@@ -177,7 +177,7 @@
 | 26 | `thincoder-vscode/test/setup-reminders.test.mjs` | 322 | 修改 | 同形报明格（端差消回归） | +~25 |
 | 27 | `docs/core/design/prompts/persona-engineering.md` | 165 | 修改 | 「项目状态档」段改写（§2.9 E；逐字 before → after 住批档 §2；行数含本设计轮 +3） | ±~10 |
 | 28 | `thincoder-core/prompts/persona-engineering.md` | 161 | 修改 | 英文运行面落地副本同义落地（**实施轮**） | ±~11 |
-| 29 | `thincoder-vscode/src/agent/setup-tooltable.mjs` | 230 | 修改 | **本批拆入面**（行 16 装配段迁入——新导出 `buildToolTable({ depth, role, engineering, provider, mcpServers, builtinTools, opts, batchDoc, settingsTool })` → `{ baseSet, tools, toolByName, toolSchemas }`；入参 = 段内消费的既有局部，返回 = 后续段解构收下（零语义）；段内 import 面随段迁入——静态边 = 既有子集（`engine-floor-guard` 零改）、四条动态 import 原样动态） | +~95（拆后 ≈325） |
+| 29 | `thincoder-vscode/src/agent/setup-tooltable.mjs` | 230 | 修改 | **本批拆入面**（行 16 装配段迁入——新导出 `buildToolTable({ depth, role, engineering, provider, mcpServers, builtinTools, opts, batchDoc, settingsTool })` → `{ baseSet, tools, toolByName, toolSchemas }`；入参 = 段内消费的既有局部，返回 = 后续段解构收下（零语义）；段内 import 面随段迁入——静态边 = 既有子集（`engine-floor-guard` 零改）、四条动态 import 原样动态）。**后续批（桌面功能对位批 #365）续拆**：工具表族再出档 `thincoder-vscode/src/agent/tool-table.mjs`（**250**）⇒ 本档现读 **102**；行 37 快照行同拍 | +~95（拆后 ≈325）⇒ **实落 102 ∕ 250（两档）** |
 | 30 | `thincoder-core/manifest.mjs` | 451 | 修改 | `DEFAULT_MANIFEST` + `MANIFEST_SCHEMA`（`nestedKeys` 补 `index` / `advisor`）+ `validateManifest` 三族形态判据 + `fillDefaults` 嵌套分支 + 头注契约行（KD-M1-31 / M1-32） | +~35 |
 | 31 | `thincoder-core/conventions.mjs` | 254 | 修改 | 装载换源：删 `CONVENTIONS_REL_PATH` / `loadConventions` / `clearConventionsCache` / `DEFAULT_CONVENTIONS` / `typeErrorsOf` / `DEFAULT_CODE_PATHS`；新增 `loadProjectDeclaration` / `clearDeclarationCache` / `DEFAULT_DECLARATION` + 退役告警点（存在性检查——内容零解析）；头注 / JSDoc | 净 ±~15 |
 | 32 | 消费面九档（核 `agent/dispatch.mjs` 499 · `agent-tools/verify.mjs` 296 · `agent-tools/advisor-settle.mjs` 241 · `advisor/repos.mjs` 151 · `advisor/project-context.mjs` 198 · `index-discover.mjs` 177 · `memory/code-sync.mjs` 428 · VSC `agent/run-helpers.mjs` 269 · VSC `agent/tool-gates.mjs` 167） | — | 修改 | 调用换名（`loadConventions` → `loadProjectDeclaration`；`DEFAULT_CONVENTIONS` → `DEFAULT_DECLARATION`）+ 两处指路文案（`dispatch.mjs` / `tool-gates.mjs`——两端逐字同文）+ 注释收正 | 逐档 Δ 上界钉死——见下注 |
@@ -185,6 +185,7 @@
 | 34 | 用例面七档（CLI `portability-classification` 298 · CLI `portability-index` 134 · CLI `portability-advisor-context` 10 · VSC `portability-vsc-classification` 293 · VSC `portability-vsc-advisor-context` 110 · VSC `memory-index-face` 298 · 核 `test/manifest.test.mjs` 479） | — | 修改 | 夹具换档（`declare()` 写 manifest）+ 调用换名 + 文案逐字 + 新增用例（T56–T58 = 本档 §3.2；分类 / 注入面新用例 = `PORTABILITY.md` §5 用例表） | 逐档 Δ 上界钉死——见下注；核 `manifest.test.mjs` 同批拆（见下注） |
 | 35 | `thincoder-core/agent-tools/advisor.mjs` | 281 | 修改 | 注释收正（`:13` 去退役符号名 `loadConventions`——J6 符号面零命中面；零语义） | Δ=0 |
 | 36 | `thincoder-core/test/manifest-discovery.test.mjs` | 0 | 新增 | **本批拆入面**（行 34 拆分——发现 / 归属面用例组 T41–T45 / T48 / T54 + 夹具 helper 自 `manifest.test.mjs` 迁入；纯搬移零语义） | +~150（实施轮回填实读） |
+| 37 | `thincoder-vscode/src/agent/setup-tooltable.mjs` ∕ `thincoder-vscode/src/agent/tool-table.mjs` | **102** ∕ **250**（实读 2026-09-29——拆档批 #365） | 修改 ∕ 新增 | 行 29 续拆落形（工具表族再出档；缝 = 既有导出面 re-export，消费档零改）——两档均 ≤300 | Δ 见行 29（实读数） |
 
 > 说明：**行数 = as-of 实测（`\n` 计数）**——同一档多行 = 各批快照，现值以最新行 / 读盘为准；行 1–9 = 装配门禁小修批（#30 模式门 / #33 二道防线）增量（as-of 01:5x）· 行 10–12 = #34 值变重推批增量（as-of 01:5x）· 行 13 = #62 仓发现复用批（as-of 2026-09-19）；上批（activeBatch 裁撤）的 M1 面清单见其批档 `docs/batches/2026-09-17-activebatch-repeal.md` §2.2。
 > 行 10 的改动面 = **一行导出 + 两处同式改用**（机制本体零改——KD-M1-18）；行 13 的改动面 = **一个导出 + 一处包装化**（机制本体零改——KD-M1-22）。
@@ -198,7 +199,7 @@
 > · 行 19 `thincoder-core/test/manifest.test.mjs`（≈380）：方案 = 发现面用例组拆出 `manifest-discovery.test.mjs`；触发条件 = 同上（测试档按用例组拆）——**触发成立（本批行 34：479 + 增量越 500 硬限）⇒ 本批执行（见下注）**。
 > · 行 21 `thincoder-core/test/setup-reminders.test.mjs`（≈303）：方案 = 值变检测组 / 报明行组拆出邻档；触发条件 = 同上。
 > · 行 26 `thincoder-vscode/test/setup-reminders.test.mjs`（≈347）：方案 = 报明 / 端差组拆出邻档；触发条件 = 同上。
-> · 行 29 `thincoder-vscode/src/agent/setup-tooltable.mjs`（≈325——本批拆入面：行 16 拆入后越 300 软线，未越 500 硬限）：方案 = 行 16 拆入的工具表段（新导出 `buildToolTable`）再拆出邻档；触发条件 = 越 500 硬限，或下一次触碰该档的批。
+> · 行 29 `thincoder-vscode/src/agent/setup-tooltable.mjs`（≈325——本批拆入面：行 16 拆入后越 300 软线，未越 500 硬限）：方案 = 行 16 拆入的工具表段（新导出 `buildToolTable`）再拆出邻档——**已执行（拆档批 #365）**：工具表族出档 `thincoder-vscode/src/agent/tool-table.mjs`（**250**）⇒ 本档现读 **102**（两档 ≤300）；行 37 快照同拍。
 > · 行 16 `thincoder-vscode/src/agent/setup.mjs`（421——实施轮实读：本批拆后仍越 300 软线，未越 500 硬限）：方案 = 该档装配段续拆或迁邻档；触发条件 = 越 500 硬限，或下一次触碰该档的批。
 > 设计档自身（本档 §2.2 架构图 + 两端钩子行 / §2.3 本表 / §2.4 KD-M1-12–M1-16 / §2.5 各条 / §3.1 AC-14–AC-18 / §3.2 T23–T31（共 14 行——新增 T24b · T24c · T28b · T28c · T28d）/ §4 + `docs/core/design/ENGINEERING-MODE-V2.md` §2.3 E2 模式口径句）由 eng-designer 本批落笔——**coder 零写设计档**。
 
@@ -326,7 +327,7 @@
    |---|---|---|
    | ① | `depth !== 0` | `false`（不注入） |
    | ② | `agent.config?.agent?.engineering !== true` | `false` |
-   | ③ | 无锚（`agent.cwd` 缺失） | `false`（零 I/O——沿用内存值；KD-M1-27） |
+   | ③ | 无锚（`agent.cwd` 缺失） | **有值（`agent.manifest` 在）⇒ 相位行**（零 I/O——沿用内存值；KD-M1-27）；**无值 ⇒ `false`**（零注入） |
 | ③' | **状态选行（本批——KD-M1-26）**：`projectView(agent.cwd)`（**每回合实读**——成本两轴见条 3）—— `ok` ⇒ 相位行（取值路径归行 ③b）；`no-project` / `ambiguous` ⇒ 报明行；`missing` / `invalid` / 读失败 ⇒ 有既往好值（`agent.manifest` 在）⇒ 相位行沿用（KD-M1-17 零改），无既往好值 ⇒ 报明行 | 选定行文本入 ④–⑥ 单活体机（机制零改） |
    | ③b | **取值前置步（本批新增——#34）**：数据档 mtime ≠ `agent._manifestMtime`（含缓存未设 = 首次观测）；`agent.cwd` 缺失 / stat 失败 ⇒ 跳过 | `readManifest` 重读：`ok:true` → 采纳（`agent.manifest` ← 新值 + 缓存 ← 观测值）；`ok:false` / 抛错 → **不更新、不清零、不抛**（沿用旧值，缓存不推进 ⇒ 下回合重试） |
    | ④ | `history` 已有同文 user 行（活体） | `false`（幂等——零历史变更） |

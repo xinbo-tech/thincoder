@@ -145,7 +145,7 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | `thincoder-desktop/src/main/host-floor.mjs` | 42 | `main.mjs` 同面拆分 · 零 `electron` 导入的叶子（宿主下限谓词 + `node:sqlite` 探针——实施批 1 已落） |
 | `thincoder-desktop/src/main/window.mjs` | **177**（实读 2026-09-28——会话维护线后） | BrowserWindow · 菜单（**R1 增「Maintenance」两项** + `confirmRecycle` 原生模态）· 系统主题 · 窗口态 |
 | `thincoder-desktop/src/main/protocol.mjs` | **88**（R1 末实读） | `app://` 供给 + 路径逃逸防护（照官方示例判据） |
-| `thincoder-desktop/src/main/ipc.mjs` | **296**（实读 2026-09-28——R1 会话维护线后） | 通道注册与分发（白名单 **35 项**——**R1** 增 `session:gc` ∕ `session:index`（处理体出档 `thincoder-desktop/src/main/session-maintenance.mjs`）；**R2** 增 `index:build` ∕ `index:status`（处理体出档 `thincoder-desktop/src/main/index-status.mjs` ∕ `thincoder-desktop/src/main/settings.mjs`）；`docs/desktop/design/IPC.md` §2「白名单面」）；超 200 行按面拆分（批 9 贴层 ⇒ 在册预案）；**越 200 ⇒ 在册预案触发**（在册预案承前） |
+| `thincoder-desktop/src/main/ipc.mjs` | **293**（实读 2026-09-29——#28 拆点后：注册面出档 `thincoder-desktop/src/main/ipc-registry.mjs` ∕ **77**） | 通道分发（注册面 = `ipc-registry.mjs` 的 `HANDLERS` 表 + 注册序）；白名单 **38 项**——**R1** 增 `session:gc` ∕ `session:index`（处理体出档 `thincoder-desktop/src/main/session-maintenance.mjs`）；**R2** 增 `index:build` ∕ `index:status`（处理体出档 `thincoder-desktop/src/main/index-status.mjs` ∕ `thincoder-desktop/src/main/settings.mjs`）；`docs/desktop/design/IPC.md` §2「白名单面」）；超 200 行按面拆分（批 9 贴层 ⇒ 在册预案）；**越 200 ⇒ 在册预案触发**（在册预案承前） |
 | `thincoder-desktop/src/main/agent-host.mjs` | **248**（实读 2026-09-29——R3 拆点后：回合驱动族出档 `thincoder-desktop/src/main/turn-driver.mjs`；≤300 回线内——§10 **BL** 已消解） | 宿主装配 + 回合驱动族同名转口面（驱动族实住 `thincoder-desktop/src/main/turn-driver.mjs`）；**R1**：`syncTitle`；**R3**：蒸馏注入 `persistDistilled`（#520） |
 | `thincoder-desktop/src/main/turn-driver.mjs`（R3 拆点落形 · 新档） | **214**（实读 2026-09-29） | 回合驱动族出档（自 `thincoder-desktop/src/main/agent-host.mjs`——§10 **BL** 拆点落形）：在飞表 ∕ 中止墓碑（`turnGate` 两查位同源）∕ 单回合执行面装配（步边界取批缝 + 撞帽询问缝）∕ `takeOver` ∕ `drive` ∕ `send` ∕ `interrupt` ∕ `dispose` ∕ `abortSuspensions` ∕ `busyOf` ∕ `queueSnapshot` + 私有装配四枚（排队面 ∕ 续发链 ∕ 挂起驱动 ∕ 提示面）；同名转口 ⇒ `thincoder-desktop/src/main/ipc.mjs` 调用面零改 |
 | `thincoder-desktop/src/main/suspension-drive.mjs` | **269**（实读 2026-09-28——idle-wake 残值兜底 + timer-wake 阶段 2 落形） | 挂起驱动胶水（**消费核件** `startSuspension`——非第四份实现）：会话寄存器（同键至多一窗 · 跨键独立）+ 入口（会话控制器 + 载体挂 `_sessionAbort` ∕ `_sessionSignal`）+ 端侧钩子四件（计数 ⇒ `ev:susp` · 边界 ⇒ `ev:digest` · 回收 ⇒ 逐条补发 `done` · 冻结 ⇒ 退出兜底同型）+ 输入 ∕ 关闭路由（`pushInput` + `wake` ∕ `abort`）+ 提示面两档；零宿主依赖 ⇒ 平 node 直测（单源 = 本档 §2 KD-34 · 批档 §2.3） |
@@ -169,7 +169,7 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | `thincoder-desktop/src/main/project-info.mjs` | **96**（实读 2026-09-28——台账行产直取后） | 项目级信息族（`ledger:read` / `batch:status`——台账经核动态 import；相位 = `readManifest(cwd)` **回执 `manifest.phase`**（无顶层 `phase`；非 ENOENT 读错上抛直传）） |
 | `thincoder-desktop/src/main/attachments.mjs`（批 B） | **125**（批 B 末实读） | 附件落盘面（批 B 新档——渲染面 `dataURL` → 主进程落文件 + 核 `appendImagePointer` 锚点）；语义 / 上限 / 清理时点单源 = `docs/desktop/design/IPC.md` §2「附件注」 |
 | `thincoder-desktop/src/main/file-links.mjs`（对齐第三批新档） | **63**（实读 2026-09-28） | 验存链接纯函数面（`extractFileLinks(cwd, text)`——路径 token + 盘上存在闸 + 去重 + 封顶；零 electron ⇒ 平 node 直测） |
-| `thincoder-desktop/src/preload/preload.cjs` | **62**（实读 2026-09-28——R1 会话维护线后） | 窄桥：白名单通道（**35 项**——`index:build` ∕ `index:status` 末位）+ `contextBridge` + **事件订阅面** `on(name, cb)`（白名单十九条通道 · 表外 throw · 返回退订） |
+| `thincoder-desktop/src/preload/preload.cjs` | **62**（实读 2026-09-28——R1 会话维护线后） | 窄桥：白名单通道（**38 项**——`settings:env` ∕ `settings:tools` ∕ `mcp:tools` 末位）+ `contextBridge` + **事件订阅面** `on(name, cb)`（白名单**二十三**通道 · 表外 throw · 返回退订） |
 | `thincoder-desktop/renderer/index.html` | **47**（实读 2026-09-28） | 骨架 + CSP（经 `app://` 的真实 origin 方可收紧）+ 设置面板容器与入口位（批 9）+ 输入区单容器 `[data-slot="composer"]`（批 A——`.session` 内、对话流之后；+1 行，结构其余不变） |
 | `thincoder-desktop/renderer/styles.css` | **498**（实读 2026-09-28；越 300 在册——拆档预案 = §10 **AL** · 距 500 硬限 2 行） | 三列布局 + 主题变量 + 折叠态 + 标签条 / 会话头 / 状态栏样式与字形面（`content`）——**批 A 修正轮入本批面**：`thincoder-desktop/renderer/styles.css:184` 注释含 `inert` 死项（⑤ 换 `tabindex` 后失效）⇒ 随 ⑤ 收正（零语义）；**本批（D21）**：主题表 **+14 变量**（亮暗两套）+ 左列会话行面 **9 面** 收正（会话面板映射表 = `docs/desktop/design/UI.md` §1「本批注（D21 · 视觉对齐）」项 2） |
 | `thincoder-desktop/renderer/chat.css` | **479**（实读 2026-09-28；**超 300 建议线**（< 500 硬限）⇒ 预案 = 新立 `thincoder-desktop/renderer/chrome-denoise.css`（拟新增 · 未落 · 排末 · 零搬移）） | 对话流块 / 工具卡 / 摘要块 / 药丸样式（形态单源 = `docs/desktop/design/UI.md` §1 对话流 / 工具卡行——分档理由 = `styles.css` 实读 284 贴 300 层） |
@@ -297,6 +297,9 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 - **人工交互面**（人工走查）：键位 / 焦点 / 拖拽类 = T-DSK21（含本批卡面「同 `prompt-id` 重挂不夺焦」幂等条）；实机交互类（宿主内实跑 + 真实后端回路）= T-DSK4 / T-DSK5 / T-DSK6 / T-DSK7 / T-DSK8 / T-DSK9 / T-DSK10 / T-DSK11 / T-DSK13。
 
 ### 4.2 现有文件改动（实施批）
+
+**拆档链登记（2026-09-29 同步 · 设计面轮）**：本批与并行拆档批的**拆档新档**（逐档读数 / 缝制式 = `docs/batches/2026-09-28-desktop-feature-parity.md` §5 各轮「拆档产物」行）：R4 ∕ R5 ∕ R7 ∕ R8 四轮产物
++ **#28 `thincoder-desktop/src/main/ipc-registry.mjs`（77**——`HANDLERS` 表 + 注册序；`ipc.mjs` 333 ⇒ **293**）+ 核侧 `thincoder-core/config-watch.mjs`（R8 上提——VSC 壳 `extension/config-watch.mjs` 78 ⇒ **36**）。消费面零改（缝 = 同名再出口 ∕ 表位注册）。
 
 | 文件 | 改动 | 归属 |
 |---|---|---|
@@ -752,12 +755,12 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
 | BB | **桌面 turn-cap 续跑（R3 ∕ #505 已落）**：用户回合撞帽 ⇒ 「继续？」询问（复用既有待决门）⇒ 同意 ⇒ 换代 controller + `resume:true` 重入（不重推用户消息）∕ 拒 ⇒ `stopped`；`autoTurn`（消化 ∕ 上行 ∕ timer 轮）⇒ cap 即收口（零自续） | **已落**（R3——2026-09-29） | 承载 = `thincoder-desktop/src/main/turn-face.mjs`（撞帽三径）+ `thincoder-desktop/src/main/turn-driver.mjs`（换代重入）；待答期 ↑Ctrl+I 携消息语义 = 台账 **#543**（另裁）；单源 = `docs/core/requirements/TURN-CAP-CONTINUE.md` |
 | BC | **核件输入面 = 文本单形**（`pushInput` 存串——`thincoder-core/agent/suspension.mjs`）⇒ 挂起窗内含附件提交 ⇒ `busy` 拒 + 渲染面留队重试（零丢失；窗内文字入队不受限） | 边界登记（零静默丢——可见气泡留场 + 重试） | 消解路 = 核件 `pushInput` 扩对象形（携 paths 跟踪）∥ 端侧侧表跟踪——**另裁**；本批取最薄形（沿客户端队列重试面） |
 | BD | **`docs/desktop/design/UI.md` 门控停笔**（外壳批设计评审轮 2 冻结）⇒ 本批 UI 面内容（状态行段 3 第三态 ∥ 消化行族 ∥ 提示面三候选）以批档 §2 定形 | **已消解（2026-09-28——外壳批复评通过解冻）** | UI.md 三处已随落（`:19` / `:21` / `:456-457`——本批批档 §1.7 已核验）；无新裁定需求 |
-| BE | 渲染面**通道计数随动面**：残句已清（修正轮 #19）；**复读（2026-09-28 末）= 事件 19 位**；**请求面续读（2026-09-29——R2 后）= 35 项**（`thincoder-desktop/src/preload/preload.cjs` `EVENT_CHANNELS` = 19 位 · `CHANNELS` = 35 项 ∧ `thincoder-desktop/renderer/events-subscribe.mjs` 十九条通道表）；`docs/desktop/design/IPC.md` §1 = **19** ∕ §2 白名单 = **35**（输入面板移植 ∕ 桌面功能对位批 R1 ∕ R2 落地后同值） | 登记（复核轮发现 7——本轮回填复读收正） | 结算 = 各批实施落地时以盘面实读复核（现盘请求 35） |
+| BE | 渲染面**通道计数随动面**：残句已清（修正轮 #19）；**复读（2026-09-29——R4 ∕ R5 ∕ R7 ∕ R8 后）= 事件 23 位 · 请求面 38 项**（`thincoder-desktop/src/preload/preload.cjs` `EVENT_CHANNELS` = 23 位 · `CHANNELS` = 38 项 ∧ `thincoder-desktop/renderer/events-subscribe.mjs` 二十三通道表）；`docs/desktop/design/IPC.md` §1 = **23** ∕ §2 白名单 = **38**（R1 ∕ R2 ∕ R7 落地后同值） | 登记（复核轮发现 7——本轮回填复读收正） | 结算 = 各批实施落地时以盘面实读复核（现盘请求 38） |
 
 | BF | **`T-DSK42` / `T-DSK43` 用例号自铸披露**（沿 T-DSK37–T-DSK40 先例——对齐第三批自铸；若实施批占用同号 ⇒ 请父侧并号裁定） | 登记（自铸披露） | 用例行随测试档修加——不进设计面条目（2026-09-27 裁定）；号面登记 = 本行；并号裁定权 = 父侧 |
 | BG | **核 `onTurnEnd` ⊃ VSC `onSubTurnBreak`**（对齐第三批 A7 端差）：核钩子含「工具批尾」与「中断注入」两支——工具批尾桌面零效果（游标已由 `onToolCall` 清）；**中断注入 ⇒ 收尾文本另起块**（VSC 不断） | 上抛（核面补窄义钩子候选） | 消解路 = 核侧补「推回/重试」窄义触发面（另裁）；本批 = 端差登记（`docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」项 7） |
 | BH | **桌面打开文件无行定位**（`shell.openPath` 无行参——相抵②端差）：`file:open` 载荷携 `line` 备用 | 登记（端差） | 消解路 = 外部编辑器 CLI 探测（另裁）；UI.md open 行在册 |
-| BI | **台账行周期刷新不在本批**（VSC `REFRESH_MS` 面）：本批只落开项目成功链一次 | 登记（有意裁量 · KD-38） | 消解路 = 与左列信息行复读面并笔（后续批）；UI.md open 行在册 |
+| BI | **台账行周期刷新**（VSC `REFRESH_MS` 面） | **已落（R8——2026-09-29）** | 启动拍 + 周期拍 **120s**（直消费核 `startLedgerSurface`；L2 明细行集 = `ev:ledger` `detailLines`）；UI.md open 行销、`docs/desktop/design/IPC.md` §1 `ev:ledger` 行同拍 |
 | BJ | **`T-DSK44` 用例号自铸披露**（沿 T-DSK37–T-DSK43 先例——timer-wake 阶段 2 自铸；若实施批占用同号 ⇒ 请父侧并号裁定） | 登记（自铸披露） | 用例行随测试档修加——不进设计面条目（2026-09-27 裁定）；号面登记 = 本行；并号裁定权 = 父侧 |
 | BK | **`T-DSK45` 用例号自铸披露**（沿 T-DSK37–T-DSK44 先例——回合中插入批自铸；若实施批占用同号 ⇒ 请父侧并号裁定） | 登记（自铸披露） | 用例行随测试档修加——不进设计面条目（2026-09-27 裁定）；号面登记 = 本行；并号裁定权 = 父侧 |
 | BL | **`thincoder-desktop/src/main/agent-host.mjs` 拆点已执行（400 ⇒ 248——R3 落形）** | **已消解**（R3——2026-09-29） | 拆点 = 回合驱动族出档 `thincoder-desktop/src/main/turn-driver.mjs`（**已落** · 实读 **214**）；续发链提取 `thincoder-desktop/src/main/turn-chain.mjs`（已落 · 71）；本档 **248 ≤ 300** 回线内 |

@@ -63,16 +63,18 @@ embedding key + 构建按钮 + 状态；向量维度 / 模型切换的校验与�
 `~/.thincoder/config.json` 为两产品共享单文件；外部写（对端 `/advisor` · `settings set` · 手工编辑）在面板常开时须**可见**。
 
 **契约**：`startConfigWatch({ onChange, debounceMs = 300, configPath }) → { dispose, noteSelfWrite }`
-（`thincoder-vscode/src/extension/config-watch.mjs:35`——纯装配模块，不含业务）：
+（端壳 = `thincoder-vscode/src/extension/config-watch.mjs`（**36**——平台落子：`createFileSystemWatcher` 订阅 + `dispose` 桥）；**纯逻辑已上提核** = `thincoder-core/config-watch.mjs`（去抖 ∕ stat 元组比对 ∕ 自写抑制——R8 · 桌面功能对位批）：
 
 - 注册 `createFileSystemWatcher(new RelativePattern(Uri.file(dirname(configPath)), basename(configPath)))`，监听 change / create / delete 三类事件；`configPath` 缺省 = `config-io` 的 `_configPath()` 当前值（W16 已迁核——现体 = 核 `thincoder-core/config-io.mjs`）。
 - 事件 → 去抖（`debounceMs`）→ **stat 元组（mtimeMs + size）与基线比对**：同 → 零推送；异 → `onChange()`（比对后基线更新为当前元组）；启动时基线 = 启动时 stat。
-- **自写抑制（基线回填）**：`noteSelfWrite()` = 重取当前元组置为基线（`config-watch.mjs:49`）；时机 = 本进程写盘成功后——`saveRaw`（核 `thincoder-core/config-io.mjs`——写盘唯一通道；W16 已迁核，端自持镜像 `thincoder-vscode/src/config-io.mjs` 已删）在写成功路径上经 `onConfigSelfWrite(fn)`（核同档 `:107`）同步回调，`startConfigWatch` 内部订阅（退订随 `dispose`）。
+- **自写抑制（基线回填）**：`noteSelfWrite()` = 重取当前元组置为基线（核 `thincoder-core/config-watch.mjs`——R8 上提后住核；VSC 壳同名转口）；
+  时机 = 本进程写盘成功后——`saveRaw`（核 `thincoder-core/config-io.mjs`——写盘唯一通道；W16 已迁核，端自持镜像 `thincoder-vscode/src/config-io.mjs` 已删）在写成功路径上经 `onConfigSelfWrite(fn)`（核同档 `:107`）同步回调，`startConfigWatch` 内部订阅（退订随 `dispose`）。
   ⇒ 扩展自写 = 事件到达时元组已等于基线 ⇒ **零推送**（不抖动面板）；外部写 = 元组异于基线 ⇒ `onChange()`。
 - `dispose()` 释放 watcher 与挂起定时器（含自写订阅退订）。
 - **降级**：宿主 API 缺失或构造抛错 → 返回 no-op `{ dispose(){}, noteSelfWrite(){} }`（不阻断激活——面板打开拉新的既有路径兜底）。
 
-**装配**：`extension.mjs` 的 activate 内把 `startConfigWatch({ onChange: … })`（定义 = `thincoder-vscode/src/extension/config-watch.mjs:35`）推入 `context.subscriptions`，复用既有轻量推送面 `_pushSettingsLight`（`thincoder-vscode/src/extension/chat-panel.mjs:331`——无网络探测、不重建面板请求路径）；自写通知订阅在模块内部建立（**装配面零增行**）。
+**装配**：`extension.mjs` 的 activate 内把 `startConfigWatch({ onChange: … })`（定义 = 核 `thincoder-core/config-watch.mjs`——R8 上提；VSC 壳 `thincoder-vscode/src/extension/config-watch.mjs` 同名转口）
+推入 `context.subscriptions`，复用既有轻量推送面 `_pushSettingsLight`（`thincoder-vscode/src/extension/chat-panel.mjs:331`——无网络探测、不重建面板请求路径）；自写通知订阅在模块内部建立（**装配面零增行**）。
 
 ### 2.8 设置面快照到达与写值纪律（F-W8 · F-W9 · F-W10）
 
@@ -191,7 +193,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   门位 = **webview 侧调用点**（同档 `:25` 动作闭包过 `_confirmSecretDelete`）——选型理由见下「模型菜单入口」段；判据 = 批档 §2.4 的 W17-31…W17-34。
   **宿主侧链（本席实读 as-of 2026-09-19）**：路由 = `src/extension/panel-messages.mjs:225`（`case "removeProvider"`）；
   处理器 = `src/extension/panel-messages-settings.mjs:82-90`（`msg.name` 有 ⇒ 直落 `persistRemoveProvider`；**无 ⇒ `:88` `removeProviderFlow`**）；
-  QuickPick 面 = `src/extension/provider-flows.mjs:129-150`（候选 = 非 active 过滤 `:137` · 空集早退 `:139` · `showQuickPick` `:142-145` · 取消早退 `if (!sel) return` `:146` · 删 `removeProviderEntry(sel.label)` `:147`）。
+  QuickPick 面 = `thincoder-vscode/src/extension/provider-flows.mjs:129-150`（候选 = 非 active 过滤 `:137` · 空集早退 `:139` · `showQuickPick` `:142-145` · 取消早退 `if (!sel) return` `:146` · 删 `removeProviderEntry(sel.label)` `:147`）。
   渲染位与门位的先后（**本门前提**）：footer 行的 click 处理器（`webview/model-menu.js:132`）=「先 `closeModelMenu()`、后调 `f.onClick()`」⇒ 弹框开在菜单 overlay 移除**之后**（弹框 `.auto-confirm` z-index 1000 / 遮罩 999——与 `mm-overlay` 1000 同层，无菜单在场即无遮挡）。
 - **MCP token / headers 无独立删除钮**：其唯一删除路径 = 编辑表单清空 token / headers 后保存（**表单语义，非删除按钮**——`thincoder-vscode/src/config-mcp.mjs:52-54` 的 `if (cfg.token)` / `if (cfg.headers)`：条目重建时字段随之消失）；
   webview 侧 = `webview/settings-tools.js:117-136` 读表单（stdio / http / ws 三分支）→ `:138` 发 `editMcp` / `saveMcpServer`。
@@ -205,12 +207,12 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
    外部写盘还经 §2.7 事件驱动推轻量快照 ⇒ 武装态存于 DOM 时会被重绘抹掉：第二击落空，或退化为「重新武装」
    （若把态另存模块变量 + 重绘重贴 = 新机制）。
 2. **取消路径须第三方机制**：武装态要么定时回退（定时器——即 P5 明令删除的「2.5s 两段定时」形态），要么只靠失焦 / 点别处兜底（无显式取消面、「行内状态复原」无判据）。
-3. **行布局**：`✕` 是键行单行 flex 内的字形钮（`.key-btn.del-key`，`webview/settings.css`）——换成「确认删除？」破行布局；且「原文不可复得、只能回服务商重取」的理由文案在行内**无容身之处**。
+3. **行布局**：`✕` 是键行单行 flex 内的字形钮（`.key-btn.del-key`，`thincoder-vscode/webview/settings.css`）——换成「确认删除？」破行布局；且「原文不可复得、只能回服务商重取」的理由文案在行内**无容身之处**。
 4. **同族一致 + 同词**：不可逆删除在本仓已有同形先例 = 会话删除确认（`webview/session-bar.js:75-107`）与 AUTO 启用确认（`webview/mode-buttons.js:54-92`），均用同一弹框件；P5 原文亦为「不可逆才**弹**确认」。
 
 **弹框契约（本面单源 = `webview/settings-widgets.js`——`showConfirmPopover({ text, yesLabel, noLabel, onConfirm })` + 同档导出的**清除入口**）**：
 
-- **件 = 既有形态**：`.auto-confirm`（`role="alertdialog"`）+ `.auto-backdrop`（`webview/controls.css:584-658`）——**零新增 CSS**；`z-index` 1000 > 设置面板 `20`（`webview/settings.css:7`）⇒ 恒在面板之上。
+- **件 = 既有形态**：`.auto-confirm`（`role="alertdialog"`）+ `.auto-backdrop`（`webview/controls.css:584-658`）——**零新增 CSS**；`z-index` 1000 > 设置面板 `20`（`thincoder-vscode/webview/settings.css:7`）⇒ 恒在面板之上。
 - **挂位 = `document.body`**（不在键行内）⇒ 键行重绘**不打断**确认在位态。
 - **载荷闭包**：确认动作 = **开框时捕获**的 payload 闭包（不是确认时读 DOM）⇒ 弹框在位期间的行重绘**不改删除目标**、不吞确认。
   **判别面明示（评审 id=116 发现 9）**：**W17-23 判「在位不打断 / 不改目标」，不判闭包形态**——`renderMcpList` 走 `list.innerHTML = …` 整表重建（`thincoder-vscode/webview/settings-tools.js:173-190`），旧钮节点脱离 DOM 后 `dataset.name` 仍为原名 ⇒ 「确认时读 DOM」与「开框时捕获」在该场景**载荷同值**；闭包形态由代码面复核守（批档 §2.2 D-M4），不以该例为判据。
@@ -273,11 +275,11 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - **否决 a 案（宿主 QuickPick 选定后二次确认）**：宿主侧确认只能落在 VS Code 原生件（`showWarningMessage` modal / 二次 QuickPick）⇒ **第二套确认面**，类判据句「不可复得类 ⇒ `_confirmSecretDelete`」的字面映射失效（要么改判据句 = 语义面、要么再登记一次「受裁例外」）；
   且第一跳 `removeProvider` 在确认**前**已发出 ⇒ 批档 §1.3 ②「取消 ⇒ 零删除 ∧ **零消息副作用**」只在宽松读法（无持久副作用）下成立。
 - **否决 b 案（宿主把选定 `name` 回给 webview 走既有弹框）**：需新增宿主→webview 消息 + webview 侧新 case ⇒ **协议零改**（批档 §1.5 ③）破 + `WEBVIEW-PROTOCOL.md` §13 判别式集须同步（写域外）；且同 a 案的第一跳问题。
-- **否决第三备选（webview 侧自建目标选择面）**：目标候选规则单源在 `provider-flows.mjs:137-145`（非 active 过滤 / `model` 描述 / 空集提示）⇒ webview 自建 = 候选语义**双源**（D2 破 + 两侧候选不一致的 fail-open 风险）；本批不替换目标选择面。
+- **否决第三备选（webview 侧自建目标选择面）**：目标候选规则单源在 `thincoder-vscode/src/extension/provider-flows.mjs:137-145`（非 active 过滤 / `model` 描述 / 空集提示）⇒ webview 自建 = 候选语义**双源**（D2 破 + 两侧候选不一致的 fail-open 风险）；本批不替换目标选择面。
 - **c 案的机检侧优势**：门在 **post 之前** ⇒ 「取消 ⇒ 零发值」**严格读成立**（宿主零调用、盘面逐字节不变）；且入口 6 落在 webview 档 ⇒ 结构对账**扩域即钉住**（见下「判据域边界」）。
 
 **已裁代价（登记 = §3）**：确认发生在**目标选定之前**（弹框文案 = 类通用式 `settings.secretDeleteConfirm`，不携 `name`）⇒ 确认的「目标绑定」弱于入口 1–5（后者目标 = 载体自身所在行）。
-补偿两条：① 目标选定步（宿主 QuickPick——`provider-flows.mjs:142-145`）**自身是一次显式选择**（选定才删）⇒ 不可复得动作实需「确认 + 选定」两步；② 选定后取消仍零删除（`provider-flows.mjs:146` `if (!sel) return` **零改**）。
+补偿两条：① 目标选定步（宿主 QuickPick——`thincoder-vscode/src/extension/provider-flows.mjs:142-145`）**自身是一次显式选择**（选定才删）⇒ 不可复得动作实需「确认 + 选定」两步；② 选定后取消仍零删除（`thincoder-vscode/src/extension/provider-flows.mjs:146` `if (!sel) return` **零改**）。
 
 **`btn` 实参 = `null`**：`_confirmSecretDelete(btn, action)` 的 `btn` 实现内**未使用**（`webview/settings.js:47` 注：弹框居中、不锚定）；footer 项的 `onClick` 由 `webview/model-menu.js:132` 调用时**不传参** ⇒ 无元素可给。
 改 `model-menu.js` 传 `e.currentTarget` = 共享件回调契约改动（4 处调用方）而收益为零 ⇒ 取 `null`。
@@ -287,9 +289,9 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 门侧：`_confirmSecretDelete(null, …)` 四条取消路径全零发值 · 确认 ⇒ 恰 1 条 `{type:"removeProvider"}` ∧ 框 / 幕移除 · 单例（连开两框仍 1 框）。
 
 **机检面**：`thincoder-vscode/test/settings-secret-delete-confirm.test.mjs`（W17-1…W17-15 · W17-17 / W17-18 / W17-26…W17-30——正常 / 取消 / 边界（连点 · 跨入口 · 弹框在位重绘 · **多行取目标**）/ 键盘 / i18n 双源 / 结构对账 fail-closed；**MCP 组（W17-16 / W17-19…W17-25）已析出** `settings-mcp-delete-confirm.test.mjs`——2026-09-19 拆分实测收正）；
-**组拆分登记**（评审 id=116 发现 4）：触发 = 实现轮末实读 **≥ 500 行** ⇒ MCP 组（W17-16 / W17-19…W17-25）析出为 `thincoder-vscode/test/settings-mcp-delete-confirm.test.mjs`（拟新增——夹具经 `test/helpers/webview-env.mjs` 共享；`thincoder-vscode/test/files.mjs` 同步登记）——组边界 / 阈值 / 到期条件 = §3。
+**组拆分登记**（评审 id=116 发现 4）：触发 = 实现轮末实读 **≥ 500 行** ⇒ MCP 组（W17-16 / W17-19…W17-25）析出为 `thincoder-vscode/test/settings-mcp-delete-confirm.test.mjs`（已落 · 实读 **177**——夹具经 `test/helpers/webview-env.mjs` 共享；`thincoder-vscode/test/files.mjs` 同步登记）——组边界 / 阈值 / 到期条件 = §3。
 用例与先红读数单源 = 批档 §2.4（密钥类批 = `docs/batches/2026-09-18-vsc-key-delete-confirm.md` §2.4；MCP 行批 = `docs/batches/2026-09-18-vsc-mcp-delete-confirm.md` §2.4；provider 行批 = `docs/batches/2026-09-19-vsc-provider-delete-confirm.md` §2.4；模型菜单批 = `docs/batches/2026-09-19-vsc-model-menu-delete-confirm.md` §2.4）。
-**入口 6 组（本批）**：`thincoder-vscode/test/model-menu-delete-confirm.test.mjs`（拟新增——W17-31…W17-34；登记落 `thincoder-vscode/test/files.mjs`）；跨面夹具 = happy-dom 真 webview 点击 → 逐条喂回真宿主分发（先例 `test/settings-empty-no-write.test.mjs:86-90`）+ 临时 config（`_setConfigPathForTest`——**绝不触碰真实 `~/.thincoder/`**）。
+**入口 6 组（本批）**：`thincoder-vscode/test/model-menu-delete-confirm.test.mjs`（已落 · 实读 **162**——W17-31…W17-34；登记落 `thincoder-vscode/test/files.mjs`）；跨面夹具 = happy-dom 真 webview 点击 → 逐条喂回真宿主分发（先例 `test/settings-empty-no-write.test.mjs:86-90`）+ 临时 config（`_setConfigPathForTest`——**绝不触碰真实 `~/.thincoder/`**）。
 结构对账 W17-17（域扩至 **9 档**）仍驻主档 `test/settings-secret-delete-confirm.test.mjs`（结构面单源）。
 
 **判据域边界（结构对账 W17-17 的扫描域）**：域 = **设置面档**（`thincoder-vscode/webview/settings*.js`——实读 **8 档**）∪ **`thincoder-vscode/webview/model-picker.js`**（入口 6 载体档——本批按入口 6 入域）= **9 档**（扫描式 = 正则 `/^settings.*\.js$/` ∪ 显式名单 `model-picker.js`；域外档一律不入集）。
@@ -434,7 +436,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   到期条件 = 触发阈值到达时 / MCP 面下次结构改动。
 - **用例档越 300 行建议线（拆分复核 · 评审 id=116 发现 4）**（测试面 · §2.10 机检面）——**已终结**（2026-09-19 按实现实测收正，原「现 439 → 预估 ~516」为预估）：provider 行批实现轮实读触线 ⇒ **拆分已执行** = 主档 `settings-secret-delete-confirm.test.mjs`
  现 **412** · MCP 组析出 `settings-mcp-delete-confirm.test.mjs` **177**（已在 `thincoder-vscode/test/files.mjs` 在册）；**两档均 <500 硬限** ⇒ 不触发再拆；**下次触发条件 = 任一档实读 ≥500**（承批档 §2.2 D-M6「越线即当场拆」）。
-  组边界 = **MCP 组**（W17-16 / W17-19…W17-25）析出为 `thincoder-vscode/test/settings-mcp-delete-confirm.test.mjs`（拟新增——夹具经 `test/helpers/webview-env.mjs` 共享；自持 `before` / `beforeEach` / 驱动助手）· `thincoder-vscode/test/files.mjs` 同步登记（主档条注释随组边界同笔收正）。
+  组边界 = **MCP 组**（W17-16 / W17-19…W17-25）析出为 `thincoder-vscode/test/settings-mcp-delete-confirm.test.mjs`（已落 · 实读 **177**——夹具经 `test/helpers/webview-env.mjs` 共享；自持 `before` / `beforeEach` / 驱动助手）· `thincoder-vscode/test/files.mjs` 同步登记（主档条注释随组边界同笔收正）。
   拆分后预估：主档 ≈ **421**（密钥类 / 结构对账 / provider 行组）· MCP 档 ≈ **160**。到期条件 = provider 行批实现轮末实读（未越线 ⇒ 不拆，读数入批档 §5）。
 - **直通门 `_confirmDelete` 零调用点（死门）+ `settings.js` 注释失实**（结构面 · §2.10「本批后态」）：provider 行批后入口册 5 行全数过确认门 ⇒ `window._confirmDelete`（`thincoder-vscode/webview/settings.js:43`）**零调用点**。
   同档 `:42` 注释「Single-click delete — the re-fillable class only (provider rows — SETTINGS.md §2.10 ruling exception)」**失实**（provider 行已入本门、可重填类空域），`:44-47` 不可复得类定义未含 provider 行。

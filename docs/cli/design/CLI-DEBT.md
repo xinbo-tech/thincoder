@@ -25,20 +25,19 @@
 
 ## 2. 档位登记（现读 as-of 2026-09-25 · 二表）
 
-### 2.1 表 A：≥400 全量（口径 §1-1——15 档）
+### 2.1 表 A：≥400 全量（口径 §1-1——**14 档**；原 A4 已消解移 §4-D4）
 
 | # | 档（`thincoder-cli/` 内） | 现读 | 余量 | 触发 / 状态 | 拆分计划 / 裁定（本册活面表述） | 裁定源（记录面） |
 |---|---|---|---|---|---|---|
 | A1 | `src/tui/model-picker.mjs` | **499**（raw 500） | 1 | 未触（触发 = >500）· **余量 0~1——高危** | 「触发式 · 不预拆」**转正**：触发 ⇒ 渠道管理四流（add / remove / key / context ≈100 行）析出为 `provider-admin.mjs`（拟新增 · `createProviderAdmin(ctx)` 装配型——同 `createModelPicker` 先例）；预估本档 → ≈390 / 新档 ≈115 / `pickers.mjs` 装配 +3 行 | `docs/batches/2026-09-19-cli-delete-confirm.md` §:91 / §:197（冻结批档·本批转正） |
 | A2 | `test/advisor-chain-guards.test.mjs` | **488** | 12 | 触发 = 后续任何新增（结论块断言扩面 / 新 kind）⇒ **先按组拆** | E 组冻结窗口（T-CG15–T-CG18 ≈91 行）→ `test/advisor-freeze-window.test.mjs`（拟新增）；B 组凭证链（T-CG6–T-CG8 ≈82 行）→ `test/advisor-credential-chain.test.mjs`（拟新增）——组内自持夹具、切点零交叉 | `docs/batches/2026-09-18-advisor-face.md` §2.7 发现 4 收正行 |
 | A3 | `test/edit-tool-improvement.test.mjs` | **486** | 14 | 触发 = 再增用例先拆（本批 +95 后仍 <500） | 核例族 / 桥例族二分（桥 4 例自带 `buildAcpCallbacks` harness——天然切点）→ `test/edit-bridge.test.mjs`（拟新增） | `docs/batches/2026-09-25-edit-arg-guard.md` 受影响表行 + `docs/batches/2026-09-25-file-tier-sweep.md` §2 S5-⑤ |
-| A4 | `bin/thincoder.mjs` | **499**（env-config-purge 批实施读数——482 → 499；`diagnostics` 键面 / 通道纪律注；读数 = `wc -l`） | **1** | **触发已到**（前批定线 = 实施读数 ≥480 ⇒ 命令分发表外提）· 未执行（另案）· **余量 ≤1 期间禁增；命令分发表外提须先于该档下次触碰** | 候选面 = 命令分发表（`switch (command)` 的 `case` 族）外提姊妹档（同档先例 = 2026-09-08 直写段外提 `src/completions.mjs`——500 行触碰手法）；实施 = 该档下次实质触碰**前**；**耦合注**（同批义务）：外提执行批须同批改 MS-1 源码读取面（`thincoder-cli/test/memory-sweep-cli.test.mjs`〔拟新增〕现按源文本锁 `case "memory"` 分发——外提即漂移；机检形 = `docs/cli/design/CLI-ENTRY.md` §4） | `docs/batches/2026-09-22-session-index.md` §:169（触发点 ≥480） |
 | A5 | `test/settings.test.mjs` | **480** | 20 | 触发式（未预拆——越 500 前 ∨ 下次实质触碰） | 候选面（评估项）：T-S3 族（引号 / 解析形态 T-S3.1–S3.3）∥ 防漂移族（T-S2.13–S2.15）分档（用例族 + 夹具自持——先例 = file-tier-sweep KD-23；同判据下的另立档先例 = `test/settings-mask.test.mjs`） | 本册首登（孤儿——台账 #340 指名）；线源 = `docs/batches/2026-09-18-settings-mask.md` §:99（D-ST15） |
 | A6 | `src/tui/cmd-config.mjs` | **471** | 29 | 触发式（未预拆） | 候选面（评估项）：`handleConfigCommand` 菜单族 / 配置读写族分面 | 本册首登（≥400 普查面） |
 | A7 | `test/acp-contract.test.mjs` | **461** | 39 | 触发式（未预拆） | 候选面（评估项）：按族二分——认证族（`:97-153`）/ 会话方法族（`:154-243`）/ 无 TTY 冒烟族（`:365` 起） | 本册首登（孤儿——台账 #340 指名）；读数口径前批 = `docs/batches/2026-09-22-pending-triage.md`（363 → ~393 越线口径行） |
 | A8 | `src/tui/render-conversation.mjs` | **460** | 40 | 触发式（未预拆——前批登记「~467 候选」按现读刷新） | 候选面（评估项）：待发送块派生面（排队块 + 缓存键签名）抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:454（300 线档位登记行） |
-| A9 | `src/tui/subagent-blocks.mjs` | **453**（读数 as-of 2026-09-25 本批实读） | 47 | 触发式（未预拆）· **本批触碰**（注释改指 · 行数守恒）⇒ **不拆**（理由 = 零结构改 + Δ0） | 候选面（评估项）：子代理事件路由族（`routeSub*` `:148`–`:382` ≈235 行）∥ 压缩面板族分面——**抽取候选线 = 压缩面板族**（`liveCompressPanel` `:383`–`markCompressFallback` `:453` ≈71 行 → `subagent-compress.mjs`〔拆分计划目标 · 裸名形态〕；原档 re-export 保持） | `docs/batches/2026-09-17-subagent-zero-block.md` §:292 · `docs/batches/2026-09-17-async-face-fixes.md` §:358 · `docs/batches/2026-09-25-doc-face-closeout.md` §2 |
-| A10 | `src/tui/tool-events.mjs` | **449**（读数 as-of 2026-09-25 本批实读） | 51 | 触发式（未预拆）· **本批触碰**（注释改指 · 行数守恒）⇒ **不拆**（理由 = 零结构改 + Δ0） | 候选面（评估项）：`buildToolCallbacks` 单体即档主体（`:61`–末）——按回调族分面；**抽取候选线 = 尾部回调族**（`onCompressStart` `:378`–`onTurnEnd` `:446` ≈69 行 → `tool-events-signals.mjs`〔拆分计划目标 · 裸名形态〕） | `docs/batches/2026-09-15-core-defect-fixes.md` §:131（增量近零 ⇒ 不设拆分计划判据句）· `docs/batches/2026-09-25-doc-face-closeout.md` §2 |
+| A9 | `src/tui/subagent-blocks.mjs` | **453**（读数 as-of 2026-09-25 · **doc-face-closeout 批**实读） | 47 | 触发式（未预拆）· **doc-face-closeout 批触碰**（注释改指 · 行数守恒）⇒ **不拆**（理由 = 零结构改 + Δ0） | 候选面（评估项）：子代理事件路由族（`routeSub*` `:148`–`:382` ≈235 行）∥ 压缩面板族分面——**抽取候选线 = 压缩面板族**（`liveCompressPanel` `:383`–`markCompressFallback` `:453` ≈71 行 → `subagent-compress.mjs`〔拆分计划目标 · 裸名形态〕；原档 re-export 保持） | `docs/batches/2026-09-17-subagent-zero-block.md` §:292 · `docs/batches/2026-09-17-async-face-fixes.md` §:358 · `docs/batches/2026-09-25-doc-face-closeout.md` §2 |
+| A10 | `src/tui/tool-events.mjs` | **449**（读数 as-of 2026-09-25 · **doc-face-closeout 批**实读） | 51 | 触发式（未预拆）· **doc-face-closeout 批触碰**（注释改指 · 行数守恒）⇒ **不拆**（理由 = 零结构改 + Δ0） | 候选面（评估项）：`buildToolCallbacks` 单体即档主体（`:61`–末）——按回调族分面；**抽取候选线 = 尾部回调族**（`onCompressStart` `:378`–`onTurnEnd` `:446` ≈69 行 → `tool-events-signals.mjs`〔拆分计划目标 · 裸名形态〕） | `docs/batches/2026-09-15-core-defect-fixes.md` §:131（增量近零 ⇒ 不设拆分计划判据句）· `docs/batches/2026-09-25-doc-face-closeout.md` §2 |
 | A11 | `test/model-ref.test.mjs` | **432** | 68 | 触发式（未预拆） | 候选面（评估项）：picker harness（`miniPickers` / `pickerHarness`）与用例族分档 | 本册首登（≥400 普查面） |
 | A12 | `src/tui/render-frame.mjs` | **423** | 77 | 触发式（未预拆） | 候选面（评估项）：§7 状态栏 / `enterHint` 面抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:456 |
 | A13 | `test/session-store.test.mjs` | **416** | 84 | 触发式（未预拆） | 候选面（评估项）：按用例族 + 夹具自持分档（先例 = KD-23） | 本册首登（≥400 普查面） |
@@ -53,10 +52,10 @@
 | B2 | `src/tui/agent-turn.mjs` | **384** | 触发式（未预拆） | 候选面：送达 / 兜底面抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:459 |
 | B3 | `test/ledger-surface.test.mjs` | **378** | 触发式（未预拆） | 越线登记 + 触发式拆分（>300 advisory——CLI 侧无机检门） | `docs/batches/2026-09-25-hygiene-ab.md` §:194 |
 | B4 | `test/memory-scan-bounds.test.mjs` | **371** | 触发式（不拆登记在册） | 「不拆」登记（±2 零结构改）；拆分 = 其面下次实质改动时重判 | `docs/batches/2026-09-20-small-debt-batch.md` §:106 |
-| B5 | `src/tui/suspension-drive.mjs` | **341** | 触发式（未预拆） | 候选面：driver 步骤面抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:460 |
+| B5 | `thincoder-cli/src/tui/suspension-drive.mjs` | **341** | 触发式（未预拆） | 候选面：driver 步骤面抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:460 |
 | B6 | `test/subagent-observe-send.test.mjs` | **330** | 触发式（不下拆判定） | 「既有超软线 · 增量小 / 非结构改 ⇒ 拆分另议」在册 | `docs/batches/2026-09-18-toolface-fixes.md` §:75 |
-| B7 | `test/tui-memory-budget.test.mjs` | **334** | 触发式（不拆登记在册）· **本批触碰**（注释改指 · ±0 行） | **该批不拆**：理由 = 零结构改 + Δ0；**抽取候选线 = U 族**（占用账 / 保底 / 步进 / 收据 / 占位行移除，`:217`–`:315` ≈99 行 → `tui-memory-account.test.mjs`〔拆分计划目标 · 裸名形态〕——组内夹具 `mkState` / `mkCallbacks`（`:35` / `:45`）随组同迁）；触发 = 越 500 ∨ 该档下次实质改动 | `docs/batches/2026-09-25-doc-face-closeout.md` §2（口径 §1-4 随触碰补登） |
-| B8 | `test/doc-check.test.mjs` | **340**（env-config-purge 批实施读数） | 触发式（未预拆）· **本批触碰**（子实例改直跑本档 + `--nested` 旗标） | 候选面（评估项）：子实例目录树族 ∥ 锚检族分档（用例族 + 夹具自持——先例 = file-tier-sweep KD-23）；触发 = 越 500 ∨ 该档下次实质改动 | 本册首登（env-config-purge 批 §3 轮次 1 发现 5——越 300 咨询线登记） |
+| B7 | `test/tui-memory-budget.test.mjs` | **334** | 触发式（不拆登记在册）· **doc-face-closeout 批触碰**（注释改指 · ±0 行） | **该批不拆**：理由 = 零结构改 + Δ0；**抽取候选线 = U 族**（占用账 / 保底 / 步进 / 收据 / 占位行移除，`:217`–`:315` ≈99 行 → `tui-memory-account.test.mjs`〔拆分计划目标 · 裸名形态〕——组内夹具 `mkState` / `mkCallbacks`（`:35` / `:45`）随组同迁）；触发 = 越 500 ∨ 该档下次实质改动 | `docs/batches/2026-09-25-doc-face-closeout.md` §2（口径 §1-4 随触碰补登） |
+| B8 | `test/doc-check.test.mjs` | **340**（env-config-purge 批实施读数） | 触发式（未预拆）· **env-config-purge 批触碰**（子实例改直跑本档 + `--nested` 旗标） | 候选面（评估项）：子实例目录树族 ∥ 锚检族分档（用例族 + 夹具自持——先例 = file-tier-sweep KD-23）；触发 = 越 500 ∨ 该档下次实质改动 | 本册首登（env-config-purge 批 §3 轮次 1 发现 5——越 300 咨询线登记） |
 | B9 | `test/provider-error-surface.test.mjs` | **309** | 触发式（未预拆） | 候选面（评估项）：按 provider 族分档（anthropic / openai / responses）；触发 = 越 500 ∨ 该档下次实质改动 | 本册首登（env-config-purge 批 §3 轮次 1 发现 5——越 300 咨询线登记） |
 
 **表 B 说明**：本表 = 自冻结/历史记录**转正**的 <400 项（口径 §1-3）——转录自各批档 / 设计档既有登记句（逐条注源）· 2026-09-25 doc-face-closeout 批随触碰补登 1 行（B7——口径 §1-4）· 2026-09-27 env-config-purge 批随触碰补登 2 行（B8 / B9——本批 §3 轮次 1 发现 5：越 300 咨询线的 <400 未登记档）。
@@ -68,8 +67,8 @@
 | # | 项 | 现状（as-of 2026-09-25） | 到期 / 触发 |
 |---|---|---|---|
 | T1 | `session gc` / `session index` 旗标补全（bash / zsh / fish **三套皆缺**） | 三套只补子命令名面，无 `--dry-run` / `--confirm` / `--status` / `--rebuild`（实装旗标面 = `thincoder-cli/bin/thincoder.mjs:120-125` USAGE 行） | 该命令面 ∨ 补全面下次触碰 |
-| T2 | `ledger` 子命令与旗标补全（三套皆缺） | `ledger migrate --dry-run \| --confirm` / `ledger audit [--root <dir>]` 无补全（实装 = `thincoder-cli/bin/thincoder.mjs:452` 起）；**顶层词**（`ledger`）= 本批补（cli-small-items 批档 §2 #350③；实施 = 该档 §5） | 同 T1 |
-| T3 | 补全面 / 命令清单**全量**机检锁缺位 | 本批窄射程锁 = sweep 旗标 + `ledger` 顶层词（宿主 = `thincoder-cli/test/memory-sweep-cli.test.mjs`〔拟新增〕）；其余命令 / 旗标条目无锁（漂移史 = 本批 #350 三件） | 立全量锁单批 ∨ 补全面下次实质改动 |
+| T2 | `ledger` 子命令与旗标补全（三套皆缺） | `ledger migrate --dry-run \| --confirm` / `ledger audit [--root <dir>]` 无补全（实装 = `thincoder-cli/bin/thincoder.mjs:452` 起）；**顶层词**（`ledger`）= **cli-small-items 批**补（该批档 §2 #350③；实施 = 该档 §5） | 同 T1 |
+| T3 | 补全面 / 命令清单**全量**机检锁缺位 | **cli-small-items 批**窄射程锁 = sweep 旗标 + `ledger` 顶层词（宿主 = `thincoder-cli/test/memory-sweep-cli.test.mjs` 已落）；其余命令 / 旗标条目无锁（漂移史 = **cli-small-items 批** #350 三件） | 立全量锁单批 ∨ 补全面下次实质改动 |
 
 ## 4. 已消解（勿当债——留证据行，防回潮）
 
@@ -78,6 +77,7 @@
 | D1 | `test/busy-injection.test.mjs` **474**（越线档登记项） | 2026-09-25 file-tier-sweep 批 S4 拆三档：留守 209 · `test/busy-injection-render.test.mjs` 155 · `test/busy-injection-consume.test.mjs` 198——三档均 <400 ⇒ 移出 |
 | D2 | `thincoder-cli/src/tui/index.mjs` **499** · `thincoder-cli/src/tui/key-handler.mjs` **498**（贴硬限两档） | 2026-09-22 structure-debt 批拆分兑现（`src/tui/input-face.mjs` 等新档）——现读 **227 / 124** ⇒ 移出 |
 | D3 | §3-T4：CLI 命令入口面（`bin` 分发 / `USAGE` / shell 补全发射）设计档归属缺位 | 2026-09-25 cli-small-items 批：#350 载体收口——载体 = `docs/cli/design/CLI-ENTRY.md`（新建 · 命令树 / 补全发射契约 / #350 机检形迁入）+ `docs/README.md` §4 登记同批 ⇒ 归属缺位消解 |
+| D4 | A4：`bin/thincoder.mjs` **499**（贴 500 硬限——命令分发表外提触发已到） | 拆档批 R4 兑现（2026-09-28）：命令分发表外提 ⇒ `bin/thincoder.mjs` **178** · `src/command-table.mjs` **186** · `src/command-interactive.mjs` **187**（缝 = 同名转口 ∕ `ctx` 注入；三档均 <400）；MS-1 读取面同批随动（`docs/cli/design/CLI-ENTRY.md` §4）⇒ 移出 |
 
 ## 5. 边界（本册不做）
 
@@ -101,3 +101,6 @@
   **B 表补登 2 行**（B8 `test/doc-check.test.mjs` **332** · B9 `test/provider-error-surface.test.mjs` **309**——越 300 咨询线的 <400 未登记档）+ 档数句 **7 → 9** + 表说明同步。**零语义**（读数与登记面）。
 
 - 2026-09-27（**env-config-purge 批 · 收口轮 · eng-designer**——承该批 §5 实施实证）：A4 读数刷新 **499**（余 **1**——注「余量 ≤1 期间禁增；命令分发表外提须先于该档下次触碰」）· B8 读数刷新 **340**（「±0 行」注撤）。**零语义**（读数与登记面）。
+
+- 2026-09-28（**文档回填与卫生轮**（台账 #516）· eng-designer——同批同笔补记）：`:40` ∕ `:41` 「2026-09-25 本批」两义逐处指名落笔批（**doc-face-closeout 批**——#377 消解径）；B7 ∕ B8 ∕ T2 ∕ T3 的「本批」逐处指名（doc-face-closeout ∕ env-config-purge ∕ cli-small-items）；
+  `thincoder-cli/test/memory-sweep-cli.test.mjs` 两处「（拟新增）」按盘去标（`:35` ∕ `:72`——在盘为实）。**零新语义**。

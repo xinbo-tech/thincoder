@@ -12,7 +12,7 @@
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
 | 技能发现 | `thincoder-core/skills.mjs` | `thincoder-vscode/src/extension/skills.mjs` |
-| 规则发现（面定义 = §2.3） | `thincoder-core/rules.mjs`（stream 规则——两端） | `thincoder-vscode/src/extension/rules.mjs`（`.cursor/rules` 作用域规则——VSC 端面） |
+| 规则发现（面定义 = §2.3） | `thincoder-core/rules.mjs`（stream 规则 + `.cursor/rules` 读取面——R10 上提（纯搬）：**124**） | `thincoder-vscode/src/extension/rules.mjs`（同名转口壳——**75**；`matchesGlob` ∕ `simpleGlobMatch` 端壳留存） |
 | 同伴实例 / 域 | `thincoder-core/peer-instances.mjs` · `thincoder-core/peer-domains.mjs` | `thincoder-vscode/src/extension/peer-instances.mjs` · `thincoder-vscode/src/extension/peer-domains.mjs` |
 | 台账规则 / 路径约定 | 已迁核——经 `@thincoder/core/{ledger,conventions,escape}.mjs` 引用（S2 U4） | 已迁核——同引核单源（S2 W4 · 自持镜像已删） |
 | 台账展示面 | `thincoder-cli/src/tui/ledger-surface.mjs` | 端壳缝——核机制 `@thincoder/core/ledger-surface.mjs` + 面板推送供值（S2 W4） |
@@ -33,12 +33,14 @@
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
 | 170 | `thincoder-core/skills.mjs` ↔ `thincoder-vscode/src/extension/skills.mjs` | ② | 融合：取一侧（发现规则两端同构：扁平 + `SKILL.md` / 排序 / 项目层优先）+ fs 面（同步 / 异步）按端注入 | 分叉 ＝ 目录 + loader 形态（VSC 头注自述「同构语义…语义同源、实现自持」`:3-5`）⇒ 前提成立 | — | S1（建核补齐） |
-| 171 | `thincoder-core/rules.mjs` ↔ `thincoder-vscode/src/extension/rules.mjs` | ② | 融合：取一侧 | 分叉 ＝ 目录归属（VSC 住 `extension/`）⇒ 前提成立 | — | S1（建核补齐） |
+| 171 | `thincoder-core/rules.mjs` ↔ `thincoder-vscode/src/extension/rules.mjs` | ② | **已消解（R10 上提）**：读取面并入核（核 = stream + `.cursor/rules`）；VSC 档 = 同名转口 | 分叉 ＝ 目录归属 ⇒ 以上提消解（非「取一侧」） | — | 已落（R10——核 54 ⇒ **124** · VSC 档 125 ⇒ **75**） |
 | 172 | `src/peer-instances.mjs` ↔ `thincoder-vscode/src/extension/peer-instances.mjs` | ② | 融合：取一侧 + 端判别面按端注入 | 分叉 ＝ 目录 + 端标记判别（VSC 头注自述「VS Code 镜像」`:2`）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
 | 173 | `src/peer-domains.mjs` ↔ `thincoder-vscode/src/extension/peer-domains.mjs` | ② | 融合：取一侧 | 分叉 ＝ 目录（VSC 头注自述「VS Code 镜像」`:3`）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
 | 174 | `thincoder-cli/src/tui/ledger-surface.mjs` ↔ `thincoder-vscode/src/extension/ledger-surface.mjs` | ② | 融合：取一侧 + 渲染面按端注入 | 分叉 ＝ 目录（CLI 住 `tui/` / VSC 住 `extension/`）；台账规则两端逐字同（`ledger.mjs` 同路径 #71）⇒ 前提成立 | — | S1（建核补齐） |
 
-**现状注（2026-09-20 · VSC 行为/能力两则批）**：#171 行「融合：取一侧」**前提不成立**——两档非同一职责（核 `thincoder-core/rules.mjs` = stream 规则发现 ∥ `thincoder-vscode/src/extension/rules.mjs` = `.cursor/rules` 作用域规则）⇒ 该行处置以 U1 裁定（2026-09-20 05:15 选项②：两端保留两套语义 + 显式登记）与下节 §2.3 定义为准；「取一侧」不再作为该行处置。
+**现状注（2026-09-20 · VSC 行为/能力两则批）**：#171 行「融合：取一侧」**前提不成立**——两档非同一职责（核 `thincoder-core/rules.mjs` = stream 规则发现 ∥ `thincoder-vscode/src/extension/rules.mjs` = `.cursor/rules` 作用域规则）⇒ 该行处置以 U1 裁定（2026-09-20 05:15 选项②：两端保留两套语义 + 显式登记）
+与下节 §2.3 定义为准；「取一侧」不再作为该行处置。
+**2026-09-29 更新（R10）：`.cursor/rules` 读取面已上提核**（纯搬——核 `rules.mjs` 54 ⇒ **124**；VSC 档 125 ⇒ **75** = 同名转口）——两档关系收正为「核承载两端读取面 ∕ VSC = 转口壳」。
 
 ### 2.3 规则发现面（**权威定义** · 2026-09-20 立 · 设计源 = `docs/batches/2026-09-20-vsc-rules-retry-batch.md` §2）
 
@@ -48,7 +50,7 @@
   语义 = 模型输出流上按 `pattern` 触发：`abort` ⇒ 中断 + 注入规则消息 + 同上下文重入；`warn` ⇒ 回合后去重注入提醒。
   发现 = 核 `thincoder-core/rules.mjs` `discoverRules`；**两端生效**——装配期各自并入 `agent.streamRules`（CLI `thincoder-cli/src/cli/make-agent.mjs` ∥ VSC `thincoder-vscode/src/agent/setup.mjs`）。
 - **作用域规则（VSC 端面）** —— 目录 `.cursor/rules/*.md` / `*.mdc`；frontmatter `globs` / `alwaysApply` / `description`。
-  读取 = `thincoder-vscode/src/extension/rules.mjs` `loadRules`；**三分类 = 按序判定（互斥）**：
+  读取 = 核 `thincoder-core/rules.mjs`（R10 上提——纯搬；VSC 端壳 `thincoder-vscode/src/extension/rules.mjs` 同名转口，`matchesGlob` ∕ `simpleGlobMatch` 端壳留存）；**三分类 = 按序判定（互斥）**：
   ① `alwaysApply: true` ⇒ **常驻集**（**先判**——`globs` 同在不改分类）；② 有 `globs` ⇒ **作用域集** = 命中路径的工具派发前置提醒（会话级去重）；
   ③ 无 `globs` 且无 `description` ⇒ **常驻集**；④ 仅 `description`（Cursor 的 agent-requested 语义）⇒ **不注入**（本端无该机制——登记 · 边界）。
   常驻集落点 = [4] 层尾块；CLI 端不读该目录（无对位——登记，非缺陷）。

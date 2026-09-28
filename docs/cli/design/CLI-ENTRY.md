@@ -4,7 +4,9 @@
 > 配对需求档 = `docs/cli/requirements/FEATURES.md`（§2.13 对外文档契约面 + §3 N9——命令 · 子命令 · 旗标「文档说得到、敲得通」的判据句；层归属不对称：机制设计住本档）。
 > 对位档 = **无**（VSC 端无 argv 命令面——结构性不对称，P2 产品面 ⇒ 落 `docs/cli/`）。
 > 建档：2026-09-25（**cli-small-items 批 · 台账 #350 命令入口面载体收口**——承设计评审轮 1 发现 11：命令入口面设计档归属缺位 = 本册指定的收口）。
-> 论域文件 = `thincoder-cli/bin/thincoder.mjs`（`USAGE` 常量 + `switch (command)` 分发族）· `thincoder-cli/src/completions.mjs`（三套补全脚本发射）。行数口径 = `wc -l`；读数 as-of 2026-09-25 设计轮实读（仓根 = `thincoder/`）。
+> 论域文件 = `thincoder-cli/bin/thincoder.mjs`（壳：argv 预处理 + `USAGE` 常量装配 + 分发入口；**178**）· `thincoder-cli/src/command-table.mjs`（命令分发表——拆档批 R4 外提：分发骨架 + 八薄命令族 + help ∕ version；**186**）
+> · `thincoder-cli/src/command-interactive.mjs`（交互长驻三命令 chat ∕ tui ∕ acp；**187**）· `thincoder-cli/src/completions.mjs`（三套补全脚本发射）。
+> 行数口径 = `wc -l`；读数 as-of 2026-09-29 实读（仓根 = `thincoder/`）。
 
 ## 1. 定位与边界
 
@@ -55,10 +57,10 @@
 
 ## 4. 机检形（#350 契约）
 
-**宿主** = `thincoder-cli/test/memory-sweep-cli.test.mjs`（拟新增——CLI 两层 glob 自动收集，零登记）。三例：
+**宿主** = `thincoder-cli/test/memory-sweep-cli.test.mjs`（已落 · 实读 **79**——CLI 两层 glob 自动收集，零登记）。三例：
 
-- **MS-1 · 源码 token 机检**：读 `bin/thincoder.mjs` + `src/cli/memory-command.mjs` 源文本，断言 `case "memory"` 分发面 · `case "sweep"` 分支 · `SWEEP_USAGE` 行 · 三旗标 token。
-  **耦合义务**：命令分发表外提（触发在册 = `docs/cli/design/CLI-DEBT.md` §2.1 A4）执行批**须同批**改本读取面（锁点随分发落点走；不改即红）。
+- **MS-1 · 源码 token 机检**：读 `bin/thincoder.mjs` + `src/command-table.mjs` + `src/cli/memory-command.mjs` 源文本，断言 `case "memory"` 分发面 · `case "sweep"` 分支 · `SWEEP_USAGE` 行 · 三旗标 token。
+  **耦合义务**：命令分发表外提（触发在册 = `docs/cli/design/CLI-DEBT.md` §2.1 A4）**已履行（拆档批 R4——2026-09-28）**：读取面锁点随分发落点改指 `src/command-table.mjs`。
 - **MS-2 · 三套横深机检**：子进程驱动 `node bin/thincoder.mjs completion <shell>`（**沙箱 env**：`HOME` / `USERPROFILE` → 临时目录）；三套输出各含 sweep 三旗标 token（fish 形 = `-l origin` / `-l dry-run` / `-l confirm`）∧ 各含顶层 `ledger`；bash 套另断 §3 发射字节形段（锁改形漂移）。
 - **MS-3 · 行为边界**：直引导出 `memoryCommand`（解析错分支零触库）——`--dry-run --confirm` 互斥 / 未知参 / `--origin=` 空 ⇒ 返回 1 + `SWEEP_USAGE`（stderr）。
 - **射程**：本三例 = **窄射程锁**（sweep 旗标 + 顶层 `ledger` 词）；**全量锁缺位**（其余命令 / 旗标补全面无锁）= `docs/cli/design/CLI-DEBT.md` §3 尾项 T3（在册）。

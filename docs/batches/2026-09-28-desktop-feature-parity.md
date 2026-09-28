@@ -147,6 +147,11 @@
 - **新规矩首用（形态活不出门）**：四处单行级——① `SHELL.md:4` D 计数 **D1–D25 ⇒ D1–D26**（**#542 收正**）；② `SHELL.md:14` script 三条 ⇒ **四条**（+`start`——#453 落）；③ `SHELL.md:23` 目录树 += `ipc-registry.mjs`（#28 拆点）；④ `preload.cjs:6` 注册指针 ⇒ `src/main/ipc-registry.mjs`（#28 拆点）。
 - **台账**：**#542 核销**。
 
+### 1.27 #43 大合并轮交付收下 + 父侧机械收正（父侧 · 2026-09-29 02:4x）
+- **交付**（#43 · 五单合一：原 #35 ∕ #36 ∕ #37 ∕ #38 ∕ #42）：A–F 组逐处落盘——`IPC.md`（事件 **23** ∧ 白名单 **38** 全链同拍 + 四新事件行 + 三请求行 + `ev:ledger` detailLines + 死句删 + #28 并入）· `UI.md`（七段 + 五支 + **头行色裁定** = VSC 逐值——`:360-363`）· `RENDERER.md`（二十三通道 + 压缩行 + 卡序 + ledgerDetail）· `PROJECT.md`（§4.1 ipc 293 ∕ preload 38 + BE/BI + §4.2 拆档链登记块）· `WORKSPACE`（四处归位）· `MANIFEST` ∕ `VSC-DEBT` ∕ `CLI-DEBT` ∕ `CLI-ENTRY` ∕ `AGENT-LOOP` ∕ `SETTINGS`。doc-check 本域 **Δ = 0** ∕ 行宽 0（自归零 10 行超宽）。§2 两段已写。
+- **跨批闸门挡回三条 → 父侧机械落**（**可 revert**）：① `:545` R10 #1 行重锚「54 ⇒ **124**」；② `:217`「已证消费 = block 经 chat-text」句按复核结论收正（**直引 0/4**——端侧自持 + 留端注）；③ 本注块（即本节）。
+- **未落（在册）**：轮 8 三靶（#448 ∕ #451 ∕ #356——舱在跑）· `CONFIG.md:48` + `CORE-UNIFICATION.md:42/:1352`（下轮随文）· 退役面七块同词面续收（未启——另轮）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（初始轮 + 评审轮 1 修正（1–14 逐号）+ R1 设计面收正轮（#129 ∕ #131 · 六档八笔；flow 批档三处归父侧）+ 评审轮 3（重发复核）修正 · 微轮 #16（1–10 逐号）+ 退役面本体收正轮 + R2 设计面收正轮（#29 · ①–⑥ 逐号）+ R3 ∕ R6 设计面收正轮（#30 · ①–④ 逐号 + 三档 changelog）在册）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -214,7 +219,7 @@
 
 **#82 在册四项复核**：skills = **非缺项**（核默认路径同表可用；`configureSkillLoader` = 端差登记，见 §2.3）；会话 GC ∕ 索引 = **真缺** ✅（R1）；多实例 = **降级为复核**（C8 反证）。
 
-**#83（核件能力 × 三端消费）· 未排批 14 族**：宿主配置缝 9 条 → **§2.3 缝对账节**（逐条判定）；提示锚 → R4；顾问面 → **复核**（桌面桥已枚举 `_asyncAdvisors`：`agent-bridge.mjs:147`；`advisorOf` 采样 `:184`）→ R10 复核清单；记忆索引构建维护 → R2；认领 ∕ peer → R10 复核；会话 GC & 索引 → R1；**检查点回退** → R10 复核（`thincoder-core` 检查点出口面未证，VSC 对位面未证——上抛）；团队同步 → **非缺项**（`agent-assemble.mjs:78-83` `ensureClone` + `syncDir` 已在）；config 热更 → R8；skills 列表 → 非缺项；auto-think → R7（设置族内）；回声合并 → R10 复核；日志遥测 → 登记（非用户可见）；render-core toast → **已在盘**（`thincoder-render-core/toast.mjs:10`）+ 消费 = R9（#486）；flow 四档（block ∕ reasoning ∕ tool-card-restore ∕ ledger-line）→ R10 复核（逐档比对核件消费面；已证消费 = `flow/block.mjs` 经 `views/chat-text.mjs`）。
+**#83（核件能力 × 三端消费）· 未排批 14 族**：宿主配置缝 9 条 → **§2.3 缝对账节**（逐条判定）；提示锚 → R4；顾问面 → **复核**（桌面桥已枚举 `_asyncAdvisors`：`agent-bridge.mjs:147`；`advisorOf` 采样 `:184`）→ R10 复核清单；记忆索引构建维护 → R2；认领 ∕ peer → R10 复核；会话 GC & 索引 → R1；**检查点回退** → R10 复核（`thincoder-core` 检查点出口面未证，VSC 对位面未证——上抛）；团队同步 → **非缺项**（`agent-assemble.mjs:78-83` `ensureClone` + `syncDir` 已在）；config 热更 → R8；skills 列表 → 非缺项；auto-think → R7（设置族内）；回声合并 → R10 复核；日志遥测 → 登记（非用户可见）；render-core toast → **已在盘**（`thincoder-render-core/toast.mjs:10`）+ 消费 = R9（#486）；flow 四档（block ∕ reasoning ∕ tool-card-restore ∕ ledger-line）→ R10 复核（逐档比对核件消费面；**复核结论（修正 9 · R10 交回）= 直引 0/4——四档对位面 = 端侧自持 + 核件留端注，非直引**）。
 
 **「CLI 参考面」4 项**：`wait-status` = 核件（`thincoder-core/provider/wait-status.mjs`——R4 经 `onWait` 消费即得）；`closeAllMcp` ∕ `ledger-migrate` = CLI 命令面（桌面无命令面；退出清理 ∕ 迁移面）⇒ 登记（非用户可见面）；`traces` = 同 A9 判定（R10）。
 
@@ -542,7 +547,7 @@
 | R1 #4 ∕ R2 #5 ∕ R4 #5 ∕ R7 #7 | `src/preload/preload.cjs` | **62** | §4.1 在册 59（差异非 ±1 口径——见号外 2）；以现读为准；逐轮 +2 ∕ +2 ∕ +2 ∕ +3 |
 | R7 #7 | `src/main/ipc.mjs` | **278** | 见修正 4 |
 | R6 #6 | `renderer/index.html` | **48** | §4.1 在册 47——±1 口径差；±≤2 |
-| R10 #1 | 核 `rules.mjs` | **54** | 上提 +≈50 ⇒ ≈104 |
+| R10 #1 | 核 `rules.mjs` | **54** | 上提 +≈50 ⇒ ≈104（**实 = 54 ⇒ 124**——diff = 档头 ∕ 注记说明块；2026-09-29 届盘重锚） |
 | R3 #5 | 核 `tools/execute.mjs` | **236** | 邻面（缝所在） |
 | R3 #8 | VSC `src/tools/shared.mjs` | **194** | 改指 |
 | R6 #3 | VSC `webview/search.js` | **165** | 改指 ⇒ ≈30 |

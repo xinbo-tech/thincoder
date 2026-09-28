@@ -29,15 +29,17 @@
 - **两层分家**：视图档（`thincoder-desktop/renderer/views/*.mjs`）分两层 —— ① **纯构树**（`xxxModel(state)` → 态对象；`xxxTree(model)` → **结构描述符树**）；② **薄挂载**（`mountXxx(root, state)` = `clear` + `build` + `append`——**建树面单点**）。视图档 **DOM 触面四处** = 建树（本条）· 接线（下条）· 帧尾态刷（`syncChrome`——本档 §1.1）· 帧尾滚动作（`settleFrame`——本档 §3）。
 - **接线面（第二形）**：事件 / 状态机型视图档（如滚动面）以 **`attachXxx(root, deps)`** 落形——`deps` = 出口回调集（`on*` 键：回填 / 复跟 / 停跟）+ **只读口** `guards?()`（缺 ⇒ 恒假），程序化滚动作经返回 handle 出（不占 `deps` 键）；阈值常量与事件订阅（`scroll` 用 `passive`）收口于该档（常量单源声明 = 档头）；判定与算式一律纯函数（`scrollAction` / `compensateTop` / `nextWindow` / `smoothWindowOpen`）。
 - **接线面依赖面（测试缝）**：`attachXxx` 的 DOM 依赖 = root 三读数（`scrollTop` / `scrollHeight` / `clientHeight`）+ `addEventListener` / `scrollTo` ⇒ **假 root 可注入**（接线面入自动面：直调出口 + 断言 store 读数）；**真实事件触发（用户真滚）仍归人工走查**。
-- **事件归约面（批 8 落）**：`ev:*` **十八条**通道 → 切片写者**单源** = `thincoder-desktop/renderer/events.mjs`——`reduce(state, ev)` 纯函数（零 DOM ⇒ 平 node 直测）+ `applyPage(state, receipt)`（页回执 → 首屏 / 回填两径）
+- **事件归约面（批 8 落）**：`ev:*` **二十三通道** → 切片写者**单源** = `thincoder-desktop/renderer/events.mjs`——`reduce(state, ev)` 纯函数（零 DOM ⇒ 平 node 直测）+ `applyPage(state, receipt)`（页回执 → 首屏 / 回填两径）
   + `applyFlags(state, key, flags)`（`sessionFlags` 切片写者——页读 / 出站回执**两径同点**；状态栏对齐批）+ `blockOfMessage(msg)`（核 message → 块五型：用户 / 助手 / 推理 / 工具 / 错误——**页读域**；
   **块总集 = 六型**：+ `subagent`（归档子 agent 块——**运行期块**，非页读域；「对齐第二批」项 5））；
-  订阅接线拆出 `thincoder-desktop/renderer/events-subscribe.mjs`——`attachEvents({ on, store, invoke, onTurnTail })`（十八条通道订阅 · 退订句柄在场 · 回合尾标题刷新**存续**——输入区 flush 携行随「回合中插入」批退场）· 单向依赖归约档（无环）。
+  订阅接线拆出 `thincoder-desktop/renderer/events-subscribe.mjs`——`attachEvents({ on, store, invoke, onTurnTail })`（二十三通道订阅 · 退订句柄在场 · 回合尾标题刷新**存续**——输入区 flush 携行随「回合中插入」批退场）· 单向依赖归约档（无环）。
   写者与读者键面同源 = `key`（`docs/desktop/design/IPC.md` §1 会话键面）。
   **批 A 增（两通道归约）**：`ev:question` / `ev:task` 由「直返 `state`」改**写切片**（`state.questions` / `state.tasks`——同 `key` 就地替换零叠条，**不入 `pool`**）；队列面写者 = `ev:queue` 归约（**「回合中插入」批收正**——权威 = 宿主 ∕ 渲染面 = 镜面；原 store 纯动作 `pool.queue` 写面退场——单源 = `docs/desktop/design/PROJECT.md` §2 **KD-40**）。
   **批 B 增（一通道归约）**：`ev:usage` 写 `usage` 切片（按会话 `key` · 同键就地替换 · 首写自种——**归约面唯一写者**；未至 / 非正数 ⇒ 零节点——KD-20，单源 = `docs/desktop/design/PROJECT.md` §2 KD-20 行）。
   **本批增（桌面空闲唤醒 · 两通道归约 + 消化行族）**：`ev:susp` 写 `susp` 切片（按会话 `key` · 同键就地替换——计数四值 + `active`；`active:false` ⇒ 段回落两态词，**禁假造**）；`ev:digest` 写 `digest` 切片（按会话 `key` · 同键就地替换——起跑 / 终态两态；`end` 原地更新本键游标行）；
   **流内消化行族** `[data-digest]` = 非块节点组（沿 `[data-pending]` 先例——不占块序 / 不动 `data-blocks` 不变式；两行：起跑标签行 + `n > 0` 计数行——单源 = `thincoder-vscode/webview/chat-status.js:69-122`）；
+  **流内压缩状态行** `[data-compress]`（R4 增）= 非块节点组同侧单元素四态（start ∕ done ∕ fallback ∕ failed——形 / 在场 / 生命期 = `docs/desktop/design/IPC.md` §1 `ev:compress` 行；构树面 = `thincoder-desktop/renderer/views/compress-status.mjs`）
+  · **卡序闭集 += `goal`（尾位）**（R5 增——核件 `renderGoalPanel` 直取；卡序单源 = `thincoder-desktop/renderer/mount-cards.mjs` `CARD_ORDER`）· **`ledgerDetail` 行**（R8 增——`ev:ledger` `detailLines` 切片 ⇒ 状态行段 11 tooltip 载波，非块节点）；
   **在场 / 出现 / 更新 / 退场路径**：在场 ⟺ 本键 `digest` 切片 = 起跑态（`start`）；出现 = 起跑帧建组 ∥ 更新 = `end` 原地更新本键游标行（先更新后摘）∥ 退场 = `end` 更新毕摘除；插入点 / 根子序与帧尾态刷成员 = 本档 §1.1 两条纪律（两处皆本族点名）；
   **块回收面**（驱动 hooks.reclaim ⇒ `ev:subagent { status: "done" }` 逐条补发—— `settled` 驻留块归档入流；退出 freeze 同型）；状态行段 3 三态与词键 = `docs/desktop/design/IPC.md` §1「挂起 ∕ 消化词键注」。
 - **池切片清点口径（批 8 落）**：池条目入池 = `ev:tool-call`（开始）、`ev:tool-result` 只收束 `status`——**清点 = 全量在场**（收束不摘除 ⇒ 长会话池切片单调增长）；
@@ -89,7 +91,7 @@
 - **用户块（可见面修复批修 · 写者与出泡时刻 —— #458；「回合中插入」批扩写者）**：活流 `user` 块两写者 = **发送面**（`msg:send` 回执 `ok` 真——直发径）+ **排队消费回执**（`ev:queue.delivered`——步边界注入 ∕ 回合尾送达两时刻；裁决与边界 = `docs/desktop/design/PROJECT.md` §2 KD-23 / KD-40）+ **键门**（回执键 = 现刻 `activeSession`，非活动 ⇒ 零写；
   **在飞回合内切回** ⇒ 本回合用户块随回合尾落盘后、于下次页读在场——页读 = `thincoder-desktop/src/main/session-slots.mjs:123` / `:145`；槽落盘在回合尾 = `thincoder-desktop/src/main/agent-host.mjs:214` / `:219`）；
   块形 = `{ kind: "user", text, ts? }`（**与 `blockOfMessage` 回放块同形**——无 `id` ⇒ 键域回落位序，同回放；`ts` = 提交 ∕ 入队现刻——「对齐第二批」项 4 载波，非有限数 ⇒ 键缺席）·
-  写入走 `appendBlock`（**既有**纯动作——`thincoder-desktop/renderer/store.mjs:73` 导出，归约面 `thincoder-desktop/renderer/events.mjs:21` / `:97` / `:105` / `:220` 四处已消费；`pendingNew` 语义同源）· 十八条通道零 `user` 通道（写入时刻 = 受理时刻 ⇒ 活流块 ⟺ 已受理）。
+  写入走 `appendBlock`（**既有**纯动作——`thincoder-desktop/renderer/store.mjs:73` 导出，归约面 `thincoder-desktop/renderer/events.mjs:21` / `:97` / `:105` / `:220` 四处已消费；`pendingNew` 语义同源）· 二十三通道零 `user` 通道（写入时刻 = 受理时刻 ⇒ 活流块 ⟺ 已受理）。
 - **流式游标清点（可见面修复批修 —— #459）**：清点两族 = ① 回合尾三径（`done` / `stopped` ∨ `ev:error`）② **段界**（`ev:tool-call` 入场 ⇒ 助手文本段收束）；
   清点**须落块面引用**（新块对象 ⇒ `blocks` 键变 ⇒ 帧触发 ⇒ 就地更新摘 `data-streaming` 锚——旁路态无刷新路径 = 缺陷成因面）· 辅助与两族调用点住归约面（`thincoder-desktop/renderer/events.mjs`）· 游标语义 = **末块追加态**（形态单源 = `docs/desktop/design/UI.md` §1「本批注（可见面修复 · 五件）」项 3 · 裁决 = `docs/desktop/design/PROJECT.md` §2 KD-24）。
 - **文本段行形态通则（可见面修复批修 —— #460）**：行内 ≥2 文本段（flex 行：`gap` ∨ `space-between`）⇒ **逐段包元素**（`span[data-seg="<段码>"]`；段缺席 ⇒ 零节点——空段仍占 flex 项 ⇒ 假间隔）；
