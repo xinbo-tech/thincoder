@@ -118,6 +118,18 @@ _electron.launch({
 
 **边界**：本序不出网、不押真实模型（零 provider = 发送必败面即判据；成功面**不做** —— §8）· 不截图（固定落点 PNG 判据面 = §3.3 第 7 步）· 断言只走 `data-*` 锚与 console 字面（**零文案匹配** —— 临时家无 `locale` 配置，词面非本序判据面）· `project:open` 无 `data-path` 形（主进程原生对话框）不适机检 ⇒ 该控件维持**在场断言**（第 4 步），真点面 = 带 `data-path` 形（第 6 步）。
 
+### 3.6 账本警示面序（即用例 5 的执行序 · 六序）
+
+1. 临时家 = `mkdtemp(join(tmpdir(), "tc-desktop-e2e-"))`（launch 契约 = §3.1 · 隔离 = §3.2）；另建第二枚临时目录作项目根（记 `PROJ`）。
+   夹具 = `<临时家>/.thincoder/config.json` = `{"locale":"en"}`（向导跳过）+ 会话槽族档一枚（`cwd` = `PROJ`——形单源 = 核写面物化形 · 沿 §3.5 夹具先例）+ **损坏现场档**一枚 = `{manifest}.corrupted`（= `<临时家>/.thincoder/sessions/<cwd 哈希>.json.manifest.corrupted`——命名单源 = `docs/core/design/SESSION.md` §6.1 后缀族 / §6.23 判据句 3）。
+2. `launch`（§3.1 · `--user-data-dir` 照 §3.2）⇒ `await app.firstWindow()` ⇒ 等 `dataset.boot ∈ {ok, error}` **落位** ⇒ 断言 `=== "ok"`。
+3. **真点**左列最近目录项（`button[data-action="project:open"][data-path]`——作用域限定照 §3.5 第 6 步）⇒ 等 `[data-guide="no-message"]` 在场（resume 开页两况同落）。
+4. 断言**警示行在场**：会话区 `[data-section="sessions"]` 末子节点 = `div.rail-ledger-notice[data-ledger-notice]`——**非 `button`** ∧ 零 `data-action`（非可点）；且**不打断列表**：`[data-list="sessions"]` 行数 = 夹具族数。
+5. 截图（沿 §3.3 第 7 步记法）：预建目录 ⇒ `page.screenshot({ path })` 落固定落点 `thincoder-desktop/test/artifacts/ledger-notice.png` ⇒ 断言存在 + PNG magic（前 4 字节 `89 50 4E 47`）。
+6. `await app.close()` ⇒ 清两枚临时目录；全程 `page.on("pageerror")` 收集须为空。
+
+**边界**：本序不出网（零 provider——不开回合）· 负断言面（正常账本 ⇒ 零注记）**不在本序**——单源 = 两单元面（`thincoder-desktop/test/session-contract.test.mjs` 回执缺席 ∧ `thincoder-desktop/test/views.test.mjs` 零节点；登记不静默缩水）· 断言只走 `data-*` 锚（零文案匹配——`reason` 值面归视图用例）。
+
 ## 4. 受影响文件清单
 
 | 档 | 现行数 | 预估增量 | 说明 |
@@ -125,7 +137,9 @@ _electron.launch({
 | `thincoder-desktop/test/integration/settings-panel.test.mjs` | 0 ⇒ **137**（内容行数） | ~120 行（预算） | 用例 1（§3.3 九步）· 常驻类 · **已落**（2026-09-27 实读） |
 | `thincoder-desktop/test/integration/first-run-smoke.test.mjs` | 0 ⇒ **171**（内容行数——2026-09-27 实读） | +171 行（已落） | 用例 2（§3.5 十二序）· 常驻类 · **已落**（批 B 追加轮） |
 | `thincoder-desktop/test/integration/chat-render.test.mjs` | 0 ⇒ **146**（内容行数——2026-09-28 实读） | +146 行（已落） | 用例 3（`T-DSK37` 会话流经核 + 会话面板元数据 · 真 Electron 直驱）· 常驻类 · **已落**（R3c） |
-| `thincoder-desktop/test/files.mjs` | 12 ⇒ **19**（2026-09-27 实读） | +1 行（已落）· 本批两档入册 ⇒ 净 0 行（名打包入既有行） | 登记新用例档（walk 递归 + 反向自检据此覆盖） |
+| `thincoder-desktop/test/integration/statusline-align.test.mjs`（集成域） | 0 ⇒ **142**（`wc -l`——实读 2026-09-28） | +142 行（已落） | 用例 4（`T-DSK39` 状态栏对齐——真 Electron 打开态对表；夹具前置 = 第二枚临时目录项目根〔槽 `cwd` = `PROJ`〕——判据面单源 = §6）· 常驻类 · **已落**（状态栏对齐批） |
+| `thincoder-desktop/test/integration/ledger-notice.test.mjs`（集成域） | 0 ⇒ **121**（`wc -l`——实读 2026-09-28） | +121 行（已落） | 用例 5（`T-DSK40` 账本警示面——真 Electron；夹具前置 = 损坏现场档 `{manifest}.corrupted` + 会话槽族档〔槽 `cwd` = `PROJ`〕——判据面单源 = §3.6 / §6）· 常驻类 · **已落**（账本可靠批 · 桌面微轮） |
+| `thincoder-desktop/test/files.mjs` | 12 ⇒ **22**（实读 2026-09-28） | 各批新档名打包入既有行（净 0 行/批——已落） | 登记新用例档（walk 递归 + 反向自检据此覆盖） |
 | `thincoder-desktop/test/run.mjs` | 41 | ±1 行（`:4` 注释改写 · **逻辑零改动**） | 注释须与本批「集成域已建」同实 ⇒ 本批随改（walk 递归天然覆盖新档） |
 | `thincoder-desktop/.gitignore`（新增） | 0 | ~5 行 | 忽略 `thincoder-desktop/test/artifacts/`（KD-10） |
 | `thincoder-desktop/package.json` | 20 | +1 行 | `devDependencies` 加 `playwright-core`（现版 `1.63.0` · as-of 2026-09-27 registry 直读）；**只进 devDependencies**，`dependencies` 不变 |
@@ -135,7 +149,7 @@ _electron.launch({
 | `docs/desktop/design/PROJECT.md` | 410（as-of 2026-09-26 落笔轮；盘上现值 431 内容行——批 A 修正轮落于其后） | +10 行（七处小改 + 值收正两处 + 行宽折行两处） | **已落**（2026-09-26 放行落笔轮）⇒ §8-7（已解） |
 | `docs/core/design/TESTING.md` | 413 | +3 行（多实现面行补桌面面 / §10 边界口径收正） | **已落**（2026-09-26 放行落笔轮）⇒ §8-4 / §8-5（已解） |
 
-> 表内「现行数 / 预估增量」为**各批落笔时读数**（as-of；行内已注日期者从其注）；全盘现值**单源** = `docs/desktop/design/PROJECT.md` §4.1。
+> 表内「现行数 / 预估增量」为**各批落笔时读数**（as-of；行内已注日期者从其注）；全盘现值**单源** = `docs/desktop/design/PROJECT.md` §4.1（各档现行值——R3 期六档行已入册）；本批触碰面「现行 ⇒ 预期」= 该档 §4.2 各批行。
 
 **零改动面**：`thincoder-desktop/src/**` 与 `thincoder-desktop/renderer/**`（= 产品码全域，本批不动）· 三端（cli / core / vscode）测试面 · 各包 `package.json` 脚本（`thincoder-desktop/package.json` 的 `scripts` 块亦零改动）。
 
@@ -159,6 +173,8 @@ _electron.launch({
 | `T-DSK27 settings-panel` | 正常 | 空 fixture 家（唯一预置 `<临时家>/.thincoder/config.json` = `{"locale":"en"}`）· 无项目 | boot `ok`；入口在；点按后面板 `open`；段序 `providers,model,agent,mcp`；态 `ready,none,ready,ready`；PNG 落固定落点（§3.3 第 7 步）；关闭后 `closed` 且子节点 0 | ✅ 做 |
 | `T-DSK32 first-run-smoke` | 正常 | 空 fixture 家（零 config ⇒ 无项目 / 无会话；预置族档一枚） | 五断言面（向导退场 → `no-project` → 真点开项目 `no-message` → 真点关标签 `no-session` → 真点 `session:create` → 键入必败面）· 全形 = §3.5 十二序 | ✅ 做（批 B 追加轮） |
 | `T-DSK37 chat-render` | 正常 | fixture 家（`{"locale":"en"}` + 会话槽族四档——槽 1 回放历史：围栏块 / 注入样本 / 路径候选 / 推理块） | 引导位 `ok`；真点最近目录 ⇒ `data-state="flow"` ∧ 块序 = `user/assistant/reasoning/user`；`pre.code-block` 恰一枚 + 复制钮点按 ⇒ 剪贴板收代码文本；注入样本字面在场 ∧ 零 `script` 节点；推理块（`details.reasoning-block`）恰一枚；路径候选零 `.file-link`；行元数据段序 = `provider / msgs / updated` ∧ 含 `p1:m1` | ✅ 做（R3c） |
+| `T-DSK39 statusline-align` | 正常 | fixture 家（`{"locale":"en"}` + **另建第二枚临时目录作项目根**（记 `PROJ`）+ 会话槽族档〔`cwd` = `PROJ`；沿 T-DSK32 夹具先例〕——**两臂**（夹具按可达态）：主臂槽档 = `autoApprove: true` / `advisor: { guard: true }` / `engineering: true` / `planMode: false`（四真不可达——`engineering: true` ⇒ 核恢复点 `clearPlanMode` 令 `planMode` 恒 false，实读 `thincoder-core/session-lifecycle.mjs:126-133`）；第二臂槽档 = `planMode: true` / `engineering: false` + `autoApprove: true` / `advisor: { guard: true }` 同值（另盖 `plan` 点亮）；两臂皆 `tasks` 2 条 + `title` 一条 + 读数可算；清理 = 两枚临时目录） | ① 真点左列**最近目录项**（`button[data-action="project:open"][data-path]`——与 T-DSK32 第 6 步同一产品路；作用域限定同 §3.5 第 6 步）⇒ `openDir` 成功链 ⇒ 自动一次 `session:resume` 开页（点开即续；主路未开页 ⇒ 备路 = 真点左列会话行〔`button[data-action="session:switch"]`〕——同一开页尾） ② 状态行在场段 ⊆ 16 码闭集 ∧ 相对序 = 闭集序 ∧ 假 / 缺 ⇒ 零节点（**主臂**亮点三段 = `auto` / `advisor` / `eng` 在场 + **`plan` 零节点**（负断言）；**第二臂** = `plan` 在场 + `eng` 零节点；两臂保留在场 = `state` / `tasks` / `context` / `title` / `enter`）③ `state` 段词 = `Ready`（locale = en）④ `enter` 段词 = `Enter: send` ⑤ `tasks` 段词 = `✓0/2` ⑥ PNG 落 `thincoder-desktop/test/artifacts/statusline-align.png`（CLI 同刻对照面）；断言序单源 = `docs/desktop/design/PROJECT.md` §7 **T-DSK39** 行 | ✅ 做（状态栏对齐批已落——机检档 `statusline-align.test.mjs` **142**） |
+| `T-DSK40 ledger-notice` | 正常 | fixture 家（`{"locale":"en"}` + 第二枚临时目录作项目根〔记 `PROJ`〕+ 会话槽族档〔`cwd` = `PROJ`〕+ **损坏现场档** `{manifest}.corrupted` 一枚——命名 / 落位单源 = §3.6 第 1 步；清理 = 两枚临时目录） | ① 真点左列最近目录项（带 `data-path` 形——作用域限定同 §3.5 第 6 步）⇒ 等 `[data-guide="no-message"]` ② 会话区 `[data-section="sessions"]` 末子 = `div.rail-ledger-notice[data-ledger-notice]`（**非 `button`** ∧ 零 `data-action`）∧ `[data-list="sessions"]` 行数 = 夹具族数 ③ PNG 落 `thincoder-desktop/test/artifacts/ledger-notice.png` ④ 零 `pageerror`；断言序单源 = §3.6；用例号自铸披露 = `docs/desktop/design/PROJECT.md` §10 **AU** | ✅ 做（账本可靠批 · 桌面微轮已落——机检档 `ledger-notice.test.mjs` **121**） |
 | `T-DSK27b config 档缺失` | 边界 | 临时家**不预置** config | 引导位仍 `ok`（档缺 ⇒ `configured` 判假）；向导面占槽（设置面是否仍可开 **待实施期实证**） | ❌ 不做（§8-3） |
 | `T-DSK27c 面板重复开 / 关` | 边界 | 连点入口两次 + 关两次 | `open` / `closed` 收敛无残留 | ❌ 不做（§8-3） |
 | `T-DSK27d 引导失败面` | 错误 | 需破坏 preload 桥（不可达） | boot `error`，用例以「boot 值 = error」失败并回显该值 | ❌ 不做（§8-3） |
@@ -166,7 +182,8 @@ _electron.launch({
 **`T-DSK32` 断言面（判据单源 = §3.5 十二序）**：① 向导退场后 `[data-guide="no-project"]`（含 `project:open` 控件）∧ 输入框 `disabled` ② **真点**最近目录项（带 `data-path` 形）⇒ `[data-guide="no-message"]` ∧ 非 `disabled`
 ③ **真点**关唯一标签 ⇒ `[data-guide="no-session"]`（含 `session:create` 控件）∧ 仍 `disabled` ④ **真点** `session:create` ⇒ `no-message` ∧ 非 `disabled` ⑤ 键入 + Enter ⇒ 值逐字保留 ∧ `data-blocks=0` ∧ console `provider-invalid`。
 
-> **按批读**：建档批（E2E 基建批）落 `T-DSK27`（判据②：至少一条）；**批 B 追加轮**补落 `T-DSK32`（首启空态引导冒烟）· **R3c** 补落 `T-DSK37`（会话流经核 + 会话面板元数据——判据面单源 = `docs/desktop/design/PROJECT.md` §7 T-DSK35 / T-DSK34）。
+> **按批读**：建档批（E2E 基建批）落 `T-DSK27`（判据②：至少一条）；**批 B 追加轮**补落 `T-DSK32`（首启空态引导冒烟）· **R3c** 补落 `T-DSK37`（会话流经核 + 会话面板元数据——判据面单源 = `docs/desktop/design/PROJECT.md` §7 T-DSK35 / T-DSK34）· **状态栏对齐批**落 **`T-DSK39`**（打开态对表——**已落** · 机检档 **142**；判据面单源 = `docs/desktop/design/PROJECT.md` §7 **T-DSK39** 行）。
+> **账本可靠批 · 桌面微轮**落 `T-DSK40`（账本警示面——真 Electron · **已落** · 机检档 **121**；判据面单源 = §3.6 / §6）。
 > 边界 / 错误三条（`T-DSK27b`–`T-DSK27d`）**登记不做**，不静默缩水；编号以 `docs/desktop/design/PROJECT.md` §7 落定序为准（`T-DSK27` = 2026-09-26 落 · `T-DSK32` = 批 B 追加轮落 · `T-DSK37` = R3c 落——自铸披露 = `docs/batches/2026-09-27-render-core-r3.md` §5）。
 
 ## 7. 边界（不做）
@@ -214,3 +231,10 @@ _electron.launch({
 - 2026-09-27（**批 B 追加轮 · 注记修正轮 #106**——设计评审 §3 轮次 2 注记 N3 落）：§3.2 fixture 行加用例面限定（「唯一预置内容」= **用例 1 面；用例 2 见 §3.5**）；明细 = `docs/batches/2026-09-27-desktop-firstrun-smoke.md` §2.11。
 - 2026-09-27（**批 B 追加轮 · 实施后对账轮**）：§4 表两行收正（`first-run-smoke.test.mjs` 0 ⇒ **171** 已落 · `files.mjs` 12 ⇒ **19**——两档入册 · 净 0 行）。明细 = `docs/batches/2026-09-27-desktop-firstrun-smoke.md` §2.12。
 - 2026-09-28（**R3 结算随收 · 设计面收正微轮**——承 `docs/batches/2026-09-27-render-core-r3.md` §5.9）：§4 补 `chat-render.test.mjs` 行（0 ⇒ **146** 已落）；§6 补 `T-DSK37` 行（✅ 做——R3c）+ 表下注「按批读」补 R3c 落项。零新语义。
+- 2026-09-28（**状态栏对齐批 · 设计轮**）：§4 增 `statusline-align.test.mjs` 行（拟新增 · 0 ⇒ ≈110——估价）· §6 增 `T-DSK39` 行（状态栏对齐——真 Electron 打开态对表 · ⏳ 待实施）+ 表下注「按批读」同笔；明细 = `docs/batches/2026-09-28-statusline-align.md` §2。
+- 2026-09-28（**状态栏对齐批 · 设计评审轮 1 修正**——发现 6 / 10 逐号点修）：§6 `T-DSK39` 输入与 ① 步**点名真点路径**（最近目录项〔`project:open` + `data-path`〕⇒ 自动续会话开页；备路 = 会话行〔`session:switch`〕）+
+  补**夹具前置**（第二枚临时目录作项目根 · 槽 `cwd` = `PROJ`）· §4 该档行同笔 · 表下「单源」口径收正（§4.1 各档现行值 + §4.2 各批触碰面）。明细 = `docs/batches/2026-09-28-statusline-align.md` §2。
+- 2026-09-28（**账本可靠批 · 桌面微轮 · 设计轮**——F-L4 桌面端落点）：§4 增 `thincoder-desktop/test/integration/ledger-notice.test.mjs` 行（拟新增 · 0 ⇒ ≈100）· §3.6 新增（`T-DSK40` 账本警示面 · 六序）· §6 增 `T-DSK40` 行 + 按批读注同笔；明细 = `docs/batches/2026-09-28-ledger-reliability.md` §2 微轮块。
+- 2026-09-28（**状态栏对齐批 · flags 供面口径修订轮**——实施座实测上抛 + 父侧裁定）：§6 `T-DSK39` 夹具按**可达态**改**两臂**（主臂 = `engineering:true ∧ planMode:false`〔四真不可达——实读 `thincoder-core/session-lifecycle.mjs:126-133`〕· 第二臂 = `planMode:true ∧ engineering:false`）；
+  ② 断言随臂收正（主臂三段亮 + `plan` 零节点 / 第二臂 `plan` 亮 + `eng` 零节点；保留 = 段在场 ⊆ 16 码闭集 · 相对序 = 闭集序 · 假 / 缺 ⇒ 零节点）+ 夹具补 `title` 一条（`title` 段在场判据——`newSlotData` 缺省空串，实读 `thincoder-core/session-slot-write.mjs:48`）。明细 = `docs/batches/2026-09-28-statusline-align.md` §2。
+- 2026-09-28（**账本可靠批 · 报告面收正轮 · eng-designer**——承三座报告面父侧处置项）：§4 两行按盘收正（`statusline-align.test.mjs` 0 ⇒ **142** · `ledger-notice.test.mjs` 0 ⇒ **121**——均已落；`files.mjs` 12 ⇒ **22**）· §6 `T-DSK39` / `T-DSK40` 两行「待实施」⇒「✅ 做」+ 表下按批读注同拍。明细 = `docs/batches/2026-09-28-ledger-reliability.md` §2.12。

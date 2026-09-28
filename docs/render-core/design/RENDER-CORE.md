@@ -135,14 +135,14 @@
 
 ## 4. 逐机制对位表（22 机制 × 桌面 · 单源）
 
-口径：机制清单 = VSC webview 会话流呈现机制归并（勘察逐档清点）——**22 行**；列 4 = 桌面接核判定三值：
-**自然成立**（接核即有 · 无桌面增量）· **需补面**（桌面侧须补入站 / 归约 / 形态）· **显式裁**（有意不承载或口径改判——须登记理由与被否）。
+口径：机制清单 = VSC webview 会话流呈现机制归并（勘察逐档清点）——**22 行**；列 4 = 桌面接核判定四值：
+**自然成立**（接核即有 · 无桌面增量）· **需补面**（桌面侧须补入站 / 归约 / 形态）· **显式裁**（有意不承载或口径改判——须登记理由与被否）· **改判**（原判定随「对齐」口径收正——行 16，2026-09-28）。
 
 | # | 机制 | VSC 承载（file:line） | 核承载件 | 桌面接核判定 |
 |---|---|---|---|---|
 | 1 | Markdown 渲染（含转义闸） | `md.js:67` / `:106` / `:146` | `md.mjs` | **显式裁（改判）**：桌面由 `pre-wrap` 纯文本改为经核 Markdown——KD-RC-4 |
 | 2 | 语法高亮 | `highlight.mjs:165`（R1 迁核） | `highlight.mjs` | **自然成立**（随 md；代码块面由核给 `<pre class="code-block">`） |
-| 3 | 流式增量渲染（rAF 降频缝合） | `streaming.js:36-79` / `:112` | 核缝合件 | **需补面**（核件分件消费 · 桌面外壳留存）：帧尾就地重渲经核 `paintStreamTarget`；流式档位分派 / 落位留桌面（`renderer/events.mjs` `onToken` + `thincoder-desktop/renderer/views/chat-stream.mjs`——未接核 rAF 缝合件） |
+| 3 | 流式增量渲染（rAF 降频缝合） | `streaming.js:36-79` / `:112` | 核缝合件 | **需补面**（核件分件消费 · 桌面外壳留存）：帧尾就地重渲经核 `paintStreamTarget`；**推理面经核 `paintReasoningTarget`**（专用画笔 = 通用画笔 + `scrollTop = scrollHeight` 钉底——「对齐第二批」项 1；不接则思考块不跟底）；流式档位分派 / 落位留桌面（`renderer/events.mjs` `onToken` + `thincoder-desktop/renderer/views/chat-stream.mjs`——未接核 rAF 缝合件） |
 | 4 | 推理块（think） | `streaming.js:81-107` | 核推理块构件 | **需补面**：核回调 `onReasoning`（`thincoder-core/agent.mjs:273`）未接——桌面 `agent-bridge.mjs` 补回调（现九键）+ 新通道 + 归约块型（块型 `reasoning` 已在桌面五型内） |
 | 5 | 帧 / 块容器（回合块与 idx） | `ui.js:176-189` | 核块容器构件 | **需补面**（核件分件消费 · 桌面外壳留存）：块容器 = 桌面描述符树留存（三锚 `data-block-kind` / `data-block-id` / `data-seg` 不动）；文本面 / 推理内容经核 `md`——否「整件替换核 DOM」 |
 | 6 | 工具卡面 | `ui.js:203` / `:281` / `:329` | 核工具卡构件 | **需补面**（核件分件消费 · 桌面外壳留存）：工具结果面经核 `capText`（渲染单源）；卡壳四段头 / 折叠 / 耗时 / 改动摘要留存（`thincoder-desktop/renderer/views/chat-tool.mjs`）；`formatToolSummary` / `isToolFailure` **不消费**（非缺口——卡面单源 = `docs/desktop/design/UI.md:25`「四段头 + 改动摘要」· 成败判据单源 = `docs/desktop/design/IPC.md:40` 载荷 `ok`） |
@@ -155,15 +155,15 @@
 | 13 | 消息窗口裁剪 | `ui.js:446-454`（150 块） | 不入核 | **显式裁（各自）**：桌面窗限 = 200 块 + 摘要块（`RENDERER.md` §2，判据面自持）——数值差登记 · 核不夺 |
 | 14 | 懒历史回填 | `history.js:43-88` | 不入核 | **显式裁（各自）**：桌面回填 / 补偿算式已在册（`RENDERER.md` §3）；核化候选另议（§9） |
 | 15 | 跟滚 / 回底 | `ui.js:426-468` · `scroll.js:13-20` | 不入核 | **显式裁（各自）**：桌面跟滚 / 药丸已在册（`RENDERER.md` §3 判据面） |
-| 16 | 队列标记（待发送） | `queued-mark.js:29` / `:63` | 核标记逻辑 | **自然成立**（桌面队列族 + flush 机制已在——`store.mjs` `enqueue` / `drainQueue`） |
+| 16 | 队列标记（待发送） | `queued-mark.js:29` / `:63` | 核标记逻辑 | **改判（对齐第二批）**：桌面**接核标记原语**（`markPending` / `paintLabel` / `clearPending`——标记类与标签两形态字面单源）+ **队列按会话分键**（`pending: { [会话键]: [{ text, ts }] }`）⇒ **流内待发送气泡**（单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 2）；`planBusyQueued` 不消费（宿主快照对账面 = VSC 专有） |
 | 17 | 忙态门 / 载入态 | `loading.js:86` / `:67` | 不入核 | **自然成立**（桌面忙态 = 位标 `running` + 输入区判据已在） |
 | 18 | 审批卡 | `permission.js:21` / `:86` | 核卡面 | **按 ② 同判（卡族外壳留存）**：桌面 `thincoder-desktop/renderer/views/approval.mjs` 自持卡面（三出口 / 批形已在）；不迁核卡面件（VSC 形态——与桌面锚系 / 用例相抵） |
 | 19 | 提问卡 | `question.js:10` / `:59-76` | 核卡面 | **按 ② 同判（卡族外壳留存）**：桌面 `thincoder-desktop/renderer/views/question.mjs` 自持卡面（两作答路已在）；不迁核卡面件 |
 | 20 | 计划 / 任务面板 | `panels.js:16` / `:39` | 核面板构树 | **按 ② 同判（面板外壳留存）**：桌面计划卡（`thincoder-desktop/renderer/views/plan.mjs`）自持构树；不迁核面板件；搜索（`search.js`）桌面**本轮不承载**（VSC 端面） |
-| 21 | 子代理活动区（live 面板） | `activity.js` · `activity-view.js` | 核块态机 + 块面 | **需补面**：桌面右列重定位为子 agent 面板（D20——通道 / 归约 / 形态三面 + **出生自愈**：宿主存活投影 2s 再断言（拍体沿 `thincoder-vscode/src/extension/panel-messages.mjs:42-74` 语义——只发在飞实例）；见 `docs/desktop/design/IPC.md` §1） |
+| 21 | 子代理活动区（live 面板） | `activity.js` · `activity-view.js` | 核块态机 + 块面 | **需补面**：桌面右列重定位为子 agent 面板（D20——通道 / 归约 / 形态三面 + **出生自愈**：宿主存活投影 2s 再断言（拍体沿 `thincoder-vscode/src/extension/panel-messages.mjs:42-74` 语义——只发在飞实例）；见 `docs/desktop/design/IPC.md` §1）；**块面直消费（对齐第二批）**：`renderSubBlock` / `refreshBlock` / `renderSubagentChunk` / `renderSubDesc`（内容回显 = tail-3 / 展开）+ **归档入流**（终态 ⇒ 流内尾追块；表项墓碑 `region: "flow"`；核 effects 表不逐条执行——端面动作由模型态幂等派生）；单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 3 / 5 |
 | 22 | 状态栏 / 状态行 | `status-bar.js:13` | 不入核 | **显式裁**：桌面状态行**对齐 CLI**（D17）而非共用 VSC 状态栏——15 段逐项裁定表住 `docs/desktop/design/UI.md` §1 本批注 |
 
-**计数（D3）**：22 行 = 自然成立 **5**（行 2 / 8 / 9 / 16 / 17）· 需补面 **9**（行 3 / 4 / 5 / 6 / 11 / 18 / 19 / 20 / 21）· 显式裁 **8**（行 1 / 7 / 10 / 12 / 13 / 14 / 15 / 22）。
+**计数（D3）**：22 行 = 自然成立 **4**（行 2 / 8 / 9 / 17）· 需补面 **9**（行 3 / 4 / 5 / 6 / 11 / 18 / 19 / 20 / 21）· 显式裁 **8**（行 1 / 7 / 10 / 12 / 13 / 14 / 15 / 22）· 改判 **1**（行 16）。
 
 ## 5. 接口契约（核导出面 · 端注入面 · 样式契约）
 
@@ -204,8 +204,71 @@
 
 **端注入面（核不持句柄）**：`deps = { emit(type, payload), t, now? }`——出站一律经 `emit`（VSC 绑 `postMessage`；桌面绑 `invoke`）；R2 构件件另注入端事实读取族（`connectedOf` / `regionOf` / `trace` / `syncLiveOf` / `onStripped`——逐件件头）；核内零全局单例（现 VSC 的 `ctx` / `S` 全局态属端）。
 
-**样式契约**：核构件类名 = 被抽档现行名（KD-RC-7）；两端各供样式——VSC 沿用 `chat.css` / `controls.css`（零改）；桌面「核类名 → 桌面变量」映射 = `thincoder-desktop/renderer/core.css`（**已落** · R3c 实读 **140**——md 产出 / 推理块 / 复制钮三族 + `task-check`）。
+**桌面消费面（对齐第二批扩 · 单源 = 本段；机制 / 判据措辞单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」）**：① 纯函数 / 状态机族扩 = `paintReasoningTarget`（推理钉底——项 1）；
+② `queued-mark` 三导出（`markPending` / `paintLabel` / `clearPending`——用户块标签两形态与待发送标记；项 2 / 4）；
+③ 构件族四件（`renderSubBlock` / `refreshBlock` / `renderSubagentChunk` / `renderSubDesc`——右列子 agent 块面与归档块面；项 3 / 5）；
+④ **`setStrings(宿主表 ∪ 核投影)` 单点接线**（核件内取词走核 i18n——落点 = `thincoder-desktop/renderer/i18n.mjs` `initDict`；核件所需 VSC 侧键（`sub.*` / `msg.*` / `queued.pending`）入宿主表，**值逐字同 VSC locales**——沿 `msg.copy` / `msg.copied` 先例）。
+
+**样式契约**：核构件类名 = 被抽档现行名（KD-RC-7）；**内容面视觉对齐 VSC（值以 VSC webview 实值为源）· 外壳自持**——VSC 沿用 `chat.css` / `controls.css`（零改）；
+  桌面 = `thincoder-desktop/renderer/core.css`（核类名 → 桌面值映射）+ 值变量单源 = 主题表 `thincoder-desktop/renderer/styles.css`（亮暗两套）。
+  落定 = 批 `docs/batches/2026-09-28-desktop-vsc-visual-parity.md`（需求 §4 **D21** · 用户 2026-09-28 04:42 走查裁定 B）。
 **「会话流经核」= 渲染逻辑单源**（核件分件消费：`md` / `attachCopyButtons` / `renderReasoning`〔推理块壳 · 结构同形〕/ `capText`）；**桌面外壳留存**（三锚 / 滚动 · 回填 · 窗口裁剪——核不夺）。
+
+**内容面视觉映射口径（三律 · 下表判据）**：
+
+1. **宿主主题色角色对位**——VSC `--vscode-*` 族（前景 / 边框 / 链接 / 错误）落桌面主题表对应变量（`--fg` / `--line` / `--accent` / `--warn`）：**角色对齐 · 值随端主题**（桌面主题体系零动——需求 D21 边界）。
+2. **语义常量值照搬**——语法配色 / 叠加层 rgba / 尺寸 / 圆角 / 透明度 / 字号比例：VSC 实值逐字为源（新增变量入主题表亮暗两套）；**字族栈例外 = `--mono`**（角色对位 / 近似——宿主编辑器字族，见变量表）。
+3. **盒层单层律**——文本面**内嵌件**（代码块 / 表格 / 引用 / 行内码 / 复制钮）的盒模型值照搬；**块壳已承载者不搬**（块内边距 / 边框 / 圆角归桌面壳层 `chat.css`）——两处内边距叠加即观感偏离（端差登记 = §9）。
+
+**桌面主题表新增变量（12 个 · 亮 / 暗两值 · 单源 = `thincoder-desktop/renderer/styles.css`）**：
+
+| 变量 | 亮 | 暗 | VSC 源（实值同字面；例外 = `--mono` 行——角色对位 / 近似） |
+|---|---|---|---|
+| `--mono` | `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` | 同亮 | **角色对位 / 近似**（宿主编辑器字族 `--vscode-editor-font-family`，随宿主设置）——字面出处 = `thincoder-desktop/renderer/core.css:29`（现值 · 本批上收为主题变量）；`thincoder-vscode/webview/base.css:74` 该行回退栈 = 系统 UI 栈 |
+| `--hover-bg` | `rgba(0,0,0,0.06)` | `rgba(255,255,255,0.08)` | `thincoder-vscode/webview/base.css:47` / `:22` |
+| `--hover-bg-strong` | `rgba(0,0,0,0.12)` | `rgba(255,255,255,0.16)` | `thincoder-vscode/webview/base.css:48` / `:23` |
+| `--overlay` | `rgba(0,0,0,0.08)` | `rgba(0,0,0,0.3)` | `thincoder-vscode/webview/base.css:49` / `:24` |
+| `--green` | `#1a8a4a` | `#4ec9b0` | `thincoder-vscode/webview/base.css:62` / `:40`（复制成功色） |
+| `--syn-kw` | `#0000ff` | `#569cd6` | `thincoder-vscode/webview/base.css:51` / `:27` |
+| `--syn-str` | `#a31515` | `#ce9178` | `thincoder-vscode/webview/base.css:52` / `:28` |
+| `--syn-cmt` | `#008000` | `#6a9955` | `thincoder-vscode/webview/base.css:53` / `:29` |
+| `--syn-num` | `#098658` | `#b5cea8` | `thincoder-vscode/webview/base.css:54` / `:30` |
+| `--syn-type` | `#267f99` | `#4ec9b0` | `thincoder-vscode/webview/base.css:55` / `:31` |
+| `--syn-prop` | `#795e26` | `#9cdcfe` | `thincoder-vscode/webview/base.css:56` / `:32` |
+| `--syn-atrule` | `#af00db` | `#d7ba7d` | `thincoder-vscode/webview/base.css:57` / `:33` |
+
+`--overlay` 两用（代码块底 ∥ 复制钮底）——VSC 侧 `thincoder-vscode/webview/chat.css:85` 取 `--vscode-textCodeBlock-background`，无宿主主题变量时回退 `--overlay`（桌面无宿主主题 ⇒ 取回退值）。
+
+**逐面映射表（21 面 · 面 = 核产出件）**——VSC 侧选择器以 `.content`（助手消息 Markdown 面）为例；桌面侧两容器 = `.block-text`（消息正文）/ `.reasoning-content`（推理内容区）：
+
+| # | 面 | VSC 实值（file:line） | 桌面落法（复用变量 ∥ 新增变量 ∥ 直接值） |
+|---|---|---|---|
+| 1 | 正文（字族 / 字号 / 行高） | 字族 = `thincoder-vscode/webview/base.css:74`（`--vscode-editor-font-family`）；字号 = `thincoder-vscode/webview/base.css:75`（`--vscode-editor-font-size`，缺省 `14px`）；`.bubble` 行高 `1.55` = `thincoder-vscode/webview/chat.css:50-55` | `font-family: var(--mono)`（**新增变量** ★上抛①）· `font-size: 14px`（与现值同）· `line-height: 1.55`；断词沿壳层 `.block` 的 `overflow-wrap: anywhere`（零重复落） |
+| 2 | 段落 + 首尾留白 | `thincoder-vscode/webview/chat.css:68-69`（`p { margin: 0 0 6px }` · `p:last-child { margin-bottom: 0 }`） | `p { margin: 0 0 6px }` + `p:last-child { margin-bottom: 0 }`；**删首子归零规则**（现 `core.css:12-15` 的 `> :first-child`）——VSC 首件保留自身上边距（**直接值**）；**保留容器级 `> :last-child { margin-bottom: 0 }`**（现 `core.css:16-19`）——保留理由 = **盒层单层律的容器臂**：尾件底外边距归零 ⇒ 底距不叠加壳层块底距（VSC 仅零 `p:last-child` ⇒ 非 p 尾件〔代码块 / 表格〕底距两端不同——**有意保留**；如需逐字对齐 ⇒ 收窄为 `p:last-child` 单条） |
+| 3 | 标题 h1–h6 | `thincoder-vscode/webview/chat.css:63-66` · `:126`（h5）· `:127`（h6） | 逐级字号 / 边距 / 字重：h1 `1.3em` `12px 0 6px` `700` · h2 `1.15em` `10px 0 4px` `700` · h3 `1.05em` `8px 0 4px` `600` · h4 `1em` `6px 0 2px` `600` · h5 `0.95em` `5px 0 2px` `600` · h6 `0.9em` `4px 0 2px` `600` **+ `opacity: 0.8`**（VSC `--textSecondary` 未定义 ⇒ 回退 `--fg`）；现制「一律 `1em` / `600` / `10px 0 4px`」⇒ 本值（**直接值**） |
+| 4 | 列表 ul / ol / li + 嵌套 | `thincoder-vscode/webview/chat.css:111-112` · `:129` · `:130-132` | `ul, ol { margin: 4px 0 6px; padding-left: 20px }` · `ol { list-style: decimal }` · `li { margin: 2px 0; line-height: 1.5 }` · 嵌套三条同值（**直接值**）；现值 `8px 0` / `22px` ⇒ 本值 |
+| 5 | 引用 blockquote | `thincoder-vscode/webview/chat.css:134-141` | `margin: 6px 0` · `padding: 6px 12px` · `border-left: 3px solid var(--line)`（**复用**）· `background: var(--hover-bg-strong)`（**新增变量**）· `border-radius: 0 4px 4px 0`（**直接值**）· **`color` 撤 `--fg-muted`**（VSC `--textSecondary` 未定义 ⇒ `--fg`） |
+| 6 | 行内码 code | `thincoder-vscode/webview/chat.css:71-78` | `font-family: var(--mono)` · `font-size: 0.9em` · `background: var(--hover-bg-strong)`（**新增变量**）· `padding: 1px 5px` · `border-radius: 3px` · `word-break: break-word`（**直接值**） |
+| 7 | 代码块壳 `pre.code-block` | `thincoder-vscode/webview/chat.css:80-88` | `margin: 8px 0` · `padding: 0` · `border: 1px solid var(--line)`（**复用**）· `border-radius: 6px` · `overflow: hidden` · `background: var(--overlay)`（**新增变量**）· `position: relative`（既有）；现值 `padding: 8px 10px` / `overflow: auto` / `var(--bg)` ⇒ 本值 |
+| 8 | 语言条 `.code-lang` | `thincoder-vscode/webview/chat.css:90-98` | `display: block` · `padding: 3px 10px` · `font-size: 10px` · `color: var(--fg)`（**复用**）· `opacity: 0.5` · `border-bottom: 1px solid var(--line)` · `font-family: var(--mono)`；现值 `--fg-muted` / `12px` / `margin-bottom: 4px` ⇒ 本值 |
+| 9 | 代码体 `.code-block code` | `thincoder-vscode/webview/chat.css:100-109` | `display: block` · `padding: 8px 10px` · `overflow-x: auto` · `font-family: var(--mono)` · `font-size: 0.88em` · `line-height: 1.5` · `background: transparent` · `border-radius: 0`；现值 `12.5px` / `padding: 0` ⇒ 本值 |
+| 10 | 语法高亮 `tk-*`（9 类） | `thincoder-vscode/webview/base.css:371-379`（变量 = `thincoder-vscode/webview/base.css:27-33` / `:51-57`） | **桌面现零 `tk-*` 规则 = 高亮不可见（本批首要缺口）** ⇒ 9 条规则照落：`.tk-keyword` → `--syn-kw` · `.tk-string` → `--syn-str` · `.tk-comment` → `--syn-cmt` + `font-style: italic` · `.tk-number` → `--syn-num` · `.tk-type` → `--syn-type` · `.tk-property` → `--syn-prop` · `.tk-atrule` → `--syn-atrule` · `.tk-class` → `--syn-type` · `.tk-id` → `--syn-atrule`（**新增变量 7**） |
+| 11 | 表格 | `thincoder-vscode/webview/chat.css:154-159` | `border-collapse: collapse` · `margin: 8px 0` · `font-size: 0.9em` · `width: 100%`（**直接值**）；现值缺 `font-size` / `width` |
+| 12 | 表头 / 单元格 | `thincoder-vscode/webview/chat.css:161-170` | `th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left }` · `th { background: var(--hover-bg-strong); font-weight: 600 }`（**新增变量**）；现值 `2px 8px` / 无表头底色 ⇒ 本值 |
+| 13 | 链接 a | `thincoder-vscode/webview/chat.css:114-115` | `color: var(--accent)`（**复用**）· `text-decoration: none` · `a:hover { text-decoration: underline }`（**直接值**） |
+| 14 | 行内强调 strong / em / s | `thincoder-vscode/webview/chat.css:123-124` · `:143` | `strong { font-weight: 700 }` · `em { font-style: italic }` · `s { text-decoration: line-through; opacity: 0.7 }`（**直接值**；核 `md` 产 `<s>`） |
+| 15 | 图片 img | `thincoder-vscode/webview/chat.css:172-175` | `max-width: 100%`（既有）· `border-radius: 4px`（**直接值**） |
+| 16 | 分隔线 hr | `thincoder-vscode/webview/chat.css:117-121` | `border: 0` · `border-top: 1px solid var(--line)`（**复用**）· `margin: 10px 0`（既有同值） |
+| 17 | 任务清单勾选 `.task-check` | `thincoder-vscode/webview/chat.css:145-151` | `margin-right: 6px` · `vertical-align: middle`（既有）· `pointer-events: none` · `[disabled] { opacity: 0.85 }`（**直接值**） |
+| 18 | 推理摘要 `.reasoning-summary` | `thincoder-vscode/webview/chat.css:286-294` | `font-size: 12px` · `color: var(--fg)`（**复用**）· `opacity: 0.5` · `font-style: italic` · `cursor: pointer` · `user-select: none`；**`padding: 4px 10px` 不搬**（盒层单层律——水平内边距归壳层；端差①= §9）；尾缀 `content: "…"`（字形面）保留 |
+| 19 | 推理内容区 `.reasoning-content` | `thincoder-vscode/webview/chat.css:393-401` | `padding: 6px 0 0`（水平 `10px` 不搬——盒层单层律）· `border-top: 1px solid var(--line)`（**复用**）· `font-size: 12px` · `opacity: 0.65` · `line-height: 1.45` · `max-height: 200px` · `overflow-y: auto` · `word-break: break-word` · `color: var(--fg)`（有效前景——VSC 不单设、继承 `body`）｜`margin-top: 6px` / `--fg-muted` 承接**均收**（2026-09-28 实施落） |
+| 20 | 推理块内 Markdown（标题 / 段 / 行内码 / 列表） | `thincoder-vscode/webview/chat.css:404-413` | `h1, h2, h3 { font-weight: 700; margin: 8px 0 4px }` · `p { margin: 0 0 5px }` + `p:last-child { margin-bottom: 0 }` · `code { font-family: var(--mono); background: rgba(127,127,127,.15); border-radius: 3px; padding: 1px 4px; font-size: 0.92em }`（**直接值**＝ VSC `--bg2` 缺省回退值）· `ul, ol { margin: 4px 0 6px; padding-left: 18px }` · `li { margin: 2px 0 }` · `strong` / `em` 同 14 行；**代码块不来推**（端差②= §9） |
+| 21 | 代码块复制钮 `.code-copy-btn` | `thincoder-vscode/webview/base.css:386-401` | `position: absolute; top: 6px; right: 6px`（既有）· `padding: 3px 8px` · `font-size: 11px` · `border: 1px solid var(--line)`（**复用**）· `border-radius: 4px` · `background: var(--overlay)`（**新增变量**）· `color: var(--fg)`（**复用**）· `opacity: 0.4` · `transition: opacity 0.15s, background 0.15s` · `:hover { opacity: 1; background: var(--hover-bg-strong) }` · `.copied { opacity: 1; color: var(--green); border-color: var(--green) }`（**新增变量**）；现值 `--fg-muted` / `--bg-raised` / `.copied` 用 `--accent` ⇒ 本值 |
+
+**计数（D3 · 内容面口径）**：**21 面**（1–21 = 正文 ∥ 段落 ∥ 标题 ∥ 列表 ∥ 引用 ∥ 行内码 ∥ 代码块壳 ∥ 语言条 ∥ 代码体 ∥ 高亮 ∥ 表格 ∥ 表头单元格 ∥ 链接 ∥ 强调 ∥ 图片 ∥ 分隔线 ∥ 勾选框 ∥ 推理摘要 ∥ 推理内容 ∥ 推理内 md ∥ 复制钮）；新增变量 **12**（`--mono` / `--hover-bg` / `--hover-bg-strong` / `--overlay` / `--green` / `--syn-*` 七）；端差 **2**（内容面 · §9）。
+**会话面板面（桌面左列会话列表）映射表 = `docs/desktop/design/UI.md` §1 本批注项 2**（端壳面，非核产出件——本档不重述）。
+**落点与预算（内容面口径）**：`thincoder-desktop/renderer/core.css` **140 ⇒ ~240**（内容行数；≪300）· `thincoder-desktop/renderer/styles.css` **374 ⇒ ~396**（主题表 +12 变量 × 亮暗两套；含会话面板面之全批预算 = `docs/desktop/design/PROJECT.md` §4.2——变量 14 · ~420）；逐面真机比对 = 需求 §4 D21 验收面。
+**★上抛①（字族）**：正文面字族随 VSC = 编辑器等宽栈（`--mono`）——**观感变化最大一项**；若用户否决 ⇒ 单点回退 = 删该行（恢复 `--font` 系统 UI 栈），余 20 面不受影响。
 
 ## 6. 受影响文件与测试面（三端 · 实施分批随动）
 
@@ -281,6 +344,15 @@
   Reload 冷启 / 清屏重推形（`items: ["x","x"]`）核 `queued-mark` 按 items 逐条建泡（2 泡），源档第二条经 `lastBubbleWithRaw` 文本查重复用首条（1 泡）——裁因 = 核与队列计数镜像自洽（源档 1 泡 = 查重副产物），C2 面无锁该形；核不为此改形（回「1 泡」口径 = 新需求另裁）。
 - **R3 端差登记（三项 · 结算随收 · 源 = `docs/batches/2026-09-27-render-core-r3.md`）**：① `ev:usage` 帧门 = `percent > 0` ⇒ percent 取整 0 的回合 `tokens` / `timers` 一并不达（段 8 / 12 前段不显——自愈：数据随 percent ≥ 1 自显；§1.2）；
   ② 「会话关闭 ⇒ 该键投影清」**无端面**——标签关闭 = 渲染面动作 · 主侧无该通道（已落 = 删除 / 宿主退出两径；如需覆盖须另裁主侧通道；§1.3）；③ consult 族**无停止径**——块面零钮（诚实非死控 · 「用时」亦不随 2s 拍刷新；§1.3）。
+- **D21 内容面视觉端差登记（两项 · 源 = `docs/batches/2026-09-28-desktop-vsc-visual-parity.md`）**：
+  ① **盒层单层（推理块）**——VSC 的推理摘要 / 内容区内边距（`thincoder-vscode/webview/chat.css:287` 的 `4px 10px` · `:394` 的 `6px 10px`）归桌面壳层，不搬（盒层单层律；水平内边距保持单层 10px——两层叠加即观感偏离）；
+  ② **推理块内代码块同形**——桌面 `.code-block` 全局规则在 `.reasoning-content` 内同样生效；VSC 侧 `.reasoning-content pre` 另有一层灰底覆盖（`thincoder-vscode/webview/chat.css:408`；且其 `.code-lang` 语言条因 `.content` 前缀缺失不复样式）⇒ 桌面**不复制**该覆盖（核产出件两端同形优先；观感差 = 推理内代码块带描边与语言条）——如需逐字复刻 ⇒ 另裁。
+- **D21 会话面板视觉端差登记（一项 + 不追面 · 全清单七条 = `docs/desktop/design/UI.md` §1 本批注项 2，本条列核心四条——本档不重述端壳面）**：
+  ① **行内动作钮键盘可达臂**——VSC 仅 hover 显隐（`thincoder-vscode/webview/session.css:114` / `:119`），桌面保留显隐律**并加一臂** `:focus-visible { opacity: 1 }`（键盘可达面已入档——`docs/desktop/design/UI.md` §1 键盘可达行）；
+  不追面核心四条 = 面板容器皮肤（`thincoder-desktop/renderer/styles.css` 的左列卡片 = 布局面；VSC = 浮层 dropdown 带 `--shadow`）· 会话选择器 / 下拉交互（`#session-selector` / `#session-dropdown`）·
+  会话条 `#session-bar`（对位 = 桌面会话头 + 标签条——已在册 D18）· `#project-btn`（多根切换钮——本端单项目模型 ⇒ 不适用）；`.dropdown-section` 无对位（VSC 会话列表不发射——仅 `thincoder-vscode/webview/model-picker.js:73` 消费）。
+- **「对齐第二批」端差 / 登记（2026-09-28 · 源 = `docs/batches/2026-09-28-desktop-vsc-align-2.md` §2）**：① 核侧无「助手说话人标签」原语（桌面 = 端侧同字面落形——上抛 = §10 **G**）；② `queued-mark` 的 `planBusyQueued` / `clearPending` 不消费（宿主快照对账面 / 节点换代交接——登记）· 核 effects 表不逐条执行（端面动作由模型态幂等派生）；
+③ 桌面无 digest 边界物 ⇒ 归档 `atBoundary` 恒按尾追（= VSC 边界失效退化径同形）；④ 2s 走时刷新（块头 elapsed）不落（归小修族）；⑤ 运行期可见面两件（待发送气泡 / 归档子 agent 块——页读整置即失）。
 
 ## 10. 上抛与报告项
 
@@ -292,6 +364,8 @@
 | D | **退役批文件面核对**：R1–R3 开工前与 #108 在飞批核对（§8 前置） | 实施前置 | 实施批执行；冲突 ⇒ 串行 |
 | E | **探针两件（实施批首跑）**：① VSC 真 webview 加载 `node_modules` 相对路径核模块（dev junction 形态下）② 桌面 `/rc/` 双根供给与逃逸门 | 实现面实证 | R1 首跑即测；任一失败 ⇒ 回本档改加载形（KD-RC-1 备选 = 物化后经 `localResourceRoots` 显式扩面） |
 | F | **桌面「计时」段新鲜度窗**：读数 = 核 `_pendingTimers`（`thincoder-core/agent.mjs:84`）· 刷新点 = 回合尾（`ev:usage` 同点）⇒ 空闲期到期不即时刷新 | 设计登记 | 沿状态行目标读（不显倒计时）；若须更强新鲜度 ⇒ 另裁推送面 |
+| G | **核侧无「助手说话人标签」原语**（核内为 `thincoder-render-core/flow/block.mjs` `renderBlock` / `buildAssistantRestore` 内联字面；桌面助手标签 = 端侧同字面落形——词键同源 / 字形住样式档） | 上抛（核面收拢候选 · 归父侧裁） | 若须核侧收拢 ⇒ 补助手标签原语（与 `queued-mark` 的 `paintLabel` 同族）——**另裁**；本批不改核件 |
+| H | **核件取词 = 端侧 `setStrings` 接线**（构件族签名无 `deps.t`——核内取词走模块级 `i18n.t`） | 登记（接线面） | 备选 = 核件签名改注入 `t`（改核件——另裁）；现状 = 桌面 `initDict` 处单点 `setStrings`（单源 = 本档 §5 桌面消费面段） |
 
 ## 变更记录
 
@@ -310,3 +384,13 @@
   §6 六档行补 R1 实施注（含 `diff.mjs:6` 逐字性唯一例外）· §5 `formatToolSummary` 签名收正（`text`）· KD-RC-1 收正「链接 / 物化 / 断言三纪律 + 永不发布」（§10 B 同裁改「不入发布序列」）。
 - 2026-09-28（**R3 结算随动 · 设计面收正微轮**——承 `docs/batches/2026-09-27-render-core-r3.md` §1.2–§1.4）：§2 KD-RC-6 与 §4 行 3 / 5 / 6 措辞收正（「换接核件」= 渲染逻辑单源——核件分件消费 · 桌面外壳留存；`formatToolSummary` / `isToolFailure` 不消费 = 非缺口登记）；
   §4 行 7 / 9 齐不消费口径 + 计数行随动（需补面 9 / 显式裁 8）；§5 样式契约落 `renderer/core.css`（实读 140）；§8 R3a `currentTool` 词项回填（由视图段自 `blocks` 派生——零新槽）· R3c 措辞同笔；§9 增 R3 端差三项。零新语义。
+- 2026-09-28（**D21 会话流 / 会话面板视觉对齐批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-vsc-visual-parity.md` §1）：§5 样式契约句收正——**内容面视觉对齐 VSC（值以 VSC webview 实值为源）· 外壳自持**（原「视觉按端自持」口径取消，改判 = 需求 §4 D21 / 用户 04:42 走查裁定 B）；
+  §5 增**内容面视觉映射口径三律** + **主题表新增变量表 12 个** + **逐面映射表 21 面**（VSC 实值带 `file:line` × 桌面落法）；§9 增 D21 端差两项（盒层单层 / 推理内代码块同形）+ 会话面板端差一项 + 不追面四条（会话面板映射表住 `docs/desktop/design/UI.md` §1 本批注——本档不重述）。
+- 2026-09-28（**D21 视觉批 · 设计评审轮 1 点修**——逐号）：§5 变量表 `--mono` 行改标**角色对位 / 近似**（宿主编辑器字族，随宿主设置）+ 字面出处（现居 `thincoder-desktop/renderer/core.css:29`）；
+  §5 计数行 / 落点预算行加**内容面口径**限定（含会话面板面之全批合计 → `docs/desktop/design/PROJECT.md` §4.2）；§5 映射表行 2 叙明容器级 `> :last-child` **保留理由**（盒层单层律的容器臂——VSC 仅零 `p:last-child`）。
+  §5 落点预算基线 141 ⇒ 收正 **140**（141 = 含末空行的编辑器计数；在册口径〔内容行数 · 文末换行不计〕与 R3 结算实读均 140）。零新语义。
+- 2026-09-28（**父侧直接执行〔可 revert〕**——评审轮 1 收尾笔）：口径律 2 与变量表表头补 `--mono` 例外句（角色对位 / 近似）——与 `:222` 行改标同笔收口（两处 · 零新语义）。
+- 2026-09-28（**父侧直接执行〔可 revert〕· 实施随动**）：§5 行 19 值列补 `color: var(--fg)` 绑定（`--fg-muted` 承接尾注收）——同 `thincoder-desktop/renderer/core.css:219`（实施落）与 E2E 读数（`rgb(27, 31, 36)` = `--fg` 亮值）对盘。零新语义。
+- 2026-09-28（**对齐第二批 · 六件 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-vsc-align-2.md` §1）：§4 行 3 / 16 / 21 三行收正（推理面接 `paintReasoningTarget` · 队列标记改「接核原语 + 流内气泡」（原「自然成立」撤销）· 子代理活动区直消费构件族四件 + 内容回显 + 归档入流）；
+  §5 增**桌面消费面段**（构件族四件 + 标记三导出 + `paintReasoningTarget` + `setStrings` 单点接线 + 核件词键面）；§9 增「对齐第二批」端差 / 登记五条；§10 增 **G / H** 两行（助手标签原语候选 · 核件取词接线面）；
+  机制 / 判据措辞单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」；通道面 = `docs/desktop/design/IPC.md` §1（`ev:subchunk`）。
