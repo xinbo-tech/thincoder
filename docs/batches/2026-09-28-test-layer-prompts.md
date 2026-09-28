@@ -128,6 +128,13 @@
 - **落点**：提示词两档单元测试条尾补显式句（EN「the change&apos;s implementer writes them and runs exactly those (nobody else, no per-round re-runs)」+ CN 镜像同句）。
 - 文件形态不动（批次本地件、名随批次档、住 `docs/batches/`——§1.15 在册）。
 
+### 1.20 「全量」词汇退役（用户 23:27 问「为什么还有全量这个词」）
+- **裁决**：新架构下不存在「全量」——舱只跑本任务几件；**收口跑的是该仓套件（= 集成集）**。所有活面「全量 ∕ full suite ∕ full-run」测试运行语义 → 统一「仓套件（收口跑）」。
+- **本笔落点（父侧直接执行 · 6 档）**：提示词 EN ×3 档（`discipline-engineering` ∕ `persona-engineering` ∕ `discipline-normal`——各 1–3 处）+ CN 镜像 ×3 档（同）· 需求档 `TESTING.md` 7 处（§1 总纲 ∕ F1 ∕ F2 义务句 ∕ F3 ∕ N1 ∕ N2 ∕ §4）。
+- **义务句改版（原文逐字替换）**：`not full-suite verified — the parent-side closeout run is the only full-run point.` → **`not repo-suite verified — the parent-side closeout run is the only repo-suite run.`**（需求 F2 = 权威源；提示词同句已同步）。
+- **设计档 `TESTING.md`（30+ 处）**：派设计轮收（#128 · fix 轮——① 词汇退役 ② N11 三前端同步 ③ 结构陈旧最小对齐；记录面 ∕ §10 历史行不动）。
+- **留存（非运行语义，不同义）**：「全量保留 ∕ 全量处置」= 范围义（F16 ∕ 合并记录）·「禁全量勘察」= 派单勘察义——均不动。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（四档对齐落定（TESTING · AGENT-LOOP · VERIFY-REDESIGN · ENGINEERING-MODE-V2）· 待评审）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>

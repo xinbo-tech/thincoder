@@ -75,7 +75,7 @@
   ① **write-first** — write the moved segment verbatim into the target file, then delete it from the source (code always has a copy; deleting first is irrecoverable on failure);
   ② logic body unchanged — only imports adjust (relative paths + new imports for referenced source symbols);
   ③ wiring — the source's remaining references to the moved symbol import it; the moved segment's references to source symbols move along or export/import back;
-  ④ verify — node --check + related tests + the full suite go green, AND the test/assertion count before and after the split must match (broken references and orphan bodies surface explicitly; a silent drop of assertions is a split defect);
+   ④ verify — node --check + related tests + the repo suite go green, AND the test/assertion count before and after the split must match (broken references and orphan bodies surface explicitly; a silent drop of assertions is a split defect);
   complete the split inside ONE task (no two-batch intermediate states).
   Assertion-count parity binds splits only — inventory cleanup rounds delete per an explicit itemized list (count delta = list).
 
