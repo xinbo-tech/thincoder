@@ -10,7 +10,7 @@
  *      `result` 空 ⇒ 头行退纯展示 `div`（零 toggle 控件 —— 诚实非死控）；
  *   ④ 折叠判据：显式 `expanded` 优先；缺省 = `status="error"` **或 `"running"`** 展开（错误取证优先 + 运行期增量在场 —— 「对齐第三批」项 3）；
  *   ⑤ 共享导出面（**消费零副本** —— `views/approval.mjs`（审批卡）/ `views/activity.mjs`（活动池）复用）：
- *      `STATUS_WORD`（**七词闭枚举**状态词 —— 含「对齐第三批」项 5 增词 `interrupted`）+ 降级阈值两常数 + `changeTotals` / `toolChanges`（改动摘要降级形）；
+ *      `STATUS_WORD`（状态词**闭枚举 8 词**中本表七键——单源 = `docs/desktop/design/UI.md` §1 状态词行；就绪词形单列 = CLI 静息值、桌面无码位；含「对齐第三批」项 5 增词 `interrupted`）+ 降级阈值两常数 + `changeTotals` / `toolChanges`（改动摘要降级形）；
  *   ⑥ **「对齐第三批」面**（本档）：头行**摘要段**（项 1 —— `→ ` + 核 `formatToolSummary` 直取）+ **轮次段**
  *      （项 14 —— advisor `(round N · model)` 同 VSC `ui.js:104-107` 式）+ 运行期展开（项 3）+ 中止词（项 5）
  *      + 结果区**链接着装 / 委托**（相抵② 渲染半 —— 核 `linkifyPaths` + `data-path` 锚 + 点按 / Enter 出口）。

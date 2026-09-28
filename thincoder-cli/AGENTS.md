@@ -48,10 +48,12 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 ```
 （机制本体 = `@thincoder/core`（agent / agent-tools / advisor / provider / tools / prompts / tool-docs / memory / mcp / git / traces / session / config 族）——本端只列端壳面；已删的自持镜像不再列行）
 bin/thincoder.cjs    CLI entry（CJS shim——npm 12 可能拒 ESM bin，转 `bin/thincoder.mjs`）
-bin/thincoder.mjs    命令分发入口（tui / chat / memory / upgrade / session gc / acp / completion）
+bin/thincoder.mjs    CLI entry 装配（崩溃捕获 / 堆遥测 / 诊断开关 / TUI stderr 包装；命令分发经 `src/command-table.mjs`）
+src/command-table.mjs  命令分发表（分发骨架 + 八薄命令族 memory/sync/distill/reindex/completion/upgrade/session/ledger + help/version——2026-09-28 拆档批 R4 自 bin 外提）
+src/command-interactive.mjs  交互长驻三命令（chat / tui / acp——命令表分发落点）
 src/tui/             bare-ANSI 终端界面 + 命令族（60+ 档：index/agent-turn/render*/key-handler/cmd-*/subagent-*/…——`docs/cli/design/TUI.md`）
 src/tui.mjs          TUI re-export hub（子模块在 `src/tui/` 下）
-src/cli/             CLI 顶层命令实现（setup-wizard/memory-command/distill-command/make-agent/permission——bin/thincoder.mjs 分发 import）
+src/cli/             CLI 顶层命令实现（setup-wizard/memory-command/distill-command/make-agent/permission——命令表分发 import）
 src/acp.mjs + src/acp/   ACP 协议桥（bridge/client-caps/ext/handlers-session/handlers-slots/login/session/transport——`thincoder acp` 入口——`docs/cli/design/ACP-CLIENT.md`）
 src/completions.mjs  `thincoder completion <shell>` 补全脚本发射（bash/zsh/fish）
 src/crash-reports.mjs  崩溃捕获与取证（fatal 报告 / 记录 / stderr 捕获 / 近堆快照——`docs/cli/design/CRASH-REPORTS.md`）

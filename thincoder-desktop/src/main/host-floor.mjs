@@ -1,5 +1,5 @@
 /**
- * host-floor.mjs — 宿主下限纯谓词 + `node:sqlite` 探针（PROJECT.md §2 KD-7；批档 §2.6 D-2）。
+ * host-floor.mjs — 宿主下限纯谓词 + `node:sqlite` 探针（PROJECT.md §2 KD-7；批档 `docs/batches/2026-09-25-desktop-impl-1.md` §2.6 D-2）。
  * **零 `electron` 导入**：`main.mjs` 顶层静态 import `electron` ⇒ 平 node 导入必炸；
  * 本档为叶子模块，自动层（`npm test`）可直接 import（拆分理由 = 批档 §2.3 末段 · R-2）。
  * 下限事实单源 = `MIN_NODE`；判据面 = 启动自检实测，不把下限压在外部档上（KD-7）。
@@ -36,7 +36,7 @@ export async function sqliteAvailable(loadSqlite = () => import("node:sqlite")) 
   }
 }
 
-/** 复合下限谓词（自检调用面）：Node 够 ∧ `node:sqlite` 可载。 */
+/** 复合下限谓词（导出 = 供宿主组合自检；现宿主自检面 = `main.mjs` 分调 `hostFloorMet` ∕ `sqliteAvailable` 两件——本谓词现无消费者，收正见台账 #396 同档注释族）。 */
 export async function engineFloorMet({ version, loadSqlite } = {}) {
   return hostFloorMet(version) && (await sqliteAvailable(loadSqlite))
 }

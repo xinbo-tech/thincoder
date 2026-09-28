@@ -81,6 +81,11 @@
 - **裁②（发现 2 · `#481` 实证缺口）**：桌面进程内 `sessionEnd()` = `desktop` 而核行渲 **`cli`**（跨端身份错写）——**码面缺口 → 台账 #553**（修法二择：核行参数化 ∥ 桌面自持行——须设计轮定形）；**提示词面 `cli|vscode` ⇒ +`desktop` = 随修法定形后落（内容权在册）**。
 - **发现 3**：坐标漂移两处（`:164 ⇒ :291` ∕ `:342 ⇒ :838`）已实读重锚入账 ✓。
 
+### 1.15 轮 6 交付收下（父侧 · 2026-09-29 01:4x）
+- **交付**（#31 · 终态 clean · fix 1）：9 条实改 8 条 + **`#378` 四处实读皆净**（父侧 19:5x 已清 ∕ 舱落地改写——如实报零改）；主笔 = `cmd-advisor.mjs` guard 剥写（槽单写；VSC 先例 + 盘上旧值保留=KD-3 面不动）+ `chat-chrome.mjs` 补写者 + `cli suspension-drive.mjs` 窗内 timer 容纳 + 计数 ∕ 坐标 ∕ 口径收正族（`chat-tool.mjs` ∕ `events.mjs` ∕ `README` ∕ 两 `AGENTS.md` ∕ `execute-tools.mjs` 十处现读）。**批次本地件落位**（`.thincoder/tmp` → `docs/batches/2026-09-28-tech-debt-closeout-r6.test.mjs`；档头运行命令一行父侧机械收正=advisor 🔵4）——**终位亲跑 8 ∕ 8 · 0 fail**（304 行）。`node --check` 8 档绿；§5 已落（4400 字符）+ 状态行更新。
+- **裁定 ∕ 转出**：① advisor 🟡-2（timerWake 门疑点——窗内 deadline ∕ 闩面口径）→ **Doc-B（#35）** 措辞面；② 收正行 1–4（#513 二半 CLI 句 ∕ #529①② ∕ 登记语 ∕ 疑点）→ **#35**（在册）；③ 🔵3 测试件 304 行 > 300 建议线 = **免裁**（批次本地件不受产品线结构档位约束——随档登记）；④ 🔵7 `dom.mjs` 缩进随下次触碰面。
+- **范围外（在册）**：VSC 同族注释旧行位残余五处（`setup.mjs:236` ∕ `panel-callbacks.mjs:205/:265/:272` ∕ `panel-subagent-relay.mjs:36`）→ 台账 **#555**。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：✅ 设计完成（initial 轮 + 修正轮 1–2（评审 #3 收正已落）· 63 条 8 轮 · 每轮 ≤10 档）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -681,7 +686,7 @@
 - **实施序**：§2.3 分层执行——轮 4 ∕ 轮 5（码面）与轮 1（文档 sweep）即起；轮 2 ∕ 3 ∕ 6–8 随派（先小设计项按轮定形）。
 
 ## §5 实施记录（eng-coder）
-**状态行**：✅ 实施完成 2026-09-28（轮 4 核∕会话码面 5 条 + 轮 5 core∕cli 码∕测试 10 条，两轮在册——逐轮记录见下方各节）
+**状态行**：实施完成（轮 6（桌面 ∕ VSC ∕ 文本 · 9 条）——审计 1 轮 clean ∕ 代码评审 1 轮 pass（🔴0）；8/8 用例绿；终态 clean）
 
 
 
@@ -791,5 +796,48 @@
 - #402「档绿」不可证：该档 `:19` 引 `renderer/views/info-row.mjs`（他批在飞迁移已删）⇒ 装载期失败；本轮两处编辑以等价复算验证（main.mjs 锚点 ∕ 分支窗断言全真）。
 
 **勘误（同轮补记 · 2026-09-28）**：上文「`git status` 自证」行测试档计数笔误——实为 **10** 档（core 6 含新档 `batch-lifecycle-gates.test.mjs` + cli 3 含新档 `entry-diagnostics-keys.test.mjs` + desktop 1）；源档 9 档（core 7 + cli 2）无误。同句「3 探针」已随收尾清理（`delete` 三档 × 不再留档）——非交付物，不碍自证。
+
+**轮 6 实施记录（桌面 ∕ VSC ∕ 文本 · 9 条 · eng-coder · 2026-09-29 · #31）**
+
+**交付摘要（逐条 → file:line）**
+
+- `#382`（槽单写）：`thincoder-cli/src/tui/cmd-advisor.mjs:21-49` —— `persistGuard` 去 config 镜像写（仅槽写）；`persist()` 写面剥 `guard`（:28-31 `delete scoped.guard`），盘上旧值原样保留（回退面不动）。
+- `#396①`：`thincoder-desktop/src/main/host-floor.mjs:2` —— 引「批档 §2.6 D-2」补齐记录点名（`docs/batches/2026-09-25-desktop-impl-1.md`）；实读核：impl-1 §2.6 D-2（:190）在位、:4 同族引可解析。
+- `#396②`：`thincoder-desktop/renderer/dom.mjs:4` —— 「E-6」补「批 1」限定词；三处靶中两处（`test/guard-closure.test.mjs:2` ∕ `test/host-floor.test.mjs:2`）随全清令删档 ⇒ 对象不存在（随靶消失，供 §6 一行）。
+- `#396③`：`thincoder-desktop/renderer/views/chat-tool.mjs:13`（「闭枚举 8 词中本表七键」）· `thincoder-desktop/renderer/events.mjs:304`（「7 ⇒ 8 词」）——与单源 `docs/desktop/design/UI.md` §1 口径统一。
+- `#425`：批次本地件（`.thincoder/tmp/2026-09-28-tech-debt-closeout-r6.test.mjs`——父侧 copy 至 `docs/batches/`）：两面零增臂（chat ∕ activity）+ 反证臂。
+- `#502`：`thincoder-vscode/AGENTS.md:95` —— `sessions` 行增 `ledger?`（`{ refused, reason, scene }`、异常才携），与 `docs/vsc/design/WEBVIEW-PROTOCOL.md` §2 同拍。
+- `#506`：免实施 + 登记句（见下「登记」第 1 行）。
+- `#512`：`thincoder-desktop/renderer/views/chat-chrome.mjs:196` —— 补写者 `fresh._ledgerLines = lines`（实现既有同引用零写意图；否决删检）+ 两用例。
+- `#513`：`thincoder-cli/src/tui/suspension-drive.mjs:301-315` —— 窗内 timer 支 try/catch 容纳（`AbortError ∧ 会话未停 ⇒ continue`；否则上抛）+ 两用例；§6.30.10 邻位补 CLI 句 = 设计面收正行（见下「上抛」第 3 行，Doc-B 承接）。
+- `#514`：`thincoder-cli/README.md:152` —— `timerWake` 全端口径（支持面 = CLI / VSC / 桌面前台；headless chat / ACP 仅边界投递）。
+- `#529③`：`thincoder-cli/AGENTS.md:51-53` ∕ `:56` —— 模块图补 `src/command-table.mjs` ∕ `src/command-interactive.mjs`（bin 行改写 + `src/cli/` 分发 import 改指）。
+- `#529⑦`：`thincoder-vscode/src/agent/execute-tools.mjs` —— 十处注释指位收正（`agent/dispatch.mjs:151/207` ∕ `agent/dispatch-run.mjs:30-31 ∕ :93 ∕ :139 ∕ :153` ∕ `agent-tools/advisor.mjs:112` ∕ `agent-tools/subagent-spawn.mjs:304 ∕ :318 ∕ :308` ∕ `agent-tools/subagent-async.mjs:407`）。
+- `#529①②④⑤⑥`：免实施 + 登记（①② 文档面 = Doc-B；④⑤⑥ 三靶档随全清令删档）。
+- `#378 转来`：四处逐读——`thincoder-vscode/AGENTS.md:86` ∕ `src/extension/settings.mjs:181` ∕ `src/extension/panel-session-write.mjs:92` 四处措辞已净（前两处+AGENTS 由父侧 19:5x 清零改；`webview/mode-buttons.js` 经在跑舱落地改写为核化档头——worktree 实读旧「mirror config.json」句已替换）⇒ 本轮零改。
+
+**决策透明表**
+
+| # | 决策 | 依据 |
+|---|---|---|
+| 1 | `#382` 除 `persistGuard` 外并收 `persist()` 写面剥 guard（一步超出设计点名行 :33） | 单点闭合「guard 不入 config 写面」；VSC 先例 = `settings-panel-write.mjs:141-143`「`guard` is NOT a payload field on this face」；盘上旧值保留 = KD-3 回退面不动（随轮报告） |
+| 2 | `#396①` 收正形 = 记录点名（保留 §2.6 字面） | 三记录对读：impl-1 §2.6 D-2 在位（:190）、§2.7 = 边界；host-node24 §2.7 D-2 = 另一判据；impl-2 §2.6 D-2 ⇒「D-2 现居 §2.7」于目标记录不复现 ⇒ 以「引用可解析化」为收正（改判随轮报告） |
+| 3 | `#425` 取「机检臂」态（备选人工走查不取） | 判据对象 = 纯构树（`RENDERER.md:59`「纯构树零 DOM ⇒ 平 node 直测」）⇒ node 直测可行，非「不可行 ⇒ 登记」支 |
+| 4 | `#513` 窗内 timer 支只落容纳句；`timerWake` 门疑点零改 | 防未授权语义扩面——阶段 1 设计字面「关 ⇒ 不武装闩」只述闩面，阶段 2 句「关 ⇒ `deadline()` 恒 null」在端面 ⇒ 二择一收口归设计措辞面（见「上抛」第 4 行） |
+
+**上抛 ∕ 登记（随轮报告）**
+
+1. `#506` 登记句：「桌面集成面按新制度重建时，`waitForFunction` ∕ 重试语义作为断言书写纪律随新建面落地——本批零改」。
+2. `#529①②（文档面）` ⇒ Doc-B（`CLI-DEBT.md:35` A4 行刷新 + 移 §4；`CLI-ENTRY.md` 描述句）；`#529④⑤⑥` ∕ `#396②` 随靶消失登记（三+二档随全清令删档——对象不存在）。
+3. `#513` 二半：`AGENT-LOOP-ASYNC-POOL.md` §6.30.10 邻位补 CLI 句（收正-⑤ 改锚）——建议句形「同句适用 CLI 窗内 timer 支（镜像落点 = `thincoder-cli/src/tui/suspension-drive.mjs:301-315`）」；落笔 = Doc-B。
+4. 疑点（advisor 🟡-2）：窗内 deadline 未过 `timerWakeEnabled`（`suspension-drive.mjs:298`）∥ 闩面过（`timer-watch.mjs:67`）—— `agent.timerWake: false` 时挂起窗仍开 timer 轮；二择一（包判据 ∥ 设计明示只关闩面）归设计措辞面，本舱零改。
+5. 表外连带收正（已披露）：`host-floor.mjs:39` 注释「自检调用面」与 `main.mjs` 分调实况不符（台账 #396 同档注释族）⇒ 注释收正为实况（`engineFloorMet` 导出零消费者）。
+6. 范围外残余（只报）：VSC 同族注释旧行位 `src/agent/setup.mjs:236` ∕ `src/extension/panel-callbacks.mjs:205 ∕ :265 ∕ :272` ∕ `panel-subagent-relay.mjs:36`（未在本轮射程）。
+
+**审计与代码评审轮次与终态**：内部背离审计（explore · 只读）1 轮 = **clean**（0 🔴 / 0 🟡 · 4 🔵 注记，其中 2 条已随本记录处置）；advisor 代码评审（type=code）1 轮 = **pass**（🔴0 ∕ 🟡2 ∕ 🔵6——🟡-1 `host-floor.mjs:39` 现场收正、🟡-2 转「上抛」第 4 行；🔵 各项按接受/登记入本记录与交付报告）；fix round = 1（注释收正，零语义）。**终态 = clean**。
+
+**读数**：批次本地件点名复跑 `node --test .thincoder/tmp/2026-09-28-tech-debt-closeout-r6.test.mjs`（仓根）＝ **8 ∕ 8 pass**；全触碰 `.mjs` 档 `node --check` 全绿。**not repo-suite verified — the parent-side closeout run is the only repo-suite run.**
+
+**披露**：① 测试件暂存于 `.thincoder/tmp/`，待父侧 copy 至 `docs/batches/`（写门实测拒——台账 #545）；② 本舱零触设计档 ∕ 需求档 ∕ 其他批档（`thincoder-core/**` 只读）；③ `#382` 的 `persist()` 剥 guard 为同口径收的连带面（决策透明表第 1 行）。
 
 ## §6 验证与收口（父代理）

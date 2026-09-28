@@ -83,7 +83,7 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 | webview → extension | `getAgentSettings` | — pull: extension re-reads config.json and pushes `agentSettings` (settings panel open = fresh disk state) |
 | extension → webview | `agentSettings` | `{ settings }` — full agent.* snapshot (push at webviewReady / after saves; reply to `getAgentSettings`) |
 | webview → extension | `selectModel` / `selectReasoning` | `{ model, provider? }` / `{ reasoning }` |
-| webview → extension | `setAdvisorGuard` / `setEngineeringEnabled` | `{ value }` — toolbar quick switches (GUARD / ENG buttons), persisted to config.json `agent.advisor.guard` / `agent.engineering` (guard = require advisor review after code changes; advisor reviews themselves are always available) |
+| webview → extension | `setAdvisorGuard` / `setEngineeringEnabled` | `{ value }` — toolbar quick switches (GUARD / ENG buttons), persisted slot-authoritative (end-side config.json mirror write retired; guard = require advisor review after code changes; advisor reviews themselves are always available) |
 | extension → webview | `token` | `{ text }` |
 | extension → webview | `reasoning` | `{ text }` (model's thinking process, shown in collapsible block) |
 | extension → webview | `turnBreak` | — (machine-only sub-turn boundary: advisor/verify/pending-task guard pushback → the webview resets its block pointers so the next reasoning/content starts a fresh block; covers non-thinking models) |
@@ -92,7 +92,7 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 | extension → webview | `providerInfo` | `{ text, keyOk, needsSetup?, settings? }` |
 | extension → webview | `autoApprove` | `{ value }` (session-level AUTO state, pushed on session load and on approve-all) |
 | extension → webview | `models` | `[{ id, label, provider, group, reasoning[] }]` |
-| extension → webview | `sessions` | `{ sessions: [{ name, title, count, active, updated }], active }` |
+| extension → webview | `sessions` | `{ sessions: [{ name, title, count, active, updated }], active, ledger? }` — `ledger` = session-ledger anomaly notice (`{ refused, reason, scene }`, carried only when anomalous — `../docs/vsc/design/WEBVIEW-PROTOCOL.md` §2) |
 | extension → webview | `historyPage` | `{ messages: [{ kind, text, name?, timestamp, idx }], hasOlder, older }` — lazy history: first paint sends the LAST page (`older=false`); scroll-back pages come via `loadOlder` (`older=true`, prepended with scroll compensation). Restored assistant messages are FRAME containers: `{ kind, text, reasoning?, turnStart, tools: [{ id, name, args, result }] }` — nested finished tool cards (SESSION-RESTORE-PARITY); a `tool`-kind message is a true-orphan fallback card only |
 | webview → extension | `loadOlder` | `{ before }` — `before` = earliest rendered global idx (from `data-idx`), the older page ends just before it |
 | extension → webview | `question` | `{ question, options, promptId }` — inline question-tool card (option buttons or free-text input + submit/cancel), NOT a native VS Code popup; card carries a host-generated monotonic `promptId` — `questionResponse` matches by it (C1, WEBVIEW.md §8) |

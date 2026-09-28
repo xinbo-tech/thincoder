@@ -193,6 +193,7 @@ function syncLedger(root, model, anchor) {
   if (lines === null) { if (node) node.remove(); return }
   if (node && node._ledgerLines === lines) return
   const fresh = build(ledgerGroupNode(lines))
+  fresh._ledgerLines = lines // #512：短路判据（同引用 ⇒ 零写）的写者——行集引用随节点携带
   if (node) { node.replaceWith(fresh); return }
   if (typeof root.insertBefore === "function") root.insertBefore(fresh, anchor)
   else root.append(fresh)

@@ -22,13 +22,20 @@ export async function handleAdvisorCommand(ctx) {
     if (ctx.persistRaw) {
       await ctx.persistRaw((raw) => {
         raw.agent ??= {}
-        raw.agent.advisor = cfg
+        // advisor.guard is session-level (#382 同口径收 · slot authority — VSC parity): the guard
+        // never rides the config write — only the config-scoped keys (model/thinking/effort/timeout)
+        // persist；盘上既有 guard 值原样保留（回退面不动 —— 读链 = 槽 ?? config）。
+        const scoped = { ...cfg }
+        delete scoped.guard
+        const diskAdvisor = typeof raw.agent.advisor === "object" && raw.agent.advisor !== null ? raw.agent.advisor : {}
+        raw.agent.advisor = { ...diskAdvisor, ...scoped }
       })
     }
   }
 
-  // Guard-only dual write (2026-08-29 — advisor.guard is session-level): the guard goes into
-  // the CURRENT session slot first (shared with VS Code), the config.json mirror follows.
+  // Guard-only slot write (2026-08-29 — advisor.guard is session-level; #382 同口径收): the guard
+  // goes into the CURRENT session slot (shared with VS Code) — the slot is the single authority;
+  // no config.json mirror write (与 VSC 面板写面同判——guard 不入 config 写面).
   // Other advisor keys (model/thinking/effort/timeout) stay config-scoped — persist() only.
   const persistGuard = async () => {
     try {
@@ -38,8 +45,7 @@ export async function handleAdvisorCommand(ctx) {
         data.advisor = { ...(typeof data.advisor === "object" && data.advisor !== null ? data.advisor : {}), guard: cfg.guard === true }
         writeSessionFile(p, data)
       }
-    } catch { /* slot missing/unreadable — config mirror still written */ }
-    await persist()
+    } catch { /* slot missing/unreadable — guard stays in-memory for this session (zero config write) */ }
   }
 
   // Lazy model cache — fetched once per /advisor session

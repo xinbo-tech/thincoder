@@ -1,7 +1,7 @@
 /**
  * dom.mjs — 渲染面 DOM 工具最小面（`docs/desktop/design/SHELL.md` §1 · `docs/desktop/design/RENDERER.md` §1）：
  * 建节点 / 文本 / 清空 / 事件 + 引导位置位。零框架零构建（`docs/desktop/design/PROJECT.md` §2 KD-4）——
- * 只用浏览器原生能力，零 `node:` / 零 `@thincoder/core`（E-6 静态闭包判据）。
+ * 只用浏览器原生能力，零 `node:` / 零 `@thincoder/core`（批 1 E-6 静态闭包判据）。
  */
 
 /** 建节点：`props` 供属性 / 事件（`on*`）· `html` 供**核 Markdown 呈现面**（R3c · D19）· `children` 供文本或子节点。

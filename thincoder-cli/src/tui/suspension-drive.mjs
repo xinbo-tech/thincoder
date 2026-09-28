@@ -299,7 +299,16 @@ export async function suspensionSession(ctx) {
       // 窗内到期（§6.30.5）：本窗兑现——送达 + timer 轮（同 digest 轮形态 skipSession: true）；不等池空。
       // 池空窗退 ⇒ 交空闲闩（到期件已出列——零重复投递）。
       if (why === "timer" && deliverExpiredTimers(ctx) > 0) {
-        await runAgentTurn(ctx, "", { autoTurn: true, timerTurn: true, skipSession: true })
+        try {
+          await runAgentTurn(ctx, "", { autoTurn: true, timerTurn: true, skipSession: true })
+        } catch (e) {
+          // §6.30.10 轮中止容纳句（timer 轮自身的回合级中止 = AbortError ∧ 会话未停 ⇒ 不是会话停止）：
+          // 容纳并重入循环（timer 轮不发 digest 边界 ⇒ 中止路径零边界、不补发轮后序钩子；池空 / pending 空
+          // 自然退出）；其余（非 AbortError ∨ 会话停）照旧上抛——finally 清场同前。镜像核
+          // `thincoder-core/agent/suspension.mjs` 同支（VSC 端面同判）。
+          if (e?.name === "AbortError" && !agent._sessionAbort?.signal.aborted) continue
+          throw e
+        }
         freezeReclaimDigestedBlocks(state, allPendingEntries(agent))
         state.status = backgroundStatusText(agent)
         render()

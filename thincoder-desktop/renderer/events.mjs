@@ -301,7 +301,7 @@ export function isTurnTail(ev) {
 }
 
 /** 中止清扫（「对齐第三批」项 5）：`stopped` 终局 ⇒ 未结算工具块（`status === "running"`）就地改
- *  `status: "interrupted"`（体 / 折叠态不动 —— VSC 同；**已中断** = 状态词闭枚举第八词，词键 `tool.interrupted`）；
+ *  `status: "interrupted"`（体 / 折叠态不动 —— VSC 同；**已中断** = 状态词闭枚举增词（7 ⇒ 8 词——单源 = `docs/desktop/design/UI.md` §1），词键 `tool.interrupted`）；
  *  命中才换新数组（无命中 ⇒ 原引用）。 */
 function sweepRunningTools(state) {
   const list = Array.isArray(state.blocks) ? state.blocks : []
@@ -381,21 +381,35 @@ function onError(state, ev) {
   return { ...blocks, tabBadges: marked.badges }
 }
 
-/** `ev:ledger`——台账行集切片（「对齐第三批」项 12 · KD-38）：载荷 `{ key, lines }`，`lines = [{ text, warn }]`
- *  **核行产逐字**（端侧零行构造）；行集过滤后非空才写（行文本非串 / 空 ⇒ 该行弃；空集 ⇒ 零写 —— 禁假造）；
- *  同值（文本逐字 + `warn` 真值同）⇒ 原引用（零重绘）。消费 = 流尾非块节点组 `[data-ledger-line]`（`renderer/views/chat.mjs`）；
- *  周期刷新（VSC `REFRESH_MS`）不在本批（KD-38 / open 行）。 */
+/** `ev:ledger`——台账两切片（「对齐第三批」项 12 · KD-38；**R8 增 `detailLines`**）：载荷 `{ key, lines?, detailLines? }`——
+ *  `lines` = 核行产逐字 `{ text, warn }`（端侧零行构造）；行集过滤后非空才写（行文本非串 / 空 ⇒ 该行弃；空集 ⇒ 零写——禁假造）；
+ *  同值（文本逐字 + `warn` 真值同）⇒ 原引用（零重绘）。`detailLines`（R8 · L2 明细行——状态行台账段 `title` 载波）= 核
+ *  `detailScans` ∕ `formatDetailLine` 行集逐字（端零行构造）；**顶层切片 `ledgerDetail`**（项目级——与状态行台账段同锚，
+ *  不按会话键）；空集照写（清 tooltip——禁假造）；同值 ⇒ 原引用。两键皆无 ⇒ 原引用。
+ *  消费 = 流尾非块节点组 `[data-ledger-line]`（`renderer/views/chat.mjs`）+ 状态行台账段 tooltip（`views/statusline-segments.mjs`）；
+ *  周期刷新（VSC `REFRESH_MS`）= R8 落（核拍面 —— `src/main/project-info.mjs`）。 */
 function onLedger(state, ev) {
   const lines = (Array.isArray(ev.lines) ? ev.lines : [])
     .filter((line) => typeof line?.text === "string" && line.text !== "")
     .map((line) => ({ text: line.text, warn: line.warn === true }))
-  if (lines.length === 0) return state
-  const table = state.ledgerLines ?? {}
-  const prev = table[ev.key]
-  const same = Array.isArray(prev) && prev.length === lines.length
-    && prev.every((line, index) => line.text === lines[index].text && line.warn === lines[index].warn)
-  if (same) return state
-  return { ...state, ledgerLines: { ...table, [ev.key]: lines } }
+  const detailLines = Array.isArray(ev.detailLines)
+    ? ev.detailLines.filter((text) => typeof text === "string" && text !== "")
+    : null
+  let next = state
+  if (lines.length > 0) {
+    const table = next.ledgerLines ?? {}
+    const prev = table[ev.key]
+    const same = Array.isArray(prev) && prev.length === lines.length
+      && prev.every((line, index) => line.text === lines[index].text && line.warn === lines[index].warn)
+    if (!same) next = { ...next, ledgerLines: { ...table, [ev.key]: lines } }
+  }
+  if (detailLines !== null) {
+    const prev = Array.isArray(next.ledgerDetail) ? next.ledgerDetail : null
+    const same = prev !== null && prev.length === detailLines.length
+      && prev.every((text, index) => text === detailLines[index])
+    if (!same) next = { ...next, ledgerDetail: detailLines }
+  }
+  return next
 }
 
 /** 纯归约出口：`ev` = `{ channel, ...载荷 }`（载荷携 `key`）。未知通道 / 形不合 ⇒ 原引用（逐通道一写者 —— 含 `ev:queue`）。 */

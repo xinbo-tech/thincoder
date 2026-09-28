@@ -171,8 +171,8 @@ export async function executeToolBatches(agent, { response, history, fullHistory
         }
       }
 
-      // PreToolUse hooks（核 `dispatch.mjs:258/314` 两端点在此合流 · P2 批 §2.17）：用户脚本
-      // 可拦截工具执行；阻断 ⇒ 工具不执行 + 模型可见结果**逐字**同核（`dispatch.mjs:337-338`）。
+      // PreToolUse hooks（核 `dispatch.mjs:151/207` 两端点在此合流 · P2 批 §2.17）：用户脚本
+      // 可拦截工具执行；阻断 ⇒ 工具不执行 + 模型可见结果**逐字**同核（`dispatch-run.mjs:30-31`）。
       // 未知工具（下方 `!tool` 路径）与前置门禁早退保持零钩子（核同——那两路在 Phase 1 更前）。
       if (tool && !(await runHooks("PreToolUse", { agent, toolName, toolArgs: args }))) {
         return { tool_call_id: tc.id, toolName, content: "Error: blocked by PreToolUse hook", meta: null }
@@ -215,22 +215,22 @@ export async function executeToolBatches(agent, { response, history, fullHistory
             cwd, agent, callbacks, signal, depth,
             // A6（群 A 批）+ W13 收口：调用 id 随 ctx 下发——核工具（advisor 等）的拒绝/收发
             // 登记面 (`agent._advisorRefusals` / `_advisorAsyncAcks` / `_advisorSyncCalls`) 恒
-            // 以 `ctx._toolCallId` 为键（核 `advisor.mjs:109` 等 10 处）；缺失 ⇒ 核侧登记空转 +
+            // 以 `ctx._toolCallId` 为键（核 `agent-tools/advisor.mjs:112` 等 10 处）；缺失 ⇒ 核侧登记空转 +
             // 端侧记账错记（显式 async:false 拒绝被误计 called/round——评审 🔴）。
             _toolCallId: tc.id,
             // tool-ctx 透传账（F2 收正——2026-09-16）：旧注曾把 spawn 门写成读 `getAuto`、子代 signal
             // 写成共享 `sessionSignal` 字段——两说均与实现不符、旧句已删（收正不得保留旧句——批次档 §2.15）。现行实态：
             // ① 核消费面 = `onPermissionRequest`（下行 F1 新供给——缝表 `CORE-UNIFICATION（核仓·设计）` §2.13.3）；
             // ② `getAuto` / `sessionSignal` 两透传 = 历史残留、核侧零消费者（核树 grep 零命中）——核
-            // spawn 门读**父对象字段** `parent.autoApprove`（`subagent-spawn.mjs:305`）；会话 signal 达核
-            // 经 `agent._sessionSignal`（`subagent-async.mjs:388`）——零回归保留（消解路径 = 报告项，另案清理）。
+            // spawn 门读**父对象字段** `parent.autoApprove`（`subagent-spawn.mjs:304`）；会话 signal 达核
+            // 经 `agent._sessionSignal`（`subagent-async.mjs:407`）——零回归保留（消解路径 = 报告项，另案清理）。
             getAuto,
             sessionSignal,
             // F1（2026-09-16 缺陷修复——承 `docs/batches/2026-09-16-vsc-autoapprove-misalign.md` §2 F1）：
-            // child 权限通道透传（核同范式 = `thincoder-core/agent/dispatch.mjs:395`）——手动档子代写
-            // 询问（`subagent-spawn.mjs:319` `${key}/${tool}`）经此达端装配层供给面（`panel-callbacks.mjs`
+            // child 权限通道透传（核同范式 = `thincoder-core/agent/dispatch-run.mjs:93`）——手动档子代写
+            // 询问（`subagent-spawn.mjs:318` `${key}/${tool}`）经此达端装配层供给面（`panel-callbacks.mjs`
             // ——owner 归属 + `⏸` 态）；缺失（headless / 无 gate）⇒ 核分支静默 `return false`
-            // （`subagent-spawn.mjs:308-309`）。
+            // （`subagent-spawn.mjs:308`）。
             onPermissionRequest: callbacks.onPermissionRequest,
             // W14（2026-09-15）：question 工具面——核 `tools/question.mjs` 读 `ctx.onQuestion`
             //（§2.13.3）；端侧通道 = callbacks.onQuestion（面板卡片）。取消/Stop（askInPanel
@@ -276,7 +276,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
               if (Array.isArray(agent._touchedFiles) && !agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)
             }
           }
-          // PostToolUse hooks（核 `dispatch.mjs:443` 同语义——fire-and-forget；载荷 result =
+          // PostToolUse hooks（核 `dispatch-run.mjs:139` 同语义——fire-and-forget；载荷 result =
           // 原始结果（非 offload 后文本）。位序：核在本轮 onToolResult 之后、端在之前（同成功路径内））
           runHooks("PostToolUse", { agent, toolName, toolArgs: args, result: raw }).catch(() => {})
 
@@ -297,7 +297,7 @@ export async function executeToolBatches(agent, { response, history, fullHistory
           if (e?.name === "AbortError" || signal?.aborted) throw e
           toolErrored = true
           logEvent("tool:error", { tool: toolName, ms: Date.now() - toolT0, err: errText(e, 200) })
-          // 失败事件钩子（核 `dispatch.mjs:456-457` 同序——中止先于事件、中止不落钩子）
+          // 失败事件钩子（核 `dispatch-run.mjs:153` 同序——中止先于事件、中止不落钩子）
           runHooks("PostToolUseFailure", { agent, toolName, toolArgs: args, error: e }).catch(() => {})
           // A tool may reject with a non-Error value (string/null) — .message would be
           // undefined and the model would see "Error: undefined", losing the cause.
