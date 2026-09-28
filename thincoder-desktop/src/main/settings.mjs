@@ -1,9 +1,13 @@
 /**
- * settings.mjs — 主侧设置族四通道：`config:write`（仅语言面）/ `model:list`（逐模型档位投影）/
- * `settings:agent`（agent 参数族读 + 写 + 档位意图级写）——外加两道端侧单点：配置档存在性读数
- * `isConfigured()` 与密钥遮罩 `maskKey()`；另出 `deepEqual` 供档位投影复用（同判据单点）；
+ * settings.mjs — 主侧设置族处理体：`config:write`（仅语言面）/ `model:list`（逐模型档位投影）/
+ * `settings:agent`（agent 参数族读 + 写 + 档位意图级写 + **consult ∕ advisor 行面读数**〔R7〕）——
+ * 外加两道端侧单点：配置档存在性读数 `isConfigured()` 与密钥遮罩 `maskKey()`（**R7 起住
+ * `settings-values.mjs`，本档同名 re-export**）；另出 `deepEqual` 供档位投影复用（同判据单点）；
  * **R2 增 `indexStatus()`**（`index:status` 回执 —— 索引状态读数装配：计数转口 `index-status.mjs`
- * 〔核只读出口〕+ `hasEmbedder` 配置面判据）。
+ * 〔核只读出口〕+ `hasEmbedder` 配置面判据）；**R7 增 `modelsFace()`**（consult ∕ advisor 行面读数
+ * —— 随 `settings:agent` 回执出）。
+ * **R7 拆出两族处理体**（先拆后改 —— 300 行层拆分）：env 族（proxy ∕ shell 读写 + TestProxy 转口）
+ * = `settings-env.mjs`；tools 族（embedding ∕ websearch key 读写）= `settings-tools.mjs`。
  *
  * 纪律（批档 §2.3/§2.5）：
  * - **写面唯一执行体** = 核 `writeConfigAtomic`（`thincoder-core/config-io.mjs:59`，
@@ -22,97 +26,17 @@
  *   两拒码（`bad-level` / `unknown-provider`）皆**零写**——判据与拒码序单源 =
  *   `docs/desktop/design/IPC.md` §2「档位控件注」。
  */
-import { existsSync } from "node:fs"
 import { loadConfig } from "@thincoder/core/config.mjs"
 import { _configPath, resolveProviders, writeConfigAtomic } from "@thincoder/core/config-io.mjs"
 import { SUPPORTED_LOCALES, normalizeLocale, projectDictionary } from "@thincoder/core/i18n.mjs"
 import { channelUnavailableMessage, listModels } from "@thincoder/core/provider/list-models.mjs"
 import { specForModel } from "@thincoder/core/model-specs.mjs"
 import { thinkOffPath, thinkOffShape } from "@thincoder/core/think-off.mjs"
-import { isSensitiveKey, _checkKnownKeyValue } from "@thincoder/core/agent-tools/settings.mjs"
+import { _checkKnownKeyValue } from "@thincoder/core/agent-tools/settings.mjs"
 import { readIndexCounts } from "./index-status.mjs"
-
-/** 遮罩字面量（与核 `agent-tools/settings.mjs:19` `MASKED` 同形——核未导出，端侧自持）。 */
-export const MASK = "••••（masked）"
-
-/**
- * **端侧遮罩单点**：敏感键 ⇒ 遮罩字面量，否则原值直通。判据复用核**导出**的
- * `isSensitiveKey`（`thincoder-core/agent-tools/settings.mjs:22`——段名判据）；核 `MASKED`
- * 非导出 ⇒ 端侧自持同形字面量（不改核、不复刻判据）。
- * 通道载荷**只回遮罩后值**：`provider:list` 的 `maskedKey` 与 `settings:agent` 的 `fields`
- * 均经本函数出口（明文密钥零下发）。
- */
-export function maskKey(path, value) {
-  return isSensitiveKey(String(path)) ? MASK : value
-}
-
-/** 配置档存在性（**向导闸**读数）：`existsSync(_configPath())`——档在 = 已配。
- *  有意比 CLI `isConfigured`（更严）**宽**：用户手编过
- *  配置即视为已配，向导不重放（批档 §2.10 项 3——勿与核口径统一）。 */
-export function isConfigured() {
-  return existsSync(_configPath())
-}
-
-/** 值类型标签（读面提示用——`array`/`null` 单列，其余 = `typeof`）。 */
-function kindOf(value) {
-  return Array.isArray(value) ? "array" : value === null ? "null" : typeof value
-}
-
-/** 叶子展平（点分路径 + 值；数组当叶子——不展开元素以免路径歧义）。 */
-function flatten(obj, prefix = "", out = []) {
-  for (const [k, v] of Object.entries(obj ?? {})) {
-    const path = prefix ? `${prefix}.${k}` : k
-    if (v !== null && typeof v === "object" && !Array.isArray(v)) flatten(v, path, out)
-    else out.push({ path, value: v })
-  }
-  return out.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
-}
-
-/** 深度遮罩副本（数组元素逐下标成路径——`providers.0.apiKey` 段判命中 ⇒ 遮罩，**容器值也遮**：
- *  否则 `providers` 数组会整体明文下发）。 */
-function maskDeep(prefix, value) {
-  if (Array.isArray(value)) return value.map((v, i) => maskDeep(`${prefix}.${i}`, v))
-  if (value !== null && typeof value === "object") {
-    const out = {}
-    for (const [k, v] of Object.entries(value)) out[k] = maskDeep(`${prefix}.${k}`, v)
-    return out
-  }
-  return maskKey(prefix, value)
-}
-
-/** 读面字段表：`{ path, value, sensitive, kind }`——值一律经 `maskDeep` 出口（遮罩单点）。 */
-function agentFields(config) {
-  return flatten(maskDeep("", config)).map(({ path, value }) => ({
-    path,
-    value,
-    sensitive: isSensitiveKey(path),
-    kind: kindOf(value),
-  }))
-}
-
-/** 点分路径写入（核未导出该 helper——端侧小工具，语义同核 settings 工具：逐段下钻，缺段建对象）。 */
-function setKeyPath(obj, path, value) {
-  const segs = String(path).split(".")
-  let cur = obj
-  for (let i = 0; i < segs.length - 1; i++) {
-    const seg = segs[i]
-    if (cur[seg] === null || typeof cur[seg] !== "object") cur[seg] = {}
-    cur = cur[seg]
-  }
-  cur[segs[segs.length - 1]] = value
-}
-
-/** 深比较（档位判据用）：`thinkOffShape` 产出的小值域字面量（`null` / `{ type:"disabled" }`）
- *  与渠道条目现存记号逐值比——键序无关、容器逐层下钻。核未导出同名 helper ⇒ 端侧小工具
- *  （判据本体仍单源 = 核 `thinkOffShape`；不另立 off 形副本）。 */
-export function deepEqual(a, b) {
-  if (a === b) return true
-  if (a === null || b === null || typeof a !== "object" || typeof b !== "object") return false
-  if (Array.isArray(a) !== Array.isArray(b)) return false
-  const ka = Object.keys(a)
-  if (ka.length !== Object.keys(b).length) return false
-  return ka.every((k) => Object.prototype.hasOwnProperty.call(b, k) && deepEqual(a[k], b[k]))
-}
+// 值面 ∕ 遮罩族（R7 先拆后改拆出 —— 导出面零改：本档同名 re-export）。
+import { agentFields, deepEqual, isConfigured, setKeyPath } from "./settings-values.mjs"
+export { MASK, deepEqual, isConfigured, maskKey } from "./settings-values.mjs"
 
 /**
  * `config:write(payload)` ⇒ `{ ok, reason:null, locale, dict, configured }` ∥ `{ ok:false, reason }`。
@@ -132,6 +56,33 @@ export function configWrite(payload) {
   const w = writeConfigAtomic(_configPath(), (disk) => { disk.locale = locale })
   if (!w.ok) return { ok: false, reason: w.reason }
   return { ok: true, reason: null, locale, dict: projectDictionary(locale), configured: isConfigured() }
+}
+
+/* ─── models 行面（consult ∕ advisor —— `settings:agent` 回执增键 · R7）────────────────────── */
+
+/** consult ∕ advisor 行面读数（R7 —— models 段）：consult 池逐行
+ *  `{ provider, model, effort, effortEnum }`（`effortEnum` = 核 `specForModel(model).reasoningEffortEnum`
+ *  **离线投影**（零探针——同 VSC `agentSettings().effortEnums` 口径）；`effort` 非串 ⇒ null）；
+ *  advisor = 两键（缺 / 空 ⇒ null）。行数 ≤5（核 `sanitizeConsultModels` 同口径）。
+ *  消费面 = 渲染面 models 段（行面 ∕ 增行表单）；写面经 `settings:agent` `{ patch }` 径（本档零新通道）。 */
+export function modelsFace(config) {
+  const consult = (Array.isArray(config?.agent?.consultModels) ? config.agent.consultModels : [])
+    .filter((m) => m && typeof m.provider === "string" && m.provider !== "" && typeof m.model === "string" && m.model !== "")
+    .slice(0, 5)
+    .map((m) => ({
+      provider: m.provider,
+      model: m.model,
+      effort: typeof m.effort === "string" ? m.effort : null,
+      effortEnum: specForModel(m.model).reasoningEffortEnum ?? [],
+    }))
+  const adv = config?.agent?.advisor ?? {}
+  return {
+    consult,
+    advisor: {
+      provider: typeof adv.provider === "string" && adv.provider !== "" ? adv.provider : null,
+      model: typeof adv.model === "string" && adv.model !== "" ? adv.model : null,
+    },
+  }
 }
 
 /**
@@ -182,7 +133,7 @@ const VANISHED = Symbol("vanished-provider")
  * 写面 = 该渠道条目级默认两键（`thinking` / `reasoningEffort`：先清不相容记号，再按档落形）。
  */
 function tierAgent(config, tier) {
-  const bad = (reason) => ({ ok: false, reason, fields: agentFields(config) })
+  const bad = (reason) => ({ ok: false, reason, fields: agentFields(config), models: modelsFace(config) })
   if (tier === null || typeof tier !== "object" || Array.isArray(tier)) return bad("invalid-patch")
   const model = typeof tier.model === "string" ? tier.model.trim() : ""
   if (!model || tier.level === undefined || tier.level === null) return bad("invalid-patch")
@@ -216,8 +167,8 @@ function tierAgent(config, tier) {
     if (error === VANISHED) return bad("unknown-provider")
     throw error
   }
-  if (!w.ok) return { ok: false, reason: w.reason, fields: agentFields(loadConfig()) }
-  return { ok: true, reason: null, fields: agentFields(loadConfig()) }
+  if (!w.ok) return { ok: false, reason: w.reason, fields: agentFields(loadConfig()), models: modelsFace(loadConfig()) }
+  return { ok: true, reason: null, fields: agentFields(loadConfig()), models: modelsFace(loadConfig()) }
 }
 
 /**
@@ -236,9 +187,9 @@ export function indexStatus({ dir = null } = {}) {
 }
 
 /**
- * `settings:agent(payload)`：读 `{}` ⇒ `{ ok, fields }`；写 `{ patch:{ "<点分路径>": value } }` ∥
- * `{ tier:{ provider, model, level } }`（**二择一**——档位为意图级载荷）⇒ `{ ok, reason, fields }`
- * （**写后回读**）。
+ * `settings:agent(payload)`：读 `{}` ⇒ `{ ok, fields, models }`；写 `{ patch:{ "<点分路径>": value } }` ∥
+ * `{ tier:{ provider, model, level } }`（**二择一**——档位为意图级载荷）⇒ `{ ok, reason, fields, models }`
+ * （**写后回读**；`models` = consult ∕ advisor 行面 —— R7 增：段读面随写同拍刷）。
  * 三档失败（§2.2 状态面②）：① 值校验拒绝 ⇒ 核 `_checkKnownKeyValue` 抛错 **零写盘**
  * （reason = 核错误串直传）；② mtime 冲突 ⇒ 核回执 `mtime-conflict`（`.bak-{ts}` 已留）；
  * ③ 路径形态非法 ⇒ `invalid-patch`。未知键**放行**（全量域 = 核语义——端侧不另立白名单）。
@@ -251,21 +202,21 @@ export function settingsAgent(payload) {
   const tier = payload?.tier
   const hasPatch = patch !== undefined && patch !== null
   const hasTier = tier !== undefined && tier !== null
-  if (hasPatch && hasTier) return { ok: false, reason: "invalid-patch", fields: agentFields(config) }
+  if (hasPatch && hasTier) return { ok: false, reason: "invalid-patch", fields: agentFields(config), models: modelsFace(config) }
   if (hasTier) return tierAgent(config, tier)
-  if (!hasPatch) return { ok: true, fields: agentFields(config) }
+  if (!hasPatch) return { ok: true, fields: agentFields(config), models: modelsFace(config) }
   const entries = typeof patch === "object" && !Array.isArray(patch) ? Object.entries(patch) : []
-  if (!entries.length) return { ok: false, reason: "invalid-patch", fields: agentFields(config) }
+  if (!entries.length) return { ok: false, reason: "invalid-patch", fields: agentFields(config), models: modelsFace(config) }
   for (const [path, value] of entries) {
     try {
       _checkKnownKeyValue(path, value)
     } catch (e) {
-      return { ok: false, reason: e?.message ?? String(e), fields: agentFields(config) }
+      return { ok: false, reason: e?.message ?? String(e), fields: agentFields(config), models: modelsFace(config) }
     }
   }
   const w = writeConfigAtomic(_configPath(), (disk) => {
     for (const [path, value] of entries) setKeyPath(disk, path, value)
   })
-  if (!w.ok) return { ok: false, reason: w.reason, fields: agentFields(loadConfig()) }
-  return { ok: true, reason: null, fields: agentFields(loadConfig()) }
+  if (!w.ok) return { ok: false, reason: w.reason, fields: agentFields(loadConfig()), models: modelsFace(loadConfig()) }
+  return { ok: true, reason: null, fields: agentFields(loadConfig()), models: modelsFace(loadConfig()) }
 }

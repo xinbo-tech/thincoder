@@ -2,15 +2,20 @@
  * settings-sections.mjs — 设置面段体档（批 9 · 批档 §2.12–§2.13；自 `renderer/views/settings.mjs` 拆出
  * —— 300 行层拆分，零语义变化）：渠道 / 模型与档位 / MCP 各一形（agent 段体已随「桌面处理流 · VSC 对齐」批 R8
  * 拆出 `renderer/views/settings-agent.mjs` —— **原档 re-export 两件、导出面零改**；「工具与服务」段体随
- * R2（桌面功能对位批）拆出 `renderer/views/settings-sections-tools.mjs` —— **本档 re-export 一件**）。
+ * R2（桌面功能对位批）拆出 `renderer/views/settings-sections-tools.mjs` —— **本档 re-export 一件**；
+ * R7（桌面功能对位批）两新段体拆出 `renderer/views/settings-sections-env.mjs`（环境）∥
+ * `settings-sections-models.mjs`（咨询与顾问）—— **本档 re-export 两件**）。
  * 面形要点：档位（现值 = `defaultModel` 渠道段条目的 `effort` 投影 · 枚举 = 模型段在 `model:list` 的元素面；
  * **不可解 ⇒ 零节点 —— 禁假造**）·
- * MCP（探活失败零保存 = 主侧口径，端侧只呈现回执）· 渠道（行 + 校验结果 + 两形表单，`loading` 期零表单）。
+ * MCP（探活失败零保存 = 主侧口径，端侧只呈现回执；**R7 增**行内两钮：`Tools` 展开工具清单〔逐工具名 /
+ * 描述 / params〕· `Test` 探活回执；两态均经 `mcp:tools` 通道）· 渠道（行 + 校验结果 + 两形表单，`loading` 期零表单）。
  * 导出面：`modelHeadNode` / `modelChoicesTree` 供首启向导第二步复用（单一 owner、零副本）；`tierFace` 供面模型取
  * 档位读数（`settings.mjs` `settingsModel`）；`NAMED_FIELDS` = agent 具名十键表（键集 / 词键 / 控型三面单源 —— 现档
  * re-export 自 `settings-agent.mjs`；消费面 = 同档 `agentBody` + `renderer/mount-settings-exits.mjs` 写路）；
  * 四段体供 `settings.mjs` 段体分派——渠道体经 `deps` 注入取用两导出面
- * （`verifyControl`）与词表（`reasonWord`），本档零 import 反向（无环）。
+ * （`verifyControl`）与词表（`reasonWord`），本档零 import 反向（无环）—— **R7 起 = 六段体**（env ∕ models 两新段
+ * 经本档 re-export 面入分派；MCP 体随两钮先拆后改出档 `-mcp.mjs`、本档同拍 re-export；MCP 体第三参 `deps` 供
+ * `reasonWord` 出词）。
  * 纪律：零 DOM（描述符树）；文案一律经 `t()`；缺 handlers ⇒ `wire` 落 `disabled: true`；
  * 零 `node:` / 零裸包 / 零 `store.mjs` import。
  */
@@ -21,6 +26,11 @@ import { wire } from "./chat-tool.mjs"
 export { agentBody, NAMED_FIELDS } from "./settings-agent.mjs"
 // 「工具与服务」段体（本批 = 索引族行）随 R2 拆出 `./settings-sections-tools.mjs`；本档 re-export ⇒ 导出面零改。
 export { toolsBody } from "./settings-sections-tools.mjs"
+// R7 两新段体（环境 ∕ 咨询与顾问）自立出档；本档 re-export ⇒ 分派面零改。
+export { envBody } from "./settings-sections-env.mjs"
+export { modelsBody } from "./settings-sections-models.mjs"
+// MCP 段体（R7 随两钮先拆后改 —— `-mcp.mjs`）同拍；本档 re-export ⇒ 分派面零改。
+export { mcpBody } from "./settings-sections-mcp.mjs"
 
 
 /** 列表切片：缺 / 非数组 ⇒ 空表（零节点 —— 禁假数据）。 */
@@ -210,57 +220,4 @@ function tierRowNode(tier, handlers) {
 export function modelBody(section, handlers) {
   const tier = section?.tier ?? null
   return [modelHeadNode(section), ...(tier === null ? [] : [tierRowNode(tier, handlers)]), ...modelChoicesTree(section, handlers)]
-}
-
-/** MCP 行：名 + 形词（表外原样）+ 摘要（主侧出口——不含密钥面）+ 移除控件。 */
-function mcpRowNode(row, handlers) {
-  const onRemove = typeof handlers?.onRemoveMcp === "function" ? () => handlers.onRemoveMcp(row.name) : undefined
-  const kind = row.kind === "url" || row.kind === "command" ? t(`settings.mcp.kind.${row.kind}`) : String(row.kind ?? "")
-  return {
-    tag: "div",
-    props: { class: "settings-row", "data-mcp": row.name, "data-kind": row.kind ?? undefined },
-    children: [
-      { tag: "span", props: { class: "settings-row-name" }, children: [row.name] },
-      { tag: "span", props: { class: "settings-row-value" }, children: [kind] },
-      { tag: "span", props: { class: "settings-row-value" }, children: [String(row.summary ?? "")] },
-      {
-        tag: "button",
-        props: wire({
-          class: "settings-row-action",
-          type: "button",
-          "data-action": "settings:removeMcp",
-          "data-name": row.name,
-          "aria-label": t("settings.mcp.remove", { name: row.name }),
-        }, onRemove),
-        children: [t("settings.mcp.remove", { name: row.name })],
-      },
-    ],
-  }
-}
-
-/** MCP 表单：名 + 配置 JSON（`name` 属性 = 载荷键；JSON 解析归提交端 —— 解析失败零发送）。 */
-function mcpFormNode(handlers) {
-  return {
-    tag: "form",
-    props: { class: "settings-form", "data-form": "mcp" },
-    children: [
-      { tag: "label", props: { class: "settings-field-label", for: "mcp-name" }, children: [t("settings.mcp.nameLabel")] },
-      { tag: "input", props: { class: "settings-field", id: "mcp-name", name: "name", type: "text" } },
-      { tag: "label", props: { class: "settings-field-label", for: "mcp-config" }, children: [t("settings.mcp.configLabel")] },
-      { tag: "textarea", props: { class: "settings-field", id: "mcp-config", name: "config", rows: "3" }, children: [] },
-      {
-        tag: "button",
-        props: wire(
-          { class: "settings-submit", type: "button", "data-action": "settings:addMcp" },
-          typeof handlers?.onAddMcp === "function" ? handlers.onAddMcp : undefined,
-        ),
-        children: [t("settings.mcp.add")],
-      },
-    ],
-  }
-}
-
-/** MCP 段体：行 + 表单（`loading` 期零表单 —— 载入中不落半形）。 */
-export function mcpBody(section, handlers) {
-  return [...section.servers.map((row) => mcpRowNode(row, handlers)), section.state === "loading" ? null : mcpFormNode(handlers)]
 }

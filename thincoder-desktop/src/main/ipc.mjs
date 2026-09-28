@@ -1,5 +1,5 @@
 /**
- * ipc.mjs — IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）：**三十五项** = 配置读取 + 项目面
+ * ipc.mjs — IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）：**三十八项** = 配置读取 + 项目面
  * `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` / `session:switch` /
  * `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` + 作答响应
  * `question:respond` —— `question` 工具真作答面 + 历史页 `history:page`
@@ -13,6 +13,10 @@
  * （派生索引重建）—— 处理体出档 `session-maintenance.mjs`（确认面 = 原生模态 `window.mjs` `confirmRecycle`）。
  * + **索引数据面两项（R2 · 桌面功能对位批 —— 白名单末位）**：`index:build`（语义索引构建入口）·
  * `index:status`（索引状态读数）—— 处理体出档 `index-status.mjs`（构建）与 `settings.mjs`（读数装配）。
+ * + **R7 设置补充三项（桌面功能对位批 —— 白名单末位）**：`settings:env`（env 读写：proxy ∕ shell +
+ * TestProxy 转口 —— 处理体出档 `settings-env.mjs`，TestProxy 出口 = `providers.mjs`）· `settings:tools`
+ * （embedding ∕ websearch key 读写 —— 出档 `settings-tools.mjs`）· `mcp:tools`（MCP 连接列举 ∕ Test 探活
+ * —— 出档 `mcp-servers.mjs`）。
  * + **台账行出站接线（「对齐第三批」KD-38）**：`pushLedgerLines` 挂 `session:resume` 成功径（出站面经
  * `setLedgerEmit` 注入；扫描 / 出站逻辑住 `project-info.mjs`）
  * （定序 = 预载白名单同序）。
@@ -33,8 +37,10 @@ import {
 } from "./session-actions.mjs"
 import { pageHistory, scheduleSessionGC } from "./session-slots.mjs"
 import { configWrite, indexStatus, isConfigured, modelList, settingsAgent } from "./settings.mjs"
+import { settingsEnv } from "./settings-env.mjs"
+import { settingsTools } from "./settings-tools.mjs"
 import { providerList, providerRemove, providerSave, providerVerify } from "./providers.mjs"
-import { mcpList, mcpRemove, mcpSave } from "./mcp-servers.mjs"
+import { mcpList, mcpRemove, mcpSave, mcpTools } from "./mcp-servers.mjs"
 import { batchStatus, ledgerRead, pushLedgerLines } from "./project-info.mjs"
 import { runSessionGcMaintenance, runSessionIndexMaintenance } from "./session-maintenance.mjs"
 import { runIndexBuild } from "./index-status.mjs"
@@ -119,6 +125,9 @@ const HANDLERS = Object.freeze({
   "session:index": sessionIndex,
   "index:build": indexBuild,
   "index:status": indexStatusChannel,
+  "settings:env": settingsEnvChannel,
+  "settings:tools": settingsToolsChannel,
+  "mcp:tools": mcpToolsChannel,
 })
 
 /** `project:open(payload)` ⇒ `{ cwd, recent }`：载荷 `{ path }` **可选**（`docs/desktop/design/IPC.md:42`）——
@@ -266,6 +275,15 @@ function sessionIndex() { return runSessionIndexMaintenance() }
  *  构建落 `{ ok:false, reason:"no-project" }`（可见失败面，零静默）。 */
 function indexBuild() { return runIndexBuild({ dir: currentCwd() }) }
 function indexStatusChannel() { return indexStatus({ dir: currentCwd() }) }
+
+/** R7 · 设置补充三项（处理体出档 `settings-env.mjs` ∕ `settings-tools.mjs` ∕ `mcp-servers.mjs`）：
+ *  `settings:env` 三支 = 读 `{}` ∕ 写 `{ patch: { proxy?, shell? } }` ∕ TestProxy `{ testProxy: { uri } }`
+ *  （写经核 `writeConfigAtomic`——端侧零自写盘）；`settings:tools` 两支 = 读 `{}` ∕ 写
+ *  `{ patch: { embedding?: { apiKey }, websearch?: { apiKey } } }`；`mcp:tools` 两支 = `{ name }`
+ *  （连接列举）∥ `{ name, test: true }`（Test 探活一次）。载荷 / 回执形 = `docs/desktop/design/IPC.md` §2。 */
+function settingsEnvChannel(payload) { return settingsEnv(payload) }
+function settingsToolsChannel(payload) { return settingsTools(payload) }
+function mcpToolsChannel(payload) { return mcpTools(payload) }
 
 /* ─── 设置族十二项处理体（本批增）：转口三档模块，本档零算法副本（§2.5 行表） ─── */
 /** `provider:list`（无入参）⇒ `{ ok, providers, active }`（密钥只回遮罩值）。 */

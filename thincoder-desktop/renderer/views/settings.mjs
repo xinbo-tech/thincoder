@@ -1,14 +1,17 @@
 /**
  * settings.mjs — 设置面 + 两导出面（批 9 · 批档 §2.12–§2.14；设计单源 = `docs/desktop/design/UI.md` §1 设置面行）。
- * 面形 = 五段（`data-section` = `providers` / `model` / `agent` / `mcp` / `tools`〔R2 增 —— 桌面功能对位批〕）
+ * 面形 = **七段**（`data-section` = `providers` / `model` / `agent` / `mcp` / `env`〔R7 增：proxy + shell〕/
+ * `tools`〔R2 增：embedding ∕ websearch ∕ 索引状态〕/ `models`〔R7 增：consult ∕ advisor 行〕）
  * 各三态（`data-state` = `none` / `loading` /
  * `ready`）：`none` / `loading` ⇒ 词表提示、`ready` ⇒ 行内容；表单在 `loading` 外常在；失败面 = `notice` 节点
  * （**核错误串直传** —— `REASON_WORD` 表内码出词、表外原样，不吞、不自造码）；面头 = 标题 + 语言控件
  * （**锚名逐字** `settings:lang`，在关闭控件**左侧** —— 点按经 `config:write(locale)` 同回带重刷词面）+ 关闭锚
- * `settings:close`（**零 Esc 绑定**）。
- * **两导出面（单一 owner —— 首启向导复用，零副本，批档 §2.3）**：`channelFormTree`（预设形 / 自定形一表；
- * `name` 属性 = 通道载荷键 ⇒ 提交端 `FormData` 直取）· `verifyControl`（渠道行 / 向导同一构造）——四段体经
- * `deps` 注入取用。兄弟档：四段体 = `renderer/views/settings-sections.mjs`（300 行层拆分）；项目级信息行 =
+ * `settings:close`（**零 Esc 绑定** —— Esc 关闭归出口族 `document` 键面）。
+ * **两导出面（单一 owner —— 首启向导复用，零副本，批档 §2.3）**：`channelFormTree` ∕ `verifyControl`——
+ * **R7 先拆后改**：随 `fieldPair` 出档 `renderer/views/settings-controls.mjs`（本档同名 re-export ⇒ 导出面零改）；
+ * 段体经 `deps` 注入取用。兄弟档：段体 = `renderer/views/settings-sections.mjs`（300 行层拆分 ——
+ * 渠道 / 模型 / MCP 三形；agent 段 = `-agent.mjs`；tools 段 = `-tools.mjs`；env 段 = `-env.mjs`；
+ * models 段 = `-models.mjs`——后两者 R7 增，前两者本档 re-export 面零改）；项目级信息行 =
  * `renderer/views/info-row.mjs`（本档 `reasonWord` 供其失败面出词）。**共用面 `syncHostProps`** = 宿主属性面复位表
  * （薄挂载属性应收单源 —— 向导 / 信息行两档同取，零副本；判据 = `docs/desktop/design/RENDERER.md` §1 退场口径 · 属性面）。
  * 纪律：零 DOM（构造点 = `dom.mjs` `build`）；
@@ -17,15 +20,23 @@
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
-import { agentBody, mcpBody, modelBody, modelIdOf, providersBody, tierFace, toolsBody } from "./settings-sections.mjs"
+import { channelFormTree, verifyControl } from "./settings-controls.mjs"
+import { agentBody, envBody, mcpBody, modelBody, modelIdOf, modelsBody, providersBody, tierFace, toolsBody } from "./settings-sections.mjs"
 
-/** 段闭集（序固定 = 渠道 → 模型与档位 → agent 参数 → MCP → 工具与服务〔R2 增〕）：名（`data-section`）+ 词键单源。 */
+// 两导出面随 R7 出档 `settings-controls.mjs`；本档 re-export ⇒ 导出面零改（消费面 = 首启向导）。
+export { channelFormTree, verifyControl } from "./settings-controls.mjs"
+
+/** 段闭集（序固定 = 渠道 → 模型与档位 → agent 参数 → MCP → 环境〔R7 增〕→ 工具与服务〔R2 增〕→
+ *  咨询与顾问〔R7 增〕；R7 终态枚举行「providers ∕ model ∕ agent ∕ mcp ＋ env ＋ tools ＋ models」同序）：
+ *  名（`data-section`）+ 词键单源。 */
 export const SECTIONS = Object.freeze([
   { name: "providers", word: "settings.section.providers" },
   { name: "model", word: "settings.section.model" },
   { name: "agent", word: "settings.section.agent" },
   { name: "mcp", word: "settings.section.mcp" },
+  { name: "env", word: "settings.section.env" },
   { name: "tools", word: "settings.section.tools" },
+  { name: "models", word: "settings.section.models" },
 ])
 
 /** 段态出词闭集（两态：`none` / `loading`）；`ready` ⇒ 行内容（零状态词）。 */
@@ -68,6 +79,9 @@ function langOf(state) {
 /** 列表切片：缺 / 非数组 ⇒ 空表（零节点 —— 禁假数据）。 */
 const listOf = (value) => (Array.isArray(value) ? value : [])
 
+/** 非空串归一：非串 / 空串 ⇒ `null`（禁假造）。 */
+const str = (value) => (typeof value === "string" && value !== "" ? value : null)
+
 /** 码 → 词：表内出词；表外（含核错误串）原样直传；缺 / 空 ⇒ `null`（零节点）。 */
 export function reasonWord(code) {
   if (code === null || code === undefined || code === "") return null
@@ -81,7 +95,12 @@ function stateOf(section) {
   return raw === "loading" || raw === "ready" ? raw : "none"
 }
 
-/** 面模型（纯 · 零 DOM）：开合 + 失败面 + 五段（各段现态直读 —— 渲染面零推导）。 */
+/** 候选项归一（models 段两处 picker）：`{ id, effortEnum }` 两键投影——`id` 缺 ⇒ 弃项（禁假造）。 */
+function pickerRows(value) {
+  return listOf(value).map((row) => ({ id: modelIdOf(row), effortEnum: listOf(row?.effortEnum) })).filter((row) => row.id !== null)
+}
+
+/** 面模型（纯 · 零 DOM）：开合 + 失败面 + 七段（各段现态直读 —— 渲染面零推导）。 */
 export function settingsModel(state) {
   const settings = state?.settings ?? {}
   const notice = settings.notice !== null && typeof settings.notice === "object" ? settings.notice : null
@@ -110,11 +129,49 @@ export function settingsModel(state) {
     mcp: {
       state: stateOf(settings.mcp),
       servers: listOf(settings.mcp?.servers).filter((s) => s && typeof s.name === "string"),
+      details: settings.mcp?.details !== null && typeof settings.mcp?.details === "object" ? settings.mcp.details : {},
+    },
+    env: {
+      state: stateOf(settings.env),
+      proxy: {
+        uri: typeof settings.env?.proxy?.uri === "string" ? settings.env.proxy.uri : "",
+        web: settings.env?.proxy?.web !== false,
+        model: settings.env?.proxy?.model === true,
+      },
+      shell: {
+        current: str(settings.env?.shell?.current),
+        candidates: listOf(settings.env?.shell?.candidates).filter((c) => c && typeof c.name === "string"),
+      },
+      test: settings.env?.test !== null && typeof settings.env?.test === "object" ? settings.env.test : null,
     },
     tools: {
       state: stateOf(settings.tools),
       status: settings.tools?.status !== null && typeof settings.tools?.status === "object" ? settings.tools.status : null,
       building: settings.tools?.building === true,
+      keys: settings.tools?.keys !== null && typeof settings.tools?.keys === "object"
+        ? {
+          embedding: { hasKey: settings.tools.keys.embedding?.hasKey === true },
+          websearch: { hasKey: settings.tools.keys.websearch?.hasKey === true },
+        }
+        : null,
+      edit: settings.tools?.edit === "embedding" || settings.tools?.edit === "websearch" ? settings.tools.edit : null,
+    },
+    models: {
+      state: stateOf(settings.models),
+      consult: listOf(settings.models?.consult).filter((row) => row && typeof row.provider === "string" && row.provider !== "" && typeof row.model === "string" && row.model !== "")
+        .map((row) => ({ provider: row.provider, model: row.model, effort: typeof row.effort === "string" ? row.effort : null, effortEnum: listOf(row.effortEnum) })),
+      advisor: { provider: str(settings.models?.advisor?.provider), model: str(settings.models?.advisor?.model) },
+      providers: listOf(settings.providers?.providers).map((p) => p?.name).filter((name) => typeof name === "string" && name !== ""),
+      picker: {
+        provider: typeof settings.models?.picker?.provider === "string" ? settings.models.picker.provider : "",
+        rows: pickerRows(settings.models?.picker?.rows),
+        model: str(settings.models?.picker?.model),
+      },
+      advisorPicker: {
+        provider: typeof settings.models?.advisorPicker?.provider === "string" ? settings.models.advisorPicker.provider : "",
+        rows: pickerRows(settings.models?.advisorPicker?.rows),
+        model: str(settings.models?.advisorPicker?.model),
+      },
     },
   }
 }
@@ -137,77 +194,10 @@ function sectionStateNode(state) {
   return { tag: "div", props: { class: "settings-section-state", "data-state-word": "" }, children: [t(STATE_WORD[state])] }
 }
 
-/** 字段两片（标词 + 输入）：`name` = 载荷键、`id` / `for` 同源。 */
-function fieldPair(name, type, labelWord, extra = {}) {
-  return [
-    { tag: "label", props: { class: "settings-field-label", for: name }, children: [t(labelWord)] },
-    { tag: "input", props: { class: "settings-field", id: name, name, type, ...extra } },
-  ]
-}
-
-/** **导出面①** —— 渠道表单（纯构树）：`{ shape, presets, formats, activeDefault, submitKey }` +
- *  `handlers.onSubmit`（提交端读 `FormData`——本档零值搬运）。两形一表：`preset` / `custom`。 */
-export function channelFormTree(form, handlers = {}) {
-  const shape = form?.shape === "custom" ? "custom" : "preset"
-  const presets = listOf(form?.presets).filter((p) => p && typeof p.name === "string")
-  const formats = listOf(form?.formats).filter((f) => typeof f === "string" && f)
-  const onSubmit = typeof handlers?.onSubmit === "function" ? handlers.onSubmit : undefined
-  const children = [
-    { tag: "input", props: { type: "hidden", name: "shape", value: shape } },
-    { tag: "label", props: { class: "settings-field-label", for: "name" }, children: [t(shape === "custom" ? "settings.providers.nameLabel" : "settings.providers.presetLabel")] },
-  ]
-  if (shape === "custom") {
-    children.push({ tag: "input", props: { class: "settings-field", id: "name", name: "name", type: "text" } })
-    children.push(...fieldPair("baseURL", "text", "settings.providers.baseURLLabel"))
-    children.push(...fieldPair("model", "text", "settings.providers.modelLabel"))
-    children.push({ tag: "label", props: { class: "settings-field-label", for: "format" }, children: [t("settings.providers.formatLabel")] })
-    children.push({
-      tag: "select",
-      props: { class: "settings-field", id: "format", name: "format" },
-      children: formats.map((f) => ({ tag: "option", props: { value: f }, children: [f] })),
-    })
-  } else {
-    children.push({
-      tag: "select",
-      props: { class: "settings-field", id: "name", name: "name" },
-      children: presets.map((p) => ({ tag: "option", props: { value: p.name }, children: [p.name] })),
-    })
-  }
-  children.push(...fieldPair("key", "password", "settings.providers.keyLabel"))
-  children.push({ tag: "label", props: { class: "settings-field-label", for: "active" }, children: [t("settings.providers.activeToggle")] })
-  children.push({
-    tag: "input",
-    props: { class: "settings-field", id: "active", name: "active", type: "checkbox", checked: form?.activeDefault === true ? true : undefined },
-  })
-  children.push({
-    tag: "button",
-    props: wire({
-      class: "settings-submit",
-      type: "button",
-      "data-action": shape === "custom" ? "settings:addCustom" : "settings:addPreset",
-    }, onSubmit),
-    children: [t(form?.submitKey ?? (shape === "custom" ? "settings.providers.addCustom" : "settings.providers.addPreset"))],
-  })
-  return { tag: "form", props: { class: "settings-form", "data-form": shape, "data-form-shape": shape }, children }
-}
-
-/** **导出面②** —— 校验控件：`name` 给 ⇒ 携标（`data-name`）；缺 ⇒ 提交端自读表单现选。 */
-export function verifyControl(name, handlers = {}) {
-  const onClick = typeof handlers?.onVerify === "function" ? () => handlers.onVerify(name ?? null) : undefined
-  return {
-    tag: "button",
-    props: wire({
-      class: "settings-row-action",
-      type: "button",
-      "data-action": "settings:verify",
-      "data-name": typeof name === "string" && name ? name : undefined,
-    }, onClick),
-    children: [t("settings.providers.verify")],
-  }
-}
-
-/** 段体分派（五段各一形；段名闭集 —— 表外段零节点）：四段体住 `settings-sections.mjs`（`tools` 段体随二道
- *  出 `settings-sections-tools.mjs` 再经本档导入面），本档经 `deps` 注入两导出面 + 词表（单一 owner —— 零副本）。 */
+/** 段体分派（七段各一形；段名闭集 —— 表外段零节点）：各段体住 `settings-sections*.mjs`（经本档导入面），
+ *  本档经 `deps` 注入两导出面 + 词表（单一 owner —— 零副本）。**段态门**（三态单源）：`env` ∕ `models` 两
+ *  新段 = `ready` 才落行（`none` / `loading` ⇒ 零行节点 —— 防未读达即落默认值〔假读数〕）；`agent` 沿旧
+ *  （`loading` 期零体）；`providers` ∕ `model` ∕ `mcp` ∕ `tools` 沿各自旧判（零行为改）。 */
 function sectionBody(name, model, handlers) {
   const deps = { channelForm: channelFormTree, verifyControl, reasonWord, formats: FORMATS }
   if (name === "providers") return [sectionStateNode(model.providers.state), ...providersBody(model.providers, handlers, deps)]
@@ -215,8 +205,10 @@ function sectionBody(name, model, handlers) {
   if (name === "agent") {
     return [sectionStateNode(model.agent.state), ...(model.agent.state === "loading" ? [] : agentBody(model.agent, handlers))]
   }
+  if (name === "env") return [sectionStateNode(model.env.state), ...(model.env.state === "ready" ? envBody(model.env, handlers) : [])]
   if (name === "tools") return [sectionStateNode(model.tools.state), ...toolsBody(model.tools, handlers)]
-  return [sectionStateNode(model.mcp.state), ...mcpBody(model.mcp, handlers)]
+  if (name === "models") return [sectionStateNode(model.models.state), ...(model.models.state === "ready" ? modelsBody(model.models, handlers) : [])]
+  return [sectionStateNode(model.mcp.state), ...mcpBody(model.mcp, handlers, deps)]
 }
 
 /** 失败面节点（核错误串直传）：段标（面板级 ⇒ 零段标）+ 串。 */

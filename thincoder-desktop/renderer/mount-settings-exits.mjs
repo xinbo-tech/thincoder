@@ -3,6 +3,10 @@
  * `renderer/mount-settings.mjs` 拆出 —— 300 行层拆分，零语义变化）：十一出口（提交 ∕ 校验 ∕ 移除 ∕ agent 存 ∕
  * 具名写 ∕ 采用模型 ∕ 档位 ∕ MCP 增删 ∕ 语言 ∕ 开合 ＋ 索引构建〔R2 · 桌面功能对位批〕）· 形式取值
  * （`rowValue` ∕ `namedOut`）· 泛化兜底变更集（`agentPatch`）· Esc 关闭绑定。
+ * **R7（桌面功能对位批）先拆后改**：MCP 增删 ∕ 索引构建三出口 + 新增段出口（env ∕ 两 key ∕ models ∕ MCP
+ * 展开面）共**二十一**出口随族迁出（env ∕ 工具 ∕ MCP **十三** = `renderer/mount-settings-segments.mjs`；models 八 =
+ * `renderer/mount-settings-segments-models.mjs` —— 两档段出口族，本档**装配即合并**，单一 `handlers` 表对外零改）；
+ * `formOf` 经 `deps` 回注段族（单一 owner ⇒ 零副本）。
  *
  * 接线沿 `mount-onboarding.mjs` 注入先例：`createExits(deps)` —— `deps = { ask, store, setSettings, report, clearReport, occupies, reads, slot, paintSettings }`
  * （窄桥 ∕ 值面 ∕ 失败面 ∕ 读数供给 ∕ 槽锚 ∕ 重绘归装配面）；返回 `{ handlers, openSettings, closeSettings }`（`handlers` = 视图 `data-action` 同域出口表）。
@@ -13,6 +17,8 @@
 import { initDict } from "./i18n.mjs"
 import { configuredFlag, patchSettings } from "./store.mjs"
 import { presetValue } from "./mount-onboarding.mjs"
+import { createSegmentExits } from "./mount-settings-segments.mjs"
+import { createModelsExits } from "./mount-settings-segments-models.mjs"
 
 /** 表单自取：提交控件 `type="button"`（handlers 直传 ⇒ 监听器 = 本函数，收 **Event**）⇒ `closest("form")`。 */
 function formOf(event) {
@@ -50,7 +56,7 @@ function rowValue(input) {
  */
 export function createExits(deps = {}) {
   const { ask, store, setSettings, report, clearReport, occupies, slot, paintSettings } = deps
-  const { loadProviders, loadAgent, loadMcp, loadIndex } = deps.reads ?? {}
+  const { loadProviders, loadAgent, loadMcp, loadEnv, loadTools } = deps.reads ?? {}
 
   /** agent 段变更集（**泛化兜底行面**）：DOM `[data-field]` 可写行 × 现态读数 diff ⇒ 只发变更路径；无变更 ∨ 无效数值行 ⇒ 零发送；作用域 = 设置槽（收到槽内即不误取）。 */
   function agentPatch(state) {
@@ -172,61 +178,13 @@ export function createExits(deps = {}) {
     await loadProviders({ models: false })
   }
 
-  /** 索引构建出口（`index:build` —— R2 · 桌面功能对位批）：构建期段面置 `building`（钮禁用 + 「构建中…」
-   *  —— VSC 钮同拍禁用同律）；**成败皆复读状态**（VSC `buildIndex` 尾 `pushIndexStatus` 同律 —— 两 sync
-   *  之一失败的部分成功径也随真值刷新计数）；失败径 ⇒ **复读后**落段级失败面（失败串不被复读清位）；
-   *  **零乐观写**（不复用回执造假成功 —— 状态一律经复读真值）。 */
-  async function buildIndex() {
-    const held = store.get().settings?.tools ?? {}
-    setSettings({ tools: { ...held, state: "ready", building: true } })
-    const receipt = await ask("index:build")
-    await loadIndex()
-    if (receipt.ok !== true) {
-      report("tools", receipt, "index:build")
-      return
-    }
-    clearReport()
-  }
-
-  /** MCP 新增出口：`config` **JSON 解析归提交端** —— 解析失败 / 空名 ⇒ **零发送** + 段级失败面。 */
-  async function addMcp(event) {
-    const form = formOf(event)
-    if (form === null) return
-    const data = new FormData(form)
-    const name = String(data.get("name") ?? "")
-    const raw = String(data.get("config") ?? "")
-    if (name === "") {
-      console.error("[renderer] mcp:save: empty name")
-      report("mcp", { reason: "invalid-shape" }, "mcp:save")
-      return
-    }
-    let config = null
-    try {
-      config = JSON.parse(raw)
-    } catch (error) {
-      console.error("[renderer] mcp:save: config is not JSON:", error?.message ?? error)
-      report("mcp", { reason: "invalid-shape" }, "mcp:save")
-      return
-    }
-    const receipt = await ask("mcp:save", { name, config })
-    if (receipt.ok !== true) {
-      report("mcp", receipt, "mcp:save")
-      return
-    }
-    clearReport()
-    await loadMcp()
-  }
-
-  /** MCP 移除出口：失败 ⇒ 零乐观摘项。 */
-  async function removeMcp(name) {
-    const receipt = await ask("mcp:remove", { name })
-    if (receipt.ok !== true) {
-      report("mcp", receipt, "mcp:remove")
-      return
-    }
-    clearReport()
-    await loadMcp()
-  }
+  /** 段出口族（env ∕ 工具与服务 ∕ MCP **十三**项 + models 八项 —— 合 **21**）随 R7 迁 `mount-settings-segments.mjs` ∕
+   *  `mount-settings-segments-models.mjs`（段出口族工厂 —— 共享项注入，本档零副本）；`formOf` 回注
+   *  （单一 owner 在本档）。 */
+  const segments = createSegmentExits({
+    ask, store, setSettings, report, clearReport, reads: deps.reads ?? {}, slot, formOf,
+  })
+  const modelSegments = createModelsExits({ ask, store, setSettings, report, clearReport, reads: deps.reads ?? {} })
 
   /** 语言出口（`config:write` 键白名单仅 `locale`）：成功回带 `{ locale, dict, configured }` ⇒ 词表重刷 + 向导闸随新档态（**一次写**）。 */
   async function toggleLang(target) {
@@ -240,13 +198,14 @@ export function createExits(deps = {}) {
     store.set({ ...patchSettings(store.get(), { configured: configuredFlag(receipt.configured), notice: null }), locale })
   }
 
-  /** 设置面开（**两入口**：信息行 ∕ 输入区控件行第 7 钮 —— 后者经句柄面转口 `renderer/mount-composer.mjs`）：开 + 失败串清位 ⇒ 五段读数随动（段态 `none` → `loading` → `ready`）。 */
+  /** 设置面开（**两入口**：信息行 ∕ 输入区控件行第 7 钮 —— 后者经句柄面转口 `renderer/mount-composer.mjs`）：开 + 失败串清位 ⇒ 七段读数随动（段态 `none` → `loading` → `ready`）。 */
   function openSettings() {
     setSettings({ open: true, notice: null })
     void loadProviders()
     void loadAgent()
     void loadMcp()
-    void loadIndex()
+    void loadEnv()
+    void loadTools()
   }
 
   /** 设置面关（退场 = 零子节点 —— 订阅面重绘清容器）。 */
@@ -284,8 +243,11 @@ export function createExits(deps = {}) {
     setSettings({ agent: { state: "ready", fields: listOf(receipt.fields) } })
   }
 
-  /** 设置面出口族（锚名逐字 = 视图 `data-action` 同域；具名控件面 = 十键同路）。 */
+  /** 设置面出口族（锚名逐字 = 视图 `data-action` 同域；具名控件面 = 十键同路；段族 **21** 项经 `segments` ∕
+   *  `modelSegments` 合并）。 */
   const handlers = {
+    ...segments.handlers,
+    ...modelSegments.handlers,
     onToggleLang: (target) => void toggleLang(target),
     onCloseSettings: () => closeSettings(),
     onSubmit: (event) => void submitChannel(event),
@@ -295,9 +257,6 @@ export function createExits(deps = {}) {
     onNamedField: (entry, event) => void applyNamedField(entry, event),
     onUseModel: (provider, name) => void useModel(provider, name),
     onTier: (provider, model, level) => void setTier(provider, model, level),
-    onBuildIndex: () => void buildIndex(),
-    onAddMcp: (event) => void addMcp(event),
-    onRemoveMcp: (name) => void removeMcp(name),
   }
 
   /** Esc 关闭（F-Esc —— 一律经既有 `closeSettings` 出口，单一实现；向导态不在本项）：**绑定宿主 = `document`**（面板为窗口级覆盖层

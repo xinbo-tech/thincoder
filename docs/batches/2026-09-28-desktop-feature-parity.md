@@ -128,6 +128,11 @@
 - **裁定 ∕ 转出**：① 登记项四项（`events` 482 顾问线 ∕ `LEDGER_STATE` 门与 VSC 同形 ∕ L2 随超阈段 ∕ 单槽互清）= **免裁在册**；② **合并轮重派**：#40（R4+R5）**撤单** → R4 + R5 + **R8 漂移列（七档 ~17 组）** 合并为原子一轮（在队）；③ `ev:config` 载荷不携 `key` = 会话键面通则例外——收正轮**明写**；④ `.r7-wire.mjs`（R7 期 ad-hoc 闸住包根）= 随 R7 收尾同处置（在册）。
 - **对账**：`flow/ledger-line` 跟滚面 = **真无缺口**（增量帧 ∕ 贴底判据实读）✓。
 
+### 1.23 R7 交付收下（父侧 · 2026-09-29 01:5x）
+- **交付**（#12 · 终态 clean · fix 1 + 评审 2 轮）：**段闭集 5 ⇒ 7**（渠道 ∕ 模型与档位 ∕ agent ∕ MCP ∕ **env** ∕ tools ∕ **models**）+ env 族（proxy ∕ shell ∕ TestProxy——复用核 `proxyFetch`，零第二 HTTP 客户端）+ tools 族（embedding ∕ websearch 两 key + 索引状态行）+ models 族（consult ≤5 ∕ advisor 两 picker）+ agent `autoThink` + MCP 工具清单（`mcp:tools` 两形态 + 三态展开）+ 三请求通道（**白名单 35 ⇒ 38**，两表同序）+ **i18n +47 键 × 两语**（键数链 265 ∕ 104 ∕ 28 ⇒ **397**）+ **先拆后改 ×4**（拆后各档 ≤298）。负控 **9/9**（唯一写体 = 核 `writeConfigAtomic`；真档沙箱零触）+ 探针 A1–A15 ∕ B1–B6 全绿 + 渲染自查 21 ∕ 25 全绿；`node --check` 24/24。内审自抓 1 🔴（`loadIndex` 悬空 ⇒ 已修 + 机械闸）；代码评审轮 1 changes-required（键缺定义 ⇒ 改指既有键）⇒ fix ⇒ 轮 2 pass。
+- **裁 ∕ 处置**：① §2.4 R7 行「4 ⇒ 7」相抵 → **父侧机械收正**（`:368` ⇒「5 ⇒ 7」——已落）；② **ipc 序** = R7（+3 通道 ⇒ 现 **325**）→ R9（#14）→ **#28 拆点**（拆后吸收全部增量 ≤300——序成立）；③ `.r7-*.mjs` 六探针 = 收口随清（在册）；④ 登记项（MCP 列举会话回收 ∕ `kindOf` ∕ i18n +47 实值 ∕ advisor 清键 null）= **免裁在册**。
+- **转出 → 设计面**：IPC §1 ∕ §2（+3 请求行 ∕ 35 ⇒ 38 ∕ `settings:agent` models 键）· UI §1（设置面七段）等 —— **并入五合一收正轮 #42**（#41 撤单并入）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（初始轮 + 评审轮 1 修正（1–14 逐号）+ R1 设计面收正轮（#129 ∕ #131 · 六档八笔；flow 批档三处归父侧）+ 评审轮 3（重发复核）修正 · 微轮 #16（1–10 逐号）+ 退役面本体收正轮 + R2 设计面收正轮（#29 · ①–⑥ 逐号）+ R3 ∕ R6 设计面收正轮（#30 · ①–④ 逐号 + 三档 changelog）在册）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -365,7 +370,7 @@
 
 | # | 档（现读） | 源（出处） | 改动要点 | 预期 |
 |---|---|---|---|---|
-| 1 | `renderer/views/settings.mjs`（297） | VSC `settings-env.js`（204）· `settings-tools.js`（399）· `settings-agent.js`（184）· `settings-models.js`（218） | 族闭集 **4 ⇒ 7 段**（providers ∕ model ∕ agent ∕ mcp ＋ env〔proxy + shell〕＋ tools〔embedding ∕ websearch ∕ 索引状态〕＋ models〔consult ∕ advisor 行〕） | 297 ⇒ ≈340 |
+| 1 | `renderer/views/settings.mjs`（297） | VSC `settings-env.js`（204）· `settings-tools.js`（399）· `settings-agent.js`（184）· `settings-models.js`（218） | 族闭集 **5 ⇒ 7 段**（providers ∕ model ∕ agent ∕ mcp ＋ env〔proxy + shell〕＋ tools〔embedding ∕ websearch ∕ 索引状态〕＋ models〔consult ∕ advisor 行〕） | 297 ⇒ ≈340 |
 | 2 | `renderer/views/settings-sections.mjs`（357 · R2 已拆索引段） | 同 #1 | env ∕ tools ∕ models 三段体先拆后改（拆点 = 新 `settings-sections-env.mjs` ∕ `-tools.mjs`） | 357 ⇒ ≈300（+新档） |
 | 3 | `renderer/mount-settings.mjs`（500 顶格） | — | 接线随动（**先拆后改**——拆点归先落者；本批只加挂载行） | ≤500 |
 | 4 | `src/main/settings.mjs`（254） | VSC `panel-messages.mjs:22`（Shell ∕ Proxy ∕ TestProxy ∕ BuildIndex ∕ EmbedKey ∕ WebsearchKey 全在册） | +处理体：env 读写（proxy ∕ shell；写经核 `writeConfigAtomic`）· embedding ∕ websearch key · consult ∕ advisor 行 · auto-think 档（`agent` 族扩） | 254 ⇒ ≈340 |
@@ -1369,5 +1374,80 @@ KD-42（`PROJECT.md:81`）补句：**「域外对账保持人工」**——理�
 5. **并发笔迹归属**：`mount-settings.mjs` 的 R7 更名对账（六档行数注同拍）与 `mount-settings-exits.mjs` ∕ `-reads.mjs` ∕ `-segments.mjs` 17:34–17:38 窗笔迹 = **他舱**（非本舱；请父侧 git 归属复核）。本舱最终触碰 13 产品档 + 3 自查脚本（`.thincoder/tmp/r8-*`）。
 
 **报告读数（最终盘面 · 可按需复跑）**：`node .thincoder/tmp/r8-ledger-readings.mjs` ∕ `r8-watch-readings.mjs` ∕ `r8-vsc-check/run.mjs`（自 `thincoder-desktop`）——三脚本全绿：周期拍 120000ms 真触发 + 明细行逐字 + 无变化零出站 + dispose 拦截；watch 三态 ×3 臂（核注入 ∕ 桌面真 fs ∕ VSC 假宿主沙箱，副本与真档 `sha256` 逐字节等）；通道两表 23 = 23 同序 + `ev:config` 窄口 + §⑤ 段读面名实相符 ∕ 集等值双 true。
+
+### R7 · 设置五族对位（env ∕ tools ∕ models）+ MCP 工具清单 · 段闭集 5 ⇒ 7（eng-coder · 2026-09-29 · initial 轮 + fix 轮 1）
+
+**交付摘要（逐档 · 后 = `read` 总行数实读；前 = 设计「现读」基线 ∕ 本舱中间态）**
+
+| # | 档 | 后 | 落点 |
+|---|---|---|---|
+| 1 | `src/main/settings.mjs`（本舱加后 418 ⇒ 拆值面 ⇒） | **222** | R7 两新族处理体：`modelsFace`（consult ≤5 行三键 + effortEnum 投影 ∕ advisor 两键 —— 随 `settings:agent` 回执出 `models` 块）+ 读 ∕ 写面兜底；**先拆后改**（值面出档 `settings-values.mjs`） |
+| 2 | 新 `src/main/settings-values.mjs` | **97** | 值面拆出（遮罩 ∕ 投影 ∕ `setKeyPath` —— 零语义迁） |
+| 3 | 新 `src/main/settings-env.mjs` | **138** | env 族处理体 `settingsEnv`：读 `{ok,proxy,shell{current,candidates}}` ∕ 写 `{patch:{proxy?,shell?}}` ∕ `{testProxy:{uri}}` 转口 `providers.testProxy`；proxy 空 uri ⇒ **节删**、shell 空 ⇒ **键删**；写 = 核 `writeConfigAtomic`（端零自写盘）；shell 候选探测（`where` + 进程级 memo） |
+| 4 | 新 `src/main/settings-tools.mjs` | **79** | tools 族处理体 `settingsTools`：读两键在场判据 ∕ 写 `{patch:{embedding?∕websearch?:{apiKey}}}`（空串 = 清键）；embedding 置键回填核 `DEFAULTS` 的 baseURL ∕ model |
+| 5 | `src/main/providers.mjs`（前 151 ⇒） | **195** | `testProxy({uri})`：复用核 `proxyFetch`（**零第二 HTTP 客户端**）；形态前置校验 + 5s 超时（fix 轮加 `AbortController` —— 超时真关 socket） |
+| 6 | `src/main/mcp-servers.mjs`（前 120 ⇒） | **165** | `mcpTools`：`{name}` ⇒ 连接列举（逐工具 name ∕ description ∕ params＝`parameters.properties` 键名逗号连）· `{name,test:true}` ⇒ 核 `probeMcpServer` 一次 ⇒ `{toolCount,latencyMs}`；unknown-server ∕ probe-failed |
+| 7 | `src/main/ipc.mjs` | **325** | +3 通道注册（`settings:env` ∕ `settings:tools` ∕ `mcp:tools`）+ 处理体转口；**越 300 顾问线**（#28 拆点未落 —— 登记项 1） |
+| 8 | `src/preload/preload.cjs` | **70** | `CHANNELS` 35 ⇒ **38**（三通道末位同序） |
+| 9 | `renderer/views/settings.mjs`（前 297 ⇒） | **296** | 段闭集 **5 ⇒ 7**（`SECTIONS` = providers/model/agent/mcp/**env**/tools/**models**）+ 面模型三新切片 + 两导出面**先拆后改**出档 `settings-controls.mjs`；env ∕ models **段态门**（非 `ready` ⇒ 零行节点 —— 防假读数） |
+| 10 | 新 `renderer/views/settings-controls.mjs` | **83** | 三控件面出档（`selectNode` ∕ `optionNode` ∕ `fieldRow`） |
+| 11 | 新 `renderer/views/settings-sections-env.mjs` | **134** | env 段体（proxy uri ∕ web ∕ model + Test + shell 候选 select + 自定义路径） |
+| 12 | 新 `renderer/views/settings-sections-models.mjs` | **164** | models 段体（consult 行 ≤5 + effort 行内 select + 增行表单 + 状态行 + advisor 行） |
+| 13 | 新 `renderer/views/settings-sections-mcp.mjs` | **126** | MCP 段体随两钮**先拆后改**出档（原 `settings-sections.mjs` 357 越线）；行 + Tools ∕ Test 两钮 + 展开面三态 + 表单 |
+| 14 | `renderer/views/settings-sections.mjs`（前 357 ⇒） | **223** | 六段体 re-export 面（分派面零改） |
+| 15 | `renderer/views/settings-sections-tools.mjs` | **154** | +embedding ∕ websearch 两键行（配置 ⇒ `****` + 修改 + 删除 ∕ 未配 ⇒ `—` + 添加 Key 零删除；编辑态 = 密码输入 + 存 ∕ 消）；**键面读数缺位 ⇒ 两行零节点**（fix 轮） |
+| 16 | `renderer/views/settings-agent.mjs` | **120** | `NAMED_FIELDS` 十 ⇒ **十一**（+`agent.autoThink`，控型 boolean） |
+| 17 | `renderer/mount-settings.mjs` | **151** | `SCOPES` 改由视图 `SECTIONS` **派生**（单源）；`refreshSettings` 五读者随段闭集扩（+env ∕ tools —— fix 轮） |
+| 18 | `renderer/mount-settings-reads.mjs` | **189** | 读族：`loadIndex` ⇒ **`loadTools`**（段三族两请求同入口）+ 增 `loadEnv`；`loadAgent` 同拍落 models 切片；键面读数缺位 ⇒ `keys: null`（零假造） |
+| 19 | `renderer/mount-settings-exits.mjs` | **274** | 段族出档（**先拆后改**）+ 两族 handlers 合并单表 |
+| 20 | 新 `renderer/mount-settings-segments.mjs` | **233** | 段出口族 env ∕ tools ∕ MCP **十三**项（基线门 ∕ 失败面 ∕ 复读链） |
+| 21 | 新 `renderer/mount-settings-segments-models.mjs` | **169** | models 出口族 **八**项（consult 增 ∕ 删 ∕ effort + advisor 两 picker + 存；写径 = `settings:agent` `{patch}`） |
+| 22 | `renderer/store.mjs` | **298** | `initialState` 三新切片（env ∕ tools ∕ models；tools `keys: null` 初值） |
+| 23 | `renderer/i18n-views.mjs` | **275** | ⑪ 设置补充族 **+47 键 × 两语**（键名同形者值逐字同 VSC `locales/{en,zh}.json`；自拟值面登记处 = ⑪ 组头） |
+| 24 | `renderer/i18n.mjs` | **470** | 键数链续链（注释面 · **R7 复核实读**：HOST **265** ∕ VIEWS **104** ∕ COMPOSER **28** ⇒ 合计 **397**；R7 本次 **+47**、前值实读 **350**） |
+
+**机检读数（命令 + 结果）**
+- **⑤ `node --check`**：全触碰档 **24/24 全过**（主侧 8 + 渲染 16；≥3 轮复跑，含 fix 轮后）。
+- **③ MCP 清单行数 = 探活回执长（工序 B · 真档）**：`glm-websearch` ⇒ 列举行 **1** = 探活 `toolCount` **1**（`latencyMs` 149–194 ∕ 三跑）；逐工具三键在场（`glm-websearch_web_search_prime(...)`）= true。**TestProxy 真探**：`http://10.2.2.112:3128` ⇒ `{ok:true,status:204}`（三跑同值）。
+- **② env 读写 + 负控①（沙箱臂 A1–A15 全绿）**：proxy 缺省三键 ∕ trim 落盘 ∕ 非法 patch ⇒ 回执 reason + **零写（字节等）** ∕ 清径（proxy 节删 + shell 键删）∕ shell 候选面（System default 恒首 + 3 候选）；**自写通知计数 = 9**（九笔写全过核 `writeConfigAtomic`）· 真档沙箱期**零触碰**。
+- **④ 负控 ∕ 零假造**：桌面树零 `writeFile|appendFile|createWriteStream`（设置面唯一写执行体 = 核 `writeConfigAtomic`）；渲染树零 `node:fs`；键面 ∕ 索引面读数缺位 ⇒ 零行节点；env ∕ models 段非 `ready` ⇒ 零行节点。
+- **渲染面运行期自查（描述符树 · 假 i18n + `/rc` 解析钩）**：`.r7-render.mjs` **21/21 全绿**（七段在场 + 段态 + 行面 + 缺 handlers ⇒ disabled）；`.r7-wire.mjs` **25/25 全绿**（出口表 30 项 ∕ env 写基线门零发送 ∕ 载荷形逐条 ∕ 失败面 scope ∕ consult 整数组回写 ∕ advisor 两态 ∕ MCP 三态 ∕ 开面七段发点 ∕ `refreshSettings` 关态零动作+开态七段 ∕ `keys:null` 零行）；`.r7-keys.mjs` 全绿（三档两语键集相等 + 触面视图 `t()` 字面键全解 + 计数 397）。
+- **① 七段在场（grep 读数）**：`SECTIONS` = `providers,model,agent,mcp,env,tools,models`；`CHANNELS` 逐项计数 = **38**；三通道两表同序（`ipc.mjs:128-130` ∧ `preload.cjs:24-35`）。
+
+**测试面**：随全清令（2026-09-28 用户令）**跳过 R7 表 #9** —— 本舱未写测试 ∕ 未跑套件；上述读数由 ad-hoc 探针承载（打印型读数面，期望值逐项随行，可按需复跑）。**not repo-suite verified — the parent-side closeout run is the only repo-suite run.**
+
+**决策透明表（逐条 · 依据）**
+
+| # | 决策 | 依据 |
+|---|---|---|
+| D1 | `settings:env` ∕ `settings:tools` 两通道载荷 ∕ 回执形 = 本舱定形（写 `{patch:{…}}` · 读双支 · `{testProxy:{uri}}`） | 设计档未载（`IPC.md` 收正转出）；沿同族既有形（`settings:agent` 的 `{patch}` + `{ok,reason}`）单源延伸 |
+| D2 | proxy 空 uri ⇒ 节删；shell 空 ⇒ 键删（与 proxy 对称） | VSC `settings-panel-write.mjs` 同口径（显式空 ⇒ 清）＋ 壳可 `null`（核形状白名单）；非对称会留残留节 |
+| D3 | `settings:agent` 回执增 `models` 块（consult + advisor 行面） | **零新通道**（models 段读数搭既有 agent 读）；写径同走 `{patch}` —— 契约最小扩 |
+| D4 | advisor 清键 = 写 `null` 两键（非删键） | `patch` 表达不了删键（在册契约）；核读面真值判（`advisor/run.mjs` `if (cfg?.provider)`）⇒ 语义等价；盘面留字面 `null`（登记项 5） |
+| D5 | MCP 列举 = 核 `connectMcpServer`（幂等 ∕ 活连接复用）、Test = 核 `probeMcpServer`（零污染） | VSC `panel-mcp` 同形 ＋ 设计行「连接列举 ⇒ 逐工具」；会话回收沿 VSC 同形（登记项 2） |
+| D6 | **先拆后改 ×4**（`views/settings.mjs` ⇒ `settings-controls.mjs`；`src/main/settings.mjs` ⇒ `settings-values.mjs`；`settings-sections.mjs` ⇒ `-mcp.mjs`〔随两钮〕；`mount-settings-exits.mjs` ⇒ `-segments.mjs` ∕ `-segments-models.mjs`） | 设计行「先拆后改」＋ ≤300 顾问线（拆后各档 ≤298；承载面零语义改，导出面全 re-export） |
+| D7 | **段态门**：env ∕ models 非 `ready` ⇒ 零行节点（providers ∕ model ∕ mcp ∕ tools 沿各自旧判） | 「禁假造」（未读达即落默认值 = 假读数）；旧段零行为改 |
+| D8 | 键面读数缺位 ⇒ `keys: null` + 两行零节点（fix 轮 1） | 顾问评 #3 —— 同族判据一致（索引面「状态缺位 ⇒ 零节点」）+ 零假阴性 |
+
+**留遗 ∕ 转出（不属本舱授权面，供父侧）**
+1. **设计档收正（本舱零触 · 逐处点名）**：`IPC.md` §1 ∕ §2 —— **+3 通道行**（`settings:env` ∕ `settings:tools` ∕ `mcp:tools` 的载荷 ∕ 回执形）· 通道计数 **35 ⇒ 38**（逐处）· `settings:agent` 回执行增 `models` 键；`UI.md` §1 设置面行（**四段闭集不动 ⇒ 七段闭集**：+env〔proxy ∕ shell〕+ tools〔两 key 行〕+ models〔consult ∕ advisor 行〕）；`PROJECT.md` §4.1 行数账（`ipc.mjs` 325 ∕ `i18n.mjs` 470 在册）。行数漂移：`providers.mjs` 195（设计估 166）· `mcp-servers.mjs` 165（估 190）。
+2. 批档 §2.4 R7 行 #1 现仍书「族闭集 **4 ⇒ 7 段**」，与 §1.7 裁「**5 ⇒ 7**」相抵 —— in-place 收正归父侧（overlay 已记收正，非实现缺陷）。
+
+**审计与代码评审（轮次与终态）**
+- **内部偏审（explore · 只读 · 1 轮）**：判 **DEVIATIONS** —— ① **🔴 真缺陷（本舱已修）**：`mount-settings.mjs` `refreshSettings` 调 `reads.loadIndex()`（本舱 `loadIndex` ⇒ `loadTools` 更名后悬空）⇒ 设置面在场时 `ev:config` 回调必抛 `TypeError`；fix 轮修为 `loadEnv` + `loadTools`（五读者随段闭集扩）+ 探针 ⑧ 机械闸（关态零动作 ∕ 开态七段发点）。② 表列项：`settings-sections-mcp.mjs` 拆点未被设计表点名（判零语义扩展，如实记）。③ 另记：探针六档住包根（临时档 —— 见报告读数）。独立复跑 `node --check` 全绿；**设计档零触**由 mtime 核实（`docs/desktop/design/` 六档 mtime 均早于 R7 窗口）。
+- **代码评审轮 1（advisor · code）**：`VERDICT: changes-required` —— 🟡 **must-fix**：`settings-sections-tools.mjs` `t("settings.keyNone")` 键**两语皆无定义**（`t()` 缺键回落键名自身）⇒「未配密钥」默认态直出内部键串；另 🟡 optional ×3（MCP 列举会话回收 ∕ 键面读失败假阴性 ∕ `ipc.mjs` 越线）+ 🔵 ×5 + 🟡 doc-state（批档 4⇒7）。
+- **fix 轮 1（本舱）**：① must-fix ⇒ 键面缺配词改指**既有** `settings.noneMark`（两语同在 —— 零新键）；② 同源 🟡 ⇒ `keys: null` + 两行零节点；③ 🔵 落修：计数收正（十三 ∕ 二十一，四处）· `SCOPES` 由 `SECTIONS` 派生 · TestProxy 超时 `abort()`（真关 socket —— 核 `proxy.mjs:191/:199` 已核）。④ 其余按登记留报（登记项 2–5）。
+- **代码评审轮 2（fix 复核）**：`VERDICT: pass`（🔴 0）—— 修项逐行核实；**fix 引入新问题 = 无**（`keys: null` 全消费点带闸 · `dom.mjs` 空位跳过已核 · 零新 import 边 · 无未捕获拒约面）。残留一处计数（`mount-settings-exits.mjs:181`「十四项」）本舱已随落收正（**十三**项 —— 合 **21**）。
+- **终态 = clean**（内审 1 轮 → fix 轮 1 → 代码评审 2 轮：轮 1 changes-required ⇒ fix ⇒ 轮 2 pass）。
+
+**登记项（不修 · 供父侧 ∕ 后续轮）**
+1. `src/main/ipc.mjs` 实读 **325** 行 > 300 顾问线（38 项注册表内联；#28 裁「通道注册表族出档 ≤300」未落，R7 已在其前落）—— 交父侧核序（本舱不复裁）。
+2. MCP 列举径会话回收：`connectMcpServer` 落核会话幂等表，移除径仅在活 agent 载该工具时回收（沿 VSC `panel-mcp` 同形 + 进程域会话）—— 建议父侧台账。
+3. `mcp-servers.mjs` `kindOf(s) ?? "command"`：形非法条目落 `command` 词（批 9 既有行、非 R7 改动面）。
+4. i18n 实增 **47** 键 vs 设计估 ≈30（键面细分，非缺项；两语同拍、全有树消费点）。
+5. advisor 清键 = 字面 `null` 落盘（非删键）⇒ 泛化 agent 行显示只读 `null` 行（语义安全 —— 核真值判）。
+6. 表列外触碰档（如实披露）：`mount-settings-exits.mjs` 拆出两新档（`-segments.mjs` ∕ `-segments-models.mjs`）与 `views/settings-sections-mcp.mjs` —— 均「先拆后改」产物，设计表未逐档点名。
+
+**报告读数（最终盘面 · 可按需复跑）**：`.r7-probe.mjs`（主侧 A1–A15 ∕ B1–B6 · 沙箱 + 真档双相）· `.r7-render.mjs`（渲染 21 项）· `.r7-wire.mjs`（接线 25 项）· `.r7-keys.mjs`（键面 ∕ 计数）+ 钩 `.r7-hooks.mjs` ∕ `.r7-register.mjs` —— 复跑：`node --import ./.r7-register.mjs .r7-render.mjs`（自 `thincoder-desktop`）。六档为**临时探针**（非批产物；留档供复核，父侧可随收口清理）。
 
 ## §6 验证与收口（父代理）

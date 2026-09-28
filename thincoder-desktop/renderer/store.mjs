@@ -102,7 +102,16 @@ export function initialState() {
       verify: null,
       model: { state: "none", provider: null, current: null, models: [] },
       agent: { state: "none", fields: [] },
-      mcp: { state: "none", servers: [] },
+      mcp: { state: "none", servers: [], details: {} },
+      // R7 两新段（env = proxy ∕ shell；models = consult ∕ advisor 行两 picker）与 tools 段键族（R2 起自持）：
+      env: { state: "none", proxy: { uri: "", web: true, model: false }, shell: { current: null, candidates: [] }, test: null },
+      // tools 段：`keys` 初始 `null`〔键面读数未达〕⇒ 两 key 行零节点（首读落位后成对象）；`edit` = 行内编辑态。
+      tools: { state: "none", status: null, building: false, keys: null, edit: null },
+      models: {
+        state: "none", consult: [], advisor: { provider: null, model: null },
+        picker: { provider: "", rows: [], model: null },
+        advisorPicker: { provider: "", rows: [], model: null },
+      },
     },
     projectInfo: { counts: null, thresholdReached: null, phase: null, notice: null },
   }
