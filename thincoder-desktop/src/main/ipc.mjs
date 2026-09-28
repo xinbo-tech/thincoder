@@ -1,5 +1,5 @@
 /**
- * ipc.mjs — IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）：**三十八项** = 配置读取 + 项目面
+ * ipc.mjs — IPC 通道处理体本体 + 宿主注入面（`docs/desktop/design/IPC.md` §1 / §2）：**三十八项** = 配置读取 + 项目面
  * `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` / `session:switch` /
  * `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` + 作答响应
  * `question:respond` —— `question` 工具真作答面 + 历史页 `history:page`
@@ -20,13 +20,15 @@
  * + **台账行出站接线（「对齐第三批」KD-38）**：`pushLedgerLines` 挂 `session:resume` 成功径（出站面经
  * `setLedgerEmit` 注入；扫描 / 出站逻辑住 `project-info.mjs`）
  * （定序 = 预载白名单同序）。
- * 白名单**单源** = `src/preload/preload.cjs` 的 `CHANNELS`（批档 §2.6 D-3）：主侧经 `createRequire` 读之并**据以注册**
- * （一条白名单项 = 一个 `ipcMain.handle` 面 ⇒ 无通道名第二副本）；白名单项无处理体 ⇒ 注册期抛（fail-closed）。
+ * 白名单**单源** = `src/preload/preload.cjs` 的 `CHANNELS`（批档 §2.6 D-3）：主侧经 `createRequire` 读之
+ * （**据以注册** = `ipc-registry.mjs` —— 表 ∕ 注册序出档 · #28；注册面纪律见该档档头）。
  * 预载档顶层零装配副作用（守卫调用 / 守卫导出）⇒ 主进程侧读取不触 `electron`（批档 §2.11 收正②）。
  * `channels` 读数口径 = 本次运行**实际分发集合**（顺序去重 —— 批档 §2.11 收正⑦）。
+ * **注册表族出档**（#28 拆点 —— 批档 §2.5「通道注册表族出档」）：`HANDLERS` 表 ∕ `registerIpcHandlers` 迁
+ * `ipc-registry.mjs`（本档只留处理体本体 + 宿主注入面；跨档引用面 = 表位处 `export { … }` 列）。
  */
 import { createRequire } from "node:module"
-import { dialog, ipcMain, shell } from "electron"
+import { dialog, shell } from "electron"
 import { loadConfig } from "@thincoder/core/config.mjs"
 import { normalizeLocale, projectDictionary } from "@thincoder/core/i18n.mjs"
 import { PRELOAD_PATH, confirmRecycle } from "./window.mjs"
@@ -96,47 +98,17 @@ function readConfig() {
   return { config, locale, dict: projectDictionary(locale), configured: isConfigured() }
 }
 
-/** 通道 → 处理体（新增行即新增白名单项，两处同时动）。 */
-const HANDLERS = Object.freeze({
-  "config:read": readConfig,
-  "project:open": openProjectChannel,
-  "project:recent": recentProjects,
-  "sessions:list": sessionList,
-  "session:create": sessionCreate,
-  "session:switch": sessionSwitch,
-  "session:rename": sessionRename,
-  "session:delete": sessionDelete,
-  "session:resume": sessionResume,
-  "approval:respond": approvalRespond,
-  "history:page": historyPage,
-  "msg:send": msgSend,
-  "msg:interrupt": msgInterrupt,
-  "provider:list": providerListChannel,
-  "provider:save": providerSaveChannel,
-  "provider:remove": providerRemoveChannel,
-  "provider:verify": providerVerifyChannel,
-  "model:list": modelListChannel,
-  "settings:agent": settingsAgentChannel,
-  "mcp:list": mcpListChannel,
-  "mcp:save": mcpSaveChannel,
-  "mcp:remove": mcpRemoveChannel,
-  "config:write": configWriteChannel,
-  "ledger:read": ledgerReadChannel,
-  "batch:status": batchStatusChannel,
-  "question:respond": questionRespond,
-  "session:prefs": sessionPrefs,
-  "subagent:stop": subagentStop,
-  "file:open": fileOpen,
-  "session:flags": sessionFlags,
-  "at:complete": atComplete,
-  "session:gc": sessionGc,
-  "session:index": sessionIndex,
-  "index:build": indexBuild,
-  "index:status": indexStatusChannel,
-  "settings:env": settingsEnvChannel,
-  "settings:tools": settingsToolsChannel,
-  "mcp:tools": mcpToolsChannel,
-})
+/** 处理体**跨档引用面**（注册表族出档 `ipc-registry.mjs` —— #28 拆点）：`HANDLERS` 表 ∕ 注册序住该档，
+ *  经本列取用（表 ∕ 定序零改；新增通道 = 本列 + 表行 + 预载白名单三处同拍）。 */
+export {
+  readConfig, openProjectChannel, recentProjects, sessionList, sessionCreate, sessionSwitch,
+  sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
+  providerListChannel, providerSaveChannel, providerRemoveChannel, providerVerifyChannel, modelListChannel,
+  settingsAgentChannel, mcpListChannel, mcpSaveChannel, mcpRemoveChannel, configWriteChannel,
+  ledgerReadChannel, batchStatusChannel, questionRespond, sessionPrefs, subagentStop, fileOpen,
+  sessionFlags, atComplete, sessionGc, sessionIndex, indexBuild, indexStatusChannel,
+  settingsEnvChannel, settingsToolsChannel, mcpToolsChannel,
+}
 
 /** `project:open(payload)` ⇒ `{ cwd, recent }`：载荷 `{ path }` **可选**（`docs/desktop/design/IPC.md:42`）——
  *  给定时直接采用（不走对话框）；缺省 ⇒ 主进程**原生目录选择**（`dialog` 注入 —— D-2；
@@ -319,15 +291,3 @@ function configWriteChannel(payload) { return configWrite(payload) }
 function ledgerReadChannel(payload) { return ledgerRead(payload) }
 /** `batch:status(payload)` ⇒ `{ ok, phase }` ∥ `{ ok:false, reason }`：载荷 `{ cwd? }`（`missing`/`invalid`）。 */
 function batchStatusChannel(payload) { return batchStatus(payload) }
-
-/** 按白名单逐项注册（白名单项无处理体 ⇒ 抛——装配期即知，不静默）。 */
-export function registerIpcHandlers() {
-  for (const channel of CHANNELS) {
-    const handler = HANDLERS[channel]
-    if (typeof handler !== "function") throw new Error(`[ipc] whitelisted channel without handler: ${channel}`)
-    ipcMain.handle(channel, (_event, payload) => {
-      if (!ipcStats.channels.includes(channel)) ipcStats.channels.push(channel)
-      return handler(payload)
-    })
-  }
-}

@@ -138,6 +138,11 @@
 - **处置**：① 设计档收正（R9 行 + i18n 两档 + 行数账）→ #35 ∕ #42 家族（在册）；② 越线两档（`mount-sessions` **400** ∕ `ipc` **333**）→ ipc 沿 **#28**；mount-sessions 并入 **#536** 家族（账已扩——含 `chrome.css` 425）；③ **rename 失败可见面对位缺口**（VSC 有 ∕ 桌面仅记错）→ 裁「**加**」→ 台账 **#556**（一字级，随下一桌面触碰轮）；④ 探针未留盘（复跑配方在 §5）∥ 测试残引随批清扫候选（在册）。
 - **纪律注记（舱披露 E）**：清临时档用 `del` 单条命令（未走 `delete` 工具）——如实披露、清零；**下轮派单补一句**：删除走 `delete` 工具 ∕ 目录走 `rmdir /s /q` 书面形。
 
+### 1.25 #28 拆点交付收下（ipc 通道注册表族出档 · 父侧 · 2026-09-29 02:3x）
+- **交付**（#28 · 终态 clean · fix 0）：`ipc.mjs` **333 ⇒ 293**（≤300 ✓）+ 新档 `ipc-registry.mjs` **77**（表 40 行 ∕ 注册序 11 行**逐字纯搬**——字节级 + 序逐位双证）+ `main.mjs` 一行引用随正（有意零 re-export——防 ESM 环，单行最小转口）。**回执读数**：探针 **17 ∕ 17**（两臂逐值等：`index:status` 四键闭集 ∕ `index:build` 两径 ∕ 注册面 38 ∕ 38 ∕ 注册序 = 白名单序逐位）；**真机冒烟** `electron . --smoke` ⇒ `ok:true · errors:[]`（新档在真进程注册分发）；`node --check` 7/7。内审 1 轮零命中 + 代码评审 1 轮 pass（🟡1 = IPC.md 指针滞后，report-only）。
+- **数值澄清**：任务书「白名单 35 ∕ 现读 307」= R2 时值；盘面实读 = **38 ∕ 333**（R7 ∕ R9 已落）——触发判据两值同判，处置不变 ✓。
+- **转出 → #43（已并入）**：`IPC.md:3` ∕ `:132` ∕ `:207` 指针 + §4.2 += `ipc-registry.mjs` + ipc 行 293；`preload.cjs:6` ∕ `SHELL.md` 系 = **父侧自理**（机械项——新规矩：形态活不出门）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（初始轮 + 评审轮 1 修正（1–14 逐号）+ R1 设计面收正轮（#129 ∕ #131 · 六档八笔；flow 批档三处归父侧）+ 评审轮 3（重发复核）修正 · 微轮 #16（1–10 逐号）+ 退役面本体收正轮 + R2 设计面收正轮（#29 · ①–⑥ 逐号）+ R3 ∕ R6 设计面收正轮（#30 · ①–④ 逐号 + 三档 changelog）在册）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -1512,5 +1517,49 @@ KD-42（`PROJECT.md:81`）补句：**「域外对账保持人工」**——理�
 4. **对位缺口候选（父侧裁）**：VSC 会话改名失败有可见面（`thincoder-vscode/src/extension/panel-messages-session.mjs:96` `showWarningMessage`）⇔ 桌面 `confirmRename` 失败仅记错（`mount-sessions.mjs:357-358`）；本舱按设计三径未加（不越设计）——是否随 `#486` 加一字归父侧。
 5. toast 样式依赖链：`.paste-toast` 唯在核 `thincoder-render-core/composer/composer.css:45 ∕ :60`，靠 `mount-composer.mjs:172` 装配期注链——组合器未装态退化为裸文本（评审 🔵，记录不改）。
 6. 测试残引（非本轮射程）：`mount-sessions.mjs:27` 等仍引 `test/guard-closure.test.mjs`（全清令后退役）——随批清扫候选。
+
+### R28 · #28 拆点：通道注册表族出档（eng-coder · 2026-09-29 · fix 轮）
+
+**交付摘要（逐档 · 后 = 实读；前 = 拆点前届盘；口径 = `read` 总行数 ∕ 括注 = `node` `split("\n").length`）**
+
+| # | 档 | 前 ⇒ 后 | 落点 |
+|---|---|---|---|
+| 1 | 新 `thincoder-desktop/src/main/ipc-registry.mjs` | 新档 ⇒ **77**（split 78） | 通道注册表族出档（#28 裁①）：`HANDLERS` 表（38 行）+ `registerIpcHandlers`（注册序）——**逐字纯搬**（探针字节级对账）；档头 = 单源句 ∕ 分工句 ∕ 读数口径句；处理体经 `ipc.mjs` 导出面取用 |
+| 2 | `thincoder-desktop/src/main/ipc.mjs` | **333 ⇒ 293**（split 334 ⇒ 294） | 表 ∕ 注册序迁出（迁尽）：表位处落**跨档引用面** `export { … }`（38 名 · 一处可见）；`electron` 导入面收为 `dialog, shell`；档头三处随正；处理体本体 ∕ 宿主注入面 ∕ R9 注入缝（`_setLoadConfigForTest`）零改 |
+| 3 | `thincoder-desktop/src/main/main.mjs` | **130 ⇒ 131**（split 131 ⇒ 132） | 唯一调用点**引用随正**（必要转口 · 一行）：`registerIpcHandlers` 改自 `./ipc-registry.mjs` 取；**有意零 re-export**（环因见 D2） |
+
+**机检读数（命令 + 结果）**
+- **① 行数（实读）**：`ipc.mjs` **293 ∕ 294 ≤ 300 ✓**（read ∕ split 两口径；拆前 333 ∕ 334）；`ipc-registry.mjs` 77 ∕ 78；`main.mjs` 131 ∕ 132。
+- **② `node --check`**：三产品档 + 四探针档 = **7/7 Syntax OK**（内审独立复跑 3/3 同值）。
+- **③ 两通道回执复跑（两臂对拍 · 逐值等）** —— `.thincoder/tmp/r28-probe.mjs`：**17/17 全绿**。A 臂 = 基线（`git cat-file blob HEAD:…ipc.mjs` 表 ∕ 注册序**文本重构执行**）· B 臂 = 新档入口：
+  - `index:status` 无项目径 = `{"ok":true,"status":{"built":false,"files":0,"chunks":0,"hasEmbedder":false}}`（四键闭集 = built ∕ files ∕ chunks ∕ hasEmbedder）；第四键非假造（配置携 `embedding.apiKey` ⇒ `hasEmbedder:true`）。
+  - `index:build` 两径 = `{"ok":false,"reason":"no-project"}` ∕ 开项目（两文件小仓）⇒ `{"ok":true,"files":2,"chunks":2}`；构建后 `index:status` = `{"ok":true,"status":{"built":true,"files":2,"chunks":2,"hasEmbedder":false}}`（计数与构建回执同源等值）——与 R2 交付形一致。
+  - 注册面：**38 ∕ 38**（两臂）· 注册序 = 预载白名单序（逐位同值）· `ipcStats.channels` = 实调用白名单项（去重）；纯搬字节级：新档含基线表块（40 行）∕ 注册序块（11 行）逐字；迁尽三判据（零 `const HANDLERS` ∕ 零 `ipcMain.handle(` ∕ 零 `export function registerIpcHandlers`）。
+- **③′ 真机冒烟**：`node_modules\.bin\electron.cmd . --smoke` ⇒ `{"lock":"primary","window":true,"boot":"ok","configKeys":16,"channels":["provider:list","ledger:read","batch:status","config:read","model:list","project:recent","sessions:list"],"errors":[],"ok":true}`（exit 0）——注册经新档在真 electron 进程成立。
+
+**测试面**：随全清令（桌面 `test/files.mjs` = `[]`）**未写测试 ∕ 未跑套件**；`test/**` 零触；机检面 = 探针 + `node --check` + 冒烟承载。**not repo-suite verified — the parent-side closeout run is the only repo-suite run.**
+
+**决策透明表（逐条 · 依据）**
+
+| # | 决策 | 依据 |
+|---|---|---|
+| D1 | 档名 = `ipc-registry.mjs`（`src/main/`） | 任务书「档名你定，报告列明」；名面对位 = 表 ∕ 注册序（registry）；沿 `*-face.mjs` ∕ `*-status.mjs` 派生名先例 |
+| D2 | **零 re-export，改调用点引用随正**（`main.mjs:14`） | 注册面需 `ipc.mjs` 38 处理体 ⇒「ipc.mjs re-export + registry 反向 import ipc.mjs」= ESM 环（初始化期 TDZ 面）；单行引用随正 = 最小转口面，任务书准「必要转口 ∕ 引用随正」 |
+| D3 | 处理体引用面 = 表位处单列 `export { … }`（非 38 处前缀） | 单点可见 ∕ 改动集中；与 registry 导入列同形对读；新增通道同步面 = 三处（本列 + 表行 + 预载白名单 —— 两档头已披露） |
+| D4 | `CHANNELS` ∕ `ipcStats` 留守 `ipc.mjs`（registry 转口取用） | 零导出面变动；`main.mjs` 读数（`configKeys` ∕ `channels`）与冒烟面零改；唯一消息分发集合写入点仍经注册包装 |
+| D5 | `ipc.mjs:288` 行首双空格**不动** | 评审 🔵 项；实核**基线同形**（非本轮引入）——纯搬纪律下不做无关格式改动（透明留报） |
+| D6 | 探针四档留 `.thincoder/tmp/`（gitignored） | 沿 `.r7-*` 探针「留档供复核」先例；基线锚 `HEAD` ⇒ 提交后失效（已注明） |
+
+**审计与代码评审（轮次与终态）**
+- **内部偏审（explore · 只读 · 1 轮 · 阻塞）**：判 **DEVIATIONS** —— 代码面四类（部分实现 ∕ 静默简化 ∕ 越表 ∕ `test/**` 触）**零命中**；🟡 1 = 「§5 无 #28 落档」（**本段消解**）；🔵 5 = 报告项（IPC.md `:3/:132/:207` · SHELL.md `:22` · PROJECT.md `:148`〔在册延后 #551〕· `preload.cjs:6` · 批档 §2.5 修正记录 vs 正文行）。独立复跑 `node --check` 3/3、独立核迁尽 ∕ 序 ∕ 消费者面。
+- **代码评审（advisor · code · 1 轮 · 同步）**：**VERDICT: pass**（🔴 0 ∕ 🟡 1 ∕ 🔵 4）。🟡 = IPC.md 三处 file 指针滞后（**doc-state · report-only** —— 零触令下归 doc 层随届盘重锚）；🔵 = 探针 `HEAD` 锚（提交后失效 ∕ 复跑须同携 register 钩）· 任务书旧值（白名单 35 ∕ 307 vs 盘面 38 ∕ 333——实施按盘面）· `ipc.mjs:288` 缩进 · 新增通道三处同拍（已披露权衡）。**零 must-fix** ⇒ **fix 0 轮**。
+- **终态 = `clean`**（内审 1 轮〔记录面项随本段消解〕→ 代码评审 1 轮 pass → fix 0）。
+
+**留遗 ∕ 转出（不属本舱授权面，供父侧）**
+1. **设计档指针收正（逐处点名）**：`docs/desktop/design/IPC.md` `:3` ∕ `:132` ∕ `:207`（注册面 ∕ 唯一入册面 ⇒ 宜分栏「处理体本体 = `ipc.mjs` ∥ 表 ∕ 注册序 = `ipc-registry.mjs`」）；`docs/desktop/design/SHELL.md:22`（目录树行 + 新档节点）；`src/preload/preload.cjs:6`（「据以注册」指针）；`PROJECT.md:148`（§4.1 行数账：ipc 行按 293 重锚 + `ipc-registry.mjs` 新行 —— 并入 #551 统一届盘重锚，`#28` 拆点后同拍）。
+2. 探针四档（`.thincoder/tmp/r28-{probe,hooks,register,electron-stub}.mjs`）留档供复核，收口随清（沿 `.r7-*` 先例）。
+3. 报告侧三数按实读：白名单 **38**（任务书 35 = R2 时值）· 拆前 **333 ∕ 334**（read ∕ split）· 拆后 **293 ∕ 294**。
+
+**报告读数（最终盘面 · 可按需复跑）**：`node --import ./.thincoder/tmp/r28-register.mjs ./.thincoder/tmp/r28-probe.mjs`（自 `thincoder-desktop`）⇒ 17/17 全绿；`node_modules\.bin\electron.cmd . --smoke` ⇒ `ok:true`。
 
 ## §6 验证与收口（父代理）

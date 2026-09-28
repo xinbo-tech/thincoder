@@ -10,7 +10,8 @@
 import { app, Notification } from "electron"
 import { hostFloorMet, MIN_NODE, sqliteAvailable } from "./host-floor.mjs"
 import { protocolStats, registerAppScheme, serveAppProtocol } from "./protocol.mjs"
-import { ipcStats, registerIpcHandlers, setAgentHost, setLedgerEmit } from "./ipc.mjs"
+import { ipcStats, setAgentHost, setLedgerEmit } from "./ipc.mjs"
+import { registerIpcHandlers } from "./ipc-registry.mjs" // #28 拆点：表 ∕ 注册序出档（处理体本体住 `ipc.mjs`）
 import { createAgentHost } from "./agent-host.mjs"
 import { currentCwd } from "./projects.mjs"
 // 会话维护线（R1 · 桌面功能对位批）：启动拍供面（GC ∕ 索引两枚延迟拍 —— 处理体同档）。
