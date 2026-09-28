@@ -200,6 +200,12 @@
 - **转出归位**：#129 观察 2–4（flow 批档 :1077/:1150 待收字样 · PROJECT.md 旧引用统裁 · §4.2 本批行）→ 台账 #538。
 - **doc-check 终读**：悬空 171（基线）· 行宽 0 · 我方新笔零悬空。
 
+### 1.32 官方定义落首（用户 00:05：「连个官方定义都没有」）
+- **令**：测试方法文档开头应先介绍什么叫单元 ∕ 集成测试，且须**官方定义**。
+- **实查原文（可复核）**：① ISTQB 术语表（公开）逐字——"component testing: A test level that focuses on individual hardware or software components."；② IEEE 610.12（后并入 ISO/IEC/IEEE 24765）逐字——"testing in which software components, hardware components, or both are combined and tested to evaluate the interaction between them."（多份公开标准 ∕ 政府文档复引互证：ECSS-Q-80B ∕ 美 DOE ∕ 美 DOT）。
+- **落点**：`requirements/TESTING.md` 新增 **§0 概念（两个词 · 官方定义）**（原文逐字 + 中文释义 + 两点推论：区别 = 测的对象不同 ⇒ 永不互转 = 定义层推论）；§1 依据线加「术语定义除外」例外；§1.2 技法轴改引 §0（D2）。
+- **备注**：这与「不引外部实践为据」不冲突——定义的权威层级 = 「可复核的独立定义（标明源）」（认知纪律②），实践层仍只按用户裁定 + 项目实测。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（四档对齐落定 + 测试终态收正轮（#128 fix：全量词汇退役 ∕ 单元档留存归档·永不互转 ∕ N11 三前端 ∕ 结构对齐）· 待评审）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
