@@ -1,7 +1,7 @@
 # 桌面端（DESKTOP）· 渲染面实现工艺
 
 > 板块 = **桌面端渲染面（前端）实现工艺**——零框架 DOM 层 · 单状态树 `store` · 渲染粒度与流式缝合 · 有界渲染窗口 · 回填与跟滚。
-> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D26 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
+> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D27 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
 > 同部分相关档：进程与目录形态（渲染面目录与模块注）= `docs/desktop/design/SHELL.md` §1 · 通道与载荷 = `docs/desktop/design/IPC.md` · 界面形态与交互 · 借用清单形态面 = `docs/desktop/design/UI.md` · 逐文件预算（§4.1）= `docs/desktop/design/PROJECT.md`。
 > 核机制面（agent 主循环 / 工具 / 记忆 / 配置 / 会话）**只住核**——本档只做**接入面**设计，不重述核语义（单一权威源）。
 > 建档：2026-09-25（桌面端设计批 1 · 分档轮）；本档坐标 = as-of 2026-09-25 实核（仓根 = `thincoder/`）。
@@ -26,7 +26,8 @@
 
 ### 1.1 视图面形态：纯描述符 + 薄挂载
 
-- **两层分家**：视图档（`thincoder-desktop/renderer/views/*.mjs`）分两层 —— ① **纯构树**（`xxxModel(state)` → 态对象；`xxxTree(model)` → **结构描述符树**）；② **薄挂载**（`mountXxx(root, state)` = `clear` + `build` + `append`——**建树面单点**）。视图档 **DOM 触面四处** = 建树（本条）· 接线（下条）· 帧尾态刷（`syncChrome`——本档 §1.1）· 帧尾滚动作（`settleFrame`——本档 §3）。
+- **两层分家**：视图档（`thincoder-desktop/renderer/views/*.mjs`）分两层 —— ① **纯构树**（`xxxModel(state)` → 态对象；`xxxTree(model)` → **结构描述符树**）；② **薄挂载**（`mountXxx(root, state)` = `clear` + `build` + `append`——**建树面单点**）。
+  视图档 **DOM 触面四处** = 建树（本条）· 接线（下条）· 帧尾态刷（`syncChrome`——本档 §1.1）· 帧尾滚动作（`settleFrame` ∕ 池面 `mountPool` 尾——本档 §3）。
 - **接线面（第二形）**：事件 / 状态机型视图档（如滚动面）以 **`attachXxx(root, deps)`** 落形——`deps` = 出口回调集（`on*` 键：回填 / 复跟 / 停跟）+ **只读口** `guards?()`（缺 ⇒ 恒假），程序化滚动作经返回 handle 出（不占 `deps` 键）；阈值常量与事件订阅（`scroll` 用 `passive`）收口于该档（常量单源声明 = 档头）；判定与算式一律纯函数（`scrollAction` / `compensateTop` / `nextWindow` / `smoothWindowOpen`）。
 - **接线面依赖面（测试缝）**：`attachXxx` 的 DOM 依赖 = root 三读数（`scrollTop` / `scrollHeight` / `clientHeight`）+ `addEventListener` / `scrollTo` ⇒ **假 root 可注入**（接线面入自动面：直调出口 + 断言 store 读数）；**真实事件触发（用户真滚）仍归人工走查**。
 - **事件归约面（批 8 落）**：`ev:*` **二十三通道** → 切片写者**单源** = `thincoder-desktop/renderer/events.mjs`——`reduce(state, ev)` 纯函数（零 DOM ⇒ 平 node 直测）+ `applyPage(state, receipt)`（页回执 → 首屏 / 回填两径）
@@ -68,7 +69,7 @@
 - **插入点纪律（批 A 扩三卡）**：块节点插入点 = **首个卡节点之前**——卡三类 = `[data-card="approval"]` / `[data-card="question"]` / `[data-card="task"]`，卡间 DOM 次序固定 = 待审批 → 提问 → 计划（缺者跳过）；卡缺席 ⇒ `[data-pill]` 之前；两者皆缺席 ⇒ 末位——根子序 = [摘要块?] → 块序列 → [消化行组?] → [待发送气泡组?] → [卡序列?] → [药丸?]（尾段两族同侧 = 块序列之后、卡序列之前；族内序 = 消化行组 → 待发送气泡组）。
 - **引导节点（批 B 追加轮 · 非块节点）**：无活动会话 ∥ 零块 ⇒ 引导节点 `div.chat-empty[data-guide]`——`none` 帧 = 根**唯一子** · `empty` 帧 = **首子**（在块序列 / 卡序列之前）· `flow` 帧 = 不在场；零 `data-block-id` ⇒ **不入块序**（上条根子序与 `data-blocks` 不变式不受其影响）。
   判据（模型 `guide` 字段）= 无活动会话 ⇒ `cwd` 缺 ? `no-project` : `no-session`；有活动会话 ∧ 可见块 0 ⇒ `no-message`；否则 `null`。
-  构树 = `thincoder-desktop/renderer/views/chat-guide.mjs`（批 B 追加轮新档 · 已落 · 实读 **54**——沿流内非块节点构树先例 = `thincoder-desktop/renderer/views/chat-copy.mjs`）；**动作控件在场 ⟺ 句柄在场**（`onOpenDir` / `onNewSession` 缺 ⇒ 整控件缺席——比接线形通则更严：零假按钮）；
+  构树 = `thincoder-desktop/renderer/views/chat-guide.mjs`（批 B 追加轮新档 · 已落——流内非块节点构树）；**动作控件在场 ⟺ 句柄在场**（`onOpenDir` / `onNewSession` 缺 ⇒ 整控件缺席——比接线形通则更严：零假按钮）；
   重挂键集须含 `project`（键名单 = `thincoder-desktop/renderer/app.mjs`）；形态单源 = `docs/desktop/design/UI.md` §1 批 B 追加注项 1 / 2。
 - **卡面在场与随动（帧尾态刷 · 批 A 扩三卡）**：卡节点 `[data-card="approval"]` / `[data-card="question"]` / `[data-card="task"]` 的在场与文本随帧内判据刷（形态单源 = `docs/desktop/design/UI.md` §1 审批呈现 / 提问呈现 / 计划面三行）；`question` 卡**退场非乐观**（回执 `ok` 真 ⇒ 清除；失败 ⇒ 卡留可重试 + `console.error`——出口口径见该行；
   **中断径** = `msg:interrupt` ⇒ 本键各门按取消结算 ⇒ 终局 `stopped` ⇒ **事件面摘本键提问项** + 清位标——判据 = 终局事件面，非回执（单源 = 本档「回合尾三径」条））；
@@ -118,7 +119,8 @@
 - **补偿单权源**：`.flow` 置 `overflow-anchor: none`（`chat.css` 面）——头侧变更的视口锚定只由 `compensate` 显式承担，免浏览器自动锚定叠算。
 - **读数区间记账**：区间 = [`t0`, `t1`] 跨头侧变更（摘 / 插 + 摘要块在场与文本）；尾侧（尾段挂载 / 就地更新 / 药丸——单行 `nowrap` 定高，`chat.css`）在区间外或零高度增量 ⇒ ΔH = `t1 - t0` = 头侧净增量。
 - **瞬时写不记窗**：`lastAt` 只由程序化平滑（`returnToBottom`）记；`stickToBottom` / `compensate` 不记 `lastAt`——其滚动回波读数即真态（同值 `setFollowing` 归原态）。
-- **块内容区跟滚（#518 收口 · 核原语直消费）**：子 agent 块内容区（`.advisor-content`）跟滚 = 核件原语 `initBlockFollow`（接线：出生 ∕ 接管共用点 = `thincoder-desktop/renderer/views/pool-subagents.mjs` `subElementOf`）+ `maybeScrollBlock`（应用四点：① 内容增量逐批 = `replayRows` 追加后 ② 挂载补钉 = `createSubBlock` `family.append` 后 ∕ 接管 `replaceWith` 后）。
+- **块内容区跟滚（#518 收口 · 核原语直消费）**：子 agent 块内容区（`.advisor-content`）跟滚 = 核件原语 `initBlockFollow` ∕ `maybeScrollBlock`（`thincoder-render-core/subblocks/block.mjs`；落点 = `thincoder-desktop/renderer/views/pool-subagents.mjs`）。
+  **接线四点** = ① 出生 ∕ 接管（`subElementOf`）· ② 内容增量（`replayRows` 追加后）· ③ 挂载补钉（`createSubBlock` `family.append` 后）· ④ 接管径补钉（`replaceWith` 后）——① 挂 `initBlockFollow`，余三点 = `maybeScrollBlock` 应用。
   判据 = `内容区._pinFollow`（`wheel` ∕ `touchmove` ⇒ 近底 24px 写旗标；`false` ⇒ **零写**——不夺阅读位）；折叠（`open=false`）∕ 已移除 ⇒ no-op；写超值不读 `scrollHeight`；桌面帧 = store 变更帧（无 rAF——直调，非脏集）。
 - **池区帧尾钉底（#518 收口 · R10 E6 帧尾径补齐）**：`views/activity.mjs` `mountPool` 尾 `maybePinPool(root)`（`views/activity-new.mjs`——`_poolPin !== false` ⇒ 写 `scrollTop`；VSC `webview/streaming.js:32` `frameEnd` 对位）；旗标维护 = `attachActivityNew` `scroll` 订阅（既有）；未钉底 ⇒ 零写。
 - **边界**：本两条只覆盖**块内容区 ∕ 池区**——会话流主跟滚面（上列各条：回填 ∕ 跟滚 ∕ 药丸 ∕ 帧尾三写）零改。
@@ -194,3 +196,5 @@
 - 2026-09-29（**退役面本体收正轮（fix · eng-designer）**）：§1 单状态树行收正；§1.1 键盘面 ∕ 页生命周期 ∕ 删会话页随动条 ∕ 幽灵更新条收正（标签条面退场对位）；档头 **D1–D26**。明细 = 批档 §2。
 - 2026-09-29（**R12 设计面同步轮（fix · #26 · eng-designer）**——承 flow 批 R12 §5.15 未办 5）：§3 回填阈值 48 ⇒ **40**（`BACKFILL_PX`）· 跟滚判据 `≤` ⇒ **`<`**（严格小于——VSC `ui.js` 同径）；§4 行 3 同拍（40px + 页量口径与 §2 窗限增量条对齐——消 `:128` ∕ `:101` 互抵）。明细 = 批档 §2。
 - 2026-09-29（**子 agent 块跟滚批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-subblock-follow.md` §1 · 台账 #518）：§1.1 「DOM 触面四处」枚举的「帧尾滚动作」补池面对位（`mountPool` 尾）；§3 增两条（**块内容区跟滚**——核原语四点接线 · **池区帧尾钉底**——`maybePinPool`）+ 边界条。明细 = 批档 §2。
+- 2026-09-29（**复制面对齐 VSC 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-desktop-copy-vsc-align.md` §1）：§1.1 引导节点条去死先例句（`views/chat-copy.mjs` 已删档——改述「流内非块节点构树」）；档头 **D1–D27**。明细 = 批档 §2。
+- 2026-09-29（**子 agent 块跟滚批 · 修复轮（评审轮 1 · 发现 3 ∕ 4）· eng-designer**）：§1.1 「DOM 触面四处」枚举的「帧尾滚动作」补池面对位（`mountPool` 尾——与 §3 池区帧尾钉底条自洽）；§3 块内容区跟滚条四点枚举统一（① 出生 ∕ 接管 · ② 内容增量 · ③ 挂载补钉 · ④ 接管径补钉——与 `docs/desktop/design/UI.md` §1 本批注同序号同指位）。明细 = 批档 §2 修复轮。

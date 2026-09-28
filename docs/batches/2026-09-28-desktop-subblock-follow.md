@@ -157,7 +157,48 @@
 
 **边界（本批不做）**：会话流主跟滚面（R12 既落在册）· marks ∕ 态机三面 ∕ goal（R5 已落）· 核件其余留端项（出生位 ∕ 说明行 ∕ 痕迹 / 帧调度——§2.2）· 机械门零新增。
 
+### 2.9 修复轮（评审轮 1 · 发现 1–7 逐条落地 · eng-designer · 2026-09-29）
+
+**输入** = 批档 §3 轮次 1（VERDICT: changes-required · 🔴1 ∕ 🟡4 ∕ 🔵2）+ 父侧逐条裁定接受与逐号落点指令（7 项）；**处置执行 = 本舱**；**零产品码触**；§3 与需求档零触（U1 ∕ U2 已由父侧处置——不重开）。
+
+| 号 | 落点（file:line） | 态 |
+|---|---|---|
+| 1 · 🔴 搜索 | `docs/render-core/design/RENDER-CORE.md` §3 行 32（`:114`）判定 端 ⇒ **拆**（实读盘面：VSC `thincoder-vscode/webview/search.js` = 18 行端壳 ∕ 桌面 `thincoder-desktop/renderer/search.mjs` = 26 行端壳 ∕ 实现整件入核 `thincoder-render-core/search.mjs` `createSearch`）+ 计数行（`:135`）核 9 ∕ 拆 8 ∕ 端 34 ⇒ **核 9 ∕ 拆 9 ∕ 端 33** + 静置面句（`:136`）四档 ⇒ 三档 + §4 行 20（`:164`）「桌面本轮不承载」⇒ **已承载** + §5（`:207`）构件族补 `createSearch` + §6（`:286` 档数 17 ⇒ **18** ∕ `:307` `search.js` 行补登＝依评审「两端受影响文件账同拍补登」臂）；`docs/desktop/design/PROJECT.md` §4.1（`:188`）与 §4.2（`:484`）search 档行实读补（**26 行**） | 落定 |
+| 2 · 🟡 行数账 | `PROJECT.md` §4.1 `views/activity.mjs`（`:205`）**321 ⇒ 259** ∕ `core.css`（`:226`）**345 ⇒ 281**（盘面实读取一 · 实读 2026-09-29）——**未越 300**，越层段（`:239-240`）两档除名；§4.2（`:529-538`）增本批「现行 ⇒ 预期」块 = 四档（`pool-subagents` 108 ⇒ ≈118 ∕ `activity-new` 100 ⇒ ≈109 ∕ `activity` 259 ⇒ ≈262 ∕ `core.css` 281 ⇒ ≈287）+ 测试面 + 设计档；核档 §6 与 §4.1 同拍（259 ∕ 281 ∕ 108 ∕ 100） | 落定 |
+| 3 · 🟡 记录≠正文 | `docs/desktop/design/RENDERER.md` §1.1（`:29-30`）「DOM 触面四处」的「帧尾滚动作」**落笔补池面对位**（`settleFrame` ∕ 池面 `mountPool` 尾——与 §3 池区帧尾钉底条自洽；行拆两行守 300）——取「落该笔」臂（记录句随实转真） | 落定 |
+| 4 · 🟡 四点枚举 | `RENDERER.md` §3（`:122-123`）与 `docs/desktop/design/UI.md` §1 本批注项 1（`:476`）**四点枚举统一**＝① 出生 ∕ 接管（`subElementOf`）· ② 内容增量（`replayRows` 追加后）· ③ 挂载补钉（`createSubBlock` `family.append` 后）· ④ 接管径补钉（`replaceWith` 后）——同序号同指位 | 落定 |
+| 5 · 🟡 WEBVIEW 两处 | `docs/vsc/design/WEBVIEW.md` §3（`:320`）读数 **450 ⇒ 190**（R2 提核后实读；本批 ⇒ ≈176）· 撤「越 300」句；**D-W13**（`:453`）载体句 ⇒ 「**原语入核 · 本端留调用点 ∕ 帧驱动**」（与 §5.5 `:399-401` 自洽；被否候选面不动） | 落定 |
+| 6 · 🔵 验收数值 | `PROJECT.md` §7 T-DSK18（`:645`）scrollTop ≤ 48 ⇒ **≤ 40px**；「100 块」⇒ 按核 `historyWindow` 缺省 200 条口径（条 ≠ 块） | 落定 |
+| 7 · 🔵 缺行 | 实核 `thincoder-desktop/renderer/heartbeat.mjs` = **在盘**（47 行）⇒ `PROJECT.md` §4.1（`:189`）**补行**（现行行数 + 结构注 = 2s 拍面 ∕ 判据三件同序——单源 = `RENDERER.md` §1.1 拍面条） | 落定 |
+
+**变更记录行同笔**（五档各一行）：`RENDER-CORE.md:418` · `RENDERER.md:200` · `UI.md:624` · `WEBVIEW.md:707` · `PROJECT.md:1068-1069`。
+
+**机检（node scripts/doc-check.mjs）**：前 = 悬空 173 ∕ 行宽 9（本域五档：悬空 63 ∕ 行宽 7；拟新增 28）；后 = 悬空 173 ∕ 行宽 9（本域：63 ∕ 7）——**Δ = 0**（本域悬空 Δ ≤ 0 ✓ · 行宽无新增 ✓；PROJECT 唯一超宽行 = 531 字符 = 存量行位置平移，非新增）。**read-back：五档逐处核过**（逐处上下文核读——含 §4.2 块整表核读）。
+
+**边界说明（只报）**：§6 判定表 17 ⇒ 18 档 + `search.js` 行补登 = 依评审 Suggestion「§5 导出面与两端受影响文件账同拍补登」之「受影响文件账」臂落（父侧指令列 §5 导出面 ∕ 连带 PROJECT 行；§6 = VSC 侧受影响文件账）——若判越界 ⇒ 单点摘除（一行 + 档数两字）。**除 7 项外零扩面、零新语义**。
+
+**同舱观察（非本批面 · 零触）**：① §4.1/越层段存量档位与现盘漂移（示例：`events.mjs` 标 497 ∕ 现盘 246；`mount-pool.mjs` 标 89 ∕ 现盘 95；`renderer/styles.css` 已被拆/改名 ⇒ 全仓 173 悬空之主源）——归台账 **#551** 统一届盘重锚（feat-parity 批档 §1 已登记）· 归文档回填轮；② `WEBVIEW.md:462` D-W22 内「450 行」为 as-of 决策理由面（dated）⇒ 未动（本批射程外）。
+
 ## §3 设计评审（评审子代理）
+
+### 轮次 1（评审子代理）
+
+设计评审（第五轮·本评审实例）发现表 —— 射程 = RENDER-CORE.md ∕ desktop/{RENDERER,UI,PROJECT}.md ∕ vsc/WEBVIEW.md（评审限制：无项目标准档 ⇒ 方法学按 Project Guide + 档内自定纪律判；无文档地图 ⇒ ownership 判据退化；需求档不在射程 ⇒ 需求符合度只经档内引用判；盘面实读核验超出射程——相关数字标 unverified）。
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | Document ownership | 🔴 | 「会话内搜索」同一机制两档相抵：`docs/desktop/design/UI.md:16`「键位注册住核件工厂 `thincoder-render-core/search.mjs`，两端同件单源」∥ `docs/render-core/design/RENDER-CORE.md:114`（§3 行 32）「`search.js` = 端 · 端搜索面；桌面本轮不承载」+ `:136` 静置面「`search.js` … 在本轮核化射程外」+ `:164`（§4 行 20）「搜索（`search.js`）桌面本轮不承载（VSC 端面）」——搜索实现单源归属（核 ∕ 端）与桌面承载两面互斥；UI.md 所指核件在核档 §3 判定表 ∕ §5 导出面 ∕ §6 受影响面零登记（核 9 ∕ 拆 8 ∕ 端 34 计数与静置面句同受影响）。 | 先裁定以哪一侧为准，再单侧收正：若确已入核 ⇒ RENDER-CORE §3 行 32 判定 + 计数行、`:136` 静置面句、`:164` §4 行 20、§5 导出面与两端受影响文件账同拍补登；若仍属端侧 ⇒ `UI.md:16`「核件单源」句收正（该能力面落点核对同拍）。 |
+| 2 | Affected-file annotations | 🟡 | 本批（子 agent 块跟滚）桌面四档行数账只住 `RENDER-CORE.md:314`（`views/pool-subagents.mjs` 108 ⇒ ≈118 · `views/activity-new.mjs` 100 ⇒ ≈109 · `views/activity.mjs` **259 ⇒ ≈262** · `renderer/core.css` **281 ⇒ ≈287**），与本端预算单源 `PROJECT.md:200`（`views/activity.mjs` **321**——实读 2026-09-28）∕ `PROJECT.md:222`（`core.css` **345**——实读 2026-09-28）同两档数值不一致（259∕281 对 321∕345——越 ∕ 未越 300 线判定相反）；`views/pool-subagents.mjs` ∕ `views/activity-new.mjs` 在 PROJECT.md §4.1 无行、§4.2 无本批行（本端自定「逐文件预算单源 = PROJECT.md §4.1」——`RENDERER.md:11`）。 | 以盘面实读取一为准（两档各定单值），把本批四档「现行 ⇒ 预期」补入 §4.1 行 ∕ §4.2 本批行（就地给数），消与 `RENDER-CORE.md:314` 的差异；越 300 判定随实读值同拍。（unverified——盘上核验超出射程） |
+| 3 | Doc-state | 🟡 | `RENDERER.md:196` 变更记录声称「§1.1 「DOM 触面四处」枚举的「帧尾滚动作」补池面对位（`mountPool` 尾）」，但正文 `RENDERER.md:29` 仍为「帧尾滚动作（`settleFrame`——本档 §3）」——无池面对位（§3 已定义池面帧尾动作 `:123`，边界条 `:124` 点名）。 | 落该笔（「帧尾滚动作」条目补池面 ∕ `mountPool` 尾对位）或收正记录句，使正文与记录、与 §3 两条自洽。 |
+| 4 | Clarity | 🟡 | 同一机制应用点计数两档不可互推：`RENDERER.md:121`「`maybeScrollBlock`（应用四点：① 内容增量逐批 = `replayRows` 追加后 ② 挂载补钉 = `createSubBlock` `family.append` 后 ∕ 接管 `replaceWith` 后）」——「四点」仅枚举 ① ②（② 含两径）；`UI.md:480` 本批注项 1 枚举为「四点接线 = 出生 ∕ 接管（`subElementOf`）· 内容增量（`replayRows`）· 挂载补钉（`createSubBlock` ∕ 接管径）」。 | 统一四点枚举与序号（出生 ∕ 接管 ∕ 内容增量 ∕ 挂载补钉）及逐点调用位置，两档同拍。 |
+| 5 | Doc-state | 🟡 | WEBVIEW.md 两处未随：（a）`WEBVIEW.md:320`「`activity.js` 现 **450 行**（as-of 2026-09-20）… 越 300 建议线」对 R2 后现值（`RENDER-CORE.md:299` R2 实读 **190** · `:313` 本批 190 ⇒ ≈176）为陈旧当前态陈述；（b）`WEBVIEW.md:453` D-W13「块级跟滚载体落 `activity.js`（旗标 + wheel/touch 让位 + rAF 帧应用）」对 `WEBVIEW.md:399-401` §5.5（原语 = 核 `subblocks/block.mjs`；本端 = 调用点）与 `RENDER-CORE.md:74` KD-RC-8 ∕ `:86` §3 行 4（提核）为陈旧载体句。 | （a）行数按 R2 ∕ 提核后实读收正（撤「越 300」句）；（b）D-W13 载体句收正为「原语入核 · 端留调用点 ∕ 帧驱动」（被否候选面不动）。 |
+| 6 | Acceptance | 🔵 | 验收行数值滞后：`PROJECT.md:608` T-DSK18「scrollTop ≤ **48**」「取更早一页（**100 块**）」对 `RENDERER.md:112` ∕ `:134` 机制单源（阈值 **40px**；页量 = 核 `historyWindow` 缺省 **200 条**——条 ≠ 块；R12 同步轮已收 §3 ∕ §4，未及 §7）。 | T-DSK18 同拍：阈值 40px；页量口径改「按核缺省页量·条 ≠ 块」（或就地注 as-of）。 |
+| 7 | Affected-file annotations | 🔵 | `RENDERER.md:84` 声称「2s 拍面（R10 落）：`thincoder-desktop/renderer/heartbeat.mjs`」，但本次三档 grep 范围内 PROJECT.md §4.1 ∕ §4.2 未见该档行（受影响文件账缺行）。 | §4.1 补行（现行行数 + 结构注）或与发现 2 同拍收正。 |
+
+计数：🔴 1 · 🟡 4 · 🔵 2 = 7 项。
+
+VERDICT: changes-required
+
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）

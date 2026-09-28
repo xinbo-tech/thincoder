@@ -111,7 +111,7 @@
 | 29 | `question.js` | **拆** | 提问卡面构树入核（`thincoder-render-core/cards/question.mjs:13`）；出站留端（`thincoder-vscode/webview/question.js:15-18`） |
 | 30 | `queued-mark.js` | **拆** | 待发送标记口径 / 防悬空纯逻辑入核（`thincoder-render-core/flow/queued-mark.mjs:39` / `:47` / `:74`）；DOM 与快照来源留端（`thincoder-vscode/webview/queued-mark.js:26-39`） |
 | 31 | `scroll.js` | 端 | 回底钮与可见性（`:13-20`） |
-| 32 | `search.js` | 端 | 端搜索面（`:160-161` Ctrl+F）；桌面本轮不承载（§4 行 20 注） |
+| 32 | `search.js` | **拆** | 会话内搜索（Ctrl+F）——实现整件入核（`thincoder-render-core/search.mjs` `createSearch`——R6 上提 · `docs/batches/2026-09-28-desktop-feature-parity.md`）；端壳留 `root` 绑定（VSC `ctx.messagesEl` ∕ 桌面 `[data-slot="flow"]`）——键位注册随核件工厂（两端同件单源 = `docs/desktop/design/UI.md` §1 交互行） |
 | 33 | `send.js` | 端 | 发送路径与守卫（`:13` / `:23-26` / `:32-`） |
 | 34 | `session-bar.js` | 端 | D18 = **对位**而非共用（多标签结构不削）；元数据形见 `docs/desktop/design/UI.md` §1「本批注（对齐重定位）」项 4 |
 | 35 | `session.css` | 端 | 会话栏样式（零宿主变量） |
@@ -132,8 +132,8 @@
 | 50 | `tool-summary.js` | **核** | 工具摘要单源（`:35`）——活卡与恢复卡共用 |
 | 51 | `ui.js` | **拆** | 块容器（`thincoder-render-core/flow/block.mjs:111`）/ 工具卡（`thincoder-render-core/flow/tool-card.mjs:56` / `:95` / `:147`）/ 恢复面（`thincoder-render-core/flow/block.mjs:93` / `:121`）/ 错误横幅（`thincoder-render-core/flow/block.mjs:133`）入核；唯一出站（`retry`）留端注入（`thincoder-vscode/webview/ui.js:164-166`） |
 
-**计数（D3）**：51 档 = **核 9**（`activity-view` · `diff` · `highlight` · `i18n` · `lib` · `md` · `toast` · `tool-card-restore.mjs` · `tool-summary`）· **拆 8**（`activity` · `ledger-line` · `panels` · `permission` · `question` · `queued-mark` · `streaming` · `ui`）· **端 34**。
-**静置面（本轮不改动）**：`search.js` / `activity-new.js` / `activity-diag.js` / `autocomplete.js` 四档在本轮核化射程外（端差或后议）。
+**计数（D3）**：51 档 = **核 9**（`activity-view` · `diff` · `highlight` · `i18n` · `lib` · `md` · `toast` · `tool-card-restore.mjs` · `tool-summary`）· **拆 9**（`activity` · `ledger-line` · `panels` · `permission` · `question` · `queued-mark` · `search` · `streaming` · `ui`）· **端 33**。
+**静置面（本轮不改动）**：`activity-new.js` / `activity-diag.js` / `autocomplete.js` 三档在本轮核化射程外（端差或后议）。
 
 ## 4. 逐机制对位表（22 机制 × 桌面 · 单源）
 
@@ -161,7 +161,7 @@
 | 17 | 忙态门 / 载入态 | `loading.js:86` / `:67` | 不入核 | **自然成立**（桌面忙态 = 位标 `running` + 输入区判据已在） |
 | 18 | 审批卡 | `permission.js:21` / `:86` | 核卡面 | **按 ② 同判（卡族外壳留存）**：桌面 `thincoder-desktop/renderer/views/approval.mjs` 自持卡面（三出口 / 批形已在）；不迁核卡面件（VSC 形态——与桌面锚系 / 用例相抵） |
 | 19 | 提问卡 | `question.js:10` / `:59-76` | 核卡面 | **按 ② 同判（卡族外壳留存）**：桌面 `thincoder-desktop/renderer/views/question.mjs` 自持卡面（两作答路已在）；不迁核卡面件 |
-| 20 | 计划 / 任务面板 | `panels.js:16` / `:39` | 核面板构树 | **按 ② 同判（面板外壳留存）**：桌面计划卡（`thincoder-desktop/renderer/views/plan.mjs`）自持构树；不迁核面板件；搜索（`search.js`）桌面**本轮不承载**（VSC 端面） |
+| 20 | 计划 / 任务面板 | `panels.js:16` / `:39` | 核面板构树 | **按 ② 同判（面板外壳留存）**：桌面计划卡（`thincoder-desktop/renderer/views/plan.mjs`）自持构树；不迁核面板件；搜索（`search.js`）**桌面已承载**——核件 `createSearch` 直取（端壳 = `thincoder-desktop/renderer/search.mjs`——R6 落） |
 | 21 | 子代理活动区（live 面板） | `activity.js` · `activity-view.js` | 核块态机 + 块面 | **需补面**：桌面右列重定位为子 agent 面板（D20——通道 / 归约 / 形态三面 + **出生自愈**：宿主存活投影 2s 再断言（拍体沿 `thincoder-vscode/src/extension/panel-messages.mjs:42-74` 语义——只发在飞实例）；见 `docs/desktop/design/IPC.md` §1）；**块面直消费（对齐第二批）**：`renderSubBlock` / `refreshBlock` / `renderSubagentChunk` / `renderSubDesc`（内容回显 = tail-3 / 展开）+ **归档入流**（终态 ⇒ 流内尾追块；表项墓碑 `region: "flow"`；核 effects 表不逐条执行——端面动作由模型态幂等派生）；单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 3 / 5 |
 | 22 | 状态栏 / 状态行 | `status-bar.js:13` | 不入核 | **显式裁**：桌面状态行**对齐 CLI**（D17）而非共用 VSC 状态栏——15 段逐项裁定表住 `docs/desktop/design/UI.md` §1 本批注 |
 
@@ -204,7 +204,7 @@
    `renderApprovalCard(model, deps?)` / `renderBatchApprovalCard(model, deps?)` · `renderQuestionCard(model, deps?)` · `renderTaskPanel(progress, deps?) → { el, visible }` / `renderGoalPanel(goal, deps?)` ·
    `renderSubBlock(model)` / `refreshBlock(block)` / `renderSubagentChunk` / `renderSubDesc`（子 agent 块面与归档块面——消费面段 ③）；
    `initBlockFollow(block)` / `maybeScrollBlock(block)`（块内容区跟滚原语——接线 ∕ 应用；**调用时机留端**——VSC rAF 帧尾 ∕ 桌面 store 帧）；
-   `attachCopyButtons(container, deps?)` · `showToast(text)` · `linkifyPaths(bodyEl, links)`（VSC 消费）。
+   `attachCopyButtons(container, deps?)` · `showToast(text)` · `linkifyPaths(bodyEl, links)`（VSC 消费） · `createSearch({ root })`（会话内搜索面——Ctrl+F 键位注册 + 扫描 ∕ 高亮；两端端壳供 `root`）。
 
 **端注入面（核不持句柄）**：`deps = { emit(type, payload), t, now? }`——出站一律经 `emit`（VSC 绑 `postMessage`；桌面绑 `invoke`）；R2 构件件另注入端事实读取族（`connectedOf` / `regionOf` / `trace` / `syncLiveOf` / `onStripped`——逐件件头）；核内零全局单例（现 VSC 的 `ctx` / `S` 全局态属端）。
 
@@ -283,7 +283,7 @@
   `flow/*.mjs`（块 / 工具卡 / 推理 / 缝合）· `cards/*.mjs`（审批 / 提问 / 计划）· `subblocks/*.mjs`（态机 / 块面）（R2） · `test/*.test.mjs`（平 node 直测——**纯函数层 + 态机层**）。
   **DOM 构件层用例宿主 = 消费端套件**（非核包）：VSC = `thincoder-vscode/test/**`（happy-dom devDep 既有）· 桌面 = `thincoder-desktop/test/fake-dom.mjs`（假 root 既有）——核包自身零 devDep（C1 机检恒可过），不引 happy-dom ∥ 不另立第二假 root。
 
-**扩展端（判定表 17 档 + 发行三件）**——逐档「现行 ⇒ 预期」（核 9 = 迁核；拆 8 = 纯面迁核 · 端留守）：
+**扩展端（判定表 18 档 + 发行三件）**——逐档「现行 ⇒ 预期」（核 9 = 迁核；拆 9 = 纯面迁核 · 端留守）：
 
 | 档（`thincoder-vscode/webview/`） | 现行 | 预期 | 判定 | 迁出面 / 注（越层档带拆分预案） |
 |---|---|---|---|---|
@@ -304,6 +304,7 @@
 | `question.js` | 89 | ≈ 60–70 · R2 实读 **25** | 拆 | 构树 ⇒ 核 `thincoder-render-core/cards/question.mjs`；低于带；出站留守 |
 | `queued-mark.js` | 88 | ≈ 55–65 · R2 实读 **40** | 拆 | 纯逻辑 ⇒ 核 `flow/queued-mark.mjs`；低于带；DOM / 快照来源留守 |
 | `ledger-line.js` | 18 | ≈ 10–12 · R2 实读 **13** | 拆 | 行构造 ⇒ 核 `flow/ledger-line.mjs`；带内（+1）；跟滚耦合留守 |
+| `search.js` | 165 | 改指核件 ⇒ **18**（R6 落 · 实读 2026-09-29——内容行数口径） | **拆** | 端壳（`root` 绑定 + 侧效应注册）——实现整件入核 `thincoder-render-core/search.mjs`（R6 上提 · `docs/batches/2026-09-28-desktop-feature-parity.md`） |
 
 **发行三件 + 测试面**：`thincoder-vscode/package.json`（依赖 +1）· `.vscodeignore`（反排除 +1 行）· `scripts/check-vsix.mjs`（断言 +1）· `thincoder-vscode/test/**`（happy-dom 直驱路径随动 + 核包 DOM 构件层用例宿主）。
 
@@ -414,3 +415,4 @@ VSC `thincoder-vscode/webview/activity.js` **190 ⇒ ≈176**（删两本地函�
 - 2026-09-28（**timer-wake 阶段 2 批 · 设计收尾轮 · eng-designer**——承 `docs/batches/2026-09-28-timer-wake-phase2.md` §2）：§10 **F** 行转**已解**（空闲期到期 ⇒ 闩到点即开 timer 轮——读数于该轮回合尾刷新；单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.11）。零新语义。
 - 2026-09-28（**桌面功能对位批 · 设计面收正轮（fix · #129）· eng-designer**——承 flow 批 R10 交付）：§3 表行 2（`activity-new.js`）收正——「桌面右列常驻不需该钮（端差登记）」⇒ **同面补装**（R10 落 · 实现 = `thincoder-desktop/renderer/views/activity-new.mjs`）。明细 = `docs/batches/2026-09-28-desktop-feature-parity.md` §2。
 - 2026-09-29（**子 agent 块跟滚批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-subblock-follow.md` §1 · 台账 #518）：§2 增 **KD-RC-8**（块级跟滚原语入核——纯 DOM 零调度依赖 + 防第三端再漏；调用时机留端）；§3 行 4 ∕ §5 构件族 ∕ §6 三处随动（+2 导出 · 三端行数账）。明细 = 批档 §2。
+- 2026-09-29（**子 agent 块跟滚批 · 修复轮（评审轮 1 · 发现 1）· eng-designer**——承批档 §3 轮次 1 · 父侧裁定以 `docs/desktop/design/UI.md` 为准）：§3 行 32 `search.js` 判定收正（端 ⇒ **拆**——实现整件入核）+ 计数行（核 9 ∕ 拆 9 ∕ 端 33）重算 + 静置面句三档；§4 行 20 搜索句收正（桌面已承载——端壳 `thincoder-desktop/renderer/search.mjs`）；§5 构件族补 `createSearch`。明细 = 批档 §2 修复轮。

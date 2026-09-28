@@ -317,7 +317,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 
 **webview 侧痕迹与上行（NFR-A2 webview 侧）**：
 
-- 痕迹面迁出至新档 `thincoder-vscode/webview/activity-diag.js`（已落——`activity.js` 现 **450 行**（行计数口径 = `wc -l` / 含末行；as-of 2026-09-20 收口轮实读）、越 300 建议线；痕迹整体迁出，`activity.js` 只留调用点）；环形 `SUB_TRACE_MAX = 50` 与 `_subTraceLog` 载体同迁（`state.js:83-85` · `:122` 两处退场）。
+- 痕迹面迁出至新档 `thincoder-vscode/webview/activity-diag.js`（已落——`activity.js` 现 **190 行**（R2 提核后实读 2026-09-29；本批随提核改指 ⇒ ≈176）；痕迹整体迁出，`activity.js` 只留调用点）；环形 `SUB_TRACE_MAX = 50` 与 `_subTraceLog` 载体同迁（`state.js:83-85` · `:122` 两处退场）。
 - kind 族（**七类**）：既有三类 `takeover` / `late-terminal-stub` / `drop-unknown-role` + `birth`（新块出生——正收据）/ `drop-frozen`（冻结键吞掉的非出生消息——① 静默面）/ `drop-tombstone` / `reassert-hit`（心跳命中已 live 块——正收据，每频道每生命周期一条）。
   **退场一类**：`skip-key-unrebuildable`（旧射程登记用）——consult / escalate 射程收正后该分支不存在（见「终态必现」）。
 - **留痕节律**：出生 / 状态面**逐条**；内容 chunk 面**每频道每生命周期首条**（高频面按频道去重——上界与 `content-first` 同族）。
@@ -450,7 +450,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | D-W10 | 终态补块前置 = **合法 id + 合法角色段（`[\w-]+`）+ 回读解析一致**（2026-09-19 收窄：`FAMILY_ROLES` 白名单退场——consult / escalate 纳入；仍否决无条件建块） | 否决无条件建块（未知 role 的块无法解读）· 否决 answered / queued-cancel 补桩（既有裁决） |
 | D-W11 | 频道名 `sub:<role>#<id>` 与 chunk 路由契约**不变** | 否决加代际后缀（连带改频道命名/子标挂载/CLI 面板路由） |
 | D-W12 | 队列上界 200 + 溢出丢最旧 + `ev:subdeliver` 留痕 | 否决无界队列（暗窗口内存无界） |
-| D-W13 | 块级跟滚载体落 `activity.js`（旗标 + wheel/touch 让位 + rAF 帧应用） | 否决内联裸钉底（无让位）· 否决几何派生（新造模式）· 否决 `ui.js` 滚动族泛化（状态模型不符 + `ui.js` 473 行（口径 = `wc -l` / 含末行 · as-of 2026-09-20 实读）越 300 建议线） |
+| D-W13 | 块级跟滚载体 = **原语入核 · 本端留调用点 ∕ 帧驱动**（核件 `thincoder-render-core/subblocks/block.mjs` `initBlockFollow` / `maybeScrollBlock`——2026-09-29 提核；`activity.js` 持旗标 + wheel/touch 让位 + rAF 帧应用） | 否决内联裸钉底（无让位）· 否决几何派生（新造模式）· 否决 `ui.js` 滚动族泛化（状态模型不符 + `ui.js` 473 行（口径 = `wc -l` / 含末行 · as-of 2026-09-20 实读）越 300 建议线） |
 | D-W14 | 高度 60px 作用于 `.sub-block` 全部（live + 冻结同卡面） | 否决仅 `.sub-live`（冻结展开态须同卡面）；advisor 流内块维持 100px |
 | D-W15 | 合并权限卡**携 `promptId` 并入逐项卡族**（单一释放通道 + 同一移除选择器） | 否决单开释放语义（同语义两通道 + 消费者按类分支——`permissionWithdrawn` 已按 id 精确匹配，见 `WEBVIEW-PROTOCOL.md` §4.6 · D-P12） |
 | D-W16 | 忙态门 = **禁用**（非隐藏 / 非不做）；判据 = `_turnState !== "idle"` | 否决隐藏（信息钮隐藏即失去「当前模型」读数）· 否决仅 `running`（留 `susp` 在飞蒸馏落盘窗——`panel-callbacks.mjs:319` 携旧回合快照）+ 与 D-P9 的分工见 §4.2 |
@@ -704,3 +704,4 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-09-28（**LEDGER-RELIABILITY 批 · 设计面扩面 · eng-designer**——承 `docs/batches/2026-09-28-ledger-reliability.md` §3 轮次 1 发现 #1）：§4 会话标题条补**账本异常注记**（`sessions` 载荷增字段 `ledger` ⇒ 下拉首行警示注记；非可点条目 / 异常清零历史态；文案键 `session.ledgerNotice`）。**零新消息 / 零既有字段改动**（`ledger` = 异常才携的增字段）。
 - 2026-09-28（**账本可靠批 · 报告面收正轮 · eng-designer**）：§3 文件表 `chat-messages.js` 读数 **234 ⇒ 238**（`wc -l`，实读 2026-09-28——LEDGER-RELIABILITY 批 `ledger` 捕获点 +1）· §4 会话标题条「异常清 ⇒ 注记消失」句收正为**两腿**（`scene` 腿 = 现场清 ⇒ 消失（零历史态）∥ `refused` 腿 = 核本进程累计 ⇒ 在场至重启（有界）；单源 = 核 `ledgerHealth(cwd)`）。零语义（读数刷新 / 口径收正）。
 - 2026-09-29（**子 agent 块跟滚提核随动 · eng-designer**——承 `docs/batches/2026-09-28-desktop-subblock-follow.md` §2 · 台账 #518）：§5.5 内层 ∕ 帧驱动两条与 §3 `activity.js` 行收正——块级跟滚原语入核（`thincoder-render-core/subblocks/block.mjs`；本端 = 调用点 + 转口）；实现单源随迁、**行为零变**（纯搬移）。明细 = 批档 §2。
+- 2026-09-29（**子 agent 块跟滚批 · 修复轮（评审轮 1 · 发现 5）· eng-designer**）：§3 `activity.js` 行行数读数收正（450 ⇒ **190**——R2 提核后实读；本批随提核改指 ⇒ ≈176；撤「越 300」句）；**D-W13** 载体句收正为「**原语入核 · 本端留调用点 ∕ 帧驱动**」（与 §5.5 两条自洽；被否候选面不动）。明细 = 批档 §2 修复轮。
