@@ -7,6 +7,7 @@
   "main": "src/main/main.mjs",
   "scripts": {
     "test": "node test/run.mjs",
+    "start": "electron .",
     "package": "electron-builder",
     "postpackage": "node scripts/check-dist.mjs"
   },

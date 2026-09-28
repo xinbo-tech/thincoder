@@ -23,7 +23,8 @@
  * （两出口 ∥ popover 确认）· `mountSessionBar`（薄挂载）；纯树面三件住 `renderer/views/session-control.mjs`；
  * `isProject` / `slotOf` / `loadPage` / `openPage` / `openResult` = 本档私有。
  * 窄桥 = 本档模块级 `globalThis.thincoder`（装配面 = `src/preload/preload.cjs` —— 与 `renderer/app.mjs` 同源同刻读取）。
- * 纪律：读面失败一律 `console.error` + 零切片写；零 `node:` / 零裸包（守卫 = `test/guard-closure.test.mjs`）。
+ * 纪律：读面失败一律 `console.error` + **核件 toast 可见提示**（R9 · #486：会话开回执拒 ∕ 调用抛 ∕ 页读抛三失败面
+ * ——— 载体 = 核 `toast.mjs`，词面 = 端词表）+ 零切片写；零 `node:` / 零裸包（守卫 = `test/guard-closure.test.mjs`）。
  */
 import { openSession } from "./events.mjs"
 // 页读径拆分产出（「对齐第二批」）——硬限拆档，结构拆分零语义
@@ -33,6 +34,8 @@ import { t } from "./i18n.mjs"
 import { beginBackfill, endBackfill, store } from "./store.mjs"
 // 会话控制面纯构树三件（R13 硬限拆分产出 —— 树面单源；本档只挂载与接线）
 import { sessionBarTree, sessionModel } from "./views/session-control.mjs"
+// 失败面可见提示载体（R9 · #486 —— 核件 toast；词面 = 端词表 `session.*`）
+import { showToast } from "/rc/toast.mjs"
 
 // 窄桥（装配面 = `src/preload/preload.cjs`）
 const host = globalThis.thincoder
@@ -267,6 +270,11 @@ function slotOf(key) {
   return Number.isInteger(slot) ? slot : key
 }
 
+/** 失败因归一（端既有口径 = `composer-wire.mjs` `reasonOf`：非空串直取，余回落 `unknown`）—— toast 插值面。 */
+function reasonOf(receipt) {
+  return typeof receipt?.reason === "string" && receipt.reason !== "" ? receipt.reason : "unknown"
+}
+
 /** 页读（首屏 `before = null` / 回填 = 页游标）：`history:page` ⇒ `applyPage` 落态；抛 / 拒绝 ⇒ 记错 + 清在途（成败皆清）。 */
 async function loadPage(key, before) {
   try {
@@ -274,6 +282,7 @@ async function loadPage(key, before) {
     store.set(applyPage(store.get(), receipt, { key, before }))
   } catch (error) {
     console.error("[renderer] history:page failed:", error)
+    showToast(t("session.loadFailed")) // R9 · #486：页读失败 ⇒ 可见提示（载入失败不静默）
     store.set(endBackfill(store.get()))
   }
 }
@@ -293,11 +302,13 @@ export function backfill() {
   void loadPage(next.activeSession, next.history.page)
 }
 
-/** 会话路三出口**共用尾**（三路 = 同一路）：`ok` ⇒ 开页 + 列表刷新；否则只记错（零切片写、界面照旧）。 */
+/** 会话路三出口**共用尾**（三路 = 同一路）：`ok` ⇒ 开页 + 列表刷新；否则记错 + **可见提示**（R9 · #486 ——
+ *  VSC 会话族三档 `showWarningMessage` 对位；零切片写、界面照旧）。 */
 async function openResult(channel, receipt, context) {
   if (receipt?.ok !== true) {
     if (context !== undefined) console.error(`[renderer] ${channel} failed:`, receipt?.reason, "slot:", context)
     else console.error(`[renderer] ${channel} failed:`, receipt?.reason)
+    showToast(t("session.openFailed", { reason: reasonOf(receipt) }))
     return false
   }
   openPage(String(receipt.slot))
@@ -311,6 +322,7 @@ export async function resumeOpened() {
     await openResult("session:resume", await host.invoke("session:resume"))
   } catch (error) {
     console.error("[renderer] session:resume failed:", error)
+    showToast(t("session.openFailed", { reason: String(error?.message ?? error) })) // R9 · #486：调用抛同理可见
   }
 }
 
@@ -320,6 +332,7 @@ export async function activateSession(key) {
     return await openResult("session:switch", await host.invoke("session:switch", { slot: slotOf(key) }), key)
   } catch (error) {
     console.error("[renderer] session:switch failed:", error)
+    showToast(t("session.openFailed", { reason: String(error?.message ?? error) })) // R9 · #486：调用抛同理可见
     return false
   }
 }
@@ -330,6 +343,7 @@ export async function createSession() {
     return await openResult("session:create", await host.invoke("session:create"))
   } catch (error) {
     console.error("[renderer] session:create failed:", error)
+    showToast(t("session.openFailed", { reason: String(error?.message ?? error) })) // R9 · #486：调用抛同理可见
     return false
   }
 }

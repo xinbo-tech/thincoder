@@ -11,7 +11,8 @@
  * 分组（按消费视图面）：① 对话流（`views/chat-tool.mjs` · `views/chat.mjs` · `views/chat-guide.mjs`）；
  * ② 输入区（`mount-composer.mjs` · `attach.mjs`）；③ 审批面（`views/approval.mjs`）；④ 设置面
  * （`views/settings-sections.mjs` —— 具名控件十键）；⑤ 会话控制面（`renderer/mount-sessions.mjs` —— 会话模型轮 R13
- * 五键：选择器可及名 ∕ 空态 ∕ 改名 · 删除两控件 ∕ 删除确认句 —— **值逐字同 VSC 同名键**）；
+ * 五键：选择器可及名 ∕ 空态 ∕ 改名 · 删除两控件 ∕ 删除确认句 —— **值逐字同 VSC 同名键**；R9 增二键
+ * 〔`session.openFailed` ∕ `session.loadFailed` —— 失败面可见性 #486 toast 词面，本端拟定〕）；
  * ⑥ **核卡族（「桌面处理流 · VSC 对齐」批 R1）**：核包 `cards/{permission,question,panel}.mjs` 内取词键
  * —— 消费面 = 核卡（经注册面投影入核 i18n），**值逐字同 VSC locales**（`thincoder-vscode/locales/*` 同名键）；
  * ⑦ **工具与服务段（R2 · 桌面功能对位批）**：`views/settings-sections-tools.mjs` 取词（段名 / 索引族名 /
@@ -70,6 +71,9 @@ export const VIEWS_DICT = Object.freeze({
     "session.rename": "Rename",
     "session.delete": "Delete",
     "session.deleteConfirm": "Delete session \"${title}\"? This cannot be undone.",
+    // R9 · #486 失败面可见性（二键 —— 本端拟定；消费面 = `renderer/mount-sessions.mjs` toast）
+    "session.openFailed": "Could not open the session (${reason})",
+    "session.loadFailed": "Could not load the session content",
     // ── ⑥ 核卡族（R1 直消费 —— 核包取词；值逐字同 VSC `locales/en.json` 同名键）──
     "perm.wantsTo": "ThinCoder wants to run",
     "perm.approve": "Approve",
@@ -188,6 +192,9 @@ export const VIEWS_DICT = Object.freeze({
     "session.rename": "重命名",
     "session.delete": "删除",
     "session.deleteConfirm": "确定删除会话 \"${title}\"？此操作不可恢复。",
+    // R9 · #486 失败面可见性（二键 —— 本端拟定；消费面 = `renderer/mount-sessions.mjs` toast）
+    "session.openFailed": "会话打开失败（${reason}）",
+    "session.loadFailed": "会话内容加载失败",
     // ── ⑥ 核卡族（R1 直消费 —— 值逐字同 VSC `locales/zh.json` 同名键）──
     "perm.wantsTo": "ThinCoder 想要执行",
     "perm.approve": "批准",

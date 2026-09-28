@@ -45,6 +45,9 @@
  *      ∕ `VIEWS_DICT`（第二档）**104** ∕ `COMPOSER_DICT`（第三档）**28** ⇒ 合计 **397**（两语同拍、键集相等）；
  *      R7 本次增 **47** 键（第二档 ⑪ 设置补充族 —— 逐键清单 = `renderer/i18n-views.mjs` ⑪ 组）⇒ 前值实读 **350**
  *      —— R2 +7 ∕ R4 +2 ∕ R5 +1 ∕ R6 +5 等前段未逐笔续计，本行起为最新链值；
+ *      **R9 增二键**（承 #486 失败面可见性：`session.openFailed` ∕ `session.loadFailed` —— 第二档 ⑤ 组；消费面 =
+ *      `renderer/mount-sessions.mjs` toast）⇒ `VIEWS_DICT`（第二档）104 ⇒ **106**；`HOST_DICT`（**合并表** —— 两语展开含第二 ∕ 三档）
+ *      265 ⇒ **267**（= 本行二键经合并点随动）；`COMPOSER_DICT`（第三档）= 28 不变（两语同拍、键集相等）；
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；

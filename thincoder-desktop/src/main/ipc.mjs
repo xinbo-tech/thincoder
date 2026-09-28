@@ -76,13 +76,21 @@ function requireAgentHost() {
   return agentHost
 }
 
+/** 配置载入面（`config:read` 唯一消费点）：默认真核件 `loadConfig`；注入缝 = `_setLoadConfigForTest`（沿核
+ *  `_setSessionsDirForTest` 先例 —— 坏配置两态（坏 JSON ⇒ 抛出 ∕ 缺文件 ⇒ 缺省）在平 node 面无 electron 也可直测）；
+ *  非函数注入 ⇒ 复位真核件。 */
+let loadConfigImpl = loadConfig
+export function _setLoadConfigForTest(fn) {
+  loadConfigImpl = typeof fn === "function" ? fn : loadConfig
+}
+
 /** `config:read`（无入参）⇒ `{ config, locale, dict, configured }`：`locale` = 配置语言字段**经核归一**
  *  （缺 / 未知 ⇒ `"en"`）；`dict` 与 `locale` 同源同归一 ⇒ 供受面与词面一致。`configured` = **配置档存在性**
  *  （`settings.mjs` `isConfigured()` = `existsSync(configPath)`——首启向导闸读数，有意比 CLI `isConfigured`
  *  宽：档在即视为已配；批档 §2.10 项 3）。配置载入失败 ⇒ **抛出**（fail-loud：`invoke` 拒绝、引导位落
- *  `error` —— D-6 fail-soft 只覆盖路径无效面）。 */
+ *  `error` —— D-6 fail-soft 只覆盖路径无效面）；载入面经 `loadConfigImpl` 取值（注入缝见上——两态直测面）。 */
 function readConfig() {
-  const config = loadConfig()
+  const config = loadConfigImpl()
   const locale = normalizeLocale(config?.locale)
   ipcStats.configKeys = Object.keys(config).length
   return { config, locale, dict: projectDictionary(locale), configured: isConfigured() }

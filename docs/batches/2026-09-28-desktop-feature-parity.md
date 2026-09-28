@@ -133,6 +133,11 @@
 - **裁 ∕ 处置**：① §2.4 R7 行「4 ⇒ 7」相抵 → **父侧机械收正**（`:368` ⇒「5 ⇒ 7」——已落）；② **ipc 序** = R7（+3 通道 ⇒ 现 **325**）→ R9（#14）→ **#28 拆点**（拆后吸收全部增量 ≤300——序成立）；③ `.r7-*.mjs` 六探针 = 收口随清（在册）；④ 登记项（MCP 列举会话回收 ∕ `kindOf` ∕ i18n +47 实值 ∕ advisor 清键 null）= **免裁在册**。
 - **转出 → 设计面**：IPC §1 ∕ §2（+3 请求行 ∕ 35 ⇒ 38 ∕ `settings:agent` models 键）· UI §1（设置面七段）等 —— **并入五合一收正轮 #42**（#41 撤单并入）。
 
+### 1.24 R9 交付收下 + 四处置（父侧 · 2026-09-29 02:2x）
+- **交付**（#14 · 终态 clean · fix 1）：8 档——`protocol.mjs` **123**（+`isAppNavigation` 判据单源；供给序零改）+ `window.mjs` **191**（探针改锚 `rc/..%2F…core.css` ∕ `escapeCss` ∕ `will-navigate` 钩 ∕ 注释改锚）+ `ipc.mjs` **333**（`_setLoadConfigForTest` 注入缝）+ `mount-sessions.mjs` **400**（失败**五调用点** toast——现形重勘）+ i18n 两档（+2 键 × 两语）+ `package.json`（`start` 行）+ `AGENTS.md`（**新建 24 行**——缺层即建 ✓）。**门读数**：改前 `ok:false · blocked:5 · css 404` ⇒ 改后 `ok:true · blocked:6 · served:112 · boot:ok`（门① 正读数 ×3 ∕ 门② ×3）；坏配置两态（缺文件⇒缺省 ok ∕ 坏 JSON⇒fail-loud 抛出）+ 注入缝消费确证；门③ 导航两向运行期在册。`node --check` 六档绿；§5 已落（6702 字符 + 状态行）。
+- **处置**：① 设计档收正（R9 行 + i18n 两档 + 行数账）→ #35 ∕ #42 家族（在册）；② 越线两档（`mount-sessions` **400** ∕ `ipc` **333**）→ ipc 沿 **#28**；mount-sessions 并入 **#536** 家族（账已扩——含 `chrome.css` 425）；③ **rename 失败可见面对位缺口**（VSC 有 ∕ 桌面仅记错）→ 裁「**加**」→ 台账 **#556**（一字级，随下一桌面触碰轮）；④ 探针未留盘（复跑配方在 §5）∥ 测试残引随批清扫候选（在册）。
+- **纪律注记（舱披露 E）**：清临时档用 `del` 单条命令（未走 `delete` 工具）——如实披露、清零；**下轮派单补一句**：删除走 `delete` 工具 ∕ 目录走 `rmdir /s /q` 书面形。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（初始轮 + 评审轮 1 修正（1–14 逐号）+ R1 设计面收正轮（#129 ∕ #131 · 六档八笔；flow 批档三处归父侧）+ 评审轮 3（重发复核）修正 · 微轮 #16（1–10 逐号）+ 退役面本体收正轮 + R2 设计面收正轮（#29 · ①–⑥ 逐号）+ R3 ∕ R6 设计面收正轮（#30 · ①–④ 逐号 + 三档 changelog）在册）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -924,7 +929,7 @@ KD-42（`PROJECT.md:81`）补句：**「域外对账保持人工」**——理�
 - 残余六项处置：操作性 2 项（`events.mjs` 重锚 ∕ `ipc.mjs` 越层行）**随轮派单携带**；记录面 4 项（`PROJECT.md` §4.1:170 收正靶 ∕ KD-42 补句 ∕ 变更记录随落核对 ∕ 引注 ∕ 裁定来源指针）入**批末文档同步清单**。
 
 ## §5 实施记录（eng-coder）
-**状态行**：实施完成（R1 会话维护线（7 档）＋ R6 会话内搜索（上提 + 两端 · 9 档 · 含父侧 §1.8 授权增量）；测试面随全清令取消；R6 审计两轮 clean ∕ 代码评审 pass（🔵7 · 零修改项））
+**状态行**：实施完成（R1 会话维护线（7 档）＋ R6 会话内搜索（上提 + 两端 · 9 档 · 含父侧 §1.8 授权增量）＋ R9 宿主人格小修族（8 档 · 2026-09-29）；测试面随全清令取消；R1 ∕ R6 ∕ R9 审计全 clean、R6 代码评审 pass（🔵7 · 零修改项）、R9 代码评审 pass（🔵10 · 零 must-fix））
 
 
 
@@ -1449,5 +1454,63 @@ KD-42（`PROJECT.md:81`）补句：**「域外对账保持人工」**——理�
 6. 表列外触碰档（如实披露）：`mount-settings-exits.mjs` 拆出两新档（`-segments.mjs` ∕ `-segments-models.mjs`）与 `views/settings-sections-mcp.mjs` —— 均「先拆后改」产物，设计表未逐档点名。
 
 **报告读数（最终盘面 · 可按需复跑）**：`.r7-probe.mjs`（主侧 A1–A15 ∕ B1–B6 · 沙箱 + 真档双相）· `.r7-render.mjs`（渲染 21 项）· `.r7-wire.mjs`（接线 25 项）· `.r7-keys.mjs`（键面 ∕ 计数）+ 钩 `.r7-hooks.mjs` ∕ `.r7-register.mjs` —— 复跑：`node --import ./.r7-register.mjs .r7-render.mjs`（自 `thincoder-desktop`）。六档为**临时探针**（非批产物；留档供复核，父侧可随收口清理）。
+
+### R9 · 宿主人格小修族（eng-coder · 2026-09-29 · initial 轮）
+
+**交付摘要（逐档 · 实读行数 = `read` 总行数口径；「现读」= 本轮落盘后）**
+
+| 档 | 现读（前值 ⇒ 本轮） | 落点 |
+|---|---|---|
+| `thincoder-desktop/src/main/protocol.mjs` | 123（112 ⇒ +11） | +`isAppNavigation`（#389③ 导航判据单源：`SCHEME` ∕ `HOST` 双面 + 畸形 fail-closed）；**供给判定序零改**（⓪①①′②③ 原样），档头 +1 行导航门注 |
+| `thincoder-desktop/src/main/window.mjs` | 191（180 ⇒ +11） | ① 探针 `css` 改锚 `styles.css` ⇒ `theme.css`（单源档随 R13 四拆退场——改前该探针 404 红）；② +探针 `escapeCss`（门①正读数探针，形态届盘重勘）；③ +`will-navigate` 钩点（外部 URL ⇒ 拒 + stderr）；④ `THEME_COLORS` 注释改锚 `theme.css` |
+| `thincoder-desktop/src/main/ipc.mjs` | 333（326 ⇒ +7） | `_setLoadConfigForTest` 注入缝（沿核 `_setSessionsDirForTest` 先例；非函数注入 ⇒ 复位真核件）+ `readConfig` 走 `loadConfigImpl`（载入失败仍直抛——fail-loud 保留） |
+| `thincoder-desktop/renderer/mount-sessions.mjs` | 400（387 ⇒ +13） | 失败面可见提示 5 调用点（`loadPage` 抛 · `openResult` 回执拒 · 三出口调用抛各 1）+ 私有 `reasonOf` + `/rc/toast.mjs` 导入 + 档头纪律行 |
+| `thincoder-desktop/renderer/i18n-views.mjs` | 282（276 ⇒ +6） | 两语各 +2 键：`session.openFailed`（`${reason}` 插值）· `session.loadFailed`（本端拟定） |
+| `thincoder-desktop/renderer/i18n.mjs` | 473（471 ⇒ +2 注释） | 键数链一行（fix 轮 1 收正口径后：三档读数并列 + `HOST_DICT` 合并表标注） |
+| `thincoder-desktop/package.json` | 23（+1） | `"start": "electron ."` |
+| `thincoder-desktop/AGENTS.md` | **新建 24 行** | 工程导览（含 Commands 三段 = `npm start` ∕ `npm test` ∕ `npm run package` + 约定五条）——设计记「+1 行」暗示已存在，盘面 ∕ 历史零该档（前提更正，见决策表 D5） |
+
+**机检读数（命令 + 结果）**
+
+- `cd thincoder-desktop && node_modules\.bin\electron.cmd . --smoke` → `ok:true` · `blocked:6` · `served:112` · 九探针逐项等值（`html 200` ∕ `css 200 text/css` ∕ `rcMd 200` ∕ 六负探针 404）· `boot:"ok"` · `errors:[]` · exit 0。
+  - **门① 正读数 ×3（stderr 归属行）**：`[protocol] escape refused: app://desktop/rc/..%2Fthincoder-core%2Fi18n.mjs` ∕ `…: app://desktop/..%2Fsrc%2Fmain%2Fprotocol.mjs` ∕ `…: app://desktop/rc/..%2Fthincoder-desktop%2Frenderer%2Fcore.css`（末枚 = 本轮新探针 `escapeCss`）。
+  - **门② 正读数 ×3**：`[protocol] extension refused: app://desktop/package.json` ×2（`escape` ∕ `escapePct` 归一化后落门②——#389① 原缺口态）· `…: app://desktop/probe.json`（`ext`）。
+  - 改前基线（同命令 · 本轮动手前）：`ok:false` · `blocked:5` · `css` 探针 `404`（`styles.css` 已退场）⇒ 本轮改锚后回绿。
+- **导航门运行期读数（一次性 electron 探针 · 跑后已清理）**：真窗起载 → `location.href='https://example.com/'` ⇒ **拒**（URL 仍 `app://desktop/index.html` + `[window] navigation refused: https://example.com/`）；`location.href='app://desktop/theme.css'` ⇒ **放行**（URL 变更）——拒 ∕ 放两向对立成立。
+- **坏配置两态 + 注入缝读数（一次性 electron 探针 · 跑后已清理）**：① 缺文件 ⇒ `boot:"ok"`（`configKeys:15`，缺省）；② 坏 JSON ⇒ `boot:"error"` + 主进程抛出（`Config file is not valid JSON, check or delete it: <tmp>`，栈落 `readConfig`）；③ `_setLoadConfigForTest(() => ({probe:true}))` ⇒ `boot:"ok"` ∧ `configKeys:1`（**消费面确证**走注入实现）。
+- `node --check` × 六档（`protocol ∕ window ∕ ipc ∕ mount-sessions ∕ i18n-views ∕ i18n`）→ 全 `Syntax OK`；`package.json` `JSON.parse` 通过。
+- i18n 实读：`VIEWS_DICT` 两语 **106 ∕ 106**（键序同）· `HOST_DICT` **267 ∕ 267** · `VIEWS ⊆ HOST` 真（合并表关系成立）。
+- **失败径提示在场（渲染面 grep）**：`import { showToast } from "/rc/toast.mjs"`（`mount-sessions.mjs:38`）+ 五处调用（`:285` ∕ `:311` ∕ `:325` ∕ `:335` ∕ `:346`）+ 词键两语在位（`i18n-views.mjs:75-76` ∕ `:196-197`）。
+
+**决策透明表（越出行动表的额外改动 ∕ 定形 · 逐条）**
+
+| # | 决策 | 依据 |
+|---|---|---|
+| D1 | 门①正读数探针形态届盘重勘：`../styles.css` 形态 ⇒ `rc/..%2Fthincoder-desktop%2Frenderer%2Fcore.css` | 设计记 `styles.css` 已退场（R13 四拆）；判据沿骨架批缺口原文「白名单扩展名 + 逃逸路径」（`.css` ⇒ 门②不拦，归属行 = 门①）；`escapeSrc` 已覆渲染面根 ⇒ 新探针补 `/rc/` 根，两根各一读数；落点 `renderer/core.css` 在盘 ⇒ link 态判别力成立 |
+| D2 | `css` 正探针 `styles.css` ⇒ `theme.css`（**改锚，非删**） | 单源档退场后该断言已死（改前 smoke `css:404`）；`theme.css` = 现盘主题变量档（与 `THEME_COLORS` 镜像同源 `:8/:44`）；判据（200 + `text/css`）零改，仅换在盘落点 |
+| D3 | 失败面提示落为 **5 调用点**（设计三径 → R13 现形） | 设计三径 = 回执拒 ∕ 页读抛 ∕ 调用抛；R13 后：回执拒 = 三出口同一路（`openResult`）· 页读抛 = `loadPage` · 调用抛 = 三出口各自 catch（原 `activateSession` 单点三路化）——父侧「closeTail 零对象」与设计第三径（`activateSession` catch）关系如实披露：第三径**未零对象**，现读三份 |
+| D4 | 词面二键本端拟定（`session.openFailed` 带 `(${reason})` · `session.loadFailed` 无参） | 设计「词面 = 端词表」；VSC 三档为宿主 `showWarningMessage` 英文句（非 toast 载体，不可逐字移植）⇒ 取端 toast 族既有形（`composer.send.failed` 的 `(${reason})` 先例）；`reason` = 核回执 reason 直取（端既有 `reasonOf` 口径） |
+| D5 | `thincoder-desktop/AGENTS.md` **新建**（非 +1 行） | 设计记「+1 行」暗示已存在；盘面 + git 历史零该档 ⇒ 按「缺层即建」立最小工程导览（含设计要的起实例命令行）；内容实核（`test/run.mjs` ∕ `files.mjs` 在盘 · `electron-builder.yml` 未在盘——注释属实）；超估如实披露 |
+| D6 | `renderer/i18n-views.mjs` ∕ `renderer/i18n.mjs` 入改动面 | 设计 #9「词面 = 端词表」的必要载体；§2.5 R9 行未列此两档 = 设计面记账缺口（内审已记，父侧随落） |
+| D7 | `will-navigate` 外链仅拒，未加 `shell.openExternal` | 设计句仅「外部 URL ⇒ 拒」；窗开面（`setWindowOpenHandler`）已自持外链转交系统浏览器——不发明第二交互面 |
+| D8 | `reasonOf` 本档私有（未引 `composer-wire.mjs` 导出版） | 沿端既有形（屏内 5 处中 1 处走导出、3 处本地副本〔fallback `invalid-shape`〕）；本档 fallback = `unknown` 同导出版；评审 🔵 记而留报 |
+
+**测试面（父侧令 · 逐行注明）**：R9 表 **#3**（`test/guard-closure.test.mjs`）· **#4**（`test/host-floor.test.mjs`）· **#6**（新 `test/config-fail-loud.test.mjs`）· **#10**（`session-open` ∕ `history-page` 随动）**跳过**——四档在盘不存在（`test/files.mjs` 空清单 + 2026-09-28 全清令）；本舱**未写测试 ∕ 未跑套件**。验收三机检项（门①/门② 正控读数 · 坏配置两态 · 失败径提示）由 smoke + 两枚一次性探针承载（读数如上；探针档跑后清理，复跑配方 = smoke 一句 + 探针重建要点见报告）。**not repo-suite verified — the parent-side closeout run is the only repo-suite run.**
+
+**审计与代码评审（轮次与终态）**
+
+- **内部偏审（explore · 只读 · 1 轮）**：判 **DEVIATIONS** —— 代码面四类（部分实现 ∕ 静默简化 ∕ 未披露越界 ∕ 越界档）**零命中**；边界两项核过（骨架批既有断言零删——探针表 9 枚全在且判据未弱；协议判定序零改——五门原样）。命中 = **设计档面两处 DOC-DRIFT**：① §2.5 R9 行未列 `renderer/i18n-views.mjs` ∕ `renderer/i18n.mjs` 两档；② R9 行数值滞后（protocol 89⇒105 实 123 · window 137∕±10 实 191 · ipc ⇒270 实 333 · mount-sessions 199⇒215 实 400）——均为设计面持账（本舱零触）⇒ **无 fix 项**。另核：跳过项有据（空清单 + 用户令）；探针脚本盘上无残留。
+- **代码评审轮 1（advisor · code）**：`VERDICT: pass`（🔴 0）—— 🟡×6（mount-sessions 400 ∕ ipc 333 越顾问线 · i18n 键数链口径 · 设计行数滞后 · VSC 改名失败对位候选 · 测试面协调项）+ 🔵×4（`escapeCss` 归属不可机检 · `reasonOf` 重复 · `AGENTS.md` 路径 ∕ 超估 · toast 样式依赖链）；**零 must-fix**。
+- **fix 轮 1（本舱 · 自持面两项）**：① i18n 键数链句收正（「合计 401」重复计入口径 ⇒ 三档读数并列 + 合并表标注；误归因括号句删）；② `AGENTS.md` 设计档路径补 `../` 前缀（与兄弟档同形）。其余 🟡 ∕ 🔵 按登记留报。
+- **终态 = clean**（内审 1 轮〔零 fix 项〕→ 代码评审 1 轮 pass → fix 轮 1〔doc 面两项自修〕）。
+
+**登记项 ∕ 留遗（不修 · 供父侧）**
+
+1. **设计档收正（本舱零触 · 逐处点名）**：§2.5 R9 行 + 两档（i18n-views ∕ i18n）；R9 行数账按届盘收正（同微轮 #16 在册）。
+2. `mount-sessions.mjs` **400** 行 > 300 顾问线（R13 重写后 387 ⇒ 本轮 +13；设计记 199）——对账登记 ∕ 拆点裁量归父侧。
+3. `ipc.mjs` **333** 行 > 300 顾问线（与 R7 登记项 1 同源；#28 在册）。
+4. **对位缺口候选（父侧裁）**：VSC 会话改名失败有可见面（`thincoder-vscode/src/extension/panel-messages-session.mjs:96` `showWarningMessage`）⇔ 桌面 `confirmRename` 失败仅记错（`mount-sessions.mjs:357-358`）；本舱按设计三径未加（不越设计）——是否随 `#486` 加一字归父侧。
+5. toast 样式依赖链：`.paste-toast` 唯在核 `thincoder-render-core/composer/composer.css:45 ∕ :60`，靠 `mount-composer.mjs:172` 装配期注链——组合器未装态退化为裸文本（评审 🔵，记录不改）。
+6. 测试残引（非本轮射程）：`mount-sessions.mjs:27` 等仍引 `test/guard-closure.test.mjs`（全清令后退役）——随批清扫候选。
 
 ## §6 验证与收口（父代理）
