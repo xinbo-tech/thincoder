@@ -76,7 +76,7 @@ reasoning, provider, images? } → extension _chat()
 
 历史断链事故：只改发射端与渲染端、漏桥 ⇒ `model` 字段自发布首日被丢弃（2026-08-26 修复 + 锁桥测试）。string / 对象双分支在 payload 构造处统一推导（对象载荷字段透传、string 分支字段 `undefined` 安全降级）。
 
-### 3.2 协议增量登记（十七项——只增不改）
+### 3.2 协议增量登记（十九项——只增不改）
 
 | # | 消息面 | 增量 | 发射点 | 接收点 |
 |---|---|---|---|---|
@@ -97,8 +97,10 @@ reasoning, provider, images? } → extension _chat()
 | 15 | `workspaceGuard`（**新消息**——host → webview） | `{ active:boolean }`——无工作区守卫态（面板拒发 + 占位符第三态；判据 / 守卫面 = `PROJECT-SWITCHER.md` §4.1） | `src/extension/workspace-guard.mjs` `pushWorkspaceGuard`（推送点 = `panel-session.mjs` `openSessionContent` 两分支 / `chat-panel.mjs` 工作区变化处理；机检发点坐标 = `src/extension/workspace-guard.mjs:38`） | `webview/chat.js:197` `case "workspaceGuard"` |
 | 16 | `queuedUserMessage`（**新消息**——webview → host 输入上行） | `{ text, model, reasoning, provider, images }`——busy 期排队注入（busy 即排队面 = `running`；host 队列载体两态（容量 8）= 无会话 `panel._busyQueued` ∥ 会话在飞 `susp.pendingInput`；细则 = `WEBVIEW-INPUT.md` §1 C-B2-6） | `webview/send.js:44`（出口分流——本地气泡先行） | `panel-messages.mjs:174` `case` → `routeUserTurn` 入槽 |
 | 17 | `busyQueued`（状态镜像 · **增字段 `count` / `items` / `text` / `merged`**） | `{ pending:boolean, count?:number, items?:string[], text?:string, merged?:string }`——队列快照（`count` / `items` = 剩余实况（守卫 = `count >= 8`；Reload 重建源 = `items`）；`text` = 队列末项原文（队列非空即携——受理 / 消费 / 忙判 / 握手各推送点同式；webview 不读）；`merged` = 本批合并文本（仅消费推送——多条批合泡源）；`WEBVIEW-INPUT.md` §1 C-B2-6 ①⑦） | `src/extension/panel-messages.mjs` `pushBusyQueued`（受理 / **五个消费点**（含步边界 pickup） / 忙分支判决 / `webviewReady` 握手重推） | `webview/chat-messages.js` `case "busyQueued"` → `S._busyQueuedCount` / `S._busyQueuedPending` + 待发送气泡（逐条标记 / 清标 / 合并成形） |
+| 18 | `usage`（增字段） | `timers`（`{ count, expired }`——核 `_pendingTimers` 活读投影；零在途 ⇒ 段零节点） | `panel-callbacks.mjs` `usage` 发射点（累计 ∕ transports 映射——同 `reasoning_tokens` 行） | `status-bar.js` `⏰N` 段 + `state.js` 两计数槽 |
+| 19 | `timer`（**新消息**——host → webview） | `{ status: "fired", text }`——`text` = 交付原文（`[System reminder: ⏰ timer — …]` 逐字；显示裁 = ≤3 行 + `…`——CLI 同规） | `thincoder-vscode/src/extension/timer-watch.mjs`（拟新增——空闲 deadline 闩到点交付点） | `webview/chat-messages.js`（流内触发行渲染） |
 
-纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–17 即全部在案增量；表外增量不入）。发射 / 接收落点：
+纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–19 即全部在案增量；表外增量不入）。发射 / 接收落点：
 `thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:27` ·
 `thincoder-vscode/webview/chat.js:260` · `thincoder-vscode/webview/status-bar.js:27-30/46`。
 
@@ -226,6 +228,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 输入提示 / 键位串 | enterHint + 键位串 | 无（按钮 / 占位符承载） | 保留（类判据见 §6.1 首） |
 | 横幅 | PLAN / AUTO / ADVISOR / ENG + attention chip | 工具条按钮 active + plan 徽标（`:23`） | 保留（类判据见 §6.1 首）+ 不做项在册（U-P5；attention chip——权限 / 提问卡流内可见） |
 | 后台段 | `后台 N 子代理运行中 · M 完成待消化` | `⏳ …`（`:51-60`——running+queued / pending+done 两段） | 等价 |
+| 计时器段（⏰N——timer-wake 阶段 2） | ` │ ⏰N`（状态段簇尾——`thincoder-cli/src/tui/render-frame.mjs:422`；含过期项 ⇒ 警示色） | （拟新增——`webview/status-bar.js` `⏰N` 段；源 = `usage` 载荷 `timers { count, expired }`——本档 §3.2 行 18） | 等价 |
 
 ### 6.2 块头字段对位（本端 × CLI）
 
@@ -244,7 +247,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 待消化 | `done · awaiting digestion`（状态区） | 块头态词同文案（`activity-view.js:91`） | 对齐 |
 | 冻结头 + tail-3 | `[✓ key · … · done Ns · turn]` + tail-3（`│ ` 前缀独立行——`render-segments.mjs:103-109`）+ 注记 ` — <note>`（停因 / interrupted——`:88-93`） | `[✓ key · … · done Ns · turn]` + tail-3（`│ ` 前缀——`activity-view.js` `refreshBlock`；容器 = `<details>/<summary>` 原生）+ 注记 ` — <note>`（载体 `meta.note`——契约 = `WEBVIEW.md` §5.2；`tailLines` = `activity-view.js:102`） | 对齐（D4 消：tail-3 行文归一 = `│ ` 前缀独立行） |
 
-### 6.3 i18n 键表（23 键 · zh/en 逐字）
+### 6.3 i18n 键表（24 键 · zh/en 逐字）
 
 > 键面 = **webview 可渲染键**（消费位见各注）；文案实体 = **核容器** `thincoder-core/i18n.mjs`（投影面）+ **本地档** `thincoder-vscode/locales/{zh,en}.json`（端特有键）——本地档核域键同值副本的处置（摘除消解路径在册）见设计档 `I18N.md` §3.1 D1（本表只作对照，不复制为第二单源）。
 > **端特有键类判据（2026-09-25 · 端差二态化）**：端特有键 = **显示宿主单侧存在的消费面**（webview 面元素——CLI 无对位）⇒ 按 A9 **保留**：① 消费面仅端侧存在；② 证据 = 各键注内消费点坐标；③ 裁定 = W15 D1「容器归一、投影端差」（2026-09-13 已裁）+ 本表收录口径（D3）。核容器键 = 投影单源（本地零重复定义）。
@@ -274,6 +277,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `queued.pending` | 待发送 · 不打断当前执行，自动发送 | Queued — sent automatically, no interruption |
 | `session.ledgerNotice` | 会话账本异常（${reason}）——打开会话即自动补回 | Session ledger anomaly (${reason}) — opening a session self-heals it |
 | `session.ledgerNotice.scene` | 损坏现场档保留 30 天 | Corrupted-scene files kept 30 days |
+| `status.timer` | ⏰${n} | ⏰${n} |
 
 - **占位符记法**：本端引擎只认 `${k}` 形态（`thincoder-vscode/webview/i18n.js:30`）——照抄 `{n}` 会把字面占位符显示给用户。
 - `sub.newBlocks`（2026-09-19 追加——出生可见性计数钮，机制单源 = `WEBVIEW.md` §5.5）：键名 / 双语逐字 / 占位符形态（`${n}`）三面以本表为单源；`${n}` = 未钉底期间出生块数。
@@ -293,6 +297,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
    消费面 = 会话下拉首行警示注记（`WEBVIEW.md` §4）；登记依据 = 加键批同轮登记（D3）。
 - `status.indexProgress`（W8 索引面归一新键——住本地档）+ 其 sibling `status.indexScan`：消费 = `thincoder-vscode/webview/status-bar.js:97-99`（`statusText` `kind:"index"` 两相位）。
 - 审批态键 = `sub.awaitingApproval`（`等待审批: ${tool}` / `Awaiting approval: ${tool}`）——**已实装**（见 §6.2）；消费 = `activity-view.js:90`。
+- `status.timer`（timer-wake 阶段 2）= **符号 + 计数形态**（无文案——两语同值 `⏰${n}`；先例 = 桌面 `thincoder-desktop/renderer/i18n.mjs` 同值）；**端特有键**（住 `thincoder-vscode/locales/{zh,en}.json`——不进核容器）；消费面 = `webview/status-bar.js` `⏰N` 段；登记依据 = 加键批同轮登记（D3）。
 
 ## 7. 关键决策记录（含否决备选）
 
@@ -308,7 +313,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | D-P8 | 状态文本载体 = **结构化 `statusText` 消息**（kind 判别 → webview 按 locale 渲染） | 否决 host 直发成品文本（host 不知 locale——复制 i18n = 双源）· 否决不做（判定句要求用例锁新增状态文本） |
 | D-P9 | Send 可见性 = running 期**隐藏** | 否决禁用态（双范式 + 仍占位） |
 | D-P10 | `scrolled N` = **保留**（类判据 §6.1 首——悬浮回底钮替代） | 否决补文本段（N 需新造单位 + 与钮重复） |
-| D-P11 | 协议增量 = **只增不改**、**十七项**登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
+| D-P11 | 协议增量 = **只增不改**、**十九项**登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
 | D-P12 | 合并权限卡**并入 `promptId` 族**（单一释放通道 `releasePermission` + id 精确匹配 + 孤儿回写） | 否决单开释放语义（同语义两通道 · 消费者按类分支）；`shift()` 队列头匹配已驳（D-P4 同据——陈旧卡不误 resolve） |
 | D-P13 | `waiting` 判据含**批权限队列** + **释放即刷**（刷新点 = 释放通道单点 `releasePermission`） | 否决逐路径各补 `_refreshStatus()`（散点——漏一处即残留）· 否决判据只列权限 / question（批卡停驻期读作 idle——状态栏失去「需你输入」语义） |
 | D-P14 | 诊断上行 `panelDiag` = **新消息（行 8 登记）**——出生 / 终态事件面痕迹入主侧日志 | 否决只留 webview 环形日志（DevTools 不可回读——本次事故正因不可回读而盲；理由详见 `WEBVIEW.md` D-W22）· 否决并入既有上行消息字段（无同缝——`webviewReady` 是一次性启动拍） |
@@ -647,3 +652,5 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 - 2026-09-25（**文档面收尾批 · 设计档收正轮 · eng-designer**——承 `docs/batches/2026-09-25-doc-face-closeout.md` §2 收正轮修正块）：§4.6 死引收正——「§18 C-1/Q1」改指 `AGENT-LOOP-SUBAGENT.md` §6.7.6 C-1/Q1（child permission gate 归核后现行家；靶节存在性先核 ✓）。**消息名 / 载荷字段 / 首列判别式集零变**（判据句面收正，机制零改）。
 - 2026-09-28（**账本可靠批 · 报告面收正轮 · eng-designer**）：§12 `sessions` 行 ② 列收正 `src/extension/panel-session.mjs:249` ⇒ **`:259`**（实施后现位 · 实读 2026-09-28）；**④ 处置列 / 载荷字段 / 首列判别式集零变**（坐标收正，零语义）。
 - 2026-09-28（**账本可靠批 · VSC 注记条件附句修正轮 · 父侧直接执行〔可 revert〕**——承端座 #40 上抛⑤ + 修正轮 #43）：§6.3 键表 **22 → 23 键**（`session.ledgerNotice` 拆主句 + 增条件附句键 `session.ledgerNotice.scene`——`scene === true` 时「主句 + 分隔符 + 附句」合成，与 CLI 同口径；D3：计数与列表同改；`:292` 附句登记注在册）。**消息名 / 载荷字段 / 首列判别式集零变**（键表拆分 + 条件合成，机制零改）。
+- 2026-09-28（**timer-wake 阶段 2 批 · 设计收尾轮 · eng-designer**——承 `docs/batches/2026-09-28-timer-wake-phase2.md` §2 · VSC 面 = 核档 §6.30.11）：§3.2 **十七 → 十九项**（+ 行 18 `usage` 增字段 `timers` · 行 19 新消息 `timer`——host → webview）+ §7 D-P11 计数同改；
+  §6.1 增**计时器段**行；§6.3 键表 **23 → 24 键**（+ `status.timer`——端特有键 + 登记注）。**消息名 / 既有载荷字段 / 首列判别式集零变**（§12 / §13 表体零改——新消息未实现，实现轮落位后补行）。

@@ -233,7 +233,7 @@ apply_patch——无坐标 hunk 宽容 + 文件头容缺；多文件原子。wri
 - **glob**：`{a,b}` brace 展开；`!` 排除前缀；不支持语法（`?(x)` / `@(a|b)` / `+(x)` / 空 / 未闭合 brace）**显式报错**（不静默漏匹配）。
 - **wait_for**：条件等待（非 sleep）——条件语义化（advisor settled / subagent id:N done / consult done / file exists / port open）；未知条件显式报错；timeout 默认 30s（config 可覆盖，cap 600s）；interval 默认 1s 下限 100ms。**`advisor settled` 判据** = 后台评审池真实态（无 running / queued 评审）——修前读子代理池的 advisor 条目（该池永无此类条目）⇒ **恒真 0ms 秒过**（用户实证）
 。机制面细则归 AGENT-LOOP 板。
-- **timer**：默认 180s；`seconds` 必须为有限正数；在途 ≤ 8（超限显式拒）；到期语义 = 在途跨 run 存活 + 到点自唤醒（空闲 / 挂起窗——**支持面 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.5**；机制 = 同档 §6.30——开关 `agent.timerWake` 默认开）。
+- **timer**：默认 180s；`seconds` 必须为有限正数；在途 ≤ 8（超限显式拒）；到期语义 = 在途跨 run 存活 + 到点自唤醒（空闲 / 挂起窗）——**支持面 = CLI / VSC / 桌面三端前台（headless 结构性不支持）**，逐格定义 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.5；机制 = 同档 §6.30（开关 `agent.timerWake` 默认开；端面接线 = §6.30.11）。
 - **task**：状态别名归一（completed / finished / …）+ warning；跨会话 / 项目级用**台账**（`/ledger`——描述含路由）。
 - **verify**：通用验证门禁——语言 / 框架 / 项目无关，不自动跑任何测试命令；模型经 `verification:{status:"passed"|"failed"|"skipped", command?, summary?}` 声明验证状态（passed 放行 / failed 打回 / skipped 放行但须 summary 理由）；参数已删 `full` / `testNamePattern` / `filter`，保留 `workdir`。
 - **read_image**：视觉模型读图；非视觉模型拒绝 / 占位（防 image_url 毒化会话）；svg 返回文本源码、bmp 拒绝并提示转 PNG。
@@ -1023,6 +1023,9 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 **边界（本增量不做）**：不做 task 工具本体改动（保留）；不做台账（M2 承接）；不做「归册三选一」替代流程（M10 一并砍）。
 
 ## 变更记录
+
+- 2026-09-28（**批 timer-wake-phase2 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-timer-wake-phase2.md` §1 · 台账 #446 + #445）：§6.7 `timer` 契约行**支持面句收正**——「空闲 / 挂起窗」的端限定由「CLI 前台 + 挂起窗」改为
+  **CLI / VSC / 桌面三端前台（headless 结构性不支持）**，逐格定义回指 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.5；机制 → 同档 §6.30 / §6.30.11（端面接线）。**参数 schema 零变**。
 
 - 2026-09-27（**timer-wake 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-27-timer-wake.md` §2 · 台账 #443）：§6.7 `timer` 契约行补**到期语义**（在途跨 run 存活 + 到点自唤醒）与在途条数帽（8 · 超限显式拒）；机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30。**参数 schema 零变**。
 

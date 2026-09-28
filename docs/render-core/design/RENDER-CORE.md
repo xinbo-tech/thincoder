@@ -41,6 +41,7 @@
 
 - 判据：`protocol.mjs` 逃逸门（`relative()` 判据——`:53-54`）对各根同式施加 ⇒ 双根 = 显式登记第二条根 + 各根各留逃逸门（供给语义不变）。
 - 渲染面静态闭包守卫随动：`thincoder-desktop/test/guard-closure.test.mjs:70`「渲染面零裸包 / 零 `@thincoder/core`」⇒ 新增 `/rc/` 前缀白名单；**裸包禁令不变**（核经 URL 前缀取，不经 `node_modules` 裸名）。
+- **装载面分层（「对齐第二批」修复轮）**：桌面渲染档分两档（node-safe ∥ 浏览器专属）——档记 / 判据单源 = `docs/desktop/design/SHELL.md` §1「node-safe 子集」条；本加载形面（`/rc/` 供给）受该条约束；违例 = 主进程装载崩 · 窗口永不出。
 - 发行面：`thincoder-desktop/package.json` `dependencies` 增该包（electron-builder 打包生产依赖）；`scripts/check-dist.mjs` 增产物断言（R1 已落 1 条——`CHECKS` 表 `:18-24`：asar 包内 `node_modules/@thincoder/render-core/package.json` 在册）。
 
 **被否候选**：
@@ -208,7 +209,8 @@
 **桌面消费面（对齐第二批扩 · 单源 = 本段；机制 / 判据措辞单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」）**：① 纯函数 / 状态机族扩 = `paintReasoningTarget`（推理钉底——项 1）；
 ② `queued-mark` 两导出（`markPending` / `paintLabel`——用户块标签两形态与待发送标记；项 2 / 4；`planBusyQueued` / `clearPending` 不消费——登记 = 本档 §9 ②）；
 ③ 构件族四件（`renderSubBlock` / `refreshBlock` / `renderSubagentChunk` / `renderSubDesc`——右列子 agent 块面与归档块面；项 3 / 5）；
-④ **`setStrings(宿主表 ∪ 核投影)` 单点接线**（核件内取词走核 i18n——落点 = `thincoder-desktop/renderer/i18n.mjs` `initDict`；核件所需 VSC 侧键（`sub.*` / `msg.*` / `queued.pending`）入宿主表，**值逐字同 VSC locales**——沿 `msg.copy` / `msg.copied` 先例）。
+④ **核件取词接线（`setStrings` 注册单点）**（核件内取词走核 i18n——注册单点 = `thincoder-desktop/renderer/app.mjs`（`setStringsSink(setStrings)` 一次注册）；`initDict` 合并式经注册端出（`thincoder-desktop/renderer/i18n.mjs` = node-safe 档——零 `/rc/` 静态导入；判据单源 = `docs/desktop/design/SHELL.md` §1「node-safe 子集」）；
+核件所需 VSC 侧键（`sub.*` / `msg.*` / `queued.pending`）入宿主表，**值逐字同 VSC locales**——沿 `msg.copy` / `msg.copied` 先例）。
 
 **样式契约**：核构件类名 = 被抽档现行名（KD-RC-7）；**内容面视觉对齐 VSC（值以 VSC webview 实值为源）· 外壳自持**——VSC 沿用 `chat.css` / `controls.css`（零改）；
   桌面 = `thincoder-desktop/renderer/core.css`（核类名 → 桌面值映射）+ 值变量单源 = 主题表 `thincoder-desktop/renderer/styles.css`（亮暗两套）。
@@ -365,9 +367,9 @@
 | C | **地图与架构档补行**：`docs/README.md` 地图 + `docs/core/design/ARCHITECTURE.md` 模块表补核包行 | 文档随动（父侧面为常例） | 随 R1 实施批（或父侧直接执行） |
 | D | **退役批文件面核对**：R1–R3 开工前与 #108 在飞批核对（§8 前置） | 实施前置 | 实施批执行；冲突 ⇒ 串行 |
 | E | **探针两件（实施批首跑）**：① VSC 真 webview 加载 `node_modules` 相对路径核模块（dev junction 形态下）② 桌面 `/rc/` 双根供给与逃逸门 | 实现面实证 | R1 首跑即测；任一失败 ⇒ 回本档改加载形（KD-RC-1 备选 = 物化后经 `localResourceRoots` 显式扩面） |
-| F | **桌面「计时」段新鲜度窗**：读数 = 核 `_pendingTimers`（`thincoder-core/agent.mjs:84`）· 刷新点 = 回合尾（`ev:usage` 同点）⇒ 空闲期到期不即时刷新 | 设计登记 | 沿状态行目标读（不显倒计时）；若须更强新鲜度 ⇒ 另裁推送面 |
+| F | **桌面「计时」段新鲜度窗**：读数 = 核 `_pendingTimers`（`thincoder-core/agent.mjs:84`）· 刷新点 = 回合尾（`ev:usage` 同点）——**空闲期到期 ⇒ 闩到点即开 timer 轮**（timer-wake 阶段 2 已解；单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.11），读数于该轮回合尾刷新 | **已解（timer-wake 阶段 2）** | 沿状态行目标读（不显倒计时）不变；不再另裁推送面 |
 | G | **核侧无「助手说话人标签」原语**（核内为 `thincoder-render-core/flow/block.mjs` `renderBlock` / `buildAssistantRestore` 内联字面；桌面助手标签 = 端侧同字面落形——词键同源 / 字形住样式档） | 上抛（核面收拢候选 · 归父侧裁） | 若须核侧收拢 ⇒ 补助手标签原语（与 `queued-mark` 的 `paintLabel` 同族）——**另裁**；本批不改核件 |
-| H | **核件取词 = 端侧 `setStrings` 接线**（构件族签名无 `deps.t`——核内取词走模块级 `i18n.t`） | 登记（接线面） | 备选 = 核件签名改注入 `t`（改核件——另裁）；现状 = 桌面 `initDict` 处单点 `setStrings`（单源 = 本档 §5 桌面消费面段） |
+| H | **核件取词 = 端侧 `setStrings` 接线**（构件族签名无 `deps.t`——核内取词走模块级 `i18n.t`） | 登记（接线面） | 备选 = 核件签名改注入 `t`（改核件——另裁）；现状 = 桌面**注册单点** = `thincoder-desktop/renderer/app.mjs`（`setStringsSink(setStrings)` 一次注册；`initDict` 合并式经注册端出——判据单源 = `docs/desktop/design/SHELL.md` §1 + 本档 §5 桌面消费面段） |
 
 ## 变更记录
 
@@ -399,3 +401,6 @@
 - 2026-09-28（**对齐第二批 · 修正轮 1**——设计评审 §3 轮次 1 发现 2 / 5 / 6 逐号点修）：§2 KD-RC-6 收正（内容 chunk 四面分流 + 回显 tail-3；被否候选「照 VSC 回显 tail-3」移入改判登记）· §4 行 16 不消费 carve-out 补 `clearPending`；
   §5 构件族补三件（`refreshBlock` / `renderSubagentChunk` / `renderSubDesc`）+ 消费面段 ② 导出数收正（两导出）。明细 = `docs/batches/2026-09-28-desktop-vsc-align-2.md` §2。
 - 2026-09-28（**桌面空闲唤醒批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-idle-wake.md` §1）：§3 行 8（`chat-status.js` 端）补桌面消化状态行同判句；§9 增「桌面空闲唤醒」端差 ∕ 登记三条（消化状态行端侧自持 ∕ 块回收面住宿主驱动 ∕ 挂起句双端值源）。核件面零改（本批不动核包）。
+- 2026-09-28（**对齐第二批 · 复核轮收正轮 · eng-designer**——承批档 §3 轮次 3）：§1.3 桌面端加载形补**装载面分层**指针句（单源 = `docs/desktop/design/SHELL.md` §1「node-safe 子集」条）；
+  §5 桌面消费面段 ④ 与 §10 **H** 行取词接线改述（**注册单点** = `thincoder-desktop/renderer/app.mjs`——`setStringsSink(setStrings)` 一次注册；`initDict` 合并式经注册端出）。明细 = `docs/batches/2026-09-28-desktop-vsc-align-2.md` §2。
+- 2026-09-28（**timer-wake 阶段 2 批 · 设计收尾轮 · eng-designer**——承 `docs/batches/2026-09-28-timer-wake-phase2.md` §2）：§10 **F** 行转**已解**（空闲期到期 ⇒ 闩到点即开 timer 轮——读数于该轮回合尾刷新；单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.11）。零新语义。

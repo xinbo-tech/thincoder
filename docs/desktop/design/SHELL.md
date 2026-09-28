@@ -1,7 +1,7 @@
 # 桌面端（DESKTOP）· 宿主适配层
 
 > 板块 = **桌面端宿主适配层**——三层进程与目录形态 · 宿主面职责（窗口 / 菜单 / 系统主题 · `app://` 供给 · 预载窄桥 · 启动自检）· 与核的接口面**七面** · 壳装配第三份。
-> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D24 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
+> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D25 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
 > 同部分相关档：总览 / 决策 / 受影响文件 / 发行 / 验收 = `docs/desktop/design/PROJECT.md` · 主 ↔ 渲染通道契约 = `docs/desktop/design/IPC.md` · 界面形态与交互 = `docs/desktop/design/UI.md` · 渲染面实现工艺 = `docs/desktop/design/RENDERER.md`。
 > 核机制面（agent 主循环 / 工具 / 记忆 / 配置 / 会话）**只住核**——本档只做**接入面**设计，不重述核语义（单一权威源）。
 > 文档体系落点（第四部分）判别与命名 = `docs/core/design/DOC-SYSTEM.md`；全仓模块地图与硬约束 = `docs/core/design/ARCHITECTURE.md`。
@@ -38,20 +38,20 @@ thincoder-desktop/                  ← 本端产品包
 ├── src/preload/preload.cjs         ← 沙箱 CJS 窄桥：contextBridge 暴露 window.thincoder（`docs/desktop/design/PROJECT.md` §2 KD-3）
 ├── renderer/                       ← 前端（Chromium——无 Node，零框架零构建）
 │   ├── index.html · styles.css · chat.css · pool.css · settings.css
-│   ├── app.mjs                     ← 引导：接线装配（会话族 / 对话流 / 池面）→ 驱动 store（池面接线拆出 `mount-pool.mjs`；设置面 / 向导接线拆出 `mount-settings.mjs`；批 A 输入区接线拆出 `mount-composer.mjs` + **会话族接线拆出 `mount-sessions.mjs`（关闭尾 / 行控件两件出口）** + 批 A 修正轮卡族出站拆出 `mount-cards.mjs`；事件订阅住 `events-subscribe.mjs`）
-│   ├── events.mjs                  ← 事件归约面：`ev:*` 十通道 → 切片写者（`reduce` 纯函数 + `applyPage` / `blockOfMessage`——零 DOM；批 A：`ev:question` / `ev:task` 由直返改写切片 `questions` / `tasks`）
-│   ├── events-subscribe.mjs        ← 订阅接线（自 `events.mjs` 拆出——`attachEvents({ on, store, invoke, onTurnTail })`（实读 **68**——`docs/desktop/design/PROJECT.md` §4.1 · 批 B 末实读）：十通道订阅 + 回合尾标题刷新 + 输入区 flush 窄口；单向依赖归约档）
+│   ├── app.mjs                     ← 引导：接线装配（会话族 / 对话流 / 池面）→ 驱动 store（池面接线拆出 `mount-pool.mjs`；设置面 / 向导接线拆出 `mount-settings.mjs`；批 A 输入区接线拆出 `mount-composer.mjs` + **会话族接线拆出 `mount-sessions.mjs`（关闭尾 / 行控件两件出口）** + 批 A 修正轮卡族出站拆出 `mount-cards.mjs`；事件订阅住 `events-subscribe.mjs`）；核件取词注册单点（「对齐第二批」修复轮）
+│   ├── events.mjs                  ← 事件归约面：`ev:*` 十三通道 → 切片写者（`reduce` 纯函数 + `applyPage` / `blockOfMessage`——零 DOM；批 A：`ev:question` / `ev:task` 由直返改写切片 `questions` / `tasks`）
+│   ├── events-subscribe.mjs        ← 订阅接线（自 `events.mjs` 拆出——`attachEvents({ on, store, invoke, onTurnTail })`（实读 **68**——`docs/desktop/design/PROJECT.md` §4.1 · 批 B 末实读）：十三通道订阅 + 回合尾标题刷新 + 输入区 flush 窄口；单向依赖归约档）
 │   ├── mount-pool.mjs              ← 活动池面接线（自 `app.mjs` 拆出——在册预案落形，`docs/desktop/design/PROJECT.md` §4.1）
 │   ├── mount-settings.mjs          ← 设置面 / 向导接线出档（自 `app.mjs` 拆出——批 9 拆分落形（批 B 拆出向导接线族 `mount-onboarding.mjs`——实读 **426**；在册例外续期 / 拆分预案 = `docs/desktop/design/PROJECT.md` §4.1）；通道接线与表单装配，视图构树住 `views/settings.mjs`）
-│   ├── mount-composer.mjs          ← 输入区挂载出档（自 `app.mjs` 拆出——批 A（实读 **348**——`docs/desktop/design/PROJECT.md` §4.1 · 批 B 末实读〔越 300 ⇒ 拆分预案见该档 §4.1〕））：两态落形 · Enter / Shift+Enter 键位 · 忙态入队 + 满队提示 · 回合尾三径 flush 队首（先发后出队）· 批 B：附件条挂载（根锚 `data-attachments`——构树 / 采集住 `attach.mjs`）+ 末条复制控件（`data-action="chat:last"`）（形态单源 = `docs/desktop/design/UI.md` §1 输入区行）
+│   ├── mount-composer.mjs          ← 输入区挂载出档（自 `app.mjs` 拆出——批 A（实读 **348**——`docs/desktop/design/PROJECT.md` §4.1 · 批 B 末实读〔越 300 ⇒ 拆分预案见该档 §4.1〕））：两态落形 · Enter / Shift+Enter 键位 · 忙态入队（受理交宿主任判）+ 满队提示 · 消费两时刻 = 步边界注入 ∕ 回合尾续发（「回合中插入」批收正）· 批 B：附件条挂载（根锚 `data-attachments`——构树 / 采集住 `attach.mjs`）+ 末条复制控件（`data-action="chat:last"`）（形态单源 = `docs/desktop/design/UI.md` §1 输入区行）
 │   ├── mount-head.mjs              ← 会话头接线（批 B（实读 **147**——`docs/desktop/design/PROJECT.md` §4.1）：会话头三值就地可改（`data-field` 内嵌 `select`——候选 = `model:list` / `provider:list` 投影）+ 状态栏读数节点（`data-usage`）；形态单源 = `docs/desktop/design/UI.md` §1 会话头 / 状态栏行）
 │   ├── attach.mjs                  ← 附件采集与构树纯函数（批 B（实读 **146**——`docs/desktop/design/PROJECT.md` §4.1）：输入区 `paste` → `FileReader` → `dataURL` 条目集 + 移除控件；**零 fs** ⇒ 平 node 直测）
 │   ├── mount-sessions.mjs          ← 会话族接线出档（自 `app.mjs` 拆出——批 A 拆分落形（实读 **197**——`docs/desktop/design/PROJECT.md` §4.1））：开页三路（`openPage` / `activateSession` / `createSession`）· 关闭尾 `closeTail`（三调用点）· 行控件两件出口（改名 / 删除接线）· 刷新面（通道面 = `docs/desktop/design/IPC.md` §2 会话族注）
 │   ├── mount-cards.mjs             ← 卡族挂载与出站（批 A 修正轮（实读 **149**——`docs/desktop/design/PROJECT.md` §4.1））：`question:respond` 出站（作答 / 取消两向）
                                       + 回执 `ok` 真 ⇒ 清本键 `questions` 切片（`clearQuestion` 增导出 = `thincoder-desktop/renderer/events.mjs`）+ 清位标 + 卡挂载（计划卡零出口——纯呈现）（形态单源 = `docs/desktop/design/UI.md` §1 提问呈现行）
 │   ├── dom.mjs                     ← 手写 DOM 工具（元素构造 / 事件委托 / 增量渲染）
-│   ├── i18n.mjs                    ← 词表面：核域键取 `config:read` 语言面下发投影 + 宿主 UI 专有键（两语）+ `t()`（供给面 = `docs/desktop/design/IPC.md` §2）
-│   ├── store.mjs                   ← 单状态树 + 订阅（会话 / 标签页 / 活动池 / 待审批 / 设置 / 项目级信息——批 9 增两切片；批 A 增 `questions` / `tasks` 两切片 + 队列三纯动作 `enqueue` / `dequeue` / `drainQueue`——`pool.queue` 唯一写面 · 满队常量 `QUEUE_MAX`；批 A 修正轮增换形态态 `railForm{ key, mode }` + 两纯动作 `openRailForm` / `closeRailForm`）
+│   ├── i18n.mjs                    ← 词表面：核域键取 `config:read` 语言面下发投影 + 宿主 UI 专有键（两语）+ `t()`（供给面 = `docs/desktop/design/IPC.md` §2）；**sink 槽 + `setStringsSink` 注册面导出**（「对齐第二批」修复轮——node-safe 档：零 `/rc/` 静态导入）
+│   ├── store.mjs                   ← 单状态树 + 订阅（会话 / 标签页 / 活动池 / 待审批 / 设置 / 项目级信息——批 9 增两切片；批 A 增 `questions` / `tasks` 两切片 + 队列面（「回合中插入」批收正：`pending` 切片 = `ev:queue` 镜面——原三纯动作退场）；批 A 修正轮增换形态态 `railForm{ key, mode }` + 两纯动作 `openRailForm` / `closeRailForm`）
 │   └── views/                      ← chat.mjs · chat-stream.mjs · chat-scroll.mjs · chat-tool.mjs · chat-copy.mjs · chat-guide.mjs · approval.mjs · question.mjs · plan.mjs · sessions.mjs · tabbar.mjs · chrome.mjs · activity.mjs · settings.mjs · settings-sections.mjs · onboarding.mjs · info-row.mjs
 ├── scripts/check-dist.mjs          ← 产物校验（照扩展端 check-vsix 先例）
 └── test/                           ← run.mjs（单入口）+ files.mjs（显式清单 · 两向自检）+ 用例模块**三十五档**
@@ -65,6 +65,11 @@ thincoder-desktop/                  ← 本端产品包
 **作用域注**：本树只落**模块形态与一行职责**；逐文件**行数预算**单源 = `docs/desktop/design/PROJECT.md` §4.1——本树不复制预算列。
 
 **分层铁律**：渲染面代码**不得** import 任何 `node:` 内置或 `@thincoder/core`（照扩展端守卫先例——渲染面静态闭包不得到达 `node:sqlite`：`thincoder-vscode/test/engine-floor-guard.test.mjs`）；跨面一律走 `window.thincoder`（通道面 = `docs/desktop/design/IPC.md` §1 / §2）。
+
+**node-safe 子集（装载面分层）**：渲染面文件按**装载面**分两档——**① node-safe 档 = 被 node 侧装载的子集**（现 = `thincoder-desktop/renderer/i18n.mjs`——主进程链 `thincoder-desktop/src/main/attachments.mjs` 静态导入）：
+须保持**平 node 可解析**——**禁 `/rc/` 协议别名静态导入**（`/rc/` 仅 `app://` 上下文可解析；平 node 视作盘符绝对路径 ⇒ 装载即 `ERR_MODULE_NOT_FOUND`）。
+**② 浏览器专属档** = 其余渲染档：**核件取词接线只许居此档**——注册单点 = `thincoder-desktop/renderer/app.mjs`（`setStringsSink(setStrings)` 一次注册；`setStringsSink` = `thincoder-desktop/renderer/i18n.mjs` 导出注册面）；`initDict` 合并式原样、经注册端出。
+判据：node-safe 档清单 = `thincoder-desktop/src/main/**` 静态导入闭包触及的渲染档；各档源面零 `/rc/` 静态导入 ∧ 平 node 直载不抛（`/rc/` 前缀白名单不豁免本判据）；违例即主进程装载崩 · 窗口永不出。
 
 ## 2. 宿主面职责（形态索引）
 
@@ -160,3 +165,7 @@ thincoder-desktop/                  ← 本端产品包
   `test/` 行用例模块 **三十 ⇒ 三十四档**（补 `agent-host-usage` / `views-chrome-vocab` / `views-head` / `attachments`）· §4 项 1 去「（拟新增）」标记；数值单源 = `docs/desktop/design/PROJECT.md` §4.1。明细 = `docs/batches/2026-09-27-desktop-chat-panel-b.md` §2。
 - 2026-09-27（**批 B 追加轮 · 实施后对账轮**）：§1 树 `views/` 行补 `chat-guide.mjs`（**54**——追加轮实读）· `test/` 行用例模块 **三十四 ⇒ 三十五档**（名单补 `views-chat-guide`——名序同 `thincoder-desktop/test/files.mjs`）·
   集成域两处并一处（用例 `settings-panel.test.mjs` / `first-run-smoke.test.mjs`）· 行宽重排（`test/` 名单条与本节条目超 300 ⇒ 分句断行——零语义）。明细 = `docs/batches/2026-09-27-desktop-firstrun-smoke.md` §2.12。
+- 2026-09-28（**对齐第二批 · 实施途中修复轮**——主进程装载崩收正）：§1 增 **node-safe 子集**判据（渲染面装载面分层——`/rc/` 静态导入禁入 node 侧装载档；核件取词接线单点 = `thincoder-desktop/renderer/app.mjs` 注册 `setStringsSink(setStrings)`）。明细 = `docs/batches/2026-09-28-desktop-vsc-align-2.md` §2。
+- 2026-09-28（**对齐第二批 · 复核轮收正轮 · eng-designer**——承批档 §3 轮次 3）：§1 树两行补注——`app.mjs` 行补**核件取词注册单点** · `i18n.mjs` 行补 **sink 槽 / `setStringsSink` 注册面导出**（node-safe 档）。明细 = `docs/batches/2026-09-28-desktop-vsc-align-2.md` §2。
+- 2026-09-28（**桌面空闲唤醒批 · 评审轮 1 修正 · eng-designer**——发现 1 同办）：§1 树两行**通道计数残句清**（「十通道」⇒ **十三通道**——现盘实读 = `thincoder-desktop/src/preload/preload.cjs` `EVENT_CHANNELS` ∧ `thincoder-desktop/renderer/events-subscribe.mjs` 订阅表；本批两通道落地后 = 15）。明细 = `docs/batches/2026-09-28-desktop-idle-wake.md` §2。
+- 2026-09-28（**回合中插入批 · 评审轮 2 修正（父侧直接执行 · 可 revert）**——承评审 #31 同族残体扫）：§1 树 `mount-composer.mjs` 行（消费两时刻 = 步边界注入 ∕ 回合尾续发）· `store.mjs` 行（队列面 = `pending` 切片 `ev:queue` 镜面——原三纯动作退场）两处退役句收正。明细 = `docs/batches/2026-09-28-desktop-midturn-input.md` §4。
