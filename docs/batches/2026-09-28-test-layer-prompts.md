@@ -97,6 +97,12 @@
 - **附带**：vsc 两处注释死引用收正（`agent-lifecycle-singleton` ∕ `vsc-stream-rules`）；`#101` 已送测试纪律令（单元-only ∕ 不刷绿 ∕ 清单先重读再写）。
 - **下一步**：锁处置（58 档 ∕ 452 例 ⇒ 目标 = 每仓一档卫生表 ∕ 只收复发实绩条目）+ 真行为档三条判据复核（Phase 2）；desktop 复跑并入 R13 收口。
 
+### 1.15 单元测试 = 批次本地件（用户 23:1x 直令落档）
+- 用户原话：「以后单元测试跟着批次档，文件名就跟着批次档的文件名，一个批次档跟一个或者几个测试文件，就放在批次目录里。」
+- **落点**（本笔 = 父侧直接执行）：① 需求 `TESTING.md` §1 总纲 + F6 行 + N1 作用域（三处收正：批次本地件——一档一至几个文件 · 名随批次档 · 住批次目录 `docs/batches/` · 随批同生共退 · 收口默认退役）；② 提示词两档（EN 运行面 `discipline-engineering.md` + CN 镜像）单元测试条补「batch-local files」句。
+- **机制后果（自带，零新增机械面）**：批次本地测试档住 `docs/batches/` ⇒ 四仓 runner 收集面（`test/*.test.mjs` 各仓 glob ∕ files.mjs 清单）天然不收——**不入常驻套件**；运行 = 直跑 `node --test docs/batches/<batch>.test.mjs`（F5 精神）；退役 = 随批次档收口处置（F9 行）。
+- 存量 `test/` 树不受此令（"以后" = 前行）；存量处置（退候选 213 已落 ∕ 锁与真行为 Phase 2）照旧。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（四档对齐落定（TESTING · AGENT-LOOP · VERIFY-REDESIGN · ENGINEERING-MODE-V2）· 待评审）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
