@@ -1,15 +1,19 @@
 /**
  * store.mjs — 渲染面单状态树（`docs/desktop/design/SHELL.md:32` · `docs/desktop/design/RENDERER.md:17`）：
  * 单一持有点 + 订阅（**变更触发** · 等值零通知 · 通知中再变更不递归）。
- * 面域 = 会话 / 标签页 / 块与历史 / 活动池 / 设置族 / 项目级信息 —— 数据面切片 = 块 / 历史回填 / 跟滚 / 标签
- * （标签含**关闭确认面**：`pendingClose` + 判据 `needsCloseConfirm` + 三纯动作；左列含**行形态**：`railForm` +
- * 两纯动作 —— 批 A ④ 改名 / 删除换形）；会话族与活动池切片随各自批次填充。
+ * 面域 = 会话 / 块与历史 / 活动池 / 设置族 / 项目级信息 —— 数据面切片 = 块 / 历史回填 / 跟滚（会话模型轮 R13：
+ * 标签族三切片 `tabs` ∕ `activeTab` ∕ `pendingClose`＋关闭确认四纯动作、左列行形态 `railForm` 两纯动作随会话模型
+ * 裁撤退场 —— 活动会话单源 = `activeSession`，会话控制面内态〔开合 ∕ 换形〕归 `renderer/mount-sessions.mjs` 面内记账）；
+ * 会话族与活动池切片随各自批次填充。
  * 批 9 增两切片：`settings`（开合 / 四段三态 / 向导 / 校验结果 —— `docs/desktop/design/UI.md` §1 设置面行）与
  * `projectInfo`（三读数 + 超阈标 + 相位 + 失败串）——**值面归接线层**（`renderer/mount-settings.mjs` 只经
  * `patchSettings` 落值），本档只持槽位 + 四条纯动作；`configured` 为**三态读数**（`null` = 未知）。
  * R3a 增四槽（D17 状态行读数面 —— `renderer/views/statusline.mjs` 读面）：`turns` / `turnStarts` / `tokens` / `timers`（后两槽 = `ev:usage` 载荷扩）。
  * **timer-wake 阶段 2 增一槽** `timerNotice`（**到期触发切片** —— 写者 = 归约面 `ev:timer`；读面 = 流内触发行 `renderer/views/chat-chrome.mjs`；
  *  与 `timers` 读数槽两回事（后者 = 在途计数投影）；非落盘件 ⇒ 首屏页读整置即失 —— `renderer/page-read.mjs`）。
+ * **R4 增两槽**（提示锚 + 状态面）：`statusText`（**状态文本切片** —— 按会话键；写者 = 归约面 `ev:statusText`
+ *  （出档 `renderer/events-status.mjs`）；读面 = 状态行段 3 支③五 kind）· `compress`（**压缩状态行切片** —— 按会话键；
+ *  写者 = 归约面 `ev:compress`；读面 = 流内压缩行 `renderer/views/compress-status.mjs`；非落盘件 ⇒ 首屏页读整置即失）。
  * R3b 增一槽（D20 子 agent 面 —— `renderer/views/activity.mjs` 读面）：`subBlocks`（**按会话键分槽**：
  *  `{ [会话键]: 块模型[] }`；写者 = 归约面 `ev:subagent`（核态机 —— `/rc/subblocks/state.mjs`）；同笔**摘工具行**
  *  —— `pool` 切片不再载 `blocks`（工具调用面 = 对话流工具卡 —— `docs/desktop/design/UI.md` §1 本批注项 2）。
@@ -17,8 +21,7 @@
  *
  * 语义（批档 §2.4（f）· §2.5 U28–U32）：
  *   ① 切片操作 = **纯函数**（`appendBlock` / `beginBackfill` / `endBackfill` / `setFollowing` /
- *      `returnToBottom` / `openTab` / `closeTab` / `requestCloseTab` / `confirmCloseTab` / `cancelCloseTab` /
- *      `openRailForm` / `closeRailForm` / `togglePool` / `patchSettings` / `setWizardStep` / `dismissWizard` /
+ *      `returnToBottom` / `togglePool` / `patchSettings` / `setWizardStep` / `dismissWizard` /
  *      `setAttachDegraded`）—— 返回**新态**；拒收 / 无变化 ⇒ **原引用**（引用等值 ⇒ 零通知，视图层可据引用短路）；
  *      排队消息面（快照镜面 `applyQueue` + 满队常量 `QUEUE_MAX`）已出档 `renderer/queue.mjs`
  *      （拆分产出 —— 「回合中插入」批收正：原三纯动作随本地队列退场），本档不再持该族；
@@ -34,7 +37,7 @@
 
 /** 初态：`locale` 由引导面置位；`project` / `sessions` / `pool` 槽位在、消费面随后续批。
  *  `tabBadges` / `sessionMeta` / `poolCollapsed` = **槽位注册**（消费面已在册 —— `views/chrome.mjs` 会话头读
- *  `sessionMeta`、`requestCloseTab` 防御取 `tabBadges`、池面折叠读 `poolCollapsed`）⇒ 注册后零行为变化；
+ *  `sessionMeta`、会话控制条目位标 ∕ 状态行告警位读 `tabBadges`、池面折叠读 `poolCollapsed`）⇒ 注册后零行为变化；
  *  三切片与 `pool` 族（待审批 / 队列两族）皆 = **供给面写入**（值面未落 ⇒ 零节点 —— 禁假造）。
  *  `usage` 为**槽位注册**（写者 = `ev:usage` 归约 · 按会话 `key` 写）；消费面 = 状态栏读数节点
  *  （`docs/desktop/design/UI.md` §1）—— 消费未落 ⇒ 注册后零行为变化。
@@ -46,24 +49,24 @@
  *  `subBlocks` = **子 agent 块切片**（R3b · D20）：按会话键分槽（无该键 / 非数组 ⇒ 该会话零块 —— 禁假造）；
  *  元素 = 核态机模型（`renderer/events.mjs` 归约面写，读面 `renderer/views/activity.mjs`）。`pool.running` 读数
  *  同源（活动会话在飞块数——范归约面写；`pool` 切片不再载 `blocks`——摘工具行）。`ledger` = **账本警示切片**
- *  （账本可靠批 · 桌面微轮：写者 = `renderer/mount-sessions.mjs` `refreshRail` 唯一写路径；读面 = 会话区末子注记）。
+ *  （账本可靠批 · 桌面微轮：写者 = `renderer/mount-sessions.mjs` `refreshRail` 唯一写路径；读面 = 会话控制下拉首行注记）。
  *  `pending` = **排队消息切片**（「对齐第二批」项 2 · **「回合中插入」批收正**）：`{ [会话键]: [{ text, ts }] }` ——
  *  **宿主单源快照的镜面**（写者 = `renderer/events.mjs` `ev:queue` 归约 ∥ `renderer/page-read.mjs` `applyPage`
  *  首屏重建 —— 原输入区三纯动作退场）；读面 = 流内待发送气泡组（输入区上方）/ 状态行段 14（本会话队）。
  *  同笔 `pool.queue` = **席位保留 · 零写者**（用户排队消息改住流内 —— 右列「队列」族不再承载；族空 ⇒ 零节点恒不在场）。
  *  `attachDegraded` = **附件降级码切片**（「回合中插入」批）：按会话键存降级码（`non-vision` / `partial`）——
  *  写者两处 = `ev:queue` 消费回执（`delivered.degraded` 浮出）∥ 输入区直发回执；读面 = 输入区提示行
- *  （`renderer/mount-composer.mjs` `composerModel` —— 经 `degradedCode` 过闸，表外码 ⇒ 零节点）。 */
+ *  （`renderer/mount-composer.mjs` 挂件锚 `data-composer-notices` 内 —— 经 `degradedCode` 过闸，表外码 ⇒ 零节点）。
+ *  `modelCandidates` = **模型候选切片**（输入面板上提批 · R1 —— 核件面板读面③ `state.models()` 的端侧来源）：
+ *  `{ forProvider, models }`（`models` = 逐项 `{ id, label, provider, group, reasoning, effortDefault }` —— **核件面形**；
+ *  投影 = `renderer/mount-composer.mjs` 候选面：`provider:list` ∕ `model:list` 回执合成）；
+ *  未取 / 取失败 / provider 缺 ⇒ 空表 + `forProvider: null`（禁假造）；写者单点 = 纯动作 `setModelCandidates`。 */
 export function initialState() {
   return {
     locale: "en",
     project: { cwd: null, recent: [] },
     sessions: [],
     activeSession: null,
-    tabs: [],
-    activeTab: null,
-    pendingClose: null,
-    railForm: null,
     ledger: null,
     tabBadges: {},
     sessionMeta: {},
@@ -74,9 +77,12 @@ export function initialState() {
     tokens: {},
     timers: {},
     timerNotice: {},
+    statusText: {}, // R4：状态文本切片（按会话键 —— 五 kind；写者 = 归约面 `ev:statusText`；读面 = 状态行段 3 支③）
+    compress: {}, // R4：压缩状态行切片（按会话键 —— 单元素四态；写者 = 归约面 `ev:compress`；读面 = 流内压缩行）
     subBlocks: {},
     pending: {},
     attachDegraded: {},
+    modelCandidates: { forProvider: null, models: [] },
     blocks: [],
     history: { hasOlder: false, inFlight: false, page: null },
     following: true,
@@ -143,67 +149,8 @@ export function returnToBottom(state) {
   return { ...state, following: true, pendingNew: 0 }
 }
 
-/** 开标签：同键去重（另置活动）；新键 ⇒ 序追加 + 置活动。 */
-export function openTab(state, key) {
-  const exists = state.tabs.includes(key)
-  return { ...state, tabs: exists ? state.tabs : [...state.tabs, key], activeTab: key }
-}
-
-/** 关标签：不变量 —— 关活动 ⇒ **邻位接管（优先右邻、无右邻取左邻）**；关唯一标签 ⇒
- *  `activeTab = null`；关非活动 ⇒ 活动键不变；键不在列表 ⇒ 原态。 */
-export function closeTab(state, key) {
-  const index = state.tabs.indexOf(key)
-  if (index < 0) return state
-  const tabs = state.tabs.filter((tab) => tab !== key)
-  if (key !== state.activeTab) return { ...state, tabs }
-  const activeTab = tabs.length === 0 ? null : tabs[Math.min(index, tabs.length - 1)]
-  return { ...state, tabs, activeTab }
-}
-
-/** 关闭确认判据（判据**单源** —— 视图只消费：`docs/desktop/design/UI.md` §1 交互行）：标签状态码集
- *  ∩ `{approval, running}` ≠ ∅ ⇒ 需确认（**不含者直接关**）；入参形与 `deriveTabBadge` 同（码集），
- *  非数组 ⇒ 假（状态面缺省防御）。 */
-export function needsCloseConfirm(codes) {
-  if (!Array.isArray(codes)) return false
-  return codes.includes("approval") || codes.includes("running")
-}
-
-/** 关闭请求（关闭控件出口）：键不在 `tabs` ⇒ **原态**（拒）；需确认（`needsCloseConfirm`）⇒ 置 `pendingClose`
- *  = 本键（`tabs` / `activeTab` 不动 —— 确认面重挂触发）；不需 ⇒ **直接 `closeTab`**（守卫内化，调用面零分支）；
- *  同键已待确认 ⇒ 原引用（无变化）。 */
-export function requestCloseTab(state, key, codes) {
-  if (!state.tabs.includes(key)) return state
-  if (!needsCloseConfirm(codes)) return closeTab(state, key)
-  return state.pendingClose === key ? state : { ...state, pendingClose: key }
-}
-
-/** 确认关闭（确认键出口）：无待确认键 ⇒ **原态**；有 ⇒ `closeTab` + 清键（邻位接管律不变）。 */
-export function confirmCloseTab(state) {
-  if (state.pendingClose == null) return state
-  return closeTab({ ...state, pendingClose: null }, state.pendingClose)
-}
-
-/** 取消关闭（取消键出口）：无待确认键 ⇒ **原态**；有 ⇒ 清键（`tabs` / `activeTab` 不动）。 */
-export function cancelCloseTab(state) {
-  return state.pendingClose == null ? state : { ...state, pendingClose: null }
-}
-
-/** 左列行形态（**换形态态单源** —— `docs/desktop/design/UI.md` §1 左列会话行 · 批 A ④；沿 `pendingClose` 先例）：
- *  `{ key, mode }`，`mode ∈ {rename, delete}`（闭集 —— 表外面拒收）；键 / 模式形不合 ⇒ **原引用**（拒收）；
- *  同键同形 ⇒ 原引用（无变化）。行键域 = 会话行串键（与行控件 `data-slot` 同域）。 */
-export function openRailForm(state, key, mode) {
-  if (typeof key !== "string" || (mode !== "rename" && mode !== "delete")) return state
-  if (state.railForm?.key === key && state.railForm.mode === mode) return state
-  return { ...state, railForm: { key, mode } }
-}
-
-/** 收形（取消 / 应用两出口共用尾）：无形态 ⇒ **原态**；有 ⇒ 清空（`tabs` / `activeTab` 不动）。 */
-export function closeRailForm(state) {
-  return state.railForm == null ? state : { ...state, railForm: null }
-}
-
-/** 标签状态位（T-DSK20 数据面）：四值码，优先序 待审批 > 运行中 > 完成 > 空闲；空集 ⇒ `"idle"`。
- *  词面映射（码 → 文案）归视图批 —— 本处不出词（批档 §2.6 D-5）。 */
+/** 位标状态位（T-DSK20 数据面 · 会话模型轮 R13：消费面 = 会话控制条目位标 ∕ 状态行跨会话告警位）：四值码，
+ *  优先序 待审批 > 运行中 > 完成 > 空闲；空集 ⇒ `"idle"`。词面映射（码 → 文案）归视图批 —— 本处不出词（批档 §2.6 D-5）。 */
 export function deriveTabBadge(states = []) {
   if (states.includes("approval")) return "approval"
   if (states.includes("running")) return "running"
@@ -248,6 +195,17 @@ export function setAttachDegraded(state, key, code) {
   if (next === null) delete out[key]
   else out[key] = next
   return { ...state, attachDegraded: out }
+}
+
+/** 模型候选切片写（纯动作 —— 输入面板上提批：核件面板读面③ `state.models()` 唯一写点）：`provider` 非非空串
+ *  ⇒ `forProvider: null`（相位未定 —— 禁假造）；`models` 非数组 ⇒ 空表。同 provider 同引用（调用面未重取 ⇒ 原
+ *  数组）⇒ **原引用**（零通知）；候选列表 = 调用面新取（新数组）⇒ 落新引用。 */
+export function setModelCandidates(state, provider, models) {
+  const name = typeof provider === "string" && provider !== "" ? provider : null
+  const list = Array.isArray(models) ? models : []
+  const held = state?.modelCandidates ?? {}
+  if (held.forProvider === name && held.models === list) return state
+  return { ...state, modelCandidates: { forProvider: name, models: list } }
 }
 
 /** 配置档读数**三态归一**（`docs/desktop/design/UI.md` §1 首启向导行）：真 = 已配 · 假 = 未配 ·

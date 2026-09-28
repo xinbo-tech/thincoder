@@ -96,6 +96,13 @@
 - **转出 → #39（设计面收正轮）**：① R10 靶行（`PROJECT.md` §10 ∕ KD-42 补句）+ `WORKSPACE.md` 读取面归位四处（§2.3:51 ∕ §1:15 ∕ `:36` ∕ `:41`）；② 行数重锚（**54 ⇒ 124 实** ∕ 设计估 ≈104）；③ **修正 9 `:528` 设计句与盘面不符**（⑤ 直引 = **0/4**——端侧自持 + 核件留端注，非「已证消费经 chat-text」）。
 - **备注**：`execute-tools.mjs:244-247` = 他批在途笔迹（提交按路径留意）；`%TEMP%/tc-r10-*` 沙箱留现场（先例）；§5 状态行未动（R1/R3 先例，随届盘统一）。
 
+### 1.17 R4 交付收下（父侧 · 2026-09-29 00:5x）
+- **交付**（#9 · 终态 clean · fix 0）：19 档——新 `prompt-injections.mjs`（两锚：bash-terminal-face = CLI 类空串 ∕ question-ui-face = VSC 字面）+ `main.mjs` 装配前一次性注册 + 桥四回调 ⇒ 两通道（`ev:statusText` ∕ `ev:compress` 四态）+ 通道计数 19 ⇒ **21**（`preload.cjs` ∧ `events-subscribe.mjs` 两表序同值同）+ `events-status.mjs`（两切片归约 ∕ 活动恢复即清 ∕ 七时点）+ `statusline.mjs` **295 ⇒ 141**（先拆后改——段构建器族出档 192）+ `compress-status.mjs`（75）+ 渲染链八档随动。**两锚负控四覆实跑**（恒等 ∕ 零残留 ∕ 表外抛 ∕ reset）；`node --check` 18/18；内审 CLEAN + 代码评审 pass（🟡3 ∕ 🔵5 无 must-fix；自抓 1 真缺陷已修——`syncChrome` 传 model 非切片）。§5 已落（6677 字符）。
+- **裁①（上抛 2 · index 支）**：**保留 + 登记**（值表与 VSC 对位；产出方 = 索引族后续接点）——台账 **#550**。
+- **裁②（上抛 3 · 位次）**：按实落序（① susp > ② 零节点 > 状态文本 > ③ running > ④ ready）——设计面轮 **#40** 复核，若有异 ⇒ 一行级收正。
+- **转出 → #40（设计面收正轮）**：`IPC.md` §1 十九 ⇒ 二十一（`:42` ∕ `:72` ∕ `:75`）+ 两通道行 ∕ `PROJECT.md:753` BE 行 ∕ `UI.md` §1 表行 3 四支 ⇒ 五支 ∕ `RENDERER.md` §1.1 根子序 += 压缩行（与 #29 列报合流）。
+- **披露**：超表八档（重挂 / 帧触发 / 模型 ∕ 子序 / 态刷 / 生命期清点 / 槽位 / 样式 / 指针——缺一即断链，逐项有由）✓；测试面 #10/#11 跳过并注明（全清令）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（初始轮 + 评审轮 1 修正（1–14 逐号）+ R1 设计面收正轮（#129 ∕ #131 · 六档八笔；flow 批档三处归父侧）+ 评审轮 3（重发复核）修正 · 微轮 #16（1–10 逐号）+ 退役面本体收正轮 + R2 设计面收正轮（#29 · ①–⑥ 逐号）在册）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -1115,5 +1122,70 @@ KD-42（`PROJECT.md:81`）补句：**「域外对账保持人工」**——理�
 4. §5 状态行未动（多轮并行在手——不抢写；沿 R1/R3 先例）。
 5. 他批在途笔迹：`execute-tools.mjs:244-247`（C-7 注释收正）——非本舱；按路径提交时留意。
 6. 沙箱残留 `%TEMP%/tc-r10-rules-*` ∕ `tc-r10-desktop-*`（自查用，留现场——同 R1 先例）。
+
+### R4 · 提示锚 + 状态面（eng-coder · 2026-09-29 · initial 轮）
+
+**交付摘要（逐档 · 实读 = `node` `split("\n").length` 口径；前 = 届盘 ∕ 设计表）**
+
+| # | 档（前） | 后 | 落点 |
+|---|---|---|---|
+| 1 | 新 `src/main/prompt-injections.mjs`（设计 ≈30） | **23** | 桌面两锚取值表：`bash-terminal-face` = CLI 类字面（`""`——桌面无可见终端）· `question-ui-face` = VSC 表字面**逐字**（有流内问题卡）——字面 = 父侧令「取现档字面」 |
+| 2 | `src/main/main.mjs`（115） | **122** | 进程入口、任何装配之前一次性注册（`configurePromptInjections(DESKTOP_PROMPT_INJECTIONS)`——先例 CLI `bin/thincoder.mjs:32` ∕ VSC `extension.mjs:92`） |
+| 3 | `src/main/agent-bridge.mjs`（257） | **283** | +四回调：`onWait`（核 `waitStatusOf` 单源 ⇒ `ev:statusText`；`warn` ∕ 未知 ∕ 缺秒 ⇒ 零载波）· `onCompressStart` ∕ `onCompress` ∕ `onCompressFail`（⇒ `ev:compress` 四态；形 = VSC `panel-callbacks.mjs:175-183` 同式） |
+| 4 | `src/preload/preload.cjs`（65） | **66** | `EVENT_CHANNELS` 19 ⇒ **21**（+`ev:statusText` ∕ `ev:compress` 末位）+ 档头 ∕ 白名单注释同拍 |
+| 5 | `renderer/events-subscribe.mjs`（80） | **83** | `CHANNELS` 19 ⇒ **21**（序同桥面表）+ 档头 ∕ 表注释 ∕ 计数残留（十九 ⇒ 二十一）同拍 |
+| 6 | 新 `renderer/events-status.mjs` | **88** | 两切片归约出档：`onStatusText`（五 kind 归一 ∕ index-done 清键 ∕ 表外零写 ∕ 同值原引用）+ `onCompress`（四态）+ **活动恢复即清** `expireStatusText`（七时点 = VSC `chat-messages.js:54-107` 同清单；判据单源 = 主档 `isTurnTail` 传入） |
+| 7 | `renderer/events.mjs`（483） | **490** | 两切片先出档（≤500 硬限 ✓）；+import ∕ `reduce` 前置清点一行 ∕ 分派两行；注释计数收正（十七 ∕ 十六 ⇒ 二十一） |
+| 8 | `renderer/views/statusline.mjs`（295） | **141** | **先拆后改**：段构建器族出档 `statusline-segments.mjs`（拆点 = 修正 2「`numOf` … `enterSegment`」）；+`statusText` 切片入参 ∕ 传段 3 |
+| 9 | 新 `renderer/views/statusline-segments.mjs` | **192** | 段构建器族（12 构建器 + `badgeCodes` + `USAGE_WARN`——**逐字搬运**）；+段 3 状态文本支 + **五 kind 取值表** `statusTextOf`（四 kind = 核 `status.*` 投影 —— **零自铸词**；index 两形 = VSC locales 逐字） |
+| 10 | 新 `renderer/views/compress-status.mjs` | **75** | 流内压缩行**单元素四态**：`compressText` ∕ `compressClass` ∕ `compressNode` ∕ `syncCompress`（幂等：等价零写 ∕ 换代原位换 ∕ 缺席摘）∕ `compressAnchorOf`（族首）；词面 = 核字典 `compress.*` 投影（零新键） |
+| 11 | `renderer/views/chat.mjs`（350） | **366** | 模型 +`compress` 切片取值 ∕ 构树子序 += `[压缩行?]`（族首 —— 块序列之后、消化行组之前） |
+| 12 | `renderer/views/chat-chrome.mjs`（289） | **292** | 帧尾态刷 +`syncCompress`（传**切片**、锚 = 族首）∥ `blockAnchor` 首链 += `[data-compress]` |
+| 13 | `renderer/mount-status.mjs`（30） | **31** | `STATUS_KEYS` += `statusText`（段 3 支③重挂触发面） |
+| 14 | `renderer/app.mjs`（276） | **276** | `CHAT_KEYS` += `compress`（流帧触发面；同行替换，行数净 0） |
+| 15 | `renderer/page-read.mjs`（133） | **144** | 首屏页读 += 压缩行清点（运行期痕三清：`stopMark` ∕ `timerNotice` ∕ `compress`） |
+| 16 | `renderer/store.mjs`（282） | **287** | +两槽 `statusText` ∕ `compress`（供面注册）+ 档头两行 |
+| 17 | `renderer/i18n-views.mjs`（158） | **166** | +键 **2** × 两语（`status.indexScan` ∕ `status.indexProgress`——index 两形，VSC `locales/{en,zh}.json:218-219` 逐字）；**余四 kind + 压缩四态 = 核字典投影直取 ⇒ 零新键**（与设计估「≈10」之差见 D3） |
+| 18 | `renderer/i18n.mjs`（≈465） | **467** | 段词单源指针收正（`statusline.mjs` ⇒ `statusline-segments.mjs`）+ R4 两键登记一句 |
+| 19 | `renderer/chat-fixes.css`（96） | **119** | +压缩行三规则（类名面沿 VSC `base.css:203-226` 同名类族；值 = 桌面 `.digest-status` 同款变量面）——`styles.css` 已不存在（前序拆分已落）；`chrome.css` 状态行族零触（新段支纯复用既有 `status-seg` 类） |
+
+**两锚实测读数（负控 · 真实应用面 = 核 `tools/shared.mjs` `toOpenAISchema`）**
+- 未配置 ⇒ 恒等 ✓；注册桌面表后：`bash` ∕ `question` 两工具描述 **零 `{{inject:` 残留** ✓（bash 锚位 = 空行〔CLI 类〕· question 锚位 = VSC 逐字行）；表外锚 ⇒ **抛**（消息含锚名）✓；`reset` ⇒ 回恒等 ✓。
+- 桌面产品面（`src/` + `renderer/`）grep `{{inject:` = **0 命中** ✓；全树唯二命中 = `.thincoder/tmp/r4-inject-check.mjs` ∕ `r4-readings.mjs`（临时检查脚本，字面为测试数据——非产品面，声明豁免）。
+
+**通道计数三处 read**：`preload.cjs` `EVENT_CHANNELS` = **21** ∧ `events-subscribe.mjs` `CHANNELS` = **21**（两表序同值同）∧ `IPC.md` §1 = **19**（设计面——本舱按任务书「设计档零触」未改；其 19 ⇒ 21 收正 = 设计面动作，见上抛 1）。
+
+**测试面**：随全清令（2026-09-28 用户令）**跳过 R4 表 #10 ∕ #11 两行**（新 `test/compress-status.test.mjs` ∕ `views-statusline` ∕ `events-reduce` 随动）——盘面 `test/files.mjs` 清单 = `[]`（存量测试全部退役）；**本舱未写测试 ∕ 未跑套件**。验证 = `node --check` **18/18** 全绿 + 6 枚 ad-hoc 脚本实跑 —— **not repo-suite verified — the parent-side closeout run is the only repo-suite run.**
+
+**ad-hoc 验证读数（脚本留 `.thincoder/tmp/r4-*.mjs`，可按需复跑）**
+- `r4-inject-check.mjs`：四覆（未配置恒等 ∕ 两描述零残留 ∕ 缺键抛 ∕ reset 恒等）——全过。
+- `r4-bridge-check.mjs`：8 posts 逐条核对（四 kind 状态 ∕ 四态压缩；warn ∕ 未知相位 ∕ `undefined` ⇒ 零载波）。
+- `r4-reduce-check.mjs`：五 kind 归 ∕ index done 清键 ∕ 表外零写 ∕ 同值原引用 ∕ 活动恢复即清（token ∕ 两 tail ∕ error 清；内联 activity ∕ 他键不清）∥ 压缩四态 + 同值 + 表外零写。
+- `r4-statusline-check.mjs`：`STATUS_SEGMENTS` = 16 未破；五 kind 全表出词（rateWait「TPM throttle wait ~9s」∕ quota「quota exhausted: daily cap」∕ index 两形）；缺值 `?`；优先序（susp ∕ 零节点 > 状态文本）；表外 kind 回落「running」。
+- `r4-flow-check.mjs`（迷你 DOM 桩）：压缩四态文本 ∕ 类名 ∕ 元素生命周期（insert ∕ 同值零写 ∕ 换代原位换 ∕ 缺席摘）∥ 锚（族首）∥ 模型 ∕ 子序（user → compress → digest）∥ `syncChrome` 整合 —— **自检抓出 1 处真缺陷（`syncChrome` 传 model 而非切片 ⇒ 压缩行渲染成 failed 文案）并修复**。
+- `r4-readings.mjs`：行数账 ∕ 通道计数 ∕ 负控（产品面 0 命中）。
+
+**决策透明表（逐条 · 依据）**
+
+| # | 决策 | 依据 |
+|---|---|---|
+| D1 | 段 3 新支位次 = ① susp > ② 零节点 > **状态文本** > ③ running > ④ ready | 设计行「表行 3（五 kind）」只增支未定序；新支 = ③ 忙义的**专形**（活读数优先于通用词），①② 既有优先级照旧不破；备选（置于 ① 之上 ∕ CLI 式覆盖）未采——登记供父侧裁（一处行可换） |
+| D2 | index 第五 kind = **VSC 对位预留支**（桌面树无 `ev:statusText` kind=index 产出方） | 五 kind **取值表**照设计落（VSC `status-bar.js:101-112` 同表）；产出 = onWait 四相（核单源）；索引进度有产出面 = R2 `index:build`（设置段）——请父侧裁「补产出 ∕ 销支」 |
+| D3 | i18n 键实落 **2**（设计估 ≈10） | 「本批零自铸词」为更强约束：四 kind + 压缩四态全走核字典投影（D2 单源），仅 index 两形无核键 ⇒ 落宿主表（VSC 逐字） |
+| D4 | 压缩行族内位次 = **族首**（压缩行 → 消化 → 到期触发 → 停止痕 → 台账） | 族内序为端侧自持面（设计只定「单元素四态 + 挂载 = `views/chat.mjs`」）；族首 = 插点链改动最小（`blockAnchor` 首链一处 + 本档锚）+ 与 VSC 消息流「后到者最近块」同向 |
+| D5 | 压缩行样式落 `chat-fixes.css`（+23 行） | `styles.css` 已不存在（前序拆分）；`chat.css` 越 300（313）⇒ 小修族档（96 行）自洽；新类族无既有类可复用（与「纯复用 ⇒ 零新增」句相容） |
+| D6 | 表外必要改动 6 档随落（`app.mjs` ∕ `mount-status.mjs` ∕ `page-read.mjs` ∕ `store.mjs` ∕ `i18n.mjs` ∕ `chat-fixes.css`） | 均为接线 ∕ 生命期 ∕ 槽位注册面——缺则段不刷 ∕ 行不显 ∕ 痕不清（逐项理由见交付报告「超表改动」节） |
+| D7 | `agent-host.mjs` **零改** | R4 #4「回调注入（桥取键 ⇒ 本档供）」语义已由既有装配面承接：`bridge(key)` 经 `turn-face.mjs` **整对象透传**入核 ⇒ 四新回调零新注入面（±≤8 未动用） |
+
+**审计与代码评审（轮次与终态）**
+
+- **内审（explore 子代理 · 1 轮，阻塞）**：判 = 代码面 **CLEAN**（四类偏差 0）；另报 2 项非四类（🟡 §5 未落 = 本 append 即消解 ∕ 🔵 注释计数残留 = 已随收正）。无可修项 ⇒ **fix 轮 0**。
+- **代码评审（advisor · 1 轮）**：**VERDICT: pass**（🔴 0 ∕ 🟡 3 ∕ 🔵 5）——3 🟡 = 两设计档滞后（`IPC.md` §1 计数 ∕ `UI.md` 表行 3 四支；均设计面笔，本舱零触）+ 一协调项（index 第五 kind 无产出方，同 D2）；5 🔵 = 行数顾问线 3 档 ∕ i18n 键数偏差 ∕ 测试行项随全清令作废 ∕ 临时脚本残件。**无一标 must-fix** ⇒ 无需 fix 轮。
+- **终态 = `clean`**（内审 1 轮 clean + fix 0；代码评审 1 轮 pass + fix 0；无未闭合项）。
+
+**上抛（随交付 · 供父侧裁）**
+1. **设计面收正未落**（按任务书「设计档零触」未动）：`IPC.md` §1 十九 ⇒ 二十一（`:42` ∕ `:72` ∕ `:75` 三处）+ 两通道行 ∕ §10 BE 行（`PROJECT.md:753`）· `UI.md` §1 表行 3 四支 ⇒ 五支（+状态文本支）· `RENDERER.md` §1.1 根子序 += 压缩行——请父侧设计面随落（批档 #5 ∕ 修正 7 靶行）。
+2. **index 第五 kind 产出面归属**（补产出 ∕ 登记销支）——见 D2。
+3. **段 3 新支位次**（D1）如与父侧预期异 ⇒ 一处行调整可换。
 
 ## §6 验证与收口（父代理）

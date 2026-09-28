@@ -19,6 +19,8 @@
  * `settings.toolsSection`；余键 = VSC 同名键逐字）；
  * ⑧ **核件搜索面（R6 · 桌面功能对位批）**：核 `search.mjs` 取词五键（占位 ∕ 上一跳 ∕ 下一跳 ∕ 关闭 ∕ 无匹配）
  * —— 键名与两语值皆 VSC `locales/{en,zh}.json:254-258` 逐字。
+ * ⑨ **状态文本段 index 两形（R4 · 桌面功能对位批）**：`renderer/views/statusline-segments.mjs` 取词（index kind 两相位
+ * —— 表外四 kind 与压缩四态 = 核字典经 `t()` 投影直取，零新键）；键名与两语值皆 VSC `locales/{en,zh}.json:218-219` 逐字。
  * 两语键集须相等（增键两语同增、禁单语落键）。
  * 零落盘 · 零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
@@ -88,6 +90,9 @@ export const VIEWS_DICT = Object.freeze({
     "search.next": "Next match",
     "search.close": "Close search",
     "search.noMatch": "No matches",
+    // ── ⑨ 状态文本段 index 两形（R4 · 桌面功能对位批 —— 键名与值皆 VSC `locales/en.json:218-219` 逐字）──
+    "status.indexScan": "Indexing: scanning ${n} files…",
+    "status.indexProgress": "Indexing: ${done}/${total}…",
   },
   zh: {
     // ── ① 对话流 ──
@@ -153,5 +158,8 @@ export const VIEWS_DICT = Object.freeze({
     "search.next": "下一个匹配",
     "search.close": "关闭搜索",
     "search.noMatch": "无匹配",
+    // ── ⑨ 状态文本段 index 两形（R4 · 桌面功能对位批 —— 键名与值皆 VSC `locales/zh.json:218-219` 逐字）──
+    "status.indexScan": "索引：扫描 ${n} 文件…",
+    "status.indexProgress": "索引：${done}/${total}…",
   },
 })

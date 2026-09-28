@@ -22,6 +22,11 @@
  *  ⇒ 经注入面 `persistDistilled(key)` **立即重落盘**（**非出站通道**；落盘动作在注入面 —— 桥零宿主依赖律不破；
  *  端侧装配 = `agent-host.mjs` ⇒ `session-io.mjs` `saveDistilledSlot`；CLI `tool-events.mjs:397` ∕ VSC
  *  `panel-callbacks.mjs:242` 同式）。
+ * **R4（提示锚 + 状态面 · `docs/batches/2026-09-28-desktop-feature-parity.md` §2.4 R4）**：增四回调 ——
+ *  `onWait`（核 `agent.mjs:285` 透传 provider 链 ⇒ `ev:statusText`；相位 → kind 映射 = 核单源
+ *  `provider/wait-status.mjs` `waitStatusOf`，`warn` ∕ 未知相位 ⇒ 零载波）· `onCompressStart` ∕ `onCompress` ∕
+ *  `onCompressFail`（核 `context.mjs:304` ∕ `agent/run-stages.mjs:89/:98/:106` ⇒ `ev:compress` 四态载荷
+ *  ——起跑 ∕ 完成 ∕ 降级 ∕ 失败；形 = VSC `panel-callbacks.mjs:175-183` 同式，词面渲染归渲染面）。
  * 依赖面 = 注入（零宿主依赖 ⇒ 平 node 直测）：`post(channel, payload)` = 主进程出站面 ·
  * `askSingle` / `askBatch` / `askQuestion` = 三门挂起（表与 resolve 在 `suspensions.mjs`，本档只转口、不持表）·
  * `syncLiveOf(key, head)` = 核 sync registry 只读采样（X10 可中止事实——核不可算，须端供给）。
@@ -31,6 +36,9 @@ import {
 } from "@thincoder/render-core/subblocks/relay.mjs"
 // 工具失败判据（「对齐第三批」项 2 —— 核单源；半 / 全角 `Error[:：]` 头 ∪ 独立成行状态位）。
 import { isToolFailure } from "@thincoder/render-core/lib.mjs"
+// 等待相位 → `ev:statusText` kind 映射（R4 —— 核单源 `provider/wait-status.mjs`：`gate` ∕ `retry` ∕ `overloaded` ∕
+// `quota` 四相 ⇒ kind；`warn` ∕ 未知相位 ⇒ `null` 不显示——本端零相位枚举 ∕ 零自铸词）。
+import { waitStatusOf } from "@thincoder/core/provider/wait-status.mjs"
 
 /** 活动名闭集（SHELL.md §4 · IPC.md §1 桥面）：`⟦ev⟧` 出发的八名 —— 表外名（子代理中继）原样透传（形状同一）。 */
 export const ACTIVITY_EVENTS = Object.freeze(["turn", "queued", "async", "settled", "stopped", "done", "cancelled", "approval"])
@@ -97,6 +105,7 @@ function subChunkOf(face, a, b) {
 
 /** 十一回调桥（`⟦ev⟧` 协议行 ⇒ `ev:activity` / relay 族 ⇒ `ev:subagent` / 前缀内容 chunk ⇒ `ev:subchunk`；
  *  非协议 ⇒ `ev:token` 文本面；推理 chunk ⇒ `ev:reasoning`）——十键为 `ev:*` 出站映射，第十一键 `onUsage` 非通道（见下）；
+ *  **R4 增四回调**（`onWait` ⇒ `ev:statusText`；`onCompressStart` ∕ `onCompress` ∕ `onCompressFail` ⇒ `ev:compress`——见档头 R4 注）；
  *  `reassertLive` = 存活投影挂点（宿主拍体调用面）：
  *  `createBridge({post, askSingle, askBatch, askQuestion, tokensOf, syncLiveOf, now, advisorOf, extractLinks})` ⇒ `bridge(key)`。每帧 `key` 前置并入
  *  （帧 payload 自带同名键时后者胜 —— 形状同原实现）。
@@ -233,6 +242,23 @@ export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf,
       // 逐次响应累入本键会话级令牌表（`tokensOf(key)` 注入；表缺 ⇒ 零动作），随宿主回合尾 `ev:usage` 载荷出
       // （`docs/desktop/design/IPC.md` §1 `ev:usage` 行「载荷扩」）。
       onUsage: (usage) => accumulateTokens(tokensOf?.(key), usage),
+      // 等待相位（R4 —— 核 `callbacks.onWait`（`agent.mjs:285` 透传 provider 链）⇒ `ev:statusText`）：映射 = 核单源
+      // `waitStatusOf`（→ `{ kind, seconds }` ∕ `{ kind, message }`）；`null`（`warn` ∕ 未知相位）⇒ **零载波**
+      //（禁假造——本端零相位枚举 ∕ 零自铸词；文案取词归渲染面 `status.*` 核字典投影）。
+      onWait: (info) => {
+        const payload = waitStatusOf(info)
+        return payload === null ? false : at("ev:statusText", payload)
+      },
+      // 压缩生命周期四态（R4 —— 核 `context.mjs:304` ∕ `agent/run-stages.mjs:89/:98/:106`）⇒ `ev:compress`：
+      // 形 = VSC `panel-callbacks.mjs:175-183` 同式（缺值携 `null`——渲染面 `?` 兜底）；词面归渲染面（核字典 `compress.*`）。
+      onCompressStart: (info) => at("ev:compress", { status: "start", messages: info?.messages ?? null }),
+      onCompress: (info) => at("ev:compress", {
+        status: info?.mode === "fallback" ? "fallback" : "done",
+        tokensFreed: info?.tokensFreed ?? null,
+        elapsedMs: info?.elapsedMs ?? null,
+        tailMessages: info?.tailMessages ?? null,
+      }),
+      onCompressFail: (err) => at("ev:compress", { status: "failed", error: err?.message ?? String(err ?? "unknown error") }),
       // 注：本对象为**回调桥**（核 `runAgent` 消费面）——键集与 `docs/desktop/design/SHELL.md` §4 回调表同源；
       // 「对齐第三批」三接缝（`onPermissionRequired` / `onSubagentApproval` / `onTurnEnd`）皆并入既有通道，非新通道。
     }

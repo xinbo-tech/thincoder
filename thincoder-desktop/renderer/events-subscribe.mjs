@@ -1,10 +1,10 @@
 /**
- * events-subscribe.mjs — 渲染面事件订阅接线（十八通道表 · `attachEvents` · 回合尾标题刷新 + `onTurnTail` 窄口）：
+ * events-subscribe.mjs — 渲染面事件订阅接线（二十一通道表 · `attachEvents` · 回合尾标题刷新 + `onTurnTail` 窄口）：
  * 自 `renderer/events.mjs` 拆出（300 行拆分层落形 —— 批档 §5 登记）；归约纯函数与值面写者仍在核心档
- * （`reduce` / `applyFlags` / `openSession` / `clearApproval`；页读径另档 = `renderer/page-read.mjs`）——
- * 本档单向依赖核心档，无环。
+ * （`reduce` / `openSession` / `clearApproval`；模式位归约径（`applyFlags` / `sameRecord`）另档 =
+ * `renderer/events-flags.mjs` · 页读径另档 = `renderer/page-read.mjs`）——本档单向依赖核心档，无环。
  *
- * 导出面一：`attachEvents({ on, store, invoke, onTurnTail })`（十八通道订阅 ⇒ 退订句柄）；回合尾判据 = 核心档导出
+ * 导出面一：`attachEvents({ on, store, invoke, onTurnTail })`（二十一通道订阅 ⇒ 退订句柄）；回合尾判据 = 核心档导出
  * `isTurnTail` **单源**（三径 —— 批 A 修正轮）；回合尾（判据命中）⇒ 标题刷新 ∧ `onTurnTail(key)` **窄口**
  * （**输入区 flush 携行随「回合中插入」批退场** —— 窄口**存续**：调用面可接（缺 / 非函数 ⇒ 零动作），
  * 队列消费改宿主驱动（步边界注入 ∕ 回合尾续发）；携回合尾事件键 —— 接线面自持纪律）。
@@ -16,17 +16,22 @@
 import { isTurnTail, reduce } from "./events.mjs"
 import { store as defaultStore } from "./store.mjs"
 
-/** 十八通道（订阅面闭集 —— 单源 = `docs/desktop/design/IPC.md` §1「白名单 = 本表十八通道」；十八通道在归约面皆有写者）。
+/** 二十一通道（订阅面闭集 —— 单源 = `docs/desktop/design/IPC.md` §1「白名单 = 本表二十一通道」；二十一通道在归约面皆有写者）。
  *  R3b 增 `ev:subagent`（子 agent 块面）；R3c 增 `ev:reasoning`（推理块增量 —— D19）；「对齐第二批」增 `ev:subchunk`
  *  （子 agent 内容增量 —— 项 3）；**桌面空闲唤醒批增 `ev:susp` ∕ `ev:digest`**（挂起计数面 ∕ 消化轮边界面 —— 宿主自产）；
  *  **「对齐第三批」增 `ev:ledger`**（台账行集 —— 归约面写者 `renderer/events.mjs` `onLedger`）；
  *  **timer-wake 阶段 2 增 `ev:timer`**（到期触发面 —— 归约面写者 `renderer/events.mjs` `onTimer`）；
  *  **「回合中插入」批增 `ev:queue`**（排队面两形 —— 归约面写者 `renderer/events.mjs` `onQueue`）；
- *  序同桥面表 —— `thincoder-desktop/src/preload/preload.cjs` `EVENT_CHANNELS` —— 13 ⇒ 18。 */
+ *  **输入面板上提批增 `ev:flags`**（模式位推送 —— 归约面写者 `renderer/events-flags.mjs` `onFlags`；
+ *  切 `sessionFlags` 切片 ⇒ 状态行 banner + 输入面板控件行两读面随动）；
+ *  **R4（提示锚 + 状态面）增 `ev:statusText` ∕ `ev:compress`**（状态文本五 kind ∕ 压缩状态行四态 —— 归约面写者
+ *  `renderer/events-status.mjs` `onStatusText` ∕ `onCompress`；活动恢复即清 = 同档 `expireStatusText`）；
+ *  序同桥面表 —— `thincoder-desktop/src/preload/preload.cjs` `EVENT_CHANNELS` —— 13 ⇒ 19 ⇒ 21。 */
 const CHANNELS = [
   "ev:token", "ev:reasoning", "ev:activity", "ev:subagent", "ev:subchunk", "ev:tool-call", "ev:tool-output", "ev:tool-result",
   "ev:approval", "ev:question", "ev:task", "ev:susp", "ev:digest", "ev:usage", "ev:error", "ev:ledger", "ev:timer",
-  "ev:queue",
+  "ev:queue", "ev:flags",
+  "ev:statusText", "ev:compress",
 ]
 
 /** 窄桥缺省出站面（预载装配的 `globalThis.thincoder.invoke`）；`invoke` 注入面优先（同形：`(name, payload) => Promise`）。 */
@@ -34,7 +39,7 @@ function callNarrowBridge(name, payload) {
   return globalThis.thincoder.invoke(name, payload)
 }
 
-/** 订阅十八通道 ⇒ 退订句柄（十八路全退；`off` 非函数 ⇒ 该路不退订，余路照退）。
+/** 订阅二十一通道 ⇒ 退订句柄（二十一路全退；`off` 非函数 ⇒ 该路不退订，余路照退）。
  *  `store` 缺省 = 单例（档形 `{ on }`）；`on` 非函数 ⇒ 记错 + 空句柄（不静默死订阅）；
  *  回合尾（判据单源 = 核心档 `isTurnTail`）⇒ 标题刷新 ∧ `onTurnTail(key)` 窄口（缺 / 非函数 ⇒ 零动作 —— 未接线调用面合法）。 */
 export function attachEvents({ on, store = defaultStore, invoke = null, onTurnTail = null }) {

@@ -83,8 +83,10 @@ import { VIEWS_DICT } from "./i18n-views.mjs"
  *  视图不造词；键位面 = `renderer/views/chrome.mjs`）· `effort.*` = 档位两特值词（`auto` = 未设（`null`）·
  *  `off` = 关思考 —— 逐模型枚举成员**零词键**、原字面投影）· `status.*` = 状态行（读数串 `${percent}%` ——
  *  未至 / 非正数 ⇒ 零节点，键面不落空串；段词十六键 = 注意力 / 当前工具 / 耗时 / 任务计数 / 令牌三件 / 计时 /
- *  排队两句 + 静息词 / 输入提示静息态 / banner 四态（代号字面 —— 两语同形）——段词与判据单源 =
- *  `renderer/views/statusline.mjs` + `renderer/views/statusline-banner.mjs`〔banner 四态〕）· 占位方言沿核 `${name}`，本档零字形字面）。 */
+ *  排队两句 + 静息词 / 输入提示静息态 / banner 四态（代号字面 —— 两语同形）＋ **R4 增状态文本 index 两形二键**
+ *  （`status.indexScan` ∕ `status.indexProgress` —— 值逐字同 VSC locales；表外四 kind 与压缩四态 = 核投影取、零新键）
+ *  ——段词与判据单源 =
+ *  `renderer/views/statusline-segments.mjs` + `renderer/views/statusline-banner.mjs`〔banner 四态〕）· 占位方言沿核 `${name}`，本档零字形字面）。 */
 export const HOST_DICT = Object.freeze({
   en: {
     "rail.action.openDir": "Open folder…",

@@ -1,9 +1,10 @@
 /**
  * chat.mjs — 对话流视图面（`docs/desktop/design/RENDERER.md` §1.1 / §2 / §3 · `docs/desktop/design/UI.md` §1 对话流行）。
  * 三档沿 RENDERER.md §1.1：`chatModel`（纯模型 · 窗出口）→ `chatTree`（纯构树 · 机检面）→ `mountChat`（薄挂载 =
- * 本档唯一清空 / 建树处）；DOM 面另两件 = 帧尾态刷 `syncChrome`（根锚四 + 摘要块 + 审批卡 + 药丸 + **消化行组** + **到期触发行组** + **停止痕** + **台账行组** + **待发送气泡组** + **真置焦执行** · 幂等 · 无帧豁免）· 帧尾六步 `settleFrame`；
+ * 本档唯一清空 / 建树处）；DOM 面另两件 = 帧尾态刷 `syncChrome`（根锚四 + 摘要块 + 审批卡 + 药丸 + **消化行组** + **到期触发行组** + **停止痕** + **台账行组** + **真置焦执行** · 幂等 · 无帧豁免）· 帧尾六步 `settleFrame`；
  * **卡面态刷**住 `renderer/views/chat-cards.mjs`（R3c 拆档 —— 在册预案 = 卡构树拆出；本档经 `syncCards` 调用）；
- * **待发送气泡组**住 `renderer/views/chat-pending.mjs`（「对齐第二批」项 2 —— 项 2 新档：尾组构树 + 帧尾组同步）；
+ * **排队期「待发送块」不在本档**（收正轮 B12 新口径 —— 住**输入行上方带**，硬验收 = 与输入面板恒定邻接；
+ * 消费前流内零真块，交付时刻 `ev:queue` 消费回执才入流）；
  * **消化行组**（`[data-digest]` —— 桌面空闲唤醒批）本档自持：非块节点组（沿 `[data-pending]` 先例），在场 ⟺ 本键 `digest`
  * 切片起跑态（`start`）—— `end` ⇒ 先原地更新本键游标行后摘除（单源 = `docs/desktop/design/RENDERER.md` §1.1 两条纪律）；
  * **到期触发行组**（`[data-timer]` —— timer-wake 阶段 2）：非块节点组 · 在场 ⟺ 本键 `timerNotice` 切片在场，
@@ -20,19 +21,19 @@
  *      呈现（KD-RC-4 · R3c —— 单源 = `renderer/views/chat-text.mjs`；转义闸在核；原文逐字另存 `[data-raw]` 锚供复制面）；
  *      **说话人标签**（项 4）：用户块恒出 / 助手族块回合首出（判据 = `turnHeadOf` 单源 —— 活流与回放同判据）——
  *      标签为**块内子节点**（不入块序 / 不改 `data-blocks`），文本落笔归帧尾着装面；
- *   ③ 根子序 = [引导?] → [摘要块?] → 块序列 → [**消化行组**?] → [**到期触发行组**?] → [**停止痕**?] → [**台账行组**?] → [**待发送气泡组**?] → [卡序列?] → [药丸?]（卡序 = 待审批 → 提问 → 计划 —— 单源 =
- *      `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条；五尾组 = 流内非块节点，族内序 = 消化行组 → 到期触发行组 → 停止痕 → 台账行 → 待发送气泡组 —— 落点 = 块序列之后、
+ *   ③ 根子序 = [引导?] → [摘要块?] → 块序列 → [**压缩行**?] → [**消化行组**?] → [**到期触发行组**?] → [**停止痕**?] → [**台账行组**?] → [卡序列?] → [药丸?]（卡序 = 待审批 → 提问 → 计划 —— 单源 =
+ *      `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条；五尾组 = 流内非块节点，族内序 = 压缩行〔R4〕→ 消化行组 → 到期触发行组 → 停止痕 → 台账行 —— 落点 = 块序列之后、
  *      卡序列之前；「对齐第三批」项 6 / 12 增停止痕与台账行组，F-置焦增置焦执行点）；块插入点 = 首个**尾组 / 卡节点**之前（`blockAnchor` 单源 —— 组在则块恒居其前 ⇒
  *      交接位置零跳；无组无卡 ⇒ `[data-pill]` 之前 · 两锚皆缺 ⇒ 末位）；本档挂载面只管审批族（提问 / 计划
  *      两族归 `renderer/mount-cards.mjs` —— 挂载零交叠，卡序判据共用一序单源）；
  *   ④ 工具卡面（三行）已拆出：`renderer/views/chat-tool.mjs`（批档 §2.3 拆分预案落形）——本档经 `toolCard` 调用；
- *      审批卡面（两形）住 `renderer/views/approval.mjs`（批档 §2.2（a））——本档经 `approvalTree` 调用（依赖单向：
- *      本档 → 它）；卡 = **非块节点** ⇒ 与块序列 / 药丸同层不破「DOM 块节点序 ≡ visible 逐位引用等」；
+ *      审批卡面（两形）住 `renderer/views/approval.mjs`（R1 —— 核卡工厂直取 + 端壳四件）——本档经
+ *      `approvalCardNode` 调用（依赖单向：本档 → 它）；卡 = **非块节点** ⇒ 与块序列 / 药丸同层不破「DOM 块节点序 ≡ visible 逐位引用等」；
  *      接线两态沿 `renderer/views/sessions.mjs:161` 通则（handlers 给 ⇒ `onClick`；缺 ⇒ `disabled` —— 诚实非死控）；
- *   ⑤ 模型形 = `{ state, state.blocks, hidden, following, pendingNew, hasOlder, inFlight, locale, approval, guide, pending, digest, timer,
- *      stopped, ledger, canRetry, configured }`
+ *   ⑤ 模型形 = `{ state, state.blocks, hidden, following, pendingNew, hasOlder, inFlight, locale, approval, guide, digest, timer,
+ *      stopped, ledger, canRetry, configured, compress }`
  *      （`blocks` = 窗出口；`approval` = 本会话待决项 ⇒ 卡面；`guide` = 引导码 —— 非块节点，判据单源 = `chat-guide.mjs`；
- *      `digest` = 本键消化行切片 —— 起跑 / 终态两态，非块节点；**「对齐第三批」四字段** = `stopped`（停止痕切片在场 ——
+ *      `digest` = 本键消化行切片 —— 起跑 / 终态两态，非块节点；**`compress`（R4）** = 本键压缩状态行切片 —— 单元素四态，非块节点；**「对齐第三批」四字段** = `stopped`（停止痕切片在场 ——
  *      项 6）· `ledger`（本键台账行集 —— 项 12）· `canRetry`（末 `user` 块在场 ⇒ 错误横幅重试钮在场 —— 项 9）·
  *      `configured`（provider 已配 —— 欢迎条文案二值 —— 项 15））。
  * 文案一律经 `t()`（零硬编码；`+` / `−` / 游标字形住 `renderer/chat.css`）；零 `node:` / 零裸包。
@@ -41,15 +42,16 @@ import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 import { attachCopyButtons } from "/rc/flow/stream.mjs"
 import { visibleWindow } from "../store.mjs"
-import { approvalTree } from "./approval.mjs"
+import { approvalCardNode } from "./approval.mjs"
+// 流内压缩状态行（R4 —— 单元素四态；构树件出档 `renderer/views/compress-status.mjs`，态刷 ∕ 锚居 `chat-chrome.mjs`）。
+import { compressNode } from "./compress-status.mjs"
 import { MAX_RENDER_BLOCKS, compensateTop, stickToBottom, tailAction } from "./chat-scroll.mjs"
 import { copyBlockNode } from "./chat-copy.mjs"
 import { blockAnchor, chromeProps, digestGroupNode, ledgerGroupNode, pillNode, stoppedNode, summaryNode, syncChrome, timerGroupNode } from "./chat-chrome.mjs"
 import { guideNode, guideOf } from "./chat-guide.mjs"
-import { pendingGroupNode, pendingOf } from "./chat-pending.mjs"
 import { blockKey } from "./chat-stream.mjs"
 import { fillSubagentEcho, subagentNode, syncSubagentEcho } from "./chat-subagent.mjs"
-import { labelNode, paintPendingMarks, paintSpeakerLabels, patchTextBlock, pinReasoning, pinReasoningBlocks, reasoningNode, textFace } from "./chat-text.mjs"
+import { labelNode, paintSpeakerLabels, patchTextBlock, pinReasoning, pinReasoningBlocks, reasoningNode, textFace } from "./chat-text.mjs"
 import { linkifyResult, toolCard, wire } from "./chat-tool.mjs"
 
 // 帧尾态刷面出档 `renderer/views/chat-chrome.mjs`（拆分产出 —— 「对齐第三批」触碰批执行在册预案：本档越 300
@@ -76,10 +78,10 @@ export function chatModel(state, limit = MAX_RENDER_BLOCKS) {
     inFlight: state?.history?.inFlight === true,
     locale: state?.locale,
     approval: mode === "none" ? [] : awaitingOf(state),
-    // 本会话队（项 2 —— 流内待发送气泡组）
-    pending: mode === "none" ? [] : pendingOf(state),
     // 本键消化行切片（桌面空闲唤醒批 —— `[data-digest]` 组；非块节点）
     digest: mode === "none" ? null : digestOf(state),
+    // 本键压缩状态行切片（R4 —— `[data-compress]` 单元素四态；非块节点 —— 族首）
+    compress: mode === "none" ? null : compressOf(state),
     // 本键到期触发切片（timer-wake 阶段 2 —— `[data-timer]` 行组；非块节点 · 与消化行同族）
     timer: mode === "none" ? null : timerNoticeOf(state),
     // 「对齐第三批」：停止痕（项 6 —— 本键切片在场；页读整置即失）· 台账行（项 12 —— 本键行集）
@@ -114,6 +116,16 @@ function awaitingOf(state) {
 function digestOf(state) {
   const key = state?.activeSession ?? null
   const table = state?.digest
+  if (key === null || table === null || typeof table !== "object") return null
+  const slice = table[key]
+  return slice !== null && typeof slice === "object" ? slice : null
+}
+
+/** 本键压缩状态行切片（源 = `state.compress[活动会话键]` —— `ev:compress` 归约面写，四态就地推进；缺 / 非载体 ⇒ `null`：
+ *  零行 —— 禁假造；生命期 = 首屏页读整置即失（`renderer/page-read.mjs` —— 沿 `stopMark` 先例）。 */
+function compressOf(state) {
+  const key = state?.activeSession ?? null
+  const table = state?.compress
   if (key === null || table === null || typeof table !== "object") return null
   const slice = table[key]
   return slice !== null && typeof slice === "object" ? slice : null
@@ -200,8 +212,9 @@ function blockNode(block, index, hidden, handlers, prev, canRetry = false) {
   }
 }
 
-/** 构树（纯 · 零 DOM）：根 = 挂载根（props 四锚；宿主 `class` / `data-slot` 归 `renderer/index.html` 骨架）；子序 = [引导节点?] → [摘要块?] → [块序列] →
- *  [待发送气泡组?] → [审批卡?] → [药丸?] —— 五尾组（皆非块节点）居块序列之后、卡序列之前（族内序 = 消化行组 → 到期触发行组 → 停止痕 → 台账行 → 待发送气泡组）；`none` 帧 = 引导节点唯一子（零**块**节点 · 引导 = 非块节点 ⇒ 不入块序：`docs/desktop/design/UI.md` §1 批 B 追加注项 1）。 */
+/** 构树（卡族 = 核卡工厂元素直取 —— R1；审批族入树项由 `approvalCardNode` 产出**真元素**，余仍为描述符 ——
+ *  `dom.mjs` `fill` 对真节点直挂 ⇒ 两形同树同序）：根 = 挂载根（props 四锚；宿主 `class` / `data-slot` 归 `renderer/index.html` 骨架）；子序 = [引导节点?] → [摘要块?] → [块序列] →
+ *  [待发送块?] 不入本档（N/A）→ [审批卡?] → [药丸?] —— 四尾组（皆非块节点）居块序列之后、卡序列之前（族内序 = 消化行组 → 到期触发行组 → 停止痕 → 台账行）；`none` 帧 = 引导节点唯一子（零**块**节点 · 引导 = 非块节点 ⇒ 不入块序：`docs/desktop/design/UI.md` §1 批 B 追加注项 1）。 */
 export function chatTree(model, handlers = {}) {
   const children = []
   const guide = guideNode(model, handlers)
@@ -209,18 +222,17 @@ export function chatTree(model, handlers = {}) {
   if (model.state !== "none") {
     if (model.hidden > 0) children.push(summaryNode(model, handlers))
     if (model.state === "flow") children.push(...model.blocks.map((block, index) => blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true)))
-    // 流内消化行组（非块节点 —— 块序列之后、待发送组之前；在场 ⟺ 本键切片起跑态）
+    // 流内压缩状态行（R4 —— 非块节点 · 族首；在场 ⟺ 本键切片在场（四态皆在场））
+    if (model.compress !== null) children.push(compressNode(model.compress))
+    // 流内消化行组（非块节点 —— 块序列之后、卡序列之前；在场 ⟺ 本键切片起跑态）
     if (model.digest?.status === "start") children.push(digestGroupNode(model.digest))
     // 流内到期触发行组（非块节点 —— 块序列之后；在场 ⟺ 本键切片在场；族内序 = 消化行组 → 本组 → 停止痕）
     if (model.timer !== null) children.push(timerGroupNode(model.timer))
-    // 停止痕（项 6 —— 流尾非块节点；族内序 = 消化行组 → 停止痕 → 台账行 → 待发送组）
+    // 停止痕（项 6 —— 流尾非块节点；族内序 = 消化行组 → 停止痕 → 台账行）
     if (model.stopped === true) children.push(stoppedNode())
     // 台账行组（项 12 —— 流尾非块节点组；行集源 = 本键切片）
     if (Array.isArray(model.ledger) && model.ledger.length > 0) children.push(ledgerGroupNode(model.ledger))
-    // 流内待发送气泡组（非块节点 —— 块序列之后、卡序列之前）
-    const pending = pendingGroupNode(model)
-    if (pending !== null) children.push(pending)
-    children.push(...model.approval.map((item) => approvalTree(item, handlers)))
+    children.push(...model.approval.map((item) => approvalCardNode(item, handlers)))
     if (!model.following) children.push(pillNode(model, handlers))
   }
   return { tag: "div", props: chromeProps(model), children }
@@ -263,7 +275,6 @@ export function mountChat(root, state, handlers = {}, limit = MAX_RENDER_BLOCKS)
   for (const child of [...tree.childNodes]) root.append(child)
   syncSubagentEcho(root, model)
   paintSpeakerLabels(root)
-  paintPendingMarks(root)
   // 重挂径推理块同「新建即落底」（尾段三径归 `dressNode`）
   pinReasoningBlocks(root)
   attachCodeCopies(root)

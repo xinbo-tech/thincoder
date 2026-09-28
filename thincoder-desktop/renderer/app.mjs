@@ -63,7 +63,7 @@ const FLOW_SLOT = '[data-slot="flow"]' // 对话流容器锚（= 滚动容器自
 // `project` = 项目钮读数；`sessions` ∕ `activeSession` ∕ `tabBadges` = 下拉列表 ∕ 活动态 ∕ 位标）
 const SESSION_KEYS = ["project", "sessions", "activeSession", "tabBadges", "locale", "ledger"]
 const HEAD_KEYS = ["activeSession", "sessionMeta", "tabBadges", "locale"] // 会话头重挂触发切片（活动键 ∕ 供给 ∕ 忙态 ∕ 词表）
-const CHAT_KEYS = ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "project", "pending", "digest", "timerNotice", "stopMark", "ledgerLines"] // 对话流帧触发切片（`locale` 在内：文案随词表 · `pool`：审批卡宿对话流 · `project`：引导码随 cwd——批 B 追加轮 · `pending`：流内待发送气泡组——「对齐第二批」项 2 · `digest`：流内消化行组——桌面空闲唤醒批 · `timerNotice`：流内到期触发行组——timer-wake 阶段 2 · `stopMark` / `ledgerLines`：两尾组的单变触发 —— 「对齐第三批」项 6 / 12；`settings` 不入表 —— 欢迎条文案二值随重挂径，且帧尾态刷判据 = 码面（见 `renderer/views/chat-guide.mjs`））
+const CHAT_KEYS = ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "project", "pending", "digest", "compress", "timerNotice", "stopMark", "ledgerLines"] // 对话流帧触发切片（`locale` 在内：文案随词表 · `pool`：审批卡宿对话流 · `project`：引导码随 cwd——批 B 追加轮 · `pending`：流内待发送气泡组——「对齐第二批」项 2 · `digest`：流内消化行组——桌面空闲唤醒批 · `compress`：流内压缩状态行——R4 · `timerNotice`：流内到期触发行组——timer-wake 阶段 2 · `stopMark` / `ledgerLines`：两尾组的单变触发 —— 「对齐第三批」项 6 / 12；`settings` 不入表 —— 欢迎条文案二值随重挂径，且帧尾态刷判据 = 码面（见 `renderer/views/chat-guide.mjs`））
 const { paintPool, handlers: poolHandlers } = attachPool(host) // 池面一族（右栏重挂 + 两出口 —— 出档 `renderer/mount-pool.mjs`）
 const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —— 挂载 + 作答 / 取消出口；出档 `renderer/mount-cards.mjs`）
 // 设置面 / 向导 / 信息行一族（自持订阅 —— 出档 `renderer/mount-settings.mjs`；目录出口复用项目面链）；

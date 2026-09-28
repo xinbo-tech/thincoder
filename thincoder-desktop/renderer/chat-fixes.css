@@ -1,7 +1,8 @@
 /* chat-fixes.css — 对话流**「对齐第三批」小修族尾段**（自 `renderer/chat.css` 四拆 —— 「桌面处理流 · VSC 对齐」批
    §2.1 拆档定稿；链序 = theme → chrome → skin → chat → chat-cards → chat-composer → **chat-fixes** → core → /rc/search.css → pool → settings）。
    单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」：工具头两态色 / 错误横幅 / 停止痕 /
-   台账行组 / diff 预览 / 文件链接 / 欢迎条（值源逐面标注 —— VSC 实读）。 */
+   台账行组 / diff 预览 / 文件链接 / 欢迎条（值源逐面标注 —— VSC 实读）＋ **流内压缩状态行（R4 · 桌面功能对位批 ——
+   值源 = VSC `webview/base.css:203-226` 同名类族）**。 */
 
 /* 工具头两态色（项 2 —— 值源 = VSC 工具状态内联色：失败 `#f14c4c` ∥ 成功 `#4ec9b0` —— VSC 换接后单源 = 核
    `flow/tool-card.mjs:111` ∕ `:114`（坐标自 `webview/ui.js:113-114` 迁移）；两值不随主题分叉 —— VSC 同径；
@@ -42,6 +43,28 @@
 /* 台账行组（项 12 —— 流尾非块节点组；类名面 = 核行产口径 `ledger-line` / `.warn`，样式单源 = `core.css` 核类名映射面；行文 = 核行产逐字）。
    字号 11px = VSC `.ledger-line`（`webview/chat.css:477-483`）逐值；颜色 = `--fg-muted` 对位 `descriptionForeground` 角色。 */
 .chat-ledger { margin-top: 8px; font-size: 11px; color: var(--fg-muted); }
+
+/* 流内压缩状态行（R4 · 桌面功能对位批 —— 单元素四态；类名面沿 VSC `webview/base.css:203-226` 同名类族，
+   值 = 桌面 `.digest-status` 同款变量面（`renderer/chat.css:285-301`——盒行 + done / failed 两显形；
+   fallback 落 failed 类 = VSC `chat-status.js:37` 同式）。锚 `data-compress`（非块节点 —— 族首）。 */
+.compress-status {
+  margin: 6px 0;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg-raised);
+  font-size: 11px;
+  opacity: 0.85;
+}
+.compress-status.compress-done {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.compress-status.compress-failed {
+  border-color: var(--error-fg);
+  background: var(--diff-del-bg);
+  color: var(--error-fg);
+}
 
 /* 审批卡 diff 预览（相抵① 样式半 —— R1 起消费面 = 核卡产同构 markup；值源 = VSC `webview/base.css:405-437`；三新变量
    `--diff-add-bg` / `--diff-add-fg` / `--diff-del-fg` 住 `renderer/theme.css`〔主题变量段 —— 本舱不立重复值〕）。 */

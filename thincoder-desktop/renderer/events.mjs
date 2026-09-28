@@ -1,7 +1,7 @@
 /**
  * events.mjs — 渲染面事件归约核心（事件通道 → 切片写者**单源** · 批档 §2.2(e) / §2.11⑧ · `docs/desktop/design/IPC.md` §1）：
  * 切片写者的**单源**——主进程只产事件 / 回执，值面落树全在本档；订阅接线面出档 `renderer/events-subscribe.mjs`
- * （十七通道表 · `attachEvents` · 回合尾窄口携键 —— 300 行拆分层落形）；问题 / 任务切片面出档 `renderer/questions.mjs`、
+ *（二十一通道表 · `attachEvents` · 回合尾窄口携键 —— 300 行拆分层落形）；问题 / 任务切片面出档 `renderer/questions.mjs`、
  * **挂起 / 消化两切片** = 桌面空闲唤醒批增归约面两分派支（`ev:susp` 计数切片 ∕ `ev:digest` 消化行切片）；
  * **到期触发切片** = timer-wake 阶段 2 增第三分派支（`ev:timer` ⇒ `state.timerNotice[key]` —— 行文 = 交付原文；
  * 行组 `[data-timer]` 与消化行同族；生命期 = 运行期痕（首屏页读整置即失 —— `renderer/page-read.mjs`））；
@@ -9,12 +9,17 @@
  * **页读径出档 `renderer/page-read.mjs`**（「对齐第二批」拆分产出 —— 硬限 500 顶格，在册预案本批执行：
  * `applyPage` / `blockOfMessage` 两消费面改引该档 = `renderer/mount-sessions.mjs` / 测试面；本档不引页读档，无环）；
  * **子 agent 归约径出档 `renderer/subagent-reduce.mjs`**（同批续拆 —— 子 agent 面（`ev:subagent` / `ev:subchunk`）
- * + 池读数两助手纯搬移；本档反向引该档两分派支 + 两助手，无环）。
+ * + 池读数两助手纯搬移；本档反向引该档两分派支 + 两助手，无环）；
+ * **模式位归约径出档 `renderer/events-flags.mjs`**（输入面板上提批 · §2.4 Q8 ∕ §2.7「裁定②本批承接」——本档 498 行
+ * 距 500 硬限余 2，`ev:flags` 归约须先出档：`applyFlags` ∕ `sameRecord` 迁入该档，`ev:flags` 归约体（`onFlags`）随迁；
+ * 本档引两件 + re-export 两件保名面，无环）。
+ * **状态面归约径出档 `renderer/events-status.mjs`**（R4：两切片先出档 —— 两归约体 + 活动恢复即清清点迁入该档；本档引三件分派 + 前置清点一行，无环）。
  *
  * 导出面（`docs/desktop/design/RENDERER.md` §1.1 事件归约面条 —— 订阅接线一发已拆出同源档）：
  *   `reduce(state, ev, now)`   纯归约（零 DOM / 零 IPC ⇒ 平 node 直测）；无变化 ⇒ **原引用**
- *   `applyFlags(state, key, flags)`  模式位切片写（**纯动作** —— 状态栏对齐批：页读 / 出站回执两径同点；`flags` 非载体 ⇒ 零写）
- *   `sameRecord(a, b)`         读数同值判（浅比 —— 页读径 `applyFlags` 与归约面读数槽共用 —— 单一实现零副本）
+ *   `applyFlags(state, key, flags)`  模式位切片写（**纯动作** —— 状态栏对齐批：页读 / 出站回执 / `session:flags`
+ *                              回执三径同点；`flags` 非载体 ⇒ 零写）——**re-export 自 `renderer/events-flags.mjs`**
+ *   `sameRecord(a, b)`         读数同值判（浅比 —— 页读径与归约面读数槽共用 —— 单一实现零副本）——同上 re-export
  *   `openSession(state, key)`  `activeSession` 写者（置键 / `null` 关页 + 清本键 `done` 位标）
  *   `clearApproval(state, promptId)`  出站成功后摘项（写者表隐含 —— 见 §2.11⑦；调用面 = `renderer/mount-pool.mjs`）
  *   `clearQuestion(state, key)`  提问出场 ⇒ 摘本键项 + 清本键 `approval` 位（两调用面 = 出站 `ok` 真 ∥ `stopped` 终局；
@@ -42,11 +47,15 @@ import { badgeStamps } from "./badges.mjs"
 // 子 agent 归约径（「对齐第二批」续拆产出 —— 子 agent 面两分派支 + 池读数两助手）；本档 `reduce` 分派两通道，
 // `withPool` / `openSession` / 待决两族引两助手（单一实现零副本）。
 import { liveCount, onSubagent, onSubchunk, poolOf } from "./subagent-reduce.mjs"
+// 模式位归约径出档（本批拆分产出 —— 输入面板上提批 §2.4 Q8）：`ev:flags` 归约体 + 两共件居该档；本档引 `onFlags`
+// 分派 + `sameRecord`（四读数槽用）并 re-export 两件（名面不变 —— 页读 / 出站两消费面零改）。
+import { onFlags, sameRecord } from "./events-flags.mjs"
+export { applyFlags, sameRecord } from "./events-flags.mjs"
+// 状态面归约径出档（R4 —— 本批拆分产出）：两归约体 + 活动恢复即清清点居该档；本档引三件分派（见 `reduce`）。
+import { expireStatusText, onCompress, onStatusText } from "./events-status.mjs"
 
 /** 活流块 id 派生前缀（页块 id 域 = 核给（工具 id）/ 缺省无 —— 两域不混）。 */
 const LIVE_ID = "live-"
-/** 模式位载荷键白名单（回执 `flags` 四布尔 —— `docs/desktop/design/IPC.md` §2「模式位投影注」项 2 四键）。 */
-const FLAG_FIELDS = ["planMode", "autoApprove", "advisorGuard", "engineering"]
 /** 审批池条目键白名单（零新键 —— 消费面 `views/approval.mjs` / `views/activity.mjs` 读取集）。
  *  **对齐第三批增两键**：`owner`（子代理门归属串 —— 核 `opts.owner.label` 原样）/ `diff`（核 `diffInfo` 原样）
  *  —— 载荷不携 ⇒ 键缺席（消费面按缺省零节点落形）。 */
@@ -88,7 +97,7 @@ function clearCursor(state) {
   return hit ? { ...state, blocks: next } : state
 }
 
-// ─── 纯归约（十六通道 → 切片）────────────────────────────────────
+// ─── 纯归约（二十一通道 → 切片）────────────────────────────────────
 
 /** `ev:reasoning`——推理块增量（R3c · D19 · `docs/desktop/design/IPC.md` §1 该行）：续写判据 = **尾块 `kind === "reasoning"`**（与正文同形）；
  *  否则起新推理块；键门同 `onToken`（非活动会话零落）。 */
@@ -184,15 +193,6 @@ function onApproval(state, ev) {
   const withItem = withPool(state, { approvals })
   const stamps = badgeStamps(withItem.tabBadges ?? {}, ev.key, "approval", true)
   return stamps.changed ? { ...withItem, tabBadges: stamps.badges } : withItem
-}
-
-/** 对象读数同值判（浅比 —— 键数 + 逐键 `Object.is`）：读数槽同值 ⇒ 原引用（零重绘）。
- *  **共用件**：页读径 `applyFlags`（`renderer/page-read.mjs`）同引 —— 单一实现零副本。 */
-export function sameRecord(a, b) {
-  if (a === null || typeof a !== "object" || b === null || typeof b !== "object") return false
-  const keys = Object.keys(a)
-  if (keys.length !== Object.keys(b).length) return false
-  return keys.every((key) => Object.is(a[key], b[key]))
 }
 
 /** 读数槽写（R3a 状态行读数槽通用形）：`value` 非 `null` ⇒ 首写自种 / 同键同值原引用 / 否就地替换；`value === null` ⇒ **清本键**（载荷缺省 / 形非法 ⇒ 该段零节点 —— `docs/desktop/design/IPC.md` §1「两键缺省 ⇒ 零节点」，禁假造）。 */
@@ -301,7 +301,8 @@ function onTimer(state, ev) {
 /** `ev:queue` —— 排队面镜面两形（「回合中插入」批 · 单源 = `docs/desktop/design/PROJECT.md` §2 KD-40 ④）：
  *  ① **状态形**（`{ key, items }`）⇒ 本键镜面整置（快照整置 · 幂等 —— 权威 = 宿主，渲染面零本地队）；
  *  ② **消费回执形**（+ `delivered`）⇒ 镜面整置 ∧ 降级码切片随动（在场 ⇒ 置位 ∕ 缺 ⇒ 清）∧ **用户块入流**
- *  （键门 = 活动会话；块形与回放同形 · 文本 = `delivered.text` 逐字）∧ **并笔回底**（直发 ∕ 回执两径同判）；
+ *  （键门 = 活动会话；块形与回放同形 · 文本 = `delivered.text` 逐字）∧ **并笔回底**（直发 ∕ 回执两径同判）——
+ *  **消费前流内零块**（收正轮 B12 新口径：待发送件住输入区带，消费时刻才入流 ⇒ 本径恒追加恰一枚）。
  *  非串 `key` / 非数组 `items` ⇒ 原引用（形不合零写）；空快照（消费殆尽 ∕ 会话中止清队）⇒ 镜面落空。 */
 function onQueue(state, ev) {
   const key = typeof ev.key === "string" && ev.key !== "" ? ev.key : null
@@ -427,6 +428,8 @@ function onLedger(state, ev) {
 export function reduce(state, ev, now = Date.now()) {
   const channel = typeof ev?.channel === "string" ? ev.channel : null
   if (channel === null) return state
+  // 活动恢复即清（statusText —— VSC 同清单七时点；判据单源 = `events-status.mjs` `expireStatusText` + 本档 `isTurnTail`）
+  state = expireStatusText(state, channel, ev, isTurnTail(ev))
   switch (channel) {
     case "ev:token": return onToken(state, ev)
     case "ev:reasoning": return onReasoning(state, ev)
@@ -446,23 +449,12 @@ export function reduce(state, ev, now = Date.now()) {
     case "ev:usage": return onUsage(state, ev)
     case "ev:ledger": return onLedger(state, ev)
     case "ev:subagent": return onSubagent(state, ev, now)
+    // 模式位推送（本批承接 —— 归约体出档 `renderer/events-flags.mjs`；三径同点写之一）
+    case "ev:flags": return onFlags(state, ev)
+    case "ev:statusText": return onStatusText(state, ev)
+    case "ev:compress": return onCompress(state, ev)
     default: return state
   }
-}
-
-// ─── 模式位切片写（纯动作 —— 两径同点）────────────────────────────────────────
-
-/** 模式位切片写（**纯动作** —— 状态栏对齐批 · `docs/desktop/design/IPC.md` §2「模式位投影注」项 4/5）：
- *  页读（`renderer/page-read.mjs` `applyPage`）与出站回执（`renderer/mount-pool.mjs` `submitVerdict`）**两径同点** —— 切片变 ⇒ 状态行重挂。
- *  `flags` 缺席 / 非载体 ⇒ **零写**（禁假造）；逐项只收严格布尔（非布尔 ⇒ 该键不落）；同值 ⇒ **原引用**（零重绘）。 */
-export function applyFlags(state, key, flags) {
-  if (flags === null || typeof flags !== "object" || Array.isArray(flags)) return state
-  if (typeof key !== "string" || key === "") return state
-  const record = {}
-  for (const field of FLAG_FIELDS) if (typeof flags[field] === "boolean") record[field] = flags[field]
-  const table = state.sessionFlags ?? {}
-  if (sameRecord(table[key], record)) return state
-  return { ...state, sessionFlags: { ...table, [key]: record } }
 }
 
 // ─── 会话键写者（`activeSession`）──────────────────────────────────────────

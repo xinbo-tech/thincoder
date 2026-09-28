@@ -16,6 +16,13 @@ import { currentCwd } from "./projects.mjs"
 // 会话维护线（R1 · 桌面功能对位批）：启动拍供面（GC ∕ 索引两枚延迟拍 —— 处理体同档）。
 import { scheduleSessionMaintenancePasses } from "./session-maintenance.mjs"
 import { createWindow, probesSatisfied, runSmoke } from "./window.mjs"
+// 提示锚取值表（R4 · 桌面功能对位批 · #519）：核缝供值面（`prompt-files.mjs` `configurePromptInjections`）。
+import { configurePromptInjections } from "@thincoder/core/prompt-files.mjs"
+import { DESKTOP_PROMPT_INJECTIONS } from "./prompt-injections.mjs"
+
+// 提示锚注册：**进程入口、任何装配之前**一次性（先例 = CLI `bin/thincoder.mjs:32` ∕ VSC `extension.mjs:92`）——
+// 调用期应用（工具表装配晚于本行）⇒ 无导入序要求；漏配 ⇒ 锚字面静默进模型工具描述。
+configurePromptInjections(DESKTOP_PROMPT_INJECTIONS)
 
 const SMOKE = process.argv.includes("--smoke")
 const TIMEOUT_MS = 20_000
