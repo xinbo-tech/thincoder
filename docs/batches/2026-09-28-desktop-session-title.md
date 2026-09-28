@@ -38,6 +38,13 @@
 - **观察处置**：① ~41 条存量悬空（styles.css 系 ∕ sessions ∕ tabbar ∕ info-row 等）——桌面四档面归对位批 **#22**（在跑）清扫，余量入台账；② **D 号计数面**（设计档档头 ∕ §6.1 表头 D1–D25 vs 需求已 D1–D26）→ 转 **#22**（其射程含 `PROJECT.md`；若跨档 ⇒ 停并报）；③ 在途时序（turn-face ≈129 ⇒ 接线后 ≈139）已按符号吸收 ✓。
 - **实施舱**：#19 排队（等 #8 让出 `turn-face.mjs`）——修正在其落笔前已入档 ✓。
 
+### 1.7 实施舱 #19 交付收下 + 落位（父侧 · 2026-09-29 00:4x）
+- **交付**（#19 · 终态 clean · fix 0）：`turn-face.mjs` 129 ⇒ **140**（`settleTurn` 单实现 `:55-60`——四步：查位 → `ensureSessionTitle` → 再查位 → `saveAgentSlot`；两 save 点 `:124` ∕ `:128` 原地一对一替换）；B2 四读面读数在册；内审 1 轮 clean + 代码评审 1 轮 pass（🟡1 消解于 §5；🔵3 记录）。
+- **落位（裁定 ② 兑现）**：暂存件 `.thincoder/tmp/2026-09-28-desktop-session-title.test.mjs`（sha256 `e2670f2c…`）→ `docs/batches/2026-09-28-desktop-session-title.test.mjs`（copy 零改字节）；**终位复跑 6/6 · 0 fail · 0 skip**（父侧亲跑 · ≈747ms）。
+- **父侧抽验**：`settleTurn` 四步 ∕ 两调用点 ∕ `:114-116` 续跑换代 ∕ `:126` 终局事件序——逐行实读吻合 ✓。
+- **设计面订正（舱列 · 非阻断）**：§2.10 ④∕⑥ 坐标与数面滞后（129 ∕ `:113` ∕ `:117` ∕ ≈139 ⇒ 实 = **140 内容行** ∕ `:124` ∕ `:128`）——届盘 ∕ 设计面微轮收正。
+- **台账**：#517 在途 → **待核销**（已核验）；写门暂存机制首用（台账 #545 在册）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：✅ 设计完成 2026-09-28（KD-41 ∕ §4.2 ∕ §6.1 ∕ §7 T-DSK46 ∕ §10 BO+BP 已落 PROJECT.md；SESSION.md §6.7 三端收正；§2.9 并发写披露 + §2.10 正文收正轮（2026-09-29 · 实施前复核 8 条 · 以 §2.10 为准））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -195,4 +202,62 @@ VERDICT: pass
 **批准**：用户 2026-09-29 00:04 回「批」——本批实施批准生效。依据 = §3 设计评审 VERDICT pass（在册 `:139`）+ §2 设计完成（KD-41 ∕ T-DSK46 在册）。实施 = eng-coder（`turn-face.mjs` 一处接线 + B2 联动面核验）；令牌因宿主进程崩溃需重签发（评审重跑在飞——父侧 00:04 点火）。
 
 ## §5 实施记录（eng-coder）
+
+**状态行**：实施完成（B1 接线已落：`turn-face.mjs` 129 ⇒ 140 内容行 · E1–E6 六例 3 连跑 6/6 绿 · B2 四读面核验在册 · 批次本地件暂存待父侧落位（裁定 ①②）· 内部审计 1 轮 clean + 代码评审 1 轮 pass · fix round 0 · 终态 clean · 2026-09-29）
+
+### 5.1 改动面（逐档表）
+
+| 档 | 现状 ⇒ 预期 | 实读 | 构成 |
+|---|---|---|---|
+| `thincoder-desktop/src/main/turn-face.mjs` | 129 ⇒ ≈139 | **129 ⇒ 140**（内容行口径；`read` 工具报 141 = 含文末空行位） | 核件导入 1（`:28`）+ 档头注 2（`:8-9`）+ `settleTurn` 8（`:53-60`：JSDoc 2 行 + 体 6 行）；两 save 点**原地一对一替换**（净 0——设计表「两调用点净 −2」未发生）：`:124` 成功径 ∕ `:128` catch 径 |
+| `.thincoder/tmp/2026-09-28-desktop-session-title.test.mjs`（批次本地件 · 暂存） | 新档 | 285 行 · 13739 字节 · sha256 `e2670f2cd6ccde846652ab5abaa5ef917abfae588a1f0094b62cd7cd7380fd7d` | 六例 E1–E6（换桩自持 · 沙箱 = `_setSessionsDirForTest`） |
+| 其余（核件 ∕ `session-io` ∕ `session-lifecycle` ∕ `session-store` ∕ `ipc` ∕ `agent-host` ∕ B2 四读面 ∕ `thincoder-desktop/test/**`） | 零改 | 零改 | `git diff` 实读：本舱唯一产品码改动 = `turn-face.mjs` |
+
+**`settleTurn` 实读**（`:55-60`，与 §2.2(a) 片断逐句同形）：① `revokedTurn` 入位查位 ⇒ ② `await ensureSessionTitle(agent)` ⇒ ③ `revokedTurn` 落盘前查位 ⇒ ④ `saveAgentSlot(agent)`；成功 ∕ catch 两径同源 ⇒ U-7 零写语义原样；结算序（标题 → 落盘 → 读数 → 终局事件）两径同序未动（`:124-126` ∕ `:128-131`）。单点接线核验：`createTurnFace` 仅 `turn-driver.mjs:66` 一实例 ⇒ 四类回合尾同点接。
+
+### 5.2 六例读数（`node --test .thincoder/tmp/2026-09-28-desktop-session-title.test.mjs` · 仓根）
+
+3 连跑 = **6/6 pass · 0 fail · exit 0**（duration ≈0.61–0.64s；无 flake）。逐例：**E1** 链路（`agent.title` 非空 ∧ 槽 `title` 非空 ∧ `listSessions` 行非空 ∧ 桩计数 1）· **E2** 时序（标题窗内 `sessions` 根零写 ∧ `ev:activity done` 发射当场槽已携标题）· **E3** 短路（装载态桩计数 0 ∧ 标题不改写）· **E4** 失败两形（前置缺 ⇒ 计数 0；网络抛 ⇒ 计数 1 ∧ 零标题零阻断；两形正常结算 ∧ 零 `ev:error`）· **E5** 窗内忙态（窗期 `busyOf` 真 ⇒ 二次 `send` 回执 `{ok:true,queued:true}` ∧ 续发不丢 ∧ 用户块入流 ∧ 二回合零二次生成）· **E6** 窗内中止（`dispose` 后槽文件字节零变 ∧ title 仍空）。
+
+判别力（评审加验）：E2 窗内零写断言在「先落盘后标题」实现下必红；E6 在缺第③查位下必红；E3 ∕ E1 计数构成正负配对。
+
+### 5.3 B2 四读面读数（零码改 · 逐面实读）
+
+| 面 | 坐标 | 读数 |
+|---|---|---|
+| 通知标题 | 核 `notify-policy.mjs:44-45`（端 `src/main/notify.mjs` = 11 行 re-export） | 活读 `agent.title`，非空才携 `payload.title` ⇒ 接线后档①通知携会话标题；不可得 ⇒ 零携原样 |
+| 列表刷新 | `renderer/events-subscribe.mjs:51`（`refreshTitles`）∕ `:70`（`isTurnTail` ⇒ 调） | 回合尾事件 ⇒ `sessions:list` 重读 ⇒ `store.set({sessions})`；E2 已证终局事件当场槽已携标题 |
+| 会话标题 span | `renderer/views/session-control.mjs:56` ∕ `:67` ∕ `:138` | 行标题非空取之，空 ⇒ `rail.session.untitled`（`:56`）；`:67` 活动行投影；`:138` 选择器 span |
+| 状态行 `title` 段 | `renderer/views/statusline.mjs:182`（段 13） | 行标题非空取之；无行 ⇒ `:181` 零节点；空 ⇒ 缺省词原样 |
+
+列表读面另经核链复核：`session-slots.mjs:210` `title: meta.title ?? ""` ⇒ `sessions.mjs:23` `title: entry.title`（新标题即证）。
+
+### 5.4 落位（门冲突 · 沿父侧裁定 ① ②）
+
+- 指定终位 `docs/batches/2026-09-28-desktop-session-title.test.mjs` 的写入被系统写门拒（拒文「cross-batch batch-record write」；判据 = 子写者对批次基底内非绑定档 fail-closed）——不绕门，已上抛、裁定归父侧。
+- 现形：终稿内容暂存 `.thincoder/tmp/2026-09-28-desktop-session-title.test.mjs`（与终位同为两层深 ⇒ 相对 import 逐字一致，copy 无须改字节；档头 `:3` 复跑命令已按终位书写）。
+- 终位落位 = 父侧（depth 0 免门）；落位后按终位名复跑即可取同读数。
+
+### 5.5 决策透明表
+
+| # | 决策 | 由据 |
+|---|---|---|
+| 1 | E4 采两形同例（形 A = 前置缺〔设计主形〕；形 B = 网络抛〔派单 E4 表述〕）——并集非简化 | 设计 §2.4 E4 + 派单；两形皆「非致命」正证 |
+| 2 | 测试件暂存 + 父侧落位（不绕门、不改指定名 ∕ 落点） | 用户裁定 ① ②；写门 fail-closed |
+| 3 | 行数如实报 140（内容行）vs 设计预期 ≈139——不凑数、不改设计档 | 设计档 §2.10 订正 ⑥「≈」口径；文档笔归设计 ∕ 父侧 |
+
+### 5.6 审计与评审轮次（终态 = clean）
+
+- 内部审计（explore · 只读 · 1 轮）：四类偏差零发现（四步序 ∕ 六例语义 ∕ 越界 ∕ Δ 核对）——clean，零修正。
+- 内部代码评审（advisor · 1 轮）：无 🔴；🟡 1（§5 段空——本笔即补）+ 🔵 3（坐标滞后 ∕ 暂存待落位 ∕ 内存 title 赋值记录项）；VERDICT pass。
+- **fix round = 0**（无代码修正：🟡 由本 §5 落笔消解；🔵 全为记录项 ∕ 父侧笔）。
+
+### 5.7 记录项（评审 🔵 #4 建议句）
+
+窗内中止（`dispose` ∕ 切项目）= **槽零写**；内存 `agent.title` 可已赋值（生成先于第③查位；代次墓碑下不可落盘——回合起跑重 `stamp`，陈旧实例纵复用亦不落错值）。
+
+### 5.8 义务句
+
+not repo-suite verified — the parent-side closeout run is the only repo-suite run.
+
 ## §6 验证与收口（父代理）
