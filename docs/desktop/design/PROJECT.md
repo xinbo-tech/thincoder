@@ -225,7 +225,7 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
   `thincoder-desktop/test/views-activity.test.mjs`（**339**——存量越线补登（实读 2026-09-28）；预案 = 池面用例拆分〔档名实施批定〕；消解窗口 = 该档下次被触碰的批）·
   `thincoder-desktop/renderer/i18n.mjs`（**470**（实读 2026-09-28——「对齐第二批」落）——**在册预案本批落形**：本批新增词族入 `thincoder-desktop/renderer/i18n-views.mjs`（拟新增）· 本体余族续期）· `thincoder-desktop/renderer/store.mjs`（**333**（实读 2026-09-28——两座落后）——预案 = 队列面拆 `thincoder-desktop/renderer/queue.mjs`（拟新增））·
   `thincoder-desktop/renderer/events.mjs`（**456**（实读 2026-09-28——align-2 拆档（`page-read.mjs`）已落；「回合中插入」批 ≈466）——预案 = 页读径已拆 · 续期预案 = 子 agent 归约径拆 `thincoder-desktop/renderer/subagent-reduce.mjs` ∕ 队列归约落 `thincoder-desktop/renderer/queue.mjs`；消解窗口 = 该档下次被触碰的批）·
-  `thincoder-desktop/renderer/mount-composer.mjs`（**362**（实读 2026-09-28）——预案 = **待定**〔在册——越线随批补登；拆档 = 结构改动，归父侧裁〕）·
+  `thincoder-desktop/renderer/mount-composer.mjs`（**322**（实读 2026-09-28——「回合中插入」批落形：发送面拆出 `thincoder-desktop/renderer/composer-send.mjs`）——拆后仍越 300 ⇒ 续拆评估在册）·
   `thincoder-desktop/test/views-settings.test.mjs`（**446**——预案 = 用例面拆出〔档名实施批定〕；新档须动 `thincoder-desktop/test/files.mjs` / `thincoder-desktop/test/run.mjs`——只登记、不建新档）· `thincoder-desktop/test/views-question.test.mjs`（**364**（实读 2026-09-28）——预案 = 提问面用例拆出〔档名实施批定〕）·
   `thincoder-desktop/test/store.test.mjs`（**339**（实读 2026-09-28——两座落后）——预案 = 拆 `thincoder-desktop/test/store-queue.test.mjs`（拟新增））· `thincoder-desktop/test/views-tabbar-close.test.mjs`（**317**——预案 = 页随动例拆出〔档名实施批定〕）；
   `thincoder-desktop/test/views-chrome-vocab.test.mjs`（**320**（实读 2026-09-28——账本警示面 +4）——预案 = 词表面用例拆分〔档名实施批定〕）· `thincoder-desktop/test/host-floor.test.mjs`（**313**（实读 2026-09-28——桌面空闲唤醒批受触档）——预案 = 臂清单族拆分〔档名实施批定〕· **消解窗口已到**〔本批触碰 ⇒ 执行 ∕ 续期归父侧裁——代码面改动，本舱零码改不落；二择一给由 = 批档 §2.11〕）；
