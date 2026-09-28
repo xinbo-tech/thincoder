@@ -30,6 +30,18 @@ ctx.sessionDropdown.addEventListener("click", (e) => {
 
 function buildSessionDropdown() {
   ctx.sessionDropdown.innerHTML = ""
+  // LEDGER-RELIABILITY（§6.25 判据句 4 · VSC 接线）：账本异常 ⇒ 首行警示注记——**非可点条目**
+  // （裸 `div`：零 role / 零 tabindex / 零 handler）；缺席 ⇒ **零节点**（异常清 ⇒ 注记消失——零历史态）。
+  // 文案 = `ledgerNoticeText`（主句 + `scene === true` 条件附句——两键合成；修正轮 · `WEBVIEW-PROTOCOL.md` §6.3）。
+  if (ctx._ledger) {
+    const notice = document.createElement("div")
+    notice.className = "session-ledger-notice"
+    notice.setAttribute("data-ledger-notice", "")
+    notice.style.padding = "6px 10px"
+    notice.style.opacity = "0.7"
+    notice.textContent = ledgerNoticeText(ctx._ledger)
+    ctx.sessionDropdown.appendChild(notice)
+  }
   for (const s of ctx._sessions) {
     const item = document.createElement("div")
     item.className = "session-item"
@@ -37,8 +49,10 @@ function buildSessionDropdown() {
     item.setAttribute("role", "option")
     item.setAttribute("aria-selected", String(!!s.active))
     if (s.active) item.classList.add("active")
+    // LEDGER-RELIABILITY（§6.25 判据句 4）：计数不可得（`null`）⇒ 「—msgs」占位（禁显示 0 / 裸 null）
+    const msgs = s.count == null ? "—msgs" : `${s.count}msgs`
     item.innerHTML = `<span class="session-item-title">${escHtml(s.title)}</span>
-      <span class="session-item-meta">${s.provider ? escHtml(s.provider) + " · " : ""}${s.count}msgs${s.updated ? " · " + fmtDate(s.updated) : ""}</span>`
+      <span class="session-item-meta">${s.provider ? escHtml(s.provider) + " · " : ""}${msgs}${s.updated ? " · " + fmtDate(s.updated) : ""}</span>`
     item.innerHTML += `<button class="session-rename" title="${t("session.rename")}" aria-label="${t("session.rename")} ${escHtml(s.title)}">✎</button>`
     if (ctx._sessions.length > 1) {
       item.innerHTML += `<button class="session-delete" title="${t("session.delete")}" aria-label="${t("session.delete")} ${escHtml(s.title)}">✕</button>`
@@ -69,6 +83,19 @@ function buildSessionDropdown() {
     empty.style.opacity = "0.5"
     ctx.sessionDropdown.appendChild(empty)
   }
+}
+
+/**
+ * 账本警示注记文案（修正轮 · 承 `WEBVIEW-PROTOCOL.md` §6.3）：主句 + **`scene === true` 时条件附句**
+ * （两键合成；`scene` 缺 / false ⇒ 仅主句——与 CLI 条件附句同口径）。
+ * 分隔符随语种：zh「；」/ en「; 」——webview 无 locale 标识（i18n 面只投已解析字串），
+ * 故取主句**模板**字面自判（含汉字 ⇒ zh——判据与 `${reason}` 取值无关）。
+ */
+function ledgerNoticeText(ledger) {
+  const main = t("session.ledgerNotice", { reason: ledger.reason })
+  if (ledger.scene !== true) return main
+  const sep = /[\u4E00-\u9FFF]/.test(t("session.ledgerNotice")) ? "；" : "; "
+  return main + sep + t("session.ledgerNotice.scene")
 }
 
 /** Inline confirmation popover for session deletion (reuses the AUTO popover style). */

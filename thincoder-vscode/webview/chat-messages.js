@@ -131,6 +131,8 @@ export function initMessageLoop(deps) {
       case "sessions":
         ctx._sessions = m.sessions || []
         ctx.activeSession = m.active || 0
+        // LEDGER-RELIABILITY（§6.25 判据句 4 · VSC 接线）：账本异常注记载荷（异常才携——缺席 ⇒ null）
+        ctx._ledger = m.ledger ?? null
         updateSessionTitle()
         break
       case "project":          handleProjectMessage(m); break

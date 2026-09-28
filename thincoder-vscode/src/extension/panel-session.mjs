@@ -18,6 +18,8 @@ import { migrateLegacySettings } from "./migrate-settings.mjs"
 import { stripEditorInjection } from "./editor-context.mjs"
 import { stripAtRefs } from "./file-refs.mjs" // F-W15：@ 引用还原（与产者同档）——恢复面显示消费面（标题源剥离面随写面迁至 panel-session-write.mjs）
 import { mergeAdjacentAssistantEchoes } from "@thincoder/core/context.mjs"
+// LEDGER-RELIABILITY（账本可靠批 · SESSION.md §6.25 判据句 4）：账本健康出口（异常可见信号面）
+import { ledgerHealth } from "@thincoder/core/session.mjs"
 import { _cwd } from "./panel-messages.mjs"
 // 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：⑤⑥ + 派生面（leaf——无环）
 import { hasWorkspaceFolder, pushWorkspaceGuard } from "./workspace-guard.mjs"
@@ -246,7 +248,15 @@ export function pushSessions(panel) {
       active: s.slot === highlight,
     }))
     // active = 绑定槽号；零探测冷路径可返 null（F-MI7）= 无高亮行（webview 容 null ✓）
-    panel._panel?.webview.postMessage({ type: "sessions", sessions, active: ensureSlot(panel) })
+    // LEDGER-RELIABILITY（§6.25 判据句 4 · VSC 接线）：账本异常 ⇒ 载荷**增字段** `ledger`
+    // （`{ refused, reason, scene }`——**异常才携**：正常 = 键缺席；判据单源 = 核 `ledgerHealth(cwd)`）。
+    // 消费 = 会话下拉首行警示注记（`webview/session-bar.js`——非可点；文案键 `session.ledgerNotice`）。
+    // 内联字面发弹（非变量载荷）——协议面机检（`test/protocol-coverage.test.mjs`）要求发射点可解析到 `type`。
+    const lh = ledgerHealth(cwd)
+    const ledger = (lh.refused > 0 || lh.scene)
+      ? { refused: lh.refused, reason: lh.refused > 0 ? lh.lastReason : "scene", scene: lh.scene }
+      : null
+    panel._panel?.webview.postMessage({ type: "sessions", sessions, active: ensureSlot(panel), ...(ledger ? { ledger } : {}) })
   }
 
 /**

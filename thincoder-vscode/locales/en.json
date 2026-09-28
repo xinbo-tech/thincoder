@@ -9,6 +9,8 @@
   "session.renamePlaceholder": "Session title",
   "session.renameTooLong": "Title is too long (max 60 characters)",
   "session.generatingTitle": "generating title…",
+  "session.ledgerNotice": "Session ledger anomaly (${reason}) — opening a session self-heals it",
+  "session.ledgerNotice.scene": "Corrupted-scene files kept 30 days",
   "input.placeholder": "Ask ThinCoder... (Shift+Enter for new line)",
   "input.busyPlaceholder": "Main session busy — Enter submit is restricted — you can keep typing",
   "input.slotFull": "Task running — the queue is full (8 messages); wait for them to be processed before submitting again.",

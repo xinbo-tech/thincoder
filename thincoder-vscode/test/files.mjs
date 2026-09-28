@@ -64,8 +64,8 @@ export default [
   "test/async-parity.test.mjs", // 第 35 批（2026-09-11）：VSC async 子代理保真（GitHub #6）——spawn ack 契约锁 + 类型守卫 + 只清已死（丢弃提醒/墓碑/ev:discarded）+ status 四终态回显 + dependsOn depc 停靠 + digest 轮 AbortError 容忍 + 症状1 现状锁（T-D1~T-D10）
   "test/md-render-escape.test.mjs", // 第 34 批（2026-09-11）：VSC webview 行内代码字面量契约 + 转义回归（GitHub #7）——行内代码不被后续替换二次处理（esc-first 保持）+ 转义面钉死——T-H1~T-H15 + AC-H5 接线（WEBVIEW.md §10）
   // 批次二（可移植性 VSC 镜像面——2026-09-11）：VP-1–VP-12 落地机判面（PORTABILITY.md §6/§7）
-  "test/portability-vsc-classification.test.mjs", // T-V01–T-V06 + AC-V01/V02/V03：分类唯一权威（嵌套/声明/损坏回退）+ 门禁拒绝与声明切换 + 静态副本扫描
-  "test/portability-vsc-advisor-context.test.mjs", // T-V07–T-V13 + AC-V04/V05/V09/V11：注入在场/三条降级句/声明优先/非 git 降级 + 文档门禁校验 + 两条文案 + 拆分兑现
+  "test/portability-vsc-classification.test.mjs", // T-V01–T-V09 · T-V22–T-V27 + AC-V01/V02/V03：分类唯一权威（嵌套/声明/损坏回退）+ 门禁拒绝与声明切换 + 静态副本扫描 + F9 辅助面同判 + 段匹配面判定表（T-V27）
+  "test/portability-vsc-advisor-context.test.mjs", // T-V11–T-V13 + AC-V11：advisor 文档门禁（documents 放行面 / 非文档拒绝）+ 两条文案（均无 `in docs/`）+ 拆分兑现（findProjectRoot 定位面）
   // 2026-09-15 W8（索引面归一核面）：`portability-vsc-index.test.mjs` 随文件制索引删旧退役（测试纪律①）——unlisted 可见化等业务面按核面承接重述入 `test/memory-index-face.test.mjs`（D3 计数同步）
   "test/provider-timeout-semantics.test.mjs", // 群 A 批 A1（2026-09-11）· W10 改判（2026-09-15）：保留 2 例——调用面 signal 原样/零合成 + 相位参数（经核 chat）；退役 3 例——镜像 parseStream idle 缝随删档（不可稳定驱动）/ 静态源文本断言（PROVIDER.md §4.3）
   "test/expand-home.test.mjs", // 群 A 批 A2（2026-09-11）：`shell` 字段 `~` 展开——形态矩阵（前缀/裸/尾分隔/非分隔符/类型护栏）+ setup 读取点接线与只读归一——T-MA2-1–5（SETTINGS.md §2.7）
@@ -142,5 +142,7 @@ export default [
   // render-core R2 换接批（2026-09-27 · `docs/batches/2026-09-27-render-core-r2.md` · 设计 `docs/render-core/design/RENDER-CORE.md` §6/§7）：核构件层用例宿主 = 消费端套件（核包零 devDep）
   "test/render-core-components.test.mjs", // 核构件（DOM）面直驱——块容器/用户气泡/恢复帧/错误横幅（出站 emit）+ 工具卡三面 + linkify + 审批/提问/面板卡（三出口载荷逐字）+ 推理块 + rAF 缝合器（帧/节流/flush/跟滚脏集）+ 复制钮 + 台账行 + 子代理块结构——RC-B1…RC-S4（14 例）
   "test/render-core-relay-map.test.mjs", // relay 映射差分锁（C2 · §7）：核单源全表逐行（`⟦ev⟧stopped` ⇒ `cancelled` 逐字）+ 状态值闭集负向（零 stopped/error）+ 跨包对拍（扩展侧产者 ∥ 核单源逐 token 同产物——R2 交接项）+ 前缀文法零依赖副本对拍权威——RM-1…RM-4
+  // 账本可靠批（2026-09-28 · `docs/batches/2026-09-28-ledger-reliability.md` §2 / §2.9 · 设计 `docs/core/design/SESSION.md` §6.25 判据句 4）：F-L4 端面可见信号（VSC 半）
+  "test/session-ledger-notice.test.mjs", // L4-8 载荷面（`sessions` 增字段 `ledger`——异常才携；判据单源 = 核 `ledgerHealth(cwd)`）+ 注记面（下拉首行警示注记：非可点 / 缺席零节点 / 异常清零历史态）+ L4-4 计数占位（`—msgs`——禁裸 null）+ 文案键两语逐字（§6.3）
 
 ]

@@ -41,7 +41,7 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 | 模块 | 职责 |
 |---|---|
 | `chat.js` | 编排层（装配 + 全局键 / 点击 + 启动握手）：init 装配（welcome / autocomplete / settings / onboarding / toolbar / 文件链接 / ⏹ 取消委托）+ 命令块 `initMessageLoop(deps)`（**原址**注册消息监听——D-C1）+ `dismissLoadingScreen` 族；启动握手 `webviewReady`（`chat.js:147`——as-of 2026-09-22 structure-debt 拆分轮实读）· **147 行**（`wc -l`） |
-| `chat-messages.js` | host → webview **消息分发循环**（`initMessageLoop`——`window.addEventListener("message")` + `case` 单表整块；D-C2 不拆族）；**234 行**（`wc -l`——as-of 2026-09-22） |
+| `chat-messages.js` | host → webview **消息分发循环**（`initMessageLoop`——`window.addEventListener("message")` + `case` 单表整块；D-C2 不拆族）；**238 行**（`wc -l`——实读 2026-09-28；LEDGER-RELIABILITY 批 +1 ＝ `sessions` 载荷 `ledger` 捕获点） |
 | `chat-status.js` | **显示状态元素一族**（`clearStatusText` / `handleStatusText` / `showCompressStatus` / `showDigestStatus`——压缩状态行 + 状态段 + digest 轮可见面；模块级 `_digestRoundEl` 随迁）；**124 行**（`wc -l`——as-of 2026-09-22） |
 | `streaming.js` | token/reasoning 流式渲染（rAF 节流 + ≥50ms 重排门——核 `flow/stream.mjs:18` / `:36`；端实例 `:28-33`）+ 回合收尾（含未结算工具卡清扫 `sweepUnsettledToolCards`——M1——`:95`）+ 子代理块路由（`subagentChunk` `:169`）+ code-block 复制按钮（核 `flow/stream.mjs:95`） |
 | `ui.js` | 端壳面：欢迎条 / 横幅 + `ctx` 装配（气泡 / 工具卡 / advisor 块经核构件——`thincoder-render-core/flow/block.mjs` / `thincoder-render-core/flow/tool-card.mjs`）+ 滚动族（`scrollDown` / `maybeScrollDown` / `maybeScrollActivity` `:190-193` / `initScrollFollow` `:211-221` / `trimOldMessages` `:199-206`）——leaf：不 import `state.js` |
@@ -84,6 +84,9 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
   会话下拉 `#session-dropdown`（`thincoder-vscode/webview/index.html:30`）列 switch / rename / delete。
   首条消息发送后 LLM 自动生成标题（`thincoder-vscode/src/extension/generate-title.mjs`）；标题未生成前显示自动占位
   （`Session N` + 生成中提示——`send.js:53-54`），生成完成后经 `sessions` 刷新。
+  账本异常注记（LEDGER-RELIABILITY 批）：`sessions` 载荷携 `ledger`（`{ refused, reason, scene }`——异常才携；判据单源 = 核 `ledgerHealth(cwd)`）⇒ 下拉**首行警示注记**（非可点条目——渲染点 `thincoder-vscode/webview/session-bar.js` `buildSessionDropdown`）。
+  文案 = 主句键 `session.ledgerNotice`（含 reason 与「打开会话即自动补回」）**+ `scene === true` 时条件附句键 `session.ledgerNotice.scene`**（「损坏现场档保留 30 天」——与 CLI 同口径：**条件合成，恒附改条件附**），见 `WEBVIEW-PROTOCOL.md` §6.3。
+  **异常清 ⇒ 两腿**（单源 = 核 `ledgerHealth(cwd)`）：`scene` 腿 = 损坏现场档清 ⇒ 注记消失（零历史态）∥ `refused` 腿 = 核**本进程累计**（不清零）⇒ 进程内一旦拒写，注记持续在场**至重启**（有界）。
 - **模型选择 UI**：主下拉列 provider 行 + hover flyout 子菜单选模型（两级菜单——`model-picker.js` / `model-menu.js`）；底部含 add / remove / key 管理入口。
 - **挂起与忙态 UI**：settled → awaitingDigest 驻留（带提示）；digest 回收 → 归档落流；会话退出 = 区全体归档（§5.1）。
   状态行（⏳ 后台 N 子代理 + 待消化计数——`status-bar.js:51-60`）；输入框永不锁（`loading.js`），
@@ -697,3 +700,5 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-09-27（**R1 结算随动 · 设计面收正微轮**）：§3「其余」行 `highlight.js` 除名（R1 删档）+ `lib.js` 改指核包单源；表后补 **R1 迁核注**（六档实现单源 = `@thincoder/render-core`——本端五档 2 行 shim · `highlight.js` 删除）；零语义。
 - 2026-09-27（**R2 结算随动 · 设计面收正微轮 · eng-designer**——承 `docs/batches/2026-09-27-render-core-r2.md`）：§2 / §3 / §5.2 / §5.4 / §5.5 / §5.6 行坐标按 R2 终态随动（`ui.js` / `activity.js` / `streaming.js` / `panels.js` / `activity-view` 相关）；
   §3 八拆档 / 三核档行补 R2 现态 · 表后补 **R2 迁核注**；`chat.css` 两处坐标全路径消歧 + 现盘收正（`:466` / `:337`）。**零新语义**。
+- 2026-09-28（**LEDGER-RELIABILITY 批 · 设计面扩面 · eng-designer**——承 `docs/batches/2026-09-28-ledger-reliability.md` §3 轮次 1 发现 #1）：§4 会话标题条补**账本异常注记**（`sessions` 载荷增字段 `ledger` ⇒ 下拉首行警示注记；非可点条目 / 异常清零历史态；文案键 `session.ledgerNotice`）。**零新消息 / 零既有字段改动**（`ledger` = 异常才携的增字段）。
+- 2026-09-28（**账本可靠批 · 报告面收正轮 · eng-designer**）：§3 文件表 `chat-messages.js` 读数 **234 ⇒ 238**（`wc -l`，实读 2026-09-28——LEDGER-RELIABILITY 批 `ledger` 捕获点 +1）· §4 会话标题条「异常清 ⇒ 注记消失」句收正为**两腿**（`scene` 腿 = 现场清 ⇒ 消失（零历史态）∥ `refused` 腿 = 核本进程累计 ⇒ 在场至重启（有界）；单源 = 核 `ledgerHealth(cwd)`）。零语义（读数刷新 / 口径收正）。

@@ -1,4 +1,4 @@
-import { listSlots, switchToSlot, applySession, renameSlot, activeSlot, slotOccupancy, readEndMarker, sessionDescriptor, loadSlotFile } from "@thincoder/core/session.mjs"
+import { listSlots, switchToSlot, applySession, renameSlot, activeSlot, slotOccupancy, readEndMarker, sessionDescriptor, loadSlotFile, ledgerHealth } from "@thincoder/core/session.mjs"
 import { resolveEngineeringManifest } from "@thincoder/core/manifest.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { restoreLines } from "./startup.mjs"
@@ -58,7 +58,14 @@ export async function handleSessionCommand(ctx) {
     return `${dt.getMonth() + 1}/${dt.getDate()} ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`
   }
   const truncate = (s, n) => (stringWidth(s) <= n ? s : sliceByWidth(s, Math.max(1, n - 1)) + "…")
+  // F-L4（账本可靠批 · SESSION.md §6.25 判据句 4）：账本异常 ⇒ 列表头部警示行（正常 ⇒ 一行不加
+  // ——负断言）；在场条件 = `refused > 0 ∨ scene`（不继承会话计数条件）。文案 = 三端同句（zh 在册字面）。
+  const lh = ledgerHealth(agent.cwd)
+  const ledgerWarn = (lh.refused > 0 || lh.scene)
+    ? `会话账本异常（${lh.refused > 0 ? lh.lastReason : "scene"}）——打开会话即自动补回${lh.scene ? "；损坏现场档保留 30 天" : ""}`
+    : null
   const entries = [
+    ...(ledgerWarn ? [{ type: "header", text: ledgerWarn }] : []),
     { type: "header", text: `Sessions (● = active, ↑↓ select, Enter switch, Esc cancel; /rename <title> renames the active one)` },
     ...slots.map((s) => {
       // 2026-08-31 会诊：行宽必须按显示宽度截断（原按 UTF-16 length 截 40 = 中文 80 格，
@@ -66,7 +73,8 @@ export async function handleSessionCommand(ctx) {
       // wrap → 残影）；title 此前完全不截断（可任意长）也是超宽源，一并宽度截断。
       const rawLabel = s.title || (s.firstMessage ? `"${s.firstMessage}"` : "(empty)")
       const label = truncate(rawLabel, 36)
-      const turns = s.turnCount > 0 ? `${s.turnCount} turns` : "0 turns"
+      // 计数不可得（`null`）⇒ 「— turns」占位（禁显示 0——真 0 与未知可分；§6.25 判据句 4）
+      const turns = s.turnCount == null ? "— turns" : `${s.turnCount} turns`
       const when = shortDate(s.updatedAt)
       const model = s.activeProvider ? ` — ${s.activeProvider}` : ""
       const marker = s.slot === highlightSlot ? " ●" : ""
