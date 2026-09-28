@@ -1,7 +1,9 @@
 /**
  * settings.mjs — 主侧设置族四通道：`config:write`（仅语言面）/ `model:list`（逐模型档位投影）/
  * `settings:agent`（agent 参数族读 + 写 + 档位意图级写）——外加两道端侧单点：配置档存在性读数
- * `isConfigured()` 与密钥遮罩 `maskKey()`；另出 `deepEqual` 供档位投影复用（同判据单点）。
+ * `isConfigured()` 与密钥遮罩 `maskKey()`；另出 `deepEqual` 供档位投影复用（同判据单点）；
+ * **R2 增 `indexStatus()`**（`index:status` 回执 —— 索引状态读数装配：计数转口 `index-status.mjs`
+ * 〔核只读出口〕+ `hasEmbedder` 配置面判据）。
  *
  * 纪律（批档 §2.3/§2.5）：
  * - **写面唯一执行体** = 核 `writeConfigAtomic`（`thincoder-core/config-io.mjs:59`，
@@ -28,6 +30,7 @@ import { channelUnavailableMessage, listModels } from "@thincoder/core/provider/
 import { specForModel } from "@thincoder/core/model-specs.mjs"
 import { thinkOffPath, thinkOffShape } from "@thincoder/core/think-off.mjs"
 import { isSensitiveKey, _checkKnownKeyValue } from "@thincoder/core/agent-tools/settings.mjs"
+import { readIndexCounts } from "./index-status.mjs"
 
 /** 遮罩字面量（与核 `agent-tools/settings.mjs:19` `MASKED` 同形——核未导出，端侧自持）。 */
 export const MASK = "••••（masked）"
@@ -215,6 +218,21 @@ function tierAgent(config, tier) {
   }
   if (!w.ok) return { ok: false, reason: w.reason, fields: agentFields(loadConfig()) }
   return { ok: true, reason: null, fields: agentFields(loadConfig()) }
+}
+
+/**
+ * `index:status`（无入参）⇒ `{ ok, status }`（R2 · 桌面功能对位批）：状态读数**装配** —— 计数 = 核只读
+ * 出口（转口 `index-status.mjs`，**端侧零 SQL ∕ 零表名**）；`hasEmbedder` = 配置面判据（`embedding.apiKey`
+ * 在场 —— 同 `agent-assemble.mjs:68` 装配判据）；`built` = 本项目 code + doc 文件数 > 0（核出口 `indexed`
+ * 同源）。无本项目 ⇒ 零计数（读数仍成回执 —— 「未建」态非错误；跨项目读全库不授权）。
+ */
+export function indexStatus({ dir = null } = {}) {
+  const config = loadConfig()
+  const counts = readIndexCounts({ dir })
+  return {
+    ok: true,
+    status: { built: counts.indexed, files: counts.files, chunks: counts.chunks, hasEmbedder: Boolean(config.embedding?.apiKey) },
+  }
 }
 
 /**

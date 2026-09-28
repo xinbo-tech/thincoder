@@ -1,5 +1,5 @@
 /**
- * ipc.mjs — IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）：**三十三项** = 配置读取 + 项目面
+ * ipc.mjs — IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）：**三十五项** = 配置读取 + 项目面
  * `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` / `session:switch` /
  * `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` + 作答响应
  * `question:respond` —— `question` 工具真作答面 + 历史页 `history:page`
@@ -11,6 +11,8 @@
  * `file-links.mjs` 零改）· `at:complete`（@ 补全文件枚举过滤 —— 处理体出档 `at-complete.mjs`）
  * + **会话维护线两项（R1 · 桌面功能对位批 —— 白名单末位）**：`session:gc`（会话数据回收）· `session:index`
  * （派生索引重建）—— 处理体出档 `session-maintenance.mjs`（确认面 = 原生模态 `window.mjs` `confirmRecycle`）。
+ * + **索引数据面两项（R2 · 桌面功能对位批 —— 白名单末位）**：`index:build`（语义索引构建入口）·
+ * `index:status`（索引状态读数）—— 处理体出档 `index-status.mjs`（构建）与 `settings.mjs`（读数装配）。
  * + **台账行出站接线（「对齐第三批」KD-38）**：`pushLedgerLines` 挂 `session:resume` 成功径（出站面经
  * `setLedgerEmit` 注入；扫描 / 出站逻辑住 `project-info.mjs`）
  * （定序 = 预载白名单同序）。
@@ -30,11 +32,12 @@ import {
   createSession, deleteSession, renameSession, resumeSession, switchSession,
 } from "./session-actions.mjs"
 import { pageHistory, scheduleSessionGC } from "./session-slots.mjs"
-import { configWrite, isConfigured, modelList, settingsAgent } from "./settings.mjs"
+import { configWrite, indexStatus, isConfigured, modelList, settingsAgent } from "./settings.mjs"
 import { providerList, providerRemove, providerSave, providerVerify } from "./providers.mjs"
 import { mcpList, mcpRemove, mcpSave } from "./mcp-servers.mjs"
 import { batchStatus, ledgerRead, pushLedgerLines } from "./project-info.mjs"
 import { runSessionGcMaintenance, runSessionIndexMaintenance } from "./session-maintenance.mjs"
+import { runIndexBuild } from "./index-status.mjs"
 // 文件链接纯判据面（「对齐第三批」相抵② · KD-39 —— `file:open` 载荷合格性；出站 = `shell.openPath`）。
 import { fileOpenTarget } from "./file-links.mjs"
 
@@ -114,6 +117,8 @@ const HANDLERS = Object.freeze({
   "at:complete": atComplete,
   "session:gc": sessionGc,
   "session:index": sessionIndex,
+  "index:build": indexBuild,
+  "index:status": indexStatusChannel,
 })
 
 /** `project:open(payload)` ⇒ `{ cwd, recent }`：载荷 `{ path }` **可选**（`docs/desktop/design/IPC.md:42`）——
@@ -255,6 +260,12 @@ function atComplete(payload) { return requireAgentHost().atComplete(payload?.que
  *  bytes }` ∥ `{ ok:false, …, error }`（驳回 ⇒ 零删除；索引不可得 ∕ 失败落回执——不抛）。 */
 function sessionGc() { return runSessionGcMaintenance({ confirm: confirmRecycle }) }
 function sessionIndex() { return runSessionIndexMaintenance() }
+
+/** R2 · 索引数据面两通道（构建处理体出档 `index-status.mjs` ∕ 读数装配出档 `settings.mjs`）：两通道
+ *  **无载荷**——`dir` = 主进程当前项目内存态（`currentCwd()`）；未开项目 ⇒ 读数零计数（零假造）·
+ *  构建落 `{ ok:false, reason:"no-project" }`（可见失败面，零静默）。 */
+function indexBuild() { return runIndexBuild({ dir: currentCwd() }) }
+function indexStatusChannel() { return indexStatus({ dir: currentCwd() }) }
 
 /* ─── 设置族十二项处理体（本批增）：转口三档模块，本档零算法副本（§2.5 行表） ─── */
 /** `provider:list`（无入参）⇒ `{ ok, providers, active }`（密钥只回遮罩值）。 */

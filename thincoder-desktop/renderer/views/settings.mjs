@@ -1,6 +1,7 @@
 /**
  * settings.mjs — 设置面 + 两导出面（批 9 · 批档 §2.12–§2.14；设计单源 = `docs/desktop/design/UI.md` §1 设置面行）。
- * 面形 = 四段（`data-section` = `providers` / `model` / `agent` / `mcp`）各三态（`data-state` = `none` / `loading` /
+ * 面形 = 五段（`data-section` = `providers` / `model` / `agent` / `mcp` / `tools`〔R2 增 —— 桌面功能对位批〕）
+ * 各三态（`data-state` = `none` / `loading` /
  * `ready`）：`none` / `loading` ⇒ 词表提示、`ready` ⇒ 行内容；表单在 `loading` 外常在；失败面 = `notice` 节点
  * （**核错误串直传** —— `REASON_WORD` 表内码出词、表外原样，不吞、不自造码）；面头 = 标题 + 语言控件
  * （**锚名逐字** `settings:lang`，在关闭控件**左侧** —— 点按经 `config:write(locale)` 同回带重刷词面）+ 关闭锚
@@ -16,14 +17,15 @@
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
-import { agentBody, mcpBody, modelBody, modelIdOf, providersBody, tierFace } from "./settings-sections.mjs"
+import { agentBody, mcpBody, modelBody, modelIdOf, providersBody, tierFace, toolsBody } from "./settings-sections.mjs"
 
-/** 段闭集（序固定 = 渠道 → 模型与档位 → agent 参数 → MCP）：名（`data-section`）+ 词键单源。 */
+/** 段闭集（序固定 = 渠道 → 模型与档位 → agent 参数 → MCP → 工具与服务〔R2 增〕）：名（`data-section`）+ 词键单源。 */
 export const SECTIONS = Object.freeze([
   { name: "providers", word: "settings.section.providers" },
   { name: "model", word: "settings.section.model" },
   { name: "agent", word: "settings.section.agent" },
   { name: "mcp", word: "settings.section.mcp" },
+  { name: "tools", word: "settings.section.tools" },
 ])
 
 /** 段态出词闭集（两态：`none` / `loading`）；`ready` ⇒ 行内容（零状态词）。 */
@@ -79,7 +81,7 @@ function stateOf(section) {
   return raw === "loading" || raw === "ready" ? raw : "none"
 }
 
-/** 面模型（纯 · 零 DOM）：开合 + 失败面 + 四段（各段现态直读 —— 渲染面零推导）。 */
+/** 面模型（纯 · 零 DOM）：开合 + 失败面 + 五段（各段现态直读 —— 渲染面零推导）。 */
 export function settingsModel(state) {
   const settings = state?.settings ?? {}
   const notice = settings.notice !== null && typeof settings.notice === "object" ? settings.notice : null
@@ -108,6 +110,11 @@ export function settingsModel(state) {
     mcp: {
       state: stateOf(settings.mcp),
       servers: listOf(settings.mcp?.servers).filter((s) => s && typeof s.name === "string"),
+    },
+    tools: {
+      state: stateOf(settings.tools),
+      status: settings.tools?.status !== null && typeof settings.tools?.status === "object" ? settings.tools.status : null,
+      building: settings.tools?.building === true,
     },
   }
 }
@@ -199,8 +206,8 @@ export function verifyControl(name, handlers = {}) {
   }
 }
 
-/** 段体分派（四段各一形；段名闭集 —— 表外段零节点）：四段体住 `settings-sections.mjs`，
- *  本档经 `deps` 注入两导出面 + 词表（单一 owner —— 零副本）。 */
+/** 段体分派（五段各一形；段名闭集 —— 表外段零节点）：四段体住 `settings-sections.mjs`（`tools` 段体随二道
+ *  出 `settings-sections-tools.mjs` 再经本档导入面），本档经 `deps` 注入两导出面 + 词表（单一 owner —— 零副本）。 */
 function sectionBody(name, model, handlers) {
   const deps = { channelForm: channelFormTree, verifyControl, reasonWord, formats: FORMATS }
   if (name === "providers") return [sectionStateNode(model.providers.state), ...providersBody(model.providers, handlers, deps)]
@@ -208,6 +215,7 @@ function sectionBody(name, model, handlers) {
   if (name === "agent") {
     return [sectionStateNode(model.agent.state), ...(model.agent.state === "loading" ? [] : agentBody(model.agent, handlers))]
   }
+  if (name === "tools") return [sectionStateNode(model.tools.state), ...toolsBody(model.tools, handlers)]
   return [sectionStateNode(model.mcp.state), ...mcpBody(model.mcp, handlers)]
 }
 

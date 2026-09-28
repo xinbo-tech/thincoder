@@ -62,6 +62,12 @@
 - #21（窄版）**已取消**（排队态、零损失）；**#22 = 扩范围版**（射程四档：`PROJECT.md` ∕ `IPC.md` ∕ `UI.md` ∕ `RENDERER.md`；排队等 #18 让出 `PROJECT.md`）。禁止碰实现依赖项（随轮收）。
 - **停止条件在册**：同类处 > 20 ∕ 触他批在途笔迹 ⇒ 停并报。
 
+### 1.11 R2 交付收下 + 两裁 + 双轮补位（父侧 · 2026-09-29 00:3x）
+- **交付**（#7 · 终态 clean）：13 档 + 3 新（核 `memory-status.mjs` 47 ∕ 桌面 `index-status.mjs` 68 ∕ 段体 `settings-sections-tools.mjs` 78 等）；六项验收全过（出口自证 ∕ 两通道回执 + 白名单 **35↔35** ∕ 五段在场 + 四态 ⋯ ∕ 零 SQL 负控 ∕ 13/13 语法 ∕ 义务句）；§5 三笔在册；两处评审发现已修毕（`agent-assemble.mjs` 引用重锚 `:67-71`；§5 计数漂移收正段）。
+- **裁① `ipc.mjs` 触发拆点**：届盘 297 + Δ ⇒ **307 ≥ 300** ⇒ 按既定读法「**拆点执行**」——轮 **#28**（通道注册表族出档，主档 ≤300）。R7（+3 通道）在其后落。
+- **裁② 新增越线 2 档**（`views/settings.mjs` 305 ∕ `mount-settings-exits.mjs` 315）：**续期在册**（窗口 = 本批后段原触面；理由 = 新增越线、均在增长面）——§2.5 处置行随 #29 补。
+- **设计面收正（舱列 6 项）** → 轮 **#29**：IPC.md `:106` 死承诺退役 ∕ 两通道行补齐 ∕ 计数 33 ⇒ 35 四处 ∥ D8 `:545` ∕ N `:731` ∥ 设计档 R2 #7 档名 + R7 基线句（5 ⇒ 7）∥ 源引勘正（族行实体 `:330-350` ∕ `:148-153`）∥ §2.5 两越线行。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（初始轮 + 评审轮 1 修正（1–14 逐号）+ R1 设计面收正轮（#129 ∕ #131 · 六档八笔；flow 批档三处归父侧）+ 评审轮 3（重发复核）修正 · 微轮 #16（1–10 逐号）在册）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -763,7 +769,7 @@ KD-42（`PROJECT.md:81`）补句：**「域外对账保持人工」**——理�
 - 残余六项处置：操作性 2 项（`events.mjs` 重锚 ∕ `ipc.mjs` 越层行）**随轮派单携带**；记录面 4 项（`PROJECT.md` §4.1:170 收正靶 ∕ KD-42 补句 ∕ 变更记录随落核对 ∕ 引注 ∕ 裁定来源指针）入**批末文档同步清单**。
 
 ## §5 实施记录（eng-coder）
-**状态行**：实施完成（R1 会话维护线（7 档 + 新档 1）；测试面随全清令取消；审计 clean ∕ 评审轮 2 pass（fix 1 轮））
+**状态行**：实施完成（R1 会话维护线（7 档）＋ R6 会话内搜索（上提 + 两端 · 9 档 · 含父侧 §1.8 授权增量）；测试面随全清令取消；R6 审计两轮 clean ∕ 代码评审 pass（🔵7 · 零修改项））
 
 
 
@@ -844,5 +850,115 @@ KD-42（`PROJECT.md:81`）补句：**「域外对账保持人工」**——理�
 | D7 | `ipc.mjs` **零拆点**（未出「通道注册表族」） | §1.5① 条件裁定 = 按**届盘读数**判（父侧届盘 297 < 300 ⇒ 零触）；本舱照办。**披露**：本轮 Δ 后该档 = **308**（越顾问线 300）——条件裁定「轮起手口径」与「轮内越线」的错位已由评审轮 3 发现 #5 在册（§3），处置请示父侧（拆点 or 续期） |
 
 **越线档披露（新增 2 · 请父侧处置）**：`renderer/views/settings.mjs` 297 ⇒ **305**（设计 R7 #1 行已含该档 297 ⇒ ≈340 的增长预案；评审轮 3 发现 #2 已请 §2.5 补处置行）· `renderer/mount-settings-exits.mjs` ≈297 ⇒ **316**（设计表未列该档——R8 拆分产物；本舱建议拆点 = 「索引 ∕ 工具段出口族」出档，或 §2.5 记续期窗口）。两档均 ≤500 硬限；本舱未自行拆（拆点归设计面 ∕ 先落者，沿 KD-T7）。
+
+**R2 · 审计与代码评审（轮次与终态）**
+
+- **内审（explore 子代理 · 1 轮，阻塞）**：判 = DEVIATIONS 三处同族 —— 🟡「无 embedder ⇒ 钮禁用」为 VSC 所无的舱内加判据（VSC `hasEmbedder` 只驱动键行显示，不参与钮禁）· 🔵 首绘 ∕ 读数失败径以「未配置 key」假态行覆盖 · 🔵 构建失败径不复读状态（VSC 成败皆尾拍状态）。⇒ **fix 轮 1（3 项）**：① 态判据回 VSC 同序（`building` ∥ `built` ∕ `not-built`；无 embedder **不禁钮**）② 状态缺位 ⇒ **零节点**（删「no-key」态与 `settings.indexNoKey` 键 —— 8 键 ⇒ **7 键**；假态不落）③ 构建**成败皆复读状态**（复读在前、失败面在后 —— 失败串不被复读清位）。复跑两枚仓外探针全绿。
+- **代码评审（advisor · 1 轮）**：**pass**（🔴 0 ∕ 🟡 3 ∕ 🔵 4）。三项 🟡 = 越顾问线（`ipc.mjs` **307** ∕ `views/settings.mjs` **304** ∕ `mount-settings-exits.mjs` **315**）—— 三档均已在 §5 披露、处置权归父侧 ∕ 设计面，**无一标 must-fix**；可修 🔵 三项 ⇒ **fix 轮 2**：① 行号引用收正（`agent-assemble.mjs:62-65` ⇒ **`:67-71`** ∕ `:63` ⇒ **`:68`** —— 该档被他舱 +5 行致漂移）② 本段记录收正（下条）③ 词档行数按届盘重锚。
+- **§5 记录收正（append-only —— 前文不改，按此段为准）**：逐档表 #13 与 D5 记「+键 **8** × 两语（态词四）」——盘面实 = **7 键 × 两语**（态词 = `indexBuilding` ∕ `indexBuilt` ∕ `indexNotBuilt` 三键；「无 key」态按 fix 轮 1 有意不落）；`i18n-views.mjs` 行数按届盘重锚 = **157**（§5 记 146 时为 R6 舱落地前 —— 该档为多轮共用词档，现含 R2 组⑦ + R6 组⑧）。
+- **终态 = `clean`**（内审 1 轮 + fix 1；代码评审 1 轮 pass + fix 1；无未闭合项）。
+
+### R3 · 回合引擎线（eng-coder · 2026-09-29 · initial 轮）
+
+**交付摘要（逐档 · 实读行数 = `read` 总行数口径）**
+
+| 档 | 现读 | 落点 |
+|---|---|---|
+| 新 `thincoder-desktop/src/main/turn-driver.mjs` | 214 | 回合驱动族出档（§10 BL 拆点落形）：在飞表 ∕ 中止墓碑（`turnGate` 两查位同源）∕ 单回合执行面装配（含步边界取批缝 + 撞帽询问缝）∕ `takeOver` ∕ `drive` ∕ `send` ∕ `interrupt` ∕ `dispose` ∕ `abortSuspensions` ∕ `busyOf` ∕ `queueSnapshot` + 私有装配四枚（排队面 ∕ 续发链 ∕ 挂起驱动 ∕ 提示面） |
+| `thincoder-desktop/src/main/agent-host.mjs` | 401 ⇒ 248 | 拆出驱动族（同名转口 ⇒ `ipc.mjs` 调用面零改）；+`persistDistilled` 注入（#520）· +`forgetKey` 装配表清单点 |
+| `thincoder-desktop/src/main/turn-face.mjs` | 78 ⇒ 130 | 撞帽三径（#505）：`autoTurn`（消化 ∕ 上行 ∕ timer 轮）⇒ cap 即收口；用户回合 ⇒ `askContinue` 薄形询问 ⇒ 同意 = 换代 controller + `resume:true` 重入（不重推用户消息）∕ 拒 ⇒ `stopped`；同意后墓碑同判；结算态回传（done ∕ stopped） |
+| `thincoder-desktop/src/main/session-io.mjs` | 38 ⇒ 47 | `saveDistilledSlot`（#520 蒸馏落位）；`saveAgentSlot(agent, label)` 单实现 + 委派（fix 轮去重） |
+| `thincoder-desktop/src/main/agent-bridge.mjs` | 249 ⇒ 257 | `onDistilled` 回调（非通道 ⇒ 注入面 `persistDistilled(key)`；缺注入零动作） |
+| 新 `thincoder-desktop/src/main/exec-run.mjs` | 23 | 桌面 exec-run 端面（#523②）：`installExecRunSeams()` ⇒ 两缝注册（值 = 核件 —— KD-T2 零第二实现） |
+| `thincoder-desktop/src/main/agent-assemble.mjs` | 96 ⇒ 104 | 档尾模块装配期一次接线（`installExecRunSeams()` —— VSC `shared.mjs:104-105` 同形） |
+| 核 `thincoder-core/tools/exec-run.mjs` | 40 ⇒ 140 | `runInterruptible` 上提（纯搬 + 转口）：VSC 原实现逐字搬运 —— git 面字节对账 **2733B === 2733B** |
+| `thincoder-vscode/src/tools/shared.mjs` | 194 ⇒ 107 | 改指核件（`runInterruptible` 导入面；本端零副本；注入点 `:104-105` 不变，零行为变） |
+
+**撞帽三径 ∕ #520 ∕ 执行面 —— 运行期自查读数（平 node 内联脚本 · 非测试档 · 真实宿主装配）**
+- 撞帽 ⇒ **询问面在场**：`ev:question { question:"Agent reached 12 turns (limit). Continue from here?", options:["Continue","Stop"] }`（载体 = 既有待决门；`question:respond` 回执 `{ok:true}`）；文案 = VSC `panel-turn-loop.mjs:144-147` 原文。
+- 同意 ⇒ **续跑可跑**：run 调用序列 `[{text:"hello",resume:false},{text:"hello",resume:true}]`（同 text 不重推 —— 核 `agent.mjs:150`）⇒ `ev:activity {event:"done"}`。
+- 拒绝 ⇒ **结算**：零重入（run 计数 +1）⇒ `ev:activity {event:"stopped"}`；`autoTurn`（直驱）⇒ 零询问 + stopped；缺注入默认 ⇒ 同（收口零静默续）。
+- #520 端到端：`onDistilled` 时刻盘面已含标记（宿主装配 → 桥回调 → `persistDistilled` → `saveDistilledSlot` 真落盘）；结算后标记被后写覆盖（两时刻可分）。沙箱 = `_setSessionsDirForTest` 临时目录（真实配置目录零触碰；首跑残留三件已清）。
+- 执行面缝：仅 import `agent-assemble`（不显式调用）⇒ `runCommand` abort ⇒ `AbortError` + `.stdout:"boot\n"`（可中断器已接管 —— 缺省 `execFileSync` 径忽略 signal）。
+
+**拆分说明（agent-host ⇒ turn-driver）**：拆点 = §10 BL 点名六件（`send` ∕ `interrupt` ∕ `drive` ∕ `takeOver` ∕ `dispose` ∕ `abortSuspensions`）+ 在飞表 + 中止墓碑，另携该族私有装配四枚（六件为其唯一消费者）；消解窗口 = 本批（「该档下次被触碰的批」）。拆后 agent-host **248 ≤ 300** ✓；`ipc.mjs` ∕ `main.mjs` 调用面同名零改（14 名逐名实核全可达）。
+
+**决策透明表（越出行动表的额外改动 · 逐条）**
+
+| # | 改动 | 为何必要 | 披露 |
+|---|---|---|---|
+| 1 | 新 `turn-driver.mjs` + agent-host 六件同名转口 | 父侧派单「先拆后改」（401 ⇒ ≤300）+ §10 BL 拆点候选 | 本段；设计档收正归父侧（BL 行转已消解） |
+| 2 | 桌面 `exec-run.mjs` = 核件转口面（23 行，无 `child_process` 第二实现） | KD-T2「端侧复刻被否」+ 修正 5「消费核 `killProcessTree`（转口，零第二实现）」+ 本批先例（timer-watch ∕ notify 端面薄壳） | 本段；如判须端侧自持 runner ⇒ 另轮（R3 #6 行值漂移见「遗留」） |
+| 3 | 询问面文案 = VSC 原文（en） | 零自铸词面；主进程既有模态文案同单语（en） | 词面内容权 = 主 agent（沿 R1 先例登记） |
+| 4 | `saveAgentSlot(agent, label = "session")` 签名扩参 | 评审轮 1 🔵（蒸馏落位去重）—— 单一「落盘不抛」实现 | 调用面零改（1 参调用恒同文案） |
+
+**审计与代码评审（轮次与终态 = `clean`）**
+- 内部偏审（explore · 只读）：判定 **DEVIATIONS** —— 仅 DOC-DRIFT 命中（🟡3 ∕ 🔵3，均 = 设计档待收正项，零触令下只报不改，点名列见「遗留」）；部分实现 ∕ 静默简化 ∕ 越表改动三类均无；审计无 git 通道 ⇒「纯搬字节等值」不可判 —— 本舱以 git 面复核补证 2733B === 2733B。
+- 代码评审轮 1（advisor · code）：`VERDICT: pass`（🔴0 ∕ 🟡1〔非阻塞〕∕ 🔵5）。处置：🔵#2（session-io 去重）**已修**；🔵#6（exec-run 回退面注记）**已修**；🟡#1（撞帽询问待答期 Ctrl+I 携消息 ⇒ 消息静默丢弃 —— 设计未定形）**推回**（不自行发明交互语义 ⇒ 报父侧裁）；🔵#3（digest 撞帽可见面 —— 收正点可能在 `suspension-drive.mjs` 面外）**推回**（父侧路由）；🔵#4（批档行值漂移 —— 设计档零触）**推回**（父侧文档层收正）；🔵#5（字节等值 —— 已由 git 复核闭合）**推回**（证据在册）。
+- 代码评审轮 2（fix 复核）：`VERDICT: pass` —— 两修真实、调用面兼容、零新 🔴（评审宿主引注校验未匹配 = 评审侧路径解析 artifact；本舱复读实核在盘）。
+- 终态 = **converged ⇒ clean**（fix 1 轮）。
+
+**测试面（全清令）**：R3 表 #9–#11 **跳过并注明** —— 未写测试档 ∕ 未改 `test/**` ∕ 未跑套件（桌面 ∕ 核测试清单均空）；运行期自查 = 平 node 内联脚本。
+**not repo-suite verified — the parent-side closeout run is the only repo-suite run.**
+
+**遗留 ∕ 转出（不属本舱授权面，供父侧）**
+1. 设计档收正（零触令 ⇒ 只报）：`PROJECT.md` §10 **BB**(:767 撞帽消解) · §10 **BL**(:778 拆点转已消解 + 行数) · §4.1 agent-host 行（400 ⇒ 248）+ `turn-driver.mjs` 新行 + `session-io`（47）∕ `agent-bridge`（257）∕ `agent-assemble`（104）三值；`CORE-UNIFICATION.md` §2.13.3 exec-run 行（43 行 ∕ VSC 坐标）+ §2.13.5 落地状态段。
+2. 批档 R3 行值漂移（父侧收正）：#2（375 ⇒ ≈395 —— 实交拆点形 248）· #5（核 +≈70 —— 实 +100）· #6（≈80 —— 实 23 转口面，措辞宜收正为「装配期转口面」）。
+3. 撞帽询问待答期 Ctrl+I 携消息语义（评审 🟡#1 —— 设计未定形：或按 Ctrl+I 同义续跑并送达该消息 ∕ 或浮出回执；请裁 ∕ 登记）。
+4. digest 撞帽可见面（评审 🔵#3 —— VSC `postDigestCap` 对照；收正点可能在 `suspension-drive.mjs` —— 面外）。
+5. 沙箱残留 `%TEMP%/tc-r3-*`（自查用，留现场 —— 同 R1 先例）。
+6. §5 状态行未动（多轮并行在手 —— 不抢写；R1 值在册）。
+
+### R6 · 会话内搜索（上提 + 两端）（eng-coder · 2026-09-29 · initial 轮）
+
+**交付摘要（逐档 · 行数 = `read` 总行数口径 · 现盘实读）**
+
+| # | 档 | 行数 | 落点 |
+|---|---|---|---|
+| 1 | 新 `thincoder-render-core/search.mjs` | 194 | VSC `webview/search.js`（165）**整件上提** = 纯搬 + 转口零语义改（KD-T2 第四处）：工厂 `createSearch(deps)`，注入面**唯一项 `root`**（源 `ctx.messagesEl`）；源逻辑逐字承（含 2026-08-28 白屏修复三件套：150ms 防抖 ∕ 500 mark 上限 + "N/500+" ∕ 搜索本身不滚动）；Ctrl+F 文档级入口（源 `:159-165`）住工厂内注册（键位单源 · 端侧零副本）；取词 = 核 i18n `t`；返回面 `{ openSearch, closeSearch, performSearch, jumpSearch }` |
+| 2 | 新 `thincoder-render-core/search.css` | 60 | 纯搬自 VSC `webview/controls.css` 原搜索段（八条规则零值改——含 `--vscode-editor-find*` 两回退值） |
+| 3 | 核 `thincoder-render-core/package.json` | 43 | `files` += `"search.css"`（§3 修正 13 ①） |
+| 4 | VSC `webview/search.js` | 165 ⇒ **19** | 端壳改指核件：`createSearch({ root: ctx.messagesEl })`；侧效应导入面（`chat.js:16`）不变 |
+| 5 | VSC `webview/controls.css` | 200 ⇒ **150** | 搜索段单源改核件（§3 修正 13 ②）：`:11` +`@import …/render-core/search.css`（先于全部规则）+ 原段 53 行删 + 档头两行 |
+| 6 | 新 `thincoder-desktop/renderer/search.mjs` | 27 | 桌面端壳：`/rc/search.mjs` 直取 + 消息容器供面 `[data-slot="flow"]`（槽缺 ⇒ 记错 + `null`）；Ctrl+F 随核件工厂注册 |
+| 7 | 桌面 `renderer/app.mjs` | 300 ⇒ **276** | 接线：`:40` import + `:247` `attachSearch()`（装配区、`bindFileLinks` 之后） |
+| 8 | 桌面 `renderer/index.html` | 48 | 核件 css 链入：`:19` `<link rel="stylesheet" href="/rc/search.css" />`（一行） |
+| 9 | 桌面 `renderer/i18n-views.mjs` | 146 ⇒ **158** | ⑧ 组 `search.*` 5 键 × 两语（值逐字同 VSC `locales/{en,zh}.json:254-258`）——父侧 §1.8 裁定「本舱直落（授权）」；落点现盘 = en `:86-90` ∕ zh `:151-155`（组头 `:85` ∕ `:150`；与他舱并发修订后的现盘行号——见遗留 3） |
+
+**机检读数（命令 + 结果）**
+- **对拍自证（验收①）**：`thincoder-vscode/.thincoder/tmp/r6-search-probe.mjs` 两臂（baseline = `git show HEAD:thincoder-vscode/webview/search.js` 源档逐字 + `ctx` ∕ `t` 替身；candidate = 核件）各跑 10 组场景，读数**逐字节相等**（`r6-baseline.json` ∕ `r6-candidate.json` 各 1388 B，`IDENTICAL: true`；两臂 stderr 皆空）：Ctrl+F 开 `{prevented:true, bar:true, beforeToolbar:true, display:"flex", focused:true}` · 防抖键入即读 `marks:0`（pending）⇒ 220ms 后 `marks:4 count:"1/4"`（命中头 4×`"beta"`）· 跳转 ↓`2/4` ⇒ ↓`3/4` ⇒ ↑`2/4` ⇒ Shift+Enter `1/4` ⇒ Enter `2/4` · 上限 `marks:500 count:"2/500+"` · Esc 关 `{display:"none", marks:0, focusedInput:true, textLossless:true}`。
+- **纯搬机检**：源档 138 逻辑行逐行命中核件（除两处**声明转口**：`ctx.messagesEl`→`root`、`ctx.inputEl.focus()`→`document.getElementById("input")?.focus()`；另两 import 替换）——未命中 0（独立复核轮 2 + 代码评审轮 1 双证）。
+- **`node --check`（验收③）**：四产品档 + 探针全 `Syntax OK`（`search.mjs` ∕ VSC `search.js` ∕ 桌面 `search.mjs` ∕ `app.mjs` ∕ 探针）。
+- **链接面**：VSC 壳 spec（`../node_modules/@thincoder/render-core/search.mjs`）realpath 与核件同件 ✓；桌面 `/rc/search.mjs` ∕ `/rc/search.css` 在 `CORE_ROOT` ✓（`protocol.mjs:19/25/33`：`/rc/` 根 + `.css` MIME 在册）；核包 `files` 含 `search.css` ✓。
+- **桌面零样式新增（验收边界）**：`renderer/` css 档数 10（不含 search.css）；全仓 `#search-bar` ∕ `mark.search-hit` 规则唯一存在处 = 核件 `search.css`（VSC 侧原段零残留；桌面侧零新规则）。
+- **VSC 零行为变（验收②）**：改指后仅 `chat.js:16` 侧效应导入消费（全树零导出消费）；`webview/i18n.js:2` 再出口 ⇒ 核 `t` 与 VSC 同实例（`setStrings` 注册链零变）；Ctrl+F 真达渲染面（桌面菜单 `window.mjs:56-65` 无 find ∕ 无 accelerator）。
+- **i18n 链端到端**：两语键集相等（55 ∕ 55——我落键后读数；现盘他舱修订后 54 ∕ 54 同拍）；5 键 × 两语与 VSC locales **逐字**同（U+2026 真省略号 ∕ 无尾随空格）；桌面链实跑：`setStringsSink(setStrings)`（`app.mjs:50`）+ `initDict` ⇒ 核 `t("search.placeholder")` = `"搜索消息…"` ∕ `"Search messages…"`（zh ∕ en 两档）。
+- **接线时序**：`app.mjs:73` `attachComposer` 同步 `mount()`（`mount-composer.mjs:376`，槽赋 `id="toolbar"` :365）先于 `:247` `attachSearch()` ⇒ 无 null 锚窗；核件锚查询延到首次 Ctrl+F（`ensureSearchBar`）。
+
+**决策透明表（表外改动 + 口径取舍 · 逐条）**
+
+| # | 项 | 依据 / 披露 |
+|---|---|---|
+| 1 | 表外档 `thincoder-render-core/package.json`（files +search.css） | §3 修正 13 ① **明列**（非自行扩张） |
+| 2 | 表外档 `thincoder-vscode/webview/controls.css`（@import + 原段删） | §3 修正 13 ② **明列**「VSC `@import`（沿 `webview/controls.css:5` 先例）」；沿 composer 两档先例（同档现三 @import） |
+| 3 | 表外档 `thincoder-desktop/renderer/i18n-views.mjs`（⑧ 组 5 键 × 两语） | 父侧 §1.8 临场裁定「本舱直落（授权）；写前重读、局部增键、报告列行号」；写前重读发现 R2 ⑦ 组已在盘 ⇒ 我组落为 **⑧**、零覆写；值逐字同 VSC locales（沿 composer 词族先例） |
+| 4 | Ctrl+F 键位住**核件工厂**（非端壳） | §2.2 R6 #1 源列**明列** `:159-165`（Ctrl+F 入口）⇒ 整件上提内含；两端同件 ⇒ 键位单源、零副本；VSC「既有宿主键位」= 该注册逐字（键名 ∕ 三修饰键守卫 ∕ `preventDefault` 不变） |
+| 5 | 注入面只 `root` 一项；`#toolbar` ∕ `#input` = 文档级同字面 id | 与设计句「`root` 元素供面」一致；源档锚即文档级字面（`document.getElementById("toolbar")`）；桌面同字面由 `mount-composer.mjs:365`（槽赋 id）与核输入面板 `composer/panel.mjs:79` 供给 ⇒ 两端同字形，不入注入面（核件档头 `:16-21` 锚表在册） |
+| 6 | `ctx.inputEl.focus()` ⇒ `document.getElementById("input")?.focus()` | 源指针在核件不可达的转口（全件**唯一**非逐字处；档内 `:19` ∕ `:181` 两处注记）；可选链 = 锚缺位零动作（两端锚恒在 ⇒ 现实不可达）；代码评审列 🔵①（非缺陷、不改码） |
+
+**测试面处置（随全清令）**：R6 表 **#7**（核 `test/search.test.mjs`）· **#8**（VSC 随动 + 桌面 `test/views-chat-frame.test.mjs` 随动）**跳过**——盘面 `test/files.mjs` 清单 = `[]`（存量测试全部退役）；本舱**未写测试 ∕ 未改 `test/**` ∕ 未跑任何套件**。**not repo-suite verified — the parent-side closeout run is the only repo-suite run.**
+
+**审计与代码评审（轮次与终态 = `clean`）**
+- 内部偏审轮 1（explore · 只读）：**CLEAN** —— 四类偏差（部分实现 ∕ 静默简化 ∕ 文档漂移 ∕ 越面）均无；独立双源佐证（0.9.7 实装副本 ∕ 探针生成物逐行一致）；两条非偏差提示（i18n 缺键本舱已上抛 · 探针字节数口径差 1）。
+- 内部偏审轮 2（增量定点 · 父侧授权后）：**CLEAN** —— 5 键 × 两语逐字符对拍同 VSC；两语键集相等；局部增键零覆写；并报一处**他舱写入致行号漂移**（R2 ⑦ 组修订 ⇒ 落点 87-91 ∕ 153-157 → **86-90 ∕ 151-155**；⑧ 块内容零变化）+ 一条观察（§5 R6 段当时未落——本段即补）。
+- 代码评审轮 1（advisor · code）：`VERDICT: pass`（🔴0 ∕ 🟡0 ∕ 🔵7）——七条皆报告 ∕ 风格 ∕ 既有特性登记，**零修改项**：① `#input` 转口 `?.` 加固（唯一非逐字处 · 已注）② `#toolbar` 锚无守卫（逐字承源；正常骨架不可达）③ 文档级 id 三档契约建议单源登记 ④ `FLOW_SLOT` 字面二处（漂移可观测）⑤ `renderer/i18n.mjs:42` 键数链「计 203」未随 +5（数值漂移 · 报告项）⑥ 档面 `app.mjs`（300 ⇒ 305）与实读 276 陈旧（文档面）⑦ `_searchMatches` 快照在容器重绘后陈旧（逐字承源 · 两端同形 · 非本批引入）。
+
+**遗留 ∕ 转出（供父侧）**
+1. **设计档收正未落**（本舱零触文档面）：§3 修正 7 R6 靶行 = `UI.md` §1 交互行（`docs/desktop/design/UI.md:17`——补 Ctrl+F 会话内搜索键位）——请派设计面随落。
+2. **注册表计数**：`renderer/i18n.mjs:42` 键数链「计 203 + 1 − 1 = 203」未随 R6 +5（该档越层 ∕ 多舱热点 ⇒ 建议并 R2 ∕ R5 ∕ R7 增量统一续链）。
+3. **行号漂移**：`i18n-views.mjs` 现盘 en `:86-90` ∕ zh `:151-155` ∕ 组头 `:85` ∕ `:150`（R2 舱并发修订所致；父侧收口复核「5 键在盘」请按现盘）。
+4. **探针留现场**：`thincoder-vscode/.thincoder/tmp/`（`r6-search-probe.mjs` ∕ `r6-baseline-search.mjs` ∕ 两 JSON ∕ 两 err）——非产品档（`.gitignore:19` 已忽略）。
+
+**行数口径注（R6 段 · 补记）**：上表 #7 `app.mjs` = **276** 与 #9 `i18n-views.mjs` = **158** 系 `split("\n").length` 口径（含文末换行空项）⇒ 按本批既有 `read` 总行数口径 = **275** ∕ **157**（系统差 +1，同 §3 修正 11 折算注）；与他舱 `§5 记录收正`（`i18n-views.mjs` 届盘重锚 **157**）同轴一致。其余各档两口径同值（无文末空项）。
 
 ## §6 验证与收口（父代理）

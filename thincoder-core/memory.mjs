@@ -19,3 +19,6 @@ export { gitSync, codeSync, markIndexedCommit, codeSearch, ensureCodeEmbeddings,
 
 // doc sync + search + memoryTools
 export { docSync, docSearch, ensureDocEmbeddings, docSearchTool, memoryTools } from "./memory/docs.mjs"
+
+// status read-only export (three-table counts single point — R2)
+export { memoryStatus } from "./memory-status.mjs"
