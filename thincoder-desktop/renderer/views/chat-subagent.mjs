@@ -8,6 +8,12 @@
  *      `rows` = 内容单留存处 · `renderer/subagent-reduce.mjs` 归档交快照）；幂等（已挂 ⇒ 零动作）；
  *   ③ `syncSubagentEcho(root, model)` —— 全根扫描补装（**重挂径**消费 —— `renderer/views/chat.mjs` `mountChat`；
  *      帧尾径 = 逐块 `fillSubagentEcho`（`chat.mjs` `dressNode`）；两径同件）；冻结块**静态** —— 不重放第二遍。
+ *   ④ **归档位置 ∕ 裁剪面（R10 E4 ∕ E10 判据 —— 逐值对表结论）**：归档块 = 流内**尾追块**（入块序；序 = 归档序
+ *      —— 块恒居尾组（消化行组等）之前 ⇒ 与 VSC `activity.js:104-110`「本轮边界前插入 ∕ 失效尾追」同位，零消差项）；
+ *      **窗口 ∕ 裁剪** = 随既有尾窗（`MAX_RENDER_BLOCKS`）：出窗即弃、不计 `data-hidden`、非回填对象（运行期块
+ *      非落盘件）；两机制**别名登记**（VSC `ui.js:199-206` 150 块 DOM 裁剪 ⇄ 桌面 200 块渲染窗 —— 值差 = 在册
+ *      显式裁，`docs/render-core/design/RENDER-CORE.md` 行 13「各自 · 数值差登记」）；归档块**两窗口皆含**
+ *      （VSC 裁剪集含 `.sub-block` ⇄ 桌面 `visibleWindow` 含 `kind === "subagent"`）。
  * 核件消费（「对齐第二批」项 3 同源面）：`renderSubBlock` / `renderSubagentChunk`（`/rc/subblocks/block.mjs`）·
  * `refreshBlock`（`/rc/subblocks/activity-view.mjs`）。域外零触：归档块为**运行期块**（页读整置即失 —— 端差登记）。
  * 依赖单向：本档 → `renderer/views/chat-text.mjs`（`labelNode`）+ 核件四件；零 `node:` / 零裸包；本档零文案。

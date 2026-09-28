@@ -25,6 +25,22 @@
  *      本档两语展开合并 ⇒ `HOST_DICT` 单一持有点不变；四组 = 对话流 6 / 输入区 2 / 审批面 1 / 设置面 agent 具名十键）；
  *      **同批退场一键** = `chat.empty.hint`（欢迎条三行取代单行提示 —— 项 15；树面消费归零 ⇒ 键面随退）
  *      —— 计 **159 + 19 − 1 = 177**（键数链随动 = `thincoder-desktop/test/views-chrome-vocab.test.mjs` U51）；
+ *      **输入面板上提批（R1）增二十八键** = 输入面板词族**第三档**（`renderer/i18n-composer.mjs` —— 核件
+ *      `composer/` 组六件取词；**键名一字不改 ∕ 两语值皆 VSC 逐字** = `thincoder-vscode/locales/*` 同名键；
+ *      合并点不变 = 本档 `HOST_DICT` 两语展开）；**同批退场四键** = 自建输入树三词 + 附件条移除控件名
+ *      （`composer.input` ∕ `composer.interrupt` ∕ `composer.queue.full` ∕ `composer.attach.remove` ——
+ *      消费面随换装归零 ⇒ 键面随退，零残键）—— 计 **177 + 28 − 4 = 201**（链口径 = 两语键集相等，
+ *      增 / 退两语同拍）；
+ *      **会话模型轮 R13 减十三键** = 左列族四（`rail.recent.title` ∕ `rail.sessions.title` ∕ `rail.project.none` ∕
+ *      `rail.empty.hint`）+ 左列动作三（`rail.action.rename` ∕ `rail.action.delete` ∕ `rail.action.cancel`——
+ *      换装为 `session.*` 三键）+ `origin.*` 三（来源端标面随左列裁撤退场）+ `tab.action.close*` 三（关闭确认面
+ *      随标签裁撤退场；`tab.badge.approval` 保留 —— 位标词键沿 `tab.badge.*` 族）；**同拍增五键入第二档**
+ *      （`session.title` ∕ `session.empty` ∕ `session.rename` ∕ `session.delete` ∕ `session.deleteConfirm`——
+ *      值 = VSC 逐字）—— 计 **201 − 13 + 5 = 193**（增 / 退两语同拍）；
+ *      **R10 增一键 ∕ 退一键** = 增 `sub.newBlocks`（池面出生计数贴 —— 两语值逐字同 VSC `locales/{en,zh}.json:170`；
+ *      消费面 = `renderer/views/activity-new.mjs`）+ 退 `pool.empty.hint`（空态提示面随 E2 区域退场 —— 消费面归零
+ *      ⇒ 键面随退，零残键）—— 计 **203 + 1 − 1 = 203**（两语同拍；实读基 = 本次改动前 `HOST_DICT` 两语各
+ *      203 键；链前段（至 193）后另有批次未逐笔续计 —— 本节自本次起以实读续链）；
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；
@@ -39,13 +55,13 @@
  *      `msg.copied` 先例）。
  * 零落盘 · 零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
+import { COMPOSER_DICT } from "./i18n-composer.mjs"
 import { VIEWS_DICT } from "./i18n-views.mjs"
 
-/** 宿主 UI 专有键（两语键序同 = 对位阅读 · 键集相等 = 用例机检面）：`rail.*` = 左列元素（含批 A ④ 行动作
- *  三键 = 改名 / 删除两控件词（经 `aria-label` —— 字形住 `renderer/styles.css`）+ 换形取消键；确认键词 = 本条动作词
- *  同键（同一事实同词））·
- *  `origin.*` = 会话行来源端标（值与核 `createdBy` 三值同名）· `tab.*` = 标签条（位标词 + 关闭控件词面 +
- *  关闭确认面两键词 —— 两键 = 文本按钮词面，**非图标字形**）· `chat.*` = 对话流（引导面两键 / 摘要块 / 药丸两态 /
+/** 宿主 UI 专有键（两语键序同 = 对位阅读 · 键集相等 = 用例机检面）：`rail.*` = 会话控制条残余族（打开目录 ∕
+ *  新建会话两动作词 + 会话条目三键 = 缺省题 ∕ 计数 ∕ 日期 + 账本注记两键——会话模型轮 R13：原左列元素族随左列
+ *  裁撤退场，保留键 = 会话控制条 ∕ 引导面两消费面同用）·
+ *  `chat.*` = 对话流（引导面两键 / 摘要块 / 药丸两态 /
  *  工具卡改动摘要 + 耗时 / 复制面两键 = 逐块控件与末条控件的可及名 —— 两控件 = 块尾 / 输入区尾，取文面与键名
  *  同档 = `renderer/views/chat-copy.mjs`；`welcome.*` 四键 = `no-message` 帧欢迎条三行〔含文案二值〕—— 单源
  *  = `renderer/i18n-views.mjs`）· `pool.*` = 活动池（标题 / 三族标 / 折叠控件两态 `aria-label` / 空态提示 ——
@@ -56,10 +72,13 @@ import { VIEWS_DICT } from "./i18n-views.mjs"
  *  当前标 · 两增键 / agent 段：只读标 · 保存 / 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
  *  移除 · 增键 —— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）·
  *  `wizard.*` = 首启向导（标题 / 退场 / 三步名 / 两推进键 / 渠道提交键 / 目录步两词）·
- *  `info.*` = 项目级信息行（标题 / 三读数标：需求池 · 技术待办 · 老化——同核台账口径 / 超阈标 / 相位标 ·
- *  两相位值 / 空态 —— 键位闭集住 `renderer/views/info-row.mjs` · `renderer/views/onboarding.mjs`）·
- *  `composer.*` = 输入区（输入框 `aria-label` / 中断控件可见词 / 满队提示行 / 附件面三键 = 逐项移除控件可及名 +
- *  回执 `degraded` 两态提示行 —— 键位闭集 = `renderer/mount-composer.mjs` + `renderer/attach.mjs`）·
+ *  `info.*` = 项目级读数族（三读数标：需求池 · 技术待办 · 老化——同核台账口径 / 超阈标 / 相位标 ·
+ *  两相位值 / 空态 —— 消费面 = 状态行台账超阈段（会话模型轮 R13：信息行视图随左列裁撤退场，
+ *  读数仍供状态行）；其余键位闭集住 `renderer/views/onboarding.mjs`）·
+ *  `composer.*` = 输入区（**换装后残余两族**：B21 发送失败行 `composer.send.failed`〔住 `renderer/i18n-views.mjs`〕+
+ *  B22 降级提示行两键 `composer.attach.nonvision` ∕ `composer.attach.partial`——三键皆端侧自有词，非 VSC 源；
+ *  旧三词（输入框 `aria-label` ∕ 中断控件词 ∕ 满队提示行）+ 附件条移除控件名随自建树退场——核件控件词归
+ *  `renderer/i18n-composer.mjs`）·
  *  `head.*` = 会话头（三字段标 = `provider` / `model` / `effort` 三 `select` 可及名 —— 值面 = 供给串原样，
  *  视图不造词；键位面 = `renderer/views/chrome.mjs`）· `effort.*` = 档位两特值词（`auto` = 未设（`null`）·
  *  `off` = 关思考 —— 逐模型枚举成员**零词键**、原字面投影）· `status.*` = 状态行（读数串 `${percent}%` ——
@@ -69,26 +88,13 @@ import { VIEWS_DICT } from "./i18n-views.mjs"
 export const HOST_DICT = Object.freeze({
   en: {
     "rail.action.openDir": "Open folder…",
-    "rail.recent.title": "Recent folders",
-    "rail.sessions.title": "Sessions",
-    "rail.project.none": "No project open",
-    "rail.empty.hint": "No sessions in this project yet",
     "rail.action.newSession": "New session",
-    "rail.action.rename": "Rename",
-    "rail.action.delete": "Delete",
-    "rail.action.cancel": "Cancel",
     "rail.session.untitled": "Untitled session",
     "rail.session.msgs": "${n} msgs",
     "rail.session.updated": "${date}",
     "rail.ledger.notice": "Session ledger anomaly (${reason}) — opening a session self-heals it",
     "rail.ledger.notice.scene": "Corrupted-scene files kept 30 days",
-    "origin.cli": "CLI",
-    "origin.vscode": "VS Code",
-    "origin.desktop": "Desktop",
     "tab.badge.approval": "awaiting approval",
-    "tab.action.close": "Close tab",
-    "tab.action.close.cancel": "Cancel",
-    "tab.action.close.confirm": "Close",
     "chat.pill.new": "${n} new",
     "chat.pill.bottom": "Back to latest",
     "chat.summary.older": "${n} earlier messages",
@@ -105,13 +111,14 @@ export const HOST_DICT = Object.freeze({
     //    （注册单点 = `renderer/app.mjs` `setStringsSink(setStrings)`；本档 `initDict` 合并式经注册端出）；
     //    **值逐字同 VSC locales** —— 同一控件同词；`msg.user` / `queued.pending` = 核
     //    `queued-mark` 两原语取词（`paintLabel` / `markPending`），`msg.assistant` = 端侧助手标签同字面落形
-    //    （核无原语 —— 端差登记））──
+    //    （核无原语 —— 端差登记）；`sub.newBlocks` = **R10 增**（池面出生计数贴 —— 端侧消费 = `views/activity-new.mjs`））──
     "sub.async": "async",
     "sub.sync": "sync",
     "sub.waiting": "waiting",
     "sub.awaitingApproval": "Awaiting approval: ${tool}",
     "sub.cancelQueueBtn": "cancel queue",
     "sub.stopBtn": "Stop this subagent",
+    "sub.newBlocks": "↓ ${n} new block(s)",
     "sub.desc": "Subagent activity — the agent spawned a helper for an independent subtask. Expand for details; ⏹ stops a background run.",
     "msg.user": "You",
     "msg.assistant": "ThinCoder",
@@ -125,12 +132,7 @@ export const HOST_DICT = Object.freeze({
     "pool.family.queue": "Queued",
     "pool.collapse": "Collapse activity",
     "pool.expand": "Expand activity",
-    "pool.empty.hint": "No activity in this session yet",
-    "composer.input": "Message",
-    "composer.interrupt": "Stop",
-    "composer.queue.full": "Queue full — wait for the running turn to finish",
-    // ── 附件面（批 B：`mount-composer.mjs` + `attach.mjs` —— 逐项移除控件可及名 + 回执 `degraded` 两态提示行）──
-    "composer.attach.remove": "Remove attachment",
+    "composer.send.failed": "Send failed (${reason}) — the text was kept",
     "composer.attach.nonvision": "Images not sent — this model does not accept images",
     "composer.attach.partial": "Some images were dropped (over the limit or failed to save) — the rest were sent",
     "approval.once": "Allow once",
@@ -205,16 +207,9 @@ export const HOST_DICT = Object.freeze({
     "wizard.dir.hint": "Pick a project folder — you can change it later.",
     "wizard.dir.pick": "Choose folder…",
     "wizard.save": "Save provider",
-    // ── 项目级信息行（批 9：`views/info-row.mjs`）──
-    "info.title": "Project info",
+    // ── 项目级读数（批 9 —— 消费面 = 状态行台账超阈段；会话模型轮 R13：信息行视图随左列裁撤退场
+    //    ⇒ 读数面八键随退（构树消费归零 = 零残键），仅余超阈位一键）──
     "info.threshold": "Ready for a batch",
-    "info.phase": "Phase",
-    "info.phase.initialDev": "Initial dev",
-    "info.phase.production": "Production",
-    "info.read.pool": "Requirements",
-    "info.read.tech": "Tech todos",
-    "info.read.aged": "Aged",
-    "info.state.none": "No reading yet",
     // ── 批 B 面（`views/chrome.mjs`：会话头三字段标 / 档位两特值词 / 状态栏读数串 —— 键名本档拟定，登记面即此处）──
     "head.field.provider": "Provider",
     "head.field.model": "Model",
@@ -244,31 +239,20 @@ export const HOST_DICT = Object.freeze({
     "susp.running": "${n} background subagent(s) running",
     "susp.digesting": "${n} awaiting digestion",
     "susp.winding": "background subagents finishing…",
+    // 「输入面板上提批」输入面板词族第三档（单源 = `renderer/i18n-composer.mjs` —— 核件 composer 组取词；两语展开）
+    ...COMPOSER_DICT.en,
     // 「对齐第三批」视图面词族第二档（单源 = `renderer/i18n-views.mjs` —— 合并式两语展开，键序尾随）
     ...VIEWS_DICT.en,
   },
   zh: {
     "rail.action.openDir": "打开目录…",
-    "rail.recent.title": "最近目录",
-    "rail.sessions.title": "会话",
-    "rail.project.none": "未打开项目",
-    "rail.empty.hint": "项目内暂无会话",
     "rail.action.newSession": "新建会话",
-    "rail.action.rename": "改名",
-    "rail.action.delete": "删除",
-    "rail.action.cancel": "取消",
     "rail.session.untitled": "未命名会话",
     "rail.session.msgs": "${n} 条消息",
     "rail.session.updated": "${date}",
     "rail.ledger.notice": "会话账本异常（${reason}）——打开会话即自动补回",
     "rail.ledger.notice.scene": "损坏现场档保留 30 天",
-    "origin.cli": "CLI",
-    "origin.vscode": "扩展端",
-    "origin.desktop": "桌面端",
     "tab.badge.approval": "待审批",
-    "tab.action.close": "关闭标签",
-    "tab.action.close.cancel": "取消",
-    "tab.action.close.confirm": "关闭",
     "chat.pill.new": "${n} 条新消息",
     "chat.pill.bottom": "回到最新",
     "chat.summary.older": "更早的 ${n} 条",
@@ -288,6 +272,7 @@ export const HOST_DICT = Object.freeze({
     "sub.awaitingApproval": "等待审批: ${tool}",
     "sub.cancelQueueBtn": "取消排队",
     "sub.stopBtn": "停止该子代理",
+    "sub.newBlocks": "↓ ${n} 新块",
     "sub.desc": "子代理活动——主 agent 为独立子任务派出的助手。展开看详情；⏹ 可停止后台运行。",
     "msg.user": "你",
     "msg.assistant": "ThinCoder",
@@ -301,12 +286,7 @@ export const HOST_DICT = Object.freeze({
     "pool.family.queue": "队列",
     "pool.collapse": "折叠活动池",
     "pool.expand": "展开活动池",
-    "pool.empty.hint": "本会话暂无活动",
-    "composer.input": "消息",
-    "composer.interrupt": "中断",
-    "composer.queue.full": "队列已满——等当前回合结束后再发",
-    // ── 附件面（批 B：`mount-composer.mjs` + `attach.mjs` —— 逐项移除控件可及名 + 回执 `degraded` 两态提示行）──
-    "composer.attach.remove": "移除附件",
+    "composer.send.failed": "发送失败（${reason}）——文本已保留",
     "composer.attach.nonvision": "图片未随发——该模型不支持图片",
     "composer.attach.partial": "部分图片已丢弃（超限或保存失败）——其余照发",
     "approval.once": "允许一次",
@@ -381,16 +361,9 @@ export const HOST_DICT = Object.freeze({
     "wizard.dir.hint": "选择项目目录——之后也可以更改。",
     "wizard.dir.pick": "选择目录…",
     "wizard.save": "保存渠道",
-    // ── 项目级信息行（批 9：`views/info-row.mjs`）──
-    "info.title": "项目信息",
+    // ── 项目级读数（批 9 —— 消费面 = 状态行台账超阈段；会话模型轮 R13：信息行视图随左列裁撤退场
+    //    ⇒ 读数面八键随退（构树消费归零 = 零残键），仅余超阈位一键）──
     "info.threshold": "可开批",
-    "info.phase": "相位",
-    "info.phase.initialDev": "初始开发",
-    "info.phase.production": "生产",
-    "info.read.pool": "需求池",
-    "info.read.tech": "技术待办",
-    "info.read.aged": "老化",
-    "info.state.none": "暂无读数",
     // ── 批 B 面（`views/chrome.mjs`：会话头三字段标 / 档位两特值词 / 状态栏读数串 —— 键名本档拟定，登记面即此处）──
     "head.field.provider": "渠道",
     "head.field.model": "模型",
@@ -420,6 +393,8 @@ export const HOST_DICT = Object.freeze({
     "susp.running": "后台 ${n} 子代理运行中",
     "susp.digesting": "${n} 完成待消化",
     "susp.winding": "后台子代理收尾…",
+    // 「输入面板上提批」输入面板词族第三档（单源 = `renderer/i18n-composer.mjs` —— 核件 composer 组取词；两语展开）
+    ...COMPOSER_DICT.zh,
     // 「对齐第三批」视图面词族第二档（单源 = `renderer/i18n-views.mjs` —— 合并式两语展开，键序尾随）
     ...VIEWS_DICT.zh,
   },

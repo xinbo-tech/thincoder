@@ -1,9 +1,20 @@
 /* pool.css — 活动池面（`docs/desktop/design/UI.md` §2 项 1 池落形 · 批档 §2.2（c）KD-13 分档）。
-   分档理由（KD-13）：`styles.css` 实读 284 贴 300 层 ⇒ 池面样式单立一档（沿 `chat.css` 批 6 先例：分档零搬移 · 零断点）。
+   分档理由（KD-13）：池面样式单立一档（沿 `chat.css` 批 6 先例：分档零搬移 · 零断点）。
    字形面 = 折叠控件箭头（`content` —— **视图档零字形字面**，与 `chat.css` / 标签条同纪律）；
-   本题零断点（单断点常量仍单源 = `styles.css`）· 零主题变量（沿 `styles.css` :root）。
+   变量源 = `renderer/theme.css` :root · 骨架（两列栅格 / 池列盒）= `renderer/chrome.css`。
    树面锚（`renderer/views/activity.mjs`）：宿主 `.pool-body[data-slot="pool"]` = 池根（`data-pool` + `data-state`）
-   ⇒ 本档选择器一律以宿主为根；条目操作区锚 `.approval-actions` 与卡面**共用**（样式单源 = `chat.css`）。 */
+   ⇒ 本档选择器一律以宿主为根；条目操作区锚 `.approval-actions` 与卡面**共用**（样式单源 = `chat.css`）。
+   **R10（E1 ∕ E6 · 2026-09-28）**：① 封顶自滚 —— 封顶 = 池列高（骨架：`.pool` `min-height:0` + 栅格行
+   `minmax(0,1fr)`；VSC 横带 32vh = 布局骨架差异在册 —— 位置已裁归右列）；自滚 = 宿主 `overflow:auto`
+   （`chrome.css`）+ 本档 `overscroll-behavior: contain`（VSC `base.css:103-107` 同值角色）；② 出生计数贴钮
+   （`.activity-new-btn` —— VSC `base.css:113-117` 照搬；粘性由池头带承载，见该条注）；③ 空态提示规则
+   （`.pool-empty`）随 E2 空态退场删。 */
+
+/* 宿主（`[data-slot="pool"]` = 池滚动容器自身）：自滚链断裂（VSC `#subagent-activity`
+   `overscroll-behavior: contain` 同值角色 —— 池滚不波及页面 / 对话流）。 */
+[data-slot="pool"] {
+  overscroll-behavior: contain;
+}
 
 .pool-head {
   position: sticky;
@@ -43,6 +54,23 @@
 .pool-toggle:not(:disabled) {
   cursor: pointer;
 }
+/* 出生计数贴（R10 E6 ∕ U-2 —— VSC `webview/base.css:113-117` 照搬）：类名 / 字面（`↓ ${n} …` 随词键
+   `sub.newBlocks`）/ 行为逐件同 VSC；**桌面 chassis 适配**：钮居池头带首子 ⇒ 粘性由 `[data-pool-head]`
+   （已 sticky）承载 —— VSC 单元素 `position: sticky` 的等效形；皮肤沿 D24 律（静息描边归零 + 交互态三值
+   —— 见档尾交互态组；VSC `--border` 可见描边 ∕ `button-secondaryBackground` ⇒ 本域 `--line` ∕ `--hover-bg`
+   角色对位，披露在册）。 */
+.activity-new-btn {
+  flex: 0 0 auto;
+  padding: 2px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--hover-bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
 
 /* 族（序固定 = 待审批 → 活动块 → 队列；空族零节点 ⇒ 无空壳样式）与条目（零内容回显 = 标称 + 状态词）；
    条目 D24：描边归零（保位）+ 下沉井底 `var(--bg)`（池卡 `--bg-raised` 内 —— `docs/desktop/design/UI.md` §1 本批注（D24）项 1）。 */
@@ -74,11 +102,12 @@
 .pool-item[data-status="error"] .pool-item-label {
   color: var(--accent);
 }
-.pool-empty {
-  color: var(--fg-muted);
-}
 
-/* 交互态组（D24 项 2 · 本注定形）：hover `--hover-bg` · 按下 `--hover-bg-strong` · 聚焦三值（outline 2px + offset -2px + 底）。 */
+/* 交互态组（D24 项 2 · 本注定形）：hover `--hover-bg` · 按下 `--hover-bg-strong` · 聚焦三值（outline 2px + offset -2px + 底）；
+   计数贴 = **实色支**（R10 E6 —— 静息底 = `--hover-bg` ⇒ hover 沿 `--hover-bg-strong`；沿 `.chat-pill` 实色支先例）。 */
 .pool-toggle:not(:disabled):hover { background: var(--hover-bg); }
 .pool-toggle:not(:disabled):active { background: var(--hover-bg-strong); }
 .pool-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--hover-bg-strong); }
+.activity-new-btn:not(:disabled):hover { background: var(--hover-bg-strong); cursor: pointer; }
+.activity-new-btn:not(:disabled):active { background: var(--hover-bg-strong); }
+.activity-new-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }

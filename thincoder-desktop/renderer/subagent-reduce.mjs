@@ -19,12 +19,15 @@ import { appendBlock } from "./store.mjs"
 
 /** 子 agent 状态闭集（**单源** = `docs/render-core/design/RENDER-CORE.md` §5 token → patch 全表：核 relay 谱
  *  `started` / `queued` / `turn` / `done` / `settled` / `cancelled` —— `⟦ev⟧stopped` ⇒ `cancelled` 先例兼容 ·
- *  `error` 有意不载）；表外码 ⇒ **零写**（禁假造 —— 沿池面「表外码零节点」纪律）。 */
-const SUB_STATUS = ["started", "queued", "turn", "done", "settled", "cancelled"]
-/** `ev:subagent` 载荷键白名单（零新键 —— 核 patch 全表字段集：身份三 + 随行九）。 */
+ *  `error` 有意不载）；**`approval` = R10 补入**（child permission gate —— 非 relay 谱来路：宿主
+ *  `src/main/agent-bridge.mjs:212-216` `onSubagentApproval` ⇒ `ev:subagent { status: "approval", tool }`；
+ *  核态机支 = `subblocks/state.mjs:190-201`；VSC 对位 = `activity.js:133-136` `applySubagentApproval` ——
+ *  白名单漏收则该态桌面永不可见（⏸ ∕ `sub.awaitingApproval` 死面）；表外码 ⇒ **零写**（禁假造 —— 沿池面「表外码零节点」纪律）。 */
+const SUB_STATUS = ["started", "queued", "turn", "done", "settled", "cancelled", "approval"]
+/** `ev:subagent` 载荷键白名单（零新键 —— 核 patch 全表字段集：身份三 + 随行九 + 审批面 `tool`——R10 补）。 */
 const SUB_KEYS = [
   "status", "role", "id", "model", "pool", "syncLive", "startedAt", "turn", "maxTurns",
-  "kind", "position", "waiting", "reason", "was",
+  "kind", "position", "waiting", "reason", "was", "tool",
 ]
 /** `ev:subchunk` 载荷键白名单（零新键 —— 内容面六；身份二 `role` / `id` = 块定位，不入行模型 ——
  *  形单源 = `docs/desktop/design/IPC.md` §1 该行）。 */
@@ -73,17 +76,22 @@ function withSubBlocks(state, table, key) {
  *  归档态判据 = **已折叠（`frozen`）∧ 非驻留（`!awaitingDigest`）∧ 未入流（`region !== "flow"`）**；
  *  `settled`（驻留待消化）不归档，后到 `done` 折叠时归档（前态判据同径）；**旧代接管归档**（旧块被替出列表，
  *  核 `takeoverBlock` ⇒ `archive` 效果）由**前后对照**捕获（前态块缺席后表 ∧ 已折叠 ∧ 未入流 ⇒ 归档）。
+ *  **每笔皆换块对象引用（R10 E4 补——视图面帧触发判据的块级同源）**：核态机**原地变更**模型块（`freezeMeta` ∕
+ *  `block.approval = …` 等）⇒ 块对象引用不变 ⇒ 视图面 `updateSubBlock` 的同一性短路（`known === entry`）恒真
+ *  ⇒ 终态折叠 ∕ `awaitingDigest` 态词 ∕ 审批态永不落 DOM（仅靠 2 s 拍残刷）。本处按核 `effects` 的**键集**
+ *  对**被触碰块**换新对象（未触碰块保持原引用——零多余重刷；VSC 同义 = 每条状态消息覆盖式刷新被触及块）。
  *  返回 `{ list, blocks }`：`list` = 表项（归档者换**墓碑** = 复本 + `region: "flow"` − `rows`）；
  *  `blocks` = 流内尾追快照（`{ kind: "subagent", meta, rows }` —— `meta` 供核件 `renderSubBlock` /
  *  `refreshBlock`，`rows` = 内容行单留存处）。 */
-function archiveIntoFlow(before, after) {
+function archiveIntoFlow(before, after, touched) {
   const alive = new Set(after)
   const snapshots = []
   for (const block of before) {
     if (alive.has(block) || block?.frozen !== true || block.region === "flow") continue
     snapshots.push(block) // 旧代接管：驻留块替出 ⇒ 归档（核 archive 效果同序 —— 先归档后改绑）
   }
-  const list = after.map((block) => {
+  const list = after.map((raw) => {
+    const block = touched.has(raw?.key) === true ? { ...raw } : raw // 触碰块换新引用（见上注）
     if (block?.frozen !== true || block.awaitingDigest === true || block.region === "flow") return block
     snapshots.push(block)
     const { rows, ...meta } = block
@@ -97,10 +105,11 @@ function archiveIntoFlow(before, after) {
 }
 
 /** `ev:subagent` —— 子 agent 块面（D20 单源 = `docs/desktop/design/UI.md` §1 本批注项 2 / 3 / 5）：按会话键写 `subBlocks`
- *  切片；态机**单源** = 核 `/rc/subblocks/state.mjs` `subBlocksReduce`（出生 / 接管 / 终态折叠三迁 —— 桌面端
- *  零 DOM：不注入 `connectedOf` / `regionOf`，本端全量重建）；**归档入流**（终态 ⇒ 墓碑 + 流内尾追块 ——
+ *  切片；态机**单源** = 核 `/rc/subblocks/state.mjs` `subBlocksReduce`（出生 / 接管 / 终态折叠 / **审批态**四迁 ——
+ *  桌面端零 DOM：不注入 `connectedOf` / `regionOf`，本端全量重建）；**归档入流**（终态 ⇒ 墓碑 + 流内尾追块 ——
  *  仅活动会话有流面可入；非活动键只落墓碑，内容随运行期面即失 = 端差登记）；块模型**原地变更**（核态机形）⇒
- *  每笔皆换切片数组引用（帧触发唯一判据 —— 同值短路在此不成立，随本件登记）。 */
+ *  每笔皆换切片数组引用**＋（R10）被触碰块换块对象引用**（帧触发唯一判据 —— 同值短路在此不成立，随本件登记）；
+ *  触碰集 = 核 `effects` 键集（`refresh` / `fold` / `awaiting` / `archive` 逐迁在册）。 */
 export function onSubagent(state, ev, now) {
   const key = typeof ev.key === "string" && ev.key !== "" ? ev.key : null
   const patch = key === null ? null : subPatchOf(ev)
@@ -109,8 +118,8 @@ export function onSubagent(state, ev, now) {
   const before = Array.isArray(table[key]) ? table[key] : []
   const list = [...before]
   // 核态机 deps：`now` 为**读钟函数**（`state.mjs` 每迁现刻取值 —— 出生起刻 / 冻结 `doneAt`）。
-  subBlocksReduce(list, patch, { now: () => now })
-  const archived = archiveIntoFlow(before, list)
+  const { effects } = subBlocksReduce(list, patch, { now: () => now })
+  const archived = archiveIntoFlow(before, list, new Set(effects.map((effect) => effect?.key)))
   const next = withSubBlocks(state, { ...table, [key]: archived.list }, key)
   if (archived.blocks.length === 0 || key !== state.activeSession) return next
   return archived.blocks.reduce((acc, block) => appendBlock(acc, block), next)

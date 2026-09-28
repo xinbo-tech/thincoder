@@ -546,7 +546,7 @@ VERDICT: changes-required
 - 评审剩余两项（非阻断）随实施轮收正：`:217` 测试档行处置 + 引证三处行号漂移（§10 AZ `:759⇒:760` ∕ 需求 §3.1 `:47⇒:49` ∕ `:54⇒:56`）。
 
 ## §5 实施记录（eng-coder）
-**状态行**：实施完成（R11 点修舱 + R2/R3 上提 + R8 provider 流程族上提 ∕ 设置面两处先拆后改（探针目标构造随迁 · 内审 7 DOC-DRIFT · 代码评审 2 轮 pass）· 2026-09-28）
+**状态行**：实施完成（R10 子代理面板 ∕ live 面 ⇒ VSC 对齐 · 8 档（1 新 + 7 改）· 真机探针 10 ∕ 10 · 审计 1 轮（DEVIATIONS 2）修复 1 轮 · 代码评审 VERDICT pass（🟡4 ∕ 🔵4 非阻断）修复 1 轮 · 终态 converged ⇒ clean · 测试面随全清令取消）
 
 
 
@@ -1077,5 +1077,79 @@ VERDICT: changes-required
 2. **设计面收正（在册）**：`UI.md` §1 状态栏行 ∕ `RENDERER.md` 状态行面 —— 两新槽 ∕ banner 四色 ∕ 分隔两裁定（规格现只住 CSS 注释）；批档 `:43` 待收两测试项标「随全清令取消」；`:601` ∕ `:603` 的 `styles.css` 悬空指针重锚 `chrome.css:400-417`。
 3. **CLI 坐标漂移（非本轮笔 · 只报）**：`views/statusline-banner.mjs:5` ∕ `src/main/agent-host.mjs:313` ∕ `UI.md:110,198,203` ∕ `IPC.md:171` ∕ `TUI.md:582` ∕ `ENGINEERING-MODE-V2.md:394,454` ∕ `AGENT-LOOP-UPSTREAM.md:885` ∕ `WEBVIEW-PROTOCOL.md:116` 引 `render-frame.mjs:221-225`（现读 227-230 —— 在飞改动 +6 行所致）—— 随设计面轮 ∕ 各触面轮收正。
 4. **`chrome.css` 424 行 > 300 顾问线**（预存 415 + 本轮 9）—— 拆分归结构 ∕ 设计面轮（本舱按边界不拆）。
+
+### 5.14 R10 实施舱 · 子代理面板 ∕ live 面 ⇒ VSC 对齐（eng-coder · 2026-09-28）〔段号就地顺正：原附 5.13 与上行 R11 补轮重号〕
+
+**目标**：R10（§2.8 R10 段：逐面 ∕ 逐元素对位表 E1–E11 + 行动表 1–9）= 桌面子代理可见全族与 VSC 对齐（空态退场 ∕ 生命期 ∕ 归档入流 ∕ 出生计数贴 ∕ 2s 拍判据 ∕ relay 载荷面）；边界 = 核件五档（`subblocks/*`）零改 · VSC 树零改 · 工具行席位不复活 · `chat.css` 不触（与 R12 避让）。
+
+**父侧裁（本舱执行口径）**：U-1 池内审批族 = 保留现状（形随核件对齐）· U-2 E6 出生计数贴 = 按表补装 · E9（消化行留存差）∕ E10（窗值 150 vs 200）∕ 状态行段 3 = **登记不内消**（另轮 ∕ 设计面裁）· **全清令（23:18）**：测试面任务全部作废（不写测试档 ∕ 不改 `files.mjs` ∕ 不跑测试）——只交付产品代码面。
+
+**逐档表（8 档 = 1 新 + 7 改 · 行数 = read 实读总行数）**
+
+| # | 档 | 前 ⇒ 后（行数） | 动作 |
+|---|---|---|---|
+| 1 | `thincoder-desktop/renderer/views/activity-new.mjs`（**新档** —— §2.10 #5 定名） | — ⇒ **100** | E6 出生计数贴（VSC `webview/activity-new.js:21-54` 照搬）：`notePoolBirth`（跟底 ⇒ 区钉底 ∕ 未跟底 ⇒ 计数）· `noteActivityBirth` · `activityNewCount` · `clearActivityNew` · `syncActivityNew`（帧面复原）· `attachActivityNew`（点击回底 + 重 pin + 清账 ∕ `scroll` 近底清账 + pin 维护）；记账随 root（`_poolNew` ∕ `_poolPin` ∕ `_poolNewWired` —— 无模块级态，池热重挂零串账） |
+| 2 | `thincoder-desktop/renderer/views/activity.mjs` | 322 ⇒ **338** | E2 空态退场（`none` ∕ `empty` 零子节点 —— `poolTree` 仅 `pool` 态建头 + 体；`mountPool` 空态径 `clear` + 清账）；E4 终态折叠含 `settled`（`foldIfFrozen` 去 `awaitingDigest` 豁免）；E6 消费（`createSubBlock` 出生点 `notePoolBirth`；会话换代 ∕ 空态清账 + pin 复位；`syncActivityNew` 帧面复原） |
+| 3 | `thincoder-desktop/renderer/mount-pool.mjs` | 90 ⇒ **95** | 接线随动：`paintPool` 增 `attachActivityNew(root)`（幂等 —— 与 ⏹ 委托同点） |
+| 4 | `thincoder-desktop/renderer/subagent-reduce.mjs` | 138 ⇒ **146** | ① `SUB_STATUS` 补 `approval` + `SUB_KEYS` 补 `tool`（child permission gate —— 白名单漏收 ⇒ ⏸ ∕ `sub.awaitingApproval` 桌面死面；三点对位 = 宿主 `agent-bridge.mjs:215` · 核 `state.mjs:190-201` · VSC `activity.js:133-136`）；② `archiveIntoFlow` 按核 `effects` 键集对被触碰块**换新对象引用**（核态机原地变更 ⇒ 视图 `updateSubBlock` 同一性短路恒真 ⇒ 终态折叠 ∕ awaiting 态词 ∕ 审批态永不落 DOM —— 修后落） |
+| 5 | `thincoder-desktop/renderer/views/chat-subagent.mjs` | 70 ⇒ **75** | E4 ∕ E10 判据落点（档头 ④：归档位置 ∕ 窗口 ∕ 裁剪逐值对表结论 —— 「结论落点 = 本表验收行 ∕ R10 #4」之执行） |
+| 6 | `thincoder-desktop/renderer/heartbeat.mjs` | 45 ⇒ **47** | E7 拍体判据三件同序（`_subMeta` 在场 ∧ `!frozen` ∧ 在连 —— 逐值同 VSC `activity.js:149-153`） |
+| 7 | `thincoder-desktop/renderer/pool.css` | 85 ⇒ **113** | E1 自滚（宿主 `[data-slot="pool"]` `overscroll-behavior: contain` —— VSC `base.css:103-107` 同值角色）+ E6 `.activity-new-btn`（值源 VSC `base.css:113-117`；皮肤沿 D24 律）+ 删 `.pool-empty` 死规则 |
+| 8 | `thincoder-desktop/renderer/i18n.mjs` | 461 ⇒ **464** | 增 `sub.newBlocks`（两语值逐字同 VSC `locales/{en,zh}.json:170`）+ 退 `pool.empty.hint`（消费面归零 ⇒ 键面随退）；两语键集 203 ∕ 203 相等（实读 + 对拍机检在册） |
+
+**表外档（越域披露 · 逐处给由）**：`renderer/i18n.mjs`（行动表外）—— 增 ∕ 退两键 = E6 词面单源（钮字面 `↓ ${n} …` 无宿主键即落键名）与 E2 死键随退的**机械必然后果**；零替代落点（词表单一持有点）。临时件：`.thincoder/tmp/r10-pool-probe.mjs`（未跟踪；运行副本 `thincoder-desktop/.r10-pool-probe.mjs` 用后即删）—— 产品树零残留（审计独立复核在册）。
+
+**决策透明表（设计未逐字之处 / 适配逐条给由）**
+
+| 决策 | 取值 | 依据 | 被否备选 |
+|---|---|---|---|
+| E2「区域退场」落形 | `none` ∕ `empty` 两态 = **零子节点**（内容退场）；右列卡 ∕ 宽度 ∕ `--pool-w` 零动 | VSC `:empty{display:none}` 语义映射到定宽右列 ⇒ 只可及内容面；右列骨架 = 用户②已裁「右列 = 子 agent 面」+ 21:02「右列保持原样」裁 | 列退场（改栅格 ∕ 宽度 —— 触 21:02 裁 + 越行动表）；保留 `empty` 提示（违 E2 ① 消除） |
+| E1「封顶自滚」落形 | 封顶 = **列高**（骨架：栅格行 `minmax(0,1fr)` + `.pool` `min-height:0`）；自滚 = 宿主 `overflow:auto` + `overscroll-behavior: contain` | VSC 横带 32vh 属**骨架值面**（定高列内无义）；「布局骨架差异在册」= E1 行自述；contain = VSC 同值同角色 | 加 `max-height: 32vh`（列内自缚 —— 与右列全高相抵）；不提 contain（漏 VSC 自滚角色） |
+| E6 钮载体 | 钮居**池头带** `[data-pool-head]` 首子（粘性由头带承载） | VSC 单元素 `position: sticky` 在桌面 chassis 无对位（池区唯一粘性带 = 头带）；披露在册 | 独立 sticky 元素（与头带叠位 ∕ 双粘性带）；`position: fixed`（越槽位） |
+| E6 皮肤 | 静息描边透明 + `--hover-bg` 底（D24 律） | D24 用户裁（描边归零）+ 实色支先例（`.chat-pill`） | VSC 原值 `1px solid var(--border)`（违 D24 裁） |
+| E6 清账增径 | 池面退场帧 `clearActivityNew`（钮随区退） | 桌面无 `resetActivity`（区 = 常驻列）；「区退场 ⇒ 钮无载体」—— 与 E2 同源 | 仅点击 ∕ 近底两径（VSC 原三径缩两径 ⇒ 空区内悬钮） |
+| approval 白名单补入 | `SUB_STATUS` += `approval`；`SUB_KEYS` += `tool` | 三点对位（宿主载荷 ∕ 核态机 ∕ VSC 对位）+ 「核 patch 全表字段集」原判据自述 | 保持漏收（⏸ 态死面 —— 违 E-table 全族对位） |
+| 触碰块换对象引用 | `archiveIntoFlow` 按核 `effects` 键集换新对象（未触碰块保原引用） | 视图帧触发判据（引用比较）是本仓既定形（`RENDERER.md` §2 帧面分派「逐位元素引用」同源）；核 `effects` 键集 = 官方触碰面 | 全列表克隆（多余重刷）；改核态机（越「核单源」裁）；视图侧快照差分（第二判据面） |
+| E9 ∕ E10 ∕ 段 3 | **登记不内消**（父侧裁） | E9 = 差需动模型 + 锚面（单轮切片 ⇒ 多轮留存；块锚恒居尾组前）；E10 = 在册显式裁（`RENDER-CORE.md` 表行 13「各自 · 数值差登记」）；段 3 非本行动表档 | 本舱内消（越行动表面 + 结构性改动） |
+
+**机检读数（实跑）**
+
+- **真机探针**（Electron + playwright-core · 隔离家目录；`.thincoder/tmp/r10-pool-probe.mjs`）：**10 ∕ 10 通过** —— ① 空态 `data-state=empty` ∧ 零子节点 ∧ 零头；② 出生 ⇒ `pool`（头 + 块）、头词 `[▶ coder#1 · async · m1 · 0s]`；③ `settled` ⇒ `sub-frozen` ∧ `open=false` ∧ 头词 `done · awaiting digestion`；④ 回收 `done` ⇒ 归档入流（`[data-block-kind="subagent"]` 在场）∧ 池内退场（回 `empty` 零子节点）；⑤ 拍体判据 hits=1（活 1 ∕ 冻 1 ∕ 无 `_subMeta` 1）；⑥ 审批 patch ⇒ `[⏸ coder#2 · async · m2 · 0s] Awaiting approval: write`；⑦ 未跟底出生 ⇒ 钮 `↓ 1 new block(s)` + 计数 1；⑧ 钮点击 ⇒ 清账 + 落底；⑨ 跟底出生 ⇒ 零计数 + 钉底；⑩ `pageerror` 0。
+- **语法**：8 档 `node --check` 全 OK。
+- **词表对拍**：`sub.newBlocks` 两语逐字 = VSC `locales/en.json:170` ∕ `zh.json:170`；键集 203 ∕ 203 相等；`pool.empty.hint` 全树零消费面。
+- **`git status` 自证**：本舱 8 档（7 `M` + 1 `??`：`views/activity-new.mjs`）；`thincoder-render-core/subblocks/*` 零命中；`chat.css` ∕ `events.mjs` ∕ `app.mjs` 零笔（行动表行 8–9「随动」= 零改，mtime 早于本舱窗口）；VSC 源档（`activity.js` ∕ `activity-new.js` ∕ `base.css` ∕ `ui.js` ∕ `chat-status.js` ∕ `panels.js`）mtime 全早于本舱窗口 ⇒ 本舱零笔。
+
+**审计与代码评审（终态 = converged ⇒ clean）**
+
+| 轮 | 形式 | 结果 |
+|---|---|---|
+| 1 | 内审 ∕ 背离审计（read-only explore · 8 档逐条对 E1–E11 + 行动表 + 边界） | **DEVIATIONS 2**：DOC-DRIFT 🟡（设计档随轮收正未落 —— 派单口径「文档收正 = 设计面另轮」；另报 `RENDER-CORE.md:83`「桌面右列常驻不需该钮（端差登记）」= 与本轮 U-2 直接相抵的失效句）· OUT-OF-LIST 🔵（`i18n.mjs` 两键 —— 本段已披露）；**PARTIAL ∕ SILENT-SIMPLIFICATION 零命中**；四项边界（核件五档 ∕ VSC 树 ∕ 工具行席位 ∕ `chat.css`）零命中；旁证 = 本轮窗口外零笔（mtime 逐档） |
+| fix round 1 | 审计观察收正：档头 ①「`empty`（词表提示）」⇒「`empty`（**区域退场** —— 与 `none` 一致零子节点，锚值保留）」（同档新旧句并存清） | 已落 |
+| 2 | 代码评审（advisor · type=code · 8 档 + 批档 §2.8 R10 上下文） | **VERDICT pass**（🟡4 ∕ 🔵4 —— 全非阻断、零 must-fix）：🟡 = `activity.mjs` 实读 338 > 300 顾问线（越行动表 row 1 估算 ≈280–330）· `i18n.mjs` 464 > 300（既存词表债，本轮净 ±0）· E3 `.sub-desc` 判据 ≠ VSC 单次律（桌面 = 会话级 —— 在册设计句 `UI.md:321`「会话首个活动块 · 一次性」，VSC = 面板级旗标 `state.js:42`）+ 归档回显不带该行 · 文档收正未落（`UI.md:462` 旧口径 ∕ `RENDERER.md:78` 未登记 R10 帧触发判据）；🔵 = E6 两处 chassis 适配未落登记句 · E2「同义」措辞 · 计数钮不跨帧存活（焦点面轻微）· 机检面随全清令取消（评审边界登记） |
+| fix round 2 | 按评审 🔵 措辞收正：`activity.mjs` 两处「同义」⇒「**内容面同形**」（区域盒 = 常驻右列卡 —— 骨架差异在册） | 已落（语法 OK） |
+
+**E9 值表（挂起 ∕ 消化可见面 —— 父侧裁「登记不内消」，值表本舱出）**
+
+| 面 | VSC（`chat-status.js:69-122`） | 桌面（`chat-chrome.mjs` `syncDigest` / `views/chat.mjs`） | 判 |
+|---|---|---|---|
+| 起跑 ∕ 形 | `.digest-turn` 标签行 +（n>0）`.digest-status`（`dataset.n`） | `[data-digest-label]` + `[data-digest-count]` 同两行（词键同源直取） | 一致 |
+| n=0 轮 | 零计数行（禁幻影） | 同判 | 一致 |
+| 终态 | `end` 原地更新后**留存**（不摘；不随 150 窗裁剪） | `end` 原地更新后**摘除整组** | **差 —— 登记（另轮 ∕ 设计面）** |
+| 落位 | `#messages` 尾追 ∕ 边界插入（`activity.js:104-110`） | 块序之后 ∕ 尾组族序 1（`chat.mjs:210-218`） | 一致（相对位） |
+| 归档依赖 | 归档块插在本轮边界行之前 | 块恒居尾组之前（与边界插入同位）；多轮绝对位差归上条 | 一致（相对位） |
+| cap 行 | `.digest-cap`（auto ∕ stop） | 无（宿主无 cap 生产者） | 零可见差 |
+| 切片 | 多轮累积 | 单轮切片（新 start 覆盖） | 差（模型级）—— 登记 |
+| 悬起句 | `status-bar.js:51-61`（`susp.running` ∕ `digesting` ∕ `winding`） | `views/statusline.mjs` 段 3（同三键；zh = CLI 逐字 ∕ en = VSC 逐字） | 归 R11（登记） |
+
+**E10 别名登记（归档块窗口 ∕ 裁剪 —— ① 消除 ∕ 差 ⇒ 消除，核后为零消差项）**：窗值差（VSC `ui.js:199-206` 150 块 DOM 裁剪 ⟷ 桌面 `MAX_RENDER_BLOCKS = 200` 渲染窗）= **在册显式裁**（`RENDER-CORE.md` 表行 13「各自 · 数值差登记 · 核不夺」）；归档块**两窗皆含**（VSC 裁剪集含 `.sub-block` ⟷ 桌面尾窗含 `kind === "subagent"`）；出窗行为一致（弃渲染 ∕ 不可回填 —— 运行期块非落盘件；VSC `_hasOlder` 布尔提示 ⟷ 桌面不计 `data-hidden` 之别名）。
+
+**E11 载荷面登记**：`ev:subagent`（核 `relayEventToSubPatch` 单源）+ `ev:subchunk`（四面）⟷ VSC `panel-subagent-relay.mjs` 单门（outbox 无对位：桌面就绪重推 = 宿主拍体 `reassertLive` —— R6 落；序 = 事件到达序 ∕ 归档序 = effects 键集序）；本轮 `approval` 白名单补入后三点一致（见档 4）。
+
+**未办 ∕ 待父侧（本舱边界外，只报）**
+
+1. **设计面轮收正清单**：`UI.md`（§2 项 1 `empty` 句 ⇒ 零子节点 ∕ 区域退场；右列子代理面 ∕ 空态 ∕ 生命期行；`.sub-desc` 会话级判据句）· `RENDERER.md`（§1.1 池面挂载条补 R10 帧触发判据「触碰块换引用」；拍面判据句）· `E2E-TESTING.md`（真机面）· `RENDER-CORE.md:83`（失效句：计数钮「桌面不需」）；核侧零改 ⇒ 无核侧收正（`RENDER-CORE.md` 表行 21 更新可选）。
+2. **真机走查（父侧）**：右列子代理全族（出生 ∕ 走时 ∕ ⏹ ∕ 终态留场 ∕ 归档 ∕ 计数贴 ∕ 空态）。
+3. **测试面**：随全清令取消（`test/**` 无 `*.test.mjs` 在盘、`files.mjs` 已置空、`integration/` 空）；行动表验收行的四档机检改锚（`views-activity` ∕ `events-subagent` ∕ `agent-host-subagent` ∕ `views.test`）**未执行** —— 本段与交付报告随令注明。
+4. **评审非阻断项（登记）**：`activity.mjs` 338 行（>300 顾问线；越 row 1 估算 ≈280–330）· `i18n.mjs` 464 行（既存）· `.sub-desc` 会话级判据 ∕ 归档回显不带该行（待父侧裁「消差 ∕ 登记」）· 计数钮不跨帧存活（焦点面轻微）。
 
 ## §6 验证与收口（父代理）
