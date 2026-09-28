@@ -17,7 +17,7 @@ import { currentCwd } from "./projects.mjs"
 import { scheduleSessionMaintenancePasses } from "./session-maintenance.mjs"
 // 台账刷新面收尾（R8 —— 拍面随开项目链重锚；窗口关 = 退出径同点——`stopLedgerRefresh` 幂等、核 interval 已 unref）。
 import { stopLedgerRefresh } from "./project-info.mjs"
-import { createWindow, probesSatisfied, runSmoke } from "./window.mjs"
+import { NEGATIVE_PROBE_COUNT, createWindow, probesSatisfied, runSmoke } from "./window.mjs"
 // config 写盘感知（R8 · 桌面功能对位批 · C3）：核件 `config-watch` 桌面壳（`node:fs.watch` 源 + 自写抑制）。
 import { startConfigWatch } from "./config-watch.mjs"
 // 提示锚取值表（R4 · 桌面功能对位批 · #519）：核缝供值面（`prompt-files.mjs` `configurePromptInjections`）。
@@ -117,7 +117,7 @@ async function main() {
 
   const reading = await runSmoke(win, recordError)
   const ok =
-    floorMet && sqlite && reading.loaded && reading.protocol.served > 0 && reading.protocol.blocked >= 5 && // 负探针 5 枚（R1 增 `rcEscape` / `escapeSrc`）——计数与逐探针读数双证
+    floorMet && sqlite && reading.loaded && reading.protocol.served > 0 && reading.protocol.blocked >= NEGATIVE_PROBE_COUNT && // 负探针枚数派生自探针表（#471⑥）——计数与逐探针读数双证
     reading.boot === "ok" && errors.length === 0 && probesSatisfied(reading.protocol.probes)
   if (!ok) {
     recordError(`smoke not ok: loaded=${reading.loaded} served=${reading.protocol.served} blocked=${reading.protocol.blocked} boot=${reading.boot}`)

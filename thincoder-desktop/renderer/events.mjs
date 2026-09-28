@@ -13,6 +13,10 @@
  * 距 500 硬限余 2，`ev:flags` 归约须先出档：`applyFlags` ∕ `sameRecord` 迁入该档，`ev:flags` 归约体（`onFlags`）随迁；
  * 本档引两件 + re-export 两件保名面，无环）。
  * **状态面归约径出档 `renderer/events-status.mjs`**（R4：两切片先出档 —— 两归约体 + 活动恢复即清清点迁入该档；本档引三件分派 + 前置清点一行，无环）。
+ * **块面归约径出档 `renderer/events-blocks.mjs`**（#510 留守拆档 · 2026-09-29：块面归约体五支 + 块面原语四件——
+ * 键门 `forActive` / 游标 `clearCursor` / 工具块定位 / 中止扇扫——迁入该档；本档引八名分派 + 原语复用，无环）。
+ * **读数与切片归约径出档 `renderer/events-slices.mjs`**（同批：读数槽族 + 目标 / 队列 / 台账切片迁入该档；
+ * 本档引五名分派 + `withReading`（回合槽写），无环）。
  * **R5（子代理面）**：增 **`ev:goal` 目标切片**（宿主桥 goal 工具结果时点采样 —— 单源 = 核 `agent.goal`；
  * 值形对齐核卡渲染预期）+ 三处态机接线（函数住 `renderer/subagent-reduce.mjs`，本档只接 —— 零第二实现）：
  * 回合尾 `stopped` ∧ 本键非挂起 ⇒ **本键表复位**（`resetSubBlocks`）· `openSession` 键变 ⇒ 复位新键表 ·
@@ -38,9 +42,7 @@
  *   分池 —— 设计未给池的会话键口径，缺口随 §5 登记）· `goal` 目标切片（R5 —— 按会话键；写者 = 本档 `ev:goal` 归约）；文案零硬编码（本档不出词）。
  * 活块 / 页块两面差异（决策 D8-8）：页块**不落** `status` / `durationMs`（活块有），键集一致性判据 = 五型闭集。
  */
-import { appendBlock, returnToBottom, setAttachDegraded } from "./store.mjs"
-// 排队镜面（「回合中插入」批 —— 快照整置纯动作；本档 = 写者之一，另一写者 = `renderer/page-read.mjs` 首屏重建）。
-import { applyQueue } from "./queue.mjs"
+import { appendBlock } from "./store.mjs"
 // 问题 / 任务切片面（桌面残余批拆档产物）：两归约体归 `reduce` 分派；`clearQuestion` 两调用面同源。
 import { clearQuestion, onQuestion, onTask } from "./questions.mjs"
 export { clearQuestion }
@@ -52,16 +54,19 @@ import { badgeStamps } from "./badges.mjs"
 import { liveCount, onSubagent, onSubchunk, poolOf, freezeAllSubBlocks, resetSubBlocks } from "./subagent-reduce.mjs"
 // 模式位归约径出档（本批拆分产出 —— 输入面板上提批 §2.4 Q8）：`ev:flags` 归约体 + 两共件居该档；本档引 `onFlags`
 // 分派 + `sameRecord`（四读数槽用）并 re-export 两件（名面不变 —— 页读 / 出站两消费面零改）。
-import { onFlags, sameRecord } from "./events-flags.mjs"
+import { onFlags } from "./events-flags.mjs"
 export { applyFlags, sameRecord } from "./events-flags.mjs"
 // 状态面归约径出档（R4 —— 本批拆分产出）：两归约体 + 活动恢复即清清点居该档；本档引三件分派（见 `reduce`）。
 import { expireStatusText, onCompress, onStatusText } from "./events-status.mjs"
 // 宿主唤醒面三切片归约径出档（R5 —— 先拆后改：本档触 500 硬限；挂起 ∕ 消化 ∕ 到期三归约体 + 共件
 // `countOf` 迁入该档；本档引三件分派 —— 无环）。
 import { onDigest, onSusp, onTimer } from "./events-wake.mjs"
+// 块面归约径出档（#510 留守拆档 · 2026-09-29）：块面五归约体 + 四原语（键门 / 游标 / 扇扫 / 工具块定位）——
+// 本档 `reduce` 分派 + `onActivity` ∕ `onError` 复用原语（无环：该档零反向 import）。
+import { clearCursor, forActive, onReasoning, onToken, onToolCall, onToolOutput, onToolResult, sweepRunningTools } from "./events-blocks.mjs"
+// 读数与切片归约径出档（同批）：读数槽族 + 目标 / 队列 / 台账切片——本档分派 + `onActivity` 复用 `withReading`。
+import { onGoal, onLedger, onQueue, onUsage, withReading } from "./events-slices.mjs"
 
-/** 活流块 id 派生前缀（页块 id 域 = 核给（工具 id）/ 缺省无 —— 两域不混）。 */
-const LIVE_ID = "live-"
 /** 审批池条目键白名单（零新键 —— 消费面 `views/approval.mjs` / `views/activity.mjs` 读取集）。
  *  **对齐第三批增两键**：`owner`（子代理门归属串 —— 核 `opts.owner.label` 原样）/ `diff`（核 `diffInfo` 原样）
  *  —— 载荷不携 ⇒ 键缺席（消费面按缺省零节点落形）。 */
@@ -76,115 +81,7 @@ function withPool(state, { approvals = null, running = null } = {}) {
   return { ...state, pool: { ...pool, approvals: nextApprovals, approval: nextApprovals.length, running: nextRunning } }
 }
 
-/** 键过滤（块 / 池写者面）：非活动会话的事件 ⇒ 调用面原引用。 */
-function forActive(state, ev) {
-  return ev.key === state.activeSession
-}
-
-/** 尾块定位（同 `id` 活块；`id === undefined` ⇒ 只认尾块 —— 无 id 事件不外扩）。 */
-function indexOfTool(blocks, id) {
-  for (let index = blocks.length - 1; index >= 0; index -= 1) {
-    const block = blocks[index]
-    if (block?.kind === "tool" && (id === undefined || block.id === id)) return index
-  }
-  return -1
-}
-
-/** 流式游标清点（#459 · KD-24 · `renderer/views/chat.mjs` 游标语义 = **末块追加态**）：命中带 `streaming` 真项者换
- *  **新块对象**（去游标 —— 位序与其余块引用不动）；无命中 ⇒ **原引用**（零通知）。清点须落块面引用 = 唯一刷新径（`blocks` 键变 ⇒ 帧触发 ⇒ 摘 `data-streaming` 锚）。 */
-function clearCursor(state) {
-  const list = Array.isArray(state.blocks) ? state.blocks : []
-  let hit = false
-  const next = list.map((block) => {
-    if (block?.streaming !== true) return block
-    hit = true
-    return { ...block, streaming: false }
-  })
-  return hit ? { ...state, blocks: next } : state
-}
-
 // ─── 纯归约（二十二通道 → 切片；`ev:config` = 纯信号窄口不入归约）────────────
-
-/** `ev:reasoning`——推理块增量（R3c · D19 · `docs/desktop/design/IPC.md` §1 该行）：续写判据 = **尾块 `kind === "reasoning"`**（与正文同形）；
- *  否则起新推理块；键门同 `onToken`（非活动会话零落）。 */
-function onReasoning(state, ev) {
-  if (!forActive(state, ev)) return state
-  const text = typeof ev.text === "string" ? ev.text : ""
-  if (text === "") return state
-  const blocks = state.blocks ?? []
-  const tail = blocks[blocks.length - 1]
-  if (!tail || tail.kind !== "reasoning") return appendBlock(state, { kind: "reasoning", id: `${LIVE_ID}${blocks.length}`, text })
-  const head = typeof tail.text === "string" ? tail.text : ""
-  return { ...state, blocks: [...blocks.slice(0, -1), { ...tail, text: head + text }] }
-}
-
-/** `ev:token`——助手尾块续写（判据 = 尾块 `kind === "assistant"` ∧ `streaming === true`）；否则起活块。
- *  新块经 `appendBlock`（停跟期间只累 `pendingNew` —— `store.mjs` 纯动作，跨切片语义同源）。 */
-function onToken(state, ev) {
-  if (!forActive(state, ev)) return state
-  const text = typeof ev.text === "string" ? ev.text : ""
-  if (text === "") return state
-  const blocks = state.blocks ?? []
-  const tail = blocks[blocks.length - 1]
-  if (tail && tail.kind === "assistant" && tail.streaming === true) {
-    return { ...state, blocks: [...blocks.slice(0, -1), { ...tail, text: tail.text + text }] }
-  }
-  return appendBlock(state, { kind: "assistant", id: `${LIVE_ID}${blocks.length}`, text, streaming: true })
-}
-
-/** `ev:tool-call`——工具块入（活块形：`{kind,id,name,argsSummary,status,startedAt}`）；**段界游标清点**（#459 ② 族：入场 ⇒ 前序
- *  助手文本段收束 —— 清点先于追加，两事不同块）。**R3b 摘工具行**：不再写池条目（工具调用面 = 对话流工具卡）。
- *  **「对齐第三批」项 14 载波**：载荷 `round` / `model`（仅 `advisor` 名）在场才落块键（缺 ⇒ 键缺席 —— 禁假造）；
- *  段文成形归视图面（`renderer/views/chat-tool.mjs`）。 */
-function onToolCall(state, ev, now) {
-  if (!forActive(state, ev)) return state
-  const block = { kind: "tool", id: ev.id, name: ev.name, argsSummary: ev.argsSummary, status: "running", startedAt: now }
-  if (typeof ev.round === "number" && Number.isFinite(ev.round) && ev.round > 0) block.round = ev.round
-  if (typeof ev.model === "string" && ev.model !== "") block.model = ev.model
-  return appendBlock(clearCursor(state), block)
-}
-
-/** `ev:tool-output`——结果文本累积入该工具块 `result`（无匹配块 ⇒ 零写）。
- *  **「对齐第三批」项 3**：chunk 到达 ⇒ **清显式折叠旗**（`expanded` 键摘除 —— 运行期展开由增量驱动，与 VSC 同径；
- *  体落判据归视图面 `isExpanded`：显式旗 ∨ `running` / `error` 缺省展开）。 */
-function onToolOutput(state, ev) {
-  if (!forActive(state, ev)) return state
-  const blocks = state.blocks ?? []
-  const index = indexOfTool(blocks, ev.id)
-  if (index < 0) return state
-  const chunk = typeof ev.chunk === "string" ? ev.chunk : ""
-  if (chunk === "") return state
-  const block = blocks[index]
-  const result = typeof block.result === "string" ? block.result + chunk : chunk
-  const next = { ...block, result }
-  delete next.expanded
-  return { ...state, blocks: [...blocks.slice(0, index), next, ...blocks.slice(index + 1)] }
-}
-
-/** `ev:tool-result`——按 `id` 定位后**重建**（`status` 收束 · `durationMs` = 现刻 − 起刻 · 丢 `startedAt`）；
- *  `status` 由载荷 `ok` 定（`ok === true` ⇒ `done`，否则 `error`）——判据串归宿主侧单源
- *  （`docs/desktop/design/IPC.md:34` 载荷定形 · 批档 §2.16⑪：本端不另立判据、不解析正文）；载荷缺该键 ⇒ 不判成功。 */
-function onToolResult(state, ev, now) {
-  if (!forActive(state, ev)) return state
-  const blocks = state.blocks ?? []
-  const index = indexOfTool(blocks, ev.id)
-  if (index < 0) return state
-  const block = blocks[index]
-  const result = ev.result ?? null
-  const ok = ev.ok === true
-  const settled = {
-    kind: "tool", id: block.id, name: block.name, argsSummary: block.argsSummary,
-    status: ok ? "done" : "error", durationMs: now - (block.startedAt ?? now), result,
-  }
-  // 「对齐第三批」项 14：轮次载波**过收束**（`round` / `model` 原样承接 —— 收束 = 同块换态非重建；
-  //   丢两键 ⇒ 具名 advisor 卡头轮次段在结果到达后消失）；只承接在块键（缺 ⇒ 仍缺席 —— 禁假造）
-  if (block.round !== undefined) settled.round = block.round
-  if (block.model !== undefined) settled.model = block.model
-  // 「对齐第三批」相抵② 载波：验存文件链接非空行集才落（缺 / 空 ⇒ 键缺席 —— 禁假造）；着装 / 出口归视图面
-  if (Array.isArray(ev.links) && ev.links.length > 0) settled.links = ev.links
-  const next = { ...state, blocks: [...blocks.slice(0, index), settled, ...blocks.slice(index + 1)] }
-  return next // R3b 摘工具行：池条目随动面已摘（工具调用面 = 对话流工具卡）
-}
 
 /** `ev:approval`——待决项入池（键白名单 + 去 `undefined` ⇒ 零新键）· `pool.approval` = 待决数 ·
  *  `tabBadges[key] ⊇ {approval}`（位标任意键可写）。同 `promptId` 复现 ⇒ 就地替换（不叠条）。
@@ -201,94 +98,6 @@ function onApproval(state, ev) {
   return stamps.changed ? { ...withItem, tabBadges: stamps.badges } : withItem
 }
 
-/** 读数槽写（R3a 状态行读数槽通用形）：`value` 非 `null` ⇒ 首写自种 / 同键同值原引用 / 否就地替换；`value === null` ⇒ **清本键**（载荷缺省 / 形非法 ⇒ 该段零节点 —— `docs/desktop/design/IPC.md` §1「两键缺省 ⇒ 零节点」，禁假造）。 */
-function withReading(table, key, value) {
-  const source = table ?? {}
-  const has = Object.hasOwn(source, key)
-  if (value === null) {
-    if (!has) return table
-    const next = { ...source }
-    delete next[key]
-    return next
-  }
-  if (has && sameRecord(source[key], value)) return table
-  return { ...source, [key]: value }
-}
-
-/** 令牌读数归一（载荷扩 `tokens` —— 五键数值；非载体 / 缺省 ⇒ `null`（清槽 ⇒ 零节点）；非数归一 0（核 `?? 0` 同形））。 */
-function tokenReading(value) {
-  if (value === null || typeof value !== "object") return null
-  const num = (raw) => (typeof raw === "number" && Number.isFinite(raw) ? raw : 0)
-  return {
-    prompt: num(value.prompt), completion: num(value.completion), reasoningTokens: num(value.reasoningTokens),
-    cacheHit: num(value.cacheHit), cacheMiss: num(value.cacheMiss),
-  }
-}
-
-/** 计时读数归一（载荷扩 `timers` —— `{ count, expired }`；`count` 非数 ⇒ `null`；`expired` 缺 / 非数 ⇒ 0）。 */
-function timerReading(value) {
-  if (value === null || typeof value !== "object") return null
-  if (typeof value.count !== "number" || !Number.isFinite(value.count)) return null
-  const expired = typeof value.expired === "number" && Number.isFinite(value.expired) ? value.expired : 0
-  return { count: value.count, expired }
-}
-
-/** `ev:usage`——本会话读数面（按 `key` 写切片 · 同键就地替换 · 首写自种 · **零键门** —— 与 `sessionMeta` 同形；读面单源 = `docs/desktop/design/UI.md` §1 状态栏行）。
- *  三槽同笔：`usage[key]` = 占用读数（**有效读数门** = 数字 ∧ `> 0`——`IPC.md` §1：有效读数⇒发 · 否则不发；未至 / 零 / 负 / 非数 ⇒ **原引用**，禁假造）· `tokens[key]` / `timers[key]` = 载荷扩两键（R3a · 状态行令牌 / 计时段——缺省 ⇒ 清槽；非数归一 / 非正 ⇒ 显示面零节点）。
- *  读数域 0–100 整数由核 `historyPercent` 直传 ⇒ 本档**零重算 · 零上界判**；三槽皆同值 ⇒ 原引用（同值重发零重绘）。 */
-function onUsage(state, ev) {
-  const percent = ev.percent
-  if (typeof percent !== "number" || !(percent > 0)) return state
-  const usage = state.usage?.[ev.key] === percent ? state.usage : { ...(state.usage ?? {}), [ev.key]: percent }
-  const tokens = withReading(state.tokens, ev.key, tokenReading(ev.tokens))
-  const timers = withReading(state.timers, ev.key, timerReading(ev.timers))
-  if (usage === state.usage && tokens === state.tokens && timers === state.timers) return state
-  return {
-    ...state,
-    ...(usage === state.usage ? {} : { usage }),
-    ...(tokens === state.tokens ? {} : { tokens }),
-    ...(timers === state.timers ? {} : { timers }),
-  }
-}
-
-/** `ev:goal`——目标面切片（R5 · B10；按会话键 · 同键就地替换 · 首写自种）：载荷 = 宿主桥按核 `agent.goal`
- *  单源投影（`{ status, objective, criteria }` —— 值形对齐核卡 `cards/panel.mjs` 渲染预期）。`status` 闭集 =
- *  VSC 产点四支（`active` / `done` / `blocked` / `cancelled`）——表外 ⇒ **零写**（禁假造）；同键同值 ⇒
- *  **原引用**（零重绘）。消费 = 目标卡（`renderer/views/goal.mjs`）∥ 状态行 🎯 非段位元素（`statusline.mjs`）。 */
-function onGoal(state, ev) {
-  const status = typeof ev?.status === "string" && GOAL_STATUS.includes(ev.status) ? ev.status : null
-  if (status === null || typeof ev.key !== "string" || ev.key === "") return state
-  const text = (value) => (typeof value === "string" && value !== "" ? value : null)
-  const record = { status, objective: text(ev.objective), criteria: text(ev.criteria) }
-  const table = state.goal ?? {}
-  if (sameRecord(table[ev.key], record)) return state
-  return { ...state, goal: { ...table, [ev.key]: record } }
-}
-
-/** 目标状态闭集（单源 = 核 `agent-tools/goal.mjs` 状态词经宿主桥投影：`active` / `complete⇒done` /
- *  `blocked` / 缺席⇒`cancelled`；表外 ⇒ 零写）。 */
-const GOAL_STATUS = Object.freeze(["active", "done", "blocked", "cancelled"])
-
-/** `ev:queue` —— 排队面镜面两形（「回合中插入」批 · 单源 = `docs/desktop/design/PROJECT.md` §2 KD-40 ④）：
- *  ① **状态形**（`{ key, items }`）⇒ 本键镜面整置（快照整置 · 幂等 —— 权威 = 宿主，渲染面零本地队）；
- *  ② **消费回执形**（+ `delivered`）⇒ 镜面整置 ∧ 降级码切片随动（在场 ⇒ 置位 ∕ 缺 ⇒ 清）∧ **用户块入流**
- *  （键门 = 活动会话；块形与回放同形 · 文本 = `delivered.text` 逐字）∧ **并笔回底**（直发 ∕ 回执两径同判）——
- *  **消费前流内零块**（收正轮 B12 新口径：待发送件住输入区带，消费时刻才入流 ⇒ 本径恒追加恰一枚）。
- *  非串 `key` / 非数组 `items` ⇒ 原引用（形不合零写）；空快照（消费殆尽 ∕ 会话中止清队）⇒ 镜面落空。 */
-function onQueue(state, ev) {
-  const key = typeof ev.key === "string" && ev.key !== "" ? ev.key : null
-  if (key === null || !Array.isArray(ev.items)) return state
-  const delivered = ev.delivered !== null && typeof ev.delivered === "object" ? ev.delivered : null
-  const mirror = applyQueue(state, key, ev.items)
-  if (delivered === null) return mirror
-  const withCode = setAttachDegraded(mirror, key, delivered.degraded)
-  const text = typeof delivered.text === "string" ? delivered.text : ""
-  if (text === "" || key !== withCode.activeSession) return withCode
-  const block = { kind: "user", text }
-  if (typeof delivered.ts === "number" && Number.isFinite(delivered.ts)) block.ts = delivered.ts
-  return returnToBottom(appendBlock(withCode, block))
-}
-
 /** 回合尾判据**单源**（三径 = §2.16②/④ + 批 A 修正轮 —— `docs/desktop/design/RENDERER.md` §1.1「回合尾三径」条）：
  *  吃**两通道形**：`ev:activity` ∧ `fields` 键**不在场** ∧ `event ∈ {done, stopped}` ∥ `ev:error`（该通道**单义** = 宿主回合结算
  *  〔错误径〕—— 工具级错误不经本通道 ⇒ 全收）∥ 余 ⇒ 假；值面 `onActivity` / `onError` 与订阅面（回合尾 ⇒ 标题刷新 · 输入区 flush）同用。
@@ -298,20 +107,6 @@ export function isTurnTail(ev) {
   if (channel === "ev:error") return true
   if (channel !== "ev:activity" || "fields" in ev) return false
   return ev.event === "done" || ev.event === "stopped"
-}
-
-/** 中止清扫（「对齐第三批」项 5）：`stopped` 终局 ⇒ 未结算工具块（`status === "running"`）就地改
- *  `status: "interrupted"`（体 / 折叠态不动 —— VSC 同；**已中断** = 状态词闭枚举增词（7 ⇒ 8 词——单源 = `docs/desktop/design/UI.md` §1），词键 `tool.interrupted`）；
- *  命中才换新数组（无命中 ⇒ 原引用）。 */
-function sweepRunningTools(state) {
-  const list = Array.isArray(state.blocks) ? state.blocks : []
-  let hit = false
-  const next = list.map((block) => {
-    if (block?.kind !== "tool" || block.status !== "running") return block
-    hit = true
-    return { ...block, status: "interrupted" }
-  })
-  return hit ? { ...state, blocks: next } : state
 }
 
 /** 停止痕切片写（「对齐第三批」项 6）：`stopped` 终局 ⇒ `stopMark[key] = true`（运行期痕 —— **非落盘件**，
@@ -379,37 +174,6 @@ function onError(state, ev) {
   const marked = badgeStamps(cleared.badges, ev.key, "done", true)
   if (!cleared.changed && !marked.changed) return blocks
   return { ...blocks, tabBadges: marked.badges }
-}
-
-/** `ev:ledger`——台账两切片（「对齐第三批」项 12 · KD-38；**R8 增 `detailLines`**）：载荷 `{ key, lines?, detailLines? }`——
- *  `lines` = 核行产逐字 `{ text, warn }`（端侧零行构造）；行集过滤后非空才写（行文本非串 / 空 ⇒ 该行弃；空集 ⇒ 零写——禁假造）；
- *  同值（文本逐字 + `warn` 真值同）⇒ 原引用（零重绘）。`detailLines`（R8 · L2 明细行——状态行台账段 `title` 载波）= 核
- *  `detailScans` ∕ `formatDetailLine` 行集逐字（端零行构造）；**顶层切片 `ledgerDetail`**（项目级——与状态行台账段同锚，
- *  不按会话键）；空集照写（清 tooltip——禁假造）；同值 ⇒ 原引用。两键皆无 ⇒ 原引用。
- *  消费 = 流尾非块节点组 `[data-ledger-line]`（`renderer/views/chat.mjs`）+ 状态行台账段 tooltip（`views/statusline-segments.mjs`）；
- *  周期刷新（VSC `REFRESH_MS`）= R8 落（核拍面 —— `src/main/project-info.mjs`）。 */
-function onLedger(state, ev) {
-  const lines = (Array.isArray(ev.lines) ? ev.lines : [])
-    .filter((line) => typeof line?.text === "string" && line.text !== "")
-    .map((line) => ({ text: line.text, warn: line.warn === true }))
-  const detailLines = Array.isArray(ev.detailLines)
-    ? ev.detailLines.filter((text) => typeof text === "string" && text !== "")
-    : null
-  let next = state
-  if (lines.length > 0) {
-    const table = next.ledgerLines ?? {}
-    const prev = table[ev.key]
-    const same = Array.isArray(prev) && prev.length === lines.length
-      && prev.every((line, index) => line.text === lines[index].text && line.warn === lines[index].warn)
-    if (!same) next = { ...next, ledgerLines: { ...table, [ev.key]: lines } }
-  }
-  if (detailLines !== null) {
-    const prev = Array.isArray(next.ledgerDetail) ? next.ledgerDetail : null
-    const same = prev !== null && prev.length === detailLines.length
-      && prev.every((text, index) => text === detailLines[index])
-    if (!same) next = { ...next, ledgerDetail: detailLines }
-  }
-  return next
 }
 
 /** 纯归约出口：`ev` = `{ channel, ...载荷 }`（载荷携 `key`）。未知通道 / 形不合 ⇒ 原引用（逐通道一写者 —— 含 `ev:queue`）。 */

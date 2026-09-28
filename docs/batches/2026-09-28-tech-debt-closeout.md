@@ -92,6 +92,11 @@
 - **码面四下传**：③URL 形收紧 ∕ ④门①段界 ∕ ⑤host 校验 ∕ ⑥阈值派生 = 码面（轮 7 舱 **#32** 二择一逐条处置——其单已载）。
 - **台账**：**#547 核销**（处置 = 维持裁定 · 依据本节）；#471 全项处置待轮 7 舱回执后合账。
 
+### 1.17 轮 7 交付收下（父侧 · 2026-09-29 02:1x）
+- **交付**（#32 · 终态 clean · fix 1）：**三拆 + 四件**——`setup-tooltable.mjs` 333 ⇒ **102**（+ 新档 `tool-table.mjs` 250——231 行逐字搬）、`events.mjs` 482 ⇒ **246**（+ `events-blocks.mjs` 135 ∕ `events-slices.mjs` 130）、`mount-composer.mjs` 409 ⇒ **237**（+ `composer-sync.mjs` 210）、`core.css` 463 ⇒ **281**（+ `core-markdown.css` 191）；**#471 产品码 ③④⑤⑥ 落修**（`protocol.mjs` 三门：host ∕ dot-segment ∕ 段界；`window.mjs` 阈值派生 ⇒ `main.mjs:120` 判 `blocked >= NEGATIVE_PROBE_COUNT`——手抄 5 撤）；**转核销四件**（styles 四拆 ∕ mount-settings 族 ∕ settings-sections 族 ∕ **agent-host 族**）+ `store.mjs` 出名单 + 测试档越层从句撤。搬移逐字核 **18 ∕ 18** 吻合 + EXACT 重演；`node --check` 11 档绿。**批次本地件落位**（档头运行命令一行父侧机械收正）——**终位亲跑 9 ∕ 9 · 0 fail**（240 行）。§5 已落（5578 字符）+ 状态行更新。
+- **范围外（在册）**：① `agent-host.mjs` 249 归属 = **转核销（turn-driver 拆）✓**；② `chrome.css` **425** 越线 → 设计面（§2.5 ∕ §4.1 对账 ∕ #551 家族）；③ 注释陈旧三处（`queue.mjs:7` ∕ `chat-pending.mjs:5/:68`）→ 随下次触碰面；④ `RENDER-CORE.md` 锚漂移（`protocol.mjs` ∕ `core.css` 面坐标）→ #551 家族；⑤ `render-core-r1.md:157` ③ 原字面与转写差 → §6 核销绑定位。
+- **收正行 → #35（Doc-B）**：#365 拆后读数（102 ∕ 250）→ `MANIFEST.md:180` ∕ §2.3 `:201` + `VSC-DEBT.md:111/:135/:163`；#510 读数族 → §4.1（#551）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：✅ 设计完成（initial 轮 + 修正轮 1–2（评审 #3 收正已落）· 63 条 8 轮 · 每轮 ≤10 档）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -692,7 +697,7 @@
 - **实施序**：§2.3 分层执行——轮 4 ∕ 轮 5（码面）与轮 1（文档 sweep）即起；轮 2 ∕ 3 ∕ 6–8 随派（先小设计项按轮定形）。
 
 ## §5 实施记录（eng-coder）
-**状态行**：实施完成（轮 6（桌面 ∕ VSC ∕ 文本 · 9 条）——审计 1 轮 clean ∕ 代码评审 1 轮 pass（🔴0）；8/8 用例绿；终态 clean）
+**状态行**：实施完成（轮 7（拆档 ∕ 尺寸 ∕ 工具清理 · 8 条）——审计 1 轮 clean ∕ 代码评审 1 轮 pass（🔴0）；批次本地件 9 ∕ 9 绿；终态 clean）
 
 
 
@@ -845,5 +850,50 @@
 **读数**：批次本地件点名复跑 `node --test .thincoder/tmp/2026-09-28-tech-debt-closeout-r6.test.mjs`（仓根）＝ **8 ∕ 8 pass**；全触碰 `.mjs` 档 `node --check` 全绿。**not repo-suite verified — the parent-side closeout run is the only repo-suite run.**
 
 **披露**：① 测试件暂存于 `.thincoder/tmp/`，待父侧 copy 至 `docs/batches/`（写门实测拒——台账 #545）；② 本舱零触设计档 ∕ 需求档 ∕ 其他批档（`thincoder-core/**` 只读）；③ `#382` 的 `persist()` 剥 guard 为同口径收的连带面（决策透明表第 1 行）。
+
+### 轮 7 · 实施记录（拆档 ∕ 尺寸 ∕ 工具清理 · 8 条 · eng-coder #32 · 2026-09-29 · initial 轮）
+
+**逐条落点（条 → 处置 → file:line · 终稿实读）**
+
+| 条 | 处置 | 落点 / 证据 |
+|---|---|---|
+| #196 | 免实施 + 登记（报告列 · 零码） | 两夹具靶档（`thincoder-core/test/manifest.test.mjs` ∕ `setup-reminders.test.mjs`）随全清令删除 ⇒ 对象不存在；登记句 =「夹具隔离（家目录建档态不翻面）随新单元面重建时自查——本批零改」；`thincoder-core/**` 零触 |
+| #364 | 免实施 + 登记（报告列 · 零码） | 裁定对象 `thincoder-vscode/test/model-picker-fallback.test.mjs` 已删 ⇒ `docs/vsc/design/VSC-DEBT.md` §12.1 不再补登（登记项随对象作废） |
+| #365 | **落：拆档** | 新档 `thincoder-vscode/src/agent/tool-table.mjs`（**250** 内容行）+ `setup-tooltable.mjs` **333 → 102**；缝 = re-export（`:102` `export { buildToolTable, modeRoleField, vscSubagentFace, withPool } from "./tool-table.mjs"`）；搬移核：原档 `:103-333`（231 行）逐字同（仅 buildToolTable 档头注 2 行级差异 = 1 行改写 + 1 行补注）；静态边集合两档并集 = 原档 11 边（W8 契约②不破）；五条动态 import 原样；`thincoder-vscode/AGENTS.md:43` 模块图随动（表外披露） |
+| #416 | 父侧自理 | 零触（父侧 §1.12 已落） |
+| #450 | 免实施 + 登记（报告列 · 零码） | 靶档 `thincoder-desktop/test/host-floor.test.mjs` 已删 ⇒ 例外面口径核对对象不存在 |
+| #456 | 父侧自理 | 零触（父侧 §1.13 转出 #546） |
+| #471 | **落：产品码 ③④⑤⑥**（①② = 父侧成文维持） | ③ `thincoder-desktop/src/main/protocol.mjs:59` 门①′ URL 形收紧（`hasDotSegment` 拒 `.` ∕ `..` 段）；④ `:58` 门①判据改**段界**（`isEscape` —— `..foo` 类不误拒）；⑤ `:53` 门⓪ host 校验；⑥ `thincoder-desktop/src/main/window.mjs:46` `NEGATIVE_PROBE_COUNT` 派生自 `PROBES`（表实读 6）+ `src/main/main.mjs:120` 消费（旧手抄 `>= 5` 撤） |
+| #510 | **落：桌面留守拆档**（三档续拆 + 已在盘项转核销） | ① `renderer/events.mjs` **482 → 246** + 新档 `events-blocks.mjs` **135** ∕ `events-slices.mjs` **130**；② `renderer/mount-composer.mjs` **409 → 237** + 新档 `composer-sync.mjs` **210**；③ `renderer/core.css` **463 → 281** + 新档 `core-markdown.css` **191**（链序 `renderer/index.html:18-19` —— 表外披露）；**转核销** = `styles.css` 四拆产物（`theme.css` 89 ∕ `chrome.css` 444 ∕ `skin.css` 13，`styles.css` ∕ `rail.css` 不在盘）· `mount-settings.mjs` 151（+ `mount-info.mjs` 40）· `views/settings-sections.mjs` 223（+ `settings-agent.mjs` 120）· `src/main/agent-host.mjs` 249（+ `turn-driver.mjs` 213）；`store.mjs` 298 ≤300 出拆名单；测试档越层 8 档随全清令撤；U95 随动撤（靶已删）；§4.1 随动 = 设计面收正行（Doc-B #35 ∕ 专轮 #551） |
+
+**搬移逐字性证据**：events 三档 —— 18 个搬移区段对 git HEAD 逐字连续核 **18 ∕ 18** 吻合（`export ` 前缀外零差异）；本体用「HEAD + 本轮删除集 + 替换集」机械重演 **EXACT**。core.css —— 183 行区段逐字 **EXACT**，本体机械重演 **EXACT**（面 1–17 出档；面 20 覆盖对同选择器「后落者胜」序保持）。VSC —— 231 行区段逐字（2 行档头注差异如上）。`mount-composer.mjs` 改前 ≠ git HEAD（含他批未提交改动）⇒ 字节级重演不适用，以「迁出面 ∕ 留存面互补核 + 双向接线逐点核 + 批测行为」替代（如实披露：该档字节级未证）。
+
+**行为保护（批次本地件）**：`.thincoder/tmp/2026-09-28-tech-debt-closeout-r7.test.mjs`（9 例 · 待父侧 copy 至 `docs/batches/`）——覆盖：尺寸闸（9 档 ≤300）· CSS 链序 · events 归约三径 ∕ 键门 ∕ 中止扇扫 ∕ 读数与切片 · composer-sync 工厂行为 + attachComposer 装配冒烟 · protocol 四门（含 ④ `..foo` 段界反证 ∕ 门归属行）· 探针表全向量实驱 + `blocked ≥ NEGATIVE_PROBE_COUNT` · `probesSatisfied` 三向。
+**亲跑（仓根）**：`node --import ./thincoder-desktop/test/rc-resolve.mjs --test ./.thincoder/tmp/2026-09-28-tech-debt-closeout-r7.test.mjs` ⇒ **9 ∕ 9 pass · 0 fail · exit 0**。`node --check`：触碰 11 档全绿。
+**not repo-suite verified — the parent-side closeout run is the only repo-suite run.**
+
+**决策透明表**
+
+| # | 决策 | 依据 |
+|---|---|---|
+| 1 | #365 出档面 = 池装配装饰 + 装配段整面（`withPool` ∕ `vscSubagentFace` ∕ 终态回显族 ∕ `modeRoleField` ∕ `buildToolTable`） | `buildToolTable` 体消费前三者 —— 只搬它必生反向边（环）；整面出档 + 同名 re-export 保消费档（`setup.mjs`）零改（KD-6 缝形） |
+| 2 | events 拆两档：blocks（块面 + 键门 ∕ 游标 ∕ 工具块定位 ∕ 中止扇扫四原语）· slices（读数槽族 + 目标 ∕ 队列 ∕ 台账） | 482 ⇒ ≤300 需移 ≥182 行；两档 135 ∕ 130、零反向 import（无环）；原语随其消费面（块面）走 |
+| 3 | composer 出档 = 随动派生面（`state` 读面 ∕ 忙态派生 ∕ 模式位推送 ∕ 候选面 ∕ 两挂件锚窄刷）工厂 `createComposerSync(deps)` | 原为单闭包；沿同档既有 `createComposerWire(deps)` 先例做 deps 注入（两宿主锚 ∕ `panel` = 装配期后置位 ⇒ 访问器注入）；`effortOf` ∕ `reasoningOf` + `REASONING_NONE` 随迁单源（写面 deps 注入 ∕ `prefsOf` 同表） |
+| 4 | core.css 出档面 ①（核 Markdown 产出，面 1–17 / 183 行） | 最大内聚面；载入序 = `index.html` core-markdown 先于 core ⇒ 面 20 覆盖（同选择器）「后落者胜」序与拆前等价 |
+| 5 | #471 门位选择：③ 落**门①′**（判据序：门 ⓪ → ① → ①′ → ② → ③） | 既有负探针仍走门①（stderr 归属行 ∕ `blocked` 计数不吞）；③ 只收紧 URL 形 dot 段（假阴面收紧）；④ 段界消除 `..foo` 误拒 |
+| 6 | 表外两处（披露）：`thincoder-vscode/AGENTS.md:43` 模块图 + `renderer/index.html:18` 链序行 | 新档入图 ∕ 入链 = 交付完整必需；逐处报告 |
+| 7 | 连带收正（零语义）：`mount-composer.mjs:33` 「本档」→ 派生面档 · `:35` 全清令死指针标记 · `isComposing` 消费者注（核卡 P2 已随核卡内建） | 拆档 ∕ 实读使本档注释与实况相抵（内部审计 + 代码评审均列；零语义） |
+
+**上抛 ∕ 登记（随轮报告）**
+
+1. 三条免实施登记句已在表内（#196 ∕ #364 ∕ #450）——§6 核销时逐条引用。
+2. `#365` 设计档回填（报告列 · 未写设计档）：`docs/core/design/MANIFEST.md` 行 29 表行（现 `:180`）与 §2.3 拆分注（现 `:201`）触发成立 ⇒ 已执行；**拆后实读 = `setup-tooltable.mjs` 102 ∕ 新档 `tool-table.mjs` 250**；`docs/vsc/design/VSC-DEBT.md:111/:135/:163` 三处旧「已落 · 实读 333」同笔收正 ⇒ **Doc-B（#35）∕ 届盘**。
+3. `#510` §4.1 随动（报告列 · 未写设计档）：三档实读 + 四转核销项读数 + `store.mjs` 出拆名单 + 测试档从句撤 + U95 撤 ⇒ **Doc-B（#35）∕ 专轮 #551**（用户令：§4.1 全表重锚另轮）。
+4. 范围外只报：`renderer/queue.mjs:7` ∕ `renderer/views/chat-pending.mjs:5` ∕ `:68` 三处仍把 `paintNotices` 记作 `mount-composer.mjs` 面（随拆档陈旧，他档面未并）；`docs/render-core/design/RENDER-CORE.md` 若干行锚因本轮门插入 ∕ 拆档漂移；`docs/batches/2026-09-27-render-core-r1.md:157`（③ 原始字面「guard 前缀白名单可收紧」）与 §1.16 转写「③URL 形收紧」非逐字同指 —— 供 §6 核销绑定目标。
+5. R1 顾问项 ⑥ 完成读数：探针表自 R9 起为 3 正 6 负 ⇒ `NEGATIVE_PROBE_COUNT` 实读 **6**（旧手抄 5 已撤；smoke 判据随之收紧）。
+
+**审计与代码评审轮次与终态**：内部 explore 背离审计（只读 · 1 轮）= **clean**（四类偏差零；附 2 项记录面：§5 未写 = 本笔补、`isComposing` 注释漂移 = 随轮收正）；advisor 代码评审（type=code · 1 轮）= **pass**（🔴0 ∕ 🟡1【编排项：设计档回填待 Doc-B #35 ∕ #551 —— 非 must-fix】∕ 🔵3【`mount-composer` 档头陈旧注释 ×2 ∕ 批测时序等待】）；**fix round = 1**（三项逐处收正：`:33` 归属改指派生面档 · `:35` 死指针标记 · 批测改确定性轮询；复跑 9 ∕ 9 保持）。**终态 = clean**。
+
+**披露**：① 测试件暂存 `.thincoder/tmp/` 待父侧 copy（写门实测拒 —— 台账 #545）；② 本舱零触设计档 ∕ 需求档 ∕ 其他批档（`thincoder-core/**` 只读）；③ 表外两处见决策表 #6；④ 工作树含他批未提交改动（`mount-composer.mjs` 改前非 HEAD 基线——字节级重演不适用，如上述）。
 
 ## §6 验证与收口（父代理）
