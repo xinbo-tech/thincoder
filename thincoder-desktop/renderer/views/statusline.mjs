@@ -1,19 +1,23 @@
 /**
- * statusline.mjs — 状态行族档（D17 · `docs/desktop/design/UI.md` §1 状态栏行 / §1「本批注（对齐重定位）」项 1 ·
- * `docs/desktop/design/PROJECT.md` §2 KD-25 / §6.1 D17）：**承载 12 段**构树单源（CLI 段集对位 =
- * `thincoder-cli/src/tui/render-frame.mjs:344` 起 `buildStatusLine`）；自 `renderer/views/chrome.mjs` 拆出
- * （300 行拆分层预案落形 —— `docs/desktop/design/PROJECT.md` §4.2 状态行族档），`chrome.mjs` 同名再出口（消费面零改）。
+ * statusline.mjs — 状态行族档（D17 / D22 · `docs/desktop/design/UI.md` §1 状态栏行 / §1「本批注（对齐重定位）」项 1 /
+ * §1「本批注（状态栏对齐 · 屏面为准）」· `docs/desktop/design/PROJECT.md` §2 KD-25 · KD-30 / §6.1 D17 · D22）：**承载 16 段**构树单源
+ * （CLI 段集对位 = `thincoder-cli/src/tui/render-frame.mjs:344` 起 `buildStatusLine`）；自 `renderer/views/chrome.mjs` 拆出
+ * （300 行拆分层预案落形 —— `docs/desktop/design/PROJECT.md` §4.2 状态行族档），`chrome.mjs` 同名再出口（消费面零改）；
+ * 本批再拆一处：banner 段组出 `renderer/views/statusline-banner.mjs`（模式四位 —— 段构树 + 活值判定单源）。
  *
- * 15 段逐项裁定（单源 = `docs/desktop/design/UI.md` §1 本批注项 1；**零静默省略**）：承载 12 = `STATUS_SEGMENTS`
- * （序同 CLI）· 旁置 2 = banner（AUTO / ENG 住会话头 · PLAN / ADVISOR 本端无该两态）· 滚动位（药丸 / 摘要块承载）·
- * 不适用 1 = 键位组（输入区 / 标签条自述）——**后三段在本档零字段 ⇒ 零节点**（不造空段）。
- * 承载段数据源（逐段）：`attention` = 活动键位标含 `approval` 码（审批 / 提问两门同码）· `busy` = 位标 `running` ·
+ * 15 段逐项裁定（单源 = `docs/desktop/design/UI.md` §1 本批注项 1；**零静默省略**）：承载 16 = `STATUS_SEGMENTS`
+ * （序同 CLI —— 注意力 chip 行首 → banner 四态 → 状态段簇）· 旁置 1 = 滚动位（药丸 / 摘要块承载）·
+ * 不适用 1 = 键位组（输入区 / 标签条自述）——**后两段在本档零字段 ⇒ 零节点**（不造空段）。
+ * 承载段数据源（逐段）：`attention` = 活动键位标含 `approval` 码（审批 / 提问两门同码）· banner 四段（`plan` / `auto` /
+ * `advisor` / `eng`）= `sessionFlags[key]` 四布尔（真 ⇒ 在场 —— 段构树单源 = `renderer/views/statusline-banner.mjs`）·
+ * `state` = 位标切片两态词（含 `running` ⇒ 运行中 · 集 ∩ {`running`, `approval`} = ∅ ⇒ 就绪）·
  * `tool` = 块面末位 running 工具块的 `name` · `elapsed` = 回合起刻（`turnStarts[key]` → 现刻）· `tasks` = `tasks[key]` ·
  * `turn` = 归约槽 `turns[key]` `{ n, max }` · `tokens` = `tokens[key]`（`↑↓` / `✦` / `hit%`）· `context` = `usage[key]` ·
  * `ledger` = `projectInfo.thresholdReached`（**只承超阈警示位** —— 计数住左列信息行）· `timer` = `timers[key]` `{ count, expired }` ·
- * `title` = 活动会话行标题（与标签条 / 左列**同源** —— `sessions:list` 行）· `queue` = `pool.queue` 队长 + 忙态。
+ * `title` = 活动会话行标题（与标签条 / 左列**同源** —— `sessions:list` 行）· `enter` = 输入提示三态（队 ≥ 1 ⇒ 条数句 ·
+ * 忙 ∧ 队空 ⇒ 排队句 · 静 ⇒ `Enter: send`）。
  * 判据（D17 · KD-25）：**未至 / 非正 / 缺片 ⇒ 该段零节点**（禁假造）；段锚 = `data-seg`（闭集 = `STATUS_SEGMENTS`）·
- * 段内件锚 = `data-part`（令牌三件）；跨会话告警位（非活动标签的待审批 / 运行提示）沿既有面（`data-alert` —— 非 15 段之一）。
+ * 段内件锚 = `data-part`（令牌三件）；跨会话告警位（非活动标签的待审批 / 运行提示）沿既有面（`data-alert` —— 非 16 段之一）。
  * 形态：纯构树（`statusModel` → 态对象 · `statusTree` → 结构描述符树）+ 薄挂载（`mountStatus` = clear + build + append ——
  * **单点重建 = 状态行唯一 writer**，`docs/desktop/design/UI.md` §1 状态栏行）；文案一律经 `t()`（零硬编码）。
  * 零 DOM（挂载一段除外）/ 零 `node:` / 零裸包（渲染面静态闭包判据）。
@@ -21,11 +25,13 @@
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 import { deriveTabBadge } from "../store.mjs"
+import { BANNER_CODES, bannerSegments } from "./statusline-banner.mjs"
 import { BADGE_WORD } from "./sessions.mjs"
 
-/** 承载 12 段（闭集 · 序 = CLI 序 —— 单源 = `docs/desktop/design/UI.md` §1 本批注项 1；旁置 2 / 不适用 1 不在本集）。 */
+/** 承载 16 段（闭集 · 序 = CLI 序 —— 单源 = `docs/desktop/design/UI.md` §1 本批注项 1；旁置 1 / 不适用 1 不在本集）。
+ *  banner 四码取自 `renderer/views/statusline-banner.mjs` `BANNER_CODES`（段构树与段码同源，不两处罗列）。 */
 export const STATUS_SEGMENTS = Object.freeze([
-  "attention", "busy", "tool", "elapsed", "tasks", "turn", "tokens", "context", "ledger", "timer", "title", "queue",
+  "attention", ...BANNER_CODES, "state", "tool", "elapsed", "tasks", "turn", "tokens", "context", "ledger", "timer", "title", "enter",
 ])
 
 /** 读数警示阈（数值单源 = `docs/desktop/design/UI.md` §1 状态栏行「≥ 80% 转警示色」）。 */
@@ -58,10 +64,13 @@ function attentionSegment(codes) {
   return { code: "attention", warn: true, parts: [{ text: t("status.attention.blocked") }] }
 }
 
-/** 段 3 · 状态词（活动会话忙态 —— 词出状态词闭枚举「运行中」，核 i18n 同源键 `sub.running`）。 */
-function busySegment(codes) {
-  if (!codes.includes("running")) return null
-  return { code: "busy", parts: [{ text: t("sub.running") }] }
+/** 段 3 · 状态词两态（表行 3 —— `docs/desktop/design/UI.md` §1 本批注项 3）：忙（位标含 `running`）⇒ 运行中（核 i18n 同源键
+ *  `sub.running`）；静（位标集 ∩ {`running`, `approval`} = ∅）⇒ 就绪（词键 `status.ready` —— 词形来源 = CLI 静息值 `Ready`）；
+ *  审批在挂而回合非忙 ⇒ 两态皆不命中 ⇒ 零节点（同刻 CLI 状态文本整行让位模态提示——本端注意力段在场）。 */
+function stateSegment(codes) {
+  if (codes.includes("running")) return { code: "state", parts: [{ text: t("sub.running") }] }
+  if (codes.includes("approval")) return null
+  return { code: "state", parts: [{ text: t("status.ready") }] }
 }
 
 /** 段 4 · 当前工具（块面末位 `kind === "tool" ∧ status === "running"` 的 `name` —— 零新通道；无名块跳过，无命中 ⇒ 零节点）。 */
@@ -155,27 +164,30 @@ function titleSegment(sessions, key) {
   return { code: "title", parts: [{ text: word }] }
 }
 
-/** 段 14 · 排队句（`pool.queue` 队长 + 忙态）：忙态 / 有队 ⇒ 在场（队 ≥ 1 ⇒ 条数句，否则 Enter 排队句）；两无 ⇒ 零节点。 */
-function queueSegment(pool, codes) {
+/** 段 14 · 输入提示三态（表行 14）：队 ≥ 1 ⇒ 条数句 · 忙 ∧ 队空 ⇒ Enter 排队句 · 静 ⇒ `Enter: send`（词键
+ *  `status.enter.send` —— 对位 CLI enterHint 静息值；静息态恒在场 = 打开态可亮面）。 */
+function enterSegment(pool, codes) {
   const queue = pool !== null && typeof pool === "object" && Array.isArray(pool.queue) ? pool.queue : []
-  const busy = codes.includes("running")
-  if (!busy && queue.length === 0) return null
-  const text = queue.length > 0 ? t("status.queue.n", { n: queue.length }) : t("status.queue.enter")
-  return { code: "queue", parts: [{ text }] }
+  if (queue.length > 0) return { code: "enter", parts: [{ text: t("status.queue.n", { n: queue.length }) }] }
+  if (codes.includes("running")) return { code: "enter", parts: [{ text: t("status.queue.enter") }] }
+  return { code: "enter", parts: [{ text: t("status.enter.send") }] }
 }
 
-/** 状态行模型：`segments` = 承载 12 段在场集（序 = CLI 序；缺段不占位）· `alerts` = 跨会话告警位（非活动标签两码，序 = 标签序）。
+/** 状态行模型：`segments` = 承载 16 段在场集（序 = CLI 序；缺段不占位）· `alerts` = 跨会话告警位（非活动标签两码，序 = 标签序）。
  *  入参 = 切片面（缺 / 非载体 ⇒ 该段零节点）；`now` 可注入（耗时段现刻 —— 测试缝）。 */
 export function statusModel({
   tabs = [], activeTab = null, badges = {}, usage = {}, sessions = [], pool = {},
-  blocks = [], tasks = {}, turns = {}, turnStarts = {}, tokens = {}, timers = {}, projectInfo = null, now = Date.now(),
+  blocks = [], tasks = {}, turns = {}, turnStarts = {}, tokens = {}, timers = {}, projectInfo = null,
+  sessionFlags = {}, now = Date.now(),
 } = {}) {
   const list = Array.isArray(tabs) ? tabs : []
   const active = activeTab == null ? null : String(activeTab)
   const codes = badgeCodes(badges, active)
+  const flags = sessionFlags !== null && typeof sessionFlags === "object" ? sessionFlags[active] : undefined
   const segments = active === null ? [] : [
     attentionSegment(codes),
-    busySegment(codes),
+    ...bannerSegments(flags),
+    stateSegment(codes),
     toolSegment(blocks),
     elapsedSegment(codes, turnStarts, active, now),
     tasksSegment(tasks, active),
@@ -185,7 +197,7 @@ export function statusModel({
     ledgerSegment(projectInfo),
     timerSegment(timers, active),
     titleSegment(sessions, active),
-    queueSegment(pool, codes),
+    enterSegment(pool, codes),
   ].filter((segment) => segment !== null)
   const alerts = []
   for (const key of list) {
@@ -249,6 +261,7 @@ export function mountStatus(root, state) {
     tokens: state?.tokens ?? {},
     timers: state?.timers ?? {},
     projectInfo: state?.projectInfo ?? null,
+    sessionFlags: state?.sessionFlags ?? {},
   })
   clear(root)
   root.append(build(statusTree(model)))

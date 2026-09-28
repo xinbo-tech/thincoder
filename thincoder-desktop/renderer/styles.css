@@ -170,6 +170,10 @@ body {
   margin: 0;
   color: var(--fg-muted);
 }
+/* 账本警示行（账本可靠批 · 桌面微轮）：会话区末位 dim 注记——非可点（零 data-action）。 */
+.rail-ledger-notice {
+  color: var(--fg-muted);
+}
 /* 控件（打开目录 / 最近项 / 会话行）= 同一条行形态（零分叉：未接线态不另立样式）。 */
 .rail-control,
 .rail-row {

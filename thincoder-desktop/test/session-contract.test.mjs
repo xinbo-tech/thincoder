@@ -2,7 +2,7 @@
  * session-contract.test.mjs — E-3 / E-1 用例（批档 §2.5 U14–U19 + U37 / U38 · `docs/desktop/design/IPC.md` §2 会话面 / 会话族注）：
  * 端壳形态（源零算法副本 + 端名已声明）/ 本端记录往返（`.manifest.desktop`）/ 端间不互写 /
  * 跨端接续 / 沙箱缝随动 / `createdBy` 三态（截图判据③ · T-DSK3）/ 白名单二十八项定序（U37）/ 会话族读面三态（U38）/
- * 会话族五通道往返（U57）。
+ * 会话族五通道往返（U57）/ 回执账本注记两向（U180 —— 账本可靠批 · 桌面微轮）。
  * 沙箱：逐用例 `mkdtemp` + 核沙箱缝 `_setSessionsDirForTest`（缝在核，端壳零副本）；用例后复位。
  */
 import { test } from "node:test"
@@ -19,7 +19,7 @@ import {
   writeEndMarker as coreWriteEndMarker,
 } from "@thincoder/core/session-slots.mjs"
 import {
-  END, _resetSessionsDirForTest, _setSessionsDirForTest, claimSlot, listSlots, loadManifest,
+  END, _resetSessionsDirForTest, _setSessionsDirForTest, claimSlot, ledgerHealth, listSlots, loadManifest, manifestPath,
   newSlotData, readEndMarker, renameSlot, resumeSlot, saveManifest, sessionPath, sessionsDir, slotDigest,
   slotPath, writeEndMarker, writeSessionFile,
 } from "../src/main/session-slots.mjs"
@@ -214,6 +214,34 @@ test("U38: sessions:list 三态（main/sessions.mjs + 白名单）", (t) => {
 
   const preload = createRequire(import.meta.url)(fileURLToPath(new URL("../src/preload/preload.cjs", import.meta.url)))
   assert.ok([...preload.CHANNELS].includes("sessions:list"), "白名单含本通道（注册面逐项 fail-closed）")
+})
+
+// ─── U180 回执账本注记（账本可靠批 · 桌面微轮 · `docs/desktop/design/IPC.md` §2 会话族注项 6 ·
+//     用例序有意义：正常 → 现场 → 拒写——核 `refused` 为本进程累计）──
+
+test("U180: 回执 `ledger` 两向（现场档 / 拒写累计 ⇒ 在场 ∧ 正常 ⇒ 缺席——负断言）", (t) => {
+  const { cwd } = sandbox(t)
+  const fixture = { ...newSlotData(cwd), history: [{ role: "user", content: "账本注记夹具" }] }
+  writeSessionFile(slotPath(cwd, 1), fixture)
+  const m = loadManifest(cwd)
+  m.slots["1"] = slotDigest(fixture)
+  saveManifest(cwd, m)
+  assert.deepEqual(Object.keys(listSessions(cwd)).sort(), ["cwd", "rows"], "正常账本 ⇒ `ledger` 缺席（= 正常——负断言）")
+
+  // 仅损坏现场档（`refused = 0`）⇒ 在场 ∧ `reason` = "scene"；行集零改（注记 = 回执增字段，不加行）
+  writeFileSync(`${manifestPath(cwd)}.corrupted`, "{ 现场 }", "utf8") // 后缀族 = 核 `preserveScene`
+  const scene = listSessions(cwd)
+  assert.deepEqual(scene.ledger, { refused: 0, reason: "scene", scene: true }, "现场档在盘 ⇒ `ledger` 在场（`reason` = `\"scene\"` 仅损坏现场时）")
+  assert.equal(scene.rows.length, 1, "行集零改")
+
+  // 真拒写（§6.23 不可信基座 ⇒ saveManifest 拒）⇒ 在场 ∧ `reason` 取 `lastReason`（`scene` 同在场仍取之）
+  writeFileSync(manifestPath(cwd), "{ 坏基座", "utf8")
+  const quiet = console.error
+  try { console.error = () => {}; saveManifest(cwd, loadManifest(cwd)) } finally { console.error = quiet }
+  const health = ledgerHealth(cwd)
+  assert.ok(health.refused >= 1 && health.scene === true, `夹具前提：真拒写已累计（refused=${health.refused} · scene=${health.scene}）`)
+  assert.deepEqual(listSessions(cwd).ledger, { refused: health.refused, reason: health.lastReason, scene: true }, "拒写累计 ⇒ 在场 ∧ `reason` = `lastReason` 逐字（非 `scene`）")
+  assert.deepEqual(listSessions(null), { cwd: null, rows: [] }, "`cwd` 空 ⇒ 不携（无判据对象）")
 })
 
 // ─── U57 五通道往返（动作层 · 批档 §2.4（b）/ 验收①）──────────────

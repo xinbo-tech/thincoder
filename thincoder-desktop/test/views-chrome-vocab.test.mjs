@@ -168,12 +168,12 @@ const infoFace = (over = {}) => ({
 
 // ─── U51 词表键齐 ∧ 零硬编码（全量）────────────────────────
 
-test("U51: 词表键齐 ∧ 零硬编码（两语 139 键键集相等 ∧ 全量与 aria-label 全哨兵 ∧ 十九视图档零 CJK）", (ctx) => {
+test("U51: 词表键齐 ∧ 零硬编码（两语 147 键键集相等 ∧ 全量与 aria-label 全哨兵 ∧ 二十一视图档零 CJK）", (ctx) => {
   const keys = Object.keys(HOST_DICT.en)
   // 键数 = 量面锁（**不写死**：数值以盘上实读为准，非设计值 —— 家族链逐舱累进，增键须同改本行与下行链面）。
   assert.equal(
-    keys.length, 15 + 4 + 10 + 8 + 7 + 3 + 49 + 10 + 9 + 6 + 3 + 2 + 1 + 10 + 2,
-    "宿主键数 = 139（左列 15 + 标签条 4 + 对话流 10 + 活动池 8 + 审批卡 7 + 提问卡 3 + 设置 49 + 首启向导 10 + 信息行 9 + 输入区 6 + 会话头 3 + 档位 2 + 状态栏 1 + 状态行 10 + 核件复制钮 2）",
+    keys.length, 17 + 4 + 10 + 8 + 7 + 3 + 49 + 10 + 9 + 6 + 3 + 2 + 1 + 16 + 2,
+    "宿主键数 = 147（左列 17 + 标签条 4 + 对话流 10 + 活动池 8 + 审批卡 7 + 提问卡 3 + 设置 49 + 首启向导 10 + 信息行 9 + 输入区 6 + 会话头 3 + 档位 2 + 状态栏 1 + 状态行 16 + 核件复制钮 2）",
   )
   assert.deepEqual([...keys].sort(), [...Object.keys(HOST_DICT.zh)].sort(), "两语键集相等（增键两语同增）")
   for (const key of ["tab.badge.approval", "tab.action.close", "tab.action.close.cancel", "tab.action.close.confirm"]) {
@@ -201,6 +201,9 @@ test("U51: 词表键齐 ∧ 零硬编码（两语 139 键键集相等 ∧ 全量
     // 左列换形两面（批 A ④）：取消键 / 确认键只在形面在场 ⇒ 两形各一树（确认键词面 = 本条动作词 —— 同键入判据）
     railTree(railModel({ projectCwd: "C:\\proj", recent: [], rows: [row(2), row(3)] }), {}, { key: "2", mode: "rename" }),
     railTree(railModel({ projectCwd: "C:\\proj", recent: [], rows: [row(2), row(3)] }), {}, { key: "2", mode: "delete" }),
+    // 账本警示行（账本可靠批 · 桌面微轮 / 修正轮）：注记在场（`scene = true` ⇒ 条件附句）⇒ `rail.ledger.notice` +
+    // `rail.ledger.notice.scene` 两键消费面（构树 / 文案两向判据住 `test/views.test.mjs` U181）
+    railTree(railModel({ projectCwd: "C:\\proj", recent: [], rows: [row(2)], ledger: { refused: 1, reason: "readback-failed", scene: true } })),
     tabbarTree(tabbarModel({
       tabs: ["1", "2", "3"], activeTab: "1", rows: [row(2, { title: "" })], badges: { 2: ["running"], 3: ["done"] },
     })),
@@ -268,8 +271,12 @@ test("U51: 词表键齐 ∧ 零硬编码（两语 139 键键集相等 ∧ 全量
     composerTree(composerModel({ activeSession: "1", pool: { queue: [] }, blocks: [{ kind: "assistant", text: "正文-a1" }] }), {}),
     // 状态行读数入量（批 B · 项 3）：活动键读数 > 0 ⇒ 读数节点（`status.usage` 消费面）
     statusTree(statusModel({ tabs: ["1", "2"], activeTab: "1", badges: { 2: ["running"] }, usage: { 1: 62 } })),
-    statusTree(statusModel({ tabs: ["1", "2"], activeTab: "1", badges: { "1": ["running", "approval"] }, usage: { "1": 85 }, sessions: [row(1, { title: "" })], pool: { queue: [] }, blocks: [chatTool("t1", "running")], tasks: { "1": [{ status: "done" }, { status: "pending" }] }, turns: { "1": { n: 2, max: 8 } }, turnStarts: { "1": 1 }, now: 5000, tokens: { "1": { prompt: 1200, completion: 300, reasoningTokens: 40, cacheHit: 6, cacheMiss: 4 } }, timers: { "1": { count: 2, expired: 1 } }, projectInfo: { thresholdReached: true } })), // R3a 状态行（D17 承载 12 段）：满场一树 —— 十个段词键消费面（段判据住 `test/views-statusline.test.mjs`）
+    statusTree(statusModel({ tabs: ["1", "2"], activeTab: "1", badges: { "1": ["running", "approval"] }, usage: { "1": 85 }, sessions: [row(1, { title: "" })], pool: { queue: [] }, blocks: [chatTool("t1", "running")], tasks: { "1": [{ status: "done" }, { status: "pending" }] }, turns: { "1": { n: 2, max: 8 } }, turnStarts: { "1": 1 }, now: 5000, tokens: { "1": { prompt: 1200, completion: 300, reasoningTokens: 40, cacheHit: 6, cacheMiss: 4 } }, timers: { "1": { count: 2, expired: 1 } }, projectInfo: { thresholdReached: true } })), // 状态行（承载 16 段）：满场一树 —— 十二个段词键消费面（段判据住 `test/views-statusline.test.mjs`）
     statusTree(statusModel({ tabs: ["1"], activeTab: "1", badges: { "1": ["running"] }, pool: { queue: [{ title: "队列一", status: "queued" }] } })),
+    // D22 状态行段集 16（banner 四段 + 静息两段）：模式位四布尔全真 ⇒ banner 四段在场 + 静息词 / 输入提示静息态 —— 本批六新键消费面
+    statusTree(statusModel({ tabs: ["1"], activeTab: "1", sessionFlags: { "1": { planMode: true, autoApprove: true, advisorGuard: true, engineering: true } } })),
+    // 部分模式位（单键真 · 余缺）：banner 四段逐码在场（非全量面 —— 与上行对拍）
+    statusTree(statusModel({ tabs: ["1"], activeTab: "1", badges: { "1": ["running", "approval"] }, sessionFlags: { "1": { engineering: true } } })),
   ]
   const data = new Set([
     "C:\\r1", "C:\\proj", "标题2", "标题3", "P", "M", "Read", "队列一", "0",
@@ -285,6 +292,8 @@ test("U51: 词表键齐 ∧ 零硬编码（两语 139 键键集相等 ∧ 全量
     "pic.png",
     // 子 agent 块面数据串（非哨兵文本 —— 角色 / 型号）
     "eng-coder", "m-block",
+    // 账本注记合成分隔符（`scene = true` 树入量 —— 按当前 locale 直取；本档注入 locale = en ⇒ 「; 」）
+    "; ",
   ])
   const used = new Set()
   for (const tree of trees) {
@@ -299,11 +308,11 @@ test("U51: 词表键齐 ∧ 零硬编码（两语 139 键键集相等 ∧ 全量
       assert.ok(data.has(text), `树内文本须为词表键值或数据串（实 = ${text}）`)
     }
   }
-  assert.deepEqual([...used].sort(), [...keys.filter((key) => !EXTRA_WORD_KEYS.includes(key)), ...CORE_WORD_KEYS].sort(), "宿主键（树消费面 137）+ 7 核状态键全被消费（键齐 = 用量面；核件复制钮两键 = 挂载面消费，出本判）")
+  assert.deepEqual([...used].sort(), [...keys.filter((key) => !EXTRA_WORD_KEYS.includes(key)), ...CORE_WORD_KEYS].sort(), "宿主键（树消费面 145）+ 7 核状态键全被消费（键齐 = 用量面；核件复制钮两键 = 挂载面消费，出本判）")
 
   for (const name of [
     "sessions.mjs", "tabbar.mjs", "chrome.mjs", "chat.mjs", "chat-stream.mjs", "chat-scroll.mjs", "chat-tool.mjs", "chat-copy.mjs",
-    "chat-cards.mjs", "chat-text.mjs", "chat-guide.mjs", "statusline.mjs",
+    "chat-cards.mjs", "chat-text.mjs", "chat-guide.mjs", "statusline.mjs", "statusline-banner.mjs",
     "approval.mjs", "activity.mjs",
     "settings.mjs", "settings-sections.mjs", "onboarding.mjs", "info-row.mjs",
     "question.mjs", "plan.mjs",

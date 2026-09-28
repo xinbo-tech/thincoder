@@ -1,70 +1,41 @@
 /**
  * agent-host.mjs — 宿主装配桥（`docs/desktop/design/SHELL.md` §4 装配第三份 · `docs/desktop/design/IPC.md` §1 桥面）。
- * 五职责：① 装配（懒 · 按需 · 同键复用）② 十回调桥（协议行解析 ⇒ `ev:*` 出站 · R3a 增 `onUsage` 入会话累计令牌表）
+ * 六职责：① 装配（懒 · 按需 · 同键复用）② 十回调桥（协议行解析 ⇒ `ev:*` 出站 · R3a 增 `onUsage` 入会话累计令牌表）
  * ③ 待决表（三门形：审批逐项 / 审批批次 / 提问）
  * ④ 回合驱动（`send` / `interrupt` + 结算三映射：done · stopped · error + 回合尾 `ev:usage` 读数〔`postUsage` · 三径同点〕）
- * ⑤ 会话级偏好写面（`setPrefs`：写盘 → 重施；在飞拒 —— 批次档 KD-19 单点）。
+ * ⑤ 会话级偏好写面（`setPrefs`：写盘 → 重施；在飞拒 —— 批次档 KD-19 单点）
+ * ⑥ 模式位投影（`flagsOf` **活值**四布尔 —— 状态栏对齐批：`approval:respond` 成功径回执叠加 `{ key, flags }`；
+ * 页读供面同函数 —— 槽投影兜底面住 `session-slots.mjs` `slotFlags`）。
  * **R3b（D20）**：子 agent 面（停止出口 + 存活投影起 / 停 / 清点）出档 `subagent-face.mjs`（行数触发线 —— 档名实施批定）。
- * 装配端差（SHELL.md §4 显式登记两项 + 取值面一项）：`cwd` = 项目根（注入的 `projects.currentCwd()`）——**非**
- * `process.cwd()`；不附着 M1 装配钩子（本端读面未接）；不连外部工具服务器（本端无此面）。
+ * 装配端差（SHELL.md §4 显式登记两项 + 取值面一项）随装配面搬运 ⇒ 单源 = `agent-assemble.mjs` 档头（本档不重述）。
  * 零宿主依赖：出站 `emit` 由主进程注入 ⇒ 平 node 直测。
  *
  * 出档（批 8 §1.14 ③：本档触行数拉线，按在册预案拆分 —— 档名实施舱定）：回调桥 ⇒ `agent-bridge.mjs`
  * （`createBridge` + 名面 `ACTIVITY_EVENTS` / `parseEvToken` / `summarizeArgs`）；待决门 ⇒ `suspensions.mjs`
  * （`createGates` + `ITEM_VERDICTS` / `BATCH_VERDICTS` / `QUESTION_CANCELLED`）；槽 I/O ⇒ `session-io.mjs`（`loadAgentSlot` /
- * `saveAgentSlot`）。上述名面在原路径**同名 re-export** ⇒ 调用方 import 路径与名面零改。
+ * `saveAgentSlot`）；**装配面（状态栏对齐批）⇒ `agent-assemble.mjs`**（`assembleFor` + `DEFAULT_DEPS` /
+ * `teamConfig` / `gitAuthor` / `validateProvider` —— 装配段逐字搬运）。上述名面在原路径**同名 re-export**
+ * ⇒ 调用方 import 路径与名面零改。
  * 会话取槽落盘（批 8 §1.14 ①②）：`ensure` 装配后装载本键槽（槽缺 ⇒ 新建形，代理不动）；`send` 三路结算
  * **先落盘再出终局事件** —— 渲染侧收尾重读即见本回合增量。
  */
-import { execSync } from "node:child_process"
-import { isAbsolute, join } from "node:path"
-import { createAgent, runAgent } from "@thincoder/core/agent.mjs"
-import { configDir, loadConfig } from "@thincoder/core/config.mjs"
-import { createMemory, syncDir } from "@thincoder/core/memory.mjs"
-import { discoverRules } from "@thincoder/core/rules.mjs"
-import { assembleBuiltinTools } from "@thincoder/core/tools/index.mjs"
+import { runAgent } from "@thincoder/core/agent.mjs"
 import { historyPercent } from "@thincoder/core/token-window.mjs"
 // 会话键语义（`String(slot)` 单源）与端壳同档 —— 键面归一不造第二口径；偏好写面（`writeSlotPrefs`）同档。
 import { slotOfKey, writeSlotPrefs } from "./session-slots.mjs"
-// 四出档（见档头）：回调桥 / 待决门 / 槽 I/O / 子 agent 面 —— 本档只装配与驱动，算法面各归其档。
+// 五族出档（见档头）：回调桥 / 待决门 / 槽 I/O / 子 agent 面 / 装配面 —— 本档只装配与驱动，算法面各归其档。
 import { createBridge } from "./agent-bridge.mjs"
 import { createGates } from "./suspensions.mjs"
 import { loadAgentSlot, saveAgentSlot } from "./session-io.mjs"
 import { createSubagentFace } from "./subagent-face.mjs"
+// 装配面（状态栏对齐批出档 —— 原档装配段逐字搬运）：本档取其默认装配函数与名面转口。
+import { assembleFor } from "./agent-assemble.mjs"
 // 附件面（`docs/desktop/design/IPC.md` §2「附件注」）：起跑前装配（非视觉门 / 落盘 / 交核指引）+ 回合尾清理。
 import { cleanupTurn, prepareTurnAttachments } from "./attachments.mjs"
 // 同名 re-export（调用面零改 —— 既有 import 路径与名面保持）。
 export { ACTIVITY_EVENTS, parseEvToken, summarizeArgs } from "./agent-bridge.mjs"
 export { ITEM_VERDICTS, BATCH_VERDICTS } from "./suspensions.mjs"
-
-/** 装配缺省面（逐项可注入 —— 断言装配调用序用假 deps；缺省 = 核单源）。 */
-const DEFAULT_DEPS = Object.freeze({
-  loadConfig, createMemory, createAgent, assembleBuiltinTools, discoverRules, syncDir,
-  team: teamConfig, author: gitAuthor,
-})
-
-/** 团队层配置（核 `config.memory.team` 有 repo 才成层）——端本地最小实现（同形于 CLI 装配侧取值）；
- *  未配置 ⇒ null（装配跳过团队层，与 CLI 同）。 */
-export function teamConfig(config) {
-  const team = config?.memory?.team
-  if (!team?.repo) return null
-  const name = team.name ?? "default"
-  return { name, repo: team.repo, dir: team.dir ?? join(configDir, "teams", name) }
-}
-
-/** 装配作者：git user.name，缺 ⇒ `"unknown"`（端本地最小实现——不引他端模块）。 */
-export function gitAuthor() {
-  try { return execSync("git config user.name", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim() || "unknown" } catch { return "unknown" }
-}
-
-/** 装配后唯一校验点（判据 = `name && model && baseURL`）：**不抛** —— 记 `_providerInvalid` 由回合驱动消费
- *  （`{ok:false,reason:"provider-invalid"}`，零假回合）；原因文案可由 config 覆盖。 */
-function validateProvider(agent, config) {
-  const p = agent?.provider
-  if (p?.name && p?.model && p?.baseURL) return
-  agent._providerInvalid = true
-  agent._providerInvalidReason = config?.providerInvalidReason ?? "provider incomplete (name/model/baseURL)"
-}
+export { DEFAULT_DEPS, assembleFor, gitAuthor, teamConfig, validateProvider } from "./agent-assemble.mjs"
 
 /** 会话级偏好键闭集（单源 = `docs/core/design/SESSION.md` §6.21 —— 与核 `SLOT_PREF_KEYS` 同集〔该符号
  *  核内私有、非引用面：值域两处各持〕；本档只判载荷形，值归一在核）。 */
@@ -86,55 +57,9 @@ function prefsPatchFailure(patch) {
   return null
 }
 
-/** 装配一份会话代理（端差已扣 —— 见档头；序同 CLI 装配序，取值面：`cwd` = 项目根）。
- *  `deps` 逐项可注入（缺省 = 核函数）：装配序可机验（U79）。 */
-async function assembleFor({ cwd, slot, deps = {} }) {
-  const D = { ...DEFAULT_DEPS, ...deps }
-  const config = D.loadConfig()
-  const provider = config.provider
-  const providers = config.providersList
-  const injectProxy = D.injectProxy ?? (await import("@thincoder/core/proxy.mjs")).injectProxy
-  injectProxy(providers, config)
-  if (provider?.name) provider.proxyUri = providers.find((p) => p.name === provider.name)?.proxyUri
-
-  const memory = D.createMemory({ dbPath: config.memory.dbPath })
-  if (config.embedding?.apiKey) {
-    const { createEmbedder } = await import("@thincoder/core/embedding.mjs")
-    memory.embedder = createEmbedder(config.embedding)
-  }
-  const fileRules = D.discoverRules(cwd)
-  if (fileRules.length) {
-    const filePatterns = new Set(fileRules.map((r) => r.pattern))
-    const configRules = (config.agent?.streamRules || []).filter((r) => !filePatterns.has(r.pattern))
-    config.agent.streamRules = [...fileRules, ...configRules]
-  }
-  memory.codeOrigin = cwd
-  if (config.memory.projectDir) {
-    memory.projectOrigin = isAbsolute(config.memory.projectDir) ? config.memory.projectDir : join(cwd, config.memory.projectDir)
-    await D.syncDir(memory, { layer: "project", dir: memory.projectOrigin })
-  }
-  const team = D.team(config)
-  if (team) {
-    const { ensureClone } = await import("@thincoder/core/git/gitmem.mjs")
-    await ensureClone(team)
-    await D.syncDir(memory, { layer: "team", dir: team.dir })
-  }
-  const tools = await D.assembleBuiltinTools({
-    memory, cwd, projectDir: config.memory.projectDir, author: D.author(), team,
-    model: provider?.model ?? null,
-  })
-  const agent = D.createAgent({ provider, tools, config, cwd, memory })
-  agent.providers = providers
-  agent.activeProvider = provider?.name ?? ""
-  agent.activeModel = provider?.model ?? null
-  agent._slot = slot
-  validateProvider(agent, config)
-  return agent
-}
-
 /** 宿主装配桥：`emit(channel, payload)` = 出站面（主进程注入）· `run` = 回合运行器 · `assemble` = 装配函数（皆可注入）。
- *  `projects` = 项目面（`currentCwd()` 供装配取值）；返回六个正文面 + 子 agent 面（`subagent-face.mjs` 展开：
- *  `stopSubagent` / `heartbeatBeat` / `startHeartbeat` / `stopHeartbeat`）+ `table` / `agents`。 */
+ *  `projects` = 项目面（`currentCwd()` 供装配取值）；返回正文面 + 子 agent 面（`subagent-face.mjs` 展开：
+ *  `stopSubagent` / `heartbeatBeat` / `startHeartbeat` / `stopHeartbeat`）+ `flagsOf` + `table` / `agents`。 */
 export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, deps = {}, projects } = {}) {
   if (typeof emit !== "function") throw new Error("[agent-host] emit required (out-bound channel)")
   const post = (channel, payload) => emit(channel, payload)
@@ -280,6 +205,35 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     return { ok: true, reason: null, cwd, slot, meta: written.meta }
   }
 
+  /** 模式位**活值**投影（`docs/desktop/design/IPC.md` §2「模式位投影注」项 2 · 状态栏对齐批）：四布尔逐项 ——
+   *  与 CLI banner 判定同源 = `thincoder-cli/src/tui/render-frame.mjs:221-225`（`planMode` / `autoApprove` /
+   *  `advisor.guard === true` / `agent.engineering === true`，零算法副本）。
+   *  **agent 不在场 ⇒ `null`**（禁假造）：页读供面以槽投影兜底（`session-slots.mjs` `slotFlags` —— 合并口径），
+   *  调用面按「键缺席 / 零写」处置。 */
+  function flagsOf(key) {
+    if (key === undefined || key === null) return null
+    const agent = agents.get(String(key))
+    if (!agent) return null
+    return {
+      planMode: agent.planMode === true,
+      autoApprove: agent.autoApprove === true,
+      advisorGuard: agent.config?.advisor?.guard === true,
+      engineering: agent.config?.agent?.engineering === true,
+    }
+  }
+
+  /** 作答 / 审批出口（待决门 `respond` 转口 + **成功径叠加** —— `docs/desktop/design/IPC.md` §2 该行 +
+   *  「模式位投影注」项 5 · 状态栏对齐批）：**成功径 ∧ 审批门** ⇒ 回执叠加 `{ key, flags }`（`flagsOf` 活值 ——
+   *  桌内 AUTO 翻转〔`always` 放行置位 = `suspensions.mjs`〕后渲染面即刷新）；**提问门径 / 失败径零叠加**
+   *  （零乐观写）；agent 已不在场 ⇒ 不叠 `flags`（键缺席 —— 禁假造）。 */
+  function respondTo(payload) {
+    const pending = table.get(payload?.promptId)
+    const receipt = respond(payload)
+    if (receipt?.ok !== true || pending?.kind !== "approval") return receipt
+    const flags = flagsOf(pending.key)
+    return flags === null ? receipt : { ...receipt, key: pending.key, flags }
+  }
+
   /** 子 agent 面（R3b · D20 —— 出档 `subagent-face.mjs`）：停止出口 + 存活投影起 / 停 / 清点。 */
   const subagentFace = createSubagentFace({ agents, bridge })
 
@@ -293,8 +247,8 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     denyGates(key)
   }
 
-  // `respond` 取自待决门出档（契约：表外 id ⇒ `unknown-prompt` · 跨 kind 载荷 ⇒ `bad-kind` · 跨形 / 表外
-  // verdict ⇒ `bad-verdict` · 非串且非 `null` 作答 ⇒ `bad-answer`；四档皆不 resolve —— 挂起保留）。
+  // `respond` = 本档 `respondTo` 转口（契约：表外 id ⇒ `unknown-prompt` · 跨 kind 载荷 ⇒ `bad-kind` · 跨形 / 表外
+  // verdict ⇒ `bad-verdict` · 非串且非 `null` 作答 ⇒ `bad-answer`；四档皆不 resolve —— 挂起保留；成功径叠加见上）。
   subagentFace.startHeartbeat() // 出生自愈起拍（起在装配期；停 `stopHeartbeat()` / 逐键清 `dispose(key)`）
-  return { ensure, send, interrupt, setPrefs, respond, dispose, ...subagentFace, table, agents }
+  return { ensure, send, interrupt, setPrefs, respond: respondTo, dispose, flagsOf, ...subagentFace, table, agents }
 }

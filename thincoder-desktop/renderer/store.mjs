@@ -38,9 +38,12 @@
  *  `turns` / `turnStarts` / `tokens` / `timers` 四槽 = **状态行读数槽随动**（R3a · D17 承载段数据源 ——
  *  写者 = 归约面（`turns` / `turnStarts` 自 `ev:activity` turn 载荷；`tokens` / `timers` 自 `ev:usage` 载荷扩），
  *  读面 = `renderer/views/statusline.mjs`；值面未落 ⇒ 对应段零节点 —— 禁假造）。
+ *  `sessionFlags` = **模式位切片**（状态栏对齐批 · D22）：按会话键存四布尔（写者 = 归约面 `applyFlags` ——
+ *  页读 / 出站回执两径）；读面 = 状态行 banner 四段（真 ⇒ 在场 · 假 / 缺 ⇒ 零节点 —— 禁假造）。
  *  `subBlocks` = **子 agent 块切片**（R3b · D20）：按会话键分槽（无该键 / 非数组 ⇒ 该会话零块 —— 禁假造）；
  *  元素 = 核态机模型（`renderer/events.mjs` 归约面写，读面 `renderer/views/activity.mjs`）。`pool.running` 读数
- *  同源（活动会话在飞块数——范归约面写；`pool` 切片不再载 `blocks`——摘工具行）。 */
+ *  同源（活动会话在飞块数——范归约面写；`pool` 切片不再载 `blocks`——摘工具行）。`ledger` = **账本警示切片**
+ *  （账本可靠批 · 桌面微轮：写者 = `renderer/mount-sessions.mjs` `refreshRail` 唯一写路径；读面 = 会话区末子注记）。 */
 export function initialState() {
   return {
     locale: "en",
@@ -51,8 +54,10 @@ export function initialState() {
     activeTab: null,
     pendingClose: null,
     railForm: null,
+    ledger: null,
     tabBadges: {},
     sessionMeta: {},
+    sessionFlags: {},
     usage: {},
     turns: {},
     turnStarts: {},

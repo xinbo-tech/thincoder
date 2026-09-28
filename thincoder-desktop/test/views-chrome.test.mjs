@@ -1,6 +1,6 @@
 /**
  * views-chrome.test.mjs — E-2 中区外壳用例（会话头 / 状态行出档 / 输入区构树与挂载接线面）：
- * 会话头（字段序单源 · 薄挂载供给面）/ 状态行出档与段表（R3a U158；告警位与 12 段判据面随状态行族迁 `test/views-statusline.test.mjs`——U50 同迁）/
+ * 会话头（字段序单源 · 薄挂载供给面）/ 状态行出档与段表（R3a U158；告警位与 16 段判据面随状态行族迁 `test/views-statusline.test.mjs`——U50 同迁）/
  * 组字门（批 A §1.16㈢ · U126）。全量词表键齐 ∧ 零硬编码（U51）住 `test/views-chrome-vocab.test.mjs`（硬限拆档：原 537 行
  * 越 `docs/desktop/design/PROJECT.md` §4.1 的 500 行硬限 ⇒ 词表族分出——面不变、判据不变，只换宿主档（同笔唯 U51 零 CJK 名单补 `chat-copy.mjs`：15 ⇒ 16）。
  * 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构面）住 `test/views-locks.test.mjs`；左列面留 `test/views.test.mjs`（U39–U44 + U53）。
@@ -21,7 +21,7 @@ import { installFakeDom, selfCheck } from "./fake-dom.mjs"
 
 // ─── U49 会话头（中区外壳 · 字段序单源）──────────────────────
 
-test("U49: 会话头（data-meta 两态 ∧ 字段序 = 槽序 ∧ 只落非空串 ∧ 根 data-tab ∧ 三值 `select` 控形）", () => {
+test("U49: 会话头（data-meta 两态 ∧ 字段序 = 槽序三值 ∧ 只落非空串 ∧ 根 data-tab ∧ 三值 `select` 控形）", () => {
   const bare = headTree(headModel({ tab: null, meta: null }))
   assert.equal(bare.props["data-meta"], "none", "零字段 ⇒ data-meta=none（供给未落 = 常态）")
   assert.equal("data-tab" in bare.props, false, "无活动标签 ⇒ 零 data-tab（不造空键）")
@@ -33,8 +33,8 @@ test("U49: 会话头（data-meta 两态 ∧ 字段序 = 槽序 ∧ 只落非空�
   assert.equal(full.props["data-tab"], "b", "根 data-tab = 活动标签键")
   assert.deepEqual(
     full.children.map((node) => node.props["data-field"]),
-    ["provider", "model", "effort", "engineering", "autoApprove"],
-    "字段序 = 槽序（供给键序为逆序 ⇒ 不随供给）",
+    ["provider", "model", "effort"],
+    "字段序 = 槽序三值（供给键序为逆序 ⇒ 不随供给）；工程模式 / AUTO 两显示位已撤 —— 供给携两键亦不渲染（D22 会话头回三值）",
   )
   // 就地可改三值（UI.md §1 批 B 注项 1）：控形 = `select`（零 handler ⇒ 未接线通则 = disabled）；候选面缺 ⇒ 选项仅现值（禁假造）
   const pickFields = ["provider", "model", "effort"]
@@ -53,7 +53,7 @@ test("U49: 会话头（data-meta 两态 ∧ 字段序 = 槽序 ∧ 只落非空�
     [["P"], ["M"], ["", "high"]],
     "选项集 = 候选 ∪ {现值}（禁吞）；档位面候选缺 ⇒ Auto（空串）+ 现值",
   )
-  assert.deepEqual(full.children.slice(3).map((node) => node.children[0]), ["on", "off"], "工程模式 / AUTO 两位不在本项 ⇒ 文本原样（数据面非词表）")
+  assert.equal(full.children.length, 3, "字段节点恰三（撤位供给在场 ⇒ 仍零节点 —— 同一事实只住状态行一处）")
 
   const partial = headTree(headModel({ tab: "b", meta: { provider: "P", effort: "", autoApprove: 3 } }))
   assert.deepEqual(partial.children.map((node) => node.props["data-field"]), ["provider"], "空串 / 非串 ⇒ 零节点（只落给到的非空串）")
@@ -96,7 +96,7 @@ test("U49b: 会话头薄挂载（供给面 = `sessionMeta[activeTab]` —— 整
 
 // ─── U158 状态行出档与段表（R3a · T-DSK33 原址补例）────────────
 
-test("U158: 状态行出档面（槽锚两向 · 单点重建不落 app.mjs · 承载 12 段表）", () => {
+test("U158: 状态行出档面（槽锚两向 · 单点重建不落 app.mjs · 承载 16 段表）", () => {
   const html = readFileSync(new URL("../renderer/index.html", import.meta.url), "utf8")
   const app = readFileSync(new URL("../renderer/app.mjs", import.meta.url), "utf8")
   const mount = readFileSync(new URL("../renderer/mount-status.mjs", import.meta.url), "utf8")
@@ -104,7 +104,7 @@ test("U158: 状态行出档面（槽锚两向 · 单点重建不落 app.mjs · �
   assert.ok(mount.includes('STATUS_SLOT = \'[data-slot="status"]\''), "槽锚常量与骨架属性同值（两向锁 —— 状态行族出档）")
   assert.ok(app.includes("attachStatus()") && app.includes("paintStatus(state)"), "接线 = 出档装配 + 订阅派发（`STATUS_KEYS` 面）")
   assert.equal(app.includes("mountStatus("), false, "状态行挂载不落 app.mjs（单点重建归状态行族档）")
-  assert.equal(STATUS_SEGMENTS.length, 12, "承载 12 段（D17 计数 —— 旁置 2 / 不适用 1 与逐段判据住 `test/views-statusline.test.mjs`）")
+  assert.equal(STATUS_SEGMENTS.length, 16, "承载 16 段（D22 计数 —— 旁置 1 / 不适用 1 与逐段判据住 `test/views-statusline.test.mjs`）")
 })
 // ─── U118 输入区构树与两态锚（批 A · T-DSK22 / T-DSK23）──────────────
 

@@ -200,6 +200,7 @@ test("U77: 二十八项含三新行 ∧ 两向 ≡ ∧ 三新处理体转口 ∧
   assert.match(body("msgSend"), /requireAgentHost\(\)\.send\(/, "`msg:send` 转口宿主回合驱动")
   assert.match(body("msgInterrupt"), /requireAgentHost\(\)\.interrupt\(/, "`msg:interrupt` 转口宿主中断")
   assert.match(body("historyPage"), /pageHistory\(currentCwd\(\), payload\)/, "`history:page` 转口读面（cwd = 主进程当前项目）")
+  assert.match(body("historyPage"), /agentHost\.flagsOf\(payload\?\.key\)/, "`history:page` 叠加活值模式位（状态栏对齐批 —— 合并口径：agent 在场 ⇒ 活值覆盖槽投影兜底）")
   for (const name of ["msgSend", "msgInterrupt", "historyPage"]) {
     assert.ok(!/ok\s*:\s*true/.test(body(name)), `${name} 处理体零 \`{ ok: true }\` 字面（不造假成功）`)
     assert.ok(!/reason/.test(body(name)), `${name} 处理体零 \`reason\` 码字面（语义单源在动作 / 读面）`)
@@ -253,7 +254,7 @@ test("U95: fresh 新档 ≤ 300 行（越层档走例外面）∧ `app.mjs` 拆�
   const fresh = [
     // 主进程侧（8a）
     "src/main/agent-host.mjs", "src/main/agent-bridge.mjs", "src/main/suspensions.mjs", "src/main/session-io.mjs",
-    "test/agent-host.test.mjs", "test/history-page.test.mjs", "test/session-io.test.mjs", "test/slot-sandbox.mjs",
+    "test/history-page.test.mjs", "test/session-io.test.mjs", "test/slot-sandbox.mjs",
     // 渲染侧（8b —— 本批三新档 + 其测试档；行数臂由 8a 落）
     "renderer/events-subscribe.mjs", "renderer/mount-pool.mjs",
     "test/events-page.test.mjs",
@@ -270,10 +271,10 @@ test("U95: fresh 新档 ≤ 300 行（越层档走例外面）∧ `app.mjs` 拆�
     "renderer/mount-head.mjs", "test/views-head.test.mjs",
     // 批 B 引导面新档（本舱 · 追加轮）：渲染侧一行（`renderer/views/chat-guide.mjs`）+ 其用例档一行（同前例）
     "renderer/views/chat-guide.mjs", "test/views-chat-guide.test.mjs",
-    // R3a 状态行族两档（本舱）：`renderer/views/statusline.mjs`（自 chrome.mjs 拆出）+ `renderer/mount-status.mjs` + 用例档一行
-    "renderer/views/statusline.mjs", "renderer/mount-status.mjs", "test/views-statusline.test.mjs",
-    // R3b 子 agent 面出档（本舱）：`src/main/subagent-face.mjs`（停止出口 + 存活投影起 / 停 / 清点 —— `agent-host.mjs` R3a 末态 288 ⇒ 同档必越 300）
-    "src/main/subagent-face.mjs",
+    // R3a 状态行族两档（本舱）：`renderer/views/statusline.mjs`（自 chrome.mjs 拆出）+ `renderer/mount-status.mjs` + 用例档一行；D22 再拆 banner 段组出 `renderer/views/statusline-banner.mjs`（模式四位段构树 + 活值判定单源）
+    "renderer/views/statusline.mjs", "renderer/mount-status.mjs", "test/views-statusline.test.mjs", "renderer/views/statusline-banner.mjs",
+    // R3b / D22 宿主拆档出档（本舱）：`src/main/subagent-face.mjs`（R3b：停止出口 + 存活投影起 / 停 / 清点）+ `src/main/agent-assemble.mjs`（D22 状态栏对齐批：装配面出档 —— `agent-host.mjs` 300 ⇒ 拆分落形）
+    "src/main/subagent-face.mjs", "src/main/agent-assemble.mjs",
     // R3b 用例三档（本舱）：桥面 relay 分流 + 存活投影 / 宿主停止出口 + 拍体 / `ev:subagent` 归约面
     "test/agent-bridge-subagent.test.mjs", "test/agent-host-subagent.test.mjs", "test/events-subagent.test.mjs",
     // R3c 视图新档（本舱）：`chat-text.mjs`（核文本面）+ `chat-cards.mjs`（卡面态刷拆档 —— 在册预案「卡构树拆出」落形）+ 用例两档（同入 ≤300 臂）
@@ -285,8 +286,9 @@ test("U95: fresh 新档 ≤ 300 行（越层档走例外面）∧ `app.mjs` 拆�
   }
   // 在册例外（越层档**逐一登记** —— 不混进 ≤300 臂 / 不入 `fresh` 清单）：两向判据 = 真越层（>300 ⇒ 例外不得
   // 静默变常档）∧ 未触硬限（≤500）；消解窗口 = 该档下次被触碰的批（登记面 = `docs/desktop/design/PROJECT.md` §4.1）。
-  //   `test/views-settings.test.mjs`（本舱 ⑧ 档位控件例入档 ⇒ 越 300）：§4.1 在册拆分预案 = 用例面拆出（档名实施批定）。
-  for (const { rel, limit } of [{ rel: "renderer/mount-settings.mjs", limit: 500 }, { rel: "renderer/events.mjs", limit: 500 }, { rel: "test/views-settings.test.mjs", limit: 500 }]) {
+  //   `test/views-settings.test.mjs`（本舱 ⑧ 档位控件例入档 ⇒ 越 300）：§4.1 在册拆分预案 = 用例面拆出（档名实施批定）·
+  //   `test/agent-host.test.mjs`（状态栏对齐批 `respond` 回执叠加两向例入档 ⇒ 越 300）：拆分预案 = 门面用例拆出（档名实施批定 —— 装配假面 harness 共享，拆待配套 harness 档）；登记面滞后 = 批次档 §5 已登记。
+  for (const { rel, limit } of [{ rel: "renderer/mount-settings.mjs", limit: 500 }, { rel: "renderer/events.mjs", limit: 500 }, { rel: "test/views-settings.test.mjs", limit: 500 }, { rel: "test/agent-host.test.mjs", limit: 500 }]) {
     const n = rows(rel)
     assert.ok(n > 300, `${rel} 仍在册例外面（实 ${n} —— 回落 ≤300 须撤销例外登记）`)
     assert.ok(n <= limit, `${rel} ≤ ${limit} 硬限（实 ${n} —— 距硬限余 ${limit - n} 行）`)

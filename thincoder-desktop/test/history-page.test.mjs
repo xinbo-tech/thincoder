@@ -60,13 +60,22 @@ test("U93: 页游（尾 / 中 / 首 / 空历史 / 零消息页）· next = 页�
     assert.equal(zero.hasOlder, true)
     assert.equal(zero.next, 50, "零消息页仍推进游标（next > 0 —— 否则前端卡死在页首）")
     writeSlot(s.cwd, 4, { history: [u(0)], activeProvider: "p1", activeModel: "m1", engineering: true, autoApprove: true })
-    assert.deepEqual(pageHistory(s.cwd, { key: "4" }).meta,
-      { provider: "p1", model: "m1", engineering: "ON", autoApprove: "ON" }, "meta 命中面（两布尔槽 = 供给面出串）")
+    assert.deepEqual(pageHistory(s.cwd, { key: "4" }).meta, { provider: "p1", model: "m1" },
+      "meta 三值命中面（会话头三值 —— 两模式位随状态栏对齐批撤出本投影）")
+    assert.deepEqual(pageHistory(s.cwd, { key: "4" }).flags,
+      { planMode: false, autoApprove: true, advisorGuard: false, engineering: true },
+      "flags = 槽投影四布尔（合并口径兜底面 —— 活值优先面住宿主转口；状态栏对齐批）")
     writeSlot(s.cwd, 5, { history: [u(0)], activeProvider: "", activeModel: "  ", engineering: false, autoApprove: false })
-    assert.deepEqual(pageHistory(s.cwd, { key: "5" }).meta,
-      { engineering: "OFF", autoApprove: "OFF" }, "非串 / 空串 ⇒ 零节点；两布尔槽 false 亦出词（OFF 是已知态，非「未供给」）")
+    assert.deepEqual(pageHistory(s.cwd, { key: "5" }).meta, {}, "非串 / 空串 ⇒ 零节点（两布尔槽不再入 meta）")
+    assert.deepEqual(pageHistory(s.cwd, { key: "5" }).flags,
+      { planMode: false, autoApprove: false, advisorGuard: false, engineering: false },
+      "flags 四布尔恒齐（假值照出 —— 零节点判据归显示面，字段缺 / 假同落 false）")
     writeSlot(s.cwd, 6, { history: [u(0)] })
     assert.deepEqual(pageHistory(s.cwd, { key: "6" }).meta, {}, "键缺（老槽）⇒ 零节点（不猜形——UI.md §1 会话头行）；`effort` 不回落配置面")
+    assert.deepEqual(pageHistory(s.cwd, { key: "6" }).flags,
+      { planMode: false, autoApprove: false, advisorGuard: false, engineering: false }, "老槽缺键 ⇒ 四布尔全假（禁假造）")
+    assert.deepEqual(pageHistory(s.cwd, { key: "4", before: 0 }).flags,
+      pageHistory(s.cwd, { key: "4" }).flags, "回填读同携 `flags`（与 `seed` 的首屏限定异）")
     // 源面：窗口切分与页尺**单源在核**（端层零副本 —— 自算切片 = 第二口径）
     const body = SRC.slice(SRC.indexOf("export function pageHistory"))
     assert.ok(!/\.slice\(/.test(body), "pageHistory 零自算切片（窗口单源）")
@@ -132,7 +141,7 @@ test("U175: seed —— tasks 直取（非数组 ⇒ []）· usage 有效门（>
   writeSlot(s.cwd, 1, slot)
 
   const first = pageHistory(s.cwd, { key: "1" })
-  assert.deepEqual(Object.keys(first).sort(), ["hasOlder", "messages", "meta", "next", "ok", "seed"], "首屏回执含 `seed`（既有五键不动）")
+  assert.deepEqual(Object.keys(first).sort(), ["flags", "hasOlder", "messages", "meta", "next", "ok", "seed"], "首屏回执含 `seed` + `flags`（既有键集不动）")
   assert.deepEqual(first.seed.tasks, tasks, "tasks = 槽数据直取（逐字）")
   assert.equal(first.seed.usage, sessionReading(slot, { providers: loadConfig().providersList, fallback: loadConfig().provider }), "usage = 核 `sessionReading`（装配入参 = `loadConfig()` 两值）")
   assert.ok(first.seed.usage > 0, "有效门正臂：读数 > 0 才在场")

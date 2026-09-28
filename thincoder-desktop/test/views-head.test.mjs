@@ -257,7 +257,7 @@ test("U150: 状态栏读数两态（在读 / `>= 80` 警示 / 未至 ⇒ 零节�
   // ① 读数在读：`data-usage` = 读数串 · 常态 class · 文本 = `t("status.usage", { percent })`（读数入词）
   const mid = read({ "1": 60 })
   assert.equal(mid.props["data-alerts"], 0, "零告警 ⇒ 根锚数 0")
-  assert.equal(mid.children.length, 1, "读数节点独子在位（读数缺 ⇒ 零子）")
+  assert.equal(mid.children.filter((node) => node.props["data-usage"] !== undefined).length, 1, "读数节点独子在位（读数缺 ⇒ 零读数节点）")
   assert.equal(usageNode(mid).props["data-usage"], "60", "`data-usage` = 读数串")
   assert.equal(usageNode(mid).props.class, "status-usage", "`< 80` ⇒ 常态 class")
   assert.deepEqual(usageNode(mid).children, [wordOf(60)], "读数文本 = `t(\"status.usage\", { percent })`（键 + 读数双钉）")

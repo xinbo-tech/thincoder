@@ -7,7 +7,7 @@
  * 读取失败（核抛）⇒ 本档不吞：**抛出 ⇒ `invoke` 拒绝**（失败面口径 = `src/main/ipc.mjs:23-25` 头注同形）。
  * 本批**不认领活动槽**：`isActive` 只读（不写 manifest、不发端壳认领）。
  */
-import { listSlots } from "./session-slots.mjs"
+import { ledgerHealth, listSlots } from "./session-slots.mjs"
 
 /** 载荷行字段集（闭集 · 单源 = IPC 会话族注项 1）：`date` / `updatedDate` 是核本地化显示串、
  *  `firstMessage` 非左列所需 ⇒ **不载**（关键决策 D-4）；**R3c 增** `provider`（= 核条目 `activeProvider`
@@ -30,8 +30,16 @@ function toRow(entry) {
   }
 }
 
-/** `sessions:list` 读面：`cwd` 空 ⇒ 空载荷（未打开项目）；否则核投影逐行挑字段（行序 = 核序 = `updatedAt` 降序）。 */
+/** `sessions:list` 读面：`cwd` 空 ⇒ 空载荷（未打开项目）；否则核投影逐行挑字段（行序 = 核序 = `updatedAt` 降序）。
+ *  **账本异常注记**（账本可靠批 · 桌面微轮 —— 单源 = `docs/desktop/design/IPC.md` §2「会话族注」项 6）：`ledger` = 回执增字段 ·
+ *  **异常才携**（缺席 = 正常——负断言）；触发 = `refused > 0 ∨ scene`（与 CLI / VSC 同口径，脱离会话计数条件）；判据单源 = 核
+ *  `ledgerHealth(cwd)`（经端壳转口引核出口——零算法副本）；`reason` = `lastReason` 逐字 ∥ `"scene"`（仅损坏现场时；`refused > 0` ⇒ `lastReason` 恒非空——核同拍写，`?? "scene"` 兜底不可达）；`cwd` 空 ⇒ 不携。 */
 export function listSessions(cwd) {
   if (typeof cwd !== "string" || cwd === "") return { cwd: null, rows: [] }
-  return { cwd, rows: listSlots(cwd).map(toRow) }
+  const receipt = { cwd, rows: listSlots(cwd).map(toRow) }
+  const health = ledgerHealth(cwd)
+  if (health.refused > 0 || health.scene) {
+    receipt.ledger = { refused: health.refused, reason: health.lastReason ?? "scene", scene: health.scene }
+  }
+  return receipt
 }

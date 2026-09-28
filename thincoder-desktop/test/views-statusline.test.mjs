@@ -1,8 +1,8 @@
 /**
- * views-statusline.test.mjs — 状态行族用例（D17 · `docs/desktop/design/UI.md` §1 状态栏行 / §1「本批注（对齐重定位）」项 1 ·
- * `docs/desktop/design/PROJECT.md` §2 KD-25 / §6.1 D17 / §7 T-DSK33；用例号 = 自铸 **U154 起** —— U1–U153 已占用，续号自选）：
- *   U154 = 15 段逐行判据（承载 12 段逐段节点 + 数据源；旁置 2 / 不适用 1 零节点 —— **零静默省略**）；
- *   U155 = 零节点面（未至 / 非正 / 缺片 ⇒ 逐段零节点 —— 禁假造 · KD-25）；
+ * views-statusline.test.mjs — 状态行族用例（D17 / D22 · `docs/desktop/design/UI.md` §1 状态栏行 / §1「本批注（对齐重定位）」项 1 /
+ * §1「本批注（状态栏对齐 · 屏面为准）」· `docs/desktop/design/PROJECT.md` §2 KD-25 / §6.1 D17 · D22 / §7 T-DSK33；用例号 = 自铸 **U154 起** —— U1–U153 已占用，续号自选）：
+ *   U154 = 15 段表逐行判据（承载 **16 段**逐段节点 + 数据源；旁置 1 / 不适用 1 零节点 —— **零静默省略**；D22 段集 12 ⇒ 16）；
+ *   U155 = 零节点面（未至 / 非正 / 缺片 ⇒ 逐段零节点 —— 禁假造 · KD-25；banner 四段负向锁 + `state` 两态 + `enter` 三态）；
  *   U156 = 挂载 / 出档 / 接线结构（单点重建 · 槽锚两向 · `STATUS_KEYS` 订阅面 · `chrome.mjs` 引调面）；
  *   U157 = 四项缺入站面端到端（`ev:activity` turn 槽 / 回合起刻 + `ev:usage` 载荷扩 `tokens` / `timers` ⇒ 归约 ⇒ 状态行节点）；
  *   U50 = 告警位面（原住 `test/views-chrome.test.mjs`，随状态行族拆档迁入 —— 面与判据不变，只换宿主档）。
@@ -31,6 +31,8 @@ const TPL = Object.freeze({
   "status.tokens": "⟦tokens:${up}/${down}⟧", "status.tokens.reasoning": "⟦reasoning:${tokens}⟧", "status.tokens.hit": "⟦hit:${percent}⟧",
   "status.usage": "⟦usage:${percent}⟧", "info.threshold": "⟦ledger⟧", "status.timer": "⟦timer:${count}⟧",
   "rail.session.untitled": "⟦untitled⟧", "status.queue.enter": "⟦queue-enter⟧", "status.queue.n": "⟦queue:${n}⟧",
+  "status.ready": "⟦ready⟧", "status.enter.send": "⟦enter-send⟧",
+  "status.banner.plan": "⟦plan⟧", "status.banner.auto": "⟦auto⟧", "status.banner.advisor": "⟦advisor⟧", "status.banner.eng": "⟦eng⟧",
   "tab.badge.approval": "⟦badge-approval⟧",
 })
 function useWords(ctx) {
@@ -38,7 +40,7 @@ function useWords(ctx) {
   ctx.after(() => initDict({}))
 }
 
-/** 承载 12 段满场夹具（逐段数据源齐给；`now` 注入 ⇒ 耗时段读数可算死）。 */
+/** 承载 16 段满场夹具（逐段数据源齐给；`now` 注入 ⇒ 耗时段读数可算死；`sessionFlags` 四布尔全真 ⇒ banner 四段在场）。 */
 const FACE = Object.freeze({
   tabs: ["1", "2"], activeTab: "1", badges: { "1": ["running", "approval"], "2": ["approval"] },
   usage: { "1": 85 }, sessions: [{ slot: 1, title: "会话甲" }],
@@ -48,6 +50,7 @@ const FACE = Object.freeze({
   turns: { "1": { n: 2, max: 8 } }, turnStarts: { "1": 7000 }, now: 12500,
   tokens: { "1": { prompt: 1200, completion: 300, reasoningTokens: 40, cacheHit: 6, cacheMiss: 4 } },
   timers: { "1": { count: 3, expired: 1 } }, projectInfo: { thresholdReached: true },
+  sessionFlags: { "1": { planMode: true, autoApprove: true, advisorGuard: true, engineering: true } },
 })
 /** 段节点（`data-seg` 码 ⇒ 节占位；缺 ⇒ `null`）。 */
 const segOf = (tree, code) => tree.children.find((node) => node.props?.["data-seg"] === code) ?? null
@@ -68,19 +71,22 @@ const textsOf = (node) => {
   return out
 }
 
-// ─── U154 15 段逐行判据（承载 12 段在场 ∧ 逐段数据源 ∧ 旁置 / 不适用零节点）────────────
+// ─── U154 15 段表逐行判据（承载 16 段在场 ∧ 逐段数据源 ∧ 旁置 / 不适用零节点）────────────
 
-test("U154: 15 段逐行判据（承载 12 段序 = CLI 序 · 逐段读数 / 警示 / 锚 · 旁置 2 + 不适用 1 零节点）", (ctx) => {
+test("U154: 15 段表逐行判据（承载 16 段序 = CLI 序 · 逐段读数 / 警示 / 锚 · 旁置 1 + 不适用 1 零节点）", (ctx) => {
   useWords(ctx)
   const tree = statusTree(statusModel(FACE))
-  assert.deepEqual(codesOf(tree), STATUS_SEGMENTS, "段序 = CLI 序（承载 12 段全在场 —— 零静默省略；闭集 = `STATUS_SEGMENTS`）")
-  assert.equal(STATUS_SEGMENTS.length, 12, "承载段计数 = 12（D17 计数锁）")
-  for (const ghost of ["banner", "scroll", "keys"]) assert.ok(!STATUS_SEGMENTS.includes(ghost), `旁置 / 不适用段不入段闭集：${ghost}`)
-  assert.equal(tree.props["data-alerts"], 1, "根锚 = 跨会话告警数（非活动键位标码 —— 非 15 段之一）")
+  assert.deepEqual(codesOf(tree), STATUS_SEGMENTS, "段序 = CLI 序（承载 16 段全在场 —— 零静默省略；闭集 = `STATUS_SEGMENTS`）")
+  assert.equal(STATUS_SEGMENTS.length, 16, "承载段计数 = 16（D22 计数锁）")
+  for (const ghost of ["scroll", "keys"]) assert.ok(!STATUS_SEGMENTS.includes(ghost), `旁置 / 不适用段不入段闭集：${ghost}`)
+  assert.equal(tree.props["data-alerts"], 1, "根锚 = 跨会话告警数（非活动键位标码 —— 非 16 段之一）")
   assert.equal(tree.children.at(-1).props["data-alert"], "approval", "告警位面居段后（既有面）")
+  // 段 1 —— banner 四态（活值四布尔真 ⇒ 四段在场；序 = CLI banner 序；词面 = 代号字面词键）
+  assert.deepEqual(["plan", "auto", "advisor", "eng"].map((code) => textOf(segOf(tree, code))),
+    [["⟦plan⟧"], ["⟦auto⟧"], ["⟦advisor⟧"], ["⟦eng⟧"]], "段 1 banner 四段（词键 `status.banner.*` —— 代号字面）")
   // 段 2 / 3 —— 位标两码（审批 / 提问同码；忙态词 = 状态词闭枚举「运行中」，核 i18n 同源键）
   assert.deepEqual([segOf(tree, "attention").props.class, textOf(segOf(tree, "attention"))], ["status-seg status-seg-warn", ["⟦blocked⟧"]], "段 2 注意力提示（警示 class 在）")
-  assert.deepEqual(textOf(segOf(tree, "busy")), ["⟦busy⟧"], "段 3 状态词 = 核状态词键（词出闭枚举，不造词）")
+  assert.deepEqual([segOf(tree, "state").props.class, textOf(segOf(tree, "state"))], ["status-seg", ["⟦busy⟧"]], "段 3 状态词 = 运行中（忙态 —— 核状态词键，词出闭枚举，不造词）")
   // 段 4 / 5 / 6 / 7 —— 块面 / 回合起刻 / 任务切片 / 回合槽
   assert.deepEqual(textOf(segOf(tree, "tool")), ["⟦tool:Bash⟧"], "段 4 当前工具 = 块面末位 running 工具名（零新通道）")
   assert.deepEqual(textOf(segOf(tree, "elapsed")), ["⟦elapsed:5⟧"], "段 5 耗时 = 现刻(12500) − 回合起刻(7000) = 5s")
@@ -95,27 +101,37 @@ test("U154: 15 段逐行判据（承载 12 段序 = CLI 序 · 逐段读数 / �
   assert.deepEqual([context.props.class, context.props["data-usage"], textOf(context)], ["status-usage status-usage-warn", "85", ["⟦usage:85⟧"]], "段 9 上下文 %（读数锚 + ≥ 80 警示）")
   assert.deepEqual([segOf(tree, "ledger").props.class, textOf(segOf(tree, "ledger"))], ["status-seg status-seg-warn", ["⟦ledger⟧"]], "段 11 台账 = 只承超阈警示位")
   assert.deepEqual([segOf(tree, "timer").props.class, textOf(segOf(tree, "timer"))], ["status-seg status-seg-warn", ["⟦timer:3⟧"]], "段 12 计时（到期未送达 ⇒ 警示）")
-  // 段 13 / 14 —— 标题（与标签条 / 左列同源）· 排队句（忙态 + 队长）
+  // 段 13 / 14 —— 标题（与标签条 / 左列同源）· 输入提示（队 ≥ 1 ⇒ 条数句）
   assert.deepEqual(textOf(segOf(tree, "title")), ["会话甲"], "段 13 会话标题 = 活动会话行标题（数据面原样）")
-  assert.deepEqual(textOf(segOf(tree, "queue")), ["⟦queue:2⟧"], "段 14 排队句（队 ≥ 1 ⇒ 条数句）")
-  // 旁置面点名：banner 的 AUTO / ENG 两位住会话头（本端无 PLAN / ADVISOR 两态）—— 状态行不复制
-  const head = chrome.headTree(chrome.headModel({ tab: "1", meta: { autoApprove: "off", engineering: "on" } }))
-  assert.deepEqual(head.children.map((node) => node.props["data-field"]), ["engineering", "autoApprove"], "旁置段 1（banner）：AUTO / ENG 住会话头（点名落点）")
+  assert.deepEqual(textOf(segOf(tree, "enter")), ["⟦queue:2⟧"], "段 14 输入提示（队 ≥ 1 ⇒ 条数句 —— 条数优先）")
+  const head = chrome.headTree(chrome.headModel({ tab: "1", meta: { provider: "P", model: "M", engineering: "on", autoApprove: "off" } })) // 会话头回三值：供给仍携两撤键 ⇒ 不渲染
+  assert.deepEqual(head.children.map((node) => node.props["data-field"]), ["provider", "model", "effort"], "旁置面收正：会话头 = 三值（撤 `engineering` / `autoApprove` 两显示位 —— 同一事实只住状态行一处）")
 })
 
 // ─── U155 零节点面（未至 / 非正 / 缺片 ⇒ 逐段零节点 —— 禁假造）────────────────────
 
-test("U155: 零节点面（12 段逐段：未至 / 非正 / 缺片 ⇒ 该段零节点 —— 队 14 与标题 13 的在场判据同钉）", (ctx) => {
+test("U155: 零节点面（16 段逐段：未至 / 非正 / 缺片 ⇒ 该段零节点 —— banner 负向锁 / `state` 两态 / `enter` 三态同钉）", (ctx) => {
   useWords(ctx)
   const blank = statusModel({ tabs: ["1"], activeTab: "1" })
-  assert.deepEqual(codesOf(statusTree(blank)), [], "全缺片 ⇒ 零段（不造空段 —— 未至 ⇒ 零节点）")
+  assert.deepEqual(codesOf(statusTree(blank)), ["state", "enter"], "全缺片 ⇒ 仅两恒在场段（就绪 / 输入提示静息态 —— 不造空段）")
   assert.deepEqual(statusTree(statusModel({ activeTab: null, badges: { "1": ["running", "approval"] }, usage: { "1": 90 } })).children, [], "无活动键 ⇒ 零段零告警（段面 = 活动会话面）")
   const face = (over) => statusModel({ ...FACE, ...over })
   const has = (over, code) => segOf(statusTree(face(over)), code) !== null
-  // 段 2 / 3：位标两码各自缺席 ⇒ 各自零节点（互不冒名）
-  assert.deepEqual([has({ badges: {} }, "attention"), has({ badges: {} }, "busy")], [false, false], "零位标 ⇒ 段 2 / 3 皆零节点")
-  assert.equal(has({ badges: { "1": ["running"] } }, "attention"), false, "无 approval 码 ⇒ 段 2 零节点")
-  assert.equal(has({ badges: { "1": ["approval"] } }, "busy"), false, "无 running 码 ⇒ 段 3 零节点")
+  const bannerCodes = ["plan", "auto", "advisor", "eng"]
+  const flagCodes = (slice) => codesOf(statusTree(face({ sessionFlags: { "1": slice } }))).filter((code) => bannerCodes.includes(code))
+  // 段 1（banner 四段 · 负向锁）：严格真 ⇒ 该段在场；假 / 缺 / 非严格真 ⇒ 零节点（逐码）
+  for (const [slice, why] of [[{}, "空切片"], [undefined, "切片缺"], [null, "非载体"], ["yes", "非对象"],
+    [{ planMode: false, autoApprove: false, advisorGuard: false, engineering: false }, "四假"],
+    [{ planMode: "yes", autoApprove: 1, advisorGuard: {}, engineering: "on" }, "非布尔真值"]]) {
+    assert.deepEqual(flagCodes(slice), [], `banner 四段零节点：${why}`)
+  }
+  assert.deepEqual([["planMode", "plan"], ["autoApprove", "auto"], ["advisorGuard", "advisor"], ["engineering", "eng"]].map(([key, code]) => [code, flagCodes({ [key]: true })]),
+    [["plan", ["plan"]], ["auto", ["auto"]], ["advisor", ["advisor"]], ["eng", ["eng"]]], "banner 单键真 ⇒ 该段独在（逐码）")
+  // 段 2 / 3：位标两码各自缺席 ⇒ 各自零节点（互不冒名）；两态词两态各钉
+  assert.deepEqual([has({ badges: {} }, "attention"), has({ badges: { "1": ["running"] } }, "attention")], [false, false], "段 2 零节点：零位标 / 无 approval 码")
+  assert.deepEqual([has({ badges: {} }, "state"), textOf(segOf(statusTree(face({ badges: {} })), "state"))], [true, ["⟦ready⟧"]], "段 3 静（位标集 ∩ {`running`, `approval`} = ∅）⇒ 就绪（词键 `status.ready`）")
+  assert.deepEqual(textOf(segOf(statusTree(face({ badges: { "1": ["running"] } })), "state")), ["⟦busy⟧"], "段 3 忙（位标含 `running`）⇒ 运行中")
+  assert.equal(has({ badges: { "1": ["approval"] } }, "state"), false, "段 3 审批在挂而回合非忙 ⇒ 零节点（两态词皆不命中 —— 同刻 CLI 状态文本让位模态提示）")
   // 段 4：非 running / 无名 / 非工具块 ⇒ 零节点
   for (const [blocks, why] of [
     [[{ kind: "tool", id: "t1", name: "Bash", status: "done" }], "已收束"],
@@ -152,10 +168,11 @@ test("U155: 零节点面（12 段逐段：未至 / 非正 / 缺片 ⇒ 该段零
   // 段 13：无行 ⇒ 零节点；行标题空 ⇒ 词表缺省词（与标签条 / 左列同投影）；他键行不算命中
   assert.deepEqual([has({ sessions: [] }, "title"), has({ sessions: [{ slot: "9", title: "别家" }] }, "title")], [false, false], "段 13 零节点：无本键行")
   assert.deepEqual(textOf(segOf(statusTree(face({ sessions: [{ slot: "1", title: "" }] })), "title")), ["⟦untitled⟧"], "段 13：标题空 ⇒ 词表缺省词（同源同投影）")
-  // 段 14：两无 ⇒ 零节点；忙态空队 ⇒ Enter 排队句；非忙有队 ⇒ 条数句（可见失败面）
-  assert.equal(has({ badges: {}, pool: { queue: [] } }, "queue"), false, "段 14 零节点：非忙 ∧ 队空")
-  assert.deepEqual(textOf(segOf(statusTree(face({ pool: { queue: [] } })), "queue")), ["⟦queue-enter⟧"], "段 14：忙态 + 队空 ⇒ Enter 排队句")
-  assert.deepEqual(textOf(segOf(statusTree(face({ badges: {}, pool: { queue: [{ title: "x" }] } })), "queue")), ["⟦queue:1⟧"], "段 14：非忙有队 ⇒ 条数句（队不隐）")
+  // 段 14（enter 三态）：静 ⇒ `Enter: send`（恒在场）；忙 ∧ 队空 ⇒ 排队句；有队 ⇒ 条数句（条数优先）
+  assert.deepEqual(textOf(segOf(statusTree(face({ badges: {}, pool: { queue: [] } })), "enter")), ["⟦enter-send⟧"], "段 14 静息（非忙 ∧ 队空）⇒ `Enter: send`（打开态可亮面）")
+  assert.deepEqual(textOf(segOf(statusTree(face({ pool: { queue: [] } })), "enter")), ["⟦queue-enter⟧"], "段 14 忙态 + 队空 ⇒ Enter 排队句")
+  assert.deepEqual([false, true].map((busy) => textOf(segOf(statusTree(face({ badges: busy ? FACE.badges : {}, pool: { queue: [{ title: "x" }] } })), "enter"))),
+    [["⟦queue:1⟧"], ["⟦queue:1⟧"]], "段 14 有队（非忙 / 忙两态同）⇒ 条数句（队不隐、优先于排队句）")
 })
 
 // ─── U156 挂载 / 出档 / 接线结构面 ────────────────────────────────────────
@@ -172,9 +189,9 @@ test("U156: 挂载 / 出档 / 接线（单点重建 · 槽锚两向 · `STATUS_K
   assert.equal(STATUS_SLOT, '[data-slot="status"]', "槽锚常量与骨架属性同值（两向锁 —— 状态行族出档）")
   assert.ok(html.includes('data-slot="status"'), "骨架承载容器锚（窗口级底行 —— UI.md §1 状态栏行）")
   const base = initialState()
-  const seeded = [...Object.keys(base), "tasks"] // `tasks`（同 `questions`）= 归约面首写自种切片 —— 不在初态键集，属在册切片面
+  const seeded = [...Object.keys(base), "tasks", "sessionFlags"] // `tasks`（同 `questions`）/ `sessionFlags` = 归约面 / 页读面首写自种切片 —— 不在初态键集，属在册切片面
   assert.deepEqual(STATUS_KEYS.filter((key) => !seeded.includes(key)), [], "订阅切片键面全在册（拼错键 ⇒ 永不重绘的静默口已闭）")
-  for (const key of ["usage", "tasks", "turns", "turnStarts", "tokens", "timers", "projectInfo", "pool", "blocks"]) {
+  for (const key of ["usage", "tasks", "turns", "turnStarts", "tokens", "timers", "projectInfo", "pool", "blocks", "sessionFlags"]) {
     assert.ok(STATUS_KEYS.includes(key), `状态行订阅切片在位：${key}`)
   }
   // ③ 单点重建（假 DOM）：重挂清容器 ⇒ 零残留；零宿主 ⇒ 早返 null
@@ -183,15 +200,15 @@ test("U156: 挂载 / 出档 / 接线（单点重建 · 槽锚两向 · `STATUS_K
   try {
     const root = fake.element("footer")
     root.setAttribute("data-slot", "status")
-    const model = mountStatus(root, { ...base, tabs: ["1"], activeTab: "1", tabBadges: { "1": ["running"] }, usage: { "1": 42 }, tokens: { "1": { prompt: 9, completion: 0, reasoningTokens: 0, cacheHit: 0, cacheMiss: 0 } } })
-    assert.deepEqual(model.segments.map((segment) => segment.code), ["busy", "tokens", "context", "queue"], "落点模型 = 段集（读数面；忙态空队 ⇒ 排队句在场）")
+    const model = mountStatus(root, { ...base, tabs: ["1"], activeTab: "1", tabBadges: { "1": ["running"] }, usage: { "1": 42 }, tokens: { "1": { prompt: 9, completion: 0, reasoningTokens: 0, cacheHit: 0, cacheMiss: 0 } }, sessionFlags: { "1": { engineering: true } } })
+    assert.deepEqual(model.segments.map((segment) => segment.code), ["eng", "state", "tokens", "context", "enter"], "落点模型 = 段集（模式位切片 → banner 段；忙态空队 ⇒ 排队句在场）")
     assert.ok(root.querySelector('[data-seg="context"]') !== null, "读数段落点实挂")
     assert.equal(root.querySelector('[data-usage="42"]').textContent, "⟦usage:42⟧", "段文本 = 词表值（读数入词）")
     assert.equal(root.querySelector('[data-seg="tokens"]').children[0].getAttribute("data-part"), "updown", "段内件锚落点（令牌三件）")
     assert.equal(root.getAttribute("data-slot"), "status", "宿主槽位零改")
     const writes = fake.mark()
-    mountStatus(root, { ...base, tabs: ["1"], activeTab: "1" })
-    assert.deepEqual(root.querySelectorAll("[data-seg]"), [], "重挂（零段态）⇒ 旧段零残留（单点重建）")
+    mountStatus(root, { ...base, tabs: ["1"], activeTab: null })
+    assert.deepEqual(root.querySelectorAll("[data-seg]"), [], "重挂（零段态：无活动键）⇒ 旧段零残留（单点重建）")
     assert.ok(fake.delta(writes).structural > 0, "重挂确走清 + 建（零写 = 假重挂）")
     assert.equal(mountStatus(null, base), null, "零宿主 ⇒ 早返 null（不抛）")
     // ④ 出档装配面（`attachStatus` 注入 store + 槽缝）：派发面 = 槽内实挂
@@ -218,18 +235,17 @@ test("U157: 端到端（turn 槽 / 起刻 + `tokens` / `timers` 载荷扩 ⇒ �
   assert.deepEqual([usage.usage[KEY], usage.tokens[KEY], usage.timers[KEY]], [64, tokens, { count: 2, expired: 1 }], "载荷扩三面同笔落槽（占用 / 令牌 / 计时）")
   const faced = (state, now) => statusTree(statusModel({
     tabs: [KEY], activeTab: KEY, badges: state.tabBadges, usage: state.usage, tasks: state.tasks, turns: state.turns,
-    turnStarts: state.turnStarts, tokens: state.tokens, timers: state.timers, blocks: state.blocks, pool: state.pool,
-    sessions: [{ slot: KEY, title: "S" }], now,
+    turnStarts: state.turnStarts, tokens: state.tokens, timers: state.timers, blocks: state.blocks, pool: state.pool, sessions: [{ slot: KEY, title: "S" }], now,
   }))
   const tree = faced(usage, 6000)
-  assert.deepEqual(codesOf(tree), ["busy", "elapsed", "turn", "tokens", "context", "timer", "title", "queue"], "归约 → 状态行端到端（八段在场 · 序 = CLI 序）")
+  assert.deepEqual(codesOf(tree), ["state", "elapsed", "turn", "tokens", "context", "timer", "title", "enter"], "归约 → 状态行端到端（八段在场 · 序 = CLI 序）")
   assert.deepEqual([textOf(segOf(tree, "elapsed")), textOf(segOf(tree, "turn")), textOf(segOf(tree, "tokens")), textOf(segOf(tree, "timer"))],
     [["⟦elapsed:5⟧"], ["⟦turn:3/12⟧"], ["⟦tokens:500/20⟧", "⟦hit:25⟧"], ["⟦timer:2⟧"]], "四源段读数（起刻差 / 回合槽 / 令牌两件 / 计时）")
   // 缺省两键 ⇒ 清槽（载荷缺省 ⇒ 零节点，禁假造）；同值三槽 ⇒ 原引用（零重绘）
   const cleared = reduce(usage, { channel: "ev:usage", key: KEY, percent: 64, timers: { count: 0, expired: 0 } })
   assert.notEqual(cleared, usage, "缺 `tokens` 键 ⇒ 清槽（状态更新）")
   assert.deepEqual([cleared.tokens[KEY], cleared.timers[KEY]], [undefined, { count: 0, expired: 0 }], "令牌槽清空 / 计时落零值（显示面「非正 ⇒ 零节点」）")
-  assert.deepEqual(codesOf(faced(cleared, 6000)), ["busy", "elapsed", "turn", "context", "title", "queue"], "清槽后令牌 / 计时段零节点（禁假造）")
+  assert.deepEqual(codesOf(faced(cleared, 6000)), ["state", "elapsed", "turn", "context", "title", "enter"], "清槽后令牌 / 计时段零节点（禁假造）")
   assert.equal(reduce(cleared, { channel: "ev:usage", key: KEY, percent: 64, timers: { count: 0, expired: 0 } }), cleared, "三槽同值 ⇒ 原引用（同值重发零重绘）")
   assert.equal(reduce(usage, { channel: "ev:usage", key: KEY, percent: 0, tokens }), usage, "有效读数门不变：未至 / 非正 ⇒ 原引用（连载荷扩两键一并不落）")
 })
@@ -245,11 +261,8 @@ test("U161: 核域词形锁（`CORE_MESSAGES` 真模板渲染 ⇒ 零残留 `${�
       assert.ok(!/\$\{\w+\}/.test(text), `段词零残留占位（复用核键 ⇒ 参数名须与核模板逐字对应 —— 实 ${text}）`)
     }
   }
-  assert.deepEqual(
-    [textOf(segOf(tree, "busy")), textOf(segOf(tree, "turn"))],
-    [["running"], ["turn 2/8"]],
-    "核键两面实填（`sub.running` / `status.turn` —— 词形单源 = `thincoder-core/i18n.mjs`）",
-  )
+  assert.deepEqual([textOf(segOf(tree, "state")), textOf(segOf(tree, "turn"))], [["running"], ["turn 2/8"]],
+    "核键两面实填（`sub.running` / `status.turn` —— 词形单源 = `thincoder-core/i18n.mjs`）")
 })
 
 
@@ -281,5 +294,5 @@ test("U50: 状态栏告警位（非活动标签的待审批 / 运行中 ∧ 序 
 
   const quiet = statusTree(statusModel({ tabs: ["a", "d"], activeTab: "a", badges: { d: ["done"] } }))
   assert.equal(quiet.props["data-alerts"], 0, "done 不入告警码集（零告警）")
-  assert.deepEqual(quiet.children, [], "零告警 ⇒ 零节点（不造占位）")
+  assert.deepEqual(alertsOf(quiet), [], "零告警 ⇒ 零告警节点（不造占位；段面 = 两恒在场静息段）")
 })

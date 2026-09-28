@@ -30,7 +30,7 @@
  * 「本批注（对齐重定位）」项 4）；**多标签结构不削**（本注不改形 —— 仅增行内元数据节点；换形/行动作两面零动）。
  */
 import { build, clear } from "../dom.mjs"
-import { t } from "../i18n.mjs"
+import { locale, t } from "../i18n.mjs"
 import { segNode } from "./chat-tool.mjs"
 // 同名 re-export（消费面零改 —— 导入路径与名面保持；语义单源 = 新档）。
 export { BADGE_WORD, mountTabbar, tabbarModel, tabbarTree } from "./tabbar.mjs"
@@ -50,13 +50,14 @@ const ROW_WORDS = Object.freeze({ rename: "rail.action.rename", delete: "rail.ac
 /** 在形文本控件选择器（草稿捕获 / 复填同锚 —— 换形面唯一文本控件）。 */
 const RENAME_INPUT = 'input[data-action="session:rename-input"]'
 
-/** 态判定：无 `cwd` ⇒ `boot`；有 `cwd` 无行 ⇒ `empty`；有行 ⇒ `list`（`recent` / `rows` 非载体 ⇒ 空集防御）。 */
-export function railModel({ projectCwd = null, recent = [], rows = [] } = {}) {
+/** 态判定（无 `cwd` ⇒ `boot` / 有 cwd 无行 ⇒ `empty` / 有行 ⇒ `list`）· `ledger` = 账本警示切片（非对象 ⇒ `null`——禁假造）。 */
+export function railModel({ projectCwd = null, recent = [], rows = [], ledger = null } = {}) {
   const list = Array.isArray(rows) ? rows : []
   return {
     state: projectCwd ? (list.length > 0 ? "list" : "empty") : "boot",
     recent: Array.isArray(recent) ? recent : [],
     rows: list,
+    ledger: ledger !== null && typeof ledger === "object" ? ledger : null,
   }
 }
 
@@ -79,6 +80,7 @@ export function mountRail(root, state, handlers = {}) {
     projectCwd: state?.project?.cwd ?? null,
     recent: state?.project?.recent ?? [],
     rows: state?.sessions ?? [],
+    ledger: state?.ledger ?? null,
   })
   const draft = readDraft(root)
   clear(root)
@@ -113,7 +115,8 @@ function restoreDraft(root, draft) {
 /** 态 → 区块集（三态互斥 —— 启动态只落项目区 + 最近目录区，**零会话行**）。 */
 function sections(model, handlers, form) {
   if (model.state === "boot") return [projectSection(handlers), recentSection(model.recent, handlers)]
-  return [sessionsSection(model.state === "empty" ? [emptyHint(), newSessionEntry(handlers)] : [rowsList(model.rows, handlers, form)])]
+  const body = model.state === "empty" ? [emptyHint(), newSessionEntry(handlers)] : [rowsList(model.rows, handlers, form)]
+  return [sessionsSection([...body, ledgerNotice(model.ledger)])]
 }
 
 /** 启动态项目区：无项目提示 + 打开目录入口（入口单键 = `rail.action.openDir` —— 决策 D-6）。 */
@@ -138,6 +141,18 @@ function recentSection(recent, handlers) {
 /** 会话区（`empty` / `list` 两态共用外壳 —— 标题恒在）。 */
 function sessionsSection(children) {
   return section("sessions", [heading(t("rail.sessions.title")), ...children])
+}
+
+/** 注记合成分隔符（主句 ⇄ 附句之间 —— **按当前 locale 直取**：zh「；」/ en「; 」；桌面有 locale 上下文，禁内容启发式）。 */
+const NOTICE_SEP = Object.freeze({ zh: "；", en: "; " })
+
+/** 账本警示行（账本可靠批 · 桌面微轮 —— 单源 = `docs/desktop/design/UI.md` §1「本批注（账本警示面）」）：会话区末子；dim · 非可点。
+ *  文案（修正轮 · 三端同义）= 主句 + **`scene === true` 条件附句**（附句另键；`scene` 缺 / false ⇒ 仅主句——禁恒附）。 */
+function ledgerNotice(ledger) {
+  if (ledger === null || typeof ledger !== "object") return null
+  const children = [t("rail.ledger.notice", { reason: ledger.reason })]
+  if (ledger.scene === true) children.push(NOTICE_SEP[locale()] ?? NOTICE_SEP.en, t("rail.ledger.notice.scene"))
+  return { tag: "div", props: { class: "rail-ledger-notice", "data-ledger-notice": "" }, children }
 }
 
 /** 空态提示（有项目无会话）。 */

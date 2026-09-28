@@ -8,7 +8,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { applyPage, openSession, reduce } from "../renderer/events.mjs"
+import { applyFlags, applyPage, openSession, reduce } from "../renderer/events.mjs"
 import { createStore, initialState } from "../renderer/store.mjs"
 import { STATUS_KEYS } from "../renderer/mount-status.mjs"
 import { submitVerdict } from "../renderer/mount-pool.mjs"
@@ -159,6 +159,7 @@ test("U92 出站后清除：成功两侧同清 / 回执非 ok 与拒绝皆零乐
   assert.equal(table.size, 0, "表删项")
   assert.deepEqual(store.get().pool.approvals, [], "切片摘项（两侧同清）")
   assert.equal(store.get().pool.approval, 0, "待决读数随摘项归零（数）")
+  assert.deepEqual(store.get().sessionFlags, {}, "回执无 `flags` 键 ⇒ 模式位切片零写（禁假造）")
 
   const refused = seed()
   const refuseHost = { invoke: () => Promise.resolve({ ok: false, reason: "bad-verdict" }) }
@@ -174,7 +175,7 @@ test("U92 出站后清除：成功两侧同清 / 回执非 ok 与拒绝皆零乐
 
 // ─── U176 首屏播种（D17 · `docs/desktop/design/IPC.md` §2「打开态播种注」项 3/4）────────
 
-test("U176 首屏播种：`seed` 同笔写两切片 · 缺席 / 形不合 ⇒ 零写 · 在飞（回合未尾）⇒ 种不落", () => {
+test("U176 首屏播种：`seed` 同笔写两切片 · 缺席 / 形不合 ⇒ 零写 · 在飞（回合未尾）⇒ 种不落 · 切片有活数据（#490）⇒ 零写", () => {
   const blank = stateOf()
   const seed = { tasks: [{ id: 1, status: "done" }, { id: 2, status: "pending" }], usage: 42 }
   const receipt = { ok: true, messages: [], hasOlder: false, next: null, meta: {}, seed }
@@ -202,7 +203,10 @@ test("U176 首屏播种：`seed` 同笔写两切片 · 缺席 / 形不合 ⇒ �
   assert.equal(inFlight.usage, live.usage, "在飞 ⇒ usage 活切片为准")
   assert.deepEqual(inFlight.blocks, [], "页整置仍走（只种不落——既有页读语义零改）")
   const settled = applyPage({ ...live, tabBadges: { [KEY]: ["done"] } }, receipt, { key: KEY, before: null })
-  assert.deepEqual(settled.tasks[KEY], seed.tasks, "回合尾（位标无 `running`）⇒ 种落")
+  assert.equal(settled.tasks, live.tasks, "回合尾 ∧ 切片已有活数据 ⇒ 零写（#490 播种只填空白）")
+  assert.equal(settled.usage, live.usage, "同判：usage 活数据在场 ⇒ 零写")
+  const blankTail = applyPage({ ...blank, tabBadges: { [KEY]: ["done"] } }, receipt, { key: KEY, before: null })
+  assert.deepEqual(blankTail.tasks[KEY], seed.tasks, "对照正臂：回合尾 ∧ 空切片 ⇒ 种落（防假红）")
 
   const backfill = applyPage(blank, receipt, { key: KEY, before: 4 })
   assert.equal(backfill.tasks, blank.tasks, "回填径不消费 `seed`（`before != null`）")
@@ -211,4 +215,38 @@ test("U176 首屏播种：`seed` 同笔写两切片 · 缺席 / 形不合 ⇒ �
   assert.equal(stray.tasks, blank.tasks, "非活动会话 ⇒ 零写（沿 `meta` 之外的切片键门）")
 
   assert.equal(STATUS_KEYS.includes("tasks") && STATUS_KEYS.includes("usage"), true, "订阅键面零改（两键已在 `STATUS_KEYS` ⇒ 帧随切片变自动重挂）")
+})
+
+// ─── U179 模式位切片（状态栏对齐批 · `docs/desktop/design/IPC.md` §2「模式位投影注」项 4/5）──────
+
+test("U179 模式位切片：页读两径写 `sessionFlags` · 缺席 / 非载体 / 非布尔 ⇒ 零写 · 同值原引用 · 出站回执径同点", async () => {
+  const flags = { planMode: true, autoApprove: false, advisorGuard: true, engineering: false }
+  const receipt = (patch = {}) => ({ ok: true, messages: [], hasOlder: false, next: null, meta: {}, ...patch })
+  const blank = stateOf()
+
+  const first = applyPage(blank, receipt({ flags }), { key: KEY, before: null })
+  assert.deepEqual(first.sessionFlags[KEY], flags, "首屏读 ⇒ `sessionFlags[key]` 写（与 `meta` 同写点）")
+  assert.deepEqual(blank.sessionFlags, {}, "原态零改写（纯归约）")
+  assert.deepEqual(applyPage(blank, receipt({ flags }), { key: KEY, before: 12 }).sessionFlags[KEY], flags, "回填径同写（每次页读皆携）")
+  const stray = applyPage(blank, receipt({ flags }), { key: "9", before: null })
+  assert.deepEqual(stray.sessionFlags["9"], flags, "非活动会话 ⇒ 切片仍按 key 写（沿 `meta` 同判）")
+  assert.equal(stray.sessionFlags[KEY], undefined, "本键零写（键域）")
+
+  for (const missing of [undefined, null, "x", 7, true]) {
+    assert.equal(applyPage(blank, receipt({ flags: missing }), { key: KEY, before: null }).sessionFlags, blank.sessionFlags,
+      `flags 缺席 / 非载体 ⇒ 零写（${String(missing)}）`)
+  }
+  assert.equal(applyPage(blank, { ok: false, reason: "bad-key" }, { key: KEY, before: null }).sessionFlags, blank.sessionFlags, "失败回执 ⇒ 零写（清在途径不碰本切片）")
+  const partial = applyPage(blank, receipt({ flags: { planMode: true, autoApprove: "yes", advisorGuard: null, outside: true } }), { key: KEY, before: null })
+  assert.deepEqual(partial.sessionFlags[KEY], { planMode: true }, "逐项只收严格布尔（非布尔 / 表外键 ⇒ 该键不落 —— 禁假造）")
+  assert.equal(applyFlags(first, KEY, flags), first, "同键同值 ⇒ 原引用（零重绘）")
+  assert.equal(applyFlags(first, KEY, { ...flags, autoApprove: true }).sessionFlags[KEY].autoApprove, true, "同键异值 ⇒ 整条就地替换")
+
+  const item = { promptId: "p1", shape: "single", tool: "write_file" }
+  const store = createStore(stateOf({ pool: { ...initialState().pool, approvals: [item], approval: 1 } }))
+  const host = { invoke: () => Promise.resolve({ ok: true, key: KEY, flags: { planMode: false, autoApprove: true, advisorGuard: false, engineering: true } }) }
+  assert.equal(await submitVerdict({ store, host }, "p1", "always"), true)
+  assert.deepEqual(store.get().sessionFlags[KEY], { planMode: false, autoApprove: true, advisorGuard: false, engineering: true },
+    "出站回执径同点写切片（桌内 AUTO 翻转即时刷新面）")
+  assert.deepEqual(store.get().pool.approvals, [], "摘项照旧（两事同笔）")
 })

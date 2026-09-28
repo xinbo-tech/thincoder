@@ -10,7 +10,7 @@
  * 或增量面（`alignPlan` ⇒ `settleFrame` 六步）；窗限 `chatLimit` **只增**（`nextWindow` 收束沿 + 本页**实并入块数**）。
  * 出档面：池面一族 = `renderer/mount-pool.mjs` · 会话族 = `renderer/mount-sessions.mjs` · 输入区 = `renderer/mount-composer.mjs`
  * · 会话头接线 = `renderer/mount-head.mjs`（候选面 / 写路 `session:prefs` / 回执刷行 —— 头面刷行调用点仍住本档）
- * · 状态行 = `renderer/mount-status.mjs`（D17 承载 12 段单点重建 + 订阅切片键面 `STATUS_KEYS`）
+ * · 状态行 = `renderer/mount-status.mjs`（D17 / D22 承载 16 段单点重建 + 订阅切片键面 `STATUS_KEYS`）
  * · 卡族两族 = `renderer/mount-cards.mjs`（提问 / 计划 —— 挂载 + 作答 / 取消出口）
  * · 事件归约 + 页应用 = `renderer/events.mjs` · 订阅接线 = `renderer/events-subscribe.mjs`；本档接线两处 = `attachScroll`
  * （回填 / 跟滚 / 停跟三出口 + 只读口 `guards()`；药丸回底 / 工具卡 toggle 两出口）· `attachEvents({ on, onTurnTail })`
@@ -51,7 +51,8 @@ const RAIL_SLOT = '[data-slot="projects"]' // 左列容器锚（骨架 = `render
 const TABS_SLOT = '[data-slot="tabs"]' // 标签条容器锚（`.session` 首子元素——命中在挂载树根之前）
 const HEAD_SLOT = '[data-slot="session-head"]' // 会话头槽（状态行槽锚随状态行族出档 —— `renderer/mount-status.mjs`）
 const FLOW_SLOT = '[data-slot="flow"]' // 对话流容器锚（= 滚动容器自身 —— 挂载根不清宿主）
-const RAIL_KEYS = ["project", "sessions", "locale", "railForm"] // 重挂触发切片（`locale` 在内：文案随词表 ⇒ 树须重绘；`railForm` = 换形态切片——行原位换形）
+// 重挂触发切片（`locale` 在内：文案随词表 ⇒ 树须重绘；`railForm` = 换形态切片——行原位换形；`ledger` = 账本警示切片）
+const RAIL_KEYS = ["project", "sessions", "locale", "railForm", "ledger"]
 const SHELL_KEYS = ["tabs", "activeTab", "sessions", "tabBadges", "sessionMeta", "locale", "pendingClose"] // 外壳重挂触发切片
 const CHAT_KEYS = ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "project"] // 对话流帧触发切片（`locale` 在内：文案随词表 · `pool`：审批卡宿对话流 · `project`：引导码随 cwd——批 B 追加轮）
 const { paintPool, handlers: poolHandlers } = attachPool(host) // 池面一族（右栏重挂 + 两出口 —— 出档 `renderer/mount-pool.mjs`）
@@ -61,7 +62,7 @@ const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —�
 const settingsFace = attachSettings(host, { onProjectOpened: openDir })
 const { flushTurnTail } = attachComposer(host, { writeText }) // 输入区一族（挂载 + handlers + 回合尾 flush 句柄 —— 出档 `renderer/mount-composer.mjs`）
 const head = attachHead({ host, onRepaint: () => paintHead() }) // 会话头接线一族（候选面 + 写路 `session:prefs` —— 出档 `renderer/mount-head.mjs`）
-const { paintStatus } = attachStatus() // 状态行一族（D17 承载 12 段单点重建 —— 出档 `renderer/mount-status.mjs`）
+const { paintStatus } = attachStatus() // 状态行一族（D17 / D22 承载 16 段单点重建 —— 出档 `renderer/mount-status.mjs`）
 
 /** 载荷形判据（`config:read` 往返：`{ config, locale, dict }`——三字段齐备才算往返成立）。 */
 function isValidPayload(payload) {

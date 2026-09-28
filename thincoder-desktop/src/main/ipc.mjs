@@ -128,9 +128,16 @@ function sessionDelete(payload) {
 }
 function sessionResume() { return resumeSession(currentCwd()) }
 
-/** `history:page(payload)` ⇒ `{ ok, messages, hasOlder, next, meta }` ∥ `{ ok:false, reason }`：读面转口
- *  `session-slots.mjs`（零算法副本；cwd 取主进程当前项目内存态 —— 同会话族）。载荷 `{ key, before }`。 */
-function historyPage(payload) { return pageHistory(currentCwd(), payload) }
+/** `history:page(payload)` ⇒ `{ ok, messages, hasOlder, next, meta, flags, seed? }` ∥ `{ ok:false, reason }`：读面
+ *  转口 `session-slots.mjs`（零算法副本；cwd 取主进程当前项目内存态 —— 同会话族）。载荷 `{ key, before }`。
+ *  **模式位投影叠加（状态栏对齐批 · `docs/desktop/design/IPC.md` §2「模式位投影注」· 合并口径）**：agent 在场
+ *  ⇒ 以**活值**四布尔（宿主 `flagsOf`）置顶（转口读面已携槽投影兜底值 —— `session-slots.mjs` `slotFlags`）；
+ *  agent 不在场 ⇒ 槽投影照旧（键仍在场）；槽读不出（失败回执）⇒ 无 `flags` 键（零写 —— 禁假造）。 */
+function historyPage(payload) {
+  const receipt = pageHistory(currentCwd(), payload)
+  const live = receipt?.ok === true && agentHost ? agentHost.flagsOf(payload?.key) : null
+  return live === null ? receipt : { ...receipt, flags: live }
+}
 
 /** `session:prefs(payload)` ⇒ 族信封 + `meta`（成功携 · 失败缺键）：载荷 `{ key, patch }`（键闭集
  *  `provider` / `model` / `effort`）—— 转口宿主写面（KD-19 单点：写盘 → 重施；`reason` 五档在动作侧）。 */

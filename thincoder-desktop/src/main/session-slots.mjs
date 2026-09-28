@@ -22,6 +22,10 @@
  *      `usage` = 核 `sessionReading` 投影（读数算法全在核）；端层只做出参装配（`loadConfig()` →
  *      `providersList` / `provider`）与有效门（数字 ∧ `> 0`）⇒ 零算法副本（形态 / 在场 / 缺席降级单源 =
  *      `docs/desktop/design/IPC.md` §2「打开态播种注」）。
+ *   ⑦ 模式位槽投影（状态栏对齐批 · D22）：`pageHistory` 回执 `flags` = 槽字段四布尔（`planMode` /
+ *      `autoApprove` / `advisor.guard` / `engineering`）**每次页读皆携** —— 活值优先面（agent 在场）住
+ *      宿主转口（`ipc.mjs` 叠加 `agent-host.mjs` `flagsOf`），本档 = 兜底口径（合并裁定；单源 =
+ *      `docs/desktop/design/IPC.md` §2「模式位投影注」）。
  *
  * 载入序不变量（批档 §2.4（a））：核 `newSlotData(cwd)` 的 `createdBy = sessionEnd()`
  * （`thincoder-core/session-slot-write.mjs:46`）⇒ 端名声明必须先于任何物化写。本档声明是模块级
@@ -56,6 +60,7 @@ export {
 } from "@thincoder/core/session-slots.mjs"
 // 会话清单消费（`createdBy` 有值才带 —— 核投影口径；`docs/desktop/design/UI.md:38,40`）+ 槽重命名纯 re-export。
 export { listSlots, slotOccupancy, renameSlot } from "@thincoder/core/session.mjs"
+export { ledgerHealth } from "@thincoder/core/session-slots.mjs" // 账本健康出口（账本可靠批 · §6.25 判据句 4——桌面警示面消费）
 export { newSlotData } from "@thincoder/core/session-slot-write.mjs"
 
 /** 端常量：本端记录文件后缀 —— 桌面端写 `.desktop`（NF1：本端记录是本端单写者文件）。 */
@@ -108,9 +113,10 @@ export function slotOfKey(key) {
   return /^\d+$/.test(raw) ? Number(raw) : null
 }
 
-/** 会话元信息（回执面）：五键**只落非空串**（UI.md §1 会话头行「字段值由**供给面出串**」——消费面
- *  `views/chrome.mjs:8-9` 判据 = 非串 / 空串 ⇒ 零节点）⇒ 两布尔槽在此出词（`ON` / `OFF`，词形同核
- *  `cmd-eng.mjs:72` / `cmd-auto.mjs:9`）；键缺（老槽）⇒ 零节点（不猜形）。
+/** 会话元信息（回执面）：**三键** = 会话头三值（`provider` / `model` / `effort`）**只落非空串**（UI.md §1
+ *  会话头行「字段值由**供给面出串**」——消费面 `views/chrome.mjs:8-9` 判据 = 非串 / 空串 ⇒ 零节点）；
+ *  键缺（老槽）⇒ 零节点（不猜形）。两模式位（`engineering` / `autoApprove`）随状态栏对齐批撤出本投影 ——
+ *  两态呈现面单源 = 状态行 banner 段（供面 = 回执 `flags`；单源 = `docs/desktop/design/IPC.md` §2「模式位投影注」）。
  *  `effort` 值只由本槽字段出串（会话级写面记录 —— 未设 ⇒ 零节点，**不回落**配置面：PROJECT.md T-DSK28）。 */
 function slotMeta(data) {
   const meta = {}
@@ -121,10 +127,19 @@ function slotMeta(data) {
   put("provider", str(data.activeProvider))
   put("model", str(data.activeModel))
   put("effort", str(data.effort))
-  const flag = (v) => (typeof v === "boolean" ? (v ? "ON" : "OFF") : null)
-  put("engineering", flag(data.engineering))
-  put("autoApprove", flag(data.autoApprove))
   return meta
+}
+
+/** 模式位**槽投影**（`flags` 回执键 · 状态栏对齐批 —— 单源 = `docs/desktop/design/IPC.md` §2「模式位投影注」
+ *  项 2；合并口径 = 活值优先、**agent 不在场 ⇒ 本投影兜底**）：四布尔逐项取自槽字段（会话状态的权威存储 ——
+ *  与 D17 `seed` 同源同形）；字段缺 / 非布尔 ⇒ 该键 `false`（负向锁 —— 显示面零节点，禁假造）。 */
+function slotFlags(data) {
+  return {
+    planMode: data.planMode === true,
+    autoApprove: data.autoApprove === true,
+    advisorGuard: data.advisor?.guard === true,
+    engineering: data.engineering === true,
+  }
 }
 
 /** 打开态播种面（`history:page` 回执 `seed` —— 形态 / 在场 / 缺席降级单源 = `docs/desktop/design/IPC.md`
@@ -159,7 +174,7 @@ export function pageHistory(cwd, payload) {
   const total = history.length
   const end = before == null ? total : Math.max(0, Math.min(before, total))
   const next = hasOlder ? Math.max(0, end - HISTORY_PAGE_SIZE) : null
-  const receipt = { ok: true, messages, hasOlder, next, meta: slotMeta(data) }
+  const receipt = { ok: true, messages, hasOlder, next, meta: slotMeta(data), flags: slotFlags(data) }
   if (before == null) receipt.seed = openingSeed(data)
   return receipt
 }

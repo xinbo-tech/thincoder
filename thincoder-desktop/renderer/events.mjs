@@ -5,9 +5,10 @@
  * 出档 `renderer/questions.mjs`、位标面出档 `renderer/badges.mjs`（桌面残余批拆档产物——本档 500 行硬限
  * 顶格，在册拆分预案执行；`clearQuestion` 本档 re-export 保导出名面）。
  *
- * 导出面七（`docs/desktop/design/RENDERER.md` §1.1 事件归约面条 —— 订阅接线一发已拆出同源档）：
+ * 导出面八（`docs/desktop/design/RENDERER.md` §1.1 事件归约面条 —— 订阅接线一发已拆出同源档）：
  *   `reduce(state, ev, now)`   纯归约（零 DOM / 零 IPC ⇒ 平 node 直测）；无变化 ⇒ **原引用**
  *   `applyPage(state, receipt, { key, before })`  页回执 → 首屏 / 回填两径（失败径 = 清在途）
+ *   `applyFlags(state, key, flags)`  模式位切片写（**纯动作** —— 状态栏对齐批：页读 / 出站回执两径同点；`flags` 非载体 ⇒ 零写）
  *   `blockOfMessage(msg)`      核 message → 块（五型闭集 `user|assistant|reasoning|tool|error`，决策 D8-8）
  *   `openSession(state, key)`  `activeSession` 写者（置键 / `null` 关页 + 清本键 `done` 位标）
  *   `clearApproval(state, promptId)`  出站成功后摘项（写者表隐含 —— 见 §2.11⑦；调用面 = `renderer/mount-pool.mjs`）
@@ -35,8 +36,11 @@ import { subBlocksReduce } from "/rc/subblocks/state.mjs"
 
 /** 活流块 id 派生前缀（页块 id 域 = 核给（工具 id）/ 缺省无 —— 两域不混）。 */
 const LIVE_ID = "live-"
-/** 会话头字段白名单（`thincoder-desktop/renderer/views/chrome.mjs:8-9` 判据：非串 / 空串 ⇒ 零节点）。 */
-const META_FIELDS = ["provider", "model", "effort", "engineering", "autoApprove"]
+/** 会话头字段白名单（`thincoder-desktop/renderer/views/chrome.mjs:8-9` 判据：非串 / 空串 ⇒ 零节点）——
+ *  **三值**（状态栏对齐批：两模式位撤出会话头投影 —— 呈现面单源 = 状态行 banner 段，供面 = 回执 `flags`）。 */
+const META_FIELDS = ["provider", "model", "effort"]
+/** 模式位载荷键白名单（回执 `flags` 四布尔 —— `docs/desktop/design/IPC.md` §2「模式位投影注」项 2 四键）。 */
+const FLAG_FIELDS = ["planMode", "autoApprove", "advisorGuard", "engineering"]
 /** 审批池条目键白名单（零新键 —— 消费面 `views/approval.mjs` / `views/activity.mjs` 读取集）。 */
 const APPROVAL_KEYS = ["promptId", "shape", "tool", "argsSummary", "changes", "batch"]
 /** 子 agent 状态闭集（**单源** = `docs/render-core/design/RENDER-CORE.md` §5 token → patch 全表：核 relay 谱
@@ -364,7 +368,20 @@ export function reduce(state, ev, now = Date.now()) {
 
 // ─── 页应用（回执 → 首屏 / 回填两径）────────────────────────────────────────
 
-/** `meta` 五值**只落非空串**（名单与 `views/chrome.mjs` 同名 —— 数据面原样，非词表）；全缺 ⇒ `{}`。 */
+/** 模式位切片写（**纯动作** —— 状态栏对齐批 · `docs/desktop/design/IPC.md` §2「模式位投影注」项 4/5）：
+ *  页读（`applyPage`）与出站回执（`renderer/mount-pool.mjs` `submitVerdict`）**两径同点** —— 切片变 ⇒ 状态行重挂。
+ *  `flags` 缺席 / 非载体 ⇒ **零写**（禁假造）；逐项只收严格布尔（非布尔 ⇒ 该键不落）；同值 ⇒ **原引用**（零重绘）。 */
+export function applyFlags(state, key, flags) {
+  if (flags === null || typeof flags !== "object" || Array.isArray(flags)) return state
+  if (typeof key !== "string" || key === "") return state
+  const record = {}
+  for (const field of FLAG_FIELDS) if (typeof flags[field] === "boolean") record[field] = flags[field]
+  const table = state.sessionFlags ?? {}
+  if (sameRecord(table[key], record)) return state
+  return { ...state, sessionFlags: { ...table, [key]: record } }
+}
+
+/** `meta` 三值**只落非空串**（名单与 `views/chrome.mjs` 同名 —— 数据面原样，非词表）；全缺 ⇒ `{}`。 */
 function metaOf(meta) {
   const out = {}
   for (const field of META_FIELDS) {
@@ -374,37 +391,41 @@ function metaOf(meta) {
   return out
 }
 
-/** 页回执应用（`docs/desktop/design/IPC.md` §2 `history:page` 定形）：`{ ok, messages, hasOlder, next, meta, seed? }`。
+/** 页回执应用（`docs/desktop/design/IPC.md` §2 `history:page` 定形）：`{ ok, messages, hasOlder, next, meta, flags, seed? }`。
  *  `ok !== true` ⇒ **清在途**（成败皆清 —— finally 语义）且不写其余切片；
- *  `key !== activeSession` ⇒ 跳块 / 历史写（`sessionMeta[key]` 仍写）；
+ *  `flags` 与 `meta` **同一写点**（`applyFlags` —— 状态栏对齐批；每次页读皆携 ⇒ 回填径同写）；
+ *  `key !== activeSession` ⇒ 跳块 / 历史写（`sessionMeta[key]` / `sessionFlags[key]` 仍写）；
  *  首屏（`before == null`）⇒ 块整置 + 回底（`following = true` / `pendingNew = 0`；空页同径）+ **打开态播种**
  *  （`seed` ⇒ `tasks[key]` / `usage[key]` 同笔——判据住 `seedPatch`）；
  *  回填 ⇒ 前插 + `history` 落态（`hasOlder === false ⇒ next = null`；高度补偿归 `settleFrame` 六步既有）。 */
 export function applyPage(state, receipt, { key, before } = {}) {
   if (receipt?.ok !== true) return endBackfill(state)
+  const flagged = applyFlags(state, key, receipt.flags)
   const meta = metaOf(receipt.meta)
-  const sessionMeta = { ...(state.sessionMeta ?? {}), [key]: meta }
-  if (key !== state.activeSession) return { ...state, sessionMeta }
+  const sessionMeta = { ...(flagged.sessionMeta ?? {}), [key]: meta }
+  if (key !== flagged.activeSession) return { ...flagged, sessionMeta }
   const hasOlder = receipt.hasOlder === true
   const next = hasOlder ? (receipt.next ?? null) : null
   const history = { hasOlder, inFlight: false, page: next }
   const messages = Array.isArray(receipt.messages) ? receipt.messages : []
   const page = messages.flatMap((msg) => blockOfMessage(msg))
   if (before == null) {
-    return { ...state, ...seedPatch(state, key, receipt.seed), blocks: page, sessionMeta, history, following: true, pendingNew: 0 }
+    return { ...flagged, ...seedPatch(flagged, key, receipt.seed), blocks: page, sessionMeta, history, following: true, pendingNew: 0 }
   }
-  return { ...state, blocks: [...page, ...(state.blocks ?? [])], sessionMeta, history }
+  return { ...flagged, blocks: [...page, ...(flagged.blocks ?? [])], sessionMeta, history }
 }
 
 /** 首屏播种补丁（D17 · `docs/desktop/design/IPC.md` §2「打开态播种注」项 4）：`seed` 同笔写 `tasks[key]` /
  *  `usage[key]` 两切片（与 `meta` 同一写点）；**时序判据** = 本键在飞（回合未尾 ⇒ 位标含 `running`）
- *  ⇒ 种不落（**零写**——活切片为准）；`seed` 缺省 / 该槽形不合 ⇒ 该槽零写（禁假造）。 */
+ *  ⇒ 种不落（**零写**——活切片为准）；**播种只填空白**（#490）：该槽切片键在场 ⇒ 零写（闭合回合尾窗口 ——
+ *  判据 = 键在场、不辨来源；设计句「非播种来源」限定的收正随批次档 §5 上抛）；`seed` 缺省 / 该槽形不合 ⇒ 零写。 */
 function seedPatch(state, key, seed) {
   if (seed === null || typeof seed !== "object") return {}
   if (Array.isArray(state.tabBadges?.[key]) && state.tabBadges[key].includes("running")) return {}
+  const blank = (table) => !Object.hasOwn(table ?? {}, key)
   const patch = {}
-  if (Array.isArray(seed.tasks)) patch.tasks = { ...(state.tasks ?? {}), [key]: seed.tasks }
-  if (typeof seed.usage === "number" && seed.usage > 0) patch.usage = { ...(state.usage ?? {}), [key]: seed.usage }
+  if (Array.isArray(seed.tasks) && blank(state.tasks)) patch.tasks = { ...(state.tasks ?? {}), [key]: seed.tasks }
+  if (typeof seed.usage === "number" && seed.usage > 0 && blank(state.usage)) patch.usage = { ...(state.usage ?? {}), [key]: seed.usage }
   return patch
 }
 

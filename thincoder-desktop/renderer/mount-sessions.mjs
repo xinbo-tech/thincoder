@@ -32,7 +32,7 @@ export async function refreshRail() {
       console.error("[renderer] rail payload shape unexpected:", project, list)
       return
     }
-    store.set({ project: { cwd: project.cwd ?? null, recent: project.recent }, sessions: list.rows })
+    store.set({ project: { cwd: project.cwd ?? null, recent: project.recent }, sessions: list.rows, ledger: list.ledger ?? null })
   } catch (error) {
     console.error("[renderer] rail refresh failed:", error)
   }

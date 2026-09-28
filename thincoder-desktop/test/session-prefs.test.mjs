@@ -66,7 +66,7 @@ test("U127: 三形 patch 往返 —— 落盘 ≡ 回执 meta ≡ 活动会话�
 
     const r1 = host.setPrefs("7", { provider: "p1", model: KNOWN_MODEL })
     assert.deepEqual({ ...r1, meta: undefined }, { ok: true, reason: null, cwd: s.cwd, slot: 7, meta: undefined }, "族信封四键")
-    assert.deepEqual(r1.meta, { provider: "p1", model: KNOWN_MODEL, engineering: "ON" }, "回执 meta ≡ 会话头投影（与 history:page 同源）")
+    assert.deepEqual(r1.meta, { provider: "p1", model: KNOWN_MODEL }, "回执 meta = 会话头三值投影（与 history:page 同源；两模式位随状态栏对齐批撤出）")
     assert.equal(readSlot(s.cwd, 7).activeModel, KNOWN_MODEL, "落盘（写盘单源 = 核写口）")
     assert.equal(agent.activeModel, KNOWN_MODEL, "施加：活动会话内存即生效")
     assert.equal(agent.provider.model, KNOWN_MODEL)
@@ -79,7 +79,7 @@ test("U127: 三形 patch 往返 —— 落盘 ≡ 回执 meta ≡ 活动会话�
 
     const r3 = host.setPrefs("7", { model: "m2" })
     assert.equal(readSlot(s.cwd, 7).activeModel, "m2", "仅换模型 ⇒ 落盘")
-    assert.deepEqual(r3.meta, { provider: "p1", model: "m2", engineering: "ON", effort: KNOWN_LEVEL }, "改模型不清档位（meta 逐键投影）")
+    assert.deepEqual(r3.meta, { provider: "p1", model: "m2", effort: KNOWN_LEVEL }, "改模型不清档位（meta 逐键投影）")
     assert.equal(agent.activeModel, "m2", "施加：仅换模型亦重施")
 
     const before = host.agents.size

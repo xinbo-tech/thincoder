@@ -2,9 +2,9 @@
  * i18n.mjs — 词表面（`docs/desktop/design/SHELL.md:31` · 批 2 档 §2.4（g）· 本批 §2.1 E-5 / §2.5 U44）：
  *   ① 核域键 = `config:read` 语言面**下发投影**（核 `projectDictionary(locale)` 已扁平投影
  *      ⇒ 渲染面零核导入、零第二词表源）；
- *   ② 宿主 UI 专有键 = `HOST_DICT`（左列 15 键 + 标签条 4 键 + 对话流 10 键 + 活动池 8 键 + 审批卡 7 键
+ *   ② 宿主 UI 专有键 = `HOST_DICT`（左列 17 键 + 标签条 4 键 + 对话流 10 键 + 活动池 8 键 + 审批卡 7 键
  *      + 提问卡 3 键 + 设置 49 键 + 向导 10 键 + 信息行 9 键 + 输入区 6 键 + 会话头 3 键 + 档位 2 键
- *      + 状态栏 1 键 + 状态行 10 键 + 核件复制钮 2 键 = **139 键** × 2 语（批 B 增十二键：本舱七 = 对话流复制面 2 · 会话头 3 · 档位 2；
+ *      + 状态栏 1 键 + 状态行 16 键 + 核件复制钮 2 键 = **147 键** × 2 语（批 B 增十二键：本舱七 = 对话流复制面 2 · 会话头 3 · 档位 2；
  *      并行舱五 = 输入区附件面 3 · 设置档位列 1 · 状态栏读数 1 —— 附件降级两键名出
  *      `docs/desktop/design/UI.md` §1 批 B 注项 2，余键名与全键值面由本档拟定：批 B 注只述形 / 锚，
  *      词面登记处 = 此处）；**批 B 追加轮增二键** = 对话流引导面 2（键名与两语句面单源 =
@@ -17,6 +17,7 @@
  *      **R3c**：左列会话行元数据族（D18）两键 = `rail.session.msgs` / `rail.session.updated` —— 左列 13 ⇒ **15**、
  *      计 135 ⇒ **137**；另**增核件复制钮两键** `msg.copy` / `msg.copied`（核 `flow/stream.mjs` `attachCopyButtons`
  *      词键 —— 端供给面：树面零消费（值住核产出 DOM 面），词值同 VSC 同键）—— 计 **137 ⇒ 139**；
+ *      **D22 状态栏对齐批增六键**（`status.ready` / `status.enter.send` + banner 四态 `status.banner.plan|auto|advisor|eng`——代号字面，两语同形）= 状态行 10 ⇒ **16**、计 139 ⇒ **145**；**账本可靠批 · 桌面微轮增一键** = `rail.ledger.notice`（左列 15 ⇒ **16**）——计 **145 ⇒ 146**；**该批修正轮增一键** = `rail.ledger.notice.scene`（主句拆出**条件附句** —— 三端同义；左列 16 ⇒ **17**）—— 计 **146 ⇒ 147**；
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；
@@ -46,8 +47,9 @@
  *  `head.*` = 会话头（三字段标 = `provider` / `model` / `effort` 三 `select` 可及名 —— 值面 = 供给串原样，
  *  视图不造词；键位面 = `renderer/views/chrome.mjs`）· `effort.*` = 档位两特值词（`auto` = 未设（`null`）·
  *  `off` = 关思考 —— 逐模型枚举成员**零词键**、原字面投影）· `status.*` = 状态行（读数串 `${percent}%` ——
- *  未至 / 非正数 ⇒ 零节点，键面不落空串；R3a 段词十键 = 注意力 / 当前工具 / 耗时 / 任务计数 / 令牌三件 / 计时 /
- *  排队两句——段词与判据单源 = `renderer/views/statusline.mjs`）· 占位方言沿核 `${name}`，本档零字形字面）。 */
+ *  未至 / 非正数 ⇒ 零节点，键面不落空串；段词十六键 = 注意力 / 当前工具 / 耗时 / 任务计数 / 令牌三件 / 计时 /
+ *  排队两句 + 静息词 / 输入提示静息态 / banner 四态（代号字面 —— 两语同形）——段词与判据单源 =
+ *  `renderer/views/statusline.mjs` + `renderer/views/statusline-banner.mjs`〔banner 四态〕）· 占位方言沿核 `${name}`，本档零字形字面）。 */
 export const HOST_DICT = Object.freeze({
   en: {
     "rail.action.openDir": "Open folder…",
@@ -62,6 +64,8 @@ export const HOST_DICT = Object.freeze({
     "rail.session.untitled": "Untitled session",
     "rail.session.msgs": "${n} msgs",
     "rail.session.updated": "${date}",
+    "rail.ledger.notice": "Session ledger anomaly (${reason}) — opening a session self-heals it",
+    "rail.ledger.notice.scene": "Corrupted-scene files kept 30 days",
     "origin.cli": "CLI",
     "origin.vscode": "VS Code",
     "origin.desktop": "Desktop",
@@ -189,7 +193,7 @@ export const HOST_DICT = Object.freeze({
     "effort.auto": "Auto",
     "effort.off": "Off",
     "status.usage": "${percent}%",
-    // ── 状态行（R3a · D17 承载 12 段：`views/statusline.mjs` —— 键名本档拟定，登记面即此处）──
+    // ── 状态行（R3a；D22 扩至承载 16 段 —— 增六键：静息词 / 输入提示静息态 / banner 四态〔代号字面 · 两语同形〕）：`views/statusline.mjs` —— 键名本档拟定，登记面即此处）──
     "status.attention.blocked": "⚠ Awaiting your approval or answer",
     "status.tool": "${name}…",
     "status.elapsed": "${seconds}s",
@@ -200,6 +204,12 @@ export const HOST_DICT = Object.freeze({
     "status.timer": "⏰${count}",
     "status.queue.enter": "Enter to queue",
     "status.queue.n": "${n} queued message(s)",
+    "status.ready": "Ready",
+    "status.enter.send": "Enter: send",
+    "status.banner.plan": "PLAN",
+    "status.banner.auto": "AUTO",
+    "status.banner.advisor": "ADVISOR",
+    "status.banner.eng": "ENG",
   },
   zh: {
     "rail.action.openDir": "打开目录…",
@@ -214,6 +224,8 @@ export const HOST_DICT = Object.freeze({
     "rail.session.untitled": "未命名会话",
     "rail.session.msgs": "${n} 条消息",
     "rail.session.updated": "${date}",
+    "rail.ledger.notice": "会话账本异常（${reason}）——打开会话即自动补回",
+    "rail.ledger.notice.scene": "损坏现场档保留 30 天",
     "origin.cli": "CLI",
     "origin.vscode": "扩展端",
     "origin.desktop": "桌面端",
@@ -341,7 +353,7 @@ export const HOST_DICT = Object.freeze({
     "effort.auto": "自动",
     "effort.off": "关闭",
     "status.usage": "${percent}%",
-    // ── 状态行（R3a · D17 承载 12 段：`views/statusline.mjs` —— 键名本档拟定，登记面即此处）──
+    // ── 状态行（R3a；D22 扩至承载 16 段 —— 增六键：静息词〔词形来源 = CLI 静息值 `Ready`〕/ 输入提示静息态 / banner 四态〔代号字面 · 两语同形〕）：`views/statusline.mjs` —— 键名本档拟定，登记面即此处）──
     "status.attention.blocked": "⚠ 等待你的审批或回答",
     "status.tool": "${name}…",
     "status.elapsed": "${seconds} 秒",
@@ -352,6 +364,12 @@ export const HOST_DICT = Object.freeze({
     "status.timer": "⏰${count}",
     "status.queue.enter": "Enter 排队",
     "status.queue.n": "已排队 ${n} 条消息",
+    "status.ready": "就绪",
+    "status.enter.send": "Enter: send",
+    "status.banner.plan": "PLAN",
+    "status.banner.auto": "AUTO",
+    "status.banner.advisor": "ADVISOR",
+    "status.banner.eng": "ENG",
   },
 })
 

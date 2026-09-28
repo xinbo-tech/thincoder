@@ -19,8 +19,8 @@ const KEY = "1"
 const KINDS = ["user", "assistant", "reasoning", "tool", "error"]
 /** 位标码闭集（§2.2(e) 值面写者表）。 */
 const BADGES = ["running", "approval", "done"]
-/** `sessionMeta` 五行（名单与 `views/chrome.mjs` 同名）。 */
-const META_FIELDS = ["provider", "model", "effort", "engineering", "autoApprove"]
+/** `sessionMeta` 三行（名单与 `views/chrome.mjs` 同名 —— 会话头三值；两模式位随状态栏对齐批撤出）。 */
+const META_FIELDS = ["provider", "model", "effort"]
 
 /** 活动会话态（页数据随 `history:page` 回执整置 ⇒ 夹具按需补 `blocks` / `history`）。 */
 const stateOf = (patch = {}) => ({ ...initialState(), activeSession: KEY, ...patch })
@@ -138,7 +138,7 @@ test("U88 回合态 + 位标码集：三码置清四组 + 错误径结算 / 闭�
   }
 })
 
-test("U89 标题刷新 + 回合尾窄口 + sessionMeta：三径各恰一次 / 窄口同刻 / meta 五行矩阵", async () => {
+test("U89 标题刷新 + 回合尾窄口 + sessionMeta：三径各恰一次 / 窄口同刻 / meta 三行矩阵", async () => {
   const handlers = new Map()
   const calls = []
   const on = (channel, handler) => {
@@ -209,9 +209,9 @@ test("U89 标题刷新 + 回合尾窄口 + sessionMeta：三径各恰一次 / �
     { key: KEY, before: 200 },
   )
   const full = Object.fromEntries(META_FIELDS.map((field) => [field, `v-${field}`]))
-  assert.deepEqual(page(full).sessionMeta[KEY], full, "五键原样写入")
-  const mixed = { provider: "", model: 7, effort: "low", engineering: null, autoApprove: {} }
-  assert.deepEqual(page(mixed).sessionMeta[KEY], { effort: "low" }, "空串 / 非串 ⇒ 该键不落")
+  assert.deepEqual(page(full).sessionMeta[KEY], full, "三键原样写入（会话头三值 —— 两模式位撤出本投影）")
+  const mixed = { provider: "", model: 7, effort: "low", engineering: "ON", autoApprove: "OFF" }
+  assert.deepEqual(page(mixed).sessionMeta[KEY], { effort: "low" }, "空串 / 非串 ⇒ 该键不落 · 表外两键（模式位）零写")
   assert.deepEqual(page({}).sessionMeta[KEY], {}, "全缺 ⇒ {}")
 })
 

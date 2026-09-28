@@ -214,14 +214,21 @@ test("U85: 逐项/批门 verdict 矩阵 · 跨形与表外 ⇒ bad-verdict ∧ �
   }
   for (const [verdict, expect] of [["once", true], ["always", true], ["reject", false]]) {
     const arm = await item(verdict)
-    assert.deepEqual(arm.r, { ok: true }, `${verdict} ⇒ 受理`)
+    assert.equal(arm.r.ok, true, `${verdict} ⇒ 受理`)
+    assert.equal(arm.r.key, KEY, "成功径回执携 `key`（状态栏对齐批叠加面）")
+    assert.deepEqual(arm.r.flags, host.flagsOf(KEY), "成功径回执携 `flags`（活值投影 —— 与 `flagsOf` 同值）")
     assert.equal(host.table.has(arm.promptId), false, "命中 ⇒ 表项即删")
     assert.equal(await arm.p, expect, `逐项门 ${verdict} ⇒ resolve ${expect}`)
-    if (verdict === "always") assert.equal(agent.autoApprove, true, "always 另置会话放行（D8-6：实例作用域）")
+    if (verdict === "always") {
+      assert.equal(agent.autoApprove, true, "always 另置会话放行（D8-6：实例作用域）")
+      assert.equal(arm.r.flags.autoApprove, true, "放行置位已入回执 `flags`（同笔重叠 —— 桌内翻转即时面）")
+    }
   }
   for (const v of ["approveAll", "deny", "oneByOne"]) {
     const arm = await item(v, "batch")
-    assert.deepEqual(arm.r, { ok: true })
+    assert.equal(arm.r.ok, true, `批门 ${v} ⇒ 受理`)
+    assert.equal(arm.r.key, KEY, "批门成功径同携 `key`（审批门两形同面）")
+    assert.deepEqual(arm.r.flags, host.flagsOf(KEY), "批门成功径同携 `flags`（活值投影）")
     assert.equal(await arm.p, v, `批形三值逐字透传（${v}）`)
   }
   // 跨形 / 表外值 ⇒ 判红 ∧ 挂起保留（合法值可续解 —— 「不 resolve」的反面证据）
@@ -296,4 +303,36 @@ test("U86: send 三态 · 中断（abort + 门拒结算）· 结算三映射（d
   assert.deepEqual(h4.host.interrupt(KEY), { ok: true }, "在飞 ⇒ abort")
   assert.equal(await gate, false, "本键待决门 ⇒ 按拒结算（resolve false）")
   assert.equal(h4.host.table.size, 0, "门结算 ⇒ 表清")
+})
+
+// ─── U178 模式位活值投影 + `respond` 成功径叠加（状态栏对齐批）──────────────
+
+test("U178: `flagsOf` 活值投影（agent 不在场 ⇒ null）· `respond` 成功径叠加 `{ key, flags }`（提问门径 / 失败径零叠加）", async () => {
+  const bare = makeHost()
+  assert.equal(bare.host.flagsOf(KEY), null, "agent 不在场 ⇒ null（禁假造 —— 页读供面槽投影兜底）")
+  assert.equal(bare.host.flagsOf(null), null, "无键 ⇒ null")
+
+  const h = await boot()
+  assert.deepEqual(h.host.flagsOf(KEY), { planMode: false, autoApprove: false, advisorGuard: false, engineering: false },
+    "agent 在场 ⇒ 四布尔齐（严格执行面缺省全假 —— 负向锁）")
+  assert.deepEqual(h.host.flagsOf(3), h.host.flagsOf(KEY), "键归一（数值键同指）")
+  h.agent.planMode = true
+  h.agent.config = { advisor: { guard: true }, agent: { engineering: true } }
+  assert.deepEqual(h.host.flagsOf(KEY), { planMode: true, autoApprove: false, advisorGuard: true, engineering: true },
+    "活值逐项直读（`planMode` / `advisor.guard === true` / `agent.engineering === true` —— 槽恢复同源）")
+
+  const gate = h.cb.onPermissionRequest("bash", { command: "ls" })
+  const promptId = [...h.host.table.keys()].at(-1)
+  const receipt = h.host.respond({ promptId, verdict: "always" })
+  assert.deepEqual(Object.keys(receipt).sort(), ["flags", "key", "ok"], "成功径叠加键集（`{ ok, key, flags }`）")
+  assert.equal(receipt.key, KEY, "`key` = 门键")
+  assert.equal(receipt.flags.autoApprove, true, "`always` 放行置位 ⇒ 回执 `flags` 即刷新（桌内 AUTO 翻转 —— 零新通道）")
+  assert.equal(await gate, true, "门 resolve 值照旧（叠加不改语义）")
+
+  const asked = h.cb.onQuestion("问？", ["a"])
+  const qid = [...h.host.table.keys()].at(-1)
+  assert.deepEqual(h.host.respond({ promptId: qid, answer: "a" }), { ok: true }, "提问门径 ⇒ 零叠加（不携 key / flags）")
+  assert.equal(await asked, "a")
+  assert.deepEqual(h.host.respond({ promptId: "nope", verdict: "once" }), { ok: false, reason: "unknown-prompt" }, "失败径 ⇒ 零叠加")
+  assert.deepEqual(h.host.respond({}), { ok: false, reason: "unknown-prompt" }, "缺 id ⇒ 零叠加（unknown-prompt）")
 })

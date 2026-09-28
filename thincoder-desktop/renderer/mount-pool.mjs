@@ -6,7 +6,7 @@
  * `host` = 窄桥注入（本档零全局读）；零 `node:` / 零裸包（静态闭包判据 = `test/guard-closure.test.mjs`）；
  * `submitVerdict` / `stopSubagent` 零 DOM ⇒ 可注入假 store / 假 host 平 node 直测（U92 · U169）。
  */
-import { clearApproval } from "./events.mjs"
+import { applyFlags, clearApproval } from "./events.mjs"
 import { store as defaultStore, togglePool } from "./store.mjs"
 import { respondApproval } from "./views/approval.mjs"
 import { mountPool } from "./views/activity.mjs"
@@ -17,12 +17,15 @@ export const POOL_SLOT = '[data-slot="pool"]' // 右列容器锚（= 滚动容�
 export const POOL_KEYS = ["pool", "poolCollapsed", "activeTab", "activeSession", "subBlocks", "locale"]
 
 /** 审批出口核心（零 DOM · 两面可注入）：窄桥 `approval:respond` ⇒ 回执 `ok === true` ⇒ **摘项**（`clearApproval`
- *  —— §2.11⑦：出站成功后才清，两侧同清）；失败 / 拒绝 / 抛 ⇒ **零乐观摘除**（原态、回 `false`；`respondApproval`
- *  自记 `console.error`）。回执落地读**现刻**态 ⇒ 与并发事件零丢失更新（禁拿调用时刻的旧态回写）。 */
+ *  —— §2.11⑦：出站成功后才清，两侧同清）+ **模式位切片写**（状态栏对齐批 · `docs/desktop/design/IPC.md`
+ *  §2「模式位投影注」项 5：成功径回执携 `{ key, flags }`〔宿主活值投影——桌内 AUTO 翻转后即刷新〕⇒
+ *  `applyFlags` 与页读同点写 `sessionFlags[key]`；回执无 `flags`〔提问门径 / 失败径〔非 `ok`〕〕⇒ 零写）；
+ *  失败 / 拒绝 / 抛 ⇒ **零乐观摘除**（原态、回 `false`；`respondApproval` 自记 `console.error`）。回执落地读
+ *  **现刻**态 ⇒ 与并发事件零丢失更新（禁拿调用时刻的旧态回写）。 */
 export async function submitVerdict({ store = defaultStore, host } = {}, promptId, verdict) {
   const receipt = await respondApproval(host, promptId, verdict)
   if (receipt?.ok !== true) return false
-  store.set(clearApproval(store.get(), promptId))
+  store.set(applyFlags(clearApproval(store.get(), promptId), receipt.key, receipt.flags))
   return true
 }
 

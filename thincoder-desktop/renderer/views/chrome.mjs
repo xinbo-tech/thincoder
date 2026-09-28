@@ -5,14 +5,15 @@
  *      读切片 `activeTab` / `sessionMeta`（供给取面 = `sessionMetaOf(state)` ⇒ **本行** `sessionMeta[activeTab]`
  *      —— 整表不是一份供给）。
  *   ② 状态行：本批自本档拆出（300 行拆分层预案落形 —— `docs/desktop/design/PROJECT.md` §4.2 状态行族档）
- *      ⇒ 语义单源 = `renderer/views/statusline.mjs`（D17 · 承载 12 段构树 + 薄挂载）；本档**同名再出口**
+ *      ⇒ 语义单源 = `renderer/views/statusline.mjs`（D17 / D22 · 承载 16 段构树 + 薄挂载）；本档**同名再出口**
  *      （`statusModel` / `statusTree` / `mountStatus` —— 消费面零改，沿 `views/sessions.mjs` 转口先例）。
- * 会话头字段（UI.md §1 会话头行槽序）：provider → model → effort → engineering → autoApprove（序单源在此，
- * 不随供给键序）；只落**已给的非空串**值 —— 非串 / 空串 ⇒ 零节点（不补空位、不造形、不猜测）；零字段 ⇒ 根
+ * 会话头字段（UI.md §1 会话头行槽序 · 「状态栏对齐」批 D22 **回三值**）：provider → model → effort（序单源在此，不随供给键序）；
+ * `engineering` / `autoApprove` 两显示位**已撤**（两态呈现面单源 = 状态行段 —— `docs/desktop/design/UI.md` §1「本批注（状态栏对齐 · 屏面为准）」项 2；
+ * 供给仍可携两键 ⇒ 本档不渲染 —— 负向锁）；只落**已给的非空串**值 —— 非串 / 空串 ⇒ 零节点（不补空位、不造形、不猜测）；零字段 ⇒ 根
  * `data-meta="none"`（供给未落 = 常态 —— 禁假数据，KD-e）。值 = 供给串**原样**（数据面非词表 —— 视图不造词）；
  * 例外 = `effort`：其值域含「未设」（`null` —— 批次档 §2.4 KD-17）⇒ 值取「非空串 ∥ `""`（= Auto · 未设）」。
  * 会话头三值就地可改（UI.md §1「批 B 注」项 1）：provider / model / effort 三字段内嵌 `select`（原生控件，
- * 锚仍 = `data-field` 字段节点）；工程模式 / AUTO 两位不在本项（沿其既有点按出口）。候选面 =
+ * 锚仍 = `data-field` 字段节点）；工程模式 / AUTO 两位不在本项（呈现面单源 = 状态行段 —— 同注项 2）。候选面 =
  * `handlers.candidates()` ⇒ `{ providers, models }`（元素形同通道回执：`provider:list` 行 / `model:list` 逐项
  * `{ id, effortEnum, thinkOff }` —— 模型标识投影单源 = `views/settings-sections.mjs` `modelIdOf`）；
  * 选项集 = 候选 ∪ {现值}（现值缺于候选 ⇒ 追加 —— 禁吞）；候选面缺 ⇒ 仅 [现值]（禁假造替代项）；
@@ -30,10 +31,10 @@ import { modelIdOf } from "./settings-sections.mjs"
 // 同名 re-export（消费面零改 —— 导入路径与名面保持；语义单源 = 状态行族档）。
 export { mountStatus, statusModel, statusTree } from "./statusline.mjs"
 
-/** 会话头字段槽序（UI.md §1 会话头行 —— 序不随供给键序）。 */
-const FIELD_ORDER = Object.freeze(["provider", "model", "effort", "engineering", "autoApprove"])
+/** 会话头字段槽序（UI.md §1 会话头行 · 「状态栏对齐」批 D22 回三值 —— 序不随供给键序）。 */
+const FIELD_ORDER = Object.freeze(["provider", "model", "effort"])
 
-/** 就地可改三值（UI.md §1「批 B 注」项 1 —— 工程模式 / AUTO 两位不在本集）。 */
+/** 就地可改三值（UI.md §1「批 B 注」项 1 —— 工程模式 / AUTO 两位不在本集）；现阶段与槽序面重合（撤两键后）、含义仍分属两面（展示序 / 可改面）—— 非重复常量，勿并；树面 `headTree` 的 `field.value` 侧为防御分支（`headModel` 产出字段名恒 ∈ 本集 ⇒ 仅手造模型可达）。 */
 const PICK_FIELDS = Object.freeze(["provider", "model", "effort"])
 
 /** 档位滤词（`"none"` 不作独立档 —— 语义由 `"off"` 承载：`docs/desktop/design/IPC.md` §2 档位闭集）。 */

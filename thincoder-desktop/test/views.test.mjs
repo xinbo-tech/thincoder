@@ -2,7 +2,7 @@
  * views.test.mjs — E-2 / E-3 左列用例（批档 §2.5 U39–U44 + R3c U170 · `docs/desktop/design/RENDERER.md` §1.1 ·
  * `docs/desktop/design/UI.md` §1 左列会话行 / 启动态 / 空态 / 断点 / i18n 行）：
  * 左列三态判定（纯函数脱 DOM）/ 启动态树（零会话行）/ 来源端三态 / 标题缺省 / 折叠常量单源 / 词表键齐零硬编码 /
- * 行元数据族三值（U170 —— R3c · D18：provider · N msgs · updated）。
+ * 行元数据族三值（U170 —— R3c · D18：provider · N msgs · updated）/ 账本警示行构树三例 + 文案两向（U181 · 账本可靠批 · 桌面微轮 / 修正轮）。
  * 拆档（档行预算 = `docs/desktop/design/PROJECT.md` §4.1）：标签条面 `thincoder-desktop/test/views-tabbar.test.mjs`
  * （U45–U48 + U54 / U55）· 中区外壳面 `thincoder-desktop/test/views-chrome.test.mjs`（U49–U51）·
  * 零回归锁面 `thincoder-desktop/test/views-locks.test.mjs`（U52）· 行控件与换形面 `thincoder-desktop/test/views-rail-actions.test.mjs`
@@ -144,12 +144,12 @@ test("U43: 折叠常量单源（命中 ⊆ styles.css ∧ 非注释恰 1 ∧ 渲
 
 // ─── U44 词表键齐 ∧ 零硬编码 ──────────────────────────────────
 
-test("U44: 词表键齐 ∧ 零硬编码（两语键集相等 ∧ 十五键用量 ∧ 树文本 / 控件词面全哨兵 ∧ 视图档零 CJK）", (ctx) => {
+test("U44: 词表键齐 ∧ 零硬编码（两语键集相等 ∧ 十七键用量 ∧ 树文本 / 控件词面全哨兵 ∧ 视图档零 CJK）", (ctx) => {
   const keys = Object.keys(HOST_DICT.en)
   assert.deepEqual([...keys].sort(), [...Object.keys(HOST_DICT.zh)].sort(), "两语键集相等")
   const railKeys = [
     "rail.action.openDir", "rail.recent.title", "rail.sessions.title", "rail.project.none", "rail.empty.hint",
-    "rail.action.newSession", "rail.session.untitled", "rail.session.msgs", "rail.session.updated",
+    "rail.action.newSession", "rail.session.untitled", "rail.session.msgs", "rail.session.updated", "rail.ledger.notice", "rail.ledger.notice.scene",
     "rail.action.rename", "rail.action.delete", "rail.action.cancel",
     "origin.cli", "origin.vscode", "origin.desktop",
   ]
@@ -164,11 +164,15 @@ test("U44: 词表键齐 ∧ 零硬编码（两语键集相等 ∧ 十五键用�
     railTree(railModel({ projectCwd: null, recent: [{ cwd: "C:\\r1" }], rows: [] })),
     railTree(railModel({ projectCwd: "C:\\proj", recent: [], rows: [] })),
     railTree(list),
+    // 账本警示行（账本可靠批 · 桌面微轮 / 修正轮）：注记在场（`scene = true` ⇒ 条件附句）⇒ `rail.ledger.notice` +
+    // `rail.ledger.notice.scene` 两键消费面（构树 / 文案两向判据 = U181）
+    railTree(railModel({ projectCwd: "C:\\proj", recent: [], rows: [row(2)], ledger: { refused: 1, reason: "readback-failed", scene: true } })),
     // 换形两面（批 A ④）：取消键只在形面在场 ⇒ 两形各一树（词面消费面 = 键齐判据）
     railTree(list, {}, { key: "2", mode: "rename" }),
     railTree(list, {}, { key: "2", mode: "delete" }),
   ]
-  const data = new Set(["C:\\r1", "C:\\proj", "标题2", "标题3"])
+  // 数据串（`"; "` = 账本注记合成分隔符 —— en 面按 locale 直取；两向判据 = U181）
+  const data = new Set(["C:\\r1", "C:\\proj", "标题2", "标题3", "; "])
   const used = new Set()
   for (const tree of trees) {
     for (const text of texts(tree)) {
@@ -183,7 +187,7 @@ test("U44: 词表键齐 ∧ 零硬编码（两语键集相等 ∧ 十五键用�
       used.add(label.slice(1, -1))
     }
   }
-  assert.deepEqual([...used].sort(), [...railKeys].sort(), "十五键全被左列消费（键齐 = 用量面 —— 含两动作键 / 取消键的控件词面）")
+  assert.deepEqual([...used].sort(), [...railKeys].sort(), "十七键全被左列消费（键齐 = 用量面 —— 含两动作键 / 取消键的控件词面）")
 
   const view = stripComments(readFileSync(new URL("../renderer/views/sessions.mjs", import.meta.url), "utf8"))
   assert.ok(!/\p{Script=Han}/u.test(view), "视图档源零 CJK（面向用户文案全经 t()）")
@@ -215,3 +219,51 @@ test("U170: 行元数据族三值（provider · N msgs · updated —— 逐值�
   assert.deepEqual(nodes(tree).filter((node) => node.props?.class === "rail-origin").length, 3, "来源端标面零动（元数据族 = 加法面）")
 })
 
+// ─── U181 账本警示行（账本可靠批 · 桌面微轮 —— 构树：在场〔含 `empty`〕/ 缺席 / 非可点；修正轮：文案两向）──
+
+test("U181: 账本警示行（在场：会话区末子 · 非可点 ∧ empty 态同在 ∥ 缺席 / boot ⇒ 零节点 ∥ 文案两向）", () => {
+  const ledger = { refused: 1, reason: "readback-failed", scene: true }
+  const MAIN_EN = "Session ledger anomaly (readback-failed) — opening a session self-heals it"
+  const SCENE_EN = "Corrupted-scene files kept 30 days"
+  const lastOf = (tree) => {
+    const section = nodes(tree).find((node) => node.props?.["data-section"] === "sessions")
+    return section.children.filter((child) => child !== null).pop()
+  }
+  const hit = (tree) => nodes(tree).some((node) => "data-ledger-notice" in (node.props ?? {}))
+  /** 注记树（`extra` = `scene` 形态 —— 文案两向判据面）。 */
+  const noticeOf = (extra) => lastOf(railTree(railModel({
+    projectCwd: "C:\\proj", recent: [], rows: [row(1)], ledger: { refused: 1, reason: "readback-failed", ...extra },
+  })))
+
+  const notice = noticeOf({ scene: true })
+  assert.equal(notice.props?.class, "rail-ledger-notice", "会话区末子 = 账本警示行（行列表之后）")
+  assert.equal(notice.tag, "div", "非 `button`（零控件语义）")
+  assert.equal("data-ledger-notice" in notice.props, true, "机读锚 `data-ledger-notice` 在位（裸标记）")
+  assert.equal("data-action" in notice.props, false, "零 `data-action`（不可点）")
+  // 文案两向（修正轮 · 三端同义）：`scene = true` ⇒ 全句逐字（主句 + 分隔符 + 附句）；`scene` 缺 / false ⇒ 仅主句
+  assert.equal(texts(notice).join(""), `${MAIN_EN}; ${SCENE_EN}`, "`scene = true` ⇒ 全句逐字（主句 + 「; 」+ 附句 —— en 在册字面）")
+  assert.ok(texts(notice).join("").includes("readback-failed"), "文案含 reason 值")
+
+  const off = noticeOf({ scene: false })
+  assert.equal(texts(off).join(""), MAIN_EN, "`scene = false` ⇒ 仅主句逐字（附句另键不落）")
+  assert.ok(!texts(off).join("").includes("Corrupted-scene"), "附句缺席（禁恒附 —— 无现场档不指现场档）")
+  assert.equal(texts(noticeOf({})).join(""), MAIN_EN, "`scene` 缺 ⇒ 与 false 同判（`=== true` 门）")
+
+  // 分隔符按当前 locale 直取（禁内容启发式）：zh 面 = 主句 + 「；」+ 附句
+  initDict({ locale: "zh" })
+  try {
+    assert.equal(
+      texts(noticeOf({ scene: true })).join(""),
+      "会话账本异常（readback-failed）——打开会话即自动补回；损坏现场档保留 30 天",
+      "zh 全句逐字（主句 + 「；」+ 附句 —— zh 在册字面）",
+    )
+    assert.equal(texts(noticeOf({ scene: false })).join(""), "会话账本异常（readback-failed）——打开会话即自动补回", "zh `scene = false` ⇒ 仅主句")
+  } finally {
+    initDict({}) // 复位（缺省 = en 面）
+  }
+
+  const empty = lastOf(railTree(railModel({ projectCwd: "C:\\proj", recent: [], rows: [], ledger })))
+  assert.equal("data-ledger-notice" in empty.props, true, "`empty` 态（有项目无会话）⇒ 注记同在（触发脱离会话计数条件）")
+  assert.equal(hit(railTree(railModel({ projectCwd: "C:\\proj", recent: [], rows: [row(1)], ledger: null }))), false, "缺席 ⇒ 零节点（禁假造）")
+  assert.equal(hit(railTree(railModel({ projectCwd: null, recent: [], rows: [], ledger }))), false, "`boot` 态 ⇒ 零节点（无 cwd 判据对象）")
+})
