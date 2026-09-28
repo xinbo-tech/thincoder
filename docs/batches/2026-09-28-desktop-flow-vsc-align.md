@@ -1027,4 +1027,55 @@ VERDICT: changes-required
 
 **not full-suite verified by this round — the parent-side closeout run is the only full-run point.**（本舱全量只跑一次，读数带归因；测试面随父侧全清令取消。）
 
+### 5.13 R11 补轮实施舱 · 状态行 banner 四位字色 → CLI 对齐 + 分隔两边缘面（eng-coder · 2026-09-28）
+
+**目标**：承 #88（分隔 ∕ base dim ∕ warn 黄已收）+ 用户「字色全对齐」直令——收 banner 四位字色端差（CLI 实形 `render-frame.mjs:227-230` 现读：`auto` 黄 ∕ `plan` 青 ∕ `advisor`·`eng` 亮绿）+ 分隔两边缘面裁定 + 真机探针复跑。**范围**：只字色 ∕ 分隔 ∕ 拆出档内落点（段集 ∕ 段序 ∕ 段读数逻辑零改；VSC 树 ∕ 核件零改；不触 R13 ∕ 右列修正面）。
+
+**逐档表（本舱实改 · 两档 · 行数 = read 实读）**
+
+| # | 档 | 前 ⇒ 后 | 动作 |
+|---|---|---|---|
+| 1 | `thincoder-desktop/renderer/theme.css` | 85 ⇒ **90** | 两新槽 × 亮 ∕ 暗：`--mode-plan`（`#0598bc` ∕ `#11a8cd`）· `--mode-advisor`（`#14ce14` ∕ `#23d18b`）—— 值 = VSC 终端 ANSI 同码默认（`terminal.ansiCyan` ∕ `ansiBrightGreen`；microsoft/vscode `terminalColorRegistry.ts` `ansiColorMap`） |
+| 2 | `thincoder-desktop/renderer/chrome.css` | 415 ⇒ **424** | 状态行段：banner 四色三规则（`:414-416`）· 告警位相邻条（`:411-412`）· 判句 ∕ 注句在档（`:392-393` ∕ `:410` ∕ `:413`） |
+
+**对表（CLI 色码 ⟷ 桌面落值 · 验收②）**
+
+| CLI 段 | CLI 常量 ∕ 码（逐字取值） | 桌面段锚 | 桌面槽 | 落值（亮 ∕ 暗） |
+|---|---|---|---|---|
+| AUTO | `C.warn` = `ansi.fg(3)`（`ansi.mjs:46`） | `[data-seg="auto"]` | `--warn`（**复用**——CLI 同一常量，不裂双黄） | `#bf8803` ∕ `#cca700` |
+| PLAN | `C.tool` = `ansi.fg(6)`（`ansi.mjs:43`） | `[data-seg="plan"]` | `--mode-plan`（新增） | `#0598bc` ∕ `#11a8cd` |
+| ADVISOR | `C.advisor` = `ESC[92m`（`ansi.mjs:47`） | `[data-seg="advisor"]` | `--mode-advisor`（新增） | `#14ce14` ∕ `#23d18b` |
+| ENG | `C.advisor`（同常量） | `[data-seg="eng"]` | `--mode-advisor`（同上） | `#14ce14` ∕ `#23d18b` |
+
+**分隔两边缘面裁定（判句 ∕ 注句在档 = `chrome.css:393`）**：① 换行时行首悬空 `│` —— **不采用**（由：段自携前导 `::before`（CLI「每段自携」同构）；纯 CSS 无「行首」选择器 ⇒ 修需 JS 测行 ∕ 改布局 = 越「段集 ∕ 段序 ∕ 段读数逻辑零改」边界；孤竖线与段间分隔同形同色、仅窄窗换行边缘可见）。② `.status-alert`（非段位）无条 —— **采用**（由：段链逐项已 `│` 分隔、告警位紧随 ⇒ 断链观感；CLI 非段位席位（注意力 chip）亦携 `│`（`render-frame.mjs:245`））—— 落形 `:411-412`（前邻在场才落条；几何 = 两侧各 6px）。
+
+**读数（实跑 · 真机探针 = `.thincoder/tmp/r11b-status-probe.mjs` · 亮 ∕ 暗两轮 · `pageErrors = 0`）**：两轮读数在 `r11b-probe{,2,3}.log`。
+- banner 实读 computed：亮 = plan `rgb(5,152,188)` · auto `rgb(191,136,3)` · advisor ∕ eng `rgb(20,206,20)`；暗 = plan `rgb(17,168,205)` · auto `rgb(204,167,0)` · advisor ∕ eng `rgb(35,209,139)` —— 与槽值逐值相符（rgb ↔ hex 换算）。
+- 连带三面（`--warn` 同角色 · 今址）：`.chat-stopped`（`chat-fixes.css:39`）· `.ledger-line.warn`（`core.css:418`）· `.sub-stop-btn`（`core.css:310`）= 亮 `rgb(191,136,3)` ∕ 暗 `rgb(204,167,0)` ✓。
+- 分隔实读：banner 邻接 `margin-left −12px` · 通用 −6px · 告警位相邻条 `content "│"` ∕ `ml −6px` ∕ `mr 6px` ✓；base 色不变（`--fg` 50%）。
+- 截图（验收②落点）：`test/artifacts/statusline-banner{,-crop}-{light,dark}.png`（4 枚 · `.gitignore` 命中面）。
+- 进场手段 = **真 IPC 注入**（`app.evaluate` ⇒ `win.webContents.send`，与主侧 `main.mjs:75` 同径）：`ev:ledger` ∕ `ev:activity stopped` ∕ `ev:subagent started` ∕ `ev:activity turn key=2` ⇒ 三连带面 + 告警位真视图在场（非合成 DOM）。
+
+**测试面（随全清令取消 · 逐项）**：②「变量计数锁同拍」（`views-locks.test.mjs:418-419`）∥ ③「机检随动」（`views-statusline.test.mjs` 原址补例 ≥4 条）∥ 验收①「`node test/run.mjs` 全绿（含新例）」—— 三项随父侧**全清令**（2026-09-28 23:18 · 桌面测试树全量删除）取消：不写测试档 ∕ 不改 `files.mjs` ∕ 不跑测试；本舱测试面零笔。
+
+**审计与代码评审（终态 = converged ⇒ clean）**
+
+| 轮 | 形式 | 结果 |
+|---|---|---|
+| 1 | 内审 ∕ 背离审计（read-only explore） | **DEVIATIONS 3（全 🔵）**：① PARTIAL（验收④「拆出档 ≤300」未达成 —— `chrome.css` 424 > 300 顾问线，预存 R13-A 415 + 本轮 9；≤500 硬限内，已自行披露）② DOC-DRIFT（设计档收正未笔 —— 在册归设计面轮）③ DOC-DRIFT（本 §5 记录缺位 —— 随本文落档闭合）；**SILENT-SIMPLIFICATION ∕ OUT-OF-LIST 零命中**；行为面隔离（原 `:408-409` 规则未削弱）✓ |
+| 2 | 代码评审（advisor · type=code · 两档 + 探针） | **VERDICT pass**（零 🔴；🟡3 ∕ 🔵6 全非必改）：🟡 = 亮色 `--mode-advisor` 白底对比 ≈2.1:1（CLI 常量自带「visible on dark backgrounds」限定——忠实同码取值之可见性风险，请父侧裁）· banner 段码 CSS 枚举无锁（协调项）· 批档状态滞后（报告面）；🔵 含告警位条右距 ∕ `:410` 措辞 —— 两条本舱即修（见 fix 轮） |
+| fix round 1 | 两条 🔵 收正：① 告警位相邻条右距 2px ⇒ **6px**（对称 6px ∕ 6px —— 段内右距 = margin-right 2px + span 内 flex gap 4px；告警位非 flex 容器 ⇒ 折算入 margin）② `:410` 注文改「前邻（段 ∕ 告警位）在场才落条（首子零前导；换行行首例外见 :393 裁定）」 | 已落；探针复跑（`r11b-probe3.log`）：`sepMr 6px` ∕ `sepMl −6px` 两主题同 ✓ |
+| 3 | 代码评审（advisor · fix 复核轮） | **VERDICT pass**：两条 fix 逐行核实（选择器对位 ∕ 前邻类型穷尽（视图源 `statusline.mjs:268` 仅段 ∕ 告警位两形）∥ 级联零冲突 —— 全仓仅 `:411-412` 触 `.status-alert::before`）；未引入新问题 |
+
+**越域披露（超声明面 · 逐处给由）**：
+1. `test/artifacts/statusline-banner{,-crop}-{light,dark}.png`（4 枚）—— 验收② ∕ 行动⑤「截图落 `test/artifacts/`」指定落点；`.gitignore:2` 命中（非跟踪件）。
+2. 临时探针件（`.thincoder/tmp/` 未跟踪 · 随清可删）：`r11b-status-probe.mjs` + `r11b-probe{,2,3}.log` + 调试件 `r11b-dbg.mjs` ∕ `r11b-dbg.log`。
+3. 同树并存他批在飞改动（`renderer/*` 姊妹批面等）**非本舱笔**，逐项分列不背书。
+
+**未办 ∕ 待父侧（本舱边界外，只报）**：
+1. **亮色 `--mode-advisor` 可见性裁**（`#14ce14` 白底 ≈2.1:1）—— 保 CLI ∕ VSC 同码对齐（现状）∥ 改值（须裂同码口径），请父侧裁。
+2. **设计面收正（在册）**：`UI.md` §1 状态栏行 ∕ `RENDERER.md` 状态行面 —— 两新槽 ∕ banner 四色 ∕ 分隔两裁定（规格现只住 CSS 注释）；批档 `:43` 待收两测试项标「随全清令取消」；`:601` ∕ `:603` 的 `styles.css` 悬空指针重锚 `chrome.css:400-417`。
+3. **CLI 坐标漂移（非本轮笔 · 只报）**：`views/statusline-banner.mjs:5` ∕ `src/main/agent-host.mjs:313` ∕ `UI.md:110,198,203` ∕ `IPC.md:171` ∕ `TUI.md:582` ∕ `ENGINEERING-MODE-V2.md:394,454` ∕ `AGENT-LOOP-UPSTREAM.md:885` ∕ `WEBVIEW-PROTOCOL.md:116` 引 `render-frame.mjs:221-225`（现读 227-230 —— 在飞改动 +6 行所致）—— 随设计面轮 ∕ 各触面轮收正。
+4. **`chrome.css` 424 行 > 300 顾问线**（预存 415 + 本轮 9）—— 拆分归结构 ∕ 设计面轮（本舱按边界不拆）。
+
 ## §6 验证与收口（父代理）

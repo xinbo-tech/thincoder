@@ -1,0 +1,89 @@
+/* theme.css — 主题变量段 + 基面（`docs/desktop/design/UI.md` §1 布局 ∕ 状态栏 ∕ 主题行；自 `renderer/styles.css`
+   四拆 —— 会话模型轮 R13：主题变量段独立成档，中区外壳面归 `chrome.css`、皮肤与交互态尾段归 `skin.css`）。
+   主题事实源 = 系统（与主进程 `nativeTheme` 同一事实）：本档经 `prefers-color-scheme` 直接消费、变量集中此处
+   （零主题通道 —— 批档 §2.6 D-8）。 */
+
+:root {
+  color-scheme: light dark;
+  --bg: #f7f8fa;
+  --bg-raised: #ffffff;
+  --fg: #1b1f24;
+  --fg-muted: #5c6672;
+  --line: #dfe3e8;
+  --accent: #2f6feb;
+  --warn: #bf8803; /* R11 状态行 ⇒ CLI 对齐（2026-09-28）：警示 = CLI 黄（`thincoder-cli/src/tui/ansi.mjs:46` `fg(3)`）⟷ 本值 = VSC 警告黄亮默认（`editorWarning.foreground`——核件 ∕ `--vscode-editorWarning-foreground` 同一角色）。 */
+  --mode-plan: #0598bc; /* R11 补轮（2026-09-28 · 用户「字色全对齐」）：状态行 banner「PLAN」字色 —— CLI `C.tool` = `fg(6)` 青（`thincoder-cli/src/tui/ansi.mjs:43`）；值 = VSC 终端 ANSI 青亮默认（`terminal.ansiCyan` —— microsoft/vscode `terminalColorRegistry.ts` `ansiColorMap`）。 */
+  --mode-advisor: #14ce14; /* 同轮：状态行 banner「ADVISOR ∕ ENG」字色 —— CLI `C.advisor` = `ESC[92m` 亮绿（同档 `:47`；两段同常量）；值 = VSC 终端 ANSI 亮绿亮默认（`terminal.ansiBrightGreen`）。 */
+  --radius: 8px;
+  --gap: 12px;
+  --pool-w: 36rem;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+  /* D21 内容面 / 会话面板面变量（值 = VSC webview 实值 —— 逐面映射表 = `docs/render-core/design/RENDER-CORE.md` §5 ·
+     `docs/desktop/design/UI.md` §1 项 2）：语法配色族 / 叠加层 rgba / 字族栈 / 语义色。 */
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --hover-bg: rgba(0,0,0,0.06);
+  --hover-bg-strong: rgba(0,0,0,0.12);
+  --overlay: rgba(0,0,0,0.08);
+  --green: #1a8a4a;
+  --syn-kw: #0000ff;
+  --syn-str: #a31515;
+  --syn-cmt: #008000;
+  --syn-num: #098658;
+  --syn-type: #267f99;
+  --syn-prop: #795e26;
+  --syn-atrule: #af00db;
+  --diff-add-bg: rgba(16,137,62,0.12);
+  --diff-add-fg: #0d6b30;
+  --diff-del-bg: rgba(201,37,37,0.12); /* diff 四变量族（「对齐第三批」相抵① 三新 + 在册一）值源 = VSC `webview/base.css:58-61`（亮色块） */
+  --diff-del-fg: #b91a1a;
+  --error-fg: #f44747;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15171c;
+    --bg-raised: #1b1e24;
+    --fg: #e6e9ee;
+    --fg-muted: #9aa4b2;
+    --line: #2a2f37;
+    --accent: #5b8def;
+    --warn: #cca700; /* 警告角色暗色值 = VSC `editorWarning.foreground` 暗默认（同族注释 = 亮色块行）。 */
+    --mode-plan: #11a8cd; /* 同族暗色值 = VSC `terminal.ansiCyan` 暗默认（同族注释 = 亮色块行）。 */
+    --mode-advisor: #23d18b; /* 同族暗色值 = VSC `terminal.ansiBrightGreen` 暗默认（同族注释 = 亮色块行）。 */
+    /* D21 同名变量暗色值（`--mono` / `--error-fg` 设计与暗同值——「同亮」，同值重声明 = 两套齐备可直读）。 */
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --hover-bg: rgba(255,255,255,0.08);
+    --hover-bg-strong: rgba(255,255,255,0.16);
+    --overlay: rgba(0,0,0,0.3);
+    --green: #4ec9b0;
+    --syn-kw: #569cd6;
+    --syn-str: #ce9178;
+    --syn-cmt: #6a9955;
+    --syn-num: #b5cea8;
+    --syn-type: #4ec9b0;
+    --syn-prop: #9cdcfe;
+    --syn-atrule: #d7ba7d;
+    --diff-add-bg: rgba(34,187,51,0.14);
+    --diff-add-fg: #a5d6a7;
+    --diff-del-bg: rgba(244,71,71,0.14); /* diff 四变量族同族注释（亮色块行）—— 本块值源 = VSC `webview/base.css:35-38`（暗色块） */
+    --diff-del-fg: #ef9a9a;
+    --error-fg: #f44747;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.5 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
