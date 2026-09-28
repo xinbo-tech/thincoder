@@ -28,7 +28,7 @@
 .pool-toggle {
   margin-left: auto;
   padding: 0 6px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: var(--radius);
   background: transparent;
   color: var(--fg-muted);
@@ -44,7 +44,8 @@
   cursor: pointer;
 }
 
-/* 族（序固定 = 待审批 → 活动块 → 队列；空族零节点 ⇒ 无空壳样式）与条目（零内容回显 = 标称 + 状态词）。 */
+/* 族（序固定 = 待审批 → 活动块 → 队列；空族零节点 ⇒ 无空壳样式）与条目（零内容回显 = 标称 + 状态词）；
+   条目 D24：描边归零（保位）+ 下沉井底 `var(--bg)`（池卡 `--bg-raised` 内 —— `docs/desktop/design/UI.md` §1 本批注（D24）项 1）。 */
 .pool-family {
   margin-top: 8px;
 }
@@ -60,8 +61,9 @@
   gap: 6px;
   margin-top: 4px;
   padding: 6px 8px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: var(--radius);
+  background: var(--bg);
 }
 .pool-item-label {
   display: flex;
@@ -75,3 +77,8 @@
 .pool-empty {
   color: var(--fg-muted);
 }
+
+/* 交互态组（D24 项 2 · 本注定形）：hover `--hover-bg` · 按下 `--hover-bg-strong` · 聚焦三值（outline 2px + offset -2px + 底）。 */
+.pool-toggle:not(:disabled):hover { background: var(--hover-bg); }
+.pool-toggle:not(:disabled):active { background: var(--hover-bg-strong); }
+.pool-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--hover-bg-strong); }

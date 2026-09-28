@@ -277,3 +277,101 @@ test("U174: D21 值落点锁（core.css 高亮 9 规则 ∧ 关键值 · styles.
     assert.ok(darkVars.includes(`${name}: ${dark};`), `暗模式 ${name} = ${dark}`)
   }
 })
+
+// ─── U182 D24 值落点锁（外壳视觉降噪 · 台账 #493 —— 值表单源 = `docs/desktop/design/UI.md` §1 本批注（外壳视觉降噪 · D24））──
+
+test("U182: D24 值落点锁（静息描边归零四族 ∧ 交互态四值族 ∧ 滚动条 4 规则 ∧ 设置面映射 ∧ 保留面两值列负向锁 ∧ 零新变量）", () => {
+  const root = fileURLToPath(new URL("../", import.meta.url))
+  const css = {
+    styles: stripComments(readFileSync(join(root, "renderer/styles.css"), "utf8")),
+    chat: stripComments(readFileSync(join(root, "renderer/chat.css"), "utf8")),
+    pool: stripComments(readFileSync(join(root, "renderer/pool.css"), "utf8")),
+    settings: stripComments(readFileSync(join(root, "renderer/settings.css"), "utf8")),
+  }
+  /** 值落点判据（`s` = 跨行 · `[^}]*` = 单规则体内 · `[^{]*` = 选择器组余部）。 */
+  const has = (name, pattern) => new RegExp(pattern, "s").test(css[name])
+
+  // ① 静息描边归零（四族 · 保位 `1px solid transparent` —— UI.md 本批注项 1 / 项 3 / 项 4）
+  for (const [name, pattern, label] of [
+    ["styles", String.raw`\.rail,\s*\.session,\s*\.pool,\s*\.status\s*\{[^}]*border:\s*1px solid transparent`, "容器族 4：四卡描边归零（保位 —— 零几何位移）"],
+    ["styles", String.raw`\.rail-head\s*\{[^}]*border-bottom:\s*1px solid transparent`, "骨架线：`.rail-head` 底线归零"],
+    ["styles", String.raw`\.session-head\s*\{[^}]*border-bottom:\s*1px solid transparent`, "骨架线：`.session-head` 底线归零"],
+    ["styles", String.raw`\.tabbar\s*\{[^}]*border-bottom:\s*1px solid transparent`, "骨架线：`.tabbar` 底线归零"],
+    ["chat", String.raw`\.composer\s*\{[^}]*border-top:\s*1px solid transparent`, "骨架线：`.composer` 顶线归零"],
+    ["styles", String.raw`\.head-field\s*\{[^}]*border:\s*1px solid transparent`, "控件族 11：`.head-field` 描边归零"],
+    ["chat", String.raw`\.chat-backfill\s*\{[^}]*border:\s*1px solid transparent`, "控件族 11：`.chat-backfill` 描边归零"],
+    ["chat", String.raw`\.chat-pill\s*\{[^}]*border:\s*1px solid transparent`, "控件族 11：`.chat-pill` 描边归零"],
+    ["pool", String.raw`\.pool-toggle\s*\{[^}]*border:\s*1px solid transparent`, "控件族 11：`.pool-toggle` 描边归零"],
+    ["styles", String.raw`\.rail-cancel,\s*\.rail-confirm\s*\{[^}]*border:\s*1px solid transparent`, "控件族 11：`.rail-cancel` / `.rail-confirm` 描边归零"],
+    ["styles", String.raw`\.tabbar-cancel,\s*\.tabbar-confirm\s*\{[^}]*border:\s*1px solid transparent`, "控件族 11：`.tabbar-cancel` / `.tabbar-confirm` 描边归零"],
+    ["chat", String.raw`\.composer-interrupt,\s*\.chat-copy-block,\s*\.chat-copy-last\s*\{[^}]*border:\s*1px solid transparent`, "控件族 11：输入区三控件描边归零"],
+    ["pool", String.raw`\.pool-item\s*\{[^}]*border:\s*1px solid transparent`, "池条目：描边归零"],
+    ["pool", String.raw`\.pool-item\s*\{[^}]*background:\s*var\(--bg\)`, "池条目：底 = `var(--bg)`（下沉井底）"],
+    ["styles", String.raw`\.tabbar-item\[data-active="1"\]\s*\{[^}]*border-color:\s*transparent[^}]*background:\s*color-mix\(in srgb, var\(--accent\) 14%, transparent\)`, "标签活动态：accent 14% 底 + 描边态归零"],
+    ["styles", String.raw`\.tabbar-item\[data-active="1"\] \.tabbar-title\s*\{[^}]*color:\s*var\(--accent\)`, "标签活动态：题字 = `var(--accent)`"],
+  ]) assert.ok(has(name, pattern), label)
+
+  // ② 交互态四值族（hover / 按下 / 聚焦 —— 本注定形；`.chat-pill` 实色支两例外随列）
+  for (const [name, pattern, label] of [
+    ["styles", String.raw`\.rail-cancel:not\(:disabled\):hover,\s*\.rail-confirm:not\(:disabled\):hover\s*\{[^}]*background:\s*var\(--hover-bg\)`, "hover：左列两键 = `--hover-bg`"],
+    ["styles", String.raw`\.rail-control:not\(:disabled\):hover\s*\{[^}]*background:\s*var\(--hover-bg\)`, "hover：`.rail-control` = `--hover-bg`（同面收齐）"],
+    ["styles", String.raw`\.tabbar-tab:not\(:disabled\):hover,\s*\.tabbar-close:not\(:disabled\):hover,\s*\.tabbar-new:not\(:disabled\):hover,\s*\.tabbar-cancel:not\(:disabled\):hover,\s*\.tabbar-confirm:not\(:disabled\):hover\s*\{[^}]*background:\s*var\(--hover-bg\)`, "hover：标签条五控成员齐（同面收齐）= `--hover-bg`"],
+    ["chat", String.raw`\.chat-backfill:not\(:disabled\):hover\s*\{[^}]*background:\s*var\(--hover-bg\)`, "hover：`.chat-backfill` = `--hover-bg`"],
+    ["chat", String.raw`\.composer-interrupt:not\(:disabled\):hover,\s*\.chat-copy-block:not\(:disabled\):hover,\s*\.chat-copy-last:not\(:disabled\):hover\s*\{[^}]*background:\s*var\(--hover-bg\)`, "hover：输入区三控件成员齐 = `--hover-bg`"],
+    ["pool", String.raw`\.pool-toggle:not\(:disabled\):hover\s*\{[^}]*background:\s*var\(--hover-bg\)`, "hover：`.pool-toggle` = `--hover-bg`"],
+    ["chat", String.raw`\.chat-pill:not\(:disabled\):hover\s*\{[^}]*background:\s*var\(--bg\)`, "hover：`.chat-pill` = `var(--bg)`（实色支例外）"],
+    ["settings", String.raw`\.settings-lang:not\(:disabled\):hover,\s*\.settings-close:not\(:disabled\):hover,\s*\.settings-submit:not\(:disabled\):hover,\s*\.wizard-dismiss:not\(:disabled\):hover,\s*\.wizard-submit:not\(:disabled\):hover,\s*\.info-entry:not\(:disabled\):hover\s*\{[^}]*background:\s*var\(--hover-bg\)`, "hover：设置面次级 6 成员齐 = `--hover-bg`"],
+    ["styles", String.raw`\.rail-cancel:not\(:disabled\):active,\s*\.rail-confirm:not\(:disabled\):active,\s*\.tabbar-cancel:not\(:disabled\):active,\s*\.tabbar-confirm:not\(:disabled\):active\s*\{[^}]*background:\s*var\(--hover-bg-strong\)`, "按下：左列两键 + 标签条两键（4 成员齐）= `--hover-bg-strong`"],
+    ["chat", String.raw`\.chat-backfill:not\(:disabled\):active,\s*\.composer-interrupt:not\(:disabled\):active,\s*\.chat-copy-block:not\(:disabled\):active,\s*\.chat-copy-last:not\(:disabled\):active\s*\{[^}]*background:\s*var\(--hover-bg-strong\)`, "按下：输入区四控成员齐 = `--hover-bg-strong`"],
+    ["pool", String.raw`\.pool-toggle:not\(:disabled\):active\s*\{[^}]*background:\s*var\(--hover-bg-strong\)`, "按下：`.pool-toggle` = `--hover-bg-strong`"],
+    ["settings", String.raw`\.settings-lang:not\(:disabled\):active,\s*\.settings-close:not\(:disabled\):active,\s*\.settings-submit:not\(:disabled\):active,\s*\.wizard-dismiss:not\(:disabled\):active,\s*\.wizard-submit:not\(:disabled\):active,\s*\.info-entry:not\(:disabled\):active\s*\{[^}]*background:\s*var\(--hover-bg-strong\)`, "按下：设置面次级 6 成员齐 = `--hover-bg-strong`"],
+    ["styles", String.raw`\.head-field:not\(:disabled\):active\s*\{[^}]*background:\s*var\(--hover-bg-strong\)`, "按下：chip 特例 = `--hover-bg-strong`"],
+    ["chat", String.raw`\.chat-pill:not\(:disabled\):active\s*\{[^}]*background:\s*var\(--bg\)`, "按下：`.chat-pill` 沿 hover（实色支无第二档）"],
+    ["styles", String.raw`\.rail-cancel:focus-visible,\s*\.rail-confirm:focus-visible,\s*\.tabbar-cancel:focus-visible,\s*\.tabbar-confirm:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--accent\)[^}]*outline-offset:\s*-2px[^}]*background:\s*var\(--hover-bg-strong\)`, "聚焦：标签条 / 左列四键成员齐三值（`--hover-bg-strong` 第三值在）"],
+    ["styles", String.raw`\.head-field:focus-within\s*\{[^}]*outline:\s*2px solid var\(--accent\)[^}]*outline-offset:\s*-2px[^}]*background:\s*var\(--hover-bg-strong\)`, "聚焦：chip 特例三值落 `.head-field`（`:focus-within`）"],
+    ["chat", String.raw`\.chat-backfill:focus-visible,\s*\.composer-interrupt:focus-visible,\s*\.chat-copy-block:focus-visible,\s*\.chat-copy-last:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--accent\)[^}]*outline-offset:\s*-2px[^}]*background:\s*var\(--hover-bg-strong\)`, "聚焦：输入区四控成员齐三值"],
+    ["pool", String.raw`\.pool-toggle:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--accent\)[^}]*outline-offset:\s*-2px[^}]*background:\s*var\(--hover-bg-strong\)`, "聚焦：`.pool-toggle` 三值"],
+    ["settings", String.raw`\.settings-lang:focus-visible,\s*\.settings-close:focus-visible,\s*\.settings-submit:focus-visible,\s*\.wizard-dismiss:focus-visible,\s*\.wizard-submit:focus-visible,\s*\.info-entry:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--accent\)[^}]*outline-offset:\s*-2px[^}]*background:\s*var\(--hover-bg-strong\)`, "聚焦：设置面次级 6 成员齐三值"],
+    ["chat", String.raw`\.chat-pill:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--accent\)`, "聚焦：`.chat-pill` outline 两值在"],
+  ]) assert.ok(has(name, pattern), label)
+  assert.ok(!/\.chat-pill:focus-visible\s*\{[^}]*background:/.test(css.chat), "聚焦：`.chat-pill` 底不随落（实色支负向锁）")
+
+  // ③ 滚动条皮肤 4 规则（全局 · 零变量 —— UI.md 本批注项 4）
+  for (const [pattern, label] of [
+    [String.raw`::-webkit-scrollbar\s*\{[^}]*width:\s*10px[^}]*height:\s*10px`, "滚动条 1/4：10px（纵 / 横）"],
+    [String.raw`::-webkit-scrollbar-track,\s*::-webkit-scrollbar-corner\s*\{[^}]*background:\s*transparent`, "滚动条 2/4：轨 / 角透明"],
+    [String.raw`::-webkit-scrollbar-thumb\s*\{[^}]*color-mix\(in srgb, var\(--fg\) 22%, transparent\)[^}]*border:\s*2px solid transparent[^}]*border-radius:\s*6px[^}]*background-clip:\s*padding-box`, "滚动条 3/4：thumb = `--fg` 22% + 2px 透明边 + 圆角 6px + clip padding-box"],
+    [String.raw`::-webkit-scrollbar-thumb:hover\s*\{[^}]*color-mix\(in srgb, var\(--fg\) 35%, transparent\)`, "滚动条 4/4：thumb hover ⇒ 35%"],
+  ]) assert.ok(has("styles", pattern), label)
+
+  // ④ 设置面映射（9 面 = 6 改 + 3 保留 —— UI.md 本批注项 5）
+  for (const [pattern, label] of [
+    [String.raw`\.settings-head,\s*\.wizard-head\s*\{[^}]*border-bottom:\s*1px solid transparent`, "设置面：面头线归零"],
+    [String.raw`\.settings-row\s*\{[^}]*border:\s*1px solid transparent[^}]*background:\s*var\(--bg-raised\)`, "设置面：行框归零 + 升底 `--bg-raised`"],
+    [String.raw`\.settings-form\s*\{[^}]*border:\s*1px solid transparent[^}]*background:\s*var\(--bg-raised\)`, "设置面：表单框归零 + 升底 `--bg-raised`"],
+    [String.raw`\.settings-notice,\s*\.wizard-notice\s*\{[^}]*border:\s*1px solid transparent`, "设置面：警示面框归零（语义随 `--accent` 字色）"],
+    [String.raw`\.settings-row\[data-active\],\s*\.settings-row\[data-current\]\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--accent\) 14%, var\(--bg-raised\)\)`, "设置面：活动 / 当前行 = accent 14% 混 `--bg-raised`（描边态归零）"],
+    [String.raw`\.settings-lang,\s*\.settings-close,\s*\.settings-submit,\s*\.wizard-dismiss,\s*\.wizard-submit,\s*\.wizard-next,\s*\.wizard-finish,\s*\.info-entry\s*\{[^}]*border:\s*1px solid transparent`, "设置面：控件形基规则描边归零（次级 6 生效）"],
+    [String.raw`\.wizard-next,\s*\.wizard-finish\s*\{[^}]*border-color:\s*var\(--accent\)`, "设置面：强调 2 键保留 accent 框"],
+    [String.raw`\.settings-field\s*\{[^}]*border:\s*1px solid var\(--line\)`, "设置面保留：`.settings-field` 细边零动"],
+    [String.raw`\.settings-mark\s*\{[^}]*border:\s*1px solid var\(--accent\)`, "设置面保留：`.settings-mark` 强调标零动"],
+  ]) assert.ok(has("settings", pattern), label)
+
+  // ⑤ 保留面负向锁（两值列 · 仍 1px 描边未被归零 —— UI.md 本批注项 7）
+  for (const [name, pattern, label] of [
+    ["chat", String.raw`\.approval-card\s*\{[^}]*border:\s*1px solid var\(--accent\)`, "保留面（accent）：`.approval-card` 语义强调框在"],
+    ["chat", String.raw`\.question-card\s*\{[^}]*border-color:\s*var\(--accent\)`, "保留面（accent）：`.question-card` 语义强调框在"],
+    ["styles", String.raw`\.rail-rename-input\s*\{[^}]*border:\s*1px solid var\(--accent\)`, "保留面（accent）：`.rail-rename-input` 输入面细边在"],
+    ["chat", String.raw`\.composer-input\s*\{[^}]*border:\s*1px solid var\(--line\)`, "保留面（`--line`）：`.composer-input` 输入面细边在"],
+    ["chat", String.raw`\.block\s*\{[^}]*border:\s*1px solid var\(--line\)`, "保留面（`--line`）：`.block` 消息块壳在"],
+    ["chat", String.raw`\.question-card,\s*\.plan-card\s*\{[^}]*border:\s*1px solid var\(--line\)`, "保留面（`--line`）：`.plan-card` 常态边在"],
+    ["styles", String.raw`\.rail-row\s*\{[^}]*border-bottom:\s*1px solid var\(--line\)`, "保留面（`--line`）：`.rail-row` 行分隔线在"],
+  ]) assert.ok(has(name, pattern), label)
+
+  // ⑥ 零新变量（主题两套变量计数不变 —— 全值用在册变量）
+  const lightVars = css.styles.match(/:root\s*\{([^}]*)\}/s)?.[1] ?? ""
+  const darkVars = css.styles.match(/prefers-color-scheme: dark\)\s*\{\s*:root\s*\{([^}]*)\}/s)?.[1] ?? ""
+  const countVars = (block) => (block.match(/--[\w-]+\s*:/g) ?? []).length
+  assert.equal(countVars(lightVars), 27, "零新变量：亮模式变量计数不变（27 —— 沿 U174 14 新增后之态）")
+  assert.equal(countVars(darkVars), 21, "零新变量：暗模式变量计数不变（21）")
+})

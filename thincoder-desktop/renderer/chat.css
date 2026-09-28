@@ -96,27 +96,31 @@
 }
 .chat-backfill {
   padding: 2px 8px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: var(--radius);
   background: transparent;
   color: var(--fg-muted);
   font: inherit;
 }
-/* 药丸（根末子 · `!following`）：`sticky` 尾随 + **单行 `nowrap` 定高**（高度增量在帧尾读数区间外 ⇒ ΔH = 头侧净增量）。 */
+/* 药丸（根末子 · `!following`）：`sticky` 尾随 + **单行 `nowrap` 定高**（高度增量在帧尾读数区间外 ⇒ ΔH = 头侧净增量）。
+   D24：描边归零（保位）+ 实色支（静息 `--bg-raised`；hover / 按下 = `var(--bg)`；聚焦底不随落 —— 见文末交互态组）。 */
 .chat-pill {
   position: sticky;
   bottom: 0;
   display: block;
   margin: 8px auto 0;
   padding: 4px 12px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: 999px;
   background: var(--bg-raised);
   color: inherit;
   font: inherit;
   white-space: nowrap;
 }
-.chat-backfill:not(:disabled):hover,
+.chat-backfill:not(:disabled):hover {
+  background: var(--hover-bg);
+  cursor: pointer;
+}
 .chat-pill:not(:disabled):hover {
   background: var(--bg);
   cursor: pointer;
@@ -254,7 +258,7 @@
   cursor: pointer;
 }
 
-/* 输入区（#457 · 本批修 —— `docs/desktop/design/UI.md` §1 本批注项 1）：根 = 单行 flex（wrap · gap · 顶边线）；
+/* 输入区（#457 · 本批修 —— `docs/desktop/design/UI.md` §1 本批注项 1）：根 = 单行 flex（wrap · gap · 顶线〔D24 归零 · 保位〕）；
    输入框撑满中区余宽且可缩（`flex: 1` + `min-width: 0`）；三控件同一控件单形（沿 `.question-input` /
    `.chat-backfill` / `.approval-action` 家族）；字形面 = 两复制控件 `content`（视图档零字形字面）；
    提示行 / 附件条 = 整行（附件条**内部**尺寸仍 open —— UI.md §1 open 行）。 */
@@ -264,7 +268,7 @@
   align-items: flex-end;
   gap: 8px;
   padding: 10px 12px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid transparent;
 }
 .composer-input {
   flex: 1;
@@ -283,7 +287,7 @@
 .chat-copy-block,
 .chat-copy-last {
   padding: 6px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: var(--radius);
   background: transparent;
   color: inherit;
@@ -293,7 +297,19 @@
 .composer-interrupt:not(:disabled):hover,
 .chat-copy-block:not(:disabled):hover,
 .chat-copy-last:not(:disabled):hover {
-  background: var(--bg);
+  background: var(--hover-bg);
   cursor: pointer;
 }
 .composer-notice, .composer-attachments { flex: 1 1 100%; }
+
+/* 交互态组（D24 项 2 · 本注定形）：按下 `--hover-bg-strong` · 聚焦三值（outline 2px + offset -2px + 底）——沿 `.rail-row:focus-visible` 先例；
+   `.chat-pill` 实色支例外：按下沿 hover（无第二档）· 聚焦底不随落。 */
+.chat-backfill:not(:disabled):active, .composer-interrupt:not(:disabled):active,
+.chat-copy-block:not(:disabled):active, .chat-copy-last:not(:disabled):active { background: var(--hover-bg-strong); }
+.chat-pill:not(:disabled):active { background: var(--bg); }
+.chat-backfill:focus-visible, .composer-interrupt:focus-visible, .chat-copy-block:focus-visible, .chat-copy-last:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--hover-bg-strong);
+}
+.chat-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }

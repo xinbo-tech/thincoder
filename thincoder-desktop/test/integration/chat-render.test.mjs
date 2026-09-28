@@ -171,5 +171,54 @@ test("T-DSK37 chat-render — 会话流经核（围栏块 / 复制钮 / 推理�
   assert.equal(metaText.includes("p1:m1"), true, `provider = 槽投影逐字（实 = ${JSON.stringify(metaText)}）`)
   assert.equal(/3/.test(metaText), true, "N msgs = 读数（槽清单 messageCount = 3）")
   assert.equal(await page.locator('[data-slot="tabs"] .tabbar-item').count(), 1, "多标签结构不削（本序单标签 —— 结构面 = 标签条在场）")
+
+  // ⑨ D24 外壳视觉降噪（值表单源 = `docs/desktop/design/UI.md` §1 本批注（外壳视觉降噪 · D24））——真机读数：
+  //    静息描边归零（保位 1px）· hover 底显形 ∧ 边框仍透明 · 键盘 Tab ⇒ `:focus-visible` + outline 2px ·
+  //    活动标签底色态 · 滚动条占宽 · `.composer-input` 细边（保留面）。
+  const TOGGLE = ".pool-toggle"
+  for (const side of ["top", "right", "bottom", "left"]) {
+    assert.equal(await styleOf(".rail", `border-${side}-color`), "rgba(0, 0, 0, 0)", `D24 容器族：.rail ${side} 边 = transparent（静息归零）`)
+    assert.equal(await styleOf(".rail", `border-${side}-width`), "1px", `D24 容器族：.rail ${side} 边宽 1px（保位 —— 零几何位移）`)
+  }
+  assert.equal(await styleOf(".rail-head", "border-bottom-color"), "rgba(0, 0, 0, 0)", "D24 骨架线：`.rail-head` 底线归零")
+  assert.equal(await styleOf(".composer", "border-top-color"), "rgba(0, 0, 0, 0)", "D24 骨架线：`.composer` 顶线归零")
+  assert.equal(await styleOf(".head-field", "border-top-color"), "rgba(0, 0, 0, 0)", "D24 控件族：chip 描边归零")
+  assert.equal(await styleOf(".head-field", "border-top-width"), "1px", "D24 控件族：chip 边宽 1px（保位）")
+  await page.locator(TOGGLE).hover()
+  const toggleHoverBg = await styleOf(TOGGLE, "background-color")
+  assert.notEqual(toggleHoverBg, "rgba(0, 0, 0, 0)", `D24 hover：折叠控件底非透明（实 = ${toggleHoverBg}）`)
+  assert.equal(await styleOf(TOGGLE, "border-top-color"), "rgba(0, 0, 0, 0)", "D24 hover：边框仍透明（hover 只改色）")
+  let tabHits = 0
+  for (let i = 0; i < 40; i++) {
+    await page.keyboard.press("Tab")
+    tabHits += 1
+    if (await page.evaluate((selector) => document.activeElement?.matches(selector) === true, TOGGLE)) break
+  }
+  assert.equal(await page.evaluate((selector) => document.activeElement?.matches(selector) === true, TOGGLE), true, `D24 聚焦：键盘 Tab 命中折叠控件（${tabHits} 步）`)
+  assert.equal(await page.evaluate(() => document.activeElement.matches(":focus-visible")), true, "D24 聚焦：`:focus-visible` 真（键盘命中）")
+  assert.equal(await styleOf(TOGGLE, "outline-width"), "2px", "D24 聚焦：outline 宽 2px")
+  assert.equal(await styleOf(TOGGLE, "outline-offset"), "-2px", "D24 聚焦：outline-offset -2px")
+  assert.equal(await styleOf(TOGGLE, "outline-color"), "rgb(47, 111, 235)", "D24 聚焦：outline = `--accent` 亮值")
+  const ACTIVE_TAB = '[data-slot="tabs"] .tabbar-item[data-active="1"]'
+  const activeTabBg = await styleOf(ACTIVE_TAB, "background-color")
+  assert.notEqual(activeTabBg, "rgba(0, 0, 0, 0)", `D24 标签活动态：底非透明（accent 14% 混同 · 实 = ${activeTabBg}）`)
+  assert.equal(await styleOf(ACTIVE_TAB, "border-top-color"), "rgba(0, 0, 0, 0)", "D24 标签活动态：描边归零")
+  assert.notEqual(await styleOf(".composer-input", "border-top-color"), "rgba(0, 0, 0, 0)", "D24 保留面：`.composer-input` 边框非透明（输入面细边）")
+  const scrollProbe = await page.locator(FLOW).evaluate((node) => {
+    const filler = document.createElement("div")
+    filler.style.height = "4000px"
+    filler.setAttribute("data-probe", "d24-scrollbar")
+    node.appendChild(filler)
+    const overflow = node.scrollHeight > node.clientHeight
+    const gap = node.offsetWidth - node.clientWidth
+    filler.remove()
+    return { overflow, gap }
+  })
+  if (scrollProbe.gap > 0) {
+    assert.equal(scrollProbe.gap, 10, "D24 滚动条：`[data-slot=\"flow\"]` 占宽 = 10px（::-webkit-scrollbar 皮肤真生效）")
+  } else {
+    console.log(`[e2e] D24 滚动条读数支不适用（占宽 = ${scrollProbe.gap} · 溢出 = ${scrollProbe.overflow} —— 前提 = 夹具使 flow 溢出且平台走经典非 overlay 滚动条）—— 按两支形不自判红`)
+  }
+  console.log(`[e2e] T-DSK37 D24 —— 静息透明 ×4 边 ∧ 1px 保位 · hover bg = ${toggleHoverBg} · Tab ${tabHits} 步 ⇒ outline 2px · 活动标签底 = ${activeTabBg} · 滚动条占宽 = ${scrollProbe.gap}`)
   console.log(`[e2e] T-DSK37 ok —— 块序 = ${kinds.join("/")} · 剪贴板 = ${JSON.stringify(clip.slice(0, 40))} · 元数据 = ${JSON.stringify(metaText)} · 高亮 = ${kwColor} / ${numColor}`)
 })

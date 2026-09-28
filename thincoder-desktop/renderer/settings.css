@@ -47,7 +47,7 @@
   align-items: center;
   gap: 8px;
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid transparent;
 }
 .settings-title,
 .wizard-title {
@@ -57,7 +57,8 @@
 .settings-lang { margin-left: auto; }
 .wizard-dismiss { margin-left: auto; }
 
-/* 控件形（关闭 / 退场 / 提交 / 推进 / 语言 / 入口 —— 同一形；未接线态不另立样式：诚实非死控）。 */
+/* 控件形（关闭 / 退场 / 提交 / 推进 / 语言 / 入口 —— 同一形；未接线态不另立样式：诚实非死控）。
+   D24：描边归零（保位）+ 四值族——次级 6（关闭 / 退场 / 提交 / 语言 / 入口族）生效；强调 2（`.wizard-next` / `.wizard-finish`）accent 框保留（下行 border-color 覆写）。 */
 .settings-lang,
 .settings-close,
 .settings-submit,
@@ -67,7 +68,7 @@
 .wizard-finish,
 .info-entry {
   padding: 2px 8px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: var(--radius);
   background: transparent;
   color: var(--fg);
@@ -107,7 +108,7 @@
   display: flex;
   gap: 8px;
   padding: 6px 8px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: var(--radius);
   color: var(--accent);
 }
@@ -137,18 +138,22 @@
 .settings-section-state,
 .settings-empty { color: var(--fg-muted); }
 
-/* 行（名 + [值] + 行动作）：渠道 / 模型 / MCP 三体共形（单源）。 */
+/* 行（名 + [值] + 行动作）：渠道 / 模型 / MCP 三体共形（单源）——D24：结构框归零 + 升底 `--bg-raised`；活动 / 当前行 = accent 14% 混同（不透明）。 */
 .settings-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: var(--radius);
+  background: var(--bg-raised);
 }
 .settings-row[data-active],
-.settings-row[data-current] { border-color: var(--accent); }
+.settings-row[data-current] {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-raised));
+}
 .settings-row-name { font-weight: 600; }
 .settings-row-value,
 .settings-key {
@@ -169,14 +174,15 @@
   color: var(--accent);
 }
 
-/* 表单（渠道序列 / 渠道自定 / MCP 增 —— 同形）：字段行 + 标 + 控件。 */
+/* 表单（渠道序列 / 渠道自定 / MCP 增 —— 同形）：字段行 + 标 + 控件——D24：框归零 + 升底 `--bg-raised`。 */
 .settings-form {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 8px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: var(--radius);
+  background: var(--bg-raised);
 }
 .settings-field-row {
   display: flex;
@@ -269,4 +275,20 @@ input.settings-field[type="checkbox"] {
 .info-state {
   color: var(--fg-muted);
   font-style: italic;
+}
+
+/* 交互态组（D24 项 5 · 次级 6 键）：hover `--hover-bg` · 按下 `--hover-bg-strong` · 聚焦三值（强调 2 键保留 accent 框，零动）。 */
+.settings-lang:not(:disabled):hover, .settings-close:not(:disabled):hover, .settings-submit:not(:disabled):hover,
+.wizard-dismiss:not(:disabled):hover, .wizard-submit:not(:disabled):hover, .info-entry:not(:disabled):hover {
+  background: var(--hover-bg);
+}
+.settings-lang:not(:disabled):active, .settings-close:not(:disabled):active, .settings-submit:not(:disabled):active,
+.wizard-dismiss:not(:disabled):active, .wizard-submit:not(:disabled):active, .info-entry:not(:disabled):active {
+  background: var(--hover-bg-strong);
+}
+.settings-lang:focus-visible, .settings-close:focus-visible, .settings-submit:focus-visible,
+.wizard-dismiss:focus-visible, .wizard-submit:focus-visible, .info-entry:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--hover-bg-strong);
 }
