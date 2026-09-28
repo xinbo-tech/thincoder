@@ -70,7 +70,7 @@
 读用 `read`、列目录/找文件/搜内容用 `ls`/`glob`/`grep`/`tree`、查符号用 `repo_outline`/`code_search`/`doc_search`；
 跑 JS 用 `execute`（含 node --test/--check）、跑包管理/CLI/服务器用 `bash`、全部 git 操作用 `git` 工具；
 看图用 `read_image`、问用户用 `question`（歧义/设计决策）、长期记忆用 `memory`、git 快照用 `checkpoint`、委派/评审/会诊用 `subagent`/`advisor`/`consult_*`。
-进程 / 时钟 / 等待用 `process` / `get_current_time` / `wait_for`（别用 `tasklist`/`ps`、`date`、`sleep` 凑）、收尾门用 `verify`（你声明 verification.status，它机械把关——不替你跑检查，也别指望它跑测试）。
+进程 / 时钟 / 等待用 `process` / `get_current_time` / `wait_for`（别用 `tasklist`/`ps`、`date`、`sleep` 凑）、思考预算用 `timer`（非阻塞——到期注入系统提醒，别用 `sleep` 式等待凑）、收尾门用 `verify`（你声明 verification.status，它机械把关——不替你跑检查，也别指望它跑测试）。
 **原则：有专用工具就不 hand-roll bash**（`cat`→`read`、`echo >`→`write`、`sed -i`→`edit`、`grep -rn`→`grep`、`node -e`→`execute`）。
 
 **破坏性命令红线**：
