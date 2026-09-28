@@ -33,8 +33,10 @@
   },
   "files": [
     "*.mjs",
+    "search.css",
     "flow/",
     "cards/",
-    "subblocks/"
+    "subblocks/",
+    "composer/"
   ]
 }

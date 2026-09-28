@@ -1,15 +1,15 @@
 /**
  * app.mjs — 渲染面引导（启动面 · 批档 §2.4）：`DOMContentLoaded` → `config:read` 往返 → 形合契约 ⇒ 词表置位（`initDict`）
- * + 状态树随动（`store.set`）+ 左列 / 中区外壳首绘 + `dataset.boot = "ok"`，否则 `"error"`（窄桥缺位 / 形不符 / 拒绝皆判
+ * + 状态树随动（`store.set`）+ 会话控制条 / 中区外壳首绘 + `dataset.boot = "ok"`，否则 `"error"`（窄桥缺位 / 形不符 / 拒绝皆判
  * error —— **不静默回退**，冒烟即红）；路径族详规 = 批档 §2.2 / §2.12 / §2.13，本档只落接线。
- * 会话族（出档 `renderer/mount-sessions.mjs`）：三路开标签**同一路**（`session:switch` / `session:create` /
- * `session:resume`）+ 关闭三出口（请求 / 确认 / 取消）—— 判据单源 = store `needsCloseConfirm`；行内改名 / 删除两控件
- * （批 A ④）+ 换形四键 ⇒ 左列十 handlers；改名确认的**文面读数**亦住本档（视图档零 DOM）。
+ * 会话族（出档 `renderer/mount-sessions.mjs` —— 会话模型轮 R13：VSC 形会话控制面（下拉开合 ∕ 条目构树 ∕ 三出口）
+ * 与接线同档）：三路开会话**同一路**（`session:switch` / `session:create` / `session:resume`）—— 本档五 handlers
+ * 转接（切会话 / 新建 / 改名确认 / 删除确认 / 开项目）；面内开合 ∕ 换形态住面内记账（原 store 两切片随裁撤退场）。
  * 本档只留接线串与目录出口链。
  * 帧出口（唯一）= `paintChat`：帧前判据 `paintPlan`（重挂键 = `activeSession` / `locale`）⇒ 重挂面（`mountChat` + 同帧态刷）
  * 或增量面（`alignPlan` ⇒ `settleFrame` 六步）；窗限 `chatLimit` **只增**（`nextWindow` 收束沿 + 本页**实并入块数**）。
  * 出档面：池面一族 = `renderer/mount-pool.mjs` · 会话族 = `renderer/mount-sessions.mjs` · 输入区 = `renderer/mount-composer.mjs`
- * （发送面三件 = `renderer/composer-send.mjs` —— 「回合中插入」批拆分产出）
+ * （面板主体 = 核件工厂 —— 输入面板上提批；发送面三件随 `renderer/composer-send.mjs` 退役入核件 ∕ 本档 deps 边）
  * · 会话头接线 = `renderer/mount-head.mjs`（候选面 / 写路 `session:prefs` / 回执刷行 —— 头面刷行调用点仍住本档）
  * · 状态行 = `renderer/mount-status.mjs`（D17 / D22 承载 16 段单点重建 + 订阅切片键面 `STATUS_KEYS`）
  * · 卡族两族 = `renderer/mount-cards.mjs`（提问 / 计划 —— 挂载 + 作答 / 取消出口）
@@ -18,7 +18,7 @@
  * （多通道订阅 —— 回合尾窄口存续（标题刷新面）；输入区 flush 携行随「回合中插入」批退场）；退订句柄本档无消费点 —— 页面生命周期 = 进程生命周期。
  * 读面失败一律 `console.error` + 零切片写（不静默）；零直连 IPC（只经窄桥 `window.thincoder.invoke`）；
  * 剪贴板写效应（`writeText`）**单点供给** = 本档（同给对话流 handlers 与输入区 `attachComposer` —— 复制面唯一实现处）；
- * 核件取词注册（「对齐第二批」修复轮）= 本档模块级一次 `setStringsSink(setStrings)`（注册单点；词表合并式仍单点居 `renderer/i18n.mjs` `initDict`）。
+ * 核件取词注册 = 本档模块级一次 `setStringsSink(setStrings)`（注册单点；合并式仍居 `renderer/i18n.mjs` `initDict`）——注册面后到 ⇒ `boot` 内 `initDict` 之后补一次 `composer.refresh()`（词面重派生）。
  * 静态闭包零 `node:` / 零裸包（守卫 = `test/guard-closure.test.mjs`）。
  * **「对齐第三批」三接线（本档）**：错误横幅重试（项 9 —— `onRetry` ⇒ 输入区直发径单副本）· 文件链接 `file:open` 委托注册（相抵②）· 2s 拍单点（P7 + `unload` 清点）。
  */
@@ -29,17 +29,16 @@ import { initDict, setStringsSink } from "./i18n.mjs"
 import { setStrings } from "/rc/i18n.mjs"
 import { attachCards, CARDS_KEYS } from "./mount-cards.mjs"
 import { attachComposer } from "./mount-composer.mjs"
-import { submitDraft } from "./composer-send.mjs"
 import { attachHead } from "./mount-head.mjs"
 import { POOL_SLOT, attachPool, POOL_KEYS } from "./mount-pool.mjs"
 import { attachStatus, STATUS_KEYS } from "./mount-status.mjs"
 import {
-  activateSession, backfill, cancelClose, cancelRailForm, confirmClose, confirmDelete, confirmRename,
-  createSession, deleteSession, refreshRail, renameSession, requestClose, resumeOpened,
+  SESSION_SLOT, activateSession, backfill, confirmRename, createSession, deleteSession, mountSessionBar,
+  refreshRail, resumeOpened,
 } from "./mount-sessions.mjs"
 import { attachSettings } from "./mount-settings.mjs"
+import { attachSearch } from "./search.mjs"
 import { configuredFlag, patchSettings, returnToBottom, setFollowing, store } from "./store.mjs"
-import { mountRail, mountTabbar } from "./views/sessions.mjs"
 import { mountHead } from "./views/chrome.mjs"
 import { MAX_RENDER_BLOCKS, attachScroll, nextWindow } from "./views/chat-scroll.mjs"
 import { alignPlan, paintPlan } from "./views/chat-stream.mjs"
@@ -58,20 +57,20 @@ const writeText =
   typeof globalThis.navigator?.clipboard?.writeText === "function"
     ? (value) => globalThis.navigator.clipboard.writeText(value)
     : undefined
-const RAIL_SLOT = '[data-slot="projects"]' // 左列容器锚（骨架 = `renderer/index.html`）
-const TABS_SLOT = '[data-slot="tabs"]' // 标签条容器锚（`.session` 首子元素——命中在挂载树根之前）
 const HEAD_SLOT = '[data-slot="session-head"]' // 会话头槽（状态行槽锚随状态行族出档 —— `renderer/mount-status.mjs`）
 const FLOW_SLOT = '[data-slot="flow"]' // 对话流容器锚（= 滚动容器自身 —— 挂载根不清宿主）
-// 重挂触发切片（`locale` 在内：文案随词表 ⇒ 树须重绘；`railForm` = 换形态切片——行原位换形；`ledger` = 账本警示切片）
-const RAIL_KEYS = ["project", "sessions", "locale", "railForm", "ledger"]
-const SHELL_KEYS = ["tabs", "activeTab", "sessions", "tabBadges", "sessionMeta", "locale", "pendingClose"] // 外壳重挂触发切片
+// 会话控制条重挂触发切片（`locale` 在内：文案随词表 ⇒ 树须重绘；`ledger` = 账本警示切片 —— 下拉首行注记；
+// `project` = 项目钮读数；`sessions` ∕ `activeSession` ∕ `tabBadges` = 下拉列表 ∕ 活动态 ∕ 位标）
+const SESSION_KEYS = ["project", "sessions", "activeSession", "tabBadges", "locale", "ledger"]
+const HEAD_KEYS = ["activeSession", "sessionMeta", "tabBadges", "locale"] // 会话头重挂触发切片（活动键 ∕ 供给 ∕ 忙态 ∕ 词表）
 const CHAT_KEYS = ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "project", "pending", "digest", "timerNotice", "stopMark", "ledgerLines"] // 对话流帧触发切片（`locale` 在内：文案随词表 · `pool`：审批卡宿对话流 · `project`：引导码随 cwd——批 B 追加轮 · `pending`：流内待发送气泡组——「对齐第二批」项 2 · `digest`：流内消化行组——桌面空闲唤醒批 · `timerNotice`：流内到期触发行组——timer-wake 阶段 2 · `stopMark` / `ledgerLines`：两尾组的单变触发 —— 「对齐第三批」项 6 / 12；`settings` 不入表 —— 欢迎条文案二值随重挂径，且帧尾态刷判据 = 码面（见 `renderer/views/chat-guide.mjs`））
 const { paintPool, handlers: poolHandlers } = attachPool(host) // 池面一族（右栏重挂 + 两出口 —— 出档 `renderer/mount-pool.mjs`）
 const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —— 挂载 + 作答 / 取消出口；出档 `renderer/mount-cards.mjs`）
 // 设置面 / 向导 / 信息行一族（自持订阅 —— 出档 `renderer/mount-settings.mjs`；目录出口复用项目面链）；
-// 句柄捕获 = 信息行复读口（#461 —— `openDir` 成功链消费 `refreshInfo`，零第二订阅点）。
+// 句柄捕获 = 项目级读数复读口（#461 —— `openDir` 成功链消费 `refreshInfo`，零第二订阅点）。
 const settingsFace = attachSettings(host, { onProjectOpened: openDir })
-attachComposer(host, { writeText }) // 输入区一族（挂载 + handlers 自接线 —— 出档 `renderer/mount-composer.mjs`；发送面 = `renderer/composer-send.mjs`）
+// 输入区一族（挂载 + deps 构造 → 核件工厂；出档 `renderer/mount-composer.mjs`）：`openSettings` = 控件行第 7 钮出口 ∕ `submit` = 直发径单副本（错误横幅重试消费）。
+const composer = attachComposer(host, { writeText, openSettings: () => settingsFace.openSettings() })
 const head = attachHead({ host, onRepaint: () => paintHead() }) // 会话头接线一族（候选面 + 写路 `session:prefs` —— 出档 `renderer/mount-head.mjs`）
 const { paintStatus } = attachStatus() // 状态行一族（D17 / D22 承载 16 段单点重建 —— 出档 `renderer/mount-status.mjs`）
 
@@ -84,55 +83,26 @@ function isValidPayload(payload) {
   )
 }
 
-/** 左列重挂（挂载面**纯读**现态 —— 不改切片；容器缺位 ⇒ `mountRail` 空转）。接线 = **十 handlers**（点行 / 新建 /
- *  行内改名 · 删除 / 换形四键 —— 批 A ④；接线形通则 `docs/desktop/design/RENDERER.md` §1.1）。 */
-function paintRail(state = store.get()) {
-  mountRail(document.querySelector(RAIL_SLOT), state, {
-    onOpenDir: () => openDir(),
-    onOpenRecent: openDir,
-    onSession: activateSession, // 点行 ⇒ 激活并成标签（与标签激活同一路）
-    onNewSession: createSession, // 空态新建入口
-    onRename: renameSession, // 行内改名控件 ⇒ 开换形态（该行原位换文本控件 + 两键）
-    onDelete: deleteSession, // 行内删除控件 ⇒ 开换形态（原位换两键确认面 —— 零 `window.confirm`）
-    onRenameCancel: cancelRailForm, // 取消 = 两形共用出口（清形态 · 页零动）
-    onDeleteCancel: cancelRailForm,
-    onRenameConfirm: confirmRenameText, // 应用两态之一：读在形控件值 ⇒ 通道往返
-    onDeleteConfirm: confirmDelete, // 应用两态之二：通道往返 ⇒ `closeTab` + 关闭尾
+/** 会话控制条重挂（挂载面**纯读**现态 —— 不改切片；容器缺位 ⇒ `mountSessionBar` 空转）。接线 = **五 handlers**
+ *  （切会话 / 新建 / 改名确认 / 删除确认 / 开项目 —— 面内开合 ∕ 换形两态住面内记账，不经本档；接线形通则 `docs/desktop/design/RENDERER.md` §1.1）。 */
+function paintSessionBar(state = store.get()) {
+  mountSessionBar(document.querySelector(SESSION_SLOT), state, {
+    onSwitch: activateSession, // 点条目 ⇒ 切换会话（三路开会话同一路）
+    onNew: createSession, // 新建钮出口
+    onRename: confirmRename, // 改名确认（词面读数 = 挂载面 —— `onRename(key, text)` 回转）
+    onDelete: deleteSession, // 确认 popover「删除」键出口
+    onOpenProject: () => openDir(), // 项目钮 = 引导面同出口（`project:open` 单一实现）
   })
 }
 
-/** 改名确认（**词面读数 = 接线面** —— 视图档零 DOM）：读在形文本控件值 ⇒ `confirmRename`；
- *  控件缺位（形态刚清 / 宿主异常）⇒ **零动作 + 记错**（不静默）。 */
-function confirmRenameText(key) {
-  const input = document.querySelector(`${RAIL_SLOT} [data-action="session:rename-input"]`)
-  if (input === null) {
-    console.error("[renderer] rename input missing for slot:", key)
-    return
-  }
-  void confirmRename(key, String(input.value ?? ""))
-}
-
-/** 会话头刷行（单行调用点 —— 供写路回退 / 候选面后到 / 外壳重挂三径；handlers 两出口 = 候选面纯读 + 写路）。 */
+/** 会话头刷行（单行调用点 —— 供写路回退 / 候选面后到 / 活动会话切换三径；handlers 两出口 = 候选面纯读 + 写路）。 */
 function paintHead(state = store.get()) {
   mountHead(document.querySelector(HEAD_SLOT), state, { candidates: head.candidates, onField: head.onField })
 }
 
-/** 外壳重挂（中区两槽：标签条 / 会话头 —— 挂载面**纯读**现态；容器缺位 ⇒ 各挂载函数空转；状态行另档单点重建）。
- *  标签条接线 = 五 handlers（激活 / 关闭 / 确认 / 取消 / 新建 —— 接线形通则 `docs/desktop/design/RENDERER.md` §1.1）。 */
-function paintShell(state = store.get()) {
-  mountTabbar(document.querySelector(TABS_SLOT), state, {
-    onActivate: activateSession, // 激活即切换会话（与左列点行同一路）
-    onClose: requestClose, // 关闭出口 1（需确认 ⇒ 确认面）
-    onConfirmClose: confirmClose, // 关闭出口 2
-    onCancelClose: cancelClose, // 关闭出口 3
-    onNew: createSession,
-  })
-  paintHead(state)
-}
-
 /** `project:open`（打开目录 / 点最近项）：`path` 给定时直用、缺省走主进程原生目录选择；成功后同链刷新 +
- *  「成功」判据命中 ⇒ **自动一次** `session:resume`（点开即续）；`refreshRail()` 之后补一步**信息行复读**
- *  （#461 —— 项目级信息随项目变；句柄 = 设置面挂载档出 `refreshInfo`，幂等）。 */
+ *  「成功」判据命中 ⇒ **自动一次** `session:resume`（点开即续）；`refreshRail()` 之后补一步**项目级读数复读**
+ *  （#461 —— 项目级读数随项目变；句柄 = 设置面挂载档出 `refreshInfo`，幂等 —— 读面消费 = 状态行台账超阈段）。 */
 async function openDir(path) {
   try {
     const before = store.get().project?.cwd ?? null
@@ -167,12 +137,11 @@ function toggleTool(id) {
   store.set({ blocks: toggleExpanded(store.get().blocks, id) })
 }
 
-/** 错误横幅重试出口（「对齐第三批」项 9 · KD-37）：**重发可重发源文本** —— 经输入区既有直发径 `submitDraft`（单实现零副本 · 零新通道）；
- *  源判据与钮在场判据**同一谓词**（`views/chat.mjs` `retrySourceOf` —— 防可点静默）；无源 ⇒ 零动作（防御档）。 */
+/** 错误横幅重试出口（「对齐第三批」项 9 · KD-37）：重发可重发源文本 —— 经输入区直发径单副本（`composer.submit`；源判据与钮在场判据同谓词 `views/chat.mjs` `retrySourceOf`，无源 / 出口缺 ⇒ 零动作 + 记错）。 */
 function retryLastUser() {
   const text = retrySourceOf(store.get().blocks)
   if (text === null) return
-  void submitDraft({ store, host }, text)
+  if (composer.submit(text) !== true) console.error("[renderer] retry skipped: composer send face unavailable")
 }
 
 /** 文件链接出口（相抵② —— 委托单点 = 本档；通道 `file:open` `{ path, line? }`）：`ok` 假 ∥ 抛 ⇒ `console.error`（渲染面零静默）；行定位不在本批（`line` 携行备用 —— 端差登记）。 */
@@ -205,9 +174,11 @@ function paintChat(state = store.get(), changedKeys = []) {
   const plan = paintPlan({ prev, next: state, changedKeys })
   const handlers = {
     onReturn: returnToLatest, onToggleTool: toggleTool, onApprove: poolHandlers.onApprove, writeText,
-    onOpenDir: () => openDir(), // 引导面（批 B 追加轮）：与左列同出口（`project:open` 单一实现）
-    onNewSession: createSession, // 引导面：与左列同出口（`session:create` 单一实现 —— 零第二路）
+    onOpenDir: () => openDir(), // 引导面（批 B 追加轮）：与会话控制条项目钮同出口（`project:open` 单一实现）
+    onNewSession: createSession, // 引导面：与会话控制条新建钮同出口（`session:create` 单一实现 —— 零第二路）
     onRetry: retryLastUser, // 错误横幅重试（「对齐第三批」项 9：重发末 `user` 块 —— 经输入区既有直发径）
+    onOpenFile: openFile, // R1：核卡「大 diff」钮单径在场径（端壳适配 f —— 与文件链接委托同出口 `file:open`）
+    onCardRefresh: () => paintChat(), // R1：核卡回执失败径的**一次卡面重挂**（端壳适配 d —— 卡复现可重试）
   }
   let mounted
   if (plan.remount) {
@@ -242,9 +213,10 @@ async function boot() {
       console.error("[renderer] config:read payload shape unexpected:", payload)
       return setBoot("error")
     }
-    // 词表置位（返回归一后的语言 ⇒ `locale` 切片同源）+ 首启闸随新档态（`configuredFlag` 三态归一：档缺 ⇒ false；畸形 / 缺 ⇒ null ⇒ 向导不进）+ 订阅面随即首绘左列。
+    // 词表置位（返回归一后的语言 ⇒ `locale` 切片同源）+ 首启闸随新档态（`configuredFlag` 三态归一：档缺 ⇒ false；畸形 / 缺 ⇒ null ⇒ 向导不进）+ 订阅面随即首绘会话控制条。
     store.set({ ...patchSettings(store.get(), { configured: configuredFlag(payload.configured) }), locale: initDict(payload) })
-    await refreshRail() // 左列数据面（读失败不改 boot 判据 —— 读面自持错误面，不抬高引导位）
+    composer.refresh() // 词面到位 ⇒ 输入面板重派生（面板挂载先于词表下发 —— 注册面后到，缺 ⇒ 占位符停留为键名）
+    await refreshRail() // 会话列表数据面（读失败不改 boot 判据 —— 读面自持错误面，不抬高引导位）
     return setBoot("ok")
   } catch (error) {
     console.error("[renderer] config:read failed:", error)
@@ -270,6 +242,10 @@ attachEvents({ on: host?.on })
 /** 文件链接着装与委托（相抵②）：着装面（核 `linkifyPaths` + `data-path` 锚）归 `views/chat-tool.mjs` / `views/chat.mjs`；**委托注册单点 = 本档**（装配期一次 —— 挂载根 = 对话流宿主；幂等 `_fileLinksBound`）。 */
 bindFileLinks(document.querySelector(FLOW_SLOT), openFile)
 
+/** 会话内搜索（R6 —— 核件 `/rc/search.mjs`；端壳 = `renderer/search.mjs`）：Ctrl+F 键位随工厂一次注册，
+ *  扫描 ∕ 高亮容器 = 对话流宿主；条插入锚 `#toolbar` ∕ 关闭置焦 `#input` 皆文档级 id（核件内直取）。 */
+attachSearch()
+
 /** 2s 拍（P7 —— 渲染面**首个定时器** · 单点 `setInterval` + 卸载清点）：① 池面在飞块逐块核件 `refreshBlock`（走时词面）
  *  ② 本键位标含 `running` ⇒ 状态行重挂（耗时段走时）；拍体 = `renderer/heartbeat.mjs`。 */
 function heartbeatTick() {
@@ -284,12 +260,12 @@ globalThis.addEventListener?.("unload", () => heartbeat.stop())
 // 会话头候选面首取（渠道候选一次入缓存 ⇒ 头面选项集就位；活动 provider 的模型候选待会话激活后随 `sync` 取）。
 void head.sync(store.get())
 
-/** 订阅随动：`locale` 变更 ⇒ 镜像 `dataset.locale`（机器读面 —— **非面向用户文案**）；左列 / 中区外壳 / 对话流 / 活动池 / 卡面触发切片 ⇒ 各自重挂 / 帧出口 / 卡面态刷。 */
+/** 订阅随动：`locale` 变更 ⇒ 镜像 `dataset.locale`（机器读面 —— **非面向用户文案**）；会话控制条 / 会话头 / 对话流 / 活动池 / 卡面触发切片 ⇒ 各自重挂 / 帧出口 / 卡面态刷。 */
 store.subscribe((state, changedKeys) => {
   if (changedKeys.includes("locale")) document.documentElement.dataset.locale = state.locale
-  if (changedKeys.some((key) => RAIL_KEYS.includes(key))) paintRail(state)
-  if (changedKeys.some((key) => SHELL_KEYS.includes(key))) {
-    paintShell(state)
+  if (changedKeys.some((key) => SESSION_KEYS.includes(key))) paintSessionBar(state)
+  if (changedKeys.some((key) => HEAD_KEYS.includes(key))) {
+    paintHead(state)
     void head.sync(state) // 头面候选面随动（活动会话 / provider 变 ⇒ 重取后就地刷行 —— 单点调用）
   }
   if (changedKeys.some((key) => STATUS_KEYS.includes(key))) paintStatus(state)

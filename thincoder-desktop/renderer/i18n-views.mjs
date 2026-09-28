@@ -10,7 +10,16 @@
  *  键名与两语句面登记处即本档。
  * 分组（按消费视图面）：① 对话流（`views/chat-tool.mjs` · `views/chat.mjs` · `views/chat-guide.mjs`）；
  * ② 输入区（`mount-composer.mjs` · `attach.mjs`）；③ 审批面（`views/approval.mjs`）；④ 设置面
- * （`views/settings-sections.mjs` —— 具名控件十键）。两语键集须相等（增键两语同增、禁单语落键）。
+ * （`views/settings-sections.mjs` —— 具名控件十键）；⑤ 会话控制面（`renderer/mount-sessions.mjs` —— 会话模型轮 R13
+ * 五键：选择器可及名 ∕ 空态 ∕ 改名 · 删除两控件 ∕ 删除确认句 —— **值逐字同 VSC 同名键**）；
+ * ⑥ **核卡族（「桌面处理流 · VSC 对齐」批 R1）**：核包 `cards/{permission,question,panel}.mjs` 内取词键
+ * —— 消费面 = 核卡（经注册面投影入核 i18n），**值逐字同 VSC locales**（`thincoder-vscode/locales/*` 同名键）；
+ * ⑦ **工具与服务段（R2 · 桌面功能对位批）**：`views/settings-sections-tools.mjs` 取词（段名 / 索引族名 /
+ * 态词三 / 钮标二）—— 值逐字同 VSC locales（段名键 = 端侧键名 `settings.section.tools`，值取 VSC
+ * `settings.toolsSection`；余键 = VSC 同名键逐字）；
+ * ⑧ **核件搜索面（R6 · 桌面功能对位批）**：核 `search.mjs` 取词五键（占位 ∕ 上一跳 ∕ 下一跳 ∕ 关闭 ∕ 无匹配）
+ * —— 键名与两语值皆 VSC `locales/{en,zh}.json:254-258` 逐字。
+ * 两语键集须相等（增键两语同增、禁单语落键）。
  * 零落盘 · 零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
 export const VIEWS_DICT = Object.freeze({
@@ -23,6 +32,10 @@ export const VIEWS_DICT = Object.freeze({
     "welcome.textConfigured": "Ask about this workspace — the agent can read files, run commands, and edit code.",
     // 端差登记：VSC 行含 `@` 文件引用段（桌面 @-补全 = 缺整面族）⇒ 本端键位行只取真有之键。
     "welcome.shortcuts": "Enter to send · Shift+Enter for newline",
+    // 排队期「待发送块」（收正轮 B12 新口径 · 参照 CLI `TUI.md` §7.5 逐字对位 —— 提示行 ⏳ + 不打断当前执行）
+    "chat.pending.single": "⏳ Queued · Won't interrupt the current run — sent automatically",
+    "chat.pending.multi": "⏳ Queued · ${count} messages (won't interrupt the current run, sent together)",
+    "chat.pending.more": "… [${lines} lines — shown in full once sent]",
     // ── ② 输入区（P26 发送失败 / P22 非栅格粘贴拒——`:${type}` 值逐字同 VSC）──
     "composer.send.failed": "Send failed (${reason}) — the text was kept",
     "paste.unsupportedFormat": "Only png / jpg / gif / webp images are supported (got ${type})",
@@ -39,6 +52,42 @@ export const VIEWS_DICT = Object.freeze({
     "settings.agent.consultTurns": "Turn limit",
     "settings.agent.consultTimeoutMs": "Timeout (minutes)",
     "settings.agent.advisorEffort": "Review effort",
+    // ── ⑤ 会话控制面（会话模型轮 R13 —— 键名与两语值皆 VSC 逐字：`thincoder-vscode/locales/en.json:2-7` 同名键）──
+    "session.title": "Session",
+    "session.empty": "No sessions",
+    "session.rename": "Rename",
+    "session.delete": "Delete",
+    "session.deleteConfirm": "Delete session \"${title}\"? This cannot be undone.",
+    // ── ⑥ 核卡族（R1 直消费 —— 核包取词；值逐字同 VSC `locales/en.json` 同名键）──
+    "perm.wantsTo": "ThinCoder wants to run",
+    "perm.approve": "Approve",
+    "perm.approveAll": "Approve All",
+    "perm.deny": "Deny",
+    "perm.viewInEditor": "View in editor",
+    "perm.batch.wantsTo": "ThinCoder wants to run ${count} tools: ${names}",
+    "perm.batch.oneByOne": "One by One",
+    "question.label": "Question",
+    "question.mark": "❯",
+    "question.submit": "Send",
+    "question.customPlaceholder": "Or type your own answer…",
+    "question.placeholder": "Type your answer…",
+    "panel.taskDesc": "Agent tracks multi-step work here — created and updated automatically",
+    "panel.goalDesc": "Long-running objective — runs until complete or cancelled",
+    "goal.objective": "Objective",
+    // ── ⑦ 工具与服务段（R2 · 桌面功能对位批 —— 段名值 = VSC `settings.toolsSection`；余键逐字同 VSC 同名键）──
+    "settings.section.tools": "Tools & Services",
+    "settings.indexSection": "Semantic Index",
+    "settings.indexBuild": "Build Index",
+    "settings.indexRebuild": "Rebuild Index",
+    "settings.indexBuilding": "Building…",
+    "settings.indexBuilt": "✓ Index built: ${files} files, ${chunks} chunks",
+    "settings.indexNotBuilt": "Index not built. Vector search is inactive.",
+    // ── ⑧ 核件搜索面（R6 —— 核 `search.mjs` 取词键；键名与两语值皆 VSC 逐字：`thincoder-vscode/locales/en.json:254-258`）──
+    "search.placeholder": "Search messages…",
+    "search.prev": "Previous match",
+    "search.next": "Next match",
+    "search.close": "Close search",
+    "search.noMatch": "No matches",
   },
   zh: {
     // ── ① 对话流 ──
@@ -48,6 +97,10 @@ export const VIEWS_DICT = Object.freeze({
     "welcome.text": "选择一个 provider 并填入 API key，即可开始使用。",
     "welcome.textConfigured": "就此工作区提问——agent 可以读取文件、运行命令、修改代码。",
     "welcome.shortcuts": "Enter 发送 · Shift+Enter 换行",
+    // 排队期「待发送块」（逐字 = CLI `render-conversation.mjs:370-371` / `:383`）
+    "chat.pending.single": "⏳ 待发送 · 不打断当前执行，自动发送",
+    "chat.pending.multi": "⏳ 待发送 · ${count} 条消息（不打断当前执行，合并发送）",
+    "chat.pending.more": "… [该条共 ${lines} 行——发送后完整显示]",
     // ── ② 输入区 ──
     "composer.send.failed": "发送失败（${reason}）——文本已保留",
     "paste.unsupportedFormat": "仅支持 png / jpg / gif / webp 图片（收到 ${type}）",
@@ -64,5 +117,41 @@ export const VIEWS_DICT = Object.freeze({
     "settings.agent.consultTurns": "轮数上限",
     "settings.agent.consultTimeoutMs": "超时（分钟）",
     "settings.agent.advisorEffort": "审查强度",
+    // ── ⑤ 会话控制面（会话模型轮 R13 —— 键名与两语值皆 VSC 逐字：`thincoder-vscode/locales/zh.json:2-7` 同名键）──
+    "session.title": "会话",
+    "session.empty": "暂无会话",
+    "session.rename": "重命名",
+    "session.delete": "删除",
+    "session.deleteConfirm": "确定删除会话 \"${title}\"？此操作不可恢复。",
+    // ── ⑥ 核卡族（R1 直消费 —— 值逐字同 VSC `locales/zh.json` 同名键）──
+    "perm.wantsTo": "ThinCoder 想要执行",
+    "perm.approve": "批准",
+    "perm.approveAll": "全部批准",
+    "perm.deny": "拒绝",
+    "perm.viewInEditor": "在编辑器中查看",
+    "perm.batch.wantsTo": "ThinCoder 想要执行 ${count} 个工具：${names}",
+    "perm.batch.oneByOne": "逐个确认",
+    "question.label": "提问",
+    "question.mark": "❯",
+    "question.submit": "发送",
+    "question.customPlaceholder": "或输入你自己的回答…",
+    "question.placeholder": "输入你的回答…",
+    "panel.taskDesc": "Agent 在此跟踪多步骤任务 — 自动创建和更新",
+    "panel.goalDesc": "长期目标 — 持续运行直到完成或取消",
+    "goal.objective": "目标",
+    // ── ⑦ 工具与服务段（R2 · 桌面功能对位批 —— 逐字同 VSC `locales/zh.json`；段名值 = `settings.toolsSection`）──
+    "settings.section.tools": "工具与服务",
+    "settings.indexSection": "语义索引",
+    "settings.indexBuild": "构建索引",
+    "settings.indexRebuild": "重新构建",
+    "settings.indexBuilding": "构建中…",
+    "settings.indexBuilt": "✓ 索引已构建：${files} 个文件，${chunks} 个块",
+    "settings.indexNotBuilt": "索引未构建，向量搜索未启用。",
+    // ── ⑧ 核件搜索面（R6 —— 核 `search.mjs` 取词键；键名与两语值皆 VSC 逐字：`thincoder-vscode/locales/zh.json:254-258`）──
+    "search.placeholder": "搜索消息…",
+    "search.prev": "上一个匹配",
+    "search.next": "下一个匹配",
+    "search.close": "关闭搜索",
+    "search.noMatch": "无匹配",
   },
 })

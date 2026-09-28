@@ -8,27 +8,27 @@
     />
     <meta name="color-scheme" content="light dark" />
     <title>ThinCoder</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./theme.css" />
+    <link rel="stylesheet" href="./chrome.css" />
+    <link rel="stylesheet" href="./skin.css" />
     <link rel="stylesheet" href="./chat.css" />
+    <link rel="stylesheet" href="./chat-cards.css" />
+    <link rel="stylesheet" href="./chat-composer.css" />
+    <link rel="stylesheet" href="./chat-fixes.css" />
     <link rel="stylesheet" href="./core.css" />
+    <link rel="stylesheet" href="/rc/search.css" />
     <link rel="stylesheet" href="./pool.css" />
     <link rel="stylesheet" href="./settings.css" />
   </head>
   <body>
-    <!-- 三列骨架（`docs/desktop/design/UI.md` §1 布局行）：左列 = 项目与会话 · 中区 = 会话（标签条 + 会话头 + 对话流）· 右栏 = 活动池。
-         状态栏 = **窗口级底行**（`.app` 第 4 子元素 ⇒ 跨三列 · 三列框外一行——位置单源 = `UI.md` §1 状态栏行；需求图 `docs/desktop/requirements/PROJECT.md` §3.1 同形）。
-         各区容器 = 视图批填充锚（`data-slot`）：左列 = 批 3 · 中区三槽（`tabs` / `session-head` / `status`）= 批 4 · 对话流槽 `flow` = 批 6（挂载根 = 滚动容器自身）；输入区槽 `composer` = 批 A（`.session` 内 · 对话流之后 —— 可见面恒在）；`tabs` = `.session` 首子元素（KD-g）。
-         标签条两处同锚：本容器 = 挂载点（`app.mjs` 查询命中此前者）· 挂载树根 `nav[data-slot="tabs"][data-tabs=N]` = 结构锚（`tabbarTree`）。
-         批 9 两容器：设置 / 向导 = `settings`（**窗口级覆盖层面** —— 三列栅格之外 · body 末子元素 · 一容器两树互斥 · 样式住 `settings.css`）· 项目级信息行 = `info`（左列底行：`.rail` 内会话区之后 · 唯一入口 = 设置面开）。
+    <!-- 两列骨架（`docs/desktop/design/UI.md` §1 布局行）：中区 = 会话（会话控制条 + 会话头 + 对话流）· 右栏 = 活动池。
+         状态栏 = **窗口级底行**（`.app` 第 3 子元素 ⇒ 跨两列 · 两列框外一行——位置单源 = `UI.md` §1 状态栏行；需求图 `docs/desktop/requirements/PROJECT.md` §3.1 同形）。
+         各区容器 = 视图批填充锚（`data-slot`）：中区四槽（`session-control` / `session-head` / `status` = 批 4 · 对话流槽 `flow` = 批 6〔挂载根 = 滚动容器自身〕· 输入区槽 `composer` = 批 A〔`.session` 内 · 对话流之后 —— 可见面恒在〕）；会话控制条 = `.session` 首子元素（VSC 形 —— 会话模型轮 R13：原标签条 ∕ 左列两面随裁撤退场）。
+         批 9 一容器：设置 / 向导 = `settings`（**窗口级覆盖层面** —— 两列栅格之外 · body 末子元素 · 一容器两树互斥 · 样式住 `settings.css`）。
          **零面向用户字符串**——词表供给面 = `config:read` 语言面下发（同档 §1 i18n 行：本端不另立词表源）⇒ 文案随视图批，经 `renderer/i18n.mjs`。例外仅 `<title>`（窗口标题 = 产品名，非词表项）。 -->
     <div class="app" id="app">
-      <aside class="rail">
-        <div class="rail-head" data-slot="rail-head"></div>
-        <div class="rail-body" data-slot="projects"></div>
-        <div data-slot="info"></div>
-      </aside>
       <main class="session">
-        <div data-slot="tabs"></div>
+        <div data-slot="session-control"></div>
         <header class="session-head" data-slot="session-head"></header>
         <div class="flow" data-slot="flow"></div>
         <div class="composer" data-slot="composer"></div>
@@ -38,7 +38,7 @@
       </aside>
       <footer class="status" data-slot="status"></footer>
     </div>
-    <!-- 设置 / 向导 = 窗口级覆盖层面（三列栅格外 · body 末子元素 ⇒ DOM 序在 `.app` 之后 —— 覆盖面不透底）：
+    <!-- 设置 / 向导 = 窗口级覆盖层面（两列栅格外 · body 末子元素 ⇒ DOM 序在 `.app` 之后 —— 覆盖面不透底）：
          **一容器两树互斥占槽**（`configured` 假 ⇒ 向导树，真 ⇒ 设置树 —— 占槽裁决 = `renderer/mount-settings.mjs`）；
          两退场都清容器（构零子节点）⇒ 空容器 / 关态的整层退场 = `renderer/settings.css`（`:empty` + `[data-state="closed"]`）。 -->
     <div data-slot="settings"></div>

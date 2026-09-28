@@ -1,0 +1,59 @@
+/* search.css — 会话内搜索（Ctrl+F）样式段：核件单一源（批 `docs/batches/2026-09-28-desktop-feature-parity.md`
+   §2.2 R6 #2 —— **纯搬**自 VSC `webview/controls.css:48-99` 原段，零值改；§3 修正 13 定形 = 新档 + 核包
+   `files` 补列该档）。
+   两端引入面：VSC = `webview/controls.css` `@import`（沿同档 composer 两档先例——原段已删）；桌面 =
+   `renderer/index.html` 链入 `/rc/search.css`（`app://` 第二根 ⇒ **桌面 css 零新增**）。
+   变量面（VSC 变量名）：`--border` ∕ `--input-bg` ∕ `--input-fg` ∕ `--accent` ∕ `--fg` —— VSC 由
+   `webview/base.css` 供给；桌面经 `renderer/chat-composer.css` 变量别名块（`:root`）同名字面命中；
+   `--vscode-editor-find*` 两键桌面不声明 ⇒ 取本档 `var()` 回退值（亮 / 暗两主题同值，核件先例同形）。 */
+
+#search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--border);
+}
+
+#search-input {
+  flex: 1;
+  padding: 4px 10px;
+  background: var(--input-bg);
+  color: var(--input-fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+}
+#search-input:focus { border-color: var(--accent); }
+
+#search-count {
+  font-size: 11px;
+  opacity: 0.6;
+  white-space: nowrap;
+  min-width: 40px;
+  text-align: center;
+}
+
+#search-bar button {
+  padding: 2px 8px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  font-family: inherit;
+}
+#search-bar button:hover { border-color: var(--accent); }
+
+mark.search-hit {
+  background: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 179, 8, 0.35));
+  color: inherit;
+  border-radius: 2px;
+}
+mark.search-hit.current {
+  background: var(--vscode-editor-findMatchBackground, #ff9632);
+  outline: 1px solid var(--accent);
+}
