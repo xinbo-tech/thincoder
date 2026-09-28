@@ -47,7 +47,7 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 | `ui.js` | 端壳面：欢迎条 / 横幅 + `ctx` 装配（气泡 / 工具卡 / advisor 块经核构件——`thincoder-render-core/flow/block.mjs` / `thincoder-render-core/flow/tool-card.mjs`）+ 滚动族（`scrollDown` / `maybeScrollDown` / `maybeScrollActivity` `:190-193` / `initScrollFollow` `:211-221` / `trimOldMessages` `:199-206`）——leaf：不 import `state.js` |
 | `md.js` | markdown 渲染（`md()` `:67` · 内联引擎 `inline()` `:34`——契约见 `WEBVIEW-INPUT.md`） |
 | `state.js` | 单一 UI 状态 `S`（`:71`）+ DOM 引用 `ctx`（`:19`）+ `vscode` 桥 |
-| `activity.js` | 活动块编排层（R2 换接：迁移判据 / 键文法 / 补桩表单源 = 核 `subblocks/state.mjs` + `subblocks/channel.mjs`；本档 = DOM 效果执行 + 出生位 / 归档入流——`:48` / `:104`）+ 块级跟滚（§5 契约） |
+| `activity.js` | 活动块编排层（R2 换接：迁移判据 / 键文法 / 补桩表单源 = 核 `subblocks/state.mjs` + `subblocks/channel.mjs`；本档 = DOM 效果执行 + 出生位 / 归档入流——`:48` / `:104`）+ 块级跟滚**调用点**（原语 = 核 `thincoder-render-core/subblocks/block.mjs`——§5.5） |
 | `activity-view.js` | 呈现叶（R2 迁核：实现单源 = 核 `subblocks/activity-view.mjs`——`refreshBlock` `:118` · `updateStopButton` `:152`（件内）· `noteChunk` `:184` · `tailLines` `:103`；本端档 = 2 行 `export *` shim）——leaf：i18n only |
 | `panels.js` | goal/task 行面板（构树 + 显隐判据单源 = 核 `thincoder-render-core/cards/panel.mjs`——R2 换接）+ 挂起态 + 桥路由（`handleSubagentMessage` 纯转发 `applySubagentStatus`）；`_panelTimer`（2s）同点刷 live 块头（`panels.js:49-52`） |
 | `send.js` / `loading.js` | 输入门（`send()` `send.js:12` · busy 拒发 `:19-24`）/ 忙态与按钮可见性（`loading.js:56-57`） |
@@ -396,8 +396,9 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 两层独立、互不写对方状态：
 
 - **外层 = 区 pin**（`ui.js:190-193`）：块出生（`activity.js:63`）与流式帧（`streaming.js:32`）调用；近底 24px 判据、上滚解 pin、回底重 pin（`ui.js:214-220` `watch` 闭包）。块出生**不再牵动** `#messages` 滚动。
-- **内层 = 块内容区跟滚**（`activity.js:160-166`）：`initBlockFollow` 给 `.advisor-content` 挂 `wheel` / `touchmove`（passive）监听写 `内容区._pinFollow`；`maybeScrollBlock`（`:171-176`）在 rAF 尾逐块应用——`open=false` 或 `!isConnected` → no-op，默认钉底写超值（不读 `scrollHeight`）。
-- **帧驱动**（`thincoder-vscode/webview/streaming.js:28-33` · `:181`；核 `thincoder-render-core/flow/stream.mjs:36`）：`subagentChunk` 追加后把块记入脏集，rAF 体内逐块 `maybeScrollBlock` 后置空；**节流重排条件含脏集**（跳过的帧不得丢跟随）。
+- **内层 = 块内容区跟滚**（原语 = 核 `thincoder-render-core/subblocks/block.mjs` `initBlockFollow` / `maybeScrollBlock`——2026-09-29 提核；本端 = 调用点）：
+  `initBlockFollow` 给 `.advisor-content` 挂 `wheel` / `touchmove`（passive）监听写 `内容区._pinFollow`；`maybeScrollBlock` 在 rAF 尾逐块应用——`open=false` 或 `!isConnected` → no-op，默认钉底写超值（不读 `scrollHeight`）。
+- **帧驱动**（`thincoder-vscode/webview/streaming.js:28-33` · `:181`；核 `thincoder-render-core/flow/stream.mjs:36`）：`subagentChunk` 追加后把块记入脏集，rAF 体内逐块 `maybeScrollBlock` 后置空；**节流重排条件含脏集**（跳过的帧不得丢跟随）；`maybeScrollBlock` 取件 = `activity.js` 转口（核件单源）。
 - **高度**：`.advisor-block.sub-block .advisor-content` = **60px**（`thincoder-vscode/webview/chat.css:466`）；基础 `.advisor-content` = 100px（`thincoder-vscode/webview/chat.css:318`）。
 - **出生可见性（④ · 本批——新块必看得见）**：
   - **区 pin 旗标维护**：`ctx._pinActivity` 由 `scroll` / `wheel` / `touchmove` 三事件同读几何（近底 24px——`ui.js:214-220` `watch` 闭包）。`scroll` 为**唯一「滚动已生效」后**触发者（键盘 / 拖条 / 程序写入全覆盖）——现状只有 wheel / touchmove，且读的是**滚动前**几何 ⇒ 旗标可留陈旧位。
@@ -702,3 +703,4 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
   §3 八拆档 / 三核档行补 R2 现态 · 表后补 **R2 迁核注**；`chat.css` 两处坐标全路径消歧 + 现盘收正（`:466` / `:337`）。**零新语义**。
 - 2026-09-28（**LEDGER-RELIABILITY 批 · 设计面扩面 · eng-designer**——承 `docs/batches/2026-09-28-ledger-reliability.md` §3 轮次 1 发现 #1）：§4 会话标题条补**账本异常注记**（`sessions` 载荷增字段 `ledger` ⇒ 下拉首行警示注记；非可点条目 / 异常清零历史态；文案键 `session.ledgerNotice`）。**零新消息 / 零既有字段改动**（`ledger` = 异常才携的增字段）。
 - 2026-09-28（**账本可靠批 · 报告面收正轮 · eng-designer**）：§3 文件表 `chat-messages.js` 读数 **234 ⇒ 238**（`wc -l`，实读 2026-09-28——LEDGER-RELIABILITY 批 `ledger` 捕获点 +1）· §4 会话标题条「异常清 ⇒ 注记消失」句收正为**两腿**（`scene` 腿 = 现场清 ⇒ 消失（零历史态）∥ `refused` 腿 = 核本进程累计 ⇒ 在场至重启（有界）；单源 = 核 `ledgerHealth(cwd)`）。零语义（读数刷新 / 口径收正）。
+- 2026-09-29（**子 agent 块跟滚提核随动 · eng-designer**——承 `docs/batches/2026-09-28-desktop-subblock-follow.md` §2 · 台账 #518）：§5.5 内层 ∕ 帧驱动两条与 §3 `activity.js` 行收正——块级跟滚原语入核（`thincoder-render-core/subblocks/block.mjs`；本端 = 调用点 + 转口）；实现单源随迁、**行为零变**（纯搬移）。明细 = 批档 §2。

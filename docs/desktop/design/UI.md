@@ -318,6 +318,7 @@
      **真机** = 与 VSC 同刻截图逐段对表（D21 同径）。
    - 边界：**2s 走时刷新不落**（VSC `panels.js` 同点——归第三批「小修族」）；`sub.desc` 说明行**落**（会话首个活动块 · 一次性）；
      **R10 存差登记（待裁——消差 ∕ 保留）**：判据**会话级**（桌面）⟷ VSC = **面板级**旗标（`thincoder-vscode/webview/state.js:42`）；**归档回显不带该行**（`.sub-desc` 与 `.advisor-content` 互为兄弟 ⇒ 不入 tail-3 射程——单源 = `docs/vsc/design/WEBVIEW-INPUT.md`）；宿主侧剥前缀（渲染面零析 `role#id/`）不变；consult 族零停止径（核档 §9 端差③）不变。
+     **#518 跟滚收口** = 本档「本批注（子 agent 块内容区跟滚 · #518 收口）」（块内容区跟滚 + 区帧钉底 + 值面两条）。
 
 4. **说话人标识（#497）**——用户 06:58「vsc那边好歹有You: / ThinCoder: 标识一下哪句话是谁说的，你这边啥都没有」：
    - 机制：用户块与助手回合首块各出**标签行**（`❯` + 说话人词 + `:` +〔时间?〕——VSC 形）：
@@ -474,6 +475,15 @@
 4. **首块上距 = 14px**（骨架承担——`.flow` `padding-top: 14px`；左右 ∕ 下沿 = `--gap` 12px——与 VSC 同值）。落点 = `thincoder-desktop/renderer/chrome.css`（R12 收口修复轮落值）。
 5. **滚动 ∕ 回填行为**（阈值 ∕ 判定 ∕ 补偿）单源 = `docs/desktop/design/RENDERER.md` §3 ∕ §4——本注不重述；证据 = 真机探针 **22 ∕ 22**（亮色 · `pageerror` 0——R12 探针留证）。
 
+**本批注（子 agent 块内容区跟滚 · #518 收口 · 2026-09-29）**：本注补「本批注（对齐第二批 · 六件）」项 3（右列子 agent 面）的行为面收口——用户 2026-09-28 18:15 走查「子agent区块里面的内容都不滚动！」；批档 = `docs/batches/2026-09-28-desktop-subblock-follow.md`（台账 #518）；口径 = 需求档 §3.6「对齐」= VSC 的形 + 行为。
+
+1. **块内容区跟滚（行为对齐 VSC §5.5）**——机制 = 核件原语直消费（`initBlockFollow` ∕ `maybeScrollBlock`——`thincoder-render-core/subblocks/block.mjs`；调用时机端侧）；桌面四点接线 = 出生 ∕ 接管（`views/pool-subagents.mjs` `subElementOf`）· 内容增量（`replayRows`）· 挂载补钉（`createSubBlock` ∕ 接管径）。
+   **不夺阅读位**（用户上滚 ⇒ `_pinFollow=false` ⇒ 零写）；折叠 ∕ 已移除 ⇒ no-op；VSC 先例 = `webview/activity.js:160-176` + 帧尾 `streaming.js:31-32`；桌面帧 = store 变更帧（无 rAF——直调）。
+2. **池区帧尾钉底**——`mountPool` 尾 `maybePinPool(root)`（`views/activity-new.mjs`；`_poolPin !== false` ⇒ 写 `scrollTop`）——R10 E6 出生径的帧尾补齐（VSC `streaming.js:32` `frameEnd` 对位）；旗标 ∕ 计数贴 ∕ 点击回底三路零改。
+3. **值面两行（映射源范围外漏项——本批补）**——`.advisor-block.sub-block .advisor-content { max-height: 60px }` · `.advisor-block.sub-block > summary { opacity: 0.75 }`（值源 = `thincoder-vscode/webview/chat.css:466-467` 逐字；落点 = `renderer/core.css` ④ 段）。
+4. **判据**——机检 = 批次本地件（核心原语四例 + 桌面接线例 + 区钉底例 + 值落点锁；复跑 = `node --test docs/batches/2026-09-28-desktop-subblock-follow.test.mjs`）；真机 = 五行为（流式内容跟滚 ∕ 近底复跟 ∕ 上滚不抢 ∕ 换块默认跟底 ∕ 区近底保持）。
+5. **边界**——会话流主跟滚面零触（R12 既落在册）；核件其余留端项（出生位 ∕ 说明行判重 ∕ 痕迹 ∕ 帧调度）不属本批（逐项对账表 = 批档 §2）。
+
 ## 2. 活动池与状态位（需求档 §3.5 三项落定）
 
 | 项 | 处置 | 内容 |
@@ -601,3 +611,4 @@
 - 2026-09-29（**退役面本体收正轮（fix · eng-designer）**）：§1 标签条行退役；左列会话行 ⇒ **会话控制面**行重写；项目级信息 ⇒ **项目级读数**；布局 ∕ 断点 ∕ 交互 ∕ 状态栏 ∕ 设置面 ∕ open 行随盘收正；测试承载残引逐处退役；档头 **D1–D26**。明细 = 批档 §2。
 - 2026-09-29（**R12 设计面同步轮（fix · #26 · eng-designer）**——承 flow 批 R12 §5.15 未办 5）：§1 对话流行新增「**本批注（R12 会话流 ⇒ VSC 对齐）**」+ 行内指针；本批注（外壳视觉降噪 · D24）项 6 ∕ 项 7 保留面收正（`.block` 移出——R12 F1；`.rail-row` ∕ `.rail-rename-input` 清出——R13-A 退场对位）。明细 = 批档 §2。
 - 2026-09-29（**桌面功能对位批 · R6 设计面收正轮（fix · #30）· eng-designer**——承批档 §1.13 处置① ∕ §3 修正 7 R6 行）：§1 交互行补 **Ctrl+F 会话内搜索**键位（搜索条开合 · 命中高亮 ∕ 上下跳 ∕ Esc 关——键位注册与检索逻辑单源 = 核件 `thincoder-render-core/search.mjs`，两端同件）。明细 = 批档 §2。
+- 2026-09-29（**子 agent 块跟滚批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-subblock-follow.md` §1 · 台账 #518）：§1 增「**本批注（子 agent 块内容区跟滚 · #518 收口）**」五项（块内容区跟滚 ∕ 池区帧尾钉底 ∕ 值面两行 ∕ 判据 ∕ 边界）+「对齐第二批 · 六件」项 3 行内指针。明细 = 批档 §2。

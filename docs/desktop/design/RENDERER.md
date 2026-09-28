@@ -118,6 +118,10 @@
 - **补偿单权源**：`.flow` 置 `overflow-anchor: none`（`chat.css` 面）——头侧变更的视口锚定只由 `compensate` 显式承担，免浏览器自动锚定叠算。
 - **读数区间记账**：区间 = [`t0`, `t1`] 跨头侧变更（摘 / 插 + 摘要块在场与文本）；尾侧（尾段挂载 / 就地更新 / 药丸——单行 `nowrap` 定高，`chat.css`）在区间外或零高度增量 ⇒ ΔH = `t1 - t0` = 头侧净增量。
 - **瞬时写不记窗**：`lastAt` 只由程序化平滑（`returnToBottom`）记；`stickToBottom` / `compensate` 不记 `lastAt`——其滚动回波读数即真态（同值 `setFollowing` 归原态）。
+- **块内容区跟滚（#518 收口 · 核原语直消费）**：子 agent 块内容区（`.advisor-content`）跟滚 = 核件原语 `initBlockFollow`（接线：出生 ∕ 接管共用点 = `thincoder-desktop/renderer/views/pool-subagents.mjs` `subElementOf`）+ `maybeScrollBlock`（应用四点：① 内容增量逐批 = `replayRows` 追加后 ② 挂载补钉 = `createSubBlock` `family.append` 后 ∕ 接管 `replaceWith` 后）。
+  判据 = `内容区._pinFollow`（`wheel` ∕ `touchmove` ⇒ 近底 24px 写旗标；`false` ⇒ **零写**——不夺阅读位）；折叠（`open=false`）∕ 已移除 ⇒ no-op；写超值不读 `scrollHeight`；桌面帧 = store 变更帧（无 rAF——直调，非脏集）。
+- **池区帧尾钉底（#518 收口 · R10 E6 帧尾径补齐）**：`views/activity.mjs` `mountPool` 尾 `maybePinPool(root)`（`views/activity-new.mjs`——`_poolPin !== false` ⇒ 写 `scrollTop`；VSC `webview/streaming.js:32` `frameEnd` 对位）；旗标维护 = `attachActivityNew` `scroll` 订阅（既有）；未钉底 ⇒ 零写。
+- **边界**：本两条只覆盖**块内容区 ∕ 池区**——会话流主跟滚面（上列各条：回填 ∕ 跟滚 ∕ 药丸 ∕ 帧尾三写）零改。
 
 ## 4. 范本借用清单（实现工艺面）
 
@@ -189,3 +193,4 @@
 - 2026-09-28（**桌面功能对位批 · 设计面收正轮（fix · #129）· eng-designer**——承 flow 批 R10 交付）：§1.1 池面挂载条补 **R10 帧触发判据**（触碰块换对象引用——`archiveIntoFlow` 按核 `effects` 键集）；新增**拍面条**（2s 拍判据三件同序——`thincoder-desktop/renderer/heartbeat.mjs`）。明细 = `docs/batches/2026-09-28-desktop-feature-parity.md` §2。
 - 2026-09-29（**退役面本体收正轮（fix · eng-designer）**）：§1 单状态树行收正；§1.1 键盘面 ∕ 页生命周期 ∕ 删会话页随动条 ∕ 幽灵更新条收正（标签条面退场对位）；档头 **D1–D26**。明细 = 批档 §2。
 - 2026-09-29（**R12 设计面同步轮（fix · #26 · eng-designer）**——承 flow 批 R12 §5.15 未办 5）：§3 回填阈值 48 ⇒ **40**（`BACKFILL_PX`）· 跟滚判据 `≤` ⇒ **`<`**（严格小于——VSC `ui.js` 同径）；§4 行 3 同拍（40px + 页量口径与 §2 窗限增量条对齐——消 `:128` ∕ `:101` 互抵）。明细 = 批档 §2。
+- 2026-09-29（**子 agent 块跟滚批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-subblock-follow.md` §1 · 台账 #518）：§1.1 「DOM 触面四处」枚举的「帧尾滚动作」补池面对位（`mountPool` 尾）；§3 增两条（**块内容区跟滚**——核原语四点接线 · **池区帧尾钉底**——`maybePinPool`）+ 边界条。明细 = 批档 §2。
