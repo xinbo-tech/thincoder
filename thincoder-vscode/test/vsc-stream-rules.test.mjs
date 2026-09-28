@@ -5,7 +5,7 @@
  * T-A1 装配合并（文件规则置前 + 同 pattern 去重）· T-A2 abort 端到端（重入 + `once` 去重）·
  * T-A3 子回合继承（真 `buildSpawnChild`）· T-A4 warn 文案逐字（`stream rule warnings …`）。
  * 手法：T-A2/T-A4 真 `runAgent`（depth 1——零面板副作用）+ `globalThis.fetch` 假 SSE 桩
- * （先例 `test/provider-timeout-semantics.test.mjs:49-53`——零网络）；配置面 = 临时 config
+ * （零网络桩法）；配置面 = 临时 config
  * 路径（核测试缝 `_setConfigPathForTest`——不读用户真实 config）。
  * 观测缝记明（批档 §2.5 T-A2）：`chat` 载荷形（`streamRules` / `firedPatterns`）不经 HTTP 体
  * ⇒ fetch 桩不可见——判据 = 载荷生效的端到端效果（请求计数 + history 提醒）。

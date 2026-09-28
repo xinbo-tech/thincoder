@@ -121,7 +121,7 @@ test("T-VSC-SG1d 接线机检：命令注册（package.json）+ 直调点（exte
   assert.equal(/\brunSessionGc\b/.test(cmdSrc), false, "不消费 runSessionGc（核内零消费方结构机检保持）")
   assert.match(cmdSrc, /sessionsDir\(\)/, "目录来源 = 端侧派生的 sessions 根")
   const manifest = readFileSync(new URL("./files.mjs", import.meta.url), "utf8")
-  for (const f of ["test/trace-cleanup.test.mjs", "test/session-gc-command.test.mjs"]) {
+  for (const f of ["test/session-gc-command.test.mjs"]) {
     assert.ok(manifest.includes(`"${f}"`), `单元清单登记（未登记 ⇒ runner fail-closed）：${f}`)
   }
 })

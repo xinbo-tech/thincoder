@@ -81,6 +81,22 @@
 - **`TESTING.md:4` 收正**（承 #123 待裁项）：『§3 测试生命周期 = v1 历史（v2 由 §10 F4 替代）』→『§3 = **现行**（口径 = 需求 F6–F14——退役纪律 2026-09-28 复确认；§10 F4 只涉台账仪式面）』（**父侧直接执行** · 单行 · 可回退）。
 - 待齐：core 清点（#124）→ 总表 + 处置单；随后本批 §6 收口（含测试处置行）。
 
+### 1.13 四仓清点汇总（#124–#127 全齐）
+- **总量**：四仓 **390 档 ∕ 3030 例**（core 94 ∕ 811 · cli 107 ∕ 895 · vsc 130 ∕ 1053 · desktop 59 ∕ 271）。
+- **分桶合计**：
+  · **集成 = 109 例**（core 0 · cli 32 · vsc 67 · desktop 10）——**四仓全部在 N10 窗口内，超额裁减候选 = 空**；
+  · **结构锁 = 58 档 ∕ 452 例**（core 28∕244 · cli 14∕110 · vsc 12∕79 · desktop 4∕19——另有 ≈24 例混装于他档）；
+  · **退候选 = 36 档 ∕ 213 例**（core 12∕68 · cli 11∕68 · vsc 6∕40 · desktop 7∕37）——第一刀；
+  · 留-待核 = 38 档 ∕ 277 例（不硬判）；真行为 = 226 档 ∕ 1979 例（收口逐条处置对象）。
+- **处置序（待用户裁）**：① 退候选 213 例即清（删除清单制）；② 结构锁 58 档单列一栏待用户一刀（留 ∕ 部分留 ∕ 全退）；③ 真行为档按 F6 ∕ F9 三条判据复核（Phase 2）。
+
+### 1.14 处置执行（退候选第一刀 · 用户 23:03「先这么做」）
+- **删除 36 档**（退候选全数）：core 12（advisor-convergence ∕ advisor-history ∕ advisor-truncate ∕ file-links ∕ history-window ∕ live-beat ∕ log ∕ queued ∕ reasoning-echo-live ∕ text-budget ∕ think-off ∕ wait-status）· cli 11（advisor-provider ∕ advisor-truncation ∕ advisor-sync-accounting ∕ advisor-context-budget ∕ config-pool ∕ heap-watch ∕ memory-wal-hygiene ∕ trace-bounds ∕ turn-across-segments ∕ memory-scan-bounds ∕ cmd-config-effort）· vsc 6（eng-settlement ∕ subagent-id-counter ∕ permission-gate-seam ∕ loop-sampler ∕ trace-cleanup ∕ provider-timeout-semantics）· desktop 7（views-attach ∕ views-chat-scroll ∕ views-chat-text ∕ store ∕ events-reduce ∕ events-subagent ∕ agent-bridge-subagent）。
+- **清单对账**：`vsc/test/files.mjs`（摘 6 行）· `desktop/test/files.mjs`（摘 7 项）· core ∕ cli = glob 自动收（零登记面）。
+- **复跑读数（父侧）**：core **745/745 exit 0**（≈811 −66）· cli **825/825 exit 0**（≈895 −70）· vsc **1012/1012 exit 0**（1053 −41；修一处死引用锁：`session-gc-command.test.mjs:124` 摘已删档登记断言 ⇒ 复跑绿）· desktop 留待 R13-B（#101）落定后的收口跑（其 `host-floor` ≤300 臂清单含 3 项已删档——已 steer #101 顺带摘行，兜底 = 父侧收尾）。
+- **附带**：vsc 两处注释死引用收正（`agent-lifecycle-singleton` ∕ `vsc-stream-rules`）；`#101` 已送测试纪律令（单元-only ∕ 不刷绿 ∕ 清单先重读再写）。
+- **下一步**：锁处置（58 档 ∕ 452 例 ⇒ 目标 = 每仓一档卫生表 ∕ 只收复发实绩条目）+ 真行为档三条判据复核（Phase 2）；desktop 复跑并入 R13 收口。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（四档对齐落定（TESTING · AGENT-LOOP · VERIFY-REDESIGN · ENGINEERING-MODE-V2）· 待评审）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>

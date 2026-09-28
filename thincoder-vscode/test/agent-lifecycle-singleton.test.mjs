@@ -1,6 +1,6 @@
 /**
  * agent-lifecycle-singleton.test.mjs — agent 生命周期对齐 CLI（2026-09-08——
- * 面板会话级顶层 agent 单例）纯函数单测（对标 eng-settlement.test 模式——可直测）：
+ * 面板会话级顶层 agent 单例）纯函数单测（可直测）：
  *  - buildTopLevelAgent 字段默认（A/C/B 归类起点——loop/tools 读面）；
  *  - resetRunState 复位清单 A（**`_pendingTimers` 除外**——跨 run 存活 = 规范语义 · T-TW22）：
  *    回合级计数器/预算/守卫回合边界清零（AC6——不跨回合累计），C 类（_tasks/_goal/

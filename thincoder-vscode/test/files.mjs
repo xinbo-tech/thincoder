@@ -22,14 +22,12 @@ export default [
   "test/queue-visible-shell.test.mjs", // 同批端壳面（拆分理由：happy-dom 全局 fetch 劫持 vs mock-llm 本地链路不可同进程——用例号与断言面零变）：真 `runAgent` 步边界 pickup（工具期入队 ⇒ 下一步边界入 history + 消费快照）+ 系统轮负向锁 + 分流机检——T-V16-15/16/16b（mock-llm）
   "test/edit-tool-improvement.test.mjs",
   "test/memory-tool.test.mjs",
-  "test/eng-settlement.test.mjs",
   "test/config-merge.test.mjs", // MODEL-SELECTION（2026-09-10）：迁移 v2 双端同规则 VSC 面（形态 A/B→单值、幂等/失败不阻断/凭据不丢、磁盘无 models 键）+ 预设 21 条单值 + resolveDefaultModel 新回退链（复合→渠道默认单值→null）
   "test/provider-admission.test.mjs", // MODEL-SELECTION（2026-09-10）：VSC 渠道准入——三 format 拉取/翻页（T1–T4/T26/T27）+ M9 配置阶段两态（T23/T24——含 fullStatus 拉取失败=不可选）+ 运行期零探测（T25）+ 面板行 `不可用` 标注（happy-dom）；W10（2026-09-15）改判：list-models/proxy 实现面迁核（`@thincoder/core/provider/list-models.mjs`）——面板行为断言原文保留；init-block 批（2026-09-18）F-W19：T-W19a 失败分类三档落账（malformed/timeout/hostBusy + 统一 ts）+ 双向词档（词 ⇔ 落账单源）· T-W19b 重试成功拍三清除（落账/available 载荷/展示回绿）· T-W19c 重试 ≤2 耗尽 · T-W19d 宿主忙闸零重试 · T-W19e 在飞去重（SETTINGS.md §2.12）
   "test/model-picker-fallback.test.mjs", // MODEL-SELECTION v2 范围追加（2026-09-11）：M10/T29——面板候选未命中不写会话槽（零 selectModel/selectReasoning post + 显示与状态回落会话槽复合 prefs 复合）+ 命中分支同值回写正控（happy-dom 直驱 handleModelsMessage）
   "test/config-io-panel.test.mjs", // MODEL-MERGE-SESSION（2026-09-09）：defaultModel 面板键白名单 + selectModel 消息 = 写会话槽（内容字节断言——config 零写——槽播种 + digest p:m）
   "test/config-io-panel-guard.test.mjs", // 配置镜像收口批（2026-09-25 · `docs/vsc/design/SETTINGS.md` §2.14/§3）：两键写面唯一性——`advisor.guard`/`agent.engineering` 翻转只写会话槽（config 字节恒等）+ 通用保存面伪造载荷零写（三格恒等 / null 登记钉住 / 未认领槽不崩）——T-1..T-8（实施轮末自 `config-io-panel.test.mjs` 拆出——原档越 300 软线）
   "test/subagent-observe-send.test.mjs",
-  "test/subagent-id-counter.test.mjs", // SUBAGENT-ID-COUNTER-AGENT（2026-09-09）：id 计数器载体 = agent 本体——压缩换线后 spawn id 仍递增 + 两池 poolMax 兜底
   "test/smoke-settings.mjs",
   "test/verify-redesign.test.mjs",
   "test/prompts-async-guidance.test.mjs", // AGENT-LOOP-SUBAGENT.md §6.7.5（2026-09-08）：escalate/advisor/spawn 顶层一律异步——async:false 同步引导内容断言（CLI 对拍同款）
@@ -68,7 +66,6 @@ export default [
   "test/portability-vsc-classification-declaration.test.mjs", // 同族拆出档（2026-09-28 拆分批 · R3——用例与断言逐字迁移）：T-V22 分类四例 · T-V23 父侧门放行与仍拒 · T-V24 子门零变（F9 辅助面同判）+ T-V25 无档等值 / T-V26 旧档在场 + T-V27 段匹配面判定表
   "test/portability-vsc-advisor-context.test.mjs", // T-V11–T-V13 + AC-V11：advisor 文档门禁（documents 放行面 / 非文档拒绝）+ 两条文案（均无 `in docs/`）+ 拆分兑现（findProjectRoot 定位面）
   // 2026-09-15 W8（索引面归一核面）：`portability-vsc-index.test.mjs` 随文件制索引删旧退役（测试纪律①）——unlisted 可见化等业务面按核面承接重述入 `test/memory-index-face.test.mjs`（D3 计数同步）
-  "test/provider-timeout-semantics.test.mjs", // 群 A 批 A1（2026-09-11）· W10 改判（2026-09-15）：保留 2 例——调用面 signal 原样/零合成 + 相位参数（经核 chat）；退役 3 例——镜像 parseStream idle 缝随删档（不可稳定驱动）/ 静态源文本断言（PROVIDER.md §4.3）
   "test/expand-home.test.mjs", // 群 A 批 A2（2026-09-11）：`shell` 字段 `~` 展开——形态矩阵（前缀/裸/尾分隔/非分隔符/类型护栏）+ setup 读取点接线与只读归一——T-MA2-1–5（SETTINGS.md §2.7）
   "test/git-commit-pathspec.test.mjs", // 群 A 批 A9（2026-09-11）：commit `--only` 镜像——列文件提交（他批 staged 不混入）+ 空/空白 path 明确错误 + 无 path 全量零回归（真 git 子进程——slow 归册；TOOLS.md §11）
   "test/webview-input-history.test.mjs", // 群 A 批 A10（2026-09-11）：↑/↓ 契约——连续上溯/↓ 回落+草稿恢复/单行任意位置/多行边界门零劫持/IME 守卫/下拉让位——T-MA10-1..8（WEBVIEW.md §11.1）
@@ -104,7 +101,6 @@ export default [
   "test/settings-mcp-delete-confirm.test.mjs", // F-W17 MCP server 行组（2026-09-19 provider 行批自主档析出——触发 = 实现轮末实读 505 ≥ 500；W17-16 / W17-19…W17-25——点击不再即发 / 确认门 / 取消两路径 / 跨入口单例 / 在位整表重绘 / i18n 双源 / 多行取目标；SETTINGS.md §3 拆分条）
   "test/model-menu-delete-confirm.test.mjs", // F-W17 模型菜单 footer 组（入口册 **#6**——2026-09-19 模型菜单批 · 台账 #97）：W17-31…W17-34——点击不再即发 / 确认门 / 端到端删盘 + apiKey 原文消失 / 取消零发值 ∧ 盘面逐字节不变 / 宿主选定取消恒绿锚；跨面夹具 = 真 webview 点击 → 逐条喂回真宿主分发 + tmp config（先例 settings-empty-no-write.test.mjs）；SETTINGS.md §2.10
   "test/activity-live-visibility.test.mjs", // VSC 子代理 live 块可见性批（2026-09-19 · 台账 #94）：出生闸去门/冻结键接管 + 出生可见性计数钮 + 内容面同口入队 + 痕七类与上行 + 窄缝四件 + 心跳/源新鲜度——T-A16–T-A32（含反例）+ 移交件面（WEBVIEW.md §5.3/§5.5）
-  "test/loop-sampler.test.mjs", // init-block 批（2026-09-18）F-W19：扩展宿主事件循环采样器——常量 100/1000/1000 + 窗口起止 + 阈值边界（999/1000）+ 起停幂等 + 未启动 fail-open + 注入缝复位 + 端侧装配（probeFailureOf/overrideAdmissionIfHostBusy）+ 零 exec·I/O 扫描 + activate/deactivate 挂点——LS-1…LS-8（SETTINGS.md §2.12）
   "test/upstream-parity.test.mjs", // 批 2026-09-19-upstream-channel-availability（2026-09-20）：上行通道 VSC 对位面（F-UC7）——T-VS-U1–U7（开轮三元组 / 注入非空 / 唤醒端到端 / note 不唤醒 / 结构机检 / 回复可达 / 组合同规；§6.27.12.12）
   "test/zero-sync-exec.test.mjs", // init-block 批（2026-09-18）F-MI7 判据① 端侧半：端侧探测面两档（session-slots.mjs / peer-instances.mjs）零 child_process 直调扫描 + 域外正证 + 探测面消费者闭包 fail-closed——MULTI-INSTANCE-COLLAB.md §3.1 条①（核半 = core test/process-probe.test.mjs；N3 门禁 ⇒ 域不交）
   // 端差·显示面消差批（2026-09-20 · `docs/batches/2026-09-20-display-parity-batch.md` · 批 1 = VSC 工具卡/摘要/状态行）
@@ -120,14 +116,12 @@ export default [
   // 端差·机制层端差批（2026-09-20 · `docs/batches/2026-09-20-mechanism-parity-batch.md` · 车道 2 = VSC）
   "test/lifecycle-hooks.test.mjs", // §2.16 端侧 Stop 钩子 + advisor-run 收口（T-LH1–T-LH9；先红 = 端侧零 `runHooks` + 零收口）
   "test/dispatch-hooks.test.mjs", // §2.17 派发面 hooks 四调用点（T-DH1–T-DH7；先红 = 零调用点/零阻断文案）
-  "test/permission-gate-seam.test.mjs", // docs/batches/2026-09-20-mechanism-parity-batch.md §2.20 VSC 半——门改经核 `io.ask` 缝（T-PT6–T-PT8；先红 = 核 `permission.mjs` 零 importer）
   "test/vsc-stream-rules.test.mjs", // VSC 行为/能力两则批（2026-09-20 · 台账 #130）：A 面 stream 规则在 VSC 端生效——T-A1…T-A4（装配合并/abort 端到端/子回合继承/warn 文案逐字；批档 §2.5）
   "test/scoped-rules.test.mjs", // 同批 B 面 `.cursor/rules` 作用域规则：T-B1…T-B4（三分类按序判定/JIT 注入+去重/[4] 层尾块零改/CLI 零对位；批档 §2.5）
   "test/subagent-queued-payload.test.mjs", // §2.22 同族事件载荷机检锚（T-QP1–6）：载荷逐 kind 对表 + 缓存单源 + 五路作废点（含 `⟦ev⟧stopped`——§2.29 #7c）+ 重生投影同形（先红后绿 = 收口轮变异探针——停用 stopped 路 `forgetQueued` ⇒ T-QP5 恰该路红）
   "test/nested-token-relay.test.mjs", // 嵌套 token 显示面批（2026-09-20 · 台账 #137 · `docs/batches/2026-09-20-nested-token-batch.md` §2）：内层链事件不路由（`panel-subagent-relay.mjs` 嵌套守卫——判据收窄 `nested ∧ rest 起于 ⟦ev⟧／[model]` + `ev:substrip` 留痕）——T-N2–T-N7（T-N6 = 宽判据反例锁；真链 = 真装配 `buildSpawnChild` + 真宣告 `armSyncChildAbort` + 真 webview 闭路）
   "test/render-granularity.test.mjs", // 渲染粒度对齐批（2026-09-20 · 台账 #148 · `docs/batches/2026-09-20-render-granularity-batch.md` §2）：内容行合并粒度（CLI `pushBlock` 对齐——WEBVIEW.md §5.6）——T-G1–T-G7 段数断言（tool 面按「工具名 + sub 同」并入末行 · RAW 零分隔符 / 调用行恒新行 / 降级恒新行 / kind 缺省归 text）
   // STARTUP-LATENCY 批（2026-09-21 · `docs/batches/2026-09-21-startup-latency.md` §2 · 台账 #173）：F-SL3 目录级清理判据（TRACES.md §6.4）+ F-SL2 端侧命令面（SESSION.md §6.17 D-SE38）
-  "test/trace-cleanup.test.mjs", // T-SL3.1/3.2/3.4：目录级三段梯（整删零逐 .jsonl stat——计数注入 / 当天跳过 / 含 .txt 逐文件）+ 每写节流（同窗 3 连写 ⇒ 扫描 ≤1 + 在飞合并）+ 缩比存量整删幂等（T-SL3.3 语义保真 = 既有 trace-store.test.mjs D-TR10 用例零改动保绿）
   "test/session-gc-command.test.mjs", // T-VSC-SG1/SG2：`thincoder.sessionGc` 处理体（空候选/确认/驳回零删除 + 模态门 + 删除期变活拒绝行 + 汇总跳过计数）+ 命令注册/直调点机检（不消费 runSessionGc）
   // 无工作区守卫批（2026-09-21 · `docs/batches/2026-09-21-vsc-no-folder-guard.md` §2.6 · 台账 #199）：用例 1–17
   "test/workspace-guard.test.mjs", // 无文件夹窗口 ⇒ 拒启 agent（零写入三档）+ 双面逐字提示（host 通知+按钮 / webview toast+占位符第三态）+ 恢复面（空↔非空免重载）；守卫八处 + 派生面 / 结构+行为双锁 / 5 结构锁——机制单源 = PROJECT-SWITCHER.md §4.1
