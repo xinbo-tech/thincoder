@@ -7,17 +7,18 @@
  * 接收档指名）——四缝在档尾模块装配期一次接线：
  *   · `configureWritePath`      ← 编辑器写路径（getOpenDoc / applyEditorEdit——脏缓冲拒写
  *                                 由核内门禁统一判定；写回 = 全文替换 + save + md 预览刷新）
- *   · `configureExecRun`        ← runInterruptible（可中断执行器：spawn + abort/timeout 树杀，
- *                                 不阻塞 extension host 事件循环——linter/verify/ops 消费）
+ *   · `configureExecRun`        ← `runInterruptible`（可中断执行器：spawn + abort/timeout 树杀，
+ *                                 不阻塞 extension host 事件循环——linter/verify/ops 消费；
+ *                                 **R3 改指核件**：实现已上提 `@thincoder/core/tools/exec-run.mjs`，
+ *                                 本端零副本——桌面功能对位批 · #523② · KD-T2 纯搬）
  *   · `configureProcessTreeKill`← killProcessTree（树杀：Windows taskkill /T /F / POSIX 组杀）
  *   · `configureTreeResolve`    ← resolvePath 式 cwd 归一（#56 端形态：join 解析，不走 realpath）
  * 未注入面（懒加载/缺省即端形态）在核内缺省径上语义等价，见各缝落点注释。
  */
 import { join, isAbsolute } from "node:path"
-import { spawn } from "node:child_process"
 import * as vscode from "vscode"
 import { configureWritePath } from "@thincoder/core/tools/write-path.mjs"
-import { configureExecRun } from "@thincoder/core/tools/exec-run.mjs"
+import { configureExecRun, runInterruptible } from "@thincoder/core/tools/exec-run.mjs"
 import { configureProcessTreeKill } from "@thincoder/core/tools/execute.mjs"
 // 树杀单源（台账 #208② · TOOLS.md §6.14 落位表行 2）：本地副本删除——改用核单源
 // `process-tree.mjs`（静态闭包仅 `node:child_process`——engine-floor 守卫契约②零影响；
@@ -89,97 +90,9 @@ export function resolvePath(p, cwd) {
 
 // ─── 执行面（configureExecRun / configureProcessTreeKill 供值）──────────
 
-/**
- * Run a child process INTERRUPTIBLY (spawn, not execSync).
- * execSync blocks the extension-host event loop — a Stop click during a long
- * lint/verify run could not even be DELIVERED until the command finished.
- * This spawns asynchronously and kills the child on abort/timeout.
- *
- * Success → resolves the stdout string (execFileSync-compatible call sites).
- * Non-zero exit / spawn error / timeout / abort → rejects an Error whose
- * .stdout/.stderr/.code are populated like execFileSync's error.
- */
-export function runInterruptible(cmd, args, opts = {}) {
-  const { cwd, timeout, signal, env } = opts
-  return new Promise((resolve, reject) => {
-    let child
-    try {
-      child = spawn(cmd, args, {
-        cwd, env: env ?? process.env, stdio: ["ignore", "pipe", "pipe"], windowsHide: true,
-        // First-line abort guard: Node kills the direct child on signal abort.
-        ...(signal ? { signal } : {}),
-      })
-    } catch (e) {
-      reject(e)
-      return
-    }
-    let stdout = "", stderr = "", settled = false, timer = null, kickTimer = null, mode = null
-
-    const KICK_MS = 3000
-    const finish = (err, out) => {
-      if (settled) return
-      settled = true
-      if (timer) clearTimeout(timer)
-      if (kickTimer) clearTimeout(kickTimer)
-      signal?.removeEventListener("abort", onAbort)
-      if (err) {
-        err.stdout = stdout
-        err.stderr = stderr
-        reject(err)
-      } else {
-        resolve(out)
-      }
-    }
-    // Kill the whole tree on abort/timeout — grandchildren (npm test's children)
-    // must die too, or they keep the stdout/stderr pipes and "close" never fires.
-    const killTree = () => { try { killProcessTree(child) } catch { /* already gone */ } }
-    // Kick-clockback: settle even if "close" never arrives (a grandchild that
-    // mocks kill signal, or a wedged pipe). Prevents a hang + leaked pipes.
-    const armKick = (err) => {
-      if (kickTimer) return
-      kickTimer = setTimeout(() => finish(err), KICK_MS)
-    }
-
-    const onAbort = () => {
-      if (mode) return
-      mode = "abort"
-      const e = new Error("aborted by user (Stop)")
-      e.name = "AbortError"
-      killTree()
-      armKick(e)
-    }
-
-    if (timeout) {
-      timer = setTimeout(() => {
-        if (mode) return
-        mode = "timeout"
-        const e = new Error(`timed out after ${timeout}ms`)
-        e.name = "TimeoutError"
-        killTree()
-        armKick(e)
-      }, timeout)
-    }
-
-    child.stdout?.on("data", (d) => { stdout += d })
-    child.stderr?.on("data", (d) => { stderr += d })
-    child.on("error", (e) => { if (e.name === "AbortError") return; finish(e) })
-    child.on("close", (code) => {
-      if (mode === "abort") { const e = new Error("aborted by user (Stop)"); e.name = "AbortError"; return finish(e) }
-      if (mode === "timeout") { const e = new Error(`timed out after ${timeout}ms`); e.name = "TimeoutError"; return finish(e) }
-      if (code === 0) finish(null, stdout)
-      else {
-        const e = new Error(`command failed with exit code ${code}`)
-        e.code = code
-        finish(e)
-      }
-    })
-
-    if (signal) {
-      if (signal.aborted) { onAbort(); return }
-      signal.addEventListener("abort", onAbort, { once: true })
-    }
-  })
-}
+// `runInterruptible`（可中断执行器：spawn + abort/timeout 树杀）**已上提核件**（R3 · 桌面功能对位批 ·
+// #523② —— KD-T2 纯搬 + 转口）：单源 = `@thincoder/core/tools/exec-run.mjs`（本档 import 面取用，
+// 档尾接线注入 —— 本端零副本）；树杀实现 = `@thincoder/core/tools/process-tree.mjs`（同见 import 面）。
 
 // ─── 端壳缝接线（模块装配期一次；缺省不覆盖 = 核内默认径）──────────────────
 

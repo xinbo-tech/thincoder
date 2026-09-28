@@ -16,8 +16,14 @@
  *     （端侧现形 = 宿主 `runInterruptible`）；
  *   · `opts = { cwd?, timeout?, signal? }`——**默认径忽略 signal**（execFileSync 不可中断，
  *     与现行 CLI 行为逐字同）；注入径自决（如 abort ⇒ 树杀）。
+ *
+ * **可中断执行器上提（R3 · 桌面功能对位批 · #523②）**：`runInterruptible` 自端侧现形
+ * （`thincoder-vscode/src/tools/shared.mjs`）**纯搬**落核（零语义改 —— KD-T2）；两端改指核件
+ * （VSC `configureExecRun({ run: runInterruptible })` 同轮改指；桌面 `src/main/exec-run.mjs` 消费）。
+ * 树杀 = 本仓 `tools/process-tree.mjs` 单源（`killProcessTree` —— 转口，零第二实现）。
  */
-import { execFileSync } from "node:child_process"
+import { execFileSync, spawn } from "node:child_process"
+import { killProcessTree } from "./process-tree.mjs"
 
 let injected = null
 
@@ -40,4 +46,94 @@ function defaultRun(cmd, args, opts) {
 export async function runCommand(cmd, args, opts = {}) {
   if (injected) return await injected.run(cmd, args, opts)
   return defaultRun(cmd, args, opts)
+}
+
+/**
+ * 可中断执行器（**上提件** —— 端侧 `configureExecRun` 供值；原住 `thincoder-vscode/src/tools/shared.mjs`，
+ * 逐字搬运 —— R3 · #523②）：`spawn`（非 `execSync` —— 同步执行阻塞事件循环：长 lint ∕ verify 期间
+ * Stop 点击连“送达”都做不到）跑命令，abort ∕ timeout ⇒ 整树杀（本档 `killProcessTree` 单源）。
+ *
+ * 成功 → resolve stdout 串（与 `execFileSync` 调用点兼容）。
+ * 非零退出 ∕ spawn 失败 ∕ 超时 ∕ 中止 → reject 携 `.stdout` / `.stderr` / `.code`（同 `execFileSync` 错误形）。
+ */
+export function runInterruptible(cmd, args, opts = {}) {
+  const { cwd, timeout, signal, env } = opts
+  return new Promise((resolve, reject) => {
+    let child
+    try {
+      child = spawn(cmd, args, {
+        cwd, env: env ?? process.env, stdio: ["ignore", "pipe", "pipe"], windowsHide: true,
+        // First-line abort guard: Node kills the direct child on signal abort.
+        ...(signal ? { signal } : {}),
+      })
+    } catch (e) {
+      reject(e)
+      return
+    }
+    let stdout = "", stderr = "", settled = false, timer = null, kickTimer = null, mode = null
+
+    const KICK_MS = 3000
+    const finish = (err, out) => {
+      if (settled) return
+      settled = true
+      if (timer) clearTimeout(timer)
+      if (kickTimer) clearTimeout(kickTimer)
+      signal?.removeEventListener("abort", onAbort)
+      if (err) {
+        err.stdout = stdout
+        err.stderr = stderr
+        reject(err)
+      } else {
+        resolve(out)
+      }
+    }
+    // Kill the whole tree on abort/timeout — grandchildren (npm test's children)
+    // must die too, or they keep the stdout/stderr pipes and "close" never fires.
+    const killTree = () => { try { killProcessTree(child) } catch { /* already gone */ } }
+    // Kick-clockback: settle even if "close" never arrives (a grandchild that
+    // mocks kill signal, or a wedged pipe). Prevents a hang + leaked pipes.
+    const armKick = (err) => {
+      if (kickTimer) return
+      kickTimer = setTimeout(() => finish(err), KICK_MS)
+    }
+
+    const onAbort = () => {
+      if (mode) return
+      mode = "abort"
+      const e = new Error("aborted by user (Stop)")
+      e.name = "AbortError"
+      killTree()
+      armKick(e)
+    }
+
+    if (timeout) {
+      timer = setTimeout(() => {
+        if (mode) return
+        mode = "timeout"
+        const e = new Error(`timed out after ${timeout}ms`)
+        e.name = "TimeoutError"
+        killTree()
+        armKick(e)
+      }, timeout)
+    }
+
+    child.stdout?.on("data", (d) => { stdout += d })
+    child.stderr?.on("data", (d) => { stderr += d })
+    child.on("error", (e) => { if (e.name === "AbortError") return; finish(e) })
+    child.on("close", (code) => {
+      if (mode === "abort") { const e = new Error("aborted by user (Stop)"); e.name = "AbortError"; return finish(e) }
+      if (mode === "timeout") { const e = new Error(`timed out after ${timeout}ms`); e.name = "TimeoutError"; return finish(e) }
+      if (code === 0) finish(null, stdout)
+      else {
+        const e = new Error(`command failed with exit code ${code}`)
+        e.code = code
+        finish(e)
+      }
+    })
+
+    if (signal) {
+      if (signal.aborted) { onAbort(); return }
+      signal.addEventListener("abort", onAbort, { once: true })
+    }
+  })
 }

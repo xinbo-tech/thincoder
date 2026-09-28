@@ -27,11 +27,20 @@ export function loadAgentSlot(agent, cwd, slot) {
   return true
 }
 
-/** 回合尾落盘（三路 done / stopped / error 同序调用 —— 先落盘再出终局事件）。 */
-export function saveAgentSlot(agent) {
+/** 回合尾落盘（三路 done / stopped / error 同序调用 —— 先落盘再出终局事件）。`label` = 日志标签（默认 `session`；
+ *  R3 蒸馏落位同经本函数 —— 单一「落盘不抛」实现，零第二副本）。 */
+export function saveAgentSlot(agent, label = "session") {
   try {
     saveSession(agent)
   } catch (err) {
-    console.error(`[agent-host] session save failed: ${err?.message ?? err}`)
+    console.error(`[agent-host] ${label} save failed: ${err?.message ?? err}`)
   }
+}
+
+/** 蒸馏落位（R3 · #520 —— `callbacks.onDistilled` 时点：机器行已被压缩版替换，回合尾 `saveSession` 持的是
+ *  压缩前快照 ⇒ **立即重落盘**，盘面不留未压缩版；CLI 先例 `thincoder-cli/src/tui/tool-events.mjs:397-399` ∕
+ *  VSC 先例 `thincoder-vscode/src/extension/panel-callbacks.mjs:242-246`）。静默纪律同 `saveAgentSlot`
+ *  （N3 —— 回合已返回，写盘失败不得浮面；实现 = 同函数 + `distilled` 标签，零副本）。 */
+export function saveDistilledSlot(agent) {
+  saveAgentSlot(agent, "distilled session")
 }

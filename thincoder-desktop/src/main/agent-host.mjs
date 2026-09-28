@@ -1,35 +1,33 @@
 /**
  * agent-host.mjs — 宿主装配桥（`docs/desktop/design/SHELL.md` §4 装配第三份 · `docs/desktop/design/IPC.md` §1 桥面）。
- * 六职责（＋R1 会话维护面一枚 `syncTitle` —— 改名内存标题同步，#525）：① 装配（懒 · 按需 · 同键复用）② 十回调桥（协议行解析 ⇒ `ev:*` 出站 · R3a 增 `onUsage` 入会话累计令牌表）
- * ③ 待决表（三门形：审批逐项 / 审批批次 / 提问）
- * ④ 回合驱动（`send` / `interrupt` + 结算三映射：done · stopped · error + 回合尾 `ev:usage` 读数〔`postUsage` · 三径同点〕）
- *    ——**桌面空闲唤醒批**：单回合执行面提取（`send` ∕ 驱动**同源** ＝ `executeTurn` · `suspDriven: true` 撤回合尾直注入兜底）
- *    + 回合尾挂起接管（`poolLive` ⇒ `suspension-drive.mjs` 核件入口）+ `send` ∕ `interrupt` ∕ `dispose` 三路由（窗内输入 ∕ 回合级中断 ∕ 会话中止）
- *    ——**「回合中插入」批**：在飞 `msg:send` ⇒ **按会话键入队**（队列单源 = `queued-input.mjs`；回执
- *    `{ ok: true, queued: true }`，满 ⇒ `queue-full`）+ 步边界取批注入（`turn-face.mjs` 传 `consumeQueuedInput`）
- *    + 回合尾续发链（`turn-chain.mjs` —— **队列先于接管**；`ev:queue` 出站）+ 会话中止清队 **∧ 在飞回合中止 + 在飞表清**
- *    （`dispose` ∕ 切项目两径同源 —— 防「忙态队 + 陈旧回合迟到投递」三条件态）。
- *    ——**点修轮（U-6 ∕ U-7）**：会话中止 ⇒ 落**中止墓碑**（回合代次 —— `dispose` ∕ 切项目两径同落）⇒ 该刻前
- *    代次的回合尾三查位同失效（本档 `takeOver` 零重注册 ∕ 步边界缝零取批 ∕ `turn-face.mjs` 回合尾落盘零写）。
+ * 六职责（**R3 拆后**：回合驱动族出档 `turn-driver.mjs` —— `docs/desktop/design/PROJECT.md` §10 **BL** 行）：
+ * ① 装配（懒 · 按需 · 同键复用）② 回调桥（协议行解析 ⇒ `ev:*` 出站 · R3a 增 `onUsage` 入会话累计令牌表 ·
+ * R3 增 `onDistilled` 蒸馏落位〔非通道〕）③ 待决表（三门形：审批逐项 / 审批批次 / 提问 —— 兼撞帽续跑询问载体）
+ * ④ **回合驱动族装配**（出档 `turn-driver.mjs`：单回合执行面 · 在飞表 · 中止墓碑 · `send` ∕ `interrupt` ∕ `dispose`
+ *    ∕ `abortSuspensions` —— 本档只供注入面并暴露其返回面）
  * ⑤ 会话级偏好写面（`setPrefs`：写盘 → 重施；在飞拒 —— 批次档 KD-19 单点）
  * ⑥ 模式位投影（`flagsOf` **活值**四布尔 —— 状态栏对齐批：`approval:respond` 成功径回执叠加 `{ key, flags }`；
  * 页读供面同函数 —— 槽投影兜底面住 `session-slots.mjs` `slotFlags`）。
+ * ＋R1 会话维护面一枚 `syncTitle`（改名内存标题同步，#525）。
+ * **R3 拆点（本批落形）**：`send` ∕ `interrupt` ∕ `drive` ∕ `takeOver` ∕ `dispose` ∕ `abortSuspensions` +
+ * 在飞表 + 中止墓碑 ⇒ `turn-driver.mjs`（连同其私有装配：排队面 ∕ 续发链 ∕ 挂起驱动 ∕ 提示面）；本档经
+ * 同名返回面转口 ⇒ `ipc.mjs` 调用面零改（拆后本档 ≤300 顾问线）。
  * **R3b（D20）**：子 agent 面（停止出口 + 存活投影起 / 停 / 清点）出档 `subagent-face.mjs`（行数触发线 —— 档名实施批定）。
  * **对齐第三批**：两**只读采样面**注入回调桥（`advisorMeta` ⇒ `ev:tool-call` `round` / `model` · `extractFileLinks`
- * ⇒ `ev:tool-result` `links`；皆纯读、零副作用 —— 不入「六职责」计数）。
+ * ⇒ `ev:tool-result` `links`；皆纯读、零副作用 —— 不入职责计数）。
  * 装配端差（SHELL.md §4 显式登记两项 + 取值面一项）随装配面搬运 ⇒ 单源 = `agent-assemble.mjs` 档头（本档不重述）。
  * 零宿主依赖：出站 `emit` 由主进程注入 ⇒ 平 node 直测。
  *
  * 出档（批 8 §1.14 ③：本档触行数拉线，按在册预案拆分 —— 档名实施舱定）：回调桥 ⇒ `agent-bridge.mjs`
  * （`createBridge` + 名面 `ACTIVITY_EVENTS` / `parseEvToken` / `summarizeArgs`）；待决门 ⇒ `suspensions.mjs`
  * （`createGates` + `ITEM_VERDICTS` / `BATCH_VERDICTS` / `QUESTION_CANCELLED`）；槽 I/O ⇒ `session-io.mjs`（`loadAgentSlot` /
- * `saveAgentSlot`）；**装配面（状态栏对齐批）⇒ `agent-assemble.mjs`**（`assembleFor` + `DEFAULT_DEPS` /
- * `teamConfig` / `gitAuthor` / `validateProvider` —— 装配段逐字搬运）。上述名面在原路径**同名 re-export**
+ * `saveDistilledSlot`〔R3 蒸馏落位〕）；**装配面（状态栏对齐批）⇒ `agent-assemble.mjs`**（`assembleFor` + `DEFAULT_DEPS` /
+ * `teamConfig` / `gitAuthor` / `validateProvider` —— 装配段逐字搬运）。上述门 ∕ 桥 ∕ 装配三名面在原路径**同名 re-export**
  * ⇒ 调用方 import 路径与名面零改。
- * 会话取槽落盘（批 8 §1.14 ①②）：`ensure` 装配后装载本键槽（槽缺 ⇒ 新建形，代理不动）；`send` 三路结算
- * **先落盘再出终局事件** —— 渲染侧收尾重读即见本回合增量。
+ * 会话取槽落盘（批 8 §1.14 ①②）：`ensure` 装配后装载本键槽（槽缺 ⇒ 新建形，代理不动）；回合三路结算（`send` 径 ——
+ * 族出档 `turn-driver.mjs`）**先落盘再出终局事件** —— 渲染侧收尾重读即见本回合增量。
  * **桌面空闲唤醒批（KD-34 / KD-35）**：挂起驱动胶水（消费核件 `startSuspension`）出档 `thincoder-desktop/src/main/suspension-drive.mjs`；
- * 提示面策略（失焦门 + 两档）出档 `thincoder-desktop/src/main/notify.mjs`（本档注入面扩三件 —— `notify` ∕ `focused` ∕ `reveal`，
+ * 提示面策略（失焦门 + 两档）出档 `thincoder-desktop/src/main/notify.mjs`（驱动族注入面三件 —— `notify` ∕ `focused` ∕ `reveal`，
  * 皆可缺省：缺 ⇒ 零动作，零连带）。
  * **R1 输入面板移植（桌面宿主面）**：两处理面出档 —— `setFlags` ⇒ `session-flags.mjs`（核 `setSlot*` 四写 +
  * 活代理重施（`loadAgentSlot`）+ `flagsOf` 回执 + ENG×PLAN 互斥）· `atComplete` ⇒ `at-complete.mjs`（@ 补全
@@ -39,27 +37,18 @@ import { runAgent } from "@thincoder/core/agent.mjs"
 import { historyPercent } from "@thincoder/core/token-window.mjs"
 // 会话键语义（`String(slot)` 单源）与端壳同档 —— 键面归一不造第二口径；偏好写面（`writeSlotPrefs`）同档。
 import { slotOfKey, writeSlotPrefs } from "./session-slots.mjs"
-// 五族出档（见档头）：回调桥 / 待决门 / 槽 I/O / 子 agent 面 / 装配面 —— 本档只装配与驱动，算法面各归其档。
+// 五族出档（见档头）：回调桥 / 待决门 / 槽 I/O / 子 agent 面 / 装配面 —— 本档只装配与注入，算法面各归其档。
 import { createBridge } from "./agent-bridge.mjs" // 含「对齐第三批」两采样面注入（见下）
 import { extractFileLinks } from "./file-links.mjs" // 验存文件链接（相抵② · KD-39 —— 盘上存在闸）
 import { createGates } from "./suspensions.mjs"
-import { loadAgentSlot, saveAgentSlot } from "./session-io.mjs"
+import { loadAgentSlot, saveDistilledSlot } from "./session-io.mjs"
 import { createSubagentFace } from "./subagent-face.mjs"
 // 装配面（状态栏对齐批出档 —— 原档装配段逐字搬运）：本档取其默认装配函数与名面转口。
 import { assembleFor } from "./agent-assemble.mjs"
-// 附件面（`docs/desktop/design/IPC.md` §2「附件注」）：起跑前装配（非视觉门 / 落盘 / 交核指引）+ 回合尾清理。
-import { cleanupTurn, prepareTurnAttachments } from "./attachments.mjs"
-// 挂起驱动胶水（KD-34 —— 消费核件 `startSuspension`：会话寄存器 + 端侧钩子 + 输入 ∕ 关闭路由）+ 提示面策略（KD-35 两档）。
-import { createSuspensionDrive } from "./suspension-drive.mjs"
-import { createNotifier } from "./notify.mjs"
-// 单回合执行面（桌面空闲唤醒批出档 —— 触 300 行顾问线，在册预案「回合执行面再出档」落形）。
-import { createTurnFace } from "./turn-face.mjs"
-// 排队面（「回合中插入」批 —— 队列单源 = `queued-input.mjs`；续发链 + `ev:queue` 出站 = `turn-chain.mjs`）。
+import { createTurnDriver } from "./turn-driver.mjs"
 // R1 输入面板移植（桌面宿主面）：模式位四写面 ∕ @ 补全面两处理体出档（新增两面零入档 —— 拆分评审结论见档头）。
 import { createSessionFlags } from "./session-flags.mjs"
 import { createAtComplete } from "./at-complete.mjs"
-import { createQueuedInput } from "./queued-input.mjs"
-import { createTurnChain } from "./turn-chain.mjs"
 // 同名 re-export（调用面零改 —— 既有 import 路径与名面保持）。
 export { ACTIVITY_EVENTS, parseEvToken, summarizeArgs } from "./agent-bridge.mjs"
 export { ITEM_VERDICTS, BATCH_VERDICTS } from "./suspensions.mjs"
@@ -96,7 +85,9 @@ export function advisorMeta(agent) {
 /** 宿主装配桥：`emit(channel, payload)` = 出站面（主进程注入）· `run` = 回合运行器 · `assemble` = 装配函数（皆可注入）。
  *  `projects` = 项目面（`currentCwd()` 供装配取值）；返回正文面 + 子 agent 面（`subagent-face.mjs` 展开：
  *  `stopSubagent` / `heartbeatBeat` / `startHeartbeat` / `stopHeartbeat`）+ `flagsOf` + `table` / `agents`。
- *  **提示面注入三件（桌面空闲唤醒批 —— 皆可缺省：缺 ⇒ 零动作）**：`notify` = 平台落子 · `focused` = 焦态判据 · `reveal` = 点击聚焦；**timer 面（timer-wake 阶段 2）**：闩 ∕ 三武装点 ∕ 窗内 `timerFace` 装配住挂起驱动档（`suspension-drive.mjs` ⋈ `timer-watch.mjs`），本档只供两枚注入面 —— `busyOf`（在飞判据）+ `takeOver`（timer 轮后同判）。 */
+ *  **提示面注入三件（桌面空闲唤醒批 —— 皆可缺省：缺 ⇒ 零动作）**：`notify` = 平台落子 · `focused` = 焦态判据 · `reveal` = 点击聚焦；
+ *  **timer 面（timer-wake 阶段 2）**：闩 ∕ 三武装点 ∕ 窗内 `timerFace` 装配住挂起驱动档（`suspension-drive.mjs` ⋈ `timer-watch.mjs`），
+ *  驱动族只供两枚注入面 —— `busyOf`（在飞判据）+ `takeOver`（timer 轮后同判），二者随族装配住 `turn-driver.mjs`。 */
 export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, deps = {}, projects, notify = null, focused = null, reveal = null } = {}) {
   if (typeof emit !== "function") throw new Error("[agent-host] emit required (out-bound channel)")
   const post = (channel, payload) => emit(channel, payload)
@@ -110,62 +101,23 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     if (!usageTally.has(key)) usageTally.set(key, { prompt: 0, completion: 0, reasoningTokens: 0, cacheHit: 0, cacheMiss: 0 })
     return usageTally.get(key)
   }
+  /** 装配表清（`dispose` 消费 —— `turn-driver.mjs` 注入面 `forgetKey`）：agents ∕ 在途装配 / 令牌表三面
+   *  同键重开零继承（清点语义 = 原档 `dispose` 三删行，逐字等价）。 */
+  const forgetKey = (key) => {
+    agents.delete(key)
+    ensuring.delete(key)
+    usageTally.delete(key)
+  }
   /** 待决门（表 + 五操作 —— 出档 `suspensions.mjs`；`table` 随宿主面继续暴露）。 */
   const { table, askSingle, askBatch, askQuestion, denyGates, respond } = createGates({ post, agents })
-  /** 十回调桥（出档 `agent-bridge.mjs`）⊕「对齐第三批」两采样面（`advisorOf` / `extractLinks` —— 见档头）。 */
+  /** 回调桥（出档 `agent-bridge.mjs`）⊕「对齐第三批」两采样面（`advisorOf` / `extractLinks` —— 见档头）
+   *  ⊕ R3 蒸馏落位注入面（`persistDistilled` —— `onDistilled` 时点按本键取装配实例重落盘，见 `session-io.mjs`）。 */
   const bridge = createBridge({
     post, askSingle, askBatch, askQuestion, tokensOf,
     syncLiveOf: (key, head) => agents.get(key)?._syncChildAborts?.has(head) === true,
     advisorOf: (key) => advisorMeta(agents.get(key)),
     extractLinks: (text) => extractFileLinks(projects?.currentCwd(), text),
-  })
-  /** 在飞回合：key → AbortController（单驱动器 ⇒ 禁双 run 竞态）。 */
-  const flights = new Map()
-  /** 中止墓碑（U-6 ∕ U-7 · 回合代次）：key → 代次计数 —— `dispose` ∕ 切项目两径 +1 ⇒ **该刻前代次**的回合尾
-   *  三查位同失效（`takeOver` 零重注册 ∕ 步边界缝零取批 ∕ `turn-face.mjs` 回合尾落盘零写）。回合起跑在代理上落当前代次
-   *  （`turn-face.mjs` 单点），查位 = 代次比对 ⇒ 会话重开后的新回合自动合法（**零清除面** —— 无「清墓碑」竞态窗）。*/
-  const turnEpochs = new Map()
-  /** 本键当前代次（未中止过 ⇒ 0）。 */
-  const epochOf = (key) => turnEpochs.get(key) ?? 0
-  /** 落墓碑：本键代次 +1 —— 该刻已在飞 ∕ 已结算未接管的回合尾即时失效。 */
-  const revokeTurns = (key) => turnEpochs.set(key, epochOf(key) + 1)
-  /** 回合代次面注入包（`turn-face.mjs` 起跑落位 ∕ 落盘前查位**同源** —— 判据单点，零第二份）。 */
-  const turnGate = {
-    stamp: (key, agent) => { if (agent != null) agent._turnEpoch = epochOf(key) },
-    revoked: (key, agent) => { const stamped = agent?._turnEpoch; return typeof stamped === "number" && stamped !== epochOf(key) },
-  }
-  /** 排队面（「回合中插入」批 · KD-40 ①）：宿主**按会话键**内存表 —— 队列单源（渲染面 = 快照镜面）。 */
-  const queued = createQueuedInput()
-  /** 单回合执行面（`send` ∕ 驱动同源 —— 出档 `turn-face.mjs`；本档供 `post` ∕ `run` ∕ 桥 ∕ 读数 ∕ 在飞表五件
-   *  + 步边界取批缝 `queuedPickup`〔用户回合传 ∕ 消化轮不传 —— 分流判据住 turn-face〕
-   *  + 回合代次面 `turnGate`〔中止墓碑三查位同源 —— U-6 ∕ U-7〕）。 */
-  const { executeTurn } = createTurnFace({
-    post, run, bridge, postUsage, flights,
-    // 步边界缝（U-6 第三臂）：中止墓碑同判据查位 —— 陈旧回合零取批（零旧代理消费新会话队 ∕ 迟到投递同族）
-    queuedPickup: (key) => (agent) => (turnGate.revoked(key, agent) ? false : chain.stepBoundaryPickup(key, agent)),
-    turnGate, // 起跑落代次（stamp）∕ 回合尾落盘前查位（revoked）—— 判据住本档
-  })
-  /** 回合尾续发链 + 排队面出站（出档 `turn-chain.mjs` —— 队列先于接管 · 续发起跑前查在飞表；KD-40 ②③④）。 */
-  const chain = createTurnChain({
-    queue: queued, post,
-    prepare: (text, images, agent) => prepareTurnAttachments(text, images, {
-      cwd: projects?.currentCwd(), model: agent?.provider?.model, locale: agent?.config?.locale,
-    }),
-    drive: (key, agent, text, attached) => drive(key, agent, text, attached),
-    busyOf: (key) => flights.has(key),
-  })
-  /** 提示面（KD-35：失焦门 + 两档合句 + 点击聚焦 —— 策略面 ∕ 平台面分家，见 `notify.mjs`）。 */
-  const notifier = createNotifier({ notify, focused, reveal })
-  /** 挂起驱动（KD-34：消费核件 —— 会话寄存器 + 端侧钩子（计数 ∕ 回收 ∕ 冻结）+ 边界两发（窗内单回合包装 `autoTurn` 支）
-   *  + 输入 ∕ 关闭路由 + 提示面两档；`runTurn` = 本档单回合执行面 —— `send` ∕ 驱动同源）。 */
-  const suspension = createSuspensionDrive({
-    post, runTurn: executeTurn, notify: notifier,
-    busyOf: (key) => flights.has(key), // 在飞判据（空闲火面用——在飞回合不夺杆；timer-wake 阶段 2 §6.30.11）
-    takeOver, // timer 轮后同判（池活 ⇒ 入窗消化——装配点① 回合尾面；函数声明提升 ⇒ 此处引用先于定义安全）
-    reloadSlot: (key, agent, cwd) => { // §2.2 会话钉定：每轮起跑前按本窗键重装槽（含 `_slot` 重钉）
-      const slot = slotOfKey(key)
-      return slot === null || typeof cwd !== "string" || cwd === "" ? false : loadAgentSlot(agent, cwd, slot)
-    },
+    persistDistilled: (key) => { const agent = agents.get(key); if (agent) saveDistilledSlot(agent) },
   })
 
   /** 计时读数（R3a 载荷扩 `timers` —— 核 `_pendingTimers` 活读投影 `{count, expired}`；新鲜度 = 本回合尾时点
@@ -207,87 +159,14 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     }
   }
 
-  /** 回合驱动尾（`send` ∥ 续发两径**同源**）：成功径 ⇒ 档①通知 + 接管；失败径 ⇒ 接管（后台项不因回合失败而失管）。 */
-  function drive(key, agent, text, attached) {
-    void executeTurn(key, agent, text, { attached }).then(
-      () => { suspension.turnDone(key, agent); takeOver(key, agent) }, // 成功径 ⇒ 提示面档①（`!autoTurn` —— send 径恒非 auto）
-      () => takeOver(key, agent),
-    )
-  }
-
-  /** 回合尾接管（KD-34 入口）：**中止墓碑查位**（U-6 —— 本刻前代次的回合尾 = 会话已中止 ∕ 项目已切 ⇒ 零
-   *  重注册：零续发 ∕ 零窗 ∕ 零闩重武装 ∕ 零新队消费；含新会话已在跑之竞态——陈旧代理不再夺杆）⇒ **队列先于接管**
-   *  （KD-40 ③ —— 队非空 ⇒ 先续发；续发起跑前查在飞表）⇒ 队空 ⇒ `poolLive(agent)` 判真 ⇒ 进挂起窗
-   *  （核件消费；`cwd` = 窗入口 cwd——窗项持入口键 + 入口 cwd，§2.2）。成功 ∕ 失败两径同接管（后台项不因回合失败而失管）。 */
-  function takeOver(key, agent) {
-    if (turnGate.revoked(key, agent)) return // 中止墓碑（U-6）：会话中止径已落代次 ⇒ 陈旧回合尾零接管
-    if (chain.continueTurn(key, agent)) return // 队列先于接管（续发轮尾自带同接管链 —— 递归至队空）
-    suspension.start(key, agent, { cwd: projects?.currentCwd() ?? null })
-  }
-
-  /** `msg:send`：坏键 ⇒ bad-key · **窗内 ⇒ 入挂起队列**（含附件 ⇒ busy 留队重试——核件输入面 = 文本单形）·
-   *  **在飞 ⇒ 按会话键入队**（`{ok:true, queued:true}`；满 ⇒ `queue-full` 零入队 —— KD-40 ②）·
-   *  provider 无效 ⇒ provider-invalid（零假回合）；否则建在飞、起跑、**立即回 `{ok:true}`**。
-   *  结算三映射（done / stopped / error）收尾清在飞 —— 三径各出一次回合尾 `ev:usage`（读数同点、终局事件之前）。
-   *  三路结算**先落盘再出终局事件**（§1.14 ② —— 渲染侧收尾重读即可见本回合增量；CLI 先例 = 回合
-   *  finally 尾部保存 ⇒ 中断 / 错误同样留现场）。
-   *  附件面（`IPC.md` §2「附件注」）：`images` 逐项 `{name,mime,dataURL}`；判决与落盘全在
-   *  `prepareTurnAttachments`（出口零抛 ⇒ 回合驱动零承担），弃项经回执 `degraded` 浮出（零静默）；
-   *  落盘件随三径结算在 `executeTurn` finally 清理（**先释放锁**再清理 —— 清理由本档自吞错，锁必释放）。 */
-  async function send(key, text, images) {
-    const slot = slotOfKey(key)
-    if (slot === null) return { ok: false, reason: "bad-key" }
-    if (suspension.active(key)) { // 挂起窗口头（KD-34）：窗内输入 ⇒ 驱动器队列 + 唤醒（用户输入优先序沿核件）
-      if (Array.isArray(images) && images.length > 0) return { ok: false, reason: "busy" }
-      return suspension.pushInput(key, String(text ?? "")) ? { ok: true } : { ok: false, reason: "busy" }
-    }
-    if (flights.has(key)) { // 忙态受理（KD-40 ②）：按会话键入队（不中断 · 下一步生效）；满 ⇒ queue-full（零入队）
-      const entry = { text: String(text ?? ""), ts: Date.now() }
-      if (Array.isArray(images) && images.length > 0) entry.images = images
-      if (queued.add(key, entry).ok !== true) return { ok: false, reason: "queue-full" }
-      chain.postQueue(key)
-      return { ok: true, queued: true }
-    }
-    // 占位先于装配 await：首跑仍在懒装配时的同键再发亦落队（在飞表占位同判）——单驱动器不许双 `runAgent`。
-    const controller = new AbortController()
-    flights.set(key, controller)
-    const release = () => {
-      if (flights.get(key) === controller) flights.delete(key)
-    }
-    let agent = null
-    try {
-      agent = await ensure(key, slot)
-    } catch (err) {
-      release() // 装配抛不吞（直传 invoke 拒绝），但先摘本键在飞——否则本键永锁 `busy`
-      throw err
-    }
-    if (agent._providerInvalid) {
-      release()
-      return { ok: false, reason: "provider-invalid" }
-    }
-    // 附件装配（项 1–4）：文本 / 路径 / 降级码三件——`cwd` = 项目根、`model` = 本回合实跑模型、
-    // `locale` = 装配实例配置（`createAgent` 存本 —— 零二次 `loadConfig`），非视觉说明词面随之就地定局。
-    const attached = prepareTurnAttachments(text, images, {
-      cwd: projects?.currentCwd(), model: agent.provider?.model, locale: agent.config?.locale,
-    })
-    release() // 占位交接给 `executeTurn`（同刻重占 —— 零 microtask 空窗）
-    drive(key, agent, attached.text, attached) // 回合驱动尾（续发径同源）
-    return attached.degraded ? { ok: true, degraded: attached.degraded } : { ok: true }
-  }
-
-  /** `msg:interrupt`：无在飞 ⇒ `idle`；在飞 ⇒ abort（**携核 abort 面**：`message` 非空串 ⇒ `{ interrupt: true, message }`
-   *  —— Ctrl+I 同上下文续跑，核 `agent.mjs:295-304,417-424` 读 `signal.reason`；缺 ∕ 空 ⇒ 裸 abort = 停回合不续跑）
-   *  + 本键待决门按拒结算。 */
-  function interrupt(key, message) {
-    if (slotOfKey(key) === null) return { ok: false, reason: "bad-key" }
-    const controller = flights.get(key)
-    if (!controller) return { ok: false, reason: "idle" }
-    const text = typeof message === "string" && message !== "" ? message : null
-    if (text === null) controller.abort()
-    else controller.abort({ interrupt: true, message: text })
-    denyGates(key)
-    return { ok: true }
-  }
+  /** 回合驱动族装配（出档 `turn-driver.mjs` —— §10 BL 拆点）：本档供注入面 —— 出站 ∕ 运行器 ∕ 桥 ∕ 读数 ∕
+   *  装配取值 ∕ 装配表清 ∕ 桥 scope 回收 ∕ 待决门按拒 ∕ 项目面 ∕ 提问门（撞帽续跑询问载体，R3 · #505）∘
+   *  提示面三件；返回面六件随宿主返回面展开（`ipc.mjs` 调用面零改）。 */
+  const turnDriver = createTurnDriver({
+    post, run, bridge, postUsage, askQuestion, projects,
+    ensure, forgetKey, dropScope: (key) => bridge.dropScope(key), denyGates,
+    notify, focused, reveal,
+  })
 
   /** `session:prefs` 写面（`docs/desktop/design/IPC.md` §2「会话级偏好注」项 2/4/7 · KD-19 单点）：判序 = `bad-key`
    *  → `busy`（在飞**零写**）→ 载荷两档（`invalid-patch` / `model-required`）→ 写盘 → 施加。
@@ -299,7 +178,7 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     const slot = slotOfKey(key)
     const fail = (reason) => ({ ok: false, reason, cwd: typeof cwd === "string" ? cwd : null, slot: null })
     if (slot === null) return fail("bad-key")
-    if (flights.has(key)) return fail("busy")
+    if (turnDriver.busyOf(key)) return fail("busy")
     const bad = prefsPatchFailure(patch)
     if (bad) return fail(bad)
     if (typeof cwd !== "string" || !cwd) return fail("slot-missing")
@@ -356,45 +235,13 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   /** 子 agent 面（R3b · D20 —— 出档 `subagent-face.mjs`）：停止出口 + 存活投影起 / 停 / 清点。 */
   const subagentFace = createSubagentFace({ agents, bridge })
 
-  /** 装配实例清除（会话关闭面 —— 防泄漏）：**中止墓碑（先落 —— 本刻前代次回合的接管 ∕ 落盘两查位即失效）
-   *  ∧ 在飞回合中止 + 在飞表清（会话中止 ⇒ 中止在飞——防四条件态：幽灵在飞把后续提交变「忙态队」，陈旧回合
-   *  结算再迟到投递 ∕ 重接管（零复活窗 —— U-6）∕ 复活落盘（U-7）；清表后同键再发 = 起新回合）
-   *  ∥ 挂起窗级联中止（§2.2 —— 清池不注入 + 出窗帧；先于摘表 —— 窗仍持 agent 引用）**
-   *  ∥ 装配表 / 在途装配 / 本键待决门（按拒结算 —— 不留悬 Promise）/ 本键令牌表 / 本键桥面 relay scope。
-   *  **R3b**：同时 = 存活投影**清点**面（该键不再入拍）。 */
-  function dispose(key) {
-    revokeTurns(key) // 中止墓碑（U-6 ∕ U-7）：无条件落 —— 「在飞 ∕ 已结算未接管」两态回合尾同失效
-    const flight = flights.get(key)
-    if (flight) { flight.abort(); flights.delete(key) } // 在飞回合中止 + 清（`abort` 幂等 —— 窗内回合随会话信号已中止者同判）
-    suspension.abort(key)
-    if (queued.clear(key)) chain.postQueue(key) // 会话中止 ⇒ 队清 + 零续发（KD-40 边界；空快照出站 —— 镜面随清）
-    agents.delete(key)
-    ensuring.delete(key)
-    usageTally.delete(key)
-    bridge.dropScope(key)
-    denyGates(key)
-  }
-
-  /** 切项目级联（§2.2：`project:open` 成功且 cwd 变更 ⇒ 旧项目**全键**窗中止 —— 会话键面 = `String(slot)` 项目内命名空间，
-   *  跨项目同槽号撞键 + 取值挂 `currentCwd()` 双错位）；**在飞回合同径中止 + 清 + 落中止墓碑**（旧项目代理不再
-   *  接管重启后的提交 —— 陈旧回合尾零重接管 ∕ 零落盘，U-6 ∕ U-7）；返回中止窗数（`ipc.mjs` 成功径调用）。 */
-  function abortSuspensions() {
-    for (const [key, controller] of flights) { // 切项目 ⇒ 旧项目在飞全键中止 + 落墓碑（代次 —— 取值面双错位防护同源）
-      revokeTurns(key)
-      controller.abort()
-    }
-    flights.clear() // 在飞表清（防陈旧回合迟到投递 —— 同 `dispose` 收口）
-    for (const key of queued.clearAll()) chain.postQueue(key) // 切项目 ⇒ 忙态队清（§2.2 级联 —— 零续发）
-    return suspension.abortAll()
-  }
-
   // `respond` = 本档 `respondTo` 转口（契约：表外 id ⇒ `unknown-prompt` · 跨 kind 载荷 ⇒ `bad-kind` · 跨形 / 表外
   // verdict ⇒ `bad-verdict` · 非串且非 `null` 作答 ⇒ `bad-answer`；四档皆不 resolve —— 挂起保留；成功径叠加见上）。
   subagentFace.startHeartbeat() // 出生自愈起拍（起在装配期；停 `stopHeartbeat()` / 逐键清 `dispose(key)`）
   return {
-    ensure, send, interrupt, setPrefs, respond: respondTo, dispose, abortSuspensions, flagsOf, syncTitle,
-    queueSnapshot: (key) => queued.snapshot(key), // `history:page` 回执 `queue` 键供面（冷启重建 —— `ipc.mjs`）
+    ensure, setPrefs, respond: respondTo, flagsOf, syncTitle,
     setFlags, atComplete, // R1 输入面板移植两通道宿主入口（`ipc.mjs` 两 handler 转口 —— 处理体各住其档）
+    ...turnDriver, // 回合驱动族六件 + 两只读面（`send` ∕ `interrupt` ∕ `dispose` ∕ `abortSuspensions` ∕ `queueSnapshot` 等 —— `turn-driver.mjs`）
     ...subagentFace, table, agents,
   }
 }

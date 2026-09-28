@@ -9,6 +9,9 @@
  * 装配端差（SHELL.md §4 显式登记两项 + 取值面一项，随搬运）：`cwd` = 项目根（注入的
  * `projects.currentCwd()`）——**非** `process.cwd()`；不附着 M1 装配钩子（本端读面未接）；不连外部
  * 工具服务器（本端无此面）。
+ * **R3 执行面缝（#523②）**：档尾**模块装配期一次接线** —— `installExecRunSeams()`（出档 `exec-run.mjs`：
+ * `configureExecRun` ← 核上提件 `runInterruptible` ∕ `configureProcessTreeKill` ← 核 `killProcessTree` 转口；
+ * VSC `tools/shared.mjs:104-105` 同形）。
  * 零宿主依赖：核函数全部经 `deps` 取值（缺省 = 核单源）⇒ 平 node 直测（零 `electron`）。
  */
 import { execSync } from "node:child_process"
@@ -18,6 +21,8 @@ import { configDir, loadConfig } from "@thincoder/core/config.mjs"
 import { createMemory, syncDir } from "@thincoder/core/memory.mjs"
 import { discoverRules } from "@thincoder/core/rules.mjs"
 import { assembleBuiltinTools } from "@thincoder/core/tools/index.mjs"
+// 执行面两缝（R3 · #523② —— 核件转口，零副本；接线在本档尾）。
+import { installExecRunSeams } from "./exec-run.mjs"
 
 /** 装配缺省面（逐项可注入 —— 断言装配调用序用假 deps；缺省 = 核单源）。 */
 export const DEFAULT_DEPS = Object.freeze({
@@ -93,3 +98,6 @@ export async function assembleFor({ cwd, slot, deps = {} }) {
   validateProvider(agent, config)
   return agent
 }
+
+// ─── 装配期缝接线（R3 · #523② —— 模块装配期一次；VSC `tools/shared.mjs:104-105` 同形）────────
+installExecRunSeams()

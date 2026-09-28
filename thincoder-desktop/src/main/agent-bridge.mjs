@@ -18,6 +18,10 @@
  *  （B1 / 相抵①）；③ `onSubagentApproval` ⇒ `ev:subagent { status: "approval" }`（B5）；④ `onTurnEnd` ⇒
  *  `ev:activity { event: "turnBreak" }`（A7）；⑤ advisor 轮次采样 ⇒ `ev:tool-call` `round` / `model`（A14）；
  *  ⑥ `ev:tool-result` 增 `links`（验存文件链接——相抵② · KD-39）。后三项各由注入面供料（见下 `createBridge`）。
+ * **R3（#520 · `onDistilled` 蒸馏落位）**：回调桥增 `onDistilled`（核 `explore-distill.mjs:150` —— 蒸馏落地时点）
+ *  ⇒ 经注入面 `persistDistilled(key)` **立即重落盘**（**非出站通道**；落盘动作在注入面 —— 桥零宿主依赖律不破；
+ *  端侧装配 = `agent-host.mjs` ⇒ `session-io.mjs` `saveDistilledSlot`；CLI `tool-events.mjs:397` ∕ VSC
+ *  `panel-callbacks.mjs:242` 同式）。
  * 依赖面 = 注入（零宿主依赖 ⇒ 平 node 直测）：`post(channel, payload)` = 主进程出站面 ·
  * `askSingle` / `askBatch` / `askQuestion` = 三门挂起（表与 resolve 在 `suspensions.mjs`，本档只转口、不持表）·
  * `syncLiveOf(key, head)` = 核 sync registry 只读采样（X10 可中止事实——核不可算，须端供给）。
@@ -98,10 +102,11 @@ function subChunkOf(face, a, b) {
  *  （帧 payload 自带同名键时后者胜 —— 形状同原实现）。
  *  **对齐第三批两注入面（皆可缺省 —— 缺 ⇒ 该项零载波，零连带）**：`advisorOf(key)` = advisor 轮次只读采样
  *  （宿主 `agent-host.mjs` 供 `_advisorRound` / `provider.model`；返回 `null` ⇒ 不携两键）；
- *  `extractLinks(text)` = 验存文件链接（宿主 `file-links.mjs` 供 —— 盘上存在闸 + 去重 + 封顶；缺 ⇒ 零链接键）。
+ *  `extractLinks(text)` = 验存文件链接（宿主 `file-links.mjs` 供 —— 盘上存在闸 + 去重 + 封顶；缺 ⇒ 零链接键）·
+ *  `persistDistilled(key)` = 蒸馏落位（R3 · #520 —— `onDistilled` 时点按本键重落盘；缺 ⇒ 零动作）。
  *  relay 面 per-键 scope（`pendingAsync` / `queued` 缓存——核 `createRelayScope`；**多会话互不串味**：
  *  各键 `role#id` 可同名，缓存不得跨键共享）。 */
-export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf, syncLiveOf, now, advisorOf, extractLinks }) {
+export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf, syncLiveOf, now, advisorOf, extractLinks, persistDistilled }) {
   const scopes = new Map() // 会话键 → relay scope（懒建 · 随键存活）
   const scopeOf = (key) => {
     if (!scopes.has(key)) scopes.set(key, createRelayScope())
@@ -221,6 +226,9 @@ export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf,
       // `suspensions.mjs` —— 桥零文案）；工具结果 = 作答串 ∥ 取消串（`QUESTION_CANCELLED`）。
       onQuestion: (question, options) => askQuestion(key, question, options),
       onTaskUpdate: (items) => at("ev:task", { items }),
+      // 蒸馏落位（R3 · #520 —— 核 `explore-distill.mjs:150`）：机器行已被压缩版替换 ⇒ 注入面按本键立即
+      // 重落盘（落盘动作经端侧装配 —— 桥零宿主依赖律不破；缺注入 ⇒ 零动作，不假造落盘）。
+      onDistilled: () => { if (typeof persistDistilled === "function") persistDistilled(key) },
       // 用量回调（R3a · 核 `callbacks.onUsage(response.usage)` —— `thincoder-core/agent.mjs:353`）：**非独立通道** ——
       // 逐次响应累入本键会话级令牌表（`tokensOf(key)` 注入；表缺 ⇒ 零动作），随宿主回合尾 `ev:usage` 载荷出
       // （`docs/desktop/design/IPC.md` §1 `ev:usage` 行「载荷扩」）。
