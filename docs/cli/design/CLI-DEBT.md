@@ -25,7 +25,7 @@
 
 ## 2. 档位登记（现读 as-of 2026-09-25 · 二表）
 
-### 2.1 表 A：≥400 全量（口径 §1-1——**14 档**；原 A4 已消解移 §4-D4）
+### 2.1 表 A：≥400 全量（口径 §1-1——**15 档**；原 A4 已消解移 §4-D4）
 
 | # | 档（`thincoder-cli/` 内） | 现读 | 余量 | 触发 / 状态 | 拆分计划 / 裁定（本册活面表述） | 裁定源（记录面） |
 |---|---|---|---|---|---|---|
@@ -43,13 +43,13 @@
 | A13 | `test/session-store.test.mjs` | **416** | 84 | 触发式（未预拆） | 候选面（评估项）：按用例族 + 夹具自持分档（先例 = KD-23） | 本册首登（≥400 普查面） |
 | A14 | `test/async-settle.test.mjs` | **411** | 89 | 触发式（未预拆） | 候选面（评估项）：digest 批量预算族（`:242` 起）/ 四族接线族（`:339` 起）二分 | 本册首登（≥400 普查面） |
 | A15 | `test/input-lock.test.mjs` | **403** | 97 | 触发式（未预拆） | 候选面（评估项）：busy 门禁族用例抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:458 · `docs/batches/2026-09-19-upstream-channel-availability.md` §:116 |
+| A16 | `src/tui/agent-turn.mjs` | **407**（as-of 2026-09-29） | 93 | 触发式（未预拆）· **越 400 首登**（#448② 实改档：386 ⇒ 407 · +21） | 候选面：送达 ∕ 兜底面抽档（原案）；回合收口层（`runAgentTurnInner` 重武装守卫族）为 #448② 后档内新主体面——拆点届盘按现盘择一 | 原 B2 行转正（源 = `docs/batches/2026-09-24-busy-queue-visible.md` §:459）+ `docs/batches/2026-09-28-tech-debt-closeout.md` §1.19 收正行 ⑥ |
 
-### 2.2 表 B：<400 · 裁定 / 登记案在册（口径 §1-3——9 档）
+### 2.2 表 B：<400 · 裁定 / 登记案在册（口径 §1-3——8 档）
 
 | # | 档（`thincoder-cli/` 内） | 现读 | 触发 / 状态 | 拆分计划 / 裁定（本册活面表述） | 裁定源（记录面） |
 |---|---|---|---|---|---|
 | B1 | `src/acp/bridge.mjs` | **397** | 触发式（未预拆） | 候选两面：桥 edit 路由族（`editSingle` / `editBatch` / `toolRouter`）与历史回放（`replayHistory`） | `docs/batches/2026-09-25-edit-arg-guard.md` 受影响表行 + file-tier-sweep §2 S5-⑤ |
-| B2 | `src/tui/agent-turn.mjs` | **384** | 触发式（未预拆） | 候选面：送达 / 兜底面抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:459 |
 | B3 | `test/ledger-surface.test.mjs` | **378** | 触发式（未预拆） | 越线登记 + 触发式拆分（>300 advisory——CLI 侧无机检门） | `docs/batches/2026-09-25-hygiene-ab.md` §:194 |
 | B4 | `test/memory-scan-bounds.test.mjs` | **371** | 触发式（不拆登记在册） | 「不拆」登记（±2 零结构改）；拆分 = 其面下次实质改动时重判 | `docs/batches/2026-09-20-small-debt-batch.md` §:106 |
 | B5 | `thincoder-cli/src/tui/suspension-drive.mjs` | **341** | 触发式（未预拆） | 候选面：driver 步骤面抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:460 |
@@ -101,6 +101,8 @@
   **B 表补登 2 行**（B8 `test/doc-check.test.mjs` **332** · B9 `test/provider-error-surface.test.mjs` **309**——越 300 咨询线的 <400 未登记档）+ 档数句 **7 → 9** + 表说明同步。**零语义**（读数与登记面）。
 
 - 2026-09-27（**env-config-purge 批 · 收口轮 · eng-designer**——承该批 §5 实施实证）：A4 读数刷新 **499**（余 **1**——注「余量 ≤1 期间禁增；命令分发表外提须先于该档下次触碰」）· B8 读数刷新 **340**（「±0 行」注撤）。**零语义**（读数与登记面）。
+
+- 2026-09-29（**doc-sync-residuals 批 · 设计面残留收正轮 · eng-designer**——承 `docs/batches/2026-09-28-tech-debt-closeout.md` §1.19 收正行 ⑥）：表 A 补登 **A16** `src/tui/agent-turn.mjs` **407**（#448② 实改档：386 ⇒ 407 · +21——越 400 首登 + 拆分预案）；B2 行转正移出（表 A 14 ⇒ **15 档** · 表 B 9 ⇒ **8 档**）。**零语义**（登记面）。
 
 - 2026-09-28（**文档回填与卫生轮**（台账 #516）· eng-designer——同批同笔补记）：`:40` ∕ `:41` 「2026-09-25 本批」两义逐处指名落笔批（**doc-face-closeout 批**——#377 消解径）；B7 ∕ B8 ∕ T2 ∕ T3 的「本批」逐处指名（doc-face-closeout ∕ env-config-purge ∕ cli-small-items）；
   `thincoder-cli/test/memory-sweep-cli.test.mjs` 两处「（拟新增）」按盘去标（`:35` ∕ `:72`——在盘为实）。**零新语义**。

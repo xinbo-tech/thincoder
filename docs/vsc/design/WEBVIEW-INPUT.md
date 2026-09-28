@@ -49,6 +49,8 @@
     · **防悬空**：已标记气泡的原文 ∉ `items` 且非本批 `merged` ⇒ 移除（已被消费且无回声面）。
     · **推送点**：受理 / **五个消费点**（**步边界 pickup** · driver 步骤 1 · 装载① splice · 装载② shift · **会话退出残余直发循环**）/ 忙分支判决（`count` 实况）/ `webviewReady` 握手重推（Reload 冷启按 `items` 重建 N 气泡——幂等快照）。
     **边界**：外部入口队满拒收 = 既有回显气泡**不带标记**（标记只随受理走；拒收提示 = 既有 `showWarningMessage`）；引用失效守卫（气泡已移除 / 清屏 ⇒ `isConnected` 假即弃引用——快照幂等重推自愈）；纯挂起等待面同款（同一规则——无另一形态）；CLI 对位 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1 + `TUI.md` §7.5（待发送块——语义同源、形态各端自落）。
+  - ⑧ **取批面放行 slash（#429 落形 · 2026-09-29）**：两取批点判据换 `consumableAction`（`thincoder-vscode/src/extension/queued-merge.mjs:37` 新导出——`slash` ∕ `turn` 同判可消费）⇒ slash 首条不再滞留队首（复现两臂 + 三用例 + 负控判红在册——源 = `docs/batches/2026-09-28-tech-debt-closeout.md` §5）；
+    落点 = `thincoder-vscode/src/extension/queued-pickup.mjs:35`（步边界）· `:53`（载具取项）。**KD-9 收结**：「堵源」（补 VSC 入队侧判据）未取——前提证伪（VSC 提交面已搬共享核件 `thincoder-render-core/composer/panel.mjs` ⇒ 堵源无处落且必波及桌面）⇒ **以备选结案**；旧「入队门禁不可达」预设（slash 首动作不可达——VSC 面）随本落形收正：slash 可达且就地消费。
 
 - **Shift+Enter** 既有形态零动（`input.js` 分支不处理——换行）。
 - **零改面**：`_turnState` 生命周期 / 单广播 / 派生、录入面（录入不禁；提交面受理分流 = C-B2-6）、中断模态、下拉过滤 / 防抖 / seq、CSS、`index.html`。（`applyBusyLock` 占位符含**第三态**——守卫 > busy > 常态，见 C-B2-5。）
@@ -224,3 +226,5 @@
   **契约判别式 / 容量 / 满队 / 消费点枚举 / 贴图降级面零变**——只追认已交付实现（零新增语义）。
 
 - 2026-09-25（**file-tier-sweep 批 · 评审轮 1 修正轮** · eng-designer——承 `docs/batches/2026-09-25-file-tier-sweep.md` §3 轮次 1 发现 4）：§9 用例面行收正——S3 拆分后 C-B2-6 面两档（`busy-injection-vsc.test.mjs` / `busy-injection-vsc-webview.test.mjs`）；「槽满跨载体」= T-V16-8 入 webview 档。**契约点 / 判别式零变**。
+
+- 2026-09-29（**doc-sync-residuals 批 · 设计面残留收正轮 · eng-designer**——承 `docs/batches/2026-09-28-tech-debt-closeout.md` §1.19 收正行 ⑤ · 台账 #429）：§1 C-B2-6 细则族补 **⑧ 取批面放行**（`consumableAction` 两取批点——slash 不再滞留；KD-9 以备选结案；旧「入队门禁不可达」预设收正）。**零新语义**（落形登记）。

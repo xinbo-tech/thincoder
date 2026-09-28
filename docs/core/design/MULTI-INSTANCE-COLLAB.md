@@ -242,6 +242,7 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
   三态（逐字形态）：纯足迹 ⇒ 逐 target 足迹行；纯认领 ⇒ 仅认领行；混合 ⇒ 认领行 + 足迹行（逐 target，互不相叠）。
 - **降级**：聚合失败 / 目录缺失 / 记录损坏 / 探测失败 ⇒ 零提示、零抛错（工具主流程永不受认领面影响）。
 - **零阻断**：认领命中绝不改变工具执行与结果（写照发——D-MI6 不动）。
+- **端同步调用族登记（#298 转档 · 2026-09-29）**：端侧写前 L3 预检 = **同步调用链**（`thincoder-vscode/src/agent/execute-tools.mjs:187-195`——写前 `peerDomains` 同步聚合，即本 §4.4.4 钩点的端半）；2026-09-18 诊断批**未取证实害**；**条件** = 写路径冻结再次被观测到时归批评估（台账 #298 转档核销）。
 
 #### 4.4.5 成本与降级（N-MI7）
 
@@ -429,4 +430,5 @@ VSC 侧无此形态（各路径现用现读）。
 - 2026-09-25（**single-source-closeout 批 · 实施后重锚（fix）· eng-designer**——承 `docs/batches/2026-09-25-single-source-closeout.md` §5 漂移清单 · 父侧派单）：
   全档 `thincoder-core/peer-domains.mjs` 坐标随实施落盘逐锚实读重锚（`recordPeerWrites:256→254` · `flushPeerDomains:275→273` · `peerDomains:177→175` · `conflicts:188→186` · `peerCollabNote:216→214` · 文案行 `:243→241` · 分隔符行 `:248→246`；
   端 `thincoder-vscode/src/extension/peer-domains.mjs` 侧 `:90-111→:90-107` + 头注 `:8-9→:9-10`；§4.4.1 聚合缓存区 `:154-170→:152-168` · 兼容区块 `:111-118→:109-116`）；零漂锚（`:37` / `:79` / `:34` / `:50/:58`）复核实读。**零新语义**（实施后坐标同步）。
+- 2026-09-29（**doc-sync-residuals 批 · 设计面残留收正轮 · eng-designer**——承 `docs/batches/2026-09-28-tech-debt-closeout.md` §5 三登记句 · 台账 #298）：§4.4.4 补**端同步调用族登记**（写前 L3 预检同步链 + 条件句：写路径冻结再现观测 ⇒ 归批评估）。**零新语义**（转档登记）。
 

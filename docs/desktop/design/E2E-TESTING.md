@@ -195,6 +195,7 @@ _electron.launch({
 > **timer-wake 阶段 2**（VSC + 桌面）落 `T-DSK44`（到期触发面——**拟新增** · 机检面 = 单元域 `thincoder-desktop/test/timer-wake.test.mjs`（离线可产）+ 真机档 `timer-wake-face.test.mjs`（拟新增 · 离线不可产组 ⇒ 人工走查 + 父侧真跑闭合）；判据面单源 = 本节 + `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.12）。
 > **回合中插入批**落 `T-DSK45`（回合中插入——**拟新增** · 机检档 `thincoder-desktop/test/integration/midturn-input.test.mjs` 拟新增 + 单元域 `queued-input.test.mjs`；**离线不可产面** = 人工走查 + 父侧真跑闭合；判据面单源 = `docs/desktop/design/PROJECT.md` §6.1 本批注 ∕ `docs/desktop/design/UI.md` §1「本批注（回合中插入 · 步边界 pickup）」）。
 > **R10 · 子代理面板 ∕ live 面**（flow 批）：真机面 = **右列子代理全族**（出生 ∕ 走时 ∕ ⏹ ∕ 终态留场 ∕ 归档 ∕ 计数贴 ∕ 空态）——**人工走查 + 父侧真跑闭合**（离线不可产组同 T-DSK45；**测试面随全清令取消**——不新增用例号）。
+> **flow 批 · 桌面 ⇒ VSC 对齐（R1–R13 · 真机走查面登记）**：卡三面 ∕ 待发送三态 ∕ 步边界取批 ∕ timer 到期唤醒 ∕ 附件贴图两径 ∕ 文件链接点开 ∕ 失焦通知两档 ∕ 子代理 2s 走时 ∕ provider 四流程 ∕ 悬挂窗四态（R1–R9）· 状态行逐段（CLI 同刻）· 会话流逐面（VSC 同刻）· 会话控制下拉与左列零残留（R11–R13）——**人工走查 + 父侧真跑闭合**（各轮探针读数 = flow 批档 §5 在册）；**测试面随全清令取消**——不新增用例号（单源 = flow 批 §2.3 第 3 条 + R12 未办 5）。
 > 边界 / 错误三条（`T-DSK27b`–`T-DSK27d`）**登记不做**，不静默缩水；编号以 `docs/desktop/design/PROJECT.md` §7 落定序为准（`T-DSK27` = 2026-09-26 落 · `T-DSK32` = 批 B 追加轮落 · `T-DSK37` = R3c 落——自铸披露 = `docs/batches/2026-09-27-render-core-r3.md` §5）。
 
 ## 7. 边界（不做）
@@ -260,3 +261,4 @@ _electron.launch({
 - 2026-09-28（**回合中插入批 · 设计收尾微轮 · eng-designer**——承批档 §5 交付转报落点随正）：§6 `T-DSK45` 行机检面落点随正——`thincoder-desktop/test/agent-host-queued.test.mjs`（U217–U219——原 `thincoder-desktop/test/agent-host.test.mjs` 触 500 硬限按在册预案拆出 ∕ 假面共享 `thincoder-desktop/test/agent-host-harness.mjs`）。明细 = 批档 §2。
 - 2026-09-28（**文档回填与卫生轮**（台账 #516）· eng-designer）：§4 `midturn-input` 行 0 ⇒ **135**（实读 2026-09-28——已落）· §6 `T-DSK45` 行机检面补 **midturn 用例族 U217–U226** 全谱（U216 空位不回收）。**零新语义**。
 - 2026-09-28（**桌面功能对位批 · 设计面收正轮（fix · #129）· eng-designer**——承 flow 批 R10 交付）：§6 按批读注补 **R10 · 子代理面板 ∕ live 面** 行（真机面 = 右列子代理全族——人工走查 + 父侧真跑闭合；测试面随全清令取消）。明细 = `docs/batches/2026-09-28-desktop-feature-parity.md` §2。
+- 2026-09-29（**doc-sync-residuals 批 · flow 真机面同步轮 · eng-designer**——承台账 #549 ∕ flow 批 §2.3 第 3 条 + R12 未办 5）：§6 按批读补 **flow 批 · 桌面 ⇒ VSC 对齐（R1–R13）** 真机走查面行（逐面 + 全清令注）。**零新语义**（登记面）。

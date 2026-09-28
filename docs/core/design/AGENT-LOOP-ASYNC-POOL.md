@@ -32,7 +32,7 @@
   **被否候选**：① 会话层包装（外层按步重入 `runAgent`）——run 级语义全破（mutation / guard 复位、turn 编号帧、Stop 钩子、续跑、压缩链、`_pendingDistill`）；
   ② 在 `callbacks.onTurnEnd` 内注入——通知通道承载隐藏写入（消费方 = 增量保存 / 流 flush），且触发点分散（`completion.mjs` 六分支 + `post-turn.mjs`）、其一在「本轮即 return」路径（注入后消息滞留到下一回合）；
   ③ 核单源 drain 函数 + 载体字段（parent-channel 模式）——队列容器迁移 ⇒ 全部入队路径 / 容量判据 / UI 派生（待发送块 / 状态栏段 / VSC 快照源）连带改（超「只加消费时机」射程）；且合并格式 / 文案属端面 ⇒ 核 drain 须持端文案（域越界）；
-  ④ 与 `send` 消费件合流（`drainInjectedQueue` 泛化）——**触碰 `send` 实现面 ⇒ 出本批范围**（登记上抛）；
+  ④ 与 `send` 消费件合流（`drainInjectedQueue` 泛化）——**触碰 `send` 实现面 ⇒ 出本批范围**（登记上抛；**条件（台账 #251 转档 · 2026-09-29）**：统一需求出现 ∨ 两套「边界消费」逻辑确已漂移 ⇒ 另开批次评估——涉 `send` 机制面 ⇒ 先单拎用户请裁）；
   ⑤ digest / 上行唤醒轮内步边界注入（理由见下「适用面」）；⑥ digest 轮步边界**让位**（run 在边界收束）——核新增退出语义 + 部分消化残面，超本批射程。
 - **适用面 = 用户回合（`autoTurn === false`）**：digest / 上行唤醒轮（系统驱动轮）**不参与**步边界 pickup——该轮域文本 = 整理域，且手动档机械门禁（无权限 handler ⇒ 写被拒；`_inAutoTurn && !autoApprove` ⇒ spawn 拒）会把用户指令降格
   ⇒ 系统轮消费点保持 driver 步骤 1（轮末，零改）；端侧传参面自带分流（autoTurn 轮不传回调）。
@@ -575,6 +575,11 @@ T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13 → `thincoder-cli/test/timer-w
 - **关的射程（措辞收口 · 2026-09-29——承轮 6 顾问疑点）**：闩面零注册（`thincoder-cli/src/tui/timer-watch.mjs:67-68` 已包判据）+ **窗内起算面同判**（关 ⇒ 窗内 `deadline` 亦 `null`——读法 = T-TW6 ∕ T-TW13 同判：关态零自动开轮）；**现盘 CLI 窗内起算面未包判据**（`thincoder-cli/src/tui/suspension-drive.mjs:298` 直取 `pendingTimerDeadline`）⇒ 码面补包判据在册；
   桌面 ∕ VSC 面 `timerWakeEnabled` 单源同判。
 - **端面镜像（同句适用）**：窗内 timer 支的轮中止容纳（本 §6.30.10 容纳句）同句适用 CLI——镜像落点 = `thincoder-cli/src/tui/suspension-drive.mjs:301-315`（代码注释同引本 §6.30.10）。
+- **闩边界面收口（#448 · 2026-09-29 · 实落）**：
+  - ① **模态期抑制 + 关闭后补评估**：用户自发模态在场（picker ∕ wizard）⇒ `fireTimerWake` 零动作（零送达 ∕ 零开轮 ∕ 在途 timer 零触碰；单谓词 = `modalOpen(state)`，`thincoder-cli/src/tui/timer-watch.mjs:80` ∕ 门位 = `:96`）；
+    模态关闭 ⇒ 补评估重同步（`reevalTimerWake` → 闩 `sync()`——按在途到期补点火）——四关闭点装配 = `thincoder-cli/src/tui/pickers.mjs:35` ∕ `thincoder-cli/src/tui/wizard.mjs:170` ∕ `:242` + 注入 = `thincoder-cli/src/tui/index.mjs:174` ∕ `:181`。
+  - ② **异常径重武装 + 会话停 ∕ 显式撤销除外（实落 = 粘滞位）**：回合链尾 `sync()` 上收收口层 `finally`（`thincoder-cli/src/tui/agent-turn.mjs:95-99`——异常 ∕ 中止逃逸的回合照常重武装；正文改名 `runAgentTurnBody` = `:104`）；
+    除外 = 会话停 ∕ 显式撤销——粘滞位 `_timerRearmRevoked`（守卫 `:84-85` ∕ 链头复位 `:157`；Ctrl+C 全停 ⇒ `:221` ∕ 会话停复位前捕获 ⇒ `:400`）⇒ 停态零自动重武装。
 
 ### 6.30.11 阶段 2 · 端面接线（桌面 / VSC）
 
@@ -696,6 +701,9 @@ T-TW22 → `thincoder-vscode/test/agent-lifecycle-singleton.test.mjs`（原址�
 6. 渲染面零定时器纪律沿用（桌面渲染面零 `setTimeout` / `setInterval`——触发面全在主进程闩）。
 
 ## 变更记录
+
+- 2026-09-29（**doc-sync-residuals 批 · 设计面残留收正轮 · eng-designer**——承 `docs/batches/2026-09-28-tech-debt-closeout.md` §1.19 收正行 ① + §5 三登记句）：§6.30.10 门三件沿用块补 **#448 两句**（① 模态期抑制 + 关闭后补评估——`modalOpen` 门 + 四关闭点装配；② 异常径重武装 + 会话停 ∕ 显式撤销除外——实落 = 粘滞位 `_timerRearmRevoked`）；
+  §6.8 被否候选④补 **#251 转档条件句**（另开批次评估前置 = 用户请裁）。**机制语义零改**（#513 CLI 句 = 文档收正大合并轮 D 组已落——本轮零触）。
 
 - 2026-09-28（**文档回填与卫生轮**（台账 #516 · timer-wake 回填面）· eng-designer）：§6.30.12 用例表 T-TW23 行补 **T-TW23b 变体**容纳（非空闲零动作）+ 用例宿主行补 **VSC 修正轮三桩注**（非新号：开关真链 / 窗内 timer 轮中止容纳 / 触发落流——源 = 批档 §5.15）。
   轮次 1 修正（批档 §3 轮次 1 发现 1 / 7）：§6.8 三端句两处去「（拟新增）」（`thincoder-cli/src/tui/queued-pickup.mjs` ∕ `thincoder-desktop/src/main/queued-input.mjs`——在盘为实）；§6.30.12 ∕ §6.30.13 全档自锚重锚 **745**（实读 2026-09-28）。**零新语义**。

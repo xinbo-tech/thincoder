@@ -1731,7 +1731,8 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 | `glm-5.3-flashx` | `true` | **实测**（`thinking:{type:"disabled"}` → 400；裸请求默认开） |
 
 行注保留现有句（`thincoder-core/test/model-specs.test.mjs` 的 `[flashx] F-5` 词锚不变），各补一句「该事实 = 机制位 `thinkAlwaysOn`（单源 = `doc:MODEL-SPECS.md:§16.3`）」**并携逐行证据等级词**——
-`glm-5.3` = **官方口径** · `glm-5.3-flash` = **族沿用**（族据 = `glm-5.3` 行）· `glm-5.3-flashx` = **实测**（与本档证据纪律齐：非实测类须逐条写进行注）。**未取证行一律不声明**（含 `glm-5.2` / `glm-5`——其 `{type:"disabled"}` 受理面未测；D-11 无据不标 ⇒ 判据默认侧 = 可宣称）。
+`glm-5.3` = **官方口径** · `glm-5.3-flash` = **族沿用**（族据 = `glm-5.3` 行）· `glm-5.3-flashx` = **实测**（与本档证据纪律齐：非实测类须逐条写进行注）。**未取证行一律不声明**（D-11）。
+**`glm-5.2` / `glm-5` 取证已落（2026-09-29 · 渠道校验级读数）**：`{type:"disabled"}` 受理且生效（载荷 200 · `reasoning_content` 缺席 ⇒ off 路径存在——族形态与 `glm-5.3` 族相反）⇒ `thinkAlwaysOn` **维持不标**、判据默认侧（可宣称 OFF）成立。
 
 ### 16.4 判据面：`thinkOffPath` —— 「何时可宣称 OFF」（#334 · 定形）
 
@@ -1882,9 +1883,11 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 1. **§15.4-2 自定义开值族行与实测相抵**（`MiniMax-M3` / `minimax-m3`）——**已裁 · 落位（父侧 2026-09-25）**：该行依据「type 机制原生 off 形」与规格表实测
 （`thincoder-core/model-specs.mjs:144-145` / `:169-171`：off 路径 = `thinking:{type:"disabled"}` ✓ rc=0）均指 `{type:"disabled"}` ⇒ 自定义开值族 off 形改 `{ type: "disabled" }`（off 可达）。
 连带面（同变）= §15.4-2 表 · §16.2 派生与生产者第 2 行 · §16.4 表第 3 行 · §16.8 AC-1 / AC-3 · §16.9 T-4 / R-2。
-2. **`glm-5.2` / `glm-5` 的 `thinkAlwaysOn` 未取证**（其枚举含 `none`，但 `{type:"disabled"}` 的受理面未实测）：本批**不标**（D-11）⇒ 判据默认侧 = `true`。取证路径 = 各自渠道的校验级读数；到期 = 该族下次触碰。
+2. **`glm-5.2` / `glm-5` 的 `thinkAlwaysOn`——取证已落（2026-09-29）**（承 `docs/batches/2026-09-28-tech-debt-closeout.md` §5 · 台账 #356）：渠道校验级读数 = `{type:"disabled"}` **受理且生效**（载荷 200 · `reasoning_content` 缺席——off 路径存在，族形态与 `glm-5.3` 族相反）⇒ **维持不标**（D-11）· 判据默认侧（可宣称 OFF）成立。
 
 ## 变更记录
+
+- 2026-09-29（**doc-sync-residuals 批 · 设计面残留收正轮 · eng-designer**——承 `docs/batches/2026-09-28-tech-debt-closeout.md` §1.19 收正行 ③ · 台账 #356）：§16.3 未取证句 + §16.12 上抛 2 收正——`glm-5.2` ∕ `glm-5` 渠道校验级读数入档（`{type:"disabled"}` 受理且生效 ⇒ `thinkAlwaysOn` 维持不标 · 判据默认侧成立）。**零新语义**（取证读数入档）。
 
 - 2026-09-25 · **off 形族收尾 · 设计评审轮 1（pass）修正（fix 轮）**（批次 `2026-09-25-off-family-closeout` · 评审发现 1..12 逐条落位）——主要笔：
   §15.4-1 共享规则并入 **off 哨兵避支**（⓪ 支——设置面板 / 聊天面板 picker 两消费面同源；§16.5 对齐）· §15.4-2 自定义开值族行 **off 形改判 `{type:"disabled"}`**（父侧裁决 · §16.12 项 1——off 可达；

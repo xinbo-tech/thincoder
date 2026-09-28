@@ -721,7 +721,8 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
   **off 记号可达性判据单源 = `thincoder-core/think-off.mjs`**（`thinkOffPath` / `thinkOffShape`）、**档位值域单源 = `specForModel(model).reasoningEffortEnum`**（`thincoder-core/model-specs.mjs`）——核内零第二份族别表。`model` 取 `patch.model ?? 槽现值 activeModel`（同 patch 带 model ⇒ 以新值为准）。
 - **判据句 4（施加面）**：`applySession` 在**模型合并支之后**应用 `data.effort`：`null` / 缺键 ⇒ 不动（沿用既有 config 链）；`"off"` ⇒ `agent.provider.thinking = thinkOffShape(spec)`（effort 族该形为 `null` ⇒ 另置 `agent.provider.reasoningEffort = "none"`——§16.4 载荷门）；
   枚举字面 ⇒ `agent.provider.reasoningEffort = <tier>`。**非活动槽只写盘**，切换时经本支生效；
-  **桌面 ∥ CLI resume 同径本施加面**（桌面 `thincoder-desktop/src/main/session-io.mjs:25` · CLI resume 同径）——**VSC 侧自有施加面**（`thincoder-vscode/src/agent/agent-state.mjs:90` `applySlotSessionState`——端侧自有函数，非本支同径；档位归一单源 = 判据句 3）。
+  **桌面 ∥ CLI resume 同径本施加面**（桌面 `thincoder-desktop/src/main/session-io.mjs:25` · CLI resume 同径）——**VSC 侧无槽 effort 施加面（实读 2026-09-29）**：`thincoder-vscode/src/agent/agent-state.mjs:89-129`（`applySlotSessionState` 槽映射无 `effort`）；
+  + `thincoder-vscode/src/agent/setup.mjs:186-207`（hydrate 只读槽 provider ∕ model）——且 VSC 全树零 `applySession` import ⇒ 槽 `effort` 在 VSC 既不读也不写（端差 = CLI ∕ 桌面写的档位在 VSC 恢复不生效）；**补接线归设计轮**（`applySlotSessionState` 增 effort 映射 + webview 初值播种）；档位归一单源 = 判据句 3。
 - **判据句 5（保存携带 · 防整对象抹除）**：`saveSession` 字段表须带 `effort`（值取当前生效档位；**缺之 ⇒ 下一次回合保存把槽写面结果整对象抹除**——同族缺陷在案）；`newSlotData` 产 `effort: null`（全新槽规范结构同源）。**老槽无该键 ⇒ 读侧按 `null` 容忍——零行为变更**。
 
 **边界情形表**：
@@ -1069,6 +1070,9 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 ## 变更记录
 
 > 分段口径：**上段 = 拆档后各批（条目自顶向下倒序累积——找「最后变更」看上段首条）** · **下段 = 建档期逐批累积（升序）**。
+
+- 2026-09-29（**doc-sync-residuals 批 · 设计面残留收正轮 · eng-designer**——承 `docs/batches/2026-09-28-tech-debt-closeout.md` §1.19 收正行 ② · 台账 #451）：§6.21 判据句 4 收正——「VSC 侧自有施加面」句卸载，改**无槽 effort 施加面**
+  （实读 2026-09-29；证据 = `agent-state.mjs:89-129` 无映射 ∕ `thincoder-vscode/src/agent/setup.mjs:186-207` 只读槽 provider ∕ model ∕ VSC 全树零 `applySession` import；补接线归设计轮）。**零新语义**（结论卸载）。
 
 - 2026-09-28（**文档回填与卫生轮**（台账 #516 · #377 / #373 面）· eng-designer）：§6.7 空窗差 ③ 行「2026-09-25 本批」改指名（**misc-four 批**）；§6.12 补**引文映射**条（代码注释「§6.12①」⇒ §6.14「生命周期联动」——子标相容登记）。**零新语义**。
 
