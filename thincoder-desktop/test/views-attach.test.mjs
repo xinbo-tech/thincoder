@@ -18,7 +18,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { t } from "../renderer/i18n.mjs"
-import { attachmentBar, collectImages, degradedCode, degradedNotice, pasteImages, toImages } from "../renderer/attach.mjs"
+import { attachmentBar, collectImages, degradedCode, degradedNotice, pasteImages, pasteRejects, toImages, unsupportedNotice } from "../renderer/attach.mjs"
 import { attachComposer, composerModel, composerTree, submitDraft } from "../renderer/mount-composer.mjs"
 import { createStore, initialState } from "../renderer/store.mjs"
 import { useSentinels } from "./views-harness.mjs"
@@ -272,12 +272,67 @@ test("U141: 接线面（粘贴 ⇒ 条 ⇒ 并发读毕序入列 ⇒ 移除 ⇒ 
   assert.equal(model().text, "失败", "失败 ⇒ 文本保留")
   assert.equal(errors.some((args) => String(args[0]).includes("msg:send failed")), true, "失败 ⇒ 诊断在场（零静默）")
 
-  // ⑦ 忙态 ⇒ 入队（队条目形载不了附件 ⇒ 图保留 —— 清条判据 = 直发 `ok` 真）
+  // ⑦ 忙态 ⇒ 入队（队条目形载不了附件 ⇒ 图保留 —— 清条判据 = 直发 `ok` 真；「对齐第二批」项 2：`pending[本会话键]`）
   store.set({ tabBadges: { [KEY]: ["running"] } })
   enter("失败")
   await flush()
-  assert.deepEqual(store.get().pool.queue.map((entry) => [entry.title, entry.status]), [["失败", "queued"]], "忙态 ⇒ 入队恰一条（`{title,status}` 形）")
+  assert.deepEqual(store.get().pending[KEY].map((entry) => entry.text), ["失败"], "忙态 ⇒ 入队恰一条（本会话键 —— `{text,ts}` 形）")
+  assert.equal(Number.isFinite(store.get().pending[KEY][0].ts), true, "条目携 `ts` = 入队现刻（待发送气泡时间面）")
+  assert.deepEqual(store.get().pool.queue, [], "右列队列族零写者（席位保留 —— 用户排队消息改住流内）")
   assert.equal(calls.length, 3, "忙态 ⇒ 零增 IPC（队列出口归回合尾）")
   assert.deepEqual(model().attachments.map((entry) => entry.name), ["keep.png"], "入队 ⇒ 图保留（队条目形载不了附件）")
   assert.equal(model().text, "", "入队 ⇒ 文本转队即清输入")
 })
+
+// ─── U206 「对齐第三批」附件面（项 22 粘贴即拒 · 提示行 · 采集 / 发送替换清）────────────
+
+test("U206: 非栅格拒（栅格四型门 · 拒表去重保序 · 提示行两态 · 采集 / 发送替换清）", async (ctx) => {
+  useSentinels(ctx)
+  captureErrors(ctx)
+
+  // ① 栅格门（值源 = VSC `webview/autocomplete.js:126` 同式）：四型 + 非标 `image/jpg` 入条；余拒（不入条）
+  assert.deepEqual(
+    pasteImages(eventOf(fileItem("image/png"), fileItem("image/jpeg"), fileItem("image/jpg"), fileItem("image/gif"), fileItem("image/webp"))).map((item) => item.mime),
+    ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"],
+    "栅格四型（含非标 `image/jpg`）入条",
+  )
+  assert.deepEqual(pasteImages(eventOf(fileItem("image/svg+xml"), fileItem("image/bmp"))), [], "非栅格图 ⇒ 不入条（粘贴即拒 —— 不先显后丢）")
+  assert.deepEqual(pasteRejects(eventOf(fileItem("image/svg+xml"), fileItem("image/heic"), fileItem("image/bmp"))), ["image/svg+xml", "image/heic", "image/bmp"], "拒表 = 非栅格图 mime 串（保序）")
+  assert.deepEqual(pasteRejects(eventOf(fileItem("image/svg+xml"), fileItem("image/svg+xml"))), ["image/svg+xml"], "拒表去重（同型串一枚）")
+  assert.deepEqual(pasteRejects(eventOf(fileItem("text/plain"), fileItem("image/png"))), [], "非图 / 栅格图 ⇒ 不入拒表（文本照粘贴语义不动）")
+  assert.deepEqual(pasteRejects(undefined), [], "事件缺 ⇒ 零项（零抛 —— 采集面同纪律）")
+
+  // ② 提示行构树（项 22）：锚单形 + `${type}` 入词；缺 / 非串 / 空 ⇒ `null`
+  const notice = unsupportedNotice("image/svg+xml")
+  assert.deepEqual([notice.tag, notice.props.class, notice.props["data-notice"]], ["div", "composer-notice", "attach-unsupported"], "提示行 = `composer-notice` 单形（锚 `attach-unsupported`）")
+  assert.deepEqual(notice.children, [t("paste.unsupportedFormat", { type: "image/svg+xml" })], "词键 + `${type}` 入词")
+  assert.deepEqual([unsupportedNotice(""), unsupportedNotice(undefined), unsupportedNotice(7)], [null, null, null], "缺 / 空 / 非串 ⇒ 零节点（禁假造）")
+
+  // ③ 接线面（平 node）：粘贴非栅格 ⇒ 拒 + 提示行（不入条）；下次成功采集 ⇒ 替换清；发送成功 ⇒ 同清
+  const reader = stubReader(ctx)
+  const store = createStore(blank())
+  const host = { invoke: () => Promise.resolve({ ok: true }) }
+  const attached = attachComposer(host, { store })
+  ctx.after(() => attached.detach())
+  const paste = (...items) => attached.handlers.onPaste(eventOf(...items))
+  const model = () => attached.paintComposer()
+
+  paste(fileItem("image/svg+xml", "vector.svg"))
+  assert.equal(model().unsupported, "image/svg+xml", "粘贴即拒 ⇒ 拒型入态（提示行随绘）")
+  const tree = composerTree(model(), attached.handlers)
+  assert.deepEqual(tree.children[0].props["data-notice"], "attach-unsupported", "树面提示行在场（首子 —— 余者零节点）")
+  assert.deepEqual(model().attachments, [], "拒项不入条（零缩略图）")
+  paste(fileItem("image/bmp", "b.bmp"))
+  assert.equal(model().unsupported, "image/bmp", "再拒 ⇒ 换型（后到覆盖）")
+  paste(fileItem("image/png", "ok.png"))
+  reader.settle(reader.pending.at(-1), "data:image/png;base64,OK")
+  await flush()
+  assert.deepEqual([model().unsupported, model().attachments.map((entry) => entry.name)], [null, ["ok.png"]], "成功采集 ⇒ 提示行替换清 + 条入列")
+  paste(fileItem("image/heic", "h.heic"))
+  assert.equal(model().unsupported, "image/heic", "再拒 ⇒ 复在场")
+  attached.handlers.onInput({ target: { value: "发送" } })
+  attached.handlers.onKeyDown({ key: "Enter", shiftKey: false, target: { value: "发送" }, preventDefault: () => {} })
+  await flush()
+  assert.deepEqual([model().unsupported, model().attachments], [null, []], "发送成功 ⇒ 同清（附件面整组归零）")
+})
+

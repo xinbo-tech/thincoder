@@ -2,10 +2,13 @@
  * agent-bridge-subagent.test.mjs — R3b 桥面 relay 分流 ∧ 存活投影直测（`docs/desktop/design/IPC.md` §1 `ev:subagent`
  * 行 · `docs/render-core/design/RENDER-CORE.md` §5 token → patch 全表 / §4 行 21「出生自愈」；批档 §2 ㈠/㈤）。
  *   U162 relay 分流：映射单源（核 `relayEventToSubPatch`）· 前缀剥除（渲染面零析 `role#id/`）· 先例兼容
- *        （`⟦ev⟧stopped` ⇒ `cancelled` · `error` 不载）· 内容 chunk 与嵌套剥除**不入对话流**（KD-RC-6）·
+ *        （`⟦ev⟧stopped` ⇒ `cancelled` · `error` 不载）· 内容 chunk 四面 ⇒ **`ev:subchunk`**（text / think /
+ *        工具调用 / 工具输出 —— 「对齐第二批」项 3 KD-RC-6 收正：内容回显 = 核件 tail-3 / 展开）·
  *        非 relay 面零回归（`⟦ev⟧` ⇒ `ev:activity` · 平文本 ⇒ `ev:token`）· per-键 scope 互不串味；
  *   U163 存活投影（出生自愈拍体面）：在飞实例 ⇒ `[model]` 形 / queued 形（`syncLive` 恒 false）· 终态出表
- *        ⇒ 零再断言 · 载体口径（agent ∥ agent.history）· 拍数回执。
+ *        ⇒ 零再断言 · 载体口径（agent ∥ agent.history）· 拍数回执；
+ *   U196 「对齐第三批」三接缝：`onSubagentApproval` 两态（`tool: null` = 清态 · 缺 id / role ⇒ 零投）·
+ *        `onTurnEnd` ⇒ `turnBreak`（无 `fields`）· `links` 载波（注入面命中 / 空 / 缺三臂）· `ok` 判据核单源（全角 / 状态位）。
  * 纪律：平 node 直测（零 electron / 零网 / 零真实 agent）—— 假 `post` 收序 + 假 agent 载体。
  */
 import { test } from "node:test"
@@ -13,13 +16,13 @@ import assert from "node:assert/strict"
 import { createBridge } from "../src/main/agent-bridge.mjs"
 
 const KEY = "1"
-/** 桥夹具：假 `post`（收序）+ 三门空转 + sync registry 采样面（`eng-coder#1` 命中）。 */
-function makeBridge({ syncLiveOf } = {}) {
+/** 桥夹具：假 `post`（收序）+ 三门空转 + sync registry 采样面（`eng-coder#1` 命中）+ 链接采样面（可选）。 */
+function makeBridge({ syncLiveOf, extractLinks, advisorOf } = {}) {
   const out = []
   const bridge = createBridge({
     post: (channel, payload) => out.push([channel, payload]),
     askSingle: () => {}, askBatch: () => {}, askQuestion: () => {},
-    syncLiveOf,
+    syncLiveOf, extractLinks, advisorOf,
   })
   return { out, bridge }
 }
@@ -67,20 +70,36 @@ test("U162: relay 分流（映射单源 · 前缀剥除 · 先例兼容 · 零�
   // ⑦ 消费不泄漏：表外 ⟦ev⟧（approval 等）· 嵌套剥除 ⇒ 零投（既非 ev:subagent 亦非 ev:token）
   assert.deepEqual(emit("coder#8/⟦ev⟧approval\x1e1\x1e2\x1eapproval\x1ebash"), [], "表外核事件 ⇒ 消费无载荷")
   assert.deepEqual(emit("eng-coder#1/explore#2/⟦ev⟧done\x1e0\x1e0\x1edone\x1e"), [], "嵌套 relay（剥除不路由）⇒ 零投")
-  // ⑧ 内容 chunk（KD-RC-6）：前缀文本 / 工具调用行 / 工具输出行 / **think chunk** **不入对话流**
-  assert.deepEqual(emit("coder#1/正文不该进流"), [], "前缀内容 chunk ⇒ 零投（前缀字面不泄漏入主流）")
-  assert.deepEqual(emit("eng-coder#1/explore#2/嵌套内容"), [], "嵌套内容 chunk ⇒ 零投")
-  assert.deepEqual(emit("coder#1/read_file"), [], "前缀工具名 chunk ⇒ 零投")
+  // ⑧ 内容 chunk 四面分流（「对齐第二批」项 3 · KD-RC-6 收正）：relay 前缀 ⇒ `ev:subchunk`（**不入对话流** ——
+  //    前缀剥除在宿主 ⇒ 载荷 `text` 为剥后原文；嵌套链折 `sub`），四面逐字段
+  assert.deepEqual(emit("coder#1/正文行"), [
+    ["ev:subchunk", { key: KEY, role: "coder", id: 1, kind: "text", text: "正文行", face: "text" }],
+  ], "text 面：前缀剥除 + 逐字段（形状 = `IPC.md` §1 `ev:subchunk` 行）")
+  assert.deepEqual(emit("eng-coder#1/explore#2/嵌套内容")[0][1], {
+    key: KEY, role: "eng-coder", id: 1, kind: "text", text: "嵌套内容", sub: "explore#2", face: "text",
+  }, "嵌套链 ⇒ `sub` = inner 链（`/` 连接；前缀仍剥除）")
   out.length = 0
-  at.onReasoning("coder#1/前缀思考不该进流")
-  assert.deepEqual(out, [], "带前缀的 think chunk ⇒ 零投（R3c：`onReasoning` 与 `onToken` 同律 —— 前缀字面不泄漏入主流）")
+  at.onReasoning("coder#1/前缀思考行")
+  assert.deepEqual(out, [
+    ["ev:subchunk", { key: KEY, role: "coder", id: 1, kind: "think", text: "前缀思考行", face: "think" }],
+  ], "think 面（R3c：`onReasoning` 与 `onToken` 同律 —— 前缀字面不泄漏入主流）")
   at.onReasoning("先读文件")
-  assert.deepEqual(out, [["ev:reasoning", { key: KEY, text: "先读文件" }]], "无前缀 think chunk ⇒ `ev:reasoning`（零回归 —— 载荷与正文同形）")
+  assert.deepEqual(out.at(-1), ["ev:reasoning", { key: KEY, text: "先读文件" }], "无前缀 think chunk ⇒ `ev:reasoning`（零回归 —— 载荷与正文同形）")
   out.length = 0
-  at.onToolCall("coder#1/read_file", { path: "a.mjs" })
-  assert.deepEqual(out, [], "带前缀的工具调用行 ⇒ 零投（工具名不作第二展示面 —— D20 块形无工具位）")
-  at.onToolOutput("coder#1/bash", "chunk", "t9")
-  assert.deepEqual(out, [], "带前缀的工具输出行 ⇒ 零投")
+  at.onToolCall("coder#1/read_file", { path: "a.mjs" }, "t9")
+  assert.deepEqual(out, [
+    ["ev:subchunk", { key: KEY, role: "coder", id: 1, kind: "tool", text: 'read_file {"path":"a.mjs"}', tool: "read_file", face: "toolCall" }],
+  ], "工具调用面：kind=tool · `tool` = relay 前缀 rest · 参数 JSON 随 `text`（零 `cmd` —— 无 `command`）")
+  out.length = 0
+  at.onToolCall("coder#1/bash", { command: "npm test" }, "t9")
+  assert.equal(out[0][1].cmd, "npm test", "工具调用面：`command` 在场 ⇒ 携 `cmd`（结构化参数摘要）")
+  out.length = 0
+  at.onToolOutput("coder#1/bash", "输出行\n", "t9")
+  assert.deepEqual(out, [
+    ["ev:subchunk", { key: KEY, role: "coder", id: 1, kind: "tool", text: "输出行\n", tool: "bash", face: "toolOutput" }],
+  ], "工具输出面：kind=tool · `text` = 输出原文 · 零 `cmd`（输出面不进状态区）")
+  // 零泄漏负向锁：带前缀内容在主流两通道（`ev:token` / `ev:reasoning`）零投
+  for (const [channel] of out) assert.equal(channel, "ev:subchunk", "前缀内容 ⇒ 恰 `ev:subchunk`（主流水面零投）")
 
   // ⑨ 非 relay 面零回归：无前缀 ⟦ev⟧ ⇒ ev:activity（内联形）；平文本 ⇒ ev:token；无前缀工具行 ⇒ 原两通道
   const inline = emit("⟦ev⟧approval\x1e1\x1e2\x1eapproval\x1ebash")
@@ -152,4 +171,46 @@ test("U163: 存活投影（在飞两态 ⇒ `[model]` / queued 形 · 终态零�
   assert.equal(at.reassertLive({ _asyncSubagents: new Map([["5", { id: 5, role: "coder", status: "done", done: true }]]) }), 0, "终态条目 ⇒ 零投（不复活）")
   assert.equal(at.reassertLive({}), 0, "池缺位 ⇒ 零投")
   assert.equal(at.reassertLive(null), 0, "载体非对象 ⇒ 零投（零抛）")
+})
+
+// ─── U196 「对齐第三批」桥面三接缝（审批态 / 子回合边界 / 链接载波）─────────────
+
+test("U196: 「对齐第三批」三接缝 —— `onSubagentApproval` 两态 · `onTurnEnd` 无 `fields` · `links` 载波三臂 · `ok` 判据核单源", () => {
+  const { out, bridge } = makeBridge()
+  const at = bridge(KEY)
+
+  // ① 子代理审批态（B5 · 核 `child-permission.mjs:40-44`）：`tool` = 待审批工具名；`null` = 清态（键在场）
+  out.length = 0
+  at.onSubagentApproval({ id: 2, role: "eng-coder", model: "m1", tool: "apply_patch" })
+  assert.deepEqual(out, [["ev:subagent", { key: KEY, status: "approval", role: "eng-coder", id: 2, model: "m1", tool: "apply_patch" }]],
+    "approval patch 逐字段（status / role / id / model / tool —— 与核回调四字段一一对应）")
+  out.length = 0
+  at.onSubagentApproval({ id: 2, role: "eng-coder", model: "m1", tool: null })
+  assert.deepEqual(out[0][1].tool, null, "清态 = `tool: null`（键在场 —— 归约面按 `null` 清 ⏸）")
+  out.length = 0
+  assert.equal(at.onSubagentApproval({ tool: "x" }), false, "缺 id / role ⇒ 零投（防半形块）")
+  assert.deepEqual(out, [], "缺键 ⇒ 零投（零抛）")
+
+  // ② 子回合边界（A7）：`ev:activity` 清游标形 —— **无 `fields`**（内联形判别键不得在场 —— 判别写死单源）
+  out.length = 0
+  at.onTurnEnd({}, 4)
+  assert.deepEqual(out, [["ev:activity", { key: KEY, event: "turnBreak" }]], "`onTurnEnd` ⇒ `{ event: \"turnBreak\" }`（恰一帧 · 零 `fields`）")
+
+  // ③ 链接载波（相抵② · KD-39）：注入面命中 ⇒ 携键；空数组 / 未注入 ⇒ 零键（禁假链接）
+  const link = { raw: "src/a.mjs:12", path: "/p/src/a.mjs", line: 12 }
+  const hit = makeBridge({ extractLinks: () => [link] })
+  hit.bridge(KEY).onToolResult("read", "src/a.mjs:12", "t1")
+  assert.deepEqual(hit.out[0], ["ev:tool-result", { key: KEY, id: "t1", ok: true, result: "src/a.mjs:12", links: [link] }], "命中 ⇒ `links` 携键（值 = 注入面产物原样）")
+  const miss = makeBridge({ extractLinks: () => [] })
+  miss.bridge(KEY).onToolResult("read", "x", "t2")
+  assert.equal("links" in miss.out[0][1], false, "空数组 ⇒ 零 `links` 键")
+  const bare = makeBridge()
+  bare.bridge(KEY).onToolResult("read", "x", "t3")
+  assert.deepEqual(Object.keys(bare.out[0][1]).sort(), ["id", "key", "ok", "result"], "未注入 ⇒ 零 `links` 键（零连带）")
+
+  // ④ `ok` 判据核单源（项 2）：全角 `Error：` 头 ∧ 独立成行状态位 ⇒ 假；正文提及 ⇒ 不误报
+  const j = makeBridge()
+  const okOf = (text) => { j.out.length = 0; j.bridge(KEY).onToolResult("bash", text, "t4"); return j.out[0][1].ok }
+  assert.deepEqual([okOf("Error：全角头"), okOf("$ x\n(exit code 1)"), okOf("plain"), okOf("文中提到 (exit code 1) 不误报")], [false, false, true, true],
+    "半 / 全角头与状态位 ⇒ 假；正文提及 ⇒ 真（核 `isToolFailure` 判据直取，零第二口径）")
 })

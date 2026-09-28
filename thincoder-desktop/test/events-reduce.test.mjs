@@ -4,13 +4,16 @@
  *   ① 块流写者（U87）· ② 回合态与位标码集（U88）· ③ 标题刷新 + 回合尾 flush 窄口与 `sessionMeta`（U89）·
  *   ④ 卡面两切片与提问出场（T-DSK24 —— 批 A 归约半：`ev:question` / `ev:task` 写切片 · `clearQuestion` · `stopped` 终局摘项）·
  *   ⑤ 占用读数归约（T-DSK29 —— 批 B：`ev:usage` 按会话 `key` 写切片 · 有效读数门〔数字且 > 0〕· 同值原引用 ·
- *      订阅面含 `ev:usage`）。
+ *      订阅面含 `ev:usage`）·
+ *   ⑥ 挂起 / 消化两通道归约（U193 —— 「桌面空闲唤醒」批：`ev:susp` 计数切片 · `ev:digest` 消化行切片〔起跑 / 终态两态〕·
+ *      订阅面 13 ⇒ 15）。
  * 平 node 直测：零 DOM · 零 electron · 零网 —— 假 `on`（订阅捕获）+ 假 `invoke`（调用记账 · 载荷逐字）。
  * 词面零字面：断言只钉结构锚（`data-*` / 键集 / 引用等值），不引文案副本。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { applyPage, clearApproval, clearQuestion, openSession, reduce } from "../renderer/events.mjs"
+import { applyFlags, clearApproval, clearQuestion, openSession, reduce } from "../renderer/events.mjs"
+import { applyPage } from "../renderer/page-read.mjs"
 import { attachEvents } from "../renderer/events-subscribe.mjs"
 import { createStore, initialState } from "../renderer/store.mjs"
 
@@ -150,25 +153,25 @@ test("U89 标题刷新 + 回合尾窄口 + sessionMeta：三径各恰一次 / �
     calls.push(args)
     return Promise.resolve({ rows: [{ key: "1", title: "T" }] })
   }
-  let tails = 0
-  const off = attachEvents({ on, store, invoke, onTurnTail: () => { tails += 1 } })
-  assert.equal(handlers.size, 12, "十二通道全订阅（R3b 增 `ev:subagent` · R3c 增 `ev:reasoning`）")
+  let tails = []
+  const off = attachEvents({ on, store, invoke, onTurnTail: (key) => { tails.push(key) } })
+  assert.equal(handlers.size, 16, "十六通道全订阅（R3b 增 `ev:subagent` · R3c 增 `ev:reasoning` · 「对齐第二批」增 `ev:subchunk` · 「桌面空闲唤醒」增 `ev:susp` ∕ `ev:digest` · 「对齐第三批」增 `ev:ledger`）")
 
   handlers.get("ev:activity")({ key: KEY, event: "turn", n: 1, max: 2 })
   await tick()
   assert.deepEqual(calls, [], "回合起 ⇒ 零重调")
-  assert.equal(tails, 0, "回合起 ⇒ 窄口零动")
+  assert.deepEqual(tails, [], "回合起 ⇒ 窄口零动")
 
   handlers.get("ev:activity")({ key: KEY, event: "done" })
   await tick()
   assert.deepEqual(calls, [["sessions:list"]], "回合尾 `done` ⇒ sessions:list 恰一次（单参逐字）")
-  assert.equal(tails, 1, "回合尾 `done` ⇒ 窄口恰一次（与标题刷新同触发点）")
+  assert.deepEqual(tails, [KEY], "回合尾 `done` ⇒ 窄口恰一次 ∧ **携回合尾事件键**（flush 目标 —— 「对齐第二批」项 2）")
   assert.deepEqual(store.get().sessions, [{ key: "1", title: "T" }], "行随动入态")
 
   handlers.get("ev:activity")({ key: KEY, event: "stopped" })
   await tick()
   assert.deepEqual(calls, [["sessions:list"], ["sessions:list"]], "回合尾两形（`done` / `stopped`）皆刷新 · 各恰一次")
-  assert.equal(tails, 2, "回合尾两形皆触窄口")
+  assert.deepEqual(tails, [KEY, KEY], "回合尾两形皆触窄口（键逐次携入）")
 
   handlers.get("ev:activity")({ key: KEY, event: "done", fields: "x" })
   handlers.get("ev:activity")({ key: KEY, event: "stopped", fields: "x" })
@@ -178,15 +181,15 @@ test("U89 标题刷新 + 回合尾窄口 + sessionMeta：三径各恰一次 / �
   handlers.get("ev:approval")({ key: KEY, promptId: "p1", shape: "single" })
   await tick()
   assert.equal(calls.length, 2, "内联形（值：串 / null / undefined —— 键在场即内联）/ 回合起 / 他通道 ⇒ 零重调")
-  assert.equal(tails, 2, "内联形（键在场）/ 回合起 / 他通道 ⇒ 窄口零动")
+  assert.deepEqual(tails, [KEY, KEY], "内联形（键在场）/ 回合起 / 他通道 ⇒ 窄口零动")
 
   handlers.get("ev:error")({ key: KEY, message: "boom" })
   await tick()
   assert.deepEqual(calls, [["sessions:list"], ["sessions:list"], ["sessions:list"]], "错误径（三径之三）⇒ 刷新恰一次")
-  assert.equal(tails, 3, "错误径 ⇒ 窄口同刻恰一次（判据单源 = `isTurnTail`）")
+  assert.deepEqual(tails, [KEY, KEY, KEY], "错误径 ⇒ 窄口同刻恰一次（判据单源 = `isTurnTail`）")
 
   off()
-  assert.equal(handlers.size, 0, "退订句柄十二路全退")
+  assert.equal(handlers.size, 0, "退订句柄十三路全退")
 
   // 窄口非函数（批档 §1.14：未接线调用面合法 ⇒ 零抛零动作 · 标题刷新不受累）
   const bareHandlers = new Map()
@@ -201,7 +204,7 @@ test("U89 标题刷新 + 回合尾窄口 + sessionMeta：三径各恰一次 / �
   await tick()
   assert.deepEqual(bareCalls, [["sessions:list"]], "非函数窄口：零抛 + 标题刷新照常（两出口同触发点 · 各司其职）")
   offBare()
-  assert.equal(bareHandlers.size, 0, "第二实例退订十二路全退（实例隔离）")
+  assert.equal(bareHandlers.size, 0, "第二实例退订十三路全退（实例隔离）")
 
   const page = (meta) => applyPage(
     stateOf({ history: { hasOlder: true, inFlight: true, page: 200 } }),
@@ -260,7 +263,7 @@ test("T-DSK24 卡面两切片：首写自种 / 同键就地替换 / clearQuestio
   assert.deepEqual(Object.keys(planned.tasks), [KEY], "他键零写")
 })
 
-test("T-DSK29 占用读数：按 key 写切片 / 有效读数门（未至 · 非正 · 非数 ⇒ 原引用）/ 同值原引用 / 十二通道接线", async () => {
+test("T-DSK29 占用读数：按 key 写切片 / 有效读数门（未至 · 非正 · 非数 ⇒ 原引用）/ 同值原引用 / 十六通道接线", async () => {
   const blank = stateOf()
   const seeded = reduce(blank, { channel: "ev:usage", key: KEY, percent: 42 })
   assert.deepEqual(seeded.usage, { [KEY]: 42 }, "按会话 key 写切片（值 = `percent` 原样）")
@@ -284,16 +287,20 @@ test("T-DSK29 占用读数：按 key 写切片 / 有效读数门（未至 · 非
     store,
     invoke: () => Promise.resolve({}),
   })
-  assert.equal(handlers.size, 12, "十二通道全订阅（R3b 增 `ev:subagent` · R3c 增 `ev:reasoning`）")
+  assert.equal(handlers.size, 16, "十六通道全订阅（R3b 增 `ev:subagent` · R3c 增 `ev:reasoning` · 「对齐第二批」增 `ev:subchunk` · 「桌面空闲唤醒」增 `ev:susp` ∕ `ev:digest` · 「对齐第三批」增 `ev:ledger`）")
   assert.ok(handlers.has("ev:usage"), "订阅含 `ev:usage`")
   assert.ok(handlers.has("ev:subagent"), "订阅含 `ev:subagent`（D20 块面）")
   assert.ok(handlers.has("ev:reasoning"), "订阅含 `ev:reasoning`（D19 推理块）")
+  assert.ok(handlers.has("ev:subchunk"), "订阅含 `ev:subchunk`（「对齐第二批」项 3 内容面）")
+  assert.ok(handlers.has("ev:susp") && handlers.has("ev:digest"), "订阅含两新通道（挂起计数面 ∕ 消化轮边界面 —— 与 `thincoder-desktop/src/preload/preload.cjs` `EVENT_CHANNELS` 同册）")
   handlers.get("ev:usage")({ key: KEY, percent: 42 })
   assert.deepEqual(store.get().usage, { [KEY]: 42 }, "通道 → 归约 → store 落态")
   handlers.get("ev:usage")({ key: KEY, percent: null })
   assert.deepEqual(store.get().usage, { [KEY]: 42 }, "门外载荷 ⇒ 状态零动（原引用不落 store）")
+  handlers.get("ev:susp")({ key: KEY, active: true, running: 1 })
+  assert.deepEqual(store.get().susp[KEY], { active: true, running: 1, queued: 0, pending: 0, done: 0 }, "两新通道同径：`ev:susp` → 归约 → store 落态（计数切片）")
   off()
-  assert.equal(handlers.size, 0, "十二路全退")
+  assert.equal(handlers.size, 0, "十五路全退")
 })
 
 test("#459 游标清点两族（回合尾三径 / 段界 ev:tool-call ⇒ 零 `streaming` 真项 ∧ 新块对象；非活动键 / 无命中 ⇒ 块面零写）", () => {
@@ -310,3 +317,105 @@ test("#459 游标清点两族（回合尾三径 / 段界 ev:tool-call ⇒ 零 `s
   const idle = stateOf({ blocks: [{ kind: "user", text: "x" }] })
   assert.deepEqual([reduce(idle, { channel: "ev:activity", key: KEY, event: "done" }).blocks, reduce(live, { channel: "ev:activity", key: "9", event: "done" }).blocks], [idle.blocks, live.blocks], "无游标命中 ∥ 非活动键回合尾 ⇒ 块面引用不变（零写两臂）")
 })
+
+test("U193 挂起 / 消化两通道归约（桌面空闲唤醒 · T-DSK41）：`ev:susp` 计数切片（四值 + `active` 归一 · 同键就地替换 · 同值原引用）· `ev:digest` 消化行切片（起跑 / 终态两态 · `end` 原地更新保起跑 `n`）", () => {
+  const blank = stateOf()
+  // ① `ev:susp` —— 按会话 `key` 写切片（首写自种 · 同键就地替换 · 零键门，与 `usage` 同形）
+  const one = reduce(blank, { channel: "ev:susp", key: KEY, active: true, running: 2, queued: 1, pending: 1, done: 0 })
+  assert.deepEqual(one.susp, { [KEY]: { active: true, running: 2, queued: 1, pending: 1, done: 0 } }, "四计数 + `active` 原样入切片（核 `backgroundCounts` 直传形）")
+  assert.deepEqual(blank.susp, undefined, "纯写：原态零改（首写自种）")
+  assert.equal(reduce(one, { channel: "ev:susp", key: KEY, active: true, running: 2, queued: 1, pending: 1, done: 0 }), one, "同键同值 ⇒ 原引用（零重绘）")
+  const exit = reduce(one, { channel: "ev:susp", key: KEY, active: false, running: 0, queued: 0, pending: 0, done: 0 })
+  assert.deepEqual([exit.susp[KEY].active, exit.susp[KEY].running], [false, 0], "退出帧 ⇒ 同键就地替换（`active:false` + 清零 —— 段回落两态词）")
+  assert.deepEqual(Object.keys(reduce(one, { channel: "ev:susp", key: "9", active: true }).susp).sort(), ["1", "9"], "他键写他键槽")
+  assert.deepEqual(reduce(blank, { channel: "ev:susp", key: KEY, active: "yes", running: NaN, queued: 0, pending: "2", done: null }).susp[KEY],
+    { active: false, running: 0, queued: 0, pending: 0, done: 0 }, "`active` 只收严格真 · 四计数非数 ⇒ 归一 0（不落 `NaN` ∥ 字面入词面）")
+  // ② `ev:digest` —— 起跑 / 终态两态（`end` **原地更新本键游标**：保留起跑 `n` —— 终态句需 n）
+  const start = reduce(blank, { channel: "ev:digest", key: KEY, status: "start", n: 3 })
+  assert.deepEqual(start.digest[KEY], { status: "start", n: 3, tier: null, from: null, msg: null }, "起跑态落切片（`n` = 起跑 pending 数）")
+  assert.equal(reduce(start, { channel: "ev:digest", key: KEY, status: "start", n: 3 }), start, "同键同值 ⇒ 原引用")
+  const ask = reduce(blank, { channel: "ev:digest", key: KEY, status: "start", n: 0, tier: "ask", from: "coder#2", msg: "要不要改？" })
+  assert.deepEqual([ask.digest[KEY].tier, ask.digest[KEY].from, ask.digest[KEY].msg], ["ask", "coder#2", "要不要改？"], "ask 档随行 `from` / `msg`（核 `upstreamAskLabelVars` 形；`n = 0` 轮照落 —— 零计数行归渲染面）")
+  assert.equal(reduce(blank, { channel: "ev:digest", key: KEY, status: "start", n: 1, tier: "other" }).digest[KEY].tier, null, "`tier` 表外值 ⇒ `null`（档位两值闭集）")
+  const end = reduce(start, { channel: "ev:digest", key: KEY, status: "end", ok: true, ms: 2500 })
+  assert.deepEqual(end.digest[KEY], { status: "end", n: 3, tier: null, from: null, msg: null, ok: true, ms: 2500 }, "终态 ⇒ 原地更新本键游标（**保留起跑 `n`**；`ok` / `ms` 覆写）")
+  assert.deepEqual(reduce(blank, { channel: "ev:digest", key: KEY, status: "end", ok: false, ms: 10 }).digest[KEY], { status: "end", ok: false, ms: 10 }, "无起跑帧的裸 `end` ⇒ 照落（渲染面零组 ⇒ 只摘不建；`ok:false` 原样）")
+  assert.equal(reduce(end, { channel: "ev:digest", key: KEY, status: "end", ok: true, ms: 2500 }), end, "同值终态 ⇒ 原引用（幂等）")
+  assert.equal(reduce(start, { channel: "ev:digest", key: KEY, status: "cap" }), start, "表外 `status` ⇒ 零写（起跑 / 终态两态闭集）")
+  assert.equal(reduce(start, { channel: "ev:digest", key: "9", status: "end", ok: true, ms: 1 }).digest[KEY], start.digest[KEY], "他键零扰本键切片")
+})
+
+// ─── U204 「对齐第三批」归约面（清扫 / 停止痕 / turnBreak / chunk 清旗 / 载波两处 / 台账行 / 审批两键）───
+
+test("U204: 「对齐第三批」归约 —— interrupted 清扫 · stopMark（页读清点）· turnBreak · chunk 清显式旗 · round/model · techInfo · ledger · approval 两键", () => {
+  // ① 中止清扫（项 5）：`stopped` 终局 ⇒ running 工具块就地 `interrupted`（已结算块零扰）；体 / 折叠态不动
+  const t1 = reduce(stateOf(), { channel: "ev:tool-call", key: KEY, id: "t1", name: "Bash", argsSummary: "sleep 10" }, 1000)
+  const t2 = reduce(t1, { channel: "ev:tool-call", key: KEY, id: "t2", name: "Read", argsSummary: "a.mjs" }, 1100)
+  const settled = reduce(t2, { channel: "ev:tool-result", key: KEY, id: "t2", ok: true, result: "ok" }, 1200)
+  const stopped = reduce(settled, { channel: "ev:activity", key: KEY, event: "stopped" })
+  assert.deepEqual(stopped.blocks.map((block) => block.status), ["interrupted", "done"], "running ⇒ interrupted ∥ 已结算块零扰")
+  assert.deepEqual(Object.keys(stopped.blocks[0]).includes("result"), false, "未结算块零结果 / 零展开键改（体 / 折叠态不动）")
+  assert.equal(stopped.stopMark[KEY], true, "停止痕切片落本键（项 6）")
+  assert.deepEqual(stopped.tabBadges[KEY], ["done"], "回合尾位标照常（去 `running` 置 `done`）")
+  assert.equal(reduce(stopped, { channel: "ev:activity", key: KEY, event: "stopped" }), stopped, "同键痕已在场 ⇒ 原引用（零重绘）")
+  const other = reduce(stopped, { channel: "ev:activity", key: "9", event: "stopped" })
+  assert.deepEqual(other.blocks.map((block) => block.status), ["interrupted", "done"], "非活动键：本键块面零写")
+  assert.equal(other.stopMark["9"], true, "痕面非块面 ⇒ 任意键可写（不设键门）")
+  // 停止痕清点（项 6 · 页读整置即失）：首屏页读 ⇒ 摘本键痕；非首屏（回填）⇒ 零动作
+  const reread = applyPage(stopped, { ok: true, messages: [], hasOlder: false, next: null, meta: {} }, { key: KEY, before: null })
+  assert.equal(reread.stopMark[KEY], undefined, "首屏页读 ⇒ 停止痕清点（**运行期痕 —— 非落盘件**）")
+  const otherReread = applyPage(other, { ok: true, messages: [], hasOlder: false, next: null, meta: {} }, { key: KEY, before: null })
+  assert.equal(otherReread.stopMark["9"], true, "他键痕零扰（清点只及本键）")
+  const backfill = applyPage(stopped, { ok: true, messages: [{ kind: "user", text: "old" }], hasOlder: false, next: 1, meta: {} }, { key: KEY, before: 40 })
+  assert.equal(backfill.stopMark[KEY], true, "回填径（`before` 在场）⇒ 痕不动（清点只在整置径）")
+
+  // ② 子回合边界（项 7）：`turnBreak` ⇒ **清游标**（尾部流式块收束）；非回合尾（位标 / 痕面零动）
+  const streaming = reduce(stateOf(), { channel: "ev:token", key: KEY, text: "片" })
+  assert.equal(streaming.blocks.at(-1).streaming, true, "夹具：流式游标在场")
+  const cut = reduce(streaming, { channel: "ev:activity", key: KEY, event: "turnBreak" })
+  assert.deepEqual([cut.blocks.at(-1).streaming, cut.blocks.at(-1).text], [false, "片"], "清游标 ⇒ 同块去 `streaming`（文面不动 —— 下片起新块）")
+  assert.equal(cut.tabBadges[KEY], undefined, "**非回合尾**：位标零动（三径判据不含本形）")
+  assert.equal(cut.stopMark, undefined, "非回合尾：痕面零写")
+  assert.equal(reduce(cut, { channel: "ev:activity", key: KEY, event: "turnBreak" }), cut, "已清 ⇒ 原引用（无命中）")
+  assert.equal(reduce(streaming, { channel: "ev:activity", key: "9", event: "turnBreak" }), streaming, "非活动键 ⇒ 块面零写（键门）")
+
+  // ③ chunk 清显式折叠旗（项 3）：`ev:tool-output` ⇒ `expanded` 键摘除（运行期展开由增量驱动）
+  const folded = reduce(stateOf(), { channel: "ev:tool-call", key: KEY, id: "t9", name: "Bash", argsSummary: "x" }, 1)
+  const manual = { ...folded, blocks: folded.blocks.map((block) => ({ ...block, expanded: false })) }
+  const chunked = reduce(manual, { channel: "ev:tool-output", key: KEY, id: "t9", chunk: "line" })
+  assert.equal("expanded" in chunked.blocks.at(-1), false, "chunk 到达 ⇒ 显式折叠旗清（`expanded` 键摘除）")
+  assert.equal(chunked.blocks.at(-1).result, "line", "结果照累（累积语义不动）")
+
+  // ④ 轮次载波（项 14）：`round` / `model` 在场才落块键（缺 ⇒ 键缺席 —— 禁假造）
+  const advisor = reduce(stateOf(), { channel: "ev:tool-call", key: KEY, id: "a1", name: "advisor", argsSummary: "review", round: 2, model: "gpt-x" }, 5)
+  assert.deepEqual([advisor.blocks.at(-1).round, advisor.blocks.at(-1).model], [2, "gpt-x"], "advisor 两键入块")
+  const plain = reduce(stateOf(), { channel: "ev:tool-call", key: KEY, id: "b1", name: "Bash", argsSummary: "x" }, 5)
+  assert.deepEqual(["round" in plain.blocks.at(-1), "model" in plain.blocks.at(-1)], [false, false], "无载荷 ⇒ 两键缺席")
+  assert.deepEqual(["round" in reduce(stateOf(), { channel: "ev:tool-call", key: KEY, name: "advisor", round: 0 }).blocks.at(-1)], [false], "非正 `round` ⇒ 不落（不造事实）")
+  const settledAdvisor = reduce(advisor, { channel: "ev:tool-result", key: KEY, id: "a1", ok: true, result: "R" }, 9)
+  assert.deepEqual([settledAdvisor.blocks.at(-1).round, settledAdvisor.blocks.at(-1).model], [2, "gpt-x"], "收束 ⇒ 两键原样承接（同块换态 —— 轮次段结果到达后不消失）")
+  const settledPlain = reduce(plain, { channel: "ev:tool-result", key: KEY, id: "b1", ok: true, result: "R" }, 9)
+  assert.deepEqual(["round" in settledPlain.blocks.at(-1), "model" in settledPlain.blocks.at(-1)], [false, false], "无载波块收束 ⇒ 两键仍缺席（零 `undefined` 键）")
+
+  // ⑤ `techInfo` 载波（项 9）：`ev:error` 在场才落块键；错误径仍判回合尾（位标 + 游标）
+  const err = reduce(stateOf(), { channel: "ev:error", key: KEY, message: "崩", techInfo: "at x" })
+  assert.deepEqual([err.blocks.at(-1).kind, err.blocks.at(-1).text, err.blocks.at(-1).techInfo], ["error", "崩", "at x"], "裁荷三键入块")
+  assert.deepEqual(err.tabBadges[KEY], ["done"], "错误径 = 回合结算（三径同判据）")
+  assert.equal(reduce(stateOf(), { channel: "ev:error", key: KEY, message: "崩" }).blocks.at(-1).techInfo, undefined, "缺 `techInfo` ⇒ 键缺席")
+
+  // ⑥ 台账行切片（项 12）：行集过滤 + 原样（warn 归一严格真）+ 同值原引用 + 按键分槽；空集 / 缺 ⇒ 零写
+  const ledger = reduce(stateOf(), { channel: "ev:ledger", key: KEY, lines: [{ text: "变化", warn: false }, { text: "明细", warn: true }] })
+  assert.deepEqual(ledger.ledgerLines[KEY], [{ text: "变化", warn: false }, { text: "明细", warn: true }], "行集逐字入切片（`{text,warn}` 归一）")
+  assert.equal(reduce(ledger, { channel: "ev:ledger", key: KEY, lines: [{ text: "变化", warn: false }, { text: "明细", warn: true }] }), ledger, "同值（文本 + warn 真值同）⇒ 原引用")
+  assert.deepEqual(reduce(ledger, { channel: "ev:ledger", key: "9", lines: [{ text: "他键" }] }).ledgerLines["9"], [{ text: "他键", warn: false }], "他键写他键槽（按会话键分槽）")
+  const blank = stateOf()
+  assert.equal(reduce(blank, { channel: "ev:ledger", key: KEY, lines: [] }), blank, "空行集 ⇒ 零写（禁假造）")
+  assert.equal(reduce(blank, { channel: "ev:ledger", key: KEY, lines: [{ warn: true }, { text: "" }] }), blank, "行文本非串 / 空 ⇒ 逐行弃（净空 ⇒ 零写）")
+
+  // ⑦ 审批载荷两键（相抵① / 外围 1）：`owner` / `diff` 入条目（白名单两键 —— 卡面增量载波）
+  const gate = reduce(stateOf(), { channel: "ev:approval", key: KEY, promptId: "p1", shape: "single", tool: "apply_patch", owner: "coder#2", diff: { patch: "@@ -1 +1 @@" }, extra: "drop" })
+  assert.deepEqual(Object.keys(gate.pool.approvals[0]).sort(), ["diff", "owner", "promptId", "shape", "tool"], "白名单四键 + 两新键（表外键零落）")
+  assert.deepEqual(gate.pool.approvals[0].diff, { patch: "@@ -1 +1 @@" }, "`diff` 原样透传（核 `diffInfo`）")
+  assert.equal("owner" in reduce(stateOf(), { channel: "ev:approval", key: KEY, promptId: "p2", shape: "batch" }).pool.approvals[0], false, "缺键 ⇒ 条目不落（零 `undefined` 键）")
+})
+

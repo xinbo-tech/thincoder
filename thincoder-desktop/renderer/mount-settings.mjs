@@ -17,6 +17,9 @@
  *      （该档 300 行硬线 —— 批档 §2.15）；`config:write` 成功同回带 ⇒ 词表重刷与向导闸随新档态（**免二跳**）。
  *   ⑥ 向导步 3 目录出口走装配面注入的项目面链（`onProjectOpened` = `app.mjs` `openDir`，含刷新 + 「点开即可续」）：
  *      注入点在本档、连线归向导接线族，本档零算法副本；信息行两读数由本档随动复读。
+ *   ⑦ 「对齐第三批」三面（本批）：**P14 出值规范化**（行控件型三值 → 出值：数值 ⇒ `Number(v)`〔空 / 非数 / `0` ⇒ 零发送〕·
+ *      布尔 ⇒ `.checked` · 串 ⇒ 原串）· **P15 具名控件即改即存**（十键单键 patch 直发；回执就位刷、失败回退）·
+ *      **F-Esc 关面板**（Esc ⇒ 既有 `settings:close` 出口，单一实现 —— 绑定宿主 = `document`，见 `handlers` 段后注释）。
  * 纪律：零 `node:` / 零裸包（静态闭包判据 = `test/guard-closure.test.mjs`）· 逐通道回执形单源 = IPC.md §2。
  */
 import { initDict } from "./i18n.mjs"
@@ -49,24 +52,49 @@ const listOf = (value) => (Array.isArray(value) ? value : [])
 /** 失败串归一：回执 `reason` 非空串 ⇒ 直传（核错误串 / 表内码）；缺 ⇒ 端侧形判码（零静默 —— 调用面另记错）。 */
 const reasonOf = (receipt) => (typeof receipt?.reason === "string" && receipt.reason !== "" ? receipt.reason : "invalid-shape")
 
-/** agent 段变更集：DOM `[data-field]` 可写行 × 现态读数 diff ⇒ 只发变更路径；无变更 ⇒ `null`（零发送）。 */
-function agentPatch(state) {
+/** agent 段现态读数表（路径 → 值原样；缺 / 非数组 ⇒ 空表）。 */
+function currentFields(state) {
   const current = new Map()
-  for (const field of listOf(state?.settings?.agent?.fields)) {
-    if (typeof field?.path === "string" && field.path !== "") current.set(field.path, String(field.value ?? ""))
-  }
+  for (const field of listOf(state?.settings?.agent?.fields)) if (typeof field?.path === "string" && field.path !== "") current.set(field.path, field.value)
+  return current
+}
+
+/** 行出值（P14）：`checkbox` ⇒ `.checked`；`number` ⇒ `Number(v)`；余 ⇒ 原串。**无效数值（空 / 非数）⇒ `undefined`**
+ *  —— 父侧裁定（2026-09-28）：真删键经 `settings:agent` 不可达（契约 = `docs/desktop/design/IPC.md` §2「档位控件注」：
+ *  `patch` 表达不了删键；核类型表拒 `null` / `undefined`）⇒ 落「**零发送**（不写盘 · 零乐观改 · 控件回退现值）」；
+ *  消解路 = 主侧写链 + 核清除形扩族（另批）。**数值 0 不在此列**（`Number.isFinite` 真且非空串 ⇒ 照发 ——
+ *  核类型表只校 `typeof`，值域语义归消费面）。 */
+function rowValue(input) {
+  if (input?.type === "checkbox") return input.checked === true
+  const raw = typeof input.value === "string" ? input.value : ""
+  if (input?.type !== "number") return raw
+  const value = Number(raw)
+  return raw.trim() === "" || !Number.isFinite(value) ? undefined : value
+}
+
+/** agent 段变更集（**泛化兜底行面**）：DOM `[data-field]` 可写行 × 现态读数 diff ⇒ 只发变更路径；无变更 ∨ 无效数值
+ *  行 ⇒ 零发送（后者见 `rowValue` —— 删键不可达，不写盘）。作用域 = 设置面挂载根（`data-field` 锚他处也在用 ——
+ *  如会话头字段 —— 收在槽内即不误取；容器缺位 ⇒ 零变更）。 */
+function agentPatch(state) {
+  if (typeof document.querySelector !== "function") return { patch: null, skipped: 0 }
+  const scope = document.querySelector(SETTINGS_SLOT)
+  if (scope === null || typeof scope.querySelectorAll !== "function") return { patch: null, skipped: 0 }
+  const current = currentFields(state)
   const patch = {}
-  let changed = false
-  for (const row of document.querySelectorAll('[data-section="agent"] .settings-field-row[data-field]')) {
-    if (typeof row.hasAttribute !== "function" || row.hasAttribute("data-readonly")) continue
+  let changed = false, skipped = 0
+  for (const row of scope.querySelectorAll("[data-field]")) {
+    if (row.getAttribute("data-readonly") !== null) continue // 只读行（敏感 / 非标量）不参与变更集（真 DOM / 假面同径）
     const path = row.getAttribute("data-field")
     const input = row.querySelector("input")
     if (typeof path !== "string" || path === "" || input === null) continue
-    if (input.value === current.get(path)) continue
-    patch[path] = input.value
+    const value = rowValue(input)
+    if (value === undefined) { console.error(`[renderer] settings:agent skipped: invalid value for ${path}`); skipped += 1; continue }
+    const held = current.get(path)
+    if (Object.is(value, held) || String(value) === String(held)) continue
+    patch[path] = value
     changed = true
   }
-  return changed ? patch : null
+  return { patch: changed ? patch : null, skipped }
 }
 
 /**
@@ -278,8 +306,8 @@ export function attachSettings(host, deps = {}) {
 
   /** agent 段提交（`settings:agent` 写）：只发变更路径；无变更 / 无可写行 ⇒ **零发送**。 */
   async function saveAgent() {
-    const patch = agentPatch(store.get())
-    if (patch === null) return
+    const { patch, skipped } = agentPatch(store.get())
+    if (patch === null) { if (skipped > 0) paintSettings(); return } // 无效行在场 ⇒ 回退现值（与具名径同形 —— 裁定句三）
     const receipt = await ask("settings:agent", { patch })
     if (receipt.ok !== true) {
       report("agent", receipt, "settings:agent")
@@ -383,7 +411,38 @@ export function attachSettings(host, deps = {}) {
     setSettings({ open: false, notice: null })
   }
 
-  /** 设置面出口族（锚名逐字 = 视图 `data-action` 同域）。 */
+  /** 具名控件出值（P14 × P15 单键）：`boolean` ⇒ `.checked`；数值 ⇒ `Number(v)`（× `scale` —— 分钟面回毫秒）；
+   *  余 ⇒ 原串；无效数值（空 / 非数 ⇒ 同 `rowValue`）/ 目标缺位 ⇒ `undefined`（调用面零发送）。 */
+  function namedOut(entry, event) {
+    const target = event?.target ?? event?.currentTarget ?? null
+    if (target === null) return undefined
+    if (entry.kind === "boolean") return target.checked === true
+    const raw = typeof target.value === "string" ? target.value : ""
+    if (entry.kind !== "number") return raw
+    const value = Number(raw)
+    if (raw.trim() === "" || !Number.isFinite(value)) return undefined
+    return entry.scale === undefined ? value : Math.round(value * entry.scale)
+  }
+
+  /** 具名控件写路（P15 即改即存 —— 单键 patch 直发，零保存键）：回执 ⇒ `fields` 就地刷新（核已回读）；失败 ⇒ 段级
+   *  失败面（**零乐观写** —— 控件随重绘回退）；无效出值 ⇒ **零发送**（见 `rowValue` 注释）。 */
+  async function applyNamedField(entry, event) {
+    const value = namedOut(entry, event)
+    if (value === undefined) {
+      console.error(`[renderer] settings:agent skipped: invalid value for ${entry.path}`)
+      paintSettings()
+      return
+    }
+    const receipt = await ask("settings:agent", { patch: { [entry.path]: value } })
+    if (receipt.ok !== true) {
+      report("agent", receipt, "settings:agent")
+      return
+    }
+    clearReport()
+    setSettings({ agent: { state: "ready", fields: listOf(receipt.fields) } })
+  }
+
+  /** 设置面出口族（锚名逐字 = 视图 `data-action` 同域；具名控件面 = 十键同路）。 */
   const handlers = {
     onToggleLang: (target) => void toggleLang(target),
     onCloseSettings: () => closeSettings(),
@@ -391,10 +450,24 @@ export function attachSettings(host, deps = {}) {
     onVerify: (name) => void verifyChannel(name),
     onRemoveProvider: (name) => void removeProvider(name),
     onSaveAgent: () => void saveAgent(),
+    onNamedField: (entry, event) => void applyNamedField(entry, event),
     onUseModel: (provider, name) => void useModel(provider, name),
     onTier: (provider, model, level) => void setTier(provider, model, level),
     onAddMcp: (event) => void addMcp(event),
     onRemoveMcp: (name) => void removeMcp(name),
+  }
+
+  /** Esc 关闭（F-Esc —— 一律经既有 `closeSettings` 出口，单一实现；向导态不在本项）：**绑定宿主 = `document`**
+   *  （沿 `renderer/views/tabbar.mjs` 加速键先例 ∥ VSC 同径 `webview/chat.js:96-104`）—— 面板为窗口级覆盖层，
+   *  点按入口后焦点仍在入口钮（面板外）⇒ 绑面板节点收不到本键；闸取**现刻**态（开 ∧ 非向导占槽）—— 闭态 /
+   *  向导态零动作；宿主无 `addEventListener` 面（假 DOM / 平 node）⇒ 零绑定。 */
+  if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+    document.addEventListener("keydown", (event) => {
+      if (event?.key !== "Escape") return
+      const state = store.get()
+      if (state?.settings?.open !== true || occupies(state)) return
+      closeSettings()
+    })
   }
 
   /** 向导出口族（六出口 —— 接线族住 `mount-onboarding.mjs`，共享三项注入 ⇒ 本档零副本）。 */

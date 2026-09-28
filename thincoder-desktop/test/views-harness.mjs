@@ -79,6 +79,15 @@ export function installSeam(fake) {
     },
     set(value) { Object.defineProperty(this, "_value", { value: String(value), writable: true, configurable: true }) },
   })
+  /** 控件型面（真 DOM `input.type` 语汇 —— 属性面同源；「对齐第三批」P14 控型三值消费点）。 */
+  def("type", {
+    get() { return String(this.attrs.get("type") ?? "") },
+  })
+  /** 勾选态面（真 DOM `checked` 语汇：属性面 = 初值 · 写入 = 活态覆盖 —— 非独立存储）。 */
+  def("checked", {
+    get() { return Object.hasOwn(this, "_checked") ? this._checked === true : this.attrs.has("checked") },
+    set(value) { Object.defineProperty(this, "_checked", { value: value === true, writable: true, configurable: true }) },
+  })
   return {
     slot(name, tag = "section") {
       const node = fake.element(tag)

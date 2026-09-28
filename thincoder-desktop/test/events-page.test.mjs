@@ -8,7 +8,8 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { applyFlags, applyPage, openSession, reduce } from "../renderer/events.mjs"
+import { applyFlags, openSession, reduce } from "../renderer/events.mjs"
+import { applyPage } from "../renderer/page-read.mjs"
 import { createStore, initialState } from "../renderer/store.mjs"
 import { STATUS_KEYS } from "../renderer/mount-status.mjs"
 import { submitVerdict } from "../renderer/mount-pool.mjs"
@@ -64,7 +65,7 @@ test("U90 activeSession + 页应用：开 / 关页 · 首屏两径 · 回填 · 
   }
   const stale = stateOf({ blocks: [{ kind: "error", text: "stale" }], following: false, pendingNew: 3 })
   const first = applyPage(stale, page, { key: KEY, before: null })
-  assert.deepEqual(first.blocks.map((block) => block.kind), ["user", "assistant", "reasoning", "tool"], "首屏非空 ⇒ 整置（旧块皆去）")
+  assert.deepEqual(first.blocks.map((block) => block.kind), ["user", "reasoning", "assistant", "tool"], "首屏非空 ⇒ 整置（旧块皆去）；助手条目序 = 推理 → 正文（「对齐第三批」项 8 收正 —— 单源 = 核 `flow/block.mjs:97-105`）")
   assert.deepEqual(Object.keys(first.blocks.at(-1)).sort(), ["argsSummary", "id", "kind", "name", "result"], "页块面不落 status / durationMs")
   assert.equal(first.following, true, "回底")
   assert.equal(first.pendingNew, 0)
@@ -75,7 +76,7 @@ test("U90 activeSession + 页应用：开 / 关页 · 首屏两径 · 回填 · 
   assert.deepEqual(blankPage.history, { hasOlder: false, inFlight: false, page: null }, "next === null ⇔ hasOlder === false")
 
   const older = applyPage(first, { ok: true, messages: [{ kind: "user", text: "old" }], hasOlder: false, next: 12, meta: {} }, { key: KEY, before: 40 })
-  assert.deepEqual(older.blocks.map((block) => block.kind), ["user", "user", "assistant", "reasoning", "tool"], "回填 ⇒ 前插")
+  assert.deepEqual(older.blocks.map((block) => block.kind), ["user", "user", "reasoning", "assistant", "tool"], "回填 ⇒ 前插（同序制：推理先于正文）")
   assert.deepEqual(older.history, { hasOlder: false, inFlight: false, page: null }, "hasOlder=false ⇒ page 归 null")
   const mid = applyPage(first, { ok: true, messages: [{ kind: "user", text: "old" }], hasOlder: true, next: 20, meta: {} }, { key: KEY, before: 40 })
   assert.deepEqual(mid.history, { hasOlder: true, inFlight: false, page: 20 })

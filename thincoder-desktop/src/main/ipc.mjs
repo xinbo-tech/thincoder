@@ -1,11 +1,14 @@
 /**
- * ipc.mjs — IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）：**二十八项** = 配置读取 + 项目面
+ * ipc.mjs — IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）：**二十九项** = 配置读取 + 项目面
  * `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` / `session:switch` /
  * `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` + 作答响应
  * `question:respond` —— `question` 工具真作答面 + 历史页 `history:page`
  * + 回合驱动 `msg:send` / `msg:interrupt`（宿主未注入 ⇒ fail-loud）+ **设置族十二项**
  * （provider 四 / model / agent 参数 / MCP 三 / 配置写 / 语言）+ **项目级信息两项**（台账 / 相位）+ 会话级偏好写面 `session:prefs`
- * + **子 agent 停止出口 `subagent:stop`（R3b 落 · 白名单末位）**
+ * + **子 agent 停止出口 `subagent:stop`（R3b 落 · 白名单末位）** + **文件链接打开 `file:open`（「对齐第三批」
+ * 相抵② · KD-39 —— 白名单末位：`shell.openPath` 出口；纯判据面住 `file-links.mjs`）**
+ * + **台账行出站接线（「对齐第三批」KD-38）**：`pushLedgerLines` 挂 `session:resume` 成功径（出站面经
+ * `setLedgerEmit` 注入；扫描 / 出站逻辑住 `project-info.mjs`）
  * （定序 = 预载白名单同序）。
  * 白名单**单源** = `src/preload/preload.cjs` 的 `CHANNELS`（批档 §2.6 D-3）：主侧经 `createRequire` 读之并**据以注册**
  * （一条白名单项 = 一个 `ipcMain.handle` 面 ⇒ 无通道名第二副本）；白名单项无处理体 ⇒ 注册期抛（fail-closed）。
@@ -13,7 +16,7 @@
  * `channels` 读数口径 = 本次运行**实际分发集合**（顺序去重 —— 批档 §2.11 收正⑦）。
  */
 import { createRequire } from "node:module"
-import { dialog, ipcMain } from "electron"
+import { dialog, ipcMain, shell } from "electron"
 import { loadConfig } from "@thincoder/core/config.mjs"
 import { normalizeLocale, projectDictionary } from "@thincoder/core/i18n.mjs"
 import { PRELOAD_PATH } from "./window.mjs"
@@ -26,7 +29,9 @@ import { pageHistory } from "./session-slots.mjs"
 import { configWrite, isConfigured, modelList, settingsAgent } from "./settings.mjs"
 import { providerList, providerRemove, providerSave, providerVerify } from "./providers.mjs"
 import { mcpList, mcpRemove, mcpSave } from "./mcp-servers.mjs"
-import { batchStatus, ledgerRead } from "./project-info.mjs"
+import { batchStatus, ledgerRead, pushLedgerLines } from "./project-info.mjs"
+// 文件链接纯判据面（「对齐第三批」相抵② · KD-39 —— `file:open` 载荷合格性；出站 = `shell.openPath`）。
+import { fileOpenTarget } from "./file-links.mjs"
 
 const require = createRequire(import.meta.url)
 
@@ -42,6 +47,13 @@ let agentHost = null
 /** 注入宿主（`main.mjs` 启动序：通道注册前）—— 本档只此一处赋值。 */
 export function setAgentHost(host) {
   agentHost = host
+}
+
+/** 台账行出站面（「对齐第三批」KD-38）：`main.mjs` 启动序注入（与 `setAgentHost` 同点）——`ev:ledger` 是
+ *  项目级自产事件（非会话回调）⇒ 不经宿主桥；非函数注入 ⇒ 清零（零出站，不假造）。 */
+let ledgerEmit = null
+export function setLedgerEmit(post) {
+  ledgerEmit = typeof post === "function" ? post : null
 }
 
 /** 宿主取值：未装配 ⇒ 抛（fail-loud ⇒ `invoke` 拒绝；不吞 / 不落假成功）。 */
@@ -92,17 +104,21 @@ const HANDLERS = Object.freeze({
   "question:respond": questionRespond,
   "session:prefs": sessionPrefs,
   "subagent:stop": subagentStop,
+  "file:open": fileOpen,
 })
 
 /** `project:open(payload)` ⇒ `{ cwd, recent }`：载荷 `{ path }` **可选**（`docs/desktop/design/IPC.md:42`）——
  *  给定时直接采用（不走对话框）；缺省 ⇒ 主进程**原生目录选择**（`dialog` 注入 —— D-2；
  *  取消 ⇒ `filePaths[0] ?? null`）；路径无效 ⇒ fail-soft（`projects.mjs` 判据：现状不变 + 零写）。 */
-function openProjectChannel(payload) {
+async function openProjectChannel(payload) {
   const pick = async () => {
     const { filePaths } = await dialog.showOpenDialog({ properties: ["openDirectory"] })
     return filePaths[0] ?? null
   }
-  return openProject({ path: payload?.path, pick })
+  const before = currentCwd()
+  const receipt = await openProject({ path: payload?.path, pick })
+  if (receipt?.cwd !== before) agentHost?.abortSuspensions() // §2.2 切项目级联：旧项目全键挂起窗中止
+  return receipt
 }
 
 /** `project:recent`（无入参）⇒ `{ cwd, recent }`：族最新 mtime 降序前 10 —— 核槽面回读、零新存储（KD-9）。 */
@@ -126,7 +142,14 @@ function sessionDelete(payload) {
   if (receipt?.ok === true && payload?.slot != null) agentHost?.dispose(String(payload.slot))
   return receipt
 }
-function sessionResume() { return resumeSession(currentCwd()) }
+function sessionResume() {
+  const receipt = resumeSession(currentCwd())
+  // 台账行出站点（「对齐第三批」KD-38 —— 落点 = 成功径：会话键天然在手）：后台面（`void`）—— 不经回执等待。
+  if (ledgerEmit && receipt?.ok === true && receipt.slot != null) {
+    void pushLedgerLines({ cwd: receipt.cwd, key: String(receipt.slot), post: ledgerEmit })
+  }
+  return receipt
+}
 
 /** `history:page(payload)` ⇒ `{ ok, messages, hasOlder, next, meta, flags, seed? }` ∥ `{ ok:false, reason }`：读面
  *  转口 `session-slots.mjs`（零算法副本；cwd 取主进程当前项目内存态 —— 同会话族）。载荷 `{ key, before }`。
@@ -173,6 +196,18 @@ function questionRespond(payload) {
  *  （`id` = 实例号——与 `ev:subagent` 同源同值）—— 转口宿主子 agent 面（核既有取消出口 —— 零算法副本；
  *  `thincoder-desktop/src/main/subagent-face.mjs`）；宿主未注入 ⇒ fail-loud 直抛（沿 `approval:respond` 先例）。 */
 function subagentStop(payload) { return requireAgentHost().stopSubagent(payload?.key, payload?.id, payload?.role) }
+
+/** `file:open(payload)` ⇒ `{ ok, reason }`（「对齐第三批」相抵② · KD-39）：载荷 `{ path, line? }` ——
+ *  `path` = 盘上绝对路径（宿主 `extractFileLinks` 产物 = **验存件**）；`line` 本批不施加（`shell.openPath`
+ *  无行参 —— 载荷备用；端差登记 = `docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」相抵②）。
+ *  出口 = 系统默认程序（`shell.openPath`：成功 ⇒ 空串；失败 ⇒ 错误串**直传出栈**）；
+ *  非串 / 空串载荷 ⇒ `bad-path`（零抛 —— 渲染面按 `console.error` 处置，零静默）。 */
+async function fileOpen(payload) {
+  const path = fileOpenTarget(payload)
+  if (path === null) return { ok: false, reason: "bad-path" }
+  const failed = await shell.openPath(path)
+  return failed ? { ok: false, reason: failed } : { ok: true, reason: null }
+}
 
 /** 在装配 agent 列表（MCP 随动面用）：宿主未注入 ⇒ `null`（无宿主面 ⇒ 随动空操作，非报错——
  *  配置已落盘，下次装配生效）。 */

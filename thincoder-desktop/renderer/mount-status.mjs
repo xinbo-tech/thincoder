@@ -11,12 +11,14 @@ import { store as defaultStore } from "./store.mjs"
 import { mountStatus } from "./views/statusline.mjs"
 
 export const STATUS_SLOT = '[data-slot="status"]' // 状态栏容器锚（= 窗口级底行 —— 骨架 `renderer/index.html`）
-/** 重挂触发切片（段随切片走：位标 / 模式位 / 计数 / 回合 / 读数 / 计时 / 台账 / 输入提示 / 标题 / 块面 / 词表 ——
- *  D22 承载 16 段数据源全集）。 */
+/** 重挂触发切片（段随切片走：位标 / 模式位 / 计数 / 回合 / 读数 / 计时 / 台账 / 输入提示 / 标题 / 块面 / 词表 / 挂起 ——
+ *  D22 承载 16 段数据源全集；段 14 源 = **本会话队** `pending`（「对齐第二批」项 2 —— 右列队列族不再承载）；
+ *  段 3 支①源 = `susp`（挂起计数切片 —— 桌面空闲唤醒批）。 */
 export const STATUS_KEYS = [
   "tabs", "activeTab", "tabBadges", "locale", "usage", "tasks", "turns", "turnStarts",
-  "tokens", "timers", "projectInfo", "sessions", "pool", "blocks",
+  "tokens", "timers", "projectInfo", "sessions", "pending", "blocks",
   "sessionFlags", // 模式位四布尔切片（banner 四段源 —— D22；写径 = 页读 / 出站回执两处，同归约点）
+  "susp", // 挂起计数切片（段 3 支①挂起句源 —— 桌面空闲唤醒批；写径 = 归约面 `ev:susp`）
 ]
 
 /** 状态行一族装配（装配期一次）：返回挂载面 `paintStatus`（`store` 注入面 = 测试缝）。 */

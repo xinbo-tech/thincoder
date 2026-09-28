@@ -7,6 +7,7 @@ import { after, test } from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { ACTIVITY_EVENTS, createAgentHost, ITEM_VERDICTS } from "../src/main/agent-host.mjs"
+import { NOTIFY_TEXTS } from "../src/main/notify.mjs"
 import { useSlotSandbox } from "./slot-sandbox.mjs"
 
 const sandbox = useSlotSandbox() // 模块级：`send` 三路皆终点保存 ⇒ 不沙箱即写真实用户 sessions 目录
@@ -49,8 +50,9 @@ function fakeDeps({ provider = PROVIDER, invalid = false } = {}) {
   return { deps, order, seen, config, memory, agent }
 }
 
-/** 假宿主：**真** `assembleFor` + 假 deps（装配路径真跑）+ 假 `emit` 收序。 */
-function makeHost({ provider, invalid, run } = {}) {
+/** 假宿主：**真** `assembleFor` + 假 deps（装配路径真跑）+ 假 `emit` 收序。
+ *  提示面三件透传（桌面空闲唤醒批 —— 缺省 = 不注入 ⇒ 零动作）。 */
+function makeHost({ provider, invalid, run, notify, focused, reveal } = {}) {
   const out = []
   const fd = fakeDeps({ provider, invalid })
   const host = createAgentHost({
@@ -58,8 +60,18 @@ function makeHost({ provider, invalid, run } = {}) {
     run: run ?? (() => Promise.resolve()),
     deps: fd.deps,
     projects: { currentCwd: () => CWD },
+    notify, focused, reveal,
   })
   return { host, out, ...fd }
+}
+
+/** 等到谓词成立（驱动循环异步 —— 最多 50 拍）。 */
+async function until(fn, label = "condition") {
+  for (let i = 0; i < 50; i += 1) {
+    if (fn()) return
+    await new Promise((done) => setTimeout(done, 0))
+  }
+  throw new Error(`timeout waiting: ${label}`)
 }
 
 /** 起一回合并取回桥面（假 `run` 捕获 `cb`；返回常驻 Promise ⇒ 在飞不结算，桥面直调不受影响）。 */
@@ -124,8 +136,8 @@ test("U81: 同键复用 · dispose 后重装配 · 装配表清", async () => {
   assert.equal(h.order.filter((x) => x === "createAgent").length, 2, "dispose 后重装配（恰二次）")
 })
 
-// ─── U82 桥面十一回调（十通道映射 + `onUsage` 并入会话累计）──────
-test("U82: 十一回调 → 十通道（载荷键集按 IPC.md §1/§2）· `onUsage` 非通道（回合尾 `ev:usage` 携载荷）· onToolResult 第 4 参透传", async () => {
+// ─── U82 桥面十一回调（十一通道映射 + `onUsage` 并入会话累计）──────
+test("U82: 十一回调 → 十一通道（载荷键集按 IPC.md §1/§2）· `onUsage` 非通道（回合尾 `ev:usage` 携载荷）· onToolResult 第 4 参透传", async () => {
   const { cb, out, host } = await boot()
   const arms = [
     [() => cb.onToken("plain text"), "ev:token", { key: KEY, text: "plain text" }],
@@ -290,11 +302,19 @@ test("U86: send 三态 · 中断（abort + 门拒结算）· 结算三映射（d
   await new Promise((r) => setImmediate(r))
   assert.equal(h2.out.filter(([, p]) => p.event === "stopped").length, 1, "abort 后拒绝 ⇒ stopped")
   assert.equal(h2.out.filter(([c]) => c === "ev:error").length, 0, "abort 分支零错误面")
-  const h3 = makeHost({ run: () => Promise.reject(new Error("provider 500")) })
+  const err500 = new Error("provider 500")
+  const h3 = makeHost({ run: () => Promise.reject(err500) })
   await h3.host.send(KEY, "x")
   await new Promise((r) => setImmediate(r))
-  assert.deepEqual(h3.out.at(-1), ["ev:error", { key: KEY, message: "provider 500" }], "非 abort 拒绝 ⇒ ev:error")
+  assert.deepEqual(h3.out.at(-1), ["ev:error", { key: KEY, message: "provider 500", techInfo: err500.stack }],
+    "非 abort 拒绝 ⇒ ev:error ∧ `techInfo` = `err.stack` 逐字（「对齐第三批」项 9 · KD-37）")
   assert.deepEqual(h3.host.interrupt(KEY), { ok: false, reason: "idle" }, "拒绝后释放在飞")
+
+  // ③b `techInfo` 缺径（非 Error 拒绝 ⇒ 无 `stack`）⇒ **键缺席**（禁假造 —— 错误横幅 `details` 面随之缺席）
+  const h3b = makeHost({ run: () => Promise.reject("plain-reason") })
+  await h3b.host.send(KEY, "x")
+  await new Promise((r) => setImmediate(r))
+  assert.deepEqual(h3b.out.at(-1), ["ev:error", { key: KEY, message: "plain-reason" }], "无 `stack` ⇒ 零 `techInfo` 键（载荷键缺席）")
 
   // ④ 中断即结算本键待决门（消悬 Promise —— 门挂起时 abort 不解除 await）
   const h4 = await boot()
@@ -336,3 +356,117 @@ test("U178: `flagsOf` 活值投影（agent 不在场 ⇒ null）· `respond` 成
   assert.deepEqual(h.host.respond({ promptId: "nope", verdict: "once" }), { ok: false, reason: "unknown-prompt" }, "失败径 ⇒ 零叠加")
   assert.deepEqual(h.host.respond({}), { ok: false, reason: "unknown-prompt" }, "缺 id ⇒ 零叠加（unknown-prompt）")
 })
+
+// ─── U191 三路由补例（桌面空闲唤醒批 —— 窗内 send ∕ 附件 busy ∕ interrupt idle ∕ dispose 级联）───
+
+test("U191: 挂起窗三路由 —— 窗内 send ⇒ pushInput（普通回合）· 含附件 ⇒ busy 留队 · interrupt 空闲 ⇒ idle · dispose ⇒ 清池 + 出窗帧", async () => {
+  const runs = []
+  const toasts = []
+  const h = makeHost({
+    run: (agent, text, callbacks, opts) => {
+      runs.push({ text, opts })
+      if (runs.length === 1) agent._asyncSubagents = new Map([["7", { id: "7", role: "subagent", status: "running", done: false }]])
+      return Promise.resolve()
+    },
+    notify: (payload) => toasts.push(payload),
+    focused: () => false,
+    reveal: () => {},
+  })
+  await h.host.ensure(KEY, 3)
+  const susp = () => h.out.filter(([c]) => c === "ev:susp").at(-1)?.[1] // 末帧安全读（无帧 ⇒ undefined）
+  assert.deepEqual(await h.host.send(KEY, "hello"), { ok: true }, "首回合受理")
+  await until(() => susp()?.active === true, "回合尾入窗")
+  assert.equal(h.agent._suspended, true, "挂起窗在场（载体 `_suspended` —— 回合尾结算后 · 在飞已释）")
+  assert.deepEqual(susp(), { key: KEY, active: true, running: 1, queued: 0, pending: 0, done: 0 }, "入口帧 = 核计数直传")
+  assert.equal(toasts.length, 1, "档①：用户回合完成 ⇒ 通知恰一条（失焦）")
+  assert.equal(toasts[0].body, NOTIFY_TEXTS.en.done, "档① 句 = 词键值（无 locale 配置 ⇒ en）")
+  assert.equal(runs[0].opts.suspDriven, true, "单回合执行面 = `suspDriven: true`（撤回合尾直注入兜底）")
+
+  // ① 窗内 send（文本）⇒ 入驱动器队列 ⇒ 立即受理 ∧ 以普通回合语义起跑
+  assert.deepEqual(await h.host.send(KEY, "窗内输入"), { ok: true }, "窗内文本 ⇒ 入队受理（立即回）")
+  await until(() => runs.length === 2, "窗内用户回合")
+  assert.deepEqual([runs[1].text, runs[1].opts.autoTurn], ["窗内输入", false], "窗内用户回合 = 普通回合语义（用户输入优先序沿核件）")
+
+  // ② 窗内含附件 ⇒ busy 留队重试（核件输入面 = 文本单形 —— 登记 §10 BC）
+  const images = [{ name: "a.png", mime: "image/png", dataURL: "data:image/png;base64,AAAA" }]
+  assert.deepEqual(await h.host.send(KEY, "带图", images), { ok: false, reason: "busy" }, "附件 ⇒ 留队重试")
+  assert.equal(runs.length, 2, "busy 径零起跑（零假回合）")
+
+  // ③ interrupt 空闲（窗等待期 —— 无在飞回合）⇒ idle
+  await until(() => true, "tick") // 一拍：让窗内回合的 finally 释放在飞
+  assert.deepEqual(h.host.interrupt(KEY), { ok: false, reason: "idle" }, "窗空闲期 ⇒ idle（无全停面）")
+
+  // ④ dispose ⇒ 窗级联中止（清池不注入 + 出窗帧 + 装配表清）
+  h.host.dispose(KEY)
+  await until(() => susp()?.active === false, "出窗帧")
+  assert.equal(h.agent._asyncSubagents.size, 0, "清池不注入（abort 语义 —— 陈旧结果不回灌）")
+  assert.equal(h.agent._suspended, false, "载体复位（窗退出）")
+  assert.equal(h.agent._sessionAbort ?? null, null, "会话控制器随窗摘除")
+  assert.equal(h.host.agents.has(KEY), false, "装配表清（dispose 既有面零回归）")
+})
+
+// ─── U192 切项目级联路由（§2.2 —— `project:open` 成功径调用面）─────────────
+
+test("U192: `abortSuspensions()` ⇒ 全键窗中止（清池不注入 + 出窗帧）· 装配表不动 · 幂等零动作", async () => {
+  const h = makeHost({
+    run: (agent) => {
+      agent._asyncSubagents = new Map([["9", { id: "9", role: "subagent", status: "running", done: false }]])
+      return Promise.resolve()
+    },
+  })
+  const susp = () => h.out.filter(([c]) => c === "ev:susp").at(-1)?.[1]
+  assert.deepEqual(await h.host.send(KEY, "hi"), { ok: true }, "受理")
+  await until(() => susp()?.active === true, "回合尾入窗")
+  assert.equal(h.host.abortSuspensions(), 1, "命中一窗（§2.2 切项目级联路由）")
+  await until(() => susp()?.active === false, "出窗帧")
+  assert.equal(h.agent._asyncSubagents.size, 0, "清池不注入（abort 语义）")
+  assert.equal(h.agent._suspended, false, "载体复位")
+  assert.equal(h.host.agents.has(KEY), true, "装配表不动（级联只中止窗 —— 非 dispose）")
+  assert.equal(h.host.abortSuspensions(), 0, "已无窗 ⇒ 零动作（幂等）")
+})
+
+// ─── U195 「对齐第三批」桥面增键（真宿主注入面：判据 / 两采样 / 两接缝）────────────
+
+test("U195: 「对齐第三批」桥面 —— 失败判据核单源 · advisor 两键（仅具名）· owner / diff 四参缝 · links 零假造负向锁", async () => {
+  const { host, out, cb, agent } = await boot()
+
+  // ① `ev:tool-result` 判据 = 核 `isToolFailure`（项 2）：半 / 全角头 ∧ 独立成行状态位 ⇒ ok 假；正文提及不误报
+  const resultOf = (text) => { out.length = 0; cb.onToolResult("bash", text, "t1"); return at(out, "ev:tool-result") }
+  assert.deepEqual(
+    [resultOf("Error: boom").ok, resultOf("Error：全角").ok, resultOf("$ x\n(exit code 1)").ok, resultOf("plain ok").ok, resultOf("文中 (exit code 1) 不误报").ok],
+    [false, false, false, true, true],
+    "判据核单源直取（旧 `startsWith(\"Error:\")` 漏判面：全角头与状态位两臂）",
+  )
+
+  // ② advisor 轮次采样（项 14 · A14）：仅 `advisor` 名携 `round` / `model`（`_advisorRound` 活读 +1）
+  agent._advisorRound = 2
+  out.length = 0
+  cb.onToolCall("advisor", { type: "code" }, "a1")
+  assert.deepEqual(at(out, "ev:tool-call"), { key: KEY, id: "a1", name: "advisor", argsSummary: "code", round: 3, model: "m1" },
+    "advisor ⇒ `round` = `_advisorRound + 1` · `model` = 生效 provider 模型（宿主只读采样 —— 零构造）")
+  out.length = 0
+  cb.onToolCall("read", { path: "/a" }, "t2")
+  assert.deepEqual(["round" in at(out, "ev:tool-call"), "model" in at(out, "ev:tool-call")], [false, false], "非 advisor ⇒ 零两键（零改面）")
+
+  // ③ 子代理门四参缝（B1 / 相抵①）：owner / diff 随载荷出站（缺 ⇒ 键缺席）
+  out.length = 0
+  const gate = cb.onPermissionRequired("apply_patch", { path: "a.mjs" }, { patch: "@@ -1 +1 @@" }, { owner: { label: "eng-coder#2" } })
+  const ask = at(out, "ev:approval")
+  assert.deepEqual([ask.owner, ask.diff], ["eng-coder#2", { patch: "@@ -1 +1 @@" }], "owner = `opts.owner.label` 原样 · diff = 核 `diffInfo` 原样")
+  assert.deepEqual([ask.shape, ask.tool], ["single", "apply_patch"], "载荷族零变（逐项形 + 工具名）")
+  assert.equal(host.respond({ promptId: ask.promptId, verdict: "once" }).ok, true, "四参缝不破既有出口（门结算走既有 verdict 面）")
+  assert.equal(await gate, true, "门 resolve = 放行真值")
+  out.length = 0
+  cb.onPermissionRequired("read", { path: "a.mjs" }, null, null)
+  assert.deepEqual(Object.keys(at(out, "ev:approval")).sort(), ["argsSummary", "key", "promptId", "shape", "tool"], "无 owner / diff ⇒ 两键缺席（深度 0 / 无主形幂等）")
+
+  // ④ links 负向锁（相抵② · KD-39）：注入面在位但 `cwd` = 假项目根 ⇒ 盘上零命中 ⇒ 零 `links` 键（禁假链接）
+  assert.equal("links" in resultOf("read /fake-project-root/missing.mjs"), false, "验存闸下无真路径 ⇒ 零 `links` 键")
+
+  // ⑤ 子回合边界（A7）：`ev:activity { event: "turnBreak" }` —— **无 `fields`**（非内联 / 非回合尾）
+  out.length = 0
+  cb.onTurnEnd(agent, 3)
+  assert.deepEqual(at(out, "ev:activity"), { key: KEY, event: "turnBreak" }, "turnBreak 形逐字（零 `fields`）")
+})
+
+

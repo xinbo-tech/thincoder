@@ -52,7 +52,10 @@
   text-align: left;
 }
 .tool-head[data-status="error"] {
-  color: var(--accent);
+  color: #f14c4c;
+}
+.tool-head[data-status="done"] {
+  color: #4ec9b0;
 }
 .tool-head[data-status="running"] {
   color: var(--fg-muted);
@@ -129,6 +132,74 @@
 /* 空态（有活动会话 · 零块 —— 禁假数据）：单提示节点。 */
 .chat-empty {
   color: var(--fg-muted);
+}
+
+/* 说话人标签行（「对齐第二批」项 4；值源 = VSC webview `chat.css:3-18`）：用户块 = 核 `paintLabel` 落 HTML
+   （含 `❯` / `:` / 时间 span）；助手回合首块 = 端侧同字面 —— 两字形（`❯` / `:`）住本档 `content`
+   （视图档零字形字面）；`data-label` 分色（用户 / 助手两面同 accent） */
+.msg-label {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--fg-muted);
+}
+.block-user > .msg-label,
+.block-assistant > .msg-label {
+  color: var(--accent);
+}
+.msg-label[data-label="assistant"]::before {
+  content: "❯ ";
+}
+.msg-label[data-label="assistant"]::after {
+  content: ":";
+}
+.msg-time {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.45;
+  margin-left: 8px;
+}
+
+/* 待发送气泡组（「对齐第二批」项 2 —— 流内非块节点：输入区上方；`[data-pending]` 组落点 = 块序列之后、卡序列之前）。
+   气泡形沿用户块（`.block.block-user`）；`pending` 类 / `⏳` 标签 = 核原语 `markPending` 落笔（本档零字形字面）。 */
+.chat-pending {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.chat-pending .pending {
+  opacity: 0.72;
+}
+
+/* 消化状态行组（桌面空闲唤醒批 —— 流内非块节点组 `[data-digest]`；落点 = 块序列之后、待发送组之前 —— 单源 =
+   `docs/desktop/design/RENDERER.md` §1.1 两条纪律；值源 = `thincoder-vscode/webview/base.css:203-235`）：
+   两规则 = ① 起跑态（起跑标签行 + `n > 0` 计数行 —— 计数行同形于状态条，标签行同族小字）∥
+   ② 终态（`end` 先原地更新后摘除 —— 行不驻留；`digest-failed` = 错误色显形，`digest-done` 承起跑态不动）。 */
+.chat-digest .digest-turn, .chat-digest .digest-status {
+  margin: 6px 0;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  font-size: 11px;
+  opacity: 0.85;
+  color: var(--fg-muted);
+}
+.chat-digest .digest-status.digest-failed {
+  opacity: 1;
+  border-color: var(--error-fg);
+  color: var(--error-fg);
+}
+
+/* 归档子 agent 块（「对齐第二批」项 5 —— 运行期块）：零边距透传容器（内嵌核件 `.advisor-block` 自持边距 / 边框 ——
+   样式单源 = `renderer/core.css` ④ 核件子 agent 块面族）。 */
+.block-subagent {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  white-space: normal;
 }
 
 /* 审批卡（流内**非块节点** · 独立卡片 —— `docs/desktop/design/UI.md` §1 审批呈现行 · 批 7）：
@@ -313,3 +384,96 @@
   background: var(--hover-bg-strong);
 }
 .chat-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ─── 「对齐第三批」小修族（对话流面）────────────────────────────
+   单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」：工具头两态色 / 错误横幅 / 停止痕 /
+   台账行组 / diff 预览 / 文件链接 / 欢迎条（值源逐面标注 —— VSC 实读）。 */
+
+/* 工具头两态色（项 2 —— 值源 = VSC 内联色 `webview/ui.js:113-114`：失败 `#f14c4c` ∥ 成功 `#4ec9b0`；
+   两值不随主题分叉 —— VSC 同径；running / interrupted 不入两值集）—— 规则单源 = 上表工具卡段落
+   （`.tool-head[data-status="error"|"done"]` 两段，后随 `running`），本段零重复。 */
+
+/* 错误横幅（项 9 —— 形源 = VSC `webview/chat.css:376-391` ∥ 核 `flow/block.mjs:133-145`）：
+   `.error-text`（文面）+ `.error-details`（原生 `details` 折叠）+ `.error-retry-btn`（单枚出口）。 */
+.error-text { flex: 1; }
+.error-details { margin-top: 6px; }
+.error-details summary { cursor: pointer; font-size: 11px; opacity: 0.7; }
+.error-details pre {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  font-family: var(--mono);
+  font-size: 11px;
+  overflow: auto;
+}
+.error-retry-btn {
+  margin-top: 6px;
+  padding: 3px 12px;
+  border: 1px solid var(--error-fg);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--error-fg);
+  font: inherit;
+  font-size: 11px;
+  align-self: flex-start;
+}
+.error-retry-btn:not(:disabled):hover { background: var(--diff-del-bg); cursor: pointer; }
+
+/* 停止痕（项 6 —— 值源 = VSC `webview/streaming.js:141`：提示色 + 斜体 —— 流尾非块节点）。 */
+.chat-stopped { margin-top: 8px; color: var(--warn); font-style: italic; }
+
+/* 台账行组（项 12 —— 流尾非块节点组；类名面 = 核行产口径 `ledger-line` / `.warn`，样式单源 = `core.css` 核类名映射面；行文 = 核行产逐字）。 */
+.chat-ledger { margin-top: 8px; font-size: 12px; color: var(--fg-muted); }
+
+/* 审批卡 diff 预览（相抵① 样式半 —— 值源 = VSC `webview/base.css:405-437`；三新变量
+   `--diff-add-bg` / `--diff-add-fg` / `--diff-del-fg` 住 `renderer/styles.css`〔样式面 —— 本舱不立重复值〕）。 */
+.diff-preview {
+  margin: 8px 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.diff-header {
+  padding: 4px 10px;
+  font-size: 11px;
+  background: var(--hover-bg);
+  color: var(--fg);
+  opacity: 0.6;
+  border-bottom: 1px solid var(--line);
+}
+.diff-line { padding: 1px 10px; white-space: pre; overflow-x: auto; }
+.diff-same { color: var(--fg); opacity: 0.7; }
+.diff-add { background: var(--diff-add-bg); color: var(--diff-add-fg); }
+.diff-del { background: var(--diff-del-bg); color: var(--diff-del-fg); }
+.diff-prefix { display: inline-block; width: 16px; opacity: 0.5; user-select: none; }
+
+/* 文件链接（相抵② —— 结果区内可点路径；核类名 `span.file-link`、类名样式单源 = `core.css` 核类名映射面〔本段零规则〕；`data-path` = 出口判据锚）。
+   点按 / Enter 出口 = 委托单点（`renderer/app.mjs`）⇒ `file:open`。 */
+
+/* 欢迎条（项 15 —— `no-message` 帧三行；形源 = VSC `webview/chat.css:431-449` 的 `.welcome` 族值）。 */
+.chat-welcome {
+  text-align: center;
+  padding: 60px 20px 30px;
+  opacity: 0.45;
+  display: flex;
+  flex-direction: column;
+}
+.welcome-heading {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  opacity: 0.75;
+}
+.welcome-text, .welcome-shortcuts {
+  font-size: 12px;
+  line-height: 1.7;
+  max-width: 280px;
+  margin: 0 auto;
+}

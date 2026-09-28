@@ -20,17 +20,22 @@ export function guideOf({ live, cwd, visible }) {
   return typeof cwd === "string" && cwd !== "" ? "no-session" : "no-project"
 }
 
-/** 三码词键（闭集 · `no-message` = 既有空态文案）· 两码动作控件（句柄名 / 动作锚 / 词键 = 左列既有键）。 */
-const WORDS = { "no-project": "chat.guide.noProject", "no-session": "chat.guide.noSession", "no-message": "chat.empty.hint" }
+/** 三码词键（闭集 · `no-message` = 欢迎条三行构树 —— 项 15）· 两码动作控件（句柄名 / 动作锚 / 词键 = 左列既有键）。 */
+const WORDS = { "no-project": "chat.guide.noProject", "no-session": "chat.guide.noSession" }
+/** 欢迎条四键（两语各四 —— 词面住 `renderer/i18n.mjs`；文案二值取定归 `welcomeNode`）。 */
+const WELCOME = { heading: "welcome.heading", text: "welcome.text", textConfigured: "welcome.textConfigured", shortcuts: "welcome.shortcuts" }
 const ACTIONS = {
   "no-project": { handle: "onOpenDir", action: "project:open", word: "rail.action.openDir" },
   "no-session": { handle: "onNewSession", action: "session:create", word: "rail.action.newSession" },
 }
 
 /** 引导节点（纯构树 · 表外码 ⇒ `null` —— 禁假造）：`div.chat-empty[data-guide]`，子序 = 文案 → [控件?]；
- *  控件 = `button[data-action]`（词面住文本子）；句柄缺 ⇒ 退纯文案（零假按钮）。 */
+ *  控件 = `button[data-action]`（词面住文本子）；句柄缺 ⇒ 退纯文案（零假按钮）。
+ *  `no-message` 帧（「对齐第三批」项 15）= **欢迎条三行**（抬头 / 文案二值 / 快捷键行 —— 对位 VSC `.welcome` 三行）；
+ *  端差登记：VSC 快捷键行含 `@` 文件引用段（桌面 @-补全 = 缺整面族 ⇒ 该段随缺面族批补 —— 词条 `welcome.shortcuts`）。 */
 export function guideNode(model, handlers = {}) {
   const code = model?.guide
+  if (code === "no-message") return welcomeNode(model)
   if (typeof code !== "string" || !Object.hasOwn(WORDS, code)) return null
   const children = [t(WORDS[code])]
   const slot = ACTIONS[code]
@@ -39,6 +44,26 @@ export function guideNode(model, handlers = {}) {
     children.push({ tag: "button", props: { class: "chat-backfill", "data-action": slot.action, onClick }, children: [t(slot.word)] })
   }
   return { tag: "div", props: { class: "chat-empty", "data-guide": code }, children }
+}
+
+/** 欢迎条三行（项 15 —— 抬头 / 文案 / 快捷键行；**文案二值** = `configured` 真 ⇒ `welcome.textConfigured`
+ *  ∥ 余（未配 / 未知）⇒ `welcome.text` —— 值逐字同 VSC）；非块节点容器（`data-guide="no-message"` 留根 ——
+ *  `syncGuide` 换代判据同域），行子序 = [抬头, 文案, 快捷键]。 */
+function welcomeNode(model) {
+  const textKey = model?.configured === true ? WELCOME.textConfigured : WELCOME.text
+  return {
+    tag: "div",
+    props: { class: "chat-empty", "data-guide": "no-message" },
+    children: [{
+      tag: "div",
+      props: { class: "chat-welcome", "data-welcome": "" },
+      children: [
+        { tag: "h2", props: { class: "welcome-heading" }, children: [t(WELCOME.heading)] },
+        { tag: "p", props: { class: "welcome-text" }, children: [t(textKey)] },
+        { tag: "p", props: { class: "welcome-shortcuts" }, children: [t(WELCOME.shortcuts)] },
+      ],
+    }],
+  }
 }
 
 /** 帧尾态刷（`syncChrome` 内唯一调用点 · 幂等 · **只摘不插** —— `none` / `empty` 帧由重挂面建、`flow` 帧由本面摘：

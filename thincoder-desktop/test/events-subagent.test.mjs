@@ -3,10 +3,13 @@
  * `docs/render-core/design/RENDER-CORE.md` §5 状态机族；`docs/desktop/design/PROJECT.md` §7 T-DSK36 ①/②/④/⑤；
  * 批档 §2 ㈢/㈤）：
  *   U166 归约写入：按会话键分槽（`subBlocks[key]`）· 五类射程同径 · 闭集过滤（表外 status / 身份缺 / 坏键 ⇒
- *        零写）· 键白名单（内容字段不入块 —— 零内容回显）· 折叠头 `running` 随动（仅活动会话）；
- *   U167 块态机三迁 + 归档 + 摘工具行：出生（queued / started）→ 逐轮帧 → 终态折叠（done / settled /
- *        cancelled ⇒ frozen + 用时源）→ **归档** = 该会话下一次「回合起」清终态（非活动键零清）；工具行不入池
- *        （`pool` / `subBlocks` 引用零动）。
+ *        零写）· 键白名单（内容字段不入块 —— 内容面单源 = `ev:subchunk`）· 折叠头 `running` 随动（仅活动会话）；
+ *   U167 块态机三迁 + 归档入流 + 摘工具行：出生（queued / started）→ 逐轮帧 → 终态折叠（done / settled /
+ *        cancelled ⇒ frozen + 用时源）→ **归档入流**（「对齐第二批」项 5：终态 ⇒ 表项墓碑 `region:"flow"` ∧
+ *        流内尾追块 `kind:"subagent"`；settled 驻留不归档；旧代接管归档；**下回合起不清出**——原口径退场）；
+ *        工具行不入池（`pool` / `subBlocks` 引用零动）；
+ *   U168 `ev:subchunk` 归约（「对齐第二批」项 3）：内容行入块模型 `rows`（重挂重放单源）· 行白名单 ·
+ *        冻结 / 缺块 / 形不合 ⇒ 零写；键白名单（`ev:subagent` 载荷不载内容）。
  * 平 node 直测：零 DOM / 零 IPC（态机单源 = 核 `/rc/subblocks/state.mjs`）。
  */
 import { test } from "node:test"
@@ -76,7 +79,7 @@ test("U166: 归约写入（按会话键分槽 · 五类同径 · 闭集过滤 ·
 
 // ─── U167 块态机三迁 + 归档 + 摘工具行 ────────────────────────────
 
-test("U167: 块态机三迁（出生 / 逐轮 / 终态折叠）+ 归档（回合起清终态）+ 摘工具行（池引用零动）", () => {
+test("U167: 块态机三迁（出生 / 逐轮 / 终态折叠）+ 归档入流（墓碑 + 流内尾追 · 下回合不清出）+ 摘工具行（池引用零动）", () => {
   // ① queued 出生 ⇒ ② started ⇒ ③ turn ⇒ ④ done 折叠（同一实例全链）
   let state = sub(stateOf(), { status: "queued", role: "coder", id: 1, kind: "slot", position: 2 }, 1000)
   const born = listOf(state)[0]
@@ -91,31 +94,77 @@ test("U167: 块态机三迁（出生 / 逐轮 / 终态折叠）+ 归档（回合
   assert.deepEqual([folded.status, folded.frozen, folded.doneAt], ["done", true, 4000], "终态折叠（就地收敛：终态词 + 用时源 = `doneAt`）")
   assert.equal(state.pool.running, 0, "折叠 ⇒ 读数回落")
 
-  // settled / cancelled 两终态同径折叠（`⟦ev⟧stopped` ⇒ cancelled 的映射在桥面 —— 本面收闭集码）
-  const settled = sub(state, { status: "settled", role: "coder", id: 2 })
-  assert.deepEqual([listOf(settled).at(-1).status, listOf(settled).at(-1).frozen], ["done", true], "settled ⇒ 折叠（kind = done）")
-  const cancelled = sub(state, { status: "cancelled", role: "coder", id: 3 })
-  assert.deepEqual([listOf(cancelled).at(-1).status, listOf(cancelled).at(-1).frozen], ["cancelled", true], "cancelled ⇒ 折叠（终态词 = 已停止）")
+  // 归档入流（「对齐第二批」项 5 · KD-33）：终态 ⇒ ① 表项墓碑（`region: "flow"` —— 池内退场）② 流内尾追块
+  assert.equal(folded.region, "flow", "终态 ⇒ 表项墓碑（`region: \"flow\"` —— 读面按 region 过滤 = 池内退场）")
+  assert.equal("rows" in folded, false, "内容随快照单留存（墓碑不再持 `rows`）")
+  const flow = state.blocks.at(-1)
+  assert.deepEqual([flow.kind, flow.meta.key, flow.meta.frozen, flow.rows], ["subagent", "sub:coder#1", true, []], "流内尾追块（`kind: \"subagent\"` · `meta` = 冻结块快照 · `rows` = 内容行）")
 
-  // 归档 = 该会话下一次「回合起」清出已终态块（修既有池切片单调增长）；在飞块与新键存活
-  const mixed = sub(sub(state, { status: "started", role: "explore", id: 9, pool: true }), { status: "done", role: "explore", id: 8 })
-  assert.equal(listOf(mixed).length, 3, "夹具：一在飞 + 两终态共存")
-  const turned = reduce(mixed, { channel: "ev:activity", key: KEY, event: "turn", n: 3, max: 20 }, 5000)
-  assert.deepEqual(listOf(turned).map((block) => block.id), [9], "回合起 ⇒ 已终态块清出（在飞块存活）")
-  assert.equal(turned.pool.running, 1, "归档后读数 = 剩余在飞块数")
+  // 三迁之二：settled（**已出生块**折叠）驻留池内不归档；后到 done ⇒ 归档
+  const settledLive = sub(state, { status: "started", role: "coder", id: 2, pool: true, model: "m2" }, 4500)
+  const settled = sub(settledLive, { status: "settled", role: "coder", id: 2 }, 4800)
+  const resident = listOf(settled).at(-1)
+  assert.deepEqual([resident.status, resident.frozen, resident.awaitingDigest, resident.region], ["done", true, true, undefined], "settled ⇒ 折叠 + 驻留（不归档：`region` 缺省）")
+  assert.equal(settled.blocks.length, state.blocks.length, "settled ⇒ 零流内块（驻留待消化）")
+  const digested = sub(settled, { status: "done", role: "coder", id: 2 }, 4900)
+  assert.equal(listOf(digested).at(-1).region, "flow", "后到 done ⇒ 归档（驻留块入流）")
+  assert.equal(digested.blocks.at(-1).meta.key, "sub:coder#2", "归档序入流（尾追）")
+  const cancelled = sub(state, { status: "cancelled", role: "coder", id: 3 })
+  assert.deepEqual([listOf(cancelled).at(-1).status, listOf(cancelled).at(-1).frozen, listOf(cancelled).at(-1).region], ["cancelled", true, "flow"], "cancelled ⇒ 折叠 + 归档（终态词 = 已停止）")
+
+  // 三迁之三：旧代接管即归档（settled 驻留块被新代替出 ⇒ 归档 + 新代出生）
+  const settledGen = sub(sub(state, { status: "started", role: "coder", id: 5, pool: true, model: "m5" }, 5000), { status: "settled", role: "coder", id: 5 }, 5100)
+  const reborn = sub(settledGen, { status: "started", role: "coder", id: 5, pool: true, model: "m5" }, 6000)
+  const nextGen = listOf(reborn).find((block) => block.id === 5)
+  assert.deepEqual([nextGen.status, nextGen.frozen, nextGen.model], ["running", false, "m5"], "接管 ⇒ 新代在飞（同键）")
+  assert.equal(reborn.blocks.at(-1).meta.key, "sub:coder#5", "旧代驻留块归档入流（接管即归档 —— 前后对照捕获）")
+  assert.equal(reborn.blocks.filter((block) => block.meta.key === "sub:coder#5").length, 1, "恰一块（不重复补桩）")
+
+  // 下回合起**不再清出**（原「回合起清终态」口径退场 —— 对拍）：墓碑留场 ∧ 块表引用零动
+  const turned = reduce(reborn, { channel: "ev:activity", key: KEY, event: "turn", n: 3, max: 20 }, 7000)
+  assert.deepEqual(listOf(turned).map((block) => block.id), listOf(reborn).map((block) => block.id), "回合起 ⇒ 块表零清（墓碑留存）")
+  assert.equal(turned.subBlocks[KEY], reborn.subBlocks[KEY], "无可清 ⇒ 块表原引用（零帧）")
   assert.deepEqual(turned.turns[KEY], { n: 3, max: 20 }, "同笔回合槽照写（D17 段 7 零回归 · 归约双面同帧）")
 
-  // 非活动键回合起 ⇒ 本键块表零清；无终态可清 ⇒ `subBlocks` 原引用（零帧）
-  const foreign = reduce(mixed, { channel: "ev:activity", key: "2", event: "turn", n: 1, max: 5 }, 5000)
-  assert.equal(foreign.subBlocks, mixed.subBlocks, "他键回合起 ⇒ 本键块表零动（归档按会话键）")
-  assert.equal(reduce(turned, { channel: "ev:activity", key: KEY, event: "turn", n: 4, max: 20 }, 6000).subBlocks, turned.subBlocks, "无可清 ⇒ 块表原引用（零帧）")
+  // 非活动键终态 ⇒ 只落墓碑（流面按会话键 —— 非活动键零入流；端差登记 = 内容随运行期面即失）
+  const otherStart = reduce(reborn, { channel: "ev:subagent", key: "2", status: "started", role: "coder", id: 7, pool: true }, 7100)
+  const otherDone = reduce(otherStart, { channel: "ev:subagent", key: "2", status: "done", role: "coder", id: 7 }, 7200)
+  assert.equal(otherDone.subBlocks["2"][0].region, "flow", "他键终态 ⇒ 墓碑落他键表")
+  assert.equal(otherDone.blocks.length, otherStart.blocks.length, "非活动键 ⇒ 不入本会话流（零写）")
 
   // 摘工具行：工具三事件不再触池（`pool` / `subBlocks` 引用零动 —— 工具面 = 对话流工具卡）
-  const call = reduce(mixed, { channel: "ev:tool-call", key: KEY, id: "t1", name: "read", argsSummary: "a.mjs" }, 6000)
-  assert.equal(call.pool, mixed.pool, "工具调用 ⇒ 池切片引用零动（摘工具行后零池写）")
-  assert.equal(call.subBlocks, mixed.subBlocks, "工具调用 ⇒ 块表引用零动")
-  assert.equal(call.blocks.length, mixed.blocks.length + 1, "工具块照入对话流（零回归）")
-  const result = reduce(call, { channel: "ev:tool-result", key: KEY, id: "t1", ok: true, result: "ok" }, 7000)
-  assert.equal(result.pool, mixed.pool, "工具收尾 ⇒ 池切片引用零动")
-  assert.equal(result.subBlocks, mixed.subBlocks, "工具收尾 ⇒ 块表引用零动")
+  const call = reduce(reborn, { channel: "ev:tool-call", key: KEY, id: "t1", name: "read", argsSummary: "a.mjs" }, 8000)
+  assert.equal(call.pool, reborn.pool, "工具调用 ⇒ 池切片引用零动（摘工具行后零池写）")
+  assert.equal(call.subBlocks, reborn.subBlocks, "工具调用 ⇒ 块表引用零动")
+  assert.equal(call.blocks.length, reborn.blocks.length + 1, "工具块照入对话流（零回归）")
+  const result = reduce(call, { channel: "ev:tool-result", key: KEY, id: "t1", ok: true, result: "ok" }, 9000)
+  assert.equal(result.pool, reborn.pool, "工具收尾 ⇒ 池切片引用零动")
+  assert.equal(result.subBlocks, reborn.subBlocks, "工具收尾 ⇒ 块表引用零动")
+})
+
+// ─── U168 `ev:subchunk` 归约（「对齐第二批」项 3：rows 入模型 · 重挂重放单源）──────
+
+test("U168: `ev:subchunk` 归约（rows 逐条入模型 · 行白名单 · 冻结 / 缺块 / 形不合 ⇒ 零写）", () => {
+  const chunk = (state, payload) => reduce(state, { channel: "ev:subchunk", key: KEY, ...payload }, 1000)
+  let state = sub(stateOf(), { status: "started", role: "coder", id: 1, pool: true, model: "m1" }, 1500)
+  const live = state
+  state = chunk(state, { role: "coder", id: 1, kind: "text", text: "正文行", face: "text" })
+  assert.deepEqual(listOf(state)[0].rows, [{ kind: "text", text: "正文行", face: "text" }], "内容行入块模型 `rows`（重挂重放单源）")
+  state = chunk(state, { role: "coder", id: 1, kind: "tool", text: "bash npm test", tool: "bash", face: "toolCall", cmd: "npm test" })
+  assert.deepEqual(listOf(state)[0].rows.at(-1), { kind: "tool", text: "bash npm test", tool: "bash", face: "toolCall", cmd: "npm test" }, "工具面行携结构化 `tool` / `cmd` / `face`（逐字段）")
+  state = chunk(state, { role: "coder", id: 1, kind: "think", text: "思考行", face: "think", sub: "explore#2", model: "m9", status: "started" })
+  assert.deepEqual(listOf(state)[0].rows.at(-1), { kind: "think", text: "思考行", face: "think", sub: "explore#2" }, "行 = 内容面六键白名单（表外键 / 身份二不入行）")
+  assert.deepEqual(listOf(state)[0].rows.map((row) => row.kind), ["text", "tool", "think"], "rows 序 = 到达序（内容行单留存处）")
+  assert.equal(state.pool.running, live.pool.running, "rows 追加 ⇒ 读数零动（在飞计数零扰）")
+
+  // 零写三臂：形不合（kind / text 缺）· 缺块（未出生键）· 已冻结（终态块迟来 chunk 不复活）
+  assert.equal(chunk(state, { role: "coder", id: 1, kind: "", text: "x" }), state, "kind 空 ⇒ 零写")
+  assert.equal(chunk(state, { role: "coder", id: 1, kind: "text" }), state, "text 缺 ⇒ 零写")
+  assert.equal(chunk(state, { role: "coder", id: 99, kind: "text", text: "x" }), state, "块未出生 ⇒ 零写（出生面 = `ev:subagent`）")
+  assert.equal(reduce(state, { channel: "ev:subchunk", key: "9", kind: "text", text: "x", role: "coder", id: 1 }), state, "非本键会话 ⇒ 零写（分槽隔离）")
+  assert.equal(reduce(state, { channel: "ev:subchunk", key: KEY, kind: "text", text: "x", role: "coder" }), state, "缺 id ⇒ 零写")
+  assert.equal(reduce(state, { channel: "ev:subchunk", status: "x", kind: "text", text: "x", role: "coder", id: 1 }), state, "缺 key ⇒ 零写")
+  const frozen = sub(state, { status: "done", role: "coder", id: 1 }, 2000)
+  assert.equal(chunk(frozen, { role: "coder", id: 1, kind: "text", text: "迟来" }), frozen, "已冻结块 ⇒ 迟来 chunk 零写（不复活）")
+  assert.equal(chunk(frozen, { role: "coder", id: 1, kind: "text", text: "迟来" }).subBlocks, frozen.subBlocks, "零写 ⇒ 块表引用不变（零帧）")
 })

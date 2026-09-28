@@ -8,16 +8,22 @@
  *   ② 改动摘要：`files` 计数 + 增删合计 ⇒ 越阈（文件数 ∨ 增删合计）降级 = 只留摘要行（零 `[data-file]`）；
  *   ③ 结果区：核件面（R3c —— 截断口径单源 = 核 `lib.mjs` `capText`：超 64K 截断并自携说明）；`result` 非空 ∧ 展开态；
  *      `result` 空 ⇒ 头行退纯展示 `div`（零 toggle 控件 —— 诚实非死控）；
- *   ④ 折叠判据：显式 `expanded` 优先，缺省 = `status="error"` 展开（错误取证优先）；
+ *   ④ 折叠判据：显式 `expanded` 优先；缺省 = `status="error"` **或 `"running"`** 展开（错误取证优先 + 运行期增量在场 —— 「对齐第三批」项 3）；
  *   ⑤ 共享导出面（**消费零副本** —— `views/approval.mjs`（审批卡）/ `views/activity.mjs`（活动池）复用）：
- *      `STATUS_WORD`（六词闭枚举状态词）+ 降级阈值两常数 + `changeTotals` / `toolChanges`（改动摘要降级形）。
+ *      `STATUS_WORD`（**七词闭枚举**状态词 —— 含「对齐第三批」项 5 增词 `interrupted`）+ 降级阈值两常数 + `changeTotals` / `toolChanges`（改动摘要降级形）；
+ *   ⑥ **「对齐第三批」面**（本档）：头行**摘要段**（项 1 —— `→ ` + 核 `formatToolSummary` 直取）+ **轮次段**
+ *      （项 14 —— advisor `(round N · model)` 同 VSC `ui.js:104-107` 式）+ 运行期展开（项 3）+ 中止词（项 5）
+ *      + 结果区**链接着装 / 委托**（相抵② 渲染半 —— 核 `linkifyPaths` + `data-path` 锚 + 点按 / Enter 出口）。
  * 文案一律经 `t()`（零硬编码；`+` / `−` 字形住 `renderer/chat.css`）；零 `node:` / 零裸包。
  */
 import { t } from "../i18n.mjs"
 import { capText } from "/rc/lib.mjs"
+import { formatToolSummary } from "/rc/tool-summary.mjs"
+import { linkifyPaths } from "/rc/flow/tool-card.mjs"
+import { labelNode } from "./chat-text.mjs"
 import { blockKey } from "./chat-stream.mjs"
 
-/** 状态词码 → 词键（核五键 + 宿主一键 `tab.badge.approval` —— 单源不复制）；表外码 ⇒ 零状态词节点。
+/** 状态词码 → 词键（核五键 + 宿主两键 `tab.badge.approval` / `tool.interrupted` —— 单源不复制）；表外码 ⇒ 零状态词节点。
  *  导出 = 闭枚举单源：工具卡头行与池面活动块 / 队列条目同表（消费零副本）。 */
 export const STATUS_WORD = Object.freeze({
   queued: "sub.queued",
@@ -25,6 +31,8 @@ export const STATUS_WORD = Object.freeze({
   approval: "tab.badge.approval",
   done: "sub.done",
   stopped: "sub.stopped",
+  // 「对齐第三批」项 5：中止清扫词（值逐字同 VSC locales —— 字面走端供给面，键面入词表）
+  interrupted: "tool.interrupted",
   error: "sub.error",
 })
 /** 耗时节点两态：仅 `done` / `error` ∧ `durationMs` 为数时落（单源 = `docs/desktop/design/UI.md` §1 工具卡行）。 */
@@ -55,9 +63,20 @@ export function segNode(code, value) {
   return { tag: "span", props: { "data-seg": code }, children: [value] }
 }
 
-/** 折叠判据（显式优先；缺省 = `error` 展开）。 */
+/** 折叠判据（显式优先；缺省 = `error` ∨ `running` 展开 —— 「对齐第三批」项 3：运行期增量在场 ⇒ 体在场；
+ *  chunk 到达清显式旗归归约面 `onToolOutput`）。 */
 function isExpanded(block) {
-  return typeof block?.expanded === "boolean" ? block.expanded : block?.status === "error"
+  return typeof block?.expanded === "boolean" ? block.expanded : block?.status === "error" || block?.status === "running"
+}
+
+/** advisor 轮次标签（「对齐第三批」项 14 —— 字面 = VSC `webview/ui.js:104-107` 同式）：`(round N · model)`；
+ *  无 `model` ⇒ 降级形 `(round N)`（不显空）；`round` 缺 / 非数 ⇒ `""`（零段 —— 非 advisor / 无载荷逐字同修前）。
+ *  逐字面向用户文案（格式串 —— 同 VSC 内联串；核 / VSC 两源皆无此键）。 */
+function roundTag(block) {
+  const round = block?.round
+  if (typeof round !== "number" || !Number.isFinite(round)) return ""
+  const model = typeof block?.model === "string" && block.model !== "" ? block.model : ""
+  return model === "" ? `(round ${round})` : `(round ${round} · ${model})`
 }
 
 /** 改动合计（`changes.items[]`）：文件数 + 增删行合计（缺项按 0）。 */
@@ -71,11 +90,13 @@ export function changeTotals(changes) {
   }
 }
 
-/** 工具卡头行：数据串（名称 / 参数摘要）+ 状态词（闭枚举）+ 耗时（两态）——四者非空才落。
+/** 工具卡头行：数据串（名称 / 轮次 / 参数摘要）+ 状态词（闭枚举）+ 耗时（两态）+ 摘要段（项 1）——非空才落。
  *  两态：有 `result` ⇒ `button`（可开关控件 + 接线两态）；空 ⇒ 纯展示 `div`（零 toggle 控件）。 */
 function toolHead(block, key, handlers) {
   const word = STATUS_WORD[block?.status]
   const timed = TIMED_STATUS.includes(block?.status) && Number.isFinite(block?.durationMs)
+  const summary = hasText(block?.result) ? formatToolSummary(block?.name, block.result) : null
+  const round = roundTag(block)
   const props = {
     class: "tool-head",
     "data-tool-head": "",
@@ -83,9 +104,12 @@ function toolHead(block, key, handlers) {
   }
   const children = [
     segNode("name", block?.name),
+    segNode("round", round),
     segNode("args", block?.argsSummary),
     segNode("status", word === undefined ? null : t(word)),
     segNode("time", timed ? t("chat.tool.duration", { seconds: (block.durationMs / 1000).toFixed(1) }) : null),
+    // 「对齐第三批」项 1：结果摘要段 —— 字面 = `→ ` + 核 `formatToolSummary` 直取；摘要空 ⇒ 零段（禁假造）
+    segNode("summary", hasText(summary) ? `→ ${summary}` : null),
   ]
   if (!hasText(block?.result)) return { tag: "div", props, children }
   return { tag: "button", props: wire({ ...props, "data-action": "chat:tool-toggle" }, withKey(handlers.onToggleTool, key)), children }
@@ -113,16 +137,18 @@ export function toolChanges(block) {
   }
 }
 
-/** 工具卡（三行 · `data-block-id` = 本块键）：头行 + 改动摘要行 + [展开结果区?]（`result` 非空 ∧ 展开态）。
- *  结果文本 = 核 `capText`（截断口径单源 —— 超 64K ⇒ 截断 + 核自携说明；DOM 有界）。 */
-export function toolCard(block, key, handlers) {
+/** 工具卡（三行 · `data-block-id` = 本块键）：[说话人标签?] + 头行 + 改动摘要行 + [展开结果区?]（`result` 非空 ∧ 展开态）。
+ *  结果文本 = 核 `capText`（截断口径单源 —— 超 64K ⇒ 截断 + 核自携说明；DOM 有界）。
+ *  `withLabel` 真 ⇒ 首子挂说话人标签容器（回合首块判据归 `renderer/views/chat.mjs` —— 本档只落形；
+ *  容器单源 = `renderer/views/chat-text.mjs` `labelNode`）。 */
+export function toolCard(block, key, handlers, withLabel = false) {
   const rows = hasText(block?.result) && isExpanded(block)
     ? [{ tag: "div", props: { class: "tool-result", "data-tool-result": "" }, children: [capText(block.result)] }]
     : []
   return {
     tag: "div",
     props: { class: "block block-tool", "data-block-id": key, "data-block-kind": "tool" },
-    children: [toolHead(block, key, handlers), toolChanges(block), ...rows],
+    children: [...(withLabel ? [labelNode("assistant")] : []), toolHead(block, key, handlers), toolChanges(block), ...rows],
   }
 }
 
@@ -135,4 +161,57 @@ export function toggleExpanded(blocks, id) {
   const next = list.slice()
   next[index] = { ...next[index], expanded: !isExpanded(next[index]) }
   return next
+}
+
+/** 结果区链接着装（「对齐第三批」相抵② 渲染半 · 帧尾着装幂等）：结果区挂核 `linkifyPaths`（逐文本节点包
+ *  `span.file-link`）⇒ 着装面补 `data-path` / `data-line` 锚（值 = 链接盘上路径 —— 核产缺 ⇒ 端侧补；已在 ⇒ 跳过）；
+ *  `links` 缺 / 空 ∨ 结果区缺（零体）⇒ 零动作（禁假造）。`linkify` 注入面 = 平 node 直测缝（缺省 = 核件 `linkifyPaths`）。 */
+export function linkifyResult(node, block, linkify = linkifyPaths) {
+  const links = Array.isArray(block?.links) ? block.links : []
+  if (links.length === 0) return node
+  const body = typeof node?.querySelector === "function" ? node.querySelector("[data-tool-result]") : null
+  if (body === null || body === undefined) return node
+  try {
+    linkify(body, links)
+  } catch (error) {
+    // 核件 `linkifyPaths` 依赖浏览器面（`window.NodeFilter` / `document.createTreeWalker`）——平 node 用例面缺两件
+    // ⇒ **一行诊断 + 零链接**（响亮 · 不拆帧；禁静默）；生产面（真 DOM）不触本支。
+    console.error("[chat] file-link dressing unavailable:", error)
+    return node
+  }
+  const byRaw = new Map(links.map((link) => [link?.raw, link]))
+  const spans = typeof body.querySelectorAll === "function" ? [...body.querySelectorAll(".file-link")] : []
+  for (const span of spans) {
+    if (span.getAttribute("data-path") !== null) continue
+    const link = byRaw.get(span.textContent)
+    if (link === undefined || typeof link.path !== "string" || link.path === "") continue
+    span.setAttribute("data-path", link.path)
+    if (typeof link.line === "number" && Number.isFinite(link.line)) span.setAttribute("data-line", String(link.line))
+  }
+  return node
+}
+
+/** 文件链接命中（相抵② 出口判据 · 纯函数）：自目标上溯最近 `.file-link` 且携非空 `data-path` ⇒ `{ path, line? }`；
+ *  余（非链接 / 锚缺 —— 未着装）⇒ `null`（零误发）。 */
+export function fileLinkOf(target) {
+  for (let node = target; node !== null && node !== undefined; node = node.parentNode) {
+    if (node.classList?.contains?.("file-link") !== true) continue
+    const path = typeof node.getAttribute === "function" ? node.getAttribute("data-path") : null
+    if (typeof path !== "string" || path === "") return null
+    const rawLine = typeof node.getAttribute === "function" ? node.getAttribute("data-line") : null
+    const line = Number(rawLine)
+    return Number.isInteger(line) && line > 0 ? { path, line } : { path }
+  }
+  return null
+}
+
+/** 点按 / Enter 委托（相抵② **出口单点** —— 装配期一次注册，幂等 `_fileLinksBound` 记账）：命中 ⇒ `open(path, line?)`；
+ *  余 ⇒ 零动作（零误发）。回值 = 本次是否完成注册。 */
+export function bindFileLinks(root, open) {
+  if (!root || typeof root.addEventListener !== "function" || typeof open !== "function" || root._fileLinksBound === true) return false
+  root._fileLinksBound = true
+  const fire = (hit) => { if (hit !== null) open(hit.path, hit.line) }
+  root.addEventListener("click", (event) => fire(fileLinkOf(event?.target)))
+  root.addEventListener("keydown", (event) => { if (event?.key === "Enter") fire(fileLinkOf(event?.target)) })
+  return true
 }

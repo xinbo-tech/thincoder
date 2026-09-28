@@ -3,20 +3,23 @@
  * 状态树（变更触发订阅 / 通知期入队）+ 数据面切片（窗口 / 回填卫兵 / 跟滚 / 标签）+ 词表面（解析序）+
  * 关闭确认面（判据单源 / 置键 / 直接关 / 清键 —— `docs/desktop/design/UI.md` §1 交互行）+ 三切片定形与纯动作
  * （批 7 U75 —— 兼消费面两读数 `requestCloseTab` / `headModel`：注册后零行为变化；批 A ④ 并入行形态两动作
- * `openRailForm` / `closeRailForm`：闭集 / 拒收 / 收形）+ 队列三纯动作
- * （批 A U117 —— `pool.queue` 唯一写面：入队上限 / 出队队首 / 排空）。
+ * `openRailForm` / `closeRailForm`：闭集 / 拒收 / 收形）+ 排队消息三纯动作
+ * （U117 —— 「对齐第二批」项 2：`pending` **按会话分键**唯一写面；三动作出档 `renderer/queue.mjs` +
+ * `QUEUE_MAX` ⇄ 核 `QUEUED_MAX_ITEMS` 值对拍锁）。
  * 纯逻辑档：零 DOM / 零 IPC / 零文件系统（渲染面无副作用面判据）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import {
-  appendBlock, beginBackfill, cancelCloseTab, closeRailForm, closeTab, confirmCloseTab, createStore, dequeue,
-  deriveTabBadge, drainQueue, endBackfill, enqueue, initialState, needsCloseConfirm, openRailForm, openTab,
-  QUEUE_MAX, requestCloseTab, returnToBottom, setFollowing, togglePool, visibleWindow,
+  appendBlock, beginBackfill, cancelCloseTab, closeRailForm, closeTab, confirmCloseTab, createStore,
+  deriveTabBadge, endBackfill, initialState, needsCloseConfirm, openRailForm, openTab,
+  requestCloseTab, returnToBottom, setFollowing, togglePool, visibleWindow,
 } from "../renderer/store.mjs"
+import { dequeue, drainQueue, enqueue, QUEUE_MAX } from "../renderer/queue.mjs"
 import { headModel, headTree } from "../renderer/views/chrome.mjs"
 import { FALLBACK_LOCALE, HOST_DICT, SUPPORTED_LOCALES, initDict, locale, normalizeLocale, t } from "../renderer/i18n.mjs"
 import { SUPPORTED_LOCALES as CORE_LOCALES, projectDictionary, t as coreT } from "@thincoder/core/i18n.mjs"
+import { QUEUED_MAX_ITEMS } from "/rc/flow/queued-mark.mjs"
 
 // ─── U28 订阅契约（等值零通知 / 变更触发 / 通知期入队不递归）──────
 
@@ -63,6 +66,14 @@ test("U29: visibleWindow = 尾 limit 块（引用等值）∧ hidden = 隐藏数
   assert.equal(wide.visible.length, 7)
   assert.deepEqual(visibleWindow([], 3), { visible: [], hidden: 0 }, "空树")
   assert.equal(visibleWindow(blocks, 0).hidden, 7, "limit ≤ 0 ⇒ 全隐（防御）")
+
+  // 运行期块记账（「对齐第二批」项 5 · `docs/desktop/design/RENDERER.md` §2）：运行期块计入块序 / 尾窗渲染，
+  // 但退窗**不计入 hidden**（该账面 = 页读域可回填块数 —— 运行期块非落盘件，回填无源）
+  const mixed = [{ id: 0, kind: "user" }, { kind: "subagent", meta: {}, rows: [] }, { id: 2, kind: "assistant" }]
+  const accounted = visibleWindow(mixed, 2)
+  assert.deepEqual(accounted.visible.map((b) => b.kind), ["subagent", "assistant"], "尾窗含运行期块（计入块序 / 渲染）")
+  assert.equal(accounted.hidden, 1, "运行期块退窗不计入 hidden（页读域计数 —— 不落摘要块）")
+  assert.equal(visibleWindow([...mixed, { id: 3, kind: "user" }], 1).hidden, 2, "防御档同源：运行期块亦不计数（limit ≤ 0 同径）")
 })
 
 // ─── U30 回填卫兵（有更早页 ∧ 无在途）──────────────────────────
@@ -236,13 +247,14 @@ test("U33: t 解析序（宿主 → 核投影 → 键名）∧ 语言归一 ⇒ 
 test("U75: initialState 切片定形 ∧ pool 两族两读数 ∧ togglePool 三支 ∧ 行形态两动作 ∧ 注册后零行为变化", () => {
   const base = initialState()
   assert.deepEqual(Object.keys(base).sort(), [
-    "activeSession", "activeTab", "blocks", "following", "history", "ledger", "locale", "pendingClose", "pendingNew",
+    "activeSession", "activeTab", "blocks", "following", "history", "ledger", "locale", "pending", "pendingClose", "pendingNew",
     "pool", "poolCollapsed", "project", "projectInfo", "railForm", "sessionFlags", "sessionMeta", "sessions", "settings", "subBlocks", "tabBadges", "tabs",
     "timers", "tokens", "turnStarts", "turns", "usage",
-  ], "初态键集 = 定形锁（三切片 + settings / projectInfo / railForm / 状态行四槽 + subBlocks + 账本警示 `ledger` 在册 —— 增 / 减键须同改本锁）")
+  ], "初态键集 = 定形锁（三切片 + settings / projectInfo / railForm / 状态行四槽 + subBlocks + `pending` + 账本警示 `ledger` 在册 —— 增 / 减键须同改本锁）")
+  assert.deepEqual(base.pending, {}, "`pending` 槽位在册（「对齐第二批」项 2：排队消息按会话键分槽 —— 写者 = `renderer/queue.mjs` 三纯动作）")
   assert.deepEqual(base.ledger, null, "ledger 槽位在册（账本警示切片 —— 缺席 / 异常清 ⇒ `null` ⇒ 注记零节点；写者 = `refreshRail`）")
   assert.deepEqual(base.railForm, null, "railForm 槽位在册（换形态单源 —— 常态 = null，换形 = `{ key, mode }`）")
-  assert.deepEqual(base.pool, { running: 0, approval: 0, queue: [], approvals: [] }, "pool 形 = 两读数（折叠头）+ 两族（待审批 / 队列）+ 待决项数组；**无 `blocks`**（R3b 摘工具行 —— 工具调用面 = 对话流工具卡）")
+  assert.deepEqual(base.pool, { running: 0, approval: 0, queue: [], approvals: [] }, "pool 形 = 两读数（折叠头）+ 两族（待审批 / 队列）+ 待决项数组；**无 `blocks`**（R3b 摘工具行 —— 工具调用面 = 对话流工具卡）；`queue` = 席位保留 · 零写者（「对齐第二批」项 2 —— 用户排队消息改住流内 `pending`）")
   assert.deepEqual(base.subBlocks, {}, "subBlocks 槽位在册（R3b 子 agent 块切片 —— 按会话键分槽；空表 ⇒ 该会话零块）")
   assert.deepEqual(base.tabBadges, {}, "tabBadges 槽位在册（位标源随供给批）")
   assert.deepEqual(base.sessionMeta, {}, "sessionMeta 槽位在册（会话头字段源随供给批）")
@@ -304,36 +316,46 @@ test("U75: initialState 切片定形 ∧ pool 两族两读数 ∧ togglePool 三
   assert.deepEqual(afterHead, beforeHead, "会话头树两态同形（零行为变化）")
 })
 
-// ─── U117 队列三纯动作（批 A · `pool.queue` 唯一写面 —— 批档 §2.4③）──────
+// ─── U117 排队消息三纯动作（「对齐第二批」项 2 · `pending` 分键唯一写面 —— 三动作出档 `renderer/queue.mjs`）──
 
-test("U117: 队列三纯动作（入队上限 / 出队队首 / 排空 —— `QUEUE_MAX` 单源 ∧ 拒收即原引用）", () => {
+test("U117: 排队消息三纯动作（按键分槽 / 满队按键判 / 出队队首 / 排空 —— `QUEUE_MAX` 单源 ∧ 拒收即原引用）", () => {
   const base = initialState()
-  assert.equal(QUEUE_MAX, 8, "上限常量单源（满队判据 = 队长 ≥ 此值 —— 树面提示行与拒绝径同源）")
-  assert.deepEqual(base.pool.queue, [], "初态队列空（切片定形）")
+  assert.equal(QUEUE_MAX, 8, "上限常量单源（满队判据 = 本键队长 ≥ 此值 —— 树面提示行与拒绝径同源）")
+  assert.equal(QUEUE_MAX, QUEUED_MAX_ITEMS, "值对拍锁：桌面队容量 ≡ 核 `queued-mark` 队容量（`QUEUE_MAX` ⇄ `QUEUED_MAX_ITEMS` 两值同改同验）")
+  assert.deepEqual(base.pending, {}, "初态排队切片空（按会话键分槽）")
+  assert.deepEqual(base.pool.queue, [], "`pool.queue` 席位保留 · 零写者（用户排队消息改住流内 —— 项 2）")
 
-  const one = enqueue(base, "第一条")
-  assert.deepEqual(one.pool.queue, [{ title: "第一条", status: "queued" }], "条目形 = 池面消费形（`title` 逐字原样 —— 零显示串副本）")
-  assert.notEqual(one.pool.queue, base.pool.queue, "受理 ⇒ 切片新对象（原引用 = 未受理）")
-  assert.deepEqual(base.pool.queue, [], "纯动作：原态零改")
+  const one = enqueue(base, "1", "第一条", 111)
+  assert.deepEqual(one.pending["1"], [{ text: "第一条", ts: 111 }], "条目形 = `{ text, ts }`（`text` 逐字原样 —— 零显示串副本；`ts` = 入队现刻）")
+  assert.notEqual(one.pending, base.pending, "受理 ⇒ 切片新对象（原引用 = 未受理）")
+  assert.deepEqual(base.pending, {}, "纯动作：原态零改")
+  const other = enqueue(one, "2", "他键条", 222)
+  assert.deepEqual([other.pending["1"].length, other.pending["2"].length], [1, 1], "按会话键分槽（互不串味）")
   for (const bad of ["", "   ", null, 7, undefined]) {
-    assert.equal(enqueue(one, bad), one, `空白 / 非串 ⇒ 原引用（实 = ${JSON.stringify(bad) ?? "undefined"}）`)
+    assert.equal(enqueue(one, "1", bad, 1), one, `空白 / 非串文本 ⇒ 原引用（实 = ${JSON.stringify(bad) ?? "undefined"}）`)
   }
+  for (const bad of ["", null, 7, undefined]) {
+    assert.equal(enqueue(one, bad, "文本", 1), one, `非串 / 空键 ⇒ 原引用（实 = ${JSON.stringify(bad) ?? "undefined"}）`)
+  }
+  assert.deepEqual(enqueue(one, "1", "无刻", "nan").pending["1"].at(-1), { text: "无刻", ts: null }, "`ts` 非有限数 ⇒ `null`（在场才落 —— 标签时间面判据归视图）")
 
   let full = base
-  for (let i = 0; i < QUEUE_MAX; i += 1) full = enqueue(full, `第${i + 1}条`)
-  assert.equal(full.pool.queue.length, QUEUE_MAX, `满队前逐条受理（${QUEUE_MAX} 条）`)
-  assert.equal(full.pool.queue[0].title, "第1条", "序 = 先进先出")
-  assert.equal(enqueue(full, "溢出"), full, "满队 ⇒ 原引用（该条不入队 —— 调用面据此判 `full` + 文本保留）")
+  for (let i = 0; i < QUEUE_MAX; i += 1) full = enqueue(full, "1", `第${i + 1}条`, i)
+  assert.equal(full.pending["1"].length, QUEUE_MAX, `满队前逐条受理（${QUEUE_MAX} 条）`)
+  assert.equal(full.pending["1"][0].text, "第1条", "序 = 先进先出")
+  assert.equal(enqueue(full, "1", "溢出", 9), full, "满队 ⇒ 原引用（**按键判**：该键满 ⇒ 该条不入队 —— 调用面据此判 `full` + 文本保留）")
+  assert.equal(enqueue(full, "2", "他键照收", 9).pending["2"].length, 1, "满队按键判：他键未满 ⇒ 照收（全局未分键口径退场）")
 
-  const popped = dequeue(full)
-  assert.equal(popped.pool.queue.length, QUEUE_MAX - 1, "出队 -1 条")
-  assert.equal(popped.pool.queue[0].title, "第2条", "摘队首（回合尾读 `queue[0]` 先发后出队）")
-  assert.equal(full.pool.queue.length, QUEUE_MAX, "纯动作：原态零改")
-  assert.equal(dequeue(base), base, "空队出队 ⇒ 原引用（零动作）")
+  const popped = dequeue(full, "1")
+  assert.equal(popped.pending["1"].length, QUEUE_MAX - 1, "出队 -1 条")
+  assert.equal(popped.pending["1"][0].text, "第2条", "摘队首（回合尾读 `pending[键][0]` 先发后出队）")
+  assert.equal(full.pending["1"].length, QUEUE_MAX, "纯动作：原态零改")
+  assert.equal(dequeue(base, "1"), base, "空队出队 ⇒ 原引用（零动作）")
+  assert.equal(dequeue(one, "zz"), one, "无该键 ⇒ 原引用")
 
-  assert.equal(drainQueue(base), base, "队空 ⇒ 原引用（关页 / 复位面零通知）")
-  const drained = drainQueue(full)
-  assert.notEqual(drained, full, "非空 ⇒ 新态（队空）")
-  assert.deepEqual(drained.pool.queue, [], "排空后零条目")
-  assert.equal(full.pool.queue.length, QUEUE_MAX, "纯动作：原态零改")
+  assert.equal(drainQueue(base, "1"), base, "队空 ⇒ 原引用（关页 / 复位面零通知）")
+  const drained = drainQueue(full, "1")
+  assert.notEqual(drained, full, "非空 ⇒ 新态（该键队空）")
+  assert.deepEqual(drained.pending["1"], [], "排空后零条目（槽留空表）")
+  assert.equal(full.pending["1"].length, QUEUE_MAX, "纯动作：原态零改")
 })

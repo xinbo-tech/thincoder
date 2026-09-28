@@ -80,6 +80,7 @@ test("U132: 回合尾有效读数 ⇒ 恰一帧（键 / 读数逐字 · 值 = �
 test("U133: 三径同点（done / stopped / error 各恰一帧 · 值随本径历史 · 序 = 读数帧终局前）", async (t) => {
   const s = useSlotSandbox(t)
   const content = { done: ASCII(400), stopped: ASCII(800), errored: ASCII(1200) }
+  const boom = new Error("boom") // 「对齐第三批」项 9：错误径载荷携 `techInfo` = `err.stack`（同一实例取读）
   const seen = {}
   const slotAt = {}
   const { host, out } = makeHost(s.cwd, {
@@ -90,7 +91,7 @@ test("U133: 三径同点（done / stopped / error 各恰一帧 · 值随本径�
         return new Promise((_res, rej) => opts.signal.addEventListener("abort", () => rej(new Error("AbortError: aborted"))))
       }
       pushReal(agent, { role: "user", content: text === "done" ? content.done : content.errored })
-      return text === "done" ? Promise.resolve() : Promise.reject(new Error("boom"))
+      return text === "done" ? Promise.resolve() : Promise.reject(boom)
     },
     onEvent: (channel, payload) => {
       if (payload?.key) slotAt[`${payload.key}:${channel}`] ??= readSlot(s.cwd, Number(payload.key))
@@ -106,7 +107,7 @@ test("U133: 三径同点（done / stopped / error 各恰一帧 · 值随本径�
   const want = [
     ["1", "ev:activity", { key: "1", event: "done" }, 10, content.done],
     ["2", "ev:activity", { key: "2", event: "stopped" }, 20, content.stopped],
-    ["3", "ev:error", { key: "3", message: "boom" }, 29, content.errored],
+    ["3", "ev:error", { key: "3", message: "boom", techInfo: boom.stack }, 29, content.errored],
   ]
   for (const [key, terminal, terminalPayload, percent, marker] of want) {
     const seq = out.filter(([, p]) => p?.key === key)

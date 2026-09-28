@@ -297,3 +297,59 @@ test("U150: 状态栏读数两态（在读 / `>= 80` 警示 / 未至 ⇒ 零节�
     assert.equal(mountStatus(null, {}), null, "零宿主 ⇒ 早返 null（不抛）")
   } finally { fake.restore() }
 })
+
+// ─── U213「对齐第三批」会话头忙态写门（P23 —— 在飞 ⇒ 三值控件 disabled · 保位）──
+
+test("U213: 「对齐第三批」忙态写门（位标 `running` ⇒ 三值控件 disabled + aria-disabled 保位 · 写路入口兵卫零通道）", async (ctx) => {
+  useHeadSentinels(ctx)
+  const errors = captureErrors(ctx)
+  resetStore(ctx)
+  const meta = { provider: "p1", model: "m1" }
+  // ① 模型面：`busy` 入模（缺省假 ⇒ 旧直调面四值零回归）
+  assert.equal(headModel({ tab: "b", meta }).busy, false, "busy 缺省 ⇒ false（直调面零回归）")
+  const busyTree = headTree(headModel({ tab: "b", meta, busy: true }), { candidates: () => FACE, onField: () => {} })
+  const busyPick = (name) => busyTree.children.find((node) => node.props["data-field"] === name).children[0]
+  for (const name of ["provider", "model", "effort"]) {
+    const control = busyPick(name)
+    assert.equal(control.tag, "select", `${name} 控件保位（信息面不撤）`)
+    assert.equal(control.props.disabled, true, `${name} 在飞 ⇒ disabled`)
+    assert.equal(control.props["aria-disabled"], "true", `${name} 在飞 ⇒ aria-disabled（可及态）`)
+    assert.equal("onChange" in control.props, false, `${name} 在飞 ⇒ 零 onChange（双闸：构树面）`)
+  }
+  assert.deepEqual(
+    headTree(headModel({ tab: "b", meta, busy: false }), { candidates: () => FACE, onField: () => {} })
+      .children.map((node) => "onChange" in node.children[0].props === false),
+    [false, false, false],
+    "非在飞 ⇒ 三控件照挂 onChange（与在飞面对拍）",
+  )
+  // ② 落点面：`mountHead` 从位标取忙态（`tabBadges[activeTab]` 含 `running`）
+  const fake = installFakeDom()
+  ctx.after(() => fake.restore())
+  const root = fake.element("div")
+  const model = mountHead(root, { activeTab: "b", sessionMeta: { b: meta }, tabBadges: { b: ["running"] } }, { candidates: () => FACE, onField: () => {} })
+  assert.equal(model.busy, true, "挂载面从位标片取忙态")
+  for (const name of ["provider", "model", "effort"]) {
+    const node = root.querySelector(`[data-field="${name}"]`).children[0]
+    assert.equal(node.getAttribute("disabled"), "", `${name} 落点面 disabled`)
+    assert.equal(node.getAttribute("aria-disabled"), "true", `${name} 落点面 aria-disabled`)
+  }
+  mountHead(root, { activeTab: "b", sessionMeta: { b: meta }, tabBadges: { b: [] } }, { candidates: () => FACE, onField: () => {} })
+  assert.equal(root.querySelector('[data-field="provider"]').children[0].getAttribute("disabled"), null, "非在飞 ⇒ 控件可写（回落）")
+  // ③ 写路入口兵卫（键盘 / 程序径）：在飞 ⇒ 零通道 + 回退重绘恰一次 + 一行诊断
+  const host = bridge((channel) => {
+    if (channel === "provider:list") return { ok: true, providers: [{ name: "p1" }, { name: "p2" }] }
+    if (channel === "model:list") return { ok: true, models: [{ id: "m1", effortEnum: [], thinkOff: false }] }
+    return { ok: true, meta }
+  })
+  const repaints = []
+  const head = attachHead({ host, onRepaint: () => repaints.push(1) })
+  store.set({ activeTab: "b", sessionMeta: { b: meta }, tabBadges: { b: ["running"] } })
+  const marks = errors.length
+  await head.onField("provider", "p2")
+  assert.equal(host.call("session:prefs").length, 0, "在飞 ⇒ 零通道（零乐观写）")
+  assert.equal(repaints.length, 1, "回退重绘恰一次（控件回退回执前值）")
+  assert.ok(errors.slice(marks).some((line) => String(line.join(" ")).includes("turn in flight")), "零静默：一行诊断")
+  store.set({ tabBadges: { b: [] } })
+  await head.onField("provider", "p2")
+  assert.deepEqual(host.call("session:prefs").at(-1), ["session:prefs", { key: "b", patch: { provider: "p2", model: "m1" } }], "非在飞 ⇒ 照常出站（门不误拦）")
+})

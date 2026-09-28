@@ -30,7 +30,8 @@ import { build } from "../renderer/dom.mjs"
 import { attachCards, mountCards, submitAnswer } from "../renderer/mount-cards.mjs"
 import { planTree } from "../renderer/views/plan.mjs"
 import { questionTree } from "../renderer/views/question.mjs"
-import { chatModel, mountChat, settleFrame, syncChrome } from "../renderer/views/chat.mjs"
+import { chatModel, mountChat, settleFrame } from "../renderer/views/chat.mjs"
+import { syncChrome } from "../renderer/views/chat-chrome.mjs"
 import { installFakeDom, selfCheck } from "./fake-dom.mjs"
 import { clickOn, nodes, sentinel, texts, useSentinels } from "./views-harness.mjs"
 
@@ -303,6 +304,84 @@ test("U124: 出站接线（回执 ok 才摘 / 失败留卡 + 记错 / 已换项�
   paintCards()
   assert.equal(cardOf(), null, "卡零回执直摘（摘项来自事件面 —— 本档零 IPC）")
   assert.equal(calls.length, quiet4, "零 IPC")
+})
+
+// ─── U210「对齐第三批」提问卡两增量（P2 Enter 提交 · P3 聚焦两态）────────
+
+test("U210: 「对齐第三批」提问卡（P2 Enter / Shift+Enter / 组字三径 · 空白零发送）∧ P3 聚焦两态（插入即焦 / 答毕回焦 / 失败零动）", async (ctx) => {
+  useSentinels(ctx)
+  assert.equal(selfCheck(), true, "假 DOM 载体自检")
+  const fake = installFakeDom()
+  ctx.after(() => fake.restore())
+  const flow = fake.element("div")
+  flow.setAttribute("data-slot", "flow")
+  const composerInput = fake.element("textarea")
+  composerInput.setAttribute("data-input", "text")
+  const shell = fake.element("div")
+  shell.append(flow, composerInput)
+  patchCardSeam(fake, shell)
+  const focused = []
+  Object.defineProperty(Object.getPrototypeOf(fake.element()), "focus", {
+    configurable: true,
+    value: function focus() { focused.push(this.getAttribute("data-input") ?? this.tag) },
+  })
+
+  const calls = []
+  let receipt = { ok: true }
+  const host = { invoke: async (channel, payload) => { calls.push([channel, payload]); return receipt } }
+  const store = createStore(withBlocks(askOn(blank()), "u1"))
+  const { paintCards, handlers } = attachCards(host, { store })
+
+  // P3 ①：新卡插入 ⇒ 卡内作答控件聚焦（插入径；刷新径不重夺焦 —— 下行对拍）
+  assert.equal(paintCards(), 1, "新问落卡")
+  assert.deepEqual(focused, ["answer"], "卡插入 ⇒ `[data-input=\"answer\"]` 聚焦恰一次")
+  assert.equal(paintCards(), 1, "等值重挂（零重建）")
+  assert.deepEqual(focused, ["answer"], "刷新径不重夺焦（零 DOM 写 ⇒ 零 focus 调用）")
+
+  // P2：Enter（非组字）⇒ preventDefault + 泻入既有 `onAnswerDraft` 径（值原样零 trim）
+  const box = flow.querySelector('[data-card="question"]').querySelector('[data-input="answer"]')
+  const prevented = []
+  box.value = "  乙  "
+  fake.fire(box, "keydown", { key: "Enter", target: box, currentTarget: box, preventDefault: () => prevented.push("enter") })
+  await tick()
+  assert.deepEqual(prevented, ["enter"], "Enter ⇒ preventDefault（本端接管该键）")
+  assert.deepEqual(calls.at(-1), ["question:respond", { promptId: "q1", answer: "  乙  " }], "复用 onAnswerDraft 径：值原样送出（零 trim —— 单一实现）")
+
+  // 空白 + Enter ⇒ 零发送（空白闸同提交键）；Shift+Enter / 组字期 ⇒ 零动作不吞键
+  box.value = "   "
+  const quiet = calls.length
+  fake.fire(box, "keydown", { key: "Enter", target: box, currentTarget: box, preventDefault: () => prevented.push("blank") })
+  await tick()
+  assert.equal(calls.length, quiet, "空白串 ⇒ 零动作零 IPC")
+  box.value = "留字"
+  fake.fire(box, "keydown", { key: "Enter", shiftKey: true, target: box, currentTarget: box, preventDefault: () => prevented.push("shift") })
+  fake.fire(box, "keydown", { key: "Enter", isComposing: true, target: box, currentTarget: box, preventDefault: () => prevented.push("ime") })
+  fake.fire(box, "keydown", { key: "Enter", keyCode: 229, target: box, currentTarget: box, preventDefault: () => prevented.push("229") })
+  fake.fire(box, "keydown", { key: "a", target: box, currentTarget: box, preventDefault: () => prevented.push("a") })
+  await tick()
+  assert.deepEqual(prevented, ["enter", "blank"], "Shift+Enter / 组字两臂 / 余键 ⇒ 零 preventDefault（不吞键）")
+  assert.equal(calls.length, quiet, "三径皆零 IPC（Shift+Enter = 换行路）")
+
+  // P3 ②：作答回执 `ok` 真 ⇒ 回焦输入区；失败径零动
+  focused.length = 0
+  receipt = { ok: true }
+  handlers.onAnswer("q1", "甲")
+  await tick()
+  assert.deepEqual(focused, ["text"], "受理 ⇒ 回焦输入区 `[data-input=\"text\"]`")
+  store.set(withBlocks(askOn(blank(), { promptId: "q2" }), "u1"))
+  paintCards()
+  focused.length = 0
+  receipt = { ok: false, reason: "bad-kind" }
+  const priorError = console.error
+  console.error = () => {}
+  try {
+    handlers.onAnswer("q2", "乙")
+    await tick()
+  } finally {
+    console.error = priorError
+  }
+  assert.equal(store.get().questions[KEY].promptId, "q2", "回执非 ok ⇒ 卡留（零切片写）")
+  assert.deepEqual(focused, [], "失败径零动（不回焦 —— 卡留场可重试）")
 })
 
 // ─── U125 T-DSK24 ②：计划卡 ─────────────────────────────────────────

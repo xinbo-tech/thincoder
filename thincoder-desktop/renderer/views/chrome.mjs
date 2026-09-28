@@ -24,6 +24,9 @@
  * 失败回退 —— 本档只出控件与供给取面）；控件两态沿房规（`views/chat.mjs` 头注通则）：handler 给 ⇒ `onChange`（值 `""` = Auto ⇒ `null` 出参），
  * 缺 ⇒ `disabled`（诚实非死控）。
  * 文案一律经 `t()`（零硬编码）；零 `node:` / 零裸包。
+ * **对齐第三批（P23 忙态写门）**：本会话位标含 `running` ⇒ 三值就地控件 `disabled` + `aria-disabled`（控件**保位** ——
+ * 信息面不撤；原生 `select` 无菜单面 ⇒ VSC `closeModelMenu` 零对位）；判据单源 = `busyOf`（写路入口同取 ——
+ * `renderer/mount-head.mjs`）。
  */
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
@@ -49,12 +52,20 @@ function fieldOf(name, source, hasModel) {
   return typeof value === "string" && value !== "" ? { name, value } : null
 }
 
-/** 会话头模型：`tab` = 活动标签键（缺 ⇒ `null`）；`meta` = 会话级供给（缺 / 非载体 ⇒ 零字段）。 */
-export function headModel({ tab = null, meta = null } = {}) {
+/** 忙态判据（P23 —— 本会话位标含 `running`；与输入区忙态同式 —— `renderer/mount-composer.mjs` `isBusy`，两面各持一份
+ *  同形判据，避免跨面向下依赖；写路入口（`renderer/mount-head.mjs`）同取本函数 ⇒ 单源。 */
+export function busyOf(state, key) {
+  const codes = key === null || key === undefined ? null : state?.tabBadges?.[key]
+  return Array.isArray(codes) && codes.includes("running")
+}
+
+/** 会话头模型：`tab` = 活动标签键（缺 ⇒ `null`）；`meta` = 会话级供给（缺 / 非载体 ⇒ 零字段）；`busy` = 忙态（P23 ——
+ *  缺省假：直调面（旧夹具）行为零改）。 */
+export function headModel({ tab = null, meta = null, busy = false } = {}) {
   const source = meta !== null && typeof meta === "object" ? meta : {}
   const hasModel = typeof source.model === "string" && source.model !== ""
   const fields = FIELD_ORDER.map((name) => fieldOf(name, source, hasModel)).filter((field) => field !== null)
-  return { tab: tab == null ? null : String(tab), fields }
+  return { tab: tab == null ? null : String(tab), fields, busy: busy === true }
 }
 
 /** 结构描述符树（根：`data-tab` = 活动标签键（缺 ⇒ 零属性）· `data-meta` = `present` / `none`；字段 `data-field` 各一）。 */
@@ -72,7 +83,7 @@ export function headTree(model, handlers = {}) {
     children: model.fields.map((field) => ({
       tag: "span",
       props: { class: "head-field", "data-field": field.name },
-      children: [PICK_FIELDS.includes(field.name) ? pickNode(field, face, chosen, onField) : field.value],
+      children: [PICK_FIELDS.includes(field.name) ? pickNode(field, face, chosen, onField, model.busy === true) : field.value],
     })),
   }
 }
@@ -96,10 +107,14 @@ function providerNameOf(value) {
   return typeof name === "string" && name !== "" ? name : null
 }
 
-/** 就地可改字段节点（`select` —— UI.md §1「批 B 注」项 1）：选项 = 选项集；两态 = handler 两态（沿房规）。 */
-function pickNode(field, face, chosen, onField) {
+/** 就地可改字段节点（`select` —— UI.md §1「批 B 注」项 1）：选项 = 选项集；两态 = handler 两态（沿房规）；
+ *  **P23 忙态门**：`busy` 真 ⇒ `disabled` + `aria-disabled`（保位不撤 —— 写路入口另有一道忙判）。 */
+function pickNode(field, face, chosen, onField, busy) {
   const props = { class: "head-pick", "aria-label": t(`head.field.${field.name}`) }
-  if (typeof onField === "function") props.onChange = (event) => acceptPick(event, field.name, onField)
+  if (busy === true) {
+    props.disabled = true
+    props["aria-disabled"] = "true"
+  } else if (typeof onField === "function") props.onChange = (event) => acceptPick(event, field.name, onField)
   else props.disabled = true
   return {
     tag: "select",
@@ -154,10 +169,11 @@ export function sessionMetaOf(state) {
   return table[key] ?? null
 }
 
-/** 薄挂载（`activeTab` / `sessionMeta[activeTab]` ⇒ 会话头；`handlers` = 候选面 + 字段出口）；返回模型（读数 / 走查面）。 */
+/** 薄挂载（`activeTab` / `sessionMeta[activeTab]` / 位标忙态 ⇒ 会话头；`handlers` = 候选面 + 字段出口）；返回模型（读数 / 走查面）。 */
 export function mountHead(root, state, handlers = {}) {
   if (!root || typeof root.append !== "function") return null
-  const model = headModel({ tab: state?.activeTab ?? null, meta: sessionMetaOf(state) })
+  const tab = state?.activeTab ?? null
+  const model = headModel({ tab, meta: sessionMetaOf(state), busy: busyOf(state, tab) })
   clear(root)
   root.append(build(headTree(model, handlers)))
   return model

@@ -1,10 +1,11 @@
 /**
  * mount-pool.mjs — 右列（子 agent 面板）接线一族（自 `renderer/app.mjs` 出档 · 批档 §2.2(g) 在册预案）：
  * 右栏重挂（`paintPool` · 挂载面**纯读**现态）+ 审批出口（出站回执 ⇒ 成功摘项）+ 折叠出口（状态树随动）
- * + **停止出口**（`subagent:stop` —— R3b · D20；零乐观写：块折叠随事件面）+ 订阅切片键面（`POOL_KEYS`）。
+ * + **停止出口**（`subagent:stop` —— R3b · D20；零乐观写：块折叠随事件面）+ **⏹ 点击委托**（「对齐第二批」项 3：
+ * 核件停止钮无 `data-action` —— 载荷锚 `data-sub-id` / `data-sub-role`）+ 订阅切片键面（`POOL_KEYS`）。
  * 接线与卡面**同一路**（三出口描述符单源 = `renderer/views/approval.mjs`）。
  * `host` = 窄桥注入（本档零全局读）；零 `node:` / 零裸包（静态闭包判据 = `test/guard-closure.test.mjs`）；
- * `submitVerdict` / `stopSubagent` 零 DOM ⇒ 可注入假 store / 假 host 平 node 直测（U92 · U169）。
+ * `submitVerdict` / `stopSubagent` / `bindSubagentStop` 零 DOM 或一次性宿主注册 ⇒ 可注入假 store / 假 host 平 node 直测（U92 · U169）。
  */
 import { applyFlags, clearApproval } from "./events.mjs"
 import { store as defaultStore, togglePool } from "./store.mjs"
@@ -45,16 +46,44 @@ export async function stopSubagent({ host } = {}, key, id, role) {
   }
 }
 
-/** 池面一族装配（装配期一次 · `host` = 窄桥）：收三出口（审批 / 折叠 / 停止）⇒ 返回挂载面 `paintPool` + 接线面
- *  `handlers`（挂载签名形 = `views/activity.mjs` `mountPool(root, state, handlers)` 的 handlers 面）。 */
+/** 点击目标 → 停止钮（自底向上最近祖先 —— 核件钮子树（字形 / `title`）点按同径；无钮 ⇒ `null`）。 */
+function stopButtonOf(target) {
+  for (let node = target; node !== null && node !== undefined; node = node.parentNode) {
+    if (node.classList?.contains?.("sub-stop-btn") === true) return node
+  }
+  return null
+}
+
+/** **⏹ 点击委托**（「对齐第二批」项 3 · 落点单源）：核件停止钮（`sub-stop-btn`）无 `data-action` ⇒ 在池宿主上
+ *  一次注册（`_stopBound` 记账 —— 幂等）；载荷读 `data-sub-id` / `data-sub-role`，会话键 = 现刻活动会话
+ *  （池面恒为活动会话块表）；非钮 / 无活动键 ⇒ 零动作（零误发）。回值 = 本次是否完成注册。 */
+export function bindSubagentStop(root, host, store = defaultStore) {
+  if (!root || typeof root.addEventListener !== "function" || root._stopBound === true) return false
+  root._stopBound = true
+  root.addEventListener("click", (event) => {
+    const button = stopButtonOf(event?.target)
+    if (button === null) return
+    const key = store.get()?.activeSession ?? null
+    if (typeof key !== "string" || key === "") return
+    const id = typeof button.getAttribute === "function" ? button.getAttribute("data-sub-id") : null
+    const role = typeof button.getAttribute === "function" ? button.getAttribute("data-sub-role") : null
+    void stopSubagent({ host }, key, id, role)
+  })
+  return true
+}
+
+/** 池面一族装配（装配期一次 · `host` = 窄桥）：收两出口（审批 / 折叠）+ **⏹ 点击委托**（项 3）⇒ 返回挂载面 `paintPool`
+ *  + 接线面 `handlers`（挂载签名形 = `views/activity.mjs` `mountPool(root, state, handlers)` 的 handlers 面）。 */
 export function attachPool(host) {
   /** 审批出口（卡面三出口 + 卡面键位同一路 · 薄壳）：出站与清除判据全归 `submitVerdict`。 */
   const onApprove = (promptId, verdict) => void submitVerdict({ store: defaultStore, host }, promptId, verdict)
   /** 折叠出口（`data-action="pool:toggle"` · 回执 = 本会话键）：纯动作 ⇒ 翻态；非串 / 无变化 ⇒ 原引用 ⇒ 零通知。 */
   const onTogglePool = (key) => defaultStore.set(togglePool(defaultStore.get(), key))
-  /** 停止出口（`data-action="subagent:stop"` · 回执 = `{ key, id, role }` —— 薄壳）：出站与判据全归 `stopSubagent`。 */
-  const onStopSubagent = (key, id, role) => void stopSubagent({ host }, key, id, role)
-  /** 右栏重挂（挂载面**纯读**现态；容器缺位 ⇒ `mountPool` 空转）。 */
-  const paintPool = (state = defaultStore.get()) => mountPool(document.querySelector(POOL_SLOT), state, { onApprove, onTogglePool, onStopSubagent })
-  return { paintPool, handlers: { onApprove, onTogglePool, onStopSubagent } }
+  /** 右栏重挂（挂载面**纯读**现态；容器缺位 ⇒ `mountPool` 空转）+ ⏹ 委托注册（幂等 —— 一次）。 */
+  const paintPool = (state = defaultStore.get()) => {
+    const root = document.querySelector(POOL_SLOT)
+    bindSubagentStop(root, host)
+    return mountPool(root, state, { onApprove, onTogglePool })
+  }
+  return { paintPool, handlers: { onApprove, onTogglePool } }
 }

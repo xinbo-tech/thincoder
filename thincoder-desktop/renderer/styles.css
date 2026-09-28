@@ -15,7 +15,7 @@
   --gap: 12px;
   --rail-w: 15rem;
   --rail-w-collapsed: 3.25rem;
-  --pool-w: 18rem;
+  --pool-w: 36rem;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
   /* D21 内容面 / 会话面板面变量（值 = VSC webview 实值 —— 逐面映射表 = `docs/render-core/design/RENDER-CORE.md` §5 ·
      `docs/desktop/design/UI.md` §1 项 2）：语法配色族 / 叠加层 rgba / 字族栈 / 语义色。 */
@@ -31,7 +31,10 @@
   --syn-type: #267f99;
   --syn-prop: #795e26;
   --syn-atrule: #af00db;
-  --diff-del-bg: rgba(201,37,37,0.12);
+  --diff-add-bg: rgba(16,137,62,0.12);
+  --diff-add-fg: #0d6b30;
+  --diff-del-bg: rgba(201,37,37,0.12); /* diff 四变量族（「对齐第三批」相抵① 三新 + 在册一）值源 = VSC `webview/base.css:58-61`（亮色块） */
+  --diff-del-fg: #b91a1a;
   --error-fg: #f44747;
 }
 
@@ -57,7 +60,10 @@
     --syn-type: #4ec9b0;
     --syn-prop: #9cdcfe;
     --syn-atrule: #d7ba7d;
-    --diff-del-bg: rgba(244,71,71,0.14);
+    --diff-add-bg: rgba(34,187,51,0.14);
+    --diff-add-fg: #a5d6a7;
+    --diff-del-bg: rgba(244,71,71,0.14); /* diff 四变量族同族注释（亮色块行）—— 本块值源 = VSC `webview/base.css:35-38`（暗色块） */
+    --diff-del-fg: #ef9a9a;
     --error-fg: #f44747;
   }
 }

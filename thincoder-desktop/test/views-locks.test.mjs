@@ -38,43 +38,65 @@ test("U52: 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构 �
   for (const file of listed) assert.ok(existsSync(join(root, file)), `登记项在盘：${file}`)
 
   const store = await import("../renderer/store.mjs")
+  const queue = await import("../renderer/queue.mjs")
+  const pageRead = await import("../renderer/page-read.mjs")
+  const subagentReduce = await import("../renderer/subagent-reduce.mjs")
+  const events = await import("../renderer/events.mjs")
   const dom = await import("../renderer/dom.mjs")
   const sessions = await import("../renderer/views/sessions.mjs")
   const chrome = await import("../renderer/views/chrome.mjs")
   const statusline = await import("../renderer/views/statusline.mjs")
   const mountStatusFace = await import("../renderer/mount-status.mjs")
   const chat = await import("../renderer/views/chat.mjs")
+  const chatChrome = await import("../renderer/views/chat-chrome.mjs")
   const chatTool = await import("../renderer/views/chat-tool.mjs")
   const approval = await import("../renderer/views/approval.mjs")
   const activity = await import("../renderer/views/activity.mjs")
+  const settingsSections = await import("../renderer/views/settings-sections.mjs")
+  const composer = await import("../renderer/mount-composer.mjs")
   assert.deepEqual(Object.keys(store).sort(), [
-    "QUEUE_MAX", "appendBlock", "beginBackfill", "cancelCloseTab", "closeRailForm", "closeTab", "configuredFlag", "confirmCloseTab",
-    "createStore", "dequeue", "deriveTabBadge", "dismissWizard", "drainQueue", "endBackfill", "enqueue", "initialState",
+    "appendBlock", "beginBackfill", "cancelCloseTab", "closeRailForm", "closeTab", "configuredFlag", "confirmCloseTab",
+    "createStore", "deriveTabBadge", "dismissWizard", "endBackfill", "initialState",
     "needsCloseConfirm", "openRailForm", "openTab", "patchSettings", "requestCloseTab", "returnToBottom", "setFollowing", "setWizardStep",
     "store", "togglePool", "visibleWindow",
-  ], "store.mjs 导出面锁（关闭确认四条 + `togglePool` 纯动作 + 设置族四条：`configuredFlag` / `dismissWizard` / `patchSettings` / `setWizardStep` + 左列换形态两条：`openRailForm` / `closeRailForm`）")
+  ], "store.mjs 导出面锁（关闭确认四条 + `togglePool` 纯动作 + 设置族四条 + 左列换形态两条；排队消息三动作 + `QUEUE_MAX` 已出档 `renderer/queue.mjs` —— 「对齐第二批」拆分产出一）")
+  assert.deepEqual(Object.keys(queue).sort(), ["QUEUE_MAX", "dequeue", "drainQueue", "enqueue"], "queue.mjs 导出面锁（拆分产出一：三纯动作 + 满队常量单源 —— `pending` 切片按会话分键唯一写面）")
+  assert.deepEqual(Object.keys(pageRead).sort(), ["applyPage", "blockOfMessage"], "page-read.mjs 导出面锁（拆分产出二：页读径两件 —— `applyFlags` 住归约核心档，两消费面同点）")
+  assert.deepEqual(Object.keys(subagentReduce).sort(), ["liveCount", "onSubagent", "onSubchunk", "poolOf"], "subagent-reduce.mjs 导出面锁（拆分产出三：子 agent 面两分派支 + 池读数两助手）")
+  assert.deepEqual(Object.keys(events).sort(), ["applyFlags", "clearApproval", "clearQuestion", "isTurnTail", "openSession", "reduce", "sameRecord"], "events.mjs 导出面锁（归约面六件 + 卡面 re-export 一件 —— 页读径 / 子 agent 径出档后名面不变）")
   assert.deepEqual(Object.keys(dom).sort(), ["build", "clear", "el", "on", "setBoot", "text"], "dom.mjs 导出面锁（本批零改动）")
   assert.deepEqual(Object.keys(sessions).sort(), ["BADGE_WORD", "mountRail", "mountTabbar", "railModel", "railTree", "tabbarModel", "tabbarTree"], "sessions.mjs 导出面 = 左列三段 + 标签条三段 + 位标词键表")
-  assert.deepEqual(Object.keys(chrome).sort(), ["headModel", "headTree", "mountHead", "mountStatus", "sessionMetaOf", "statusModel", "statusTree"], "chrome.mjs 导出面 = 会话头三段 + 供给取面单源一段 + 状态行三段**再出口**（R3a 拆档：语义单源 = statusline.mjs）")
+  assert.deepEqual(Object.keys(chrome).sort(), ["busyOf", "headModel", "headTree", "mountHead", "mountStatus", "sessionMetaOf", "statusModel", "statusTree"], "chrome.mjs 导出面 = 会话头三段 + 供给取面单源一段 + 状态行三段**再出口**（R3a 拆档：语义单源 = statusline.mjs）+ **`busyOf`**（「对齐第三批」P23 忙态判据单源 —— 构树与写路入口两处同取）")
   assert.deepEqual(Object.keys(statusline).sort(), ["STATUS_SEGMENTS", "mountStatus", "statusModel", "statusTree"], "statusline.mjs 导出面 = 状态行三段 + 承载段闭集（R3a 新档）")
   assert.deepEqual(Object.keys(mountStatusFace).sort(), ["STATUS_KEYS", "STATUS_SLOT", "attachStatus"], "mount-status.mjs 导出面 = 槽锚 + 订阅切片键面 + 装配面（R3a 新档）")
-  assert.deepEqual(Object.keys(chat).sort(), ["chatModel", "chatTree", "mountChat", "settleFrame", "syncChrome"], "chat.mjs 导出面 = 三档 + 帧尾态刷 / 帧尾六步")
+  assert.deepEqual(Object.keys(chat).sort(), ["chatModel", "chatTree", "mountChat", "retrySourceOf", "settleFrame"], "chat.mjs 导出面 = 三档 + 帧尾六步 + 重试源谓词（「对齐第三批」项 9 单源 —— 钮在场与出口同谓词；帧尾态刷面出档 `views/chat-chrome.mjs`）")
+  assert.deepEqual(Object.keys(chatChrome).sort(), ["blockAnchor", "chromeProps", "digestGroupNode", "focusAutofocus", "ledgerGroupNode", "pillNode", "stoppedNode", "summaryNode", "syncChrome"], "chat-chrome.mjs 导出面 = 帧尾态刷 + 四尾组构树 + 插点锚 + 真置焦（拆分产出 —— 单项）")
   assert.deepEqual(Object.keys(chatTool).sort(), [
-    "DIFF_FILE_FLOOR", "DIFF_LINE_FLOOR", "STATUS_WORD", "changeTotals", "segNode", "toggleExpanded", "toolCard", "toolChanges",
+    "DIFF_FILE_FLOOR", "DIFF_LINE_FLOOR", "STATUS_WORD", "bindFileLinks", "changeTotals", "fileLinkOf", "linkifyResult", "segNode", "toggleExpanded", "toolCard", "toolChanges",
     "wire", "withKey",
-  ], "chat-tool.mjs 导出面 = 工具卡构树 + 接线两态 + 折叠纯函数 + 核状态词表 / 改动摘要阈值与合计（本批增复用面 —— 审批卡同源消费；`segNode` = 文本段通则单源 —— 四处行内多段面同表消费）")
+  ], "chat-tool.mjs 导出面 = 工具卡构树 + 接线两态 + 折叠纯函数 + 核状态词表 / 改动摘要阈值与合计（本批增复用面 —— 审批卡同源消费；`segNode` = 文本段通则单源；**相抵② 三件** = 链接着装 `linkifyResult` / 命中 `fileLinkOf` / 委托 `bindFileLinks`）")
   assert.deepEqual(Object.keys(approval).sort(), [
     "approvalActions", "approvalExits", "approvalSummary", "approvalTitle", "approvalTree", "respondApproval", "verdictOfKey",
   ], "approval.mjs 导出面 = 卡面（两形构树 / 键位闭集 / 出口表 · 操作区 · 两标称）+ 出口动作（同一路）")
   assert.deepEqual(Object.keys(activity).sort(), ["mountPool", "poolModel", "poolTree"], "activity.mjs 导出面 = 右列三段（模型 → 构树 → 薄挂载 —— R3b 重写为子 agent 块面，面形不变）")
+  assert.deepEqual(Object.keys(settingsSections).sort(), [
+    "NAMED_FIELDS", "agentBody", "mcpBody", "modelBody", "modelChoicesTree", "modelHeadNode", "modelIdOf", "providersBody", "tierFace", "tierOptions",
+  ], "settings-sections.mjs 导出面 = 四段体 + 模型段两导出面 + 档位两件 + **具名十键表 `NAMED_FIELDS`（「对齐第三批」P15 键集 / 词键 / 控型三面单源）**")
+  assert.deepEqual(Object.keys(composer).sort(), [
+    "COMPOSER_KEYS", "COMPOSER_SLOT", "attachComposer", "composerModel", "composerTree", "flushTurnTail", "isComposing", "mountComposer", "submitDraft",
+  ], "mount-composer.mjs 导出面 = 挂载一族 + **`isComposing`**（「对齐第三批」P2 组字判据单源 —— 卡族 Enter 径同取，零副本）")
 
   const html = stripComments(readFileSync(new URL("../renderer/index.html", import.meta.url), "utf8"))
   const app = stripComments(readFileSync(new URL("../renderer/app.mjs", import.meta.url), "utf8"))
-  // KD-RC-5（R3c）：文件链接面**不承载** —— 核 `linkifyPaths` 在渲染面无消费（视角面 = 桌面不落假控件）
-  for (const name of ["chat-text.mjs", "chat.mjs", "chat-copy.mjs", "chat-tool.mjs", "activity.mjs", "approval.mjs", "question.mjs", "plan.mjs"]) {
+  // 「对齐第三批」相抵②：文件链接面**承载**（原 KD-RC-5「不承载」口径退场 —— D19 收正）—— 核 `linkifyPaths` 消费
+  // **单点** = `views/chat-tool.mjs`（结果区链接着装）；余视图档零消费（单点锁 —— 双路着装破幂等面）。
+  for (const name of ["chat-text.mjs", "chat.mjs", "chat-copy.mjs", "activity.mjs", "approval.mjs", "question.mjs", "plan.mjs"]) {
     const view = stripComments(readFileSync(new URL(`../renderer/views/${name}`, import.meta.url), "utf8"))
-    assert.ok(!/linkifyPaths/.test(view), `渲染面无核 linkifyPaths 消费（KD-RC-5）：${name}`)
+    assert.ok(!/linkifyPaths/.test(view), `核 linkifyPaths 消费单点（相抵②）：${name} 零消费`)
   }
+  const chatToolSrc = stripComments(readFileSync(new URL("../renderer/views/chat-tool.mjs", import.meta.url), "utf8"))
+  assert.ok(chatToolSrc.includes("linkifyPaths"), "着装面消费核 `linkifyPaths`（相抵② —— 单点 = `views/chat-tool.mjs`）")
+  assert.ok(chatToolSrc.includes('"data-path"'), "着装面补 `data-path` 锚（断言锚 = `.file-link[data-path]`）")
   const pool = stripComments(readFileSync(new URL("../renderer/mount-pool.mjs", import.meta.url), "utf8"))
   const mountStatusSrc = stripComments(readFileSync(new URL("../renderer/mount-status.mjs", import.meta.url), "utf8"))
   assert.ok(mountStatusSrc.includes("mountStatus("), "状态行挂载调用在位：mount-status.mjs（单点重建一族）")
@@ -98,7 +120,7 @@ test("U52: 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构 �
     assert.ok(shellKeys.includes(`"${key}"`), `外壳订阅切片在位：${key}`)
   }
   const chatKeys = app.match(/const CHAT_KEYS = \[([^\]]*)\]/)?.[1] ?? ""
-  for (const key of ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool"]) {
+  for (const key of ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "stopMark", "ledgerLines"]) {
     assert.ok(chatKeys.includes(`"${key}"`), `对话流订阅切片在位：${key}`)
   }
   assert.ok(app.includes("FLOW_SLOT"), "对话流容器锚常量在位：FLOW_SLOT")
@@ -109,7 +131,7 @@ test("U52: 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构 �
   assert.ok(pool.includes("POOL_SLOT"), "右列容器锚常量在位：POOL_SLOT")
   // 状态行订阅切片（R3a 新族档）：D17 承载段数据源全集（段随切片走 —— 漏键 = 段永不刷新的静默口）
   const statusKeys = mountStatusFace.STATUS_KEYS
-  for (const key of ["usage", "tasks", "turns", "turnStarts", "tokens", "timers", "projectInfo", "sessions", "pool", "blocks", "tabs", "activeTab", "tabBadges", "locale"]) {
+  for (const key of ["usage", "tasks", "turns", "turnStarts", "tokens", "timers", "projectInfo", "sessions", "pending", "blocks", "tabs", "activeTab", "tabBadges", "locale"]) {
     assert.ok(statusKeys.includes(key), `状态行订阅切片在位：${key}`)
   }
   for (const call of [
@@ -146,13 +168,19 @@ test("U52: 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构 �
   // 词面读数落接线面（视图档零 DOM）：改名读在形文本控件值 —— 选择符锚同面
   assert.ok(app.includes('[data-action="session:rename-input"]'), "词面读数落点在位：在形文本控件选择符（宿主 = renderer/app.mjs）")
   // 审批出口 / 折叠接线 / 停止出口结构面（批 7 落形 · 批 8 随迁 `mount-pool.mjs`：卡面与池面条目同一路 —— 三出口描述符单源；
-  // R3b 增停止出口 —— `subagent:stop` 通道字面与薄壳调用形）
+  // R3b 增停止出口 —— `subagent:stop` 通道字面与薄壳调用形；「对齐第二批」项 3：⏹ 点击委托（核件钮无 `data-action`））
   for (const wiring of [
     "onApprove, onTogglePool", "respondApproval(host, promptId, verdict)", "togglePool(defaultStore.get(), key)",
-    "onStopSubagent", 'host.invoke("subagent:stop", { key, id, ...(role ? { role } : {}) })',
+    "bindSubagentStop(root, host)", 'host.invoke("subagent:stop", { key, id, ...(role ? { role } : {}) })',
   ]) {
     assert.ok(pool.includes(wiring), `接线落点在位：${wiring}（审批出口同一路 / 折叠入状态树 / 停止出口零乐观写）`)
   }
+  // 「对齐第二批」项 6（A6 · 右列加宽一倍 · 值落点锁）：`--pool-w` 声明单源 = 36rem ∧ 两处引用皆 `var(--pool-w)`
+  const stylesCss = stripComments(readFileSync(new URL("../renderer/styles.css", import.meta.url), "utf8"))
+  assert.equal((stylesCss.match(/--pool-w\s*:/g) ?? []).length, 1, "`--pool-w` 声明恰一处（单源 —— 零第二处数值）")
+  assert.ok(/--pool-w:\s*36rem;/.test(stylesCss), "`--pool-w` 值 = 36rem（项 6 —— 18rem ⇒ ×2）")
+  assert.equal((stylesCss.match(/var\(--pool-w\)/g) ?? []).length, 2, "两处引用皆 `var(--pool-w)`（主栅格 + 窄断点行 —— 自动随动）")
+  assert.equal(stylesCss.includes("18rem"), false, "零 18rem 残留（旧值不留痕）")
 })
 
 // ─── U152 可见面修复本批锁（#457 输入区五类规则 ∧ #461 开项目链复读序）──────────
@@ -191,7 +219,7 @@ test("U152: 输入区样式与开项目链（#457 五类 + 两附属行在 `chat
 
 // ─── U174 D21 值落点锁（内容面 21 面 · 会话面板面 9 面 —— 值表单源 = 核档 §5 / `docs/desktop/design/UI.md` §1 项 2）──
 
-test("U174: D21 值落点锁（core.css 高亮 9 规则 ∧ 关键值 · styles.css 新增变量 14 × 亮暗两套 ∧ 会话行九面值）", () => {
+test("U174: D21 值落点锁（core.css 高亮 9 规则 ∧ 关键值 · styles.css 新增变量 17 × 亮暗两套 ∧ 会话行九面值）", () => {
   const root = fileURLToPath(new URL("../", import.meta.url))
   const core = stripComments(readFileSync(join(root, "renderer/core.css"), "utf8"))
   const coreHas = (pattern) => new RegExp(pattern, "s").test(core)
@@ -270,8 +298,12 @@ test("U174: D21 值落点锁（core.css 高亮 9 规则 ∧ 关键值 · styles.
     "--syn-atrule": ["#af00db", "#d7ba7d"],
     "--diff-del-bg": ["rgba(201,37,37,0.12)", "rgba(244,71,71,0.14)"],
     "--error-fg": ["#f44747", "#f44747"],
+    // 「对齐第三批」相抵①：diff 预览三新变量（值源 = VSC `webview/base.css:35-38` 暗色块 / `:58-61` 亮色块 —— 4 变量族的余三）
+    "--diff-add-bg": ["rgba(16,137,62,0.12)", "rgba(34,187,51,0.14)"],
+    "--diff-add-fg": ["#0d6b30", "#a5d6a7"],
+    "--diff-del-fg": ["#b91a1a", "#ef9a9a"],
   }
-  assert.equal(Object.keys(NEW_VARS).length, 14, "新增变量合计 14（内容面 12 + 会话面板面 2 —— D3 计数）")
+  assert.equal(Object.keys(NEW_VARS).length, 17, "新增变量合计 17（内容面 12 + 会话面板面 2 + 「对齐第三批」diff 三 —— D3 计数）")
   for (const [name, [light, dark]] of Object.entries(NEW_VARS)) {
     assert.ok(lightVars.includes(`${name}: ${light};`), `亮模式 ${name} = ${light}`)
     assert.ok(darkVars.includes(`${name}: ${dark};`), `暗模式 ${name} = ${dark}`)
@@ -368,10 +400,10 @@ test("U182: D24 值落点锁（静息描边归零四族 ∧ 交互态四值族 �
     ["styles", String.raw`\.rail-row\s*\{[^}]*border-bottom:\s*1px solid var\(--line\)`, "保留面（`--line`）：`.rail-row` 行分隔线在"],
   ]) assert.ok(has(name, pattern), label)
 
-  // ⑥ 零新变量（主题两套变量计数不变 —— 全值用在册变量）
+  // ⑥ 零新变量（本批零新变量 —— 计数 = 盘面实读；沿「对齐第三批」diff 三变量 × 两套落位后之态）
   const lightVars = css.styles.match(/:root\s*\{([^}]*)\}/s)?.[1] ?? ""
   const darkVars = css.styles.match(/prefers-color-scheme: dark\)\s*\{\s*:root\s*\{([^}]*)\}/s)?.[1] ?? ""
   const countVars = (block) => (block.match(/--[\w-]+\s*:/g) ?? []).length
-  assert.equal(countVars(lightVars), 27, "零新变量：亮模式变量计数不变（27 —— 沿 U174 14 新增后之态）")
-  assert.equal(countVars(darkVars), 21, "零新变量：暗模式变量计数不变（21）")
+  assert.equal(countVars(lightVars), 30, "亮模式变量计数 = 30（27 —— D24 后之态 + 「对齐第三批」diff 三）")
+  assert.equal(countVars(darkVars), 24, "暗模式变量计数 = 24（21 + 同三）")
 })

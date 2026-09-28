@@ -3,6 +3,8 @@
  *   载荷 / 上限 / 降级面 = `docs/desktop/design/IPC.md` §2「附件注」）：
  *   ① 采集 = `paste` 取剪贴板图像项（`kind === "file"` ∧ `type` 前缀 `image/`）；非图内容**零动作且不吞事件**
  *      ⇒ 文本照粘贴。`FileReader` 转 `dataURL` —— 本档**唯一 IO 点**（零落盘：图面数据随 `msg:send` 入主进程）；
+ *      **非栅格拒（「对齐第三批」项 22 · 粘贴即拒）** = 栅格四型（png / jpeg / jpg / gif / webp）之外不入条 +
+ *      提示面（`pasteRejects` 取拒表 —— 值源 = VSC `webview/autocomplete.js:126` 同式；主侧判据零动 —— 双闸）；
  *   ② 构树 = 输入区上方附件条（根锚 `data-attachments` · 住 `[data-slot="composer"]` 内）：逐项 = 缩略图
  *      （`img[src=dataURL]`）+ 文件名（**有给才落** —— 无名粘贴不造串）+ 移除控件（`data-action="attach:remove"`
  *      携 `data-attachment-id` · 可及名 = 词键）；**空 ⇒ `null`**（零节点 —— 禁假造空位）；
@@ -19,6 +21,11 @@ export const DEGRADED_WORD = Object.freeze({
   "non-vision": "composer.attach.nonvision",
   partial: "composer.attach.partial",
 })
+
+/** 栅格四型判据（「对齐第三批」项 22 · 值源 = VSC `webview/autocomplete.js:126` 同式 —— 含非标 `image/jpg`）：
+ *  **粘贴即拒** —— 栅格之外（含 `image/svg+xml` / `image/heic` / `image/bmp`）不入条（不静默丢：提示行明示
+ *  `${type}`）；主侧判据（`parseDataUrl`）零动 —— 双闸，渲染面拒先达。 */
+export const RASTER_MIME = /^(image\/(png|jpeg|jpg|gif|webp))$/
 
 const hasText = (value) => typeof value === "string" && value.length > 0
 
@@ -37,14 +44,29 @@ function imageItem(item) {
   return { file, name: typeof file.name === "string" ? file.name : "", mime }
 }
 
-/** 采集面（纯函数 · 零 IO）：`paste` 事件的剪贴板图像项 ⇒ 逐项 `{ file, name, mime }`（序同剪贴板）。 */
+/** 采集面（纯函数 · 零 IO）：`paste` 事件的剪贴板项 ⇒ **栅格项**逐项 `{ file, name, mime }`（序同剪贴板）；
+ *  非栅格图项交 `pasteRejects`（两函数同源判据 `RASTER_MIME` —— 单一实现零副本）。 */
 export function pasteImages(event) {
   const items = event?.clipboardData?.items
   if (items === null || items === undefined || typeof items.length !== "number") return []
   const out = []
   for (let index = 0; index < items.length; index += 1) {
     const picked = imageItem(items[index])
-    if (picked !== null) out.push(picked)
+    if (picked !== null && RASTER_MIME.test(picked.mime)) out.push(picked)
+  }
+  return out
+}
+
+/** 拒表（纯函数 · 零 IO —— 「对齐第三批」项 22 提示行载波）：非栅格**图**项的 mime 串（**去重保序** ——
+ *  逐串出词 `${type}`）；无项 / 事件缺 ⇒ `[]`（零抛 —— 采集面同纪律）。 */
+export function pasteRejects(event) {
+  const items = event?.clipboardData?.items
+  if (items === null || items === undefined || typeof items.length !== "number") return []
+  const out = []
+  for (let index = 0; index < items.length; index += 1) {
+    const picked = imageItem(items[index])
+    if (picked === null || RASTER_MIME.test(picked.mime)) continue
+    if (!out.includes(picked.mime)) out.push(picked.mime)
   }
   return out
 }
@@ -142,5 +164,16 @@ export function degradedNotice(code) {
     tag: "div",
     props: { class: "composer-notice", "data-notice": "attach-degraded", "data-degraded": code },
     children: [t(word)],
+  }
+}
+
+/** 非栅格拒提示行构树（「对齐第三批」项 22 —— `composer-notice` 单形；`${type}` 入词）：mime 缺 / 非串 / 空 ⇒ `null`
+ *  （零节点 —— 禁假造）；类名 / 锚单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」P22。 */
+export function unsupportedNotice(type) {
+  if (typeof type !== "string" || type === "") return null
+  return {
+    tag: "div",
+    props: { class: "composer-notice", "data-notice": "attach-unsupported" },
+    children: [t("paste.unsupportedFormat", { type })],
   }
 }

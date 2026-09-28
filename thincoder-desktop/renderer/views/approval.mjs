@@ -16,9 +16,17 @@
  *      `onApprove` 给 ⇒ `keydown` 在场，缺 ⇒ 不挂 —— 不夺焦，与三出口同一两态）；
  *   ⑥ 出口动作 `respondApproval(host, promptId, verdict)`：窄桥 `approval:respond`；invoke 抛 / 拒绝 ⇒
  *      `console.error`（**不静默**）+ 回执 `null`（调用面零分支；待决项清除归事件面 ⇒ 本档零切片写）。
- * 文案一律经 `t()`（零硬编码）；零字形字面；零 `node:` / 零裸包。
+ *   ⑦ 「对齐第三批」三增量（本批 —— 单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」）：
+ *      **P1 owner 归属**（子代理门——深度 0 缺省 ⇒ 既有形零回归）：首行首段 = `<owner> · <tool>`（`data-seg="owner"`）；
+ *      **相抵① diff 预览**：载荷 `diff`（核 `diffInfo` 原样两形）⇒ `.diff-preview` 行级差（核三导出直取：
+ *      `patchLineType` / `lineDiff` / `renderDiff`）；超阈（patch > 20 行 ∥ 改动 > 12 行）⇒ 只出摘要 + 计数
+ *      （零外部查看器—— VSC「view in editor」钮不采）；**F-置焦**：焦点锚 `data-autofocus="1"` 本档产出，
+ *      DOM `focus()` 执行点 = 帧尾（`renderer/views/chat-chrome.mjs` `focusAutofocus`）。
+ * 文案一律经 `t()`（零硬编码）；零字形字面（分隔串 = 与 VSC / 核同形的格式串）；零 `node:` / 零裸包。
  */
 import { t } from "../i18n.mjs"
+import { lineDiff, renderDiff } from "/rc/diff.mjs"
+import { patchLineType } from "/rc/lib.mjs"
 import { STATUS_WORD, segNode, toolChanges, wire, withKey } from "./chat-tool.mjs"
 
 /** 键位闭集（唯一 owner）：形 → 三出口描述符（键位 / 值 / 词键 / 置焦）；表外形 ⇒ `null`（零动作）。
@@ -100,14 +108,52 @@ export function approvalTitle(item) {
   return item?.shape === "batch" ? t("approval.batch.count", { count: batchCount(item) }) : item?.tool
 }
 
-/** 卡首行：逐项形 = 标识片 + 状态词；批形 = 计数词 + 逐工具名（逐段包元素 —— 间距归 `chat.css`）。 */
+/** diff 降级阈值（相抵① —— 值源 = 核 `cards/permission.mjs:32` / `:36` 同值：patch 行数 > 20 ∥ 改动行数 > 12）。 */
+const DIFF_PATCH_FLOOR = 20
+const DIFF_SAME_FLOOR = 12
+
+/** 卡首行：逐项形 = 标识片 + 状态词；批形 = 计数词 + 逐工具名（逐段包元素 —— 间距归 `chat.css`）。
+ *  P1 owner：`owner` 在场 ⇒ 逐项形首段改落 `owner` 段（`<owner> · <tool>` —— 核卡同形；缺 owner = 既有形）。 */
 function headNode(item, shape) {
   const props = { class: "approval-head", "data-approval-head": "" }
   const summary = approvalSummary(item)
+  const tool = hasText(summary[0]) ? summary[0] : null
+  const owner = hasText(item?.owner) ? (tool === null ? item.owner : `${item.owner} · ${tool}`) : null
   const children = shape === "batch"
     ? [segNode("count", summary[0]), ...summary.slice(1).map((name) => segNode("name", name))]
-    : [segNode("name", summary[0]), segNode("args", summary[1]), segNode("status", t(STATUS_WORD.approval))]
+    : owner !== null
+      ? [segNode("owner", owner), segNode("args", summary[1]), segNode("status", t(STATUS_WORD.approval))]
+      : [segNode("name", tool), segNode("args", summary[1]), segNode("status", t(STATUS_WORD.approval))]
   return { tag: "div", props, children }
+}
+
+/** 卡面 diff 节点（相抵①）：载荷 `diff`（核 `diffInfo` 原样）两形 = `{ patch }`（apply_patch 门）∥ `{ old, new, path }`；
+ *  行面 = 核三导出直取（`patchLineType` / `lineDiff` / `renderDiff` —— 值源单源，转义闸在核）；
+ *  超阈（patch > 20 行 ∥ 改动 > 12 行）⇒ **只出摘要 + 计数**（一律无外部查看器 —— VSC「view in editor」钮不采）。
+ *  缺 diff / 两形皆不可组（非串 / 同文）⇒ `null`（零节点 —— 禁假造）。 */
+function diffNode(item) {
+  const diff = item?.diff
+  if (diff === null || diff === undefined || typeof diff !== "object") return null
+  const patch = hasText(diff.patch) ? diff.patch : null
+  const oldText = typeof diff.old === "string" ? diff.old : null
+  const newText = typeof diff.new === "string" ? diff.new : null
+  if (patch === null && (oldText === null || newText === null || oldText === newText)) return null
+  const lines = patch === null
+    ? lineDiff(oldText, newText)
+    : patch.split("\n").map((line) => ({ type: patchLineType(line), text: line }))
+  const count = patch === null ? lines.filter((line) => line.type !== "same").length : lines.length
+  const big = patch === null ? count > DIFF_SAME_FLOOR : count > DIFF_PATCH_FLOOR
+  const header = patch === null ? (hasText(diff.path) ? diff.path : null) : (hasText(item?.tool) ? item.tool : null)
+  return {
+    tag: "div",
+    props: { class: "diff-preview", "data-diff": big ? "large" : "lines" },
+    children: [
+      header === null ? null : { tag: "div", props: { class: "diff-header" }, children: [header] },
+      big
+        ? { tag: "div", props: { class: "diff-line diff-same" }, children: [t("approval.diff.large", { n: count })] }
+        : { tag: "div", props: { "data-diff-lines": "", html: renderDiff(lines) }, children: [] },
+    ],
+  }
 }
 
 /** 卡根 `keydown` 两态：`onApprove` 给 ⇒ 键处理在场（闭集命中 ⇒ `preventDefault` + 派发；表外 ⇒ 零动作）。
@@ -122,7 +168,7 @@ function onKeyDown(item, handlers) {
   }
 }
 
-/** 审批卡（纯构树 · 零 DOM）：子序 = 首行 → [改动摘要行?] → 三出口操作区；两形同构，唯首行与出口表不同。 */
+/** 审批卡（纯构树 · 零 DOM）：子序 = 首行 → [改动摘要行?] → [diff 预览?] → 三出口操作区；两形同构，唯首行与出口表不同。 */
 export function approvalTree(item, handlers = {}) {
   const shape = item?.shape
   const promptId = item?.promptId
@@ -135,7 +181,7 @@ export function approvalTree(item, handlers = {}) {
       "data-shape": hasText(shape) ? shape : undefined,
       onKeyDown: onKeyDown(item, handlers),
     },
-    children: [headNode(item, shape), toolChanges(item), approvalExits(item, handlers, { autofocus: true })],
+    children: [headNode(item, shape), toolChanges(item), diffNode(item), approvalExits(item, handlers, { autofocus: true })],
   }
 }
 

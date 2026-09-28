@@ -21,7 +21,8 @@
  * （词面经 `aria-label`，字形住 `styles.css`）；**换形态**（态单源 = store `railForm`，经 `railTree` 第三参纯读传入）
  * ＝**行原位换形**：改名形子序 [文本控件, 取消, 确认]（行控件内容即被编辑 ⇒ 行按钮原位退出，零激活歧义）·
  * 删除形子序 [行控件, 取消, 确认]（行控件在位 —— 沿标签条关闭确认面同形）；两键词面 = 文本按钮，
- * DOM 序 = 取消 → 确认（同档 §1 交互行同形）。
+ * DOM 序 = 取消 → 确认（同档 §1 交互行同形）；**行常态删除控件在场判据 = 会话数 > 1**（「对齐第三批」P12 ——
+ * 渲染半；VSC `session-bar.js:57-59` 同判；空态 / 单行 ⇒ 零删除控件，双闸另一半 = 主侧 `session:delete` 末项拒）。
  * **重绘草稿保护**（`mountRail`）：重挂前捕获在形文本控件的值 / 焦点 / 光标，重建后按同锚复填 ——
  * 回合尾重绘（`refreshTitles`）不吞草稿；草稿住 DOM（零 store 字段、零签名改）。拆档纪律：本档与 `chat-tool.mjs` / `tabbar.mjs` 各持 `wire` / `withKey`
  * 私有副本（同形同律 —— 单源是设计档 §1.1，不是某一份副本）。
@@ -165,21 +166,23 @@ function newSessionEntry(handlers) {
   return control({ label: t("rail.action.newSession"), action: "session:create", onClick: handlers.onNewSession })
 }
 
-/** 会话行列表（行序 = 输入序 = 核投影序）。 */
+/** 会话行列表（行序 = 输入序 = 核投影序；**删除控件在场判据 = 会话数 > 1** —— P12 渲染半）。 */
 function rowsList(rows, handlers, form) {
-  return list("sessions", rows.map((row) => rowItem(row, handlers, form)))
+  const canDelete = rows.length > 1
+  return list("sessions", rows.map((row) => rowItem(row, handlers, form, canDelete)))
 }
 
 /** 会话行（**行原位换形** = 批 A ④）：本键在形（`form.key`）⇒ 子序随形 —— 改名形 [文本控件, 两键]（行按钮
  *  原位退出：编辑对象即行内容，活性与编辑面不得同处）· 删除形 [行控件, 两键]（行控件在位 —— 沿关闭确认面同形）；
- *  未在形 ⇒ 常态 [行控件, 改名, 删除]。行键锚 = `data-slot`（行 / 控件同键）；在形 ⇒ 增 `data-form` 机读锚。 */
-function rowItem(row, handlers, form) {
+ *  未在形 ⇒ 常态 [行控件, 改名, **删除?**]（删除仅在 `canDelete` —— P12：会话数 > 1）。
+ *  行键锚 = `data-slot`（行 / 控件同键）；在形 ⇒ 增 `data-form` 机读锚。 */
+function rowItem(row, handlers, form, canDelete) {
   const key = String(row.slot)
   const mode = form?.key === key && FORM_KEYS[form.mode] !== undefined ? form.mode : null
   const formKeys = mode === null ? [] : [formKey(mode, "cancel", key, handlers), formKey(mode, "confirm", key, handlers)]
   const children = mode === "rename" ? [renameInput(row), ...formKeys]
     : mode === "delete" ? [rowButton(row, handlers), ...formKeys]
-    : [rowButton(row, handlers), rowControl("rename", key, handlers), rowControl("delete", key, handlers)]
+    : [rowButton(row, handlers), rowControl("rename", key, handlers), canDelete ? rowControl("delete", key, handlers) : null]
   return item(children, { "data-slot": key, ...(mode === null ? {} : { "data-form": mode }) })
 }
 

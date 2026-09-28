@@ -13,15 +13,17 @@ import { HOST_DICT, initDict } from "../renderer/i18n.mjs"
 import { guideNode, guideOf, syncGuide } from "../renderer/views/chat-guide.mjs"
 import { installFakeDom, selfCheck } from "./fake-dom.mjs"
 
-/** 词面哨兵（全表逐键给值 —— 缺值走缺省句 ⇒ 哨兵面失真，断言即假绿）。 */
+/** 词面哨兵（全表逐键给值 —— 缺值走缺省句 ⇒ 哨兵面失真，断言即假绿）。
+ *  「对齐第三批」新键（`welcome.*` 四 —— 词面住 `renderer/i18n.mjs`）随本档注入：词面到位前后判据同形。 */
+const NEW_WORD_KEYS = ["welcome.heading", "welcome.text", "welcome.textConfigured", "welcome.shortcuts"]
 function setupDict(ctx) {
-  const host = Object.fromEntries(Object.keys(HOST_DICT.en).map((key) => [key, `⟦${key}⟧`]))
+  const host = Object.fromEntries([...Object.keys(HOST_DICT.en), ...NEW_WORD_KEYS].map((key) => [key, `⟦${key}⟧`]))
   initDict({ locale: "en", host })
   ctx.after(() => initDict({}))
 }
 
-/** 三码词键闭集（闭集内断言 —— 表外码由构树面另判）。 */
-const WORDS = { "no-project": "chat.guide.noProject", "no-session": "chat.guide.noSession", "no-message": "chat.empty.hint" }
+/** 两码词键闭集（闭集内断言 —— 表外码由构树面另判；`no-message` = 欢迎条三行构树，不取词键）。 */
+const WORDS = { "no-project": "chat.guide.noProject", "no-session": "chat.guide.noSession" }
 /** 两码句柄齐（在场面）· 控件词键（左列既有键）。 */
 const handlers = { onOpenDir: () => {}, onNewSession: () => {} }
 const ACTION_WORDS = { "no-project": "rail.action.openDir", "no-session": "rail.action.newSession" }
@@ -45,7 +47,7 @@ test("U151: 引导三件（判据四值 / 构树两向 + 表外零树 / 帧尾�
   assert.equal(guideNode(), null, "模型缺位 ⇒ null")
 
   // ③ 三码树：根锚两件 · 子序 = 文案 → [控件?] · 控件词 = 左列既有键
-  for (const code of ["no-project", "no-session", "no-message"]) {
+  for (const code of ["no-project", "no-session"]) {
     const node = guideNode({ guide: code }, handlers)
     assert.deepEqual(node.props, { class: "chat-empty", "data-guide": code }, `${code} 根锚两件`)
     assert.equal(node.children[0], `⟦${WORDS[code]}⟧`, `${code} 文案经 t()（哨兵键）`)
@@ -57,7 +59,18 @@ test("U151: 引导三件（判据四值 / 构树两向 + 表外零树 / 帧尾�
   const session = guideNode({ guide: "no-session" }, handlers)
   assert.deepEqual(session.children[1].props, { class: "chat-backfill", "data-action": "session:create", onClick: handlers.onNewSession }, "no-session 控件 = session:create")
   assert.deepEqual(session.children[1].children, [`⟦${ACTION_WORDS["no-session"]}⟧`], "控件词 = 左列既有键")
-  assert.equal(guideNode({ guide: "no-message" }, handlers).children.length, 1, "no-message ⇒ 零控件（句柄齐亦零）")
+  // 「对齐第三批」项 15（原单行 hint 退场）：no-message = 欢迎条三行（抬头 / 文案二值 / 快捷键行 —— 零控件）
+  const welcome = guideNode({ guide: "no-message" }, handlers)
+  assert.deepEqual(welcome.props, { class: "chat-empty", "data-guide": "no-message" }, "no-message 根锚两件（码面不变）")
+  assert.equal(welcome.children.length, 1, "no-message ⇒ 恰一枚欢迎条容器（句柄齐亦零控件）")
+  const strip = welcome.children[0]
+  assert.deepEqual([strip.props.class, strip.props["data-welcome"]], ["chat-welcome", ""], "欢迎条容器 `.chat-welcome`")
+  assert.deepEqual(strip.children.map((row) => row.props.class), ["welcome-heading", "welcome-text", "welcome-shortcuts"], "三行 = 抬头 / 文案 / 快捷键行")
+  assert.deepEqual(strip.children.map((row) => row.children[0]), ["⟦welcome.heading⟧", "⟦welcome.text⟧", "⟦welcome.shortcuts⟧"], "行文经 t()（未配 / 未知 ⇒ `welcome.text`）")
+  const configured = guideNode({ guide: "no-message", configured: true }, handlers)
+  assert.equal(configured.children[0].children[1].children[0], "⟦welcome.textConfigured⟧", "已配（`configured` 真）⇒ 文案二值换 `welcome.textConfigured`（同三行）")
+  assert.equal(guideNode({ guide: "no-message", configured: false }).children[0].children[1].children[0], "⟦welcome.text⟧", "未配 ⇒ `welcome.text`")
+  assert.equal(guideNode({ guide: "no-message", configured: null }).children[0].children[1].children[0], "⟦welcome.text⟧", "未知（null —— 三态）⇒ 回落 `welcome.text`（禁假造）")
 
   // ④ 构树两向之二：句柄缺 ⇒ 退纯文案（零假按钮 —— 两码逐码）
   for (const code of ["no-project", "no-session"]) {

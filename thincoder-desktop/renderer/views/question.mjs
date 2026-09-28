@@ -11,6 +11,8 @@
  *   ④ 三出口值映射（**单一 owner**）：给答项 ⇒ 选项串原样 ∥ 提交 ⇒ 输入串 ∥ 取消 ⇒ `null`（挂起表按取消串
  *      `(user cancelled)` 结算，串单源 = `thincoder-desktop/src/main/suspensions.mjs`）；接线两态沿通则
  *      （handler 缺 ⇒ `disabled: true`，锚恒在 —— 诚实非死控）；
+ *   ④′ Enter 键径（「对齐第三批」P2）：文本控件携 `onKeyDown`（Enter / Shift+Enter / 组字三判据归接线面 ——
+ *      本档零 DOM、零判据副本）；
  *   ⑤ 出口动作 `respondQuestion(host, promptId, answer)`：窄桥 `question:respond`；invoke 抛 / 拒绝 ⇒
  *      `console.error`（**不静默**）+ 回执 `null`（调用面零分支；**卡退场判据 = 回执 `ok` 真**，非乐观 ——
  *      归 `thincoder-desktop/renderer/mount-cards.mjs`）。
@@ -52,10 +54,13 @@ function optionsNode(item, promptId, handlers) {
 }
 
 /** 作答区（恒在场 · 与给答项并立）：文本控件（草稿住 DOM —— 帧内等值 ⇒ 零重写，归挂载面）+ 提交键
- *  （事件转发 —— **词面读数 = 接线面**，视图档零 DOM）+ 取消键（值 `null`）。 */
+ *  （事件转发 —— **词面读数 = 接线面**，视图档零 DOM）+ 取消键（值 `null`）。
+ *  **Enter 键径（P2 —— 本批）**：`handlers.onAnswerKey` 给 ⇒ 文本控件挂 `keydown`（Enter 提交 / Shift+Enter 换行 /
+ *  组字期零动作的判据全住接线面 `renderer/mount-cards.mjs` —— 本档只落描述符接线，两态通则同提交键）。 */
 function answerNode(promptId, handlers) {
   const onAnswer = typeof handlers?.onAnswer === "function" ? (answer) => handlers.onAnswer(promptId, answer) : undefined
   const onDraft = typeof handlers?.onAnswerDraft === "function" ? (event) => handlers.onAnswerDraft(promptId, event) : undefined
+  const onKey = typeof handlers?.onAnswerKey === "function" ? (event) => handlers.onAnswerKey(promptId, event) : undefined
   return {
     tag: "div",
     props: { class: "question-answer", "data-question-answer": "" },
@@ -68,6 +73,7 @@ function answerNode(promptId, handlers) {
           rows: "1",
           "aria-label": t("question.input"),
           disabled: onDraft === undefined ? true : undefined,
+          onKeyDown: onKey,
         },
         children: [],
       },

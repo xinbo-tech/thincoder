@@ -1,40 +1,58 @@
 /**
  * chat.mjs — 对话流视图面（`docs/desktop/design/RENDERER.md` §1.1 / §2 / §3 · `docs/desktop/design/UI.md` §1 对话流行）。
  * 三档沿 RENDERER.md §1.1：`chatModel`（纯模型 · 窗出口）→ `chatTree`（纯构树 · 机检面）→ `mountChat`（薄挂载 =
- * 本档唯一清空 / 建树处）；DOM 面另两件 = 帧尾态刷 `syncChrome`（根锚四 + 摘要块 + 审批卡 + 药丸 · 幂等 · 无帧豁免）· 帧尾六步 `settleFrame`；
+ * 本档唯一清空 / 建树处）；DOM 面另两件 = 帧尾态刷 `syncChrome`（根锚四 + 摘要块 + 审批卡 + 药丸 + **消化行组** + **停止痕** + **台账行组** + **待发送气泡组** + **真置焦执行** · 幂等 · 无帧豁免）· 帧尾六步 `settleFrame`；
  * **卡面态刷**住 `renderer/views/chat-cards.mjs`（R3c 拆档 —— 在册预案 = 卡构树拆出；本档经 `syncCards` 调用）；
+ * **待发送气泡组**住 `renderer/views/chat-pending.mjs`（「对齐第二批」项 2 —— 项 2 新档：尾组构树 + 帧尾组同步）；
+ * **消化行组**（`[data-digest]` —— 桌面空闲唤醒批）本档自持：非块节点组（沿 `[data-pending]` 先例），在场 ⟺ 本键 `digest`
+ * 切片起跑态（`start`）—— `end` ⇒ 先原地更新本键游标行后摘除（单源 = `docs/desktop/design/RENDERER.md` §1.1 两条纪律）；
+ * **归档子 agent 块**住 `renderer/views/chat-subagent.mjs`（项 5 新档 —— 壳构树 + 核件回显补装）；
  * 工具卡面与折叠纯函数 `toggleExpanded` 住 `renderer/views/chat-tool.mjs`（§2.3 拆分预案落形 —— 依赖单向：本档 → 它）；文本族块尾的复制控件 + 末条复制控件
- * 住 `renderer/views/chat-copy.mjs`（UI.md §1「批 B 注」项 4 —— 依赖单向：本档 → 它）；**文本面（核 Markdown 呈现）+ 推理块 + 就地更新**住 `renderer/views/chat-text.mjs`（R3c · D19 —— 依赖单向：本档 → 它）；首启空白态引导面（判据
+ * 住 `renderer/views/chat-copy.mjs`（UI.md §1「批 B 注」项 4 —— 依赖单向：本档 → 它）；**文本面（核 Markdown 呈现）+ 推理块 + 就地更新 + 说话人标签**住 `renderer/views/chat-text.mjs`（R3c · D19；项 1 / 4 增推理画笔分流 + 标签落笔 —— 依赖单向：本档 → 它）；首启空白态引导面（判据
  * `guideOf` + 构树 `guideNode` + 帧尾只摘态刷 `syncGuide`）住 `renderer/views/chat-guide.mjs`（UI.md §1「批 B 追加注」项 1 —— 依赖单向：本档 → 它）。
  *   ① 三态 `data-state`：无活动会话 ⇒ `none`（零**块**节点 + 引导节点——禁假数据）· 有会话零块 ⇒ `empty`
  *      （引导节点 · `chat.empty.hint`）· 否则 `flow`；
- *   ② 块五型（`user` / `assistant` / `reasoning` / `tool` / `error`）单序列；块键单源 = `blockKey`（`data-block-id` /
+ *   ② 块六型（`user` / `assistant` / `reasoning` / `tool` / `error` 五项页读域 + 运行期块 `subagent` —— 归档入流块，
+ *      单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 5）单序列；块键单源 = `blockKey`（`data-block-id` /
  *      增量缝合 / toggle 同域）；兜底键用**全列表位序**（`hidden + i`）⇒ 窗滑动不改键；文本族块面 = **经核 Markdown**
  *      呈现（KD-RC-4 · R3c —— 单源 = `renderer/views/chat-text.mjs`；转义闸在核；原文逐字另存 `[data-raw]` 锚供复制面）；
- *   ③ 根子序 = [摘要块?] → 块序列 → [卡序列?] → [药丸?]（卡序 = 待审批 → 提问 → 计划 —— 单源 =
- *      `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条）；块插入点 = 首个**卡节点**之前（三族任一 ——
- *      锚 = `[data-card]`；无卡 ⇒ `[data-pill]` 之前 · 两锚皆缺 ⇒ 末位）；本档挂载面只管审批族（提问 / 计划
+ *      **说话人标签**（项 4）：用户块恒出 / 助手族块回合首出（判据 = `turnHeadOf` 单源 —— 活流与回放同判据）——
+ *      标签为**块内子节点**（不入块序 / 不改 `data-blocks`），文本落笔归帧尾着装面；
+ *   ③ 根子序 = [引导?] → [摘要块?] → 块序列 → [**消化行组**?] → [**停止痕**?] → [**台账行组**?] → [**待发送气泡组**?] → [卡序列?] → [药丸?]（卡序 = 待审批 → 提问 → 计划 —— 单源 =
+ *      `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条；四尾组 = 流内非块节点，族内序 = 消化行组 → 停止痕 → 台账行 → 待发送气泡组 —— 落点 = 块序列之后、
+ *      卡序列之前；「对齐第三批」项 6 / 12 增停止痕与台账行组，F-置焦增置焦执行点）；块插入点 = 首个**尾组 / 卡节点**之前（`blockAnchor` 单源 —— 组在则块恒居其前 ⇒
+ *      交接位置零跳；无组无卡 ⇒ `[data-pill]` 之前 · 两锚皆缺 ⇒ 末位）；本档挂载面只管审批族（提问 / 计划
  *      两族归 `renderer/mount-cards.mjs` —— 挂载零交叠，卡序判据共用一序单源）；
  *   ④ 工具卡面（三行）已拆出：`renderer/views/chat-tool.mjs`（批档 §2.3 拆分预案落形）——本档经 `toolCard` 调用；
  *      审批卡面（两形）住 `renderer/views/approval.mjs`（批档 §2.2（a））——本档经 `approvalTree` 调用（依赖单向：
  *      本档 → 它）；卡 = **非块节点** ⇒ 与块序列 / 药丸同层不破「DOM 块节点序 ≡ visible 逐位引用等」；
  *      接线两态沿 `renderer/views/sessions.mjs:161` 通则（handlers 给 ⇒ `onClick`；缺 ⇒ `disabled` —— 诚实非死控）；
- *   ⑤ 模型形 = `{ state, state.blocks, hidden, following, pendingNew, hasOlder, inFlight, locale, approval, guide }`
- *      （`blocks` = 窗出口；`approval` = 本会话待决项 ⇒ 卡面；`guide` = 引导码 —— 非块节点，判据单源 = `chat-guide.mjs`）。
+ *   ⑤ 模型形 = `{ state, state.blocks, hidden, following, pendingNew, hasOlder, inFlight, locale, approval, guide, pending, digest,
+ *      stopped, ledger, canRetry, configured }`
+ *      （`blocks` = 窗出口；`approval` = 本会话待决项 ⇒ 卡面；`guide` = 引导码 —— 非块节点，判据单源 = `chat-guide.mjs`；
+ *      `digest` = 本键消化行切片 —— 起跑 / 终态两态，非块节点；**「对齐第三批」四字段** = `stopped`（停止痕切片在场 ——
+ *      项 6）· `ledger`（本键台账行集 —— 项 12）· `canRetry`（末 `user` 块在场 ⇒ 错误横幅重试钮在场 —— 项 9）·
+ *      `configured`（provider 已配 —— 欢迎条文案二值 —— 项 15））。
  * 文案一律经 `t()`（零硬编码；`+` / `−` / 游标字形住 `renderer/chat.css`）；零 `node:` / 零裸包。
  */
-import { build, clear, text } from "../dom.mjs"
+import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 import { attachCopyButtons } from "/rc/flow/stream.mjs"
 import { visibleWindow } from "../store.mjs"
 import { approvalTree } from "./approval.mjs"
 import { MAX_RENDER_BLOCKS, compensateTop, stickToBottom, tailAction } from "./chat-scroll.mjs"
 import { copyBlockNode } from "./chat-copy.mjs"
-import { syncCards } from "./chat-cards.mjs"
-import { guideNode, guideOf, syncGuide } from "./chat-guide.mjs"
+import { blockAnchor, chromeProps, digestGroupNode, ledgerGroupNode, pillNode, stoppedNode, summaryNode, syncChrome } from "./chat-chrome.mjs"
+import { guideNode, guideOf } from "./chat-guide.mjs"
+import { pendingGroupNode, pendingOf } from "./chat-pending.mjs"
 import { blockKey } from "./chat-stream.mjs"
-import { patchTextBlock, reasoningNode, textFace } from "./chat-text.mjs"
-import { toolCard, wire } from "./chat-tool.mjs"
+import { fillSubagentEcho, subagentNode, syncSubagentEcho } from "./chat-subagent.mjs"
+import { labelNode, paintPendingMarks, paintSpeakerLabels, patchTextBlock, pinReasoning, pinReasoningBlocks, reasoningNode, textFace } from "./chat-text.mjs"
+import { linkifyResult, toolCard, wire } from "./chat-tool.mjs"
+
+// 帧尾态刷面出档 `renderer/views/chat-chrome.mjs`（拆分产出 —— 「对齐第三批」触碰批执行在册预案：本档越 300
+// 在册、本批触碰 ⇒ 出档）；本档引调面 = 构树五件（`chromeProps` / `summaryNode` / `digestGroupNode` / `stoppedNode` /
+// `ledgerGroupNode` / `pillNode`）+ 插点锚 `blockAnchor` + 帧尾态刷 `syncChrome` ⇒ 依赖单向（本档 → 出档档，无环）。
 
 // ─── 三档之①：纯模型 ───────────────────────────────────────────────
 
@@ -56,7 +74,29 @@ export function chatModel(state, limit = MAX_RENDER_BLOCKS) {
     inFlight: state?.history?.inFlight === true,
     locale: state?.locale,
     approval: mode === "none" ? [] : awaitingOf(state),
+    // 本会话队（项 2 —— 流内待发送气泡组）
+    pending: mode === "none" ? [] : pendingOf(state),
+    // 本键消化行切片（桌面空闲唤醒批 —— `[data-digest]` 组；非块节点）
+    digest: mode === "none" ? null : digestOf(state),
+    // 「对齐第三批」：停止痕（项 6 —— 本键切片在场；页读整置即失）· 台账行（项 12 —— 本键行集）
+    stopped: mode !== "none" && state?.stopMark?.[state.activeSession] === true,
+    ledger: mode === "none" ? null : ledgerOf(state),
+    // 重试钮在场判据（项 9）：可重发源在场（= 末个「`user` ∧ 文本为串」块）—— 与出口同谓词（`retrySourceOf` 单源）
+    canRetry: mode !== "none" && retrySourceOf(state?.blocks) !== null,
+    // 欢迎条文案二值（项 15）：provider 已配 ⇒ `welcome.textConfigured` ∥ 余（未配 / 未知）⇒ `welcome.text`
+    configured: state?.settings?.configured === true,
   }
+}
+
+/** 重试源判据（项 9 单源 —— 模型在场判据与出口取文同谓词，防「可点但静默」的死控）：
+ *  末个「`kind === "user"` ∧ `text` 为串」块的文本；无 ⇒ `null`（禁假造 —— 非串文本块不算可重发源）。 */
+export function retrySourceOf(blocks) {
+  const list = Array.isArray(blocks) ? blocks : []
+  for (let index = list.length - 1; index >= 0; index -= 1) {
+    const block = list[index]
+    if (block?.kind === "user" && typeof block.text === "string") return block.text
+  }
+  return null
 }
 
 /** 待决项（源 = `state.pool.approvals` —— 本会话切片语义）：缺 / 非数组 ⇒ 空表（**零卡** —— 禁假数据）。 */
@@ -65,69 +105,105 @@ function awaitingOf(state) {
   return Array.isArray(list) ? list : []
 }
 
-/** 根锚四（单源 —— `chatTree` 与 `syncChrome` 同用）：`data-blocks` = 已渲染块数（= DOM 块节点数）。 */
-function chromeProps(model) {
-  return {
-    "data-state": model.state,
-    "data-blocks": model.blocks.length,
-    "data-hidden": model.hidden,
-    "data-following": model.following ? "1" : "0",
-  }
+/** 本键消化行切片（源 = `state.digest[活动会话键]` —— `ev:digest` 归约面写，起跑 / 终态两态；缺 / 非载体 ⇒ `null`：
+ *  零组 —— 禁假造）。 */
+function digestOf(state) {
+  const key = state?.activeSession ?? null
+  const table = state?.digest
+  if (key === null || table === null || typeof table !== "object") return null
+  const slice = table[key]
+  return slice !== null && typeof slice === "object" ? slice : null
 }
 
-// ─── 三档之②：纯构树（块五型 + 工具卡三行 + 三控件）─────────────────
+/** 本键台账行集（源 = `state.ledgerLines[活动会话键]` —— `ev:ledger` 归约面写；缺 / 非数组 / 空 ⇒ `null`：
+ *  零组 —— 禁假造；单源 = 「对齐第三批」项 12 · KD-38）。 */
+function ledgerOf(state) {
+  const key = state?.activeSession ?? null
+  const table = state?.ledgerLines
+  if (key === null || table === null || typeof table !== "object") return null
+  const lines = table[key]
+  return Array.isArray(lines) && lines.length > 0 ? lines : null
+}
 
-/** 块节点（五型单序列）：文本族 = 核 Markdown 面（`textFace` —— 转义闸在核 · 原文另存 `[data-raw]`）+ 块尾复制控件
- *  （块文本空 ⇒ 零控件）；`reasoning` ⇒ 核推理块结构（`reasoningNode`）；`tool` ⇒ 工具卡三行（工具卡无文本面 ⇒
- *  不入复制面）。 */
-function blockNode(block, index, hidden, handlers) {
+/** 错误横幅（「对齐第三批」项 9 · KD-37）：`.error-text`（文面经核 `md` —— 同文本面）+ [`details.error-details`
+ *  （`techInfo` 在场才落 —— `summary` + `pre` 原生折叠）] + **重试钮**（在场判据 = 末 `user` 块在场 —— 诚实面，
+ *  判据源 = 模型 `canRetry`；词键 `error.retry` —— 值同 VSC）；重试出口 = 重发末 `user` 块文本（经输入区既有
+ *  直发径 —— 零新通道，句柄 = `handlers.onRetry`）。两态通则沿块族（handler 缺 ⇒ 钮 `disabled`）。 */
+function errorNode(block, key, handlers, withLabel, canRetry) {
+  const children = [...(withLabel ? [labelNode("assistant")] : [])]
+  // 文面 = 桌面 md 容器类 `block-text`（核 md 产出样式面单源 = `renderer/core.css`）+ 核横幅类 `error-text`
+  children.push(textFace(block, "block-text error-text"))
+  if (typeof block?.techInfo === "string" && block.techInfo !== "") {
+    children.push({
+      tag: "details",
+      props: { class: "error-details" },
+      // `summary` 字面 = 核横幅同字面（`thincoder-render-core/flow/block.mjs:138` —— 核 / VSC 两源无此词键）
+      children: [{ tag: "summary", props: {}, children: ["Details"] }, { tag: "pre", props: {}, children: [block.techInfo] }],
+    })
+  }
+  if (canRetry === true) {
+    children.push({ tag: "button", props: wire({ class: "error-retry-btn", "data-action": "chat:retry" }, handlers?.onRetry), children: [t("error.retry")] })
+  }
+  children.push(copyBlockNode(block, key, handlers))
+  return { tag: "div", props: { class: "block block-error", "data-block-id": key, "data-block-kind": "error" }, children }
+}
+
+// ─── 三档之②：纯构树（块六型 + 工具卡三行 + 三控件）─────────────────
+
+/** 助手族块型（回合首块判据射程 —— 归档 `subagent` 块在内）。 */
+const TURN_KINDS = Object.freeze(["assistant", "reasoning", "tool", "error", "subagent"])
+
+/** 回合首块判据（**单源** · 活流 / 回放同判据 —— 「对齐第二批」项 4）：助手族块前一位块 = `user` 块 ∨ 居块序首位
+ *  ⇒ 出标签；其余零标签。窗越限时块序首位的前位不可知（更早块未渲染）⇒ 零标签（禁假造 —— 不猜回合界）。 */
+function turnHeadOf(kind, prev, index, hidden) {
+  if (!TURN_KINDS.includes(kind)) return false
+  if (index === 0 && hidden > 0) return false
+  return prev === undefined || prev?.kind === "user"
+}
+
+/** 块节点（六型单序列）：文本族 = 核 Markdown 面（`textFace` —— 转义闸在核 · 原文另存 `[data-raw]`）+ 块尾复制控件
+ *  （块文本空 ⇒ 零控件）；`reasoning` ⇒ 核推理块结构（`reasoningNode`）；`tool` ⇒ 工具卡三行；`subagent` ⇒
+ *  归档块壳（回显 = 核件元素，帧后补装）；`withLabel` = 说话人标签容器（用户块恒出 / 助手族回合首出 ——
+ *  文本落笔归帧尾着装面；标签容器为块内子节点 —— 不入块序）。 */
+function blockNode(block, index, hidden, handlers, prev, canRetry = false) {
   const kind = block?.kind
   const key = blockKey(block, hidden + index)
-  if (kind === "tool") return toolCard(block, key, handlers)
-  if (kind === "reasoning") return reasoningNode(block, key, handlers)
+  const label = kind === "user" || turnHeadOf(kind, prev, index, hidden)
+  if (kind === "tool") return toolCard(block, key, handlers, label)
+  if (kind === "reasoning") return reasoningNode(block, key, handlers, label)
+  if (kind === "subagent") return subagentNode(block, key, label)
+  if (kind === "error") return errorNode(block, key, handlers, label, canRetry)
   return {
     tag: "div",
     props: {
       class: `block block-${kind}`,
       "data-block-id": key,
       "data-block-kind": kind,
+      "data-ts": kind === "user" && typeof block?.ts === "number" ? String(block.ts) : undefined,
       "data-streaming": kind === "assistant" && block?.streaming === true ? "1" : undefined,
     },
-    children: [textFace(block), copyBlockNode(block, key, handlers)],
-  }
-}
-
-/** 摘要块（根首子 · 在场 ⟺ `hidden > 0`）：文本（`[data-summary-text]` 供态刷就地刷）+ 回填控件（接线两态）。 */
-function summaryNode(model, handlers) {
-  return {
-    tag: "div",
-    props: { class: "chat-summary", "data-summary": "" },
-    children: [
-      { tag: "span", props: { class: "chat-summary-text", "data-summary-text": "" }, children: [t("chat.summary.older", { n: model.hidden })] },
-      { tag: "button", props: wire({ class: "chat-backfill", "data-action": "chat:backfill" }, handlers.onBackfill), children: [] },
-    ],
-  }
-}
-
-/** 药丸（根末子 · 在场 ⟺ `!following`）：文本两态 = 未读数 > 0 ⇒ `chat.pill.new`，否则 `chat.pill.bottom`。 */
-function pillNode(model, handlers) {
-  const label = model.pendingNew > 0 ? t("chat.pill.new", { n: model.pendingNew }) : t("chat.pill.bottom")
-  return {
-    tag: "button",
-    props: wire({ class: "chat-pill", "data-pill": "", "data-action": "chat:return" }, handlers.onReturn),
-    children: [label],
+    children: [...(label ? [labelNode(kind === "user" ? "user" : "assistant")] : []), textFace(block), copyBlockNode(block, key, handlers)],
   }
 }
 
 /** 构树（纯 · 零 DOM）：根 = 挂载根（props 四锚；宿主 `class` / `data-slot` 归 `renderer/index.html` 骨架）；子序 = [引导节点?] → [摘要块?] → [块序列] →
- *  [审批卡?] → [药丸?] —— `none` 帧 = 引导节点唯一子（零**块**节点 · 引导 = 非块节点 ⇒ 不入块序：`docs/desktop/design/UI.md` §1 批 B 追加注项 1）。 */
+ *  [待发送气泡组?] → [审批卡?] → [药丸?] —— `none` 帧 = 引导节点唯一子（零**块**节点 · 引导 = 非块节点 ⇒ 不入块序：`docs/desktop/design/UI.md` §1 批 B 追加注项 1）。 */
 export function chatTree(model, handlers = {}) {
   const children = []
   const guide = guideNode(model, handlers)
   if (guide) children.push(guide)
   if (model.state !== "none") {
     if (model.hidden > 0) children.push(summaryNode(model, handlers))
-    if (model.state === "flow") children.push(...model.blocks.map((block, index) => blockNode(block, index, model.hidden, handlers)))
+    if (model.state === "flow") children.push(...model.blocks.map((block, index) => blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true)))
+    // 流内消化行组（非块节点 —— 块序列之后、待发送组之前；在场 ⟺ 本键切片起跑态）
+    if (model.digest?.status === "start") children.push(digestGroupNode(model.digest))
+    // 停止痕（项 6 —— 流尾非块节点；族内序 = 消化行组 → 停止痕 → 台账行 → 待发送组）
+    if (model.stopped === true) children.push(stoppedNode())
+    // 台账行组（项 12 —— 流尾非块节点组；行集源 = 本键切片）
+    if (Array.isArray(model.ledger) && model.ledger.length > 0) children.push(ledgerGroupNode(model.ledger))
+    // 流内待发送气泡组（非块节点 —— 块序列之后、卡序列之前）
+    const pending = pendingGroupNode(model)
+    if (pending !== null) children.push(pending)
     children.push(...model.approval.map((item) => approvalTree(item, handlers)))
     if (!model.following) children.push(pillNode(model, handlers))
   }
@@ -151,6 +227,15 @@ function attachCodeCopies(root) {
   attachCopyButtons(root, { t })
 }
 
+/** 新块节点着装（帧尾尾段挂载 / 重建 / 前插三径内 —— **先于读数 `t0` / `t1`** ⇒ 高度计入本帧尾 / 头侧）：
+ *  说话人标签落笔（项 4）+ 归档块核件回显补装（项 5）+ 推理块首帧钉底（项 1）+ 工具卡结果区链接着装（相抵②）。 */
+function dressNode(node, block) {
+  paintSpeakerLabels(node)
+  fillSubagentEcho(node, block)
+  if (block?.kind === "reasoning") pinReasoning(node)
+  if (block?.kind === "tool") linkifyResult(node, block)
+}
+
 /** 薄挂载（本档唯一清空 / 建树处）：根描述符四锚复制到宿主（**保留** `data-slot`）⇒ `clear` ⇒ 子节点入位。
  *  返回 `{ model, mounted }`；容器缺位 ⇒ 模型照给、零节点（非重挂帧的对齐输入 = 空序）。 */
 export function mountChat(root, state, handlers = {}, limit = MAX_RENDER_BLOCKS) {
@@ -160,61 +245,28 @@ export function mountChat(root, state, handlers = {}, limit = MAX_RENDER_BLOCKS)
   for (const name of tree.getAttributeNames()) root.setAttribute(name, tree.getAttribute(name))
   clear(root)
   for (const child of [...tree.childNodes]) root.append(child)
+  syncSubagentEcho(root, model)
+  paintSpeakerLabels(root)
+  paintPendingMarks(root)
+  // 重挂径推理块同「新建即落底」（尾段三径归 `dressNode`）
+  pinReasoningBlocks(root)
   attachCodeCopies(root)
-  return { model, mounted: mountedOf(root, model.blocks) }
+  const mounted = mountedOf(root, model.blocks)
+  // 工具卡结果区链接着装（相抵② 渲染半 —— 重挂径全根逐块；尾段三径归 `dressNode`）
+  for (const item of mounted) if (item.block?.kind === "tool") linkifyResult(item.node, item.block)
+  return { model, mounted }
 }
 
-/** 控件三态刷（幂等）：在场 ∧ 判据真 ⇒ 就地刷文本；在场 ∧ 判据假 ⇒ 摘；缺席 ∧ 判据真 ⇒ 建（`atStart` 真 ⇒ 首插 · 假 ⇒ 末插）。 */
-function chromeSlot(root, selector, want, make, update, atStart = false) {
-  const node = typeof root.querySelector === "function" ? root.querySelector(selector) : null
-  if (node && !want) return void node.remove()
-  if (node) return void update(node)
-  if (!want) return
-  const built = build(make())
-  if (atStart && typeof root.prepend === "function") root.prepend(built)
-  else root.append(built)
-}
-
-/** 帧尾态刷（刷新面单点 · 幂等 · 与档位解耦 —— `none` 帧同刷）：根锚四 + 引导节点 / 摘要块 / 审批卡 / 药丸随判据。
- *  `none` 态零块节点化不破：三控件判据皆含 `state !== "none"`（卡面由 `chatModel` 归零）⇒ 零插入（只摘——
- *  引导节点同此面纪律：缺席 ⇒ 零动作 · 判据空 ⇒ 摘，「只摘不插」）；卡面态刷住 `renderer/views/chat-cards.mjs`
- *  （R3c 拆档 —— 在册预案 = 卡构树拆出）。 */
-export function syncChrome(root, model, handlers = {}) {
-  if (!root || typeof root.querySelector !== "function") return model
-  for (const [name, value] of Object.entries(chromeProps(model))) root.setAttribute(name, String(value))
-  syncGuide(root, model, handlers)
-  const live = model.state !== "none"
-  chromeSlot(
-    root, "[data-summary]", live && model.hidden > 0,
-    () => summaryNode(model, handlers),
-    (node) => {
-      const label = node.querySelector("[data-summary-text]")
-      if (label) text(label, t("chat.summary.older", { n: model.hidden }))
-    },
-    true,
-  )
-  syncCards(root, model, handlers)
-  chromeSlot(
-    root, "[data-pill]", live && !model.following,
-    () => pillNode(model, handlers),
-    (node) => text(node, model.pendingNew > 0 ? t("chat.pill.new", { n: model.pendingNew }) : t("chat.pill.bottom")),
-  )
-  return model
-}
-
-/** 块节点插点锚（单源 —— 尾段挂载与头侧前插同用）：首个**卡节点**之前（三族任一 —— 卡序判据面 = 卡序单源）；
- *  无卡 ⇒ 药丸之前；两锚皆缺 ⇒ `null`（末位）。 */
-function blockAnchor(root) {
-  if (typeof root?.querySelector !== "function") return null
-  return root.querySelector("[data-card]") ?? root.querySelector("[data-pill]")
-}
-
-/** 尾段挂载（帧尾第 ① 步 · 先于读数）：逐枚建块 ⇒ 插点 = 首个卡节点之前（无卡 ⇒ 药丸之前 · 两锚皆缺 ⇒ 末位）。 */
+/** 尾段挂载（帧尾第 ① 步 · 先于读数）：逐枚建块 ⇒ 插点 = `blockAnchor`；新建即着装（标签 / 归档回显 / 推理钉底 ——
+ *  先于 `t0` ⇒ 高度计入本帧尾侧）。 */
 function mountTail(root, model, plan, handlers) {
   const start = model.blocks.length - plan.tail.length
   const anchor = blockAnchor(root)
   plan.tail.forEach((block, step) => {
-    root.insertBefore(build(blockNode(block, start + step, model.hidden, handlers)), anchor)
+    const index = start + step
+    const node = build(blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true))
+    root.insertBefore(node, anchor)
+    dressNode(node, block)
   })
 }
 /** 流式锚同刷（就地更新面）：`assistant` ∧ `streaming` ⇒ 落 `data-streaming`，否则摘（残锚不留）。 */
@@ -232,7 +284,9 @@ function patchTail(root, model, handlers) {
   const node = nodes[nodes.length - 1]
   if (!node || !block) return
   if (node.getAttribute?.("data-block-kind") !== block.kind || block.kind === "tool") {
-    node.replaceWith(build(blockNode(block, index, model.hidden, handlers)))
+    const fresh = build(blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true))
+    node.replaceWith(fresh)
+    dressNode(fresh, block)
     return
   }
   patchTextBlock(node, block, blockKey(block, model.hidden + index), handlers)
@@ -247,7 +301,11 @@ function headMoves(root, model, plan, handlers) {
   const anchor = nodes[evicted] ?? blockAnchor(root)
   const prepends = Math.max(0, Math.min(plan.prepend, model.blocks.length))
   for (let index = 0; index < prepends; index += 1) {
-    root.insertBefore(build(blockNode(model.blocks[index], index, model.hidden, handlers)), anchor)
+    const block = model.blocks[index]
+    const node = build(blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true))
+    root.insertBefore(node, anchor)
+    // 前插 = 头侧 ⇒ 着装先于 `t1`（高度入补偿算式）
+    dressNode(node, block)
   }
   return evicted + prepends
 }

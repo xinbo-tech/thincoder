@@ -14,18 +14,22 @@
  * · 卡族两族 = `renderer/mount-cards.mjs`（提问 / 计划 —— 挂载 + 作答 / 取消出口）
  * · 事件归约 + 页应用 = `renderer/events.mjs` · 订阅接线 = `renderer/events-subscribe.mjs`；本档接线两处 = `attachScroll`
  * （回填 / 跟滚 / 停跟三出口 + 只读口 `guards()`；药丸回底 / 工具卡 toggle 两出口）· `attachEvents({ on, onTurnTail })`
- * （十二通道订阅 + 回合尾 flush 窄口 —— 批档 §1.14）；退订句柄本档无消费点 —— 页面生命周期 = 进程生命周期。
+ * （多通道订阅 + 回合尾 flush 窄口 —— 批档 §1.14）；退订句柄本档无消费点 —— 页面生命周期 = 进程生命周期。
  * 读面失败一律 `console.error` + 零切片写（不静默）；零直连 IPC（只经窄桥 `window.thincoder.invoke`）；
  * 剪贴板写效应（`writeText`）**单点供给** = 本档（同给对话流 handlers 与输入区 `attachComposer` —— 复制面唯一实现处）；
+ * 核件取词注册（「对齐第二批」修复轮）= 本档模块级一次 `setStringsSink(setStrings)`（注册单点；词表合并式仍单点居 `renderer/i18n.mjs` `initDict`）。
  * 静态闭包零 `node:` / 零裸包（守卫 = `test/guard-closure.test.mjs`）。
+ * **「对齐第三批」三接线（本档）**：错误横幅重试（项 9 —— `onRetry` ⇒ 输入区直发径单副本）· 文件链接 `file:open` 委托注册（相抵②）· 2s 拍单点（P7 + `unload` 清点）。
  */
 import { setBoot } from "./dom.mjs"
 import { attachEvents } from "./events-subscribe.mjs"
-import { initDict } from "./i18n.mjs"
+import { createHeartbeat, refreshLiveBlocks } from "./heartbeat.mjs"
+import { initDict, setStringsSink } from "./i18n.mjs"
+import { setStrings } from "/rc/i18n.mjs"
 import { attachCards, CARDS_KEYS } from "./mount-cards.mjs"
-import { attachComposer } from "./mount-composer.mjs"
+import { attachComposer, submitDraft } from "./mount-composer.mjs"
 import { attachHead } from "./mount-head.mjs"
-import { attachPool, POOL_KEYS } from "./mount-pool.mjs"
+import { POOL_SLOT, attachPool, POOL_KEYS } from "./mount-pool.mjs"
 import { attachStatus, STATUS_KEYS } from "./mount-status.mjs"
 import {
   activateSession, backfill, cancelClose, cancelRailForm, confirmClose, confirmDelete, confirmRename,
@@ -37,8 +41,13 @@ import { mountRail, mountTabbar } from "./views/sessions.mjs"
 import { mountHead } from "./views/chrome.mjs"
 import { MAX_RENDER_BLOCKS, attachScroll, nextWindow } from "./views/chat-scroll.mjs"
 import { alignPlan, paintPlan } from "./views/chat-stream.mjs"
-import { chatModel, mountChat, settleFrame, syncChrome } from "./views/chat.mjs"
-import { toggleExpanded } from "./views/chat-tool.mjs"
+import { chatModel, mountChat, retrySourceOf, settleFrame } from "./views/chat.mjs"
+import { focusAutofocus, syncChrome } from "./views/chat-chrome.mjs"
+import { bindFileLinks, toggleExpanded } from "./views/chat-tool.mjs"
+
+// 核件取词注册（「对齐第二批」修复轮 · 注册单点）：模块求值先于 `DOMContentLoaded` ⇒ 先注册、后 `initDict`
+// （合并式）经此端出；核件供体 `/rc/i18n.mjs` 居本浏览器专属档（平 node 装载面 = `renderer/i18n.mjs`）。
+setStringsSink(setStrings)
 
 const host = globalThis.thincoder // 窄桥（装配面 = `src/preload/preload.cjs`）
 /** 剪贴板写效应（复制面**唯一实现处** —— `docs/desktop/design/UI.md` §1「批 B 注」项 4）：宿主无面 ⇒ `undefined`
@@ -54,7 +63,7 @@ const FLOW_SLOT = '[data-slot="flow"]' // 对话流容器锚（= 滚动容器自
 // 重挂触发切片（`locale` 在内：文案随词表 ⇒ 树须重绘；`railForm` = 换形态切片——行原位换形；`ledger` = 账本警示切片）
 const RAIL_KEYS = ["project", "sessions", "locale", "railForm", "ledger"]
 const SHELL_KEYS = ["tabs", "activeTab", "sessions", "tabBadges", "sessionMeta", "locale", "pendingClose"] // 外壳重挂触发切片
-const CHAT_KEYS = ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "project"] // 对话流帧触发切片（`locale` 在内：文案随词表 · `pool`：审批卡宿对话流 · `project`：引导码随 cwd——批 B 追加轮）
+const CHAT_KEYS = ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "project", "pending", "digest", "stopMark", "ledgerLines"] // 对话流帧触发切片（`locale` 在内：文案随词表 · `pool`：审批卡宿对话流 · `project`：引导码随 cwd——批 B 追加轮 · `pending`：流内待发送气泡组——「对齐第二批」项 2 · `digest`：流内消化行组——桌面空闲唤醒批 · `stopMark` / `ledgerLines`：两尾组的单变触发 —— 「对齐第三批」项 6 / 12；`settings` 不入表 —— 欢迎条文案二值随重挂径，且帧尾态刷判据 = 码面（见 `renderer/views/chat-guide.mjs`））
 const { paintPool, handlers: poolHandlers } = attachPool(host) // 池面一族（右栏重挂 + 两出口 —— 出档 `renderer/mount-pool.mjs`）
 const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —— 挂载 + 作答 / 取消出口；出档 `renderer/mount-cards.mjs`）
 // 设置面 / 向导 / 信息行一族（自持订阅 —— 出档 `renderer/mount-settings.mjs`；目录出口复用项目面链）；
@@ -156,6 +165,24 @@ function toggleTool(id) {
   store.set({ blocks: toggleExpanded(store.get().blocks, id) })
 }
 
+/** 错误横幅重试出口（「对齐第三批」项 9 · KD-37）：**重发可重发源文本** —— 经输入区既有直发径 `submitDraft`（单实现零副本 · 零新通道）；
+ *  源判据与钮在场判据**同一谓词**（`views/chat.mjs` `retrySourceOf` —— 防可点静默）；无源 ⇒ 零动作（防御档）。 */
+function retryLastUser() {
+  const text = retrySourceOf(store.get().blocks)
+  if (text === null) return
+  void submitDraft({ store, host }, text)
+}
+
+/** 文件链接出口（相抵② —— 委托单点 = 本档；通道 `file:open` `{ path, line? }`）：`ok` 假 ∥ 抛 ⇒ `console.error`（渲染面零静默）；行定位不在本批（`line` 携行备用 —— 端差登记）。 */
+function openFile(path, line) {
+  const payload = line === undefined ? { path } : { path, line }
+  void Promise.resolve(host?.invoke("file:open", payload))
+    .then((receipt) => {
+      if (receipt?.ok !== true) console.error(`[renderer] file:open failed: ${receipt?.reason ?? "unknown"}`)
+    })
+    .catch((error) => console.error("[renderer] file:open rejected:", error))
+}
+
 /** 回底复跟（接线第 1 处 · 药丸点击）：状态树复跟 + 清未读 ⇒ handle 平滑回底（程序化滚动记窗 ⇒ 不派发回波）。 */
 function returnToLatest() {
   store.set(returnToBottom(store.get()))
@@ -178,6 +205,7 @@ function paintChat(state = store.get(), changedKeys = []) {
     onReturn: returnToLatest, onToggleTool: toggleTool, onApprove: poolHandlers.onApprove, writeText,
     onOpenDir: () => openDir(), // 引导面（批 B 追加轮）：与左列同出口（`project:open` 单一实现）
     onNewSession: createSession, // 引导面：与左列同出口（`session:create` 单一实现 —— 零第二路）
+    onRetry: retryLastUser, // 错误横幅重试（「对齐第三批」项 9：重发末 `user` 块 —— 经输入区既有直发径）
   }
   let mounted
   if (plan.remount) {
@@ -195,6 +223,8 @@ function paintChat(state = store.get(), changedKeys = []) {
       paintCards(state)
     }
   }
+  // 帧尾真置焦（F-置焦 —— 三径同点，卡族由 `paintCards` 后到 ⇒ 补一拍；幂等记账不夺已移焦）
+  focusAutofocus(root)
   chatFrame = { state, mounted }
 }
 
@@ -231,10 +261,23 @@ chatScroll = attachScroll(document.querySelector(FLOW_SLOT), {
   guards: () => ({ hasOlder: store.get().history?.hasOlder === true, inFlight: store.get().history?.inFlight === true }),
 })
 
-/** 事件面接线（装配一次 · 批 8 · 批档 §2.11）：十二通道订阅 ⇒ 值面写者单源 = `renderer/events.mjs`（归约）+ `renderer/events-subscribe.mjs`
- *  （订阅）；回合尾 ⇒ `flushTurnTail` 窄口（批档 §1.14 —— flush 触发只此一处）；退订句柄本档无消费点（页面生命周期 = 进程生命周期）。
- *  `on` 缺位 ⇒ 该档记错 + 空操作（不静默死订阅）。 */
+/** 事件面接线（装配一次 · 批 8 · 批档 §2.11）：多通道订阅 ⇒ 值面写者单源 = `renderer/events.mjs`（归约）+ `renderer/events-subscribe.mjs`
+ *  （订阅）；回合尾 ⇒ `flushTurnTail` 窄口（批档 §1.14 —— flush 触发只此一处）；退订句柄本档无消费点；`on` 缺位 ⇒ 该档记错 + 空操作。 */
 attachEvents({ on: host?.on, onTurnTail: flushTurnTail })
+
+/** 文件链接着装与委托（相抵②）：着装面（核 `linkifyPaths` + `data-path` 锚）归 `views/chat-tool.mjs` / `views/chat.mjs`；**委托注册单点 = 本档**（装配期一次 —— 挂载根 = 对话流宿主；幂等 `_fileLinksBound`）。 */
+bindFileLinks(document.querySelector(FLOW_SLOT), openFile)
+
+/** 2s 拍（P7 —— 渲染面**首个定时器** · 单点 `setInterval` + 卸载清点）：① 池面在飞块逐块核件 `refreshBlock`（走时词面）
+ *  ② 本键位标含 `running` ⇒ 状态行重挂（耗时段走时）；拍体 = `renderer/heartbeat.mjs`。 */
+function heartbeatTick() {
+  const state = store.get()
+  refreshLiveBlocks(document.querySelector(POOL_SLOT))
+  const codes = state?.tabBadges?.[state.activeSession ?? ""]
+  if (Array.isArray(codes) && codes.includes("running")) paintStatus(state)
+}
+const heartbeat = createHeartbeat({ tick: heartbeatTick })
+globalThis.addEventListener?.("unload", () => heartbeat.stop())
 
 // 会话头候选面首取（渠道候选一次入缓存 ⇒ 头面选项集就位；活动 provider 的模型候选待会话激活后随 `sync` 取）。
 void head.sync(store.get())

@@ -8,6 +8,9 @@
  * 闭集（提问门无 verdict ⇒ 无 `shape` 键）。出站 respond ∨ 门 resolve 皆清表。
  * 依赖面 = 注入：`post`（出站）· `agents`（装配表 —— `always` 放行需置会话位 `agent.autoApprove`；
  * 本档只读该表、不改表）。`summarizeArgs` 取 `agent-bridge.mjs`（同口径，不复制）。
+ * **对齐第三批（`docs/desktop/design/UI.md` §1 本批注 B1 / 相抵① · `docs/desktop/design/IPC.md` §1 `ev:approval` 行）**：
+ * 审批载荷增**行外两键** `owner`（核 `opts.owner.label` 原样 —— 子代理门归属串）· `diff`（核 `diffInfo` 原样
+ * 两形 `{ patch }` ∥ `{ old, new, path }`）——两门出站形随动；缺 / `null` ⇒ 键缺席（深度 0 门 = 既有形）。
  */
 import { randomUUID } from "node:crypto"
 import { summarizeArgs } from "./agent-bridge.mjs"
@@ -23,6 +26,16 @@ export const QUESTION_CANCELLED = "(user cancelled)"
 /** 门 `kind` → 出站通道（两值闭集 · 单一映射点 —— 核 `docs/desktop/design/IPC.md` §1 出站表）。 */
 const GATE_CHANNELS = Object.freeze({ approval: "ev:approval", question: "ev:question" })
 
+/** 审批载荷**行外两键**（「对齐第三批」B1 / 相抵①）：有值才携键（传入体缺项 ∥ `null` ⇒ 键缺席）；
+ *  非对象 ⇒ 零键（表外形零担）。 */
+function extraKeys(extra) {
+  if (!extra || typeof extra !== "object") return {}
+  return {
+    ...(typeof extra.owner === "string" && extra.owner !== "" ? { owner: extra.owner } : {}),
+    ...(extra.diff ? { diff: extra.diff } : {}),
+  }
+}
+
 /** 造待决门：返回 `{ table, askSingle, askBatch, askQuestion, denyGates, respond }`。 */
 export function createGates({ post, agents }) {
   /** 待决表（挂起表 · 唯一持有点）：promptId → `{ kind, shape?, key, resolve }`；清表 = 出站 respond ∨ 门 resolve。 */
@@ -37,19 +50,21 @@ export function createGates({ post, agents }) {
     })
   }
 
-  /** 逐项门：工具名 + 参数摘要；verdict 三值 —— 放行/拒绝的布尔映射在 `respond`（单一映射点），此处不再复算。 */
-  function askSingle(key, tool, args) {
+  /** 逐项门：工具名 + 参数摘要 + **行外两键**（「对齐第三批」—— 子代理门四参缝载荷面：`owner` / `diff`）；
+   *  verdict 三值 —— 放行/拒绝的布尔映射在 `respond`（单一映射点），此处不再复算。 */
+  function askSingle(key, tool, args, extra = null) {
     const promptId = randomUUID()
-    const payload = { key, promptId, shape: "single", tool, argsSummary: summarizeArgs(tool, args) }
+    const payload = { key, promptId, shape: "single", tool, argsSummary: summarizeArgs(tool, args), ...extraKeys(extra) }
     return suspend(key, "approval", payload, promptId, "single")
   }
 
-  /** 批门：一次合并问（核 `onBatchPermissionRequest` 形状 ⇒ `{count,tools}`，`tools` = 工具名串数组）。 */
-  function askBatch(key, req) {
+  /** 批门：一次合并问（核 `onBatchPermissionRequest` 形状 ⇒ `{count,tools}`，`tools` = 工具名串数组）——
+   *  出站形与逐项门随动（行外两键同源；批缝无两参 ⇒ 实践中恒零键）。 */
+  function askBatch(key, req, extra = null) {
     const promptId = randomUUID()
     const tools = (req?.tools ?? []).map((t) => t?.name ?? "")
     const count = Number.isInteger(req?.count) ? req.count : tools.length
-    const payload = { key, promptId, shape: "batch", batch: { count, tools } }
+    const payload = { key, promptId, shape: "batch", batch: { count, tools }, ...extraKeys(extra) }
     return suspend(key, "approval", payload, promptId, "batch")
   }
 

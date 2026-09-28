@@ -13,6 +13,7 @@ import {
   approvalActions, approvalExits, approvalSummary, approvalTitle, approvalTree, respondApproval, verdictOfKey,
 } from "../renderer/views/approval.mjs"
 import { DIFF_FILE_FLOOR, DIFF_LINE_FLOOR, toolChanges } from "../renderer/views/chat-tool.mjs"
+import { focusAutofocus } from "../renderer/views/chat-chrome.mjs"
 import { build } from "../renderer/dom.mjs"
 import { installFakeDom, selfCheck } from "./fake-dom.mjs"
 
@@ -176,9 +177,9 @@ test("U69: 卡面降级与接线两态（同判据同形 ∧ 阈值边界 ∧ di
   assert.equal(withAttr(small, "data-file").length, 1, "未越阈 ⇒ 每文件一行")
   assert.equal(texts(one(small, "data-approval-actions")).length, 3, "改动摘要行不夺出口（子序 = 首行 → 摘要 → 出口）")
   assert.deepEqual(
-    small.children.map((child) => child === null ? null : child.props["data-approval-head"] !== undefined ? "head" : child.props["data-approval-actions"] !== undefined ? "exits" : "changes"),
-    ["head", "changes", "exits"],
-    "卡子序 = 首行 → 改动摘要行 → 三出口操作区",
+    small.children.map((child) => child === null ? null : child.props["data-approval-head"] !== undefined ? "head" : child.props["data-approval-actions"] !== undefined ? "exits" : child.props["data-diff"] !== undefined ? "diff" : "changes"),
+    ["head", "changes", null, "exits"],
+    "卡子序 = 首行 → 改动摘要行 → [diff 预览?] → 三出口操作区（无 diff ⇒ 空位）",
   )
   assert.equal(approvalTree(single({ changes: changesOf(0) })).children[1], null, "changes 在场但零项 ⇒ 摘要行空位（toolChanges 判据同源）")
 
@@ -271,8 +272,8 @@ test("U70: 出口动作与负例（载荷逐字 / 拒绝不静默 / 零 store.mj
   assert.equal(code.includes("store.mjs"), false, "源面：代码面零 store.mjs（零乐观写 = 无切片可写）")
   assert.deepEqual(
     [...code.matchAll(/from\s+"([^"]+)"/g)].map((hit) => hit[1]).sort(),
-    ["../i18n.mjs", "./chat-tool.mjs"],
-    "结构面：import 闭集 = 两档（无 store 可达路径 · 零 node: / 零裸包）",
+    ["../i18n.mjs", "./chat-tool.mjs", "/rc/diff.mjs", "/rc/lib.mjs"],
+    "结构面：import 闭集 = 四档（两本档 + 核三导出供体；无 store 可达路径 · 零 node: / 零裸包）",
   )
 
   // ④ 假 DOM 落点：三出口经 `build` 落节点 ⇒ 真注册面（`addEventListener`）收 (promptId, verdict)
@@ -286,7 +287,7 @@ test("U70: 出口动作与负例（载荷逐字 / 拒绝不静默 / 零 store.mj
   assert.deepEqual(buttons.map((button) => button.getAttribute("data-key")), ["1", "2", "3"], "落点面：键位锚逐位同序")
   for (const button of buttons) fake.fire(button, "click")
   assert.deepEqual(clicks, [["p1", "once"], ["p1", "always"], ["p1", "reject"]], "落点面：三按钮 click ⇒ 同一 handler 收 (promptId, verdict)")
-  assert.equal(fake.fire(build(approvalTree(single(), {}).children[2]).children[0], "click"), 0, "缺 handlers ⇒ 零监听（disabled 面非死控）")
+  assert.equal(fake.fire(build(approvalTree(single(), {}).children[3]).children[0], "click"), 0, "缺 handlers ⇒ 零监听（disabled 面非死控）")
 
   // ⑤ 假 DOM 落点：卡根 keydown（第一出口面）—— 命中接管 ∧ 表外不吞键 ∧ 缺 handlers 不挂
   const pressed = []
@@ -297,4 +298,101 @@ test("U70: 出口动作与负例（载荷逐字 / 拒绝不静默 / 零 store.mj
   fake.fire(keyed, "keydown", { key: "7", preventDefault: () => prevented.push("7") })
   assert.deepEqual(prevented, ["3"], "表外键 ⇒ 零 preventDefault（不吞键）")
   assert.equal(fake.fire(build(approvalTree(single(), {})), "keydown", { key: "1", preventDefault: () => prevented.push("1") }), 0, "缺 handlers ⇒ keydown 不挂（不夺焦）")
+})
+
+// ─── U209「对齐第三批」卡面三增量（P1 owner / 相抵① diff / F-置焦）────────
+
+/** 词面哨兵（本例）：diff 降级计数键带参数入词 —— 断言即证「文案经 `t()` 消费 + 参数插值」。 */
+const DIFF_TEMPLATE = { "approval.diff.large": "⟦diff:${n}⟧" }
+
+/** patch 夹具：`count` 行内容行（`+` 前缀 ⇒ 全 add）+ 一行头（核 `patchLineType` 同判）。 */
+const patchOf = (count) => ["@@ -1 +1 @@", ...Array.from({ length: count }, (_, i) => `+line${i}`)].join("\n")
+
+test("U209: 「对齐第三批」卡面三增量（P1 owner 段 · 相抵① diff 节点两形 / 超阈降级 / 负向 · F-置焦锤点可执行）", (ctx) => {
+  initDict({
+    locale: "en",
+    host: Object.fromEntries(Object.keys(HOST_DICT.en).map((key) => [key, HOST_TEMPLATE[key] ?? DIFF_TEMPLATE[key] ?? `⟦${key}⟧`])),
+    dict: Object.fromEntries(CORE_WORD.map((key) => [key, `⟦${key}⟧`])),
+  })
+  ctx.after(() => initDict({}))
+
+  // ① P1 owner 归属（子代理门）：首行首段 = `<owner> · <tool>` ∧ 工具名不再另落一段
+  const owned = approvalTree(single({ owner: "eng-coder#2" }))
+  const ownedHead = one(owned, "data-approval-head")
+  assert.deepEqual(texts(ownedHead), ["eng-coder#2 · Bash", "npm test", "⟦tab.badge.approval⟧"], "首行 = owner · tool（格式串与核卡同形）+ 参摘 + 状态词")
+  assert.deepEqual(withAttr(ownedHead, "data-seg").map((node) => node.props["data-seg"]), ["owner", "args", "status"], "owner 在场 ⇒ 段码序 = owner / args / status")
+  assert.equal(withAttr(ownedHead, "data-seg").length, ownedHead.children.length, "首行子节点全为 `[data-seg]` 元素（裸串零入 flex 行）")
+  assert.deepEqual(texts(one(approvalTree(single()), "data-approval-head")), ["Bash", "npm test", "⟦tab.badge.approval⟧"], "owner 缺 ⇒ 既有形零回归（段码 = name / args / status）")
+  assert.deepEqual(
+    texts(one(approvalTree(single({ owner: "coder#1", tool: undefined })), "data-approval-head")),
+    ["coder#1", "npm test", "⟦tab.badge.approval⟧"],
+    "owner 在场而工具名缺 ⇒ 零悬挂分隔符（不拼空段）",
+  )
+  assert.deepEqual(
+    texts(one(approvalTree(batch({ owner: "coder#1" })), "data-approval-head")),
+    ["⟦batch:3⟧", "Bash", "Edit", "Read"],
+    "批形零 owner 段（核批卡无 owner 面 —— 两形同构不变）",
+  )
+
+  // ② 相抵① diff 两形（行面 = 核三导出直取）：patch 形 ⇒ 头 = 工具名 + 行级差 html（核 `renderDiff` 产出）
+  const patchCard = approvalTree(single({ tool: "apply_patch", diff: { patch: patchOf(3) } }))
+  const patchNode = one(patchCard, "data-diff")
+  assert.equal(patchNode.props.class, "diff-preview", "diff 节点 = `.diff-preview`（核类名面）")
+  assert.equal(patchNode.props["data-diff"], "lines", "未越阈 ⇒ `lines` 面")
+  assert.deepEqual(texts(patchNode.children[0]), ["apply_patch"], "patch 形头 = 工具名（核卡同形）")
+  assert.equal(patchNode.children[1].props["data-diff-lines"], "", "行级差携机读锚")
+  assert.ok(patchNode.children[1].props.html.includes("diff-add") && patchNode.children[1].props.html.includes("diff-line"), "行面 = 核 `renderDiff` 产出（diff-add / diff-line 类名面）")
+  const oldNew = approvalTree(single({ tool: "Edit", diff: { old: "a\nb\nc", new: "a\nx\nc", path: "src/a.mjs" } }))
+  const oldNewNode = one(oldNew, "data-diff")
+  assert.deepEqual(texts(oldNewNode.children[0]), ["src/a.mjs"], "old/new 形头 = 盘上路径（核卡 `diff.path` 同形）")
+  assert.ok(oldNewNode.children[1].props.html.includes("diff-del") && oldNewNode.children[1].props.html.includes("diff-add"), "两向行面在场（删 / 增）")
+
+  // ③ 超阈降级（patch > 20 行 ∥ 改动 > 12 行）⇒ 只出摘要 + 计数（零外部查看器）；边界 = 严格大于
+  const floorPatch = one(approvalTree(single({ diff: { patch: patchOf(19) } })), "data-diff")
+  assert.equal(floorPatch.props["data-diff"], "lines", "恰 20 行（头行 + 19）⇒ 未越阈（严格大于）")
+  const bigPatch = one(approvalTree(single({ tool: "apply_patch", diff: { patch: patchOf(20) } })), "data-diff")
+  assert.equal(bigPatch.props["data-diff"], "large", "21 行 ⇒ 越阈")
+  assert.equal(bigPatch.children[1].props["data-diff-lines"], undefined, "降级 ⇒ 零行面（预览省略）")
+  assert.deepEqual(texts(bigPatch.children[1]), ["⟦diff:21⟧"], "计数 = 行数（含头行）+ 键带参入词")
+  assert.deepEqual(texts(bigPatch.children[0]), ["apply_patch"], "降级 ⇒ 摘要（头行）仍在")
+  const oldNewCase = (changed) => single({
+    diff: { old: "a\nz", new: ["a", ...Array.from({ length: changed }, (_, i) => `x${i}`), "z"].join("\n") },
+  })
+  assert.equal(one(approvalTree(oldNewCase(12)), "data-diff").props["data-diff"], "lines", "old/new 形：恰 12 行改动 ⇒ 未越阈")
+  const bigOldNew = one(approvalTree(oldNewCase(13)), "data-diff")
+  assert.equal(bigOldNew.props["data-diff"], "large", "old/new 形：13 行改动 ⇒ 越阈")
+  assert.deepEqual(texts(bigOldNew.children[1]), ["⟦diff:13⟧"], "old/new 形计数 = 改动行数（非全行数）")
+
+  // ④ 负向面：缺 diff / 表外形 / 两形皆不可组 ⇒ 零节点；批形同构
+  for (const item of [
+    single(),
+    single({ diff: null }),
+    single({ diff: "patch" }),
+    single({ diff: {} }),
+    single({ diff: { patch: "" } }),
+    single({ diff: { old: "a", new: "a" } }),
+    single({ diff: { old: "a", new: 7 } }),
+    single({ diff: { old: "a" } }),
+  ]) {
+    assert.equal(withAttr(approvalTree(item), "data-diff").length, 0, `负向 ${JSON.stringify(item.diff ?? null)} ⇒ 零 diff 节点（禁假造）`)
+  }
+  assert.equal(withAttr(approvalTree(single({ diff: { old: "a", new: "b" } })), "data-diff").length, 1, "old/new 单行改写 ⇒ 节点在场（正例 —— 非负向）")
+  assert.equal(withAttr(approvalTree(batch({ diff: { patch: patchOf(2) } })), "data-diff").length, 1, "批形同构（diff 节点两形同落）")
+
+  // ⑤ F-置焦（锤点可执行）：卡内 `[data-autofocus="1"]` 恰一 ∧ 帧尾执行器对它执行 `focus()`
+  assert.equal(withAttr(approvalTree(single()), "data-autofocus").length, 1, "卡内焦点锚恰一（逐项）")
+  const fake = installFakeDom()
+  ctx.after(() => fake.restore())
+  const focused = []
+  Object.defineProperty(Object.getPrototypeOf(fake.element()), "focus", {
+    configurable: true,
+    value: function focus() { focused.push(this.getAttribute("data-key") ?? this.getAttribute("data-autofocus")) },
+  })
+  const cardRoot = fake.element("div")
+  const cardEl = build(approvalTree(single(), { onApprove: () => {} }))
+  cardRoot.append(cardEl)
+  focusAutofocus(cardRoot)
+  assert.deepEqual(focused, ["3"], "帧尾执行器 ⇒ 逐项形最安全键（键 3）获焦")
+  focusAutofocus(cardRoot)
+  assert.deepEqual(focused, ["3"], "已执行过 ⇒ 零重焦（不夺已移焦）")
 })

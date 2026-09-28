@@ -41,6 +41,35 @@ class FakeElement extends FakeNode {
 
   get childNodes() { return this.children }
 
+  /** `parentNode` / `isConnected` 最小面（核件 `refreshBlock` ⏹ 门控读 `isConnected` —— 真 DOM 语义：
+   *  有父即视为已挂；根自身否）。 */
+  get parentNode() { return this.parent }
+  get isConnected() { return this.parent !== null }
+
+  /** `lastElementChild` 最小面（核件 `appendAdvisorChunk` 末行合并判据用 —— 元素子集中末位）。 */
+  get lastElementChild() {
+    const kids = this.children.filter((kid) => kid instanceof FakeElement)
+    return kids.length === 0 ? null : kids[kids.length - 1]
+  }
+
+  /** `dataset` 最小面（核件 `block.dataset.subname` / `btn.dataset.subId` 等写点）：
+   *  camelCase ⇄ `data-*` 属性双向同源（真 DOM 同义 —— 非独立存储）。 */
+  get dataset() {
+    const owner = this
+    const kebab = (name) => String(name).replace(/[A-Z]/g, (ch) => `-${ch.toLowerCase()}`)
+    return new Proxy({}, {
+      get: (_, prop) => {
+        if (typeof prop !== "string") return undefined
+        return owner.attrs.get(`data-${kebab(prop)}`)
+      },
+      set: (_, prop, value) => {
+        owner.setAttribute(`data-${kebab(String(prop))}`, String(value))
+        return true
+      },
+      has: (_, prop) => typeof prop === "string" && owner.attrs.has(`data-${kebab(prop)}`),
+    })
+  }
+
   /** `className` ⇒ `class` 属性（核件 `btn.className = …` 与选择器面同源 —— 真 DOM 同义）。 */
   get className() { return this.attrs.get("class") ?? "" }
   set className(value) { this.setAttribute("class", String(value)) }
@@ -184,7 +213,11 @@ function parseSelector(selector) {
 export function installFakeDom() {
   const previous = { Node: globalThis.Node, document: globalThis.document }
   const writes = { structural: 0, text: 0, attr: 0 }
-  const document = { createElement: (tag) => new FakeElement(tag, writes) }
+  const document = {
+    createElement: (tag) => new FakeElement(tag, writes),
+    /** `createTextNode` 最小面（dom.mjs / 核件 `appendAdvisorChunk` 用 —— 文本节点 = `FakeText`）。 */
+    createTextNode: (data) => new FakeText(data),
+  }
   globalThis.Node = FakeNode
   globalThis.document = document
 

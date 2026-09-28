@@ -1,7 +1,7 @@
 /**
  * session-contract.test.mjs — E-3 / E-1 用例（批档 §2.5 U14–U19 + U37 / U38 · `docs/desktop/design/IPC.md` §2 会话面 / 会话族注）：
  * 端壳形态（源零算法副本 + 端名已声明）/ 本端记录往返（`.manifest.desktop`）/ 端间不互写 /
- * 跨端接续 / 沙箱缝随动 / `createdBy` 三态（截图判据③ · T-DSK3）/ 白名单二十八项定序（U37）/ 会话族读面三态（U38）/
+ * 跨端接续 / 沙箱缝随动 / `createdBy` 三态（截图判据③ · T-DSK3）/ 白名单二十九项定序（U37）/ 会话族读面三态（U38）/
  * 会话族五通道往返（U57）/ 回执账本注记两向（U180 —— 账本可靠批 · 桌面微轮）。
  * 沙箱：逐用例 `mkdtemp` + 核沙箱缝 `_setSessionsDirForTest`（缝在核，端壳零副本）；用例后复位。
  */
@@ -145,7 +145,7 @@ test("U19: createdBy 三态（新建 desktop / 老槽 \"\" / 认领后仍 \"\"�
 
 // ─── U37 白名单定序（E-1 · 批档 §2.4（b））──────────────────────
 
-test("U37: preload 白名单二十八项定序 ∧ 冻结", () => {
+test("U37: preload 白名单二十九项定序 ∧ 冻结", () => {
   const preload = createRequire(import.meta.url)(fileURLToPath(new URL("../src/preload/preload.cjs", import.meta.url)))
   assert.deepEqual(
     [...preload.CHANNELS],
@@ -155,9 +155,9 @@ test("U37: preload 白名单二十八项定序 ∧ 冻结", () => {
       "approval:respond", "history:page", "msg:send", "msg:interrupt",
       "provider:list", "provider:save", "provider:remove", "provider:verify",
       "model:list", "settings:agent", "mcp:list", "mcp:save", "mcp:remove",
-      "config:write", "ledger:read", "batch:status", "question:respond", "session:prefs", "subagent:stop",
+      "config:write", "ledger:read", "batch:status", "question:respond", "session:prefs", "subagent:stop", "file:open",
     ],
-    "二十八项 + 定序（既有十三项段不动；末十五项 = 设置族十 + 项目级信息二 + 作答响应一 + 会话级偏好一 + 子 agent 停止出口一）",
+    "二十九项 + 定序（既有十三项段不动；末十六项 = 设置族十 + 项目级信息二 + 作答响应一 + 会话级偏好一 + 子 agent 停止出口一 + 文件链接打开一）",
   )
   assert.ok(Object.isFrozen(preload.CHANNELS), "冻结（运行期不可改）")
 })
@@ -288,10 +288,22 @@ test("U57: 五通道往返（信封形 ∧ 成功槽面可回读 ∧ 负例档 �
   assert.equal(renameSlot.length, 3, "动作层只传 3 参（第 4 参 = 缺省缝）")
   assert.equal(listSlots(cwd).find((r) => r.slot === 1)?.title, "往返标题", "冲突放弃 ⇒ 标题保持原值（并发内容不丢）")
 
-  // ④ session:delete —— 成立 / 不成立
-  assert.deepEqual(envelope(deleteSession(cwd, 1), "delete"), { ok: true, reason: null, cwd, slot: 1 }, "delete 在册槽 ⇒ ok")
+  // ④ session:delete —— **末项门**两向（「对齐第三批」P12：会话数 ≤ 1 拒 `last-session`）+ 成立 / 不成立
+  const second = envelope(await createSession(cwd), "create-2")
+  assert.equal(second.ok, true, "再建一会话（会话数 2 —— delete 成立臂前置）")
+  assert.deepEqual(envelope(deleteSession(cwd, 1), "delete"), { ok: true, reason: null, cwd, slot: 1 }, "delete 在册槽（会话数 > 1）⇒ ok")
   assert.equal(listSlots(cwd).some((r) => r.slot === 1), false, "删除 ⇒ 清单条目消失（槽面可回读）")
-  assert.equal(envelope(deleteSession(cwd, 9), "delete-缺槽").reason, "slot-missing", "不在册槽 ⇒ slot-missing")
+  assert.equal(envelope(deleteSession(cwd, 9), "delete-缺槽").reason, "slot-missing", "不在册槽（会话数 > 1）⇒ slot-missing")
+  const remaining = listSlots(cwd)
+  assert.ok(remaining.length > 1, `夹具前提：会话数 > 1（实 ${remaining.length}——含坏档夹具遗留槽）`)
+  let rest = remaining
+  while (rest.length > 1) { // 逐删至余一（每删皆门放行 —— 与末项臂对照）
+    assert.equal(envelope(deleteSession(cwd, rest[0].slot), "delete-清至一").ok, true, "会话数 > 1 ⇒ 删成立（门放行）")
+    rest = listSlots(cwd)
+  }
+  assert.equal(rest.length, 1, "夹具前提：余一槽（末项门触发位）")
+  assert.equal(envelope(deleteSession(cwd, rest[0].slot), "delete-末项").reason, "last-session", "会话数 ≤ 1 ⇒ 拒 `last-session`（动作层判）")
+  assert.equal(listSlots(cwd).length, 1, "末项门拒 ⇒ 清单零变（零删）")
 
   // ⑤ session:resume —— 恒 ok（空清单 ⇒ 兜底 allocateFresh）；cwd 空 ⇒ no-project
   const resumed = envelope(await resumeSession(cwd), "resume")
@@ -303,11 +315,11 @@ test("U57: 五通道往返（信封形 ∧ 成功槽面可回读 ∧ 负例档 �
   // 不在无数据槽上断言行存在（非本批判据面）。
   assert.equal(envelope(await resumeSession(null), "resume-cwd空").reason, "no-project", "cwd 空 ⇒ no-project（零写）")
 
-  // 负例 reason 面 = 六值闭集（零端层第二词表）
+  // 负例 reason 面 = 七值闭集（零端层第二词表；`last-session` = 「对齐第三批」末项门增）
   assert.deepEqual(
     [...new Set(reasons)].filter((reason) => reason !== null).sort(),
-    ["file-missing", "invalid-slot", "mtime-conflict", "no-project", "parse-failure", "slot-missing"],
-    "reason 面全在闭集内 ∧ 六档皆已触达",
+    ["file-missing", "invalid-slot", "last-session", "mtime-conflict", "no-project", "parse-failure", "slot-missing"],
+    "reason 面全在闭集内 ∧ 七档皆已触达",
   )
 
   // 另端 marker 零触碰（五通道全跑完后）

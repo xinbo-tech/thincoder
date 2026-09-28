@@ -14,7 +14,8 @@
  * 窄桥 = 本档模块级 `globalThis.thincoder`（装配面 = `src/preload/preload.cjs` —— 与 `renderer/app.mjs` 同源同刻读取）。
  * 纪律：本档零 DOM / 零 `node:` / 零裸包（守卫 = `test/guard-closure.test.mjs`）；读面失败一律 `console.error` + 零切片写。
  */
-import { applyPage, openSession } from "./events.mjs"
+import { openSession } from "./events.mjs"
+import { applyPage } from "./page-read.mjs" // 页读径拆分产出（「对齐第二批」）——硬限拆档，结构拆分零语义
 import { beginBackfill, cancelCloseTab, closeRailForm, closeTab, confirmCloseTab, endBackfill, openRailForm, openTab, requestCloseTab, store } from "./store.mjs"
 
 const host = globalThis.thincoder // 窄桥（装配面 = `src/preload/preload.cjs`）

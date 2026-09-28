@@ -16,9 +16,10 @@
  * 语义（批档 §2.4（f）· §2.5 U28–U32）：
  *   ① 切片操作 = **纯函数**（`appendBlock` / `beginBackfill` / `endBackfill` / `setFollowing` /
  *      `returnToBottom` / `openTab` / `closeTab` / `requestCloseTab` / `confirmCloseTab` / `cancelCloseTab` /
- *      `openRailForm` / `closeRailForm` / `togglePool` / `patchSettings` / `setWizardStep` / `dismissWizard` /
- *      队列三动作 `enqueue` / `dequeue` / `drainQueue`（`pool.queue` 唯一写面 · 满队常量 `QUEUE_MAX` 单源 —— 批 A））——
+ *      `openRailForm` / `closeRailForm` / `togglePool` / `patchSettings` / `setWizardStep` / `dismissWizard`）——
  *      返回**新态**；拒收 / 无变化 ⇒ **原引用**（引用等值 ⇒ 零通知，视图层可据引用短路）；
+ *      排队消息三纯动作（`enqueue` / `dequeue` / `drainQueue` + 满队常量 `QUEUE_MAX`）已出档
+ *      `renderer/queue.mjs`（拆分产出 —— 「对齐第二批」项 2 队列按会话分键，在册预案本批执行）；
  *   ② `set(next)` 逐键 `Object.is` 比较（`next` = 补丁（局部键）或整态（全键）—— 同一路径：
  *      `store.set(appendBlock(store.get(), block))`），**至少一键变更才通知**；回执 = `(state, changedKeys)`；
  *   ③ 通知期内的再 `set` **入队** —— 当前轮通知跑完再发（不递归、不丢、合并后一次性通知）；
@@ -43,7 +44,11 @@
  *  `subBlocks` = **子 agent 块切片**（R3b · D20）：按会话键分槽（无该键 / 非数组 ⇒ 该会话零块 —— 禁假造）；
  *  元素 = 核态机模型（`renderer/events.mjs` 归约面写，读面 `renderer/views/activity.mjs`）。`pool.running` 读数
  *  同源（活动会话在飞块数——范归约面写；`pool` 切片不再载 `blocks`——摘工具行）。`ledger` = **账本警示切片**
- *  （账本可靠批 · 桌面微轮：写者 = `renderer/mount-sessions.mjs` `refreshRail` 唯一写路径；读面 = 会话区末子注记）。 */
+ *  （账本可靠批 · 桌面微轮：写者 = `renderer/mount-sessions.mjs` `refreshRail` 唯一写路径；读面 = 会话区末子注记）。
+ *  `pending` = **排队消息切片**（「对齐第二批」项 2）：`{ [会话键]: [{ text, ts }] }` —— 写者 = 输入区
+ *  入队 / 出队 / 排空三纯动作（出档 `renderer/queue.mjs`）；读面 = 流内待发送气泡组（输入区上方）/
+ *  状态行段 14（本会话队）。同笔 `pool.queue` = **席位保留 · 零写者**（用户排队消息改住流内 —— 右列
+ *  「队列」族不再承载；族空 ⇒ 零节点恒不在场）。 */
 export function initialState() {
   return {
     locale: "en",
@@ -64,6 +69,7 @@ export function initialState() {
     tokens: {},
     timers: {},
     subBlocks: {},
+    pending: {},
     blocks: [],
     history: { hasOlder: false, inFlight: false, page: null },
     following: true,
@@ -96,12 +102,14 @@ export function appendBlock(state, block) {
   return { ...state, blocks: [...state.blocks, block], pendingNew }
 }
 
-/** 窗口切片（T-DSK17 数据面）：`visible` = 尾 `limit` 块（**引用等值**）；
- *  `hidden` = 隐藏块数（number）：正整数 `limit` ⇒ `blocks.length - limit`；
- *  `limit ≤ 0` / 非整数 ⇒ 防御档（`visible` 空、`hidden = blocks.length`）。 */
+/** 窗口切片（T-DSK17 数据面 · **运行期块记账** = `docs/desktop/design/RENDERER.md` §2）：`visible` = 尾 `limit` 块
+ *  （**引用等值**）；`hidden` = 未渲染更早块数 = **页读域可回填块数** —— 运行期块（`kind === "subagent"`：
+ *  归档入流块，非落盘件 / 回填无源）**退出尾窗不计入**（不落摘要块 ⇒ `hidden > 0` 判据不被其扰动）；
+ *  正整数 `limit` ⇒ 尾窗切片；`limit ≤ 0` / 非整数 ⇒ 防御档（`visible` 空、未渲染 = 全量）。 */
 export function visibleWindow(blocks, limit) {
   const shown = Number.isInteger(limit) && limit > 0 ? Math.min(limit, blocks.length) : 0
-  return { visible: blocks.slice(blocks.length - shown), hidden: blocks.length - shown }
+  const hidden = blocks.slice(0, blocks.length - shown).filter((block) => block?.kind !== "subagent").length
+  return { visible: blocks.slice(blocks.length - shown), hidden }
 }
 
 /** 回填起页（T-DSK18 数据面 · `docs/desktop/design/RENDERER.md` §3 触发条件）：**有更早页 ∧
@@ -204,40 +212,6 @@ export function togglePool(state, key) {
   const current = collapsed[key]
   const next = current !== true
   return next === current ? state : { ...state, poolCollapsed: { ...collapsed, [key]: next } }
-}
-
-/** 满队常量（**单源** —— `pool.queue` 队长上限；池面队列族与输入区共用同一个数）：
- *  设计面只点名「常量单源」（`docs/desktop/design/UI.md` §1 输入区行 / §2 项 1「队列入池」）而**未定值** ——
- *  值 8 = 本档实施选择（满队判据 / 提示行 / 不入队三事皆与该值无关）；披露 = 批次档 §5。 */
-export const QUEUE_MAX = 8
-
-/** 队列写面（`pool.queue` **唯一写面** —— 三纯动作 + 常量单源；条目形 `{ title, status: "queued" }`，
- *  形单源 = 池面队列条目消费集 `renderer/views/activity.mjs:119-125`）：
- *  ① `enqueue(state, title)` —— 尾追一条；**满队**（队长 ≥ `QUEUE_MAX`）∥ 非串 / 空白串 ⇒ **原引用**（不收）；
- *  ② `dequeue(state)` —— 摘队首（只减不取值：值面读 `state.pool.queue[0]` —— 回合尾 flush **先发后出队**）；
- *  ③ `drainQueue(state)` —— 排空队列（关页 / 复位路径）；空队 ⇒ **原引用**。
- *  三动作皆态进态出（拒收 / 无变化 ⇒ 原引用 ⇒ 零通知 —— 同本档其余纯函数）。 */
-export function enqueue(state, title) {
-  const pool = state.pool ?? {}
-  const queue = Array.isArray(pool.queue) ? pool.queue : []
-  if (typeof title !== "string" || title.trim() === "" || queue.length >= QUEUE_MAX) return state
-  return { ...state, pool: { ...pool, queue: [...queue, { title, status: "queued" }] } }
-}
-
-/** 摘队首：空队 ⇒ 原引用。 */
-export function dequeue(state) {
-  const pool = state.pool ?? {}
-  const queue = Array.isArray(pool.queue) ? pool.queue : []
-  if (queue.length === 0) return state
-  return { ...state, pool: { ...pool, queue: queue.slice(1) } }
-}
-
-/** 排空队列：空队 ⇒ 原引用。 */
-export function drainQueue(state) {
-  const pool = state.pool ?? {}
-  const queue = Array.isArray(pool.queue) ? pool.queue : []
-  if (queue.length === 0) return state
-  return { ...state, pool: { ...pool, queue: [] } }
 }
 
 /** 设置族切片补丁：逐键 `Object.is` 比较 ⇒ 至少一键变更才落新引用；非对象补丁 / 无变化 ⇒ **原引用**

@@ -5,6 +5,7 @@
  *   U155 = 零节点面（未至 / 非正 / 缺片 ⇒ 逐段零节点 —— 禁假造 · KD-25；banner 四段负向锁 + `state` 两态 + `enter` 三态）；
  *   U156 = 挂载 / 出档 / 接线结构（单点重建 · 槽锚两向 · `STATUS_KEYS` 订阅面 · `chrome.mjs` 引调面）；
  *   U157 = 四项缺入站面端到端（`ev:activity` turn 槽 / 回合起刻 + `ev:usage` 载荷扩 `tokens` / `timers` ⇒ 归约 ⇒ 状态行节点）；
+ *   U190 = 段 3 态机四支（桌面空闲唤醒 —— 挂起句 / 零节点 / 运行中 / 就绪 + 优先序 + N/M 取词链 + 交叠角落；单源 = `docs/desktop/design/UI.md` §1「本批注（对齐重定位）」项 1 表行 3）；
  *   U50 = 告警位面（原住 `test/views-chrome.test.mjs`，随状态行族拆档迁入 —— 面与判据不变，只换宿主档）。
  * 判据面 = 纯描述符（构树）+ `test/fake-dom.mjs`（落点那段机检）；词面走宿主哨兵缝（`initDict` host = 全键代理 —— 增键即入判据；
  * 插值模板钉「读数入词」）；零真 DOM。
@@ -32,6 +33,7 @@ const TPL = Object.freeze({
   "status.usage": "⟦usage:${percent}⟧", "info.threshold": "⟦ledger⟧", "status.timer": "⟦timer:${count}⟧",
   "rail.session.untitled": "⟦untitled⟧", "status.queue.enter": "⟦queue-enter⟧", "status.queue.n": "⟦queue:${n}⟧",
   "status.ready": "⟦ready⟧", "status.enter.send": "⟦enter-send⟧",
+  "susp.running": "⟦susp-run:${n}⟧", "susp.digesting": "⟦susp-digest:${n}⟧", "susp.winding": "⟦susp-winding⟧", // 桌面空闲唤醒批三键（段 3 支①）
   "status.banner.plan": "⟦plan⟧", "status.banner.auto": "⟦auto⟧", "status.banner.advisor": "⟦advisor⟧", "status.banner.eng": "⟦eng⟧",
   "tab.badge.approval": "⟦badge-approval⟧",
 })
@@ -44,7 +46,7 @@ function useWords(ctx) {
 const FACE = Object.freeze({
   tabs: ["1", "2"], activeTab: "1", badges: { "1": ["running", "approval"], "2": ["approval"] },
   usage: { "1": 85 }, sessions: [{ slot: 1, title: "会话甲" }],
-  pool: { queue: [{ title: "队一", status: "queued" }, { title: "队二", status: "queued" }] },
+  pending: { "1": [{ text: "队一", ts: 1 }, { text: "队二", ts: 2 }] }, // 段 14 源 = 本会话队（「对齐第二批」项 2）
   blocks: [{ kind: "user", id: "u1", text: "问" }, { kind: "tool", id: "t1", name: "Bash", status: "running" }],
   tasks: { "1": [{ status: "done" }, { status: "in_progress" }, { status: "done" }] },
   turns: { "1": { n: 2, max: 8 } }, turnStarts: { "1": 7000 }, now: 12500,
@@ -103,7 +105,7 @@ test("U154: 15 段表逐行判据（承载 16 段序 = CLI 序 · 逐段读数 /
   assert.deepEqual([segOf(tree, "timer").props.class, textOf(segOf(tree, "timer"))], ["status-seg status-seg-warn", ["⟦timer:3⟧"]], "段 12 计时（到期未送达 ⇒ 警示）")
   // 段 13 / 14 —— 标题（与标签条 / 左列同源）· 输入提示（队 ≥ 1 ⇒ 条数句）
   assert.deepEqual(textOf(segOf(tree, "title")), ["会话甲"], "段 13 会话标题 = 活动会话行标题（数据面原样）")
-  assert.deepEqual(textOf(segOf(tree, "enter")), ["⟦queue:2⟧"], "段 14 输入提示（队 ≥ 1 ⇒ 条数句 —— 条数优先）")
+  assert.deepEqual(textOf(segOf(tree, "enter")), ["⟦queue:2⟧"], "段 14 输入提示（本会话队 ≥ 1 ⇒ 条数句 —— 条数优先）")
   const head = chrome.headTree(chrome.headModel({ tab: "1", meta: { provider: "P", model: "M", engineering: "on", autoApprove: "off" } })) // 会话头回三值：供给仍携两撤键 ⇒ 不渲染
   assert.deepEqual(head.children.map((node) => node.props["data-field"]), ["provider", "model", "effort"], "旁置面收正：会话头 = 三值（撤 `engineering` / `autoApprove` 两显示位 —— 同一事实只住状态行一处）")
 })
@@ -168,11 +170,39 @@ test("U155: 零节点面（16 段逐段：未至 / 非正 / 缺片 ⇒ 该段零
   // 段 13：无行 ⇒ 零节点；行标题空 ⇒ 词表缺省词（与标签条 / 左列同投影）；他键行不算命中
   assert.deepEqual([has({ sessions: [] }, "title"), has({ sessions: [{ slot: "9", title: "别家" }] }, "title")], [false, false], "段 13 零节点：无本键行")
   assert.deepEqual(textOf(segOf(statusTree(face({ sessions: [{ slot: "1", title: "" }] })), "title")), ["⟦untitled⟧"], "段 13：标题空 ⇒ 词表缺省词（同源同投影）")
-  // 段 14（enter 三态）：静 ⇒ `Enter: send`（恒在场）；忙 ∧ 队空 ⇒ 排队句；有队 ⇒ 条数句（条数优先）
-  assert.deepEqual(textOf(segOf(statusTree(face({ badges: {}, pool: { queue: [] } })), "enter")), ["⟦enter-send⟧"], "段 14 静息（非忙 ∧ 队空）⇒ `Enter: send`（打开态可亮面）")
-  assert.deepEqual(textOf(segOf(statusTree(face({ pool: { queue: [] } })), "enter")), ["⟦queue-enter⟧"], "段 14 忙态 + 队空 ⇒ Enter 排队句")
-  assert.deepEqual([false, true].map((busy) => textOf(segOf(statusTree(face({ badges: busy ? FACE.badges : {}, pool: { queue: [{ title: "x" }] } })), "enter"))),
+  // 段 14（enter 三态）：静 ⇒ `Enter: send`（恒在场）；忙 ∧ 队空 ⇒ 排队句；有队 ⇒ 条数句（条数优先；源 = 本会话队）
+  assert.deepEqual(textOf(segOf(statusTree(face({ badges: {}, pending: {} })), "enter")), ["⟦enter-send⟧"], "段 14 静息（非忙 ∧ 队空）⇒ `Enter: send`（打开态可亮面）")
+  assert.deepEqual(textOf(segOf(statusTree(face({ pending: {} })), "enter")), ["⟦queue-enter⟧"], "段 14 忙态 + 队空 ⇒ Enter 排队句")
+  assert.deepEqual([false, true].map((busy) => textOf(segOf(statusTree(face({ badges: busy ? FACE.badges : {}, pending: { "1": [{ text: "x", ts: 1 }] } })), "enter"))),
     [["⟦queue:1⟧"], ["⟦queue:1⟧"]], "段 14 有队（非忙 / 忙两态同）⇒ 条数句（队不隐、优先于排队句）")
+  assert.deepEqual(textOf(segOf(statusTree(face({ badges: {}, pending: { "2": [{ text: "他键", ts: 1 }] } })), "enter")), ["⟦enter-send⟧"], "段 14 源 = **本**会话键（他键队面零扰）")
+})
+
+// ─── U190 段 3 态机四支（桌面空闲唤醒 —— 单源 = `docs/desktop/design/UI.md` §1「本批注（对齐重定位）」项 1 表行 3）──
+
+test("U190: 段 3 态机四支（优先序 ①挂起句 > ②零节点 > ③运行中 > ④就绪 · N/M 取词链 · 交叠角落 · active 严格真门）", (ctx) => {
+  useWords(ctx)
+  const treeOf = (over) => statusTree(statusModel({ tabs: ["1"], activeTab: "1", ...over }))
+  const text1 = (over) => { const seg = segOf(treeOf(over), "state"); return seg === null ? null : textOf(seg)[0] }
+  const susp = (counts) => ({ susp: { "1": { active: true, running: 0, queued: 0, pending: 0, done: 0, ...counts } } })
+  // ① 挂起句支（N = `running + queued` · M = `pending + done`；取词链 = 三键条件组装）
+  assert.equal(text1(susp({ running: 2, queued: 1 })), "⟦susp-run:3⟧", "① N > 0 ∧ M = 0 ⇒ susp.running（N = running + queued = 3）")
+  assert.equal(text1(susp({ running: 2, queued: 1, pending: 1, done: 1 })), "⟦susp-run:3⟧ · ⟦susp-digest:2⟧", "① N > 0 ∧ M > 0 ⇒ 主体句 + 附句（M = pending + done = 2）")
+  assert.equal(text1(susp({ pending: 1 })), "⟦susp-digest:1⟧", "① N = 0 ∧ M > 0 ⇒ 单附句（无主体句）")
+  assert.equal(text1(susp({})), "⟦susp-winding⟧", "① N = 0 ∧ M = 0 ⇒ winding（零计数轮 —— 窗在场照出）")
+  assert.equal(segOf(treeOf(susp({ running: 1 })), "state").props.class, "status-seg", "① 段 class = 常态（非警示段）")
+  // ② 零节点支 / ③ 运行中 / ④ 就绪（两态词 = 既有两态 —— 无窗时回落）
+  assert.equal(text1({ badges: { "1": ["approval"] } }), null, "② approval 在挂 ∧ 回合非忙 ⇒ 段零节点（承载 = 注意力 chip）")
+  assert.equal(text1({ badges: { "1": ["running", "approval"] } }), "⟦busy⟧", "③ 忙 ⇒ 运行中（② 门 = ¬running ⇒ 审批同挂不夺段）")
+  assert.equal(text1({}), "⟦ready⟧", "④ 其余 ⇒ 就绪")
+  // 支①的严格真门（`active` 缺 / 非布尔 ⇒ 禁假造回落两态词）+ 交叠角落 + 他键零扰
+  assert.equal(text1({ susp: { "1": { running: 9 } } }), "⟦ready⟧", "`active` 缺 ⇒ 不落①（回落两态词 —— 禁假造）")
+  assert.equal(text1(susp({ active: "yes" })), "⟦ready⟧", "`active` 非严格真（非布尔真值）⇒ 不落①")
+  assert.equal(text1({ susp: { "1": { active: true, running: 1 }, "2": { active: true, running: 9 } } }), "⟦susp-run:1⟧", "源 = 本会话键（他键窗零扰）")
+  assert.equal(text1({ badges: { "1": ["approval"] }, ...susp({ pending: 1 }) }), "⟦susp-digest:1⟧", "交叠角落（approval ∧ ¬running ∧ 挂起窗在场）⇒ 取①（chip 照常承载审批 —— 两事实不同面）")
+  assert.equal(text1({ badges: { "1": ["running"] }, ...susp({ pending: 1 }) }), "⟦susp-digest:1⟧", "① 段与③ 交叠 ⇒ 取①（窗在场 ⇒ 挂起句夺段于运行中词）")
+  // 四计数非数 ⇒ `numOf` 归一 0（不落 `NaN` 入词面 —— 沿归约面同判）
+  assert.equal(text1(susp({ running: NaN, pending: "1" })), "⟦susp-winding⟧", "非数计数 ⇒ 归一 0（零 N / 零 M ⇒ winding）")
 })
 
 // ─── U156 挂载 / 出档 / 接线结构面 ────────────────────────────────────────
@@ -189,9 +219,9 @@ test("U156: 挂载 / 出档 / 接线（单点重建 · 槽锚两向 · `STATUS_K
   assert.equal(STATUS_SLOT, '[data-slot="status"]', "槽锚常量与骨架属性同值（两向锁 —— 状态行族出档）")
   assert.ok(html.includes('data-slot="status"'), "骨架承载容器锚（窗口级底行 —— UI.md §1 状态栏行）")
   const base = initialState()
-  const seeded = [...Object.keys(base), "tasks", "sessionFlags"] // `tasks`（同 `questions`）/ `sessionFlags` = 归约面 / 页读面首写自种切片 —— 不在初态键集，属在册切片面
+  const seeded = [...Object.keys(base), "tasks", "sessionFlags", "susp"] // `tasks`（同 `questions`）/ `sessionFlags` = 归约面 / 页读面首写自种切片 —— 不在初态键集，属在册切片面；`susp` = `ev:susp` 归约面首写自种（桌面空闲唤醒批）
   assert.deepEqual(STATUS_KEYS.filter((key) => !seeded.includes(key)), [], "订阅切片键面全在册（拼错键 ⇒ 永不重绘的静默口已闭）")
-  for (const key of ["usage", "tasks", "turns", "turnStarts", "tokens", "timers", "projectInfo", "pool", "blocks", "sessionFlags"]) {
+  for (const key of ["usage", "tasks", "turns", "turnStarts", "tokens", "timers", "projectInfo", "pending", "blocks", "sessionFlags", "susp"]) {
     assert.ok(STATUS_KEYS.includes(key), `状态行订阅切片在位：${key}`)
   }
   // ③ 单点重建（假 DOM）：重挂清容器 ⇒ 零残留；零宿主 ⇒ 早返 null

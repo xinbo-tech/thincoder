@@ -16,10 +16,16 @@
  *   ⑥ 词面读数 = 接线面（视图档零 DOM —— `docs/desktop/design/RENDERER.md` §1.1 判据面条）：本卡
  *      `[data-input="answer"]` 取值；控件缺位 ⇒ 零动作 + 记错（**不得**当取消 —— 取消是显式出口）；空白串 ⇒
  *      零动作零 IPC（沿输入区空白闸；值原样送出 —— 零改写）。
+ *   ⑦ 「对齐第三批」两增量（本批 —— 单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」）：
+ *      **P2 Enter 提交**（`onAnswerKey`）= Enter（非组字）⇒ `preventDefault` + 泻入**既有** `onAnswerDraft` 径
+ *      （单一实现 —— 空白闸 / 值读数 / 零 trim 全同提交键）；Shift+Enter / 组字期 ⇒ 零动作不吞键
+ *      （组字判据单源 = `renderer/mount-composer.mjs` `isComposing`）； **P3 聚焦两态** = ① 新卡插入 ⇒
+ *      卡内作答控件 `focus()`；② 作答 / 取消回执 `ok` 真 ⇒ 回焦输入区 `[data-input="text"]`（失败径零动）。
  * 纪律：零 `node:` / 零裸包；本档零面向用户文案（词面归视图档）。
  */
 import { build } from "./dom.mjs"
 import { clearQuestion } from "./events.mjs"
+import { isComposing } from "./mount-composer.mjs"
 import { store as defaultStore } from "./store.mjs"
 import { planTree } from "./views/plan.mjs"
 import { questionTree, respondQuestion } from "./views/question.mjs"
@@ -37,10 +43,22 @@ export const CARD_ORDER = Object.freeze(["approval", "question", "task"])
 /** 本档两族 = 卡序尾二（审批族归 `renderer/views/chat.mjs`）。 */
 const OWN_CODES = CARD_ORDER.slice(1)
 
-// ─── 出站（作答 / 取消同一路）────────────────────────────────────────────
+// ─── 出站（作答 / 取消同一路）────────────────────────────
+
+/** 聚焦（P3 两态 —— 无 `focus` 面（假 DOM / 平 node）⇒ 零动作零抛）。 */
+function focusNode(node) {
+  if (node !== null && node !== undefined && typeof node.focus === "function") node.focus()
+}
+
+/** 回焦输入区（P3 ②）：作答 / 取消回执 `ok` 真 ⇒ `[data-input="text"]` 聚焦（容器面外一查 —— 输入区与卡族不同槽）；
+ *  面缺 ⇒ 零动作。 */
+function focusComposer() {
+  if (typeof document === "undefined" || typeof document.querySelector !== "function") return
+  focusNode(document.querySelector('[data-input="text"]'))
+}
 
 /** 提问出口核心（零 DOM · 两面可注入）：窄桥 `question:respond` ⇒ 回执 `ok` 真 ⇒ 摘本键提问项（切片 + 位标
- *  同清）。返回 = 出站是否被受理（`ok` 真）；**卡退场非乐观**（失败 ⇒ 卡留 —— 零切片写）。 */
+ *  同清）+ **回焦输入区**（P3 ②）。返回 = 出站是否被受理（`ok` 真）；**卡退场非乐观**（失败 ⇒ 卡留 —— 零切片写）。 */
 export async function submitAnswer({ store = defaultStore, host } = {}, promptId, answer) {
   const key = store.get()?.activeSession ?? null
   if (key === null) {
@@ -54,8 +72,12 @@ export async function submitAnswer({ store = defaultStore, host } = {}, promptId
     return false
   }
   const state = store.get()
-  if (state?.questions?.[key]?.promptId !== promptId) return true // 已被事件面摘 ∥ 已被新项替换 ⇒ 零写
+  if (state?.questions?.[key]?.promptId !== promptId) {
+    focusComposer() // 已被事件面摘 ∥ 已被新项替换 ⇒ 零写（回焦照落 —— 受理已成立）
+    return true
+  }
   store.set(clearQuestion(state, key))
+  focusComposer()
   return true
 }
 
@@ -98,7 +120,8 @@ function wantedCards(state, handlers) {
   return wanted
 }
 
-/** 卡族挂载（幂等）：等值 ⇒ 零写 ∥ 就地换；多 ⇒ 摘；缺 ⇒ 插位。返回 = 在场族数。 */
+/** 卡族挂载（幂等）：等值 ⇒ 零写 ∥ 就地换；多 ⇒ 摘；缺 ⇒ 插位（**提问族新插 ⇒ 卡内作答控件聚焦** —— P3 ①）。
+ *  返回 = 在场族数。 */
 export function mountCards(root, state, handlers = {}) {
   if (typeof root?.insertBefore !== "function") return 0 // 容器缺位 / 宿主异常 ⇒ 空转
   const wanted = wantedCards(state, handlers)
@@ -115,14 +138,18 @@ export function mountCards(root, state, handlers = {}) {
     if (signature(node) !== signature(next)) node.replaceWith(next) // 等值 ⇒ 零 DOM 写（草稿 / 焦点保全）
   }
   for (const node of live) node.remove() // 多 ⇒ 摘（切片已摘 / 换会话无槽 ⇒ 同此径）
-  for (const entry of missing) root.insertBefore(build(entry.descriptor), cardAnchor(root, entry.code))
+  for (const entry of missing) {
+    const node = build(entry.descriptor)
+    root.insertBefore(node, cardAnchor(root, entry.code))
+    if (entry.code === "question") focusNode(node.querySelector?.('[data-input="answer"]') ?? null)
+  }
   return wanted.length
 }
 
 // ─── 装配（接线形通则 = `docs/desktop/design/RENDERER.md` §1.1）────────────
 
-/** 卡族装配：`paintCards`（挂载面**纯读**现态 —— 容器缺位 ⇒ `mountCards` 空转）+ 两 handlers（薄壳 ——
- *  出站与清除判据全归 `submitAnswer`）。 */
+/** 卡族装配：`paintCards`（挂载面**纯读**现态 —— 容器缺位 ⇒ `mountCards` 空转）+ 三 handlers（薄壳 ——
+ *  出站与清除判据全归 `submitAnswer`；Enter 径 = 同路入 `onAnswerDraft` —— 单一实现）。 */
 export function attachCards(host, deps = {}) {
   const store = deps.store ?? defaultStore
   const onAnswer = (promptId, answer) => void submitAnswer({ store, host }, promptId, answer)
@@ -136,8 +163,16 @@ export function attachCards(host, deps = {}) {
     if (draft.trim() === "") return // 空白串 ⇒ 零动作零 IPC（取消走显式出口 —— 不吞别的键）
     void submitAnswer({ store, host }, promptId, draft)
   }
-  const paintCards = (state = store.get()) => mountCards(document.querySelector(CARDS_SLOT), state, { onAnswer, onAnswerDraft })
-  return { paintCards, handlers: { onAnswer, onAnswerDraft } }
+  /** Enter 提交（P2）：Enter（非组字）⇒ `preventDefault` + **泻入既有 `onAnswerDraft`**（空白闸 / 值读数 / 零 trim 全同 ——
+   *  单一实现）；Shift+Enter / 组字期 / 余键 ⇒ 零动作不吞键（组字判据单源 = `mount-composer.mjs` `isComposing`）。 */
+  const onAnswerKey = (promptId, event) => {
+    if (isComposing(event)) return
+    if (event?.key !== "Enter" || event?.shiftKey === true) return
+    if (typeof event.preventDefault === "function") event.preventDefault()
+    onAnswerDraft(promptId, event)
+  }
+  const paintCards = (state = store.get()) => mountCards(document.querySelector(CARDS_SLOT), state, { onAnswer, onAnswerDraft, onAnswerKey })
+  return { paintCards, handlers: { onAnswer, onAnswerDraft, onAnswerKey } }
 }
 
 /** 本卡文本控件（**词面读数 = 接线面**）：由事件宿主定位（`currentTarget` ⇒ 最近提问卡 → `[data-input="answer"]`）；

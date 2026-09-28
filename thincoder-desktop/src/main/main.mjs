@@ -4,12 +4,13 @@
  * 启动序**单线**（批档 §2.4）：`--smoke` 解析 → `requestSingleInstanceLock()` → 非主实例分支（不开窗）→ 下限自检
  * （调用点先于协议 / 窗口注册——U4）→ `registerAppScheme()`（ready 前）→ `await app.whenReady()` → `serveAppProtocol()`
  * → `registerIpcHandlers()` → `createWindow()` → 加载完 → 冒烟读回 → 单行 JSON → `app.exit(0)`；常态（无 `--smoke`）= 窗口常驻。
+ * **桌面空闲唤醒批**：通知装配注入三行（`Notification` 构造 ∕ 焦态 ∕ 聚焦——闭包读 `win`；策略面住 `notify.mjs`）。
  * stdout 只许一行 JSON（读数面；日志与栈一律 stderr）——`process.stdout.write` 仅本档一处。
  */
-import { app } from "electron"
+import { app, Notification } from "electron"
 import { hostFloorMet, MIN_NODE, sqliteAvailable } from "./host-floor.mjs"
 import { protocolStats, registerAppScheme, serveAppProtocol } from "./protocol.mjs"
-import { ipcStats, registerIpcHandlers, setAgentHost } from "./ipc.mjs"
+import { ipcStats, registerIpcHandlers, setAgentHost, setLedgerEmit } from "./ipc.mjs"
 import { createAgentHost } from "./agent-host.mjs"
 import { currentCwd } from "./projects.mjs"
 import { createWindow, probesSatisfied, runSmoke } from "./window.mjs"
@@ -67,13 +68,27 @@ async function main() {
   registerAppScheme() // ready 前 · 仅一次
   await app.whenReady()
   serveAppProtocol()
-  // 宿主装配（出站 emit 注入；建窗晚于本行 ⇒ 闭包读 `win`）——先于通道注册（处理体取宿主）。
+  // 出站面（webContents 发送单点）：宿主 emit 与台账行出站共用（建窗晚于注入 ⇒ 闭包读 `win`；建窗前零事件 ⇒ 丢弃）。
+  const emit = (channel, payload) => {
+    if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
+  }
+  // 宿主装配（出站 emit 注入）——先于通道注册（处理体取宿主）。
   setAgentHost(createAgentHost({
-    emit: (channel, payload) => {
-      if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
-    },
+    emit,
     projects: { currentCwd },
+    // 完成提示面（KD-35）平台装配 —— 策略面 ∕ 平台面分家（策略 = `notify.mjs`：失焦门 + 两档合句；本处只落平台三件）：
+    // 落子 = `Notification`（`title` 缺省 ⇒ 零携）+ 点击 ⇒ `reveal`；焦态源 = `win.isFocused()`（失焦门）。
+    // 无窗口（建窗前 ∥ 已销毁）视为「已聚焦」⇒ 门闭合（无窗口可聚焦 / 可 reveal ⇒ 零通知——never noise）。
+    notify: ({ title, body, reveal }) => {
+      const toast = new Notification({ ...(title ? { title } : {}), body })
+      if (typeof reveal === "function") toast.on("click", reveal)
+      toast.show()
+    },
+    focused: () => !win || win.isDestroyed() || win.isFocused(),
+    reveal: () => { if (win && !win.isDestroyed()) { win.show(); win.focus() } },
   }))
+  // 台账行出站面（「对齐第三批」KD-38）：`session:resume` 成功径挂调用（`ipc.mjs`）——项目级自产事件，非会话回调。
+  setLedgerEmit(emit)
   registerIpcHandlers()
   win = createWindow(recordError)
   if (!SMOKE) return // 常态启动 = 窗口常驻（不取读数、不退出）

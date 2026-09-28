@@ -5,8 +5,10 @@
  * 「桌面端加载形」；`test/guard-closure.test.mjs` `/rc/` 前缀白名单同源）。平 node 无该 origin ⇒ 本钩子把
  * `/rc/<子路径>` 解析到 `@thincoder/render-core` 包根（**包名解析单源** = `package.json`，与生产主进程
  * `protocol.mjs` 的 `CORE_ROOT` 同址同法）——渲染档在测试与生产下走同一份核件。
- * 射程说明：测试文件自身 spawn 的第三方子进程（如 `spawnSync(process.execPath, …)`）**不**承袭本钩子；
- * 现存子进程面均不加载渲染档（`host-floor` 的子进程只 require 预载档）。
+ * 射程说明：测试文件自身 spawn 的第三方子进程（如 `spawnSync(process.execPath, …)`）**不**承袭本钩子。
+ * 生产侧同形——app 主进程装载 `renderer/i18n.mjs`（node-safe 档：零 `/rc/` 静态导入 ⇒ 不经本钩子；
+ * 判据单源 = `docs/desktop/design/SHELL.md` §1「node-safe 子集」）：本钩子射程 = **测试进程内**渲染档取件
+ * （含渲染档 import 的核件面）。
  */
 import { createRequire, registerHooks } from "node:module"
 import { dirname, join } from "node:path"

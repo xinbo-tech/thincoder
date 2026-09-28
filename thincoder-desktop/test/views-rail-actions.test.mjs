@@ -148,3 +148,29 @@ test("U53: 会话行两锚 + 行内两控件与行原位换形（行 ⇒ session
     }
   }
 })
+
+// ─── U211「对齐第三批」末项删除门（P12 渲染半 —— 双闸另一半 = 主侧 `session:delete` 末项拒）──
+
+test("U211: 「对齐第三批」末项删除门（渲染半）—— 会话数 > 1 才落删除控件 ∧ 单会话 / 零会话零控件 ∧ 改名面零动", () => {
+  const handlers = { onDelete: () => {}, onRename: () => {} }
+  const deletes = (rows) => nodes(railTree(railModel({ projectCwd: "C:\\proj", recent: [], rows }), handlers))
+    .filter((node) => node.props?.["data-action"] === "session:delete")
+  const renames = (rows) => nodes(railTree(railModel({ projectCwd: "C:\\proj", recent: [], rows }), handlers))
+    .filter((node) => node.props?.["data-action"] === "session:rename")
+
+  assert.equal(deletes([row(1)]).length, 0, "单会话 ⇒ 零删除控件（行控件仍归位）")
+  assert.equal(renames([row(1)]).length, 1, "单会话 ⇒ 改名控件不受门（两控不同命）")
+  assert.deepEqual(
+    nodes(railTree(railModel({ projectCwd: "C:\\proj", recent: [], rows: [row(1)] }), handlers))
+      .filter((node) => node.tag === "button").map((node) => node.props["data-action"]),
+    ["session:switch", "session:rename"],
+    "单会话常态行 = [行, 改名]（删除位不落空控件）",
+  )
+  assert.equal(deletes([row(1), row(2)]).length, 2, "两会话 ⇒ 每行一枚删除控件（判据 = 会话数 > 1，非常态行面）")
+  assert.equal(deletes([row(1), row(2), row(3)]).length, 3, "三会话 ⇒ 同判据（与行数同阶）")
+  assert.equal(deletes([]).length, 0, "零会话（empty 态）⇒ 零删除控件（零行面）")
+
+  // 单会话 + 删除形（防御面：形态入参本身不扞门 —— 常态控作已不在场 ⇒ 无入口可达）
+  const singleForm = railTree(railModel({ projectCwd: "C:\\proj", recent: [], rows: [row(1)] }), handlers, { key: "1", mode: "delete" })
+  assert.equal(nodes(singleForm).some((node) => node.props["data-form"] === "delete"), true, "形面入参直落（树形只随入参形变 —— 门只管常态入口）")
+})

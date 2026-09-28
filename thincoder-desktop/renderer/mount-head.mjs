@@ -12,11 +12,13 @@
  *      `meta` 缺 ⇒ `onRepaint()`（回退为回执前值）+ `console.error`（零静默）。
  *   ③ 随动 `sync(state)`：渠道候选未入缓存 ⇒ 取；活动 provider 变 ⇒ 重取模型候选；落地后 `onRepaint()`
  *      （候选面后到 ⇒ 选项集不全 ⇒ 就地再刷；幂等）。挂载面 = `renderer/app.mjs`（`paintHead` + 外壳切片订阅处单点调用）。
+ *      **P23 忙态写门**（「对齐第三批」）：写路入口先判位标忙态（`renderer/views/chrome.mjs` `busyOf` 单源）——
+ *      在飞 ⇒ 零发送 + 回退重绘（控件面已 `disabled`，本闸为键盘 / 程序面兵衛；与构树门双闸）。
  * 纪律：零 `node:` / 零裸包（渲染面静态闭包判据）；控制台诊断串**非面向用户文案**（不经 `t()` —— 同 `renderer/events-subscribe.mjs`）。
  */
 import { store } from "./store.mjs"
 import { modelIdOf } from "./views/settings-sections.mjs"
-import { sessionMetaOf } from "./views/chrome.mjs"
+import { busyOf, sessionMetaOf } from "./views/chrome.mjs"
 
 /** 头面可写字段闭集（`docs/desktop/design/UI.md` §1「批 B 注」项 1 —— 表外字段零动作）。 */
 const PICK_FIELDS = Object.freeze(["provider", "model", "effort"])
@@ -93,12 +95,18 @@ export function attachHead(options = {}) {
     return { providers, models }
   }
 
-  /** 写路（见档头 ②）：`name` ∈ 三值闭集且活动会话在场才发通道；失败径一律回退 + 记错。 */
+  /** 写路（见档头 ②）：三值闭集 ∧ 活动会话在场 ∧ **非忙态**（P23）才发通道；失败径一律回退 + 记错。 */
   async function onField(name, value) {
     const state = store.get()
     const key = state?.activeTab ?? null
     if (key === null || !PICK_FIELDS.includes(name)) {
       console.error(`[renderer] session:prefs skipped: no active session / unknown field: ${String(name)}`)
+      onRepaint()
+      return
+    }
+    if (busyOf(state, key)) {
+      // P23 忙态写门（构树已 `disabled`；本闸拦键盘 / 程序径）：零发送 + 回退重绘（零乐观写）
+      console.error(`[renderer] session:prefs skipped: turn in flight for session ${String(key)}`)
       onRepaint()
       return
     }

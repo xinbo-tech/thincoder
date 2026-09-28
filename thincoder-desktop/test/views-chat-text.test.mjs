@@ -11,8 +11,9 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { HOST_DICT, initDict, t } from "../renderer/i18n.mjs"
+import { build } from "../renderer/dom.mjs"
 import { chatModel, chatTree, mountChat, settleFrame } from "../renderer/views/chat.mjs"
-import { textFace } from "../renderer/views/chat-text.mjs"
+import { patchTextBlock, pinReasoning, reasoningNode, textFace } from "../renderer/views/chat-text.mjs"
 import { installFakeDom, selfCheck } from "./fake-dom.mjs"
 
 /** 词面哨兵：插值键保留占位方言 ⇒ 断言同时钉「键 + 参数入词」。 */
@@ -82,7 +83,7 @@ test("U172: C7 / T-DSK35 —— 核 Markdown 面（围栏块 / 转义闸 / 推�
   assert.equal(html[0].includes("code-copy-btn"), false, "复制钮不属 md 产出（挂载面核件 `attachCopyButtons` 补 —— U173 / E2E）")
   assert.equal(html[1].includes("<script"), false, "注入样本 ⇒ 零裸标签（转义闸 —— C7 ②）")
   assert.equal(html[1].includes("&lt;script&gt;alert(1)&lt;/script&gt;"), true, "注入样本 ⇒ 字面文本（渲染面零执行面）")
-  assert.equal(/file-link/.test(html[2]), false, "文件链接零节点（KD-RC-5 —— 核 `linkifyPaths` 不消费；T-DSK35 ④）")
+  assert.equal(/file-link/.test(html[2]), false, "md 产出零链接节点（相抵②：链接着装 = 帧尾着装面 `linkifyResult`，非 md 面；T-DSK35 ④）")
   assert.equal(html[2].includes("src/main/app.mjs"), true, "文件路径文本原样在场（只是零链接面）")
   const reasoning = withAttr(tree, "data-block-kind").find((node) => node.props["data-block-kind"] === "reasoning")
   const details = reasoning.children[0]
@@ -137,6 +138,30 @@ test("U173: 代码块复制钮挂点（核件 `attachCopyButtons` —— 挂载 
   assert.deepEqual(written, ["const a = 1"], "点按 ⇒ `clipboard.writeText` 收**代码文本**（块内 `code` 面现读 —— C7/T-DSK35 ①）")
   assert.equal(buttons[0].textContent, "⟦msg.copied⟧", "回执面 = 核键 `msg.copied`（核件自刷）")
   assert.equal(buttons[0].classList.contains("copied"), true, "`copied` state class 在场（核件同源）")
+
+  // ④ 推理画笔分流（「对齐第二批」项 1 · #494）：reasoning 尾文档位变 ⇒ 核专用画笔 `paintReasoningTarget`
+  //    （含钉底）；assistant 同径 ⇒ 通用画笔（零钉底赋值 —— **对拍有牙**）
+  const reasoning = build(reasoningNode({ kind: "reasoning", text: "想" }, "r1"))
+  const rFace = reasoning.querySelector(".reasoning-content")
+  rFace.scrollHeight = 777
+  rFace.scrollTop = 0
+  patchTextBlock(reasoning, { kind: "reasoning", text: "想更" }, "r1")
+  assert.equal(rFace.getAttribute("data-raw"), "想更", "推理块重渲面值同刷（`data-raw` 幂等判同径）")
+  assert.equal(rFace.scrollTop, 777, "推理块重渲走核专用画笔（钉底：`scrollTop = scrollHeight`）")
+  const assistant = build({ tag: "div", props: { class: "block block-assistant" }, children: [textFace({ kind: "assistant", text: "正文" })] })
+  const aFace = assistant.querySelector("[data-raw]")
+  aFace.scrollHeight = 555
+  aFace.scrollTop = 0
+  patchTextBlock(assistant, { kind: "assistant", text: "正文二" }, "a1")
+  assert.equal(aFace.getAttribute("data-raw"), "正文二", "助手块重渲面值同刷")
+  assert.equal(aFace.scrollTop, 0, "助手块零钉底赋值（通用画笔 —— 对拍有牙）")
+  // 首帧钉底单件（重挂径 `pinReasoningBlocks` / 尾段三径 `dressNode` 共用件）
+  const pinNode = build(reasoningNode({ kind: "reasoning", text: "想" }, "r2"))
+  const pinFace = pinNode.querySelector(".reasoning-content")
+  pinFace.scrollHeight = 321
+  pinFace.scrollTop = 0
+  pinReasoning(pinNode)
+  assert.equal(pinFace.scrollTop, 321, "`pinReasoning`：新建推理块即落底（`scrollTop = scrollHeight` —— 与 VSC 首帧同形）")
 })
 
 // ─── U177 用户块 md 深度（D19 · 口径标尺 = 核件 `flow/block.mjs`：user = `mdInline` ∥ assistant = `md`）──

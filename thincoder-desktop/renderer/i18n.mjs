@@ -2,9 +2,9 @@
  * i18n.mjs — 词表面（`docs/desktop/design/SHELL.md:31` · 批 2 档 §2.4（g）· 本批 §2.1 E-5 / §2.5 U44）：
  *   ① 核域键 = `config:read` 语言面**下发投影**（核 `projectDictionary(locale)` 已扁平投影
  *      ⇒ 渲染面零核导入、零第二词表源）；
- *   ② 宿主 UI 专有键 = `HOST_DICT`（左列 17 键 + 标签条 4 键 + 对话流 10 键 + 活动池 8 键 + 审批卡 7 键
+ *   ② 宿主 UI 专有键 = `HOST_DICT`（左列 17 键 + 标签条 4 键 + 对话流 10 键 + 活动池 7 键 + 审批卡 7 键
  *      + 提问卡 3 键 + 设置 49 键 + 向导 10 键 + 信息行 9 键 + 输入区 6 键 + 会话头 3 键 + 档位 2 键
- *      + 状态栏 1 键 + 状态行 16 键 + 核件复制钮 2 键 = **147 键** × 2 语（批 B 增十二键：本舱七 = 对话流复制面 2 · 会话头 3 · 档位 2；
+ *      + 状态栏 1 键 + 状态行 16 键 + 核件复制钮 2 键 + **核件子 agent 词键 7 + 说话人三键 3** = **156 键** × 2 语（批 B 增十二键：本舱七 = 对话流复制面 2 · 会话头 3 · 档位 2；
  *      并行舱五 = 输入区附件面 3 · 设置档位列 1 · 状态栏读数 1 —— 附件降级两键名出
  *      `docs/desktop/design/UI.md` §1 批 B 注项 2，余键名与全键值面由本档拟定：批 B 注只述形 / 锚，
  *      词面登记处 = 此处）；**批 B 追加轮增二键** = 对话流引导面 2（键名与两语句面单源 =
@@ -18,21 +18,37 @@
  *      计 135 ⇒ **137**；另**增核件复制钮两键** `msg.copy` / `msg.copied`（核 `flow/stream.mjs` `attachCopyButtons`
  *      词键 —— 端供给面：树面零消费（值住核产出 DOM 面），词值同 VSC 同键）—— 计 **137 ⇒ 139**；
  *      **D22 状态栏对齐批增六键**（`status.ready` / `status.enter.send` + banner 四态 `status.banner.plan|auto|advisor|eng`——代号字面，两语同形）= 状态行 10 ⇒ **16**、计 139 ⇒ **145**；**账本可靠批 · 桌面微轮增一键** = `rail.ledger.notice`（左列 15 ⇒ **16**）——计 **145 ⇒ 146**；**该批修正轮增一键** = `rail.ledger.notice.scene`（主句拆出**条件附句** —— 三端同义；左列 16 ⇒ **17**）—— 计 **146 ⇒ 147**；
+ *      **「对齐第二批」增十键** = 核件子 agent 词键 7（`sub.*` 族 —— 核 `subblocks/*` 四构件取词）+ 说话人 / 待发送 3（`msg.user` / `msg.assistant` / `queued.pending`）—— 计 147 ⇒ **157**；**同批退场一键** = `pool.stop`（自建五段行块面退场 ⇒ ⏹ 词归核件 `sub.stopBtn`；活动池 8 ⇒ **7**）—— 计 **157 ⇒ 156**；
+ *      **桌面空闲唤醒批增三键** = `susp.*` 三键（状态行段 3 支①挂起句 —— 值 zh = CLI 逐字 ∥ en = VSC 逐字；键名沿 VSC 同名键；
+ *      消费面 = `renderer/views/statusline.mjs`；`digest.*` **零新键** —— 核字典经 `t()` 投影面直取、`notify.*` 两键 = 主进程自持〔非本表〕）—— 计 **156 ⇒ 159**；
+ *      **「对齐第三批」增十九键** = 视图面词族**第二档**（`renderer/i18n-views.mjs` —— 在册拆分落形：新增词族出第二档，
+ *      本档两语展开合并 ⇒ `HOST_DICT` 单一持有点不变；四组 = 对话流 6 / 输入区 2 / 审批面 1 / 设置面 agent 具名十键）；
+ *      **同批退场一键** = `chat.empty.hint`（欢迎条三行取代单行提示 —— 项 15；树面消费归零 ⇒ 键面随退）
+ *      —— 计 **159 + 19 − 1 = 177**（键数链随动 = `thincoder-desktop/test/views-chrome-vocab.test.mjs` U51）；
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；
  *   ④ 语言归一：**与核 `normalizeLocale` 同形同终态**（`thincoder-core/i18n.mjs:75-81`）—— BCP-47 取
  *      基语言（`zh-CN` ⇒ `zh`）；缺 / 非串 / 未知 ⇒ `"en"`；值域同核 `SUPPORTED_LOCALES`。
+ *   ⑤ **核件取词单点接线**（「对齐第二批」项 3 / 修复轮收正 —— 接线点外移）：核构件族内取词走核 i18n
+ *      （模块级 `t`）⇒ 端侧经**注册面** `setStringsSink(fn)` 注入 —— 注册单点 = `renderer/app.mjs`
+ *      （`setStringsSink(setStrings)` 一次注册；核件供体 `/rc/i18n.mjs` 居该浏览器专属档）；本档 `initDict`
+ *      合并式（核投影 ∪ 宿主表）**经注册端出**（缺 sink ⇒ 空操作 —— 本档保持平 node 可装载：**零 `/rc/`
+ *      静态导入**，判据单源 = `docs/desktop/design/SHELL.md` §1「node-safe 子集」）；核件所需 VSC 侧键
+ *      （`sub.*` 族 / `msg.*` / `queued.pending`）入宿主表，**值逐字同 VSC locales**（沿 `msg.copy` /
+ *      `msg.copied` 先例）。
  * 零落盘 · 零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
+import { VIEWS_DICT } from "./i18n-views.mjs"
 
 /** 宿主 UI 专有键（两语键序同 = 对位阅读 · 键集相等 = 用例机检面）：`rail.*` = 左列元素（含批 A ④ 行动作
  *  三键 = 改名 / 删除两控件词（经 `aria-label` —— 字形住 `renderer/styles.css`）+ 换形取消键；确认键词 = 本条动作词
  *  同键（同一事实同词））·
  *  `origin.*` = 会话行来源端标（值与核 `createdBy` 三值同名）· `tab.*` = 标签条（位标词 + 关闭控件词面 +
- *  关闭确认面两键词 —— 两键 = 文本按钮词面，**非图标字形**）· `chat.*` = 对话流（空态提示 / 摘要块 / 药丸两态 /
+ *  关闭确认面两键词 —— 两键 = 文本按钮词面，**非图标字形**）· `chat.*` = 对话流（引导面两键 / 摘要块 / 药丸两态 /
  *  工具卡改动摘要 + 耗时 / 复制面两键 = 逐块控件与末条控件的可及名 —— 两控件 = 块尾 / 输入区尾，取文面与键名
- *  同档 = `renderer/views/chat-copy.mjs`）· `pool.*` = 活动池（标题 / 三族标 / 折叠控件两态 `aria-label` / 空态提示 ——
+ *  同档 = `renderer/views/chat-copy.mjs`；`welcome.*` 四键 = `no-message` 帧欢迎条三行〔含文案二值〕—— 单源
+ *  = `renderer/i18n-views.mjs`）· `pool.*` = 活动池（标题 / 三族标 / 折叠控件两态 `aria-label` / 空态提示 ——
  *  折叠字形住 `renderer/pool.css`）· `approval.*` = 审批卡两形三出口词面 + 批形计数（`${count}` 占位；
  *  键位闭集住 `renderer/views/approval.mjs`）· `question.*` = 提问卡（文本控件 `aria-label` / 提交键 / 取消键 ——
  *  键位闭集住 `renderer/views/question.mjs`）· `settings.*` = 设置面（标题 / 关闭 / 语言控件两键 = 目标语自名 /
@@ -73,7 +89,6 @@ export const HOST_DICT = Object.freeze({
     "tab.action.close": "Close tab",
     "tab.action.close.cancel": "Cancel",
     "tab.action.close.confirm": "Close",
-    "chat.empty.hint": "No messages in this session yet",
     "chat.pill.new": "${n} new",
     "chat.pill.bottom": "Back to latest",
     "chat.summary.older": "${n} earlier messages",
@@ -86,6 +101,21 @@ export const HOST_DICT = Object.freeze({
     //    词值同 VSC 同键（`thincoder-vscode/locales/en.json:34-35`）—— 同一控件同词）──
     "msg.copy": "Copy",
     "msg.copied": "Copied!",
+    // ── 核件子 agent 词键 + 说话人 / 待发送三键（「对齐第二批」项 3 / 4：核构件族内取词经**注册端**注入
+    //    （注册单点 = `renderer/app.mjs` `setStringsSink(setStrings)`；本档 `initDict` 合并式经注册端出）；
+    //    **值逐字同 VSC locales** —— 同一控件同词；`msg.user` / `queued.pending` = 核
+    //    `queued-mark` 两原语取词（`paintLabel` / `markPending`），`msg.assistant` = 端侧助手标签同字面落形
+    //    （核无原语 —— 端差登记））──
+    "sub.async": "async",
+    "sub.sync": "sync",
+    "sub.waiting": "waiting",
+    "sub.awaitingApproval": "Awaiting approval: ${tool}",
+    "sub.cancelQueueBtn": "cancel queue",
+    "sub.stopBtn": "Stop this subagent",
+    "sub.desc": "Subagent activity — the agent spawned a helper for an independent subtask. Expand for details; ⏹ stops a background run.",
+    "msg.user": "You",
+    "msg.assistant": "ThinCoder",
+    "queued.pending": "Queued — sent automatically, no interruption",
     // ── 首启引导面（批 B 追加轮：`views/chat-guide.mjs` —— 两码文案）──
     "chat.guide.noProject": "No project open — open a folder to start",
     "chat.guide.noSession": "No session yet — create one to start chatting",
@@ -96,7 +126,6 @@ export const HOST_DICT = Object.freeze({
     "pool.collapse": "Collapse activity",
     "pool.expand": "Expand activity",
     "pool.empty.hint": "No activity in this session yet",
-    "pool.stop": "Stop",
     "composer.input": "Message",
     "composer.interrupt": "Stop",
     "composer.queue.full": "Queue full — wait for the running turn to finish",
@@ -210,6 +239,13 @@ export const HOST_DICT = Object.freeze({
     "status.banner.auto": "AUTO",
     "status.banner.advisor": "ADVISOR",
     "status.banner.eng": "ENG",
+    // ── 挂起句三键（桌面空闲唤醒批 —— 核 i18n 无同源键；值单源 = `docs/desktop/design/IPC.md` §1「挂起 ∕ 消化词键注」：
+    //    en = VSC 逐字（`thincoder-vscode/locales/en.json:259-261` 同名键）· zh = CLI 逐字；消费 = 状态行段 3 支①）──
+    "susp.running": "${n} background subagent(s) running",
+    "susp.digesting": "${n} awaiting digestion",
+    "susp.winding": "background subagents finishing…",
+    // 「对齐第三批」视图面词族第二档（单源 = `renderer/i18n-views.mjs` —— 合并式两语展开，键序尾随）
+    ...VIEWS_DICT.en,
   },
   zh: {
     "rail.action.openDir": "打开目录…",
@@ -233,7 +269,6 @@ export const HOST_DICT = Object.freeze({
     "tab.action.close": "关闭标签",
     "tab.action.close.cancel": "取消",
     "tab.action.close.confirm": "关闭",
-    "chat.empty.hint": "本会话暂无消息",
     "chat.pill.new": "${n} 条新消息",
     "chat.pill.bottom": "回到最新",
     "chat.summary.older": "更早的 ${n} 条",
@@ -246,6 +281,17 @@ export const HOST_DICT = Object.freeze({
     //    词值同 VSC 同键（`thincoder-vscode/locales/zh.json:34-35`）—— 同一控件同词）──
     "msg.copy": "复制",
     "msg.copied": "已复制！",
+    // ── 核件子 agent 词键 + 说话人 / 待发送三键（「对齐第二批」项 3 / 4：值逐字同 VSC locales）──
+    "sub.async": "异步",
+    "sub.sync": "同步",
+    "sub.waiting": "等待中",
+    "sub.awaitingApproval": "等待审批: ${tool}",
+    "sub.cancelQueueBtn": "取消排队",
+    "sub.stopBtn": "停止该子代理",
+    "sub.desc": "子代理活动——主 agent 为独立子任务派出的助手。展开看详情；⏹ 可停止后台运行。",
+    "msg.user": "你",
+    "msg.assistant": "ThinCoder",
+    "queued.pending": "待发送 · 不打断当前执行，自动发送",
     // ── 首启引导面（批 B 追加轮：`views/chat-guide.mjs` —— 两码文案）──
     "chat.guide.noProject": "未打开项目——先打开一个项目目录即可开始",
     "chat.guide.noSession": "尚无会话——新建一个会话即可开始对话",
@@ -256,7 +302,6 @@ export const HOST_DICT = Object.freeze({
     "pool.collapse": "折叠活动池",
     "pool.expand": "展开活动池",
     "pool.empty.hint": "本会话暂无活动",
-    "pool.stop": "停止",
     "composer.input": "消息",
     "composer.interrupt": "中断",
     "composer.queue.full": "队列已满——等当前回合结束后再发",
@@ -370,6 +415,13 @@ export const HOST_DICT = Object.freeze({
     "status.banner.auto": "AUTO",
     "status.banner.advisor": "ADVISOR",
     "status.banner.eng": "ENG",
+    // ── 挂起句三键（桌面空闲唤醒批 —— zh = CLI 逐字：`thincoder-cli/src/tui/suspension-drive.mjs` `backgroundStatusText`；
+    //    两语句合成式（` · ` 分隔）沿 CLI 同字面）──
+    "susp.running": "后台 ${n} 子代理运行中",
+    "susp.digesting": "${n} 完成待消化",
+    "susp.winding": "后台子代理收尾…",
+    // 「对齐第三批」视图面词族第二档（单源 = `renderer/i18n-views.mjs` —— 合并式两语展开，键序尾随）
+    ...VIEWS_DICT.zh,
   },
 })
 
@@ -384,6 +436,14 @@ export const FALLBACK_LOCALE = "en"
 let current = FALLBACK_LOCALE
 let project = {}
 let hostTable = null
+/** 核件取词注册槽（「对齐第二批」修复轮）：未注册（平 node / 用例面）⇒ `initDict` 空操作 —— 本档零依赖。 */
+let stringSink = null
+
+/** 核件取词注册面（注册单点 = `renderer/app.mjs` —— 浏览器专属档持核 `setStrings`；本档须保持平 node
+ *  可装载 ⇒ **零 `/rc/` 静态导入** —— `docs/desktop/design/SHELL.md` §1「node-safe 子集」）。非函数 ⇒ 清槽。 */
+export function setStringsSink(fn) {
+  stringSink = typeof fn === "function" ? fn : null
+}
 
 /** 归一（**镜像核同形** `thincoder-core/i18n.mjs:75-81`：BCP-47 取基语言 `zh-CN` ⇒ `zh`；
  *  缺 / 空 / 非串 / 未知 ⇒ 缺省）。 */
@@ -397,11 +457,15 @@ export function normalizeLocale(value) {
 
 /** 词表置位（引导面调用）→ 归一后的语言。`dict` = `config:read` 载荷的核投影（缺 / 非载体
  *  ⇒ 空投影）；`host` = 宿主键表覆盖（**测试缝** —— 先例 = 核 `_setSessionsDirForTest`：
- *  宿主表缺省 = 本档 `HOST_DICT`（缝：⑤ 优先级判据须能注入同名键）。 */
+ *  宿主表缺省 = 本档 `HOST_DICT`（缝：⑤ 优先级判据须能注入同名键）。
+ *  **核件取词单点接线**（「对齐第二批」项 3 / 修复轮收正）：同一写点 = 合并式（核投影 ∪ 宿主表，宿主胜
+ *  —— 与 `t` 解析序同向）**经注册端出**（`stringSink` —— 注册单点 = `renderer/app.mjs`；缺 sink ⇒
+ *  空操作）——核构件族（四件）内取词走核模块级 `t` ⇒ 不接线即出键名。 */
 export function initDict({ locale, dict, host } = {}) {
   current = normalizeLocale(locale)
   project = dict !== null && typeof dict === "object" ? dict : {}
   hostTable = host !== null && typeof host === "object" ? host : null
+  stringSink?.({ ...project, ...(hostTable ?? HOST_DICT[current] ?? {}) })
   return current
 }
 

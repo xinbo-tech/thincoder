@@ -10,7 +10,7 @@
  * 不适用 1 = 键位组（输入区 / 标签条自述）——**后两段在本档零字段 ⇒ 零节点**（不造空段）。
  * 承载段数据源（逐段）：`attention` = 活动键位标含 `approval` 码（审批 / 提问两门同码）· banner 四段（`plan` / `auto` /
  * `advisor` / `eng`）= `sessionFlags[key]` 四布尔（真 ⇒ 在场 —— 段构树单源 = `renderer/views/statusline-banner.mjs`）·
- * `state` = 位标切片两态词（含 `running` ⇒ 运行中 · 集 ∩ {`running`, `approval`} = ∅ ⇒ 就绪）·
+ * `state` = **态机四支**（优先序 ①>②>③>④ —— 单源 = `docs/desktop/design/UI.md` §1「本批注（对齐重定位）」项 1 表行 3：① 挂起窗在场 ⇒ 挂起句〔`susp` 切片——桌面空闲唤醒批〕· ② `approval` 在挂 ∧ 回合非忙 ⇒ 段零节点 · ③ 忙 ⇒ 运行中 · ④ 就绪）·
  * `tool` = 块面末位 running 工具块的 `name` · `elapsed` = 回合起刻（`turnStarts[key]` → 现刻）· `tasks` = `tasks[key]` ·
  * `turn` = 归约槽 `turns[key]` `{ n, max }` · `tokens` = `tokens[key]`（`↑↓` / `✦` / `hit%`）· `context` = `usage[key]` ·
  * `ledger` = `projectInfo.thresholdReached`（**只承超阈警示位** —— 计数住左列信息行）· `timer` = `timers[key]` `{ count, expired }` ·
@@ -64,12 +64,30 @@ function attentionSegment(codes) {
   return { code: "attention", warn: true, parts: [{ text: t("status.attention.blocked") }] }
 }
 
-/** 段 3 · 状态词两态（表行 3 —— `docs/desktop/design/UI.md` §1 本批注项 3）：忙（位标含 `running`）⇒ 运行中（核 i18n 同源键
- *  `sub.running`）；静（位标集 ∩ {`running`, `approval`} = ∅）⇒ 就绪（词键 `status.ready` —— 词形来源 = CLI 静息值 `Ready`）；
- *  审批在挂而回合非忙 ⇒ 两态皆不命中 ⇒ 零节点（同刻 CLI 状态文本整行让位模态提示——本端注意力段在场）。 */
-function stateSegment(codes) {
+/** 段 3 · 挂起句（态机支① —— 挂起窗在场；N/M 映射与取词链单源 = `docs/desktop/design/UI.md` §1「本批注（对齐重定位）」项 1 表行 3 ·
+ *  `docs/desktop/design/IPC.md` §1「挂起 ∕ 消化词键注」）：N = `running + queued`（主体句 = `susp.running`）·
+ *  M = `pending + done`（附句 = `susp.digesting`）；取词链 = N > 0 ⇒ `susp.running`〔M > 0 ⇒ 附 `susp.digesting`〕·
+ *  N = 0 ∧ M > 0 ⇒ `susp.digesting` · N = 0 ∧ M = 0 ⇒ `susp.winding`（值 zh = CLI 逐字 ∥ en = VSC 逐字；
+ *  ` · ` 分隔 = VSC `status-bar.js:58` 同式）。 */
+function suspSegment(record) {
+  const n = numOf(record.running) + numOf(record.queued)
+  const m = numOf(record.pending) + numOf(record.done)
+  const text = n > 0
+    ? t("susp.running", { n }) + (m > 0 ? ` · ${t("susp.digesting", { n: m })}` : "")
+    : m > 0 ? t("susp.digesting", { n: m }) : t("susp.winding")
+  return { code: "state", parts: [{ text }] }
+}
+
+/** 段 3 · 状态文本**态机四支**（优先序 ① > ② > ③ > ④ —— 单源 = `docs/desktop/design/UI.md` §1「本批注（对齐重定位）」项 1 表行 3）：
+ *  ① 挂起窗在场（`susp[<会话键>].active` 严格真）⇒ 挂起句；② 位标含 `approval` ∧ 位标不含 `running` ⇒ **段零节点**
+ *  （承载 = 注意力 chip——不重复）；③ 忙（位标含 `running`）⇒ 运行中（核 i18n 同源键 `sub.running`）；④ 其余 ⇒ 就绪
+ *  （词键 `status.ready` —— 词形来源 = CLI 静息值 `Ready`）。
+ *  **交叠角落**（`approval` ∧ ¬`running` ∧ 挂起窗在场）⇒ 取①（chip 照常承载审批——两事实不同面，零重复）；
+ *  `active` 非严格真（缺 / 假 / 非布尔）⇒ 不落①（`active=false` ⇒ 回落两态词 —— 禁假造）。 */
+function stateSegment(codes, suspRecord) {
+  if (suspRecord?.active === true) return suspSegment(suspRecord)
+  if (codes.includes("approval") && !codes.includes("running")) return null
   if (codes.includes("running")) return { code: "state", parts: [{ text: t("sub.running") }] }
-  if (codes.includes("approval")) return null
   return { code: "state", parts: [{ text: t("status.ready") }] }
 }
 
@@ -164,10 +182,11 @@ function titleSegment(sessions, key) {
   return { code: "title", parts: [{ text: word }] }
 }
 
-/** 段 14 · 输入提示三态（表行 14）：队 ≥ 1 ⇒ 条数句 · 忙 ∧ 队空 ⇒ Enter 排队句 · 静 ⇒ `Enter: send`（词键
+/** 段 14 · 输入提示三态（表行 14 · 「对齐第二批」项 2：**源 = 本会话队** —— `pending[活动会话键]`，右列队列族不再
+ *  承载用户排队消息）：队 ≥ 1 ⇒ 条数句 · 忙 ∧ 队空 ⇒ Enter 排队句 · 静 ⇒ `Enter: send`（词键
  *  `status.enter.send` —— 对位 CLI enterHint 静息值；静息态恒在场 = 打开态可亮面）。 */
-function enterSegment(pool, codes) {
-  const queue = pool !== null && typeof pool === "object" && Array.isArray(pool.queue) ? pool.queue : []
+function enterSegment(pending, key, codes) {
+  const queue = key !== null && pending !== null && typeof pending === "object" && Array.isArray(pending[key]) ? pending[key] : []
   if (queue.length > 0) return { code: "enter", parts: [{ text: t("status.queue.n", { n: queue.length }) }] }
   if (codes.includes("running")) return { code: "enter", parts: [{ text: t("status.queue.enter") }] }
   return { code: "enter", parts: [{ text: t("status.enter.send") }] }
@@ -176,18 +195,20 @@ function enterSegment(pool, codes) {
 /** 状态行模型：`segments` = 承载 16 段在场集（序 = CLI 序；缺段不占位）· `alerts` = 跨会话告警位（非活动标签两码，序 = 标签序）。
  *  入参 = 切片面（缺 / 非载体 ⇒ 该段零节点）；`now` 可注入（耗时段现刻 —— 测试缝）。 */
 export function statusModel({
-  tabs = [], activeTab = null, badges = {}, usage = {}, sessions = [], pool = {},
+  tabs = [], activeTab = null, badges = {}, usage = {}, sessions = [], pending = {},
   blocks = [], tasks = {}, turns = {}, turnStarts = {}, tokens = {}, timers = {}, projectInfo = null,
-  sessionFlags = {}, now = Date.now(),
+  sessionFlags = {}, susp = {}, now = Date.now(),
 } = {}) {
   const list = Array.isArray(tabs) ? tabs : []
   const active = activeTab == null ? null : String(activeTab)
   const codes = badgeCodes(badges, active)
   const flags = sessionFlags !== null && typeof sessionFlags === "object" ? sessionFlags[active] : undefined
+  // 段 3 支①源 = `ev:susp` 计数切片（桌面空闲唤醒批）
+  const suspend = susp !== null && typeof susp === "object" ? susp[active] : undefined
   const segments = active === null ? [] : [
     attentionSegment(codes),
     ...bannerSegments(flags),
-    stateSegment(codes),
+    stateSegment(codes, suspend),
     toolSegment(blocks),
     elapsedSegment(codes, turnStarts, active, now),
     tasksSegment(tasks, active),
@@ -197,7 +218,7 @@ export function statusModel({
     ledgerSegment(projectInfo),
     timerSegment(timers, active),
     titleSegment(sessions, active),
-    enterSegment(pool, codes),
+    enterSegment(pending, active, codes),
   ].filter((segment) => segment !== null)
   const alerts = []
   for (const key of list) {
@@ -253,7 +274,7 @@ export function mountStatus(root, state) {
     badges: state?.tabBadges ?? {},
     usage: state?.usage ?? {},
     sessions: state?.sessions ?? [],
-    pool: state?.pool ?? {},
+    pending: state?.pending ?? {},
     blocks: state?.blocks ?? [],
     tasks: state?.tasks ?? {},
     turns: state?.turns ?? {},
@@ -262,6 +283,7 @@ export function mountStatus(root, state) {
     timers: state?.timers ?? {},
     projectInfo: state?.projectInfo ?? null,
     sessionFlags: state?.sessionFlags ?? {},
+    susp: state?.susp ?? {},
   })
   clear(root)
   root.append(build(statusTree(model)))

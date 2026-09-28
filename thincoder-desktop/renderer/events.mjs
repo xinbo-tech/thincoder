@@ -1,15 +1,18 @@
 /**
- * events.mjs — 渲染面事件归约核心（十二通道写切片 · 批档 §2.2(e) / §2.11⑧ · `docs/desktop/design/IPC.md` §1）：
+ * events.mjs — 渲染面事件归约核心（事件通道 → 切片写者**单源** · 批档 §2.2(e) / §2.11⑧ · `docs/desktop/design/IPC.md` §1）：
  * 切片写者的**单源**——主进程只产事件 / 回执，值面落树全在本档；订阅接线面出档 `renderer/events-subscribe.mjs`
- * （十二通道表 · `attachEvents` · 回合尾标题刷新 —— 300 行拆分层落形，批档 §5 登记）；问题 / 任务切片面
- * 出档 `renderer/questions.mjs`、位标面出档 `renderer/badges.mjs`（桌面残余批拆档产物——本档 500 行硬限
- * 顶格，在册拆分预案执行；`clearQuestion` 本档 re-export 保导出名面）。
+ * （十六通道表 · `attachEvents` · 回合尾窄口携键 —— 300 行拆分层落形）；问题 / 任务切片面出档 `renderer/questions.mjs`、
+ * **挂起 / 消化两切片** = 桌面空闲唤醒批增归约面两分派支（`ev:susp` 计数切片 ∕ `ev:digest` 消化行切片）；
+ * 位标面出档 `renderer/badges.mjs`（桌面残余批拆档产物 —— `clearQuestion` 本档 re-export 保导出名面）；
+ * **页读径出档 `renderer/page-read.mjs`**（「对齐第二批」拆分产出 —— 硬限 500 顶格，在册预案本批执行：
+ * `applyPage` / `blockOfMessage` 两消费面改引该档 = `renderer/mount-sessions.mjs` / 测试面；本档不引页读档，无环）；
+ * **子 agent 归约径出档 `renderer/subagent-reduce.mjs`**（同批续拆 —— 子 agent 面（`ev:subagent` / `ev:subchunk`）
+ * + 池读数两助手纯搬移；本档反向引该档两分派支 + 两助手，无环）。
  *
- * 导出面八（`docs/desktop/design/RENDERER.md` §1.1 事件归约面条 —— 订阅接线一发已拆出同源档）：
+ * 导出面（`docs/desktop/design/RENDERER.md` §1.1 事件归约面条 —— 订阅接线一发已拆出同源档）：
  *   `reduce(state, ev, now)`   纯归约（零 DOM / 零 IPC ⇒ 平 node 直测）；无变化 ⇒ **原引用**
- *   `applyPage(state, receipt, { key, before })`  页回执 → 首屏 / 回填两径（失败径 = 清在途）
  *   `applyFlags(state, key, flags)`  模式位切片写（**纯动作** —— 状态栏对齐批：页读 / 出站回执两径同点；`flags` 非载体 ⇒ 零写）
- *   `blockOfMessage(msg)`      核 message → 块（五型闭集 `user|assistant|reasoning|tool|error`，决策 D8-8）
+ *   `sameRecord(a, b)`         读数同值判（浅比 —— 页读径 `applyFlags` 与归约面读数槽共用 —— 单一实现零副本）
  *   `openSession(state, key)`  `activeSession` 写者（置键 / `null` 关页 + 清本键 `done` 位标）
  *   `clearApproval(state, promptId)`  出站成功后摘项（写者表隐含 —— 见 §2.11⑦；调用面 = `renderer/mount-pool.mjs`）
  *   `clearQuestion(state, key)`  提问出场 ⇒ 摘本键项 + 清本键 `approval` 位（两调用面 = 出站 `ok` 真 ∥ `stopped` 终局；
@@ -17,52 +20,34 @@
  *   `isTurnTail(ev)`           回合尾判据**单源**（**三径** = `ev:activity` 无 `fields` 的 `done` / `stopped` ∥ `ev:error` —— `onActivity` / `onError` 与订阅面 `events-subscribe.mjs` 同用）
  *
  * 纪律：块面写（`blocks`）须 `ev.key === state.activeSession`（否则原引用 —— 非活动会话的事件不落本会话流）；
- *   `tabBadges` 任意键可写 · `sessionMeta` / `usage` / 卡面两切片（`questions` / `tasks`）按 key 写（切片同键就地替换 · 首写自种 · 零键门 —— 切回即见，单源 = `docs/desktop/design/RENDERER.md` §1.1 事件归约面条）（§2.2(e) 值面写者表）· 状态行读数槽四（`turns` / `turnStarts` /
- *   `tokens` / `timers`）同判（R3a · D17 承载段数据源）· `subBlocks` 按会话键分槽（R3b · D20 —— 块面零内容回显：
- *   态机单源 = 核 `/rc/subblocks/state.mjs` `subBlocksReduce`）· 池切片 **摘工具行**（`pool.blocks` 不再在册 ——
- *   工具调用面 = 对话流工具卡；折叠头 `running` 读数改源于活动会话在飞子 agent 块数）· `pool.approvals` 无会话键维度
- *   （写者 = `ev:approval`，不按会话分池 —— 设计未给池的会话键口径，缺口随 §5 登记）；文案零硬编码（本档不出词）。
+ *   `tabBadges` 任意键可写 · `sessionMeta` / `usage` / 卡面两切片（`questions` / `tasks`）· 挂起 / 消化两切片（`susp` / `digest` —— 空闲唤醒批）按 key 写（切片同键就地替换 · 首写自种 · 零键门 —— 切回即见，单源 = `docs/desktop/design/RENDERER.md` §1.1 事件归约面条）（§2.2(e) 值面写者表）· 状态行读数槽四（`turns` / `turnStarts` /
+ *   `tokens` / `timers`）同判（R3a · D17 承载段数据源）· `subBlocks` 按会话键分槽（R3b · D20 —— 归约径住
+ *   `renderer/subagent-reduce.mjs`：块面内容回显 = 核件 tail-3 / 展开（「对齐第二批」项 3 收正：原「零内容回显」
+ *   口径撤销）；态机单源 = 核 `/rc/subblocks/state.mjs` `subBlocksReduce`）· 池切片 **摘工具行**（`pool.blocks` 不再在册 —— 工具调用面 = 对话流工具卡；折叠头
+ *   `running` 读数改源于活动会话在飞子 agent 块数）· `pool.approvals` 无会话键维度（写者 = `ev:approval`，不按会话
+ *   分池 —— 设计未给池的会话键口径，缺口随 §5 登记）；文案零硬编码（本档不出词）。
  * 活块 / 页块两面差异（决策 D8-8）：页块**不落** `status` / `durationMs`（活块有），键集一致性判据 = 五型闭集。
  */
-import { appendBlock, endBackfill } from "./store.mjs"
+import { appendBlock } from "./store.mjs"
 // 问题 / 任务切片面（桌面残余批拆档产物）：两归约体归 `reduce` 分派；`clearQuestion` 两调用面同源。
 import { clearQuestion, onQuestion, onTask } from "./questions.mjs"
 export { clearQuestion }
 // 位标面单源（同批拆出——`events.mjs` 500 行硬限顶格）；本档 `onApproval` / `onActivity` / `onError` /
 // `openSession` / `clearApproval` 与 `renderer/questions.mjs` 同引。
 import { badgeStamps } from "./badges.mjs"
-// 子 agent 块态机（R3b · D20）：核共享件（单源 = `docs/render-core/design/RENDER-CORE.md` §5 状态机族）——桌面经 `app://desktop/rc/**` 第二根取（同源 URL，非裸包：`test/guard-closure.test.mjs` `/rc/` 白名单）。
-import { subBlocksReduce } from "/rc/subblocks/state.mjs"
+// 子 agent 归约径（「对齐第二批」续拆产出 —— 子 agent 面两分派支 + 池读数两助手）；本档 `reduce` 分派两通道，
+// `withPool` / `openSession` / 待决两族引两助手（单一实现零副本）。
+import { liveCount, onSubagent, onSubchunk, poolOf } from "./subagent-reduce.mjs"
 
 /** 活流块 id 派生前缀（页块 id 域 = 核给（工具 id）/ 缺省无 —— 两域不混）。 */
 const LIVE_ID = "live-"
-/** 会话头字段白名单（`thincoder-desktop/renderer/views/chrome.mjs:8-9` 判据：非串 / 空串 ⇒ 零节点）——
- *  **三值**（状态栏对齐批：两模式位撤出会话头投影 —— 呈现面单源 = 状态行 banner 段，供面 = 回执 `flags`）。 */
-const META_FIELDS = ["provider", "model", "effort"]
 /** 模式位载荷键白名单（回执 `flags` 四布尔 —— `docs/desktop/design/IPC.md` §2「模式位投影注」项 2 四键）。 */
 const FLAG_FIELDS = ["planMode", "autoApprove", "advisorGuard", "engineering"]
-/** 审批池条目键白名单（零新键 —— 消费面 `views/approval.mjs` / `views/activity.mjs` 读取集）。 */
-const APPROVAL_KEYS = ["promptId", "shape", "tool", "argsSummary", "changes", "batch"]
-/** 子 agent 状态闭集（**单源** = `docs/render-core/design/RENDER-CORE.md` §5 token → patch 全表：核 relay 谱
- *  `started` / `queued` / `turn` / `done` / `settled` / `cancelled` —— `⟦ev⟧stopped` ⇒ `cancelled` 先例兼容 ·
- *  `error` 有意不载）；表外码 ⇒ **零写**（禁假造 —— 沿池面「表外码零节点」纪律）。 */
-const SUB_STATUS = ["started", "queued", "turn", "done", "settled", "cancelled"]
-/** `ev:subagent` 载荷键白名单（零新键 —— 核 patch 全表字段集：身份三 + 随行九）。 */
-const SUB_KEYS = [
-  "status", "role", "id", "model", "pool", "syncLive", "startedAt", "turn", "maxTurns",
-  "kind", "position", "waiting", "reason", "was",
-]
+/** 审批池条目键白名单（零新键 —— 消费面 `views/approval.mjs` / `views/activity.mjs` 读取集）。
+ *  **对齐第三批增两键**：`owner`（子代理门归属串 —— 核 `opts.owner.label` 原样）/ `diff`（核 `diffInfo` 原样）
+ *  —— 载荷不携 ⇒ 键缺席（消费面按缺省零节点落形）。 */
+const APPROVAL_KEYS = ["promptId", "shape", "tool", "argsSummary", "changes", "batch", "owner", "diff"]
 // ─── 内部读面 ────────────────────────────────────────────────────────────────
-
-/** 池切片（缺省槽位 —— 防御读；不造键）。 */
-function poolOf(state) {
-  return state.pool ?? { running: 0, approval: 0, queue: [], approvals: [] }
-}
-
-/** 在飞块数（折叠头 `running` 读数源 —— 已终态折叠块不计；非数组 ⇒ 0）。 */
-function liveCount(list) {
-  return (Array.isArray(list) ? list : []).filter((block) => block?.frozen !== true).length
-}
 
 /** 池写（`approvals` 一支 —— `approval` = 待决数；`running` 由子 agent 面写者归（未给 ⇒ 原值））。 */
 function withPool(state, { approvals = null, running = null } = {}) {
@@ -99,7 +84,7 @@ function clearCursor(state) {
   return hit ? { ...state, blocks: next } : state
 }
 
-// ─── 纯归约（十二通道 → 切片）────────────────────────────────────
+// ─── 纯归约（十六通道 → 切片）────────────────────────────────────
 
 /** `ev:reasoning`——推理块增量（R3c · D19 · `docs/desktop/design/IPC.md` §1 该行）：续写判据 = **尾块 `kind === "reasoning"`**（与正文同形）；
  *  否则起新推理块；键门同 `onToken`（非活动会话零落）。 */
@@ -129,14 +114,20 @@ function onToken(state, ev) {
 }
 
 /** `ev:tool-call`——工具块入（活块形：`{kind,id,name,argsSummary,status,startedAt}`）；**段界游标清点**（#459 ② 族：入场 ⇒ 前序
- *  助手文本段收束 —— 清点先于追加，两事不同块）。**R3b 摘工具行**：不再写池条目（工具调用面 = 对话流工具卡）。 */
+ *  助手文本段收束 —— 清点先于追加，两事不同块）。**R3b 摘工具行**：不再写池条目（工具调用面 = 对话流工具卡）。
+ *  **「对齐第三批」项 14 载波**：载荷 `round` / `model`（仅 `advisor` 名）在场才落块键（缺 ⇒ 键缺席 —— 禁假造）；
+ *  段文成形归视图面（`renderer/views/chat-tool.mjs`）。 */
 function onToolCall(state, ev, now) {
   if (!forActive(state, ev)) return state
   const block = { kind: "tool", id: ev.id, name: ev.name, argsSummary: ev.argsSummary, status: "running", startedAt: now }
+  if (typeof ev.round === "number" && Number.isFinite(ev.round) && ev.round > 0) block.round = ev.round
+  if (typeof ev.model === "string" && ev.model !== "") block.model = ev.model
   return appendBlock(clearCursor(state), block)
 }
 
-/** `ev:tool-output`——结果文本累积入该工具块 `result`（无匹配块 ⇒ 零写）。 */
+/** `ev:tool-output`——结果文本累积入该工具块 `result`（无匹配块 ⇒ 零写）。
+ *  **「对齐第三批」项 3**：chunk 到达 ⇒ **清显式折叠旗**（`expanded` 键摘除 —— 运行期展开由增量驱动，与 VSC 同径；
+ *  体落判据归视图面 `isExpanded`：显式旗 ∨ `running` / `error` 缺省展开）。 */
 function onToolOutput(state, ev) {
   if (!forActive(state, ev)) return state
   const blocks = state.blocks ?? []
@@ -146,7 +137,9 @@ function onToolOutput(state, ev) {
   if (chunk === "") return state
   const block = blocks[index]
   const result = typeof block.result === "string" ? block.result + chunk : chunk
-  return { ...state, blocks: [...blocks.slice(0, index), { ...block, result }, ...blocks.slice(index + 1)] }
+  const next = { ...block, result }
+  delete next.expanded
+  return { ...state, blocks: [...blocks.slice(0, index), next, ...blocks.slice(index + 1)] }
 }
 
 /** `ev:tool-result`——按 `id` 定位后**重建**（`status` 收束 · `durationMs` = 现刻 − 起刻 · 丢 `startedAt`）；
@@ -164,6 +157,12 @@ function onToolResult(state, ev, now) {
     kind: "tool", id: block.id, name: block.name, argsSummary: block.argsSummary,
     status: ok ? "done" : "error", durationMs: now - (block.startedAt ?? now), result,
   }
+  // 「对齐第三批」项 14：轮次载波**过收束**（`round` / `model` 原样承接 —— 收束 = 同块换态非重建；
+  //   丢两键 ⇒ 具名 advisor 卡头轮次段在结果到达后消失）；只承接在块键（缺 ⇒ 仍缺席 —— 禁假造）
+  if (block.round !== undefined) settled.round = block.round
+  if (block.model !== undefined) settled.model = block.model
+  // 「对齐第三批」相抵② 载波：验存文件链接非空行集才落（缺 / 空 ⇒ 键缺席 —— 禁假造）；着装 / 出口归视图面
+  if (Array.isArray(ev.links) && ev.links.length > 0) settled.links = ev.links
   const next = { ...state, blocks: [...blocks.slice(0, index), settled, ...blocks.slice(index + 1)] }
   return next // R3b 摘工具行：池条目随动面已摘（工具调用面 = 对话流工具卡）
 }
@@ -183,53 +182,9 @@ function onApproval(state, ev) {
   return stamps.changed ? { ...withItem, tabBadges: stamps.badges } : withItem
 }
 
-// ─── 子 agent 块面（R3b · D20）─────────────────────────────────────────────
-
-/** `ev:subagent` 载荷 → 核态机 patch（键白名单投影）；状态表外 / 身份缺 ⇒ `null` = **零写**（禁假造）。 */
-function subPatchOf(ev) {
-  if (typeof ev?.status !== "string" || !SUB_STATUS.includes(ev.status)) return null
-  if (ev.role == null || ev.id == null) return null
-  const patch = {}
-  for (const field of SUB_KEYS) if (ev[field] !== undefined) patch[field] = ev[field]
-  return patch
-}
-
-/** 归档面（D20 第三迁）：本会话块表清出**已终态**块（该会话下一次「回合起」—— 修既有池切片单调增长）；
- *  无可清 ⇒ **原表**（引用等值 ⇒ 零帧）。 */
-function archiveFrozen(table, key) {
-  const list = table?.[key]
-  if (!Array.isArray(list)) return table
-  const kept = list.filter((block) => block?.frozen !== true)
-  return kept.length === list.length ? table : { ...table, [key]: kept }
-}
-
-/** 子 agent 面随动尾（subBlocks 写者共用）：块表 + 折叠头 `running` 读数（**活动会话**在飞块数 ——
- *  键非活动 ⇒ 读数不动；读数同值 ⇒ 池引用不动）。 */
-function withSubBlocks(state, table, key) {
-  const next = { ...state, subBlocks: table }
-  if (key !== state.activeSession) return next
-  const running = liveCount(table[key])
-  const pool = poolOf(state)
-  return pool.running === running ? next : { ...next, pool: { ...pool, running } }
-}
-
-/** `ev:subagent` —— 子 agent 块面（D20 单源 = `docs/desktop/design/UI.md` §1 本批注项 2）：按会话键写 `subBlocks`
- *  切片；态机**单源** = 核 `/rc/subblocks/state.mjs` `subBlocksReduce`（出生 / 接管 / 终态折叠三迁 —— 桌面端
- *  零 DOM：不注入 `connectedOf` / `regionOf`，效果表为零，本端全量重建）。块模型**原地变更**（核态机形）⇒
- *  每笔皆换切片数组引用（帧触发唯一判据 —— 同值短路在此不成立，随本件登记）。 */
-function onSubagent(state, ev, now) {
-  const key = typeof ev.key === "string" && ev.key !== "" ? ev.key : null
-  const patch = key === null ? null : subPatchOf(ev)
-  if (patch === null) return state
-  const table = state.subBlocks ?? {}
-  const list = [...(Array.isArray(table[key]) ? table[key] : [])]
-  // 核态机 deps：`now` 为**读钟函数**（`state.mjs` 每迁现刻取值 —— 出生起刻 / 冻结 `doneAt`）。
-  subBlocksReduce(list, patch, { now: () => now })
-  return withSubBlocks(state, { ...table, [key]: list }, key)
-}
-
-/** 对象读数同值判（浅比 —— 键数 + 逐键 `Object.is`）：读数槽同值 ⇒ 原引用（零重绘）。 */
-function sameRecord(a, b) {
+/** 对象读数同值判（浅比 —— 键数 + 逐键 `Object.is`）：读数槽同值 ⇒ 原引用（零重绘）。
+ *  **共用件**：页读径 `applyFlags`（`renderer/page-read.mjs`）同引 —— 单一实现零副本。 */
+export function sameRecord(a, b) {
   if (a === null || typeof a !== "object" || b === null || typeof b !== "object") return false
   const keys = Object.keys(a)
   if (keys.length !== Object.keys(b).length) return false
@@ -286,6 +241,47 @@ function onUsage(state, ev) {
   }
 }
 
+/** 计数归一（`ev:susp` 四计数 / `ev:digest` `n` ∕ `ms` —— 非数 ⇒ 0，沿状态行 `numOf` 同判；零抛）。 */
+function countOf(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0
+}
+
+/** `ev:susp`——挂起窗计数切片（按会话 `key` · 同键就地替换 · 首写自种）：载荷 = 核 `backgroundCounts` 直传
+ *  四计数（`running` / `queued` / `pending` / `done`）+ `active`（进出两态 —— `active:false` 为退出唯一形态）。
+ *  消费 = 状态行段 3 挂起句（`renderer/views/statusline.mjs`；`active:false` ⇒ 段回落两态词 —— **禁假造**）。
+ *  同键同值 ⇒ **原引用**（零重绘）；`active` 只收严格真；四计数非数 ⇒ 归一 0（不落 `NaN` 入词面）。 */
+function onSusp(state, ev) {
+  const record = {
+    active: ev.active === true,
+    running: countOf(ev.running), queued: countOf(ev.queued), pending: countOf(ev.pending), done: countOf(ev.done),
+  }
+  const table = state.susp ?? {}
+  if (sameRecord(table[ev.key], record)) return state
+  return { ...state, susp: { ...table, [ev.key]: record } }
+}
+
+/** `ev:digest`——消化轮边界切片（按会话 `key` · 同键就地替换——**起跑 / 终态两态**）：
+ *  `start` 写起跑态（`n` = 起跑 pending 数 · `tier: "ask"` 档随行 `from` / `msg`——核 `upstreamAskLabelVars`）；
+ *  `end` **原地更新本键游标**（保留起跑 `n` —— 终态句 `digest.done` 需 n；`ok` 缺省 ⇒ 真，沿宿主 `ok !== false` 判据）。
+ *  表外 `status` ⇒ 零写；同键同值 ⇒ 原引用。消费 = 流内消化行组 `[data-digest]`（`renderer/views/chat.mjs`）。 */
+function onDigest(state, ev) {
+  const table = state.digest ?? {}
+  const prev = table[ev.key]
+  let record = null
+  if (ev.status === "start") {
+    record = {
+      status: "start", n: countOf(ev.n),
+      tier: ev.tier === "ask" ? "ask" : null,
+      from: typeof ev.from === "string" ? ev.from : null,
+      msg: typeof ev.msg === "string" ? ev.msg : null,
+    }
+  } else if (ev.status === "end") {
+    record = { ...(prev ?? {}), status: "end", ok: ev.ok !== false, ms: countOf(ev.ms) }
+  } else return state
+  if (sameRecord(prev, record)) return state
+  return { ...state, digest: { ...table, [ev.key]: record } }
+}
+
 /** 回合尾判据**单源**（三径 = §2.16②/④ + 批 A 修正轮 —— `docs/desktop/design/RENDERER.md` §1.1「回合尾三径」条）：
  *  吃**两通道形**：`ev:activity` ∧ `fields` 键**不在场** ∧ `event ∈ {done, stopped}` ∥ `ev:error`（该通道**单义** = 宿主回合结算
  *  〔错误径〕—— 工具级错误不经本通道 ⇒ 全收）∥ 余 ⇒ 假；值面 `onActivity` / `onError` 与订阅面（回合尾 ⇒ 标题刷新 · 输入区 flush）同用。
@@ -297,52 +293,99 @@ export function isTurnTail(ev) {
   return ev.event === "done" || ev.event === "stopped"
 }
 
+/** 中止清扫（「对齐第三批」项 5）：`stopped` 终局 ⇒ 未结算工具块（`status === "running"`）就地改
+ *  `status: "interrupted"`（体 / 折叠态不动 —— VSC 同；**已中断** = 状态词闭枚举第八词，词键 `tool.interrupted`）；
+ *  命中才换新数组（无命中 ⇒ 原引用）。 */
+function sweepRunningTools(state) {
+  const list = Array.isArray(state.blocks) ? state.blocks : []
+  let hit = false
+  const next = list.map((block) => {
+    if (block?.kind !== "tool" || block.status !== "running") return block
+    hit = true
+    return { ...block, status: "interrupted" }
+  })
+  return hit ? { ...state, blocks: next } : state
+}
+
+/** 停止痕切片写（「对齐第三批」项 6）：`stopped` 终局 ⇒ `stopMark[key] = true`（运行期痕 —— **非落盘件**，
+ *  页读整置即失：清点住 `renderer/page-read.mjs` `applyPage` 首屏径）；已在场 ⇒ 原引用（零重绘）。 */
+function withStopMark(state, key) {
+  const table = state.stopMark ?? {}
+  if (table[key] === true) return state
+  return { ...state, stopMark: { ...table, [key]: true } }
+}
+
 /** `ev:activity` 四形（§2.16② 写死）：① `fields` 在场 ⇒ 内联形（核 token 流内 ⟦ev⟧ 段）⇒ **零写零重调**（内联 `done` ⇒ 不清位标）；
  *  ② 无 `fields` ∧ `event === "turn"`（`{ n, max }`）⇒ 置 `running` + **回合槽**（`turns[key] = { n, max }`——D17 段 7，有意取代旧“不落”态）
- *  + **回合起刻**（`turnStarts[key] = now`——仅本键此前非 running 时落，即回合首帧；D17 段 5 耗时源）
- *  + **子 agent 块归档**（D20 第三迁：清本键已终态块 —— 修池切片单调增长）；
+ *  + **回合起刻**（`turnStarts[key] = now`——仅本键此前非 running 时落，即回合首帧；D17 段 5 耗时源）；
  *  ③ 无 `fields` ∧ `isTurnTail` ⇒ **唯一回合尾**（去 `running` + 置 `done`；`stopped` 兼摘本键提问项 + 清本键 `approval` 位 ——
  *  中断径各门按取消结算 ⇒ 卡随事件面出场；`done` 径不摘 —— `docs/desktop/design/RENDERER.md` §1.1）；
+ *  **`turnBreak` 形（「对齐第三批」项 7）** = 宿主接核 `onTurnEnd` 的子回合边界：**清游标**（尾块追加态收束 ⇒
+ *  下片文本起新块 —— VSC `streaming.js:71-88` 复位语义）；**非回合尾**（三径判据不含本形）· 键门同块面诸写者；
+ *  **`stopped` 兼两事（「对齐第三批」项 5 / 6）**：未结算工具块清扫（`interrupted`）+ 停止痕切片写（任意键 ——
+ *  痕面非块面，不设键门）；
  *  **回合尾三径皆兼游标清点**（#459 ① 族 —— 尾块追加态结束 ⇒ 游标不得常驻；**键门同 `onError` / `onToolCall`** ——
- *  块面写须 `ev.key === state.activeSession`：非活动会话的回合尾只落位标，不动本会话块面）。 */
+ *  块面写须 `ev.key === state.activeSession`：非活动会话的回合尾只落位标，不动本会话块面）。
+ *  **回合起不再清终态块**（「对齐第二批」项 5：原「下回合起清出」口径退场 —— 终态块留场为墓碑 + 已入流快照）。 */
 function onActivity(state, ev, now) {
   if ("fields" in ev) return state
+  // 子回合边界（项 7）：清游标即止 —— 不置位标 / 不动回合槽 / 不判回合尾（键门同块面）
+  if (ev.event === "turnBreak") return forActive(state, ev) ? clearCursor(state) : state
   if (!isTurnTail(ev)) {
     if (ev.event !== "turn") return state
-    // 归档（D20 第三迁）：该会话下一次「回合起」清出已终态块 + 折叠头 `running` 随动（基数 = 归档后表）。
-    const archived = archiveFrozen(state.subBlocks, ev.key)
-    const base = archived === state.subBlocks ? state : withSubBlocks(state, archived, ev.key)
-    const badges = base.tabBadges ?? {}
+    const badges = state.tabBadges ?? {}
     const wasRunning = Array.isArray(badges[ev.key]) && badges[ev.key].includes("running")
     const turnSlot = Number.isInteger(ev.n) && ev.n > 0 && Number.isInteger(ev.max) && ev.max > 0
-      ? withReading(base.turns, ev.key, { n: ev.n, max: ev.max })
-      : base.turns
-    const starts = wasRunning ? base.turnStarts : { ...(base.turnStarts ?? {}), [ev.key]: now }
+      ? withReading(state.turns, ev.key, { n: ev.n, max: ev.max })
+      : state.turns
+    const starts = wasRunning ? state.turnStarts : { ...(state.turnStarts ?? {}), [ev.key]: now }
     const stamps = badgeStamps(badges, ev.key, "running", true)
-    if (base === state && stamps.changed === false && turnSlot === base.turns && starts === base.turnStarts) return state
+    if (stamps.changed === false && turnSlot === state.turns && starts === state.turnStarts) return state
     return {
-      ...base,
-      ...(turnSlot === base.turns ? {} : { turns: turnSlot }),
-      ...(starts === base.turnStarts ? {} : { turnStarts: starts }),
+      ...state,
+      ...(turnSlot === state.turns ? {} : { turns: turnSlot }),
+      ...(starts === state.turnStarts ? {} : { turnStarts: starts }),
       ...(stamps.changed ? { tabBadges: stamps.badges } : {}),
     }
   }
   const tail = ev.event === "stopped" ? clearQuestion(state, ev.key) : state
-  const cursor = forActive(state, ev) ? clearCursor(tail) : tail
-  const cleared = badgeStamps(tail.tabBadges ?? {}, ev.key, "running", false)
+  const swept = ev.event === "stopped" && forActive(state, ev) ? sweepRunningTools(tail) : tail
+  const cursor = forActive(state, ev) ? clearCursor(swept) : swept
+  const marked0 = ev.event === "stopped" ? withStopMark(cursor, ev.key) : cursor
+  const cleared = badgeStamps(marked0.tabBadges ?? {}, ev.key, "running", false)
   const marked = badgeStamps(cleared.badges, ev.key, "done", true)
-  if (cursor === tail && tail === state && !cleared.changed && !marked.changed) return state
-  return { ...cursor, tabBadges: marked.badges }
+  if (marked0 === state && !cleared.changed && !marked.changed) return state
+  return { ...marked0, tabBadges: marked.badges }
 }
 
 /** `ev:error`——错误块入流（文本 = 载荷 `message` 原样；无槽位自造）+ **错误径 = 回合结算**（三径同判据 —— `docs/desktop/design/RENDERER.md` §1.1）：
  *  本键 `running` 清 + 位落 `done`（错误终局后输入区不再判忙 · 队首可 flush —— `ok` 假 ∥ 抛 ⇒ 留队 + 下次回合尾重触发）+ **游标清点**（错误径 ∈ 三径）；位标键源 = `ev.key`（任意键可写），块面仍守键门。 */
 function onError(state, ev) {
-  const blocks = forActive(state, ev) ? clearCursor(appendBlock(state, { kind: "error", text: ev.message })) : state
+  // 「对齐第三批」项 9：载荷扩 `techInfo`（宿主 `err.stack`）—— 在场才落块键（缺 ⇒ 键缺席）；`details` 面归视图面
+  const block = { kind: "error", text: ev.message }
+  if (typeof ev.techInfo === "string" && ev.techInfo !== "") block.techInfo = ev.techInfo
+  const blocks = forActive(state, ev) ? clearCursor(appendBlock(state, block)) : state
   const cleared = badgeStamps(blocks.tabBadges ?? {}, ev.key, "running", false)
   const marked = badgeStamps(cleared.badges, ev.key, "done", true)
   if (!cleared.changed && !marked.changed) return blocks
   return { ...blocks, tabBadges: marked.badges }
+}
+
+/** `ev:ledger`——台账行集切片（「对齐第三批」项 12 · KD-38）：载荷 `{ key, lines }`，`lines = [{ text, warn }]`
+ *  **核行产逐字**（端侧零行构造）；行集过滤后非空才写（行文本非串 / 空 ⇒ 该行弃；空集 ⇒ 零写 —— 禁假造）；
+ *  同值（文本逐字 + `warn` 真值同）⇒ 原引用（零重绘）。消费 = 流尾非块节点组 `[data-ledger-line]`（`renderer/views/chat.mjs`）；
+ *  周期刷新（VSC `REFRESH_MS`）不在本批（KD-38 / open 行）。 */
+function onLedger(state, ev) {
+  const lines = (Array.isArray(ev.lines) ? ev.lines : [])
+    .filter((line) => typeof line?.text === "string" && line.text !== "")
+    .map((line) => ({ text: line.text, warn: line.warn === true }))
+  if (lines.length === 0) return state
+  const table = state.ledgerLines ?? {}
+  const prev = table[ev.key]
+  const same = Array.isArray(prev) && prev.length === lines.length
+    && prev.every((line, index) => line.text === lines[index].text && line.warn === lines[index].warn)
+  if (same) return state
+  return { ...state, ledgerLines: { ...table, [ev.key]: lines } }
 }
 
 /** 纯归约出口：`ev` = `{ channel, ...载荷 }`（载荷携 `key`）。未知通道 / 形不合 ⇒ 原引用。 */
@@ -352,6 +395,7 @@ export function reduce(state, ev, now = Date.now()) {
   switch (channel) {
     case "ev:token": return onToken(state, ev)
     case "ev:reasoning": return onReasoning(state, ev)
+    case "ev:subchunk": return onSubchunk(state, ev)
     case "ev:tool-call": return onToolCall(state, ev, now)
     case "ev:tool-output": return onToolOutput(state, ev)
     case "ev:tool-result": return onToolResult(state, ev, now)
@@ -360,16 +404,19 @@ export function reduce(state, ev, now = Date.now()) {
     case "ev:error": return onError(state, ev)
     case "ev:question": return onQuestion(state, ev)
     case "ev:task": return onTask(state, ev)
+    case "ev:susp": return onSusp(state, ev)
+    case "ev:digest": return onDigest(state, ev)
     case "ev:usage": return onUsage(state, ev)
+    case "ev:ledger": return onLedger(state, ev)
     case "ev:subagent": return onSubagent(state, ev, now)
     default: return state
   }
 }
 
-// ─── 页应用（回执 → 首屏 / 回填两径）────────────────────────────────────────
+// ─── 模式位切片写（纯动作 —— 两径同点）────────────────────────────────────────
 
 /** 模式位切片写（**纯动作** —— 状态栏对齐批 · `docs/desktop/design/IPC.md` §2「模式位投影注」项 4/5）：
- *  页读（`applyPage`）与出站回执（`renderer/mount-pool.mjs` `submitVerdict`）**两径同点** —— 切片变 ⇒ 状态行重挂。
+ *  页读（`renderer/page-read.mjs` `applyPage`）与出站回执（`renderer/mount-pool.mjs` `submitVerdict`）**两径同点** —— 切片变 ⇒ 状态行重挂。
  *  `flags` 缺席 / 非载体 ⇒ **零写**（禁假造）；逐项只收严格布尔（非布尔 ⇒ 该键不落）；同值 ⇒ **原引用**（零重绘）。 */
 export function applyFlags(state, key, flags) {
   if (flags === null || typeof flags !== "object" || Array.isArray(flags)) return state
@@ -379,87 +426,6 @@ export function applyFlags(state, key, flags) {
   const table = state.sessionFlags ?? {}
   if (sameRecord(table[key], record)) return state
   return { ...state, sessionFlags: { ...table, [key]: record } }
-}
-
-/** `meta` 三值**只落非空串**（名单与 `views/chrome.mjs` 同名 —— 数据面原样，非词表）；全缺 ⇒ `{}`。 */
-function metaOf(meta) {
-  const out = {}
-  for (const field of META_FIELDS) {
-    const value = meta?.[field]
-    if (typeof value === "string" && value !== "") out[field] = value
-  }
-  return out
-}
-
-/** 页回执应用（`docs/desktop/design/IPC.md` §2 `history:page` 定形）：`{ ok, messages, hasOlder, next, meta, flags, seed? }`。
- *  `ok !== true` ⇒ **清在途**（成败皆清 —— finally 语义）且不写其余切片；
- *  `flags` 与 `meta` **同一写点**（`applyFlags` —— 状态栏对齐批；每次页读皆携 ⇒ 回填径同写）；
- *  `key !== activeSession` ⇒ 跳块 / 历史写（`sessionMeta[key]` / `sessionFlags[key]` 仍写）；
- *  首屏（`before == null`）⇒ 块整置 + 回底（`following = true` / `pendingNew = 0`；空页同径）+ **打开态播种**
- *  （`seed` ⇒ `tasks[key]` / `usage[key]` 同笔——判据住 `seedPatch`）；
- *  回填 ⇒ 前插 + `history` 落态（`hasOlder === false ⇒ next = null`；高度补偿归 `settleFrame` 六步既有）。 */
-export function applyPage(state, receipt, { key, before } = {}) {
-  if (receipt?.ok !== true) return endBackfill(state)
-  const flagged = applyFlags(state, key, receipt.flags)
-  const meta = metaOf(receipt.meta)
-  const sessionMeta = { ...(flagged.sessionMeta ?? {}), [key]: meta }
-  if (key !== flagged.activeSession) return { ...flagged, sessionMeta }
-  const hasOlder = receipt.hasOlder === true
-  const next = hasOlder ? (receipt.next ?? null) : null
-  const history = { hasOlder, inFlight: false, page: next }
-  const messages = Array.isArray(receipt.messages) ? receipt.messages : []
-  const page = messages.flatMap((msg) => blockOfMessage(msg))
-  if (before == null) {
-    return { ...flagged, ...seedPatch(flagged, key, receipt.seed), blocks: page, sessionMeta, history, following: true, pendingNew: 0 }
-  }
-  return { ...flagged, blocks: [...page, ...(flagged.blocks ?? [])], sessionMeta, history }
-}
-
-/** 首屏播种补丁（D17 · `docs/desktop/design/IPC.md` §2「打开态播种注」项 4）：`seed` 同笔写 `tasks[key]` /
- *  `usage[key]` 两切片（与 `meta` 同一写点）；**时序判据** = 本键在飞（回合未尾 ⇒ 位标含 `running`）
- *  ⇒ 种不落（**零写**——活切片为准）；**播种只填空白**（#490）：该槽切片键在场 ⇒ 零写（闭合回合尾窗口 ——
- *  判据 = 键在场、不辨来源；设计句「非播种来源」限定的收正随批次档 §5 上抛）；`seed` 缺省 / 该槽形不合 ⇒ 零写。 */
-function seedPatch(state, key, seed) {
-  if (seed === null || typeof seed !== "object") return {}
-  if (Array.isArray(state.tabBadges?.[key]) && state.tabBadges[key].includes("running")) return {}
-  const blank = (table) => !Object.hasOwn(table ?? {}, key)
-  const patch = {}
-  if (Array.isArray(seed.tasks) && blank(state.tasks)) patch.tasks = { ...(state.tasks ?? {}), [key]: seed.tasks }
-  if (typeof seed.usage === "number" && seed.usage > 0 && blank(state.usage)) patch.usage = { ...(state.usage ?? {}), [key]: seed.usage }
-  return patch
-}
-
-// ─── 页 → 块归约（五型闭集）────────────────────────────────────────────────
-
-/** 屏文本栏（核给 `string | null`；非串 ⇒ 空 —— 零节点判据归消费面）。 */
-function textOf(value) {
-  return typeof value === "string" ? value : null
-}
-
-/** 核 message / 内嵌 tool → 工具块（**不落** `status` / `durationMs` —— 决策 D8-8 两面差异）。 */
-function toolBlock(tool) {
-  const block = { kind: "tool", name: tool?.name ?? null }
-  if (tool?.id !== undefined) block.id = tool.id
-  block.argsSummary = textOf(tool?.args)
-  block.result = tool?.result !== undefined ? textOf(tool.result) : textOf(tool?.text)
-  return block
-}
-
-/** 核 message → 块数组（未知型 ⇒ `[]`；助手条目序 = `[assistant?, reasoning?, ...tools]`）。 */
-export function blockOfMessage(msg) {
-  const kind = msg?.kind
-  if (kind === "user") return [{ kind: "user", text: textOf(msg.text) }]
-  if (kind === "error") return [{ kind: "error", text: textOf(msg.text) }]
-  if (kind === "tool") return [toolBlock(msg)]
-  if (kind !== "assistant") return []
-  const blocks = []
-  const text = textOf(msg.text)
-  if (text !== null && text !== "") blocks.push({ kind: "assistant", text })
-  const reasoning = textOf(msg.reasoning)
-  if (reasoning !== null && reasoning !== "") blocks.push({ kind: "reasoning", text: reasoning })
-  const tools = Array.isArray(msg.tools) ? msg.tools : []
-  for (const tool of tools) blocks.push(toolBlock(tool))
-  return blocks
 }
 
 // ─── 会话键写者（`activeSession`）──────────────────────────────────────────

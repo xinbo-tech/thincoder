@@ -9,7 +9,10 @@
  * 夹具（本序特有）：① `config.json` = `{"locale":"en"}`（configured 真 ⇒ 向导不占槽）；② 会话槽族四档
  * （`<40hex>.json` 基档 = 最近目录源 · `.1` 槽数据 = 回放历史 · `.manifest` = 槽索引 · `.manifest.desktop`
  * = 本端记录 ⇒ `resumeSlot` 命中槽 1）—— 形 = 核物化形（先例 `test/projects.test.mjs` / `test/session-contract.test.mjs`）。
- * 边界：零文案匹配（断言只取 `data-*` 锚 / 态值 / class 选择器 / 核产出结构）· 不出网（零渠道）· 不截图。
+ * 边界：零文案匹配（断言只取 `data-*` 锚 / 态值 / class 选择器 / 核产出结构；**例外 = ⑪ 两处设计逐字词面读数**——
+ * `susp.running` / `digest.start` en 值，同 T-DSK39 ③④⑤ 先例）· 不出网（零渠道）· 不截图。
+ * 段序（⑪ · 「桌面空闲唤醒」批真机面 —— D16）：挂起句入段 3 支① ∧ 消化行组 `[data-digest]` 两行入流（非块节点）∧
+ * 退出帧回落两态词；载荷为合成（主进程 `webContents.send` 注入 —— 宿主 emit 同径），真跑子任务面（凭据面）归父侧真跑闭合。
  * 失败取证 = console / pageerror 转发 + 步内自含读数（KD-9）；零固定 sleep（就绪判据 = 引导位落位 + 帧锚）。
  */
 import { test } from "node:test"
@@ -104,11 +107,28 @@ test("T-DSK37 chat-render — 会话流经核（围栏块 / 复制钮 / 推理�
   await page.locator(RECENT).first().click()
   await page.waitForFunction((scope) => document.querySelector(scope)?.getAttribute("data-state") === "flow", FLOW, WAIT)
   const kinds = await page.locator(`${FLOW} [data-block-kind]`).evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-block-kind")))
-  assert.deepEqual(kinds, ["user", "assistant", "reasoning", "user"], "回放块序 = 历史序（助手条目序 = [assistant, reasoning] + 尾注入样本用户块）")
+  assert.deepEqual(kinds, ["user", "reasoning", "assistant", "user"], "回放块序 = 历史序（助手条目序 = [reasoning, assistant] —— 「对齐第三批」项 8 收正 + 尾注入样本用户块）")
 
   // ③ D21 内容面视觉读数（真机 computed style —— 需求 §4 D21 · 值表 = 核档 §5；置于复制钮点按（④）**之前**：
   //    静息 `opacity: 0.4` 只在未点按（未落 `.copied`）时可读）
   const styleOf = (selector, prop) => page.locator(selector).first().evaluate((node, name) => getComputedStyle(node).getPropertyValue(name), prop)
+  /** hover 读数稳定器（父侧 2026-09-28 —— hover 态经 transition 落值时序不稳 ⇒ 读前轮询到位；期望值 / 断言口径零改）。 */
+  const waitStyle = async (locator, prop, want, timeoutMs = 6000) => {
+    const t0 = Date.now()
+    for (;;) {
+      const v = await locator.evaluate((node, name) => getComputedStyle(node).getPropertyValue(name), prop)
+      if (v === want || Date.now() - t0 > timeoutMs) return v
+      await new Promise((r) => setTimeout(r, 50))
+    }
+  }
+  const waitBgNonTransparent = async (locator, timeoutMs = 6000) => {
+    const t0 = Date.now()
+    for (;;) {
+      const v = await locator.evaluate((node) => getComputedStyle(node).backgroundColor)
+      if (v !== "rgba(0, 0, 0, 0)" || Date.now() - t0 > timeoutMs) return v
+      await new Promise((r) => setTimeout(r, 50))
+    }
+  }
   assert.equal(await styleOf(`${FLOW} .block-text`, "line-height"), "21.7px", "面 1：正文行高 1.55 × 14px = 21.7px")
   assert.equal((await styleOf(`${FLOW} .block-text`, "font-family")).includes("mono"), true, "面 1：正文面字族 = `--mono` 等宽栈")
   assert.equal(await styleOf(CODE_BLOCK, "background-color"), "rgba(0, 0, 0, 0.08)", "面 7：代码块壳底 = `--overlay` 亮值")
@@ -131,9 +151,9 @@ test("T-DSK37 chat-render — 会话流经核（围栏块 / 复制钮 / 推理�
   const railRow = page.locator(`${PROJECTS} .rail-row`).first()
   const railRename = page.locator(`${PROJECTS} .rail-rename`).first()
   await railRow.hover()
-  assert.equal(await railRename.evaluate((node) => getComputedStyle(node).opacity), "0.5", "面板面 6：行 hover ⇒ 改名钮半显 0.5")
+  assert.equal(await waitStyle(railRename, "opacity", "0.5"), "0.5", "面板面 6：行 hover ⇒ 改名钮半显 0.5")
   await railRename.hover()
-  assert.equal(await railRename.evaluate((node) => getComputedStyle(node).opacity), "1", "面板面 6：钮自身 hover ⇒ 全显 1")
+  assert.equal(await waitStyle(railRename, "opacity", "1"), "1", "面板面 6：钮自身 hover ⇒ 全显 1")
 
   // ④ C7 ① / T-DSK35 ①：围栏块 ⇒ `pre.code-block` 真在场（核 md 围栏切分）+ 复制钮真在场
   assert.equal(await page.locator(CODE_BLOCK).count(), 1, "围栏块 ⇒ `pre.code-block` 恰一枚（真解析面）")
@@ -155,9 +175,10 @@ test("T-DSK37 chat-render — 会话流经核（围栏块 / 复制钮 / 推理�
   assert.equal((await page.locator(`${REASONING} summary`).innerText()).trim().length > 0, true, "折叠头词面在场（核键 `status.thinking` 出串）")
   assert.equal((await page.locator(`${REASONING} .reasoning-content`).innerText()).includes(REASONING_TEXT), true, "推理内容在场（经核 md）")
 
-  // ⑦ T-DSK35 ④（KD-RC-5）：文件路径文本在场但**零链接节点**
+  // ⑦ T-DSK35 ④（「对齐第三批」收正）：**历史卡（页读面）零链接** —— 文件路径文本在场但零 `.file-link` 节点
+  //    （承载面 = 活流工具结果区（宿主验存链 + 核 `linkifyPaths` + `file:open`）；VSC 同径 —— 单源 = UI.md 相抵②）
   assert.equal(flowText.includes("src/main/app.mjs"), true, "文件路径文本在场")
-  assert.equal(await page.locator(`${FLOW} .file-link`).count(), 0, "文件链接零节点（KD-RC-5 —— 核 linkifyPaths 桌面不消费）")
+  assert.equal(await page.locator(`${FLOW} .file-link`).count(), 0, "历史卡零链接节点（页读面 —— VSC 同径）")
 
   // ⑧ D18：会话面板元数据族三值（provider · N msgs · updated）+ 多标签结构不削
   const meta = page.locator(`${PROJECTS} [data-row-meta]`).first()
@@ -172,7 +193,15 @@ test("T-DSK37 chat-render — 会话流经核（围栏块 / 复制钮 / 推理�
   assert.equal(/3/.test(metaText), true, "N msgs = 读数（槽清单 messageCount = 3）")
   assert.equal(await page.locator('[data-slot="tabs"] .tabbar-item').count(), 1, "多标签结构不削（本序单标签 —— 结构面 = 标签条在场）")
 
-  // ⑨ D24 外壳视觉降噪（值表单源 = `docs/desktop/design/UI.md` §1 本批注（外壳视觉降噪 · D24））——真机读数：
+  // ⑨ 「对齐第二批」真机读数（D16 —— 零文案匹配：只取属性锚 / 实测几何）：A6 右列宽 = 36rem（576px）；
+  //    A4 说话人标签结构（用户块恒出 / 助手回合首块出 / ts 在场 ⇒ 时间 span）
+  const poolWidth = await page.locator(".pool").evaluate((node) => Math.round(node.getBoundingClientRect().width))
+  assert.equal(poolWidth, 576, `A6 真机：右列实测宽 = 36rem ⇒ 576px（实 = ${poolWidth}；内层池体扣 1px 边 = 574 不入本判）`)
+  assert.equal(await page.locator(`${FLOW} [data-block-kind="user"] .msg-label`).count(), 2, "A4 真机：用户块各出标签行（本序两枚用户块）")
+  assert.equal(await page.locator(`${FLOW} [data-block-kind="user"] .msg-label .msg-time`).count(), 2, "A4 真机：ts 在场 ⇒ 时间 span 落笔（槽历史携 ts —— 无 ts 不显示）")
+  assert.equal(await page.locator(`${FLOW} .msg-label[data-label="assistant"]`).count(), 1, "A4 真机：助手回合首块出标签（恰一枚 —— 同回合后续零标签）")
+
+  // ⑩ D24 外壳视觉降噪（值表单源 = `docs/desktop/design/UI.md` §1 本批注（外壳视觉降噪 · D24））——真机读数：
   //    静息描边归零（保位 1px）· hover 底显形 ∧ 边框仍透明 · 键盘 Tab ⇒ `:focus-visible` + outline 2px ·
   //    活动标签底色态 · 滚动条占宽 · `.composer-input` 细边（保留面）。
   const TOGGLE = ".pool-toggle"
@@ -185,7 +214,7 @@ test("T-DSK37 chat-render — 会话流经核（围栏块 / 复制钮 / 推理�
   assert.equal(await styleOf(".head-field", "border-top-color"), "rgba(0, 0, 0, 0)", "D24 控件族：chip 描边归零")
   assert.equal(await styleOf(".head-field", "border-top-width"), "1px", "D24 控件族：chip 边宽 1px（保位）")
   await page.locator(TOGGLE).hover()
-  const toggleHoverBg = await styleOf(TOGGLE, "background-color")
+  const toggleHoverBg = await waitBgNonTransparent(page.locator(TOGGLE))
   assert.notEqual(toggleHoverBg, "rgba(0, 0, 0, 0)", `D24 hover：折叠控件底非透明（实 = ${toggleHoverBg}）`)
   assert.equal(await styleOf(TOGGLE, "border-top-color"), "rgba(0, 0, 0, 0)", "D24 hover：边框仍透明（hover 只改色）")
   let tabHits = 0
@@ -220,5 +249,35 @@ test("T-DSK37 chat-render — 会话流经核（围栏块 / 复制钮 / 推理�
     console.log(`[e2e] D24 滚动条读数支不适用（占宽 = ${scrollProbe.gap} · 溢出 = ${scrollProbe.overflow} —— 前提 = 夹具使 flow 溢出且平台走经典非 overlay 滚动条）—— 按两支形不自判红`)
   }
   console.log(`[e2e] T-DSK37 D24 —— 静息透明 ×4 边 ∧ 1px 保位 · hover bg = ${toggleHoverBg} · Tab ${tabHits} 步 ⇒ outline 2px · 活动标签底 = ${activeTabBg} · 滚动条占宽 = ${scrollProbe.gap}`)
+  // ⑪ 桌面空闲唤醒可见面（两事件面真机读数 —— D16 义务；通道注入面 = 主进程 `webContents.send`（宿主 emit 同径）——
+  //    真实链路 = 通道 → 订阅面 → 归约面 → 视图面全走生产码，仅载荷为合成：挂起句入段 3（支①）· 消化行组入流
+  //    （非块节点 —— `data-blocks` 不变）· 退出帧回落两态词。边界：通知面（失焦系统通知）不可机检 —— 人工走查 + 父侧真跑闭合。
+  const STATUS = '[data-slot="status"]'
+  const STATE_SEG = `${STATUS} [data-seg="state"]`
+  const DIGEST = `${FLOW} [data-digest]`
+  const inject = (channel, payload) => app.evaluate(({ BrowserWindow }, [name, body]) => {
+    const [win] = BrowserWindow.getAllWindows()
+    win.webContents.send(name, body)
+  }, [channel, payload])
+  const KEY = "1" // 活动会话键 = `String(slot)`（`.manifest.desktop` 接续槽 1）
+  await inject("ev:susp", { key: KEY, active: true, running: 1, queued: 0, pending: 0, done: 0 })
+  await page.waitForFunction((scope) => (document.querySelector(scope)?.textContent ?? "").includes("background subagent"), STATE_SEG, WAIT)
+  assert.equal((await page.locator(STATE_SEG).innerText()).trim(), "1 background subagent(s) running",
+    "挂起句入段 3 支①（N = running + queued = 1；`susp.running` en 值逐字 = VSC —— 值单源 = IPC.md「挂起 ∕ 消化词键注」）")
+  const blocksBefore = await page.locator(FLOW).getAttribute("data-blocks")
+  await inject("ev:digest", { key: KEY, status: "start", n: 1 })
+  await page.waitForFunction((scope) => document.querySelector(scope) !== null, DIGEST, WAIT)
+  assert.deepEqual(await page.locator(`${DIGEST} > div`).evaluateAll((nodes) => nodes.map((node) => node.getAttribute("class"))),
+    ["digest-turn", "digest-status"], "消化行组两行 = 起跑标签行 + 计数行（非块节点组）")
+  assert.equal((await page.locator(`${DIGEST} [data-digest-count]`).innerText()).trim(), "Digesting 1 background report(s)…",
+    "计数行 = `digest.start` en 值逐字（n = 起跑 pending 数；词面直取核字典 —— 零新键）")
+  assert.equal(await page.locator(FLOW).getAttribute("data-blocks"), blocksBefore, "组不入账（零 `data-block-id` —— `data-blocks` 不变式不破）")
+  await inject("ev:digest", { key: KEY, status: "end", ok: true, ms: 1200 })
+  await page.waitForFunction((scope) => document.querySelector(scope) === null, DIGEST, WAIT)
+  assert.equal(await page.locator(DIGEST).count(), 0, "终态 ⇒ 组退场（`end` 先原地更新后摘除 —— 行不驻留）")
+  await inject("ev:susp", { key: KEY, active: false, running: 0, queued: 0, pending: 0, done: 0 })
+  await page.waitForFunction((scope) => (document.querySelector(scope)?.textContent ?? "") === "Ready", STATE_SEG, WAIT)
+  assert.equal((await page.locator(STATE_SEG).innerText()).trim(), "Ready", "退出帧 ⇒ 段回落两态词（禁假造）")
+  console.log(`[e2e] T-DSK37 ⑪ idle-wake —— 挂起句在场（1 background subagent(s) running）∧ 消化行组两行在场（data-blocks ${blocksBefore} 不变）∧ 无窗回落 Ready`)
   console.log(`[e2e] T-DSK37 ok —— 块序 = ${kinds.join("/")} · 剪贴板 = ${JSON.stringify(clip.slice(0, 40))} · 元数据 = ${JSON.stringify(metaText)} · 高亮 = ${kwColor} / ${numColor}`)
 })

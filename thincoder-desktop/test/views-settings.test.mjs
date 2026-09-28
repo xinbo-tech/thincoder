@@ -63,7 +63,7 @@ test("T-DSK7: 四段三态 ∧ 零假数据 ∧ 缺 handlers ⇒ disabled ∧ �
   assert.equal(row.props["data-active"], "", "激活行带 data-active（形 = 空串）")
   assert.equal(nodes(row).find((node) => node.props?.["data-key"] !== undefined).props["data-key"], "masked", "键面 = 遮罩值（明文零下发）")
   assert.equal(nodes(row).find((node) => node.props?.["data-action"] === "settings:verify").props["data-name"], "p1", "校验控件携名（值 = 行名）")
-  assert.deepEqual(disabled(ready).map((node) => node.props["data-model"]), ["m1"], "仅当前模型行的采用控件 disabled")
+  assert.deepEqual(disabled(ready).map((node) => node.props["data-action"]), ["settings:useModel", "settings:saveAgent"], "disabled 面 = 当前模型行采用控件（m1）+ agent 保存键（具名十键全在场 ⇒ 泛化面零可编辑行 ⇒ 保存键非死控 disabled）")
   assert.deepEqual(disabled(settingsTree(settingsModel(stateOf({ open: true })), {})).map((node) => node.props["data-action"]), ["settings:lang", "settings:close", "settings:addPreset", "settings:addCustom", "settings:saveAgent", "settings:addMcp"], "缺 handlers ⇒ 全控件 disabled（含两形提交）")
 
   const data = new Set([...FORMATS, "openai", "p1", "p2", "m1", "m2", "p1:m1", "sk-x", "agent.maxTurns", "12", "agent.key", "••", "fs", "npx fs", "web", "https://x"])
@@ -442,5 +442,5 @@ test("T-DSK31: 写盘 `mtime-conflict`（核 reason 直传 · 表内出词 · �
   assert.equal(notice.getAttribute("data-scope"), "model", "失败面落位 = 模型段（段标可读）")
   assert.equal(notice.textContent, t("settings.section.model") + t("settings.reason.mtimeConflict"), "核 reason 直传 + 表内出词（`mtime-conflict` ∈ REASON_WORD）")
   assert.equal(reasonWord("mtime-conflict"), t("settings.reason.mtimeConflict"), "出词面单源（`reasonWord` —— 零端侧造码）")
-  assert.equal(logged.some((line) => line.includes("settings:agent")), true, "零静默：失败面同时记错")
+  assert.equal(logged.some((line) => line.includes("settings:agent")), true, "零静默：失败面同时记码")
 })

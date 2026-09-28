@@ -2,7 +2,9 @@
  * project-info.test.mjs — 项目级信息两通道用例（用例号 U111–U113 · `docs/desktop/design/PROJECT.md` §7
  * T-DSK11 + `IPC.md` §1 键面）：`ledger:read` 未开项目拒面 + 三计数/阈值读数（**行集不下发**）+
  * 无台账 = 零读数（合法，非错误）· `batch:status` 相位读数 + `missing`/`invalid` 两分不合并 +
- * 项目一份（载荷无 cwd ⇒ 回落主进程内存态；载荷 `key` 零效果）+ 消费面动态 import 机检（W8 契约②）。
+ * 项目一份（载荷无 cwd ⇒ 回落主进程内存态；载荷 `key` 零效果）+ 消费面动态 import 机检（W8 契约②）·
+ * **U199 台账行出站**（「对齐第三批」· KD-38：核 `runLedgerScan` 行产直取 ⇒ `ev:ledger` 行集；
+ * 零行 ⇒ 零出站；入参不合 ⇒ 零动作）。
  * 纪律：沙箱逐用例 `mkdtemp`；台账库目录缝 `_setLedgerDirForTest`、会话目录缝 `_setSessionsDirForTest`
  * （测试不碰真实用户目录）；台账夹具经核 `openLedger` 真建表 + 真行（零 DDL 副本）。**首例依赖进程内存态
  * 未打开**（`currentCwd() === null` 是模块状态，node --test 单档内顶层用例按声明序串行——首例先跑）。
@@ -11,11 +13,11 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, basename } from "node:path"
 import { fileURLToPath } from "node:url"
 import { _resetSessionsDirForTest, _setSessionsDirForTest } from "@thincoder/core/session-slots.mjs"
 import { currentCwd, openProject } from "../src/main/projects.mjs"
-import { batchStatus, ledgerRead } from "../src/main/project-info.mjs"
+import { batchStatus, ledgerRead, pushLedgerLines } from "../src/main/project-info.mjs"
 
 /** 档内相对路径 ⇒ 绝对路径（源面机检用；同 settings 档式）。 */
 const here = (p) => fileURLToPath(new URL(p, import.meta.url))
@@ -122,3 +124,48 @@ test("U113: batch:status —— 相位读数 + missing/invalid 两分不合并 +
   mkdirSync(manifest)
   assert.throws(() => batchStatus({ cwd: root }), /EISDIR/, "非 ENOENT 读错上抛（本档零 catch ⇒ invoke 拒绝直传，不吞——批档 §2.10 项 2）")
 })
+
+// ─── U199 台账行出站（「对齐第三批」· KD-38 —— 核行产直取 ⇒ `ev:ledger`）─────────
+
+test("U199: 台账行出站 —— 启动拍行集（变化行 + 明细行）逐字 · 二拍去重只余明细 · 零行 ⇒ 零出站 · 入参不合 ⇒ 零动作", async (t) => {
+  const { dir, root } = sandbox(t, "ledgerlines")
+  await ledger(t, dir, root, [
+    { kind: "requirement", status: "待讨论", title: "**F** 一" },
+    { kind: "requirement", status: "待讨论", title: "**G** 二" },
+    { kind: "requirement", status: "待设计", title: "**H** 三" },
+  ])
+  const name = basename(root)
+  const post = []
+  const notifyFile = join(dir, "notify.json") // 去重档注入面（生产缺省 = 核 NOTIFY_FILE 跨端共享档）
+  const first = await pushLedgerLines({ cwd: root, key: "7", post: (channel, payload) => post.push([channel, payload]), notifyFile })
+  assert.equal(first, 2, "启动拍行数 = 变化行（阈值首达）+ 明细行（current 可动作）")
+  assert.deepEqual(post.map(([channel]) => channel), ["ev:ledger"], "行集打包 ⇒ 恰一次出站")
+  const payload = post[0][1]
+  assert.deepEqual(Object.keys(payload).sort(), ["key", "lines"], "载荷键闭集 = `{ key, lines }`（`docs/desktop/design/IPC.md` §1 该行）")
+  assert.equal(payload.key, "7", "会话键逐字（调用面给 —— 端侧零构造）")
+  assert.deepEqual(payload.lines.map((line) => [line.text, line.warn]), [
+    [`台账变化：${name} 需求池达阈值（3 条）— 可开批`, true],
+    [`台账 ${name}：需求池 3 · 技术待办 0（老化 0） — 可开批`, true],
+  ], "行集逐字（核 `planChangeLines` / `formatDetailLine` 直取 —— 端侧零行构造 · `warn` = 布尔位）")
+
+  const second = []
+  const again = await pushLedgerLines({ cwd: root, key: "7", post: (channel, p) => second.push([channel, p]), notifyFile })
+  assert.equal(again, 1, "同档二拍：变化行已记账 ⇒ 只剩明细行（去重门在位）")
+  assert.equal(second[0][1].lines[0].text, `台账 ${name}：需求池 3 · 技术待办 0（老化 0） — 可开批`, "二拍行集 = 明细行（非变化行）")
+
+  const { dir: quietDir, root: quietRoot } = sandbox(t, "quiet")
+  await ledger(t, quietDir, quietRoot, [{ kind: "requirement", status: "待讨论", title: "**I** 一" }])
+  const silent = []
+  assert.equal(
+    await pushLedgerLines({ cwd: quietRoot, key: "7", post: (channel, p) => silent.push([channel, p]), notifyFile: join(quietDir, "notify.json") }),
+    0,
+    "非可动作 ∧ 零变化 ⇒ 零行",
+  )
+  assert.deepEqual(silent, [], "零行 ⇒ 零出站（不投空帧）")
+
+  assert.deepEqual([
+    await pushLedgerLines({ cwd: "", key: "7", post: () => {} }),
+    await pushLedgerLines({ cwd: root, key: "7" }),
+  ], [0, 0], "cwd 空 / `post` 缺 ⇒ 零动作（零抛）")
+})
+

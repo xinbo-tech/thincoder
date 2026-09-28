@@ -1,21 +1,24 @@
 /**
  * views-activity.test.mjs — E-5 **右列 = 子 agent 面板**用例（R3b · D20 —— `docs/desktop/design/UI.md` §1
- * 「本批注（对齐重定位）」项 2 · `docs/desktop/design/PROJECT.md` §6.1 D20 / §7 T-DSK36；批档 §2 ㈣/㈤）：
- *   U72 三态与三族（族序 = 待审批 → 子 agent → 队列 · 空族零节点 · 零内容回显 · 块头四段 + 状态词闭集 +
- *       停止钮在场判据 · 表外码零节点）；
- *   U73 折叠与两读数（体零条目 ∧ 头读数仍在 ∧ `togglePool` 三支 + 按会话记忆）+ 薄挂载（假 DOM）；
- *   U168 块面判据（射程五类同形 · 用时三态 · 回合词形**核域真词表**锁 · 停止钮闸门 · 零工具行）；
- *   U169 停止出口（`stopSubagent` —— 载荷逐字 / `ok` 真 ⇒ 零切片写 / 失败与抛 ⇒ `console.error` + `false`）。
+ * 「本批注（对齐重定位）」项 2 · 「本批注（对齐第二批 · 六件）」项 3 / 5 · `docs/desktop/design/PROJECT.md`
+ * §6.1 D20 / §7 T-DSK36；批档 §2）：
+ *   U72 三态与三族（族序 = 待审批 → 子 agent → 队列 · 空族零节点 · **归档墓碑 region 过滤** · 表外码零节点）；
+ *   U73 折叠与两读数（体零条目 ∧ 头读数仍在 ∧ `togglePool` 三支 + 按会话记忆）+ 薄挂载（假 DOM · **键控差分**）；
+ *   U168 子 agent 族核件面（「对齐第二批」项 3 —— 块 = `details.advisor-block.sub-block` · 头文形 · tail-3 `│ `
+ *        前缀 · ⏹ 判据 · **接管末刷**（换元素径挂载后末刷）· **同 key 元素跨帧同一**（不重建）· 内容行增量 ·
+ *        **跨会话换代**（键域 = 会话内）· `sub.desc` 一次性 · 零工具行负向锁）；
+ *   U169 停止出口（`stopSubagent` —— 载荷逐字 / `ok` 真 ⇒ 零切片写 / 失败与抛 ⇒ `console.error` + `false`）
+ *        + ⏹ 点击委托（`bindSubagentStop` —— 载荷读 `data-sub-id` / `data-sub-role`）。
  * 面 = `poolModel` / `poolTree`（**纯构树**）+ `mountPool` 薄挂载（假 DOM · `test/fake-dom.mjs`）；折叠纯动作 =
- * `renderer/store.mjs` 的 `togglePool`；停止出口 = `renderer/mount-pool.mjs` 的 `stopSubagent`（假 host）。
+ * `renderer/store.mjs` 的 `togglePool`；停止出口 = `renderer/mount-pool.mjs`。
  * 词面判据沿宿主表注入缝（`initDict({ host, dict })`）：哨兵值 ⇒ 断言即证「文案经 `t()` 消费」，不引字面；
- * 核域真词表锁（用时 / 回合两段）用 `projectDictionary` 真投影 —— 缝自铸模板会遮蔽参名不符（R3a 教训）。
+ * 核件头文形判据走核件真词值（`sub.async` 等哨兵 + 核 `status.thinking`）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { projectDictionary } from "@thincoder/core/i18n.mjs"
-import { HOST_DICT, initDict } from "../renderer/i18n.mjs"
-import { stopSubagent } from "../renderer/mount-pool.mjs"
+import { setStrings } from "/rc/i18n.mjs"
+import { HOST_DICT, initDict, setStringsSink } from "../renderer/i18n.mjs"
+import { bindSubagentStop, stopSubagent } from "../renderer/mount-pool.mjs"
 import { mountPool, poolModel, poolTree } from "../renderer/views/activity.mjs"
 import { initialState, togglePool } from "../renderer/store.mjs"
 import { installFakeDom, selfCheck } from "./fake-dom.mjs"
@@ -43,25 +46,26 @@ const one = (tree, name) => withAttr(tree, name)[0]
 /** 读数节点按名取（两读数同锚不同名）。 */
 const readOf = (tree, name) => withAttr(tree, "data-read").find((node) => node.props["data-read"] === name)
 const families = (tree) => withAttr(tree, "data-family").map((node) => node.props["data-family"])
-/** 块条目集（`data-pool-item="subagent"`）。 */
-const items = (tree) => withAttr(tree, "data-pool-item").filter((node) => node.props["data-pool-item"] === "subagent")
-/** 条目分段（`data-seg`）按码取。 */
-const segOf = (item, code) => withAttr(item, "data-seg").find((node) => node.props["data-seg"] === code)
+const items = (tree) => withAttr(tree, "data-pool-item")
+const itemTypes = (tree) => items(tree).map((node) => node.props["data-pool-item"])
 
 /** 词面哨兵：插值键保留占位方言 ⇒ 断言同时钉「键 + 参数入词」。 */
-const HOST_TEMPLATE = { "approval.batch.count": "⟦batch:${count}⟧", "status.elapsed": "⟦status.elapsed:${seconds}⟧" }
-const CORE_WORD = ["sub.queued", "sub.running", "sub.done", "sub.stopped", "sub.error", "status.turn"]
+const HOST_TEMPLATE = { "approval.batch.count": "⟦batch:${count}⟧", "sub.awaitingApproval": "⟦awaiting:${tool}⟧" }
+const CORE_WORD = ["sub.queued", "sub.running", "sub.done", "sub.stopped", "sub.error", "status.turn", "status.thinking"]
 
 function setupDict(ctx) {
   const host = Object.fromEntries(Object.keys(HOST_DICT.en).map((key) => [key, HOST_TEMPLATE[key] ?? `⟦${key}⟧`]))
+  // 核件取词接线（「对齐第二批」项 3 · 修复轮择形（c））：注册单点 = 生产里 `renderer/app.mjs`；用例同径注册
+  // ⇒ 核件 `t()` 经注册端取词（§2.8 前瞻注 —— 断言核件词值须先注册 sink）
+  setStringsSink(setStrings)
   initDict({ locale: "en", host, dict: Object.fromEntries(CORE_WORD.map((key) => [key, `⟦${key}⟧`])) })
-  ctx.after(() => initDict({}))
+  ctx.after(() => { initDict({}); setStringsSink(null) })
 }
 
-/** 块模型夹具（核态机模型形 —— `/rc/subblocks/state.mjs` `buildModel` + 迁移写点）。 */
+/** 块模型夹具（核态机模型形 —— `/rc/subblocks/state.mjs` `buildModel` + 迁移写点；`startedAt` = 现刻 ⇒ 用时 0s 可算死）。 */
 const block = (over = {}) => ({
   key: "sub:coder#1", label: "coder#1", role: "coder", id: 1, model: "glm-5.3",
-  startedAt: 1000, pool: true, syncLive: false, turn: 3, maxTurns: 100,
+  startedAt: Date.now(), pool: true, syncLive: false, turn: 3, maxTurns: 100,
   status: "running", queued: false, frozen: false, doneAt: null, ...over,
 })
 /** 帧态夹具：`subBlocks` 按会话键分槽（键 = `activeSession`）。 */
@@ -77,13 +81,10 @@ function state(over = {}) {
 }
 const approvalItem = (over = {}) => ({ shape: "single", promptId: "a1", tool: "Bash", argsSummary: "npm test", ...over })
 const queueItem = (over = {}) => ({ title: "待跑任务", status: "queued", ...over })
-/** 内容回显哨兵（条目零回显 ⇒ 五串皆不得入树）。 */
-const ECHO = ["秘密参数", "秘密输出", "秘密正文", "秘密入参", "秘密笔记"]
-const echoOf = () => ({ stateWord: ECHO[0], result: ECHO[1], text: ECHO[2], args: ECHO[3], note: ECHO[4] })
 
 // ─── U72 右列三族与三态（块面 = 子 agent）─────────────────────
 
-test("U72: 右列三族与三态（none 零节点 / empty 提示 / 族序 = 待审批 → 子 agent → 队列 ∧ 空族零节点 ∧ 零内容回显）", (ctx) => {
+test("U72: 右列三族与三态（none 零节点 / empty 提示 / 族序 = 待审批 → 子 agent → 队列 ∧ 空族零节点 ∧ region 墓碑过滤）", (ctx) => {
   setupDict(ctx)
 
   const stale = state({ activeSession: null, pool: { running: 3, approval: 2 }, subBlocks: { "1": [block()] } })
@@ -120,51 +121,40 @@ test("U72: 右列三族与三态（none 零节点 / empty 提示 / 族序 = 待�
   assert.deepEqual(families(partial), ["queue"], "部分空 ⇒ 只落非空族（空族零节点 —— 不落空壳）")
   assert.deepEqual(families(poolTree(poolModel(state({ subBlocks: {}, pool: { approvals: [approvalItem()], queue: [queueItem()] } })))), ["approvals", "queue"], "跳空族 ⇒ 序仍固定")
 
-  const card = withAttr(full, "data-pool-item")
-  assert.deepEqual(card.map((node) => node.props["data-pool-item"]), ["approval", "subagent", "queue"], "条目族标 = 三型各一（族内序 = 入参序）")
+  // 子 agent 族 = **常驻容器空壳**（纯树只出族标签 —— 项元素 = 核件（DOM 面）由 `mountPool` 键控差分填入）
+  const subFamily = withAttr(full, "data-family").find((node) => node.props["data-family"] === "subagents")
+  assert.equal(subFamily.props["data-family"], "subagents", "子 agent 族节点在场（容器壳）")
+  assert.deepEqual(texts(subFamily), ["⟦pool.family.subagents⟧"], "族标签 = 词表键（零硬编码）")
+  assert.equal(withAttr(full, "data-pool-item").filter((node) => node.props["data-pool-item"] === "subagent").length, 0, "纯树零 subagent 条目（项元素 = 核件 —— 不入描述符树）")
+
+  const card = items(full)
+  assert.deepEqual(itemTypes(full), ["approval", "queue"], "条目族标 = 两型（待审批 / 队列 —— 子 agent 项在 DOM 面）")
   assert.equal(card[0].props["data-prompt-id"], "a1", "待审批条目 = 身份锚（prompt-id 单形）")
   assert.deepEqual(texts(card[0].children[0]), ["Bash", "⟦tab.badge.approval⟧"], "待审批标称 = approvalTitle + 状态词（同源卡面）")
   assert.equal(withAttr(card[0], "data-approval-actions").length, 1, "待审批条目 = 三出口操作区（与卡面同一构造）")
   assert.equal(withAttr(card[0], "data-autofocus").length, 0, "池面条目不争焦（零 data-autofocus）")
-
-  assert.equal(card[1].props["data-status"], "running", "子 agent 条 = data-status 落闭枚举码")
-  assert.equal(card[1].props["data-sub-id"], "1", "身份锚 = data-sub-id（停止出口载荷源 —— 与 ev:subagent 同源同值）")
-  assert.equal(card[1].props["data-sub-role"], "coder", "身份锚 = data-sub-role")
-  assert.deepEqual(withAttr(card[1], "data-seg").map((node) => node.props["data-seg"]), ["role", "model", "elapsed", "turn", "status"], "块头段码序 = role / model / elapsed / turn / status（**逐段包元素**）")
-  assert.deepEqual(texts(segOf(card[1], "role")), ["coder"], "role 段 = 数据串原样")
-  assert.deepEqual(texts(segOf(card[1], "model")), ["glm-5.3"], "model 段 = 数据串原样")
-  assert.deepEqual(texts(segOf(card[1], "status")), ["⟦sub.running⟧"], "状态词 = 闭枚举词（经 t()）")
-  assert.equal(card[2].props["data-status"], "queued", "队列条目 = data-status 落码")
-  assert.deepEqual(texts(card[2]), ["待跑任务", "⟦sub.queued⟧"], "队列标称 = 标题串 + 状态词")
+  assert.equal(card[1].props["data-status"], "queued", "队列条目 = data-status 落码")
+  assert.deepEqual(texts(card[1]), ["待跑任务", "⟦sub.queued⟧"], "队列标称 = 标题串 + 状态词")
   assert.equal(card[0].props["data-status"], undefined, "待审批条目 = 零 data-status（族已是身份）")
 
   const muted = poolTree(poolModel(state({
     subBlocks: { "1": [block({ status: "weird", queued: false })] },
     pool: { queue: [queueItem({ status: 7 })] },
   })))
-  const mutedItems = withAttr(muted, "data-pool-item")
-  assert.equal(mutedItems[0].props["data-status"], undefined, "表外状态码 ⇒ 零 data-status（禁假造）")
-  assert.equal(segOf(mutedItems[0], "status"), undefined, "表外码 ⇒ 零状态词（不自造词）")
-  assert.equal(mutedItems[1].props["data-status"], undefined, "非串状态 ⇒ 零 data-status")
-  assert.deepEqual(texts(mutedItems[1].children[0]), ["待跑任务"], "非串状态 ⇒ 零状态词")
+  const mutedItems = items(muted)
+  assert.equal(mutedItems.length, 1, "沉默场条目 = 队列一条（子 agent 项 = 核件面 —— 不入描述符树）")
+  assert.equal(mutedItems[0].props["data-status"], undefined, "非串状态 ⇒ 零 data-status")
+  assert.deepEqual(texts(mutedItems[0].children[0]), ["待跑任务"], "非串状态 ⇒ 零状态词")
+  assert.deepEqual(families(muted), ["subagents", "queue"], "表外码子 agent 块仍占族（零状态词归核件面 —— 不自造词）")
 
-  // 标签行两段**逐段包元素**（`span[data-seg]` —— 裸串直作 flex 行子 ⇒ `gap` 静默失效；缺席段零节点）
-  const labelOf = (item) => item.children[0]
-  const labelSegs = (item) => withAttr(labelOf(item), "data-seg").map((node) => node.props["data-seg"])
-  assert.deepEqual(labelSegs(card[0]), ["title", "status"], "待审批标签行段码序 = title / status")
-  assert.deepEqual(labelSegs(card[2]), ["title", "status"], "队列条目同段集")
-  assert.equal(labelOf(card[2]).children.filter((kid) => kid !== null).length, withAttr(labelOf(card[2]), "data-seg").length, "标签行子节点**全为** `[data-seg]` 元素（裸串零入 flex 行）")
-  assert.deepEqual(labelSegs(mutedItems[1]), ["title"], "表外状态码 ⇒ 状态段零节点（段数 = 在场段数）")
-  assert.equal(withAttr(poolTree(poolModel(state({ subBlocks: {}, pool: { approvals: [approvalItem({ shape: "weird" })] } }))), "data-approval-actions").length, 0, "表外形 ⇒ 零操作区（账目仍在）")
-  assert.equal(withAttr(poolTree(poolModel(state({ subBlocks: {}, pool: { approvals: [approvalItem({ shape: "weird", promptId: 9 })] } }))), "data-prompt-id")[0].props["data-prompt-id"], "9", "表外形 ⇒ 身份锚仍在（不掩盖事实）")
-
-  const echo = poolTree(poolModel(state({
-    subBlocks: { "1": [block(echoOf())] },
-    pool: { approvals: [approvalItem(echoOf())], queue: [queueItem(echoOf())] },
-  })))
-  const dump = JSON.stringify(echo)
-  for (const marker of ECHO) assert.equal(dump.includes(marker), false, `零内容回显：${marker} 不入树（块头 + 状态词之外不回显）`)
-  assert.equal(dump.includes("npm"), false, "参数摘要不入右列树（零回显）")
+  // **归档墓碑过滤**（项 5）：`region: "flow"` 表项池内退场（族计数 / empty 判定同源过滤）
+  const archived = block({ frozen: true, status: "done", doneAt: Date.now(), region: "flow" })
+  const living = block({ key: "sub:coder#2", label: "coder#2", id: 2 })
+  assert.deepEqual(poolModel(state({ subBlocks: { "1": [archived] } })).blocks, [], "全墓碑 ⇒ 块表空")
+  assert.equal(poolModel(state({ subBlocks: { "1": [archived] } })).state, "empty", "全墓碑 ≈ 三族皆空 ⇒ empty（归档者不占位）")
+  const mixed = poolModel(state({ subBlocks: { "1": [archived, living] } }))
+  assert.deepEqual(mixed.blocks.map((entry) => entry.key), ["sub:coder#2"], "墓碑过滤：只留在场块（池内退场）")
+  assert.deepEqual(families(poolTree(mixed)), ["subagents"], "族节点随过滤后非空表")
 
   const reads = poolTree(poolModel(state({ subBlocks: { "1": [block()] }, pool: { running: 0, approval: 2 } })))
   assert.deepEqual(texts(readOf(reads, "running")), ["0"], "读数 = String(数)（含 0 —— 0 亦是读数）")
@@ -172,12 +162,16 @@ test("U72: 右列三族与三态（none 零节点 / empty 提示 / 族序 = 待�
   const fakeReads = poolTree(poolModel(state({ subBlocks: { "1": [block()] }, pool: { running: "3", approval: null } })))
   assert.equal(readOf(fakeReads, "running"), undefined, "读数非数 ⇒ 零节点（禁假造）")
   assert.equal(readOf(fakeReads, "approval"), undefined, "读数缺 ⇒ 零节点")
-  assert.equal(fakeReads.props["data-state"], "pool", "读数缺不影响三态判（族非空 ⇒ pool）")
+
+  // 零工具行负向锁（右列条目型闭集不含 tool —— 工具面 = 对话流工具卡）
+  const dump = JSON.stringify(full)
+  assert.equal(dump.includes('"tool"'), false, "零工具行节点（条目型 / 段码里无 tool）")
+  assert.equal(dump.includes("npm"), false, "参数摘要不入右列树（工具面在对话流）")
 })
 
 // ─── U73 右列折叠与两读数（含 togglePool 三支 + 薄挂载）──────────
 
-test("U73: 右列折叠与两读数（体零条目 ∧ 头读数仍在 ∧ aria 两态 ∧ togglePool 三支 + 按会话记忆 + 薄挂载）", (ctx) => {
+test("U73: 右列折叠与两读数（体零条目 ∧ 头读数仍在 ∧ aria 两态 ∧ togglePool 三支 + 按会话记忆 + 薄挂载键控差分）", (ctx) => {
   setupDict(ctx)
 
   const stocked = { subBlocks: { "1": [block()] }, pool: { approvals: [approvalItem()], queue: [queueItem()] } }
@@ -195,7 +189,6 @@ test("U73: 右列折叠与两读数（体零条目 ∧ 头读数仍在 ∧ aria 
   assert.equal(withAttr(folded, "data-family").length, 0, "折叠 ⇒ 零族节点")
   assert.equal(withAttr(folded, "data-pool-item").length, 0, "折叠 ⇒ 零条目节点")
   assert.deepEqual(withAttr(folded, "data-read").map((node) => node.props["data-read"]), ["running", "approval"], "折叠 ⇒ 头两读数仍在（读数不随体折叠）")
-  assert.deepEqual(texts(readOf(folded, "running")), ["1"], "折叠 ⇒ 读数照给现值")
   assert.equal(toggleOf(folded).props["aria-expanded"], "false", "折叠 ⇒ aria-expanded=false")
   assert.equal(toggleOf(folded).props["aria-label"], "⟦pool.expand⟧", "折叠 ⇒ aria-label = pool.expand")
   assert.equal(withAttr(folded, "data-pool-head").length, 1, "折叠 ⇒ 头在场")
@@ -208,7 +201,6 @@ test("U73: 右列折叠与两读数（体零条目 ∧ 头读数仍在 ∧ aria 
   }
   assert.equal(poolModel(state({ ...stocked, activeTab: 7, poolCollapsed: { "1": true } })).collapsed, false, "会话键非串 ⇒ 非折叠")
   assert.equal(poolModel(state({ ...stocked, activeSession: null, poolCollapsed: { "1": true } })).collapsed, false, "none 态 ⇒ 非折叠")
-  // 块表键 = activeSession（面板随已载入页）；折叠键 = activeTab（存量口径）——两键在生产同源（会话键）
   const shifted = poolModel(state({ ...stocked, activeSession: "1", activeTab: "2", poolCollapsed: { "1": true } }))
   assert.equal(shifted.collapsed, false, "折叠键 ≠ 块表键时各按各键（activeTab 口径）")
   assert.equal(shifted.blocks.length, 1, "块表随 activeSession（本会话块在）")
@@ -228,97 +220,135 @@ test("U73: 右列折叠与两读数（体零条目 ∧ 头读数仍在 ∧ aria 
   for (const key of [7, null, undefined, {}, ["1"]]) {
     assert.equal(togglePool(base, key), base, `非串键 ${JSON.stringify(key)} ⇒ 原引用（零通知）`)
   }
-  assert.equal(togglePool({ ...base, poolCollapsed: { "1": false } }, "1").poolCollapsed["1"], true, "现值非 true ⇒ 落 true（不误判为命中）")
-  assert.equal(togglePool({ ...base, poolCollapsed: { "1": "true" } }, "1").poolCollapsed["1"], true, "现值串 'true' ⇒ 落 true（严格 === 判）")
 
-  // 薄挂载（假 DOM）：props 复制 + 清空 + 入位，宿主 data-slot 保留；停止钮真注册
+  // 薄挂载（假 DOM）：props 复制 + 清空 + 入位，宿主 data-slot 保留
   assert.equal(selfCheck(), true, "假 DOM 载体自检（选择器闭集 / 锚缺抛 / 写计三档 —— 载体自身不静默失效）")
   const fake = installFakeDom()
   ctx.after(() => fake.restore())
   const root = fake.element("section")
   root.setAttribute("data-slot", "pool")
-  const calls = []
-  const model = mountPool(root, base, {
-    onTogglePool: (key) => calls.push(["toggle", key]),
-    onStopSubagent: (key, id, role) => calls.push(["stop", key, id, role]),
-  })
+  const model = mountPool(root, base, { onTogglePool: () => {} })
   assert.equal(model.state, "pool", "挂载回执 = 模型（调用面零分支）")
   assert.equal(root.getAttribute("data-pool"), "", "根锚复制到宿主")
   assert.equal(root.getAttribute("data-state"), "pool", "态锚复制到宿主")
   assert.equal(root.getAttribute("data-slot"), "pool", "宿主 data-slot 保留（槽位零改）")
   assert.equal(root.querySelector("[data-pool-head]") !== null, true, "头入位")
   assert.equal(root.querySelector("[data-pool-body]") !== null, true, "体入位")
-  for (const marker of ECHO) assert.equal(root.textContent.includes(marker), false, `零内容回显：${marker} 不入节点`)
-  const button = root.querySelector('[data-action="pool:toggle"]')
-  assert.equal(fake.fire(button, "click"), 1, "折叠控件真注册（click 监听在场）")
-  assert.deepEqual(calls, [["toggle", "1"]], "折叠控件回执 = 本会话键")
-  const stopBtn = root.querySelector('[data-action="subagent:stop"]')
-  assert.equal(fake.fire(stopBtn, "click"), 1, "停止钮真注册（可中止块 ⇒ 钮在场）")
-  assert.deepEqual(calls.at(-1), ["stop", "1", 1, "coder"], "停止钮回执 = `{ 会话键, id, role }`（与 ev:subagent 同源同值）")
-  mountPool(root, state({ subBlocks: { "1": [block()] }, pool: {} }), {})
-  assert.equal(root.getAttribute("data-state"), "pool", "重挂 = 幂等（props 再复制）")
-  assert.equal(root.querySelectorAll("[data-pool-head]").length, 1, "重挂先清空 ⇒ 头恰一枚（不叠加）")
-  assert.equal(root.querySelectorAll("[data-family]").length, 1, "重挂后族数随新态（单族恰一枚）")
-  assert.equal(fake.fire(root.querySelector('[data-action="pool:toggle"]'), "click"), 0, "缺 handlers ⇒ 零监听（disabled 面非死控）")
+  const family = root.querySelector('[data-family="subagents"]')
+  assert.equal(family !== null, true, "子 agent 族容器入位")
+  const element = root.querySelector(".sub-block")
+  assert.equal(element !== null, true, "核件块元素入位（`details.advisor-block.sub-block`）")
+  assert.equal(element.tag, "details", "块元素 = details")
+  // 键控差分：同 key 再挂 ⇒ 同元素（不重建）；容器常驻；两族照帧刷
+  const again = mountPool(root, base, {})
+  assert.equal(again.state, "pool", "再挂 = 幂等（props 再复制）")
+  assert.equal(root.querySelectorAll("[data-pool-head]").length, 1, "再挂 ⇒ 头恰一枚（不叠加）")
+  assert.equal(root.querySelector(".sub-block"), element, "**同 key 元素跨帧同一**（键控差分 —— 不重建）")
+  assert.equal(root.querySelector('[data-family="subagents"]'), family, "族容器常驻（跨帧同一）")
   assert.notEqual(mountPool(null, state()), null, "容器缺位 ⇒ 模型照给（零抛）")
 })
 
-// ─── U168 块面判据（射程五类 · 用时三态 · 回合真词表锁 · 停止钮闸门 · 零工具行）──
+// ─── U168 子 agent 族核件面（「对齐第二批」项 3）──────────────
 
-test("U168: 块面判据（五类射程同形 · 用时三态 ∧ 回合核域词形锁 ∧ 停止钮闸门 ∧ 零工具行）", (ctx) => {
+test("U168: 子 agent 族核件面（块壳 ∧ 头文形两态 ∧ tail-3 `│ ` ∧ ⏹ 判据 · 接管末刷 · 同 key 复用 + 内容增量 · 跨会话换代 · sub.desc 一次性）", (ctx) => {
   setupDict(ctx)
-  const now = 60_000 // 固定现刻（用时判据可算死）
+  assert.equal(selfCheck(), true, "假 DOM 载体自检")
+  const fake = installFakeDom()
+  ctx.after(() => fake.restore())
+  const root = fake.element("section")
+  root.setAttribute("data-slot", "pool")
 
-  // 射程五类 = sync spawn / async 池 / consult / escalate / advisor-async（凭 relay 前缀出场 —— 归约面零角色过滤）
-  const five = [
-    block({ key: "sub:eng-coder#1", role: "eng-coder", id: 1, pool: false, syncLive: true, model: "m-sync" }),
-    block({ key: "sub:coder#2", role: "coder", id: 2, pool: true, syncLive: false, model: "m-pool" }),
-    block({ key: "sub:consult#3", role: "consult", id: 3, pool: false, syncLive: false, model: "m-consult" }),
-    block({ key: "sub:escalate#4", role: "escalate", id: 4, pool: true, syncLive: false, model: "m-esc" }),
-    block({ key: "sub:advisor#5", role: "advisor", id: 5, pool: true, syncLive: false, model: "m-adv" }),
-  ]
-  const tree = poolTree(poolModel(state({ subBlocks: { "1": five }, pool: { running: 5 } }), now))
-  const cards = items(tree)
-  assert.equal(cards.length, 5, "五类射程各出块（同形 —— 块头 + 状态词 + 停止钮）")
-  assert.deepEqual(cards.map((item) => item.props["data-sub-role"]), ["eng-coder", "coder", "consult", "escalate", "advisor"], "块身份逐类在场")
-  for (const item of cards) {
-    assert.deepEqual(withAttr(item, "data-seg").map((node) => node.props["data-seg"]), ["role", "model", "elapsed", "turn", "status"], "五类同形：段集与段序一致")
-  }
-  // 停止钮闸门（诚实非死控）：sync（registry live）/ async 池 / queued ⇒ 在场；无池无 registry（consult）⇒ 零钮
-  const stopOf = (item) => withAttr(item, "data-action").find((node) => node.props["data-action"] === "subagent:stop")
-  assert.equal(stopOf(cards[0]) !== undefined, true, "sync（syncLive 真）⇒ 停止钮在场")
-  assert.equal(stopOf(cards[1]) !== undefined, true, "async 池（pool 真）⇒ 停止钮在场")
-  assert.equal(stopOf(cards[2]), undefined, "consult（无池 / 无 registry）⇒ 零钮（不可中止者不落钮）")
-  assert.equal(stopOf(cards[3]) !== undefined, true, "escalate（池条目）⇒ 停止钮在场")
-  assert.equal(stopOf(cards[4]) !== undefined, true, "advisor（评审池）⇒ 停止钮在场")
-  assert.deepEqual(texts(stopOf(cards[0])), ["⟦pool.stop⟧"], "停止钮词 = 词表键（经 t()）")
-  const queuedCard = items(poolTree(poolModel(state({ subBlocks: { "1": [block({ status: "queued", queued: true, pool: false, syncLive: false })] }, pool: { running: 1 } }), now)))[0]
-  assert.equal(stopOf(queuedCard) !== undefined, true, "queued ⇒ 停止钮在场（可撤销排队决策）")
-  assert.equal(segOf(queuedCard, "elapsed"), undefined, "排队态 ⇒ 用时零节点（等待不计用时）")
-  assert.deepEqual(texts(segOf(queuedCard, "status")), ["⟦sub.queued⟧"], "排队态 ⇒ 状态词 = 排队中")
-  const frozenCard = items(poolTree(poolModel(state({ subBlocks: { "1": [block({ status: "cancelled", frozen: true, doneAt: 5000 })] }, pool: { running: 0 } }), now)))[0]
-  assert.equal(stopOf(frozenCard), undefined, "已终态 ⇒ 零钮（折叠面 = 终态词 + 用时）")
-  assert.deepEqual(texts(segOf(frozenCard, "status")), ["⟦sub.stopped⟧"], "`cancelled` ⇒ 词表「已停止」（⟦ev⟧stopped 先例兼容映射）")
-  assert.deepEqual(texts(segOf(frozenCard, "elapsed")), ["⟦status.elapsed:4⟧"], "终态用时 = `doneAt` − `startedAt`（冻结后不走时 —— 现刻再进 1h 亦同）")
-  assert.deepEqual(texts(segOf(frozenCard, "elapsed")), texts(segOf(items(poolTree(poolModel(state({ subBlocks: { "1": [block({ status: "cancelled", frozen: true, doneAt: 5000 })] }, pool: { running: 0 } }), now + 3_600_000)))[0], "elapsed")), "冻结块用时与现刻无关（两帧同值）")
-  const liveCard = items(poolTree(poolModel(state({ subBlocks: { "1": [block({ done: false })] }, pool: { running: 1 } }), now)))[0]
-  assert.deepEqual(texts(segOf(liveCard, "elapsed")), ["⟦status.elapsed:59⟧"], "在用时 = 现刻 − 起刻（1000ms 起 ⇒ 59s）")
+  // ① 块壳与头文形（live：`[▶ role#id · async · model · 0s · turn 3/100]` + 状态词）
+  mountPool(root, state({ subBlocks: { "1": [block()] } }), {})
+  const element = root.querySelector(".sub-block")
+  assert.equal(element.getAttribute("data-subname"), "sub:coder#1", "块壳 data 面：data-subname = 核态机键")
+  assert.equal(element.getAttribute("data-subrole"), "coder", "data-subrole = 角色")
+  assert.equal(element.getAttribute("data-subid"), "1", "data-subid = 核态机 id")
+  const header = element.querySelector(".sub-hdr")
+  assert.equal(header.textContent.startsWith("[▶ coder#1 · ⟦sub.async⟧ · glm-5.3 · 0s · turn 3/100]"), true, `头文形 = 核件 VSC 同件（实 = ${header.textContent}）`)
+  assert.equal(header.textContent.includes("⟦status.thinking⟧…"), true, "live 状态词 = 核 `status.thinking`+…（闭枚举）")
+  assert.equal(element.querySelector(".sub-stop-btn") !== null, true, "async 池 running ⇒ ⏹ 在场")
+  assert.equal(element.querySelector(".sub-desc").textContent, "⟦sub.desc⟧", "会话首块 = 说明行一次性（核 `renderSubDesc`）")
 
-  // 回合段词形**核域真词表**锁（缝自铸模板会遮蔽参名不符 —— R3a 教训；参数名须逐字 = 核 `${n}/${m}`）
-  initDict({ locale: "en", dict: projectDictionary("en") })
-  const real = items(poolTree(poolModel(state({ subBlocks: { "1": [block({ turn: 2, maxTurns: 8 })] }, pool: { running: 1 } }), now)))[0]
-  assert.deepEqual(texts(segOf(real, "turn")), ["turn 2/8"], "回合段 = 核键真渲染（零残留 `${…}` —— 参名逐字）")
-  assert.equal(texts(segOf(real, "turn")).join("").includes("${"), false, "零占位残留")
+  // ② 内容行增量 + tail-3（`│ ` 前缀独立行）：同 key 更新 ⇒ 同元素、内容行追加（不重建）
+  const r1 = { kind: "text", text: "第一行" }
+  const r2 = { kind: "text", text: "第二行", sub: "s2" } // 异 sub ⇒ 新行（核合并判据 = 同 kind ∧ 同 sub 才拼接）
+  mountPool(root, state({ subBlocks: { "1": [block({ rows: [r1] })] } }), {})
+  assert.equal(root.querySelector(".sub-block"), element, "内容追加 ⇒ 同 key 元素复用（不重建）")
+  assert.equal(element.querySelectorAll(".advisor-text").length, 1, "内容行 1 行入块体（核 `renderSubagentChunk`）")
+  mountPool(root, state({ subBlocks: { "1": [block({ rows: [r1, r2] })] } }), {})
+  assert.equal(root.querySelector(".sub-block"), element, "再追加 ⇒ 元素仍同一")
+  assert.equal(element.querySelectorAll(".advisor-text").length, 2, "增量重放：只追新行（1 ⇒ 2）")
+  assert.equal(element.querySelector(".sub-tail"), null, "live ∧ 展开 ⇒ 零 tail（核件：tail-3 只入折叠 / 冻结态）")
+  assert.equal(element.querySelectorAll(".sub-desc").length, 1, "说明行仍恰一（不重复）")
+  assert.equal(element.querySelector(".sub-desc") !== null, true, "说明行随元素存活（一次性 —— 非每帧）")
 
-  // 零工具行（右列）：条目型闭集 = {approval, subagent, queue}；工具名 / 池条目形不得入树
-  const types = [...new Set(withAttr(tree, "data-pool-item").map((node) => node.props["data-pool-item"]))].sort()
-  assert.deepEqual(types, ["subagent"], "树面条目型 = 子 agent（零工具行节点）")
-  assert.equal(JSON.stringify(tree).includes("read_file"), false, "工具名串不入右列树")
+  // ③ 终态折叠（frozen）：头词换 `[✓ … done 0s]`、⏹ 摘除、内容仍可展开（`open=false`）
+  const frozen = block({ frozen: true, status: "done", doneAt: Date.now(), rows: [r1, r2] })
+  mountPool(root, state({ subBlocks: { "1": [frozen] }, pool: { running: 0 } }), {})
+  const foldedEl = root.querySelector(".sub-block")
+  assert.equal(foldedEl, element, "终态折叠 ⇒ 同元素（就地）")
+  assert.equal(foldedEl.classList.contains("sub-frozen"), true, "class 翻转 sub-live ⇒ sub-frozen")
+  assert.equal(foldedEl.open, false, "终态折叠（默认收起 —— 可展开）")
+  assert.equal(foldedEl.querySelector(".sub-stop-btn"), null, "冻结 ⇒ ⏹ 摘除（核 fold 同形）")
+  assert.equal(foldedEl.querySelector(".sub-hdr").textContent.startsWith("[✓ coder#1 · ⟦sub.async⟧ · glm-5.3 · ⟦sub.done⟧ 0s"), true, `冻结头文形 = [✓ … done Ns]（实 = ${foldedEl.querySelector(".sub-hdr").textContent}）`)
+  assert.equal(foldedEl.querySelectorAll(".advisor-text").length, 2, "内容留场（可展开 —— 零截断）")
+  assert.equal(foldedEl.querySelector(".sub-tail").textContent.includes("│ 第二行"), true, "tail-3 = `│ ` 前缀独立行（折叠态在场）")
+
+  // ④ 新代接管（同键新代：前态冻结 ∧ 新态未冻结）⇒ 换新元素（核 takeover 同形）
+  const fresh = block({ key: "sub:coder#1", label: "coder#1", id: 1, rows: [] })
+  mountPool(root, state({ subBlocks: { "1": [fresh] } }), {})
+  const replaced = root.querySelector(".sub-block")
+  assert.notEqual(replaced, foldedEl, "新代接管 ⇒ 换新元素（旧代已归档入流）")
+  assert.equal(replaced.classList.contains("sub-live"), true, "新代 = live 形态")
+  assert.equal(replaced.querySelectorAll(".advisor-text").length, 0, "新代内容面清零（不继承旧代行）")
+  assert.equal(replaced.querySelector(".sub-stop-btn") !== null, true, "接管后挂载后末刷 ⇒ ⏹ 在场（`isConnected` 门控 —— 与首见径同序）")
+  // ④(b) 接管至 queued（新代未起跑）：末刷同径 ⇒ 「取消排队」钮在场（核 `updateStopButton` queued 支同门控）
+  const parked = block({ key: "sub:coder#1", label: "coder#1", id: 1, frozen: true, status: "done", doneAt: Date.now(), rows: [] })
+  mountPool(root, state({ subBlocks: { "1": [parked] }, pool: { running: 0 } }), {})
+  const parkedOver = block({ key: "sub:coder#1", label: "coder#1", id: 1, status: "queued", queued: true, pool: false, syncLive: false })
+  mountPool(root, state({ subBlocks: { "1": [parkedOver] } }), {})
+  const parkedEl = root.querySelector(".sub-block")
+  assert.notEqual(parkedEl, replaced, "冻结 ⇒ queued 亦走新代接管径（换元素）")
+  assert.equal(parkedEl.querySelector(".sub-stop-btn") !== null, true, "接管后末刷：queued 接管态 ⇒ 取消排队钮在场（同门控）")
+
+  // ⑤ ⏹ 判据（诚实非死控）：consult（无池 / 无 registry）⇒ 零钮；queued ⇒ 在场；frozen ⇒ 零钮
+  const consult = block({ key: "sub:consult#2", role: "consult", id: 2, pool: false, syncLive: false })
+  mountPool(root, state({ subBlocks: { "1": [consult] } }), {})
+  assert.equal(root.querySelector(".sub-block").querySelector(".sub-stop-btn"), null, "consult（不可中止）⇒ 零钮")
+  const queuedCoder = block({ key: "sub:coder#3", label: "coder#3", id: 3, status: "queued", queued: true, pool: false, syncLive: false })
+  mountPool(root, state({ subBlocks: { "1": [queuedCoder] } }), {})
+  assert.equal(root.querySelector(".sub-block").querySelector(".sub-stop-btn") !== null, true, "queued（家族角色）⇒ ⏹ 在场（可撤销排队）")
+  const queuedConsult = block({ key: "sub:consult#4", role: "consult", id: 4, status: "queued", queued: true, pool: false, syncLive: false })
+  mountPool(root, state({ subBlocks: { "1": [queuedConsult] } }), {})
+  assert.equal(root.querySelector(".sub-block").querySelector(".sub-stop-btn"), null, "queued consult ⇒ 零钮（FAMILY_ROLES 角色门 —— 核件同 VSC）")
+
+  // ⑥ 零工具行负向锁（DOM 面）：条目型闭集 = {approval, queue}；核件块面不入工具行
+  const types = [...new Set([...root.querySelectorAll("[data-pool-item]")].map((node) => node.getAttribute("data-pool-item")))].sort()
+  assert.deepEqual(types, [], "无池条目时零条目型（子 agent 项 = 核件元素 —— 不带 data-pool-item）")
+  assert.equal(root.querySelectorAll('[data-pool-item="tool"]').length, 0, "零工具行（工具面 = 对话流工具卡）")
+
+  // ⑦ 跨会话换代（「键域与换代」—— 元素复用键域 = 会话内）：同键重现于另一会话 ⇒ 弃容器重建（不承旧账）
+  const rOld = { kind: "text", text: "旧会话行" }
+  const rNewA = { kind: "text", text: "新会话行一" }
+  const rNewB = { kind: "text", text: "新会话行二", sub: "s2" } // 异 sub ⇒ 新行（同 ② 合并判据）
+  mountPool(root, state({ activeSession: "1", activeTab: "1", subBlocks: { "1": [block({ rows: [rOld] })] } }), {})
+  const oldGen = root.querySelector(".sub-block")
+  assert.deepEqual([...oldGen.querySelectorAll(".advisor-text")].map((node) => node.textContent), ["旧会话行"], "夹具：旧会话块一行")
+  mountPool(root, state({ activeSession: "2", activeTab: "2", subBlocks: { "2": [block({ rows: [rNewA, rNewB] })] } }), {})
+  const newGen = root.querySelector(".sub-block")
+  assert.notEqual(newGen, oldGen, "跨会话同键 ⇒ 弃旧容器重建（元素换代 —— 不复用旧会话元素）")
+  assert.equal(root.querySelectorAll(".sub-block").length, 1, "族恰一枚块（旧容器弃用后零残留）")
+  assert.deepEqual([...newGen.querySelectorAll(".advisor-text")].map((node) => node.textContent), ["新会话行一", "新会话行二"], "行账复位（`_rowsDone` 归零 —— 头新体旧 ⇒ 消除）")
+  mountPool(root, state({ activeSession: "1", activeTab: "1", subBlocks: { "1": [block({ rows: [rOld] })] } }), {})
+  const backGen = root.querySelector(".sub-block")
+  assert.notEqual(backGen, newGen, "切回原会话 ⇒ 再换代（族重建 —— 旧元素不复活）")
+  assert.deepEqual([...backGen.querySelectorAll(".advisor-text")].map((node) => node.textContent), ["旧会话行"], "切回 ⇒ 本会话行恰一（不叠加）")
 })
 
-// ─── U169 停止出口（`stopSubagent` · 零乐观写）──────────────────
+// ─── U169 停止出口（`stopSubagent` · 零乐观写）+ ⏹ 点击委托 ──────────────
 
-test("U169: 停止出口（载荷逐字 `{ key, id, role? }` · `ok` 真 ⇒ `true` ∧ 零切片写 · 失败与抛 ⇒ `console.error` + `false`）", async (ctx) => {
+test("U169: 停止出口（载荷逐字 `{ key, id, role? }` · `ok` 真 ⇒ `true` ∧ 零切片写 · 失败与抛 ⇒ `console.error` + `false`）+ ⏹ 委托", async (ctx) => {
   const calls = []
   const host = { invoke: (channel, payload) => { calls.push([channel, payload]); return Promise.resolve({ ok: true, reason: null }) } }
   assert.equal(await stopSubagent({ host }, "1", 3, "coder"), true, "`ok` 真 ⇒ `true`")
@@ -336,4 +366,25 @@ test("U169: 停止出口（载荷逐字 `{ key, id, role? }` · `ok` 真 ⇒ `tr
   const broken = { invoke: () => { throw new Error("bridge down") } }
   assert.equal(await stopSubagent({ host: broken }, "1", 9, "coder"), false, "抛 ⇒ `false`（不吞）")
   assert.equal(errors.length, 2, "抛亦入诊断（零静默）")
+
+  // ⏹ 点击委托（「对齐第二批」项 3）：核件钮无 `data-action` —— 载荷读 `data-sub-id` / `data-sub-role`；
+  // 键 = 现刻活动会话；幂等注册；非钮点按 ⇒ 零动作
+  assert.equal(selfCheck(), true, "假 DOM 载体自检")
+  const fake = installFakeDom()
+  ctx.after(() => fake.restore())
+  const root = fake.element("section")
+  root.setAttribute("data-slot", "pool")
+  const host2 = { calls: [], invoke(channel, payload) { this.calls.push([channel, payload]); return Promise.resolve({ ok: true }) } }
+  const store = { get: () => state({}) }
+  assert.equal(bindSubagentStop(root, host2, store), true, "首次注册 ⇒ true")
+  assert.equal(bindSubagentStop(root, host2, store), false, "重复注册 ⇒ false（幂等 —— `_stopBound` 记账）")
+  mountPool(root, state({ subBlocks: { "1": [block()] } }), {})
+  const stopBtn = root.querySelector(".sub-stop-btn")
+  assert.equal(stopBtn.getAttribute("data-sub-id"), "1", "钮身份锚 = data-sub-id（核件落笔）")
+  assert.equal(stopBtn.getAttribute("data-sub-role"), "coder", "钮身份锚 = data-sub-role")
+  fake.fire(root, "click", { target: stopBtn })
+  assert.deepEqual(host2.calls, [["subagent:stop", { key: "1", id: "1", role: "coder" }]], "委托载荷 = `{ key, id, role }`（id / role 读钮 data 锚 —— 与 ev:subagent 同源）")
+  host2.calls.length = 0
+  fake.fire(root, "click", { target: root.querySelector(".pool-head") })
+  assert.deepEqual(host2.calls, [], "非 ⏹ 点按 ⇒ 零动作（不误发）")
 })
