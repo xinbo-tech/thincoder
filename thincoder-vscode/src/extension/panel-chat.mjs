@@ -92,7 +92,7 @@ async function runPanelChatImpl(panel, opts = {}) {
   // 之前）。一切回合路径（user / auto / digest / 挂起内回合）经此 ⇒ 不建 agent（manifest 建档
   // 钩子 `src/agent/setup.mjs` 不可达 = 零 manifest I/O）。结构锁 = `test/workspace-guard.test.mjs` 用例 4。
   if (blockOnNoWorkspace(panel)) return
-  let { text, modelOverride, reasoning, providerName, images, autoTurn = false, upstreamTurn = false, susp = null, skipSession = false } = opts
+  let { text, modelOverride, reasoning, providerName, images, autoTurn = false, upstreamTurn = false, timerTurn = false, susp = null, skipSession = false } = opts
   if (!panel._panel) { vscode.window.showErrorMessage("_chat: panel is null"); return }
 
   // C1（SESSION-FLOW-C F-C1b——abort 启动闩——修 H-C）：回合起点（任何 await 之前）清闩 +
@@ -247,7 +247,7 @@ async function runPanelChatImpl(panel, opts = {}) {
   const tLog = opts._logOutcome ?? {}
   tLog.started = true
   logEvent("turn:start", { kind: autoTurn ? "auto" : "user" })
-  await runTurnLoop(panel, { text, cwd, p, callbacks, images, history, fullHistory, autoTurn, upstreamTurn, susp, turnSlot, tLog, askInPanel, slotStamp })
+  await runTurnLoop(panel, { text, cwd, p, callbacks, images, history, fullHistory, autoTurn, upstreamTurn, susp, timerTurn, turnSlot, tLog, askInPanel, slotStamp })
   } finally {
     // 收尾段（迁出至 panel-turn-stages.mjs——捕获变量参数化；纪律 = §12.2.1 第 4 步附加纪律）。
     await finalizeTurn(panel, { history, fullHistory, slotStamp, turnSlot, susp, skipSession })

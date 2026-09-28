@@ -74,6 +74,10 @@ export const S = {
   _taskProgress: null,
   _lastUsage: null,
   _lastCtxPct: null,
+  // timer-wake 阶段 2（协议 §3.2 行 18 · §6.30.11 VSC 可见面）：`usage` 载荷 `timers { count, expired }`
+  // 镜像两计数槽（读面 = status-bar `⏰N` 段）；缺省 / 零在途 ⇒ 段零节点（禁假造——旧 host 无字段同判）。
+  _timerCount: 0,
+  _timerExpired: 0,
   _planActive: false,
   _goalInfo: null,
   // Subagent/consultant activity-stream blocks (ACTIVITY-REWRITE-SIMPLE——簿记 map 删

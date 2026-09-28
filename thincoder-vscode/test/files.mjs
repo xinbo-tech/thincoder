@@ -144,5 +144,7 @@ export default [
   "test/render-core-relay-map.test.mjs", // relay 映射差分锁（C2 · §7）：核单源全表逐行（`⟦ev⟧stopped` ⇒ `cancelled` 逐字）+ 状态值闭集负向（零 stopped/error）+ 跨包对拍（扩展侧产者 ∥ 核单源逐 token 同产物——R2 交接项）+ 前缀文法零依赖副本对拍权威——RM-1…RM-4
   // 账本可靠批（2026-09-28 · `docs/batches/2026-09-28-ledger-reliability.md` §2 / §2.9 · 设计 `docs/core/design/SESSION.md` §6.25 判据句 4）：F-L4 端面可见信号（VSC 半）
   "test/session-ledger-notice.test.mjs", // L4-8 载荷面（`sessions` 增字段 `ledger`——异常才携；判据单源 = 核 `ledgerHealth(cwd)`）+ 注记面（下拉首行警示注记：非可点 / 缺席零节点 / 异常清零历史态）+ L4-4 计数占位（`—msgs`——禁裸 null）+ 文案键两语逐字（§6.3）
+  // timer-wake 阶段 2 批（2026-09-28 · `docs/batches/2026-09-28-timer-wake-phase2.md` §2 · 机制单源 = 核档 §6.30.10–§6.30.15 · VSC 块 = §6.30.11）：VSC 端面——空闲 deadline 闩 / 窗内第三兑现态 / 域文本旗标三跳 / 可见面载荷 `usage.timers` / 开关关（T-TW23–T-TW27；T-TW22 宿主 = `agent-lifecycle-singleton.test.mjs` 原址改例）
+  "test/timer-wake.test.mjs",
 
 ]

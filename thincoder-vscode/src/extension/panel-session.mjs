@@ -122,6 +122,9 @@ export function loadSession(panel) {
     // 引导（槽绑定顺延 resolve→webviewReady——正常 UI 流 view 打开时无活回合；忙态冷启
     // 仅 dev reload/webview 崩溃重载可达——销毁安全面不变）。
     panel._agent = null
+    // §6.30.11 VSC 空闲面撤闩（切槽销毁点 = 六路汇合处）：旧会话的闩随 agent 一并停（持旧 agent
+    // 的闩已失效——fire 零动作；disarm 避免悬持一次性 timer）；新会话经回合尾武装点重同步。
+    panel._timerWatch?.disarm()
     // 心跳源新鲜度（D-W24——2026-09-19）：会话切换 / 新建点置空 `_liveLines`（newSession /
     // switchSession / deleteSession / onProjectChanged / openSessionContent 五路汇合于本函数）
     // ⇒ 心跳 / 再断言回落 `panel._susp?.lines`，不把旧会话池块每 2 s 投进新面板。

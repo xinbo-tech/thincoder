@@ -2,8 +2,9 @@
  * agent-lifecycle-singleton.test.mjs — agent 生命周期对齐 CLI（2026-09-08——
  * 面板会话级顶层 agent 单例）纯函数单测（对标 eng-settlement.test 模式——快层可测）：
  *  - buildTopLevelAgent 字段默认（A/C/B 归类起点——loop/tools 读面）；
- *  - resetRunState 复位清单 A：回合级计数器/预算/守卫回合边界清零（AC6——不跨回合
- *    累计），C 类（_tasks/_goal/_engDesignTokens/config engineering）保留；
+ *  - resetRunState 复位清单 A（**`_pendingTimers` 除外**——跨 run 存活 = 规范语义 · T-TW22）：
+ *    回合级计数器/预算/守卫回合边界清零（AC6——不跨回合累计），C 类（_tasks/_goal/
+ *    _engDesignTokens/config engineering）保留；
  *  - reconcileEngDesignTokens C：Map 永不复位清空（内存未结算项保留——双载体漂移
  *    根因消除）+ 槽权威合入（TTL 过滤）+ legacy 镜像一次性迁移；
  *  - applySlotSessionState 槽↔hydrate 映射：engineering/advisor.guard/planMode/
@@ -120,7 +121,8 @@ test("resetRunState: A-class budgets/flags cleared at the run boundary, C-class 
   a._verifyPassed = false
   a._verifyRetries = 2
   a._honestReminderInjected = true
-  a._pendingTimers = [{ id: 1, expiresAt: Date.now(), message: "t" }]
+  const carryTimer = { id: 1, expiresAt: Date.now() + 60_000, message: "t" } // T-TW22：§6.30.11 端差消解——不再属 A 类
+  a._pendingTimers = [carryTimer]
   a._lastPromptTokens = 12345
   a._usageAtLen = 9
   a._compressFailures = 1
@@ -144,7 +146,6 @@ test("resetRunState: A-class budgets/flags cleared at the run boundary, C-class 
   assert.equal(a._verifyPassed, undefined)
   assert.equal(a._verifyRetries, 0)
   assert.equal(a._honestReminderInjected, false)
-  assert.deepEqual(a._pendingTimers, [])
   assert.equal(a._lastPromptTokens, null)
   assert.equal(a._usageAtLen, null)
   assert.equal(a._compressFailures, 0)
@@ -162,6 +163,7 @@ test("resetRunState: A-class budgets/flags cleared at the run boundary, C-class 
   assert.equal(a._lastEngState, false) // eng 进出重通知语义——每 runAgent 重通知
   assert.deepEqual(a._pendingReminders, [])
   // C preserved — session-level singleton benefit (F1)
+  assert.deepEqual(a._pendingTimers, [carryTimer], "T-TW22：在途 timer 跨 run 存活（§6.30.11 端差 #445 消解——原每 run 清空断言随改）")
   assert.equal(a._tasks[0].title, "t1")
   assert.equal(a._goal.objective, "g")
   assert.equal(a._engDesignTokens.get("d1"), tok)
@@ -325,8 +327,11 @@ test("hydrateRun: 复用同一 agent 对象——A 复位回合边界、B 每轮
   agent._lastEngState = true
   agent._tasks = [{ title: "carry", status: "pending" }]
   agent._engDesignTokens = new Map()
+  // T-TW22（端差 #445 消解）：第 1 run 置入的在途 timer——第 2 run 起点仍在（跨 run 载体 = 顶层单例）
+  agent._pendingTimers = [{ id: 7, expiresAt: Date.now() + 60_000, message: "carry" }]
   const r2 = await hydrateRun(agent, optsFor())
   assert.equal(r2.agent, agent, "AC1: 复用同一对象——无 per-run 重建")
+  assert.equal(agent._pendingTimers.length, 1, "T-TW22: 第 1 run 置入的 timer 在第 2 run 起点仍在（不再回合边界清空）")
   assert.deepEqual(agent._touchedFiles, [], "AC6: 回合级计数器回合边界清零")
   assert.equal(agent._advisorRound, 0)
   assert.equal(agent._emptyRetries, 0)

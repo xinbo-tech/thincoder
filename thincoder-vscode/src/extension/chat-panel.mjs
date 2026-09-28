@@ -119,6 +119,7 @@ export class ChatPanel {
         this._slot = null
         // 销毁点（工作区转空即换 cwd——agent 不跨项目复用）
         this._agent = null
+        this._timerWatch?.disarm() // §6.30.11 撤闩（销毁点同族——本支不经 loadSession）
         releaseOldCwdClaims(oldCwd) // 旧 cwd 认领补一次同语义释放（单点 = panel-project.mjs；同 cwd ⇒ no-op）
         pushWorkspaceGuard(this, true)
         blockOnNoWorkspace(this, { once: true })
@@ -179,6 +180,7 @@ export class ChatPanel {
       stopLiveHeartbeat(this) // 出生自愈心跳停拍（D-W20——起于 webviewReady）
       // §11 销毁点：view 销毁 → 会话级 agent 随之销毁（面板重开经 ensurePanelAgent 重建）
       this._agent = null
+      this._timerWatch?.disarm() // §6.30.11 撤闩（销毁点同族——view 销毁与 dispose / 切槽同判）
       this._abortController?.abort()
       this._distillController?.abort()  // kill any in-flight async distillation — it belongs to the dying view
       closeAllMcp()
@@ -293,6 +295,8 @@ export class ChatPanel {
     // aborted signal).
     this._susp?.abortControllers?.forEach((c) => c.abort())
     this._susp?.abort?.abort()
+    // §6.30.11 VSC 空闲面撤闩：面板销毁 ⇒ 闩撤（到期件随会话 agent 一并回收；重开面板重建闩面）
+    this._timerWatch?.disarm()
     this._statusBar?.dispose()
     this._statusBar = null
     disposeLedgerSurface() // LEDGER-SURFACE：台账 item / 周期随面板释放（重载后 init 可重建）

@@ -59,6 +59,12 @@ export function renderStatusBar(m) {
       : digesting > 0 ? t("susp.digesting", { n: digesting }) : t("susp.winding")
     parts.push(`<span class="susp-status">⏳ ${escHtml(text)}</span>`)
   }
+  // timer-wake 阶段 2（协议 §3.2 行 18 · §6.1 计时器段）：在途 timer 计数段——源 = `usage` 载荷
+  // `timers { count, expired }` 槽镜像（`handleUsageMessage` 落槽）；零在途 ⇒ 段零节点；含过期项 ⇒
+  // 警示色（CLI `render-frame.mjs:422` 同判——⏰N 语义 = 计数形态，不显倒计时）。
+  if (S._timerCount > 0) parts.push(S._timerExpired > 0
+    ? `<span style="color:var(--vscode-editorWarning-foreground, #cca700)">${t("status.timer", { n: S._timerCount })}</span>`
+    : t("status.timer", { n: S._timerCount }))
   document.getElementById("status-line").innerHTML = parts.join(` <span class="status-sep">|</span> `)
   // Wire click handlers for the two panel badges (the subagent count badge was
   // removed with the row panel — SESSION-ACTIVITY-REVISED 评审 #2 — the activity
@@ -82,6 +88,10 @@ export function handleUsageMessage(m) {
   S._lastUsage = m.usage || {}
   S._llmCalls++ // one LLM call per usage report (CLI turn parity)
   if (m.ctxPct != null) S._lastCtxPct = m.ctxPct
+  // timer-wake 阶段 2（协议 §3.2 行 18 / §6.30.11）：timer 计数随载荷落槽（核 `_pendingTimers`
+  // 活读投影）；缺省 / 零在途 ⇒ 0（段零节点——旧 host 无字段同判）。
+  S._timerCount = m.timers?.count ?? 0
+  S._timerExpired = m.timers?.expired ?? 0
   renderStatusBar(m)
 }
 

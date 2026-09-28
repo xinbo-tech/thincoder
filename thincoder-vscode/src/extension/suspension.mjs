@@ -21,6 +21,10 @@
 // （`@thincoder/core/agent-tools/consult.mjs`）——均动态 import（核链可达 node:sqlite，W8 契约②；
 // 静态引会入端壳静态链）。原静态行（`../agent-tools/async-settle.mjs`）随 W13 镜像删旧退役。
 import { logEvent } from "@thincoder/core/log.mjs"
+// §6.30.11 VSC 面：闩装配 / 同步（窗退武装点）+ 窗内送达（本档 = 窗内路；空闲路武装点 = panel-turn-stages）
+import { deliverExpiredTimers, syncTimerWatch } from "./timer-watch.mjs"
+// §6.30.11 窗内 deadline：核到期件读面（最近到期时点——与闩 / 显示面同源；零依赖叶 ⇒ 静态引入安全）
+import { pendingTimerDeadline } from "@thincoder/core/agent/timers.mjs"
 // 任务可见性族投递通道（第 10 批 §5.1.4 第 3 条）：环 import（panel-callbacks ↔ 本模块——
 // B2 panel-messages↔panel-session 同款）——postSubagentEvent 为函数声明（hoist）——只在
 // 调用期读——环安全（两模块无顶层跨环读取）。
@@ -176,11 +180,13 @@ export function reassertLiveChildren(panel) {
   return n
 }
 
-/** 等待下一次 settle（running 子代理完成）或用户唤醒（Enter 入队 / 会话 abort）。
- *  唤醒器经 panel._suspWake 单槽注入；abort 监听兜底。返回唤醒原因。 */
-function waitForSettleOrWake(panel, susp) {
+/** 等待下一次 settle（running 子代理完成）/ 用户唤醒（Enter 入队 / 会话 abort）/ **timer 到期**
+ *  （§6.30.11 第三兑现态——与 settle / wake 同槽先到先得）。
+ *  唤醒器经 panel._suspWake 单槽注入；abort 监听兜底；timer 一次性（unref——不阻断退出）。 */
+function waitForSettleOrWake(panel, susp, { deadline = null, timer = setTimeout, clear = clearTimeout } = {}) {
   return new Promise((resolve) => {
     let finished = false
+    let handle = null
     // W13（2026-09-15）挂起唤醒面收口：核 settle 尾部（`async-settle.mjs` 公共尾 ④）唤醒面
     // = `parent._asyncWaiters.splice(0)`（子 agent 的 settle 回调以 `ctx.agent` 为 parent——
     // 生产 = 面板会话单例 agent）；端侧旧 `onAsyncSettled` 回执面（panel-callbacks 仍有定义）
@@ -189,6 +195,9 @@ function waitForSettleOrWake(panel, susp) {
     const carriers = [panel._agent, susp.lines?.history].filter((o) => o && typeof o === "object")
     const cleanup = () => {
       panel._suspWake = null
+      const h = handle
+      handle = null
+      if (h !== null) { try { clear(h) } catch { /* 已触发 / 不可清——尽力面（同 CLI） */ } }
       for (const c of carriers) {
         const list = c._asyncWaiters
         if (!Array.isArray(list)) continue
@@ -205,8 +214,14 @@ function waitForSettleOrWake(panel, susp) {
     }
     const wake = () => finish("wake")
     const onAbort = () => finish("aborted")
+    const onTimer = () => finish("timer")
     for (const c of carriers) (c._asyncWaiters ??= []).push(wake)
     panel._suspWake = wake
+    // 窗内 deadline（§6.30.5 窗内行 · §6.30.11）：池 live + 在途 timer ⇒ 本窗兑现（不等池空）；无在途 ⇒ 零注册
+    if (deadline != null) {
+      handle = timer(onTimer, Math.max(0, deadline - Date.now()))
+      try { handle?.unref?.() } catch { /* unref 失败不阻断 */ }
+    }
     if (susp.abort?.signal.aborted) { onAbort(); return }
     susp.abort?.signal.addEventListener("abort", onAbort, { once: true })
   })
@@ -357,8 +372,26 @@ export async function suspensionSession(panel, entry) {
       }
       // 3. 池空（无 running/queued/未注入）→ 自然退出回 idle（补发冻结在 finally）
       if (!poolLive(history)) break
-      // 4. 等下一 settle / 用户唤醒（Enter 入队、会话 abort）
-      await waitForSettleOrWake(panel, susp)
+      // 4. 等下一 settle / 用户唤醒（Enter 入队、会话 abort）/ timer 到期（§6.30.11 第三兑现态——先到先得）
+      const why = await waitForSettleOrWake(panel, susp, { deadline: pendingTimerDeadline(panel._agent), timer: entry.timer, clear: entry.clear })
+      // 窗内到期（§6.30.11）：本窗兑现——送达（会话活线）+ timer 轮（entry.runTurn 闭包已携 skipSession: true，
+      // 同 digest 轮形态）；不等池空。池空窗退 ⇒ 交空闲闩（到期件已出列——零重复投递）。
+      if (why === "timer" && deliverExpiredTimers(panel, { lines: susp.lines }).length > 0) {
+        const before = pendingRowSnapshot(history)
+        try {
+          await entry.runTurn({ text: "", autoTurn: true, timerTurn: true })
+        } catch (e) {
+          // §6.30.10 轮中止容纳句推广至端面自驱窗（timer 轮自身的回合级中止 = AbortError ∧ 会话未停
+          // 不是会话停止）：容纳并重入循环（timer 轮不发 digest 边界 ⇒ 中止路径零边界、不补发轮后序钩子；
+          // 池空 / pending 空自然退出）；其余（非 AbortError ∨ 会话停）照旧上抛——finally 清场同前。
+          // 本支不留痕（与消化支 `digest:stopped` 的差异面 = timer 轮无 digest 计数器可载；设计句
+          // 未要求日志 ⇒ 刻意不加，非漏写）。
+          if (e?.name === "AbortError" && !susp.abort?.signal.aborted) continue
+          throw e
+        }
+        reclaimDigestedBlocks(panel, history, before)
+        postSuspension(panel, susp)
+      }
     }
   } finally {
     const aborted = susp.aborted || susp.abort.signal.aborted
@@ -422,6 +455,9 @@ export async function suspensionSession(panel, entry) {
           try { await entry.runTurn(item) } catch { /* surfaced by the turn runner */ }
         }
       }
+    // §6.30.11 武装点（挂起会话退出后同点接管 · CLI agent-turn.mjs 回合链尾对位）：窗退 ⇒ 空闲闩按
+    // 在途（重）武装（无在途 / 开关关 ⇒ 撤旧零注册）；开轮失败不抛（闩侧自兜底：落账 + 重同步）。
+    syncTimerWatch(panel)
   }
 }
 

@@ -15,7 +15,7 @@
  * 端 overlay 住端侧 ⇒ 端特有述句不进核。W8 契约②：核 `agent/helpers.mjs` 已在端壳静态闭包内
  * （经 setup-reminders 转口）⇒ 本档不引新核侧静态边，`node:sqlite` 仍不入端壳静态链。
  */
-import { AUTO_TURN_DIGEST_DOMAIN, AUTO_TURN_DIGEST_DOMAIN_ENG, UPSTREAM_TURN_DOMAIN } from "./setup-reminders.mjs"
+import { AUTO_TURN_DIGEST_DOMAIN, AUTO_TURN_DIGEST_DOMAIN_ENG, UPSTREAM_TURN_DOMAIN, TIMER_TURN_DOMAIN } from "./setup-reminders.mjs"
 
 /** 端 overlay（端特有呈递纪律——逐字搬迁自端侧既有变体的端特有部分：advisor / consult /
  *  escalate 三族呈递规则；零新撰 / 零改写；源 as-of = 原 `thincoder-vscode/src/agent.mjs:29-30`
@@ -23,13 +23,15 @@ import { AUTO_TURN_DIGEST_DOMAIN, AUTO_TURN_DIGEST_DOMAIN_ENG, UPSTREAM_TURN_DOM
 export const VSC_TURN_OVERLAY =
   "(async advisor review reports: present the findings and suggested fixes verbatim — do not apply them; consultation reports: present each reply verbatim with your per-reply adoption judgment as text — do not apply anything; escalate reports: summarize the merged post-op work — further changes need a user message)"
 
-/** 端侧域文本组合（唯一组合点）：两级选择——轮型（`upstreamTurn` 真 ⇒ 唤醒轮基座，否则 digest
- *  轮基座）→ 模式（`engineering` 真 ⇒ digest 轮取工程变体 `AUTO_TURN_DIGEST_DOMAIN_ENG`；变体只挂
- *  digest 基座——唤醒轮与模式无关）；端 overlay 两轮两模式恒在场（差异项 = 0——§6.15.3 单源）。
- *  默认 `engineering = false` ⇒ 既有调用与断言逐字零回归。 */
-export function composeTurnDomain(upstreamTurn, engineering = false) {
+/** 端侧域文本组合（唯一组合点）：三级选择——轮型（`upstreamTurn` 真 ⇒ 唤醒轮基座；`timerTurn` 真 ⇒
+ *  timer 轮基座〔§6.30.3 D-TW4〕）→ 模式（`engineering` 真 ⇒ digest 轮取工程变体 `AUTO_TURN_DIGEST_DOMAIN_ENG`；
+ *  变体只挂 digest 基座——唤醒轮 / timer 轮与模式无关）；端 overlay 各轮各模式恒在场（差异项 = 0——§6.15.3 单源）。
+ *  默认两旗标 `false` ⇒ 既有调用与断言逐字零回归；`upstreamTurn` 优先不回归（ask 轮更紧——与核选择序同源）。 */
+export function composeTurnDomain(upstreamTurn, engineering = false, timerTurn = false) {
   const base = upstreamTurn
     ? UPSTREAM_TURN_DOMAIN
-    : (engineering ? AUTO_TURN_DIGEST_DOMAIN_ENG : AUTO_TURN_DIGEST_DOMAIN)
+    : timerTurn
+      ? TIMER_TURN_DOMAIN
+      : (engineering ? AUTO_TURN_DIGEST_DOMAIN_ENG : AUTO_TURN_DIGEST_DOMAIN)
   return base.endsWith("]") ? `${base.slice(0, -1)} ${VSC_TURN_OVERLAY}]` : `${base} ${VSC_TURN_OVERLAY}`
 }

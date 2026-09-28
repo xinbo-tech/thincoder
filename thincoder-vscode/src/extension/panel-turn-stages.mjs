@@ -26,6 +26,7 @@ import { t } from "../i18n.mjs"
 import { _cwd, pushBusyQueued } from "./panel-messages.mjs"
 import { takeQueuedBatchItem } from "./queued-pickup.mjs"
 import { suspensionSession, poolLive, backgroundStatus } from "./suspension.mjs"
+import { syncTimerWatch } from "./timer-watch.mjs" // §6.30.11 VSC 空闲面：回合尾武装点（单例惰性建 + 活体重读）
 // C-B2-6 细则⑥（busy-injection 批 fix 轮 2026-09-22）：送达侧贴图降级判决（已抽入
 // `image-handler.mjs`——本档零 import 主档纪律保持，该档为 leaf 向）。
 import { downgradeNonVisionImages } from "./image-handler.mjs"
@@ -152,6 +153,9 @@ export async function finalizeTurn(panel, { history, fullHistory, slotStamp, tur
   }
   panel._refreshStatus()
   panel._panel?.webview.postMessage({ type: "loading", loading: false })
+  // §6.30.11 VSC 空闲面武装点（忙态归位后·CLI agent-turn.mjs 回合链尾对位）：在途 timer ∧ 开关开
+  // ⇒ 闩武装（无在途 / 开关关 ⇒ 撤旧零注册）；挂起会话退出后同点接管（suspension.mjs finally）。
+  syncTimerWatch(panel)
 }
 
 /** 迁出自 `panel-chat.mjs`（本批逐字搬迁——段 B）：挂起会话接管（释放窗口判定 + 会话入口）。
@@ -176,7 +180,7 @@ export async function enterSuspensionTurn(panel, { turnSlot, distillSlot, histor
       && poolLive(history) && !panel._abortController?.signal.aborted
     if (enter) {
       const cwd = _cwd() || process.cwd()
-      const runTurn = async ({ text: tText, modelOverride: tModel, reasoning: tReasoning, providerName: tProvider, images: tImages, autoTurn: tAuto, upstreamTurn: tUp, fromBusyQueue: tFromQueue, visionReader: tVisionReader }) => {
+      const runTurn = async ({ text: tText, modelOverride: tModel, reasoning: tReasoning, providerName: tProvider, images: tImages, autoTurn: tAuto, upstreamTurn: tUp, timerTurn: tTimer, fromBusyQueue: tFromQueue, visionReader: tVisionReader }) => {
         // C-B2-6 细则⑥（fix 轮 2026-09-22）：入槽项（来源标记 `fromBusyQueue`）送达前同过 F-1
         // 降级判定——纯挂起既有路径（无标记）零改；窗内 `_turnState` = susp（判决函数静挂面
         // 不置 running——无 Stop 面，受读图 60s 超时约束）。
@@ -187,7 +191,7 @@ export async function enterSuspensionTurn(panel, { turnSlot, distillSlot, histor
           const d = await downgradeNonVisionImages(panel, { text: tText, images: tImages, providerName: tProvider, modelOverride: tModel, cwd, visionReader: tVisionReader })
           text = d.text; images = d.images; visionAbort = d.visionAbort
         }
-        await runChat(panel, { text, modelOverride: tModel, reasoning: tReasoning, providerName: tProvider, images, autoTurn: tAuto === true, upstreamTurn: tUp === true, susp: panel._susp, skipSession: true })
+        await runChat(panel, { text, modelOverride: tModel, reasoning: tReasoning, providerName: tProvider, images, autoTurn: tAuto === true, upstreamTurn: tUp === true, timerTurn: tTimer === true, susp: panel._susp, skipSession: true })
         // A12（随迁）：窗内被 Stop ⇒ 置闩（序 = 调 runChat 之后——newTurnController 消费）。
         if (visionAbort?.signal.aborted) panel._abortRequested = true
       }

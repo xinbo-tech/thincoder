@@ -186,6 +186,9 @@ export function initMessageLoop(deps) {
       case "digest":
         showDigestStatus(m)
         break
+      // timer-wake 阶段 2（协议 §3.2 行 19 · §6.30.11 VSC 可见面）：到期触发落流一行（`{status:"fired", text}`）
+      // ——显示裁 ≤3 行 + `…`（CLI 同规）；未登记 status / 非非空串 ⇒ 零动作（见 `addTimerLine`）。
+      case "timer":            addTimerLine(ctx, m); break
       case "statusText":       handleStatusText(m); break
       case "turnFrame":        S._turnFrame = { turn: m.turn, maxTurns: m.maxTurns }; renderStatusBar(); break
       case "permissionRequest":
@@ -235,4 +238,22 @@ export function initMessageLoop(deps) {
         break
     }
   })
+}
+
+/** timer 触发落流行（`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.11 VSC 可见面 · 协议 §3.2 行 19）：
+ *  `text` = 交付原文逐字（`[System reminder: ⏰ timer — …]`）；显示裁 = ≤3 行 + `…`（CLI `timer-watch.mjs`
+ *  `reminderDisplay` 同规）；逐行落子节点 = 免依赖样式面（同桌面 `timerGroupNode` 口径）。
+ *  未登记 status / 非非空串 ⇒ 零动作（fail-closed——禁假造空行）。 */
+function addTimerLine(ctx, m) {
+  if (m?.status !== "fired" || typeof m.text !== "string" || m.text === "") return
+  const lines = m.text.split("\n")
+  const el = document.createElement("div")
+  el.className = "timer-line"
+  for (const line of lines.length > 3 ? [...lines.slice(0, 3), "…"] : lines) {
+    const row = document.createElement("div")
+    row.textContent = line
+    el.appendChild(row)
+  }
+  ctx.messagesEl.appendChild(el)
+  maybeScrollDown(ctx)
 }

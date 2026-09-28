@@ -73,7 +73,7 @@ export function bindPanelAgent(panel, holder) {
  * ro.agent（agent.mjs write-back）——Ctrl+I/ContinueError 续跑与下回合复用同一单例。
  */
 export async function runTurnLoop(panel, deps) {
-  const { text, cwd, p, callbacks, images, history, fullHistory, autoTurn, upstreamTurn, susp, turnSlot, tLog, askInPanel, slotStamp } = deps
+  const { text, cwd, p, callbacks, images, history, fullHistory, autoTurn, upstreamTurn, susp, timerTurn, turnSlot, tLog, askInPanel, slotStamp } = deps
   let carryTaken = false
   // §11: guard-carry 只在本回合首个（resume=false）runAgent 应用一次（resume 迭代不重取）
   const inherited = (!autoTurn && !carryTaken) ? (panel._guardCarry ?? null) : undefined
@@ -93,6 +93,8 @@ export async function runTurnLoop(panel, deps) {
     // 读点）——仅选域文本基座，不进任何门（autoTurn 维持 auto 轮类语义）。
     autoTurn,
     upstreamTurn,
+    // §6.30.3 D-TW4 第三跳（解构 → 本 opts 字面量 → 核 `runAgent` 读点）：timer 轮旗标——仅选域文本基座
+    timerTurn,
     suspDriven: true,
     sessionSignal: susp?.abort?.signal ?? null,
     inheritedGuard: inherited,

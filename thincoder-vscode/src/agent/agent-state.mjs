@@ -1,8 +1,8 @@
 /**
  * agent/agent-state.mjs — §11.2 agent 状态纯函数层（setup.mjs 拆分——2026-09-08
  * 500 行硬限触碰执行——VSC TODO L15 / CLI TODO L10 同物登记；原注释随函数逐字迁入）：
- * resetRunState（per-run 复位清单 A）/ reconcileEngDesignTokens（C
- * engDesignTokens 水合）/ applySlotSessionState（槽字段 ↔ hydrate 映射）——
+ * resetRunState（per-run 复位清单 A——`_pendingTimers` 除外：跨 run 存活 · §6.30.11 端差 #445）/
+ * reconcileEngDesignTokens（C engDesignTokens 水合）/ applySlotSessionState（槽字段 ↔ hydrate 映射）——
  * 纯函数、无 IO（test/agent-lifecycle-singleton.test.mjs 单测锚点）。
  */
 // W12（2026-09-15）：原 `../agent-tools/advisor.mjs` 的 token 工具随 advisor 镜像删旧退役——
@@ -27,7 +27,6 @@ export function resetRunState(agent) {
   agent._verifyPassed = undefined
   agent._verifyRetries = 0
   agent._honestReminderInjected = false
-  agent._pendingTimers = []
   agent._lastPromptTokens = null
   agent._usageAtLen = null
   agent._compressFailures = 0

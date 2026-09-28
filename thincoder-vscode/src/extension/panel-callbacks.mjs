@@ -190,7 +190,10 @@ export function buildPanelCallbacks(panel, deps) {
       totalUsage.reasoning_tokens += u.reasoning_tokens ?? 0 // C-12#6：✦ 段（transports 映射补全）
       // M2（§2.1）：分子 = 核 `estimateTokens(history)`（与 CLI 状态行同源同式——`render-frame.mjs:388-389`）。
       const ctxPct = ctxPercentForHistory(history, p)
-      panel._panel?.webview.postMessage({ type: "usage", usage: { ...totalUsage }, ctxPct })
+      // §6.30.11（协议 §3.2 行 18）：timer 计数随载荷（webview `⏰N` 段源——核 `_pendingTimers` 活读投影）
+      const timers = panel._agent?._pendingTimers ?? []
+      const expired = timers.filter((x) => x.expiresAt <= Date.now()).length
+      panel._panel?.webview.postMessage({ type: "usage", usage: { ...totalUsage }, ctxPct, timers: { count: timers.length, expired } })
     },
     onToolCall: (n, a, id) => {
       if (relaySubagentContentChunk(panel, "toolCall", n, a)) return

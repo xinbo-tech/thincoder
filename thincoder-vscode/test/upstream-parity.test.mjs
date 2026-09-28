@@ -208,8 +208,8 @@ test("T-VS-U5 结构机检：生产载体表两款 / 消费点 / 谓词 / 组合
   const agentSrc = read("src/agent.mjs")
   assert.equal(count(agentSrc, "drainChildUpstream(agent)"), 1, "端壳消费点恰 1 处（循环头单点）")
   assert.equal(count(agentSrc, "composeTurnDomain("), 1, "域文本组合调用恰 1 处（调用方无从绕过端 overlay）")
-  assert.equal(count(agentSrc, "composeTurnDomain(upstreamTurn, agent.config?.agent?.engineering === true)"), 1,
-    "DOM-V3：组合调用传模式（第二实参 = 模式旗标，与核侧同键）")
+  assert.equal(count(agentSrc, "composeTurnDomain(upstreamTurn, agent.config?.agent?.engineering === true, timerTurn)"), 1,
+    "DOM-V3：组合调用传模式（第二实参 = 模式旗标，与核侧同键）+ timer 轮旗标第三实参（§6.30.3 D-TW4）")
   assert.ok(/await import\("@thincoder\/core\/agent-tools\/parent-channel\.mjs"\)/.test(agentSrc),
     "核单源经动态 import 载入（W8 契约②）")
   assert.ok(!/^\s*import\b[^\n]*agent-tools\/parent-channel\.mjs/m.test(agentSrc),

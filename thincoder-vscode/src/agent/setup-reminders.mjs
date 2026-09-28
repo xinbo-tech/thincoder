@@ -18,8 +18,8 @@
  *   - `@thincoder/core/agent/helpers.mjs`：`AUTO_REMINDER` · `ENG_{ON,OFF}_REMINDER` ·
  *     `injectEngineeringReminder` · `composeGitContext` · `collectGitContext` +
  *     失败冷却测试缝（原端侧同构副本随本单元退场——核注释同款「VSC 镜像」）·
- *     回合域文本基座三名 `AUTO_TURN_DIGEST_DOMAIN` + `AUTO_TURN_DIGEST_DOMAIN_ENG` +
- *     `UPSTREAM_TURN_DOMAIN`（§6.27.12.5 J + `TOOLS.md` §6.15.3（工程模式变体）——
+ *     回合域文本基座四名 `AUTO_TURN_DIGEST_DOMAIN` + `AUTO_TURN_DIGEST_DOMAIN_ENG` + `UPSTREAM_TURN_DOMAIN` +
+ *     `TIMER_TURN_DOMAIN`（§6.27.12.5 J + `TOOLS.md` §6.15.3（工程模式变体）+ `AGENT-LOOP-ASYNC-POOL.md` §6.30.3——
  *     端侧零自持基座副本，消费点 = `./turn-domains.mjs` 组合单点）。
  *   - `@thincoder/core/agent/setup-reminders.mjs`：#113 并集面 `pushInjections` /
  *     `appendImagePointer`（核供注入纪律单点——内容由端采集/传入，核内零端名）；
@@ -43,6 +43,7 @@ export {
   AUTO_TURN_DIGEST_DOMAIN,
   AUTO_TURN_DIGEST_DOMAIN_ENG,
   UPSTREAM_TURN_DOMAIN,
+  TIMER_TURN_DOMAIN,
 } from "@thincoder/core/agent/helpers.mjs"
 export { pushInjections, appendImagePointer, manifestStateLine, pushManifestStateReminder } from "@thincoder/core/agent/setup-reminders.mjs"
 import { collectGitContext } from "@thincoder/core/agent/helpers.mjs" // pushGitContext 体内用

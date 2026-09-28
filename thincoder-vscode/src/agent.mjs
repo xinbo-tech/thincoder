@@ -5,6 +5,8 @@
 import { chat } from "@thincoder/core/provider/core.mjs"
 // P2 批 §2.23 / §2.18：核单类转口（ContinueError 权威类——字段 `turn`）+ guard 回填单点
 import { ContinueError, restoreGuard } from "@thincoder/core/agent/helpers.mjs"
+// §6.30.11 端差消解（#445）：到期件三件单源（出列幂等 + 逐字注入形态）——原端侧内联过滤块退役
+import { takeExpiredTimers, injectTimerReminders } from "@thincoder/core/agent/timers.mjs"
 import { specForModel, assistantToolCallMessage } from "./specs.mjs"
 import { traceStop } from "./extension/stop-trace.mjs"
 import {
@@ -59,6 +61,8 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   // §6.27.12.12 ③/④: up-stream wake turn (a running subagent's in-flight ask opened it) — the flag
   // only SELECTS the domain text (§6.27.12.5 L); it enters no gate (autoTurn keeps the auto-turn class).
   const upstreamTurn = opts.upstreamTurn === true
+  // §6.30.3 D-TW4: timer wake turn (third auto-turn variant) — domain-text selection only, same as upstreamTurn.
+  const timerTurn = opts.timerTurn === true
 
   // Live autoApprove read (CLI parity): the panel passes a getter — approve-all / the
   // AUTO toolbar button flip the flag MID-TURN; the gate + AUTO reminder re-read it.
@@ -118,10 +122,10 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
   agent._sessionSignal = opts.sessionSignal ?? null
   // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6: an auto-turn's guard marks are inherited by the next USER run (not reset).
   if (!opts.resume && opts.inheritedGuard) restoreGuard(agent, opts.inheritedGuard)
-  // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6 manual tier + §6.27.12.12 ④: system-driven turn domain reminder — the base switches by
-  // turn type (digest / up-stream wake), the end-side overlay is always present (§6.27.12.5 L).
+  // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6 manual tier + §6.27.12.12 ④ + §6.30.3 D-TW4: system-driven turn domain reminder — the base
+  // switches by turn type (digest / up-stream wake / timer wake), the end-side overlay is always present (§6.27.12.5 L).
   if ((autoTurn || upstreamTurn) && !getAuto()) {
-    history.push({ role: "user", content: composeTurnDomain(upstreamTurn, agent.config?.agent?.engineering === true), transient: true })
+    history.push({ role: "user", content: composeTurnDomain(upstreamTurn, agent.config?.agent?.engineering === true, timerTurn), transient: true })
   }
 
   // AGENT-LOOP-SUBAGENT.md §6.7.3 D-A3（VS Code 对齐）：async 注册表挂 agent 上；depth-0 的容器沿共享 history
@@ -418,15 +422,9 @@ export async function runAgent(provider, cwd, input, callbacks = {}, signal, aut
       history.push({ role: "user", content: `[User interrupt: ${signal.reason.message}]` })
       continue
     }
-    // Expired timers — inject reminders when the thinking budget is up (ported from CLI post-turn)
-    if (agent._pendingTimers.length > 0) {
-      const now = Date.now()
-      const expired = agent._pendingTimers.filter((t) => t.expiresAt <= now)
-      agent._pendingTimers = agent._pendingTimers.filter((t) => t.expiresAt > now)
-      for (const t of expired) {
-        history.push({ role: "user", content: `[System reminder: ⏰ timer — ${t.message}]` })
-      }
-    }
+    // Expired timers — inject reminders when the thinking budget is up（核单源 = `agent/timers.mjs`；
+    // 出列幂等 + 逐字形态——§6.30.11 端差消解：原端侧内联过滤块退役 = 零第二份过滤语义）
+    injectTimerReminders(agent, takeExpiredTimers(agent))
 
     // Goal injection
     if (agent._goal?.status === "active") {

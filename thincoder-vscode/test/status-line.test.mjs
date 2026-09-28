@@ -56,6 +56,8 @@ function resetLine(S) {
   S._turnFrame = null
   S._lastUsage = null
   S._phase = null
+  S._timerCount = 0 // timer-wake 阶段 2 两计数槽（清场随新槽扩展——逐测独立起点）
+  S._timerExpired = 0
   send({ type: "clearMessages" })
 }
 
@@ -195,4 +197,43 @@ test("T11 界面（FR31 ② / AC13）：工程模式 ⇒ plan 按钮 disabled + 
   assert.equal(btn.disabled, false, "退出工程态恢复可用")
   assert.ok(btn.title !== zh["toolbar.planDisabled"], "title 回落到缺省（非工程态）")
   setStrings(en)
+})
+
+// ─── ④ timer-wake 阶段 2（VSC 可见面 · `AGENT-LOOP-ASYNC-POOL.md` §6.30.11 · 协议 §3.2 行 18/19 = T-TW25） ──
+
+test("T-TW25 可见面（timer-wake 阶段 2）：在途 2 ⇒ `⏰2`；含过期 ⇒ 警示形态；空 ⇒ 零段；`timer` 消息 ⇒ 流内一行（原文 + ≤3 行裁）", async () => {
+  const { S } = await loadChat()
+  resetLine(S)
+  // ① 状态行面（源 = `usage` 载荷 `timers { count, expired }`——协议 §3.2 行 18；段位 = 状态段簇尾）
+  send({ type: "usage", usage: { prompt_tokens: 100, completion_tokens: 20 }, ctxPct: 10, timers: { count: 2, expired: 0 } })
+  assert.ok(line().includes("⏰2"), `在途 2 ⇒ ⏰2（实到 ${line()}）`)
+  assert.ok(!line().includes("editorWarning"), "无过期项 ⇒ 常态段（零警示色）")
+  send({ type: "usage", usage: { prompt_tokens: 100, completion_tokens: 20 }, ctxPct: 10, timers: { count: 2, expired: 1 } })
+  assert.ok(
+    line().includes('<span style="color:var(--vscode-editorWarning-foreground, #cca700)">⏰2</span>'),
+    `含过期项 ⇒ 警示色段（实到 ${line()}）`,
+  )
+  send({ type: "usage", usage: { prompt_tokens: 100, completion_tokens: 20 }, ctxPct: 10, timers: { count: 0, expired: 0 } })
+  assert.ok(!line().includes("⏰"), "零在途 ⇒ 段零节点")
+  send({ type: "usage", usage: { prompt_tokens: 100, completion_tokens: 20 }, ctxPct: 10 }) // 旧 host（无 `timers` 字段）
+  assert.ok(!line().includes("⏰"), "缺 `timers` 字段 ⇒ 段零节点（后向兼容）")
+  // ② `timer` 消息面（协议 §3.2 行 19——流内触发行；`text` = 交付原文逐字）
+  const messages = document.getElementById("messages")
+  send({ type: "timer", status: "fired", text: "[System reminder: ⏰ timer — pull the data]" })
+  const fired = messages.querySelector(".timer-line")
+  assert.ok(fired, "触发落流一行在场")
+  assert.equal(fired.textContent, "[System reminder: ⏰ timer — pull the data]", "逐字 = 交付原文（零裁切）")
+  // 显示裁 = ≤3 行 + `…`（CLI 同规；逐行落子节点 = 免依赖样式面）
+  send({ type: "timer", status: "fired", text: "[System reminder: ⏰ timer — l1\nl2\nl3\nl4\nl5]" })
+  const capped = [...messages.querySelectorAll(".timer-line")].at(-1)
+  assert.deepEqual(
+    [...capped.children].map((row) => row.textContent),
+    ["[System reminder: ⏰ timer — l1", "l2", "l3", "…"],
+    "显示裁 ≤3 行 + `…`",
+  )
+  // 未登记形态 / 空串 ⇒ 零动作（fail-closed——禁假造空行）
+  const before = messages.querySelectorAll(".timer-line").length
+  send({ type: "timer", status: "fired", text: "" })
+  send({ type: "timer", status: "?" })
+  assert.equal(messages.querySelectorAll(".timer-line").length, before, "空串 / 未登记 status ⇒ 零新增行")
 })

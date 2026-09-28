@@ -85,7 +85,7 @@ export function buildTopLevelAgent() {
     _pendingReminders: [], // A 复位 + restore 槽回填（resetRunState / applySlotSessionState——agent-state.mjs）
     // A — 回合级预算/守卫/计数器（resetRunState 每 runAgent 调用清零）
     _touchedFiles: [], _verifiedThisRun: false, _verifyPassed: undefined, _verifyRetries: 0,
-    _honestReminderInjected: false, _pendingTimers: [],
+    _honestReminderInjected: false, _pendingTimers: [], // _pendingTimers 例外：跨 run 存活（D-TW3——不再随 resetRunState 清）
     _lastPromptTokens: null, _usageAtLen: null, _compressFailures: 0, _emptyRetries: 0,
     _taskPushbacks: 0, _advisorRound: 0, _advisorSession: null, _lastAdvisorOutput: null,
     _calledAdvisorThisRun: false, _mutatedThisRun: false,
@@ -146,6 +146,11 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   // #175（W15 · a 半）：autoThink 键随 config 归一（默认 false——核 DEFAULTS.agent.autoThink；
   // 消费点 = agent.mjs 循环首轮核分类器调用）——W16 前为死键（全仓零消费）。
   let cfgAutoThink = DEFAULTS.agent?.autoThink === true
+  // timer-wake 阶段 2（§6.30.11 VSC 块）：`agent.timerWake` 键随 config 归一（默认 true——核
+  // DEFAULTS.agent.timerWake；消费点 = `extension/timer-watch.mjs` `timerWakeEnabled` 活读）——
+  // `agent.config.agent` 白名单整建曾漏该键 ⇒ 判据恒开、`config.json` 关不掉（评审 🟡1）；本行 = 生产者，
+  // 与 autoThink 同形（键面先例 = 核 `config.mjs` DEFAULTS `agent.timerWake: true`）。
+  let cfgTimerWake = DEFAULTS.agent?.timerWake !== false
   let cfgStreamRules = [] // #130 A-1/A-2：stream 规则（`.thincoder/rules` 文件规则并入 config 规则）
   try {
     const raw = loadRaw()
@@ -169,6 +174,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     cfgHooks = raw.hooks ?? null
     cfgTraces = { ...DEFAULTS.traces, ...(raw.traces ?? {}) }
     cfgAutoThink = raw.agent?.autoThink ?? cfgAutoThink // #175a：显式键优先（缺省 = 核 DEFAULTS）
+    cfgTimerWake = raw.agent?.timerWake ?? cfgTimerWake // 显式键优先（缺省 = 核 DEFAULTS——默认开；判据 `!== false`）
     cfgStreamRules = mergeFileRules(raw.agent?.streamRules ?? [], cwd) // #130 A-1：与 CLI make-agent.mjs:44-48 同语义
   } catch { /* config unreadable — defaults */ }
 
@@ -187,7 +193,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
       subagentModel: cfgSubagentModel, subagentModels: cfgSubagentModels, subagentTurns: cfgSubagentTurns,
       maxTurns: cfgMaxTurns, verifyGuard: cfgVerifyGuard, compactThreshold: cfgCompactThreshold,
       consultModels: cfgConsultModels, consultTurns: cfgConsultTurns, consultTimeoutMs: cfgConsultTimeoutMs,
-      waitForTimeoutMs: cfgWaitForTimeoutMs, poolLimits: cfgPoolLimits, autoThink: cfgAutoThink,
+      waitForTimeoutMs: cfgWaitForTimeoutMs, poolLimits: cfgPoolLimits, autoThink: cfgAutoThink, timerWake: cfgTimerWake,
       streamRules: cfgStreamRules, // #130 A-2：经 agentFields → agent.config.agent.streamRules（消费 = 核 chat）
     },
     proxy: cfgProxy, shell: cfgShell, providersList: cfgProviders, websearch: cfgWebsearch,
