@@ -16,7 +16,7 @@
  * `msg:send` → `msg:interrupt` → `provider:list` → `provider:save` → `provider:remove` → `provider:verify` →
  * `model:list` → `settings:agent` → `mcp:list` → `mcp:save` → `mcp:remove` → `config:write` → `ledger:read` →
  * `batch:status` → `question:respond` → `session:prefs` → `subagent:stop` → `file:open` → `session:flags` → `at:complete` → `session:gc` → `session:index` → `index:build` → `index:status`；顺序供白名单定序断言 —— 主侧据以注册）。
- * 出站订阅面 `on(name, cb)`：白名单 = **二十一条** `ev:*`（`EVENT_CHANNELS`）——表外名 **throw**（不入 IPC）；
+ * 出站订阅面 `on(name, cb)`：白名单 = **二十二条** `ev:*`（`EVENT_CHANNELS`）——表外名 **throw**（不入 IPC）；
  * 返回退订函数（同 listener 引用 ⇒ 二次退订零抛）。
  */
 const CHANNELS = Object.freeze([
@@ -30,13 +30,14 @@ const CHANNELS = Object.freeze([
   "session:gc", "session:index",
   "index:build", "index:status",
 ])
-/** 出站订阅白名单（序同桥面表；名面与主侧 `webContents.send` 用名同；**二十一条** = 回调映射十三条（含 **R4 增 `ev:statusText` ∕ `ev:compress`**——桥 `onWait` ∕ `onCompressStart` ∕ `onCompress` ∕ `onCompressFail` 映射）+ 宿主自产八条（`ev:usage` / `ev:error` / `ev:susp` / `ev:digest` / `ev:ledger` [`ev:timer` —— timer-wake 阶段 2 增] / [`ev:queue` —— 「回合中插入」批增] / [`ev:flags` —— R1 输入面板移植增：工具驱动翻转 ∕ 写回执后]）—— 非回调映射；计数族权威数 / 三档同值收正 = 在册登记（`docs/desktop/design/PROJECT.md` §10 BE 行），事件映射段 = `docs/desktop/design/IPC.md` §1）。 */
+/** 出站订阅白名单（序同桥面表；名面与主侧 `webContents.send` 用名同；**二十二条** = 回调映射十三条（含 **R4 增 `ev:statusText` ∕ `ev:compress`**——桥 `onWait` ∕ `onCompressStart` ∕ `onCompress` ∕ `onCompressFail` 映射）+ 宿主自产九条（`ev:usage` / `ev:error` / `ev:susp` / `ev:digest` / `ev:ledger` [`ev:timer` —— timer-wake 阶段 2 增] / [`ev:queue` —— 「回合中插入」批增] / [`ev:flags` —— R1 输入面板移植增：工具驱动翻转 ∕ 写回执后] / [`ev:goal` —— **R5 增**：goal 工具结果时点采样]）—— 非回调映射；计数族权威数 / 三档同值收正 = 在册登记（`docs/desktop/design/PROJECT.md` §10 BE 行），事件映射段 = `docs/desktop/design/IPC.md` §1）。 */
 const EVENT_CHANNELS = Object.freeze([
   "ev:token", "ev:reasoning", "ev:activity", "ev:subagent", "ev:subchunk", "ev:tool-call", "ev:tool-output", "ev:tool-result",
   "ev:approval", "ev:question", "ev:task", "ev:susp", "ev:digest", "ev:usage", "ev:error", "ev:ledger", "ev:timer",
   "ev:queue",
   "ev:flags",
   "ev:statusText", "ev:compress",
+  "ev:goal",
 ])
 const BRIDGE_KEY = "thincoder"
 

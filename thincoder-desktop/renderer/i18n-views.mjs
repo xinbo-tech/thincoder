@@ -21,6 +21,9 @@
  * —— 键名与两语值皆 VSC `locales/{en,zh}.json:254-258` 逐字。
  * ⑨ **状态文本段 index 两形（R4 · 桌面功能对位批）**：`renderer/views/statusline-segments.mjs` 取词（index kind 两相位
  * —— 表外四 kind 与压缩四态 = 核字典经 `t()` 投影直取，零新键）；键名与两语值皆 VSC `locales/{en,zh}.json:218-219` 逐字。
+ * ⑩ **目标徽标可及名（R5 · 桌面功能对位批）**：`renderer/views/statusline.mjs` 取词（状态行**非段位元素** 🎯 ——
+ * 字形直出零键；本键 = `aria-label`）；en 逐字 = VSC `status-bar.js:24` aria-label 字面〔VSC 未本地化〕· zh 本端拟定；
+ * 目标卡体内文词 = 核卡直取（`panel.goalDesc` / `goal.objective` 已住建档 ⑥ · `goal.criteria` = 核字典投影直取，零新键）。
  * 两语键集须相等（增键两语同增、禁单语落键）。
  * 零落盘 · 零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
@@ -93,6 +96,8 @@ export const VIEWS_DICT = Object.freeze({
     // ── ⑨ 状态文本段 index 两形（R4 · 桌面功能对位批 —— 键名与值皆 VSC `locales/en.json:218-219` 逐字）──
     "status.indexScan": "Indexing: scanning ${n} files…",
     "status.indexProgress": "Indexing: ${done}/${total}…",
+    // ── ⑩ 目标徽标可及名（R5 · 桌面功能对位批 —— en 逐字 = VSC `status-bar.js:24` aria-label 字面；zh 本端拟定）──
+    "status.goal": "Goal panel",
   },
   zh: {
     // ── ① 对话流 ──
@@ -161,5 +166,7 @@ export const VIEWS_DICT = Object.freeze({
     // ── ⑨ 状态文本段 index 两形（R4 · 桌面功能对位批 —— 键名与值皆 VSC `locales/zh.json:218-219` 逐字）──
     "status.indexScan": "索引：扫描 ${n} 文件…",
     "status.indexProgress": "索引：${done}/${total}…",
+    // ── ⑩ 目标徽标可及名（R5 · 桌面功能对位批 —— 同键两语同拍）──
+    "status.goal": "目标面板",
   },
 })

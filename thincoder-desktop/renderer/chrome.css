@@ -429,3 +429,16 @@
   font-size: 12px;
   white-space: nowrap;
 }
+
+/* 目标徽标（非段位元素 —— R5 · B10；沿 `.status-alert` 边缘面②「采用」同款落形）：几何 ∕ 字色同告警位；
+   相邻条 = 前邻（段 ∕ 告警位）在场才落（行首 ∕ 首位零前导 —— 同「缺席不落空分隔」纪律），
+   后接告警位时告警位前导条由本规则补（🎯 插在段链与告警链之间 ⇒ 原 `.status-alert` 前导判据不命中）。 */
+.status-goal {
+  flex: 0 0 auto;
+  color: var(--fg-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.status-bar > [data-seg] + .status-goal::before,
+.status-bar > .status-alert + .status-goal::before,
+.status-bar > .status-goal + .status-alert::before { content: "│"; margin: 0 6px 0 -6px; color: color-mix(in srgb, var(--fg) 50%, transparent); }

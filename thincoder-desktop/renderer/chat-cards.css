@@ -1,0 +1,152 @@
+/* chat-cards.css — 对话流**卡族段**（自 `renderer/chat.css` 四拆 —— 「桌面处理流 · VSC 对齐」批 §2.1 拆档定稿
+   「按面拆：卡族段 / 输入区段 / 小修族尾段」；链序 = theme → chrome → skin → chat → **chat-cards** → chat-composer → chat-fixes → core → pool → settings）。
+   面 = 卡族三类（**皆流内非块节点** —— `docs/desktop/design/UI.md` §1 审批呈现 / 提问呈现 / 计划面行）：
+     ① **池面审批操作区**（`views/activity.mjs` 池条目 —— `approvalExits` 描述符消费面；卡面出口已归核卡自带）；
+     ② **审批卡**（核 `cards/permission.mjs` 产出 —— R1 直消费）：类名面 = 核产（`.permission-prompt*`），
+        值源 = VSC `webview/base.css:190-291`（口径三律同 `renderer/core.css`：宿主主题色角色对位 / 语义常量值照搬 /
+        盒层单层律）；端壳增量唯二 = 置焦锚高亮（`[data-autofocus="1"]` —— `views/approval.mjs` 产出）与
+        `[data-autofocus]` 键位面；
+     ③ **提问卡 / 计划卡**（核 `cards/question.mjs` ∕ `cards/panel.mjs` 产出 —— R1 直消费）：提问族类名面 = 核产
+        （`.question-card` / `.question-*`，值源 = VSC `base.css:296-366`）；计划族 = 端壳包壳 `.plan-card` + 核体
+        （核体类名面 `.panel-desc` / `.task-*` 归 `renderer/core.css` ⑤ 核卡族段）。
+   `.perm-btn` 族（提问卡三钮/选项共用，核产）亦归 `renderer/core.css` ⑤ —— 与核控件族同列。
+   卡间 / 卡块相邻留白 = 核卡自带 margin（`12px 0`，块流页边距折叠）⇒ 本档零相邻补足规则（原桌面自造卡类随退场）。 */
+
+/* ── 池面审批操作区（`views/activity.mjs` 条目三出口 —— 卡面出口归核卡，此段只服务池条目；键位锚同一表）── */
+.approval-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.approval-action {
+  padding: 2px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.approval-action:not(:disabled):hover {
+  background: var(--bg);
+  cursor: pointer;
+}
+
+/* ── 审批卡（核 `cards/permission.mjs` 产出；值源 = VSC `base.css:190-291`）──────────────────────
+   卡壳 / 首行 / 出口行三段逐值照搬（三态：逐项 / 批同壳）；`--vscode-inputValidation-warning*` = 警告角色
+   别名（未声明 ⇒ 回退 VSC 默认值 —— 与 VSC 无主题变量时同形）。 */
+.permission-prompt {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--vscode-inputValidation-warningBorder, rgba(204,167,0,0.35));
+  border-radius: 8px;
+  background: var(--vscode-inputValidation-warningBackground, rgba(204,167,0,0.06));
+  font-size: 12px;
+  line-height: 1.5;
+}
+.permission-prompt-text {
+  color: var(--vscode-inputValidation-warningForeground, #cca700);
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+.permission-prompt-actions {
+  display: flex;
+  gap: 8px;
+}
+/* 卡内出口钮 = 核卡裸类按钮（`.approve` ∕ `.approve-all` ∕ `.deny` ∕ `.one-by-one`）：VSC 两源（`base.css` 与
+   VS Code webview 默认样式表）皆**无按钮规则** ⇒ 实形 = UA 默认；VSC `base.css:1-5` 的 `* { margin:0; padding:0 }`
+   全局 reset 为其唯一形塑 ⇒ 本档等效映射该两值（余承 UA 默认 —— 零自造样式）。 */
+.permission-prompt button {
+  margin: 0;
+  padding: 0;
+}
+.permission-prompt button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--hover-bg-strong);
+}
+/* 置焦锚（端壳适配 c —— 卡内恰一：最安全键 = deny）：差异只经边框色，不落第二字形。 */
+.permission-prompt [data-autofocus="1"] {
+  border-color: var(--accent);
+}
+
+/* ── 提问卡（核 `cards/question.mjs` 产出；值源 = VSC `base.css:296-366`）──────────────────────
+   卡面沿审批卡同族同形（内边距 / 圆角 / 决策面强调色边）；选项列 / 作答行 / 文本控件逐值照搬。 */
+.question-card {
+  margin: 12px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font-size: var(--vscode-editor-font-size, 14px);
+  line-height: 1.5;
+}
+.question-card .perm-btn {
+  font-size: var(--vscode-editor-font-size, 14px);
+  font-weight: 400;
+}
+.question-card .question-input {
+  font-size: var(--vscode-editor-font-size, 14px);
+}
+.question-mark {
+  color: var(--accent);
+  font-weight: 700;
+}
+.question-text {
+  color: var(--fg);
+  margin-bottom: 8px;
+  word-break: break-word;
+  white-space: pre-wrap;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.question-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.question-options .perm-btn {
+  width: 100%;
+  text-align: left;
+}
+.question-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.question-input {
+  flex: 1;
+  min-width: 140px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--fg);
+  background: var(--vscode-input-background, transparent);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  outline: none;
+}
+.question-input:focus {
+  border-color: var(--accent);
+}
+
+/* ── 计划卡（端壳包壳 + 核体；核体类名面归 `renderer/core.css` ⑤）────────────────────────────
+   包壳 = 端挂载锚（`data-card="task"`）+ 卡片壳件（桌面卡族同形：内边距 / 圆角 / 卡间留白）。 */
+.plan-card {
+  padding: 8px 10px;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+}
+
+/* ── 目标卡（R5 · 端壳包壳 + 核体；核体类名面归 `renderer/core.css` ⑤）────────────────────────
+   包壳 = 端挂载锚（`data-card="goal"`）+ 卡片壳件（桌面卡族同形 —— 与 `.plan-card` 逐值同）。 */
+.goal-card {
+  padding: 8px 10px;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+}

@@ -13,8 +13,13 @@
  * （`kind: "subagent"` —— 运行期块，页读整置即失）③ 表项 `rows` 随归档交快照（内容单留存处）；原
  * 「下回合起清出」（`archiveFrozen`）口径**退场**；核 effects 表**不逐条执行**（端面动作由模型态幂等派生 ——
  * 改造据 = 端差登记 `docs/desktop/design/PROJECT.md` §10 AZ）。
+ * **R5（子代理面 · #521 ∕ #522 —— 三面）**：① `resetSubBlocks`（`resetActivity` 语义接 —— 会话中止 ∕ 清屏 ⇒
+ *  本键表复位 + 池面随动；两触发住 `renderer/events.mjs`）② `freezeAllSubBlocks`（退出兜底 —— 核
+ *  `subBlocksFreezeAll` 直取；触发 = `ev:susp {active:false}` 出窗帧）③ `onSubchunk` 出生闸 = 核
+ *  `ensureSubBlock` 直取（原「无块 ⇒ 零写」形差收正 —— 「内容先到」可达，与核同律）；注记载荷（X6）经
+ *  `note` 键随 `ev:subagent` 入块模型（`SUB_KEYS` 增键 —— 渲染 = 核件直出）。
  */
-import { subBlocksReduce } from "/rc/subblocks/state.mjs"
+import { ensureSubBlock, subBlocksFreezeAll, subBlocksReduce } from "/rc/subblocks/state.mjs"
 import { appendBlock } from "./store.mjs"
 
 /** 子 agent 状态闭集（**单源** = `docs/render-core/design/RENDER-CORE.md` §5 token → patch 全表：核 relay 谱
@@ -24,10 +29,12 @@ import { appendBlock } from "./store.mjs"
  *  核态机支 = `subblocks/state.mjs:190-201`；VSC 对位 = `activity.js:133-136` `applySubagentApproval` ——
  *  白名单漏收则该态桌面永不可见（⏸ ∕ `sub.awaitingApproval` 死面）；表外码 ⇒ **零写**（禁假造 —— 沿池面「表外码零节点」纪律）。 */
 const SUB_STATUS = ["started", "queued", "turn", "done", "settled", "cancelled", "approval"]
-/** `ev:subagent` 载荷键白名单（零新键 —— 核 patch 全表字段集：身份三 + 随行九 + 审批面 `tool`——R10 补）。 */
+/** `ev:subagent` 载荷键白名单（核 patch 全表字段集：身份三 + 随行九 + 审批面 `tool`〔R10 补〕+ **注记
+ *  `note`〔R5 增 —— X6 注记载荷；核态机活态载体 `meta.note` 单源，块头 `— <note>` 渲染 = 核件
+ *  `subblocks/activity-view.mjs` 直出〕）。 */
 const SUB_KEYS = [
   "status", "role", "id", "model", "pool", "syncLive", "startedAt", "turn", "maxTurns",
-  "kind", "position", "waiting", "reason", "was", "tool",
+  "kind", "position", "waiting", "reason", "was", "tool", "note",
 ]
 /** `ev:subchunk` 载荷键白名单（零新键 —— 内容面六；身份二 `role` / `id` = 块定位，不入行模型 ——
  *  形单源 = `docs/desktop/design/IPC.md` §1 该行）。 */
@@ -126,21 +133,58 @@ export function onSubagent(state, ev, now) {
 }
 
 /** `ev:subchunk` —— 子 agent 内容增量入块模型 `rows`（**重挂重放单源** —— 视图面按 `rows` 逐条重放核件
- *  `renderSubagentChunk`；「对齐第二批」项 3）：按会话键定位块（键 = `sub:role#id` —— 与核态机出生面同形）；
- *  块不在场 / 已冻结（终态）⇒ **零写**（出生面 = `ev:subagent` 出生事件；迟来 chunk 不复活 —— 核
- *  `ensureSubBlock` 出生闸同律；桌面出生面单源 = 状态机）。 */
-export function onSubchunk(state, ev) {
+ *  `renderSubagentChunk`；「对齐第二批」项 3）：按会话键定位块（键 = `sub:role#id` —— 与核态机出生面同形）。
+ *  **出生闸 = 核 `ensureSubBlock` 直取**（R5 · #522③ 形差收正 —— 本端零第二份判据）：无块 ⇒ **建块**
+ *  （「内容先到」可达 —— 与核同律：核闸的独有出生路径）；已终态（`frozen`）/ 墓碑（`region:"flow"`
+ *  —— 冻结即墓碑的在册派生）⇒ **零写**（迟来 chunk 不复活 —— 幂等守卫）；live ⇒ 复用（不重挂 / 不刷新）。
+ *  **调用序**：核闸先于行写（建块 ⇒ 行入 `rows`）；建块经 `withSubBlocks` 落表（活动键 ⇒ 折叠头 `running`
+ *  读数随动）。 */
+export function onSubchunk(state, ev, now = Date.now()) {
   const key = typeof ev.key === "string" && ev.key !== "" ? ev.key : null
   const row = key === null ? null : subchunkOf(ev)
   if (row === null) return state
   const table = state.subBlocks ?? {}
-  const list = Array.isArray(table[key]) ? table[key] : null
-  if (list === null) return state
+  const list = [...(Array.isArray(table[key]) ? table[key] : [])]
   const target = `sub:${ev.role}#${ev.id}`
-  const index = list.findIndex((block) => block?.key === target)
-  if (index < 0 || list[index]?.frozen === true) return state
-  const block = list[index]
+  const { block } = ensureSubBlock(list, target, { now: () => now })
+  if (block === null) return state // 已终态 ∕ 墓碑 ⇒ 丢弃（迟来 chunk 不半复活）
   const rows = [...(Array.isArray(block.rows) ? block.rows : []), row]
+  const index = list.indexOf(block)
   const next = [...list.slice(0, index), { ...block, rows }, ...list.slice(index + 1)]
   return withSubBlocks(state, { ...table, [key]: next }, key)
+}
+
+/** `resetActivity` 语义接（R5 · #522① —— VSC `webview/activity.js:180-189` 同义）：**键级复位** ——
+ *  会话中止（回合尾 `stopped` ∧ 本键非挂起 —— 池子随回合死）/ 清屏（`openSession` 键变）⇒ 该键切片整删
+ *  （live + 驻留 + 墓碑全清；流内归档块 = 会话历史不动）＋活动键 ⇒ 折叠头 `running` 读数归 0（**池面 +
+ *  表复位**）。他键零扰（切片级动作）；该键本就不在场 ⇒ **原引用**（幂等）。复位只清**存量** —— 迟来事件按核
+ *  出生闸**重新出生**（与 VSC 清 map 同义；幂等守卫只挡冻结 ∕ 墓碑键）；活块由 2s 存活投影自愈重投。 */
+export function resetSubBlocks(state, key) {
+  const table = state.subBlocks ?? {}
+  if (typeof key !== "string" || key === "" || !Object.hasOwn(table, key)) return state
+  const next = { ...table }
+  delete next[key]
+  return withSubBlocks(state, next, key)
+}
+
+/** `subBlocksFreezeAll`（R5 · #522② —— **退出兜底**；VSC `webview/activity.js:141-144` 同义）：挂起窗
+ *  退出帧（`ev:susp {active:false}`）⇒ 本键**全体归档** —— live ⇒ 折叠（核 `freezeMeta`；`interrupted`
+ *  注记只随载荷真值落 —— 本端出窗载荷无该键 ⇒ 恒零注记，不假造）· 驻留（`awaitingDigest`）⇒ 清驻留 +
+ *  归档 · 已墓碑（`region:"flow"`）⇒ 不动（`regionOf` 注入 = 桌面区判据：**墓碑外皆「在区」**）。归档入流
+ *  单源 = 核效果表 + 本档 `archiveIntoFlow` 派生（与 `onSubagent` 同径 —— 单一实现零副本）。 */
+export function freezeAllSubBlocks(state, ev, now = Date.now()) {
+  const key = typeof ev?.key === "string" && ev.key !== "" ? ev.key : null
+  const table = state.subBlocks ?? {}
+  const before = key === null ? null : table[key]
+  if (!Array.isArray(before) || before.length === 0) return state
+  const list = [...before]
+  const { effects } = subBlocksFreezeAll(list, {
+    now: () => now,
+    regionOf: (block) => (block?.region === "flow" ? "flow" : "activity"),
+    interrupted: ev.interrupted === true,
+  })
+  const archived = archiveIntoFlow(before, list, new Set(effects.map((effect) => effect?.key)))
+  const next = withSubBlocks(state, { ...table, [key]: archived.list }, key)
+  if (archived.blocks.length === 0 || key !== state.activeSession) return next
+  return archived.blocks.reduce((acc, block) => appendBlock(acc, block), next)
 }

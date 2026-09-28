@@ -27,6 +27,10 @@
  *  `provider/wait-status.mjs` `waitStatusOf`，`warn` ∕ 未知相位 ⇒ 零载波）· `onCompressStart` ∕ `onCompress` ∕
  *  `onCompressFail`（核 `context.mjs:304` ∕ `agent/run-stages.mjs:89/:98/:106` ⇒ `ev:compress` 四态载荷
  *  ——起跑 ∕ 完成 ∕ 降级 ∕ 失败；形 = VSC `panel-callbacks.mjs:175-183` 同式，词面渲染归渲染面）。
+ * **R5（子代理面 · 同批 §2.4 R5 —— `#521` ∕ B10）**：① `onToolResult` 检两锚（核 `child-marks.mjs` `TURN_CAP_MARK` ∕
+ *  `STOPPED_MARK`）⇒ sync 子代理 `done` 补发 + 块头注记载荷（X6 判据，逐字同 CLI `tool-events.mjs:217` ∕
+ *  VSC `panel-callbacks.mjs:102-103`；同点收口 `subKey` 消费 = sync 块冻结）；② 增 `goalOf` 采样注入面 ——
+ *  goal 工具结果时点采样 ⇒ `ev:goal`（核 `agent.goal` 单源；值形对齐核卡渲染预期）。
  * 依赖面 = 注入（零宿主依赖 ⇒ 平 node 直测）：`post(channel, payload)` = 主进程出站面 ·
  * `askSingle` / `askBatch` / `askQuestion` = 三门挂起（表与 resolve 在 `suspensions.mjs`，本档只转口、不持表）·
  * `syncLiveOf(key, head)` = 核 sync registry 只读采样（X10 可中止事实——核不可算，须端供给）。
@@ -39,6 +43,8 @@ import { isToolFailure } from "@thincoder/render-core/lib.mjs"
 // 等待相位 → `ev:statusText` kind 映射（R4 —— 核单源 `provider/wait-status.mjs`：`gate` ∕ `retry` ∕ `overloaded` ∕
 // `quota` 四相 ⇒ kind；`warn` ∕ 未知相位 ⇒ `null` 不显示——本端零相位枚举 ∕ 零自铸词）。
 import { waitStatusOf } from "@thincoder/core/provider/wait-status.mjs"
+// 子 agent 报告文本锚点（R5 · #521 —— 核零依赖叶**单源**：`TURN_CAP_MARK` ∕ `STOPPED_MARK`；块头注记判据）。
+import { STOPPED_MARK, TURN_CAP_MARK } from "@thincoder/core/agent/child-marks.mjs"
 
 /** 活动名闭集（SHELL.md §4 · IPC.md §1 桥面）：`⟦ev⟧` 出发的八名 —— 表外名（子代理中继）原样透传（形状同一）。 */
 export const ACTIVITY_EVENTS = Object.freeze(["turn", "queued", "async", "settled", "stopped", "done", "cancelled", "approval"])
@@ -79,6 +85,29 @@ export function summarizeArgs(name, args) {
   }
 }
 
+/** sync 子代理完成注记（R5 · #521 —— X6 注记判据，**逐字同** CLI `tool-events.mjs:217` ∕ VSC `panel-callbacks.mjs:102-103`）：
+ *  `TURN_CAP_MARK` ⇒ `turn cap reached — work may be partial`；`STOPPED_MARK` ⇒ `stopped by user — work may be partial`；
+ *  否则 `null`（零注记 —— **不伪造**）。锚常量 = 核单源（`child-marks.mjs`），禁字面复制；注记的块头渲染
+ *  （尾接 ` — <note>` ∕ 归一拍平 ≤140）归核件 `subblocks/activity-view.mjs` 直出（端零文案自铸）。 */
+function syncNoteOf(result) {
+  const text = String(result ?? "")
+  if (text.includes(TURN_CAP_MARK)) return "turn cap reached — work may be partial"
+  if (text.includes(STOPPED_MARK)) return "stopped by user — work may be partial"
+  return null
+}
+
+/** goal 面投影（R5 · B10 —— 逐字同 VSC `agent.mjs:409-411`：`active` 原样 ∕ `complete ⇒ done` ∕ 余（`blocked`）原样；
+ *  goal 缺席（取消 ∕ 未设）⇒ `{ status: "cancelled" }`）。核 `agent.goal` = 唯一写者（goal 工具）⇒ 单源；
+ *  值形对齐核卡渲染预期（`cards/panel.mjs` `renderGoalPanel` 读 `{ status, objective, criteria }`）。 */
+function goalInfoOf(goal) {
+  if (!goal) return { status: "cancelled" }
+  return {
+    status: goal.status === "active" ? "active" : goal.status === "complete" ? "done" : goal.status,
+    objective: goal.objective,
+    criteria: goal.criteria,
+  }
+}
+
 /** relay 前缀内容 chunk 四面分流（「对齐第二批」项 3 —— 构造面同形 = 扩展端先例
  *  `thincoder-vscode/src/extension/panel-subagent-relay.mjs:172-191`）：relay 前缀（含嵌套链）⇒ `ev:subchunk`
  *  载荷（**前缀剥除在本档** ⇒ 渲染面零析 `role#id/`）；无前缀 ⇒ `null`（调用面原样转发）。
@@ -112,10 +141,12 @@ function subChunkOf(face, a, b) {
  *  **对齐第三批两注入面（皆可缺省 —— 缺 ⇒ 该项零载波，零连带）**：`advisorOf(key)` = advisor 轮次只读采样
  *  （宿主 `agent-host.mjs` 供 `_advisorRound` / `provider.model`；返回 `null` ⇒ 不携两键）；
  *  `extractLinks(text)` = 验存文件链接（宿主 `file-links.mjs` 供 —— 盘上存在闸 + 去重 + 封顶；缺 ⇒ 零链接键）·
- *  `persistDistilled(key)` = 蒸馏落位（R3 · #520 —— `onDistilled` 时点按本键重落盘；缺 ⇒ 零动作）。
+ *  `persistDistilled(key)` = 蒸馏落位（R3 · #520 —— `onDistilled` 时点按本键重落盘；缺 ⇒ 零动作）·
+ *  `goalOf(key)` = 目标面**只读采样**（R5 · B10 —— 宿主 `agents.get(key)?.goal ?? null` 供；**不可判（agent 缺席）⇒ `undefined`**
+ *  ⇒ 零载波；`null` = goal 缺席（取消）——两义不可合）。
  *  relay 面 per-键 scope（`pendingAsync` / `queued` 缓存——核 `createRelayScope`；**多会话互不串味**：
  *  各键 `role#id` 可同名，缓存不得跨键共享）。 */
-export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf, syncLiveOf, now, advisorOf, extractLinks, persistDistilled }) {
+export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf, syncLiveOf, now, advisorOf, extractLinks, persistDistilled, goalOf }) {
   const scopes = new Map() // 会话键 → relay scope（懒建 · 随键存活）
   const scopeOf = (key) => {
     if (!scopes.has(key)) scopes.set(key, createRelayScope())
@@ -208,11 +239,31 @@ export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf,
       // 宿主计算：路径 token + 盘上存在闸 + 去重 + 封顶；空 / 缺 ⇒ 零键）。
       onToolResult: (name, result, id, subKey) => {
         const links = typeof extractLinks === "function" ? extractLinks(result) : null
-        return at("ev:tool-result", {
+        const out = at("ev:tool-result", {
           id, ok: !isToolFailure(result), result,
           ...(Array.isArray(links) && links.length > 0 ? { links } : {}),
           ...(subKey ? { subKey } : {}),
         })
+        // R5 · #521（X6 注记）：`subKey`（核 `dispatch-run.mjs:137` 第 4 参 —— 仅 sync 成功 / 折叠径设置）
+        // 在场 ⇒ 本键 `done` 补发 —— sync 块冻结（VSC `settleSyncSubagent` ∕ CLI `finishSubTaskKey` 同款）
+        // + 两锚命中才携注记（`note` 入块级活态载体 `meta.note` —— 核态机直收，禁假造）。已冻结块
+        // （例：`⟦ev⟧stopped` 先到）⇒ 核「已冻丢注记」判据照旧（VSC ∕ CLI 同面登记）。
+        if (subKey) {
+          const path = relayPathOf(`${String(subKey)}/`)
+          const hash = path === null ? -1 : path.head.indexOf("#")
+          const subId = hash > 0 ? Number(path.head.slice(hash + 1)) : NaN
+          if (Number.isFinite(subId)) {
+            const note = syncNoteOf(result)
+            sub({ status: "done", role: path.head.slice(0, hash), id: subId, ...(note === null ? {} : { note }) })
+          }
+        }
+        // R5 · B10（目标面）：**goal 工具结果时点采样**（核 `agent.goal` 单源 —— 唯一写者 = goal 工具）；
+        // 错误结果 = 零状态变更 ⇒ 不出站（禁假造「cancelled」）；`goalOf` 缺注入 ∥ 不可判（agent 缺席）⇒ 零载波。
+        if (name === "goal" && typeof goalOf === "function" && !isToolFailure(result)) {
+          const goal = goalOf(key)
+          if (goal !== undefined) at("ev:goal", goalInfoOf(goal))
+        }
+        return out
       },
       onPermissionRequest: (name, args) => askSingle(key, name, args),
       onBatchPermissionRequest: (req) => askBatch(key, req),

@@ -1,10 +1,9 @@
 /**
  * events.mjs — 渲染面事件归约核心（事件通道 → 切片写者**单源** · 批档 §2.2(e) / §2.11⑧ · `docs/desktop/design/IPC.md` §1）：
  * 切片写者的**单源**——主进程只产事件 / 回执，值面落树全在本档；订阅接线面出档 `renderer/events-subscribe.mjs`
- *（二十一通道表 · `attachEvents` · 回合尾窄口携键 —— 300 行拆分层落形）；问题 / 任务切片面出档 `renderer/questions.mjs`、
- * **挂起 / 消化两切片** = 桌面空闲唤醒批增归约面两分派支（`ev:susp` 计数切片 ∕ `ev:digest` 消化行切片）；
- * **到期触发切片** = timer-wake 阶段 2 增第三分派支（`ev:timer` ⇒ `state.timerNotice[key]` —— 行文 = 交付原文；
- * 行组 `[data-timer]` 与消化行同族；生命期 = 运行期痕（首屏页读整置即失 —— `renderer/page-read.mjs`））；
+ *（二十二通道表 · `attachEvents` · 回合尾窄口携键 —— 300 行拆分层落形）；问题 / 任务切片面出档 `renderer/questions.mjs`、
+ * **宿主唤醒面三切片**（挂起 ∕ 消化 ∕ 到期）= **出档 `renderer/events-wake.mjs`**（R5 先拆后改 —— 本档触 500
+ * 硬限；三归约体 + 共件 `countOf` 迁入该档，本档引三件分派，无环）；
  * 位标面出档 `renderer/badges.mjs`（桌面残余批拆档产物 —— `clearQuestion` 本档 re-export 保导出名面）；
  * **页读径出档 `renderer/page-read.mjs`**（「对齐第二批」拆分产出 —— 硬限 500 顶格，在册预案本批执行：
  * `applyPage` / `blockOfMessage` 两消费面改引该档 = `renderer/mount-sessions.mjs` / 测试面；本档不引页读档，无环）；
@@ -14,6 +13,10 @@
  * 距 500 硬限余 2，`ev:flags` 归约须先出档：`applyFlags` ∕ `sameRecord` 迁入该档，`ev:flags` 归约体（`onFlags`）随迁；
  * 本档引两件 + re-export 两件保名面，无环）。
  * **状态面归约径出档 `renderer/events-status.mjs`**（R4：两切片先出档 —— 两归约体 + 活动恢复即清清点迁入该档；本档引三件分派 + 前置清点一行，无环）。
+ * **R5（子代理面）**：增 **`ev:goal` 目标切片**（宿主桥 goal 工具结果时点采样 —— 单源 = 核 `agent.goal`；
+ * 值形对齐核卡渲染预期）+ 三处态机接线（函数住 `renderer/subagent-reduce.mjs`，本档只接 —— 零第二实现）：
+ * 回合尾 `stopped` ∧ 本键非挂起 ⇒ **本键表复位**（`resetSubBlocks`）· `openSession` 键变 ⇒ 复位新键表 ·
+ * `ev:susp` 出窗帧 ⇒ **退出兜底归档**（`freezeAllSubBlocks` —— 住 `events-wake.mjs`）。
  *
  * 导出面（`docs/desktop/design/RENDERER.md` §1.1 事件归约面条 —— 订阅接线一发已拆出同源档）：
  *   `reduce(state, ev, now)`   纯归约（零 DOM / 零 IPC ⇒ 平 node 直测）；无变化 ⇒ **原引用**
@@ -32,7 +35,7 @@
  *   `renderer/subagent-reduce.mjs`：块面内容回显 = 核件 tail-3 / 展开（「对齐第二批」项 3 收正：原「零内容回显」
  *   口径撤销）；态机单源 = 核 `/rc/subblocks/state.mjs` `subBlocksReduce`）· 池切片 **摘工具行**（`pool.blocks` 不再在册 —— 工具调用面 = 对话流工具卡；折叠头
  *   `running` 读数改源于活动会话在飞子 agent 块数）· `pool.approvals` 无会话键维度（写者 = `ev:approval`，不按会话
- *   分池 —— 设计未给池的会话键口径，缺口随 §5 登记）；文案零硬编码（本档不出词）。
+ *   分池 —— 设计未给池的会话键口径，缺口随 §5 登记）· `goal` 目标切片（R5 —— 按会话键；写者 = 本档 `ev:goal` 归约）；文案零硬编码（本档不出词）。
  * 活块 / 页块两面差异（决策 D8-8）：页块**不落** `status` / `durationMs`（活块有），键集一致性判据 = 五型闭集。
  */
 import { appendBlock, returnToBottom, setAttachDegraded } from "./store.mjs"
@@ -46,13 +49,16 @@ export { clearQuestion }
 import { badgeStamps } from "./badges.mjs"
 // 子 agent 归约径（「对齐第二批」续拆产出 —— 子 agent 面两分派支 + 池读数两助手）；本档 `reduce` 分派两通道，
 // `withPool` / `openSession` / 待决两族引两助手（单一实现零副本）。
-import { liveCount, onSubagent, onSubchunk, poolOf } from "./subagent-reduce.mjs"
+import { liveCount, onSubagent, onSubchunk, poolOf, freezeAllSubBlocks, resetSubBlocks } from "./subagent-reduce.mjs"
 // 模式位归约径出档（本批拆分产出 —— 输入面板上提批 §2.4 Q8）：`ev:flags` 归约体 + 两共件居该档；本档引 `onFlags`
 // 分派 + `sameRecord`（四读数槽用）并 re-export 两件（名面不变 —— 页读 / 出站两消费面零改）。
 import { onFlags, sameRecord } from "./events-flags.mjs"
 export { applyFlags, sameRecord } from "./events-flags.mjs"
 // 状态面归约径出档（R4 —— 本批拆分产出）：两归约体 + 活动恢复即清清点居该档；本档引三件分派（见 `reduce`）。
 import { expireStatusText, onCompress, onStatusText } from "./events-status.mjs"
+// 宿主唤醒面三切片归约径出档（R5 —— 先拆后改：本档触 500 硬限；挂起 ∕ 消化 ∕ 到期三归约体 + 共件
+// `countOf` 迁入该档；本档引三件分派 —— 无环）。
+import { onDigest, onSusp, onTimer } from "./events-wake.mjs"
 
 /** 活流块 id 派生前缀（页块 id 域 = 核给（工具 id）/ 缺省无 —— 两域不混）。 */
 const LIVE_ID = "live-"
@@ -97,7 +103,7 @@ function clearCursor(state) {
   return hit ? { ...state, blocks: next } : state
 }
 
-// ─── 纯归约（二十一通道 → 切片）────────────────────────────────────
+// ─── 纯归约（二十二通道 → 切片）────────────────────────────────────
 
 /** `ev:reasoning`——推理块增量（R3c · D19 · `docs/desktop/design/IPC.md` §1 该行）：续写判据 = **尾块 `kind === "reasoning"`**（与正文同形）；
  *  否则起新推理块；键门同 `onToken`（非活动会话零落）。 */
@@ -245,58 +251,23 @@ function onUsage(state, ev) {
   }
 }
 
-/** 计数归一（`ev:susp` 四计数 / `ev:digest` `n` ∕ `ms` —— 非数 ⇒ 0，沿状态行 `numOf` 同判；零抛）。 */
-function countOf(value) {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0
-}
-
-/** `ev:susp`——挂起窗计数切片（按会话 `key` · 同键就地替换 · 首写自种）：载荷 = 核 `backgroundCounts` 直传
- *  四计数（`running` / `queued` / `pending` / `done`）+ `active`（进出两态 —— `active:false` 为退出唯一形态）。
- *  消费 = 状态行段 3 挂起句（`renderer/views/statusline.mjs`；`active:false` ⇒ 段回落两态词 —— **禁假造**）。
- *  同键同值 ⇒ **原引用**（零重绘）；`active` 只收严格真；四计数非数 ⇒ 归一 0（不落 `NaN` 入词面）。 */
-function onSusp(state, ev) {
-  const record = {
-    active: ev.active === true,
-    running: countOf(ev.running), queued: countOf(ev.queued), pending: countOf(ev.pending), done: countOf(ev.done),
-  }
-  const table = state.susp ?? {}
+/** `ev:goal`——目标面切片（R5 · B10；按会话键 · 同键就地替换 · 首写自种）：载荷 = 宿主桥按核 `agent.goal`
+ *  单源投影（`{ status, objective, criteria }` —— 值形对齐核卡 `cards/panel.mjs` 渲染预期）。`status` 闭集 =
+ *  VSC 产点四支（`active` / `done` / `blocked` / `cancelled`）——表外 ⇒ **零写**（禁假造）；同键同值 ⇒
+ *  **原引用**（零重绘）。消费 = 目标卡（`renderer/views/goal.mjs`）∥ 状态行 🎯 非段位元素（`statusline.mjs`）。 */
+function onGoal(state, ev) {
+  const status = typeof ev?.status === "string" && GOAL_STATUS.includes(ev.status) ? ev.status : null
+  if (status === null || typeof ev.key !== "string" || ev.key === "") return state
+  const text = (value) => (typeof value === "string" && value !== "" ? value : null)
+  const record = { status, objective: text(ev.objective), criteria: text(ev.criteria) }
+  const table = state.goal ?? {}
   if (sameRecord(table[ev.key], record)) return state
-  return { ...state, susp: { ...table, [ev.key]: record } }
+  return { ...state, goal: { ...table, [ev.key]: record } }
 }
 
-/** `ev:digest`——消化轮边界切片（按会话 `key` · 同键就地替换——**起跑 / 终态两态**）：
- *  `start` 写起跑态（`n` = 起跑 pending 数 · `tier: "ask"` 档随行 `from` / `msg`——核 `upstreamAskLabelVars`）；
- *  `end` **原地更新本键游标**（保留起跑 `n` —— 终态句 `digest.done` 需 n；`ok` 缺省 ⇒ 真，沿宿主 `ok !== false` 判据）。
- *  表外 `status` ⇒ 零写；同键同值 ⇒ 原引用。消费 = 流内消化行组 `[data-digest]`（`renderer/views/chat.mjs`）。 */
-function onDigest(state, ev) {
-  const table = state.digest ?? {}
-  const prev = table[ev.key]
-  let record = null
-  if (ev.status === "start") {
-    record = {
-      status: "start", n: countOf(ev.n),
-      tier: ev.tier === "ask" ? "ask" : null,
-      from: typeof ev.from === "string" ? ev.from : null,
-      msg: typeof ev.msg === "string" ? ev.msg : null,
-    }
-  } else if (ev.status === "end") {
-    record = { ...(prev ?? {}), status: "end", ok: ev.ok !== false, ms: countOf(ev.ms) }
-  } else return state
-  if (sameRecord(prev, record)) return state
-  return { ...state, digest: { ...table, [ev.key]: record } }
-}
-
-/** `ev:timer`——到期触发切片（按会话 `key` 分槽 · 同键就地替换——**最近一次交付**；行文 = 交付原文）：
- *  消费 = 流内触发行组 `[data-timer]`（构树 ∕ 帧尾同刷住 `renderer/views/chat-chrome.mjs`）；生命期 = **运行期痕**
- *  （非落盘件 —— 首屏页读整置即失；同 `[data-stopped]` 族）；`text` 非非空串 ⇒ **零写**（禁假造空行）。
- *  显示裁（≤3 行 + `…`）= 渲染面单点（`timerGroupNode`）；单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.11。 */
-function onTimer(state, ev) {
-  if (typeof ev.text !== "string" || ev.text === "") return state
-  const table = state.timerNotice ?? {}
-  const record = { text: ev.text }
-  if (sameRecord(table[ev.key], record)) return state
-  return { ...state, timerNotice: { ...table, [ev.key]: record } }
-}
+/** 目标状态闭集（单源 = 核 `agent-tools/goal.mjs` 状态词经宿主桥投影：`active` / `complete⇒done` /
+ *  `blocked` / 缺席⇒`cancelled`；表外 ⇒ 零写）。 */
+const GOAL_STATUS = Object.freeze(["active", "done", "blocked", "cancelled"])
 
 /** `ev:queue` —— 排队面镜面两形（「回合中插入」批 · 单源 = `docs/desktop/design/PROJECT.md` §2 KD-40 ④）：
  *  ① **状态形**（`{ key, items }`）⇒ 本键镜面整置（快照整置 · 幂等 —— 权威 = 宿主，渲染面零本地队）；
@@ -385,7 +356,10 @@ function onActivity(state, ev, now) {
     }
   }
   const tail = ev.event === "stopped" ? clearQuestion(state, ev.key) : state
-  const swept = ev.event === "stopped" && forActive(state, ev) ? sweepRunningTools(tail) : tail
+  // R5（#522①）：会话中止 ⇒ **本键表复位**（VSC `streaming.js:156` 同义 —— `aborted && !suspended`）：
+  // 回合尾 `stopped` ∧ 本键非挂起（挂起窗内回合尾不动池 —— children 持会话信号）⇒ 池子随回合死。
+  const reset = ev.event === "stopped" && state.susp?.[ev.key]?.active !== true ? resetSubBlocks(tail, ev.key) : tail
+  const swept = ev.event === "stopped" && forActive(state, ev) ? sweepRunningTools(reset) : reset
   const cursor = forActive(state, ev) ? clearCursor(swept) : swept
   const marked0 = ev.event === "stopped" ? withStopMark(cursor, ev.key) : cursor
   const cleared = badgeStamps(marked0.tabBadges ?? {}, ev.key, "running", false)
@@ -433,7 +407,7 @@ export function reduce(state, ev, now = Date.now()) {
   switch (channel) {
     case "ev:token": return onToken(state, ev)
     case "ev:reasoning": return onReasoning(state, ev)
-    case "ev:subchunk": return onSubchunk(state, ev)
+    case "ev:subchunk": return onSubchunk(state, ev, now)
     case "ev:tool-call": return onToolCall(state, ev, now)
     case "ev:tool-output": return onToolOutput(state, ev)
     case "ev:tool-result": return onToolResult(state, ev, now)
@@ -442,13 +416,15 @@ export function reduce(state, ev, now = Date.now()) {
     case "ev:error": return onError(state, ev)
     case "ev:question": return onQuestion(state, ev)
     case "ev:task": return onTask(state, ev)
-    case "ev:susp": return onSusp(state, ev)
+    case "ev:susp": return onSusp(state, ev, now)
     case "ev:digest": return onDigest(state, ev)
     case "ev:timer": return onTimer(state, ev)
     case "ev:queue": return onQueue(state, ev)
     case "ev:usage": return onUsage(state, ev)
     case "ev:ledger": return onLedger(state, ev)
     case "ev:subagent": return onSubagent(state, ev, now)
+    // 目标面切片（R5 —— 产点 = 宿主桥 goal 工具结果时点采样；表外状态 ⇒ 零写）
+    case "ev:goal": return onGoal(state, ev)
     // 模式位推送（本批承接 —— 归约体出档 `renderer/events-flags.mjs`；三径同点写之一）
     case "ev:flags": return onFlags(state, ev)
     case "ev:statusText": return onStatusText(state, ev)
@@ -466,11 +442,14 @@ export function openSession(state, key) {
   const next = key == null ? null : String(key)
   const cleared = next === null ? { badges: state.tabBadges ?? {}, changed: false } : badgeStamps(state.tabBadges ?? {}, next, "done", false)
   if (next === state.activeSession && !cleared.changed) return state
+  // R5（#522① · 清屏径）：键变 ⇒ **复位新键表**（VSC `clearMessages` ⇒ `resetActivity` 同义 —— `chat-messages.js:120`）：
+  // 历史会话重现不留旧代行账（活块由 2s 存活投影自愈重投）；同键重开（零键变）不复位。
+  const swapped = next !== null && next !== state.activeSession ? resetSubBlocks(state, next) : state
   const base = cleared.changed
-    ? { ...state, activeSession: next, tabBadges: cleared.badges }
-    : { ...state, activeSession: next }
-  const running = liveCount(next === null ? [] : state.subBlocks?.[next])
-  const pool = poolOf(state)
+    ? { ...swapped, activeSession: next, tabBadges: cleared.badges }
+    : { ...swapped, activeSession: next }
+  const running = liveCount(next === null ? [] : swapped.subBlocks?.[next])
+  const pool = poolOf(swapped)
   return pool.running === running ? base : { ...base, pool: { ...pool, running } }
 }
 

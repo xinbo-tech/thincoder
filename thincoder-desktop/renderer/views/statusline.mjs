@@ -9,6 +9,8 @@
  *
  * 承载 16 段 = `STATUS_SEGMENTS`（序同 CLI —— 注意力 chip 行首 → banner 四态 → 状态段簇）· 旁置 1 = 滚动位（药丸 / 摘要块承载）·
  * 不适用 1 = 键位组（输入区 / 标签条自述）——**后两段零字段 ⇒ 零节点**（不造空段；逐项裁定单源 = `docs/desktop/design/UI.md` §1 本批注项 1）。
+ * **R5 增非段位元素 1** = 🎯 目标徽标（锚 `data-goal` —— **不入 `STATUS_SEGMENTS` 闭集**，沿 `data-alert`「非 16 段之一」
+ * 先例；在场判据随核件 = `renderer/views/goal.mjs` `goalBadgeVisible` —— 非 `active` 态 ⇒ 零节点）。
  * 承载段数据源（逐段）居段构建器族档（本档只给装配序与切片取值）；段 3 态机（挂起句 / 零节点 / 状态文本 / 运行中 / 就绪）单源 = 同档。
  * **R4（提示锚 + 状态面）**：段 3 态机增**状态文本支**（五 kind —— `ev:statusText` 切片；归约面写者 = `renderer/events-status.mjs`）。
  * 判据（D17 · KD-25）：**未至 / 非正 / 缺片 ⇒ 该段零节点**（禁假造）；段锚 = `data-seg`（闭集 = `STATUS_SEGMENTS`）·
@@ -23,6 +25,8 @@ import { t } from "../i18n.mjs"
 import { deriveTabBadge } from "../store.mjs"
 import { BANNER_CODES, bannerSegments } from "./statusline-banner.mjs"
 import { BADGE_WORD } from "./chrome.mjs"
+// 目标徽标在场判据（R5 —— 核件判据直取：`goalPanelVisible` + `active` 态门，住 `renderer/views/goal.mjs`）。
+import { goalBadgeVisible } from "./goal.mjs"
 // 段构建器族（R4 出档 —— 本批先拆后改）：本档只装配（段序 / 切片取值）与构树；逐段判据 = 该档档头与逐函数注释。
 import {
   attentionSegment, badgeCodes, contextSegment, elapsedSegment, enterSegment, ledgerSegment, stateSegment,
@@ -44,7 +48,7 @@ const ALERT_CODES = Object.freeze(["approval", "running"])
 export function statusModel({
   activeSession = null, badges = {}, usage = {}, sessions = [], pending = {},
   blocks = [], tasks = {}, turns = {}, turnStarts = {}, tokens = {}, timers = {}, projectInfo = null,
-  sessionFlags = {}, susp = {}, statusText = {}, now = Date.now(),
+  sessionFlags = {}, susp = {}, statusText = {}, goal = {}, now = Date.now(),
 } = {}) {
   const rows = Array.isArray(sessions) ? sessions : []
   const active = activeSession == null ? null : String(activeSession)
@@ -53,6 +57,8 @@ export function statusModel({
   // 段 3 支①源 = `ev:susp` 计数切片（桌面空闲唤醒批）；支③源 = `ev:statusText` 状态文本切片（R4）
   const suspend = susp !== null && typeof susp === "object" ? susp[active] : undefined
   const statusSlice = statusText !== null && typeof statusText === "object" ? statusText[active] : undefined
+  // 非段位元素源 = `ev:goal` 切片（R5）；在场判据随核件（闸内 = 非段位元素 —— 不入段集）
+  const goalSlice = goal !== null && typeof goal === "object" ? goal[active] : undefined
   const segments = active === null ? [] : [
     attentionSegment(codes),
     ...bannerSegments(flags),
@@ -75,7 +81,7 @@ export function statusModel({
     const code = deriveTabBadge(badgeCodes(badges, key))
     if (ALERT_CODES.includes(code) && typeof BADGE_WORD[code] === "string") alerts.push({ tab: key, code })
   }
-  return { alerts, segments }
+  return { alerts, segments, goal: goalBadgeVisible(goalSlice) }
 }
 
 /** 段节点（锚 = `data-seg` 码；警示 class 两形 —— `status-usage-warn` 沿既有面，`status-seg-warn` 为余段单形）。 */
@@ -105,12 +111,23 @@ function alertNode(alert) {
   }
 }
 
-/** 结构描述符树（根 `data-alerts` = 告警数；子序 = 承载段序 → 告警序）。 */
+/** 目标徽标节点（**非段位元素** —— 修正 1 定形①：不入 `STATUS_SEGMENTS` 闭集；沿 `data-alert` 先例）：字形 = `🎯`
+ *  （VSC `status-bar.js:24` 逐字；字形非词表项）；可及名经词表（`status.goal`）；**无点击面** —— 目标卡随核件判据常显
+ *  （VSC 面板开合接线无桌面对位 —— 不自造交互）。 */
+function goalNode() {
+  return {
+    tag: "span",
+    props: { class: "status-goal", "data-goal": "", "aria-label": t("status.goal") },
+    children: ["🎯"],
+  }
+}
+
+/** 结构描述符树（根 `data-alerts` = 告警数；子序 = 承载段序 → **目标徽标（R5）** → 告警序）。 */
 export function statusTree(model) {
   return {
     tag: "div",
     props: { class: "status-bar", "data-alerts": model.alerts.length },
-    children: [...model.segments.map(segNode), ...model.alerts.map(alertNode)],
+    children: [...model.segments.map(segNode), ...(model.goal === true ? [goalNode()] : []), ...model.alerts.map(alertNode)],
   }
 }
 
@@ -133,6 +150,7 @@ export function mountStatus(root, state) {
     sessionFlags: state?.sessionFlags ?? {},
     susp: state?.susp ?? {},
     statusText: state?.statusText ?? {},
+    goal: state?.goal ?? {},
   })
   clear(root)
   root.append(build(statusTree(model)))

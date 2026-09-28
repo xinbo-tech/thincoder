@@ -48,7 +48,9 @@
  *  页读 / 出站回执两径）；读面 = 状态行 banner 四段（真 ⇒ 在场 · 假 / 缺 ⇒ 零节点 —— 禁假造）。
  *  `subBlocks` = **子 agent 块切片**（R3b · D20）：按会话键分槽（无该键 / 非数组 ⇒ 该会话零块 —— 禁假造）；
  *  元素 = 核态机模型（`renderer/events.mjs` 归约面写，读面 `renderer/views/activity.mjs`）。`pool.running` 读数
- *  同源（活动会话在飞块数——范归约面写；`pool` 切片不再载 `blocks`——摘工具行）。`ledger` = **账本警示切片**
+ *  同源（活动会话在飞块数——范归约面写；`pool` 切片不再载 `blocks`——摘工具行）。`goal` = **目标面切片**（R5 · B10：
+ *  按会话键存 `{ status, objective, criteria }`（写者 = 归约面 `ev:goal`——宿主桥按核 `agent.goal` 单源投影；
+ *  读面 = 目标卡 `renderer/views/goal.mjs` ∥ 状态行 🎯 非段位元素）；非载体 / 缺键 ⇒ 该会话零节点 —— 禁假造）。`ledger` = **账本警示切片**
  *  （账本可靠批 · 桌面微轮：写者 = `renderer/mount-sessions.mjs` `refreshRail` 唯一写路径；读面 = 会话控制下拉首行注记）。
  *  `pending` = **排队消息切片**（「对齐第二批」项 2 · **「回合中插入」批收正**）：`{ [会话键]: [{ text, ts }] }` ——
  *  **宿主单源快照的镜面**（写者 = `renderer/events.mjs` `ev:queue` 归约 ∥ `renderer/page-read.mjs` `applyPage`
@@ -79,6 +81,7 @@ export function initialState() {
     timerNotice: {},
     statusText: {}, // R4：状态文本切片（按会话键 —— 五 kind；写者 = 归约面 `ev:statusText`；读面 = 状态行段 3 支③）
     compress: {}, // R4：压缩状态行切片（按会话键 —— 单元素四态；写者 = 归约面 `ev:compress`；读面 = 流内压缩行）
+    goal: {}, // R5：目标面切片（按会话键 —— `{ status, objective, criteria }`；写者 = 归约面 `ev:goal`；读面 = 目标卡 ∕ 状态行 🎯）
     subBlocks: {},
     pending: {},
     attachDegraded: {},

@@ -420,6 +420,33 @@
   letter-spacing: 0.3px;
 }
 
+/* 目标面板体（核 `cards/panel.mjs` `goalPanelHtml` 产出 —— 目标卡内体；端包壳 `.goal-card` 住 `renderer/chat-cards.css`；
+   值源 = VSC `controls.css:107-148` 逐值）。 */
+.goal-section { padding: 2px 0; }
+.goal-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.5;
+  margin-bottom: 2px;
+}
+.goal-value {
+  font-size: 12px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+.goal-status-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+.goal-status-badge.active { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+.goal-status-badge.done { background: var(--diff-add-bg); color: var(--green); }
+.goal-status-badge.cancelled { background: var(--hover-bg-strong); color: var(--fg); opacity: 0.5; }
+
 /* ── 核类名映射 · 组外面（「对齐第三批」项 12 / 相抵②）─────────────
    两族宿主 = 流内非块节点组（`.chat-ledger` / 工具结果区）—— **非两文本面容器** ⇒ 按核类名直落、零容器作用域
    （类名面 = 核行产 `ledger-surface.mjs` / 核链接着装 `flow/tool-card.mjs` `linkifyPaths` 产出 —— 值为桌面变量面）。 */

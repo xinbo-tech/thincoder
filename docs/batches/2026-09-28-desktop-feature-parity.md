@@ -113,6 +113,12 @@
 - §1.17「转出 → **#40**（设计面收正轮）」= 实 id **#39**（R4 设计面收正轮）。
 - 两轮在队（按调度器串行）；编号以本节为准。
 
+### 1.20 R5 交付收下 + 三处置（父侧 · 2026-09-29 01:2x）
+- **交付**（#10 · 终态 clean · fix 1）：18 档——`subagent-reduce.mjs` 三面（reset ∕ 退出兜底冻结 ∕ 出生闸同律 147 ⇒ **191**）· `events.mjs` **先拆后改**（483 ⇒ 469 + 三切片出档 `events-wake.mjs`）· `activity.mjs` **先拆后改**（338 ⇒ 260 + `pool-subagents.mjs`）· 新 `goal.mjs`（核件直取）· 🎯 非段位元素（段闭集 16 零破）· **通道 21 ⇒ 22**（+`ev:goal`——三档同值）· 桥两锚注记载荷（逐字 CLI ∕ VSC）+ goal 采样 · 样式三档随落。三裁全照落（ev:goal —— 双触发 —— §2.4 三面 ∕ 痕迹不落）；三面运行期读数在册（出生闸三态 ∕ reset 零残留 ∕ 退出兜底 ∕ marks 在场）；`node --check` 15/15。§5 已落（7218 字符）。
+- **裁①（转出 ② · `agent-bridge` 334 越线）**：**续期在册**（拆点候选 = 注记面出档；窗口 = 批末对账——与 settings 305 ∕ exits 315 同径）。
+- **裁②（转出 ③ · 端差两处）**：登记待裁 → 台账 **#554**（`interrupted` 注记无载体 ∕ 🎯 无点击面——随下一桌面对位轮，默认对齐）。
+- **裁③（转出 ① · 设计面）**：#39（R4 单）**已撤单**——与 R5 五项**合并为原子一轮**（同批文档、一次落齐；编号以届时回执为准）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（初始轮 + 评审轮 1 修正（1–14 逐号）+ R1 设计面收正轮（#129 ∕ #131 · 六档八笔；flow 批档三处归父侧）+ 评审轮 3（重发复核）修正 · 微轮 #16（1–10 逐号）+ 退役面本体收正轮 + R2 设计面收正轮（#29 · ①–⑥ 逐号）+ R3 ∕ R6 设计面收正轮（#30 · ①–④ 逐号 + 三档 changelog）在册）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -1229,5 +1235,65 @@ KD-42（`PROJECT.md:81`）补句：**「域外对账保持人工」**——理�
 1. **设计面收正未落**（按任务书「设计档零触」未动）：`IPC.md` §1 十九 ⇒ 二十一（`:42` ∕ `:72` ∕ `:75` 三处）+ 两通道行 ∕ §10 BE 行（`PROJECT.md:753`）· `UI.md` §1 表行 3 四支 ⇒ 五支（+状态文本支）· `RENDERER.md` §1.1 根子序 += 压缩行——请父侧设计面随落（批档 #5 ∕ 修正 7 靶行）。
 2. **index 第五 kind 产出面归属**（补产出 ∕ 登记销支）——见 D2。
 3. **段 3 新支位次**（D1）如与父侧预期异 ⇒ 一处行调整可换。
+
+### R5 · 子代理面（child-marks ∕ subblocks 态机三面 ∕ goal 面板）（eng-coder · 2026-09-29 · initial 轮）
+
+**交付摘要（逐档 · 后 = `split("\n").length` 实读；前 = 届盘 ∕ 本舱实读）**
+
+| # | 档（前） | 后 | 落点 |
+|---|---|---|---|
+| 1 | `renderer/subagent-reduce.mjs`（147） | **191** | 态机三面：① `resetSubBlocks`（#522① —— 键级表复位 + 池面读数随动）② `freezeAllSubBlocks`（#522② —— 核 `subBlocksFreezeAll` 直取 + `regionOf` 注入 + `archiveIntoFlow` 同径归档）③ `onSubchunk` 出生闸 = 核 `ensureSubBlock` 直取（「内容先到」可达 —— 原「无块 ⇒ 零写」形差收正）；`SUB_KEYS` += `note`（X6 注记载荷） |
+| 2 | `renderer/events.mjs`（483） | **469** | +`ev:goal` 切片（表外状态零写 ∕ 同值原引用）+ 两触发接线（`onActivity`：`stopped` ∧ 非挂起 ⇒ 本键表复位；`openSession`：键变 ⇒ 复位新键表）+ `ev:susp` 出窗帧 ⇒ 退出兜底；子面两通道 `now` 透传；**先拆后改**：挂起 ∕ 消化 ∕ 到期三切片出档（原档触 500 硬限 ⇒ ≤490 目标达成） |
+| 3 | 新 `renderer/events-wake.mjs` | **72** | 宿主唤醒面三切片归约径（`onSusp` ∕ `onDigest` ∕ `onTimer` + 共件 `countOf` —— 逐字搬运零语义改） |
+| 4 | `renderer/views/activity.mjs`（338） | **260** | **先拆后改**（越 300 顾问线）：族内六件出 `pool-subagents.mjs`；本档 += 三面随动（模型零块 ⇒ 弃族容器账 + 计数贴清 —— 零块帧不产族壳 ⇒ 容器 DOM 必陈旧） |
+| 5 | 新 `renderer/views/pool-subagents.mjs` | **109** | 子 agent 族键控差分六件（元素构造 ∕ 行重放 ∕ 冻结着装 ∕ 同键更新 ∕ 出生 ∕ 键控差分；`syncSubBlocks` 唯一导出） |
+| 6 | 新 `renderer/views/goal.mjs` | **35** | 目标面：`goalCardNode`（核 `renderGoalPanel` 直取 + 端壳 `div.goal-card[data-card="goal"]`）+ `goalBadgeVisible`（核判据 ∧ `active` —— VSC `status-bar.js:24` 同判） |
+| 7 | `renderer/mount-cards.mjs`（153） | **157** | goal 族挂载（`CARD_ORDER` 尾位 + `CARDS_KEYS` ⊇ goal） |
+| 8 | `renderer/views/statusline.mjs`（295） | **159** | 🎯 **非段位元素**（修正 1 定形① —— 不入 `STATUS_SEGMENTS`，段闭集 16 零破；锚 `data-goal`；子序 = 段 → 🎯 → 告警）+ `mountStatus` 传 `goal` 切片 |
+| 9 | `renderer/i18n-views.mjs`（166） | **173** | +键 **1** × 两语（`status.goal` —— en 逐字 VSC `status-bar.js:24` aria-label ∕ zh 本端拟定；余词面 = 核字典 ∕ 核卡直取 ⇒ 零新键 —— 与设计估 ≈5 之差见 D6） |
+| 10 | `renderer/mount-status.mjs`（31） | **32** | `STATUS_KEYS` += `goal`（🎯 重挂触发面） |
+| 11 | `renderer/store.mjs`（287） | **290** | +`goal` 槽位（表外 —— 父侧准，随 D1 通道同落） |
+| 12 | `renderer/events-subscribe.mjs`（83） | **86** | 通道 21 ⇒ **22**（+`ev:goal` 末位） |
+| 13 | `src/main/agent-bridge.mjs`（283） | **334** | ① `onToolResult` 两锚（核 `child-marks.mjs` 单源 import）⇒ sync 子代理 `done` 补发 + 注记载荷（逐字同 CLI `tool-events.mjs:217` ∕ VSC `panel-callbacks.mjs:102-103`；同点收口 `IPC.md:56` 在册「`subKey` 消费未落」= sync 块冻结）② goal 工具结果时点采样（`goalOf` 注入面；值形逐字同 VSC `agent.mjs:409-411`）⇒ `ev:goal` |
+| 14 | `src/main/agent-host.mjs`（249） | **250** | `goalOf` 采样面注入（agent 缺席 ⇒ `undefined` 不可判 ∕ `null` = goal 缺席 —— 两义不合） |
+| 15 | `src/preload/preload.cjs`（65） | **67** | `EVENT_CHANNELS` 21 ⇒ **22**（+`ev:goal`） |
+| 16 | `renderer/chrome.css`（432） | **445** | +`.status-goal` 样式段 + 分隔条相邻性补全（fix 轮 1 —— 评审 🟡#2） |
+| 17 | `renderer/core.css`（437） | **464** | +目标面板体样式（`.goal-section` ∕ `.goal-label` ∕ `.goal-value` ∕ `.goal-status-badge` 三态 —— 值源 VSC `controls.css:107-148`） |
+| 18 | `renderer/chat-cards.css`（143 · 他轮新建未跟踪） | **153** | +`.goal-card` 卡壳（与 `.plan-card` 逐值同） |
+
+**机检读数（命令 + 结果）**
+- `node --check` × **15 档**（产品面全触碰档）→ 全 `Syntax OK`（fix 后固定复跑同绿）。
+- 三面运行期读数（`.thincoder/tmp/r5-readings.mjs` · 平 node + 迷你 DOM 桩 + `/rc/` 解析钩子 —— 可按需复跑）：① 出生闸三态 = 内容先到 ⇒ 出生（`sub:coder#7`，rows=1，`pool.running`=1）∕ live ⇒ 复用（rows 2，同块）∕ 已终态 ⇒ 零写（引用同一；墓碑 `region=flow`）+ 归档入流；② 复位 = `stopped` ∧ 非挂起 ⇒ 键 1 出表 + `pool.running` 2 ⇒ 0（他键零扰）∕ 挂起窗内回合尾不复位 ∕ `openSession` 键变 ⇒ 复位新键表（旧键留）∕ 同键重开零写；③ 退出兜底 = 出窗帧 ⇒ 全体 `frozen` + 墓碑 + `awaitingDigest` 归零 + 两枚流内快照；④ marks = 两锚 ⇒ `{status:"done", role, id, note}` 逐字（`turn cap reached — work may be partial` ∕ `stopped by user — work may be partial`）· 零锚 ⇒ 零 `note` · 无 `subKey` ⇒ 零子面出站；块头经核件 `renderSubBlock` 直出含 `— turn cap reached — work may be partial`；⑤ goal = 采样出站逐字 · 错误结果零出站 · 切片表外零写 ∕ 同值原引用 · 卡在场（`data-card=goal`）· 显隐三态（active ⇒ true ∕ done ∕ null ⇒ false）· 🎯 在场 1 ∕ 缺席 0 · 段闭集 16 未破 · `data-seg` 零借位；⑥ 复位随动 = `state=empty` ∕ 容器弃账 ∕ 计数贴清；⑦ 通道计数 = preload **22** ∧ events-subscribe 订阅 **22**（同含 `ev:goal`）。
+- 负控：桌面产品树 `TURN_CAP_MARK` ∕ `child-marks` 命中 = 唯 `agent-bridge.mjs`（import + 两锚消费，零字面重定义）；`data-goal` 唯 `statusline.mjs`（呈现）+ goal 卡锚 `data-card="goal"`；核件（`thincoder-render-core/**`）**零改**。
+
+**测试面**：随全清令（2026-09-28 用户令）**跳过 R5 表 #9 ∕ #10 两行**（新 `test/views-goal.test.mjs` ∕ `events-subagent` ∕ `views-activity` 随动）—— 本舱未写测试 ∕ 未跑套件；三面 ∕ 注记 ∕ goal 的机器读数由上述 ad-hoc 脚本承载。**not repo-suite verified — the parent-side closeout run is the only repo-suite run.**
+
+**决策透明表（逐条 · 依据）**
+
+| # | 决策 | 依据 |
+|---|---|---|
+| D1 | `ev:goal` 通道新增 + 采样点 = goal 工具结果时点 | 父侧裁①（准本舱取向）；表外三档（`preload.cjs` ∕ `events-subscribe.mjs` ∕ `store.mjs`）随落披露 —— 通道 21 ⇒ 22 = 设计面收正行（本舱零触设计档） |
+| D2 | 双触发 (a)(b)、不认 (c) | 父侧裁②；全渲染树 `resetSubBlocks` 调用点唯 `events.mjs` 两处（`:361` ∕ `:447`），页读面零触 |
+| D3 | 三面按 §2.4 施行、**痕迹不落** | 父侧裁③（§2.3 A.4 ∕ A.7 处置列判旧稿） |
+| D4 | 注记字面逐字同 CLI ∕ VSC（端零新铸词）+ `done` 补发（同点收口 `subKey` 消费） | 父侧附裁；VSC `settleSyncSubagent` ∕ CLI `finishSubTaskKey` 同款（sync 块冻结同补） |
+| D5 | 采样闸 += `!isToolFailure(result)` | 核 `agent-tools/goal.mjs` 实读：错误径均**先返错误**（`blocked` 1/3 只动 `_blockTally`、不入投影）⇒ 闸零损失（禁假造「cancelled」） |
+| D6 | i18n 键实落 **1**（设计估 ≈5） | 余词面直取：`panel.goalDesc` ∕ `goal.objective`（⑥已在册）· `goal.criteria` = 核字典投影；字形 `🎯` 非词表项（VSC 逐字） |
+| D7 | 出档两枚（`events-wake.mjs` ∕ `pool-subagents.mjs`）+ 样式落 `core.css` ∕ `chat-cards.css` ∕ `chrome.css` | 先拆后改（KD-T7：`events.mjs` 触 500 ∕ `activity.mjs` 越 300）；`renderer/styles.css` 已不在盘（修正 6 落点名滞后 —— 设计面收正行）；样式三分 = 核卡体类名归 `core.css` ⑤段 ∕ 卡壳归 `chat-cards.css` ∕ 状态行族归 `chrome.css`（沿实读归属） |
+| D8 | `mountPool` 零块 ⇒ 弃族容器账 + 计数贴清 | 三面随动必然后果（零块帧不产族壳 ⇒ 容器 DOM 必陈旧）；折叠径不受扰（折叠时块非零） |
+| D9 | 🎯 无点击面（惰性指示） | 桌面目标卡随核件判据常显（无开合面）；VSC `wire("goal-badge","goal-panel")` 无对位 —— 端差登记（不新造交互） |
+| D10 | `agent-bridge.mjs` 334 行越 300 顾问线：**登记未拆** | 该档进 R5 时 283（未越线）、本轮 +51；批次 KD-T7 允许「先拆后改 ∕ 续期」——按父侧 R2 先例（§1.11 裁② 续期在册）报父侧裁；拆点候选 = R5 新增两注记面（`syncNoteOf` ∕ `goalInfoOf` + 两消费位）出档 |
+
+**审计与代码评审（轮次与终态）**
+- 内部偏审（explore · 只读 · 1 轮）：判 **DEVIATIONS**（1 🔴 + 5 🔵）——🔴 = §5 未落（本 append 即消解）；🔵 = 拆点字面差异（`bindFamilyLabel` 留守 —— `familyLabel` 为三族共用件防环）· 样式落点（`styles.css` 不在盘）· `.status-goal` 零样式（fix 轮 1 已修）· 采样闸加严（已核核侧零损失）· 词键数（见 D6）；**部分实现 ∕ 静默简化 ∕ 越表三类零命中**（越表核 = 全树 grep 命中集 ⊆ 披露面）。
+- 代码评审轮 1（advisor · code）：`VERDICT: pass`（🔴0 ∕ 🟡2 ∕ 🔵4）。**fix 轮 1**：🟡#2（🎯 无样式 + 分隔条断链）⇒ `chrome.css` 新增 `.status-goal` 样式段 + 三条相邻条选择器补全；🟡#1（`agent-bridge.mjs` 333 行越线）= 登记转出（见 D10）；🔵#3 = 注释收正（评审建议原文落地，纯注释、行为零变）。
+- 代码评审轮 2（fix 复核 · 定点）：`VERDICT: pass` —— 两档（`chrome.css` ∕ `statusline.mjs`）缝合完整（类名同形 ∕ 子序与相邻条规则一一对应 ∕ 原两径零回归），未引入新面；四条登记项维持不判。
+- 终态 = **clean**（内审 1 轮（🔴=§5 待落，随本 append 消解）∕ 代码评审 2 轮 pass ∕ fix 1 轮 + 注释 1 笔）。
+
+**遗留 ∕ 转出（不属本舱授权面，供父侧）**
+1. **设计面收正（本舱零触）**：`IPC.md` §1 通道 21 ⇒ 22（+`ev:goal` 行）· `PROJECT.md` §10 BE ∕ §4.2 拆档链（三新档登记）· 批档 §2.4 R5 现读列漂移（#2 138→147 · #3 322→338 · #5 185→153 · #7 293→295）· 修正 6 样式落点行（`renderer/styles.css` 不在盘 ⇒ 实落 `chrome.css` ∕ `core.css` ∕ `chat-cards.css`）· `RENDERER.md` §1.1 插入点纪律条（卡序闭集 +`goal` 尾位）。
+2. `agent-bridge.mjs` 越 300 顾问线（334）——请裁「拆点执行 ∕ 续期在册」（拆点候选见 D10）。
+3. 端差登记两处待裁：① `interrupted` 注记无真值载体（VSC `freezeLiveBlocks(interrupted)` 有入参；桌面出窗帧无该键 ⇒ 恒零注记 —— 若须 X11 面则宿主 `suspension-drive.mjs` 出窗帧扩键）② 🎯 无点击面（VSC `wire("goal-badge","goal-panel")` 无对位）。
+4. 沙箱残留：`.thincoder/tmp/r5-readings.mjs`（自查脚本 · 可按需复跑 —— 留现场，同 R1 ∕ R4 先例）。
+5. §5 状态行未动（多轮并行在手 —— 不抢写；沿 R1 ∕ R3 ∕ R4 ∕ R10 先例）。
 
 ## §6 验证与收口（父代理）

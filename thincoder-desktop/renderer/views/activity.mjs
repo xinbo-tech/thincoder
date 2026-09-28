@@ -27,14 +27,17 @@
  *      + 帧面重挂复原；会话切换 ∕ 空态退场 ⇒ 清账）；
  *   ④ **封顶自滚**（E1 —— 封顶 = 列高（布局骨架差异在册：VSC 横带 32vh）；自滚 = 宿主 `overflow: auto` +
  *      `overscroll-behavior: contain`（`renderer/pool.css` 该条注））。核件消费面（`subblocks/*`）零改。
+ * **R5（先拆后改 —— 本档 338 行越顾问线）**：子 agent 族键控差分段出档 `renderer/views/pool-subagents.mjs`
+ * （族内六件；容器标签刷 ∕ 挂载编排留本档）；本档 += **态机三面随动** —— 模型零块（复位 ∕ 全归档）⇒
+ * 弃族容器账 + 计数贴清（零块帧不产族壳 ⇒ 容器 DOM 必陈旧）；块头注记呈现 = 核件直出（端零文案）。
  */
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
-import { renderSubagentChunk, renderSubBlock, renderSubDesc } from "/rc/subblocks/block.mjs"
-import { refreshBlock } from "/rc/subblocks/activity-view.mjs"
-import { clearActivityNew, notePoolBirth, syncActivityNew } from "./activity-new.mjs"
+import { clearActivityNew, syncActivityNew } from "./activity-new.mjs"
 import { approvalExits, approvalTitle } from "./approval.mjs"
 import { segNode, wire } from "./chat-tool.mjs"
+// 子 agent 族键控差分（R5 先拆后改出档 —— 本档 338 行越顾问线）：族内六件住该档，本档只引键控差分一件。
+import { syncSubBlocks } from "./pool-subagents.mjs"
 
 /** 读数（`pool.running` / `pool.approval`）：数为值、非数 ⇒ `null`（**零节点** —— 禁假造）。 */
 const readingOf = (value) => (Number.isFinite(value) ? value : null)
@@ -190,98 +193,9 @@ export function poolTree(model, handlers = {}) {
   return { tag: "div", props: { "data-pool": "", "data-state": mode }, children }
 }
 
-// ─── 子 agent 族（核件直消费 · 键控差分）─────────────────────────────
-
-/** 核件块元素（新代 / 首见）：块壳（`renderSubBlock` —— 含 data 面 + toggle + 首刷）⇒ 内容行重放
- *  （`entry.rows` 逐条 `renderSubagentChunk` —— 重挂重放单源）⇒ 冻结着装 ⇒ 末刷（挂 DOM 后补 —— 首见径 `createSubBlock` ∕ 接管径 `updateSubBlock` 同序）。 */
-function subElementOf(entry) {
-  const element = renderSubBlock(entry)
-  element._rowsDone = 0
-  replayRows(element, entry)
-  foldIfFrozen(element, entry)
-  return element
-}
-
-/** 内容行增量重放（`_rowsDone` 记账 —— 同 frames 内只追加新行；`rows` 缺 / 非数组 ⇒ 零动作）。 */
-function replayRows(element, entry) {
-  const rows = Array.isArray(entry?.rows) ? entry.rows : []
-  const pending = rows.slice(element._rowsDone ?? 0)
-  if (pending.length > 0) {
-    // 冻结块重放（重建 / 会话切回两径 —— 历史面，非运行态增量）：临时以未冻态过核件追加闸，毕还原本相
-    const thaw = entry?.frozen === true
-    if (thaw) element._subMeta = { ...entry, frozen: false }
-    for (const row of pending) renderSubagentChunk(element, row)
-    if (thaw) element._subMeta = entry
-  }
-  element._rowsDone = rows.length
-}
-
-/** 冻结着装（终态折叠 —— 核 fold 效果逐值同形：`sub-live ⇒ sub-frozen` + 折叠 + ⏹ 移除）。R10 E4：
- *  `settled`（`awaitingDigest`）与其余终态**同折**（VSC `activity.js:80-86` fold 效果无 awaiting 分支 ——
- *  驻留态词 `sub.awaitingDigest` 由核 `refreshBlock` 照常落头行）。幂等（已着装重复调用零新写）。 */
-function foldIfFrozen(element, entry) {
-  if (entry?.frozen !== true) return
-  element.classList.remove("sub-live")
-  element.classList.add("sub-frozen")
-  element.open = false
-  element.querySelector(".sub-stop-btn")?.remove()
-}
-
-/** 同 key 元素更新（**不重建**）：新代接管（核 `takeover` —— 同键新代：前态已冻结 ∧ 新态未冻结）⇒ 换新元素
- *  （**挂载后末刷** —— ⏹ 门控读 `isConnected`，与首见径 `createSubBlock` 同序）；其余（内容追加 / 状态迁移 /
- *  终态折叠）⇒ 就地核函数更新（内容追加 / 折叠态 / ⏹ 全走核函数）。 */
-function updateSubBlock(element, entry) {
-  const known = element._subMeta
-  if (known === entry) return
-  if (known?.frozen === true && entry?.frozen !== true) {
-    const next = subElementOf(entry)
-    element.replaceWith(next)
-    // 挂载后末刷（换元素径 —— 核首刷发生在挂载前，`isConnected` 门控未过；与首见径同序）
-    refreshBlock(next)
-    return
-  }
-  element._subMeta = entry
-  replayRows(element, entry)
-  foldIfFrozen(element, entry)
-  refreshBlock(element)
-}
-
-/** 新块出生（族尾 append）：说明行（会话首个活动块 · 一次性 —— 核 `renderSubDesc` 插 `.advisor-content` 之前）；
- *  出生点判据（R10 E6 —— VSC `activity.js:60-63` 同点：跟底 ⇒ 区钉底；未跟底 ⇒ 计数贴 +1）；
- *  挂 DOM 后重刷（⏹ 门控读 `isConnected` —— 核首刷发生在挂载前）。 */
-function createSubBlock(root, family, entry) {
-  const element = subElementOf(entry)
-  if (family.querySelectorAll(".sub-block").length === 0 && family.querySelector(".sub-desc") === null) {
-    element.insertBefore(renderSubDesc(), element.querySelector(".advisor-content"))
-  }
-  family.append(element)
-  notePoolBirth(root)
-  refreshBlock(element)
-  return element
-}
-
-/** 键控差分（项 3）：同 key ⇒ 复用元素就地更新；新 key ⇒ 尾追出生；出表（归档墓碑过滤后缺席 / 取消）⇒ 摘除。
- *  块表序 = 插入序 ∧ 新增恒在尾 ⇒ DOM 序 ≡ 模型序（不重排）。 */
-function syncSubBlocks(root, family, model) {
-  const items = [...family.querySelectorAll(".sub-block")]
-  const byKey = new Map()
-  for (const element of items) {
-    const key = element.getAttribute("data-subname") ?? ""
-    if (key !== "" && !byKey.has(key)) byKey.set(key, element)
-  }
-  const wanted = new Set()
-  for (const entry of model.blocks) {
-    const key = typeof entry?.key === "string" ? entry.key : ""
-    if (key === "" || wanted.has(key)) continue
-    wanted.add(key)
-    const element = byKey.get(key)
-    if (element === undefined) createSubBlock(root, family, entry)
-    else updateSubBlock(element, entry)
-  }
-  for (const element of items) {
-    if (!wanted.has(element.getAttribute("data-subname") ?? "")) element.remove()
-  }
-}
+// ─── 子 agent 族（容器账 · 主档编排）─────────────────────────────────
+// 族内六件（元素构造 / 行重放 / 冻结着装 / 同键更新 / 出生 / 键控差分）= 出档 `./pool-subagents.mjs`（R5 先拆后改）；
+// 本档留：容器标签刷 + 挂载编排（mountPool —— 三态 / 头 / 两族 / 弃容器两径）。
 
 /** 常驻族容器标签刷（语言切 ⇒ 词面随动；容器身份与项元素零扰 —— 原位换标签）。 */
 function bindFamilyLabel(family) {
@@ -311,6 +225,13 @@ export function mountPool(root, state, handlers = {}) {
   if ((root._poolSub ?? null) !== null && root._poolSubSession !== model.key) {
     root._poolSub = null
     root._poolSubSession = null
+  }
+  // R5（#522① 随动）：模型零块 ⇒ 族容器弃账 —— 零块帧不产族壳（`subFamilyNode` 缺席）⇒ 容器 DOM 必陈旧
+  //（复位 ∕ 全归档同判 ⇒ 下次出生重挂全新建元素）；计数贴随零块清（VSC `resetActivity` 同点清账）。
+  if (model.blocks.length === 0) {
+    root._poolSub = null
+    root._poolSubSession = null
+    clearActivityNew(root)
   }
   const live = root._poolSub ?? null
   // 先摘 —— 常驻容器不入 clear 射程（子树存活）

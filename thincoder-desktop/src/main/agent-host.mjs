@@ -14,7 +14,7 @@
  * 同名返回面转口 ⇒ `ipc.mjs` 调用面零改（拆后本档 ≤300 顾问线）。
  * **R3b（D20）**：子 agent 面（停止出口 + 存活投影起 / 停 / 清点）出档 `subagent-face.mjs`（行数触发线 —— 档名实施批定）。
  * **对齐第三批**：两**只读采样面**注入回调桥（`advisorMeta` ⇒ `ev:tool-call` `round` / `model` · `extractFileLinks`
- * ⇒ `ev:tool-result` `links`；皆纯读、零副作用 —— 不入职责计数）。
+ * ⇒ `ev:tool-result` `links`；皆纯读、零副作用 —— 不入职责计数）；**R5** 增第三只读采样面 `goalOf`（⇒ `ev:goal`，同律）。
  * 装配端差（SHELL.md §4 显式登记两项 + 取值面一项）随装配面搬运 ⇒ 单源 = `agent-assemble.mjs` 档头（本档不重述）。
  * 零宿主依赖：出站 `emit` 由主进程注入 ⇒ 平 node 直测。
  *
@@ -111,13 +111,15 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   /** 待决门（表 + 五操作 —— 出档 `suspensions.mjs`；`table` 随宿主面继续暴露）。 */
   const { table, askSingle, askBatch, askQuestion, denyGates, respond } = createGates({ post, agents })
   /** 回调桥（出档 `agent-bridge.mjs`）⊕「对齐第三批」两采样面（`advisorOf` / `extractLinks` —— 见档头）
-   *  ⊕ R3 蒸馏落位注入面（`persistDistilled` —— `onDistilled` 时点按本键取装配实例重落盘，见 `session-io.mjs`）。 */
+   *  ⊕ R3 蒸馏落位注入面（`persistDistilled` —— `onDistilled` 时点按本键取装配实例重落盘，见 `session-io.mjs`）
+   *  ⊕ R5 目标面采样面（`goalOf` —— goal 工具结果时点读核载体 `agent.goal` 单源；agent 缺席 ⇒ `undefined` 不可判）。 */
   const bridge = createBridge({
     post, askSingle, askBatch, askQuestion, tokensOf,
     syncLiveOf: (key, head) => agents.get(key)?._syncChildAborts?.has(head) === true,
     advisorOf: (key) => advisorMeta(agents.get(key)),
     extractLinks: (text) => extractFileLinks(projects?.currentCwd(), text),
     persistDistilled: (key) => { const agent = agents.get(key); if (agent) saveDistilledSlot(agent) },
+    goalOf: (key) => { const agent = agents.get(key); return agent === undefined ? undefined : (agent.goal ?? null) },
   })
 
   /** 计时读数（R3a 载荷扩 `timers` —— 核 `_pendingTimers` 活读投影 `{count, expired}`；新鲜度 = 本回合尾时点
