@@ -262,3 +262,75 @@ test("streamOutputAllowed：三态门（#78 并入）纯函数直驱", async () 
   assert.equal(streamOutputAllowed(1, "coder", false), false, "其余子代理默认不流式")
   assert.equal(streamOutputAllowed(1, "coder", true), true, "streamOutput 显式选择进入")
 })
+
+// ── 核件 timer 面（opt-in——§6.30.10 · 用例 T-TW14–T-TW16 + 补例两桩（🟡2 余项 ∕ 中止容纳句））──────────────────
+const spyTimer = () => { const calls = []; const fn = (cb, ms) => { const h = { cb, ms, unrefCalled: false, unref() { this.unrefCalled = true } }; calls.push(h); return h }; fn.calls = calls; return fn }
+/** timer 面 rig：活池 + 假 timer + 记录面；`face` = `{ deadline(), delivered }`（不传 ⇒ 缺省形）；`abortSignal` = 会话中止注入缝（缺省 null——既有用例零改）。 */
+function timerRig(face, runTurn, abortSignal = null) {
+  const carrier = makeCarrier(FIXTURES["CLI 形（agent 字段对象）"])
+  carrier._asyncSubagents.set("s1", { id: "s1", status: "running" })
+  const timer = spyTimer(); const seen = { opened: [], deliver: 0, reclaim: 0, counts: 0, digest: 0, cleared: 0, lastCleared: null }
+  const timerFace = face ? { deadline: face.deadline, deliver: () => { seen.deliver++; return face.delivered } } : null
+  const h = startSuspension({ carrier, timer, timerFace, abortSignal, clear: (hdl) => { seen.cleared++; seen.lastCleared = hdl }, hooks: { reclaim: () => { seen.reclaim++ }, onCounts: () => { seen.counts++ }, onDigest: () => { seen.digest++ } },
+    runTurn: async (text, opts) => { seen.opened.push({ text, opts }); await runTurn?.(carrier) } })
+  return { carrier, timer, seen, h }
+}
+
+test("T-TW14 正常·核件 opt-in 零回归（不传 timerFace ⇒ 零注册；既有核测逐条全绿为证）", async () => {
+  const { carrier, timer, seen, h } = timerRig(undefined)
+  await tick(); carrier._asyncSubagents.clear(); carrier._asyncWaiters.splice(0).forEach((w) => w())
+  assert.deepEqual([timer.calls.length, seen.cleared, await h.done], [0, 0, { reason: "idle", residualInput: [] }], "零注册 + 零清理 + 缺省回执零改")
+})
+
+test("T-TW15 正常·核件窗内兑现（timer 轮恰一次 · deliver 恰一次 · 轮后序同形）", async () => {
+  const { timer, seen, h } = timerRig({ deadline: () => Date.now() + 30_000, delivered: true }, (c) => c._asyncSubagents.clear())
+  await tick(); await timer.calls[0].cb()
+  assert.deepEqual([(await h.done).reason, timer.calls.length, timer.calls[0].unrefCalled, timer.calls[0].ms > 0 && timer.calls[0].ms <= 30_000, seen.opened, seen.deliver, seen.reclaim, seen.counts, seen.cleared],
+    ["idle", 1, true, true, [{ text: "", opts: { autoTurn: true, timerTurn: true } }], 1, 1, 2, 1], "注册恰一次 / unref / 轮恰一次 / 交付恰一次 / 轮后序同形 / 撤句柄恰一次")
+})
+
+test("T-TW16 边界·核件零交付（deliver() 返假 ⇒ 零开轮 / 零轮后序；循环重入等待——不空转）", async () => {
+  let deadlineCalls = 0; let runs = 0
+  const { carrier, timer, seen, h } = timerRig({ deadline: () => (++deadlineCalls === 1 ? Date.now() + 5_000 : null), delivered: false }, async () => { runs++ })
+  await tick(); await timer.calls[0].cb(); await tick()
+  assert.deepEqual([seen.deliver, runs, seen.opened.length, seen.reclaim, seen.counts, timer.calls.length, carrier._asyncWaiters?.length],
+    [1, 0, 0, 0, 1, 1, 1], "交付恰一次 / 零开轮 / 零轮后序 / 重入零新注册（不空转）+ 等待栓在世")
+  carrier._asyncSubagents.clear(); h.wake()
+  assert.equal((await h.done).reason, "idle", "重入后退出照常")
+})
+
+test("补例·clear 先到先得臂（settle ∕ wake 先到 ⇒ 撤未触发句柄恰一次 · 评审 🟡2 余项）", async () => {
+  const arm = async (win) => { // win = 非 timer 先到路（settle ∕ wake 两臂同判）
+    let deadlineCalls = 0
+    const { carrier, timer, seen, h } = timerRig({ deadline: () => (++deadlineCalls === 1 ? Date.now() + 30_000 : null), delivered: true })
+    await tick() // 纯等待：timer 句柄在世（未触发）
+    if (win === "wake") h.wake(); else carrier._asyncWaiters.splice(0).forEach((w) => w())
+    await tick() // 循环重入（deadline 二次 null ⇒ 零补注册）
+    assert.deepEqual([timer.calls.length, seen.cleared, seen.lastCleared === timer.calls[0], seen.deliver, seen.opened.length],
+      [1, 1, true, 0, 0], `[${win} 先到] 撤未触发句柄恰一次 / 零交付 / 零开轮 / 零补注册`)
+    carrier._asyncSubagents.clear(); h.wake()
+    assert.deepEqual([(await h.done).reason, timer.calls.length, seen.cleared], ["idle", 1, 1], `[${win} 先到] 池空退出照常（无二次清除）`)
+  }
+  await arm("wake")
+  await arm("settle")
+})
+
+test("补例·timer 轮中止容纳（AbortError ∧ 会话未停 ⇒ 容纳并重入；负臂 = 非 AbortError ∕ 会话停照旧上抛 · §6.30.10）", async () => {
+  let deadlineCalls = 0
+  const { carrier, timer, seen, h } = timerRig({ deadline: () => (++deadlineCalls === 1 ? Date.now() + 5_000 : null), delivered: true },
+    async () => { throw Object.assign(new Error("Aborted"), { name: "AbortError" }) })
+  await tick(); await timer.calls[0].cb(); await tick()
+  assert.deepEqual([deadlineCalls, seen.opened.length, seen.deliver, seen.reclaim, seen.counts, seen.digest, timer.calls.length, carrier._asyncWaiters?.length],
+    [2, 1, 1, 0, 1, 0, 1, 1], "容纳并重入（等待在世 · 零补注册）/ 零轮后序 / 零 digest 边界")
+  carrier._asyncSubagents.clear(); h.wake()
+  assert.equal((await h.done).reason, "idle", "重入后池空自然退出（回执零改）")
+  // 负臂①：非 AbortError ⇒ 照旧上抛（同一 throw 行——§6.30.10「其余照旧上抛」）。
+  const r2 = timerRig({ deadline: () => Date.now() + 5_000, delivered: true }, async () => { throw new Error("boom") })
+  await tick(); await r2.timer.calls[0].cb()
+  await assert.rejects(r2.h.done, /boom/, "非 AbortError 不纳入")
+  // 负臂②：AbortError ∧ 会话停 ⇒ 照旧上抛（不纳入——清场走 abort 合并判定，同 ④b 形）。
+  const ctrl = new AbortController()
+  const r3 = timerRig({ deadline: () => Date.now() + 5_000, delivered: true }, async () => { ctrl.abort(); throw Object.assign(new Error("Aborted"), { name: "AbortError" }) }, ctrl.signal)
+  await tick(); await r3.timer.calls[0].cb()
+  await assert.rejects(r3.h.done, (e) => e.name === "AbortError", "会话停不纳入")
+})

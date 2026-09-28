@@ -105,6 +105,14 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
  * 299 → **302**（净 +3）越线；设计预裁「登记不拆」——拆分计划已登设计档
  * `docs/core/design/CORE-UNIFICATION.md` §2.8.1 子表行 18（拆点 = 序列化面 `OMIT` / `scalarJson` / `writeValue`
  * 外提姊妹档（`jsonl.mjs` 式），re-export 保 import 面）；消解条件 = 越 500 硬限或该档下次实质改动。
+ * timer-wake 阶段 2 批（2026-09-28 · `docs/batches/2026-09-28-timer-wake-phase2.md` §5 实施轮）新增登记
+ * `test/suspension.test.mjs`（**336**（node 实测 · 末行终止后口径）——补例两桩追加后越线 300 → 336：clear 先到先得臂
+ * （settle ∕ wake 先到 ⇒ 撤未触发句柄恰一次 · 评审 🟡2 余项）+ timer 轮中止容纳（`AbortError` ∧ 会话未停 ⇒ 容纳并重入——
+ * 设计句 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.10）；越线原因 = 用例面追加（同批实现面核件
+ * `agent/suspension.mjs` 273 → **280** 仍 ≤300）；拆分方案 = timer 面用例组（`spyTimer` / `timerRig` 夹具 + T-TW14–T-TW16 +
+ * 补例两桩）随下次触碰该档的批拆出邻档 `test/suspension-timer.test.mjs`（双夹具 `FIXTURES` / `makeCarrier` 与本档既有组同根
+ * ⇒ 拆档 = 复制脚手架——沿 `test/batch.test.mjs` 先例「登记不拆」）；触发条件 = 越 500 硬限或该档下次实质改动；
+ * 设计档对应行（§6.30.13 行注）已随批收正（登记路 · 336——父侧直接执行 2026-09-28）。
  */
 const SOFT_LINE_REGISTRY = new Set([
   "agent/dispatch.mjs", "agent/helpers.mjs", "agent/setup.mjs", "agent.mjs",
@@ -117,6 +125,7 @@ const SOFT_LINE_REGISTRY = new Set([
   "memory/schema.mjs", "model-specs.mjs", "process-probe.mjs", "provider/core.mjs", "provider/responses.mjs",
   "session-lifecycle.mjs", "session-slots.mjs", "session-slots-manifest.mjs", "session-store.mjs", "session-gc.mjs", "test/batch.test.mjs", "test/manifest.test.mjs", "test/model-specs.test.mjs", "test/session-gc-stale.test.mjs", "test/turn-cap-checkpoint.test.mjs",
   "test/provider-merge.test.mjs", "test/session-slot-write.test.mjs", "test/setup-reminders.test.mjs", "test/tool-seams-agent.test.mjs", "test/compress-form.test.mjs", "test/tool-seams.test.mjs",
+  "test/suspension.test.mjs",
   "traces/trace-store.mjs",
   "tools/edit-diff.mjs", "tools/file.mjs", "tools/git.mjs",
   "tools/lsp.mjs", "tools/repomap.mjs", "tools/shared.mjs",

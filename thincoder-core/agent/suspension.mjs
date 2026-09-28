@@ -18,7 +18,8 @@
  * ctx 接口（注入面）：
  *   - carrier           池 / pending / 标志载体（见上）
  *   - runTurn(text, opts)  回合执行器（digest = `("", { autoTurn: true })`；上行唤醒轮 =
- *                          `("", { autoTurn: true, upstreamTurn: true })`——旗标仅供域文本选择）
+ *                          `("", { autoTurn: true, upstreamTurn: true })`；timer 轮 =
+ *                          `("", { autoTurn: true, timerTurn: true })`——旗标仅供域文本选择）
  *   - abortSignal       会话中止信号（兜底监听 + abort 清场判据）
  *   - hooks.onCounts(counts)      计数变化通知（{ running, queued, pending, done }）
  *   - hooks.onDigest(phase, counts) 消化轮边界（start / end）
@@ -26,6 +27,11 @@
  *   - hooks.freezeAll()           退出冻结（兜底残项）
  *   - injectResidual(entry)       残余注入面（idle 退出清场；宿主装配端注入器——CLI =
  *                                 逐族注入分发 / VSC = pending 单容器注入器）
+ *   - timerFace        **opt-in** timer 面（§6.30.10）：`{ deadline(), deliver() }`——`deadline()`
+ *                      每轮步骤 4 现算（number|null；缺省 / null ⇒ 零注册，等待仍三态）；
+ *                      `deliver()` 到期兑现面（返回布尔 = 是否已交付；交付真 ⇒ timer 轮）。
+ *                      缺省不传 ⇒ 既有行为逐字等价（现宿主零传）。
+ *   - timer / clear    等待原语注入缝（缺省 `setTimeout` / `clearTimeout`——用例零真实等待）
  */
 
 import { parkAsyncPending } from "../agent-tools/async-settle.mjs"
@@ -114,13 +120,19 @@ export async function finishSuspension(carrier, { aborted = false, injectResidua
   }
 }
 
-/** 等待下一次 settle（池 waiter——核内异步面 settle 尾部唤醒）或宿主唤醒（wake——用户输入）。
- *  双路单次兑现（settle / wake / aborted 三态，先到先得）；cleanup 摘除全部注册。 */
-function waitForSettleOrWake(carrier, abortSignal, latch) {
+/** 等待下一次 settle（池 waiter——核内异步面 settle 尾部唤醒）/ 宿主唤醒（wake——用户输入）/
+ *  **timer 到期**（opt-in——§6.30.10 等待第四态，与 settle / wake 同槽先到先得）。
+ *  `deadline != null` ⇒ 一次性注册（`unref()` 尽力——不阻断宿主退出）；缺省 / null ⇒ 三态逐字等价。
+ *  cleanup 摘除全部注册（含未触发句柄——尽力清）；到期兑现交循环支（本原语零交付语义）。 */
+function waitForSettleOrWake(carrier, abortSignal, latch, { deadline = null, timer = setTimeout, clear = clearTimeout } = {}) {
   return new Promise((resolve) => {
     let finished = false
+    let handle = null
     const cleanup = () => {
       latch.wake = null
+      const h = handle
+      handle = null
+      if (h !== null) { try { clear(h) } catch { /* 已触发 / 不可清——尽力面 */ } }
       const i = (carrier._asyncWaiters ?? []).indexOf(onSettle)
       if (i >= 0) carrier._asyncWaiters.splice(i, 1)
       abortSignal?.removeEventListener("abort", onAbort)
@@ -133,8 +145,14 @@ function waitForSettleOrWake(carrier, abortSignal, latch) {
     }
     const onSettle = () => finish("settle")
     const onAbort = () => finish("aborted")
+    const onTimer = () => finish("timer")
     ;(carrier._asyncWaiters ??= []).push(onSettle)
     latch.wake = () => finish("wake")
+    // opt-in deadline（§6.30.10 等待第四态）：无在途 / 未传 ⇒ 零注册（等待仍三态）。宿主不变式 = 到期即出列 / 关即 null（否则「已到期 ∧ 交付假」会 0ms 反复重注册）。
+    if (deadline != null) {
+      handle = timer(onTimer, Math.max(0, deadline - Date.now()))
+      try { handle?.unref?.() } catch { /* unref 失败不阻断 */ }
+    }
     if (abortSignal?.aborted) { onAbort(); return }
     abortSignal?.addEventListener("abort", onAbort, { once: true })
   })
@@ -148,11 +166,14 @@ function waitForSettleOrWake(carrier, abortSignal, latch) {
  * 2. pending 非空 或 存在未 drain 的 ask（`upstreamWaiting`）→ 合并消化轮 / 唤醒轮（auto-turn；
  *    注入由宿主 runTurn 首行完成——单注入点）；
  * 3. 池空（无 running / queued / 未注入）→ 自然退出；
- * 4. 等下一 settle / 宿主唤醒（handle.wake）。
+ * 4. 等下一 settle / 宿主唤醒（handle.wake）/ timer 到期（opt-in——兑现真 ⇒ timer 轮）。
  * 每轮消化 / 用户回合后：hooks.reclaim(consumed) 逐条回收（不等池空）。
  */
 export function startSuspension(ctx) {
-  const { carrier, runTurn, abortSignal = null, hooks = {}, injectResidual = null } = ctx
+  const {
+    carrier, runTurn, abortSignal = null, hooks = {}, injectResidual = null,
+    timerFace = null, timer = setTimeout, clear = clearTimeout,
+  } = ctx
   const pendingInput = []
   const latch = { wake: null }
   let finished = false
@@ -210,9 +231,28 @@ export function startSuspension(ctx) {
         }
         // 3. 池空 → 自然退出。
         if (!poolLive(carrier)) break
-        // 4. 等下一 settle / 宿主唤醒。
-        const why = await waitForSettleOrWake(carrier, abortSignal, latch)
+        // 4. 等下一 settle / 宿主唤醒 / timer 到期（opt-in——§6.30.10 等待第四态；deadline 每轮现算）。
+        const why = await waitForSettleOrWake(carrier, abortSignal, latch, {
+          deadline: timerFace?.deadline?.() ?? null, timer, clear,
+        })
         if (why === "aborted") { aborted = true; break }
+        // 4b. 窗内到期兑现（§6.30.10 循环兑现支）：交付真 ⇒ timer 轮（轮后序同消化轮形 = reclaim +
+        //     onCounts 两钩，不发 digest 边界）；交付面契约 = 同步 · 严格布尔（`=== true`——非布尔返值
+        //     即静默零轮）；池空窗退交宿主空闲闩（到期件已出列——零重复投递）；交付假 ⇒ 循环重入。
+        if (why === "timer" && timerFace?.deliver?.() === true) {
+          const afterRun = consumedByRun()
+          try {
+            await runTurn("", { autoTurn: true, timerTurn: true })
+          } catch (e) {
+            // timer 轮自身的回合级中止不是会话停止——容纳并重入循环（timer 轮不发 digest 边界 ⇒
+            // 中止路径零边界、不补发轮后序钩子；池空 / pending 空自然退出——与消化支同判，§6.30.10）。
+            if (e?.name === "AbortError" && !abortSignal?.aborted) continue
+            throw e
+          }
+          hooks.reclaim?.(afterRun())
+          hooks.onCounts?.(backgroundCounts(carrier))
+          continue
+        }
       }
     } finally {
       if (!finished) {
