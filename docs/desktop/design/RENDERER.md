@@ -73,7 +73,8 @@
   三卡皆**非块节点** ⇒ 不入块序不变式（本档 §2），块面比较对与 `data-blocks` 语义不受其影响。
 - **流内非块节点族（对齐第二批扩 · 桌面空闲唤醒批增一）**：**消化行组** `[data-digest]`（两行 = 起跑标签行 + `n > 0` 计数行；落点 = 块序列之后、待发送气泡组之前；在场 / 更新 / 退场 = 本档 §1.1 事件归约面条）；
   **待发送气泡组** `[data-pending]`（组内项 = 待发送气泡·落点 = 块序列之后、卡序列之前——与块插入点同侧 ⇒ 交接位置零跳）；**归档子 agent 块**（`data-block-kind="subagent"`——**是块节点**（入块序 / 计 `data-blocks`；壳 = 零边距透传容器 + 内嵌核件元素——“对齐第二批”项 5）。
-- **到期触发行（timer-wake 阶段 2 批增）**：`ev:timer` ⇒ 归约写 `state.timerNotice[key]` 切片 ∧ `thincoder-desktop/renderer/views/chat.mjs` 流内行组（非块节点 · 不入块序——**与 `[data-digest]` 行同族**）；行文 = 交付原文（显示裁 ≤3 行 + `…`）；在场 / 退场路径 = open（随实施轮定形）；单源 = `docs/desktop/design/IPC.md` §1。
+- **到期触发行（timer-wake 阶段 2 批增）**：`ev:timer` ⇒ 归约写 `state.timerNotice[key]` 切片 ∧ `thincoder-desktop/renderer/views/chat.mjs` 流内行组（非块节点 · 不入块序——**与 `[data-digest]` 行同族**）；行文 = 交付原文（显示裁 ≤3 行 + `…`）；
+  在场 / 退场路径 = **随页读整置即失**（沿 `[data-stopped]` 先例——定形 2026-09-28）；落点 = `thincoder-desktop/renderer/page-read.mjs` ∕ `views/chat-chrome.mjs` `syncTimer`（幂等 ∕ 换代原位换 ∕ 缺席摘）；单源 = `docs/desktop/design/IPC.md` §1。
 - **池面挂载（键控差分 · 「对齐第二批」项 3）**：壳（三态 / 头读数 / 折叠）与待审批 / 队列族**照帧刷**（`clear` + `build` + `append` 薄挂载口径不变）；**子 agent 族按 key 复用元素**（`el._subMeta === model` 判据：同 key 跨帧同一元素——内容追加 / 折叠态 / ⏹ 全走核函数，**不重建**）；
    形态单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 3（KD-32 同裁 = `docs/desktop/design/PROJECT.md` §2）。
 - **键域与换代（交付评审修正 · 2026-09-28）**：元素复用键域 = **会话内**（容器跨帧常驻不承旧账——同键重现于另一会话 ⇒ 元素账复位 ∕ 换代，禁沿用旧会话行账——relay id 按 agent 实例自 1 起计，同键跨会话重现属常态）；**换元素径**（新代接管）须**挂载后末刷**（⏹ 门控读 `isConnected`——与首见径同序）。
@@ -85,7 +86,8 @@
 
 - **用户块（可见面修复批修 · 写者与出泡时刻 —— #458；「回合中插入」批扩写者）**：活流 `user` 块两写者 = **发送面**（`msg:send` 回执 `ok` 真——直发径）+ **排队消费回执**（`ev:queue.delivered`——步边界注入 ∕ 回合尾送达两时刻；裁决与边界 = `docs/desktop/design/PROJECT.md` §2 KD-23 / KD-40）+ **键门**（回执键 = 现刻 `activeSession`，非活动 ⇒ 零写；
   **在飞回合内切回** ⇒ 本回合用户块随回合尾落盘后、于下次页读在场——页读 = `thincoder-desktop/src/main/session-slots.mjs:123` / `:145`；槽落盘在回合尾 = `thincoder-desktop/src/main/agent-host.mjs:214` / `:219`）；
-  块形 = `{ kind: "user", text }`（**与 `blockOfMessage` 回放块同形**——无 `id` ⇒ 键域回落位序，同回放）· 写入走 `appendBlock`（**既有**纯动作——`thincoder-desktop/renderer/store.mjs:73` 导出，归约面 `thincoder-desktop/renderer/events.mjs:21` / `:97` / `:105` / `:220` 四处已消费；`pendingNew` 语义同源）· 十三通道零 `user` 通道（写入时刻 = 受理时刻 ⇒ 活流块 ⟺ 已受理）。
+  块形 = `{ kind: "user", text, ts? }`（**与 `blockOfMessage` 回放块同形**——无 `id` ⇒ 键域回落位序，同回放；`ts` = 提交 ∕ 入队现刻——「对齐第二批」项 4 载波，非有限数 ⇒ 键缺席）·
+  写入走 `appendBlock`（**既有**纯动作——`thincoder-desktop/renderer/store.mjs:73` 导出，归约面 `thincoder-desktop/renderer/events.mjs:21` / `:97` / `:105` / `:220` 四处已消费；`pendingNew` 语义同源）· 十三通道零 `user` 通道（写入时刻 = 受理时刻 ⇒ 活流块 ⟺ 已受理）。
 - **流式游标清点（可见面修复批修 —— #459）**：清点两族 = ① 回合尾三径（`done` / `stopped` ∨ `ev:error`）② **段界**（`ev:tool-call` 入场 ⇒ 助手文本段收束）；
   清点**须落块面引用**（新块对象 ⇒ `blocks` 键变 ⇒ 帧触发 ⇒ 就地更新摘 `data-streaming` 锚——旁路态无刷新路径 = 缺陷成因面）· 辅助与两族调用点住归约面（`thincoder-desktop/renderer/events.mjs`）· 游标语义 = **末块追加态**（形态单源 = `docs/desktop/design/UI.md` §1「本批注（可见面修复 · 五件）」项 3 · 裁决 = `docs/desktop/design/PROJECT.md` §2 KD-24）。
 - **文本段行形态通则（可见面修复批修 —— #460）**：行内 ≥2 文本段（flex 行：`gap` ∨ `space-between`）⇒ **逐段包元素**（`span[data-seg="<段码>"]`；段缺席 ⇒ 零节点——空段仍占 flex 项 ⇒ 假间隔）；
@@ -178,3 +180,4 @@
 - 2026-09-28（**回合中插入批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-midturn-input.md` §2 · 台账 #509）：§1.1 三处随动——回合尾三径条消费面（输入区 flush + `onTurnTail` 窄口**退场** ⇒ 消费面两处 + `ev:queue` 归约两形）· 流内非块节点族（待发送气泡组写者 = `ev:queue` 归约）· 用户块条（写者扩「排队消费回执」径）。
   形态 ∕ 判据单源 = `docs/desktop/design/PROJECT.md` §2 KD-40 ∕ `docs/desktop/design/UI.md` §1「本批注（回合中插入 · 步边界 pickup）」。
 - 2026-09-28（**回合中插入批 · 设计评审轮 1 修正（父侧直接执行 · 可 revert）**——承评审 #29 发现 #1 / #11）：§1 索引行 · §1.1 三处（订阅接线条 / 批 A 归约条 / 池切片清点条）**退役句清**（原三纯动作 · `pool.queue` 写面 · flush 携行）逐处对齐 KD-40；窄口条补「标题刷新存续 ∕ flush 携行退场」限定句。明细 = `docs/batches/2026-09-28-desktop-midturn-input.md` §4。
+- 2026-09-28（**回合中插入批 · 设计收尾微轮 · eng-designer**——承批档 §5 U-5 存量漂移）：§1.1 用户块条块形句补 **`ts` 载波**（`{ kind: "user", text, ts? }`——「对齐第二批」项 4 产出；非有限数 ⇒ 键缺席）。零新语义。明细 = 批档 §2。

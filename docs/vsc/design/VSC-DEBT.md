@@ -314,6 +314,10 @@
 **主 / 测试档读数刷新（2026-09-28 · LEDGER-RELIABILITY 批后 · 实读 · `wc -l` 口径）**：`thincoder-vscode/src/extension/panel-session.mjs` **312 ⇒ 322**（>300 咨询线、≤500 硬限——越线登记在册〔2026-09-21 首登〕，本次为读数刷新；无拆分义务）·
 `thincoder-vscode/webview/chat-messages.js` **234 ⇒ 238**（≤300 咨询线 ⇒ 不入本登记；值随 `WEBVIEW.md` §3 文件表同拍）。逐项登记，**非全量普查**。
 
+**主 / 测试档读数刷新（2026-09-28 · timer-wake 阶段 2 批后 · 实读 · `wc -l` 口径）**：`thincoder-vscode/src/agent/setup.mjs` **421 ⇒ 427**（>300 咨询线、≤500 硬限——读数刷新；触发线 **>497** 未触）·
+`thincoder-vscode/src/extension/suspension.mjs` **447 ⇒ 483**（>300 咨询线、≤500 硬限——越线登记在册，本次为读数刷新；无拆分义务）·
+`thincoder-vscode/test/timer-wake.test.mjs` **396**（>300 咨询线——**首登**；≤500 硬限，无拆分义务；先例 = `thincoder-vscode/test/ledger.test.mjs` 324 首登）。逐项登记，**非全量普查**。
+
 ### 12.2 逐档方案（职责分面 · 六新档）
 
 #### 12.2.1 `panel-chat.mjs`（499 → ≈240）—— 回合驱动面
@@ -725,3 +729,6 @@
 - 2026-09-27（**env-config-purge 批 · 设计评审轮 1 修正轮 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §3 轮次 1 发现 5）：§12.1 追加**测试档越线登记块（续 · env-config-purge 批后）**——`thincoder-vscode/test/async-visibility.test.mjs` **452**（首登）
   · `thincoder-vscode/test/activity-live-visibility.test.mjs` **399**（首登）· `thincoder-vscode/test/trace-store.test.mjs` **399 → ≈395**（本批触碰 · 读数刷新）——均 >300 咨询线、≤500 硬限（读数口径 = `wc -l`）。**零语义**（登记面）。
 - 2026-09-28（**账本可靠批 · 报告面收正轮 · eng-designer**）：§12.1 追加**主 / 测试档读数刷新块**（`panel-session.mjs` **312 ⇒ 322**——越线登记在册，读数刷新；`webview/chat-messages.js` **234 ⇒ 238**——≤300 ⇒ 不入登记）。**零语义**（登记面）。
+
+- 2026-09-28（**timer-wake 阶段 2 批 · VSC 收尾轮 · eng-designer**——承 `docs/batches/2026-09-28-timer-wake-phase2.md` §5.15 表外报出）：§12.1 追加**主 / 测试档读数刷新块**（`thincoder-vscode/src/agent/setup.mjs` 421 ⇒ **427**——触发线 >497 未触；`thincoder-vscode/src/extension/suspension.mjs` 447 ⇒ **483**——读数刷新）
+  + **测试档越线登记**（`thincoder-vscode/test/timer-wake.test.mjs` **396**——首登）。**零语义**（登记面）。

@@ -418,6 +418,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `suspension` | src/extension/panel-messages.mjs:317/thincoder-vscode/src/extension/suspension.mjs:435/:446 | webview/chat-messages.js:226 | `活` | 载荷增 `interrupted`（X11 会话中止注记——§3.2 行 13） |
 | `taskProgress` | src/extension/panel-callbacks.mjs:156 | webview/chat-messages.js:219 | `活` | — |
 | `testProviderResult` | src/extension/panel-messages-settings.mjs:117 | webview/chat-messages.js:155 | `活` | — |
+| `timer` | thincoder-vscode/src/extension/timer-watch.mjs:83 | webview/chat-messages.js:191 | `活` | timer-wake 阶段 2 触发落流一行（载荷 `{ status:"fired", text }`——§3.2 行 19 登记；`text` = 交付原文逐字 · 显示裁 ≤3 行 + `…` = webview 侧）；② ③ 列 = 2026-09-28 提取器（`--emit`）读数 |
 | `token` | src/extension/panel-callbacks.mjs:141 | webview/chat-messages.js:53 | `活` | — |
 | `toolCall` | src/extension/panel-callbacks.mjs:199 | webview/chat-messages.js:60 | `活` | 载荷增 `round` · `model`（X2——advisor 专属，非 advisor 零字段——§3.2 行 9） |
 | `toolOutput` | src/extension/panel-callbacks.mjs:222 | webview/chat-messages.js:70 | `活` | `text` 端边界归一为串（M3——非串取 `.text`）；`kind` 可选随行 |

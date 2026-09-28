@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-09-28 · 来源 = 用户 2026-09-28 14:08 走查发现（桌面端「会话中插入用户指令」缺失）；父侧三端实读定性 = 核缝在位（agent.mjs:244）· CLI/VSC 已接 · 桌面未接；台账 = 同刻登记。
 > 台账 = #509（docs/desktop/requirements/PROJECT.md · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：进行中（设计评审轮 1 = changes-required（3🔴/6🟡/3🔵）→ 十二项修正落定——复核轮 2 待点火）
+**状态行**：已收口 2026-09-28
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 ### 1.1 来源（用户 2026-09-28 14:08 走查）
@@ -34,6 +34,16 @@
 ### 1.5 落点
 
 台账 = **#509**（待设计 → 在途）；需求档 D 点随落 = 父侧（设计定形后）；同族 = #495（排队可见性 · 显示面）/ #494 系；本批 = 插入时机（机制面）。
+
+### 1.19 在飞裁定登记（2026-09-28 17:0x · 承 #39 两条设计缺口 ask）
+1. **slash 尾径**（父侧裁定）：步边界零动作（防御面原样）∥ **回合尾对 slash 首条按「逐条直发」消费**（单条 · 保序 · 不合并 · 零静默丢——与桌面闲态同文本同语义；桌面无斜杠面〔需求 §3.5〕⇒「两处皆零动作」造死结不采纳）。设计句由设计档收尾轮落（在途）。
+2. **步边界缝 timer 轮归属**：缝按 `autoTurn` 分流（用户回合传 ∕ 消化轮不传）+ **timer 轮（`timerTurn` 真 ∥ `autoTurn` 假）= 普通回合（接缝消费）**。设计句随落（在途）。
+3. 另：#39 审计项「`history:page` 未装配径补 `queue: []`（键恒在场）」已修（在案）。
+
+### 1.20 §1.19-2 更正（父侧 · 2026-09-28 17:1x——经设计收尾轮 #44 在盘核读）
+- 在盘实读：timer 轮实形 = `{ autoTurn: true, timerTurn: true }`（三端同形——`timer-watch.mjs` 桌面 :77 ∕ CLI :88 ∕ VSC :98；T-TW18/T-TW21 锁形）；缝判据 `turn-face.mjs:44` = `opts.autoTurn === true ⇒ null` ⇒ **timer 轮在盘 = 缝不传（不消费）**；核档 `:37-38`「用户回合（`autoTurn === false`）；系统轮不参与」同向。
+- **归属句按 ① 落**（设计收尾轮）：timer 轮同按 `autoTurn` 分流——`autoTurn` 真 ⇒ 与消化轮同、缝不传；队列留待该轮回合尾续发。
+- §1.19-2 原措辞（「`timerTurn` 真 ∥ `autoTurn` 假」组合）系据 #39 报告转述失准（其在盘实现 = `autoTurn` 单判据，与 ① 已符）——作废，以本行为准（记录面更正）。
 
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（B1–B3 全落 · 落点五档（IPC / PROJECT / RENDERER / UI / E2E）· 需求档零笔 · doc-check 净 0（悬空 64 · 行宽 35）2026-09-28）
@@ -104,6 +114,24 @@
 ② **越层档上抛**：`thincoder-desktop/src/main/agent-host.mjs` **285 ⇒ ≈330**（越 300）——预案 = 续发链提取（档名实施批定）；执行 ∕ 续期 = 父侧裁（§4.1 本批行 + §10 BL）。
 ③ **登记三项**（§10 BM）：队条目携图 = 宿主内存（量级同提交前）· 气泡显示文本（图不入快照——两端同形）· 队列 = 运行期切片（重启即失）。
 ④ **端差说明（有意保留）**：合并注入形态（`你排队了 N 条消息：…`）为 zh 字面（CLI ∕ VSC 同值）——渲染面仅透传显示，零 CJK 字面入渲染面码（机检面不受影响）。
+
+### 2.8 设计收尾微轮（2026-09-28 · eng-designer——承 §1.19 两条设计缺口 + §5 转报）
+
+**落笔三处**：
+
+① **slash 尾径句（两档同拍）**——`docs/desktop/design/PROJECT.md` §2 KD-40 尾补「**边界（slash 尾径）**：步边界零动作（防御面原样——斜杠文本入队门禁零改）∥ 回合尾对 slash 首条按「逐条直发」消费（单条 · 保序 · 不合并 · 零静默丢——与桌面闲态同文本同语义；「两处皆零动作」造死结不采纳）」+ `docs/desktop/design/UI.md` §1 本批注项 5 同拍收正；
+② **timer 轮路由句（两档同拍）**——KD-40 ② + UI 本批注项 2 补「timer 轮（`timerTurn` 真）同按 `autoTurn` 分流——`autoTurn` 真 ⇒ 与消化轮同、缝不传；队列留待该轮回合尾续发」。
+   **裁决 = 父侧回执 ①**（2026-09-28）：§1.19-2 措辞据 #39 报告转述失准，父侧更正入记录面 §1.20；在盘实现单判据（`thincoder-desktop/src/main/turn-face.mjs:44`）= ①，零代码改；
+③ **用户块 `ts` 载波（存量漂移 · §5 U-5）**——`docs/desktop/design/RENDERER.md` §1.1 用户块条块形句 ⇒ `{ kind: "user", text, ts? }`（「对齐第二批」项 4 产出；非有限数 ⇒ 键缺席）。
+
+**落点随正（父侧补令）**：`docs/desktop/design/PROJECT.md` §6.1 本批注机检面 ∥ `docs/desktop/design/E2E-TESTING.md` §6 `T-DSK45` 行 ⇒ **`thincoder-desktop/test/agent-host-queued.test.mjs`**（U217–U219——原 `thincoder-desktop/test/agent-host.test.mjs` 触 500 硬限按在册预案拆出；假面共享 = `thincoder-desktop/test/agent-host-harness.mjs`）；
+PROJECT.md §4.1 本批块补**实施实读漂移注**（新增四档 + `thincoder-desktop/renderer/page-read.mjs` 表外随动——归回填轮，未就地回填）。
+
+**机检读数**：`node scripts/doc-check.mjs --root .` = **悬空 65 · 行宽 36（净 0 / 0——本微轮开跑前基线即 65 / 36）**；§4.3 ∕ §4.4 前记 64 ∕ 35 与本刻之差 = 在途他批写面所增（非本微轮）。行文过程两条 >300 行（PROJECT.md §6.1 机检面行 · RENDERER.md §1.1 用户块条）已就地折行清零。
+
+**变更记录 +1 笔 ×4 档**：PROJECT.md ∕ UI.md ∕ RENDERER.md ∕ E2E-TESTING.md。越域披露：E2E-TESTING.md = 父侧补令加入的可动档。**零新语义**（全部句子 = §1.19 裁定 + 在盘实读）；产品码 ∕ 核 ∕ CLI ∕ VSC ∕ 其余档零触碰。
+
+**表外观察（只报未改）**：① `docs/vsc/design/VSC-DEBT.md` 行号 +4 漂移（他批在飞写面——本刻宽度行 `:656` ∕ `:717` ⇒ `:660` ∕ `:721`）；② `docs/core/design/AGENT-LOOP-ASYNC-POOL.md:696` 曾现 372 字符行（他批在飞 · 瞬态——复跑已消）。
 
 ## §3 设计评审（评审子代理）
 
@@ -211,4 +239,190 @@
 - 实施轮 = 待排（与 timer-wake 阶段 2 同列——align-3 三舱落定后按序派发；任务书 = 本档 §2 + §2.5 AC；设计单源 = `docs/desktop/design/PROJECT.md` §2 KD-40 链）。
 
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（点修两轮收口（U-4 ∕ U-3 · U-6 ∕ U-7）：全量 263 ∕ 263 绿 · smoke = window:true ∧ ok:true ∧ errors:[] · 审计 2 轮 + 评审 1 轮（pass）· fix round 1 · 终态 clean · 2026-09-28）
+
+
+
+### 实施摘要（eng-coder · 2026-09-28）
+
+任务书 = 本档 §2（KD-40 ①–⑤ · UI 本批注五项 · `IPC.md` `ev:queue` ∕ `msg:send` ∕ `history:page` 三行）；设计单源 = `docs/desktop/design/PROJECT.md` §2 KD-40 链 + §2.5 AC-1–AC-7。
+全链落定：队列单源 = 宿主（`src/main/queued-input.mjs`）⇒ 受理分岔（忙态按键判入队 ∕ 第 9 条 `queue-full` 零入队）⇒ 两消费时刻（步边界合并注入 `pushReal` ∕ 回合尾续发兜底）⇒ 出站 `ev:queue`（两形）⇒ 渲染面快照镜面（归约两形 + `history:page` 首屏重建）⇒ 可见面（流尾待发送气泡组 ∕ 段 14 读数 ∕ 降级提示行切片）。
+
+**逐档落点与实读行数**（实施轮实读；基线 = `git show HEAD`）：
+
+| 档 | 基线 | 实读 | 要点 |
+|---|---|---|---|
+| `src/main/queued-input.mjs` | 新档 | 117 | 队列表（键 → `{text,ts,images?}`）· 容量 8 按键判 · 计划取批（合并 ≤8 条 ∧ ≤2000 字符 · slash 单条）· 快照投影 `{text,ts}`（图零回传） |
+| `src/main/turn-chain.mjs` | 新档 | 71 | `postQueue` 出站（两形）· `stepBoundaryPickup`（空队 ∥ slash ∥ 携图批 ⇒ 零消费）· `continueTurn`（起跑前查在飞表 · 整批不拆 · `prepare` 抛 ⇒ 留队 + 一行 `console.error`） |
+| `src/main/agent-host.mjs` | 298 | 341 | 受理分岔（忙态入队）· 续发链接线 · `dispose` ∕ 切项目清队 · `queueSnapshot` 供面（**越 300 —— 见「上抛」**） |
+| `src/main/turn-face.mjs` | 62 | 70 | `consumeQueuedInput` 传参：用户回合传 ∕ `autoTurn`（消化轮）不传 |
+| `src/main/ipc.mjs` | 256 | 260 | `history:page` 回执 `queue` 键（恒在场 · 空队 `[]`；宿主未装配径同出空键）；切项目径清队接线 |
+| `src/preload/preload.cjs` | 58 | 59 | `EVENT_CHANNELS` 十七 ⇒ **十八**（`ev:queue` 末位） |
+| `renderer/queue.mjs` | 45 | 41 | `applyQueue`（快照整置 · 幂等 · 形不合零写）+ `QUEUE_MAX`（值 8 —— 与 `QUEUED_MAX_ITEMS` 对拍锁）；原三纯动作随本地队列退场 |
+| `renderer/events.mjs` | 460 | 497 | `ev:queue` 归约两形 + 分派（**距 500 硬限 3 行** —— 见「上抛」） |
+| `renderer/store.mjs` | 307 | 328 | `attachDegraded` 切片 + `setAttachDegraded`（降级提示行单一载波） |
+| `renderer/composer-send.mjs` | 新档 | 70 | 发送面三件拆出（`ask` ∕ `withUserBlock` ∕ `submitDraft`：判据 `sent ∕ queued ∕ full ∥ kept ∕ empty ∕ no-session`） |
+| `renderer/mount-composer.mjs` | 407 | 322 | flush 携行退役 · 忙态交宿主任判 · 降级码读切片 |
+| `renderer/events-subscribe.mjs` | 74 | 77 | +`ev:queue` 订阅；`onTurnTail` 窄口**存续**（只退 flush 携行） |
+| `renderer/page-read.mjs` | 116 | 132 | **表外（披露）**：首屏读 `queue` 键重建镜面（回填读不重建 —— 防在途快照覆盖活镜面） |
+| `renderer/app.mjs` | 297 | 299 | 去 flush 接线 · `submitDraft` 改引 `composer-send` |
+| `renderer/views/statusline.mjs` | 291 | 292 | 仅注释（段 14 读 `pending` 原已在位） |
+| `test/agent-host.test.mjs` | 472 | 431 | 拆分产出（触 500 硬限 ⇒ 在册预案「门面用例拆出 + 装配假面 harness 共享」本批执行：U217–U219 出档 + 假面出档 `agent-host-harness.mjs`）；余量仍 >300 在册 |
+| 测试面新增 5 档 | 新档 | 87 ∕ 151 ∕ 84 ∕ 135 ∕ — | `test/queued-input.test.mjs`（U214–U215）· `test/agent-host-queued.test.mjs`（U217–U219）· `test/agent-host-harness.mjs`（共享假面 · 零用例）· `test/integration/midturn-input.test.mjs`（T-DSK45） |
+| 测试面改动 6 档 | — | — | `test/events-reduce.test.mjs`（+U220）· `test/store.test.mjs`（U117 重写 + U75 键锁）· `test/views-chrome.test.mjs` · `test/views-attach.test.mjs` · `test/views-locks.test.mjs` · `test/host-floor.test.mjs` · `test/files.mjs`（三新档打包入既有行 · 净 0 行） |
+
+**验证读数**：
+- `node test/run.mjs`（`thincoder-desktop/`）= **257 ∕ 257 pass · 0 fail**（含本批新档与既有八集成档）。
+- `npx electron . --smoke` = `{"smoke":1,"lock":"primary","window":true,"node":"24.21.0","sqlite":true,"floorMet":true,"boot":"ok","errors":[],"ok":true}`。
+- 本批新档单跑：`test/queued-input.test.mjs`（计划面与 CLI ∕ VSC 值对拍 ∕ 队列表语义）· `test/agent-host-queued.test.mjs`（忙态入队 ∕ 步边界取批 ∕ 续发链）· `test/integration/midturn-input.test.mjs`（`ev:queue` 两形注入 ⇒ 气泡组 ∕ 段 14 ∕ 交接三态）——全绿。
+- 用例号：**自铸 U214–U220**（实落 U214 ∕ U215 ∕ U217 ∕ U218 ∕ U219 ∕ U220；U216 空位不回收）——设计用例号归属表无本舱段，沿 A-3b `U120/U121` 先例；T-DSK45 = 设计在册号。
+
+**AC 对照（§2.5 · 机检面）**：AC-1 U217（回执两形 + 第 9 条 `queue-full` 零入队 + 快照恰形 + `dataURL` 负向锁）· AC-2 U218①（缝在场 + `pushReal` 普通 user 消息 + 合并一次消费）+ `test/agent-host.test.mjs`（用户回合缝在场）· AC-3 U219①–③（递归至队空 ∕ 队列先于接管 ∕ `dispose` ∕ 切项目清队零续发）· AC-4 U220（归约两形 + 尾块 user + 首屏重建）+ U117（镜面应用）+ `test/integration/midturn-input.test.mjs`（真链两态）· AC-5 U218③（携图整批让位）+ U219④（送达面 `degraded` 随回执）· AC-6 = T-DSK45 离线可产面落档（真机面待父侧真跑闭合）· AC-7 = 核件 ∕ CLI ∕ VSC 零改（本批触碰面全在桌面舱）。
+
+### 决策透明表（实施轮）
+
+| # | 决策 | 依据 ∕ 口径 | 落点 |
+|---|---|---|---|
+| D-1 | 队列单源 = 宿主内存表；渲染面零本地队（`pending` = 宿主快照镜面） | KD-40 ①（§2.6） | `src/main/queued-input.mjs` · `renderer/queue.mjs` |
+| D-2 | `slash` 首动作：步边界零消费 ∕ 回合尾**逐条直发**（单条 · 保序 · 不合并） | **父侧 2026-09-28 裁定**（设计档未载 —— 见 U-1） | `turn-chain.mjs` · `queued-input.mjs`（U218② 只锁步边界） |
+| D-3 | 携图条目 ⇒ **整批**让位（批界 = 合并跨度 · 不拆批） | 设计评审轮 1 #6 落定（「整批让位为有意行为 + 机检一例」） | `turn-chain.mjs`（U218③） |
+| D-4 | 入队 ∕ 满队受理 ⇒ 清输入 + 清附件条（队条目携图 ⇒ 图形随条目走） | KD-40 ⑤ · UI 本批注清条判据 | `renderer/mount-composer.mjs`（U141⑦） |
+| D-5 | `degraded` 载波 = `attachDegraded` 切片单点（写者两处 = 直发回执 ∕ 消费回执） | UI 本批注（提示行载波） | `store.mjs` · `events.mjs` · `mount-composer.mjs`（U220） |
+| D-6 | 空文本门：渲染面拒空白串；**宿主受理不判空**（窄桥面责任归调用侧 —— 披露） | 沿既有渲染面门（advisor 🔵 #10 在案） | `agent-host.mjs` · `composer-send.mjs` |
+| D-7 | `QUEUE_MAX`（渲染面）= 8 与宿主 `QUEUED_MAX_ITEMS` = 8 两名两处（跨进程不可 import；两处各有值锁） | §4.4 外范围② 处置 = 符号随 `queue.mjs` 保留 ⇒ `PROJECT.md:588`（T-DSK23 夹具引用）可解；满队判据已归宿主按键判（advisor 🔵 #9 在案） | `renderer/queue.mjs` |
+
+### 审计与代码评审轮次与终态
+
+- **内部分歧审计（explore · 只读 · 轮 1）**：判 **DEVIATIONS 1 条（低）**——`history:page` 回执 `queue` 键在「宿主未装配径」缺席，与 `IPC.md` 定形句「键恒在场（空队 ⇒ `[]`）」字面不符；其余四类（AC 覆盖 ∕ 静默简化 ∕ 表外改动 ∕ 设计漂移 ∕ 残留）**零发现**。**已修**（`ipc.mjs`：`queue: agentHost ? agentHost.queueSnapshot(key) : []` + 档注随齐）；复跑相关三档 16 ∕ 16 绿。
+- **内部代码评审（advisor · 轮 1 = 全量）**：**VERDICT: pass**（🔴 0 · 🟡 7 · 🔵 5 · 共 12）。口径声明（限制）= 未给工程标准档 ⇒ 判据按 AGENTS.md + 各档自报单源判（降级）；评审为只读面 ⇒ 评审后未再改动被评面（冻结守）。
+- **终态 = clean**（审计 1 轮 · 自修 2 轮 · 评审 1 轮 pass · 零 🔴）；advisor 12 条均 🟡 ∕ 🔵 咨询项，逐条处置在案（下）。**fix round 计数 = 2**：① 自测轮（U86② ∕ U217–U219 断言修正 · 六测试档随动 · `queued-input.mjs` 档头去 `electron` 字面〔源面零宿主依赖正则误命中〕）；② 审计轮（`ipc.mjs` 键恒在场）。
+- **advisor 12 条处置**：🟡 #1 `events.mjs` 497（距 500 硬限 3 行）· #2 `agent-host.mjs` 341 · #3 `store.mjs` 328 · #4 `mount-composer.mjs` 322 ⇒ **接受现状 + 上抛 U-2**（四档注册预案均已执行、均未越硬限）；🟡 #5 缺「消化轮 ⇒ 缝缺席」负向锁 ⇒ **接受**（实现按 `turn-face.mjs` 分流在盘，只缺用例 —— U-3）；🟡 #6 机检面落点跨档滞后（`PROJECT.md:537` ∕ `E2E-TESTING.md:184` 仍指 `agent-host.test.mjs`，实落拆分档）⇒ **接受**（归父侧文档面）；🟡 #7 本档 §5 ∕ §6 缺位 ⇒ **本段即 §5 落笔**（§6 ∕ §1 状态行归父侧）；🟡 #8 `dispose` 不清 `flights`（忙态队把可见拒换成静默迟到投递）⇒ **接受 + 上抛 U-4**；🔵 #9 ∕ #10 ∕ #11 ∕ #12 ⇒ 接受（D-7 ∕ D-6 在案 · §4.1 回填与「拟新增」去标归父侧文档面）。
+
+### 上抛（请父侧裁）
+
+- **U-1（设计档缺口 · slash）**：回合尾对 `slash` 首动作条按父侧 2026-09-28 裁定「逐条直发」实现，该句未落设计档 ⇒ 建议父侧补一句；机检面只锁步边界不消费，尾径 slash 零机检。
+- **U-2（越层续期）**：`agent-host.mjs` 341 ∥ `events.mjs` 497 ∥ `store.mjs` 328 ∥ `mount-composer.mjs` 322 ⇒ 请裁「续期登记」或「下批再拆」（`host-floor.test.mjs` 已按四档登记例外面 + 档内注明）。
+- **U-3（用例补齐）**：桌面「消化轮 ⇒ 缝缺席」负向例（advisor 🟡 #5）——建议下批随 `test/agent-host-queued.test.mjs` 补（值取 CLI ∕ VSC 同形）。
+- **U-4（边界收口）**：`dispose` 与在飞回合交互（advisor 🟡 #8）——建议 ① `dispose` 中止并清 `flights`（与「会话中止 ⇒ 队清 + 零续发」同向）。
+- **U-5（存量观察 · 非本批漂移）**：`RENDERER.md:88` 用户块定形句未含既有 `ts` 载波（`ts` 属「对齐第二批」项 4 产出 —— `git show HEAD:thincoder-desktop/renderer/mount-composer.mjs` 可证）· `SHELL.md:43`「输入区 flush 窄口」同族残体（设计轮 2 外范围观察已登记 · 归回填轮）。
+- **行数勘误（本段更正上段表）**：测试面新增 **4 档**（非 5）= `test/queued-input.test.mjs` ∕ `test/agent-host-queued.test.mjs` ∕ `test/agent-host-harness.mjs` ∕ `test/integration/midturn-input.test.mjs`；测试面改动 **8 档**（非 6）= `test/agent-host.test.mjs` ∕ `events-reduce` ∕ `store` ∕ `views-chrome` ∕ `views-attach` ∕ `views-locks` ∕ `host-floor` ∕ `files.mjs` —— 合计测试面 **12 档**（产品面 15 档）。
+
+### 点修轮 —— U-4 ∕ U-3 收口（eng-coder · 2026-09-28）
+
+**交付摘要**：承上段上抛 U-4 ∕ U-3（父侧裁：修），两件落定 —— ① `dispose` ∕ 切项目径补「**在飞回合中止 + 在飞表清**」（`flights`），与既有「队清 + 空快照 + 零续发」同族收口；② 补「**消化轮（`autoTurn`）⇒ 步边界缝缺席**」负向锁 + 队零动 ∕ 接线面单点锁 + U-4 两臂用例。
+
+**逐号落点**（file:line = 现盘实读）：
+
+| 号 | 改动 | 落点（file:line） | 说明 |
+|---|---|---|---|
+| 1 | ① 在飞中止 + 清 `flights` | `src/main/agent-host.mjs:320-321`（`dispose`：`const flight = flights.get(key)` / `if (flight) { flight.abort(); flights.delete(key) }`）· `:335-336`（`abortSuspensions`：全键 `controller.abort()` + `flights.clear()`）· 档头 `:10-11` + 两处文档注释随齐 | `turn-chain.mjs` **零改**（清单两落点之二 —— 判定见 D-1） |
+| 2 | ② 负向锁 | `test/agent-host-queued.test.mjs:169-206`（U221） | 真链（宿主 → 挂起窗 → `turn-face`）捕 `opts`：`autoTurn === true` ∧ `"consumeQueuedInput" in opts === false` + 核循环头同址调用零副作用断言 + `turn-face.mjs` 源面单接线点三锁 |
+| 3 | ③ 用例随补（U-4 两臂） | `test/agent-host-queued.test.mjs:208-252`（U222） | ①「dispose 中」：signal 收 ∕ `interrupt` ⇒ idle ∕ 同键再发 ⇒ 起新回合（重装配）∕ 队零条目；②「dispose 后」：陈旧回合结算 ⇒ 零续发 ∕ 零迟到投递 ∕ 零复活窗（池空配置面）；③ 切项目臂同判 |
+| — | 假面（测试面随宜） | `test/agent-host-harness.mjs:45-55` | 假 `createAgent` 镜像装配入参 provider + 两旗标回位（D-3） |
+
+**逐档实读行数**：`src/main/agent-host.mjs` 341 ⇒ **349**（在册例外 ≤500）· `test/agent-host-queued.test.mjs` 151 ⇒ **252**（≤300）· `test/agent-host-harness.mjs` 87 ⇒ **95**（≤300）· `src/main/turn-face.mjs` **71 零改**。
+
+### 决策透明表（点修轮）
+
+| # | 决策 | 依据 ∕ 口径 | 落点 |
+|---|---|---|---|
+| D-1 | 只改 `agent-host.mjs`；`turn-chain.mjs` 零改 | 链侧已有两守卫（`busyOf` 起跑前查在飞 ∕ `plan === null` 空队 ⇒ 零续发），任务书口径「中止 + 清 `flights`」落在在飞表所有者侧；改链 = 越裁定机制 | `agent-host.mjs` |
+| D-2 | 中止序 = 在飞中止 ∕ 清表 先于 `suspension.abort` ∕ 摘表 | 沿既有「先于摘表 —— 窗仍持 agent 引用」同族序；`abort` 幂等（窗内回合随会话信号已中止者同判） | `dispose` `:320-322` |
+| D-3 | 假面 `createAgent` 镜像装配入参 provider + 两旗标回位（**表外改动 · 已披露**） | 实测踩中：前序用例数轮 `saveSession` 落槽 ⇒ 槽装载（`applySession`）污染共享假 agent 的 provider（缺 `baseURL`）⇒ 第二次装配 `validateProvider` 误判 incomplete ⇒ U222① 假 provider-invalid；核 `createAgent` 逐次**新建对象**（无跨装配残留）⇒ 镜像 + 回位 = 同形保真；回位在校验前（`agent-assemble.mjs:88` ⇒ `:93`）⇒ invalid 配置仍每装配重判 | `test/agent-host-harness.mjs` |
+| D-4 | U221「队零动」三断言为**恒真面**（自陈在案，不改断言） | 内审 R2：队项在回合尾即取批送达 ⇒ 窗开启时宿主队必空；鉴别力主承「缝缺席」断言 + 源面单接线点锁 ⇒ 注释明写口径，不以恒真断言冒充证据 | `test/agent-host-queued.test.mjs:189-192` |
+
+### 审计与代码评审轮次与终态
+
+- **内部分歧审计（explore · 只读 · 轮 1）**：判 **DEVIATIONS 4 条（无 🔴）** —— R1 装配在飞窗残径（🟡 · AC 字面外 ∕ 同族残留）· R2 U221 尾部三断言恒真（🔵 · 自陈面）· R3 U222②「零复活窗」为池空配置面（🔵 · 自陈）· R4 档面滞后（🟡 · `docs/**` 本轮零改 ⇒ 父侧）。其余（AC 部分实现 ∕ 表外改动 ∕ 设计漂移 ∕ 残留四类）**零发现**；反证抽查 = U222 在预修行为下至少四处独立判红（鉴别力成立）。
+- **内部代码评审（advisor · 轮 1 = 全量）**：**VERDICT: pass**（🔴 0 · 🟡 3 · 🔵 2）—— 🟡① 回合尾接管链未阻断（池活 ⇒ 复活窗 ∕ 池空 + 在途 timer ⇒ 空闲闩重武装 ⇒ 亡键 timer 轮 ∕ 与新队竞态 ⇒ 旧代理迟到投递；切项目臂另带 cwd 取值面）⇒ **报告面（父侧裁 · U-6）**；🟡② 中止径仍「三路同序落盘」⇒ 删会话被落盘复活（预修版同类落盘更晚，本收口使其即时化）⇒ **报告面（父侧裁 · U-7）**；🟡③ 349 行 > 300（在册例外续期面 · U-8）；🔵①=U221 恒真面（自陈 · D-4）· 🔵②=假面旗标回位（已修 · D-3）。
+- **内部代码评审（advisor · 轮 2 = 窄复核：仅验修复声明）**：**VERDICT: pass** —— 三点核验：两行回位在盘 ∕ 装配序（`createAgent` ⇒ `validateProvider`）⇒ 回位在校验前（不洗白 invalid 用例）∕ 旗标全集闭合（全域唯 `agent-assemble.mjs:47-48` 置位 · `agent-host.mjs:238` 消费）且 95 行 ≤ 300。
+- **终态 = clean**（审计 1 轮 · 评审 2 轮 pass · 零 🔴）；**fix round 计数 = 1**（① 审计 R2 ∕ R3 口径披露注释随落 + 评审 🔵② 假面旗标回位；零行为面改动）。
+
+### 验证读数（点修轮）
+
+- `cd thincoder-desktop && node test/run.mjs` = **259 ∕ 259 pass · 0 fail**（点修前 257 ⇒ +2 = U221 ∕ U222）。
+- `npx electron . --smoke` = `{"smoke":1,"lock":"primary","window":true,"node":"24.21.0","sqlite":true,"floorMet":true,"boot":"ok","errors":[],"ok":true}` —— `window:true ∧ ok:true ∧ errors:[]`。
+- 单档：`node --test test/agent-host-queued.test.mjs` = **5 ∕ 5 pass**。
+- **负控（鉴别力实证 · 临时改后已还原，`CONTROL` 痕零残留）**：① 预修行（dispose 不中止 ∕ 不清）⇒ U222 首断言判红；② 中止但不清表 ⇒ 「在飞表已清」断言判红；③ 幽灵在飞保留 + 陈旧回合结算 ⇒ 迟到投递可复现（回执 `{ok:true,queued:true}` · `runs` 发送刻 1 → 结算后 2 · 消费回执 `{text:"新会话消息"}`）；④ `turn-face` 去 `autoTurn` 分流 ⇒ U221「缝缺席」断言判红。
+
+### 上抛（请父侧裁 · 点修轮新增）
+
+- **U-6（回合尾接管残径 · 新）**：两条中止径只中止 + 清表，**不阻断回合尾接管链**（`agent-host.mjs:188` `.then(… takeOver)` ⇒ `:199` `suspension.start(key, agent, { cwd: projects?.currentCwd() ?? null })`）⇒ 已亡键仍可达重注册：池活 ⇒ 复活窗（含消化轮）；池空 + 在途 timer ⇒ 空闲闩重武装 ⇒ 亡键起 timer 轮；与新会话忙态队竞态 ⇒ 旧代理消费新队（迟到投递同族）；切项目臂另带 cwd（新）vs agent（旧）取值面。建议：中止墓碑（两径按键落墓碑，回合尾链 ∕ `takeOver` 起跑前查位）或中止径不调 `takeOver`；机检补池活 ∕ 在途 timer 两臂。
+- **U-7（中止径落盘 × 删会话 · 新）**：会话中止后回合尾仍 `saveAgentSlot`（`turn-face.mjs:58`）⇒ 核 `saveSession` 按 `agent._slot` 重建槽文件 + manifest 条目 ⇒ 已删会话复活（带中止时点历史）。建议：中止径跳过落盘（或落盘面查中止标记）+ 设计句；否则「消息随会话终止」在盘面被自身落盘面部分推翻。
+- **U-8（行数续期 · 承 U-2）**：`agent-host.mjs` 341 ⇒ **349**——本点修即「该档下次被触碰的批」（`host-floor.test.mjs:346-348` 在册例外注的消解窗口已到）⇒ 裁「拆（受理路由 ∕ 清队 ∕ 中止三面出档）」或「续期登记」。
+- **U-9（档面滞后 · 承内审 R4）**：`docs/desktop/design/PROJECT.md:79`（KD-40 ⑤）∕ `:104`（§2.2）未载「在飞中止 + 在飞表清」；§4.1 `:144` 行数读数 285 vs 盘面 349；`PROJECT.md:537` ∕ `docs/desktop/design/E2E-TESTING.md:184` 机检面未列 U221 ∕ U222（自铸号披露 = 本段）——均归父侧文档面（本轮 `docs/**` 零改）。
+- 表外发现（只报未改）：`turn-chain.mjs` 零改判定理由 = D-1（供核）。
+
+### 点修轮 2 —— U-6 ∕ U-7 收口（eng-coder · 2026-09-28）
+
+**交付摘要**：承上段上抛 U-6 ∕ U-7（父侧裁：**修**，实现先行），两件落定 + 一条同族补齐：① **中止墓碑**（回合代次 —— `dispose` ∕ `abortSuspensions` 两径同落）⇒ 该刻前代次的回合尾在**三查位**同失效：`takeOver` 零重注册（零续发 ∕ 零窗 ∕ 零闩重武装 ∕ 零新队消费）· **步边界缝零取批**（旧代理不消费新会话队 —— 复审轮补口）· 回合尾落盘零写（U-7：已删会话不得被落盘复活）；② 回合起跑在代理上落当代次（`turn-face.mjs` 单点），查位 = 代次比对 ⇒ 会话重开后新回合自动合法（**零清除面** —— 无「清墓碑」竞态窗）；③ 机检四例（U223–U226，自铸号披露见下）。
+
+**逐号落点**（file:line = 现盘实读）：
+
+| 号 | 改动 | 落点（file:line） | 说明 |
+|---|---|---|---|
+| 1 | 中止墓碑 + 三查位 | `src/main/agent-host.mjs:118-130`（`turnEpochs` ∕ `epochOf` ∕ `revokeTurns` ∕ `turnGate`）· `:217`（`takeOver` 首行查位）· `:341`（`dispose` 无条件落）· `:357-358`（切项目在飞键逐一落）· `:139`（步边界缝查位） | `turn-chain.mjs` **零改**（判定 = 链侧取批唯一生产调用点在本档闭包 —— 判据单点，无第二查位面） |
+| 2 | 中止径落盘零写（U-7） | `src/main/turn-face.mjs:33-36`（`revokedTurn` 判据）· `:42`（起跑落代次）· `:61` ∕ `:65`（成功 ∕ catch 两 save 点前查位） | 择一取「**落盘面查中止标记**」（非「中止径跳过」）：理由 = 落盘唯一站点在 turn-face 且 key 在手；`session-io.mjs` 只收 agent（无 key ⟹ 需第二注入面）⇒ 该档零改；「中断（`interrupt`）仍留现场」语义不动（interrupt 不落墓碑） |
+| 3 | 机检四例 | `test/agent-host-queued.test.mjs:258`（U223）· `:282`（U226）· `test/agent-host.test.mjs:438`（U224）· `:461`（U225）；假面 `test/agent-host-harness.mjs:60-80`（`makeHost` 增可选 `assemble` + `freshAgent`） | 三例 = 任务书点名（①②③）+ 缝臂一例（U226 —— 复审轮发现补口）；用例号 **自铸 U223–U226**（设计号表无本舱段，沿 U214–U222 先例） |
+
+**逐档实读行数**：`src/main/agent-host.mjs` 349 ⇒ **374**（在册例外 ≤500）· `src/main/turn-face.mjs` 71 ⇒ **77** · `test/agent-host.test.mjs` 431 ⇒ **489**（距 500 硬限 11 行 —— 见上抛）· `test/agent-host-queued.test.mjs` 252 ⇒ **298**（≤300 臂内）· `test/agent-host-harness.mjs` 95 ⇒ **101** · `turn-chain.mjs` ∕ `session-io.mjs` 零改。
+
+**验证读数**（命令 + 结果）：
+
+- `cd thincoder-desktop && node test/run.mjs` = **263 ∕ 263 pass · 0 fail**（本轮前 259 ⇒ +4 = U223–U226）。
+- `npx electron . --smoke` = `{"smoke":1,"lock":"primary","window":true,"node":"24.21.0","sqlite":true,"floorMet":true,"boot":"ok","errors":[],"ok":true}` —— `window:true ∧ ok:true ∧ errors:[]`。
+- 单档：`node --import ./test/rc-resolve.mjs --test test/agent-host-queued.test.mjs test/agent-host.test.mjs` = **23 ∕ 23 pass**。
+- **负控（四桩 · 预修行为判红，临时改后已还原；源面零残留）**：① U223（去 `takeOver` 查位）⇒ 判红（「零复活窗」断言：实际现 `ev:susp {active:true}` 帧）；② U224（同）⇒ 判红（`runs` 实际 `['旧回合','']` = 亡键 timer 轮）；③ U225（去落盘查位）⇒ 判红（「dispose 臂：槽零写」：槽文件现）；④ U226（去缝查位）⇒ 判红（「陈旧代理零注入」：实际 = 读数 +1，旧代理消费新队）。
+
+### 决策透明表（点修轮 2）
+
+| # | 决策 | 依据 ∕ 口径 | 落点 |
+|---|---|---|---|
+| D-1 | 墓碑 = per-key **代次计数**（非键集 ∕ 非代理布尔标记） | 任务书「两径落墓碑 · `takeOver` 前查位」；代次制天然「零清除面」（新回合自动合法，无「清墓碑」竞态窗） | `agent-host.mjs:118-130` |
+| D-2 | 落盘 gate 放 turn-face（择一取「落盘面查中止标记」） | 父侧「择一 · 报告理由」；判据需 key + 代次面，turn-face 两件皆在手（`session-io.mjs` 仅收 agent） | `turn-face.mjs:33-36 ∕ :61 ∕ :65` |
+| D-3 | 步边界缝补闸（内审轮 1 🟡 驱动） | 核循环头缝前无中止闸（`thincoder-core/agent.mjs:247`）；该面 = 任务书 harm 清单第三臂「旧代理消费新队」—— 闭路由同判据短路（`queuedPickup` 闭包） | `agent-host.mjs:139` |
+| D-4 | `turn-chain.mjs` ∕ `session-io.mjs` 零改 | 判据单点住宿主；链侧无需第二查位（`continueTurn` 只在 `takeOver` 之后可达） | — |
+| D-5 | 假面 `makeHost` 增可选 `assemble` + 新导出 `freshAgent`（**表内** —— 假面在任务书落点清单） | U226 需「逐次新建代理」（陈旧 ∕ 新代两对象可辨 —— 假面共享对象面下不可测）；缺省路径不变（条件展开，缺省 = 真 `assembleFor`） | `agent-host-harness.mjs:60-80` |
+
+### 审计与代码评审轮次与终态
+
+- **内部分歧审计（explore · 只读 · 轮 1）**：判 **DEVIATIONS 2 条（无 🔴）** —— 🟡 缝径未闭（任务书 harm 第三臂只在接管链径闭合；核 `agent.mjs:244-247` 缝前无中止闸）+ 🔵 档面滞后（`docs/**` 本轮禁触 ⇒ 归父侧回填）；两条表外发现**确认属实**（⓵ `send` 装配 `await` 期跨中止仍起跑且结算落盘 · ⓶ 空闲闩已点火恰逢中止仍交付 + 起 timer 轮 —— **均只报未改**）。AC ∕ 静默简化 ∕ 表外改动 ∕ 残留四类零发现；实触 ⊆ 清单。
+- **自修（fix round 1）**：按审计 🟡 补缝闸（`agent-host.mjs:139`）+ U226 机检例 + 假面 `assemble` ∕ `freshAgent`（负控判红取证）。
+- **内部分歧审计（轮 2 · 窄复核）**：**四类偏差零发现（无 🔴）** —— 缝闸静态核证「revoked ⇒ 零 `queue.take` ∕ 零 `pushReal` ∕ 零 `postQueue`」✓ · 缺省面零回归 ✓ · U226 鉴别力成立 ✓ · `assemble` 注入兼容（既有调用面零改）✓ · 新残留零；附一条**条件性残余**（切项目臂 —— 转报父侧，见 U-12）。
+- **内部代码评审（advisor · 轮 1 = 全量）**：**VERDICT: pass**（🔴 0 · 🟡 3 · 🔵 3 · 共 6）。逐条处置（**全部接受 ∕ 报父侧 —— 评审后零代码改动，冻结守**）：🟡① = 切项目臂代次洗白（= 内审条件性残余同面 —— 归 U-12 父侧裁）· 🟡② = `test/agent-host.test.mjs` 489 行（距 500 硬限 11 行 ⇒ 建议下轮迁出本轮两例；归 U-11）· 🟡③ = `agent-host.mjs` 374 行（在册例外 · 承 U-8 待裁；归 U-11）；🔵① = U224 固定 15ms 墙钟观察窗（**接受**：0 延迟闩在定时器相位内必达，15ms ≈ 十余倍余量；根治需宿主补时钟缝 —— 归裁）· 🔵② = queued 档头 `:13` 用例号清单未随（一句话级，随回填轮收口）· 🔵③ = 三查位不含**终局帧面**（口径澄清非缺陷 —— 建议设计句明写「终局帧不设门」）。
+- **终态 = clean**（审计 2 轮 · 自修 1 轮 · 评审 1 轮 pass · 零 🔴）；**fix round 计数 = 1**（审计 🟡 缝径 → 补闸 + 新例）。
+- **过程临时物清零**：调试脚本 ∕ 输出转存 ∕ `session-io.mjs` 临时插桩行**均已还原**（git 面该档零差异；盘上零临时档残留）—— 披露：插桩曾短暂落在清单内档、未出清单。
+
+### 本轮不做（父侧口径在案）
+
+不拆 `agent-host`（行数续期面归 U-8 ∕ U-11 裁）· 不碰清单外档（`renderer/**` ∕ `docs/**` ∕ 核件 ∕ CLI ∕ VSC 零触）· 不做全量探索（点修）· 不重构。
+
+### 上抛（请父侧裁 · 点修轮 2 新增）
+
+- **U-10（设计句 ∕ 文档面）**：U-6 ∕ U-7 机制句回填（KD-40 链 ∕ §2.2 + 「三查位」措辞）+ 本轮记录 —— `docs/**` 本轮零触碰（任务书禁），归回填轮 ∕ 父侧。
+- **U-11（行数续期 · 承 U-8）**：`agent-host.mjs` 349 ⇒ **374**（在册例外 ≤500）· `test/agent-host.test.mjs` **431 ⇒ 489**（距 500 硬限 11 行 —— 复审建议下轮迁出 U224 ∕ U225）—— 请裁「拆 ∕ 续期」。
+- **U-12（残余 · 复审 🟡① ∕ 内审条件性残余同面）**：**切项目臂代次洗白** —— `abortSuspensions` 不动装配表 + `ensure` 复用同一代理对象 + 起跑就地覆写代次 ⇒ 陈旧回合尾可被「洗白」（四环可达条件在案：切项目时在飞 ∧ 旧回合活过新回合起跑 ∧ 同键同槽号再发 ∧ 队非空）；`dispose` 臂不受影响（装配表清 ⇒ 核 `createAgent` 逐次新建）。收口方向二择一（回合域代次 ∕ 级联清装配），请裁。
+- **U-13（用例号自铸披露）**：U223–U226（设计用例号归属表无本舱段 —— 沿 U214–U222 先例）。
+- **表外发现（只报未改 · 内审两轮确认属实）**：⓵ `send` 装配 `await` 期被 `dispose` ∕ 切项目（占位在飞被清）⇒ 该 send 仍起跑一回合（跨中止的回合 —— 非陈旧尾、墓碑拦不住；结算径亦落盘）—— 收口需 send 侧闸 + 新 reason 码（设计面）；⓶ 空闲闩**已点火**（回调已在队列）恰逢中止 ⇒ `fireIdle` 的 busy ∕ inWindow 读点在中止后 ⇒ 仍交付 + 起 timer 轮（`suspension-drive.mjs` ∕ `timer-watch.mjs` —— 非本档落点）。
+
 ## §6 验证与收口（父代理）
+
+### 6.1 亲验（2026-09-28 17:5x · 父侧独立复跑——与 timer-wake 批同刻）
+- 桌面 `node test/run.mjs` = **263/263 pass · fail 0**（本批新档与集成域真 Electron 全绿）；冒烟 = `window:true ∧ boot:"ok" ∧ errors:[] ∧ ok:true`；核 772/772 · VSC 1052/1052（跨批共享读数）。
+- 机检 = 悬空 64 · 行宽 35（净 0/0）。
+- 实施链 = 实施舱（#39）→ 设计收尾（#44）→ 点修（#46：U-4/U-3）→ 修正 2（#47：U-6/U-7）；全舱 converged（修正 2 终态 clean · 负控四桩判红取证在案）。
+
+### 6.2 验收对照（AC-1–AC-7）
+- 机检 ∕ 离线可产面全绿（AC-1–AC-7 逐条在 §5 在案；AC-6 = T-DSK45 离线可产面落档）。
+- **人工走查登记（非阻断）**：真回合面（忙态气泡 × 步边界注入观感 ∕ 附件让位 ∕ 续发链）——待真机走查（父侧 ∕ 用户）。
+
+### 6.3 未决 ∕ 移交（在册不丢）
+- **U-12（切项目臂代次洗白 · 四环条件）+ 表外两发现（`send` 装配 await 跨中止起跑 ∕ 空闲闩已点火逢中止）** = 入册（台账新条——各需设计面决策）。
+- **回填轮 #511**：U-9（KD-40 ⑤ ∕ §2.2 补句 · §4.1 读数 ∕ 机检面清单）· U-10（墓碑 ∕ 代次 ∕ 落盘闸机制句）· `RENDERER.md:88`「十三通道」计数。
+- **拆档批 #510**：`agent-host.mjs` 374 ∕ `agent-host.test.mjs` **489（距硬限 11 行——下轮迁两例）**。
+- 在册小项：`test/agent-host-queued.test.mjs:13` 档头用例号清单（一句级）。
+
+### 6.4 收口同步清单（D7）
+- 角色表 = 六段齐；状态行随本收口置；指针（§1.19–§1.20 ∕ §2.8 ∕ §5 各轮）全解析；变更记录 = 五档以上各 +1 笔；台账 = #509 待核销（随提交核销）。
+- **前批遗留交叉核对**：align-3 等 = 已收口冻结 ✓；无「条目已结而锚批档未闭」项。
+- **本批 = 实施完成 + 亲验通过 ⇒ 已收口 2026-09-28（记录冻结）。**
