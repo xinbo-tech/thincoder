@@ -1,12 +1,16 @@
 /**
- * ipc.mjs — IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）：**二十九项** = 配置读取 + 项目面
+ * ipc.mjs — IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）：**三十三项** = 配置读取 + 项目面
  * `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` / `session:switch` /
  * `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` + 作答响应
  * `question:respond` —— `question` 工具真作答面 + 历史页 `history:page`
  * + 回合驱动 `msg:send` / `msg:interrupt`（宿主未注入 ⇒ fail-loud）+ **设置族十二项**
  * （provider 四 / model / agent 参数 / MCP 三 / 配置写 / 语言）+ **项目级信息两项**（台账 / 相位）+ 会话级偏好写面 `session:prefs`
- * + **子 agent 停止出口 `subagent:stop`（R3b 落 · 白名单末位）** + **文件链接打开 `file:open`（「对齐第三批」
- * 相抵② · KD-39 —— 白名单末位：`shell.openPath` 出口；纯判据面住 `file-links.mjs`）**
+ * + **子 agent 停止出口 `subagent:stop`（R3b 落）** + **文件链接打开 `file:open`（「对齐第三批」
+ * 相抵② · KD-39 —— `shell.openPath` 出口；纯判据面住 `file-links.mjs`）**
+ * + **R1 输入面板移植两项（白名单末位）**：`session:flags`（模式位四写面 —— 处理体出档 `session-flags.mjs`；
+ * `file-links.mjs` 零改）· `at:complete`（@ 补全文件枚举过滤 —— 处理体出档 `at-complete.mjs`）
+ * + **会话维护线两项（R1 · 桌面功能对位批 —— 白名单末位）**：`session:gc`（会话数据回收）· `session:index`
+ * （派生索引重建）—— 处理体出档 `session-maintenance.mjs`（确认面 = 原生模态 `window.mjs` `confirmRecycle`）。
  * + **台账行出站接线（「对齐第三批」KD-38）**：`pushLedgerLines` 挂 `session:resume` 成功径（出站面经
  * `setLedgerEmit` 注入；扫描 / 出站逻辑住 `project-info.mjs`）
  * （定序 = 预载白名单同序）。
@@ -19,17 +23,18 @@ import { createRequire } from "node:module"
 import { dialog, ipcMain, shell } from "electron"
 import { loadConfig } from "@thincoder/core/config.mjs"
 import { normalizeLocale, projectDictionary } from "@thincoder/core/i18n.mjs"
-import { PRELOAD_PATH } from "./window.mjs"
+import { PRELOAD_PATH, confirmRecycle } from "./window.mjs"
 import { currentCwd, openProject, recentDirs } from "./projects.mjs"
 import { listSessions } from "./sessions.mjs"
 import {
   createSession, deleteSession, renameSession, resumeSession, switchSession,
 } from "./session-actions.mjs"
-import { pageHistory } from "./session-slots.mjs"
+import { pageHistory, scheduleSessionGC } from "./session-slots.mjs"
 import { configWrite, isConfigured, modelList, settingsAgent } from "./settings.mjs"
 import { providerList, providerRemove, providerSave, providerVerify } from "./providers.mjs"
 import { mcpList, mcpRemove, mcpSave } from "./mcp-servers.mjs"
 import { batchStatus, ledgerRead, pushLedgerLines } from "./project-info.mjs"
+import { runSessionGcMaintenance, runSessionIndexMaintenance } from "./session-maintenance.mjs"
 // 文件链接纯判据面（「对齐第三批」相抵② · KD-39 —— `file:open` 载荷合格性；出站 = `shell.openPath`）。
 import { fileOpenTarget } from "./file-links.mjs"
 
@@ -105,6 +110,10 @@ const HANDLERS = Object.freeze({
   "session:prefs": sessionPrefs,
   "subagent:stop": subagentStop,
   "file:open": fileOpen,
+  "session:flags": sessionFlags,
+  "at:complete": atComplete,
+  "session:gc": sessionGc,
+  "session:index": sessionIndex,
 })
 
 /** `project:open(payload)` ⇒ `{ cwd, recent }`：载荷 `{ path }` **可选**（`docs/desktop/design/IPC.md:42`）——
@@ -134,7 +143,12 @@ function sessionList() { return listSessions(currentCwd()) }
  *  忽略 `payload`；载荷形 = `{slot}`（switch / delete）· `{slot, title}`（rename）。 */
 function sessionCreate() { return createSession(currentCwd()) }
 function sessionSwitch(payload) { return switchSession(currentCwd(), payload?.slot) }
-function sessionRename(payload) { return renameSession(currentCwd(), payload?.slot, payload?.title) }
+function sessionRename(payload) {
+  const receipt = renameSession(currentCwd(), payload?.slot, payload?.title)
+  // #525：成功径 ⇒ 已装配实例 `agent.title` 随动（否则回合尾 `saveSession` 全量覆盖把盘面新标题写回旧值）：
+  if (receipt?.ok === true) agentHost?.syncTitle(payload?.slot, payload?.title)
+  return receipt
+}
 function sessionDelete(payload) {
   const receipt = deleteSession(currentCwd(), payload?.slot)
   // R3b（D20 数据链「会话关闭 / 删除 / 宿主退出 ⇒ 该键投影清」）：删除成功 ⇒ 装配实例出表（宿主 `dispose`
@@ -144,6 +158,8 @@ function sessionDelete(payload) {
 }
 function sessionResume() {
   const receipt = resumeSession(currentCwd())
+  // 残留 GC 显式点火（R1 · #406 · KD-T4② —— 桌面恢复径走核裸版，无包装调度；核内每进程每前缀去重）：
+  if (receipt?.ok === true && typeof receipt.cwd === "string" && receipt.cwd !== "") scheduleSessionGC(receipt.cwd)
   // 台账行出站点（「对齐第三批」KD-38 —— 落点 = 成功径：会话键天然在手）：后台面（`void`）—— 不经回执等待。
   if (ledgerEmit && receipt?.ok === true && receipt.slot != null) {
     void pushLedgerLines({ cwd: receipt.cwd, key: String(receipt.slot), post: ledgerEmit })
@@ -176,8 +192,9 @@ function sessionPrefs(payload) { return requireAgentHost().setPrefs(payload?.key
  *  载荷 `{ key, text, images }`（`images` 逐项 `{ name, mime, dataURL }`），转口宿主回合驱动。 */
 function msgSend(payload) { return requireAgentHost().send(payload?.key, payload?.text, payload?.images) }
 
-/** `msg:interrupt(payload)` ⇒ `{ ok:true }` ∥ `{ ok:false, reason }`（`idle` / `bad-key`）：载荷 `{ key }`。 */
-function msgInterrupt(payload) { return requireAgentHost().interrupt(payload?.key) }
+/** `msg:interrupt(payload)` ⇒ `{ ok:true }` ∥ `{ ok:false, reason }`（`idle` / `bad-key`）：载荷 `{ key, message? }`
+ *  —— `message` 非空串 ⇒ Ctrl+I 同上下文续跑（宿主下传核 abort 面 `{ interrupt: true, message }`）；缺 ∕ 空 ⇒ 停回合。 */
+function msgInterrupt(payload) { return requireAgentHost().interrupt(payload?.key, payload?.message) }
 
 /** `approval:respond(payload)` ⇒ 审批出口：载荷 `{ promptId, verdict }`（形已在册，本批接线**语义**面）。
  *  转口宿主待决表（`agent-host.mjs`）：未知 id / 跨形 verdict / 表外 verdict 皆有 `{ok:false}` 档，且
@@ -220,6 +237,24 @@ function liveAgents() {
   if (!agentHost) return null
   return [...agentHost.agents.values()]
 }
+
+/** `session:flags(payload)` ⇒ `{ ok:true, flags? }` ∥ `{ ok:false, reason }`（R1 输入面板移植）：载荷
+ *  `{ key, patch }`（`patch` 四键闭集 `planMode` ∕ `autoApprove` ∕ `advisorGuard` ∕ `engineering`，逐项布尔）
+ *  —— 转口宿主模式位写面（处理体出档 `session-flags.mjs`：核 `setSlot*` 四写 + 活代理重施 + ENG×PLAN 互斥；
+ *  成功径 `flags` = `flagsOf` 活值，agent 不在场 ⇒ 键缺席）。宿主未注入 ⇒ fail-loud 直抛
+ *  （沿 `session:prefs` ∕ `approval:respond` 先例）。 */
+function sessionFlags(payload) { return requireAgentHost().setFlags(payload?.key, payload?.patch) }
+
+/** `at:complete(payload)` ⇒ `{ ok, matches, seq }`（R1 输入面板移植）：载荷 `{ query, seq }` —— 转口宿主
+ *  @ 补全面（处理体出档 `at-complete.mjs`：项目树枚举过滤，排除面 ∕ 封顶照 VSC；**`seq` 原样回携** ——
+ *  迟到丢弃 = 消费面判据）。宿主未注入 ⇒ fail-loud 直抛。 */
+function atComplete(payload) { return requireAgentHost().atComplete(payload?.query, payload?.seq) }
+
+/** R1 · 会话维护线两处理体转口（出档 `session-maintenance.mjs`）：`session:gc` ⇒ `{ ok, candidates, confirmed,
+ *  deleted, files, skipped, skippedFiles }`；`session:index` ⇒ `{ ok, sessions, changed, messages, toolCalls,
+ *  bytes }` ∥ `{ ok:false, …, error }`（驳回 ⇒ 零删除；索引不可得 ∕ 失败落回执——不抛）。 */
+function sessionGc() { return runSessionGcMaintenance({ confirm: confirmRecycle }) }
+function sessionIndex() { return runSessionIndexMaintenance() }
 
 /* ─── 设置族十二项处理体（本批增）：转口三档模块，本档零算法副本（§2.5 行表） ─── */
 /** `provider:list`（无入参）⇒ `{ ok, providers, active }`（密钥只回遮罩值）。 */

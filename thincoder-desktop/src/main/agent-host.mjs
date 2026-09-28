@@ -1,6 +1,6 @@
 /**
  * agent-host.mjs — 宿主装配桥（`docs/desktop/design/SHELL.md` §4 装配第三份 · `docs/desktop/design/IPC.md` §1 桥面）。
- * 六职责：① 装配（懒 · 按需 · 同键复用）② 十回调桥（协议行解析 ⇒ `ev:*` 出站 · R3a 增 `onUsage` 入会话累计令牌表）
+ * 六职责（＋R1 会话维护面一枚 `syncTitle` —— 改名内存标题同步，#525）：① 装配（懒 · 按需 · 同键复用）② 十回调桥（协议行解析 ⇒ `ev:*` 出站 · R3a 增 `onUsage` 入会话累计令牌表）
  * ③ 待决表（三门形：审批逐项 / 审批批次 / 提问）
  * ④ 回合驱动（`send` / `interrupt` + 结算三映射：done · stopped · error + 回合尾 `ev:usage` 读数〔`postUsage` · 三径同点〕）
  *    ——**桌面空闲唤醒批**：单回合执行面提取（`send` ∕ 驱动**同源** ＝ `executeTurn` · `suspDriven: true` 撤回合尾直注入兜底）
@@ -31,6 +31,9 @@
  * **桌面空闲唤醒批（KD-34 / KD-35）**：挂起驱动胶水（消费核件 `startSuspension`）出档 `thincoder-desktop/src/main/suspension-drive.mjs`；
  * 提示面策略（失焦门 + 两档）出档 `thincoder-desktop/src/main/notify.mjs`（本档注入面扩三件 —— `notify` ∕ `focused` ∕ `reveal`，
  * 皆可缺省：缺 ⇒ 零动作，零连带）。
+ * **R1 输入面板移植（桌面宿主面）**：两处理面出档 —— `setFlags` ⇒ `session-flags.mjs`（核 `setSlot*` 四写 +
+ * 活代理重施（`loadAgentSlot`）+ `flagsOf` 回执 + ENG×PLAN 互斥）· `atComplete` ⇒ `at-complete.mjs`（@ 补全
+ * 文件枚举过滤 + `seq` 原样回携）；本档只留 import + 装配 ∕ 暴露两行（拆分评审结论 = 批档 §2.7 本档行）。
  */
 import { runAgent } from "@thincoder/core/agent.mjs"
 import { historyPercent } from "@thincoder/core/token-window.mjs"
@@ -52,6 +55,9 @@ import { createNotifier } from "./notify.mjs"
 // 单回合执行面（桌面空闲唤醒批出档 —— 触 300 行顾问线，在册预案「回合执行面再出档」落形）。
 import { createTurnFace } from "./turn-face.mjs"
 // 排队面（「回合中插入」批 —— 队列单源 = `queued-input.mjs`；续发链 + `ev:queue` 出站 = `turn-chain.mjs`）。
+// R1 输入面板移植（桌面宿主面）：模式位四写面 ∕ @ 补全面两处理体出档（新增两面零入档 —— 拆分评审结论见档头）。
+import { createSessionFlags } from "./session-flags.mjs"
+import { createAtComplete } from "./at-complete.mjs"
 import { createQueuedInput } from "./queued-input.mjs"
 import { createTurnChain } from "./turn-chain.mjs"
 // 同名 re-export（调用面零改 —— 既有 import 路径与名面保持）。
@@ -269,12 +275,16 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     return attached.degraded ? { ok: true, degraded: attached.degraded } : { ok: true }
   }
 
-  /** `msg:interrupt`：无在飞 ⇒ `idle`；在飞 ⇒ abort + 本键待决门按拒结算。 */
-  function interrupt(key) {
+  /** `msg:interrupt`：无在飞 ⇒ `idle`；在飞 ⇒ abort（**携核 abort 面**：`message` 非空串 ⇒ `{ interrupt: true, message }`
+   *  —— Ctrl+I 同上下文续跑，核 `agent.mjs:295-304,417-424` 读 `signal.reason`；缺 ∕ 空 ⇒ 裸 abort = 停回合不续跑）
+   *  + 本键待决门按拒结算。 */
+  function interrupt(key, message) {
     if (slotOfKey(key) === null) return { ok: false, reason: "bad-key" }
     const controller = flights.get(key)
     if (!controller) return { ok: false, reason: "idle" }
-    controller.abort()
+    const text = typeof message === "string" && message !== "" ? message : null
+    if (text === null) controller.abort()
+    else controller.abort({ interrupt: true, message: text })
     denyGates(key)
     return { ok: true }
   }
@@ -316,6 +326,15 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     }
   }
 
+  /** 改名**内存标题**同步（R1 · #525 —— `session:rename` 成功径调用，见 `ipc.mjs`）：装配表命中 ⇒ 写
+   *  `agent.title`（盘面已由核 `renameSlot` 写就 —— 本面只同步内存，零第二写径）；不在场 ⇒ 零动作
+   *  （不隐式装配：下次装配自读盘上新标题）。依据 = 回合尾 `saveSession` 全量覆盖 ⇒ 内存旧标题会把盘面
+   *  新标题写回；CLI 先例 `thincoder-cli/src/tui/cmd-session.mjs:35`（改名成功后置 `agent.title`）。 */
+  function syncTitle(slot, title) {
+    const agent = agents.get(String(slot))
+    if (agent) agent.title = title
+  }
+
   /** 作答 / 审批出口（待决门 `respond` 转口 + **成功径叠加** —— `docs/desktop/design/IPC.md` §2 该行 +
    *  「模式位投影注」项 5 · 状态栏对齐批）：**成功径 ∧ 审批门** ⇒ 回执叠加 `{ key, flags }`（`flagsOf` 活值 ——
    *  桌内 AUTO 翻转〔`always` 放行置位 = `suspensions.mjs`〕后渲染面即刷新）；**提问门径 / 失败径零叠加**
@@ -327,6 +346,12 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     const flags = flagsOf(pending.key)
     return flags === null ? receipt : { ...receipt, key: pending.key, flags }
   }
+
+  /** 模式位写面（R1 输入面板移植 —— `session:flags`；处理体出档 `session-flags.mjs`）：`flagsOf` 为函数声明（提升）
+   *  ⇒ 此处引用先于定义安全。 */
+  const { setFlags } = createSessionFlags({ agents, projects, post, flagsOf })
+  /** @ 补全面（R1 输入面板移植 —— `at:complete`；文件枚举过滤出档 `at-complete.mjs`）。 */
+  const { atComplete } = createAtComplete({ projects })
 
   /** 子 agent 面（R3b · D20 —— 出档 `subagent-face.mjs`）：停止出口 + 存活投影起 / 停 / 清点。 */
   const subagentFace = createSubagentFace({ agents, bridge })
@@ -367,8 +392,9 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   // verdict ⇒ `bad-verdict` · 非串且非 `null` 作答 ⇒ `bad-answer`；四档皆不 resolve —— 挂起保留；成功径叠加见上）。
   subagentFace.startHeartbeat() // 出生自愈起拍（起在装配期；停 `stopHeartbeat()` / 逐键清 `dispose(key)`）
   return {
-    ensure, send, interrupt, setPrefs, respond: respondTo, dispose, abortSuspensions, flagsOf,
+    ensure, send, interrupt, setPrefs, respond: respondTo, dispose, abortSuspensions, flagsOf, syncTitle,
     queueSnapshot: (key) => queued.snapshot(key), // `history:page` 回执 `queue` 键供面（冷启重建 —— `ipc.mjs`）
+    setFlags, atComplete, // R1 输入面板移植两通道宿主入口（`ipc.mjs` 两 handler 转口 —— 处理体各住其档）
     ...subagentFace, table, agents,
   }
 }

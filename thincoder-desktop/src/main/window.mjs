@@ -1,12 +1,16 @@
 /**
- * window.mjs — 窗口装配（单窗 · 隔离三件套）+ 原生菜单 + 系统主题 + 冒烟读回（判据②③读数面）。
+ * window.mjs — 窗口装配（单窗 · 隔离三件套）+ 原生菜单 + 系统主题 + 冒烟读回（判据②③读数面）
+ * + 会话维护动作宿主面（R1 · 桌面功能对位批：菜单「Maintenance」两项 + 确认 ∕ 结果两枚原生对话框——
+ * 处理体（核数据面）住 `session-maintenance.mjs`，本档只做 electron 落子）。
  * 主题 = CSS `prefers-color-scheme` 消费（本批零主题通道）；`resolveTheme()` 只作同事实对照（批档 §2.6 D-8）。
  * 探针用 `net.fetch`（官方档 `net`：「differs from Node's fetch(), which uses Node.js's HTTP stack」+
  * 「requests made with net.fetch can be made to custom protocols」）——Node 全局 `fetch` 对自定义 scheme 无保证。
  */
 import { resolve } from "node:path"
-import { BrowserWindow, Menu, nativeTheme, net, shell } from "electron"
+import { BrowserWindow, Menu, dialog, nativeTheme, net, shell } from "electron"
 import { HOST, SCHEME, protocolStats } from "./protocol.mjs"
+// 会话维护线（R1 · 桌面功能对位批）：两枚处理体出档（本档只做宿主面 —— 确认 ∕ 结果两枚原生对话框）。
+import { gcSummaryText, indexSummaryText, runSessionGcMaintenance, runSessionIndexMaintenance } from "./session-maintenance.mjs"
 
 /** 预载绝对路径（隔离面唯一入口；`ipc.mjs` 亦引本常量读取白名单）。 */
 export const PRELOAD_PATH = resolve(import.meta.dirname, "../preload/preload.cjs")
@@ -42,7 +46,8 @@ export function resolveTheme() {
   return nativeTheme.shouldUseDarkColors ? "dark" : "light"
 }
 
-/** 原生菜单：只挂主进程动作面（窗口 / 缩放 / 退出 / 开发者工具 + Chromium 原生编辑 role）——零 IPC 项。 */
+/** 原生菜单：只挂主进程动作面（窗口 / 缩放 / 退出 / 开发者工具 + Chromium 原生编辑 role + 维护两项）
+ *  ——零 IPC 依赖项；维护两项出口 = 本档 `runMaintenance`（与 `session:gc` ∕ `session:index` 两通道同处理体）。 */
 function buildMenu() {
   const group = (label, roles) => ({
     label,
@@ -53,7 +58,42 @@ function buildMenu() {
     group("Edit", ["undo", "redo", { type: "separator" }, "cut", "copy", "paste", "selectAll"]),
     group("View", ["reload", "forceReload", "toggleDevTools", { type: "separator" }, "resetZoom", "zoomIn", "zoomOut", { type: "separator" }, "toggleFullscreen"]),
     group("Window", ["minimize", "zoom"]),
+    group("Maintenance", [
+      { label: "Clean up session data…", click: () => void runMaintenance("gc") },
+      { label: "Rebuild session index", click: () => void runMaintenance("index") },
+    ]),
   ])
+}
+
+/** 回收确认（**原生模态** —— 菜单与 `session:gc` 通道同源）：默认 ∕ 取消键 = 「Cancel」⇒ 驳回 ∕ Esc ⇒
+ *  `false`（**零删除** —— 核删除面一步不进；先例 VSC `showWarningMessage(..., { modal: true }, "Delete")`）。 */
+export async function confirmRecycle({ count } = {}) {
+  const { response } = await dialog.showMessageBox({
+    type: "warning", buttons: ["Recycle", "Cancel"], defaultId: 1, cancelId: 1,
+    message: `ThinCoder: recycle session data for ${count} cold project(s)?`,
+    detail: "The files are moved to the sessions-trash recycle bin (recoverable for 7 days).",
+  })
+  return response === 0
+}
+
+/** 菜单维护出口（R1 · 会话维护线）：处理体（核数据面）住 `session-maintenance.mjs`（零 electron）——
+ *  本档只做宿主面两枚对话框（确认 + 结果）；结果句单源 = 同档两枚 formatter。
+ *  **结果面三径同 VSC 先例**（`session-gc-command.mjs:36-46/:66-68`）：无候选 ⇒ 一句「nothing to clean」；
+ *  真回收 ⇒ 汇总句；**用户驳回 ⇒ 零弹框**（沿先例驳回径静默返回同形——回执面（`session:gc` 通道）不受影响）。
+ *  异常 ⇒ stderr 一行（不吞、不假成功 —— 菜单回调无 invoke 拒绝面兜底）。 */
+async function runMaintenance(action) {
+  try {
+    const summary = action === "gc"
+      ? await runSessionGcMaintenance({ confirm: confirmRecycle })
+      : await runSessionIndexMaintenance()
+    if (action === "gc" && summary.confirmed === false && summary.candidates > 0) return // 驳回径：静默（VSC 同形）
+    await dialog.showMessageBox({
+      type: summary.ok === false ? "error" : "info", buttons: ["OK"],
+      message: action === "gc" ? gcSummaryText(summary) : indexSummaryText(summary),
+    })
+  } catch (error) {
+    console.error(`[window] session maintenance (${action}) failed:`, error)
+  }
 }
 
 /** 单窗装配：隔离三件套 + 预载绝对路径；加载 `app://` 首页（供给与防护 = protocol.mjs）。 */

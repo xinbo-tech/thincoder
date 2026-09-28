@@ -13,6 +13,8 @@ import { protocolStats, registerAppScheme, serveAppProtocol } from "./protocol.m
 import { ipcStats, registerIpcHandlers, setAgentHost, setLedgerEmit } from "./ipc.mjs"
 import { createAgentHost } from "./agent-host.mjs"
 import { currentCwd } from "./projects.mjs"
+// 会话维护线（R1 · 桌面功能对位批）：启动拍供面（GC ∕ 索引两枚延迟拍 —— 处理体同档）。
+import { scheduleSessionMaintenancePasses } from "./session-maintenance.mjs"
 import { createWindow, probesSatisfied, runSmoke } from "./window.mjs"
 
 const SMOKE = process.argv.includes("--smoke")
@@ -91,6 +93,10 @@ async function main() {
   setLedgerEmit(emit)
   registerIpcHandlers()
   win = createWindow(recordError)
+  // 启动拍（R1 · 会话维护 · KD-T4② 端层显式点火）：窗口起后两枚延迟拍（核侧 3s 启动窗外；异步非阻塞、
+  // 失败静默 —— 索引 = 派生品）。GC 拍须项目 cwd：开机未开项目 ⇒ 此处零动作，由恢复入口（`ipc.mjs`
+  // `session:resume` 成功径）同款点火；索引拍 = 全根扫描（无需 cwd），此处恒点火（核内每进程一次去重）。
+  void scheduleSessionMaintenancePasses({ cwd: currentCwd() })
   if (!SMOKE) return // 常态启动 = 窗口常驻（不取读数、不退出）
 
   const reading = await runSmoke(win, recordError)

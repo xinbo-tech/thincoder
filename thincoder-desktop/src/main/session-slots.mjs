@@ -26,6 +26,8 @@
  *      `autoApprove` / `advisor.guard` / `engineering`）**每次页读皆携** —— 活值优先面（agent 在场）住
  *      宿主转口（`ipc.mjs` 叠加 `agent-host.mjs` `flagsOf`），本档 = 兜底口径（合并裁定；单源 =
  *      `docs/desktop/design/IPC.md` §2「模式位投影注」）。
+ *   ⑧ 会话维护族转口（R1 · 桌面功能对位批 · 本节末）：GC ∕ 存量组 ∕ 索引拍五名的核出口转口——
+ *      判据与算法全在核（本档零副本）；`dir` 由调用面按端侧派生注入（`sessionsDir()`）。
  *
  * 载入序不变量（批档 §2.4（a））：核 `newSlotData(cwd)` 的 `createdBy = sessionEnd()`
  * （`thincoder-core/session-slot-write.mjs:46`）⇒ 端名声明必须先于任何物化写。本档声明是模块级
@@ -192,4 +194,33 @@ export function writeSlotPrefs(cwd, slot, patch) {
   // 写已发生而档不可读 = 矛盾态 ⇒ fail-loud（**显式判** —— 不倚仗 `slotMeta(null)` 的解引用抛）
   if (!data) throw new Error(`[session-slots] slot unreadable after prefs write: ${slot}`)
   return { ok: true, meta: slotMeta(data) }
+}
+
+// ─── 会话维护族转口（R1 · 桌面功能对位批 —— 判据与算法全在核：本档零算法副本）──────────────
+
+/** 会话数据回收面（核 `thincoder-core/session-gc.mjs` §6.12 / §6.17）：`listColdCwds` = 冷 cwd 枚举
+ *  （90 天面）· `deleteColdCwd` = 单组回收（**内部 TOCTOU 重校验** —— 期间变活 ∕ 出窗 ⇒ 拒绝，零删除）；
+ *  两函数 `dir` 由调用面注入 = **端侧派生** sessions 根（`sessionsDir()`；核函缺省 = 核内 `configDir` 版
+ *  —— 随核沙箱缝走的只有端侧派生径）。 */
+export { listColdCwds, deleteColdCwd } from "@thincoder/core/session-gc.mjs"
+
+/** 存量组枚举（核 `session-stale.mjs`：三合取判据 · 显式面候选 = 冷 cwd ∪ 存量组，`limit` 由调用面给）。 */
+export { listStaleCwds } from "@thincoder/core/session-stale.mjs"
+
+/** 残留 GC 启动拍转口（核 §6.12 启动钩子）：**每进程每前缀一次**去重 + 启动窗外 3s 延迟拍、异步非阻塞。
+ *  桌面恢复径有意走核**裸版**（`session-io.mjs` 头注 —— 避认领竞争）⇒ 端层显式点火在 `ipc.mjs`（恢复入口）
+ *  与 `main.mjs`（窗口起后）两处 —— 去重由核内 `scheduledPrefixes` 承担（重复点火零副作用）。 */
+export { scheduleSessionGC } from "@thincoder/core/session-gc.mjs"
+
+/** 索引启动拍转口（核 §6.19 触发点②）——**惰性**（核索引链静态导入 `node:sqlite`；端壳静态闭包须零
+ *  sqlite，VSC 纪律①同款 `session-index-command.mjs:38-43`）。不可得 ⇒ `false` + stderr 一行
+ *  （索引 = 派生品：fail-soft，不成红、不假造）。异步：调用面 `await` ∕ `void`。 */
+export async function scheduleSessionIndexPass(options = {}) {
+  try {
+    const { scheduleSessionIndexPass: coreSchedulePass } = await import("@thincoder/core/session-index-pass.mjs")
+    return coreSchedulePass(options)
+  } catch (error) {
+    console.error("[session-slots] session index pass unavailable:", error)
+    return false
+  }
 }
