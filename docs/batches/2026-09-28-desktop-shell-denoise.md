@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-09-28 · 来源 = 用户 2026-09-28 走查反馈「桌面端页面上线条框框太多，显得非常杂乱」→ 06:36 裁定「先只做外壳」→ 06:43 选定 ② 整壳降噪（对照 mock `denoise-02-chrome.png`）→ 06:44「开工」；落点 = 需求档 §4 D24 · 台账 #493。
 > 台账 = #493（docs/desktop/requirements/PROJECT.md · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：进行中（代签落（§4.1）→ 实施已派（eng-coder · 初始轮 · 四档 CSS + 两测试档））
+**状态行**：已收口 2026-09-28
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 ### 1.1 讨论来源
@@ -228,4 +228,76 @@ VERDICT: pass
 **批准范围** = §2 设计全文（D24 值表九项 + 验收三件 + 决策 KD-D24-1…7）；**实施派发** = eng-coder（初始轮 · 按 §2 受影响文件与测试面）。
 
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（初始轮 · 六档落齐（四 CSS + 两测试档）· npm test 203/203 · 内部审计 1 轮（1 PARTIAL 自修）+ 代码评审 1 轮（0🔴 · 1🟡 非阻断 · 5🔵）· fix round 1 = 2 项 · 终态 clean · doc-check 悬空 47 / 行宽 36 零净增）
+
+
+
+### 5.1 交付摘要
+
+**改动面 = 六档**（产品四 + 测试二；新文件 0 · 新变量 0 · 新依赖 0）：`thincoder-desktop/renderer/styles.css` · `thincoder-desktop/renderer/chat.css` · `thincoder-desktop/renderer/pool.css` · `thincoder-desktop/renderer/settings.css` · `thincoder-desktop/test/views-locks.test.mjs` · `thincoder-desktop/test/integration/chat-render.test.mjs`。
+`thincoder-desktop/renderer/core.css`（内容面）零改；值表单源 = 设计 §1「本批注（D24）」九项，逐值照落——去描边一律保位式（`1px solid transparent` / `*-color: transparent`），保 1px 占位 ⇒ 零几何位移。
+
+**行数实读（对设计 §2 尺度表预估）**：styles.css 467 ⇒ **492**（≈485）· chat.css 300 ⇒ **315**（≈310）· pool.css 78 ⇒ **84**（≈84）· settings.css 273 ⇒ **294**（≈289）· views-locks.test.mjs 280 ⇒ **377**（≈320 ⇒ **+57 披露**）· chat-render.test.mjs 176 ⇒ **224**（≈212）。
+
+**值面落点（逐族 · 全名路径）**：
+- 容器族 4 = `thincoder-desktop/renderer/styles.css:101`；骨架线 4 处 = `styles.css:117` · `:132` · `:360` · `thincoder-desktop/renderer/chat.css:271`；
+- 控件族 11 = `styles.css:449` ∥ `chat.css:99` · `:113` ∥ `thincoder-desktop/renderer/pool.css:31` ∥ `styles.css:306` · `:422` ∥ `chat.css:290`；
+- 池条目 = `pool.css:64` + `:66`（描边透 + 底 `var(--bg)`）；标签活动态 = `styles.css:376-379`（描边归零 + accent 14% 底 + 题字 accent）；滚动条 4 规则 = `styles.css:477-481`；
+- 交互态组 = `styles.css:483-492`（四键按下 / 聚焦 + chip 三态）· `chat.css:307-315` · `pool.css:82-84` · `thincoder-desktop/renderer/settings.css:281-294`；
+- 设置面 6 改 = `settings.css:50` · `:71` · `:111` · `:141-156` · `:183-185`；3 保留 = `settings.css:83-87`（强调 2 键 accent 框）· `:199`（`.settings-field`）· `:166`（`.settings-mark`）。
+
+**验收三件**：① 值落点锁 = U182（`thincoder-desktop/test/views-locks.test.mjs:283` 起 —— 表项 56〔① 16 / ② 20 / ③ 4 / ④ 9 / ⑤ 7〕+ 计数两式 + `.chat-pill` 聚焦底负向一锁）；② 真机读数 = T-DSK37 第 ⑨ 块（`thincoder-desktop/test/integration/chat-render.test.mjs:175-222`）；③ 改前 / 改后对照 = `.thincoder/tmp/denoise-00-before.png` ∥ `.thincoder/tmp/denoise-04-after.png`（同夹具 / 同机位 / 同滚位；改后帧探针 = `.thincoder/tmp/desktop-denoise-after.mjs` 一次性物 · 非批产物 · 零注入）。
+
+### 5.2 决策透明表（实施层形 —— 设计外的落地选择）
+
+| # | 选择 | 依据 / 被否 |
+|---|---|---|
+| 1 | `.head-field` 三态单列成规则（hover / 按下 / `:focus-within`），不入四键组 | 设计项 2 特例句 + 值面骨架「11 选择器 × 四值」；按下支 = 内部审计 ① 命中后补齐（族值 4 缺 1） |
+| 2 | 设置面 8 选择器共用基规则描边归零；`.wizard-next` / `.wizard-finish` 由后序 `border-color: var(--accent)` 保留 | 与设计「次级 6 归零 + 强调 2 保留」等价；不复制声明（D2 单源）· 级联后序可读 |
+| 3 | 滚动条 thumb `:hover` 用 `background-color`（非 `background` 简写） | 简写会重置基规则的 `background-clip: padding-box`（hover 期 2px 边被填 ⇒ 视觉变粗）；语义等价 |
+| 4 | `.chat-pill` 三例外（hover / 按下 `var(--bg)` · 聚焦底不随落）写独立规则 | 设计项 2 明文实色支例外（半透明叠加会透底层文字）；不并入族组 |
+| 5 | 滚动条 / 交互态组住 `styles.css` 文末全局段 | 设计项 4 落点「全局段（新增）」；末位层序 · 增量改不触他批段落 |
+| 6 | E2E 滚动条两支形分支键 = 实测占宽（> 0），非「是否溢出」 | 设计原文「有滚动条 ⇒ 10 ∥ 无 ⇒ 不适用」；键在溢出时，overlay 滚动条平台会假红（评审 🔵③ 采纳） |
+
+### 5.3 命令读数
+
+- `cd thincoder-desktop && npm test` = **203 例 / 203 pass / 0 fail**（含新增 U182 + T-DSK37 ⑨；fix 前 `d24-npm-test.log` · fix 后 `d24-npm-test-2.log` 双绿）。
+- 单档 = `node --import thincoder-desktop/test/rc-resolve.mjs --test test/views-locks.test.mjs` ⇒ 4 / 4 绿；`… --test test/integration/chat-render.test.mjs` ⇒ 1 / 1 绿。
+- E2E D24 真机读数（实跑输出）：静息 `.rail` 四边 `rgba(0, 0, 0, 0)` ∧ 边宽 1px · `.rail-head` 底线 / `.composer` 顶线透明 · chip 透明 ∧ 1px · hover 底 = `rgba(0, 0, 0, 0.06)` ∧ 边框透明 · Tab 8 步 ⇒ `:focus-visible` 真 ∧ outline 2px / offset -2px / `rgb(47, 111, 235)` · 活动标签底 = `color(srgb 0.184314 0.435294 0.921569 / 0.14)` · 滚动条占宽 = **10** · `.composer-input` 边框非透明。
+
+### 5.4 尺度与破限预案
+
+- `styles.css` **492** 行（< 500 硬限 · 余量 ≈8）：预案 KD-D24-4 维持（破 500 ⇒ 新立 `thincoder-desktop/renderer/chrome-denoise.css` 排末 · 本批不落）；评审 🟡① 建议 = 下一触碰该档的批先落分档。
+- `views-locks.test.mjs` **377** 行（越 300 建议线 · < 500 硬限）：越层在册（设计 §2 修正块已裁「本批接受 · 登记」）；实读对预估 +57 = 断言逐项展开所致 —— 披露。
+
+### 5.5 审计与代码评审轮次与终态
+
+- **内部探索审计（只读子代理 · 1 轮）** = DEVIATIONS 1 条（PARTIAL 🟡）：`.head-field` 缺按下支（命中面 11 控件族值面 4 只落 3）⇒ **fix round 1 采纳**；另报歧义 1 条（`.rail-control` / 标签条三控无按下 · 聚焦 —— 设计项 2 只要求 hover 收齐 ⇒ 按「该句为完整口径」读法不计偏离）。
+- **代码评审（advisor · 1 轮 · 同步）= pass**：**0 🔴 / 1 🟡 / 5 🔵** —— 🟡① = 文件尺度账实不符（views-locks 377 > 300 建议线 · styles.css 余量 ≈8）⇒ 登记不阻断（归 5.4）；🔵② = 尺度表数值漂移 ⇒ 归父侧文档层；🔵③ = E2E 滚动条分支键 ⇒ **已采纳**；🔵④ = 锁组内成员不可判 ⇒ **已采纳**（改逐成员序列断言 + 补设置面 hover 一锁）；🔵⑤ = 聚焦第三值在 hover 并存时被层序压（沿 D21 `.rail-row` 先例）⇒ 报告项；🔵⑥ = 需求句「聚焦逐控件定形」对标签条三控 / `.rail-control` 无本端定形（设计项 2 明文只要求 hover · 设计 > 需求）⇒ 报告项。
+- **fix round 1（2 项）**：① `.head-field:not(:disabled):active` 按下支（`styles.css:491`）+ 锁（`views-locks.test.mjs:328`）；② 锁组内成员逐名序列（② 段全改 · 9 组）+ E2E 滚动条分支键（`chat-render.test.mjs:217`）。复跑 = 单档 + 全量 203 / 203 双绿。
+- **终态 = clean**（审计 1 轮 + 评审 1 轮 + fix 1 轮；0 未闭阻断项）。
+
+### 5.6 未闭报告项（只报 · 归父侧 / 设计席）
+
+① 评审 🔵⑤：聚焦三值第三值在 hover 并存时被层序压（同 D21 `.rail-row` 先例）——若意图「聚焦恒胜」需设计补层序口径；
+② 评审 🔵⑥：标签条三控 / `.rail-control` 聚焦态无本端定形（UA 默认焦点环在 · 非可达性缺口）——归设计席（用户走查判不足则补值）；
+③ 尺度表六档「预期」对实读的漂移 + 本档 §6 段 ⇒ 归父侧收口面；
+④ 设计 §2 在册上抛三项（原生 select 皮肤化 · `[data-slot="info"]` 顶线 · 设置面形）—— 本批零动照旧。
+
+**§5 落笔清账（doc-check 实跑）**：落笔后 `node scripts/doc-check.mjs --root .` ⇒ **悬空 47 / 行宽 36 = 基线原值（净增 0 ✓）**；新规则读数 = 悬空 47 · 行宽 36（对照落笔前 `d24-doccheck-before5.log` ∥ `d24-doccheck-after5.log` 逐行集合差 = **本批零新增悬空行**）。旁注（外部漂移 · 非本批）：拟新增 45 ⇒ 49（+4）——新增行住 `docs/desktop/design/PROJECT.md:375` 与 `docs/desktop/design/UI.md:349`（两档引用 `renderer/page-read.mjs` / `renderer/queue.mjs` 的「拟新增」前向引，两文件盘上缺席；本批零触碰该两档与两文件）⇒ 归并发在途批的文档面（拟新增列报 · 不入闸）。
+
 ## §6 验证与收口（父代理）
+
+### 6.1 验证结论（父侧亲跑 · 2026-09-28）
+
+**改动核验**：六档 diff 实读逐处对 §2 值表（容器四卡 / 骨架线 4 / 控件族 11 / 池条目 / 标签活动态 / 滚动条 4 规则 / 设置面 6 改 + 3 保留 / 交互态组 / 保留面两值列）——照落；保位式去描边（1px 透明）零几何位移；内容面 `core.css` 零改。
+
+**读数（父侧实跑）**：`thincoder-desktop` `node test/run.mjs` ⇒ **203/203 绿 ×2**（另 1 跑红 = 既有断言 `test/integration/chat-render.test.mjs:136`〔面板面 6 · 钮自身 hover 时序〕偶发——**非本批面**（D24 diff 不触该链 · 5 跑 1 红 = 脆性）；**稳定性债已登记归批**）；子代理双跑日志亦 203/203（`d24-npm-test.log` / `-2`）。`doc-check` 悬空 47 / 行宽 36 = 基线（净增 0）。改前 / 改后对照帧在盘（`.thincoder/tmp/denoise-00-before.png` ∥ `denoise-04-after.png`）。
+
+**尺度披露**：`styles.css` 467 ⇒ **492**（预估 ≈485）· `chat.css` 300 ⇒ **315**（≈310）· `pool.css` 78 ⇒ **84** ✓ · `settings.css` 273 ⇒ **294**（≈289）· `views-locks.test.mjs` 280 ⇒ **377**（≈320 · +57 披露）· `chat-render.test.mjs` 176 ⇒ **224**（≈212）——漂移全部在案（§5.1 / §5.4）。
+
+**核销**：台账 **#493** ⇒ 已核销（证据 = 本节 + 提交 `a0aa11e5`）。**签入**：产品面 = `a0aa11e5`（双远端随推）；本档随 §6 收口笔一并签入。
+
+### 6.2 残留报告项处置（承 §5.6）
+
+① 聚焦 / hover 层序（🔵⑤）+ ② 标签条三控聚焦定形（🔵⑥）——登记（用户走查判不足再补值）；③ 尺度表漂移 = 本节披露在册；④ 上抛三项（原生 select 皮肤化 / `[data-slot="info"]` 顶线 / 设置面形）——照旧在册。

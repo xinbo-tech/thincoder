@@ -68,7 +68,7 @@
 | KD-RC-3 | 核**输出形态 = DOM 构件 + 纯函数**（浏览器原生；不引框架、不定 HTML 字符串契约） | 两端渲染面同为 Chromium DOM；DOM 非宿主特权（§1.2）；VSC 现状 = DOM 命令式、桌面现状 = 描述符树——核构件（返回 DOM 节点）可被两端各挂各的壳（桌面挂载面直接 append） | **纯逻辑核（不碰 DOM）**（桌面须保第二份 DOM 实现 ⇒「共用核」名存实亡——用户改判对象即此）；**HTML 字符串核**（转义闸责任漂移 + 桌面现制零 HTML 注入面全量重构）；**引框架**（违零框架裁定） |
 | KD-RC-4 | 桌面**「零 Markdown」口径改判**：对话流文本面 ⇒ 经核 Markdown 呈现（`md.mjs` 单源；助手块 / 用户块同径） | 用户 2026-09-27 20:45 走查第 3 点「会话流…应该跟 VSC 对齐」+ D19 明列 Markdown；对齐须经同核（同文本 ⇒ 同渲） | **保留纯文本 `pre-wrap`**（背离走查原话；D19 列举失守）；**桌面自写第二份 md**（第二实现 = 漂移面）；**只渲助手块、用户块保纯文本**（同流两制 = 读感断层；VSC 用户块亦走 md） |
 | KD-RC-5 | 桌面**文件链接不承载**（核含 `linkify`，桌面不消费 ⇒ 零链接节点） | 需求 §5.1：**文件视图与编辑器（打开 / 编辑 / 保存 / 内置 diff）暂缓**——链接出口 = 「打开文件」⇒ 落链接即假控件（违「诚实非死控」律 `docs/desktop/design/RENDERER.md:43`） | **落链接 + 无出口**（假控件）；**落链接 + 系统程序打开**（越暂缓边界，须需求侧先裁）；**核删 linkify**（VSC 消费面在——核不夺） |
-| KD-RC-6 | 桌面**子 agent 面内容 chunk 分流 = 工具名仅作分流判据 · 丢内容**（块面无工具位——D20 单源） | 需求 §3.1:51 / D4「不回显内容」+ D20 块形（子 agent 实例——无工具位）；现状漏 = 带 `role#id/` 前缀的内容 chunk **原样进主流**（`thincoder-desktop/src/main/agent-bridge.mjs:57-63` 只剥 `⟦ev⟧` 协议段，其余前缀不剥）⇒ 分流 = 修漏 + 定形 | **照 VSC 回显 tail-3**（违 D4 语义面）；**原样留主流**（前缀字面泄漏入对话流）；**剥前缀后并入主流正文**（子代理内容冒充主会话正文——三端语义分叉） |
+| KD-RC-6 | 桌面**子 agent 面内容 chunk 四面分流 + 回显 tail-3**（KD-RC-6 收正——「对齐第二批」项 3） | 需求 §3.6「对齐」口径 + D4（内容回显 = 核件 tail-3 / 展开）+ D20 块形；四面 = text / think / 工具调用行 / 工具输出行（桥面出站 `ev:subchunk`——载荷 / 在场单源 = `docs/desktop/design/IPC.md` §1 该行）；现状漏 = 带 `role#id/` 前缀的内容 chunk **原样进主流**（`thincoder-desktop/src/main/agent-bridge.mjs:57-63` 只剥 `⟦ev⟧` 协议段，其余前缀不剥）⇒ 分流 = 修漏 + 定形 | **原样留主流**（前缀字面泄漏入对话流）；**剥前缀后并入主流正文**（子代理内容冒充主会话正文——三端语义分叉）；**改判（2026-09-28 · 对齐第二批）**：原否「照 VSC 回显 tail-3（违 D4 语义面）」⇒ 随 D4 句收正**改采**（单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 3） |
 | KD-RC-7 | 核**构件类名沿用被抽档现行名**（逐字搬迁纪律）；样式变量面 = 各端映射（桌面新增「核类名 → 桌面变量」样式档） | VSC 侧 CSS（`chat.css` / `controls.css`）与逐字文案锁按现行名成文 ⇒ 改名 = 全量机械重构、收益为零；桌面样式自有（`styles.css` 340 行） | **改命名空间 `rc-*`**（VSC 全量 CSS + 测试靶重构）；**核搬整套 CSS**（两端主题体系打架——KD-RC-7 即为此面裁定） |
 
 ## 3. 核边界 · 逐模块判定表（VSC webview 51 档 · 单源）
@@ -155,7 +155,7 @@
 | 13 | 消息窗口裁剪 | `ui.js:446-454`（150 块） | 不入核 | **显式裁（各自）**：桌面窗限 = 200 块 + 摘要块（`RENDERER.md` §2，判据面自持）——数值差登记 · 核不夺 |
 | 14 | 懒历史回填 | `history.js:43-88` | 不入核 | **显式裁（各自）**：桌面回填 / 补偿算式已在册（`RENDERER.md` §3）；核化候选另议（§9） |
 | 15 | 跟滚 / 回底 | `ui.js:426-468` · `scroll.js:13-20` | 不入核 | **显式裁（各自）**：桌面跟滚 / 药丸已在册（`RENDERER.md` §3 判据面） |
-| 16 | 队列标记（待发送） | `queued-mark.js:29` / `:63` | 核标记逻辑 | **改判（对齐第二批）**：桌面**接核标记原语**（`markPending` / `paintLabel` / `clearPending`——标记类与标签两形态字面单源）+ **队列按会话分键**（`pending: { [会话键]: [{ text, ts }] }`）⇒ **流内待发送气泡**（单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 2）；`planBusyQueued` 不消费（宿主快照对账面 = VSC 专有） |
+| 16 | 队列标记（待发送） | `queued-mark.js:29` / `:63` | 核标记逻辑 | **改判（对齐第二批）**：桌面**接核标记原语**（`markPending` / `paintLabel`——标记类与标签两形态字面单源）+ **队列按会话分键**（`pending: { [会话键]: [{ text, ts }] }`）⇒ **流内待发送气泡**（单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 2）；`planBusyQueued` / `clearPending` 不消费（宿主快照对账面 = VSC 专有 ∥ 桌面交接 = 节点换代——登记 = §9「对齐第二批」②） |
 | 17 | 忙态门 / 载入态 | `loading.js:86` / `:67` | 不入核 | **自然成立**（桌面忙态 = 位标 `running` + 输入区判据已在） |
 | 18 | 审批卡 | `permission.js:21` / `:86` | 核卡面 | **按 ② 同判（卡族外壳留存）**：桌面 `thincoder-desktop/renderer/views/approval.mjs` 自持卡面（三出口 / 批形已在）；不迁核卡面件（VSC 形态——与桌面锚系 / 用例相抵） |
 | 19 | 提问卡 | `question.js:10` / `:59-76` | 核卡面 | **按 ② 同判（卡族外壳留存）**：桌面 `thincoder-desktop/renderer/views/question.mjs` 自持卡面（两作答路已在）；不迁核卡面件 |
@@ -199,13 +199,14 @@
 **跨包对拍锁** = `thincoder-vscode/test/render-core-relay-map.test.mjs` RM-3（`:95`）· RM-4（`:117`——`RELAY_PREFIX_RE` 正则 `.source` 逐字）。
 
 3. **构件族（DOM）**——`renderBlock({ idx, withLabel })` · `renderToolCard({…})` / `finishToolCard(ref, name, text, links, truncated, deps?)` / `renderToolHistory(name, text, idx)` · `renderReasoning(model, deps?)`；
-   `renderApprovalCard(model, deps?)` / `renderBatchApprovalCard(model, deps?)` · `renderQuestionCard(model, deps?)` · `renderTaskPanel(progress, deps?) → { el, visible }` / `renderGoalPanel(goal, deps?)` · `renderSubBlock(model)`；
+   `renderApprovalCard(model, deps?)` / `renderBatchApprovalCard(model, deps?)` · `renderQuestionCard(model, deps?)` · `renderTaskPanel(progress, deps?) → { el, visible }` / `renderGoalPanel(goal, deps?)` ·
+   `renderSubBlock(model)` / `refreshBlock(block)` / `renderSubagentChunk` / `renderSubDesc`（子 agent 块面与归档块面——消费面段 ③）；
    `attachCopyButtons(container, deps?)` · `showToast(text)` · `linkifyPaths(bodyEl, links)`（VSC 消费）。
 
 **端注入面（核不持句柄）**：`deps = { emit(type, payload), t, now? }`——出站一律经 `emit`（VSC 绑 `postMessage`；桌面绑 `invoke`）；R2 构件件另注入端事实读取族（`connectedOf` / `regionOf` / `trace` / `syncLiveOf` / `onStripped`——逐件件头）；核内零全局单例（现 VSC 的 `ctx` / `S` 全局态属端）。
 
 **桌面消费面（对齐第二批扩 · 单源 = 本段；机制 / 判据措辞单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」）**：① 纯函数 / 状态机族扩 = `paintReasoningTarget`（推理钉底——项 1）；
-② `queued-mark` 三导出（`markPending` / `paintLabel` / `clearPending`——用户块标签两形态与待发送标记；项 2 / 4）；
+② `queued-mark` 两导出（`markPending` / `paintLabel`——用户块标签两形态与待发送标记；项 2 / 4；`planBusyQueued` / `clearPending` 不消费——登记 = 本档 §9 ②）；
 ③ 构件族四件（`renderSubBlock` / `refreshBlock` / `renderSubagentChunk` / `renderSubDesc`——右列子 agent 块面与归档块面；项 3 / 5）；
 ④ **`setStrings(宿主表 ∪ 核投影)` 单点接线**（核件内取词走核 i18n——落点 = `thincoder-desktop/renderer/i18n.mjs` `initDict`；核件所需 VSC 侧键（`sub.*` / `msg.*` / `queued.pending`）入宿主表，**值逐字同 VSC locales**——沿 `msg.copy` / `msg.copied` 先例）。
 
@@ -395,4 +396,6 @@
 - 2026-09-28（**对齐第二批 · 六件 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-vsc-align-2.md` §1）：§4 行 3 / 16 / 21 三行收正（推理面接 `paintReasoningTarget` · 队列标记改「接核原语 + 流内气泡」（原「自然成立」撤销）· 子代理活动区直消费构件族四件 + 内容回显 + 归档入流）；
   §5 增**桌面消费面段**（构件族四件 + 标记三导出 + `paintReasoningTarget` + `setStrings` 单点接线 + 核件词键面）；§9 增「对齐第二批」端差 / 登记五条；§10 增 **G / H** 两行（助手标签原语候选 · 核件取词接线面）；
   机制 / 判据措辞单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」；通道面 = `docs/desktop/design/IPC.md` §1（`ev:subchunk`）。
+- 2026-09-28（**对齐第二批 · 修正轮 1**——设计评审 §3 轮次 1 发现 2 / 5 / 6 逐号点修）：§2 KD-RC-6 收正（内容 chunk 四面分流 + 回显 tail-3；被否候选「照 VSC 回显 tail-3」移入改判登记）· §4 行 16 不消费 carve-out 补 `clearPending`；
+  §5 构件族补三件（`refreshBlock` / `renderSubagentChunk` / `renderSubDesc`）+ 消费面段 ② 导出数收正（两导出）。明细 = `docs/batches/2026-09-28-desktop-vsc-align-2.md` §2。
 - 2026-09-28（**桌面空闲唤醒批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-idle-wake.md` §1）：§3 行 8（`chat-status.js` 端）补桌面消化状态行同判句；§9 增「桌面空闲唤醒」端差 ∕ 登记三条（消化状态行端侧自持 ∕ 块回收面住宿主驱动 ∕ 挂起句双端值源）。核件面零改（本批不动核包）。

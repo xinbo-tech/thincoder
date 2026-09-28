@@ -68,6 +68,8 @@
   **中断径** = `msg:interrupt` ⇒ 本键各门按取消结算 ⇒ 终局 `stopped` ⇒ **事件面摘本键提问项** + 清位标——判据 = 终局事件面，非回执（单源 = 本档「回合尾三径」条））；
   三卡皆**非块节点** ⇒ 不入块序不变式（本档 §2），块面比较对与 `data-blocks` 语义不受其影响。
 - **流内非块节点族（对齐第二批扩）**：**待发送气泡组** `[data-pending]`（组内项 = 待发送气泡·落点 = 块序列之后、卡序列之前——与块插入点同侧 ⇒ 交接位置零跳）；**归档子 agent 块**（`data-block-kind="subagent"`——**是块节点**（入块序 / 计 `data-blocks`；壳 = 零边距透传容器 + 内嵌核件元素——“对齐第二批”项 5）。
+- **池面挂载（键控差分 · 「对齐第二批」项 3）**：壳（三态 / 头读数 / 折叠）与待审批 / 队列族**照帧刷**（`clear` + `build` + `append` 薄挂载口径不变）；**子 agent 族按 key 复用元素**（`el._subMeta === model` 判据：同 key 跨帧同一元素——内容追加 / 折叠态 / ⏹ 全走核函数，**不重建**）；
+  形态单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 3（KD-32 同裁 = `docs/desktop/design/PROJECT.md` §2）。
 - **设置面与向导形（批 9 落）**：两形构树（`thincoder-desktop/renderer/views/settings.mjs` 四段面〔渠道 / 模型与档位 / agent 参数 / MCP〕· `thincoder-desktop/renderer/views/onboarding.mjs` 三步向导——纯描述符 + 薄挂载，形态单源 = `docs/desktop/design/UI.md` §1）· 接线出档 = `thincoder-desktop/renderer/mount-settings.mjs`（自 `app.mjs` 拆出）；
   **零新事件通道**——读数 / 写入全走请求通道：写成功**同回带** `{ locale, dict, configured }` ⇒ `initDict` 重刷 + 向导闸随新档态（**免二跳重调**）；填 key 经 `provider:verify` 真调一次；**闸 = `configured`**（档存在性——向导不进 / 设置面可进 + 明示不可读；零静默重置）。
   **容器面（批 9 裁定）**：挂载根 = `index.html` 单容器 `[data-slot="settings"]` 自身（窗口级覆盖层面——设置树 / 向导树**互斥**占槽：`configured` 假 ⇒ 向导树占位；退场 = `clear` 清空容器 ⇒ 主 UI 可用）。
@@ -86,6 +88,7 @@
 
 - **MAX_RENDER_BLOCKS = 200**：只渲染尾部窗口，更早块折**「摘要块」**（可一键回填，回填后仍守窗口）；**不做虚拟化**（DOM 块数有界即达标——虚拟化不列入本版）。
 - **窗限增量**：窗限 = 视图侧计数（初值 200）——回填收束沿（无在途 ⇒ 页并入）⇒ 限 + **本页归约后实际块数**（页量 = 核 `historyWindow` 缺省 200 **条**——**条 ≠ 块**，渲染面不写死页量），以宽窗容纳并入的更早页；未渲染更早块数落根锚 `data-hidden`（判据函数 = `nextWindow`——落点 = `thincoder-desktop/renderer/views/chat-scroll.mjs`）。`hasOlder ∧ data-hidden === 0` ⇒ 零摘要块（回填只经滚顶触发）。
+- **运行期块记账（「对齐第二批」项 5 · 判据）**：运行期块（`kind === "subagent"`——归档入流块）计入块序 / `data-blocks` / 尾窗渲染；**退出尾窗 ⇒ 不计入 `data-hidden`**（该账面 = 页读域可回填块数——运行期块非落盘件，回填无源）；退窗运行期块**即弃**（不落摘要块 / 不成回填对象）；⇒ 摘要块判据（`hidden > 0`）与回填触发（`hasOlder`）不受运行期块扰动——回填耗尽 ⇒ `data-hidden` 归零 ⇒ 零摘要块。
 - **窗口对齐步（非重挂帧帧尾固定步）**：每帧以本帧 `visible`（= 窗出口尾窗）对齐已挂块序 `mounted`（帧层记账——不变式：DOM 块节点序 ≡ 其）——判据纯函数 `alignPlan(mounted, visible, tailExempt)` → `{ evict, prepend, tail, ok }`（落点 = `thincoder-desktop/renderer/views/chat-stream.mjs`）。
 - **对齐判据**：重合 = 逐位**引用**等（非键——兜底键 `String(index)` 逐位会漂）；取**最大重合**（`evict` 最小者）；`evict` = 摘去 DOM 头部枚数、`prepend` = 头部前插枚数（插点 = 块序首，摘要块之后）；**尾位豁免**（`tailExempt` = `patch` 档 ⇒ 尾位不入重合判、不入余段，由就地更新承接）；零重合 ⇒ `ok = false` ⇒ 该帧回落全量重挂。
 - **对齐步两效果**：饱和追加 ⇒ 摘最旧守窗口（DOM 块数有界）；限增宽窗帧（块面可为零变更——限变而 `blocks` 引用等）⇒ 前插更早页块；对齐步不随块面档位（`history` 帧同走）。
@@ -160,3 +163,4 @@
 - 2026-09-28（**归档面收尾 · 父侧直接执行〔可 revert〕**——承状态栏对齐批 wiring 座 #38 报告面）：§1.1 事件归约面条补新导出 **`applyFlags(state, key, flags)`**（`sessionFlags` 切片写者——页读 / 出站回执两径同点）。**零新语义**（模块图补名）。
 - 2026-09-28（**桌面空闲唤醒批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-idle-wake.md` §1）：§1 索引增**挂起窗与消化轮**行；§1.1 事件归约面增**两通道归约 + 消化行族**条。
   机制 ∕ 判据单源 = `docs/desktop/design/PROJECT.md` §2 KD-34–36；词键 = `docs/desktop/design/IPC.md` §1「挂起 ∕ 消化词键注」。
+- 2026-09-28（**对齐第二批 · 修正轮 1**——设计评审 §3 轮次 1 发现 7 / 12 逐号点修）：§1.1 增**池面挂载（键控差分）**条（同 key 元素复用 · 壳照帧刷 · 不重建）；§2 增**运行期块记账**条（退出尾窗不计入 `data-hidden`——回填耗尽 ⇒ 零摘要块）。明细 = `docs/batches/2026-09-28-desktop-vsc-align-2.md` §2。

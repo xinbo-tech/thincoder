@@ -152,6 +152,25 @@
 
 **需求档收正（父侧笔权 · 评审后落）**：§2.1 回指句列 D4 / D19 / D20 / D21 四处随本批收正——待设计评审落地后由父侧落笔。
 
+### 1.15 评审轮 1 裁定表（父侧 · 依据 = 本档 §3 轮次 1 · changes-required 12 条）
+
+| 号 | 级别 | 处置 | 说明 |
+|---|---|---|---|
+| 1 | 🔴 | Fixed（修正轮） | UI.md:355 同格两读收正（删「零内容回显」残留 · 「下回合起清终态」改「归档 = 入流」） |
+| 2 | 🔴 | Fixed（修正轮） | RENDER-CORE KD-RC-6 随批收正（题名 / 理由列 + 被否候选「照 VSC 回显 tail-3」移入改判登记） |
+| 3 | 🔴 | Fixed（修正轮） | T-DSK36 ①⑤ / T-DSK22 / §10 K / §6.1 D20 验证面收正（条目 `text` · 可见面 = 流内待发送气泡 · K 行转已消解） |
+| 4 | 🔴 | Fixed（修正轮） | 块型集合收正（UI.md:19 + PROJECT.md:145 ⇒ 六型 ∥ 标「页读域五型 + 运行期 `subagent`」） |
+| 5 | 🟡 | Fixed（修正轮） | `clearPending` 消费清单五处统一（「`markPending` / `paintLabel` 消费 · `planBusyQueued` / `clearPending` 不消费」） |
+| 6 | 🟡 | Fixed（修正轮） | §5 构件族清单补三件（`refreshBlock` / `renderSubagentChunk` / `renderSubDesc`） |
+| 7 | 🟡 | Fixed（修正轮） | RENDERER §1.1 补键控差分挂载判据（或指针） |
+| 8 | 🟡 | **Fixed（父侧直接执行）** | 需求档 :52 / :59「不回显内容」两处删（与 D4 行同句） |
+| 9 | 🔵 | Fixed（修正轮） | 行数账五组同 as-of 回填 |
+| 10 | 🔵 | Fixed（修正轮） | 拆前 / 拆后算式二择一给数 |
+| 11 | 🔵 | Fixed（修正轮） | 「新档 2」计数口径注明（拆分产出另计） |
+| 12 | 🔵 | Fixed（修正轮） | 归档块 与 `data-hidden` / 摘要块关系补一句判据 |
+
+**父侧口径**：12 条全数接受（无 Not-an-issue）；🔴 四条均为「同机制两处描述」的文档残留收正——设计方向零动。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（六件（#494–#498 · #500）设计已交——单源 = UI.md §1「本批注（对齐第二批 · 六件）」/ PROJECT.md KD-31–33 · §4.2 / IPC.md（ev:subchunk）/ RENDERER.md §1.1 / RENDER-CORE.md §4 · §5 · §9 · §10；doc-check 本批零新增（悬空 / 行宽））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -219,7 +238,45 @@
 - **A6 前提「`--pool-w: 18rem` 单源」核实** ✓（`styles.css:18`；`:86` / `:339-342` 同变量引用——**栅格与窄断点零第二处数值**）。
 - **A4 前提「`❯` / `msg-label` 全树零命中」核实** ✓（桌面 renderer 零命中——标签面全新；核心键 `msg.user` / `msg.assistant` / `queued.pending` 桌面词表未载 ⇒ 本批入宿主表）。
 
+### 2.7 修正轮 1（设计评审 §3 轮次 1 点修 · eng-designer · 2026-09-28）
+
+发现 1–7 / 9–12 共 11 条逐条点修（发现 8 = 需求档侧 · 父侧直接执行——本设计面零动）；**设计方向零动**。逐号落点：
+
+- 发现 1 / 4 / 5 / 11 / 12（`docs/desktop/design/UI.md`）：§2 项 1 行两处残留句收正（条目内容回显 = 核件 tail-3 / 展开 · 子块归档 = 入流）· 对话流行「块五型 ⇒ 块六型」（+ 运行期块 `subagent`）· 项 2 导出清单收正（`clearPending` 移入不消费）· 计数行补拆分产出 2 · 项 5 边界补运行期块记账指针。
+- 发现 2 / 5 / 6（`docs/render-core/design/RENDER-CORE.md`）：KD-RC-6 收正（题名「内容 chunk 四面分流 + 回显 tail-3」；理由列改「§3.6 对齐口径 + D4 内容回显」；被否候选「照 VSC 回显 tail-3」移入改判登记）· §4 行 16 carve-out 补 `clearPending` · §5 构件族补三件（`refreshBlock` / `renderSubagentChunk` / `renderSubDesc`）+ 消费面段 ② 收正为两导出。
+- 发现 3 / 4 / 5 / 9 / 10 / 11（`docs/desktop/design/PROJECT.md`）：§7 T-DSK36 ①⑤ + T-DSK22（可见面 = 流内待发送气泡 · 条目 `text`）+ §10 K 行（转「已消解」）+ §6.1 D4 / D20 两行随动；§4.1 `events-subscribe` / `views/chat.mjs` 按盘回填（**69** / **280**）；§4.2 本批表「现行」列五处同 as-of 回填（events **494** · store **333** · chat.css **300**〔D24 后 ≈310 起算〕· 拆前 / 拆后算式收正 ⇒ 拆后 ≈380）+ 新档计数补拆分产出 2。
+- 发现 7 / 12（`docs/desktop/design/RENDERER.md`）：§1.1 增「池面挂载（键控差分）」条 · §2 增「运行期块记账」条（退窗不计入 `data-hidden`；回填耗尽 ⇒ 零摘要块）。
+
+**同族残留随修（评审未点名 · 随报告）**：`PROJECT.md:472`（T-DSK5）· `:420`（§6.1 D4 行）「内容回显」残留 + `UI.md:137`「块五型」——按已裁口径一并收正。
+
+**机检**：`node scripts/doc-check.mjs --root .` = 悬空 **47** / 行宽 **36**（与基线持平——零净增；中途曾 +2 行宽〔新条两行超限〕，已拆行收回）。四档变更记录各补修正轮一行。
+
+**报告父侧（非本批面 · 零触碰）**：① `docs/desktop/design/IPC.md:14`「块型 `reasoning` 已在桌面块五型内」= 同族残留句（落点在派单四档之外 · 「对齐重定位批」段落）——建议收正为「页读域五型」或随实施轮；② 盘上读数三处与文档估值差（`i18n.mjs` **425** · `styles.css` **492** · `chat.css` **315**——D24 批在途产物）——随该批结算回填。
+
 ## §3 设计评审（评审子代理）
+
+### 轮次 1（评审子代理）
+
+评审对象 = 批档 §2（2.1–2.6）+ 设计落点（UI.md 本批注（对齐第二批 · 六件）· PROJECT.md KD-31–33 / §4.1–4.2 / §6.1 / §7 / §10 · IPC.md `ev:subchunk` · RENDERER.md §1.1 · RENDER-CORE.md 消费面 / 端差）。口径 = 机制级「同机制两处不同描述」判 🔴；纯数值/清单口径判 🟡/🔵。
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | Document ownership | 🔴 | `docs/desktop/design/UI.md:355`（§2 项 1 行）同一单元格并存两读：既有「块面 = 核件同款（…内容 tail-3 + 展开）——原「不回显内容」口径撤销」，又有活句「条目**零内容回显**（块头读数 + 状态词…）」；同格「子块归档 = 该会话下回合起清终态」亦与 `UI.md:335`/项 5「归档 = 入流；原「下回合起清出」退场」相抵——本批两处撤销（批档 §2.2 自述）只落注内，未清行内残留 | 就地收正该格两句：删/改「条目零内容回显」为「内容回显 = 核件 tail-3 / 展开（项 3）」；「子块归档 = 该会话下回合起清终态」改为「归档 = 入流（项 5）」 |
+| 2 | Document ownership | 🔴 | `docs/render-core/design/RENDER-CORE.md:71`（KD-RC-6）仍题「…分流 = 工具名仅作分流判据 · **丢内容**」，理由列引需求「D4『不回显内容』」（该句已随本批收正——`docs/desktop/requirements/PROJECT.md:141`），被否候选含「照 VSC 回显 tail-3（违 D4 语义面）」——与同档 `:163`（§4 行 21「内容回显 = tail-3 / 展开」）/`:209`（§5 消费面 ③）及 UI 项 3 相抵；本批落点（批档 §2.2 / RENDER-CORE 变更记录）列 §4/§5/§9/§10 四处，未含 KD-RC-6 | KD-RC-6 随批收正：题名与理由列改「内容 chunk 四面分流 + 回显 tail-3（KD-RC-6 收正）」；「照 VSC 回显 tail-3」从被否列移入改判登记 |
+| 3 | Acceptance criteria | 🔴 | `docs/desktop/design/PROJECT.md:503`（T-DSK36）①「零内容回显（text / think 不进流也不进块）」· ⑤「归档 = 下回合起已终态块不在场」；`:489`（T-DSK22）「池面『队列』族在场」两处 +「取文本面 = 条目 `title`」（设计已定 `{ text, ts }`——`UI.md:20`/`:297`）；`:578`（§10 K）仍记「已裁 = 归档 = 该会话下回合起清已终态」；§6.1 D20 验证面仍指 T-DSK36（`:436`）——验收/裁决表行与设计相抵 | 三行收正：T-DSK36 ①⑤ / T-DSK22（条目 `text` · 可见面 = 流内待发送气泡）/ §10 K（沿 S 行先例转「已消解」）；§6.1 D20 验证面随动（或登记收正随动项） |
+| 4 | Document ownership | 🔴 | 块型集合两处不同描述：`UI.md:19`「**块五型**（user / assistant / reasoning / tool / error）**单序列**」（同族残留 `PROJECT.md:145` chat.mjs 行「块五型」）vs `RENDERER.md:33`「**块总集 = 六型**：+ `subagent`」及 `UI.md:336`（项 5 新增流内块型 `subagent`——入块序 / 计 `data-blocks`） | UI.md:19 与 PROJECT.md:145 收正为六型（或标「页读域五型 + 运行期块 `subagent`」并指项 5） |
+| 5 | Clarity | 🟡 | `clearPending` 消费与否两处相反：`UI.md:294`「导出直消费（markPending / paintLabel / clearPending）」vs `UI.md:296`「不消费…clearPending」；`RENDER-CORE.md:158`（§4 行 16「接核标记原语（…clearPending）」——该行不消费 carve-out 仅列 `planBusyQueued`）+`:208`（§5 ②「三导出」）vs `:354`（§9 ②「`planBusyQueued` / `clearPending` 不消费」）；`PROJECT.md:69`（KD-31「三导出直消费」）/`:435`（D19「队列标记三导出」）vs `:615`（AZ）/ 批档 `2026-09-28-desktop-vsc-align-2.md:207` | 五处清单统一为「`markPending` / `paintLabel` 消费 · `planBusyQueued` / `clearPending` 不消费（登记）」；§4 行 16 的 carve-out 补 `clearPending` |
+| 6 | Clarity | 🟡 | 核导出面清单与消费面段不咬合：`RENDER-CORE.md:201-203`（§5 构件族）仅列 `renderSubBlock(model)`；同档 `:209`（§5 桌面消费面 ③）另列 `refreshBlock` / `renderSubagentChunk` / `renderSubDesc` | §5 构件族清单补三件（或加注「导出面以消费面段为准」） |
+| 7 | Document ownership | 🟡 | 键控差分挂载为池面挂载工艺改判（`UI.md:313`；`PROJECT.md:366` 同批行），渲染工艺单源 `RENDERER.md:29`（§1.1 薄挂载 = `clear` + `build` + `append`）未收正 / 无指针 | RENDERER.md §1.1 补一条（或指针）承载键控差分判据（同 key 元素复用 · 壳照帧刷 · 不重建） |
+| 8 | Requirements | 🟡 | 需求档 `docs/desktop/requirements/PROJECT.md:52`（§3.1）· `:59`（§3.2 项 3）仍携「不回显内容」；D4 行已收正（`:141`），变更记录自述「『不回显内容』句退场」（`:234`）未覆盖该两处 | 两处删「不回显内容」（与 D4 行同句——「内容回显 = 核件 tail-3 / 展开」），或登记为收正随动项 |
+| 9 | Affected-file annotations | 🔵 | 行数账 spot-check 五组互不一致：`PROJECT.md:361`（events.mjs **473**）vs `:138`/`:388`（**494**）；`:362`（store.mjs **331**）vs `:144`/`:339`（**333**）；`:364`（events-subscribe **69**）vs `:139`（**68**）；`:372`（chat.css **299**）vs `:135`/`:348`（**300 ⇒ ≈310**，D24 在途未计）；`:145`（chat.mjs **299**）vs `:365`/`:294`（**280**） | 五组按同一 as-of 回填统一（本批表「现行」列与 §4.1 / 各批行同源） |
+| 10 | Affected-file annotations | 🔵 | `PROJECT.md:361` 拆前/拆后算式不自洽：「473 ⇒ 硬限 500 顶格 ⇒ …拆 ≈120 ⇒ 拆后 ≈415」⇒ 倒推增量 ≈ 62，与「500 顶格」相抵（按顶格拆后应 ≈380） | 拆前终值与拆后估值二择一给数（或改述为「拆前已近 / 触硬限 ⇒ 拆分必须」） |
+| 11 | Affected-file annotations | 🔵 | `UI.md:349` / `PROJECT.md:375`「新档 **2**」未含本批执行的两件拆分产出（`:361` `page-read.mjs` · `:362` `queue.mjs`——均标「拟新增 · 本批执行」） | 计数补记两件（或注明口径 = 新功能档 · 拆分产出另计） |
+| 12 | Acceptance criteria | 🔵 | 归档块（运行期块）入块序 / 计 `data-blocks`（`RENDERER.md:70`）后与窗口 / 回填账面（`data-hidden` = 未渲染更早块数 · 摘要块与回填判据——`RENDERER.md:88`）的关系仅一句「窗限 / 裁剪随既有窗口机制」（`UI.md:343`）；运行期块被计入「更早块」而不可回填复现的边界未给判据 | 补一句判据：运行期块是否计入 `data-hidden` / 摘要块（含回填耗尽后的表现） |
+
+计数：🔴 4 · 🟡 4 · 🔵 4 · 合计 12。
+VERDICT: changes-required（4 🔴——🔴 全清前不签发 token）
+
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）
