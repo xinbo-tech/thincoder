@@ -4,7 +4,7 @@
  * （兼作环境契约：测试机即产品下限面）/ 启动序机检（下限自检调用点先于协议 / 窗口注册 · 失败走显式退出 · `main` 值锁 · 本档入册）/
  * 预载三面（主进程可读不抛 · 平 node 装配判红 · 主侧读取面 = `createRequire`）/
  * 通道配线两向（`CHANNELS` 二十九项 · `HANDLERS` 键集≡白名单集 · 三新处理体转口 · 未装配处理体 fail-loud 源面判红）/
- * 订阅面白名单（`EVENT_CHANNELS` 十六条 ∧ 冻结 · 表内订阅收单参载荷 · 表外 throw · 退订同引用幂等）/
+ * 订阅面白名单（`EVENT_CHANNELS` 十七条 ∧ 冻结 · 表内订阅收单参载荷 · 表外 throw · 退订同引用幂等）/
  * 行数触发线（批 8 主进程侧 / 渲染侧新档 ≤ 300 · 批 9 新增六档〔用例模块〕≤ 300 · 在册例外两向〔越层档不入 `fresh` 清单〕· 宿主档源面零 `electron`）/
  * 退场复位回路（三薄挂载宿主属性面无残留 —— `docs/desktop/design/RENDERER.md` §1 退场口径 · 属性面）/
  * 宿主面接线两件（U200：「对齐第三批」台账行出站点 `session:resume` 成功径 + `file:open` 出口）。
@@ -144,16 +144,17 @@ test("U74: 白名单二十九项 ∧ 既有十三项序锁定（第 10 项 = app
   assert.ok(!/ok\s*:\s*true/.test(body[1]), "未装配处理体零 `{ ok: true }` 字面（不造假成功）")
 })
 
-// ─── U76 出站订阅面白名单（批档 §2.11 收正②/③ · IPC.md §1 十六行）─────
+// ─── U76 出站订阅面白名单（批档 §2.11 收正②/③ · IPC.md §1 十七行）─────
 
-test("U76: EVENT_CHANNELS 十六条 ∧ 冻结 · 表内订阅收单参载荷 · 表外 throw · 退订同引用幂等", () => {
+test("U76: EVENT_CHANNELS 十八条 ∧ 冻结 · 表内订阅收单参载荷 · 表外 throw · 退订同引用幂等", () => {
   const preload = createRequire(import.meta.url)(fileURLToPath(new URL("../src/preload/preload.cjs", import.meta.url)))
   const names = [...preload.EVENT_CHANNELS]
-  assert.equal(names.length, 16, "恰十六条 —— 回调映射十一通道 + 宿主自产五条（`ev:usage` / `ev:error` / `ev:susp` / `ev:digest` / `ev:ledger`）")
+  assert.equal(names.length, 18, "恰十八条 —— 回调映射十一通道 + 宿主自产七条（`ev:usage` / `ev:error` / `ev:susp` / `ev:digest` / `ev:ledger` / `ev:timer` / `ev:queue`）")
   assert.deepEqual(names, [
     "ev:token", "ev:reasoning", "ev:activity", "ev:subagent", "ev:subchunk", "ev:tool-call", "ev:tool-output", "ev:tool-result",
-    "ev:approval", "ev:question", "ev:task", "ev:susp", "ev:digest", "ev:usage", "ev:error", "ev:ledger",
-  ], "出站白名单 = 十六条 `ev:*`（序 = 桥面表 —— 宿主自产新通道 `ev:ledger` 随 `ev:error` 后，同 `IPC.md` §1 行序）")
+    "ev:approval", "ev:question", "ev:task", "ev:susp", "ev:digest", "ev:usage", "ev:error", "ev:ledger", "ev:timer",
+    "ev:queue",
+  ], "出站白名单 = 十八条 `ev:*`（序 = 桥面表 —— 宿主自产新通道 `ev:timer` ∕ `ev:queue` 只增位；同 `IPC.md` §1 行序）")
   // 「对齐第三批」收正（代码评审轮 1 发现 1）：渲染面订阅表须与桥面白名单**同集** —— 缺订阅 = 归约面死支（宿主出站 /
   //   归约写者 / 消费面三处齐而订阅缺 ⇒ 特性不可达）；本臂 = 该类的机制守卫（源面机读，两向）
   const subscribe = readFileSync(new URL("../renderer/events-subscribe.mjs", import.meta.url), "utf8")
@@ -279,8 +280,12 @@ test("U95: fresh 新档 ≤ 300 行（越层档走例外面）∧ `app.mjs` 拆�
   const rows = (rel) => readFileSync(new URL(`../${rel}`, import.meta.url), "utf8").replace(/\n$/, "").split("\n").length
   const fresh = [
     // 主进程侧（8a）
-    "src/main/agent-host.mjs", "src/main/agent-bridge.mjs", "src/main/suspensions.mjs", "src/main/session-io.mjs",
+    "src/main/agent-bridge.mjs", "src/main/suspensions.mjs", "src/main/session-io.mjs",
     "test/history-page.test.mjs", "test/session-io.test.mjs", "test/slot-sandbox.mjs",
+    // 「回合中插入」批新档两件（本舱 —— 新增码面档一律入 ≤300 臂读数）：宿主排队面 + 续发链
+    "src/main/queued-input.mjs", "src/main/turn-chain.mjs",
+    // 「回合中插入」批测试面三件（本舱 —— 同臂）：排队面用例档 + 宿主装配桥拆分产出两档（用例档 / 共享假面档）
+    "test/queued-input.test.mjs", "test/agent-host-queued.test.mjs", "test/agent-host-harness.mjs",
     // 渲染侧（8b —— 本批三新档 + 其测试档；行数臂由 8a 落）
     "renderer/events-subscribe.mjs", "renderer/mount-pool.mjs",
     "test/events-page.test.mjs",
@@ -312,13 +317,17 @@ test("U95: fresh 新档 ≤ 300 行（越层档走例外面）∧ `app.mjs` 拆�
      // 「桌面空闲唤醒」主面（本舱 —— 新增码面档一律入 ≤300 臂读数）：驱动胶水（消费核件 `startSuspension`）/
      //   提示面策略（失焦门 + 两档）/ 单回合执行面（触 300 行顾问线，在册预案「回合执行面再出档」落形）+ 驱动族用例档
      "src/main/suspension-drive.mjs", "src/main/notify.mjs", "src/main/turn-face.mjs", "test/agent-host-suspension.test.mjs",
-    // 「对齐第三批」小修族（本舱 —— 新增码面 / 拆分产出档一律入 ≤300 臂读数）：
+     // 「timer-wake 阶段 2」主面（本舱 —— 新增码面档一律入 ≤300 臂读数）：空闲 deadline 闩 + 到期触发面（键面 · 三时钟缝）+ 其用例档
+     "src/main/timer-watch.mjs", "test/timer-wake.test.mjs",
+     // 「对齐第三批」小修族（本舱 —— 新增码面 / 拆分产出档一律入 ≤300 臂读数）：
     //   2s 拍档（首个渲染面定时器 —— `setInterval` + 清点封装）+ 帧尾态刷拆分产出（`chat.mjs` 越 300 在册 ⇒ 在册预案本批执行）+ 拍用例档
     "renderer/heartbeat.mjs", "renderer/views/chat-chrome.mjs", "test/heartbeat.test.mjs",
-    // 「对齐第三批」外围舱（本舱）：视图面词族第二档（`renderer/i18n-views.mjs` —— 在册拆分预案「新增词族出第二档」本批执行）
-    //   + 用例拆出档（`test/views-settings-agent.test.mjs` —— 宿主档在册例外（≤ 500）⇒ 按在册预案本批执行拆分）
-    "renderer/i18n-views.mjs", "test/views-settings-agent.test.mjs",
-  ]
+      // 「对齐第三批」外围舱（本舱）：视图面词族第二档（`renderer/i18n-views.mjs` —— 在册拆分预案「新增词族出第二档」本批执行）
+     //   + 用例拆出档（`test/views-settings-agent.test.mjs` —— 宿主档在册例外（≤ 500）⇒ 按在册预案本批执行拆分）
+     "renderer/i18n-views.mjs", "test/views-settings-agent.test.mjs",
+     // 「回合中插入」批新档两件（本舱 —— 同臂）：发送面拆分产出（越 300 顾问线，在册预案「发送面拆出」落形）
+     "renderer/composer-send.mjs",
+   ]
   for (const rel of fresh) {
     const n = rows(rel)
     assert.ok(n <= 300, `${rel} ≤ 300 行（触发线：贴层即拆；实 ${n}）`)
@@ -326,13 +335,18 @@ test("U95: fresh 新档 ≤ 300 行（越层档走例外面）∧ `app.mjs` 拆�
   // 在册例外（越层档**逐一登记** —— 不混进 ≤300 臂 / 不入 `fresh` 清单）：两向判据 = 真越层（>300 ⇒ 例外不得
   // 静默变常档）∧ 未触硬限（≤500）；消解窗口 = 该档下次被触碰的批（登记面 = `docs/desktop/design/PROJECT.md` §4.1）。
   //   `test/views-settings.test.mjs`（本舱 ⑧ 档位控件例入档 ⇒ 越 300）：§4.1 在册拆分预案 = 用例面拆出（档名实施批定）·
-  //   `test/agent-host.test.mjs`（状态栏对齐批 `respond` 回执叠加两向例入档 ⇒ 越 300）：拆分预案 = 门面用例拆出（档名实施批定 —— 装配假面 harness 共享，拆待配套 harness 档）；登记面滞后 = 批次档 §5 已登记。
+  //   `test/agent-host.test.mjs`（状态栏对齐批 `respond` 回执叠加两向例入档 ⇒ 越 300，500 硬限内）：**「回合中插入」批按在册预案执行拆分**
+  //   —— 门面用例拆出 `test/agent-host-queued.test.mjs` + 装配假面共享档 `test/agent-host-harness.mjs`（本批落形；拆后实读 431）；
+  //   余量 >300 = 既有 U78–U86 / U191–U195 / T-TW21 各例，消解窗口 = 该档下次被触碰的批；登记面 = 批次档 §5。
   //   `test/views-statusline.test.mjs`（「桌面空闲唤醒」批 段 3 态机四支例入档 ⇒ 越 300，300 顶格档）：拆分预案 = 态机用例面拆出（档名实施批定）；登记面滞后 = 批次档 §5 已登记。
   //   `test/views-chat.test.mjs`（「桌面空闲唤醒」批 U194 消化行组例入档 ⇒ 越 300——本批开工实读 311 已越线，入档续增）：拆分预案 = 用例面拆出（档名实施批定 —— `views-chat-text` / `views-chat-frame` 拆出先例同因）；登记面滞后 = 批次档 §5 已登记。
   //   `test/views-head.test.mjs`（「对齐第三批」小型族 U213 忙态写门例入档 ⇒ 越 300——原 300 贴线）：拆分预案 =
   //   用例面拆出（档名实施批定）；阻塞面 = 夹具三件（`useHeadSentinels` / `captureErrors` / `resetStore`）现为档内局部面，
   //   拆档须同步外提共享档（先例 = `test/views-harness.mjs`）⇒ 随拆档一并落；登记面 = 批次档 §5。
-  for (const { rel, limit } of [{ rel: "renderer/mount-settings.mjs", limit: 500 }, { rel: "renderer/events.mjs", limit: 500 }, { rel: "test/views-settings.test.mjs", limit: 500 }, { rel: "test/views-head.test.mjs", limit: 500 }, { rel: "test/agent-host.test.mjs", limit: 500 }, { rel: "test/views-statusline.test.mjs", limit: 500 }, { rel: "test/views-chat.test.mjs", limit: 500 }]) {
+  //   `src/main/agent-host.mjs`（「回合中插入」批受理路由 + 续发链接线入档 ⇒ 越 300——开工实读 300 已贴线）：在册拆分预案
+  //   「续发链提取 `src/main/turn-chain.mjs`」**本批已执行**（链 + 排队面出站出档）；余量超线 = 受理路由分岔 ∕ 清队两行净增
+  //   ⇒ 续期登记（消解窗口 = 该档下次被触碰的批）；登记面 = 批次档 §5。
+  for (const { rel, limit } of [{ rel: "src/main/agent-host.mjs", limit: 500 }, { rel: "renderer/mount-settings.mjs", limit: 500 }, { rel: "renderer/events.mjs", limit: 500 }, { rel: "test/views-settings.test.mjs", limit: 500 }, { rel: "test/views-head.test.mjs", limit: 500 }, { rel: "test/agent-host.test.mjs", limit: 500 }, { rel: "test/views-statusline.test.mjs", limit: 500 }, { rel: "test/views-chat.test.mjs", limit: 500 }]) {
     const n = rows(rel)
     assert.ok(n > 300, `${rel} 仍在册例外面（实 ${n} —— 回落 ≤300 须撤销例外登记）`)
     assert.ok(n <= limit, `${rel} ≤ ${limit} 硬限（实 ${n} —— 距硬限余 ${limit - n} 行）`)
@@ -341,7 +355,7 @@ test("U95: fresh 新档 ≤ 300 行（越层档走例外面）∧ `app.mjs` 拆�
   // 判据 = 行数规则线本身（「无文件 >300 行」· **含线上** —— 恰 300 合规 · 非余量口径）：接线族已在 `mount-*.mjs` 出档。
   assert.ok(rows("renderer/app.mjs") <= 300, `renderer/app.mjs 拆后 ≤ 300（实 ${rows("renderer/app.mjs")}）`)
   // 宿主档源面零 `electron`（脱壳直测前提 —— 「桌面空闲唤醒」批量档同判据：策略面 ∕ 驱动面 ∕ 执行面皆零宿主依赖）。
-  for (const rel of ["src/main/agent-host.mjs", "src/main/turn-face.mjs", "src/main/suspension-drive.mjs", "src/main/notify.mjs"]) {
+  for (const rel of ["src/main/agent-host.mjs", "src/main/turn-face.mjs", "src/main/suspension-drive.mjs", "src/main/notify.mjs", "src/main/queued-input.mjs", "src/main/turn-chain.mjs"]) {
     assert.ok(!/electron/i.test(readFileSync(new URL(`../${rel}`, import.meta.url), "utf8")), `${rel} 源面零 \`electron\`（脱壳直测前提）`)
   }
   // 渲染 import 面（零 `node:` / 零裸包）= U5 单源：其闭包自 `renderer/app.mjs` 递归走边、本批三渲染新档

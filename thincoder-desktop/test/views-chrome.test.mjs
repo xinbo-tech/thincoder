@@ -5,7 +5,7 @@
  * 越 `docs/desktop/design/PROJECT.md` §4.1 的 500 行硬限 ⇒ 词表族分出——面不变、判据不变，只换宿主档（同笔唯 U51 零 CJK 名单补 `chat-copy.mjs`：15 ⇒ 16）。
  * 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构面）住 `test/views-locks.test.mjs`；左列面留 `test/views.test.mjs`（U39–U44 + U53）。
  * 纪律：本档只读源 + 调纯函数（`headModel` / `headTree` / `mountHead` / `sessionMetaOf` / `STATUS_SEGMENTS` /
- * `composerModel` / `composerTree` / `attachComposer` / `flushTurnTail`（平 node：`document` 缺 ⇒ 薄挂载早返径））——**不触真 DOM**
+ * `composerModel` / `composerTree` / `attachComposer`（平 node：`document` 缺 ⇒ 薄挂载早返径）；`submitDraft` 出档 `renderer/composer-send.mjs`（「回合中插入」批拆分产出））——**不触真 DOM**
  * （会话头挂载落点一段走假 DOM `test/fake-dom.mjs`；真机走查随人工）。
  */
 import { test } from "node:test"
@@ -15,7 +15,8 @@ import { initDict, t } from "../renderer/i18n.mjs"
 import { headModel, headTree, mountHead, sessionMetaOf } from "../renderer/views/chrome.mjs"
 import { STATUS_SEGMENTS } from "../renderer/views/statusline.mjs"
 import { createStore } from "../renderer/store.mjs"
-import { attachComposer, COMPOSER_SLOT, composerModel, composerTree, flushTurnTail, submitDraft } from "../renderer/mount-composer.mjs"
+import { attachComposer, COMPOSER_SLOT, composerModel, composerTree } from "../renderer/mount-composer.mjs"
+import { submitDraft } from "../renderer/composer-send.mjs"
 import { QUEUE_MAX } from "../renderer/queue.mjs"
 import { chatModel, chatTree } from "../renderer/views/chat.mjs"
 import { installFakeDom, selfCheck } from "./fake-dom.mjs"
@@ -183,7 +184,7 @@ test("U118: 输入区构树（两态锚 / 满队提示行 / 键位接线两态 �
 
 // ─── U119 输入区挂载/接线面（批 A · §1.3 判据②「DOM 槽 + handlers 接线」两半）─────────────
 
-test("U119: 挂载/接线面（attach 零抛 · 句柄表形 · 槽锚两向与落点 · flush 在飞卫兵）", async () => {
+test("U119: 挂载/接线面（attach 零抛 · 句柄表形 · 槽锚两向与落点 · flush 携行退役）", async () => {
   const state = () => ({ activeSession: "1", pending: { "1": [{ text: "第一条", ts: 1 }] }, blocks: [] })
   const store = { get: state, set: () => {}, subscribe: () => () => {} }
 
@@ -192,7 +193,7 @@ test("U119: 挂载/接线面（attach 零抛 · 句柄表形 · 槽锚两向与�
   for (const name of ["onInput", "onKeyDown", "onInterrupt"]) {
     assert.equal(typeof attached.handlers?.[name], "function", `接线面句柄表含 ${name}`)
   }
-  assert.deepEqual(attached.keys, ["activeSession", "tabBadges", "pending", "locale", "blocks"], "重绘触发切片面（批 B ⑧ +`blocks`；「对齐第二批」项 2：`pool` ⇒ `pending`；「对齐第三批」P28 +`tabBadges` —— 中断键两态随位标）")
+  assert.deepEqual(attached.keys, ["activeSession", "tabBadges", "pending", "attachDegraded", "locale", "blocks"], "重绘触发切片面（批 B ⑧ +`blocks`；「对齐第二批」项 2：`pool` ⇒ `pending`；「对齐第三批」P28 +`tabBadges`；「回合中插入」+`attachDegraded` —— 降级提示行载波）")
   attached.detach()
 
   // ② 槽锚两向（骨架属性 ↔ 常量声明同值）+ 落点（`.session` 内 · 对话流之后）
@@ -204,21 +205,9 @@ test("U119: 挂载/接线面（attach 零抛 · 句柄表形 · 槽锚两向与�
   assert.ok(composerAt >= 0, "index.html 承载输入区容器锚")
   assert.ok(flowAt < composerAt, "落点 = 对话流之后（UI.md §1 输入区行）")
 
-  // ③ flush 在飞卫兵（交叠刻本刻零动作 —— 余者待下一回合尾；防同条双发 / 连摘两条）
-  let release = null
-  const host = { invoke: () => new Promise((resolve) => { release = resolve }) }
-  const inFlight = flushTurnTail({ store, host, key: "1" })
-  assert.equal(await flushTurnTail({ store, host, key: "1" }), false, "交叠刻零动作（一次一条）")
-  release({ ok: true })
-  assert.equal(await inFlight, true, "在飞者照常发出")
-  // ④ 键缺 ⇒ 留队 + 一行诊断（接线面漏携键 —— 不静默偷发活动会话）
-  const silent = []
-  const prior = console.error
-  console.error = (...args) => silent.push(args)
-  try {
-    assert.equal(await flushTurnTail({ store, host: { invoke: async () => ({ ok: true }) } }), false, "键缺 ⇒ 零发出")
-  } finally { console.error = prior }
-  assert.equal(silent.filter((args) => String(args[0]).includes("turn-tail key")).length, 1, "键缺 ⇒ 恰一行诊断（零静默）")
+  // ③ flush 携行退役（「回合中插入」批 · KD-40 ④）：本档回执面**零 `flushTurnTail`**（队列消费改宿主驱动 ——
+  //    步边界注入 ∕ 回合尾续发；非并存 ⇒ 双写者重复投递面闭）
+  assert.equal(Object.hasOwn(attached, "flushTurnTail"), false, "attachComposer 回执面零 flush 携行（退役）")
 })
 
 // ─── U126 输入区组字门（批 A · §1.16㈢ 第 1 项 · IME 小修；判据单源 = `docs/desktop/design/UI.md` §1 交互行）──
@@ -300,23 +289,14 @@ test("U153: 用户块出泡两径（受理即出 ∧ 键门零写 ∧ 失败零�
   assert.equal(await submitDraft({ store: thrown, host: thrown.host }, "文本 D"), "kept", "抛 ⇒ kept")
   assert.deepEqual([failed.get().blocks, thrown.get().blocks], kept, "两径皆零乐观块（引用不变）")
   assert.equal(usersOf(failed.get().blocks).length, 0, "失败径 ⇒ 树面零块（零假回合）")
-  // ④ 回合尾 flush 同源（取文源 = 队首 `text` 逐字）：受理 ⇒ 出队 + 用户块入流 ∥ 失败 ⇒ 留队 + 零块
-  const flushed = face(ok)
-  assert.equal(await flushTurnTail({ store: flushed, host: flushed.host, key: "1" }), true, "受理 ⇒ 发出")
-  assert.deepEqual([flushed.get().blocks, flushed.get().pending["1"]], [[{ kind: "user", text: "队首", ts: 1 }], []], "同源用户块（文本逐字 + 条目 `ts` —— 项 4）∧ 受理 ⇒ 出队（先发后出队）")
-  const flushHeld = face(() => ({ ok: false, reason: "busy" }))
-  assert.equal(await flushTurnTail({ store: flushHeld, host: flushHeld.host, key: "1" }), false, "回执假 ⇒ 零动作")
-  assert.deepEqual([flushHeld.get().blocks.length, flushHeld.get().pending["1"].length], [0, 1], "失败 ⇒ 零块 ∧ 留队（原形不动）")
-  // ⑤ 切会话错发修（设计 §2.4①②）：flush 目标 = **回合尾事件键**（非现刻活动会话）——
-  //    活动会话已切到 "2"，键 "1" 的回合尾 ⇒ 发本键队列、出本键队；非活动键零入流（用户块随下次页读）
-  const crossed = face(ok)
-  const sent = []
-  crossed.host = { invoke: (c, p) => { sent.push([c, p]); return Promise.resolve(ok()) } }
-  crossed.set({ ...crossed.get(), activeSession: "2", pending: { "1": [{ text: "甲键条", ts: 1 }], "2": [{ text: "乙键条", ts: 2 }] } })
-  assert.equal(await flushTurnTail({ store: crossed, host: crossed.host, key: "1" }), true, "键 1 回合尾 ⇒ 发出")
-  assert.deepEqual(sent, [["msg:send", { key: "1", text: "甲键条" }]], "载荷键 = 回合尾事件键（零发他键 —— 切会话错发缺陷面修）")
-  assert.deepEqual(crossed.get().pending, { "1": [], "2": [{ text: "乙键条", ts: 2 }] }, "只摘本键队首（他键零动）")
-  assert.deepEqual(crossed.get().blocks, [], "非活动键受理 ⇒ 零用户块入流（#458 键门——随下次页读）")
+  // ④ 入队径（「回合中插入」批）：回执 `{ ok: true, queued: true }` ⇒ `queued` ∧ **零块写**（气泡归镜面 —— 消费时刻才交接）
+  const queuedFace = face(() => ({ ok: true, queued: true }))
+  assert.equal(await submitDraft({ store: queuedFace, host: queuedFace.host }, "排队稿"), "queued", "入队受理 ⇒ queued")
+  assert.deepEqual(queuedFace.get().blocks, [], "入队径零块写（出泡归 `ev:queue` 镜面 —— 零乐观块）")
+  // ⑤ 满队径 ⇒ `full`（文本保留；提示行归派生读数 `full`）· 零块零出队
+  const fullFace = face(() => ({ ok: false, reason: "queue-full" }))
+  assert.equal(await submitDraft({ store: fullFace, host: fullFace.host }, "第9条"), "full", "queue-full ⇒ full（零静默丢字）")
+  assert.deepEqual([fullFace.get().blocks, fullFace.get().pending["1"].length], [[], 1], "满队径零块 ∧ 队不增（留队重试面归用户）")
 })
 
 // ─── U207 「对齐第三批」输入区两件（项 13 发送后回底 · 项 26 发送失败可见性）────────────

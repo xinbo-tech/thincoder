@@ -7,7 +7,9 @@
  * 批 9 增两切片：`settings`（开合 / 四段三态 / 向导 / 校验结果 —— `docs/desktop/design/UI.md` §1 设置面行）与
  * `projectInfo`（三读数 + 超阈标 + 相位 + 失败串）——**值面归接线层**（`renderer/mount-settings.mjs` 只经
  * `patchSettings` 落值），本档只持槽位 + 四条纯动作；`configured` 为**三态读数**（`null` = 未知）。
- * R3a 增四槽（D17 状态行读数面 —— `renderer/views/statusline.mjs` 读面）：`turns` / `turnStarts` / `tokens` / `timers`。
+ * R3a 增四槽（D17 状态行读数面 —— `renderer/views/statusline.mjs` 读面）：`turns` / `turnStarts` / `tokens` / `timers`（后两槽 = `ev:usage` 载荷扩）。
+ * **timer-wake 阶段 2 增一槽** `timerNotice`（**到期触发切片** —— 写者 = 归约面 `ev:timer`；读面 = 流内触发行 `renderer/views/chat-chrome.mjs`；
+ *  与 `timers` 读数槽两回事（后者 = 在途计数投影）；非落盘件 ⇒ 首屏页读整置即失 —— `renderer/page-read.mjs`）。
  * R3b 增一槽（D20 子 agent 面 —— `renderer/views/activity.mjs` 读面）：`subBlocks`（**按会话键分槽**：
  *  `{ [会话键]: 块模型[] }`；写者 = 归约面 `ev:subagent`（核态机 —— `/rc/subblocks/state.mjs`）；同笔**摘工具行**
  *  —— `pool` 切片不再载 `blocks`（工具调用面 = 对话流工具卡 —— `docs/desktop/design/UI.md` §1 本批注项 2）。
@@ -16,10 +18,10 @@
  * 语义（批档 §2.4（f）· §2.5 U28–U32）：
  *   ① 切片操作 = **纯函数**（`appendBlock` / `beginBackfill` / `endBackfill` / `setFollowing` /
  *      `returnToBottom` / `openTab` / `closeTab` / `requestCloseTab` / `confirmCloseTab` / `cancelCloseTab` /
- *      `openRailForm` / `closeRailForm` / `togglePool` / `patchSettings` / `setWizardStep` / `dismissWizard`）——
- *      返回**新态**；拒收 / 无变化 ⇒ **原引用**（引用等值 ⇒ 零通知，视图层可据引用短路）；
- *      排队消息三纯动作（`enqueue` / `dequeue` / `drainQueue` + 满队常量 `QUEUE_MAX`）已出档
- *      `renderer/queue.mjs`（拆分产出 —— 「对齐第二批」项 2 队列按会话分键，在册预案本批执行）；
+ *      `openRailForm` / `closeRailForm` / `togglePool` / `patchSettings` / `setWizardStep` / `dismissWizard` /
+ *      `setAttachDegraded`）—— 返回**新态**；拒收 / 无变化 ⇒ **原引用**（引用等值 ⇒ 零通知，视图层可据引用短路）；
+ *      排队消息面（快照镜面 `applyQueue` + 满队常量 `QUEUE_MAX`）已出档 `renderer/queue.mjs`
+ *      （拆分产出 —— 「回合中插入」批收正：原三纯动作随本地队列退场），本档不再持该族；
  *   ② `set(next)` 逐键 `Object.is` 比较（`next` = 补丁（局部键）或整态（全键）—— 同一路径：
  *      `store.set(appendBlock(store.get(), block))`），**至少一键变更才通知**；回执 = `(state, changedKeys)`；
  *   ③ 通知期内的再 `set` **入队** —— 当前轮通知跑完再发（不递归、不丢、合并后一次性通知）；
@@ -45,10 +47,13 @@
  *  元素 = 核态机模型（`renderer/events.mjs` 归约面写，读面 `renderer/views/activity.mjs`）。`pool.running` 读数
  *  同源（活动会话在飞块数——范归约面写；`pool` 切片不再载 `blocks`——摘工具行）。`ledger` = **账本警示切片**
  *  （账本可靠批 · 桌面微轮：写者 = `renderer/mount-sessions.mjs` `refreshRail` 唯一写路径；读面 = 会话区末子注记）。
- *  `pending` = **排队消息切片**（「对齐第二批」项 2）：`{ [会话键]: [{ text, ts }] }` —— 写者 = 输入区
- *  入队 / 出队 / 排空三纯动作（出档 `renderer/queue.mjs`）；读面 = 流内待发送气泡组（输入区上方）/
- *  状态行段 14（本会话队）。同笔 `pool.queue` = **席位保留 · 零写者**（用户排队消息改住流内 —— 右列
- *  「队列」族不再承载；族空 ⇒ 零节点恒不在场）。 */
+ *  `pending` = **排队消息切片**（「对齐第二批」项 2 · **「回合中插入」批收正**）：`{ [会话键]: [{ text, ts }] }` ——
+ *  **宿主单源快照的镜面**（写者 = `renderer/events.mjs` `ev:queue` 归约 ∥ `renderer/page-read.mjs` `applyPage`
+ *  首屏重建 —— 原输入区三纯动作退场）；读面 = 流内待发送气泡组（输入区上方）/ 状态行段 14（本会话队）。
+ *  同笔 `pool.queue` = **席位保留 · 零写者**（用户排队消息改住流内 —— 右列「队列」族不再承载；族空 ⇒ 零节点恒不在场）。
+ *  `attachDegraded` = **附件降级码切片**（「回合中插入」批）：按会话键存降级码（`non-vision` / `partial`）——
+ *  写者两处 = `ev:queue` 消费回执（`delivered.degraded` 浮出）∥ 输入区直发回执；读面 = 输入区提示行
+ *  （`renderer/mount-composer.mjs` `composerModel` —— 经 `degradedCode` 过闸，表外码 ⇒ 零节点）。 */
 export function initialState() {
   return {
     locale: "en",
@@ -68,8 +73,10 @@ export function initialState() {
     turnStarts: {},
     tokens: {},
     timers: {},
+    timerNotice: {},
     subBlocks: {},
     pending: {},
+    attachDegraded: {},
     blocks: [],
     history: { hasOlder: false, inFlight: false, page: null },
     following: true,
@@ -227,6 +234,20 @@ export function patchSettings(state, patch) {
     changed = true
   }
   return changed ? { ...state, settings: next } : state
+}
+
+/** 附件降级码切片写（纯动作 —— 「回合中插入」批：输入区降级提示行载波，按会话键）：写者两处 = `ev:queue`
+ *  消费回执（`renderer/events.mjs` —— `delivered.degraded` 浮出）∥ 输入区直发回执（`renderer/mount-composer.mjs`
+ *  —— 受理径回执 `degraded`）；`code` 非非空串（合 `null`）⇒ **清本键**（下次判决替换 / 清除）；同值 / 坏键 ⇒ **原引用**。 */
+export function setAttachDegraded(state, key, code) {
+  if (typeof key !== "string" || key === "") return state
+  const table = state?.attachDegraded ?? {}
+  const next = typeof code === "string" && code !== "" ? code : null
+  if ((table[key] ?? null) === next) return state
+  const out = { ...table }
+  if (next === null) delete out[key]
+  else out[key] = next
+  return { ...state, attachDegraded: out }
 }
 
 /** 配置档读数**三态归一**（`docs/desktop/design/UI.md` §1 首启向导行）：真 = 已配 · 假 = 未配 ·

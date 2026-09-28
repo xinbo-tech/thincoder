@@ -1,90 +1,21 @@
 /**
  * agent-host.test.mjs — 宿主装配桥脱壳直测（批档 §2.4 U78–U86）。
  * 纪律：替身 `deps` + 替身 `run` + 假 `emit` ⇒ **零网 / 零 electron / 零用户目录**（`loadConfig` 亦替身；真盘面落于 tmp sessions 根 —— 本档多例经 `send` 必走终点保存，故**模块级**沙箱一次）。
- * 覆盖：脱壳纪律 · 装配序与端差取值 · 装配形 + provider 判定 · 实例生命周期 · 桥面十一回调（含 `onUsage`——非独立通道）· `⟦ev⟧` 分流 · 挂起表两形 · verdict 矩阵与即删 · 回合驱动与中断（U78–U86 同序）。
+ * 覆盖：脱壳纪律 · 装配序与端差取值 · 装配形 + provider 判定 · 实例生命周期 · 桥面十一回调（含 `onUsage`——非独立通道）· `⟦ev⟧` 分流 · 挂起表两形 · verdict 矩阵与即删 · 回合驱动与中断（U78–U86 同序）——排队面三例（U217–U219）出档 `test/agent-host-queued.test.mjs`（本档越 500 硬限 ⇒ 按在册预案「门面用例拆出 + 装配假面 harness 共享」落形）。
+ * 点修轮（U-6 ∕ U-7）两例：U224（中止墓碑 —— 亡键零 timer 轮）· U225（中止径落盘零写 —— 槽 ∕ manifest 零复活）。
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
-import { ACTIVITY_EVENTS, createAgentHost, ITEM_VERDICTS } from "../src/main/agent-host.mjs"
+import { existsSync } from "node:fs"
+import { ACTIVITY_EVENTS, ITEM_VERDICTS } from "../src/main/agent-host.mjs"
 import { NOTIFY_TEXTS } from "../src/main/notify.mjs"
+// 共享假面（「回合中插入」批拆分产出 —— 本档越 500 硬限 ⇒ 装配假面出档 `test/agent-host-harness.mjs`；拆档 = `agent-host-queued.test.mjs`）。
+import { at, boot, CWD, KEY, makeHost, SRC, stripComments, until } from "./agent-host-harness.mjs"
 import { useSlotSandbox } from "./slot-sandbox.mjs"
+import { loadManifest, slotPath } from "../src/main/session-slots.mjs" // U225 写面读数（槽 / manifest 两处）
 
 const sandbox = useSlotSandbox() // 模块级：`send` 三路皆终点保存 ⇒ 不沙箱即写真实用户 sessions 目录
 after(sandbox.cleanup)
-
-const SRC = readFileSync(new URL("../src/main/agent-host.mjs", import.meta.url), "utf8")
-const KEY = "3"
-const CWD = "/fake-project-root" // 注入项目根 —— 非 process.cwd() ⇒ 装配取值可辨
-const PROVIDER = { name: "p1", model: "m1", baseURL: "http://127.0.0.1:1/v1" }
-
-/** 剥注释（块 / 行）：源面机检须看**代码** —— 档头注释里明写 `process.cwd()` 反例（实测踩中）。 */
-function stripComments(source) {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "")
-}
-
-/** 假装配面：记录调用序 + 产出核同形对象（`config.agent` 恒在场 —— 核 `loadConfig` 缺省面）。 */
-function fakeDeps({ provider = PROVIDER, invalid = false } = {}) {
-  const order = []
-  const seen = {}
-  const config = {
-    provider: invalid ? { name: "", model: "", baseURL: "" } : { ...provider },
-    providersList: invalid ? [] : [{ name: provider.name, model: provider.model }],
-    agent: { streamRules: [] },
-    memory: { dbPath: ":memory:", projectDir: "proj-mem" },
-    providerInvalidReason: invalid ? "no provider configured" : undefined,
-  }
-  const memory = { codeOrigin: null, projectOrigin: null }
-  const agent = { provider: { ...config.provider }, tools: [], cwd: CWD, history: [], _fullHistory: [] } // 保存面所需（核 `saveSession` 直读 `cwd` / 人读线）
-  const deps = {
-    loadConfig: () => { order.push("loadConfig"); return config },
-    injectProxy: () => { order.push("injectProxy") },
-    createMemory: () => { order.push("createMemory"); return memory },
-    discoverRules: (cwd) => { order.push("discoverRules"); seen.rulesCwd = cwd; return [{ pattern: "AGENTS.md" }] },
-    syncDir: async (_m, o) => { order.push(`syncDir:${o.layer}`) },
-    team: () => { order.push("team"); return null },
-    author: () => "tester",
-    assembleBuiltinTools: (o) => { order.push("assembleBuiltinTools"); seen.tools = o; return [{ name: "read" }] },
-    createAgent: (o) => { order.push("createAgent"); seen.agent = o; return agent },
-  }
-  return { deps, order, seen, config, memory, agent }
-}
-
-/** 假宿主：**真** `assembleFor` + 假 deps（装配路径真跑）+ 假 `emit` 收序。
- *  提示面三件透传（桌面空闲唤醒批 —— 缺省 = 不注入 ⇒ 零动作）。 */
-function makeHost({ provider, invalid, run, notify, focused, reveal } = {}) {
-  const out = []
-  const fd = fakeDeps({ provider, invalid })
-  const host = createAgentHost({
-    emit: (channel, payload) => out.push([channel, payload]),
-    run: run ?? (() => Promise.resolve()),
-    deps: fd.deps,
-    projects: { currentCwd: () => CWD },
-    notify, focused, reveal,
-  })
-  return { host, out, ...fd }
-}
-
-/** 等到谓词成立（驱动循环异步 —— 最多 50 拍）。 */
-async function until(fn, label = "condition") {
-  for (let i = 0; i < 50; i += 1) {
-    if (fn()) return
-    await new Promise((done) => setTimeout(done, 0))
-  }
-  throw new Error(`timeout waiting: ${label}`)
-}
-
-/** 起一回合并取回桥面（假 `run` 捕获 `cb`；返回常驻 Promise ⇒ 在飞不结算，桥面直调不受影响）。 */
-async function boot(opts = {}) {
-  let cb = null
-  const h = makeHost({ ...opts, run: (_agent, _text, callbacks) => { cb = callbacks; return new Promise(() => {}) } })
-  await h.host.ensure(KEY, 3)
-  const receipt = await h.host.send(KEY, "hello")
-  return { ...h, cb, receipt }
-}
-
-/** 末条某通道载荷。 */
-const at = (out, channel) => out.filter(([c]) => c === channel).at(-1)[1]
 
 // ─── U78 脱壳面纪律 ────────────────────────────────────────────
 test("U78: 源面零 electron / 零 MCP / 零 attachManifest · 假 emit 收序 = 事件序", async () => {
@@ -270,28 +201,40 @@ test("U86: send 三态 · 中断（abort + 门拒结算）· 结算三映射（d
   assert.deepEqual(await bad.host.send(KEY, "hi"), { ok: false, reason: "provider-invalid" }, "在飞已释放（非 busy）")
   assert.deepEqual(await bad.host.send("nope", "hi"), { ok: false, reason: "bad-key" }, "坏键 ⇒ bad-key")
 
-  // ② 正常回合：立即回执 · 在飞再发 ⇒ busy · run 收 (agent, text, cb, {signal}) · resolve ⇒ done
+  // ② 正常回合：立即回执 · **在飞再发 ⇒ 入队**（KD-40 ② 零 busy 拒面）· run 收 (agent, text, cb, {signal}) ·
+  //    resolve ⇒ done ⇒ 回合尾续发（队非空 —— 队列先于接管）
+  const runs = []
   let resolveRun = null
   let captured = null
   const h = makeHost({
     run: (agent, text, callbacks, opts) => {
       captured = { agent, text, callbacks, opts }
+      runs.push(text)
       return new Promise((r) => { resolveRun = r })
     },
   })
   const p1 = h.host.send(KEY, "one")
-  assert.deepEqual(await h.host.send(KEY, "two"), { ok: false, reason: "busy" }, "在飞再发 ⇒ busy（占位先于装配 await）")
+  assert.deepEqual(await h.host.send(KEY, "two"), { ok: true, queued: true }, "在飞再发 ⇒ 入队受理（占位先于装配 await 同判；零 busy 拒面）")
+  const queuedFrame = () => h.out.filter(([c]) => c === "ev:queue").at(-1)?.[1]
+  assert.deepEqual(queuedFrame()?.items.map((item) => item.text), ["two"], "入队即出站（`ev:queue` 状态形 —— 快照 = 本键队列）")
   assert.deepEqual(await p1, { ok: true }, "正常 ⇒ 立即回 {ok:true}")
   assert.equal(captured.text, "one", "run 收本轮文本")
   assert.equal(captured.agent, await h.host.ensure(KEY, 3), "run 收装配实例")
   assert.deepEqual([captured.opts.signal instanceof AbortSignal, captured.opts.signal.aborted], [true, false], "run 收 {signal}（起跑未中断）")
+  assert.equal(typeof captured.opts.consumeQueuedInput, "function", "用户回合 ⇒ 步边界缝在场（KD-40 ② —— turn-face 传参）")
   assert.deepEqual(h.host.interrupt("nope"), { ok: false, reason: "bad-key" })
   assert.deepEqual(h.host.interrupt(KEY), { ok: true }, "在飞 ⇒ abort 收")
   assert.equal(captured.opts.signal.aborted, true, "interrupt ⇒ signal 中止")
   resolveRun()
   await new Promise((r) => setImmediate(r))
-  assert.equal(h.out.filter(([, p]) => p.event === "done").length, 1, "run resolve ⇒ done 收尾（唯一回合尾）")
-  assert.deepEqual(h.host.interrupt(KEY), { ok: false, reason: "idle" }, "结算后 ⇒ idle")
+  assert.equal(h.out.filter(([, p]) => p.event === "done").length, 1, "run resolve ⇒ done 收尾（首个回合）")
+  assert.deepEqual(runs, ["one", "two"], "结算后队非空 ⇒ 宿主续发（队列先于接管 —— KD-40 ③）")
+  assert.deepEqual(queuedFrame().items, [], "取批后快照空（整置语义）——配回执 `delivered.text` 逐字")
+  assert.equal(queuedFrame().delivered.text, "two", "消费回执 = 本批注入文本（单条原样）")
+  resolveRun()
+  await new Promise((r) => setImmediate(r))
+  assert.equal(h.out.filter(([, p]) => p.event === "done").length, 2, "续发轮结算 ⇒ 第二 done（队空 ⇒ 不递归）")
+  assert.deepEqual(h.host.interrupt(KEY), { ok: false, reason: "idle" }, "结算后（队空）⇒ idle")
 
   // ③ abort 后拒绝 ⇒ stopped（不入错误面）· 非 abort 拒绝 ⇒ ev:error
   let rejectRun = null
@@ -469,4 +412,78 @@ test("U195: 「对齐第三批」桥面 —— 失败判据核单源 · advisor 
   assert.deepEqual(at(out, "ev:activity"), { key: KEY, event: "turnBreak" }, "turnBreak 形逐字（零 `fields`）")
 })
 
+// ─── T-TW21 驱动面（timer-wake 阶段 2 —— 空闲闩到点 ⇒ timer 轮：旗标与落流同径）────────
 
+test("T-TW21（驱动面）: 回合尾接管后武装 ⇒ 空闲到点 ⇒ `ev:timer` 落流 + 单回合执行面收 `{autoTurn,timerTurn}`", async () => {
+  const runs = []
+  const h = makeHost({
+    run: (agent, text, callbacks, opts) => {
+      runs.push({ text, opts })
+      if (runs.length === 1) agent._pendingTimers = [{ id: "t1", expiresAt: Date.now() - 1, message: "ping" }] // 到期件（闩延迟夹 0）
+      return Promise.resolve()
+    },
+  })
+  await h.host.ensure(KEY, 3)
+  assert.deepEqual(await h.host.send(KEY, "hello"), { ok: true }, "首回合受理（回合尾接管 ⇒ 未入窗 ⇒ 武装空闲闩）")
+  await until(() => runs.length === 2, "空闲 timer 轮")
+  assert.deepEqual([runs[1].opts.autoTurn, runs[1].opts.timerTurn, runs[1].opts.suspDriven], [true, true, true], "timer 轮 = 双旗标（五件透传）")
+  assert.equal(runs[0].opts.timerTurn, false, "普通回合缺省 ⇒ false")
+  assert.deepEqual(at(h.out, "ev:timer"), { key: KEY, text: "[System reminder: ⏰ timer — ping]" }, "触发落流（交付原文逐字 · 开轮前）")
+  assert.deepEqual(h.agent._pendingTimers, [], "到期即出列（幂等）")
+  assert.equal(h.out.filter(([channel]) => channel === "ev:digest").length, 0, "timer 轮不冒充消化边界（零 `ev:digest` 帧）")
+})
+
+// ─── U224 U-6 收口（在途 timer 臂）：会话中止 ⇒ 回合尾接管墓碑 —— 空闲闩零重武装（亡键零 timer 轮）──
+
+test("U224: U-6 —— `dispose` 后陈旧回合结算（池空 + 在途 timer）⇒ 零亡键 timer 轮（闩零重武装）", async () => {
+  const runs = []
+  let resolveRun = null
+  const h = makeHost({
+    run: (agent, text) => {
+      runs.push(text)
+      agent._pendingTimers = [{ id: "t1", expiresAt: Date.now() - 1, message: "ping" }] // 到期件（闩延迟夹 0 —— 免真实等待；手法同 T-TW21）
+      return new Promise((r) => { resolveRun = r })
+    },
+  })
+  await h.host.ensure(KEY, 3)
+  await h.host.send(KEY, "旧回合")
+  h.host.dispose(KEY) // 会话中止 ⇒ 在飞中止 + 落中止墓碑（闩撤）
+  resolveRun() // 陈旧回合迟到结算
+  await until(() => h.out.some(([channel, payload]) => channel === "ev:activity" && payload.event === "done"), "陈旧回合结算")
+  await new Promise((done) => setTimeout(done, 15)) // 失效窗：旧行为 = 闩重武装 + 延迟 0 点火（本刻内必达）
+  assert.deepEqual(runs, ["旧回合"], "零亡键 timer 轮（闩零重武装 —— 旧行为 ⇒ 第二跑 `{autoTurn,timerTurn}`）")
+  assert.equal(h.out.some(([channel]) => channel === "ev:timer"), false, "零 `ev:timer` 落流（亡键零交付）")
+  assert.equal(h.agent._pendingTimers.length, 1, "到期件仍在册（亡键零消费 —— 出列即消费）")
+})
+
+// ─── U225 U-7 收口：会话中止（`dispose` ∕ 切项目）⇒ 回合尾落盘零写（槽 ∕ manifest 零复活）─────────
+
+test("U225: U-7 —— 会话中止 ⇒ 回合尾落盘零写（已删会话槽 ∕ manifest 零复活）· 正控 = 正常回合双写", async () => {
+  const K9 = "9" // 本用例键 —— 与既有例的槽 3 隔离（模块沙箱共享：正控须对本刻负向断言有物可对）
+  const slot9 = slotPath(CWD, 9)
+  const entry9 = () => loadManifest(CWD).slots[9] ?? null
+  // ① `dispose` 臂（在飞中止 ⇒ 回合拒绝 —— catch 径）：落盘零写
+  let rejectRun = null
+  const h = makeHost({ run: () => new Promise((_r, rej) => { rejectRun = rej }) })
+  await h.host.ensure(K9, 9)
+  await h.host.send(K9, "旧回合")
+  h.host.dispose(K9)
+  rejectRun(new Error("AbortError: aborted"))
+  await until(() => h.out.some(([channel, payload]) => channel === "ev:activity" && payload.event === "stopped"), "中止径结算")
+  assert.equal(existsSync(slot9), false, "dispose 臂：槽零写（中止径跳过落盘 —— 旧行为 ⇒ 复活槽文件）")
+  // ② 切项目臂（成功径同判）：`abortSuspensions` 后回合 resolve ⇒ 落盘零写
+  let resolveRun = null
+  const h2 = makeHost({ run: () => new Promise((r) => { resolveRun = r }) })
+  await h2.host.ensure(K9, 9)
+  await h2.host.send(K9, "旧项目回合")
+  h2.host.abortSuspensions()
+  resolveRun()
+  await until(() => h2.out.some(([channel, payload]) => channel === "ev:activity" && payload.event === "done"), "切项目径结算")
+  assert.equal(existsSync(slot9), false, "切项目臂：槽零写（成功径同判）")
+  assert.equal(entry9(), null, "manifest 零条目（两臂合计 —— 已删会话不进清单）")
+  // ③ 正控：同键正常回合 ⇒ 槽 ∕ manifest 双写（写面可达 —— 上面两条负向断言非空判）
+  const h3 = makeHost({ run: () => Promise.resolve() })
+  await h3.host.send(K9, "正常回合")
+  await until(() => existsSync(slot9), "正常回合落盘")
+  assert.notEqual(entry9(), null, "正控：槽 ∕ manifest 双写（本刻同键写面可达）")
+})

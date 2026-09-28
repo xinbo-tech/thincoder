@@ -54,13 +54,14 @@ test("U52: 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构 �
   const activity = await import("../renderer/views/activity.mjs")
   const settingsSections = await import("../renderer/views/settings-sections.mjs")
   const composer = await import("../renderer/mount-composer.mjs")
+  const composerSend = await import("../renderer/composer-send.mjs")
   assert.deepEqual(Object.keys(store).sort(), [
     "appendBlock", "beginBackfill", "cancelCloseTab", "closeRailForm", "closeTab", "configuredFlag", "confirmCloseTab",
     "createStore", "deriveTabBadge", "dismissWizard", "endBackfill", "initialState",
-    "needsCloseConfirm", "openRailForm", "openTab", "patchSettings", "requestCloseTab", "returnToBottom", "setFollowing", "setWizardStep",
+    "needsCloseConfirm", "openRailForm", "openTab", "patchSettings", "requestCloseTab", "returnToBottom", "setAttachDegraded", "setFollowing", "setWizardStep",
     "store", "togglePool", "visibleWindow",
-  ], "store.mjs 导出面锁（关闭确认四条 + `togglePool` 纯动作 + 设置族四条 + 左列换形态两条；排队消息三动作 + `QUEUE_MAX` 已出档 `renderer/queue.mjs` —— 「对齐第二批」拆分产出一）")
-  assert.deepEqual(Object.keys(queue).sort(), ["QUEUE_MAX", "dequeue", "drainQueue", "enqueue"], "queue.mjs 导出面锁（拆分产出一：三纯动作 + 满队常量单源 —— `pending` 切片按会话分键唯一写面）")
+  ], "store.mjs 导出面锁（关闭确认四条 + `togglePool` 纯动作 + 设置族四条 + 左列换形态两条 + **`setAttachDegraded`（「回合中插入」批降级码切片写）**；排队镜面 `applyQueue` + `QUEUE_MAX` 住 `renderer/queue.mjs`）")
+  assert.deepEqual(Object.keys(queue).sort(), ["QUEUE_MAX", "applyQueue"], "queue.mjs 导出面锁（「回合中插入」批：快照整置纯动作 + 满队常量（值同宿主队容量）—— 原三纯动作随本地队列退场）")
   assert.deepEqual(Object.keys(pageRead).sort(), ["applyPage", "blockOfMessage"], "page-read.mjs 导出面锁（拆分产出二：页读径两件 —— `applyFlags` 住归约核心档，两消费面同点）")
   assert.deepEqual(Object.keys(subagentReduce).sort(), ["liveCount", "onSubagent", "onSubchunk", "poolOf"], "subagent-reduce.mjs 导出面锁（拆分产出三：子 agent 面两分派支 + 池读数两助手）")
   assert.deepEqual(Object.keys(events).sort(), ["applyFlags", "clearApproval", "clearQuestion", "isTurnTail", "openSession", "reduce", "sameRecord"], "events.mjs 导出面锁（归约面六件 + 卡面 re-export 一件 —— 页读径 / 子 agent 径出档后名面不变）")
@@ -70,7 +71,7 @@ test("U52: 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构 �
   assert.deepEqual(Object.keys(statusline).sort(), ["STATUS_SEGMENTS", "mountStatus", "statusModel", "statusTree"], "statusline.mjs 导出面 = 状态行三段 + 承载段闭集（R3a 新档）")
   assert.deepEqual(Object.keys(mountStatusFace).sort(), ["STATUS_KEYS", "STATUS_SLOT", "attachStatus"], "mount-status.mjs 导出面 = 槽锚 + 订阅切片键面 + 装配面（R3a 新档）")
   assert.deepEqual(Object.keys(chat).sort(), ["chatModel", "chatTree", "mountChat", "retrySourceOf", "settleFrame"], "chat.mjs 导出面 = 三档 + 帧尾六步 + 重试源谓词（「对齐第三批」项 9 单源 —— 钮在场与出口同谓词；帧尾态刷面出档 `views/chat-chrome.mjs`）")
-  assert.deepEqual(Object.keys(chatChrome).sort(), ["blockAnchor", "chromeProps", "digestGroupNode", "focusAutofocus", "ledgerGroupNode", "pillNode", "stoppedNode", "summaryNode", "syncChrome"], "chat-chrome.mjs 导出面 = 帧尾态刷 + 四尾组构树 + 插点锚 + 真置焦（拆分产出 —— 单项）")
+  assert.deepEqual(Object.keys(chatChrome).sort(), ["blockAnchor", "chromeProps", "digestGroupNode", "focusAutofocus", "ledgerGroupNode", "pillNode", "stoppedNode", "summaryNode", "syncChrome", "timerGroupNode"], "chat-chrome.mjs 导出面 = 帧尾态刷 + 五尾组构树 + 插点锚 + 真置焦（拆分产出 —— 单项；`timerGroupNode` = timer-wake 阶段 2 到期触发行组）")
   assert.deepEqual(Object.keys(chatTool).sort(), [
     "DIFF_FILE_FLOOR", "DIFF_LINE_FLOOR", "STATUS_WORD", "bindFileLinks", "changeTotals", "fileLinkOf", "linkifyResult", "segNode", "toggleExpanded", "toolCard", "toolChanges",
     "wire", "withKey",
@@ -83,8 +84,9 @@ test("U52: 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构 �
     "NAMED_FIELDS", "agentBody", "mcpBody", "modelBody", "modelChoicesTree", "modelHeadNode", "modelIdOf", "providersBody", "tierFace", "tierOptions",
   ], "settings-sections.mjs 导出面 = 四段体 + 模型段两导出面 + 档位两件 + **具名十键表 `NAMED_FIELDS`（「对齐第三批」P15 键集 / 词键 / 控型三面单源）**")
   assert.deepEqual(Object.keys(composer).sort(), [
-    "COMPOSER_KEYS", "COMPOSER_SLOT", "attachComposer", "composerModel", "composerTree", "flushTurnTail", "isComposing", "mountComposer", "submitDraft",
-  ], "mount-composer.mjs 导出面 = 挂载一族 + **`isComposing`**（「对齐第三批」P2 组字判据单源 —— 卡族 Enter 径同取，零副本）")
+    "COMPOSER_KEYS", "COMPOSER_SLOT", "attachComposer", "composerModel", "composerTree", "isComposing", "mountComposer",
+  ], "mount-composer.mjs 导出面 = 挂载一族 + **`isComposing`**（「对齐第三批」P2 组字判据单源）；发送面三件已出档 `renderer/composer-send.mjs`（「回合中插入」批拆分产出）、**`flushTurnTail` 退场**（队列消费改宿主驱动）")
+  assert.deepEqual(Object.keys(composerSend).sort(), ["ask", "submitDraft", "withUserBlock"], "composer-send.mjs 导出面锁（拆分产出：窄桥出站归一 + 提交判据 + 用户块写入）")
 
   const html = stripComments(readFileSync(new URL("../renderer/index.html", import.meta.url), "utf8"))
   const app = stripComments(readFileSync(new URL("../renderer/app.mjs", import.meta.url), "utf8"))
@@ -120,7 +122,7 @@ test("U52: 零回归面（清单两向 ∧ 导出面锁 ∧ 七槽接线结构 �
     assert.ok(shellKeys.includes(`"${key}"`), `外壳订阅切片在位：${key}`)
   }
   const chatKeys = app.match(/const CHAT_KEYS = \[([^\]]*)\]/)?.[1] ?? ""
-  for (const key of ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "stopMark", "ledgerLines"]) {
+  for (const key of ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "stopMark", "ledgerLines", "timerNotice"]) {
     assert.ok(chatKeys.includes(`"${key}"`), `对话流订阅切片在位：${key}`)
   }
   assert.ok(app.includes("FLOW_SLOT"), "对话流容器锚常量在位：FLOW_SLOT")

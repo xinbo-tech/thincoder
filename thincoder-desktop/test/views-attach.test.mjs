@@ -8,8 +8,8 @@
  *   U140 出口面（`toImages` / `submitDraft`）：恰形 `{name,mime,dataURL}`（`id` = 端侧锚位，不出面）· 零附件 ⇒
  *     不落 `images` 键（批 A 恰形不变）· 非空 ⇒ 逐项随载荷 · `onReceipt` 只随直发（早返径零 IPC 零钩）；
  *   U141 接线面（`attachComposer` 平 node：`document` 缺 ⇒ `paintComposer` 回值 = 模型）：粘贴 ⇒ 条 ⇒ 并发粘贴
- *     读毕序入列（不互覆盖）⇒ 移除 ⇒ 直发携图 + 清条 + 降级记录 ⇒ 下次净发送替换（`degraded` 清）· 失败 / 忙态入队
- *     ⇒ 图保留（清条判据 = 直发 `ok` 真 —— 队条目形载不了附件）。
+ *     读毕序入列（不互覆盖）⇒ 移除 ⇒ 直发携图 + 清条 + 降级记录 ⇒ 下次净发送替换（`degraded` 清）· 失败 ⇒ 图保留 ·
+ *     忙态受理（宿主任判 ⇒ `queued`）⇒ 清条清文（队条目**携图** —— 「回合中插入」批 KD-40 ⑤）。
  * 用例号 = 自铸（`U138–U141`）：设计用例号归属表无本舱段（沿 A-3b `U120/U121` 先例）。
  * 复制面（`views/chat-copy.mjs`）归本批他舱 —— 本档只附件面。
  * 平 node 桩：`FileReader` 环境桩（本档**无注入面** —— 跑真默认径）；真粘贴 / 真剪贴板 / 真落盘 = 人工走查（T-DSK30）。
@@ -19,7 +19,8 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { t } from "../renderer/i18n.mjs"
 import { attachmentBar, collectImages, degradedCode, degradedNotice, pasteImages, pasteRejects, toImages, unsupportedNotice } from "../renderer/attach.mjs"
-import { attachComposer, composerModel, composerTree, submitDraft } from "../renderer/mount-composer.mjs"
+import { attachComposer, composerModel, composerTree } from "../renderer/mount-composer.mjs"
+import { submitDraft } from "../renderer/composer-send.mjs"
 import { createStore, initialState } from "../renderer/store.mjs"
 import { useSentinels } from "./views-harness.mjs"
 
@@ -152,7 +153,7 @@ test("U139: 构树面（三件 / 无名不造串 / 空条零节点 / id 携键�
 
   // 输入区子序（[满队?][降级?][条?]输入框[中断]）+ 粘贴接线两态
   const wired = { onKeyDown: () => {}, onPaste: () => {}, onRemoveAttachment: () => {} }
-  const tree = composerTree(composerModel(blank({ pool: { ...initialState().pool } }), { attachments: [IMAGE], degraded: "partial" }), wired)
+  const tree = composerTree(composerModel(blank({ pool: { ...initialState().pool }, attachDegraded: { [KEY]: "partial" } }), { attachments: [IMAGE] }), wired)
   assert.deepEqual(
     tree.children.map((kid) => kid.props["data-notice"] ?? kid.props.class),
     ["attach-degraded", "composer-attachments", "composer-input", "composer-interrupt"],
@@ -272,16 +273,19 @@ test("U141: 接线面（粘贴 ⇒ 条 ⇒ 并发读毕序入列 ⇒ 移除 ⇒ 
   assert.equal(model().text, "失败", "失败 ⇒ 文本保留")
   assert.equal(errors.some((args) => String(args[0]).includes("msg:send failed")), true, "失败 ⇒ 诊断在场（零静默）")
 
-  // ⑦ 忙态 ⇒ 入队（队条目形载不了附件 ⇒ 图保留 —— 清条判据 = 直发 `ok` 真；「对齐第二批」项 2：`pending[本会话键]`）
-  store.set({ tabBadges: { [KEY]: ["running"] } })
+  // ⑦ 忙态受理（「回合中插入」批 · KD-40 ②）：一律交宿主任判 ⇒ 回执 `{ ok:true, queued:true }` ⇒ **清条清文**
+  //   （队条目**携图** —— 图形随条目走）；渲染面零本地入队（镜像 = 宿主快照 —— 待发送气泡由 `ev:queue` 出）
+  reply = { ok: true, queued: true }
+  type("失败")
   enter("失败")
   await flush()
-  assert.deepEqual(store.get().pending[KEY].map((entry) => entry.text), ["失败"], "忙态 ⇒ 入队恰一条（本会话键 —— `{text,ts}` 形）")
-  assert.equal(Number.isFinite(store.get().pending[KEY][0].ts), true, "条目携 `ts` = 入队现刻（待发送气泡时间面）")
+  assert.equal(calls.length, 4, "忙态受理 ⇒ 直发径同源（零本地入队 —— 判忙归宿主）")
+  assert.deepEqual(calls[3], ["msg:send", { key: KEY, text: "失败", images: [{ name: "keep.png", mime: "image/png", dataURL: "data:image/png;base64,KEEP" }] }],
+    "携图交宿主任判（图随载荷入队 —— 原样）")
+  assert.deepEqual(store.get().pending?.[KEY] ?? [], [], "渲染面零本地入队（`pending` = 宿主快照镜面）")
   assert.deepEqual(store.get().pool.queue, [], "右列队列族零写者（席位保留 —— 用户排队消息改住流内）")
-  assert.equal(calls.length, 3, "忙态 ⇒ 零增 IPC（队列出口归回合尾）")
-  assert.deepEqual(model().attachments.map((entry) => entry.name), ["keep.png"], "入队 ⇒ 图保留（队条目形载不了附件）")
-  assert.equal(model().text, "", "入队 ⇒ 文本转队即清输入")
+  assert.deepEqual(model().attachments, [], "入队受理 ⇒ 清条（队条目携图 —— 图形随条目走）")
+  assert.equal(model().text, "", "入队受理 ⇒ 清输入")
 })
 
 // ─── U206 「对齐第三批」附件面（项 22 粘贴即拒 · 提示行 · 采集 / 发送替换清）────────────

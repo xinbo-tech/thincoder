@@ -155,7 +155,7 @@ test("U89 标题刷新 + 回合尾窄口 + sessionMeta：三径各恰一次 / �
   }
   let tails = []
   const off = attachEvents({ on, store, invoke, onTurnTail: (key) => { tails.push(key) } })
-  assert.equal(handlers.size, 16, "十六通道全订阅（R3b 增 `ev:subagent` · R3c 增 `ev:reasoning` · 「对齐第二批」增 `ev:subchunk` · 「桌面空闲唤醒」增 `ev:susp` ∕ `ev:digest` · 「对齐第三批」增 `ev:ledger`）")
+  assert.equal(handlers.size, 18, "十八通道全订阅（R3b 增 `ev:subagent` · R3c 增 `ev:reasoning` · 「对齐第二批」增 `ev:subchunk` · 「桌面空闲唤醒」增 `ev:susp` ∕ `ev:digest` · 「对齐第三批」增 `ev:ledger` · timer-wake 阶段 2 增 `ev:timer` · 「回合中插入」增 `ev:queue`）")
 
   handlers.get("ev:activity")({ key: KEY, event: "turn", n: 1, max: 2 })
   await tick()
@@ -165,7 +165,7 @@ test("U89 标题刷新 + 回合尾窄口 + sessionMeta：三径各恰一次 / �
   handlers.get("ev:activity")({ key: KEY, event: "done" })
   await tick()
   assert.deepEqual(calls, [["sessions:list"]], "回合尾 `done` ⇒ sessions:list 恰一次（单参逐字）")
-  assert.deepEqual(tails, [KEY], "回合尾 `done` ⇒ 窄口恰一次 ∧ **携回合尾事件键**（flush 目标 —— 「对齐第二批」项 2）")
+  assert.deepEqual(tails, [KEY], "回合尾 `done` ⇒ 窄口恰一次 ∧ **携回合尾事件键**（窄口存续 —— 输入区 flush 携行随「回合中插入」批退场）")
   assert.deepEqual(store.get().sessions, [{ key: "1", title: "T" }], "行随动入态")
 
   handlers.get("ev:activity")({ key: KEY, event: "stopped" })
@@ -189,7 +189,7 @@ test("U89 标题刷新 + 回合尾窄口 + sessionMeta：三径各恰一次 / �
   assert.deepEqual(tails, [KEY, KEY, KEY], "错误径 ⇒ 窄口同刻恰一次（判据单源 = `isTurnTail`）")
 
   off()
-  assert.equal(handlers.size, 0, "退订句柄十三路全退")
+  assert.equal(handlers.size, 0, "退订句柄十八路全退")
 
   // 窄口非函数（批档 §1.14：未接线调用面合法 ⇒ 零抛零动作 · 标题刷新不受累）
   const bareHandlers = new Map()
@@ -263,7 +263,7 @@ test("T-DSK24 卡面两切片：首写自种 / 同键就地替换 / clearQuestio
   assert.deepEqual(Object.keys(planned.tasks), [KEY], "他键零写")
 })
 
-test("T-DSK29 占用读数：按 key 写切片 / 有效读数门（未至 · 非正 · 非数 ⇒ 原引用）/ 同值原引用 / 十六通道接线", async () => {
+test("T-DSK29 占用读数：按 key 写切片 / 有效读数门（未至 · 非正 · 非数 ⇒ 原引用）/ 同值原引用 / 十八通道接线", async () => {
   const blank = stateOf()
   const seeded = reduce(blank, { channel: "ev:usage", key: KEY, percent: 42 })
   assert.deepEqual(seeded.usage, { [KEY]: 42 }, "按会话 key 写切片（值 = `percent` 原样）")
@@ -287,12 +287,13 @@ test("T-DSK29 占用读数：按 key 写切片 / 有效读数门（未至 · 非
     store,
     invoke: () => Promise.resolve({}),
   })
-  assert.equal(handlers.size, 16, "十六通道全订阅（R3b 增 `ev:subagent` · R3c 增 `ev:reasoning` · 「对齐第二批」增 `ev:subchunk` · 「桌面空闲唤醒」增 `ev:susp` ∕ `ev:digest` · 「对齐第三批」增 `ev:ledger`）")
+  assert.equal(handlers.size, 18, "十八通道全订阅（R3b 增 `ev:subagent` · R3c 增 `ev:reasoning` · 「对齐第二批」增 `ev:subchunk` · 「桌面空闲唤醒」增 `ev:susp` ∕ `ev:digest` · 「对齐第三批」增 `ev:ledger` · timer-wake 阶段 2 增 `ev:timer` · 「回合中插入」增 `ev:queue`）")
   assert.ok(handlers.has("ev:usage"), "订阅含 `ev:usage`")
   assert.ok(handlers.has("ev:subagent"), "订阅含 `ev:subagent`（D20 块面）")
   assert.ok(handlers.has("ev:reasoning"), "订阅含 `ev:reasoning`（D19 推理块）")
   assert.ok(handlers.has("ev:subchunk"), "订阅含 `ev:subchunk`（「对齐第二批」项 3 内容面）")
   assert.ok(handlers.has("ev:susp") && handlers.has("ev:digest"), "订阅含两新通道（挂起计数面 ∕ 消化轮边界面 —— 与 `thincoder-desktop/src/preload/preload.cjs` `EVENT_CHANNELS` 同册）")
+  assert.ok(handlers.has("ev:queue"), "订阅含 `ev:queue`（排队面两形 —— 与桥面白名单同册）")
   handlers.get("ev:usage")({ key: KEY, percent: 42 })
   assert.deepEqual(store.get().usage, { [KEY]: 42 }, "通道 → 归约 → store 落态")
   handlers.get("ev:usage")({ key: KEY, percent: null })
@@ -300,7 +301,7 @@ test("T-DSK29 占用读数：按 key 写切片 / 有效读数门（未至 · 非
   handlers.get("ev:susp")({ key: KEY, active: true, running: 1 })
   assert.deepEqual(store.get().susp[KEY], { active: true, running: 1, queued: 0, pending: 0, done: 0 }, "两新通道同径：`ev:susp` → 归约 → store 落态（计数切片）")
   off()
-  assert.equal(handlers.size, 0, "十五路全退")
+  assert.equal(handlers.size, 0, "十八路全退")
 })
 
 test("#459 游标清点两族（回合尾三径 / 段界 ev:tool-call ⇒ 零 `streaming` 真项 ∧ 新块对象；非活动键 / 无命中 ⇒ 块面零写）", () => {
@@ -417,5 +418,47 @@ test("U204: 「对齐第三批」归约 —— interrupted 清扫 · stopMark（
   assert.deepEqual(Object.keys(gate.pool.approvals[0]).sort(), ["diff", "owner", "promptId", "shape", "tool"], "白名单四键 + 两新键（表外键零落）")
   assert.deepEqual(gate.pool.approvals[0].diff, { patch: "@@ -1 +1 @@" }, "`diff` 原样透传（核 `diffInfo`）")
   assert.equal("owner" in reduce(stateOf(), { channel: "ev:approval", key: KEY, promptId: "p2", shape: "batch" }).pool.approvals[0], false, "缺键 ⇒ 条目不落（零 `undefined` 键）")
+})
+
+// ─── U220「回合中插入」排队面归约（镜面两形 · 消费回执交接 · 首屏重建 · 降级码切片）────
+
+test("U220: `ev:queue` 归约（状态形镜面整置 ∕ 消费回执形 ⇒ 镜面 + 用户块 + 降级码切片）· `history:page` 首屏重建", () => {
+  const blank = stateOf()
+  // ① 状态形：本键镜面整置（幂等 —— 同值原引用；非数组 / 坏键 ⇒ 零写）
+  const one = reduce(blank, { channel: "ev:queue", key: KEY, items: [{ text: "排队一", ts: 11 }] })
+  assert.deepEqual(one.pending[KEY], [{ text: "排队一", ts: 11 }], "状态形 ⇒ 本键镜面整置（权威 = 宿主）")
+  assert.equal(reduce(one, { channel: "ev:queue", key: KEY, items: [{ text: "排队一", ts: 11 }] }), one, "同值 ⇒ 原引用（幂等）")
+  assert.equal(reduce(one, { channel: "ev:queue", key: KEY, items: "x" }), one, "非数组 ⇒ 零写（形不合）")
+  assert.equal(reduce(one, { channel: "ev:queue", items: [{ text: "x" }] }), one, "坏键 ⇒ 零写")
+  assert.deepEqual(reduce(one, { channel: "ev:queue", key: KEY, items: [{ text: "排队一", ts: NaN }] }).pending[KEY],
+    [{ text: "排队一", ts: null }], "`ts` 非有限数 ⇒ `null`（禁假造）")
+  assert.deepEqual(reduce(one, { channel: "ev:queue", key: "9", items: [{ text: "他键", ts: 1 }] }).pending["9"], [{ text: "他键", ts: 1 }], "按会话键分槽")
+
+  // ② 消费回执形（键门 = 活动会话）：镜面整置 + 用户块入流 + 降级码切片
+  const stopped = reduce(one, { channel: "ev:activity", key: KEY, event: "done" })
+  const withFollowOff = { ...stopped, following: false, pendingNew: 3 }
+  const receipt = reduce(withFollowOff, { channel: "ev:queue", key: KEY, items: [], delivered: { text: "排队一", ts: 11, degraded: "partial" } })
+  assert.deepEqual(receipt.pending[KEY], [], "镜面整置（空快照）")
+  assert.deepEqual(receipt.blocks.at(-1), { kind: "user", text: "排队一", ts: 11 }, "用户块入流（尾块 = user —— 回放同形）")
+  assert.deepEqual([receipt.following, receipt.pendingNew], [true, 0], "并笔回底（直发 ∕ 回执两径同判）")
+  assert.deepEqual(receipt.attachDegraded, { [KEY]: "partial" }, "降级码切片置位（提示面载波）")
+  const cleaned = reduce(receipt, { channel: "ev:queue", key: KEY, items: [], delivered: { text: "下一条", ts: 12 } })
+  assert.deepEqual(cleaned.attachDegraded, {}, "下次回执无 `degraded` ⇒ 清键（零残留）")
+
+  // 非活动键：镜面 + 降级码照写（切回即见），块面零写（键门）
+  const away = reduce({ ...stateOf(), activeSession: "9" }, { channel: "ev:queue", key: KEY, items: [], delivered: { text: "非活动条目", ts: 1, degraded: "non-vision" } })
+  assert.equal(away.blocks.length, 0, "键门：非活动会话 ⇒ 零块写")
+  assert.deepEqual(away.pending[KEY], [], "非活动键镜面照整置")
+  assert.deepEqual(away.attachDegraded, { [KEY]: "non-vision" }, "非活动键降级码照写（切回即见）")
+
+  // ③ 首屏重建（`history:page` 回执 `queue` 键）· 回填读不重建 · 键缺 ⇒ 零写
+  const first = applyPage(stateOf({ pending: { [KEY]: [{ text: "旧镜面", ts: 1 }] } }),
+    { ok: true, messages: [], hasOlder: false, next: null, meta: null, flags: null, queue: [{ text: "宿主队项", ts: 7 }] }, { key: KEY, before: null })
+  assert.deepEqual(first.pending[KEY], [{ text: "宿主队项", ts: 7 }], "首屏读 ⇒ 镜面重建（冷启 ∕ 重载面）")
+  const backfill = applyPage(stateOf({ pending: { [KEY]: [{ text: "活镜面", ts: 2 }] } }),
+    { ok: true, messages: [], hasOlder: true, next: 0, meta: null, flags: null, queue: [{ text: "旧值", ts: 1 }] }, { key: KEY, before: 100 })
+  assert.deepEqual(backfill.pending[KEY], [{ text: "活镜面", ts: 2 }], "回填读不重建（防在途快照覆盖活镜面）")
+  const absent = applyPage(stateOf(), { ok: true, messages: [], hasOlder: false, next: null, meta: null, flags: null }, { key: KEY, before: null })
+  assert.deepEqual(absent.pending, {}, "回执无 `queue` 键 ⇒ 零写（防御读形 —— 禁假造）")
 })
 

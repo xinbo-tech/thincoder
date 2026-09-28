@@ -6,7 +6,9 @@
  * 〔autoTurn 支起跑 ∕ 收尾两发〕；回收 ⇒ 消化完成逐条补发 `ev:subagent { status:"done" }`〔`settled` 驻留块归档入流——
  * VSC `reclaimDigestedBlocks` 同形〕；冻结 ⇒ 退出兜底同型）④ 输入 ∕ 关闭路由（`pushInput` + `wake` ∕ `abort`）
  * ⑤ 提示面触发两档（①用户回合完成 ∕ ②消化轮起跑 `pending > 0`）⑥ **残输入兜底**（出窗残值非空 ⇒ 以普通回合续发——
- * 不静默丢；VSC 队列兜底同形 —— 对位表「关闭」行）。
+ * 不静默丢；VSC 队列兜底同形 —— 对位表「关闭」行）⑦ **timer 面装配**（timer-wake 阶段 2 —— §6.30.11 桌面块：
+ * 空闲 deadline 闩（`timer-watch.mjs` 键面）装配 ∥ 三武装点（回合尾接管未入窗 ⇒ 武装 ∕ 出窗结算后 ⇒ 重武装 ∕
+ * 会话清除面 ⇒ 撤闩清点）∥ 窗内 `timerFace` 注入（核件 opt-in，§6.30.10——`deadline` 现算 + `deliver` 交付））。
  * **边界取点** = 窗内单回合包装（`driveTurn` 的 autoTurn 支：起跑读核 `backgroundCounts(agent).pending` = 起跑数，
  * `tier` 随 `upstreamTurn`；收尾在 `finally`——非 Abort 失败径同样出 `end`）。核件 `hooks.onDigest` 为**备用面**
  * （核钩在非 Abort 失败径不出 `end` ⇒ 不可作主取点）：本档不注册该钩 —— **零双帧**。
@@ -15,15 +17,19 @@
  * 读该投影 ⇒ 逐条经 `runTurn`（宿主既有三径结算提取面，`send` 同源）以**普通回合**续发；会话中止径（`abort` = dispose ∕
  * 切项目级联）不续发——会话已亡，消息随会话终止（VSC `panel._panel` 守卫同形，记错一行；含**续发期**窗已摘后的中止，
  * 经 `resuming` ∕ 中止墓碑检查点落位——零复活窗）。
- * 零宿主依赖（`post` ∕ `runTurn` ∕ `reloadSlot` ∕ `notify` 皆注入）⇒ 平 node 直测；零文案（文案面 = 渲染面 ∕ `notify.mjs`）。
+ * 零宿主依赖（`post` ∕ `runTurn` ∕ `reloadSlot` ∕ `notify` ∕ `busyOf` ∕ `takeOver` ∕ 三时钟缝皆注入）⇒ 平 node 直测；零文案（文案面 = 渲染面 ∕ `notify.mjs`）。
  */
 import { backgroundCounts, poolLive, startSuspension } from "@thincoder/core/agent/suspension.mjs"
 import { upstreamAskLabelVars } from "@thincoder/core/agent-tools/parent-channel.mjs"
+import { pendingTimerDeadline } from "@thincoder/core/agent/timers.mjs"
+import { createTimerWatch, deliverExpiredTimers, fireTimerWake, timerWakeEnabled } from "./timer-watch.mjs"
 
 /** 挂起驱动工厂：`post(channel, payload)` = 出站面（主进程注入）· `runTurn(key, agent, text, opts)` = 单回合执行面
  *  （宿主既有三径结算提取 —— `send` ∕ 驱动同源）· `reloadSlot(key, agent, cwd)` = 每轮起跑前按本窗键重装槽
- *  （§2.2 会话钉定；缺省 = 零动作）· `notify` = 提示面策略（`thincoder-desktop/src/main/notify.mjs`；缺省 = 零动作）。 */
-export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify = null } = {}) {
+ *  （§2.2 会话钉定；缺省 = 零动作）· `notify` = 提示面策略（`thincoder-desktop/src/main/notify.mjs`；缺省 = 零动作）·
+ *  `busyOf(key)` = 在飞回合判据（宿主在飞表单向读面——空闲火面用；缺省 ⇒ 恒假）· `takeOver(key, agent)` = 宿主回合尾
+ *  接管面（timer 轮后同判——池活 ⇒ 入窗消化；缺省 ⇒ 回落闩重同步）· `timer` ∕ `clear` ∕ `now` = 闩时钟三扇注入缝。 */
+export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify = null, busyOf = () => false, takeOver = null, timer = setTimeout, clear = clearTimeout, now = Date.now } = {}) {
   if (typeof post !== "function") throw new Error("[suspension-drive] post required (out-bound channel)")
   if (typeof runTurn !== "function") throw new Error("[suspension-drive] runTurn required (single-turn face)")
   /** 窗表：key → entry（`entry` = `{ key, agent, cwd, controller, frozen, handle, pending }`；`pending` = 残输入投影）。 */
@@ -32,6 +38,36 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
   const resuming = new Set()
   /** 续发期中止墓碑（键集）：链每轮起跑前 + 接管前查位——命中 ⇒ 停链，余值随会话终止（记错一行）。 */
   const abortTombstones = new Set()
+  /** 空闲 deadline 闩（§6.30.11 桌面块 —— 装配住本档：与窗内 `timerFace` 是同一 deadline 的两载体，出窗交接
+   *  （池空窗退 ⇒ 交空闲闩）即在本档生命周期内 ⇒ 单点持有；宿主只供两枚注入面（`busyOf` ∕ `takeOver`））。 */
+  const watch = createTimerWatch({
+    onFire: (key, agent) => { void fireIdle(key, agent).catch((err) => console.error(`[suspension-drive] idle timer wake ${key} failed: ${err?.message ?? err}`)) },
+    timer, clear, now,
+  })
+
+  /** 窗内 timer 面（核件 opt-in 三注入项之一 —— §6.30.10）：`deadline()` 每轮现算（开关关 ⇒ `null` ⇒ 零注册）；
+   *  `deliver()` = 到期批交付（**严格布尔**——交付真 ⇒ 核件开 timer 轮；交付面同点落 `ev:timer`）。 */
+  function timerFaceOf(key, agent) {
+    return {
+      deadline: () => (timerWakeEnabled(agent) ? pendingTimerDeadline(agent) : null),
+      deliver: () => deliverExpiredTimers(agent, key, { post, now }) > 0,
+    }
+  }
+
+  /** 空闲闩触发（§6.30.11 火面）：非空闲零动作（在飞 ∕ 窗内交既有路径）；**轮后链尾接管**（§6.30.11 装配点①
+   *  的回合尾面 —— timer 轮亦为回合：池活 ⇒ 入窗消化 ∥ 池空 ⇒ 闩重武装；与 `send` 径两径同接管同判）；交付未
+   *  发生（在飞 ∕ 零到期）⇒ 零动作（免「已到期未出列」0ms 重注册）；轮内抛错同走接管（`finally`）。 */
+  async function fireIdle(key, agent) {
+    let ran = false
+    try {
+      return await fireTimerWake(key, {
+        agent, post, busy: busyOf(key) === true, inWindow: windows.has(key), now,
+        runTurn: (k, a, text, opts) => { ran = true; return runTurn(k, a, text, opts) },
+      })
+    } finally {
+      if (ran) { if (takeOver) takeOver(key, agent); else watch.sync(key, agent) } // 接管面缺省 ⇒ 回落闩重同步（用例面）
+    }
+  }
 
   /** 计数帧（`ev:susp` —— 核 `backgroundCounts` 直传：`{ key, active, running, queued, pending, done }`）。 */
   const postSusp = (key, agent, active, counts = null) => post("ev:susp", { key, active, ...(counts ?? backgroundCounts(agent)) })
@@ -77,12 +113,15 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
     const { key, agent, cwd, controller } = entry
     const autoTurn = opts.autoTurn === true
     const upstreamTurn = opts.upstreamTurn === true
+    const timerTurn = opts.timerTurn === true
+    // 边界帧面 = 消化 ∕ 上行两族（`ev:digest`）；timer 轮的可见面 = `ev:timer` 落流（CLI 同判——timer 轮不冒充消化边界）
+    const boundary = autoTurn && !timerTurn
     if (!autoTurn) { // 消费投影（用户回合）：核件出窗时未及消费者即残值
       const i = entry.pending.indexOf(text)
       if (i >= 0) entry.pending.splice(i, 1)
     }
     const started = Date.now()
-    if (autoTurn) {
+    if (boundary) {
       const n = backgroundCounts(agent).pending // 起跑数（run 首行注入之前读 —— 与 VSC 起跑 post 同点）
       const ask = upstreamTurn ? upstreamAskLabelVars(agent) : null
       post("ev:digest", { key, status: "start", n, ...(upstreamTurn ? { tier: "ask", ...(ask ?? {}) } : {}) })
@@ -91,12 +130,12 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
     reloadSlot?.(key, agent, cwd) // 会话钉定：回合落槽面 = 本窗键槽（非现刻 activeSession —— 切标签零影响）
     let ok = true
     try {
-      await runTurn(key, agent, text, { autoTurn, upstreamTurn, sessionSignal: controller.signal })
+      await runTurn(key, agent, text, { autoTurn, upstreamTurn, timerTurn, sessionSignal: controller.signal })
     } catch (err) {
       ok = false
       throw err
     } finally {
-      if (autoTurn) post("ev:digest", { key, status: "end", ok, ms: Date.now() - started })
+      if (boundary) post("ev:digest", { key, status: "end", ok, ms: Date.now() - started })
     }
     if (!autoTurn) turnDone(key, agent) // 档①：窗内用户回合完成（成功径——与宿主 `send` 径同一判据）
   }
@@ -132,10 +171,14 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
     start(entry.key, entry.agent, { cwd: entry.cwd })
   }
 
+  // （闩面三武装点住 `start` ∕ `closeWindow` ∕ `abort` 三处 —— 单点持有 ⇒ 与窗状态同刻变更，零跨档同步面。）
+
   /** 入口（回合尾结算后 —— 终局事件已出 · 在飞表已释）：`poolLive(agent)` 判真 ⇒ 进挂起会话（核件直消费）。
    *  返回是否入窗（同键已有窗 ∥ 池空 ⇒ false——零动作）。 */
   function start(key, agent, { cwd = null } = {}) {
-    if (windows.has(key) || !poolLive(agent)) return false
+    if (windows.has(key)) return false // 同键已有窗 ⇒ 零动作（窗内 deadline 由 `timerFace` 单持——不另武装）
+    if (!poolLive(agent)) { watch.sync(key, agent); return false } // 未入窗 ⇒ 武装空闲闩（§6.30.11 装配点①）
+    watch.disarm(key) // 入窗 ⇒ 撤空闲闩（同一 deadline 单持——零双注册）
     const controller = new AbortController()
     const entry = { key, agent, cwd, controller, frozen: null, handle: null, pending: [] }
     windows.set(key, entry)
@@ -146,6 +189,7 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
       abortSignal: controller.signal,
       runTurn: (text, opts) => driveTurn(entry, text, opts),
       injectResidual: (item) => injectResidual(agent, item),
+      timerFace: timerFaceOf(key, agent), // opt-in timer 面（§6.30.10）：窗内到期 ⇒ 兑现开 timer 轮（不等池空）
       hooks: {
         onCounts: (counts) => postSusp(key, agent, true, counts), // 计数 ⇒ `ev:susp`（核单点直传）
         reclaim: (consumed) => reemitDone(key, consumed), // 回收 ⇒ 消化完成逐条补发 done
@@ -170,6 +214,7 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
         }
         return
       }
+      watch.sync(key, entry.agent) // 出窗结算后（§6.30.11 装配点②）：窗退且仍有在途 ⇒ 重武装
       resumeResidual(entry).catch((err) => console.error(`[suspension-drive] window ${key} residual resume failed: ${err?.message ?? err}`))
     }
     handle.done.then(() => closeWindow(null), (err) => closeWindow(err))
@@ -180,6 +225,7 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
   /** 会话中止（`dispose(key)` ∕ 切项目级联）：清池不注入（陈旧结果不回灌）+ 出窗帧；返回是否命中（窗 ∥ 续发链）。
    *  续发期（`closeWindow` 摘窗之后）窗表无项 ⇒ 落**中止墓碑**（`resumeResidual` 检查点消费——免中止盲区）。 */
   function abort(key) {
+    watch.disarm(key) // 会话清除面（§6.30.11 装配点③）：撤闩清点（无闩 ⇒ 零动作——返回语义不变：窗 ∥ 续发链）
     const entry = windows.get(key)
     if (!entry) {
       if (!resuming.has(key)) return false
@@ -212,9 +258,12 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
     abortAll() {
       let n = 0
       for (const key of new Set([...windows.keys(), ...resuming])) if (abort(key)) n += 1
+      watch.disarmAll() // 切项目级联 ⇒ 撤闩清点（空闲态键不在窗表 ∕ 续发链——单列清）
       return n
     },
     /** 窗数读数（诊断 ∕ 测试面）。 */
     size() { return windows.size },
+    /** 闩数读数（诊断 ∕ 测试面 —— 撤闩清点断言；闩表为档内私有面）。 */
+    timerLatches() { return watch.size() },
   }
 }

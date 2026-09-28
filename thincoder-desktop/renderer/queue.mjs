@@ -1,45 +1,41 @@
 /**
- * queue.mjs — 排队消息面（「对齐第二批 · 六件」项 2 · **拆分产出**：队列三纯动作 + 满队常量自
- * `renderer/store.mjs` 拆出 —— 在册预案本批执行，结构拆分零语义）。
- * `pending` 切片（**按会话键分键** `{ [会话键]: [{ text, ts }] }`）的**唯一写面** = 三纯动作 + 常量单源；
- * 条目形 = `{ text, ts }`（`text` 逐字原样 —— 零显示串副本；`ts` = 入队现刻 ms，非有限数 ⇒ `null`）。
- * 分键两理由（设计 §2.4①）：① 未受理气泡挂某会话流 ⇒ 队列须带键（切会话不漂页）；② **flush 目标 =
- * 回合尾事件键**（原取「现刻活动会话」有「切会话错发」缺陷面 —— 该面随分键修）。
- * 读取面：`renderer/mount-composer.mjs`（满队闸 / 回合尾 flush 队首）· 视图面（流内待发送气泡组 /
- * 状态行段 14）按 `state.pending?.[键] ?? []` 直读。
- * 纪律：纯数据面（零 DOM / 零 IPC / 零 `node:` / 零裸包）；拒收 / 无变化 ⇒ **原引用**（零通知 ——
- * 同 `renderer/store.mjs` 其余纯动作）。形态单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 2。
+ * queue.mjs — 排队镜面（「对齐第二批」项 2 · **「回合中插入」批收正**：队列权威 = **宿主单源** ⇒ 本档 = 宿主快照的
+ * **镜面应用纯动作**；原 `enqueue` / `dequeue` / `drainQueue` 三纯动作随本地队列退场 —— 档名不变，语义面收窄）。
+ * `pending` 切片（**按会话键分键** `{ [会话键]: [{ text, ts }] }`）—— **写者两处同源**：
+ *   `renderer/events.mjs` `ev:queue` 归约（快照整置：状态形 ∕ 消费回执形 —— 单源 = `docs/desktop/design/IPC.md` §1 该行）
+ *   ∥ `renderer/page-read.mjs` `applyPage`（`history:page` 回执 `queue` 键 —— 首屏重建）。
+ * 读面 = 流内待发送气泡组（`renderer/views/chat-pending.mjs`）/ 状态行段 14（`renderer/views/statusline.mjs`）。
+ * 条目形 `{ text, ts }`（`text` 逐字原样 —— 零显示串副本；`ts` 非有限数 ⇒ `null`）；图不入快照（KD-40 ⑤）。
+ * 形态单源 = `docs/desktop/design/UI.md` §1「本批注（回合中插入 · 步边界 pickup）」项 1 镜面句。
+ * 纪律：纯数据面（零 DOM / 零 IPC / 零 `node:` / 零裸包）；形不合 / 无变化 ⇒ **原引用**（零通知）。
  */
 
-/** 满队常量（**单源** —— 本键队长上限；满队提示行与拒绝径共用同一个数）：设计面只点名「常量单源」
- *  而**未定值** —— 值 8 = 实施选择（满队判据 / 提示行 / 不入队三事皆与该值无关）。 */
+/** 满队常量（**显示面判据**：本键队长 ≥ 此值 ⇒ 满队提示行在场 —— 提示行由派生读数驱动，零本地提示态；
+ *  拒绝径归**宿主回执** `queue-full`；容量判据单源 = `thincoder-desktop/src/main/queued-input.mjs` `QUEUED_MAX_ITEMS` 同值）。 */
 export const QUEUE_MAX = 8
 
-/** ① 入队（尾追一条）：**满队按键判**（本键队长 ≥ `QUEUE_MAX`）∥ 空白 / 非串文本 ∥ 非串空键 ⇒
- *  **原引用**（不收 —— 调用面据此判 `full` + 文本保留）。 */
-export function enqueue(state, key, text, ts) {
+/** 快照条目归一（恰形 `{ text, ts }`：文本非串 ⇒ `""`（不抛 —— 宿主逐字投影面）；非有限数 `ts` ⇒ `null`）。 */
+function entryOf(entry) {
+  return {
+    text: typeof entry?.text === "string" ? entry.text : "",
+    ts: typeof entry?.ts === "number" && Number.isFinite(entry.ts) ? entry.ts : null,
+  }
+}
+
+/** 列表等价判据（幂等面：长度 + 逐项 `text` 逐字 / `ts` 同值 ⇒ 零写）。 */
+function sameList(a, b) {
+  if (a === b) return true
+  if (!Array.isArray(a) || a.length !== b.length) return false
+  return a.every((entry, index) => entry?.text === b[index].text && entry?.ts === b[index].ts)
+}
+
+/** 本键镜面整置（纯动作 · 幂等 —— 快照整置语义）：非串键 / 非数组 ⇒ **原引用**（形不合零写 —— 禁假造）；
+ *  同值 ⇒ 原引用（零通知）。空快照（`[]`）⇒ 本键落空表（气泡组由帧尾判据退场）。 */
+export function applyQueue(state, key, items) {
   if (typeof key !== "string" || key === "") return state
-  if (typeof text !== "string" || text.trim() === "") return state
+  if (!Array.isArray(items)) return state
+  const list = items.map(entryOf)
   const table = state?.pending ?? {}
-  const list = Array.isArray(table[key]) ? table[key] : []
-  if (list.length >= QUEUE_MAX) return state
-  const entry = { text, ts: typeof ts === "number" && Number.isFinite(ts) ? ts : null }
-  return { ...state, pending: { ...table, [key]: [...list, entry] } }
-}
-
-/** ② 摘队首（只减不取值 —— 值面读 `pending[键][0]`：回合尾 flush **先发后出队**）；空队 / 无该键 ⇒
- *  **原引用**。 */
-export function dequeue(state, key) {
-  const table = state?.pending ?? {}
-  const list = Array.isArray(table[key]) ? table[key] : []
-  if (list.length === 0) return state
-  return { ...state, pending: { ...table, [key]: list.slice(1) } }
-}
-
-/** ③ 排空本键队列（关页 / 复位路径；槽留空表）：空队 / 无该键 ⇒ **原引用**。 */
-export function drainQueue(state, key) {
-  const table = state?.pending ?? {}
-  const list = Array.isArray(table[key]) ? table[key] : []
-  if (list.length === 0) return state
-  return { ...state, pending: { ...table, [key]: [] } }
+  if (sameList(table[key], list)) return state
+  return { ...state, pending: { ...table, [key]: list } }
 }

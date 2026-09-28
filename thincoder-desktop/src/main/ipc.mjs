@@ -151,15 +151,19 @@ function sessionResume() {
   return receipt
 }
 
-/** `history:page(payload)` ⇒ `{ ok, messages, hasOlder, next, meta, flags, seed? }` ∥ `{ ok:false, reason }`：读面
+/** `history:page(payload)` ⇒ `{ ok, messages, hasOlder, next, meta, flags, queue, seed? }` ∥ `{ ok:false, reason }`：读面
  *  转口 `session-slots.mjs`（零算法副本；cwd 取主进程当前项目内存态 —— 同会话族）。载荷 `{ key, before }`。
+ *  **排队快照叠加（「回合中插入」批 · KD-40 ④）**：`queue` = 本键队列快照（`[{ text, ts }]` —— 冷启 ∕ 重载镜面
+ *  重建面；队列单源 = 宿主 —— 供面 `agentHost.queueSnapshot`）；**键恒在场**（空队 ⇒ `[]`；宿主未装配径同出空键 ——
+ *  无宿主 ⇒ 队必空，形不缺 ∕ 零假造）。
  *  **模式位投影叠加（状态栏对齐批 · `docs/desktop/design/IPC.md` §2「模式位投影注」· 合并口径）**：agent 在场
  *  ⇒ 以**活值**四布尔（宿主 `flagsOf`）置顶（转口读面已携槽投影兜底值 —— `session-slots.mjs` `slotFlags`）；
  *  agent 不在场 ⇒ 槽投影照旧（键仍在场）；槽读不出（失败回执）⇒ 无 `flags` 键（零写 —— 禁假造）。 */
 function historyPage(payload) {
   const receipt = pageHistory(currentCwd(), payload)
   const live = receipt?.ok === true && agentHost ? agentHost.flagsOf(payload?.key) : null
-  return live === null ? receipt : { ...receipt, flags: live }
+  const merged = receipt?.ok === true ? { ...receipt, queue: agentHost ? agentHost.queueSnapshot(payload?.key) : [] } : receipt
+  return live === null ? merged : { ...merged, flags: live }
 }
 
 /** `session:prefs(payload)` ⇒ 族信封 + `meta`（成功携 · 失败缺键）：载荷 `{ key, patch }`（键闭集
@@ -167,7 +171,8 @@ function historyPage(payload) {
 function sessionPrefs(payload) { return requireAgentHost().setPrefs(payload?.key, payload?.patch) }
 
 /** `msg:send(payload)` ⇒ `{ ok:true }`（**立即回** —— 过程走 `ev:*` 出站）∥ `{ ok:true, degraded }`（附件弃项两态
- *  —— `IPC.md` §2「附件注」项 5）∥ `{ ok:false, reason }`（`bad-key` / `busy` / `provider-invalid`）：
+ *  —— `IPC.md` §2「附件注」项 5）∥ `{ ok:true, queued:true }`（**忙态入队** —— 「回合中插入」批 · KD-40 ②）
+ *  ∥ `{ ok:false, reason }`（`bad-key` / `busy`〔挂起窗附件面〕/ `queue-full` / `provider-invalid`）：
  *  载荷 `{ key, text, images }`（`images` 逐项 `{ name, mime, dataURL }`），转口宿主回合驱动。 */
 function msgSend(payload) { return requireAgentHost().send(payload?.key, payload?.text, payload?.images) }
 

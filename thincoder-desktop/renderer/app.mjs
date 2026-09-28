@@ -9,12 +9,13 @@
  * 帧出口（唯一）= `paintChat`：帧前判据 `paintPlan`（重挂键 = `activeSession` / `locale`）⇒ 重挂面（`mountChat` + 同帧态刷）
  * 或增量面（`alignPlan` ⇒ `settleFrame` 六步）；窗限 `chatLimit` **只增**（`nextWindow` 收束沿 + 本页**实并入块数**）。
  * 出档面：池面一族 = `renderer/mount-pool.mjs` · 会话族 = `renderer/mount-sessions.mjs` · 输入区 = `renderer/mount-composer.mjs`
+ * （发送面三件 = `renderer/composer-send.mjs` —— 「回合中插入」批拆分产出）
  * · 会话头接线 = `renderer/mount-head.mjs`（候选面 / 写路 `session:prefs` / 回执刷行 —— 头面刷行调用点仍住本档）
  * · 状态行 = `renderer/mount-status.mjs`（D17 / D22 承载 16 段单点重建 + 订阅切片键面 `STATUS_KEYS`）
  * · 卡族两族 = `renderer/mount-cards.mjs`（提问 / 计划 —— 挂载 + 作答 / 取消出口）
  * · 事件归约 + 页应用 = `renderer/events.mjs` · 订阅接线 = `renderer/events-subscribe.mjs`；本档接线两处 = `attachScroll`
- * （回填 / 跟滚 / 停跟三出口 + 只读口 `guards()`；药丸回底 / 工具卡 toggle 两出口）· `attachEvents({ on, onTurnTail })`
- * （多通道订阅 + 回合尾 flush 窄口 —— 批档 §1.14）；退订句柄本档无消费点 —— 页面生命周期 = 进程生命周期。
+ * （回填 / 跟滚 / 停跟三出口 + 只读口 `guards()`；药丸回底 / 工具卡 toggle 两出口）· `attachEvents({ on })`
+ * （多通道订阅 —— 回合尾窄口存续（标题刷新面）；输入区 flush 携行随「回合中插入」批退场）；退订句柄本档无消费点 —— 页面生命周期 = 进程生命周期。
  * 读面失败一律 `console.error` + 零切片写（不静默）；零直连 IPC（只经窄桥 `window.thincoder.invoke`）；
  * 剪贴板写效应（`writeText`）**单点供给** = 本档（同给对话流 handlers 与输入区 `attachComposer` —— 复制面唯一实现处）；
  * 核件取词注册（「对齐第二批」修复轮）= 本档模块级一次 `setStringsSink(setStrings)`（注册单点；词表合并式仍单点居 `renderer/i18n.mjs` `initDict`）。
@@ -27,7 +28,8 @@ import { createHeartbeat, refreshLiveBlocks } from "./heartbeat.mjs"
 import { initDict, setStringsSink } from "./i18n.mjs"
 import { setStrings } from "/rc/i18n.mjs"
 import { attachCards, CARDS_KEYS } from "./mount-cards.mjs"
-import { attachComposer, submitDraft } from "./mount-composer.mjs"
+import { attachComposer } from "./mount-composer.mjs"
+import { submitDraft } from "./composer-send.mjs"
 import { attachHead } from "./mount-head.mjs"
 import { POOL_SLOT, attachPool, POOL_KEYS } from "./mount-pool.mjs"
 import { attachStatus, STATUS_KEYS } from "./mount-status.mjs"
@@ -63,13 +65,13 @@ const FLOW_SLOT = '[data-slot="flow"]' // 对话流容器锚（= 滚动容器自
 // 重挂触发切片（`locale` 在内：文案随词表 ⇒ 树须重绘；`railForm` = 换形态切片——行原位换形；`ledger` = 账本警示切片）
 const RAIL_KEYS = ["project", "sessions", "locale", "railForm", "ledger"]
 const SHELL_KEYS = ["tabs", "activeTab", "sessions", "tabBadges", "sessionMeta", "locale", "pendingClose"] // 外壳重挂触发切片
-const CHAT_KEYS = ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "project", "pending", "digest", "stopMark", "ledgerLines"] // 对话流帧触发切片（`locale` 在内：文案随词表 · `pool`：审批卡宿对话流 · `project`：引导码随 cwd——批 B 追加轮 · `pending`：流内待发送气泡组——「对齐第二批」项 2 · `digest`：流内消化行组——桌面空闲唤醒批 · `stopMark` / `ledgerLines`：两尾组的单变触发 —— 「对齐第三批」项 6 / 12；`settings` 不入表 —— 欢迎条文案二值随重挂径，且帧尾态刷判据 = 码面（见 `renderer/views/chat-guide.mjs`））
+const CHAT_KEYS = ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "project", "pending", "digest", "timerNotice", "stopMark", "ledgerLines"] // 对话流帧触发切片（`locale` 在内：文案随词表 · `pool`：审批卡宿对话流 · `project`：引导码随 cwd——批 B 追加轮 · `pending`：流内待发送气泡组——「对齐第二批」项 2 · `digest`：流内消化行组——桌面空闲唤醒批 · `timerNotice`：流内到期触发行组——timer-wake 阶段 2 · `stopMark` / `ledgerLines`：两尾组的单变触发 —— 「对齐第三批」项 6 / 12；`settings` 不入表 —— 欢迎条文案二值随重挂径，且帧尾态刷判据 = 码面（见 `renderer/views/chat-guide.mjs`））
 const { paintPool, handlers: poolHandlers } = attachPool(host) // 池面一族（右栏重挂 + 两出口 —— 出档 `renderer/mount-pool.mjs`）
 const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —— 挂载 + 作答 / 取消出口；出档 `renderer/mount-cards.mjs`）
 // 设置面 / 向导 / 信息行一族（自持订阅 —— 出档 `renderer/mount-settings.mjs`；目录出口复用项目面链）；
 // 句柄捕获 = 信息行复读口（#461 —— `openDir` 成功链消费 `refreshInfo`，零第二订阅点）。
 const settingsFace = attachSettings(host, { onProjectOpened: openDir })
-const { flushTurnTail } = attachComposer(host, { writeText }) // 输入区一族（挂载 + handlers + 回合尾 flush 句柄 —— 出档 `renderer/mount-composer.mjs`）
+attachComposer(host, { writeText }) // 输入区一族（挂载 + handlers 自接线 —— 出档 `renderer/mount-composer.mjs`；发送面 = `renderer/composer-send.mjs`）
 const head = attachHead({ host, onRepaint: () => paintHead() }) // 会话头接线一族（候选面 + 写路 `session:prefs` —— 出档 `renderer/mount-head.mjs`）
 const { paintStatus } = attachStatus() // 状态行一族（D17 / D22 承载 16 段单点重建 —— 出档 `renderer/mount-status.mjs`）
 
@@ -262,8 +264,8 @@ chatScroll = attachScroll(document.querySelector(FLOW_SLOT), {
 })
 
 /** 事件面接线（装配一次 · 批 8 · 批档 §2.11）：多通道订阅 ⇒ 值面写者单源 = `renderer/events.mjs`（归约）+ `renderer/events-subscribe.mjs`
- *  （订阅）；回合尾 ⇒ `flushTurnTail` 窄口（批档 §1.14 —— flush 触发只此一处）；退订句柄本档无消费点；`on` 缺位 ⇒ 该档记错 + 空操作。 */
-attachEvents({ on: host?.on, onTurnTail: flushTurnTail })
+ *  （订阅）；回合尾窄口存续（标题刷新面）—— 输入区 flush 携行随「回合中插入」批退场（队列消费改宿主驱动）；退订句柄本档无消费点；`on` 缺位 ⇒ 该档记错 + 空操作。 */
+attachEvents({ on: host?.on })
 
 /** 文件链接着装与委托（相抵②）：着装面（核 `linkifyPaths` + `data-path` 锚）归 `views/chat-tool.mjs` / `views/chat.mjs`；**委托注册单点 = 本档**（装配期一次 —— 挂载根 = 对话流宿主；幂等 `_fileLinksBound`）。 */
 bindFileLinks(document.querySelector(FLOW_SLOT), openFile)

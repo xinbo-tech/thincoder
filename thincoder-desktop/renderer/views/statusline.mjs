@@ -14,8 +14,8 @@
  * `tool` = 块面末位 running 工具块的 `name` · `elapsed` = 回合起刻（`turnStarts[key]` → 现刻）· `tasks` = `tasks[key]` ·
  * `turn` = 归约槽 `turns[key]` `{ n, max }` · `tokens` = `tokens[key]`（`↑↓` / `✦` / `hit%`）· `context` = `usage[key]` ·
  * `ledger` = `projectInfo.thresholdReached`（**只承超阈警示位** —— 计数住左列信息行）· `timer` = `timers[key]` `{ count, expired }` ·
- * `title` = 活动会话行标题（与标签条 / 左列**同源** —— `sessions:list` 行）· `enter` = 输入提示三态（队 ≥ 1 ⇒ 条数句 ·
- * 忙 ∧ 队空 ⇒ 排队句 · 静 ⇒ `Enter: send`）。
+ * `title` = 活动会话行标题（与标签条 / 左列**同源** —— `sessions:list` 行）· `enter` = 输入提示三态（源 = 本会话队镜面；
+ * 队 ≥ 1 ⇒ 条数句 · 忙 ∧ 队空 ⇒ 排队句 · 静 ⇒ `Enter: send`）。
  * 判据（D17 · KD-25）：**未至 / 非正 / 缺片 ⇒ 该段零节点**（禁假造）；段锚 = `data-seg`（闭集 = `STATUS_SEGMENTS`）·
  * 段内件锚 = `data-part`（令牌三件）；跨会话告警位（非活动标签的待审批 / 运行提示）沿既有面（`data-alert` —— 非 16 段之一）。
  * 形态：纯构树（`statusModel` → 态对象 · `statusTree` → 结构描述符树）+ 薄挂载（`mountStatus` = clear + build + append ——
@@ -182,8 +182,9 @@ function titleSegment(sessions, key) {
   return { code: "title", parts: [{ text: word }] }
 }
 
-/** 段 14 · 输入提示三态（表行 14 · 「对齐第二批」项 2：**源 = 本会话队** —— `pending[活动会话键]`，右列队列族不再
- *  承载用户排队消息）：队 ≥ 1 ⇒ 条数句 · 忙 ∧ 队空 ⇒ Enter 排队句 · 静 ⇒ `Enter: send`（词键
+/** 段 14 · 输入提示三态（表行 14 · 「对齐第二批」项 2 · **「回合中插入」批收正**：**源 = 本会话队快照镜面**
+ *  —— `pending[活动会话键]`；权威 = 宿主，渲染面 = 镜面；右列队列族不再承载用户排队消息）：
+ *  队 ≥ 1 ⇒ 条数句 · 忙 ∧ 队空 ⇒ Enter 排队句 · 静 ⇒ `Enter: send`（词键
  *  `status.enter.send` —— 对位 CLI enterHint 静息值；静息态恒在场 = 打开态可亮面）。 */
 function enterSegment(pending, key, codes) {
   const queue = key !== null && pending !== null && typeof pending === "object" && Array.isArray(pending[key]) ? pending[key] : []

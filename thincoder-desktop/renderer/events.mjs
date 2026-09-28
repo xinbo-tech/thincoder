@@ -1,8 +1,10 @@
 /**
  * events.mjs — 渲染面事件归约核心（事件通道 → 切片写者**单源** · 批档 §2.2(e) / §2.11⑧ · `docs/desktop/design/IPC.md` §1）：
  * 切片写者的**单源**——主进程只产事件 / 回执，值面落树全在本档；订阅接线面出档 `renderer/events-subscribe.mjs`
- * （十六通道表 · `attachEvents` · 回合尾窄口携键 —— 300 行拆分层落形）；问题 / 任务切片面出档 `renderer/questions.mjs`、
+ * （十七通道表 · `attachEvents` · 回合尾窄口携键 —— 300 行拆分层落形）；问题 / 任务切片面出档 `renderer/questions.mjs`、
  * **挂起 / 消化两切片** = 桌面空闲唤醒批增归约面两分派支（`ev:susp` 计数切片 ∕ `ev:digest` 消化行切片）；
+ * **到期触发切片** = timer-wake 阶段 2 增第三分派支（`ev:timer` ⇒ `state.timerNotice[key]` —— 行文 = 交付原文；
+ * 行组 `[data-timer]` 与消化行同族；生命期 = 运行期痕（首屏页读整置即失 —— `renderer/page-read.mjs`））；
  * 位标面出档 `renderer/badges.mjs`（桌面残余批拆档产物 —— `clearQuestion` 本档 re-export 保导出名面）；
  * **页读径出档 `renderer/page-read.mjs`**（「对齐第二批」拆分产出 —— 硬限 500 顶格，在册预案本批执行：
  * `applyPage` / `blockOfMessage` 两消费面改引该档 = `renderer/mount-sessions.mjs` / 测试面；本档不引页读档，无环）；
@@ -20,7 +22,7 @@
  *   `isTurnTail(ev)`           回合尾判据**单源**（**三径** = `ev:activity` 无 `fields` 的 `done` / `stopped` ∥ `ev:error` —— `onActivity` / `onError` 与订阅面 `events-subscribe.mjs` 同用）
  *
  * 纪律：块面写（`blocks`）须 `ev.key === state.activeSession`（否则原引用 —— 非活动会话的事件不落本会话流）；
- *   `tabBadges` 任意键可写 · `sessionMeta` / `usage` / 卡面两切片（`questions` / `tasks`）· 挂起 / 消化两切片（`susp` / `digest` —— 空闲唤醒批）按 key 写（切片同键就地替换 · 首写自种 · 零键门 —— 切回即见，单源 = `docs/desktop/design/RENDERER.md` §1.1 事件归约面条）（§2.2(e) 值面写者表）· 状态行读数槽四（`turns` / `turnStarts` /
+ *   `tabBadges` 任意键可写 · `sessionMeta` / `usage` / 卡面两切片（`questions` / `tasks`）· 挂起 / 消化两切片（`susp` / `digest` —— 空闲唤醒批）· 到期触发切片（`timerNotice` —— timer-wake 阶段 2）按 key 写（切片同键就地替换 · 首写自种 · 零键门 —— 切回即见，单源 = `docs/desktop/design/RENDERER.md` §1.1 事件归约面条）（§2.2(e) 值面写者表）· 状态行读数槽四（`turns` / `turnStarts` /
  *   `tokens` / `timers`）同判（R3a · D17 承载段数据源）· `subBlocks` 按会话键分槽（R3b · D20 —— 归约径住
  *   `renderer/subagent-reduce.mjs`：块面内容回显 = 核件 tail-3 / 展开（「对齐第二批」项 3 收正：原「零内容回显」
  *   口径撤销）；态机单源 = 核 `/rc/subblocks/state.mjs` `subBlocksReduce`）· 池切片 **摘工具行**（`pool.blocks` 不再在册 —— 工具调用面 = 对话流工具卡；折叠头
@@ -28,7 +30,9 @@
  *   分池 —— 设计未给池的会话键口径，缺口随 §5 登记）；文案零硬编码（本档不出词）。
  * 活块 / 页块两面差异（决策 D8-8）：页块**不落** `status` / `durationMs`（活块有），键集一致性判据 = 五型闭集。
  */
-import { appendBlock } from "./store.mjs"
+import { appendBlock, returnToBottom, setAttachDegraded } from "./store.mjs"
+// 排队镜面（「回合中插入」批 —— 快照整置纯动作；本档 = 写者之一，另一写者 = `renderer/page-read.mjs` 首屏重建）。
+import { applyQueue } from "./queue.mjs"
 // 问题 / 任务切片面（桌面残余批拆档产物）：两归约体归 `reduce` 分派；`clearQuestion` 两调用面同源。
 import { clearQuestion, onQuestion, onTask } from "./questions.mjs"
 export { clearQuestion }
@@ -282,6 +286,37 @@ function onDigest(state, ev) {
   return { ...state, digest: { ...table, [ev.key]: record } }
 }
 
+/** `ev:timer`——到期触发切片（按会话 `key` 分槽 · 同键就地替换——**最近一次交付**；行文 = 交付原文）：
+ *  消费 = 流内触发行组 `[data-timer]`（构树 ∕ 帧尾同刷住 `renderer/views/chat-chrome.mjs`）；生命期 = **运行期痕**
+ *  （非落盘件 —— 首屏页读整置即失；同 `[data-stopped]` 族）；`text` 非非空串 ⇒ **零写**（禁假造空行）。
+ *  显示裁（≤3 行 + `…`）= 渲染面单点（`timerGroupNode`）；单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.11。 */
+function onTimer(state, ev) {
+  if (typeof ev.text !== "string" || ev.text === "") return state
+  const table = state.timerNotice ?? {}
+  const record = { text: ev.text }
+  if (sameRecord(table[ev.key], record)) return state
+  return { ...state, timerNotice: { ...table, [ev.key]: record } }
+}
+
+/** `ev:queue` —— 排队面镜面两形（「回合中插入」批 · 单源 = `docs/desktop/design/PROJECT.md` §2 KD-40 ④）：
+ *  ① **状态形**（`{ key, items }`）⇒ 本键镜面整置（快照整置 · 幂等 —— 权威 = 宿主，渲染面零本地队）；
+ *  ② **消费回执形**（+ `delivered`）⇒ 镜面整置 ∧ 降级码切片随动（在场 ⇒ 置位 ∕ 缺 ⇒ 清）∧ **用户块入流**
+ *  （键门 = 活动会话；块形与回放同形 · 文本 = `delivered.text` 逐字）∧ **并笔回底**（直发 ∕ 回执两径同判）；
+ *  非串 `key` / 非数组 `items` ⇒ 原引用（形不合零写）；空快照（消费殆尽 ∕ 会话中止清队）⇒ 镜面落空。 */
+function onQueue(state, ev) {
+  const key = typeof ev.key === "string" && ev.key !== "" ? ev.key : null
+  if (key === null || !Array.isArray(ev.items)) return state
+  const delivered = ev.delivered !== null && typeof ev.delivered === "object" ? ev.delivered : null
+  const mirror = applyQueue(state, key, ev.items)
+  if (delivered === null) return mirror
+  const withCode = setAttachDegraded(mirror, key, delivered.degraded)
+  const text = typeof delivered.text === "string" ? delivered.text : ""
+  if (text === "" || key !== withCode.activeSession) return withCode
+  const block = { kind: "user", text }
+  if (typeof delivered.ts === "number" && Number.isFinite(delivered.ts)) block.ts = delivered.ts
+  return returnToBottom(appendBlock(withCode, block))
+}
+
 /** 回合尾判据**单源**（三径 = §2.16②/④ + 批 A 修正轮 —— `docs/desktop/design/RENDERER.md` §1.1「回合尾三径」条）：
  *  吃**两通道形**：`ev:activity` ∧ `fields` 键**不在场** ∧ `event ∈ {done, stopped}` ∥ `ev:error`（该通道**单义** = 宿主回合结算
  *  〔错误径〕—— 工具级错误不经本通道 ⇒ 全收）∥ 余 ⇒ 假；值面 `onActivity` / `onError` 与订阅面（回合尾 ⇒ 标题刷新 · 输入区 flush）同用。
@@ -388,7 +423,7 @@ function onLedger(state, ev) {
   return { ...state, ledgerLines: { ...table, [ev.key]: lines } }
 }
 
-/** 纯归约出口：`ev` = `{ channel, ...载荷 }`（载荷携 `key`）。未知通道 / 形不合 ⇒ 原引用。 */
+/** 纯归约出口：`ev` = `{ channel, ...载荷 }`（载荷携 `key`）。未知通道 / 形不合 ⇒ 原引用（逐通道一写者 —— 含 `ev:queue`）。 */
 export function reduce(state, ev, now = Date.now()) {
   const channel = typeof ev?.channel === "string" ? ev.channel : null
   if (channel === null) return state
@@ -406,6 +441,8 @@ export function reduce(state, ev, now = Date.now()) {
     case "ev:task": return onTask(state, ev)
     case "ev:susp": return onSusp(state, ev)
     case "ev:digest": return onDigest(state, ev)
+    case "ev:timer": return onTimer(state, ev)
+    case "ev:queue": return onQueue(state, ev)
     case "ev:usage": return onUsage(state, ev)
     case "ev:ledger": return onLedger(state, ev)
     case "ev:subagent": return onSubagent(state, ev, now)

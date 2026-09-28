@@ -10,6 +10,8 @@
  */
 import { applyFlags } from "./events.mjs"
 import { endBackfill } from "./store.mjs"
+// 排队镜面（「回合中插入」批 —— `history:page` 回执 `queue` 键 = 冷启 ∕ 重载重建面；写者两处同源）。
+import { applyQueue } from "./queue.mjs"
 
 /** 会话头字段白名单（`renderer/views/chrome.mjs:8-9` 判据：非串 / 空串 ⇒ 零节点）——
  *  **三值**（状态栏对齐批：两模式位撤出会话头投影 —— 呈现面单源 = 状态行 banner 段，供面 = 回执 `flags`）。 */
@@ -87,12 +89,23 @@ function clearStopMark(table, key) {
   return next
 }
 
-/** 页回执应用（`docs/desktop/design/IPC.md` §2 `history:page` 定形）：`{ ok, messages, hasOlder, next, meta, flags, seed? }`。
+/** 到期触发痕清点（timer-wake 阶段 2 · 单源 = 本档）：首屏页读（`before == null`）⇒ 摘本键触发行（运行期痕 ——
+ *  **非落盘件**：重开 / 切回页读即失）；无痕 ⇒ 原引用（零写）。 */
+function clearTimerNotice(table, key) {
+  if (table === null || typeof table !== "object" || table[key] === undefined) return table
+  const next = { ...table }
+  delete next[key]
+  return next
+}
+
+/** 页回执应用（`docs/desktop/design/IPC.md` §2 `history:page` 定形）：`{ ok, messages, hasOlder, next, meta, flags, queue, seed? }`。
  *  `ok !== true` ⇒ **清在途**（成败皆清 —— finally 语义）且不写其余切片；
  *  `flags` 与 `meta` **同一写点**（`applyFlags` —— 状态栏对齐批；每次页读皆携 ⇒ 回填径同写）；
  *  `key !== activeSession` ⇒ 跳块 / 历史写（`sessionMeta[key]` / `sessionFlags[key]` 仍写）；
- *  首屏（`before == null`）⇒ 块整置 + 回底（`following = true` / `pendingNew = 0`；空页同径）+ **打开态播种**
- *  （`seed` ⇒ `tasks[key]` / `usage[key]` 同笔 —— 判据住 `seedPatch`）；
+ *  首屏（`before == null`）⇒ 块整置 + 回底（`following = true` / `pendingNew = 0`；空页同径）+ **运行期痕两清**
+ *  （停止痕 `stopMark` ∕ 到期触发痕 `timerNotice` —— 同首屏门）+ **打开态播种**
+ *  （`seed` ⇒ `tasks[key]` / `usage[key]` 同笔 —— 判据住 `seedPatch`）+ **排队镜面重建**
+ *  （`queue` 键 ⇒ `applyQueue` —— 「回合中插入」批 · KD-40 ④；仅首屏读）；
  *  回填 ⇒ 前插 + `history` 落态（`hasOlder === false ⇒ next = null`；高度补偿归 `settleFrame` 六步既有）。 */
 export function applyPage(state, receipt, { key, before } = {}) {
   if (receipt?.ok !== true) return endBackfill(state)
@@ -107,10 +120,13 @@ export function applyPage(state, receipt, { key, before } = {}) {
   const page = messages.flatMap((msg) => blockOfMessage(msg))
   if (before == null) {
     const stopMark = clearStopMark(flagged.stopMark, key)
-    return {
-      ...flagged, ...(stopMark === flagged.stopMark ? {} : { stopMark }),
+    const timerNotice = clearTimerNotice(flagged.timerNotice, key)
+    const first = {
+      ...flagged, ...(stopMark === flagged.stopMark ? {} : { stopMark }), ...(timerNotice === flagged.timerNotice ? {} : { timerNotice }),
       ...seedPatch(flagged, key, receipt.seed), blocks: page, sessionMeta, history, following: true, pendingNew: 0,
     }
+    // 排队镜面重建（仅首屏读 —— 回填读不重建：防在途快照覆盖活镜面）；键缺 / 非数组 ⇒ `applyQueue` 拒收（零写）。
+    return applyQueue(first, key, receipt.queue)
   }
   return { ...flagged, blocks: [...page, ...(flagged.blocks ?? [])], sessionMeta, history }
 }

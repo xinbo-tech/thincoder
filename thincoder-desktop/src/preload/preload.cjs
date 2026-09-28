@@ -15,7 +15,7 @@
  * `msg:send` → `msg:interrupt` → `provider:list` → `provider:save` → `provider:remove` → `provider:verify` →
  * `model:list` → `settings:agent` → `mcp:list` → `mcp:save` → `mcp:remove` → `config:write` → `ledger:read` →
  * `batch:status` → `question:respond` → `session:prefs` → `subagent:stop` → `file:open`；顺序供白名单定序断言 —— 主侧据以注册）。
- * 出站订阅面 `on(name, cb)`：白名单 = **十六条** `ev:*`（`EVENT_CHANNELS`）——表外名 **throw**（不入 IPC）；
+ * 出站订阅面 `on(name, cb)`：白名单 = **十八条** `ev:*`（`EVENT_CHANNELS`）——表外名 **throw**（不入 IPC）；
  * 返回退订函数（同 listener 引用 ⇒ 二次退订零抛）。
  */
 const CHANNELS = Object.freeze([
@@ -26,10 +26,11 @@ const CHANNELS = Object.freeze([
   "model:list", "settings:agent", "mcp:list", "mcp:save", "mcp:remove",
   "config:write", "ledger:read", "batch:status", "question:respond", "session:prefs", "subagent:stop", "file:open",
 ])
-/** 出站订阅白名单（序同桥面表；名面与主侧 `webContents.send` 用名同；**十六条** = 回调映射十一条 + 宿主自产五条（`ev:usage` / `ev:error` / `ev:susp` / `ev:digest` / `ev:ledger`——「对齐第三批」增）—— 非回调映射；计数族权威数 / 三档同值收正 = 在册登记（`docs/desktop/design/PROJECT.md` §10 BE 行），事件映射段 = `docs/desktop/design/IPC.md` §1）。 */
+/** 出站订阅白名单（序同桥面表；名面与主侧 `webContents.send` 用名同；**十八条** = 回调映射十一条 + 宿主自产七条（`ev:usage` / `ev:error` / `ev:susp` / `ev:digest` / `ev:ledger` [`ev:timer` —— timer-wake 阶段 2 增] / [`ev:queue` —— 「回合中插入」批增]）—— 非回调映射；计数族权威数 / 三档同值收正 = 在册登记（`docs/desktop/design/PROJECT.md` §10 BE 行），事件映射段 = `docs/desktop/design/IPC.md` §1）。 */
 const EVENT_CHANNELS = Object.freeze([
   "ev:token", "ev:reasoning", "ev:activity", "ev:subagent", "ev:subchunk", "ev:tool-call", "ev:tool-output", "ev:tool-result",
-  "ev:approval", "ev:question", "ev:task", "ev:susp", "ev:digest", "ev:usage", "ev:error", "ev:ledger",
+  "ev:approval", "ev:question", "ev:task", "ev:susp", "ev:digest", "ev:usage", "ev:error", "ev:ledger", "ev:timer",
+  "ev:queue",
 ])
 const BRIDGE_KEY = "thincoder"
 
