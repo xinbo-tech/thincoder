@@ -64,6 +64,12 @@
 - **#423 ∕ #424（派单纪律句）**：persona-engineering 派单结构节尾 append——CN `:137-138` · EN `:139-140`（跨舱读数依赖 ⇒ 串行 ∕ 晚取；临时产物 ⇒ `.thincoder/tmp/` ∕ 仓外）。
 - **残余**：#481（`SESSION.md` §6.11 核实收正）随 Doc-A（#34）落；本单四项全落（读回核已过——两树逐项单处 ∕ 指针形 ∕ 行在位）。
 
+### 1.12 父侧自理件（一）：#400② + #416 落（父侧直接执行 · 2026-09-29 00:5x）
+- **#400②（CI Node 22 腿）**：`.github/workflows/test.yml` 新增 `core-node22` 作业（name「thincoder-core (kernel · Node 22.13 floor)」· `node-version: "22.13"` · 步骤 = checkout + setup-node + `npm test`——**既有 `core` 作业零改**）；YAML 缩进读回核已过（D6）；生效 = 下一 push。
+- **#416（核副本族清理）**：四目录已清——`thincoder/.thincoder/tmp/{core-pkg,core-probe,cli-pkg}` · `thincoder-vscode/.thincoder/tmp/core-registry-copy`（引用面 grep = 仅日志 ∕ 批档记载、零活面引用；`rmdir /s /q` 四连 **exit 0**）。
+- **保留登记（裁量 · 报告供审）**：`.thincoder/tmp/probe/` = npm 探针沙箱（node_modules + 40B package.json——非核副本）；`.thincoder/tmp/enge-160/` = 明标 `.before.md` 快照（比较证据类，非复制体）——两者按「登记保留理由」处置。
+- **余**：#456（doc-check 行数面）· #471 的 `check-dist.mjs` 部分——在办。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：✅ 设计完成（initial 轮 + 修正轮 1–2（评审 #3 收正已落）· 63 条 8 轮 · 每轮 ≤10 档）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>

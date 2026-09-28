@@ -44,6 +44,18 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
       - run: npm test
+
+  core-node22:
+    name: thincoder-core (kernel · Node 22.13 floor)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: thincoder-core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22.13" }
+      - run: npm test
   docs:
     name: repo-wide doc machine checks
     runs-on: ubuntu-latest
