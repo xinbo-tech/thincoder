@@ -1,35 +1,47 @@
-/* chat.css — 对话流面 + 输入区面（`docs/desktop/design/UI.md` §1 对话流行 / 工具卡行 / 输入区行 · `docs/desktop/design/RENDERER.md` §2 / §3）。
-   滚动容器 = `.flow` 宿主自身（骨架 `styles.css:86` 已给 flex / 溢出 / 内边距——本档只补 `overflow-anchor: none`：
+/* chat.css — 对话流面**主档**（`docs/desktop/design/UI.md` §1 对话流行 / 工具卡行 · `docs/desktop/design/RENDERER.md` §2 / §3）。
+   拆档沿「桌面处理流 · VSC 对齐」批 §2.1 拆档定稿（**先拆后改** · 原档 480+ 行 ⇒ 四档，本档为主档）：
+     · `chat-cards.css` —— 卡族段（审批池面操作区 / 提问 / 计划 —— 桌面壳件）
+     · `chat-composer.css` —— 输入区段（变量别名块 + 两挂件锚 + 两复制控件 + 交互态组）
+     · `chat-fixes.css` —— 「对齐第三批」小修族尾段（错误横幅 / 停止痕 / 台账行 / diff 预览 / 文件链接 / 欢迎条）
+   链序（`renderer/index.html`）= theme → chrome → skin → **chat → chat-cards → chat-composer → chat-fixes** → core → /rc/search.css → pool → settings
+   （四档相对序保持 = 原单档内段序）；本档只留对话流面（块 / 工具卡 / 摘要 / 药丸 / 空态 / 说话人标签 / 待发送带 / 消化行组 / 归档块）。
+   滚动容器 = `.flow` 宿主自身（骨架 `chrome.css` 已给 flex / 溢出 / 内边距——本档只补 `overflow-anchor: none`：
    补偿**单权源**（RENDERER.md §3）——头侧变更的视口锚定只由 `compensateTop` 显式承担，免浏览器自动锚定叠算。
-   字形面 = 改动增删符号 / 流式游标（`content` —— **视图档零字形字面**，与标签条 / 关闭控件同纪律 KD-f）；
-   未接线控件 `disabled` 与可点态**同形**（诚实非死控 —— 同 `styles.css` 行形态律）；本题零主题变量（沿 `styles.css`）。 */
+   字形面 = 改动增删符号 / 流式游标（`content` —— **视图档零字形字面**，与卡族 / 输入区同纪律 KD-f）；
+   未接线控件 `disabled` 与可点态**同形**（诚实非死控 —— 同 chrome.css 行形态律）；本题零主题变量（沿 `theme.css`）。 */
 
 .flow {
   overflow-anchor: none;
 }
 
-/* 块（五型单序列）：文本面经**核 Markdown**呈现（R3c · KD-RC-4 —— 渲染面单源 = `renderer/views/chat-text.mjs`；核产出面样式 = `renderer/core.css`）；
-   本段只给块壳（边距 / 边框）：`pre-wrap` 保留（核 md 产出无裸换行 · 行内块件自持 `white-space`），流式游标住 `.block-assistant[data-streaming="1"]`。 */
+/* 块（六型单序列）：文本面经**核 Markdown**呈现（R3c · KD-RC-4 —— 渲染面单源 = `renderer/views/chat-text.mjs`；核产出面样式 = `renderer/core.css`）；
+   块壳 = **透明无卡壳**（无边框 ∕ 无底 ∕ 零内边距 —— VSC `webview/chat.css:20-48` `.message` 族逐值：面宽全型 100%〔基础行 90% 被 user ∕ assistant 两覆盖行落至 100%——有效值〕· 块距 14px；文本内边距 user `0` ∕ assistant `8px 0`）；
+   面内件各自携盒值（本档 = 工具卡 ∕ 错误横幅；推理块 = `renderer/core.css` ② 核类名映射面）；`pre-wrap` 保留（核 md 产出无裸换行 · 行内块件自持 `white-space`），流式游标住 `.block-assistant[data-streaming="1"]`。 */
 .block {
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+/* 块距 = VSC `.message { margin-top: 14px }` 逐值（原 8px）。 */
 .block + .block {
-  margin-top: 8px;
+  margin-top: 14px;
 }
-.block-user {
-  background: var(--bg);
+/* 助手文本内边距 = VSC `.message.assistant .bubble { padding: 8px 0 }`（落文本面容器 —— 标签行与 VSC 同位：消息顶；user `.bubble` = `padding: 0` ⇒ 零规则）。 */
+.block-assistant > .block-text {
+  padding: 8px 0;
 }
-.block-reasoning {
-  color: var(--fg-muted);
-  font-style: italic;
-}
+/* 错误横幅 = VSC `webview/chat.css:417-427` `.error-banner` 逐值（无边框；红底 ∕ 错误色；内边距 6px 10px ∕ 圆角 6px；字号 12px —— 同 VSC banner 对其内容的覆盖）。 */
 .block-error {
-  border-color: var(--accent);
-  color: var(--accent);
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--diff-del-bg);
+  color: var(--error-fg);
+  font-size: 12px;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+}
+.block-error .error-text {
+  font-size: 12px;
 }
 /* 流式游标：末块追加态 ⇒ 文本尾随 `▌`（`content` 不入 DOM ⇒ 不入选区 / 不入断言面）。 */
 .block-assistant[data-streaming="1"]::after {
@@ -37,14 +49,27 @@
   color: var(--fg-muted);
 }
 
-/* 工具卡三行（同档 §1 工具卡行）：头行（可折叠 ⇒ `button` 形）· 改动摘要行 · 展开结果区。 */
+/* 工具卡（三行：头行（可折叠 ⇒ `button` 形）· 改动摘要行 · 展开结果区）：盒 = VSC `.tool-call`（`webview/chat.css:179-187`）逐值 ——
+   边框 ∕ 圆角 6px ∕ `--tool-bg` 角色对位 ⇒ `--overlay` ∕ 字号 12px ∕ `overflow: hidden`；`margin: 8px 0 0` **不叠落**（扁平化模型：面内件的消息内边距 ∕ 外边距由块级 14px 块距承担）。 */
+.block-tool {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  font-size: 12px;
+  background: var(--overlay);
+}
+/* 盒面内的说话人标签（回合首块 = 工具卡时）：盒壳零内边距（VSC 头行 ∕ 主体自携内边距）⇒ 标签自携同等缩进
+   （桌面标签为块内子节点 —— VSC 标签在盒外、盒顶；零缩进那么标签贴边）。 */
+.block-tool > .msg-label {
+  padding: 5px 10px 0;
+}
 .tool-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px; /* VSC `.tool-call-header` */
   width: 100%;
-  padding: 0;
+  padding: 5px 10px; /* VSC `.tool-call-header` */
   border: 0;
   background: transparent;
   color: inherit;
@@ -63,8 +88,12 @@
 .tool-head:not(:disabled) {
   cursor: pointer;
 }
+.tool-head:not(:disabled):hover {
+  background: var(--hover-bg); /* VSC `.tool-call-header:hover` */
+}
 .tool-changes {
   margin-top: 6px;
+  padding: 0 10px 6px; /* 桌面独有行 —— 缩进与头行 ∕ 结果区同缘（VSC 无对位行） */
   color: var(--fg-muted);
   font-size: 12px;
 }
@@ -81,11 +110,18 @@
 .tool-file [data-del]::before {
   content: "−";
 }
+/* 结果区 = VSC `.tool-call-body`（`webview/chat.css:257-272`）逐值（等宽栈 ∕ 11px ∕ `opacity: .75` ∕ 行高 1.45 ∕ 封顶 180px 自滚）；与壳共用顶线分隔。 */
 .tool-result {
-  margin-top: 8px;
-  padding-top: 8px;
+  padding: 6px 10px;
   border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.45;
+  opacity: 0.75;
+  max-height: 180px;
+  overflow-y: auto;
   white-space: pre-wrap;
+  word-break: break-all;
 }
 
 /* 摘要块（根首子 · 未渲染更早块 > 0）：文本 + 回填控件（回填接线缺省 ⇒ `disabled`）。 */
@@ -106,7 +142,7 @@
   font: inherit;
 }
 /* 药丸（根末子 · `!following`）：`sticky` 尾随 + **单行 `nowrap` 定高**（高度增量在帧尾读数区间外 ⇒ ΔH = 头侧净增量）。
-   D24：描边归零（保位）+ 实色支（静息 `--bg-raised`；hover / 按下 = `var(--bg)`；聚焦底不随落 —— 见文末交互态组）。 */
+   D24：描边归零（保位）+ 实色支（静息 `--bg-raised`；hover / 按下 = `var(--bg)`；聚焦底不随落 —— 见交互态组）。 */
 .chat-pill {
   position: sticky;
   bottom: 0;
@@ -143,8 +179,8 @@
   margin-bottom: 6px;
   color: var(--fg-muted);
 }
-.block-user > .msg-label,
-.block-assistant > .msg-label {
+.msg-label[data-label="user"],
+.msg-label[data-label="assistant"] {
   color: var(--accent);
 }
 .msg-label[data-label="assistant"]::before {
@@ -160,35 +196,64 @@
   margin-left: 8px;
 }
 
-/* 待发送气泡组（「对齐第二批」项 2 —— 流内非块节点：输入区上方；`[data-pending]` 组落点 = 块序列之后、卡序列之前）。
-   气泡形沿用户块（`.block.block-user`）；`pending` 类 / `⏳` 标签 = 核原语 `markPending` 落笔（本档零字形字面）。 */
+/* 排队期「待发送块」（收正轮 B12 新口径 · 参照 CLI —— **输入区上方带**：贴输入框上沿 ⇒ 与输入面板恒定邻接
+   （任意内容高度 ∕ 任意滚动位置）：标签行警示色 + 逐条原文 muted（逐条 ≤3 行：`-webkit-line-clamp` 截行；
+   超限尾标记行随帧尾量面摘 `hidden`）—— 非真块节点（不由流容器承载 —— `data-blocks` 不变式零破） */
 .chat-pending {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 4px;
+  margin-bottom: 8px;
 }
-.chat-pending .pending {
-  opacity: 0.72;
+.chat-pending-label {
+  color: var(--warn);
+  font-size: 12px;
+  font-weight: 600;
+}
+.chat-pending-item,
+.chat-pending-more {
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+.chat-pending-body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.chat-pending-more {
+  font-style: italic;
 }
 
 /* 消化状态行组（桌面空闲唤醒批 —— 流内非块节点组 `[data-digest]`；落点 = 块序列之后、待发送组之前 —— 单源 =
-   `docs/desktop/design/RENDERER.md` §1.1 两条纪律；值源 = `thincoder-vscode/webview/base.css:203-235`）：
-   两规则 = ① 起跑态（起跑标签行 + `n > 0` 计数行 —— 计数行同形于状态条，标签行同族小字）∥
-   ② 终态（`end` 先原地更新后摘除 —— 行不驻留；`digest-failed` = 错误色显形，`digest-done` 承起跑态不动）。 */
-.chat-digest .digest-turn, .chat-digest .digest-status {
+   `docs/desktop/design/RENDERER.md` §1.1 两条纪律；形 = VSC `webview/base.css:203-247` 逐值 —— turn 行 = 纯行（无边 ∕ 无底）· status 行 = 盒行）：
+   ① 起跑态（起跑标签行 + `n > 0` 计数行 —— 计数行同形于状态条，标签行同族小字）∥
+   ② 终态（`end` 先原地更新后摘除 —— 行不驻留；`digest-failed` = 错误色显形〔opacity 不覆盖 —— 沿 VSC 继承 0.85〕，`digest-done` = 信息色显形）。
+   `--bg-raised` ∕ `--line` = `editorWidget-background` ∕ `-border` 角色对位；done ∕ failed 两底色 = `infoBackground` ∕ `errorBackground` 角色对位（accent 8% 先例 = `.question-card`）。 */
+.chat-digest .digest-turn {
+  margin: 6px 0 0;
+  font-size: 11px;
+  opacity: 0.7;
+  color: var(--fg-muted);
+}
+.chat-digest .digest-status {
   margin: 6px 0;
   padding: 6px 12px;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 6px;
   background: var(--bg-raised);
   font-size: 11px;
   opacity: 0.85;
-  color: var(--fg-muted);
+}
+.chat-digest .digest-status.digest-done {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
 }
 .chat-digest .digest-status.digest-failed {
-  opacity: 1;
   border-color: var(--error-fg);
+  background: var(--diff-del-bg);
   color: var(--error-fg);
 }
 
@@ -200,280 +265,4 @@
   border-radius: 0;
   background: transparent;
   white-space: normal;
-}
-
-/* 审批卡（流内**非块节点** · 独立卡片 —— `docs/desktop/design/UI.md` §1 审批呈现行 · 批 7）：
-   首行（标称片 + 状态词）· 改动摘要行（锚与工具卡**共用**——样式的另一处 = `.tool-changes`）· 三出口操作区
-   （卡面与池面条目**共用** ⇒ 本段为操作区样式单源）。 */
-.approval-card {
-  padding: 8px 10px;
-  margin-top: 8px;
-  border: 1px solid var(--accent);
-  border-radius: var(--radius);
-  background: var(--bg-raised);
-}
-.approval-card + .block,
-.block + .approval-card {
-  margin-top: 8px;
-}
-.approval-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.approval-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-}
-.approval-action {
-  padding: 2px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: transparent;
-  color: inherit;
-  font: inherit;
-}
-/* 最安全键（置焦锚 —— 逐项 ⇒ 拒绝 / 批 ⇒ 全否）：差异只经边框色，不落第二字形。 */
-.approval-action[data-autofocus="1"] {
-  border-color: var(--accent);
-}
-.approval-action:not(:disabled):hover {
-  background: var(--bg);
-  cursor: pointer;
-}
-
-/* 提问卡 / 计划卡（流内**非块节点** · `data-card="question"` / `"task"` —— `docs/desktop/design/UI.md` §1 提问呈现 / 计划面行 · 批 A）：
-   卡面沿 `.approval-card` 段**同族同形**（内边距 / 圆角 / 卡间留白 / 操作区 / 键形 —— 卡族形态单源住审批卡段）；
-   提问 = 决策面 ⇒ 强调色边（同审批卡）· 计划 = 事项表 ⇒ 常态边。状态词着色只挂 `data-status` 码
-   （码面 = 机器读面，词面随语言变 ⇒ 色彩判据不入词面），零第二字形；未接线控件 `disabled` 与可点态同形。 */
-.question-card,
-.plan-card {
-  padding: 8px 10px;
-  margin-top: 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--bg-raised);
-}
-.question-card {
-  border-color: var(--accent);
-}
-/* 卡与块相邻：块顶端留白只对块—块成立 ⇒ 跨族相邻在本段补齐（审批卡侧住其本段）。 */
-.question-card + .block,
-.block + .question-card,
-.plan-card + .block,
-.block + .plan-card {
-  margin-top: 8px;
-}
-/* 题干行 / 事项行（行族形 = 行内 flex + 换行留白）：事项行两段对置（标题 ↔ 状态词）。 */
-.question-head,
-.plan-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.plan-row {
-  justify-content: space-between;
-}
-.plan-row + .plan-row {
-  margin-top: 4px;
-}
-.plan-row[data-status="in_progress"] {
-  color: var(--accent);
-}
-.plan-row[data-status="done"] {
-  color: var(--fg-muted);
-}
-/* 给答项操作区（同族形 = 审批三出口操作区 —— 同上条）；选项串原样 ⇒ 长串随词换行，不截断。 */
-.question-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-}
-/* 作答区三件：文本控件形沿 `.rail-rename-input`（本仓输入控件单形）· 两键形沿卡族。 */
-.question-answer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-.question-option,
-.question-submit,
-.question-cancel {
-  padding: 2px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: transparent;
-  color: inherit;
-  font: inherit;
-}
-.question-input {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--bg);
-  color: inherit;
-  font: inherit;
-}
-.question-option:not(:disabled):hover,
-.question-submit:not(:disabled):hover,
-.question-cancel:not(:disabled):hover {
-  background: var(--bg);
-  cursor: pointer;
-}
-
-/* 输入区（#457 · 本批修 —— `docs/desktop/design/UI.md` §1 本批注项 1）：根 = 单行 flex（wrap · gap · 顶线〔D24 归零 · 保位〕）；
-   输入框撑满中区余宽且可缩（`flex: 1` + `min-width: 0`）；三控件同一控件单形（沿 `.question-input` /
-   `.chat-backfill` / `.approval-action` 家族）；字形面 = 两复制控件 `content`（视图档零字形字面）；
-   提示行 / 附件条 = 整行（附件条**内部**尺寸仍 open —— UI.md §1 open 行）。 */
-.composer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 8px;
-  padding: 10px 12px;
-  border-top: 1px solid transparent;
-}
-.composer-input {
-  flex: 1;
-  min-width: 0;
-  min-height: 2.25rem;
-  padding: 6px 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--bg);
-  color: inherit;
-  font: inherit;
-  resize: vertical;
-}
-/* 三控件单形（`.composer-interrupt` / `.chat-copy-block` / `.chat-copy-last`）；两复制控件零文本子 ⇒ 字形 = `content`。 */
-.composer-interrupt,
-.chat-copy-block,
-.chat-copy-last {
-  padding: 6px 10px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  background: transparent;
-  color: inherit;
-  font: inherit;
-}
-.chat-copy-block::before, .chat-copy-last::before { content: "⧉"; }
-.composer-interrupt:not(:disabled):hover,
-.chat-copy-block:not(:disabled):hover,
-.chat-copy-last:not(:disabled):hover {
-  background: var(--hover-bg);
-  cursor: pointer;
-}
-.composer-notice, .composer-attachments { flex: 1 1 100%; }
-
-/* 交互态组（D24 项 2 · 本注定形）：按下 `--hover-bg-strong` · 聚焦三值（outline 2px + offset -2px + 底）——沿 `.rail-row:focus-visible` 先例；
-   `.chat-pill` 实色支例外：按下沿 hover（无第二档）· 聚焦底不随落。 */
-.chat-backfill:not(:disabled):active, .composer-interrupt:not(:disabled):active,
-.chat-copy-block:not(:disabled):active, .chat-copy-last:not(:disabled):active { background: var(--hover-bg-strong); }
-.chat-pill:not(:disabled):active { background: var(--bg); }
-.chat-backfill:focus-visible, .composer-interrupt:focus-visible, .chat-copy-block:focus-visible, .chat-copy-last:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-  background: var(--hover-bg-strong);
-}
-.chat-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-
-/* ─── 「对齐第三批」小修族（对话流面）────────────────────────────
-   单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」：工具头两态色 / 错误横幅 / 停止痕 /
-   台账行组 / diff 预览 / 文件链接 / 欢迎条（值源逐面标注 —— VSC 实读）。 */
-
-/* 工具头两态色（项 2 —— 值源 = VSC 内联色 `webview/ui.js:113-114`：失败 `#f14c4c` ∥ 成功 `#4ec9b0`；
-   两值不随主题分叉 —— VSC 同径；running / interrupted 不入两值集）—— 规则单源 = 上表工具卡段落
-   （`.tool-head[data-status="error"|"done"]` 两段，后随 `running`），本段零重复。 */
-
-/* 错误横幅（项 9 —— 形源 = VSC `webview/chat.css:376-391` ∥ 核 `flow/block.mjs:133-145`）：
-   `.error-text`（文面）+ `.error-details`（原生 `details` 折叠）+ `.error-retry-btn`（单枚出口）。 */
-.error-text { flex: 1; }
-.error-details { margin-top: 6px; }
-.error-details summary { cursor: pointer; font-size: 11px; opacity: 0.7; }
-.error-details pre {
-  margin: 6px 0 0;
-  padding: 6px 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--bg-raised);
-  font-family: var(--mono);
-  font-size: 11px;
-  overflow: auto;
-}
-.error-retry-btn {
-  margin-top: 6px;
-  padding: 3px 12px;
-  border: 1px solid var(--error-fg);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--error-fg);
-  font: inherit;
-  font-size: 11px;
-  align-self: flex-start;
-}
-.error-retry-btn:not(:disabled):hover { background: var(--diff-del-bg); cursor: pointer; }
-
-/* 停止痕（项 6 —— 值源 = VSC `webview/streaming.js:141`：提示色 + 斜体 —— 流尾非块节点）。 */
-.chat-stopped { margin-top: 8px; color: var(--warn); font-style: italic; }
-
-/* 台账行组（项 12 —— 流尾非块节点组；类名面 = 核行产口径 `ledger-line` / `.warn`，样式单源 = `core.css` 核类名映射面；行文 = 核行产逐字）。 */
-.chat-ledger { margin-top: 8px; font-size: 12px; color: var(--fg-muted); }
-
-/* 审批卡 diff 预览（相抵① 样式半 —— 值源 = VSC `webview/base.css:405-437`；三新变量
-   `--diff-add-bg` / `--diff-add-fg` / `--diff-del-fg` 住 `renderer/styles.css`〔样式面 —— 本舱不立重复值〕）。 */
-.diff-preview {
-  margin: 8px 0;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  overflow: hidden;
-  max-height: 300px;
-  overflow-y: auto;
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.5;
-}
-.diff-header {
-  padding: 4px 10px;
-  font-size: 11px;
-  background: var(--hover-bg);
-  color: var(--fg);
-  opacity: 0.6;
-  border-bottom: 1px solid var(--line);
-}
-.diff-line { padding: 1px 10px; white-space: pre; overflow-x: auto; }
-.diff-same { color: var(--fg); opacity: 0.7; }
-.diff-add { background: var(--diff-add-bg); color: var(--diff-add-fg); }
-.diff-del { background: var(--diff-del-bg); color: var(--diff-del-fg); }
-.diff-prefix { display: inline-block; width: 16px; opacity: 0.5; user-select: none; }
-
-/* 文件链接（相抵② —— 结果区内可点路径；核类名 `span.file-link`、类名样式单源 = `core.css` 核类名映射面〔本段零规则〕；`data-path` = 出口判据锚）。
-   点按 / Enter 出口 = 委托单点（`renderer/app.mjs`）⇒ `file:open`。 */
-
-/* 欢迎条（项 15 —— `no-message` 帧三行；形源 = VSC `webview/chat.css:431-449` 的 `.welcome` 族值）。 */
-.chat-welcome {
-  text-align: center;
-  padding: 60px 20px 30px;
-  opacity: 0.45;
-  display: flex;
-  flex-direction: column;
-}
-.welcome-heading {
-  font-size: 15px;
-  font-weight: 600;
-  margin: 0 0 8px;
-  opacity: 0.75;
-}
-.welcome-text, .welcome-shortcuts {
-  font-size: 12px;
-  line-height: 1.7;
-  max-width: 280px;
-  margin: 0 auto;
 }

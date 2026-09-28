@@ -2,16 +2,19 @@
    覆盖面 = **核产出 DOM 面**（核类名 + 核 md 产出的原生件）；作用域容器 = 桌面两个文本面类（`.block-text` /
    `.reasoning-content`——容器本身即核内容的落点，非桌面卡/块外壳）；**组外核类名**（「对齐第三批」项 12 / 相抵②：
    `.ledger-line` / `.warn` / `.file-link` —— 宿主 = 流内非块节点组 / 工具结果区，非两容器 ⇒ 按核类名直落、零容器作用域，
-   见档尾「核类名映射 · 组外面」段）；值面变量 = `styles.css` 主题表（亮暗两套）。
-   三族：
+   见档尾「核类名映射 · 组外面」段）；值面变量 = `renderer/theme.css` 主题表（亮暗两套）。
+   五族：
     ① 核 Markdown 产出（核 `md.mjs`：代码块 / 行内 / 表 / 引 / 列表 / 标题 / 分隔线 / 图片 / 链接）；
     ② 推理块（核 `flow/reasoning.mjs` `renderReasoning`：`details.reasoning-block` + `.reasoning-content`）；
     ③ 代码块复制钮（核 `flow/stream.mjs` `attachCopyButtons`：`button.code-copy-btn`）；
-    ④ 子 agent 块面（核 `subblocks/*` 四构件 —— 「对齐第二批」项 3：`advisor-block` 族 / `sub-*` 族 —— 右列与流内归档块共用）。
-   块 / 卡 / 池 / 输入区等**桌面外壳类**（`.block*` 除文本面容器 · `.tool-*` · `.chat-*` 等）住 `chat.css` ——
+    ④ 子 agent 块面（核 `subblocks/*` 四构件 —— 「对齐第二批」项 3：`advisor-block` 族 / `sub-*` 族 —— 右列与流内归档块共用）；
+    ⑤ 核卡族（R1 直消费）：提问卡控件族 `.perm-btn` + 任务面板体 `.panel-desc` / `.task-*`（卡壳类名面
+       `.permission-prompt*` / `.question-*` 住 `chat-cards.css` 卡族段）。
+   块 / 卡 / 池 / 输入区等**桌面外壳类**（`.block*` 除文本面容器 · `.tool-*` · `.chat-*` 等）住对话流四档
+   （`renderer/chat.css` ∕ `chat-cards.css` ∕ `chat-composer.css` ∕ `chat-fixes.css` —— R1 四拆）——
    本档零外壳面规则（`data-raw` 等锚为属性，零样式）。
    **D21 视觉对齐（2026-09-28 · 需求 §4）**：内容面 21 面值以 VSC webview 实值为源（逐面映射表 = 核档 §5 行 1–21；
-   口径三律 = ①宿主主题色角色对位 ②语义常量值照搬 ③盒层单层律〔块壳已承载的块内边距 / 边框 / 圆角不搬〕）；
+   口径三律 = ①宿主主题色角色对位 ②语义常量值照搬 ③核件面自携盒值〔VSC 面级盒值原样落核类名 —— 对话流块壳零盒〕）；
    本档注释内「面 N」= 该表行号。 */
 
 /* ── ① 核 Markdown 产出（容器 = 文本面 `.block-text` / 推理内容区 `.reasoning-content`）── */
@@ -197,12 +200,20 @@
   opacity: 0.85;
 }
 
-/* ── ② 推理块（核件结构）：块壳 `.block-reasoning` 住 `chat.css`，此处只核面件（summary / 内容区 / 内 md）。 ── */
+/* ── ② 推理块（核件结构）：盒值（边框 ∕ 圆角 6px ∕ `--tool-bg` 角色对位 ⇒ `--overlay` ∕ 字号 12px ∕ `overflow: hidden`）+
+   行内边距（summary `4px 10px` ∕ 内容区 `6px 10px`）= VSC `webview/chat.css:277-294` ∕ `:393-401` 逐值——
+   盒层单层律随块壳去盒退场（R12 会话流对齐：盒值归面级；`margin: 4px 0` 不叠落——扁平化模型由块级块距承担）。 ── */
 .reasoning-block {
   margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  font-size: 12px;
+  background: var(--overlay);
 }
-/* 面 18 推理摘要（`padding: 4px 10px` 不搬 —— 盒层单层律：水平内边距归壳层；端差①= 核档 §9）。 */
+/* 面 18 推理摘要（`padding: 4px 10px` = VSC 逐值）。 */
 .reasoning-summary {
+  padding: 4px 10px;
   color: var(--fg);
   font-size: 12px;
   font-style: italic;
@@ -214,10 +225,10 @@
 .reasoning-summary::after {
   content: "…";
 }
-/* 面 19 推理内容区（水平 `10px` 不搬 —— 盒层单层律；端差①= 核档 §9）；
-   前景色 = `--fg`（VSC 不单设 ⇒ 继承 `body`；壳层 `.block-reasoning` 的 `--fg-muted` 承接已废——父侧 2026-09-28 裁定）。 */
+/* 面 19 推理内容区（`padding: 6px 10px` = VSC 逐值）；
+   前景色 = `--fg`（VSC 不单设 ⇒ 继承 `body`）。 */
 .reasoning-content {
-  padding: 6px 0 0;
+  padding: 6px 10px;
   border-top: 1px solid var(--line);
   color: var(--fg);
   font-size: 12px;
@@ -336,10 +347,84 @@
 /* 冻结块（终态原地折叠）：与运行态同卡面 —— 折叠默认、可展开；头行含 done/stopped 时长。 */
 .advisor-block.sub-block.sub-frozen { opacity: 1; }
 
+/* ── ⑤ 核卡族（「桌面处理流 · VSC 对齐」批 R1 直消费 —— 核 `cards/{question,panel}.mjs` 产出 DOM 面）──
+   值源 = VSC webview 实读（`base.css:261-291` 提问卡控件族 · `controls.css:40-153` 任务面板体）；口径三律同 D21。
+   审批卡 ∕ 提问卡**卡壳**类名面（`.permission-prompt*` / `.question-*`）住 `renderer/chat-cards.css`（卡族段）；
+   本段 = 两卡共用控件族（`.perm-btn`）+ 任务面板体（`.panel-desc` / `.task-*`）。 */
+.perm-btn {
+  padding: 4px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  border: 1px solid;
+  transition: background 0.15s;
+}
+.perm-btn.deny {
+  background: transparent;
+  color: var(--red);
+  border-color: var(--red);
+}
+.perm-btn.deny:hover { background: color-mix(in srgb, var(--red) 15%, transparent); }
+.perm-btn.approve {
+  background: var(--green);
+  color: var(--bg);
+  border-color: var(--green);
+}
+.perm-btn.approve:hover { filter: brightness(1.1); }
+.perm-btn.approve-all {
+  background: transparent;
+  color: var(--green);
+  border-color: var(--green);
+}
+.perm-btn.approve-all:hover { background: color-mix(in srgb, var(--green) 15%, transparent); }
+
+/* 任务面板体（核 `cards/panel.mjs` —— 计划卡内体；端包壳 `.plan-card` 住 `renderer/chat-cards.css`）。 */
+.panel-desc {
+  font-size: 10px;
+  opacity: 0.5;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  opacity: 0.7;
+}
+.task-item:first-child { padding-top: 6px; }
+.task-item:last-child { padding-bottom: 4px; }
+.task-mark {
+  font-size: 14px;
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+.task-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.task-status {
+  color: var(--fg);
+  opacity: 0.55;
+  font-size: 10px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
 /* ── 核类名映射 · 组外面（「对齐第三批」项 12 / 相抵②）─────────────
    两族宿主 = 流内非块节点组（`.chat-ledger` / 工具结果区）—— **非两文本面容器** ⇒ 按核类名直落、零容器作用域
    （类名面 = 核行产 `ledger-surface.mjs` / 核链接着装 `flow/tool-card.mjs` `linkifyPaths` 产出 —— 值为桌面变量面）。 */
-.ledger-line { padding: 1px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.ledger-line.warn { color: var(--warn); }
+/* 行级值 = VSC `webview/chat.css:477-488` 逐值（`line-height: 1.5` ∕ `opacity: .85` ∕ warn `opacity: 1`；字号与色面落组容器
+   `.chat-ledger` —— `chat-fixes.css` 侧 11px ∕ `--fg-muted` 继承）。 */
+.ledger-line { padding: 1px 0; line-height: 1.5; opacity: 0.85; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ledger-line.warn { color: var(--warn); opacity: 1; }
 .file-link { color: var(--accent); cursor: pointer; text-decoration: underline dotted; }
 .file-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

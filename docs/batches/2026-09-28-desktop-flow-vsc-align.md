@@ -135,6 +135,12 @@
 - **观察处置**：① `PROJECT.md:1027` 303 字符 = 会话标题批并发笔迹（已 send #18 自清）；② §1.21（`:109`）「随动 = 6 测试档 import + 1 锁行」句随全清令作废（以本节为准）；③ chat-guide 80 vs 79 = ±1 不入判（零动作）；④ 冻结记录不回改（零动作）；⑤ `chat-composer.css:61` 注释死指针 → **台账 #539**（随下一桌面码面轮顺带）；⑥ 既有悬空 44 行号 = 设计面收正在收同源（零新动作）。
 - **设计面状态**：本批设计微轮（#6 + 设计面收正轮）均落，无待评审项（评审 #1 = pass 在册）。
 
+### 1.27 R12 交付收下 + 呈报项裁定（父侧 · 2026-09-29 00:2x）
+- **交付**（#5 · 终态 converged ⇒ clean）：F1–F5 逐面收正 + 缺口收正 5 档（`chat.css` 269 ∕ `core.css` 430 ∕ `chat-fixes.css` 95 ∕ `chat-text.mjs` 126 ∕ 探针 `.r12-probe.mjs` 237）；真机探针 **22/22**（亮色 · pageerror 0）；内审 1 轮 + 代码评审 1 轮（🔴1 → fix → 复核 pass）；§5.15 已自写落档。**父侧抽验通过**（`chat.css:20-64` ∕ `data-label` 锚 `:175-189` 实读）。
+- **重要更正**：前舱 #117 的 F1–F4 主体**已在盘**（mtime 证据 = 崩溃窗口时点）——崩溃非全损；本舱 = 核验 + 缺口收正（§1.24「零落盘」表述按此更正：四舱零报告 ∕ 零 §5，但 #117 有在盘笔迹）。
+- **呈报项裁定（父侧）**：① 件级外边距 ∕ ② 首块上距 ∕ ③ 头行段样式四组（读在册「头行色」项，相抵即停报）∕ ④ file-link 三值——**裁 = 全落**（F3「差 ⇒ 消除」）→ 修复轮 **#25**（fix · 在跑 · `chrome.css` 入界授权在册）；⑤ digest-cap 面缺（U-R12-1）→ **台账 #541**（归另轮）；⑥ `window.mjs` 死探针引用 → 已随 R9 舱任务书（届盘重勘）✓；⑦ 设计面收正清单（§5.15 未办 5）→ 设计同步轮 **#26**（fix · 排队等 #22）。
+- **剩余**：#25 ∕ #26 落定后，本批设计面 ∕ 收口面齐备（→ §6 收口预检）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成 · 2026-09-29（评审轮 1 十二发现落修 + R13 入书（§2.10）+ 评审 #1 ①–⑥ ∕ ⑧ 微轮收正（§2.11）；实施任务书 R1–R13 在册）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -603,7 +609,7 @@ VERDICT: changes-required
 - 评审剩余两项（非阻断）随实施轮收正：`:217` 测试档行处置 + 引证三处行号漂移（§10 AZ `:759⇒:760` ∕ 需求 §3.1 `:47⇒:49` ∕ `:54⇒:56`）。
 
 ## §5 实施记录（eng-coder）
-**状态行**：实施完成（R10 子代理面板 ∕ live 面 ⇒ VSC 对齐 · 8 档（1 新 + 7 改）· 真机探针 10 ∕ 10 · 审计 1 轮（DEVIATIONS 2）修复 1 轮 · 代码评审 VERDICT pass（🟡4 ∕ 🔵4 非阻断）修复 1 轮 · 终态 converged ⇒ clean · 测试面随全清令取消）
+**状态行**：实施完成（R12 重发轮 · 会话流 ⇒ VSC 对齐 · 本舱笔 5 档（chat.css ∕ core.css ∕ chat-fixes.css ∕ chat-text.mjs ∕ .r12-probe.mjs）+ 前舱遗留核验纳入 · 真机探针 22 ∕ 22（亮色 · pageerror 0）· 内审 1 轮（DEVIATIONS 4）修复 1 轮 · 代码评审 changes-required（🔴1 标签分色）⇒ fix round 1 ⇒ 复核 VERDICT pass · 终态 converged ⇒ clean · 测试面随全清令取消 · 2026-09-29）
 
 
 
@@ -1208,5 +1214,61 @@ VERDICT: changes-required
 2. **真机走查（父侧）**：右列子代理全族（出生 ∕ 走时 ∕ ⏹ ∕ 终态留场 ∕ 归档 ∕ 计数贴 ∕ 空态）。
 3. **测试面**：随全清令取消（`test/**` 无 `*.test.mjs` 在盘、`files.mjs` 已置空、`integration/` 空）；行动表验收行的四档机检改锚（`views-activity` ∕ `events-subagent` ∕ `agent-host-subagent` ∕ `views.test`）**未执行** —— 本段与交付报告随令注明。
 4. **评审非阻断项（登记）**：`activity.mjs` 338 行（>300 顾问线；越 row 1 估算 ≈280–330）· `i18n.mjs` 464 行（既存）· `.sub-desc` 会话级判据 ∕ 归档回显不带该行（待父侧裁「消差 ∕ 登记」）· 计数钮不跨帧存活（焦点面轻微）。
+
+### 5.15 R12 实施舱（重发轮）· 会话流 ⇒ VSC 对齐（eng-coder · 2026-09-29）
+
+**背景**：R12 前舱 #117 随宿主进程崩溃死亡（零报告零 §5 写入）；本舱 = 令牌重签发后的重发轮。盘面实读：**前舱 F1–F4 主体收正已落盘**（mtime 证据：`chat.css` 15:56:44 ∕ `core.css` 15:54:59 ∕ `chat-fixes.css` 15:55:02 ∕ `chat-scroll.mjs` 15:55:09 UTC = 崩溃窗口 23:5x 本地）；本舱职责 = 逐面核验（读值 + 真机探针）+ 缺口收正 + 报告。
+
+**目标**：R12（§2.8 R12 段 F1–F5）= 会话流与 VSC `#messages` 面逐值对齐（块壳 ∕ 面宽 ∕ 面内件 ∕ 流尾件形 ∕ 滚动回填行为）。边界：VSC 树 ∕ 核件零改 · 流尾件面零撤 · 测试面随全清令取消。
+
+**逐档表（本舱笔 5 档 · 行数 = 末行实读）**
+
+| # | 档 | 行数 | 动作 |
+|---|---|---|---|
+| 1 | `renderer/chat.css`（主档） | 268（净 −1） | ① `.digest-status.digest-failed` 删 `opacity: 1`（沿 VSC 继承 0.85）；② `.tool-head` `gap: 8px ⇒ 6px`（VSC `.tool-call-header` 逐值 · 审计点名）；③ 回合首标签分色换 `data-label` 锚（评审轮 1 🔴 修复 —— 四型块 accent）；④ 链序注文补 `/rc/search.css` |
+| 2 | `renderer/core.css` | 430（净 +2 · 注） | 组外面 `.ledger-line` 补行级 `line-height: 1.5` ∕ `opacity: .85`、`.warn` 补 `opacity: 1`（VSC `webview/chat.css:477-488` 逐值） |
+| 3 | `renderer/chat-fixes.css` | 95（净 +1 · 注） | 工具头两态色引据坐标随 VSC 换接修正（`webview/ui.js:113-114` ⇒ 核 `flow/tool-card.mjs:111/:114`）+ 链序注文补 `/rc/search.css` |
+| 4 | `renderer/views/chat-text.mjs` | 126（净 −2） | 删档尾悬空重复注释（待发送标记面退场遗留） |
+| 5 | `.r12-probe.mjs`（临时探针） | 237 | 扩展：ledger 行级臂 ∕ tool-head gap 臂 ∕ 标签色值双臂（工具卡 + 推理）∥ 路径可移植化（`import.meta.dirname` + `new URL`） |
+
+**前舱遗留（在盘 · 本舱核验纳入交付）**：`chat.css` F1 块壳透明 ∕ F2 块距 14px ∕ F3 工具卡-错误横幅盒值 ∕ F4 消化行组盒值；`core.css` 推理块段（盒值 + 行内边距 + margin 0）；`chat-fixes.css` ledger 11px 组容器；`chat-scroll.mjs` `BACKFILL_PX = 40` ∕ `FOLLOW_PX = 24`（严格小于）；探针初版 20 ∕ 20。
+
+**决策透明表（设计未逐字之处）**
+
+| 决策 | 取值 | 依据 | 被否备选 |
+|---|---|---|---|
+| digest-failed `opacity: 1` | 删（沿 VSC 继承 .85） | F4「形与 VSC 邻近面逐值（差 ⇒ 消除）」；VSC `base.css:221-226` 无 opacity 覆盖 | 保留 1（非 VSC 值；且 end 后即摘 —— 不可观察） |
+| ledger 行级透明度 ∕ 行高落点 | 行级补两值（`core.css` 组外面）+ warn opacity 1 | VSC 行级逐值（`chat.css:477-488`）；字号 ∕ 色面仍落组容器（继承等效） | 全量搬行级（无值差 + 增 diff）；不补（透明度 ∕ 行高与 VSC 差） |
+| 工具头 `gap` | 8 ⇒ 6 | VSC `.tool-call-header` 逐值（原值未标来源 · 审计点名） | 保留 8（无来源 · 未登记） |
+| 标签分色锚 | `data-label` 两值选择器 | 注文自称锚（`chat.css:175`）+ VSC `chat.css:11` 值源；四型块回合首同落 accent | 补齐四型父类选择器（脆）；不动（🔴） |
+| 件级外边距 ∕ 首块上距 | **不内消** —— 模型级 ∕ 骨架面（呈报） | 扁平块模型下件级层不存在（单值化注释在案 `chat.css:53` ∕ `core.css:205`）；首块上距属 `chrome.css` 骨架 + `--gap` 体系值（行动表外） | 按件型拆规则（消息边界不可恢复）；改骨架 padding（越行动表 + 触 R13 面） |
+| 探针处置 | 留盘（扩展后） | 父侧验收③「复用 `.r12-probe.mjs`」 | 删（验收复用面断） |
+
+**读数（实跑）**
+
+- **真机探针**（Electron + playwright-core · 隔离家目录 · 亮色）：**22 ∕ 22 通过**（含新增：label 色值双臂 = `rgb(47, 111, 235)`（= `--accent` `#2f6feb`）· ledger 行级 `0.85 ∕ 16.5px ∕ 1` · tool-head `gap 6px`）；`pageerror` 0。
+- **语法**：`node --check` 全触碰 `.mjs`（`views/chat.mjs` ∕ `chat-text.mjs` ∕ `chat-scroll.mjs` ∕ `chat-guide.mjs` ∕ `.r12-probe.mjs`）OK。
+- **测试面**：随全清令取消（不写测试档 ∕ 不跑套件 ∕ 不改 `files.mjs`）——「not repo-suite verified — the parent-side closeout run is the only repo-suite run.」
+
+**审计与代码评审（终态 = converged ⇒ clean）**
+
+| 轮 | 形式 | 结果 |
+|---|---|---|
+| 1 | 内审 ∕ 背离审计（read-only explore · 8 档对 F1–F5 + 边界） | **DEVIATIONS 4**：🟡1（`RENDERER.md:110/:128` 未随 F5 阈值随动 + `:128` ∕ `:101` 互抵 —— 设计面轮）· 🔵3（`.tool-head` gap 8≠6 未声明【本舱收正】· digest-cap 面无对位【上抛 U-R12-1】· `chat-fixes.css` 引据坐标漂移【本舱收正】）；PARTIAL ∕ 静默简化零命中；边界四项零命中 |
+| 2 | 代码评审（advisor · type=code · 8 档 + 批档上下文） | **changes-required**：🔴1（回合首标签分色只落两类块 ⇒ 工具卡 ∕ 推理 ∕ 错误 ∕ 子代理四型落 muted；与 VSC `chat.css:11` 值源 + 本档注文相抵；探针固化偏差形）· 🟡4（件间距 14px 模型级 · 首块上距 12 ∕ 14 · 标签住卡盒内 · `chat.mjs` 350 行 ∕ UI.md 文档面）· 🔵4（`.file-link` 三值 · 探针硬编码路径 ∕ 链序注文漏 `/rc/search.css` ∕ 探针缺色值读数） |
+| fix round 1 | ① 标签分色换 `data-label` 锚 ② 探针增 label 色值双臂 ③ 探针路径 `import.meta.dirname` + `new URL` ④ 两处链序注文补 `/rc/search.css` | 已落；探针复跑 22 ∕ 22（新臂两例全绿） |
+| 3 | 代码评审（advisor · 复核 fix 声明 · 3 档） | **VERDICT pass**：四项逐条核实（标签锚无遗漏 ∕ 无特异性冲突；断言值与 `--accent` 一致；路径零残留硬编码；注文与 `index.html:11-21` 逐位相符）；无新 🔴 |
+
+**越域披露（超声明面 · 逐处给由）**：① `renderer/core.css`（行动表外）——`.ledger-line` 行级值 = F4「差 ⇒ 消除」必要落点（值面需要，按父侧口径报告列明）；② `.r12-probe.mjs` 扩展（临时验证工具）；③ `chat-fixes.css` 注释两处 ∕ `chat-text.mjs` 悬空注释删除 = 触面随动清理。
+
+**未办 ∕ 待父侧（本舱边界外，只报）**
+
+1. **模型级 ∕ 骨架面两差（呈裁）**：① 件级外边距（VSC 消息内件 8px ∕ 4px）⟷ 桌面 14px 块距单值化（若须逐件落，行内退场路径 = `.block + .block-tool { margin-top: 8px }` 等三处）；② 首块上距 12px（`.flow` padding）⟷ VSC 14px（`#messages` 顶 0 + `.message` margin 14）——涉 `chrome.css` + `--gap`。
+2. **digest-cap 面无对位（上抛 U-R12-1）**：VSC `.digest-cap`（auto ∕ stop 两档，`base.css:237-247` · `chat-status.js:97-105`）桌面无同件 —— 面缺非形差，拟另轮 ∕ 设计面裁（沿 R10 U-2 先例）。
+3. **工具卡头行段样式未落（呈裁）**：VSC `.tool-call-name`（600 + accent）· `.tool-call-args`（省略四值）· `.tool-call-status`（11px + .6）· `.tool-call-summary`（11px + .75 + `margin-left: 8px` + `max-width: 45%`）四组在桌面无对位规则（现形 = 整行色 + `flex-wrap`）——与在册「头行色」设计（`UI.md:362`）需一并决策 ⇒ 另轮 ∕ 设计面裁。
+4. **`.file-link` 三值差**（相抵② 面 · 评审 🔵）：缺 `text-underline-offset: 2px` ∕ 无 hover solid ∕ focus 值相异 —— 另轮 ∕ 登记。
+5. **设计面轮收正清单**：`RENDERER.md` §3/§4（回填 48 ⇒ 40 · 跟滚 ≤ ⇒ < · `:128` ∕ `:101` 互抵）· `UI.md` §1 对话流行（块壳透明 ∕ 面宽 100% ∕ 块距 14px ∕ 扁平化模型）+ D24 保留面两处旧文（`:265` ∕ `:272`）· `E2E-TESTING.md`（真机面）· 批档 §2.8 R12 行动表 ∕ 验收行仍为拆前旧值（480 ∕ `styles.css` 499）——父侧准备单已按拆后落点重锚，§2 就地收正待父侧落笔。
+6. **外舱转呈**：`src/main/window.mjs:27` 冒烟探针 `{ id:"css", path:"styles.css", expect:200 }` 死引用（`styles.css` 已随 R13-A 拆档删除）—— 归 R13-A 收尾漏项，非 R12 面。
+7. **测试面**：R12 验收行机检三档（`views-chat` ∕ `views-chat-frame` ∕ `integration/chat-render`）+「套件绿（≥263）」随全清令取消 —— 与 §1.10 准备单口径一致。
 
 ## §6 验证与收口（父代理）

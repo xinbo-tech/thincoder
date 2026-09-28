@@ -12,7 +12,8 @@
  */
 
 export const FOLLOW_PX = 24
-export const BACKFILL_PX = 48
+/* 回填触发阈 —— VSC `webview/history.js:82`（`scrollTop > 40` 即不取 ⇒ 触顶 ≤ 40px 取页）逐值。 */
+export const BACKFILL_PX = 40
 export const SMOOTH_MS = 420
 export const MAX_RENDER_BLOCKS = 200
 
@@ -23,12 +24,13 @@ function metricsOf(source) {
   return { scrollTop: read(metrics.scrollTop), scrollHeight: read(metrics.scrollHeight), clientHeight: read(metrics.clientHeight) }
 }
 
-/** 滚动出口判据（三出口互斥）：触顶 ∧ 有更早 ∧ 非回填中 ⇒ `backfill`；距底 ≤ `FOLLOW_PX` ⇒ `follow`；其余 ⇒ `unfollow`。
- *  边界皆命中（恰 `BACKFILL_PX` / 恰 `FOLLOW_PX`）。`guards` = 只读取数口（缺 ⇒ 恒假 —— 不造事实）。 */
+/** 滚动出口判据（三出口互斥）：触顶 ≤ `BACKFILL_PX`（边界命中）∧ 有更早 ∧ 非回填中 ⇒ `backfill`；
+ *  距底 `< FOLLOW_PX` ⇒ `follow`（VSC `ui.js:215` 严格小于 —— 恰 24px 不判近底）；其余 ⇒ `unfollow`。
+ *  `guards` = 只读取数口（缺 ⇒ 恒假 —— 不造事实）。 */
 export function scrollAction(metrics, guards = {}) {
   const { scrollTop, scrollHeight, clientHeight } = metricsOf(metrics)
   if (scrollTop <= BACKFILL_PX && guards?.hasOlder === true && guards?.inFlight !== true) return "backfill"
-  if (scrollHeight - scrollTop - clientHeight <= FOLLOW_PX) return "follow"
+  if (scrollHeight - scrollTop - clientHeight < FOLLOW_PX) return "follow"
   return "unfollow"
 }
 

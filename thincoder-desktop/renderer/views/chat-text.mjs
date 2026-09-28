@@ -7,8 +7,8 @@
  *      `renderer/core.css`）；
  *   ③ `patchTextBlock(node, block, key, handlers)` —— 帧尾就地更新（面值变才写 + 复制控件缺席则补；
  *      **推理分流** = 重渲走核专用画笔 `paintReasoningTarget`〔含钉底〕——「对齐第二批」项 1）；
- *   ④ `labelNode(role)` / `paintSpeakerLabels(root)` / `paintPendingMarks(root)` —— 说话人标签容器与帧尾落笔
- *      （项 4：用户块 = 核 `paintLabel` 原语；助手回合首块 = 端侧同字面〔核无原语 —— 端差登记〕；待发送气泡 = 核 `markPending`）；
+ *   ④ `labelNode(role)` / `paintSpeakerLabels(root)` —— 说话人标签容器与帧尾落笔（项 4：用户块 = 核 `paintLabel`
+ *      原语；助手回合首块 = 端侧同字面〔核无原语 —— 端差登记〕）；
  *   ⑤ `pinReasoning(node)` —— 推理块新建即落底（首帧钉底；增量钉底归核画笔）。
  * `data-raw` = **原文逐字**（复制取文源 —— KD-22「块文本逐字（不经渲染面解析）」：渲染面 markdown 后 DOM 文本已非
  * 原文 ⇒ 原文另存锚上；两复制控件同读 = `renderer/views/chat-copy.mjs`）。
@@ -20,7 +20,7 @@
 import { build, text } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 import { md, mdInline } from "/rc/md.mjs"
-import { markPending, paintLabel } from "/rc/flow/queued-mark.mjs"
+import { paintLabel } from "/rc/flow/queued-mark.mjs"
 import { paintReasoningTarget, paintStreamTarget } from "/rc/flow/stream.mjs"
 import { blockTextOf, copyBlockNode } from "./chat-copy.mjs"
 
@@ -123,10 +123,4 @@ export function paintSpeakerLabels(root) {
     text(label, t("msg.assistant"))
     node._labelPainted = true
   }
-}
-
-/** 待发送气泡标记落笔（帧尾后处理 · 幂等 —— 核 `markPending` 自持已标守卫：类 `pending` + `⏳ <queued.pending>`）。 */
-export function paintPendingMarks(root) {
-  if (!root || typeof root.querySelectorAll !== "function") return
-  for (const node of root.querySelectorAll("[data-pending-item]")) markPending(node)
 }
