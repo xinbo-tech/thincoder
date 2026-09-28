@@ -51,6 +51,12 @@
 - **写域记录**：R6 实际写面 += `renderer/i18n-views.mjs`（表外扩张——照实披露）。
 - **收口复核项**：本批收口核 5 键在盘（防跨舱覆写丢失）。
 
+### 1.9 微轮 #16 交付收下 + 本体同步轮派单（父侧 · 2026-09-29 00:2x）
+- **#16 交付**：10/10 逐号落位（§2 :593-673 overlay——① 全清令后验收面行规则 + 点名清单；②–⑧ 各靶行重锚 ∕ 补行；⑨⑩ 设置段裁定收正）+ 状态行更新；本舱笔迹 Δ = 0（doc-check 前 175 ∕ 后 175；行宽 0）。
+- **并发笔迹核对**：现刻悬空 177（+2）∥ 行宽 1（`PROJECT.md:1027` = 303 字符）——**非 #16 笔迹**，归会话标题批正文收正轮（#18，在跑）⇒ 已 send #18 定点收正（折行 + T-DSK41 悬空消解 + Δ ≤ 0）。
+- **#16 观察① 处置**：设计档本体行（②⑥⑦ 对应本体）分两路——「已落事实类」（会话模型六失据行 ∕ 测试残引）⇒ **本刻派本体同步轮**（eng-designer #21 · fix · 排队等 #18 让出 `PROJECT.md`）；「实现依赖类」（白名单计数 ∕ §4.1:141/:153/:177-178）⇒ 随对应轮落地后收（窗口在册 §2）。
+- **#16 观察③** 并入 #21 射程（§4.1 测试面越层段 ∕ §10 U 行残引）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（初始轮 + 评审轮 1 修正（1–14 逐号）+ R1 设计面收正轮（#129 ∕ #131 · 六档八笔；flow 批档三处归父侧）+ 评审轮 3（重发复核）修正 · 微轮 #16（1–10 逐号）在册）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -797,5 +803,41 @@ KD-42（`PROJECT.md:81`）补句：**「域外对账保持人工」**——理�
 2. `agent-host.mjs` 400 行 > 300 顾问线（本批触碰）而 §2.5 越层处置行缺席 —— 请父侧补行（拆点 ∕ 续期窗口）。
 3. 维护面文案单语（en）——与主进程既有词面（zh ∕ en 双值 + locale 取词）口径待裁（内容权在主 agent）。
 4. 产品代码运行自查 = 内联脚本（非测试档）；沙箱目录留在 `%TEMP%/tc-maint-*`（未删，留现场）。
+
+### R2 · 索引数据面（eng-coder · 2026-09-29 · initial 轮）
+
+**交付摘要（逐档 · 后 = node `split("\n").length` 实读；前 = 届盘 ∕ 设计表读数，逐行标注来源）**
+
+| # | 档（前） | 后 | 落点 |
+|---|---|---|---|
+| 1 | 新核 `thincoder-core/memory-status.mjs`（设计 ≈70） | **47** | 只读出口 `memoryStatus(memory, { origin })`：三表计数单点（`files` 表 ∕ `code_chunks` ∕ `doc_chunks`）+ `totals`（code+doc，端侧既有读数同口径）+ `indexed`；`origin` 经核 `normalizeOrigin` 归一（写缝归一 ⇒ 读面同键）；零写面 ∕ 零动作面 ∕ 零端名 |
+| 2 | 核 `thincoder-core/memory.mjs`（21） | **25** | +汇总档 re-export（`export { memoryStatus } from "./memory-status.mjs"` —— 面名归汇总档，消费面 `@thincoder/core/memory.mjs` 直取） |
+| 3 | 新 `thincoder-desktop/src/main/index-status.mjs`（设计 ≈120） | **68** | ① `runIndexBuild({dir})`：`gitSync`（增径）⇒ `null` 落全量 `codeSync` ∥ `docSync`（allSettled；有失败项 ⇒ 失败句并不吞）⇒ 核出口复读计数；② `readIndexCounts({dir})`：核出口单点（端侧零 SQL ∕ 零表名）；句柄装配形沿 `agent-assemble.mjs:62-65`（`openMemory` 单点） |
+| 4 | `thincoder-desktop/src/main/ipc.mjs`（**297** 父侧届盘） | **308** | +2 通道 `index:build` ∕ `index:status`（定序末位）+ 两处理体转口（`dir` = `currentCwd()`）+ 档头计数 33 ⇒ 35 同拍 |
+| 5 | `thincoder-desktop/src/preload/preload.cjs`（**63** 评审核读） | **65** | 白名单 33 ⇒ 35（`index:build` ∕ `index:status` 末位）+ 档头计数 ∕ 定序行同拍 |
+| 6 | `thincoder-desktop/src/main/settings.mjs`（254 设计表） | **272** | +`indexStatus({dir})`（状态读数**装配**：核出口计数 + `built` + `hasEmbedder` = `embedding.apiKey` 在场，同装配判据） |
+| 7 | 新 `thincoder-desktop/renderer/views/settings-sections-tools.mjs`（设计 ≈80；档名承父侧裁定 = **tools**） | **71** | 「工具与服务」段体 = 索引族行（名 ∕ 状态词 ∕ 构建钮）；四态判据序 = VSC `renderIndexStatus` 同序（`building` ∥ `no-key` ∥ `built` ∕ `not-built`）；`data-index-state` 锚供机检 |
+| 8 | `renderer/views/settings-sections.mjs`（264 我届盘 read） | **267** | +re-export `toolsBody`（沿 `settings-agent.mjs` 先例 —— 导出面零改）+ 档头一句 |
+| 9 | `renderer/views/settings.mjs`（297 设计表；**设计表漏列 ∕ 父侧裁定②追加**） | **305** | `SECTIONS` 4 ⇒ 5（`tools`）+ `settingsModel.tools` 切片 + 段体分派 + 档头 |
+| 10 | `renderer/mount-settings-reads.mjs`（99） | **119** | +`loadIndex()`（`index:status` 读数；回执无 `status` 载体 ⇒ 段 `none` + 失败面） |
+| 11 | `renderer/mount-settings-exits.mjs`（≈297） | **316** | +`buildIndex()` 出口（构建期 `building` ⇒ 钮禁用；成功复读；失败零乐观写 + 段级失败面）+ `openSettings` 随动 + handlers 一键 + 档头 |
+| 12 | `renderer/mount-settings.mjs`（135；**父侧裁定②追加**） | **136** | `SCOPES` +`tools`（失败面段标域与视图 `SECTIONS` 同域） |
+| 13 | `renderer/i18n-views.mjs`（124 我届盘 read） | **146** | +键 **8** × 两语（段名 ∕ 索引族名 ∕ 态词四 ∕ 钮标二）—— 值逐字同 VSC `locales/{en,zh}.json`（段名键 = 端侧键名 `settings.section.tools`，值取 VSC `settings.toolsSection`） |
+
+**测试面**：随全清令（2026-09-28 用户令）**跳过 R2 表 #10 ∕ #11 两行**（核 `test/memory-status.test.mjs` ∕ `test/settings.test.mjs` 随动）——盘面 `test/files.mjs` 清单 = `[]`（存量测试全部退役）；**本舱未写测试 ∕ 未跑套件**。核 ∕ 桌面 ∕ VSC ∕ CLI ∕ render-core 套件均未跑（**not repo-suite verified — the parent-side closeout run is the only repo-suite run.**）。
+
+**决策透明表（逐条 · 依据）**
+
+| # | 决策 | 依据 |
+|---|---|---|
+| D1 | **段名 = `tools`、档名 = `settings-sections-tools.mjs`** | 父侧裁定（两处相抵的上抛回执）：R7 终态枚举明写「tools{embedding ∕ websearch ∕ 索引状态}」且既有拆点命名已定 ⇒ 先建同名档，R7 只增行零改名搬迁；R7 基线按届盘重锚为「5 ⇒ 7」 |
+| D2 | 写域追加 `renderer/views/settings.mjs` ∕ `renderer/mount-settings.mjs` | 父侧裁定②（设计表漏列，照实现补）；另 `mount-settings-reads.mjs` ∕ `mount-settings-exits.mjs` = R2 #8「接线随动（先拆后改——拆点归先落者，本批消费）」的**拆分后落点**（拆档已由先落者执行，本舱消费其形） |
+| D3 | 读数面**不建库**：库不在盘 ⇒ 零计数直接回 | 读面零副作用（`index:status` 在设置面每次开合可触发；`createMemory` 会建库 ⇒ 读径加 `existsSync` 闸）；构建径无闸（构建本就写） |
+| D4 | 无本项目 ⇒ 读数零计数 ∕ 构建 `no-project` | 禁假造（不跨项目读全库：`origin=null` 会落**全库**计数）；`no-project` 码已在端词表 `REASON_WORD`（`settings.reason.noProject`） |
+| D5 | `i18n` 键落 `renderer/i18n-views.mjs`（非 `i18n.mjs`） | R2 #9 行定点（+键 ≈6 ⇒ ≈80）；实落 8 键（段名 1 ∕ 索引族名 1 ∕ 态词 4 ∕ 钮标 2）—— 比 ≈6 多 2，因段名与族名各一键（VSC 三段视觉件 = 族名 + 状态行 + 钮，逐件有词） |
+| D6 | 构建回执携计数 + 渲染面另复读状态 | VSC `buildIndex` 尾 `pushIndexStatus` 同律（回执计数供调用面，UI 状态独立复读 ⇒ 两处同源不漂） |
+| D7 | `ipc.mjs` **零拆点**（未出「通道注册表族」） | §1.5① 条件裁定 = 按**届盘读数**判（父侧届盘 297 < 300 ⇒ 零触）；本舱照办。**披露**：本轮 Δ 后该档 = **308**（越顾问线 300）——条件裁定「轮起手口径」与「轮内越线」的错位已由评审轮 3 发现 #5 在册（§3），处置请示父侧（拆点 or 续期） |
+
+**越线档披露（新增 2 · 请父侧处置）**：`renderer/views/settings.mjs` 297 ⇒ **305**（设计 R7 #1 行已含该档 297 ⇒ ≈340 的增长预案；评审轮 3 发现 #2 已请 §2.5 补处置行）· `renderer/mount-settings-exits.mjs` ≈297 ⇒ **316**（设计表未列该档——R8 拆分产物；本舱建议拆点 = 「索引 ∕ 工具段出口族」出档，或 §2.5 记续期窗口）。两档均 ≤500 硬限；本舱未自行拆（拆点归设计面 ∕ 先落者，沿 KD-T7）。
 
 ## §6 验证与收口（父代理）
