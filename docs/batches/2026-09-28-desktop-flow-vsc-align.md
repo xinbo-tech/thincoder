@@ -106,32 +106,37 @@
 ### 1.21 R13-A 交付登记（#100 · 2026-09-28 22:4x）
 - 交付：左列三档裁撤（真机三锚命中 0）· VSC 形会话控制（项目钮 ∕ 下拉 ∕ 新建 ∕ 条目 ∕ 空态）落地 · **四拆落定**（`theme.css` 85 ∕ `chrome.css` 415 ∕ `skin.css` 13；`styles.css` ∕ `rail.css` 删档）· i18n 204 ⇒ 188 · 测试面改锚 14 档 + 新档 1 + 删 2 + `files.mjs` · 集成 9 档改锚 · 真机四步全过 + `pageerror` 0。
 - **收口全量恰一次**（新纪律首案）：`tests 270 · pass 269 · fail 1` → 唯一红（`first-run-smoke` 核面口径）单档复跑绿 ⇒ 实质 **270 ∕ 270**。
-- **未闭（1 · 入册）**：`renderer/mount-sessions.mjs` **588 行越 500 硬限** ⇒ 按 §5.4 落形三件出档（`views/session-control.mjs` ⇒ 接线档 ≈300；随动 = 6 测试档 import + 1 锁行）——**父侧裁：随 R13-B（#101）一并落**（其面即测试 ∕ 锁面，随动正落其射程）。
+- **未闭（1 · 入册）**：`renderer/mount-sessions.mjs` **588 行越 500 硬限** ⇒ 按 §5.19 落形三件出档（`views/session-control.mjs` ⇒ 接线档 ≈300；随动 = 6 测试档 import + 1 锁行）——**父侧裁：随 R13-B（#101）一并落**（其面即测试 ∕ 锁面，随动正落其射程）。
 - 其余披露入册：核面口径（新建会话首存前不入下拉列——核侧面）· `no-session` 引导态近不可达（词键 ∕ 分支保留）· 他档注释残留 ∕ `settings.css` 死规则（批末清扫面）。
 
 ### 1.22 R1 #8 待发送面冲突裁（承 #111 ask · 2026-09-28 22:4x）
 - **裁 = B 侧为准**：用户 21:07 直令（「流里一个节点都不许有」）+ 姊妹批已落终态（`[data-composer-notices]` 输入区带 ∕ 流内零节点）**晚于且覆盖**本批设计 §2.2 R1 #8 的「在连泡就近标记形」；设计自认并笔序 = 姊妹批先行。
 - **处置**：① R1 #8 的流内 ∕ 输入面板部分**行内退场**（不再落地）；② `planBusyQueued` ∕ 在连气泡形在 B 侧形态下无消费点 ⇒ 不再落地；③ 可做残项 = `renderer/queue.mjs` 容量常量改核件单源 + 口径注（声明外披露；冲突即弃、折登记）；④ 设计面（R1 #8 行 ∕ KD-31 邻位 ∕ §2.7 行 4 收正）**随设计面轮**（在册）。
 
-### 1.9 批档勘误（父侧 · 2026-09-28 23:5x · 承 #116 R11 补轮转出）
+### 1.23 批档勘误（父侧 · 2026-09-28 23:5x · 承 #116 R11 补轮转出）〔段号就地顺正：原标 1.9 与上行重号〕
 - ① **§1.8「待收」两测试项随全清令取消**：机检随动（分隔 ∕ 字色断言）与 `views-locks.test.mjs:418-419` 变量计数锁同拍——测试树已全删（用户 2026-09-28 23:18 令）；替代实证 = R11 补轮真机探针（亮 ∕ 暗两轮，见 §5.13）。
 - ② **§5.6 第 1 ∕ 3 条所引坐标作废重锚**：`styles.css:470-480` ∕ `styles.css:461-463` = 旧坐标（`renderer/styles.css` 已随 R13-A 拆分退场）——现行落点 = `renderer/chrome.css`（banner 四色三规则 `:414-416` · 判句 ∕ 注句 `:392-393` ∕ `:410` ∕ `:413` · 告警位相邻条 `:411-412`）；同条所引 `views-locks.test.mjs` 已随令删除。
 - ③ 设计面收正（`UI.md` §1 状态栏行 ∕ `RENDERER.md` 状态行面）= 设计轮 #129 追加项（在收）。
 
-### 1.10 进程崩溃 · 队列死亡与重发准备（父侧 · 2026-09-28 23:57）
+### 1.24 进程崩溃 · 队列死亡与重发准备（父侧 · 2026-09-28 23:57）〔段号就地顺正：原标 1.10 与上行重号〕
 - **事件**：宿主进程意外退出（用户报「意外飞出来了」）→ 重启后子代理池清零——**在飞 ∕ 排队的四舱全部死亡**：#106 ∕ #109 ∕ #112（对位批后续轮面）· **#117 = R12（会话流 ⇒ VSC 对齐）**；四舱**零报告零 §5 写入**。
 - **盘面核对**：**无损伤**——所有已提交工作完好；工作树 = 链上累积未提交面（与崩溃前一致）；`.r12-probe.mjs`（R12 探针）在盘可复用。
 - **重发阻塞点（实测）**：引擎要求 designToken **原件**（自历史不可回收——按设计抹除）——重发 R12 的 spawn 被机械门拒：「Invalid or missing design token」。⇒ 重发通道 = **补一次设计评审点火（用户方）** → 令牌签发 → 父侧按准备单重发。
 - **R12 重发准备单**（六件任务书已拟好，点火后照发）：目标 = 会话流 F1–F5 对位（块壳消除 ∕ 面宽 90%∥100% ∕ 块距 14px ∕ 面内件核件面 ∕ 流尾件零撤 ∕ 滚动回填行为对表）；面 = `chat.css`（拆后落点）· `views/chat{,‑text,‑scroll,‑guide}.mjs`；验收 = 逐值表 + 探针复跑 + 全清令注记；边界 = VSC ∕ 核件 ∕ 流尾件零改。
 - **对位批（feature-parity）同状**：其后续轮（#106 ∕ #109 ∕ #112 面 = `agent-host` ∕ `suspension-drive` 等）同随进程死亡、同需令牌重发。
 
-### 1.11 R12 重发点火 + 评审 #1 处置（父侧 · 2026-09-29 00:0x）
-- 评审 #1（R12 重发复核）**VERDICT: pass**（🔴0 ∕ 🟡5 ∕ 🔵3——报告与 §3 落档）；令牌已签发（值 = 运行态，不落档）；**R12 已重发**（eng-coder #5 · running——按 §1.10 准备单 + 拆后落点行动表）。
+### 1.25 R12 重发点火 + 评审 #1 处置（父侧 · 2026-09-29 00:0x）〔段号就地顺正：原标 1.11 与上行重号〕
+- 评审 #1（R12 重发复核）**VERDICT: pass**（🔴0 ∕ 🟡5 ∕ 🔵3——报告与 §3 落档）；令牌已签发（值 = 运行态，不落档）；**R12 已重发**（eng-coder #5 · running——按 §1.24 准备单 + 拆后落点行动表）。
 - **逐条处置**：① 行动表失锚 → 重发任务书已按拆后落点落，正文收正入微轮；② 验收失锚 → 重发任务书已换口径（逐值表 ∕ 探针 ∕ 全清令注记），正文收正入微轮；③ F4 digest 项 → 微轮（拆列 + 接 E9 登记）；④ chat.mjs 拆点登记 → 微轮；⑤ D24 锁随动对象消失 → 微轮（行收正 + F1 句改述）；⑥ 数值漂移 → 微轮（回填）；⑦ F5 结论落点 → **已随重发任务书闭环**（落点 = 报告逐值表 + 差项逐条处置）；⑧ 段号重复 → 微轮（顺正打标）。
 - **微轮** = eng-designer #6（fix · 定点 ①–⑥ ∕ ⑧）——边界 = 只收上述项、零语义。
 
+### 1.26 微轮 #6 交付收下（父侧 · 2026-09-29 00:2x）
+- **交付**：评审 #1 的 ①–⑥ ∕ ⑧ 共 7 项全落（⑦ 依令零触）——行动表按拆后落点重锚（chat.css **229** ∕ theme **90** ∕ chrome **424** ∕ chat.mjs **350** ∕ chat-text **132** ∕ chat-scroll **91** ∕ chat-guide **79**；styles.css 改指）；验收换 §1.24 准备单口径（全清令注记）；F4 digest 拆列（`chat-status.js:69-122` 同锚）+ E9 续登；chat.mjs 拆点登记句；F1 ∕ D24 锁句改述（`PROJECT.md:561` 同拍 + `.rail-row` 清出）；数值统一回填；段号顺正（1.9⇒**1.23** ∕ 1.10⇒**1.24** ∕ 1.11⇒**1.25**；§5 三组 ⇒ **5.15–5.20** + 裸号引用随正）。**父侧抽验通过**（`:426-440` 行动表 ∕ `PROJECT.md:561` 实读）。
+- **观察处置**：① `PROJECT.md:1027` 303 字符 = 会话标题批并发笔迹（已 send #18 自清）；② §1.21（`:109`）「随动 = 6 测试档 import + 1 锁行」句随全清令作废（以本节为准）；③ chat-guide 80 vs 79 = ±1 不入判（零动作）；④ 冻结记录不回改（零动作）；⑤ `chat-composer.css:61` 注释死指针 → **台账 #539**（随下一桌面码面轮顺带）；⑥ 既有悬空 44 行号 = 设计面收正在收同源（零新动作）。
+- **设计面状态**：本批设计微轮（#6 + 设计面收正轮）均落，无待评审项（评审 #1 = pass 在册）。
+
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成 · 2026-09-28（评审轮 1 十二发现逐号落修 + 新增轮 R13 入书（就地修正——打标 §2.10；实施任务书 R1–R13 在册））
+**状态行**：设计完成 · 2026-09-29（评审轮 1 十二发现落修 + R13 入书（§2.10）+ 评审 #1 ①–⑥ ∕ ⑧ 微轮收正（§2.11）；实施任务书 R1–R13 在册）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 ### 2.0 交付形态与计量口径（本 §2 = 实施任务书）
@@ -181,9 +186,9 @@
 | 档 | 现读 | 预期增量（本批） | 拆档定稿 |
 |---|---|---|---|
 | `renderer/events.mjs` | **498** | R10 #8 ∕ R11 #3 = 随动（±≤5） | **拆分已由输入面板批 R1 承接**（新档 `renderer/events-flags.mjs` ≈+75）——本批两轮引用之（不重复计划）；主档批后 ≈482；锁随动归先落者（§2.0 跨批序） |
-| `renderer/styles.css` | **499**（距 500 余 1） | R12 变量面（±0～−10）；R13 左列 ∕ 标签条段裁撤（净减 ≈230–260） | 拆点 = 按面拆：`theme.css`（主题变量段）∕ `rail.css`（左列面）∕ `chrome.css`（中区外壳面）∕ `skin.css`（皮肤与交互态尾段）——承 拆档批 §2.2-1（收正后拆点）；**R13 后重锚**（左列面随裁撤退场）；消费面 = `index.html` 链序；锁随动 = `views-locks` U174 ∕ U182 扫描靶 + `check-dist` 产物清单；执行 = 拆档批 R1（暂缓）∥ R13 触面——**先拆后改**（谁先落谁拆，另一批消费） |
+| `renderer/styles.css` | **499 ⇒ 已删档**（R13-A 四拆） | R12 变量面（±0～−10）——拆后落点 = `theme.css` ∕ `chrome.css` | **已落（R13-A 四拆）**：删档 ⇒ `theme.css`（85 ⇒ 90）· `chrome.css`（415 ⇒ 424）（R11 补轮后）· `skin.css`（13）；`rail.css` 建后随左列裁撤即删；消费面 = `index.html` 链序（已随动）；`check-dist`（已随拆分落）；`views-locks` 靶随全清令退役；执行句已消费 |
 | `renderer/mount-settings.mjs` | **500**（顶格） | R8 #3 随动（表单随核流程；≈ −10～+15） | 拆点 = 三族出档：`mount-settings-reads.mjs`（读数供给 ≈105）∕ `mount-info.mjs`（信息行族 ≈50）∕ `mount-settings-exits.mjs`（出口 + 写路辅助 ≈175）；主档 ≈180–270——承 拆档批 §2.2-4（KD-S2）；**R13 影响**：信息行族随左列裁撤退场（`mount-info.mjs` 拆点随裁撤消解）；消费面 = `app.mjs` ∕ 视图接线（原档 re-export 承接）；锁随动 = `host-floor` U95 `fresh` 臂清单 + `views-settings*` import 面；执行 = **先拆后改**（拆档批复起 ∥ R8 触面） |
-| `renderer/chat.css` | **480** | R1 #10 核卡类名（≈490–510 ⇒ 越 500）；R10 #9 ∕ R12 #1（±0～−10） | 拆点 = 按面拆：`chat-cards.css`（卡族段）∕ `chat-composer.css`（输入区段）∕ `chat-fixes.css`（小修族尾段）；主档 ≈204——承 拆档批 §2.2-10（收正后拆点）；消费面 = `index.html` 链序（各拆出段相对序保持）；锁随动 = `views-locks` U174 ∕ `chat-render` D24 面；执行 = **先拆后改**（R1 #10 触面先拆，另一批消费） |
+| `renderer/chat.css` | **480 ⇒ 229**（R1 四拆后主档） | R10 #9 ∕ R12 #1（±0～−10）——落点 = 主档（块壳 ∕ 面宽 ∕ 间距） | **已落（R1 四拆）**：主档 **229** + `chat-cards.css`（143）∕ `chat-composer.css`（72）∕ `chat-fixes.css`（94）；消费面 = `index.html` 链序（已随动）；`views-locks` U174 ∕ `chat-render` D24 面随全清令退役；执行句已消费 |
 | `test/agent-host.test.mjs` | **490** | R4 ∕ R6 ∕ R7 ∕ R9 四处触例（改锚 + 补例；≈ +10–25） | 拆点 = 生命周期六例出档 `test/agent-host-lifecycle.test.mjs`（U86 ∕ U178 ∕ U191 ∕ U192 ∕ U224 ∕ U225 ≈231）；主档 ≈258——承 拆档批 §2.3-8；消费面 = `files.mjs` ∕ `run.mjs` 清单 + `agent-host-harness.mjs` 夹具；锁随动 = 清单两向自检；执行 = **先拆后改**（拆档批 R2 ∥ 本触面轮） |
 
 ### 2.2 逐轮行动表（R1–R9 · 每轮 = 一份实施契约）
@@ -425,18 +430,19 @@
 
 | # | 面 | VSC 原件 | 桌面现状 | 处置 |
 |---|---|---|---|---|
-| F1 | 块壳 | 文本面透明无卡壳（无边框 ∕ 无底；`chat.css:3-59`） | `.block` 1px 描边 + 圆角（`renderer/chat.css:13-25`） | 消除 ⇒ `D24 消息块壳`锁随动（同 U-R1-2 先例：锁随动 + 冲突断言逐处改） |
+| F1 | 块壳 | 文本面透明无卡壳（无边框 ∕ 无底；`chat.css:3-59`） | `.block` 1px 描边 + 圆角（`renderer/chat.css:13-25`） | 消除 ⇒ `D24 消息块壳`保留面收正（`.block` 移出——`PROJECT.md` D24 行同拍）；锁随动对象已随全清令退役（`views-locks` 删档）⇒ 留证改逐值表 ∕ 探针 |
 | F2 | 面宽 ∕ 间距 | max-width 90%（user 100%）· 块距 14px | 满宽 · 块距 8px | 消除 ⇒ 逐值对表 |
 | F3 | 面内件（工具卡 ∕ 推理 ∕ 错误） | 与桌面同源（核件面） | 核件消费在盘 | 逐值对表（差 ⇒ 消除） |
-| F4 | 流尾件（digest ∕ timer ∕ ledger ∕ stopMark ∕ 待发送） | 无对位面（VSC 无同件） | 前批用户裁定面 | 非端差项——**形**与 VSC 邻近面逐值对表（差 ⇒ 消除）；面本身零动 |
+| F4 | 流尾件（digest ∕ timer ∕ ledger ∕ stopMark ∕ 待发送） | digest = 有对位面（`.digest-turn` ∕ `.digest-status`；`chat-status.js:69-122`——E9 同锚）；timer ∕ ledger ∕ stopMark ∕ 待发送 = 无同件 | 前批用户裁定面 | 非端差项——**形**与 VSC 邻近面逐值对表（差 ⇒ 消除）；面本身零动；**digest 两差（终态留存 ∕ 多轮切片）显式续登**（不内消——R10 父侧裁；登记 = §5.14 E9 值表） |
 | F5 | 滚动 ∕ 回填 | `history.js:29-56` 懒加载 + 跟滚；`ui.js:211-221` pin（24px 阈） | `views/chat-scroll.mjs`（回填 + 停跟） | 行为对表（随轮深勘；差 ⇒ 消除） |
 
-**行动表**：`renderer/chat.css`（**480**——先拆后改，拆档见 §2.1）· `renderer/styles.css`（**499**——变量面；拆档见 §2.1）· `renderer/views/chat.mjs`（**355**）· `renderer/views/chat-text.mjs`（**133**）· `renderer/views/chat-scroll.mjs`（**92**）· `renderer/views/chat-guide.mjs`（**80**——空态面随动）——原档 ≤15；预期 = 值面收正（±0～−10 ∕ 档）。
-**验收**：机检——块壳 ∕ 间距 ∕ 面宽断言（原址改锚（现读）：`test/views-chat.test.mjs`（452） ∕ `views-chat-frame.test.mjs`（418） ∕ `integration/chat-render.test.mjs`（284））+ D24 锁逐处随动记录；套件——desktop 绿（≥263）。真机（父侧）——会话流与 VSC 同刻对照（文本 ∕ 工具卡 ∕ 推理 ∕ 错误 ∕ 滚动）。
+**行动表**：`renderer/chat.css`（**229**——拆后主档：块壳 ∕ 面宽 ∕ 间距）· `renderer/theme.css`（**90**）∕ `renderer/chrome.css`（**424**）——变量 ∕ 骨架面（原 `styles.css` 已删档 ⇒ 改指）
+· `renderer/views/chat.mjs`（**350**——>300：拆点登记随结构 ∕ 设计面轮（R1 舱 `§5.11` 在册）；本批内不拆）· `renderer/views/chat-text.mjs`（**132**）· `renderer/views/chat-scroll.mjs`（**91**）· `renderer/views/chat-guide.mjs`（**79**——空态面随动）——原档 ≤15；预期 = 值面收正（±0～−10 ∕ 档）。
+**验收**：以 §1.24 准备单为准——逐值表 + 探针复跑 + 全清令注记。机检测试面（`views-chat` ∕ `views-chat-frame` ∕ `integration/chat-render` 三档原址改锚 +「套件 desktop 绿（≥263）」）**随全清令取消**（用户 2026-09-28 23:18 令——测试树已全删）；机械面改逐值表 ∕ 真机探针留证。真机（父侧）——会话流与 VSC 同刻对照（文本 ∕ 工具卡 ∕ 推理 ∕ 错误 ∕ 滚动）。
 **边界**：流尾件面零撤（前批裁定）；与 R10 的 `chat.css` 面避让（串行）。
-**文档收正（随轮）**：`UI.md` §1 对话流行（块壳 ∕ 面宽 ∕ 间距）+ `RENDERER.md`（帧面若触）+ `E2E-TESTING.md`（真机面）+ `PROJECT.md`（**D24 行「消息块壳」保留面收正**——R12 F1 ① 消除径；§7 用例行）+ `RENDER-CORE.md` §5（若值面触）。
+**文档收正（随轮）**：`UI.md` §1 对话流行（块壳 ∕ 面宽 ∕ 间距）+ `RENDERER.md`（帧面若触）+ `E2E-TESTING.md`（真机面）+ `PROJECT.md`（**D24 行「消息块壳」保留面收正——已落 · 2026-09-29 设计微轮**；§7 用例行）+ `RENDER-CORE.md` §5（若值面触）。
 
-**全批验收补（补令增轮 + 会话模型轮适用）**：R10–R13 各轮同 §2.3 四条（四套件全绿 + 用例数不降 · VSC 树零改机械锁 · 真机走查面登记 · 轮粒度）；R10–R13 真机面并入 §2.3 第 3 条列表（右列子代理全族 · 状态行逐段 ∕ CLI 同刻 · 会话流逐面 ∕ VSC 同刻 · 会话控制下拉与左列零残留）。
+**全批验收补（补令增轮 + 会话模型轮适用）**：以 §1.24 准备单为准——R10–R13 各轮验收 = 逐值表 + 探针复跑 + 全清令注记；原「各轮同 §2.3 四条（四套件全绿 + 用例数不降 · VSC 树零改机械锁 · 真机走查面登记 · 轮粒度）」**随全清令取消**（测试树已全删 · 用户 2026-09-28 23:18 令）；R10–R13 真机面并入 §2.3 第 3 条列表（右列子代理全族 · 状态行逐段 ∕ CLI 同刻 · 会话流逐面 ∕ VSC 同刻 · 会话控制下拉与左列零残留）。
 
 ### 2.9 会话模型轮 R13（承用户 2026-09-28 19:04 ∕ 19:0x 续裁 + 需求档 §3.1）
 
@@ -516,6 +522,21 @@
 | R13 | **§2.9 新增轮**（会话模型对齐：下线面逐项 + VSC 原件 → 落位对位表 + 适配逐条 + 行动表 + 验收 + 与 R10–R12 接口声明 + 文档收正 + 上抛）；需求侧 = 已落（§3.1 + D18 ∕ D21 ∕ D24 ∕ D26——本座只报）；台账 #528 | 入书 |
 
 **表外发现（本轮报父侧——不在 12 条内）**：`docs/core/design/CORE-UNIFICATION.md` 行 183 将 `file-links` ∕ `notify` ∕ `image-handler` 列入「端特有 · 不迁」——与本批 R2 ∕ R5 ∕ R6 上提直接相抵（同 KD-39 类）；收正落点已点入 R2 ∕ R5 ∕ R6 各轮「文档收正」行（行 183 三处项）。
+
+### 2.11 评审 #1 收正微轮 —— 打标（§2 就地修正 + §1 ∕ §5 段号顺正 · 2026-09-29 · eng-designer）
+**来源**：评审 #1（R12 重发复核 · VERDICT pass · 🔴0 ∕ 🟡5 ∕ 🔵3）发现之 **①–⑥ ∕ ⑧** 逐号落修（⑦ 已随重发任务书闭环——零触）。**口径**：零语义——只收锚点 ∕ 行文 ∕ 数值 ∕ 段号；新增条目零 · 边界零动 · 码 ∕ 测试面零改 · §3 ∕ §4 ∕ §6 零触碰。
+**笔域**：§2 就地修正（本作者段）+ §1 ∕ §5 段号顺正（专项——内容零改，沿 §5.14 先例）+ `docs/desktop/design/PROJECT.md` 两处（D24 行收正 · chat-guide 读数回填）。
+**段号顺正（⑧）**：§1 三处——1.9 ⇒ **1.23** · 1.10 ⇒ **1.24** · 1.11 ⇒ **1.25**（评审列 1.9 ∕ 1.10；实读 1.11 亦两见——一并顺正；引用随正 §1.10 ⇒ §1.24）；§5 六组——R3 舱 5.7 ⇒ **5.15**、R13-A 段 5.1–5.5 ⇒ **5.16–5.20**（评审列 5.1 ∕ 5.2 ∕ 5.7；实读 5.3 ∕ 5.4 ∕ 5.5 亦同号两见——一并顺正；引用随正 §5.4 ⇒ §5.19 及段内裸号）。
+
+| 号 | 落点 | 处置 |
+|---|---|---|
+| ① | R12 行动表 ∕ §2.1 拆档定稿两行 | 按拆后落点重锚（`chat.css` **229** · `theme.css` **90** · `chrome.css` **424** · `chat.mjs` **350** · `chat-text` **132** · `chat-scroll` **91** · `chat-guide` **79**）；`styles.css` 项改指；§2.1 两行改「已落」态 |
+| ② | R12 验收行 ∕ §2.8 尾 | 换准备单口径（逐值表 + 探针复跑 + 全清令注记）+「以 §1.24 准备单为准」指针 |
+| ③ | R12 F4 行 | VSC 列逐项拆分（digest ⇒ `chat-status.js:69-122` 同锚）+ E9 两差显式续登（不内消——登记 = §5.14 E9 值表） |
+| ④ | R12 行动表 `chat.mjs` 项 | 拆点登记句（>300 顾问线——随结构 ∕ 设计面轮；R1 舱 `§5.11` 在册） |
+| ⑤ | R12 F1 行 ∕ `PROJECT.md` D24 行 | 锁句改述（锁载体随全清令退役 ⇒ 留证改逐值表 ∕ 探针）+ `.block` 移出保留面（`.rail-row` 随 R13-A 退场同拍） |
+| ⑥ | R12 行动表 ∕ `PROJECT.md` §4.2 行 | 数值统一回填（**350** ∕ **132** ∕ **91** ∕ **79**；chat-guide 54 ⇒ 79） |
+| ⑧ | §1 ∕ §5 段号 | 就地顺正打标（见上）——内容零改 |
 
 ## §3 设计评审（评审子代理）
 
@@ -685,7 +706,7 @@ VERDICT: changes-required
 
 **读数补（交付前末次 · 2026-09-28）**：桌面套件第三快照 = `274 ∕ pass 267 ∕ fail 7`——树又动（姊妹批改锚面部分转绿，`U51 ∕ U52 ∕ U95 ∕ U118 ∕ store` 已回绿），余 **7 红全为待发送组 ∕ 出泡族**（`T-DSK45 ∕ T-DSK46 ∕ T-DSK47` E2E + `U153` 出泡不变式 + `U59 ∕ U194 ∕ U205` 帧面 ∕ 块序 ∕ 消化行组——均姊妹批（输入面板 R1 · B12 口径）在飞面）；本轮 `file-links` 三例零红。三快照（`274∕269∕5` → `264∕251∕13` → `274∕267∕7`）红集随树移动而变，**逐次均零 `file-links` 红** ⇒ 归因稳定。
 
-### 5.7 R3 实施记录（队列纯逻辑族上提 + 回合链接驳 · eng-coder · 2026-09-28）
+### 5.15 R3 实施记录（队列纯逻辑族上提 + 回合链接驳 · eng-coder · 2026-09-28）〔段号就地顺正：原标 5.7 与上行 R2 舱重号〕
 
 **目标**：R3 = 核新档 `queued.mjs`（VSC 纯逻辑族上提）+ 桌面 `queued-input.mjs` 消费核族（删本地副本）+ `turn-chain.mjs` 取批面处置；机检 = 核新测档（批拆分 ∕ 8 条 ∕ 2000 字 ∕ slash 首条两径 ∕ 取项保序）+ 桌面测随动；套件 core + desktop。
 
@@ -885,44 +906,44 @@ VERDICT: changes-required
 2. **核内 `FORMATS` 双份**（`provider-flows.mjs:33` ∥ `config-io.mjs:219`）：评审 🟡 登记（单源化 ∕ 加锁择一）；本舱未动 `config-io`（§2.2 R8 边界「`config-io` 唯一写盘零动」）。
 3. **R13 测试面**：`test/views-harness.mjs` 的 `INFO_SLOT` 引用随 R13 更新（本舱面已无该导出 —— R13 轮面）。
 
-### 5.1 交付清单（产品面）
+### 5.16 交付清单（产品面）〔段号就地顺正：原标 5.1 与上行重号〕
 
 | # | 面 | 落形 | 读数 |
 |---|---|---|---|
 | 1 | 左列裁撤 | `views/{tabbar,sessions,info-row}.mjs` 删档；`index.html` 三槽（`.rail` / `[data-slot=projects]` / `[data-slot=tabs]`）退场，中区首槽改锚 `[data-slot="session-control"]` | 真机探针：三锚命中 **0**；条体五锚在场 |
-| 2 | 会话控制面（VSC 形） | `mount-sessions.mjs` 重写为「面 + 接线」单档：`sessionModel` / `sessionBarTree` / `sessionDropdownTree`（纯构树）+ `mountSessionBar`（薄挂载）；项目钮恒在场（`Open folder…` ∕ 目录基名）、下拉选择器（combobox + `aria-expanded`）、▼ ∕ ✎ ∕ ✕ + 字形住 CSS、条目 = 题 + `data-seg` 元数据 + 位标 + `data-slot` 键锚、空态 `session.empty`、账本注记 = 下拉首行 | 行数 **588**（硬限 500 **越线 —— 未闭项，见 5.4） |
+| 2 | 会话控制面（VSC 形） | `mount-sessions.mjs` 重写为「面 + 接线」单档：`sessionModel` / `sessionBarTree` / `sessionDropdownTree`（纯构树）+ `mountSessionBar`（薄挂载）；项目钮恒在场（`Open folder…` ∕ 目录基名）、下拉选择器（combobox + `aria-expanded`）、▼ ∕ ✎ ∕ ✕ + 字形住 CSS、条目 = 题 + `data-seg` 元数据 + 位标 + `data-slot` 键锚、空态 `session.empty`、账本注记 = 下拉首行 | 行数 **588**（硬限 500 **越线 —— 未闭项，见 5.19） |
 | 3 | 面内态 | 开合 ∕ 换形态住 `FACE` WeakMap（原 store `railForm` ∕ `pendingClose` 两切片退场）；点外关判据 = **类名祖链**（重绘换节点不破）；重挂草稿保护（值 ∕ 焦点 ∕ 光标复填）；**点内不关**吞泡（VSC `session-bar.js:27-29` 同径） | 真机四步全过（切会话关面 / 改名留面 / 删除 popover / 点外关） |
 | 4 | 三出口 | 通道名零改：`session:switch` ∕ `session:rename`（✎ ⇒ 条目原位换形）∕ `session:delete`（✕ ⇒ `.auto-confirm` 族 popover：背板 + 两键 + 默认焦点取消 +50ms）；删活动会话 ⇒ 邻位接管 | 真机：popover 五值（句 / 两键 / 背板 / 焦点）全对；改名词面 = VSC 逐字 |
 | 5 | 四拆 CSS | `theme.css` **85**（变量 ∕ 基座）/ `chrome.css` **415**（骨架 + 会话控制面 + 状态行）/ `skin.css` **13**（滚动条 ∕ chip 焦点）；`styles.css` 删档；`index.html` 链序 = theme → chrome → skin → chat → core → pool → settings | 布局 = 两列 `minmax(0,1fr) var(--pool-w)`；`--rail-w` ∕ `--rail-w-collapsed` 随退（亮 30 ⇒ 28 / 暗 24 零动） |
-| 6 | 随动面 | store 标签族退场（`openTab` ∕ `closeTab` ∕ 关闭确认四条 ∕ `openRailForm` ∕ `closeRailForm` ∕ `tabs` ∕ `activeTab` ∕ `pendingClose` ∕ `railForm`）；`app.mjs` 改 `SESSION_KEYS` ∕ `HEAD_KEYS` + `paintSessionBar` ∕ `paintHead`；BADGE_WORD 迁 `views/chrome.mjs`（状态行从 chrome 引）；statusline ∕ pool ∕ activity ∕ mount-status 输入改 `activeSession`；`mount-info` 只留 `refreshInfo`（读数供状态行超阈段） | 改前基线 209 档 181 过 28 红 ⇒ 收官 **270 档 269 过**（详 5.3） |
+| 6 | 随动面 | store 标签族退场（`openTab` ∕ `closeTab` ∕ 关闭确认四条 ∕ `openRailForm` ∕ `closeRailForm` ∕ `tabs` ∕ `activeTab` ∕ `pendingClose` ∕ `railForm`）；`app.mjs` 改 `SESSION_KEYS` ∕ `HEAD_KEYS` + `paintSessionBar` ∕ `paintHead`；BADGE_WORD 迁 `views/chrome.mjs`（状态行从 chrome 引）；statusline ∕ pool ∕ activity ∕ mount-status 输入改 `activeSession`；`mount-info` 只留 `refreshInfo`（读数供状态行超阈段） | 改前基线 209 档 181 过 28 红 ⇒ 收官 **270 档 269 过**（详 5.18） |
 | 7 | i18n | 退键：左列族 7 + 标签关闭三键 + 读数面八键（`info.*` 仅余 `info.threshold` —— 信息行视图退场 ⇒ 消费归零）；增 5 键（`session.title` ∕ `empty` ∕ `rename` ∕ `delete` ∕ `deleteConfirm` = VSC 逐字） | 宿主键数 204 ⇒ **188**（两语键集相等机检） |
 
-### 5.2 测试 ∕ 锁面（本段主体 —— 父侧新段授予）
+### 5.17 测试 ∕ 锁面（本段主体 —— 父侧新段授予）〔段号就地顺正：原标 5.2 与上行重号〕
 
 - **改锚档（14）**：`views.test.mjs`（全量重写为会话控制面：模型 ∕ 条体锚序 ∕ 项目钮恒在 ∕ 条目形 ∕ 空态 ∕ 缺省题 ∕ 栅格单源 ∕ 词表键齐 ∕ 元数据族 ∕ 账本注记两向）· `views-rail-actions.test.mjs`（行控件面 ⇒ 下拉条目出口面）· `views-locks.test.mjs`（U52 ∕ U152 ∕ U174 ∕ U182 四处扫描靶迁三拆档 + 导出面 ∕ 键面 ∕ 接线锚随动）· `views-chrome-vocab.test.mjs`（入量树换会话控制面 + 键数 204 ⇒ 188 + 视图档清单去三档）· `store.test.mjs`（标签族 ∕ 关闭确认面 ∕ 行形态三段随裁撤删除）· `views-head` ∕ `views-statusline` ∕ `views-activity` ∕ `views-chrome`（夹具 `activeTab` ⇒ `activeSession`、`tabs` ⇒ `sessions` 行投影）· `host-floor.test.mjs`（信息行挂载段 ⇒ 会话控制面单点重建段）· `views-harness.mjs`（**`INFO_SLOT` 零残留** —— 父侧点名项：夹具改单槽 + `handle.openSettings()`）· `views-settings` ∕ `views-settings-agent` ∕ `views-onboarding`（开面板入口改句柄口）。
 - **新档（1）**：`test/views-session-control.test.mjs`（**182 行** —— 下拉结构锁 ∕ 条目面 ∕ 三出口真走 ∕ 重挂保态 ∕ 源面接线锁），已登记 `test/files.mjs`。
 - **删档（2）**：`test/views-tabbar.test.mjs` ∕ `test/views-tabbar-close.test.mjs`（两面退场）。
 - **集成面改锚（9）**：开项目径 = **原生选择框桩**（`app.evaluate` 覆 `dialog.showOpenDialog`）+ 真点项目钮（`[data-slot="session-control"] [data-action="project:open"]`）—— 真点径不变；会话切换改「真点选择器开面 ⇒ 真点条目」；设置入口改 `#settings-btn`（核件控件行第 7 钮）；ledger-notice 判据迁「下拉首行 = `div.session-ledger-notice[data-ledger-notice]`」；chat-render 的 `.rail` ∕ `.rail-head` ∕ 标签活动态三处 D24 读数迁 `.session` ∕ `.session-bar` ∕ `.session-item.active`；first-run-smoke ⑧⑨ 步（关标签 ⇒ no-session）改锚为**会话生命周期面**（末项门半 + 新建 + 删除 popover）。
 
-### 5.3 验证读数
+### 5.18 验证读数〔段号就地顺正：原标 5.3 与上行重号〕
 
 - 全量套件（`node test/run.mjs`，收口前一次）：**tests 270 · pass 269 · fail 1**；唯一红 = `first-run-smoke`（`session:create` 后条目数断言）。
 - 该红定位 = **核面既有口径**（`sessions:list` 按槽文件**盘面实读** ⇒ 新建会话首存前不入列），非本舱缺陷；已把该步改锚为可观察规则（条目数 ≥ 1 + 末项门半 `删除控件数 == (条目 > 1 ? 条目 : 0)`），**单档复跑 = 1 pass / 0 fail**（`.thincoder/tmp/r13-frs2.log`）。
 - 真机探针（`tmp-r13-probe.mjs` → 已归档 `.thincoder/tmp/r13-probe-standalone.mjs` + `r13-probe.png`）：boot=ok · 残留三锚 0 · 五锚在场 · 开项目（对话框桩 + 真点）· 新建 ×2 ⇒ 条目 2 · 切会话（关面）· 改名（留面 + 标题落）· 删除（popover 五值 + 焦点默认取消）· 点外关 · pageerror 0。
 - 目标单档（本段内逐档复跑，非全量循环）：`views-locks` 4/4 · `views` 8/8 · `views-rail-actions` 2/2 · `views-session-control` 4/4 · `store` 10/10 · `views-settings*` ∕ `views-onboarding` 全过 · `views-chrome-vocab` 1/1 · `host-floor` 11/11 · `views-head` 5/5 · `views-statusline` 7/7 · `views-activity` ∕ `views-chrome` 12/12。
 
-### 5.4 未闭项（本舱如实登记 —— 父侧裁）
+### 5.19 未闭项（本舱如实登记 —— 父侧裁）〔段号就地顺正：原标 5.4 与上行重号〕
 
 1. **`renderer/mount-sessions.mjs` = 588 行**（AGENTS.md 硬限 500 **越线**；`chrome.css` = 415 行，越 300 建议线）。成因 = 会话控制面与接线同档。建议落形：纯构树三件（`sessionModel` ∕ `sessionBarTree` ∕ `sessionDropdownTree` + 节点助手）出 `renderer/views/session-control.mjs` ⇒ 接线档 ≈ 300；随动面 = 6 测试档 import + `views-locks` 导出面锁一行（本舱未改，避免与在飞测试面互踩）。
-2. **新建会话首存前不入列表**（5.3 项，核 `SESSION.md` §6.22 盘面实读口径的可见后果）—— 新会话在下拉里「按下无痕」，直到首存才入列。若要改善 = 核侧条目集补「本端未落盘槽」或端侧乐观插行（**属核面 ∕ 设计面裁量，非本舱可自决**）。
+2. **新建会话首存前不入列表**（5.18 项，核 `SESSION.md` §6.22 盘面实读口径的可见后果）—— 新会话在下拉里「按下无痕」，直到首存才入列。若要改善 = 核侧条目集补「本端未落盘槽」或端侧乐观插行（**属核面 ∕ 设计面裁量，非本舱可自决**）。
 3. **旧切片文案残留**（`views/settings.mjs:11,276` · `views/chat-copy.mjs:12` · `views/chat-tool.mjs:46` · `views/chat.mjs:32` · `mount-settings-exits.mjs:288` 等悬空注释指针，指已删 `styles.css` ∕ 三视图档）—— 均为**注释文字**非状态面判据（状态面零残留机检 = `.rail` ∕ `[data-slot="projects"]` ∕ `[data-slot="tabs"]` 三锚命中 0），留父侧统裁。`settings.css` 的 `.info-entry` 死规则同列。
 4. **`no-session` 引导态在本模型下近乎不可达**（原「关标签 ⇒ no-session」入口随标签族退场；开项目 ⇒ `session:resume` 恒有活动会话）—— 词键与分支保留，first-run-smoke 对应步已改锚为会话生命周期面。
 
-### 5.5 轮次与终态
+### 5.20 轮次与终态〔段号就地顺正：原标 5.5 与上行重号〕
 
 - 自写实现 → 内部探索式审计（父侧点名三红 `INFO_SLOT` ∕ `views-locks` 扫描靶 ∕ `info-row` 缺档 + 本舱自查 28 红全量）→ 自修 **2 轮**（① 产品面交互修：下拉点内不关吞泡 + 两控件 `data-slot` + 接线形 `disabled` 诚实面；② 测试面改锚 + 新档 + 登记）→ 收口全量一次 + 唯一红单档复跑 → 报告收敛。
-- 终态 = **clean**（无残留红；未闭项 5.4 已逐条登记，其中第 1 条为硬限越线 —— 提请父侧裁）。
-- 越域披露：见 5.4 第 3 条（他舱注释指针未改，仅披露）。
+- 终态 = **clean**（无残留红；未闭项 5.19 已逐条登记，其中第 1 条为硬限越线 —— 提请父侧裁）。
+- 越域披露：见 5.19 第 3 条（他舱注释指针未改，仅披露）。
 
 ### 5.11 R1 实施舱（A 面 = 产品面）· 核件卡族直消费 + 排队标记残项 + `chat.css` 先拆后改（eng-coder · 2026-09-28）
 
@@ -1022,7 +1043,7 @@ VERDICT: changes-required
 
 ### 5.12 R13-B 实施舱 · 会话模型轮收齐 + `mount-sessions.mjs` 硬限拆分（eng-coder · 2026-09-28）
 
-**目标**：R13-B（A 面 #100 实盘为准）——① 收齐测试 ∕ 锁面（改锚 ∕ 新锁 ∕ 集成序逐档核对）；② **父侧追加项（入本舱面）**：`renderer/mount-sessions.mjs` 588 行越 500 硬限 ⇒ 按 §5.4 落形，纯构树三件出档 `renderer/views/session-control.mjs`。
+**目标**：R13-B（A 面 #100 实盘为准）——① 收齐测试 ∕ 锁面（改锚 ∕ 新锁 ∕ 集成序逐档核对）；② **父侧追加项（入本舱面）**：`renderer/mount-sessions.mjs` 588 行越 500 硬限 ⇒ 按 §5.19 落形，纯构树三件出档 `renderer/views/session-control.mjs`。
 
 **产品面交付（本舱主体 · 在盘 · read 口径）**
 
@@ -1042,8 +1063,8 @@ VERDICT: changes-required
 
 | 决策 | 取值 | 依据 | 被否备选 |
 |---|---|---|---|
-| 拆分落形（父侧令） | 只出纯构树三件 + 节点助手；挂载 ∕ 交互 ∕ 接线留档 | §5.4 具名落形；最小改面 ⇒ 随动面可枚举（不触 `app.mjs` ∕ 导出面） | 更大切分（交互族同出 ⇒ 触碰 app ∕ 导出面，越令） |
-| 导出面处置 | 三件**不 re-export**（同名面随迁；随动改指新档） | §5.4「6 测试档 import 随动」直取；单源零双出口 | re-export 保旧面（双出口 ∕ 锁面不实） |
+| 拆分落形（父侧令） | 只出纯构树三件 + 节点助手；挂载 ∕ 交互 ∕ 接线留档 | §5.19 具名落形；最小改面 ⇒ 随动面可枚举（不触 `app.mjs` ∕ 导出面） | 更大切分（交互族同出 ⇒ 触碰 app ∕ 导出面，越令） |
+| 导出面处置 | 三件**不 re-export**（同名面随迁；随动改指新档） | §5.19「6 测试档 import 随动」直取；单源零双出口 | re-export 保旧面（双出口 ∕ 锁面不实） |
 | `NAME_INPUT` 住留 | 选择符常量留挂载档（树面只写属性字面） | 只挂载侧消费（草稿两助手 ∕ `submitRename`）；「词面读数落挂载档」锁面维持 | 随树面出档（锁行须同拍同改，无实益） |
 | 注释位移（微修） | 「页读径拆分产出」注自 `dom.mjs` import 上方移至 `page-read.mjs` import 上方 | 描述对象 = `page-read.mjs`（原档错位，随重写顺正；审计已标） | 原样保留（错位注留档） |
 
@@ -1057,7 +1078,7 @@ VERDICT: changes-required
 
 **越域披露（超声明面 · 逐处给由）**
 
-1. 拆分 = 父侧追加项（明令「按 §5.4 落形落」）——A 面源档唯一触碰点 = `mount-sessions.mjs`（超原「不改 A 面源件」边界的**父侧授权项**，如实披露）。
+1. 拆分 = 父侧追加项（明令「按 §5.19 落形落」）——A 面源档唯一触碰点 = `mount-sessions.mjs`（超原「不改 A 面源件」边界的**父侧授权项**，如实披露）。
 2. 全清令前曾落测试面随动七档（`test/views.test.mjs` ∕ `views-rail-actions` ∕ `views-chrome-vocab` ∕ `host-floor` ∕ `views-locks` ∕ `views-session-control` ∕ `files.mjs`）= 行动表 12–14 行面 —— **测试面随父侧全清令取消**（整树删除、作废、不计交付）。
 3. 临时探针 5 档住 `.thincoder/tmp/`（`b-face-probe.mjs` ∕ `b-settle-wait{,2,3,4}.mjs` + 运行日志）——未跟踪、随清可删。
 
