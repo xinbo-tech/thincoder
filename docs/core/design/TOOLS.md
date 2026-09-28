@@ -53,7 +53,7 @@
 
 | # | 相对路径 / 对位 | 面 | 相似度 · 逐字节 | 分类 | 目标 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|---|---|---|
-| 52 | `tools/question.md` | 同路径 | 0.8667 · 异 | ② | 进核（`thincoder-core/tool-docs/question.md`） | 融合：取 CLI 措辞 + 无 UI 降级径按端注入（VSC 面板卡片 / QuickPick ＝ ④ 段） | 分叉 ＝ 措辞随两端 UI 形态（CLI 无 UI 抛错 `src/tools/question.mjs:20`；VSC 面板 + 子代理注册期过滤 `thincoder-vscode/src/agent/setup.mjs:196`）；前提（同持有、仅失败形态不同）仍成立（W14 已迁核——VSC 无回调降级径退场，现体 = 面板 `onQuestion` 通道） | — | S1（建核补齐） |
+| 52 | `tools/question.md` | 同路径 | 0.8667 · 异 | ② | 进核（`thincoder-core/tool-docs/question.md`） | 融合：取 CLI 措辞 + 无 UI 降级径按端注入（VSC 面板卡片 / QuickPick ＝ ④ 段） | 分叉 ＝ 措辞随两端 UI 形态（CLI 无 UI 抛错 `src/tools/question.mjs:20`；VSC 面板 + 子代理注册期过滤 `thincoder-vscode/src/agent/setup.mjs:196`）；前提（同持有、仅失败形态不同）仍成立（W14 已迁核——VSC 无回调降级径退场，现体 = 面板 `onQuestion` 通道） | — | S1（建核补齐） （迁移期引文） |
 | 53 | `tools/bash.md` | 同路径 | 0.8485 · 异 | ② | 进核（`thincoder-core/tool-docs/bash.md`） | 融合：取 CLI 文本 + `terminal` 参数段按端注入（VSC 宿主真终端 ＝ ④ 段） | 分叉 ＝ VSC 独有 visible/inject 两模式（`src/tools/shell.mjs:183,191,202`）+ CLI 有 POSIX 前置提示（`src/tools/bash.mjs:34,264-266`）；前提（宿主终端只在 VSC）仍成立 | — | S1（建核补齐） |
 | 54 | `tools/grep.md` | 同路径 | 0.8125 · 异 | ③ | 进核 | 以 CLI 为准（`before`/`after` 上下文随行；错误形态归一为抛错） | 分叉 ＝ CLI 有上下文档（`src/tools/search.mjs:116-118,173-191`）、VSC 无（`src/tools/search.mjs:230-238`）；前提（同职责）仍成立 | **①** | S1（建核补齐） |
 | 55 | `tools/lint.md` | 同路径 | 0.7778 · 异 | ② | 进核 | 融合：取 VSC 措辞（两侧代码实际同输出——CLI `src/tools/linter.mjs:81` / VSC `:85`） | 分叉 ＝ CLI 文档措辞失真（写「✓ no issues」，实为「✓ <checker>: no issues」）；前提 ＝ 无（纯文档订正） | — | S1（建核补齐） |
@@ -65,7 +65,7 @@
 | 61 | `tools/linter.mjs` | 同路径 | 0.4872 · 异 | ② | 进核 | 融合：取 CLI + 可中断执行按端注入（VSC `runInterruptible` ＝ ④ 段） | 分叉 ＝ 执行方式（CLI `execFileSync` `src/tools/linter.mjs:48,64` / VSC `runInterruptible` `src/tools/linter.mjs:53,64-66`）；检查器映射与文案逐字同 | — | S1（建核补齐） |
 | 62 | `tools/ops.mjs` | 同路径 | 0.2851 · 异 | ② | 进核 | 融合：`wait_for` 并回单档（VSC 拆到 `wait_for.mjs`——`src/tools/ops.mjs:11-112` / `src/tools/wait_for.mjs:150-190`）（W14 已迁核——VSC 两档已删，现体 = 核 `thincoder-core/tools/ops.mjs`） | 分叉 ＝ 文件切分（能力不缺——条件字面与限额逐字同）；前提（同职责）仍成立 | — | S1（建核补齐） （迁移期引文） |
 | 63 | `thincoder-core/tools/shared.mjs` | 同路径 | 0.2829 · 异 | ② | 进核（`thincoder-core/tools/shared.mjs`） | 融合：取并集 + VS Code 侧基建（编辑器编辑 / `runInterruptible`）按端注入（④ 段） | 分叉 ＝ 两端各带本端基建（CLI EOL / glob 再导出；VSC 编辑器编辑面 `thincoder-vscode/src/tools/shared.mjs:66-106`）+ cwd 归一差异；前提（同职责）仍成立 | — | S1（建核补齐） |
-| 64 | `tools/question.mjs` | 同路径 | 0.1667 · 异 | ② | 进核 | 融合：取 CLI 上限校验 + 无 UI 降级径按端注入（VSC QuickPick / InputBox `src/tools/question.mjs:36-53` ＝ ④ 段） | 分叉 ＝ 无 UI 时形态（CLI 抛错 `src/tools/question.mjs:20`；VSC 降级原生 UI）；上限 100 字符 / 4 选项两端同（2026-09-06 裁定）（W14 已迁核——自持档已删，现体 = 核 `thincoder-core/tools/question.mjs` + 端 `onQuestion` 注入；QuickPick / InputBox 降级径随 W14 退场） | — | S1（建核补齐） |
+| 64 | `tools/question.mjs` | 同路径 | 0.1667 · 异 | ② | 进核 | 融合：取 CLI 上限校验 + 无 UI 降级径按端注入（VSC QuickPick / InputBox `src/tools/question.mjs:36-53` ＝ ④ 段） | 分叉 ＝ 无 UI 时形态（CLI 抛错 `src/tools/question.mjs:20`；VSC 降级原生 UI）；上限 100 字符 / 4 选项两端同（2026-09-06 裁定）（W14 已迁核——自持档已删，现体 = 核 `thincoder-core/tools/question.mjs` + 端 `onQuestion` 注入；QuickPick / InputBox 降级径随 W14 退场） | — | S1（建核补齐） （迁移期引文） |
 | 65 | `tools/search.mjs` | 同路径 | 0.1455 · 异 | ③ | 进核 | 以 CLI 为准（grep 上下文 + `ls` 归位）+ VSC 的「路径不存在明确报错」并入（取并集） | 分叉 ＝ 导出面切分（CLI 含 `ls` `src/tools/search.mjs:195` / VSC 移 `more-file.mjs:318`）+ glob 指向文件与报错形态差异（CLI 静默 `(no matches)`）；前提（同职责）仍成立 | **①** | S1（建核补齐） |
 | 66 | `tools/lsp.mjs` | 同路径 | 0.1429 · 异 | ③ | 进核 | 以 CLI 为准（JSON-RPC over stdio + `lsp.servers` 配置）+ VSC 宿主语言服务径按端注入（④ 段） | 分叉 ＝ 实现路线（CLI 自起服务器 `src/tools/lsp.mjs:97-168` / VSC 调宿主命令 `src/tools/lsp.mjs:76-112`）；前提（VSC 有宿主语言服务、CLI 无）仍成立 | **①③** | S1（建核补齐） |
 | 67 | `tools/web.mjs` | 同路径 | 0.1184 · 异 | ③ | 进核 | 以 CLI 为准（RSS + `engine`/`page` + 跟随一次重定向 + 200K + `htmlToText`） | 分叉 ＝ 抓取 / 抓页实现分叉（CLI 跟随重定向 `src/tools/web.mjs:201-215`、上限 200K、正文转换；VSC 拒绝重定向 `src/tools/web.mjs:111-115`、上限 20K `:130`、朴素去标签）；前提（同职责）仍成立 | **①②** | S1（建核补齐） |
@@ -74,7 +74,7 @@
 | 70 | `thincoder-core/tools/index.mjs` | 同路径 | 0.0215 · 异 | ② | 进核 | 融合：完整注册表（VSC 31 工具）+ CLI 侧消费方拼装面归位；`read_image` 注册门取 VSC（按模型能力） | 分叉 ＝ 注册位置（CLI 25 工具子集 + 消费方拼装 `src/cli/make-agent.mjs:64` / VSC 完整表 `src/index.mjs:50-64`）；前提（最终可达集合基本对齐）仍成立 | — | S1（建核补齐） （迁移期引文） |
 | 83 | `agent-tools.mjs` | 同路径 | 0.0000 · 异 | ② | 进核 | 融合：取核内统一登记册（VSC 13 项含 `consult_start/stop` `thincoder-vscode/src/agent-tools/index.mjs:15`；CLI 12 项 + consult 另挂 `thincoder-core/agent/setup.mjs:173,271-275`） | 分叉 ＝ 登记位置与是否多一层转口（CLI 18 行显式列 / VSC 2 行转口）；最终暴露集合一致；前提 ＝ 无 | — | S1（建核补齐） |
 | 84 | `agent-tools/batch-segment.mjs` | 同路径 | 0.7530 · 异 | ② | 进核 | 融合：取 CLI 主体 + VSC 的 `_touchedFiles` 记账按端注入（④ 段） | 分叉 ＝ VSC 把写过的批次档计入本轮变更（`src/agent-tools/batch-segment.mjs:184`）+ 评审实例绑定解析（CLI `:57-66`）；工具本体一致 | — | S1（建核补齐） |
-| 85 | `agent-tools/plan.mjs` | 同路径 | 0.6579 · 异 | ③ | 进核 | 以 VSC 为准（未知 action 报错——CLI 现会误入 plan 模式 `src/agent-tools/plan.mjs:68-79`） | 分叉 ＝ 未知 action 处置（CLI 一律进入并返回 activated / VSC 报错 `:86`）；状态字段名与 `onPlanMode` 回调属结构面 | **①** | S1（建核补齐） |
+| 85 | `agent-tools/plan.mjs` | 同路径 | 0.6579 · 异 | ③ | 进核 | 以 VSC 为准（未知 action 报错——CLI 现会误入 plan 模式 `src/agent-tools/plan.mjs:68-79`） | 分叉 ＝ 未知 action 处置（CLI 一律进入并返回 activated / VSC 报错 `:86`）；状态字段名与 `onPlanMode` 回调属结构面 | **①** | S1（建核补齐） （迁移期引文） |
 | 86 | `agent-tools/timer.mjs` | 同路径 | 0.5833 · 异 | ③ | 进核 | 以 CLI 为准（`seconds` 必须为有限正数 `src/agent-tools/timer.mjs:34-37`） | 分叉 ＝ VSC 未同步该修复（`src/agent-tools/timer.mjs:34-35` 直取 `?? 180` ⇒ 非数字时 `expiresAt = NaN`、定时器永不触发且不报错）；前提（该修复只在 CLI 落地）⇒ **直接归一** | **①** | S1（建核补齐） |
 | 88 | `agent-tools/skill.mjs` | 同路径 | 0.4746 · 异 | ② | 进核 | 融合：取一侧（异步 loader）+ VSC 的同步 loader 面按核内结构归一 | 分叉 ＝ loader 同步 / 异步与模块路径（CLI `../skills.mjs` / VSC `../extension/skills.mjs`）；发现规则（扁平 + `SKILL.md`、排序、项目层优先）两端同构 | — | S1（建核补齐） |
 | 90 | `agent-tools/task.mjs` | 同路径 | 0.3592 · 异 | ③ | 进核 | 以 CLI 为准（空标题过滤 + done 留 3 + 总量 20 `src/agent-tools/task.mjs:66-77`） | 分叉 ＝ 过滤 / 截断规则缺失（VSC `src/agent-tools/task.mjs:60-66`）+ 回话形态（CLI 汇总串 / VSC 逐条列）；前提（同职责）仍成立 | **①** | S1（建核补齐） |
@@ -132,7 +132,7 @@
 | # | 条目（路径 / 对位） | 命中 | 左端行为（CLI） | 右端行为（VSC） | 建议归一形态 | 影响面 | 裁定状态 |
 |---|---|---|---|---|---|---|---|
 | B1 | `agent-tools/timer.mjs`（#86） | ① | `seconds` 非有限正数 ⇒ **当场报错**（`:34-37`） | 直取 `?? 180`（`:34-35`）⇒ 传成 `"30s"` 时 `expiresAt = NaN`，**定时器永不触发且不报错** | 以 CLI 为准（补校验）——前提失效型（该修复只在 CLI 落地，非有意端差） | ① VSC 里传错秒数由「静默失效」变「报错」——只有一种合理做法（修 bug） | **已裁（2026-09-13）· 按建议** |
-| B2 | `agent-tools/plan.mjs`（#85） | ① | 未知 `action` 也进入 plan 模式并返回 `activated`（`:68-79`）⇒ 会话可能被误锁成只读 | 未知 `action` 返回 Error（`:86`） | 以 VSC 为准（未知 action 报错） | ① CLI 里模型传垃圾 action 时由「突然只能读不能写」变「报错」——只有一种合理做法 | **已裁（2026-09-13）· 按建议** |
+| B2 | `agent-tools/plan.mjs`（#85） | ① | 未知 `action` 也进入 plan 模式并返回 `activated`（`:68-79`）⇒ 会话可能被误锁成只读 | 未知 `action` 返回 Error（`:86`） | 以 VSC 为准（未知 action 报错） | ① CLI 里模型传垃圾 action 时由「突然只能读不能写」变「报错」——只有一种合理做法 | **已裁（2026-09-13）· 按建议** （迁移期引文——原两端档已迁核） |
 
 ## 4. 对外契约影响（自 `CORE-UNIFICATION.md` §2.12.2 搬入 · 逐字）
 
@@ -557,7 +557,7 @@ timed out after <n>s (killed) — no interactive input is possible here (editor 
 | 2 | `status` | — | — | — | — | 零改（`runGitRaw` 转 async 薄壳） |
 | 3 | `log` | — | — | — | — | 零改（pager 实测不上——#9） |
 | 4 | `show` | — | — | — | — | 零改 |
-| 5 | `checkpoint`（list / create / rewind / cat / versions） | — | — | — | — | 表外面零改：`git/checkpoint.mjs` plumbing（`rev-parse` / `diff` / `ls-files` / `checkout` / `apply`）零交互族 |
+| 5 | `checkpoint`（list / create / rewind / cat / versions） | — | — | — | — | 表外面零改：`thincoder-core/git/checkpoint.mjs` plumbing（`rev-parse` / `diff` / `ls-files` / `checkout` / `apply`）零交互族 |
 | 6 | `add` | — | — | — | — | 零改 |
 | 7 | `rm`（`--cached`） | — | — | — | — | 零改 |
 | 8 | `commit`（`-m` · `--only -m`） | 固 | — | 固 | — | 编辑器零入口（无 `-m` 工具即拒——实测 #10）；加固 = 兜底 |
@@ -642,7 +642,7 @@ timed out after <n>s (killed) — no interactive input is possible here (editor 
 回归守卫：`thincoder-core/test/tool-seams.test.mjs`（`killProcessTree` 导出面 + #55 用例）· `thincoder-core/test/git-repo-discovery.test.mjs`（§6.13 A14–A22）· `thincoder-cli/test/git-commit-pathspec.test.mjs`（commit 路径）——**零改**。
 
 **边界（本节不做）**：不改 `bash` 工具（其加固照旧，`thincoder-core/tools/bash.mjs` 零改）· 不新增 action / 参数 / 用户选项（超时与加固均为常量，不进 schema）· 成功路径输出形态零变（加固走 env，不加命令行参数）· checkpoint / 快照语义零改 · 不接 Stop / abort（`runGit` 族无 `ctx.signal` 通路——本批不做）
- · 「表外复核」五位中 `gitDiffOne` / `patch.mjs` 两处本批落（#208 · as-of 2026-09-25 设计轮：转 `spawnGit`）；余三位（`git/checkpoint.mjs` / `advisor/repos.mjs` / `bash.mjs`）维持零改（见上表）· 不做 ssh 面 `GIT_SSH_COMMAND` 覆盖（会夺用户自配）+ 不设 `SSH_ASKPASS`（登记为超时兜底面）· 不改 README / 需求档 / 发布面。
+ · 「表外复核」五位中 `gitDiffOne` / `patch.mjs` 两处本批落（#208 · as-of 2026-09-25 设计轮：转 `spawnGit`）；余三位（`thincoder-core/git/checkpoint.mjs` / `advisor/repos.mjs` / `bash.mjs`）维持零改（见上表）· 不做 ssh 面 `GIT_SSH_COMMAND` 覆盖（会夺用户自配）+ 不设 `SSH_ASKPASS`（登记为超时兜底面）· 不改 README / 需求档 / 发布面。
 
 **发布关联**：缺陷在已发布 `0.12.64`（「已知变坏不得出厂」族）⇒ 修复随**下一代 CLI** 发布；**发布动作 = 用户门**（批档 §1）。
 
@@ -1135,3 +1135,4 @@ plan 工具退出文本收正为**批准语义**（**五处**：`thincoder-core/
 - 2026-09-20（**卫生族二批 · 台账 #142 · eng-designer**）：§6.12 两处修订式残句清理（边界行去划改形保断言 + 对账口径行退役句删）；**零新语义**。
 - 2026-09-21（**context-tool 批 · 设计轮（含设计评审轮 1 收正）· eng-designer**——承 `docs/batches/2026-09-21-context-tool.md` §1 / §3 轮次 1 · 台账 #18）：
   §1 归属表「单端独有实现」行 + §2.3 映射表 `context` ⇒ **`ide`** 改名（自 `context.mjs`——让出 `context` 名与核新工具 · 旧路径删除态）· §6.2 元工具清单补 `context`（主动整理上下文 · 单工具三操作）+ 子代理过滤行补形态指针（`:172` / `:173`）· §6.12 调用方普查表坐标随改名（`:326`）。**零新语义**。
+- 2026-09-28（**文档回填与卫生轮**（台账 #516）· eng-designer）：§2.2 闸内悬空四行补「（迁移期引文）」标记（rows #52 / #64 / #85 / B2——已迁核侧引用）+ `git/checkpoint.mjs` 裸形复核——裸形仅存 `:105`（**史实引文面**：「（迁移期引文）」标记在册 · 现体全形 `thincoder-core/git/checkpoint.mjs` 同句在位 · 判不改）；全档现体全形在位（§1 ∕ §2.2 ∕ §6 三节）。**零新语义**。

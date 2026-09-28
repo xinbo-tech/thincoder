@@ -97,9 +97,9 @@
 > 动机 = busy 期 Enter 提交被吞（INPUT-LOCK 2026-09-09 有意收窄的有意识部分重开）；**queue-visible 批（用户 2026-09-24 03:01 裁定）**：形态 = **多槽（容量 8 条）+ 合并消费**（R15 攒批恢复——机制 / 常量单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8）。
 > Ctrl+I 中断注入**保留并存**（打断 vs 排队两语义——用户 2026-09-21 22:38 裁定，本批零触碰 Ctrl+I）。
 > **扩面（2026-09-22 · 台账 #224）**：前批只开「普通回合 busy（池空）」一格——而池 live 会话期 `state.suspended` 恒 true
-> （`suspension-drive.mjs:226/:290`），池 live 的用户回合（`:246-250`，只翻 `agent._suspended`）与 digest 均属「挂起会话内」
+> （`thincoder-cli/src/tui/suspension-drive.mjs:226/:290`），池 live 的用户回合（`:246-250`，只翻 `agent._suspended`）与 digest 均属「挂起会话内」
 > ⇒ 工程模式（子代理常年在飞）的日常面仍吞。本批吞面去 `state.suspended || state._suspPending`——两面同判据、同队列、同反馈。
-> 送达链路 = **步边界 pickup（主——本批新增）** + 既有回合尾 drain（`thincoder-cli/src/tui/agent-turn.mjs:333-350` 队列续发 + `suspension-drive.mjs:246-257`
+> 送达链路 = **步边界 pickup（主——本批新增）** + 既有回合尾 drain（`thincoder-cli/src/tui/agent-turn.mjs:333-350` 队列续发 + `thincoder-cli/src/tui/suspension-drive.mjs:246-257`
 > driver 消费）——**取数同按合并计划**（见「送达链路」段）；消费回执按批新增 dim 行；反馈面与三时机 = `docs/cli/design/TUI.md` §7.5（机制侧步边界定义 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8）。
 
 **放行判据（busy Enter → 入队，全部满足）**：
@@ -119,38 +119,38 @@
 斜杠 → 吞 + busy 提示（文本保留，既有）；空 → 静默（既有）；条件 2 不满足 → 吞 + busy 提示（文本保留，既有）；
 **队满（条件 5）→ 拒 + 提示 + 文本保留**（先例 = 挂起态队满分支 `key-handler-edit.mjs:60-64` 同构——拒 + 提示 + 文本保留；**满队提示形态 = 端内字面** `[主会话处理中 —— 已排队 8 条消息，请等其处理完成后再发送]`（`C.warn`）——条数阈 1 → 8（容量裁定连带；VSC 对位键 `input.slotFull` 值同轮改）；
 **其余（1∧2∧3∧4∧5）→ 入队**：清框 + `history.push` + `historyIndex = -1` + `_draft = null` + `pendingInput.push(text)`
-+ `state.scroll = 0` + `state._followTail = true`（F4「新提交消息 → 恢复跟随」——排队提交同列；与 `turn-face.mjs:32-33` submit 同款两行，两条入槽路径同款：本档 busy 门禁 / `key-handler-edit.mjs:65-70` 挂起态）
++ `state.scroll = 0` + `state._followTail = true`（F4「新提交消息 → 恢复跟随」——排队提交同列；与 `thincoder-cli/src/tui/turn-face.mjs:32-33` submit 同款两行，两条入槽路径同款：本档 busy 门禁 / `key-handler-edit.mjs:65-70` 挂起态）
 （与挂起态入队分支同款清理——`state.input` 永不被后台事件读写的不变量（§4）保持：入队是**前台**按键路径写自己的队列）。
 **挂起面入队后同款唤醒**：`state.suspended || state._suspPending` ⇒ `state._suspWake?.()`（§4 既有挂起分支同款）；
-busy 期该槽恒 null ⇒ 零动作——证据 = `suspension-drive.mjs:122`（等待结束清理即置 null）· `:137`（仅在 `waitForSettleOrWake` 等待窗口注入；唯一调用点 `:279`）
+busy 期该槽恒 null ⇒ 零动作——证据 = `thincoder-cli/src/tui/suspension-drive.mjs:122`（等待结束清理即置 null）· `:137`（仅在 `waitForSettleOrWake` 等待窗口注入；唯一调用点 `:279`）
 ⇒ 轮末 driver 步骤 1 恒接走；普通 busy 面零唤醒（现状零改）。批档 §2 用例面「挂起内入槽」格断言 `wakes` 计数（= 呼叫点执行——桩注入 spy；生产 busy 期零副作用）。
 
 **再提交与满队（容量 8）= 拒 + 提示 + 文本保留**：容量内再提交 ⇒ 连续入队（多槽——每条各占一项）；满队再提交 ⇒ 拒 + 提示 + 文本保留
-（不覆盖、不丢——违「不静默丢」纪律的反面；先例 `suspension-drive.mjs:308-311` 中止残余转正注释）；拒 + 提示与既有队列满语义同构零新机制。
+（不覆盖、不丢——违「不静默丢」纪律的反面；先例 `thincoder-cli/src/tui/suspension-drive.mjs:308-311` 中止残余转正注释）；拒 + 提示与既有队列满语义同构零新机制。
 
 **submit 双保险同步**（`turn-face.mjs` submit busy 拒分支——`:21-25`）：防御语义保持「busy 期拒绝 + 不清框」——直呼路径不因本批开裂；
 本批正常流量的 Enter 在 key-handler 族（`key-handler-busy.mjs` 门禁 · `key-handler-edit.mjs` 入槽）已分流，submit busy 分支仍只服务直呼防御（注释随判据收正同步更新）。
 
 **消费回执（送达链路侧——每批一行 dim 行）**：`[sending queued message]` 在**消费时**按批推送（批 = 合并计划取数单位）——
-① **步边界 pickup**（`queued-pickup.mjs`（拟新增）——核循环头回调取批后；本批新增）；② 回合尾兜底转正点（`agent-turn.mjs` 队列 while 取批后）；③ 挂起 driver 消费点（`suspension-drive.mjs` pendingInput 取批后）。
+① **步边界 pickup**（`queued-pickup.mjs`（已落 · 实读 **34**）——核循环头回调取批后；本批新增）；② 回合尾兜底转正点（`agent-turn.mjs` 队列 while 取批后）；③ 挂起 driver 消费点（`suspension-drive.mjs` pendingInput 取批后）。
 形态对位既有 `[continuing…]`（`agent-turn.mjs:220`，`C.tool`）——消费事实的可见锚，回执在则顺序自然
 （queued dim 行 → 回合尾 → `❯ You:` 标签 + 消息行）。**否决气泡行编辑**（改写 queued 行为送达态）：
 生命周期簿记两处编辑点 + 行 diff 键漂移风险，消费回执行零簿记同效。
 
 **排队期呈现与消费转正（呈现面——queue-visible 批 2026-09-24）**：入队后队列以会话流尾**待发送块**呈现（派生行——
-逐条原文 + 条数标签；形态 / 上限 / 缓存键 / 边界 = `docs/cli/design/TUI.md` §7.5；本档不重述——D2）；消费按合并计划取批（步边界 pickup（主——`queued-pickup.mjs`（拟新增））/ `agent-turn.mjs` 回合尾兜底 + 队列续发 /
+逐条原文 + 条数标签；形态 / 上限 / 缓存键 / 边界 = `docs/cli/design/TUI.md` §7.5；本档不重述——D2）；消费按合并计划取批（步边界 pickup（主——`queued-pickup.mjs`（已落 · 实读 **34**））/ `agent-turn.mjs` 回合尾兜底 + 队列续发 /
 `suspension-drive.mjs` driver 输入优先）⇒ 回执 + `❯ You:` + **本批合并文本**落 `state.lines`（`agent-turn.mjs:84-87`）在同一同步段
 ⇒ 渲染帧合并调度下**单帧切换**（N 条待发送块 → 回执行 + 一条合并用户消息：零空窗 / 零重复——并解同处 §7.5 消费转正条）。
 中止残余（按合并计划转 `state.queue` + 既有提示行）不渲染待发送块（同 §7.5 边界）。
 
 **送达链路（合并消费——本轮需求裁定解除旧「谓词零改」边界）**：四支入口共用**同一合并计划** `planQueuedInput`（纯函数——
-`thincoder-cli/src/tui/queued-merge.mjs`（拟新增）；常量 `MAX_MERGE_ITEMS`（8）/ `MAX_MERGE_CHARS`（2000）与形态文案同源）：
+`thincoder-cli/src/tui/queued-merge.mjs`（已落 · 实读 **68**）；常量 `MAX_MERGE_ITEMS`（8）/ `MAX_MERGE_CHARS`（2000）与形态文案同源）：
 ⓪ **用户回合在飞（`autoTurn === false`）⇒ 步边界 pickup（主——本批新增）**：核 loop 循环头投递回调（`consumeQueuedInput`）按计划取批（首动作 = merged 批；`/cmd` 首动作 = 入队门禁不可达的防御面——留给既有消费点）
 ⇒ `pushReal` 一条 user 消息入历史（下一步生效——不中断）+ 呈现（回执行 + `❯ You:` + 合并文本）。系统轮（digest / 上行唤醒轮）不传回调（域 / 门禁降格理由 = `docs/cli/design/TUI.md` §7.5「分流」）；
 ① 普通回合 busy 入队 → 回合自然结束：顶层兜底（`agent-turn.mjs:334-336`：`!poolLive` 时按计划取批 → `state.queue` → 队列 while 续发新回合）；
-② 挂起会话内 busy 入队 → 池 live ⇒ driver 步骤 1 输入优先，按计划取批（`suspension-drive.mjs:246-257`——以本批合并消息开新回合，先于 digest 合并）；
+② 挂起会话内 busy 入队 → 池 live ⇒ driver 步骤 1 输入优先，按计划取批（`thincoder-cli/src/tui/suspension-drive.mjs:246-257`——以本批合并消息开新回合，先于 digest 合并）；
 ③ 池空 + 会话退出 ⇒ 退出前残余按计划兜底（`suspension-drive.mjs` 退出段——零丢失）。超过一批者（>8 条 / 合并 > 2000 字符）截批先行——余下循环接取（多回合，不丢）。
-**模型句收正**：`suspension-drive.mjs:242-245` 现注「Enter 只可能落在挂起空闲 / 释放窗口」在池 live 会话中不成立——
+**模型句收正**：`thincoder-cli/src/tui/suspension-drive.mjs:242-245` 现注「Enter 只可能落在挂起空闲 / 释放窗口」在池 live 会话中不成立——
 随本批收正为「busy 期提交亦入本槽（本档 §4.1）」（注释面同笔，机制零改）。
 
 **VSC 对位（对称修——本批扩面，射程内）**：`webview/send.js` 出口守卫原分两态（`running && !_suspended` 排队 ∥
@@ -361,19 +361,19 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 
 - 2026-09-22（**busy-extend 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-22-busy-extend.md` §1（E1 / E2））：§4.1 **扩面**——
   **吞面收敛四**（模态 / 斜杠 / 空 / 槽满）：判据表去「挂起两态」条（六条 → 五条 · 条件重编号）、执行序补挂起面入槽后 `state._suspWake?.()`、
-  送达链路补「挂起会话内 busy 入槽 ⇒ driver 步骤 1 输入优先消费」并收正 `suspension-drive.mjs:242-245` 模型句；
+  送达链路补「挂起会话内 busy 入槽 ⇒ driver 步骤 1 输入优先消费」并收正 `thincoder-cli/src/tui/suspension-drive.mjs:242-245` 模型句；
   VSC 对位段收正为「busy 即排队面（`running`）+ 单槽载体两态」，细则单源回指 `WEBVIEW-INPUT.md` §1 C-B2-6。§4 Enter / 斜杠两条 busy 句同步收正（去「先经门禁吞」口径）。
 
 - 2026-09-22（**busy-extend 批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-22-busy-extend.md` §3 轮次 1 发现 #8 / #9 / #12）：
   §4.1 执行序槽满句钉提示形态（= `TUI.md` §7.5 表第 1 行逐字 `已排队 1 条消息`）+ 先例坐标收正（`key-handler.mjs:440-444`）；
-  挂起面唤醒句补证据行（`suspension-drive.mjs:122` / `:137` / `:279`）+ 批档 §2 用例面「挂起内入槽」格期望注；§6 用例宿主范围收正（T-F16-1…9）。**判据表 / 语义零变**。
+  挂起面唤醒句补证据行（`thincoder-cli/src/tui/suspension-drive.mjs:122` / `:137` / `:279`）+ 批档 §2 用例面「挂起内入槽」格期望注；§6 用例宿主范围收正（T-F16-1…9）。**判据表 / 语义零变**。
 
 - 2026-09-22（**busy-extend 批 · 设计评审轮 2 修正** · eng-designer——承 `docs/batches/2026-09-22-busy-extend.md` §3 轮次 2 发现 #3 / #7）：
   §4 Enter 条容器名收正（「`state.pendingInput` 队列」→ **单槽（至多一条——见 §4.1）**）；§9.2「挂起决策 / 队列机制的正文」去向行的节号收正
   （`docs/core/design/AGENT-LOOP.md` §9 → **`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8**）。**判据表 / 语义零变**。
 
 - 2026-09-22（**structure-debt 批 · 档面车道（#226 / #159 尾账）· eng-designer**——承 `docs/batches/2026-09-22-structure-debt.md` §2.1 / §2.2 / §2.6 档面行 + 父侧派单）：
-  §4 / §4.1 执行序与先例坐标改指新档（busy 门禁 → `key-handler-busy.mjs`；挂起态槽满先例 `:440-444` → `key-handler-edit.mjs:60-64`；submit 拒分支 → `turn-face.mjs:21-25`）；
+  §4 / §4.1 执行序与先例坐标改指新档（busy 门禁 → `key-handler-busy.mjs`；挂起态槽满先例 `:440-444` → `key-handler-edit.mjs:60-64`；submit 拒分支 → `thincoder-cli/src/tui/turn-face.mjs:21-25`）；
   §5.2 两处 key-handler 指称改指 `key-handler-edit.mjs`；§4.1 边界 Ctrl+I 坐标 `:176-183` → **`:81-88`**；§6 相关模块表按新档清单收正（补五族 + `tui-state.mjs` / `input-face.mjs` 行，`index.mjs` 行收窄为装配序列）。**零语义**：判据表 / 键语义零变。
 
 - 2026-09-24（**queue-visible 批 · 需求裁定升级轮（多槽 + 合并消费）· eng-designer**——承 `docs/batches/2026-09-24-busy-queue-visible.md` §1.10）：§4.1 全面重写为**多槽 + 合并消费**——判据条件 5 改**容量（8）**；吞面四末位改**队满（第 9 条）**；执行序满队提示改条数阈（`已排队 8 条消息`）；

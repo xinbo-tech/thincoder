@@ -100,7 +100,8 @@
 
 **§3.2 注（载入面自证 · 实现面 · 2026-09-26 修复轮）**：
 
-- **实现 = 2 行**：读取行（`import.meta.resolve("@thincoder/core/agent.mjs")` 取实体目录 + 读同目录 `package.json` 的 `version`；**单行 `try` 兜底**——先例 `thincoder-vscode/test/engine-floor-guard.test.mjs:126`（`try { src = readFileSync(file, "utf8") } catch { continue }`））+ 输出行 `console.warn("[thincoder] core face = <路径> (v<版本>)")`。
+- **实现 = 2 行**：读取行（`import.meta.resolve("@thincoder/core/agent.mjs")` 取实体目录 + 读同目录 `package.json` 的 `version`；
+  **单行 `try` 兜底**——先例 `thincoder-vscode/test/engine-floor-guard.test.mjs:126`（`try { src = readFileSync(file, "utf8") } catch { continue }`））+ 输出行 `console.warn("[thincoder] core face = <路径> (v<版本>)")`。
 - **失败面**：读取失败 ⇒ 记 `[thincoder] core face = unresolved`——**不抛、不阻断激活**（只留证据；诊断面非门禁面）。
 - **观察通道** = VSC **Extension Host 日志**（`console.warn` 宿主直捕——零新增通道；同档既有先例 `:74`（engine floor）/ `:93`（activate starting））⇒ T7 / 实盘复核按此通道读日志。
 - **机检** = T5（`engine-floor-guard.test.mjs` +1 用例：activate 源码切片断言含 core 实体路径诊断行——沿该档 `:88` 先例）。

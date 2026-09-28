@@ -271,7 +271,7 @@ N4 范围 = **核侧 + CLI + VSC 两端对位**（**2026-09-19 23:23 用户裁�
 
 | # | 需求（能力逐条可交付） | 范围边界（明确不做什么） |
 |---|---|---|
-| F-TW1 | **到期件**：核 `thincoder-core/agent/timers.mjs`（拟新增）三件纯函数（deadline / takeExpired / injectReminders）——`post-turn.mjs` 改调（行为零变 · 投递形态逐字沿用） | 不新增并行调度器；不改注入文本形态 |
+| F-TW1 | **到期件**：核 `thincoder-core/agent/timers.mjs`（已落 · 实读 50）三件纯函数（deadline / takeExpired / injectReminders）——`post-turn.mjs` 改调（行为零变 · 投递形态逐字沿用） | 不新增并行调度器；不改注入文本形态 |
 | F-TW2 | **空闲唤醒**：CLI 空闲面一次性 deadline 闩（到点自撤 / `unref` / 单槽）+ 挂起窗第三兑现态 `timer` ⇒ 开轮经既有驱动器（auto-turn 第三变体 `timerTurn` · 普通权限面） | 不借 busy 队列（用户消息语义）；不入 `poolLive`（挂起态三面）；headless = 结构性不支持（空转面不存在）；**桌面 / VSC = 阶段 2**（分阶段交付——批 `docs/batches/2026-09-28-timer-wake-phase2.md`） |
 | F-TW3 | **门三件**：仅系统类可自唤醒（唤醒源 = `_pendingTimers` 唯一写点）· 成本闸（合并一轮 / 到期即消费幂等 / `maxTurns` 帽 / 撞帽不续跑 / 在途帽 8 超限显式拒）· 开关 `agent.timerWake` 默认 true | 不新增机械门（动作域 = 系统轮既有机械面沿用）；timer 参数 schema 零改 |
 | F-TW4 | **可见面**（台账 #444）：单源 = `docs/cli/requirements/TUI.md` F17 | 本档不复制（D2） |

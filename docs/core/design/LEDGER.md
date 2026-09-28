@@ -152,7 +152,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 **判据句**：工具层**五工具**（写命令三 + 读命令二——2026-09-28 扩面）的**运行时入参**在进入核函数**之前**，按工具自身声明（`parameters`：`required` / `properties[*].type` / `properties[*].enum`）机械校验——非法 ⇒ **拒**（throw；零写、零库动作），文案 = 中文 · 点名字段 + 取值域；
 **零 SQLite 原文外泄**（守卫 + 写门判于绑定 / 库动作之前 ⇒ 工具路径下绑定类 / 咬合类原文不可达——缺指针（`null`）/ 空串 `task_book` 经写门拒，其余非法形经 P1–P6 拒；咬合 CHECK = 库级最后防线）。
 
-**落点**：`thincoder-core/ledger-tools.mjs`（拟新增 · 待建 · as-of 2026-09-28——工具定义 + 守卫 helper 的拆分落点）五工具 `execute` 顶端（守卫 = 工具档单点 helper——`assertToolArgs(tool, args)` **返回**入参对象；消费形 = `execute` 首句 `args = assertToolArgs(Tool, args)`）；判序 = **参数守卫 →（核内）迁移表判 → 写门 → UPDATE**（§3.1 / §6.1 各自判序零变，守卫先于其全部）。
+**落点**：`thincoder-core/ledger-tools.mjs`（已落 · 实读 **187** · as-of 2026-09-28——工具定义 + 守卫 helper 的拆分落点）五工具 `execute` 顶端（守卫 = 工具档单点 helper——`assertToolArgs(tool, args)` **返回**入参对象；消费形 = `execute` 首句 `args = assertToolArgs(Tool, args)`）；判序 = **参数守卫 →（核内）迁移表判 → 写门 → UPDATE**（§3.1 / §6.1 各自判序零变，守卫先于其全部）。
 
 - 理由：① 原始 args（含未知键）只在工具层存在——未知键闭合无法在核函数表达（`row` 已拆解）；② 拒因文案面向**模型**（修向指引），核函数既有文案面向直调面；③ 核函数（`ledgerAdd` / `ledgerUpdate` / `ledgerClose`）函数体零改。
 - 落选（被拒方案）：核函数层守卫（照 §6.1 写门同层落）——写门守**数据不变量**（任意调用面须守），参数守卫守**模型调用契约**（只在工具边界成立）；且未知键判无法下沉。
@@ -201,7 +201,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 
 **受影响面（读数 as-of 2026-09-28；行数 = 现行 ⇒ 预期）**：
 
-- ① 实现（本批拆分落地）：拆分后 = `thincoder-core/ledger-tools.mjs`（拟新增 · 待建 · ≈170 行——五工具定义 + 守卫 helper 三件 + tool 层 `getSessionId` 动态 import）+ `thincoder-core/ledger-cmd.mjs`（298 行 ⇒ 核心函数档 ≈140 行）+ `thincoder-core/ledger.mjs`（214 行 ⇒ re-export 面两源 ±2 行）。
+- ① 实现（本批拆分落地）：拆分后 = `thincoder-core/ledger-tools.mjs`（已落 · 实读 **187**——五工具定义 + 守卫 helper 三件 + tool 层 `getSessionId` 动态 import）+ `thincoder-core/ledger-cmd.mjs`（298 行 ⇒ 核心函数档 ≈140 行）+ `thincoder-core/ledger.mjs`（214 行 ⇒ re-export 面两源 ±2 行）。
   拆分触发 = `ledger-cmd.mjs` 298 行贴 300 顾问线，本批增量（读面守卫 ×2 + `additionalProperties` ×2）必越线 ⇒ 按既有登记「下一增量轮先审视拆分」落地。
 - ② 用例 = 档 `thincoder-core/test/ledger-args-guard.test.mjs`（在位 · 198 行 · as-of 2026-09-28——T37–T44；本批增量 = T43 / T44 ⇒ ≈240 行；照 `thincoder-core/test/ledger-close.test.mjs`（在位 · 153 行）同规模形）。
 - ③ 文档 = 本档 + 批档 §2。

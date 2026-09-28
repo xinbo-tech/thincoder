@@ -45,7 +45,7 @@
   - ⑦ **排队气泡「待发送」态 + 合并成形**（queue-visible 批 2026-09-24——会话流可见；多槽 / 合并 = 用户 03:01 裁定）：排队项**逐条**在其 user 气泡上带 `pending` 标记——标签行换 `⏳ ${t("queued.pending")}`（原文照常显示；类 `pending` 落 DOM = 机检把手；时间缺失不显示——同既有无 ts 纪律）。
     判据源 = host **队列快照** `busyQueued { pending, count, items, merged? }`（`items` = 队列**剩余**项原文——按队列序；`count` = 剩余条数；`merged` = 本批消费的合并文本——仅消费推送携；协议登记 = `WEBVIEW-PROTOCOL.md` §3 / §3.2 行 17）：
     · **标记（三支判据序——收口轮补述）**：`items` 每条——① 已标记（`data-raw` 相等）⇒ 保持；② 未标记但存同文气泡（`data-raw` 相等，取末条）⇒ **就地标记**（不新建——冷启重放 / 回显入口免重复建泡；`thincoder-vscode/webview/queued-mark.js:83-85`）；③ 无同文气泡 ⇒ 新建 + 标记（原文 = 该项；`data-raw` 建面处随写）；本地提交路径出泡即标记（受理即反馈——本地先行置位、host 推送权威收敛）。
-    · **清标与合并**：`merged` 在场 ⇒ 若其文本恰等于某条已标记气泡的原文（**单条批**）⇒ 该气泡清标保留（气泡 = 回声面）；否则（**多条批**）⇒ 移除全部已标记气泡 + 追加一条**合并气泡**（文本 = `merged`——合并形态声明于 `thincoder-vscode/src/extension/queued-merge.mjs`（拟新增），与 CLI 同源）。
+    · **清标与合并**：`merged` 在场 ⇒ 若其文本恰等于某条已标记气泡的原文（**单条批**）⇒ 该气泡清标保留（气泡 = 回声面）；否则（**多条批**）⇒ 移除全部已标记气泡 + 追加一条**合并气泡**（文本 = `merged`——合并形态声明于 `thincoder-vscode/src/extension/queued-merge.mjs`（已落 · 实读 **64**），与 CLI 同源）。
     · **防悬空**：已标记气泡的原文 ∉ `items` 且非本批 `merged` ⇒ 移除（已被消费且无回声面）。
     · **推送点**：受理 / **五个消费点**（**步边界 pickup** · driver 步骤 1 · 装载① splice · 装载② shift · **会话退出残余直发循环**）/ 忙分支判决（`count` 实况）/ `webviewReady` 握手重推（Reload 冷启按 `items` 重建 N 气泡——幂等快照）。
     **边界**：外部入口队满拒收 = 既有回显气泡**不带标记**（标记只随受理走；拒收提示 = 既有 `showWarningMessage`）；引用失效守卫（气泡已移除 / 清屏 ⇒ `isConnected` 假即弃引用——快照幂等重推自愈）；纯挂起等待面同款（同一规则——无另一形态）；CLI 对位 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1 + `TUI.md` §7.5（待发送块——语义同源、形态各端自落）。

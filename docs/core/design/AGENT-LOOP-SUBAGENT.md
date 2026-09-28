@@ -564,7 +564,7 @@ export function writeTombstone(parent, id, status, role) {
 | ①-1 | **落 system**（spawn 固块字段 → `prepareRun` 拼接） | 与缓存契约相容（run 内逐字节稳定）· 压缩后天然不丢（零重挂机制）· 与台账 #23 已定形修法同向 | **选定** |
 | ①-2 | 留 user + 压缩后重挂（P1 pinned 形——照 advisor F13 先例） | 复用既有先例 | 否决——须在 `context.mjs` 增挂接面（子代理路径无参数面，pin 的供给方无处落）+ 重挂落在动态位置；且与已定形修法相抵 |
 | ①-3 | 不改（靠模型自省重读任务书） | 零改动 | 否决——#67 实证失败（500 轮后满仓 `ls` 即本条病根） |
-| ②-1 | 审计块构造器**外提**（`thincoder-core/agent-tools/audit-block.mjs`（拟新增）：`summarizeEngTaskBook` + `buildAuditBlock`） | `subagent-spawn.mjs` 470 行已越 300 软线、逼近 500 硬限；本改净增 ⇒ 外提后回 ~390；且块构造成纯函数（判据面可直测） | **选定** |
+| ②-1 | 审计块构造器**外提**（`thincoder-core/agent-tools/audit-block.mjs`（已落 · 实读 **106**）：`summarizeEngTaskBook` + `buildAuditBlock`） | `subagent-spawn.mjs` 470 行已越 300 软线、逼近 500 硬限；本改净增 ⇒ 外提后回 ~390；且块构造成纯函数（判据面可直测） | **选定** |
 | ②-2 | 块内联留在 spawn 档 | 少一次搬动 | 否决——线宽风险 + 判据面无直测落点 |
 | ③-1 | 审计子代理（role `explore`）**不**补批次档路径行 | 审计范围纪律（只读 touched ∪ 任务书点名节）+ schema 面已删该参数（`thincoder-core/agent/family-tools.mjs:101`） | **选定** |
 | ③-2 | 审计子代理亦补批次档路径行 | 「审计能看到档」 | 否决——邀其通读批次档全档 ⇒ 与 10 轮预算 /「只读该读的」句相抵 |
@@ -628,9 +628,9 @@ if (agent._spawnSystemBlock) systemPrompt += `\n\n${agent._spawnSystemBlock}`
 | 文件 | 当前行数 | 预计增量 | 说明 |
 |---|---|---|---|
 | `thincoder-core/agent-tools/subagent-spawn.mjs` | 470 | −80 / +12 | ① `summarizeEngTaskBook`（`:44-80`）与审计模板构造体（`:394-437`）外提；② 三处改固块收集 + `child._spawnSystemBlock` 绑定（S1 / S2 / S3 单点） |
-| `thincoder-core/agent-tools/audit-block.mjs`（拟新增） | 0 | +~95 | `summarizeEngTaskBook` + `buildAuditBlock(ctx)`（纯函数——判据面直测面） |
+| `thincoder-core/agent-tools/audit-block.mjs`（已落 · 实读 **106**） | 0 | +~95 | `summarizeEngTaskBook` + `buildAuditBlock(ctx)`（纯函数——判据面直测面） |
 | `thincoder-core/agent/setup.mjs` | 234 | +3 | `:214` 之后固块拼接（`prepareRun` 单点） |
-| `thincoder-core/test/spawn-system-block.test.mjs`（拟新增） | 0 | +~120 | 用例 U1–U7 宿主（`npm test` 自动收集——`thincoder-core/test/run.mjs:8` 单层 glob） |
+| `thincoder-core/test/spawn-system-block.test.mjs`（已落 · 实读 **249**） | 0 | +~120 | 用例 U1–U7 宿主（`npm test` 自动收集——`thincoder-core/test/run.mjs:8` 单层 glob） |
 | `thincoder-cli/test/batch-doc-gate.test.mjs` | 188 | ±14 | `:98` · `:115-119` · `:127` · `:143-146` · `:185` 判据改指固块字段（`input` 侧断言反转「不含」） |
 | `thincoder-cli/test/eng-designer-role.test.mjs` | 269 | ±8 | `:162-168`（批次档行）· `:202`（负控强化为「连固块字段也不含」）· `:207`（对照改指固块） |
 | `thincoder-vscode/test/eng-designer-role.test.mjs` | 198 | ±3 | `:167` 负控补固块字段断言（防空转——原断言改后恒真） |
@@ -650,7 +650,7 @@ if (agent._spawnSystemBlock) systemPrompt += `\n\n${agent._spawnSystemBlock}`
 |---|---|---|
 | D23-1 | 载体 = **system 固块**（`child._spawnSystemBlock` → `prepareRun` 拼接） | 与缓存契约相容 / 压缩天然不丢 / 零重挂机制；否决 pinned 重挂（须新挂接面——选型 ①-2） |
 | D23-2 | 拼接位 = 槽位装配之后、项目指令之前 | 固块与槽位同属「角色 / 契约」层；项目指令（不可信包裹）保持尾位不动 |
-| D23-3 | 审计块构造器外提 `audit-block.mjs`（拟新增） | spawn 档越软线 + 块构造成纯函数可直测；否决内联（选型 ②-2） |
+| D23-3 | 审计块构造器外提 `audit-block.mjs`（已落 · 实读 **106**） | spawn 档越软线 + 块构造成纯函数可直测；否决内联（选型 ②-2） |
 | D23-4 | 块内文本**逐字搬移**（含块内自指词） | 零提示词正文改动（内容权在主 agent）；否决「顺手改写」（非本批必要 + 须上抛） |
 | D23-5 | 审计子代理不补批次档路径行 | 审计范围纪律 + schema 面已删该参数；否决「顺带补上」（选型 ③-2） |
 | D23-6 | `_engTaskInput` 语义 = **纯任务书**（不含固块） | A2 摘要面更干净（三要素抽取不受派生行干扰）；固块不再是「任务书的一部分」 |

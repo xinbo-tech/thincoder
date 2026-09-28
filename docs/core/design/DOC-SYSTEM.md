@@ -123,8 +123,8 @@ thincoder/                                  ← 合并仓根（git 仓）
 | `core` | `docs/core/` | `thincoder-core/**` | ——（核包，非产品） |
 | `cli` | `docs/cli/` | `thincoder-cli/src` · `thincoder-cli/test` | `thincoder-cli/` |
 | `vsc` | `docs/vsc/` | `thincoder-vscode/src` · `thincoder-vscode/webview` | `thincoder-vscode/` |
-| `desktop` | `docs/desktop/` | `thincoder-desktop/src` · `thincoder-desktop/renderer` · `thincoder-desktop/test` | `thincoder-desktop/`（拟新增 · 实施批建） |
-| `render-core` | `docs/render-core/` | `thincoder-render-core/**`（拟新增 · R1 实施批建） | ——（共享核包，非产品） |
+| `desktop` | `docs/desktop/` | `thincoder-desktop/src` · `thincoder-desktop/renderer` · `thincoder-desktop/test` | `thincoder-desktop/`（已建 · 实施批建） |
+| `render-core` | `docs/render-core/` | `thincoder-render-core/**`（已建 · R1 实施批建） | ——（共享核包，非产品） |
 
 **模块镜像（判据句）**：有独立代码目录的模块 ⇒ 独立文档部分（2026-09-27 用户裁定；先例 = desktop 2026-09-25——`thincoder-<X>/` ↔ `docs/<X>/`）。
 
@@ -140,9 +140,9 @@ thincoder/                                  ← 合并仓根（git 仓）
 | `thincoder-vscode/docs/{design,requirements}/**` | 按同一判据落到 `docs/core/` ∥ `docs/vsc/` | 同上 |
 | `thincoder-cli/docs/batches/**` · `thincoder-vscode/docs/batches/**` | 随触发批并入 `docs/batches/`（或入 `_archive/`） | 批档 = 时序日志（README §3.4） |
 
-**第四部分（`desktop`）无迁移底本**：桌面端 = 新增端，需求 / 设计两档自建档即落基准层（无产品树旧档可迁）；其代码面 `thincoder-desktop/`（拟新增 · 实施批建）与文档面同批立起。该部分的落点判据沿用 §5.1（P1–P5）无须扩充——首件 = 需求单档（`PROJECT`），设计侧**五档**：`PROJECT` = 板块镜像对（N-b），其余四档（`SHELL` / `IPC` / `UI` / `RENDERER`）无需求侧镜像——**N-b 为一对多口径**（同板块：需求单档 ↔ 设计多档），设计侧其余四档不判违例。
+**第四部分（`desktop`）无迁移底本**：桌面端 = 新增端，需求 / 设计两档自建档即落基准层（无产品树旧档可迁）；其代码面 `thincoder-desktop/`（已建 · 实施批建）与文档面同批立起。该部分的落点判据沿用 §5.1（P1–P5）无须扩充——首件 = 需求单档（`PROJECT`），设计侧**五档**：`PROJECT` = 板块镜像对（N-b），其余四档（`SHELL` / `IPC` / `UI` / `RENDERER`）无需求侧镜像——**N-b 为一对多口径**（同板块：需求单档 ↔ 设计多档），设计侧其余四档不判违例。
 
-**第五部分（`render-core`）无迁移底本**：模块 = 新顶层包 `thincoder-render-core/`（拟新增 · R1 实施批建）；文档面随模块立项落基准层——首档 = 设计侧 `docs/render-core/design/RENDER-CORE.md`（2026-09-27 落 · 对齐重定位批）；落点判据 = 本节**模块镜像**句。
+**第五部分（`render-core`）无迁移底本**：模块 = 新顶层包 `thincoder-render-core/`（已建 · R1 实施批建）；文档面随模块立项落基准层——首档 = 设计侧 `docs/render-core/design/RENDER-CORE.md`（2026-09-27 落 · 对齐重定位批）；落点判据 = 本节**模块镜像**句。
 
 ## 5. 归属判据（FR3）
 

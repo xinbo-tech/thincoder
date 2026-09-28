@@ -208,7 +208,7 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
 `cfg.thinking === false`（非法原值）仍归一为 `undefined`（零变）。载荷层谓词本体**零改**（本批只补解析链前置）；用例 = `doc:MODEL-SPECS.md:§15.7` AD-1..AD-4。
 无 off 路径的族（effort 型枚举不含 `none` / 服务端强制思考族）不受本条影响——谓词 guard ④ 照旧不命中（无该字段、不抛错）。
 **生产者面**（off 形的族别取形——effort 族须落 `thinking: null`；CLI `/advisor` 与 VSC 面板写面两处同式）单源 = `doc:MODEL-SPECS.md:§15.4-2`。
-**「有效 off 路径」判据与回执可宣称性**（生产者全表 · 单源实现 `thincoder-core/think-off.mjs`（拟新增））= `doc:MODEL-SPECS.md:§16`——谓词本体（本节）零改。
+**「有效 off 路径」判据与回执可宣称性**（生产者全表 · 单源实现 `thincoder-core/think-off.mjs`（已落 · 实读 **26**））= `doc:MODEL-SPECS.md:§16`——谓词本体（本节）零改。
 
 ### 6.13 Responses API transport
 

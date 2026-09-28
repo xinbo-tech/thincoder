@@ -95,9 +95,9 @@ R16 语义（跨模式存活 + 三清时机 + 单一权威）**已全部落地**
 | 开工程模式清过期 | **W9 已迁核**——现体 = 核 `thincoder-core/agent-tools/eng.mjs:74`（`purgeExpiredDesignTokens`——仅删过期、有效保留）；原端侧 `eng.mjs:20/:74/:79` 已删 |
 | spawn 门禁族 | **W12/W13 已迁核**——现体 = 核 `thincoder-core/agent-tools/subagent-spawn.mjs:112`（`resolveDesignSlot`——精确槽 / 单槽 / 多槽拒；内存 miss 回读槽）· `:158-169`（仅过期拒才删槽——`removeDesignTokenSlot`）· `:152`（`executeConsumeDesignAction`——链终消费 + 落盘对称）；原端侧 `subagent-spawn-gate.mjs:70/:101/:124/:145` 已删 （迁移期引文） |
 | 内存运行态 + 回合尾落盘 | 端壳 `thincoder-vscode/src/agent/setup.mjs:304`（`_engDesignTokens` 惰性 Map——每 run 重建 agent 后水合）· `:491`（`setSlotEngDesignTokens` 回合尾 flush） |
-| 多槽持久化原语 | 端壳 `thincoder-vscode/src/extension/session-slot-write.mjs:23`（`setSlotEngDesignTokens` / `mergeEngTokensForSave` 核转口 re-export）→ 核 `thincoder-core/session-slot-write.mjs:156`；原 `session-io.mjs:43` re-export 行随 W11 重排 |
+| 多槽持久化原语 | 端壳 `thincoder-vscode/src/extension/session-slot-write.mjs:23`（`setSlotEngDesignTokens` / `mergeEngTokensForSave` 核转口 re-export）→ 核 `thincoder-core/session-slot-write.mjs:156`；原 `thincoder-vscode/src/extension/session-io.mjs:43` re-export 行随 W11 重排 |
 
-**VSC 侧差异**（有意——源码注释逐字登记）：① slot 持久化 = 会话槽 + config.json mirror（端壳 `thincoder-vscode/src/agent/setup.mjs` `configureEngMirror` onToggle——冲突时槽优先）；② spawn 门禁 `resolveDesignSlot` 读当前 run 内存 Map、**miss 时回读槽文件权威台账**（结算面——`DESIGN-TOKEN-SETTLEMENT.md` §6.3）。
+**VSC 侧差异**（有意——源码注释逐字登记）：① slot 持久化 = **会话槽单点**（镜像双写已退役——现体 = `thincoder-vscode/src/agent/setup-tooltable.mjs:88-97`）；② spawn 门禁 `resolveDesignSlot` 读当前 run 内存 Map、**miss 时回读槽文件权威台账**（结算面——`DESIGN-TOKEN-SETTLEMENT.md` §6.3）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -164,6 +164,8 @@ token 门与冻结窗口判据复用 v1 现有导出（`anyLiveDesignSlot` / `in
 **边界（本增量不做）**：不做 token 签发（M6）；不做评审判据（advisor）；不重写 v1 门禁本体（继承 + 声明面微调）；不做语义写权判断（「谁写需求谁写设计」不可机判——落提示词层 + 互锁兜底）。
 
 ## 变更记录
+
+- 2026-09-28（**文档回填与卫生轮**（台账 #516 · #378 面）· eng-designer）：§6.3 VSC 侧差异 ① 行按现盘收正——「会话槽 + config.json mirror」⇒「**会话槽单点**（镜像双写已退役）」（现体 = `thincoder-vscode/src/agent/setup-tooltable.mjs:88-97`）。**零新语义**。
 
 - 2026-09-27（**conventions.json 退役批 · 扫尾** · eng-designer——承 `docs/batches/2026-09-27-conventions-retire.md` §3 轮次 2 发现 1）：§9 AC-M4-5 符号名随本批改名收正（`loadConventions` ⇒ `loadProjectDeclaration`）；零语义。
 

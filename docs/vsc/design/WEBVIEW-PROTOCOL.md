@@ -98,10 +98,10 @@ reasoning, provider, images? } → extension _chat()
 | 16 | `queuedUserMessage`（**新消息**——webview → host 输入上行） | `{ text, model, reasoning, provider, images }`——busy 期排队注入（busy 即排队面 = `running`；host 队列载体两态（容量 8）= 无会话 `panel._busyQueued` ∥ 会话在飞 `susp.pendingInput`；细则 = `WEBVIEW-INPUT.md` §1 C-B2-6） | `webview/send.js:44`（出口分流——本地气泡先行） | `panel-messages.mjs:174` `case` → `routeUserTurn` 入槽 |
 | 17 | `busyQueued`（状态镜像 · **增字段 `count` / `items` / `text` / `merged`**） | `{ pending:boolean, count?:number, items?:string[], text?:string, merged?:string }`——队列快照（`count` / `items` = 剩余实况（守卫 = `count >= 8`；Reload 重建源 = `items`）；`text` = 队列末项原文（队列非空即携——受理 / 消费 / 忙判 / 握手各推送点同式；webview 不读）；`merged` = 本批合并文本（仅消费推送——多条批合泡源）；`WEBVIEW-INPUT.md` §1 C-B2-6 ①⑦） | `src/extension/panel-messages.mjs` `pushBusyQueued`（受理 / **五个消费点**（含步边界 pickup） / 忙分支判决 / `webviewReady` 握手重推） | `webview/chat-messages.js` `case "busyQueued"` → `S._busyQueuedCount` / `S._busyQueuedPending` + 待发送气泡（逐条标记 / 清标 / 合并成形） |
 | 18 | `usage`（增字段） | `timers`（`{ count, expired }`——核 `_pendingTimers` 活读投影；零在途 ⇒ 段零节点） | `panel-callbacks.mjs` `usage` 发射点（累计 ∕ transports 映射——同 `reasoning_tokens` 行） | `status-bar.js` `⏰N` 段 + `state.js` 两计数槽 |
-| 19 | `timer`（**新消息**——host → webview） | `{ status: "fired", text }`——`text` = 交付原文（`[System reminder: ⏰ timer — …]` 逐字；显示裁 = ≤3 行 + `…`——CLI 同规） | `thincoder-vscode/src/extension/timer-watch.mjs`（拟新增——空闲 deadline 闩到点交付点） | `webview/chat-messages.js`（流内触发行渲染） |
+| 19 | `timer`（**新消息**——host → webview） | `{ status: "fired", text }`——`text` = 交付原文（`[System reminder: ⏰ timer — …]` 逐字；显示裁 = ≤3 行 + `…`——CLI 同规） | `thincoder-vscode/src/extension/timer-watch.mjs`（已落——空闲 deadline 闩到点交付点） | `webview/chat-messages.js`（流内触发行渲染） |
 
 纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–19 即全部在案增量；表外增量不入）。发射 / 接收落点：
-`thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:27` ·
+`thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:29` ·
 `thincoder-vscode/webview/chat.js:260` · `thincoder-vscode/webview/status-bar.js:27-30/46`。
 
 ### 3.3 工具驱动的模式 / 参数变更 → 端显示同步（#45）
@@ -110,8 +110,8 @@ reasoning, provider, images? } → extension _chat()
 
 | 变更源 | 端 | 显示面 | 判定 | 证据 |
 |---|---|---|---|---|
-| `eng` 工具（核） | VSC | `agentSettings` 快照 → ENG 按钮态 | **未接** | `configureEngMirror` 端侧实现只做槽写 + 结果尾提示串，**零 webview 推送**（`thincoder-vscode/src/agent/setup-tooltable.mjs:84-100`；对照 webview 桥 `thincoder-vscode/src/extension/panel-callbacks.mjs:251`） |
-| `plan` 工具（核） | VSC | `planMode` 消息 | **已接（静态链完整）· 运行时未验** | `thincoder-vscode/src/agent.mjs:423-426`（写入 diff → `callbacks.onPlanMode`）→ `thincoder-vscode/src/extension/panel-callbacks.mjs:251`（`postMessage({type:"planMode"})` + `_setPlanMode` 槽写） |
+| `eng` 工具（核） | VSC | `agentSettings` 快照 → ENG 按钮态 | **未接** | `configureEngMirror` 端侧实现只做槽写 + 结果尾提示串，**零 webview 推送**（`thincoder-vscode/src/agent/setup-tooltable.mjs:88-97`；对照 webview 桥 `thincoder-vscode/src/extension/panel-callbacks.mjs:158`） |
+| `plan` 工具（核） | VSC | `planMode` 消息 | **已接（静态链完整）· 运行时未验** | `thincoder-vscode/src/agent.mjs:423-426`（写入 diff → `callbacks.onPlanMode`）→ `thincoder-vscode/src/extension/panel-callbacks.mjs:158`（`postMessage({type:"planMode"})` + `_setPlanMode` 槽写） |
 | `settings` 工具（核） | VSC | `agentSettings` / `proxySettings` / `websearchSettings` / `shellCandidates` 四快照 | **未接** | 核工具全域零通知缝（`thincoder-core/agent-tools/settings.mjs` 内 `configure` / `notify` / `onChange` / `postMessage` / `panel` 零命中）；`config-watch` 的**自写抑制**（成功写后刷基线 ⇒ 元组未变零推送）把兜底路径一并关掉 |
 | 三工具 | CLI | 状态行 banner（`ENG│` / `PLAN│`） | **已接（结构性——零改需求）** | `thincoder-cli/src/tui/render-frame.mjs:220-224` 每帧由**活对象** recompute（`agent.config.agent.engineering` / `agent.planMode`）；回合中 1s ticker + 行 diff 重绘（`thincoder-cli/src/tui/agent-turn.mjs` 回合驱动器） |
 
@@ -228,7 +228,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 输入提示 / 键位串 | enterHint + 键位串 | 无（按钮 / 占位符承载） | 保留（类判据见 §6.1 首） |
 | 横幅 | PLAN / AUTO / ADVISOR / ENG + attention chip | 工具条按钮 active + plan 徽标（`:23`） | 保留（类判据见 §6.1 首）+ 不做项在册（U-P5；attention chip——权限 / 提问卡流内可见） |
 | 后台段 | `后台 N 子代理运行中 · M 完成待消化` | `⏳ …`（`:51-60`——running+queued / pending+done 两段） | 等价 |
-| 计时器段（⏰N——timer-wake 阶段 2） | ` │ ⏰N`（状态段簇尾——`thincoder-cli/src/tui/render-frame.mjs:422`；含过期项 ⇒ 警示色） | （拟新增——`webview/status-bar.js` `⏰N` 段；源 = `usage` 载荷 `timers { count, expired }`——本档 §3.2 行 18） | 等价 |
+| 计时器段（⏰N——timer-wake 阶段 2） | ` │ ⏰N`（状态段簇尾——`thincoder-cli/src/tui/render-frame.mjs:422`；含过期项 ⇒ 警示色） | （已落——`thincoder-vscode/webview/status-bar.js` `⏰N` 段（`:62` 起）；源 = `usage` 载荷 `timers { count, expired }`——本档 §3.2 行 18） | 等价 |
 
 ### 6.2 块头字段对位（本端 × CLI）
 
@@ -503,6 +503,9 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 **方向口径**：本表只收 webview → host。**「删」= host 消费位在位而 webview 发射恒无（死 handler）**——处置逐条入批档（`docs/batches/2026-09-18-vsc-settings-wiring.md` §2）并已随实现落地（三删 + 一接线转活——**本表现零 `删` 行**）；**删除落地 ⇒ 源零位 ⇒ 表行同步退场**（不留悬空行——同 §12 口径）。**「补」= 发射在位而 host 缺消费位**（本表现零行）。
 
 ## 变更记录
+
+- 2026-09-28（**文档回填与卫生轮**（台账 #516 · #390 面）· eng-designer）：§3.2 发射落点 `panel-index.mjs:27` ⇒ **:29**（实读）；§3.3 `eng` / `plan` 两行证据列 `panel-callbacks.mjs:251` ⇒ **:158**（+ `setup-tooltable.mjs` 区间 ⇒ **:88-97**）；§6.1 计时器段行「（拟新增）」⇒「（**已落**）」（`thincoder-vscode/webview/status-bar.js` 全形 `:62` 起）。
+  轮次 1 修正（批档 §3 轮次 1 发现 1）：§3.2 行 19 发点档去「（拟新增）」（`thincoder-vscode/src/extension/timer-watch.mjs`——在盘为实；交付点 `:83` 已记 §12）。**零新语义**。
 
 - 2026-09-28（**LEDGER-RELIABILITY 批 · 设计面扩面 · eng-designer**——承 `docs/batches/2026-09-28-ledger-reliability.md` §3 轮次 1 发现 #1）：§2 `sessions` 行 + §12 `sessions` 行登记**增字段** `ledger`（账本异常注记，异常才携）；§6.3 加键 `session.ledgerNotice`（**21 → 22 键**——zh/en 逐字 + 消费面在册）。**消息名 / 既有字段集 / 判别式集零变**。
 

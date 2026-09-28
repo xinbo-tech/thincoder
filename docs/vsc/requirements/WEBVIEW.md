@@ -77,7 +77,8 @@ webview 只做 UI 渲染与用户交互；agent 循环与工具执行在 extensi
 **本批登记（不修——消解路径 + 到期条件在册）**
 
 - **P2-3 默认值物化**：`settings-agent.js:16-23` / `:66-67` / `:78-130` 用硬编码回退渲染且一次提交全部字段 ⇒ 首次改动即把默认值钉进 `config.json`（与核 `DEFAULTS` 现同值，故今天无行为差）。消解路径 = 差异提交（只发被编辑字段）；到期 = agent 卡下次触碰。
-- **P2-4 元素缺席 ≡ 显式清空**：`settings-agent.js:123-125`（`|| null`）+ `settings-panel-write.mjs:129-138`（显式 null ⇒ delete）⇒ 改动 agent 卡任一控件会删掉手写 `agent.advisor.effort`。消解路径 = 缺席字段发 `undefined`。**advisor-effort 半** = `2026-09-25-spec-effort` 批在办（select 未渲染 ⇒ 不发字段——#331 接线；实施验证后核销）；余项（advisor `provider` / `model` 等字段）在册。
+- **P2-4 元素缺席 ≡ 显式清空**：`settings-agent.js:123-125`（`|| null`）+ `settings-panel-write.mjs:129-138`（显式 null ⇒ delete）⇒ 改动 agent 卡任一控件会删掉手写 `agent.advisor.effort`。消解路径 = 缺席字段发 `undefined`。
+  **advisor-effort 半** = `2026-09-25-spec-effort` 批在办（select 未渲染 ⇒ 不发字段——#331 接线；实施验证后核销）；余项（advisor `provider` / `model` 等字段）在册。
 - **P2-5 保存面零校验**：`thincoder-vscode/src/extension/settings.mjs:246-256` 只 trim + 非空 ⇒ 可落盘缺 scheme 的 URI，错误延后到每次请求才抛（`thincoder-core/proxy.mjs:184-190`）。消解路径 = URI 形态校验前置到保存；到期 = 代理面下次触碰。
 - **P2-6 providers 卡重建清空半填表单**：`settings-providers.js:237-242` ⇒ 后台准入变化会丢未落盘输入。消解路径 = 重建前保留在编输入；到期 = providers 面下次触碰。
 - **P2-7 面板关闭时 `providerError` 不可见**：`webview/chat.js:208` → `settings.js:47-58` ⇒ 配置写入失败在 UI 无痕。消解路径 = 关闭态转系统级提示；到期 = 下批。
@@ -98,7 +99,7 @@ webview 只做 UI 渲染与用户交互；agent 循环与工具执行在 extensi
 | N-W4 | 分页与恢复对位 | `HISTORY_PAGE_SIZE === 200`（`thincoder-vscode/src/extension/history-window.mjs:22`——跨端首窗对齐）；恢复保真（帧序 / 工具卡 / 时间戳形态） | 常量断言 = `thincoder-vscode/test/history-window.test.mjs`；`history-restore.test.mjs` 全绿 |
 | N-W5 | 可机判 | 每条功能需求有既有用例面（活动族 / 输入族 / 历史族 / 状态族）；**登记在案的例外 1 条**：F-W4 活卡面现无专属用例——**消解路径** = 活卡面（`toolCall`/`toolOutput`/`toolResult` 接收）补测；**到期条件** = WEBVIEW 面下次被触碰时 / 下批收口前（依据 = `ENGINEERING-MODE（VSC 侧·需求）` §1.3 F14 第三子条）；测试档登记入 `thincoder-vscode/test/files.mjs`（清单制） | `node test/run.mjs` 全绿（单入口）+ 档名在册；登记在案的例外 1 条（消解路径 + 到期条件在位） |
 | N-W6 | 端差显式 | 各端独立实现、语义同源；端差逐条登记（本档 §4），不静默（同规 = `AGENT-LOOP（VSC 侧·需求）` §16 N-CL4） | §4 表逐行在位；无未登记放行通道（`ENGINEERING-MODE（VSC 侧·需求）` §1.3 F14） |
-| N-W7 | 收发面对表零未处置 | host → webview 全部**顶级**消息判别式（`type` / `name`）逐条登记：发射点 `file:line` / 分发或消费位 `file:line` / 处置（`活`·`删`·`补`）——**无未处置项**；无生产者族（死码）当批删除且零悬空引用；`补` 行（host 缺发射）登记 + 转技术待办（带消解期），不在本批新增协议语义 | 表在 `design/WEBVIEW-PROTOCOL.md` §12；结构机检 = `thincoder-vscode/test/protocol-coverage.test.mjs`（拟新增 · 复跑零未处置）；被删标识符全树 `grep` 零命中；`npm test` 绿 |
+| N-W7 | 收发面对表零未处置 | host → webview 全部**顶级**消息判别式（`type` / `name`）逐条登记：发射点 `file:line` / 分发或消费位 `file:line` / 处置（`活`·`删`·`补`）——**无未处置项**；无生产者族（死码）当批删除且零悬空引用；`补` 行（host 缺发射）登记 + 转技术待办（带消解期），不在本批新增协议语义 | 表在 `design/WEBVIEW-PROTOCOL.md` §12；结构机检 = `thincoder-vscode/test/protocol-coverage.test.mjs`（已落 · 实读 386 · 复跑零未处置）；被删标识符全树 `grep` 零命中；`npm test` 绿 |
 
 | N-W8 | 配置面防数据丢失可机判 | 三条**先红后绿**用例在案且修复前必红：① 打开路径快照到达（F-W8）② 未编辑控件的空值零写盘（F-W10）③ 推送后旧值不回写（F-W9）。既有 `test/smoke-settings.mjs:70-78` 在 `openSettings()` 前手工灌 SS 的手法 = 掩盖源 ⇒ **不得沿用**；`saveProxySettingsFromPanel` / `proxySettings` / `handleSetProviderProxy` 现零测试命中 ⇒ 本批补测并登记入 `thincoder-vscode/test/files.mjs` | 三条新用例 `node --test` 全绿（修复前必红）+ `npm test` 绿 + `files.mjs` 含新档 |
 

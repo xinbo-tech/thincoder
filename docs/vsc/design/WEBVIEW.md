@@ -49,7 +49,7 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 | `state.js` | 单一 UI 状态 `S`（`:71`）+ DOM 引用 `ctx`（`:19`）+ `vscode` 桥 |
 | `activity.js` | 活动块编排层（R2 换接：迁移判据 / 键文法 / 补桩表单源 = 核 `subblocks/state.mjs` + `subblocks/channel.mjs`；本档 = DOM 效果执行 + 出生位 / 归档入流——`:48` / `:104`）+ 块级跟滚（§5 契约） |
 | `activity-view.js` | 呈现叶（R2 迁核：实现单源 = 核 `subblocks/activity-view.mjs`——`refreshBlock` `:118` · `updateStopButton` `:152`（件内）· `noteChunk` `:184` · `tailLines` `:103`；本端档 = 2 行 `export *` shim）——leaf：i18n only |
-| `panels.js` | goal/task 行面板（构树 + 显隐判据单源 = 核 `cards/panel.mjs`——R2 换接）+ 挂起态 + 桥路由（`handleSubagentMessage` 纯转发 `applySubagentStatus`）；`_panelTimer`（2s）同点刷 live 块头（`panels.js:49-52`） |
+| `panels.js` | goal/task 行面板（构树 + 显隐判据单源 = 核 `thincoder-render-core/cards/panel.mjs`——R2 换接）+ 挂起态 + 桥路由（`handleSubagentMessage` 纯转发 `applySubagentStatus`）；`_panelTimer`（2s）同点刷 live 块头（`panels.js:49-52`） |
 | `send.js` / `loading.js` | 输入门（`send()` `send.js:12` · busy 拒发 `:19-24`）/ 忙态与按钮可见性（`loading.js:56-57`） |
 | `input.js` / `autocomplete.js` / `toast.js` | 输入面（keydown 全族——`WEBVIEW-INPUT.md`）/ @ 补全与图片粘贴 / 瞬时提示（R2 迁核：核 `toast.mjs`；本端 = 2 行 `export *` shim） |
 | `permission.js` / `question.js` | 权限弹窗与批确认 / 内联 question 卡（R2 换接：构树单源 = 核 `thincoder-render-core/cards/permission.mjs` / `thincoder-render-core/cards/question.mjs`——端壳只留出站绑） |

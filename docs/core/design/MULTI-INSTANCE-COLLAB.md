@@ -87,7 +87,9 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
 - **判据（测试层 · 需求档 F-MI6 / N-MI6）**：读面 = `thincoder-core/test/peer-instances.test.mjs`（注入缝 `:37/:44` 首用——身份不符 ⇒ **不列为同伴**；身份符 / 探测失败 / 缺行 ⇒ **保留**）；清理面 = `thincoder-core/test/session-slot-write.test.mjs`（同判据：不符 ⇒ 删，不确定 ⇒ 不删）；
   本批受影响文件（当前行数 / 增量）= 批次档 `docs/batches/2026-09-18-init-block.md` §2.3 + 同档 §2「fix 轮附录」（实施面受影响文件；F-MI6 侧沿革 = 批次档 `docs/batches/2026-09-15-core-defect-fixes.md` §四）。
 - **判据（测试层 · 需求档 F-MI7 · 本批锚 · 2026-09-18）**：测试档 = `thincoder-core/test/process-probe.test.mjs`（束 API / 三态 / 注入缝计数 / 零同步 exec 扫描——核半）· `thincoder-core/test/session-slot-write.test.mjs`（扩——有界同步例外锚）· `thincoder-vscode/test/zero-sync-exec.test.mjs`（零同步 exec 扫描——端半）；四路锚：
-  ① **零同步 exec 扫描（两域分档）**：核域 = `thincoder-core/session-slots.mjs` · `thincoder-core/session.mjs` · `session-lifecycle.mjs` · 端域 = `thincoder-vscode/src/extension/session-slots.mjs` · `thincoder-vscode/src/extension/peer-instances.mjs`；分档 = N3 门禁（`thincoder-core/test/core-hygiene.test.mjs:96-107`）；
+  ① **零同步 exec 扫描（两域分档）**：核域 = `thincoder-core/session-slots.mjs` · `thincoder-core/session.mjs` · `session-lifecycle.mjs` · 端域（零同步 exec 扫描域）= `thincoder-vscode/src/extension/session-slots.mjs` · `thincoder-vscode/src/extension/peer-instances.mjs`；
+  **端侧探测消费面** = `thincoder-vscode/src/extension/peer-instances.mjs` · `thincoder-vscode/src/extension/session-io.mjs`（`session-slots.mjs` 副本已注销归核 ⇒ 零自有探测——2026-09-25 SLOT-END-PARAM 批；名册机检 = `thincoder-vscode/test/zero-sync-exec.test.mjs`）；
+  分档 = N3 门禁（`thincoder-core/test/core-hygiene.test.mjs:96-107`）；
   域内零 `execSync` / `execFileSync` / `spawnSync` 直引（形态先例 = `thincoder-core/test/tool-seams.test.mjs:289-299`——核 / 端两半同形；域完整性对账先例 = `thincoder-vscode/test/settings-open-snapshots.test.mjs:163-185`）；`thincoder-core/process-probe.mjs` = 探针族单点落点（豁免——不在零域）。
   ② **束 exec 上界**（注入缝计数）：每束 ≤1 批量判活 + ≤1 批量 cmdline、零逐 pid——经 `_setProcessProbeTestImpl({ aliveFn, cmdlineFn })` 计数断言（越出即红）。
   ③ **有界同步例外锚**（`activeSlot` / `slotOccupancy` 两面）：零探测早退命中（粘性 / 无属主 / 本进程属主）⇒ 计数断言零探测；探测失败 / 超时（注入形——零真实 2 s 等待）⇒ 未知保守保留（占用判定 ⇒ `{ occupied: true, unknown: true }`）；
