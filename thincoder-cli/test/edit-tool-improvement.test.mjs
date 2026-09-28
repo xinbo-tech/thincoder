@@ -6,7 +6,7 @@
  * normalize 统一（弯引号/反引号 → 直双引号单遍映射——8.2）/
  * 防误匹配（无行内 \s+ 折叠——结构不同文字相似行不命中）。
  *
- * 条目级用例走 computeEditEntry / applyPatchLines / validateEditEntry（纯内存——快层）；
+ * 条目级用例走 computeEditEntry / applyPatchLines / validateEditEntry（纯内存——轻量）；
  * 落盘端到端（runSingleEdit / applyEditBatch 写 tmp 文件）为 fs 重活——slow() 门控。
  */
 import test from "node:test"
@@ -409,7 +409,7 @@ slow("#327 T9: FILE_MUTATORS 六成员 × args=null ⇒ 必败 ∧ 目标零变�
   }
 })
 
-// ---- 端到端（fs 落盘——slow 层） -------------------------------------------
+// ---- 端到端（fs 落盘——重 IO） -------------------------------------------
 
 slow("AC1 端到端: runSingleEdit 按行号改写盘（含尾随换行保持）", async () => {
   const dir = await mkdtemp(join(tmpdir(), "thincoder-edit-"))

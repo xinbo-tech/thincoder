@@ -11,7 +11,7 @@
  * 驻留锚（旧词组不复现类锚退役——现行守卫行为由集成场景 ① 与 T-V1~V6 覆盖）。
  * 2026-09-12 PROSE-ANCHOR-RETIRE：T-V10 整删（读 src/prompts 常量子串 = 散文锚；判据见 CLI 侧设计档 TESTING.md §11）。
  * 2026-09-12 收尾轮 9：整档 11 例 slow() 门控（每例真 git 子进程面——`runCommand("git", …)` ×2 命令 ×2 cwd 链；
- * 观测 81–1649ms）；留快层 = T-V11（纯闸逻辑，2ms）。
+ * 观测 81–1649ms）；轻量档 = T-V11（纯闸逻辑，2ms）。
  *
  * Covers T-V1..V6 of the design test table (VS Code side; T-V7 dual-end
  * consistency is a cross-repo behavior asserted by the parent's full run):

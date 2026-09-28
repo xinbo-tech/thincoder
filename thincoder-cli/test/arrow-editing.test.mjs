@@ -5,7 +5,7 @@
  * 1:1）；需求 = docs/requirements/TUI.md F11 / N8。
  * 手法：createKeyHandler / handleInterruptMode / insertPastedText 直驱（无真实 TTY——同
  * input-lock.test.mjs）；竖移几何 = moveCursorVertical(chars, cursor, inputContentWidth(cols))。
- * 纯函数快层（无定时器/无 IO——不属 slow 归册）。
+ * 纯函数轻量（无定时器/无 IO——不属 slow 归册）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"

@@ -62,9 +62,12 @@ The report must contain: what changed / why, the paths of files touched, how you
 
 ## Testing discipline (simplified · anti-over-engineering)
 
-- **Unit tests = development-time tools**: written to get the change right, discarded once it's right — **write-and-drop, no retirement-ledger ceremony** (no per-test retirement judgments, no promotion burden-of-proof).
-- **Integration tests = project assets**: business scenarios + production-problem additions, asserting only business-observable results; permanent, **never augmented per single change**.
+- **Unit tests = development-time tools**: written to get the change right; disposed **per-test at batch closeout** — **default = retire (delete)**; graduates to integration only if **all three hold** (business-observable, not already covered, stably drivable) — otherwise deleted. **Retirement is the norm; keeping requires proof** — the basis is already on record (batch file / delivery tables), zero new bookkeeping.
+- **Closeout disposal line**: each batch closeout carries a test-disposal line — ① this batch's unit tests, per-test: retire / graduate; ② whether integration scenarios are affected (added / revised / none).
+- **Integration tests = project assets**: business scenarios + production-problem additions, asserting only business-observable results; permanent, **never augmented per single change**; a repo's integration-suite budget is **≈50–100 cases — beyond that is over-testing** (trim, don't add).
 - **Gate = one `test` all-green** (no more lint + test:full + test:integration three layers).
+- **Iteration = unit tests only**: verify **only your own change** — run the targeted unit tests for the changed face (single file / relevant subset). **Never run the full suite per round.**
+- **Whole-suite runs = the release gate, not a work rhythm**: the full run happens **once at closeout, parent side** — not inside the eng-coder chain. Report: "not full-suite verified — the parent-side closeout run is the only full-run point."
 - **No new prose anchors**: never write tests that read non-test docs and assert "sentence X present / absent" (`includes` / verbatim substring / sentence-matching regex); new assertions only in **behavior form** (business-observable results) and **structure-machine-check form**.
 
 ## Doc discipline
@@ -104,8 +107,8 @@ When one mechanism lands on several implementation faces (multiple ends / langua
    **the main agent MUST verify the pieces agree** (four axes = same rulings / same criteria / same-shaped boundaries / differences explicitly registered; a silent difference = drift);
    the check runs once every face's design is on disk, inside the pre-review self-check; report its conclusion plus the difference table together with the "design ready for review" message.
 6. **Cross-face difference disposition (default and exception)** — **default = eliminate**: a mechanism-face difference ⇒ collapse to one authoritative implementation / align every face to one criterion;
-   **keeping one requires all three — structural asymmetry + evidence + an explicit ruling** (structural asymmetry = exists on one side only / depends on a host capability that side alone has); **this discipline is not grounds for keeping a difference**;
-   the difference register records **ruled keeps only** — it is not a fallback for undecided differences.
+**user-visible cross-end differences = defects (the sole exception = host-capability faces — differences constrained by a host capability that only one side possesses; evidence required); the register-and-keep channel is repealed**; **this discipline is not grounds for keeping a difference**;
+the difference register records **ruled host-capability exceptions only** — it is not a fallback for undecided differences.
 
 ### Rules & exceptions (precedent is not grounds for exception)
 1. **The only grounds for an exception is a judgment line**: "it was always like this / already landed in this form / other batches' precedent / existing inventory" is never grounds to deviate from a rule —

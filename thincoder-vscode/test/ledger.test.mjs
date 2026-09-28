@@ -5,7 +5,7 @@
  * 面：数据面 / 机制面归核（`@thincoder/core/ledger.mjs` + `ledger-surface.mjs`——W4 单源）· 跨端去重档键等价 ·
  * item 形态（T107）· webview 渲染（T108，真 chat.js + happy-dom）· 启动行 post 门 + 送达门 · 接线机检 · 老化界值。
  * 手法：tmp SQLite 夹具（ledgerAdd + 时间戳回拨——替代 v1 ageOf git blame 注入面）；vscode-mock（`test/vscode-mock`）。
- * 归册（M2 重写）：T107 观测 619ms——slow() 门控；AC89 归册 slow 层（计时用例）；T102 改快层（时间戳纯计算，无 git）。
+ * 归册（M2 重写）：T107 观测 619ms——`slow()`；AC89 归册（计时用例）；T102 改轻量（时间戳纯计算，无 git）。
  */
 import { test, before, after, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
@@ -244,7 +244,7 @@ test("AC89 边界：无老化候选项不计老化（trigger 豁免——SQLite 
   assert.equal(item?.backgroundColor, undefined, "无老化候选 → 无警示底色")
 })
 
-// ── AC89 批级：单次刷新成本（慢层——两项目族，SQLite 时间戳路径） ────────────
+// ── AC89 批级：单次刷新成本（重 IO——两项目族，SQLite 时间戳路径） ────────────
 slow("AC89 批级：单次刷新 ≤500ms（两项目族 + SQLite 行集）", async () => {
   const family = join(tmp, "ws")
   for (const name of ["alpha", "beta"]) {
@@ -263,7 +263,7 @@ slow("AC89 批级：单次刷新 ≤500ms（两项目族 + SQLite 行集）", as
   assert.equal(vscode.window.statusBarItems[0]?.text, "台账 1·10", "扫描结果到位（非空转）")
 })
 
-// ── T102 老化界值（快层——时间戳纯计算；SQLite 时间戳源替代 v1 git blame） ────
+// ── T102 老化界值（轻量——时间戳纯计算；SQLite 时间戳源替代 v1 git blame） ────
 test("T102 边界：老化界值（29 / 31 天 + 触发表态）", () => {
   const proj = mkLedgerAt(join(tmp, "proj"), [
     { row: techRow("甲"), ageDays: 29 },

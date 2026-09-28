@@ -4,7 +4,7 @@
  *
  * 覆盖：commit `--only` 镜像（列文件提交——索引他批不混入）+ 空/空白 path 明确错误（零回落
  * 全量、零副作用）+ 无 path 全量零回归 + untracked path 错误形态。
- * 真 git 子进程（本档用例 = slow 归册——快层 skip，`npm run test:full` 跑）。
+ * 真 git 子进程（本档用例 = `slow()` 归册——纯别名，`npm test` 单入口跑）。
  */
 import { after } from "node:test"
 import { slow } from "./slow.mjs"

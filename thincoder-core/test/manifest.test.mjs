@@ -1,7 +1,7 @@
 /**
  * manifest.test.mjs — M1 项目状态档 manifest 单测。
  * 权威验收 = docs/core/design/MANIFEST.md §3（测试面——AC-M1-1..5 回指规格 AC 号 + T1–T7 用例表）。
- * 隔离：每用例组 mkdtempSync tmpdir 数据档（无真仓污染）；全同步 fs——快层安全。
+ * 隔离：每用例组 mkdtempSync tmpdir 数据档（无真仓污染）；全同步 fs——轻量安全。
  * 2026-09-21（#188 按用点解析批）追加：`init:false` 面歧义（T55）——权威 = `docs/core/design/MANIFEST.md` §2.2 / §3.2。
  * 2026-09-27（conventions.json 退役批）：发现 / 归属面用例组（T41–T45 / T48 / 项目视图五态 / T54 +
  * 夹具 helper）拆入邻档 `manifest-discovery.test.mjs`（纯搬移零语义——主档承接本批增量将越 500 硬限）；

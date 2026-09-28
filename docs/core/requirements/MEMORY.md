@@ -84,7 +84,7 @@ CLI 侧住 `thincoder-cli/src/memory/**`（8 档）与 `memory.mjs` 转口；VSC
 | F8 | 自检 / 发现规则一致（嵌套 memory） | 自检面（`listMemoryFiles`）与发现面（`discoverFiles`）对 `.thincoder/memory/` 的**递归口径一致**——嵌套文件不得被反复判 file-removed（**随归一退场**——2026-09-15） | 不改记忆读模型；不改 memory 文件格式 / 工具契约 |
 | F9 | 诊断原因串统一 | `needsRebuild` 的 reason 词表单一化（**随归一退场**——2026-09-15） | 不改 reason 消费语义；不新增 reason 种类 |
 
-**非功能**：N5 降级可用 + 零回归（校验判「不匹配」时按「增强不可用」降级——关键词路径照常出结果）· N6 可机器验证（fixture / 桩面板驱动真模块；真 git 子进程用例归册慢层）。
+**非功能**：N5 降级可用 + 零回归（校验判「不匹配」时按「增强不可用」降级——关键词路径照常出结果）· N6 可机器验证（fixture / 桩面板驱动真模块；真 git 子进程用例归册（`slow()`））。
 
 **判定句**：F6 换模型后 —— `searchIndex` 返回空（不返回 score=0 行）；索引状态面显示「模型不匹配 + 重建入口」。F7 gitignored 文件增 / 删 / 改 —— `needsRebuild` 报 `needed:true`。
 F8 嵌套 memory 文件 —— 连续两次 `needed:false`；两集合一致。F9 全路径 —— reason ∈ 七词表（`no-index` · `new-commits` · `file-added` · `file-removed` · `file-missing` · `file-changed` · `up-to-date`）。
@@ -146,7 +146,7 @@ N-M3 零依赖 / 可移植（无迭代器则**键序分页**——游标键随�
 | F-M6 | 有效性校验（换模型不静默）：`indexCompat`（模型比对 → `model-changed`）+ 维度硬闸 + 可见面两推口（状态 + 重建提示） | 换模型后检索不产出无效结果；状态面显示「模型不匹配 + 重建入口」；失败仍静默降级关键词（两语义不冲突）（**随归一退场**——2026-09-15：核面承接 = 失效向量置空 + 检索懒回填） |
 | F-M7 | 回合记忆召回注入：depth-0 非 resume 非 auto-turn 的回合注入召回块（关键词路径，limit 3；注入失败静默跳过） | 回合装配含召回块（可断）；注入失败不阻塞回合 |
 
-**非功能条目**（VSC 端现状）：N-M1 零依赖（纯 `node:fs`——无第三方 / 无 FTS5）；N-M2 降级可用（embedder / 索引缺失 → 关键词路径；cosine 异长返 0）；N-M3 跨端一致（frontmatter 与 CLI byte-compatible；端差登记见下）；N-M4 可机判（重 IO 用例归册慢层）。
+**非功能条目**（VSC 端现状）：N-M1 零依赖（纯 `node:fs`——无第三方 / 无 FTS5）；N-M2 降级可用（embedder / 索引缺失 → 关键词路径；cosine 异长返 0）；N-M3 跨端一致（frontmatter 与 CLI byte-compatible；端差登记见下）；N-M4 可机判（重 IO 用例归册 `slow()`）。
 
 **对位与端差登记**（对位 = CLI 侧需求条目——与 CLI 语义同源、本端原文自持）：
 

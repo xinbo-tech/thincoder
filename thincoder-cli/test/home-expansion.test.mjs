@@ -2,7 +2,7 @@
  * home-expansion.test.mjs — 第 29 批 HOME-EXPANSION（设计 MEMORY.md §9）：
  * T-H1–T-H6 展开器形态表 / T-H7–T-H10 loadConfig 单点归一 / T-H11–T-H12 projectDir 消费侧基准解析 /
  * T-H13 team.dir / T-H14 伪 HOME 端到端（slow）/ T-H15 README 对齐。
- * 快层零网络、零真实 home 写入（home 全部注入 / tmp 目录）。
+ * 轻量、零网络、零真实 home 写入（home 全部注入 / tmp 目录）。
  */
 import { test, after } from "node:test"
 import assert from "node:assert/strict"

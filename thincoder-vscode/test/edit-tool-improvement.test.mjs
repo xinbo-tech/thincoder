@@ -15,12 +15,11 @@
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
-// W13（2026-09-15 · 快层 slow 门 D-T6 收口）：AC2/stage2 变体例 = 真 fs fixture × 4 变体——
-// 并行快层负载下实测 >500ms（独立跑 ~360ms）⇒ 按「重 IO 用例归册」入慢层（快层 skip；
-// test:full 照跑——不删用例）。
+// W13（2026-09-15 · 重 IO 归册收口）：AC2/stage2 变体例 = 真 fs fixture × 4 变体——
+// 并行满负载下实测 >500ms（独立跑 ~360ms）⇒ 按「重 IO 用例归册」标记 `slow()`（纯别名——全量跑；不删用例）。
 // D-1（VSC-DEBT 批 7 · 2026-09-15 · 判据见 docs/vsc/design/VSC-DEBT.md §3.1——读数入批次档 §5）：
-// 本档 fs fixture 族在并行快层下 10–20× 膨胀（同例单跑 4–300ms / 满载 0.8–2.9s）；
-// 连续两跑满载 >800ms 者按「复跑复核仍超 ⇒ 归册」入慢层（首跑点名 + 复跑回落者 = 负载假红，保持裸 test）。
+// 本档 fs fixture 族在并行满载下 10–20× 膨胀（同例单跑 4–300ms / 满载 0.8–2.9s）；
+// 连续两跑满载 >800ms 者按「复跑复核仍超 ⇒ 归册」（首跑点名 + 复跑回落者 = 负载假红，保持裸 test）。
 import { slow } from "./slow.mjs"
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"

@@ -13,7 +13,7 @@
  * 设计权威：`docs/cli/design/TUI-INPUT-BOX.md` §4.1（执行序 / 消费回执）· `TUI.md` §7.5
  * （三时机）· `AGENT-LOOP-ASYNC-POOL.md` §6.8（步边界 pickup）；批档
  * `docs/batches/2026-09-21-busy-injection.md` §2 用例表 + busy-extend 批档 §2（T-F16-8/9）+
- * queue-visible 批（2026-09-24 · 台账 #249）批档 §2（T-F16-15…19）。快层直跑（`ctx.runAgent`
+ * queue-visible 批（2026-09-24 · 台账 #249）批档 §2（T-F16-15…19）。直跑（`ctx.runAgent`
  * 桩 + 短微任务等待——零网络零 TTY；驱动会话必然终止）。
  */
 import { test } from "node:test"

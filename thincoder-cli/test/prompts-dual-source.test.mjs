@@ -8,7 +8,7 @@
  * 保留面 = 结构机检（AC21 双源槽文件存在性 + 头注格式；T-CL1 ## 块计数；T-RO6 / T-TD3–T-TD4
  * 锚串零维护者注反证）。
  * 头部自持（零跨档 import——D-2 契约）：imports + read/exists 助手 + 语料读取 + NEW_PROMPTS 常量。
- * 纯文件读取 + 字符串匹配——快层 glob 自动发现直跑。
+ * 纯文件读取 + 字符串匹配——glob 自动发现直跑。
  *
  * U2（CORE-UNIFICATION §2.6.3）：英文落地面已随迁移改指核包（`thincoder-core/prompts/`——
  * `src/prompts/` 已删；中文权威面 `docs/core/design/prompts/` 原地保留，裁定 B）——本档面内改判。

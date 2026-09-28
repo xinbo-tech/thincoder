@@ -24,7 +24,7 @@ import { resolveChildProvider } from "@thincoder/core/agent-tools/subagent-async
 import { applySession } from "@thincoder/core/session.mjs"
 
 // ─── F-1 请求体断言（AC-1）───
-// 全部同步快（guard 在 body 组装前 throw——pre-network）——快层直跑不标 slow。
+// 全部同步快（guard 在 body 组装前 throw——pre-network）——直跑不标 slow。
 const F1_RE = /provider "deepseek": model is undefined — provider cloned without model re-derivation \(set providers\[\]\.model — the channel default model\)/
 
 function runProvider(model) {

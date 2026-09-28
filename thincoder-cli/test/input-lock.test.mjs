@@ -10,7 +10,7 @@
  * queue-visible（2026-09-24 · 台账 #249）：容量 1 → 8（第 9 条拒 + 提示 + 文本保留——本档断言
  * 随容量口径收正；R15 合并消费 = `busy-injection.test.mjs` 新用例面）。
  * 手法：createKeyHandler 桩 ctx 直驱按键（无真实 TTY）；suspensionSession 桩 agent/state
- * 直驱驱动循环（ctx.runAgent 注入——runAgentTurn 测试缝——真实单消息交接路径）。快层直跑
+ * 直驱驱动循环（ctx.runAgent 注入——runAgentTurn 测试缝——真实单消息交接路径）。直跑
  * （<800ms——无定时器悬挂：驱动会话必然终止）。
  */
 import { test } from "node:test"

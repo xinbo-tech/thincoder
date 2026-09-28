@@ -8,7 +8,7 @@
  * 2026-09-11 TEST-LIFECYCLE 扫① 削段：原 T8 源码字面锚全删（行为由 T1-T4/T9/T10 覆盖）；
  * T11 裁为 escalate-async 种子最小锚（agent.mjs/runChild 两份已被 T9/T10 行为覆盖，删）。
  * AC 映射：AC1′←T1-T4/T9 · AC2′←T5/T6/T10 · AC3′←T11 · AC4′←T7 · AC5′←T9
- * （全量回归缝 = `npm test` / `npm run test:full`）。
+ * （全量回归缝 = `npm test`（单入口））。
  * 接缝注（T9/T10——设计 `TURN-CAP-CONTINUE.md` §3–§5）：T9 provider 桩 = 不可解析（无 baseURL——chat 即抛）；
  * fetch 桩以 AbortError 立即重抛（绕开 requestWithRetry 的 1s/2s/4s 退避——机械保证零网络；
  * 每段 ~0.8s 为 agent setup 开销）。onAgentTurn 在循环头先于 chat 发射——测试 catch 抛错、

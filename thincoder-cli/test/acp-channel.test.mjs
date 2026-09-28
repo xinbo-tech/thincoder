@@ -4,7 +4,7 @@
  *
  * 驱动面：buildAcpCallbacks（假 notify/request 捕获载荷）· replayHistory 直驱 ·
  * applyToolExclusions / parseRelayPath 纯函数直测 · 文法单一权威源（再导出身份直测）。
- * 零网络 / 零子进程 / 零定时器——快层归册（TESTING.md §1 D-T6）。
+ * 零网络 / 零子进程 / 零定时器——归册（`slow()` 纯别名——全量跑）。
  */
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"

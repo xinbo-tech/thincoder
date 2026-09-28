@@ -3,7 +3,7 @@
  *
  * 覆盖 T-RS1–T-RS9 / T-RS12–T-RS14 + AC-RS9（恢复只读末段）；T-RS10/T-RS11 在
  * integration/session-resume.test.mjs 与既有族（模式 F 零回归）。
- * 形态：快层 unit——temp 目录注入（零真实 HOME 依赖）、零网络、零定时器。
+ * 形态：轻量 unit——temp 目录注入（零真实 HOME 依赖）、零网络、零定时器。
  * 段读计数口径 = `_storeStats.segmentReads`（段文件内容读——AC-RS9 断言；末段在 bind
  * 扫描时读入并缓存，窗口读取不重复读同一段）。
  */

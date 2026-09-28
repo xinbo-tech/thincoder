@@ -1,30 +1,28 @@
 # 测试基建（TESTING）· 设计
 
 > 板块：测试基建——**分层纪律与测试门（v2——单入口 `npm test`）** · **测试库存治理** · **测试生命周期（三层来源）与集成集** · **散文锚退役与禁令**。
-> **v2 就地更新**（2026-09-17 退役批）：M10 模块设计语义融入（门禁简化——见 §10；原旁路档 `_archive/modules/ENGINEERING-MODE-V2-MODULE-TEST-DISCIPLINE.md` 已归档 `_archive/modules/`）。§1 = **分层纪律与测试门**（活语义 = 工作分工 L0 / L0+ / L2；**门禁权威 = §10**）· §4 = **集成集承载与执行**（v2 = 并入单入口——§4.2 / §4.3）· §3 测试生命周期 = v1 历史（v2 由 §10 F4 替代）。
+> **v2 就地更新**（2026-09-17 退役批）：M10 模块设计语义融入（门禁简化——见 §10；原旁路档 `_archive/modules/ENGINEERING-MODE-V2-MODULE-TEST-DISCIPLINE.md` 已归档 `_archive/modules/`）。§1 = **分层纪律与测试门**（活语义 = 收口分工：舱内单元 ∕ 链终全量；**门禁权威 = §10**）· §4 = **集成集承载与执行**（v2 = 并入单入口——§4.2 / §4.3）· §3 测试生命周期 = **现行**（口径 = 需求 F6–F14——退役纪律 2026-09-28 复确认；§10 F4 只涉台账仪式面）。
 > 需求层指针 = `requirements/TESTING.md`（§1 总体 / §2 F1–F14 / §3 N1–N9 / §5 F15–F22 · N10–N12）。
 > 兄弟档：无——原 `design/E2E-HARNESS.md`（CLI 自动验证面）**已删除**（2026-09-15 · 错轴退役；终端程序自动验证面的设计面 = 待重做另轮）。 （迁移期引文）
 > 权威源（实现）：`thincoder-cli/test/run.mjs`（单入口——单元 + 集成 + slow 全跑）+ `thincoder-cli/test/slow.mjs`（`slow` 纯别名）+ 三包 `package.json` scripts（`test` 一条测试入口）。
 > **多实现面（语义同源 · 各面原文自持 · 不做字节一致 · 不加面间同步依赖）**：CLI 面（上行所列）· VSC 对端面（其 `test/` 同构 runner 族）· **核树面**（`thincoder-core/test/run.mjs` + `thincoder-core/package.json` scripts——无集成层）
 > **桌面面**：`thincoder-desktop/test/run.mjs` + `thincoder-desktop/package.json` scripts——单入口，单元 + 集成同清单（集成域 = `thincoder-desktop/test/integration/`）；驱动 / 隔离 / 截图面单源 = `docs/desktop/design/E2E-TESTING.md`。
-> 关联：本档 §1 是分层纪律的权威叙述；工程模式实现侧分级正文 = `thincoder-core/prompts/persona-eng-coder.md` + `discipline-engineering.md`。
+> 关联：本档 §1 分层纪律口径源 = `requirements/TESTING.md` §2 F1–F4（只引用不重述）；工程模式实现侧正文 = `thincoder-core/prompts/discipline-engineering.md`（测试纪律节）· `persona-engineering.md`（派单验收行）——CN 正本 = `docs/core/design/prompts/` 同名两档。
 > 对端对位档 = 对端仓库的同名测试基建档（**语义同源、各端原文自持**）。
 
 ## 1. 分层纪律与测试门（v2）
 
 ### 1.1 分层纪律
 
-分层纪律把一次代码改动的验证拆成三级，级级向上收口，避免“随便改一点就跑上千个测试”：
+一次代码改动的验证**按层收口**（浅改浅验 ∕ 深改深验 ∕ 链终一次全量）——口径 = 需求档 `requirements/TESTING.md` §1 总纲 + §2 F1–F4；**本档只引用不重述**（D2 单一权威源）：
 
-| 层 | 时机 | 内容 | 谁跑 |
+| 面 | 时机 | 内容 | 谁跑 |
 |---|---|---|---|
-| **L0** | 每个修正轮 | 改动即时验证 + verify 声明 | eng-coder |
-| **L0+** | 首次实现 | 语法检查 + 定向相关测试（秒级） | eng-coder |
-| **L2** | 链终态 | 各包 `npm test` 全量（唯一测试入口——§10） | 父侧收口恰一次/端 |
+| **舱内**（需求 F1） | 每次改动 ∕ 修正轮 | 只验本任务改动——跑改动面相关单元测试（单档 ∕ 相关子集）；不得逐轮跑全量 | eng-coder |
+| **链终收口**（需求 F3） | 链末 | 全量（含集成集）恰一次/端——不在 eng-coder 链内；入口 = 各包 `npm test`（§10 F1） | 父侧 |
 
-- **首次实现 = L0+，不做全量**——报告义务句逐字：“not full-suite verified — the parent-side L2 run is the only full-suite point.”
-- **L2 = 全量**：链末父侧终验恰一次/端，不在 eng-coder 链内跑（入口 = 各包 `npm test`——§10 F1）。
-- verify 三层都只收模型的 `verification.status` 声明（passed / skipped+reason），**不代跑任何测试**（verify 语义 = `design/VERIFY-REDESIGN.md`）。
+- **报告义务句 = 需求 F2 原文逐字**（未跑全量时随报告带出）。
+- verify 只收模型的 `verification.status` 声明，**不代跑任何测试**（需求 F4；verify 语义 = `design/VERIFY-REDESIGN.md`）。
 
 ### 1.2 slow 标注
 
@@ -54,7 +52,7 @@
 
 ## 3. 测试生命周期（三层来源）
 
-> 术语辨异：**来源层**（①②③——测试的出身与寿命）与**验证层级**（L0/L0+/L2——一次改动何时跑什么）是**两个正交轴**，勿混。
+> 术语辨异：**来源层**（①②③——测试的出身与寿命）与**收口分工**（舱内单元 ∕ 链终全量——一次改动何时跑什么；口径 = `requirements/TESTING.md` §2 F1–F4）是**两个正交轴**，勿混。
 
 ### 3.1 三层来源与寿命
 
@@ -223,6 +221,7 @@
 | A-TS10 | 散文锚退役：`用例总数(批后) = 用例总数(批前) − 清单整删条数`；混装档行为断言零改 | F15–F22 · N10–N12 |
 | A-TS11 | 新增断言零散文锚（结构机检 F17 封闭枚举不变） | F19 |
 | A-TS12 | **核树面**：`npm test`(核) exit 0（单入口全量——原慢例同跑）· CI 核作业跑同一入口（覆盖不降） | §3 N1 / N3 / N4 / N5 |
+| A-TS13 | 本档 §1.1 ∕ §3 与需求 F1–F4 同口径（舱内单元 ∕ 链终全量收口 · verify 不代跑）；旧分层表述仅存变更记录面（+ 日期） | F1–F4 |
 
 **用例表（正常 / 边界 / 错误——摘）**：
 
@@ -257,7 +256,7 @@
 
 ## 10. 测试门禁简化（v2——M10 增量）
 
-**定位**：v1 测试门禁 = **三层**（`lint` → `test:full`（全量，slow 门控放行）→ `test:integration`（集成集））+ 慢测层归册机制（`slow()` 门控 + `slow-gate.mjs` 防漏拦截）+ 五套 runner 脚本 + 「批次收口的测试退役三选一」流程。v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库存**。
+**定位**：v1 测试门禁 = **三层**（`lint` → `test:full`（全量，slow 门控放行）→ `test:integration`（集成集））+ 慢测层归册机制（`slow()` 门控 + `slow-gate.mjs` 防漏拦截）+ 五套 runner 脚本 + 「批次收口的测试退役三选一」的**独立台账仪式**。v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库存**；**退役处置仍按需求 `requirements/TESTING.md` §2 F6 ∕ F9**（批次收口逐条——2026-09-28 复确认）。
 
 **功能点**：
 
@@ -266,7 +265,7 @@
 | F1 | 统一 `test` 命令 | 一条命令跑全量（单元 + 集成 + slow 全跑），全绿即门禁 |
 | F2 | 砍多套脚本 | `run-fast` / `run-full` / `run-integration` / `slow-gate` / `slow`（门控面）→ 收敛为每包一条 `test`（`node test/run.mjs`——CLI 与核 glob · VSC 显式清单；**清单↔盘上两向自检**见 §10.2） |
 | F3 | 砍慢测层归册 | `slow()` 不再 skip（慢就慢，全量跑）；`slow-gate` 防漏拦截删除；`THINCODER_TEST_FULL` / `THINCODER_SLOW_GATE_MS` env 门全删。**`slow.mjs` 保留为纯别名**（`export { test as slow }`——35 档 + 2 fixture 的 `import { slow }` 零悬空；整档删 = 悬空 import + 35 档机械重写） |
-| F4 | 砍测试退役台账 | 不做「批次收口的测试退役三选一」流程（§3 生命周期 = v1 历史） |
+| F4 | 砍**独立**退役台账仪式 | 不做「批次收口的测试退役三选一」的**独立台账仪式**——退役处置仍按需求 `requirements/TESTING.md` §2 F6 ∕ F9（批次收口逐条；2026-09-28 复确认） |
 
 **不砍 `lint`（check-syntax）**：砍单只列测试 runner 脚本；`lint` 是语法门（node --check）非测试门，CI 两作业 + VSC `vscode:prepublish` 仍消费（KD-M10-6）。
 
@@ -379,6 +378,10 @@
 - 不在 M8 机检加测试面判据（测试档不入 `docs/**` 机检域）；不做用例级漏跑判据（用例被 `node:test` 收集失败的面归各档自持）。
 
 ## 变更记录
+
+- 2026-09-28（**测试按层收口·设计对齐轮** · eng-designer——承 `docs/batches/2026-09-28-test-layer-prompts.md` §1.4 派单 + 父侧追加裁定；口径 = 需求 `requirements/TESTING.md` §1 总纲 + §2 F1–F4）：
+  §1.1 旧三层分工表退场 → 舱内 ∕ 链终收口两面表（报告义务句 ∕ verify 改引用）· 首部状态行 · §1 关联行 · §3 术语注 · §7 新增 A-TS13——**L0 ∕ L0+ ∕ L2 现行表述退场**（旧字面仅存记录面）；
+  §10 定位段 ∕ F4 行复确认收正——退役「砍」义限定为**独立台账仪式**，退役处置仍按需求 F6 ∕ F9（2026-09-28 复确认）。**零新语义**（只引用不重述——D2）。
 
 - 2026-09-22（**措辞退场批（wording-retire）· 设计轮** · eng-designer——承用户 2026-09-22 08:15 裁定；批档 = `docs/batches/2026-09-22-wording-retire.md`）：首部多实现面行 + §4.4 双端镜像策略——「互不追赶」两处从活面退场（改「不加面间同步依赖」+「不以任一端产物回改另一端（对齐经同源设计）」）；**零新语义**；旧字面仅存记录面 / 归档面。
 

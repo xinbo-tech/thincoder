@@ -4,12 +4,12 @@
  * busy 排队受理（C-B2-6——busy-extend 批 2026-09-22：`running` 一律排队；原 C-B2-4 拒发面撤销；
  * 普通 / 会话在飞两态 = `busy-injection-vsc.test.mjs` T-V16-1 / T-V16-4a）。用例 1:1 = §9.6 T-B2-1~T-B2-7。
  *
- * 手法（§9.6）：setupWebview + installChatFixture + 本档自备补充元素（#at-dropdown /
- * #paste-bar / #paste-badge / #file-input / #attach-btn——共享 fixture 零改）+ 动态 import
- * `input.js`（副作用注册——先于 initAutocomplete，注册次序 = §9.2 契约）与真 `initAutocomplete`
- * 装配；Enter 以 `new KeyboardEvent("keydown", { key:"Enter", isComposing })` 派发（已验证
+ * 手法（§9.6）：setupWebview + installChatFixture（含 `#toolbar` 输入段骨架）+ 核件接线
+ * （`input.js` = deps 构造 + 工厂装配——2026-09-28 上提批：本档原「动态 import 真 `input.js` +
+ * 真 `initAutocomplete` 装配」改指核件同面：@ 下拉推送入口 = `autocomplete.js` 两导出）；
+ * Enter 以 `new KeyboardEvent("keydown", { key:"Enter", isComposing })` 派发（已验证
  * isComposing 可控 + dispatchEvent 返回值即 !defaultPrevented）；消息面断言经 capturedPosts；
- * busy toast 只断言即时态（不等 2.6s 淡出——快层慢门，计时器显式清掉）。
+ * busy toast 只断言即时态（不等 2.6s 淡出——避免慢用例，计时器显式清掉）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"
@@ -23,33 +23,18 @@ before(async () => {
   const env = setupWebview()
   cleanupEnv = env.cleanup
   capturedPosts = env.capturedPosts
-  installChatFixture()
-  // 本档自备补充元素（共享 fixture 零改）：真下拉 + send() 清理面（paste-bar/badge）+
-  // initAutocomplete 真装配所需（file-input/attach-btn）。
-  document.body.insertAdjacentHTML("beforeend", `
-    <div id="at-dropdown" style="display:none"></div>
-    <div id="paste-bar" style="display:none"></div>
-    <div id="paste-badge"></div>
-    <input id="file-input" type="file">
-    <button id="attach-btn"></button>
-  `)
+  installChatFixture() // 夹具含 `#toolbar` 输入段骨架（核件接线按同 id 退场重建）
   const state = await import("../webview/state.js")
-  await import("../webview/input.js") // 副作用注册（先注册 → 先运行——协调契约前提）
-  const { initAutocomplete } = await import("../webview/autocomplete.js")
-  const atDropdown = document.getElementById("at-dropdown")
+  await import("../webview/input.js") // 接线（deps 构造 + 工厂装配——键位监听先于 @ 面）
+  const ac = await import("../webview/autocomplete.js") // @ 面推送入口（核 `showAtDropdown` 同入口）
   W = {
     S: state.S,
     ctx: state.ctx,
     t: (await import("../webview/i18n.js")).t,
     toast: await import("../webview/toast.js"),
     setLoading: (await import("../webview/loading.js")).setLoading,
-    ac: initAutocomplete({
-      inputEl: state.ctx.inputEl,
-      atDropdown,
-      vscode: state.vscode,
-      pastedImages: state.ctx._pastedImages,
-    }),
-    atDropdown,
+    ac: { showAtDropdown: ac.showAtDropdown, closeAtDropdown: ac.closeAtDropdown },
+    atDropdown: document.getElementById("at-dropdown"), // 核件产物（静态占位已退场）
   }
 })
 
@@ -75,13 +60,12 @@ function resetInput(value) {
   S._turnState = "idle"
   S._suspended = false
   S._busyQueuedPending = false // C-B2-6 细则① 镜像（初启态——队列分支守卫判据源）
-  ctx.isRunning = false
-  ctx._interruptMode = false
+  ctx.isRunning = false // 核 loading 标记活代理（写 ⇒ 核 setLoading）
   ac.closeAtDropdown()
   atDropdown.style.display = "none"
   inputEl().value = value
   inputEl().placeholder = ""
-  inputEl().classList.remove("interrupt-mode")
+  inputEl().classList.remove("interrupt-mode") // 中断模态面（核内态——由核件键位面进出）
   const toastEl = document.getElementById("paste-toast")
   if (toastEl) { toastEl.classList.remove("visible"); toastEl.textContent = "" }
 }
@@ -130,26 +114,19 @@ test("T-B2-3 @ 下拉协调：打开态 Enter 建议插入（@<path> 落地）+ 
   assert.equal(W.atDropdown.style.display, "none", "下拉关闭")
 })
 
-// ─── T-B2-4 边界：下拉元素缺失 ≠ 打开（C-B2-3 硬化）───
+// ─── T-B2-4 边界：下拉关闭态 ≠ 打开（C-B2-3 硬化的现存分支）───
 
-test("T-B2-4 判据硬化：同 T-B2-3 但 #at-dropdown 元素移除后 Enter → 正常发送（缺失 ≠ 打开；修前恒判打开 → 永不发送）", () => {
+test("T-B2-4 判据硬化：下拉关闭态（display:none）⇒ Enter 正常发送（C-B2-3 判据 = display；「元素缺失」支随核化退役——下拉由核件自建恒在）", () => {
   resetInput("no dropdown here")
   W.ac.showAtDropdown([{ path: "src/a.mjs", name: "a.mjs" }])
-  const el = W.atDropdown
-  el.remove()
-  // 注（代码评审 #2——合成尾态登记）：元素移除但 _atActive 仍置位——input.js 先行发送后，
-  // autocomplete 侧仍会走 stale 引用插入路径（生产不可达：webview/index.html:31 常驻该元素）；
-  // 本用例只断言发送面（C-B2-3 判据），不锁该合成尾态。
+  assert.equal(W.atDropdown.style.display, "block", "预览：下拉已打开")
+  W.ac.closeAtDropdown()
+  assert.equal(W.atDropdown.style.display, "none", "预览：下拉已关闭（display 判据）")
   const mark = capturedPosts.length
-  try {
-    pressKey({ key: "Enter" })
-    const userMsgs = postsSince(mark).filter((m) => m.type === "userMessage")
-    assert.equal(userMsgs.length, 1, "元素缺失 → Enter 照常发送")
-    assert.equal(userMsgs[0].text, "no dropdown here")
-  } finally {
-    document.body.appendChild(el) // 还原（后续用例共享该元素）
-    W.ac.closeAtDropdown()
-  }
+  pressKey({ key: "Enter" })
+  const userMsgs = postsSince(mark).filter((m) => m.type === "userMessage")
+  assert.equal(userMsgs.length, 1, "关闭态 → Enter 照常发送")
+  assert.equal(userMsgs[0].text, "no dropdown here")
 })
 
 // ─── T-B2-5 正常：busy 排队受理（busy-extend 批 2026-09-22——C-B2-6 一律排队）───
@@ -189,20 +166,20 @@ test("T-B2-6 双守卫：下拉打开 + 组合期 Enter → 零 userMessage + �
 
 // ─── T-B2-7 边界：中断模态组合守卫（中断通道零回归）───
 
-test("T-B2-7 中断模态：Ctrl+I 进入 → 组合 Enter 零 interrupt（模态未退出）→ 非组合 Enter 发出 interrupt", () => {
+test("T-B2-7 中断模态（核内态经类名观测）：Ctrl+I 进入 → 组合 Enter 零 interrupt（模态未退出）→ 非组合 Enter 发出 interrupt", () => {
   resetInput("注入文本")
   W.ctx.isRunning = true
   pressKey({ key: "i", ctrlKey: true })
-  assert.equal(W.ctx._interruptMode, true, "Ctrl+I（running）→ 中断模态")
+  assert.equal(inputEl().classList.contains("interrupt-mode"), true, "Ctrl+I（running）→ 中断模态")
   const mark = capturedPosts.length
   pressKey({ key: "Enter", isComposing: true })
   assert.equal(postsSince(mark).filter((m) => m.type === "interrupt").length, 0, "组合期零 interrupt")
-  assert.equal(W.ctx._interruptMode, true, "组合 Enter 被吞——模态未退出")
+  assert.equal(inputEl().classList.contains("interrupt-mode"), true, "组合 Enter 被吞——模态未退出")
   assert.equal(inputEl().value, "注入文本", "文本保留")
 
   pressKey({ key: "Enter" })
   const interrupts = postsSince(mark).filter((m) => m.type === "interrupt")
   assert.equal(interrupts.length, 1, "非组合 Enter → interrupt 发出（中断通道零回归）")
   assert.equal(interrupts[0].message, "注入文本")
-  assert.equal(W.ctx._interruptMode, false, "模态退出")
+  assert.equal(inputEl().classList.contains("interrupt-mode"), false, "模态退出")
 })

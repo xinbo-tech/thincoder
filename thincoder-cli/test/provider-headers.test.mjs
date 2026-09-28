@@ -9,7 +9,7 @@
  * mock 形态（PROVIDER.md §6.17 注）：`globalThis.fetch` 注入记录 (url, opts)；native 三格式最小 SSE 帧
  * （responses / anthropic / google）；OpenAI 面非 SSE 单 chunk JSON 兜底；generate-title proxy
  * 分支经 `_deps.proxyFetchImpl` 注入；config 面经 `_setConfigPathForTest` + tmp config.json
- * （夹具形态同 config-merge.test.mjs）。无定时器等待——快层直跑（D-T6 阈值内）。
+ * （夹具形态同 config-merge.test.mjs）。无定时器等待——直跑（阈值内）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"

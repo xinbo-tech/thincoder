@@ -2,7 +2,7 @@
  * heap-watch.test.mjs — TUI-OOM-ROOTCAUSE 批 组 4（A3——CRASH-REPORTS.md §8.6）
  * 用例表 1:1：T-HW1–T-HW5（默认启动 / 关值单例 / 边缘触发 / 逐字与订阅 / 失败面）。
  *
- * 形态：快层 unit——注入 sample/heapLimit/timer（零等待、零真实定时器、零真实内存压力）。
+ * 形态：轻量 unit——注入 sample/heapLimit/timer（零等待、零真实定时器、零真实内存压力）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"

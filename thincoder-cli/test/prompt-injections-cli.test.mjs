@@ -8,7 +8,7 @@
  *   ② 配置态（CLI 表）：七个场景装配 + 全部内建工具描述零 `{{inject:` 字面，且 §2.13.2
  *      「CLI 列」取值逐条在场（空串项由零字面断言覆盖）；
  *   ③ 未配置态：恒等（原文过——U0 三态基线「未配置零变」）。
- * 纯模块调用 + 文件读取——快层直跑（真实入口径覆盖在集成层 cli-prompt-entry.test.mjs）。
+ * 纯模块调用 + 文件读取——直跑（真实入口径覆盖在集成层 cli-prompt-entry.test.mjs）。
  */
 import { test, after } from "node:test"
 import assert from "node:assert/strict"

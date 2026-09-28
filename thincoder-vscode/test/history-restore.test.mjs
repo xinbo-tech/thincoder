@@ -4,7 +4,7 @@
  * 手法（activity-flow.test.mjs 模式）：setupWebview + 自备 DOM fixture（installChatFixture
  * ids + scroll.js 需要的 #chat-container/#toolbar）后动态 import 真模块（state.js/
  * ui.js/history.js——单一运行时对象 S/ctx），直驱 applyHistoryPage/buildHistoryMessage
- * （消息 = historyWindow 输出形状直构——webview 直构测试）。快层直跑（无真实定时器）。
+ * （消息 = historyWindow 输出形状直构——webview 直构测试）。直跑（无真实定时器）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"

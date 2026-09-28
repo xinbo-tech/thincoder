@@ -19,7 +19,7 @@
  *    （AC-3 必做锁——非 git 目录 ms 级真失败 → catch 记 ts → 30s 内二次调用跳过——
  *    不触发真 5s 超时；Map 预填 ts 正向锁 skip 路径 + >30s 旧条目访问时惰性清）。
  * 归册（2026-09-12 收尾轮 9）：prepareRun ×3 + collectGitContext ×2 走真 git 子进程——
- * slow() 门控（快层 skip、test:full 照跑）。
+ * `slow()` 纯别名（全量跑、无 skip）。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import { slow } from "./slow.mjs"

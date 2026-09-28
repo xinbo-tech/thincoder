@@ -12,8 +12,8 @@
  * 不入符号面）；反引号标识符经 `extractAnchors`（`scripts/doc-check-anchors.mjs`）并入（宽形态面——较强形态更松，命中面偏宽 = 已登记取舍）。
  * 输出：① 变更面（文件 + 符号候选）② 反查命中档清单（`docs/{design,requirements}` 内——每档一行 + 命中词 + 命中数）
  * ③ 一行提示（建议录入批次档 §2 受影响文件表）。输出**不自动**写批次档（写权归作者）。
- * 实现形态（单源）：纯函数 `docImpact({changedFiles, changedSymbols, docsRoot})`（快层直驱可测）+
- * 薄 git 包装（子进程——慢层 `slow()` 归册）+ CLI。扫描域取**声明面** `checkConfig.scanDirs`（D2 单源——manifest；2026-09-18 判据面批收正）。
+ * 实现形态（单源）：纯函数 `docImpact({changedFiles, changedSymbols, docsRoot})`（直驱可测）+
+ * 薄 git 包装（子进程——`slow()` 归册）+ CLI。扫描域取**声明面** `checkConfig.scanDirs`（D2 单源——manifest；2026-09-18 判据面批收正）。
  * 导出：isStrongSymbol / changedTokensFromDiff / docImpact / gitChangedSurface / main（`test/doc-impact.test.mjs` 消费）。
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -102,7 +102,7 @@ export function docImpact({ changedFiles = [], changedSymbols = [], docsRoot, sc
   return { docsRoot: resolve(docsRoot), changedFiles: files, changedSymbols: symbols, scanned, hits };
 }
 
-/** 薄 git 包装（子进程——慢层归册）：`--base` 起 diff → 变更文件（`--files` 追加）+ 变更符号。 */
+/** 薄 git 包装（子进程——归册）：`--base` 起 diff → 变更文件（`--files` 追加）+ 变更符号。 */
 export function gitChangedSurface({ base, extraFiles = [], cwd = process.cwd() }) {
   const run = (args) => {
     const r = spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });

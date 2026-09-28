@@ -1,11 +1,11 @@
 /**
  * eng-designer-role.test.mjs — eng-designer 角色 + 行为纪律 + 文档更新纪律（ENGINEERING-MODE.md
  * 第 2 批 · CLI 端）。用例表 1:1 落地（§3.2 T30–T36 / T39 / T40）+ AC16–AC27：
- *   T30 正常（slow——第 20 批 A3 归册：真实 prepareRun 装配实测 818.5ms 撞快层慢门）：
+ *   T30 正常（`slow()`——第 20 批 A3 归册：真实 prepareRun 装配实测 818.5ms 超归册线）：
  *       角色注册（schema enum / 描述角色矩阵 + Mode filtering / setup 工程 enum）
  *   T31 错误：非工程模式 spawn eng-designer → throw（第三道模式门——与 eng-coder 门同族）
  *   T32 边界：装配不静默回退（assemblePrompt("eng-designer") 非空 + 零警告）
- *   T32b（第 20 批 A2）：受限变体描述动作清单（7 动作/无 check）+ 机械门文案同清单——零新增装配调用，规避慢门
+ *   T32b（第 20 批 A2）：受限变体描述动作清单（7 动作/无 check）+ 机械门文案同清单——零新增装配调用（轻量形态）
  *   T33 错误/正常：designer 无 batchDoc → throw（文案含实际角色名）；带可读路径 → 通过 + 注入行
  *   T35 边界：勘察受限（受限 schema explore-only + 机械门拒 coder / 允 explore 且返回 null；
  *        勘察任务输入不含 Audit scope 块）
@@ -229,7 +229,7 @@ test("T36 边界：designer spawn 不带 designToken → 通过（不需凭证�
 // ═════════════════════════════════════════════════════════════════════════════
 test("T39 边界：designer 子代理写 docs/ → 走父侧授权 ask（非静默）；autoApprove 才免问", async () => {
   // 工具名用 `probe_write`（非 PEER_WRITE_TOOLS 成员——避开 peer 扫描的同步 git 子进程：
-  // 冷启 ~0.5s 会把本用例推过快层 slow 门，而权限路径的判据只有 tool.readonly，与工具名无关）。
+  // 冷启 ~0.5s 会推高本用例耗时，而权限路径的判据只有 tool.readonly，与工具名无关）。
   const writeTool = { name: "probe_write", readonly: false, touchedPaths: (a) => [a.path], execute: async () => "written" }
   const toolByName = new Map([["probe_write", writeTool]])
   const call = () => ({ name: "probe_write", arguments: JSON.stringify({ path: "docs/design/X.md" }), id: "c1" })

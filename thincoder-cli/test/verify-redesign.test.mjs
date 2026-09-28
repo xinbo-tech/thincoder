@@ -10,7 +10,7 @@
  * 2026-09-12 散文锚退役批：guard 文案 / prompts verify 语义两读档用例整删（判据见
  * `docs/design/TESTING.md` §11.1）；行为面由 T-V1..V8 + 集成 ①（工具流 verify 关口）覆盖。
  * 2026-09-12 收尾轮 9 归册：本档用例面统一走真子进程（git rev-parse / git diff ×3；code 路径再叠
- * node --check 建议步）——按子进程类整档 slow() 门控（快层 skip、test:full 照跑）。
+ * node --check 建议步）——按子进程类整档 `slow()` 归册（纯别名——全量跑、无 skip）。
  */
 import { slow } from "./slow.mjs"
 import assert from "node:assert"

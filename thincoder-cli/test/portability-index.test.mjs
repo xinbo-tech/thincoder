@@ -6,7 +6,7 @@
  * （{entries, unlisted} / indexExtensions / unlistedExts）+ cmd-reindex 提示行。
  * 全离线：临时目录 + :memory: 库（不跑 git 索引真实仓库）。
  * 归册（2026-09-12 收尾轮 9）：T-13/T-14/T-16 为真 fs 索引构建（临时项目全遍历）——
- * slow() 门控（快层 skip、test:full 照跑）。
+ * `slow()` 纯别名（全量跑、无 skip）。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
@@ -113,7 +113,7 @@ slow("T-16 边界（声明）：index.codeExtensions 声明后 .xyz 入索引；
 })
 
 /** 慢例（test/slow.mjs ≡ test）：/reindex = code+doc 两次全量重建（真实 fs + git 子进程），
- *  slow ≡ test 后无快层 skip——慢就慢，全量跑。 */
+ *  `slow ≡ test`（无 skip——慢就慢，全量跑）。 */
 slow("T-17 正常（文案）：/reindex 在存在 unlisted 时打印声明指路提示行", async () => {
   w("a.xyz")
   const mem = createMemory({ dbPath: ":memory:" })

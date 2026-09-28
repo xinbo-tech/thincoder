@@ -1,6 +1,6 @@
 /**
  * history-window.test.mjs — historyWindow 直驱组（核内纯函数——无 fs / 无宿主依赖，
- * node --test 快层直跑）。
+ * node --test 直跑）。
  *
  * 手法：直驱 `../history-window.mjs`；fixture = 真实磁盘形状混排（真实消息打点 ts /
  * role 键 / tool_calls{id,function:{name,arguments}} / tool{tool_call_id,name,content}——

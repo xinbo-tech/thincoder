@@ -3,7 +3,7 @@
  * 2026-09-09 评审采纳版）：F-1 VSC 非视觉贴图自动降级视觉子代理（routeUserTurn 触发——评审 #6
  * runner seam 参数注入 mock）+ F-2 fallback 可读（无渠道/失败/超时/空返 → 原样下发——主回合
  * setup 现报错文案——不静默丢）+ AC-2 视觉模型路径零回归 + seam 缺省回落生产（默认跑者直调——
- * keyless 渠道短路——零网络）。全部快层直跑（<800ms 不标 slow——mock 跑者或渠道短路无 LLM）。
+ * keyless 渠道短路——零网络）。全部直跑（阈值内不标 slow——mock 跑者或渠道短路无 LLM）。
  */
 import { test, before, after } from "node:test"
 import assert from "node:assert/strict"

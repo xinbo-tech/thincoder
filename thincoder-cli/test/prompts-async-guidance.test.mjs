@@ -8,7 +8,7 @@
  * `docs/design/TESTING.md` §11.1（读非测试档断言句子在场/缺席 = 散文锚）。退役旧件不存在检查
  * 已收归接收档 test/doc-consistency.test.mjs T75（扫① 2026-09-11）。
  * 保留面 = 结构机检（新集合存在性 / 槽表与装配矩阵结构断言 / 降级链警告结构断言 / 槽注与表行机械扫）。
- * 纯文件读取 + 装配函数调用——无 io/网络/慢依赖——快层直跑。
+ * 纯文件读取 + 装配函数调用——无 io/网络/慢依赖——直跑。
  */
 import { test } from "node:test"
 import assert from "node:assert"

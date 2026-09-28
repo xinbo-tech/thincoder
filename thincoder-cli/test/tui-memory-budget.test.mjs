@@ -6,10 +6,10 @@
  * （批次档 §2.5 用例表）。U8 / U9 真路径（restoreLines / createLoadOlder）且输入 ≈2.4M–4.8M 码元
  * ——slow() 归册（同 T-TB9 先例；分层判定见批次档 §5）。
  *
- * 形态：快层 unit——直驱（零定时器、零终端）；常量一律从 `display-budget.mjs` 导入断言
+ * 形态：轻量 unit——直驱（零定时器、零终端）；常量一律从 `display-budget.mjs` 导入断言
  * （AC-TB2 单源）。
  * 归册（2026-09-12 收尾轮 9）：T-TB9（400 条 × 2k 字符 + 20 轮翻页模拟）观测 568–857ms
- * ——slow() 门控（快层 skip、test:full 照跑）。
+ * ——`slow()` 纯别名（全量跑、无 skip）。
  */
 import { test } from "node:test"
 import { slow } from "./slow.mjs"

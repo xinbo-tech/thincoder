@@ -11,7 +11,7 @@
  *
  * 设计权威：`docs/cli/design/TUI.md` §7.5（待发送块 / 四态 / 三时机）· `TUI-INPUT-BOX.md`
  * §4.1（容量 / 满队）；批档 `docs/batches/2026-09-21-busy-injection.md` §2 用例表 +
- * queue-visible 批（2026-09-24 · 台账 #249）批档 §2（T-F16-10…19）。快层直跑（纯函数 +
+ * queue-visible 批（2026-09-24 · 台账 #249）批档 §2（T-F16-10…19）。直跑（纯函数 +
  * `renderStatus` 直驱——零网络零 TTY 零定时器）。
  */
 import { test } from "node:test"

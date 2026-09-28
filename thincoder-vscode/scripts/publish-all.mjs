@@ -7,7 +7,7 @@
  *
  * 流程（两段——每段各自可见于下方输出，任何一步失败即中止发布）：
  *   段 0  核版本存在性预检：registry 上须已有 vsix 将内嵌的核版本（核先发——A6 / §2.6.1）。
- *   段 1  打包一次：`vsce package` 自动跑 `vscode:prepublish` = lint + test:full 全量
+ *   段 1  打包一次：`vsce package` 自动跑 `vscode:prepublish` = lint + `npm test`（单入口）全量
  *         （~72s）——全量门禁仅此 1 跑。无 <vsix> 参数时本脚本自跑该段；
  *         给了 <vsix>（已 `npm run package` 过）则整段跳过。
  *   段 1.5 vsix 含核断言：`scripts/check-vsix.mjs`（T-C7 vsix 域 = 断言 B + D——含核 +
@@ -87,7 +87,7 @@ try {
 
 // ── 段 1：打包（仅未提供 vsix 时）——vscode:prepublish 全量门禁仅此 1 跑 ──
 if (!vsix) {
-  run(`npx @vscode/vsce package`, "① 打包 (vsce package — vscode:prepublish = lint + test:full 全量 ~72s，全量仅此 1 跑)")
+  run(`npx @vscode/vsce package`, "① 打包 (vsce package — vscode:prepublish = lint + npm test 全量 ~72s，全量仅此 1 跑)")
 }
 const artifact = vsix ?? join(ROOT, `${PKG.name}-${PKG.version}.vsix`)
 if (!existsSync(artifact)) {

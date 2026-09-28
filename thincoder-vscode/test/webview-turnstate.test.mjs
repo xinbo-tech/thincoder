@@ -8,7 +8,8 @@
  * INPUT-LOCK（C'——2026-09-09，thincoder-cli/docs/design/INPUT-LOCK-ASYNC.md）→ 修订
  * （INPUT-LOCK-BEHAVIOR-REVISED——2026-09-09）：⑤ 状态派生组——busy（running 含 digest——
  * 单一判据）不禁录入（readOnly 锁移除——打字回显）+ busy 占位符 + send 拒发（Enter/发送
- * 按钮——文本保留）/susp·idle 默认占位符——Ctrl+I 中断模态占位符归属（ctx._interruptMode）。
+ * 按钮——文本保留）/susp·idle 默认占位符——Ctrl+I 中断模态占位符归属（核内态，经 `interrupt-mode`
+ * 类名观测——2026-09-28 上提批改锚）。
  * 活动区收口批（2026-09-12 §14 C-14——T-CL20）：**Send 按钮 running 期隐藏**（busy 提交 = 入队受理
  * （容量 8）+ 待发送标记——源 `thincoder-vscode/webview/send.js:32-56`；满队（第 9 条）⇒ 拒发 toast
  * + 文本保留）——消除假 affordance；susp/idle 恢复 flex）——⑤ 尾段 + ⑥ 锁该可见性（send.js 出口守卫机检属散文锚——2026-09-12 删）。
@@ -19,7 +20,7 @@
  * 直接驱动 host 消息对应的 reducer（chat-messages.js window message case 的行为等价面：
  * loading case → setLoading；turnState case → handleTurnStateMessage；suspension →
  * handleSuspensionMessage）——不引导 chat.js 全量模块图。
- * 快层直跑（全部 <800ms——无真实定时器；panels.js 的 2s 状态行 interval 在 after 经
+ * 直跑（全部在阈值内——无真实定时器；panels.js 的 2s 状态行 interval 在 after 经
  * unload 事件清掉——防悬挂）。
  */
 import { test, before, after } from "node:test"
@@ -36,12 +37,8 @@ before(() => {
   cleanupEnv = env.cleanup
   capturedPosts = env.capturedPosts
   installChatFixture()
-  // F16（busy-injection 2026-09-21）：send() 排队路径清理面（生产 index.html 常驻）——
-  // 共享 fixture 零改，本档自备补充（先例 `webview-input-enter.test.mjs`）。
-  document.body.insertAdjacentHTML("beforeend", `
-    <div id="paste-bar" style="display:none"></div>
-    <div id="paste-badge"></div>
-  `)
+  // 输入面板 = 核件接线（`input.js`——2026-09-28 上提批）：共享夹具含 `#toolbar` 输入段骨架
+  // （核件接线按同 id 退场重建）——旧自备补充元素（paste-bar/paste-badge）随核化退场。
 })
 
 after(() => {
@@ -64,6 +61,8 @@ async function loadWebview() {
 const statusLine = () => document.getElementById("status-line").innerHTML
 const abortShown = () => document.getElementById("abort-btn").style.display === "flex"
 const sendShown = () => document.getElementById("send-btn").style.display === "flex"
+/** 键位派发（真核件键位面——中断模态进出径）。 */
+const pressKey = (init, el) => (el ?? document.getElementById("input")).dispatchEvent(new window.KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init }))
 
 /** 逐测冷启复位（node --test 同文件串行——模块缓存共享同一 S——每测独立起点）。 */
 function resetBusy({ S, ctx }) {
@@ -73,7 +72,7 @@ function resetBusy({ S, ctx }) {
   S._suspCounts = null
   S._phase = null
   ctx.isRunning = false
-  ctx._interruptMode = false
+  ctx.inputEl?.classList.remove("interrupt-mode") // 中断模态面（核内态——真核件键位面进出）
   ctx.inputEl.readOnly = false
   document.getElementById("abort-btn").style.display = "none"
   document.getElementById("send-btn").style.display = "flex"
@@ -242,7 +241,7 @@ test("④ _suspCounts 在 re-post 间不陈旧（AC-C2e）：digest 间重发/se
 
 // ─── ⑤ INPUT-LOCK busy 输入面（修订——INPUT-LOCK-BEHAVIOR-REVISED：不禁录入只禁 send）───
 
-test("⑤ busy 不禁录入 + send 分流（INPUT-LOCK-BEHAVIOR-REVISED + C-B2-6）：running → readOnly false（打字回显）+ busy 占位符 + send 排队注入（queuedUserMessage——入槽清框）；loading 交替不翻；susp/idle 默认占位符；Ctrl+I 中断模态占位符归属（ctx._interruptMode——注入通道不误伤）", async () => {
+test("⑤ busy 不禁录入 + send 分流（INPUT-LOCK-BEHAVIOR-REVISED + C-B2-6）：running → readOnly false（打字回显）+ busy 占位符 + send 排队注入（queuedUserMessage——入槽清框）；loading 交替不翻；susp/idle 默认占位符；Ctrl+I 中断模态占位符归属（核内态——`interrupt-mode` 类名观测）", async () => {
   const { S, ctx, t, send, setLoading, applyBusyLock, handleTurnStateMessage } = await loadWebview()
   resetBusy({ S, ctx })
   const input = ctx.inputEl
@@ -289,15 +288,18 @@ test("⑤ busy 不禁录入 + send 分流（INPUT-LOCK-BEHAVIOR-REVISED + C-B2-6
   handleTurnStateMessage({ type: "turnState", state: "idle" })
   setLoading(ctx, false)
   assert.equal(input.placeholder, t("input.placeholder"), "idle → 默认占位符")
-  // Ctrl+I 中断模态（红线——注入通道保留）：模态激活期间占位符归 input.js（applyBusyLock
-  // 不动）；模态退出（ctx._interruptMode 复位）→ applyBusyLock 重派生（回 busy 占位符）
+  // Ctrl+I 中断模态（红线——注入通道保留）：模态激活期间占位符归核件键位面（applyBusyLock
+  // 不动）；模态退出（Esc）→ applyBusyLock 重派生（回 busy 占位符）。核内态经类名观测。
   handleTurnStateMessage({ type: "turnState", state: "running" })
-  ctx.inputEl.placeholder = "sentinel" // 模态中由 input.js enterInterruptMode 管理——applyBusyLock 不抢
-  ctx._interruptMode = true
+  setLoading(ctx, true) // 模态门禁读 loading 标记（Ctrl+I 仅 running 期可入）
+  pressKey({ key: "i", ctrlKey: true }) // 真路径入模态（核件键位面）
+  assert.equal(input.classList.contains("interrupt-mode"), true, "Ctrl+I（running）→ 中断模态")
+  ctx.inputEl.placeholder = "sentinel" // 模态中由核件 enterInterruptMode 管理——applyBusyLock 不抢
   applyBusyLock()
   assert.equal(input.placeholder, "sentinel", "中断模态激活 → applyBusyLock 不碰占位符（归本模态管理）")
   assert.equal(input.readOnly, false, "中断模态 → 输入可编辑（注入框）")
-  ctx._interruptMode = false
+  pressKey({ key: "Escape" }) // 模态退出（核件键位面 Esc）
+  assert.equal(input.classList.contains("interrupt-mode"), false, "Esc → 模态退出")
   applyBusyLock()
   assert.equal(input.placeholder, t("input.busyPlaceholder"), "模态退出 → 重派生回 busy 占位符")
   handleTurnStateMessage({ type: "turnState", state: "idle" })

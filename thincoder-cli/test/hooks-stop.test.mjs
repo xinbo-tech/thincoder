@@ -2,10 +2,10 @@
  * hooks-stop.test.mjs — 第 30 批 STOP-HOOK（设计 AGENT-LOOP.md §6.13，需求 §7）：
  * T-HS1–T-HS11——Stop 触发面五态 / 载荷三态 / 非阻塞（信号同步）/ matcher 忽略 /
  * 失败静默 / PreToolUse matcher 回归 / 事件集静态收口（AC-HS1–AC-HS5）。
- * 快层零网络：假 hook 脚本 = tmpdir 运行期生成（command = process.execPath——
+ * 轻量零网络：假 hook 脚本 = tmpdir 运行期生成（command = process.execPath——
  * 免 PATH / Windows 差异）；配置注入面 = 既有缝（桩 agent.config.hooks[event]，AGENT-LOOP.md §6.13 注记）。
  * 归册（2026-09-12 收尾轮 9）：真 spawn 用例（T-HS1/2/3/6/7/9/10）走 slow() 门控（子进程类——
- * 快层 skip、test:full 照跑）；T-HS4/5/8/11 零真进程留快层。
+ * `slow()` 纯别名（全量跑、无 skip）；T-HS4/5/8/11 零真进程形态不变。
  */
 import { after, test } from "node:test"
 import { slow } from "./slow.mjs"

@@ -122,7 +122,7 @@ Batch record, dispatch task books, verification conclusions, review firing, requ
   **Round** (initial / fix — fix rounds point-fix only, no full exploration)
   **Known facts** (paths you already explored — no re-exploration)
   **Design points & forbidden scope**
-  **Acceptance criteria** (machine-verifiable: commands, thresholds, assertion counts — no vague "do it well")
+   **Acceptance criteria** (machine-verifiable: commands, thresholds, assertion counts — no vague "do it well"); verification = **targeted unit tests for the changed face (single files) only** — never write suite-green-per-round clauses; the whole-suite run belongs to parent-side closeout
   **Delivery report format**.
   Sized dispatch without these fields is a defect — the coder would re-explore what you already know (async default — if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); pass `files` for scheduler serialization).
 - **Dispatch size discipline (pre-flight · one dispatch, one change face)**: an implementation dispatch's `files` declaration is **≤15 files and must not span change faces** — **spanning faces ⇒ split the dispatch by face**.

@@ -72,7 +72,7 @@
 | M8 | 机检引擎 | `scripts/doc-check.mjs` + `scripts/doc-check-anchors.mjs` + `scripts/doc-check-targets.mjs` + `scripts/doc-check-width.mjs`（**现状档**——v2 单引擎已落地） | 单引擎（锚 + 行宽）+ 声明面（manifest `checkConfig`）；台账一致性由 SQLite schema 承接（`check-ledger` 作废） | §8.7 |
 | M9 | 提示词双面流程 | 模板 `docs/core/design/prompts/`（中文审核面）→ 落地 `thincoder-core/prompts/`（英文运行面——翻译生成；机检与度量脚本已裁退役——2026-09-17 用户裁定）+ 清理「方案选型对比」残留 |（`persona-eng-designer.md` 8 项「选型对比」· `discipline-engineering.md` A3⑤——已废，随 M9 落地一起清） | 单向流程（只改模板 → 翻译生成落地），落点读声明面 | §8.4 |
 | M10 | 测试纪律 | 产品 `package.json`（**修改**）+ `test/run-fast|full|integration|slow-gate|slow`（**修改/删除**） | 三层门禁 → 一条 `test` 全绿 | §8.6 |
-| M11 | plan 面排除（FR31） | 核 `agent/family-tools.mjs`（174 行·**修改**）+ `agent-tools/plan.mjs`（86 行·**修改**）+ `agent-tools/eng.mjs`（102 行·**修改**）+ `session-lifecycle.mjs`（305 行·**修改**）；两端侧文件见接线表 + §2.3 E7 | 工程模式 plan 工具不入表 + 命令面拒绝（含 ACP 出口形态 / VSC 提示载体）+ `planMode` 清零（内存 + 槽） | §13.9 |
+| M11 | plan 面排除（FR31） | 核 `agent/family-tools.mjs`（174 行·**修改**）+ `thincoder-core/agent-tools/plan.mjs`（86 行·**修改**）+ `agent-tools/eng.mjs`（102 行·**修改**）+ `session-lifecycle.mjs`（305 行·**修改**）；两端侧文件见接线表 + §2.3 E7 | 工程模式 plan 工具不入表 + 命令面拒绝（含 ACP 出口形态 / VSC 提示载体）+ `planMode` 清零（内存 + 槽） | §13.9 |
 
 **现状勘察摘要（as-of，用于两端接线锚定）**：
 
@@ -276,7 +276,7 @@ M10 测试（独立简化，无依赖）
 
 **提示词双面流程**（M9 落点，v2 §8.4）：「模板（`docs/core/design/prompts/`）= 中文审核面（用户审核用）；落地档（`thincoder-core/prompts/`）= 英文运行面（国外模型运行用）。更新流程 = 改模板 → 翻译生成落地；生成 = 翻译，不是 cp。无机检门（2026-09-17 用户裁定）」。
 
-**测试纪律（简化）**（M10 落点，v2 §8.6）：「门禁 = 一条 `test` 全绿（不再 lint + test:full + test:integration 三层）」「砍掉：慢测层归册（慢就慢，全量跑）· run-fast / run-full / slow-gate 多脚本 · 测试退役台账」——具体裁剪到模块设计定，本档只定「简化」方向。
+**测试纪律（简化）**（M10 落点，v2 §8.6）：「门禁 = 一条 `test` 全绿（不再 lint + test:full + test:integration 三层）」「砍掉：慢测层归册（慢就慢，全量跑）· run-fast / run-full / slow-gate 多脚本 · 独立退役台账仪式（处置仍按需求 `requirements/TESTING.md` §2 F6 ∕ F9——批次收口逐条，2026-09-28 复确认）」——具体裁剪到模块设计定，本档只定「简化」方向。
 
 **机检引擎（一个引擎 + 声明面）**（M8 落点，v2 §8.7）：「双引擎、三套源域、三套行宽判据、参照历史面豁免族、六档并入映射、V3 历史常量」砍掉；留内核 = 「锚检查 / 行宽检查 / 台账一致性（由 SQLite schema 承接，check-ledger 作废）」；判据（扫描域 / 行宽阈值 / 锚域 / 豁免）全部从 manifest `checkConfig` 读取（声明面），不再硬编码本仓路径——这是「可迁移」（N3）的结构承载点。
 
@@ -351,7 +351,7 @@ M10 测试（独立简化，无依赖）
 |---|---|---|---|
 | ① | 装配面 | `assembleFamilyTools` 固定段按模式裁剪（`thincoder-core/agent/family-tools.mjs:184-186`）：工程模式固定段 = `[timer]`——task / plan 皆不入表（KD8 / F10 同处置）——**模型不可见** | 工程模式装配名集不含 `plan` ∧ 不含 `task`；普通模式两者皆含（回归） |
 | ② | 命令面 | `/plan`（`thincoder-cli/src/tui/cmd-plan.mjs`）· ACP 两入口（`handlers-session.mjs` `applyConfigOption` `mode` 分支 · `session/set_mode`）· VSC 面板开关（`chat-panel.mjs` `_setPlanMode`）工程模式一律拒绝 + 提示可见 | 拒绝后 `planMode` 不变 + 提示可见（非静默失败） |
-| ③ | 残留清零 | 单点 `clearPlanMode(agent)`（`agent-tools/plan.mjs`）：清 `planMode` + 两 reminder 计数 + **未注入的 plan 提示语**；三个翻转点 + 两个恢复点复用；恢复面**槽值一并收正** | 工程模式真值 ⇒ `planMode` 恒 false（内存 + 槽位） |
+| ③ | 残留清零 | 单点 `clearPlanMode(agent)`（`thincoder-core/agent-tools/plan.mjs`）：清 `planMode` + 两 reminder 计数 + **未注入的 plan 提示语**；三个翻转点 + 两个恢复点复用；恢复面**槽值一并收正** | 工程模式真值 ⇒ `planMode` 恒 false（内存 + 槽位） |
 
 **命令面逐面钉定（工程真值来源 / 拒绝出口形态 / 提示可见载体——评审轮 1 发现 #2 · #4）**：
 
@@ -399,7 +399,7 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 | file | 行数 | 改动面 |
 |---|---|---|
 | 核 `agent/family-tools.mjs` | 174 | 固定段按 `engineering` 裁剪（`:173` 返回式 + 注释）；`:27` 解构形态零改（`test/tool-registry.test.mjs:102` 源扫描依赖） |
-| 核 `agent-tools/plan.mjs` | 86 | 新增 `clearPlanMode(agent)` + 拒绝文案常量（TUI / ACP 两面共用一条；VSC 面提示 = webview i18n 键 `toolbar.planDisabled`） |
+| 核 `thincoder-core/agent-tools/plan.mjs` | 86 | 新增 `clearPlanMode(agent)` + 拒绝文案常量（TUI / ACP 两面共用一条；VSC 面提示 = webview i18n 键 `toolbar.planDisabled`） |
 | 核 `agent-tools/eng.mjs` | 102 | `enter` 分支（`:85` 翻态后）调 `clearPlanMode` |
 | 核 `session-lifecycle.mjs` | 305 | 槽恢复面清零（`:101` planMode 与 `:111-114` engineering 判定之后——清 `planMode` + 未注入提示语；CLI 槽在下次保存随内存值收正） |
 | CLI `thincoder-cli/src/tui/cmd-plan.mjs` | 10 | 工程模式拒绝分支（提示行 + 零翻转） |
@@ -528,6 +528,8 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 | T14 | 错误：普通模式零回归 | 普通模式装配 / `/plan` 切换 / ACP `mode:"plan"` / 槽 `planMode:true` 恢复 | 四条路径全带宽不变（**除本批所列矩阵镜像收正**——`host-shape-spawn.test.mjs` T5：两条工程行删 `plan` + 增 explore 工程行——外，既有测试零改全绿） |
 
 ## 4. 变更记录
+
+- 2026-09-28（**测试按层收口·设计对齐轮 · eng-designer**——承 `docs/batches/2026-09-28-test-layer-prompts.md` §1.4 派单 + 父侧裁定（声明外追加 · 父侧已裁））：§「测试纪律（简化）」行收正——「测试退役台账」→「独立退役台账仪式」（退役处置仍按需求 `requirements/TESTING.md` §2 F6 ∕ F9——批次收口逐条；2026-09-28 复确认）。**本档机制条文零改**。
 
 - 2026-09-27（**conventions.json 退役批 · 随动收正 · eng-designer**——承 `docs/batches/2026-09-27-conventions-retire.md` §1 · 用户 2026-09-27 19:39 裁定）：
   E1 键面收正——schema 五键 → **八键**（`.thincoder/conventions.json` 三族声明并入 manifest：`codePaths` / `index` / `advisor`）；E5.1 表第 8 行随动——项目级枚举去退役档（`.thincoder/conventions.json` 移出；`PROJECT-MANIFEST.json` 含声明三族键）；

@@ -2,7 +2,7 @@
  * #212；设计档 = docs/cli/design/CRASH-REPORTS.md §2.2/§3）：用例 T1-T5 / T7 / T7b / T7c——
  * 武装注入缝 + heapSnapshot 参数两态 + 武装失败不阻断 + API 存在性守护 + purge/判定集两态。
  * **真快照不跑**（实测代价 236MB / ≈10s @64MB 堆——T8 = 手动 QA 面，不进套件）；
- * 全部用例快层（无真 spawn / 无真快照——AC8）。 */
+ * 全部用例轻量（无真 spawn / 无真快照——AC8）。 */
 import { test, after } from "node:test"
 import assert from "node:assert/strict"
 import { mkdtempSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs"

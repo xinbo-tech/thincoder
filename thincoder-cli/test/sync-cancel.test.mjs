@@ -4,7 +4,7 @@
  * 2. classifySyncAbort 三分支（含挂起场景——ctx.signal 未 abort 而 baseSignal aborted）
  * 3. 折叠报告形态（merge/STOPPED_MARK/_capturedOutput/designId 后缀）
  * 4. controller 链（base abort → ctrl 链式——嵌套递归——+ finally 三路径注销）
- * 5. 端到端（慢测/人工——不入快层——文件尾注）
+ * 5. 端到端（端到端/人工——不入单入口——文件尾注）
  * 确定性单元（async-settle.test.mjs 风格——纯单元无 io/无 LLM/无真实子代理）。
  */
 import { test } from "node:test"
@@ -187,9 +187,9 @@ test("T-AF12 sync ⏹ 日志面（F-12）：提交点直记 ev:cancelled 恰 1 �
 })
 
 /**
- * 组 5 —— 端到端（慢测/人工——不入快层）：
+ * 组 5 —— 端到端（端到端/人工——不入单入口）：
  * 中点 ⏹ → stopped 报告 + 块冻结的完整链路 = TUI + 真实 runAgent（LLM 子代理）——
- * 快层禁 io/LLM（TESTING.md §1）——人工验收步骤：
+ * 单入口禁 io/LLM——人工验收步骤：
  *   1. CLI TUI 顶层发起 sync spawn（depth-0 async:false——或 escalate async:false 场景外）
  *      ——面板块头出现 ⏹（sub.async 未置位 + state._agent._syncChildAborts live）；
  *   2. 子代理运行中点鼠标点击 ⏹ → cancelSyncChild → ctrl.abort → 子代理 AbortError 解绕

@@ -16,7 +16,7 @@
  * （T-F16-13 = 容量 8 连续性）。
  * 手法：`createKeyHandler` 桩 ctx 直驱按键（无真实 TTY——先例 `input-lock.test.mjs`）+
  * `renderStatus` 纯函数直驱（状态栏 queued 段 + F13 零注意力色对——先例
- * `session-title-surface.test.mjs`）。快层直跑（无定时器悬挂）。
+ * `session-title-surface.test.mjs`）。直跑（无定时器悬挂）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"

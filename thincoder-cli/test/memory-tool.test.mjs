@@ -8,7 +8,7 @@
  * （盘符大写 + `/`）——本档期望随改（行查询用 `normalizeOrigin(dir)`）；uid 字符串面不变
  * （旧形态 uid 仍可直接删——`deleteByUid` 归一化解析）。
  *
- * 快层：in-memory sqlite + 少量 tmp 目录写删——无 git、无网络、无长 IO。
+ * 轻量：in-memory sqlite + 少量 tmp 目录写删——无 git、无网络、无长 IO。
  */
 import test from "node:test"
 import assert from "node:assert/strict"

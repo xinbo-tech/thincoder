@@ -6,8 +6,8 @@
  * 去重 + 送达门 + 条目键稳定（T103）· 状态行接线（T106）· 项目发现（T109）· 降级不崩（T110）· 刷新成本（AC89）。
  * 手法：tmp SQLite 夹具（ledgerAdd + created_at/updated_at 时间戳回拨——buildScan 时间戳源
  * 替代 v1 ageOf git blame 注入面）+ 直驱 `runLedgerScan` / `renderStatus` / `buildScan`。
- * 归册（M2 重写）：T104（check-ledger `--summary`）随 check-ledger 作废——移 M8 批；T102 改快层
- * （时间戳纯计算，无 git）；AC89 归册 slow 层（计时用例）。
+ * 归册（M2 重写）：T104（check-ledger `--summary`）随 check-ledger 作废——移 M8 批；T102 改轻量
+ * （时间戳纯计算，无 git）；AC89 归册（计时用例）。
  */
 import { test, beforeEach, afterEach } from "node:test"
 import assert from "node:assert/strict"
@@ -281,7 +281,7 @@ test("T109 边界：深路径 / 容器目录 / 全无台账", () => {
   assert.deepStrictEqual(cur2.projects.map((p) => p.root), [join(tmp, "ws", "beta"), join(tmp, "ws", "alpha")], "发现序：current 在前（字典序在后仍居首——判别夹具）")
   // ③ 全无台账：锚 = 系统盘根下**全链不存在的幽灵路径**——全链零台账（环境自持）。
   //    旧夹具以 tmpdir 子目录为锚，父链扫描会命中并行用例在 %TEMP% 遗留的 ledger-* 台账目录 → 假红
-  //    （test:full 并行下实测复现）；幽灵链任何时刻不随环境漂移，断言强度不变（仍要求 current=null + projects=[]）。
+  //    （并行满载下实测复现）；幽灵链任何时刻不随环境漂移，断言强度不变（仍要求 current=null + projects=[]）。
   const ghost = join(parse(tmpdir()).root, "thincoder-zero-ledger-probe", "deep", "nested")
   const none = discoverFamily(ghost)
   assert.equal(none.current, null, "③无任何台账 → current=null")
@@ -312,7 +312,7 @@ test("T110 错误：降级不崩——不可读台账跳过 / 坏 JSON 空态 / 
   assert.equal(tr.state.ledger.warn, false, "无老化 → 默认色")
 })
 
-// ── T102 老化界值（快层——时间戳纯计算；buildScan 时间戳源替代 v1 git blame） ──
+// ── T102 老化界值（轻量——时间戳纯计算；buildScan 时间戳源替代 v1 git blame） ──
 test("T102 边界：老化界值（29 / 31 天 + 触发表态；created_at 时间戳源）", () => {
   const proj = mkLedgerAt(join(tmp, "proj"), [
     { row: techRow("甲"), ageDays: 29 },
@@ -329,7 +329,7 @@ test("T102 边界：老化界值（29 / 31 天 + 触发表态；created_at 时�
   assert.equal(buildScan({ cwd: proj }).aged, 0, "行龄未知 → 不计且不抛")
 })
 
-// ── AC89 批级：单次刷新成本（慢层——两项目族，SQLite 时间戳路径） ────────────
+// ── AC89 批级：单次刷新成本（重 IO——两项目族，SQLite 时间戳路径） ────────────
 slow("AC89 批级：单次刷新 ≤500ms（两项目族 + SQLite 行集）", async () => {
   const family = join(tmp, "ws")
   for (const name of ["alpha", "beta"]) {

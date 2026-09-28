@@ -1,7 +1,7 @@
 /**
  * read-image-guide.test.mjs — IMAGE-DOWNGRADE-VISION F-3（CLI 镜像——软引导）：
  * 非视觉模型 read_image 错误文案含引导句（逐字锚照抄设计档——可 spawn 视觉渠道子代理）；
- * 视觉模型不触发（零回归——现 multimodal 注入路径 intact）。纯工具直调——无网络——快层。
+ * 视觉模型不触发（零回归——现 multimodal 注入路径 intact）。纯工具直调——无网络——轻量。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"

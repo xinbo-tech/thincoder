@@ -5,7 +5,7 @@
  * 行为面：**同一棵树两种拼写 ⇒ 库内一个 origin 键**（单次索引、检索同批行——「半可见」收正）；
  * 纯函数面：三变换（`\`→`/` · 盘符大写 · 去尾斜杠）+ 非字符串 / 空串透传。
  *
- * 快层：in-memory sqlite + tmp 目录——无 git、无网络。
+ * 轻量：in-memory sqlite + tmp 目录——无 git、无网络。
  */
 import test from "node:test"
 import assert from "node:assert/strict"

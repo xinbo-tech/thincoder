@@ -1,5 +1,5 @@
 /**
- * files.mjs — 测试清单单一来源（npm test 快层与 test:full 全量共用）。
+ * files.mjs — 测试清单单一来源（`npm test` 单入口共用）。
  *
  * 2026-09-07 大规模清理：从 68 项收敛为真实冒烟/核心行为集（原锚/时序/UI/内部细节
  * 测试全部删除——AI 提示词锚测试与内部实现锁属于过度工程，见 METHODOLOGY 铁律）。
@@ -64,7 +64,8 @@ export default [
   "test/async-parity.test.mjs", // 第 35 批（2026-09-11）：VSC async 子代理保真（GitHub #6）——spawn ack 契约锁 + 类型守卫 + 只清已死（丢弃提醒/墓碑/ev:discarded）+ status 四终态回显 + dependsOn depc 停靠 + digest 轮 AbortError 容忍 + 症状1 现状锁（T-D1~T-D10）
   "test/md-render-escape.test.mjs", // 第 34 批（2026-09-11）：VSC webview 行内代码字面量契约 + 转义回归（GitHub #7）——行内代码不被后续替换二次处理（esc-first 保持）+ 转义面钉死——T-H1~T-H15 + AC-H5 接线（WEBVIEW.md §10）
   // 批次二（可移植性 VSC 镜像面——2026-09-11）：VP-1–VP-12 落地机判面（PORTABILITY.md §6/§7）
-  "test/portability-vsc-classification.test.mjs", // T-V01–T-V09 · T-V22–T-V27 + AC-V01/V02/V03：分类唯一权威（嵌套/声明/损坏回退）+ 门禁拒绝与声明切换 + 静态副本扫描 + F9 辅助面同判 + 段匹配面判定表（T-V27）
+  "test/portability-vsc-classification.test.mjs", // T-V01–T-V09 + AC-V01/V02/V03：分类唯一权威（嵌套/声明/损坏回退）+ 门禁拒绝与声明切换 + 静态副本扫描（T-V22–T-V27 组已迁下行新档——2026-09-28 拆分批 · R3）
+  "test/portability-vsc-classification-declaration.test.mjs", // 同族拆出档（2026-09-28 拆分批 · R3——用例与断言逐字迁移）：T-V22 分类四例 · T-V23 父侧门放行与仍拒 · T-V24 子门零变（F9 辅助面同判）+ T-V25 无档等值 / T-V26 旧档在场 + T-V27 段匹配面判定表
   "test/portability-vsc-advisor-context.test.mjs", // T-V11–T-V13 + AC-V11：advisor 文档门禁（documents 放行面 / 非文档拒绝）+ 两条文案（均无 `in docs/`）+ 拆分兑现（findProjectRoot 定位面）
   // 2026-09-15 W8（索引面归一核面）：`portability-vsc-index.test.mjs` 随文件制索引删旧退役（测试纪律①）——unlisted 可见化等业务面按核面承接重述入 `test/memory-index-face.test.mjs`（D3 计数同步）
   "test/provider-timeout-semantics.test.mjs", // 群 A 批 A1（2026-09-11）· W10 改判（2026-09-15）：保留 2 例——调用面 signal 原样/零合成 + 相位参数（经核 chat）；退役 3 例——镜像 parseStream idle 缝随删档（不可稳定驱动）/ 静态源文本断言（PROVIDER.md §4.3）
@@ -78,10 +79,10 @@ export default [
   "test/status-line.test.mjs", // 活动区收口批（2026-09-12）：状态行字段级对齐——statusText 五 kind 两 locale/✦reasoning/turn N/M（旧段退役）/端差（scrolled 不做·ctx pct）+ onWait/索引/transport 发射点机检——T-CL21~T-CL24（WEBVIEW.md §14）
   "test/child-permission.test.mjs", // 子代理审批面对齐批（2026-09-12）：child 审批门——ask 弹卡带归属/approve-deny 语义/AUTO 直通/轮中 approve-all/escalate sync+async（⏹ 与 Stop 两路释放）/promptId 路由/角色域零卡/无通道静默/depth-0 零回归/块头 ⏸+态词+i18n/结构对表——T-CP1..T-CP19（AGENT-LOOP.md VSC §18；2026-09-12 拆分：引擎接线组 6 例 → child-permission-wiring.test.mjs）
   "test/child-permission-wiring.test.mjs", // child-permission 引擎接线组（2026-09-12 拆分自 child-permission.test.mjs——500 行硬限无豁免）：escalate sync/async 通道接线 + ⏹ / Stop 两路释放 + runChild 角色域零卡/无通道静默——T-CP6/T-CP7/T-CP19/T-CP10/T-CP11/T-CP15（AGENT-LOOP.md VSC §18；夹具自持——零跨档 import）
-  "test/ledger.test.mjs", // LEDGER-SURFACE 批（2026-09-12）：台账可见面 VSC 面——语义同源单元组 + 跨端去重键 + item 形态（T107）+ webview 渲染（T108）+ post/送达门 + 接线机检 + 慢层 git 老化界值（T102）（ENGINEERING-MODE.md §2.30）
+  "test/ledger.test.mjs", // LEDGER-SURFACE 批（2026-09-12）：台账可见面 VSC 面——语义同源单元组 + 跨端去重键 + item 形态（T107）+ webview 渲染（T108）+ post/送达门 + 接线机检 + 重 IO git 老化界值（T102）（ENGINEERING-MODE.md §2.30）
   "test/engine-floor-guard.test.mjs", // W8 前置笔（2026-09-15）：引擎下限护栏（A8 裁定）——版本闸 22.13 + node:sqlite 探针 + 低于下限提示/记忆面停用/不抛（批次档 §2 W8「门 1」）
   "test/agent-tools-registry.test.mjs", // W9（2026-09-15）：登记册 14 名装配断言（引核册——核 agent-tools.mjs 名集 / 端侧转口面同集 / setup.mjs 动态装配 14 名；CORE-UNIFICATION §2.13.4 #83）+ W8 契约②形态面（静态闭包零 node:sqlite 扫描在 `test/engine-floor-guard.test.mjs`）
-  "test/memory-index-face.test.mjs", // W8（2026-09-15）：索引面归一核面专项验收——A-K12（反向判零 + 检索 = 核面 FTS 回退非空 + 面板读数 = 核库计数）· A-K13（相位序列 scan→index→done + 完成提示 = 核读数 + 模型变更零手动重建/懒回填）· A-K14（旧目录清退：告示一次 + 显式删除 + 零自动删除路径）· VP-9 可见化核面承接（快层：A-K12 反向判零 + A-K14 两档；慢档：真 fs/sqlite 四档——A-K12 检索 / A-K13 相位 / A-K13 懒回填 / VP-9 可见化）
+  "test/memory-index-face.test.mjs", // W8（2026-09-15）：索引面归一核面专项验收——A-K12（反向判零 + 检索 = 核面 FTS 回退非空 + 面板读数 = 核库计数）· A-K13（相位序列 scan→index→done + 完成提示 = 核读数 + 模型变更零手动重建/懒回填）· A-K14（旧目录清退：告示一次 + 显式删除 + 零自动删除路径）· VP-9 可见化核面承接（轻量档：A-K12 反向判零 + A-K14 两档；重 IO 档：真 fs/sqlite 四档——A-K12 检索 / A-K13 相位 / A-K13 懒回填 / VP-9 可见化）
   "test/subagent-content-relay.test.mjs", // VSC 子代理面板通道恢复批（2026-09-16）：端壳内容中继面——子代内容 chunk（核 relay 前缀）四路分流 → `toolPanel` `sub:<role>#<id>` 频道（T1–T7：块内命中 / 主流零命中 / 嵌套子标 / 无前缀正控 / 事件面零回归 / escalate·consult 同族 / 误伤形态锁定）
   "test/protocol-coverage.test.mjs", // VSC 产品树残留债清零批（2026-09-16）：§12 收发面全量对表机检——首列 ↔ 源码提取集双向对账（含 `sub:*` 归一并集）+ ④ 处置闭区间 + 错误路径点名（夹具树零污染）——T-5/T-6/T-7/A4（WEBVIEW-PROTOCOL.md §12；VSC-DEBT.md §2.3/§3.2）
   "test/compaction-echo.test.mjs", // ENGINE-DEBT ED-1（2026-09-16）：恢复面回声归并 VSC 调用点——activeLines 真槽落盘/读盘链（病态零违例/健康零回归/链式/会话档零改写）——T-V1~T-V4 + 接线机检（CONTEXT-COMPACTION.md §6.10 #8）
