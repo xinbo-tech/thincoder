@@ -213,7 +213,8 @@
 > · **（续）**：`schema.mjs`（454 ⇒ ≤455）：扩展名表组拆 `memory/ext-tables.mjs`（拟新增）· 核 `dispatch.mjs`（499 ⇒ ≤500）：门禁段拆 `dispatch-gates.mjs`（拟新增）。
 > · **同款（续）**：CLI `portability-classification`（298 ⇒ ≤348）· VSC `portability-vsc-classification`（293 ⇒ ≤328）· 核 `manifest.test.mjs`（拆后 ≈410）——方案 = 门禁组 / 用例组按组拆邻档；**触发（钉死 · 父侧裁）= 越 500 硬限即拆**；「下一次触碰该档的批」= **复核点**（触碰批复核：越限 ⇒ 拆；未越限 ⇒ 回填行数账，不强制拆）。
 > · **300 软线贴线面（本批触碰）**：`verify.mjs`（296 ⇒ ≤297）· VSC `memory-index-face.test.mjs`（298 ⇒ ≤300）——上界未越 300（钉死如上）；越线即按同款登记方案 + 触发（方案 = 该档对应组拆邻档；**触发 = 越 300 软线即拆**；「下一次触碰」= 复核点——同款）。
-> · **实施轮实读回填（2026-09-27 · 父侧直接执行〔例外②③〕 · 可 revert）**：`manifest.mjs` **482**（≤486 ✓）· `conventions.mjs` **244**（239–269 ✓）· 核 `dispatch.mjs` **498**（≤500 ✓）· 拆后 `manifest.test.mjs` **355** / 新档 `manifest-discovery.test.mjs` **210** · 用例面：CLI `portability-classification` **372** · VSC `portability-vsc-classification` **352**（各越钉死上界 24 行——三例新增 + 事件断言 + 夹具开销；均未越 500 硬限，**父侧裁** = 回填实读 + 维持拆分预案）· 其余逐档在界内。
+> · **实施轮实读回填（2026-09-27 · 父侧直接执行〔例外②③〕 · 可 revert）**：`manifest.mjs` **482**（≤486 ✓）· `conventions.mjs` **244**（239–269 ✓）· 核 `dispatch.mjs` **498**（≤500 ✓）· 拆后 `manifest.test.mjs` **355** / 新档 `manifest-discovery.test.mjs` **210** ·
+> · 用例面：CLI `portability-classification` **372** · VSC `portability-vsc-classification` **352**（各越钉死上界 24 行——三例新增 + 事件断言 + 夹具开销；均未越 500 硬限，**父侧裁** = 回填实读 + 维持拆分预案）· 其余逐档在界内。
 
 ### 2.4 关键决策记录
 
@@ -245,7 +246,7 @@
 | KD-M1-24 | 读侧解析单点 `projectView(target)`（非抛错 / **零写** / 五态）；建档动作留入口决策树 | 判据单源（D2）——情境行 / 钩子 / 报明三面共用一处状态机；**零写**保证「读面不建档」（防注入器变写点）。被拒备选：各消费面自行 `discoverProjects` + `readManifest` 拼装（三处判据漂移） |
 | KD-M1-25 | 装配钩子**不再 fatal**（启动零拒绝）：非 ok 态 ⇒ `agent.manifest = null` + 记 `agent._projectView`，**不抛** | 需求 §⑥「不砖死（不变量）」（用户 11:00 反馈 + 11:19 验收）：fatal 点早于会话 ⇒ 自救无门。**口径变更登记**：AC-15④ / T27「档非法 ⇒ 装配期抛」收正为「不抛 + 报明」；翻转面拒翻不变（#41） |
 | KD-M1-26 | 情境行按**状态选行**：`ok` ⇒ 相位行（零改）；`no-project` / `ambiguous` ⇒ 报明行；`missing` / `invalid` / 读失败 ⇒ **有既往好值**则保守沿用（KD-M1-17 零改）、**无既往好值** ⇒ 报明行 | 「该动作报明」的模型侧承载；保守规则不撤（瞬时 I/O 失败不得误报为「档没了」）+ 补「整会话静默」的洞（首观即失败 ⇒ 至少可见一次）。被拒备选：① 一律报明（瞬时失败误报 + T35 / T36 语义翻）② 一律保守（首观失败 ⇒ 静默——正是本批要消灭的不可见） |
-| KD-M1-27 | 无锚（`agent.cwd` 缺失）⇒ **零 I/O / 零报明**（沿用内存值） | 既有 §2.6 条 3 边界零改（无 cwd 夹具的既有用例零改）；生产面 cwd 恒在。被拒备选：无锚也报明（无解析对象——报什么无从判定） |
+| KD-M1-27 | 无锚（`agent.cwd` 缺失）⇒ **零 I/O / 零报明**；**无锚 ∧ 有值（`agent.manifest` 在）⇒ 相位行 + 沿用内存值**；无锚 ∧ 无值 ⇒ 零注入（`false`） | 既有 §2.6 条 3 边界零改（无 cwd 夹具的既有用例零改）；生产面 cwd 恒在。被拒备选：无锚也报明（无解析对象——报什么无从判定） |
 | KD-M1-28 | 决策树失败码 = `no-project`（梯⑤）/ `ambiguous`（≥2 候选）；文案族 = 「项目不可解析」（稳定锚句 `/项目不可解析/`——拒翻面与报明面共用） | 两态处置不同（无项目 ⇒ 锚处可落地；歧义 ⇒ 列候选不猜）——单码装不下报明文案；启动零拒绝（KD-M1-25）后「启动拒绝」措辞无落点 |
 | KD-M1-29 | **建档站点** = 壳面入口（会话起点钩子 + 翻转面）：**轻动作**（内容 = `DEFAULT_MANIFEST`，`writer:'main'`）覆盖梯②④⑤ 三格；**机制零自动 `git init`** | 用户 11:03「帮他初始化」+ 11:25「项目落地 = 建 manifest」「`git init` 降为可选增强」；`85a4a6b3`（拒自动建档）的前提（无仓 ⇒ 无法落地）已被本轮裁定废止——该裁定的适用面**收窄为「歧义 / 档非法不建」**。被拒备选：① 每个消费面用到时各自建档（注入器 / 台账 / 批次写点都成写点——静默写面爆炸，违「不静默批量」）② 梯⑤ 不建只报明（用户 11:03 诉求在无项目目录落空）③ 机制代跑 `git init`（重动作越权 + 用户明示其为可选增强） |
 | KD-M1-30 | **归属形** = `owningProject(target)`（沿祖先链取最近带档目录）；`projectView` = **归属 ⇒ 发现兜底** 两段合成；`resolveProjectRoot` = `owningProject ?? discoverProjects().root` | 用户 11:29 裁定（嵌套/重叠：**最近者优先**——子优于根 ✗ 嵌套合法 ✗ 不跨兄弟 ✗ 无全局优先级）。两段分离的理由：**归属（向上）**解「谁的参数」（含嵌套子项目）；**发现（向下）**解「锚在哪落地 / 锚项目是谁」——保批前容器语义（本仓锚 `D:\teamcode` ⇒ 向下恰一 ⇒ `thincoder`）。被拒备选：① 只用归属（容器锚 ⇒ 无档 ⇒ 无项目——本仓现状倒退：容器锚的多项目工作区失去解析）② 只用发现（嵌套子项目失效——子内目标归到根） |
@@ -636,7 +637,13 @@ AC-16 接线锁（`bin` 源码序）零改 · **AC-N5 / T13 收正**（门控第
 
 ## 4. 变更记录
 
-- 2026-09-27（**conventions.json 退役批 · 实施轮实读回填** · 父侧直接执行〔例外②③〕 · 可 revert）：§2.3 回填 = `manifest.mjs` **482**（≤486 ✓）· `conventions.mjs` **244**（239–269 ✓）· 核 `dispatch.mjs` **498**（≤500 ✓）· 拆后 `manifest.test.mjs` **355** / 新档 `manifest-discovery.test.mjs` **210**；用例面 CLI `portability-classification` **372** · VSC `portability-vsc-classification` **352**（各越钉死上界 24 行——均未越 500 硬限，父侧裁 = 回填实读 + 维持拆分预案）；**触发语义钉死**（消「两读可歧」）：越限即拆 / 「下一次触碰」= 复核点。零新语义。
+- 2026-09-29（**技术债清偿批 · 台账 #195 残余收正** · eng-designer——承 `docs/batches/2026-09-28-tech-debt-closeout.md` §2 轮 2）：
+  KD-M1-27 判据字面按实况收正（判实现为准——实现 = `thincoder-core/agent/setup-reminders.mjs:156-160`）——「无锚 ∧ 有值（`agent.manifest` 在）⇒ 相位行 + 沿用内存值；无锚 ∧ 无值 ⇒ 零注入」；
+  AC-N5 ∕ T13 已载「无锚（`agent.cwd` 缺失）」表列（前批收正 · 本批转核销——零触碰）。零新语义。
+
+- 2026-09-27（**conventions.json 退役批 · 实施轮实读回填** · 父侧直接执行〔例外②③〕 · 可 revert）：§2.3 回填 = `manifest.mjs` **482**（≤486 ✓）· `conventions.mjs` **244**（239–269 ✓）· 核 `dispatch.mjs` **498**（≤500 ✓）· 拆后 `manifest.test.mjs` **355** / 新档 `manifest-discovery.test.mjs` **210**；
+  用例面 CLI `portability-classification` **372** · VSC `portability-vsc-classification` **352**（各越钉死上界 24 行——均未越 500 硬限，父侧裁 = 回填实读 + 维持拆分预案）；
+  **触发语义钉死**（消「两读可歧」）：越限即拆 / 「下一次触碰」= 复核点。零新语义。
 
 - 2026-09-27（**conventions.json 退役批 · 设计评审轮 2 修正** · eng-designer——fix 轮；承 `docs/batches/2026-09-27-conventions-retire.md` §3 轮次 2 发现 3 / 4）：坐标收正——`SPEC-MANIFEST.md` `:58`「现八键」句 ⇒ **`:59`**；FR11 锚 `docs/core/requirements/PORTABILITY.md:62` ⇒ **`:63`**（§2.5 两处 + §2.8 F6 同判）。零语义。
 

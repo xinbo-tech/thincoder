@@ -511,6 +511,7 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | 验证面（三层） | ① **产物存在性**：校验脚本断言安装包 / 免安装包齐备且体积合理；② **产物可启**：CI 内自解包 + 冒烟启动（win / linux 可实跑；mac 以 CI 为准）；③ **三端共享契约零回归**：与另两端互读互写同一份配置与会话（需求档 A2） |
 | CI | `.github/workflows/test.yml` 增平台矩阵（需求档 A3：本机 Windows 实跑，另两平台以 CI 为验证面） |
 | 版本与升级 | 版本号 = CalVer（三端同制，`docs/RELEASE.md` §4）；升级路径首版 = 手动下载覆盖安装，自动更新**不列入本轮**（§8 边界） |
+| 依赖镜像纪律（2026-09-29 · 台账 #394） | **依赖安装 ∕ 打包一律带 `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/`**（或经 proxy）——Electron 二进制下载源；命令形 = `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ npm install`（依赖安装）· `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ npm run package`（打包）；同指 = `thincoder-desktop/scripts/check-dist.mjs` 头注（指向本节） |
 
 ## 6. 验收判据回指需求
 

@@ -110,6 +110,11 @@ npm publish --access public    # scoped 包默认 private——首发必须显�
 
 **完成判定**：exit 0；复核 `npm view @thincoder/core version` = 本次号。发版 commit + tag（`v` + 本次号）**推双远端**（`origin` + `github`；github 固定走 proxy）。
 
+**发布窗两条纪律（2026-09-29 · 台账 #470）**：
+
+- **先 bump + publish 核、再做物化 ∕ 打包**：核版本未上 registry 时先物化，会把 registry 旧快照烙进产物（实证：`@thincoder/core@0.9.5` tarball 无 `think-off.mjs`——registry 落后源树）；**打包物化一律源自源树**。
+- **`npm install` 覆盖 junction 后的恢复收敛序**：先 `npm install`（lock 回 link 形）**再** `npm link @thincoder/core`——序反会把 lock 写成 packed 形。（`file:` 目录依赖在 `--install-links` 态 `npm ls` 报 `ELSPROBLEMS/invalid` = npm 11 固有，非本项目缺陷。）
+
 ### 5.4 阶段 2 · 发 CLI（`thincoder`）
 
 **第 1 步 · smoke**（人工 · **花真钱** · 在自动门禁之外）：

@@ -18,7 +18,7 @@
 |---|---|---|
 | 1 | **纯 ESM `.mjs`**——无 TypeScript、无转译；仓根引导为 `.cjs`（`bin/thincoder.cjs`） | `package.json` 双端 `"type": "module"` |
 | 2 | **无构建步骤**——无 bundler、无打包产物；直接跑源码 | 双端 `scripts` 无 build 项 |
-| 3 | **Node 版本**：CLI 产品 `>=24` · 核包 `>=22.13.0` | `thincoder-cli/package.json:19` · `thincoder-core/package.json:8` |
+| 3 | **Node 版本**：CLI 产品 `>=24` · 核包 `>=22.13.0`——**核包底线由最低宿主驱动**：VSC 扩展宿主（`engines.vscode` 面 · Node 22.13）为最低宿主 ⇒ **核内禁用 Node 24 专属 API**（核 = 三壳共用实现，须在最老宿主可跑） | `thincoder-cli/package.json:19` · `thincoder-core/package.json:29` · `thincoder-vscode/package.json:29` |
 | 4 | **零第三方运行期依赖**——唯一运行期依赖 = 仓内核包 `@thincoder/core`（本地链接，非 registry 第三方） | `thincoder-cli/package.json:22` · `thincoder-cli/node_modules/@thincoder` |
 | 5 | **仓内三目录分工**：核包 `thincoder-core/`（共享实现）· CLI 壳 `thincoder-cli/` · VSC 壳 `thincoder-vscode/` | 仓根目录树（§3） |
 | 6 | **第四端（桌面端）适用面**：主进程纯 ESM（`.mjs`）· 预载 = 沙箱 CJS（`.cjs`——官方约束：沙箱预载不支持 ESM import）· 渲染面零 Node（原生 ESM + 手写 DOM，**无构建步骤**）· 零第三方**运行期**依赖（唯一 = 核包；Electron 与打包器 = **构建期 devDep**） | 设计 = `docs/desktop/design/PROJECT.md` §1–§2（KD-1 / KD-3 / KD-4 / KD-6）；宿主下限判据 = 启动自检（该档 §2 KD-7） |
