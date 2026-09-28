@@ -85,7 +85,7 @@
 | 5 | `autocomplete.js` | 端 | 输入面端能力（`@` 补全 / 粘贴上传） |
 | 6 | `base.css` | 端 | 宿主变量映射层（`:8-20`）；核契约 = KD-RC-7 |
 | 7 | `chat-messages.js` | 端 | 52-case 分发 = 端协议（`:48` 唯一监听点） |
-| 8 | `chat-status.js` | 端 | 压缩 / digest 状态文案（核机制钩子面） |
+| 8 | `chat-status.js` | 端 | 压缩 / digest 状态文案（核机制钩子面）；**桌面消化状态行同判**（端侧自持——词键直取核字典 ⇒ 值同源；单源 = `docs/desktop/design/IPC.md` §1「挂起 ∕ 消化词键注」） |
 | 9 | `chat.css` | 端 | 会话流域样式（核类名契约住本档 §5） |
 | 10 | `chat.js` | 端 | 装配 / 启动握手（`:135` · `:147`） |
 | 11 | `controls.css` | 端 | 控制面样式 |
@@ -353,6 +353,7 @@
   会话条 `#session-bar`（对位 = 桌面会话头 + 标签条——已在册 D18）· `#project-btn`（多根切换钮——本端单项目模型 ⇒ 不适用）；`.dropdown-section` 无对位（VSC 会话列表不发射——仅 `thincoder-vscode/webview/model-picker.js:73` 消费）。
 - **「对齐第二批」端差 / 登记（2026-09-28 · 源 = `docs/batches/2026-09-28-desktop-vsc-align-2.md` §2）**：① 核侧无「助手说话人标签」原语（桌面 = 端侧同字面落形——上抛 = §10 **G**）；② `queued-mark` 的 `planBusyQueued` / `clearPending` 不消费（宿主快照对账面 / 节点换代交接——登记）· 核 effects 表不逐条执行（端面动作由模型态幂等派生）；
 ③ 桌面无 digest 边界物 ⇒ 归档 `atBoundary` 恒按尾追（= VSC 边界失效退化径同形）；④ 2s 走时刷新（块头 elapsed）不落（归小修族）；⑤ 运行期可见面两件（待发送气泡 / 归档子 agent 块——页读整置即失）。
+- **「桌面空闲唤醒」端差 ∕ 登记（2026-09-28 · 源 = `docs/batches/2026-09-28-desktop-idle-wake.md` §2）**：① 消化状态行 = 端侧自持（VSC `chat-status.js` 同判「端」——核不夺）；② 子 agent 块**回收面**（消化完成逐条发 `done` ⇒ 归档入流）住桌面宿主驱动（核件 hooks 供给——与 VSC `reclaimDigestedBlocks` 同形）；③ 状态行挂起句 = 端侧词表（zh = CLI 逐字 ∕ en = VSC 逐字——双端值源登记）。
 
 ## 10. 上抛与报告项
 
@@ -394,3 +395,4 @@
 - 2026-09-28（**对齐第二批 · 六件 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-vsc-align-2.md` §1）：§4 行 3 / 16 / 21 三行收正（推理面接 `paintReasoningTarget` · 队列标记改「接核原语 + 流内气泡」（原「自然成立」撤销）· 子代理活动区直消费构件族四件 + 内容回显 + 归档入流）；
   §5 增**桌面消费面段**（构件族四件 + 标记三导出 + `paintReasoningTarget` + `setStrings` 单点接线 + 核件词键面）；§9 增「对齐第二批」端差 / 登记五条；§10 增 **G / H** 两行（助手标签原语候选 · 核件取词接线面）；
   机制 / 判据措辞单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」；通道面 = `docs/desktop/design/IPC.md` §1（`ev:subchunk`）。
+- 2026-09-28（**桌面空闲唤醒批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-idle-wake.md` §1）：§3 行 8（`chat-status.js` 端）补桌面消化状态行同判句；§9 增「桌面空闲唤醒」端差 ∕ 登记三条（消化状态行端侧自持 ∕ 块回收面住宿主驱动 ∕ 挂起句双端值源）。核件面零改（本批不动核包）。

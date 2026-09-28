@@ -20,6 +20,7 @@
 | 渲染粒度 · 流式缝合 | `chat-stream.mjs` 按块更新、不整段重画（token / 推理块 / 工具卡增量） | `docs/desktop/design/SHELL.md` §1 · `docs/desktop/design/PROJECT.md` §4.1 |
 | 设置面 / 向导（批 9） | 两形构树（`thincoder-desktop/renderer/views/settings.mjs` / `thincoder-desktop/renderer/views/onboarding.mjs`）+ 薄挂载出档（`thincoder-desktop/renderer/mount-settings.mjs`）；**零新事件通道**（请求通道）；向导闸 = `config:read` 回执 `configured` | 本档 §1.1 · `docs/desktop/design/UI.md` §1 设置面 / 首启向导行 |
 | 提问与计划卡 · 输入区（批 A） | 提问卡 / 计划卡 = 流内非块节点，纯构树（`thincoder-desktop/renderer/views/question.mjs` / `thincoder-desktop/renderer/views/plan.mjs`——零 `store` import）· 输入区 = 中区底行挂载出档（`thincoder-desktop/renderer/mount-composer.mjs`，自 `app.mjs` 拆出）· 卡族挂载与出站 = `thincoder-desktop/renderer/mount-cards.mjs`（批 A 修正轮——`question:respond` 出站 + 清本键 `questions` 切片 + 清位标） | 本档 §1.1 · `docs/desktop/design/UI.md` §1 输入区 / 提问呈现 / 计划面行 |
+| 挂起窗与消化轮（桌面空闲唤醒） | 宿主挂起驱动（消费核件）= 空闲子任务 settle ⇒ 自唤醒消化轮；两事件面 `ev:susp`（计数：状态行段 3 第三态）· `ev:digest`（边界：流内消化状态行）；挂起空闲输入开放；块回收（消化完成逐条 `done` 归档） | 本档 §1.1 · `docs/desktop/design/PROJECT.md` §2 KD-34–36 · `docs/desktop/design/IPC.md` §1 |
 | 有界渲染窗口 | 见本档 §2 | 本档 |
 | 回填与跟滚 | 见本档 §3 | 本档 |
 
@@ -34,6 +35,9 @@
   写者与读者键面同源 = `key`（`docs/desktop/design/IPC.md` §1 会话键面）。
   **批 A 增（两通道归约）**：`ev:question` / `ev:task` 由「直返 `state`」改**写切片**（`state.questions` / `state.tasks`——同 `key` 就地替换零叠条，**不入 `pool`**）；队列写者 = `thincoder-desktop/renderer/store.mjs` 纯动作（`pool.queue` 唯一写面；**出队即摘除** = `docs/desktop/design/UI.md` §2 项 1 行）。
   **批 B 增（一通道归约）**：`ev:usage` 写 `usage` 切片（按会话 `key` · 同键就地替换 · 首写自种——**归约面唯一写者**；未至 / 非正数 ⇒ 零节点——KD-20，单源 = `docs/desktop/design/PROJECT.md` §2 KD-20 行）。
+  **本批增（桌面空闲唤醒 · 两通道归约 + 消化行族）**：`ev:susp` 写 `susp` 切片（按会话 `key` · 同键就地替换——征数四值 + `active`；`active:false` ⇒ 段回落两态词，**禁假造**）；`ev:digest` 写 `digest` 切片（按会话 `key` · 同键就地替换——起跑 / 终态两态；`end` 原地更新本键游标行）；
+  **流内消化行族** `[data-digest]` = 非块节点组（沿 `[data-pending]` 先例——不占块序 / 不动 `data-blocks` 不变式；两行：起跑标签行 + `n > 0` 计数行——单源 = `thincoder-vscode/webview/chat-status.js:69-122`）；
+  **块回收面**（驱动 hooks.reclaim ⇒ `ev:subagent { status: "done" }` 逐条补发—— `settled` 驻留块归档入流；退出 freeze 同型）；状态行段 3 三态与词键 = `docs/desktop/design/IPC.md` §1「挂起 ∕ 消化词键注」。
 - **池切片清点口径（批 8 落）**：池条目入池 = `ev:tool-call`（开始）、`ev:tool-result` 只收束 `status`——**清点 = 全量在场**（收束不摘除 ⇒ 长会话池切片单调增长）；
   **窗限 / 归档 = open**（登记 = `docs/desktop/design/PROJECT.md` §10 · `docs/desktop/design/UI.md` §2 项 1）；**队列族例外（批 A 落）** = 出队即摘除（`pool.queue` 非单调——写者 = `thincoder-desktop/renderer/store.mjs` 纯动作）。
 - **回合尾三径（判据单源 · 批 A 修正轮）**：回合尾 = `ev:activity`（无 `fields`）的 `done` ∨ `stopped` ∨ **`ev:error`**（宿主错误结算——`ev:error` 行单源 = `docs/desktop/design/IPC.md` §1）；三径**同判据**（谓词 `isTurnTail` 住 `thincoder-desktop/renderer/events.mjs`）：**谓词入参形（点名）** = 吃**两通道形**——
@@ -154,3 +158,5 @@
 - 2026-09-28（**对齐第二批 · 六件 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-vsc-align-2.md` §1）：§1.1 四处随动——块总集 **五型 ⇒ 六型**（+ `subagent` 归档块 · 运行期块）· 回合尾三径条消费面补**窄口携 `key`**（`onTurnTail(key)`——flush 目标 = 回合尾事件键）· 帧尾态刷条增**待发送气泡组** `[data-pending]` ·
   增**流内非块节点族**条（待发送气泡组 + 归档子 agent 块）。形态 / 判据单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 2 / 5；明细 = 批档 §2。
 - 2026-09-28（**归档面收尾 · 父侧直接执行〔可 revert〕**——承状态栏对齐批 wiring 座 #38 报告面）：§1.1 事件归约面条补新导出 **`applyFlags(state, key, flags)`**（`sessionFlags` 切片写者——页读 / 出站回执两径同点）。**零新语义**（模块图补名）。
+- 2026-09-28（**桌面空闲唤醒批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-idle-wake.md` §1）：§1 索引增**挂起窗与消化轮**行；§1.1 事件归约面增**两通道归约 + 消化行族**条。
+  机制 ∕ 判据单源 = `docs/desktop/design/PROJECT.md` §2 KD-34–36；词键 = `docs/desktop/design/IPC.md` §1「挂起 ∕ 消化词键注」。

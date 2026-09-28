@@ -69,6 +69,9 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | KD-31 | **排队可见面 = 流内待发送气泡 + 队列按会话分键**（2026-09-28「对齐第二批」项 2）：忙态提交 ⇒ **入队即出泡**（流尾 `[data-pending]` 非块节点组——节点换代交接给流内用户块）；队列 = `pending: { [会话键]: [{ text, ts }] }`（三纯动作带键 · 满队按键判）；**flush 目标 = 回合尾事件键**；右列「队列」族**零写者 · 席位保留** | 用户 06:52「queued跑到右边Activity区去了」+ 07:08「排队中的时候要先是在输入区的上面，不是在右边」；未受理气泡挂某会话流 ⇒ 队列须带键（兼修「切会话错发」缺陷面）；核 `queued-mark` 三导出直消费 = 标记形与标签两形态单源 | **队列保全局未分键**（切会话漂页 + flush 错发他键）；**待发送气泡作块入 `blocks`**（页读整置即漂——与 slice 双记账）；**右列队列族继续承载**（违 07:08 原话）；**右列队列族摘除**（父侧 §1.8「回归本义」口径 = 席位不撤——摘除候选被否） |
 | KD-32 | **核件直消费 + `setStrings` 单点接线**（2026-09-28「对齐第二批」项 3 / 4）：右列子 agent 块 = 核 `renderSubBlock` / `refreshBlock` / `renderSubagentChunk` / `renderSubDesc` 直消费（**键控差分挂载**——同 key 跨帧同一元素）；说话人标签 = 核 `queued-mark` 原语落笔（用户块两形态）∥ 端侧同字面落形（助手标签——核无原语，登记 + 上抛 §10 **AY**）；渲染面 `initDict` 处 `setStrings(宿主表 ∪ 核投影)` | 「对齐」= 同一核件 + 值对齐（需求 §3.6 · 07:06）；核件内取词走核 i18n ⇒ 不接线即出键名（`sub.async` 一族） | **描述符复刻核构件**（头词 / tail-3 / 状态词 = 第二实现——违单源）；**整件替换核 DOM**（桌面外壳 / 三锚 / 窗限全失）；**核件取词改端注入**（核件签名无 `deps.t`——须改核件，越本批边界） |
 | KD-33 | **终态 = 折叠 + 归档入流**（2026-09-28「对齐第二批」项 5）：归档 ⇒ 池内退场 ∧ 流内尾追块（新块型 `subagent`——壳 = 零边距透传容器 + 内嵌核件元素）；表项留存墓碑（`region: "flow"`——迟来事件按 `drop-frozen` 消化）；`atBoundary` **恒按尾追**（桌面无 digest 边界物）；核 effects 表**不逐条执行**（端面动作由模型态幂等派生） | 用户 07:01「刚才不是有个子agent在跑吗？…为啥没了？」+ VSC 同径（`archiveBlock` 入 `#messages`）；原「下回合起清出」（`archiveFrozen`）退场 | **保留「下回合清出」**（用户明否）；**归档块留池内**（右列单调增长——原清出之动因仍在）；**归档块入盘**（非落盘件——运行期面，页读整置即失登记 = §10 **BA**） |
+| KD-34 | **挂起驱动 = 消费核件 `startSuspension`（不移植第四份）**：入口 = 回合尾结算后（终局事件已出 · 在飞表已释）`poolLive(agent)` 判真 ⇒ `startSuspension({ carrier: agent, runTurn, abortSignal, hooks })`；**载体 = agent 对象**（CLI 同形——桌面装配实例跨回合 ∕ 跨会话键存活；核 `carrierField` 两形皆读）；驱动胶水出档 `thincoder-desktop/src/main/suspension-drive.mjs`（拟新增）：会话寄存器 + hooks（计数 ∕ 回收 ∕ 冻结——计数面 = 核 `backgroundCounts`，回收 = 消化完成逐条 `⟦ev⟧done` 补发（归档面）+ 冻结 = 退出兜底同型）+ 输入 ∕ 关闭路由；**单回合执行面 = 宿主既有三径结算提取**（`send` ∕ 驱动同源 · `suspDriven: true` ⇒ 已 settle 留池等消化，撤回合尾直注入兜底）；挂起空闲输入**开放**（`msg:send` ⇒ `pushInput` + `wake`——用户输入优先序沿核件；**含附件 ⇒ `busy` 留队重试**——核件输入面 = 文本单形，登记 §10 **BC**）；`msg:interrupt` = 回合级（digest 中止 ⇒ 核件 catch 重入循环，非会话停；空闲等待期无在飞回合 ⇒ `idle`）；`dispose(key)` = 会话中止（abort ⇒ 清池不注入——陈旧结果不回灌） | 核件 = 两端现行驱动的同源移植（`thincoder-core/agent/suspension.mjs` 档头自注「两端同源」· 载体零预设）；「对齐」= 同一核件（需求 §3.6 · 用户 06:54）；desktop agent 字段形 = CLI 形载体（`_suspended` ∕ 双池 ∕ pending 单容器全在 agent 上）⇒ 消费即得全语义 | **同形移植（第四份驱动）**——四份实现漂移面 + 违单源；**不接（保兜底支）**——违本批要因（空闲不唤醒 = 用户 10:11 原话）；**改核件签名（补状态行文案面）**——核件零文案纪律（契约 5 ∕ 10），越本端边界 |
+| KD-35 | **完成提示面 = 失焦系统通知（两触发档）+ 既有位标 + 状态栏挂起句**：通知出档 `thincoder-desktop/src/main/notify.mjs`（拟新增——策略面零 electron 依赖，`notify` ∕ 焦态判据注入 ⇒ 平 node 直测；electron 装配住 `thincoder-desktop/src/main/main.mjs`）；**门 = 窗口失焦**（VSC `thincoder-vscode/src/extension/notify.mjs` 「focused = no-op · never noise」同判据）；**触发两档** = ① 用户回合完成（`!autoTurn`——VSC 逐字同判据）② 后台消化轮起跑（pending > 0——本批要因「子任务完成」；同批 settle 的自然合并点，N 计数在场）；形态 = `title` = 会话标题（不可得 ⇒ 零携）+ `body` = 句（档① 词键 `notify.done` 值 = VSC 逐字；档② `notify.subagents` 新键）+ 点击 = 聚焦窗口（VSC reveal 语义——不切会话）；**位标 ∕ 状态栏两候选不动**：`done` 码既有面自然点亮（回合尾置码 · 开页清码）、状态栏告警码集保持 `{approval, running}`（`done` 非告警面——既有裁定） | 用户原话「子任务完成后…零完成提示面」+ VSC 有形（失焦通知）；后台档取消化轮起跑 = 触发时刻即可见面（先例 = timer-wake 批「触发落流一行」）；不逐条 settle 通知（噪声 ∕ 同批无合并点） | **纯 VSC 同形（仅用户回合档）**——要因（后台完成）无声；**每 settle 逐条通知**（噪声 + 无合并点）；**通知即全部**（失焦外零面）；**点击切会话**（须新主→渲染命令通道——另裁） |
+| KD-36 | **挂起 ∕ 消化可见面 = `ev:susp` + `ev:digest` + 状态段三态**：`ev:susp`（计数面 = 核 `backgroundCounts` 直传 · 进出两态）⇒ 状态行**段 3 状态文本**第三态 = 挂起句（「后台 N 子代理运行中〔 · M 完成待消化〕」∥「后台子代理收尾…」——zh 值 = CLI 逐字 ∕ en 值 = VSC 逐字）；优先序 = 挂起句 > 运行中 > 就绪；`ev:digest`（边界面 = start ∕ end，`n` ∕ `tier` ∕ `ok` ∕ `ms`）⇒ **流内消化状态行**（VSC `.digest-status` 同形：起跑标签行 + `n > 0` 计数行 ⇒ end 原地更新；词键 = 核字典 `digest.*`（`t()` 投影面直取——值同源零复制））；块侧「待消化」面 = 既有（`settled` 驻留 ⇒ `done` 归档）+ 驱动 hooks 回收（消化完成逐条补发 `done`——沿 VSC 回收面）；**D4「挂起态与 digest」两落点 = 本行**（§10 S 行随批消解） | 需求 D4（S 行零落点随批消解）；D22「屏面为准」——CLI 挂起期状态文本 = 同句（`thincoder-cli/src/tui/suspension-drive.mjs` `backgroundStatusText`）；VSC 流内 `.digest-status` 同形（`thincoder-vscode/webview/chat-status.js`）⇒ 双标尺各有落点；digest 无面 ⇒ 自唤醒轮在流内不可辨（B1 落 ⇒ 必有面） | **状态栏新立段**（段集 = CLI 16 段闭集——D17 零静默省略律）；**通知即 digest 面**（失焦外零面）；**不落 digest 边界**（S 行留白 + 自唤醒轮无标识） |
 
 ### 2.1 实测读数（实施批回填）
 
@@ -373,6 +376,27 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | 测试面 | 原址补例：`store` / `views` / `views-chat` / `views-chat-text` / `views-activity` / `views-chrome` / `views-statusline` / `views-locks` / `agent-bridge-subagent` / `events-subagent` / `events-reduce`；真机读数 = 集成域现有档原址补例（D16 义务）——测试档随修随加（2026-09-27 裁定） | **本批** |
 | `docs/desktop/design/{UI,PROJECT,IPC,RENDERER}.md` + `docs/render-core/design/RENDER-CORE.md` | 本批设计落定（UI 本批注六件 · 本档 KD / §4.2 / §6.1 / §10 · IPC `ev:subchunk` · RENDERER 块六型与尾组 · 核档 §4 / §5 / §9 / §10） | **本批**（已落） |
 
+**本批（桌面空闲唤醒）行「现行 ⇒ 预期」**（实读 2026-09-28；机制 ∕ 判据单源 = 本档 KD-34–36；通道面 = `docs/desktop/design/IPC.md` §1）：
+
+| 文件 | 现行 ⇒ 预期（构成） | 批 |
+|---|---|---|
+| `thincoder-desktop/src/main/suspension-drive.mjs`（拟新增） | — ⇒ **≈130**（驱动胶水：会话寄存器 + 入口（核件装配 + 会话控制器 + 载体挂 `_sessionAbort` ∕ `_sessionSignal`）+ hooks 四件（计数 ∕ 回收 ∕ 冻结）+ 输入 ∕ 关闭路由 + 提示面触发两档；零宿主依赖 ⇒ 平 node 直测） | **本批** |
+| `thincoder-desktop/src/main/notify.mjs`（拟新增） | — ⇒ **≈55**（提示面策略：失焦门 + 两档合句 + 点击聚焦；`notify` ∕ 焦态判据注入） | **本批** |
+| `thincoder-desktop/src/main/agent-host.mjs` | **254 ⇒ ≈300**（单回合执行面提取（`send` ∕ 驱动同源 · `suspDriven: true`）+ 挂起接管 + `send` ∕ `interrupt` ∕ `dispose` 三路由 + 注入面扩（notify ∕ 焦态 ∕ reveal）；**越 300 顾问线预案 = 回合执行面再出档**） | **本批** |
+| `thincoder-desktop/src/main/main.mjs` | **93 ⇒ ≈100**（通知装配注入三行（Notification 构造 ∕ 焦态 ∕ 聚焦——闭包读 `win`）） | **本批** |
+| `thincoder-desktop/src/preload/preload.cjs` | **58 ⇒ ≈61**（`EVENT_CHANNELS` **12 ⇒ 14**（+ `ev:susp` ∕ `ev:digest`）——定序断言随动） | **本批** |
+| `thincoder-desktop/renderer/events.mjs` | **494 ⇒ ≈530**（两通道归约（`ev:susp` 写计数切片 ∕ `ev:digest` 写消化行切片）+ 消化行游标；**与「对齐第二批」串行**（其拆 `page-read.mjs` 先落 ⇒ 本批基线 = 拆后档）） | **本批** |
+| `thincoder-desktop/renderer/views/statusline.mjs` | **269 ⇒ ≈285**（段 3 三态：挂起句 > 运行中 > 就绪——读 `susp` 切片） | **本批** |
+| `thincoder-desktop/renderer/views/chat.mjs` | **280 ⇒ ≈295**（消化状态行组 `[data-digest]`——非块节点，沿 `[data-pending]` 先例） | **本批** |
+| `thincoder-desktop/renderer/mount-status.mjs` | **26 ⇒ ≈27**（`STATUS_KEYS` 增 `susp`） | **本批** |
+| `thincoder-desktop/renderer/app.mjs` | **254 ⇒ ≈255**（`CHAT_KEYS` 增 `digest`） | **本批** |
+| `thincoder-desktop/renderer/events-subscribe.mjs` | **69 ⇒ ≈75**（订阅表 **12 ⇒ 14**） | **本批** |
+| `thincoder-desktop/renderer/i18n.mjs` | **425 ⇒ ≈435**（词键 +5 × 2 语：`susp.*` 三键（zh = CLI 逐字 ∕ en = VSC 逐字）+ `notify.*` 两键；**digest 词面零新键**——核字典 `digest.*` 经 `t()` 投影面直取（值同源零复制）） | **本批** |
+| `thincoder-desktop/renderer/chat.css` | **≈325（「对齐第二批」后） ⇒ ≈340**（`.digest-*` 两规则——起跑 ∕ 终态两态） | **本批** |
+| 测试面 | 原址补例：`agent-host`（挂起进出 ∕ 输入路由 ∕ digest 中止 ∕ dispose）· `events-reduce`（两通道归约 + 游标）· `views-statusline`（段 3 三态）· `views-chat`（消化行组）· `host-floor`（`EVENT_CHANNELS` 14 断言）· 新档 `thincoder-desktop/test/agent-host-suspension.test.mjs`（拟新增——驱动族平 node 直测）+ `thincoder-desktop/test/files.mjs` 登记行；真机 = 集成域现有档原址补例（**D16 义务**——凡改可见面）——测试档随修随加（2026-09-27 裁定 · 不进设计面条目） | **本批** |
+| `docs/desktop/design/{PROJECT,IPC,RENDERER}.md` + `docs/render-core/design/RENDER-CORE.md` + `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` | 本批设计落定（本档 KD-34–36 ∕ §4.2 ∕ §6.1 ∕ §10 · IPC 两通道 + `msg:send` ∕ `msg:interrupt` 挂起口头 · RENDERER 消化行族与挂起切片 · 核档三处「桌面无挂起窗」收正） | **本批**（已落） |
+| `docs/desktop/design/UI.md` | **门控停笔**（外壳批设计评审轮 2 冻结——外壳批档 §1 状态行实读「复评（轮 2）在飞」）⇒ 本批 UI 面内容 = 批档 §2 定形；解冻后随落（登记 §10 **BD**） | **本批（待解冻）** |
+
 ## 5. 三平台打包链与发行面（需求档 D12）
 
 | 项 | 形态 |
@@ -393,7 +417,7 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | D1 | 打开目录后按 cwd 哈希取会话路径（点名「同一状态文件」= `sessions/<sha1>.json`，核 `sessionPath`）；重启后最近目录列表仍在（读面 = 槽面回读、零新存储——`docs/desktop/design/IPC.md` §2 项目面注 · `docs/desktop/design/PROJECT.md` §2 KD-9） | T-DSK1 / T-DSK2 |
 | D2 | 新建 / 列表 / 切换 / 删除 / 重命名 / 接续六操作各有往返读数；跨端接续 = 与另两端读写同一 sessions 目录（A2）；列表条目 `createdBy` 读面 = 会话行来源端标注（缺键 ⇒ 不标注——`docs/desktop/design/UI.md` §2 项 3） | T-DSK3 / T-DSK12 / T-DSK20 |
 | D3 | 发送后收到流式增量事件序列；中断后回合停止且历史保留；错误卡出现且含耗时；长会话渲染 / 回填 / 跟滚三面见 `docs/desktop/design/RENDERER.md` §2 / §3；批 A 落**输入区**（Enter 发送 / Shift+Enter 换行 · 忙态入队 · 回合尾 flush——`docs/desktop/design/UI.md` §1 输入区行）；**可见面修复批修（#458 / #459 / #457）**：用户消息块活流在场（受理即出——`docs/desktop/design/UI.md` §1「本批注（可见面修复 · 五件）」项 2）· 回合尾零流式游标（项 3）· 输入区样式落点与关键尺寸（项 1） | T-DSK4 / T-DSK17 / T-DSK18 / T-DSK19 / T-DSK22 |
-| D4 | 子代理活动块 = 子 agent 实例（块头读数〔role / model / 用时 / 回合 N/M〕+ 状态词；**无工具位** · **不含内容**——D20 块形，单源 = `docs/desktop/design/UI.md` §1「本批注（对齐重定位）」项 2；状态词出自同档 §1 状态词行闭枚举，不得自造词）；advisor / consult / 队列 / 待审批四族各可呈现；批 A 落**队列写者**（忙态发送入队——写者 = `thincoder-desktop/renderer/store.mjs` 纯动作，条目 `{ title, status: "queued" }`）+ 满队提示（`QUEUE_MAX`） | T-DSK5 / T-DSK22 / T-DSK23 |
+| D4 | 子代理活动块 = 子 agent 实例（块头读数〔role / model / 用时 / 回合 N/M〕+ 状态词；**无工具位** · **不含内容**——D20 块形，单源 = `docs/desktop/design/UI.md` §1「本批注（对齐重定位）」项 2；状态词出自同档 §1 状态词行闭枚举，不得自造词）；advisor / consult / 队列 / 待审批四族各可呈现；批 A 落**队列写者**（忙态发送入队——写者 = `thincoder-desktop/renderer/store.mjs` 纯动作，条目 `{ title, status: "queued" }`）+ 满队提示（`QUEUE_MAX`）**；本批（桌面空闲唤醒）**：挂起态与 digest 两面落点 = 本档 KD-36（状态行段 3 第三态挂起句 + 流内消化状态行 + `ev:susp` ∕ `ev:digest` 两事件面；块侧 `settled` 驻留 ⇒ `done` 归档 + 驱动回收） | T-DSK5 / T-DSK22 / T-DSK23 |
 | D5 | 审批三出口（once / always / reject）+ 批审批三按钮皆通；AUTO 与工程模式状态随会话槽往返不丢 | T-DSK6 / T-DSK21 |
 | D6 | provider → 模型两级选择生效；档位与 effort 菜单回执与槽值一致（批 9 落：`model:list` 候选集 = 核 `listModels` 投影 · `settings:agent` 写入后回读同值——主侧用例 `thincoder-desktop/test/settings.test.mjs`）；**批 B 落**：三值入槽（`session:prefs` ⇒ 槽往返不丢 · 改一处不波及他会话 · 在飞拒 `busy` 零写）+ 档位枚举化（设置面 `select` = 全局默认 ∥ 会话头 `select` = 会话级；候选 = `model:list` 逐模型元素投影（`effortEnum` + `thinkOff`——off 在场判据）+ `provider:list`；表外档位字面串 ⇒ 归一 `null`（未设）——KD-17 / KD-18 / KD-19）；**批 B · ⑥（档位控件设计修订轮）**：设置面现值 = `provider:list` 行投影 `effort`（离线）· 表外现值自成一选项 · `defaultModel` 缺 / 模型段空 ⇒ 控件零节点 · 写面 = 意图级载荷 `{ tier }`（`bad-level` / `unknown-provider` 两码零写）——单源 = `docs/desktop/design/IPC.md` §2「档位控件注」 | T-DSK7 / T-DSK28 / T-DSK31 |
 | D7 | provider 增删 + key 校验 + preset 三协议 + i18n 两语各往返（批 9 落：`provider:*` 四通道 + `config:write` 的 `locale` 键——用例 `thincoder-desktop/test/providers.test.mjs` / `settings.test.mjs` + `views-settings.test.mjs`） | T-DSK8 |
@@ -558,7 +582,7 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
 | P | 核 `task` 工具在**工程模式下机械停用**（实读 `thincoder-core/agent-tools/task.mjs:64-66`）⇒ `ev:task` 帧只在普通模式会话出现 | 环境事实（登记） | 计划面消费路已落（`docs/desktop/design/UI.md` §1 计划面行）——验收按**事件驱动**（投 `ev:task` ⇒ 卡可见），不写「必现」；启用面 = 工程模式择绪另议 |
 | Q | **页窗暂留**：页键变更至 `history:page` 回执落之间，屏上暂留前页块（关活动 / 切标签同源 —— 既有口径），非「状态转了页没转」 | 设计登记（既有行为 · 非本批新增） | 消解 = 第三态「载入中」= 新词键 / 新形态 ⇒ 新需求面——本批不落；若裁定须消解 ⇒ 另批（`docs/desktop/design/RENDERER.md` §1.1 页生命周期行） |
 | R | 桌面端 E2E 面续件：判据④（web 快筛与 Electron 一致性）归属 · 边界 / 错误用例三条 · CI 接线 | 上抛（判据归属 · 父侧裁定） | 判据④ = 落需求档或另立批（本批只登记不做）；用例补面 = 后续批；CI 接线 = 随三平台 CI 批——单源 = `docs/desktop/design/E2E-TESTING.md` §6 / §7 / §8 |
-| S | 需求 D4「挂起态与 **digest**」的 `digest` 面（`docs/desktop/requirements/PROJECT.md:112`）在设计五档零落点（评审扫全档仅需求档一处命中） | 需求与设计覆盖差（登记 · 不改需求档） | 父侧 / 需求侧收口（另批起落点 ∥ 需求措辞收正）——本批只登记；连带 = §10 O 行已裁 D4「挂起态」前半（提问呈现），「digest」未涉 |
+| S | 需求 D4「挂起态与 **digest**」的 `digest` 面（`docs/desktop/requirements/PROJECT.md` §4 D4 行）在设计五档零落点（评审扫全档仅需求档一处命中） | **已消解（本批——桌面空闲唤醒）** | 两落点已定形（单源 = 本档 **KD-36**）：挂起态 = 状态行段 3 第三态（挂起句 · `ev:susp` 计数面）· digest = 流内消化状态行（`ev:digest` 边界面）+ 块侧 `settled` 驻留 ⇒ `done` 归档；需求档 D4 措辞不改（原句覆盖两落点——需求侧零动作） |
 | T | **§4.1 行数账按盘全量回填**（实读 2026-09-27）：§5 披露差三档收正（`app.mjs` **222** / `i18n.mjs` **317** / `views-chrome.test.mjs` **392**）· `agent-bridge.mjs` 实读 **77** | 实施后随动收正（登记） | 值列 = 本档 §4.1；存量估值几项（只报）见该段 |
 | U | **批 A 拆档产物四件**（`views/tabbar.mjs` **200** · `mount-sessions.mjs` **197** · `agent-host-question.test.mjs` **116** · `views-tabbar-close.test.mjs` **317**——末者拆后即越 300） | 登记（拆分落形） | 越层档预案 = 本档 §4.1 越 300 段（`views-tabbar-close` 页随动例拆出——档名实施批定） |
 | V | `railForm` **无外部消解窗口**（切项目 / 行集整置留场 · 槽号复用 ⇒ 陈旧确认面指向新槽——批档 §5 响应表 4） | 设计缺口（登记） | 消解 = 设新需求面（另批立项）；落点 = `docs/desktop/design/UI.md` §1 左列会话行 |
@@ -590,6 +614,9 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
 | AY | **核侧无「助手说话人标签」原语**（核内为 `renderBlock` / `buildAssistantRestore` 内联字面；桌面助手标签 = 端侧同字面落形——词键同源 / 字形住样式档） | 上抛（核面收拢候选） | 若须核侧收拢 ⇒ 补助手标签原语（与 `queued-mark` 的 `paintLabel` 同族）——**另裁**；本批不改核件 |
 | AZ | **核件消费面两处不消费登记**：`queued-mark` 的 `planBusyQueued`（宿主快照对账面 = VSC 专有）/ `clearPending`（桌面交接 = 节点换代，非原地清标）· 核 **effects 表不逐条执行**（端面动作由模型态幂等派生——`connectedOf` / `regionOf` 由模型字段供给） | 登记（非缺口） | 单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 2 / 5；如判须逐条执行 ⇒ 另裁 |
 | BA | **运行期可见面两件**：待发送气泡 / 归档子 agent 块——页读整置即失（非落盘件） | 登记（有意行为） | 与 VSC 重载面同族；如需持久化 ⇒ 新需求面（另裁） |
+| BB | **桌面无 turn-cap 续跑循环**（实读：桌面 src ∕ test 全树零 `ContinueError` 命中——CLI / VSC 均有续跑循环，单源 = `docs/core/requirements/TURN-CAP-CONTINUE.md`）⇒ 撞帽回合 = 失败径（`ev:error`）；**消化轮撞帽同此**（驱动非 Abort 异常 ⇒ 失败面；结果已注入者不丢——器落 `_pendingAsyncResults` 清点） | **发现项登记**（本批零触碰——越桌面空闲唤醒射程） | 消解 = 另批对齐续跑面（落点桌面 `thincoder-desktop/src/main/agent-host.mjs` 回合执行面）；触发条件 = 长任务实测撞帽可见面 |
+| BC | **核件输入面 = 文本单形**（`pushInput` 存串——`thincoder-core/agent/suspension.mjs`）⇒ 挂起窗内含附件提交 ⇒ `busy` 拒 + 渲染面留队重试（零丢失；窗内文字入队不受限） | 边界登记（零静默丢——可见气泡留场 + 重试） | 消解路 = 核件 `pushInput` 扩对象形（携 paths 跟踪）∥ 端侧侧表跟踪——**另裁**；本批取最薄形（沿客户端队列重试面） |
+| BD | **`docs/desktop/design/UI.md` 门控停笔**（外壳批设计评审轮 2 冻结）⇒ 本批 UI 面内容（状态行段 3 第三态 ∥ 消化行族 ∥ 提示面三候选）以批档 §2 定形、UI.md 行内指针待解冻随落 | 门控结果（写入次序门控——派单硬要求） | 解冻（外壳批复评通过）⇒ 随落 UI.md 三处（状态栏行 / 对话流行 / 变更记录）；无新裁定需求 |
 
 ## 11. 范本借用清单（UI 范式勘察落档）
 
@@ -784,4 +811,6 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
   续：`app.mjs` **254** · `events` **494** · `mount-pool` **60** · `i18n` **423** · `store` **333** · `views/sessions` **295** · `chrome` **164** · `statusline` **269** + 新档 `statusline-banner` **25** · `mount-status` **26**；
   §4.1 用例模块值列受触档刷新 + 集成域补两行（`statusline-align` **142** / `ledger-notice` **121**）；越 300 层段刷新 + 补登三档（`agent-host.test` **338** · `session-contract.test` **319** · `events-reduce.test` **312**——各带预案）；
   §4.2 两座行按盘收正（含新档两行 + 表外四档）· §7 机检面三处去「拟新增」/ 值收正；明细 = `docs/batches/2026-09-28-ledger-reliability.md` §2.12。
+- 2026-09-28（**桌面空闲唤醒批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-idle-wake.md` §1）：§2 增 **KD-34 / KD-35 / KD-36**（挂起驱动 = 消费核件 · 完成提示面 = 失焦通知两档 · 挂起 ∕ 消化可见面 = 两通道 + 段 3 三态）；
+  §4.2 增本批行（main 五档 + renderer 八档 + 测试面 + 设计档 + UI.md 门控行）；§6.1 **D4 行补本批句** · **§10 S 行转已消解**（D4「挂起态与 digest」两落点定形）· 增 **BB / BC / BD** 三行（turn-cap 缺口 ∕ 附件输入边界 ∕ UI.md 门控）；核档三处「桌面无挂起窗」收正随批（`docs/core/design/AGENT-LOOP-ASYNC-POOL.md`）。
 

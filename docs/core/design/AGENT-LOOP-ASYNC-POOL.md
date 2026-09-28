@@ -13,7 +13,8 @@
 
 > 核内形态（状态机 / 载体契约 / 注入面 / 端特有面）见 `AGENT-LOOP.md` §2.3；本节 = 现行机制语义与端面分工。
 
-- **回合尾语义**：回合尾**不再直注入排空**——done 条目留池（settled not consumed）→ `willSuspend`（`poolLive` 覆盖池非空）判 true → 进挂起态 → `sweepSettledToPending` → pending 非空 → digest 回合。**无 suspension 驱动的调用方**（headless / 直连 `runAgent`）保留回合尾直注入兜底（不丢结果）。多条目近邻完成 = **合并一轮消化**。
+- **回合尾语义**：回合尾**不再直注入排空**——done 条目留池（settled not consumed）→ `willSuspend`（`poolLive` 覆盖池非空）判 true → 进挂起态 → `sweepSettledToPending` → pending 非空 → digest 回合。**无 suspension 驱动的调用方**（headless / 直连 `runAgent`）保留回合尾直注入兜底（不丢结果）。
+  **接入面（2026-09-28 桌面空闲唤醒批收正）**：端面 = CLI / VSC / 桌面**三端全接**（CLI ∕ VSC 各持端形驱动 · 桌面直消费核件 `startSuspension`——批档 `docs/batches/2026-09-28-desktop-idle-wake.md` §2）；「**无 suspension 驱动的调用方**」集收窄为 headless / 直连 `runAgent` / ACP 客户端驱动面，保留回合尾直注入兜底（不丢结果）。多条目近邻完成 = **合并一轮消化**。
 - **主会话 busy（processing 含 digest）提交 = 入 `pendingInput` 队列**（**容量 8 条**——普通回合与会话内 busy 同判据）：输入不禁（可打字回显），Enter 受理入队；
   **吞面收敛四** = 模态 / 斜杠 / 空 / **队满（第 9 条 ⇒ 拒 + 提示 + 文本保留）**（逐条 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1；反馈 = `docs/cli/design/TUI.md` §7.5；VSC 对位 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）；
   `state.queue` = 残项单容器（释放窗口兜底 / 中止残余——零丢失保留）。
@@ -389,7 +390,7 @@ I1 → `thincoder-cli/test/integration/subagent-lifecycle.test.mjs:182`（扩）
 - **在途跨 run 存活 = 规范语义**（决策 D-TW3）：核内 `_pendingTimers` 读写点三处——初值 `thincoder-core/agent.mjs:83` · 写 `timer.mjs:41-42` · 消费 `post-turn.mjs:18-21`——**无 per-run 复位**。
 - **端差（发现项 · 另批对齐）**：VSC 端每 run 起点清空 `_pendingTimers`（`thincoder-vscode/src/agent/agent-state.mjs:30`，经 `thincoder-vscode/src/agent/setup.mjs:117` 的 hydrateRun 路径进入）
   ⇒ 跨 run 的 timer 在 VSC 侧被静默丢弃——与其端内消费点（`thincoder-vscode/src/agent.mjs:422-425`）冲突，与核语义相悖。
-- **桌面端**：无挂起窗（核 `thincoder-core/agent/suspension.mjs` 的挂起驱动在端上零消费者）· 回合入口单一（`thincoder-desktop/src/main/ipc.mjs:77`）· 主进程零轮询 ⇒ 自唤醒面不存在（§6.30.5 表）。
+- **桌面端**：挂起窗**已落**（2026-09-28 桌面空闲唤醒批——直消费核 `thincoder-core/agent/suspension.mjs` `startSuspension`；原「核挂起驱动在端上零消费者」句随该批收正）· 回合入口单一（`thincoder-desktop/src/main/ipc.mjs:78`）· 主进程仍零轮询 ⇒ **自唤醒面仍不存在**（无空闲 deadline 闩 + 核件 `waitForSettleOrWake` 无 timer 第三兑现态；§6.30.5 表）。
 
 ### 6.30.2 载体定形（D-TW1）
 
@@ -458,7 +459,7 @@ I1 → `thincoder-cli/test/integration/subagent-lifecycle.test.mjs:182`（扩）
 | CLI 前台（TUI 空闲） | ✅ | 一次性 deadline 闩（`thincoder-cli/src/tui/timer-watch.mjs`（拟新增））——武装点 = 回合链尾「无人自动接手」判据邻位 |
 | CLI 挂起窗（池 live） | ✅ | `waitForSettleOrWake` 第三兑现态；窗内到期即开 timer 轮（不等池空）；池空窗退 ⇒ 交空闲闩（到期件已出列——零重复投递） |
 | CLI headless（`chat` 一次性 / ACP / 直连 `runAgent`） | ❌ 不支持 | 空转面不存在（`chat` 一次性 run 结束即退；ACP 回合由客户端驱动——`thincoder-cli/src/acp/session.mjs:20` `run = runAgent`、无挂起窗）；到期仍在下一工具回合边界投递（既有语义不变） |
-| 桌面 | ❌ 不支持（本批 · 理由） | 无挂起窗 + 回合入口单一 + 主进程零轮询 ⇒ 自唤醒需新造主进程调度器（出本批边界）；可见面需新 `ev:*` 通道（白名单 10 条测试锁定，`thincoder-desktop/src/preload/preload.cjs:31-32`）⇒ 同批不接；登记后续项 |
+| 桌面 | ❌ 不支持（本批） | **理由收正（2026-09-28 桌面空闲唤醒批）**：挂起窗已落（直消费核件）⇒ 原「无挂起窗」理由不再成立；剩余理由 = 无空闲 deadline 闩（主进程零轮询——须新造宿主闩）+ 核件 `waitForSettleOrWake` **无 timer 第三兑现态**（CLI 自有驱动独有）+ 可见面需新 `ev:*` 通道（白名单定序断言随动，`thincoder-desktop/src/preload/preload.cjs:31-32`）；消解窗口 = 桌面 timer 自唤醒另批 |
 | VSC | ❌ 不支持（本批） | 有挂起窗但空转期无等待器；且端内每 run 清 `_pendingTimers`（§6.30.1 发现项）⇒ 先补端差再谈自唤醒 |
 
 ### 6.30.6 受影响文件清单（R24a）
@@ -550,6 +551,9 @@ T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13 → `thincoder-cli/test/timer-w
 5. 子代理（depth>0）timer 面零改（其面板时间面自持）。
 
 ## 变更记录
+
+- 2026-09-28（**桌面空闲唤醒批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-idle-wake.md` §1 · 台账 #504）：三处**「桌面无挂起窗」登记收正**（桌面已接驱动——直消费核 `startSuspension`；本批零改核件）：
+  §6.8 补**三端接入面**句（「无 suspension 驱动的调用方」集收窄）；§6.30.1 桌面端条收正（挂起窗已落 + 自唤醒面仍不在的理由重列）；§6.30.5 桌面行理由收正（原「无挂起窗」不再成立——剩余 = 无空闲 deadline 闩 + 核件无 timer 第三兑现态 + 可见面白名单随动；消解窗口 = 桌面 timer 自唤醒另批）。**机制语义零改**。
 
 - 2026-09-27（**timer-wake 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-27-timer-wake.md` §1 · 台账 #443）：新增 §6.30（timer 到期自唤醒——空闲唤醒面 · 第三开轮源）：
   载体定形（核到期件 + CLI 一次性 deadline 闩 + 挂起窗第三兑现态；四条否决候选）· 投递形态 / 消费入口（auto-turn 第三变体 `timerTurn` + 普通权限面）· 门三件（仅系统类可自唤醒 / 成本闸 / 开关默认开）·
