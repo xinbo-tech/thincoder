@@ -3,7 +3,7 @@
  * 顶层只允许四类语句：**常量定义 · 函数声明 · 守卫调用 · 守卫导出**——`contextBridge` 装配（含 `require("electron")`）
  * 整块落装配函数体内；守卫谓词写死 = `typeof window !== "undefined"`（沙箱预载处为渲染进程上下文 ⇒ 装配；
  * 主进程 `createRequire` 读取与平 node 测试无 `window` ⇒ 零装配、不触 `electron`）。
- * 白名单 `CHANNELS` **单源**（主侧经 `createRequire` 读之据以注册——`src/main/ipc.mjs`）；非白名单通道**立即 reject**（不入 IPC）。
+ * 白名单 `CHANNELS` **单源**（主侧经 `createRequire` 读之据以注册——`src/main/ipc-registry.mjs`）；非白名单通道**立即 reject**（不入 IPC）。
  * 请求白名单 = **三十八项**（三十五 ⇒ 三十八 —— R7 设置补充三项：`settings:env` ∕ `settings:tools` ∕ `mcp:tools` · 定序末位）= 配置读取 + 项目面（打开 —— 原生目录选择 / 最近目录）+ 会话面（列表 / 新建 / 切换 / 重命名 /
  * 删除 / 恢复）+ 审批响应（`approval:respond` —— 出口动作面，见 `src/main/ipc.mjs`）+ 作答响应
  * （`question:respond` —— `question` 工具真作答面）+ 历史页（`history:page`）
