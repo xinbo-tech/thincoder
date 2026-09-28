@@ -92,7 +92,7 @@
 .code-copy-btn.copied { opacity: 1; color: var(--green); border-color: var(--green); }
 
 /* ── ④ 核件子 agent 块面（`subblocks/*` 四构件 —— 「对齐第二批」项 3；右列与流内归档块共用）。 ── */
-/* 值源 = VSC webview `chat.css:298-374` / `:328-371`；口径三律同 D21：宿主主题色角色对位 / 语义常量值照搬 /
+/* 值源 = VSC webview `chat.css:298-374` / `:328-371` / `:466-467`；口径三律同 D21：宿主主题色角色对位 / 语义常量值照搬 /
    盒层单层律；`⏹` 字形住核件 JS。块壳背景 = `--overlay`（`--tool-bg` = textBlockQuote-background 角色对位 ——
    沿面 7 代码块壳同变量）。 */
 .advisor-block {
@@ -165,6 +165,12 @@
 }
 /* 冻结块（终态原地折叠）：与运行态同卡面 —— 折叠默认、可展开；头行含 done/stopped 时长。 */
 .advisor-block.sub-block.sub-frozen { opacity: 1; }
+
+/* #518（映射源范围外漏项——本批补）：子 agent 块内容区 60px ∕ 表头 0.75 透明度 —— 值源 = VSC
+   `chat.css:466-467` 逐字（口径三律同 D21「语义常量值照搬」；选择器仅收窄 `.sub-block` —— 余
+   `.advisor-block` 维持基础 100px）。 */
+.advisor-block.sub-block .advisor-content { max-height: 60px; }
+.advisor-block.sub-block > summary { opacity: 0.75; }
 
 /* ── ⑤ 核卡族（「桌面处理流 · VSC 对齐」批 R1 直消费 —— 核 `cards/{question,panel}.mjs` 产出 DOM 面）──
    值源 = VSC webview 实读（`base.css:261-291` 提问卡控件族 · `controls.css:40-153` 任务面板体）；口径三律同 D21。

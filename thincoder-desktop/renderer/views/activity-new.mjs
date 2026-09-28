@@ -3,7 +3,8 @@
  * 照搬 —— 同名函数 ∕ 同判据 ∕ 同清账三路；样式值源 = VSC `webview/base.css:113-117`，落 `renderer/pool.css`）：
  *   ① 出生点判据二向（VSC `activity.js:60-63` 两径内聚 —— 调用点 = 池面块出生 `renderer/views/activity.mjs`
  *      `createSubBlock`）：跟底 ⇒ 区钉底照旧（写 `scrollTop`）；**未跟底 ⇒ 不改位**（不夺用户阅读位）
- *      + 本档计数 +1 —— 钮在场 ⟺ `未跟底 ∧ 新生 > 0`；
+ *      + 本档计数 +1 —— 钮在场 ⟺ `未跟底 ∧ 新生 > 0`；**帧尾径**（#518 补齐 · VSC `streaming.js:32`
+ *      `frameEnd` 对位）：`maybePinPool(root)` —— `mountPool` 尾调用；出生径复用同一写；
  *   ② 钮（`.activity-new-btn` —— 类名与词键逐字同 VSC）：字面 = `t("sub.newBlocks", { n })`
  *      （`↓ ${n} …`，两语值逐字同 VSC `locales/{en,zh}.json:170`）；**桌面 chassis 适配**：钮居池头带
  *      `[data-pool-head]` 首子（VSC 单元素 `position: sticky` 的等效形 —— 粘性由池头带承载，见 `pool.css`
@@ -30,6 +31,14 @@ function nearBottom(root) {
   return root.scrollHeight - root.scrollTop - root.clientHeight < FOLLOW_PX
 }
 
+/** 池区钉底（帧尾径 —— #518 补齐；VSC `streaming.js:32` `frameEnd` 对位）：跟底（`_poolPin !== false`
+ *  ——缺省 = 跟底）⇒ 写 `scrollTop` 超值（不读 `scrollHeight`）；未跟底（用户上滚）⇒ **零写**——不夺
+ *  阅读位。出生径（`notePoolBirth`）复用本写。 */
+export function maybePinPool(root) {
+  if (!root || root._poolPin === false) return
+  root.scrollTop = Number.MAX_SAFE_INTEGER
+}
+
 /** 出生点**判据总口**（VSC `activity.js:60-63` 两径）：跟底 ⇒ 写 `scrollTop`（区钉底）；未跟底 ⇒ 计数 +1。
  *  回值 = 本次是否计入新生（诊断面）。 */
 export function notePoolBirth(root) {
@@ -38,7 +47,7 @@ export function notePoolBirth(root) {
     noteActivityBirth(root)
     return true
   }
-  root.scrollTop = Number.MAX_SAFE_INTEGER
+  maybePinPool(root)
   return false
 }
 

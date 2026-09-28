@@ -7,12 +7,15 @@
  * **R5（子 agent 面 · 态机三面随动 + 块头注记）**：注记呈现 = **核件直出**（`refreshBlock` ⇒ `headerText`
  * 读 `meta.note` —— 端零文案）；本档随态机三面 —— 复位（模型零块 ⇒ 主档弃容器 ⇒ 下次出生全新建元素）·
  * 退出兜底（归档后模型 `frozen` ⇒ `foldIfFrozen` 着装）· 出生闸（新块 ⇒ `createSubBlock` 出生）。
- * 依赖单向：本档 → 核件（`/rc/subblocks/block.mjs` `renderSubagentChunk` ∕ `renderSubBlock` ∕ `renderSubDesc`；
- * `/rc/subblocks/activity-view.mjs` `refreshBlock`）· `./activity-new.mjs`（出生点判据总口）；主档反向引
- * 本档唯一导出 `syncSubBlocks` —— **无环**。
+ * 依赖单向：本档 → 核件（`/rc/subblocks/block.mjs` `renderSubagentChunk` ∕ `renderSubBlock` ∕ `renderSubDesc` ∕
+ * `initBlockFollow` ∕ `maybeScrollBlock`；`/rc/subblocks/activity-view.mjs` `refreshBlock`）· `./activity-new.mjs`
+ * （出生点判据总口）；主档反向引本档唯一导出 `syncSubBlocks` —— **无环**。
+ * **#518 块内容区跟滚（四点接线 · 核原语直消费）**：① 出生 ∕ 接管（`subElementOf` 尾 `initBlockFollow`）·
+ * ② 内容增量（`replayRows` 追加后）· ③ 挂载补钉（`createSubBlock` `family.append` 后）· ④ 接管径补钉
+ * （`updateSubBlock` `replaceWith` 后）——余三点 = `maybeScrollBlock` 应用（让位旗标为假 ⇒ 零写）。
  * 零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
-import { renderSubagentChunk, renderSubBlock, renderSubDesc } from "/rc/subblocks/block.mjs"
+import { renderSubagentChunk, renderSubBlock, renderSubDesc, initBlockFollow, maybeScrollBlock } from "/rc/subblocks/block.mjs"
 import { refreshBlock } from "/rc/subblocks/activity-view.mjs"
 import { notePoolBirth } from "./activity-new.mjs"
 
@@ -23,6 +26,7 @@ function subElementOf(entry) {
   element._rowsDone = 0
   replayRows(element, entry)
   foldIfFrozen(element, entry)
+  initBlockFollow(element) // ① 出生 ∕ 接管共用点：内容区跟滚监听（核原语——VSC `buildBlockEl` 同点）
   return element
 }
 
@@ -36,6 +40,7 @@ function replayRows(element, entry) {
     if (thaw) element._subMeta = { ...entry, frozen: false }
     for (const row of pending) renderSubagentChunk(element, row)
     if (thaw) element._subMeta = entry
+    maybeScrollBlock(element) // ② 内容增量 ⇒ 跟滚应用（让位旗标为假 ⇒ 零写；折叠 ∕ 未挂 = 核原语 no-op）
   }
   element._rowsDone = rows.length
 }
@@ -60,6 +65,7 @@ function updateSubBlock(element, entry) {
   if (known?.frozen === true && entry?.frozen !== true) {
     const next = subElementOf(entry)
     element.replaceWith(next)
+    maybeScrollBlock(next) // ④ 接管径补钉（新元素默认跟底——旧块让位旗标不随迁）
     // 挂载后末刷（换元素径 —— 核首刷发生在挂载前，`isConnected` 门控未过；与首见径同序）
     refreshBlock(next)
     return
@@ -79,6 +85,7 @@ function createSubBlock(root, family, entry) {
     element.insertBefore(renderSubDesc(), element.querySelector(".advisor-content"))
   }
   family.append(element)
+  maybeScrollBlock(element) // ③ 挂载补钉（重挂重放场景——挂载前写无效）
   notePoolBirth(root)
   refreshBlock(element)
   return element

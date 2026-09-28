@@ -33,7 +33,7 @@
  */
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
-import { clearActivityNew, syncActivityNew } from "./activity-new.mjs"
+import { clearActivityNew, syncActivityNew, maybePinPool } from "./activity-new.mjs"
 import { approvalExits, approvalTitle } from "./approval.mjs"
 import { segNode, wire } from "./chat-tool.mjs"
 // 子 agent 族键控差分（R5 先拆后改出档 —— 本档 338 行越顾问线）：族内六件住该档，本档只引键控差分一件。
@@ -255,5 +255,8 @@ export function mountPool(root, state, handlers = {}) {
     bindFamilyLabel(family)
     syncSubBlocks(root, family, model)
   }
+  // #518 池区帧尾钉底（R10 E6 帧尾径补齐）：跟底 ⇒ 写 `scrollTop`（VSC `streaming.js:32` `frameEnd` 对位）；
+  // 未跟底 ⇒ 零写（不夺阅读位）。
+  maybePinPool(root)
   return model
 }

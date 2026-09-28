@@ -6,8 +6,8 @@
  * R2 换接（§3 行 4「拆」）：**迁移判据 / 键文法 / 终态补桩表**单源 = 核包 `subblocks/state.mjs`
  * + `subblocks/channel.mjs`（`subBlocksReduce` 三迁全族 · `ensureSubBlock` 内容出生闸 ·
  * `subBlocksFreezeAll` 会话退出兜底）；本档留端 = **DOM 效果执行**（按序逐条——核件头「执行序
- * 约定」：`key → DOM` 于该条执行时解析）+ 出生位 / 说明行 / 区 pin 与计数钮 / 块级跟滚 /
- * 痕迹绑定 / 区复位 / 头词定时刷新。
+ * 约定」：`key → DOM` 于该条执行时解析）+ 出生位 / 说明行 / 区 pin 与计数钮 / 块级跟滚调用点
+ * （原语入核——KD-RC-8）/ 痕迹绑定 / 区复位 / 头词定时刷新。
  * 模型列表 = `S._subBlocks` 实时物化（值序 = 插入序；模型对象与块 `_subMeta` 同一引用——
  * 核原地改动即时可见）；`deps.connectedOf` / `regionOf` 必注入（DOM 事实在端）。
  *
@@ -23,7 +23,7 @@ import { traceSub, traceSubOnce, clearSubTraceChannel } from "./activity-diag.js
 import { noteActivityBirth, clearActivityNew } from "./activity-new.js"
 import { refreshBlock } from "./activity-view.js"
 import { subBlocksReduce, subBlocksFreezeAll, ensureSubBlock } from "../node_modules/@thincoder/render-core/subblocks/state.mjs"
-import { renderSubBlock } from "../node_modules/@thincoder/render-core/subblocks/block.mjs"
+import { renderSubBlock, initBlockFollow, maybeScrollBlock } from "../node_modules/@thincoder/render-core/subblocks/block.mjs"
 
 // streaming.js import 面不变（noteChunk 定义在核叶——hub re-export）
 export { noteChunk } from "./activity-view.js"
@@ -152,28 +152,11 @@ export function refreshLiveHeaders() {
   }
 }
 
-// ─── Block follow-scroll（§13——块内容区下列）───────
+// ─── Block follow-scroll（块内容区下列——原语入核 2026-09-29 · KD-RC-8）───────
+// `initBlockFollow` / `maybeScrollBlock` 本体住核 `subblocks/block.mjs`（取件见档头 import）；本端留调用点
+// （`buildBlockEl` 出生点）与转口 `maybeScrollBlock`（`streaming.js` rAF 尾消费——零改）。
 
-/** 块级跟滚监听（§13 C-LU1——出生接线）：内容区挂 wheel / touchmove 让位监听
- *  （{ passive: true }——与 ui.js initScrollFollow 同形），处理式 = 近底 24px 判据写
- *  `内容区._pinFollow`（族同口径——gap < 24 即近底）。内容区缺失零操作。 */
-function initBlockFollow(block) {
-  const content = block.querySelector(".advisor-content")
-  if (!content) return
-  const onScroll = () => { content._pinFollow = content.scrollHeight - content.scrollTop - content.clientHeight < 24 }
-  content.addEventListener("wheel", onScroll, { passive: true })
-  content.addEventListener("touchmove", onScroll, { passive: true })
-}
-
-/** 块级跟滚应用（§13 C-LU1——streaming.js rAF 尾逐块消费）：折叠（open=false）或已移除
- *  （!isConnected）→ no-op（零滚动副作用）；默认钉底（`内容区._pinFollow !== false` idiom
- *  同 ctx._pinBottom）→ 写超值不读 scrollHeight（ui.js 口径——免强制同步布局）。 */
-export function maybeScrollBlock(block) {
-  if (!block?.isConnected || !block.open) return
-  const content = block.querySelector(".advisor-content")
-  if (!content || content._pinFollow === false) return
-  content.scrollTop = Number.MAX_SAFE_INTEGER
-}
+export { maybeScrollBlock }
 
 /** Full reset — 回合中止（abort 无挂起会话）/会话清（§14 C-7）：**只清区子树**（live +
  *  awaitingDigest）+ 清 map + 区子树内防御孤儿清——**流内归档块（会话历史）不动**；计数钮同清。 */

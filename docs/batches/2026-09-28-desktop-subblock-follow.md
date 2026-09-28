@@ -233,4 +233,51 @@ VERDICT: pass
 
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（P1–P6 落 · 审计 0 差异 · 代码评审 pass · fix round 0 · 2026-09-29）
+
+
+### 5.1 交付摘要（P1–P6 逐档「前 ⇒ 后」· 内容行数口径）
+
+| 序 | 档 | 前 ⇒ 后 | 变更 |
+|---|---|---|---|
+| P1 | `thincoder-render-core/subblocks/block.mjs` | 45 ⇒ **69** | +2 导出（`initBlockFollow` ∕ `maybeScrollBlock`——自 VSC 旧 `webview/activity.js:160-166` ∕ `:171-176` **逐字搬移**）+ 档头留端清单收正（块级跟滚移出留端项 ⇒「原语住本档 · 调用时机留端」） |
+| P2 | `thincoder-vscode/webview/activity.js` | 190 ⇒ **173** | 删两本地函数 ⇒ import 并入核件取件行 + 转口 `export { maybeScrollBlock }`；档头留端句随动 |
+| P2 | `thincoder-vscode/webview/streaming.js` | 182 ⇒ **182** | **零改**（转口保留 ⇒ import 面不变 —— 取件 `:17` 原位） |
+| P3 | `thincoder-desktop/renderer/views/pool-subagents.mjs` | 108 ⇒ **115** | +import + 四点接线 = ① `subElementOf` 尾 `initBlockFollow` · ② `replayRows` 追加后 · ③ `createSubBlock` `family.append` 后 · ④ `updateSubBlock` `replaceWith` 后（②③④ = `maybeScrollBlock` 应用） |
+| P3 | `thincoder-desktop/renderer/views/activity-new.mjs` | 100 ⇒ **109** | +`maybePinPool(root)`（`_poolPin !== false` ⇒ 写 `scrollTop` MAX；未跟底 ⇒ 零写）+ `notePoolBirth` 复用该写；档头帧尾径注随拍 |
+| P3 | `thincoder-desktop/renderer/views/activity.mjs` | 259 ⇒ **262** | `mountPool` 尾 `maybePinPool(root)`（VSC `streaming.js:32` `frameEnd` 对位）+ import |
+| P4 | `thincoder-desktop/renderer/core.css` | 281 ⇒ **287** | +两规则逐字（`.advisor-block.sub-block .advisor-content { max-height: 60px; }` ∕ `.advisor-block.sub-block > summary { opacity: 0.75; }` —— 值源 `chat.css:466-467`）+ ④ 段值源行 `:466-467` 同拍 |
+| P5 | `.thincoder/tmp/2026-09-28-desktop-subblock-follow.test.mjs` | 新增 **367 行** | 批次本地件（13 例 = 四组 + P2 对拍；暂存位两层深 ⇒ 终位 `docs/batches/` 相对 import 同解；**父侧收位**） |
+
+四档产品码皆 ≪300 ✓（核件 69 ∕ VSC 173 ∕ 池面 115 ∕ 区面 109 ∕ 主档 262 ∕ 值面 287）。
+
+### 5.2 实施读数（命令 + 结果）
+
+- `node --check` 全触碰档（5 产品档 + 测试件）⇒ **全过**。
+- 批次本地件：`node --test .thincoder/tmp/2026-09-28-desktop-subblock-follow.test.mjs` ⇒ **13 pass ∕ 0 fail**（①核原语 4 例 · ②桌面接线 4 例 · ③区钉底 3 例 · ④值落点锁 1 例 · ⑤P2 对拍 1 例）。
+- **P2 对拍两臂**：① 机械 —— `git show HEAD:thincoder-vscode/webview/activity.js` 旧档两函数 ⟷ 新核件两函数**字节等**（去 `export` 前缀后逐字节同）；VSC 本地定义删净 ✓ · 转口在场 ✓ · `streaming.js` 字节零改 ✓；② 运行面 —— 真取 VSC `webview/activity.js` ⇒ `maybeScrollBlock === 核 block.mjs.maybeScrollBlock`（同一函数对象 · 核件单源）。
+- 单源核销：全仓 `maybeScrollBlock` 仅一处定义（核 `block.mjs:64`）；VSC 经 `node_modules/@thincoder/render-core` 链接、桌面经 `/rc/`（`src/main/protocol.mjs`）皆指同一核树 —— **无第二实现面**。
+- `node scripts/doc-check.mjs`（域外读数 · 本批零文档触）：悬空 171（设计轮基线 173 ⇒ Δ = −2 = 新增标识符回锚）· 行宽 16 为他批在途文档（与本批无涉）。
+
+### 5.3 审计与代码评审轮次与终态
+
+- **内部差异审计（explore · 只读 · 轮 1）**：四类（部分实现 ∕ 静默简化 ∕ 文档漂移 ∕ 越出文件表）= **0 条**；观察 5 条（含 `mountPool` none ∕ empty 早退径不涉帧尾写 = 判非差异〔空态零子节点 ⇒ 行为等价〕）；终态 = **clean**。
+- **代码评审（advisor · 轮 1 · 全量）**：**VERDICT = pass**；发现 6 条 = 🟡4 ∕ 🔵2，**均非阻塞、无 must-fix** ⇒ 处置 = **不修**（逐条由：① 块内容区监听集缺 `scroll`（拖条径）—— 核件按设计逐字搬移，属设计面裁定项，已披露；② 池区 pin 旗标 `scroll` 单订阅 × 新增每帧写的窗口 —— R10 既有面、本批声明零触，已披露；③ 测试件 367 行 > 300 顾问线 —— 批次件、不入仓套件、≤500 硬限未越；④ 测试件收位 = 父侧既定动作；⑤ 核两原语空值守卫不对称 —— 加守卫即改逐字搬移体，反损；⑥ core.css 注释未点名基础值行号 —— 陈述已准确）。
+- **fix round = 0**（无修复轮；终态 = converged）。
+
+### 5.4 留遗 ∕ 披露（不阻塞）
+
+1. **块内容区跟滚 · 拖条径**（🟡 · 设计面裁定项）：旗标只由 `wheel` ∕ `touchmove` 维护 ⇒ 拖动内容区自绘滚动条（桌面 10px 条）与键盘滚动不写旗标（A3「上滚不抢」在该径不成立）；成因 = 逐字搬移 VSC 原语（VSC 区面同族先例 = `ui.js:217` 三事件 + `WEBVIEW.md:404` 陈旧旗标判据说明）——交设计面（原语监听集补 `scroll` ∕ 端侧另挂）。
+2. **池区 pin 旗标维护面**（🟡）：`_poolPin` 唯一维护者 = `scroll` 订阅（R10 既有）+ 本批每帧写 ⇒ 极端窗口内可夺回一次上滚；建议随下一桌面设计面轮评估（VSC = wheel/touchmove/scroll 三事件）。
+3. 真机走查（五行为 ∕ A1–A6 用户可观察面）= **父侧 P6 项**；本舱零真机面。
+
 ## §6 验证与收口（父代理）
+
+### 6.1 收口（父侧 · 2026-09-29 03:5x）
+- **交付总览**：设计（#44）→ 评审（#46 · changes-required · 7 条）→ 修复（#47 · 7/7）→ 复审（#48 · **pass**）→ **实施（#50 · clean）**——P1–P6 全落：核 `subblocks/block.mjs` 45 ⇒ **69**（+2 导出 · 逐字搬移）+ VSC `webview/activity.js` 190 ⇒ **173**（改指 · 转口保留 · `streaming.js` 182 零改）+ 桌面四点接线（`views/pool-subagents.mjs` 108 ⇒ **115**）· 区帧尾（`views/activity-new.mjs` 100 ⇒ **109** · `views/activity.mjs` 259 ⇒ **262**）+ 值面（`renderer/core.css` 281 ⇒ **287**）。
+- **验证（父侧）**：批次本地件 `docs/batches/2026-09-28-desktop-subblock-follow.test.mjs`（367 行——含 mini 假 DOM harness；批次本地件不入仓套件 ≤500 硬限未越）——**终位亲跑 13 ∕ 13 · 0 fail**；`node --check` 全触碰档（#50 读数）；P2 对拍两臂（字节等 + 函数同一性）；doc-check Δ −2（171）。
+- **收口测试行（F9 双半）**：① 本批单元档 = 上述件（随档留存；复跑 = `node --test docs/batches/2026-09-28-desktop-subblock-follow.test.mjs`）；② 集成影响 = **无**（重建期窗口）。
+- **台账结算**：**#518 核销**（依据本节 + §5 · 用户 2026-09-28 18:15 实证缺陷「块里的内容都不滚动」→ 全链闭合）。
+- **残留（转出在册）**：① 跟滚旗标维护面两则（代码评审 🟡 披露：块区拖条 ∕ 键盘滚动不带旗标；池区 `_poolPin` `scroll` 单订阅 × 每帧写窗口）——归设计面轮；② 真机五行为走查 = 用户账（随走查）；③ 复审轮残项 #2 ∕ #5 ∕ #8（§4.1 两行 ∕ D-W13 括注 ∕ 两处批次期语句）——随下一桌面设计面轮。
+- **前置核（D7）**：修正轮先于 close ✓（#47 先落并过复审）；计数 ∕ 指针 ∕ changelog 抽核 ✓；**设计槽随收口消费**（designId 8a39d015…）。
+- **本记录收口冻结**（后续变更 = 新批）。
