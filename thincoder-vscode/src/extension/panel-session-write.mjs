@@ -89,7 +89,7 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
     autoApprove: existing.autoApprove ?? false,
     advisor: advisorOut,
     // Engineering state persisted by runAgent (agentState): design token survives turns;
-    // the engineering flag is slot-authoritative (2026-08-29) — config.json is the mirror.
+    // the engineering flag is slot-authoritative (2026-08-29); end-side config.json mirror write retired.
     // `!== undefined` (not ??): a legacy slot with NO engineering field must stay field-less
     // when the run didn't speak (abort/finally saves) — hard-writing `false` here would pin
     // the session off and kill the config.json fallback (compat contract, see tests).

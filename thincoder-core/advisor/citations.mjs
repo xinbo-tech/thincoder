@@ -5,7 +5,7 @@
  * checked against the CURRENT disk state; mismatches mark the finding
  * unverified and cannot support a push-back.
  *
- * 第 11 批（C / F14 / §14.5）：解析候选 = cwd + **评审对象声明范围派生根**（声明仓根 /
+ * 第 11 批（C / F14 / `ADVISOR-GUARDS.md §3`）：解析候选 = cwd + **评审对象声明范围派生根**（声明仓根 /
  * 声明文件目录 / 声明目录——纯路径派生，零扫描、零 git）；命中判据三条件全中（围栏内 ∧
  * 可读 ∧ 目标行含引文内容）⇒ 零新增假命中。失败原因三分（file unreadable /
  * content mismatch @ path / path traversal）——父侧不再人肉复核。
@@ -30,7 +30,7 @@ export function extractCitations(text) {
   return out
 }
 
-/** 候选解析根（§14.5——纯路径派生，候选顺序 = cwd → 各声明路径的派生根）：
+/** 候选解析根（`ADVISOR-GUARDS.md §3`——纯路径派生，候选顺序 = cwd → 各声明路径的派生根）：
  *  声明仓根（`cwd/<segs[0]>`）与 声明文件目录 / 声明目录本身。声明在 cwd 之外 → 不派生
  *  （relative 越出 cwd 或跨盘符——候选与声明脱节即假命中面）。 */
 function citationRoots(cwd, scope) {
@@ -50,7 +50,7 @@ function citationRoots(cwd, scope) {
   return roots
 }
 
-/** 单引文解析（§14.5）：按候选顺序试 `resolve(root, file)`；三条件全中才算命中。
+/** 单引文解析（`ADVISOR-GUARDS.md §3`）：按候选顺序试 `resolve(root, file)`；三条件全中才算命中。
  *  @returns {{matched: true, root: string, resolved: string}|{matched: false, reason: string}} */
 function resolveCitation(citation, roots, base) {
   const fence = base + sep
@@ -104,7 +104,7 @@ export function verifyCitations(text, cwd, opts = {}) {
   for (const c of citations) {
     const r = resolveCitation(c, roots, base)
     if (r.matched) {
-      // 命中根记录（§14.5）：经派生根解析（非 cwd 直解）的命中在报告中注明解析路径。
+      // 命中根记录（`ADVISOR-GUARDS.md §3`）：经派生根解析（非 cwd 直解）的命中在报告中注明解析路径。
       matched.push(r.root === base ? c : { ...c, root: r.root, resolved: r.resolved })
     } else {
       failed.push({ ...c, reason: r.reason })
@@ -122,7 +122,7 @@ export function appendCitationReport(text, cwd, opts = {}) {
     "---",
     `[host-verified] ${matched.length}/${total} citations match current file state.`,
   ]
-  // 命中根透明（F14/§14.5）：经声明范围派生根解析的命中逐条注明解析路径（cwd 直解的不列
+  // 命中根透明（F14/`ADVISOR-GUARDS.md §3`）：经声明范围派生根解析的命中逐条注明解析路径（cwd 直解的不列
   // ——零噪音；列的正是修复前会被误报为 unreadable 的裸路径引用）。
   const derived = matched.filter((c) => c.resolved)
   if (derived.length > 0) {

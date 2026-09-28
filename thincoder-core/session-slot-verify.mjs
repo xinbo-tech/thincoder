@@ -134,6 +134,10 @@ async function scanOne(path, size, cwd) {
       scan.feed(dec.decode(buf.subarray(0, n), { stream: true }))
       await yieldToLoop() // 逐块宏任务让出（零 ≥50 ms 连续同步段）
     }
+    // EOF 尾段冲洗（#499）：流式解码器在文件末滞留的**不完整 UTF-8 序列**（≤3 字节）不冲洗就
+    // 丢失——坏档尾段会逃过「尾随非空白 = 坏 JSON」门；无参 `decode()` 收尾 ⇒ 残缺字节出 U+FFFD
+    // ⇒ 按坏档门不过（完整多字节字符照常解码，零影响）。
+    scan.feed(dec.decode())
   } catch {
     return null // 读失败 ⇒ 门不过（负缓存）
   } finally {

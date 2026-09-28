@@ -41,19 +41,11 @@ export function effortEnumFor(modelId) {
   // before the model-list network probe returns.
   return SS.agentSettings?.effortEnums?.[modelId] || []
 }
-/** 归一链单源（§15.4-1——设置面板 / 聊天面板 picker / advisor 读面三面共用同一个 value）：
- *  ⓪ off 哨兵避支（§16.5 · 2026-09-25 收尾批并入）：`current === "none"`（读面 off 形字面）∧ 枚举
- *     不含 `"none"` ⇒ **中性档**（**不经 ② 支**）——off 形式不得降级为档位（用户从未选过）；
- *  ① 已存值 ∈ 枚举 ⇒ 取之；② 否则注册默认（**须 ∈ 枚举**）⇒ 取之；③ 否则 ⇒ `null`（中性档）。
- *  「已存值 ∉ 枚举」= 按枚举**显式判成员**（不再由浏览器「无匹配 option ⇒ value 落空」的代发行为承载结果）；
- *  中性档语义 = **不写 effort 载荷**（服务端默认与渠道条目原值照旧生效）。 */
-export function effortSelection(levels, current, registeredDefault) {
-  const list = Array.isArray(levels) ? levels : []
-  if (current === "none" && !list.includes("none")) return null
-  if (list.includes(current)) return current
-  if (list.includes(registeredDefault)) return registeredDefault
-  return null
-}
+// 归一链单源（§15.4-1——设置面板 / 聊天面板 picker / advisor 读面三面共用同一个 value）已搬核：
+// `composer/model-menu.mjs`（上提批 `2026-09-28-desktop-input-vsc-align.md` §2.7 P7——VSC `:44-56` 原地）。
+// 本档保留 import ∕ re-export 两行：消费面（`effort-select-views.test.mjs` E-6..E-8 直驱）不断。
+import { effortSelection } from "../node_modules/@thincoder/render-core/composer/model-menu.mjs"
+export { effortSelection }
 
 /** Effort 下拉视图（两渲染径共用——初渲染（`settings-agent.js`）/ 换模型重建（`settings-widgets.js`））：
  *  `levels` = 「—」+ 枚举（「—」恒首项、不落盘 effort）；`selected` = `effortSelection` 三支结果

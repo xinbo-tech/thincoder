@@ -1,77 +1,69 @@
 /**
- * chat-pending.mjs — 流内**待发送气泡组**（「对齐第二批 · 六件」项 2 · 新档 —— `docs/desktop/design/UI.md`
- * §1「本批注（对齐第二批 · 六件）」项 2 / §1「输入区」行 · `docs/desktop/design/RENDERER.md` §1.1 插入点纪律）：
- *   ① `pendingOf(state)` —— 本会话队读取（`pending[活动会话键]` —— 缺 / 非数组 ⇒ 空表：零气泡 —— 禁假造）；
- *   ② `pendingGroupNode(model)` —— 尾组构树（纯描述符 · 机检面）：`[data-pending]` 组 = **流内非块节点**
- *      （零 `data-block-id` ⇒ 不占块序 / 不动 `data-blocks` 不变式）；项 = 待发送气泡（`.block.block-user` 形 ·
- *      文本面 `mdInline` —— 与用户块同面 · `.msg-label` 空容器 · **零复制控件**〔未受理 —— 诚实面〕）；
- *   ③ `syncPending(root, model, anchor)` —— 帧尾组同步（幂等）：在场 ⟺ 本会话队非空；项数 = 队长；内容等价 ⇒
- *      零写；**落点 = 块序列之后、卡序列之前**（= 块插入点同侧 ⇒ 回合尾受理交接位置零跳 —— 单源 =
- *      `renderer/views/chat.mjs` `blockAnchor`）。
- * 标签落笔归帧尾后处理（核 `markPending` —— 类 `pending` 由原语加，构树不得预置该类，否则原语幂等守卫吞掉落笔）。
- * 依赖单向：本档 → `renderer/dom.mjs`（`build`）+ `renderer/views/chat-text.mjs`（`labelNode` / `textFace`）。
- * 零 `node:` / 零裸包；本档零文案（不出词 —— 组内文案全在文本面与核原语）。
+ * chat-pending.mjs — 排队期「待发送块」（**输入区上方带 · 派生** —— 输入逻辑收正轮 B12 新口径 · 参照 CLI
+ * `thincoder-cli/src/tui/render-conversation.mjs:359-385` + `docs/cli/design/TUI.md` §7.5 形态）：
+ *   **载体 = 派生**（判据 = 队镜面非空，渲染期现算 —— 零块序写入 ∕ 零生命周期簿记；消费 ∕ 中止随判据消失）；
+ *   **落位 = 输入行上方带**（消费面 = `renderer/mount-composer.mjs` `paintNotices` —— 贴输入框上沿 ⇒
+ *     与输入面板**恒定邻接**（任意内容高度 ∕ 任意滚动位置下间距恒定 —— 硬验收：短会话不得浮在会话区上方）；
+ *     非 `[data-block-kind]` 块 ⇒ `data-blocks` 不变式零破）；
+ *   **形态照 CLI**（标签行单条 ∕ 多条两形 + 逐条原文 dim + 多条 `i. ` 编号 + 逐条 ≤3 行 + 超限尾标记）；
+ *   **零真块**（收正轮 ④）：一切入队受理径的本地泡不残留（滞后径退流住 `renderer/composer-wire.mjs`）；
+ *   消费时刻 = 派生块消失 + 真块入流（单帧切换，零空窗零重复）。
+ * 文案一律经 `t()`（零硬编码 —— 词键住 `renderer/i18n-views.mjs`）；零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
-import { build } from "../dom.mjs"
-import { labelNode, textFace } from "./chat-text.mjs"
+import { t } from "../i18n.mjs"
 
-/** 本会话队读取（**单源** —— 渲染面零推导；非活动会话 / 槽缺 / 非数组 ⇒ 空表）。 */
+/** 逐条原文上限行数（CLI `QUEUED_ITEM_MAX_LINES` 同值 —— 超限 ⇒ 尾标记行）。 */
+const ITEM_MAX_LINES = 3
+
+/** 队镜面切片（判据面 —— 宿主权威快照，未过滤；本档只读不写）。 */
 export function pendingOf(state) {
   const key = state?.activeSession ?? null
-  const table = state?.pending
-  const list = key === null || table === null || typeof table !== "object" ? undefined : table[key]
+  const list = key === null ? null : state?.pending?.[key]
   return Array.isArray(list) ? list : []
 }
 
-/** 待发送气泡（项 = 条目 `{ text, ts }` 的 `text` 逐字 —— 零显示串副本；`html` 经核 `mdInline` 转义闸）。 */
-function bubbleNode(entry) {
-  const text = typeof entry?.text === "string" ? entry.text : ""
-  return {
-    tag: "div",
-    props: { class: "block block-user", "data-pending-item": "" },
-    children: [labelNode("user"), textFace({ kind: "user", text }, "block-text")],
-  }
-}
-
-/** 尾组构树（纯 · 零 DOM）：队空 ⇒ `null`（零节点 —— 不落空壳）；否则组 + 逐条气泡（序 = 队序）。 */
+/** 待发送块构树（派生 —— `null` = 判据空 ⇒ 零节点）：标签行（单条 ∕ 多条两形）+ 逐条原文（多条带 `i. ` 编号）。
+ *  行锚 = `[data-pending-item]` + `[data-raw]`（原文逐字 —— 机检 ∕ 复制面同约）；尾标记行初置 `hidden`（量面归帧尾）。 */
 export function pendingGroupNode(model) {
-  const list = Array.isArray(model?.pending) ? model.pending : []
-  if (list.length === 0) return null
-  return {
+  const items = Array.isArray(model?.pending) ? model.pending : []
+  if (items.length === 0) return null
+  const multi = items.length >= 2
+  const children = [{
     tag: "div",
-    props: { class: "chat-pending", "data-pending": "" },
-    children: list.map(bubbleNode),
+    props: { class: "chat-pending-label" },
+    children: [multi ? t("chat.pending.multi", { count: String(items.length) }) : t("chat.pending.single")],
+  }]
+  for (const [index, entry] of items.entries()) {
+    const raw = typeof entry?.text === "string" ? entry.text : ""
+    children.push({
+      tag: "div",
+      props: { class: "chat-pending-item", "data-pending-item": "", "data-raw": raw },
+      children: [
+        { tag: "div", props: { class: "chat-pending-body" }, children: [multi ? `${index + 1}. ${raw}` : raw] },
+        { tag: "div", props: { class: "chat-pending-more", "data-pending-more": "", hidden: true }, children: [] },
+      ],
+    })
+  }
+  return { tag: "div", props: { class: "chat-pending", "data-pending": "" }, children }
+}
+
+/** 逐条超限尾标记（帧尾量面 —— CLI `:379-384` 对位）：正文折行高 ÷ 行高 > 上限 ⇒ 摘 `hidden` ∧ 填行数词；
+ *  平 node ∕ 零版式面（`scrollHeight` / 行高缺）⇒ 早返零写。 */
+export function paintPendingOverflow(root) {
+  if (typeof root?.querySelectorAll !== "function") return
+  for (const body of root.querySelectorAll(".chat-pending-body")) {
+    const more = typeof body.parentElement?.querySelector === "function" ? body.parentElement.querySelector("[data-pending-more]") : null
+    if (more === null || more === undefined) continue
+    if (typeof body.scrollHeight !== "number" || typeof body.clientHeight !== "number") return
+    const style = typeof globalThis.getComputedStyle === "function" ? globalThis.getComputedStyle(body) : null
+    const lineHeight = Number.parseFloat(style?.lineHeight ?? "")
+    if (!Number.isFinite(lineHeight) || lineHeight <= 0) return
+    const rows = Math.max(1, Math.round(body.scrollHeight / lineHeight))
+    const over = rows > ITEM_MAX_LINES
+    more.hidden = !over
+    if (over) more.textContent = t("chat.pending.more", { lines: String(rows) })
   }
 }
 
-/** 组内容等价判据（帧刷幂等）：项数 = 队长 ∧ 逐项原文锚逐字等 ⇒ 零 DOM 写（标签落笔面不入判 ——
- *  核原语自持幂等；`pending` 类由原语加，不参与等价）。 */
-function equivalentPending(node, list) {
-  const items = [...node.children]
-  if (items.length !== list.length) return false
-  return items.every((item, index) => {
-    const face = item.querySelector("[data-raw]")
-    const raw = typeof list[index]?.text === "string" ? list[index].text : ""
-    return face !== null && face.getAttribute("data-raw") === raw
-  })
-}
-
-/** 帧尾组同步（幂等）：在场判据 = 本会话队非空；`anchor` = 卡面插点锚（首个卡节点 ∨ 药丸 ∨ `null` 末位）——
- *  组恒居块序列之后、卡序列之前（交接位置零跳）。内容等价 ⇒ 零写；组换代 ⇒ 原位换（零序跳）。 */
-export function syncPending(root, model, anchor = null) {
-  if (!root || typeof root.querySelector !== "function") return
-  const list = Array.isArray(model?.pending) ? model.pending : []
-  const node = root.querySelector("[data-pending]")
-  if (list.length === 0) {
-    if (node !== null && node !== undefined) node.remove()
-    return
-  }
-  if (node !== null && node !== undefined && equivalentPending(node, list)) return
-  const fresh = build(pendingGroupNode(model))
-  if (node !== null && node !== undefined) {
-    node.replaceWith(fresh)
-    return
-  }
-  if (typeof root.insertBefore === "function") root.insertBefore(fresh, anchor)
-  else root.append(fresh)
-}
+/** 帧尾同步 —— 消费面（`renderer/mount-composer.mjs` `paintNotices`）每帧重挂整组；本档只供标签 ∕ 项构树
+ *  与尾标记量面两件。 */

@@ -86,7 +86,7 @@ export const TMP_RETENTION_MS = 3 * 24 * 3600 * 1000
 export const MAX_PARALLEL_SUBAGENTS = 4
 
 /**
- * UTF-16-safe truncation (CLI parity, PROVIDER.md §14.6/§14.7): plain `slice(0, N)` cuts
+ * UTF-16-safe truncation (CLI parity): plain `slice(0, N)` cuts
  * BY UTF-16 CODE UNIT — an emoji (surrogate pair) straddling the boundary becomes a LONE
  * high surrogate (U+D800-DBFF) that deepseek's strict UTF-16 decoder 400s with
  * "unexpected end of hex escape". When the cut point lands on a high surrogate, step back

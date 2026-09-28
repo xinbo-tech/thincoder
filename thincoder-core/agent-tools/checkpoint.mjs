@@ -21,9 +21,13 @@ import { getAsyncPool } from "./async-settle.mjs"
  * 段数 / 累计轮次二元文本（§4 留痕口径——两值同读一次）：
  * `_continueSegments`（链内段数，首段 1）· `_turnSeq`（链内累计轮次，跨段不重置）。
  * 两值均挂子 agent 本体。
+ * #417 追加第三元「本段零落盘轮数」（`_zeroWriteTurns`——核回合环采集，与 `_turnSeq` 同源面）：
+ * **只报数**（零阈值 / 零自动动作——父侧据此判断「在推进」还是「在原地读」）。缺该字段的
+ * 执行面（端侧自有回合环、未跟踪）不渲染该元——缺省不冒充 `0`（「未跟踪」不得读作「零消耗」）。
  */
 function traceText(child) {
-  return `segments ${child?._continueSegments ?? 1} · accumulated ${child?._turnSeq ?? 0} turns`
+  const base = `segments ${child?._continueSegments ?? 1} · accumulated ${child?._turnSeq ?? 0} turns`
+  return Number.isInteger(child?._zeroWriteTurns) ? `${base} · zero-write rounds this segment: ${child._zeroWriteTurns}` : base
 }
 
 /** 留痕片段（§3.1 池条目留痕行）：挂池条目摘要**文本**面（status / observe）——桥字段零新增。 */

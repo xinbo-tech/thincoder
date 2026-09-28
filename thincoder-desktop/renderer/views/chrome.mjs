@@ -2,11 +2,13 @@
  * chrome.mjs — 中区外壳面（`docs/desktop/design/UI.md` §1 会话头行 · §1「批 B 注」项 1 ·
  * `docs/desktop/design/RENDERER.md` §1.1）：会话头三段（model / tree / mount），挂载面 = 本档唯一触 DOM 处。
  *   ① 会话头：`headModel({ tab, meta })` / `headTree(model, handlers)` / `mountHead(root, state, handlers)` ——
- *      读切片 `activeTab` / `sessionMeta`（供给取面 = `sessionMetaOf(state)` ⇒ **本行** `sessionMeta[activeTab]`
- *      —— 整表不是一份供给）。
+ *      读切片 `activeSession` / `sessionMeta`（供给取面 = `sessionMetaOf(state)` ⇒ **本行** `sessionMeta[activeSession]`
+ *      —— 整表不是一份供给；会话模型轮 R13：原 `activeTab` 切片随标签裁撤退场，活动键单源 = `activeSession`）。
  *   ② 状态行：本批自本档拆出（300 行拆分层预案落形 —— `docs/desktop/design/PROJECT.md` §4.2 状态行族档）
  *      ⇒ 语义单源 = `renderer/views/statusline.mjs`（D17 / D22 · 承载 16 段构树 + 薄挂载）；本档**同名再出口**
- *      （`statusModel` / `statusTree` / `mountStatus` —— 消费面零改，沿 `views/sessions.mjs` 转口先例）。
+ *      （`statusModel` / `statusTree` / `mountStatus` —— 消费面零改）。
+ *   ③ 位标词键表 `BADGE_WORD`（码 → 词键 —— 单一持有点）：两消费面 = 会话控制条目位标（`renderer/mount-sessions.mjs`）
+ *      ∕ 状态行跨会话告警位（`renderer/views/statusline.mjs`）—— 同源同词（词键沿 `tab.badge.*` 族）。
  * 会话头字段（UI.md §1 会话头行槽序 · 「状态栏对齐」批 D22 **回三值**）：provider → model → effort（序单源在此，不随供给键序）；
  * `engineering` / `autoApprove` 两显示位**已撤**（两态呈现面单源 = 状态行段 —— `docs/desktop/design/UI.md` §1「本批注（状态栏对齐 · 屏面为准）」项 2；
  * 供给仍可携两键 ⇒ 本档不渲染 —— 负向锁）；只落**已给的非空串**值 —— 非串 / 空串 ⇒ 零节点（不补空位、不造形、不猜测）；零字段 ⇒ 根
@@ -34,6 +36,15 @@ import { modelIdOf } from "./settings-sections.mjs"
 // 同名 re-export（消费面零改 —— 导入路径与名面保持；语义单源 = 状态行族档）。
 export { mountStatus, statusModel, statusTree } from "./statusline.mjs"
 
+/** 位标词键表（码 → 词键 —— 单一持有点，两消费面同引）：`approval` = 宿主新键（核无审批词条 —— KD-c）；
+ *  `running` / `done` = 核状态词族键（词形单源）；`idle` **无词条**（零节点）。会话模型轮 R13：标签条面裁撤
+ *  退场 ⇒ 本表迁入本档（两消费面 = 会话控制条目位标 ∕ 状态行告警位）。 */
+export const BADGE_WORD = Object.freeze({
+  approval: "tab.badge.approval",
+  running: "sub.running",
+  done: "sub.done",
+})
+
 /** 会话头字段槽序（UI.md §1 会话头行 · 「状态栏对齐」批 D22 回三值 —— 序不随供给键序）。 */
 const FIELD_ORDER = Object.freeze(["provider", "model", "effort"])
 
@@ -59,7 +70,7 @@ export function busyOf(state, key) {
   return Array.isArray(codes) && codes.includes("running")
 }
 
-/** 会话头模型：`tab` = 活动标签键（缺 ⇒ `null`）；`meta` = 会话级供给（缺 / 非载体 ⇒ 零字段）；`busy` = 忙态（P23 ——
+/** 会话头模型：`tab` = 活动会话键（缺 ⇒ `null`；参数名沿在册 —— 机读锚 `data-tab` 不变）；`meta` = 会话级供给（缺 / 非载体 ⇒ 零字段）；`busy` = 忙态（P23 ——
  *  缺省假：直调面（旧夹具）行为零改）。 */
 export function headModel({ tab = null, meta = null, busy = false } = {}) {
   const source = meta !== null && typeof meta === "object" ? meta : {}
@@ -68,7 +79,7 @@ export function headModel({ tab = null, meta = null, busy = false } = {}) {
   return { tab: tab == null ? null : String(tab), fields, busy: busy === true }
 }
 
-/** 结构描述符树（根：`data-tab` = 活动标签键（缺 ⇒ 零属性）· `data-meta` = `present` / `none`；字段 `data-field` 各一）。 */
+/** 结构描述符树（根：`data-tab` = 活动会话键（缺 ⇒ 零属性）· `data-meta` = `present` / `none`；字段 `data-field` 各一）。 */
 export function headTree(model, handlers = {}) {
   const face = candidateFace(handlers)
   const chosen = model.fields.find((field) => field.name === "model")?.value ?? null
@@ -160,19 +171,19 @@ function acceptPick(event, name, onField) {
   onField(name, value === "" ? null : value)
 }
 
-/** 活动会话的会话级供给（读面单源：`sessionMeta[activeTab]` ⇒ 本行供给 —— 表 / 本键缺 ⇒ `null`；无活动标签 ⇒
- *  `null`。头面读面两处同用：构树薄挂载 `mountHead` + 接线档 `renderer/mount-head.mjs`）。 */
+/** 活动会话的会话级供给（读面单源：`sessionMeta[activeSession]` ⇒ 本行供给 —— 表 / 本键缺 ⇒ `null`；无活动会话
+ *  ⇒ `null`。头面读面两处同用：构树薄挂载 `mountHead` + 接线档 `renderer/mount-head.mjs`）。 */
 export function sessionMetaOf(state) {
-  const key = state?.activeTab ?? null
+  const key = state?.activeSession ?? null
   const table = state?.sessionMeta
   if (key === null || table === null || typeof table !== "object") return null
   return table[key] ?? null
 }
 
-/** 薄挂载（`activeTab` / `sessionMeta[activeTab]` / 位标忙态 ⇒ 会话头；`handlers` = 候选面 + 字段出口）；返回模型（读数 / 走查面）。 */
+/** 薄挂载（`activeSession` / `sessionMeta[activeSession]` / 位标忙态 ⇒ 会话头；`handlers` = 候选面 + 字段出口）；返回模型（读数 / 走查面）。 */
 export function mountHead(root, state, handlers = {}) {
   if (!root || typeof root.append !== "function") return null
-  const tab = state?.activeTab ?? null
+  const tab = state?.activeSession ?? null
   const model = headModel({ tab, meta: sessionMetaOf(state), busy: busyOf(state, tab) })
   clear(root)
   root.append(build(headTree(model, handlers)))

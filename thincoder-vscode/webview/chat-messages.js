@@ -28,6 +28,7 @@ import { showPermissionRequest, showBatchPermissionRequest } from "./permission.
 import { addLedgerNotice } from "./ledger-line.js"
 import { applyHistoryPage } from "./history.js"
 import { clearStatusText, handleStatusText, showCompressStatus, showDigestStatus } from "./chat-status.js"
+import { showAtDropdown } from "./autocomplete.js"
 // C-B2-6 细则⑦（queue-visible 批 2026-09-24）：排队「待发送」标记面（逐条标记 / 消费即清 / 多批合泡）
 import { applyBusyQueued } from "./queued-mark.js"
 
@@ -37,13 +38,13 @@ import { applyBusyQueued } from "./queued-mark.js"
  *            notifyAgentSettingsRefreshed: Function, updateWebsearchSettings: Function,
  *            updateTestProviderResult: Function, updateShellCandidates: Function,
  *            updateProxySettings: Function, updateProxyTestResult: Function, showSettingsError: Function,
- *            showAtDropdown: Function, dismissLoadingScreenOnce: Function, _loadingTimeout: any }} deps */
+ *            dismissLoadingScreenOnce: Function, _loadingTimeout: any }} deps */
 export function initMessageLoop(deps) {
   const {
     renderMcpList, updateMcpTools, updateMcpTestResult, updateIndexStatus, updateProviderStatus,
     updateAgentSettings, notifyAgentSettingsRefreshed, updateWebsearchSettings, updateTestProviderResult,
     updateShellCandidates, updateProxySettings, updateProxyTestResult, showSettingsError,
-    showAtDropdown, dismissLoadingScreenOnce, _loadingTimeout,
+    dismissLoadingScreenOnce, _loadingTimeout,
   } = deps
   window.addEventListener("message", (e) => {
     const m = e.data

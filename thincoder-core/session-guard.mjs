@@ -4,7 +4,7 @@
  * 行随迁，verbatim 零语义变）：saveSession 与 token-ttl persistEngTokens 共用同一份。
  * 写前校验磁盘槽文件是否本进程会话的现场——磁盘文件 sessionStart 与本进程会话不符
  * （另一进程/会话的现场）/版本更新/异 cwd → 先轮转 .bak 保留再写。检查按 mtime 缓存
- * （agent._slotMtime）：文件自上次检查/自写未变就跳过全量解析——每次保存都
+ * （agent._slotMtime = `{p, mtimeMs}`——**按槽文件路径**命中，见 #386 复核）：文件自上次检查/自写未变就跳过全量解析——每次保存都
  * readFileSync+JSON.parse 多 MB 会话 → O(n²) 退化。文件存在但不可读（损坏/半写）→
  * 改名 .corrupted 保留现场。返回轮转的 .bak 路径或 null。
  *
@@ -39,7 +39,12 @@ export function guardForeignSlotFile(agent, p, slot) {
       return null
     }
     const st = statSync(p)
-    if (st.mtimeMs === (agent._slotMtime ?? -1)) return null // mtime 命中：未解析盘面 ⇒ 值不动
+    // mtime 命中（**同路径** ∧ 同 mtime）：未解析盘面 ⇒ 值不动。缓存带路径标签（#386 复核）——
+    // 单 agent 换槽复用（`_slot` 直钉新槽，未经 applySession / resetSessionState 清缓存）时，
+    // 旧槽 mtime 不得命中新槽（同 mtime 巧合 ⇒ 漏轮转 / 漏 createdBy 透传）；「换槽即清缓存」
+    // 不再是被依赖的隐式前提。
+    const hit = agent._slotMtime
+    if (hit && hit.p === p && st.mtimeMs === hit.mtimeMs) return null
     const disk = JSON.parse(readFileSync(p, "utf8"))
     // version>2 的新版文件无论 sessionStart 一律轮转（loadSlotFile 对 v3 返回 null 不动
     // 文件——若其 sessionStart 为 null，旧版首次保存会静默覆盖；轮转 .bak 保证新版文件
@@ -54,11 +59,11 @@ export function guardForeignSlotFile(agent, p, slot) {
       renameSync(p, bak)
       moveSidecar(p, bak, agent)
       console.error(`[session] slot ${slot} holds ${diskIsNewer ? `a newer-version file (v${disk.version})` : diskForeign ? `a foreign-cwd file (${disk.cwd})` : `another session (start ${diskStart}, ours ${myStart})`} — preserved as ${basename(bak)}`)
-      agent._slotMtime = st.mtimeMs
+      agent._slotMtime = { p, mtimeMs: st.mtimeMs }
       agent._slotCreatedBy = sessionEnd() // 轮转：现场已让位 ⇒ 本端将首物化新文件
       return bak
     }
-    agent._slotMtime = st.mtimeMs
+    agent._slotMtime = { p, mtimeMs: st.mtimeMs }
     agent._slotCreatedBy = disk?.createdBy ?? null // 解析通过：透传盘上键（无键 ⇒ null ⇒ 禁回填）
     return null
   } catch {

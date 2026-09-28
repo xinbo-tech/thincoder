@@ -258,6 +258,9 @@ export function persistEngTokens(agent) {
       engineering: agent.config?.agent?.engineering ?? false,
       goal: agent.goal ?? null,
       advisor: agent.config?.advisor ?? null,
+      // 会话级档位（#441③ 键齐——与 `newSlotData` 规范结构 / `saveSession` 携带面同源：
+      // 实况有值携带、无则 `null`；老槽禁回填不适用——本分支只产全新槽）。
+      effort: agent._slotEffort ?? null,
       pendingReminders: agent._pendingReminders ?? [],
       sessionStart: agent._sessionStart ?? null,
       // 创建端（SLOT-END-PARAM 批 §6.20 判据句 4 写面——全新分支）：取值链已由守卫（上方
@@ -273,13 +276,18 @@ export function persistEngTokens(agent) {
   delete data.engDesignToken
   data.updatedAt = Date.now()
   writeSessionFile(p, data)
-  // 记录我们刚写的 mtime——下次保存/守卫跳过重复解析（saveSession 同款）
-  try { agent._slotMtime = statSync(p).mtimeMs } catch {}
+  // 记录我们刚写的 mtime——下次保存/守卫跳过重复解析（saveSession 同款；缓存按路径命中 #386）
+  // + 摘要 `ts` 地板入参（#503：保存面写后取 mtime——同族先例 session-slot-verify.mjs:99）。
+  let wroteMtimeMs
+  try {
+    wroteMtimeMs = statSync(p).mtimeMs
+    agent._slotMtime = { p, mtimeMs: wroteMtimeMs }
+  } catch { /* stat 失败 ⇒ 缓存不动 / 摘要裸墙钟回溯 */ }
   // Update slot metadata in manifest（saveSession 同款尾——非致命：数据已安全，
   // metadata 下次 listSlots 惰性恢复）
   try {
     const m = loadManifest(agent.cwd)
-    m.slots[slot] = slotDigest(data)
+    m.slots[slot] = slotDigest(data, wroteMtimeMs)
     saveManifest(agent.cwd, m)
   } catch (e) {
     console.error(`[session] manifest metadata update failed for slot ${slot}: ${e.message}`)

@@ -17,6 +17,10 @@
  *      普通消息 ⇒ 送达同义，零静默丢）；送达面 `prepareTurnAttachments` 判决 ⇒ `degraded` 随消费回执浮出；
  *      取批失败 ⇒ 该条留队 + 一行诊断（零静默丢条）。
  *
+ * 取批面（「桌面处理流 · VSC 对齐」批 R3）：批计划单源 = 核件 `@thincoder/core/queued.mjs`（经 `queued-input.mjs` `plan` 面消费）；
+ * **取项边缘 = KD-40 在册裁定**（slash 逐条直发 ∕ 携图批不拆 —— 父侧 2026-09-28 裁）⇒ 桌面不消费核
+ * `takeQueuedBatchItem`（VSC 载具取项面：携图批退化逐条 ∕ slash 零动作）。
+ *
  * 注入面（`queue` / `post` / `prepare` / `drive` / `busyOf` 五件）—— 零宿主依赖 ⇒ 平 node 直测。
  */
 import { pushReal } from "@thincoder/core/context.mjs"

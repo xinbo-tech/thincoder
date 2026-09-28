@@ -18,7 +18,7 @@ export { advisorToolsFor, advisorToolsFor as _advisorToolsFor } from "./loop.mjs
 export { runAdvisorToolLoop as _runAdvisorToolLoop } from "./loop.mjs"
 export { advisorIncompleteMarker } from "./compaction.mjs"
 
-/** B 启动拒绝前缀（§14.4 #2）——稳定契约单源（三消费点同串）：run.mjs 生成；同步工具面
+/** B 启动拒绝前缀（`ADVISOR-GUARDS.md §2` #2）——稳定契约单源（三消费点同串）：run.mjs 生成；同步工具面
  *  据此登记 `_advisorRefusals`；异步结算面据此不置 `_calledAdvisorThisRun`。 */
 export const ADVISOR_LAUNCH_REFUSAL_PREFIX = "Advisor: design review launch refused"
 
@@ -36,7 +36,7 @@ export function resolveAdvisorProvider(agent) {
       // 单值）；渠道无默认模型 → 父 provider 兜底（与 subagent F-2c 同构）——绝不产出静默
       // undefined-model 请求（最极端两者皆无 → chat 前 assertProviderModel fail-fast）。
       const result = cfg.model ? { ...provider, model: cfg.model } : { ...provider, model: provider.model ?? agent.provider?.model }
-      // 台账 #329 / 设计 §15.4-3：off 形须**活着到达载荷层**——载荷层 off 门首款 = `provider.thinking === null`
+      // 台账 #329 / `MODEL-SPECS.md §15.4-3`：off 形须**活着到达载荷层**——载荷层 off 门首款 = `provider.thinking === null`
       // （`thincoder-core/provider/core.mjs:213-219`）；归一为 `undefined` 会让该门永不开（effort 族 advisor
       // 关思考静默失效）。显式 off 同清**继承档**（渠条目自带 / 主 provider 的 `reasoningEffort` 不得随行——
       // 随行则显式档支先命中、off 意图作废）。`false`（非法原值）仍归一 `undefined`（零变）。
@@ -54,7 +54,7 @@ export function resolveAdvisorProvider(agent) {
   }
   const provider = { ...agent.provider }
   if (cfg?.model) provider.model = cfg.model
-  // thinking off: null = NF1 显式 off 标记（保形——同自定义渠道分支；§15.4-3），a raw `false`
+  // thinking off: null = NF1 显式 off 标记（保形——同自定义渠道分支；`MODEL-SPECS.md §15.4-3`），a raw `false`
   // value is invalid for providers that expect undefined or an object.
   if (cfg?.thinking === null) {
     provider.thinking = null
@@ -72,9 +72,9 @@ export function looksLikeReviewOutput(text) {
 }
 
 /**
- * 压缩定锚简报（F13/§14.4 #3）——**由评审参数构建**（非模型输出）：对象声明 / 文档清单 /
+ * 压缩定锚简报（F13/`ADVISOR-GUARDS.md §2` #3）——**由评审参数构建**（非模型输出）：对象声明 / 文档清单 /
  * Approval Signal 三锚；重内容（项目指南 / 方法论 / 文档地图）不入 pin（压缩的意义所在）。
- * 形态逐字见设计 §14.4 #3（首行为机械化重挂说明）。
+ * 形态逐字见 `ADVISOR-GUARDS.md §2` #3（首行为机械化重挂说明）。
  */
 function buildPinnedBrief(reviewType, documents, object, designToken, designId) {
   const docList = Array.isArray(documents) ? documents.filter((d) => typeof d === "string" && d.trim()) : []
@@ -116,7 +116,7 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
 
   const messages = prepareAdvisorMessages(agent, reviewType, designToken, documents, paths, null, object, designId)
 
-  // B 启动断言（fail-closed——§14.4 #2）：设计评审请求内**必须**携带与本次签发 token 精确
+  // B 启动断言（fail-closed——`ADVISOR-GUARDS.md §2` #2）：设计评审请求内**必须**携带与本次签发 token 精确
   // 对应的 Approval Signal——构建面补不上就拒绝启动（不发"请回显一个不存在的 token"的请求）。
   // 拒绝报告前缀 `Advisor: design review launch refused` = 稳定契约（同步工具面据此登记
   // _advisorRefusals；异步结算面据此不置 _calledAdvisorThisRun）。工具路径恒签发 token ⇒
@@ -136,7 +136,7 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
   // callbacks.batchDoc（即 resolved.run 的实例绑定）；异步路径 = 本实例在跑池条目的
   // run.batchDoc（同文档集实例键——各评审各取各档，不用单值会话态）。
   const boundBatchDoc = reviewType === "design" ? batchDocForReview(agent, documents, callbacks) : null
-  // F13/§14.4 #3：压缩定锚简报（评审参数构建——压缩触发时由 compaction 重挂）。
+  // F13/`ADVISOR-GUARDS.md §2` #3：压缩定锚简报（评审参数构建——压缩触发时由 compaction 重挂）。
   const pinned = buildPinnedBrief(reviewType, documents, object, designToken, designId)
 
   try {
@@ -148,7 +148,7 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
     // the prior table instead of re-reading (three consecutive false reports
     // cited pre-fix line content). Unverified citations must not support a
     // push-back; the parent agent sees the verification report.
-    // F14/§14.5：解析候选 = cwd + 评审对象声明范围派生根（scope = documents + paths）。
+    // F14/`ADVISOR-GUARDS.md §3`：解析候选 = cwd + 评审对象声明范围派生根（scope = documents + paths）。
     let final = result
     if (!result.trimStart().startsWith("Advisor:")) {
       final = appendCitationReport(result, advisorCwd, { scope: [...(documents ?? []), ...(paths ?? [])] })

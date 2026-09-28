@@ -1,20 +1,19 @@
 /**
- * attach.mjs — 输入区附件面（批 B ⑧ · 形态单源 = `docs/desktop/design/UI.md` §1 输入区行「批 B 注」项 2 ·
- *   载荷 / 上限 / 降级面 = `docs/desktop/design/IPC.md` §2「附件注」）：
- *   ① 采集 = `paste` 取剪贴板图像项（`kind === "file"` ∧ `type` 前缀 `image/`）；非图内容**零动作且不吞事件**
- *      ⇒ 文本照粘贴。`FileReader` 转 `dataURL` —— 本档**唯一 IO 点**（零落盘：图面数据随 `msg:send` 入主进程）；
- *      **非栅格拒（「对齐第三批」项 22 · 粘贴即拒）** = 栅格四型（png / jpeg / jpg / gif / webp）之外不入条 +
- *      提示面（`pasteRejects` 取拒表 —— 值源 = VSC `webview/autocomplete.js:126` 同式；主侧判据零动 —— 双闸）；
- *   ② 构树 = 输入区上方附件条（根锚 `data-attachments` · 住 `[data-slot="composer"]` 内）：逐项 = 缩略图
- *      （`img[src=dataURL]`）+ 文件名（**有给才落** —— 无名粘贴不造串）+ 移除控件（`data-action="attach:remove"`
- *      携 `data-attachment-id` · 可及名 = 词键）；**空 ⇒ `null`**（零节点 —— 禁假造空位）；
- *   ③ 出口 = `toImages` 恰形投影 `{ name, mime, dataURL }` 逐项（`id` = 端侧锚位，**不出面**）；
- *   ④ 降级提示行 = 回执 `degraded` 闭集两值（`non-vision` / `partial`）；表外码 ⇒ `null`（不猜、不造串）。
- * 上限与弃项判据（单 15MB / 合计 30MB）归**主进程**——渲染面零预筛：采集照收、回执照示。
+ * attach.mjs — 输入区附件面**残余档**（输入面板上提批 `2026-09-28-desktop-input-vsc-align.md` §2.4 Q3 ∕ P5）：
+ * 采集 ∕ 栅格门 ∕ 芯片条三面随上提入核（`thincoder-render-core/composer/attach.mjs` —— 该档判据面与本档现物
+ * 同源合流），本档只留**载荷与提示两投影**（另半 = 挂件锚，见 `renderer/mount-composer.mjs`）：
+ *   ① 归档码闭集 `DEGRADED_WORD` + `degradedCode`——回执 `degraded` 两值（`non-vision` / `partial`）过闸；
+ *      表外码 ⇒ `null`（不猜、不造串）；单源 = `docs/desktop/design/IPC.md` §2「附件注」项 3 / 项 4；
+ *   ② `toImages`——**载荷投影**（D7 端既有形）：核件面板采集两段（粘贴 ∕ 文件选取）出 `dataURL` 串，
+ *      本函数逐项包为 `{ name, mime, dataURL }`（主侧 `prepareTurnAttachments` 零改须此形）；
+ *      `mime` = dataURL 媒体类型**同源直取**（非第二判据 —— 载荷 `mime` 字段与它同源，见主侧 `attachments.mjs:36-37`）；
+ *      非 dataURL 项 ⇒ 弃项（零假造）；无名粘贴 ⇒ `name: ""`（不造串）；
+ *   ③ `degradedNotice`——B22 附件降级提示行构树（保留行 —— 行形不动；载体 = 宿主挂件锚 `data-composer-notices`）。
+ * 退场面（列明）：`RASTER_MIME` ∕ `pasteImages` ∕ `pasteRejects` ∕ `collectImages` ∕ `fileToDataURL` ∕
+ * `attachmentBar` ∕ `itemNode` ∕ `unsupportedNotice` —— 采集 / 栅格门 / 芯片条归核件；非栅格拒（B9）改核件 toast。
  * 纪律：零 `node:` / 零裸包（渲染面静态闭包判据）；面向用户文案全经 `t()`；本档零 DOM（构树只产描述符）。
  */
 import { t } from "./i18n.mjs"
-import { wire, withKey } from "./views/chat-tool.mjs"
 
 /** 降级码闭集（回执 `degraded` 两值 —— 单源 = `docs/desktop/design/IPC.md` §2「附件注」项 3 / 项 4）。 */
 export const DEGRADED_WORD = Object.freeze({
@@ -22,10 +21,8 @@ export const DEGRADED_WORD = Object.freeze({
   partial: "composer.attach.partial",
 })
 
-/** 栅格四型判据（「对齐第三批」项 22 · 值源 = VSC `webview/autocomplete.js:126` 同式 —— 含非标 `image/jpg`）：
- *  **粘贴即拒** —— 栅格之外（含 `image/svg+xml` / `image/heic` / `image/bmp`）不入条（不静默丢：提示行明示
- *  `${type}`）；主侧判据（`parseDataUrl`）零动 —— 双闸，渲染面拒先达。 */
-export const RASTER_MIME = /^(image\/(png|jpeg|jpg|gif|webp))$/
+/** dataURL 头（媒体类型捕获组 —— `mime` 投影源；字面沿主侧 `parseDataUrl` 同族四型）。 */
+const DATA_URL = /^data:(image\/[a-z0-9.+-]+);base64,/i
 
 const hasText = (value) => typeof value === "string" && value.length > 0
 
@@ -34,129 +31,21 @@ export function degradedCode(value) {
   return typeof DEGRADED_WORD[value] === "string" ? value : null
 }
 
-/** 剪贴板单项判据（文件项 ∧ `image/` 前缀 ⇒ `{ file, name, mime }` ∥ 余 ⇒ `null`）。 */
-function imageItem(item) {
-  if (item?.kind !== "file" || typeof item.getAsFile !== "function") return null
-  const file = item.getAsFile()
-  if (file === null || file === undefined) return null
-  const mime = typeof file.type === "string" ? file.type : ""
-  if (!mime.startsWith("image/")) return null
-  return { file, name: typeof file.name === "string" ? file.name : "", mime }
-}
-
-/** 采集面（纯函数 · 零 IO）：`paste` 事件的剪贴板项 ⇒ **栅格项**逐项 `{ file, name, mime }`（序同剪贴板）；
- *  非栅格图项交 `pasteRejects`（两函数同源判据 `RASTER_MIME` —— 单一实现零副本）。 */
-export function pasteImages(event) {
-  const items = event?.clipboardData?.items
-  if (items === null || items === undefined || typeof items.length !== "number") return []
+/** 载荷投影（恰形 · 通道见 `docs/desktop/design/IPC.md` §2）：核件图列（`dataURL` 串列）⇒
+ *  `{ name, mime, dataURL }` 逐项（`mime` = 媒体类型直取；非 dataURL 项弃 —— 零假造、零改形）。 */
+export function toImages(images) {
+  const list = Array.isArray(images) ? images : []
   const out = []
-  for (let index = 0; index < items.length; index += 1) {
-    const picked = imageItem(items[index])
-    if (picked !== null && RASTER_MIME.test(picked.mime)) out.push(picked)
+  for (const value of list) {
+    const hit = typeof value === "string" ? value.match(DATA_URL) : null
+    if (hit === null) continue
+    out.push({ name: "", mime: hit[1].toLowerCase(), dataURL: value })
   }
   return out
 }
 
-/** 拒表（纯函数 · 零 IO —— 「对齐第三批」项 22 提示行载波）：非栅格**图**项的 mime 串（**去重保序** ——
- *  逐串出词 `${type}`）；无项 / 事件缺 ⇒ `[]`（零抛 —— 采集面同纪律）。 */
-export function pasteRejects(event) {
-  const items = event?.clipboardData?.items
-  if (items === null || items === undefined || typeof items.length !== "number") return []
-  const out = []
-  for (let index = 0; index < items.length; index += 1) {
-    const picked = imageItem(items[index])
-    if (picked === null || RASTER_MIME.test(picked.mime)) continue
-    if (!out.includes(picked.mime)) out.push(picked.mime)
-  }
-  return out
-}
-
-/** 文件读面（`File` ⇒ `dataURL`）：环境缺 `FileReader` ⇒ **拒绝**（采集面响亮弃项，零静默）。 */
-function fileToDataURL(file) {
-  return new Promise((resolve, reject) => {
-    if (typeof FileReader !== "function") {
-      reject(new Error("FileReader unavailable"))
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "")
-    reader.onerror = () => reject(reader.error ?? new Error("read failed"))
-    reader.readAsDataURL(file)
-  })
-}
-
-/** 采集出口（素逻辑薄壳 · 无注入面 —— 平 node 直测以环境桩代 `FileReader`）：逐项读，**读失败 ∥ 空读 ⇒ 弃该项
- *  + 一行诊断**（零静默丢图；配对项 = 读毕才入列 ⇒ 并发粘贴不互覆盖；无图像项 ⇒ 零动作；**采集面自身
- *  抛错 ⇒ 零图 + 一行诊断** —— 本函数零拒绝面）。 */
-export async function collectImages(event) {
-  const out = []
-  let picked = []
-  try {
-    picked = pasteImages(event)
-  } catch (error) {
-    console.error("[attach] paste: clipboard read failed:", error)
-    return out
-  }
-  for (const { file, name, mime } of picked) {
-    try {
-      const dataURL = await fileToDataURL(file)
-      if (hasText(dataURL)) out.push({ name, mime, dataURL })
-      else console.error(`[attach] paste: empty read for ${mime}`)
-    } catch (error) {
-      console.error("[attach] paste: image read failed:", error)
-    }
-  }
-  return out
-}
-
-/** 载荷投影（恰形 · 通道见 `docs/desktop/design/IPC.md` §2）：条目 ⇒ `{ name, mime, dataURL }` 逐项（`id` 不出面）。 */
-export function toImages(attachments) {
-  const list = Array.isArray(attachments) ? attachments : []
-  return list
-    .filter((entry) => hasText(entry?.dataURL))
-    .map((entry) => ({
-      name: typeof entry.name === "string" ? entry.name : "",
-      mime: typeof entry.mime === "string" ? entry.mime : "",
-      dataURL: entry.dataURL,
-    }))
-}
-
-/** 单条目（描述符）：缩略图（有给才落）+ 文件名（有给才落）+ 移除控件（`wire` 两态 —— 零隐藏，锚恒在）。 */
-function itemNode(entry, handlers) {
-  const id = entry?.id ?? ""
-  const children = []
-  if (hasText(entry?.dataURL)) {
-    children.push({ tag: "img", props: { class: "composer-attach-thumb", src: entry.dataURL, alt: "" }, children: [] })
-  }
-  if (hasText(entry?.name)) {
-    children.push({ tag: "span", props: { class: "composer-attach-name" }, children: [entry.name] })
-  }
-  children.push({
-    tag: "button",
-    props: wire(
-      {
-        class: "composer-attach-remove", "data-action": "attach:remove", "data-attachment-id": id,
-        "aria-label": t("composer.attach.remove"),
-      },
-      withKey(handlers?.onRemoveAttachment, id),
-    ),
-    children: [],
-  })
-  return { tag: "div", props: { class: "composer-attach" }, children }
-}
-
-/** 附件条构树（描述符 · 零 DOM）：**空 ∥ 非数组 ⇒ `null`**（调用方按空位跳过 —— 零节点）。 */
-export function attachmentBar(attachments, handlers = {}) {
-  const list = Array.isArray(attachments) ? attachments : []
-  if (list.length === 0) return null
-  return {
-    tag: "div",
-    props: { class: "composer-attachments", "data-attachments": "" },
-    children: list.map((entry) => itemNode(entry, handlers)),
-  }
-}
-
-/** 降级提示行构树（闭集表外 ∥ 缺 ⇒ `null`）：锚 `data-notice="attach-degraded"` · 码字面住 `data-degraded`。 */
+/** 降级提示行构树（B22 保留行 —— 闭集表外 ∥ 缺 ⇒ `null`）：锚 `data-notice="attach-degraded"` · 码字面住
+ *  `data-degraded`；行形 ∕ 锚不动（载体 = 宿主挂件锚 `data-composer-notices`）。 */
 export function degradedNotice(code) {
   const word = DEGRADED_WORD[code]
   if (typeof word !== "string") return null
@@ -164,16 +53,5 @@ export function degradedNotice(code) {
     tag: "div",
     props: { class: "composer-notice", "data-notice": "attach-degraded", "data-degraded": code },
     children: [t(word)],
-  }
-}
-
-/** 非栅格拒提示行构树（「对齐第三批」项 22 —— `composer-notice` 单形；`${type}` 入词）：mime 缺 / 非串 / 空 ⇒ `null`
- *  （零节点 —— 禁假造）；类名 / 锚单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」P22。 */
-export function unsupportedNotice(type) {
-  if (typeof type !== "string" || type === "") return null
-  return {
-    tag: "div",
-    props: { class: "composer-notice", "data-notice": "attach-unsupported" },
-    children: [t("paste.unsupportedFormat", { type })],
   }
 }

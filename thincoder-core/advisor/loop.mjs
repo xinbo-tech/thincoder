@@ -3,7 +3,7 @@
  * review timeline (split out of advisor/run.mjs, 第 11 批 — run.mjs was 498/500
  * 硬帽；拆分保持既有 import 面：run.mjs 继续 re-export 本文件导出）。
  *
- * 第 11 批（F15/§14.6）：每次 chat 调用携带硬墙信号（`AbortSignal.any([signal,
+ * 第 11 批（F15/`ADVISOR-GUARDS.md §4`）：每次 chat 调用携带硬墙信号（`AbortSignal.any([signal,
  * AbortSignal.timeout(remaining)])`；墙判定绑信号状态——抛错 / partial 两形态同判），
  * 并按 0.75 一次性预算提示 + 结构化超时尾收尾；守卫与限额函数在 compaction.mjs。
  */
@@ -56,7 +56,7 @@ export { advisorToolsFor, advisorToolsFor as _advisorToolsFor }
  * the panel keeps moving while the advisor explores — otherwise the panel sits
  * frozen through every tool-call phase and the review appears to have stalled.
  *
- * @param {string|null} [pinned] — 第 11 批：压缩定锚简报（评审参数构建——F13/§14.4 #3）。
+ * @param {string|null} [pinned] — 第 11 批：压缩定锚简报（评审参数构建——F13/`ADVISOR-GUARDS.md §2` #3）。
  * @param {{now?: Function, chat?: Function, describeArgs?: Function}} [seams] — 测试缝 + ④ 端差注入点
  *   （默认 Date.now / chat / 无进度行——生产调用不传时进度行由端装配层补齐）。
  */
@@ -91,7 +91,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
   let reviewTextProduced = false
   let budgetNudged = false
   const startTime = now()
-  // 第 25 批（§16.3）：上下文预算跟随评审模型窗口——`providerSpec`（模型规格表 × provider 级
+  // 第 25 批（`ADVISOR-GUARDS.md §8`）：上下文预算跟随评审模型窗口——`providerSpec`（模型规格表 × provider 级
   // context 覆盖）派生；函数体内、while 轮次外一次性（provider 全场不变），两档消费见下守卫。
   const budget = advisorContextBudget(provider)
 
@@ -106,11 +106,11 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
     const timeoutMs = (Number.isFinite(cfg) && cfg > 0) ? cfg : REVIEW_TIMEOUT_MS
     const elapsed = now() - startTime
     const remaining = timeoutMs - elapsed
-    // 硬墙（§14.6 #1）：预算用尽 → 结构化超时尾（首行 = 判定族 timeout 前缀）。
+    // 硬墙（`ADVISOR-GUARDS.md §4` #1）：预算用尽 → 结构化超时尾（首行 = 判定族 timeout 前缀）。
     if (remaining <= 0) {
       return renderTimeline(timeline, timeoutTail(timeoutMs, turns, toolCallCount, reviewTextProduced))
     }
-    // 0.75 一次性预算提示（§14.6 #2——同一检查点、每场评审至多一次）：注入一条 user 消息
+    // 0.75 一次性预算提示（`ADVISOR-GUARDS.md §4` #2——同一检查点、每场评审至多一次）：注入一条 user 消息
     // 促模型在墙前收敛产出（不改语义判据、不碰提示词面）。
     if (shouldBudgetNudge(elapsed, timeoutMs, budgetNudged)) {
       budgetNudged = true
@@ -143,9 +143,9 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
     // reasoning continues right where the placeholder sits.
     onOutput?.({ kind: "think", text: ADVISOR_THINKING_PLACEHOLDER })
 
-    // 硬墙（§14.6 #1）：单次请求信号 = 用户信号 × 本调用 deadline（remaining）。复合信号
+    // 硬墙（`ADVISOR-GUARDS.md §4` #1）：单次请求信号 = 用户信号 × 本调用 deadline（remaining）。复合信号
     // 无条件传入（上层检查与本调用之间的中止仍必须取消请求——已 aborted 的 composite 使请求
-    // 立即失败）；此处改正了原指向 provider/core.mjs 组合 AbortSignal 的陈旧注释（§14.10 #3）。
+    // 立即失败）；此处改正了原指向 provider/core.mjs 组合 AbortSignal 的陈旧注释。
     const callSignal = signal
       ? AbortSignal.any([signal, AbortSignal.timeout(remaining)])
       : AbortSignal.timeout(remaining)
@@ -171,7 +171,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
         },
       })
     } catch (e) {
-      // 墙判定绑信号状态（§14.6 #1——非异常名）：① 用户信号已中止 ⇒ 原样上抛（中断语义
+      // 墙判定绑信号状态（`ADVISOR-GUARDS.md §4` #1——非异常名）：① 用户信号已中止 ⇒ 原样上抛（中断语义
       // 零变）；② 复合信号已中止（墙触发）而用户信号未中止 ⇒ 结构化超时尾（形态①：抛错；
       // AbortError / TimeoutError 两名兜底——AbortSignal.timeout 的 reason 是 TimeoutError
       // DOMException）；③ 其余错误原样上抛（runAdvisorReview 的失败分类不变）。
@@ -182,7 +182,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
       throw e
     }
     if (signal?.aborted) return renderTimeline(timeline, "Advisor: interrupted.")
-    // 形态②（§14.6 #1）：不抛错而返回 partial（流已有内容时中断以 partial:true 透传）——
+    // 形态②（`ADVISOR-GUARDS.md §4` #1）：不抛错而返回 partial（流已有内容时中断以 partial:true 透传）——
     // 不得按普通结果收尾：墙触发（复合信号已中止）同判。
     if (callSignal.aborted && response?.partial) {
       return renderTimeline(timeline, timeoutTail(timeoutMs, turns, toolCallCount, reviewTextProduced))

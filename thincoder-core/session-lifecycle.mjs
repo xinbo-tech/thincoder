@@ -173,8 +173,10 @@ export function applySession(agent, data, opts = {}) {
     agent.activeModel = slotModel
     agent.provider = { ...slotProvider }
     if (slotModel) agent.provider.model = slotModel
-    // 重算 compactThreshold（auto 时——阈值跟模型走；原在 bin 的 switched 分支——收拢本处）
-    if (switched && agent.config?.agent?.compactThresholdAuto && agent.provider.model) {
+    // 重算 compactThreshold（auto 时——阈值跟模型走；原在 bin 的 switched 分支——收拢本处）。
+    // 非串 model（外端脏载 / 手工档）⇒ 不重算：`resolveCompactThreshold → providerSpec` 链在非串
+    // model 上 `.toLowerCase` 可抛（#441④ 抛错径收敛）；与下方档位块同口径——类型脏载不中断恢复。
+    if (switched && agent.config?.agent?.compactThresholdAuto && typeof agent.provider.model === "string" && agent.provider.model) {
       agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
     }
     // 会话级档位施加（§6.21 判据句 4——在模型合并支之后，以**合并后**的 `provider.model` 判 spec；
@@ -251,7 +253,8 @@ export async function newSession(cwd, opts = {}) {
   // （原字面逐字同形——并入后随其带创建端 = 本端名）。
   const data = newSlotData(cwd)
   writeSessionFile(slotPath(cwd, slot), data)
-  m.slots[slot] = slotDigest(data)
+  // 摘要 `ts` 地板入参（#503 同族随动——保存面写后取 mtime；`slotMtime` 读失败 ⇒ null ⇒ 裸墙钟）
+  m.slots[slot] = slotDigest(data, slotMtime(cwd, slot))
   m.active = slot
   // 2026-08-31 advisor round1 🟡：与 ensureActive 认领模型一致——立即记录新 slot 所有权，
   // 否则 /new 后到首次保存之间并发方（VS Code/另一 CLI）会把新 active 槽当"空闲可恢复"

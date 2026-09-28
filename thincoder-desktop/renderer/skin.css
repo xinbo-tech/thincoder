@@ -1,0 +1,13 @@
+/* skin.css — 皮肤与交互态尾段（自 `renderer/styles.css` 四拆 —— 会话模型轮 R13：滚动条皮肤 + 会话头 chip 交互态
+   两族留存；原左列 ∕ 标签条两族成员随两面裁撤退场，会话控制面交互态随面住 `chrome.css`）。 */
+
+/* 滚动条皮肤（D24 R6 · 全局 · 零变量）：10px · 轨 / 角透明 · thumb = `--fg` 22%（2px 透明边 · clip padding-box · 圆角 6px）· hover ⇒ 35%——盖各滚动容器与设置面板。 */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--fg) 22%, transparent); border: 2px solid transparent; border-radius: 6px; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--fg) 35%, transparent); }
+/* 交互态组（D24 项 2 · 本注定形）：chip 特例 ⇒ 三值落 `.head-field`（`:focus-within` —— 可聚焦面 = 内嵌 `.head-pick`）。 */
+.head-field:hover { background: var(--hover-bg); }
+.head-field:not(:disabled):active { background: var(--hover-bg-strong); }
+.head-field:focus-within { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--hover-bg-strong); }

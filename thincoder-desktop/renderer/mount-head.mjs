@@ -5,7 +5,7 @@
  *      `models` = **现行 provider** 的 `model:list` 元素（形 `{ id, effortEnum, thinkOff }` —— 档位候选面
  *      单源 = `docs/desktop/design/IPC.md` §2 该行「批 B 增」）；模型标识投影单源 = `views/settings-sections.mjs`
  *      `modelIdOf`（本档写面同用 ⇒ **选项值与写值同一投影**）。
- *   ② 写路 `onField(name, value)`：通道 `session:prefs { key, patch }`（`key` = 活动标签键；字段闭集 = 头面三值）；
+ *   ② 写路 `onField(name, value)`：通道 `session:prefs { key, patch }`（`key` = 活动会话键；字段闭集 = 头面三值）；
  *      `provider` 变更**同送 `model`** = 新 provider 首候选（否则核拒 `model-required` 零写 —— IPC.md §2「会话级
  *      偏好注」项 7）；**零乐观写**（store 不动，控件值恒来自 store 现态 ⇒ 失败径即回退）；回执 `meta` ⇒
  *      `store.set({ sessionMeta: { ...表, [key]: meta } })` ⇒ 外壳切片随动 ⇒ **就位刷本行**；`ok` 假 ∥ 抛 ∥
@@ -98,7 +98,7 @@ export function attachHead(options = {}) {
   /** 写路（见档头 ②）：三值闭集 ∧ 活动会话在场 ∧ **非忙态**（P23）才发通道；失败径一律回退 + 记错。 */
   async function onField(name, value) {
     const state = store.get()
-    const key = state?.activeTab ?? null
+    const key = state?.activeSession ?? null
     if (key === null || !PICK_FIELDS.includes(name)) {
       console.error(`[renderer] session:prefs skipped: no active session / unknown field: ${String(name)}`)
       onRepaint()

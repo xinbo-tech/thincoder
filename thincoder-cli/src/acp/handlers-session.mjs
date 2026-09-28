@@ -18,6 +18,9 @@ import { loadManifest, normalizeCwd, bindRecordStore, newSession, saveManifest, 
 // core `session.mjs` 未 re-export 该名——直引 manifest 档，先例 = `thincoder-vscode/src/extension/session-io.mjs`）。
 import { staleClaims } from "@thincoder/core/session-slots-manifest.mjs"
 import { PLAN_ENGINEERING_REFUSED } from "@thincoder/core/agent-tools/plan.mjs"
+// #363①（off 形族单源——MODEL-SPECS.md §16.2）：thinking 开关的取形引核（本档零副本）。
+import { thinkOffShape } from "@thincoder/core/think-off.mjs"
+import { providerSpec } from "@thincoder/core/config.mjs"
 import { ACP_ERRORS } from "./transport.mjs"
 
 /** ENG-PLAN-EXCLUSION（FR31 ② · E7「命令面逐面钉定」）：工程真值 = 核单源同键
@@ -85,7 +88,15 @@ export function applyConfigOption(agent, configId, value) {
     }
     case "thinking": {
       if (typeof value !== "boolean" || !agent.provider) return false
-      agent.provider.thinking = value ? { type: "enabled" } : { type: "disabled" }
+      // off 取形 = 核单源（MODEL-SPECS.md §16.2——#363①）：effort 族 ⇒ `null`（载荷门据其补发
+      // `reasoning_effort:"none"` = 唯一有效 off 路径）；其余族 ⇒ `{ type:"disabled" }`。旧形
+      // 全族一形 `{type:"disabled"}` 在 effort 族被载荷层 falsy 跳过 ⇒ 关思考静默失效。
+      // on 侧同引核（thinkEnabledValue——自定义开值族 MiniMax = "adaptive"）。
+      const spec = providerSpec(agent.provider)
+      agent.provider.thinking = value ? { type: spec.thinkEnabledValue ?? "enabled" } : thinkOffShape(spec)
+      // effort 族：`null` 标记在载荷层由「无显式档」门控（provider/core.mjs:193 显式档优先会
+      // 跳过标记）⇒ off 清档位（与 CLI `/think off` 同法——cmd-think.mjs `applyThink` off 支）。
+      if (!value) delete agent.provider.reasoningEffort
       return true
     }
     case "mode": {

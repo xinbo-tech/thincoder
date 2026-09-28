@@ -305,11 +305,11 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     let declined = false // review #1: guard against double-settle when onDeclined fired
 
     // Turn-cap continue loop (TURN-CAP-CONTINUE.md) via runWithContinue (§7.2 D3): hitting
-    // the cap asks the user via the SAME y/n panel the main agent uses — unlimited
-    // continues, each with a fresh turn budget AND a re-armed wall-clock watchdog (a
-    // continue is a fresh budget, the clock restarts too). Parallel consultants serialize
-    // their prompts through a session-level queue. Declined / headless → failed reply
-    // (partial diagnosis).
+    // the cap reports to the PARENT agent through the turn-cap checkpoint — the user y/n
+    // card is gone (F8; see the askContinue hook below). Each grant = a fresh turn budget
+    // AND a re-armed wall-clock watchdog (a continue is a fresh budget, the clock restarts
+    // too). Parallel consultants serialize their prompts through a session-level queue.
+    // Declined / headless → failed reply (partial diagnosis).
     const runner = ctx.runAgent ?? runAgent
     try {
       const result = await runWithContinue(

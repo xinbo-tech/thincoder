@@ -112,7 +112,7 @@ export const getCurrentTimeTool = {
 
 // ─── wait_for ───────────────────────────────────────────────────
 
-/** wait_for bounds (TOOLS.md §16): a BUILT-IN ceiling replaces the unbounded
+/** wait_for bounds: a BUILT-IN ceiling replaces the unbounded
  *  sleep-then-wait — timeout_ms defaults to 30s (config.json agent.waitForTimeoutMs
  *  overrides), capped at WAIT_FOR_MAX_TIMEOUT_MS (600s — the execute-tool timeout
  *  convention, Math.min(t, 600_000)); interval_ms defaults to 1s with a 100ms
@@ -122,7 +122,7 @@ export const WAIT_FOR_MAX_TIMEOUT_MS = 600_000
 export const WAIT_FOR_DEFAULT_INTERVAL_MS = 1_000
 export const WAIT_FOR_MIN_INTERVAL_MS = 100
 
-// Condition-source seam (§16 评审 #4): production uses the real evaluator
+// Condition-source seam (评审 #4): production uses the real evaluator
 // (evaluateWaitForCondition); tests inject a deterministic fake source via
 // setWaitForConditionSource (default null — production path unchanged).
 let injectedConditionSource = null

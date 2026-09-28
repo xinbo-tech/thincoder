@@ -22,6 +22,8 @@ import {
   slotPath, writeSessionFile, loadManifest, saveManifest, slotDigest,
   activeSlot, writeEndMarker,
 } from "./session-slots.mjs"
+// 摘要打点单源（#503 地板——与 session-lifecycle 同径直引；静态环同族，函数体内运行时使用）。
+import { digestTs } from "./session-slots-manifest.mjs"
 // F2 轮转守卫自 2026-09-08 迁至 session-guard.mjs（session-slots 再越 500 行硬限拆分）
 import { guardForeignSlotFile } from "./session-guard.mjs"
 import { engTokenSlotFields } from "./token-ttl.mjs"
@@ -81,8 +83,9 @@ export function sessionDescriptor(agent, data) {
   return { history: full, total: full.length, base: 0 }
 }
 
-/** 槽摘要（记录存储绑定路径——history 不物化）：与 slotDigest(extractSlotMeta) 同形。 */
-function digestFromStore(fields, counters) {
+/** 槽摘要（记录存储绑定路径——history 不物化）：与 slotDigest(extractSlotMeta) 同形（含
+ *  `ts` 打点单源 `digestTs`——#503：`mtimeMs` 为该档写后取（缺省 ⇒ 裸墙钟回溯）。 */
+function digestFromStore(fields, counters, mtimeMs) {
   const meta = {
     messageCount: counters.total,
     turnCount: counters.userReal,
@@ -94,7 +97,7 @@ function digestFromStore(fields, counters) {
   if (fields.activeModel) meta.activeModel = fields.activeModel
   // 创建端（SLOT-END-PARAM 批 §6.20 判据句 4 读面——有值才带；老槽无键 ⇒ 键缺席 = 未知）
   if (fields.createdBy) meta.createdBy = fields.createdBy
-  return { ts: Date.now(), ...meta }
+  return { ts: digestTs(mtimeMs), ...meta }
 }
 
 /** Save agent state to the active slot file (atomic write). `display` (the old
@@ -168,14 +171,19 @@ export function saveSession(agent) {
   // 绑定态 → 流式投影（段原文拼接——VSC 兼容面逐字同形）；未绑定 → 既有全量物化写
   if (agent._recordStore) saveProjectedSlot(agent, p, fields, contextHistory)
   else writeSessionFile(p, { ...fields, history: legacyHistory(agent), contextHistory })
-  // 记录我们刚写的 mtime——下次保存跳过重复解析
-  try { agent._slotMtime = statSync(p).mtimeMs } catch {}
+  // 记录我们刚写的 mtime——下次保存跳过解析（缓存 = `{p, mtimeMs}` 按路径命中：#386）+
+  // 摘要 `ts` 地板入参（#503：保存面**写后取** mtime——同族先例 session-slot-verify.mjs:99）。
+  let wroteMtimeMs
+  try {
+    wroteMtimeMs = statSync(p).mtimeMs
+    agent._slotMtime = { p, mtimeMs: wroteMtimeMs }
+  } catch { /* stat 失败 ⇒ 缓存不动 / 摘要裸墙钟回溯 */ }
   // Update slot metadata in manifest
   try {
     const m = loadManifest(agent.cwd)
     m.slots[slot] = agent._recordStore
-      ? digestFromStore(fields, agent._recordStore.counters())
-      : slotDigest({ ...fields, history: legacyHistory(agent) })
+      ? digestFromStore(fields, agent._recordStore.counters(), wroteMtimeMs)
+      : slotDigest({ ...fields, history: legacyHistory(agent) }, wroteMtimeMs)
     saveManifest(agent.cwd, m)
   } catch (e) {
     // Manifest update failure is non-fatal — data is safe, metadata will lazy-recover on next listSlots

@@ -12,6 +12,10 @@ import { proxyFetch } from "./proxy.mjs"
 // D7（2026-09-21 块标题行对齐批——标题链单源）：首条真实 user 消息谓词收核单源
 // （`isRealUserMsg`——纯函数零依赖，无环）。
 import { isRealUserMsg } from "./history-window.mjs"
+// #363③（off 形族单源——MODEL-SPECS.md §16.2 / §16.4）：禁思考形与「是否可禁」一律引核
+// （`thinkOffShape` / `thinkOffPath`——本档零副本）；spec 查表同单源（`specForModel`）。
+import { specForModel } from "./model-specs.mjs"
+import { thinkOffShape, thinkOffPath } from "./think-off.mjs"
 
 // Test seam (_-prefix, mirrors run.mjs seams): lets the proxy-branch regression
 // test swap the proxy fetch. The branch it exercises used to carry a dynamic
@@ -31,6 +35,12 @@ export async function generateTitle(userContent, provider) {
   if (typeof userText !== "string" || userText.length < 10) return null
   if (!provider?.apiKey || !provider?.baseURL || !provider?.model) return null
 
+  // #363③：禁思考形（三格式支共用）——off 取形与可宣称性引核单源：`thinkOffPath` 假
+  // （thinkAlwaysOn 族）或 `thinkOffShape` 为 `null`（effort 族——`null` 形是核载荷门的
+  // 约定，本档无门）⇒ 不发禁形（假标记：被服务端拒 / 静默失效）。
+  const spec = specForModel(provider.model)
+  const offShape = thinkOffPath(spec) ? thinkOffShape(spec) : null
+
   try {
     const system = "Generate a concise title (max 40 chars, no quotes) for this conversation. Reply ONLY with the title."
     const text = userText.slice(0, 200)
@@ -43,7 +53,7 @@ export async function generateTitle(userContent, provider) {
         messages: [{ role: "user", content: text }],
         max_tokens: MAX_TITLE_TOKENS,
         stream: false,
-        thinking: { type: "disabled" }, // IK9UZ8：不让 reasoning 吃掉输出预算
+        ...(offShape !== null ? { thinking: offShape } : {}), // IK9UZ8：不让 reasoning 吃掉输出预算
       })
       extract = (data) => data.content?.map((b) => b.text || "").join("")
     } else if (provider.format === "google") {
@@ -51,7 +61,11 @@ export async function generateTitle(userContent, provider) {
       body = JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents: [{ role: "user", parts: [{ text }] }],
-        generationConfig: { maxOutputTokens: MAX_TITLE_TOKENS, thinkingConfig: { thinkingLevel: "none" } }, // IK9UZ8
+        generationConfig: {
+          maxOutputTokens: MAX_TITLE_TOKENS,
+          // google 格式自身的关思考形（wire 原生——非族别取形副本）；无有效 off 路径 ⇒ 零发
+          ...(offShape !== null ? { thinkingConfig: { thinkingLevel: "none" } } : {}),
+        }, // IK9UZ8
       })
       extract = (data) => data.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("")
     } else {
@@ -65,7 +79,9 @@ export async function generateTitle(userContent, provider) {
         // leave content empty (IK9UZ8). Providers that don't accept the field ignore it
         // (OpenAI-compatible convention). A 40-char title wants ~60–80 tokens, so 100 is
         // ~2.5x headroom (design decision — docs/core/design/SESSION.md §6.7).
-        thinking: { type: "disabled" },
+        // #363③：形自核单源（`thinkOffShape`——type 族 = `{type:"disabled"}`；无有效 off 路径
+        // 族不发——见上方 offShape 取形）。
+        ...(offShape !== null ? { thinking: offShape } : {}),
         max_tokens: MAX_TITLE_TOKENS,
         stream: false,
       }

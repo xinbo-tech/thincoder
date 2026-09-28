@@ -19,7 +19,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { dirname, resolve } from "node:path"
 
 import {
-  SEGMENT_BY_ROLE, STATUS_WORDS, STATUS_LINE_RE, readBatchStatusLine, sectionHeaderRe, batchSkeleton,
+  SEGMENT_BY_ROLE, STATUS_WORDS, STATUS_LINE_RE, readBatchStatusLine, sectionHasStatusLine, sectionHeaderRe, batchSkeleton,
   TEMPLATE_PLACEHOLDERS, findPlaceholderResidue, placeholderResidueError,
 } from "./batch-skeleton.mjs"
 import { resolveBatchCreatePath } from "./batch-paths.mjs"
@@ -56,8 +56,22 @@ function assertMainAgentOnly(ctx, action, review) {
   }
 }
 
+/** 递归收集目录下全部 `*.md`（#369 · KD-4：显式嵌套路径为合法 create 面 ⇒ 顶层平扫会欠计
+ *  ⇒ 复数情形漏判、默认定位可落非预期档）。只认真目录（`dirent.isDirectory()`——symlink 不入，
+ *  防环）；单目录读错按无候选处理（尽力面，同旧平扫）。 */
+function collectMarkdownFiles(dir, out = []) {
+  let entries = []
+  try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return out }
+  for (const e of entries) {
+    const abs = resolve(dir, e.name)
+    if (e.isDirectory()) collectMarkdownFiles(abs, out)
+    else if (e.isFile() && e.name.endsWith(".md")) out.push(abs)
+  }
+  return out
+}
+
 /**
- * depth-0 目标定位（D-BR21）：扫描全部基底根下 `*.md`，逐档读 §1 状态行判定 open
+ * depth-0 目标定位（D-BR21）：扫描全部基底根下 `*.md`（**递归**——#369），逐档读 §1 状态行判定 open
  * （readBatchStatusLine === "open"）。0 个 ⇒ throw（无在飞批）；恰 1 个 ⇒ 返回该档绝对路径；
  * ≥2 ⇒ throw（复数在飞批——必传 path，错误消息列出候选）。
  * 基底根数组由主档传入（batchDocBases——声明面单源，恒非空）；单根目录读错按无候选处理。
@@ -69,11 +83,7 @@ export function findInFlightBatch(cwd, bases) {
   void cwd
   const candidates = []
   for (const root of bases ?? []) {
-    let entries = []
-    try { entries = readdirSync(root) } catch { continue }
-    for (const name of entries) {
-      if (!name.endsWith(".md")) continue
-      const abs = resolve(root, name)
+    for (const abs of collectMarkdownFiles(root)) {
       let src
       try { src = readFileSync(abs, "utf8") } catch { continue }
       if (readBatchStatusLine(src) === "open") candidates.push(abs)
@@ -162,6 +172,25 @@ function updateSectionStatusLine(src, seg, value) {
   return src.slice(0, hdr.index) + lines.join(eol) + src.slice(endIdx)
 }
 
+/** §6 段体非空白内容判据（#422①——close 前闸：段头行余文（标题文本）不计入内容；
+ *  §6 段头缺失同判空——create 是骨架唯一权威入口）。 */
+function sectionSixHasContent(src) {
+  const hdr = sectionHeaderRe(6).exec(src)
+  if (!hdr) return false
+  const nextRe = /^## §\d/gm
+  nextRe.lastIndex = hdr.index + hdr[0].length
+  const next = nextRe.exec(src)
+  const body = src.slice(hdr.index + hdr[0].length, next ? next.index : src.length)
+  const nl = body.indexOf("\n") // 跳过段头行余文（`## §6 …` 的标题部分）
+  return (nl >= 0 ? body.slice(nl + 1) : "").trim() !== ""
+}
+
+/** §6 空闸拒绝句（#422①——空 ⇒ 拒 + 提示先写 §6；防「append 被拒 ⇒ close 照常 ⇒ §6 永久为空」
+ *  复发——2026-09-26 dispatch-sizing 批实证）。 */
+function emptySectionSixError() {
+  return "batch: §6 收口段为空（non-empty gate）— close refuses: the closeout section (§6) has no content, and closing would freeze the record with that section permanently empty. Write the section first (append §6: the closeout / verification summary), then call close again. Nothing was written."
+}
+
 /** 冻结门（§4.9——append/status 同门；close 视为写同样过门）：closed/unknown 的错误串与
  *  append 面同字面（「已收口档不回改」/「状态行不可解析或缺失」）。 */
 function assertGateOpen(src) {
@@ -170,7 +199,7 @@ function assertGateOpen(src) {
     throw new Error("batch: 已收口档不回改 — the record's §1 status line contains 「已收口」, so the record is frozen: its body is never written to again (整档冻结；改 = 新批新档). Nothing was written.")
   }
   if (gate === "unknown") {
-    throw new Error("batch: 状态行不可解析或缺失 — the record has no §1 `**状态行**：` line whose value contains 已收口 or 进行中 (fail-closed: the write is refused as if frozen). Nothing was written.")
+    throw new Error("batch: 状态行不可解析或缺失 — the record has no §1 `**状态行**：` line whose value contains 已收口 or 进行中 (fail-closed: the write is refused as if frozen). Nothing was written. Do NOT close the record after a refused append — nothing landed, and closing freezes the missing section for good (失败 ⇒ 勿 close).")
   }
 }
 
@@ -278,13 +307,20 @@ export function statusBatchRecord({ args, ctx, review, pickTarget, onWritten }) 
  * close——收口冻结（§4.13，仅 depth-0）。§1 状态行 →「已收口 <YYYY-MM-DD>」；此后该档
  * append/status 全拒（冻结判据唯一真值 = §1 行——§4.9 零语义变）。对已收口档再 close ⇒ 拒
  * （close 本身是对冻结档的写）。不代写 §6 内容、不替代台账核销事务。
+ * 前提三规则（#422）：① §6 非空闸（空 ⇒ 拒 + 提示先写 §6）；② 拒句含「失败 ⇒ 勿 close」
+ * （append/status 面——见 batch.mjs 与上方 assertGateOpen）；③ 无状态行档 ⇒ 自建机读位
+ * （updateSectionStatusLine 缺失即插——同路收口；「有行但不可解析」仍 fail-closed）。
  * @returns {string} 成功消息
  */
 export function closeBatchRecord({ args, ctx, review, pickTarget, onWritten }) {
   assertMainAgentOnly(ctx, "close", review)
   const abs = pickTarget(args?.path)
   const src = readFileSync(abs, "utf8")
-  assertGateOpen(src)
+  // #422③：§1 无状态行档 ⇒ 自建机读位（下行走 updateSectionStatusLine 缺失即插——同路收口）；
+  // 「有行但不可解析」维持 fail-closed（assertGateOpen 拒——防误冻结）。
+  if (readBatchStatusLine(src) !== "open" && sectionHasStatusLine(src, 1)) assertGateOpen(src)
+  // #422①：§6 非空闸（空 ⇒ 拒 + 提示先写 §6）——防「append 被拒 ⇒ close 照常 ⇒ §6 永久为空」复发。
+  if (!sectionSixHasContent(src)) throw new Error(emptySectionSixError())
   const date = todayLocal()
   const written = updateSectionStatusLine(src, 1, `已收口 ${date}`)
   writeFileSync(abs, written)

@@ -44,6 +44,9 @@ export function renderQuestionCard(model = {}, deps = {}) {
     input.type = "text"
     input.placeholder = placeholder
     input.addEventListener("keydown", (e) => {
+      // IME 组字门（R1 小修——父侧裁 2026-09-28）：组合期回车 = 选字确认（归输入法）⇒ 零提交零防默认
+      // （判据同族 = composer/panel.mjs:179 两臂：`isComposing` ∕ `keyCode 229` 兜底）。
+      if (e.isComposing || e.keyCode === 229) return
       if (e.key === "Enter" && input.value.trim()) answer(input.value.trim())
     })
     actions.appendChild(input)

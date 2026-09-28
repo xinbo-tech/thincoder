@@ -1,0 +1,46 @@
+/* model-menu.css — 模型菜单 / 推理下拉样式（**静态承载** —— 2026-09-28 输入逻辑收正轮：
+ * 原 JS 注入形（`model-menu-css.mjs` 的 `createElement("style")` + `textContent`）在 VSC 侧可过（CSP 含
+ * `unsafe-inline`），在桌面侧**依 CSP 语义被拒**（`renderer/index.html:7` `style-src 'self'` + 
+ * `test/guard-closure.test.mjs` U7 显式禁 `unsafe-*`）⇒ 收正为静态资产：两端各以自身静态装载形引入本档
+ * （VSC = `webview/controls.css` `@import`；桌面 = `renderer/mount-composer.mjs` 注 `<link>`）。
+ *
+ * 规则体 = 原注入串**逐字**（`webview/model-menu.js:30-74` 自 VSC 原件出档的同一份 CSS 字面，语义零改）；
+ * 变量族 = 桌面 C2 别名块（`renderer/chat.css`）覆盖的近 VSC 键 + `--vscode-*` 回退值（同 `composer.css` 口径）。
+ */
+
+.mm-overlay { position: fixed; inset: 0; z-index: 1000; }
+.mm-panel {
+  position: fixed; z-index: 1001; min-width: 260px; max-width: 420px; max-height: 340px;
+  overflow-y: auto; overflow-x: visible;
+  background: var(--vscode-dropdown-background, #252526);
+  border: 1px solid var(--border, #454545); border-radius: 6px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.35); font-size: 12px;
+  color: var(--fg, #ccc);
+}
+.mm-row {
+  padding: 6px 12px; cursor: pointer; display: flex; align-items: center;
+  justify-content: space-between; gap: 8px; white-space: nowrap;
+}
+.mm-row:hover { background: var(--vscode-list-hoverBackground, rgba(255,255,255,.06)); }
+.mm-row .mm-sub { opacity: .55; font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+.mm-row .mm-arrow { opacity: .5; margin-left: 4px; }
+.mm-row[aria-selected="true"] { background: var(--vscode-list-activeSelectionBackground, rgba(0,120,212,.25)); }
+.mm-sep { height: 1px; background: var(--border, #454545); opacity: .5; margin: 4px 0; }
+.mm-manage { opacity: .75; font-size: 11px; }
+.mm-flyout {
+  position: fixed; z-index: 1002; min-width: 180px; max-height: 320px; overflow-y: auto;
+  background: var(--vscode-dropdown-background, #252526);
+  border: 1px solid var(--border, #454545); border-radius: 6px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.35); font-size: 12px; color: var(--fg, #ccc);
+}
+.mm-flyout .mm-row .mm-check { color: var(--accent, #4ec9b0); }
+.mm-filter {
+  width: calc(100% - 18px); margin: 5px 9px 3px; padding: 4px 6px;
+  box-sizing: border-box; min-width: 0;
+  background: var(--vscode-input-background, #3c3c3c); color: var(--vscode-input-foreground, #ccc);
+  border: 1px solid var(--vscode-input-border, #555); border-radius: 4px; font-size: 12px;
+  outline: none;
+}
+.mm-filter:focus { border-color: var(--vscode-focusBorder, #0078d4); }
+.mm-filter-nomatch { padding: 8px 12px; opacity: .6; }
+.mm-loading { padding: 8px 12px; opacity: .6; }

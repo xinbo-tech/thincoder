@@ -1,88 +1,12 @@
 /**
- * send.js — the send path: input history bookkeeping, turn-start state, panel
- * reset, and the userMessage post.
+ * send.js — 提交面接线（提交逻辑单源 = 核 `composer/panel.mjs`；本档原 89 行整体搬核）。
+ *
+ * 核内提交面已内生发送钮绑定（`panel.mjs` 两钮点击段），Enter 由核键位面直调同一函数 —— 两入口同门
+ * （守卫 ∕ 满队 ∕ 排队受理 ∕ 清框判据全在核内）。本档保留端侧提交入口（外部触发点 = 装配 ∕ 测试）。
  */
-import { ctx, vscode, S } from "./state.js"
-import { t } from "./i18n.js"
-import { addUser } from "./ui.js"
-import { markPending, QUEUED_MAX_ITEMS } from "./queued-mark.js"
-import { setLoading } from "./loading.js"
-import { clearPanels } from "./panels.js"
-import { showToast } from "./toast.js"
+import { composer } from "./input.js"
 
+/** 提交入口：转发到发送钮内生路径（`#send-btn` = 结构单源 id；查询域 = 面板子树内，防同 id 双存干扰）。 */
 export function send() {
-  const text = ctx.inputEl.value.trim()
-  // INPUT-LOCK-ASYNC（C'——2026-09-09）→ C-B2-6（busy-extend 批 2026-09-22）：busy
-  // （S._turnState==="running"——回合/digest/标题窗口——与 loading.js 同判据）send 出口守卫 =
-  // **排队受理**（本地气泡 + queuedUserMessage；槽满 = 不出泡 + toast）；busy 期输入框不禁
-  // （readOnly 锁已移除）——Enter（input.js keydown）与发送按钮同经此门。模态不受影响（AC-6）。
-  if (!text) return
-  // 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：出口守卫先于 busy 与
-  // echo/addUser —— 拒发（文本保留不吞——开文件夹后可重按）+ toast 逐字；无假气泡、无悬挂
-  // loading。占位符不在此直写（单点派生 = `loading.js` `applyBusyLock` 第三态）。
-  if (S._workspaceRequired) {
-    showToast(t("workspace.required"))
-    return
-  }
-  // C-B2-6（busy-injection 批 2026-09-21 · busy-extend 批 2026-09-22 扩面 · queue-visible 批 2026-09-24
-  // 多槽 + 待发送标记 · `WEBVIEW-INPUT.md` §1）：busy 提交**一律排队**——判据 = `running`（`_suspended`
-  // 不再分流：挂起会话内与普通回合同判据）⇒ 本地气泡先行（送达时即该消息 user 回声面）+ 出泡即标记
-  // （「待发送」态）+ `queuedUserMessage` 上行（host 队列两载体，容量 8；不 setLoading 不清面板
-  // ——回合仍跑在既有流上）；回合态簿记（`_turnStart` / `_llmCalls`）归下一回合起点——零触碰。
-  if (S._turnState === "running") {
-    // C-B2-6 细则① 二次提交守卫（fix 轮 2026-09-22 · queue-visible 批阈值收正 = 容量 8）：队列满
-    // （第 9 条——host 权威镜像 `busyQueued { count }`）⇒ 提交不出泡 / 不清框 + toast
-    // （对位 CLI 满队面 = `thincoder-cli/src/tui/key-handler-busy.mjs`）。
-    if (S._busyQueuedCount >= QUEUED_MAX_ITEMS) {
-      showToast(t("input.slotFull"))
-      return
-    }
-    S._busyQueuedCount += 1 // 本地先行自增（受理即置——防同 tick 二连 Enter 竞态；host 推送权威收敛）
-    S._busyQueuedPending = S._busyQueuedCount > 0
-    const h = ctx._inputHistory
-    if (h[h.length - 1] !== text) h.push(text) // dedupe consecutive repeats
-    ctx._historyIdx = -1
-    ctx._inputDraft = ""
-    const w = ctx.messagesEl.querySelector(".welcome")
-    if (w) w.remove()
-    ctx.inputEl.value = ""
-    ctx.inputEl.style.height = "auto"
-    const images = [...ctx._pastedImages]
-    ctx._pastedImages.length = 0
-    document.getElementById("paste-bar").style.display = "none"
-    document.getElementById("paste-badge").innerHTML = ""
-    markPending(addUser(ctx, text, Date.now())) // 出泡即标记（受理即反馈——细则⑦ 本地提交路径）
-    vscode.postMessage({ type: "queuedUserMessage", text, model: ctx.selectedModel, reasoning: ctx.selectedReasoning, provider: ctx.selectedProvider, images })
-    return
-  }
-  const h = ctx._inputHistory
-  if (h[h.length - 1] !== text) h.push(text) // dedupe consecutive repeats
-  ctx._historyIdx = -1
-  ctx._inputDraft = ""
-  S._turnStart = Date.now()
-  S._llmCalls = 0
-  const w = ctx.messagesEl.querySelector(".welcome")
-  if (w) w.remove()
-  ctx.inputEl.value = ""
-  ctx.inputEl.style.height = "auto"
-  setLoading(ctx, true)
-  ctx.hadToolResult = false
-  // AGENT-LOOP-ASYNC-POOL.md §6.8: panel reset happens per NORMAL turn only — a send during the suspension
-  // session belongs to the running session (its subagent rows/blocks stay live).
-  if (!S._suspended) clearPanels()
-  addUser(ctx, text, Date.now()) // F（SESSION-RESTORE-PARITY）：本地气泡补真实时间戳——无 ts 不显示的配套
-  // Snapshot + clear IN PLACE (GitHub thincoder#3): autocomplete.js holds this array
-  // BY REFERENCE (chat.js passes ctx._pastedImages into initAutocomplete). Reassigning
-  // ctx._pastedImages = [] orphanized the shared array — the paste bar kept rendering
-  // the old one, send() read the new empty one, so only the first paste+send ever
-  // carried images. length=0 preserves the identity; chips and ✕-delete keep working.
-  const images = [...ctx._pastedImages]
-  ctx._pastedImages.length = 0
-  document.getElementById("paste-bar").style.display = "none"
-  document.getElementById("paste-badge").innerHTML = ""
-  vscode.postMessage({ type: "userMessage", text, model: ctx.selectedModel, reasoning: ctx.selectedReasoning, provider: ctx.selectedProvider, images })
-  // If session title is auto-generated (Session N), show a hint that a better title is coming
-  if (/^Session \d+$/.test(ctx.sessionTitle.textContent)) {
-    ctx.sessionTitle.textContent = ctx.sessionTitle.textContent + " — " + t("session.generatingTitle")
-  }
+  composer.inputEl.parentElement.querySelector("#send-btn").click()
 }

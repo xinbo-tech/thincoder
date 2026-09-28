@@ -144,6 +144,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   // §2.3 链内段数（TURN-CAP-CONTINUE.md §4）：首段 1、每次续跑 +1——复位条件同 `_turnSeq`
   // （链起点复位、续跑不回退）；消费面 = 检查点 ask 载荷 / 池条目留痕二元。
   agent._continueSegments = resume ? (agent._continueSegments ?? 1) + 1 : 1
+  // #417（撞帽载荷「本段零落盘轮数」——只报数：零阈值常量 / 零自动动作）：段起点复位（首段 /
+  // 续跑新段——与 `_continueSegments` 同点）；段内累加，采集点在回合环（与 `_turnSeq` 同源面）。
+  agent._zeroWriteTurns = 0
   if (!resume) {
     // 第 19 批（TURN-ACROSS-SEGMENTS——设计 TURN-CAP-CONTINUE.md §4）：链内累计编号
     // 只在链起点复位——续跑（resume:true）不重置、不回退（编号帧公式见 helpers.mjs
@@ -212,6 +215,10 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
   // （先例 = 上方 injectAsyncResult :113-117）。
   const { drainChildUpstream } = await import("./agent-tools/parent-channel.mjs")
 
+  // #417（撞帽载荷「本段零落盘轮数」——只报数：零阈值 / 零自动动作）：计数基线——回合环逐轮
+  // 比对 `_touchedFiles` 增量（轮顶对上一轮结账；撞帽收尾轮在环外单结）。
+  agent._turnFilesMark = agent._touchedFiles.length
+
   let thrownError = null
   try {
     for (let turn = 0; turn < maxTurns; turn++) {
@@ -223,6 +230,10 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     const frame = turnFrame(++agent._turnSeq, turn, maxTurns)
     agent._currentTurn = frame.turn
     agent._maxTurns = frame.maxTurns
+    // #417（撞帽载荷「本段零落盘轮数」——采集点与 `_turnSeq` 同源面）：上一轮至今 `_touchedFiles`
+    // 零增 ⇒ 上一轮零落盘，计数 +1；mark 前移（收尾轮在环外结账——见下方 ContinueError 前）。
+    if (turn > 0 && agent._touchedFiles.length === agent._turnFilesMark) agent._zeroWriteTurns += 1
+    agent._turnFilesMark = agent._touchedFiles.length
     // D2 (AGENT-LOOP-SUBAGENT.md §6.7.2): depth>0 children emit a ⟦ev⟧turn progress token each turn —
     // single emit point covering all three spawn tools; phase=llm (tool/done progress rides
     // the onToolCall/onToolResult relay — no token for those). 第 19 批：载荷取上方帧值
@@ -434,6 +445,9 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     injectPostTurn(agent, results, recentCallSigs, callbacks, turn)
     }
 
+    // #417（撞帽载荷「本段零落盘轮数」）：收尾轮（撞帽轮）若零落盘同样计入——轮顶计数只
+    // 覆盖到倒数第二轮（maxTurns ≤ 0 时环未跑，不虚计）。
+    if (maxTurns > 0 && agent._touchedFiles.length === agent._turnFilesMark) agent._zeroWriteTurns += 1
     throw new ContinueError(maxTurns)
   } catch (e) {
     thrownError = e

@@ -25,7 +25,7 @@
 import { existsSync, readFileSync, renameSync, statSync } from "node:fs"
 
 import { getSessionId, loadManifest, saveManifest, slotDigest, slotPath, writeSessionFile, sessionEnd } from "./session-slots.mjs"
-import { loadSlotFile } from "./session.mjs"
+import { loadSlotFile, isLegacyTransient } from "./session.mjs"
 // token 形态单源（格式校验 + 到期时刻）——本档的保存面合并规则复用同一判定。
 import { tokenExpiryMs } from "./token-ttl.mjs"
 // 会话级偏好写面（§6.21 判据句 3）的判据单源——档位值域（`specForModel(...).reasoningEffortEnum`）
@@ -71,8 +71,11 @@ function rotateIfForeign(p, slot, data) {
       disk.cwd.toLowerCase() !== data.cwd.toLowerCase()
     const diskStart = disk?.sessionStart ?? null
     const myStart = data?.sessionStart ?? null
+    // 盘面长度与快照**同口径**（#441①）：快照 `data` 来自读槽回放（`loadSlotFile` 已按
+    // `isLegacyTransient` 过滤，`session.mjs` 读面）⇒ 盘侧同滤——否则坏档里的 legacy 注入
+    // 条目会凭空把盘面算长，无并发追加也误判轮转（.bak 白产 + 误报 concurrent append）。
     const diskLonger = Array.isArray(disk?.history) && Array.isArray(data?.history) &&
-      disk.history.length > data.history.length
+      disk.history.filter((m) => !isLegacyTransient(m)).length > data.history.length
     if (!(diskIsNewer || diskForeign || (diskStart && diskStart !== myStart) || diskLonger)) return null
     const bak = `${p}.bak-${Date.now()}`
     renameSync(p, bak)
@@ -104,10 +107,13 @@ export function saveSlotData(cwd, slot, data) {
   const rotated = rotateIfForeign(p, slot, data)
   if (data.createdBy === undefined && !existsSync(p)) data.createdBy = sessionEnd()
   writeSessionFile(p, data)
-  slotMtimeCache.set(p, (() => { try { return statSync(p).mtimeMs } catch { return 0 } })())
+  // 写后取 mtime 单次采集（读失败 ⇒ `0` = 不可得）：缓存（本档路径键）+ 摘要 `ts` 地板入参
+  // （#503——保存面写后取 mtime，同族先例 `session-slot-verify.mjs:99`）。
+  const wroteMtime = (() => { try { return statSync(p).mtimeMs } catch { return 0 } })()
+  slotMtimeCache.set(p, wroteMtime)
   try {
     const m = loadManifest(cwd)
-    m.slots[slot] = slotDigest(data)
+    m.slots[slot] = slotDigest(data, wroteMtime)
     saveManifest(cwd, m)
   } catch { /* 摘要失败非致命——数据已安全，元数据下次 listSlots 惰性恢复 */ }
   return rotated
@@ -209,6 +215,12 @@ export function resolveEffortPatch(level, model) {
  * `resolveEffortPatch` 归一（`model` 取 `patch.model ?? 槽现值 activeModel`），归一 `null` = 未设
  * （回落配置面 / 渠道默认）——**值置 `null` 不删键**（与 `newSlotData` 规范结构同源）。
  * 只写盘：不碰当前内存态（施加面唯一 = `applySession`——§6.21 判据句 4 / 边界表第 5 行）。
+ *
+ * **值域面（#441② 明文——核侧有意不校）**：本出口只校**键闭集**，**不校值域**——`provider` /
+ * `model` 传 `null`（或表外字面）按**缺键语义**零改（不报错；`null` 仅对 `effort` 有「未设」
+ * 语义）；值域名（`null` 仅 `effort` + `provider` / `model` 非空）由**端侧契约**把守
+ * （桌面 IPC「会话级偏好注」；端侧拒例 = `thincoder-desktop/src/main/agent-host.mjs`
+ * `prefsPatchFailure`）——读侧容忍为有意（跨端 / 手工改写档零行为变更），核内不立第二份值域校验。
  */
 export function setSlotPrefs(cwd, slot, patch) {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) return false

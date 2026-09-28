@@ -6,7 +6,8 @@
  * 沿 `renderer/views/chat-copy.mjs` 先例（流内非块节点构树 · 零 `store.mjs` import）：本档触 DOM 面 = `syncGuide`
  * （帧尾只摘 / 原位换 —— `views/chat.mjs` 侧唯一调用点）；其余两件 = 纯函数 / 描述符 ⇒ 平 node 直测。
  * 动作控件在场 ⟺ **句柄在场**（`onOpenDir` / `onNewSession` 缺 ⇒ 整控件缺席 —— 零假按钮，比接线两态通则更严）；
- * 出口 = 左列同两枚（`project:open` / `session:create` 各单一实现 —— 本档零第二路）。控件类沿流内小控件同款
+ * 出口 = 会话控制条同两枚（`project:open` / `session:create` 各单一实现 —— 本档零第二路；会话模型轮 R13：
+ * 原左列两面裁撤退场 ⇒ 本面 = 开项目 ∕ 开会话的首屏入口之一）。控件类沿流内小控件同款
  * （追加注裁定「引导面不另立样式档」⇒ 零新 CSS，视觉沿用现盘 `.chat-empty`）。
  * 文案一律经 `t()`（零硬编码 · 代码零 CJK 字面）；零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
@@ -20,7 +21,7 @@ export function guideOf({ live, cwd, visible }) {
   return typeof cwd === "string" && cwd !== "" ? "no-session" : "no-project"
 }
 
-/** 三码词键（闭集 · `no-message` = 欢迎条三行构树 —— 项 15）· 两码动作控件（句柄名 / 动作锚 / 词键 = 左列既有键）。 */
+/** 三码词键（闭集 · `no-message` = 欢迎条三行构树 —— 项 15）· 两码动作控件（句柄名 / 动作锚 / 词键 = 会话控制条同键）。 */
 const WORDS = { "no-project": "chat.guide.noProject", "no-session": "chat.guide.noSession" }
 /** 欢迎条四键（两语各四 —— 词面住 `renderer/i18n.mjs`；文案二值取定归 `welcomeNode`）。 */
 const WELCOME = { heading: "welcome.heading", text: "welcome.text", textConfigured: "welcome.textConfigured", shortcuts: "welcome.shortcuts" }

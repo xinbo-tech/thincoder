@@ -6,17 +6,15 @@
  */
 import { ctx, vscode } from "./state.js"
 import { showWelcome } from "./ui.js"
-import { initAutocomplete } from "./autocomplete.js"
 import { initSettings } from "./settings.js"
 import { initOnboarding } from "./onboarding.js"
 import { closeModelMenu } from "./model-menu.js"
-import { send } from "./send.js"
 // Side-effect imports: these register their DOM listeners on evaluation.
 // Order preserves the original chat.js top-to-bottom registration order for
 // listeners on the same target (scroll.js's initScrollFollow before history.js's
 // messagesEl scroll listener).
 import "./search.js"
-import "./input.js"
+import { composerHooks } from "./input.js" // 输入面板接线（deps 构造 + 核件工厂装配）——注册序不变量见该档头注
 import "./scroll.js"
 // 消息分发循环迁 chat-messages.js（structure-debt #163）：其静态链携 history.js（messagesEl
 // scroll 监听器）——本 import 位置即原 history.js 行（注册顺序不变量）。
@@ -44,28 +42,22 @@ const _loadingTimeout = setTimeout(dismissLoadingScreenOnce, 3000) // 兜底：�
 
 showWelcome(ctx)
 
-ctx.sendBtn.addEventListener("click", send)
-ctx.abortBtn.addEventListener("click", () => vscode.postMessage({ type: "abort" }))
-
-// ─── @-autocomplete & image paste ──────────────
-
-const _ac = initAutocomplete({
-  inputEl: ctx.inputEl,
-  atDropdown: document.getElementById("at-dropdown"),
-  vscode,
-  pastedImages: ctx._pastedImages,
-})
-const { showAtDropdown } = _ac
+// 输入区三面（两钮绑定 ∕ @ 下拉 ∕ 附件采集）随核件内生（`composer/panel.mjs` ∕ `composer/atmenu.mjs`
+// ∕ `composer/attach.mjs`）——本档只留装配与跨面注入，逻辑零副本。
 
 // ─── Settings panel (init early so openSettings is available for toolbar binding) ──
 const _settings = initSettings({ onClose: () => ctx.inputEl.focus(), getModels: () => ctx._models })
 const { openSettings, closeSettings, renderMcpList, updateMcpTools, updateMcpTestResult, updateProviderStatus, updateIndexStatus, updateAgentSettings, notifyAgentSettingsRefreshed, updateWebsearchSettings, updateTestProviderResult, updateShellCandidates, updateProxySettings, updateProxyTestResult, showSettingsError } = _settings
 
+// ⑤ hooks 回填（设置面板初始化之后——`chat.js` 装配点）：控件行第 7 钮出口 ∕ `agentSettings` 设置面板刷新。
+composerHooks.openSettings = openSettings
+composerHooks.onAgentSettings = updateAgentSettings
+
 initOnboarding({ openSettings })
 
 // ─── Toolbar buttons ───────────────────────────
 
-document.getElementById("settings-btn").addEventListener("click", openSettings)
+// `#settings-btn` 绑定随核件（`composer/controls.mjs` 七钮之一——出口 = 上行 `composerHooks.openSettings` 注入）。
 
 // Clickable file paths in tool cards — click / Enter opens the file in the editor.
 ctx.messagesEl.addEventListener("click", (e) => {
@@ -93,7 +85,8 @@ const onStopClick = (e) => {
 }
 ctx.activityEl?.addEventListener("click", onStopClick)
 
-// Close all dropdowns on Escape
+// Close all dropdowns on Escape（端侧旧全局处理：核件已自持 AUTO 确认 ∕ 推理下拉 ∕ 模型菜单三解散面
+// ——本段为幂等保留（重复关闭零副作用）；保位理由见核件舱记录 D5。）
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     closeModelMenu()
@@ -120,6 +113,7 @@ document.addEventListener("keydown", (e) => {
 
 document.addEventListener("click", (e) => {
   // model menu is overlay-managed (self-closing); no legacy dropdown containment needed
+  // （推理下拉段 = 端侧幂等保留——核件自持同判据；见上行 Escape 段注）
   if (!ctx.reasoningDropdown.contains(e.target) && e.target !== ctx.reasoningBtn) ctx.reasoningDropdown.style.display = "none"
   if (!ctx.sessionDropdown.contains(e.target) && !ctx.sessionSelector.contains(e.target)) {
     ctx.sessionDropdown.style.display = "none"
@@ -130,13 +124,13 @@ document.addEventListener("click", (e) => {
 // ─── Message handling ──────────────────────────
 
 // 分发循环注册点保持原址（D-C1：非副作用 import——显式调用保 window.addEventListener("message")
-// 的注册时刻）。deps = 闭包实需面：settings 解构 13 键 + showAtDropdown + dismissLoadingScreenOnce
-// + _loadingTimeout；状态面四函数由 chat-messages.js 直接 import chat-status.js。
+// 的注册时刻）。deps = 闭包实需面：settings 解构 13 键 + dismissLoadingScreenOnce + _loadingTimeout；
+// 状态面四函数由 chat-messages.js 直接 import chat-status.js（`atResults` 面同改静态 import）。
 initMessageLoop({
   renderMcpList, updateMcpTools, updateMcpTestResult, updateIndexStatus, updateProviderStatus,
   updateAgentSettings, notifyAgentSettingsRefreshed, updateWebsearchSettings, updateTestProviderResult,
   updateShellCandidates, updateProxySettings, updateProxyTestResult, showSettingsError,
-  showAtDropdown, dismissLoadingScreenOnce, _loadingTimeout,
+  dismissLoadingScreenOnce, _loadingTimeout,
 })
 
 // ─── Startup handshake: the extension sets webview.html then immediately

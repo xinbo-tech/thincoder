@@ -109,7 +109,7 @@ export function injectProjectGuide(agent, parts, scopeFiles = []) {
   // readFileSync succeeded — compute the budget OUTSIDE the try so a spec
   // lookup failure can never masquerade as "no AGENTS.md".
   // providerSpec: the project-guide budget follows the provider-level context
-  // override (PROVIDER.md §15 — advisor messages budget is context-based).
+  // override (`ADVISOR-GUARDS.md §8` — advisor messages budget is context-based).
   // 字段名归一：解析后的 provider 挂点两端其一（`provider` 本体字段 / `_provider` 运载字段）
   // ——取在场者，两形态同语义（都指本回合生效的 provider 对象）。
   const resolvedProvider = agent.provider ?? agent._provider

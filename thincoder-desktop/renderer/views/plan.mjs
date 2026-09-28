@@ -1,44 +1,34 @@
 /**
- * plan.mjs — 计划卡面（`docs/desktop/design/UI.md` §1 计划面行 · 批 A · 形态单源 = 该行「落形」条）：
- * **纯描述符 · 零出口**（`ev:task` 消费 —— 挂载面 = `thincoder-desktop/renderer/mount-cards.mjs`）。
- *   ① 卡根 = `data-card="task"`（驻点 = 对话流根 · **非块节点**）；**空列表 ⇒ 卡不在场**（返回 `null` —— 零节点）；
- *   ② 逐行 = 事项标题 + 状态词（`pending` ⇒ 排队中 / `in_progress` ⇒ 运行中 / `done` ⇒ 完成 —— 词出
- *      `docs/desktop/design/UI.md` §1 状态词闭枚举 6 词）；**两段逐段包元素**（`span[data-seg]`—— 行
- *      `justify-content: space-between` 的语义即两段对置，裸文本子下**数学上不可达**；通则 = `docs/desktop/design/RENDERER.md` §1.1）；
- *      `data-status` = 原始码（**机器读面** —— 词面随语言变，
- *      码面不变 —— 判据面 = `docs/desktop/design/RENDERER.md` §1.1 判据面条）；表外码 ⇒ **零状态词节点**
- *      （沿 `views/chat-tool.mjs` `STATUS_WORD` 表外降级）；
- *   ③ **同 key 就地替换**（同回合同 key 新载荷整卡替换，不叠卡）—— 归挂载面帧内幂等（等值 ⇒ 零 DOM 写）；
- *   ④ 事项形单源 = `ev:task` 载荷 `{ title, status }`（核 `task` 工具三值）；标题串原样（**零构造**）。
- * 本档零 `store.mjs` import（零切片面）· 零 `node:` / 零裸包；文案一律经 `t()`；段形通则经 `./chat-tool.mjs` `segNode`（零副本）。
+ * plan.mjs — 计划卡面（`docs/desktop/design/UI.md` §1 计划面行）：**核件直消费 + 端壳**
+ * （「桌面处理流 · VSC 对齐」批 R1 #3 · KD-F1）——面板体与**显隐判据**单源 = 核包 `cards/panel.mjs`
+ * （`renderTaskPanel` / `taskPanelVisible` —— VSC ∕ 桌面同一文件；VSC 壳 = `webview/panels.js:15-17`）。
+ *   **纯呈现 · 零出口**（`ev:task` 消费 —— 挂载面 = `thincoder-desktop/renderer/mount-cards.mjs`）。
+ *   ① 核 `renderTaskPanel(progress, { shown })` ⇒ `{ el, visible }` 两态：`visible` 真 ⇒ 端以核体元素装卡
+ *      （卡根 = 端壳装饰 `div.plan-card[data-card="task"]` —— 核体为 `DocumentFragment`，无根元素可挂锚）；
+ *      假 ⇒ `null`（**卡不在场** —— 零节点 · 零擦除）；
+ *   ② **可见判据随核**（① 消除 —— 与 VSC 同）：无 items ⇒ 不显示；全 done 且当前**未显示** ⇒ 不新示
+ *      （badge 已表达 ✓N/N）；全 done 且**已在显示** ⇒ 照常重渲（`shown` = 挂载面现读）；其余 ⇒ 显示；
+ *   ③ **同 key 就地替换**（同回合同 key 新载荷整卡替换，不叠卡）—— 归挂载面帧内幂等（等值 ⇒ 零 DOM 写）。
+ * 核体内文案经核 i18n（`panel.taskDesc` / `task.in_progress` —— 值 = VSC locales 逐字）；本档零文案。
  */
-import { t } from "../i18n.mjs"
-import { segNode } from "./chat-tool.mjs"
+import { renderTaskPanel } from "/rc/cards/panel.mjs"
 
-/** 核任务状态码 → 词键（码域 = 核 `task` 工具三值 ≠ `STATUS_WORD` 工具状态码域 ⇒ 本档自表；
- *  词键复用核域 `sub.*` 闭枚举 —— **零新词**）。表外码 ⇒ `null`（零状态词节点）。 */
-const PLAN_WORD = Object.freeze({ pending: "sub.queued", in_progress: "sub.running", done: "sub.done" })
-
-const hasText = (value) => typeof value === "string" && value.length > 0
-
-/** 事项行：`data-status` = 原始码（非串 / 空串 ⇒ 不上属性 —— 零假造）；标题 / 状态词缺 ⇒ 相应零节点。 */
-function rowNode(item) {
-  const code = item?.status
-  const word = hasText(code) && Object.hasOwn(PLAN_WORD, code) ? t(PLAN_WORD[code]) : null
-  return {
-    tag: "div",
-    props: { class: "plan-row", "data-status": hasText(code) ? code : undefined },
-    children: [segNode("title", item?.title), segNode("status", word)],
-  }
+/** 切片形归一（端壳适配 —— 核卡入参形 = `{ items, … }` 载体；桌面 `tasks` 切片 = **items 数组**
+ *  （写者 = `renderer/questions.mjs` `onTask`：`tasks[key] = ev.items`；同源读面 = `views/statusline.mjs`
+ *  `Array.isArray(list)` 直读 · `renderer/page-read.mjs` 页读播种同形））：数组 ⇒ `{ items: list }`；
+ *  载体形（已含 `items`）直通；余 ⇒ 原样交核（核判据自持「无 items ⇒ 不显示」——禁假造）。 */
+function progressOf(slice) {
+  return Array.isArray(slice) ? { items: slice } : slice
 }
 
-/** 计划卡（纯构树 · 零 DOM · 零出口）：空列表 / 非数组 ⇒ `null`（**卡不在场**）。 */
-export function planTree(items) {
-  const list = Array.isArray(items) ? items : []
-  if (list.length === 0) return null
-  return {
-    tag: "div",
-    props: { class: "plan-card", "data-card": "task" },
-    children: list.map((item) => rowNode(item)),
-  }
+/** 计划卡（核体直取 + 端壳装饰）：`progress` = `ev:task` 载荷（**items 数组**或载体形 —— 本档归一）；
+ *  `shown` = 本卡当前是否在显示（挂载面现读 —— 判据输入面；缺省 `false` = 未示）。不可见 ⇒ `null`（卡不在场 —— 零节点）。 */
+export function planCardNode(progress, { shown = false } = {}) {
+  const { el, visible } = renderTaskPanel(progressOf(progress), { shown })
+  if (visible !== true || el === null || el === undefined) return null
+  const card = document.createElement("div")
+  card.className = "plan-card"
+  card.setAttribute("data-card", "task")
+  card.append(el)
+  return card
 }

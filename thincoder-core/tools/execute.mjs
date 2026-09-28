@@ -34,7 +34,7 @@ const MAX_OUTPUT = 50_000
 const DEFAULT_TIMEOUT = 30_000
 
 /**
- * 超时错误文本——带重试引导（TOOLS.md §14.1 D14.1.2——"下一跳"）：数字 = 实际生效的
+ * 超时错误文本——带重试引导（"下一跳"）：数字 = 实际生效的
  * timeoutMs（Math.min(t, 600_000) 或默认 30s）——上限 600000 与 schema/头注/execute.md 一致。
  */
 const timeoutErrorText = (timeoutMs) =>
@@ -223,7 +223,7 @@ export const executeTool = {
       if (code.length > MAX_SCRIPT) {
         return `Error: script too large (${code.length} > ${MAX_SCRIPT} bytes). Split into smaller scripts or use individual tools.`
       }
-      // inline mode: pure node ESM — no prelude, nothing injected (TOOLS.md §12).
+      // inline mode: pure node ESM — no prelude, nothing injected.
       childArgs = ["--input-type=module", "--eval", code]
     }
 

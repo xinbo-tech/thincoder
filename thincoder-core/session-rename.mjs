@@ -29,9 +29,13 @@ export function renameSlot(cwd, slot, title, _stat = statSync) {
   // 读与写之间文件被并发方改过 → 放弃（保留并发内容，重命名下次重试）
   if (_stat(p).mtimeMs !== t0) return { ok: false, reason: "mtime-conflict" }
   writeSessionFile(p, data)
+  // 写后取 mtime（标题写也是一次落盘）——摘要 `ts` 地板入参（#503 同族随动；读失败 ⇒ 缺省回溯墙钟。
+  // `statSync` 是真实 stat——`_stat` 只为 mtime-conflict 判据注入，地板不共用该缝）。
+  let wroteMtimeMs
+  try { wroteMtimeMs = statSync(p).mtimeMs } catch { /* 不可得 ⇒ 裸墙钟 */ }
   const m = loadManifest(cwd)
   if (m.slots[n]) {
-    m.slots[n] = slotDigest(data)
+    m.slots[n] = slotDigest(data, wroteMtimeMs)
     saveManifest(cwd, m)
   }
   return { ok: true }

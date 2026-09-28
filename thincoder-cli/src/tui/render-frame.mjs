@@ -10,6 +10,8 @@ import { ansi, C, ESC } from "./ansi.mjs"
 import { convCacheKey, renderConversation, countConvLines } from "./render-conversation.mjs"
 import { sliceByWidth, stringWidth } from "./render.mjs"
 import { providerSpec } from "@thincoder/core/config.mjs"
+// #363②（off 形族单源——MODEL-SPECS.md §16.2 / §16.4）：顶栏 think 徽标的 off 判据引核（本档零副本）。
+import { thinkOffShape, thinkOffPath } from "@thincoder/core/think-off.mjs"
 import { computeLayout, subagentVisibleLines } from "./layout.mjs"
 import { basename } from "node:path"
 import { readFileSync } from "node:fs"
@@ -49,7 +51,11 @@ export function renderHeader(agent, cols) {
   const thinkOnValue = spec.thinkEnabledValue ?? "enabled"
   const t = agent.provider?.thinking
   const effort = agent.provider?.reasoningEffort
-  const thinkBadge = t?.type === "disabled" ? "│ think: off"
+  // off 徽标（#363②·单源引核）：off 可宣称（`thinkOffPath`）∧ 现形 = 该族 off 取形
+  // （`thinkOffShape`）——thinkAlwaysOn 族 / effort 族携残留标记不再误报 `think: off`
+  // （旧形裸判 `type === "disabled"`，与「有效 off 路径」无判据关系——MODEL-SPECS.md §16.4）。
+  const offShape = thinkOffPath(spec) ? thinkOffShape(spec) : null
+  const thinkBadge = offShape !== null && t?.type === offShape.type ? "│ think: off"
     : effort ? `│ think: ${effort}`
     : t?.type === thinkOnValue ? "│ think: on" : ""
   return `${ansi.bold}${C.tool} ThinCoder ${ansi.reset}${ansi.dim}${THINCODER_VERSION} │ ${sliceByWidth(model, 30)}${thinkBadge ? " " + thinkBadge : ""} │ ${sliceByWidth(basename(agent.cwd), Math.max(10, cols - 60))}${ansi.reset}`

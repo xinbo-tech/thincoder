@@ -178,7 +178,7 @@ export function handleSetProviderProxy(name, proxy) {
 
 /** Agent/Advisor settings snapshot for the panel (from shared config.json).
  *  `session` ({ cwd, slot }, optional): engineering + advisor.guard are SESSION-level
- *  (2026-08-29 refactor — slot authority, config.json is the CLI mirror). When given, the
+ *  (2026-08-29 refactor — slot authority; end-side config.json mirror write retired). When given, the
  *  session slot's values override the config snapshot so the ENG/GUARD buttons show the
  *  live session state, not the global one; without it (no panel bound yet) config is shown. */
 export function agentSettings(session) {

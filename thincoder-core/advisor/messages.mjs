@@ -77,7 +77,7 @@ export function buildDesignApprovalBlock(designToken, designId) {
  */
 export function buildAdvisorUserMessage(agent, prior, reviewType, designToken = null, documents = null, paths = null, object = null, designId = null) {
   const body = buildAdvisorUserMessageInner(agent, prior, reviewType, designToken, documents, paths, object, designId)
-  // B 构建自愈（F12/§14.4 #1）：design + token 且输出不含逐字信号 ⇒ 尾包补齐 Approval Signal。
+  // B 构建自愈（F12/`ADVISOR-GUARDS.md §2` #1）：design + token 且输出不含逐字信号 ⇒ 尾包补齐 Approval Signal。
   // 覆盖所有出口（含 code 形态分支降级态与 legacy 收敛分支）——既有分支语义零改：已在分支内
   // 注入过的路径因 `[DESIGN-TOKEN:{token}` 逐字在场而不重复追加（幂等）。
   if (reviewType !== "design" || !designToken) return body

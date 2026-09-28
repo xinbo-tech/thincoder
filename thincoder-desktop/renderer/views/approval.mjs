@@ -1,33 +1,32 @@
 /**
- * approval.mjs — 审批卡面（`docs/desktop/design/UI.md` §1 审批呈现行 + 键盘可达行 · 批档 §2.2（a）· KD-8）：
- * 卡树两形（逐项 / 批）+ 键位闭集 + 置焦「最安全键」+ 出口动作。**本档零 `store.mjs` import**（KD-14 ——
- * 「出口失败 ⇒ 零切片写」是**结构性保证**：本档无切片可写，非运行期判）。
- *   ① 卡根 = `data-card="approval"` + `data-prompt-id`（待决项身份 / 路由键）+ `data-shape`；驻点 = 对话流根
- *      （**非块节点** —— 与块序列 / 药丸同层的根子项，块节点序不变式不受影响）；
- *   ② 逐项形首行 = 工具名 + 参数摘要 + 状态词（复用 `tab.badge.approval` 词键 —— 闭枚举单源，零副本）；
- *      批形首行 = 计数词（`approval.batch.count` 带 `{count}`）+ 逐工具名（**两形首行皆逐段包元素**——
- *      `span[data-seg]` 零分隔符字面 · 间距归 `chat.css`；批形段集不定长 ⇒ 拼串必自造分隔符，违「零构造」）；
- *      两形改动摘要行 = `changes` 在场 ⇒ 复用工具卡降级形（`toolChanges`，越阈判同源）；缺 ⇒ 零节点；
- *      两形标识片 / 单行标称 = `approvalSummary` / `approvalTitle`（**池面条目同源消费** —— 零副本）；
- *   ③ 三出口描述符 = **本档单一 owner**（键位 / 值映射 / 词键 / 置焦）：`approvalActions(shape)` ——
- *      卡面与池面同表消费（零副本），操作区构造同源 `approvalExits`（两面同锚：`data-action` / `data-key`）；
- *   ④ `verdictOfKey(shape, key)` = 键位闭集：表外键 / 非串 / 未知形 ⇒ `null`（零动作 · **不吞键** —— 不 `preventDefault`）；
- *   ⑤ 置焦 = 最安全键（逐项 ⇒ `reject` · 批 ⇒ `deny`）锚 `data-autofocus="1"`（描述符内定 ⇒ 恰一枚；键处理两态：
- *      `onApprove` 给 ⇒ `keydown` 在场，缺 ⇒ 不挂 —— 不夺焦，与三出口同一两态）；
- *   ⑥ 出口动作 `respondApproval(host, promptId, verdict)`：窄桥 `approval:respond`；invoke 抛 / 拒绝 ⇒
- *      `console.error`（**不静默**）+ 回执 `null`（调用面零分支；待决项清除归事件面 ⇒ 本档零切片写）。
- *   ⑦ 「对齐第三批」三增量（本批 —— 单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」）：
- *      **P1 owner 归属**（子代理门——深度 0 缺省 ⇒ 既有形零回归）：首行首段 = `<owner> · <tool>`（`data-seg="owner"`）；
- *      **相抵① diff 预览**：载荷 `diff`（核 `diffInfo` 原样两形）⇒ `.diff-preview` 行级差（核三导出直取：
- *      `patchLineType` / `lineDiff` / `renderDiff`）；超阈（patch > 20 行 ∥ 改动 > 12 行）⇒ 只出摘要 + 计数
- *      （零外部查看器—— VSC「view in editor」钮不采）；**F-置焦**：焦点锚 `data-autofocus="1"` 本档产出，
- *      DOM `focus()` 执行点 = 帧尾（`renderer/views/chat-chrome.mjs` `focusAutofocus`）。
- * 文案一律经 `t()`（零硬编码）；零字形字面（分隔串 = 与 VSC / 核同形的格式串）；零 `node:` / 零裸包。
+ * approval.mjs — 审批卡面（`docs/desktop/design/UI.md` §1 审批呈现行 + 键盘可达行）：**核件直消费 + 端壳**
+ * （「桌面处理流 · VSC 对齐」批 R1 #1 · KD-F1）——卡面构树单源 = 核包 `cards/permission.mjs`
+ * （`renderApprovalCard` / `renderBatchApprovalCard` —— VSC ∕ 桌面同一文件），本档只留四件端胶水：
+ *   ① **出站桥**（端壳适配 g）：核 `deps.emit(type, payload)` ⇒ 端窄桥 `approval:respond`
+ *      ——逐项形 `permissionResponse{approved}`：`true` ⇒ `once` ∕ `"approveAll"` ⇒ `always` ∕ `false` ⇒ `reject`；
+ *      批形 `batchPermissionResponse{choice}` ⇒ 同名 verdict（`approveAll` ∕ `oneByOne` ∕ `deny`）；表外 ⇒ 零派发 + 记错。
+ *      出口实作 = **池面同一路**（`handlers.onApprove` ⇒ `mount-pool.mjs` `submitVerdict`：回执 `ok` 真 ⇒ 摘项 + 模式位写
+ *      —— 卡面 ∕ 池面单一出口，零第二实现）；
+ *   ② **锚装饰**（端壳适配 b）：核卡自带 `data-prompt-id`（身份 / 路由键）；端侧补 `data-card="approval"` + `data-shape`
+ *      （端挂载 ∕ 同步面不变式锚 —— 核卡无此两锚）；
+ *   ③ **键位胶水**（端壳适配 a）：核卡无键位（VSC 实测零命中）⇒ 卡根挂 `keydown`，`verdictOfKey` 命中 ⇒ `preventDefault`
+ *      + 触发**核卡内**对应出口控件（点击 ⇒ 核卡自摘 + 出站）；表外键 ⇒ 零动作不吞键；`onApprove` 缺 ⇒ 不挂（不夺焦）；
+ *   ④ **置焦锚**（端壳适配 c）：核卡无置焦（VSC 壳 = deny +50ms 聚焦）⇒ 对「最安全键」补 `data-autofocus="1"`（卡内恰一），
+ *      DOM `focus()` 执行点 = 帧尾（`views/chat-chrome.mjs` `focusAutofocus` —— 两壳同目标：deny）。
+ *   ⑤ **大 diff 钮处置**（端壳适配 f ∕ §2.7 行 3「宿主能力面例外」）：核 `.view-diff` 钮在核 `diffBig` 时在场；桌面零外部
+ *      diff 查看器 ⇒ 唯 `diff.path`（单径）在场才留钮并经 `handlers.onOpenFile` 走 `file:open`；`apply_patch` 形（无单径）
+ *      ⇒ 钮退场（不引入死控）。
+ *   ⑥ **回执非乐观**（端壳适配 d）：核卡点按即摘（核实现 `el.remove()`）；端侧切片**零乐观写**（清除归回执 `ok` 真）
+ *      —— 回执失败径端壳触发一次卡面重挂（`handlers.onCardRefresh`）⇒ 卡复现在场可重试。
+ * 池面描述符（`approvalActions` ∕ `verdictOfKey` ∕ `approvalExits` ∕ `approvalSummary` ∕ `approvalTitle`）**原位保留**
+ * —— `views/activity.mjs` 池面条目同源消费（零副本）。**本档零 `store.mjs` import**（KD-14 —— 「出口失败 ⇒ 零切片写」是
+ * 结构性保证：本档无切片可写，非运行期判）。
+ * 文案一律经核 i18n（核卡内取词 —— `renderer/i18n.mjs` `initDict` 经注册端投影；值 = VSC locales 逐字）；零字形字面；
+ * 零 `node:` / 零裸包。
  */
+import { renderApprovalCard, renderBatchApprovalCard } from "/rc/cards/permission.mjs"
 import { t } from "../i18n.mjs"
-import { lineDiff, renderDiff } from "/rc/diff.mjs"
-import { patchLineType } from "/rc/lib.mjs"
-import { STATUS_WORD, segNode, toolChanges, wire, withKey } from "./chat-tool.mjs"
+import { wire, withKey } from "./chat-tool.mjs"
 
 /** 键位闭集（唯一 owner）：形 → 三出口描述符（键位 / 值 / 词键 / 置焦）；表外形 ⇒ `null`（零动作）。
  *  逐位序 = 呈现序；`safe: true` = 置焦「最安全键」（逐项 ⇒ `reject` · 批 ⇒ `deny`）。 */
@@ -61,9 +60,37 @@ export function verdictOfKey(shape, key) {
   return hit === undefined ? null : hit.verdict
 }
 
-/** 三出口操作区（卡面与池面**同一构造** ⇒ 两态同锚）：`data-action="approval:<值>"` + `data-key` + 词键文本。
- *  `autofocus` 真 ⇒ 最安全键落 `data-autofocus="1"`（恰一枚；池面条目不争焦 ⇒ 缺省假）；
- *  `handlers.onApprove` 缺 ⇒ 三出口 `disabled: true` ∧ 锚仍在场（诚实非死控）；未知形 ⇒ `null`。 */
+/** verdict ⇒ **核卡内**出口控件选择器（键位胶水的落点面 —— 核类名单源，逐位对核三出口：
+ *  逐项 `.approve` ∕ `.approve-all` ∕ `.deny`；批 `.approve-all` ∕ `.one-by-one` ∕ `.deny`）。 */
+const EXIT_SELECTOR = Object.freeze({
+  once: ".approve",
+  always: ".approve-all",
+  reject: ".deny",
+  approveAll: ".approve-all",
+  oneByOne: ".one-by-one",
+  deny: ".deny",
+})
+
+/** 核出站 ⇒ 端 verdict（端壳适配 g 的映射表）：表外 `type` ∕ 表外值 ⇒ `null`（零派发）。批形 choice 值域
+ *  以 `approvalActions("batch")` 为准（键位表单源 —— 表外值不派发）。 */
+export function verdictOfEmit(type, payload) {
+  if (type === "permissionResponse") {
+    if (payload?.approved === true) return "once"
+    if (payload?.approved === "approveAll") return "always"
+    if (payload?.approved === false) return "reject"
+    return null
+  }
+  if (type === "batchPermissionResponse") {
+    const choice = payload?.choice
+    const actions = approvalActions("batch")
+    return actions.some((entry) => entry.verdict === choice) ? choice : null
+  }
+  return null
+}
+
+/** 三出口操作区（**池面条目**构造 —— `views/activity.mjs` 消费；卡面出口 = 核卡自带）：`data-action="approval:<值>"`
+ *  + `data-key` + 词键文本。`autofocus` 真 ⇒ 最安全键落 `data-autofocus="1"`；`handlers.onApprove` 缺 ⇒ 三出口
+ *  `disabled: true` ∧ 锚仍在场（诚实非死控）；未知形 ⇒ `null`。 */
 export function approvalExits(item, handlers = {}, { autofocus = false } = {}) {
   const actions = approvalActions(item?.shape)
   if (actions === null) return null
@@ -96,7 +123,7 @@ function batchCount(item) {
   return Number.isInteger(item?.batch?.count) ? item.batch.count : batchTools(item).length
 }
 
-/** 待决项标识片（卡面与池面**同源** —— 零副本）：逐项形 ⇒ `[工具名, 参数摘要]`；批形 ⇒ `[计数词, …工具名]`
+/** 待决项标识片（池面条目 —— 零副本）：逐项形 ⇒ `[工具名, 参数摘要]`；批形 ⇒ `[计数词, …工具名]`
  *  （键形沿 `docs/desktop/design/IPC.md` §1 `ev:approval` 行）。 */
 export function approvalSummary(item) {
   if (item?.shape === "batch") return [t("approval.batch.count", { count: batchCount(item) }), ...batchTools(item)]
@@ -108,84 +135,7 @@ export function approvalTitle(item) {
   return item?.shape === "batch" ? t("approval.batch.count", { count: batchCount(item) }) : item?.tool
 }
 
-/** diff 降级阈值（相抵① —— 值源 = 核 `cards/permission.mjs:32` / `:36` 同值：patch 行数 > 20 ∥ 改动行数 > 12）。 */
-const DIFF_PATCH_FLOOR = 20
-const DIFF_SAME_FLOOR = 12
-
-/** 卡首行：逐项形 = 标识片 + 状态词；批形 = 计数词 + 逐工具名（逐段包元素 —— 间距归 `chat.css`）。
- *  P1 owner：`owner` 在场 ⇒ 逐项形首段改落 `owner` 段（`<owner> · <tool>` —— 核卡同形；缺 owner = 既有形）。 */
-function headNode(item, shape) {
-  const props = { class: "approval-head", "data-approval-head": "" }
-  const summary = approvalSummary(item)
-  const tool = hasText(summary[0]) ? summary[0] : null
-  const owner = hasText(item?.owner) ? (tool === null ? item.owner : `${item.owner} · ${tool}`) : null
-  const children = shape === "batch"
-    ? [segNode("count", summary[0]), ...summary.slice(1).map((name) => segNode("name", name))]
-    : owner !== null
-      ? [segNode("owner", owner), segNode("args", summary[1]), segNode("status", t(STATUS_WORD.approval))]
-      : [segNode("name", tool), segNode("args", summary[1]), segNode("status", t(STATUS_WORD.approval))]
-  return { tag: "div", props, children }
-}
-
-/** 卡面 diff 节点（相抵①）：载荷 `diff`（核 `diffInfo` 原样）两形 = `{ patch }`（apply_patch 门）∥ `{ old, new, path }`；
- *  行面 = 核三导出直取（`patchLineType` / `lineDiff` / `renderDiff` —— 值源单源，转义闸在核）；
- *  超阈（patch > 20 行 ∥ 改动 > 12 行）⇒ **只出摘要 + 计数**（一律无外部查看器 —— VSC「view in editor」钮不采）。
- *  缺 diff / 两形皆不可组（非串 / 同文）⇒ `null`（零节点 —— 禁假造）。 */
-function diffNode(item) {
-  const diff = item?.diff
-  if (diff === null || diff === undefined || typeof diff !== "object") return null
-  const patch = hasText(diff.patch) ? diff.patch : null
-  const oldText = typeof diff.old === "string" ? diff.old : null
-  const newText = typeof diff.new === "string" ? diff.new : null
-  if (patch === null && (oldText === null || newText === null || oldText === newText)) return null
-  const lines = patch === null
-    ? lineDiff(oldText, newText)
-    : patch.split("\n").map((line) => ({ type: patchLineType(line), text: line }))
-  const count = patch === null ? lines.filter((line) => line.type !== "same").length : lines.length
-  const big = patch === null ? count > DIFF_SAME_FLOOR : count > DIFF_PATCH_FLOOR
-  const header = patch === null ? (hasText(diff.path) ? diff.path : null) : (hasText(item?.tool) ? item.tool : null)
-  return {
-    tag: "div",
-    props: { class: "diff-preview", "data-diff": big ? "large" : "lines" },
-    children: [
-      header === null ? null : { tag: "div", props: { class: "diff-header" }, children: [header] },
-      big
-        ? { tag: "div", props: { class: "diff-line diff-same" }, children: [t("approval.diff.large", { n: count })] }
-        : { tag: "div", props: { "data-diff-lines": "", html: renderDiff(lines) }, children: [] },
-    ],
-  }
-}
-
-/** 卡根 `keydown` 两态：`onApprove` 给 ⇒ 键处理在场（闭集命中 ⇒ `preventDefault` + 派发；表外 ⇒ 零动作）。
- *  非函数 ⇒ `undefined`（`el` 跳过 ⇒ 不挂 —— 不夺焦）。 */
-function onKeyDown(item, handlers) {
-  if (typeof handlers?.onApprove !== "function") return undefined
-  return (event) => {
-    const verdict = verdictOfKey(item?.shape, event?.key)
-    if (verdict === null) return
-    event.preventDefault()
-    handlers.onApprove(item?.promptId, verdict)
-  }
-}
-
-/** 审批卡（纯构树 · 零 DOM）：子序 = 首行 → [改动摘要行?] → [diff 预览?] → 三出口操作区；两形同构，唯首行与出口表不同。 */
-export function approvalTree(item, handlers = {}) {
-  const shape = item?.shape
-  const promptId = item?.promptId
-  return {
-    tag: "div",
-    props: {
-      class: "approval-card",
-      "data-card": "approval",
-      "data-prompt-id": promptId == null ? undefined : String(promptId),
-      "data-shape": hasText(shape) ? shape : undefined,
-      onKeyDown: onKeyDown(item, handlers),
-    },
-    children: [headNode(item, shape), toolChanges(item), diffNode(item), approvalExits(item, handlers, { autofocus: true })],
-  }
-}
-
-/** 出口动作（三出口同一路）：窄桥 `approval:respond`；抛 / 拒绝 ⇒ `console.error`（不静默）+ 回执 `null`
+/** 出口动作（池面同路）：窄桥 `approval:respond`；抛 / 拒绝 ⇒ `console.error`（不静默）+ 回执 `null`
  *  （零切片写 = 结构性 —— 本档无 `store.mjs` import）。 */
 export function respondApproval(host, promptId, verdict) {
   try {
@@ -197,4 +147,97 @@ export function respondApproval(host, promptId, verdict) {
     console.error("[renderer] approval:respond failed:", error)
     return null
   }
+}
+
+// ─── 卡面（核卡工厂 + 端壳四件）──────────────────────────────────────────
+
+/** 形归一（工厂选择）：`"batch"` ⇒ 批卡；余 ⇒ 逐项卡（**核卡两形**；`data-shape` 仍落原样值 —— 锚面零假造）。 */
+const shapeOf = (item) => (item?.shape === "batch" ? "batch" : "single")
+
+/** 卡模型投影（端 `ev:approval` 载荷 ⇒ 核卡 `m` 形 · 键名沿核面）：逐项形 = `{ tool, args, owner?, diff?, promptId? }`；
+ *  批形 = `{ count, tools:[{name}], promptId? }`。缺项按核卡缺省面（零假造 —— 核内 `??` 兜底）。 */
+function cardModelOf(item, shape) {
+  const model = { promptId: item?.promptId }
+  if (shape === "batch") {
+    model.count = batchCount(item)
+    model.tools = batchTools(item).map((name) => ({ name }))
+    return model
+  }
+  model.tool = hasText(item?.tool) ? item.tool : ""
+  if (hasText(item?.argsSummary)) model.args = item.argsSummary
+  if (hasText(item?.owner)) model.owner = item.owner
+  if (item?.diff !== null && typeof item?.diff === "object") model.diff = item.diff
+  return model
+}
+
+/** 单径判据（⑤ 大 diff 钮退场）：`diff.path` 非空串 ⇒ 该径；余（`apply_patch` 形 / 缺）⇒ `null`。 */
+function diffPathOf(item) {
+  const path = item?.diff?.path
+  return hasText(path) ? path : null
+}
+
+/** 回执判定 + 失败径重挂（⑥）：`onApprove` 返 thenable 才判 —— 回执 `ok` 真 ⇒ 零动作；否则触发**一次**卡面重挂
+ *  （`handlers.onCardRefresh`）；无回执面（同步返值 ∕ `undefined`）⇒ 零动作（不误判失败 —— 判定面单源 = 回执）。 */
+function settleExit(result, handlers) {
+  if (result === null || result === undefined || typeof result.then !== "function") return
+  void Promise.resolve(result).then(
+    (receipt) => { if (receipt?.ok !== true) handlers?.onCardRefresh?.() },
+    () => handlers?.onCardRefresh?.(),
+  )
+}
+
+/** 出站桥（①）：核 `deps.emit` ⇒ 端出口；`openDiff` ⇒ 单径在场 ⇒ `file:open`（`handlers.onOpenFile`），缺 ⇒ 零动作。
+ *  `onApprove` 非函数（接线缺位）⇒ 零派发 + 记错（两态通则：核卡钮无 `disabled` 面 ⇒ 本桥为唯一门）。 */
+function emitBridge(item, handlers) {
+  return (type, payload) => {
+    if (type === "openDiff") {
+      const path = diffPathOf(item)
+      if (path !== null && typeof handlers?.onOpenFile === "function") handlers.onOpenFile(path)
+      return
+    }
+    const verdict = verdictOfEmit(type, payload)
+    if (verdict === null) {
+      console.error(`[renderer] approval card emitted unbound exit: ${String(type)}`)
+      return
+    }
+    if (typeof handlers?.onApprove !== "function") {
+      console.error("[renderer] approval card exit unbound: onApprove missing")
+      return
+    }
+    const promptId = payload?.promptId ?? item?.promptId ?? null
+    settleExit(handlers.onApprove(promptId, verdict), handlers)
+  }
+}
+
+/** 键位胶水（③）：闭集命中 ⇒ `preventDefault` + 触发核卡内对应出口控件；表外 ⇒ 零动作（不吞键）。
+ *  `onApprove` 缺 ⇒ 不挂（两态通则 —— 不夺焦）。 */
+function keyHandlerOf(shape, card, handlers) {
+  if (typeof handlers?.onApprove !== "function") return null
+  return (event) => {
+    const verdict = verdictOfKey(shape, event?.key)
+    if (verdict === null) return
+    const target = typeof card.querySelector === "function" ? card.querySelector(EXIT_SELECTOR[verdict]) : null
+    if (target === null || target === undefined || typeof target.click !== "function") return
+    event.preventDefault()
+    target.click()
+  }
+}
+
+/** 审批卡（核卡工厂直取 + 端壳四件）：返回卡元素（核卡自带 `data-prompt-id`；端补 `data-card` / `data-shape` /
+ *  `data-autofocus` 锚）。`handlers` = 流面接线（`onApprove` ∕ `onOpenFile` ∕ `onCardRefresh` —— `renderer/app.mjs`）。 */
+export function approvalCardNode(item, handlers = {}) {
+  const shape = shapeOf(item)
+  const model = cardModelOf(item, shape)
+  const deps = { emit: emitBridge(item, handlers) }
+  const card = shape === "batch" ? renderBatchApprovalCard(model, deps) : renderApprovalCard(model, deps)
+  card.setAttribute("data-card", "approval")
+  if (hasText(item?.shape)) card.setAttribute("data-shape", item.shape)
+  // ④ 置焦锚：最安全键（逐项 ⇒ deny ∕ 批 ⇒ deny —— 两形同目标，沿核三出口类名）
+  const safe = card.querySelector(".deny")
+  if (safe !== null && safe !== undefined) safe.setAttribute("data-autofocus", "1")
+  // ⑤ 大 diff 钮：无单径（`apply_patch` 形）⇒ 退场（不引入死控 —— 桌面零外部 diff 查看器）
+  if (diffPathOf(item) === null) card.querySelector(".view-diff")?.remove()
+  const onKeyDown = keyHandlerOf(shape, card, handlers)
+  if (onKeyDown !== null && typeof card.addEventListener === "function") card.addEventListener("keydown", onKeyDown)
+  return card
 }

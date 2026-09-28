@@ -195,7 +195,7 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
     throw new Error("batch_segment: 已收口档不回改 — the bound batch record's §1 status line contains 「已收口」, so the record is frozen: its body is never written to again (整档冻结；改 = 新批新档). Nothing was written. Report the section as not written.")
   }
   if (status === "unknown") {
-    throw new Error("batch_segment: 状态行不可解析或缺失 — the bound batch record has no §1 `**状态行**：` line whose value contains 已收口 or 进行中 (fail-closed: the write is refused as if frozen). Ask the record's creator to set the §1 status line, then call again. Nothing was written.")
+    throw new Error("batch_segment: 状态行不可解析或缺失 — the bound batch record has no §1 `**状态行**：` line whose value contains 已收口 or 进行中 (fail-closed: the write is refused as if frozen). Ask the record's creator to set the §1 status line, then call again. Nothing was written. Do NOT close the record after a refused append — nothing landed, and closing freezes the missing section for good (失败 ⇒ 勿 close).")
   }
   if (typeof args?.text !== "string") {
     throw new Error("batch_segment: text must be a string (the markdown to append).")
@@ -204,7 +204,7 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
     throw new Error(`batch_segment: text is ${args.text.length} characters — the limit is ${MAX_TEXT_CHARS} per call. Split it into multiple calls: each call becomes its own section and the round number N continues (分段追加——每次调用各成节、N 顺延).`)
   }
   if (/^## §\d/m.test(args.text)) {
-    throw new Error("batch_segment: the text contains a section header line matching `^## §N` — that would break section location and the append-only guarantee. Rewrite it (escape the heading, or drop the leading `## §N`), then call again (骨架保护). Nothing was written.")
+    throw new Error("batch_segment: the text contains a section header line matching `^## §N` — that would break section location and the append-only guarantee. Rewrite it (escape the heading, or drop the leading `## §N`), then call again (骨架保护). Nothing was written. Do NOT close the record after a refused append — nothing landed, and closing freezes the missing section for good (失败 ⇒ 勿 close).")
   }
   const body = sanitizeText(args.text, n === 3).replace(/^\n+/, "").replace(/\s+$/, "")
   if (!body.trim()) {

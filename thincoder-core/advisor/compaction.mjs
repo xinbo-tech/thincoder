@@ -4,9 +4,9 @@
  * limits + the terminal-state guards + the review-text assembler.
  *
  * estimateTokens / compactMessages moved VERBATIM (the only edit is the `pinned`
- * re-attach — F13/§14.4 #3); renderTimeline moved verbatim too, so the tail
+ * re-attach — F13/`ADVISOR-GUARDS.md §2` #3); renderTimeline moved verbatim too, so the tail
  * GENERATOR and the tail CLASSIFIER stay in one file with the assembler they
- * feed (§14.3 谓词 ↔ §14.6 结构化尾——同族单源)。拆分线 = 行数硬帽实测（见批次档 §5）。
+ * feed (`ADVISOR-GUARDS.md §1` 谓词 ↔ §4 结构化尾——同族单源)。拆分线 = 行数硬帽实测（见批次档 §5）。
  */
 
 import { providerSpec } from "../config.mjs" // 第 25 批：预算派生（与 loop.mjs:11 同源导入）
@@ -22,7 +22,7 @@ export const MAX_ADVISOR_TURNS = 100
 // Context window limits
 // 上下文预算（第 25 批——120K 硬编码退场）：预算跟随评审模型窗口（providerSpec：
 // 模型规格表 × provider 级 context 覆盖）。头寸用途 = chars/4 估算误差 + 响应/协议开销
-// （内存不构成约束——设计 §16.4）；判死线仍是宿主机自限线，服务端窗口约束不变。
+// （内存不构成约束——`ADVISOR-GUARDS.md §8`）；判死线仍是宿主机自限线，服务端窗口约束不变。
 export const CONTEXT_LIMIT_RATIO = 0.8  // 判死线 = 窗口 × 0.8
 const COMPACT_TRIGGER_RATIO = 0.8       // 压缩触发 = 判死线 × 0.8（既有关系零改）
 
@@ -71,7 +71,7 @@ export function compactMessages(messages, pinned = null) {
   const filesPart = keyFiles.length > 0 ? ` Key files examined: ${keyFiles.join(", ")}` : ""
   const summary = `Earlier exploration: ${toolCount} tool calls completed.${filesPart}`
 
-  // F13（第 11 批 §14.4 #3）：压缩丢掉的正是**首条 user 消息**（评审简报，含 token）——
+  // F13（第 11 批 · `ADVISOR-GUARDS.md §2` #3）：压缩丢掉的正是**首条 user 消息**（评审简报，含 token）——
   // pinned 由评审参数构建（非模型输出），在本次压缩动作内作为一条 user 消息重挂（幂等可读：
   // 重复压缩允许重复挂回，不做存在性判定）。
   const pin = pinned ? [{ role: "user", content: pinned }] : []
@@ -83,10 +83,10 @@ export function compactMessages(messages, pinned = null) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 不完整判定族（A / F16 共用单谓词——§14.3；六 kind = 宿主尾族）
+// 不完整判定族（A / F16 共用单谓词——`ADVISOR-GUARDS.md §1`；六 kind = 宿主尾族）
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** 宿主尾族六 kind 的块首行逐字前缀（§14.3 表）。变量段（token 数 / 秒数 / 工具轮数）
+/** 宿主尾族六 kind 的块首行逐字前缀（`ADVISOR-GUARDS.md §1` 表）。变量段（token 数 / 秒数 / 工具轮数）
  *  不入前缀——取各尾的固定字面部分；`review_failed` = run.mjs catch 的字符串 resolve
  *  形态（不 throw），其余五条 = renderTimeline 尾（loop.mjs）。 */
 const ADVISOR_INCOMPLETE_PREFIXES = [
@@ -100,7 +100,7 @@ const ADVISOR_INCOMPLETE_PREFIXES = [
 
 /** 单谓词（三消费点同源：design 结算 / code 完成守卫 / 报告提示）——**块首行扫描**（按空行
  *  分块，逐块取首行 trim 后测前缀；时间线与尾以空行相接，六条尾均以块首行形态落地）。
- *  负向精度（§14.3 修正轮）：引文中同串的**非块首形态**（围栏内行 / 表格行 / 引用行）不判
+ *  负向精度（`ADVISOR-GUARDS.md §1` 修正轮）：引文中同串的**非块首形态**（围栏内行 / 表格行 / 引用行）不判
  *  incomplete；块首裸行引用同串的残余误报方向安全（fail-closed——多付一轮重跑，如实登记）。
  *  @returns {string|null} kind 或 null */
 export function advisorIncompleteMarker(text) {
@@ -116,7 +116,7 @@ export function advisorIncompleteMarker(text) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 预算提示 + 结构化超时尾（D / F15——§14.6 #2/#3）
+// 预算提示 + 结构化超时尾（D / F15——`ADVISOR-GUARDS.md §4` #2/#3）
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** 0.75 一次性预算提示判定（纯函数——阈值两侧可机测；每场评审至多一次）。 */
@@ -124,14 +124,14 @@ export function shouldBudgetNudge(elapsedMs, budgetMs, nudged) {
   return !nudged && Number.isFinite(budgetMs) && budgetMs > 0 && elapsedMs >= budgetMs * 0.75
 }
 
-/** 预算提示文案（逐字——§14.6 #2；由循环注入一条 user 消息）。 */
+/** 预算提示文案（逐字——`ADVISOR-GUARDS.md §4` #2；由循环注入一条 user 消息）。 */
 export function budgetNudgeText(elapsedMs, budgetMs) {
   const secs = (ms) => Math.round(ms / 100) / 10
   const pct = Math.round((elapsedMs / budgetMs) * 100)
   return `⏳ review budget: ~${pct}% consumed (${secs(elapsedMs)}s of ${secs(budgetMs)}s). Converge now: emit your findings table for the evidence you have verified, mark anything you could not verify explicitly as \`unverified\` (unverified evidence must not support a pass), and emit your verdict line.`
 }
 
-/** 结构化超时尾（§14.6 #3）：族前缀 `Advisor: review timeout after {S}s.` 逐字保持
+/** 结构化超时尾（`ADVISOR-GUARDS.md §4` #3）：族前缀 `Advisor: review timeout after {S}s.` 逐字保持
  *  （判定族字面依赖）；其后 = 机读统计（rounds / tool calls / review text produced）
  *  + 可执行恢复指引（narrower scope / 调预算）。 */
 export function timeoutTail(timeoutMs, rounds, toolCalls, producedText) {

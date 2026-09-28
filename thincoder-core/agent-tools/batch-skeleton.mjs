@@ -126,6 +126,24 @@ export function readBatchStatusLine(src) {
 }
 
 /**
+ * §N 段内「`**状态行**：` 行存在性」判据（#422③——close 对无状态行档自建机读位的**采集面**：
+ * 与 readBatchStatusLine 的「值可解析」正交——无行 ⇒ 可自建；有行而值不可解析 ⇒ 仍 fail-closed）。
+ * 段界定消费 sectionHeaderRe（同单源——`## §20` 不误命中 `§2`）。
+ * @param {string} src — 档全文
+ * @param {number|string} seg — 段号
+ * @returns {boolean} 段内是否存在形态匹配行（段头缺失同判 false）
+ */
+export function sectionHasStatusLine(src, seg) {
+  const hdr = sectionHeaderRe(seg).exec(src)
+  if (!hdr) return false
+  const nextRe = /^## §\d/gm
+  nextRe.lastIndex = hdr.index + hdr[0].length
+  const next = nextRe.exec(src)
+  const body = src.slice(hdr.index + hdr[0].length, next ? next.index : src.length)
+  return body.split("\n").some((line) => STATUS_LINE_RE.test(line))
+}
+
+/**
  * create 骨架模板（BATCH-RECORD.md §4.10 行为规格的**代码单源**——红线：模板只覆盖骨架与
  * 占位，不模板化内容）：`## §1–§6` 段头（含职责署名）+ 档头 boilerplate（六段一段一作者句 +
  * 编制行 + 台账/前情指针行）+ §1 段内**占位状态行**（含 gate 合法关键字「进行中」——建档即过

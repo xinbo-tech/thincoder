@@ -6,7 +6,7 @@
  * 语义（§4.4.1–§4.4.3）：结构化写成功 ⇒ `registerClaims` 登记——同 `peers/{sessionId}.json`
  * 的 `claims` / `claimsUpdatedAt` 两字段，与足迹面 `domains` / `updatedAt` **分字段分存**
  * （落盘 = 字段级合并写、互不改写、未知字段与身份字段逐字保留）；租约 `CLAIM_TTL_MS`，同域
- * 再写续约（`claimedAt` 保持首次；覆盖去冗 = 方向性 `coversClaim` 三分支，集内无被覆盖项）；
+ * 再写续约（`claimedAt` 保持首次；覆盖去冗 = 方向性 `covers` 三分支——**核单源**（#351），集内无被覆盖项）；
  * 落盘 = 新目标即刻 + 续约节流 `CLAIM_RENEW_FLUSH_MS`（届内零 IO）；落盘原语 = 核 `writeSessionFile`
  * （经端壳 `./session-slots.mjs` 单源转口——.tmp + rename，rename 翻目录 mtime ⇒ 对端聚合缓存
  * 失效；含末级兜底支（§4.4.1 单一实现）；端档零本地原子写实现）；落盘门控 = 本 cwd 会话
@@ -26,6 +26,9 @@
 import { existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { sessionsDir, getSessionId, END, manifestPath, writeSessionFile } from "./session-slots.mjs"
+// 路径谓词**核单源**（#351 / D-MI24「无端差纯函数必须共享」）：本档零判据副本——重叠谓词 =
+// 核 `pathsOverlap` 名面别名，覆盖谓词直接消费核 `covers`（两谓词归口处 = 核 `peer-claims.mjs`）。
+import { covers, pathsOverlap } from "@thincoder/core/peer-claims.mjs"
 
 /** 认领租约 / 续约节流（§4.4.2 / §4.4.3——双端等值：与核 `peer-claims.mjs` 同值，AC-IC11 对拍）。 */
 export const CLAIM_TTL_MS = 30 * 60 * 1000
@@ -100,30 +103,10 @@ export function parseClaims(raw) {
   return out
 }
 
-// ─── 路径谓词（覆盖去冗 / 命中判据）──────────────────────────────────────
+// ─── 路径谓词（覆盖去冗 / 命中判据——**核单源**，本档零副本：#351）─────────────────
 
-function normPath(p) {
-  const n = process.platform === "win32" ? String(p).toLowerCase() : String(p)
-  return (process.platform === "win32" ? n.replace(/\//g, "\\") : n.replace(/\\/g, "/")).replace(/[\\/]+$/, "")
-}
-
-/** 方向性包含（覆盖去冗判据 §4.4.1——单方向：相等或 coarse 为 fine 的目录前缀）。 */
-function coversClaim(coarse, fine) {
-  const pc = normPath(coarse)
-  const pf = normPath(fine)
-  if (pc === pf) return true
-  return pf.startsWith(pc + (process.platform === "win32" ? "\\" : "/"))
-}
-
-/** 路径重叠（§4.4.4 命中判据——与核 `pathsOverlap` 同判据：相等或互为目录包含；分隔符归一）。 */
-export function claimsOverlap(a, b) {
-  const pa = normPath(a)
-  const pb = normPath(b)
-  if (pa === pb) return true
-  const sepN = process.platform === "win32" ? "\\" : "/"
-  const prefix = (p, q) => p === q || p.startsWith(q + sepN)
-  return prefix(pa, pb) || prefix(pb, pa)
-}
+/** 路径重叠（§4.4.4 命中判据——核 `pathsOverlap` 直引别名：相等或互为目录包含；分隔符归一）。 */
+export const claimsOverlap = pathsOverlap
 
 // ─── 认领登记 / 落盘（§4.4.3——写成功钩子调用）──────────────────────────
 
@@ -137,10 +120,10 @@ export function registerClaims(absPaths, cwd) {
     }
     for (const target of absPaths ?? []) {
       if (typeof target !== "string" || !target) continue
-      const covering = [...pendingClaims.values()].find((c) => coversClaim(c.target, target))
+      const covering = [...pendingClaims.values()].find((c) => covers(c.target, target))
       if (covering) { covering.expiresAt = now + CLAIM_TTL_MS; continue } // 续约（claimedAt 保持首次）
       for (const [t, c] of [...pendingClaims]) {
-        if (coversClaim(target, c.target)) { pendingClaims.delete(t); flushedClaims.delete(t) }
+        if (covers(target, c.target)) { pendingClaims.delete(t); flushedClaims.delete(t) }
       }
       pendingClaims.set(target, { target, claimedAt: now, expiresAt: now + CLAIM_TTL_MS })
     }
