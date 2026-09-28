@@ -108,6 +108,14 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     ensuring.delete(key)
     usageTally.delete(key)
   }
+  /** 装配表**全清**（切项目级联 —— `turn-driver.mjs` 注入面；#515① ∕ #507 装配表清点）：语义 = `forgetKey`
+   *  的全表形（三面全清）。切项目后同槽号键不再命中旧项目 agent；陈旧回合尾的「代次就地覆写」面随装配
+   *  对象更换一并消除（旧对象持旧代次 ⇒ 墓碑恒判失效——与 `dispose` 臂同型）。 */
+  const forgetAll = () => {
+    agents.clear()
+    ensuring.clear()
+    usageTally.clear()
+  }
   /** 待决门（表 + 五操作 —— 出档 `suspensions.mjs`；`table` 随宿主面继续暴露）。 */
   const { table, askSingle, askBatch, askQuestion, denyGates, respond } = createGates({ post, agents })
   /** 回调桥（出档 `agent-bridge.mjs`）⊕「对齐第三批」两采样面（`advisorOf` / `extractLinks` —— 见档头）
@@ -152,12 +160,15 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   async function ensure(key, slot) {
     if (agents.has(key)) return agents.get(key)
     if (!ensuring.has(key)) ensuring.set(key, assembleAndLoad(key, slot))
+    const pending = ensuring.get(key)
     try {
-      const agent = await ensuring.get(key)
-      agents.set(key, agent)
+      const agent = await pending
+      // 级联清装配（`forgetKey` ∕ `forgetAll`）后不回流：本条装配若已被清（会话关闭 ∕ 切项目），结果只回
+      // 调用方、不回表——同槽号键不得命中旧项目 agent（#515① ∕ #507；并发同键去重面不变）。
+      if (ensuring.get(key) === pending) agents.set(key, agent)
       return agent
     } finally {
-      ensuring.delete(key)
+      if (ensuring.get(key) === pending) ensuring.delete(key)
     }
   }
 
@@ -166,7 +177,7 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
    *  提示面三件；返回面六件随宿主返回面展开（`ipc.mjs` 调用面零改）。 */
   const turnDriver = createTurnDriver({
     post, run, bridge, postUsage, askQuestion, projects,
-    ensure, forgetKey, dropScope: (key) => bridge.dropScope(key), denyGates,
+    ensure, forgetKey, forgetAll, dropScope: (key) => bridge.dropScope(key), denyGates,
     notify, focused, reveal,
   })
 

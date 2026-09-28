@@ -38,10 +38,18 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
   const resuming = new Set()
   /** 续发期中止墓碑（键集）：链每轮起跑前 + 接管前查位——命中 ⇒ 停链，余值随会话终止（记错一行）。 */
   const abortTombstones = new Set()
+  /** 中止代次（每键 —— #515③）：`abort` ∕ `abortAll` +1；空闲闩的到点回调携**武装刻代次**（`rev` 注入面）
+   *  与现值比对 ⇒ 「已点火（回调在队）恰逢中止」的陈旧点火零交付 ∥ 零开轮（中止后交付闸）。 */
+  const abortGens = new Map()
+  const genOf = (key) => abortGens.get(key) ?? 0
   /** 空闲 deadline 闩（§6.30.11 桌面块 —— 装配住本档：与窗内 `timerFace` 是同一 deadline 的两载体，出窗交接
    *  （池空窗退 ⇒ 交空闲闩）即在本档生命周期内 ⇒ 单点持有；宿主只供两枚注入面（`busyOf` ∕ `takeOver`））。 */
   const watch = createTimerWatch({
-    onFire: (key, agent) => { void fireIdle(key, agent).catch((err) => console.error(`[suspension-drive] idle timer wake ${key} failed: ${err?.message ?? err}`)) },
+    onFire: (key, agent, gen) => {
+      if (gen !== genOf(key)) return // 武装后被中止 ⇒ 陈旧点火丢弃（#515③ 中止后交付闸）
+      void fireIdle(key, agent).catch((err) => console.error(`[suspension-drive] idle timer wake ${key} failed: ${err?.message ?? err}`))
+    },
+    rev: genOf,
     timer, clear, now,
   })
 
@@ -223,8 +231,10 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
   }
 
   /** 会话中止（`dispose(key)` ∕ 切项目级联）：清池不注入（陈旧结果不回灌）+ 出窗帧；返回是否命中（窗 ∥ 续发链）。
+   *  **中止代次先落**（#515③：先于一切早退——无窗 ∕ 续发期两态同落 ⇒ 已点火回调即失效）；
    *  续发期（`closeWindow` 摘窗之后）窗表无项 ⇒ 落**中止墓碑**（`resumeResidual` 检查点消费——免中止盲区）。 */
   function abort(key) {
+    abortGens.set(key, genOf(key) + 1) // #515③ 陈旧点火闸（先于早退——置位与撤闩同刻）
     watch.disarm(key) // 会话清除面（§6.30.11 装配点③）：撤闩清点（无闩 ⇒ 零动作——返回语义不变：窗 ∥ 续发链）
     const entry = windows.get(key)
     if (!entry) {
@@ -257,8 +267,8 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
     /** 切项目（`project:open` 成功且 cwd 变更）：旧项目**全键**中止（窗 ∥ 续发链——§2.2 键面 ∕ 取值面双错位防护）；返回中止数。 */
     abortAll() {
       let n = 0
-      for (const key of new Set([...windows.keys(), ...resuming])) if (abort(key)) n += 1
-      watch.disarmAll() // 切项目级联 ⇒ 撤闩清点（空闲态键不在窗表 ∕ 续发链——单列清）
+      for (const key of new Set([...windows.keys(), ...resuming, ...watch.keys()])) if (abort(key)) n += 1 // 闩键同入（#515③：空闲态键不在窗表 ∕ 续发链——代次同落）
+      watch.disarmAll() // 切项目级联 ⇒ 撤闩清点（幂等——逐键 abort 已撤，兜底无闩面）
       return n
     },
     /** 窗数读数（诊断 ∕ 测试面）。 */

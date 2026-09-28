@@ -16,7 +16,7 @@ import { probeChannelModels } from "./model-catalog.mjs"
  * Returns { startWizard, renderWizard, wizardChooseProvider, wizardSubmitText, cancelWizard, finishWizard }
  */
 export function createWizard(ctx) {
-  const { agent, state, pushLine, pushLabel, render, persistRaw } = ctx
+  const { agent, state, pushLine, pushLabel, render, persistRaw, onModalClose = null } = ctx
 
   /** Candidates for the menu step: existing providers (marked "no key" if missing), unadded presets, custom
    *  MODEL-SELECTION v2：渠道默认模型 = 单值 `model`（preset 自带；候选清单运行期拉取） */
@@ -166,6 +166,8 @@ export function createWizard(ctx) {
       : "Skipped initial setup. Use /model to add providers and configure API keys anytime."
     pushLine(hint, C.dim)
     render()
+    // #448①「关闭后补评估」：wizard 面退场（无 picker 同在场）⇒ 通知链尾（闩重武装）
+    if (state.picker == null) ctx.onModalClose?.()
   }
 
   /** Wizard complete: write provider (update if exists) with its single default model (`model`),
@@ -234,7 +236,10 @@ export function createWizard(ctx) {
       pushLine(`Vector search disabled (memory falls back to text-only search). Run /config embedkey <key> to enable.`, C.dim)
     }
     pushLine(`Select model (Esc to keep ${agent.activeModel})`, C.dim)
-    ctx.openModelPicker().catch((e) => pushLine(`[error] ${e.message}`, C.error))
+    // #448①「关闭后补评估」：收尾链落定（模型 picker 关闭 ∕ 零弹面两态）⇒ 通知链尾（闩重武装——幂等）。
+    ctx.openModelPicker()
+      .catch((e) => pushLine(`[error] ${e.message}`, C.error))
+      .then(() => { if (state.picker == null && state.wizard == null) ctx.onModalClose?.() })
   }
 
   return { startWizard, renderWizard, wizardChooseProvider, wizardSubmitText, cancelWizard, finishWizard, wizardProviderItems }

@@ -77,8 +77,31 @@ export async function runAgentTurn(ctx, text, opts = {}) {
   }
 }
 
-/** runAgentTurn 本体（LOGGING 包装之外——见上方包装器）。 */
+/** #448② 重武装守卫（KD-6「异常径重武装——会话停 ∕ 显式撤销除外」）：**粘滞位 `_timerRearmRevoked`**
+ *  = 主线（两实落点：Ctrl+C 全停 `{abortTrigger:"stop"}` 中止分支 ∕ 挂起会话中止（`_suspAborted`）复位前捕获；
+ *  链头复位 ⇒ 下一链正常重入）。余两腿为**防御面**（仅在正文异常早退、控制器尚未置空时可达）：
+ *  `_suspAborted` 未及复位 ∥ 本链控制器 stop 语义在场 ∥ 会话 abort 句柄已中止。 */
+function timerRearmBlocked(state, agent) {
+  return state?._timerRearmRevoked === true
+    || state?._suspAborted === true
+    || state?.controller?.signal?.reason?.abortTrigger === "stop"
+    || agent?._sessionAbort?.signal?.aborted === true
+}
+
+/** runAgentTurn 本体（LOGGING 包装之外——见上方包装器）：**链尾收口层**——正文（`runAgentTurnBody`）
+ *  之后收「链尾闩重同步」（§6.30.5 载体②武装点——履行原正文内同点调用；#448②：入 `finally` ⇒
+ *  异常 ∕ 中止逃逸的回合同样重武装；守卫 = `timerRearmBlocked`）。attention 仍在正文链尾原位
+ *  （谓词读 `_pendingTimers`、不读闩状态 ⇒ 与 sync 无相对序依赖）。 */
 async function runAgentTurnInner(ctx, text, opts) {
+  try {
+    await runAgentTurnBody(ctx, text, opts)
+  } finally {
+    if (!timerRearmBlocked(ctx?.state, ctx?.agent)) ctx?.timerWatch?.sync()
+  }
+}
+
+/** runAgentTurn 正文（原 `runAgentTurnInner` 逐字——唯一改动 = 链尾 `sync()` 上收收口层 `finally`）。 */
+async function runAgentTurnBody(ctx, text, opts) {
   const { autoTurn = false, skipSession = false, upstreamTurn = false, timerTurn = false } = opts ?? {} // upstreamTurn / timerTurn：系统轮旗标（§6.27.12.5 D/I · §6.30.3 D-TW4）——透传核 `runAgent`，仅供域文本选择
   const { agent, state, pushLine, pushLabel, render, scheduleRender, ensureAssistantLabel, askPermission, askBatchPermission, askQuestion, handleSlash } = ctx
   // 可注入覆盖（测试用）；默认走真实实现
@@ -129,6 +152,9 @@ async function runAgentTurnInner(ctx, text, opts) {
     state._turnControllers = []
     agent._sessionAbort = null
     agent._sessionAbortAll = null
+    // 链头复位「重武装撤销」粘滞位（#448② KD-6——上一链的显式停止只约束到下一链头；新链
+    // 正常重入 ⇒ 链尾照常重武装）。会话内回合不在此列（suspended）——链条内标志始终有效。
+    state._timerRearmRevoked = false
   }
   state._turnControllers ??= []
   const makeController = () => {
@@ -190,6 +216,9 @@ async function runAgentTurnInner(ctx, text, opts) {
             while (h?.length > 0 && String(h.at(-1)?.content ?? "") === "[User interrupt: undefined]") h.pop()
           }
           pushLine("[stopped]", C.warn)
+          // #448② KD-6「显式撤销」：Ctrl+C 全停（`{ abortTrigger: "stop" }`——key-handler 二按语义）
+          // ⇒ 落粘滞位：链尾闩不重武装（链头复位后新链恢复——见 `timerRearmBlocked`）。
+          if (reason?.abortTrigger === "stop") state._timerRearmRevoked = true
           if (opts?._logOutcome) opts._logOutcome.result = "stopped"
           break
         }
@@ -368,12 +397,12 @@ async function runAgentTurnInner(ctx, text, opts) {
     // 首行复位成死代码）——子代理结果退化到"下个回合尾才注入"、状态行/自动消化/区块
     // 驻留全消失；释放窗口守卫同步失效（Enter 并发开第二个 runAgentTurn——双驱动器
     // 竞态复现）。
+    if (state._suspAborted) state._timerRearmRevoked = true // #448② KD-6「会话停」：链尾闩不重武装（粘滞位——复位前捕获）
     state._suspAborted = false
   }
 
-  // AGENT-LOOP-ASYNC-POOL.md §6.30.5 载体②武装点：回合链尾「无人自动接手」判据**邻位**——到期 timer
-  // 空闲自唤醒闩（一次性 deadline；无在途 / 开关关 ⇒ 撤旧零注册）。挂起会话退出后同点接管。
-  ctx.timerWatch?.sync()
+  // §6.30.5 载体②武装点（回合链尾「无人自动接手」判据**邻位**）：已上收收口层 `finally`
+  // （#448② 异常径重武装 —— 见 `runAgentTurnInner`；本处零注册 ∕ 零动作）。
 
   // 第 33 批（TUI §14.3(d)）：顶层链尾（队列续发循环与挂起会话退出**之后**）——无人自动
   // 接手 ⇒ 置 attention 位（渲染层实时派生 blocked/awaiting；用户任意输入清位）。D-AT6：

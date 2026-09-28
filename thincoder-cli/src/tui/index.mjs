@@ -158,6 +158,10 @@ export async function startTUI(agent, opts = {}) {
       turnCtx.timerWatch?.sync()
     }),
   })
+  // #448①「关闭后补评估」（KD-6）：用户自发模态（picker ∕ wizard）全部退场 ⇒ 闩重武装——模态期被
+  // 抑制的到期件即达（无在途 / 开关关 ⇒ `sync()` 自判零注册——幂等）。两关闭点（picker 栈空 ∕
+  // wizard 退场）同注本回调；抑制本体 = `timer-watch.mjs` `fireTimerWake` 模态门（同谓词 `modalOpen`）。
+  const reevalTimerWake = () => { turnCtx.timerWatch?.sync() }
 
   // ---------------------------------------------------------- Slash Commands
 
@@ -167,12 +171,14 @@ export async function startTUI(agent, opts = {}) {
   // Model picker + generic picker: implemented in pickers.mjs
   const { closePicker, showPicker, popPicker, renderPickerLines, openModelPicker, selectModel, setProviderKey, pickModelForSlot, confirmDelete } = createPickers({
     agent, state, render, ansi, C, pushLine, pushLabel, persistRaw, askQuestion, maskKey,
+    onModalClose: reevalTimerWake, // #448①「关闭后补评估」（picker 栈空点）
   })
 
   // First-launch config wizard: implemented in wizard.mjs, closure deps passed via ctx
   const { startWizard, renderWizard, wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems } = createWizard({
     agent, state, pushLine, pushLabel, render, persistRaw,
     openModelPicker: () => openModelPicker(),
+    onModalClose: reevalTimerWake, // #448①「关闭后补评估」（wizard 退场点）
   })
 
   // /distill: impl in distill-cmd.mjs, ctx-passed

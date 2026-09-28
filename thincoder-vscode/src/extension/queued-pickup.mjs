@@ -8,7 +8,7 @@
  */
 import { pushReal } from "../agent/run-helpers.mjs"
 import { pushBusyQueued } from "./panel-messages.mjs"
-import { planQueuedInput } from "./queued-merge.mjs"
+import { consumableAction, planQueuedInput } from "./queued-merge.mjs"
 
 /** 载体两态（C-B2-6：无会话 `panel._busyQueued` ∥ 会话在飞 `susp.pendingInput`）。 */
 function carrier(panel) {
@@ -20,8 +20,8 @@ const hasImages = (q) => Array.isArray(q?.images) && q.images.length > 0
 
 /**
  * 步边界取批（端壳循环头回调——空队列 no-op；系统轮不传回调）。
- * 取数 = 计划首动作（`planQueuedInput`——2 条短消息 ⇒ 合并批一次消费）；`/cmd` 首动作 =
- * 入队门禁不可达的防御面 ⇒ 不消费（留给既有送达路径）。
+ * 取数 = 计划首动作（`planQueuedInput`——2 条短消息 ⇒ 合并批一次消费）；取批判据 = `consumableAction`
+ * （#429：本端无斜杠面 ⇒ `slash` 动作按普通文本单条消费——保序 · 不合并 · 零滞留；见 `queued-merge.mjs`）。
  * **贴图批让位**：本回调是同步面（F-1 视觉降级 = 异步读图，不可达）⇒ 批内任一条目携
  * `images` 即不消费，留给既有送达路径（driver 步骤 1 / 装载② / 退出残余——同过降级判定），
  * 不静默丢图片。
@@ -32,7 +32,7 @@ export function pickupQueuedAtStepBoundary(panel, { history, fullHistory }) {
   const queue = carrier(panel)
   if (!Array.isArray(queue) || queue.length === 0) return
   const action = planQueuedInput(queue.map((q) => String(q?.text ?? "")))[0]
-  if (action.kind !== "turn") return
+  if (!consumableAction(action)) return
   if (queue.slice(0, action.count).some(hasImages)) return
   queue.splice(0, action.count)
   pushReal(history, fullHistory, { role: "user", content: action.text }) // 下一步生效（非中断通道）
@@ -41,7 +41,8 @@ export function pickupQueuedAtStepBoundary(panel, { history, fullHistory }) {
 
 /**
  * 载体条目面取批（driver 步骤 1 / 装载② / 退出残余三处共用——同一合并计划）：
- * 首动作为 `turn` ⇒ 就地消费一批并返回待送达条目；`slash` 首动作（入队门禁不可达）⇒ 零动作。
+ * 首动作可消费（`consumableAction`——`turn` ∕ `slash` 同判，#429）⇒ 就地消费一批并返回待送达条目
+ * （`slash` 单条 · `count` 恒 1 ⇒ 原文直发，保序 · 不合并）。
  * **贴图批退化逐条**（批内任一条目携 `images` ⇒ count = 1——图片随条目元数据走 F-1 降级面）；
  * 无贴图 ⇒ 多条合并为一条（头条目元数据 + 合并文本）。
  * @returns {{item: object|null, merged: string|null}} 取出的载体条目 + 本批文本（快照 `merged` 源）
@@ -49,7 +50,7 @@ export function pickupQueuedAtStepBoundary(panel, { history, fullHistory }) {
 export function takeQueuedBatchItem(queue) {
   if (!Array.isArray(queue) || queue.length === 0) return { item: null, merged: null }
   const action = planQueuedInput(queue.map((q) => String(q?.text ?? "")))[0]
-  if (action.kind !== "turn") return { item: null, merged: null }
+  if (!consumableAction(action)) return { item: null, merged: null }
   const count = queue.slice(0, action.count).some(hasImages) ? 1 : action.count
   const taken = queue.splice(0, count)
   const text = count > 1 ? action.text : String(taken[0]?.text ?? "")

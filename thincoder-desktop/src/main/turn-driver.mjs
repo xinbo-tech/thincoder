@@ -21,7 +21,8 @@
  * `postUsage(key, agent)` = 回合尾读数（`agent-host.mjs` 单源）· `askQuestion(key, question, options)` =
  * 待决门提问（撞帽询问载体 —— 缺省 ⇒ 询问按拒绝：收口不静默续）· `projects` = 项目面（`currentCwd()`
  * 供附件 / 窗口取值）· `ensure(key, slot)` = 装配取值（懒装配 ∕ 同键复用）· `forgetKey(key)` = 装配表清
- * （agents ∕ 在途 ∕ 令牌表 —— `dispose` 消费）· `dropScope(key)` = 桥 scope 回收 ·
+ * （agents ∕ 在途 ∕ 令牌表 —— `dispose` 消费）· `forgetAll()` = 装配表全清（切项目级联 —— #515① ∕ #507
+ * 装配表清点；缺省 ⇒ 零动作）· `dropScope(key)` = 桥 scope 回收 ·
  * `denyGates(key)` = 本键待决门按拒结算 · 提示面三件（`notify` ∕ `focused` ∕ `reveal` —— 皆可缺省：缺 ⇒ 零动作）。
  */
 import { prepareTurnAttachments } from "./attachments.mjs"
@@ -36,7 +37,7 @@ import { createTurnFace } from "./turn-face.mjs"
 /** 回合驱动族工厂（族内六件 + 私有装配 —— 见档头依赖面清单）。 */
 export function createTurnDriver({
   post, run, bridge, postUsage, askQuestion = null, projects = null,
-  ensure, forgetKey, dropScope, denyGates, notify = null, focused = null, reveal = null,
+  ensure, forgetKey, forgetAll = null, dropScope, denyGates, notify = null, focused = null, reveal = null,
 }) {
   /** 在飞回合：key → AbortController（单驱动器 ⇒ 禁双 run 竞态）。 */
   const flights = new Map()
@@ -113,7 +114,8 @@ export function createTurnDriver({
 
   /** `msg:send`：坏键 ⇒ bad-key · **窗内 ⇒ 入挂起队列**（含附件 ⇒ busy 留队重试——核件输入面 = 文本单形）·
    *  **在飞 ⇒ 按会话键入队**（`{ok:true, queued:true}`；满 ⇒ `queue-full` 零入队 —— KD-40 ②）·
-   *  provider 无效 ⇒ provider-invalid（零假回合）；否则建在飞、起跑、**立即回 `{ok:true}`**。
+   *  provider 无效 ⇒ provider-invalid · **装配 `await` 期跨中止 ⇒ `aborted`**（#515② 零起跑；两档皆零假回合）；
+   *  否则建在飞、起跑、**立即回 `{ok:true}`**。
    *  结算三映射（done / stopped / error）收尾清在飞 —— 三径各出一次回合尾 `ev:usage`（读数同点、终局事件之前）。
    *  三路结算**先落盘再出终局事件**（§1.14 ② —— 渲染侧收尾重读即可见本回合增量；CLI 先例 = 回合
    *  finally 尾部保存 ⇒ 中断 / 错误同样留现场）。
@@ -147,6 +149,9 @@ export function createTurnDriver({
       release() // 装配抛不吞（直传 invoke 拒绝），但先摘本键在飞——否则本键永锁 `busy`
       throw err
     }
+    // 跨中止闸（#515②）：装配 `await` 期被 `dispose` ∕ 切项目级联（占位已清）⇒ 本 send 不起跑——
+    // 防「跨中止的回合」凭空起跑 + 结算落盘（墓碑拦不住的窗口：本回合非陈旧尾）；新 reason 码 `aborted`。
+    if (flights.get(key) !== controller) return { ok: false, reason: "aborted" }
     if (agent._providerInvalid) {
       release()
       return { ok: false, reason: "provider-invalid" }
@@ -194,7 +199,9 @@ export function createTurnDriver({
 
   /** 切项目级联（§2.2：`project:open` 成功且 cwd 变更 ⇒ 旧项目**全键**窗中止 —— 会话键面 = `String(slot)` 项目内命名空间，
    *  跨项目同槽号撞键 + 取值挂 `currentCwd()` 双错位）；**在飞回合同径中止 + 清 + 落中止墓碑**（旧项目代理不再
-   *  接管重启后的提交 —— 陈旧回合尾零重接管 ∕ 零落盘，U-6 ∕ U-7）；返回中止窗数（`ipc.mjs` 成功径调用）。 */
+   *  接管重启后的提交 —— 陈旧回合尾零重接管 ∕ 零落盘，U-6 ∕ U-7）；**级联清装配**（旧项目装配全清 ——
+   *  同槽号键不得命中旧项目 agent ∧ 陈旧尾「代次就地覆写」面随对象更换消除；#515① ∕ #507）；
+   *  忙态队清（零续发）；返回中止窗数（`ipc.mjs` 成功径调用）。 */
   function abortSuspensions() {
     for (const [key, controller] of flights) { // 切项目 ⇒ 旧项目在飞全键中止 + 落墓碑（代次 —— 取值面双错位防护同源）
       revokeTurns(key)
@@ -202,6 +209,7 @@ export function createTurnDriver({
     }
     flights.clear() // 在飞表清（防陈旧回合迟到投递 —— 同 `dispose` 收口）
     for (const key of queued.clearAll()) chain.postQueue(key) // 切项目 ⇒ 忙态队清（§2.2 级联 —— 零续发）
+    forgetAll?.() // 级联清装配（#515① ∕ #507）：agents ∕ 在途装配 / 令牌表全清（缺省 ⇒ 零动作）
     return suspension.abortAll()
   }
 

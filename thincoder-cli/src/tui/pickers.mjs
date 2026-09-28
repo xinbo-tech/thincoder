@@ -12,7 +12,7 @@ import { createModelPicker } from "./model-picker.mjs"
  *  删除类二次确认件：confirmDelete（TUI-COMMANDS.md §5.4 单源——形态同 cmd-clear / cmd-new 先例）。
  *  选中即关闭（Enter = resolve + pop）；Esc = pop 当前层并 resolve(null)。菜单循环由调用方 while 重开。 */
 export function createPickers(ctx) {
-  const { agent, state, render, ansi, C, pushLine, persistRaw, askQuestion, maskKey } = ctx
+  const { agent, state, render, ansi, C, pushLine, persistRaw, askQuestion, maskKey, onModalClose = null } = ctx
 
   state.pickerStack ??= []
 
@@ -22,7 +22,9 @@ export function createPickers(ctx) {
     return p.entries.filter((e) => e.type === "item" && (!f || e.text.toLowerCase().includes(f)))
   }
 
-  /** 弹出栈顶 picker 并 resolve 其 Promise。返回是否有 picker 被弹出。 */
+  /** 弹出栈顶 picker 并 resolve 其 Promise。返回是否有 picker 被弹出。
+   *  #448①「关闭后补评估」：本弹出使 picker 面退场（栈空 ∧ 无 wizard）⇒ 通知链尾（闩重武装——模态期
+   *  被抑制的到期件即达）；其余模态仍在场 ⇒ 零动作（交其关闭点）。 */
   function popPicker(value) {
     const p = state.pickerStack.pop()
     if (!p) return false
@@ -30,6 +32,7 @@ export function createPickers(ctx) {
     if (state.picker) rebuildLines()
     else render()
     p.resolve(value)
+    if (state.picker === null && state.wizard == null) onModalClose?.()
     return true
   }
 

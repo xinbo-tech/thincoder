@@ -75,15 +75,25 @@ export function createTimerWatch({ agent, onFire, timer = setTimeout, clear = cl
   return { sync, disarm }
 }
 
+/** 用户自发模态判据（#448① · KD-6——单源：火面抑制 ∥「关闭后补评估」两处同谓词）：picker ∕ wizard
+ *  在场即真（工具权限 ∕ 提问面板属**在飞回合**面——由 `state.processing` 门承担，不入本判据）。 */
+export function modalOpen(state) {
+  return state?.picker != null || state?.wizard != null
+}
+
 /**
  * 空闲闩触发（§6.30.3 开轮两处①）：**非空闲零动作**——回合在飞 / 挂起窗由各自既有路径接管
  * （在飞回合 post-turn 轮询；挂起窗第三兑现态），在途表零触碰（链尾重同步再武装）。
+ * **模态期抑制**（#448① KD-6「用户显式交互优先于后台自动轮」）：用户自发模态（picker ∕ wizard）
+ * 在场 ⇒ 零送达零开轮（在途 timer 零触碰）；闩已自撤 ⇒ 兑现交**关闭后补评估**（模态关闭点重武装
+ * ⇒ 到期件即达——装配面 = `index.mjs` `onModalClose`）。
  * 空闲 ⇒ 到期批送达 + 开 timer 轮（顶层链：`skipSession` 缺省——队列续发 / 挂起入口 / attention 照常）。
  * @returns {Promise<boolean>} 是否开轮
  */
 export async function fireTimerWake(ctx, { runTurn, now = Date.now } = {}) {
   const { agent, state } = ctx
   if (state.processing || state.suspended || state._suspPending) return false
+  if (modalOpen(state)) return false
   if (deliverExpiredTimers(ctx, now()) === 0) return false
   await (runTurn ?? ctx.runTurn)("", { autoTurn: true, timerTurn: true })
   return true
