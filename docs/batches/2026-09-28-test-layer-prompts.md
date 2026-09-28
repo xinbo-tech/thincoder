@@ -103,6 +103,12 @@
 - **机制后果（自带，零新增机械面）**：批次本地测试档住 `docs/batches/` ⇒ 四仓 runner 收集面（`test/*.test.mjs` 各仓 glob ∕ files.mjs 清单）天然不收——**不入常驻套件**；运行 = 直跑 `node --test docs/batches/<batch>.test.mjs`（F5 精神）；退役 = 随批次档收口处置（F9 行）。
 - 存量 `test/` 树不受此令（"以后" = 前行）；存量处置（退候选 213 已落 ∕ 锁与真行为 Phase 2）照旧。
 
+### 1.16 处置执行（第二刀 · 锁类纯档）
+- **删除 10 档**（规格表锁 ∕ 计数+白名单锁 ∕ golden 冻结 ∕ 协议对位——用户 23:0x 批准类目）：core 8（model-specs ×5 = 62 ∕ config-presets = 8 ∕ i18n = 5 ∕ core-hygiene = 5）· vsc 2（protocol-coverage = 4 ∕ protocol-coverage-reverse = 3）。
+- **复跑（父侧）**：core **665/665 exit 0**（745 −80）· vsc **1005/1005 exit 0**（1012 −7）。
+- **随刀清理**：vsc `files.mjs` 摘 2 行；**死引用注释 12 处**收正（vsc 源 4 档 5 处 ∕ queue-visible-vsc ∕ render-core composer ∕ core 6 处）——零语义（父侧直接执行 · 可回退）。
+- **余量**：锁 58 档 ∕ 452 例 → **48 档 ∕ 365 例**；待续 = 剩余锁逐档判（U 系单源族留并 ∕ 其余退）+ 真行为档三条判据复核（Phase 2）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（四档对齐落定（TESTING · AGENT-LOOP · VERIFY-REDESIGN · ENGINEERING-MODE-V2）· 待评审）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>

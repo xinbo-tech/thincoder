@@ -9,8 +9,7 @@
  * `panel-messages.mjs` 分发表各 case 的 `break` 保持）。
  *
  * 缝保持：`panel-messages.mjs` 分发表仍按**同名 case 标签**分发（转发行）——case 标签集合零变化
- * （`protocol-coverage-reverse.test.mjs` 的 `HOST_DISPATCH` 扫 `panel-messages*.mjs`；本档零顶级
- * case 标签）。
+ * （本档零顶级 case 标签）。
  *
  * 一处**具名适配（零语义）**：`settings.mjs` 三件与会话外写入面的 `handle*` 名与本档 handler 名
  * 同形冲突（`handleAddProvider` / `handleRemoveProvider` / `handleSetProviderProxy`）⇒ 该三件

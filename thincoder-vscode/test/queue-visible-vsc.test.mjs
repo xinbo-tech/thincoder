@@ -8,7 +8,7 @@
  * 手法：① webview-env（happy-dom + capturedPosts）驱真 `send()` + 真 `chat.js` 消息 case；
  * ② host 直驱 `pushBusyQueued`（受理面快照 / 字段注册面）；③ CLI 同族对拍（跨仓 import——先例
  * `tool-summary-parity.test.mjs`）。零真实网络出站。
- * 协议门两档（`protocol-coverage{,-reverse}`）与既有 `busy-injection-vsc` 族零回归 = 全量
+ * 既有 `busy-injection-vsc` 族等零回归 = 全量
  * `npm test` 面（本档只锁快照字段 ⊆ 注册集）。
  */
 import { test, before, after } from "node:test"
@@ -49,7 +49,8 @@ const bubbles = () => [...document.querySelectorAll(".message.user")]
 const marked = () => [...document.querySelectorAll(".message.user.pending")]
 const pushSnapshot = (m) => window.dispatchEvent(new window.MessageEvent("message", { data: { type: "busyQueued", ...m } }))
 
-/** 逐测冷启复位（DOM + 队列镜像——同文件串行）。 */
+/** 逐测冷启复位（DOM + 队列镜像——同文件串行）。注：附件图列实住核件（端侧同名字段已死），
+ *  本档零附件面子例 ⇒ 不设图列复位（原 `ctx._pastedImages.length = 0` 为死写，已摘）。 */
 function resetWebview(value = "") {
   const { S, ctx } = W
   S._turnState = "idle"
@@ -61,12 +62,11 @@ function resetWebview(value = "") {
   ctx.messagesEl.replaceChildren()
   ctx._nextIdx = 0
   ctx.inputEl.value = value
-  ctx._pastedImages.length = 0
   const toastEl = document.getElementById("paste-toast")
   if (toastEl) { toastEl.classList.remove("visible"); toastEl.textContent = "" }
 }
 
-test("T-V16-11 正常（webview）：`running` ⇒ send() ×2 出泡即标记（类 `pending` + 标签 = `⏳ <queued.pending>` 逐字）∧ 镜像 `_busyQueuedCount = 2`", () => {
+test("T-V16-11 正常（webview）：`running` ⇒ send() ×2 出泡即标记（类 `pending` + 标签 = `⏳ <queued.pending>` 逐字）∧ 端侧镜面零本地写（本地先行增量住核内）", () => {
   resetWebview()
   const { S, ctx, send, t } = W
   S._turnState = "running"
@@ -80,7 +80,7 @@ test("T-V16-11 正常（webview）：`running` ⇒ send() ×2 出泡即标记（
   assert.deepEqual(bs.map((el) => el.dataset.raw), ["q1", "q2"], "标记气泡 = 两条排队项（`data-raw` 锚定）")
   assert.equal(bs[0].querySelector(".msg-label").textContent, `⏳ ${t("queued.pending")}`, "标签行逐字 = `⏳ ` + `queued.pending` 值")
   assert.equal(bs[0].querySelector(".bubble").textContent, "q1", "原文照常显示")
-  assert.deepEqual([S._busyQueuedCount, S._busyQueuedPending], [2, true], "镜像：受理即本地先行自增（host 推送权威收敛）")
+  assert.deepEqual([S._busyQueuedCount, S._busyQueuedPending], [0, false], "端侧镜面零本地写（本地先行增量住核内——host 权威推送才写镜面：T-V16-12 同面）")
   assert.equal(capturedPosts.slice(mark).filter((m) => m.type === "queuedUserMessage").length, 2, "两条上行（受理面）")
 })
 

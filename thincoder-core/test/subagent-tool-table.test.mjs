@@ -16,7 +16,7 @@ import { assembleBuiltinTools } from "../tools/index.mjs"
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const CORE = resolve(HERE, "..")
-const REPO = resolve(CORE, "..") // thincoder/（三包同仓根——`test/model-specs.test.mjs` 先例）
+const REPO = resolve(CORE, "..") // thincoder/（三包同仓根）
 
 /** 父表夹具：只读面 / 写面 / 交互式主会话工具（`question` 亦标 readonly——排除与只读过滤正交）。 */
 const FIXTURE_TOOLS = [

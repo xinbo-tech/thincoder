@@ -9,15 +9,15 @@
  * `postDigestCap` / `buildPanelCallbacks`。
  *
  * ⚠ 1-hop 解析面（设计 §12.2.3 R-1–R-6 · 硬约束）：本档 = **持 RELAYS 登记行的档**
- * （`test/protocol-coverage.test.mjs:33`——行格式与既有两行同形、精确等值匹配）成对约束：
+ * （行格式与既有两行同形、精确等值匹配——格式约定在档）成对约束：
  *   ① 本档裸标识符发射位（`postMessage(payload)`）= `postSubagentEvent` 与 `flushSubagentOutbox`
  *      两处（本档唯二）；
  *   ② 载荷字面量构造面**必须同档**（`relayLiterals` 只扫本档同名牌的调用点——注释内勿写
  *      「名 + 左括号」形态，lexer 亦扫之）：本档内构造调用点四处 = `relaySubagentEventToken`
  *      的 `emit`（`type: "subagent"`）+ 下方两转口 `postSubagentStatus` / `postSubagentApproval`
  *      + `emitToolPanel`（`type: "toolPanel"`——2026-09-19 批同口入队，字面量随行以保 §12 记账）。
- * 缺①或②任一 ⇒ `protocol-coverage.test.mjs` fail-closed 红（`:178` / `:180`）；漏
- * `subagentApproval` 一半 ⇒ T-6 `wrongDisp` 红（表记 `活` ∕ 实得 `删`）。
+ * 缺①或②任一 ⇒ 协议面记账缺行为（机器面已随测试退役——2026-09-28）；漏
+ * `subagentApproval` 一半 ⇒ 分发表 `wrongDisp` 失配（表记 `活` ∕ 实得 `删`）。
  *
  * 缝保持（KD-12）：`panel-callbacks.mjs` 按**既有导出名** re-export 本档导出件（六件 + #118 新增
  * `queuedInfoOf`）⇒ 消费档 import 面零改（`relaySubagentEventToken` 消费面：`panel-messages.mjs:28`

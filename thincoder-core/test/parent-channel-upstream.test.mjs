@@ -26,7 +26,7 @@ const parentAgent = (over = {}) => ({
 })
 
 const src = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8")
-/** 注释剥除（行 / 块注释——机检只在代码面上计数，散文提及不算调用；同 core-hygiene 口径）。 */
+/** 注释剥除（行 / 块注释——机检只在代码面上计数，散文提及不算调用）。 */
 const code = (text) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1")
 
 test("T18 正常：ask 入队即唤醒——等待栓兑现恰 1 次并清空；入队同步返回（零 await）", () => {

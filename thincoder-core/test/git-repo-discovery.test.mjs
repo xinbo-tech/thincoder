@@ -195,7 +195,7 @@ test("A22 裸仓级歧义：容器 + 两裸子仓 ⇒ throw（消息 = 裸仓档
 // ── A20 错误 / 结构面：单源机判（禁第二份发现实现——KD-M1-22）────────────────────────────────
 test("A20 单源机判：git.mjs 经 manifest.mjs 复用发现（node:fs / 扫描谓词零命中）", () => {
   const raw = readFileSync(join(ROOT, "tools", "git.mjs"), "utf8")
-  // 注释剥除后再扫（承 core-hygiene.test.mjs 的 stripComments 先例——散文提词不构成 import / 调用，免假红）
+   // 注释剥除后再扫（承 stripComments 先例——散文提词不构成 import / 调用，免假红）
   const src = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1")
   assert.match(src, /import\s*\{[^}]*\bdiscoverRepos\b[^}]*\}\s*from\s*"\.\.\/manifest\.mjs"/,
     "① 单源：discoverRepos 自 ../manifest.mjs import 命中（两消费者共用同一导出）")

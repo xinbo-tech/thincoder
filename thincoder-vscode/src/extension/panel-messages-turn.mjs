@@ -10,8 +10,7 @@
  * `panel-messages.mjs` 分发表各 case 的 `break` 保持）。
  *
  * 缝保持：`panel-messages.mjs` 分发表仍按**同名 case 标签**分发（转发行；骨架与全部 case 标签
- * 留主档）——case 标签集合零变化（`protocol-coverage-reverse.test.mjs` 的 `HOST_DISPATCH` 扫
- * `panel-messages*.mjs` 顶级 case；本档零顶级 case 标签）。
+ * 留主档）——case 标签集合零变化（本档零顶级 case 标签）。
  *
  * 依赖：`relaySubagentEventToken` 取自**定义档** `panel-subagent-relay.mjs`（cancelSubagent 的
  * 合成 callbacks 中继面）。本档零反向 import `panel-messages.mjs`（回合族零 `_cwd` 消费）

@@ -36,7 +36,7 @@ const VSC_PROC = process.platform === "win32"
   ? "C:\\Code\\Code.exe --type=extensionHost"
   : "/usr/share/code/code --type=extensionHost"
 
-/** 注释剥离（机检扫描用——注释里的关键词不算违规；形态同 `core-hygiene.test.mjs`）。 */
+/** 注释剥离（机检扫描用——注释里的关键词不算违规）。 */
 const stripComments = (src) =>
   src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1")
 

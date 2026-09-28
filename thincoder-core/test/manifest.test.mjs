@@ -349,7 +349,7 @@ test("AC-33 读向单向（源码面结构断言）：投影经 manifest 单源�
   const conv = readFileSync(new URL("../conventions.mjs", import.meta.url), "utf8")
   const man = readFileSync(new URL("../manifest.mjs", import.meta.url), "utf8")
   assert.ok(!/readFileSync/.test(conv), "conventions.mjs 零 readFileSync（禁第二读取器——经 readManifest 投影）")
-  // 说明符按值形断言（不写 `from \"…\"` 相邻形式——免碰 core-hygiene 的说明符扫描）
+  // 说明符按值形断言（不写 `from \"…\"` 相邻形式）
   assert.ok(conv.includes('"' + "./manifest.mjs" + '"') && conv.includes("readManifest("), "投影经 manifest.mjs 单源（readManifest——KD-M1-33）")
   for (const line of man.split("\n")) assert.ok(!/^\s*import[^\n]*conventions/.test(line), "manifest.mjs 对 conventions 零出边（单向）")
 })

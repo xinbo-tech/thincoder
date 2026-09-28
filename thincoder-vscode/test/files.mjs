@@ -81,7 +81,6 @@ export default [
   "test/agent-tools-registry.test.mjs", // W9（2026-09-15）：登记册 14 名装配断言（引核册——核 agent-tools.mjs 名集 / 端侧转口面同集 / setup.mjs 动态装配 14 名；CORE-UNIFICATION §2.13.4 #83）+ W8 契约②形态面（静态闭包零 node:sqlite 扫描在 `test/engine-floor-guard.test.mjs`）
   "test/memory-index-face.test.mjs", // W8（2026-09-15）：索引面归一核面专项验收——A-K12（反向判零 + 检索 = 核面 FTS 回退非空 + 面板读数 = 核库计数）· A-K13（相位序列 scan→index→done + 完成提示 = 核读数 + 模型变更零手动重建/懒回填）· A-K14（旧目录清退：告示一次 + 显式删除 + 零自动删除路径）· VP-9 可见化核面承接（轻量档：A-K12 反向判零 + A-K14 两档；重 IO 档：真 fs/sqlite 四档——A-K12 检索 / A-K13 相位 / A-K13 懒回填 / VP-9 可见化）
   "test/subagent-content-relay.test.mjs", // VSC 子代理面板通道恢复批（2026-09-16）：端壳内容中继面——子代内容 chunk（核 relay 前缀）四路分流 → `toolPanel` `sub:<role>#<id>` 频道（T1–T7：块内命中 / 主流零命中 / 嵌套子标 / 无前缀正控 / 事件面零回归 / escalate·consult 同族 / 误伤形态锁定）
-  "test/protocol-coverage.test.mjs", // VSC 产品树残留债清零批（2026-09-16）：§12 收发面全量对表机检——首列 ↔ 源码提取集双向对账（含 `sub:*` 归一并集）+ ④ 处置闭区间 + 错误路径点名（夹具树零污染）——T-5/T-6/T-7/A4（WEBVIEW-PROTOCOL.md §12；VSC-DEBT.md §2.3/§3.2）
   "test/compaction-echo.test.mjs", // ENGINE-DEBT ED-1（2026-09-16）：恢复面回声归并 VSC 调用点——activeLines 真槽落盘/读盘链（病态零违例/健康零回归/链式/会话档零改写）——T-V1~T-V4 + 接线机检（CONTEXT-COMPACTION.md §6.10 #8）
   "test/tool-display-sync.test.mjs", // #45 工具驱动变更→端显示同步（2026-09-18 模式联动批）：`syncToolDrivenDisplayState` 两判据（模式腿 `_engShown` 已展示基线 / 参数腿 `_settingsTouched` 读后复位）+ hydrateRun 基线置值 + 深度>0 no-op（WEBVIEW-PROTOCOL.md §3.3 判据①②；批档 AC-D）
   "test/advisor-guard-rounds.test.mjs", // 顾问面治理批（2026-09-18 · 撤 cap）：端侧 guard 不以轮次停推（`maybeGuardPushbacks` 直驱桩 agent——`_advisorRound=6` 仍推回 + `MAX_ADVISOR_PUSHBACKS` 仍限 3）——T-AF7（ADVISOR-CONVERGENCE.md §3.1）
@@ -89,7 +88,6 @@ export default [
   "test/settings-open-snapshots.test.mjs", // F-W8 设置面快照打开必达（W8-1/W8-2/W8-3——回批固定序 + 建面真值 + 250ms 回落；桩 ChatPanel 原型 + 真 chat.js/settings.js；SETTINGS.md §2.8）+ F-W18 静默判据①②（W8-4 注入 800ms 伪探测 ⇒ 逐序 + 相邻两拍 < 2s + Promise.all 并发 + memo/在飞去重；W8-5 探测链零同步形态扫描 + 扫描域完整性 fail-closed——SETTINGS.md §2.11）
   "test/settings-empty-no-write.test.mjs", // F-W10 空值不得静默清除（W10-1…W10-7——基线判据 + 逐字段载荷 + 空值路径册 + handleSetProviderProxy 覆盖；AC-W3/AC-W8）
   "test/settings-refill.test.mjs", // F-W9 + F-W11 回填半（W9-1…W9-5——代理/Shell/检索/索引四点控件级回填 + 跳过聚焦 + 行级重绘；SETTINGS.md §2.8/§2.9）
-  "test/protocol-coverage-reverse.test.mjs", // F-W12/N-W7 发面全量对表机检（W12-1…W12-3——§13 表 ↔ webview 发射集 + 分发档 case 双向对账 + 四形态提取 + fail-closed 点名）
   // VSC 会话界面接线修复批（2026-09-18 · 台账 #90——F-W13/F-W14/F-W15/F-W16）
   "test/webview-permission-batch-release.test.mjs", // F-W13 批权限卡必可释放（W13-1…W13-7——批卡携 promptId 并族 + id 精确匹配 + 孤儿回写 + 释放即刷；WEBVIEW-PROTOCOL.md §4.6 · WEBVIEW.md §4.1）
   "test/webview-model-busy-gate.test.mjs", // F-W14 忙态门（W14-1…W14-4——判据非 idle 的禁用派生 + 两入口守卫 + idle 零回归；WEBVIEW.md §4.2）

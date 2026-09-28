@@ -254,7 +254,7 @@ export function pushSessions(panel) {
     // LEDGER-RELIABILITY（§6.25 判据句 4 · VSC 接线）：账本异常 ⇒ 载荷**增字段** `ledger`
     // （`{ refused, reason, scene }`——**异常才携**：正常 = 键缺席；判据单源 = 核 `ledgerHealth(cwd)`）。
     // 消费 = 会话下拉首行警示注记（`webview/session-bar.js`——非可点；文案键 `session.ledgerNotice`）。
-    // 内联字面发弹（非变量载荷）——协议面机检（`test/protocol-coverage.test.mjs`）要求发射点可解析到 `type`。
+    // 内联字面发弹（非变量载荷）——发射点保持可解析到 `type`。
     const lh = ledgerHealth(cwd)
     const ledger = (lh.refused > 0 || lh.scene)
       ? { refused: lh.refused, reason: lh.refused > 0 ? lh.lastReason : "scene", scene: lh.scene }

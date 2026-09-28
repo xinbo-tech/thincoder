@@ -13,7 +13,7 @@
  *
  * 手法：直驱核导出（零网络 / 零 LLM——排队条目从不 start；T-AF10 以 `_setLogsDirForTest`
  * 隔离目录读档）。夹具与 `advisor-pool-queue.test.mjs`（ED-4 池/队列面）同形但**独立自持**
- * （两档均 <300 行——`core-hygiene.test.mjs` 软线机检）。
+ * （两档均 <300 行）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
