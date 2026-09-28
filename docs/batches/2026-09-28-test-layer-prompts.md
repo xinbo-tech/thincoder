@@ -109,6 +109,14 @@
 - **随刀清理**：vsc `files.mjs` 摘 2 行；**死引用注释 12 处**收正（vsc 源 4 档 5 处 ∕ queue-visible-vsc ∕ render-core composer ∕ core 6 处）——零语义（父侧直接执行 · 可回退）。
 - **余量**：锁 58 档 ∕ 452 例 → **48 档 ∕ 365 例**；待续 = 剩余锁逐档判（U 系单源族留并 ∕ 其余退）+ 真行为档三条判据复核（Phase 2）。
 
+### 1.17 全清重置执行（用户 23:18 令「干脆全清干净以后再建」）
+- **删除**：五仓测试树全量——core ∕ cli ∕ vsc ∕ desktop ∕ render-core 的 `*.test.mjs` + 集成域 + helpers ∕ fixtures ∕ mocks ∕ harness（**≈489 档**，含前两刀 46 档；用例量约 2900）。**每仓 runner 骨架保留**（`run.mjs` ∕ `slow.mjs` ∕ `rc-resolve.mjs`）+ 手工 smoke 脚本（不入套件）。
+- **清单重置**：vsc ∕ desktop `files.mjs` → 空（含重建规则注）；vsc `integration/files.mjs` 重建为空。
+- **runner 守卫**：五仓 `run.mjs` 补「空清单守卫」（零用例即绿；拦截 `node --test` 自动发现——vsc 首跑曾误收 smoke 档触发假红）。
+- **复跑**：五仓 `npm test` **全 exit 0**（`test manifest is empty — zero tests = green`）。
+- **重建规则（即日生效）**：单元 = 批次本地件（名随批次档、住 `docs/batches/`）；集成 = 业务设立（窗口 50–100 ∕ 仓 · N10）。前文三刀计划（退候选 ∕ 锁 ∕ 真行为）**随全清令并完**——后两刀取消（被全清覆盖）。
+- **残留（在册）**：① docs ∕ 源码注释中指向已删测试档的死引用（批量扫描收正——随文档面轮）；② `desktop/test/artifacts/`（gitignore 截图）与个别空目录剩留（无害）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（四档对齐落定（TESTING · AGENT-LOOP · VERIFY-REDESIGN · ENGINEERING-MODE-V2）· 待评审）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>

@@ -39,5 +39,11 @@ const walk = (rel) => {
 }
 walk("test")
 
+// 空清单守卫（2026-09-28 全清重置：零用例即绿——不走 node --test 免触自动发现）
+if (unitFiles.length === 0) {
+  console.log("ℹ test manifest is empty — zero tests = green (2026-09-28 full reset).")
+  process.exit(0)
+}
+
 const result = spawnSync(process.execPath, ["--import", pathToFileURL(join(testDir, "rc-resolve.mjs")).href, "--test", ...unitFiles], { stdio: "inherit" })
 process.exit(result.status ?? 1)

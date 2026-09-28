@@ -60,5 +60,10 @@ for (const f of integrationFiles) {
   if (unit.has(f)) fail(`integration file also listed in the unit manifest test/files.mjs — the two manifests must never mix: ${f}`)
 }
 
+// 空清单守卫（2026-09-28 全清重置：零用例即绿——不走 node --test 免触自动发现）
+if (unitFiles.length === 0 && integrationFiles.length === 0) {
+  console.log("ℹ test manifest is empty — zero tests = green (2026-09-28 full reset).")
+  process.exit(0)
+}
 const r = spawnSync(process.execPath, ["--test", ...unitFiles, ...integrationFiles], { stdio: "inherit" })
 process.exit(r.status ?? 1)

@@ -40,6 +40,12 @@ for (const rel of onDisk) {
   }
 }
 
+// 空清单守卫（2026-09-28 全清重置：零用例即绿——不走 node --test 免触自动发现）
+if (onDisk.length === 0) {
+  console.log("ℹ test manifest is empty — zero tests = green (2026-09-28 full reset).")
+  process.exit(0)
+}
+
 // execPath 可能含空格（C:\Program Files\...）——spawn + shell:true 时必须整体加引号
 const r = spawnSync(`"${process.execPath}"`, ["--test", "test/*.test.mjs", "test/integration/*.test.mjs"], { stdio: "inherit", shell: true })
 process.exit(r.status ?? 1)

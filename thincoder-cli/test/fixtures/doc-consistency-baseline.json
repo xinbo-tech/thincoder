@@ -1,6 +1,0 @@
-{
-  "note": "文档一致性机检基线（V1/V2/V3）。**必须保持为空**——新增违规一律红，不得再入基线：入基线 = 例外 = 违规（fail-closed；检查器对非空基线直接 FAIL，见 scripts/check-doc-width.mjs）。历史存量已于 2026-09-12 清零轮逐条处置（CLI 25 条）：V1 规范形态化（`名称 §N`——去 .md 后缀与路径前缀；自引同规）· V2 计数与列表同改（D3）· V3 工具前时代批次档由判据射程排除（V3_ERA_START = 2026-09-11——工具落地前 §3 由父侧代写，属结构性历史事实而非违规）。键按 (kind|file|ref/声明) 生成，不含行号——文档编辑位移不改键值。",
-  "generatedAt": "2026-09-12",
-  "source": "node -e \"import('./scripts/check-doc-width.mjs').then(m=>console.log(JSON.stringify([...m.checkDocConsistency(process.cwd()).v1.map(m.v1Key),...m.checkDocConsistency(process.cwd()).v2.map(m.v2Key),...m.checkDocConsistency(process.cwd()).v3.map(m.v3Key)],null,2)))\"",
-  "entries": []
-}
