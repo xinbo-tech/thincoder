@@ -4,11 +4,11 @@
  * 一致：① W9 batch 记账缝注入 · ② W14 三缝接线（skill loader / eng mirror / verify
  * 诊断段）。
  * 2026-09-21（`docs/core/design/MANIFEST.md` §2.3 行 16 / 29 拆入面）：`setup.mjs` 装配段
- * （家族段装配 / MCP 连接 / 基础集 · 全表 · `toolByName` · `toolSchemas`）纯结构搬移迁入——
- * 新导出 `buildToolTable`（段内四条动态 import 原样动态——W8 契约②）；2026-09-29（#365 按同档
- * 拆分注 行 29 落形）：装配段 + 池装配装饰与子代理面（`buildToolTable` / `withPool` /
- * `vscSubagentFace` / 终态回显族 / `modeRoleField`）再拆出邻档 `tool-table.mjs`——缝 = re-export
- * （KD-6）：`setup.mjs` 继续自本档取四名 ⇒ 消费档零改。
+ * 纯结构搬移迁入——新导出 `buildToolTable`；2026-09-29（#365 按同档拆分注 行 29 落形）：
+ * 装配段 + 装饰面（`buildToolTable` / `vscSubagentFace` / 终态回显族）再拆出邻档
+ * `tool-table.mjs`——缝 = re-export（KD-6）。2026-09-29 parity-b1（批档 §2.2 行 12）：
+ * `buildToolTable` 收敛为**基础集**装配（家族段归核；装饰体经 `opts.toolDecorate` 供核）；
+ * 旧拷贝项 `withPool` / `modeRoleField` 并入装饰体 ∕ 取核（§2.5「拷贝项取核或登记差额」）。
  * W8 契约②（`test/engine-floor-guard.test.mjs:129`——端壳静态闭包零 `node:sqlite`）：本档静态边
  * = setup.mjs 既有静态边之子集；核 `agent-tools/skill.mjs` / `eng.mjs` 两类面仍走**动态** import()
  * （见 `wireAgentToolSeams`）；`vscStatusTerminalEcho` 同法（住 `tool-table.mjs`）。
@@ -32,8 +32,8 @@ configureBatchSegment({
 })
 
 // ─── W14（2026-09-15）：agent-tools 三缝端侧接线（#88 skill loader / #91 eng mirror / #96 verify 诊断段）──
-// 端侧供值随删旧迁入装配层（同 W9 先例）：① `configureSkillLoader` —— 本端 loader 形态 = 同步
-// 实现（`src/extension/skills.mjs`，D-CI3 与核 skills.mjs 同构语义）；② `configureEngMirror` ——
+// 端侧供值随删旧迁入装配层（同 W9 先例）：① `configureSkillLoader` —— 本端 loader = 核单源转口
+// （`src/extension/skills.mjs` 纯再导出 `@thincoder/core/skills.mjs` 的 loadSkillsSync ∕ readSkillSync）；② `configureEngMirror` ——
 // 工程模式翻转后的槽写（**会话槽唯一权威**，无 config.json 镜像；迁自删除档
 // `src/agent-tools/eng.mjs:92-105`）；③ `configureVerifyDiagnostics` —— 编辑器诊断
 // 段（advisory——迁自删除档 `src/agent-tools/verify.mjs:250-275`，逐字同语义）。
@@ -99,4 +99,4 @@ export async function wireAgentToolSeams() {
 // 缝（KD-6）：工具表装配装饰面出档 `tool-table.mjs`（2026-09-29 · #365 拆分落形——`docs/core/design/MANIFEST.md`
 // §2.3 拆分注 行 29：行 16 拆入的工具表段再拆出邻档，纯结构搬移零语义）——既有导出名本合同档再导出
 // ⇒ 消费档（`setup.mjs`）零改。
-export { buildToolTable, modeRoleField, vscSubagentFace, withPool } from "./tool-table.mjs"
+export { buildToolTable, vscSubagentFace } from "./tool-table.mjs"

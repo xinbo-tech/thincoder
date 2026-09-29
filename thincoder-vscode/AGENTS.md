@@ -39,8 +39,8 @@ Design docs in `docs/_archive/design/` (migration-period reference — retained,
 ```
 （机制本体 = `@thincoder/core`（prompts / provider / mcp / memory / checkpoint / tools / tool-docs / traces / advisor / agent-tools 族）——本端只列端壳 / 装配面；已删的自持镜像不再列行）
 extension.mjs        Extension entry — 注册 ChatPanel（类已迁 src/extension/chat-panel.mjs）为 WebviewViewProvider + commands/status bar（session CRUD/设置/标题生成/CSP 注入随类迁移）
-src/agent.mjs         Agent main loop — parallel tool batching, multimodal image injection, context compaction, subagent spawning, reasoningEcho
-src/agent/           端壳装配面（W15 重定保留）—— setup.mjs（装配/注入/工具表）· setup-tooltable.mjs（装配层缝接线面——W9 记账缝 / W14 三缝 / 编辑器诊断段）· tool-table.mjs（工具表装配装饰面——池装配与子代理面 ∕ `buildToolTable`；缝 = `setup-tooltable.mjs` 同名 re-export）· turn-domains.mjs（端侧回合域文本组合单点——核基座转口 + 端 overlay，digest 轮与 ask 唤醒轮共用）· run-stages.mjs（回合级阶段）· response-stages.mjs（响应后处理段——traceStop/内置工具本地化/interrupt/usage/流规则 abort/提醒；2026-09-25 file-tier-sweep 批 S2 外提）· setup-reminders.mjs（端特有提醒 + 核转口）· agent-state.mjs · context-injections.mjs · execute-tools.mjs · tool-gates.mjs · run-helpers.mjs
+src/agent.mjs         ContinueError 转口残面（主循环归核 @thincoder/core/agent.mjs runAgent——host 包装 = src/extension/panel-turn-loop.mjs）
+src/agent/           端壳装配面（W15 重定保留；2026-09-29 parity-b1 收口核后现态）—— setup.mjs（host 装配：config ∕ 槽 ∕ 基础集 ∕ 镜像 ∕ 历史 ∕ manifest ∕ 记忆句柄 ∕ A2 ∕ A3 ∕ 贴图）· setup-tooltable.mjs（装配层缝接线面——W9 记账缝 / W14 三缝 / 编辑器诊断段）· tool-table.mjs（工具表装配装饰面——基础集 + `vscSubagentFace` 装饰体；缝 = `setup-tooltable.mjs` 同名 re-export）· turn-domains.mjs（端侧回合域文本组合单点——核基座转口 + 端 overlay）· setup-reminders.mjs（端特有提醒残件 + 核转口）· agent-state.mjs · run-helpers.mjs（核单源转口 + 端独有件）；已删（主循环归核随动）：context-injections.mjs · execute-tools.mjs · response-stages.mjs · run-stages.mjs · tool-gates.mjs
 src/agent-tools/index.mjs  自持工具集转口（W9 起 = 核登记册 `@thincoder/core/agent-tools.mjs` 单源；端侧不再自持名清单）
 src/agent-tools/async-discard.mjs  Stop 丢弃面（端壳档；池/墓碑读改指核 `async-settle` 单源）
 src/config-mcp.mjs    MCP 配置端壳（面板增删改 → 端壳写盘通道 `vscPersistRaw`）
@@ -107,7 +107,7 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 1. User sends message → `ChatPanel._chat()` called
 2. Abort previous run via `AbortController`
 3. Append user message to persisted history
-4. Call `runAgent(provider, cwd, text, callbacks, signal, autoApprove)`
+4. Call 核 `runAgent(agent, text, callbacks, opts)`（host 装配 = `src/agent/setup.mjs`；主循环归核——`src/extension/panel-turn-loop.mjs` 三段续跑包装）
 5. Agent loop runs (tool execution with parallel batching, context compaction, subagent spawning)
 6. Each token → `onToken` callback → webview `token` message
 7. Reasoning tokens → `onReasoning` callback → webview `reasoning` message (collapsible "Thinking..." block)
@@ -119,9 +119,10 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 ## Testing
 
 - **Smoke test**: `node test/smoke-provider.mjs <provider> <api-key>` — directly tests an API provider (single turn, no tools).
-- **Unit tests** (`npm test`): explicit file list in `test/files.mjs`（清单单一来源——逐档登记 + 行内注释记覆盖面；测试基线读数与 as-of 的权威 = `../docs/core/design/TESTING.md` §10）covering the agent loop, dual-line history, tool routing, config, advisor convergence protocol (fresh sessions, citations verification, escapeLiteralEscapes), provider panels, the permission gate, live autoApprove semantics (mid-turn flip stops repeated prompts), lazy history pagination (global idx anchors, scroll-back chaining), the inline question tool (panel callback preferred over native popups, subagent questions routed to the same panel callback), the webview diff renderer (every permission-prompt diff preview), context-utilization math (divides by the REAL spec context — the old `contextWindow` field read fell back to 128K and showed 137% on 1M models), provider parity constants (FETCH_TIMEOUT_MS = 10 min), SSRF guards (proxy URL validation, redirect allowlist), websearch (Bing fallback, Tavily structured API), abort end-to-end (bash process-tree kill, AbortError propagation out of tool batches, SSE stream interruption), the in-conversation search bar (Ctrl+F highlight/jump/clear, plus input-history ↑/↓ boundary behavior), and the paste-image pipeline (webview alias regression, dataURL→tmp-file save, `[Attached images:]` pointer injection, non-multimodal guard, panel-messages wiring).
+- **Unit tests** (`npm test`): explicit file list in `test/files.mjs`（清单单一来源——逐档登记 + 行内注释记覆盖面；测试基线读数与 as-of 的权威 = `../docs/core/design/TESTING.md` §10）。
+  **2026-09-28 全清重置（用户令）**：存量用例全退役——清单现为空（`export default []`）；重建规则 = 单元档随批次本地、集成档业务设立（见 `test/files.mjs` 档头）。
 - **Full suite**: `npm test` — the single entry: unit + integration + slow all run in one go (no separate fast/full/integration scripts).
-- **Integration set**: business-voice scenarios asserting observable results — they run inside `npm test` (`test/integration/` + its manifest `test/integration/files.mjs`, driven by the unified runner `test/run.mjs`).
+- **Integration set**: business-voice scenarios asserting observable results — they run inside `npm test`（`test/integration/` + 其清单 `test/integration/files.mjs`，统一 runner `test/run.mjs` 驱动）。**2026-09-28 全清重置**：集成清单现为空（`export default []`）——重建按业务设立（窗口 50–100）。
 - **Release gate**: `vscode:prepublish` = `npm run lint && npm test` (runs automatically on `vsce package` / bare `vsce publish`).
 - **Doc check (not a gate step)**: `npm run doc:check` — repo-root domain; same command as the CI docs job.
 - **Packaging assertion**: `postpackage` = `node scripts/check-vsix.mjs` (runs automatically after `npm run package`) — unpacks the produced vsix and asserts the embedded core + version literal equality + prompt-face completeness (`prompts/` 16 + `tool-docs/` 24 — names + sha256); fail-closed (a core-less vsix exits 1, though vsce itself exits 0).

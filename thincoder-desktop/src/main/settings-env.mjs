@@ -6,60 +6,17 @@
  * shell? } }`（**写经核 `writeConfigAtomic`**——端侧零自写盘；删键语义住 mutate 体）· TestProxy
  * `{ testProxy: { uri } }`（转口 `providers.mjs` `testProxy` —— 探针面单源，本档零第二探针）。
  * 语义源（逐项）：proxy merge ∕ shell 清键 = VSC `settings-env.js` + `saveProxySettingsFromPanel` ∕
- * `saveShellSettingsFromPanel`（`thincoder-vscode/src/extension/settings.mjs`）；shell 候选面 =
- * VSC `shellCandidates`（同序同形：System default 恒首）。
+ * `saveShellSettingsFromPanel`（`thincoder-vscode/src/extension/settings.mjs`）；shell 候选面 = **核单源**
+ * `@thincoder/core/shell-candidates.mjs`（B10 S17 收编：候选项表 ∕ 探测序 ∕ 超时 ∕ memo 单源；本档零自持候选表）。
  * 纪律：零 electron 依赖（平 node 可直测）；写前校验失败 ⇒ 回执 reason 直传、**零写**；
  * TestProxy 反向依赖经**动态 import** 解引用（零顶层环）。
  */
-import { execFile } from "node:child_process"
-import { existsSync } from "node:fs"
 import { loadConfig, normalizeProxy } from "@thincoder/core/config.mjs"
 import { _configPath, writeConfigAtomic } from "@thincoder/core/config-io.mjs"
-
-/** Shell 候选面（平台探测；源 = VSC `src/extension/settings.mjs` `shellCandidates` 同序同形 ——
- *  「System default」恒首 + 平台候选（`where` ∕ `sh -c 'command -v'` 探存））：
- *  memo（本进程内 shell 路径不热变化）+ 在飞去重（同批共享 —— 不叠发子进程）；
- *  `detect` 只返回候选名 ∕ 值两键（探测函数不外发）。**绝不抛出**（探测失败 = 该候选缺席）。 */
-let _shellProbeCache = null
-let _shellProbeInFlight = null
-
-/** 候选命令是否存在（异步探测：Windows `where` / POSIX `sh -c 'command -v'`；失败或超时 ⇒ false）。 */
-function commandExists(cmd) {
-  return new Promise((resolve) => {
-    const win = process.platform === "win32"
-    try {
-      execFile(win ? "where" : "sh", win ? [cmd] : ["-c", `command -v ${cmd}`], { timeout: 3000 }, (err, stdout) => {
-        resolve(!err && String(stdout ?? "").trim().length > 0)
-      })
-    } catch { resolve(false) }
-  })
-}
-
-/** 平台 shell 候选读数（异步 ⇒ Promise；memo + 在飞去重）。 */
-export function shellCandidates() {
-  if (_shellProbeCache !== null) return Promise.resolve(_shellProbeCache)
-  if (_shellProbeInFlight) return _shellProbeInFlight
-  const GIT_BASH_PATHS = [
-    "C:\\Program Files\\Git\\bin\\bash.exe",
-    "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
-    `${process.env.LOCALAPPDATA ?? ""}\\Programs\\Git\\bin\\bash.exe`,
-  ]
-  const candidates = [{ name: "System default", value: null, detect: () => true }]
-  if (process.platform === "win32") {
-    candidates.push({ name: "PowerShell (pwsh)", value: "pwsh", detect: () => commandExists("pwsh") })
-    candidates.push({ name: "Windows PowerShell (powershell)", value: "powershell", detect: () => commandExists("powershell") })
-    const gb = GIT_BASH_PATHS.find((p) => p && existsSync(p))
-    if (gb) candidates.push({ name: `Git Bash (${gb})`, value: gb, detect: () => true })
-    candidates.push({ name: "WSL bash (wsl)", value: "wsl", detect: () => commandExists("wsl") })
-  } else {
-    for (const sh of ["bash", "zsh", "fish"]) candidates.push({ name: sh, value: sh, detect: () => commandExists(sh) })
-  }
-  const p = Promise.all(candidates.map(async (c) => ((await c.detect()) ? { name: c.name, value: c.value } : null)))
-    .then((hits) => { _shellProbeCache = hits.filter(Boolean); return _shellProbeCache })
-    .finally(() => { if (_shellProbeInFlight === p) _shellProbeInFlight = null })
-  _shellProbeInFlight = p
-  return p
-}
+// Shell 候选面（B10 S17：候选表 ∕ 探测序 ∕ 超时 ∕ memo 上提**核单源** —— 本档薄壳 = re-export，
+// 消费面（`envFace` 与旧导出面）零改）。
+import { shellCandidates } from "@thincoder/core/shell-candidates.mjs"
+export { shellCandidates }
 
 /** env 读面（`{ proxy, shell }`）：proxy = 核 `normalizeProxy` 投影（缺 ∕ 非法 ⇒ 默认三键形——
  *  空 uri 即「未配置」；沿 VSC `saveProxySettingsFromPanel` 缺省形）；shell = 现值（缺 ⇒ null）+ 候选面。 */

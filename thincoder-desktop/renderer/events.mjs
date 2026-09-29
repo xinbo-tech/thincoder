@@ -34,8 +34,8 @@
  *   `isTurnTail(ev)`           回合尾判据**单源**（**三径** = `ev:activity` 无 `fields` 的 `done` / `stopped` ∥ `ev:error` —— `onActivity` / `onError` 与订阅面 `events-subscribe.mjs` 同用）
  *
  * 纪律：块面写（`blocks`）须 `ev.key === state.activeSession`（否则原引用 —— 非活动会话的事件不落本会话流）；
- *   `tabBadges` 任意键可写 · `sessionMeta` / `usage` / 卡面两切片（`questions` / `tasks`）· 挂起 / 消化两切片（`susp` / `digest` —— 空闲唤醒批）· 到期触发切片（`timerNotice` —— timer-wake 阶段 2）按 key 写（切片同键就地替换 · 首写自种 · 零键门 —— 切回即见，单源 = `docs/desktop/design/RENDERER.md` §1.1 事件归约面条）（§2.2(e) 值面写者表）· 状态行读数槽四（`turns` / `turnStarts` /
- *   `tokens` / `timers`）同判（R3a · D17 承载段数据源）· `subBlocks` 按会话键分槽（R3b · D20 —— 归约径住
+ *   `tabBadges` 任意键可写 · `sessionMeta` / `usage` / 卡面两切片（`questions` / `tasks`）· 挂起 / 消化两切片（`susp` / `digest` —— 空闲唤醒批）· 到期触发切片（`timerNotice` —— timer-wake 阶段 2）按 key 写（切片同键就地替换 · 首写自种 · 零键门 —— 切回即见，单源 = `docs/desktop/design/RENDERER.md` §1.1 事件归约面条）（§2.2(e) 值面写者表）· 状态行读数槽五（`turns` / `turnStarts` /
+ *   `tokens` / `timers` / `lastOutputAt`〔停滞轻显形批 —— 写径 = `reduce` 可见输出通道集单点 + `onActivity` turn 起刻〕）同判（R3a · D17 承载段数据源）· `subBlocks` 按会话键分槽（R3b · D20 —— 归约径住
  *   `renderer/subagent-reduce.mjs`：块面内容回显 = 核件 tail-3 / 展开（「对齐第二批」项 3 收正：原「零内容回显」
  *   口径撤销）；态机单源 = 核 `/rc/subblocks/state.mjs` `subBlocksReduce`）· 池切片 **摘工具行**（`pool.blocks` 不再在册 —— 工具调用面 = 对话流工具卡；折叠头
  *   `running` 读数改源于活动会话在飞子 agent 块数）· `pool.approvals` 无会话键维度（写者 = `ev:approval`，不按会话
@@ -72,6 +72,18 @@ import { onGoal, onLedger, onQueue, onUsage, withReading } from "./events-slices
  *  —— 载荷不携 ⇒ 键缺席（消费面按缺省零节点落形）。 */
 const APPROVAL_KEYS = ["promptId", "shape", "tool", "argsSummary", "changes", "batch", "owner", "diff"]
 // ─── 内部读面 ────────────────────────────────────────────────────────────────
+
+/** 停滞轻显形（UI.md §1 本批注「停滞轻显形 · 2026-09-29」项 2 · 语义单源 = `docs/cli/design/TUI.md` §7.7）：
+ *  可见输出通道集（重置单点 —— 三类并集：流式 ∕ 工具面 ∕ 子代理面）。 */
+const OUTPUT_CHANNELS = new Set([
+  "ev:token", "ev:reasoning", "ev:subchunk", "ev:tool-call", "ev:tool-output", "ev:tool-result", "ev:subagent",
+])
+
+/** `lastOutputAt` 切片写（按会话键 —— 时间戳切片同 `turnStarts` 判）：键缺 ∕ 非串 ∕ 空串 ⇒ 零写（禁假造）。 */
+function withOutputAt(state, key, now) {
+  if (typeof key !== "string" || key === "") return state
+  return { ...state, lastOutputAt: { ...(state.lastOutputAt ?? {}), [key]: now } }
+}
 
 /** 池写（`approvals` 一支 —— `approval` = 待决数；`running` 由子 agent 面写者归（未给 ⇒ 原值））。 */
 function withPool(state, { approvals = null, running = null } = {}) {
@@ -118,7 +130,7 @@ function withStopMark(state, key) {
 }
 
 /** `ev:activity` 四形（§2.16② 写死）：① `fields` 在场 ⇒ 内联形（核 token 流内 ⟦ev⟧ 段）⇒ **零写零重调**（内联 `done` ⇒ 不清位标）；
- *  ② 无 `fields` ∧ `event === "turn"`（`{ n, max }`）⇒ 置 `running` + **回合槽**（`turns[key] = { n, max }`——D17 段 7，有意取代旧“不落”态）
+ *  ② 无 `fields` ∧ `event === "turn"`（载荷 `{ turn, maxTurns }`）⇒ 置 `running` + **回合槽**（`turns[key] = { n, max }`——D17 段 7，有意取代旧“不落”态）
  *  + **回合起刻**（`turnStarts[key] = now`——仅本键此前非 running 时落，即回合首帧；D17 段 5 耗时源）；
  *  ③ 无 `fields` ∧ `isTurnTail` ⇒ **唯一回合尾**（去 `running` + 置 `done`；`stopped` 兼摘本键提问项 + 清本键 `approval` 位 ——
  *  中断径各门按取消结算 ⇒ 卡随事件面出场；`done` 径不摘 —— `docs/desktop/design/RENDERER.md` §1.1）；
@@ -137,16 +149,19 @@ function onActivity(state, ev, now) {
     if (ev.event !== "turn") return state
     const badges = state.tabBadges ?? {}
     const wasRunning = Array.isArray(badges[ev.key]) && badges[ev.key].includes("running")
-    const turnSlot = Number.isInteger(ev.n) && ev.n > 0 && Number.isInteger(ev.max) && ev.max > 0
-      ? withReading(state.turns, ev.key, { n: ev.n, max: ev.max })
+    const turnSlot = Number.isInteger(ev.turn) && ev.turn > 0 && Number.isInteger(ev.maxTurns) && ev.maxTurns > 0
+      ? withReading(state.turns, ev.key, { n: ev.turn, max: ev.maxTurns })
       : state.turns
     const starts = wasRunning ? state.turnStarts : { ...(state.turnStarts ?? {}), [ev.key]: now }
+    // 停滞轻显形（UI.md §1 本批注项 2）：回合起刻 = 静默初始锚（`turnStarts` 邻位同置 —— 仅回合首帧）
+    const outputStarts = wasRunning ? state.lastOutputAt : { ...(state.lastOutputAt ?? {}), [ev.key]: now }
     const stamps = badgeStamps(badges, ev.key, "running", true)
-    if (stamps.changed === false && turnSlot === state.turns && starts === state.turnStarts) return state
+    if (stamps.changed === false && turnSlot === state.turns && starts === state.turnStarts && outputStarts === state.lastOutputAt) return state
     return {
       ...state,
       ...(turnSlot === state.turns ? {} : { turns: turnSlot }),
       ...(starts === state.turnStarts ? {} : { turnStarts: starts }),
+      ...(outputStarts === state.lastOutputAt ? {} : { lastOutputAt: outputStarts }),
       ...(stamps.changed ? { tabBadges: stamps.badges } : {}),
     }
   }
@@ -163,11 +178,11 @@ function onActivity(state, ev, now) {
   return { ...marked0, tabBadges: marked.badges }
 }
 
-/** `ev:error`——错误块入流（文本 = 载荷 `message` 原样；无槽位自造）+ **错误径 = 回合结算**（三径同判据 —— `docs/desktop/design/RENDERER.md` §1.1）：
+/** `ev:error`——错误块入流（文本 = 载荷 `text` 原样；无槽位自造）+ **错误径 = 回合结算**（三径同判据 —— `docs/desktop/design/RENDERER.md` §1.1）：
  *  本键 `running` 清 + 位落 `done`（错误终局后输入区不再判忙 · 队首可 flush —— `ok` 假 ∥ 抛 ⇒ 留队 + 下次回合尾重触发）+ **游标清点**（错误径 ∈ 三径）；位标键源 = `ev.key`（任意键可写），块面仍守键门。 */
 function onError(state, ev) {
   // 「对齐第三批」项 9：载荷扩 `techInfo`（宿主 `err.stack`）—— 在场才落块键（缺 ⇒ 键缺席）；`details` 面归视图面
-  const block = { kind: "error", text: ev.message }
+  const block = { kind: "error", text: ev.text }
   if (typeof ev.techInfo === "string" && ev.techInfo !== "") block.techInfo = ev.techInfo
   const blocks = forActive(state, ev) ? clearCursor(appendBlock(state, block)) : state
   const cleared = badgeStamps(blocks.tabBadges ?? {}, ev.key, "running", false)
@@ -182,6 +197,9 @@ export function reduce(state, ev, now = Date.now()) {
   if (channel === null) return state
   // 活动恢复即清（statusText —— VSC 同清单七时点；判据单源 = `events-status.mjs` `expireStatusText` + 本档 `isTurnTail`）
   state = expireStatusText(state, channel, ev, isTurnTail(ev))
+  // 停滞轻显形（UI.md §1 本批注项 2）：可见输出通道集 ⇒ `lastOutputAt[<会话键>]` 置现刻（重置单点 ——
+  // 逐事件恒变：「无变化 ⇒ 原引用」对时间戳切片自然不适用）。
+  if (OUTPUT_CHANNELS.has(channel)) state = withOutputAt(state, ev.key, now)
   switch (channel) {
     case "ev:token": return onToken(state, ev)
     case "ev:reasoning": return onReasoning(state, ev)

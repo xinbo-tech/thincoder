@@ -5,7 +5,7 @@
 > 对位档 = **无**（VSC 侧无行间区块面——其工具面为 webview 卡片，非同机制；非同源镜像）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 6 批**——`thincoder-cli/docs/design/TUI-TOOL-OUTPUT.md` 内容重建入基准层；
 > 旧档原地一字不改、留作参照历史。需求侧同批自 `thincoder-cli/docs/requirements/TUI-TOOL-OUTPUT.md` 迁入）。
-> 本档坐标与行数 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
+> 本档坐标与行数 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）；§4 三处坐标随 B7 1a 收编重锚（2026-09-29——见变更记录）。
 
 ## 1. 定位与边界
 
@@ -44,10 +44,10 @@
 
 ## 4. 参数可见性（`thincoder-cli/src/tui/tool-args.mjs`）
 
-- **单源摘要**：`describeToolArgs(name, args)`（`:18`）——按工具挑关键参数的可读单行
+- **单源摘要**：`describeToolArgs(name, args)`（单源 = 核 `thincoder-core/tool-args.mjs:16`——B7 1a 上提；本端 `:14` 同名转口）——按工具挑关键参数的可读单行
   （bash = 命令 + workdir；文件工具 = 路径 + offset/limit/edit 摘要；搜索 = pattern + path；未知 / MCP 工具 = 紧凑 JSON 80 截断）。
-- **live 标题行**：`❯ name <可读摘要>`（`tool-events.mjs:153` 调用）——取代早期「原始 JSON 前 80 字符」（长路径截半不可读）。
-- **恢复路径**：`[tool] name — <摘要>` 标题行 + **全量 pretty JSON 落 dim 行**（`toolArgsLines`，`:81`）——
+- **live 标题行**：`❯ name <可读摘要>`（`tool-events.mjs:158` 调用）——取代早期「原始 JSON 前 80 字符」（长路径截半不可读）。
+- **恢复路径**：`[tool] name — <摘要>` 标题行 + **全量 pretty JSON 落 dim 行**（`toolArgsLines`，`:20-23`）——
   TUI 无悬停面，全量必须落行；超长由连续 dim 折叠收纳。畸形 args JSON 降级为原始串 dim 行，不崩。
 - **两端对齐**：VSC 卡片头 name+args 截断 ≈ 标题行摘要；点击展开 body ≈ 全量 JSON dim 行。
 
@@ -115,3 +115,5 @@
   ① 落点 = `docs/cli/design/`（P2：CLI 终端界面结构性只属 CLI；VSC 无行间区块面）；
   ② 坐标全量改**现状路径**并实核（`thincoder-cli/src/tui/**` · `thincoder-core/agent/dispatch.mjs`）；
   ③ 旧档「测试 / 用例 / 变更流水」入 §8.1（不并）；④ 字符维度额度的详述挂 `docs/cli/design/TUI-SESSION-VIEW.md` §5（D2 单一权威源）。
+- 2026-09-29（**parity-b7-minor 批 · W4 文档收正轮 · eng-designer**——承批档 §5.C6-5 ∕ §5.C4）：§4 三处坐标收正——`describeToolArgs` 单源迁核（`thincoder-core/tool-args.mjs:16`；本端 `:14` 转口）· `toolArgsLines` `:81 ⇒ :20-23` ·
+  `tool-events.mjs` `:153 ⇒ :158`（现盘实读）。**机制语义零改**。

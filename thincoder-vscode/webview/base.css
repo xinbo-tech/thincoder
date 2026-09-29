@@ -116,6 +116,17 @@ body {
   background: var(--vscode-button-secondaryBackground, rgba(255, 255, 255, 0.08));
 }
 
+/* 让位期出口钮（2026-09-29 块跟滚让位修复批 · 台账 #603 · WEBVIEW.md §5.5）：核件自持（建 ∕ 更 ∕ 删 + 两态
+   词键 `sub.follow.new` ∕ `sub.follow.bottom`）；块内容窗右下 overlay；折叠态不显（核件在场判据已含 `open`，
+   本行 = 残位兜底）。 */
+.sub-follow-btn {
+  position: absolute; right: 6px; bottom: 6px; padding: 0 8px; font-size: 11px;
+  border: 1px solid var(--border); border-radius: 10px; color: var(--fg); cursor: pointer;
+  background: var(--vscode-button-secondaryBackground, rgba(255, 255, 255, 0.08));
+}
+.advisor-block.sub-block:not([open]) .sub-follow-btn { display: none; }
+.advisor-block.sub-block.sub-frozen .sub-follow-btn { display: none; } /* 冻结兜底（在场判据含非冻结——灭残位） */
+
 /* ─── Scroll-to-bottom button ─────────────────── */
 
 .scroll-bottom-btn {

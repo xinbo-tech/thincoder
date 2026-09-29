@@ -40,13 +40,15 @@ const SCOPES = Object.freeze(SECTIONS.map((section) => section.name))
 
 /**
  * 设置族接线：装配三族（读数供给 / 出口 / 项目级读数）+ 挂载（一挂载面：设置 / 向导两树互斥）+ 向导接线 + 自持重绘订阅。
- * `host` = preload 窄桥（只 `invoke`）；`deps.onProjectOpened` = 装配面项目面链注入（缺 ⇒ 目录出口零动作）。
+ * `host` = preload 窄桥（只 `invoke`）；`deps.onProjectOpened` = 装配面项目面链注入（缺 ⇒ 目录出口零动作）；
+ * `deps.onProvidersChanged` = provider 写成功随动注入（全渠扇出批 —— 缺 ⇒ 零动作）。
  * 返回 `{ paintSettings, refreshInfo, openSettings, refreshSettings, handlers, wizardHandlers, keys, detach }`（消费面只
  * `attachSettings(host, …)`；`refreshInfo` 出句柄面 = 开项目成功链复读口（#461 —— `renderer/app.mjs` `openDir` 消费 · 幂等）；
  * `refreshSettings` 出句柄面 = config 写盘感知复读口（R8 · `ev:config` 窄口 —— `renderer/app.mjs` `attachEvents` 消费）。 */
 export function attachSettings(host, deps = {}) {
   const store = deps.store ?? defaultStore
   const onProjectOpened = typeof deps.onProjectOpened === "function" ? deps.onProjectOpened : null
+  const onProvidersChanged = typeof deps.onProvidersChanged === "function" ? deps.onProvidersChanged : null
   const bridgeReady = host !== null && typeof host === "object" && typeof host.invoke === "function"
   if (!bridgeReady) console.error("[renderer] preload bridge missing: settings channels unavailable")
 
@@ -99,7 +101,7 @@ export function attachSettings(host, deps = {}) {
   const reads = createReads({ ask, store, setSettings, report })
   /** 出口族 + 写路辅助（出档 `mount-settings-exits.mjs` —— 共享项注入，本档零副本；`paintSettings` 迟绑定穿透）。 */
   const exits = createExits({
-    ask, store, setSettings, report, clearReport, occupies, reads,
+    ask, store, setSettings, report, clearReport, occupies, reads, onProvidersChanged,
     slot: SETTINGS_SLOT, paintSettings: (state) => paintSettings(state),
   })
   /** 项目级读数族（出档 `mount-info.mjs` —— 两读数复读；读面消费 = 状态行台账超阈段）。 */

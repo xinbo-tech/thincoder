@@ -20,6 +20,9 @@
  *      （VSC `src/extension/ledger-surface.mjs:69` 对位——除该两件外仅 compose 核族扫描导出，
  *      零本地扫描实现；行文本核产逐字、端零行构造）；每拍重算、同值零出站；空集照出（清 tooltip
  *      —— 禁假造）。
+ *   ③ `marker`（状态行 ⇒ CLI 补漏批增 · 状态行段 11 常驻标记载波）：核状态位转发（`{ text, warn }` ∕ `null`
+ *      —— `text` = 核 `formatMarker` 逐字、`warn` = 核判位（老化 > 0 ∨ 死执行者 > 0）——端零重算）；
+ *      首拍必携（含 null——清旧项目残影）· 同值零出站（投影 ∕ 比较 = `ledgerMarkerOf` ∕ `sameLedgerMarker`）。
  */
 import { readManifest } from "@thincoder/core/manifest.mjs"
 import { currentCwd } from "./projects.mjs"
@@ -47,12 +50,30 @@ export async function ledgerRead(payload) {
   }
 }
 
-/** 台账机制状态位载体（核 `runLedgerScan` 写 `state.ledger` 标记位——本端只作载体，不消费该标记）。
+/** 台账机制状态位载体（核 `runLedgerScan` 写 `state.ledger` 标记位——本端**只作转发载体**：拍尾经
+ *  `ledgerMarkerOf` 投影出站 `ev:ledger` `marker` 键（状态行段 11 消费）；端零重算 ∕ 零判位）。
  *  核拍面 `processing` 避让门（`ledger-surface.mjs:66`）本端无该态 ⇒ 恒不触发（与 VSC 同形——登记）。 */
 const LEDGER_STATE = { ledger: null }
 
 /** 行色表（核面缝值 `colors`）：核按 `warn` 位逐行取色 ⇒ 两值 = 位哨兵（`pushLine(text, warn)` 得真布尔）。 */
 const LINE_COLORS = Object.freeze({ warn: true, dim: false })
+
+/** 台账状态位出站投影（纯函数 —— 用例缝）：核拍面写的 `state.ledger`（`{ marker, warn, scannedAt }` ——
+ *  `ledger-surface.mjs:52`）⇒ 出站值 `{ text, warn }` ∕ `null`：`text` = 核 `formatMarker` 逐字（端零构造）；
+ *  未扫 ∕ 无当前项目（`marker` 空）⇒ `null`（出站 `null` = 清渲染面残影 —— 段 11 在场判据 = `text` 非空串）。 */
+export function ledgerMarkerOf(ledger) {
+  const text = ledger !== null && typeof ledger === "object" && typeof ledger.marker === "string" && ledger.marker !== ""
+    ? ledger.marker
+    : null
+  if (text === null) return null
+  return { text, warn: ledger.warn === true }
+}
+
+/** 状态位同值判据（纯函数 —— 用例缝）：`text` 逐字 + `warn` 真值同判（两 `null` 同值）。 */
+export function sameLedgerMarker(a, b) {
+  if (a === null || b === null) return a === b
+  return a.text === b.text && (a.warn === true) === (b.warn === true)
+}
 
 /** 当前刷新面句柄（模块级单例——开项目链重锚：先撤旧后立新）。 */
 let _refresh = null
@@ -85,8 +106,9 @@ async function ledgerDetailLines(anchor) {
  * `startLedgerSurface`（返回拍面句柄 `{ dispose }` ∥ `null`）。入参不合（非 cwd ∕ 非 post）⇒ `null`
  * 零动作；重复调用 = **重锚**（先撤旧后立新——开项目链可多次）。
  * `notifyFile` = 去重档注入面（生产缺省 = 核 `NOTIFY_FILE`——跨端共享档；用例注入 tmp 档）。
- * 出站两键：`lines`（核行产——变化行 ∕ 启动拍含明细行）· `detailLines`（本档明细行集——状态行
- * tooltip 载波）；两键皆无变化 ⇒ 零出站。调用点 `void`（`ipc.mjs`）零消费返回值。
+ * 出站三键：`lines`（核行产——变化行 ∕ 启动拍含明细行）· `detailLines`（本档明细行集——状态行
+ * tooltip 载波）· `marker`（核状态位——状态行段 11 常驻标记载波 · 状态行 ⇒ CLI 补漏批增）；
+ * 三键皆无变化 ⇒ 零出站。调用点 `void`（`ipc.mjs`）零消费返回值。
  */
 export async function pushLedgerLines({ cwd, key, post, notifyFile } = {}) {
   if (typeof cwd !== "string" || cwd === "" || typeof post !== "function") return null
@@ -100,8 +122,9 @@ export async function pushLedgerLines({ cwd, key, post, notifyFile } = {}) {
   }
   const pending = [] // 本拍行缓冲（`pushLine` 收；拍尾出站后清）
   let lastDetail = null // 上拍明细行集（同值零出站）
+  let lastMarker // 上拍状态位（`undefined` = 本锚期未出 ⇒ 首拍必携；同值零出站）
   let flushing = false // 拍重叠防衛（明细拍含判活探束——慢拍在飞 ⇒ 跳本拍出站，行缓冲留待下拍）
-  /** 拍尾（核 `render` 回调）：行缓冲 + 明细行集一并出站（两键皆无变化 ⇒ 零出站——对位 VSC 同值零推）。 */
+  /** 拍尾（核 `render` 回调）：行缓冲 + 明细行集 + 状态位一并出站（三键皆无变化 ⇒ 零出站——对位 VSC 同值零推）。 */
   const flush = async () => {
     if (flushing) return
     flushing = true
@@ -120,7 +143,13 @@ export async function pushLedgerLines({ cwd, key, post, notifyFile } = {}) {
           && detailLines.every((text, index) => text === lastDetail[index])
         if (!same) { payload.detailLines = detailLines; lastDetail = detailLines }
       }
-      if (payload.lines === undefined && payload.detailLines === undefined) return
+      // 状态位（状态行 ⇒ CLI 补漏批增）：首拍必携（含 null——清旧项目残影）· 同值零出站
+      const marker = ledgerMarkerOf(LEDGER_STATE.ledger)
+      if (lastMarker === undefined || !sameLedgerMarker(lastMarker, marker)) {
+        payload.marker = marker
+        lastMarker = marker
+      }
+      if (payload.lines === undefined && payload.detailLines === undefined && payload.marker === undefined) return
       try { post("ev:ledger", { key, ...payload }) } catch (error) {
         console.error("[project-info] ledger emit failed:", error) // 出站抛自吞（零静默）—— 调用点 `void` ⇒ 不落未处理拒绝
       }

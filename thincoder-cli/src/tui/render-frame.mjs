@@ -10,6 +10,7 @@ import { ansi, C, ESC } from "./ansi.mjs"
 import { convCacheKey, renderConversation, countConvLines } from "./render-conversation.mjs"
 import { sliceByWidth, stringWidth } from "./render.mjs"
 import { providerSpec } from "@thincoder/core/config.mjs"
+import { t } from "@thincoder/core/i18n.mjs" // 停滞轻显形（TUI.md §7.7）：句式键 status.quiet——词面单源（CLI 直取）
 // #363②（off 形族单源——MODEL-SPECS.md §16.2 / §16.4）：顶栏 think 徽标的 off 判据引核（本档零副本）。
 import { thinkOffShape, thinkOffPath } from "@thincoder/core/think-off.mjs"
 import { computeLayout, subagentVisibleLines } from "./layout.mjs"
@@ -33,6 +34,11 @@ const SLASH_HINTS = {
   "/session": "select archived session",
   "/restore": "select checkpoint to restore",
 }
+
+// ---------- 停滞轻显形阈值（docs/cli/design/TUI.md §7.7 · stall-indicator 批 2026-09-29）----------
+/** 静默显示阈值（毫秒）——静默 ≥ 本值才注入读数（首显值 = 10s）；跳秒 = 既有 1s 拍
+ *  （agent-turn ticker——零新定时器）；三端同值（VSC ∕ 桌面各自持有常量面）。 */
+export const QUIET_MS = 10_000
 
 // ====================================================================
 // Panel render functions (exported for incremental rendering)
@@ -393,7 +399,14 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
     ? ` │ ↑${fmtK(tk.prompt)} ↓${fmtK(tk.completion)}${tk.reasoningTokens > 0 ? ` ✦${fmtK(tk.reasoningTokens)}` : ""}${cacheTotal > 0 ? ` hit${Math.round((tk.cacheHit / cacheTotal) * 100)}%` : ""}` : ""
   const elapsed = state.processing ? ` ${Math.floor((Date.now() - state.processingStarted) / 1000)}s` : ""
   const toolHint = state.currentTool ? ` ${state.currentTool}…` : ""
-  const statusText = state.processing ? `${state.status}${toolHint}${elapsed}` : state.status
+  // 停滞轻显形（docs/cli/design/TUI.md §7.7 · stall-indicator 批 2026-09-29）：显示位 = elapsed 之后；
+  // 静默 = 距最近一次可见输出（`state.lastOutputAt`——回合起刻为初始锚，重置点三类见 tool-events ∕
+  // subagent-blocks）；非显示条件（未至阈值 ∕ 非在飞 ∕ 未起算）零注入（负向锁——逐字节等价）；纯读数零警示色。
+  const lastOut = state.lastOutputAt ?? 0
+  const quietHint = state.processing && lastOut > 0 && Date.now() - lastOut >= QUIET_MS
+    ? ` ${t("status.quiet", { s: Math.floor((Date.now() - lastOut) / 1000) })}`
+    : ""
+  const statusText = state.processing ? `${state.status}${toolHint}${elapsed}${quietHint}` : state.status
   // 2026-09-02 Q1（SESSION.md §6.8）：provider 可为 null —— providerSpec(null) 保守 128K 不抛错
   // 2026-09-02 §15：context 窗口跟随 providers[].context 覆盖（T-C6——百分比基于覆盖后的窗口）
   const modelContext = providerSpec(agent.provider).context

@@ -302,7 +302,7 @@ claude / gemini 携 `format: "anthropic" / "google"`；minimax 携 `chatPath: "/
 运行期拉取候选两级（写 `raw.defaultModel`）。Add / Remove / Key 流 = `thincoder-vscode/src/extension/provider-flows.mjs`（`addProviderFlow` `:106`——QuickPick preset 过滤已添加或 Custom 手输 name / baseURL / model + format → `addProviderEntry` → 问 key → `setProviderKey`）；
 `settings.mjs` `fullStatus`（`:308`）单源拉取
 （逐已配置渠道各探一次——探通 → 候选行直接可选；探不通 → 不可选 + 失败消息随载荷）。**M9 准入探针（配置阶段）** = 收敛于核 `@thincoder/core/provider/list-models.mjs`（W10 已迁核——同名镜像已删；消费面 = `thincoder-vscode/src/extension/{provider-flows,settings,settings-panel-write}.mjs` 经核面引用）
-（探针形状由 `thincoder-vscode/src/config-io.mjs:230` `probeTargetFromEntry` 组装——端侧缝保留）；探通 / 探不通两态 + **不阻断保存**；`defaultModel` 写面探针 fire-and-forget（写面为同步契约——探针绝不 reject）；**运行期零探测**（启动 / 发请求 / 面板打开不做 `/models` 探测）。候选未命中 = 保持当前选择显示与状态
+（探针目标由核 `thincoder-core/provider-flows.mjs` `probeTargetOf` 组装——三端同源；VSC 端侧自持副本已删（B10 E1）——桌面 ∕ VSC 写面同取该件）；探通 / 探不通两态 + **不阻断保存**；`defaultModel` 写面探针 fire-and-forget（写面为同步契约——探针绝不 reject）；**运行期零探测**（启动 / 发请求 / 面板打开不做 `/models` 探测）。候选未命中 = 保持当前选择显示与状态
 （回落会话槽复合）+ 零 `selectModel` / `selectReasoning` post（§6.16 M10 语义同源 · 独立实现）。
 **探针落账与有界重试（2026-09-18 · F-W19）**：端侧详面 = `docs/vsc/design/SETTINGS.md` §2.12（采样器 / 重试窗口 / 展示面分档 / 机检面）；核语义 = §6.16 M8/M9 补行（载荷与分类）——双向指，**不重述**。
 

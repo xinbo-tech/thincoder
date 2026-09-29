@@ -90,7 +90,7 @@
 | M1 manifest | 新增 `manifest.mjs` + 修改 `thincoder-core/agent/setup-reminders.mjs` / `thincoder-core/agent/run-stages.mjs`（情境行注入——E5.1） | 修改 `src/cli/make-agent.mjs`（装配层读/初始化 manifest） | 修改 `thincoder-vscode/src/agent/setup.mjs`（装配层读/初始化 manifest）+ `thincoder-vscode/src/agent.mjs` / `thincoder-vscode/src/agent/setup-reminders.mjs`（情境行端镜） |
 | M2 台账 | 修改 `ledger.mjs` + `ledger-surface.mjs` + 命令注册 `thincoder-core/tools/index.mjs` + `family-tools.mjs` | 修改 `thincoder-cli/src/tui/ledger-surface.mjs`（70 行） | 修改 `thincoder-vscode/src/extension/ledger-surface.mjs`（119 行） |
 | M3 批次档 | 修改 `agent-tools/batch-segment.mjs`（改名 `batch.mjs`——符号名随批改 `batchTool`；`batchSegmentTool` = 过渡别名，映射权威 = BATCH-RECORD §4.14——fix 轮 #9） | 零改（核内工具，端经 import 装配） | 零改（核内工具，端经 import 装配） |
-| M4 写权门禁 | 修改 `agent/dispatch.mjs` | 零改（核内门禁） | 修改 `src/agent/tool-gates.mjs`（165 行——VSC 独立同语义镜像） |
+| M4 写权门禁 | 修改 `agent/dispatch.mjs` | 零改（核内门禁） | 修改 `src/agent/tool-gates.mjs`（165 行——VSC 独立同语义镜像） （迁移期引文——档已迁核） |
 | M5 委派 spawn | 修改 `subagent-spawn.mjs` + `subagent-scheduler.mjs` | 零改（端经核单源 import） | 零改（端经核单源 import） |
 | M6 评审凭证 | 修改 `advisor.mjs` + `token-ttl.mjs` + `agent-tools/design-token.mjs` | 零改 | 零改（`tool-gates.mjs` 已 import `validateDesignToken` 自核） |
 | M7 checklist 废除 | 删 checklist 族 + 摘挂载 `thincoder-core/tools/index.mjs` + 移除注入 `thincoder-core/agent/setup.mjs` + 死指针 + 门禁 + 注释 + 测试 3 档（清单见 M7 模块设计档） | 零改 | VSC 摘挂载/移除注入/死指针 + 编排注记（±0）+ 测试 2 档（清单见 M7 模块设计档） |
@@ -391,7 +391,7 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
                 ├──► 命令面拒绝（/plan · ACP · VSC 面板）─► 半状态不产生（②）
                 └──► clearPlanMode（三翻转 + 两恢复）────► planMode 恒 false（③）
                          └─► 消费面零改（core 侧五处为示例：dispatch.mjs:167 · run-stages.mjs:98 · context.mjs:344
-                             · render-frame.mjs:222,225（PLAN│ 横幅）· session.mjs:128（槽保存）；VSC 载体面 / 槽写面同类面见 §2.4 依赖表行）
+                             · render-frame.mjs:228,231（PLAN│ 横幅）· session.mjs:128（槽保存）；VSC 载体面 / 槽写面同类面见 §2.4 依赖表行）
 ```
 
 **受影响文件表**（行数 = as-of 2026-09-21 实测——口径 = 内容行数、不含文末空行；测试面落点 = T10–T14 的建议就近档）：
@@ -451,7 +451,7 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 | M9 → 文件 | 读/写 | 模板目录 → 落地目录（翻译生成） |
 | M6 → M1 | 读 | 评审对象来源 = manifest `docRoot`（声明面，E6 微调点） |
 | M11 ← VSC 装配 | 读 | `engineering` 模式位（端差面：VSC 装配块下移后取派生值——E7） |
-| M11 → planMode 消费面 | 不变量 | 「工程模式 ⇒ `planMode` 恒 false」——core 侧五处（示例）：`thincoder-core/agent/dispatch.mjs:167` · `thincoder-core/agent/run-stages.mjs:98` · `thincoder-core/context.mjs:344` · `thincoder-cli/src/tui/render-frame.mjs:222,225` · `thincoder-core/session.mjs:128`（槽保存）；同不变量下另有 VSC 载体面（`thincoder-vscode/src/agent/tool-gates.mjs:73` · `thincoder-vscode/src/agent.mjs:419`）与槽写面（`thincoder-core/token-ttl.mjs:256` · `thincoder-core/session-slot-write.mjs:131` · `thincoder-core/session-lifecycle.mjs:250`）——**全部零改** |
+| M11 → planMode 消费面 | 不变量 | 「工程模式 ⇒ `planMode` 恒 false」——core 侧五处（示例）：`thincoder-core/agent/dispatch.mjs:167` · `thincoder-core/agent/run-stages.mjs:98` · `thincoder-core/context.mjs:344` · `thincoder-cli/src/tui/render-frame.mjs:228,231` · `thincoder-core/session.mjs:128`（槽保存）；同不变量下另有 VSC 载体面（`thincoder-vscode/src/agent/tool-gates.mjs:73` · `thincoder-vscode/src/agent.mjs:419`）与槽写面（`thincoder-core/token-ttl.mjs:256` · `thincoder-core/session-slot-write.mjs:131` · `thincoder-core/session-lifecycle.mjs:250`）——**全部零改** （迁移期引文——档已迁核） |
 
 ### 2.5 整体数据流
 
@@ -528,6 +528,8 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 | T14 | 错误：普通模式零回归 | 普通模式装配 / `/plan` 切换 / ACP `mode:"plan"` / 槽 `planMode:true` 恢复 | 四条路径全带宽不变（**除本批所列矩阵镜像收正**——`host-shape-spawn.test.mjs` T5：两条工程行删 `plan` + 增 explore 工程行——外，既有测试零改全绿） |
 
 ## 4. 变更记录
+
+- 2026-09-29（**desktop-residuals-sweep 批 · 波 D（非冻结档面）· eng-designer**——承 `docs/batches/2026-09-29-desktop-residuals-sweep.md` §2 · 台账 #535）：两处坐标按盘收正（`render-frame.mjs:222,225 ⇒ 228,231`——判据链图 ∕ §2.4 依赖表 M11 行）。**零新语义**。
 
 - 2026-09-28（**测试按层收口·设计对齐轮 · eng-designer**——承 `docs/batches/2026-09-28-test-layer-prompts.md` §1.4 派单 + 父侧裁定（声明外追加 · 父侧已裁））：§「测试纪律（简化）」行收正——「测试退役台账」→「独立退役台账仪式」（退役处置仍按需求 `requirements/TESTING.md` §2 F6 ∕ F9——批次收口逐条；2026-09-28 复确认）。**本档机制条文零改**。
 

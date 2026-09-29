@@ -2,17 +2,20 @@
  * pool-subagents.mjs — 池面**子 agent 族**键控差分族（纯 DOM 执行面；R5 · 桌面功能对位批「先拆后改」：
  * `renderer/views/activity.mjs` 届盘 338 行越 300 顾问线，按在册拆点「`subElementOf` … `bindFamilyLabel`」
  * 落形 —— 结构拆分零语义）。本档 = 族内六件（元素构造 ∕ 行重放 ∕ 冻结着装 ∕ 同键更新 ∕ 出生 ∕ 键控差分）；
- * 容器标签刷（`bindFamilyLabel`）与挂载编排（`mountPool` / 三态 / 头 / 两族）留主档 —— `familyLabel` 为
- * 三族共用件（审批 ∕ 子 agent ∕ 队列同用）⇒ 不随迁（避免反向依赖成环）。
+ * 容器标签刷（`bindFamilyLabel`）与挂载编排（`mountPool` / 三态 / 头 / 两族）留主档；纯构树族（含三族共用
+ * `familyLabel`）居 `renderer/views/pool-tree.mjs`（让位修复批预案出档）—— 本档对二者零依赖。
  * **R5（子 agent 面 · 态机三面随动 + 块头注记）**：注记呈现 = **核件直出**（`refreshBlock` ⇒ `headerText`
  * 读 `meta.note` —— 端零文案）；本档随态机三面 —— 复位（模型零块 ⇒ 主档弃容器 ⇒ 下次出生全新建元素）·
  * 退出兜底（归档后模型 `frozen` ⇒ `foldIfFrozen` 着装）· 出生闸（新块 ⇒ `createSubBlock` 出生）。
  * 依赖单向：本档 → 核件（`/rc/subblocks/block.mjs` `renderSubagentChunk` ∕ `renderSubBlock` ∕ `renderSubDesc` ∕
  * `initBlockFollow` ∕ `maybeScrollBlock`；`/rc/subblocks/activity-view.mjs` `refreshBlock`）· `./activity-new.mjs`
- * （出生点判据总口）；主档反向引本档唯一导出 `syncSubBlocks` —— **无环**。
+ * （出生点判据总口）；主档反向引本档两导出（`syncSubBlocks` / `applySubBlockFollow`）—— **无环**。
  * **#518 块内容区跟滚（四点接线 · 核原语直消费）**：① 出生 ∕ 接管（`subElementOf` 尾 `initBlockFollow`）·
  * ② 内容增量（`replayRows` 追加后）· ③ 挂载补钉（`createSubBlock` `family.append` 后）· ④ 接管径补钉
  * （`updateSubBlock` `replaceWith` 后）——余三点 = `maybeScrollBlock` 应用（让位旗标为假 ⇒ 零写）。
+ * **让位修复批（2026-09-29 · #603）**：应用点契约（追加后 ∕ 挂载后 ∕ 帧尾复核——单源 = 核档 KD-RC-8）之**帧尾
+ * 复核**落本档新导出 `applySubBlockFollow`（族级逐块 `maybeScrollBlock`——任何位面被抹 ⇒ 下一帧自愈），
+ * 调用点 = 主档 `mountPool` 尾（`syncSubBlocks` 之后）。
  * 零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
 import { renderSubagentChunk, renderSubBlock, renderSubDesc, initBlockFollow, maybeScrollBlock } from "/rc/subblocks/block.mjs"
@@ -113,3 +116,12 @@ export function syncSubBlocks(root, family, model) {
     if (!wanted.has(element.getAttribute("data-subname") ?? "")) element.remove()
   }
 }
+
+/** 帧尾复核扫（让位修复批 · KD-RC-8 应用点清单「帧尾复核」——族级逐 `.sub-block` 应用核 `maybeScrollBlock`）：
+ *  旗标真者复钉（任何位面被抹 ⇒ 下一帧自愈）；旗标假者零写（不夺阅读位）。**只扫池族**——归档流内块 = 冻结静态，
+ *  不扫 ∕ 不写；族缺 ∕ 非元素 ⇒ 零动作（幂等）。 */
+export function applySubBlockFollow(family) {
+  if (!family || typeof family.querySelectorAll !== "function") return
+  for (const element of family.querySelectorAll(".sub-block")) maybeScrollBlock(element)
+}
+

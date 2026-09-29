@@ -59,6 +59,8 @@ export const REASON_WORD = Object.freeze({
   timeout: "settings.reason.timeout",
   malformed: "settings.reason.malformed",
   "probe-failed": "settings.reason.probeFailed",
+  "base-url-required": "settings.providerUrlRequired", // S2：拉取模型前置拒（缺 baseURL）
+  "slot-authority": "settings.reason.slotAuthority", // S14a：slot 权威键通用保存拒写
 })
 
 /** 段名闭集（notice `scope` 判据；`panel` = 面板级失败 —— 不出段标）：由 `SECTIONS` 派生（词键单源）。 */
@@ -81,6 +83,8 @@ const listOf = (value) => (Array.isArray(value) ? value : [])
 
 /** 非空串归一：非串 / 空串 ⇒ `null`（禁假造）。 */
 const str = (value) => (typeof value === "string" && value !== "" ? value : null)
+/** 对象切片归一：缺 / 非对象 ⇒ `null`（禁假造——S2 `probe` ∕ `draft` 同判）。 */
+const objOf = (value) => (value !== null && typeof value === "object" ? value : null)
 
 /** 码 → 词：表内出词；表外（含核错误串）原样直传；缺 / 空 ⇒ `null`（零节点）。 */
 export function reasonWord(code) {
@@ -100,6 +104,30 @@ function pickerRows(value) {
   return listOf(value).map((row) => ({ id: modelIdOf(row), effortEnum: listOf(row?.effortEnum) })).filter((row) => row.id !== null)
 }
 
+/** 复合串模型段（`"provider:model"` ⇒ `"model"`；无冒号 / 空段 ⇒ `null`）。 */
+function modelSegmentOf(composite) {
+  const at = typeof composite === "string" ? composite.indexOf(":") : -1
+  return at > 0 ? str(composite.slice(at + 1)) : null
+}
+
+/** guard 开关现值（S14b）：活动会话键 ⇒ `sessionFlags` 槽投影布尔；无活动会话 / 无读数 ⇒ `null`（未知 —— 禁假造）。 */
+function guardFlagOf(state) {
+  const key = typeof state?.activeSession === "string" && state.activeSession !== "" ? state.activeSession : null
+  if (key === null || state?.sessionFlags === null || typeof state?.sessionFlags !== "object") return null
+  const record = state.sessionFlags[key]
+  return typeof record?.advisorGuard === "boolean" ? record.advisorGuard : null
+}
+
+/** advisor 推理档**归属模型**（S11 收正 · 顾问评审 🟡2——写面 ∕ 候选面同源同序；对位核 `resolveAdvisorProvider`
+ *  `thincoder-core/advisor/run.mjs:26-56`「cfg.model > 渠道 model > 主 provider model」）：
+ *  `advisor.model` ⇒ 该值；否则 advisor 渠条目默认模型；再缺 ⇒ 主模型段（`defaultModel`）；无 ⇒ `null`。 */
+function advisorTargetOf(settings) {
+  const advisor = settings.models?.advisor ?? {}
+  const provider = str(advisor.provider)
+  const channelModel = provider === null ? null : str(listOf(settings.providers?.providers).find((p) => p?.name === provider)?.model)
+  return str(advisor.model) ?? channelModel ?? modelSegmentOf(settings.model?.current)
+}
+
 /** 面模型（纯 · 零 DOM）：开合 + 失败面 + 七段（各段现态直读 —— 渲染面零推导）。 */
 export function settingsModel(state) {
   const settings = state?.settings ?? {}
@@ -114,6 +142,7 @@ export function settingsModel(state) {
       presets: listOf(settings.providers?.presets).filter((p) => p && typeof p.name === "string"),
       rows: listOf(settings.providers?.providers).filter((p) => p && typeof p.name === "string"),
       verify: settings.verify !== null && typeof settings.verify === "object" ? settings.verify : null,
+      edit: str(settings.providers?.edit), probe: objOf(settings.providers?.probe), draft: objOf(settings.providers?.draft),
     },
     model: {
       state: stateOf(settings.model),
@@ -125,11 +154,20 @@ export function settingsModel(state) {
     agent: {
       state: stateOf(settings.agent),
       fields: listOf(settings.agent?.fields).filter((f) => f && typeof f.path === "string"),
+      // B10 W3（S10 ∕ S11 ∕ S14b）三读数：候选 = `model:list` 投影元素面（激活渠 —— 子代理模型槽值 / advisor 档位枚举双用）；
+      // advisor 档归属模型 = `advisorModel`（写面 ∕ 候选面同源同序，S11 收正——见 `advisorTargetOf` · 顾问评审 🟡2）；
+      // guard = 活动会话 `sessionFlags` 槽投影（未知 ⇒ null）。
+      models: listOf(settings.model?.models).filter((row) => row !== null && typeof row === "object" && typeof row.id === "string" && row.id !== ""),
+      provider: str(settings.model?.provider),
+      advisorModel: advisorTargetOf(settings),
+      guard: guardFlagOf(state),
     },
     mcp: {
       state: stateOf(settings.mcp),
       servers: listOf(settings.mcp?.servers).filter((s) => s && typeof s.name === "string"),
       details: settings.mcp?.details !== null && typeof settings.mcp?.details === "object" ? settings.mcp.details : {},
+      // S8：表单态（`editing` = 编辑中服务器名 ∥ null；`type` = 三型现选）—— 缺 / 形不合 ⇒ null（新增态）。
+      form: objOf(settings.mcp?.form),
     },
     env: {
       state: stateOf(settings.env),
@@ -199,7 +237,7 @@ function sectionStateNode(state) {
  *  新段 = `ready` 才落行（`none` / `loading` ⇒ 零行节点 —— 防未读达即落默认值〔假读数〕）；`agent` 沿旧
  *  （`loading` 期零体）；`providers` ∕ `model` ∕ `mcp` ∕ `tools` 沿各自旧判（零行为改）。 */
 function sectionBody(name, model, handlers) {
-  const deps = { channelForm: channelFormTree, verifyControl, reasonWord, formats: FORMATS }
+  const deps = { channelForm: channelFormTree, verifyControl, reasonWord, formats: FORMATS, edit: model?.providers?.edit ?? null }
   if (name === "providers") return [sectionStateNode(model.providers.state), ...providersBody(model.providers, handlers, deps)]
   if (name === "model") return [sectionStateNode(model.model.state), ...modelBody(model.model, handlers)]
   if (name === "agent") {

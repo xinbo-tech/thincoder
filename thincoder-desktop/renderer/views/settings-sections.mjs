@@ -54,39 +54,113 @@ function verifyNode(verify, deps) {
   return { tag: "div", props: { class: "settings-verify", "data-verify": verify.kind === "ok" ? "ok" : "fail" }, children: [word] }
 }
 
-/** 渠道行：名 + 键面 + 当前标 + 校验 / 移除两控件（校验控件 = `deps` 注入，单一 owner）。 */
-function providerRowNode(row, handlers, deps) {
-  const onRemove = typeof handlers?.onRemoveProvider === "function" ? () => handlers.onRemoveProvider(row.name) : undefined
-  const remove = {
+/** 段内按钮（锚名 ∕ 可及名 ∕ 词面三处同源；缺 handler ⇒ `wire` 落 `disabled` —— 诚实非死控）。 */
+function rowButton(action, name, word, aria, handler) {
+  return {
     tag: "button",
-    props: wire({
-      class: "settings-row-action",
-      type: "button",
-      "data-action": "settings:removeProvider",
-      "data-name": row.name,
-      "aria-label": t("settings.providers.remove", { name: row.name }),
-    }, onRemove),
-    children: [t("settings.providers.remove", { name: row.name })],
+    props: wire({ class: "settings-row-action", type: "button", "data-action": action, "data-name": name, "aria-label": aria }, handler),
+    children: [word],
   }
+}
+
+/** 渠道行 sub 段（S4 ∕ S3）：`model` ∕ `baseURL` ∕ 不可用标与失败句 —— **非空才显**（禁假造；空值 ⇒ 零节点）。 */
+function rowSubNodes(row) {
+  const unavailable = row?.available === false
+  const reason = typeof row?.unavailableReason === "string" && row.unavailableReason !== "" ? row.unavailableReason : ""
+  return [
+    typeof row?.model === "string" && row.model !== ""
+      ? { tag: "span", props: { class: "settings-row-value", "data-provider-model": "" }, children: [row.model] } : null,
+    typeof row?.baseURL === "string" && row.baseURL !== ""
+      ? { tag: "span", props: { class: "settings-row-value", "data-provider-baseurl": "" }, children: [row.baseURL] } : null,
+    unavailable ? { tag: "span", props: { class: "settings-mark", "data-available": "false" }, children: [t("settings.reason.unavailable")] } : null,
+    unavailable && reason !== ""
+      ? { tag: "span", props: { class: "settings-row-value", "data-unavailable-reason": "" }, children: [reason] } : null,
+  ]
+}
+
+/** 渠级代理复选（S5）：`change-to-save`（值 ⇒ `onSetProxy(name, checked)`）；缺 handler ⇒ `disabled`（沿段内先例）。 */
+function proxyNode(row, handlers) {
+  const props = { type: "checkbox", class: "settings-field", "data-provider-proxy": "", checked: row.proxy === true ? true : undefined }
+  if (typeof handlers?.onSetProxy === "function") props.onChange = (event) => handlers.onSetProxy(row.name, event?.target?.checked === true)
+  else props.disabled = true
+  return {
+    tag: "label",
+    props: { class: "settings-field-label", title: t("settings.proxyRowTitle") },
+    children: [{ tag: "input", props }, t("settings.proxyRow")],
+  }
+}
+
+/** 钥控件两态（S1）：静止 = 设 ∕ 改钥（已配 ⇒ 兼出删钥；两删除门经出口前置确认）；编辑中 = 密码输入 + 存 ∕ 消。 */
+function keyControls(row, handlers, editing) {
+  if (editing) {
+    const save = typeof handlers?.onProviderKeySave === "function" ? () => handlers.onProviderKeySave(row.name) : undefined
+    const cancel = typeof handlers?.onProviderKeyCancel === "function" ? () => handlers.onProviderKeyCancel() : undefined
+    return [
+      { tag: "input", props: { class: "settings-field", type: "password", "data-provider-key-input": row.name, placeholder: "sk-...", "aria-label": t("settings.providers.keyLabel") } },
+      rowButton("settings:providerKeySave", row.name, t("settings.save"), t("settings.save"), save),
+      rowButton("settings:providerKeyCancel", row.name, t("settings.cancel"), t("settings.cancel"), cancel),
+    ]
+  }
+  const word = t(row.hasKey === true ? "settings.changeKey" : "settings.addKey")
+  const edit = typeof handlers?.onProviderKeyEdit === "function" ? () => handlers.onProviderKeyEdit(row.name) : undefined
+  const controls = [rowButton("settings:providerKeyEdit", row.name, word, word, edit)]
+  if (row.hasKey === true) {
+    const del = typeof handlers?.onProviderKeyDelete === "function" ? () => handlers.onProviderKeyDelete(row.name) : undefined
+    controls.push(rowButton("settings:providerKeyDelete", row.name, t("settings.keyDelete"), t("settings.deleteKey"), del))
+  }
+  return controls
+}
+
+/** 渠道行：名 + 键面 + 当前标 + sub 段（S4 ∕ S3）+ 代理复选（S5）+ 钥控件（S1）+ 校验 / 移除两控件
+ *  （校验控件 = `deps` 注入，单一 owner）。行内钥编辑态（`deps.edit` = 本行名）⇒ 控件族换形：只留
+ *  [钥输入, 存, 消]（沿 VSC `keyRowEdit` 同形；代理 ∕ 移除暂撤 —— 取消即回）。 */
+function providerRowNode(row, handlers, deps) {
+  const editing = typeof deps?.edit === "string" && deps.edit !== "" && deps.edit === row.name
+  const onRemove = typeof handlers?.onRemoveProvider === "function" ? () => handlers.onRemoveProvider(row.name) : undefined
+  const remove = rowButton(
+    "settings:removeProvider", row.name, t("settings.providers.remove", { name: row.name }),
+    t("settings.providers.remove", { name: row.name }), onRemove,
+  )
   return {
     tag: "div",
-    props: { class: "settings-row", "data-provider": row.name, "data-active": row.active === true ? "" : undefined },
+    props: {
+      class: "settings-row", "data-provider": row.name,
+      "data-active": row.active === true ? "" : undefined, "data-edit": editing ? "" : undefined,
+    },
     children: [
       { tag: "span", props: { class: "settings-row-name" }, children: [row.name] },
       keyFaceNode(row),
       row.active === true ? { tag: "span", props: { class: "settings-mark", "data-active": "" }, children: [t("settings.providers.active")] } : null,
+      ...rowSubNodes(row),
+      ...(editing ? [] : [proxyNode(row, handlers)]),
+      ...keyControls(row, handlers, editing),
       deps.verifyControl(row.name, handlers),
-      remove,
+      ...(editing ? [] : [remove]),
     ],
   }
 }
 
-/** 渠道段体：渠道行 + 校验结果 + 两形表单（`loading` 期零表单）。 */
+/** 拉取模型状态面（S2）：三态词 —— 探期 ∕ 探通（计数 = 候选数）∥ 探不通（`reason` 经 `deps.reasonWord`
+ *  直传，缺 ⇒ `settings.connFailed`）；无探 ⇒ `null`（零节点 —— 禁假造）。 */
+function probeFace(probe, deps) {
+  const state = probe !== null && typeof probe?.state === "string" ? probe.state : null
+  if (state === "running") return { state, word: t("settings.connecting") }
+  if (state === "ok") return { state, word: t("settings.connOk", { count: listOf(probe?.models).length }) }
+  if (state === "fail") return { state, word: deps.reasonWord(probe.reason) ?? t("settings.reason.probeFailed") }
+  return null
+}
+
+/** 渠道段体：渠道行 + 校验结果 + 两形表单（`loading` 期零表单）。**S2**：自定形随表单给
+ *  `probe`（已出词状态面）∕ `draft`（暂存值回填）∕ `modelCandidates`（探通才有候选 —— 零假造）。 */
 export function providersBody(section, handlers, deps) {
   const loading = section.state === "loading"
+  const candidates = section?.probe?.state === "ok" ? listOf(section.probe.models) : []
   const forms = loading ? [] : [
     deps.channelForm({ shape: "preset", presets: section.presets, formats: deps.formats }, handlers),
-    deps.channelForm({ shape: "custom", presets: [], formats: deps.formats }, handlers),
+    deps.channelForm({
+      shape: "custom", presets: [], formats: deps.formats,
+      probe: probeFace(section?.probe ?? null, deps), draft: section?.draft ?? null, modelCandidates: candidates,
+    }, handlers),
   ]
   return [
     ...section.rows.map((row) => providerRowNode(row, handlers, deps)),

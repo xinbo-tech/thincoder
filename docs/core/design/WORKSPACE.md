@@ -12,7 +12,7 @@
 | 面 | CLI 档 | VSC 档 |
 |---|---|---|
 | 技能发现 | `thincoder-core/skills.mjs` | `thincoder-vscode/src/extension/skills.mjs` |
-| 规则发现（面定义 = §2.3） | `thincoder-core/rules.mjs`（stream 规则 + `.cursor/rules` 读取面——R10 上提（纯搬）：**124**） | `thincoder-vscode/src/extension/rules.mjs`（同名转口壳——**75**；`matchesGlob` ∕ `simpleGlobMatch` 端壳留存） |
+| 规则发现（面定义 = §2.3） | `thincoder-core/rules.mjs`（stream 规则 + `.cursor/rules` 读取面——R10 上提（纯搬）· B7 3a 收编：**261**） | 已退役（迁移期引文——B7 3a：`extension/rules.mjs` ∕ `agent/rules-face.mjs` 两档已删；读取 ∕ 分类 ∕ 匹配 ∕ JIT 面全入核，VSC 经核件直取） |
 | 同伴实例 / 域 | `thincoder-core/peer-instances.mjs` · `thincoder-core/peer-domains.mjs` | `thincoder-vscode/src/extension/peer-instances.mjs` · `thincoder-vscode/src/extension/peer-domains.mjs` |
 | 台账规则 / 路径约定 | 已迁核——经 `@thincoder/core/{ledger,conventions,escape}.mjs` 引用（S2 U4） | 已迁核——同引核单源（S2 W4 · 自持镜像已删） |
 | 台账展示面 | `thincoder-cli/src/tui/ledger-surface.mjs` | 端壳缝——核机制 `@thincoder/core/ledger-surface.mjs` + 面板推送供值（S2 W4） |
@@ -32,15 +32,14 @@
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
-| 170 | `thincoder-core/skills.mjs` ↔ `thincoder-vscode/src/extension/skills.mjs` | ② | 融合：取一侧（发现规则两端同构：扁平 + `SKILL.md` / 排序 / 项目层优先）+ fs 面（同步 / 异步）按端注入 | 分叉 ＝ 目录 + loader 形态（VSC 头注自述「同构语义…语义同源、实现自持」`:3-5`）⇒ 前提成立 | — | S1（建核补齐） |
-| 171 | `thincoder-core/rules.mjs` ↔ `thincoder-vscode/src/extension/rules.mjs` | ② | **已消解（R10 上提）**：读取面并入核（核 = stream + `.cursor/rules`）；VSC 档 = 同名转口 | 分叉 ＝ 目录归属 ⇒ 以上提消解（非「取一侧」） | — | 已落（R10——核 54 ⇒ **124** · VSC 档 125 ⇒ **75**） |
+| 170 | `thincoder-core/skills.mjs` ↔ `thincoder-vscode/src/extension/skills.mjs` | ② | 融合：取一侧（发现规则两端同构：扁平 + `SKILL.md` / 排序 / 项目层优先）+ fs 面（同步 / 异步）按端注入 | 分叉 ＝ 目录 + loader 形态（VSC 头注自述「同构语义…语义同源、实现自持」`:3-5`——迁移期引文，随 2026-09-29 parity-b1 收编退场）⇒ 前提成立 ⇒ **已收编（2026-09-29 · parity-b1-vsc-core）：VSC 档 = 核单源转口（`loadSkillsSync` ∕ `readSkillSync` ∕ `formatSkillListing` 三名单源——消费面零改）** | — | S1（建核补齐） |
+| 171 | `thincoder-core/rules.mjs` ↔ `thincoder-vscode/src/extension/rules.mjs` | ② | **已消解（R10 上提 ∕ B7 3a 收编）**：读取面并入核（核 = stream + `.cursor/rules`）；VSC 两档已退役（B7 3a——VSC 经核件直取） | 分叉 ＝ 目录归属 ⇒ 以上提消解（非「取一侧」） | — | 已落（R10——核 54 ⇒ **124** · VSC 档 125 ⇒ **75**；B7 3a——核 **124 ⇒ 261** · VSC 两档 **75 ∕ 120 ⇒ 0（删）**） |
 | 172 | `src/peer-instances.mjs` ↔ `thincoder-vscode/src/extension/peer-instances.mjs` | ② | 融合：取一侧 + 端判别面按端注入 | 分叉 ＝ 目录 + 端标记判别（VSC 头注自述「VS Code 镜像」`:2`）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
 | 173 | `src/peer-domains.mjs` ↔ `thincoder-vscode/src/extension/peer-domains.mjs` | ② | 融合：取一侧 | 分叉 ＝ 目录（VSC 头注自述「VS Code 镜像」`:3`）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
 | 174 | `thincoder-cli/src/tui/ledger-surface.mjs` ↔ `thincoder-vscode/src/extension/ledger-surface.mjs` | ② | 融合：取一侧 + 渲染面按端注入 | 分叉 ＝ 目录（CLI 住 `tui/` / VSC 住 `extension/`）；台账规则两端逐字同（`ledger.mjs` 同路径 #71）⇒ 前提成立 | — | S1（建核补齐） |
 
-**现状注（2026-09-20 · VSC 行为/能力两则批）**：#171 行「融合：取一侧」**前提不成立**——两档非同一职责（核 `thincoder-core/rules.mjs` = stream 规则发现 ∥ `thincoder-vscode/src/extension/rules.mjs` = `.cursor/rules` 作用域规则）⇒ 该行处置以 U1 裁定（2026-09-20 05:15 选项②：两端保留两套语义 + 显式登记）
-与下节 §2.3 定义为准；「取一侧」不再作为该行处置。
-**2026-09-29 更新（R10）：`.cursor/rules` 读取面已上提核**（纯搬——核 `rules.mjs` 54 ⇒ **124**；VSC 档 125 ⇒ **75** = 同名转口）——两档关系收正为「核承载两端读取面 ∕ VSC = 转口壳」。
+**现状注（2026-09-20 · VSC 行为/能力两则批）**：#171 行「融合：取一侧」**前提不成立**——两档非同一职责（核 `thincoder-core/rules.mjs` = stream 规则发现 ∥ `thincoder-vscode/src/extension/rules.mjs` = `.cursor/rules` 作用域规则）⇒ 该行处置以下节 §2.3 定义与下条 2026-09-29 更新为准；「取一侧」不再作为该行处置。
+**2026-09-29 更新（R10 ∕ B7 3a）：`.cursor/rules` 读取面已上提核**（R10 纯搬——核 `rules.mjs` 54 ⇒ **124**；VSC 档 125 ⇒ **75** = 同名转口；**B7 3a 收编**——核 **124 ⇒ 261**，VSC 两档退役（**75 ∕ 120 ⇒ 0（删）**），读取 ∕ 分类 ∕ 匹配 ∕ JIT 面全入核）——读取面 = 核单源；三端同得。
 
 ### 2.3 规则发现面（**权威定义** · 2026-09-20 立 · 设计源 = `docs/batches/2026-09-20-vsc-rules-retry-batch.md` §2）
 
@@ -49,11 +48,11 @@
 - **stream 规则** —— 目录 `.thincoder/rules/*.md`；frontmatter `pattern` / `action`（`abort` | `warn`）/ `repeat`。
   语义 = 模型输出流上按 `pattern` 触发：`abort` ⇒ 中断 + 注入规则消息 + 同上下文重入；`warn` ⇒ 回合后去重注入提醒。
   发现 = 核 `thincoder-core/rules.mjs` `discoverRules`；**两端生效**——装配期各自并入 `agent.streamRules`（CLI `thincoder-cli/src/cli/make-agent.mjs` ∥ VSC `thincoder-vscode/src/agent/setup.mjs`）。
-- **作用域规则（VSC 端面）** —— 目录 `.cursor/rules/*.md` / `*.mdc`；frontmatter `globs` / `alwaysApply` / `description`。
-  读取 = 核 `thincoder-core/rules.mjs`（R10 上提——纯搬；VSC 端壳 `thincoder-vscode/src/extension/rules.mjs` 同名转口，`matchesGlob` ∕ `simpleGlobMatch` 端壳留存）；**三分类 = 按序判定（互斥）**：
+- **作用域规则（B7 3a 起三端同面）** —— 目录 `.cursor/rules/*.md` / `*.mdc`；frontmatter `globs` / `alwaysApply` / `description`。
+  读取 = 核 `thincoder-core/rules.mjs`（R10 上提——纯搬；B7 3a 收编——VSC 端壳两档退役，`matchesGlob` ∕ `simpleGlobMatch` 入核单源）；**三分类 = 按序判定（互斥）**：
   ① `alwaysApply: true` ⇒ **常驻集**（**先判**——`globs` 同在不改分类）；② 有 `globs` ⇒ **作用域集** = 命中路径的工具派发前置提醒（会话级去重）；
   ③ 无 `globs` 且无 `description` ⇒ **常驻集**；④ 仅 `description`（Cursor 的 agent-requested 语义）⇒ **不注入**（本端无该机制——登记 · 边界）。
-  常驻集落点 = [4] 层尾块；CLI 端不读该目录（无对位——登记，非缺陷）。
+  常驻集落点 = [4] 层尾块；desk ∕ CLI 端同得该目录两面（尾块 + 作用域 JIT——B7 3a 收编；核单源取得）。
 - **消费单源** = 核 provider `chat()`（`streamRules` + `firedPatterns`）——两端同引；abort / warn 两分支同式。
 
 ## 3. 须用户裁条目
@@ -110,3 +109,7 @@
 - 2026-09-15（**S2 W4 · VSC 单元**）：§1 两行收正——台账规则 / 路径约定（两产品均已迁核：CLI = S2 U4 · VSC = S2 W4）· 台账展示面（VSC = 端壳缝：核机制 + 面板推送供值）；机制条文零改。
 - 2026-09-20（**VSC 行为/能力两则批 · #130 · eng-designer**）：§1 规则发现行收正 + 新增 **§2.3 规则发现面（权威定义——stream 规则 ∥ `.cursor/rules` 作用域规则，一线程一语义）** + §2.2 #171 行加现状注（「融合：取一侧」前提不成立）；设计源 = `docs/batches/2026-09-20-vsc-rules-retry-batch.md` §2。
 - 2026-09-20（**VSC 行为/能力两则批 · 设计评审 fix 轮 · eng-designer**——承 `docs/batches/2026-09-20-vsc-rules-retry-batch.md` §3 发现 2 / 10）：§2.3 规则发现面三分类改**按序判定（`alwaysApply` 先判——互斥）**；悬空节引清理（首部机制面节区改 `§6–§8` + 一条历史节号指称删除）。
+- 2026-09-29（**parity-b1-vsc-core 批 · 收口轮 · eng-coder**——承批档 `docs/batches/2026-09-29-parity-b1-vsc-core.md` §2.9）：§2.2 #170 行按**取核后事实**收正——技能面 VSC 自持句（头注自述「实现自持」）随收编退场，VSC 档 = 核单源转口（`loadSkillsSync` ∕ `readSkillSync` ∕ `formatSkillListing` 三名单源；消费面零改）。**机制语义零改**。
+- 2026-09-29（**parity-b7-minor 批 · W4 文档收正轮 · eng-designer**——承批档 §2.2.3 ∕ §5.C4）：§1 规则发现行 ∕ §2.2 #171 行与现状注 ∕ §2.3 作用域规则段按 B7 3a 收编事实收正——
+  VSC 两档退役（迁移期引文——`extension/rules.mjs` ∕ `agent/rules-face.mjs` 已删），读取 ∕ 分类 ∕ 匹配 ∕ JIT 面全入核，三端同得；核 `rules.mjs` **124 ⇒ 261**。**机制语义零改**；
+  U1 选项②登记句（「两端保留两套语义 + 显式登记」）随收编退场（判据基准 = 2026-09-28 ∕ 09-29 在案口径）。

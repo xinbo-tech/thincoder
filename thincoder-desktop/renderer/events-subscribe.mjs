@@ -64,11 +64,11 @@ export function attachEvents({ on, store = defaultStore, invoke = null, onTurnTa
   const refreshTitles = async () => {
     try {
       const list = await call("sessions:list")
-      if (!Array.isArray(list?.rows)) {
+      if (!Array.isArray(list?.sessions)) {
         console.error("[events] sessions:list payload shape unexpected:", list)
         return
       }
-      store.set({ sessions: list.rows })
+      store.set({ sessions: list.sessions })
     } catch (error) {
       console.error("[events] sessions:list refresh failed:", error)
     }

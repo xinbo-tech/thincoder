@@ -1,17 +1,23 @@
 /**
  * mount-settings-exits.mjs — 设置面出口族 + 写路辅助（「桌面处理流 · VSC 对齐」批 R8 · 自
- * `renderer/mount-settings.mjs` 拆出 —— 300 行层拆分，零语义变化）：十一出口（提交 ∕ 校验 ∕ 移除 ∕ agent 存 ∕
- * 具名写 ∕ 采用模型 ∕ 档位 ∕ MCP 增删 ∕ 语言 ∕ 开合 ＋ 索引构建〔R2 · 桌面功能对位批〕）· 形式取值
- * （`rowValue` ∕ `namedOut`）· 泛化兜底变更集（`agentPatch`）· Esc 关闭绑定。
+ * `renderer/mount-settings.mjs` 拆出 —— 300 行层拆分，零语义变化）：**本档直辖出口**（提交 ∕ 校验 ∕ 移除 ∕
+ * 采用模型 ∕ 档位 ∕ 语言 ∕ 开合 ＋ Esc 关闭绑定）+ **四族出口工厂装配**（段 ∕ models ∕ 渠道 ∕ agent ——
+ * 本档装配合并，单一 `handlers` 表对外零改）。
  * **R7（桌面功能对位批）先拆后改**：MCP 增删 ∕ 索引构建三出口 + 新增段出口（env ∕ 两 key ∕ models ∕ MCP
  * 展开面）共**二十一**出口随族迁出（env ∕ 工具 ∕ MCP **十三** = `renderer/mount-settings-segments.mjs`；models 八 =
- * `renderer/mount-settings-segments-models.mjs` —— 两档段出口族，本档**装配即合并**，单一 `handlers` 表对外零改）；
- * `formOf` 经 `deps` 回注段族（单一 owner ⇒ 零副本）。
+ * `renderer/mount-settings-segments-models.mjs`）；`formOf` 经 `deps` 回注段族（单一 owner ⇒ 零副本）。
  *
  * 接线沿 `mount-onboarding.mjs` 注入先例：`createExits(deps)` —— `deps = { ask, store, setSettings, report, clearReport, occupies, reads, slot, paintSettings }`
  * （窄桥 ∕ 值面 ∕ 失败面 ∕ 读数供给 ∕ 槽锚 ∕ 重绘归装配面）；返回 `{ handlers, openSettings, closeSettings }`（`handlers` = 视图 `data-action` 同域出口表）。
+ * **B10 W2**：渠道面六出口（S1 钥编辑两件 + 设 ∕ 改钥 + 删钥 · S5 代理开关 · S2 拉取模型）随族拆出
+ * `renderer/mount-settings-segments-providers.mjs`（按族续拆；本档装配合并，单一 `handlers` 表对外零改）；
+ * 本档增：渠移除 ∕ 删钥删除门（S6 —— `settings-confirm.mjs`）+ 开 ∕ 关面面态复位（`edit` ∕ `probe` ∕ `draft`）。
+ * **B10 W3**：agent 段五出口（`agentPatch` ∕ `saveAgent` ∕ `namedOut` ∕ `applyNamedField` ∕ `toggleGuard`
+ * —— S10 ∕ S11 ∕ S14b）随族拆出 `renderer/mount-settings-segments-agent.mjs`（拆分债注③预案落形：本批
+ * agent 面三触点原拆点；本档装配合并，单一 `handlers` 表对外零改）；开 ∕ 关面面态复位同拍扩 MCP 表单态
+ * （`form` —— S8 编辑态不跨面驻留）。
  * 语义锚（`docs/desktop/design/IPC.md` §2 设置族注）：出站失败 ⇒ **零乐观写**（不摘项、不改段读数）；畸形 JSON ⇒ **零发送**；
- * 写成功 ⇒ 清失败串 + 重读本段。**P14 出值规范化**（数值 ⇒ `Number(v)`〔空 / 非数 ⇒ 零发送〕· 布尔 ⇒ `.checked` · 串 ⇒ 原串；无效值 ⇒ 控件回退现值）· **P15 具名控件即改即存**（十键单键 patch 直发）· **F-Esc 关面板**（Esc ⇒ 既有 `closeSettings` 出口，单一实现 —— 绑定宿主 = `document`）。
+ * 写成功 ⇒ 清失败串 + 重读本段。**P14 出值规范化**（数值 ⇒ `Number(v)`〔空 / 非数 ⇒ 零发送〕· 布尔 ⇒ `.checked` · 串 ⇒ 原串；无效值 ⇒ 控件回退现值）· **P15 具名控件即改即存**（单键 patch 直发 —— 写路随 W3 迁 `mount-settings-segments-agent.mjs`）· **F-Esc 关面板**（Esc ⇒ 既有 `closeSettings` 出口，单一实现 —— 绑定宿主 = `document`）。
  * 纪律：零 `node:` / 零裸包 · 逐通道回执形单源 = IPC.md §2。
  */
 import { initDict } from "./i18n.mjs"
@@ -19,6 +25,9 @@ import { configuredFlag, patchSettings } from "./store.mjs"
 import { presetValue } from "./mount-onboarding.mjs"
 import { createSegmentExits } from "./mount-settings-segments.mjs"
 import { createModelsExits } from "./mount-settings-segments-models.mjs"
+import { createProviderExits } from "./mount-settings-segments-providers.mjs"
+import { createAgentExits } from "./mount-settings-segments-agent.mjs"
+import { closeSettingsConfirm, confirmSecretDelete } from "./settings-confirm.mjs"
 
 /** 表单自取：提交控件 `type="button"`（handlers 直传 ⇒ 监听器 = 本函数，收 **Event**）⇒ `closest("form")`。 */
 function formOf(event) {
@@ -32,54 +41,13 @@ const listOf = (value) => (Array.isArray(value) ? value : [])
 /** 失败串归一：回执 `reason` 非空串 ⇒ 直传（核错误串 ∕ 表内码）；缺 ⇒ 端侧形判码（零静默 —— 调用面另记错）。 */
 const reasonOf = (receipt) => (typeof receipt?.reason === "string" && receipt.reason !== "" ? receipt.reason : "invalid-shape")
 
-/** agent 段现态读数表（路径 → 值原样；缺 / 非数组 ⇒ 空表）。 */
-function currentFields(state) {
-  const current = new Map()
-  for (const field of listOf(state?.settings?.agent?.fields)) if (typeof field?.path === "string" && field.path !== "") current.set(field.path, field.value)
-  return current
-}
-
-/** 行出值（P14）：`checkbox` ⇒ `.checked`；`number` ⇒ `Number(v)`；余 ⇒ 原串。**无效数值（空 / 非数）⇒ `undefined`**
- *  —— 父侧裁定（2026-09-28）：真删键经 `settings:agent` 不可达（契约 = `docs/desktop/design/IPC.md` §2「档位控件注」：`patch` 表达不了删键）
- *  ⇒ 落「**零发送**（不写盘 · 零乐观改 · 控件回退现值）」；消解路 = 主侧写链 + 核清除形扩族（另批）。**数值 0 照发**（核类型表只校 `typeof`）。 */
-function rowValue(input) {
-  if (input?.type === "checkbox") return input.checked === true
-  const raw = typeof input.value === "string" ? input.value : ""
-  if (input?.type !== "number") return raw
-  const value = Number(raw)
-  return raw.trim() === "" || !Number.isFinite(value) ? undefined : value
-}
-
 /**
  * 出口族工厂。`deps.reads = { loadProviders, loadAgent, loadMcp }`（读数供给族注入）；`deps.paintSettings`
  * = 装配面重绘口（无效数值回退现值用）；`deps.slot` = 设置槽锚（表单现选自读 ∕ 泛化兜底行作用域）。
  */
 export function createExits(deps = {}) {
-  const { ask, store, setSettings, report, clearReport, occupies, slot, paintSettings } = deps
+  const { ask, store, setSettings, report, clearReport, occupies, slot, paintSettings, onProvidersChanged } = deps
   const { loadProviders, loadAgent, loadMcp, loadEnv, loadTools } = deps.reads ?? {}
-
-  /** agent 段变更集（**泛化兜底行面**）：DOM `[data-field]` 可写行 × 现态读数 diff ⇒ 只发变更路径；无变更 ∨ 无效数值行 ⇒ 零发送；作用域 = 设置槽（收到槽内即不误取）。 */
-  function agentPatch(state) {
-    if (typeof document.querySelector !== "function") return { patch: null, skipped: 0 }
-    const scope = document.querySelector(slot)
-    if (scope === null || typeof scope.querySelectorAll !== "function") return { patch: null, skipped: 0 }
-    const current = currentFields(state)
-    const patch = {}
-    let changed = false, skipped = 0
-    for (const row of scope.querySelectorAll("[data-field]")) {
-      if (row.getAttribute("data-readonly") !== null) continue // 只读行（敏感 / 非标量）不参与变更集（真 DOM / 假面同径）
-      const path = row.getAttribute("data-field")
-      const input = row.querySelector("input")
-      if (typeof path !== "string" || path === "" || input === null) continue
-      const value = rowValue(input)
-      if (value === undefined) { console.error(`[renderer] settings:agent skipped: invalid value for ${path}`); skipped += 1; continue }
-      const held = current.get(path)
-      if (Object.is(value, held) || String(value) === String(held)) continue
-      patch[path] = value
-      changed = true
-    }
-    return { patch: changed ? patch : null, skipped }
-  }
 
   /** 渠道表单提交（两形同一路）：载荷按形直取（表内 `name` = 载荷键）—— 空名 ⇒ 端侧形判 `invalid-shape` 零发送。 */
   async function submitChannel(event) {
@@ -105,6 +73,7 @@ export function createExits(deps = {}) {
     clearReport()
     setSettings({ verify: null })
     await loadProviders()
+    onProvidersChanged?.() // 全渠扇出批 · #3：provider 写成功 ⇒ 输入区候选面强制刷新（渠道集已变 —— 首启向导同路）
   }
 
   /** 校验出口（`provider:verify`）：`name` 缺（向导步 1）⇒ 自读表单现选；探不通**仍可保存**（只出读数，不拦写）。 */
@@ -125,8 +94,9 @@ export function createExits(deps = {}) {
     setSettings({ verify: { kind: "fail", count: null, reason: reasonOf(receipt) } })
   }
 
-  /** 渠道移除出口：失败（含激活渠道保护）⇒ 核文案直传 ⇒ **零乐观摘项**（列表不动 + 失败面）。 */
-  async function removeProvider(name) {
+  /** 渠道移除**执行径**（确认面「是」⇒ 本径；S6 前 = 直删）：失败（含激活渠道保护）⇒ 核文案直传
+   *  ⇒ **零乐观摘项**（列表不动 + 失败面）。 */
+  async function runRemoveProvider(name) {
     const receipt = await ask("provider:remove", { name })
     if (receipt.ok !== true) {
       report("providers", receipt, "provider:remove")
@@ -135,19 +105,12 @@ export function createExits(deps = {}) {
     clearReport()
     setSettings({ verify: null })
     await loadProviders()
+    onProvidersChanged?.() // 全渠扇出批 · #3：同上（删除至无渠 ⇒ #6 零推送边界）
   }
 
-  /** agent 段提交（`settings:agent` 写）：只发变更路径；无变更 / 无可写行 ⇒ **零发送**。 */
-  async function saveAgent() {
-    const { patch, skipped } = agentPatch(store.get())
-    if (patch === null) { if (skipped > 0) paintSettings(); return } // 无效行在场 ⇒ 回退现值（与具名径同形 —— 裁定句三）
-    const receipt = await ask("settings:agent", { patch })
-    if (receipt.ok !== true) {
-      report("agent", receipt, "settings:agent")
-      return
-    }
-    clearReport()
-    setSettings({ agent: { state: "ready", fields: listOf(receipt.fields) } })
+  /** 渠道移除出口（S6：**不可复得类删除前置确认** —— 条目连带其 `apiKey` 原文消失；驳回 ⇒ 零写）。 */
+  function removeProvider(name) {
+    confirmSecretDelete(() => { void runRemoveProvider(name) })
   }
 
   /** 模型采用出口：写 `defaultModel` 复合串（键面与形态判归核 —— `settings:agent` 写通道）⇒ 写后回读两段。 */
@@ -178,13 +141,23 @@ export function createExits(deps = {}) {
     await loadProviders({ models: false })
   }
 
-  /** 段出口族（env ∕ 工具与服务 ∕ MCP **十三**项 + models 八项 —— 合 **21**）随 R7 迁 `mount-settings-segments.mjs` ∕
+  /** 段出口族（env ∕ 工具与服务 ∕ MCP **十八**项 + models 八项 —— 合 **26**）随 R7 ∕ W3 迁 `mount-settings-segments.mjs` ∕
    *  `mount-settings-segments-models.mjs`（段出口族工厂 —— 共享项注入，本档零副本）；`formOf` 回注
    *  （单一 owner 在本档）。 */
   const segments = createSegmentExits({
     ask, store, setSettings, report, clearReport, reads: deps.reads ?? {}, slot, formOf,
   })
   const modelSegments = createModelsExits({ ask, store, setSettings, report, clearReport, reads: deps.reads ?? {} })
+  /** 渠道面出口族（S1 ∕ S2 ∕ S5 —— 随本批按族拆出 `mount-settings-segments-providers.mjs`：
+   *  本档装配即合并，单一 `handlers` 表对外零改；`loadProviders` 绑定 `{ models: false }` —— 渠行面
+   *  复读不重探模型面（候选面随动另路 = `onProvidersChanged`））。 */
+  const providerSegments = createProviderExits({
+    ask, store, setSettings, report, clearReport, onProvidersChanged, slot, formOf,
+    loadProviders: () => loadProviders({ models: false }),
+  })
+  /** agent 段出口族（S10 ∕ S11 ∕ S14b —— 随本批按族拆出 `mount-settings-segments-agent.mjs`：本档装配
+   *  即合并，单一 `handlers` 表对外零改）。 */
+  const agentSegments = createAgentExits({ ask, store, setSettings, report, clearReport, slot, paintSettings })
 
   /** 语言出口（`config:write` 键白名单仅 `locale`）：成功回带 `{ locale, dict, configured }` ⇒ 词表重刷 + 向导闸随新档态（**一次写**）。 */
   async function toggleLang(target) {
@@ -198,9 +171,12 @@ export function createExits(deps = {}) {
     store.set({ ...patchSettings(store.get(), { configured: configuredFlag(receipt.configured), notice: null }), locale })
   }
 
-  /** 设置面开（**两入口**：信息行 ∕ 输入区控件行第 7 钮 —— 后者经句柄面转口 `renderer/mount-composer.mjs`）：开 + 失败串清位 ⇒ 七段读数随动（段态 `none` → `loading` → `ready`）。 */
+  /** 设置面开（**两入口**：信息行 ∕ 输入区控件行第 7 钮 —— 后者经句柄面转口 `renderer/mount-composer.mjs`）：开 + 失败串清位 ⇒ 七段读数随动（段态 `none` → `loading` → `ready`）。
+   *  S1 ∕ S2：渠道段面态复位（钥编辑态 ∕ 探果 ∕ 暂存值——**钥暂存不跨面驻留**）；S8：MCP 编辑态复位（`form`）。 */
   function openSettings() {
-    setSettings({ open: true, notice: null })
+    const providers = store.get().settings?.providers ?? {}
+    const mcp = store.get().settings?.mcp ?? {}
+    setSettings({ open: true, notice: null, providers: { ...providers, edit: null, probe: null, draft: null }, mcp: { ...mcp, form: null } })
     void loadProviders()
     void loadAgent()
     void loadMcp()
@@ -208,53 +184,27 @@ export function createExits(deps = {}) {
     void loadTools()
   }
 
-  /** 设置面关（退场 = 零子节点 —— 订阅面重绘清容器）。 */
+  /** 设置面关（退场 = 零子节点 —— 订阅面重绘清容器）：同清确认弹层（S6 —— 弹层挂 `document.body`，
+   *  不在容器内 ⇒ 关面须显式清；先例 = VSC `closeSettings` 同清）+ 渠道段面态复位（S1 ∕ S2）+ MCP 编辑态复位（S8）。 */
   function closeSettings() {
-    setSettings({ open: false, notice: null })
+    closeSettingsConfirm()
+    const providers = store.get().settings?.providers ?? {}
+    const mcp = store.get().settings?.mcp ?? {}
+    setSettings({ open: false, notice: null, providers: { ...providers, edit: null, probe: null, draft: null }, mcp: { ...mcp, form: null } })
   }
 
-  /** 具名控件出值（P14 × P15 单键）：`boolean` ⇒ `.checked`；数值 ⇒ `Number(v)`（× `scale` —— 分钟面回毫秒）；余 ⇒ 原串；
-   *  无效数值（同 `rowValue`）/ 目标缺位 ⇒ `undefined`（调用面零发送）。 */
-  function namedOut(entry, event) {
-    const target = event?.target ?? event?.currentTarget ?? null
-    if (target === null) return undefined
-    if (entry.kind === "boolean") return target.checked === true
-    const raw = typeof target.value === "string" ? target.value : ""
-    if (entry.kind !== "number") return raw
-    const value = Number(raw)
-    if (raw.trim() === "" || !Number.isFinite(value)) return undefined
-    return entry.scale === undefined ? value : Math.round(value * entry.scale)
-  }
-
-  /** 具名控件写路（P15 即改即存 —— 单键 patch 直发）：回执 ⇒ `fields` 就地刷新（核已回读）；失败 ⇒ 段级失败面（**零乐观写**）；无效出值 ⇒ **零发送**。 */
-  async function applyNamedField(entry, event) {
-    const value = namedOut(entry, event)
-    if (value === undefined) {
-      console.error(`[renderer] settings:agent skipped: invalid value for ${entry.path}`)
-      paintSettings()
-      return
-    }
-    const receipt = await ask("settings:agent", { patch: { [entry.path]: value } })
-    if (receipt.ok !== true) {
-      report("agent", receipt, "settings:agent")
-      return
-    }
-    clearReport()
-    setSettings({ agent: { state: "ready", fields: listOf(receipt.fields) } })
-  }
-
-  /** 设置面出口族（锚名逐字 = 视图 `data-action` 同域；具名控件面 = 十键同路；段族 **21** 项经 `segments` ∕
-   *  `modelSegments` 合并）。 */
+  /** 设置面出口族（锚名逐字 = 视图 `data-action` 同域；具名控件面 = 单键同路；段族 **26** 项经 `segments` ∕
+   *  `modelSegments` ∕ `agentSegments` 合并 + 渠道面 **6** 项经 `providerSegments` 合并 —— 四档出口族工厂）。 */
   const handlers = {
     ...segments.handlers,
     ...modelSegments.handlers,
+    ...providerSegments.handlers,
+    ...agentSegments.handlers,
     onToggleLang: (target) => void toggleLang(target),
     onCloseSettings: () => closeSettings(),
     onSubmit: (event) => void submitChannel(event),
     onVerify: (name) => void verifyChannel(name),
     onRemoveProvider: (name) => void removeProvider(name),
-    onSaveAgent: () => void saveAgent(),
-    onNamedField: (entry, event) => void applyNamedField(entry, event),
     onUseModel: (provider, name) => void useModel(provider, name),
     onTier: (provider, model, level) => void setTier(provider, model, level),
   }

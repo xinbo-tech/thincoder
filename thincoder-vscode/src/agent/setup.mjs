@@ -1,53 +1,34 @@
 /**
- * agent/setup.mjs — pre-loop setup for runAgent: tool table, config, system prompt,
- * dual-line history, and startup context injection.
- * Extracted from agent.mjs (file-size split).
- * 2026-09-16（批 7 VSC-DEBT §3.3 档一）：工具表装配装饰面迁出 `setup-tooltable.mjs`（batch
- * 记账缝 / W14 三缝接线 / 池装配装饰与子代理面）；本档 re-export 既有导出名（KD-6 缝）；
- * 动态载核登记册面（KD-5）随 2026-09-21 的装配段拆分迁往 `setup-tooltable.mjs`。
- * 2026-09-21（`docs/core/design/MANIFEST.md` §2.3 行 16/29）：本档 500 行越硬限 ⇒ **装配段**
- * （家族段装配 / MCP 连接 / 基础集 · 全表 · `toolByName` · `toolSchemas`）纯结构搬移入
- * `setup-tooltable.mjs` 的 `buildToolTable`（W8 契约②：段内动态 import 原样动态）。
- * agent 生命周期对齐 CLI（2026-09-08）：setupAgentRun 拆出
- * buildTopLevelAgent（agent 对象工厂——首轮/destroy 重建-only）+ hydrateRun（每轮
- * reconcile——顶层单例复用路径）。纯函数层 resetRunState / reconcileEngDesignTokens /
- * applySlotSessionState 已拆 agent-state.mjs（复位清单与槽↔hydrate
- * 映射——500 行硬限——test/agent-lifecycle-singleton.test.mjs 单测锚点）。
+ * agent/setup.mjs — runAgent 前置 **host 装配**（2026-09-29 parity-b1 · 批档 §2.3 件 1 逐段对位表）。
+ *
+ * 本档保留 = 端壳装配面：agent 对象 · config 读 ∕ 槽 reconcile（`agent-state.mjs` 纯函数层）·
+ * 工具表**基础集**（`agent.tools` = baseSet；家族段核追加）· run 绑定与前向镜像 · 双线历史 ·
+ * manifest 附着 ∕ 会话身份 ∕ `_fullHistory` · 端 adapter 面（A3 域文本 ∕ R5 重启闸 ∕
+ * 贴图指引 ∕ 记忆句柄）。归核（同批 —— 核 `runAgent` → `prepareRun`）= 上下文注入组 ∕ 提示词装配 ∕
+ * skills 清单 ∕ 输入推入 ∕ env ∕ peer ∕ time ∕ editor 注入 ∕ 主循环本体。
+ * 核增补消费键（§2.5 A ∕ B + 裁定①）由调用方把本档写回的 `opts`（或摘取键）传核 `runAgent`：
+ * `opts.injections` ∕ `opts.turnDomainText` ∕ `opts.distillSignal` ∕ `opts.toolDecorate`
+ * （B7 3b：规则尾块键已退役——尾块由核 `prepareRun` 自持）。
  */
-import * as os from "node:os"
 import { builtinTools } from "../tools.mjs"
-// W9（2026-09-15）：工具集 re-export 面退役——14 名装配面**动态载入核登记册**
-// `@thincoder/core/agent-tools.mjs`（登记册单一来源 #83；载入点 = `buildToolTable`——
-// 2026-09-21 随装配段迁出本档，见 `setup-tooltable.mjs`）。
-// 形式 = 动态 import()（**非**静态）：核登记册静态图经 consult/subagent 族可达核 agent 栈
-// （`core/agent/setup.mjs:9` → `memory.mjs` → `node:sqlite`）——静态引入会破坏 W8 契约②
-// （`test/engine-floor-guard.test.mjs:129`：端壳静态链不得到达 node:sqlite，低宿主加载期硬失败）。
-// 核侧同款先例 = 核 `agent-tools.mjs` 头注「Loaded from agent.mjs via dynamic import」；
-// 动态 import 不入静态闭包（扫描语义同 W8 契约）。
 import { settingsTool as coreSettingsTool } from "@thincoder/core/agent-tools/settings.mjs"
-import { resetRunState, reconcileEngDesignTokens, applySlotSessionState } from "./agent-state.mjs"
-import { vscSubagentFace, modeRoleField, wireAgentToolSeams, buildToolTable } from "./setup-tooltable.mjs" // 缝（KD-6）：迁出面同档再导出
+import { resetRunState, applySlotSessionState } from "./agent-state.mjs"
+import { wireAgentToolSeams, buildToolTable } from "./setup-tooltable.mjs" // 缝（KD-6）：迁出面同档再导出
 import { loadSlot } from "../extension/session-io.mjs"
-import { escapeXml, pushReal } from "./run-helpers.mjs"
 import { expandHome } from "@thincoder/core/expand-home.mjs"
-import { assemblePrompt } from "@thincoder/core/prompt-overlays.mjs"
 import { resolveEngineeringManifest, projectView } from "@thincoder/core/manifest.mjs"
-import { loadSkills, formatSkillListing } from "../extension/skills.mjs"
 import { loadRaw, resolveProviders } from "@thincoder/core/config-io.mjs"
 import { DEFAULTS, normalizeProxy } from "@thincoder/core/config.mjs"
 import { loadConsultPool } from "../extension/presets.mjs"
 import { setSlotEngDesignTokens, setSlotPlanMode } from "../extension/session-slot-write.mjs"
-import { injectRunContext, loadProjectInstructions } from "./context-injections.mjs"
-import { pushTimeReminder, pushInjections, appendImagePointer, pushEnvStateReminder, pushPeerReminder } from "./setup-reminders.mjs"
-import { mergeFileRules, scopedRulesBlock } from "./rules-face.mjs" // #130 规则面判据单源（批档 §2.1）
-export { vscSubagentFace, modeRoleField } // 既有导出名零改（批 7 VSC-DEBT §3.3 缝）
+import { appendImagePointer, detectRestoredSession } from "./setup-reminders.mjs"
+import { memoryFor } from "../embed-config.mjs" // §2.6 表注处置（裁定①）：记忆 ∕ 索引句柄（W8 经动态 import——静态闭包零 sqlite）
+import { mergeFileRules } from "@thincoder/core/rules.mjs" // B7 3a：规则面全档核单源（端壳判据档退役）
+import { composeTurnDomain } from "./turn-domains.mjs" // §2.5-A3：回合域文本组合单点（端 overlay）
+export { vscSubagentFace } from "./setup-tooltable.mjs" // 既有导出名零改（批 7 VSC-DEBT §3.3 缝）
 
-// W16（2026-09-15）：settings 工具 = 核工厂单源（`@thincoder/core/agent-tools/settings.mjs`
-// `settingsTool(opts)`——本端实例化一次；写盘 = 核 `writeConfigAtomic`（DEFAULTS 全量类型表
-// = A5 已裁「以 CLI 为准」——错类型拒写不再是端侧窄表）。
-// #45 参数腿（WEBVIEW-PROTOCOL.md §3.3 判据②）：端侧**包装实例**——`execute` **返回后**置位
-// `ctx.agent._settingsTouched`（不做「成功」判定；同步点读后复位、快照重推幂等）。
-// 核零改（核内通知缝 = 本批边界外——批档 §2.5）。**导出**（测试直驱面 = settings-tool 用例）。
+// W16：settings 工具 = 核工厂单源（`settingsTool(opts)`）；#45 参数腿（WEBVIEW-PROTOCOL.md §3.3 判据②）：
+// 端侧**包装实例**——`execute` **返回后**置位 `ctx.agent._settingsTouched`（不做「成功」判定；读后复位）。
 export function vscSettingsFace(tool) {
   return {
     ...tool,
@@ -60,22 +41,10 @@ export function vscSettingsFace(tool) {
 }
 const settingsTool = vscSettingsFace(coreSettingsTool())
 
-// PROMPT-SYSTEM 施工② G1（2026-09-10）：旧三件（system.md/discipline.md/main.md）退役——
-// 六件槽位常量装载收口 prompt-overlays.mjs（mod 为槽位内容新家）；本文件不再各自读取。
-// W2（2026-09-15）：槽位装配面 = **核内单点**（`@thincoder/core/prompt-overlays.mjs`）——本端
-// 镜像已删（本地路径运算随之为零）。
-
-
-
-/** AUTO mode reminder lives in setup-reminders.mjs (single source of truth —
- *  D-CI6: the agent loop head pushes it; agent.mjs imports it from there for the dedupe check). */
-
 /**
  * agent 对象工厂——首轮-only（hydrateRun 每轮 reconcile）。归类：A = 回合级预算/守卫
- * （resetRunState 每 runAgent 清零——AC6）；C = 会话级保留（_tasks/_goal/_engDesignTokens
- * 不复位，hydrate 槽 reconcile）；_pendingReminders = A 复位 + restore 槽回填（A/C 双列注）；
- * B = run 绑定（每轮重指 _role/_provider/_planMode/cwd/history/_fullHistory/config 等）。
- * 池载体（_asyncSubagents/…）不在此——挂共享 history 数组。
+ * （resetRunState 每 runAgent 清零——AC6）；C = 会话级保留（_tasks/_goal/_engDesignTokens 不复位）；
+ * B = run 绑定（每轮重指）；池载体（_asyncSubagents/…）不在此——挂共享 history 数组。
  */
 export function buildTopLevelAgent() {
   return {
@@ -104,16 +73,17 @@ export function buildTopLevelAgent() {
 }
 
 /**
- * hydrateRun —— 顶层 agent 每轮 reconcile：复位（A）→ config/tools/MCP 重建
- * （AC7）→ 槽水合（槽↔hydrate 映射表）→ systemPrompt → history 重指 → 上下文注入。复用（opts.agent
- * ——面板回合/续跑）与新建（factory + restore:true）同路径；子代理 depth>0 经 setupAgentRun
- * （opts.agent 仅 depth-0 honored——AC5）。
- * @returns {{ agent, history, fullHistory, toolByName, toolSchemas, cfgVerifyGuard, cfgCompactThreshold, systemPrompt }}
+ * hydrateRun —— host 装配（顶层复用与新建（`setupAgentRun`）同路径）：复位（A）→ W14 三缝接线 →
+ * config 读（AC7）→ 槽水合（槽↔hydrate 映射表）→ 工具表基础集 → run 绑定 + 前向镜像 →
+ * 双线历史重指 → manifest 附着 ∕ 会话身份 → 端 adapter 键写回（A2 ∕ A3 ∕ R5 闸）。
+ * 回合级装配（注入组 ∕ 提示词 ∕ 输入推入 ∕ env ∕ peer ∕ time）归核 `prepareRun`（§2.3 件 1）。
+ * @returns {{ agent, history, fullHistory, input }}（`agent.tools` = baseSet；核 `runAgent` 追加
+ *  家族段；`input` = 贴图指引施用后的最终用户输入串——调用方传核 `runAgent`）
  */
 export async function hydrateRun(agent, { provider, cwd, input, opts, depth, role, getAuto, restore = false }) {
-  const { mcpServers, skills, engState, engDesignReviewed, resume = false, autoTurn = false, batchDoc = null } = opts
+  const { mcpServers, engState, engDesignReviewed, resume = false, autoTurn = false, batchDoc = null } = opts
 
-  // per-run 复位先于一切 reconcile（含 inheritedGuard 的 agent.mjs 侧应用）
+  // per-run 复位先于一切 reconcile（含核 runAgent 侧 inheritedGuard 应用）
   resetRunState(agent)
 
   // W14（2026-09-15）：agent-tools 三缝（skill loader / eng mirror / verify 诊断段）接线——
@@ -137,19 +107,17 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   let cfgConsultTimeoutMs = 600_000
   let cfgPoolLimits = null // §5 D-24a（R14）：async 池角色域容量——每次入池判定时读（effectivePoolLimits 校验）
   let cfgWaitForTimeoutMs = undefined // wait_for default override (TOOLS.md §6.7 — CLI parity); undefined → tool default 30s
+  let cfgGoalTurns = null // 表注：核 `post-turn.mjs` 读 `agent.config.agent.goalTurns ?? 200`（缺省 null ⇒ 核默认）
   let cfgProviders = []
   let cfgWebsearch = { apiKey: "" } // structured search; empty key → Bing fallback
   let cfgHooks = null // P2 批 §2.16：hooks 段随 config 读入（`runHooks` 消费面）
   // TRACE-STORE-VSC（D-TR6 镜像——核 config.mjs DEFAULTS.traces 合并同语义）：traces 段
   // 默认 OFF（2026-09-05 发布隐私裁定）——agent.config.traces 由此整建——每轮拾取外部变更
   let cfgTraces = { ...DEFAULTS.traces }
-  // #175（W15 · a 半）：autoThink 键随 config 归一（默认 false——核 DEFAULTS.agent.autoThink；
-  // 消费点 = agent.mjs 循环首轮核分类器调用）——W16 前为死键（全仓零消费）。
+  // #175（W15 · a 半）：autoThink 键随 config 归一（默认 false——核 DEFAULTS）；timer-wake 阶段 2：
+  // `agent.timerWake` 键随 config 归一（默认 true；消费 = 核 `timers.mjs` `timerWakeEnabled` 活读——VSC 端经 `extension/timer-watch.mjs` 闩装配，B3 收编）——
+  // 两者皆「显式键优先、缺省 = 核 DEFAULTS」。
   let cfgAutoThink = DEFAULTS.agent?.autoThink === true
-  // timer-wake 阶段 2（§6.30.11 VSC 块）：`agent.timerWake` 键随 config 归一（默认 true——核
-  // DEFAULTS.agent.timerWake；消费点 = `extension/timer-watch.mjs` `timerWakeEnabled` 活读）——
-  // `agent.config.agent` 白名单整建曾漏该键 ⇒ 判据恒开、`config.json` 关不掉（评审 🟡1）；本行 = 生产者，
-  // 与 autoThink 同形（键面先例 = 核 `config.mjs` DEFAULTS `agent.timerWake: true`）。
   let cfgTimerWake = DEFAULTS.agent?.timerWake !== false
   let cfgStreamRules = [] // #130 A-1/A-2：stream 规则（`.thincoder/rules` 文件规则并入 config 规则）
   try {
@@ -169,6 +137,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     cfgConsultTimeoutMs = raw.agent?.consultTimeoutMs ?? 600_000 // consultation wall-clock watchdog (panel-exposed)
     cfgPoolLimits = raw.agent?.poolLimits ?? null // §5 D-24a: async pool per-domain limits（校验在 scheduler 读点）
     cfgWaitForTimeoutMs = raw.agent?.waitForTimeoutMs ?? undefined // wait_for timeout override — tool applies its own default/cap when absent
+    cfgGoalTurns = raw.agent?.goalTurns ?? null // 表注：goal 轮预算（核缺省 200——null ⇒ 核默认）
     cfgProviders = resolveProviders().providers // for subagent model overrides
     cfgWebsearch = raw.websearch ?? { apiKey: "" }
     cfgHooks = raw.hooks ?? null
@@ -178,10 +147,8 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     cfgStreamRules = mergeFileRules(raw.agent?.streamRules ?? [], cwd) // #130 A-1：与 CLI make-agent.mjs:44-48 同语义
   } catch { /* config unreadable — defaults */ }
 
-  // 槽 reconcile：顶层会话绑定（opts.engPersist = {cwd, slot}）每轮读权威槽（settle
-  // 落盘在 run 外——hydrate 是唯一 reconcile 点——digest/续跑可见刚落盘的 token）；子代理无
-  // 槽绑定 → 回退 opts.engState（父模式镜像）→ cfg。restore（agent 刚由 factory 新建——
-  // 首轮/destroy 重建）→ tasks/goal/pendingReminders 从槽回填（槽↔hydrate 映射表）。
+  // 槽 reconcile：顶层会话绑定（opts.engPersist）每轮读权威槽（hydrate = 唯一 reconcile 点）；
+  // 子代理无槽绑定 → 回退 opts.engState → cfg。restore（factory 新建）→ tasks/goal/pendingReminders 回填。
   const bind = opts.engPersist
   const sessionData = (depth === 0 && bind?.cwd && bind?.slot)
     ? (() => { try { return loadSlot(bind.cwd, bind.slot) } catch { return null } })()
@@ -194,6 +161,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
       maxTurns: cfgMaxTurns, verifyGuard: cfgVerifyGuard, compactThreshold: cfgCompactThreshold,
       consultModels: cfgConsultModels, consultTurns: cfgConsultTurns, consultTimeoutMs: cfgConsultTimeoutMs,
       waitForTimeoutMs: cfgWaitForTimeoutMs, poolLimits: cfgPoolLimits, autoThink: cfgAutoThink, timerWake: cfgTimerWake,
+      goalTurns: cfgGoalTurns,
       streamRules: cfgStreamRules, // #130 A-2：经 agentFields → agent.config.agent.streamRules（消费 = 核 chat）
     },
     proxy: cfgProxy, shell: cfgShell, providersList: cfgProviders, websearch: cfgWebsearch,
@@ -205,9 +173,8 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     engState,
     planModeOverride: opts.planMode,
   }, { cfg: cfgBag, restore })
-  // #45（WEBVIEW-PROTOCOL.md §3.3 判据①——设计评审轮 1 发现 9 定值）：`_engShown` = **已展示基线**
-  // （当前 engineering 布尔——槽应用之后取值）；非 `undefined` / `null`（后者会让每 run 首个工具批
-  // 无条件重推一次快照）。工具驱动翻转的比对起点（写入面 = agent-state 同步 cell）。
+  // #45（WEBVIEW-PROTOCOL.md §3.3 判据①）：`_engShown` = 已展示基线（槽应用之后取值）；
+  // 工具驱动翻转的比对起点（写入面 = agent-state 同步 cell）。
   agent._engShown = agent.config?.agent?.engineering === true
   // D2 触发③：restore/水合发现槽内过期项 → 回写权威台账清 expired（幂等；map 可能已含内存项）
   if (droppedExpired && bind?.cwd && bind?.slot) {
@@ -221,25 +188,19 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     try { setSlotPlanMode(bind.cwd, bind.slot, false) } catch { /* 槽写失败非致命——生效值已是 false */ }
   }
 
-  // ── 工具表装配（2026-09-21 拆出——`docs/core/design/MANIFEST.md` §2.3 行 16/29：装配段
-  // **纯结构搬移零语义**迁入 `setup-tooltable.mjs` 的 `buildToolTable`；段序 / 段内四条动态
-  // import 逐字保留——W8 契约②）。`baseSet` 即 `agent.tools` 绑定值；`toolByName` / `toolSchemas`
-  // 随 hydrateRun 返回面出。
-  const { baseSet, tools, toolByName, toolSchemas } = await buildToolTable({
+  // ── 工具表基础集（§2.3 件 1「工具表」行）：`agent.tools` = baseSet——家族段由核 `prepareRun`
+  // 追加（`assembleFamilyTools` 单源）；端装饰体经 `opts.toolDecorate` 写回（裁定①）。
+  const { baseSet } = await buildToolTable({
     depth, role, engineering, provider, mcpServers, builtinTools, opts, batchDoc, settingsTool,
   })
 
   // B 类 run 绑定（每轮重指——复用 agent 不残留上轮引用）+ opts 派生字段
   agent._role = role
   // autoApprove 字段接线（2026-09-16 缺陷修复——承 `docs/batches/2026-09-16-vsc-autoapprove-misalign.md`
-  // §2 A′）：核侧读**父对象字段** `parent.autoApprove`（spawn 门 `subagent.mjs:258` · escalate 门
-  // `:184` · 子代权限继承 `subagent-spawn.mjs:305` · 读点族 `subagent-async.mjs:272` 等），而本端
-  // live AUTO 值只走 `getAuto` 闭包 ⇒ 宿主曾缺该字段、核读点恒判非 AUTO（自动轮 spawn 恒拒 +
-  // 子代理写恒拒 + 报告必待用户再发一句）。形态 = **访问器**（每轮重定义——复用单例换轮换闭包）：
-  // 取值恒 live（轮中翻转同读——与端面板 mid-turn doctrine `permission-gate.mjs:5-10` 及 CLI
-  // 字段翻转语义一致）；**无 setter** ⇒ 面板 flag 为唯一来源、未来写入方失败显性（fail-loud）。
-  // 先例 = `agent.mjs:144-150` 载体访问器别名（同文件同形态）。
-  const autoProbe = typeof getAuto === "function" ? getAuto : () => false // 归一（同 agent.mjs:64）
+  // §2 A′）：核读点 = **父对象字段** `parent.autoApprove`（spawn 门 `subagent.mjs:271` ∕ escalate 门
+  // `:194` ∕ 子代权限继承 `subagent-spawn.mjs:304` · 读点族 `subagent-async.mjs:291` 等）；
+  // 形态 = **访问器**（每轮重定义——取值恒 live；无 setter ⇒ 面板 flag 为唯一来源，fail-loud）。
+  const autoProbe = typeof getAuto === "function" ? getAuto : () => false // 归一（同核 `agent.mjs:69`）
   Object.defineProperty(agent, "autoApprove", { configurable: true, enumerable: true, get: () => autoProbe() === true })
   agent._depth = depth // TRACE-STORE-VSC（D-TR4）：compress/distill 等内嵌 chat 调用点的 depth 归属
   agent._provider = provider
@@ -254,55 +215,22 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
   agent._engDesignReviewed = engDesignReviewed === true // eng-coder children arrive pre-authorized
   if (opts.engPersist) agent._engPersist = opts.engPersist
   else if (depth === 0 && agent._engPersist) agent._engPersist = null // 直连/非面板顶层 run —— 不残留旧槽绑定
-  const platform = { win32: "Windows", darwin: "macOS", linux: "Linux" }[os.platform()] ?? os.platform()
+  // W9 端差适配——**前向镜像**（§2.3 件 1「面板推送腿」行：前向镜像落 host 装配段，每 run 一次；
+  // 回填 ∕ 比对块随主循环退役迁往 `callbacks.onTurnEnd`——核 `post-turn.mjs` 每工具执行轮末恰一次）：
+  // 核工具族读 CLI 载体名（agent.provider / agent.tasks / agent.planMode / agent.goal）——本端载体 =
+  // 语义同值的入参 / _tasks / _planMode / _goal；task 腿走核 `_onTaskUpdate` 缝（核 `prepareRun` 装配）。
+  agent.provider = provider
+  agent.tasks = agent._tasks ?? []
+  agent.planMode = agent._planMode === true
+  if (agent._goal) agent.goal = agent._goal
 
-  // Live state channel for the parent (eng-coder mutation merge) — the caller gets a
-  // reference to the same array, so it stays current as the child touches files.
-  // state-sink face (D-SF1): the agent OBJECT reference (not the array) — the
-  // pool entry's status summary re-reads childAgent._touchedFiles live; a bare array
-  // reference goes stale when a resume re-runs setup (new per-run agent). Each
-  // runAgent re-assigns it, so entry.childAgent always points at the CURRENT run.
+  // Live state channel（D-SF1 状态汇）：agent **对象**引用（非数组）——池条目状态摘要 live 重读。
   if (opts.stateSink) {
     opts.stateSink.touchedFiles = agent._touchedFiles
     opts.stateSink.agent = agent
   }
-  // ── System prompt ── PROMPT-SYSTEM 施工② G2/G3（2026-09-10）：四槽位装配函数
-  // assemblePrompt({scenario}) 表驱动（D1 场景表 = 蓝图 §3.2 装配矩阵）——取代旧
-  // consult/工程/普通三分支 + overlay 前缀。固定序 人格→common→纪律（§3.1）；
-  // 降级链（蓝图 §3.4）：人格/纪律/common 槽文件缺失 → 该槽空缺跳过 + 醒目警告
-  // （不 fallback 其他槽——层间隔离）。consult = 特殊模块（§3.3）——CONSULT_BASE
-  // 自含基底直接返回，不入主链、无四槽。eng-coder 场景即工程纪律（G6——本端
-  // spawn 侧 engineering 镜像语义同 CLI：scenario=eng-coder → discipline-engineering 槽）。
-  // [4] 层（项目指令 + skills 清单）= systemPrompt 尾块——D-CI2（cli :341-349 同序）。
-  const engPromptActive = engineering && (depth === 0 || role === "eng-coder" || role === "eng-designer")
-  const scenario =
-    role === "consult"
-      ? "consult"
-      : engPromptActive
-        ? (role === "eng-coder" || role === "eng-designer" ? role : "engineering")
-        : (depth === 0 ? "normal" : role ?? "normal")
-  const { prompt: base, warnings: slotWarnings } = assemblePrompt(scenario)
-  // G3：overlay（人格）随装配改造退役——人格槽由场景表承载，不再前缀叠加。
-  // [4] 层（D-CI2——cli setup.mjs:341-349 同序）：项目指令块（不分 depth）+ skills 清单
-  // （depth 0）。旧「OS: … Working directory:」尾行退役——载体归 pushOsSnapshot（D-CI1 #2）。
-  let systemPrompt = base
-  const projectRules = loadProjectInstructions(cwd)
-  if (projectRules) {
-    systemPrompt += `\n\nProject instructions (follow these as project conventions):\n<untrusted_project_instructions>\n${escapeXml(projectRules)}\n</untrusted_project_instructions>`
-  }
-  // #130 B-3/B-4：`.cursor/rules` 常驻集 [4] 层尾块 + 作用域集缓存载体（本 run 唯一一次目录读；
-  // R10 上提后目录读取 = 核 `rules.mjs` `loadRules`——调用面与行为零变）
-  systemPrompt += scopedRulesBlock(agent, cwd)
-  if (depth === 0) {
-    const skillsList = Array.isArray(skills) ? skills : loadSkills(cwd)
-    const listing = formatSkillListing(skillsList)
-    if (listing) systemPrompt += `\n\n${listing}`
-  }
 
-  // Dual-line history. Top-level runs use PERSISTENT lines passed in via opts (survive across calls,
-  // written to the session file by chat-panel): history = machine context (compaction shrinks it),
-  // fullHistory = never-compacted human-readable record. Subagents always use throwaway local lines.
-  // Old sessions / first turn: seed the machine line from the human line (correctness over tokens).
+  // 双线历史（SESSION.md §6.9）：顶层 = 持久双线（opts 传入）；子代理 = 丢即弃本地线（escalate 续跑回传）；老会话/首轮：机读线由人读线播种。
   const fullHistory = depth === 0 ? (opts.fullHistory ?? (opts.fullHistory = [])) : []
   const history = depth === 0
     ? (opts.history ?? (opts.history = [...fullHistory]))
@@ -311,35 +239,15 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     // history back in — the conversation survives across runAgent calls.
     : (opts.history ?? [])
 
-  // ── Q1 审计收敛（蓝图 §3.4 第 4 款）：特殊模块基底缺失 → 该模块不可用报错（不自降级
-  // ——空基底绝不可静默上岗）。consult 场景在外部消费点收口：入历史后抛错（面板回合
-  // → 错误可见——不静默、不降级）。四槽场景维持跳过+警告降级链（AC-2 三款）。
-  // 位置纪律：必须在 history 初始化之后（advisor round1 🔴——此前引用未初始化的
-  // history 绑定会 TDZ ReferenceError，守卫/警告在触发时自爆）。
-  if (role === "consult" && !base) {
-    const msg = "[Consult module unavailable: prompts/consult-base.md missing — the consultation module refuses to degrade (特殊模块不自降级). Check the installation's prompts directory.]"
-    history.push({ role: "user", content: msg })
-    throw new Error(`consult-base.md missing — consultation module unavailable (no degraded fallback)`)
-  }
-  // D2 警告通道 = history 注入（CLI 同款深度门——depth 0 才注入）。
-  if (depth === 0 && slotWarnings.length > 0) {
-    for (const w of slotWarnings) history.push({ role: "user", content: w })
-  }
-
   // The advisor helpers (ported from the CLI) reach for agent.cwd and agent.history —
   // keep those aliases live so the ported modules work unchanged.
   agent.cwd = cwd
   agent.history = history
-  // M1-manifest（docs/core/design/MANIFEST.md §2.2 两端装配钩子——VSC 端）：
-  // 模式门（KD-M1-12——判据 = `agent.config.agent.engineering`，已由 `applySlotSessionState`
-  // 按槽订正：槽优先 + config 回退）：普通会话 → 钩子整体不执行——**零 manifest I/O**
-  // （不读 / 不拒 / 不建档）+ `agent.manifest = null`（清残留附着——复用 agent 跨模式防陈旧）。
-  // 工程模式分支的决策树 = 核单源 `resolveEngineeringManifest`（KD-M1-20）；**非 fatal**
-  // （KD-M1-25 / M1-29——启动零拒绝）：档合法 / 梯②④⑤ 缺档（`depth === 0` ⇒ 就地建档，
-  // `writer:'main'`）⇒ 附着；歧义 / 档非法 / 建档失败 ⇒ **不抛**（会话照常起）——
-  // `agent.manifest = null` + 记 `agent._projectView`（形状 = `projectView` 返回面 + `created`
-  // 建档标记）。`depth > 0`（子代理水合同经此钩）⇒ `init:false`（仅不初始化——写门缺省拒已
-  // 机械兜底）。两端同形（本批）。
+  // M1-manifest（MANIFEST.md §2.2 两端装配钩子——VSC 端）：模式门 = `agent.config.agent.engineering`
+  // （已由 `applySlotSessionState` 槽优先订正）：普通会话 ⇒ 零 manifest I/O + `agent.manifest = null`；
+  // 工程模式 ⇒ 核单源 `resolveEngineeringManifest` 决策树（KD-M1-20），**非 fatal**（KD-M1-25/29——
+  // 启动零拒绝）：歧义 ∕ 档非法 ∕ 建档失败 ⇒ 不抛——`manifest = null` + 记 `agent._projectView`；
+  // `depth > 0` ⇒ `init:false`（写门缺省拒已机械兜底）。
   if (agent.config?.agent?.engineering !== true) {
     agent.manifest = null
   } else {
@@ -347,82 +255,43 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     agent._projectView = { ...projectView(cwd), created: r.ok && r.created === true }
     agent.manifest = r.ok ? r.manifest : null
   }
-  // TRACE-STORE-VSC（D-TR4 镜像——CLI agent/setup.mjs `_sessionStart ??=` 同语义）：顶层
-  // 会话身份 = 槽 sessionStart（跨端同身份——F2 打点同源）优先，无槽/未保存则首建打点；
-  // 复用 agent 不重打（??=——同会话跨回合恒等）；子代理（depth>0）不设——轨迹 session
-  // 字段 null（CLI parity——children 无 _sessionStart——回靠 role+depth 归属）。
+  // TRACE-STORE-VSC（D-TR4 镜像）：顶层会话身份 = 槽 sessionStart 优先，无槽首建打点（`??=`——
+  // 复用 agent 不重打）；子代理不设（轨迹 session null——CLI parity）。
   if (depth === 0 && agent._sessionStart == null) {
     agent._sessionStart = sessionData?.sessionStart ?? new Date().toISOString()
   }
-  // read_history (SESSION.md §6.9): the tool reads the HUMAN line via agent._fullHistory —
-  // attach at depth 0 only (subagent throwaway lines are never reachable, the tool is not
-  // registered for them anyway).
+  // read_history（SESSION.md §6.9）：人读线经 `agent._fullHistory` 读——仅 depth 0 挂（子代理丢即弃）。
   if (depth === 0) agent._fullHistory = fullHistory
-  // SESSION.md §6.11（2026-09-08——F2 评审 #7 修复版）：resumed 按会话跟踪——agent 级
-  // _resumedPending 只在 agent 新建（restore:true factory 路径——首轮/destroy 换槽重建
-  // 同路径）且 fullHistory 载入非空时武装——每次槽恢复进新 agent 天然得一次 resumed:yes；
-  // 同绑定复用（restore=false）不武装（下方注入点消费即清——复用路径恒 no）。
-  if (restore && fullHistory.length > 0) agent._resumedPending = true
-  // process restarted 句（N6——评审 🔴 修复）：随 D-CI1 #3 迁入 context-injections
-  // （injectRunContext——模块级 restartDetectionDone 一次性闸保留：extension host 重启后
-  // 模块级重置、进程内切槽不重置＝真重启语义；判据 = 载入历史非空，且在用户输入落线前
-  // 求值——CLI prepareRun 同序）。跨端异名互指（结构债批 5 N7）：thincoder SESSION.md §6.11
-  // ——CLI 同机制载体 = agent._envResumed + agent._processRestartPending。
 
-  // Live history reference for the parent: same array the loop appends to — a caller
-  // that catches ContinueError can hand it back via opts.history to resume the child
-  // conversation (escalate turn-cap continue).
-  if (opts.stateSink) opts.stateSink.history = history
-
-  // ─── Context injection（D-CI1/D-CI2——契约 / 序表；序表 = SESSION.md §6.15）────
-  // 块 #1–#6（git → OS/cwd/Session start/快照 → restarted → 依赖大纲 → 文档召回 →
-  // 记忆召回）由 context-injections 单一编排注入（只追加、只 transient、
-  // 失败静默；门 = depth 0 且非 resume/autoTurn）。原 git 行与 restarted 段随编排退役。
-  await injectRunContext(agent, { history, cwd, input, depth, resume, autoTurn, platform })
-
-  // resume (interrupt continuation): the input is already in history — pushing it
-  // again would duplicate the user message (CLI setup.mjs resume parity).
-  // digest D-S6 autoTurn（AGENT-LOOP-ASYNC-POOL.md §6.8）: system-driven turn with NO user input — same
-  // no-push semantic, but as a fresh run (per-run state resets like a normal turn;
-  // resume additionally preserves guard state for ContinueError continuations).
-  // The pushed object is captured BY REFERENCE: the paste-image pointer below
-  // appends to THIS message (never history.at(-1) — the transient time reminder
-  // pushed afterwards is last, and mutating it re-sent the image pointer every run).
-  let userMsg = null
-  if (!resume && !autoTurn) {
-    userMsg = { role: "user", content: input }
-    pushReal(history, fullHistory, userMsg)
-  }
-
-  // SESSION.md §6.11：统一 env-state reminder（每回合、depth-0）——注入句解耦
-  // （N6——评审 🔴 修复、双信号独立消费）：resumed:yes = agent 级 _resumedPending（上方
-  // restore 路径武装——读即清，每次会话恢复一次；切槽恢复只发 resumed:yes、不误报进程
-  // 重启）。process restarted 句由 context-injections #3（injectRunContext）在输入落线前按进场历史求值。
+  // §2.6 表注处置（裁定①）：记忆 ∕ 索引句柄随 host 装配补齐——核注入组读点 = `agent.memory`
+  // （依赖大纲 ∕ 文档召回 ∕ 记忆召回三块——核 `agent/setup.mjs:91/:103`）；端句柄 = `memoryFor(cwd)`
+  // （形兼容 `createMemory({dbPath})` + `.db`；停用 ∕ 未建 ⇒ null ⇒ 核静默跳过 = 旧端同形，同 I/O）。
   if (depth === 0) {
-    const resumed = agent._resumedPending === true
-    agent._resumedPending = false
-    pushEnvStateReminder(history, { engineering, provider, slot: bind?.slot ?? null, resumed })
+    try { agent.memory = await memoryFor(cwd) } catch { agent.memory = null /* 记忆面不可用 ⇒ 三块静默跳过（核同形） */ }
   }
 
-  // R10 L1（MULTI-INSTANCE-COLLAB.md D-L1a——决策④ 每回合）：同伴实例提醒——env-state
-  // 之后、time reminder 之前（transient；有同伴才注入——peerInstances 惰性 mtime 缓存）。
-  if (depth === 0) pushPeerReminder(history, cwd)
+  // ── 端 adapter 键（写回调用方 opts——先例 = opts.agent ∕ opts.history 写回）──────────────
+  // SESSION.md §6.11：resumed 载体 = 核字段 `agent._envResumed`（同条件——restore + 载入历史非空；
+  // 读即清 = 核 `pushEnvStateReminder`）；槽绑定 = 核字段 `agent._slot`（env 行 slot ∕ `read_history` 解析读点）。
+  if (restore && fullHistory.length > 0) agent._envResumed = true
+  agent._slot = bind?.slot ?? null
+  // R5 重启闸（端独有——extension-host 重载语义）：判真 ⇒ 置核消费位 `agent._processRestartPending`
+  // ——核 `prepareRun`（!resume 段）发句（句文本与序位 git → OS → restarted → outline 随核零变）。
+  if (detectRestoredSession({ depth, resume, autoTurn, fullHistory })) agent._processRestartPending = true
+  // §2.5-A3：回合域文本 = 核基座 + 端 overlay（组合单点 = `./turn-domains.mjs`）——核推送点消费。
+  opts.turnDomainText = composeTurnDomain(opts.upstreamTurn === true, agent.config?.agent?.engineering === true, opts.timerTurn === true)
+  // 贴图指引（§2.3 件 1「贴图指针」行——adapter：核 `runAgent` 调用前对 input 串施用；非多模态 + 带图 ⇒ 抛错）。
+  if (!resume && !autoTurn && Array.isArray(opts.images) && opts.images.length > 0) {
+    const userMsg = { role: "user", content: input }
+    appendImagePointer(userMsg, opts.images, provider.model, { depth })
+    input = userMsg.content
+  }
 
-  // D-CI2 #11/#12（序表 = SESSION.md §6.15）：编辑器注入（VSC 独有——D-CI5 同文去重后）在 peer 之后、time 之前；
-  // time 保持最后（前缀缓存契约——KD-2：cli setup.mjs:145-146/152-156 同为尾位）。
-  pushInjections(history, opts.injections)
-
-  pushTimeReminder(history)
-
-  // Pasted images (GitHub thincoder#3, Plan B): pointer appended to the REAL user
-  // message by reference — see setup-reminders.mjs for the full contract.
-  appendImagePointer(userMsg, opts.images, provider.model, { depth })
-
-  return { agent, history, fullHistory, toolByName, toolSchemas, cfgVerifyGuard, cfgCompactThreshold, systemPrompt }
+  return { agent, history, fullHistory, input }
 }
 
 /** setupAgentRun —— 既有装配入口（子代理/首轮/直连）：factory 新建 → hydrateRun（restore:true
- *  ——首轮与 destroy 后重建同路径，槽回填）。顶层复用走 agent.mjs 的 hydrateRun(existing, …)。 */
+ *  ——首轮与 destroy 后重建同路径，槽回填）。顶层复用走 hydrateRun(existing, …)。 */
 export function setupAgentRun(ctx) {
   return hydrateRun(buildTopLevelAgent(), { ...ctx, restore: true })
 }

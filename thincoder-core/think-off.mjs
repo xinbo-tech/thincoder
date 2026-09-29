@@ -24,3 +24,26 @@ export function thinkOffPath(spec) {
   if (thinkOffShape(spec) === null) return (spec?.reasoningEffortEnum ?? []).includes("none")
   return true
 }
+
+/** advisor 推理档写面三态（**写语义单源** —— 由 VSC `settings-panel-write.mjs:149-164` 上提；B10 S11：
+ *  桌面主侧 ∕ VSC 写面两端同引，零副本）：`advisor` 对象原地作用于 `{ thinking, reasoningEffort }` 两键 ——
+ *  ① `"none"`（关思考）⇒ `thinking = thinkOffShape(spec)`（族别 off 形）+ 删 `reasoningEffort`；
+ *  ② 非空档字面 ⇒ `reasoningEffort = 值` + 清 off 形残记（`thinking` 为 `null` 字面 ∕ `{type:"disabled"}`
+ *     两 off 形皆清 —— 选档即要思考，B10 S11 收正：源式只清 `null` 字面，type 族 off 形残留会压过档位读回）；
+ *  ③ 其余（空 ∕ 非串 = 中性）⇒ 删 `reasoningEffort` + 清 off 形残记（读回中性 —— 同上收正）。
+ *  写后投影恒等（读回 = 所选：off 形 ⇒ `"none"`；字面档 ⇒ 该档；两清 ⇒ 中性）。*/
+export function applyAdvisorEffort(advisor, value, spec) {
+  const target = advisor !== null && typeof advisor === "object" && !Array.isArray(advisor) ? advisor : {}
+  const offish = target.thinking === null || target.thinking?.type === "disabled"
+  if (value === "none") {
+    target.thinking = thinkOffShape(spec)
+    delete target.reasoningEffort
+  } else if (typeof value === "string" && value.trim()) {
+    target.reasoningEffort = value.trim()
+    if (offish) delete target.thinking
+  } else {
+    delete target.reasoningEffort
+    if (offish) delete target.thinking
+  }
+  return target
+}

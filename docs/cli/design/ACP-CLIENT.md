@@ -565,7 +565,7 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
   （`authenticate` 失败复用同一文案；错误码恒 `-32000` ⇒ AC6 不变。）
 - **`session/new` 的装配后检查（兜底，与门互补）**：门拦的是「key 缺失 / `defaultModel` 不可解析」；装配后检查拦的是**门放行但 provider 仍不可用**的残余（如 `defaultModel` 可解析而 provider 缺 `baseURL`）。
   现状 `defaultCreateSession` → `assembleAgent` 带 `_providerInvalid` **照样建会话**，问题延后到首个 prompt 才以含糊错误爆出。
-  改法：装配后**显式检查** `agent._providerInvalid`，真 ⇒ 返回错误（文案 = `agent._providerInvalidReason`——`make-agent.mjs:134-135` 取 `config.providerInvalidReason`；`validateProvider` 兜底「provider 不存在 / model 缺失 / 缺少 baseURL」）而**不建半死会话**。
+  改法：装配后**显式检查** `agent._providerInvalid`，真 ⇒ 返回错误（文案 = `agent._providerInvalidReason`——核 `thincoder-core/agent/assemble.mjs` `validateProvider(agent, config)` 取 `config?.providerInvalidReason`（兜底三档文案「provider 不存在 / model 缺失 / 缺少 baseURL」））而**不建半死会话**。
 - **代码注释面收正（逐字目标 · 评审 #2 站点级断言的依据）**：
   - `thincoder-core/config.mjs:11` → ` * API key comes from providers[].apiKey only — environment variables are not a key source.`
   - `thincoder-cli/src/acp.mjs:69` → `/** Config is "configured" when the active provider has a resolvable API key (providers[].apiKey only). */`

@@ -438,7 +438,13 @@
   color: var(--fg-muted);
   font-size: 12px;
   white-space: nowrap;
+  cursor: pointer; /* #554②：点击开合面（VSC `#goal-badge` inline `cursor:pointer` 同形） */
 }
 .status-bar > [data-seg] + .status-goal::before,
 .status-bar > .status-alert + .status-goal::before,
 .status-bar > .status-goal + .status-alert::before { content: "│"; margin: 0 6px 0 -6px; color: color-mix(in srgb, var(--fg) 50%, transparent); }
+
+/* 首屏引导层（R1 —— `renderer/index.html` 静态件 ∕ `renderer/app.mjs` `settleBoot` 随动）：`data-boot` ≠ `ok` 期间在场
+   （窗口级覆盖层面 —— 冷启首帧 = 引导面，非空骨架）；置 `ok` ⇒ 节点移除（零残留）；`error` ⇒ 错误面（`.boot-reason` 显原因，转轮停）。 */
+.boot-gate { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: var(--bg); color: var(--fg-muted); }
+.boot-reason { max-width: calc(100vw - 2 * var(--gap)); margin: 0; font-size: 13px; text-align: center; white-space: pre-wrap; overflow-wrap: anywhere; }

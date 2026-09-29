@@ -70,6 +70,13 @@ export function busyOf(state, key) {
   return Array.isArray(codes) && codes.includes("running")
 }
 
+/** 挂起窗判据（「消费前流内零块」批 · 挂起窗径批 ∥ 窗队列批）：本键挂起窗活跃（`ev:susp` 置位标）。
+ *  两消费面同源：出泡抑制面（`renderer/mount-composer.mjs` `onUserEcho` 判据 = `busyOf ∨ 本件`）· 忙态域
+ *  `susp` 支（`renderer/composer-sync.mjs` `turnState` 改用本件——零行为变，消重复直读）。 */
+export function suspActiveOf(state, key) {
+  return key === null || key === undefined ? false : state?.susp?.[key]?.active === true
+}
+
 /** 会话头模型：`tab` = 活动会话键（缺 ⇒ `null`；参数名沿在册 —— 机读锚 `data-tab` 不变）；`meta` = 会话级供给（缺 / 非载体 ⇒ 零字段）；`busy` = 忙态（P23 ——
  *  缺省假：直调面（旧夹具）行为零改）。 */
 export function headModel({ tab = null, meta = null, busy = false } = {}) {

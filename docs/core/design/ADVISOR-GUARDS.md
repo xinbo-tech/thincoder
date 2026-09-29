@@ -366,7 +366,7 @@ export function advisorContextBudget(provider) {
 - 不拦截代码评审的在途写（仅设计评审）；不覆盖 bash / 文件操作类写入面（登记）。
 - 不碰在途链文件；不改判定族 / 六条尾文案 / 压缩阈值。
 - **零 UI 面**（拒绝文案落工具结果、冻结句落工具返回——无渲染面改动）。
-- **类型门登记（非发起点——零改，判据见 §2.4 / §10 A-AG13）**：VSC 记账面 `thincoder-vscode/src/agent/execute-tools.mjs:363`（`args.type !== "design"` 分支——判定后恒为枚举值，语义等价）· CLI 显示面 `thincoder-cli/src/tui/tool-args.mjs:51`（`a.type ?? "review"` 渲染兜底——不参与发轨判定，被拒调用照原样渲染）。
+- **类型门登记（非发起点——零改，判据见 §2.4 / §10 A-AG13）**：核记账面 `thincoder-core/agent/record-results.mjs`（类型门分支已随取核归位——判定后恒为枚举值，语义等价）· CLI 显示面 `thincoder-cli/src/tui/tool-args.mjs:51`（`a.type ?? "review"` 渲染兜底——不参与发轨判定，被拒调用照原样渲染）。
   **对象声明面** `thincoder-core/agent-tools/advisor.mjs:66`（`object` schema——自述为调用方声明的评审类型，只描述评审对象、**不选轨**；一致性校验 = §2.4 冲突分支）。
 - 不写实现代码（工具 / 守卫 / 检查点 = eng-coder 写域）。
 

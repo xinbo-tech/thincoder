@@ -2,11 +2,11 @@
  * mount-composer.mjs — 输入区**换装出档**（输入面板上提批 `2026-09-28-desktop-input-vsc-align.md` §2.4 Q1 ∕ §2.3
  * 桌面侧）：面板主体 = **核件工厂** `createComposerPanel(deps)`（`thincoder-render-core/composer/panel.mjs` ——
  * VSC ∕ 桌面同一文件）；本档只留三面 = **deps 构造** + **写面 deps 接线**（写面本体出档 `renderer/composer-wire.mjs`
- * —— 收正轮拆分，见下）+ **装配与挂件锚面**（两宿主锚；随动派生面出档 `renderer/composer-sync.mjs` —— #510 续拆，见下）。
+ * —— 收正轮拆分，见下）+ **装配与提示锚面**（宿主锚；随动派生面出档 `renderer/composer-sync.mjs` —— #510 续拆，见下）。
  *
- * 槽形（`[data-slot="composer"]` 三件 —— §2.4「挂件锚三件」）：① `[data-composer-notices]`（B21 发送失败 ∕
- * B22 附件降级**两保留行**，行形不动；面板子树之前）② 核件面板子树（ids 照 VSC —— 结构单源；工厂自持）③
- * `[data-composer-tail]`（末条复制控件 —— `renderer/views/chat-copy.mjs` `lastCopyNode`，该档零改）。
+ * 槽形（`[data-slot="composer"]` 两件）：① `[data-composer-notices]`（B21 发送失败 ∕
+ * B22 附件降级**两保留行**，行形不动；面板子树之前）② 核件面板子树（ids 照 VSC —— 结构单源；工厂自持）。
+ * （复制面对齐批：原 ③ 末条复制控件 ∕ 尾锚退场 —— 自建复制面摘除，槽形三件 ⇒ 两件。）
  * 槽 = 核件 `#toolbar` 样式规则命中物（VSC 静态容器 id）⇒ 装配期赋 `id="toolbar"` —— 核件样式值零复写
  * （样式单源 = 核件 `composer/composer.css`，装配期注 `<link>` 引入；变量别名块住 `renderer/chat.css`，C2）。
  *
@@ -18,7 +18,7 @@
  * store 订阅；标题 = 回合尾刷新；欢迎条 = 帧面随块；模式位 = `sessionFlags` 切片；设置面自持读面；邻面下拉端无）。
  *
  * 写面（映射表 §2.5 D1–D5 —— **出档 `renderer/composer-wire.mjs`**，收正轮拆分；本档只注入 deps）：`userMessage` ∕
- * `queuedUserMessage` ⇒ `msg:send { key, text, images? }`（images 经 `toImages` 投影为端既有形，D7）· `abort` ∕
+ * `queuedUserMessage` ⇒ `msg:send { key, text, images? }`（images 经 `toImages` 投影为 dataURL 串列 —— A1 收正 ∕ VSC 同形）· `abort` ∕
  * `interrupt` ⇒ `msg:interrupt { key, message? }`（收正轮：`interrupt` 单投并携文本 —— 宿主下传核 abort 面
  * `{ interrupt: true, message }` ⇒ 同上下文注入续跑；「abort + 另投 `msg:send`」双投形退场）· `atComplete` ⇒
  * `at:complete { query, seq }`（回执 seq ≠ 现存 seq ⇒ **迟到丢弃**）· `selectModel` ∕ `selectReasoning` ⇒
@@ -41,7 +41,7 @@
  * **拆分注记（收正轮执行）**：本档换装后实读 466（越 300 顾问线）⇒ 在册预案「写面出档」本批执行：写面（通道往返 ∕
  * 逐类型 handler ∕ 本地先行块标记三态 ∕ B21 失败态）落 `renderer/composer-wire.mjs`（实读 177，≤300 臂内）。
  * **续拆（#510 留守拆档 · 2026-09-29）**：随动派生面（④ `state` 读面 ∕ 忙态与守卫派生 ∕ 模式位推送 ∕ 候选面 ∕
- * 两挂件锚窄刷 ∕ 随动总入口）再出档 `renderer/composer-sync.mjs` ⇒ 拆后本档 ≤300（实读见同批报告）。
+ * 提示锚窄刷 ∕ 随动总入口）再出档 `renderer/composer-sync.mjs` ⇒ 拆后本档 ≤300（实读见同批报告）。
  * 纪律：零 `node:` / 零裸包（渲染面静态闭包判据）；控制台诊断串非面向用户文案（不经 `t()`）。
  */
 import { createComposerPanel } from "/rc/composer/panel.mjs"
@@ -50,21 +50,26 @@ import { createComposerSync, effortOf } from "./composer-sync.mjs"
 import { degradedCode, toImages } from "./attach.mjs"
 import { applyFlags } from "./events-flags.mjs"
 import { appendBlock, returnToBottom, setAttachDegraded, store as defaultStore } from "./store.mjs"
-import { busyOf } from "./views/chrome.mjs"
+import { busyOf, suspActiveOf } from "./views/chrome.mjs"
 
 /** 输入区容器锚（骨架属性住 `renderer/index.html`）。 */
 export const COMPOSER_SLOT = '[data-slot="composer"]'
 
 /** 重绘触发切片：活动会话（守卫 ∕ 读面换键）· 会话级供给（模型 ∕ 档位 ∕ 模式位）· **位标（忙态派生）** ·
- *  排队（队计数）· 附件降级码（B22 行源）· 语言（词面）· 块（末条复制控件取文源）· 挂起窗（`susp` —— 收正轮 ③）。 */
+ *  排队（队计数）· 附件降级码（B22 行源）· 语言（词面）· 挂起窗（`susp` —— 收正轮 ③）。
+ *  （复制面对齐批：`blocks` 随末条复制控件退场除名 —— 其唯一消费者已摘。） */
 export const COMPOSER_KEYS = Object.freeze([
-  "activeSession", "sessionMeta", "sessionFlags", "tabBadges", "pending", "attachDegraded", "locale", "blocks",
+  "activeSession", "sessionMeta", "sessionFlags", "tabBadges", "pending", "attachDegraded", "locale",
   "susp", // 挂起窗切片（收正轮 · ③）—— `ev:susp` 置位标 ⇒ 忙态门（`susp` 域）随动重派生
 ])
 
-/** 挂件锚两属性名（槽内两宿主容器 —— 属桌面胶水，不入核件结构锁）。 */
+/** 挂起空闲判据（= 窗活跃 ∧ ¬忙 —— 挂起窗径批 ∥ 窗队列批）：窗内直发径（未起跑）⇒ 回执面据本判据复位 loading
+ *  （防窗内残余 Ctrl+C ∕ I 假 affordance）；窗内在飞回合（`running` 位标在）⇒ 零复位（防误关真回合的 Stop 门）。
+ *  判据单源 = `views/chrome.mjs` 两件合成（`suspActiveOf ∧ ¬busyOf`）；消费面 = 写面 `sendDirect` 队形回执支。 */
+const suspIdleOf = (state, key) => suspActiveOf(state, key) && !busyOf(state, key)
+
+/** 挂件锚属性名（槽内宿主容器 —— 属桌面胶水，不入核件结构锁）。 */
 const NOTICES_ANCHOR = "data-composer-notices"
-const TAIL_ANCHOR = "data-composer-tail"
 
 /** IME 组字判据（**单源一处** —— 本档导出）：组字期回车 = 选字确认（归输入法）⇒ 发送面与 `preventDefault` 面
  *  **双零**、键不吞。`keyCode 229` = 兜底臂（老 WebView 不置 `isComposing`；同族先例 = VSC 输入面）。
@@ -81,17 +86,16 @@ function withUserBlock(state, key, block) {
   return returnToBottom(appendBlock(state, block))
 }
 
-/** 挂载（接线面句柄式）：返回 `{ submit, refresh, keys, detach }` —— `submit(text)` = **直发径单副本**（错误横幅
- *  重试 · 项 9：写值 ⇒ 触发发送键，零第二实现）；`refresh()` = 词面到位重派生（`boot` `initDict` 之后一次 ——
- *  注册面后到，见其函数注）；`keys` = 重绘触发切片面；`detach` = 退订句柄（调用面 `renderer/app.mjs`）。 */
+/** 挂载（接线面句柄式）：返回 `{ submit, refresh, keys, detach, refreshCandidates }` —— `submit(text)` = **直发径单副本**
+ *  （错误横幅重试 · 项 9：写值 ⇒ 触发发送键，零第二实现）；`refresh()` = 词面到位重派生（`boot` `initDict` 之后一次 ——
+ *  注册面后到，见其函数注）；`keys` = 重绘触发切片面；`detach` = 退订句柄；`refreshCandidates()` = 候选面**强制刷新口**
+ *  （全渠扇出批 · #2 ∕ #3 接线消费 —— `renderer/app.mjs`；在飞期调用 = 位标，见 `composer-sync.mjs`）。 */
 export function attachComposer(host, deps = {}) {
   const store = deps.store ?? defaultStore
-  const writeText = typeof deps.writeText === "function" ? deps.writeText : undefined
   const openSettings = typeof deps.openSettings === "function" ? deps.openSettings : undefined
   const pushSubs = []
   let panel = null
   let noticesAnchor = null
-  let tailAnchor = null
 
   const slotEl = () => (typeof document === "undefined" ? null : document.querySelector(COMPOSER_SLOT))
   const activeKey = () => store.get()?.activeSession ?? null
@@ -125,30 +129,36 @@ export function attachComposer(host, deps = {}) {
     panelOf: () => panel, // 直发失败径复位 loading
     repaint: (state1) => sync.paintNotices(state1), // 提示行重挂（派生面档 `paintNotices` 单源）
     onLoadingReset: () => { sync.resetBusy() }, // 忙态派生缓存复位（收正轮 · 行 8）
+    suspIdleOf, // 挂起空闲复位判据（挂起窗径批：窗内直发径未起跑 ⇒ loading 门禁归位）
     toImages, degradedCode, effortOf, withUserBlock, setAttachDegraded, applyFlags,
     openSettings: () => openSettings?.(), // footer 三出口（A8 唯一映射点）
   })
   const post = wire.post
 
   // ─── 随动派生面（出档 `renderer/composer-sync.mjs` —— #510 留守拆档 · 2026-09-29）──────────────
-  // ④ `state` 读面 ∕ 忙态与守卫派生 ∕ 模式位推送 ∕ 候选面 ∕ 两挂件锚窄刷 ∕ 随动总入口皆住该档；本档只注入 deps
-  // （`panel` 与两宿主锚 = 装配期后置位 ⇒ 访问器注入；`wire` = 上一步已建）。
+  // ④ `state` 读面 ∕ 忙态与守卫派生 ∕ 模式位推送 ∕ 候选面 ∕ 提示锚窄刷 ∕ 随动总入口皆住该档；本档只注入 deps
+  // （`panel` 与宿主锚 = 装配期后置位 ⇒ 访问器注入；`wire` = 上一步已建）。
   const sync = createComposerSync({
-    store, activeKey, call, push, pushSubs, wire, writeText,
+    store, activeKey, call, push, pushSubs, wire,
     panelOf: () => panel,
     noticesOf: () => noticesAnchor,
-    tailOf: () => tailAnchor,
   })
 
   // 本地先行块登记（`noteEcho`）与**退流**（`retractEcho`）随写面出档 `renderer/composer-wire.mjs`（收正轮拆分）；
   // 本档 `onUserEcho` 只作登记 —— 消费前流内零**真块**（正径滞后时由回执退流）；待发送块 = 本档提示带（派生）。
 
-  /** B12 出泡钩：**直发径** = 本地先行（写用户块 + 并笔回底）；**忙态径** = 零本地块（返 `null` —— 防双泡，
-   *  待发送气泡归队镜面 + 帧尾 `markPending`）。返值 = 核件 `markPending` 落笔宿主（两径均无须落笔面）。 */
+  /** B12 出泡钩：**直发径** = 本地先行（写用户块 + 并笔回底）；**忙态 ∕ 挂起窗径** = 零本地块（返 `null` —— 防双泡，
+   *  待发送气泡归队镜面 + 帧尾 `markPending`）；**抑制径恒登记**（`noteEcho(key, null)` —— 退流锚恒指本提交，
+   *  防误摘既往真块）。返值 = 核件 `markPending` 落笔宿主（各径均无须落笔面）。 */
   function onUserEcho(text, ts) {
     const held = store.get()
     const key = held?.activeSession ?? null
-    if (key === null || busyOf(held, key)) return null
+    if (key === null) return null
+    // 抑制面（挂起窗径批扩 susp）：忙态 ∨ 挂起窗活跃 ⇒ 零本地块（消费前流内零真块 —— 消费时刻由 `ev:queue.delivered` 补写）
+    if (busyOf(held, key) || suspActiveOf(held, key)) {
+      wire.noteEcho(key, null)
+      return null
+    }
     const block = { kind: "user", text }
     if (typeof ts === "number" && Number.isFinite(ts)) block.ts = ts
     wire.noteEcho(key, block) // 认领锚（正径滞后时回执落标 —— 单点在写面档）
@@ -186,7 +196,7 @@ export function attachComposer(host, deps = {}) {
   }
 
   /** 槽装配（一次）：核件样式引入 ⇒ 槽赋 `id="toolbar"`（核件样式规则命中物）⇒ 提示锚 ⇒ 核件面板（工厂按 VSC
-   *  序 append 四子树）⇒ 尾锚。槽缺 ∕ 平 node ⇒ `null`（记错一次 —— 零静默）。 */
+   *  序 append 四子树）。槽缺 ∕ 平 node ⇒ `null`（记错一次 —— 零静默）。 */
   function mount() {
     const container = slotEl()
     if (container === null || typeof container.append !== "function") {
@@ -198,11 +208,7 @@ export function attachComposer(host, deps = {}) {
     noticesAnchor = document.createElement("div")
     noticesAnchor.setAttribute(NOTICES_ANCHOR, "")
     container.append(noticesAnchor)
-    const created = createComposerPanel({ root: container, post, state: sync.state, hooks })
-    tailAnchor = document.createElement("div")
-    tailAnchor.setAttribute(TAIL_ANCHOR, "")
-    container.append(tailAnchor)
-    return created
+    return createComposerPanel({ root: container, post, state: sync.state, hooks })
   }
 
   panel = mount()
@@ -234,5 +240,5 @@ export function attachComposer(host, deps = {}) {
     sync.syncPanel()
   }
 
-  return { submit, refresh, keys: COMPOSER_KEYS, detach }
+  return { submit, refresh, keys: COMPOSER_KEYS, detach, refreshCandidates: sync.refreshCandidates }
 }

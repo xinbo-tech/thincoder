@@ -172,6 +172,18 @@
 .advisor-block.sub-block .advisor-content { max-height: 60px; }
 .advisor-block.sub-block > summary { opacity: 0.75; }
 
+/* 让位期出口钮（块跟滚让位修复批 · 2026-09-29 · 台账 #603 · KD-RC-8）：核件自持（建 ∕ 更 ∕ 删 + 两态
+   文案 `sub.follow.*`）；右下 overlay——同 `.sub-stop-btn` 家族先例（绝对定位不入文档流）。值源 = 主题变量面。 */
+.sub-follow-btn {
+  position: absolute; right: 6px; bottom: 6px; padding: 0 8px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--overlay); color: var(--fg);
+  font-size: 11px; line-height: 1.6; cursor: pointer; opacity: 0.9;
+}
+.sub-follow-btn:hover { opacity: 1; }
+/* 折叠态兜底（灭 1 帧残位——在场判据含 `open`；本行 = 帧间缝隙兜底）。 */
+.advisor-block.sub-block:not([open]) .sub-follow-btn { display: none; }
+.advisor-block.sub-block.sub-frozen .sub-follow-btn { display: none; } /* 冻结兜底（在场判据含非冻结——灭残位） */
+
 /* ── ⑤ 核卡族（「桌面处理流 · VSC 对齐」批 R1 直消费 —— 核 `cards/{question,panel}.mjs` 产出 DOM 面）──
    值源 = VSC webview 实读（`base.css:261-291` 提问卡控件族 · `controls.css:40-153` 任务面板体）；口径三律同 D21。
    审批卡 ∕ 提问卡**卡壳**类名面（`.permission-prompt*` / `.question-*`）住 `renderer/chat-cards.css`（卡族段）；

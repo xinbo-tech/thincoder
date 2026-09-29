@@ -109,6 +109,9 @@ export function ensureSubTaskKey(state, key, role) {
     // ——块创建（此处）即应用——sub.async 区块创建即知（⏹ 门控/头标判定源保真）。
     if (state._pendingAsyncKeys?.delete(key)) state.subTasks[key].async = true
   }
+  // 停滞轻显形（TUI.md §7.7 · stall-indicator 批 2026-09-29）：③子代理面 = 可见输出事件——
+  // 内容回显四路由（text ∕ think ∕ 工具 ∕ 输出）与 ⟦ev⟧ 块状态事件均先经本函数 ⇒ 单点重置静默起算。
+  state.lastOutputAt = Date.now()
   return state.subTasks[key]
 }
 
@@ -169,6 +172,7 @@ export function routeSubToken(state, t, scheduleRender) {
         delete live.queued
         live.started = Date.now()
       }
+      state.lastOutputAt = Date.now() // 停滞轻显形（§7.7）：③块状态——queued→running 转正（头标 ∕ 走时可感）
     }
     else {
       state._pendingAsyncKeys ??= new Set()
@@ -190,6 +194,7 @@ export function routeSubToken(state, t, scheduleRender) {
       // ⇒ 后续 ⟦ev⟧stopped 经 ensureSubTaskKey 直接丢弃（零幻影冻结块——探针实证的
       // state.lines 0 → 1 路径封死）；no-block 面不写（无可防之幻影——语义零扩）。
       tombstoneSubKey(state, path.head)
+      state.lastOutputAt = Date.now() // 停滞轻显形（§7.7）：③块状态——出队 ∕ 取消块移除（可见）
     }
     scheduleRender()
     return true
@@ -409,6 +414,7 @@ export function ensureCompressPanel(state, info = {}) {
   const messages = Number.isInteger(info.messages) && info.messages >= 0 ? info.messages : "?"
   appendSubBlock(panel, "status", "Compressing context…\n", { fresh: true })
   appendSubBlock(panel, "meta", `summarizing ${messages} messages\n`, { fresh: true })
+  state.lastOutputAt = Date.now() // 停滞轻显形（§7.7 语义填充——压缩面板起始 ∕ 刷新 = 可见输出）
   return panel
 }
 
@@ -419,6 +425,7 @@ export function markCompressFailed(state, error) {
   const text = error?.message ? String(error.message) : String(error ?? "unknown error")
   panel.lastError = text
   appendSubBlock(panel, "err", `Compression failed: ${text}\n`, { fresh: true })
+  state.lastOutputAt = Date.now() // 停滞轻显形（§7.7 语义填充——压缩失败行 = 可见输出）
 }
 
 /** 冻结压缩面板进流（同完成子代理的载体/折叠 key）+ 释放 live 条目。 */
@@ -438,6 +445,7 @@ export function markCompressDone(state, info = {}) {
   panel.currentTool = null
   appendSubBlock(panel, "status", `Compressed: ${tokensFreed} tokens freed → summary (${seconds}s)\n`, { fresh: true })
   freezeCompressPanel(state, panel)
+  state.lastOutputAt = Date.now() // 停滞轻显形（§7.7 语义填充——压缩完成冻结块入流 = 可见输出）
 }
 
 /** 降级态（onCompress mode:"fallback"）——3 连败后 "truncated to N messages"。 */
@@ -450,4 +458,5 @@ export function markCompressFallback(state, info = {}) {
   panel.currentTool = null
   appendSubBlock(panel, "err", `Compression failed — fallback: truncated to ${tailMessages} messages\n`, { fresh: true })
   freezeCompressPanel(state, panel)
+  state.lastOutputAt = Date.now() // 停滞轻显形（§7.7 语义填充——降级冻结块入流 = 可见输出）
 }

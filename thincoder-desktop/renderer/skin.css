@@ -11,3 +11,8 @@
 .head-field:hover { background: var(--hover-bg); }
 .head-field:not(:disabled):active { background: var(--hover-bg-strong); }
 .head-field:focus-within { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--hover-bg-strong); }
+
+/* 首屏引导转轮（R1 —— 肤色 ∕ 动效归本档「皮肤」面；骨架规则住 `chrome.css`）：`error` 面转轮停（错误面只留原因）。 */
+.boot-spinner { width: 22px; height: 22px; border: 2px solid color-mix(in srgb, var(--fg) 22%, transparent); border-top-color: var(--accent); border-radius: 50%; animation: boot-spin 0.9s linear infinite; }
+.boot-gate[data-state="error"] .boot-spinner { display: none; }
+@keyframes boot-spin { to { transform: rotate(360deg); } }

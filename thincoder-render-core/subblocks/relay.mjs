@@ -1,7 +1,9 @@
 /**
  * relay.mjs — relay 事件 token → 子代理状态 patch（**映射单源**——设计 §5「状态机族」）。
  * 先例 = `thincoder-vscode/src/extension/panel-subagent-relay.mjs:101-147`（逐字搬迁：
- * 识别 → 剥除 → 映射 / pending 集 / queued 缓存 / 终态词全表；R2 后 VSC 该档经本件取值）。
+ * 识别 → 剥除 → 映射 / pending 集 / queued 缓存 / 终态词全表；R2 交接项由 B7 2a 收口
+ * ——该档事件面 ∕ 内容构形面换接本件取值（W2 落地后为真）。内容 chunk 构形单源 =
+ * `relaySubContentChunk`（B7 2a ∕ KD-7——desk ∕ VSC 双消费；宿主副作用留端，见其处注释）。
  * 两端共用：VSC 扩展侧（绑 postMessage）/ 桌面主进程（绑 invoke）。**本档零 DOM 零宿主**——
  * Node 侧可直 import（`@thincoder/render-core/subblocks/relay.mjs`）。
  *
@@ -137,4 +139,35 @@ export function relayEventToSubPatch(token, scope, deps = {}) {
   }
   if (rest.startsWith("⟦ev⟧")) return null // 其余核事件（approval 等——端另有通道）：消费不泄漏
   return null
+}
+
+// ─── 内容 chunk 构形（B7 2a ∕ KD-7——内容构形单源：desk ∕ VSC 双消费，原双造收编）────────────
+
+/** relay 前缀内容 chunk 构形：relay 前缀（含嵌套链）⇒ 内容 chunk 载荷（**前缀剥除在本件**
+ *  ⇒ 渲染面零析 `role#id/`）；返回 `null` 双义 = **无前缀** 或 **非四面**（调用面原样转发 ∕
+ *  早退——两义同口）。逐字搬 desk `agent-bridge.mjs` `subChunkOf` 现体（**零宿主**）；面集
+ *  gate = **四面**（`text` ∕ `think` ∕ `toolCall` ∕ `toolOutput`）——第五路 `toolResult` 死路
+ *  （无产者证据链：`docs/vsc/design/WEBVIEW.md` §5.3）⇒ `null`。
+ *  chunk 形 = `{ role, id, kind, text, sub?, tool?, face?, cmd? }`（desk 形——携 identity；
+ *  **不携频道键 `ch`**）⇒ 宿主侧由 chunk 重导：`ch = "sub:" + `${chunk.role}#${chunk.id}``
+ *  （等价原 `"sub:" + path.head`）。宿主分工：副作用留宿主（desk 既有 `chunkOut` ⇒
+ *  `ev:subchunk`；VSC `noteContentFirst` ∕ `emitToolPanel` 两调用照旧）。 */
+export function relaySubContentChunk(face, a, b) {
+  if (face !== "text" && face !== "think" && face !== "toolCall" && face !== "toolOutput") return null
+  const path = relayPathOf(String(a ?? ""))
+  if (path === null) return null
+  const hash = path.head.indexOf("#")
+  const identity = { role: path.head.slice(0, hash), id: Number(path.head.slice(hash + 1)) }
+  const sub = path.inner.length > 0 ? { sub: path.inner.join("/") } : {}
+  if (face === "toolCall") {
+    const argsJson = JSON.stringify(b) || ""
+    return {
+      ...identity, kind: "tool", text: `${path.rest} ${argsJson.slice(0, 120)}`, ...sub, tool: path.rest, face,
+      ...(typeof b?.command === "string" ? { cmd: b.command } : {}),
+    }
+  }
+  if (face === "toolOutput") {
+    return { ...identity, kind: "tool", text: typeof b === "string" ? b : String(b?.text ?? ""), ...sub, tool: path.rest, face }
+  }
+  return { ...identity, kind: face === "think" ? "think" : "text", text: path.rest, ...sub, face }
 }

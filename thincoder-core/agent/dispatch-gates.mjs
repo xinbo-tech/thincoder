@@ -110,6 +110,18 @@ export function isSubagentEscalateAction(toolName, args) {
   return toolName === "subagent" && args?.action === "escalate"
 }
 
+/** E1（parity-b1 §2.5——动作谓词采纳）：工具面动作谓词钩子**优先**、缺省回落核名面谓词（`??` 同式）。
+ *  端壳装饰体携钩子（`gitTool.isReadonlyAction` ∕ `memoryTool.isReadonlyAction` ∕ 子代 `vscSubagentFace`
+ *  的 `isReadonlyAction/isControlAction`）——取核 dispatch 后其动作级分类（planMode 放行 ∕ 免审批）
+ *  由此保形；核内工具零钩子 ⇒ CLI ∕ desktop 逐字零变（`undefined ?? 核谓词`）。
+ *  两谓词 = 上列两门禁位（planMode ∕ 权限短路）的公共输入（同址同用，防两处漂移）。 */
+export function readonlyActionOf(tool, toolName, args) {
+  return tool?.isReadonlyAction?.(args) ?? isSubagentReadonlyAction(toolName, args)
+}
+export function controlActionOf(tool, toolName, args) {
+  return tool?.isControlAction?.(args) ?? isSubagentControlAction(toolName, args)
+}
+
 /**
  * fix A — 唯一记账点：FILE_MUTATORS 工具执行成功即刻记 mutation seq（abs 路径）。
  * 取代 record-results 批后段 + agent.mjs 中断分支的 noteMutations（不双计——中断+同批

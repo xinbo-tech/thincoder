@@ -8,6 +8,7 @@
  * 批 9 增两切片：`settings`（开合 / 四段三态 / 向导 / 校验结果 —— `docs/desktop/design/UI.md` §1 设置面行）与
  * `projectInfo`（三读数 + 超阈标 + 相位 + 失败串）——**值面归接线层**（`renderer/mount-settings.mjs` 只经
  * `patchSettings` 落值），本档只持槽位 + 四条纯动作；`configured` 为**三态读数**（`null` = 未知）。
+ * **B10 W2 增三键**（`settings.providers` 切片 —— S1 ∕ S2 面）：`edit`（行内钥编辑态 = 渠名；写者 = 出口，`loadProviders` ∕ 关面复位）· `probe`（自定形「拉取模型」三态果 `{ state, models, reason }`）· `draft`（表单暂存值回填快照 —— 探果写切片致重挂时救回未落盘输入）。
  * R3a 增四槽（D17 状态行读数面 —— `renderer/views/statusline.mjs` 读面）：`turns` / `turnStarts` / `tokens` / `timers`（后两槽 = `ev:usage` 载荷扩）。
  * **timer-wake 阶段 2 增一槽** `timerNotice`（**到期触发切片** —— 写者 = 归约面 `ev:timer`；读面 = 流内触发行 `renderer/views/chat-chrome.mjs`；
  *  与 `timers` 读数槽两回事（后者 = 在途计数投影）；非落盘件 ⇒ 首屏页读整置即失 —— `renderer/page-read.mjs`）。
@@ -52,17 +53,18 @@
  *  按会话键存 `{ status, objective, criteria }`（写者 = 归约面 `ev:goal`——宿主桥按核 `agent.goal` 单源投影；
  *  读面 = 目标卡 `renderer/views/goal.mjs` ∥ 状态行 🎯 非段位元素）；非载体 / 缺键 ⇒ 该会话零节点 —— 禁假造）。`ledger` = **账本警示切片**
  *  （账本可靠批 · 桌面微轮：写者 = `renderer/mount-sessions.mjs` `refreshRail` 唯一写路径；读面 = 会话控制下拉首行注记）。
- *  `pending` = **排队消息切片**（「对齐第二批」项 2 · **「回合中插入」批收正**）：`{ [会话键]: [{ text, ts }] }` ——
+ *  `pending` = **排队消息切片**（「对齐第二批」项 2 · **「回合中插入」批收正**）：`{ [会话键]: string[] }`
+ *  —— A9 收正形：元素 = 文本串（宿主出站 `items` 恰形；`ts` 留宿主内部载体）；
  *  **宿主单源快照的镜面**（写者 = `renderer/events.mjs` `ev:queue` 归约 ∥ `renderer/page-read.mjs` `applyPage`
  *  首屏重建 —— 原输入区三纯动作退场）；读面 = 流内待发送气泡组（输入区上方）/ 状态行段 14（本会话队）。
  *  同笔 `pool.queue` = **席位保留 · 零写者**（用户排队消息改住流内 —— 右列「队列」族不再承载；族空 ⇒ 零节点恒不在场）。
  *  `attachDegraded` = **附件降级码切片**（「回合中插入」批）：按会话键存降级码（`non-vision` / `partial`）——
  *  写者两处 = `ev:queue` 消费回执（`delivered.degraded` 浮出）∥ 输入区直发回执；读面 = 输入区提示行
  *  （`renderer/mount-composer.mjs` 挂件锚 `data-composer-notices` 内 —— 经 `degradedCode` 过闸，表外码 ⇒ 零节点）。
- *  `modelCandidates` = **模型候选切片**（输入面板上提批 · R1 —— 核件面板读面③ `state.models()` 的端侧来源）：
- *  `{ forProvider, models }`（`models` = 逐项 `{ id, label, provider, group, reasoning, effortDefault }` —— **核件面形**；
- *  投影 = `renderer/mount-composer.mjs` 候选面：`provider:list` ∕ `model:list` 回执合成）；
- *  未取 / 取失败 / provider 缺 ⇒ 空表 + `forProvider: null`（禁假造）；写者单点 = 纯动作 `setModelCandidates`。 */
+ *  `modelCandidates` = **模型候选切片**（输入面板上提批 · R1 ∕ 全渠扇出批收正 —— 核件面板读面③ `state.models()`
+ *  的端侧来源）：`{ models, unavailable }`（`models` = 逐项 `{ id, label, provider, group, reasoning }` —— **核件面形**；
+ *  投影 = `renderer/composer-sync.mjs` 候选面：`model:catalog` 回执投影；`unavailable` = 失败渠 `{ provider, reason }`
+ *  诊断面（现时视图零消费 —— 诊断主载 = 核落账，禁假造）；未取 / 取失败 ⇒ 空表（禁假造）；写者单点 = 纯动作 `setModelCandidates`。 */
 export function initialState() {
   return {
     locale: "en",
@@ -85,7 +87,7 @@ export function initialState() {
     subBlocks: {},
     pending: {},
     attachDegraded: {},
-    modelCandidates: { forProvider: null, models: [] },
+    modelCandidates: { models: [], unavailable: [] },
     blocks: [],
     history: { hasOlder: false, inFlight: false, page: null },
     following: true,
@@ -98,11 +100,11 @@ export function initialState() {
       configured: null,
       defaultModel: null,
       wizard: { step: 1, dismissed: false, notice: null },
-      providers: { state: "none", presets: [], providers: [] },
+      providers: { state: "none", presets: [], providers: [], edit: null, probe: null, draft: null },
       verify: null,
       model: { state: "none", provider: null, current: null, models: [] },
       agent: { state: "none", fields: [] },
-      mcp: { state: "none", servers: [], details: {} },
+      mcp: { state: "none", servers: [], details: {}, form: null },
       // R7 两新段（env = proxy ∕ shell；models = consult ∕ advisor 行两 picker）与 tools 段键族（R2 起自持）：
       env: { state: "none", proxy: { uri: "", web: true, model: false }, shell: { current: null, candidates: [] }, test: null },
       // tools 段：`keys` 初始 `null`〔键面读数未达〕⇒ 两 key 行零节点（首读落位后成对象）；`edit` = 行内编辑态。
@@ -209,15 +211,15 @@ export function setAttachDegraded(state, key, code) {
   return { ...state, attachDegraded: out }
 }
 
-/** 模型候选切片写（纯动作 —— 输入面板上提批：核件面板读面③ `state.models()` 唯一写点）：`provider` 非非空串
- *  ⇒ `forProvider: null`（相位未定 —— 禁假造）；`models` 非数组 ⇒ 空表。同 provider 同引用（调用面未重取 ⇒ 原
- *  数组）⇒ **原引用**（零通知）；候选列表 = 调用面新取（新数组）⇒ 落新引用。 */
-export function setModelCandidates(state, provider, models) {
-  const name = typeof provider === "string" && provider !== "" ? provider : null
+/** 模型候选切片写（纯动作 —— 输入面板上提批 ∕ 全渠扇出批收正：核件面板读面③ `state.models()` 唯一写点）：
+ *  `models` ∕ `unavailable` 非数组 ⇒ 空表；两者**同引用**（调用面未重取）⇒ **原引用**（零通知）；
+ *  候选行数组 = 调用面新取（新数组）⇒ 落新引用。 */
+export function setModelCandidates(state, models, unavailable) {
   const list = Array.isArray(models) ? models : []
+  const missing = Array.isArray(unavailable) ? unavailable : []
   const held = state?.modelCandidates ?? {}
-  if (held.forProvider === name && held.models === list) return state
-  return { ...state, modelCandidates: { forProvider: name, models: list } }
+  if (held.models === list && held.unavailable === missing) return state
+  return { ...state, modelCandidates: { models: list, unavailable: missing } }
 }
 
 /** 配置档读数**三态归一**（`docs/desktop/design/UI.md` §1 首启向导行）：真 = 已配 · 假 = 未配 ·

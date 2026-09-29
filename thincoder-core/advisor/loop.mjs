@@ -64,7 +64,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
   const now = seams.now ?? Date.now
   const chatCall = seams.chat ?? chat
   // ④ 端差注入点（CORE-UNIFICATION §2.5 #109「进度行按端注入」）：工具进度行的参数摘要
-  // 是**展示面**（CLI = `tui/tool-args.mjs` 的 `describeToolArgs`；VSC = 卡片头），不进核。
+  // 是**展示面**（单源 = 核 `tool-args.mjs` `describeToolArgs`（B7 1a）；CLI 取核件转口，VSC = 卡片头），不进核。
   // 未注入 ⇒ 不发进度行（核内零端名分支——契约 5 / 10）。端在装配层传入自己的格式化器。
   const describeArgs = seams.describeArgs ?? (() => "")
   // 第 11 批硬墙 / 预算 / 尾：实现注解见下方各点；守卫函数与 renderTimeline 在 compaction.mjs。

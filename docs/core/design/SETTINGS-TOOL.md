@@ -136,7 +136,7 @@ VSC 端测试坐标 = `thincoder-vscode/test/settings-tool.test.mjs`（9 例—�
 | 工具实现 | `thincoder-core/agent-tools/settings.mjs`（敏感判定词表句 `:15` + 开口键族句 `:16`〔拟新增〕· 形状表 `:29` / `:38` · `_nullLeafPaths:61` · 完备性锁 `:72-81` · 键寻址 `:146` · 值解析 `:188-198` · description 句 `:212` · 测试缝导出 `:265`） |
 | 原子写盘 | `thincoder-core/config.mjs`（`writeConfigAtomic`——`:29` export；DEFAULTS / configPath 同档） |
 | CLI 装配 | `thincoder-cli/src/cli/make-agent.mjs`（baseTools）；dispatch 动作级只读分类（list/get 放行） |
-| 读取器判据点 | `thincoder-core/config.mjs:277`（defaultModel 非串→null）· `thincoder-cli/src/cli/make-agent.mjs:150`（`!team?.repo`）· `thincoder-core/agent-tools/subagent-spawn.mjs:92`（subagentModels 回落）· `thincoder-core/tools/bash.mjs:131`（`shell ?? true`） |
+| 读取器判据点 | `thincoder-core/config.mjs:277`（defaultModel 非串→null）· 核 `thincoder-core/agent/assemble.mjs:31`（`!team?.repo`）· `thincoder-core/agent-tools/subagent-spawn.mjs:92`（subagentModels 回落）· `thincoder-core/tools/bash.mjs:131`（`shell ?? true`） |
 | 测试档 | `thincoder-cli/test/settings.test.mjs`（480 行 · T-S2 族 25 例 · T-S3 族 3 例）· 遮蔽面新档（`settings-mask.test.mjs`，拟新增——夹具键集逐键 6 例，D-ST15）· VSC 端 `thincoder-vscode/test/settings-tool.test.mjs`（9 例——W16 已改指核工具；双缝并用） |
 
 ## 6. 不并项与历史沿革

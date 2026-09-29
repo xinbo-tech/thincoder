@@ -2,16 +2,24 @@
  * window.mjs — 窗口装配（单窗 · 隔离三件套）+ 原生菜单 + 系统主题 + 冒烟读回（判据②③读数面）
  * + 窗口自身导航钩点（#389③：`will-navigate` ⇒ 外部 URL 拒——判据单源 `protocol.mjs` `isAppNavigation`）
  * + 会话维护动作宿主面（R1 · 桌面功能对位批：菜单「Maintenance」两项 + 确认 ∕ 结果两枚原生对话框——
- * 处理体（核数据面）住 `session-maintenance.mjs`，本档只做 electron 落子）。
+ * 处理体（核数据面）住 `session-maintenance.mjs`，本档只做 electron 落子；**词面出档 `menu-words.mjs`**
+ * ——#533：`menuLabels(locale)` 消费——zh = 语义直译值（#533 裁定）；en 表 = 回归面现值）
+ * + 右键编辑菜单落子（复制面对齐批 · D27 ∕ KD-43：`webContents.on("context-menu")` ⇒ 按 `params` 构模板 ⇒
+ * `Menu.popup`；条目集 ∕ 空选零菜单 ∕ 文案四键 = `context-menu.mjs` 两纯函数 + `loadConfig().locale` 现读）。
  * 主题 = CSS `prefers-color-scheme` 消费（本批零主题通道）；`resolveTheme()` 只作同事实对照（批档 §2.6 D-8）。
  * 探针用 `net.fetch`（官方档 `net`：「differs from Node's fetch(), which uses Node.js's HTTP stack」+
  * 「requests made with net.fetch can be made to custom protocols」）——Node 全局 `fetch` 对自定义 scheme 无保证。
  */
 import { resolve } from "node:path"
 import { BrowserWindow, Menu, dialog, nativeTheme, net, shell } from "electron"
+import { loadConfig } from "@thincoder/core/config.mjs"
 import { HOST, SCHEME, isAppNavigation, protocolStats } from "./protocol.mjs"
-// 会话维护线（R1 · 桌面功能对位批）：两枚处理体出档（本档只做宿主面 —— 确认 ∕ 结果两枚原生对话框）。
+// 右键编辑菜单（复制面对齐批 · D27 ∕ KD-43）：模板两纯函数出档 `context-menu.mjs` —— 本档只做宿主面落子。
+import { contextMenuLabels, contextMenuTemplate } from "./context-menu.mjs"
+// 会话维护线（R1 · 桌面功能对位批）：两枚处理体出档（本档只做宿主面 —— 确认 ∕ 结果两枚原生对话框）；
+// 维护面词表出档 `menu-words.mjs`（#533 —— 词表单源；本档只做词面消费落子）。
 import { gcSummaryText, indexSummaryText, runSessionGcMaintenance, runSessionIndexMaintenance } from "./session-maintenance.mjs"
+import { menuLabels } from "./menu-words.mjs"
 
 /** 预载绝对路径（隔离面唯一入口；`ipc.mjs` 亦引本常量读取白名单）。 */
 export const PRELOAD_PATH = resolve(import.meta.dirname, "../preload/preload.cjs")
@@ -56,20 +64,29 @@ export function resolveTheme() {
 }
 
 /** 原生菜单：只挂主进程动作面（窗口 / 缩放 / 退出 / 开发者工具 + Chromium 原生编辑 role + 维护两项）
- *  ——零 IPC 依赖项；维护两项出口 = 本档 `runMaintenance`（与 `session:gc` ∕ `session:index` 两通道同处理体）。 */
+ *  ——零 IPC 依赖项；维护两项出口 = 本档 `runMaintenance`（与 `session:gc` ∕ `session:index` 两通道同处理体）。
+ *  维护面词面 = `menu-words.mjs` `menuLabels`（#533 —— 词表单源；`locale` 现读取 `loadConfig()`；读失败
+ *  ⇒ 回落 en + 记错（零静默 —— 沿右键菜单 locale 现读同形））。 */
 function buildMenu() {
   const group = (label, roles) => ({
     label,
     submenu: roles.map((role) => (typeof role === "string" ? { role } : role)),
   })
+  let words
+  try {
+    words = menuLabels(loadConfig()?.locale)
+  } catch (error) {
+    console.error("[window] menu locale readback failed:", error)
+    words = menuLabels("en")
+  }
   return Menu.buildFromTemplate([
     group("File", ["close", { type: "separator" }, "quit"]),
     group("Edit", ["undo", "redo", { type: "separator" }, "cut", "copy", "paste", "selectAll"]),
     group("View", ["reload", "forceReload", "toggleDevTools", { type: "separator" }, "resetZoom", "zoomIn", "zoomOut", { type: "separator" }, "toggleFullscreen"]),
     group("Window", ["minimize", "zoom"]),
-    group("Maintenance", [
-      { label: "Clean up session data…", click: () => void runMaintenance("gc") },
-      { label: "Rebuild session index", click: () => void runMaintenance("index") },
+    group(words.maintenance, [
+      { label: words.cleanUp, click: () => void runMaintenance("gc") },
+      { label: words.rebuildIndex, click: () => void runMaintenance("index") },
     ]),
   ])
 }
@@ -114,6 +131,21 @@ export function createWindow(onError) {
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: PRELOAD_PATH },
   })
   win.setMenu(buildMenu())
+  /** 右键编辑菜单（复制面对齐批 · D27 ∕ KD-43）：Electron 无默认右键菜单 ⇒ 本档按 `context-menu` 事件落子；
+   *  条目集（可编辑四件 ∕ 选中两件 ∕ 空选零菜单）与文案四键 = `context-menu.mjs` 两纯函数；`locale` 右键时刻
+   *  现读（语言切换即时随动）；读失败 ⇒ 回落 en + 记错（零静默）；空模板 ⇒ 不 popup（非编辑空选 = 零菜单）。 */
+  win.webContents.on("context-menu", (_event, params) => {
+    let labels
+    try {
+      labels = contextMenuLabels(loadConfig()?.locale)
+    } catch (error) {
+      console.error("[window] context menu locale readback failed:", error)
+      labels = contextMenuLabels("en")
+    }
+    const template = contextMenuTemplate(params, labels)
+    if (template.length === 0) return
+    Menu.buildFromTemplate(template).popup({ window: win })
+  })
   /** 加固（设计档未定形）：窗口内不开新窗，外链交系统浏览器；**窗口自身导航**（#389③）只许应用源 ——
    *  外部 URL ⇒ 拒（判据单源 = `protocol.mjs` `isAppNavigation`；refused 记 stderr——零静默）。 */
   win.webContents.setWindowOpenHandler(({ url }) => {

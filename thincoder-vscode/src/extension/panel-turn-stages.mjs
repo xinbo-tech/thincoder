@@ -25,7 +25,7 @@ import { specForModel } from "../specs.mjs"
 import { t } from "../i18n.mjs"
 import { _cwd, pushBusyQueued } from "./panel-messages.mjs"
 import { takeQueuedBatchItem } from "./queued-pickup.mjs"
-import { suspensionSession, poolLive, backgroundStatus } from "./suspension.mjs"
+import { suspensionSession, poolLive, backgroundStatus, loadSuspensionCore } from "./suspension.mjs"
 import { syncTimerWatch } from "./timer-watch.mjs" // §6.30.11 VSC 空闲面：回合尾武装点（单例惰性建 + 活体重读）
 // C-B2-6 细则⑥（busy-injection 批 fix 轮 2026-09-22）：送达侧贴图降级判决（已抽入
 // `image-handler.mjs`——本档零 import 主档纪律保持，该档为 leaf 向）。
@@ -144,7 +144,12 @@ export async function finalizeTurn(panel, { history, fullHistory, slotStamp, tur
   if (title) {
     try { panel._pushSessions() } catch (e) { console.error("[chat-panel] pushSessions after title failed:", e.message) }
   }
-  if (!skipSession && !susp && !panel._susp && panel._panel && poolLive(history)) {
+  // W8 契约②（2026-09-29 · B1 面修单）：核驱动模块动态装载——释放窗口判据前的预载点（首触 = 真
+  // 装载，态 = "running" ⇒ 事件安全；此后 = 已装载 ⇒ 微任务续段）。其后 sync 出口（`poolLive` ∕
+  // `backgroundStatus`）读缓存引用（对外语义零变）。判据面与现状逐字同（下式子项序 ∕ 短路不变）。
+  const prewindow = !skipSession && !susp && !panel._susp && panel._panel
+  if (prewindow) await loadSuspensionCore()
+  if (prewindow && poolLive(history)) {
     panel._publishTurnState("susp")
   } else if (susp || panel._susp) {
     panel._publishTurnState("susp", backgroundStatus(history))
@@ -164,9 +169,10 @@ export async function finalizeTurn(panel, { history, fullHistory, slotStamp, tur
 export async function enterSuspensionTurn(panel, { turnSlot, distillSlot, history, fullHistory, skipSession, susp, runChat }) {
   // 释放窗口接管（偏差修复 #2——A2 修订 + INPUT-LOCK-ASYNC 2026-09-09）：标题
   // 已移 finally 归位前（running——routeUserTurn 入单槽）——入队容器已随排队机制废弃——释放
-  // 窗口 = 会话建立的同一同步续段（susp 广播与 suspensionSession 间零 await——无事件窗
-  // 口）；本块只做会话入口判定：池 live + controller 未中止 → 进挂起会话（用户输入优先于
-  // digest——D-S5）；否则忙态归位 idle（防 susp 悬空——Stop 派生/路由守卫以 idle 收敛）。
+  // 窗口 = 会话建立的同一续段（susp 广播与 suspensionSession 间零 macrotask 让渡——W8 预载为
+  // 已装载缓存的微任务续段，事件窗口不变量保持）；本块只做会话入口判定：池 live + controller
+  // 未中止 → 进挂起会话（用户输入优先于 digest——D-S5）；否则忙态归位 idle（防 susp 悬空——
+  // Stop 派生/路由守卫以 idle 收敛）。
   // F16（busy-injection 2026-09-21 · `WEBVIEW-INPUT.md` §1 C-B2-6 细则②）：普通回合 busy 期
   // 排队输入（`panel._busyQueued`）在本入口装载两分支——① 池 live 进会话：残项预填
   // `susp.pendingInput`（driver 输入优先消费开用户回合）；② 池空 idle 归位：直接以该消息
@@ -176,6 +182,10 @@ export async function enterSuspensionTurn(panel, { turnSlot, distillSlot, histor
   const busyQueued = panel._busyQueued ?? []
   const releaseWindow = !skipSession && !susp && !panel._susp
   if (releaseWindow && panel._turnState === "susp") {
+    // W8 契约②：核驱动预载（`finalizeTurn` 同源预载点——已装载 ⇒ 微任务级）——其后 sync 出口
+    // `poolLive` 与 `suspensionSession` 装配面（`_core.startSuspension`）读缓存引用。预载门与
+    // `poolLive` 评估门同形（`panel._panel` 缺席 ⇒ 不评估 ⇒ 免预载）。
+    if (panel._panel) await loadSuspensionCore()
     const enter = releaseWindow && panel._panel
       && poolLive(history) && !panel._abortController?.signal.aborted
     if (enter) {
@@ -232,7 +242,7 @@ export async function enterSuspensionTurn(panel, { turnSlot, distillSlot, histor
 async function deliverBusyQueued(panel, busyQueued, runChat) {
   if (!panel._panel || busyQueued.length === 0) return
   const { item, merged } = takeQueuedBatchItem(busyQueued)
-  if (!item) return // /cmd 首动作（门禁不可达防御面）——零动作
+  if (!item) return // /cmd 首动作（防御支——#429 取批面放行：`slash` ∕ `turn` 同判可消费，恒不触）——零动作
   pushBusyQueued(panel, merged ?? undefined) // C-B2-6 细则①：消费即清（webview 镜像 + 标记面）
   const d = await downgradeNonVisionImages(panel, { text: item.text, images: item.images, providerName: item.providerName, modelOverride: item.modelOverride, cwd: _cwd() || process.cwd(), visionReader: item.visionReader })
   await runChat(panel, { text: d.text, modelOverride: item.modelOverride, reasoning: item.reasoning, providerName: item.providerName, images: d.images })

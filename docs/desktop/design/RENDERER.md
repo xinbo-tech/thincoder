@@ -18,6 +18,7 @@
 | 接线形通则 | handlers 给 ⇒ 落 `onClick` 且**无** `disabled`；缺省 ⇒ `disabled: true` + `data-action`（**诚实非死控**——树形只随 handlers 变）· **键盘面**（批 A）= 挂载面自挂 `keydown`（审批卡根 / 标签条加速键 `Ctrl/Cmd+1..9`——文档级 · 命中才 `preventDefault`） | 本档 §1.1 |
 | 单状态树 | `store.mjs` 单状态树 + 订阅（会话 / 标签页 / 活动池 / 待审批 / 设置 / 项目级信息——批 9 增两切片；**批 A 增** `questions` / `tasks` 两切片 + 队列面（**「回合中插入」批收正**：`pending` 切片 = `ev:queue` 镜面——原三纯动作退场；单源 = `docs/desktop/design/PROJECT.md` §2 **KD-40**）；**会话模型轮 R13**：会话开合 ∕ 换形态归 `thincoder-desktop/renderer/mount-sessions.mjs` 面内记账（活动会话单源 = `activeSession`）；**批 B 增** `usage` 切片），由 IPC 事件驱动 | `docs/desktop/design/SHELL.md` §1 · `docs/desktop/design/IPC.md` §1 |
 | 渲染粒度 · 流式缝合 | `chat-stream.mjs` 按块更新、不整段重画（token / 推理块 / 工具卡增量） | `docs/desktop/design/SHELL.md` §1 · `docs/desktop/design/PROJECT.md` §4.1 |
+| 更新纪律（帧合并 · 收核） | 触发源 = store 变更 ⇒ 核帧合并件 `mark`；单飞 rAF + `FRAME_MIN_MS`(50) 间隔；每帧每面至多绘一次 + 布局节俭 + 帧尾动作 | 本档 §1.2 · `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-9 |
 | 设置面 / 向导（批 9） | 两形构树（`thincoder-desktop/renderer/views/settings.mjs` / `thincoder-desktop/renderer/views/onboarding.mjs`）+ 薄挂载出档（`thincoder-desktop/renderer/mount-settings.mjs`）；**零新事件通道**（请求通道）；向导闸 = `config:read` 回执 `configured` | 本档 §1.1 · `docs/desktop/design/UI.md` §1 设置面 / 首启向导行 |
 | 提问与计划卡 · 输入区（批 A） | 提问卡 / 计划卡 = 流内非块节点，纯构树（`thincoder-desktop/renderer/views/question.mjs` / `thincoder-desktop/renderer/views/plan.mjs`——零 `store` import）· 输入区 = 中区底行挂载出档（`thincoder-desktop/renderer/mount-composer.mjs`，自 `app.mjs` 拆出）· 卡族挂载与出站 = `thincoder-desktop/renderer/mount-cards.mjs`（批 A 修正轮——`question:respond` 出站 + 清本键 `questions` 切片 + 清位标） | 本档 §1.1 · `docs/desktop/design/UI.md` §1 输入区 / 提问呈现 / 计划面行 |
 | 挂起窗与消化轮（桌面空闲唤醒） | 宿主挂起驱动（消费核件）= 空闲子任务 settle ⇒ 自唤醒消化轮；两事件面 `ev:susp`（计数：状态行段 3 第三态）· `ev:digest`（边界：流内消化状态行）；挂起空闲输入开放；块回收（消化完成逐条 `done` 归档） | 本档 §1.1 · `docs/desktop/design/PROJECT.md` §2 KD-34–36 · `docs/desktop/design/IPC.md` §1 |
@@ -61,12 +62,12 @@
 - **页窗暂留（登记 · 非本批新增）**：页键变更至邻位页回执落之间，屏上暂留前页块（既有口径：页数据随 `history:page` 回执整置）；消解需第三态「载入中」= 新词键 / 新形态 ⇒ 新需求面，本批不落（登记 = `docs/desktop/design/PROJECT.md` §10）。
 - **判据面**：纯构树**零 DOM** ⇒ 视图行为可在平 node 直测（断言描述符树：机器读面用 `data-*` 承载，不依赖 DOM 实现）；挂载函数不进自动面（DOM 面随人工走查）。
 - **文案纪律**：视图档内面向用户字符串**一律经 `t()`**（词表面）——档内零硬编码文案（含英文；机检面 = 词表键哨兵 / 源扫描）。
-- **帧面分派（判据面）**：块面比较对 = 两帧 **`state.blocks`**（全列表引用 + 逐位元素引用）——非模型窗列表（窗列表每帧新数组 ∧ 饱和追加时位移 ⇒ 每 token 全量重挂）；四档判据 = `streamDelta`、分派纯函数 = `paintPlan({ prev, next, changedKeys })` → `{ tier, index, remount, refresh }`（平 node 直测）。
+- **帧面分派（判据面）**：块面比较对 = 两帧 **`state.blocks`**（全列表引用 + 逐位元素引用）——非模型窗列表（窗列表每帧新数组 ∧ 饱和追加时位移 ⇒ 每 token 全量重挂）；四档判据 = `streamDelta`、分派纯函数 = `paintPlan({ prev, next, changedKeys })` → `{ tier, index, remount, refresh }`（平 node 直测）；**分派时机 = 帧合并件**（触发源 = store 变更 ⇒ `mark`——本档 §1.2；比较对与四档判据不变）。
 - **全量重挂键 = `activeSession` / `locale`**：两键变 ⇒ 无条件全量重挂；其余键不重挂——`mountChat` 的 `clear` 清宿主 ⇒ 滚动位置归零（停跟翻转时重挂 = 把用户拽回顶部）。
 - **帧尾态刷（刷新面单点）**：每帧末尾一处 `syncChrome(root, model)`（`chat.mjs` DOM 面 · 幂等 · 与档位解耦——`none` 帧同刷，`refresh` 恒真 = 无帧豁免）⇒ 根锚四（语义单源 = 本档 §2 / `docs/desktop/design/UI.md` §1 对话流行）+ 两控件（摘要块 `hidden > 0` · 药丸 `!following`）
-  + **待发送气泡组**（`[data-pending]`——在场 ⟺ 本会话队（`pending[<会话键>]`）非空；**写者 = `ev:queue` 归约**（宿主快照镜面——「回合中插入」批）；「对齐第二批」项 2）+ **消化行组**（`[data-digest]`——在场 ⟺ 本键 `digest` 切片起跑态；`end` ⇒ 原地更新后摘除；「桌面空闲唤醒批」）
+  + **消化行组**（`[data-digest]`——在场 ⟺ 本键 `digest` 切片起跑态；`end` ⇒ 原地更新后摘除；「桌面空闲唤醒批」）——**待发送带不在流内**（住输入区上方带：消费面 = `thincoder-desktop/renderer/mount-composer.mjs` `paintNotices`；数据源 = `pending` 镜面非空判据——两源：忙态队 ∪ 挂起窗输入队；本批收正——收正轮 B12 终态口径落字）
   + **引导节点**（判据 = `model.guide` 空否——`none` / `empty` 帧由重挂面建 · `flow` 帧由本刷面摘）在场与文本随判据；`none` 态零块节点不破（只摘不插）。
-- **插入点纪律（批 A 扩三卡）**：块节点插入点 = **首个卡节点之前**——卡三类 = `[data-card="approval"]` / `[data-card="question"]` / `[data-card="task"]`，卡间 DOM 次序固定 = 待审批 → 提问 → 计划（缺者跳过）；卡缺席 ⇒ `[data-pill]` 之前；两者皆缺席 ⇒ 末位——根子序 = [摘要块?] → 块序列 → [消化行组?] → [待发送气泡组?] → [卡序列?] → [药丸?]（尾段两族同侧 = 块序列之后、卡序列之前；族内序 = 消化行组 → 待发送气泡组）。
+- **插入点纪律（批 A 扩三卡）**：块节点插入点 = **首个卡节点之前**——卡三类 = `[data-card="approval"]` / `[data-card="question"]` / `[data-card="task"]`，卡间 DOM 次序固定 = 待审批 → 提问 → 计划（缺者跳过）；卡缺席 ⇒ `[data-pill]` 之前；两者皆缺席 ⇒ 末位——根子序 = [摘要块?] → 块序列 → [消化行组?] → [卡序列?] → [药丸?]（尾段族同侧 = 块序列之后、卡序列之前；**待发送带不在流内**——住输入区上方带（本批收正）；余族（压缩 ∕ 到期触发 ∕ 停止痕 ∕ 台账行）现读 = `thincoder-desktop/renderer/views/chat.mjs` 档头）。
 - **引导节点（批 B 追加轮 · 非块节点）**：无活动会话 ∥ 零块 ⇒ 引导节点 `div.chat-empty[data-guide]`——`none` 帧 = 根**唯一子** · `empty` 帧 = **首子**（在块序列 / 卡序列之前）· `flow` 帧 = 不在场；零 `data-block-id` ⇒ **不入块序**（上条根子序与 `data-blocks` 不变式不受其影响）。
   判据（模型 `guide` 字段）= 无活动会话 ⇒ `cwd` 缺 ? `no-project` : `no-session`；有活动会话 ∧ 可见块 0 ⇒ `no-message`；否则 `null`。
   构树 = `thincoder-desktop/renderer/views/chat-guide.mjs`（批 B 追加轮新档 · 已落——流内非块节点构树）；**动作控件在场 ⟺ 句柄在场**（`onOpenDir` / `onNewSession` 缺 ⇒ 整控件缺席——比接线形通则更严：零假按钮）；
@@ -74,22 +75,22 @@
 - **卡面在场与随动（帧尾态刷 · 批 A 扩三卡）**：卡节点 `[data-card="approval"]` / `[data-card="question"]` / `[data-card="task"]` 的在场与文本随帧内判据刷（形态单源 = `docs/desktop/design/UI.md` §1 审批呈现 / 提问呈现 / 计划面三行）；`question` 卡**退场非乐观**（回执 `ok` 真 ⇒ 清除；失败 ⇒ 卡留可重试 + `console.error`——出口口径见该行；
   **中断径** = `msg:interrupt` ⇒ 本键各门按取消结算 ⇒ 终局 `stopped` ⇒ **事件面摘本键提问项** + 清位标——判据 = 终局事件面，非回执（单源 = 本档「回合尾三径」条））；
   三卡皆**非块节点** ⇒ 不入块序不变式（本档 §2），块面比较对与 `data-blocks` 语义不受其影响。
-- **流内非块节点族（对齐第二批扩 · 桌面空闲唤醒批增一）**：**消化行组** `[data-digest]`（两行 = 起跑标签行 + `n > 0` 计数行；落点 = 块序列之后、待发送气泡组之前；在场 / 更新 / 退场 = 本档 §1.1 事件归约面条）；
-  **待发送气泡组** `[data-pending]`（组内项 = 待发送气泡·落点 = 块序列之后、卡序列之前——与块插入点同侧 ⇒ 交接位置零跳）；**归档子 agent 块**（`data-block-kind="subagent"`——**是块节点**（入块序 / 计 `data-blocks`；壳 = 零边距透传容器 + 内嵌核件元素——“对齐第二批”项 5）。
+- **流内非块节点族（对齐第二批扩 · 桌面空闲唤醒批增一）**：**消化行组** `[data-digest]`（两行 = 起跑标签行 + `n > 0` 计数行；落点 = 块序列之后；在场 / 更新 / 退场 = 本档 §1.1 事件归约面条）；
+  **归档子 agent 块**（`data-block-kind="subagent"`——**是块节点**（入块序 / 计 `data-blocks`；壳 = 零边距透传容器 + 内嵌核件元素——“对齐第二批”项 5）。
 - **到期触发行（timer-wake 阶段 2 批增）**：`ev:timer` ⇒ 归约写 `state.timerNotice[key]` 切片 ∧ `thincoder-desktop/renderer/views/chat.mjs` 流内行组（非块节点 · 不入块序——**与 `[data-digest]` 行同族**）；行文 = 交付原文（显示裁 ≤3 行 + `…`）；
   在场 / 退场路径 = **随页读整置即失**（沿 `[data-stopped]` 先例——定形 2026-09-28）；落点 = `thincoder-desktop/renderer/page-read.mjs` ∕ `views/chat-chrome.mjs` `syncTimer`（幂等 ∕ 换代原位换 ∕ 缺席摘）；单源 = `docs/desktop/design/IPC.md` §1。
-- **池面挂载（键控差分 · 「对齐第二批」项 3）**：壳（三态 / 头读数 / 折叠）与待审批 / 队列族**照帧刷**（`clear` + `build` + `append` 薄挂载口径不变）；**子 agent 族按 key 复用元素**（`el._subMeta === model` 判据：同 key 跨帧同一元素——内容追加 / 折叠态 / ⏹ 全走核函数，**不重建**）；
+- **池面挂载（键控差分 · 「对齐第二批」项 3；**让位修复批收正（2026-09-29）——壳原位领用**）**：**三径** = ① `none` / `empty` ⇒ `clear` + 零节点（无滚动件）② 壳缺位（首挂 ∕ 换代后）⇒ 建树全挂 ③ **壳在位 ∧ `pool` ⇒ 原位领用**——头 ∕ 待审批族 ∕ 队列族 = **原位重建**（节点内零滚动件——重建零损失）；**子 agent 族容器（含 `[data-pool-body]` 祖先链）零摘离 ∕ 零移动**（块内容区位 ∕ 池自身滚动位跨帧**保真**——链不稳定则位面归零，单源 = `docs/batches/2026-09-29-subblock-follow-resume.md` §2.3-A）；**子 agent 族按 key 复用元素**（`el._subMeta === model` 判据：同 key 跨帧同一元素——内容追加 / 折叠态 / ⏹ 全走核函数，**不重建**）；
   **R10 帧触发判据 = 触碰块换对象引用**（`archiveIntoFlow` 按核 `effects` 键集对被触碰块**换新引用**——未触碰块保原引用 ⇒ 帧比较对逐位引用即定触发，沿本档 §2 帧面分派同源）；
    形态单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 3（KD-32 同裁 = `docs/desktop/design/PROJECT.md` §2）。
 - **键域与换代（交付评审修正 · 2026-09-28）**：元素复用键域 = **会话内**（容器跨帧常驻不承旧账——同键重现于另一会话 ⇒ 元素账复位 ∕ 换代，禁沿用旧会话行账——relay id 按 agent 实例自 1 起计，同键跨会话重现属常态）；**换元素径**（新代接管）须**挂载后末刷**（⏹ 门控读 `isConnected`——与首见径同序）。
-- **2s 拍面（R10 落）**：`thincoder-desktop/renderer/heartbeat.mjs`——拍体 = 在飞块逐块 `refreshBlock` + 状态行重挂；**判据三件同序** = `_subMeta` 在场 ∧ `!frozen` ∧ 在连（逐值同 VSC `thincoder-vscode/webview/activity.js:149-153`）。
+- **1s 拍面（R10 落）**：`thincoder-desktop/renderer/heartbeat.mjs`——拍体 = 在飞块逐块核件 `refreshBlock`（封装 = `refreshLiveBlocks`）+ 状态行重挂（`paintStatus`——装配单点 = `thincoder-desktop/renderer/app.mjs:269-276`）；**判据三件同序** = `_subMeta` 在场 ∧ `!frozen` ∧ 在连（逐值同 VSC `thincoder-vscode/webview/activity.js:149-153`）。
 - **设置面与向导形（批 9 落）**：两形构树（`thincoder-desktop/renderer/views/settings.mjs` 四段面〔渠道 / 模型与档位 / agent 参数 / MCP〕· `thincoder-desktop/renderer/views/onboarding.mjs` 三步向导——纯描述符 + 薄挂载，形态单源 = `docs/desktop/design/UI.md` §1）· 接线出档 = `thincoder-desktop/renderer/mount-settings.mjs`（自 `app.mjs` 拆出）；
   **零新事件通道**——读数 / 写入全走请求通道：写成功**同回带** `{ locale, dict, configured }` ⇒ `initDict` 重刷 + 向导闸随新档态（**免二跳重调**）；填 key 经 `provider:verify` 真调一次；**闸 = `configured`**（档存在性——向导不进 / 设置面可进 + 明示不可读；零静默重置）。
   **容器面（批 9 裁定）**：挂载根 = `index.html` 单容器 `[data-slot="settings"]` 自身（窗口级覆盖层面——设置树 / 向导树**互斥**占槽：`configured` 假 ⇒ 向导树占位；退场 = `clear` 清空容器 ⇒ 主 UI 可用）。
   **退场口径（批 9 补——子节点面 ∥ 属性面）**：退场 = `clear` 清空容器（子节点面）**+ 薄挂载属性应收**——挂载期所加宿主属性须有复位回路；判据 = **退场后宿主属性集 ⊆ 挂载前属性集**（只增不减 ⇒ 判据不达）；**回路已落 · 单源 = `thincoder-desktop/renderer/views/settings.mjs` `syncHostProps`**（复位表 = `root` → 上次薄挂载所落属性名集 · 未再声明者摘除 · 骨架属性零动）——三挂载共用（设置 / 向导 / 信息行）。
   `removeAttribute` 两命中 = `thincoder-desktop/renderer/views/chat.mjs:227`（`data-streaming` 摘除）+ `thincoder-desktop/renderer/views/settings.mjs:281`（复位表摘除）；**长驻两面** = `thincoder-desktop/renderer/views/{chat,activity}.mjs`（:134 / :167）**无复位回路 ⇒ 码面池**（属性名集常量〔`chromeProps` 四名 · 池树两名〕⇒ 跨重绘不增 ⇒ 现值零残留）。
 
-- **用户块（可见面修复批修 · 写者与出泡时刻 —— #458；「回合中插入」批扩写者）**：活流 `user` 块两写者 = **发送面**（`msg:send` 回执 `ok` 真——直发径）+ **排队消费回执**（`ev:queue.delivered`——步边界注入 ∕ 回合尾送达两时刻；裁决与边界 = `docs/desktop/design/PROJECT.md` §2 KD-23 / KD-40）+ **键门**（回执键 = 现刻 `activeSession`，非活动 ⇒ 零写；
+- **用户块（可见面修复批修 · 写者与出泡时刻 —— #458；「回合中插入」批扩写者；挂起窗径批扩抑制面 ∕ 时刻）**：活流 `user` 块两写者 = **发送面**（`msg:send` 回执 `ok` 真——直发径本地先行）+ **排队消费回执**（`ev:queue.delivered`——**四时刻**：步边界注入 ∕ 回合尾续发 ∥ **窗内消费 ∕ 残续发**（挂起窗径批增）；裁决与边界 = `docs/desktop/design/PROJECT.md` §2 KD-23 / KD-40）+ **挂起窗径抑制面（挂起窗径批增）**：窗内提交零本地块（`onUserEcho` 判据 = `busyOf ∨ suspActiveOf`）⇒ 块唯一来源 = 消费回执；直发径「回执言队形」（含窗内受理）⇒ 本地块**退流**（终态 = 消费前流内零块）；失败径 ⇒ 本地块退流（零块）+ 失败行 + 稿留输入历史；**键门**（回执键 = 现刻 `activeSession`，非活动 ⇒ 零写；
   **在飞回合内切回** ⇒ 本回合用户块随回合尾落盘后、于下次页读在场——页读 = `thincoder-desktop/src/main/session-slots.mjs:123` / `:145`；槽落盘在回合尾 = `thincoder-desktop/src/main/agent-host.mjs:214` / `:219`）；
   块形 = `{ kind: "user", text, ts? }`（**与 `blockOfMessage` 回放块同形**——无 `id` ⇒ 键域回落位序，同回放；`ts` = 提交 ∕ 入队现刻——「对齐第二批」项 4 载波，非有限数 ⇒ 键缺席）·
   写入走 `appendBlock`（**既有**纯动作——`thincoder-desktop/renderer/store.mjs:73` 导出，归约面 `thincoder-desktop/renderer/events.mjs:21` / `:97` / `:105` / `:220` 四处已消费；`pendingNew` 语义同源）· 二十三通道零 `user` 通道（写入时刻 = 受理时刻 ⇒ 活流块 ⟺ 已受理）。
@@ -97,6 +98,16 @@
   清点**须落块面引用**（新块对象 ⇒ `blocks` 键变 ⇒ 帧触发 ⇒ 就地更新摘 `data-streaming` 锚——旁路态无刷新路径 = 缺陷成因面）· 辅助与两族调用点住归约面（`thincoder-desktop/renderer/events.mjs`）· 游标语义 = **末块追加态**（形态单源 = `docs/desktop/design/UI.md` §1「本批注（可见面修复 · 五件）」项 3 · 裁决 = `docs/desktop/design/PROJECT.md` §2 KD-24）。
 - **文本段行形态通则（可见面修复批修 —— #460）**：行内 ≥2 文本段（flex 行：`gap` ∨ `space-between`）⇒ **逐段包元素**（`span[data-seg="<段码>"]`；段缺席 ⇒ 零节点——空段仍占 flex 项 ⇒ 假间隔）；
   **裸串不得直作 flex 行子**（相邻文本节点合为单一匿名项 ⇒ `gap` / `space-between` 静默失效）；逐处段码与取舍 = `docs/desktop/design/UI.md` §1「本批注（可见面修复 · 五件）」项 4。
+
+### 1.2 更新纪律：帧合并（收核 · 2026-09-29）
+
+本批（`docs/batches/2026-09-29-render-perf.md` · 台账 #609）把 VSC 已付的轮子收核、桌面消费：**触发源 = store 变更 · 更新纪律收核**。机制单源 = `docs/render-core/design/RENDER-CORE.md` §2 **KD-RC-9**；本档只落接入面。
+
+- **帧出口唯一化**：`store` 订阅 ⇒ `frame.mark(changedKeys)`（**O(1) 脏键集**——订阅回调零渲染）；帧触发后按键集分派六面（会话控制条 ∕ 会话头 ∕ 状态行 ∕ 对话流 ∕ 池区 ∕ 卡面）——**每面每帧至多一次**（分派件 = `thincoder-desktop/renderer/frame-dispatch.mjs`；**帧时刻现读 `store.get()`**——禁 mark 时刻取态快照）。
+- **帧合并件 = 核 `flow/frame.mjs` `createFrameMerge`**（脏标记 ∕ 帧合并 ∕ 应用器契约）：单飞 rAF + `FRAME_MIN_MS`（50——与核 `createStreamRenderer` 同值同意）；
+  `flush()` = 同步尾帧（消费点 = 回底顺序保真（app 侧回底入口 `returnToLatest`——`thincoder-desktop/renderer/app.mjs:152`；内调 store 纯动作 `returnToBottom`——`thincoder-desktop/renderer/store.mjs:160`）+ 测试 ∕ 探针确定性）。
+- **应用器契约**（KD-RC-9）：① 增量更新为默认（尾块就地 ∕ O(1) 追加 ∕ 面内差分；整面重挂仅判据命中）② 布局节俭（读数仅帧内、按档裁剪——禁逐 chunk 强制布局）③ 帧尾动作（滚动 ∕ 钉底 ∕ gating）落各面尾段、每帧至多一次 ④ 每 chunk 同步成本禁 ∝ 累计文本。
+- **逐面落点**（2026-09-29 批）：会话流正文 ∕ 推理 = 帧界 + 尾块就地 md 重渲（核 `paintStreamTarget` ∕ `paintReasoningTarget`——帧内至多一次）；工具卡 = **就地更新**（头行分段刷 + 结果区核 `appendToolOutput` O(1) 追加——零重建；#605 消）；状态行 = 帧界 + 面内差分门（模型等价 ⇒ 零写）；池区 = 帧界（壳原位领用 = 让位修复批在册面）；卡面 ∕ 会话条 ∕ 会话头 = 帧界（低频键面）。
 
 ## 2. 有界渲染窗口
 
@@ -115,14 +126,18 @@
 - **滚动作落面**（DOM 写面点名）：跟滚追加 ⇒ **瞬时贴底**（写 `scrollTop`——先例 `thincoder-vscode/webview/ui.js:428`）· 药丸回底 ⇒ **程序化平滑**（`scrollTo({ top: scrollHeight, behavior: "smooth" })` + 记 `lastAt`）· `scroll` 订阅先过 `smoothWindowOpen(now, lastAt)` 门——**窗内不派发**（该判据真 ⇒ 窗已过期、可派发；程序化平滑的滚动回波不算用户动作）。
 - **帧尾滚动作（补偿消费点）**：非重挂帧末尾 `settleFrame(root, model, scroll, align, tier)`（落点 = `thincoder-desktop/renderer/views/chat.mjs` · `paintChat` 调用）——六步序 = ① 挂尾段（**先于读数**）② 读数 `t0` ③ `syncChrome` ④ 头动作（摘 `evict` + 前插 `prepend`）⑤ 读数 `t1` ⑥ 写（下两条）。
 - **尾段挂载（第 ① 步）**：`align.tail` 逐枚挂（插点单源 = §1.1 插入点纪律）；`patch` 档 ⇒ 就地更新尾块（文本 + `data-streaming` 锚），尾段 ∅；`none` 档 ⇒ 尾段 ∅。
-- **帧尾三写（第 ⑥ 步）**：帧后跟滚 ⇒ `stickToBottom`（瞬时贴底——写 `scrollTop`，幂等）；非跟滚 ∧ `evict + prepend > 0` ⇒ `compensate`（`compensateTop` 算式——`prevTop` = `t0.scrollTop`、`prevHeight` = `t0.scrollHeight`、`nextHeight` = `t1`）；其余 ⇒ **零写**。
+- **帧尾三写（第 ⑥ 步）**：帧后跟滚 ⇒ `stickToBottom`（瞬时贴底——**写超值不读 `scrollHeight`**（浏览器鉗底），幂等）；非跟滚 ∧ `evict + prepend > 0` ⇒ `compensate`（`compensateTop` 算式——`prevTop` = `t0.scrollTop`、`prevHeight` = `t0.scrollHeight`、`nextHeight` = `t1`）；其余 ⇒ **零写**。
 - **补偿单权源**：`.flow` 置 `overflow-anchor: none`（`chat.css` 面）——头侧变更的视口锚定只由 `compensate` 显式承担，免浏览器自动锚定叠算。
 - **读数区间记账**：区间 = [`t0`, `t1`] 跨头侧变更（摘 / 插 + 摘要块在场与文本）；尾侧（尾段挂载 / 就地更新 / 药丸——单行 `nowrap` 定高，`chat.css`）在区间外或零高度增量 ⇒ ΔH = `t1 - t0` = 头侧净增量。
-- **瞬时写不记窗**：`lastAt` 只由程序化平滑（`returnToBottom`）记；`stickToBottom` / `compensate` 不记 `lastAt`——其滚动回波读数即真态（同值 `setFollowing` 归原态）。
-- **块内容区跟滚（#518 收口 · 核原语直消费）**：子 agent 块内容区（`.advisor-content`）跟滚 = 核件原语 `initBlockFollow` ∕ `maybeScrollBlock`（`thincoder-render-core/subblocks/block.mjs`；落点 = `thincoder-desktop/renderer/views/pool-subagents.mjs`）。
-  **接线四点** = ① 出生 ∕ 接管（`subElementOf`）· ② 内容增量（`replayRows` 追加后）· ③ 挂载补钉（`createSubBlock` `family.append` 后）· ④ 接管径补钉（`replaceWith` 后）——① 挂 `initBlockFollow`，余三点 = `maybeScrollBlock` 应用。
-  判据 = `内容区._pinFollow`（`wheel` ∕ `touchmove` ⇒ 近底 24px 写旗标；`false` ⇒ **零写**——不夺阅读位）；折叠（`open=false`）∕ 已移除 ⇒ no-op；写超值不读 `scrollHeight`；桌面帧 = store 变更帧（无 rAF——直调，非脏集）。
-- **池区帧尾钉底（#518 收口 · R10 E6 帧尾径补齐）**：`views/activity.mjs` `mountPool` 尾 `maybePinPool(root)`（`views/activity-new.mjs`——`_poolPin !== false` ⇒ 写 `scrollTop`；VSC `webview/streaming.js:32` `frameEnd` 对位）；旗标维护 = `attachActivityNew` `scroll` 订阅（既有）；未钉底 ⇒ 零写。
+- **瞬时写不记窗**：`lastAt` 只由程序化平滑（滚动面 handle 方法 `returnToBottom()`——`thincoder-desktop/renderer/views/chat-scroll.mjs:78`）记；`stickToBottom` / `compensate` 不记 `lastAt`——其滚动回波读数即真态（同值 `setFollowing` 归原态）。
+- **读数按档裁剪（更新纪律收核批 · 2026-09-29）**：跟滚帧 ⇒ 帧尾两读数免读（贴底 = 写超值）；非跟滚帧 ⇒ 头动作 > 0（补偿径）才读 `t0` ∕ `t1`——即每帧读数 ≤2 且仅在补偿径（禁逐 chunk 强制布局；单源 = 核档 §2 KD-RC-9）。
+- **块内容区跟滚（#518 收口 · 核原语直消费；让位修复批收正（2026-09-29））**：子 agent 块内容区（`.advisor-content`）跟滚 = 核件原语 `initBlockFollow` ∕ `maybeScrollBlock`（`thincoder-render-core/subblocks/block.mjs`；落点 = `thincoder-desktop/renderer/views/pool-subagents.mjs`）。
+  **接线四点** = ① 出生 ∕ 接管（`subElementOf`）· ② 内容增量（`replayRows` 追加后）· ③ 挂载补钉（`createSubBlock` `family.append` 后）· ④ 接管径补钉（`replaceWith` 后）——① 挂 `initBlockFollow`，余三点 = `maybeScrollBlock` 应用；**帧尾复核** = `mountPool` 尾逐块 `applySubBlockFollow(family)`（族级扫描——`views/pool-subagents.mjs` 新导出；VSC `streaming.js:31` 脏集对位：任何位面被抹 ⇒ 下一帧自愈）——**应用时机契约** = 核档 §2 KD-RC-8（应用点清单：追加后 ∕ 挂载后 ∕ 帧尾复核；“端只在宿主时刻调用核应用器”；端侧遗漏应用点 = **违约缺陷**）。
+  判据 = `内容区._pinFollow`（**让位三律** = 近底 < 24px **无条件翻真** ∕ 远离底仅凭**用户手势门**（`wheel` ∕ `touchmove` ∕ `pointerdown` · 600ms）翻假 ∕ 非手势位移（复位回波 ∕ 程序写 ∕ 布局）**不改旗标**；`false` ⇒ **零写**——不夺阅读位）；让位期出口钮 `sub-follow-btn`（核件自持：`open ∧ 非冻结 ∧ 可滚` ⇒ 可见；两态 `sub.follow.new` ∕ `sub.follow.bottom`；点击 ⇒ 回底 + 复跟）——单源 = `docs/render-core/design/RENDER-CORE.md` §2 **KD-RC-8**；折叠（`open=false`）∕ 已移除 ⇒ no-op；写超值不读 `scrollHeight`；桌面帧 = **store 变更排帧**（核帧合并件——单飞 rAF + ≥50ms 间隔 + 脏键集；触发源 = store 变更——本档 §1.2 ∕ 核档 §2 KD-RC-9）。
+  **键盘位移**（键盘滚动——无手势标记）不改旗标（非手势位移同路）；可达性 unverified（需真机核）⇒ **残余登记**（单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-8）。**手势窗内以手势为准**（窗内非手势位移按手势期计——有意取舍）。
+- **池区帧尾钉底（#518 收口 · R10 E6 帧尾径补齐）**：`views/activity.mjs` `mountPool` 尾 `maybePinPool(root)`（`views/activity-new.mjs`——`_poolPin !== false` ⇒ 写 `scrollTop`；VSC `webview/streaming.js:32` `frameEnd` 对位）；旗标维护 = `attachActivityNew` `scroll` 订阅（既有）；未钉底 ⇒ 零写。**让位修复批**：池位跨帧保真由领用径承担（池面挂载条）——`_poolPin=false` 时新 chunk 不再拽回顶（churn 消）；`_poolPin` 语义零改（#563② 有界自纠结论保持）；**区钉底判据 ∕ 清账路 = 滚动策略族契约同源**（核档 §2 KD-RC-8——近底 24px + 旗标门 + 清账三路；端 = 契约适配器，判据逐字同式）。
+  **对拍机检腿** = 批次本地机检件（**本批须新增**——载体单源 = `docs/desktop/design/PROJECT.md` §4.2 本批行「测试面 ∕ 探针面」）。
+- **池区旗标窗口登记（#563② 评估 · 残余族清账批 · 2026-09-29）**：`_poolPin` 三写者（点击 ∕ `scroll` ∕ 世代重置）+ 帧尾写守 `_poolPin !== false` 早退 ⇒ 极端窗口（上滚与帧尾写同刻）可夺回一次上滚 = **有界自纠**（非持续失效）——裁 = 维持现态；若真机走查再现夺回 ⇒ 再立小修。
 - **边界**：本两条只覆盖**块内容区 ∕ 池区**——会话流主跟滚面（上列各条：回填 ∕ 跟滚 ∕ 药丸 ∕ 帧尾三写）零改。
 
 ## 4. 范本借用清单（实现工艺面）
@@ -196,5 +211,12 @@
 - 2026-09-29（**退役面本体收正轮（fix · eng-designer）**）：§1 单状态树行收正；§1.1 键盘面 ∕ 页生命周期 ∕ 删会话页随动条 ∕ 幽灵更新条收正（标签条面退场对位）；档头 **D1–D26**。明细 = 批档 §2。
 - 2026-09-29（**R12 设计面同步轮（fix · #26 · eng-designer）**——承 flow 批 R12 §5.15 未办 5）：§3 回填阈值 48 ⇒ **40**（`BACKFILL_PX`）· 跟滚判据 `≤` ⇒ **`<`**（严格小于——VSC `ui.js` 同径）；§4 行 3 同拍（40px + 页量口径与 §2 窗限增量条对齐——消 `:128` ∕ `:101` 互抵）。明细 = 批档 §2。
 - 2026-09-29（**子 agent 块跟滚批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-subblock-follow.md` §1 · 台账 #518）：§1.1 「DOM 触面四处」枚举的「帧尾滚动作」补池面对位（`mountPool` 尾）；§3 增两条（**块内容区跟滚**——核原语四点接线 · **池区帧尾钉底**——`maybePinPool`）+ 边界条。明细 = 批档 §2。
-- 2026-09-29（**复制面对齐 VSC 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-desktop-copy-vsc-align.md` §1）：§1.1 引导节点条去死先例句（`views/chat-copy.mjs` 已删档——改述「流内非块节点构树」）；档头 **D1–D27**。明细 = 批档 §2。
+- 2026-09-29（**复制面对齐 VSC 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-desktop-copy-vsc-align.md` §1）：§1.1 引导节点条去死先例句（`chat-copy.mjs` 已删档——改述「流内非块节点构树」）；档头 **D1–D27**。明细 = 批档 §2。
 - 2026-09-29（**子 agent 块跟滚批 · 修复轮（评审轮 1 · 发现 3 ∕ 4）· eng-designer**）：§1.1 「DOM 触面四处」枚举的「帧尾滚动作」补池面对位（`mountPool` 尾——与 §3 池区帧尾钉底条自洽）；§3 块内容区跟滚条四点枚举统一（① 出生 ∕ 接管 · ② 内容增量 · ③ 挂载补钉 · ④ 接管径补钉——与 `docs/desktop/design/UI.md` §1 本批注同序号同指位）。明细 = 批档 §2 修复轮。
+- 2026-09-29（**挂起窗径「消费前流内零块」批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-desktop-susp-queue.md` §2 · 台账 #561）：§1.1 三处随动——用户块条（写者四时刻 + 挂起径零本地块 ∕ 退流 ∕ 失败径退流句）· 帧尾态刷 + 插入点纪律 + 流内非块节点族三处**待发送带落点收正**（非流内——住输入区上方带；收正轮 B12 终态口径落字）。明细 = 批档 §2。
+- 2026-09-29（**挂起窗径批 · 修正轮（重派 · 评审轮 1 · 12 条）· eng-designer**——发现 1 逐号点修）：「流内非块节点族」成员表剔除「待发送带」（非流内——落点表述住帧尾态刷 ∕ 插入点纪律两条）。明细 = 批档 §2.9。
+- 2026-09-29（**子 agent 块跟滚让位修复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-subblock-follow-resume.md` §1 · 台账 #603）：§1.1 **池面挂载条收正**（三径：`none`/`empty` 清 ∕ 壳缺位建 ∕ **壳在位原位领用**——子 agent 族祖先链零摘离，滚动位保真）；§3 **块内容区跟滚条收正**（让位三律 + 帧尾复核扫 + 出口钮 `sub-follow-btn` + **应用时机契约在核 ∕ 宿主帧模型在端**——留端边界清算同笔）+ 池区帧尾钉底条补 churn 消句与滚动策略族契约句。明细 = 批档 §2（含 §2.13 边界裁定）。
+- 2026-09-29（**更新纪律收核批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-render-perf.md` §1 · 台账 #609 + #190 会诊终报）：§1 索引增**更新纪律**行；§1.1 帧面分派条补时机句；**新增 §1.2**（帧合并：触发源 ∕ 核帧合并件 ∕ 应用器契约 ∕ 逐面落点）；§3 块跟滚条尾句收正（⇒ **store 变更排帧**）+ 帧尾三写条与新增**读数按档裁剪**条（跟滚帧零读 ∕ 补偿径 ≤2 读）。明细 = 批档 §2。
+- 2026-09-29（**子 agent 块跟滚让位修复批 · 修复轮（评审轮 1 · 发现 1 / 3 / 6）· eng-designer**——承批档 §3 轮次 1）：§3 块跟滚条补**键盘位移归属**（不改旗标 + 残余登记指针）+ **手势窗内归因取舍句**（窗内以手势为准——有意取舍）；池区帧尾钉底条补**对拍机检腿载体单源指针**。明细 = 批档 §3。
+- 2026-09-29（**更新纪律收核批 · 修复轮（评审轮 1（#214）· 发现 4 ∕ 8）· eng-designer**）：§1.1 拍面条按盘收正（**1s 拍面**——停滞轻显形批落值；拍体 = `refreshLiveBlocks`（核件 `refreshBlock` 逐块）+ 状态行重挂 `paintStatus`；装配单点 = `app.mjs:269-276`）；
+  §1.2 两处回底符号逐处点名（`returnToLatest` = app 侧入口（`app.mjs:152`）∥ `returnToBottom` = store 纯动作（`store.mjs:160`）∕ 滚动面 handle（`chat-scroll.mjs:78`））。明细 = 批档 §2.9。

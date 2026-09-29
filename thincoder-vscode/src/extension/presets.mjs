@@ -12,7 +12,7 @@
  * 「config 三段端侧消费面」）：
  *  - `resolveKey` / `resolveDefaultModel` / `providerFromConfig` / `providerNamesInConfig`
  *    （provider 运行时解析——VSC 面板/视觉通道消费）；
- *  - `probeTargetFromEntry`（M9 准入探针目标构造——list-models 消费形状）；
+ *    （M9 准入探针目标构造 = 核 `probeTargetOf`——B10 E1 已收编，端侧零自持）；
  *  - `sanitizeConsultModels` / `warnConsultModelsFiltered` / `loadConsultPool`（F-4 会诊池
  *    软失败清洗 + 运行时读面——provider:model 引用面，写面（settings-panel-write）与读面
  *    （agent/setup）共用）。
@@ -148,24 +148,6 @@ export function providerNamesInConfig() {
     return resolveProviders().providers.map((p) => p.name)
   } catch {
     return []
-  }
-}
-
-/**
- * M9 探针目标：渠道条目 → `listModels` 可消费的 provider 形状（探针走模型请求的
- * 代理链——与 providerFromConfig 同规则：per-provider `proxy: true` 且全局 `proxy.model === true`）。
- * apiKey 缺失 → 空串（探针会如实失败 → 渠道标「不可用」——准入判据 M8）。
- */
-export function probeTargetFromEntry(entry) {
-  const raw = loadRaw()
-  const proxyCfg = normalizeProxy(raw.proxy)
-  const proxyUri = entry?.proxy === true && proxyCfg?.uri && proxyCfg.model === true ? proxyCfg.uri : undefined
-  return {
-    name: entry?.name,
-    baseURL: entry?.baseURL,
-    apiKey: resolveKey(entry) ?? "",
-    format: entry?.format,
-    proxyUri,
   }
 }
 

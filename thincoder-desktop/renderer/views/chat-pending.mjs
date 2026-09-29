@@ -34,7 +34,7 @@ export function pendingGroupNode(model) {
     children: [multi ? t("chat.pending.multi", { count: String(items.length) }) : t("chat.pending.single")],
   }]
   for (const [index, entry] of items.entries()) {
-    const raw = typeof entry?.text === "string" ? entry.text : ""
+    const raw = typeof entry === "string" ? entry : ""
     children.push({
       tag: "div",
       props: { class: "chat-pending-item", "data-pending-item": "", "data-raw": raw },

@@ -10,6 +10,10 @@ import { t } from "./i18n.js"
 import { fmtK } from "./lib.js"
 import { escHtml } from "./ui.js"
 
+/** 停滞轻显形阈值（WEBVIEW.md §4.7——2026-09-29 批 stall-indicator）：回合在飞 ∧ 静默 ≥ 10s ⇒ 读数段（“已静默 Xs”）；
+ *  数值单源 = `docs/cli/design/TUI.md` §7.7（三端同值）；跳秒 1s = `panels.js` `_panelTimer` 拍。 */
+const QUIET_MS = 10000
+
 export function renderStatusBar(m) {
   // m is optional — if not passed, uses cached state from _lastUsage
   const u = m ? (m.usage || {}) : (S._lastUsage || {})
@@ -45,6 +49,17 @@ export function renderStatusBar(m) {
   if (S._currentTool) parts.push(`<span class="status-tool">${t("status.currentTool")}: ${escHtml(S._currentTool)}</span>`)
   if (S._turnFrame) parts.push(t("status.turn", { n: S._turnFrame.turn, m: S._turnFrame.maxTurns })) // C-15：turn N/M 段（旧 status.turns 段退役）
   if (S._turnStart) parts.push(`${t("status.elapsed")} ${Math.round((Date.now() - S._turnStart) / 1000)}s`)
+  // 停滞轻显形段（WEBVIEW.md §4.7——同语义位：耗时之后；语义单源 = `docs/cli/design/TUI.md` §7.7）：
+  // 显示条件 = 回合在飞（`_turnState === "running"`）∧ 静默 ≥ QUIET_MS；静默 = 距最近一次可见输出
+  // （`_lastOutputAt ?? _turnStart`——回合起刻 = 初始锚）；读数 = `floor(毫秒/1000)`；纯读数零警示色。
+  // 负向锁 = 非显示条件（未至阈值 ∕ 非在飞 ∕ 锚缺）⇒ 零注入（逐字节等价）。
+  if (S._turnState === "running") {
+    const anchor = S._lastOutputAt ?? S._turnStart
+    if (anchor != null) {
+      const quietMs = Date.now() - anchor
+      if (quietMs >= QUIET_MS) parts.push(t("status.quiet", { s: Math.floor(quietMs / 1000) }))
+    }
+  }
   if (S._taskStatus) parts.push(`<span id="task-badge" role="button" tabindex="0" aria-label="Task progress" style="cursor:pointer">${S._taskStatus}</span>`) // 子代理计数徽标已撤（SESSION-ACTIVITY-REVISED 评审 #2——活动区自动显隐——计数由 ⏳ 挂起段承担）
   // AGENT-LOOP-ASYNC-POOL.md §6.8 background-mode status line (D-S8): "后台 N 子代理运行中" while the suspension
   // session is live — appended after the usage stats, dim badge.

@@ -73,7 +73,7 @@ const hasImages = (q) => Array.isArray(q?.images) && q.images.length > 0
 
 /**
  * 载体条目面取批（纯函数——就地消费）：首动作为 `turn` ⇒ 按计划取一批并返回待送达条目；
- * `slash` 首动作（入队门禁不可达的防御面）⇒ 零动作 `{ item: null, merged: null }`。
+ * `slash` 首动作 ⇒ 零动作 `{ item: null, merged: null }`。
  * **贴图批退化逐条**（批内任一条目携 `images` ⇒ count = 1——图片随条目元数据走降级面）；
  * 无贴图 ⇒ 多条合并为一条（头条目元数据 + 合并文本）。
  * @param {Array} queue 载体条目数组（条目 `{ text, images?, ... }`——就地 `splice` 消费）

@@ -8,8 +8,9 @@
  * §2.13.3 `opts.schema` 缝；本端直写面统一经此）。
  */
 import { persistRaw, conflictError, loadRaw } from "@thincoder/core/config-io.mjs"
-import { thinkOffShape } from "@thincoder/core/think-off.mjs"
-import { probeTargetFromEntry, sanitizeConsultModels } from "./presets.mjs"
+import { applyAdvisorEffort } from "@thincoder/core/think-off.mjs"
+import { probeTargetOf } from "@thincoder/core/provider-flows.mjs"
+import { sanitizeConsultModels } from "./presets.mjs"
 import { probeChannelModels } from "@thincoder/core/provider/list-models.mjs"
 import { overrideAdmissionIfHostBusy } from "./loop-sampler.mjs"
 import { specForModel } from "../specs.mjs"
@@ -49,20 +50,11 @@ function probeDefaultModelChannel(dm) {
     const raw = loadRaw()
     const entry = (Array.isArray(raw.providers) ? raw.providers : []).find((p) => p?.name === name)
     if (!entry) return
-    const r = await probeChannelModels(name, probeTargetFromEntry(entry))
+    const r = await probeChannelModels(name, probeTargetOf(entry))
     // F-W19（`SETTINGS.md` §2.12）：宿主忙 = 端侧证据 ⇒ 覆盖核落账分类（`reason` 逐字不动）。
     // 写面同步契约零改——探针仍 fire-and-forget（本链已全兜底）。
     if (!r.ok) overrideAdmissionIfHostBusy(name, r.error)
   })().catch(() => { /* 探针绝不阻断写面 */ })
-}
-
-/** off 形按族取形（取形 = **单源** `@thincoder/core/think-off.mjs` 的 `thinkOffShape`——`docs/core/design/MODEL-SPECS.md`
- *  §16.2 生产者表第 4 行 / §15.4-2 族别判据；本地零形体，只剩取源一步）：effort 族（`thinkApi === "effort"`）
- *  ⇒ `null`（载荷层 off 门首款要求 `provider.thinking === null`——`{type:"disabled"}` 不开门 ⇒ effort 族关思考静默失效）；
- *  其余（type 族默认 / 自定义开值族）⇒ `{ type: "disabled" }`（达载荷层）。
- *  取形源 = payload 内 `adv.model`（off 档只在 select 已渲染时可达 ⇒ spec 可解；未给名 ⇒ 查表兜底 DEFAULT_SPEC）。 */
-function advisorOffShape(model) {
-  return thinkOffShape(specForModel(model ?? ""))
 }
 
 /** Panel persistence: build the agent.* patch from a webview payload (CLI-parity field names).
@@ -147,20 +139,12 @@ export function saveAgentSettingsFromPanel(payload) {
     if (typeof adv.timeoutMs === "number" && adv.timeoutMs > 0) merged.timeoutMs = adv.timeoutMs
     if (!Number.isFinite(merged.timeoutMs) || merged.timeoutMs <= 0) delete merged.timeoutMs
     // §15.4-6（台账 #331——死键接线）：写键 = `advisor.reasoningEffort`（单源 = 核读取键
-    // `thincoder-core/advisor/run.mjs:48/:64`——as-of 本批实施，与 CLI `/advisor` 菜单同键）。三态：`none` = 关思考 ⇒
-    // 族别 off 形（§15.4-2）+ 删键；「—」/ 空 ⇒ 删键（不写档、**不动** thinking）；其余档 = 字面值
-    // + 清 `null` 标记（选档 = 要思考；`{type:"disabled"}` 不动——同 CLI `cmd-think.mjs:119-120`）。
+    // `thincoder-core/advisor/run.mjs:48/:64`——as-of 本批实施，与 CLI `/advisor` 菜单同键）。三态写语义
+    // = **核单源** `applyAdvisorEffort`（B10 S11 上提：none ⇒ 族别 off 形 + 删键；档 ⇒ 字面值 + 清 off 形
+    // 残记；空 ⇒ 删键 + 清 off 形残记 —— 桌面主侧同引，跨端零副本）。spec 取形源 = payload 内 `adv.model`
+    // （off 档只在 select 已渲染时可达 ⇒ spec 可解；未给名 ⇒ 查表兜底 DEFAULT_SPEC）。
     if ("reasoningEffort" in adv) {
-      const v = adv.reasoningEffort
-      if (v === "none") {
-        merged.thinking = advisorOffShape(adv.model)
-        delete merged.reasoningEffort
-      } else if (typeof v === "string" && v.trim()) {
-        merged.reasoningEffort = v.trim()
-        if (merged.thinking === null) delete merged.thinking
-      } else {
-        delete merged.reasoningEffort
-      }
+      applyAdvisorEffort(merged, adv.reasoningEffort, specForModel(adv.model ?? ""))
     }
     // legacy `advisor.effort`（写而无人读的死键）——保存即删，不迁移值（静默激活历史死值）、不复活。
     delete merged.effort

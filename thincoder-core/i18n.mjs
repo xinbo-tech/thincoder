@@ -46,6 +46,8 @@ export const CORE_MESSAGES = Object.freeze({
   "status.rateLimited": { en: "Rate-limited 429, retry in ${s}s", zh: "限流 429，${s}s 后重试" },
   "status.overloaded": { en: "Server overloaded, retrying in ${s}s", zh: "服务过载，${s}s 后重试" },
   "status.quota": { en: "quota exhausted: ${msg}", zh: "配额耗尽：${msg}" },
+  // ── 停滞轻显形（在飞回合静默读数——TUI.md §7.7 · stall-indicator 批 2026-09-29）──
+  "status.quiet": { en: "Quiet ${s}s", zh: "已静默 ${s}s" },
   // ── 异步池状态词 ──
   "sub.running": { en: "running", zh: "运行中" },
   "sub.queued": { en: "queued", zh: "排队中" },

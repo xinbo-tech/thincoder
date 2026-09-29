@@ -26,7 +26,7 @@
  */
 
 import { statSync } from "node:fs"
-import { manifestPath, loadManifest, getSessionId, END } from "./session-slots.mjs"
+import { manifestPath, loadManifest, getSessionId, sessionEnd } from "./session-slots.mjs"
 import { batchAlive, batchAliveAsync, probeCmdlinesAsync, classifyEnd, isProductProc } from "./process-probe.mjs"
 
 export { batchAlive } // 既有 import 面（peer-domains.mjs）零破——实现已外提 process-probe.mjs
@@ -146,7 +146,7 @@ export async function peerInstances(cwd) {
   const peers = []
   const selfGroup = groups.find((g) => g.sessionId === myId)
   if (selfGroup) {
-    peers.push({ pid: selfGroup.pid ?? process.pid, sessionId: myId, slots: selfGroup.slots, end: END, self: true })
+    peers.push({ pid: selfGroup.pid ?? process.pid, sessionId: myId, slots: selfGroup.slots, end: sessionEnd(), self: true })
   }
   for (const g of peerGroups) {
     const end = known ? classifyEnd(cmdlines.get(g.pid)) : undefined

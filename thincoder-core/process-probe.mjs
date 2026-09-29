@@ -40,6 +40,11 @@ const VSC_END_RE = /--extensionDevelopmentPath|--type=extensionHost|extensionHos
  *  「误删方向」——消解路径 = 实测出现时补进本族，单源改点仅此一处）。 */
 const CLI_ENTRY_RE = /thincoder\.cjs|thincoder\.mjs|thincoder-cli/i
 
+/** 桌面端（Electron 主进程）判别标记族（台账 #584 实读定形——`electron .` 启动形态）：真机捕获
+ *  命令行 = `"…\thincoder-desktop\node_modules\electron\dist\electron.exe" .`——产品树路径段可判
+ *  （打包件 exe 名同族）。补入本族 = §3.1「标记族假阴性」已知局限的实测消解路径（原族外形态）。 */
+const DESKTOP_END_RE = /thincoder-desktop/i
+
 // 模块级测试注入缝（default null = 生产实现；测试注入 + finally 恢复——见测试文件）
 let _testImpl = null
 
@@ -208,19 +213,21 @@ export async function probeCmdlinesAsync(pids) {
   }
 }
 
-/** 本产品身份判据（单源）：命令行命中 CLI 入口族或 VSC 扩展宿主族 ⇒ 本产品进程。
+/** 本产品身份判据（单源）：命令行命中 CLI 入口族 ∕ VSC 扩展宿主族 ∕ 桌面端族 ⇒ 本产品进程。
  *  命令未知（undefined / 空串）⇒ `false`——**调用方须自行区分「未知」与「明确不符」**
  *  （未知 = 保守保留，明确不符 = 剔除/可删；两态判据见 `filterDeadOwners` 与读面落点）。 */
 export function isProductProc(cmdline) {
   if (typeof cmdline !== "string" || cmdline.length === 0) return false
-  return CLI_ENTRY_RE.test(cmdline) || VSC_END_RE.test(cmdline)
+  return CLI_ENTRY_RE.test(cmdline) || VSC_END_RE.test(cmdline) || DESKTOP_END_RE.test(cmdline)
 }
 
-/** cmdline → 端标签：扩展宿主标记 → vscode；其余（node/thincoder CLI）→ cli。
+/** cmdline → 端标签：扩展宿主标记 → vscode；桌面端族 → desktop；其余（node/thincoder CLI）→ cli。
  *  命令不可得（探测失败 / 缺行）⇒ `undefined`（端字段缺省——既有降级语义）。 */
 export function classifyEnd(cmdline) {
   if (typeof cmdline !== "string" || cmdline.length === 0) return undefined
-  return VSC_END_RE.test(cmdline) ? "vscode" : "cli"
+  if (VSC_END_RE.test(cmdline)) return "vscode"
+  if (DESKTOP_END_RE.test(cmdline)) return "desktop"
+  return "cli"
 }
 
 /**

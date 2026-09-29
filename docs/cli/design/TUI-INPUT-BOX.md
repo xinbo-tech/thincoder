@@ -144,7 +144,7 @@ busy 期该槽恒 null ⇒ 零动作——证据 = `thincoder-cli/src/tui/suspen
 中止残余（按合并计划转 `state.queue` + 既有提示行）不渲染待发送块（同 §7.5 边界）。
 
 **送达链路（合并消费——本轮需求裁定解除旧「谓词零改」边界）**：四支入口共用**同一合并计划** `planQueuedInput`（纯函数——
-`thincoder-cli/src/tui/queued-merge.mjs`（已落 · 实读 **68**）；常量 `MAX_MERGE_ITEMS`（8）/ `MAX_MERGE_CHARS`（2000）与形态文案同源）：
+核单源 `thincoder-core/queued.mjs`（CLI 经转口档 `thincoder-cli/src/tui/queued-merge.mjs`（已落 · 实读 **12** · 内容行计））；常量 `MAX_MERGE_ITEMS`（8）/ `MAX_MERGE_CHARS`（2000）与形态文案同源）：
 ⓪ **用户回合在飞（`autoTurn === false`）⇒ 步边界 pickup（主——本批新增）**：核 loop 循环头投递回调（`consumeQueuedInput`）按计划取批（首动作 = merged 批；`/cmd` 首动作 = 入队门禁不可达的防御面——留给既有消费点）
 ⇒ `pushReal` 一条 user 消息入历史（下一步生效——不中断）+ 呈现（回执行 + `❯ You:` + 合并文本）。系统轮（digest / 上行唤醒轮）不传回调（域 / 门禁降格理由 = `docs/cli/design/TUI.md` §7.5「分流」）；
 ① 普通回合 busy 入队 → 回合自然结束：顶层兜底（`agent-turn.mjs:334-336`：`!poolLive` 时按计划取批 → `state.queue` → 队列 while 续发新回合）；
@@ -323,6 +323,8 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 | 输入层状态机的宿主实现细节 | `key-handler` 族 / `key-modes` 内部结构 | 实现面——落点 `thincoder-cli/src/tui/key-handler.mjs` + 五族 `key-handler-{ctrlc,modals,scroll,busy,edit}.mjs` · `key-modes.mjs`（本档只留行为契约） |
 
 ## 变更记录
+
+- 2026-09-29（**批 parity-b2-queued · 实施收正轮 · eng-coder**——承 `docs/batches/2026-09-29-parity-b2-queued.md` §2 ∕ §2.10 · 台账 #566）：送达链路块合并计划句「`thincoder-cli/src/tui/queued-merge.mjs`（实读 68）」⇒ 核单源（转口）形 + 届盘实读 **12**（内容行计）。**零新语义**（核件 `thincoder-core/queued.mjs` 单源；CLI 经转口档）。
 
 - 2026-09-25（**misc-four 批 · 设计评审修正轮 2（发现 #16）· eng-designer**——承 `docs/batches/2026-09-25-misc-four.md` §3 轮次 2）：档头对位行「差异登记见 §9.2」悬空指针改述为「端差已消解——历史见变更记录 misc-four 行」（§9.2 该登记行已随本批设计轮删除）。**语义零改**。
 

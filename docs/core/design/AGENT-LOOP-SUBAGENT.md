@@ -779,7 +779,7 @@ A-3 机检（单行 · cmd.exe · cwd = `thincoder-vscode/`；§3 复评 🔵#3 
 **拒绝文案（实现单源）**：`write refused — cross-batch batch-record write: this child is bound to <A>; <B> is a different batch record. Write only your own bound record (the batch tool targets your bound record); the parent agent handles other batch records.`（A / B = 基名）
 
 **落点（两端对齐）**：核 `thincoder-core/agent/dispatch.mjs` Phase 1（与 D5 冻结窗同区——同为写前门 · 共用同一路径集）；
-VSC `thincoder-vscode/src/agent/tool-gates.mjs` 的 `preGateBlocked`（CLI parity 单点）。判据本体 = `thincoder-core/agent/write-gate.mjs` 新导出
+端已取核——核 `thincoder-core/agent/write-gate.mjs`（CLI parity 单点）。判据本体 = `thincoder-core/agent/write-gate.mjs` 新导出
 `batchRecordWriteConflict(agent, depth, absPaths)`（与 `freezeWindowConflict` 同址——写前判据单源）；基底集按子代理 run 记忆化（每 run 一次 manifest 读）。
 
 **接口契约（实现面）**（形照 `docs/core/design/TOOLS.md` §6.17「接口契约（实现面）」表）：
@@ -788,7 +788,7 @@ VSC `thincoder-vscode/src/agent/tool-gates.mjs` 的 `preGateBlocked`（CLI parit
 |---|---|---|
 | 判据本体 | `thincoder-core/agent/write-gate.mjs` | `export function batchRecordWriteConflict(agent, depth, absPaths)` → 命中 = `{ bound, target, message }`（`bound` / `target` = 绝对路径；`message` = 逐字拒绝文案——A / B 基名已填）· 无冲突 / 不进本门 = `null` · **恒零抛**（形照 `freezeWindowConflict` 先例） |
 | 拒绝文案单源 | `thincoder-core/agent/write-gate.mjs` | 文案字面**只出该档**（与判据同址——判据与文案同时锁死）；两端直取 `conflict.message`——**零字面副本** |
-| 两端取用 | 核 `thincoder-core/agent/dispatch.mjs` Phase 1 · VSC `thincoder-vscode/src/agent/tool-gates.mjs` `preGateBlocked` | 各一次 import（`@thincoder/core/agent/write-gate.mjs`）+ 拒因分支；文案取上表单源（T12 的「文案含 A / B 基名」由此保证） |
+| 两端取用 | 核 `thincoder-core/agent/dispatch.mjs` Phase 1（单源——端已取核） | 各一次 import（`@thincoder/core/agent/write-gate.mjs`）+ 拒因分支；文案取上表单源（T12 的「文案含 A / B 基名」由此保证） |
 
 **与 `batch` 工具的关系（分层，不重复）**：`batch` 工具的绑定面管**段维度**（身份 → 可写段白名单，`BATCH-RECORD.md` §4.1 / §4.2）；本门管**档维度**——绑定档**之外**的同族文件此前无门（`write` / `edit` 直写批档 = 绕过工具绑定的通道，正是本实例的损害通道）。
 
@@ -977,3 +977,6 @@ spawn 门区（`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `batchDoc` �
 - 2026-09-20（**P2 机制层端差批 · 车道 3 设计档落笔轮 · eng-designer**——承 `docs/batches/2026-09-20-mechanism-parity-batch.md` §2.21）：§6.27.12.2「挂起驱动坐标」段尾句按现态收正——核驱动 = **参考实现**（唯一消费者 = 核测）；挂起面权威 = 两端驱动（已分叉，**判保留**）；核档读者不得据其改端行为（2026-09-20 §2.21 裁定）。机制条文零改。
 - 2026-09-20（**库存清账批 · v1 测试门词面收正 · eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §2 · 台账 #128）：§6.20.7 A6 行判据收正（v1 三层命令 → `lint` / 各包 `npm test` 单入口）。**零新语义**。
 - 2026-09-27（**env-config-purge 批 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §1.5）：T15 断言面留痕读取由 `THINCODER_LOG_DIR` 隔离目录改**日志落点缝** `_setLogsDirForTest(临时目录)`（缝形态单源 = `CONFIG.md` §6.2）。**断言语义零改**。
+- 2026-09-29（**parity-b1-vsc-core 批 · 收口轮 · eng-coder**——承批档 `docs/batches/2026-09-29-parity-b1-vsc-core.md` §2.9）：**取代注**——本档 2026-09-20（P2 机制层端差批 · 车道 3 设计档落笔轮）条所载
+  「核驱动 = 参考实现（唯一消费者 = 核测）· 挂起面权威 = 两端驱动（已分叉 · 判保留）」**已由本批全修收编取代**：**挂起面单源 = 核驱动（三端消费）**——CLI ∕ VSC ∕ desktop 皆以 `startSuspension` 为唯一驱动，端差只在装配面（carrier ∕ hooks ∕ 输入缝）。
+  依据 = 用户 2026-09-29 全修令 ＋「用户可见端差 = 缺陷；唯一例外 = 宿主能力面（须实证）；登记后保留通道已废」判据（2026-09-28）。规范面收正坐标 = 批档 §2.9。

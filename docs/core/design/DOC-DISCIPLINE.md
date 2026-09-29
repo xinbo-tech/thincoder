@@ -487,7 +487,7 @@ node -e "const fs=require('fs');let n=0;fs.readdirSync('.',{recursive:true}).for
 | `thincoder-core/text-budget.mjs` | 1 | `:2` `§23.3.1` |
 | `thincoder-core/traces/trace-store.mjs` | 1 | `:2` `§18.6` |
 | `thincoder-vscode/src/agent.mjs` | 2 | `:24` `§17` · `:102` `§11` |
-| `thincoder-vscode/src/agent/execute-tools.mjs` | 1 | `:243` `§29` |
+| `thincoder-vscode/src/agent/execute-tools.mjs` | 1 | `:243` `§29` （迁移期引文——档已迁核） |
 | `thincoder-vscode/src/agent/run-stages.mjs` | 1 | `:301` `§15` |
 | `thincoder-vscode/src/agent/setup-tooltable.mjs` | 1 | `:134` `§19.6` |
 | `thincoder-vscode/src/agent/setup.mjs` | 1 | `:8` `§11` |

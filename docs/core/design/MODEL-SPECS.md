@@ -220,7 +220,7 @@
    无 `type:"audio"` 字面量；`RASTER_IMAGE_URL = /^data:image\/(png|jpe?g|gif|webp);base64,/`
    本就排除 `data:audio/`，`thincoder-core/provider/normalize.mjs:11`）⇒ `modalities` 写进来后
    **零个消费点**，只剩「登记了但没人读」的第二真源风险（违 D2 单权威源）。
-   （注：`thincoder-core/tools/file.mjs:138` 与 `thincoder-vscode/src/agent/execute-tools.mjs:271` 的同名 `multimodal` 是**工具属性**（返回值带图），与模型 spec 无关，不入此计数。）
+   （注：`thincoder-core/tools/file.mjs:138` 的 `multimodal` 是**工具属性**（返回值带图），与模型 spec 无关，不入此计数；端同名实现已取核。）
 3. **本环境不接音频输入**：ACP 侧 `promptCapabilities` 全 `false`
    （`thincoder-cli/src/acp/client-caps.mjs:59`）⇒ 用户无法向本工具投喂音频，
    声明服务端音频能力对产品行为无意义。
@@ -1991,7 +1991,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
   ① **出处收正**：A-17 / A-18 的裁定出处由「批次档 §3 轮次 1」改记 **§5.4 顾问代码评审 🟡①②**（§3 轮次 1 = 设计评审 #1…#10，原记系误指）——§3 尾注 · §5 尾注 · A-17 / A-18 两行 · 本记录下方 2026-09-20 修正轮条目（头部 / ⑤ 句 / 夹带句）同步变。
   ② **坐标收正（修复轮实读）**：`thincoder-cli/src/tui/cmd-think.mjs` `:121`→`:131`（on 默认档）· `:106-111`→`:104`（off 归一入点）· `:47-48`→`:48-49`（面板行）· `:54`→`:55`；
   `thincoder-core/model-specs.mjs` `DEFAULT_SPEC` `:99`→`:118` · `warnUnknownModel` `:135-141`→`:154-160` · `providerSpec` 展开 `:107`→`:198` · `specMatch` `:153-158`→`:172` · `SORTED_SPECS` `:111`→`:130` · `qwen3.8-max` 行 `:66`→`:74`；
-  `thincoder-core/agent/spawn-child.mjs` `:193-202`→`:188-195` · `thincoder-vscode/src/agent/setup.mjs` `:168`→`:173` · `thincoder-vscode/src/agent/execute-tools.mjs` `:259`→`:271` · `thincoder-vscode/src/specs.mjs` 端差表 `:22-31`→`:22-36`。
+  `thincoder-core/agent/spawn-child.mjs` `:193-202`→`:188-195` · `thincoder-vscode/src/agent/setup.mjs` `:168`→`:173` · `thincoder-vscode/src/agent/execute-tools.mjs` `:259`→`:271` · `thincoder-vscode/src/specs.mjs` 端差表 `:22-31`→`:22-36`。 （迁移期引文——档已迁核）
   ③ **§3 行数刷新（实读）**：`thincoder-cli/src/tui/cmd-think.mjs` 142→**152** · `thincoder-cli/test/cmd-think.test.mjs` 85→**154** · `thincoder-vscode/test/model-picker-fallback.test.mjs` 157→**221**；行数上限段同变；`thincoder-core/test/provider-merge.test.mjs` 标「T-9 第四态 = 修复轮唯一未落项」；§3 尾注「未落项」句改落位实况（九条中八条完整落盘）。
   ④ **§6 增实施标签映射注**：T-16 ↦ 实施档「修复轮 #11」×3 段 · T-17 ↦ 「③」×2 用例（实施侧未挂 T- 号，判定以语义覆盖为准）。
   ⑤ **【勘误】**：§2.1「现状坐标」列 · §2.1「现 210 行」 · §2.3 `:69` · §2.2 探针 `:24-30` · §7 `:75-87` 等 = **落位前 as-of 读数**（落位后净增 20 行），按 D4「行号仅作 as-of 参考」不逐条追改——本记录即漂移登记面；本记录内新坐标 = 2026-09-20 修复轮实读值。
@@ -2029,7 +2029,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
   `thincoder-core/provider/normalize.mjs` / `thincoder-vscode/src/extension/vision-channel.mjs` /
   `thincoder-core/auto-think.mjs` / `thincoder-core/agent/spawn-child.mjs` /
   `thincoder-vscode/webview/model-picker.js` / `thincoder-vscode/src/extension/reasoning-mode.mjs` /
-  `thincoder-vscode/src/extension/provider-probe-window.mjs` / `thincoder-vscode/src/agent/execute-tools.mjs`）、现行数 211→210 与 `docs/core/design/PROVIDER.md` 402→417；
+  `thincoder-vscode/src/extension/provider-probe-window.mjs` / `thincoder-vscode/src/agent/execute-tools.mjs`）、现行数 211→210 与 `docs/core/design/PROVIDER.md` 402→417； （迁移期引文——档已迁核）
   ⑦ §7 边界新三条（不删 `cacheMode` / 不修 VSC 兑底链 / 不改探针脚本），§5 回指新登 §1.8-④ 归属；
   ⑧ 本稿修正引入的四项待目均已在本档内收账（不入批次档 R 号，防同号异事）：A-16 行内【前提】注（属新增断言非回归）·
   §7「不修 `qwen3.8-max` 枚举」条（= 台账待办）· §7「`cacheMode` 不删」条（= 台账待办）· §3 交付面条数收正（八条）。**零新需求、零语义改写**——均为评审发现的直接导出项。

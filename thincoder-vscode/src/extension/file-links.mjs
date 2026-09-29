@@ -1,41 +1,16 @@
 /**
- * file-links.mjs — extract workspace-real file paths from tool output so the
- * webview can render them as clickable links. Only paths that EXIST on disk
- * (relative to cwd, or absolute) become links — no false positives from URLs /
- * log noise / version numbers (the existence check is the final guard).
+ * file-links.mjs — 验存文件链接抽取（**薄壳** —— parity-b4 W1）：本体（token 抽取 ∕ 去重 ∕ 封顶 ∕
+ * 盘上存在闸）核单源 `@thincoder/core/file-links.mjs`；本档只承**端侧探针注入**（盘面 `node:fs`
+ * `{ existsSync, statSync }` —— 核缝 fail-loud：缺 ∕ 形违 ⇒ 抛）。
+ * 消费面（`panel-callbacks.mjs` onToolResult）调用形零改：`extractFileLinks(cwd, text)` ∕ `MAX_LINKS`。
  */
 import { existsSync, statSync } from "node:fs"
-import { resolve, isAbsolute } from "node:path"
+import { extractFileLinks as coreExtractFileLinks } from "@thincoder/core/file-links.mjs"
 
-// Path token: optional Windows drive prefix, path chars, a dot-extension, and an
-// optional :line / :line:col suffix. Group 1 = the path (for fs), group 2 = line.
-// The full match (m[0], with the line suffix) is what the webview wraps.
-const PATH_TOKEN_RE = /((?:[A-Za-z]:)?[~./\\\w][\w./\\~-]*\.\w{1,10})(?::(\d+)(?::\d+)?)?/g
+/** 逐结果封顶（核单源 re-export —— 值同旧端侧字面）。 */
+export { MAX_LINKS } from "@thincoder/core/file-links.mjs"
 
-const MAX_LINKS = 50
-
-/**
- * @returns {{ raw: string, path: string, line: number|null }[]} — deduped,
- *   capped, verified-existing file references found in `text`.
- */
+/** 工具结果文本 ⇒ 验存文件链接（去重 + 封顶；相对 token 以 `cwd` 为解析基）。 */
 export function extractFileLinks(cwd, text) {
-  if (!text || typeof text !== "string") return []
-  const links = []
-  const seen = new Set()
-  for (const m of text.matchAll(PATH_TOKEN_RE)) {
-    const pathPart = m[1]
-    // Scheme-relative URL residue ("//example.com/a.png") — never a workspace path
-    if (pathPart.startsWith("//") || pathPart.startsWith("\\\\")) continue
-    const line = m[2] ? Number(m[2]) : null
-    const abs = isAbsolute(pathPart) ? pathPart : resolve(cwd, pathPart)
-    const key = abs + ":" + (line ?? "")
-    if (seen.has(key)) continue
-    try {
-      if (!existsSync(abs) || !statSync(abs).isFile()) continue
-    } catch { continue }
-    seen.add(key)
-    links.push({ raw: m[0], path: abs, line })
-    if (links.length >= MAX_LINKS) break
-  }
-  return links
+  return coreExtractFileLinks(cwd, text, { existsSync, statSync })
 }

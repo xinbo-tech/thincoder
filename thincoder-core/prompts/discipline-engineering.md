@@ -118,6 +118,7 @@ the difference register records **ruled host-capability exceptions only** — it
    (any form outside the judgment enumeration gets fixed, never "kept as is"); historical semantics may stay, **the FORM must be compliant**;
    **no more "inventory exemption / baselining"** — inventory is not a legal state.
 3. **Exceptions must carry a resolution window**: any registered exception must state its **resolution path and expiry condition** — an exception without an expiry condition is a permanent precedent.
+4. **Booking form (engineering mode)** — a debt found at any point (implementation / review / exploration alike) is **booked the same day** as a ledger row (`trigger` bare enum: `归批` / `条件` / `认账不排期` — batch name / condition sentence into `evidence`) or **escalated to the parent**.
 
 ### Doc update discipline (D1–D7)
 Sole authorship is only necessary; the doc system is maintained by discipline. Seven doc-update disciplines:

@@ -4,6 +4,7 @@ import { DESC, resolveInCwd } from "./shared.mjs"
 import { runCommand } from "./exec-run.mjs"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
+import { nodeChildEnv } from "./node-child.mjs"
 
 export const lintTool = {
   name: "lint",
@@ -47,7 +48,7 @@ async function nodeCheckResult(abs, signal) {
     return `lint (check): only JS/TS-family files supported for fast syntax check; use full=true for other languages. Path: ${abs}`
   }
   try {
-    await runCommand(process.execPath, ["--check", abs], { timeout: 10000, signal })
+    await runCommand(process.execPath, ["--check", abs], { timeout: 10000, signal, env: nodeChildEnv() })
     return `Syntax OK: ${abs}`
   } catch (e) {
     const msg = (e.stderr || e.stdout || e.message || "").trim()

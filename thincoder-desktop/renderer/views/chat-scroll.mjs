@@ -4,7 +4,8 @@
  *   ① 常量单源（`FOLLOW_PX` / `BACKFILL_PX` / `SMOOTH_MS` / `MAX_RENDER_BLOCKS`）——别处只引用不复写；
  *   ② `scrollAction(metrics, guards)`：序 backfill → follow → unfollow（触顶回填优先于贴底判）；
  *   ③ `compensateTop`（帧尾视口补偿算式）/ `nextWindow`（限增宽窗 = 现限 + 本页**实并入块数**）/ `smoothWindowOpen`（平滑窗判据）；
- *   ④ `tailAction`（帧尾三写判据）+ `stickToBottom`（贴底出口：写 `scrollTop`，幂等）；
+ *   ④ `tailAction`（帧尾三写判据）+ `stickToBottom`（贴底出口：**写超值不读 `scrollHeight`**，幂等）+ `plannedMoves`
+ *      （帧尾**读数裁剪**预判 —— 头动作数先于读数确定）；
  *   ⑤ `attachScroll(root, deps)`：`scroll` 订阅（`passive`）⇒ 三读数 ⇒ `scrollAction` ⇒ 对应出口。
  * 程序化滚动（药丸回底）经返回 handle 出 —— 不占 `deps` 键；`SMOOTH_MS` 窗内不派发 = 抑制程序化回波
  * （自写非用户滚动）；窗只由 handle 记（帧尾贴底 / 补偿不记 —— KD-9）。
@@ -57,12 +58,21 @@ export function tailAction({ following = false, headMoves = 0 } = {}) {
   return headMoves > 0 ? "compensate" : "none"
 }
 
-/** 贴底出口（帧尾跟滚写 · 幂等）：写 `scrollTop` = `scrollHeight`；返回写入值（读数面）。 */
+/** 贴底超值（帧尾跟滚写 —— **写超值不读 `scrollHeight`**：引擎自鉗底；单源 = 核档 §2 KD-RC-9 ② 读数裁剪条）。 */
+export const STICK_TOP = Number.MAX_SAFE_INTEGER
+
+/** 贴底出口（帧尾跟滚写 · 幂等 · **零读**）：写 `scrollTop = STICK_TOP`（引擎鉗底 —— 不读 `scrollHeight`）；
+ *  返回写入值（读数面）。 */
 export function stickToBottom(root) {
   if (!root) return null
-  const height = Number.isFinite(root.scrollHeight) ? root.scrollHeight : 0
-  root.scrollTop = height
-  return height
+  root.scrollTop = STICK_TOP
+  return STICK_TOP
+}
+
+/** 头动作预判（帧尾**读数裁剪**判据 —— 动作数先于读数确定）：`evict` ∕ `prepend` 各受在位块数 ∕ 目标块数夹取；
+ *  `renderer/views/chat.mjs` `headMoves` 按同式取数（两处同源 ⇒ 预判 = 实动数）。 */
+export function plannedMoves({ evict = 0, prepend = 0 } = {}, mountedCount = 0, blockCount = 0) {
+  return Math.max(0, Math.min(evict, mountedCount)) + Math.max(0, Math.min(prepend, blockCount))
 }
 
 /**

@@ -11,9 +11,9 @@
   --fg-muted: #5c6672;
   --line: #dfe3e8;
   --accent: #2f6feb;
-  --warn: #bf8803; /* R11 状态行 ⇒ CLI 对齐（2026-09-28）：警示 = CLI 黄（`thincoder-cli/src/tui/ansi.mjs:46` `fg(3)`）⟷ 本值 = VSC 警告黄亮默认（`editorWarning.foreground`——核件 ∕ `--vscode-editorWarning-foreground` 同一角色）。 */
-  --mode-plan: #0598bc; /* R11 补轮（2026-09-28 · 用户「字色全对齐」）：状态行 banner「PLAN」字色 —— CLI `C.tool` = `fg(6)` 青（`thincoder-cli/src/tui/ansi.mjs:43`）；值 = VSC 终端 ANSI 青亮默认（`terminal.ansiCyan` —— microsoft/vscode `terminalColorRegistry.ts` `ansiColorMap`）。 */
-  --mode-advisor: #14ce14; /* 同轮：状态行 banner「ADVISOR ∕ ENG」字色 —— CLI `C.advisor` = `ESC[92m` 亮绿（同档 `:47`；两段同常量）；值 = VSC 终端 ANSI 亮绿亮默认（`terminal.ansiBrightGreen`）。 */
+  --warn: #8a6100; /* 亮色暗化（#578② · 2026-09-29）：R11 状态行 ⇒ CLI 对齐（2026-09-28）：警示 = CLI 黄（`thincoder-cli/src/tui/ansi.mjs:46` `fg(3)`）⟷ 色相源 = VSC 警告黄亮默认（`editorWarning.foreground`——核件 ∕ `--vscode-editorWarning-foreground` 同一角色），原值对 `--bg` 对比 2.93:1（不达 4.5:1）⇒ 同色相暗化（现 **5.21:1** ∕ 白底 5.54）；暗色块保留原值零动（同族注释 = 暗色块行）。 */
+  --mode-plan: #047990; /* 亮色暗化（#578② · 2026-09-29）：R11 补轮（2026-09-28 · 用户「字色全对齐」）：状态行 banner「PLAN」字色 —— CLI `C.tool` = `fg(6)` 青（`thincoder-cli/src/tui/ansi.mjs:43`）；色相源 = VSC 终端 ANSI 青亮默认（`terminal.ansiCyan` —— microsoft/vscode `terminalColorRegistry.ts` `ansiColorMap`），原值对 `--bg` 对比 3.18:1（不达 4.5:1）⇒ 同色相暗化（现 **4.77:1** ∕ 白底 5.07）；暗色块保留原值零动（同族注释 = 暗色块行）。 */
+  --mode-advisor: #0a7b0a; /* 亮色暗化（#534 · 2026-09-29）：状态行 banner「ADVISOR ∕ ENG」字色 —— CLI `C.advisor` = `ESC[92m` 亮绿（同档 `:47`；两段同常量）；色相源 = VSC 终端 ANSI 亮绿亮默认（`terminal.ansiBrightGreen` `#14ce14`），原值对 `--bg` 对比 2.00:1 不可读 ⇒ 同色相暗化（现 **5.13:1** ∕ 白底 5.45）；暗色块保留原值零动（同族注释 = 暗色块行）。 */
   --radius: 8px;
   --gap: 12px;
   --pool-w: 36rem;

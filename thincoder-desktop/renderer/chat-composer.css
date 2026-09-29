@@ -1,7 +1,7 @@
 /* chat-composer.css — 对话流**输入区段**（自 `renderer/chat.css` 四拆 —— 「桌面处理流 · VSC 对齐」批 §2.1 拆档定稿；
    链序 = theme → chrome → skin → chat → chat-cards → **chat-composer** → chat-fixes → core → pool → settings）。
    面 = 输入区挂件面 + 两交互态组（**面板族本体样式单源 = 核件 `composer/composer.css`** —— 输入面板上提批；
-   本档旧 `.composer` 族已退场，只留**变量别名块**（C2 · 唯一桥）与**两挂件锚**（提示行 ∕ 末条复制控件 —— 桌面胶水））。
+   本档旧 `.composer` 族已退场，只留**变量别名块**（C2 · 唯一桥）与**提示行锚**（桌面胶水））。
 
    输入区（换装出档 —— 输入面板上提批 §2.4 Q5：旧 `.composer` ∕ `.composer-input` ∕ `.composer-interrupt` 三族退场，
    面板族样式单源 = 核件 `composer/composer.css`；核件零变量声明 ⇒ 本块 = **变量别名块（C2）**，两变量族唯一桥）：
@@ -28,42 +28,19 @@
   --vscode-focusBorder: var(--accent);
 }
 
-/* 挂件锚（两宿主容器 —— 属桌面胶水，非核件结构）：① 提示行族（B21 发送失败 ∕ B22 附件降级两保留行，面板子树之前 ——
-   行形 ∕ 词键住 `renderer/mount-composer.mjs` ∕ `renderer/attach.mjs`；行 = block 常态，空锚零高）·
-   ② 末条复制控件（面板子树之后 —— 右对齐居尾）。 */
+/* 挂件锚（宿主容器 —— 属桌面胶水，非核件结构）：提示行族（B21 发送失败 ∕ B22 附件降级两保留行，面板子树之前 ——
+   行形 ∕ 词键住 `renderer/mount-composer.mjs` ∕ `renderer/attach.mjs`；行 = block 常态，空锚零高）。
+   （复制面对齐批：原末条复制控件右对齐尾锚随自建复制面摘除。） */
 .composer-notice {
   flex: 1 1 100%;
 }
 
-[data-composer-tail] {
-  display: flex;
-  justify-content: flex-end;
-}
-
-/* 两复制控件单形（`renderer/views/chat-copy.mjs` —— 块尾 ∕ 输入区尾；零文本子 ⇒ 字形 = `content`；
-   旧三控件组的 `.composer-interrupt` 成员随换装退场 —— 停止钮归核件面板 `#abort-btn`，样式随核件）。 */
-.chat-copy-block,
-.chat-copy-last {
-  padding: 6px 10px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  background: transparent;
-  color: inherit;
-  font: inherit;
-}
-.chat-copy-block::before, .chat-copy-last::before { content: "⧉"; }
-.chat-copy-block:not(:disabled):hover,
-.chat-copy-last:not(:disabled):hover {
-  background: var(--hover-bg);
-  cursor: pointer;
-}
-
 /* 交互态组（D24 项 2 · 本注定形）：按下 `--hover-bg-strong` · 聚焦三值（outline 2px + offset -2px + 底）——沿 `.rail-row:focus-visible` 先例；
-   `.chat-pill` 实色支例外：按下沿 hover（无第二档）· 聚焦底不随落。输入区成员（`.composer-interrupt`）随换装退场 ⇒ **组内重锚**（余成员不动 —— U-R1-2a 已裁）。 */
-.chat-backfill:not(:disabled):active,
-.chat-copy-block:not(:disabled):active, .chat-copy-last:not(:disabled):active { background: var(--hover-bg-strong); }
+   `.chat-pill` 实色支例外：按下沿 hover（无第二档）· 聚焦底不随落。输入区成员（`.composer-interrupt`）随换装退场 ⇒ **组内重锚**（余成员不动 —— U-R1-2a 已裁）；
+   复制面两成员（块级 ∕ 末条两控件）随复制面对齐批退场（余成员零动）。 */
+.chat-backfill:not(:disabled):active { background: var(--hover-bg-strong); }
 .chat-pill:not(:disabled):active { background: var(--bg); }
-.chat-backfill:focus-visible, .chat-copy-block:focus-visible, .chat-copy-last:focus-visible {
+.chat-backfill:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
   background: var(--hover-bg-strong);

@@ -154,9 +154,10 @@ export const ADVISOR_THINKING_PLACEHOLDER = "\n[thinking…]\n"
 
 /**
  * Tool-call progress line summary delegates to the single source describeToolArgs
- * (../tui/tool-args.mjs) — the same function main-agent tool blocks and subagent
- * blocks use. 2026-08-31: replaced the local picker (action/path/pattern/command-only)
- * so advisor progress lines show the quoted-path forms everywhere else.
+ * (../tool-args.mjs — B7 1a 上提核件单源；CLI `tui/tool-args.mjs` = 核件同名转口) — the same
+ * function main-agent tool blocks and subagent blocks use. 2026-08-31: replaced the local
+ * picker (action/path/pattern/command-only) so advisor progress lines show the quoted-path
+ * forms everywhere else.
  */
 /**
  * Render the ordered review timeline — thinking / tool progress / final text

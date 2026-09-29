@@ -6,32 +6,34 @@
  * 与接线同档）：三路开会话**同一路**（`session:switch` / `session:create` / `session:resume`）—— 本档五 handlers
  * 转接（切会话 / 新建 / 改名确认 / 删除确认 / 开项目）；面内开合 ∕ 换形态住面内记账（原 store 两切片随裁撤退场）。
  * 本档只留接线串与目录出口链。
- * 帧出口（唯一）= `paintChat`：帧前判据 `paintPlan`（重挂键 = `activeSession` / `locale`）⇒ 重挂面（`mountChat` + 同帧态刷）
- * 或增量面（`alignPlan` ⇒ `settleFrame` 六步）；窗限 `chatLimit` **只增**（`nextWindow` 收束沿 + 本页**实并入块数**）。
+ * 帧出口（唯一）= 帧合并件（核 `createFrameMerge` —— 触发源 = store 变更 ⇒ `mark`；单飞 rAF + `FRAME_MIN_MS`(50) · `flush` = 同步尾帧）
+ * ⇒ 六面分派（`renderer/frame-dispatch.mjs`）；对话流面 `paintChat`：帧前判据 `paintPlan`（重挂键 = `activeSession` / `locale`）
+ * ⇒ 重挂面（`mountChat` + 同帧态刷）或增量面（`alignPlan` ⇒ `settleFrame` 六步）；窗限 `chatLimit` **只增**（`nextWindow` 收束沿 + 本页**实并入块数**）。
  * 出档面：池面一族 = `renderer/mount-pool.mjs` · 会话族 = `renderer/mount-sessions.mjs` · 输入区 = `renderer/mount-composer.mjs`
  * （面板主体 = 核件工厂 —— 输入面板上提批；发送面三件随 `renderer/composer-send.mjs` 退役入核件 ∕ 本档 deps 边）
  * · 会话头接线 = `renderer/mount-head.mjs`（候选面 / 写路 `session:prefs` / 回执刷行 —— 头面刷行调用点仍住本档）
- * · 状态行 = `renderer/mount-status.mjs`（D17 / D22 承载 16 段单点重建 + 订阅切片键面 `STATUS_KEYS`）
+ * · 状态行 = `renderer/mount-status.mjs`（D17 / D22 承载 17 段单点重建 + 面内差分门 + 切片键面 `STATUS_KEYS`）
  * · 卡族两族 = `renderer/mount-cards.mjs`（提问 / 计划 —— 挂载 + 作答 / 取消出口）
  * · 事件归约 + 页应用 = `renderer/events.mjs` · 订阅接线 = `renderer/events-subscribe.mjs`；本档接线两处 = `attachScroll`
  * （回填 / 跟滚 / 停跟三出口 + 只读口 `guards()`；药丸回底 / 工具卡 toggle 两出口）· `attachEvents({ on })`
  * （多通道订阅 —— 回合尾窄口存续（标题刷新面）；输入区 flush 携行随「回合中插入」批退场）；退订句柄本档无消费点 —— 页面生命周期 = 进程生命周期。
  * 读面失败一律 `console.error` + 零切片写（不静默）；零直连 IPC（只经窄桥 `window.thincoder.invoke`）；
- * 剪贴板写效应（`writeText`）**单点供给** = 本档（同给对话流 handlers 与输入区 `attachComposer` —— 复制面唯一实现处）；
  * 核件取词注册 = 本档模块级一次 `setStringsSink(setStrings)`（注册单点；合并式仍居 `renderer/i18n.mjs` `initDict`）——注册面后到 ⇒ `boot` 内 `initDict` 之后补一次 `composer.refresh()`（词面重派生）。
  * 静态闭包零 `node:` / 零裸包（守卫 = `test/guard-closure.test.mjs`）。
- * **「对齐第三批」三接线（本档）**：错误横幅重试（项 9 —— `onRetry` ⇒ 输入区直发径单副本）· 文件链接 `file:open` 委托注册（相抵②）· 2s 拍单点（P7 + `unload` 清点）。
+ * **「对齐第三批」三接线（本档）**：错误横幅重试（项 9 —— `onRetry` ⇒ 输入区直发径单副本）· 文件链接 `file:open` 委托注册（相抵②）· 1s 拍单点（P7 + `unload` 清点——停滞轻显形批 2s ⇒ 1s）。
  */
 import { setBoot } from "./dom.mjs"
 import { attachEvents } from "./events-subscribe.mjs"
+import { dispatchFrame } from "./frame-dispatch.mjs"
 import { createHeartbeat, refreshLiveBlocks } from "./heartbeat.mjs"
 import { initDict, setStringsSink } from "./i18n.mjs"
+import { createFrameMerge } from "/rc/flow/frame.mjs"
 import { setStrings } from "/rc/i18n.mjs"
-import { attachCards, CARDS_KEYS } from "./mount-cards.mjs"
+import { attachCards } from "./mount-cards.mjs"
 import { attachComposer } from "./mount-composer.mjs"
 import { attachHead } from "./mount-head.mjs"
-import { POOL_SLOT, attachPool, POOL_KEYS } from "./mount-pool.mjs"
-import { attachStatus, STATUS_KEYS } from "./mount-status.mjs"
+import { POOL_SLOT, attachPool } from "./mount-pool.mjs"
+import { attachStatus } from "./mount-status.mjs"
 import {
   SESSION_SLOT, activateSession, backfill, confirmRename, createSession, deleteSession, mountSessionBar,
   refreshRail, resumeOpened,
@@ -42,7 +44,8 @@ import { configuredFlag, patchSettings, returnToBottom, setFollowing, store } fr
 import { mountHead } from "./views/chrome.mjs"
 import { MAX_RENDER_BLOCKS, attachScroll, nextWindow } from "./views/chat-scroll.mjs"
 import { alignPlan, paintPlan } from "./views/chat-stream.mjs"
-import { chatModel, mountChat, retrySourceOf, settleFrame } from "./views/chat.mjs"
+import { chatModel, retrySourceOf } from "./views/chat-model.mjs"
+import { mountChat, settleFrame } from "./views/chat.mjs"
 import { focusAutofocus, syncChrome } from "./views/chat-chrome.mjs"
 import { bindFileLinks, toggleExpanded } from "./views/chat-tool.mjs"
 
@@ -51,28 +54,19 @@ import { bindFileLinks, toggleExpanded } from "./views/chat-tool.mjs"
 setStringsSink(setStrings)
 
 const host = globalThis.thincoder // 窄桥（装配面 = `src/preload/preload.cjs`）
-/** 剪贴板写效应（复制面**唯一实现处** —— `docs/desktop/design/UI.md` §1「批 B 注」项 4）：宿主无面 ⇒ `undefined`
- *  （控件落 `disabled` —— 诚实非死控，`views/chat-copy.mjs` 两态通则）。 */
-const writeText =
-  typeof globalThis.navigator?.clipboard?.writeText === "function"
-    ? (value) => globalThis.navigator.clipboard.writeText(value)
-    : undefined
 const HEAD_SLOT = '[data-slot="session-head"]' // 会话头槽（状态行槽锚随状态行族出档 —— `renderer/mount-status.mjs`）
 const FLOW_SLOT = '[data-slot="flow"]' // 对话流容器锚（= 滚动容器自身 —— 挂载根不清宿主）
-// 会话控制条重挂触发切片（`locale` 在内：文案随词表 ⇒ 树须重绘；`ledger` = 账本警示切片 —— 下拉首行注记；
-// `project` = 项目钮读数；`sessions` ∕ `activeSession` ∕ `tabBadges` = 下拉列表 ∕ 活动态 ∕ 位标）
-const SESSION_KEYS = ["project", "sessions", "activeSession", "tabBadges", "locale", "ledger"]
-const HEAD_KEYS = ["activeSession", "sessionMeta", "tabBadges", "locale"] // 会话头重挂触发切片（活动键 ∕ 供给 ∕ 忙态 ∕ 词表）
-const CHAT_KEYS = ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "project", "pending", "digest", "compress", "timerNotice", "stopMark", "ledgerLines"] // 对话流帧触发切片（`locale` 在内：文案随词表 · `pool`：审批卡宿对话流 · `project`：引导码随 cwd——批 B 追加轮 · `pending`：流内待发送气泡组——「对齐第二批」项 2 · `digest`：流内消化行组——桌面空闲唤醒批 · `compress`：流内压缩状态行——R4 · `timerNotice`：流内到期触发行组——timer-wake 阶段 2 · `stopMark` / `ledgerLines`：两尾组的单变触发 —— 「对齐第三批」项 6 / 12；`settings` 不入表 —— 欢迎条文案二值随重挂径，且帧尾态刷判据 = 码面（见 `renderer/views/chat-guide.mjs`））
+// 六面重挂触发切片（`SESSION_KEYS` / `HEAD_KEYS` / `CHAT_KEYS`）随分派体出档 `renderer/frame-dispatch.mjs`（更新纪律收核批 —— 键面 = 分派语义；装配面只留帧接线与面回调表）。
 const { paintPool, handlers: poolHandlers } = attachPool(host) // 池面一族（右栏重挂 + 两出口 —— 出档 `renderer/mount-pool.mjs`）
 const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —— 挂载 + 作答 / 取消出口；出档 `renderer/mount-cards.mjs`）
 // 设置面 / 向导 / 信息行一族（自持订阅 —— 出档 `renderer/mount-settings.mjs`；目录出口复用项目面链）；
-// 句柄捕获 = 项目级读数复读口（#461 —— `openDir` 成功链消费 `refreshInfo`，零第二订阅点）。
-const settingsFace = attachSettings(host, { onProjectOpened: openDir })
+// 句柄捕获 = 项目级读数复读口（#461 —— `openDir` 成功链消费 `refreshInfo`，零第二订阅点）；
+// `onProvidersChanged`（全渠扇出批 · #3）= 设置面 provider 写成功 ⇒ 输入区候选面强制刷新（迟绑定：`composer` 于下行装配）。
+const settingsFace = attachSettings(host, { onProjectOpened: openDir, onProvidersChanged: () => composer.refreshCandidates() })
 // 输入区一族（挂载 + deps 构造 → 核件工厂；出档 `renderer/mount-composer.mjs`）：`openSettings` = 控件行第 7 钮出口 ∕ `submit` = 直发径单副本（错误横幅重试消费）。
-const composer = attachComposer(host, { writeText, openSettings: () => settingsFace.openSettings() })
+const composer = attachComposer(host, { openSettings: () => settingsFace.openSettings() })
 const head = attachHead({ host, onRepaint: () => paintHead() }) // 会话头接线一族（候选面 + 写路 `session:prefs` —— 出档 `renderer/mount-head.mjs`）
-const { paintStatus } = attachStatus() // 状态行一族（D17 / D22 承载 16 段单点重建 —— 出档 `renderer/mount-status.mjs`）
+const { paintStatus } = attachStatus() // 状态行一族（D17 / D22 承载 17 段单点重建 —— 出档 `renderer/mount-status.mjs`）
 
 /** 载荷形判据（`config:read` 往返：`{ config, locale, dict }`——三字段齐备才算往返成立）。 */
 function isValidPayload(payload) {
@@ -106,7 +100,7 @@ function paintHead(state = store.get()) {
 async function openDir(path) {
   try {
     const before = store.get().project?.cwd ?? null
-    const receipt = await host.invoke("project:open", path ? { path } : undefined)
+    const receipt = await host.invoke("project:open", path ? { fsPath: path } : undefined)
     await refreshRail()
     await settingsFace.refreshInfo()
     if (opened(receipt, before, path)) await resumeOpened()
@@ -154,9 +148,10 @@ function openFile(path, line) {
     .catch((error) => console.error("[renderer] file:open rejected:", error))
 }
 
-/** 回底复跟（接线第 1 处 · 药丸点击）：状态树复跟 + 清未读 ⇒ handle 平滑回底（程序化滚动记窗 ⇒ 不派发回波）。 */
+/** 回底复跟（接线第 1 处 · 药丸点击）：状态树复跟 + 清未读 ⇒ **帧同步尾帧**（`flush` —— 顺序保真）⇒ handle 平滑回底（程序化滚动记窗 ⇒ 不派发回波）。 */
 function returnToLatest() {
   store.set(returnToBottom(store.get()))
+  frame.flush()
   chatScroll?.returnToBottom()
 }
 
@@ -173,7 +168,7 @@ function paintChat(state = store.get(), changedKeys = []) {
   const model = chatModel(state, chatLimit)
   const plan = paintPlan({ prev, next: state, changedKeys })
   const handlers = {
-    onReturn: returnToLatest, onToggleTool: toggleTool, onApprove: poolHandlers.onApprove, writeText,
+    onReturn: returnToLatest, onToggleTool: toggleTool, onApprove: poolHandlers.onApprove,
     onOpenDir: () => openDir(), // 引导面（批 B 追加轮）：与会话控制条项目钮同出口（`project:open` 单一实现）
     onNewSession: createSession, // 引导面：与会话控制条新建钮同出口（`session:create` 单一实现 —— 零第二路）
     onRetry: retryLastUser, // 错误横幅重试（「对齐第三批」项 9：重发末 `user` 块 —— 经输入区既有直发径）
@@ -189,7 +184,7 @@ function paintChat(state = store.get(), changedKeys = []) {
     const align = alignPlan(chatFrame?.mounted ?? [], model.blocks, plan.tier === "patch")
     if (align.ok) {
       paintCards(state) // 先于读数 t0：卡高不入头侧增量
-      mounted = settleFrame(root, model, chatScroll, align, plan.tier, handlers)
+      mounted = settleFrame(root, model, chatScroll, align, plan.tier, handlers, chatFrame?.mounted ?? []) // `mounted` = 上一帧记账（尾 / 头节点直取 —— 零全块扫）
     } else {
       mounted = mountChat(root, state, handlers, chatLimit).mounted
       syncChrome(root, model, handlers)
@@ -201,26 +196,48 @@ function paintChat(state = store.get(), changedKeys = []) {
   chatFrame = { state, mounted }
 }
 
-/** 引导：窄桥 ⇒ `config:read` 往返 ⇒ 词表置位 + 数据面刷新 ⇒ `boot = "ok"`（任一不合 ⇒ `"error"`）。 */
+/** 首屏引导层随动（R1 —— 静态件住 `renderer/index.html`）：`ok` ⇒ 撤层（零残留）；`error` ⇒ 错误面
+ *  （`.boot-reason` 显原因——引导面拿不到词表 ⇒ 文案 = 诊断串）；其余（`none` 骨架态）⇒ 层在场（静态默认可见）。
+ *  引导位（`dataset.boot`）经 `setBoot` 恒置——主进程冒烟读面零改。 */
+function settleBoot(value, reason) {
+  const layer = document.getElementById("boot-gate")
+  if (layer) {
+    if (value === "ok") layer.remove()
+    else if (value === "error") {
+      layer.dataset.state = "error"
+      const body = document.getElementById("boot-reason")
+      if (body) {
+        body.textContent = String(reason ?? "")
+        body.hidden = false
+      }
+    }
+  }
+  return setBoot(value)
+}
+
+/** 引导：窄桥 ⇒ `config:read` 往返 ⇒ 词表置位 + 数据面刷新 ⇒ `boot = "ok"`（任一不合 ⇒ `"error"`）
+ *  + 首屏引导层随动（R1 —— 见 `settleBoot`）。 */
 async function boot() {
   if (!host || typeof host.invoke !== "function") {
-    console.error("[renderer] preload bridge missing: window.thincoder.invoke unavailable")
-    return setBoot("error")
+    const reason = "preload bridge missing: window.thincoder.invoke unavailable"
+    console.error(`[renderer] ${reason}`)
+    return settleBoot("error", reason)
   }
   try {
     const payload = await host.invoke("config:read")
     if (!isValidPayload(payload)) {
-      console.error("[renderer] config:read payload shape unexpected:", payload)
-      return setBoot("error")
+      const reason = "config:read payload shape unexpected"
+      console.error(`[renderer] ${reason}:`, payload)
+      return settleBoot("error", reason)
     }
     // 词表置位（返回归一后的语言 ⇒ `locale` 切片同源）+ 首启闸随新档态（`configuredFlag` 三态归一：档缺 ⇒ false；畸形 / 缺 ⇒ null ⇒ 向导不进）+ 订阅面随即首绘会话控制条。
     store.set({ ...patchSettings(store.get(), { configured: configuredFlag(payload.configured) }), locale: initDict(payload) })
     composer.refresh() // 词面到位 ⇒ 输入面板重派生（面板挂载先于词表下发 —— 注册面后到，缺 ⇒ 占位符停留为键名）
     await refreshRail() // 会话列表数据面（读失败不改 boot 判据 —— 读面自持错误面，不抬高引导位）
-    return setBoot("ok")
+    return settleBoot("ok")
   } catch (error) {
     console.error("[renderer] config:read failed:", error)
-    return setBoot("error")
+    return settleBoot("error", error?.message ?? String(error))
   }
 }
 
@@ -237,8 +254,9 @@ chatScroll = attachScroll(document.querySelector(FLOW_SLOT), {
 
 /** 事件面接线（装配一次 · 批 8 · 批档 §2.11）：多通道订阅 ⇒ 值面写者单源 = `renderer/events.mjs`（归约）+ `renderer/events-subscribe.mjs`
  *  （订阅）；回合尾窄口存续（标题刷新面）—— 输入区 flush 携行随「回合中插入」批退场（队列消费改宿主驱动）；退订句柄本档无消费点；`on` 缺位 ⇒ 该档记错 + 空操作。
- *  **R8 增 `ev:config` 窄口**（config 写盘感知 —— 纯信号 ⇒ 设置面复读：`refreshSettings` 自判在场，关态零动作）。 */
-attachEvents({ on: host?.on, onConfig: () => { settingsFace.refreshSettings() } })
+ *  **R8 增 `ev:config` 窄口**（config 写盘感知 —— 纯信号 ⇒ 设置面复读：`refreshSettings` 自判在场，关态零动作）；
+ *  **全渠扇出批同窄口增候选面随动**（#2：外部写盘 ⇒ 输入区候选面强制刷新 —— `model:catalog` 重取）。 */
+attachEvents({ on: host?.on, onConfig: () => { settingsFace.refreshSettings(); composer.refreshCandidates() } })
 
 /** 文件链接着装与委托（相抵②）：着装面（核 `linkifyPaths` + `data-path` 锚）归 `views/chat-tool.mjs` / `views/chat.mjs`；**委托注册单点 = 本档**（装配期一次 —— 挂载根 = 对话流宿主；幂等 `_fileLinksBound`）。 */
 bindFileLinks(document.querySelector(FLOW_SLOT), openFile)
@@ -247,8 +265,8 @@ bindFileLinks(document.querySelector(FLOW_SLOT), openFile)
  *  扫描 ∕ 高亮容器 = 对话流宿主；条插入锚 `#toolbar` ∕ 关闭置焦 `#input` 皆文档级 id（核件内直取）。 */
 attachSearch()
 
-/** 2s 拍（P7 —— 渲染面**首个定时器** · 单点 `setInterval` + 卸载清点）：① 池面在飞块逐块核件 `refreshBlock`（走时词面）
- *  ② 本键位标含 `running` ⇒ 状态行重挂（耗时段走时）；拍体 = `renderer/heartbeat.mjs`。 */
+/** 1s 拍（P7 —— 渲染面**首个定时器** · 单点 `setInterval` + 卸载清点；停滞轻显形批 2s ⇒ 1s）：① 池面在飞块逐块核件 `refreshBlock`（走时词面）
+ *  ② 本键位标含 `running` ⇒ 状态行重挂（耗时段 ∕ 静默段走时）；拍体 = `renderer/heartbeat.mjs`。 */
 function heartbeatTick() {
   const state = store.get()
   refreshLiveBlocks(document.querySelector(POOL_SLOT))
@@ -261,16 +279,21 @@ globalThis.addEventListener?.("unload", () => heartbeat.stop())
 // 会话头候选面首取（渠道候选一次入缓存 ⇒ 头面选项集就位；活动 provider 的模型候选待会话激活后随 `sync` 取）。
 void head.sync(store.get())
 
-/** 订阅随动：`locale` 变更 ⇒ 镜像 `dataset.locale`（机器读面 —— **非面向用户文案**）；会话控制条 / 会话头 / 对话流 / 活动池 / 卡面触发切片 ⇒ 各自重挂 / 帧出口 / 卡面态刷。 */
-store.subscribe((state, changedKeys) => {
-  if (changedKeys.includes("locale")) document.documentElement.dataset.locale = state.locale
-  if (changedKeys.some((key) => SESSION_KEYS.includes(key))) paintSessionBar(state)
-  if (changedKeys.some((key) => HEAD_KEYS.includes(key))) {
-    paintHead(state)
-    void head.sync(state) // 头面候选面随动（活动会话 / provider 变 ⇒ 重取后就地刷行 —— 单点调用）
-  }
-  if (changedKeys.some((key) => STATUS_KEYS.includes(key))) paintStatus(state)
-  if (changedKeys.some((key) => CHAT_KEYS.includes(key))) paintChat(state, changedKeys)
-  if (changedKeys.some((key) => POOL_KEYS.includes(key))) paintPool(state)
-  if (changedKeys.some((key) => CARDS_KEYS.includes(key))) paintCards(state)
-})
+/** 帧分派面表（六面回调注入 —— 每面每帧至多一次；面序 = 会话控制条 → 会话头 → 状态行 → 对话流 → 池区 → 卡面）。 */
+const faces = {
+  sessionBar: paintSessionBar, status: paintStatus, chat: paintChat, pool: paintPool, cards: paintCards,
+  head: (state) => { paintHead(state); void head.sync(state) }, // 头面：刷行 + 候选面随动（单点调用）
+}
+
+/** 帧出口（apply · 每帧至多一次）：帧时刻**现读** `store.get()`（禁 mark 时刻取态快照）—— `locale` 镜像 `dataset.locale` + 六面按键集分派。 */
+function applyFrame(dirtyKeys) {
+  const state = store.get()
+  if (dirtyKeys.includes("locale")) document.documentElement.dataset.locale = state.locale
+  return dispatchFrame({ dirtyKeys, state, faces })
+}
+
+/** 帧合并件（单源 = 核档 §2 KD-RC-9）：触发源 = store 变更 ⇒ `mark`；`flush` 消费点 = `returnToLatest` + 测试 ∕ 探针确定性。 */
+const frame = createFrameMerge({ apply: applyFrame })
+
+/** 订阅随动（**O(1) 脏键集** —— 订阅回调零渲染）：store 变更 ⇒ `frame.mark(changedKeys)`（帧触发后分派六面）。 */
+store.subscribe((_state, changedKeys) => { frame.mark(changedKeys) })

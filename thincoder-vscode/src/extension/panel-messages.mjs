@@ -26,6 +26,7 @@ import { savePastedImages, downgradeNonVisionImages } from "./image-handler.mjs"
 // queue-visible 批（2026-09-24 · 台账 #249）：队容量单源 = `queued-merge.mjs`（与 CLI 同名同值）
 import { QUEUED_MAX_ITEMS } from "./queued-merge.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
+import { createLiveBeat, LIVE_HEARTBEAT_MS as CORE_LIVE_HEARTBEAT_MS } from "@thincoder/core/agent/live-beat.mjs"
 import { backgroundStatus, reassertLiveChildren } from "./suspension.mjs"
 // 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：② 回合入口守卫（leaf——无环）
 import { blockOnNoWorkspace } from "./workspace-guard.mjs"
@@ -42,8 +43,9 @@ export const _cwd = () => _cwdOverride ?? (vscode.workspace.workspaceFolders?.[0
 // ─── 出生自愈心跳（D-W20/D-W21——§5.3）──────────────────────────────
 // 拍体 = `reassertLiveChildren` 本体（单一存活投影）；起 = `webviewReady` case；止 = panel dispose。
 // 两前置：未就绪不拍（不向队列堆重复出生事件）；空拍零留痕（n 变化即记 + 每 30 拍兜底）。
-export const LIVE_HEARTBEAT_MS = 2000
-const _heartbeats = new WeakMap() // panel → interval 句柄
+// parity-b4 W1：间隔 ∕ 起 ∕ 停 ∕ 幂等 ∕ unref 取核 `live-beat.mjs`（`createLiveBeat`）；两门前置留端。
+export const LIVE_HEARTBEAT_MS = CORE_LIVE_HEARTBEAT_MS
+const _beats = new WeakMap() // panel → createLiveBeat 实例（拍体闭包本面板）
 const _hbState = new WeakMap() // panel → { beats, last }
 
 /** 单拍（返回本拍重发条数——测试直驱面）。 */
@@ -58,20 +60,15 @@ export function liveHeartbeatBeat(panel) {
   return n
 }
 
-/** 起拍（幂等：同面板单拍）/ 停拍（panel dispose）。 */
+/** 起拍（幂等：核 `start` 单拍幂等 ∕ 返句柄）/ 停拍（panel dispose；未起 = 零动作）。 */
 export function startLiveHeartbeat(panel) {
-  if (_heartbeats.has(panel)) return _heartbeats.get(panel)
-  const timer = setInterval(() => liveHeartbeatBeat(panel), LIVE_HEARTBEAT_MS)
-  timer.unref?.() // 不阻进程退出
-  _heartbeats.set(panel, timer)
-  return timer
+  if (!_beats.has(panel)) _beats.set(panel, createLiveBeat({ beat: () => liveHeartbeatBeat(panel) }))
+  return _beats.get(panel).start()
 }
 
 export function stopLiveHeartbeat(panel) {
-  const timer = _heartbeats.get(panel)
-  if (!timer) return
-  clearInterval(timer)
-  _heartbeats.delete(panel)
+  _beats.get(panel)?.stop()
+  _beats.delete(panel)
 }
 
 /**
@@ -154,12 +151,12 @@ export async function routeUserTurn(panel, { text, modelOverride, reasoning, pro
       return
     }
     if (panel._susp) { // 会话在飞：同队列受理（拒面收敛四 = 空/满队/组合期与中断模态/无工作区）
-      const inSess = Array.isArray(images) && images.length > 0 ? savePastedImages(images, _cwd()) : undefined
+      const inSess = Array.isArray(images) && images.length > 0 ? savePastedImages(images, _cwd()).paths : undefined
       await panel._chat(text, modelOverride, reasoning, providerName, inSess, true, visionReader)
       pushBusyQueued(panel) // 判决后推实际占用（受理 / 满队拒收同式——两载体实况）
       return
     }
-    const busySaved = Array.isArray(images) && images.length > 0 ? savePastedImages(images, _cwd()) : undefined
+    const busySaved = Array.isArray(images) && images.length > 0 ? savePastedImages(images, _cwd()).paths : undefined
     // 入队项携来源标记（`fromBusyQueue`——装载① `runTurn` 闭包据此只对排队支降级，纯挂起既有
     // 路径零改）与 `visionReader` per-call 缝（C-B2-6 细则⑥：送达侧判决与 idle 面同判定同注入形态）。
     ;(panel._busyQueued ??= []).push({ text, modelOverride, reasoning, providerName, images: busySaved, fromBusyQueue: true, visionReader })
@@ -180,7 +177,7 @@ export async function routeUserTurn(panel, { text, modelOverride, reasoning, pro
   // `image-handler.mjs` 的 `downgradeNonVisionImages`（三调用点共用同一判定——本调用点保留
   // `_turnState !== "susp"` 门）。
   let saved = Array.isArray(images) && images.length > 0
-    ? savePastedImages(images, _cwd())
+    ? savePastedImages(images, _cwd()).paths
     : undefined
   let visionAbort = null
   if (saved?.length && modelOverride && panel._turnState !== "susp") {

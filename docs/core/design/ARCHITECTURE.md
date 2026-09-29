@@ -128,6 +128,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | crash-reports | 崩溃捕获与取证 | fatal 报告 / 记录 / stderr 捕获 / 近堆快照 | `docs/cli/design/CRASH-REPORTS.md` |
 | bin/thincoder.mjs | CLI 命令表 | 命令分发入口 | ——（`thincoder-cli/bin/thincoder.mjs:1`） |
 | desktop 壳 | 宿主适配 + IPC 通道族 | 桌面端第四壳（Electron 宿主——主进程持核 · 渲染面零 Node；宿主面与通道面分档） | `docs/desktop/design/SHELL.md` · `docs/desktop/design/IPC.md` |
+| render-core | DOM 构件族 + 纯函数族 | 扩展端 / 桌面端**共用宿主无关渲染核**（会话流呈现）；**不入发布序列**——`private: true` 永不发布、两端内嵌带发、零 registry 端消费者 | `docs/render-core/design/RENDER-CORE.md` |
 
 **provider 关键决策（reasoning 语义）**：
 
@@ -173,7 +174,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | 配置存储 | 共享 `config.json` | 同一文件 | 同一文件 |
 | 权限审批 | TUI 交互（y/n/a） | 弹窗 + 批确认 | 流内卡片 + 活动池计数 + 标签位（同一待决项三种视图） |
 | 活动渲染 | TUI 面板 | 活动面板 + 冻结入流 | 会话内右栏活动池（随会话入标签页，可折叠） |
-| 壳装配 | `assembleAgent` | `buildTopLevelAgent` | 第三份（形态对齐——共享化 = 独立议题） |
+| 壳装配 | `assembleAgent` | `buildTopLevelAgent` | 装配序核单源（`thincoder-core/agent/assemble.mjs`）+ 端壳 adapter（余端差在册） |
 | 测试面 | 单入口 `npm test` | `node thincoder-vscode/test/run.mjs` + 显式清单 | 同形（单入口 + 显式清单） |
 | 发行 | npm 包 | vsix（Marketplace / Open VSX） | 三平台安装包（win / mac / linux） |
 
@@ -188,7 +189,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 ## 6. 未决设计批
 
 - **桌面端 · 会话行「来源端」标注**：需核侧新增字段（槽创建端）方可实现——当前设计标 open（`docs/desktop/design/UI.md` §2 项 3）；待裁定：开核侧小批，或撤该标注。
-- **壳装配第三份是否抽共享层**（三端装配同形）：独立议题，不并入桌面端设计批（`docs/desktop/design/SHELL.md` §4）。
+- **壳装配第三份是否抽共享层**（三端装配同形）：**本批部分落定**——序 + 团队层取值已上提核件（`thincoder-core/agent/assemble.mjs`）；余端差在册（`docs/desktop/design/SHELL.md` §4）。
 
 ## 7. 不并项与历史沿革
 
@@ -212,6 +213,8 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | VSC 源档 §1 设计原则（与 core §2 重叠者） · §2 整体架构图 · 文首未决 / 待办状态行 · 变更记录 | 重叠面 / 时点面 / 流水 | **不并**——VSC 专属取向已并入 §4.1；待办状态行与变更流水 = 时点材料（(d) 类） |
 
 ## 变更记录
+
+- 2026-09-29（**desktop-residuals-sweep 批 · 波 D（非冻结档面）· eng-designer**——承 `docs/batches/2026-09-29-desktop-residuals-sweep.md` §2 · 台账 #560）：§4 模块接口速览表尾补 **render-core** 行（扩展端 / 桌面端共用宿主无关渲染核——**不入发布序列**；值源 = `docs/render-core/design/RENDER-CORE.md` §10 B ∕ KD-RC-1）。**零新语义**。
 
 - 2026-09-25（**桌面端设计批 1 · 修正轮 · eng-designer**——设计评审 §3 轮次 1 发现 5）：桌面端指针随五档分档收正——档头专有面行改指**五档**路径 · §3 模块地图 desktop 壳行改指 `docs/desktop/design/SHELL.md` / `docs/desktop/design/IPC.md` · §4.2 行注改指五档导航 · §6 两项改指 `docs/desktop/design/UI.md` §2 项 3 / `docs/desktop/design/SHELL.md` §4。
 - 2026-09-25（**桌面端设计批 1 · eng-designer**——承 `docs/desktop/requirements/PROJECT.md`）：**补第四端**——档头专有面行 · §1.1 硬约束表增**桌面端适用面**行（第 6 行：主进程 ESM / 沙箱 CJS 预载 / 渲染面零 Node 零构建 / Electron 与打包器 = 构建期 devDep）。

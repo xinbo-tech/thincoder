@@ -128,7 +128,7 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
       await settleTurn(key, agent) // 三路同序（CLI 先例 = 回合 finally 尾部保存；中止径零写 —— U-7）
       postUsage(key, agent) // 三径同点（中断 / 错误同样出本回合读数）
       if (live.signal.aborted) post("ev:activity", { key, event: "stopped" })
-      else post("ev:error", { key, message: String(err?.message ?? err), ...techInfoOf(err) })
+      else post("ev:error", { key, text: String(err?.message ?? err), ...techInfoOf(err) })
       throw err
     } finally {
       if (flights.get(key) === live) flights.delete(key) // 先释放在飞（**现代** —— 中断续跑换代后同释）—— 清理自吞错（`cleanupTurn` 出口零抛 —— 回合驱动零承担）

@@ -9,19 +9,25 @@
  *
  * 段构建判据（逐段）与数据源 = 主档档头（不重述）；本档逐函数注释只记**该段自身**判据。
  * 承载段序（主档装配序）与本档函数一一对应：`attention` / `state`（含 R4 状态文本支）/ `tool` / `elapsed` /
- * `tasks` / `turn` / `tokens` / `context` / `ledger` / `timer` / `title` / `enter`。
+ * `quiet`（停滞轻显形批 2026-09-29——序 = `elapsed` 之后）/ `tasks` / `turn` / `tokens` / `context` / `ledger` /
+ * `timer` / `title` / `enter`。
+ * **状态行 ⇒ CLI 补漏批（2026-09-29 · 台账 #600）**：段 9 读数改 CLI 形（`context <pct>% <tokens>` —— 令牌尾串
+ * 源 = `usageTokens` 切片）；段 11 改**常驻**（在场判据 = `marker.text` 非空串 ∕ 警示色 = 核 `warn` 位）。
  */
 import { t } from "../i18n.mjs"
 
 /** 读数警示阈（数值单源 = `docs/desktop/design/UI.md` §1 状态栏行「≥ 80% 转警示色」）。 */
 const USAGE_WARN = 80
 
+/** 静默读数阈（停滞轻显形批 2026-09-29——语义 ∕ 数值单源 = `docs/cli/design/TUI.md` §7.7；三端同值）。 */
+const QUIET_MS = 10000
+
 /** 非数归一（核 ∥ 载荷缺键的兜底读数 = 0 —— 零抛；「非正 ⇒ 零节点」判据归各段）。 */
 function numOf(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0
 }
 
-/** 计数缩写（CLI 同形 = `thincoder-cli/src/tui/render-frame.mjs:384` `fmtK`：≥ 10k ⇒ 整数 k · ≥ 1k ⇒ 一位小数 k）。 */
+/** 计数缩写（CLI 同形 = `thincoder-cli/src/tui/render-frame.mjs:396` `fmtK`：≥ 10k ⇒ 整数 k · ≥ 1k ⇒ 一位小数 k）。 */
 function fmtK(n) {
   if (n >= 10000) return `${Math.round(n / 1000)}k`
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
@@ -107,7 +113,20 @@ export function elapsedSegment(codes, turnStarts, key, now) {
   const start = turnStarts !== null && typeof turnStarts === "object" ? turnStarts[key] : undefined
   if (typeof start !== "number" || !Number.isFinite(start)) return null
   const seconds = Math.max(0, Math.floor((now - start) / 1000))
-  return { code: "elapsed", parts: [{ text: t("status.elapsed", { seconds }) }] }
+  return { code: "elapsed", parts: [{ text: t("status.elapsedSeconds", { seconds }) }] }
+}
+
+/** 静默读数段（停滞轻显形批 2026-09-29——序 = `elapsed` 之后；语义单源 = `docs/cli/design/TUI.md` §7.7）：
+ *  判据 = 位标含 `running` ∧ `now − lastOutputAt[key] ≥ QUIET_MS` ⇒ 段在场（首显 = 10s）；不足阈值 ∕ 非 running ∕
+ *  切片缺 ∕ 非数 ⇒ 零节点（负向锁）；读数 = `floor(静默毫秒 ∕ 1000)`；纯读数零警示色。
+ *  起算锚 = `lastOutputAt[key]`（回合起刻 = 初始锚 —— 归约面 `renderer/events.mjs` turn 形同置）。 */
+export function quietSegment(codes, lastOutputAt, key, now) {
+  if (!codes.includes("running")) return null
+  const stamp = lastOutputAt !== null && typeof lastOutputAt === "object" ? lastOutputAt[key] : undefined
+  if (typeof stamp !== "number" || !Number.isFinite(stamp)) return null
+  const quietMs = now - stamp
+  if (quietMs < QUIET_MS) return null
+  return { code: "quiet", parts: [{ text: t("status.quiet", { s: Math.floor(quietMs / 1000) }) }] }
 }
 
 /** 段 6 · 任务计数（`tasks[key]` 切片 —— 与计划卡同源；空列表 / 非数组 ⇒ 零节点；`done` 数按计划行状态词口径）。 */
@@ -118,7 +137,7 @@ export function tasksSegment(tasks, key) {
   return { code: "tasks", parts: [{ text: t("status.tasks", { done, total: list.length }) }] }
 }
 
-/** 段 7 · 回合 N/M（归约槽 `turns[key]` —— `ev:activity` turn 载荷 `{ n, max }`；两值皆正整数才落，缺 / 非法 ⇒ 零节点）。
+/** 段 7 · 回合 N/M（归约槽 `turns[key]` —— 载荷 = `ev:activity` turn 形 `{ turn, maxTurns }`〔归约入槽 `{ n, max }`〕；两值皆正整数才落，缺 / 非法 ⇒ 零节点）。
  *  入词**按核键占位名**（`thincoder-core/i18n.mjs` `status.turn` = `turn ${n}/${m}` —— 词形单源，桌面不另立同义键）。 */
 export function turnSegment(turns, key) {
   const row = turns !== null && typeof turns === "object" ? turns[key] : undefined
@@ -141,30 +160,37 @@ export function tokensSegment(tokens, key) {
   return { code: "tokens", parts }
 }
 
-/** 段 9 · 上下文 %（`usage[key]` 切片 —— 数字 ∧ `> 0` ⇒ 读数节点；读数域 0–100 整数直传，端零重算 · 零上界判）。 */
-export function contextSegment(usage, key) {
+/** 段 9 · 上下文读数（`usage[key]` 切片 —— 数字 ∧ `> 0` ⇒ 读数节点；读数域 0–100 整数直传，端零重算 · 零上界判）。
+ *  **本批改形（状态行 ⇒ CLI 补漏批 · 2026-09-29）**：读数 = `context <pct>% <tokens>`（en 逐字 = CLI
+ *  `thincoder-cli/src/tui/render-frame.mjs:413-416`；zh 对位译形）；令牌 = `tokens[key]` 切片（数字 ∧ `> 0`
+ *  ⇒ 尾串 `␣<fmtK>`，否则空串 ⇒ 半态 `context <pct>%`——CLI 同门；≤ 0 ∕ 缺 ∕ 非数 ⇒ 禁假造）。 */
+export function contextSegment(usage, tokens, key) {
   const slice = usage !== null && typeof usage === "object" ? usage : {}
   const value = slice[key]
   if (typeof value !== "number" || !(value > 0)) return null
+  const count = numOf(tokens !== null && typeof tokens === "object" ? tokens[key] : undefined)
   return {
     code: "context",
     class: "status-usage",
     warn: value >= USAGE_WARN,
     attrs: { "data-usage": String(value) },
-    parts: [{ text: t("status.usage", { percent: value }) }],
+    parts: [{ text: t("status.usage", { percent: value, tokens: count > 0 ? ` ${fmtK(count)}` : "" }) }],
   }
 }
 
-/** 段 11 · 台账标记（**只承超阈警示位** —— `projectInfo.thresholdReached` 严格真；R8 增 L2 明细行**载波** = 段
- *  `title`（tooltip 面 —— VSC `ledger-surface.mjs:69` 对位；行文本核产逐字 ∕ 端零行构造；空集 ⇒ 零 title）。 */
-export function ledgerSegment(projectInfo, detailLines) {
-  if (projectInfo?.thresholdReached !== true) return null
-  const details = Array.isArray(detailLines) ? detailLines.filter((text) => typeof text === "string" && text !== "") : []
+/** 段 11 · 台账标记（**常驻** —— `marker` = 归约切片 `ledgerMarker`（`ev:ledger` `marker` 键转发；值 = 核
+ *  `formatMarker` 逐字 `台账 N·M` —— 端零构造）；`marker.text` 非空串 ⇒ 在场（**本批改形**：不再绑
+ *  `thresholdReached` —— 状态行 ⇒ CLI 补漏批 · 2026-09-29）；警示色 = 核 `warn` 位（老化 > 0 ∨ 死执行者 > 0
+ *  —— 端零重算）；L2 明细行**载波** = 段 `title`（tooltip 面 —— R8；行文本核产逐字 ∕ 端零行构造；空集 ⇒ 零 title）。 */
+export function ledgerSegment(marker, detailLines) {
+  const text = typeof marker?.text === "string" && marker.text !== "" ? marker.text : null
+  if (text === null) return null
+  const details = Array.isArray(detailLines) ? detailLines.filter((line) => typeof line === "string" && line !== "") : []
   return {
     code: "ledger",
-    warn: true,
+    warn: marker.warn === true,
     ...(details.length > 0 ? { attrs: { title: details.join("\n") } } : {}),
-    parts: [{ text: t("info.threshold") }],
+    parts: [{ text }],
   }
 }
 
@@ -174,10 +200,10 @@ export function timerSegment(timers, key) {
   if (row === null || typeof row !== "object") return null
   const count = row.count
   if (typeof count !== "number" || !Number.isFinite(count) || count <= 0) return null
-  return { code: "timer", warn: numOf(row.expired) > 0, parts: [{ text: t("status.timer", { count }) }] }
+  return { code: "timer", warn: numOf(row.expired) > 0, parts: [{ text: t("status.timer", { n: count }) }] }
 }
 
-/** 段 13 · 会话标题（活动会话行 —— 与标签条 / 左列同源同投影：标题空 ⇒ 词表缺省词；无行 ⇒ 零节点）。 */
+/** 段 13 · 会话标题（活动会话行 —— 与会话控制条目同源同投影：标题空 ⇒ 词表缺省词；无行 ⇒ 零节点）。 */
 export function titleSegment(sessions, key) {
   const list = Array.isArray(sessions) ? sessions : []
   const hit = list.find((row) => row !== null && typeof row === "object" && String(row.slot) === key)

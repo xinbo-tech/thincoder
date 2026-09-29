@@ -12,7 +12,9 @@
  * ② 输入区（`mount-composer.mjs` · `attach.mjs`）；③ 审批面（`views/approval.mjs`）；④ 设置面
  * （`views/settings-sections.mjs` —— 具名控件十键）；⑤ 会话控制面（`renderer/mount-sessions.mjs` —— 会话模型轮 R13
  * 五键：选择器可及名 ∕ 空态 ∕ 改名 · 删除两控件 ∕ 删除确认句 —— **值逐字同 VSC 同名键**；R9 增二键
- * 〔`session.openFailed` ∕ `session.loadFailed` —— 失败面可见性 #486 toast 词面，本端拟定〕）；
+ * 〔`session.openFailed` ∕ `session.loadFailed` —— 失败面可见性 #486 toast 词面，本端拟定〕；#556 增一键
+ * 〔`session.renameFailed` —— 改名失败径同 toast 面〕；#578③ 增一键
+ * 〔`session.deleteFailed` —— 删除失败径同 toast 面〕）；
  * ⑥ **核卡族（「桌面处理流 · VSC 对齐」批 R1）**：核包 `cards/{permission,question,panel}.mjs` 内取词键
  * —— 消费面 = 核卡（经注册面投影入核 i18n），**值逐字同 VSC locales**（`thincoder-vscode/locales/*` 同名键）；
  * ⑦ **工具与服务段（R2 · 桌面功能对位批）**：`views/settings-sections-tools.mjs` 取词（段名 / 索引族名 /
@@ -32,6 +34,9 @@
  * （键名同形者即同名；`settings.proxyTest*` 三键 = VSC webview 内字面收归键面（en 逐字）· zh 本端拟定；
  * `settings.section.*` / `settings.consultProvider` / `settings.pickProvider` / `settings.deleteKey` /
  * `settings.effortLabel` / `settings.noneMark` / `settings.agent.autoThink` = 本端拟定（值面登记处 = 本组））。
+ * ⑫ **B10 W3 设置余面族**（MCP 编辑 ∕ 重连 · 子代理模型槽 · guard 开关 —— S8–S11 ∕ S14）：
+ * MCP 表单结构化九键 + 两钮（值逐字同 VSC `settings.mcp.*` 同名键）· 重连两词（本端拟定）·
+ * `settings.submodelGlobal`（VSC 逐字）· `settings.advisorGuard`（VSC 逐字）· `settings.reason.slotAuthority`（本端拟定）。
  * 两语键集须相等（增键两语同增、禁单语落键）。
  * 零落盘 · 零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
@@ -71,9 +76,11 @@ export const VIEWS_DICT = Object.freeze({
     "session.rename": "Rename",
     "session.delete": "Delete",
     "session.deleteConfirm": "Delete session \"${title}\"? This cannot be undone.",
-    // R9 · #486 失败面可见性（二键 —— 本端拟定；消费面 = `renderer/mount-sessions.mjs` toast）
+    // R9 · #486 失败面可见性（四键 —— 本端拟定；消费面 = `renderer/mount-sessions.mjs` toast；`renameFailed` = #556 增；`deleteFailed` = #578③ 增）
     "session.openFailed": "Could not open the session (${reason})",
     "session.loadFailed": "Could not load the session content",
+    "session.renameFailed": "Could not rename the session (${reason})",
+    "session.deleteFailed": "Could not delete the session (${reason})",
     // ── ⑥ 核卡族（R1 直消费 —— 核包取词；值逐字同 VSC `locales/en.json` 同名键）──
     "perm.wantsTo": "ThinCoder wants to run",
     "perm.approve": "Approve",
@@ -98,6 +105,8 @@ export const VIEWS_DICT = Object.freeze({
     "settings.indexBuilding": "Building…",
     "settings.indexBuilt": "✓ Index built: ${files} files, ${chunks} chunks",
     "settings.indexNotBuilt": "Index not built. Vector search is inactive.",
+    // B10 W2 · S12：embedding key 缺态词（值逐字同 VSC `locales/en.json:178`）
+    "settings.indexNoKey": "No embedding API key configured.",
     // ── ⑧ 核件搜索面（R6 —— 核 `search.mjs` 取词键；键名与两语值皆 VSC 逐字：`thincoder-vscode/locales/en.json:254-258`）──
     "search.placeholder": "Search messages…",
     "search.prev": "Previous match",
@@ -157,6 +166,23 @@ export const VIEWS_DICT = Object.freeze({
     "settings.inherit": "Inherit",
     "settings.effortLabel": "Effort",
     "settings.agent.autoThink": "Auto-think (classify task difficulty per turn)",
+    // ── ⑫ B10 W3 设置余面族（MCP 编辑 ∕ 重连 · 子代理模型槽 · guard 开关 —— S8–S11 ∕ S14）──
+    // MCP 表单结构化九键 + 两钮 = VSC `settings.mcp.*` 同名键逐字；重连两词 ∕ slotAuthority 拒写词 = 本端拟定。
+    "settings.mcp.edit": "Edit",
+    "settings.mcp.reconnect": "Reconnect",
+    "settings.mcp.type": "Type",
+    "settings.mcp.command": "Command",
+    "settings.mcp.args": "Args (space-separated)",
+    "settings.mcp.env": "Env (KEY=value, comma-separated)",
+    "settings.mcp.url": "URL",
+    "settings.mcp.wsUrl": "WebSocket URL",
+    "settings.mcp.token": "Auth token (Bearer)",
+    "settings.mcp.headers": "Headers (KEY=value, comma-separated)",
+    "settings.mcp.reconnecting": "reconnecting…",
+    "settings.mcp.reconnectOk": "✓ Reconnected — ${count} tools",
+    "settings.submodelGlobal": "Global default",
+    "settings.advisorGuard": "Require advisor review",
+    "settings.reason.slotAuthority": "Session-level option — change it from the input panel",
   },
   zh: {
     // ── ① 对话流 ──
@@ -192,9 +218,11 @@ export const VIEWS_DICT = Object.freeze({
     "session.rename": "重命名",
     "session.delete": "删除",
     "session.deleteConfirm": "确定删除会话 \"${title}\"？此操作不可恢复。",
-    // R9 · #486 失败面可见性（二键 —— 本端拟定；消费面 = `renderer/mount-sessions.mjs` toast）
+    // R9 · #486 失败面可见性（四键 —— 本端拟定；消费面 = `renderer/mount-sessions.mjs` toast；`renameFailed` = #556 增；`deleteFailed` = #578③ 增）
     "session.openFailed": "会话打开失败（${reason}）",
     "session.loadFailed": "会话内容加载失败",
+    "session.renameFailed": "会话改名失败（${reason}）",
+    "session.deleteFailed": "会话删除失败（${reason}）",
     // ── ⑥ 核卡族（R1 直消费 —— 值逐字同 VSC `locales/zh.json` 同名键）──
     "perm.wantsTo": "ThinCoder 想要执行",
     "perm.approve": "批准",
@@ -219,6 +247,8 @@ export const VIEWS_DICT = Object.freeze({
     "settings.indexBuilding": "构建中…",
     "settings.indexBuilt": "✓ 索引已构建：${files} 个文件，${chunks} 个块",
     "settings.indexNotBuilt": "索引未构建，向量搜索未启用。",
+    // B10 W2 · S12：embedding key 缺态词（值逐字同 VSC `locales/zh.json:178`）
+    "settings.indexNoKey": "未配置 embedding API key。",
     // ── ⑧ 核件搜索面（R6 —— 核 `search.mjs` 取词键；键名与两语值皆 VSC 逐字：`thincoder-vscode/locales/zh.json:254-258`）──
     "search.placeholder": "搜索消息…",
     "search.prev": "上一个匹配",
@@ -278,5 +308,21 @@ export const VIEWS_DICT = Object.freeze({
     "settings.inherit": "继承",
     "settings.effortLabel": "推理强度",
     "settings.agent.autoThink": "自动思考（按回合分类任务难度）",
+    // ── ⑫ B10 W3 设置余面族（同上）──
+    "settings.mcp.edit": "编辑",
+    "settings.mcp.reconnect": "重连",
+    "settings.mcp.type": "类型",
+    "settings.mcp.command": "命令",
+    "settings.mcp.args": "参数（空格分隔）",
+    "settings.mcp.env": "环境变量（KEY=value，逗号分隔）",
+    "settings.mcp.url": "URL",
+    "settings.mcp.wsUrl": "WebSocket URL",
+    "settings.mcp.token": "认证令牌（Bearer）",
+    "settings.mcp.headers": "请求头（KEY=value，逗号分隔）",
+    "settings.mcp.reconnecting": "重连中…",
+    "settings.mcp.reconnectOk": "✓ 已重连 — ${count} 个工具",
+    "settings.submodelGlobal": "全局默认",
+    "settings.advisorGuard": "强制 advisor 评审",
+    "settings.reason.slotAuthority": "会话级选项——请从输入面板修改",
   },
 })

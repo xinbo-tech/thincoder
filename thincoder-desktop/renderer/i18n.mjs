@@ -20,7 +20,7 @@
  *      **D22 状态栏对齐批增六键**（`status.ready` / `status.enter.send` + banner 四态 `status.banner.plan|auto|advisor|eng`——代号字面，两语同形）= 状态行 10 ⇒ **16**、计 139 ⇒ **145**；**账本可靠批 · 桌面微轮增一键** = `rail.ledger.notice`（左列 15 ⇒ **16**）——计 **145 ⇒ 146**；**该批修正轮增一键** = `rail.ledger.notice.scene`（主句拆出**条件附句** —— 三端同义；左列 16 ⇒ **17**）—— 计 **146 ⇒ 147**；
  *      **「对齐第二批」增十键** = 核件子 agent 词键 7（`sub.*` 族 —— 核 `subblocks/*` 四构件取词）+ 说话人 / 待发送 3（`msg.user` / `msg.assistant` / `queued.pending`）—— 计 147 ⇒ **157**；**同批退场一键** = `pool.stop`（自建五段行块面退场 ⇒ ⏹ 词归核件 `sub.stopBtn`；活动池 8 ⇒ **7**）—— 计 **157 ⇒ 156**；
  *      **桌面空闲唤醒批增三键** = `susp.*` 三键（状态行段 3 支①挂起句 —— 值 zh = CLI 逐字 ∥ en = VSC 逐字；键名沿 VSC 同名键；
- *      消费面 = `renderer/views/statusline.mjs`；`digest.*` **零新键** —— 核字典经 `t()` 投影面直取、`notify.*` 两键 = 主进程自持〔非本表〕）—— 计 **156 ⇒ 159**；
+ *      消费面 = `renderer/views/statusline.mjs`；`digest.*` **零新键** —— 核字典经 `t()` 投影面直取、`notify.*` 单键（`notify.done` 值对）= 核 `notify-policy.mjs` `NOTIFY_TEXTS` 自持〔非本表〕）—— 计 **156 ⇒ 159**；
  *      **「对齐第三批」增十九键** = 视图面词族**第二档**（`renderer/i18n-views.mjs` —— 在册拆分落形：新增词族出第二档，
  *      本档两语展开合并 ⇒ `HOST_DICT` 单一持有点不变；四组 = 对话流 6 / 输入区 2 / 审批面 1 / 设置面 agent 具名十键）；
  *      **同批退场一键** = `chat.empty.hint`（欢迎条三行取代单行提示 —— 项 15；树面消费归零 ⇒ 键面随退）
@@ -48,6 +48,19 @@
  *      **R9 增二键**（承 #486 失败面可见性：`session.openFailed` ∕ `session.loadFailed` —— 第二档 ⑤ 组；消费面 =
  *      `renderer/mount-sessions.mjs` toast）⇒ `VIEWS_DICT`（第二档）104 ⇒ **106**；`HOST_DICT`（**合并表** —— 两语展开含第二 ∕ 三档）
  *      265 ⇒ **267**（= 本行二键经合并点随动）；`COMPOSER_DICT`（第三档）= 28 不变（两语同拍、键集相等）；
+ *      **复制面对齐批退二增四**（复制面对齐 VSC 批 · 台账 #557 ∕ #558：退自建复制面两键（块级 ∕ 末条两控件可及名，消费面归零
+ *      ⇒ 键面随退）；增 `menu.edit.*` 四键（主进程右键编辑菜单文案 ——
+ *      消费面 = `src/main/context-menu.mjs` `contextMenuLabels` 直取本表））⇒ `HOST_DICT`（**合并表**）267 ⇒ **269**（两语同拍、键集相等）；
+ *      **B10 W2 增八键**（S1 ∕ S2 ∕ S5 ∕ S6 词面七键 = `settings.proxyRow` ∕ `settings.proxyRowTitle` ∕ `settings.fetchModels` ∕
+ *      `settings.connecting` ∕ `settings.connOk` ∕ `settings.providerUrlRequired` ∕ `settings.secretDeleteConfirm` + 第二档 `settings.indexNoKey`〔S12〕；
+ *      行面「不可用」∕ 拉取失败兜底两词复用同表在册键 `settings.reason.unavailable` ∕ `settings.reason.probeFailed`）⇒ 实读
+ *      `HOST_DICT`（**合并表**）**279** ∕ `VIEWS_DICT`（第二档）**109**（两语同拍、键集相等；其间他批增键未逐笔续计 —— 台账 #575 在途）；
+ *      **让位修复批增二键**（承 `docs/batches/2026-09-29-subblock-follow-resume.md` —— `sub.follow.new` ∕
+ *      `sub.follow.bottom`：核件出口钮两态（消费面 = 核 `subblocks/block.mjs` 出口钮，词经注册端出）；值逐字同
+ *      VSC `locales/{en,zh}.json` 同名键）⇒ 实读 `HOST_DICT`（**合并表**）**281**（两语同拍、键集相等；届盘重读落笔 ——
+ *      并行舱键增未逐笔续计，后落者续链；**收口复读**〔父侧 · 2026-09-29 · #603 §6 实测〕：三档单语键数 = `HOST_DICT` **295** ∕ `VIEWS_DICT`（第二档）**124** ∕ `COMPOSER_DICT`（第三档）**28**（两语同拍、键集相等——其间多舱增键未逐笔续计，本行为最新链值）。
+ *      **状态行 ⇒ CLI 补漏批退一键**（项目级读数族末键两语退场 —— 段 11 改常驻、消费归零 ⇒ 键面随退，零残键；
+ *      `status.usage` 仅值改、零增退）⇒ 实读 `HOST_DICT`（**合并表**）**295 ⇒ 294**（两语同拍、键集相等；届盘实读续链）。
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；
@@ -69,9 +82,9 @@ import { VIEWS_DICT } from "./i18n-views.mjs"
  *  新建会话两动作词 + 会话条目三键 = 缺省题 ∕ 计数 ∕ 日期 + 账本注记两键——会话模型轮 R13：原左列元素族随左列
  *  裁撤退场，保留键 = 会话控制条 ∕ 引导面两消费面同用）·
  *  `chat.*` = 对话流（引导面两键 / 摘要块 / 药丸两态 /
- *  工具卡改动摘要 + 耗时 / 复制面两键 = 逐块控件与末条控件的可及名 —— 两控件 = 块尾 / 输入区尾，取文面与键名
- *  同档 = `renderer/views/chat-copy.mjs`；`welcome.*` 四键 = `no-message` 帧欢迎条三行〔含文案二值〕—— 单源
- *  = `renderer/i18n-views.mjs`）· `pool.*` = 活动池（标题 / 三族标 / 折叠控件两态 `aria-label` / 空态提示 ——
+ *  工具卡改动摘要 + 耗时；`welcome.*` 四键 = `no-message` 帧欢迎条三行〔含文案二值〕—— 单源
+ *  = `renderer/i18n-views.mjs`）· `menu.*` = 主进程原生右键菜单四键（编辑族文案 = 剪切 ∕ 复制 ∕ 粘贴 ∕ 全选 ——
+ *  消费面 = `src/main/context-menu.mjs` `contextMenuLabels`，主进程直取本表）· `pool.*` = 活动池（标题 / 三族标 / 折叠控件两态 `aria-label` / 空态提示 ——
  *  折叠字形住 `renderer/pool.css`）· `approval.*` = 审批卡两形三出口词面 + 批形计数（`${count}` 占位；
  *  键位闭集住 `renderer/views/approval.mjs`）· `question.*` = 提问卡（文本控件 `aria-label` / 提交键 / 取消键 ——
  *  键位闭集住 `renderer/views/question.mjs`）· `settings.*` = 设置面（标题 / 关闭 / 语言控件两键 = 目标语自名 /
@@ -79,16 +92,13 @@ import { VIEWS_DICT } from "./i18n-views.mjs"
  *  当前标 · 两增键 / agent 段：只读标 · 保存 / 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
  *  移除 · 增键 —— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）·
  *  `wizard.*` = 首启向导（标题 / 退场 / 三步名 / 两推进键 / 渠道提交键 / 目录步两词）·
- *  `info.*` = 项目级读数族（三读数标：需求池 · 技术待办 · 老化——同核台账口径 / 超阈标 / 相位标 ·
- *  两相位值 / 空态 —— 消费面 = 状态行台账超阈段（会话模型轮 R13：信息行视图随左列裁撤退场，
- *  读数仍供状态行）；其余键位闭集住 `renderer/views/onboarding.mjs`）·
  *  `composer.*` = 输入区（**换装后残余两族**：B21 发送失败行 `composer.send.failed`〔住 `renderer/i18n-views.mjs`〕+
  *  B22 降级提示行两键 `composer.attach.nonvision` ∕ `composer.attach.partial`——三键皆端侧自有词，非 VSC 源；
  *  旧三词（输入框 `aria-label` ∕ 中断控件词 ∕ 满队提示行）+ 附件条移除控件名随自建树退场——核件控件词归
  *  `renderer/i18n-composer.mjs`）·
  *  `head.*` = 会话头（三字段标 = `provider` / `model` / `effort` 三 `select` 可及名 —— 值面 = 供给串原样，
  *  视图不造词；键位面 = `renderer/views/chrome.mjs`）· `effort.*` = 档位两特值词（`auto` = 未设（`null`）·
- *  `off` = 关思考 —— 逐模型枚举成员**零词键**、原字面投影）· `status.*` = 状态行（读数串 `${percent}%` ——
+ *  `off` = 关思考 —— 逐模型枚举成员**零词键**、原字面投影）· `status.*` = 状态行（上下文读数串 `context ${percent}%${tokens}` —— 令牌尾串 `␣<fmtK>`、0 ∕ 缺 ⇒ 缺席 = 半态〔状态行 ⇒ CLI 补漏批改形〕——
  *  未至 / 非正数 ⇒ 零节点，键面不落空串；段词十六键 = 注意力 / 当前工具 / 耗时 / 任务计数 / 令牌三件 / 计时 /
  *  排队两句 + 静息词 / 输入提示静息态 / banner 四态（代号字面 —— 两语同形）＋ **R4 增状态文本 index 两形二键**
  *  （`status.indexScan` ∕ `status.indexProgress` —— 值逐字同 VSC locales；表外四 kind 与压缩四态 = 核投影取、零新键）
@@ -109,9 +119,12 @@ export const HOST_DICT = Object.freeze({
     "chat.summary.older": "${n} earlier messages",
     "chat.tool.changes": "${files} files · +${add} −${del}",
     "chat.tool.duration": "${seconds}s",
-    // ── 复制面（批 B：`views/chat-copy.mjs` —— 块尾 / 输入区尾两控件可及名）──
-    "chat.action.copy": "Copy block text",
-    "chat.action.copyLast": "Copy last reply",
+    // ── 右键编辑菜单四键（复制面对齐批：主进程 `src/main/context-menu.mjs` `contextMenuLabels` 直取本表 ——
+    //    显式 `label` 文案（不采 role 默认文案 = 英文硬编码字面）；`locale` 现读 ⇒ 两语随动）──
+    "menu.edit.cut": "Cut",
+    "menu.edit.copy": "Copy",
+    "menu.edit.paste": "Paste",
+    "menu.edit.selectAll": "Select All",
     // ── 核件复制钮两键（R3c：核 `flow/stream.mjs` `attachCopyButtons` 词键 —— **端供给面**，树面零消费；
     //    词值同 VSC 同键（`thincoder-vscode/locales/en.json:34-35`）—— 同一控件同词）──
     "msg.copy": "Copy",
@@ -128,6 +141,10 @@ export const HOST_DICT = Object.freeze({
     "sub.cancelQueueBtn": "cancel queue",
     "sub.stopBtn": "Stop this subagent",
     "sub.newBlocks": "↓ ${n} new block(s)",
+    // 让位修复批增二键（2026-09-29 · #603 · 核件出口钮两态——核 `subblocks/block.mjs` 取词经注册端出；
+    // 值逐字同 VSC `locales/{en,zh}.json` 同名键——同一控件同词）
+    "sub.follow.new": "↓ New output",
+    "sub.follow.bottom": "↓ Back to latest",
     "sub.desc": "Subagent activity — the agent spawned a helper for an independent subtask. Expand for details; ⏹ stops a background run.",
     "msg.user": "You",
     "msg.assistant": "ThinCoder",
@@ -141,7 +158,6 @@ export const HOST_DICT = Object.freeze({
     "pool.family.queue": "Queued",
     "pool.collapse": "Collapse activity",
     "pool.expand": "Expand activity",
-    "composer.send.failed": "Send failed (${reason}) — the text was kept",
     "composer.attach.nonvision": "Images not sent — this model does not accept images",
     "composer.attach.partial": "Some images were dropped (over the limit or failed to save) — the rest were sent",
     "approval.once": "Allow once",
@@ -193,6 +209,13 @@ export const HOST_DICT = Object.freeze({
     "settings.providers.noKey": "No API key",
     "settings.providers.remove": "Remove ${name}",
     "settings.providers.active": "Active",
+    "settings.proxyRow": "proxy",
+    "settings.proxyRowTitle": "Route this provider's model requests through the proxy (needs global proxy.model on)",
+    "settings.fetchModels": "Fetch Models",
+    "settings.connecting": "Connecting…",
+    "settings.connOk": "✓ Connected — ${count} models",
+    "settings.providerUrlRequired": "baseURL required",
+    "settings.secretDeleteConfirm": "Delete? This cannot be undone — the original credential cannot be recovered; you would have to reconfigure it or get a new one from the provider.",
     "settings.agent.readonly": "Read-only",
     "settings.agent.save": "Save",
     "settings.model.current": "Current model",
@@ -203,7 +226,6 @@ export const HOST_DICT = Object.freeze({
     "settings.mcp.kind.command": "Command",
     "settings.mcp.remove": "Remove ${name}",
     "settings.mcp.nameLabel": "Name",
-    "settings.mcp.configLabel": "Config (JSON)",
     "settings.mcp.add": "Add server",
     // ── 首启向导（批 9：`views/onboarding.mjs`）──
     "wizard.title": "Initial setup",
@@ -216,25 +238,22 @@ export const HOST_DICT = Object.freeze({
     "wizard.dir.hint": "Pick a project folder — you can change it later.",
     "wizard.dir.pick": "Choose folder…",
     "wizard.save": "Save provider",
-    // ── 项目级读数（批 9 —— 消费面 = 状态行台账超阈段；会话模型轮 R13：信息行视图随左列裁撤退场
-    //    ⇒ 读数面八键随退（构树消费归零 = 零残键），仅余超阈位一键）──
-    "info.threshold": "Ready for a batch",
     // ── 批 B 面（`views/chrome.mjs`：会话头三字段标 / 档位两特值词 / 状态栏读数串 —— 键名本档拟定，登记面即此处）──
     "head.field.provider": "Provider",
     "head.field.model": "Model",
     "head.field.effort": "Tier",
     "effort.auto": "Auto",
     "effort.off": "Off",
-    "status.usage": "${percent}%",
+    "status.usage": "context ${percent}%${tokens}",
     // ── 状态行（R3a；D22 扩至承载 16 段 —— 增六键：静息词 / 输入提示静息态 / banner 四态〔代号字面 · 两语同形〕）：`views/statusline.mjs` —— 键名本档拟定，登记面即此处）──
     "status.attention.blocked": "⚠ Awaiting your approval or answer",
     "status.tool": "${name}…",
-    "status.elapsed": "${seconds}s",
+    "status.elapsedSeconds": "${seconds}s",
     "status.tasks": "✓${done}/${total}",
     "status.tokens": "↑${up} ↓${down}",
     "status.tokens.reasoning": "✦${tokens}",
     "status.tokens.hit": "hit${percent}%",
-    "status.timer": "⏰${count}",
+    "status.timer": "⏰${n}",
     "status.queue.enter": "Enter to queue",
     "status.queue.n": "${n} queued message(s)",
     "status.ready": "Ready",
@@ -267,9 +286,12 @@ export const HOST_DICT = Object.freeze({
     "chat.summary.older": "更早的 ${n} 条",
     "chat.tool.changes": "${files} 个文件 · +${add} −${del}",
     "chat.tool.duration": "${seconds} 秒",
-    // ── 复制面（批 B：`views/chat-copy.mjs` —— 块尾 / 输入区尾两控件可及名）──
-    "chat.action.copy": "复制块文本",
-    "chat.action.copyLast": "复制末条回复",
+    // ── 右键编辑菜单四键（复制面对齐批：主进程 `src/main/context-menu.mjs` `contextMenuLabels` 直取本表 ——
+    //    显式 `label` 文案（不采 role 默认文案 = 英文硬编码字面）；`locale` 现读 ⇒ 两语随动）──
+    "menu.edit.cut": "剪切",
+    "menu.edit.copy": "复制",
+    "menu.edit.paste": "粘贴",
+    "menu.edit.selectAll": "全选",
     // ── 核件复制钮两键（R3c：核 `flow/stream.mjs` `attachCopyButtons` 词键 —— **端供给面**，树面零消费；
     //    词值同 VSC 同键（`thincoder-vscode/locales/zh.json:34-35`）—— 同一控件同词）──
     "msg.copy": "复制",
@@ -282,6 +304,9 @@ export const HOST_DICT = Object.freeze({
     "sub.cancelQueueBtn": "取消排队",
     "sub.stopBtn": "停止该子代理",
     "sub.newBlocks": "↓ ${n} 新块",
+    // 让位修复批增二键（2026-09-29 · #603 · 核件出口钮两态；值逐字同 VSC `locales/{en,zh}.json` 同名键）
+    "sub.follow.new": "↓ 新内容",
+    "sub.follow.bottom": "↓ 回到最新",
     "sub.desc": "子代理活动——主 agent 为独立子任务派出的助手。展开看详情；⏹ 可停止后台运行。",
     "msg.user": "你",
     "msg.assistant": "ThinCoder",
@@ -295,7 +320,6 @@ export const HOST_DICT = Object.freeze({
     "pool.family.queue": "队列",
     "pool.collapse": "折叠活动池",
     "pool.expand": "展开活动池",
-    "composer.send.failed": "发送失败（${reason}）——文本已保留",
     "composer.attach.nonvision": "图片未随发——该模型不支持图片",
     "composer.attach.partial": "部分图片已丢弃（超限或保存失败）——其余照发",
     "approval.once": "允许一次",
@@ -347,6 +371,13 @@ export const HOST_DICT = Object.freeze({
     "settings.providers.noKey": "未配置密钥",
     "settings.providers.remove": "移除 ${name}",
     "settings.providers.active": "当前",
+    "settings.proxyRow": "代理",
+    "settings.proxyRowTitle": "该 provider 的模型请求走代理（需全局 proxy.model 开启）",
+    "settings.fetchModels": "拉取模型",
+    "settings.connecting": "连接中…",
+    "settings.connOk": "✓ 连接成功 — ${count} 个模型",
+    "settings.providerUrlRequired": "需要 baseURL",
+    "settings.secretDeleteConfirm": "确定删除？删除后无法恢复——凭证原文不可复得，只能重新配置或回服务商重取。",
     "settings.agent.readonly": "只读",
     "settings.agent.save": "保存",
     "settings.model.current": "当前模型",
@@ -357,7 +388,6 @@ export const HOST_DICT = Object.freeze({
     "settings.mcp.kind.command": "命令",
     "settings.mcp.remove": "移除 ${name}",
     "settings.mcp.nameLabel": "名称",
-    "settings.mcp.configLabel": "配置（JSON）",
     "settings.mcp.add": "添加服务器",
     // ── 首启向导（批 9：`views/onboarding.mjs`）──
     "wizard.title": "初始设置",
@@ -370,25 +400,22 @@ export const HOST_DICT = Object.freeze({
     "wizard.dir.hint": "选择项目目录——之后也可以更改。",
     "wizard.dir.pick": "选择目录…",
     "wizard.save": "保存渠道",
-    // ── 项目级读数（批 9 —— 消费面 = 状态行台账超阈段；会话模型轮 R13：信息行视图随左列裁撤退场
-    //    ⇒ 读数面八键随退（构树消费归零 = 零残键），仅余超阈位一键）──
-    "info.threshold": "可开批",
     // ── 批 B 面（`views/chrome.mjs`：会话头三字段标 / 档位两特值词 / 状态栏读数串 —— 键名本档拟定，登记面即此处）──
     "head.field.provider": "渠道",
     "head.field.model": "模型",
     "head.field.effort": "档位",
     "effort.auto": "自动",
     "effort.off": "关闭",
-    "status.usage": "${percent}%",
+    "status.usage": "上下文 ${percent}%${tokens}",
     // ── 状态行（R3a；D22 扩至承载 16 段 —— 增六键：静息词〔词形来源 = CLI 静息值 `Ready`〕/ 输入提示静息态 / banner 四态〔代号字面 · 两语同形〕）：`views/statusline.mjs` —— 键名本档拟定，登记面即此处）──
     "status.attention.blocked": "⚠ 等待你的审批或回答",
     "status.tool": "${name}…",
-    "status.elapsed": "${seconds} 秒",
+    "status.elapsedSeconds": "${seconds} 秒",
     "status.tasks": "✓${done}/${total}",
     "status.tokens": "↑${up} ↓${down}",
     "status.tokens.reasoning": "✦${tokens}",
     "status.tokens.hit": "命中${percent}%",
-    "status.timer": "⏰${count}",
+    "status.timer": "⏰${n}",
     "status.queue.enter": "Enter 排队",
     "status.queue.n": "已排队 ${n} 条消息",
     "status.ready": "就绪",

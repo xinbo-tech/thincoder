@@ -20,6 +20,11 @@
  *   - runTurn(text, opts)  回合执行器（digest = `("", { autoTurn: true })`；上行唤醒轮 =
  *                          `("", { autoTurn: true, upstreamTurn: true })`；timer 轮 =
  *                          `("", { autoTurn: true, timerTurn: true })`——旗标仅供域文本选择）
+ *   - inputQueue        **opt-in** 宿主既有输入队列数组（增补 C）：驱动就地消费该数组——宿主
+ *                       其余入队 ∕ 读取面与驱动同一数组（零同步面）；缺省核内新建（既有宿主零变）
+ *   - takeInput(queue)  **opt-in** 取项缝（增补 C）：批次策略（富条目 / 合并批 / 消费回执行）
+ *                       归宿主；缺省 `shift`；返回 null/undefined ⇒ 本步零动作、落第 2 步
+ *                       （首动作不可消费的防御面——条目不消费留队）。可异步（宿主取项含动态 import）
  *   - abortSignal       会话中止信号（兜底监听 + abort 清场判据）
  *   - hooks.onCounts(counts)      计数变化通知（{ running, queued, pending, done }）
  *   - hooks.onDigest(phase, counts) 消化轮边界（start / end）
@@ -100,13 +105,16 @@ function consultLiveCount(carrier) {
 
 /**
  * 退出清场（单点——驱动 finally 与单测共用）：
- *  - abort：清池不注入（用户显式停——陈旧结果不回灌）+ 会诊会话清理标记；
+ *  - abort：**只清已死**（§6.20 口径——增补 D：`discardAbortedPool` ∕ `discardAbortedAdvisors`
+ *    单点，与核 run-stages 回合尾中止同式；存活 ∕ 已 settle 条目留池——settled 报告沿后续
+ *    回合边界注入到达，不静默丢）+ pending 单容器清 + 会诊会话清理标记；
  *  - idle：残余直注入（极端竞态残项——结果零丢失；注入器由宿主注入，缺省 no-op 保残项）。
  */
 export async function finishSuspension(carrier, { aborted = false, injectResidual = null } = {}) {
   if (aborted) {
-    carrier._asyncSubagents?.clear()
-    carrier._asyncAdvisors?.clear()
+    const { discardAbortedPool, discardAbortedAdvisors } = await import("../agent-tools/async-discard.mjs")
+    discardAbortedPool(carrier)
+    discardAbortedAdvisors(carrier)
     carrier._pendingAsyncResults = []
     if (carrier._consultSessions instanceof Map) {
       const { cleanupConsultSessions } = await import("../agent-tools/consult.mjs")
@@ -173,8 +181,11 @@ export function startSuspension(ctx) {
   const {
     carrier, runTurn, abortSignal = null, hooks = {}, injectResidual = null,
     timerFace = null, timer = setTimeout, clear = clearTimeout,
+    inputQueue = null, takeInput = null,
   } = ctx
-  const pendingInput = []
+  // 输入队列（增补 C）：宿主既有数组（VSC ∕ CLI 形——宿主其余读者与驱动同一数组）优先；
+  // 缺省核内新建（desktop 形——经 `pushInput` 入槽）。
+  const pendingInput = Array.isArray(inputQueue) ? inputQueue : []
   const latch = { wake: null }
   let finished = false
 
@@ -194,19 +205,23 @@ export function startSuspension(ctx) {
       while (true) {
         if (abortSignal?.aborted) { aborted = true; break }
         sweepSettledToPending(carrier)
-        // 1. 用户输入优先：单槽（至多一条待交接——宿主在 busy 期拒收提交）。
+        // 1. 用户输入优先（D-S5）：队列非空 → 取项缝（增补 C——缺省 `shift`；富条目 ∕ 合并批
+        //    由宿主 `takeInput` 实现）开普通回合（`_suspended=false`）；首动作不可消费
+        //    （`takeInput ⇒ null`）⇒ 本步零动作、条目不消费，落第 2 步。
         if (pendingInput.length > 0) {
-          const head = String(pendingInput.shift())
-          const afterRun = consumedByRun()
-          carrier._suspended = false // 用户回合 = 普通回合语义（settle 即冻结 + 回合尾直注入）
-          try {
-            await runTurn(head)
-          } finally {
-            carrier._suspended = true
+          const item = takeInput ? await takeInput(pendingInput) : pendingInput.shift()
+          if (item != null) {
+            const afterRun = consumedByRun()
+            carrier._suspended = false // 用户回合 = 普通回合语义（settle 即冻结 + 回合尾直注入）
+            try {
+              await runTurn(item)
+            } finally {
+              carrier._suspended = true
+            }
+            hooks.reclaim?.(afterRun())
+            hooks.onCounts?.(backgroundCounts(carrier))
+            continue
           }
-          hooks.reclaim?.(afterRun())
-          hooks.onCounts?.(backgroundCounts(carrier))
-          continue
         }
         // 2. pending 非空 或 未 drain 的 ask → 合并消化轮 / 上行唤醒轮（单注入点由 runTurn
         //    首行完成：pending 经 run 起始注入器，ask 经回合头 `drainChildUpstream`）。
@@ -271,8 +286,9 @@ export function startSuspension(ctx) {
   })()
 
   return {
-    /** 挂起空闲期入槽（单槽语义：宿主 busy 期拒收；至多一条待交接）。 */
-    pushInput(msg) { pendingInput.push(String(msg)) },
+    /** 挂起空闲期入槽（宿主 busy 期拒收——条数策略归宿主）。**保留原值**（增补 C：富条目
+     *  ——VSC ∕ CLI 载体对象；消费面 = 宿主 `takeInput`；`String()` 化归宿主需要时自做）。 */
+    pushInput(msg) { pendingInput.push(msg) },
     /** 宿主唤醒（用户输入落槽后 / 宿主 settle 回调路径——settle 由池 waiter 另一路唤醒）。 */
     wake() { latch.wake?.() },
     done,

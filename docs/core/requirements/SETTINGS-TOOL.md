@@ -22,7 +22,7 @@ agent 需要在不打断会话的前提下查看 / 修改运行配置（模型�
 | **F-ST2** | 写动作 = 写共享配置 | 设值类动作写共享配置（`thincoder-vscode/src/config-io.mjs`）+ 热应用到 live 配置（`thincoder-core/agent-tools/settings.mjs`）；**热应用语义**：回合边界读取的键（maxTurns / autoThink 等）下回合生效、会话内持续读取的键即时、重启不丢（写盘） |
 | **F-ST7** | 值解析两端统一（**用户裁定 ① 去引号**——2026-09-11） | `JSON.parse` 成功且为顶层标量 / 对象 / 数组 → 解析结果；**解析成功但结果为字符串 → 解析值（去引号）**；parse 失败 → 字符串字面——两端同一语义；不可消费形态两端同拒、磁盘零变化 |
 | **F-ST3** | 已知键校验 | 非空叶子由默认值表（agent / traces 默认集）**派生**——按规范全路径寻址，不手写镜像键表 |
-| **F-ST4** | 形状护栏 | 不可消费形态明确拒绝（不落盘、不热应用）；空叶子与跨面 / 同族键走显式形状表；**无静默判据**（F-S1.8）：对每个受约束键断言「接受集 == 应用侧可消费集 ∧ 拒绝集 == 应用侧不可消费集」（表驱动集合相等，判据取自应用侧读取器本体——`thincoder-core/config.mjs:277` · `thincoder-cli/src/cli/make-agent.mjs:150` · `thincoder-core/agent-tools/subagent-spawn.mjs:92` · `thincoder-core/tools/bash.mjs:131` · `thincoder-core/model-ref.mjs:25-36` 形态面），被拒值的写入尝试不改变磁盘与内存 |
+| **F-ST4** | 形状护栏 | 不可消费形态明确拒绝（不落盘、不热应用）；空叶子与跨面 / 同族键走显式形状表；**无静默判据**（F-S1.8）：对每个受约束键断言「接受集 == 应用侧可消费集 ∧ 拒绝集 == 应用侧不可消费集」（表驱动集合相等，判据取自应用侧读取器本体——`thincoder-core/config.mjs:257` · `thincoder-core/agent/assemble.mjs:31` · `thincoder-core/agent-tools/subagent-spawn.mjs:82` · `thincoder-core/tools/bash.mjs:120` · `thincoder-core/model-ref.mjs:25-36` 形态面），被拒值的写入尝试不改变磁盘与内存 |
 | **F-ST5** | 敏感键遮蔽 | 键段判定命中（密钥类键段名）⇒ 值遮蔽展示——读面不泄漏凭据 |
 | **F-ST6** | 并发写冲突可见 | 目标文件被并发改过 ⇒ 拒绝本次写并返回同型冲突提示（不静默覆盖） |
 

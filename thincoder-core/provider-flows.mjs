@@ -4,7 +4,7 @@
  *
  * 上提源 = VSC `thincoder-vscode/src/extension/provider-flows.mjs`（`addProviderFlow:60` ∕
  * `removeProviderFlow:129` ∕ `setKeyFlow:153` ∕ `probeProviderAdmission:32`）——**纯搬 + 转口，零语义改**
- * （三流程步序 ∕ 字段校验 ∕ 拒因 ∕ 探针语义逐字）；VSC 自持副本迁移留后（双写窗口在册——本档 = 桌面消费单源）。
+ * （三流程步序 ∕ 字段校验 ∕ 拒因 ∕ 探针语义逐字）；VSC 自持副本已随本批（parity-b4）迁移改指本档（双写窗口关闭——本档 = 桌面 ∕ VSC 消费单源）。
  *
  * 转口（宿主面 ⇒ 注入缝；本档零宿主依赖、零 `vscode` 引用）：
  *  - **UI 壳**（VSC = `vscode.window.showQuickPick ∕ showInputBox ∕ showErrorMessage ∕ showWarningMessage ∕
@@ -22,7 +22,7 @@
  * 绝不回滚已完成的保存；失败不缓存（下次配置动作重探）。
  *
  * 消费面：桌面 `thincoder-desktop/src/main/providers.mjs`（四通道壳——判据面：`FORMATS` ∕
- * `customFieldsError` ∕ `probeAdmission`；端侧 reason 词法不动）；三流程本体待 VSC ∕ CLI 迁移消费。
+ * `customFieldsError` ∕ `probeAdmission`；端侧 reason 词法不动）；三流程本体 = 桌面 ∕ VSC（已随本批迁移改指）消费，CLI 待迁。
  */
 import { PROVIDER_PRESETS } from "./config-presets.mjs"
 import { normalizeProxy } from "./config.mjs"

@@ -96,7 +96,7 @@
 - **删（渲染实现）**：`webview/streaming.js:215-235`（JSDoc + `advisorChunk`；§1 实测 `:221` 为函数行）。上列载体与三档级联（`state.js` / 两测试档）全部入 §4 清单。
 - **保留判据（不动）**：共享渲染面（`.advisor-content` DOM 类 · `appendAdvisorChunk` / `buildAdvisorBlock`）**仅当**仍被非 advisor 路径（子代理 `subagentChunk`）使用 ⇒ 逐处 grep 判，保留则零改。
 - **连带处置**：若保留判据**不成立**（该渲染面亦 advisor 专属）⇒ 其直依测试（`test/activity-flow.test.mjs:110`/`:314`/`:316`/`:402` · `test/activity-live-ux.test.mjs:48`/`:70`）同批处置——① 层测试 = 开发期工具，**退役为常态**（处置行落批次档 §6），改写成业务场景须三条件全满足（业务可观察 + 集成未覆盖 + 可稳定驱动）。
-- **不改**：`advisor` **工具**链（核面，`thincoder-vscode/src/agent/execute-tools.mjs:348-349` · `thincoder-vscode/src/agent-tools/async-discard.mjs:98-104` advisor 池）——本批只清**回显面死码**，不动工具/池语义。
+- **不改**：`advisor` **工具**链（核面，`thincoder-vscode/src/agent/execute-tools.mjs:348-349` · `thincoder-vscode/src/agent-tools/async-discard.mjs:98-104` advisor 池）——本批只清**回显面死码**，不动工具/池语义。 （迁移期引文——档已迁核）
 
 **判据（可机判）**：① 提取器复跑零未处置（`test/protocol-coverage.test.mjs` 绿——双向对账 + **第④列**处置枚举无空）② 被删标识符活代码面零命中（`grep -rn` 读数入 §5；射程 = §6 A6 注）③ `npm test` 绿 ④ `npm run doc:check` 零悬空。
 
@@ -273,9 +273,9 @@
 **拆分计划已落地** = 域文本常量族外提 `thincoder-vscode/src/agent/turn-domains.mjs`（本批新增档，该档净移出 8 行））。
 
 **机制层端差批（2026-09-20-mechanism-parity-batch）读数收正（实现轮实核 · 2026-09-20；口径 `find /c /v ""` ≡ `wc -l`）**：
-`thincoder-vscode/src/agent.mjs` **现盘 494**（触发线 **>495**——**未触** · 距 500 硬限 **6** 行；拆分候选在册 = 响应后处理段 → `agent/response-stages.mjs`（已落 · 实读 **73**））；
+`thincoder-vscode/src/agent.mjs` **现盘 494**（触发线 **>495**——**未触** · 距 500 硬限 **6** 行；拆分候选在册 = 响应后处理段 → `agent/response-stages.mjs`（已落 · 实读 **73**））； （迁移期引文——档已迁核）
 `thincoder-vscode/src/agent/run-stages.mjs` **现盘 403**（>300 咨询线、≤500 硬限）；
-`thincoder-vscode/src/agent/execute-tools.mjs` **现盘 418**（同上）；
+`thincoder-vscode/src/agent/execute-tools.mjs` **现盘 418**（同上）； （迁移期引文——档已迁核）
 `thincoder-vscode/src/agent/setup.mjs` **现盘 495**（触发线 **>497**——**未触** · 距 500 硬限 **5** 行；拆分候选在册 = 配置读段 → `agent/setup-config.mjs`（拟新增））；
 `thincoder-vscode/src/extension/permission-gate.mjs` **109 → 117**（+8：门体改经核 `askPermission` 的 `io.ask` 缝；<300 咨询线）；
 `thincoder-vscode/test/files.mjs` **现势回填 120**（+3 = `vsc-stream-rules.test.mjs` / `scoped-rules.test.mjs` / `nested-token-relay.test.mjs` 登记）。
@@ -303,13 +303,13 @@
   `thincoder-vscode/test/busy-injection-vsc.test.mjs` **546**（越 500 硬限 ⇒ 本批拆分执行，设计 = §13.5）· `settings.mjs` **409** · `webview/settings-tools.js` **398**（触发未到——登记案按现读重锚 = §13.3）·
   `webview/ui.js` **494**（**首次登记**；触发 = 下次实质触碰 ∨ 余量 ≤5——未到）· `test/async-parity.test.mjs` **492**（登记〔自 `2026-09-18-toolface-fixes` 批转正〕：拆分候选 = 用例族切面；触发 = 越 500 前 ∨ 下次实质触碰）·
   `test/session-boot.test.mjs` **490**（余 10——触发未到）· `test/workspace-guard.test.mjs` **487** · `thincoder-vscode/src/extension/suspension.mjs` **447** · `thincoder-vscode/src/agent/run-stages.mjs` **421** ·
-  `thincoder-vscode/src/agent/setup.mjs` **421** · `src/agent/execute-tools.mjs` **417** ·
+  `thincoder-vscode/src/agent/setup.mjs` **421** · `src/agent/execute-tools.mjs` **417** （迁移期引文——档已迁核） ·
   `src/extension/panel-messages.mjs` **357** · `src/extension/panel-session.mjs` **312**——均读数刷新（触发未到，零动作）。
 **CSS 类记录值（零拆分计划——引既有裁定「CSS 不入门」：N-P3 模块缝语义 + 评审 id=104 先例 + `2026-09-21-loading-screens` 评审「按既有裁定不升级、不重开」；依据句 = `docs/batches/2026-09-18-vsc-session-wiring.md:82`）**：`thincoder-vscode/webview/chat.css` **514** · `webview/controls.css` **658**。
 逐项登记，**非全量普查**（同款须知 = 上方块注）。
 
 **批后登记（2026-09-25 file-tier-sweep 批 · 实施轮实测 · `wc -l` 口径）**：`thincoder-vscode/src/extension/chat-panel.mjs` **497 → 426**（拆分 = §13.2；>300 咨询线、≤500 硬限——触发未到）· `thincoder-vscode/src/agent.mjs` **496 → 457**（拆分 = §13.4；触发 **>495**——未触）。
-`thincoder-vscode/src/extension/panel-settings-push.mjs` **119**（新档 · Settings 段外提 = §13.2）· `thincoder-vscode/src/agent/response-stages.mjs` **73**（新档 · 响应后处理段外提 = §13.4）——两新档均 ≤300 咨询线（无拆分义务）。
+`thincoder-vscode/src/extension/panel-settings-push.mjs` **119**（新档 · Settings 段外提 = §13.2）· `thincoder-vscode/src/agent/response-stages.mjs` **73**（新档 · 响应后处理段外提 = §13.4）——两新档均 ≤300 咨询线（无拆分义务）。 （迁移期引文——档已迁核）
 `thincoder-vscode/test/busy-injection-vsc.test.mjs` **546 → 330**（拆分 = §13.5；>300 咨询线、≤500 硬限——越线登记见下行）· `thincoder-vscode/test/busy-injection-vsc-webview.test.mjs` **249**（新档 · webview 引导族外提 = §13.5；≤300 咨询线，无拆分义务）。
 **CLI 面（同批拆分 · 登记载体 = 批档 §2——KD-26）**：`thincoder-cli/test/busy-injection.test.mjs` **474 → 209** · `thincoder-cli/test/busy-injection-render.test.mjs` **155**（新档）· `thincoder-cli/test/busy-injection-consume.test.mjs` **198**（新档）——三档均 ≤300 咨询线（无拆分义务）。
 **测试档越线登记（续 · 2026-09-25 file-tier-sweep 批后）**：`thincoder-vscode/test/busy-injection-vsc.test.mjs` **330**（`wc -l`；>300 咨询线——本批拆分落地 546 → 330；≤500 硬限，无拆分义务）——结构不变〔本批拆分后定形：用例族 + 夹具自持〕· 不拆理由 = ≤500 硬限在位（300 为咨询线）。
@@ -323,6 +323,18 @@
 **主 / 测试档读数刷新（2026-09-28 · timer-wake 阶段 2 批后 · 实读 · `wc -l` 口径）**：`thincoder-vscode/src/agent/setup.mjs` **421 ⇒ 427**（>300 咨询线、≤500 硬限——读数刷新；触发线 **>497** 未触）·
 `thincoder-vscode/src/extension/suspension.mjs` **447 ⇒ 483**（>300 咨询线、≤500 硬限——越线登记在册，本次为读数刷新；无拆分义务）·
 `thincoder-vscode/test/timer-wake.test.mjs` **396**（>300 咨询线——**首登**；≤500 硬限，无拆分义务；先例 = `thincoder-vscode/test/ledger.test.mjs` 324 首登）。逐项登记，**非全量普查**。
+
+**主 / 测试档读数刷新（2026-09-29 · parity-b1-vsc-core 批后 · 实读 · `wc -l` 口径——= `split("\n").length − 1`）**：本批 = VSC ∕ CLI 收口核（大件）——VSC 五档退役、多档大幅收缩；本批受影响档逐档刷新（小计：23 档合计 **5344 → 2304**——批档 §2.0 split 口径；−57%）：
+`thincoder-vscode/src/agent.mjs` **455 ⇒ 9**（前值 = 本批前实读 ∕ `wc -l`；上轮登记 457 ∕ as-of 2026-09-25。主循环归核；`ContinueError` 转口残面——**越线登记关闭**）· `src/agent/setup.mjs` **427 ⇒ 298**（host 装配；触发线 **>497** 未触）·
+`src/agent/run-helpers.mjs` **268 ⇒ 88** · `src/agent/setup-reminders.mjs` **141 ⇒ 41** · `src/agent/tool-table.mjs` **250 ⇒ 181**（基础集 + `vscSubagentFace` 装饰体）· `src/agent/turn-domains.mjs` **37 ⇒ 37**（零改 · 复测）· `src/agent/agent-state.mjs` **158 ⇒ 158** ·
+`src/extension/suspension.mjs` **483 ⇒ 290**（取核装配 + 会话外壳 + W8 修单动态装载；**越线登记关闭**）· `src/extension/panel-turn-stages.mjs` **240 ⇒ 250** · `src/extension/panel-chat.mjs` **259 ⇒ 260** ·
+`src/extension/skills.mjs` **118 ⇒ 5** · `src/extension/peer-claims.mjs` **207 ⇒ 34** · `src/extension/peer-domains.mjs` **264 ⇒ 32** · `src/extension/peer-instances.mjs` **182 ⇒ 20** · `src/extension/image-handler.mjs` **129 ⇒ 51**（B4-W1 抽核后实测；本批零改复测）。
+**>300 咨询线首登（本批）**：`src/extension/panel-turn-loop.mjs` **186 ⇒ 311**（host 装配 + 核 `runAgent` 改接 + 三段续跑 + 三适配面——结构 = 适配面单档聚合；≤500 硬限在位，无拆分义务；触发 = 越 500 ∨ 下次实质触碰）。
+**退役档（删除——登记关闭）**：`src/agent/context-injections.mjs`（216）· `src/agent/execute-tools.mjs`（421）· `src/agent/response-stages.mjs`（74）· `src/agent/run-stages.mjs`（422）· `src/agent/tool-gates.mjs`（167）。 （迁移期引文）
+**CLI 面**：`thincoder-cli/src/tui/suspension-drive.mjs` **371 ⇒ 210**（核驱动装配 + 壳）。
+逐项登记，**非全量普查**（同款须知 = 上方块注）。
+
+**越线拆分登记（补登 · 2026-09-29 · 设计轮上抛处置〔父侧裁〕）**：`thincoder-vscode/src/extension/panel-turn-loop.mjs` **311**（`wc -l`；>300 咨询线、≤500 硬限内——首登见上方 B1 块）⇒ **触发式（未预拆）**：候选线 = 循环外适配 ∕ 绑定族（`newTurnController` ∕ `bindPanelAgent` ∕ `bindCarrierFace`〔+ 载体表〕∕ `attachToolDrivenLegs`——`:35-143` ≈109 行）出档〔新档名实施批定〕· **消解窗口 = 该档下次结构性触碰的批**（注释 ∕ 坐标 ∕ 词值 ∕ 行级小修不计）。
 
 ### 12.2 逐档方案（职责分面 · 六新档）
 
@@ -642,13 +654,13 @@
 
 两档触发未到 ⇒ 本批零执行（判定口径 = KD-20）。
 
-### 13.4 `thincoder-vscode/src/agent.mjs`（496 → 目标 ≤460）——响应后处理段外提 · `agent/response-stages.mjs`（已落 · 实读 **73**）
+### 13.4 `thincoder-vscode/src/agent.mjs`（496 → 目标 ≤460）——响应后处理段外提 · `agent/response-stages.mjs`（已落 · 实读 **73**） （迁移期引文——档已迁核）
 
 **拆点（as-of 实读；登记候选逐字 = §12.1「响应后处理段（builtin / interrupt / reminders）」）**：
 
 | 段 | 行段 | 去向 |
 |---|---|---|
-| `traceStop` + 内置工具结果本地化 | :300-313 | `src/agent/response-stages.mjs`（已落 · 实读 **73**） |
+| `traceStop` + 内置工具结果本地化 | :300-313 | `src/agent/response-stages.mjs`（已落 · 实读 **73**） （迁移期引文——档已迁核） |
 | interrupt 提交 | :315-324 | 同上 |
 | usage 记账 | :326-334 | 同上 |
 | 流规则 abort 消费 | :336-340 | 同上 |
@@ -742,3 +754,9 @@
 
 - 2026-09-28（**timer-wake 阶段 2 批 · VSC 收尾轮 · eng-designer**——承 `docs/batches/2026-09-28-timer-wake-phase2.md` §5.15 表外报出）：§12.1 追加**主 / 测试档读数刷新块**（`thincoder-vscode/src/agent/setup.mjs` 421 ⇒ **427**——触发线 >497 未触；`thincoder-vscode/src/extension/suspension.mjs` 447 ⇒ **483**——读数刷新）
   + **测试档越线登记**（`thincoder-vscode/test/timer-wake.test.mjs` **396**——首登）。**零语义**（登记面）。
+
+- 2026-09-29（**parity-b1-vsc-core 批 · 收口轮 · eng-coder**——承 `docs/batches/2026-09-29-parity-b1-vsc-core.md` §2.9 ∕ §2.0 行数口径）：§12.1 追加**主 / 测试档读数刷新块（B1 收口核批后）**——本批受影响 23 档逐档刷新（小计 5344 ⇒ **2304**，−57%）
+  + 五档退役登记关闭（`context-injections.mjs` ∕ `execute-tools.mjs` ∕ `response-stages.mjs` ∕ `run-stages.mjs` ∕ `tool-gates.mjs`）+ **>300 首登一档**（`panel-turn-loop.mjs` 311）。**零语义**（读数与登记面）。
+
+- 2026-09-29（**residuals-round2 批 · 设计轮上抛处置轮 · eng-designer**——承批档 `docs/batches/2026-09-29-residuals-round2.md`〔父侧裁②〕）：§12.1 追加**越线拆分登记（补登）**——`panel-turn-loop.mjs` 311（首登见 B1 块）⇒ 触发式（未预拆）+ 候选线（循环外适配 ∕ 绑定族出档〔新档名实施批定〕）+ 消解窗口（该档下次结构性触碰的批）。**零语义**（登记面）。
+

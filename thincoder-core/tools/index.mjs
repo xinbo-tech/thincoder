@@ -68,7 +68,8 @@ export async function assembleBuiltinTools({ memory, cwd, projectDir = null, aut
     ...memoryTools(memory, { cwd, projectDir, author, team }),
     codeSearchTool(memory),
     docSearchTool(memory),
-    repoOutlineTool(memory.db, cwd),
+    // memory 缺位容错：组装期零解引用（memory?.db）；缺位不抛（懒失败留执行期——与 memory ∕ code_search ∕ doc_search 同族，dispatch 收成 Error 回模型）；有 memory 逐字零变
+    repoOutlineTool(memory?.db, cwd),
     settingsTool(),
     peerInstancesTool,
     // 台账查询命令族（M2 设计 §2.2 命令面接线——查询命令全角色面；写命令住 family-tools depthOnly 分支）

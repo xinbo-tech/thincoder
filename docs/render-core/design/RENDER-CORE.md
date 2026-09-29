@@ -20,7 +20,7 @@
 
 1. **宿主句柄获取**——VSC `acquireVsCodeApi()`（唯一获取点 = `thincoder-vscode/webview/state.js:10`）；桌面预载桥（`thincoder-desktop/src/preload/preload.cjs:21-33` 白名单）。
 2. **出站消息**——VSC `postMessage`（散布 20 档 65 处；代表性 = `webview/send.js:55` / `webview/permission.js:58` / `webview/session-bar.js:10`）；桌面 `invoke`。
-3. **主题变量命名空间**——VSC `--vscode-*`（映射层 `webview/base.css:8-20`；直用：`chat.css` 14 行 / `controls.css` 10 行 / `status-bar.js:38` / `streaming.js:197`）；桌面自有变量（`renderer/styles.css`）。
+3. **主题变量命名空间**——VSC `--vscode-*`（映射层 `webview/base.css:8-20`；直用：`chat.css` 14 行 / `controls.css` 10 行 / `status-bar.js:38` / `streaming.js:197`）；桌面自有变量（`thincoder-desktop/renderer/theme.css`）。
 4. **入站分发与装配**——VSC 消息循环（`webview/chat-messages.js:48` 唯一监听点）；桌面订阅 + 帧装配（`renderer/events-subscribe.mjs` / `renderer/app.mjs`）。
 
 ### 1.3 落点与加载形（零构建下两端如何取核）
@@ -71,7 +71,8 @@
 | KD-RC-5 | 桌面**文件链接不承载**（核含 `linkify`，桌面不消费 ⇒ 零链接节点） | 需求 §5.1：**文件视图与编辑器（打开 / 编辑 / 保存 / 内置 diff）暂缓**——链接出口 = 「打开文件」⇒ 落链接即假控件（违「诚实非死控」律 `docs/desktop/design/RENDERER.md:43`） | **落链接 + 无出口**（假控件）；**落链接 + 系统程序打开**（越暂缓边界，须需求侧先裁）；**核删 linkify**（VSC 消费面在——核不夺） |
 | KD-RC-6 | 桌面**子 agent 面内容 chunk 四面分流 + 回显 tail-3**（KD-RC-6 收正——「对齐第二批」项 3） | 需求 §3.6「对齐」口径 + D4（内容回显 = 核件 tail-3 / 展开）+ D20 块形；四面 = text / think / 工具调用行 / 工具输出行（桥面出站 `ev:subchunk`——载荷 / 在场单源 = `docs/desktop/design/IPC.md` §1 该行）；现状漏 = 带 `role#id/` 前缀的内容 chunk **原样进主流**（`thincoder-desktop/src/main/agent-bridge.mjs:57-63` 只剥 `⟦ev⟧` 协议段，其余前缀不剥）⇒ 分流 = 修漏 + 定形 | **原样留主流**（前缀字面泄漏入对话流）；**剥前缀后并入主流正文**（子代理内容冒充主会话正文——三端语义分叉）；**改判（2026-09-28 · 对齐第二批）**：原否「照 VSC 回显 tail-3（违 D4 语义面）」⇒ 随 D4 句收正**改采**（单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 3） |
 | KD-RC-7 | 核**构件类名沿用被抽档现行名**（逐字搬迁纪律）；样式变量面 = 各端映射（桌面新增「核类名 → 桌面变量」样式档） | VSC 侧 CSS（`chat.css` / `controls.css`）与逐字文案锁按现行名成文 ⇒ 改名 = 全量机械重构、收益为零；桌面样式自有（`styles.css` 340 行） | **改命名空间 `rc-*`**（VSC 全量 CSS + 测试靶重构）；**核搬整套 CSS**（两端主题体系打架——KD-RC-7 即为此面裁定） |
-| KD-RC-8 | **块级跟滚原语**（`initBlockFollow` / `maybeScrollBlock`）**入核**（2026-09-29） | 纯 DOM 零调度依赖（先例 = 核 `paintReasoningTarget` 即写 `scrollTop`）；同一份十余行逻辑要求每端复刻 ⇒ 注定再漏（实证 = 台账 #518：桌面块内容区跟滚零接线）；**调用时机留端**（VSC = rAF 帧尾；桌面 = store 帧内）——核件零调度依赖不破 | **端侧留端**（每端复刻——已证漏）；**端侧复刻**（桌面第二实现 + 双源漂移面）；**核持调度**（rAF ∕ 帧模型属端——违「与宿主无关」定性边界） |
+| KD-RC-8 | **块级跟滚原语**（`initBlockFollow` / `maybeScrollBlock`）**入核**（2026-09-29）；**让位语义收正 + 出口钮自持 + 两半归属定死**（2026-09-29 · 批 `docs/batches/2026-09-29-subblock-follow-resume.md` · 用户裁定留端清算） | 纯 DOM 零调度依赖（先例 = 核 `paintReasoningTarget` 即写 `scrollTop`）；同一份十余行逻辑要求每端复刻 ⇒ 注定再漏（实证 = 台账 #518：桌面块内容区跟滚零接线）。**让位修复三律**：① 近底（gap < 24px）无条件翻真（自愈）② 远离底仅凭用户手势门（`wheel` / `touchmove` / `pointerdown` · 600ms）翻假 ③ 非手势位移（复位回波 / 程序写 / 布局）不改旗标；**键盘位移**（键盘滚动——无手势标记）同路（不改旗标）——可达性 unverified（需真机核）⇒ **残余登记**（消解路 = 真机核，可达 ⇒ 纳手势集另立小修；过期 = 真机核落地；登记落点 = `docs/desktop/design/UI.md` §1「本批注（块跟滚让位修复 · 2026-09-29）」项 5）；**出口钮** `sub-follow-btn` = 原语自持面（让位期 `open ∧ 非冻结 ∧ 可滚` ⇒ 可见；两态词键 `sub.follow.new` / `sub.follow.bottom`；点击 ⇒ 回底 + 复跟）——两端随核同收。**两半归属**：① **原语 ∕ 旗标语义 ∕ 出口钮 = 核**；② **应用时机契约 = 核**（应用点清单 = 本档 §5 单源：追加后 · 挂载后 · 帧尾复核——端只在宿主时刻按清单调用核应用器；端侧遗漏应用点 = **违约缺陷**，机检腿逐端在册；#518 四点 ∕ #603 帧尾 ∕ 归档径三漏即契约缺位所致）；③ **触发源 = 端**（桌面 = store 变更 ⇒ 调核帧合并件 `mark`；VSC 面本批零改——流式装配现走核 `createStreamRenderer`，改接 = 排后另议）——**帧合并 ∕ 更新纪律已收核**（rAF 属浏览器原生面——§1.2 定性内，先例 = `createStreamRenderer`；单源 = §2 **KD-RC-9**）；④ **滚动策略族契约同源**（块内容区 ∕ 活动区 ∕ 池列 ∕ 对话流四载体一句契约：近底 < 24px 判据 ∕ 旗标门 `!== false` ⇒ 写 `scrollTop = MAX` ∕ 不夺阅读位 ∕ 清账三路——端实现 = 契约适配器，判据逐字同式（机检对拍腿——载体 = 批次本地机检件〔**本批须新增**；单源 = `docs/desktop/design/PROJECT.md` §4.2 本批行「测试面 ∕ 探针面」〕）；判据漂移 = 缺陷） | **端侧留端**（每端复刻——已证漏）；**端侧复刻**（桌面第二实现 + 双源漂移面）；**核持触发源（核订阅 ∕ 驱动宿主事件面）**（触发源属宿主——§1.2 四条；帧合并 ∕ 更新纪律收核后触发源仍留端——单源 = §2 KD-RC-9）；**让位单边翻真**（拖条让位丢失——下一帧夺回阅读位）；**事件溯源式非手势识别**（摘离标记 / MutationObserver——重机具 · 跨端不可移植）；**出口钮端侧各建**（双实现面）；**出口钮计数（↓ N 新行）**（行合并致 N 语义不闭合） |
+| KD-RC-9 | **更新纪律收核**（2026-09-29 · 批 `docs/batches/2026-09-29-render-perf.md` · 台账 #609 · 用户报障 + 真机实锤）：核新增**帧合并件 `flow/frame.mjs`**（`createFrameMerge`——**脏标记 ∕ 帧合并 ∕ 应用器契约**；`FRAME_MIN_MS` = 50 · 单飞 rAF · `flush` 同步尾帧）+ **`appendToolOutput`**（O(1) 工具输出追加原语——自 VSC `chat-messages.js:77-96` 上提，VSC 改指零行为变更；桌面工具卡消费）。**应用器契约**：① 每键面每帧至多绘一次（增量更新为默认——尾块就地 ∕ O(1) 追加 ∕ 面内差分；整面重挂仅判据命中）② 布局节俭（禁逐 chunk 强制布局——读数仅帧内、按档裁剪）③ 帧尾动作（滚动 ∕ 钉底 ∕ gating）落面尾段、每帧至多一次 ④ 每 chunk 同步成本禁 ∝ 累计文本 ⑤ `apply` 抛错语义——脏集于调用前快照并清空（apply 内新 `mark` ⇒ 落下一帧；抛错帧不重试同脏集）· 异常不吞（直抛）· 单飞标记 `try/finally` 复位 ⇒ 帧链不断（抛错后后续 `mark` 照常起帧）。**触发源留端**（宿主事件 / store 变更 ⇒ `mark`）；`flush` = 顺序保真点（回底）+ 测试 ∕ 探针确定性 | 用户 13:45 报「桌面输出速度好慢」+ 13:48 斥「VSC 早就处理了的毛病又搞出来——渲染核干了啥」；真机计时实锤（`thincoder/.thincoder/tmp/perf-probe.mjs`：单块流式每 chunk 重挂成本随文本**线性增长** 10KB=0.9ms ∕ 40KB=4.5ms ∕ 80KB=5.9ms）；VSC 已付轮子 = rAF 节流（其 `CHANGELOG`「Stop 卡顿」——每 chunk 全文重渲 ∕ DOM 重建 ⇒ O(n²)）；桌面缺该层 ⇒ 触发源留端（KD-RC-8③ 收正）· 更新纪律收核 | **维持现状（每写即绘）**（成本 ∝ 文本长度——实锤在册）；**端各自优化（桌面自建节流）**（第二实现 = 双源漂移；VSC 已付轮子不复用 = 核「统更新纪律」落空）；**核持触发源（核订阅 ∕ 驱动）**（触发源属宿主——核不持宿主句柄，§1.2 四条）；**独立 frameEnd 槽**（跨面收尾消费者为零——死 API；帧尾纪律入应用器契约条③）；**全文增量 md 渲染（真 O(1) DOM）**（VSC 未付该轮子——其口径 = 全量 md 重渲 + 帧界；增量 md = 新机制另议）；**核内两套帧件归一（`createStreamRenderer` ⇒ `createFrameMerge` 单件）**（不给由——两件分工：单目标流式缝合（VSC 流式档现行）∥ 多面脏键集合并（桌面六面）；VSC 改接 = 排后另议——本批零改；防第三份 = 新面须择两件之一复用） |
 
 ## 3. 核边界 · 逐模块判定表（VSC webview 51 档 · 单源）
 
@@ -83,7 +84,7 @@
 | 1 | `activity-diag.js` | 端 | 诊断留痕上行（`:81` 上行 `panelDiag`）——端观测面 |
 | 2 | `activity-new.js` | 端 | 活动区计数钮（`:21` / `:33`）；桌面**同面补装**（R10 落——`thincoder-desktop/renderer/views/activity-new.mjs`（实读 **100**）；未跟底计新生 ∕ 点钮回底清账——单源 = `docs/batches/2026-09-28-desktop-flow-vsc-align.md` §2.8 R10） |
 | 3 | `activity-view.js` | **核** | 块头 / 状态词 / 尾 3 行 / ⏹ 控件（`:118` `refreshBlock` · `:152` · `:184`）——零 A / B / C |
-| 4 | `activity.js` | **拆** | 块态机（出生 `thincoder-render-core/subblocks/state.mjs:103` / 接管 `:124` / 冻结 `:47` / 归档 `:93` 的**迁移判据**）入核；出生位 / 归档入流的 DOM 编排留端（`thincoder-vscode/webview/activity.js:48` / `:104`）；**块级跟滚原语入核**（`thincoder-render-core/subblocks/block.mjs` `initBlockFollow` / `maybeScrollBlock`——2026-09-29 提核；**调用时机留端**） |
+| 4 | `activity.js` | **拆** | 块态机（出生 `thincoder-render-core/subblocks/state.mjs:103` / 接管 `:124` / 冻结 `:47` / 归档 `:93` 的**迁移判据**）入核；出生位 / 归档入流的 DOM 编排留端（`thincoder-vscode/webview/activity.js:48` / `:104`）；**块级跟滚原语入核**（`thincoder-render-core/subblocks/block.mjs` `initBlockFollow` / `maybeScrollBlock`——2026-09-29 提核；**应用时机契约在核 ∕ 触发源在端**（帧合并 ∕ 更新纪律收核——2026-09-29 收正）——单源 = §2 KD-RC-8 ∕ KD-RC-9） |
 | 5 | `autocomplete.js` | 端 | 输入面端能力（`@` 补全 / 粘贴上传） |
 | 6 | `base.css` | 端 | 宿主变量映射层（`:8-20`）；核契约 = KD-RC-7 |
 | 7 | `chat-messages.js` | 端 | 52-case 分发 = 端协议（`:48` 唯一监听点） |
@@ -144,7 +145,7 @@
 |---|---|---|---|---|
 | 1 | Markdown 渲染（含转义闸） | `md.js:67` / `:106` / `:146` | `md.mjs` | **显式裁（改判）**：桌面由 `pre-wrap` 纯文本改为经核 Markdown——KD-RC-4 |
 | 2 | 语法高亮 | `highlight.mjs:165`（R1 迁核） | `highlight.mjs` | **自然成立**（随 md；代码块面由核给 `<pre class="code-block">`） |
-| 3 | 流式增量渲染（rAF 降频缝合） | `streaming.js:36-79` / `:112` | 核缝合件 | **需补面**（核件分件消费 · 桌面外壳留存）：帧尾就地重渲经核 `paintStreamTarget`；**推理面经核 `paintReasoningTarget`**（专用画笔 = 通用画笔 + `scrollTop = scrollHeight` 钉底——「对齐第二批」项 1；不接则思考块不跟底）；流式档位分派 / 落位留桌面（`renderer/events.mjs` `onToken` + `thincoder-desktop/renderer/views/chat-stream.mjs`——未接核 rAF 缝合件） |
+| 3 | 流式增量渲染（rAF 降频缝合） | `streaming.js:36-79` / `:112` | 核缝合件 | **需补面**（核件分件消费 · 桌面外壳留存）：帧尾就地重渲经核 `paintStreamTarget`；**推理面经核 `paintReasoningTarget`**（专用画笔 = 通用画笔 + `scrollTop = scrollHeight` 钉底——「对齐第二批」项 1；不接则思考块不跟底）；流式档位分派 / 落位留桌面（`renderer/events.mjs` `onToken` + `thincoder-desktop/renderer/views/chat-stream.mjs`）；**更新纪律已收核**（2026-09-29——帧合并件 `flow/frame.mjs` 桌面接装：触发源 = store 变更 ⇒ `mark`；单源 = §2 **KD-RC-9**） |
 | 4 | 推理块（think） | `streaming.js:81-107` | 核推理块构件 | **需补面**：核回调 `onReasoning`（`thincoder-core/agent.mjs:273`）未接——桌面 `agent-bridge.mjs` 补回调（现九键）+ 新通道 + 归约块型（块型 `reasoning` 已在桌面五型内） |
 | 5 | 帧 / 块容器（回合块与 idx） | `ui.js:176-189` | 核块容器构件 | **需补面**（核件分件消费 · 桌面外壳留存）：块容器 = 桌面描述符树留存（三锚 `data-block-kind` / `data-block-id` / `data-seg` 不动）；文本面 / 推理内容经核 `md`——否「整件替换核 DOM」 |
 | 6 | 工具卡面 | `ui.js:203` / `:281` / `:329` | 核工具卡构件 | **需补面**（核件分件消费 · 桌面外壳留存）：工具结果面经核 `capText`（渲染单源）；卡壳四段头 / 折叠 / 耗时 / 改动摘要留存（`thincoder-desktop/renderer/views/chat-tool.mjs`）；`formatToolSummary` / `isToolFailure` **不消费**（非缺口——卡面单源 = `docs/desktop/design/UI.md:25`「四段头 + 改动摘要」· 成败判据单源 = `docs/desktop/design/IPC.md:40` 载荷 `ok`） |
@@ -157,7 +158,7 @@
 | 13 | 消息窗口裁剪 | `ui.js:446-454`（150 块） | 不入核 | **显式裁（各自）**：桌面窗限 = 200 块 + 摘要块（`RENDERER.md` §2，判据面自持）——数值差登记 · 核不夺 |
 | 14 | 懒历史回填 | `history.js:43-88` | 不入核 | **显式裁（各自）**：桌面回填 / 补偿算式已在册（`RENDERER.md` §3）；核化候选另议（§9） |
 | 15 | 跟滚 / 回底 | `ui.js:426-468` · `scroll.js:13-20` | 不入核 | **显式裁（各自）**：桌面跟滚 / 药丸已在册（`RENDERER.md` §3 判据面） |
-| 16 | 队列标记（待发送） | `queued-mark.js:29` / `:63` | 核标记逻辑 | **改判（对齐第二批）**：桌面**接核标记原语**（`markPending` / `paintLabel`——标记类与标签两形态字面单源）+ **队列按会话分键**（`pending: { [会话键]: [{ text, ts }] }`）⇒ **流内待发送气泡**（单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 2）；`planBusyQueued` / `clearPending` 不消费（宿主快照对账面 = VSC 专有 ∥ 桌面交接 = 节点换代——登记 = §9「对齐第二批」②） |
+| 16 | 队列标记（待发送） | `queued-mark.js:29` / `:63` | 核标记逻辑 | **改判（对齐第二批）**：桌面**接核标记原语**（`markPending` / `paintLabel`——标记类与标签两形态字面单源）+ **队列按会话分键**（`pending: { [会话键]: [{ text, ts }] }`）⇒ **输入区上方待发送带（非流内）**（单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 2）；`planBusyQueued` / `clearPending` 不消费（宿主快照对账面 = VSC 专有 ∥ 桌面交接 = 节点换代——登记 = §9「对齐第二批」②） |
 | 17 | 忙态门 / 载入态 | `loading.js:86` / `:67` | 不入核 | **自然成立**（桌面忙态 = 位标 `running` + 输入区判据已在） |
 | 18 | 审批卡 | `permission.js:21` / `:86` | 核卡面 | **按 ② 同判（卡族外壳留存）**：桌面 `thincoder-desktop/renderer/views/approval.mjs` 自持卡面（三出口 / 批形已在）；不迁核卡面件（VSC 形态——与桌面锚系 / 用例相抵） |
 | 19 | 提问卡 | `question.js:10` / `:59-76` | 核卡面 | **按 ② 同判（卡族外壳留存）**：桌面 `thincoder-desktop/renderer/views/question.mjs` 自持卡面（两作答路已在）；不迁核卡面件 |
@@ -167,15 +168,18 @@
 
 **计数（D3）**：22 行 = 自然成立 **4**（行 2 / 8 / 9 / 17）· 需补面 **9**（行 3 / 4 / 5 / 6 / 11 / 18 / 19 / 20 / 21）· 显式裁 **8**（行 1 / 7 / 10 / 12 / 13 / 14 / 15 / 22）· 改判 **1**（行 16）。
 
+**「显式裁（各自）· 核不夺」口径限定（2026-09-29 · 与 KD-RC-8 ④ 关系随拍）**：核不夺 = **实现载体**不夺（行 13–15 实现各端自持）；**判据面**：滚动策略族四载体（块内容区 ∕ 活动区 ∕ 池列 ∕ 对话流）契约 = KD-RC-8 ④ **同源**（近底 < 24px 判据 ∕ 旗标门 `!== false` ⇒ 写 `scrollTop = MAX` ∕ 不夺阅读位 ∕ 清账三路；端 = 契约适配器——判据漂移 = 缺陷）——行 15（跟滚 / 回底——对话流载体）随族契约同源；行 13（窗裁）∕ 行 14（回填）非族成员（判据各端自持）。
+
 ## 5. 接口契约（核导出面 · 端注入面 · 样式契约）
 
-**核导出面（三族）**：
+**核导出面（四族）**：
 
 1. **纯函数族**——`md(text)` / `mdInline(text)` / `esc(s)` / `highlight(code, lang)` / `lineDiff(a, b)` / `renderDiff(...)` / `formatToolSummary(name, text)` / `t(key, vars)` / `setStrings(dict)`；
    `lib` 各纯函数（`tailTruncate` / `capText` / `fmtK` / `fmtTime` / `patchLineType` / `toolFailureStatus` / `isToolFailure`）。
 2. **状态机族**——`relayEventToSubPatch(token, scope, deps?) → patch | null`（**映射单源**：VSC 扩展侧 / 桌面主进程两端共用；`scope` = `createRelayScope()` 实例，**必给**——缺 scope fail-closed 报错，不静默降级）；
+   `relaySubContentChunk(face, a, b) → chunk | null`（**内容 chunk 构形单源**——B7 2a 落：前缀剥除 ∕ 四面 gate（`text` ∕ `think` ∕ `toolCall` ∕ `toolOutput`；非四面 ∕ 无前缀同口 `null`）全在本件；`chunk` 不携频道键 `ch`——宿主由 `role`+`id` 重导；宿主副作用（`noteContentFirst` ∕ `emitToolPanel`）留端）；
    `subBlocksReduce(list, patch, deps?) → { list, effects }`（出生 / 终态折叠 / 归档三态机；`effects` = DOM 效果表——端按序执行）+ `ensureSubBlock(list, key, deps?)`（内容 chunk 出生闸）+ `subBlocksFreezeAll(list, deps?)`（会话退出兜底）；判据族（键文法 / 终态 kind / 补桩表 / 补桩前置）= `channel.mjs`。
-   先例 = `thincoder-vscode/src/extension/panel-subagent-relay.mjs:101-147`（逐字搬迁——R2 后 VSC 差分 = 零）。**token → patch 全表（单源 · 本表）**：
+   先例 = VSC 自持表（`thincoder-vscode/src/extension/panel-subagent-relay.mjs`——**B7 2a 换接 rc 单源后已删**：现盘该档只余转口壳 ⇒ **VSC 差分 = 零**；下表「先例」列行号 = 搬迁时采样，不解析现盘）。**token → patch 全表（单源 · 本表）**：
 
    | token | 产物 patch | 先例 |
    |---|---|---|
@@ -198,13 +202,15 @@
      VSC webview 终态词表的 `error` / `failed` / `terminated` 成员 = 自述面遗留（`onSubagent` 回调在核内零发射点——`thincoder-vscode/src/extension/panel-callbacks.mjs:164` 仅定义）⇒ 无活上游，桌面不复制；错误可见面在对话流（工具卡 / 报告），不在本块面。
 
 **relay 文法零依赖副本登记**：relay 前缀文法（`role#id/`）权威 = `thincoder-core/agent/relay-prefix.mjs`（`:10` / `:16-32`）；核包零依赖约束下不可 import ⇒ 副本逐字移植于 `thincoder-render-core/subblocks/relay.mjs`（`:20` / `:25`，漂移登记在件头）；
-**跨包对拍锁** = `thincoder-vscode/test/render-core-relay-map.test.mjs` RM-3（`:95`）· RM-4（`:117`——`RELAY_PREFIX_RE` 正则 `.source` 逐字）。
+**跨包对拍锁** = `docs/batches/2026-09-29-parity-b7-minor.test.mjs`（F2——文法副本漂移锁 ∕ RM-4 复建：`relayPathOf` ∕ `RELAY_PREFIX_RE` ∥ 权威 `thincoder-core/agent/relay-prefix.mjs` 逐字对；F4——CLI `routeSubToken` ∥ rc `relayEventToSubPatch` 语义同判）；旧件 `thincoder-vscode/test/render-core-relay-map.test.mjs`（RM-3 ∕ RM-4）已随 B7 退场。
 
 3. **构件族（DOM）**——`renderBlock({ idx, withLabel })` · `renderToolCard({…})` / `finishToolCard(ref, name, text, links, truncated, deps?)` / `renderToolHistory(name, text, idx)` · `renderReasoning(model, deps?)`；
    `renderApprovalCard(model, deps?)` / `renderBatchApprovalCard(model, deps?)` · `renderQuestionCard(model, deps?)` · `renderTaskPanel(progress, deps?) → { el, visible }` / `renderGoalPanel(goal, deps?)` ·
    `renderSubBlock(model)` / `refreshBlock(block)` / `renderSubagentChunk` / `renderSubDesc`（子 agent 块面与归档块面——消费面段 ③）；
-   `initBlockFollow(block)` / `maybeScrollBlock(block)`（块内容区跟滚原语——接线 ∕ 应用；**调用时机留端**——VSC rAF 帧尾 ∕ 桌面 store 帧）；
-   `attachCopyButtons(container, deps?)` · `showToast(text)` · `linkifyPaths(bodyEl, links)`（VSC 消费） · `createSearch({ root })`（会话内搜索面——Ctrl+F 键位注册 + 扫描 ∕ 高亮；两端端壳供 `root`）。
+   `initBlockFollow(block)` / `maybeScrollBlock(block)`（块内容区跟滚原语——接线 ∕ 应用；旗标 = 手势门控让位 + 无条件近底自愈，让位期出口钮 `sub-follow-btn` 随原语自持（`sub.follow.*` 两键）；**应用时机契约在核（应用点清单：追加后 · 挂载后 · 帧尾复核）∕ 触发源在端**（帧合并 ∕ 更新纪律收核——2026-09-29）——单源 = §2 KD-RC-8 ∕ KD-RC-9）；
+   `attachCopyButtons(container, deps?)` · `showToast(text)` · `linkifyPaths(bodyEl, links)`（VSC 消费） · `createSearch({ root })`（会话内搜索面——Ctrl+F 键位注册 + 扫描 ∕ 高亮；两端端壳供 `root`） · `appendToolOutput(el, text, deps?)`（**工具输出 O(1) 追加**——占位清（`deps.initial`）∕ 超 `MAX_TOOL_OUTPUT` 截断（注字面 = `capText` 缺省注单源）∕ `_capped` 停收；VSC 活卡消费改指 ∕ 桌面工具卡消费——2026-09-29）。
+
+4. **调度族（更新纪律 · 2026-09-29 · KD-RC-9）**——`createFrameMerge(deps)`（**帧合并件**：脏标记 `mark(keys)` ∕ 单飞 rAF ∕ `FRAME_MIN_MS`(50) 最小间隔 ∕ `flush()` 同步尾帧；`deps = { apply(dirtyKeys), raf?, now?, minMs? }`——应用器契约 = §2 KD-RC-9）· `FRAME_MIN_MS`（常量——与核 `STREAM_RENDER_MIN_MS` 同值同意）。
 
 **端注入面（核不持句柄）**：`deps = { emit(type, payload), t, now? }`——出站一律经 `emit`（VSC 绑 `postMessage`；桌面绑 `invoke`）；R2 构件件另注入端事实读取族（`connectedOf` / `regionOf` / `trace` / `syncLiveOf` / `onStripped`——逐件件头）；核内零全局单例（现 VSC 的 `ctx` / `S` 全局态属端）。
 
@@ -213,9 +219,10 @@
 ③ 构件族四件（`renderSubBlock` / `refreshBlock` / `renderSubagentChunk` / `renderSubDesc`——右列子 agent 块面与归档块面；项 3 / 5）；
 ④ **核件取词接线（`setStrings` 注册单点）**（核件内取词走核 i18n——注册单点 = `thincoder-desktop/renderer/app.mjs`（`setStringsSink(setStrings)` 一次注册）；`initDict` 合并式经注册端出（`thincoder-desktop/renderer/i18n.mjs` = node-safe 档——零 `/rc/` 静态导入；判据单源 = `docs/desktop/design/SHELL.md` §1「node-safe 子集」）；
 核件所需 VSC 侧键（`sub.*` / `msg.*` / `queued.pending`）入宿主表，**值逐字同 VSC locales**——沿 `msg.copy` / `msg.copied` 先例）。
+⑤ **调度族 + 追加原语（更新纪律收核批 · 2026-09-29）**：`createFrameMerge`（帧合并——触发源 = store 变更 ⇒ `mark`；桌面接装单点 = `thincoder-desktop/renderer/app.mjs`） · `appendToolOutput`（工具卡结果区 O(1) 追加——`thincoder-desktop/renderer/views/chat-tool.mjs` 消费；VSC 同件改指 `thincoder-vscode/webview/chat-messages.js:77-96`——零行为变更）。
 
 **样式契约**：核构件类名 = 被抽档现行名（KD-RC-7）；**内容面视觉对齐 VSC（值以 VSC webview 实值为源）**；**外壳 = 端侧自有面（VSC 无对位件——不构成端差）**——VSC 沿用 `chat.css` / `controls.css`（零改）；
-  桌面 = `thincoder-desktop/renderer/core.css`（核类名 → 桌面值映射）+ 值变量单源 = 主题表 `thincoder-desktop/renderer/styles.css`（亮暗两套）。
+  桌面 = `thincoder-desktop/renderer/core.css`（核类名 → 桌面值映射）+ 值变量单源 = 主题表 `thincoder-desktop/renderer/theme.css`（亮暗两套）。
   落定 = 批 `docs/batches/2026-09-28-desktop-vsc-visual-parity.md`（需求 §4 **D21** · 用户 2026-09-28 04:42 走查裁定 B）。
 **「会话流经核」= 渲染逻辑单源**（核件分件消费：`md` / `attachCopyButtons` / `renderReasoning`〔推理块壳 · 结构同形〕/ `capText`）；**桌面外壳留存**（三锚 / 滚动 · 回填 · 窗口裁剪——核不夺）。
 
@@ -225,7 +232,7 @@
 2. **语义常量值照搬**——语法配色 / 叠加层 rgba / 尺寸 / 圆角 / 透明度 / 字号比例：VSC 实值逐字为源（新增变量入主题表亮暗两套）；**字族栈例外 = `--mono`**（角色对位 / 近似——宿主编辑器字族，见变量表）。
 3. **盒层单层律**——文本面**内嵌件**（代码块 / 表格 / 引用 / 行内码 / 复制钮）的盒模型值照搬；**块壳已承载者不搬**（块内边距 / 边框 / 圆角归桌面壳层 `chat.css`）——两处内边距叠加即观感偏离（端差登记 = §9）。
 
-**桌面主题表新增变量（12 个 · 亮 / 暗两值 · 单源 = `thincoder-desktop/renderer/styles.css`）**：
+**桌面主题表新增变量（12 个 · 亮 / 暗两值 · 单源 = `thincoder-desktop/renderer/theme.css`）**：
 
 | 变量 | 亮 | 暗 | VSC 源（实值同字面；例外 = `--mono` 行——角色对位 / 近似） |
 |---|---|---|---|
@@ -272,16 +279,16 @@
 
 **计数（D3 · 内容面口径）**：**21 面**（1–21 = 正文 ∥ 段落 ∥ 标题 ∥ 列表 ∥ 引用 ∥ 行内码 ∥ 代码块壳 ∥ 语言条 ∥ 代码体 ∥ 高亮 ∥ 表格 ∥ 表头单元格 ∥ 链接 ∥ 强调 ∥ 图片 ∥ 分隔线 ∥ 勾选框 ∥ 推理摘要 ∥ 推理内容 ∥ 推理内 md ∥ 复制钮）；新增变量 **12**（`--mono` / `--hover-bg` / `--hover-bg-strong` / `--overlay` / `--green` / `--syn-*` 七）；端差 **2**（内容面 · §9）。
 **会话面板面（桌面左列会话列表）映射表 = `docs/desktop/design/UI.md` §1 本批注项 2**（端壳面，非核产出件——本档不重述）。
-**落点与预算（内容面口径）**：`thincoder-desktop/renderer/core.css` **140 ⇒ ~240**（内容行数；≪300）· `thincoder-desktop/renderer/styles.css` **374 ⇒ ~396**（主题表 +12 变量 × 亮暗两套；含会话面板面之全批预算 = `docs/desktop/design/PROJECT.md` §4.2——变量 14 · ~420）；逐面真机比对 = 需求 §4 D21 验收面。
+**落点与预算（内容面口径）**：`thincoder-desktop/renderer/core.css` **140 ⇒ ~240**（内容行数；≪300）· `thincoder-desktop/renderer/theme.css` **374 ⇒ ~396**（主题表 +12 变量 × 亮暗两套；含会话面板面之全批预算 = `docs/desktop/design/PROJECT.md` §4.2——变量 14 · ~420）；逐面真机比对 = 需求 §4 D21 验收面。
 **★上抛①（字族）**：正文面字族随 VSC = 编辑器等宽栈（`--mono`）——**观感变化最大一项**；若用户否决 ⇒ 单点回退 = 删该行（恢复 `--font` 系统 UI 栈），余 20 面不受影响。
 
 ## 6. 受影响文件与测试面（三端 · 实施分批随动）
 
-口径：现行 = 本批设计轮实读（2026-09-27 · 内容行数口径——文末换行不计）；预期 = 估值（R1 / R2 已按实读回填——行内「N 实读」旁注）；「结构不变」= 档职责边界不动。
+口径：现行 = 本批设计轮实读（2026-09-27 · 内容行数口径——文末换行不计）；预期 = 估值（R1 / R2 已按实读回填——行内「N 实读」旁注；#518 随动两档行同法回填〔2026-09-29〕）；「结构不变」= 档职责边界不动。
 
 **核包（新建——R1 已落）**：`thincoder-render-core/package.json` · `md.mjs` · `highlight.mjs` · `diff.mjs` · `lib.mjs` · `tool-summary.mjs` · `i18n.mjs`（R1——逐字搬迁：行数 = VSC 原档现行值，见下表） ·
   `flow/*.mjs`（块 / 工具卡 / 推理 / 缝合）· `cards/*.mjs`（审批 / 提问 / 计划）· `subblocks/*.mjs`（态机 / 块面）（R2） · `test/*.test.mjs`（平 node 直测——**纯函数层 + 态机层**）。
-  **DOM 构件层用例宿主 = 消费端套件**（非核包）：VSC = `thincoder-vscode/test/**`（happy-dom devDep 既有）· 桌面 = `thincoder-desktop/test/fake-dom.mjs`（假 root 既有）——核包自身零 devDep（C1 机检恒可过），不引 happy-dom ∥ 不另立第二假 root。
+  **DOM 构件层用例宿主 = 消费端套件**（非核包）：VSC = `thincoder-vscode/test/**`（happy-dom devDep 既有）· 桌面 = `fake-dom.mjs` 假 root 宿主档（已随 2026-09-28 测试树全清重置退场）——核包自身零 devDep（C1 机检恒可过），不引 happy-dom ∥ 不另立第二假 root。
 
 **扩展端（判定表 18 档 + 发行三件）**——逐档「现行 ⇒ 预期」（核 9 = 迁核；拆 9 = 纯面迁核 · 端留守）：
 
@@ -310,10 +317,15 @@
 
 **桌面端**：`thincoder-desktop/package.json`（依赖 +1）· `src/main/protocol.mjs`（双根 + `/rc/`）· `test/guard-closure.test.mjs`（前缀白名单）· `scripts/check-dist.mjs`（产物断言）· `renderer/*` 三面重定位（R3a–R3c）——逐档「现行 ⇒ 预期」= `docs/desktop/design/PROJECT.md` §4.2 本批行（**就地给数** · 指针不悬空）。
 
-**块级跟滚提核随动（2026-09-29 · `docs/batches/2026-09-28-desktop-subblock-follow.md`）**：核 `thincoder-render-core/subblocks/block.mjs` **45 ⇒ ≈66**（+2 导出——纯搬移 · 档头留端清单同拍）；
+**块级跟滚提核随动（2026-09-29 · `docs/batches/2026-09-28-desktop-subblock-follow.md`）**：核 `thincoder-render-core/subblocks/block.mjs` **45 ⇒ ≈66**（+2 导出——纯搬移 · 档头留端清单同拍；**实读 2026-09-29 = 71**——#518 预测未回填；现行值见本节「块跟滚让位修复随动」段）；
 VSC `thincoder-vscode/webview/activity.js` **190 ⇒ ≈176**（删两本地函数 ⇒ 改指核件；`thincoder-vscode/webview/streaming.js` **182** 零改——转口保留）；
-桌面 `views/pool-subagents.mjs` **108 ⇒ ≈118** · `views/activity-new.mjs` **100 ⇒ ≈109** · `views/activity.mjs` **259 ⇒ ≈262** · `renderer/core.css` **281 ⇒ ≈287**（+两值规则——值源 = `thincoder-vscode/webview/chat.css:466-467`）；
+桌面 `views/pool-subagents.mjs` **108 ⇒ ≈118**（**实读 2026-09-29 = 115**）· `views/activity-new.mjs` **100 ⇒ ≈109** · `views/activity.mjs` **259 ⇒ ≈262** · `renderer/core.css` **281 ⇒ ≈287**（+两值规则——值源 = `thincoder-vscode/webview/chat.css:466-467`）；
 测试面 = 批次本地件 `docs/batches/2026-09-28-desktop-subblock-follow.test.mjs`（拟新增 · 随批留存）。
+
+**块跟滚让位修复随动（2026-09-29 · `docs/batches/2026-09-29-subblock-follow-resume.md`）**：核 `thincoder-render-core/subblocks/block.mjs` **71 ⇒ ≈120**（+≤50：旗标手势门（600ms · `wheel` / `touchmove` / `pointerdown`）+ 出口钮三件（`sub-follow-btn` 建 / 更 / 删 + 两态词键 + 点击回底）+ 档注随改）——语义单源 = 本档 §2 **KD-RC-8**；VSC = 零逻辑改（随核同收）+ 两键入 `locales/{en,zh}.json` + `base.css` 钮样式；桌面 = 端面三轴（池壳原位领用 ∕ 帧尾逐块复钉 ∕ 归档重建径接线——逐档「现行 ⇒ 预期」= `docs/desktop/design/PROJECT.md` §4.2 本批行）。
+
+**更新纪律收核随动（2026-09-29 · 批 `docs/batches/2026-09-29-render-perf.md` · 台账 #609）**：核 `flow/frame.mjs`（**新档** ≈60——帧合并件；单源 = §2 KD-RC-9）· 核 `flow/stream.mjs` **113 ⇒ ≈135**（+`appendToolOutput`）· 核 `test/run.mjs` **82 ⇒ 82**（零改——帧归并用例住批内件；全清令）；
+VSC `webview/chat-messages.js` **267 ⇒ ≈262**（toolOutput 支改指核件——零行为变更）；桌面逐档「现行 ⇒ 预期」= `docs/desktop/design/PROJECT.md` §4.2 本批行（就地给数）。
 
 **文档面**：本档（新）· `docs/desktop/design/{UI,IPC,PROJECT,RENDERER}.md` · `docs/vsc/design/WEBVIEW.md`（接入形）· `docs/core/design/ARCHITECTURE.md` + `docs/README.md`（模块地图补行——父侧面，§10 上抛）。
 
@@ -329,6 +341,9 @@ VSC `thincoder-vscode/webview/activity.js` **190 ⇒ ≈176**（删两本地函�
 | C6 | 产物断言：桌面 dist 含核包 | `thincoder-desktop/scripts/check-dist.mjs` |
 | C7 | 桌面 Markdown 面：含围栏代码块的文本 ⇒ 渲染含 `pre.code-block`；转义闸（注入样本 ⇒ 字面文本） | 桌面视图用例 |
 | C8 | 桌面对位表 22 行在册且计数自洽（D3） | 本档 §4 |
+| C9 | 帧合并件语义（脏键集合并 ∕ 单飞 rAF ∕ `minMs` 跳帧重排 ∕ `flush` 同步 ∕ `apply` 抛错不吞 ∕ 帧链不断——注入 `raf` ∕ `now`）平 node 全绿 | 批内件（`docs/batches/2026-09-29-render-perf.test.mjs`；全清令——核套件零触） |
+| C10 | 桌面每 chunk 同步成本对文本长度近似平坦（真机探针 80KB 档 ≤0.3ms ∧ 10KB→80KB 比 ≤2；基线 5.9ms ∕ ≈6.6× 在册）；帧成本 p95 ≤8ms@80KB；帧数 ≤ ⌈窗/50ms⌉+2（窗 = 1000-chunk 流的墙钟时长——探针侧读数） | 真机探针（批内件 `docs/batches/2026-09-29-render-perf.probe.mjs`） |
+| C11 | VSC 零回归：`appendToolOutput` 改指零行为变更（动作面逐字——批内件对拍）+ VSC 套件零触（全清令——现盘空清单） | 批内件 |
 
 ## 8. 实施分批建议（文件面 · 串行序）
 
@@ -360,7 +375,7 @@ VSC `thincoder-vscode/webview/activity.js` **190 ⇒ ≈176**（删两本地函�
   ② **推理块内代码块同形**——桌面 `.code-block` 全局规则在 `.reasoning-content` 内同样生效；VSC 侧 `.reasoning-content pre` 另有一层灰底覆盖（`thincoder-vscode/webview/chat.css:408`；且其 `.code-lang` 语言条因 `.content` 前缀缺失不复样式）⇒ 桌面**不复制**该覆盖（核产出件两端同形优先；观感差 = 推理内代码块带描边与语言条）——**用户可见观感差 ⇒ 待消除（归对齐批）**。
 - **D21 会话面板视觉端差（一项 + 不追面 · 现状记录 · 全清单七条 = `docs/desktop/design/UI.md` §1 本批注项 2，本条列核心四条——本档不重述端壳面）——用户可见差异 ⇒ 待消除（归对齐批）；不适用项除外（`#project-btn`——本端单项目模型）**：
   ① **行内动作钮键盘可达臂**——VSC 仅 hover 显隐（`thincoder-vscode/webview/session.css:114` / `:119`），桌面保留显隐律**并加一臂** `:focus-visible { opacity: 1 }`（键盘可达面已入档——`docs/desktop/design/UI.md` §1 键盘可达行）；
-  不追面核心四条 = 面板容器皮肤（`thincoder-desktop/renderer/styles.css` 的左列卡片 = 布局面；VSC = 浮层 dropdown 带 `--shadow`）· 会话选择器 / 下拉交互（`#session-selector` / `#session-dropdown`）·
+  不追面核心四条 = 面板容器皮肤（`thincoder-desktop/renderer/chrome.css` 的会话控制条原位下拉〔非浮层〕= 布局面；VSC = 浮层 dropdown 带 `--shadow`）· 会话选择器 / 下拉交互（`#session-selector` / `#session-dropdown`）·
   会话条 `#session-bar`（对位 = 桌面会话头 + 标签条——已在册 D18）· `#project-btn`（多根切换钮——本端单项目模型 ⇒ 不适用）；`.dropdown-section` 无对位（VSC 会话列表不发射——仅 `thincoder-vscode/webview/model-picker.js:73` 消费）。
 - **「对齐第二批」端差 / 登记（2026-09-28 · 源 = `docs/batches/2026-09-28-desktop-vsc-align-2.md` §2）**：① 核侧无「助手说话人标签」原语（桌面 = 端侧同字面落形——上抛 = §10 **G**）；② `queued-mark` 的 `planBusyQueued` / `clearPending` 不消费（宿主快照对账面 / 节点换代交接——登记）· 核 effects 表不逐条执行（端面动作由模型态幂等派生）；
 ③ 桌面无 digest 边界物 ⇒ 归档 `atBoundary` 恒按尾追（= VSC 边界失效退化径同形）；④ 2s 走时刷新（块头 elapsed）不落（归小修族）；⑤ 运行期可见面两件（待发送气泡 / 归档子 agent 块——页读整置即失）。
@@ -378,6 +393,8 @@ VSC `thincoder-vscode/webview/activity.js` **190 ⇒ ≈176**（删两本地函�
 | F | **桌面「计时」段新鲜度窗**：读数 = 核 `_pendingTimers`（`thincoder-core/agent.mjs:84`）· 刷新点 = 回合尾（`ev:usage` 同点）——**空闲期到期 ⇒ 闩到点即开 timer 轮**（timer-wake 阶段 2 已解；单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.11），读数于该轮回合尾刷新 | **已解（timer-wake 阶段 2）** | 沿状态行目标读（不显倒计时）不变；不再另裁推送面 |
 | G | **核侧无「助手说话人标签」原语**（核内为 `thincoder-render-core/flow/block.mjs` `renderBlock` / `buildAssistantRestore` 内联字面；桌面助手标签 = 端侧同字面落形——词键同源 / 字形住样式档） | 上抛（核面收拢候选 · 归父侧裁） | 若须核侧收拢 ⇒ 补助手标签原语（与 `queued-mark` 的 `paintLabel` 同族）——**另裁**；本批不改核件 |
 | H | **核件取词 = 端侧 `setStrings` 接线**（构件族签名无 `deps.t`——核内取词走模块级 `i18n.t`） | 登记（接线面） | 备选 = 核件签名改注入 `t`（改核件——另裁）；现状 = 桌面**注册单点** = `thincoder-desktop/renderer/app.mjs`（`setStringsSink(setStrings)` 一次注册；`initDict` 合并式经注册端出——判据单源 = `docs/desktop/design/SHELL.md` §1 + 本档 §5 桌面消费面段） |
+| I | **需求侧性能阈值与测法**（`docs/desktop/requirements/PROJECT.md` §6 性能行「阈值与测法留设计轮」——本批定形）：每 chunk 同步成本 ≤0.3ms@80KB ∧ 10KB→80KB 比 ≤2；帧成本 p95 ≤8ms@80KB；测法 = 真机计时探针 + 平 node 机检（批内两件） | 需求档落笔 = 父侧（笔权；建议文本 = 批档 §2.8） |
+| J | **批内探针 ∕ 走查项交接**：#190 会诊 C2 两腿（单位时间输出可见延迟 ∕ Stop 可响应）+ 探针扩面件 ⇒ 挂台账 **#592** 走查清单（防无人复启） | 台账随动（父侧） |
 
 ## 变更记录
 
@@ -416,3 +433,11 @@ VSC `thincoder-vscode/webview/activity.js` **190 ⇒ ≈176**（删两本地函�
 - 2026-09-28（**桌面功能对位批 · 设计面收正轮（fix · #129）· eng-designer**——承 flow 批 R10 交付）：§3 表行 2（`activity-new.js`）收正——「桌面右列常驻不需该钮（端差登记）」⇒ **同面补装**（R10 落 · 实现 = `thincoder-desktop/renderer/views/activity-new.mjs`）。明细 = `docs/batches/2026-09-28-desktop-feature-parity.md` §2。
 - 2026-09-29（**子 agent 块跟滚批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-desktop-subblock-follow.md` §1 · 台账 #518）：§2 增 **KD-RC-8**（块级跟滚原语入核——纯 DOM 零调度依赖 + 防第三端再漏；调用时机留端）；§3 行 4 ∕ §5 构件族 ∕ §6 三处随动（+2 导出 · 三端行数账）。明细 = 批档 §2。
 - 2026-09-29（**子 agent 块跟滚批 · 修复轮（评审轮 1 · 发现 1）· eng-designer**——承批档 §3 轮次 1 · 父侧裁定以 `docs/desktop/design/UI.md` 为准）：§3 行 32 `search.js` 判定收正（端 ⇒ **拆**——实现整件入核）+ 计数行（核 9 ∕ 拆 9 ∕ 端 33）重算 + 静置面句三档；§4 行 20 搜索句收正（桌面已承载——端壳 `thincoder-desktop/renderer/search.mjs`）；§5 构件族补 `createSearch`。明细 = 批档 §2 修复轮。
+
+- 2026-09-29（**desktop-residuals-sweep 批 · 波 D（非冻结档面）· eng-designer**——承 `docs/batches/2026-09-29-desktop-residuals-sweep.md` §2 · 台账 #540）：存量悬空重锚——`styles.css` 五处按语义择一（变量 ∕ 主题表面四处 ⇒ `theme.css`；§9 容器皮肤一处 ⇒ `chrome.css`）；§6 `fake-dom.mjs` 假 root 宿主锚随 2026-09-28 测试树全清重置删除（留档名标退场）。**零新语义**。
+- 2026-09-29（**子 agent 块跟滚让位修复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-subblock-follow-resume.md` §1 · 台账 #603）：§2 **KD-RC-8 收正**（让位三律——近底无条件自愈 ∕ 手势门控让位（600ms）∕ 非手势位移不改旗标；出口钮 `sub-follow-btn` 随原语自持 + 被否四候选在册）；**留端边界清算（用户裁定 · 档面同笔）**——「调用时机留端」表述退场 ⇒ 两半归属定死（原语 ∕ 旗标 ∕ 出口 = 核 · 应用时机契约 = 核〔应用点清单〕· 宿主帧模型 = 端〔不收核给由在册〕· 滚动策略族契约同源〔端 = 适配器 + 对拍腿〕）；§3 行 4 与 §5 构件族两条目随动；§6 增让位修复随动段（核 71 ⇒ ≈120 · VSC 零逻辑改 ∕ 桌面端面三轴）。明细 = 批档 §2（含 §2.13 边界裁定）。
+- 2026-09-29（**更新纪律收核批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-render-perf.md` §1 · 台账 #609 + #190 会诊终报）：§2 增 **KD-RC-9**（更新纪律收核——帧合并件 `flow/frame.mjs` + O(1) 追加原语 `appendToolOutput`；触发源留端）+ **KD-RC-8③ 收正**（「宿主帧模型 = 端」退场 ⇒ 触发源 = 端 · 帧合并纪律 = 核）与被否列同拍；§3 行 4 ∕ §4 行 3 ∕ §5 两条目随动；§5 增调度族 + 追加原语；§6 增本批随动段；§7 增 C9–C11；§10 增 I ∕ J。明细 = 批档 §2。
+- 2026-09-29（**子 agent 块跟滚让位修复批 · 修复轮（评审轮 1 · 发现 1 / 3 / 5 + 增补 B）· eng-designer**——承批档 §3 轮次 1 · 父侧裁定逐条受理）：§2 KD-RC-8 补**键盘位移归属**（同③路 + 残余登记〔消解路 = 真机核〕）+ ④ 对拍腿补**载体单源指针**；§4 表后增「核不夺 = 实现载体」限定句（与 ④ 族契约关系——零新语义）；§6「块级跟滚提核随动」段补「实读 N」旁注（`block.mjs` 71 ∕ `pool-subagents.mjs` 115）+ 回填口径句随拍。明细 = 批档 §3。
+- 2026-09-29（**parity-b10-ui 批 · W4 · R3 残余（核档收正）· eng-coder**——承 `docs/batches/2026-09-29-parity-b10-ui.md` §2.6 R3 行）：§5 状态机族补 `relaySubContentChunk` 导出行（B7 2a 落件）；「先例…R2 后 VSC 差分 = 零」句改述（VSC 自持表已随 B7 2a 删——差分 = 零；「先例」列行号标为搬迁时采样）；「跨包对拍锁」指针改指 B7 批内件（旧件 `render-core-relay-map.test.mjs` 已退场）。**零新语义**（残句收正）。
+- 2026-09-29（**更新纪律收核批 · 修复轮（评审轮 1（#214）· 发现 2 ∕ 3 ∕ 5 ∕ 6 ∕ 9 ∕ 10）· eng-designer**）：KD-RC-8③ 触发源括注按端限定（桌面 ⇒ `mark`；VSC 零改——现行 `createStreamRenderer`，改接另议）；KD-RC-9 应用器契约补 ⑤ 异常语义 + 被否列补两套帧件分工给由；§5 导出面「三族 ⇒ 四族」；
+  §6 更新纪律随动段 `thincoder-render-core/test/run.mjs` 行收正（**82 ⇒ 82 零改**——帧归并用例住批内件）+ §7 C9 载体收正（批内件——全清令）+ C10 补帧数判据与「窗」定义 + C11 载体收正。明细 = 批档 §2.9。

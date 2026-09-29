@@ -104,7 +104,7 @@ VSC 侧同名档 `thincoder-vscode/test/edit-tool-improvement.test.mjs`（同引
 | D-3 | **零重叠 ⇒ 替换即删**（breaking） | 「插入保留旧行」使简单替换产生双份内容（实害）；否决保留旧语义（新增行有 insert_after 正路） |
 | D-4 | 显式空串 = **错误**、省略 = 删行 | 空串是手滑最可能形态（防误删）；省略是有界显式意图 |
 | D-5 | `edits` 数组**全判后原子写** | 半应用批量 = 不自洽工作树 |
-| D-6 | 入参守卫落 **`touchedPaths` 零抛 + 执行阶段单源成形错误**（#325） | 钩子内抛错（即便成形文案）会从首个未守卫点逸出（实测 = VSC L3 前置查询 `thincoder-vscode/src/agent/execute-tools.mjs:188`→`Promise.all` 批级拒绝、裸 TypeError 直达用户）；零抛 ⇒ 拒绝统一落 `applyEditBatch`（与空数组同点同文）。**消费侧兜底（#327）**：十处消费点归单源谓词 `toolTouchPaths`（`docs/core/design/TOOLS.md` §6.17）——零抛契约两侧同护。否决：钩子内抛同文案（第二抛点、逸出不可控） |
+| D-6 | 入参守卫落 **`touchedPaths` 零抛 + 执行阶段单源成形错误**（#325） | 钩子内抛错（即便成形文案）会从首个未守卫点逸出（实测 = VSC L3 前置查询 `thincoder-vscode/src/agent/execute-tools.mjs:188`→`Promise.all` 批级拒绝、裸 TypeError 直达用户）；零抛 ⇒ 拒绝统一落 `applyEditBatch`（与空数组同点同文）。**消费侧兜底（#327）**：十处消费点归单源谓词 `toolTouchPaths`（`docs/core/design/TOOLS.md` §6.17）——零抛契约两侧同护。否决：钩子内抛同文案（第二抛点、逸出不可控） （迁移期引文——档已迁核） |
 | D-7 | 跨档单源 = **`thincoder-core/tools/edit-diff.mjs`**（#325 · 桥面同批收）：两守卫 + 五文案，核 `edit-batch.mjs` 与 ACP 桥 `bridge.mjs` 同调用、桥零副本 | 两侧已共同导入 `edit-diff` 校验词汇（`assertEditArgsExclusive` / `validateEditEntry` 等先例）——单源住共用导入面，条件与文案同时锁死；否决：常量导自 `edit-batch.mjs`（桥依赖本地实现模块、条件可分叉）；否决：桥自持副本（D2 双源） |
 | D-8 | 非数组容器的通道归宿 = **归一（#327）**：桥 `edit` 路由判据改与核同（`Boolean(args?.edits)` 真值判）——`edits` 真值 ⇒ 两通道同入批量分支、同容器错误面；假值 ⇒ 单形态面。窄形态（真值非数组 + 合法单形态参数）不再有「桥径单形态应用」分支 | 分歧的代价 = 窄形态下写落地而门禁 / 变更记账 / L3 看到零路径（fail-open 面——`touchedPaths` 真值非数组返 `[]` 的前提「该调用必败」被打破）；归一恢复该前提 ⇒ `[]` 语义重新为真，#325 判据零改（否决：维持登记〔承载 fail-open 面〕；否决：核侧改 `Array.isArray`〔弱化容器守卫、违 E1/E2〕；否决：改 `[]` 为保守形〔掩盖真因〕） |
 

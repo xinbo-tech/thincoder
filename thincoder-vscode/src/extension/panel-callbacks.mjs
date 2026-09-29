@@ -17,7 +17,6 @@ import { TURN_CAP_MARK, STOPPED_MARK } from "@thincoder/core/agent/child-marks.m
 import { resolveAdvisorProvider } from "@thincoder/core/advisor/run.mjs"
 import { extractFileLinks } from "./file-links.mjs"
 import { permissionGate, batchPermissionGate } from "./permission-gate.mjs"
-import { notifyCompletionIfUnfocused } from "./notify.mjs"
 import { backgroundStatus } from "./suspension.mjs"
 // W15（R5 · 事件中继面）：核 relay 前缀解析（`role#id/` 文法单一权威——零依赖）。
 import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
@@ -30,10 +29,10 @@ import { makeChildPermission } from "@thincoder/core/agent-tools/child-permissio
 // relay 中继面 + 任务可见性族投递队列迁出至 `panel-subagent-relay.mjs`（逐字搬迁 + 1-hop
 // 解析面结构约定 R-1–R-6）；此处只 import 回调装配面消费件（`buildPanelCallbacks`）。
 import { relaySubagentEventToken, relaySubagentContentChunk, emitToolPanel, postSubagentStatus, postSubagentApproval } from "./panel-subagent-relay.mjs"
-// 消费档 import 行逐字不变（KD-12）：`relaySubagentEventToken`（panel-messages.mjs:28 · 测试 2 档）·
-// `postSubagentEvent` / `flushSubagentOutbox` / `WV_OUTBOX_MAX`（suspension.mjs:27 · 测试 3 档）·
-// `emitToolPanel` / `relaySubagentContentChunk`（外部零消费）· `queuedInfoOf`（#118 R2——
-// suspension.mjs 重生投影读同一转口面）。
+// 消费档 import 行逐字不变（KD-12）：`relaySubagentEventToken`（消费面 = `panel-messages-turn.mjs:24`
+// ——`cancelSubagent` 合成 callbacks `:123` 调用）· `postSubagentEvent` / `queuedInfoOf`（`suspension.mjs:38`
+// ——重生投影 `:94` 调用 · #118 R2）· `flushSubagentOutbox`（`panel-messages.mjs:35`——`:328` 调用）·
+// `emitToolPanel` / `relaySubagentContentChunk`（外部零消费）· `WV_OUTBOX_MAX`（外部零消费——机器面已随 2026-09-28 测试全清退役）。
 export { relaySubagentEventToken, relaySubagentContentChunk, emitToolPanel, postSubagentEvent, flushSubagentOutbox, WV_OUTBOX_MAX, queuedInfoOf } from "./panel-subagent-relay.mjs"
 
 /**
@@ -202,7 +201,7 @@ export function buildPanelCallbacks(panel, deps) {
       panel._panel?.webview.postMessage({ type: "toolCall", name: n, args: JSON.stringify(a, null, 2), id, ...(meta ?? {}) })
     },
     onToolResult: (n, r, id, subKey) => {
-      // ⑥（2026-09-19）第 4 参 `_subagentKey` = sync 子代理完成锚（核 `dispatch.mjs:441` 传入；
+      // ⑥（2026-09-19）第 4 参 `_subagentKey` = sync 子代理完成锚（核 `dispatch-run.mjs:137` 传入；
       // 仅 sync 成功 / 折叠路径设置）⇒ 该参在即补 `done`（块冻结 + 归档落流——CLI `finishSubTaskKey`
       // 对位）；无该参（async ack / 普通工具）零动作。与内容面分流互不排斥（两事同点）。
       if (subKey) settleSyncSubagent(panel, subKey, syncNoteOf(r))
@@ -233,7 +232,8 @@ export function buildPanelCallbacks(panel, deps) {
       // Native notification when the user is in another window (no-op when focused).
       // AGENT-LOOP-ASYNC-POOL.md §6.8: digests are system-driven turns — no completion notification per digest
       // (the user sees the summarized results when they return).
-      if (!autoTurn) notifyCompletionIfUnfocused()
+      // parity-b4 W1：完成提示走面板宿主包装（策略在核；装配点 = `chat-panel.mjs` 构造段，`?.` 防御）。
+      if (!autoTurn) panel._notifier?.turnDone({ agent: panel._agent })
     },
     // Distillation finished and the machine line was REPLACED by the compressed version — the
     // onComplete save above holds the pre-shrink line, so persist again (FR3/AC5). Slot guard:
@@ -262,14 +262,14 @@ export function buildPanelCallbacks(panel, deps) {
   }
   // ─── F1（2026-09-16 缺陷修复——承批次档 §2 F1）：child 权限通道**端侧供给** ─────────────
   // 核 spawn / escalate / continue 三族经 `ctx.onPermissionRequest(name, args)` 询问（缝契约 =
-  // `CORE-UNIFICATION.md` §2.13.3）：name = `${key}/${tool}`（子代写——`subagent-spawn.mjs:319`；
+  // `CORE-UNIFICATION.md` §2.13.3）：name = `${key}/${tool}`（子代写——`subagent-spawn.mjs:318`；
   // key = relayPrefix 去尾 = `<role>#<id>`）· `escalate#<id>/${tool}`（飞刀写）· `continue`
   // （撞帽续跑——归属键在 args.agent）。形态 = 按次解析归属键 ⇒ `makeChildPermission` 按次构造
   // （announce → ask → 清态 + owner 归属——面板卡带 `<role>#<id>` 归属、与活动块同源）；
   // 键不符（嵌套 relay 等）⇒ 回退面板 gate **原样名**询问（卡可达 · 无归属标签）；
   // AUTO（live）⇒ 直返 true 零卡——**`continue` 名除外**（续期恒须人答：两分支皆携 gate 豁免）。
   // 核分支：缺失本供给 ⇒ 核 spawn 分支静默 `return false`、
-  // 不出卡（`subagent-spawn.mjs:308-309`——手动档子代写症状源）。
+  // 不出卡（`subagent-spawn.mjs:308`——手动档子代写症状源）。
   // 残环批（2026-09-16——承 `docs/batches/2026-09-16-subagent-panel-residual-rings.md` §2）：
   // ① 条目级 signal 接回——按归属键 id 读池条目（与 ⏹ 路由同源同式：`panel._liveLines ??
   //    panel._susp?.lines` → `history._asyncSubagents.get(String(id))`）⇒ `signal: entry.controller.signal`

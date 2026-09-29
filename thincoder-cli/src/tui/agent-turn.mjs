@@ -139,6 +139,9 @@ async function runAgentTurnBody(ctx, text, opts) {
   // bounded by the N2 per-child 500-line ring buffer.
   state.currentTool = null
   state.processingStarted = Date.now()
+  // 停滞轻显形（docs/cli/design/TUI.md §7.7 · stall-indicator 批 2026-09-29）：静默起算初始锚 =
+  // 回合起刻（此后三类可见输出重置——流式 ∕ 工具面 ∕ 子代理面，见 tool-events ∕ subagent-blocks）。
+  state.lastOutputAt = Date.now()
   // AGENT-LOOP-ASYNC-POOL.md §6.8 偏差修复 #3（会话 abort 全覆盖）：回合链 controller 登记。链头 = 非挂起会话内
   // 且非释放窗口期（suspended/_suspPending 均 false）开启的回合——登记表清零；队列
   // 递归回合（_suspPending 置位期）与会话内回合（suspended=true）继续累积。链条内每次

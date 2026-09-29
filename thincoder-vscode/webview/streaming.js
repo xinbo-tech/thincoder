@@ -146,6 +146,7 @@ export function finish(aborted) {
   ctx._toolRefs = {}
   S._currentTool = null
   S._turnStart = null
+  S._lastOutputAt = null // 停滞轻显形：回合尾清点（WEBVIEW.md §4.7——终态 done/stopped/error ⇒ 读数即刻退场）
   // 2026-09-11 活动区回归 → 2026-09-12 收口（WEBVIEW.md §14）：活动块生命周期 = 块终态
   // （终态消息即时折叠；settled → awaitingDigest 驻留、回收才归档）/会话退出兜底
   // （suspension freeze → 区全体归档）——不随普通回合尾重置。正常 complete 尾池 live →

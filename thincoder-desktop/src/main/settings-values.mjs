@@ -2,25 +2,25 @@
  * settings-values.mjs — 设置族**值面 ∕ 遮罩族**（R7 · 桌面功能对位批 · 批档 §2 R7 #4；先拆后改：
  * 自 `src/main/settings.mjs` 拆出 `MASK` … `deepEqual` —— 300 行层拆分，**零语义变化**）。
  *
- * 面：遮罩单点（`MASK` ∕ `maskKey` —— 判据 = 核**导出** `isSensitiveKey`，明文零下发）· 配置档存在性
+ * 面：遮罩单点（`MASK` = 核 `MASKED` ∕ `maskKey` —— 判据 = 核**导出** `isSensitiveKey`，明文零下发）· 配置档存在性
  * （`isConfigured` = `existsSync(_configPath())`）· 叶展平 / 深遮罩 / 字段表（`kindOf` ∕ `flatten` ∕
  * `maskDeep` ∕ `agentFields`）· 点分路径写（`setKeyPath`）· 深比较（`deepEqual` —— 档位判据用）。
  * 单一 owner = 本档；`settings.mjs` ∕ `providers.mjs` 经原 import 面取（settings.mjs 同名 re-export，
  * 导出面零改）。
  * 纪律：零自写盘（写面唯一执行体 = 核 `writeConfigAtomic`）；核未导出的 helper 才端侧自持
- * （`MASK` 同形字面 ∕ `setKeyPath` ∕ `deepEqual`），判据面一律取核导出。
+ * （`setKeyPath` ∕ `deepEqual`——遮罩字面已收编核 `MASKED`），判据面一律取核导出。
  */
 import { existsSync } from "node:fs"
 import { _configPath } from "@thincoder/core/config-io.mjs"
-import { isSensitiveKey } from "@thincoder/core/agent-tools/settings.mjs"
+import { MASKED, isSensitiveKey } from "@thincoder/core/agent-tools/settings.mjs"
 
-/** 遮罩字面量（与核 `agent-tools/settings.mjs:19` `MASKED` 同形——核未导出，端侧自持）。 */
-export const MASK = "••••（masked）"
+/** 遮罩字面量（**单源** = 核 `MASKED`——B10 S13 收编：核导出 ∕ 端侧零自持副本）。 */
+export const MASK = MASKED
 
 /**
  * **端侧遮罩单点**：敏感键 ⇒ 遮罩字面量，否则原值直通。判据复用核**导出**的
- * `isSensitiveKey`（`thincoder-core/agent-tools/settings.mjs:22`——段名判据）；核 `MASKED`
- * 非导出 ⇒ 端侧自持同形字面量（不改核、不复刻判据）。
+ * `isSensitiveKey`（`thincoder-core/agent-tools/settings.mjs:22`——段名判据）；遮罩字面同取核
+ * `MASKED`（B10 S13 转 export——端侧零副本）。
  * 通道载荷**只回遮罩后值**：`provider:list` 的 `maskedKey` 与 `settings:agent` 的 `fields`
  * 均经本函数出口（明文密钥零下发）。
  */
@@ -82,6 +82,18 @@ export function setKeyPath(obj, path, value) {
     cur = cur[seg]
   }
   cur[segs[segs.length - 1]] = value
+}
+
+/** 点分路径删键（**显式清除**面 —— 沿核 `_checkKnownKeyValue`「null = 显式清除」语义：patch 值为 null ⇒ 删键；
+ *  B10 W3 · S10 ∕ S11 写链落点；缺段 ⇒ 无操作；父段空对象残留不清理——读面按缺键同判）。 */
+export function deleteKeyPath(obj, path) {
+  const segs = String(path).split(".")
+  let cur = obj
+  for (let i = 0; i < segs.length - 1; i++) {
+    if (cur === null || typeof cur !== "object") return
+    cur = cur[segs[i]]
+  }
+  if (cur !== null && typeof cur === "object") delete cur[segs[segs.length - 1]]
 }
 
 /** 深比较（档位判据用）：`thinkOffShape` 产出的小值域字面量（`null` / `{ type:"disabled" }`）

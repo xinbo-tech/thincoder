@@ -23,8 +23,8 @@
  * （两出口 ∥ popover 确认）· `mountSessionBar`（薄挂载）；纯树面三件住 `renderer/views/session-control.mjs`；
  * `isProject` / `slotOf` / `loadPage` / `openPage` / `openResult` = 本档私有。
  * 窄桥 = 本档模块级 `globalThis.thincoder`（装配面 = `src/preload/preload.cjs` —— 与 `renderer/app.mjs` 同源同刻读取）。
- * 纪律：读面失败一律 `console.error` + **核件 toast 可见提示**（R9 · #486：会话开回执拒 ∕ 调用抛 ∕ 页读抛三失败面
- * ——— 载体 = 核 `toast.mjs`，词面 = 端词表）+ 零切片写；零 `node:` / 零裸包（守卫 = `test/guard-closure.test.mjs`）。
+ * 纪律：读面失败一律 `console.error` + **核件 toast 可见提示**（R9 · #486：会话开回执拒 ∕ 调用抛 ∕ 页读抛三失败面；
+ * **#556 增改名失败两径**（回执拒 ∕ 抛）· **#578③ 增删除失败两径**（回执拒 ∕ 抛）——载体 = 核 `toast.mjs`，词面 = 端词表）+ 零切片写；零 `node:` / 零裸包（守卫 = `test/guard-closure.test.mjs`）。
  */
 import { openSession } from "./events.mjs"
 // 页读径拆分产出（「对齐第二批」）——硬限拆档，结构拆分零语义
@@ -252,11 +252,11 @@ function isProject(payload) {
 export async function refreshRail() {
   try {
     const [project, list] = await Promise.all([host.invoke("project:recent"), host.invoke("sessions:list")])
-    if (!isProject(project) || !Array.isArray(list?.rows)) {
+    if (!isProject(project) || !Array.isArray(list?.sessions)) {
       console.error("[renderer] session list payload shape unexpected:", project, list)
       return
     }
-    store.set({ project: { cwd: project.cwd ?? null, recent: project.recent }, sessions: list.rows, ledger: list.ledger ?? null })
+    store.set({ project: { cwd: project.cwd ?? null, recent: project.recent }, sessions: list.sessions, ledger: list.ledger ?? null })
   } catch (error) {
     console.error("[renderer] session list refresh failed:", error)
   }
@@ -349,25 +349,29 @@ export async function createSession() {
 }
 
 /** 改名出口（下拉条目 ✎ 换形后的确认键 —— 通道既有）：`ok` 真 ⇒ 列表刷新（新标题可见）+ 回 `true`（面收形）；
- *  `ok:false`（核拒：`invalid-slot` ∕ `mtime-conflict` 等四值闭集直传）∕ 抛 ⇒ **零写零收形**（草稿不丢）+ 记错。 */
+ *  `ok:false`（核拒：`invalid-slot` ∕ `mtime-conflict` 等四值闭集直传）∕ 抛 ⇒ **零写零收形**（草稿不丢）+ 记错
+ *  + **可见提示**（toast —— #556：对位 VSC `panel-messages-session.mjs:96` 改名失败提示；词面同 `session.openFailed` 族）。 */
 export async function confirmRename(key, text) {
   try {
     const receipt = await host.invoke("session:rename", { slot: slotOf(key), title: text })
     if (receipt?.ok !== true) {
       console.error("[renderer] session:rename failed:", receipt?.reason, "slot:", key)
+      showToast(t("session.renameFailed", { reason: reasonOf(receipt) })) // #556：失败面可见（回执拒径）
       return false
     }
     await refreshRail()
     return true
   } catch (error) {
     console.error("[renderer] session:rename failed:", error)
+    showToast(t("session.renameFailed", { reason: String(error?.message ?? error) })) // #556：调用抛同理可见
     return false
   }
 }
 
 /** 删除出口（确认 popover 的「删除」键 —— 通道既有）：`ok` 真 ⇒ 列表刷新 + **删活动会话 ⇒ 邻位接管**
  *  （`closeTab` 同律的会话列表形：同位置行〔越界取末行〕⇒ `session:switch` 同一路；列表空 ⇒ 关页）；
- *  `ok:false`（核拒：末项门 `last-session` ∕ `slot-missing`）⇒ **零动作**（不造死页）+ 记错。 */
+ *  `ok:false`（核拒：末项门 `last-session` ∕ `slot-missing`）∕ 抛 ⇒ **零动作**（不造死页）+ 记错
+ *  + **可见提示**（toast —— #578③：删除失败径同 toast 面；词面同 `session.openFailed` 族）。 */
 export async function deleteSession(key) {
   try {
     const before = store.get()
@@ -377,6 +381,7 @@ export async function deleteSession(key) {
     const receipt = await host.invoke("session:delete", { slot: slotOf(key) })
     if (receipt?.ok !== true) {
       console.error("[renderer] session:delete failed:", receipt?.reason, "slot:", key)
+      showToast(t("session.deleteFailed", { reason: reasonOf(receipt) })) // #578③：失败面可见（回执拒径）
       return false
     }
     await refreshRail()
@@ -384,6 +389,7 @@ export async function deleteSession(key) {
     return true
   } catch (error) {
     console.error("[renderer] session:delete failed:", error)
+    showToast(t("session.deleteFailed", { reason: String(error?.message ?? error) })) // #578③：调用抛同理可见
     return false
   }
 }

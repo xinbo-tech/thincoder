@@ -26,3 +26,6 @@ tmp-*.mjs
 ledger.db
 ledger.db-*
 
+# 大件基准产物（PDF——本地保留，不入库）
+bench/results/*.pdf
+

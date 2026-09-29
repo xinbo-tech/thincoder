@@ -5,26 +5,31 @@
  *   ② `reasoningNode(block, key, handlers, withLabel)` —— 推理块（核件结构同形 = 核 `flow/reasoning.mjs` `renderReasoning`：
  *      `details.reasoning-block[open] > summary + div.reasoning-content`；类名契约 = KD-RC-7，桌面映射样式住
  *      `renderer/core.css`）；
- *   ③ `patchTextBlock(node, block, key, handlers)` —— 帧尾就地更新（面值变才写 + 复制控件缺席则补；
- *      **推理分流** = 重渲走核专用画笔 `paintReasoningTarget`〔含钉底〕——「对齐第二批」项 1）；
+ *   ③ `patchTextBlock(node, block, key, handlers)` —— 帧尾就地更新（面值变才写；**推理分流** = 重渲走核专用
+ *      画笔 `paintReasoningTarget`〔含钉底〕——「对齐第二批」项 1）；
  *   ④ `labelNode(role)` / `paintSpeakerLabels(root)` —— 说话人标签容器与帧尾落笔（项 4：用户块 = 核 `paintLabel`
  *      原语；助手回合首块 = 端侧同字面〔核无原语 —— 端差登记〕）；
  *   ⑤ `pinReasoning(node)` —— 推理块新建即落底（首帧钉底；增量钉底归核画笔）。
- * `data-raw` = **原文逐字**（复制取文源 —— KD-22「块文本逐字（不经渲染面解析）」：渲染面 markdown 后 DOM 文本已非
- * 原文 ⇒ 原文另存锚上；两复制控件同读 = `renderer/views/chat-copy.mjs`）。
+ * `data-raw` = **原文逐字**（**就地更新判据面** —— KD-22「块文本逐字（不经渲染面解析）」：渲染面 markdown 后 DOM
+ * 文本已非原文 ⇒ 原文另存锚上；`patchTextBlock` 值变比较消费 —— 复制面 = 核件代码块 Copy 钮唯一）。
  * 边界（KD-RC 各端在册机制不夺）：滚动 / 回填 / 窗口裁剪留端；**文件链接着装不在本档**（相抵② 承面 = 结果区
  * `views/chat-tool.mjs` `linkifyResult` —— 核件 `linkifyPaths` 消费单点，历史卡零链接）。零 `node:` / 零裸包；
  * 文案一律经 `t()`（零硬编码 —— 本档词面 = 核键
  * `status.thinking` + 说话人三键，词形单源 = 核 i18n / 宿主表）。
  */
-import { build, text } from "../dom.mjs"
+import { text } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 import { md, mdInline } from "/rc/md.mjs"
 import { paintLabel } from "/rc/flow/queued-mark.mjs"
 import { paintReasoningTarget, paintStreamTarget } from "/rc/flow/stream.mjs"
-import { blockTextOf, copyBlockNode } from "./chat-copy.mjs"
 
-/** 文本块面（核 Markdown 单源 · **深度分流** = D19）：`data-raw` = 原文逐字（复制取文源 · 空串 ⇒ 照落，判据归复制控件面）；
+/** 块文本（`data-raw` 值源单源；复制面对齐批迁入 —— 自建复制面档整删，本函数随文本面留存）：`block.text` 非串
+ *  ⇒ `""`（工具卡等无文本块 —— 空串照落锚，判据归就地更新面）。 */
+export function blockTextOf(block) {
+  return typeof block?.text === "string" ? block.text : ""
+}
+
+/** 文本块面（核 Markdown 单源 · **深度分流** = D19）：`data-raw` = 原文逐字（空串 ⇒ 照落）；
  *  深度按 `block.kind` 分流（口径标尺 = 核件 `thincoder-render-core/flow/block.mjs`：user 气泡 = `mdInline` ∥ 助手内容面 = `md`）：
  *  `user` ⇒ `mdInline`（行内深度 —— 块级构件零节点）；`assistant` / `reasoning` / `error` ⇒ 全量 `md`（零回归）；
  *  `html` = 核产出 —— **渲染面唯一 `innerHTML` 字面** = `renderer/dom.mjs` `el()` 的 `html` prop
@@ -53,7 +58,6 @@ export function reasoningNode(block, key, handlers = {}, withLabel = false) {
           textFace(block, "reasoning-content"),
         ],
       },
-      copyBlockNode(block, key, handlers),
     ],
   }
 }
@@ -68,9 +72,9 @@ export function labelNode(role) {
 /** 就地更新文本块（帧尾 `patch` 档 —— `renderer/views/chat.mjs` `patchTail` 调用；RENDERER.md §3 帧尾滚动作
  *  零改）：文本面（`[data-raw]`）**值变才写**（`data-raw` + md 重渲同刷 —— 幂等帧零写）；**推理块分流** =
  *  重渲走核专用画笔 `paintReasoningTarget`（核 `flow/stream.mjs` —— 通用画笔 + `scrollTop = scrollHeight` 钉底；
- *  「对齐第二批」项 1 改接），其余走 `paintStreamTarget`（无钉底 —— 对拍有牙）。复制控件缺席则补（文本空 ⇒
- *  零控件 —— 构树同判据）；`key` = 块键（`renderer/views/chat-stream.mjs` `blockKey` 同域）；`handlers` 透传
- *  ⇒ 补入控件的接线态与构树同源（两态通则）。 */
+ *  「对齐第二批」项 1 改接），其余走 `paintStreamTarget`（无钉底 —— 对拍有牙）；`key` = 块键
+ *  （`renderer/views/chat-stream.mjs` `blockKey` 同域）—— 复制面对齐批后本档不再建控件（签名沿帧尾调用形保留；
+ *  `key` ∕ `handlers` 本档无内部消费）。 */
 export function patchTextBlock(node, block, key, handlers = {}) {
   if (!node || typeof node.querySelector !== "function") return node
   const face = node.querySelector("[data-raw]")
@@ -81,10 +85,6 @@ export function patchTextBlock(node, block, key, handlers = {}) {
       if (block?.kind === "reasoning") paintReasoningTarget(face, raw)
       else paintStreamTarget(face, raw)
     }
-  }
-  if (node.querySelector('[data-action="chat:copy-block"]') === null) {
-    const control = copyBlockNode(block, key, handlers)
-    if (control !== null) node.append(build(control))
   }
   return node
 }

@@ -86,7 +86,7 @@ export function onToolOutput(state, ev) {
   const blocks = state.blocks ?? []
   const index = indexOfTool(blocks, ev.id)
   if (index < 0) return state
-  const chunk = typeof ev.chunk === "string" ? ev.chunk : ""
+  const chunk = typeof ev.text === "string" ? ev.text : ""
   if (chunk === "") return state
   const block = blocks[index]
   const result = typeof block.result === "string" ? block.result + chunk : chunk

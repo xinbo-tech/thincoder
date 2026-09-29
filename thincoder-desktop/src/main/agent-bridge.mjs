@@ -2,7 +2,7 @@
  * agent-bridge.mjs — 宿主装配桥的**回调桥**出档（批 8 §1.14 ③：宿主档触行数拉线，按在册预案拆分；
  * 档名实施舱定）。三面单源（原 `agent-host.mjs` 同名面逐字搬运）：① 活动名闭集 `ACTIVITY_EVENTS`；
  * ② 协议行解析 `parseEvToken`（正则 `EV_RE` + relay 前缀 `RELAY_HEAD_RE`）；③ 十一回调 ⇒ `ev:*` 出站
- * 通道映射 `createBridge`（R3a：回调十键 —— 增 `onUsage`，非独立通道 ⇒ 累入会话级令牌表；R3c：增 `onReasoning` ⇒ `ev:reasoning`，D19 推理块接线）。工具参数摘要 `summarizeArgs` 同行（回调桥与待决门 payload 共用一份口径 ——
+ * 通道映射 `createBridge`（R3a：回调十键 —— 增 `onUsage`，非独立通道 ⇒ 累入会话级令牌表；R3c：增 `onReasoning` ⇒ `ev:reasoning`，D19 推理块接线）。工具参数摘要 `summarizeArgs` 同行（**B7 1a 保名转口**：体 = 核件单源 `@thincoder/core/tool-args.mjs` —— 回调桥与待决门 payload 共用一份口径；
  * `suspensions.mjs` 引用本档，不复制）。
  * **R3b（D20 · `docs/desktop/design/UI.md` §1 本批注项 2 / `docs/desktop/design/IPC.md` §1 `ev:subagent` 行）**：
  *  ① relay 分流——relay 前缀 token（`⟦ev⟧` / `[model]` 族）⇒ `ev:subagent`（映射**单源** = 核
@@ -64,26 +64,10 @@ export function parseEvToken(text) {
   return hit ? { event: hit[1], fields: hit[2] ?? null } : null
 }
 
-/** 工具参数摘要（展示面自持小函数 —— 形仿卡片头口径，不引他端模块）：单行 · 按工具挑关键字段 · 截断。 */
-export function summarizeArgs(name, args) {
-  if (!args || typeof args !== "object") return ""
-  const a = args
-  const one = (v) => String(v ?? "").replace(/\s+/g, " ").trim()
-  const cut = (s, n = 60) => (s.length > n ? `${s.slice(0, n)}…` : s)
-  switch (name) {
-    case "bash": case "cmd-shell":
-      return cut(one(a.command) + (a.workdir ? `  (in ${one(a.workdir)})` : ""))
-    case "read": case "write": case "edit": case "hashline_edit": case "insert_after": case "apply_patch":
-      return cut(a.path ? `"${one(a.path)}"` : one(a.filePath))
-    case "grep": case "glob": case "code_search": case "doc_search":
-      return cut(`/${one(a.pattern ?? a.query)}/${a.path ? ` in "${one(a.path)}"` : ""}`)
-    case "ls": return cut(a.path ? one(a.path) : ".")
-    case "question": return cut(one(a.question))
-    case "subagent": case "advisor": return cut(one(a.task || a.action || a.type))
-    default:
-      try { return cut(JSON.stringify(a), 80) } catch { return "" }
-  }
-}
+/** 工具参数摘要（**B7 1a 保名转口** —— 体 = 核件单源 `@thincoder/core/tool-args.mjs` `describeToolArgs`；
+ *  名面存续：本档调用面（`onToolCall`）与端内转口面（`agent-host.mjs` ∕ `suspensions.mjs`）零改）。 */
+import { describeToolArgs as summarizeArgs } from "@thincoder/core/tool-args.mjs"
+export { summarizeArgs }
 
 /** sync 子代理完成注记（R5 · #521 —— X6 注记判据，**逐字同** CLI `tool-events.mjs:217` ∕ VSC `panel-callbacks.mjs:102-103`）：
  *  `TURN_CAP_MARK` ⇒ `turn cap reached — work may be partial`；`STOPPED_MARK` ⇒ `stopped by user — work may be partial`；
@@ -220,7 +204,7 @@ export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf,
         const piece = subChunkOf("think", text)
         return piece !== null ? chunkOut(piece) : at("ev:reasoning", { text })
       },
-      onAgentTurn: (n, max) => at("ev:activity", { event: "turn", n, max }),
+      onAgentTurn: (n, max) => at("ev:activity", { event: "turn", turn: n, maxTurns: max }),
       onToolCall: (name, args, id) => {
         // 子 agent 工具调用行 ⇒ `ev:subchunk` 工具面（face = toolCall）；不带前缀者才入流。
         const piece = subChunkOf("toolCall", name, args)
@@ -232,7 +216,7 @@ export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf,
       onToolOutput: (name, text, id) => {
         // 子 agent 工具输出行 ⇒ `ev:subchunk` 工具面（face = toolOutput）。
         const piece = subChunkOf("toolOutput", name, text)
-        return piece !== null ? chunkOut(piece) : at("ev:tool-output", { id, chunk: text })
+        return piece !== null ? chunkOut(piece) : at("ev:tool-output", { id, text })
       },
       // 收尾：`ok` = 核 `isToolFailure` 判据单源（「对齐第三批」项 2 收正 —— 半 / 全角 `Error[:：]` 头与独立成行
       // 状态位；`docs/desktop/design/IPC.md` §1 `ev:tool-result` 行）；`links` = 验存文件链接（相抵② · KD-39 ——
@@ -320,14 +304,15 @@ export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf,
 }
 
 /** 令牌累计（**纯函数** —— 表原地累加并回原表；CLI 同源映射 = `thincoder-cli/src/tui/tool-events.mjs:400-405`）：
- *  五键 = `prompt` / `completion` / `reasoningTokens` / `cacheHit` / `cacheMiss`；`tally` 非载体 ⇒ 原样返回（零抛）。 */
+ *  五键 = `prompt_tokens` / `completion_tokens` / `reasoning_tokens` / `prompt_cache_hit_tokens`
+ *  / `prompt_cache_miss_tokens`（VSC 键面对位 —— `ev:usage` 载荷契约 B8-A6）；`tally` 非载体 ⇒ 原样返回（零抛）。 */
 export function accumulateTokens(tally, usage) {
   if (tally === null || typeof tally !== "object") return tally
   const num = (value) => (typeof value === "number" && Number.isFinite(value) ? value : 0)
-  tally.prompt += num(usage?.prompt_tokens)
-  tally.completion += num(usage?.completion_tokens)
-  tally.reasoningTokens += num(usage?.completion_tokens_details?.reasoning_tokens)
-  tally.cacheHit += num(usage?.prompt_cache_hit_tokens)
-  tally.cacheMiss += num(usage?.prompt_cache_miss_tokens)
+  tally.prompt_tokens += num(usage?.prompt_tokens)
+  tally.completion_tokens += num(usage?.completion_tokens)
+  tally.reasoning_tokens += num(usage?.completion_tokens_details?.reasoning_tokens)
+  tally.prompt_cache_hit_tokens += num(usage?.prompt_cache_hit_tokens)
+  tally.prompt_cache_miss_tokens += num(usage?.prompt_cache_miss_tokens)
   return tally
 }

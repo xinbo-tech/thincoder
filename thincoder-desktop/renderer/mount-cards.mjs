@@ -19,7 +19,7 @@
  */
 import { clearQuestion } from "./events.mjs"
 import { store as defaultStore } from "./store.mjs"
-import { goalCardNode } from "./views/goal.mjs"
+import { goalCardNode, goalPanelOpen } from "./views/goal.mjs"
 import { planCardNode } from "./views/plan.mjs"
 import { questionCardNode, respondQuestion } from "./views/question.mjs"
 
@@ -101,7 +101,8 @@ function liveCards(root) {
 
 /** 本档期望卡（纯读切片 —— 族内单槽：`questions` / `tasks` / `goal` 按会话键各一槽；缺 / 空 ⇒ 该族缺席）：
  *  三族皆**核卡工厂直取**（`views/question.mjs` / `views/plan.mjs` / **`views/goal.mjs`（R5）**）；计划族显隐判据随核
- *  （`shown` = 本卡当前是否显示 —— 挂载面现读，判据输入面）；目标族显隐判据随核（`goalPanelVisible` —— 非空即显）。 */
+ *  （`shown` = 本卡当前是否显示 —— 挂载面现读，判据输入面）；目标族显隐判据随核（`goalPanelVisible` —— 非空即可显示）
+ *  ∧ **开合态**（#554②：`{ open }` 传入 —— 默认合 ⇒ 新卡挂载即隐藏；🎯 开合就地施用）。 */
 function wantedCards(state, handlers, shown) {
   const key = state?.activeSession ?? null
   if (key === null) return []
@@ -110,7 +111,7 @@ function wantedCards(state, handlers, shown) {
   if (question !== undefined) wanted.push({ code: "question", node: questionCardNode(question, handlers) })
   const plan = planCardNode(state?.tasks?.[key], { shown })
   if (plan !== null) wanted.push({ code: "task", node: plan })
-  const goal = goalCardNode(state?.goal?.[key])
+  const goal = goalCardNode(state?.goal?.[key], { open: goalPanelOpen() })
   if (goal !== null) wanted.push({ code: "goal", node: goal })
   return wanted
 }

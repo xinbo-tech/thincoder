@@ -242,7 +242,7 @@ test("E5 窗内忙态：标题窗期二次 send ⇒ {ok,queued} ∧ 结算后续
   const second = await driver.send(KEY, SECOND_MSG)
   assert.deepEqual(second, { ok: true, queued: true }, "忙态受理 ⇒ 按会话键入队（KD-40 ②）")
   assert.ok(
-    events.some((e) => e.channel === "ev:queue" && e.payload.items?.some((i) => i.text === SECOND_MSG)),
+    events.some((e) => e.channel === "ev:queue" && e.payload.items?.some((i) => i === SECOND_MSG)),
     "队镜面已出帧（ev:queue 快照）"
   )
 

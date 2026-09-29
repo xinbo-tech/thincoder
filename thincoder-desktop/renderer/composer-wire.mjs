@@ -8,30 +8,44 @@
  * 注入面（deps）：`store`（切片读写）· `activeKey()`（现刻活动会话）· `call(channel, payload)`（窄桥往返 ——
  * mount 侧归一失败形）· `push(message)`（核件推送 —— `atResults` 回投）· `panelOf()`（核件面板读数面 ——
  * 直发失败径复位 loading）· `repaint()`（提示行重挂 —— mount 侧 `paintNotices`）· `onLoadingReset()`（忙态派生
- * 缓存复位 —— mount 侧 `lastBusy`）· 映射 ∕ 纯动作件（`toImages` 载荷投影 ∕ `degradedCode` 降级码过闸 ∕ `effortOf`
+ * 缓存复位 —— mount 侧 `lastBusy`）· `suspIdleOf(state, key)`（挂起空闲判据 —— 窗内直发径回执后复位 loading；
+ * 缺省 ⇒ 零复位）· 映射 ∕ 纯动作件（`toImages` 载荷投影 ∕ `degradedCode` 降级码过闸 ∕ `effortOf`
  * 档位写向映射（与 mount 侧读向 `reasoningOf` 同表）∕ `withUserBlock` 用户块单源写（mount 侧同取 —— 出泡不变式）∕
  * `setAttachDegraded` ∕ `applyFlags`）· `openSettings()`（footer 三出口 —— A8 唯一映射点）。
  *
  * 纪律（沿 mount 侧）：零 `node:` / 零裸包（渲染面静态闭包判据）；控制台诊断串非面向用户文案（不经 `t()`）。
+ * **#597（发送忙态时机）+ #596（回执超时）**：`sendDirect` 三增 —— ① 失败回执 `started === false`（宿主未受理）⇒
+ * `clearRunning` 忙位回收（守卫 = 本尝试仍最新）；② 发送回执超时界（`sendTimeoutMs` 注入缝，缺省 120000）⇒ 清位 ∕
+ * 失败行 ∕ 退流；③ 迟到回执自愈（失败行清受最新门 ∕ 用户块补写不受门）。
  */
+import { clearRunning } from "./badges.mjs"
 
 /** 回执 `reason` 归一（缺 ∕ 非串 ∕ 空串 ⇒ `fallback`）—— 诊断串单源（mount 侧候选面同引）。 */
 export function reasonOf(receipt, fallback = "unknown") {
   return typeof receipt?.reason === "string" && receipt.reason !== "" ? receipt.reason : fallback
 }
 
+/** 发送回执超时哨兵（timer 先到 —— 与回执值域无交集）。 */
+const SEND_TIMEOUT = Symbol("send-timeout")
+
+/** 忙位读数（本键位标含 `running`）—— 超时清位「位标在场」判据；本档须 node 可装载（直测面）⇒ 不引视图面
+ *  向下依赖（同式 = `renderer/views/chrome.mjs` `busyOf`）。 */
+const runningOf = (state, key) => Array.isArray(state?.tabBadges?.[key]) && state.tabBadges[key].includes("running")
+
 /** 写面工厂：返回 `{ post, noteEcho, retractEcho, failure }` —— `post(type, payload)` = 核件出站归一入口；
  *  `noteEcho(key, block)` = 本地先行块登记（`onUserEcho` 出泡后调用）；`retractEcho(key)` = 本地块退流（正径滞后）；
  *  `failure()` = B21 行源读数（mount 侧 `paintNotices` 取）。 */
 export function createComposerWire(deps = {}) {
   const {
-    store, activeKey, call, push, panelOf, repaint, onLoadingReset,
+    store, activeKey, call, push, panelOf, repaint, onLoadingReset, suspIdleOf = null,
     toImages, degradedCode, effortOf, withUserBlock, setAttachDegraded, applyFlags, openSettings,
+    sendTimeoutMs = 120000, // 发送回执超时界（#596 并入 —— 工厂注入缝；装配面零传 = 生产缺省）
   } = deps
 
   let failed = null // B21 行源（回执写 —— 本地闭包量，非切片）
   let lastEcho = null // 最近一次本地先行出的用户块 `{ key, block }`（标记三态落点 —— 按引用定位）
   let atSeq = 0 // @ 面请求 seq（迟到回执丢弃判据 —— VSC `autocomplete.js:29-34` 同式）
+  const inFlight = new Map() // 本键最新发送尝试登记（key → 尝试令牌 —— 陈旧回执 ∕ 陈旧超时守卫单点 · #597）
 
   /** 失败态记录（B21）：`reason` 入态 + 记错 + 提示行重挂。 */
   function recordFailure(channel, receipt) {
@@ -40,26 +54,74 @@ export function createComposerWire(deps = {}) {
     repaint()
   }
 
-  /** 直发径（D1）：受理 ⇒ 清 B21 + 降级码切片写（回执 `degraded` 浮出，表外码记错）；**回执言队形 ⇒ 本地块退流**
-   *  （`retractEcho` —— 消费前流内零真块）；失败 ⇒ B21 行 + 本地 loading 标记复位（宿主未起跑 —— 防 Ctrl+C ∕
-   *  中断模态门滞留）。 */
+  /** 直发径（D1；#597 接入）：受理 ⇒ 清 B21 + 降级码切片写（回执 `degraded` 浮出，表外码记错）；**回执言队形 ⇒ 本地块退流**
+   *  （`retractEcho` —— 消费前流内零真块）+ **挂起空闲复位**（`suspIdleOf` 真 ⇒ loading 门禁归位 —— 窗内直发径
+   *  未起跑，防假中断位）；失败 ⇒ 本地块**退流**（零块 —— KD-23 失败径的本地先行回滚面）+ B21 行 + 本地 loading
+   *  标记复位（宿主未起跑 —— 防 Ctrl+C ∕ 中断模态门滞留）；**宿主未受理（`started === false` —— 四清位 ∕ 装配抛 ∕
+   *  装配窗中止）⇒ 位标回收**（`clearRunning` 单点；守卫 = 本尝试仍为该键最新登记）；**回执超时界**（timer 先到 ⇒
+   *  清位（最新 ∧ 位标在场）∕ 失败行 `timeout` ∕ 退流；`orig` 另挂续延兜迟到值 —— 自愈见 `healLate`）。 */
   async function sendDirect(key, payload) {
     if (key === null) return void console.error("[composer] msg:send skipped: no active session")
-    const receipt = await call("msg:send", { key, text: String(payload?.text ?? ""), images: toImages(payload?.images) })
-    if (receipt.ok !== true) {
-      recordFailure("msg:send", receipt)
+    const text = String(payload?.text ?? "")
+    const attempt = {} // 尝试令牌（登记 = `inFlight` 最新）
+    inFlight.set(key, attempt)
+    const orig = call("msg:send", { key, text, images: toImages(payload?.images) })
+    let settled = false // 单次结算标志（§2.12 条 7）：正常径先到 ⇒ 迟到续延零动作（两径正交）
+    let timer = null
+    const receipt = await Promise.race([
+      orig,
+      new Promise((resolve) => { timer = setTimeout(() => resolve(SEND_TIMEOUT), sendTimeoutMs) }),
+    ])
+    if (receipt === SEND_TIMEOUT) {
+      // 超时界（#596 并入）：本尝试仍最新 ∧ 位标在场 ⇒ 清位；失败行 + 退流（宿主未回 —— 视同未受理）
+      if (inFlight.get(key) === attempt && runningOf(store.get(), key)) store.set(clearRunning(store.get(), key))
+      retractEcho(key)
+      recordFailure("msg:send", { reason: "timeout" })
       panelOf()?.setLoading(false)
-      onLoadingReset?.() // 忙态派生读数复位（收正轮 · 行 8）：本径直写 loading 面 ⇒ 缓存须跟（否则同态 sync 被吞）
-      return
+      onLoadingReset?.()
+    } else {
+      settled = true // 正常径先到 ⇒ 迟到续延零动作
+      clearTimeout(timer) // 界清点（零残留计时器）
+      if (receipt.ok !== true) {
+        // 失败径收位（#597 · 2.3(3)）：`started === false`（受理即置的四清位 ∕ 装配抛 ∕ 装配窗中止）⇒ 位标回收（守卫 = 本尝试仍最新）
+        if (receipt.started === false && inFlight.get(key) === attempt) store.set(clearRunning(store.get(), key))
+        retractEcho(key) // 失败径退流（挂起窗径批）：本地先行块回滚（KD-23 失败径「稿逐字留 + 零块」的本地块面）
+        recordFailure("msg:send", receipt)
+        panelOf()?.setLoading(false)
+        onLoadingReset?.() // 忙态派生读数复位（收正轮 · 行 8）：本径直写 loading 面 ⇒ 缓存须跟（否则同态 sync 被吞）
+        return
+      }
+      if (receipt.queued === true) { // 忙位读数滞后正径（端判闲 ∕ 宿主已忙 ∕ 已入挂起窗）
+        retractEcho(key) // 本地块退流（待发送件归输入区带）
+        if (suspIdleOf?.(store.get(), key) === true) { // 挂起空闲复位（窗内回合在飞 ⇒ 零复位——真回合门不误关）
+          panelOf()?.setLoading(false)
+          onLoadingReset?.()
+        }
+      }
+      failed = null
+      const code = degradedCode(receipt.degraded)
+      if (code === null && receipt.degraded !== undefined && receipt.degraded !== null) {
+        console.error(`[composer] msg:send: unknown degraded code: ${String(receipt.degraded)}`)
+      }
+      store.set(setAttachDegraded(store.get(), key, code))
+      repaint()
     }
-    if (receipt.queued === true) retractEcho(key) // 忙位读数滞后正径（端判闲 ∕ 宿主已忙）：本地块退流（待发送件归输入区带）
-    failed = null
-    const code = degradedCode(receipt.degraded)
-    if (code === null && receipt.degraded !== undefined && receipt.degraded !== null) {
-      console.error(`[composer] msg:send: unknown degraded code: ${String(receipt.degraded)}`)
+    // 迟到续延（§2.12 条 7）：挂 `orig` 兜迟到值 —— 超时径（settled 假）⇒ 自愈；正常径 ⇒ 零动作。
+    void orig.then((late) => { if (!settled) healLate(key, attempt, late, text) })
+  }
+
+  /** 迟到自愈（§2.12 条 6 分治）：`ok` 真 —— **失败行清 = 受最新尝试守卫门**（行槽属后续尝试面——防重发径自身
+   *  失败行被陈旧 `ok` 抹掉）；**用户块补写 = 不受门**（「每受理消息恰一枚块」消息级不变式——重发同文双块 =
+   *  双受理的如实投影，不合并 ∕ 不去重）；队形 ⇒ 零块补（退流态保持——消费时刻由队径补写）；`ok` 假 ⇒ 零追加。 */
+  function healLate(key, attempt, receipt, text) {
+    if (receipt?.ok !== true) return
+    let touched = false
+    if (inFlight.get(key) === attempt && failed !== null) { failed = null; touched = true }
+    if (receipt.queued !== true) {
+      store.set(withUserBlock(store.get(), key, { kind: "user", text, ts: Date.now() }))
+      touched = true
     }
-    store.set(setAttachDegraded(store.get(), key, code))
-    repaint()
+    if (touched) repaint()
   }
 
   /** 忙态径（D1 队径）：宿主任判忙态 ⇒ `{ ok:true, queued:true }`（气泡 ∕ 待发送标归队镜面）；成功径清 B21
@@ -69,6 +131,7 @@ export function createComposerWire(deps = {}) {
   async function sendQueued(key, payload) {
     if (key === null) return void console.error("[composer] queuedUserMessage skipped: no active session")
     const text = String(payload?.text ?? "")
+    inFlight.set(key, {}) // 重发登记（陈旧守卫：重发一经发起 ⇒ 前次即非最新 · #597）
     const receipt = await call("msg:send", { key, text, images: toImages(payload?.images) })
     if (receipt.ok !== true) return recordFailure("queuedUserMessage", receipt)
     failed = null // B21 清（受理径 —— 收正轮 · 行 1）

@@ -9,20 +9,25 @@
  *     （`Add Key` ∕ `Change` + 删除；未配 ⇒ 零删除控件）+ 编辑态（密码输入 + `Save` ∕ `Cancel`）；
  *  ② **索引族行**（源 = VSC `settings-tools.js:330-350`（`renderIndexStatus`）· `:148-153`（构建钮绑定））：
  *     名（`settings.indexSection`）+ 状态词 + 构建钮（两标：构建 ∕ 重新构建）—— VSC 同形同判据序：
- *     `built` 真 ⇒ 计数行 + 「重新构建」；否则 ⇒ 「未构建」+ 「构建索引」。**钮恒可用**
- *     （VSC 同：无 embedding key 不禁构建 —— key 只驱动 embedding 键行显示，向量层由检索面懒回填）。
- * 三态（段级状态为异步回执，索引状态缺位另立一态）：① `building` ⇒ 「构建中…」+ 钮禁用（VSC 点按即禁同律）；
- *  ② **索引状态缺位**（首开在途 ∕ 读数回执失败）⇒ **索引行零节点**（段态词 + 段级失败面承载；VSC 的「无状态」支 =
- *  宿主记忆面不可得态，桌面无同态 ⇒ 不落「未配置 key」假词 —— 零假造）；③ 有状态 ⇒ 上述两词面。
+ *     `built` 真 ⇒ 计数行 + 「重新构建」；否则 ⇒ 「未构建」+ 「构建索引」；**无 embedding key ⇒ 不可构建**
+ *     （S12 落：`settings.indexNoKey` 词 + 钮禁用 —— VSC `settings-tools.js:337-341` 同判）。
+ * 态机（段级状态为异步回执）：① `building` ⇒ 「构建中…」+ 钮禁用（VSC 点按即禁同律）；② 无 embedding key
+ *  ⇒ `no-key`（`settings.indexNoKey` 词 + 钮禁用 —— S12：VSC `settings-tools.js:337-341` 同判；键面读数缺位
+ *  ⇒ 不可证假，沿下一判）；③ **索引状态缺位**（首开在途 ∕ 读数回执失败）⇒ **索引行零节点**（段态词 +
+ *  段级失败面承载 —— 零假造）；④ 有状态 ⇒ built ∕ not-built 两词面。
  * 纪律：零 DOM（描述符树）；文案一律经 `t()`；缺 handlers ∥ 禁用态 ⇒ `wire` 落 `disabled: true`
  * （诚实非死控）；零 `node:` ∕ 零裸包（渲染面静态闭包判据）。
  */
 import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
 
-/** 态判据（VSC `renderIndexStatus` 同判据序；`null` = 状态缺位 —— 零节点，禁假造）。 */
+/** 态判据（VSC `renderIndexStatus` 同判据序；`null` = 状态缺位 —— 零节点，禁假造）。
+ *  **S12 增 `no-key`**：embedding 键面读数在场且 `hasKey` 假 ⇒ 该态（对位 VSC `settings-tools.js:337-341`：
+ *  无 key ⇒ `settings.indexNoKey` 词 + 构建钮禁用）——键面读数缺位（`keys` 非对象）⇒ 不可证假，沿旧判。 */
 function indexState(section) {
   if (section?.building === true) return "building"
+  const keys = section?.keys !== null && typeof section?.keys === "object" ? section.keys : null
+  if (keys !== null && keys.embedding?.hasKey !== true) return "no-key"
   const status = section?.status ?? null
   if (status === null) return null
   return status.built === true ? "built" : "not-built"
@@ -33,6 +38,7 @@ const STATE_WORD = Object.freeze({
   building: "settings.indexBuilding",
   built: "settings.indexBuilt",
   "not-built": "settings.indexNotBuilt",
+  "no-key": "settings.indexNoKey",
 })
 
 /** 计数归一：非有限数 ⇒ 0（禁假造 —— 回执原样投影，缺键落 0 计数）。 */
@@ -117,11 +123,12 @@ function keyRowNode(kind, words, hasKey, editing, handlers) {
 }
 
 /** 索引族行（名 + 状态词 + 构建钮）；状态缺位 ⇒ **零节点**（段态词承载 —— 零假造）。
- *  禁用判据仅 `building`（VSC 点按即禁同律）；缺 `onBuildIndex` ⇒ `wire` 落 `disabled`（诚实非死控）。 */
+ *  禁用于两态：`building`（VSC 点按即禁同律）与 `no-key`（S12：无 embedding key 不供构建）；
+ *  缺 `onBuildIndex` ⇒ `wire` 落 `disabled`（诚实非死控）。 */
 function indexRowNode(section, handlers) {
   const state = indexState(section)
   if (state === null) return null
-  const onClick = state !== "building" && typeof handlers?.onBuildIndex === "function" ? handlers.onBuildIndex : undefined
+  const onClick = state !== "building" && state !== "no-key" && typeof handlers?.onBuildIndex === "function" ? handlers.onBuildIndex : undefined
   return {
     tag: "div",
     props: { class: "settings-row", "data-index": "row", "data-index-state": state },

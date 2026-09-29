@@ -46,10 +46,12 @@ export function clearPanels() {
 // 状态行 elapsed 刷新（保留运行期驱动：usage/toolCall 消息之间有长工具批——elapsed 段
 // 不得冻结）+ live 块头刷新（§14 C-11④——**不设运行态门**：`_turnState` 为 `susp` 的
 // 纯池跑主场景照刷；无 live 块 = 零操作；renderStatusBar 维持既有 running 门不变）。
+// 拍值 2s ⇒ **1s**（停滞轻显形批 2026-09-29——静默读数跳秒 1s 步进；单源 = `docs/cli/design/TUI.md` §7.7；
+// 定时器**恒启**——`running` 门只作用状态行重挂 ⇒ 无子代理块的在飞回合照有帧）。
 const _panelTimer = setInterval(() => {
   refreshLiveHeaders()
   if (S._turnState === "running") renderStatusBar()
-}, 2000)
+}, 1000)
 // Webview lifetime == panel lifetime, but clear on unload so a future
 // teardown/dispose path cannot leak the interval.
 window.addEventListener("unload", () => clearInterval(_panelTimer))

@@ -14,59 +14,63 @@
  *      两处（本档唯二）；
  *   ② 载荷字面量构造面**必须同档**（`relayLiterals` 只扫本档同名牌的调用点——注释内勿写
  *      「名 + 左括号」形态，lexer 亦扫之）：本档内构造调用点四处 = `relaySubagentEventToken`
- *      的 `emit`（`type: "subagent"`）+ 下方两转口 `postSubagentStatus` / `postSubagentApproval`
+ *      的 emit（`type: "subagent"`）+ 下方两转口 `postSubagentStatus` / `postSubagentApproval`
  *      + `emitToolPanel`（`type: "toolPanel"`——2026-09-19 批同口入队，字面量随行以保 §12 记账）。
  * 缺①或②任一 ⇒ 协议面记账缺行为（机器面已随测试退役——2026-09-28）；漏
  * `subagentApproval` 一半 ⇒ 分发表 `wrongDisp` 失配（表记 `活` ∕ 实得 `删`）。
  *
+ * B7 2a（2026-09-29 · 批档 `docs/batches/2026-09-29-parity-b7-minor.md` §2.2.2 · R2 交接收口）：
+ * 事件面 ∕ 内容构形面换接 **rc 单源**（`@thincoder/render-core/subblocks/relay.mjs`）——
+ * `relayEventToSubPatch`（识别 ∕ 剥除 ∕ 映射 ∕ pending ∕ queued 缓存全表在 rc）+
+ * `relaySubContentChunk`（内容构形 ∕ 前缀剥除 ∕ 四面 gate 全在 rc——desk ∕ VSC 双消费）。
+ * per-panel relay 状态 = rc `createRelayScope()`（WeakMap 代原 `_relayAsyncPending` ∕
+ * `_relayQueuedInfo` 双缓存——多面板互不串味语义不变）；`queuedInfoOf` 转口改 scope 形
+ * （导出名 ∕ 形参形零改）。宿主分工（副作用留端）：`ev:substrip` 留痕经 rc `deps.onStripped`
+ * （NFR-A2 保形）；`ev:subcontent` 收据 ∕ `noteContentFirst` ∕ `emitToolPanel` 两调用照旧。
+ * 信封 ∕ outbox ∕ 留痕（`ev:subdeliver`）保形。
+ *
  * 缝保持（KD-12）：`panel-callbacks.mjs` 按**既有导出名** re-export 本档导出件（六件 + #118 新增
- * `queuedInfoOf`）⇒ 消费档 import 面零改（`relaySubagentEventToken` 消费面：`panel-messages.mjs:28`
- * 一行随本批 case 迁移收窄为 `flushSubagentOutbox`——真消费点 = `panel-messages-turn.mjs:25`；
- * `suspension.mjs:27` · 测试 2 档）。
+ * `queuedInfoOf`）⇒ 消费档 import 面零改（`relaySubagentEventToken` 消费面：`panel-messages.mjs`
+ * （`flushSubagentOutbox`）· `panel-messages-turn.mjs:24`（`cancelSubagent` 合成 callbacks——`:123`
+ * 调用）· `suspension.mjs:38`（`queuedInfoOf`——重生投影 `:94` 调用））。
  * 依赖单向：本档零 import 主档（`panel-callbacks → panel-subagent-relay`——无环）。
  */
+import { createRelayScope, relayEventToSubPatch, relayPathOf, relaySubContentChunk,
+  queuedInfoOf as scopeQueuedInfoOf } from "@thincoder/render-core/subblocks/relay.mjs"
 import { toolPanelPayload } from "./panel-toolpanel.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
-// W15（R5 · 事件中继面）：核 relay 前缀解析（`role#id/` 文法单一权威——零依赖）。
-import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
 
 // ─── W15（2026-09-15 · R5「⏹ queued 等待头回收」+ W13 观察项收口）事件中继面 ───────────
 // 核异步族（spawn/settle/cancel）经 `ctx.callbacks.onToken` 发 **relay 前缀 ⟦ev⟧ 事件 token**
-// （TUI routeSubToken 消费面；`subagent-run.mjs:143` `⟦ev⟧async` · `subagent-scheduler.mjs:337`
-// `⟦ev⟧queued` · `subagent-async.mjs:262` `⟦ev⟧cancelled` · `async-settle.mjs:228/262/264`
-// `⟦ev⟧stopped/⟦ev⟧settled/⟦ev⟧done` · 核 `agent.mjs:207` 子代 `⟦ev⟧turn`）。VSC 消费面 =
-// `{type:"subagent", …}` 状态消息（webview `activity.js` `applySubagentStatus`）——原 W12/W13
-// 镜像删旧后该转换面缺失（事件以裸文本泄漏 / ⏹ queued 取消无等待头回收事件）。
+// （TUI routeSubToken 消费面；`subagent-run.mjs:163` `⟦ev⟧async` · `subagent-scheduler.mjs:356`
+// `⟦ev⟧queued` · `subagent-async.mjs:281` `⟦ev⟧cancelled` · `async-settle.mjs:239/273/275`
+// `⟦ev⟧stopped/⟦ev⟧settled/⟦ev⟧done` · 核 `agent/turn-loop.mjs:77`（2026-09-29 拆分后重锚·父侧随动）子代 `⟦ev⟧turn`）。VSC 消费面 =
+// `{type:"subagent", …}` 状态消息（webview `activity.js` `applySubagentStatus`）。
 //
 // `relaySubagentEventToken` = 转换单点：识别（relay 前缀 + ⟦ev⟧/[model] 形态）即**消费**
 // （返回 true——不再以裸 token 文本泄漏）；未识别 → false（调用方原样转发）。两类调用面：
 //   ① 面板 `onToken` 包装（buildPanelCallbacks）——运行期事件流；
 //   ② ⏹/取消路径的合成 callbacks（panel-messages `cancelSubagent`——核 `executeCancelAction`
 //      的 `⟦ev⟧cancelled` + `refreshQueuedTokens` 中继）。
-// `⟦ev⟧async` → 记 pending（started 载荷 pool:true 判定）；尾随 `[model]` → `started` 载荷
-// （model 入块头）。pending 表挂 panel 弱映射（多面板互不串味）。
-const _relayAsyncPending = new WeakMap() // panel → Set<`role#id`>
-// #118（2026-09-20 一致性同步批 · R1）：queued 载荷四项（`kind` / `position` / `waiting` / `reason`）
-// 的**每面板缓存**（载体同款：`WeakMap<panel, Map<`role#id`, info>>`）。理由：`kind` / `detail` 只
-// 存在于一次性 token（池条目仅携 `position`），而 webview 重载后的存活投影（`suspension.mjs`
-// `reassertLiveChildren`）必须与 live 中继面**同形**——否则重绘后排队头回落「槽满等位」。
-// 键 = relay 前缀 head；清点 = started / cancelled / 终态分支（排队信息作废）；缓存缺省 = 降级态。
-const _relayQueuedInfo = new WeakMap() // panel → Map<`role#id`, {kind, position, waiting, reason}>
+// 映射表 ∕ pending 集 ∕ queued 缓存 ∕ 终态词 = rc 单源（B7 2a 换接）：`⟦ev⟧async` → 记 pending
+// （started 载荷 pool:true 判定）；尾随 `[model]` → `started` 载荷（model 入块头）；pending /
+// queued 挂 per-panel scope（多面板互不串味）。
 
-/** queued 缓存写点（#118 R1——queued 消费点同点入缓存）。 */
-function rememberQueued(panel, key, info) {
-  let m = _relayQueuedInfo.get(panel)
-  if (!m) { m = new Map(); _relayQueuedInfo.set(panel, m) }
-  m.set(key, info)
+/** per-panel relay 状态（rc `createRelayScope()`——`pendingAsync`：`⟦ev⟧async` 已见、待
+ *  `[model]` 出生；`queued`：queued 四项缓存。WeakMap 代原双缓存（#118 R1 载体同款：
+ *  panel 弱映射；多面板互不串味语义不变）。键 = relay 前缀 head；清点 = started /
+ *  cancelled / 终态分支（排队信息作废）；缓存缺省 = 降级态。 */
+const _relayScopes = new WeakMap() // panel → scope
+function relayScopeOf(panel) {
+  let scope = _relayScopes.get(panel)
+  if (!scope) { scope = createRelayScope(); _relayScopes.set(panel, scope) }
+  return scope
 }
 
-/** queued 缓存删点（#118 R1——`started` / `cancelled` / 终态分支删该键：排队信息作废）。 */
-function forgetQueued(panel, key) { _relayQueuedInfo.get(panel)?.delete(key) }
-
-/** queued 缓存读点（#118 R1/R2——重生投影载荷**同形单源**：`suspension.mjs`
- *  `reassertLiveChildren` 的 queued 行四项取自本缓存）。未消费过该键的 queued token ⇒ null
- *  （降级态：重发仅 `position`——WEBVIEW.md §5.2 降级形）。 */
-export function queuedInfoOf(panel, key) { return _relayQueuedInfo.get(panel)?.get(key) ?? null }
+/** queued 缓存读点（#118 R1/R2——重生投影载荷**同形单源**：`suspension.mjs` `reassertLiveChildren`
+ *  的 queued 行四项取自本缓存）。未消费过该键的 queued token ⇒ null（降级态）。
+ *  B7 2a：转口 rc（per-panel scope 形——导出名 ∕ 形参形零改；消费面 import 行零改）。 */
+export function queuedInfoOf(panel, key) { return scopeQueuedInfoOf(relayScopeOf(panel), key) }
 
 /** X10（显示面消差批 §2.10.5 #4）：sync 块 ⏹ 门控**事实**——核 sync registry
  *  `agent._syncChildAborts`（核写点 `subagent.mjs` `armSyncChildAbort`；键 = relay 前缀去尾 `role#id`）
@@ -78,72 +82,30 @@ function syncLiveOf(panel, key) {
   return panel?._agent?._syncChildAborts?.has(key) === true
 }
 
-/** 事件 token → webview 活动区状态消息（映射表：queued / cancelled / stopped / settled /
- *  done / turn / async+[model]）。识别返回 true；未知形态（非本面事件）返回 false。 */
+/** 事件 token → webview 活动区状态消息（映射单源 = rc `relayEventToSubPatch`）。识别返回 true
+ *  （不再以裸 token 文本泄漏）；未知形态（非本面）返回 false。逐支语义（queued / cancelled /
+ *  stopped / settled / done / turn / async+[model]/ 嵌套剥除 / 表外 ⟦ev⟧）见 rc 件映射表。
+ *  消费判定保形（= 换接前 true 分支合集：path 存在 ∧ `rest` 起于 `⟦ev⟧`／`[model]`）——rc 返回
+ *  `null` 双义（「本面已消费、无 patch」∕「非本面」）⇒ 以同形复核区分；rc 载荷重组为旧信封
+ *  `{ type: "subagent", role, id, …载荷 }`（键序逐字同——行为对拍面零差）。 */
 export function relaySubagentEventToken(panel, tok) {
   const text = String(tok ?? "")
   if (!text.includes("⟦ev⟧") && !text.includes("[model]")) return false
-  const path = parseRelayPath(text)
-  if (!path) return false
-  const hash = path.head.indexOf("#")
-  const role = path.head.slice(0, hash)
-  const id = Number(path.head.slice(hash + 1))
-  const rest = path.rest
-  // 判据射程（评审 #1 收窄）= 嵌套 ∧ `rest` 起于 `⟦ev⟧`／`[model]`：含字面形态的内层 text
-  // chunk 不在射程（仍走内容面——T-N6 锁）。剥除不路由——**同旨** CLI `routeSubToken`（防外层块
-  // 头污染；覆盖面差异 = CLI 另有子块载体落点，本端端差登记见批档 §2.8 #2）；NFR-A2 留痕 =
-  // `ev:substrip` 独立事件名（不并入 `ev:subdeliver` 五处置计数——沿 `ev:subcontent` 先例）。
-  const nested = path.inner.length > 0
-  if (nested && (rest.startsWith("⟦ev⟧") || rest.startsWith("[model]"))) {
-    logEvent("ev:substrip", { ch: `sub:${path.inner.at(-1)}`, outer: path.head, kind: rest.startsWith("[model]") ? "model" : rest.slice(4).split("\x1e")[0] })
-    return true // 剥除不路由——同旨 CLI routeSubToken（防外层块头污染）；NFR-A2 留痕
+  const patch = relayEventToSubPatch(text, relayScopeOf(panel), {
+    // X10：sync 出生面事实（端 registry 只读采样——rc 不可算）；NFR-A2 留痕（`ev:substrip`——
+    // 嵌套剥除不路由，独立事件名保形）。
+    syncLiveOf: (head) => syncLiveOf(panel, head),
+    onStripped: (info) => logEvent("ev:substrip", info),
+  })
+  if (patch !== null) {
+    const { role, id, ...payload } = patch
+    postSubagentEvent(panel, { type: "subagent", role, id, ...payload })
+    return true // 识别即消费
   }
-  const emit = (payload) => { postSubagentEvent(panel, { type: "subagent", role, id, ...payload }); return true }
-  if (rest.startsWith("⟦ev⟧async")) {
-    let set = _relayAsyncPending.get(panel)
-    if (!set) { set = new Set(); _relayAsyncPending.set(panel, set) }
-    set.add(path.head)
-    return true // [model] 随行补发 started
-  }
-  if (rest.startsWith("[model]")) {
-    const pool = _relayAsyncPending.get(panel)?.delete(path.head) === true
-    forgetQueued(panel, path.head) // #118 R1：已启动 ⇒ 排队信息作废
-    // X10：sync 出生面事实（pool=false 且 registry 命中 ⇒ `syncLive:true`）——async 块恒 false。
-    return emit({ status: "started", pool, model: rest.slice("[model]".length) || null, startedAt: Date.now(), syncLive: !pool && syncLiveOf(panel, path.head) })
-  }
-  if (rest.startsWith("⟦ev⟧queued")) {
-    // 载荷：⟦ev⟧queued \x1e kind \x1e position \x1e queued \x1e detail（subagent-scheduler 发射面）
-    // #118 R1：`kind` 随载荷下行（此前解析即丢——显示面无法区分 slot / wait / depc）；同点四项入
-    // 每面板缓存（重生投影 `reassertLiveChildren` 读——live 面与重绘面同形）。
-    const parts = rest.split("\x1e")
-    const kind = parts[1]
-    const detail = parts.slice(4).join("\x1e")
-    const info = {
-      kind: kind ?? null,
-      position: Number(parts[2]) || null,
-      waiting: kind === "slot" ? null : (kind === "depc" ? "dependency-cancelled" : "waiting-deps"),
-      reason: kind === "slot" ? null : (detail || null),
-    }
-    rememberQueued(panel, path.head, info)
-    return emit({ status: "queued", ...info })
-  }
-  if (rest.startsWith("⟦ev⟧cancelled")) {
-    // 核仅在 queued 取消路径发（subagent-async executeCancelAction——出队即终态）
-    forgetQueued(panel, path.head) // #118 R1：出队即终态（cancelled(was:"queued")——头移除）
-    return emit({ status: "cancelled", was: "queued" })
-  }
-  // #118 R1：终态分支同删缓存键（该键后世代的 queued 事件会重写缓存，陈旧项不得滞留）。
-  // X6 收口（#134 ②）：`⟦ev⟧stopped` 第 4 位 = **恒定字面**原因词 `stopped`（核发射 `⟦ev⟧stopped\x1e0\x1e0\x1estopped\x1e`——`agent-tools/async-settle.mjs:239` / `agent-tools/subagent.mjs:364` 同形，无第二取值）
-  // ⇒ 与冻结头 verb `stopped` 重复 ⇒ **零注记**（不传 `note`；CLI 标尺 = `subagent-blocks.mjs:263-273` 该分支不置 `lastError`）；注记面（done 停因 / interrupted）零影响。
-  if (rest.startsWith("⟦ev⟧stopped")) { forgetQueued(panel, path.head); return emit({ status: "cancelled" }) }
-  if (rest.startsWith("⟦ev⟧settled")) { forgetQueued(panel, path.head); return emit({ status: "settled" }) }
-  if (rest.startsWith("⟦ev⟧done")) { forgetQueued(panel, path.head); return emit({ status: "done" }) }
-  if (rest.startsWith("⟦ev⟧turn")) {
-    const parts = rest.split("\x1e")
-    return emit({ status: "turn", turn: Number(parts[1]) || 0, maxTurns: Number(parts[2]) || 0 })
-  }
-  if (rest.startsWith("⟦ev⟧")) return true // 其余核事件（approval 等——VSC 另有通道）：消费不泄漏
-  return false
+  // null 复核：`rest` 起于事件字面 ⇒ 本面已消费（剥除 ∕ async / 表外 ⟦ev⟧——不得泄漏）；
+  // 否则非事件面（`rest` 为内容文本——含字面形态的内层内容 chunk 仍走内容面——T-N6 锁语义）。
+  const path = relayPathOf(text)
+  return path !== null && (path.rest.startsWith("⟦ev⟧") || path.rest.startsWith("[model]"))
 }
 
 // ─── W15 内容中继面（2026-09-16 子代理面板通道恢复批——子代理内容回流 `sub:` 块）────────
@@ -163,28 +125,18 @@ export function emitToolPanel(panel, name, chunk) {
   postSubagentEvent(panel, { type: "toolPanel", ...toolPanelPayload(name, chunk) })
 }
 
-/** 子代内容 chunk 分流：relay 前缀（含嵌套链——D-M8 子标）→ 面板载荷。无前缀 → false（调用方
- *  原样转发）。**面集 = 四面**（`text` / `think` / `toolCall` / `toolOutput`）——非四面 face
- *  （含第五路 `toolResult` 死路）⇒ 早退 false（不入内容面正收据 · 不发载荷；2026-09-20 渲染粒度
- *  对齐批删净——无产者证据链 `WEBVIEW.md` §5.3）。**面随载荷**：CLI 以「哪个路由函数被调用」表达
- *  面，本端四面压成单 `toolPanel` 载荷 ⇒ 面必须随载荷（否则调用行与输出行不可分）；工具面 chunk
- *  携 `tool`（relay 前缀 rest 逐字——与 CLI `fresh` 判据同源）。 */
+/** 子代内容 chunk 分流：relay 前缀（含嵌套链——D-M8 子标）→ 面板载荷；无前缀 ∕ 非四面 → false
+ *  （调用方原样转发）。构形单源 = rc `relaySubContentChunk`（B7 2a——前缀剥除 ∕ 四面 gate
+ *  （`text` ∕ `think` ∕ `toolCall` ∕ `toolOutput`；第五路 `toolResult` 死路——无产者证据链
+ *  `WEBVIEW.md` §5.3）∕ chunk 形全在 rc 件）。宿主分工（副作用留端）：`ch` 由 chunk 重导
+ *  （`role#id`——与 `path.head` 等价）；两宿主调用照旧——`noteContentFirst`（`ev:subcontent`
+ *  正收据）+ `emitToolPanel`。**面随载荷**（`face`：CLI 以「哪个路由函数被调用」表达面，
+ *  本端四面压成单 `toolPanel` 载荷 ⇒ 面必须随载荷）；工具面 chunk 携 `tool`（relay 前缀
+ *  rest 逐字——与 CLI `fresh` 判据同源）。 */
 export function relaySubagentContentChunk(panel, face, a, b) {
-  if (face !== "text" && face !== "think" && face !== "toolCall" && face !== "toolOutput") return false
-  const path = parseRelayPath(String(a ?? ""))
-  if (!path) return false
-  const sub = path.inner.length > 0 ? path.inner.join("/") : undefined // D-M8 嵌套子标
-  let chunk
-  if (face === "toolCall") {
-    const argsJson = JSON.stringify(b) || ""
-    chunk = { kind: "tool", text: `${path.rest} ${argsJson.slice(0, 120)}`, tool: path.rest, face,
-      cmd: typeof b?.command === "string" ? b.command : undefined, sub }
-  } else if (face === "toolOutput") {
-    chunk = { kind: "tool", text: typeof b === "string" ? b : String(b?.text ?? ""), tool: path.rest, face, sub }
-  } else {
-    chunk = { kind: face === "think" ? "think" : "text", text: path.rest, face, sub }
-  }
-  const ch = "sub:" + path.head
+  const chunk = relaySubContentChunk(face, a, b)
+  if (chunk === null) return false
+  const ch = "sub:" + `${chunk.role}#${chunk.id}`
   noteContentFirst(panel, ch, face)
   emitToolPanel(panel, ch, chunk)
   return true

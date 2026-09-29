@@ -95,6 +95,7 @@ Object.defineProperty(ctx, "isRunning", {
 composerHooks.onTurnStart = () => {
   // 回合起点动作（`send.js:62-63,69,72` 同点并钩）：簿记归零 + 工具结果位清 + 面板清（含 `_suspended` 条件）
   S._turnStart = Date.now()
+  S._lastOutputAt = S._turnStart // 停滞轻显形：回合起刻 = 静默初始锚（WEBVIEW.md §4.7——`_turnStart` 邻位同置）
   S._llmCalls = 0
   ctx.hadToolResult = false
   if (!S._suspended) clearPanels()

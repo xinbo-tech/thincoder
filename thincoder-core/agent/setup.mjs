@@ -10,13 +10,14 @@ import { search as memorySearch, docSearch } from "../memory.mjs"
 import { pushReal } from "../context.mjs"
 import { toOpenAISchema } from "../tools/index.mjs"
 import { loadSkills, formatSkillListing } from "../skills.mjs"
+import { scopedRulesBlock } from "../rules.mjs"
 import { assemblePrompt } from "../prompt-overlays.mjs"
 import {
   escapeXml, repairHistory, listWorkDir,
   collectGitContext, loadProjectInstructions, OUTLINE_INJECT_PREFIX,
   DEFAULT_MAX_TURNS, ensureAutoReminder,
 } from "./helpers.mjs"
-import { pushEnvStateReminder, pushPeerReminder } from "./setup-reminders.mjs"
+import { pushEnvStateReminder, pushPeerReminder, pushInjections } from "./setup-reminders.mjs"
 import { assembleFamilyTools } from "./family-tools.mjs"
 
 const DEFAULT_COMPACT_THRESHOLD = 100_000
@@ -41,6 +42,10 @@ const MEMORY_SEARCH_LIMIT = 3
  */
 export async function prepareRun(agent, input, callbacks, {
   depth = 0, signal, overrideTurns, resume, extraTools = null,
+  // P4-I（批次档 §2.5 A1 + 父侧 2026-09-29 裁定①）：端壳装配缝——注入串 ∕ 工具装饰；
+  // 两项缺省（null ∕ undefined）⇒ 现行行为逐字零变（CLI ∕ desktop 不传即零变）。
+  // （A2 提示尾块载位已退役——B7 3a：核自持 `.cursor/rules` 尾块，见下方 depth-0 块。）
+  injections = null, toolDecorate = undefined,
 } = {}) {
   const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_TURNS
   const threshold = agent.config?.agent?.compactThreshold ?? DEFAULT_COMPACT_THRESHOLD
@@ -137,6 +142,9 @@ export async function prepareRun(agent, input, callbacks, {
     pushEnvStateReminder(agent)
     await pushPeerReminder(agent)
   }
+  // A1（§2.5——端壳编辑器上下文注入，序位 = env/peer 之后、time 之前）：端采集内容经
+  // `pushInjections` 单点落机器线（transient + 同文去重）；缺省 null ⇒ 零行为。
+  pushInjections(agent.history, injections)
 
   // Time grounding for EVERY agent depth AND every resume, pushed LAST (after the user
   // input): transient on the HUMAN line — dropped on persist; on the MACHINE line — kept
@@ -165,6 +173,9 @@ export async function prepareRun(agent, input, callbacks, {
     engineering: agent.config?.agent?.engineering === true,
     consultModels: agent.config?.agent?.consultModels ?? [],
     batchDoc: agent._batchDoc ?? null,
+    // 裁定①（P4-I · 父侧 2026-09-29）：端壳装饰体透传（`assembleFamilyTools` 既有 `decorate`
+    // 参数面——缺省 undefined ⇒ 核默认形态逐字零变，CLI ∕ desktop 不传即零变）。
+    decorate: toolDecorate,
   })
   // 两段式：绑定值（基础集）→ 家族段 → caller 注入面（§2.3F 不相交义务在注入方）。
   const tools = [...agent.tools, ...familyTools, ...(Array.isArray(extraTools) ? extraTools : [])]
@@ -232,6 +243,11 @@ export async function prepareRun(agent, input, callbacks, {
     const skills = await loadSkills(agent.cwd)
     const listing = formatSkillListing(skills)
     if (listing) systemPrompt += `\n\n${listing}`
+    // B7 3a：`.cursor/rules` 常驻集尾块（原端壳 A2 载位退役——核自持；序位 = skills 清单之后）。
+    // 尾块 ∕ JIT 两缝同门 `depth === 0`（子代理不携——B1 §2.5-A2 在册态）；同点缓存 `agent._rules`
+    // （JIT 判定只读该缓存——`loadScopedRules` 本 run 唯一一次目录读取）。
+    const scopedBlock = scopedRulesBlock(agent, agent.cwd)
+    if (scopedBlock) systemPrompt += scopedBlock
   }
 
   ensureAutoReminder(agent)

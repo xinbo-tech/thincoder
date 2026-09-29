@@ -1,7 +1,8 @@
 /**
  * chat.mjs — 对话流视图面（`docs/desktop/design/RENDERER.md` §1.1 / §2 / §3 · `docs/desktop/design/UI.md` §1 对话流行）。
- * 三档沿 RENDERER.md §1.1：`chatModel`（纯模型 · 窗出口）→ `chatTree`（纯构树 · 机检面）→ `mountChat`（薄挂载 =
- * 本档唯一清空 / 建树处）；DOM 面另两件 = 帧尾态刷 `syncChrome`（根锚四 + 摘要块 + 审批卡 + 药丸 + **消化行组** + **到期触发行组** + **停止痕** + **台账行组** + **真置焦执行** · 幂等 · 无帧豁免）· 帧尾六步 `settleFrame`；
+ * 三档沿 RENDERER.md §1.1：`chatModel`（纯模型 · 窗出口 —— 更新纪律收核批出档 `renderer/views/chat-model.mjs`）→
+ * `chatTree`（纯构树 · 机检面）→ `mountChat`（薄挂载 =
+ * 本档唯一清空 / 建树处）；DOM 面另两件 = 帧尾态刷 `syncChrome`（根锚四 + 摘要块 + 审批卡 + 药丸 + **消化行组** + **到期触发行组** + **停止痕** + **台账行组** + **真置焦执行** · 幂等 · 无帧豁免）· 帧尾六步 `settleFrame`（**读数按档裁剪** · `mounted` 记账直取 —— 更新纪律收核批）；
  * **卡面态刷**住 `renderer/views/chat-cards.mjs`（R3c 拆档 —— 在册预案 = 卡构树拆出；本档经 `syncCards` 调用）；
  * **排队期「待发送块」不在本档**（收正轮 B12 新口径 —— 住**输入行上方带**，硬验收 = 与输入面板恒定邻接；
  * 消费前流内零真块，交付时刻 `ev:queue` 消费回执才入流）；
@@ -10,15 +11,14 @@
  * **到期触发行组**（`[data-timer]` —— timer-wake 阶段 2）：非块节点组 · 在场 ⟺ 本键 `timerNotice` 切片在场，
  * 构树 ∕ 帧尾同刷住 `renderer/views/chat-chrome.mjs`（与消化行组同族）；
  * **归档子 agent 块**住 `renderer/views/chat-subagent.mjs`（项 5 新档 —— 壳构树 + 核件回显补装）；
- * 工具卡面与折叠纯函数 `toggleExpanded` 住 `renderer/views/chat-tool.mjs`（§2.3 拆分预案落形 —— 依赖单向：本档 → 它）；文本族块尾的复制控件 + 末条复制控件
- * 住 `renderer/views/chat-copy.mjs`（UI.md §1「批 B 注」项 4 —— 依赖单向：本档 → 它）；**文本面（核 Markdown 呈现）+ 推理块 + 就地更新 + 说话人标签**住 `renderer/views/chat-text.mjs`（R3c · D19；项 1 / 4 增推理画笔分流 + 标签落笔 —— 依赖单向：本档 → 它）；首启空白态引导面（判据
+ * 工具卡面与折叠纯函数 `toggleExpanded` 住 `renderer/views/chat-tool.mjs`（§2.3 拆分预案落形 —— 依赖单向：本档 → 它）；**文本面（核 Markdown 呈现）+ 推理块 + 就地更新 + 说话人标签**住 `renderer/views/chat-text.mjs`（R3c · D19；项 1 / 4 增推理画笔分流 + 标签落笔，复制面对齐批迁入 `blockTextOf` —— 依赖单向：本档 → 它）；首启空白态引导面（判据
  * `guideOf` + 构树 `guideNode` + 帧尾只摘态刷 `syncGuide`）住 `renderer/views/chat-guide.mjs`（UI.md §1「批 B 追加注」项 1 —— 依赖单向：本档 → 它）。
  *   ① 三态 `data-state`：无活动会话 ⇒ `none`（零**块**节点 + 引导节点——禁假数据）· 有会话零块 ⇒ `empty`
  *      （引导节点 · `chat.empty.hint`）· 否则 `flow`；
  *   ② 块六型（`user` / `assistant` / `reasoning` / `tool` / `error` 五项页读域 + 运行期块 `subagent` —— 归档入流块，
  *      单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 5）单序列；块键单源 = `blockKey`（`data-block-id` /
  *      增量缝合 / toggle 同域）；兜底键用**全列表位序**（`hidden + i`）⇒ 窗滑动不改键；文本族块面 = **经核 Markdown**
- *      呈现（KD-RC-4 · R3c —— 单源 = `renderer/views/chat-text.mjs`；转义闸在核；原文逐字另存 `[data-raw]` 锚供复制面）；
+ *      呈现（KD-RC-4 · R3c —— 单源 = `renderer/views/chat-text.mjs`；转义闸在核；原文逐字另存 `[data-raw]` 锚——就地更新判据面）；
  *      **说话人标签**（项 4）：用户块恒出 / 助手族块回合首出（判据 = `turnHeadOf` 单源 —— 活流与回放同判据）——
  *      标签为**块内子节点**（不入块序 / 不改 `data-blocks`），文本落笔归帧尾着装面；
  *   ③ 根子序 = [引导?] → [摘要块?] → 块序列 → [**压缩行**?] → [**消化行组**?] → [**到期触发行组**?] → [**停止痕**?] → [**台账行组**?] → [卡序列?] → [药丸?]（卡序 = 待审批 → 提问 → 计划 —— 单源 =
@@ -41,115 +41,23 @@
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 import { attachCopyButtons } from "/rc/flow/stream.mjs"
-import { visibleWindow } from "../store.mjs"
 import { approvalCardNode } from "./approval.mjs"
 // 流内压缩状态行（R4 —— 单元素四态；构树件出档 `renderer/views/compress-status.mjs`，态刷 ∕ 锚居 `chat-chrome.mjs`）。
 import { compressNode } from "./compress-status.mjs"
-import { MAX_RENDER_BLOCKS, compensateTop, stickToBottom, tailAction } from "./chat-scroll.mjs"
-import { copyBlockNode } from "./chat-copy.mjs"
+import { MAX_RENDER_BLOCKS, compensateTop, plannedMoves, stickToBottom, tailAction } from "./chat-scroll.mjs"
+import { chatModel } from "./chat-model.mjs"
 import { blockAnchor, chromeProps, digestGroupNode, ledgerGroupNode, pillNode, stoppedNode, summaryNode, syncChrome, timerGroupNode } from "./chat-chrome.mjs"
-import { guideNode, guideOf } from "./chat-guide.mjs"
+import { guideNode } from "./chat-guide.mjs"
 import { blockKey } from "./chat-stream.mjs"
 import { fillSubagentEcho, subagentNode, syncSubagentEcho } from "./chat-subagent.mjs"
 import { labelNode, paintSpeakerLabels, patchTextBlock, pinReasoning, pinReasoningBlocks, reasoningNode, textFace } from "./chat-text.mjs"
-import { linkifyResult, toolCard, wire } from "./chat-tool.mjs"
+import { linkifyResult, patchToolCard, toolCard, wire } from "./chat-tool.mjs"
 
 // 帧尾态刷面出档 `renderer/views/chat-chrome.mjs`（拆分产出 —— 「对齐第三批」触碰批执行在册预案：本档越 300
 // 在册、本批触碰 ⇒ 出档）；本档引调面 = 构树五件（`chromeProps` / `summaryNode` / `digestGroupNode` / `stoppedNode` /
 // `ledgerGroupNode` / `pillNode`）+ 插点锚 `blockAnchor` + 帧尾态刷 `syncChrome` ⇒ 依赖单向（本档 → 出档档，无环）。
 
-// ─── 三档之①：纯模型 ───────────────────────────────────────────────
-
-/** 帧模型：三态 + 窗出口（`visible` / `hidden` 单源 = `renderer/store.mjs:53`）+ 四标量读数 + 待决项（卡面）
- *  + 引导码（`guide` —— 判据转调 `chat-guide.mjs` 的 `guideOf`）。
- *  `none` ⇒ `blocks` 空 ∧ `hidden` 0 ∧ `approval` 空（守 `data-blocks` = DOM 块节点数不变式 —— 不落 stale 块 / 卡）。 */
-export function chatModel(state, limit = MAX_RENDER_BLOCKS) {
-  const live = state?.activeSession !== null && state?.activeSession !== undefined
-  const { visible, hidden } = visibleWindow(Array.isArray(state?.blocks) ? state.blocks : [], limit)
-  const mode = !live ? "none" : visible.length === 0 ? "empty" : "flow"
-  return {
-    state: mode,
-    guide: guideOf({ live, cwd: state?.project?.cwd, visible: visible.length }),
-    blocks: mode === "none" ? [] : visible,
-    hidden: mode === "none" ? 0 : hidden,
-    following: state?.following === true,
-    pendingNew: typeof state?.pendingNew === "number" ? state.pendingNew : 0,
-    hasOlder: state?.history?.hasOlder === true,
-    inFlight: state?.history?.inFlight === true,
-    locale: state?.locale,
-    approval: mode === "none" ? [] : awaitingOf(state),
-    // 本键消化行切片（桌面空闲唤醒批 —— `[data-digest]` 组；非块节点）
-    digest: mode === "none" ? null : digestOf(state),
-    // 本键压缩状态行切片（R4 —— `[data-compress]` 单元素四态；非块节点 —— 族首）
-    compress: mode === "none" ? null : compressOf(state),
-    // 本键到期触发切片（timer-wake 阶段 2 —— `[data-timer]` 行组；非块节点 · 与消化行同族）
-    timer: mode === "none" ? null : timerNoticeOf(state),
-    // 「对齐第三批」：停止痕（项 6 —— 本键切片在场；页读整置即失）· 台账行（项 12 —— 本键行集）
-    stopped: mode !== "none" && state?.stopMark?.[state.activeSession] === true,
-    ledger: mode === "none" ? null : ledgerOf(state),
-    // 重试钮在场判据（项 9）：可重发源在场（= 末个「`user` ∧ 文本为串」块）—— 与出口同谓词（`retrySourceOf` 单源）
-    canRetry: mode !== "none" && retrySourceOf(state?.blocks) !== null,
-    // 欢迎条文案二值（项 15）：provider 已配 ⇒ `welcome.textConfigured` ∥ 余（未配 / 未知）⇒ `welcome.text`
-    configured: state?.settings?.configured === true,
-  }
-}
-
-/** 重试源判据（项 9 单源 —— 模型在场判据与出口取文同谓词，防「可点但静默」的死控）：
- *  末个「`kind === "user"` ∧ `text` 为串」块的文本；无 ⇒ `null`（禁假造 —— 非串文本块不算可重发源）。 */
-export function retrySourceOf(blocks) {
-  const list = Array.isArray(blocks) ? blocks : []
-  for (let index = list.length - 1; index >= 0; index -= 1) {
-    const block = list[index]
-    if (block?.kind === "user" && typeof block.text === "string") return block.text
-  }
-  return null
-}
-
-/** 待决项（源 = `state.pool.approvals` —— 本会话切片语义）：缺 / 非数组 ⇒ 空表（**零卡** —— 禁假数据）。 */
-function awaitingOf(state) {
-  const list = state?.pool?.approvals
-  return Array.isArray(list) ? list : []
-}
-
-/** 本键消化行切片（源 = `state.digest[活动会话键]` —— `ev:digest` 归约面写，起跑 / 终态两态；缺 / 非载体 ⇒ `null`：
- *  零组 —— 禁假造）。 */
-function digestOf(state) {
-  const key = state?.activeSession ?? null
-  const table = state?.digest
-  if (key === null || table === null || typeof table !== "object") return null
-  const slice = table[key]
-  return slice !== null && typeof slice === "object" ? slice : null
-}
-
-/** 本键压缩状态行切片（源 = `state.compress[活动会话键]` —— `ev:compress` 归约面写，四态就地推进；缺 / 非载体 ⇒ `null`：
- *  零行 —— 禁假造；生命期 = 首屏页读整置即失（`renderer/page-read.mjs` —— 沿 `stopMark` 先例）。 */
-function compressOf(state) {
-  const key = state?.activeSession ?? null
-  const table = state?.compress
-  if (key === null || table === null || typeof table !== "object") return null
-  const slice = table[key]
-  return slice !== null && typeof slice === "object" ? slice : null
-}
-
-/** 本键到期触发切片（源 = `state.timerNotice[活动会话键]` —— `ev:timer` 归约面写；缺 / 非载体 / 文本非串 ⇒ `null`：
- *  零组 —— 禁假造；生命期 = 运行期痕（首屏页读整置即失 —— 同 `[data-stopped]` 族））。 */
-function timerNoticeOf(state) {
-  const key = state?.activeSession ?? null
-  const table = state?.timerNotice
-  if (key === null || table === null || typeof table !== "object") return null
-  const slice = table[key]
-  return slice !== null && typeof slice === "object" && typeof slice.text === "string" ? slice : null
-}
-
-/** 本键台账行集（源 = `state.ledgerLines[活动会话键]` —— `ev:ledger` 归约面写；缺 / 非数组 / 空 ⇒ `null`：
- *  零组 —— 禁假造；单源 = 「对齐第三批」项 12 · KD-38）。 */
-function ledgerOf(state) {
-  const key = state?.activeSession ?? null
-  const table = state?.ledgerLines
-  if (key === null || table === null || typeof table !== "object") return null
-  const lines = table[key]
-  return Array.isArray(lines) && lines.length > 0 ? lines : null
-}
+// ─── 三档之①：纯模型 —— 出档 `renderer/views/chat-model.mjs`（更新纪律收核批拆分产出：越 300 消解）──────
 
 /** 错误横幅（「对齐第三批」项 9 · KD-37）：`.error-text`（文面经核 `md` —— 同文本面）+ [`details.error-details`
  *  （`techInfo` 在场才落 —— `summary` + `pre` 原生折叠）] + **重试钮**（在场判据 = 末 `user` 块在场 —— 诚实面，
@@ -170,7 +78,6 @@ function errorNode(block, key, handlers, withLabel, canRetry) {
   if (canRetry === true) {
     children.push({ tag: "button", props: wire({ class: "error-retry-btn", "data-action": "chat:retry" }, handlers?.onRetry), children: [t("error.retry")] })
   }
-  children.push(copyBlockNode(block, key, handlers))
   return { tag: "div", props: { class: "block block-error", "data-block-id": key, "data-block-kind": "error" }, children }
 }
 
@@ -187,8 +94,8 @@ function turnHeadOf(kind, prev, index, hidden) {
   return prev === undefined || prev?.kind === "user"
 }
 
-/** 块节点（六型单序列）：文本族 = 核 Markdown 面（`textFace` —— 转义闸在核 · 原文另存 `[data-raw]`）+ 块尾复制控件
- *  （块文本空 ⇒ 零控件）；`reasoning` ⇒ 核推理块结构（`reasoningNode`）；`tool` ⇒ 工具卡三行；`subagent` ⇒
+/** 块节点（六型单序列）：文本族 = 核 Markdown 面（`textFace` —— 转义闸在核 · 原文另存 `[data-raw]`）；
+ *  `reasoning` ⇒ 核推理块结构（`reasoningNode`）；`tool` ⇒ 工具卡三行；`subagent` ⇒
  *  归档块壳（回显 = 核件元素，帧后补装）；`withLabel` = 说话人标签容器（用户块恒出 / 助手族回合首出 ——
  *  文本落笔归帧尾着装面；标签容器为块内子节点 —— 不入块序）。 */
 function blockNode(block, index, hidden, handlers, prev, canRetry = false) {
@@ -208,7 +115,7 @@ function blockNode(block, index, hidden, handlers, prev, canRetry = false) {
       "data-ts": kind === "user" && typeof block?.ts === "number" ? String(block.ts) : undefined,
       "data-streaming": kind === "assistant" && block?.streaming === true ? "1" : undefined,
     },
-    children: [...(label ? [labelNode(kind === "user" ? "user" : "assistant")] : []), textFace(block), copyBlockNode(block, key, handlers)],
+    children: [...(label ? [labelNode(kind === "user" ? "user" : "assistant")] : []), textFace(block)],
   }
 }
 
@@ -247,21 +154,23 @@ function mountedOf(root, blocks) {
 }
 
 /** 代码块复制钮挂点（核件 `attachCopyButtons` —— 真代码块面随核落：围栏切分 / 语言高亮 / **代码块级复制**；
- *  KD-22 两控件（块级 / 末条）口径不变 ⇒ 三控件并存）：根内逐 `pre.code-block` 补按钮（**已挂着跳过** ⇒ 幂等）；
- *  `t` 注入 = 桌面词表（核件 `deps.t`；词键 `msg.copy` / `msg.copied` = **端供给面**——核 dict 无此两键，
- *  值住 `renderer/i18n.mjs` 宿主表，词值同 VSC 同键）；钮定位住 `renderer/core.css`（`position: absolute`
- *  ⇒ 不入高度读数 ⇒ 补偿算式零扰）。 */
+ *  KD-22 收正（复制面对齐批）：自建两控件退场 ⇒ 核件代码块 Copy 钮 = **复制面唯一**）：根内逐 `pre.code-block`
+ *  补按钮（**已挂着跳过** ⇒ 幂等）；`t` 注入 = 桌面词表（核件 `deps.t`；词键 `msg.copy` / `msg.copied` = **端供给面** ——
+ *  核 dict 无此两键，值住 `renderer/i18n.mjs` 宿主表，词值同 VSC 同键）；钮定位住 `renderer/core.css`
+ *  （`position: absolute` ⇒ 不入高度读数 ⇒ 补偿算式零扰）。 */
 function attachCodeCopies(root) {
   attachCopyButtons(root, { t })
 }
 
 /** 新块节点着装（帧尾尾段挂载 / 重建 / 前插三径内 —— **先于读数 `t0` / `t1`** ⇒ 高度计入本帧尾 / 头侧）：
- *  说话人标签落笔（项 4）+ 归档块核件回显补装（项 5）+ 推理块首帧钉底（项 1）+ 工具卡结果区链接着装（相抵②）。 */
+ *  说话人标签落笔（项 4）+ 归档块核件回显补装（项 5）+ 推理块首帧钉底（项 1）+ 工具卡结果区链接着装（相抵②）
+ *  + **代码块复制钮（gating —— 逐新节点，禁帧级全根扫）**。 */
 function dressNode(node, block) {
   paintSpeakerLabels(node)
   fillSubagentEcho(node, block)
   if (block?.kind === "reasoning") pinReasoning(node)
   if (block?.kind === "tool") linkifyResult(node, block)
+  attachCodeCopies(node)
 }
 
 /** 薄挂载（本档唯一清空 / 建树处）：根描述符四锚复制到宿主（**保留** `data-slot`）⇒ `clear` ⇒ 子节点入位。
@@ -302,30 +211,38 @@ function setStreaming(node, on) {
   else node.removeAttribute?.("data-streaming")
 }
 
-/** 就地更新尾块（第 ① 步 · `patch` 档）：文本 + 复制控件（`patchTextBlock`）+ 流式锚同刷；kind 变（含 tool 卡 ⇄
- *  文本族）⇒ 单块重建（节点形变非就地可改）；非尾块零触碰。 */
-function patchTail(root, model, handlers) {
+/** 就地更新尾块（第 ① 步 · `patch` 档）：kind 变（tool ⇄ 文本族 ⇄ 他型）⇒ 单块重建（节点形变非就地可改）；
+ *  `tool` 卡 ⇒ 就地更新（`patchToolCard` —— 头行分段刷 + 结果区 O(1) 追加，**节点身份不变** —— #605 消）；
+ *  文本族 ⇒ `patchTextBlock` + 流式锚同刷 + 重渲帧补代码块复制钮（gating —— 逐新节点，禁帧级全根扫）；
+ *  非尾块零触碰。`mounted` = 上一帧记账（**尾节点直取 —— 零全块扫**）。 */
+function patchTail(root, model, handlers, mounted) {
   const index = model.blocks.length - 1
   const block = model.blocks[index]
-  const nodes = typeof root.querySelectorAll === "function" ? [...root.querySelectorAll("[data-block-kind]")] : []
-  const node = nodes[nodes.length - 1]
+  const node = mounted.length > 0 ? mounted[mounted.length - 1].node : null
   if (!node || !block) return
-  if (node.getAttribute?.("data-block-kind") !== block.kind || block.kind === "tool") {
+  if (node.getAttribute?.("data-block-kind") !== block.kind) {
     const fresh = build(blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true))
     node.replaceWith(fresh)
     dressNode(fresh, block)
     return
   }
+  if (block.kind === "tool") {
+    patchToolCard(node, block, blockKey(block, model.hidden + index), handlers)
+    return
+  }
+  const face = typeof node.querySelector === "function" ? node.querySelector("[data-raw]") : null
+  const before = face !== null && typeof face.getAttribute === "function" ? face.getAttribute("data-raw") : null
   patchTextBlock(node, block, blockKey(block, model.hidden + index), handlers)
+  if (before !== null && face.getAttribute("data-raw") !== before) attachCodeCopies(node)
   setStreaming(node, block.kind === "assistant" && block.streaming === true)
 }
 
-/** 头动作（帧尾第 ④ 步）：摘 `evict` 枚头块 + 前插 `prepend` 枚（插点 = 首块之前 ⇒ 摘要块之后）；返回动作数。 */
-function headMoves(root, model, plan, handlers) {
-  const nodes = typeof root.querySelectorAll === "function" ? [...root.querySelectorAll("[data-block-kind]")] : []
-  const evicted = Math.max(0, Math.min(plan.evict, nodes.length))
-  for (const node of nodes.slice(0, evicted)) node.remove()
-  const anchor = nodes[evicted] ?? blockAnchor(root)
+/** 头动作（帧尾第 ④ 步）：摘 `evict` 枚头块 + 前插 `prepend` 枚（插点 = 首块之前 ⇒ 摘要块之后）；节点集 =
+ *  `mounted` 记账（零全块扫）；夹取式 = `plannedMoves` 同源（帧尾读数裁剪的预判 = 实动数）；返回动作数。 */
+function headMoves(root, model, plan, handlers, mounted) {
+  const evicted = Math.max(0, Math.min(plan.evict, mounted.length))
+  for (const item of mounted.slice(0, evicted)) item.node.remove()
+  const anchor = mounted[evicted]?.node ?? blockAnchor(root)
   const prepends = Math.max(0, Math.min(plan.prepend, model.blocks.length))
   for (let index = 0; index < prepends; index += 1) {
     const block = model.blocks[index]
@@ -337,29 +254,31 @@ function headMoves(root, model, plan, handlers) {
   return evicted + prepends
 }
 
-/** 帧尾六步（非重挂帧 · 判据面 = `docs/desktop/design/RENDERER.md` §3 帧尾滚动作）：
- *  ① 挂尾段（append / reset 档；`patch` 档就地更新；`none` 档 ∅）② 读数 `t0` ③ `syncChrome` ④ 头动作
- *  ⑤ 读数 `t1` ⑥ 帧尾三写（贴底 / 补偿算式 / 零写）。返回新 `mounted`（由 DOM 重建 —— 对齐步下帧输入）。 */
-export function settleFrame(root, model, scroll, align, tier, handlers = {}) {
+/** 帧尾六步（非重挂帧 · 判据面 = `docs/desktop/design/RENDERER.md` §3 帧尾滚动作 —— **读数按档裁剪**：
+ *  KD-RC-9 ② 禁逐 chunk 强制布局——跟滚帧零读（贴底 = 写超值）· 非跟滚 ∧ 头动作 > 0（补偿径）才读 `t0` ∕ `t1`）：
+ *  ① 挂尾段（append / reset 档；`patch` 档就地更新；`none` 档 ∅）② 读数 `t0`（仅补偿径）③ `syncChrome`
+ *  ④ 头动作 ⑤ 读数 `t1`（仅补偿径）⑥ 帧尾三写（贴底 / 补偿算式 / 零写）。`mounted` = 上一帧记账（对齐步输入
+ *  —— 尾 / 头节点直取）；返回新 `mounted`（由 DOM 重建 —— 对齐步下帧输入）。 */
+export function settleFrame(root, model, scroll, align, tier, handlers = {}, mounted = []) {
   if (!root || typeof root.querySelector !== "function") return []
   const plan = align ?? { evict: 0, prepend: 0, tail: [], ok: true }
   if (tier === "append" || tier === "reset") mountTail(root, model, plan, handlers)
-  else if (tier === "patch") patchTail(root, model, handlers)
+  else if (tier === "patch") patchTail(root, model, handlers, mounted)
   const readMetrics = () => (typeof scroll?.readMetrics === "function" ? scroll.readMetrics() : {
     scrollTop: Number.isFinite(root.scrollTop) ? root.scrollTop : 0,
     scrollHeight: Number.isFinite(root.scrollHeight) ? root.scrollHeight : 0,
     clientHeight: Number.isFinite(root.clientHeight) ? root.clientHeight : 0,
   })
-  const t0 = readMetrics()
+  // 读数裁剪：头动作数先于读数确定（`plannedMoves` 与 `headMoves` 夹取同源 ⇒ 预判 = 实动数）
+  const moves = plannedMoves(plan, mounted.length, model.blocks.length)
+  const t0 = model.following === true || moves === 0 ? null : readMetrics()
   syncChrome(root, model, handlers)
-  const moved = headMoves(root, model, plan, handlers)
-  const t1 = readMetrics()
+  const moved = headMoves(root, model, plan, handlers, mounted)
   const writing = tailAction({ following: model.following, headMoves: moved })
   if (writing === "stick") stickToBottom(root)
   else if (writing === "compensate") {
+    const t1 = readMetrics()
     root.scrollTop = compensateTop({ prevTop: t0.scrollTop, prevHeight: t0.scrollHeight, nextHeight: t1.scrollHeight })
   }
-  // 尾段 / 就地更新两径新出的代码块补钮（六步后 —— 钮绝对定位 ⇒ 不入高度读数）
-  attachCodeCopies(root)
   return mountedOf(root, model.blocks)
 }

@@ -1,7 +1,7 @@
 /**
  * queued-input.mjs — 宿主排队面（「回合中插入」批 · 机制单源 = `docs/desktop/design/PROJECT.md` §2 **KD-40 ①**）：
  *   ① 队列表 = **按会话键**的运行期内存表（`Map<会话键, 条目[]>`）——条目形 `{ text, ts, images? }`
- *      （`text` 逐字原样 · `ts` = 入队现刻 ms · `images` = `{name,mime,dataURL}` 原样，缺 ⇒ 无附件径）；
+ *      （`text` 逐字原样 · `ts` = 入队现刻 ms · `images` = dataURL 串原样（A1），缺 ⇒ 无附件径）；
  *      容量 = `QUEUED_MAX_ITEMS`（**按键判** —— 满 ⇒ `add` 拒（零入队）；回执码 `queue-full` 归宿主 `send`）。
  *   ② 计划取批 = **核件单源**（`@thincoder/core/queued.mjs` ——「桌面处理流 · VSC 对齐」批 R3 上提产物；
  *      常量 ∕ 合并形态 ∕ 批计划三面在本档**零本地副本**）：连续非 `/` 条目攒批（单批 ≤ `MAX_MERGE_ITEMS` 条 ∧

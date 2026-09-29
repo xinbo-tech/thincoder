@@ -3,7 +3,7 @@
  * (SESSION.md §6.11 — 2026-09-06 需求池 R5/R8/R9/R11 合并设计; R10 L1 peer 注入同文件).
  *
  * One unified transient user reminder per turn covers the whole self-awareness
- * family: env identity (R8 — §6.10 D-1 END 常量先例：静态常量，不做 cmdline 判别),
+ * family: env identity (R8 — §6.10 D-1 端名先例：值 = 进程端名（§6.20 端名缝 sessionEnd()），不做 cmdline 判别),
  * engineering mode (R9), active model (R11), session slot (F1), restart awareness
  * (R5 resumed). §6.11（2026-09-08）：resumed 按会话跟踪——恢复事件由 session.mjs
  * applySession 武装（agent._envResumed——载入历史非空 = 恢复）；进程重启句独立走
@@ -29,16 +29,16 @@
  */
 import { statSync } from "node:fs"
 import { resolve } from "node:path"
-import { END } from "../session-slots.mjs"
+import { sessionEnd } from "../session-slots.mjs"
 import { peerInstances } from "../peer-instances.mjs"
 import { specForModel } from "../config.mjs"
 import { manifestFilePath, readManifest, projectView } from "../manifest.mjs"
 
-/** env-state line builder — pure, unit-testable.
+/** env-state line builder — 对入参 + 进程端名确定（§6.20 端名缝 sessionEnd()；setSessionEnd 注入 ⇒ 单测可用）。
  *  §6.11（F1）：slot 字段入行——位置在 model 后 resumed 前（N3：无绑定 → 显式 null——
  *  不读 manifest active 共享指针——粘性 _slot 才是"本 agent 之槽"）。 */
 export function envStateLine({ mode, model, slot, resumed }) {
-  return `[System reminder: env: ${END}, mode: ${mode}, model: ${model}, slot: ${slot}, resumed: ${resumed ? "yes" : "no"}.]`
+  return `[System reminder: env: ${sessionEnd()}, mode: ${mode}, model: ${model}, slot: ${slot}, resumed: ${resumed ? "yes" : "no"}.]`
 }
 
 /**

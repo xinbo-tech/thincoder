@@ -3,7 +3,7 @@
  * `docs/desktop/design/PROJECT.md` §4.2 `mount-*.mjs` 族随动（状态行））：自 `renderer/app.mjs` 出档
  * （先例 = 批 8 池面 `mount-pool.mjs` / 批 A 会话族 · 输入区 · 卡族 —— 「接线一族一档，app.mjs 只留派发」）。
  * `attachStatus()` ⇒ `{ paintStatus }`：挂载面**纯读**现态（容器缺位 ⇒ `mountStatus` 早返 null——空转不抛）；
- * 订阅切片键面 = `STATUS_KEYS`（D17 / D22 承载 16 段数据源全集 —— 调用面 `renderer/app.mjs` 订阅处单点派发，
+ * 订阅切片键面 = `STATUS_KEYS`（D17 / D22 承载 17 段数据源全集 —— 调用面 `renderer/app.mjs` 订阅处单点派发，
  * 与 `paintPool` / `paintCards` / `paintSessionBar` 同形）。
  * 纪律：零 `node:` / 零裸包（渲染面静态闭包判据）；`document` 只经挂载面（测试走注入 `store` + 假 DOM 槽）。
  */
@@ -12,7 +12,7 @@ import { mountStatus } from "./views/statusline.mjs"
 
 export const STATUS_SLOT = '[data-slot="status"]' // 状态栏容器锚（= 窗口级底行 —— 骨架 `renderer/index.html`）
 /** 重挂触发切片（段随切片走：活动键 / 位标 / 模式位 / 计数 / 回合 / 读数 / 计时 / 台账 / 句子 / 标题 / 块面 / 词表 / 挂起 ——
- *  D22 承载 16 段数据源全集；段 14 源 = **本会话队** `pending`（「对齐第二批」项 2 —— 右列队列族不再承载）；
+ *  D22 承载 17 段数据源全集；段 14 源 = **本会话队** `pending`（「对齐第二批」项 2 —— 右列队列族不再承载）；
  *  段 3 支①源 = `susp`（挂起计数切片 —— 桌面空闲唤醒批）；会话模型轮 R13：活动键单源 = `activeSession`
  *  〔原 `tabs` ∕ `activeTab` 两键随标签裁撤退场——跨会话告警位源改 `sessions` 行投影〕）。 */
 export const STATUS_KEYS = [
@@ -23,6 +23,8 @@ export const STATUS_KEYS = [
   "statusText", // 状态文本切片（段 3 支③五 kind 源 —— R4；写径 = 归约面 `ev:statusText`）
   "goal", // 目标面切片（🎯 非段位元素源 —— R5；写径 = 归约面 `ev:goal`）
   "ledgerDetail", // L2 明细行切片（段 11 tooltip 载波 —— R8；写径 = 归约面 `ev:ledger` 的 `detailLines` 键）
+  "usageTokens", // 上下文令牌切片（段 9 令牌尾串源 —— 状态行 ⇒ CLI 补漏批；写径 = 归约面 `ev:usage` 的 `ctxTokens` 键）
+  "ledgerMarker", // 台账状态位切片（段 11 常驻标记源 —— 状态行 ⇒ CLI 补漏批；写径 = 归约面 `ev:ledger` 的 `marker` 键）
 ]
 
 /** 状态行一族装配（装配期一次）：返回挂载面 `paintStatus`（`store` 注入面 = 测试缝）。 */

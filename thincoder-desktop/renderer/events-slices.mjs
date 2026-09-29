@@ -5,6 +5,8 @@
  * （`onLedger`）。本档零反向 import（无环——`reduce` 分派面与余下通道归约体住 `events.mjs`）。
  * 纯结构搬移零语义（判据 / 注文逐字同源档）——形态单源 = `docs/desktop/design/RENDERER.md` §1.1
  * ∕ `docs/desktop/design/IPC.md` §1；切片纪律（「未至 / 非数 / 非正 ⇒ 零写 —— 禁假造」）见各归约体。
+ * **状态行 ⇒ CLI 补漏批（2026-09-29 · 台账 #600）**：`onUsage` 增第四槽 `usageTokens`（`ev:usage` `ctxTokens`
+ * 投影 —— 段 9 令牌尾串源）；`onLedger` 增 `marker` 支（顶层切片 `ledgerMarker` —— 段 11 常驻标记源）。
  */
 import { appendBlock, returnToBottom, setAttachDegraded } from "./store.mjs"
 import { applyQueue } from "./queue.mjs"
@@ -24,13 +26,13 @@ export function withReading(table, key, value) {
   return { ...source, [key]: value }
 }
 
-/** 令牌读数归一（载荷扩 `tokens` —— 五键数值；非载体 / 缺省 ⇒ `null`（清槽 ⇒ 零节点）；非数归一 0（核 `?? 0` 同形））。 */
+/** 令牌读数归一（载荷扩 `usage` —— 五键数值〔VSC 键面对位〕；非载体 / 缺省 ⇒ `null`（清槽 ⇒ 零节点）；非数归一 0（核 `?? 0` 同形））。 */
 function tokenReading(value) {
   if (value === null || typeof value !== "object") return null
   const num = (raw) => (typeof raw === "number" && Number.isFinite(raw) ? raw : 0)
   return {
-    prompt: num(value.prompt), completion: num(value.completion), reasoningTokens: num(value.reasoningTokens),
-    cacheHit: num(value.cacheHit), cacheMiss: num(value.cacheMiss),
+    prompt: num(value.prompt_tokens), completion: num(value.completion_tokens), reasoningTokens: num(value.reasoning_tokens),
+    cacheHit: num(value.prompt_cache_hit_tokens), cacheMiss: num(value.prompt_cache_miss_tokens),
   }
 }
 
@@ -43,18 +45,30 @@ function timerReading(value) {
 }
 
 /** `ev:usage`——本会话读数面（按 `key` 写切片 · 同键就地替换 · 首写自种 · **零键门** —— 与 `sessionMeta` 同形；读面单源 = `docs/desktop/design/UI.md` §1 状态栏行）。
- *  三槽同笔：`usage[key]` = 占用读数（**有效读数门** = 数字 ∧ `> 0`——`IPC.md` §1：有效读数⇒发 · 否则不发；未至 / 零 / 负 / 非数 ⇒ **原引用**，禁假造）· `tokens[key]` / `timers[key]` = 载荷扩两键（R3a · 状态行令牌 / 计时段——缺省 ⇒ 清槽；非数归一 / 非正 ⇒ 显示面零节点）。
- *  读数域 0–100 整数由核 `historyPercent` 直传 ⇒ 本档**零重算 · 零上界判**；三槽皆同值 ⇒ 原引用（同值重发零重绘）。 */
+ *  四槽同笔：`usage[key]` = 占用读数（**有效读数门** = 数字 ∧ `> 0`——`IPC.md` §1：有效读数⇒发 · 否则不发；未至 / 零 / 负 / 非数 ⇒ **原引用**，禁假造）·
+ *  `usageTokens[key]` = 上下文令牌（状态行 ⇒ CLI 补漏批增 —— 有效门沿 `usage`：数字 ∧ `> 0` ⇒ 写 · 同值原引用；
+ *  0 ∕ 缺 ∕ 非数 ⇒ **清本键**（端侧落半态 —— `IPC.md` §1 `ev:usage` 行：`ctxTokens` 0 ∕ 缺不抑事件；禁假造））·
+ *  `tokens[key]` / `timers[key]` = 载荷两扩键切片（`usage` ∕ `timers` —— R3a · 状态行令牌 / 计时段——缺省 ⇒ 清槽；非数归一 / 非正 ⇒ 显示面零节点）。
+ *  读数域 0–100 整数由核 `historyPercent` 直传 ⇒ 本档**零重算 · 零上界判**；四槽皆同值 ⇒ 原引用（同值重发零重绘）。 */
 export function onUsage(state, ev) {
-  const percent = ev.percent
+  const percent = ev.ctxPct
   if (typeof percent !== "number" || !(percent > 0)) return state
   const usage = state.usage?.[ev.key] === percent ? state.usage : { ...(state.usage ?? {}), [ev.key]: percent }
-  const tokens = withReading(state.tokens, ev.key, tokenReading(ev.tokens))
+  const rawTokens = ev.ctxTokens
+  let usageTokens = state.usageTokens
+  if (typeof rawTokens === "number" && Number.isFinite(rawTokens) && rawTokens > 0) {
+    if (usageTokens?.[ev.key] !== rawTokens) usageTokens = { ...(usageTokens ?? {}), [ev.key]: rawTokens }
+  } else if (usageTokens !== undefined && Object.hasOwn(usageTokens, ev.key)) {
+    usageTokens = { ...usageTokens }
+    delete usageTokens[ev.key]
+  }
+  const tokens = withReading(state.tokens, ev.key, tokenReading(ev.usage))
   const timers = withReading(state.timers, ev.key, timerReading(ev.timers))
-  if (usage === state.usage && tokens === state.tokens && timers === state.timers) return state
+  if (usage === state.usage && usageTokens === state.usageTokens && tokens === state.tokens && timers === state.timers) return state
   return {
     ...state,
     ...(usage === state.usage ? {} : { usage }),
+    ...(usageTokens === state.usageTokens ? {} : { usageTokens }),
     ...(tokens === state.tokens ? {} : { tokens }),
     ...(timers === state.timers ? {} : { timers }),
   }
@@ -98,12 +112,22 @@ export function onQueue(state, ev) {
   return returnToBottom(appendBlock(withCode, block))
 }
 
-/** `ev:ledger`——台账两切片（「对齐第三批」项 12 · KD-38；**R8 增 `detailLines`**）：载荷 `{ key, lines?, detailLines? }`——
+/** 台账状态位归一（状态行 ⇒ CLI 补漏批增 —— `ev:ledger` `marker` 载荷形）：`{ text, warn }`（`text` 非空串；
+ *  `warn` 真值归一）⇒ 记录；形不合 ⇒ `null`（调用面按零写处置 —— 禁假造）。载荷清值（`null`）不归本函数判。 */
+function markerReading(value) {
+  if (value === null || typeof value !== "object") return null
+  if (typeof value.text !== "string" || value.text === "") return null
+  return { text: value.text, warn: value.warn === true }
+}
+
+/** `ev:ledger`——台账三切片（「对齐第三批」项 12 · KD-38；**R8 增 `detailLines`**；**状态行 ⇒ CLI 补漏批增 `marker`**）：载荷 `{ key, lines?, detailLines?, marker? }`——
  *  `lines` = 核行产逐字 `{ text, warn }`（端侧零行构造）；行集过滤后非空才写（行文本非串 / 空 ⇒ 该行弃；空集 ⇒ 零写——禁假造）；
  *  同值（文本逐字 + `warn` 真值同）⇒ 原引用（零重绘）。`detailLines`（R8 · L2 明细行——状态行台账段 `title` 载波）= 核
  *  `detailScans` ∕ `formatDetailLine` 行集逐字（端零行构造）；**顶层切片 `ledgerDetail`**（项目级——与状态行台账段同锚，
- *  不按会话键）；空集照写（清 tooltip——禁假造）；同值 ⇒ 原引用。两键皆无 ⇒ 原引用。
- *  消费 = 流尾非块节点组 `[data-ledger-line]`（`renderer/views/chat.mjs`）+ 状态行台账段 tooltip（`views/statusline-segments.mjs`）；
+ *  不按会话键）；空集照写（清 tooltip——禁假造）；同值 ⇒ 原引用。`marker`（本批增 · 状态位转发）= 核
+ *  `formatMarker` 逐字 ∕ `warn` 核判位；**顶层切片 `ledgerMarker`**（项目级）；载荷键在场 ⇒ 写 ∕ 清（`null` = 清残影——
+ *  与「键缺席 = 零动作」两事）；形不合 ⇒ 零写；同值 ⇒ 原引用。三键皆无 ⇒ 原引用。
+ *  消费 = 流尾非块节点组 `[data-ledger-line]`（`renderer/views/chat.mjs`）+ 状态行台账段 ∕ tooltip（`views/statusline-segments.mjs`）；
  *  周期刷新（VSC `REFRESH_MS`）= R8 落（核拍面 —— `src/main/project-info.mjs`）。 */
 export function onLedger(state, ev) {
   const lines = (Array.isArray(ev.lines) ? ev.lines : [])
@@ -125,6 +149,14 @@ export function onLedger(state, ev) {
     const same = prev !== null && prev.length === detailLines.length
       && prev.every((text, index) => text === detailLines[index])
     if (!same) next = { ...next, ledgerDetail: detailLines }
+  }
+  // 台账状态位（本批增）：键在场 ⇒ 写 ∕ 清（`null` = 清残影——首拍必携）；形不合 ⇒ 零写（禁假造）；同值（`text` 逐字 + `warn` 真值同）⇒ 原引用。
+  if (Object.hasOwn(ev, "marker")) {
+    const prev = next.ledgerMarker ?? null
+    const value = ev.marker === null ? null : markerReading(ev.marker)
+    const valid = ev.marker === null || value !== null
+    const same = prev === null ? value === null : value !== null && prev.text === value.text && prev.warn === value.warn
+    if (valid && !same) next = { ...next, ledgerMarker: value }
   }
   return next
 }

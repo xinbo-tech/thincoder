@@ -2,7 +2,8 @@
  * file-links.mjs — 工具结果文本的**验存**文件链接抽取（上提核件 —— 处理流批 R2 · 2026-09-28）。
  * 上提源 = VSC `thincoder-vscode/src/extension/file-links.mjs`（token 抽取 ∕ 去重 ∕ 封顶）× 桌面同档
  * （相对径需项目根——无根 ⇒ 相对 token 零判据，不落 `process.cwd()` 第二解析基）；本档 = 单源
- * （消费面 = 桌面 `thincoder-desktop/src/main/file-links.mjs`；VSC 自持副本迁移留后）。
+ * （消费面 = 桌面 `thincoder-desktop/src/main/file-links.mjs` · VSC `thincoder-vscode/src/extension/file-links.mjs`——已随
+ * parity-b4 迁移轮改指本档（2026-09-29，双写窗口收口））。
  * 判据 = **盘上存在闸**（存在 ∧ 是文件）：路径 token 只在真实存在时才成链接 —— URL ∕ 日志噪音 ∕
  * 版本号恒不成链接（存在检查 = 最后一道闸）。**验存（`existsSync` ∕ `statSync`）转注入缝**：本档零
  * `node:fs`——盘面探针由调用方注入（`probe = { existsSync, statSync }`）；缺 ∕ 形违 ⇒ 抛（fail-loud——

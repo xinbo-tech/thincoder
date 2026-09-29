@@ -175,11 +175,11 @@ test("①核原语·默认钉底：旗标缺省 ⇒ 写超值 scrollTop（不读
   assert.equal(content.scrollTop, Number.MAX_SAFE_INTEGER, "默认钉底 ⇒ 写超值")
 })
 
-test("①核原语·近底双向旗标：wheel ∕ touchmove ⇒ 近底（< 24px）真 ∕ 远离假（恰 24 不判近底）", () => {
+test("①核原语·近底双向旗标：wheel ∕ touchmove ∕ scroll ⇒ 近底（< 24px）真 ∕ 远离假（恰 24 不判近底）", () => {
   const block = makeBlock()
   const content = contentOf(block)
   core.initBlockFollow(block)
-  assert.deepEqual(content.listeners.map((l) => l.type), ["wheel", "touchmove"], "两监听在场")
+  assert.deepEqual(content.listeners.map((l) => l.type), ["wheel", "touchmove", "scroll"], "三监听在场（scroll = 2026-09-29 补——「滚动已生效」唯一后触者；核件注释 ∕ sweep 波A #537 在册；断言随动 = 父侧 2026-09-29）")
   assert.equal(content.listeners.every((l) => l.options?.passive === true), true, "passive 监听（不夺滚动）")
 
   setGap(content, 10)

@@ -21,3 +21,10 @@ export function badgeStamps(badges, key, code, present) {
   }
   return { badges: { ...badges, [key]: next }, changed: true }
 }
+
+/** 忙位回收（#597 · 清位单点）：`running` 摘除 —— **宿主事实驱动**（回执 `started:false` ∕ 发送回执超时；消费点
+ *  `renderer/composer-wire.mjs`）；置位写者仍唯一 = 归约面（`renderer/events.mjs` 受理支）。值等 ⇒ 原引用（零通知）。 */
+export function clearRunning(state, key) {
+  const stamps = badgeStamps(state?.tabBadges ?? {}, key, "running", false)
+  return stamps.changed ? { ...state, tabBadges: stamps.badges } : state
+}

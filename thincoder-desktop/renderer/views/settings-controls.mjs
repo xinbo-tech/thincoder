@@ -3,6 +3,9 @@
  * `renderer/views/settings.mjs` 拆出 —— 300 行层拆分，**零语义变化**）：`channelFormTree`（预设形 /
  * 自定形一表；`name` 属性 = 通道载荷键 ⇒ 提交端 `FormData` 直取）· `verifyControl`（渠道行 / 向导同一
  * 构造）· 共用叶 `fieldPair`（标词 + 输入两片）。
+ * **B10 W2 增（S2 ∕ S7）**：自定形「拉取模型」钮 + 状态行 + `datalist` 候选面（探不通 ⇒ 失败词；
+ * **手输不受限** —— 零阻断保存）+ 表单暂存值回填（`form.draft` —— 探果写切片 ⇒ 树重挂 ⇒ 未落盘输入救回）；
+ * 预设项标签 = `name — desc (model)` 串形（`form.presets[].desc` 由主侧转发）。
  * **单一 owner** —— 消费面 = 设置面渠道段体（经 `renderer/views/settings.mjs` 段体分派 `deps` 注入）
  * 与首启向导第二步（`renderer/views/onboarding.mjs`）；`settings.mjs` **同名 re-export** ⇒ 导出面零改。
  * 纪律：零 DOM（描述符树）；文案一律经 `t()`、零字形字面；缺 handlers ⇒ `wire` 落 `disabled: true`。
@@ -13,12 +16,47 @@ import { wire } from "./chat-tool.mjs"
 /** 列表切片：缺 / 非数组 ⇒ 空表（零节点 —— 禁假数据）。 */
 const listOf = (value) => (Array.isArray(value) ? value : [])
 
+/** 候选面 `datalist` id（面板内唯一 —— 自定形单表单；`input[list=…]` 引用点同锚）。 */
+const MODEL_CANDIDATE_LIST_ID = "settings-model-candidates"
+
 /** 字段两片（标词 + 输入）：`name` = 载荷键、`id` / `for` 同源。 */
 function fieldPair(name, type, labelWord, extra = {}) {
   return [
     { tag: "label", props: { class: "settings-field-label", for: name }, children: [t(labelWord)] },
     { tag: "input", props: { class: "settings-field", id: name, name, type, ...extra } },
   ]
+}
+
+/** 预设项标签（S7 · 串形对位 VSC `settings-providers.js:204` —— `name — desc (model)`）：缺段不落空括号
+ *  （禁假造 —— 注记：VSC 空 model 落 `()`；本端不落，有效段集下两形逐字同）。 */
+export function presetLabel(preset) {
+  const name = typeof preset?.name === "string" ? preset.name : ""
+  const desc = typeof preset?.desc === "string" && preset.desc !== "" ? ` — ${preset.desc}` : ""
+  const model = typeof preset?.model === "string" && preset.model !== "" ? ` (${preset.model})` : ""
+  return `${name}${desc}${model}`
+}
+
+/** 模型候选 `datalist`（S2）：拉取所得逐项（`input[list]` 下拉建议 —— **手输不受限**，零阻断保存）。 */
+function candidateListNode(candidates) {
+  return {
+    tag: "datalist",
+    props: { id: MODEL_CANDIDATE_LIST_ID },
+    children: candidates.map((name) => ({ tag: "option", props: { value: name }, children: [] })),
+  }
+}
+
+/** 拉取模型行（S2）：钮 + 状态行（`probe` = 段面已出词三态：探期 ∕ 探通（携计数）∥ 探不通；缺 ⇒ 零节点）。 */
+function fetchRowNode(probe, onFetch) {
+  const state = typeof probe?.state === "string" ? probe.state : null
+  const word = typeof probe?.word === "string" ? probe.word : ""
+  return {
+    tag: "div",
+    props: { class: "settings-field-row", "data-fetch-models": "" },
+    children: [
+      { tag: "button", props: wire({ class: "settings-submit", type: "button", "data-action": "settings:fetchModels" }, onFetch), children: [t("settings.fetchModels")] },
+      word === "" ? null : { tag: "span", props: { class: "settings-verify", "data-probe": state }, children: [word] },
+    ],
+  }
 }
 
 /** **导出面①** —— 渠道表单（纯构树）：`{ shape, presets, formats, activeDefault, submitKey }` +
@@ -28,28 +66,37 @@ export function channelFormTree(form, handlers = {}) {
   const presets = listOf(form?.presets).filter((p) => p && typeof p.name === "string")
   const formats = listOf(form?.formats).filter((f) => typeof f === "string" && f)
   const onSubmit = typeof handlers?.onSubmit === "function" ? handlers.onSubmit : undefined
+  const onFetch = typeof handlers?.onFetchModels === "function" ? handlers.onFetchModels : undefined
   const children = [
     { tag: "input", props: { type: "hidden", name: "shape", value: shape } },
     { tag: "label", props: { class: "settings-field-label", for: "name" }, children: [t(shape === "custom" ? "settings.providers.nameLabel" : "settings.providers.presetLabel")] },
   ]
+  // 暂存值回填（S2 —— 仅自定形；`draft` 缺 ⇒ 全空，零行为改）：探果写切片 ⇒ 树重挂 ⇒ 未落盘输入救回。
+  const draft = shape === "custom" && form?.draft !== null && typeof form?.draft === "object" ? form.draft : null
+  const seed = (key) => (draft !== null && typeof draft[key] === "string" && draft[key] !== "" ? { value: draft[key] } : {})
+  const candidates = shape === "custom" ? listOf(form?.modelCandidates).filter((m) => typeof m === "string" && m !== "") : []
   if (shape === "custom") {
-    children.push({ tag: "input", props: { class: "settings-field", id: "name", name: "name", type: "text" } })
-    children.push(...fieldPair("baseURL", "text", "settings.providers.baseURLLabel"))
-    children.push(...fieldPair("model", "text", "settings.providers.modelLabel"))
+    children.push({ tag: "input", props: { class: "settings-field", id: "name", name: "name", type: "text", ...seed("name") } })
+    children.push(...fieldPair("baseURL", "text", "settings.providers.baseURLLabel", seed("baseURL")))
+    if (onFetch !== undefined) children.push(fetchRowNode(form?.probe, onFetch)) // S2：拉取模型（暂存值直探，不落盘）
+    children.push(...fieldPair("model", "text", "settings.providers.modelLabel", {
+      ...seed("model"), ...(candidates.length > 0 ? { list: MODEL_CANDIDATE_LIST_ID } : {}),
+    }))
+    if (candidates.length > 0) children.push(candidateListNode(candidates))
     children.push({ tag: "label", props: { class: "settings-field-label", for: "format" }, children: [t("settings.providers.formatLabel")] })
     children.push({
       tag: "select",
       props: { class: "settings-field", id: "format", name: "format" },
-      children: formats.map((f) => ({ tag: "option", props: { value: f }, children: [f] })),
+      children: formats.map((f) => ({ tag: "option", props: draft?.format === f ? { value: f, selected: true } : { value: f }, children: [f] })),
     })
   } else {
     children.push({
       tag: "select",
       props: { class: "settings-field", id: "name", name: "name" },
-      children: presets.map((p) => ({ tag: "option", props: { value: p.name }, children: [p.name] })),
+      children: presets.map((p) => ({ tag: "option", props: { value: p.name }, children: [presetLabel(p)] })),
     })
   }
-  children.push(...fieldPair("key", "password", "settings.providers.keyLabel"))
+  children.push(...fieldPair("key", "password", "settings.providers.keyLabel", seed("key")))
   children.push({ tag: "label", props: { class: "settings-field-label", for: "active" }, children: [t("settings.providers.activeToggle")] })
   children.push({
     tag: "input",

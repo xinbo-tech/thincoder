@@ -12,7 +12,7 @@ import {
   addTool, finishTool, showError, maybeScrollDown, advisorRoundTag,
 } from "./ui.js"
 import { setLoading, applyBusyLock } from "./loading.js"
-import { MAX_TOOL_OUTPUT } from "./lib.js"
+import { appendToolOutput } from "../node_modules/@thincoder/render-core/flow/stream.mjs"
 import { setStrings, t } from "./i18n.js"
 import { applyI18nToDOM } from "./i18n-dom.js"
 import { onToken, onReasoning, onTurnBreak, finish, subagentChunk } from "./streaming.js"
@@ -31,6 +31,11 @@ import { clearStatusText, handleStatusText, showCompressStatus, showDigestStatus
 import { showAtDropdown } from "./autocomplete.js"
 // C-B2-6 细则⑦（queue-visible 批 2026-09-24）：排队「待发送」标记面（逐条标记 / 消费即清 / 多批合泡）
 import { applyBusyQueued } from "./queued-mark.js"
+
+/** 停滞轻显形重置点（WEBVIEW.md §4.7——2026-09-29 批 stall-indicator · 语义单源 = `docs/cli/design/TUI.md` §7.7）：
+ *  三类可见输出事件命中 ⇒ 静默起算置现刻（① 流式 = `token` ∕ `reasoning`；② 工具面 = `toolCall` ∕ `toolOutput` ∕
+ *  `toolResult`；③ 子代理面 = `subagent` ∕ `subagentApproval` ∕ `toolPanel`（`sub:` 前缀））——分发处逐点调用。 */
+const markOutput = () => { S._lastOutputAt = Date.now() }
 
 /** host → webview 分发循环（分发单表 = 本函数体——协议机检提取对象，D-C2 不拆族）。
  *  @param {{ renderMcpList: Function, updateMcpTools: Function, updateMcpTestResult: Function,
@@ -51,14 +56,15 @@ export function initMessageLoop(deps) {
     switch (m.type) {
       case "i18n":           setStrings(m.strings); applyI18nToDOM(); break
       case "userMessage":      addUser(ctx, m.text, m.timestamp, m.idx); break
-      case "token":            clearStatusText(); onToken(m.text); break
-      case "reasoning":        clearStatusText(); onReasoning(m.text); break
+      case "token":            markOutput(); clearStatusText(); onToken(m.text); break
+      case "reasoning":        markOutput(); clearStatusText(); onReasoning(m.text); break
       case "turnBreak":        onTurnBreak(); break
       // X2（显示面消差批 §2.1）：advisor 卡头携轮次标签 + 状态行字面 = CLI `tool-events.mjs:145`
       // 逐字（`advisor review (round N · model)`）；无 round 字段（非 advisor / 旧载荷）⇒ 逐字节同修前。
       // 注：`round` 仅 advisor 载荷携（宿主 `advisorMeta`）⇒ 以标签非空分派，**不写工具名字面比较**
       // （该形会被 `protocol-coverage` 提取器当消息判别式——§12 表机检）。
       case "toolCall": {
+        markOutput()
         clearStatusText()
         const roundTag = advisorRoundTag(m.round, m.model)
         S._currentTool = roundTag ? `advisor review ${roundTag}` : m.name
@@ -67,21 +73,17 @@ export function initMessageLoop(deps) {
         break
       }
       // X5（显示面消差批 §2.2）：`truncated` 事实旗标透传（正文/摘要标记见 ui.js finishToolCard）
-      case "toolResult":       clearStatusText(); finishTool(ctx, m.name, m.id, m.text, m.links, m.truncated); S._currentTool = null; renderStatusBar(); break
+      case "toolResult":       markOutput(); clearStatusText(); finishTool(ctx, m.name, m.id, m.text, m.links, m.truncated); S._currentTool = null; renderStatusBar(); break
       case "toolOutput": {
+        markOutput()
         // Live output streaming (bash etc.): chunks append to the running card's
         // body. Open while streaming so long commands are watchable; finishTool
         // collapses the card again on success.
+        // 更新纪律收核（2026-09-29）：追加 ∕ 占位清 ∕ 64K 截断（`_capped` 停收）改指核件在
+        // `@thincoder/render-core/flow/stream.mjs` `appendToolOutput`——行为与逐字动作同修前（零行为变更）。
         const ref = ctx._toolRefs[m.id || m.name]
         if (!ref) break
-        if (ref.b.textContent === t("tool.initial")) ref.b.textContent = ""
-        if (!ref._capped) {
-          ref.b.textContent += m.text
-          if (ref.b.textContent.length > MAX_TOOL_OUTPUT) {
-            ref.b.textContent = ref.b.textContent.slice(0, MAX_TOOL_OUTPUT) + "…(输出过长已截断)"
-            ref._capped = true
-          }
-        }
+        appendToolOutput(ref.b, m.text, { initial: t("tool.initial") })
         ref.b.classList.add("open")
         ref.h.querySelector(".tool-call-icon")?.classList.add("open")
         ref.h.setAttribute("aria-expanded", "true")
@@ -224,10 +226,10 @@ export function initMessageLoop(deps) {
       case "usage":            handleUsageMessage(m); break
       case "taskProgress":     handleTaskProgress(m); break
       case "planMode":         handlePlanMode(m); break
-      case "subagent":         handleSubagentMessage(m); break
+      case "subagent":         markOutput(); handleSubagentMessage(m); break
       // §18 C-8（child permission gate）：审批态块头通知（tool 非空 = `⏸` + 等待审批；
       // null = 清态）——查块绝不建块（activity.js applySubagentApproval）
-      case "subagentApproval":  applySubagentApproval(m); break
+      case "subagentApproval":  markOutput(); applySubagentApproval(m); break
       case "goal":             handleGoalMessage(m); break
       case "suspension":       S._digestBoundary = null; handleSuspensionMessage(m); break
       case "toolPanel":
@@ -235,7 +237,7 @@ export function initMessageLoop(deps) {
         // (§13/§14 — activity.js ensureBlock). Advisor has no webview consumer
         // (VSC-DEBT D-2: no host emitter — the advisor family merged into the
         // subagent container; src/agent.mjs:79).
-        if (m.name?.startsWith("sub:")) subagentChunk(m)
+        if (m.name?.startsWith("sub:")) { markOutput(); subagentChunk(m) }
         break
     }
   })

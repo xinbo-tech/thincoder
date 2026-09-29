@@ -14,6 +14,16 @@ import assert from "node:assert/strict"
 import { registerHooks } from "node:module"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import { mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
+
+// ─── 测试隔离（台账 #601 修复）：家目录重定向到临时目录。
+// 依据：本档夹具会驱动真实会话写面；`config-io.mjs` 的 `configDir` 于模组装载期取值
+// （`join(homedir(), ".thincoder")`），Windows 上 `os.homedir()` 读 `USERPROFILE`
+// ⇒ 必须在一切（动态）import 之前覆盖，HOME 与 USERPROFILE 双写。
+const _tmpHome = mkdtempSync(join(tmpdir(), "tc-r8-home-"))
+process.env.HOME = _tmpHome
+process.env.USERPROFILE = _tmpHome
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = join(here, "..", "..") // 仓根（.thincoder/tmp 两层深）
@@ -268,7 +278,7 @@ test("#515②: 装配 await 期跨中止 ⇒ send 回 `aborted` 且零起跑（a
   await tick()
   host1.abortSuspensions() // 跨中止（占位清 + 装配清）
   release1()
-  assert.deepEqual(await pending1, { ok: false, reason: "aborted" }) // 新 reason 码（零起跑）
+  assert.deepEqual(await pending1, { ok: false, reason: "aborted", started: false }) // 新 reason 码（零起跑；`started:false` = 发送忙态批 E2 四清位形）
   assert.equal(runs1.length, 0)
 
   // 臂 2：dispose（会话关闭径）
@@ -284,7 +294,7 @@ test("#515②: 装配 await 期跨中止 ⇒ send 回 `aborted` 且零起跑（a
   await tick()
   host2.dispose("1")
   release2()
-  assert.deepEqual(await pending2, { ok: false, reason: "aborted" })
+  assert.deepEqual(await pending2, { ok: false, reason: "aborted", started: false })
   assert.equal(runs2.length, 0)
 
   // 正控：不中止 ⇒ 正常起跑（本闸不误伤）

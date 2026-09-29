@@ -39,7 +39,7 @@
 | A9 | `src/tui/subagent-blocks.mjs` | **453**（读数 as-of 2026-09-25 · **doc-face-closeout 批**实读） | 47 | 触发式（未预拆）· **doc-face-closeout 批触碰**（注释改指 · 行数守恒）⇒ **不拆**（理由 = 零结构改 + Δ0） | 候选面（评估项）：子代理事件路由族（`routeSub*` `:148`–`:382` ≈235 行）∥ 压缩面板族分面——**抽取候选线 = 压缩面板族**（`liveCompressPanel` `:383`–`markCompressFallback` `:453` ≈71 行 → `subagent-compress.mjs`〔拆分计划目标 · 裸名形态〕；原档 re-export 保持） | `docs/batches/2026-09-17-subagent-zero-block.md` §:292 · `docs/batches/2026-09-17-async-face-fixes.md` §:358 · `docs/batches/2026-09-25-doc-face-closeout.md` §2 |
 | A10 | `src/tui/tool-events.mjs` | **449**（读数 as-of 2026-09-25 · **doc-face-closeout 批**实读） | 51 | 触发式（未预拆）· **doc-face-closeout 批触碰**（注释改指 · 行数守恒）⇒ **不拆**（理由 = 零结构改 + Δ0） | 候选面（评估项）：`buildToolCallbacks` 单体即档主体（`:61`–末）——按回调族分面；**抽取候选线 = 尾部回调族**（`onCompressStart` `:378`–`onTurnEnd` `:446` ≈69 行 → `tool-events-signals.mjs`〔拆分计划目标 · 裸名形态〕） | `docs/batches/2026-09-15-core-defect-fixes.md` §:131（增量近零 ⇒ 不设拆分计划判据句）· `docs/batches/2026-09-25-doc-face-closeout.md` §2 |
 | A11 | `test/model-ref.test.mjs` | **432** | 68 | 触发式（未预拆） | 候选面（评估项）：picker harness（`miniPickers` / `pickerHarness`）与用例族分档 | 本册首登（≥400 普查面） |
-| A12 | `src/tui/render-frame.mjs` | **423** | 77 | 触发式（未预拆） | 候选面（评估项）：§7 状态栏 / `enterHint` 面抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:456 |
+| A12 | `src/tui/render-frame.mjs` | **434** | 77 | 触发式（未预拆） | 候选面（评估项）：§7 状态栏 / `enterHint` 面抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:456 |
 | A13 | `test/session-store.test.mjs` | **416** | 84 | 触发式（未预拆） | 候选面（评估项）：按用例族 + 夹具自持分档（先例 = KD-23） | 本册首登（≥400 普查面） |
 | A14 | `test/async-settle.test.mjs` | **411** | 89 | 触发式（未预拆） | 候选面（评估项）：digest 批量预算族（`:242` 起）/ 四族接线族（`:339` 起）二分 | 本册首登（≥400 普查面） |
 | A15 | `test/input-lock.test.mjs` | **403** | 97 | 触发式（未预拆） | 候选面（评估项）：busy 门禁族用例抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:458 · `docs/batches/2026-09-19-upstream-channel-availability.md` §:116 |
@@ -52,7 +52,7 @@
 | B1 | `src/acp/bridge.mjs` | **397** | 触发式（未预拆） | 候选两面：桥 edit 路由族（`editSingle` / `editBatch` / `toolRouter`）与历史回放（`replayHistory`） | `docs/batches/2026-09-25-edit-arg-guard.md` 受影响表行 + file-tier-sweep §2 S5-⑤ |
 | B3 | `test/ledger-surface.test.mjs` | **378** | 触发式（未预拆） | 越线登记 + 触发式拆分（>300 advisory——CLI 侧无机检门） | `docs/batches/2026-09-25-hygiene-ab.md` §:194 |
 | B4 | `test/memory-scan-bounds.test.mjs` | **371** | 触发式（不拆登记在册） | 「不拆」登记（±2 零结构改）；拆分 = 其面下次实质改动时重判 | `docs/batches/2026-09-20-small-debt-batch.md` §:106 |
-| B5 | `thincoder-cli/src/tui/suspension-drive.mjs` | **341** | 触发式（未预拆） | 候选面：driver 步骤面抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:460 |
+| B5 | `thincoder-cli/src/tui/suspension-drive.mjs` | **210**（实读 2026-09-29——B1-P3 取核重写后） | 触发式（未预拆） | 候选面：driver 步骤面抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:460 |
 | B6 | `test/subagent-observe-send.test.mjs` | **330** | 触发式（不下拆判定） | 「既有超软线 · 增量小 / 非结构改 ⇒ 拆分另议」在册 | `docs/batches/2026-09-18-toolface-fixes.md` §:75 |
 | B7 | `test/tui-memory-budget.test.mjs` | **334** | 触发式（不拆登记在册）· **doc-face-closeout 批触碰**（注释改指 · ±0 行） | **该批不拆**：理由 = 零结构改 + Δ0；**抽取候选线 = U 族**（占用账 / 保底 / 步进 / 收据 / 占位行移除，`:217`–`:315` ≈99 行 → `tui-memory-account.test.mjs`〔拆分计划目标 · 裸名形态〕——组内夹具 `mkState` / `mkCallbacks`（`:35` / `:45`）随组同迁）；触发 = 越 500 ∨ 该档下次实质改动 | `docs/batches/2026-09-25-doc-face-closeout.md` §2（口径 §1-4 随触碰补登） |
 | B8 | `test/doc-check.test.mjs` | **340**（env-config-purge 批实施读数） | 触发式（未预拆）· **env-config-purge 批触碰**（子实例改直跑本档 + `--nested` 旗标） | 候选面（评估项）：子实例目录树族 ∥ 锚检族分档（用例族 + 夹具自持——先例 = file-tier-sweep KD-23）；触发 = 越 500 ∨ 该档下次实质改动 | 本册首登（env-config-purge 批 §3 轮次 1 发现 5——越 300 咨询线登记） |
@@ -106,3 +106,5 @@
 
 - 2026-09-28（**文档回填与卫生轮**（台账 #516）· eng-designer——同批同笔补记）：`:40` ∕ `:41` 「2026-09-25 本批」两义逐处指名落笔批（**doc-face-closeout 批**——#377 消解径）；B7 ∕ B8 ∕ T2 ∕ T3 的「本批」逐处指名（doc-face-closeout ∕ env-config-purge ∕ cli-small-items）；
   `thincoder-cli/test/memory-sweep-cli.test.mjs` 两处「（拟新增）」按盘去标（`:35` ∕ `:72`——在盘为实）。**零新语义**。
+
+- 2026-09-29（**micros 批 · 档面波（解冻后）· eng-designer**——承 `docs/batches/2026-09-29-desktop-micros.md` §2 档面笔清单 P5）：B5 读数刷新 **341 ⇒ 210**（届盘实读 2026-09-29——B1-P3 取核重写 + #576 笔后）。**零语义**（读数与登记面）。

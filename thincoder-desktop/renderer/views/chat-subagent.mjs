@@ -15,10 +15,12 @@
  *      显式裁，`docs/render-core/design/RENDER-CORE.md` 行 13「各自 · 数值差登记」）；归档块**两窗口皆含**
  *      （VSC 裁剪集含 `.sub-block` ⇄ 桌面 `visibleWindow` 含 `kind === "subagent"`）。
  * 核件消费（「对齐第二批」项 3 同源面）：`renderSubBlock` / `renderSubagentChunk`（`/rc/subblocks/block.mjs`）·
- * `refreshBlock`（`/rc/subblocks/activity-view.mjs`）。域外零触：归档块为**运行期块**（页读整置即失 —— 端差登记）。
+ * `refreshBlock`（`/rc/subblocks/activity-view.mjs`）。**让位修复批（2026-09-29 · #603）**：归档重建径尾接
+ * `initBlockFollow`（接线一致性——出生 ∕ 接管 ∕ 重放三径同件）；冻结块零行为变更（出口钮不建、零写）。
+ * 域外零触：归档块为**运行期块**（页读整置即失 —— 端差登记）。
  * 依赖单向：本档 → `renderer/views/chat-text.mjs`（`labelNode`）+ 核件四件；零 `node:` / 零裸包；本档零文案。
  */
-import { renderSubagentChunk, renderSubBlock } from "/rc/subblocks/block.mjs"
+import { renderSubagentChunk, renderSubBlock, initBlockFollow } from "/rc/subblocks/block.mjs"
 import { refreshBlock } from "/rc/subblocks/activity-view.mjs"
 import { labelNode } from "./chat-text.mjs"
 
@@ -52,6 +54,7 @@ function echoOf(block) {
   for (const row of rows) renderSubagentChunk(element, row)
   element._subMeta = meta
   foldEcho(element)
+  initBlockFollow(element) // 让位修复批：归档重建径同源接线（冻结块 —— 出口钮不建、零写）
   return element
 }
 

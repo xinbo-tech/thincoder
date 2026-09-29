@@ -3,7 +3,7 @@
  * `docs/desktop/design/RENDERER.md` §1.1「引导节点」）：判据四值纯函数 `guideOf` + 构树 `guideNode` + 帧尾态刷
  * `syncGuide`。落点 = 对话流挂载根 `[data-slot="flow"]` 自身：`none` 帧 = 根唯一子 · `empty` 帧 = 首子 ·
  * `flow` 帧 = 不在场；零 `data-block-id` ⇒ 不入块序（块序插入点判据与 `data-blocks` 不变式不受其影响）。
- * 沿 `renderer/views/chat-copy.mjs` 先例（流内非块节点构树 · 零 `store.mjs` import）：本档触 DOM 面 = `syncGuide`
+ * 沿流内非块节点构树先例（零 `store.mjs` import）：本档触 DOM 面 = `syncGuide`
  * （帧尾只摘 / 原位换 —— `views/chat.mjs` 侧唯一调用点）；其余两件 = 纯函数 / 描述符 ⇒ 平 node 直测。
  * 动作控件在场 ⟺ **句柄在场**（`onOpenDir` / `onNewSession` 缺 ⇒ 整控件缺席 —— 零假按钮，比接线两态通则更严）；
  * 出口 = 会话控制条同两枚（`project:open` / `session:create` 各单一实现 —— 本档零第二路；会话模型轮 R13：

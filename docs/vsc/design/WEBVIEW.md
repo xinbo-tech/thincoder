@@ -12,7 +12,7 @@
 webview 是扩展主机的 **UI 适配层**，只负责 UI 渲染与用户交互；agent 循环与工具执行在 extension host 侧。两者经 `postMessage` **单向通信**——webview 为隔离 iframe，无共享状态。
 
 - **UI 状态单一持有在 webview 端**：`thincoder-vscode/webview/state.js:71` 的 `S`（UI 状态）+ 同档 `ctx`（DOM 引用集，如 `state.js:19` 的 `ctx.activityEl`）+ `vscode` postMessage 桥。
-- **会话 / Provider / 工具状态在扩展端**：`thincoder-vscode/src/extension/**`（面板生命周期与消息路由）· `thincoder-vscode/src/agent.mjs`（agent 循环）。
+- **会话 / Provider / 工具状态在扩展端**：`thincoder-vscode/src/extension/**`（面板生命周期与消息路由）· `thincoder-vscode/src/extension/panel-turn-loop.mjs`（回合循环 host 包装——核 `runAgent` 改接）。
 - 消息族、投递纪律与忙态收敛 = `WEBVIEW-PROTOCOL.md`（本档不重述）。
 
 ## 2. 布局（垂直序 + grid）
@@ -72,7 +72,7 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 `activity-view` / `toast` / `tool-card-restore` 三档 = 2 行 `export *` shim（实现单源 = 核包 `@thincoder/render-core/subblocks/activity-view.mjs` / `@thincoder/render-core/toast.mjs` / `@thincoder/render-core/flow/tool-card-restore.mjs`）；§5.x 各节内未逐处重锚的其余相关坐标 = 换接前实读。
 
 **本端接线**：实现为唯一事实源——模块图登记见 `thincoder-vscode/AGENTS.md`（webview 行为维护寄存器）。
-extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `panel-*.mjs`（消息处理分模块）· `suspension.mjs`（挂起驱动）· `permission-gate.mjs`（权限门）。
+extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `panel-*.mjs`（消息处理分模块）· `suspension.mjs`（挂起驱动装配——核 `startSuspension`）· `permission-gate.mjs`（权限门）。
 
 ## 4. 交互组件与标题
 
@@ -178,6 +178,15 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
   - **刷新路径**：状态行唯一载体 = `S._lastCtxPct`（`thincoder-vscode/webview/status-bar.js`），消费面 = `usage` 消息驱动 + 2 s 拍（`running` 门内）⇒ 两路径同值；渲染句零改（`context X%` + ≥80 警示色 = CLI 同形）。
 - **边界**：不改 CLI；不改 ≥80 阈值；不新增绝对 token 段（不做项在册——`WEBVIEW-PROTOCOL.md` §6.1 类判据 + U-P5）；不引入核改动。
 
+### 4.7 停滞轻显形段（在飞回合静默读数 · 2026-09-29）
+
+- **语义单源 = `docs/cli/design/TUI.md` §7.7**（静默定义 ∕ 三类重置点 ∕ 阈值 10s ∕ 句式键 ∕ 终态消失 ∕ 一致性表——本段不重述，只落本端实现面）。
+- **显示位** = 状态行 `#status-line`——耗时位（`status-bar.js:47` `Elapsed Ns`）之后、任务徽标之前；词面 = `t("status.quiet", { s })`（核字典键经投影面直取——本端本地档零同键副本，沿「32 键双源冻结」摘除方向）。
+- **载体（本端）**：新增 `S._lastOutputAt`（`webview/state.js`）；起算锚 = `input.js:97`（`S._turnStart = Date.now()` 邻位同置）；重置点 = `chat-messages.js` 分发命中三类可见输出消息（`token` ∕ `reasoning`；`toolCall` ∕ `toolOutput` ∕ `toolResult`；`subagent` ∕ `subagentApproval` ∕ `toolPanel`（`sub:` 前缀））⇒ 置现刻；回合尾同清（`streaming.js:148` 邻位）。
+- **跳秒** = 既有拍收正为 **1s**（`panels.js:49-52` `_panelTimer`——`running` 门内重绘；拍值与另两端同口径——跳秒步进单源 = `docs/cli/design/TUI.md` §7.7）。
+- **判据（可机检）**：`S._turnState === "running"` ∧ `now − (S._lastOutputAt ?? S._turnStart) ≥ 10000` ⇒ 段在场（首显 = 10s）；不足阈值 ∕ 非 running ∕ 回合尾 ⇒ 零段（负向锁）；真机 = 父侧真跑闭合（D16 义务）。
+- **边界**：纯读数——零控件 ∕ 零打断 ∕ 零警示色；**零协议改**（本段纯 webview 自算——无新消息 ∥ 无新载荷 ∥ 无新通道）；核件 ∕ 宿主零改；段位对位表行 = `WEBVIEW-PROTOCOL.md` §6.1（本批已补）。
+
 ## 5. 子代理活动块与活动区
 
 子 agent / consult / escalate / advisor-async 的活动块**出生即 append 到固定活动区 `#subagent-activity` 区尾**（`thincoder-vscode/webview/activity.js:108`），在消息区与输入区之间——**live 固定可见，不随会话流滚动丢失**。
@@ -202,7 +211,7 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 | 重置 | 回合中止（无挂起会话）/ 会话清 | `resetActivity` **只清区子树**（+ 清 map + 区内孤儿防御清）——流内归档块（会话历史）不动 | `activity.js:415-424` |
 
 - **归档落点二值**（`activity.js:196-206`）：① 消化回收且本轮边界 `S._digestBoundary` 有效（`isConnected`）→ 边界之前；② 其余（普通终态 / 补桩 / 会话退出 flush / 边界失效 / 无边界）→ `#messages` 尾追。同批多块 = 消息到达序；幂等 = 已归档（`parentNode === messagesEl`）即 no-op。
-- **消化回收（host 侧）**：`thincoder-vscode/src/extension/suspension.mjs:95-101`（`reclaimDigestedBlocks`）对该轮已消化条目逐条补发 `{type:"subagent", status:"done"}`——**直投不入队**（非出生事件，属收尾通知）。
+- **消化回收（host 侧）**：`thincoder-vscode/src/extension/suspension.mjs:112-119`（`reclaimDigestedBlocks`）对该轮已消化条目逐条补发 `{type:"subagent", status:"done"}`——**直投不入队**（非出生事件，属收尾通知）。
 - **消化轮起跑档位（F-UC8——批 SUBAGENT-SIGNAL-LINES）**：宿主起跑载荷携 `tier` ∈ `ask` / `digest`（**按因两档**——ask 因优先；旗标取核既有载体，**禁新造第二判据**；判据与 CLI **同源同式**）；webview 按 `tier` 取键：`digest.turnLabel`（digest 档 / 缺省档）/ `digest.turnLabelAsk`（ask 档——**携参**）。
 - **ask 档携参**（载荷 `from` / `msg`——仅 ask 档条件携带）：`from` = 提问者 `role#id`；`msg` = 问题摘要（显示串——单行 + 截断 ≤120 字符，核单点 `upstreamAskLabelVars`）。
 - **计数元素随 `n > 0`**（两档同规）：`n > 0` ⇒ 建本轮计数元素（`dataset.n` = 起跑数）；`n = 0`（ask-only 轮）⇒ 不建（`_digestRoundEl` 置空）∧ end 侧**零动作**（禁兜底建元素——`dataset.n = "?"` 幻影行禁出）。起跑判据 = **本轮起跑即发**（`n` 可 0）。
@@ -252,9 +261,9 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 块的身份键 = 频道名 `sub:<role>#<id>`（契约不变——`activity.js:144-155`）；单 map 单守卫 = `S._subBlocks`（`state.js:81`）。
 
 **键文法单源**：relay 前缀文法 `RELAY_PREFIX_RE = /^([\w-]+)#(\d+)\//`（`thincoder-core/agent/relay-prefix.mjs:10`——角色段**不容空格**）；
-端侧内容面键 = `"sub:" + path.head`（`thincoder-vscode/src/extension/panel-subagent-relay.mjs:130`）。
+端侧内容面键 = `"sub:" + <role>#<id>`——构形单源 = rc `relaySubContentChunk`（B7 2a 换接：前缀剥除 ∕ 四面 gate 均在 rc）；端侧由 chunk `role` / `id` 重导（`thincoder-vscode/src/extension/panel-subagent-relay.mjs:139`——与 `path.head` 等价）。
 **键形收正（2026-09-19 · 本批）**：`consult` / `escalate` 的端侧键 = `sub:consult#4` / `sub:escalate#2`——**不含模型段**；
-实据 = 键构造（`panel-subagent-relay.mjs:130`）+ 既有断言 `thincoder-vscode/test/subagent-content-relay.test.mjs:129`（逐字 `["sub:escalate#2","sub:consult#1"]`）。
+实据 = 键构造（`panel-subagent-relay.mjs:139`）+ 既有断言 `thincoder-vscode/test/subagent-content-relay.test.mjs:129`（逐字 `["sub:escalate#2","sub:consult#1"]`）。
 `activity.js:44-48` 的 `sub:consult <model> #<id>` 解析分支 = CLI 形态残留（端侧**无产者**）——保留不改，但**不作判据**。
 
 **出生面 = 存活闸（F-A3 · 本批 ①）**：出生事件 = `queued` 与 `started`（`[model]` token = 真启动锚）；命中三向：
@@ -278,13 +287,13 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 **投递链三面**：
 
 - **投递队列（host · 单队列）**：`panel._wvOutbox`（数组，上界 `WV_OUTBOX_MAX = 200`——溢出丢最旧 + 留痕）——**事件面与内容面同队**（⑤ 本批落）：
-  `postSubagentEvent`（`thincoder-vscode/src/extension/panel-subagent-relay.mjs:143-155`）为两族**唯一**投递口（`panel._wvReady === true` 直投，否则入队）；内容面 `emitToolPanel`（`:109-111`）由直投改**同口入队**——早到内容不再永久丢（暗窗口 = 入队 → 就绪 flush）。
+  `postSubagentEvent`（`thincoder-vscode/src/extension/panel-subagent-relay.mjs:167-181`）为两族**唯一**投递口（`panel._wvReady === true` 直投，否则入队）；内容面 `emitToolPanel`（`:124-126`）由直投改**同口入队**——早到内容不再永久丢（暗窗口 = 入队 → 就绪 flush）。
   **序**：单队列按插入序（事件先于内容 = 块先出生再吃内容）；上界 / 丢最旧语义零变化（D-W12）。
   `logEvent("ev:subdeliver", …)` **五处置全留痕**（`direct` / `enqueue` / `flush` / `drop-overflow` / `discard-dispose`——见下「投递面全量留痕」）。
 - **就绪握手（两拍）**：webview 起手投 `webviewReady`（`thincoder-vscode/webview/chat.js:147`）→ host case（`panel-messages.mjs:276`）置 `_wvReady = true`（`:288`），
   **排在** `openSessionContent`（`:222`——内部含 `clearMessages` + `resetActivity`）**之后**执行 ① flush 队列（`:228` `flushSubagentOutbox`——保持入队序，**含内容面**）→ ② `reassertLiveChildren`（`:229`）。
   后置理由：先投的出生事件必被清屏抹掉。
-- **存活投影**：`thincoder-vscode/src/extension/suspension.mjs:131-148` 读 `panel._liveLines ?? panel._susp?.lines` 的 `_asyncSubagents` / `_asyncAdvisors`（与 ⏹ 路由同源），
+- **存活投影**：`thincoder-vscode/src/extension/suspension.mjs:77-106` 读 `panel._liveLines ?? panel._susp?.lines` 的 `_asyncSubagents` / `_asyncAdvisors`（与 ⏹ 路由同源），
   **只发 live**——`running` → `started` + `pool: true`，`queued` → `queued`（两侧 role/id 必带；**载荷与 relay 面同形**：`position` / `waiting` / `reason` / `kind` 一并投影——重绘后与 live 面逐档一致；缓存单源 = queued 事件消费点）。（#118 落）
 
 **内容面投递（W15 内容面——2026-09-16 补；投递面本批并入队列）**：子代内容 chunk（text / think / 工具调用行 / 工具输出行）经 relay 前缀文法
@@ -306,7 +315,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
   修法落点 = `thincoder-vscode/src/extension/panel-session.mjs:74` **`loadSession` 入口段**（`:85` `panel._agent = null` 销毁点旁）置空 `panel._liveLines`——
   newSession / switchSession / deleteSession / onProjectChanged / openSessionContent 五路汇合于此（同档 `:78-80` 注释）⇒ 单点覆盖、回落 `panel._susp?.lines`；判据：切换后心跳 `n ≡ 0`（T-A7）。
 - **不做**：不重发终态 / settled（终态呈现 = 既有终态消息与 digest——F-A2 面）；不复活已归档块（tombstone / frozen 语义不变）。
-- **sync spawn 出生面本批已落**（`started` + `pool:false` 即建块——见上「出生面射程」）；心跳射程仍 = 池条目（`thincoder-vscode/src/extension/suspension.mjs:140-159`——`_asyncSubagents` / `_asyncAdvisors`）。
+- **sync spawn 出生面本批已落**（`started` + `pool:false` 即建块——见上「出生面射程」）；心跳射程仍 = 池条目（`thincoder-vscode/src/extension/suspension.mjs:77-106`——`_asyncSubagents` / `_asyncAdvisors`）。
 
 **投递面全量留痕（host · NFR-A2 主侧）**：
 
@@ -397,7 +406,10 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 
 - **外层 = 区 pin**（`ui.js:190-193`）：块出生（`activity.js:63`）与流式帧（`streaming.js:32`）调用；近底 24px 判据、上滚解 pin、回底重 pin（`ui.js:214-220` `watch` 闭包）。块出生**不再牵动** `#messages` 滚动。
 - **内层 = 块内容区跟滚**（原语 = 核 `thincoder-render-core/subblocks/block.mjs` `initBlockFollow` / `maybeScrollBlock`——2026-09-29 提核；本端 = 调用点）：
-  `initBlockFollow` 给 `.advisor-content` 挂 `wheel` / `touchmove`（passive）监听写 `内容区._pinFollow`；`maybeScrollBlock` 在 rAF 尾逐块应用——`open=false` 或 `!isConnected` → no-op，默认钉底写超值（不读 `scrollHeight`）。
+  `initBlockFollow` 给 `.advisor-content` 挂 `wheel` / `touchmove` / `pointerdown`（手势标记）+ `scroll`（passive）监听维护 `内容区._pinFollow`——**让位三律** = 近底（< 24px）无条件翻真 ∕ 远离底仅凭用户手势门（600ms）翻假 ∕ 非手势位移（复位回波 / 程序写 / 布局）不改旗标；`maybeScrollBlock` 在 rAF 尾逐块应用——`open=false` 或 `!isConnected` → no-op，默认钉底写超值（不读 `scrollHeight`）。
+  **应用时机契约在核**——端侧遗漏应用点 = **违约缺陷**（应用点清单单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-8：追加后 ∕ 挂载后 ∕ 帧尾复核）。
+  **键盘位移**（键盘滚动——无手势标记）不改旗标（非手势位移同路）；可达性 unverified（需真机核）⇒ **残余登记**（单源 = 核档 §2 KD-RC-8）。**手势窗内以手势为准**（窗内非手势位移按手势期计——有意取舍）。
+- **让位期出口（让位死开关修复 · 2026-09-29——`docs/batches/2026-09-29-subblock-follow-resume.md` · 台账 #603）**：让位期（`_pinFollow === false` ∧ 内容可滚 ∧ 块展开）⇒ 块内**右下 overlay** 钮 `.sub-follow-btn`（核件自持——本端零 JS；样式 = `thincoder-vscode/webview/base.css`（`.activity-new-btn` 邻位））；两态文案 = `sub.follow.new`（让位期间有新行）∕ `sub.follow.bottom`；点击 ⇒ 回底 + 复跟 + 钮退场（清账三路：点击 ∕ 近底复跟 ∕ 元素重建——同区首计数钮对位）；折叠态钮不显（CSS 兜底）。键登记 = `WEBVIEW-PROTOCOL.md` §6.3。
 - **帧驱动**（`thincoder-vscode/webview/streaming.js:28-33` · `:181`；核 `thincoder-render-core/flow/stream.mjs:36`）：`subagentChunk` 追加后把块记入脏集，rAF 体内逐块 `maybeScrollBlock` 后置空；**节流重排条件含脏集**（跳过的帧不得丢跟随）；`maybeScrollBlock` 取件 = `activity.js` 转口（核件单源）。
 - **高度**：`.advisor-block.sub-block .advisor-content` = **60px**（`thincoder-vscode/webview/chat.css:466`）；基础 `.advisor-content` = 100px（`thincoder-vscode/webview/chat.css:318`）。
 - **出生可见性（④ · 本批——新块必看得见）**：
@@ -450,7 +462,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | D-W10 | 终态补块前置 = **合法 id + 合法角色段（`[\w-]+`）+ 回读解析一致**（2026-09-19 收窄：`FAMILY_ROLES` 白名单退场——consult / escalate 纳入；仍否决无条件建块） | 否决无条件建块（未知 role 的块无法解读）· 否决 answered / queued-cancel 补桩（既有裁决） |
 | D-W11 | 频道名 `sub:<role>#<id>` 与 chunk 路由契约**不变** | 否决加代际后缀（连带改频道命名/子标挂载/CLI 面板路由） |
 | D-W12 | 队列上界 200 + 溢出丢最旧 + `ev:subdeliver` 留痕 | 否决无界队列（暗窗口内存无界） |
-| D-W13 | 块级跟滚载体 = **原语入核 · 本端留调用点 ∕ 帧驱动**（核件 `thincoder-render-core/subblocks/block.mjs` `initBlockFollow` / `maybeScrollBlock`——2026-09-29 提核；`activity.js` 持旗标 + wheel/touch 让位 + rAF 帧应用） | 否决内联裸钉底（无让位）· 否决几何派生（新造模式）· 否决 `ui.js` 滚动族泛化（状态模型不符 + `ui.js` 473 行（口径 = `wc -l` / 含末行 · as-of 2026-09-20 实读）越 300 建议线） |
+| D-W13 | 块级跟滚载体 = **原语入核 · 本端留调用点 ∕ 帧驱动**（核件 `thincoder-render-core/subblocks/block.mjs` `initBlockFollow` / `maybeScrollBlock`——2026-09-29 提核） | 否决内联裸钉底（无让位）· 否决几何派生（新造模式）· 否决 `ui.js` 滚动族泛化（状态模型不符 + `ui.js` 473 行（口径 = `wc -l` / 含末行 · as-of 2026-09-20 实读）越 300 建议线） |
 | D-W14 | 高度 60px 作用于 `.sub-block` 全部（live + 冻结同卡面） | 否决仅 `.sub-live`（冻结展开态须同卡面）；advisor 流内块维持 100px |
 | D-W15 | 合并权限卡**携 `promptId` 并入逐项卡族**（单一释放通道 + 同一移除选择器） | 否决单开释放语义（同语义两通道 + 消费者按类分支——`permissionWithdrawn` 已按 id 精确匹配，见 `WEBVIEW-PROTOCOL.md` §4.6 · D-P12） |
 | D-W16 | 忙态门 = **禁用**（非隐藏 / 非不做）；判据 = `_turnState !== "idle"` | 否决隐藏（信息钮隐藏即失去「当前模型」读数）· 否决仅 `running`（留 `susp` 在飞蒸馏落盘窗——`panel-callbacks.mjs:319` 携旧回合快照）+ 与 D-P9 的分工见 §4.2 |
@@ -596,6 +608,8 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 
 ## 变更记录
 
+- 2026-09-29（**stall-indicator 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-stall-indicator.md` §1 · 台账 #568）：新增 **§4.7**（停滞轻显形段——在飞回合静默读数：载体重置点 ∕ 拍收正 1s ∕ 判据 ∕ 边界）；语义单源 = `docs/cli/design/TUI.md` §7.7；段位登记 = `WEBVIEW-PROTOCOL.md` §6.1（本批已补行）。**零协议改 ∕ 零宿主改**。
+
 - 2026-09-25（**config 镜像写收口批 · 坐标 / 措辞收正（fix 轮 2）· eng-designer**——承 `docs/batches/2026-09-25-config-mirror-closeout.md`）：
   §2 / §4 五处 `index.html` 引用收正——四处裸锚补全路径前缀（`:6-11` · `:83→:93` · `:40→:50` · `:20→:30`；其中 `:6-11` 号不变）+ §2 活动区行号收正（`:25→:35`）；
   动因 = 桌面端 renderer 目录新增 `index.html` 使域内 basename 撞名、裸锚悬空（doc-check 回归）。**零新语义**。
@@ -705,3 +719,9 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-09-28（**账本可靠批 · 报告面收正轮 · eng-designer**）：§3 文件表 `chat-messages.js` 读数 **234 ⇒ 238**（`wc -l`，实读 2026-09-28——LEDGER-RELIABILITY 批 `ledger` 捕获点 +1）· §4 会话标题条「异常清 ⇒ 注记消失」句收正为**两腿**（`scene` 腿 = 现场清 ⇒ 消失（零历史态）∥ `refused` 腿 = 核本进程累计 ⇒ 在场至重启（有界）；单源 = 核 `ledgerHealth(cwd)`）。零语义（读数刷新 / 口径收正）。
 - 2026-09-29（**子 agent 块跟滚提核随动 · eng-designer**——承 `docs/batches/2026-09-28-desktop-subblock-follow.md` §2 · 台账 #518）：§5.5 内层 ∕ 帧驱动两条与 §3 `activity.js` 行收正——块级跟滚原语入核（`thincoder-render-core/subblocks/block.mjs`；本端 = 调用点 + 转口）；实现单源随迁、**行为零变**（纯搬移）。明细 = 批档 §2。
 - 2026-09-29（**子 agent 块跟滚批 · 修复轮（评审轮 1 · 发现 5）· eng-designer**）：§3 `activity.js` 行行数读数收正（450 ⇒ **190**——R2 提核后实读；本批随提核改指 ⇒ ≈176；撤「越 300」句）；**D-W13** 载体句收正为「**原语入核 · 本端留调用点 ∕ 帧驱动**」（与 §5.5 两条自洽；被否候选面不动）。明细 = 批档 §2 修复轮。
+- 2026-09-29（**parity-b1-vsc-core 批 · 收口轮 · eng-coder**——承批档 `docs/batches/2026-09-29-parity-b1-vsc-core.md` §2.9）：**挂起 ∕ 循环接线句收正**——§1 `agent.mjs`（agent 循环）⇒ `panel-turn-loop.mjs`（回合循环 host 包装——核 `runAgent` 改接）；
+  §3 本端接线行 `suspension.mjs`（挂起驱动 ⇒ 挂起驱动装配——核 `startSuspension`）；§5.1 消化回收 / §5.2 存活投影 / §5.2 心跳射程三处 `suspension.mjs` 坐标随取核重锚（`:95-101 ⇒ :112-119` · `:131-148 ⇒ :77-106` · `:140-159 ⇒ :77-106`）。**零新语义**（端接线事实收正）。
+
+- 2026-09-29（**desktop-residuals-sweep 批 · 波 D（非冻结档面）· eng-designer**——承 `docs/batches/2026-09-29-desktop-residuals-sweep.md` §2 · 台账 #518②）：D-W13 括注提核前残句（`activity.js` 持旗标 + wheel/touch 让位 + rAF 帧应用）删除——与 §5.5 ∕ KD-RC-8 自洽。**零新语义**。
+- 2026-09-29（**子 agent 块跟滚让位修复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-subblock-follow-resume.md` §2 · 台账 #603）：§5.5 **内层跟滚条收正**（让位三律——近底无条件翻真 ∕ 手势门（600ms）翻假 ∕ 非手势位移不改旗标）+ 增**让位期出口条**（`.sub-follow-btn`——核件自持，本端零 JS；两态词键 `sub.follow.new` ∕ `sub.follow.bottom`）；键登记同轮 = `WEBVIEW-PROTOCOL.md` §6.3。明细 = 批档 §2。
+- 2026-09-29（**parity-b10-ui 批 · W6 文档随动轮 · eng-designer**——承 `docs/batches/2026-09-29-parity-b10-ui.md` §2.7 文档随动表；实施依据 = B7 2a 换接 rc 单源）：§5.3 键构造 ∕ 投递口三处坐标按盘收正（`panel-subagent-relay.mjs:130 ⇒ :139`（内容面键 ∕ 实据两处）· `:143-155 ⇒ :167-181`（`postSubagentEvent`）· `:109-111 ⇒ :124-126`（`emitToolPanel`））+ 键构形句收正（构形单源 = rc `relaySubContentChunk`——端侧由 chunk `role` / `id` 重导）。**零新语义**（坐标随动）。明细 = 批档 §2。

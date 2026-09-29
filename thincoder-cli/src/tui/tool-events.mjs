@@ -101,6 +101,7 @@ export function buildToolCallbacks(deps) {
       if (routeSubToken(state, t, scheduleRender)) return
       ensureAssistantLabel()
       state.streaming = appendCapped(state.streaming, t, STREAM_CAP_OPTS) // §5.1 STREAM_MAX_CHARS
+      state.lastOutputAt = Date.now() // 停滞轻显形（TUI.md §7.7）：①流式——主文本增量
       scheduleRender()
     },
     onReasoning: (t) => {
@@ -109,6 +110,7 @@ export function buildToolCallbacks(deps) {
       if (routeSubReasoning(state, t, scheduleRender)) return
       ensureAssistantLabel()
       state.reasoning = appendCapped(state.reasoning, t, STREAM_CAP_OPTS) // §5.1 STREAM_MAX_CHARS
+      state.lastOutputAt = Date.now() // 停滞轻显形（TUI.md §7.7）：①流式——推理增量
       scheduleRender()
     },
     onToolCall: (name, args, toolId) => {
@@ -127,6 +129,7 @@ export function buildToolCallbacks(deps) {
       flushStream()
       ensureAssistantLabel()
       state.currentTool = name
+      state.lastOutputAt = Date.now() // 停滞轻显形（TUI.md §7.7）：②工具面——调用（标题行 ∕ 状态栏）
       // Advisor's effective model (resolved once for the status line + inline title below).
       const advModel = name === "advisor" ? (() => { try { return resolveAdvisorProvider(agent).model } catch { return null } })() : null
       // Update status bar with current tool and key arguments for user visibility
@@ -179,6 +182,7 @@ export function buildToolCallbacks(deps) {
     // 签名（普通工具/老回调/错误路径不带 key）。
     onToolResult: (name, result, toolId, subKey) => {
       state.currentTool = null
+      state.lastOutputAt = Date.now() // 停滞轻显形（TUI.md §7.7）：②工具面——结果（含子代理 ∕ escalate ∕ advisor 面同刻）
       // AGENT-LOOP-SUBAGENT.md §6.7 merged family: route per the action recorded at onToolCall (no record = default spawn).
       let subAction = null
       if (name === "subagent") {
@@ -326,6 +330,7 @@ export function buildToolCallbacks(deps) {
       }
       if (!part.text) return
       if (routeSubToolOutput(state, name, part, scheduleRender)) return
+      state.lastOutputAt = Date.now() // 停滞轻显形（TUI.md §7.7）：②工具面——输出流（含 advisor 输出）
       if (name === "advisor") {
         // Accumulate to buffer — formatTables + wrapText in render-conversation
         // handles markdown formatting, same as main agent response.

@@ -97,6 +97,10 @@ export const S = {
   _currentTool: null,  // name of the tool currently executing (CLI status parity)
   _llmCalls: 0,        // LLM calls this turn (CLI turn-count parity)
   _turnStart: null,    // ms timestamp of the current turn (elapsed parity)
+  // 停滞轻显形（WEBVIEW.md §4.7——2026-09-29 批 stall-indicator）：最近一次可见输出事件时刻（三类 =
+  // 流式 ∕ 工具面 ∕ 子代理面；回合起刻 = 初始锚）；读面 = status-bar 静默段（`t("status.quiet")`）。
+  // 语义单源 = `docs/cli/design/TUI.md` §7.7。
+  _lastOutputAt: null,
   // Review-guard / Engineering mode quick-switch state (session-bar buttons;
   // the settings panel has the full advisor configuration).
   _advisorOn: false,

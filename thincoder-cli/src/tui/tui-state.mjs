@@ -40,6 +40,7 @@ export function createTuiState({ cols, rows, agent }) {
     subTasks: {}, // sub-agent activity blocks (docs/cli/design/TUI.md §6.8 D4): { "coder#1": { key, role, model, started, done, doneAt, blocks: [{kind,text}], currentTool, toolArgs, turn, maxTurns, approval, lastError, dropped, blockEpoch, awaitingDigest（AGENT-LOOP-ASYNC-POOL.md §6.8 挂起中间态）, _freezeAt（冻结锚点）, stopped, children: []（SUBAGENT-TAIL：嵌套子代理**守护载体**——内容行并入本块 blocks——subagent-children.mjs） } } — rendered as collapsible in-conversation blocks; persists across turns (blocks are the child activity's ONLY carrier — child tool calls never enter the parent history); bounded by the N2 500-line per-child ring buffer（SUBAGENT-TAIL 单环：内层行同环计数、单载体最旧先行——TUI.md §6）
     currentTool: null, // currently executing tool name (shown in status bar)
     processingStarted: 0, // current turn start time (status bar timer)
+    lastOutputAt: 0, // 停滞轻显形（TUI.md §7.7 · stall-indicator 批）：最近一次可见输出时刻（静默起算——回合起刻为初始锚；0 = 未起算）
     status: "Ready",
     ledger: { marker: null, warn: false, scannedAt: 0 }, // LEDGER-SURFACE（§2.30.3.4）：L1 标记位——ledger-surface 写 / render-frame 读
     queue: [], // 交接残项单容器 [{ text }]（INPUT-LOCK：submit 不再排队——仅释放窗口兜底/挂起中止残余——回合尾队列循环续发，至多一条）

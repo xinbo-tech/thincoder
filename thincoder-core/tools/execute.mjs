@@ -28,6 +28,7 @@ import { spawn } from "node:child_process"
 import { resolve } from "node:path"
 import { DESC } from "./shared.mjs"
 import { killProcessTree } from "./process-tree.mjs"
+import { nodeChildEnv } from "./node-child.mjs"
 
 const MAX_SCRIPT = 50_000
 const MAX_OUTPUT = 50_000
@@ -83,6 +84,8 @@ function runNode(childArgs, baseDir, timeoutMs, signal) {
   return new Promise((resolvePromise) => {
     const child = spawn(process.execPath, childArgs, {
       cwd: baseDir,
+      // TOOLS.md §6.18：Electron 宿主 execPath 属 Electron 族二进制——补旗标按 node 语义启动
+      env: nodeChildEnv(),
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
       // POSIX detached → 子进程为组首——killProcessTree 的 -pid 组杀可达孙进程（win 用

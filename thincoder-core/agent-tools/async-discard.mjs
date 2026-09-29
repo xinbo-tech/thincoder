@@ -94,7 +94,11 @@ function discardRole(parent, spec, ctx) {
   if (out.discarded.length === 0) return out // 零丢弃 = 零噪音（零注入 / 零事件）
   spec.pruneQueue?.(parent, ids)
   const list = out.discarded.map(spec.listPhrase).join(", ")
-  pushReal(parent, { role: "user", content: spec.reminder(out.discarded.length, escapeXml(list)) })
+  // 注入面（#94 载体两形吸收）：agent 形（run-stages ∕ 挂起中止接线点——`parent.history` 在）走
+  // `pushReal`（机器 + 人读双线）；**history 数组本体形**（VSC 挂起载体——池挂数组）无注入目标 ⇒
+  // 跳过（与对侧 VSC copy 的 `parent?.history` 守卫同判；§6.20.1「carrier 形无注入目标」先例）
+  // ——墓碑与 `ev:discarded` 照发，仅模型可见提醒缺席（数组形无人读线可达面）。
+  if (parent?.history) pushReal(parent, { role: "user", content: spec.reminder(out.discarded.length, escapeXml(list)) })
   logEvent("ev:discarded", { n: out.discarded.length, ids: out.discarded.map((d) => `${d.role}#${d.id}`).join(", ") })
   return out
 }

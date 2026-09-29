@@ -23,7 +23,7 @@
 import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { configDir } from "./config.mjs"
-import { normalizeCwd, getSessionId, END, manifestPath, writeSessionFile } from "./session-slots.mjs"
+import { normalizeCwd, getSessionId, sessionEnd, manifestPath, writeSessionFile } from "./session-slots.mjs"
 
 /** 认领租约（§4.4.2）：30 min——同目标再写 / 目标被已有认领覆盖 ⇒ `expiresAt = now + 本值`。 */
 export const CLAIM_TTL_MS = 30 * 60 * 1000
@@ -175,7 +175,7 @@ export function flushPeerClaims(agent, now = claimsNow()) {
     const payload = { ...base }
     if (payload.sessionId === undefined) payload.sessionId = sessionId
     if (payload.pid === undefined) payload.pid = process.pid
-    if (payload.end === undefined) payload.end = END
+    if (payload.end === undefined) payload.end = sessionEnd()
     if (payload.cwd === undefined) payload.cwd = normalizeCwd(cwd)
     payload.claims = claims
     payload.claimsUpdatedAt = now

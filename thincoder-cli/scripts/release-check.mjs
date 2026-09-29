@@ -1,12 +1,17 @@
 /**
  * release-check.mjs — 发版前一键检查（RELEASE.md §1 合并项——2026-09-05）。
- * 顺序：lint（check-syntax）→ 全量测试（test/run.mjs——单元 + 集成 + slow 全跑）。
+ * 顺序：⓪ 核版本存在性预检（registry——RELEASE.md §5.4；对位 VSC publish-all 段 0）→ lint（check-syntax）→ 全量测试（test/run.mjs——单元 + 集成 + slow 全跑）。
  * 痛点修复（0.12.59 发版实测——失败详情被管道过滤吞掉，为看错误跑 3 次全量）：
  * 测试步骤输出巨大（200K+）不全透传——只打印摘要行；失败时**自动提取并打印
  * failing tests 详情段**（✖ 行 + 每个失败错误块 ≤20 行）——迭代不再靠手工重定向。
  * exit code = 最后的失败状态（0 = 全绿可发版）。
  */
-import { spawnSync } from "node:child_process"
+import { execSync, spawnSync } from "node:child_process"
+import { readFileSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")
 
 function run(script, args = [], opts = {}) {
   // shell:false——execPath 直接执行（无 shell 拼接——DEP0190 消除）；路径含空格由 spawnSync 原生处理
@@ -61,6 +66,17 @@ function runTestStep(label, script, note) {
   }
   console.log(`✔ ${label} finished in ${secs}s`)
   return 0
+}
+
+// ── 0. 核版本存在性预检（RELEASE.md §5.4；对位 VSC publish-all 段 0——核先发）──
+const CORE_VERSION = JSON.parse(readFileSync(join(ROOT, "..", "thincoder-core", "package.json"), "utf8")).version
+console.log(`\n▶ ⓪ 核版本存在性预检\n  $ npm view @thincoder/core@${CORE_VERSION} version`)
+try {
+  execSync(`npm view @thincoder/core@${CORE_VERSION} version`, { cwd: ROOT, stdio: "pipe", timeout: 120_000 })
+  console.log(`  ✔ registry 上存在 @thincoder/core@${CORE_VERSION}\n`)
+} catch {
+  console.error(`  ✘ registry 上找不到 @thincoder/core@${CORE_VERSION} —— 核须先发布（RELEASE.md §5.4）`)
+  process.exit(1)
 }
 
 // ── 1. lint ──

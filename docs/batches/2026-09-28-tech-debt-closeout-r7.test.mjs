@@ -70,7 +70,7 @@ test("events: 块面三径 + 切片随动 + 原引用不变式（拆档后经单
   const s3 = m.reduce(s2, { channel: "ev:tool-result", key: "k1", id: "t1", ok: true, result: "ok" })
   assert.equal(s3.blocks[1].status, "done")
   assert.equal(typeof s3.blocks[1].durationMs, "number")
-  const s4 = m.reduce(s3, { channel: "ev:usage", key: "k1", percent: 42, tokens: { prompt: 1, completion: 2, reasoningTokens: 0, cacheHit: 0, cacheMiss: 0 }, timers: { count: 1, expired: 0 } })
+  const s4 = m.reduce(s3, { channel: "ev:usage", key: "k1", ctxPct: 42, usage: { prompt_tokens: 1, completion_tokens: 2, reasoning_tokens: 0, prompt_cache_hit_tokens: 0, prompt_cache_miss_tokens: 0 }, timers: { count: 1, expired: 0 } })
   assert.deepEqual(s4.usage, { k1: 42 })
   assert.deepEqual(s4.tokens.k1, { prompt: 1, completion: 2, reasoningTokens: 0, cacheHit: 0, cacheMiss: 0 })
   assert.deepEqual(s4.timers.k1, { count: 1, expired: 0 })

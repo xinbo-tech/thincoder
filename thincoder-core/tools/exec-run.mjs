@@ -14,8 +14,9 @@
  *   · `run(cmd, args, opts) → Promise<string> | string`——成功给 stdout；
  *   · 失败以 Error reject——`.stdout` / `.stderr` / `.code` 与 `execFileSync` 错误同形
  *     （端侧现形 = 宿主 `runInterruptible`）；
- *   · `opts = { cwd?, timeout?, signal? }`——**默认径忽略 signal**（execFileSync 不可中断，
- *     与现行 CLI 行为逐字同）；注入径自决（如 abort ⇒ 树杀）。
+ *   · `opts = { cwd?, timeout?, signal?, env? }`——**默认径忽略 signal**（execFileSync 不可中断，
+ *     与现行 CLI 行为逐字同）；`env` 缺省（undefined）不设 = 继承（逐字零变），给定则透传
+ *     （Electron 宿主旗标径 = TOOLS.md §6.18）；注入径自决（如 abort ⇒ 树杀）。
  *
  * **可中断执行器上提（R3 · 桌面功能对位批 · #523②）**：`runInterruptible` 自端侧现形
  * （`thincoder-vscode/src/tools/shared.mjs`）**纯搬**落核（零语义改 —— KD-T2）；两端改指核件
@@ -35,10 +36,11 @@ export function configureExecRun(impl) {
 /** 撤销注入（测试与端装配生命周期用——缺省态 = execFileSync 默认径）。 */
 export function resetExecRun() { injected = null }
 
-/** 默认径（CLI 语义——utf8 + timeout + stdio ignore/pipe/pipe；cwd 未给则不设）。 */
+/** 默认径（CLI 语义——utf8 + timeout + stdio ignore/pipe/pipe；cwd ∕ env 未给则不设）。 */
 function defaultRun(cmd, args, opts) {
   const options = { encoding: "utf8", timeout: opts.timeout, stdio: ["ignore", "pipe", "pipe"] }
   if (opts.cwd !== undefined) options.cwd = opts.cwd
+  if (opts.env !== undefined) options.env = opts.env
   return execFileSync(cmd, args, options)
 }
 

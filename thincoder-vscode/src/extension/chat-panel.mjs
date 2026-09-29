@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url"
 import { endProbeWindow } from "./settings.mjs" // F-W19（探针窗口终止）——消费点在 resolveWebviewView/dispose（本档留守面）
 import { loadLocaleStrings } from "../i18n.mjs"
 import { handlePanelMessage, routeUserTurn, _cwd, setProjectFolder, clearProjectOverride, stopLiveHeartbeat } from "./panel-messages.mjs"
+import { createVscNotify } from "./notify.mjs" // parity-b4 W1：完成提示宿主包装（策略 ∕ 词键 ∕ 语言取值在核）
 // queue-visible 批（2026-09-24 · 台账 #249）：队容量单源 = `queued-merge.mjs`（会话载体满队守卫）
 import { QUEUED_MAX_ITEMS } from "./queued-merge.mjs"
 // 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：判据单源 + 提示 + 状态推送
@@ -76,6 +77,7 @@ export class ChatPanel {
     // 首轮 runAgent 经 ensurePanelAgent 建、后续回合复用同一对象（AC1/F1）；会话切换/换项目/
     // dispose 销毁置 null（AC4——六销毁点）——内存态随对象回收，槽文件仍权威。
     this._agent = null
+    this._notifier = createVscNotify(this) // parity-b4 W1：零宿主句柄 ⇒ 无释放点；调用点 `?.` 防御
 
     // Follow-active-file project switching (multi-root): when the setting is on and the
     // active editor's folder differs from the current project, switch automatically.

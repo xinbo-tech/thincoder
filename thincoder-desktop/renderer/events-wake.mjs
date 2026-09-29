@@ -21,7 +21,8 @@ function countOf(value) {
 }
 
 /** `ev:susp`——挂起窗计数切片（按会话 `key` · 同键就地替换 · 首写自种）：载荷 = 核 `backgroundCounts` 直传
- *  四计数（`running` / `queued` / `pending` / `done`）+ `active`（进出两态 —— `active:false` 为退出唯一形态）。
+ *  四计数（`running` / `queued` / `pending` / `done`）+ `active`（进出两态 —— `active:false` 为退出唯一形态）
+ *  + 出窗帧另携 `interrupted`（会话中止事实 —— #554①；转 `freezeAllSubBlocks` 消费 —— 本档零预读）。
  *  消费 = 状态行段 3 挂起句（`renderer/views/statusline.mjs`；`active:false` ⇒ 段回落两态词 —— **禁假造**）。
  *  同键同值 ⇒ **原引用**（零重绘）；`active` 只收严格真；四计数非数 ⇒ 归一 0（不落 `NaN` 入词面）。
  *  **R5（#522②）**：`active:false`（出窗帧）兼走**退出兜底** —— 本键子 agent 块全体归档

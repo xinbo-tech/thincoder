@@ -133,13 +133,13 @@
 > 来源 = `thincoder-vscode/docs/design/PORTABILITY.md`（VSC 产品档·批次二——旧档一字未改、留参照历史）。VSC 端 = 同机制的第二实现面：**同语义同 schema、各自独立实现**（不做 byte-identical、不以任一端产物回改另一端——镜像纪律）；未进核前的独立实现坐标如下。
 > **W4 状态注（2026-09-15）**：VSC 端镜像实现已删——VSC 经 `@thincoder/core/conventions.mjs` 引用（单源；下表坐标 = 迁移前 as-of）。
 > **W15 状态注（2026-09-15）**：VSC 端装配/注入面（i18n 投影 · 提醒转口 · 蒸馏适配 · 事件中继）随 W15 核单源化收口；
-> 本节坐标逐个可达（实核：`agent/tool-gates.mjs:78` 落在 eng-coder 子门注释段 · `:81-84` = eng-coder 子门实体 · `:92` = 父门（门条件）/`:97` = 其 hint 分支 · `agent/run-helpers.mjs:71` = `hasCodeMutations` 体内〔声明 `:70`〕）。
+> 本节坐标逐个可达（实核：`agent/tool-gates.mjs:78` 落在 eng-coder 子门注释段 · `:81-84` = eng-coder 子门实体 · `:92` = 父门（门条件）/`:97` = 其 hint 分支 · `agent/run-helpers.mjs:71` = `hasCodeMutations` 体内〔声明 `:70`〕）。 （迁移期引文——档已迁核）
 
 | 面 | VSC 落点（实核） | 差异注 |
 |---|---|---|
 | 分类裁判（唯一实现） | `thincoder-vscode/src/conventions.mjs:76`（`classifyPath`）· `:85`（`isCodePath`）· `:91`（`isDocPath`）· `:194`（装载面）——W4 已迁核（现体 = `thincoder-core/conventions.mjs`，装载面现体 = `loadProjectDeclaration`） | 与核面同语义（W4 前 = 两份实现、语义同源）——统一方向见 `docs/core/design/CORE-UNIFICATION.md` |
 | 声明面 | `PROJECT-MANIFEST.json` 三族键（与 CLI 同档同 schema：`codePaths` / `index.*Extensions` / `advisor.{docMap,standardsDoc}`；声明语义 = §3.1） | VSC 侧亦不建本仓自用声明（默认判据对本仓即正确——与 CLI 批同口径） |
-| 父侧设计门禁 | `thincoder-vscode/src/agent/tool-gates.mjs:78`（评审前拦截）· `:97`（hint 含未声明指路）——判定经共享谓词 | 门禁载体 = `tool-gates.mjs`（VSC 装配面；CLI 对位 = `thincoder-core/agent/dispatch.mjs:204`） |
+| 父侧设计门禁 | `thincoder-vscode/src/agent/tool-gates.mjs:78`（评审前拦截）· `:97`（hint 含未声明指路）——判定经共享谓词 | 门禁载体 = `tool-gates.mjs`（VSC 装配面；CLI 对位 = `thincoder-core/agent/dispatch.mjs:204`） （迁移期引文——档已迁核） |
 | 设计评审文档门禁 | `thincoder-vscode/src/agent-tools/advisor.mjs:219`–`:228`（`isDocPath`——`docs/` 前缀判据已退役） | 拒绝文案 = 产品约定指路（逐字本体住产品代码，本档不复制——D2） （迁移期引文） |
 | 变更集判据 | `thincoder-vscode/src/agent/run-helpers.mjs:70`（`hasCodeMutations`——`isCodePath` 消费，实核 2026-09-27）；VSC 端 verify / 陈旧判定无本地实现（`thincoder-vscode/src/agent-tools/index.mjs:8` = 核登记册转口——核单源） | 谓词全部换源 `@thincoder/core/conventions.mjs`（W4 已迁核）、不设 re-export（单一裁判纪律两端同构） |
 | 项目上下文发现与注入 | `thincoder-vscode/src/advisor/project-context.mjs:35`（`NO_GUIDE_NOTICE`）· `:39`（`NO_DOC_MAP_NOTICE`）· `:40`（`NO_STANDARDS_NOTICE`）· `:41`（`NO_GIT_NOTICE`）· `:56`（`findProjectRoot`）· `:91`（`injectProjectGuide`）· `:138`（`injectDocumentMap`）· `:176`（`injectProjectStandards`） | `messages.mjs` 注入调用 = `thincoder-vscode/src/advisor/messages.mjs:107`（guide）· `:115`（NO_GIT）· `:155` / `:240`（standards）· `:160`（docMap） |
@@ -148,7 +148,7 @@
 
 **VSC 端消息文案**与 CLI 已交付文本**逐字同文**（`NO_*_NOTICE` 四常量 + 门禁 hint + eng 工具消息 + advisor 拒绝文案——文案与端无关）；逐字本体住产品代码 / 提示词面，本档不复制（D2）。
 
-> **F9 状态注（2026-09-27）**：VSC 父侧门（`thincoder-vscode/src/agent/tool-gates.mjs:89-101`）与变更记账守卫（子门 `:78-81` 不动）均为核分类器消费者——aux 缺省随核自动随动（VSC 端零改）；同判读数 = `thincoder-vscode/test/portability-vsc-classification.test.mjs` T-V22–T-V24（§5 用例表——同判三例）。
+> **F9 状态注（2026-09-27）**：VSC 父侧门（`thincoder-vscode/src/agent/tool-gates.mjs:89-101`）与变更记账守卫（子门 `:78-81` 不动）均为核分类器消费者——aux 缺省随核自动随动（VSC 端零改）；同判读数 = `thincoder-vscode/test/portability-vsc-classification.test.mjs` T-V22–T-V24（§5 用例表——同判三例）。 （迁移期引文——档已迁核）
 
 ### 3.7 F9 缺省辅助面（aux）的消费面核销（2026-09-27）
 
@@ -156,8 +156,8 @@
 
 | # | 消费面（实核 2026-09-27） | aux 缺省前 | aux 缺省后 | 裁定 |
 |---|---|---|---|---|
-| 1 | 父侧门 `thincoder-core/agent/dispatch.mjs:195-217` ∥ `thincoder-vscode/src/agent/tool-gates.mjs:89-101` | 辅助面路径判 code ⇒ 无令牌拒 | 判 aux ⇒ 放行 | **本批目标** |
-| 2 | eng-coder token 门 `dispatch.mjs:172-180` ∥ `tool-gates.mjs:78-81` | 不看路径（角色 + token 判据） | 零变 | 硬要求（F9） |
+| 1 | 父侧门 `thincoder-core/agent/dispatch.mjs:195-217` ∥ `thincoder-vscode/src/agent/tool-gates.mjs:89-101` | 辅助面路径判 code ⇒ 无令牌拒 | 判 aux ⇒ 放行 | **本批目标** （迁移期引文——档已迁核） |
+| 2 | eng-coder token 门 `dispatch.mjs:172-180` ∥ `tool-gates.mjs:78-81` | 不看路径（角色 + token 判据） | 零变 | 硬要求（F9） （迁移期引文——档已迁核） |
 | 3 | verify 代码文件集 `thincoder-core/agent-tools/verify.mjs:191` + 验证声明门 `:222-226` | 辅助面文件计入 ⇒ 索验证声明 + 语法提示 | 不计入 ⇒ 辅助面独立变更落「No code files changed」 | 接受·登记（消解：见上） |
 | 4 | 验证 / 评审推送守卫 `thincoder-core/agent/completion.mjs:77` / `:132`（经 `thincoder-core/advisor/repos.mjs:118-123` `hasCodeMutations`；该两守卫本限非工程模式 · `thincoder-core/agent/completion.mjs:75` / `:123`；VSC 同族守卡 = `thincoder-vscode/src/agent/run-stages.mjs:105` / `:156`） | 辅助面独立变更计入代码 ⇒ 推送 verify / 评审 | 不计入 ⇒ 不推送 | 接受·登记（同 3） |
 | 5 | 评审陈旧判定 `thincoder-core/agent-tools/advisor-settle.mjs:74`（code 评审） | 辅助面写致 stale | 不致 stale | 接受（code 评审判 code 面——辅助面不在其射程） |

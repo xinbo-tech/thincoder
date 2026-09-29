@@ -16,7 +16,8 @@ import { DEFAULTS, configPath, writeConfigAtomic } from "../config.mjs"
 const SENSITIVE_SEGMENT = /(^|[._-])(api[_-]?key|key|token|secret|password|authorization|auth|cookie|credential)($|[._-])/i
 /** 开口键族段判定（headers / env——段名命中 ⇒ 其下全部子键整族遮罩：头名 / 变量名不可枚举） */
 const SENSITIVE_FAMILY = /(^|[._-])(headers|env)($|[._-])/i
-const MASKED = "••••（masked）"
+/** 敏感键遮罩字面（**导出单源**——工具回显 ∕ 桌面 `settings-values.mjs` ∕ VSC `settings.mjs` 三端同源；B10 S13 转 export） */
+export const MASKED = "••••（masked）"
 
 /** #58（hygiene-sweep 批）：谓词/标记导出——CLI `/mcp` 表单现值脱敏同源（`cmd-mcp-form.mjs`）。 */
 export function isSensitiveKey(path) {

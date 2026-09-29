@@ -14,12 +14,15 @@
  *   ⑥ **「对齐第三批」面**（本档）：头行**摘要段**（项 1 —— `→ ` + 核 `formatToolSummary` 直取）+ **轮次段**
  *      （项 14 —— advisor `(round N · model)` 同 VSC `ui.js:104-107` 式）+ 运行期展开（项 3）+ 中止词（项 5）
  *      + 结果区**链接着装 / 委托**（相抵② 渲染半 —— 核 `linkifyPaths` + `data-path` 锚 + 点按 / Enter 出口）。
+ *   ⑦ **就地更新面（更新纪律收核批 —— #605 消）**：`patchToolCard`（帧界 `patch` 档 —— 头行分段刷 ∕ 改动摘要行增替 ∕ 结果区 `appendToolOutput` O(1) 追加；**节点身份不变** —— 跨 chunk 结果区自滚位 ∕ 选区保真）。
  * 文案一律经 `t()`（零硬编码；`+` / `−` 字形住 `renderer/chat.css`）；零 `node:` / 零裸包。
  */
+import { build, clear, text } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 import { capText } from "/rc/lib.mjs"
 import { formatToolSummary } from "/rc/tool-summary.mjs"
 import { linkifyPaths } from "/rc/flow/tool-card.mjs"
+import { appendToolOutput } from "/rc/flow/stream.mjs"
 import { labelNode } from "./chat-text.mjs"
 import { blockKey } from "./chat-stream.mjs"
 
@@ -90,27 +93,31 @@ export function changeTotals(changes) {
   }
 }
 
-/** 工具卡头行：数据串（名称 / 轮次 / 参数摘要）+ 状态词（闭枚举）+ 耗时（两态）+ 摘要段（项 1）——非空才落。
- *  两态：有 `result` ⇒ `button`（可开关控件 + 接线两态）；空 ⇒ 纯展示 `div`（零 toggle 控件）。 */
-function toolHead(block, key, handlers) {
+/** 头行段表（非空段 · 值 = 段文本 —— **一源两用**：建树 `toolHead` ∥ 就地分段刷 `paintHeadRow`；段序 = 建树序）。 */
+function headSegments(block) {
   const word = STATUS_WORD[block?.status]
   const timed = TIMED_STATUS.includes(block?.status) && Number.isFinite(block?.durationMs)
   const summary = hasText(block?.result) ? formatToolSummary(block?.name, block.result) : null
-  const round = roundTag(block)
+  return [
+    { code: "name", value: block?.name },
+    { code: "round", value: roundTag(block) },
+    { code: "args", value: block?.argsSummary },
+    { code: "status", value: word === undefined ? null : t(word) },
+    { code: "time", value: timed ? t("chat.tool.duration", { seconds: (block.durationMs / 1000).toFixed(1) }) : null },
+    // 「对齐第三批」项 1：结果摘要段 —— 字面 = `→ ` + 核 `formatToolSummary` 直取；摘要空 ⇒ 零段（禁假造）
+    { code: "summary", value: hasText(summary) ? `→ ${summary}` : null },
+  ].filter((seg) => hasText(seg.value))
+}
+
+/** 工具卡头行：数据串（名称 / 轮次 / 参数摘要）+ 状态词（闭枚举）+ 耗时（两态）+ 摘要段（项 1）——非空才落。
+ *  两态：有 `result` ⇒ `button`（可开关控件 + 接线两态）；空 ⇒ 纯展示 `div`（零 toggle 控件）。 */
+function toolHead(block, key, handlers) {
   const props = {
     class: "tool-head",
     "data-tool-head": "",
     "data-status": typeof block?.status === "string" ? block.status : undefined,
   }
-  const children = [
-    segNode("name", block?.name),
-    segNode("round", round),
-    segNode("args", block?.argsSummary),
-    segNode("status", word === undefined ? null : t(word)),
-    segNode("time", timed ? t("chat.tool.duration", { seconds: (block.durationMs / 1000).toFixed(1) }) : null),
-    // 「对齐第三批」项 1：结果摘要段 —— 字面 = `→ ` + 核 `formatToolSummary` 直取；摘要空 ⇒ 零段（禁假造）
-    segNode("summary", hasText(summary) ? `→ ${summary}` : null),
-  ]
+  const children = headSegments(block).map((seg) => segNode(seg.code, seg.value))
   if (!hasText(block?.result)) return { tag: "div", props, children }
   return { tag: "button", props: wire({ ...props, "data-action": "chat:tool-toggle" }, withKey(handlers.onToggleTool, key)), children }
 }
@@ -163,14 +170,88 @@ export function toggleExpanded(blocks, id) {
   return next
 }
 
+/** 头行分段刷（就地更新径 —— 不重建头行元素）：`data-status` 直刷；**段码序变**（形变帧：首结果落位 ∕ 收束耗时 / 摘要段出现）⇒ 子节点重建；**同形 ⇒ 逐段值写**（等价 ⇒ 零写）。
+ *  摘要段 = 全量结果派生（`formatToolSummary`）——每帧至多一次（帧界节流；沿 VSC「摘要 = 收束时算」口径）。 */
+function paintHeadRow(head, block) {
+  const status = typeof block?.status === "string" ? block.status : null
+  if (status === null) head.removeAttribute?.("data-status")
+  else head.setAttribute("data-status", status)
+  const want = headSegments(block)
+  const rows = typeof head.querySelectorAll === "function" ? [...head.querySelectorAll("[data-seg]")] : []
+  const sameShape = rows.length === want.length && rows.every((row, idx) => row.getAttribute?.("data-seg") === want[idx].code)
+  if (sameShape) {
+    rows.forEach((row, idx) => { if (row.textContent !== want[idx].value) text(row, want[idx].value) })
+    return
+  }
+  clear(head)
+  for (const seg of want) head.append(build(segNode(seg.code, seg.value)))
+}
+
+/** 工具卡就地更新（帧界 `patch` 档 —— **节点身份不变**：头行分段刷 + 改动摘要行增替 + 结果区 O(1) 追加；
+ *  #605 消 —— 跨 chunk 结果区自滚位 ∕ 选区保真）。结果区三态：
+ *  ① 在场判据（`result` 非空 ∧ 展开态）假 ⇒ 摘；② 首见 ⇒ 建（`_written` 起点）+ 全量落笔；
+ *  ③ 存量 ∧ 运行期 ⇒ 增量追加（`appendToolOutput` —— O(chunk)）；存量 ∧ 已收束 ⇒ **换代全量改写一次**
+ *  （收束文本非流式前缀 —— bash 包装行等；沿 VSC `finishToolCard` 同径，同引用 ⇒ 零写）。
+ *  `key` = 块键（toggle 接线同域 —— `renderer/views/chat-stream.mjs` `blockKey`）。 */
+export function patchToolCard(node, block, key, handlers = {}) {
+  if (!node || typeof node.querySelector !== "function") return node
+  const head = node.querySelector("[data-tool-head]")
+  if (head === null || head === undefined) return node
+  const toggled = typeof head.getAttribute === "function" && head.getAttribute("data-action") === "chat:tool-toggle"
+  if (hasText(block?.result) !== toggled) head.replaceWith(build(toolHead(block, key, handlers)))
+  else paintHeadRow(head, block)
+  // 改动摘要行（收束时出现；内容换代 ⇒ 原位换 —— 无滚动 ∕ 选区面；同 `changes` 引用 ⇒ 零写，沿 `_ledgerLines` 判例）
+  const changes = toolChanges(block)
+  const changesRow = node.querySelector("[data-tool-changes]")
+  if (changes === null) {
+    if (changesRow) changesRow.remove()
+  } else if (changesRow === null || changesRow === undefined || changesRow._changes !== (block?.changes ?? null)) {
+    const fresh = build(changes)
+    fresh._changes = block?.changes ?? null
+    if (changesRow === null || changesRow === undefined) {
+      const body0 = node.querySelector("[data-tool-result]")
+      if (body0 === null || body0 === undefined) node.append(fresh)
+      else node.insertBefore(fresh, body0)
+    } else changesRow.replaceWith(fresh)
+  }
+  // 结果区（#605 判据面 —— 跨 chunk 同一元素：scrollTop ∕ 选区保真）
+  const result = typeof block?.result === "string" ? block.result : ""
+  let body = node.querySelector("[data-tool-result]")
+  if (result === "" || !isExpanded(block)) {
+    if (body) body.remove()
+  } else {
+    if (body === null || body === undefined) {
+      body = build({ tag: "div", props: { class: "tool-result", "data-tool-result": "" }, children: [] })
+      body._written = 0
+      node.append(body)
+    }
+    const written = typeof body._written === "number" ? body._written : body.textContent.length // 建树径：DOM 已持 `capText(result)` ⇒ 起点 = 现读数长
+    if (block?.status !== "running") {
+      if (body._settled !== result) {
+        text(body, capText(result))
+        body._settled = result
+        body._written = result.length
+        body._linked = null // 体换代（重写）⇒ 链接记账复位（尾段 `linkifyResult` 重着）
+      }
+    } else if (result.length > written) {
+      appendToolOutput(body, result.slice(written))
+      body._written = result.length
+    }
+  }
+  linkifyResult(node, block)
+  return node
+}
+
 /** 结果区链接着装（「对齐第三批」相抵② 渲染半 · 帧尾着装幂等）：结果区挂核 `linkifyPaths`（逐文本节点包
- *  `span.file-link`）⇒ 着装面补 `data-path` / `data-line` 锚（值 = 链接盘上路径 —— 核产缺 ⇒ 端侧补；已在 ⇒ 跳过）；
- *  `links` 缺 / 空 ∨ 结果区缺（零体）⇒ 零动作（禁假造）。`linkify` 注入面 = 平 node 直测缝（缺省 = 核件 `linkifyPaths`）。 */
+ *  `span.file-link`）⇒ 着装面补 `data-path` / `data-line` 锚；`links` 缺 / 空 ∨ 结果区缺 ⇒ 零动作（禁假造）。
+ *  **幂等闸**：同一 `links` 引用只着装一次（`body._linked` 记账 —— 核件非幂等：重包会嵌层 `.file-link` ∕ 丢选区）；
+ *  体换代 ⇒ 记账复位。`linkify` 注入面 = 平 node 直测缝（缺省 = 核件 `linkifyPaths`）。 */
 export function linkifyResult(node, block, linkify = linkifyPaths) {
   const links = Array.isArray(block?.links) ? block.links : []
   if (links.length === 0) return node
   const body = typeof node?.querySelector === "function" ? node.querySelector("[data-tool-result]") : null
   if (body === null || body === undefined) return node
+  if (body._linked === links) return node // 同引用 ⇒ 零动作（防嵌层）
   try {
     linkify(body, links)
   } catch (error) {
@@ -188,6 +269,7 @@ export function linkifyResult(node, block, linkify = linkifyPaths) {
     span.setAttribute("data-path", link.path)
     if (typeof link.line === "number" && Number.isFinite(link.line)) span.setAttribute("data-line", String(link.line))
   }
+  body._linked = links // 幂等闸记账（同引用 ⇒ 下次零动作；体换代处清）
   return node
 }
 

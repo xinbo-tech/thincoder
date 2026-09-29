@@ -109,7 +109,7 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 | 双端切片（UTF-16 安全） | `thincoder-vscode/src/agent/run-helpers.mjs:97`（`safeSliceUTF16`）· `:115`（`safeSliceUTF16Tail`） |
 | preview 构造 | `thincoder-vscode/src/agent/run-helpers.mjs:132`（`buildHeadTailPreview`——head + 省略注 + tail 预算） |
 | 落盘 + 写时自清理 | `thincoder-vscode/src/agent/run-helpers.mjs:167`（`offloadToolResult`）· `:86`（`TMP_RETENTION_MS` = 3 天）· `:181`（mtime 清理判定） |
-| 主链路调用点 | `thincoder-vscode/src/agent/execute-tools.mjs:256`（非 read_image 结果统一过落盘守卫） |
+| 主链路调用点 | 核 `thincoder-core/agent/dispatch-run.mjs`（非 read_image 结果统一过落盘守卫——端已取核） |
 | advisor 上限 + 双端截断 | `thincoder-vscode/src/advisor/compaction.mjs:34`（`MAX_RESULT_CHARS` = 64 × 1024）· `thincoder-vscode/src/advisor/truncate.mjs`（`truncateAdvisorResult`——头行 ~60% + 中段注 + 尾行余预算）· 调用 `thincoder-vscode/src/advisor/loop.mjs:266`（`thincoder-core/advisor/run.mjs:19` re-export） |
 | 实时显示同宽 | `thincoder-vscode/src/extension/panel-callbacks.mjs:165`（`onToolResult` `slice(0, 64 * 1024)`） |
 | 历史页工具卡同宽 | `thincoder-vscode/src/extension/panel-session.mjs:195`（tool 卡）· `:199`（tool 结果数组同限） |

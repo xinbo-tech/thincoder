@@ -6,7 +6,7 @@
  *   ① `no-project`（cwd 空 —— 核入口不判 cwd 面；`switch` / `delete` 无此档：cwd 空 ⇒ 核判 `slot-missing`）；
  *   ② `slot-missing`（核回 `null` / `false` 的统一档名；三因 = 非整数槽 / 清单无项 / 数据文件不可读）；
  *   ③ `last-session`（**末项门** —— 「对齐第三批」P12：`delete` 且会话数 ≤ 1 ⇒ 拒；对位 VSC 宿主同门
- *      `thincoder-vscode/src/extension/panel-session.mjs:217-218`；双闸 = 渲染面控件在场判据 + 本门）。
+ *      `thincoder-vscode/src/extension/panel-session.mjs:220-221`；双闸 = 渲染面控件在场判据 + 本门）。
  * 核 `renameSlot` 的 reason 闭集（`invalid-slot|file-missing|parse-failure|mtime-conflict`）**直传**
  * （端层零第二词表）。意外抛**不吞** —— 直传 invoke 拒绝（fail-loud，沿 `config:read` 先例）。
  * 纯逻辑档（零 `electron` 导入 ⇒ 平 node 直测）；`cwd` 取**入参**而非主进程内存态（KD-a：可脱壳直测）。
@@ -57,7 +57,7 @@ export function renameSession(cwd, slot, title) {
 
 /** `session:delete({ slot })`：**末项门**（「对齐第三批」P12 —— `docs/desktop/design/UI.md` §1 本批注 P12 ·
  *  `docs/desktop/design/IPC.md` §2「会话族注」项 5）⇒ 会话数 ≤ 1 拒 `last-session`（动作层判；对位 VSC 宿主
- *  同门 `thincoder-vscode/src/extension/panel-session.mjs:217-218` —— 计数 = 核 `listSlots` 投影长，零算法副本）。
+ *  同门 `thincoder-vscode/src/extension/panel-session.mjs:220-221` —— 计数 = 核 `listSlots` 投影长，零算法副本）。
  *  cwd 空 ⇒ **不入门**（守既有档不对称：恒落 `slot-missing`）。核 `true` ⇒ 删除成立（清单条目 / 槽文件 / 记录存储联动全在核）；`false` ⇒ `slot-missing`。 */
 export function deleteSession(cwd, slot) {
   if (!blank(cwd) && listSlots(cwd).length <= 1) return fail("last-session", cwd)

@@ -1,5 +1,5 @@
 /**
- * ipc-registry.mjs — 通道注册表族（`docs/desktop/design/IPC.md` §2「唯一入册面」）：**三十八项** =
+ * ipc-registry.mjs — 通道注册表族（`docs/desktop/design/IPC.md` §2「唯一入册面」）：**四十五项** =
  * 白名单逐项 → 处理体映射（`HANDLERS` 表）+ 注册序（`registerIpcHandlers`）——**#28 拆点出档**
  * （批档 §2.5「通道注册表族出档」；纯搬零语义改 —— 表 ∕ 注册 ∕ 定序逐行沿出档前 `ipc.mjs`）。
  *
@@ -16,10 +16,12 @@ import {
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
   providerListChannel, providerSaveChannel, providerRemoveChannel, providerVerifyChannel, modelListChannel,
+  providerSetKeyChannel, providerDelKeyChannel, providerModelsChannel, providerSetProxyChannel,
+  modelCatalogChannel,
   settingsAgentChannel, mcpListChannel, mcpSaveChannel, mcpRemoveChannel, configWriteChannel,
   ledgerReadChannel, batchStatusChannel, questionRespond, sessionPrefs, subagentStop, fileOpen,
   sessionFlags, atComplete, sessionGc, sessionIndex, indexBuild, indexStatusChannel,
-  settingsEnvChannel, settingsToolsChannel, mcpToolsChannel,
+  settingsEnvChannel, settingsToolsChannel, mcpToolsChannel, mcpUpdateChannel, mcpReconnectChannel,
 } from "./ipc.mjs"
 
 /** 通道 → 处理体（新增行即新增白名单项，两处同时动）。 */
@@ -41,7 +43,12 @@ const HANDLERS = Object.freeze({
   "provider:save": providerSaveChannel,
   "provider:remove": providerRemoveChannel,
   "provider:verify": providerVerifyChannel,
+  "provider:setKey": providerSetKeyChannel,
+  "provider:delKey": providerDelKeyChannel,
+  "provider:models": providerModelsChannel,
+  "provider:setProxy": providerSetProxyChannel,
   "model:list": modelListChannel,
+  "model:catalog": modelCatalogChannel,
   "settings:agent": settingsAgentChannel,
   "mcp:list": mcpListChannel,
   "mcp:save": mcpSaveChannel,
@@ -62,6 +69,8 @@ const HANDLERS = Object.freeze({
   "settings:env": settingsEnvChannel,
   "settings:tools": settingsToolsChannel,
   "mcp:tools": mcpToolsChannel,
+  "mcp:update": mcpUpdateChannel,
+  "mcp:reconnect": mcpReconnectChannel,
 })
 
 /** 按白名单逐项注册（白名单项无处理体 ⇒ 抛——装配期即知，不静默）。 */

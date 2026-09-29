@@ -1,29 +1,21 @@
 /**
- * timer-watch.mjs — timer 空闲唤醒闩（载体②：CLI 空闲面一次性 deadline 闩）。
+ * timer-watch.mjs — timer 空闲唤醒端面壳（CLI：判据族 + 显示裁 + 核转口）。
  *
- * 机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30（§6.30.2 载体定形 D-TW1 / §6.30.3
- * 门三件 / §6.30.5 跨形态行为表）；显示形态 = `docs/cli/design/TUI.md` §7.6。
- *
- * 形态：**一次性 deadline 闩**——到点自撤 · `unref()` · 单槽武装（重复武装 = 撤旧立新）；
- * **非** interval 轮询、**非**第二执行引擎（开轮一律经既有回合驱动器 `runAgentTurn`）。形态先例 =
- * `thincoder-cli/src/heap-watch.mjs:41-48`（`timer` 参数注入缝 + `unref`）+ `:12-13`（开关默认开 + 显式关键）。
- *
- * 门（§6.30.3）：① 唤醒源 = `_pendingTimers`（唯一写点 = timer 工具）——本档只读到期件，**不看 history**，
- * 零通用「注入即唤醒」通道；② 成本闸 = 到期批合并一轮 + 出列幂等（`takeExpiredTimers`）——本档不新增预算件；
- * ③ 开关 `agent.timerWake`（默认开；关 ⇒ `sync()` 零注册）。
- *
- * 注入缝（可测性，零真实等待）：`timer` / `clear` / `now`——测试以假实现直驱 `sync()` 与
- * `fireTimerWake`（先例 `thincoder-cli/test/heap-watch.test.mjs`）。
+ * 机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30（闩 ∕ 派发 ∕ 火策略住核
+ * `thincoder-core/agent/timers.mjs`——B3 批改指 = §6.30.16；显示形态 = `docs/cli/design/TUI.md` §7.6）。
+ * 本档零自持闩 ∕ 零判据副本：`createTimerWatch` ∕ `deliverExpiredTimers` ∕ `fireTimerWake` = 核转口
+ * （签名与返回零变——存量批测冻结面）· `timerWakeEnabled` = 核 re-export；注入缝：`timer` / `clear` / `now`（可测性 · 零真实等待）。
  */
-import { pendingTimerDeadline, takeExpiredTimers, injectTimerReminders } from "@thincoder/core/agent/timers.mjs"
+import {
+  createTimerWatch as coreCreateTimerWatch,
+  deliverExpiredTimers as coreDeliverExpiredTimers,
+  fireTimerWake as coreFireTimerWake,
+  timerWakeEnabled,
+} from "@thincoder/core/agent/timers.mjs"
 import { C } from "./ansi.mjs"
 import { REMINDER_CAP } from "./tool-display.mjs"
 
-/** 开关判据（§6.30.3 门三件③ D-TW5）：默认开——只有显式 `false` 才关（键 `agent.timerWake`；
- *  与 `diagnostics.heapWatch` 同口径：`!== false`）。 */
-export function timerWakeEnabled(agent) {
-  return agent?.config?.agent?.timerWake !== false
-}
+export { timerWakeEnabled } // 判据单源转口（§6.30.3 门三件③ D-TW5）：默认开——只有显式 `false` 才关（键 `agent.timerWake`）
 
 /** 「唤醒会武装」判据（`docs/cli/design/TUI.md` §7.1 awaiting 行除外 / §7.2 置位谓词）：主 agent 在途 timer
  *  非空 ∧ 开关开 ⇒ 自动续跑在途（不计 attention / 闩会在回合链尾武装）。 */
@@ -38,41 +30,16 @@ export function reminderDisplay(text) {
   return lines.length > REMINDER_CAP ? lines.slice(0, REMINDER_CAP).join("\n") + "\n…" : text
 }
 
-/** 到期批送达（两路共用：空闲闩 fire ∥ 挂起窗第三兑现态）：出列（幂等）→ 注入历史 → 触发落流逐条。
- *  返回送达条数（0 = 无到期项——零注入零行）。`pushLine` 自带渲染（conversation-writer）。 */
+/** 到期批送达（两路共用：空闲闩 fire ∥ 挂起窗第三兑现态）：核派发（出列幂等 → 注入历史）+ `onLine` 落流（显示裁 `reminderDisplay`）；返回送达条数（0 = 无到期项——零注入零行）。 */
 export function deliverExpiredTimers(ctx, now = Date.now()) {
   const { agent, pushLine } = ctx
-  const lines = injectTimerReminders(agent, takeExpiredTimers(agent, now))
-  for (const line of lines) pushLine(reminderDisplay(line), C.warn)
-  return lines.length
+  return coreDeliverExpiredTimers(agent, { now, onLine: (line) => pushLine(reminderDisplay(line), C.warn) }).length
 }
 
-/**
- * 一次性 deadline 闩（单槽）。`sync()` = 按当前在途最近到期时点（重）武装：无在途 / 开关关 ⇒ 撤旧零注册。
- * @param {object} p.agent 主 agent（读 `_pendingTimers` + 开关）
- * @param {Function} p.onFire 到点回调（生产 = `fireTimerWake`；测试 = 假实现）
- * @param {Function} [p.timer] 注入缝——默认 `setTimeout`
- * @param {Function} [p.clear] 注入缝——默认 `clearTimeout`
- * @param {Function} [p.now] 注入缝——默认 `Date.now`
- * @returns {{ sync: Function, disarm: Function }}
- */
+/** 一次性 deadline 闩转口（KD-B3-1 · 签名零变）：`agent` 缝 ⇒ 核 `{getAgent: () => agent}` **冻结捕获**（与改前
+ *  逐字同判——`turnCtx.agent` 实读零写点）；闩体全责 = 核 `createTimerWatch`（武装 ∕ 到点自撤 ∕ 重臂撤旧 ∕ 开关关零注册）。 */
 export function createTimerWatch({ agent, onFire, timer = setTimeout, clear = clearTimeout, now = Date.now } = {}) {
-  let handle = null
-  const disarm = () => {
-    const h = handle
-    handle = null
-    if (h !== null) { try { clear(h) } catch { /* 已触发 / 不可清——尽力面（同 heap-watch） */ } }
-  }
-  const sync = () => {
-    const deadline = timerWakeEnabled(agent) ? pendingTimerDeadline(agent) : null
-    if (deadline == null) { disarm(); return null } // 无在途 / 开关关——撤旧，零注册
-    disarm() // 单槽：重复武装 = 撤旧立新（延迟按最近到期重算）
-    const delay = Math.max(0, deadline - now())
-    handle = timer(() => { handle = null; onFire?.() }, delay)
-    try { handle?.unref?.() } catch { /* unref 失败不阻断（一次性命令自然退出） */ }
-    return delay
-  }
-  return { sync, disarm }
+  return coreCreateTimerWatch({ getAgent: () => agent, onFire, timer, clear, now })
 }
 
 /** 用户自发模态判据（#448① · KD-6——单源：火面抑制 ∥「关闭后补评估」两处同谓词）：picker ∕ wizard
@@ -82,19 +49,16 @@ export function modalOpen(state) {
 }
 
 /**
- * 空闲闩触发（§6.30.3 开轮两处①）：**非空闲零动作**——回合在飞 / 挂起窗由各自既有路径接管
- * （在飞回合 post-turn 轮询；挂起窗第三兑现态），在途表零触碰（链尾重同步再武装）。
- * **模态期抑制**（#448① KD-6「用户显式交互优先于后台自动轮」）：用户自发模态（picker ∕ wizard）
- * 在场 ⇒ 零送达零开轮（在途 timer 零触碰）；闩已自撤 ⇒ 兑现交**关闭后补评估**（模态关闭点重武装
- * ⇒ 到期件即达——装配面 = `index.mjs` `onModalClose`）。
- * 空闲 ⇒ 到期批送达 + 开 timer 轮（顶层链：`skipSession` 缺省——队列续发 / 挂起入口 / attention 照常）。
- * @returns {Promise<boolean>} 是否开轮
+ * 空闲闩触发（§6.30.3 开轮两处① = 核策略 + 端两缝——B3 改指 §6.30.16）：**非空闲零动作**（processing ∥
+ * suspended ∥ `_suspPending` ∥ `modalOpen`——在途表零触碰，链尾重同步再武装）；**模态期抑制**（#448① KD-6）：
+ * 模态在场 ⇒ 零送达零开轮（兑现交**关闭后补评估**——装配 = `index.mjs` `onModalClose`）；空闲 ⇒ 到期批送达 +
+ * 开 timer 轮（顶层链：`skipSession` 缺省）。@returns {Promise<boolean>} 是否开轮
  */
 export async function fireTimerWake(ctx, { runTurn, now = Date.now } = {}) {
-  const { agent, state } = ctx
-  if (state.processing || state.suspended || state._suspPending) return false
-  if (modalOpen(state)) return false
-  if (deliverExpiredTimers(ctx, now()) === 0) return false
-  await (runTurn ?? ctx.runTurn)("", { autoTurn: true, timerTurn: true })
-  return true
+  const { state } = ctx
+  return coreFireTimerWake({
+    busy: state.processing || state.suspended || state._suspPending || modalOpen(state),
+    deliver: () => deliverExpiredTimers(ctx, now()) > 0,
+    openTurn: () => (runTurn ?? ctx.runTurn)("", { autoTurn: true, timerTurn: true }),
+  })
 }

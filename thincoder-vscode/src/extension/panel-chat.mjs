@@ -143,9 +143,10 @@ async function runPanelChatImpl(panel, opts = {}) {
   try {
 
   // Async distillation mount point (SEND-STALL-DISTILL): the distill promise survives across
-  // turns on the panel (the runAgent-side pending carrier is panel-owned — §11 后 agent 单例
-  // 复用，蒸馏与 agent 生命周期无关，跨回合照常挂载). `pending` is the
-  // previous turn's in-flight distill — the next runAgent awaits it before pushing its input.
+  // turns on the panel — 核承载体 = `agent._pendingDistill`（核 `runAgent` 起点 N1 await）；面板槽
+  // `panel._distillState.pending` 由 `panel-turn-loop.runTurnLoop` 回合末回填（parity-b1 P4-II——
+  // §11 后 agent 单例复用，蒸馏与 agent 生命周期无关，跨回合照常挂载）。`pending` = 上一回合
+  // 在飞蒸馏——本回合先 await 它（下段）。
   panel._distillState ??= { pending: null }
   // One AbortController per panel lifetime — NOT recreated per turn: a rapid second message
   // must not cancel the previous turn's in-flight distill (AC6a). Only panel dispose / session
@@ -157,8 +158,8 @@ async function runPanelChatImpl(panel, opts = {}) {
   // Previous turn's async distillation must land BEFORE this turn loads the lines from disk:
   // runPanelChat rebuilds the history array per turn (activeLines → JSON.parse of the slot),
   // so awaiting inside runAgent alone would shrink the DETACHED previous array and this turn
-  // would start from the stale uncompressed line (AC6a race). The runAgent-side await (N1)
-  // stays for direct callers; here pending is nulled so runAgent sees a no-op.
+  // would start from the stale uncompressed line (AC6a race). 核侧 N1 await 为直呼者保留（本处已
+  // 兑现 ⇒ 核见已结 promise——no-op）。
   const prevDistill = panel._distillState.pending
   if (prevDistill) {
     panel._distillState.pending = null

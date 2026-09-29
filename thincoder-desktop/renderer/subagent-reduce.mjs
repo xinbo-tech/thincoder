@@ -25,7 +25,7 @@ import { appendBlock } from "./store.mjs"
 /** 子 agent 状态闭集（**单源** = `docs/render-core/design/RENDER-CORE.md` §5 token → patch 全表：核 relay 谱
  *  `started` / `queued` / `turn` / `done` / `settled` / `cancelled` —— `⟦ev⟧stopped` ⇒ `cancelled` 先例兼容 ·
  *  `error` 有意不载）；**`approval` = R10 补入**（child permission gate —— 非 relay 谱来路：宿主
- *  `src/main/agent-bridge.mjs:212-216` `onSubagentApproval` ⇒ `ev:subagent { status: "approval", tool }`；
+ *  `src/main/agent-bridge.mjs:261-265` `onSubagentApproval` ⇒ `ev:subagent { status: "approval", tool }`；
  *  核态机支 = `subblocks/state.mjs:190-201`；VSC 对位 = `activity.js:133-136` `applySubagentApproval` ——
  *  白名单漏收则该态桌面永不可见（⏸ ∕ `sub.awaitingApproval` 死面）；表外码 ⇒ **零写**（禁假造 —— 沿池面「表外码零节点」纪律）。 */
 const SUB_STATUS = ["started", "queued", "turn", "done", "settled", "cancelled", "approval"]
@@ -169,7 +169,8 @@ export function resetSubBlocks(state, key) {
 
 /** `subBlocksFreezeAll`（R5 · #522② —— **退出兜底**；VSC `webview/activity.js:141-144` 同义）：挂起窗
  *  退出帧（`ev:susp {active:false}`）⇒ 本键**全体归档** —— live ⇒ 折叠（核 `freezeMeta`；`interrupted`
- *  注记只随载荷真值落 —— 本端出窗载荷无该键 ⇒ 恒零注记，不假造）· 驻留（`awaitingDigest`）⇒ 清驻留 +
+ *  注记只随载荷真值落 —— 出窗帧今携该键（`suspension-drive.mjs` `postSuspEnd` 端帧 · #554①），
+ *  键缺 ∕ 假 ⇒ 恒零注记，不假造）· 驻留（`awaitingDigest`）⇒ 清驻留 +
  *  归档 · 已墓碑（`region:"flow"`）⇒ 不动（`regionOf` 注入 = 桌面区判据：**墓碑外皆「在区」**）。归档入流
  *  单源 = 核效果表 + 本档 `archiveIntoFlow` 派生（与 `onSubagent` 同径 —— 单一实现零副本）。 */
 export function freezeAllSubBlocks(state, ev, now = Date.now()) {

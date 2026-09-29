@@ -53,7 +53,7 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
 - 读 manifest `slotSessions` → 按 sessionId（`{pid}-{ts}-{rand}` 进程级）去重分组 → slots 数组；
 - **一次批量判活**（`batchAlive(pids)`——`thincoder-core/process-probe.mjs:118`，单次 tasklist/ps 全量比对）；探测失败（null）≠ 全死——按「无活伴」降级（不显示幽灵同伴）；
 - self = `sessionId === getSessionId()`（本进程恒活不查）；
-- **端字段**：`probeCmdlines(pids)`（`thincoder-core/process-probe.mjs:168`）一次 exec 拿全部 pid+cmdline，`VSC_END_RE`（extensionHost 族）命中 → `vscode`，其余 → `cli`；失败 → end 缺省；
+- **端字段**：`probeCmdlines(pids)`（`thincoder-core/process-probe.mjs:168`）一次 exec 拿全部 pid+cmdline，`VSC_END_RE`（extensionHost 族）命中 → `vscode`；桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段）命中 → `desktop`；其余 → `cli`〔2026-09-29 parity-b1 收正轮〕；失败 → end 缺省；
 - **惰性缓存（TUI 假死批收正 · 2026-09-18）**：命中判据 = **manifest mtime 未变 ∨ 快照年龄 < `PEER_PROBE_TTL_MS = 5000` ms** ⇒ 直接返回缓存快照（零 exec 零读）；
   缺失 / 损坏 → `[]`（不缓存空结果）；缓存上限 `CACHE_MAX = 64`；快照记 `probedAt`（上次实探时刻）。
   **可测缝（TTL 两侧）**：模块级 `nowFn`（缺省 `Date.now`——经 `_setPeerInstancesTestImpl` 注入、`??` 兜底、测试 finally 恢复）
@@ -68,7 +68,7 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
   同步面仅剩**两处有界同步消费**（同束 `probeOwnersSync`，`SYNC_PROBE_MS` = 2 s 紧界）：① `activeSlot` 冷路径；② 占用判定 `slotOccupancy`（`thincoder-core/session.mjs`，拆分后随 `session-lifecycle.mjs`）。
   两处均带**零探测早退**（粘性早退 / 无属主或本进程属主）——详面 = `SESSION.md` §6.2；测试锚 = 本档「判据（测试层 · F-MI7）」条 ③。
 - **活判定身份校验（本批 · F-MI6 / N-MI6 · 2026-09-16 · 评审 #3 落点澄清）**：身份过滤**不进 `batchAlive`**（保持**纯存在性**——`thincoder-core/peer-domains.mjs` 死文件清理语义零变、**零改**）；过滤落点 = **读面 `peerInstances()`**（存在性结果 × 命令行复核）+ **清理面 `filterDeadOwners`**（详面见下条判据单源）。命令行命中**本产品标记族**才计为活同伴。
-  标记族 = ① CLI 入口族（命令行含 `thincoder.cjs` / `thincoder.mjs` / `thincoder-cli` 路径段）· ② VSC 宿主族（既有 `VSC_END_RE`——extensionHost）；
+  标记族 = ① CLI 入口族（命令行含 `thincoder.cjs` / `thincoder.mjs` / `thincoder-cli` 路径段）· ② VSC 宿主族（既有 `VSC_END_RE`——extensionHost）· ③ 桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段；2026-09-29 parity-b1 收正轮补入）；
   命令**明确可得且不命中** ⇒ 不列为同伴（消除 pid 复用假阳性——台账实测 `docs/TODO.md:27`）；命令探测失败 / 该 pid 缺行 ⇒ **保守保留**（探测失败 ≠ 死；既有降级语义不变）。
 - **判据单源**：身份判据实现住 **`thincoder-core/process-probe.mjs`**——`batchAlive` / `probeCmdlines` / `isProductProc(cmdline)` / `classifyEnd` / `filterDeadOwners`；
   **感知面（读）与陈旧记录清理面（写）调用同一实现**，零第二套标记正则（清理面 = `thincoder-core/session-slots.mjs` `cleanDeadOwners`（as-of 2026-09-18 `:205-219`）（机制面 = `SESSION.md` §6.2）——`isProcessAlive` 之外加身份复核，pid 活 + 身份不符 ⇒ 条目可删）。
@@ -98,16 +98,15 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
 - 测试注入缝：`_setPeerInstancesTestImpl({ aliveFn, cmdlineFn, nowFn })` / `_resetPeerInstancesTestImpl()`（`:48` / `:55`——注入即清缓存；`nowFn` 同批新增——TTL 面见上）。
 - **VSC 镜像面收正（2026-09-18 · init-block 批 · F-MI6）**：端侧 `thincoder-vscode/src/extension/peer-instances.mjs` 判活 / 标记正则 / 批量 cmdline **本地副本删除**（本地副本 = `:39` `batchAlive` · `:74` `classifyEnd` · `:88` `probeCmdlines`）——判据**引核**（经 `@thincoder/core/process-probe.mjs` 引用，单源不变）；
   端侧只留 **END / 命名空间薄壳**；注入缝转口——端侧 `_setAliveProbeForTest` 转注入核缝 `_setProcessProbeTestImpl`（同缝语义——测试免双缝）。
+  **（2026-09-29 parity-b1-vsc-core 收编后现态：端侧整档 = 核单源转口——SWR 同步壳 ∕ 异步对偶 ∕ 预热实现 ∕ 端探针缝名全量退役；见批档 `docs/batches/2026-09-29-parity-b1-vsc-core.md` §2.9 与 §5.P2）**
   验收：既有同伴用例行为零变（引核后同一判据）+ 端侧本地判活 / 标记正则 / cmdline 副本零残留（扫描判据 = 本档「判据（测试层 · F-MI7）」条 ①）。
 - **聚合半段单源（2026-09-25 · peer 收口批 · 台账 #302）**：manifest → 按 sessionId 分组（`groupSlotSessions`——`thincoder-core/peer-instances.mjs:85` **具名导出**）**归核**；端侧**引核**（`thincoder-vscode/src/extension/peer-instances.mjs` 零本地副本）——共享面 = 纯函数分组半段。
-  端壳自持的**壳形**（SWR 快照读 + 异步对偶 / 预热——§3.1「端读面形态与缓存判据」条）零变：共享分组半段 ≠ 委托整面（端 `peerInstances` 仍自持）。
+  端壳自持的**壳形**（SWR 快照读 + 异步对偶 / 预热——§3.1「端读面形态与缓存判据」条）零变：共享分组半段 ≠ 委托整面（端 `peerInstances` 仍自持）。**（2026-09-29 parity-b1-vsc-core 收编后现态：壳形随取核退役——端 `peerInstances` = 核单源转口；`prewarmPeerInstances` = 核缓存预热薄转口）**
   判据：① 结构（机检）= 端档零本地 `groupSlotSessions` 定义 ∧ 具名 import 自核；② 行为（对拍）= 同 manifest（多槽同 sessionId / 非数字槽 / 空 sessionId / pid 不可解析）⇒ 两端分组集合逐字段相等。
-- **端读面形态与缓存判据（2026-09-18 · init-block 批 · 2026-09-25 二态化）**：VSC 侧读形 = **SWR 快照壳**（`thincoder-vscode/src/extension/peer-instances.mjs:148-153`——TTL 到期先返旧快照 + 后台异步重探）+ 启动期异步预热（`:160`）+ 异步对偶（`:156`——工具面 / 预热面）；
+- **端读面形态与缓存判据（2026-09-18 · init-block 批 · 2026-09-25 二态化；2026-09-29 parity-b1 收编后现态 = 核读面单源 · async）**：VSC 侧读形 = **核读面直取**（`@thincoder/core/peer-instances.mjs`——async · mtime ∨ TTL 惰性缓存 · 探针族单源）；原 **SWR 快照壳**（TTL 到期先返旧快照 + 后台异步重探）· 异步对偶 · 端探针缝名随取核**退役**；
   **预热落点（父侧裁定 2026-09-19）**：启动期异步预热的落点 = **panel resolve 面**（键 = **panel cwd**）——对齐 SWR 缓存键；`activate()` 无 per-cwd 键，多根工作区会预热错键。
-  **形态面（非登记项）**：SWR / 预热 / 异步对偶 = 端壳读形自持（N-MI2「各端自持——独立性指行为语义面」射程；同族 = D-MI24「共享半段 ≠ 委托整面」）——**不作端差登记**。
-  **缓存判据差（A9 核查 = ① 不成立 ⇒ 消解路径）**：端缓存命中判据 = TTL 单判据，核 = `mtime ∨ TTL` 双判据（N-MI3 判据句——`docs/core/requirements/MULTI-INSTANCE-COLLAB.md:45`）；
-  ① 端同步读形**非结构性约束**（装配体为 async——`thincoder-vscode/src/agent/setup.mjs:374` `await injectRunContext`；同步签名可改）⇒ 按「端差默认 = 消」——
-  **消解路径 = 端缓存判据并核（补 manifest mtime 子句；读形零变）；到期条件 = peer 面下次触碰**。`N-MI2` lockstep 不受影响——同伴清单**不入**认领 / 占用判定（判定面单源 = 核束 + `ownerState`）。
+  **形态面（非登记项——2026-09-29 收编后为「核读面单源」）**：预热 = 核缓存预热薄转口（`prewarmPeerInstances`——先起一次核读面落缓存）；端壳读形自持面退场（N-MI2「各端自持——独立性指行为语义面」射程内——零端差）。
+  **缓存判据差（2026-09-25 A9 核查 = ① 不成立 ⇒ 消解路径）**：**已消解**（2026-09-29 parity-b1-vsc-core 收编——端读形整档转口核件：核 `mtime ∨ TTL` 双判据单源，端 TTL 单判据差退场；原消解路径「端缓存判据并核」随取核一步到位）。`N-MI2` lockstep 不受影响——同伴清单**不入**认领 / 占用判定（判定面单源 = 核束 + `ownerState`）。
 
 ### 3.2 L1 回合注入（`pushPeerReminder`）
 
@@ -168,8 +167,8 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 > `[peer-collab] ${target} — another live instance (${who}) registered writing it within the last 5 minutes; concurrent edits may overwrite each other. Write not blocked — coordinate before proceeding.`
 
 `who` = 各 `{end} pid={pid}` 以 ", " 连接。无冲突 / 无目标 / 降级 → null（调用方零附加）。
-- **分隔符不属逐字锚**：多行提示的行间分隔符不属逐字契约——核逐行 `\n`（`thincoder-core/peer-domains.mjs:246`）、端块内空行 `\n\n`（`thincoder-vscode/src/extension/peer-domains.mjs` `peerNotes` 块拼接）；单行文案本体不受影响。
-- **字面规范面（2026-09-25 · peer 收口批 · 台账 #291 裁定）**：本字面 = **规范面单源**——核实现（`thincoder-core/peer-domains.mjs:241`）与核测试逐字锁之；**端侧按本字面逐 target 出行**（形态面：行间分隔符各端自持、不入逐字锚——**非端差登记项**；见上条）。
+- **分隔符 = 核形 `\n`（2026-09-29 parity-b1 收编后单源）**：多行提示的行间分隔符不属逐字契约——核逐行 `\n`（`thincoder-core/peer-domains.mjs`）；原端块内空行 `\n\n`（`peerNotes` 块拼接）随取核退场；单行文案本体不受影响。
+- **字面规范面（2026-09-25 · peer 收口批 · 台账 #291 裁定；2026-09-29 parity-b1 收编后现态）**：本字面 = **规范面单源**——核实现（`thincoder-core/peer-domains.mjs`）与核测试逐字锁之；**端侧按本字面逐 target 出行**（形态面：行间分隔符 = 核形 `\n` 单源（2026-09-29 收编——「各端自持」退场）；**非端差登记项**；见上条）。
   **F-MI9 读法**：需求档 F-MI9「仅足迹命中 ⇒ 既有文案零变」的「既有文案」= 本条规范面字面本体——端侧改形 = 聚合单行 → 逐 target（行形态），文案串零变。
   判据：① 结构（机检 · **扫描口径单源 = 本行**）：扫描面 = 核 / 端两包（`thincoder-core/**` · `thincoder-vscode/**`）+ 书写面（`docs/**/design/**` · `docs/**/requirements/**`）排除三面后零命中——
   ⒜ 定义性引用行（本档 §4.3「字面规范面」条内载该字面的判据行——`[peer conflict notice]` 作为被判对象唯此一处被引）· ⒝ 记录面 / 归档面（`docs/batches/**` · `**/_archive/**`）· ⒞ `.thincoder/tmp/**`；② 行为（对拍）= 同（target × 属主集）输入 ⇒ 端 `peerNotes` 足迹行与核 `peerCollabNote` 足迹行**逐行字面相等**（比较按行拆分——分隔符端差不入锚）；③ 多目标 ⇒ 逐 target 各一行（零聚合单行）。
@@ -220,14 +219,14 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 
 #### 4.4.3 认领与落盘时机（D-MI18 / D-MI19）
 
-- **认领触发 = 结构化写工具执行成功**（与足迹同一钩子点：核 `thincoder-core/agent/dispatch.mjs:421-423` · 端 `thincoder-vscode/src/agent/execute-tools.mjs:253-261`）——**零新手工动作**；工程模式各里程碑（批点火 / 实施轮派发 / 写轮）**不新增耦合**：实施轮写文件即自动认领。
+- **认领触发 = 结构化写工具执行成功**（与足迹同一钩子点：核 `thincoder-core/agent/dispatch-run.mjs:65` ∕ `:115`——单源，端已取核）——**零新手工动作**；工程模式各里程碑（批点火 / 实施轮派发 / 写轮）**不新增耦合**：实施轮写文件即自动认领。
 - **落盘节流**：本次写含新目标（不在上次落盘集内）⇒ 即刻整写（原子写原语见 §4.4.1）；否则仅当距上次落盘 ≥ `CLAIM_RENEW_FLUSH_MS = 60 * 1000` ⇒ 续约落盘；其余 **零 IO**。失败容忍（NF2 同型——下次写重试）。
 - **无显式释放面**（D-MI19）：释放只有三条——租约到期 / 属主进程死亡 / 记录被死清理。
-- **落盘门控（测试卫生）**：认领落盘前置「本 cwd 会话 manifest 在场」判据（端侧既有 L3 门同法——`thincoder-vscode/src/agent/execute-tools.mjs:189`）；足迹面零改。
+- **落盘门控（测试卫生）**：认领落盘前置「本 cwd 会话 manifest 在场」判据（核侧 L3 门同法——`thincoder-core/agent/dispatch.mjs`；端已取核）；足迹面零改。
 
 #### 4.4.4 写前命中与软提示升级（D-MI20）
 
-- **钩点** = 与既有 L3 预检同点（核 `thincoder-core/agent/dispatch.mjs:358-359` · 端 `thincoder-vscode/src/agent/execute-tools.mjs:187-195`）——一次聚合扫描同时供两面（零二次扫描）。
+- **钩点** = 与既有 L3 预检同点（核 `thincoder-core/agent/dispatch-run.mjs:52`——单源，端已取核）——一次聚合扫描同时供两面（零二次扫描）。
 - **命中判据** = 目标 ∩ 他实例（同 cwd · self 排除）**未过期认领**（`expiresAt > now` ∧ `pathsOverlap`）。
 - **软提示文案（逐字契约，双端一致）**：
 
@@ -242,7 +241,7 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
   三态（逐字形态）：纯足迹 ⇒ 逐 target 足迹行；纯认领 ⇒ 仅认领行；混合 ⇒ 认领行 + 足迹行（逐 target，互不相叠）。
 - **降级**：聚合失败 / 目录缺失 / 记录损坏 / 探测失败 ⇒ 零提示、零抛错（工具主流程永不受认领面影响）。
 - **零阻断**：认领命中绝不改变工具执行与结果（写照发——D-MI6 不动）。
-- **端同步调用族登记（#298 转档 · 2026-09-29）**：端侧写前 L3 预检 = **同步调用链**（`thincoder-vscode/src/agent/execute-tools.mjs:187-195`——写前 `peerDomains` 同步聚合，即本 §4.4.4 钩点的端半）；2026-09-18 诊断批**未取证实害**；**条件** = 写路径冻结再次被观测到时归批评估（台账 #298 转档核销）。
+- **端同步调用族登记（#298 转档 · 2026-09-29）**：端侧写前 L3 预检 = **同步调用链**（历史观测——原端半档 `thincoder-vscode/src/agent/execute-tools.mjs:187-195` **已迁核**、现盘零命中；现态 = 核 `thincoder-core/agent/dispatch-run.mjs:52` 写前 `peerCollabNote`）；2026-09-18 诊断批**未取证实害**；**条件** = 写路径冻结再现观测归批评估（观测点 = 核写前预检面；台账 #298 转档核销）。 （迁移期引文——档已迁核）
 
 #### 4.4.5 成本与降级（N-MI7）
 
@@ -256,7 +255,7 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 | 核 · 认领逻辑 | `thincoder-core/peer-claims.mjs`（认领存储 / 租约 / 命中判据 / 文案 / 合并写 / 节流 / `nowFn` 与重置缝；peers 路径与 `pathsOverlap` 归口于此） |
 | 核 · 接线 | `thincoder-core/peer-domains.mjs`（`peerCollabNote` 组合认领行 · `recordPeerWrites` 调认领登记 · `flushPeerDomains` 字段级合并写 + `_peerNoted` 首步清空 · 聚合载荷增 `claims`） |
 | 核 · 钩点 | `thincoder-core/agent/dispatch.mjs`（写前 / 写后两处——既有钩子内接线，只换调用行 + 3 行；该档 499 行贴硬限——距 500 余 1 行） |
-| 端 | `thincoder-vscode/src/extension/peer-domains.mjs`（就地扩；落盘若越 300 软线 ⇒ 认领块外提 `thincoder-vscode/src/extension/peer-claims.mjs`）· 钩点 = `thincoder-vscode/src/agent/execute-tools.mjs` · 去重集清空 = `thincoder-vscode/src/agent/run-stages.mjs` |
+| 端 | `thincoder-vscode/src/extension/peer-domains.mjs`（就地扩；落盘若越 300 软线 ⇒ 认领块外提 `thincoder-vscode/src/extension/peer-claims.mjs`）· 钩点 = 核 `thincoder-core/agent/dispatch.mjs` · 去重集清空 = 核 `thincoder-core/agent/run-stages.mjs`（端已取核） |
 | 常量 / 文案锚 | `CLAIM_TTL_MS` · `CLAIM_RENEW_FLUSH_MS` · 认领软提示文案——双端各持副本，**测试对拍等值 / 逐字同串**（N-MI2 各端自持；跨端读取比对形态先例 = `thincoder-vscode/test/prompts-mirror-anchors.test.mjs:40-44`；常量 / 文案同串面 = AC-IC11） |
 
 #### 4.4.7 判据（测试层）
@@ -297,7 +296,7 @@ VSC 侧无此形态（各路径现用现读）。
 |---|---|
 | 感知面 L1/L2 | `thincoder-core/peer-instances.mjs`（`peerInstances` · `peerInstancesTool` · `groupSlotSessions`（具名导出——端侧引核，§3.1） · 测试缝 `:48/:55`）+ **`thincoder-core/process-probe.mjs`（探测与判据单源）**：`batchAlive` / `probeCmdlines` 及其 `*Async` 对偶 · `probeOwnersSync` / `probeOwnersAsync` 束（2026-09-18 增） · `ownerState` / `isProductProc` / `classifyEnd` / `filterDeadOwners` · **`isProcessAlive`（2026-09-18 自 `session-slots.mjs` 移居——单 pid 兼容面，同步有界 2 s）**；陈旧清理面 = `thincoder-core/session-slots.mjs`（`cleanDeadOwners`——探针入参化，零自有 exec） |
 | 域面 L3 | `thincoder-core/peer-domains.mjs`（`HOT_WINDOW_MS:37` · `peerWriteTargets:79` · `peerDomains:175` · `conflicts:186` · `peerCollabNote:214` · `recordPeerWrites:254` · `flushPeerDomains:273` · 测试缝 `:50/:58`；`pathsOverlap` 归口 `thincoder-core/peer-claims.mjs:74`——本档 re-export `:34`） |
-| 意图认领面 | `thincoder-core/peer-claims.mjs`（认领存储 / 租约 / 命中 / 文案 / 合并写 / `nowFn` 缝；peers 路径与 `pathsOverlap` 归口于此）· 接线 = `thincoder-core/peer-domains.mjs` §4.4.6 · 端 = `thincoder-vscode/src/extension/peer-domains.mjs` + `thincoder-vscode/src/extension/peer-claims.mjs`（认领块——越 300 软线外提）+ `thincoder-vscode/src/agent/execute-tools.mjs`（钩点） |
+| 意图认领面 | `thincoder-core/peer-claims.mjs`（认领存储 / 租约 / 命中 / 文案 / 合并写 / `nowFn` 缝；peers 路径与 `pathsOverlap` 归口于此）· 接线 = `thincoder-core/peer-domains.mjs` §4.4.6 · 端 = `thincoder-vscode/src/extension/peer-domains.mjs` + `thincoder-vscode/src/extension/peer-claims.mjs`（认领块——越 300 软线外提）+ 钩点 = 核 `thincoder-core/agent/dispatch.mjs`（端已取核） |
 | L1 注入装配 | `thincoder-core/agent/setup-reminders.mjs`（`pushPeerReminder`）· `thincoder-core/agent/setup.mjs`（注入时序：env-state 后 time 前） |
 | L3 钩子 | `thincoder-core/agent/dispatch.mjs` + `thincoder-core/agent/run-stages.mjs`（写前检测 / 成功记录 / 回合末 flush） |
 | L2 工具装配（CLI） | `thincoder-cli/src/cli/make-agent.mjs` |
@@ -380,6 +379,8 @@ VSC 侧无此形态（各路径现用现读）。
 - 2026-09-18（**TUI 假死修复批 · eng-designer**——承 `docs/batches/2026-09-18-tui-freeze.md` 的 §1）：§3.1 缓存判据收正（mtime ∨ TTL）
   + 探测异步化（`batchAliveAsync` / `probeCmdlinesAsync`，同一注入缝；读面 / `pushPeerReminder` → async）；
   §3.2 补异步形态行；§8 补 D-MI13–D-MI14；判据（身份 / 批量 / 保守保留）与文案零变。
+- 2026-09-29（**微收正（父侧直接执行 · 可 revert）**）：§3.1 端字段 ∕ 标记族两处补 **③ 桌面族**（`DESKTOP_END_RE`——`thincoder-desktop` 路径段；parity-b1 收正轮真机捕获）。零新语义。
+
 - 2026-09-16（**批 1 CORE-DEFECT-FIXES · eng-designer · 含复审修正轮**）：§3.1 补 **F-MI6 / N-MI6 判定句**（身份校验——标记族命中才计活 · 探测失败保守保留 ·
   判据单源 `thincoder-core/process-probe.mjs`）与判据单源行；§8 补 **D-MI9–D-MI12**；体量读数 232 → 238。复审修正轮：§3.1 再补清理面探测**单次批量**形态（复审 #2）
   与标记族**假阴性误删方向**已知局限（复审 #3）；**签名收正**（2026-09-16）：§3.1 清理面 API = `filterDeadOwners(pid, { alive, cmdline })`（随实现同步——参数具名对齐 `thincoder-core/process-probe.mjs`）。
@@ -431,4 +432,7 @@ VSC 侧无此形态（各路径现用现读）。
   全档 `thincoder-core/peer-domains.mjs` 坐标随实施落盘逐锚实读重锚（`recordPeerWrites:256→254` · `flushPeerDomains:275→273` · `peerDomains:177→175` · `conflicts:188→186` · `peerCollabNote:216→214` · 文案行 `:243→241` · 分隔符行 `:248→246`；
   端 `thincoder-vscode/src/extension/peer-domains.mjs` 侧 `:90-111→:90-107` + 头注 `:8-9→:9-10`；§4.4.1 聚合缓存区 `:154-170→:152-168` · 兼容区块 `:111-118→:109-116`）；零漂锚（`:37` / `:79` / `:34` / `:50/:58`）复核实读。**零新语义**（实施后坐标同步）。
 - 2026-09-29（**doc-sync-residuals 批 · 设计面残留收正轮 · eng-designer**——承 `docs/batches/2026-09-28-tech-debt-closeout.md` §5 三登记句 · 台账 #298）：§4.4.4 补**端同步调用族登记**（写前 L3 预检同步链 + 条件句：写路径冻结再现观测 ⇒ 归批评估）。**零新语义**（转档登记）。
+- 2026-09-29（**parity-b1-vsc-core 批 · 收口轮 · eng-coder**——承批档 `docs/batches/2026-09-29-parity-b1-vsc-core.md` §2.9）：**取核后事实收正**——§3.1 镜像面 ∕ 聚合半段单源两 dated 条目补**收编后现态注**（端侧整档 = 核单源转口；SWR 壳 ∕ 异步对偶 ∕ 端探针缝名退役）；
+  §3.1 端读面形态与缓存判据条目改**核读面单源 · async**（缓存判据差「已消解」）；§4.3 分隔符句与字面规范面条目按**核形 `\n` 单源**收正（端块内空行 ∕ 「各端自持」 phrasing 退场）。**机制语义零改**（端差句退场 ∕ 取核事实直落）。
+- 2026-09-29（**doc-sync-residuals 批 · 修正轮（评审 #202 发现 2）· eng-designer**）：§4.4.4 端同步调用族登记句定性收正为历史观测（原端半档已迁核——现盘零命中；现态 = 核 `thincoder-core/agent/dispatch-run.mjs:52` 写前 `peerCollabNote`）；§4.4.3 ∕ §4.4.4 钩点坐标两处同拍重锚（⇒ `thincoder-core/agent/dispatch-run.mjs:65` ∕ `:115` ∕ `:52`）。**零新语义**。
 

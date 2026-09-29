@@ -194,9 +194,11 @@
 | 网络 | `isPrivateHost`（localhost / 内网 / 云元数据 `169.254.169.254`）SSRF 防护；响应体 ≤ 5MB；HTML 转文本（`stripTags` / `htmlToText`） |
 | 文件 | `MAX_READ_LINES = 2000` / `MAX_OUTPUT_CHARS = 200_000`（超限落盘，模型见预览）；`normalizeEOL`（CRLF 统一）；write 前 `autoSyntaxCheck`（JS 文件自动 `node --check`） |
 | lint | `node --check` fast path + 语言级联（tsc / ruff / cargo / go vet）；eslint 级联已删（零依赖）——`scripts/check-syntax.mjs` 替代 |
-| lsp | 按需 spawn LSP server（`process.execPath` 直跑，无 shell），语义级诊断 / 跳转兜底 |
+| lsp | 按需 spawn LSP server（`config.lsp.servers` 的 `command` 直跑，无 shell——`thincoder-core/tools/lsp.mjs:148`），语义级诊断 / 跳转兜底 |
 
 **execute 边界**：纯净 node ESM 子进程，与 bash 同边界——顶层 await / 动态 `import()` / `require()` / `console` / `fetch` / `process` 全可用；**无 import 阻断、无 require 禁、无目录限制、无伪沙箱、无预置全局**（exec-prelude 已退役）。文件能力唯一入口 = 专用工具。超时 SIGKILL 强杀（默认 30s，上限 600s）。
+
+子进程 = **本宿主运行时的 node 语义**——Electron 宿主补 `ELECTRON_RUN_AS_NODE`（单点与消费面 = §6.18）。
 
 ### 6.5 调度与权限（标记语义）
 
@@ -272,7 +274,7 @@ VS Code 端在 extension host 内运行的**端独有增强**（CLI 无对应面
   （abort → resolve(false)/deny，循环不悬挂——接线 = `docs/core/design/AGENT-LOOP.md` §6.18）。**W14 端增量（2026-09-15）**：git 工具动作级只读分类（`isReadonlyAction`）迁入 VSC 装配面 `thincoder-vscode/src/tools/index.mjs`（核 git 工具无此概念）；
   审批层还消费 `configureGitApproval` / `configureEditReceipt` 缝（本批按缺省不覆盖——端审批在工具执行前）。
 - **描述装载面**：两端同源 = 核包 `tool-docs/*.md`（`DESC()` = 核 `loadToolDoc` 单一解析面；CLI 随 U2 / VSC 随 W2 落——VSC 原 `.mjs` 内嵌面已退场；锚替换调用期应用）；24 档随包发布（`.vscodeignore` 不排除 `node_modules/@thincoder/core/**`——打包面 N6 需求侧承载）。
-- **工具面接线（2026-09-20 · 机制层端差批）**：① **派发面 hooks 三调用点**（`thincoder-vscode/src/agent/execute-tools.mjs:176` PreToolUse〔可阻断——阻断结果逐字同核 `thincoder-core/agent/dispatch.mjs:337-338`〕· `:268` PostToolUse · `:288` PostToolUseFailure；机制 = `AGENT-LOOP.md` §6.13 / §6.18）；
+- **工具面接线（2026-09-20 · 机制层端差批）**：① **派发面 hooks 三调用点**（核 `thincoder-core/agent/dispatch.mjs` PreToolUse〔可阻断——阻断结果逐字同核 `:337-338`〕· `thincoder-core/agent/dispatch-run.mjs` PostToolUse ∕ PostToolUseFailure；机制 = `AGENT-LOOP.md` §6.13 / §6.18——端已取核）；
   ② **台账查询两工具入基础集**（`ledger_query` / `ledger_count`——`thincoder-vscode/src/agent/setup.mjs:142-144` 经动态 import 核 `ledger.mjs` 追加、`:165-168` 入 `baseTools` ⇒ 模型面 + 子代装配面同核口径；写命令族本已随核 `assembleFamilyTools` 在端可达）。
 
 ### 6.12 git 工具读面 fail-closed（2026-09-18 · 批 TOOLFACE-FIXES · 条目 ③ · 台账 #55）
@@ -906,12 +908,12 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 | 4 | `thincoder-core/agent/record-results.mjs:150`（`_touchedFiles` + 重建索引） | `touchedPaths(args)` + `[args.path]`；`:148` 二次 `JSON.parse` 无守卫 | **无** |
 | 5 | `thincoder-core/agent.mjs:401`（中断分支记账） | `touchedPaths(args)` + `[args.path]` | 有（try/catch 包体） |
 | 6 | `thincoder-core/peer-domains.mjs:80`（L3 写前查 + 足迹登记） | `touchedPaths(args ?? {})` | **无**（调用本体无零抛兜底） |
-| 7 | `thincoder-vscode/src/agent/tool-gates.mjs:23`（`l3TouchedPaths` 定义——端侧路径提取单源） | `touchedPaths(args ?? {})` + 尾 `.filter`（本批裁定 5 落地后 = 整面转调单源谓词 + `toolName` 参删） | **无** |
-| 8 | `thincoder-vscode/src/agent/execute-tools.mjs:351`（`_touchedFiles` 记账） | `touchedPaths(args)` + `[args?.path]` | **无** |
-| 9 | `thincoder-vscode/src/agent/tool-gates.mjs:90`（工程设计闸） | `touchedPaths(args)` + `[args.path]` | **无** |
+| 7 | `thincoder-vscode/src/agent/tool-gates.mjs:23`（`l3TouchedPaths` 定义——端侧路径提取单源） | `touchedPaths(args ?? {})` + 尾 `.filter`（本批裁定 5 落地后 = 整面转调单源谓词 + `toolName` 参删） （迁移期引文——档已迁核） | **无** |
+| 8 | `thincoder-vscode/src/agent/execute-tools.mjs:351`（`_touchedFiles` 记账） | `touchedPaths(args)` + `[args?.path]` | **无** （迁移期引文——档已迁核） |
+| 9 | `thincoder-vscode/src/agent/tool-gates.mjs:90`（工程设计闸） | `touchedPaths(args)` + `[args.path]` | **无** （迁移期引文——档已迁核） |
 | 10 | `thincoder-vscode/src/agent/rules-face.mjs:103`（作用域规则 JIT） | `touchedPaths(args ?? {})` + `(raw ?? [])` | **无** |
 
-（台账 #327 点名六点 = 2 / 4 / 8 / 9 / 10 + 第 7 点的调用方 `thincoder-vscode/src/agent/execute-tools.mjs:190`；第 6 点为本轮实勘新增同族点。）
+（台账 #327 点名六点 = 2 / 4 / 8 / 9 / 10 + 第 7 点的调用方 `thincoder-vscode/src/agent/execute-tools.mjs:190`；第 6 点为本轮实勘新增同族点。） （迁移期引文——档已迁核）
 
 **裁定（一谓词三面收敛）**：
 
@@ -926,7 +928,7 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 4. **前提机检**：`[]` 零触达语义以「该调用必败」为支撑——以用例固定该前提：`FILE_MUTATORS` 六成员 × 畸形入参（`args = null`；`edit` 的 `edits` 真值非数组）⇒ `execute` **必败** ∧ 目标文件零变更（形态据实施轮先跑读数定——`Error:` 串 ∥ 抛错；判据只取「必败 ∧ 零变更」，形态不参与判定）。
 
 5. **`file_ops` 动作感知入谓词 + 端特例分支清零**（2026-09-25 · 批 single-source-closeout · 台账 #333——**用户裁 15:16「先修正核、再单源化」**）：核 `peer-domains.mjs` 的 `file_ops` 双算特例分支与端 `tool-gates.mjs` 的 `l3TouchedPaths` 本地分支**双删**（两侧整面走谓词；
-   端 `l3TouchedPaths` 的 `toolName` 参数随删——两个调用点（`thincoder-vscode/src/agent/tool-gates.mjs` · `thincoder-vscode/src/agent/execute-tools.mjs`）同步改签名，仓内零测试消费者）。
+   端 `l3TouchedPaths` 的 `toolName` 参数随删——两个调用点（`thincoder-vscode/src/agent/tool-gates.mjs` · `thincoder-vscode/src/agent/execute-tools.mjs`）同步改签名，仓内零测试消费者）。 （迁移期引文——档已迁核）
    **十消费点语义复核**（核 6 / 端 4——逐点清单 = 批档 §2）：行为变仅两处——
    ① 核 #6 `thincoder-core/peer-domains.mjs`（L3 写前查 / 足迹登记）：`copy` 源不再计入写域（本裁定目标面）；
    ② 端 #10 `thincoder-vscode/src/agent/rules-face.mjs`（作用域规则 JIT）：`file_ops` 覆盖面**由死转活**——谓词此前对 `file_ops` 返 `[args.path]`（`file_ops` 无 `path` 参）⇒ 该工具在 `PATH_TOOLS` 内实零候选；本裁定如实登记为行为面变化。
@@ -944,7 +946,7 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 |---|---|---|
 | 谓词 | `thincoder-core/agent/helpers.mjs` | `export function toolTouchPaths(tool, args)` → 恒数组 · 恒零抛 |
 | 核消费 | `thincoder-core/agent/dispatch.mjs` · `thincoder-core/agent/record-results.mjs` · `thincoder-core/agent.mjs` · `thincoder-core/peer-domains.mjs` | 六处替换调用（#1/#3/#5 的旧 try/catch 外壳退休；**#5 现存 try/catch = `JSON.parse` 失败降级——非外壳**） |
-| 端消费 | `thincoder-vscode/src/agent/tool-gates.mjs` · `thincoder-vscode/src/agent/execute-tools.mjs` · `thincoder-vscode/src/agent/rules-face.mjs` | 四处替换调用；`l3TouchedPaths` 整面转调谓词（零本地 `file_ops` 分支——动作感知随核单源） |
+| 端消费 | `thincoder-vscode/src/agent/tool-gates.mjs` · `thincoder-vscode/src/agent/execute-tools.mjs` · `thincoder-vscode/src/agent/rules-face.mjs` | 四处替换调用；`l3TouchedPaths` 整面转调谓词（零本地 `file_ops` 分支——动作感知随核单源） （迁移期引文——档已迁核） |
 | 桥判据 | `thincoder-cli/src/acp/bridge.mjs` | `edit` 路由：`Boolean(args?.edits)` 单点取值，条件与分支同用 |
 
 **登记面判定（桥路由归一 · 裁定 3）**：判 = **纯缺陷修复**（判据未变——桥向核对齐；窄形态 = 畸形入参的 fail-open 面收口）⇒ **零对外契约登记、零 CHANGELOG 行**
@@ -955,6 +957,34 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 **边界（本节不做）**：不改钩子本体语义（`thincoder-core/tools/file.mjs` 零改）· 不改门禁对空路径集的判据（T-22 语义保持）· 不动 `touchedPaths` 契约形状（仍是「工具自报 · 可选钩子」）· 不新增工具面标记 / 配置开关。
 
 > 用例表 / 受影响文件与行数预算 / 验收回指 = 批档 `docs/batches/2026-09-25-guard-scheduler.md` §2（一次性批次材料——本档不重述）。
+
+### 6.18 node 语义子进程启动面（Electron 宿主 · 2026-09-29 · 批 desktop-execute-electron-node · 台账 #602）
+
+**缺口**：核内 spawn `process.execPath` 的隐含前提 = 「execPath 为 node」。桌面宿主主进程 = `electron.exe`（`process.execPath` = Electron 二进制）⇒ 子进程按 Electron 应用启动、不执行代码 ⇒ `execute` 悬挂至超时（实勘 = 批档 `docs/batches/2026-09-29-desktop-execute-electron-node.md` §1）。
+
+**判据与单点（核件新增）**：`thincoder-core/tools/node-child.mjs`（**已落** · 2026-09-29）—— `nodeChildEnv(base = process.env, isElectron = !!process.versions.electron)`：
+
+- `isElectron` 真 ⇒ 返回 `{ ...base, ELECTRON_RUN_AS_NODE: "1" }`（Electron 二进制以 node 语义启动；副本——不改父进程 env）；
+- 假 ⇒ **原样返回 `base`**（同引用——spawn 缺省继承语义，逐字零变）。
+
+判据语义 = 「本进程运行时是 Electron ⇒ `process.execPath` 属 Electron 族二进制」——**运行时能力探测，非端名分支**（三端同判据、同式执行；契约 5「端差以注入表达」（`docs/core/design/CORE-UNIFICATION.md` §2.2）的注入缝承载的是端差值，本项无端差值可注入——被否候选见 §7 D-TO14）。
+已处 node 模式的 Electron 宿主（如 VS Code 扩展宿主——env 携旗标，实证 = `docs/batches/2026-09-25-desktop-impl-3.md:333`）为**同值幂等**。第二参 = 判据注入（机检用缺省参——先例 `_setGitTimeoutForTest` 族）。
+
+**消费点（全量）**：
+
+| # | 消费点 | 接入形 |
+|---|---|---|
+| 1 | `thincoder-core/tools/execute.mjs` `runNode` spawn 选项（`:85`——`env` 行 `:88`） | `env: nodeChildEnv()`——inline（`:227`）∕ scriptFile（`:219`）两径与 `nodeArgs` 直通（只进 args）均经 `runNode`（`:230`）⇒ 单点全覆盖、零旁路 |
+| 2 | `thincoder-core/tools/linter.mjs` `nodeCheckResult`（`:51`，`node --check` 快路径） | `runCommand(process.execPath, ["--check", abs], { timeout, signal, env: nodeChildEnv() })` |
+| 3 | `thincoder-core/tools/exec-run.mjs` `defaultRun`（`:40-45`，承载 2 号） | 补 `opts.env` 透传；注入径 `runInterruptible`（`:60`）本已读 `env` ⇒ 执行面契约收敛为 `{ cwd?, timeout?, signal?, env? }` |
+
+**清扫（execPath 消费点 · 全仓 as-of 2026-09-29）**：产品码消费为 node 语义者**仅核内 2 处**（= 上表 1 / 2 号——本批修复）；CLI 产品面 1 处（TUI 自重启 `wrapped-spawn.mjs:48`——宿主恒 node）与工程 ∕ 测试面 9 档（node 直跑）前提成立、**零动作**；VSC ∕ desktop 产品面 `src/**` 实读**零** `spawn(process.execPath`（VSC 扩展宿主内跑核件 ⇒ 经 1 / 2 号修复受益）。逐处表 = 批档 §2.4。
+
+**邻类（非 execPath——登记，零动作）**：以 PATH 解析 `"node"` 的两处核内点（`thincoder-core/tools/shared.mjs:247` `autoSyntaxCheck` · `thincoder-core/agent-tools/verify.mjs:202` 语法提示）+ 配置驱动外部命令面（`hooks` ∕ `mcp` ∕ `lsp` 的 `command`）——桌面无 PATH-node 场景的语义退化属另立条目面（非本批）。
+
+**边界**：旗标随 env 继承至后代（node 语义传递——同扩展宿主现状）· 不涉审批 ∕ 安全 ∕ schema ∕ 超时树杀语义 · 不覆盖 PATH 外部命令面 · **打包面**：依赖 Electron `RunAsNode` fuse 在线（现仓零 fuses 配置——实读 as-of 2026-09-29：`thincoder-desktop/package.json` 无 `build` 键、无 `electron-builder.*` 配置档）——打包批需登记该前提。
+
+> 用例表 ∕ 受影响文件与行数预算 ∕ 验收回指 = 批档 `docs/batches/2026-09-29-desktop-execute-electron-node.md` §2（一次性批次材料——本档不重述）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -973,6 +1003,7 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 | D-TO11 | 子代面 `question` 过滤 = **装配层按面排除**（depth>0 工具表；单源排除集 + 谓词，住 `thincoder-core/agent/helpers.mjs`——静态表 / 工具本体 / 机械门零改；端侧同款字面归一核单源） | 详见 §6.16。死条目 = 上下文税 + 假可供性；路由指引已在人格档 ⇒ 该通道对子代零信息增益。否决备选：只靠机械门兜底（保留 token 税与假可供性）· 给工具本体加声明式标记（触及工具本体——本批边界零改）· 人格档再写一遍（重复指引违 D2） |
 | D-TO12 | 工具钩子消费 = **单源谓词 + 判据归一**（#327）：`toolTouchPaths` 住 `thincoder-core/agent/helpers.mjs`，两树十处消费点一律调用；ACP 桥 `edit` 路由判据改与核同（真值判）⇒ 同参两通道同归宿 | 详见 §6.17。五份守卫形态 = 下轮漂移源（否决逐点 try/catch）；钩子内抛成形文案会逸出（否决，#325 D-6）；核侧迁就桥 = 弱化容器守卫（否决）；`[]` 零触达语义以「该调用必败」为支撑——归一恢复该前提，而非改判据（否决 #327④ 保守形 `args.path ? [args.path] : []`） |
 | D-TO13 | `file_ops` 动作感知 = **入单源谓词**（`copy` ⇒ 只 `dest`；`move` / `rename` 等 ⇒ `source` + `dest`）+ **端特例分支清零** | 详见 §6.17 裁定 5（台账 #333）。否决备选：① 核向端对齐（端窄形态转正）——单源化只消灭两处漂移、不判规则对错，先让核吃正确规则（用户 2026-09-25 15:16「先修正核、再单源化」）；② 只改设计档字面而谓词不动（核仍登记 `copy` 源 ⇒ 对端假提示不消）；③ 逐消费点各自按动作判别（多份形态 = 下轮漂移源——D-TO12 同旨） |
+| D-TO14 | **node 语义子进程启动面 = 核内单点 `nodeChildEnv`**（`thincoder-core/tools/node-child.mjs`（**已落** · 2026-09-29）——判据 `process.versions.electron`；Electron 宿主补 `ELECTRON_RUN_AS_NODE:"1"`，否则原样 `base`）；消费 = `execute.runNode` ∕ `lint` 快路径（经 `exec-run` `opts.env` 透传） | 详见 §6.18（台账 #602）。否决备选：① 两消费点各自内联判据（重复检测——第二点漏修即复发）· ② 端注入缝 `configureNodeChildEnv`（判据 = 运行时能力、无端差值可注入——新增缝 + 三端接线代价 > 收益）· ③ 直改父进程 `process.env`（污染父进程并殃及后续全部子进程）· ④ 依赖 PATH `node` ∕ 随产物分发 node（不可靠 ∕ 破零依赖）· ⑤ `exec-run` 内按 `cmd === process.execPath` 隐式补 env（对普通命令不可见的分叉） |
 
 ## 8. 不并项与历史沿革
 
@@ -1023,6 +1054,14 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 **边界（本增量不做）**：不做 task 工具本体改动（保留）；不做台账（M2 承接）；不做「归册三选一」替代流程（M10 一并砍）。
 
 ## 变更记录
+
+- 2026-09-29（**desktop-execute-electron-node 批 · 实施收口笔 · 父侧直接执行 · 可 revert**——核件已落）：§6.18 ∕ D-TO14「（拟新增）」字样退场 ＋ §6.18 消费点表 1–3 号坐标按落盘重锚（`execute.mjs:85` ∕ `linter.mjs:51` ∕ `exec-run.mjs:40-45`）。**零新语义**。
+
+- 2026-09-29（**desktop-execute-electron-node 批 · 设计评审 #210 修正轮（§3 轮次 1 · 发现 7）· eng-designer**——承 `docs/batches/2026-09-29-desktop-execute-electron-node.md` §3 轮次 1 · 发现 7 / §2.8）：§6.18 判据段「契约 5」补出处（端差以注入表达 = `docs/core/design/CORE-UNIFICATION.md` §2.2）——消悬空编号。**零新语义**。
+
+- 2026-09-29（**desktop-execute-electron-node 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-desktop-execute-electron-node.md` §1 · 台账 #602）：
+  新增 **§6.18**（node 语义子进程启动面——`nodeChildEnv` 单点 + `execute` ∕ `lint` 两消费点 + `exec-run` `opts.env` 透传）；§6.4 execute 边界句随动半句；
+  §6.4 lsp 行失实收正（`process.execPath` 直跑 ⇒ `config.lsp.servers` 的 `command` 直跑——实读 `thincoder-core/tools/lsp.mjs:148`）。决策 **D-TO14**。
 
 - 2026-09-28（**批 timer-wake-phase2 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-28-timer-wake-phase2.md` §1 · 台账 #446 + #445）：§6.7 `timer` 契约行**支持面句收正**——「空闲 / 挂起窗」的端限定由「CLI 前台 + 挂起窗」改为
   **CLI / VSC / 桌面三端前台（headless 结构性不支持）**，逐格定义回指 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.5；机制 → 同档 §6.30 / §6.30.11（端面接线）。**参数 schema 零变**。

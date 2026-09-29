@@ -34,7 +34,7 @@
  * 文件枚举过滤 + `seq` 原样回携）；本档只留 import + 装配 ∕ 暴露两行（拆分评审结论 = 批档 §2.7 本档行）。
  */
 import { runAgent } from "@thincoder/core/agent.mjs"
-import { historyPercent } from "@thincoder/core/token-window.mjs"
+import { estimateTokens, historyPercent } from "@thincoder/core/token-window.mjs"
 // 会话键语义（`String(slot)` 单源）与端壳同档 —— 键面归一不造第二口径；偏好写面（`writeSlotPrefs`）同档。
 import { slotOfKey, writeSlotPrefs } from "./session-slots.mjs"
 // 五族出档（见档头）：回调桥 / 待决门 / 槽 I/O / 子 agent 面 / 装配面 —— 本档只装配与注入，算法面各归其档。
@@ -98,7 +98,7 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   /** 会话累计令牌表（key → 五键记录 —— R3a：写者 = 桥面 `onUsage`，读面 = 回合尾 `ev:usage` 载荷；`dispose` 随清）。 */
   const usageTally = new Map()
   const tokensOf = (key) => {
-    if (!usageTally.has(key)) usageTally.set(key, { prompt: 0, completion: 0, reasoningTokens: 0, cacheHit: 0, cacheMiss: 0 })
+    if (!usageTally.has(key)) usageTally.set(key, { prompt_tokens: 0, completion_tokens: 0, reasoning_tokens: 0, prompt_cache_hit_tokens: 0, prompt_cache_miss_tokens: 0 })
     return usageTally.get(key)
   }
   /** 装配表清（`dispose` 消费 —— `turn-driver.mjs` 注入面 `forgetKey`）：agents ∕ 在途装配 / 令牌表三面
@@ -138,14 +138,16 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   }
 
   /** 回合尾用量读数（`docs/desktop/design/IPC.md` §1 `ev:usage` 行 —— 产出方 = 宿主回合尾结算）：
-   *  载荷 = `{ key, percent, tokens, timers }` —— `percent` = 核 `historyPercent` 投影（**端侧零重算** · 门 = 有效读数〔数字 ∧ `> 0`〕，
-   *  不假造）；`tokens` = 本键会话累计（桥面 `onUsage` 累加 · CLI 同源映射）· `timers` = 核 `_pendingTimers` 活读（空在途 ⇒ 零值——
-   *  显示面自持「非正 ⇒ 零节点」）。**三径同点调用**：落盘之后、终局事件之前 · **不抛前提** = `agent.history` 恒数组
-   *  （核装配缺省 `thincoder-core/agent.mjs:64` · 接续恒置 `thincoder-core/session-lifecycle.mjs:108`）⇒ 本读数不改结算链。 */
+   *  载荷 = `{ key, ctxPct, ctxTokens, usage, timers }` —— `ctxPct` = 核 `historyPercent` 投影（**端侧零重算** · 门 = 有效读数〔数字 ∧ `> 0`〕，
+   *  不假造）；`ctxTokens` = 核 `estimateTokens(agent.history)` 投影（状态行 ⇒ CLI 补漏批增——与 `ctxPct` 同点产出；
+   *  发门 = `ctxPct` 单判——`ctxTokens` 0 ∕ 缺不抑事件，渲染面自持「非正 ⇒ 尾串缺席」）；`usage` = 本键会话累计（桥面 `onUsage` 累加 ·
+   *  五键 = VSC 键面 · CLI 同源映射）· `timers` = 核 `_pendingTimers` 活读（空在途 ⇒ 零值——显示面自持「非正 ⇒ 零节点」）。
+   *  **三径同点调用**：落盘之后、终局事件之前 · **不抛前提** = `agent.history` 恒数组
+   *  （核装配缺省 `thincoder-core/agent.mjs:54` · 接续恒置 `thincoder-core/session-lifecycle.mjs:113`）⇒ 本读数不改结算链。 */
   function postUsage(key, agent) {
-    const percent = historyPercent(agent?.history ?? [], agent?.provider)
-    if (typeof percent !== "number" || !(percent > 0)) return
-    post("ev:usage", { key, percent, tokens: { ...tokensOf(key) }, timers: pendingTimers(agent) })
+    const ctxPct = historyPercent(agent?.history ?? [], agent?.provider)
+    if (typeof ctxPct !== "number" || !(ctxPct > 0)) return
+    post("ev:usage", { key, ctxPct, ctxTokens: estimateTokens(agent?.history ?? []), usage: { ...tokensOf(key) }, timers: pendingTimers(agent) })
   }
 
   /** 装配 + 装载本键槽：`loadAgentSlot` 在**宿主内**（假 `assemble` 注入同走装载 —— §1.14 ① 的语义面
@@ -202,7 +204,7 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   }
 
   /** 模式位**活值**投影（`docs/desktop/design/IPC.md` §2「模式位投影注」项 2 · 状态栏对齐批）：四布尔逐项 ——
-   *  与 CLI banner 判定同源 = `thincoder-cli/src/tui/render-frame.mjs:221-225`（`planMode` / `autoApprove` /
+   *  与 CLI banner 判定同源 = `thincoder-cli/src/tui/render-frame.mjs:233-236`（`planMode` / `autoApprove` /
    *  `advisor.guard === true` / `agent.engineering === true`，零算法副本）。
    *  **agent 不在场 ⇒ `null`**（禁假造）：页读供面以槽投影兜底（`session-slots.mjs` `slotFlags` —— 合并口径），
    *  调用面按「键缺席 / 零写」处置。 */

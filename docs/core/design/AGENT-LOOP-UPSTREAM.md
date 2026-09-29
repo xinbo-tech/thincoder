@@ -425,11 +425,10 @@ Queue a message on the parent's side; your turn is not interrupted and nothing i
 
 **末行缺口的填充（2026-09-19 VSC 扩面轮）**：表内「未 drain 的 ask」一行的「——」= 诊断时缺口；修法 = 唤醒（核 ask 入队尾调 `wakeAsyncWaiters`——§6.27.12.4 ①）+ 三驱动第 2 步谓词（§6.27.12.4 ① / §6.27.12.12-③）。**VSC 侧等待栓（W1 面）本就在位**（`thincoder-vscode/src/extension/suspension.mjs:190`）——本批只补该面的消费与谓词。
 
-**挂起驱动坐标（核 + 两端）**：核 `thincoder-core/agent/suspension.mjs`（**234 行** · `startSuspension` `:150` · 等待单点 `waitForSettleOrWake` `:116-138`）·
-CLI `thincoder-cli/src/tui/suspension-drive.mjs`（**301 行** · `suspensionSession` `:191` · 等待单点 `:109-132`）·
-VSC `thincoder-vscode/src/extension/suspension.mjs`（**397 行** · `suspensionSession` `:227` · 等待单点 `:163-195`）。
-**核驱动现状 = 无生产消费方**：`startSuspension` 全仓命中仅核档 + `thincoder-core/test/suspension.test.mjs`（CLI / VSC 各自持自有循环）⇒ **核档 = 参考实现**（唯一消费者 = 核测）；挂起面**权威 = 两端驱动**（CLI `thincoder-cli/src/tui/suspension-drive.mjs` ∥ VSC `thincoder-vscode/src/extension/suspension.mjs`——已分叉，**判保留**：结构不对称）；
-核档读者不得据其改端行为（2026-09-20 · 机制层端差批 §2.21 裁定）。
+**挂起驱动坐标（核 + 两端——2026-09-29 收口轮实读）**：核 `thincoder-core/agent/suspension.mjs`（**297 行** · `startSuspension` `:180` · 等待单点 `waitForSettleOrWake` `:135`）·
+CLI `thincoder-cli/src/tui/suspension-drive.mjs`（**211 行** · `suspensionSession` `:137` · 核驱动装配面 + 壳）·
+VSC `thincoder-vscode/src/extension/suspension.mjs`（**291 行** · `suspensionSession` `:193` · 核驱动装配面——核驱动动态装载）。
+**核驱动现状（2026-09-29 · parity-b1-vsc-core 全修收编）**：**挂起面单源 = 核驱动（三端消费）**——CLI ∕ VSC ∕ desktop 皆以 `startSuspension` 为唯一驱动，端差只在装配面（carrier ∕ hooks ∕ 输入缝）。
 
 #### 6.27.12.3 关键发现——唤醒 ≠ 开轮（第二要件）
 
@@ -882,7 +881,7 @@ escalate reports: summarize the merged post-op work — further changes need a u
 
 | # | 决策 | 理由 | 否决备选 |
 |---|---|---|---|
-| D-SL1 | `digest.turnLabelAuto` **退场**（键删除 + `tier` 的 `auto` 值退役） | 开轮因穷尽（`pendingFamiliesNonEmpty` ∥ `upstream`——CLI `:253` / VSC `:307`）⇒ 泛句无生产者；模式可见性另有载体（CLI `AUTO│` 横幅 `thincoder-cli/src/tui/render-frame.mjs:221` / VSC `autoApprove` 广播 `thincoder-vscode/src/extension/panel-session.mjs:127`） | 降兜底（保留 `auto` 档作未知来源回退）——无未知来源、徒留死分支 |
+| D-SL1 | `digest.turnLabelAuto` **退场**（键删除 + `tier` 的 `auto` 值退役） | 开轮因穷尽（`pendingFamiliesNonEmpty` ∥ `upstream`——CLI `:253` / VSC `:307`）⇒ 泛句无生产者；模式可见性另有载体（CLI `AUTO│` 横幅 `thincoder-cli/src/tui/render-frame.mjs:227` / VSC `autoApprove` 广播 `thincoder-vscode/src/extension/panel-session.mjs:127`） | 降兜底（保留 `auto` 档作未知来源回退）——无未知来源、徒留死分支 |
 | D-SL2 | 计数行规则 = `n > 0`（替「非 ask 档」） | 两因同轮时 digest 计数不丢（VSC 亦得 `digest.done` 收尾更新）；两端规则同式 | 按档判（ask 档吞计数——两因同轮信息缺失） |
 | D-SL3 | 携参单源 = **核 `parent-channel.mjs` 新导出**（选择 + 显示串同点） | 选择须走 `carrierField` 吸收（父字段 / 载体别名两形态）；截断 / 归一字面跨端一致（D2） | 两端各自读原始字段（载体形态漏读 ⇒ 标签与 tier 判据分叉）· VSC 自持副本（第二单源） |
 | D-SL4 | 标签字面 = **核容器键**（CLI 亦改读容器——零自持字面） | D2 单源（CLI 现持硬编码字面 = 第二份）；CLI 既有 `t()` 先例（`thincoder-cli/src/tui/suspension-drive.mjs:29` / `:191`） | CLI 保留硬编码（两端逐字漂移面） |
@@ -1011,3 +1010,6 @@ export function upstreamAskLabelVars(carrier) {
 
 - 2026-09-22（**structure-debt 批 · 档面车道 · eng-designer**——承 `docs/batches/2026-09-22-structure-debt.md` §2.5 · 台账 #67）：**建档**——自 `docs/core/design/AGENT-LOOP-SUBAGENT.md` 三分迁出
   §6.27 全族（§6.27.1–§6.27.12.13 + §6.27.8 内两段无编号提示词面文本块——**段零改动**——逐字搬移、节号沿用；全仓档面指针同批改指本档名）。
+- 2026-09-29（**parity-b1-vsc-core 批 · 收口轮 · eng-coder**——承批档 `docs/batches/2026-09-29-parity-b1-vsc-core.md` §2.9）：§6.27.12.2 段尾句（核驱动现状）按**取代句**收正——**挂起面单源 = 核驱动（三端消费）**（端差只在装配面）；同段挂起驱动坐标块按实施后实读刷新（核 **297** ∕ CLI **211** ∕ VSC **291**——含 B1 面 W8 修单）。**机制条文零改**。
+
+- 2026-09-29（**desktop-residuals-sweep 批 · 波 D（非冻结档面）· eng-designer**——承 `docs/batches/2026-09-29-desktop-residuals-sweep.md` §2 · 台账 #535）：D-SL1 行坐标按盘收正（`render-frame.mjs:221 ⇒ 227`——`AUTO│` 横幅）。**零新语义**。

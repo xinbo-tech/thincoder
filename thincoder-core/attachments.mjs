@@ -2,19 +2,19 @@
  * attachments.mjs — 回合附件（粘贴图）族：dataURL 解析 ∕ 临时落盘管线 ∕ 非多模态降级
  * （上提核件 —— 处理流批 R5 · 2026-09-28）。
  *
- * 上提源 = VSC `thincoder-vscode/src/extension/image-handler.mjs`（`parseDataUrl` :34 ·
+ * 上提源（迁移前坐标）= VSC `thincoder-vscode/src/extension/image-handler.mjs`（`parseDataUrl` :34 ·
  * `savePastedImages` :49 · `downgradeNonVisionImages` :109）；预算语义（合计 30MB ∕ 轮 · 溢出项弃后
  * **继续扫**「其余照发」）与配额单位 = 桌面同档 `thincoder-desktop/src/main/attachments.mjs`
  * （15MB ∕ 条 —— 与核 `read_image` 内闸同值同单位：`tools/file.mjs:26` `MAX_IMAGE_BYTES = 15_000_000`，
- * 接纳面不得宽于该闸）。本档 = 单源（消费面 = 桌面 `src/main/attachments.mjs`；VSC 自持副本迁移留后）。
+ * 接纳面不得宽于该闸）。本档 = 单源（消费面 = 桌面 `src/main/attachments.mjs`；VSC 自持副本已随本批（parity-b4）迁移改指本档）。
  * 指引行（`[Attached images: …]`）不迁 —— 单源 = `agent/setup-reminders.mjs:248` `appendImagePointer`（原位）。
  *
- * 与 VSC 自持副本的**在册差异**（双写窗口 · 迁移轮随核收正，逐条）：① 阈单位 —— VSC
- * `15 * 1024 * 1024` 二进制 ∕ 本档十进制（对齐 `read_image` 闸）；② 弃项索引 —— VSC 按**过滤后**
- * 下标命名，本档按**源序**命名（`i` 恒 = 输入序，弃项不重编号）；③ 合计预算闸 —— VSC 无此面
- * （预算语义承桌面契约）；④ 降级成功判据 —— 本档 `out.ok !== true` 严于 VSC 真值判（缝契约 = `ok` 布尔）；
- * ⑤ 清理面 —— 本档不回收（半失败写入的孤儿件无回收面）：桌面 = 逐回合显式清（`cleanupTurn`）·
- * VSC = `offloadToolResult` mtime 扫除兜底（其档头在册）。
+ * 与 VSC 自持副本的在册差异（双写窗口）**收正已毕**（迁移轮 parity-b4 —— 逐条处置见批档 §2.3）：① 阈单位 ∕
+ * ② 弃项索引 ∕ ③ 合计预算闸 ∕ ④ 降级成功判据 = **两端同源单值**（收正方向——VSC 侧本地字面 ∕ 过滤后下标 ∕ 无预算 ∕
+ * 真值判四面随迁移删；VSC 消费本档 `IMAGE_MAX_BYTES` ∕ 源序命名 ∕ `TURN_MAX_BYTES` ∕ `out.ok !== true`）；
+ * ⑤ 清理面 = **保留**（两向皆在册的端侧时序面）：本档不回收（半失败写入的孤儿件无回收面）——桌面 =
+ * 逐回合显式清（`cleanupTurn`）· VSC = `offloadToolResult` mtime 扫除兜底（paste-* 在其扫除面内；
+ * 其档头在册）。
  *
  * 两面 + 两缝：
  *  ① 落盘管线（`savePastedImages`）：逐项解析 ⇒ 预算判 ⇒ 写 `<cwd>/.thincoder/tmp/paste-<id>-<i>.<ext>`
@@ -22,8 +22,8 @@
  *     （`fs = { mkdirSync, writeFileSync }` —— `node:fs` 同名面；本档零 `node:fs`）。
  *  ② 非多模态降级（`downgradeNonVisionImages`）：判据 = 图非空 ∧ 模型在场 ∧ 非多模态
  *     （`isNonVisionModel`）⇒ 读图；成功 ⇒ 描述注文（`[图片 … 描述: …]`）+ 图清空；
- *     失败 ⇒ 原样兜底（不静默丢）。**视觉子代理 spawn 转注入缝**（`visionReader` ——
- *     端侧实现闭包自身上下文：渠道 ∕ cwd ∕ 工态真值）。
+ *     失败 ⇒ 原样兜底（不静默丢）。**视觉子代理 spawn 转注入缝**（`visionReader({ paths, signal })` ——
+ *     缺省实现 = 核 `vision-reader.mjs` `runVisionReader`（桌面径直取）；VSC 经宿主包装注入）。
  */
 import { join } from "node:path"
 import { specForModel } from "./model-specs.mjs"
@@ -55,7 +55,7 @@ export function isNonVisionModel(model) {
 }
 
 /**
- * 落盘管线：dataURL 串列 ⇒ `{ paths, dropped }`（`dropped` = 受理过但未落盘者 —— 零静默判据）。
+ * 落盘管线：dataURL 串列 ⇒ `{ paths, dropped }`（`dropped` = 未落盘者（解析拒 ∕ 超单项阈 ∕ 预算溢出 ∕ 写失败）——零静默判据）。
  * 逐项：解析（表外 ∕ 空载荷 ∕ 超条阈 ⇒ 弃）⇒ 合计预算（`running + size ≤ TURN_MAX_BYTES` 才收，
  * 溢出项弃后**继续扫**）⇒ 写 `<cwd>/.thincoder/tmp/paste-<id>-<i>.<ext>`（`index` = 源序；目录
  * **懒建** —— 零落盘项 ⇒ 零目录）。`fs` = 写面注入缝（`{ mkdirSync(p, {recursive}), writeFileSync(p, buf) }`
@@ -104,8 +104,8 @@ export function savePastedImages(dataUrls, cwd, { fs } = {}) {
 
 /**
  * 非多模态降级（判据 + 结果成形；读图 = 注入缝）：判据 = `images` 非空 ∧ `model` 在场 ∧
- * `isNonVisionModel(model)`。`visionReader({ paths, signal })` ⇒ `{ ok, description }`（端侧实现
- * 闭包自身上下文）；成功 ⇒ 描述注文（`[图片 <路径表> 描述: <描述>]`，正文空 ⇒ 描述独占）+ `images`
+ * `isNonVisionModel(model)`。`visionReader({ paths, signal })` ⇒ `{ ok, description }`（缺省实现 = 核
+ * `vision-reader.mjs` `runVisionReader`；注入实现闭包自身上下文）；成功 ⇒ 描述注文（`[图片 <路径表> 描述: <描述>]`，正文空 ⇒ 描述独占）+ `images`
  * 清空；无返回 ∕ `ok` 非真 ∕ 空描述 ∕ 异常 ⇒ 原样兜底（`{ text, images }` 不动 —— 不静默丢）。
  * `visionReader` 缺 ∕ 形违 ⇒ 抛（fail-loud：降级路径未接线不得静默扮成「原样兜底」）；判据未过
  * ⇒ 早退（缝不检、零调用）。返回 `{ text, images, downgraded }`（成功径 `images` = `undefined`）。

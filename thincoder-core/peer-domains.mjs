@@ -21,7 +21,7 @@
 
 import { statSync, readdirSync, readFileSync, unlinkSync } from "node:fs"
 import { join, resolve } from "node:path"
-import { normalizeCwd, getSessionId, END, writeSessionFile } from "./session-slots.mjs"
+import { normalizeCwd, getSessionId, sessionEnd, writeSessionFile } from "./session-slots.mjs"
 import { batchAlive } from "./peer-instances.mjs"
 import { FILE_MUTATORS, toolTouchPaths } from "./agent/helpers.mjs"
 // 认领面（§4.4）归口 `peer-claims.mjs`；re-export 路径与谓词保既有 import 面（单源不复制）。
@@ -282,7 +282,7 @@ export function flushPeerDomains(agent) {
       ...base,
       sessionId,
       pid: process.pid,
-      end: END,
+      end: sessionEnd(),
       cwd: normalizeCwd(agent.cwd),
       domains: [...set],
       updatedAt: Date.now(),

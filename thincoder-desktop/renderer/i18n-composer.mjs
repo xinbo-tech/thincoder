@@ -8,7 +8,7 @@
  * 六件内取词走核 `i18n.t` —— 端侧经注册面 `setStringsSink(setStrings)` 注入，注册单点 = `renderer/app.mjs`；
  * 本档零装配逻辑，纯词表 —— 合并点仍 = `renderer/i18n.mjs` `HOST_DICT` 两语展开）。
  *
- * 分组（28 键 · 五族，按消费源档）：
+ * 分组（28 键 · 四组，按消费源档）：
  *   ① 提交面 ∕ 输入行（`panel.mjs`：placeholder 三态 + 守卫两词 + 满队 toast）六键；
  *   ② 控件行 ∕ AUTO 确认（`controls.mjs`）五键；
  *   ③ 模型 ∕ 推理两浮层（`model-menu.mjs`）九键（含 footer 三出口 —— 桌面出口映射 = 设置面，见批档 §2.2 A8）；

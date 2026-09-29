@@ -247,7 +247,7 @@
 照抄 README 示例 `"dbPath": "~/.thincoder/memory.db"` 进 config.json 后，`createMemory()` 先 `mkdirSync(dirname(dbPath), { recursive: true })`——
 以 cwd 为基准建**字面量 `~/.thincoder/` 目录树**再在 cwd 开 / 建库。无警告；用户真实 home 库中的存量记忆「消失」（实为换了库），且 cwd 被污染出 `~` 目录树。
 
-**同病四字段与读点**：`memory.dbPath`（schema 开库点 + 调用点）· `memory.projectDir`（七点位 `join(cwd, …)`）· `memory.team.dir`（`teamConfig()` → `ensureClone` / `syncDir` / `commitAndPush`）· `shell`（`thincoder-core/tools/bash.mjs` → `spawn(…, { shell })`——响亮失败，属同病）。
+**同病四字段与读点**：`memory.dbPath`（schema 开库点 + 调用点）· `memory.projectDir`（七点位 `join(cwd, …)`）· `memory.team.dir`（核 `thincoder-core/agent/assemble.mjs` `teamConfig()` → `ensureClone` / `syncDir` / `commitAndPush`）· `shell`（`thincoder-core/tools/bash.mjs` → `spawn(…, { shell })`——响亮失败，属同病）。
 
 **展开器契约**（`thincoder-core/expand-home.mjs`——纯函数、零依赖；`home` 第二参 = 测试注入缝，生产缺省 `homedir()`）：
 

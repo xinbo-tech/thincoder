@@ -15,11 +15,13 @@ import { anyLiveDesignSlot } from "../token-ttl.mjs"
 import { freezeWindowConflict, batchRecordWriteConflict } from "./write-gate.mjs"
 // 门面谓词 ∕ 记账（2026-09-28 拆分外提——见头注）：动作级四谓词 + logToolError 住 ./dispatch-gates.mjs。
 import {
-  logToolError, isSubagentReadonlyAction, isSubagentControlAction,
-  isSubagentConsumeDesignAction, isSubagentEscalateAction,
+  logToolError, isSubagentConsumeDesignAction, isSubagentEscalateAction,
+  readonlyActionOf, controlActionOf, // E1（§2.5）：工具面动作谓词钩子优先 ∕ 核名面谓词回落
 } from "./dispatch-gates.mjs"
 // 单条执行体（2026-09-28 拆分外提——见头注）：runPreparedItem（原 runOne 闭包；本档两处调用点改指）。
 import { runPreparedItem } from "./dispatch-run.mjs"
+// B7 3a：作用域规则 JIT 注入（核单源——`../rules.mjs`；相位一末打点见下方缝注释）。
+import { injectScopedRules } from "../rules.mjs"
 
 /**
  * Two-phase execution:
@@ -53,7 +55,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       continue
     }
 
-    if (agent.planMode && !tool.readonly && !isSubagentReadonlyAction(toolCall.name, args) && !isSubagentControlAction(toolCall.name, args)) {
+    if (agent.planMode && !tool.readonly && !readonlyActionOf(tool, toolCall.name, args) && !controlActionOf(tool, toolCall.name, args)) {
       prepared.push({ toolCall, tool, denied: true, reason: "plan mode" })
       continue
     }
@@ -110,21 +112,25 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
 
     // E（第 11 批·F17/ADVISOR-GUARDS.md §5 E-3d）：D5 冻结窗口写前拦截——设计评审在途（点火 → 结算）期间，
     // 父侧对被审文件集（声明文档集 + 批次档）的写入会被拒绝：在途写使本轮结算 stale——pass 轮
-    // = token 直接丢失（实证：第 10 批 id=20 整轮作废）。工具面 = FILE_MUTATORS（与变更记账
-    // 同集——不记入日志的写面既不判 stale 也不拦）；判据与 reviewIsStale 同源、单一权威源 =
+    // = token 直接丢失（实证：第 10 批 id=20 整轮作废）。工具面 = FILE_MUTATORS ∪ `file_ops`
+    // （E2——冻结腿覆盖面；批次档腿仍 = FILE_MUTATORS：与变更记账同集——不记入日志的写面既不判 stale 也不拦）；判据与 reviewIsStale 同源、单一权威源 =
     // agent/write-gate.mjs 的 freezeWindowConflict（声明文档集腿 = inflightDesignReviewConflict
     // 同 docAbs / 同 normAbs；批次档腿 = run.batchDoc——M4 合流点，仅扫 running 未取消的设计条目）。
     // 位置：只读 / autoApprove 短路之前——审批不得绕过冻结；拒绝 = 可见 denied + 逃生门
     // （先 cancel → 改 → 重发）。
-    if (FILE_MUTATORS.has(toolCall.name)) {
+    if (FILE_MUTATORS.has(toolCall.name) || toolCall.name === "file_ops") {
       // #327：单源谓词（同集合内两处消费共用）；#309 批次档写门与 D5 冻结窗同区、共用同一路径集。
+      // E2（parity-b1 §2.5——缺省取核形）：外门扩 `file_ops`（冻结窗覆盖面与端壳对齐——`file_ops`
+      // 的 move ∕ copy ∕ rename 亦为写面）；**批次档写门判据集不变**（= `FILE_MUTATORS`，file_ops 不入）。
       const absPaths = toolTouchPaths(tool, args)
         .filter((p) => typeof p === "string" && p)
         .map((p) => resolve(agent.cwd, p))
-      const crossBatch = batchRecordWriteConflict(agent, depth, absPaths)
-      if (crossBatch) {
-        prepared.push({ toolCall, tool, denied: true, reason: "cross-batch record write", hint: crossBatch.message })
-        continue
+      if (FILE_MUTATORS.has(toolCall.name)) {
+        const crossBatch = batchRecordWriteConflict(agent, depth, absPaths)
+        if (crossBatch) {
+          prepared.push({ toolCall, tool, denied: true, reason: "cross-batch record write", hint: crossBatch.message })
+          continue
+        }
       }
       const conflict = freezeWindowConflict(agent, absPaths)
       if (conflict) {
@@ -147,7 +153,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // — the exemption never widens what reaches this stage (round4 #3, T-E14).
     // PreToolUse hooks still run below. Non-eng-coder children keep the manual
     // parent ask (human in the loop).
-    if (tool.readonly || isSubagentReadonlyAction(toolCall.name, args) || isSubagentControlAction(toolCall.name, args) || isSubagentConsumeDesignAction(toolCall.name, args) || agent.autoApprove || agent._engTaskAuthorized) {
+    if (tool.readonly || readonlyActionOf(tool, toolCall.name, args) || controlActionOf(tool, toolCall.name, args) || isSubagentConsumeDesignAction(toolCall.name, args) || agent.autoApprove || agent._engTaskAuthorized) {
       if (!(await runHooks("PreToolUse", { agent, toolName: toolCall.name, toolArgs: args }))) {
         prepared.push({ toolCall, tool, denied: true, reason: "blocked by PreToolUse hook" })
         continue
@@ -213,6 +219,13 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       callbacks.onToolCall?.(p.toolCall.name, p.args, p.toolCall.id)
       prepared.push({ toolCall: p.toolCall, tool: p.tool, args: p.args })
     }
+  }
+
+  // ---- B7 3a JIT 缝（相位一末 ∕ 相位二前——原 VSC「派发前」语义；`depth === 0` 门）--------
+  // 作用域规则注入：打点 = `prepared` 非拒项 `{tool, args}`（即将执行集）；注入源 = 本 run 尾块
+  // 读点缓存 `agent._rules.scoped`（核 `prepareRun` 同点写入），去重域 = 会话。子代不注入。
+  if (depth === 0) {
+    injectScopedRules(agent, agent.history, prepared.filter((p) => p.tool && p.args).map(({ tool, args }) => ({ tool, args })))
   }
 
   // ---- Phase 2: order-preserving execution ----

@@ -13,6 +13,7 @@
  */
 import { md } from "../md.mjs"
 import { t as coreT } from "../i18n.mjs"
+import { capText, MAX_TOOL_OUTPUT } from "../lib.mjs"
 
 /** 长回复降频：全量 md() 重渲染限到 ≥50ms 一次（源档常量）。 */
 export const STREAM_RENDER_MIN_MS = 50
@@ -27,6 +28,27 @@ export function paintStreamTarget(el, raw) {
 export function paintReasoningTarget(el, raw) {
   paintStreamTarget(el, raw)
   if (el) el.scrollTop = el.scrollHeight
+}
+
+/** 工具输出 O(1) 追加原语（**更新纪律收核** —— 单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-9；
+ *  逻辑自 VSC `webview/chat-messages.js:77-96` toolOutput 支上提，VSC 改指零行为变更；桌面工具卡结果区消费）：
+ *   ① 占位清：`deps.initial` 给（非 `undefined`）且现读数恒等 ⇒ 清空（首 chunk 落位）；
+ *   ② 追加：`textContent += text`（成本 ∝ 本次 chunk —— 禁 ∝ 累计文本）；
+ *   ③ 截断：超 `MAX_TOOL_OUTPUT` ⇒ `capText` 截断（**注字面 = `capText` 缺省注单源**）+ `_capped` 停收
+ *      （此后零写 —— 截断态幂等）。
+ *  幂等：空串 ∕ 已 `_capped` ⇒ 零写；`el` 缺 ⇒ 直返。返回 `el`（链式 ∕ 读数面）。 */
+export function appendToolOutput(el, text, deps = {}) {
+  if (!el) return el
+  if (deps.initial !== undefined && el.textContent === deps.initial) el.textContent = ""
+  if (el._capped === true) return el
+  const chunk = typeof text === "string" ? text : ""
+  if (chunk === "") return el
+  el.textContent += chunk
+  if (el.textContent.length > MAX_TOOL_OUTPUT) {
+    el.textContent = capText(el.textContent)
+    el._capped = true
+  }
+  return el
 }
 
 /** 建流式重渲器（实例态 = 源档模块级四变量：`_renderScheduled` / `_reasoningDirty` /

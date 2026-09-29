@@ -20,7 +20,7 @@
  */
 import { loadRaw } from "@thincoder/core/config-io.mjs"
 import { loadMcpServers } from "../config-mcp.mjs"
-import { addProviderFlow, removeProviderFlow, setKeyFlow, probeProviderAdmission } from "./provider-flows.mjs"
+import { addProviderFlow, removeProviderFlow, setKeyFlow, probeProviderAdmission, ui } from "./provider-flows.mjs"
 import { handleAddProvider as persistAddProvider, handleRemoveProvider as persistRemoveProvider, handleSetProviderProxy as persistSetProviderProxy, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection } from "./settings.mjs"
 import { setSlotAdvisorGuard, setSlotEngineering } from "./session-io.mjs"
 import { _cwd } from "./panel-messages.mjs"
@@ -73,7 +73,7 @@ export async function handleAddProvider(panel, msg) {
       }
     }
   } else {
-    await addProviderFlow(() => panel._pushSettings())
+    await addProviderFlow(ui, () => panel._pushSettings())
   }
 }
 
@@ -84,7 +84,7 @@ export async function handleRemoveProvider(panel, msg) {
     if (err) panel._panel?.webview.postMessage({ type: "providerError", text: err })
     panel._pushSettings()
   } else {
-    await removeProviderFlow(() => panel._pushSettings())
+    await removeProviderFlow(ui, () => panel._pushSettings())
   }
 }
 
@@ -95,7 +95,7 @@ export function handleSetProviderProxy(panel, msg) {
 }
 
 /** 迁出自 `panel-messages.mjs` 的 case "setKey"。 */
-export async function handleSetKey(panel) { await setKeyFlow(() => panel._pushSettings()) }
+export async function handleSetKey(panel) { await setKeyFlow(ui, () => panel._pushSettings()) }
 
 /** 迁出自 `panel-messages.mjs` 的 case "saveEmbedKey"。 */
 export async function handleSaveEmbedKey(panel, msg) { await panel._saveEmbeddingConfig({ apiKey: msg.key }) }

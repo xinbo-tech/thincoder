@@ -15,10 +15,9 @@ import { loadMcpServers, addMcpServer, updateMcpServer, removeMcpServer } from "
 import { vscPersistRaw, saveAgentSettingsFromPanel, saveShellSettingsFromPanel } from "./settings-panel-write.mjs"
 import { probeProviderAdmission } from "./provider-flows.mjs"
 import { listModels, admissionOf } from "@thincoder/core/provider/list-models.mjs"
+import { MASKED } from "@thincoder/core/agent-tools/settings.mjs"
 import { specForModel } from "../specs.mjs"
 import { loadModelPrefs, loadSlot } from "./session-io.mjs"
-import { existsSync } from "node:fs"
-import { execFile } from "node:child_process"
 import { _probeWindow, _probeBatch, _retryFailed } from "./provider-probe-window.mjs"
 
 /** Agent settings merged view（W16：自 config-io 迁入——本端面板/运行读面）。默认值 = 核
@@ -50,69 +49,11 @@ export function loadAgentSettings() {
   }
 }
 
-// ─── Shell candidates（W16 自 config-io 迁入——面板消费面）─────────────────────
-// F-W18（`SETTINGS.md` §2.11）：探测面 = **异步非阻塞**——`execFile` + `Promise.all`（并发）；
-// 进程内 memo 保留（成功结果缓存：本进程生命周期内 shell 路径不热变化——同前语义）+ 在飞去重
-// （同一时刻重复请求**共享同一批**探测——不叠发子进程）。同步 `spawnSync` 探测会在打开拍占住
-// 宿主事件循环（UI 假死同源）——本函数**绝不抛出**（探测失败 = 该候选缺席）。
-let _shellCandidatesCache = null
-let _shellCandidatesInFlight = null
-
-// 测试缝（§2.11 ②「注入式时序断言」——`_setProbeImplForTest` 同族）：伪探测替掉真实 `execFile`
-// 探测（同步阻塞面模拟）；注入即清 memo / 在飞态（免旧批结果串味）；复位 = null。
-let _detectImpl = null
-export function _setShellDetectForTest(fn) {
-  _detectImpl = fn
-  _shellCandidatesCache = null
-  _shellCandidatesInFlight = null
-}
-
-/** 候选命令是否存在（异步探测：Windows `where` / POSIX `sh -c 'command -v'`；失败或超时 ⇒ false）。
- *  回调式 `execFile`（非阻塞）——`timeout` 到点由 execFile 杀进程后回调错误。 */
-function commandExists(cmd) {
-  return new Promise((resolve) => {
-    if (_detectImpl) { resolve(_detectImpl(cmd)); return } // 注入的伪探测（可返回 Promise——异步面同形）
-    const win = process.platform === "win32"
-    try {
-      // 'command -v' is a POSIX shell builtin; sh -c runs it (Windows uses `where`)
-      execFile(win ? "where" : "sh", win ? [cmd] : ["-c", `command -v ${cmd}`], { timeout: 3000 }, (err, stdout) => {
-        resolve(!err && String(stdout ?? "").trim().length > 0)
-      })
-    } catch { resolve(false) }
-  })
-}
-
-/** Detect available shells for this platform ⇒ `Promise<候选[]>`（memo + 在飞去重）。
- *  Cached: shell availability does not change during a session — but the first probe must
- *  not block the host event loop（F-W18）。 */
-export function shellCandidates() {
-  if (_shellCandidatesCache !== null) return Promise.resolve(_shellCandidatesCache)
-  if (_shellCandidatesInFlight) return _shellCandidatesInFlight // 在飞去重：同批共享
-  const GIT_BASH_PATHS = [
-    "C:\\Program Files\\Git\\bin\\bash.exe",
-    "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
-    `${process.env.LOCALAPPDATA ?? ""}\\Programs\\Git\\bin\\bash.exe`,
-  ]
-  const candidates = []
-  // System default always first
-  candidates.push({ name: "System default", value: null, detect: () => true })
-  if (process.platform === "win32") {
-    candidates.push({ name: "PowerShell (pwsh)", value: "pwsh", detect: () => commandExists("pwsh") })
-    candidates.push({ name: "Windows PowerShell (powershell)", value: "powershell", detect: () => commandExists("powershell") })
-    const gb = GIT_BASH_PATHS.find((p) => existsSync(p))
-    if (gb) candidates.push({ name: `Git Bash (${gb})`, value: gb, detect: () => true })
-    candidates.push({ name: "WSL bash (wsl)", value: "wsl", detect: () => commandExists("wsl") })
-  } else {
-    for (const sh of ["bash", "zsh", "fish"]) {
-      candidates.push({ name: sh, value: sh, detect: () => commandExists(sh) })
-    }
-  }
-  const p = Promise.all(candidates.map(async (c) => ((await c.detect()) ? c : null)))
-    .then((hits) => { _shellCandidatesCache = hits.filter(Boolean); return _shellCandidatesCache })
-    .finally(() => { if (_shellCandidatesInFlight === p) _shellCandidatesInFlight = null })
-  _shellCandidatesInFlight = p
-  return p
-}
+// ─── Shell candidates（B10 S17 收编：候选表 ∕ 探测序 ∕ 超时 ∕ memo 上提**核单源**
+// `@thincoder/core/shell-candidates.mjs`（异步非阻塞 ∕ memo+在飞去重 ∕ 绝不抛出 —— 原语义逐点随迁）；
+// 本档薄壳 = re-export——消费面零改（`panel-messages-settings.mjs` / `panel-settings-push.mjs` 取件名不动；
+// `_setShellDetectForTest` 测试缝随核档同名）────────────────────────────────────────────────────
+export { shellCandidates, _setShellDetectForTest } from "@thincoder/core/shell-candidates.mjs"
 
 /**
  * Status snapshot for the settings panel. Shape consumed by webview/settings.js:
@@ -136,7 +77,7 @@ export function providerStatus() {
     const entry = providers[name] || {}
     const admission = admissionOf(name)
     status[name] = {
-      configured, masked: configured ? "****" : "",
+      configured, masked: configured ? MASKED : "",
       baseURL: entry.baseURL,
       model: typeof entry.model === "string" ? entry.model : "",
       isActive: name === activeProvider,
