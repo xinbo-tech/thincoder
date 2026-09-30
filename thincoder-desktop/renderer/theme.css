@@ -28,7 +28,7 @@
   --ls: normal;
   /* D21 内容面 / 会话面板面变量（值 = VSC webview 实值 —— 逐面映射表 = `docs/render-core/design/RENDER-CORE.md` §5 ·
      `docs/desktop/design/UI.md` §1 项 2）：语法配色族 / 叠加层 rgba / 字族栈 / 语义色。 */
-  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; /* 非色变量：两态同值 —— 单块单留（不入值对）。 */
+  --mono: "Cascadia Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Microsoft YaHei UI", "Microsoft YaHei", monospace; /* 非色变量：两态同值 —— 单块单留（不入值对）。首字 Cascadia Mono + 中文字族雅黑（轻通道轮三 笔 18 · 2026-10-01——用户「复原了字体确实不如刚才好看，再改回去」；笔 17 复原 ⇒ 18 复采）；未装环境自动落回 Consolas。 */
   --hover-bg: light-dark(rgba(0,0,0,0.06), rgba(255,255,255,0.08));
   --hover-bg-strong: light-dark(rgba(0,0,0,0.12), rgba(255,255,255,0.16));
   --overlay: light-dark(rgba(0,0,0,0.08), rgba(0,0,0,0.3));
