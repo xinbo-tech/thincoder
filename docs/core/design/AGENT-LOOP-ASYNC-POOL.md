@@ -14,7 +14,7 @@
 
 > 核内形态（状态机 / 载体契约 / 注入面 / 端特有面）见 `AGENT-LOOP.md` §2.3；本节 = 现行机制语义与端面分工。
 
-- **回合尾语义**：回合尾**不再直注入排空**——done 条目留池（settled not consumed）→ `willSuspend`（`poolLive` 覆盖池非空）判 true → 进挂起态 → `sweepSettledToPending` → pending 非空 → digest 回合。**无 suspension 驱动的调用方**（headless / 直连 `runAgent`）保留回合尾直注入兜底（不丢结果）。
+- **回合尾语义**：回合尾**不再直注入排空**——已结算条目留池（done-in-pool；settled not consumed——settle 事件面 = `⟦ev⟧settled`，见「冻结门控 + 消化完成逐条回收」条）→ `willSuspend`（`poolLive` 覆盖池非空）判 true → 进挂起态 → `sweepSettledToPending` → pending 非空 → digest 回合。**无 suspension 驱动的调用方**（headless / 直连 `runAgent`）保留回合尾直注入兜底（不丢结果）。
   **接入面（2026-09-29 · parity-b1-vsc-core）**：端面 = CLI / VSC / 桌面**三端全接**（三端皆消费核件 `startSuspension`——端差只在装配面（carrier ∕ hooks ∕ 输入缝）；桌面接入先例 = 批档 `docs/batches/2026-09-28-desktop-idle-wake.md` §2）；「**无 suspension 驱动的调用方**」集收窄为 headless / 直连 `runAgent` / ACP 客户端驱动面，保留回合尾直注入兜底（不丢结果）。多条目近邻完成 = **合并一轮消化**。
 - **主会话 busy（processing 含 digest）提交 = 入 `pendingInput` 队列**（**容量 8 条**——普通回合与会话内 busy 同判据）：输入不禁（可打字回显），Enter 受理入队；
   **吞面收敛四** = 模态 / 斜杠 / 空 / **队满（第 9 条 ⇒ 拒 + 提示 + 文本保留）**（逐条 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1；反馈 = `docs/cli/design/TUI.md` §7.5；VSC 对位 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6）；
@@ -60,7 +60,7 @@
 | auto-turn | 结束且池非空 | 回挂起等下一 settle | → suspension |
 | auto-turn | 结束且有 pendingInput | 自动以本批**合并消息**开新回合（计划 / 常量见上「合并消费」） | → 回合 |
 
-**时序边界**：settle 与 `_suspended` 翻转竞态——`_suspended` 在 `runAgent` finally 返回后（交互层进入挂起前）置位；settle 回调读到的标志若为 false（回合刚结束瞬间）→ 按正常回合语义发 done 冻结（该块本就在流尾，无害）；门控以回调读取时刻为准（确定性，无锁需求）。
+**时序边界**：settle 与 `_suspended` 翻转竞态——`_suspended` 在 `runAgent` finally 返回后（交互层进入挂起前）置位；settle 回调读到的标志若为 false（回合刚结束瞬间）→ 发 `⟦ev⟧settled`（条目留池、冻结 ∕ 归档随消费窗——与挂起态同事件面，「冻结门控」条）；门控以回调读取时刻为准（确定性，无锁需求）。
 
 **digest 动作域（两档）**：
 
@@ -73,7 +73,7 @@
 
 **冻结门控 + 消化完成逐条回收**：
 
-- **挂起态 settle 延迟冻结**：settle 时若处于挂起态 → 不发 `⟦ev⟧done`，区块头保持中间态（`done · awaiting digestion` 驻留面板）；正常回合内 settle 行为不变（完成即冻结）。
+- **settle 延迟冻结（两态统一 · 块到达时点归位批 · #746）**：settle 一律发 `⟦ev⟧settled`（**挂起态 ∥ 非挂起态同**——`thincoder-core/agent-tools/async-settle.mjs:272-278`），区块头保持中间态（`done · awaiting digestion` 驻留面板）；**`⟦ev⟧done` = 消费面补发**（桌面 = 起跑窗 ∥ reclaim ∥ 退出 freeze；VSC = reclaim ∥ 退出 freeze；CLI = 本端 reclaim ∥ freezeAll 冻结，无补发）——冻结 ∥ 归档恒落消费时点（块不于运行中回合中途入流——「块与轮同刻同邻」）。**驻留分流（pending ∕ 留池）不变**：挂起态 ⇒ 入 `_pendingAsyncResults` + 出池；非挂起态 ⇒ 留池 done-in-pool（回合尾直注入兜底 ∥ 挂起会话 sweep 两消费链照旧）。
 - **digest 消化完成即逐条补发冻结回收**（不等池空）：pending 条目注入后按 settle 锚点 splice 落位（冻结块位于其 digest 总览文本**之前**）；池空 freeze-out 仅兜底未消化残项。
 - **settle 锚点 splice**：`sub._freezeAt` = settle 时刻流位置；多锚点按 `_freezeAt` **降序**冻结（splice 是绝对位置插入——先插小锚点会把大锚点目标后移一位）；>5000 行头裁切处按净位移校正锚点。
 
@@ -319,7 +319,8 @@ pending 清容器（`:266`）与既有序（consult 清场 `:267-268`、pendingI
 
 - `thincoder-cli/src/tui/suspension-drive.mjs`（**301——已越 300 软线**）：候选拆分面 = `finally` 收尾块（清场 + 计数日志，`:246-266`）抽 `suspension-teardown.mjs`。**本批只登记不执行**（搬迁 ≠ 本批范围——避免夹带）。
 - `thincoder-core/agent-tools/subagent-scheduler.mjs`（398——实测）：候选拆分面 = 依赖与等待态派生族（`depInfo` / `describeBlockers` / `detectStall`）抽 `subagent-deps.mjs`。本批只登记。
-- **未触碰**：`thincoder-core/agent-tools/subagent-actions.mjs`（488，贴 500 硬限）、`async-settle.mjs`（279）。
+- `thincoder-core/agent-tools/async-settle.mjs`（**302 → 303**——块到达时点归位批 · #746 **实施后实读**〔2026-09-30 · 净 +1 行级收正〕；越 300 软线）：候选拆分面 = **墓碑族**（`carrierField:53` ∥ `writeTombstoneTo:64` ∥ `writeTombstone:74` ∥ `tombstoneOf:87`——≈50 行）抽 `async-tombstone.mjs`；**消解窗口 = 该档下次结构性触碰的批**（注释 ∕ 坐标 ∕ 词值 ∥ 行级小修不计；贴 500 硬线 ⇒ 先行拆分）。本批只登记不执行（搬迁 ≠ 本批范围）。
+- **未触碰**：`thincoder-core/agent-tools/subagent-actions.mjs`（488，贴 500 硬限）。
 
 ### 6.20.5 关键决策记录
 
@@ -830,3 +831,6 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 - 2026-09-29（**core-hygiene 批 · P3 文档收正 · eng-designer**——承批档 `docs/batches/2026-09-29-core-hygiene.md` §2.8 行 5）：循环头投递回调 ∕ `_pendingTimers` 三处 ∕ timer 投递调用点坐标按 **P2 三拆**收正（循环头 = `agent/turn-loop.mjs:87-93`；投递调用点 = `:237`；初值 = `thincoder-core/agent.mjs:73`）；档头补三拆坐标注。机制条文零改。
 
 - 2026-09-30（**跨线清零轮 · 设计档收正 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2 · 台账 #677）：§6.30.1 端差行收正——VSC 每 run 清空 `_pendingTimers` 旧句（「另批对齐」）退场；现态 = 跨 run timer 两端同存活（消解 = #445 轮——见 §6.30.11）。**零机制改**。
+
+- 2026-09-30（**块到达时点归位批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-block-arrival-timing.md` §1 · 台账 #746）：§6.8「挂起态 settle 延迟冻结」条 ⇒ **settle 延迟冻结（两态统一）**——非挂起态 settle 不再发 `⟦ev⟧done`（与挂起态同发 `⟦ev⟧settled`；`⟦ev⟧done` = 消费面补发：桌面起跑窗 ∥ reclaim ∥ 退出 freeze）；时序边界句 ∥ 回合尾语义句同拍（原「完成即冻结」表述退场）。机制单源 = `thincoder-core/agent-tools/async-settle.mjs`（驻留分流保留——仅事件面统一）。明细 = 批档 §2。
+- 2026-09-30（**块到达时点归位批 · 修复轮（评审轮 1 · 发现 1 ∕ 2 · 父侧裁 = 全采纳）· eng-designer**——承批档 §3）：§6.8 条删修订式残句（「原…分流退场」——现行口径不动）；§6.20.4 拆分计划增 `async-settle.mjs` 越线登记行（**302 → ≈306**——候选拆分面 = 墓碑族 ∥ 消解窗口在册；「未触碰」句旧读数退场）。**零机制改**。

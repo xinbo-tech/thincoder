@@ -180,7 +180,7 @@ export function releaseSettledEntry(entry) {
  *   ③ 分流：cancelled（出池 + cancelled 墓碑 + ⟦ev⟧stopped + 族提醒——不入 pending）→
  *      parentAborted（守卫抑制——不落事件不入流——中止清池在回合尾/挂起中止统一做）→
  *      settled（族 onAccounting hook 记账 → 挂起期（或 consult 族恒停靠）移交 pending
- *      单容器 + 出池 + ⟦ev⟧settled；回合内 ⟦ev⟧done 留池 done:true）；
+ *      单容器 + 出池，非挂起期留池 done:true；两态一律 ⟦ev⟧settled——⟦ev⟧done = 消费面补发）；
  *   ④ 公共尾部：settleSeq 递增 + `_settle` 唤醒 waiter + 腾槽补位（subagent/escalate 族
  *      恒补——settle/cancel 释放槽 → maybeRefillAsync + refreshQueuedTokens——AGENT-LOOP.md
  *      AGENT-LOOP-SUBAGENT.md §6.9 "settle/cancel 释放槽后…启动到槽满"；advisor 经 refillAdvisorQueue 补位
@@ -266,16 +266,17 @@ export function settleAsyncEntry(parent, entry, opts = {}) {
     // escalate 腾槽补位）——可改写 entry.report（settle 分支输出——digest 原样进）。
     onAccounting?.(parent, entry)
     // 挂起分流（AGENT-LOOP-ASYNC-POOL.md §6.8 D-S8 + D-S3 记账——以读取时刻为准）：挂起期 settle → 移交 pending
-    // 单容器（digest 注入）+ 出池 + ⟦ev⟧settled 驻留；回合内 → ⟦ev⟧done 立即冻结
-    // （条目留池——done-in-pool 统一表示——回合尾 collectSettledAsync 注入）。
+    // 单容器（digest 注入）+ 出池；非挂起期 ⇒ 留池 done-in-pool（回合尾 collectSettledAsync 注入兜底 ∥
+    // 挂起会话 sweep 消费链照旧）。
     // consult 族恒停靠（settle 即出会话池入 pending——无 TUI 冻结事件——子块各自冻结）。
     if (suspended || role === "consult") {
       parkAsyncPending(parent, entry)
       pool?.delete(String(entry.id))
-      ctx?.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e`)
-    } else {
-      ctx?.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e`)
     }
+    // 发射单点（块到达时点归位批 · #746｜§6.8「settle 延迟冻结（两态统一）」）：settle 一律 ⟦ev⟧settled
+    // （区块头恒中间态「done · awaiting digestion」驻留面板）；⟦ev⟧done = 消费面补发（消费窗清单单源
+    // = §6.8）⇒ 冻结 ∥ 归档恒落消费时点——回合运行中零归档触发器（「S 不夹运行中回合」结构不变式）。
+    ctx?.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e`)
   }
   // ④ 公共尾部：settleSeq 递增 + _settle 唤醒（never rejects）+ 唤醒挂起驱动 waiter
   entry._settleSeq = (parent._asyncSettleSeq = (parent._asyncSettleSeq ?? 0) + 1)
