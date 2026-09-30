@@ -1,5 +1,6 @@
 /**
  * 2026-09-29-desktop-residuals-round3.test.mjs — 桌面残余三轮 · **波 A（注释面 · 零行为）+ 波 C（设置面）** 批次本地件
+ * ⚠ 断代失效（2026-09-30 · 台账 #731 核处）：本件白盒断言所测内部形态已随后续批次演进（#719 消化面重构 ∥ chat-tree 拆档 ∥ 锚链序变更等）——重跑必红为预期；特性现形态的回归锚以近期批件为准。本件留档参考，勿按红态排障。
  * （潜行形：`docs/batches/` 落位走父侧收位 —— 写门相抵同 #545 先例；运行 = 自 `thincoder/` 根
  *  `node --test .thincoder/tmp/2026-09-29-desktop-residuals-round3.test.mjs`，收位后换 `docs/batches/` 同法）。
  * 腿集 · 波 A（§2.2 #539 ∕ #610 ∕ #618②；纯 fs 扫描，零产品码 import）：

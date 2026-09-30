@@ -1,5 +1,6 @@
 /**
  * 2026-09-29-desktop-residuals-sweep-wave-a.test.mjs — 桌面残余族清账批 · **实施波 A** 批次本地件
+ * ⚠ 断代失效（2026-09-30 · 台账 #731 核处）：本件白盒断言所测内部形态已随后续批次演进（#719 消化面重构 ∥ chat-tree 拆档 ∥ 锚链序变更等）——重跑必红为预期；特性现形态的回归锚以近期批件为准。本件留档参考，勿按红态排障。
  * （潜行形：写门相抵 #545 ⇒ 父侧已收位到 `docs/batches/` 终位；运行 = 自 `thincoder/` 根
  *  `node --import ./thincoder-desktop/test/rc-resolve.mjs --test docs/batches/2026-09-29-desktop-residuals-sweep-wave-a.test.mjs`）。
  * 腿集（设计 §2 修正轮 §4 机检腿清单 · 本波射程）：
