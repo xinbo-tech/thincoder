@@ -40,7 +40,7 @@ const tlsSock = tlsConnect({ socket: sock, servername: target.hostname, rejectUn
 
 | 面 | 内容 |
 |---|---|
-| **旧档原句**（`thincoder-cli/docs/design/PROXY.md:32`） | 「CONNECT 隧道内的 TLS 握手使用 `rejectUnauthorized: false`——**不校验目标站证书**。」 |
+| **旧档原句**（`thincoder-cli/docs/_archive/design/PROXY.md:32`） | 「CONNECT 隧道内的 TLS 握手使用 `rejectUnauthorized: false`——**不校验目标站证书**。」 |
 | **实装事实** | `thincoder-core/proxy.mjs:214`：`rejectUnauthorized: opts?.insecureTls !== true` ⇒ **默认 true（全量校验）**；`:174`–`:175` 与 `:213` 注释逐字：「TLS 默认全量证书校验（rejectUnauthorized: true）——走代理的流量（含 API key）不得在未验证链路上传输；确需自签 / 内网代理时 opts.insecureTls=true 显式放行」。 |
 | **新档写法** | **默认校验**；自签 / 企业 MITM 代理须**显式 opt-in**。 |
 
@@ -67,7 +67,7 @@ Test connection                                经当前生效配置请求 gener
 Clear proxy
 ```
 
-- 落点：`thincoder-cli/src/tui/cmd-config.mjs:104`（`proxyMenu`）· 菜单项 `:109`–`:114`。
+- 落点：`thincoder-cli/src/tui/cmd-config.mjs:112`（`proxyMenu`）· 菜单项 `:118`–`:122`。
 - **保存链**：`saveProxy` → `reloadConfig`（`loadConfig` → `injectProxy` → 恢复运行时 provider 选择）——`thincoder-cli/src/tui/cmd-config.mjs:54`–`:61` · `:82`–`:83`。
 - 菜单开关必须先有 `uri`（未设置时提示 `Proxy URI not set — use Set proxy URI… first`，`:133`）。
 
@@ -77,7 +77,7 @@ Clear proxy
 
 | 面 | 落点 | 实核 |
 |---|---|---|
-| 配置归一化 | `thincoder-core/config.mjs:199`（`normalizeProxy`）· 调用 `:313` | 在位 |
+| 配置归一化 | `thincoder-core/config.mjs:204`（`normalizeProxy`）· 调用 `:323` | 在位 |
 | 代理解析（含 env 回落） | `thincoder-core/proxy.mjs:21`（`resolveProxyConfig`）· `:39`（`resolveWebProxy`） | 在位 |
 | model 注入 | `thincoder-core/proxy.mjs:49`（`injectProxy`） | 在位 |
 | TLS 校验判定 | `thincoder-core/proxy.mjs:214` | 默认全量校验 |
@@ -112,7 +112,7 @@ Clear proxy
 
 | 旧档位置 | 内容 | 何故不并 |
 |---|---|---|
-| **旧档 §TLS 段第 1 句**（`thincoder-cli/docs/design/PROXY.md:32`） | 「`rejectUnauthorized: false`——**不校验目标站证书**」 | **与实装相反**——现行默认全量校验 + `insecureTls` 显式放行（§3）。旧档一字不改（B 式）；照抄即把**错误的安全承诺**写进权威层 |
+| **旧档 §TLS 段第 1 句**（`thincoder-cli/docs/_archive/design/PROXY.md:32`） | 「`rejectUnauthorized: false`——**不校验目标站证书**」 | **与实装相反**——现行默认全量校验 + `insecureTls` 显式放行（§3）。旧档一字不改（B 式）；照抄即把**错误的安全承诺**写进权威层 |
 | 旧档 §「配置形态」中 `web` 条目 | 「web 工具（fetch/websearch）是否走代理。每次调用时现读，即时生效」 | **与实装不符**——web 工具已改逐次调用参数（§4）；`web` 字段现行只在 Test connection 探针上活。旧档一字不改 |
 | 旧档 §「配置形态」中「env 路径只影响 web 工具」括注 | env 回落的消费者描述 | 同上——env 回落现行只经 `resolveProxyConfig` / `resolveWebProxy` 生效（探针面），不作用于 web 工具 |
 | 旧档档头「基于代码实际实现梳理」+ 「文档格式债清理批 A2」注 | 建档语境 / 一次性格式批注 | 批次语境——现行态已入 §1–§6 |

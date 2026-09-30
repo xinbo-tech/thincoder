@@ -3,7 +3,7 @@
  * 在册拆分预案本批执行 —— 页读径 `applyPage` / `blockOfMessage` + 私有面（`seedPatch` / `metaOf` /
  * 文本面 `textOf` / `toolBlock`）自归约核心档**纯搬移**，结构拆分零语义）。
  * 依赖单向：本档 → `renderer/events.mjs`（`applyFlags` 模式位写点 —— 共用件单一实现零副本）· → `renderer/store.mjs`（`endBackfill` 清在途）；归约核心档**不引**本档（无环）。
- * 消费面两处：`renderer/mount-sessions.mjs`（首屏 / 回填两径）· 测试面（`test/events-page.test.mjs` /
+ * 消费面两处：`renderer/session-wire.mjs`（首屏 / 回填两径）· 测试面（`test/events-page.test.mjs` /
  * `test/events-reduce.test.mjs`）。
  * 纪律：纯函数（零 DOM / 零 IPC / 零 `node:` / 零裸包 —— 渲染面静态闭包判据）。
  * 单源：`docs/desktop/design/IPC.md` §2 `history:page` 定形 / 「打开态播种注」项 4。
@@ -12,12 +12,14 @@ import { applyFlags } from "./events.mjs"
 import { endBackfill } from "./store.mjs"
 // 排队镜面（「回合中插入」批 —— `history:page` 回执 `queue` 键 = 冷启 ∕ 重载重建面；写者两处同源）。
 import { applyQueue } from "./queue.mjs"
+// 消化轮集清点（运行期痕**四清**之四 —— 判据单源 = 消化行组档 `renderer/views/chat-digest.mjs`）。
+import { clearDigest } from "./views/chat-digest.mjs"
 
-/** 会话头字段白名单（`renderer/views/chrome.mjs:8-9` 判据：非串 / 空串 ⇒ 零节点）——
- *  **三值**（状态栏对齐批：两模式位撤出会话头投影 —— 呈现面单源 = 状态行 banner 段，供面 = 回执 `flags`）。 */
+/** 会话级三值字段白名单（判据：非串 / 空串 ⇒ 不落键 —— 数据面原样，非词表）——
+ *  **三值**（状态栏对齐批：两模式位撤出本投影 —— 呈现面单源 = 状态行 banner 段，供面 = 回执 `flags`）。 */
 const META_FIELDS = ["provider", "model", "effort"]
 
-/** `meta` 三值**只落非空串**（名单与 `views/chrome.mjs` 同名 —— 数据面原样，非词表）；全缺 ⇒ `{}`。 */
+/** `meta` 三值**只落非空串**（名单同上 —— 数据面原样，非词表）；全缺 ⇒ `{}`。 */
 function metaOf(meta) {
   const out = {}
   for (const field of META_FIELDS) {
@@ -111,8 +113,8 @@ function clearCompress(table, key) {
  *  `ok !== true` ⇒ **清在途**（成败皆清 —— finally 语义）且不写其余切片；
  *  `flags` 与 `meta` **同一写点**（`applyFlags` —— 状态栏对齐批；每次页读皆携 ⇒ 回填径同写）；
  *  `key !== activeSession` ⇒ 跳块 / 历史写（`sessionMeta[key]` / `sessionFlags[key]` 仍写）；
- *  首屏（`before == null`）⇒ 块整置 + 回底（`following = true` / `pendingNew = 0`；空页同径）+ **运行期痕三清**
- *  （停止痕 `stopMark` ∕ 到期触发痕 `timerNotice` ∕ 压缩行 `compress`（R4）—— 同首屏门）+ **打开态播种**
+ *  首屏（`before == null`）⇒ 块整置 + 回底（`following = true` / `pendingNew = 0`；空页同径）+ **运行期痕四清**
+ *  （停止痕 `stopMark` ∕ 到期触发痕 `timerNotice` ∕ 压缩行 `compress`（R4）∕ 消化轮集 `digest`（终端轮整清——未结末轮保）—— 同首屏门）+ **打开态播种**
  *  （`seed` ⇒ `tasks[key]` / `usage[key]` 同笔 —— 判据住 `seedPatch`）+ **排队镜面重建**
  *  （`queue` 键 ⇒ `applyQueue` —— 「回合中插入」批 · KD-40 ④；仅首屏读）；
  *  回填 ⇒ 前插 + `history` 落态（`hasOlder === false ⇒ next = null`；高度补偿归 `settleFrame` 六步既有）。 */
@@ -131,9 +133,10 @@ export function applyPage(state, receipt, { key, before } = {}) {
     const stopMark = clearStopMark(flagged.stopMark, key)
     const timerNotice = clearTimerNotice(flagged.timerNotice, key)
     const compress = clearCompress(flagged.compress, key)
+    const digest = clearDigest(flagged.digest, key)
     const first = {
       ...flagged, ...(stopMark === flagged.stopMark ? {} : { stopMark }), ...(timerNotice === flagged.timerNotice ? {} : { timerNotice }),
-      ...(compress === flagged.compress ? {} : { compress }),
+      ...(compress === flagged.compress ? {} : { compress }), ...(digest === flagged.digest ? {} : { digest }),
       ...seedPatch(flagged, key, receipt.seed), blocks: page, sessionMeta, history, following: true, pendingNew: 0,
     }
     // 排队镜面重建（仅首屏读 —— 回填读不重建：防在途快照覆盖活镜面）；键缺 / 非数组 ⇒ `applyQueue` 拒收（零写）。

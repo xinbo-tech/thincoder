@@ -256,9 +256,11 @@ const SORTED_SPECS = [...MODEL_SPECS].sort((a, b) => b[0].length - a[0].length)
 
 /** Single table lookup shared by specForModel / specMatch — prefix match (case-insensitive)
  *  with vendor-namespace stripping. Returns null on a miss (DEFAULT_SPEC is the caller-side
- *  fallback and is deliberately NOT returned here — `matched` needs the miss itself). */
+ *  fallback and is deliberately NOT returned here — `matched` needs the miss itself).
+ *  非串 model（外端脏载 / 手工档）归一等价空串 ⇒ 未命中 ⇒ 调用侧 DEFAULT_SPEC（#638 查表全性：
+ *  下游无类型门——`.toLowerCase` 只认串，非串归一后本函数恒 total，同 providerSpec 文档句）。 */
 function lookupSpec(model) {
-  const m = (model ?? "").toLowerCase()
+  const m = (typeof model === "string" ? model : "").toLowerCase()
   for (const [prefix, spec] of SORTED_SPECS) {
     if (m.startsWith(prefix.toLowerCase())) return spec
   }
@@ -277,7 +279,8 @@ function lookupSpec(model) {
  *  instead of silently degrading to the 128K default (IK5VGJ). The dedupe set is shared by
  *  specForModel / specMatch (PROVIDER.md §16 M5). */
 function warnUnknownModel(model) {
-  const m = (model ?? "").toLowerCase()
+  // 非串 model（脏载）归一空串 ⇒ 不警告（未登记 ≠ 拼错——不刷屏；#638 与 lookupSpec 同归一）
+  const m = (typeof model === "string" ? model : "").toLowerCase()
   if (m && !warnedModels.has(m)) {
     warnedModels.add(m)
     console.warn(`[config] model "${model}" not found in MODEL_SPECS — using default spec (128K context, 32K output). Check the model ID or add an alias.`)

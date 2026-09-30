@@ -29,12 +29,16 @@ export function renderTaskPanel() {
 
 export function renderGoalPanel() {
   const panel = document.getElementById("goal-panel")
+  // #587（2026-09-29 · 桌面 #554②对齐）：显隐判据 = `goalPanelVisible(S._goalInfo) && S._goalPanelOpen`
+  // （默认合 + 🎯 开合）；goalPanelVisible 真时照常 replaceChildren——开时内容不陈旧、显隐只随态。
   if (!goalPanelVisible(S._goalInfo)) { panel.style.display = "none"; return }
   panel.replaceChildren(goalPanelFragment(S._goalInfo).el)
-  panel.style.display = "block"
+  panel.style.display = S._goalPanelOpen ? "block" : "none"
 }
 
 export function clearPanels() {
+  // 会话边界重置（#642 重置点归位：会话切换 ∕ 载入经 `chat-messages.js` `clearMessages` 支调用——
+  // 回合起点不再清，回合后 🎯 ∕ task 存续；开合态不重置 = 构树重挂不丢态）。
   // 活动块不由本函数重置（resetActivity 由回合中止/clearMessages 驱动）——只隐 goal/task。
   S._goalInfo = null
   S._taskProgress = null

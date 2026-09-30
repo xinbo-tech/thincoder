@@ -3,8 +3,8 @@
      · `chat-cards.css` —— 卡族段（审批池面操作区 / 提问 / 计划 —— 桌面壳件）
      · `chat-composer.css` —— 输入区段（变量别名块 + 提示行锚 + 交互态组）
      · `chat-fixes.css` —— 「对齐第三批」小修族尾段（错误横幅 / 停止痕 / 台账行 / diff 预览 / 文件链接 / 欢迎条）
-   链序（`renderer/index.html`）= theme → chrome → skin → **chat → chat-cards → chat-composer → chat-fixes** → core → /rc/search.css → pool → settings
-   （四档相对序保持 = 原单档内段序）；本档只留对话流面（块 / 工具卡 / 摘要 / 药丸 / 空态 / 说话人标签 / 待发送带 / 消化行组 / 归档块）。
+   链序（`renderer/index.html`）= theme → chrome → session-list → skin → **chat → chat-cards → chat-composer → chat-fixes** → core-markdown → core → /rc/search.css → pool → settings
+   （四档相对序保持 = 原单档内段序）；本档只留对话流面（块 / 工具卡 / 摘要 / 药丸 / 空态 / 说话人标签 / 待发送带 / 消化行族 / 归档块）。
    滚动容器 = `.flow` 宿主自身（骨架 `chrome.css` 已给 flex / 溢出 / 内边距——本档只补 `overflow-anchor: none`：
    补偿**单权源**（RENDERER.md §3）——头侧变更的视口锚定只由 `compensateTop` 显式承担，免浏览器自动锚定叠算。
    字形面 = 改动增删符号 / 流式游标（`content` —— **视图档零字形字面**，与卡族 / 输入区同纪律 KD-f）；
@@ -15,36 +15,56 @@
 }
 
 /* 块（六型单序列）：文本面经**核 Markdown**呈现（R3c · KD-RC-4 —— 渲染面单源 = `renderer/views/chat-text.mjs`；核产出面样式 = `renderer/core.css`）；
-   块壳 = **透明无卡壳**（无边框 ∕ 无底 ∕ 零内边距 —— VSC `webview/chat.css:20-48` `.message` 族逐值：面宽全型 100%〔基础行 90% 被 user ∕ assistant 两覆盖行落至 100%——有效值〕· 块距 14px；文本内边距 user `0` ∕ assistant `8px 0`）；
+   块壳 = **透明无卡壳**（无边框 ∕ 无底 ∕ 零内边距 —— VSC `webview/chat.css:20-48` `.message` 族逐值：面宽全型 100%〔基础行 90% 被 user ∕ assistant 两覆盖行落至 100%——有效值〕· 块距：块块相连 + 带签 16 ∕ 盒块 8 两例外〔扁平化 ∥ 间距批 2026-09-30；单源 = `docs/desktop/design/UI.md`「流内竖向间距」注〕；文本内边距 user `0` ∕ assistant `8px 0`）；
    面内件各自携盒值（本档 = 工具卡 ∕ 错误横幅；推理块 = `renderer/core.css` ② 核类名映射面）；`pre-wrap` 保留（核 md 产出无裸换行 · 行内块件自持 `white-space`），流式游标住 `.block-assistant[data-streaming="1"]`。 */
 .block {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  contain: layout style paint; /* 巨块渲染夹层（批档 §2.14-B）：块壳三隔——不含 size（高度确定性保持——回填 ∕ 跟滚补偿算式单源不动）；零语义（只增） */
 }
-/* 块距 = VSC `.message { margin-top: 14px }` 逐值（原 8px）。 */
+/* 块距：扁平化（用户 2026-09-30 裁决）块块相连——归零（原 VSC 逐值 14px）。 */
 .block + .block {
-  margin-top: 14px;
+  margin-top: 0;
 }
-/* 件级外边距 = VSC 逐值（R12 收口修复轮 —— 三件型覆写）：工具 = `webview/chat.css:179-180` `.tool-call { margin: 8px 0 0 }` ∕
-   错误 = `:417-422` `.error-banner { margin-top: 8px }` ∕ 推理 = `:277-278` `.reasoning-block { margin: 4px 0 }`——
-   扁平块模型下件级外边距由块级块距承担 ⇒ 三覆盖规则（同特异度后置取胜；余型仍 14px）。 */
-.block + .block-tool {
+/* 件级外边距：扁平化（用户 2026-09-30 裁决）后块距归零——原三件型覆写规则随批撤销（块距 = 0 通管）。 */
+
+/* 盒块间呼吸（轻通道 #716 · 用户 2026-09-30「工具和思考块之间都没间隔……你觉得呢」——父侧建议小间隔；CLI 参照 =
+   `render-conversation.mjs:375` 块前空行；桌面盒块（工具/思考/错误/归档）非带签者获 8px 上距——扁平化前工具块历史值）。 */
+.block + .block:is(.block-tool, .block-reasoning, .block-error, .block-subagent):not(:has(> .msg-label)) {
   margin-top: 8px;
 }
-.block + .block-error {
+
+/* 消息前留距（轻通道 #715 · 用户 2026-09-30「会话流里有点挤，❯ You:/❯ ThinCoder: 前面留大一点间隔」）：
+   凡带签名标签的块获上距（用户块恒带；助手族回合首块 = 推理/工具/文本/错误/归档任一型）——工具 ∥ 思考等无签块仍零距相连。 */
+.block + .block:has(> .msg-label) {
+  margin-top: 16px;
+}
+
+/* 非块插层承接（轮一收尾修复 · 评审发现 6 · 2026-09-30）：消化行（`.chat-digest`——流内就地非块节点）
+   插于两块之间时 `+` 相邻选择器不命中 ⇒ 以本两条承接（带签 16 ∥ 盒块 8 同值同义）。 */
+.chat-digest + .block:has(> .msg-label) {
+  margin-top: 16px;
+}
+.chat-digest + .block:is(.block-tool, .block-reasoning, .block-error, .block-subagent):not(:has(> .msg-label)) {
   margin-top: 8px;
 }
-.block + .block-reasoning {
-  margin-top: 4px;
+
+/* 消化行上距（轻通道轮一 · 收尾期补笔 6 · 用户 2026-09-30「前面希望留点间距，不要跟上面的内容挨在一起」）：
+   新轮消化行（`.chat-digest`）与上方内容间呼吸 8px；多轮相接保持 0（同一波活动不散）。 */
+.chat-digest {
+  margin-top: 8px;
+}
+.chat-digest + .chat-digest {
+  margin-top: 0;
 }
 /* 助手文本内边距 = VSC `.message.assistant .bubble { padding: 8px 0 }`（落文本面容器 —— 标签行与 VSC 同位：消息顶；user `.bubble` = `padding: 0` ⇒ 零规则）。 */
 .block-assistant > .block-text {
   padding: 8px 0;
 }
-/* 错误横幅 = VSC `webview/chat.css:417-427` `.error-banner` 逐值（无边框；红底 ∕ 错误色；内边距 6px 10px ∕ 圆角 6px；字号 12px —— 同 VSC banner 对其内容的覆盖）。 */
+/* 错误横幅 = VSC `webview/chat.css:417-427` `.error-banner` 逐值（无边框；红底 ∕ 错误色；内边距 6px 10px ∕ 圆角 0〔扁平化 2026-09-30〕；字号 12px —— 同 VSC banner 对其内容的覆盖）。 */
 .block-error {
   padding: 6px 10px;
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--diff-del-bg);
   color: var(--error-fg);
   font-size: 12px;
@@ -62,11 +82,11 @@
 }
 
 /* 工具卡（三行：头行（可折叠 ⇒ `button` 形）· 改动摘要行 · 展开结果区）：盒 = VSC `.tool-call`（`webview/chat.css:179-187`）逐值 ——
-   边框 ∕ 圆角 6px ∕ `--tool-bg` 角色对位 ⇒ `--overlay` ∕ 字号 12px ∕ `overflow: hidden`；`margin: 8px 0 0` = 件级外边距
-   ⇒ 落 `.block + .block-tool { margin-top: 8px }`（上方三覆盖规则之一——扁平化模型下件级外边距由块级块距承担）。 */
+   边框 0 ∕ 圆角 0〔扁平化 2026-09-30〕 ∕ `--tool-bg` 角色对位 ⇒ `--overlay` ∕ 字号 12px ∕ `overflow: hidden`；件级外边距由块级模型通管
+   （现值 = 盒块规则 `.block + .block:is(…) { margin-top: 8px }`——扁平化 ∥ 间距批 2026-09-30；原三覆写之一已退场）。 */
 .block-tool {
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  border: 0;
+  border-radius: 0;
   overflow: hidden;
   font-size: 12px;
   background: var(--overlay);
@@ -89,26 +109,24 @@
   font: inherit;
   text-align: left;
 }
-.tool-head[data-status="error"] {
+/* 头行色 = VSC 逐值（`docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」项 2 —— 已裁）：
+   两态色归 **status 段**（`[data-status]` 整行两态色退场——非 VSC 形；值源 = VSC 内联 `flow/tool-card.mjs:111/:114`）。 */
+.tool-head[data-status="error"] [data-seg="status"] {
   color: #f14c4c;
 }
-.tool-head[data-status="done"] {
+.tool-head[data-status="done"] [data-seg="status"] {
   color: #4ec9b0;
 }
-.tool-head[data-status="running"] {
-  color: var(--fg-muted);
-}
 /* 头行段样式四组 = VSC `webview/chat.css:216-244` 逐值（段面 = 桌面 `[data-seg]` 子节点）：
-   name `:216-219` 字重 600 ∕ args `:221-228` 省略四值 + 降显 .5 ∕ status `:230-233` 11px + .6 ∕
-   summary `:235-244` 11px + .75 + `margin-left: 8px` + `max-width: 45%` + `flex-shrink: 1` + 省略三值。
-   **色面两项不落（在册相抵 · 停报——不硬改）**：VSC name `color: var(--accent)` ∕ args `color: var(--fg)` 若落 ⇒
-   name ∕ args 失两态色；与 `docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」项 2 在册头行色两值
-   （`[data-status="error"]` ⇒ `#f14c4c` ∕ `"done"` ⇒ `#4ec9b0`，= 本档上三段规则）相抵 ⇒ 两段仍承头行两态色，
-   待设计面一并决策（VSC 同径 = 两值住 status 段——`flow/tool-card.mjs:111/:114` 内联落点）。 */
+   name `:216-219` 字重 600 + `color: var(--accent)` ∕ args `:221-228` `color: var(--fg)` + 省略四值 + 降显 .5 ∕
+   status `:230-233` 11px + .6 ∕ summary `:235-244` 11px + .75 + `margin-left: 8px` + `max-width: 45%` +
+   `flex-shrink: 1` + 省略三值；耗时段（`time` —— 段产出面 = `views/chat-tool.mjs`）11px ∕ .6（#25 裁①）随落。 */
 .tool-head [data-seg="name"] {
   font-weight: 600;
+  color: var(--accent);
 }
 .tool-head [data-seg="args"] {
+  color: var(--fg);
   opacity: 0.5;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -116,6 +134,10 @@
   flex: 1;
 }
 .tool-head [data-seg="status"] {
+  font-size: 11px;
+  opacity: 0.6;
+}
+.tool-head [data-seg="time"] {
   font-size: 11px;
   opacity: 0.6;
 }
@@ -154,10 +176,9 @@
 .tool-file [data-del]::before {
   content: "−";
 }
-/* 结果区 = VSC `.tool-call-body`（`webview/chat.css:257-272`）逐值（等宽栈 ∕ 11px ∕ `opacity: .75` ∕ 行高 1.45 ∕ 封顶 180px 自滚）；与壳共用顶线分隔。 */
+/* 结果区 = VSC `.tool-call-body`（`webview/chat.css:257-272`）逐值（等宽栈 ∕ 11px ∕ `opacity: .75` ∕ 行高 1.45 ∕ 封顶 180px 自滚）；顶线分隔随扁平化（2026-09-30）退场。 */
 .tool-result {
   padding: 6px 10px;
-  border-top: 1px solid var(--line);
   font-family: var(--mono);
   font-size: 11px;
   line-height: 1.45;
@@ -173,7 +194,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
   color: var(--fg-muted);
   font-size: 12px;
 }
@@ -191,10 +212,10 @@
   position: sticky;
   bottom: 0;
   display: block;
-  margin: 8px auto 0;
+  margin: 0 auto;
   padding: 4px 12px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--bg-raised);
   color: inherit;
   font: inherit;
@@ -247,7 +268,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 .chat-pending-label {
   color: var(--warn);
@@ -271,22 +292,23 @@
   font-style: italic;
 }
 
-/* 消化状态行组（桌面空闲唤醒批 —— 流内非块节点组 `[data-digest]`；落点 = 块序列之后、待发送组之前 —— 单源 =
-   `docs/desktop/design/RENDERER.md` §1.1 两条纪律；形 = VSC `webview/base.css:203-247` 逐值 —— turn 行 = 纯行（无边 ∕ 无底）· status 行 = 盒行）：
-   ① 起跑态（起跑标签行 + `n > 0` 计数行 —— 计数行同形于状态条，标签行同族小字）∥
-   ② 终态（`end` 先原地更新后摘除 —— 行不驻留；`digest-failed` = 错误色显形〔opacity 不覆盖 —— 沿 VSC 继承 0.85〕，`digest-done` = 信息色显形）。
+/* 消化行族（桌面空闲唤醒批 · 流内落位批改逐轮元素 —— 流内非块节点 `[data-digest]`〔每轮一元素〕；落点 = 流内就地 ——
+   单源 = `docs/desktop/design/RENDERER.md` §1.1 两条纪律；形 = VSC `webview/base.css:203-247` 逐值 —— turn 行 = 纯行（无边 ∕ 无底）· status 行 = 盒行）：
+   ① 起跑态（起跑标签行 + `n > 0` 计数行 —— 计数行同形于状态条，标签行同族小字；**行集逐轮重复——每轮一元素**)∥
+   ② 终态（`end` 就末轮元素更新后**留存** —— 元素驻留至首屏页读清点（运行期痕四清）；`digest-failed` = 错误色显形〔opacity 不覆盖 —— 沿 VSC 继承 0.85〕，`digest-done` = 信息色显形）；
+   **③ 撞帽行（#541 —— 轮尾 `.digest-cap`；`end` 更新毕随轮留存——`data-digest-cap` 跨 `end` 存续）**。
    `--bg-raised` ∕ `--line` = `editorWidget-background` ∕ `-border` 角色对位；done ∕ failed 两底色 = `infoBackground` ∕ `errorBackground` 角色对位（accent 8% 先例 = `.question-card`）。 */
 .chat-digest .digest-turn {
-  margin: 6px 0 0;
+  margin: 0;
   font-size: 11px;
   opacity: 0.7;
   color: var(--fg-muted);
 }
 .chat-digest .digest-status {
-  margin: 6px 0;
+  margin: 0;
   padding: 6px 12px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--bg-raised);
   font-size: 11px;
   opacity: 0.85;
@@ -299,6 +321,20 @@
   border-color: var(--error-fg);
   background: var(--diff-del-bg);
   color: var(--error-fg);
+}
+
+/* 撞帽行（#541 —— 对位 VSC `webview/base.css:248-258` 逐值：auto = dim〔同族观感〕、stop = warn〔部分消化——用户需知〕；
+   角色对位 = `--fg-muted` ∕ `--warn`）。 */
+.chat-digest .digest-cap {
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.75;
+  color: var(--fg-muted);
+}
+
+.digest-cap.digest-cap-stop {
+  opacity: 1;
+  color: var(--warn);
 }
 
 /* 归档子 agent 块（「对齐第二批」项 5 —— 运行期块）：零边距透传容器（内嵌核件 `.advisor-block` 自持边距 / 边框 ——

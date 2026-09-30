@@ -246,12 +246,16 @@ export function bindAddProviderForm() {
 }
 
 /** Re-render ONLY the providers card in place (panel open). A full buildSettings()
- *  rebuild would clobber in-progress edits in the other cards — forbidden by design. */
+ *  rebuild would clobber in-progress edits in the other cards — forbidden by design.
+ *  P2-6（#677 I15）：重建重解析本卡子树 ⇒ 在编 [+ Add] 表单丢——先摘出原表单节点，
+ *  重建后原位回插（输入 ∕ 已探测候选 ∕ 状态行随节点存活；未开（`none`）⇒ 零动作）。 */
 export function renderProvidersCard() {
   const card = document.getElementById("providers-card")
   if (!card) return
+  const form = document.getElementById("prov-add-form")
   card.outerHTML = providersCardHtml()
   bindAddProviderForm()
+  if (form?.style.display === "block") { document.getElementById("prov-add-form")?.replaceWith(form); document.getElementById("prov-list").style.display = "none" }
 }
 
 export function updateProviderStatus(status) {

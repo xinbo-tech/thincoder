@@ -6,7 +6,7 @@
  *
  * 用例 = 两档 AC 判据面（`2026-09-29-desktop-susp-queue.md` §2.5 AC-1–AC-11 之可用例面 +
  * `2026-09-29-desktop-window-queue-parity.md` §2.6 AC-1–AC-4）：
- *   T1 窗队模块：四帧 + 投影五操作（`ts` 缺省不携——禁假造）
+ *   T1 窗队模块：五帧 + 投影操作（步边界取批 ∕ 倾出 ∕ 清队；`ts` 缺省不携——禁假造）
  *   T2 挂起驱动：窗内受理（受理帧）⇒ 核消费 ⇒ 消费帧（纯文本径）+ 投影读面
  *   T3 携图窗内对齐 × 真送达面（`prepareTurnAttachments`）：多模态指针段 ∕ 非视觉降级码浮出 + 落盘件
  *   T4 窗中止（#561 AC-6）：清队 + 状态帧 + 读面归空
@@ -16,7 +16,7 @@
  *   T7 写面（node 可装载件）：队形回执 ⇒ 退流 + 挂起空闲复位（#561 AC-9）；失败回执 ⇒ 退流 + 失败行
  *      （#561 AC-4 ∕ AC-11）；`noteEcho(key,null)` ⇒ 退流零动作（防误摘既往真块）
  *   T8 结构核（不可 node 装载三档——判据单源在场）：`suspActiveOf` ∕ `turnState` 改引 ∕ 抑制面恒登记 ∕ 失败径退流
- *   T9 时序面（§2.10 定形句）：hold 占位链——signal = hold.signal ∕ 中断 fail-fast ∕ 占位被摘 ⇒ 零起跑 + 落盘件自清 ∧ 不重投（两调用点）
+ *   T9 时序面（§2.10 定形句）：hold 占位链——signal = hold.signal ∕ 中断 fail-fast ∕ 占位被摘 ⇒ 零起跑 + 落盘件自清 ∧ 不重投（守卫序列出档 `suspension-guard.mjs`——两调用点）
  * 纪律：只读面 ∕ 行为断言；⌛ 面（真机）归父侧闭合。
  */
 import test from "node:test"
@@ -72,7 +72,7 @@ function makeDrive({ agent, prepare = null, degrade = null, hold = null } = {}) 
   return { drive, runs, frames, events }
 }
 
-test("T1 窗队模块：四帧 + 投影五操作（ts 缺省不携——禁假造）", async () => {
+test("T1 窗队模块：五帧 + 投影操作（步边界取批 ∕ 倾出 ∕ 清队；ts 缺省不携——禁假造）", async () => {
   const frames = []
   const q = wqMod.createWindowQueue({ postQueue: (key, delivered = null) => frames.push({ key, delivered }) })
   const pending = []
@@ -84,14 +84,18 @@ test("T1 窗队模块：四帧 + 投影五操作（ts 缺省不携——禁假�
   q.accept("1", pending, "乙", null)
   assert.deepEqual(Object.keys(pending[1]).sort(), ["text", "ts"], "无图径 ⇒ 无 images 键")
   assert.deepEqual(q.snapshot(pending).map((e) => Object.keys(e).sort()), [["text", "ts"], ["text", "ts"]], "投影恰形（图不入快照）")
-  assert.equal(q.take(pending, "丙"), null, "未中 ⇒ null（零消费零帧）")
-  assert.equal(q.take(pending, "甲").text, "甲", "首中即取（与既有 indexOf 同判）")
-  assert.equal(pending.length, 1, "取项摘除")
+  // `take`（find-by-text）退役 ⇒ 步边界取批（核件取项——单源）：批内含图（甲）⇒ **整批让位**（零消费零帧）
+  assert.equal(q.stepPickup(pending), null, "批内含图 ⇒ 整批让位（同步缝不可降级）")
+  assert.equal(pending.length, 2, "让位 ⇒ 队列零触碰")
+  const noImg = pending.splice(1, 1) // 无图单条（乙）出列 ⇒ 正径取批夹具
+  const noImgTs = noImg[0]?.ts ?? null
+  assert.deepEqual(q.stepPickup(noImg), { text: "乙", ts: noImgTs }, "正径 ⇒ { text, ts }（就地消费——零帧，帧由调用点出）")
+  assert.equal(noImg.length, 0, "取批 ⇒ 消费")
   const out = await q.consume("1", { text: "无 ts 条目" }, null)
   assert.deepEqual(Object.keys(frames.at(-1).delivered).sort(), ["text"], "ts 非有限数 ⇒ 键缺席（缺省不携）")
   assert.deepEqual(out, { text: "无 ts 条目", attached: null }, "无附件径 ⇒ 原文逐字")
   const drained = q.drain(pending)
-  assert.deepEqual(drained.map((e) => e.text), ["乙"], "倾出（残值逐条）")
+  assert.deepEqual(drained.map((e) => e.text), ["甲"], "倾出（残值逐条）")
   assert.equal(pending.length, 0)
   // 送达面违约（非串 text）⇒ 回落该条文本逐字（与链径 `turn-chain.mjs:94` 同式）
   const q2 = wqMod.createWindowQueue({ postQueue: () => {}, prepare: () => ({ text: 123, paths: [] }) })
@@ -334,7 +338,7 @@ test("T8 结构核（不可 node 装载三档）：判据单源 ∕ 抑制面 �
   assert.match(mount, /const suspIdleOf = \(state, key\) => suspActiveOf\(state, key\) && !busyOf\(state, key\)/, "挂起空闲判据 = 窗活跃 ∧ ¬忙（判据单源合成）")
   assert.match(mount, /suspIdleOf, \/\/ 挂起空闲复位判据/, "wire deps 注入在场")
   const wire = text("thincoder-desktop/renderer/composer-wire.mjs")
-  assert.match(wire, /retractEcho\(key\)[^\n]*\n[^\n]*recordFailure\("msg:send", receipt\)/, "失败径退流先于失败行记录")
+  assert.match(wire, /retractEcho\(key, attempt\)[^\n]*\n[^\n]*recordFailure\("msg:send", receipt\)/, "失败径退流先于失败行记录")
   assert.match(wire, /suspIdleOf\?\.\(store\.get\(\), key\) === true/, "队形支复位判据（含 ¬busy 闭合）")
 })
 
@@ -449,9 +453,11 @@ test("T9 时序面（§2.10 定形句）：hold 占位链——signal ∕ 中断
   assert.equal(existsSync(paths5[0]), false, "残续发径落盘件自清")
   assert.equal(e.frames.filter((f) => f.delivered?.text === "乙").length, 1, "不重投（消费帧恰一枚——不复位 ∕ 不追回）")
   await until(() => e.drive.active("1") === false)
-  // 结构面：两调用点接线 + 转口注入（行为面难观察的接线面）
+  // 结构面：两调用点经守卫序列（出档 `suspension-guard.mjs`——纯结构搬）+ 转口注入（行为面难观察的接线面）
+  const guardSrc = text("thincoder-desktop/src/main/suspension-guard.mjs")
+  assert.equal((guardSrc.match(/held\?\.signal \?\? null/g) ?? []).length, 1, "守卫序列 signal 接 hold.signal（单点——两调用点共用）")
   const driveSrc = text("thincoder-desktop/src/main/suspension-drive.mjs")
-  assert.equal((driveSrc.match(/held\?\.signal \?\? null/g) ?? []).length, 2, "两调用点 signal 接 hold.signal（`driveTurn` ∕ `resumeResidual`）")
+  assert.equal((driveSrc.match(/await guardedDeliver\(/g) ?? []).length, 2, "两调用点经守卫（`driveTurn` ∕ `resumeResidual`）")
   assert.match(text("thincoder-desktop/src/main/turn-driver.mjs"), /suspension = createSuspensionDrive\(\{[\s\S]*?\bhold,/, "hold 转口注入 `createSuspensionDrive`")
   t.diagnostic(`tmp 根：${root}`)
 })

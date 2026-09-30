@@ -64,6 +64,14 @@ export function specForModel(model) {
   return d === undefined ? spec : { ...spec, reasoningEffortDefault: d }
 }
 
+/** Effort 枚举面单源（I7 · #677）：在册枚举 ⇒ 原样；思考开关族（无枚举 ∧ `thinking` 在场）⇒
+ *  `["enabled"]` 单档（§16.6-⑴ 零变）；其余（未在册 ∕ 无能力位名）⇒ 回退全档 `["high","max"]`
+ *  （对齐 CLI `cmd-think.mjs:19` 托底形——「VSC 档位空」端差消）。 */
+export function effortEnumForModel(model) {
+  const s = specForModel(model)
+  return s.reasoningEffortEnum || (s.thinking ? ["enabled"] : ["high", "max"])
+}
+
 /**
  * Context utilization percentage: provider-reported prompt tokens vs the provider-aware
  * context window (spec context, overridden by providers[].context). Null when there is
@@ -75,15 +83,18 @@ export function ctxPercentForModel(promptTokens, provider) {
 }
 
 /**
- * Context utilization percentage — CLI-parity ruler (显示面消差批 M2): numerator = core
+ * Context usage pair — CLI-parity ruler (显示面消差批 M2 ∕ I16a): numerator = core
  * `estimateTokens(history)`, the SAME estimate the CLI status line renders (`thincoder-cli/src/tui/
  * render-frame.mjs:388-389` over the `render-loop.mjs:89-91` ctxCache —— 分子分母两端同源),
  * denominator = the provider-aware window (`providerSpec(provider).context`). The provider-reported
  * `prompt_tokens` numerator (ctxPercentForModel above) double-reported: one session showed two
- * percentages under the same `context X%` label (端差 M2). Null when the estimate is 0.
+ * percentages under the same `context X%` label (端差 M2). `pct` = null when the estimate is 0；
+ * `tokens` = 状态行 `Yk` 尾串源（#677 I16a——两值同点产出，单次估算）。
  */
-export function ctxPercentForHistory(history, provider) {
+export function ctxUsageForHistory(history, provider) {
   const tokens = estimateTokens(history ?? [])
-  if (!tokens) return null
-  return Math.round((tokens / providerSpec(provider).context) * 100)
+  return { tokens, pct: tokens ? Math.round((tokens / providerSpec(provider).context) * 100) : null }
 }
+
+/** 占比单值形（既有名面——设计档 `WEBVIEW.md` §4.6 派生单点）。 */
+export function ctxPercentForHistory(history, provider) { return ctxUsageForHistory(history, provider).pct }

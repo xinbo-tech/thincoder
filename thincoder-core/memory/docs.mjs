@@ -5,25 +5,30 @@
 import { readFile, stat } from "node:fs/promises"
 import { isAbsolute, join } from "node:path"
 import { embed, cosine, toBlob, fromBlob } from "../embedding.mjs"
-import { scanVectors, createTopK } from "./scan.mjs"
+import { scanVectors, createTopK, SCAN_YIELD_MS } from "./scan.mjs"
 import { normalizeOrigin } from "./origin.mjs"
 import { commitAndPush } from "../git/gitmem.mjs"
 import { MAX_DOC_FILE_BYTES } from "./schema.mjs"
-import { buildFtsQuery, put, search, putMarkdown, clearPersonal, EMBED_TEXT_MAX_LEN } from "./core.mjs"
+import { buildFtsQuery, put, search, putMarkdown, clearPersonal, invalidateStaleEmbeddings, EMBED_TEXT_MAX_LEN } from "./core.mjs"
 import { deleteByUid, matchMemoryRows, deleteWhere } from "./delete.mjs"
 import { _upsertDocFile, yieldTick } from "./code-index.mjs"
 import { markIndexedCommit, listProjectFiles, indexExtensions } from "./code-sync.mjs"
+import { createRowBudget, rowCountOfPath, sweepStaleRows } from "./sync-tail.mjs"
+import { loadProjectDeclaration } from "../conventions.mjs" // 排除谓词本档不直调（经 `decl` 传 `sweepStaleRows`）
 import { logEvent } from "../log.mjs"
 import { safeSliceUTF16 } from "../text-budget.mjs"
+import { DESC } from "../tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/*.md（DESC 单解析面，缺档抛错语义不变）
 
 const DOC_EMBED_BATCH = 64
 
 /**
  * Sync doc index: scan all .md/.mdc/.txt/.rst/.adoc under dir → chunk → upsert into doc_chunks.
- * Incremental by mtime.
+ * Incremental by mtime. opts seam (§6.14 M3): `yieldFn` ∕ `nowFn` ∕ `yieldMs` — stale-loop yield
+ * budget injectable for deterministic tests (same seam style as scan.mjs).
  */
-export async function docSync(memory, dir, { onProgress } = {}) {
+export async function docSync(memory, dir, { onProgress, yieldFn = yieldTick, nowFn = Date.now, yieldMs = SCAN_YIELD_MS } = {}) {
   const origin = normalizeOrigin(dir) // §6.11 写缝归一（目录/git I/O 用原样 dir；库面 origin 一律归一值）
+  const decl = loadProjectDeclaration(dir)
   const { entries, unlisted } = await listProjectFiles(dir, indexExtensions(dir).doc)
   const files = [] // { abs, rel, mtimeMs }
   let overSizeSkipped = 0
@@ -33,6 +38,8 @@ export async function docSync(memory, dir, { onProgress } = {}) {
     if (st.size > MAX_DOC_FILE_BYTES) { overSizeSkipped++; continue }
     files.push({ abs, rel, mtimeMs: Math.floor(st.mtimeMs) })
   }
+  // §6.14 P2：处理序钉死 = `rel` 字典序（现 walk ∕ git 列序不确定；预算跳过 = 列序后缀）
+  files.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0))
 
   const indexed = new Map(
     memory.db.prepare(`SELECT path, mtime_ms FROM doc_chunks WHERE origin = ?`).all(origin).map((r) => [r.path, r.mtime_ms])
@@ -40,6 +47,10 @@ export async function docSync(memory, dir, { onProgress } = {}) {
   const seen = new Set()
 
   onProgress?.({ phase: "scan", total: files.length, overSizeSkipped })
+
+  // §6.14 P2 行预算（单源 = createRowBudget：WARN 一行可见 ∕ CAP 跳过后列——只停新增，存量行不失效）
+  const budget = createRowBudget(memory, origin, "doc", dir)
+  const budgetSkipped = []
 
   let updated = 0, removed = 0, skipped = 0, failed = 0
   const errors = []
@@ -51,11 +62,15 @@ export async function docSync(memory, dir, { onProgress } = {}) {
       skipped++
       continue
     }
+    budget.note()
+    if (budget.over()) { budgetSkipped.push(rel); continue }
 
     try {
+      const before = rowCountOfPath(memory, "doc_chunks", origin, rel)
       const text = await readFile(abs, "utf8")
       const lines = text.split("\n")
       _upsertDocFile(memory, origin, rel, lines, mtimeMs)
+      budget.add(rowCountOfPath(memory, "doc_chunks", origin, rel) - before) // 净增行数——与「库内行数」同刻度
       updated++
     } catch (e) {
       failed++
@@ -68,19 +83,17 @@ export async function docSync(memory, dir, { onProgress } = {}) {
     }
   }
 
-  for (const stale of indexed.keys()) {
-    if (!seen.has(stale)) {
-      memory.db.prepare(`DELETE FROM doc_chunks WHERE origin = ? AND path = ?`).run(origin, stale)
-      removed++
-    }
-  }
+  // §6.14 B6 ∕ M3：收尾 stale 循环（同款让出 + 面① 收尾保护位）——机制单源 = `sync-tail.mjs`
+  removed = await sweepStaleRows(memory, { table: "doc_chunks", origin, indexed, seen, decl, yieldFn, nowFn, yieldMs })
 
-  onProgress?.({ phase: "done", total: files.length, updated, removed, skipped, failed, overSizeSkipped })
-  markIndexedCommit(memory, dir)
+  onProgress?.({ phase: "done", total: files.length, updated, removed, skipped, failed, overSizeSkipped, budgetSkipped: budgetSkipped.length })
+  // §6.14 B7 维护口：模型键失配的失效**执行**（读面只判定降级——执行住同步尾）
+  if (memory.embedder) { try { invalidateStaleEmbeddings(memory) } catch { /* 非阻塞 */ } }
+  await markIndexedCommit(memory, dir) // 锚推进 = 同步完成条件（§6.14 M1——原 fire-and-forget 竞态）
   if (unlisted.count > 0) {
     logEvent("index:unlisted", { dir, kind: "doc", count: unlisted.count, exts: unlisted.exts.map((e) => e.ext) })
   }
-  return { updated, removed, skipped, failed, errors, total: files.length, overSizeSkipped, unlistedExts: unlisted }
+  return { updated, removed, skipped, failed, errors, total: files.length, overSizeSkipped, budgetSkipped, unlistedExts: unlisted }
 }
 
 /**
@@ -106,8 +119,13 @@ export async function docSearch(memory, query, { limit = 5 } = {}) {
 
   if (!memory.embedder) return ftsList.slice(0, limit)
 
-  try { await ensureDocEmbeddings(memory) } catch (e) {
+  let docEnsured
+  try { docEnsured = await ensureDocEmbeddings(memory) } catch (e) {
     console.error(`[docs] embedding ensure failed, falling back to FTS-only: ${e.message}`)
+    return ftsList.slice(0, limit)
+  }
+  if (docEnsured?.mismatch) { // §6.14 B7 读面零写：模型键失配 ⇒ 本面向量通道降级 FTS-only（一行可见；失效执行归维护口）
+    console.warn("[docs] embedding model changed — vector channel degraded to FTS-only (rebuild runs at maintenance: sync tail / reindex)")
     return ftsList.slice(0, limit)
   }
   let qvec
@@ -161,9 +179,9 @@ async function _runEnsureDocEmbeddings(memory) {
   const modelKey = memory.embedder.model
   const stored = memory.db.prepare(`SELECT value FROM meta WHERE key = 'doc_embedding_model'`).get()?.value
   if (stored !== modelKey) {
-    memory.db.prepare(`UPDATE doc_chunks SET embedding = NULL`).run()
-    memory.db.prepare(`INSERT INTO meta (key, value) VALUES ('doc_embedding_model', ?)
-      ON CONFLICT (key) DO UPDATE SET value = excluded.value`).run(modelKey)
+    // §6.14 B7 读面零写：只判定（返回降级信号）；失效**执行**（清向量 + 落键）归维护口
+    // `invalidateStaleEmbeddings`（同步尾 ∕ /reindex ∕ 桌面 ∕ VSC）。
+    return { mismatch: true }
   }
 
   const pending = memory.db.prepare(`SELECT rowid, path, heading, content FROM doc_chunks WHERE embedding IS NULL LIMIT ${DOC_EMBED_BATCH}`).all()
@@ -180,10 +198,7 @@ async function _runEnsureDocEmbeddings(memory) {
 export function docSearchTool(memory) {
   return {
     name: "doc_search",
-    description:
-      "Search the project's documentation (README, design docs, guides, markdown files) for relevant information. Use this to find design decisions, coding conventions, architecture docs, or project rules. Prefer this over code_search when you need to understand the project's intended design rather than existing implementation. " +
-      "Returns matching doc chunks: path, heading, line range, relevance score, content excerpt. " +
-      "For what was said in sessions (conversation/chat history — decisions, rulings), use read_history.",
+    description: DESC("doc_search"), // #15 外置：文本单点 = tool-docs/doc_search.md
     parameters: {
       type: "object",
       properties: {
@@ -205,22 +220,12 @@ export function docSearchTool(memory) {
 
 // ---------------------------------------------------------------- agent tools
 
-/** §6 shared tool surface — action enum / parameter shapes / descriptions byte-identical
- *  with thincoder-vscode/src/memory.mjs (MEMORY.md §6 D-M1/F-M6); layer VALUES per end
+/** §6 shared tool surface — action enum / parameter shapes / output contract shared with the
+ *  VS Code face (`thincoder-vscode/src/memory-tool.mjs`); the description is a per-end form —
+ *  core text lives in `tool-docs/memory.md` (DESC() load; #15 外置). Layer VALUES per end
  *  (VS Code has no team layer and rejects it with CLI guidance). */
 const MEMORY_ACTIONS = ["search", "put", "list", "delete", "clear"]
 const MEMORY_LAYERS = ["personal", "project", "team"]
-const MEMORY_TOOL_DESCRIPTION =
-  "Manage long-term memory in ONE tool — the action parameter picks the operation:\n" +
-  "- search — find knowledge saved in previous sessions (query, optional layer/limit); result rows start with a [layer] tag and carry the entry id (id prefix = the layer)\n" +
-  "- put — save a piece of knowledge for future sessions (type: rule = coding standards, knowledge = project facts, decision = architecture decisions, pattern = debugging/workflow patterns; title/content/tags; layer defaults to personal)\n" +
-  "- list — inventory what memory holds (optional layer/type/keyword filters, limit default 50); one row per entry: [layer] id [type] title (date); a truncated list notes the full count\n" +
-  "- delete — SINGLE: {id, layer} removes the entry shown in put/search/list output — layer is optional: when passed it is validated against the id prefix (a mismatch is refused — guards against deleting the wrong entry); when omitted the id prefix routes the delete, so any id search/list returned is directly deletable. BATCH (no id): {layer, type and/or keyword} removes every matching entry in that layer — layer and at least one of type/keyword are required, plus confirm:true (without confirm it returns the count plus a preview); layer-wide wipes without filters are refused on every layer\n" +
-  "- clear — {layer: \"personal\", confirm: true} wipes ALL personal memory entries. clear is personal-only: a missing layer or a project/team layer is refused (use delete batch filters on shared layers)\n" +
-  "Layer is the memory tier: personal (private), project (shared via this repo's .thincoder/memory/), team (CLI only, git-synced). The [layer] tag on search/list result rows, the row's id prefix, and the layer parameter are the same concept — pass a result row's [layer] as layer, or omit it on a single delete to auto-route by the id prefix.\n" +
-  "Deleting project/team (CLI) entries removes the local markdown file and its index row — team deletion is local only and a later team sync may resurrect the file while the remote still has it.\n" +
-  "Save bugs, conventions, and preferences here — they persist across sessions.\n" +
-  "Session message history (what was said in this or past sessions) is NOT in memory — search session messages with read_history."
 
 function validateTypeFilter(type) {
   if (type === undefined || type === null || type === "") return null
@@ -256,7 +261,7 @@ export function memoryTools(memory, opts = {}) {
   return [
     {
       name: "memory",
-      description: MEMORY_TOOL_DESCRIPTION,
+      description: DESC("memory"), // #15 外置：文本单点 = tool-docs/memory.md
       parameters: {
         type: "object",
         properties: {

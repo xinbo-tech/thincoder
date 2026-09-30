@@ -300,7 +300,7 @@ test("T11 badges.clearRunning 纯动作：摘 running（值等 ⇒ 原引用；�
 
 test("T12 结构核（AC1 链路五跳 + AC5 清位写者账）：判据单源在场", () => {
   // 发射端（受理即置单点）
-  const driver = text("thincoder-desktop/src/main/turn-driver.mjs")
+  const driver = text("thincoder-desktop/src/main/turn-input.mjs")
   assert.equal((driver.match(/post\("ev:activity", \{ key, event: "turn" \}\)/g) ?? []).length, 1, "受理形发射单点（恰一发）")
   // ① 归约面：无帧 turn 入受理支 ⇒ 置 running（写者唯一）
   const events = text("thincoder-desktop/renderer/events.mjs")

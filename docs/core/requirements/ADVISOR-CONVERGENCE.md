@@ -202,7 +202,7 @@
   1. **硬墙中止形态**：VSC 中止返回 `interrupted` 字段（非抛错）——墙判定以信号状态为主判据（`thincoder-vscode/src/advisor/` 设计档 §13.6 / §13.10）。**= 已消解**（2026-09-25 实读复核：
      端侧 `thincoder-vscode/src/advisor/` 不存在——W12 删旧；中止形态 = 核单源——`thincoder-core/advisor/loop.mjs:100` · `:184`（返回「Advisor: interrupted.」尾）∥ `thincoder-core/advisor/run.mjs:178`（`AbortError` + `signal.reason.interrupt` 重抛））。
   2. **结算拒发不记账载体** = per-call `ctx._advisorRefused`（CLI 用 `agent._advisorRefusals` Set）——载体差异，语义零差——**形态（非登记项）**。
-  3. **冻结窗口实现点** = `src/agent/execute-tools.mjs`（单一预闸点——VSC 无独立 dispatch 模块）；事件面 = 核 `_mutLog`（`noteMutations`——W12 改指；原端侧 `_fileMutEvents` 已随删旧退役）——**形态（非登记项）**（实现点各端自持，语义同源）。
+  3. **冻结窗口实现点** = `src/agent/execute-tools.mjs`（单一预闸点——VSC 无独立 dispatch 模块）；事件面 = 核 `_mutLog`（`noteMutations`——W12 改指；原端侧 `_fileMutEvents` 已随删旧退役）——**形态（非登记项）**（实现点各端自持，语义同源）。（迁移期引文——档已迁核）
   4. **项目方法论指针** = 仅声明（`advisor.standardsDoc`——硬探针已退役）；文档地图 = 声明优先 → 兜底链——**形态（非登记项）**（指针形态；两端同机制）。
 
 **二态化裁定行（2026-09-25 · 台账 #339① 需求层复核）**：① = **已消解**（W12 迁核——端侧实现面不存在；中止形态 = 核单源）；② = **形态（非登记项）**（载体差异，语义零差）；③ = **形态（非登记项）**（实现点差异，语义同源）；④ = **形态（非登记项）**（指针形态，两端同机制）。

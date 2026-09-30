@@ -159,7 +159,7 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
   （理由与逐名后果 = `docs/core/design/MODEL-SPECS.md` §2.4，本档不重述）。**约束：以后不得以蹭泛前缀的方式给新 qwen 档配能力**——
   音/视频能力在 schema 上**未表达且未接入**（`multimodal` 仅承载「可收图像 part」），新档声明只写实测到的字段。
 - **re-export 契约**：`config.mjs` re-export `specForModel` / `providerSpec` / `specMatch`；`providerSpec` = spec + provider 级 context 覆盖。
-- **`noUsageStream` 语义 = 「核不主动发 `stream_options.include_usage`」（保守抑制，**非**服务端能力断言）**：唯一消费点 = 载荷组装段的 OpenAI 兼容支（`thincoder-core/provider/core.mjs:183`；`format:"google"` 行走原生 transport ⇒ 对 gemini 行为**惰性声明**）。逐族裁据与保留裁定 = `doc:MODEL-SPECS.md:§15.2`（本档不复述数值/名单）。
+- **`noUsageStream` 语义 = 「核不主动发 `stream_options.include_usage`」（保守抑制，**非**服务端能力断言）**：唯一消费点 = 载荷组装段的 OpenAI 兼容支（`thincoder-core/provider/core.mjs:179`；`format:"google"` 行走原生 transport ⇒ 对 gemini 行为**惰性声明**）。逐族裁据与保留裁定 = `doc:MODEL-SPECS.md:§15.2`（本档不复述数值/名单）。
 
 ### 6.10 畸形 tool_calls 防御解析
 
@@ -168,12 +168,16 @@ name 空槽丢弃并计数、缺 id 合成 `call_N`。告警（`droppedToolCalls
 
 ### 6.11 模型支持与预设（PROVIDER_PRESETS）
 
-- **预设** `PROVIDER_PRESETS`（住 `thincoder-core/config-presets.mjs`，21 家）：按需从预设创建 provider，各预设声明 `baseURL` / **`model`（单值默认模型）** / thinking / reasoningEffort / maxTokens / desc。**预设不再携带候选清单**（原 `models` 种子已废）。
+- **预设** `PROVIDER_PRESETS`（住 `thincoder-core/config-presets.mjs`，22 家）：按需从预设创建 provider，各预设声明 `baseURL` / **`model`（单值默认模型）** / thinking / reasoningEffort / maxTokens / desc。**预设不再携带候选清单**（原 `models` 种子已废）。
 - **渠道接入批新增**（2026-09-20 · `tokenhub` 入表 + `volcengine` 默认模型改值）：`tokenhub` = 腾讯 TokenHub 聚合网关
   （baseURL `https://tokenhub.tencentmaas.com/v1`，默认模型 `hy3`，**不带** thinking / reasoningEffort / maxTokens 字段 =
   该载荷面未实测，不设即不发）；`volcengine` = 火山方舟，默认模型 = `doubao-seed-2-0-code-preview-260215`（实测在册；
   改值动因与旧值 = 批次档 `2026-09-20-channel-onboarding.md` §1.2–§1.3）。既有 `hunyuan` 预设 = 另一主机，本轮未实测 ⇒ **不动**。
-  行集与逐字段取值 = `doc:MODEL-SPECS.md:§9`；护栏用例 = 预置↔规格漂移白名单（只减不增）。
+  行集与逐字段取值 = `doc:MODEL-SPECS.md:§9`；护栏用例 = 预置↔规格漂移白名单（只减不增）——现形 = 批次本地件（2026-09-28 测试树全清后，护栏随批重立于 `docs/batches/2026-09-29-provider-config-family.test.mjs`）。
+- **华为云 MaaS 入表（2026-09-29 provider-config-family 批 · 台账 #176）**：`huawei` = 华为云 ModelArts Studio（MaaS）——baseURL
+  `https://api.modelarts-maas.com/openai/v1`（OpenAI 兼容；区域端点变体走自定义渠道自助路径——§6.21）；默认模型 = **实施轮实拉 `/models` 取值**
+  （取数规则与证据等级 = `docs/batches/2026-09-29-provider-config-family.md` §2；无 key 时按官方口径记名并标「待验」）；`thinking` / `reasoningEffort` / `maxTokens`
+  **不带**（载荷面未测——「不设 = 不发」）。
 - **预置 `maxTokens` ⇄ 规格行对齐（2026-09-25 批）**：不变式 `maxTokens ≤ specForModel(preset.model).maxOutput`（**基准 = 生效规格值**，含 `DEFAULT_SPEC` 兜底）；六对超限已逐对对齐（真行三对降行值 / 无行三对降生效基准），`OVER_LIMIT` 白名单 → **空名单**。逐对表与覆盖缺口（挂 `#11`） = `doc:MODEL-SPECS.md:§15.3`。
 - 能力差异全走规格表；`kimi/kimi-k3`（router 前缀）与 `k3` 保留显式 alias 行；未知模型保守 `DEFAULT_SPEC`。
 - **DeepSeek V4.1-Flash 行集**：新行 `deepseek-flash`（1M 上下文 / 384K 输出 / thinking 默认开 / 前缀补全 Beta / 磁盘缓存默认开 / `multimodal: true`）；
@@ -255,6 +259,7 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
 - **消费点全表**（5 通路 + 1 对照面）：① 主聊天（OpenAI 兼容）`core.mjs`（参照面）· ② responses（`responses.mjs` 三处 fetch 改引用提升后的单个 `const headers`）· ③ anthropic（`anthropic.mjs` 既有 `const headers` 首行加展开）· ④ google（`google.mjs` 内联展开）· ⑤ 会话标题生成（`generate-title.mjs` `opts.headers` 内联展开）· ⑥ 模型清单拉取 `list-models.mjs`（对照面——零改）。
 - **域外与端面**：会话动态头（`x-opencode-session` 类）不做（证据未立）；embedding 独立渠道无定制头字段；**VS Code 端无 `providers[].headers` 概念**（配置面与展开面均无——对位引入属新需求）。
 - **已知边界**：大小写变体同名定制头交给 fetch 归并（不做大小写归一）；未经装载面净化而直达 `chat()` 的定制 `Authorization` 在 anthropic 通路（无内置 `Authorization`）原样透传——不在本项加第二道防线。**open 项：无**。
+- **值引用**：定制头值与 `apiKey` 可携 `${env:VAR}` 引用（落盘不落明文）——解析 = 消费侧单源 `doc:CONFIG.md:§6.3`；装配契约与装载面净化零改。
 
 ### 6.18 图片输入与贴图降级链（VSC 端 · 终收批并入）
 
@@ -262,12 +267,12 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
 
 **图片输入链（VSC）**：粘贴 / 拖拽 / 附加按钮 → webview 传 dataURL → `thincoder-vscode/src/extension/panel-messages.mjs` `routeUserTurn`（`:59`）内
 `savePastedImages`（`:82`）落盘 `<cwd>/.thincoder/tmp/paste-<id>-<i>.<ext>`（`src/extension/image-handler.mjs`；raster png / jpg / gif / webp 白名单 + >15MB 跳过）→
-`thincoder-vscode/src/agent/setup-reminders.mjs:216` `appendImagePointer` 给真实 user 消息追加 `[Attached images: …] — use the read_image tool to view them before answering.`（**非多模态模型直接 throw**——可见错误不静默丢）→
+`thincoder-vscode/src/agent/setup-reminders.mjs:22` `appendImagePointer` 给真实 user 消息追加 `[Attached images: …] — use the read_image tool to view them before answering.`（**非多模态模型直接 throw**——可见错误不静默丢）→
 模型调 `read_image` 带图进载荷。历史内容保持字符串（不回放 images）；文件随 offload 写时自清理。
 
 **贴图降级链（非视觉模型自动降级）**：非视觉模型贴图不再硬报错——自动降级为视觉模型子代理读图、文本描述注入主会话——用户无感换模型（VSC 主；CLI 镜像软引导）。触发点 = `routeUserTurn`（savePastedImages 后、主回合 LLM 请求前）：
 非视觉模型（`specForModel(provider.model).multimodal` 假）+ images 非空 + depth-0 → ① 视觉渠道查找（`thincoder-vscode/src/extension/vision-channel.mjs`——resolveProviders 扫 multimodal；判据与 appendImagePointer / read_image 注册门同源 = MODEL_SPECS multimodal）
-② extension 内直跑一次性视觉子代理读图（`runVisionReader`——`image-handler.mjs:65`，复用 runAgent / runChild 换渠道模式；**超时 60s**（`VISION_READ_TIMEOUT_MS` `:64`）；seam = `visionReader ?? runVisionReader` 参数注入 `panel-messages.mjs:92`）
+② extension 内直跑一次性视觉子代理读图（`runVisionReader`——`thincoder-core/vision-reader.mjs:47`，复用 runAgent / runChild 换渠道模式；**超时 60s**（`VISION_READ_TIMEOUT_MS` `:30`）；seam = `visionReader ?? runVisionReader` 参数注入 `panel-messages.mjs:128`）
 ③ 描述注入：text 改 `[图片 <路径> 描述: <视觉子代理描述>]`、images 清空（appendImagePointer throw 路径不达）④ fallback：
 无视觉渠道 / spawn 失败 / 超时 / 空返回 → 保留现可读报错（不静默丢图）。
 
@@ -275,7 +280,7 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
 ① 窗前建 `AbortController` 挂 `panel._visionAbort`（`:90` · `finally` 幂等清理 `:93`）② 取消缝——`runVisionReader({ …, signal })` 内 `signal?.addEventListener("abort", () => ac.abort(), { once: true })` 桥接内部超时 controller（既有 catch → `null` 语义复用——零新返回形态）
 ③ abort 定向——面板 abort case 的 running 分支**优先**判 `panel._visionAbort`（`:236-237` → `abort()` 后跳出，不再落僵尸交付路径）
 ④ 停后语义 = **启动即中止**——
-await 快速返 `null` → 照常 `_chat`（用户消息入 history——at-most-half-a-turn）→ `_chat` 调用后置 `panel._abortRequested = true`（`:104`）——`newTurnController`（`panel-chat.mjs:59-60` / `:129`）消费 → 回合建立即 abort ⑤ **零新增布尔状态**（stopped 判定 = `signal.aborted`；唯一新字段 = `panel._visionAbort`——窗生命周期）⑥ 边界：
+await 快速返 `null` → 照常 `_chat`（用户消息入 history——at-most-half-a-turn）→ `_chat` 调用后置 `panel._abortRequested = true`（`:104`）——`newTurnController`（`panel-chat.mjs:44` / `:224`）消费 → 回合建立即 abort ⑤ **零新增布尔状态**（stopped 判定 = `signal.aborted`；唯一新字段 = `panel._visionAbort`——窗生命周期）⑥ 边界：
 Ctrl+I（interrupt）面与视觉模型 / 无图路径零动；`maxTurns` 不改。
 
 **关键决策与边界**：① **返回形态 = 文本描述替换 images**（与现机制完全兼容——无图污染；否决去图投喂主模型——非视觉模型无图路径）② **引擎级新 spawn 通道不建**（勘察确认不存在——降级 = extension 内 runAgent 一次性直跑，不走 agent-tools 池）③ CLI 镜像 = 软引导（read_image 工具错误文案追加「可 spawn 视觉模型子代理读图」；硬自动 CLI 不做）④ UI 前置（模型下拉 vision 标记）= UX 增强**移出本批**（后批）⑤ 边界：
@@ -288,14 +293,14 @@ Ctrl+I（interrupt）面与视觉模型 / 无图路径零动；`maxTurns` 不改
 **配置存储端差**（`thincoder-vscode/src/config-io.mjs`）：与 CLI 共享 `~/.thincoder/config.json`（`resolveProviders` `:167`）——差异点 = ① `resolveKey` **只读 config.json `entry.apiKey`**（env 不是密钥源——与 CLI env 回退语义不同）；空 → provider 不可用（`providerFromConfig` 返回 null；模型选择走 onboarding）
 ② 代理 = provider 级 `proxy: true` **且** 全局 `proxy.model === true`（`injectProxy` 语义）→ 请求经代理（单键不生效）
 ③ **并发写防冲突（F5b）**：`loadRaw` 记 mtimeMs + size 基线、`saveRaw` 写前重 stat 不符 → 放弃 `{reason: "mtime-conflict"}` + `.bak-{ts}` 轮转（副本不自动合并）+ `CONFIG_CONFLICT_HINT` 提示重试 ④ 旧版迁移：
-VS Code settings 的 `thincoder.providers` + SecretStorage 一次性迁入 config.json（`thincoder-vscode/src/config-migrate.mjs` `migrateCore`——不覆盖已有 apiKey、preset 名自动重建）后清 legacy 存储；嵌入 key 一并迁移 ⑤ `resolveDefaultModel`（`thincoder-vscode/src/config-io.mjs:213`）回退链 =
+VS Code settings 的 `thincoder.providers` + SecretStorage 一次性迁入 config.json（`thincoder-vscode/src/config-migrate.mjs` `migrateCore`——不覆盖已有 apiKey、preset 名自动重建）后清 legacy 存储；嵌入 key 一并迁移 ⑤ `resolveDefaultModel`（`thincoder-vscode/src/extension/presets.mjs:106`）回退链 =
 ① defaultModel 复合属本渠道 ② 渠道单值 `entry.model` ③ `null`——**不再静默回退 `models[0]`**（§6.16 M7 同源 · VSC 独立实现）；v2 迁移 `delete p.models` / `p.model` 单值恢复。
 
 **Preset 预设表（核单源 · 2026-09-20 实读取一侧）**：`PROVIDER_PRESETS` 表 = **核单源**（`thincoder-core/config-presets.mjs`），
-VSC 侧取一侧复用（`thincoder-vscode/src/extension/presets.mjs:9` 注 + `:21` re-export；端壳无镜像文件）——**21 preset**（deepseek / kimi / kimi-code /
+VSC 侧取一侧复用（`thincoder-vscode/src/extension/presets.mjs:9` 注 + `:21` re-export；端壳无镜像文件）——**22 preset**（deepseek / kimi / kimi-code /
 glm / glm-code / qwen / qwenplan / mimo / mimoplan / minimax / openai / claude / gemini / grok / mistral / volcengine / hunyuan / siliconflow /
-openrouter / groq / **tokenhub**）；
-claude / gemini 携 `format: "anthropic" / "google"`；minimax 携 `chatPath: "/text/chatcompletion_v2"`；`presetToEntry`（核单源 = `thincoder-core/config-presets.mjs:41`）剥离 `desc` 余下发成 provider 条目
+openrouter / groq / **tokenhub** / **huawei**）；
+claude / gemini 携 `format: "anthropic" / "google"`；minimax 携 `chatPath: "/text/chatcompletion_v2"`；`presetToEntry`（核单源 = `thincoder-core/config-presets.mjs:44`）剥离 `desc` 余下发成 provider 条目
 （单值默认模型——§6.11 同源）；2026-09-11 `deepseek` 预设默认模型 → `deepseek-flash`（§6.11 同源）。
 
 **模型选择 UI（面板接线）**：主下拉列 provider 行（名 + 当前模型 + `›`）+ hover flyout 子菜单（webview 无键盘导航）；选中 = 写当前会话槽；设置面板「默认模型」项 = provider →
@@ -313,12 +318,12 @@ VSC 调用面已无相位传参点（W10 已迁核）——相位参数由核 ch
 本地接线不变 = responses provider 经 config.json 手写 `format: "responses"` 或预设扩展启用（custom 表单 format 下拉未加 responses 项——显式 opt-in，CLI parity）；
 finishReason 区分（`response.incomplete` 非长度原因不得报成 `length`）**保留为端侧验收面**。
 
-**能力适配端差**（语义同源不重并——坐标即指）：`specForModel` / `providerSpec` / `resolveEnableThinking` / `isBailianHost`（`thincoder-vscode/src/config.mjs:106 / :142 / :183 / :166`——W16 面）·
+**能力适配端差**（语义同源不重并——坐标即指）：`specForModel` / `providerSpec` / `resolveEnableThinking` / `isBailianHost`（`thincoder-vscode/src/config.mjs:106 / :142 / :183 / :166`（as-of 2026-09-29）——W16 面）·
 reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 真 off；**载荷形随 `doc:MODEL-SPECS.md:§16.2` 按族取形**）· escape v5 与 UTF-16 安全截断（核 `escape.mjs` + 端 `src/agent/run-helpers.mjs` `safeSliceUTF16`——§6.7 同构）·
 畸形 tool_calls 防御（W10 已迁核——现体 = 核 `provider/sse.mjs`；§6.10 同构）· 前缀剥离与 `DEFAULT_SPEC` 兜底（§6.9 同构）；
 规格表每行多 `reasoningEffortDefault`（§6.9 已登记端差）。**`provider.headers`：VS Code 端无 `providers[].headers` 概念**（§6.17 域外与端面已登记——对位引入属新需求）。
 
-**LLM 标题生成**（`thincoder-vscode/src/extension/generate-title.mjs:13`；`panel-chat.mjs:334` 触发）：会话第一条 user 消息后 agent 完成回复——取首条文本（多模态 part 数组取 text）→ 用该 provider 发简短 prompt（"Generate a concise title (max 40 chars…)"），**非流式** + `max_tokens: 100` + **逐 format 禁 thinking**
+**LLM 标题生成**（`thincoder-vscode/src/extension/generate-title.mjs:15`；`panel-chat.mjs:334` 触发）：会话第一条 user 消息后 agent 完成回复——取首条文本（多模态 part 数组取 text）→ 用该 provider 发简短 prompt（"Generate a concise title (max 40 chars…)"），**非流式** + `max_tokens: 100` + **逐 format 禁 thinking**
 （openai `thinking:{type: "disabled"}` / anthropic 同 / google `thinkingConfig: {thinkingLevel: "none"}`——`:57`——否则 reasoning_content 吃光输出预算内容空 IK9UZ8）。失败静默降级返回 null（首条消息截断作标题兜底）；10s 超时；标题 trim 截 40 字符。headers 展开消费点已列 §6.17（⑤ 会话标题生成）。
 
 ### 6.20 onWait 相位 → 状态文案（核内单源映射 · 2026-09-16 批 1）
@@ -345,10 +350,10 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 | `warn` | `message` | — | — | **不显示**（前置告警——与 VSC 面 `statusTextPayload` 同判据） |
 | 未知相位 / 秒缺失 | — | — | — | **不显示**（不虚构数值、不落兜底误标） |
 
-- **`kind` 词表与 i18n 键**：`kind` = `rateWait` / `rateLimited` / `overloaded` / `quota`——**与 VSC 面 `statusTextPayload` 的 kind 同名**（两端同一词表）；渲染 = `t("status." + kind, { s, msg }, locale)`（`t` = `thincoder-core/i18n.mjs:83`——同表同占位符，**核内零第二套字面**）。
+- **`kind` 词表与 i18n 键**：`kind` = `rateWait` / `rateLimited` / `overloaded` / `quota`——**与 VSC 面 `statusTextPayload` 的 kind 同名**（两端同一词表）；渲染 = `t("status." + kind, { s, msg }, locale)`（`t` = `thincoder-core/i18n.mjs:89`——同表同占位符，**核内零第二套字面**）。
 - **API**：`waitStatusOf(ev) → { kind, seconds?, message? } | null`（纯映射）· `waitStatusText(ev, locale?) → string | null`（`null` = 不显示）；`quota` 相剥发射前缀（`retry.mjs:60` `quota exhausted: `——首现即剥，一次）后插值。
 - **消费点收敛**：三处相位枚举 / 兜底分支退役 → `const s = waitStatusText(ev); if (s) …`（TUI 状态行 / headless stderr `[rate-limit]` 前缀 / ACP stderr 日志）。
-- **VSC 面（多实现面）**：`thincoder-vscode/src/extension/panel-callbacks.mjs:195-202` `statusTextPayload()` 五相已完备（`warn` / 未知 → `null` = 不发射；用例 `thincoder-vscode/test/status-line.test.mjs:62-70`）——**语义同源、各面独立实现**（不以任一面产物回改另一面）。
+- **VSC 面（多实现面）**：`thincoder-vscode/src/extension/panel-callbacks.mjs:72` `statusTextPayload()` 五相已完备（`warn` / 未知 → `null` = 不发射；用例 `thincoder-vscode/test/status-line.test.mjs:62-70`）——**语义同源、各面独立实现**（不以任一面产物回改另一面）。
 - **复现与判据（本批测试层 · 需求档 F-PV1）**：
   ① 单测直驱三消费点回调：`{ phase: "warn", message: "estimated 5000 tokens > tpm 1000 — request proceeds and may hit a server 429" }` ⇒ TUI 状态行 / headless stderr **不出现** `undefined`（现态必现）；
   ② `{ phase: "quota", message: "quota exhausted: x" }` ⇒ 显示 `quota exhausted: x`（**不双前缀**——剥前缀后插值）；`{ phase: "quota", message: "x" }` ⇒ 显示 `quota exhausted: x`；
@@ -358,6 +363,27 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 
 > 本批受影响文件（当前行数 / 增量）= 批次档 `docs/batches/2026-09-15-core-defect-fixes.md` §四；验收 = 同档 §五 V5 / V6。
 
+### 6.21 预设收录判据与长尾渠道自助路径（2026-09-29 provider-config-family 批 · 台账 #177）
+
+**判据（预设表收录门槛——「预设表 ≠ 厂商名录」）**：新渠道入 `PROVIDER_PRESETS` 须同时满足三条：
+
+| # | 判据 | 判据义 |
+|---|---|---|
+| ① | 公开 OpenAI 兼容端点文档实锤 | 厂商公开文档载明 OpenAI 兼容端点（仅「平台侧接入标准 ∕ 兼容声明」不算——须有可照抄的端点形与鉴权形） |
+| ② | 可自助开通 ∕ 可实测 | 可自助开通并实测（与 M8/M9 准入相容——`GET /models` 拉不到清单 = 该渠道不可选） |
+| ③ | 非纯等价重复或有明确用户需求 | 纯转售等价重复低边际价值；有明确用户需求者不受此限 |
+
+入表项的字段面纪律不变：默认模型按实拉取值（无 key 时按官方口径记名 + 证据等级标注）；未测载荷字段**不设 = 不发**（§6.11 渠道接入批先例 · D-13）。
+
+**运营商三家首测结论（2026-09-21 评估 · 给由在台账 #177）**：电信天翼云（息壤 ∕ 慧聚）= **可收 · 低优先**
+（判据① 实锤 + 免费体验；**本轮不入表**——低优先 = 无排期；入表条件 = 用户点名或需求出现）；移动九天 ∕ MoMA = **暂不收**
+（判据① 未实锤——公开面无 OpenAI 兼容端点文档）；联通元景 = **暂不收**（判据① 未实锤——「深度适配 OpenAI API 标准」= 平台侧接入标准，非提供兼容端点）。
+
+**长尾渠道自助路径（判据外的兜底）**：任意 OpenAI 兼容端点（含区域端点变体，如华为云区域形 `https://api-ap-southeast-1.modelarts-maas.com/openai/v1`）
+无需预设即可接入——CLI `/model` 菜单「add provider → custom」或 VSC `Add provider… → Custom`（name + baseURL + model [+ format]），或手写 `providers[]` 自由字段；
+用户指引条 = `thincoder-cli/README.md`（自定义渠道一条；VSC README 已有「+ custom OpenAI-compatible endpoint」覆盖）。
+
+## 7. 关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
 |---|---|---|
@@ -460,3 +486,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - 2026-09-25（**off 形族收尾批 · eng-designer**——承 `docs/batches/2026-09-25-off-family-closeout.md` §2 · 台账 #334 / #335 / #346）：§6.12 补 **「有效 off 路径」判据与回执可宣称性**指针（生产者全表 + 单源实现 `thincoder-core/think-off.mjs`（拟新增）——真源 = `doc:MODEL-SPECS.md:§16`）；谓词本体零改。
 - 2026-09-25（**off 形族收尾批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-25-off-family-closeout.md` §3 轮次 1 + §2 修正块 · 台账 #334 / #335 / #346）：
   §6.9 规格字段清单补 `thinkAlwaysOn`（服务端强制思考标记——语义单源 = `doc:MODEL-SPECS.md:§16.3`，循 `cacheMode` 同笔同步先例）；§6.19 旧形字面收正（`"off"` 载荷**按族取形**——真源 = `doc:MODEL-SPECS.md:§16.2`）。谓词本体零改。
+- 2026-09-29（**provider-config-family 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-provider-config-family.md` · 台账 #176 ∕ #177）：§6.11 预设计数 21 → **22**（D3 计数与清单同变）+ 新登 `huawei` 预置（华为云 MaaS——端点钉定 ∕ 默认模型 = 实施轮实拉取值 ∕ 未测载荷字段不带）+ 护栏句重锚（批次本地件形态）；§6.19 计数与名单同变；
+  §6.17 新登值引用指针（`${env:VAR}` 解析单源 → `doc:CONFIG.md:§6.3`）；新增 **§6.21 预设收录判据与长尾渠道自助路径**（三判据 + 运营商三家结论 + 自助路径）。**零新语义**（= 台账 #176 ∕ #177 既定内容的成文；另含结构面自修一项：§7 标题行补立——D-PR 决策表原为无标题表块）。
+- 2026-09-29（**provider-config-family 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-29-provider-config-family.md` §3 轮次 1 发现 6）：§6.19 `presetToEntry` 坐标收正——`thincoder-core/config-presets.mjs:41` ⇒ **`:44`**（函数体行；原注落 JSDoc 前位）。**零新语义**。
+- 2026-09-30（**doc-sweep 批 · 行宽收正 · eng-designer**——承 `docs/batches/2026-09-30-doc-sweep.md` §2 · 台账 #664）：provider-config-family 设计轮条（原单行 439 字符）**折行**（仅换行 ∕ 语义零改——doc-check 行宽闸收正）。**零新语义**。

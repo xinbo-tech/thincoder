@@ -1,0 +1,169 @@
+/* session-list.css — 会话**列表面**（自 `renderer/chrome.css` 出档 —— 越线档结构轮 · 台账 #536；切点 ∕ 缝单源 = 批档
+   `docs/batches/2026-09-29-structure-split-round.md` §2.2-A：原 `:136-262` ∕ `:287-323` 全量逐字迁出 —— 零重排 ∕ 零规则增删）。
+   链序（`renderer/index.html`）= theme → chrome → **session-list** → skin → chat → chat-cards → chat-composer → chat-fixes → core-markdown → core → /rc/search.css → pool → settings
+   （位次 = chrome.css 之后 ∕ skin.css 之前 —— 级联序零变）。
+   面 = 下拉面（开合单源 = `data-open`）+ 条目全族（标题 ∕ 元数据三值 ∕ 位标 ∕ 行内 ✎ ∕ ✕）+ 空态 + 账本注记 + 条目内改名形；
+   共享面 `.auto-confirm` 族 ∕ 控制条 `.session-new` 留 `renderer/chrome.css`（不迁 —— KD-SS-3）。 */
+/* 下拉面（开合单源 = `data-open`；`display: none` ⇒ 闭）——挂选择器内 ⇒ 随条体溢出裁面（面板 `overflow: hidden` 外自然裁）。 */
+.session-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 2px;
+  z-index: 100;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: var(--shadow);
+  display: none;
+}
+.session-dropdown[data-open="1"] {
+  display: block;
+}
+/* 条目（标题 + 元数据 + 位标 + 行内 ✎ ∕ ✕ —— 对位 VSC `.session-item`；末行无线）。 */
+.session-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.session-item:last-child {
+  border-bottom: none;
+}
+.session-item:hover {
+  background: var(--hover-bg);
+}
+/* 条目聚焦（VSC `base.css:449-457` 同三值 —— 键盘可达面；沿原左列行聚焦先例）。 */
+.session-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--hover-bg-strong);
+}
+.session-item.active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.session-item.active .session-item-title {
+  color: var(--accent);
+}
+.session-item-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 元数据三值（provider · N msgs · updated —— 逐段包元素 `data-seg`；段间分隔符归本条，缺席段不落空分隔）。 */
+.session-item-meta {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 4px;
+  color: var(--fg);
+  font-size: 11px;
+  opacity: 0.4;
+  white-space: nowrap;
+}
+.session-item-meta > [data-seg] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.session-item-meta > [data-seg] + [data-seg]::before {
+  content: "· ";
+}
+/* 位标（运行中 ∕ 待审批 ∕ 完成 —— 码由视图落、词由词表出；`idle` 零节点）。 */
+.session-item-badge {
+  flex: 0 0 auto;
+  color: var(--fg-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+/* 空态行（`session.empty` —— 半透明 · 非可点）。 */
+.session-empty {
+  opacity: 0.5;
+  cursor: default;
+}
+/* 账本警示注记（下拉首行 · 非可点 —— 端既有面迁位；值 = VSC `session-bar.js:33-44` 同款）。 */
+.session-ledger-notice {
+  padding: 6px 10px;
+  opacity: 0.7;
+}
+/* 行内动作钮（✎ ∕ ✕）：22px 方 · 静息隐没 · 行 hover 半显 · 自身 hover 全显。 */
+.session-rename,
+.session-delete {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: 12px;
+  opacity: 0;
+}
+.session-rename::before { content: "✎"; }
+.session-delete::before { content: "✕"; }
+.session-item:hover .session-rename,
+.session-item:hover .session-delete {
+  opacity: 0.5;
+}
+.session-rename:not(:disabled):hover {
+  opacity: 1;
+  background: var(--hover-bg-strong);
+  color: var(--accent);
+  cursor: pointer;
+}
+.session-delete:not(:disabled):hover {
+  opacity: 1;
+  background: var(--diff-del-bg);
+  color: var(--error-fg);
+  cursor: pointer;
+}
+.session-rename:focus-visible,
+.session-delete:focus-visible {
+  opacity: 1;
+}
+/* 改名形（条目原位换形 —— 端既有换形面迁入本行）：[文本控件, 取消, 确认]。 */
+.session-rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: inherit;
+  font: inherit;
+}
+.session-cancel,
+.session-confirm {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  font: inherit;
+}
+.session-cancel { color: var(--fg-muted); }
+.session-confirm { color: var(--accent); }
+.session-cancel:not(:disabled):hover,
+.session-confirm:not(:disabled):hover {
+  background: var(--hover-bg);
+  cursor: pointer;
+}
+.session-cancel:not(:disabled):active,
+.session-confirm:not(:disabled):active {
+  background: var(--hover-bg-strong);
+}
+.session-cancel:focus-visible,
+.session-confirm:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--hover-bg-strong);
+}

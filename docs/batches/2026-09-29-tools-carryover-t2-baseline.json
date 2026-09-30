@@ -1,0 +1,349 @@
+{
+ "timer": {
+  "name": "timer",
+  "description": "Set a timer before you start analyzing code. When the timer fires, a system reminder will be injected suggesting you try running code or adding debug logs. Use this to enforce a thinking budget: you get N seconds to reason, then the timer reminds you to act. Returns the set confirmation — the reminder fires at the deadline. Delivery: while a turn is running it lands at the next step boundary; when the session is idle it is delivered on the spot and starts a turn — the idle wake is available on the CLI / VSC / desktop foregrounds and suspension windows (headless is structurally unsupported); other paths keep the step-boundary behavior. A pending timer survives across runs; at most 8 timers may be pending at once, and further timer calls are rejected until some expire.",
+  "schemaLen": 1147,
+  "structure": {
+   "type": "object",
+   "properties": {
+    "seconds": {
+     "type": "number"
+    },
+    "message": {
+     "type": "string"
+    }
+   },
+   "required": []
+  }
+ },
+ "goal": {
+  "name": "goal",
+  "description": "Manage a long-running autonomous goal. action='set': create or replace the goal — must have a verifiable completion criterion (a machine-checkable proof, not vague effort). action='complete': mark achieved — only after the criterion's check has actually passed. action='blocked': report an impasse (requires 'reason') — only after 3 genuine attempts. action='cancel': abandon the goal. Returns a status line — the goal set/updated/completed/blocked/cancelled confirmation, or Error: ... with the reason.",
+  "schemaLen": 1050,
+  "structure": {
+   "type": "object",
+   "properties": {
+    "action": {
+     "type": "string",
+     "enum": [
+      "set",
+      "complete",
+      "blocked",
+      "cancel"
+     ]
+    },
+    "objective": {
+     "type": "string"
+    },
+    "criteria": {
+     "type": "string"
+    },
+    "reason": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "action"
+   ]
+  }
+ },
+ "task": {
+  "name": "task",
+  "description": "Plan and track a task list for complex multi-step work. Each call replaces the entire list. Keep exactly one item in_progress at a time; mark items done as you complete them; never mark done if tests fail or work is partial. Statuses: pending | in_progress | done — synonyms (completed/finished/complete, todo/open/waiting, active/running/working, …) are accepted and normalized with a warning. IMPORTANT: title is required and must be a non-empty string — items with empty titles are silently dropped. For cross-session / project-level tracking, use `/ledger`. Returns the updated task list (or the new item's ID on add).",
+  "schemaLen": 896,
+  "structure": {
+   "type": "object",
+   "properties": {
+    "items": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "properties": {
+       "title": {
+        "type": "string"
+       },
+       "status": {
+        "type": "string",
+        "enum": [
+         "pending",
+         "in_progress",
+         "done"
+        ]
+       }
+      },
+      "required": [
+       "title",
+       "status"
+      ]
+     }
+    }
+   },
+   "required": [
+    "items"
+   ]
+  }
+ },
+ "skill": {
+  "name": "skill",
+  "description": "Load a project skill from .thincoder/skills/. Skills contain reusable instructions, workflows, or reference material. Use this when the user references a skill by name, or when a task matches a known skill's description. Call with action='list' to see available skills; call with action='load' and name=<skill> to activate one. Returns the skill list ('list'), the load confirmation ('load' — instructions arrive in the next message), or Error: ... with the available skills.",
+  "schemaLen": 754,
+  "structure": {
+   "type": "object",
+   "properties": {
+    "action": {
+     "type": "string",
+     "enum": [
+      "list",
+      "load"
+     ]
+    },
+    "name": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "action"
+   ]
+  }
+ },
+ "plan": {
+  "name": "plan",
+  "description": "Enter or exit plan mode. In plan mode you are restricted to READ-ONLY tools: read files, search code, run read-only shell commands. Use plan mode before complex multi-step tasks — explore the codebase, design the architecture, present a plan to the user. Exit plan mode to present the plan for the user's approval; implement only after they approve. For simple single-file edits, skip plan mode and just make the change.",
+  "schemaLen": 597,
+  "structure": {
+   "type": "object",
+   "properties": {
+    "action": {
+     "type": "string",
+     "enum": [
+      "enter",
+      "exit"
+     ]
+    }
+   },
+   "required": [
+    "action"
+   ]
+  }
+ },
+ "git": {
+  "name": "git",
+  "description": "Run a git command. Only works inside a git repository.\n\n**Route to git instead of bash:** `git status`→status, `git log`→log, `git diff`→diff, `git show`→show, `git add`→add, `git rm`→rm, `git commit -m`→commit, `git push <remote> <branch> <tag>`→push, `git tag`→tag, `git branch`→branch, `git checkout`→checkout, `git restore`→restore, `git stash`→stash, `git fetch/pull`→fetch/pull, `git reset`→reset, `git revert`→revert, `git merge`→merge, `git cherry-pick`→cherry-pick, `git ls-remote`→ls-remote, `git clone`→clone, `git init`→init, `git rebase`→rebase, `git remote`→remote, `git clean`→clean, `git switch`→switch, `git apply`→apply, `git worktree`→worktree, `git archive`→archive, `git blame`→blame, `git mv`→mv.\n\n- action='diff': unified diff — what changed since last commit. staged=true for staged-only; ref=<ref> to compare a commit/branch; path=<dir> to scope.\n- action='status': working tree state — staged / unstaged / untracked / conflicts, categorized.\n- action='log': recent commits. count (default 10), oneline=true compact, path=<file> for one file's history.\n- action='show': a commit's details (--stat). ref=<ref> (default HEAD).\n- action='add': stage files — path=<file> (granular) or all changes when path omitted.\n- action='commit': commit. message required; path=<file> → `git commit --only <paths>` — commits those files' working-tree content only (other staged batches are NOT mixed in — atomic); without path → add -A + full commit. New (untracked) files aren't committable by path alone — `git add` them first (staging extra is safe: --only still commits only the listed files).\n- action='rm': untrack a file/dir (git rm --cached, kept on disk). path required.\n- action='push'/'fetch'/'pull': sync with remote. remote=<origin>, ref=<branch or tag> (space-separated for multiple), tags=true for --tags.\n- action='tag': manage tags. tagAction=list (optional filter) / create (name, optional ref) / delete (name; snapshots first).\n- action='branch': manage branches. branchAction=list / create (name, optional ref) / switch (name) / delete (name; snapshots first).\n- action='checkout': switch to ref=<branch/commit>, or restore a file path=<file> (discards its working-tree changes; snapshots first).\n- action='restore': restore a file from index/HEAD. path required; staged=true restores the staged copy; snapshots first.\n- action='stash': manage the stash. stashAction=list / push (message) / pop (snapshots first).\n- action='reset': reset to ref (default HEAD). mode=soft/mixed/hard; hard snapshots the tree first (drops working-tree changes).\n- action='revert': revert a commit (safe). ref=<commit> (default HEAD).\n- action='merge': merge ref=<branch/commit>; conflicts reported for you to resolve.\n- action='cherry-pick': cherry-pick ref=<commit>.\n- action='ls-remote': light remote-ref check — which refs a remote has (read-only, network). remote=<origin>, ref=<branch/tag> optional, config for proxy.\n- action='clone': clone a repo. remote required (URL or local path); path optional (target dir).\n- action='init': init a repo in the current (work)dir.\n- action='rebase': rebase onto ref. rebaseAction=start (ref required) / abort / continue（操作前自动快照，checkpointAction=rewind 恢复）.\n- action='remote': manage remotes. remoteAction=list / add / remove / set-url; remoteUrl for add/set-url.\n- action='clean': remove untracked files/dirs. dryRun for -n preview（真删除操作前自动快照，checkpointAction=rewind 恢复）.\n- action='switch': switch branch. name required; create for -c (new branch).\n- action='apply': apply a patch. path required (patch file).\n- action='worktree': manage worktrees. worktreeAction=list / add (path, ref) / remove (path).\n- action='archive': write a tar of ref (default HEAD). path required (output file).\n- action='blame': file blame. path required.\n- action='mv': rename/move. path (source) + dest required.\n- action='checkpoint': git snapshots. checkpointAction=list/create/rewind/cat/versions; checkpointId required for rewind/cat.\n- Destructive ops (checkout -- path / restore / reset --hard / stash pop / branch|tag delete / clean / rebase) auto-snapshot first — restore via checkpointAction=rewind.\n\nParameters:\n- action (required): diff / status / log / show / checkpoint / add / rm / commit / push / tag / branch / checkout / restore / stash / fetch / pull / reset / revert / merge / cherry-pick / ls-remote / clone / init / rebase / remote / clean / switch / apply / worktree / archive / blame / mv\n- workdir: run git in this subdirectory (monorepo / multi-repo). Path relative to cwd — no directory restriction. Default: the discovered project repo root（缺省 = 发现的项目仓根；显式 workdir 优先）\n- config: (network actions push/fetch/pull/ls-remote/clone) git -c overrides, e.g. [\"http.proxy=http://10.2.2.112:3128\"] for blocked remotes\n- path: (diff/log/add/commit/checkout/restore/rm/apply/archive/blame/mv/worktree) file or directory to scope / stage / restore\n- ref: (show/diff/checkout/reset/revert/merge/cherry-pick/tag:create/branch:create/rebase/worktree:add/archive) commit/branch/ref; (push/pull/fetch) the branch or tag (space-separated for multiple)\n- name: (branch/tag/switch) the branch or tag name\n- remote: (push/fetch/pull/remote/clone) remote name (e.g. origin) or URL; default: current upstream\n- tags: (push) also push all tags (--tags)\n- staged: (diff) staged changes; (restore) the staged copy\n- count: (log) number of commits (default 10)\n- oneline: (log) one-line-per-commit\n- message: (commit) commit message — required; (stash:push) stash message\n- mode: (reset) soft / mixed / hard — hard snapshots the tree first + needs confirmation\n- tagAction: (tag) list / create / delete — branchAction: (branch) list / create / delete / switch — stashAction: (stash) push / pop / list\n- filter: (read-only actions) keep only output lines matching this regex (case-insensitive)\n- checkpointAction: (checkpoint) list / create / rewind / cat / versions — checkpointId: snapshot id (rewind/cat)\n- remoteAction: (remote) list / add / remove / set-url — remoteUrl: (remote add/set-url) URL — rebaseAction: (rebase) start / abort / continue — dryRun: (clean) -n preview — create: (switch) -c — dest: (mv) destination — worktreeAction: (worktree) list / add / remove\n",
+  "schemaLen": 10743,
+  "structure": {
+   "type": "object",
+   "properties": {
+    "action": {
+     "type": "string",
+     "enum": [
+      "diff",
+      "status",
+      "log",
+      "show",
+      "checkpoint",
+      "add",
+      "rm",
+      "commit",
+      "push",
+      "tag",
+      "branch",
+      "checkout",
+      "restore",
+      "stash",
+      "fetch",
+      "pull",
+      "reset",
+      "revert",
+      "merge",
+      "cherry-pick",
+      "ls-remote",
+      "clone",
+      "init",
+      "rebase",
+      "remote",
+      "clean",
+      "switch",
+      "apply",
+      "worktree",
+      "archive",
+      "blame",
+      "mv"
+     ]
+    },
+    "staged": {
+     "type": "boolean"
+    },
+    "path": {
+     "type": "string"
+    },
+    "ref": {
+     "type": "string"
+    },
+    "count": {
+     "type": "number"
+    },
+    "oneline": {
+     "type": "boolean"
+    },
+    "message": {
+     "type": "string"
+    },
+    "filter": {
+     "type": "string"
+    },
+    "name": {
+     "type": "string"
+    },
+    "remote": {
+     "type": "string"
+    },
+    "workdir": {
+     "type": "string"
+    },
+    "config": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "tags": {
+     "type": "boolean"
+    },
+    "mode": {
+     "type": "string",
+     "enum": [
+      "soft",
+      "mixed",
+      "hard"
+     ]
+    },
+    "tagAction": {
+     "type": "string",
+     "enum": [
+      "list",
+      "create",
+      "delete"
+     ]
+    },
+    "branchAction": {
+     "type": "string",
+     "enum": [
+      "list",
+      "create",
+      "delete",
+      "switch"
+     ]
+    },
+    "stashAction": {
+     "type": "string",
+     "enum": [
+      "push",
+      "pop",
+      "list"
+     ]
+    },
+    "checkpointAction": {
+     "type": "string",
+     "enum": [
+      "list",
+      "create",
+      "rewind",
+      "cat",
+      "versions"
+     ]
+    },
+    "checkpointId": {
+     "type": "string"
+    },
+    "remoteAction": {
+     "type": "string",
+     "enum": [
+      "list",
+      "add",
+      "remove",
+      "set-url"
+     ]
+    },
+    "remoteUrl": {
+     "type": "string"
+    },
+    "rebaseAction": {
+     "type": "string",
+     "enum": [
+      "start",
+      "abort",
+      "continue"
+     ]
+    },
+    "dryRun": {
+     "type": "boolean"
+    },
+    "create": {
+     "type": "boolean"
+    },
+    "dest": {
+     "type": "string"
+    },
+    "worktreeAction": {
+     "type": "string",
+     "enum": [
+      "list",
+      "add",
+      "remove"
+     ]
+    }
+   },
+   "required": [
+    "action"
+   ]
+  }
+ },
+ "process": {
+  "name": "process",
+  "description": "List running processes, optionally filtered by name. Returns process name / PID / memory.\n\n**Route to process instead of bash:**\n- `tasklist` (Windows) / `ps aux` (POSIX) → process\n\nParameters:\n- name (optional): substring filter (case-insensitive), e.g. \"node\", \"python\"\n\nNotes:\n- List-only. To kill a process, use `bash taskkill /PID <pid> /F` (Windows) or `bash kill <pid>` — and confirm with the user first.",
+  "schemaLen": 1028,
+  "structure": {
+   "type": "object",
+   "properties": {
+    "action": {
+     "type": "string",
+     "enum": [
+      "list",
+      "kill"
+     ]
+    },
+    "name": {
+     "type": "string"
+    },
+    "pid": {
+     "type": "number"
+    },
+    "id": {
+     "type": "number"
+    }
+   }
+  }
+ },
+ "wait_for": {
+  "name": "wait_for",
+  "description": "Wait until a condition becomes true — polls the condition every interval_ms and returns as soon as it holds or the timeout_ms ceiling passes. Use it ONLY for genuinely asynchronous waits: an async subagent/consult still settling, a file appearing, a port opening. Synchronous tools (advisor, blocking subagent spawn) return when done — waiting after them is NOT needed and wastes time.\n\nParameters:\n- condition (required): a semantic condition expression:\n  - `advisor settled` — an in-flight advisor review session has finished (async advisor-role children settled)\n  - `subagent id:N done` — async subagent N (the id your async spawn ack returned) has settled\n  - `consult done` — every consult_start session has drained\n  - `file exists:path` — the file at path exists (path relative to cwd)\n  - `port open:N` — something is listening on 127.0.0.1 port N\n  - The agent-internal conditions (advisor / subagent / consult) apply to ASYNC sessions only — a synchronous call already completed before it returned and has nothing to wait for. An unknown condition is an explicit error (`wait_for: unsupported condition \"...\"` — the supported forms are listed above), never a silent wait.\n- interval_ms: poll interval (default 1000, floor 100 — polling never busy-spins)\n- timeout_ms: overall ceiling (default 30000; config.json `agent.waitForTimeoutMs` overrides the default; hard cap 600000 like the execute tool)\n\nReturns:\n- `wait_for: condition satisfied after Nms (N checks): \"<condition>\"` — condition held\n- `wait_for: timed out after Nms waiting for \"<condition>\" ...` — ceiling passed with the condition still false (never burns beyond the ceiling)\n- interrupts (Ctrl+C / cancel) exit immediately; malformed conditions and unsupported syntax error out explicitly\n\nNotes:\n- Read-only and non-destructive — it only observes (agent pools, the filesystem, a local port probe).\n- Blocking by design — call it ALONE in a turn, not batched with calls that depend on its result.\n- Do not use it to wait after synchronous tools (advisor / blocking subagent spawn / verify return only when done).\n",
+  "schemaLen": 2649,
+  "structure": {
+   "type": "object",
+   "properties": {
+    "condition": {
+     "type": "string"
+    },
+    "interval_ms": {
+     "type": "integer"
+    },
+    "timeout_ms": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "condition"
+   ]
+  }
+ }
+}

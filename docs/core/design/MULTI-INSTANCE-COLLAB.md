@@ -51,16 +51,16 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
 ### 3.1 `peerInstances(cwd)`（`thincoder-core/peer-instances.mjs:113`——双端同构）
 
 - 读 manifest `slotSessions` → 按 sessionId（`{pid}-{ts}-{rand}` 进程级）去重分组 → slots 数组；
-- **一次批量判活**（`batchAlive(pids)`——`thincoder-core/process-probe.mjs:118`，单次 tasklist/ps 全量比对）；探测失败（null）≠ 全死——按「无活伴」降级（不显示幽灵同伴）；
+- **一次批量判活**（`batchAlive(pids)`——`thincoder-core/process-probe-exec.mjs:96`，单次 tasklist/ps 全量比对）；探测失败（null）≠ 全死——按「无活伴」降级（不显示幽灵同伴）；
 - self = `sessionId === getSessionId()`（本进程恒活不查）；
-- **端字段**：`probeCmdlines(pids)`（`thincoder-core/process-probe.mjs:168`）一次 exec 拿全部 pid+cmdline，`VSC_END_RE`（extensionHost 族）命中 → `vscode`；桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段）命中 → `desktop`；其余 → `cli`〔2026-09-29 parity-b1 收正轮〕；失败 → end 缺省；
+- **端字段**：`probeCmdlines(pids)`（`thincoder-core/process-probe-exec.mjs:146`）一次 exec 拿全部 pid+cmdline，`VSC_END_RE`（extensionHost 族）命中 → `vscode`；桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段）命中 → `desktop`；其余 → `cli`〔2026-09-29 parity-b1 收正轮〕；失败 → end 缺省；
 - **惰性缓存（TUI 假死批收正 · 2026-09-18）**：命中判据 = **manifest mtime 未变 ∨ 快照年龄 < `PEER_PROBE_TTL_MS = 5000` ms** ⇒ 直接返回缓存快照（零 exec 零读）；
   缺失 / 损坏 → `[]`（不缓存空结果）；缓存上限 `CACHE_MAX = 64`；快照记 `probedAt`（上次实探时刻）。
   **可测缝（TTL 两侧）**：模块级 `nowFn`（缺省 `Date.now`——经 `_setPeerInstancesTestImpl` 注入、`??` 兜底、测试 finally 恢复）
   ⇒ 「TTL 内命中 / TTL 外重探」两侧均可**确定性**断言，免真实 ≥ 5 s 等待。
   **修因**：`saveSession` 每回合重写 manifest（`thincoder-core/session.mjs:163-172`）⇒ 纯 mtime 判据**每回合自击穿**，
   每回合重跑 `tasklist` + `Get-CimInstance`（1–3 s **同步 exec**，独占事件循环——主 agent 回合假死源之一）。
-  TTL 只影响**新鲜度**（同伴来去在人类时标），不影响正确性；TTL 内不重探 = 与 T-L1c「零 exec」同向。
+  TTL 只影响**新鲜度**（同伴来去在人类时标），不影响正确性；TTL 内不重探 = 与 T-L1c「零 exec」同向。 （机检豁免——用例退场登记）
 - **探测异步化（同批）**：`thincoder-core/process-probe.mjs` 增 `batchAliveAsync` / `probeCmdlinesAsync`（`execFile` promise 化；
   **同一注入缝** `_setProcessProbeTestImpl`——测试注入的同步函数经 `await` 消费，零新缝）；
   读面 `peerInstances` → **async**，`pushPeerReminder` → **async**（装配点 `prepareRun` 已 async——`await pushPeerReminder(agent)`）。
@@ -86,9 +86,9 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
   接受边界 = 入口族命中面（CLI 入口段 / extensionHost）内无此方向；族外残差接受（放宽标记族 = 复引入 pid 复用误报——`D-MI11` 判据零改）；消解路径 = 实测出现该形态时按形态补进标记族（单源改点 = `isProductProc`）。
 - **判据（测试层 · 需求档 F-MI6 / N-MI6）**：读面 = `thincoder-core/test/peer-instances.test.mjs`（注入缝 `:37/:44` 首用——身份不符 ⇒ **不列为同伴**；身份符 / 探测失败 / 缺行 ⇒ **保留**）；清理面 = `thincoder-core/test/session-slot-write.test.mjs`（同判据：不符 ⇒ 删，不确定 ⇒ 不删）；
   本批受影响文件（当前行数 / 增量）= 批次档 `docs/batches/2026-09-18-init-block.md` §2.3 + 同档 §2「fix 轮附录」（实施面受影响文件；F-MI6 侧沿革 = 批次档 `docs/batches/2026-09-15-core-defect-fixes.md` §四）。
-- **判据（测试层 · 需求档 F-MI7 · 本批锚 · 2026-09-18）**：测试档 = `thincoder-core/test/process-probe.test.mjs`（束 API / 三态 / 注入缝计数 / 零同步 exec 扫描——核半）· `thincoder-core/test/session-slot-write.test.mjs`（扩——有界同步例外锚）· `thincoder-vscode/test/zero-sync-exec.test.mjs`（零同步 exec 扫描——端半）；四路锚：
+- **判据（测试层 · 需求档 F-MI7 · 本批锚 · 2026-09-18）**：测试档 = `thincoder-core/test/process-probe.test.mjs`（束 API / 三态 / 注入缝计数 / 零同步 exec 扫描——核半）· `thincoder-core/test/session-slot-write.test.mjs`（扩——有界同步例外锚）· `thincoder-vscode/test/zero-sync-exec.test.mjs`（零同步 exec 扫描——端半；随 2026-09-28 测试树全清重置退场——重建时恢复）；四路锚：
   ① **零同步 exec 扫描（两域分档）**：核域 = `thincoder-core/session-slots.mjs` · `thincoder-core/session.mjs` · `session-lifecycle.mjs` · 端域（零同步 exec 扫描域）= `thincoder-vscode/src/extension/session-slots.mjs` · `thincoder-vscode/src/extension/peer-instances.mjs`；
-  **端侧探测消费面** = `thincoder-vscode/src/extension/peer-instances.mjs` · `thincoder-vscode/src/extension/session-io.mjs`（`session-slots.mjs` 副本已注销归核 ⇒ 零自有探测——2026-09-25 SLOT-END-PARAM 批；名册机检 = `thincoder-vscode/test/zero-sync-exec.test.mjs`）；
+  **端侧探测消费面** = `thincoder-vscode/src/extension/peer-instances.mjs` · `thincoder-vscode/src/extension/session-io.mjs`（`session-slots.mjs` 副本已注销归核 ⇒ 零自有探测——2026-09-25 SLOT-END-PARAM 批；名册机检 = `thincoder-vscode/test/zero-sync-exec.test.mjs`（随 2026-09-28 测试树全清重置退场——重建时恢复））；
   分档 = N3 门禁（`thincoder-core/test/core-hygiene.test.mjs:96-107`）；
   域内零 `execSync` / `execFileSync` / `spawnSync` 直引（形态先例 = `thincoder-core/test/tool-seams.test.mjs:289-299`——核 / 端两半同形；域完整性对账先例 = `thincoder-vscode/test/settings-open-snapshots.test.mjs:163-185`）；`thincoder-core/process-probe.mjs` = 探针族单点落点（豁免——不在零域）。
   ② **束 exec 上界**（注入缝计数）：每束 ≤1 批量判活 + ≤1 批量 cmdline、零逐 pid——经 `_setProcessProbeTestImpl({ aliveFn, cmdlineFn })` 计数断言（越出即红）。
@@ -158,7 +158,7 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 - **路径重叠** `pathsOverlap(a, b)`（`thincoder-core/peer-claims.mjs:74`——`thincoder-core/peer-domains.mjs:34` re-export 保名面）：相等或互为目录包含；区分大小写按平台；分隔符归一。
 - **缓存**：聚合结果按 peers 目录 mtime 惰性缓存（目录未变不重扫）；**N-MI3 度量**：单次写工具调用新增开销上限 = 目录 stat 一次；注册 flush = 回合末一次整写。
 
-**dispatch 钩子**（`thincoder-core/agent/dispatch.mjs` + `thincoder-core/agent/run-stages.mjs`）：执行前 `peerCollabNote(agent, tool, args)`（`:214`）查 conflicts——
+**dispatch 钩子**（`thincoder-core/agent/dispatch-run.mjs` + `thincoder-core/agent/run-stages.mjs`）：执行前 `peerCollabNote(agent, tool, args)`（`:214`）查 conflicts——
 命中 → 工具结果附**软提示**（不阻止）；成功后 `recordPeerWrites`（仅成功写计入）；routed（ACP 客户端执行）成功同样记账。
 **共享钩点**——认领面同点接线（写前命中 / 写后登记见 §4.4.4 / §4.4.3）。
 
@@ -173,11 +173,11 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
   判据：① 结构（机检 · **扫描口径单源 = 本行**）：扫描面 = 核 / 端两包（`thincoder-core/**` · `thincoder-vscode/**`）+ 书写面（`docs/**/design/**` · `docs/**/requirements/**`）排除三面后零命中——
   ⒜ 定义性引用行（本档 §4.3「字面规范面」条内载该字面的判据行——`[peer conflict notice]` 作为被判对象唯此一处被引）· ⒝ 记录面 / 归档面（`docs/batches/**` · `**/_archive/**`）· ⒞ `.thincoder/tmp/**`；② 行为（对拍）= 同（target × 属主集）输入 ⇒ 端 `peerNotes` 足迹行与核 `peerCollabNote` 足迹行**逐行字面相等**（比较按行拆分——分隔符端差不入锚）；③ 多目标 ⇒ 逐 target 各一行（零聚合单行）。
 - **端 `conflicts` 判据（2026-09-25 · 批 single-source-closeout · 台账 #344）**：与核**同判据**——`pathsOverlap`（相等或互为目录包含）+ 同 cwd 过滤 + hot 窗口 + self 排除；
-  端谓词落点 = 端 `claimsOverlap`（`thincoder-vscode/src/extension/peer-claims.mjs:119`——与核 `pathsOverlap` 同判据）。
+  端谓词落点 = 端 `claimsOverlap`（`thincoder-vscode/src/extension/peer-claims.mjs:33`——与核 `pathsOverlap` 同判据）。
   **端差保留核查（A9 三件）= 不成立**：端同时具备同 cwd 过滤（端 `sameCwd`）与重叠谓词（端 `claimsOverlap`）两件，无结构性强不对称 ⇒ 按「端差默认 = 消」并核。
 - **判据（测试层 · 足迹面 · 2026-09-25 背填 · 台账 #290）**：两端各一新测试档——核 `thincoder-core/test/peer-domains.test.mjs` + 端 `thincoder-vscode/test/peer-domains.test.mjs`（端档须入册 `thincoder-vscode/test/files.mjs`）。
   核半覆盖（D-L3a / D-L3b 行为组）：目标解析 / 写工具集 / hot 窗口两侧界 / 路径重叠与 self·cwd 过滤 / 保守不删与死清理 / 回合累积与整写一次 / 无写回合零写 ∧ 去重集先清 / 失败容忍保账 / dispatch 钩点端到端 / 收尾接线。
-  端半覆盖：登记累积与整写 / 冲突查询（**与核同判据**——端 `peer-domains.test.mjs` T-L3v2 对位核 T-L3e：目录包含 ⇒ 命中 · 他 cwd ⇒ 零命中）与聚合缓存 / 死清理 / 预检门控 / 逐 target 足迹行与混合合成；两侧沙箱 = peers / sessions 目录注入缝 + 判活注入缝（真目录零触）；逐例清单与用例号族 = 本批档 `docs/batches/2026-09-25-peer-closeout.md` §2.3。
+  端半覆盖：登记累积与整写 / 冲突查询（**与核同判据**——端 `peer-domains.test.mjs` T-L3v2 对位核 T-L3e：目录包含 ⇒ 命中 · 他 cwd ⇒ 零命中）与聚合缓存 / 死清理 / 预检门控 / 逐 target 足迹行与混合合成；两侧沙箱 = peers / sessions 目录注入缝 + 判活注入缝（真目录零触）；逐例清单与用例号族 = 本批档 `docs/batches/2026-09-25-peer-closeout.md` §2.3。 （机检豁免——用例退场登记）
 
 ### 4.4 意图认领面（claims · TTL 租约 · P1）
 
@@ -205,7 +205,7 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
   - 已有认领 `covers` 新目标 ⇒ **只续约**（不新增）；新目标 `covers` 已有认领项 ⇒ **替换**（被覆盖项出集、新目标入集）；无包含关系 ⇒ 新目标入集。
   - **不变式 = 集内无被覆盖项**（即集内必为最粗覆盖者）⇒ 覆盖新目标的集内项至多一个（续约对象唯一——不存在多覆盖者择一问题）。
 - **分存纪律 = 字段级合并写（read-modify-write）**：认领落盘只改 `claims` / `claimsUpdatedAt`（其余字段逐字保留，含未知字段）；足迹落盘只改 `domains` / `updatedAt`（同法保留认领字段）。
-- **落盘原语 = 原子写（`.tmp + rename`）——单一实现**：核 `writeSessionFile`（`thincoder-core/session-slots.mjs:128`——会话 / 足迹 / 认领三面同一原语）；**端侧引核**（经端壳 `thincoder-vscode/src/extension/session-slots.mjs` 的单源转口——端档零本地原子写实现）。原语含**末级兜底支**：二次 rename 失败 ⇒ 以 tmp 内容直写目标（非原子，最后手段）。
+- **落盘原语 = 原子写（`.tmp + rename`）——单一实现**：核 `writeSessionFile`（`thincoder-core/session-slots.mjs:154`——会话 / 足迹 / 认领三面同一原语）；**端侧引核**（经端壳 `thincoder-vscode/src/extension/session-slots.mjs` 的单源转口——端档零本地原子写实现）。原语含**末级兜底支**：二次 rename 失败 ⇒ 以 tmp 内容直写目标（非原子，最后手段）。
   **理由**：两侧聚合缓存以 peers 目录 mtime 为键（核 `thincoder-core/peer-domains.mjs:152-168`；端 `thincoder-vscode/src/extension/peer-domains.mjs:90-107` + 头注 `:9-10`）——rename 翻目录 mtime ⇒ 对端缓存失效、认领**回合内可见**；就地重写（同名单）不动目录 mtime ⇒ 对端不可见（本层立项动因落空）。
 - **兼容（双向）**：旧读者忽略新字段（两侧扫描器只校验既有必填字段——`thincoder-core/peer-domains.mjs:109-116`）；旧记录无 `claims` ⇒ 认领面零命中（按缺失降级，不炸）。
 - **测试沙箱**：核侧 peers 目录此前零缝 ⇒ 随本批增 `_setPeersDirForTest` / `_resetPeersDirForTest`（形态先例 = 端侧同名缝，`thincoder-vscode/src/extension/peer-claims.mjs:36-37`）。
@@ -214,7 +214,7 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 
 - **TTL** = `CLAIM_TTL_MS = 30 * 60 * 1000`（30 min）；**续约** = 同目标再次写成功，或目标被已有认领覆盖（续约对象 = 该覆盖认领——§4.4.1）⇒ `expiresAt = now + TTL`（`claimedAt` 保持首次）。
 - **过期失效** = 读面按 `expiresAt > now` 过滤 + 本实例落盘时剪除（**不 unlink**——过期不是崩溃残留）。
-- **进程死亡即失效** = 复用聚合面既有批量判活（`batchAlive`——`thincoder-core/process-probe.mjs:118`）与死文件惰性清理：属主死 ⇒ 整条记录不可见并随既有清理删除。
+- **进程死亡即失效** = 复用聚合面既有批量判活（`batchAlive`——`thincoder-core/process-probe-exec.mjs:96`）与死文件惰性清理：属主死 ⇒ 整条记录不可见并随既有清理删除。
 - **崩溃残留** = 与足迹面同一路径（死 pid 文件聚合时清理）；探测失败 / 未知 ⇒ 保守不删（D-MI10 零变）。
 
 #### 4.4.3 认领与落盘时机（D-MI18 / D-MI19）
@@ -222,7 +222,7 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 - **认领触发 = 结构化写工具执行成功**（与足迹同一钩子点：核 `thincoder-core/agent/dispatch-run.mjs:65` ∕ `:115`——单源，端已取核）——**零新手工动作**；工程模式各里程碑（批点火 / 实施轮派发 / 写轮）**不新增耦合**：实施轮写文件即自动认领。
 - **落盘节流**：本次写含新目标（不在上次落盘集内）⇒ 即刻整写（原子写原语见 §4.4.1）；否则仅当距上次落盘 ≥ `CLAIM_RENEW_FLUSH_MS = 60 * 1000` ⇒ 续约落盘；其余 **零 IO**。失败容忍（NF2 同型——下次写重试）。
 - **无显式释放面**（D-MI19）：释放只有三条——租约到期 / 属主进程死亡 / 记录被死清理。
-- **落盘门控（测试卫生）**：认领落盘前置「本 cwd 会话 manifest 在场」判据（核侧 L3 门同法——`thincoder-core/agent/dispatch.mjs`；端已取核）；足迹面零改。
+- **落盘门控（测试卫生）**：认领落盘前置「本 cwd 会话 manifest 在场」判据（核侧 L3 门同法——`thincoder-core/agent/dispatch-run.mjs`；端已取核）；足迹面零改。
 
 #### 4.4.4 写前命中与软提示升级（D-MI20）
 
@@ -254,14 +254,14 @@ depth-0 分支内 `await pushPeerReminder(agent)`；**注入时序与文案零�
 |---|---|
 | 核 · 认领逻辑 | `thincoder-core/peer-claims.mjs`（认领存储 / 租约 / 命中判据 / 文案 / 合并写 / 节流 / `nowFn` 与重置缝；peers 路径与 `pathsOverlap` 归口于此） |
 | 核 · 接线 | `thincoder-core/peer-domains.mjs`（`peerCollabNote` 组合认领行 · `recordPeerWrites` 调认领登记 · `flushPeerDomains` 字段级合并写 + `_peerNoted` 首步清空 · 聚合载荷增 `claims`） |
-| 核 · 钩点 | `thincoder-core/agent/dispatch.mjs`（写前 / 写后两处——既有钩子内接线，只换调用行 + 3 行；该档 499 行贴硬限——距 500 余 1 行） |
-| 端 | `thincoder-vscode/src/extension/peer-domains.mjs`（就地扩；落盘若越 300 软线 ⇒ 认领块外提 `thincoder-vscode/src/extension/peer-claims.mjs`）· 钩点 = 核 `thincoder-core/agent/dispatch.mjs` · 去重集清空 = 核 `thincoder-core/agent/run-stages.mjs`（端已取核） |
+| 核 · 钩点 | `thincoder-core/agent/dispatch-run.mjs`（写前 / 写后两处——既有钩子内接线，只换调用行 + 3 行；**读数**：2026-09-28 拆分后 `dispatch.mjs` **254** ∕ `dispatch-run.mjs` **167**——原 498 ∕ 499 贴硬限面已消解） |
+| 端 | `thincoder-vscode/src/extension/peer-domains.mjs`（就地扩；落盘若越 300 软线 ⇒ 认领块外提 `thincoder-vscode/src/extension/peer-claims.mjs`）· 钩点 = 核 `thincoder-core/agent/dispatch-run.mjs` · 去重集清空 = 核 `thincoder-core/agent/run-stages.mjs`（端已取核） |
 | 常量 / 文案锚 | `CLAIM_TTL_MS` · `CLAIM_RENEW_FLUSH_MS` · 认领软提示文案——双端各持副本，**测试对拍等值 / 逐字同串**（N-MI2 各端自持；跨端读取比对形态先例 = `thincoder-vscode/test/prompts-mirror-anchors.test.mjs:40-44`；常量 / 文案同串面 = AC-IC11） |
 
 #### 4.4.7 判据（测试层）
 
 测试档 = `thincoder-core/test/peer-claims.test.mjs`（核半）+ `thincoder-vscode/test/peer-claims.test.mjs`（端半）。
-沙箱 = 核 `_setPeersDirForTest` / 端同名缝 + 时钟缝 `_setPeerClaimsTestImpl({ nowFn })` + 判活注入 `_setProcessProbeTestImpl`（`thincoder-core/process-probe.mjs:48`）。
+沙箱 = 核 `_setPeersDirForTest` / 端同名缝 + 时钟缝 `_setPeerClaimsTestImpl({ nowFn })` + 判活注入 `_setProcessProbeTestImpl`（`thincoder-core/process-probe-exec.mjs:26`）。
 四路锚：① 写入 / 续约 / 节流（落盘计数断言——零真实等待）；② 过期 / 死属主 / 崩溃残留 / 旧记录兼容（注入时钟与判活）；③ 命中 / 文案逐字 / 去重 / 优先级 / 端侧混合命中合成 / 降级；④ 分存回归（认领落盘不改 `domains` / `updatedAt`；足迹落盘不改 `claims`；既有足迹面行为零变）。
 
 ## 5. checklist 并发同步（F4）——**已废（历史沿革）**
@@ -296,9 +296,9 @@ VSC 侧无此形态（各路径现用现读）。
 |---|---|
 | 感知面 L1/L2 | `thincoder-core/peer-instances.mjs`（`peerInstances` · `peerInstancesTool` · `groupSlotSessions`（具名导出——端侧引核，§3.1） · 测试缝 `:48/:55`）+ **`thincoder-core/process-probe.mjs`（探测与判据单源）**：`batchAlive` / `probeCmdlines` 及其 `*Async` 对偶 · `probeOwnersSync` / `probeOwnersAsync` 束（2026-09-18 增） · `ownerState` / `isProductProc` / `classifyEnd` / `filterDeadOwners` · **`isProcessAlive`（2026-09-18 自 `session-slots.mjs` 移居——单 pid 兼容面，同步有界 2 s）**；陈旧清理面 = `thincoder-core/session-slots.mjs`（`cleanDeadOwners`——探针入参化，零自有 exec） |
 | 域面 L3 | `thincoder-core/peer-domains.mjs`（`HOT_WINDOW_MS:37` · `peerWriteTargets:79` · `peerDomains:175` · `conflicts:186` · `peerCollabNote:214` · `recordPeerWrites:254` · `flushPeerDomains:273` · 测试缝 `:50/:58`；`pathsOverlap` 归口 `thincoder-core/peer-claims.mjs:74`——本档 re-export `:34`） |
-| 意图认领面 | `thincoder-core/peer-claims.mjs`（认领存储 / 租约 / 命中 / 文案 / 合并写 / `nowFn` 缝；peers 路径与 `pathsOverlap` 归口于此）· 接线 = `thincoder-core/peer-domains.mjs` §4.4.6 · 端 = `thincoder-vscode/src/extension/peer-domains.mjs` + `thincoder-vscode/src/extension/peer-claims.mjs`（认领块——越 300 软线外提）+ 钩点 = 核 `thincoder-core/agent/dispatch.mjs`（端已取核） |
+| 意图认领面 | `thincoder-core/peer-claims.mjs`（认领存储 / 租约 / 命中 / 文案 / 合并写 / `nowFn` 缝；peers 路径与 `pathsOverlap` 归口于此）· 接线 = `thincoder-core/peer-domains.mjs` §4.4.6 · 端 = `thincoder-vscode/src/extension/peer-domains.mjs` + `thincoder-vscode/src/extension/peer-claims.mjs`（认领块——越 300 软线外提）+ 钩点 = 核 `thincoder-core/agent/dispatch-run.mjs`（端已取核） |
 | L1 注入装配 | `thincoder-core/agent/setup-reminders.mjs`（`pushPeerReminder`）· `thincoder-core/agent/setup.mjs`（注入时序：env-state 后 time 前） |
-| L3 钩子 | `thincoder-core/agent/dispatch.mjs` + `thincoder-core/agent/run-stages.mjs`（写前检测 / 成功记录 / 回合末 flush） |
+| L3 钩子 | `thincoder-core/agent/dispatch-run.mjs` + `thincoder-core/agent/run-stages.mjs`（写前检测 / 成功记录 / 回合末 flush） |
 | L2 工具装配（CLI） | `thincoder-cli/src/cli/make-agent.mjs` |
 | F5 原子写 | `thincoder-core/config.mjs`（`writeConfigAtomic`——`:29` export · `:242` 自用迁移面）；写点收口 = `thincoder-cli/src/tui/{config-helpers,pickers,cmd-mcp,cmd-config}.mjs` + `src/cli/setup-wizard.mjs` + `thincoder-core/agent-tools/settings.mjs` |
 
@@ -417,7 +417,7 @@ VSC 侧无此形态（各路径现用现读）。
   §4.3 补**冲突判据端差**登记（端 `conflicts` = 归一后精确匹配 + 与 cwd 无关 ∥ 核 = `pathsOverlap` + 同 cwd 过滤——四态实测；本批零改；消解裁定待另批）。**零新语义**（登记面补登）。
 - 2026-09-25（**single-source-closeout 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-single-source-closeout.md` §1 · 台账 #333 / #344）：
   ① §4.2 目标解析行收正——`file_ops` 按**动作感知**（`copy` ⇒ 只 `dest`；`move` / `rename` ⇒ `source` + `dest`；未知 / 缺失 `action` ⇒ 保守双算），动作感知规则住单源谓词 `toolTouchPaths`（规格 = `TOOLS.md` §6.17）；
-  ② §4.3 补**端 `conflicts` 判据**条（与核同判据 = `pathsOverlap` + 同 cwd 过滤 + hot 窗口 + self 排除；端差保留核查 A9 三件 = 不成立），同节判据（测试层）端半补**与核同判据**对位（端 T-L3v2 ↔ 核 T-L3e）；
+  ② §4.3 补**端 `conflicts` 判据**条（与核同判据 = `pathsOverlap` + 同 cwd 过滤 + hot 窗口 + self 排除；端差保留核查 A9 三件 = 不成立），同节判据（测试层）端半补**与核同判据**对位（端 T-L3v2 ↔ 核 T-L3e）； （机检豁免——用例退场登记）
   ③ **冲突判据端差登记条随对齐删除**（判据并单源后无该端差）。**零新语义**（#333 = 用户裁定谓词规格落地；#344 = 端差默认 = 消）。
 - 2026-09-25（**end-diff-registry 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §1 · 台账 #338 / #345）：
   ① §3.1「端读面形态与缓存判据」条二态化——读形（SWR 壳 / 预热 / 异步对偶）= **形态面自持**（非登记项；N-MI2 射程）；缓存判据差（端 TTL 单判据 ∥ 核 `mtime ∨ TTL`）A9 核查 = ① 不成立 ⇒ 转**消解路径 + 到期条件**（端判据并核——读形零变）；
@@ -435,4 +435,7 @@ VSC 侧无此形态（各路径现用现读）。
 - 2026-09-29（**parity-b1-vsc-core 批 · 收口轮 · eng-coder**——承批档 `docs/batches/2026-09-29-parity-b1-vsc-core.md` §2.9）：**取核后事实收正**——§3.1 镜像面 ∕ 聚合半段单源两 dated 条目补**收编后现态注**（端侧整档 = 核单源转口；SWR 壳 ∕ 异步对偶 ∕ 端探针缝名退役）；
   §3.1 端读面形态与缓存判据条目改**核读面单源 · async**（缓存判据差「已消解」）；§4.3 分隔符句与字面规范面条目按**核形 `\n` 单源**收正（端块内空行 ∕ 「各端自持」 phrasing 退场）。**机制语义零改**（端差句退场 ∕ 取核事实直落）。
 - 2026-09-29（**doc-sync-residuals 批 · 修正轮（评审 #202 发现 2）· eng-designer**）：§4.4.4 端同步调用族登记句定性收正为历史观测（原端半档已迁核——现盘零命中；现态 = 核 `thincoder-core/agent/dispatch-run.mjs:52` 写前 `peerCollabNote`）；§4.4.3 ∕ §4.4.4 钩点坐标两处同拍重锚（⇒ `thincoder-core/agent/dispatch-run.mjs:65` ∕ `:115` ∕ `:52`）。**零新语义**。
+
+- 2026-09-29（**doc-backfill 批 · 波 1 · eng-designer**——承 `docs/batches/2026-09-29-doc-backfill.md` §2 · 台账 #612）：档名收正——`agent/dispatch.mjs` 引用六处改指现体 `agent/dispatch-run.mjs`（2026-09-28 拆分；写前 `:52` ∕ 写后 `:65` ∕ `:115`）；
+  §4.4.6 钩点行读数收正（拆分后 `dispatch.mjs` **254** ∕ `dispatch-run.mjs` **167**——原 499 贴硬限面已消解）；零同步 exec 扫描端半档两处补退场标注（随 2026-09-28 测试树全清重置退场——重建时恢复）。**零新语义**（坐标 ∕ 读数 ∕ 退场标注）。
 

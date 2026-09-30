@@ -9,7 +9,8 @@
  * mount 侧归一失败形）· `push(message)`（核件推送 —— `atResults` 回投）· `panelOf()`（核件面板读数面 ——
  * 直发失败径复位 loading）· `repaint()`（提示行重挂 —— mount 侧 `paintNotices`）· `onLoadingReset()`（忙态派生
  * 缓存复位 —— mount 侧 `lastBusy`）· `suspIdleOf(state, key)`（挂起空闲判据 —— 窗内直发径回执后复位 loading；
- * 缺省 ⇒ 零复位）· 映射 ∕ 纯动作件（`toImages` 载荷投影 ∕ `degradedCode` 降级码过闸 ∕ `effortOf`
+ * 缺省 ⇒ 零复位）· `slotFullNotice(message)`（#656 · cap 待答径队满可见形 —— 核件 toast `input.slotFull` +
+ * 文本回注输入框，零丢失；回注缝 = 挂载面注入小口；缺省 ⇒ 零动作）· 映射 ∕ 纯动作件（`toImages` 载荷投影 ∕ `degradedCode` 降级码过闸 ∕ `effortOf`
  * 档位写向映射（与 mount 侧读向 `reasoningOf` 同表）∕ `withUserBlock` 用户块单源写（mount 侧同取 —— 出泡不变式）∕
  * `setAttachDegraded` ∕ `applyFlags`）· `openSettings()`（footer 三出口 —— A8 唯一映射点）。
  *
@@ -17,6 +18,12 @@
  * **#597（发送忙态时机）+ #596（回执超时）**：`sendDirect` 三增 —— ① 失败回执 `started === false`（宿主未受理）⇒
  * `clearRunning` 忙位回收（守卫 = 本尝试仍最新）；② 发送回执超时界（`sendTimeoutMs` 注入缝，缺省 120000）⇒ 清位 ∕
  * 失败行 ∕ 退流；③ 迟到回执自愈（失败行清受最新门 ∕ 用户块补写不受门）。
+ * **#613（回声槽竞态）**：`lastEcho` 槽随尝试键控 —— `noteEcho` 落**未认领**登记（`attempt: null`）；`sendDirect`
+ * 令牌诞生点**认领**（未认领 ∧ 键同 ⇒ 补本提交令牌）；`retractEcho(key, attempt)` 以认领令牌守卫（槽被后提交覆盖 ∕
+ * 未认领 ⇒ 零动作 —— 滞后回执不得错摘后提交块）。
+ * **#656（cap 待答径队满可见形 · KD-52 ③）**：`abortTurn` 收 `{ ok:false, reason:"queue-full" }` ⇒ 单点消费注入缝
+ * `slotFullNotice(message)`（词键复用 `input.slotFull` —— i18n 零增；文本回注输入框 —— 零丢失）；其余失败因（`idle` ∕
+ * `bad-key`）照旧仅诊断一行（既有形零变）。
  */
 import { clearRunning } from "./badges.mjs"
 
@@ -33,17 +40,19 @@ const SEND_TIMEOUT = Symbol("send-timeout")
 const runningOf = (state, key) => Array.isArray(state?.tabBadges?.[key]) && state.tabBadges[key].includes("running")
 
 /** 写面工厂：返回 `{ post, noteEcho, retractEcho, failure }` —— `post(type, payload)` = 核件出站归一入口；
- *  `noteEcho(key, block)` = 本地先行块登记（`onUserEcho` 出泡后调用）；`retractEcho(key)` = 本地块退流（正径滞后）；
+ *  `noteEcho(key, block)` = 本地先行块登记（`onUserEcho` 出泡后调用 —— **未认领**态）；`retractEcho(key, attempt)` = 本地块退流
+ *  （正径滞后；`attempt` = 本回执所在尝试令牌 —— #613 槽守卫：槽内认领 ≠ 本令牌 ⇒ 零动作）；
  *  `failure()` = B21 行源读数（mount 侧 `paintNotices` 取）。 */
 export function createComposerWire(deps = {}) {
   const {
     store, activeKey, call, push, panelOf, repaint, onLoadingReset, suspIdleOf = null,
     toImages, degradedCode, effortOf, withUserBlock, setAttachDegraded, applyFlags, openSettings,
+    slotFullNotice = null, // #656：cap 待答径队满可见形缝（toast + 文本回注 —— 挂载面注入；缺省 ⇒ 零动作）
     sendTimeoutMs = 120000, // 发送回执超时界（#596 并入 —— 工厂注入缝；装配面零传 = 生产缺省）
   } = deps
 
   let failed = null // B21 行源（回执写 —— 本地闭包量，非切片）
-  let lastEcho = null // 最近一次本地先行出的用户块 `{ key, block }`（标记三态落点 —— 按引用定位）
+  let lastEcho = null // 最近一次本地先行出的用户块 `{ key, block, attempt }`（标记三态落点 —— 按引用定位；`attempt` = 提交侧认领令牌 —— #613，未认领 ⇒ `null`）
   let atSeq = 0 // @ 面请求 seq（迟到回执丢弃判据 —— VSC `autocomplete.js:29-34` 同式）
   const inFlight = new Map() // 本键最新发送尝试登记（key → 尝试令牌 —— 陈旧回执 ∕ 陈旧超时守卫单点 · #597）
 
@@ -65,6 +74,10 @@ export function createComposerWire(deps = {}) {
     const text = String(payload?.text ?? "")
     const attempt = {} // 尝试令牌（登记 = `inFlight` 最新）
     inFlight.set(key, attempt)
+    // #613 提交侧认领：回声先行于上行（核 `composer/panel.mjs` `onUserEcho` 先于 `post`）⇒ 回声时刻 `inFlight` 尚为
+    // 上一提交令牌 ⇒ 令牌不得在回声侧读；未认领槽在本提交令牌诞生点认领（回声与上行同同步链相接 ⇒ 认领恒命中
+    // 本提交）；`sendQueued` 不认领（该径零本地块 ∕ 零退流调用 —— 现式 `inFlight.set(key, {})` 保留）。
+    if (lastEcho !== null && lastEcho.key === key && lastEcho.attempt === null) lastEcho = { key, attempt, block: lastEcho.block }
     const orig = call("msg:send", { key, text, images: toImages(payload?.images) })
     let settled = false // 单次结算标志（§2.12 条 7）：正常径先到 ⇒ 迟到续延零动作（两径正交）
     let timer = null
@@ -75,7 +88,7 @@ export function createComposerWire(deps = {}) {
     if (receipt === SEND_TIMEOUT) {
       // 超时界（#596 并入）：本尝试仍最新 ∧ 位标在场 ⇒ 清位；失败行 + 退流（宿主未回 —— 视同未受理）
       if (inFlight.get(key) === attempt && runningOf(store.get(), key)) store.set(clearRunning(store.get(), key))
-      retractEcho(key)
+      retractEcho(key, attempt)
       recordFailure("msg:send", { reason: "timeout" })
       panelOf()?.setLoading(false)
       onLoadingReset?.()
@@ -85,14 +98,14 @@ export function createComposerWire(deps = {}) {
       if (receipt.ok !== true) {
         // 失败径收位（#597 · 2.3(3)）：`started === false`（受理即置的四清位 ∕ 装配抛 ∕ 装配窗中止）⇒ 位标回收（守卫 = 本尝试仍最新）
         if (receipt.started === false && inFlight.get(key) === attempt) store.set(clearRunning(store.get(), key))
-        retractEcho(key) // 失败径退流（挂起窗径批）：本地先行块回滚（KD-23 失败径「稿逐字留 + 零块」的本地块面）
+        retractEcho(key, attempt) // 失败径退流（挂起窗径批）：本地先行块回滚（KD-23 失败径「稿逐字留 + 零块」的本地块面）
         recordFailure("msg:send", receipt)
         panelOf()?.setLoading(false)
         onLoadingReset?.() // 忙态派生读数复位（收正轮 · 行 8）：本径直写 loading 面 ⇒ 缓存须跟（否则同态 sync 被吞）
         return
       }
       if (receipt.queued === true) { // 忙位读数滞后正径（端判闲 ∕ 宿主已忙 ∕ 已入挂起窗）
-        retractEcho(key) // 本地块退流（待发送件归输入区带）
+        retractEcho(key, attempt) // 本地块退流（待发送件归输入区带）
         if (suspIdleOf?.(store.get(), key) === true) { // 挂起空闲复位（窗内回合在飞 ⇒ 零复位——真回合门不误关）
           panelOf()?.setLoading(false)
           onLoadingReset?.()
@@ -144,11 +157,18 @@ export function createComposerWire(deps = {}) {
 
   /** 停止 ∕ 中断注入（D2 · 收正轮）：**单投** `msg:interrupt { key, message }` —— `abort` 无文本（停回合）；
    *  `interrupt` 携文本 ⇒ 宿主下传核 abort 面 ⇒ 同上下文注入续跑（VSC `panel-messages-turn.mjs:129-138` 同式；
-   *  「abort + 另投 `msg:send`」双投形退场 —— 队径送达 ≠ 同上下文续跑）。 */
+   *  「abort + 另投 `msg:send`」双投形退场 —— 队径送达 ≠ 同上下文续跑）。
+   *  **#656（KD-52 ③）**：cap 询问待答径队满 ⇒ 宿主回 `queue-full`（**零中止** ∕ 零入队 —— 询问在场）⇒
+   *  端侧可见形 = `slotFullNotice(message)`（toast + 文本回注 —— 零丢失；缺省 ⇒ 零动作）；其余失败因照旧诊断。 */
   async function abortTurn(key, message = "") {
     if (key === null) return void console.error("[composer] msg:interrupt skipped: no active session")
     const receipt = await call("msg:interrupt", { key, message })
-    if (receipt.ok !== true) console.error(`[composer] msg:interrupt failed: ${reasonOf(receipt)}`)
+    if (receipt.ok !== true) {
+      const reason = reasonOf(receipt)
+      // #656：cap 待答径拒收 ⇒ 可见形单点（toast + 文本回注）；`idle` 等其余因零可见形（既有形零变）。
+      if (reason === "queue-full" && typeof slotFullNotice === "function") slotFullNotice(message)
+      console.error(`[composer] msg:interrupt failed: ${reason}`)
+    }
   }
 
   /** @ 补全（D5）：回执 `seq` ≠ 现存 seq ⇒ **迟到丢弃**（不下发 ∕ 不覆盖 —— 慢请求不得挤掉新下拉）。 */
@@ -161,8 +181,8 @@ export function createComposerWire(deps = {}) {
     push({ type: "atResults", matches: Array.isArray(receipt.matches) ? receipt.matches : [] })
   }
 
-  /** 会话级偏好写（D3 · 沿 `renderer/mount-head.mjs` `onField` 同判据）：回执 `ok` 真 ∧ `meta` 面 ⇒
-   *  `sessionMeta[key]` 写（头面 ∕ 本档候选面两读面随动）；失败 ⇒ 记错零写（零乐观写）。 */
+  /** 会话级偏好写（D3 —— 输入区控件行 = 三值唯一居所）：回执 `ok` 真 ∧ `meta` 面 ⇒
+   *  `sessionMeta[key]` 写（本档候选面读面随动）；失败 ⇒ 记错零写（零乐观写）。 */
   async function writePrefs(key, patch) {
     if (key === null) return void console.error("[composer] session:prefs skipped: no active session")
     const receipt = await call("session:prefs", { key, patch })
@@ -206,17 +226,21 @@ export function createComposerWire(deps = {}) {
     }
   }
 
-  /** 本地先行块登记（`onUserEcho` 出泡后调用 —— 标记三态的按引用锚）。 */
+  /** 本地先行块登记（`onUserEcho` 出泡后调用 —— 标记三态的按引用锚；**未认领**态 —— 尝试令牌由提交侧
+   *  （`sendDirect` 令牌诞生点）认领 —— #613：回声先行，令牌后生，两事同链相接）。 */
   function noteEcho(key, block) {
-    lastEcho = { key, block }
+    lastEcho = { key, block, attempt: null }
   }
 
   /** 本地先行块**退流**（收正轮 B12 新口径 ④）：回执言队形（端判闲 ∕ 宿主已忙）⇒ 该条消费前不得占流内位
    *  （不变式 = 消费前流内零块 —— 待发送件住输入区带）；按引用定位摘除 —— 块已不在序列（重挂 ∕ 换页 /
-   *  窗口溢出）⇒ 零写（诚实回归，禁假造）。 */
-  function retractEcho(key) {
+   *  窗口溢出）⇒ 零写（诚实回归，禁假造）。
+   *  **#613 尝试守卫**：`attempt` = 本回执所在尝试的本地令牌（三调用面全住 `sendDirect`——`attempt` 直取）；
+   *  槽内认领 ≠ 本令牌（槽被后提交覆盖 ∕ 未认领）⇒ **零动作**（滞后回执不得错摘后提交块）。 */
+  function retractEcho(key, attempt) {
     const target = lastEcho
     if (target === null || target.key !== key) return
+    if (target.attempt !== attempt) return
     const held = store.get()
     if (held?.activeSession !== key) return
     const blocks = Array.isArray(held.blocks) ? held.blocks : []

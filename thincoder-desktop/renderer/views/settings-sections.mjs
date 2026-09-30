@@ -36,7 +36,7 @@ export { mcpBody } from "./settings-sections-mcp.mjs"
 /** 列表切片：缺 / 非数组 ⇒ 空表（零节点 —— 禁假数据）。 */
 const listOf = (value) => (Array.isArray(value) ? value : [])
 
-/** 档位核心字面：`"none"` 语义由 `"off"` 承载（候选面滤值 —— 沿会话头同口径；本档局部常量，零跨档共享面）。 */
+/** 档位核心字面：`"none"` 语义由 `"off"` 承载（候选面滤值 —— 档位闭集口径；本档局部常量，零跨档共享面）。 */
 const EFFORT_NONE = "none"
 
 /** 键面回显：已配 ⇒ 遮罩值（主侧出口直传，**明文零下发**）；未配 ⇒ 无密钥词。 */
@@ -63,17 +63,24 @@ function rowButton(action, name, word, aria, handler) {
   }
 }
 
-/** 渠道行 sub 段（S4 ∕ S3）：`model` ∕ `baseURL` ∕ 不可用标与失败句 —— **非空才显**（禁假造；空值 ⇒ 零节点）。 */
+/** 渠道行 sub 段（S4 ∕ S3）：`model` ∕ `baseURL` ∕ 不可用标与失败句 —— **非空才显**（禁假造；空值 ⇒ 零节点）。
+ *  **S3 分档（#673 · 2026-09-29 —— 消）**：`failure === "hostBusy"` ⇒ 状态词「宿主繁忙」（≠ 渠道故障词）+
+ *  **抑制渠道故障句**（载体为宿主忙，不得渲渠道故障文案——载具 = `data-failure` 机检锚 + 词键分档；
+ *  判据同 VSC `webview/settings-providers.js:189 ∕ :192`；单源 = `docs/vsc/design/SETTINGS.md` §2.12 展示面分档）。 */
 function rowSubNodes(row) {
   const unavailable = row?.available === false
+  const hostBusy = unavailable && row?.failure === "hostBusy"
   const reason = typeof row?.unavailableReason === "string" && row.unavailableReason !== "" ? row.unavailableReason : ""
+  const failure = typeof row?.failure === "string" && row.failure !== "" ? row.failure : undefined
   return [
     typeof row?.model === "string" && row.model !== ""
       ? { tag: "span", props: { class: "settings-row-value", "data-provider-model": "" }, children: [row.model] } : null,
     typeof row?.baseURL === "string" && row.baseURL !== ""
       ? { tag: "span", props: { class: "settings-row-value", "data-provider-baseurl": "" }, children: [row.baseURL] } : null,
-    unavailable ? { tag: "span", props: { class: "settings-mark", "data-available": "false" }, children: [t("settings.reason.unavailable")] } : null,
-    unavailable && reason !== ""
+    unavailable
+      ? { tag: "span", props: { class: "settings-mark", "data-available": "false", "data-failure": failure }, children: [t(hostBusy ? "settings.reason.hostBusy" : "settings.reason.unavailable")] }
+      : null,
+    unavailable && !hostBusy && reason !== ""
       ? { tag: "span", props: { class: "settings-row-value", "data-unavailable-reason": "" }, children: [reason] } : null,
   ]
 }
@@ -90,13 +97,18 @@ function proxyNode(row, handlers) {
   }
 }
 
-/** 钥控件两态（S1）：静止 = 设 ∕ 改钥（已配 ⇒ 兼出删钥；两删除门经出口前置确认）；编辑中 = 密码输入 + 存 ∕ 消。 */
-function keyControls(row, handlers, editing) {
+/** 钥控件两态（S1）：静止 = 设 ∕ 改钥（已配 ⇒ 兼出删钥；两删除门经出口前置确认）；编辑中 = 密码输入 + 存 ∕ 消。
+ *  **#615②**：编辑态输入以 `deps.keyDraft`（`{ name, value }` —— 本行名对上才回填）为种子 —— 失败径重挂不丢键入。
+ *  **#652**：编辑态输入携 `[data-draft]`（无 `id` ⇒ 标记取值作显式键 = 行名）＋作用域 `key:<名>`（写成功径失效声明自读件取值）。 */
+function keyControls(row, handlers, editing, deps) {
   if (editing) {
+    const draft = deps?.keyDraft ?? null
+    const seed = draft !== null && draft.name === row.name && typeof draft.value === "string" ? draft.value : undefined
     const save = typeof handlers?.onProviderKeySave === "function" ? () => handlers.onProviderKeySave(row.name) : undefined
     const cancel = typeof handlers?.onProviderKeyCancel === "function" ? () => handlers.onProviderKeyCancel() : undefined
     return [
-      { tag: "input", props: { class: "settings-field", type: "password", "data-provider-key-input": row.name, placeholder: "sk-...", "aria-label": t("settings.providers.keyLabel") } },
+      { tag: "input", props: { class: "settings-field", type: "password", "data-provider-key-input": row.name, "data-draft": row.name,
+        "data-draft-scope": `key:${row.name}`, placeholder: "sk-...", "aria-label": t("settings.providers.keyLabel"), value: seed } },
       rowButton("settings:providerKeySave", row.name, t("settings.save"), t("settings.save"), save),
       rowButton("settings:providerKeyCancel", row.name, t("settings.cancel"), t("settings.cancel"), cancel),
     ]
@@ -113,7 +125,7 @@ function keyControls(row, handlers, editing) {
 
 /** 渠道行：名 + 键面 + 当前标 + sub 段（S4 ∕ S3）+ 代理复选（S5）+ 钥控件（S1）+ 校验 / 移除两控件
  *  （校验控件 = `deps` 注入，单一 owner）。行内钥编辑态（`deps.edit` = 本行名）⇒ 控件族换形：只留
- *  [钥输入, 存, 消]（沿 VSC `keyRowEdit` 同形；代理 ∕ 移除暂撤 —— 取消即回）。 */
+ *  [钥输入, 存, 消]（沿 VSC `keyRowEdit` 同形；代理 ∕ 移除暂撤 —— 取消即回；输入种子 = `deps.keyDraft`，见 `keyControls`）。 */
 function providerRowNode(row, handlers, deps) {
   const editing = typeof deps?.edit === "string" && deps.edit !== "" && deps.edit === row.name
   const onRemove = typeof handlers?.onRemoveProvider === "function" ? () => handlers.onRemoveProvider(row.name) : undefined
@@ -133,7 +145,7 @@ function providerRowNode(row, handlers, deps) {
       row.active === true ? { tag: "span", props: { class: "settings-mark", "data-active": "" }, children: [t("settings.providers.active")] } : null,
       ...rowSubNodes(row),
       ...(editing ? [] : [proxyNode(row, handlers)]),
-      ...keyControls(row, handlers, editing),
+      ...keyControls(row, handlers, editing, deps),
       deps.verifyControl(row.name, handlers),
       ...(editing ? [] : [remove]),
     ],

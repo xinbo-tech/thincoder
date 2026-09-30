@@ -9,6 +9,8 @@
  */
 import { store as defaultStore } from "./store.mjs"
 import { mountStatus } from "./views/statusline.mjs"
+// 快照族（波 1 产物 —— #606④ 包络：状态行宿主滚位 ∕ 域内焦点复填）
+import { captureView, restoreView } from "./view-state.mjs"
 
 export const STATUS_SLOT = '[data-slot="status"]' // 状态栏容器锚（= 窗口级底行 —— 骨架 `renderer/index.html`）
 /** 重挂触发切片（段随切片走：活动键 / 位标 / 模式位 / 计数 / 回合 / 读数 / 计时 / 台账 / 句子 / 标题 / 块面 / 词表 / 挂起 ——
@@ -27,8 +29,15 @@ export const STATUS_KEYS = [
   "ledgerMarker", // 台账状态位切片（段 11 常驻标记源 —— 状态行 ⇒ CLI 补漏批；写径 = 归约面 `ev:ledger` 的 `marker` 键）
 ]
 
-/** 状态行一族装配（装配期一次）：返回挂载面 `paintStatus`（`store` 注入面 = 测试缝）。 */
+/** 状态行一族装配（装配期一次）：返回挂载面 `paintStatus`（`store` 注入面 = 测试缝）。
+ *  **#606④ 包络**：帧前捕快照（滚位 ∕ 域内焦点）⇒ 重建 ⇒ 帧后复填（容器缺位 ⇒ 捕获 `null`，零动作）。 */
 export function attachStatus({ store = defaultStore } = {}) {
-  const paintStatus = (state = store.get()) => mountStatus(document.querySelector(STATUS_SLOT), state)
+  const paintStatus = (state = store.get()) => {
+    const root = document.querySelector(STATUS_SLOT)
+    const snap = captureView(root)
+    const model = mountStatus(root, state)
+    restoreView(root, snap)
+    return model
+  }
   return { paintStatus }
 }

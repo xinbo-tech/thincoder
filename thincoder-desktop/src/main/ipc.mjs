@@ -1,32 +1,19 @@
 /**
- * ipc.mjs — IPC 通道处理体本体 + 宿主注入面（`docs/desktop/design/IPC.md` §1 / §2）：**四十五项** = 配置读取 + 项目面
- * `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` / `session:switch` /
- * `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` + 作答响应
- * `question:respond` —— `question` 工具真作答面 + 历史页 `history:page`
- * + 回合驱动 `msg:send` / `msg:interrupt`（宿主未注入 ⇒ fail-loud）+ **设置族**
- * （provider 八 / model 两 / agent 参数 / MCP 六 / 配置写 `config:write` —— R7 ∕ 模型菜单全渠 ∕ B10 W2 ∕ B10 W3 各批增项逐条见下）
- * + **项目级信息两项**（台账 / 相位）+ 会话级偏好写面 `session:prefs`
- * + **子 agent 停止出口 `subagent:stop`（R3b 落）** + **文件链接打开 `file:open`（「对齐第三批」
- * 相抵② · KD-39 —— `shell.openPath` 出口；纯判据面住 `file-links.mjs`）**
- * + **R1 输入面板移植两项（白名单末位）**：`session:flags`（模式位四写面 —— 处理体出档 `session-flags.mjs`；
- * `file-links.mjs` 零改）· `at:complete`（@ 补全文件枚举过滤 —— 处理体出档 `at-complete.mjs`）
- * + **会话维护线两项（R1 · 桌面功能对位批 —— 白名单末位）**：`session:gc`（会话数据回收）· `session:index`
- * （派生索引重建）—— 处理体出档 `session-maintenance.mjs`（确认面 = 原生模态 `window.mjs` `confirmRecycle`）。
- * + **索引数据面两项（R2 · 桌面功能对位批 —— 白名单末位）**：`index:build`（语义索引构建入口）·
- * `index:status`（索引状态读数）—— 处理体出档 `index-status.mjs`（构建）与 `settings.mjs`（读数装配）。
- * + **R7 设置补充三项（桌面功能对位批 —— 白名单末位）**：`settings:env`（env 读写：proxy ∕ shell +
- * TestProxy 转口 —— 处理体出档 `settings-env.mjs`，TestProxy 出口 = `providers.mjs`）· `settings:tools`
- * （embedding ∕ websearch key 读写 —— 出档 `settings-tools.mjs`）· `mcp:tools`（MCP 连接列举 ∕ Test 探活
- * —— 出档 `mcp-servers.mjs`）。
- * + **B10 W2 设置面四增（S1 ∕ S2 ∕ S5 —— 白名单末位）**：`provider:setKey` ∕ `provider:delKey`
- * （渠道密钥设 ∕ 改 ∕ 删）· `provider:models`（自定形「拉取模型」——暂存值不落盘）· `provider:setProxy`
- * （渠级代理开关）—— 处理体均住 `providers.mjs`（本档四转口，零算法副本）。
- * + **B10 W3 MCP 两增（S8 ∕ S9 —— 白名单末位）**：`mcp:update`（MCP 编辑面——原位替换，仅落盘）·
- * `mcp:reconnect`（行重连——先断后连）—— 处理体均住 `mcp-servers.mjs`（本档两转口，零算法副本）。
- * + **模型菜单全渠扇出批增 `model:catalog`（白名单末位）**：无载荷全渠扇出（逐 `hasKey` 渠探针 ——
- * 失败渠零行 + `unavailable` 诊断项；处理体出档 `settings.mjs`）。
- * + **台账行出站接线（「对齐第三批」KD-38）**：`pushLedgerLines` 挂 `session:resume` 成功径（出站面经
- * `setLedgerEmit` 注入；扫描 / 出站逻辑住 `project-info.mjs`）
+ * ipc.mjs — IPC 通道处理体本体 + 宿主注入面（`docs/desktop/design/IPC.md` §1 / §2）：**四十五项**白名单面 =
+ * 本档（配置读取 + 项目面 `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` /
+ * `session:switch` / `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` +
+ * 作答响应 `question:respond` —— `question` 工具真作答面 + 历史页 `history:page` + 回合驱动 `msg:send` /
+ * `msg:interrupt`（宿主未注入 ⇒ fail-loud）+ 会话级偏好写面 `session:prefs` + 子 agent 停止出口 `subagent:stop`
+ * （R3b 落）+ 文件链接打开 `file:open`（「对齐第三批」相抵② · KD-39 —— 编辑器 CLI 探测 ⇒ spawn
+ * (`editor-open.mjs`)；兜底 `shell.openPath`；纯判据面住 `file-links.mjs`）+ R1 输入面板两项 `session:flags` /
+ * `at:complete` + 会话维护线两项 `session:gc` / `session:index` —— 白名单末位）+ **转口群二十四项出档
+ * `ipc-relays.mjs`**（#685 拆点 —— 331 ⇒ 两档 ⇒ 越 300 回线）：索引数据面两 + 设置族十九（provider 八 /
+ * model 两 / agent 参数 / MCP 六 / env / tools）+ 台账相位两 / 配置写——逐项一参数纯转口（本档零算法副本）。
+ * 跨档接线：两档同取 `currentCwd`；本档**新导出** `liveAgents`（mcp 四转口随动面取用 —— 单向
+ * `ipc-relays.mjs → ipc.mjs`，零环）；注册面（`HANDLERS` 表 ∕ 注册序 ∕ 白名单 ∕ `main.mjs`）零改。
+ * 台账行出站接线（「对齐第三批」KD-38）：`pushLedgerLines` 挂 `session:resume` 成功径（出站面经
+ * `setLedgerEmit` 注入；扫描 / 出站逻辑住 `project-info.mjs`）——**#686 拒绝面**：调用点挂拒绝处理器
+ * （后台面 `void` 语义锁保持 —— 回执不候后台面；出站级失败 ⇒ `console.error`，零未处理拒绝逃逸）。
  * （定序 = 预载白名单同序）。
  * 白名单**单源** = `src/preload/preload.cjs` 的 `CHANNELS`（批档 §2.6 D-3）：主侧经 `createRequire` 读之
  * （**据以注册** = `ipc-registry.mjs` —— 表 ∕ 注册序出档 · #28；注册面纪律见该档档头）。
@@ -47,16 +34,14 @@ import {
   createSession, deleteSession, renameSession, resumeSession, switchSession,
 } from "./session-actions.mjs"
 import { pageHistory, scheduleSessionGC } from "./session-slots.mjs"
-import { configWrite, indexStatus, isConfigured, modelCatalog, modelList, settingsAgent } from "./settings.mjs"
-import { settingsEnv } from "./settings-env.mjs"
-import { settingsTools } from "./settings-tools.mjs"
-import { providerDelKey, providerList, providerModels, providerRemove, providerSave, providerSetKey, providerSetProxy, providerVerify } from "./providers.mjs"
-import { mcpList, mcpReconnect, mcpRemove, mcpSave, mcpTools, mcpUpdate } from "./mcp-servers.mjs"
-import { batchStatus, ledgerRead, pushLedgerLines } from "./project-info.mjs"
+// 设置族 ∕ 索引面 ∕ 台账相位 ∕ 配置写的处理体转口群随 #685 出档 `ipc-relays.mjs`（本档只取核心面值件）。
+import { isConfigured } from "./settings.mjs"
+import { pushLedgerLines } from "./project-info.mjs"
 import { runSessionGcMaintenance, runSessionIndexMaintenance } from "./session-maintenance.mjs"
-import { runIndexBuild } from "./index-status.mjs"
 // 文件链接纯判据面（「对齐第三批」相抵② · KD-39 —— `file:open` 载荷合格性；出站 = `shell.openPath`）。
 import { fileOpenTarget } from "./file-links.mjs"
+// 行定位消解面（端差清算轮 #627 —— 外部编辑器 CLI 探测 ∕ argv 构造 / spawn 形；本档零算法副本）。
+import { buildEditorArgs, detectEditorCli, spawnEditorCli } from "./editor-open.mjs"
 
 const require = createRequire(import.meta.url)
 
@@ -107,16 +92,15 @@ function readConfig() {
   return { config, locale, dict: projectDictionary(locale), configured: isConfigured() }
 }
 
-/** 处理体**跨档引用面**（注册表族出档 `ipc-registry.mjs` —— #28 拆点）：`HANDLERS` 表 ∕ 注册序住该档，
- *  经本列取用（表 ∕ 定序零改；新增通道 = 本列 + 表行 + 预载白名单三处同拍）。 */
+/** 处理体**跨档引用面**（注册表族出档 `ipc-registry.mjs` —— #28 拆点；转口群出档 `ipc-relays.mjs` —— #685）：
+ *  `HANDLERS` 表 ∕ 注册序住注册档，经注册档两源 import 取用（表 ∕ 定序 ∕ 白名单零改；新增通道 = 两列之一 +
+ *  表行 + 预载白名单三处同拍）。**本档留用面** = 核心 21 通道 + `liveAgents`（#685 新导出 —— mcp 四转口随动面，
+ *  单向供 `ipc-relays.mjs` 取用，零环）。 */
 export {
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
-  providerListChannel, providerSaveChannel, providerRemoveChannel, providerVerifyChannel, providerSetKeyChannel, providerDelKeyChannel, providerModelsChannel, providerSetProxyChannel, modelListChannel, modelCatalogChannel,
-  settingsAgentChannel, mcpListChannel, mcpSaveChannel, mcpRemoveChannel, mcpUpdateChannel, mcpReconnectChannel, configWriteChannel,
-  ledgerReadChannel, batchStatusChannel, questionRespond, sessionPrefs, subagentStop, fileOpen,
-  sessionFlags, atComplete, sessionGc, sessionIndex, indexBuild, indexStatusChannel,
-  settingsEnvChannel, settingsToolsChannel, mcpToolsChannel,
+  questionRespond, sessionPrefs, subagentStop, fileOpen, sessionFlags, atComplete, sessionGc, sessionIndex,
+  liveAgents,
 }
 
 /** `project:open(payload)` ⇒ `{ cwd, recent }`：载荷 `{ fsPath }` **可选**（A7 收正形 —— VSC `setProject` 同键；
@@ -166,13 +150,15 @@ function sessionDelete(payload) {
   if (receipt?.ok === true && payload?.slot != null) agentHost?.dispose(String(payload.slot))
   return receipt
 }
-function sessionResume() {
-  const receipt = resumeSession(currentCwd())
+async function sessionResume() {
+  const receipt = await resumeSession(currentCwd())
   // 残留 GC 显式点火（R1 · #406 · KD-T4② —— 桌面恢复径走核裸版，无包装调度；核内每进程每前缀去重）：
   if (receipt?.ok === true && typeof receipt.cwd === "string" && receipt.cwd !== "") scheduleSessionGC(receipt.cwd)
   // 台账行出站点（「对齐第三批」KD-38 —— 落点 = 成功径：会话键天然在手）：后台面（`void`）—— 不经回执等待。
+  // #686 拒绝面：调用点挂拒绝处理器（`void` 语义锁保持 —— 回执不候后台面；出站级失败 ⇒ `console.error`，零未处理拒绝逃逸）。
   if (ledgerEmit && receipt?.ok === true && receipt.slot != null) {
     void pushLedgerLines({ cwd: receipt.cwd, key: String(receipt.slot), post: ledgerEmit })
+      .catch((error) => { console.error("[ipc] ledger emit failed:", error) })
   }
   return receipt
 }
@@ -204,8 +190,9 @@ function sessionPrefs(payload) { return requireAgentHost().setPrefs(payload?.key
  *  载荷 `{ key, text, images }`（`images` = dataURL 串列 —— A1），转口宿主回合驱动。 */
 function msgSend(payload) { return requireAgentHost().send(payload?.key, payload?.text, payload?.images) }
 
-/** `msg:interrupt(payload)` ⇒ `{ ok:true }` ∥ `{ ok:false, reason }`（`idle` / `bad-key`）：载荷 `{ key, message? }`
- *  —— `message` 非空串 ⇒ Ctrl+I 同上下文续跑（宿主下传核 abort 面 `{ interrupt: true, message }`）；缺 ∕ 空 ⇒ 停回合。 */
+/** `msg:interrupt(payload)` ⇒ `{ ok:true }` ∥ `{ ok:false, reason }`（`idle` / `bad-key` / `queue-full`〔#656 · KD-52 ②：
+ *  cap 询问待答 ∧ 携文 ∧ 忙态队满——**零中止 ∕ 零入队**（询问在场 ∕ 回合照旧）；文本由端侧回注输入框〕）：
+ *  载荷 `{ key, message? }` —— `message` 非空串 ⇒ Ctrl+I 同上下文续跑（宿主下传核 abort 面 `{ interrupt: true, message }`）；缺 ∕ 空 ⇒ 停回合。 */
 function msgInterrupt(payload) { return requireAgentHost().interrupt(payload?.key, payload?.message) }
 
 /** `approval:respond(payload)` ⇒ 审批出口：载荷 `{ promptId, verdict }`（形已在册，本批接线**语义**面）。
@@ -231,14 +218,20 @@ function questionRespond(payload) {
  *  `thincoder-desktop/src/main/subagent-face.mjs`）；宿主未注入 ⇒ fail-loud 直抛（沿 `approval:respond` 先例）。 */
 function subagentStop(payload) { return requireAgentHost().stopSubagent(payload?.key, payload?.id, payload?.role) }
 
-/** `file:open(payload)` ⇒ `{ ok, reason }`（「对齐第三批」相抵② · KD-39）：载荷 `{ path, line? }` ——
- *  `path` = 盘上绝对路径（宿主 `extractFileLinks` 产物 = **验存件**）；`line` 本批不施加（`shell.openPath`
- *  无行参 —— 载荷备用；端差登记 = `docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」相抵②）。
- *  出口 = 系统默认程序（`shell.openPath`：成功 ⇒ 空串；失败 ⇒ 错误串**直传出栈**）；
+/** `file:open(payload)` ⇒ `{ ok, reason }`（「对齐第三批」相抵② · KD-39；行定位消解 = 端差清算轮 #627）：
+ *  载荷 `{ path, line? }` —— `path` = 盘上绝对路径（宿主 `extractFileLinks` 产物 = **验存件**）；`line` = 正整数
+ *  （`file-link` 锚 `data-line`——缺 ∕ 非法 ⇒ 纯路径开）。**单一路径链**（零静默）：命中编辑器 CLI ⇒ spawn
+ *  （**参数含行**—— `--goto path:line`；`subl` = `path:line`）；未命中 ⇒ `shell.openPath` 兜底**恰一次**
+ *  （现状零回归）；spawn 失败 ⇒ 兜底恰一次；全链失败（兜底亦败）⇒ `{ ok:false, reason }` **直传**。
+ *  探测 ∕ 命令行构造 ∕ spawn 形单源 = `editor-open.mjs`（本档零算法副本）。
  *  非串 / 空串载荷 ⇒ `bad-path`（零抛 —— 渲染面按 `console.error` 处置，零静默）。 */
 async function fileOpen(payload) {
   const path = fileOpenTarget(payload)
   if (path === null) return { ok: false, reason: "bad-path" }
+  const cli = await detectEditorCli()
+  if (cli !== null && (await spawnEditorCli(cli, buildEditorArgs(cli, path, payload?.line)))) {
+    return { ok: true, reason: null }
+  }
   const failed = await shell.openPath(path)
   return failed ? { ok: false, reason: failed } : { ok: true, reason: null }
 }
@@ -268,55 +261,5 @@ function atComplete(payload) { return requireAgentHost().atComplete(payload?.que
 function sessionGc() { return runSessionGcMaintenance({ confirm: confirmRecycle }) }
 function sessionIndex() { return runSessionIndexMaintenance() }
 
-/** R2 · 索引数据面两通道（构建处理体出档 `index-status.mjs` ∕ 读数装配出档 `settings.mjs`）：两通道
- *  **无载荷**——`dir` = 主进程当前项目内存态（`currentCwd()`）；未开项目 ⇒ 读数零计数（零假造）·
- *  构建落 `{ ok:false, reason:"no-project" }`（可见失败面，零静默）。 */
-function indexBuild() { return runIndexBuild({ dir: currentCwd() }) }
-function indexStatusChannel() { return indexStatus({ dir: currentCwd() }) }
-
-/** R7 · 设置补充三项（处理体出档 `settings-env.mjs` ∕ `settings-tools.mjs` ∕ `mcp-servers.mjs`）：
- *  `settings:env` 三支 = 读 `{}` ∕ 写 `{ patch: { proxy?, shell? } }` ∕ TestProxy `{ testProxy: { uri } }`
- *  （写经核 `writeConfigAtomic`——端侧零自写盘）；`settings:tools` 两支 = 读 `{}` ∕ 写
- *  `{ patch: { embedding?: { apiKey }, websearch?: { apiKey } } }`；`mcp:tools` 两支 = `{ name }`
- *  （连接列举）∥ `{ name, test: true }`（Test 探活一次）。载荷 / 回执形 = `docs/desktop/design/IPC.md` §2。 */
-function settingsEnvChannel(payload) { return settingsEnv(payload) }
-function settingsToolsChannel(payload) { return settingsTools(payload) }
-function mcpToolsChannel(payload) { return mcpTools(payload) }
-
-/* ─── 设置族十二项处理体（本批增）：转口三档模块，本档零算法副本（§2.5 行表） ─── */
-/** `provider:list`（无入参）⇒ `{ ok, providers, active }`（密钥只回遮罩值）。 */
-function providerListChannel() { return providerList() }
-/** `provider:save(payload)` ⇒ `{ ok, reason }`：载荷 `{ name, shape, preset?, baseURL?, model?, key?, format?, active? }`。 */
-function providerSaveChannel(payload) { return providerSave(payload) }
-/** `provider:remove(payload)` ⇒ `{ ok, reason }`：载荷 `{ name }`（激活渠道保护 = 核错误串直传）。 */
-function providerRemoveChannel(payload) { return providerRemove(payload) }
-/** `provider:verify(payload)` ⇒ `{ ok, models }` ∥ `{ ok:false, reason }`（`timeout`/`malformed`/`unavailable`；
- *  探不通**仍可保存**——本通道只回报，不拦写）。 */
-function providerVerifyChannel(payload) { return providerVerify(payload) }
-/** B10 W2 四处理体转口（S1 ∕ S2 ∕ S5 —— 载荷 ∕ 回执形单源 = `providers.mjs`；本档零算法副本）。 */
-function providerSetKeyChannel(payload) { return providerSetKey(payload) }
-function providerDelKeyChannel(payload) { return providerDelKey(payload) }
-function providerModelsChannel(payload) { return providerModels(payload) }
-function providerSetProxyChannel(payload) { return providerSetProxy(payload) }
-/** `model:list(payload)` ⇒ `{ ok, models }` ∥ `{ ok:false, reason }`：载荷 `{ provider }`（provider 名）。 */
-function modelListChannel(payload) { return modelList(payload) }
-/** `model:catalog`（无载荷）⇒ `{ ok, models, unavailable }`（全渠扇出 —— 逐 `hasKey` 渠探针；失败渠零行 + 诊断项）。 */
-function modelCatalogChannel() { return modelCatalog() }
-/** `settings:agent(payload)`：读 `{}` ⇒ `{ ok, fields }`；写 `{ patch }` ⇒ `{ ok, reason, fields }`（写后回读）。 */
-function settingsAgentChannel(payload) { return settingsAgent(payload) }
-/** `mcp:list`（无入参）⇒ `{ ok, servers }`（只列已配；不连接）。 */
-function mcpListChannel() { return mcpList() }
-/** `mcp:save(payload)` ⇒ `{ ok, tools }` ∥ `{ ok:false, reason, detail? }`（探活不通 ⇒ 零写盘）。 */
-function mcpSaveChannel(payload) { return mcpSave(payload, { listAgents: liveAgents }) }
-/** `mcp:remove(payload)` ⇒ `{ ok }` ∥ `{ ok:false, reason }`：载荷 `{ name }`。 */
-function mcpRemoveChannel(payload) { return mcpRemove(payload, { listAgents: liveAgents }) }
-/** `mcp:update(payload)` ⇒ `{ ok, tools }` ∥ `{ ok:false, reason }`：载荷 `{ name, config }`（S8 编辑面——仅落盘 + 随动重挂）。 */
-function mcpUpdateChannel(payload) { return mcpUpdate(payload, { listAgents: liveAgents }) }
-/** `mcp:reconnect(payload)` ⇒ `{ ok, tools }` ∥ `{ ok:false, reason }`：载荷 `{ name }`（S9 行重连——先断后连）。 */
-function mcpReconnectChannel(payload) { return mcpReconnect(payload, { listAgents: liveAgents }) }
-  /** `config:write(payload)` ⇒ `{ ok, reason, locale, dict, configured }` ∥ `{ ok:false, reason }`：载荷 `{ patch }`（仅 `locale`）。 */
-function configWriteChannel(payload) { return configWrite(payload) }
-/** `ledger:read(payload)` ⇒ `{ ok, counts, thresholdReached }` ∥ `{ ok:false, reason }`：载荷 `{ cwd? }`。 */
-function ledgerReadChannel(payload) { return ledgerRead(payload) }
-/** `batch:status(payload)` ⇒ `{ ok, phase }` ∥ `{ ok:false, reason }`：载荷 `{ cwd? }`（`missing`/`invalid`）。 */
-function batchStatusChannel(payload) { return batchStatus(payload) }
+/* ─── 转口群二十四项（设置族 ∕ 索引数据面 / 台账相位 / 配置写）出档 `ipc-relays.mjs`（#685 拆点 —— 本档零副本；
+ *     注册面（`ipc-registry.mjs`）import 拆两源取用 —— `HANDLERS` 表 ∕ 注册序 ∕ 白名单零改）。 ─── */

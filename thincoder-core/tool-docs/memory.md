@@ -1,0 +1,10 @@
+Manage long-term memory in ONE tool — the action parameter picks the operation:
+- search — find knowledge saved in previous sessions; each result row carries [layer] + entry id (the id's prefix = the layer)
+- put — save knowledge for future sessions; type = rule (coding standards) / knowledge (project facts) / decision (architecture decisions) / pattern (debugging/workflow patterns)
+- list — inventory what memory holds; one row per entry: [layer] id [type] title (date); a truncated list notes the full count
+- delete — SINGLE: {id, layer} removes the entry shown in put/search/list output — layer is optional: passed, it is validated against the id prefix (a mismatch is refused — guards against deleting the wrong entry); omitted, the id prefix routes the delete (any id from put/search/list is directly deletable). BATCH (no id): {layer, type and/or keyword} removes every matching entry in that layer — layer + at least one of type/keyword required; without confirm:true it returns the count + preview instead; layer-wide wipes without filters are refused on every layer
+- clear — {layer: "personal", confirm: true} wipes ALL personal memory entries. clear is personal-only: a missing layer or a project/team layer is refused (use delete batch filters on shared layers)
+Layer = the memory tier: personal (private) / project (shared via this repo's .thincoder/memory/) / team (CLI only, git-synced); the [layer] tag, the id prefix, and the layer parameter are the same concept — pass a result row's [layer] as layer.
+Deleting project/team entries removes the local markdown file and its index row — team deletion is local only; a later team sync may resurrect the file while the remote still has it.
+Save bugs, conventions, and preferences here — they persist across sessions.
+Session message history (what was said in this or past sessions) is NOT in memory — search session messages with read_history.

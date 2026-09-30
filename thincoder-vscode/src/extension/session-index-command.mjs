@@ -4,7 +4,7 @@
  * SESSION.md §6.19 D-SE46「VSC 对位」：命令 `thincoder.sessionIndexRebuild`——处理体跑**核数据面**
  * （清四表 → 全量重扫会话档 → 摘要），结果经宿主提示回报。纪律（`session-gc-command.mjs` 同族）：
  *   ① **核索引面一律动态 import**（`node:sqlite` 不得进入端壳静态闭包——`extension.mjs` 静态链
- *      零 node:sqlite 是既有结构机判，见 `thincoder-vscode/test/engine-floor-guard.test.mjs`）；
+ *      零 node:sqlite 是既有结构机判——W8 契约②判据现载体 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`，单测树重建时回迁端侧单测档）；
  *   ② 目录来源 = 端侧派生的 sessions 根（`session-slots.mjs` `sessionsDir()`——核 `configDir`
  *      与核沙箱缝自动随动），不依赖核函缺省 `dir`；索引库 = 单库 `~/.thincoder/session-index.db`
  *      （两端同库——索引是本机派生品，无端差）；

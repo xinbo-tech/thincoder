@@ -1,17 +1,18 @@
-/* chrome.css — 中区外壳面（`docs/desktop/design/UI.md` §1 布局 ∕ 会话控制 ∕ 会话头 ∕ 状态栏行；自
+/* chrome.css — 中区外壳面（`docs/desktop/design/UI.md` §1 布局 ∕ 会话控制 ∕ 状态栏行；自
    `renderer/styles.css` 四拆 —— 会话模型轮 R13：原标签条 ∕ 左列两面随会话模型裁撤退场，会话控制条 = VSC 形换装
    〔对位 `thincoder-vscode/webview/session.css`，值面沿桌面调色板变量〕；窄窗断点随左列裁撤消解
    〔余两列无折叠行为 —— 零断点〕）。
 
 /* 两列栅格 + 窗口级状态栏底行：中（会话面板）· 右（活动池）——中列 `minmax(0, 1fr)` 防内容撑破栅格；
    第二行 = 状态栏底行（`auto` 高、跨两列——需求 §3.1 图：状态栏在两列框外）。 */
+/* 扁平化（2026-09-30）：块内相连 ∥ 去圆角 ∥ 去分割线。 */
 .app {
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--pool-w);
   grid-template-rows: minmax(0, 1fr) auto;
-  gap: var(--gap);
+  gap: 0;
   height: 100%;
-  padding: var(--gap);
+  padding: 0;
 }
 
 /* 容器三卡（D24 静息描边归零 · 保位：`border-color: transparent` —— 1px 占位留 ⇒ 零几何位移）——层次 = `--bg-raised` 底 + `--gap` 间距。 */
@@ -46,12 +47,6 @@
   padding-top: 14px;
 }
 
-.session-head {
-  min-height: 44px;
-  padding: 10px 12px;
-  border-bottom: 1px solid transparent;
-}
-
 .status {
   grid-column: 1 / -1;
   min-height: 32px;
@@ -60,7 +55,7 @@
 }
 
 /* ─── 会话控制条（面板内顶部 —— VSC `#session-bar` 三件对位：项目钮 ∕ 下拉选择器 ∕ 新建钮；会话模型轮 R13：
-   原标签条槽改锚本面。点内不关 ∕ 点外关 = 挂载面文档级 listener；静息描边归零 = D24 保位律，沿 `.session-head` 同族）── */
+   原标签条槽改锚本面。点内不关 ∕ 点外关 = 挂载面文档级 listener；静息描边归零 = D24 保位律）── */
 .session-bar {
   display: flex;
   align-items: center;
@@ -133,133 +128,7 @@
 .session-arrow::before {
   content: "▼";
 }
-/* 下拉面（开合单源 = `data-open`；`display: none` ⇒ 闭）——挂选择器内 ⇒ 随条体溢出裁面（面板 `overflow: hidden` 外自然裁）。 */
-.session-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  margin-top: 2px;
-  z-index: 100;
-  max-height: 280px;
-  overflow-y: auto;
-  background: var(--bg-raised);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  box-shadow: var(--shadow);
-  display: none;
-}
-.session-dropdown[data-open="1"] {
-  display: block;
-}
-/* 条目（标题 + 元数据 + 位标 + 行内 ✎ ∕ ✕ —— 对位 VSC `.session-item`；末行无线）。 */
-.session-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--line);
-  cursor: pointer;
-}
-.session-item:last-child {
-  border-bottom: none;
-}
-.session-item:hover {
-  background: var(--hover-bg);
-}
-/* 条目聚焦（VSC `base.css:449-457` 同三值 —— 键盘可达面；沿原左列行聚焦先例）。 */
-.session-item:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-  background: var(--hover-bg-strong);
-}
-.session-item.active {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-.session-item.active .session-item-title {
-  color: var(--accent);
-}
-.session-item-title {
-  flex: 1;
-  min-width: 0;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-/* 元数据三值（provider · N msgs · updated —— 逐段包元素 `data-seg`；段间分隔符归本条，缺席段不落空分隔）。 */
-.session-item-meta {
-  display: flex;
-  flex: 0 1 auto;
-  min-width: 0;
-  gap: 4px;
-  color: var(--fg);
-  font-size: 11px;
-  opacity: 0.4;
-  white-space: nowrap;
-}
-.session-item-meta > [data-seg] {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.session-item-meta > [data-seg] + [data-seg]::before {
-  content: "· ";
-}
-/* 位标（运行中 ∕ 待审批 ∕ 完成 —— 码由视图落、词由词表出；`idle` 零节点）。 */
-.session-item-badge {
-  flex: 0 0 auto;
-  color: var(--fg-muted);
-  font-size: 12px;
-  white-space: nowrap;
-}
-/* 空态行（`session.empty` —— 半透明 · 非可点）。 */
-.session-empty {
-  opacity: 0.5;
-  cursor: default;
-}
-/* 账本警示注记（下拉首行 · 非可点 —— 端既有面迁位；值 = VSC `session-bar.js:33-44` 同款）。 */
-.session-ledger-notice {
-  padding: 6px 10px;
-  opacity: 0.7;
-}
-/* 行内动作钮（✎ ∕ ✕）：22px 方 · 静息隐没 · 行 hover 半显 · 自身 hover 全显。 */
-.session-rename,
-.session-delete {
-  flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--fg);
-  font: inherit;
-  font-size: 12px;
-  opacity: 0;
-}
-.session-rename::before { content: "✎"; }
-.session-delete::before { content: "✕"; }
-.session-item:hover .session-rename,
-.session-item:hover .session-delete {
-  opacity: 0.5;
-}
-.session-rename:not(:disabled):hover {
-  opacity: 1;
-  background: var(--hover-bg-strong);
-  color: var(--accent);
-  cursor: pointer;
-}
-.session-delete:not(:disabled):hover {
-  opacity: 1;
-  background: var(--diff-del-bg);
-  color: var(--error-fg);
-  cursor: pointer;
-}
-.session-rename:focus-visible,
-.session-delete:focus-visible {
-  opacity: 1;
-}
+/* 会话列表面（下拉 + 条目全族 + 条目内改名形）随本批出档 `renderer/session-list.css`（越线档结构轮 · #536——迁出 = 原 :136-262 ∕ :287-323）。 */
 /* 新建钮（+ —— 词面经 `aria-label`，字形住本档 `content`）。 */
 .session-new {
   flex-shrink: 0;
@@ -283,43 +152,6 @@
   color: var(--accent);
   opacity: 1;
   cursor: pointer;
-}
-/* 改名形（条目原位换形 —— 端既有换形面迁入本行）：[文本控件, 取消, 确认]。 */
-.session-rename-input {
-  flex: 1;
-  min-width: 0;
-  padding: 6px 8px;
-  border: 1px solid var(--accent);
-  border-radius: var(--radius);
-  background: var(--bg);
-  color: inherit;
-  font: inherit;
-}
-.session-cancel,
-.session-confirm {
-  flex: 0 0 auto;
-  padding: 2px 8px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  background: transparent;
-  font: inherit;
-}
-.session-cancel { color: var(--fg-muted); }
-.session-confirm { color: var(--accent); }
-.session-cancel:not(:disabled):hover,
-.session-confirm:not(:disabled):hover {
-  background: var(--hover-bg);
-  cursor: pointer;
-}
-.session-cancel:not(:disabled):active,
-.session-confirm:not(:disabled):active {
-  background: var(--hover-bg-strong);
-}
-.session-cancel:focus-visible,
-.session-confirm:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-  background: var(--hover-bg-strong);
 }
 /* 内联确认 popover（`.auto-confirm` 族 —— VSC 形：背板 + 两键 + 默认焦点取消；挂 `document.body` ⇒ 出面板溢出裁面。
    VSC 侧该族零容器规则（只 base.css 聚焦臂）⇒ 面体 ∕ 背板两值 = 端补最小可用形，族名与两键锚逐字保持）。 */
@@ -376,27 +208,10 @@
   background: var(--hover-bg-strong);
 }
 
-/* 会话头字段面（同档 §1 会话头行）：槽序布局 + 字段锚形态（序单源 = `renderer/views/chrome.mjs` `FIELD_ORDER`）；
-   值串 = 供给面数据（非词表）；`data-meta="none"`（供给未落）= 常态：零字段节点（禁假数据 —— KD-e）。
-   D24：chip 描边归零（保位）——可聚焦面 = 内嵌 `.head-pick` ⇒ hover / 按下 / 聚焦三值落 chip（`:focus-within`，见 `skin.css`）。 */
-.head-fields {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.head-field {
-  padding: 1px 6px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  color: var(--fg-muted);
-  font-size: 12px;
-}
-
 /* 状态行面（D17 十五段裁定「承载 12」—— 本批 R3a）：段 = 横排 `span[data-seg]`（段锚 = 机读面；段内件 = `data-part`）；警示色四段（注意力 / 台账超阈 / 计时到期 / 上下文 ≥ 80%）；四段外置位面（告警）见上 `.status-alert`。
    **R11 状态行 ⇒ CLI 对齐（屏面为准 · 2026-09-28）**：段间分隔 = CLI 形 `段 │ 段`（形源 = `thincoder-cli/src/tui/render-frame.mjs:344-427`：每段自携 ` │ ` 前导；banner 四位 ∕ banner→后段 = 竖线紧贴前词 `PLAN│ AUTO`）；字形住本档（视图档零字形字面），分隔归 CSS 本条（相邻段选择器 ⇒ 缺席段不落空分隔 —— 沿 `.session-item-meta > [data-seg] + [data-seg]::before` 先例；竖线居段距带内 ⇒ 两侧各 6px）。
    字色：base = CLI `dim` 基色（`thincoder-cli/src/tui/ansi.mjs:31` `ESC[2m` 低强调）⟷ `--fg` 50% 强度（终端 dim = 前景半强度）；警示段 = CLI 黄（同档 `:46`）⟷ `--warn`（调色板值 = VSC 警告黄默认）。
-   **banner 四位字色（R11 补轮 · 2026-09-28 · 用户「字色全对齐」）**：四段字色 = CLI 逐段常量实形（`render-frame.mjs:227-230` 现读）：`auto` = `C.warn`（`ansi.mjs:46` `fg(3)` 黄）· `plan` = `C.tool`（同档 `:43` `fg(6)` 青）· `advisor` ∕ `eng` = `C.advisor`（同档 `:47` `ESC[92m` 亮绿 —— 两段同常量）；落法 = `auto` **复用 `--warn`**（与警示段同槽：CLI 同一常量 ⇒ 不裂双黄），`plan` ∕ `advisor+eng` **槽新增** `--mode-plan` ∕ `--mode-advisor`（值 = VSC 终端 ANSI 同码亮 ∕ 暗默认 —— `terminalColorRegistry.ts` `ansiColorMap`；两套值住 `theme.css`）。
+   **banner 四位字色（R11 补轮 · 2026-09-28 · 用户「字色全对齐」）**：四段字色 = CLI 逐段常量实形（`render-frame.mjs:233-236` 现读〔2026-09-29 按盘重锚〕）：`auto` = `C.warn`（`ansi.mjs:46` `fg(3)` 黄）· `plan` = `C.tool`（同档 `:43` `fg(6)` 青）· `advisor` ∕ `eng` = `C.advisor`（同档 `:47` `ESC[92m` 亮绿 —— 两段同常量）；落法 = `auto` **复用 `--warn`**（与警示段同槽：CLI 同一常量 ⇒ 不裂双黄），`plan` ∕ `advisor+eng` **槽新增** `--mode-plan` ∕ `--mode-advisor`（值 = VSC 终端 ANSI 同码亮 ∕ 暗默认 —— `terminalColorRegistry.ts` `ansiColorMap`；两套值住 `theme.css`）。
    **分隔两边缘面裁定（R11 补轮）**：① 换行时行首悬空 `│` —— **不采用**（由：分隔 = 段自携前导 `::before`（CLI「每段自携」同构）⇒ `flex-wrap` 换行后行首段仍带前导；纯 CSS 无「行首」选择器 ⇒ 修需 JS 测行 ∕ 改布局 = 越「段集 ∕ 段序 ∕ 段读数逻辑零改」边界；孤竖线与段间分隔同形同色、仅窄窗换行边缘可见 —— 无误读风险）。② `.status-alert`（非段位）无条 —— **采用**（由：段链逐项已 `│` 分隔、告警位紧随段链 ⇒ 断链观感；CLI 非段位席位（注意力 chip）亦携 `│`（`render-frame.mjs:245` `chip + " │ "`）—— 补条仅落「段 ∕ 告警位之后」，行首零前导（同「缺席段不落空分隔」纪律））。 */
 .status-bar {
   display: flex;
@@ -445,6 +260,10 @@
 .status-bar > .status-goal + .status-alert::before { content: "│"; margin: 0 6px 0 -6px; color: color-mix(in srgb, var(--fg) 50%, transparent); }
 
 /* 首屏引导层（R1 —— `renderer/index.html` 静态件 ∕ `renderer/app.mjs` `settleBoot` 随动）：`data-boot` ≠ `ok` 期间在场
-   （窗口级覆盖层面 —— 冷启首帧 = 引导面，非空骨架）；置 `ok` ⇒ 节点移除（零残留）；`error` ⇒ 错误面（`.boot-reason` 显原因，转轮停）。 */
+   （窗口级覆盖层面 —— 冷启首帧 = 引导面，非空骨架）；置 `ok` ⇒ 节点移除（零残留）；`error` ⇒ 错误面非模态：
+   顶部横幅（`.boot-reason` 显原因，转轮停 —— #617-CJ；基规则照旧全窗，仅 `[data-state="error"]` 转横幅）。 */
 .boot-gate { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: var(--bg); color: var(--fg-muted); }
 .boot-reason { max-width: calc(100vw - 2 * var(--gap)); margin: 0; font-size: 13px; text-align: center; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* #617-CJ：错误面非模态（顶部横幅 —— 载原因而不覆盖交互：带高自动 ∕ 点击穿透 ∕ z 序居设置面（z 10）之下 ⇒ 设置面可进可出）。
+   `ok` ∕ `loading` 两态零改（基规则全窗不动）；本规则只作用于 `[data-state="error"]`（写者 = `app.mjs` `settleBoot` 单点）。 */
+.boot-gate[data-state="error"] { position: fixed; inset: 0 0 auto; z-index: 9; display: block; padding: 8px var(--gap); pointer-events: none; background: var(--bg-raised); border-bottom: 1px solid var(--line); }

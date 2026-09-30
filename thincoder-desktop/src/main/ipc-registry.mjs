@@ -7,7 +7,8 @@
  * - 白名单**单源** = `src/preload/preload.cjs` 的 `CHANNELS`（批档 §2.6 D-3）：本档经 `ipc.mjs` 转口
  *   读取**并据以注册**（一条白名单项 = 一个 `ipcMain.handle` 面 ⇒ 无通道名第二副本）；白名单项无处理体
  *   ⇒ 注册期抛（fail-closed）。
- * - 处理体本体住 `ipc.mjs`（本档只持映射 ∕ 注册序）；跨档引用面 = 该档表位处 `export { … }` 列。
+ * - 处理体本体 = `ipc.mjs`（核心面）+ 转口群出档 `ipc-relays.mjs`（#685 —— 两源 import；本档只持映射 ∕ 注册序）；
+ *   跨档引用面 = 两档表位处 `export { … }` 列。
  * - `channels` 读数口径 = 本次运行**实际分发集合**（顺序去重 —— 批档 §2.11 收正⑦）。
  */
 import { ipcMain } from "electron"
@@ -15,14 +16,16 @@ import {
   CHANNELS, ipcStats,
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
-  providerListChannel, providerSaveChannel, providerRemoveChannel, providerVerifyChannel, modelListChannel,
-  providerSetKeyChannel, providerDelKeyChannel, providerModelsChannel, providerSetProxyChannel,
-  modelCatalogChannel,
-  settingsAgentChannel, mcpListChannel, mcpSaveChannel, mcpRemoveChannel, configWriteChannel,
-  ledgerReadChannel, batchStatusChannel, questionRespond, sessionPrefs, subagentStop, fileOpen,
-  sessionFlags, atComplete, sessionGc, sessionIndex, indexBuild, indexStatusChannel,
-  settingsEnvChannel, settingsToolsChannel, mcpToolsChannel, mcpUpdateChannel, mcpReconnectChannel,
+  questionRespond, sessionPrefs, subagentStop, fileOpen, sessionFlags, atComplete, sessionGc, sessionIndex,
 } from "./ipc.mjs"
+/** 转口群（#685 拆档）：二十四项设置族 ∕ 索引数据面 / 台账相位 / 配置写 —— 出档 `ipc-relays.mjs`（表行逐字不动）。 */
+import {
+  providerListChannel, providerSaveChannel, providerRemoveChannel, providerVerifyChannel, modelListChannel,
+  providerSetKeyChannel, providerDelKeyChannel, providerModelsChannel, providerSetProxyChannel, modelCatalogChannel,
+  settingsAgentChannel, mcpListChannel, mcpSaveChannel, mcpRemoveChannel, configWriteChannel, ledgerReadChannel,
+  batchStatusChannel, indexBuild, indexStatusChannel, settingsEnvChannel, settingsToolsChannel, mcpToolsChannel,
+  mcpUpdateChannel, mcpReconnectChannel,
+} from "./ipc-relays.mjs"
 
 /** 通道 → 处理体（新增行即新增白名单项，两处同时动）。 */
 const HANDLERS = Object.freeze({

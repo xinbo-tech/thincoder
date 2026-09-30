@@ -6,6 +6,10 @@
  *
  * 出口（六件）：钥行编辑态两件（开 ∕ 消）· 设 ∕ 改钥 · 删钥（确认门经 `settings-confirm.mjs`）·
  * 渠级代理开关 · 「拉取模型」（暂存值直探）。
+ * **桌面残余三轮 · 波 C（#615②）**：改钥失败径 ⇒ 键入值落 `providers.keyDraft`（重挂后行内输入按名回填 —— 失败不丢键入）；
+ * 复位四点 = 成功 ∕ 取消（本档两件）＋ 开面 ∕ 关面（`mount-settings-exits.mjs`）；读面种子消费 = `views/settings-sections.mjs` `keyControls`。
+ * **#652**：成功径在复位写前声明该行草稿失效（`invalidateDrafts(scope)` 注入 —— 作用域 = 输入件自携 `data-draft-scope`；
+ * 失败径零声明：种子 ∕ 草稿两路皆保真）。
  * 语义锚（`docs/desktop/design/IPC.md` §2 设置族注）：出站失败 ⇒ **零乐观写**（不摘项、不改段读数）；
  * 写成功 ⇒ 清失败串 + 复读本段（`loadProviders` —— 单一 owner = 读数供给族）。
  * S2 面纪律：探针载荷 = **表单暂存值**（不落盘）；探果写切片 ⇒ 树重挂 ⇒ 表单现值以 `draft` 快照回填
@@ -26,7 +30,7 @@ const reasonOf = (receipt) => (typeof receipt?.reason === "string" && receipt.re
  * `handlers` 表）。
  */
 export function createProviderExits(deps = {}) {
-  const { ask, store, setSettings, report, clearReport, loadProviders, slot, formOf, onProvidersChanged } = deps
+  const { ask, store, setSettings, report, clearReport, loadProviders, slot, formOf, onProvidersChanged, invalidateDrafts } = deps
 
   /** 渠道段切片局部写（引用不变 ⇒ 零通知 —— 同值写零重绘；沿段族 `setEnvSlice` 先例）。 */
   const setProvidersSlice = (patch) => {
@@ -36,10 +40,16 @@ export function createProviderExits(deps = {}) {
 
   /** 钥行编辑态开（S1）：行内换形（钥输入 + 存 ∕ 消）——行面判据单源 = 视图 `deps.edit`。 */
   const openKeyEdit = (name) => setProvidersSlice({ edit: typeof name === "string" && name !== "" ? name : null })
-  /** 钥行编辑态消（S1 ∕ 取消）：回静止态（**零发送** —— 取消非写意图）。 */
-  const cancelKeyEdit = () => setProvidersSlice({ edit: null })
+  /** 钥行编辑态消（S1 ∕ 取消）：回静止态（**零发送** —— 取消非写意图）；#615②：失败草稿随取消清（取消 = 弃输入）。
+   *  **#652**：同拍声明该行草稿失效（弃输入 = 草稿作废 —— 在途窗内复开亦不复活；作用域自输入件自携）。 */
+  const cancelKeyEdit = () => {
+    const input = typeof document?.querySelector === "function" ? document.querySelector(`${slot} [data-provider-key-input]`) : null
+    invalidateDrafts?.(typeof input?.getAttribute === "function" ? input.getAttribute("data-draft-scope") : null)
+    setProvidersSlice({ edit: null, keyDraft: null })
+  }
 
   /** 设 ∕ 改钥出口（S1）：读行内输入现值 ⇒ `provider:setKey`（写后复读行面）；空值 ⇒ **零发送**（零静默）。
+   *  **#615②**：失败径 ⇒ 段级失败面 + `providers.keyDraft` 落键入值（重挂后同点回填 —— 失败不丢键入）。
    *  读面 = 无参选择器：行内编辑态单例（`edit` 单名）⇒ 在场输入唯一（免名字插值进选择器）。 */
   async function saveProviderKey(name) {
     const input = typeof document?.querySelector === "function" ? document.querySelector(`${slot} [data-provider-key-input]`) : null
@@ -51,10 +61,13 @@ export function createProviderExits(deps = {}) {
     const receipt = await ask("provider:setKey", { name, key: value })
     if (receipt.ok !== true) {
       report("providers", receipt, "provider:setKey")
+      setProvidersSlice({ keyDraft: { name, value } }) // #615②：失败草稿种子（成功 ∕ 取消 ∕ 开 ∕ 关面四复位）
       return
     }
+    // #652 写成功径：该行草稿一次性作废（作用域 = 输入件自携 `data-draft-scope` —— 单源在视图档；失败径零声明）。
+    invalidateDrafts?.(typeof input.getAttribute === "function" ? input.getAttribute("data-draft-scope") : null)
     clearReport()
-    setProvidersSlice({ edit: null })
+    setProvidersSlice({ edit: null, keyDraft: null })
     await loadProviders()
     onProvidersChanged?.() // 渠面变（钥）⇒ 输入区候选面随动（沿 `provider:save` 先例）
   }

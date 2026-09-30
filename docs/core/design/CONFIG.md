@@ -34,7 +34,7 @@
 | 74 | `proxy.mjs` | 同路径 | 0.7570 · 异 | ② | 进核 | 融合：取 CLI（abort 来源标注）+ VSC 的坏代理串友好报错并入 | 分叉 ＝ 错误形态（VSC 包 try/catch 报「Invalid proxy URI」`src/proxy.mjs:189,236` / CLI 抛原生）；配置格式与双开关语义同 | — | S1（建核补齐） |
 | 77 | `expand-home.mjs` | 同路径 | 0.2308 · 异 | ② | 进核 | 融合：取一侧、逐字随迁 | 分叉 ＝ 仅注释出处（CLI 引记忆子系统规范档的 §9.3a / VSC 引本端设置档的 §2.7） | — | S1（建核补齐） |
 | 79 | `config-migrate.mjs` | 同路径 | 0.0802 · 异 | ② | 进核 | 融合：取并集——核内保留 VSC 的 VS Code 旧设置 / 密钥库迁移遍（`src/config-migrate.mjs:112-184`） | 分叉 ＝ VSC 多一条老用户升级通道（VSC 独有迁移遍，不迁即丢密钥）；模型字段迁移两端同规则（CLI `src/config-migrate.mjs:20-63`） | — | S1（建核补齐） |
-| 80 | `config.mjs` | 同路径 | 0.0471 · 异 | ③ | 进核（**同名不同物**：对位 = CLI `config.mjs` ↔ VSC `config-io.mjs`；VSC 的 `config.mjs` 实为模型规格表 ↔ CLI `model-specs.mjs`） | 以 CLI 为准（装载器）+ VSC 的 `$schema` 注入与配置监视面按端注入；默认值 / 校验覆盖面取 CLI 全量表 | 分叉 ＝ 组织结构（VSC 拆 8 档）+ 两处差异（`$schema` 注入 VSC `src/config-io.mjs:108`；VSC 校验表只覆盖 agent/traces `src/agent-tools/settings.mjs:43`）；前提（同一 `~/.thincoder/config.json`、同一 v2 架构）仍成立 | **①②** | S1（建核补齐） （迁移期引文） |
+| 80 | `config.mjs` | 同路径 | 0.0471 · 异 | ③ | 进核（**同名不同物**：对位 = CLI `config.mjs` ↔ VSC `config-io.mjs`；VSC 的 `config.mjs` 实为模型规格表 ↔ CLI `model-specs.mjs`） | 以 CLI 为准（装载器）+ VSC 的 `$schema` 注入与配置监视面按端注入；默认值 / 校验覆盖面取 CLI 全量表 | 分叉 ＝ 组织结构（VSC 拆 8 档）+ 两处差异（`$schema` 注入 VSC `src/config-io.mjs:108`（as-of 2026-09-29）；VSC 校验表只覆盖 agent/traces `src/agent-tools/settings.mjs:43`）；前提（同一 `~/.thincoder/config.json`、同一 v2 架构）仍成立 | **①②** | S1（建核补齐） （迁移期引文） |
 | 87 | `thincoder-core/agent-tools/settings.mjs` | 同路径 | 0.5546 · 异 | ③ | 进核 | 以 CLI 为准（类型表由全量 DEFAULTS 派生 `src/agent-tools/settings.mjs:58`） | 分叉 ＝ 校验覆盖面（VSC 只派生 agent/traces `:43,61` ⇒ `websearch` / `mcp` / `memory` / `embedding` / `shell` 错类型可静默写入两端共享的 `config.json`）；前提（同一 config.json）仍成立 | **①②** | S1（建核补齐） （迁移期引文） |
 
 ### 2.2 语义对位遍行（原 §2.5（四）行集——同职责但相对路径不同）
@@ -54,7 +54,7 @@
 
 | # | 条目（路径 / 对位） | 命中 | 左端行为（CLI） | 右端行为（VSC） | 建议归一形态 | 影响面 | 裁定状态 |
 |---|---|---|---|---|---|---|---|
-| A4 | `config.mjs`（席位 #80；**同名不同物**——对位 = CLI `config.mjs` ↔ VSC `config-io.mjs`） | ①② | 装载器 + 全量 DEFAULTS（agent / memory / shell / embedding / mcp / websearch / traces）；写盘不注入 `$schema` | 装载器在 `config-io.mjs`（同址同格式）；写盘**注入 `$schema`**（`src/config-io.mjs:108`）；本端 `config.mjs` 实为模型规格表 | 以 CLI 为准（装载器）+ 端差注入（`$schema` 是否注入 · 配置监视面） | ① 配置文件里会 / 不会多一个 `$schema` 键（仅 VSC 写盘时）；② 键名与默认值口径统一 ⇒ 旧键保留为读入别名（兼容） | **已裁（2026-09-13）· 按建议** |
+| A4 | `config.mjs`（席位 #80；**同名不同物**——对位 = CLI `config.mjs` ↔ VSC `config-io.mjs`） | ①② | 装载器 + 全量 DEFAULTS（agent / memory / shell / embedding / mcp / websearch / traces）；写盘不注入 `$schema` | 装载器在 `config-io.mjs`（同址同格式）；写盘**注入 `$schema`**（`src/config-io.mjs:108`（as-of 2026-09-29））；本端 `config.mjs` 实为模型规格表 | 以 CLI 为准（装载器）+ 端差注入（`$schema` 是否注入 · 配置监视面） | ① 配置文件里会 / 不会多一个 `$schema` 键（仅 VSC 写盘时）；② 键名与默认值口径统一 ⇒ 旧键保留为读入别名（兼容） | **已裁（2026-09-13）· 按建议** |
 | A5 | `thincoder-core/agent-tools/settings.mjs`（#87） | ①② | 类型表由**全量** DEFAULTS 派生（`thincoder-core/agent-tools/settings.mjs:58`）⇒ 错类型被拒 | 类型表只派生 agent / traces（`:43,61`）⇒ `websearch` / `mcp` / `memory` / `embedding` / `shell` 的错类型**静默写进两端共享的 `config.json`** | 以 CLI 为准（全量类型校验） | ① VSC 里写错类型会被拒绝（原来会静默落盘，且 CLI 下次读该值会异常）；② 共享 `config.json` 的写入可靠性 | **已裁（2026-09-13）· 按建议** |
 
 ## 4. 对外契约影响（自 `CORE-UNIFICATION.md` §2.12.2 搬入 · 逐字；契约类模板见该档 §2.12.1）
@@ -103,7 +103,7 @@
 | `other` | 同上 | 同上 |
 | `advisor` | **独立** advisor 读取器（每 launch 读） | 合法 ≥1 整数生效；非法 / 缺省回退 4 |
 
-- **双读取器独立不共享**（键表语义不同）：subagent 两键 = `thincoder-core/agent-tools/subagent-async.mjs:94`（`poolLimitsFor`）；advisor 第三键 = `thincoder-core/agent-tools/advisor-async.mjs:168`（`resolveAdvisorPoolLimit`）。
+- **双读取器独立不共享**（键表语义不同）：subagent 两键 = `thincoder-core/agent-tools/subagent-async.mjs:94`（`poolLimitsFor`）；advisor 第三键 = `thincoder-core/agent-tools/advisor-async.mjs:178`（`resolveAdvisorPoolLimit`）。
 - **默认值四源同改**（缺一即漂移）：DEFAULTS（`thincoder-core/config.mjs:63`）↔ 运行时常量（`thincoder-core/agent-tools/subagent-async.mjs:55` · `thincoder-core/agent-tools/advisor-async.mjs:166`）↔ 耦合锁（`thincoder-cli/test/config-pool.test.mjs` · `thincoder-vscode/test/config-pool.test.mjs`）。
 - **生效时机**：变更下回合生效；运行期读取点各自校验（非法键回退默认 + 告警）。
 - **界面入口**：CLI `/config` →「并发池」子菜单（`thincoder-cli/src/tui/cmd-config.mjs:245`–`:273`——三域读写 + 主菜单 / view 摘要）；VSC 设置面板并发池三域（`thincoder-vscode/src/extension/settings-panel-write.mjs:94` 白名单 · `thincoder-vscode/src/extension/settings.mjs:176` 回退显 4/4/4——W16 行号重核）。
@@ -115,6 +115,8 @@
 ### 6.2 配置通道纪律与自有环境变量面（2026-09-27 批 · 环境变量配置面拔除）
 
 **纪律（单源 · 全仓适用）**：自有配置 / 行为输入**只经四类通道**——不得经环境变量（含「未设即缺省」与「旧名兼容读」两类回退分支）。
+
+**值位显式引用 ≠ 配置通道（2026-09-29）**：敏感值位的 `${env:VAR}` 引用（§6.3）**不构成配置通道**——配置键（`config.json`）仍是唯一真源；env 只在用户于值位**显式引用**时充当凭据来源，无隐式回退分支（缺失 ∕ 空串即抛错——§6.3）。
 
 | # | 通道 | 形态 | 适用面 |
 |---|---|---|---|
@@ -146,8 +148,8 @@
 | `BENCH_RESULTS_DIR` | ② 参数 / ③ 缝 | `--results-dir <路径>` + `setResultsDir(dir)`（`bench/lib/output.mjs`——③ 缝；读点 `_resultsDir ?? join(BENCH_DIR,"results")`）（**命名 / 成对例外**——`setResultsDir` 兼具参数应用与测试缝〔非纯测试缝〕· 无 `_reset` 半：复位面无消费者；混合形口径见名录后） |
 | `BENCH_JUDGE` / `BENCH_PRICES` | ② 参数 / ③ 缝 | `--judge-config <路径>` / `--prices <路径>`（子进程调用面——参数名定值）+ `_setJudgeConfigPathForTest` / `_resetJudgeConfigPathForTest`（`bench/lib/judge.mjs`）· `_setPricesPathForTest` / `_resetPricesPathForTest`（`bench/lib/prices.mjs`）——进程内面（③ 缝成对） |
 | `THINCODER_SMOKE` | ④ argv | `node test/smoke-qwen-thinking.mjs --smoke`（缺 ⇒ skip + 退出 0——发版 glob 收集面零花费） |
-| `DOC_CHECK_NESTED` | ④ argv | `node test/doc-check.test.mjs --nested` |
-| `FAKE_MCP_READY_FILE` | 退场 | 孤儿死块删除（`thincoder-vscode/test/fixtures/fake-mcp-server.mjs`） |
+| `DOC_CHECK_NESTED` | 退场 | `node test/doc-check.test.mjs --nested`（`--nested` 门）随 2026-09-28 测试树全清令随档退场——常驻重建挂台账 #590 面 |
+| `FAKE_MCP_READY_FILE` | 退场 | 孤儿死块删除（`thincoder-vscode/test/fixtures/fake-mcp-server.mjs`） （迁移期引文） |
 
 **混合形（argv 解析 + 进程内缝）**：CLI 面参数（② / ④ 面）经入口解析后落 **③ 缝**——缝面成对规则同 ③；**单半 / 命名例外逐行标于名录**（现存：`--test-cleanup-out` → 单半；结果目录 `setResultsDir` → 命名例外〔参数应用与测试缝共用〕）。
 
@@ -161,8 +163,27 @@
 
 | # | 决策 | 理由 / 否决备选 |
 |---|---|---|
-| D-CF5 | 自有配置 / 行为输入**只经四类通道**——**禁 env 回退** | 用户裁定「不用环境变量做配置……存量的也直接拔掉」；env = 隐式全局态（不可枚举 / 不可见 / 宿主与子进程串扰）；否决「保留旧名兼容读」（= 存量不拔） |
+| D-CF5 | 自有配置 / 行为输入**只经四类通道**——**禁 env 回退** | 用户裁定「不用环境变量做配置……存量的也直接拔掉」；env = 隐式全局态（不可枚举 / 不可见 / 宿主与子进程串扰）；否决「保留旧名兼容读」（= 存量不拔）。**2026-09-29 补注**：值位显式引用（`${env:VAR}`——§6.3）≠ 通道 ∕ 回退；缺失即抛错，无隐式分支 |
 | D-CF6 | 退场后**按原受众定型**：用户面开关 ⇒ 配置键；测试隔离落点 ⇒ 进程内缝；子进程测试钩 ⇒ argv 标志 | 等价能力以最小面承接——用户面仍有可关通道、测试面零污染、生产零路径不进命令解析；否决「一律升为配置键」（测试钩进产品配置面 = 面膨胀） |
+
+### 6.3 配置值 `${env:VAR}` 引用（消费侧解析 · 2026-09-29 provider-config-family 批 · 台账 #57）
+
+**机制**：敏感值位可写 `${env:NAME}` 引用替代明文——**落盘不落明文**；解析 = **消费侧（use-time）单源**，叶档 `env-ref.mjs`（住 `thincoder-core/`——已落）：
+`resolveEnvRefs`（串）· `resolveEnvRefMap`（键值对象）· 形状适配 `resolveProviderSecrets` ∕ `resolveMcpServerSecrets`。
+
+**生效面（v1 五族）**：`providers[].apiKey` ∕ `providers[].headers.*` ∕ `mcp.servers[].token` 与 `.headers.*` ∕ `.env.*` ∕ `websearch.apiKey` ∕ `embedding.apiKey`——
+解析点 = 各消费口（provider 聊天入口 ∕ 清单拉取入口 ∕ MCP 传输建连 ∕ websearch 读点 ∕ embedding 读点 ∕ **会话标题生成径**——`thincoder-core/generate-title.mjs`）——**六处**；
+标题径解析抛错落其既有非致命兜底（标题回落 `null`——不破坏回合）；引用串不再按原文上线（401 静默回落消解）。
+
+**语义**：值内嵌与整值同解（`sk-${env:K}` 式）；同一值可含多引用；**变量未设或为空串 = 消费点抛错**（点名变量；无「未设即缺省」回退——不静默字面透传）；
+畸形引用（`${env:` 开头不匹配标识符名形）同抛错；非字符串值原样通过。
+
+**与遮蔽面关系**：`settings` 工具 ∕ 面板的敏感谓词（`doc:SETTINGS-TOOL.md:§2.4`）**零改**——引用串同住敏感值位 ⇒ 族遮罩内；
+解析产物只在请求 ∕ 建连路径使用——**永不回显、永不回写**（写盘链按磁盘原文；显示面读存储形 = 引用串）。
+
+**与 §6.2 四类通道纪律的关系**：不构成新配置通道——配置键（`config.json`）仍是唯一通道与唯一真源；env 只被用户在值位**显式引用**为凭据来源，无隐式回退分支。
+
+**边界（不做）**：非敏感值位（`baseURL` ∕ `model` ∕ `command` ∕ `args` 等）不解析；无缺省语法（`${env:VAR:-…}`）与转义形；MCP `url` ∕ `command` ∕ `args` 不解析；解析单遍（产物不再二次解析）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -206,3 +227,8 @@
   `BENCH_JUDGE` / `BENCH_PRICES` 补 `_reset` 对（去「若既有等价参数存在则复用」条件句）；名录后补**混合形口径**段 + **`settings` 派生消费面登记**（`thincoder-core/agent-tools/settings.mjs:62`）。**零语义**：四类通道 / D-CF5 / D-CF6 零改。
 - 2026-09-27（**timer-wake 批 · 设计评审轮 1 修正轮（fix）· eng-designer**——承 `docs/batches/2026-09-27-timer-wake.md` §3 轮次 1 发现 4 · 父侧裁定）：§6.2 派生消费面登记行**扩面**——键列补 `agent.timerWake`（`thincoder-core/config.mjs` DEFAULTS `agent` 段；与 `diagnostics` 两键同经 `settings` 工具类型面装载期派生）。**零新语义**（登记面补列）。
 - 2026-09-29（**doc-sync-residuals 批 · 设计面残留收正轮 · eng-designer**——承 `docs/batches/2026-09-28-tech-debt-closeout.md` §2.9 ∕ 收正行 · `config-watch` 上提）：§2.2 #132 行收正——路径补仓根全形（端壳两档——`doc-check` 悬空 −1）+ **端特有段判词收窄**（配置监视纯逻辑已上提核 `thincoder-core/config-watch.mjs`；端特有 = 宿主接线 + 迁移面）。**零新语义**。
+- 2026-09-29（**doc-sync-carryover 批 · 文档随动族收正轮 · eng-designer**——承 `docs/batches/2026-09-29-doc-sync-carryover.md` §1 · 台账 #647）：§6.2 自有面名录 `DOC_CHECK_NESTED` 行收正——随档退场（`--nested` 门随 2026-09-28 测试树全清令无消费者；常驻重建挂台账 #590 面）。**零新语义**。
+- 2026-09-29（**provider-config-family 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-provider-config-family.md` · 台账 #57）：新增 **§6.3 配置值 `${env:VAR}` 引用（消费侧解析）**——机制 ∕ 生效面五族 ∕ 语义（缺失即抛错）∕ 与遮蔽面关系 ∕ 与 §6.2 通道纪律的关系 ∕ 边界；
+  机制单源 = 本节（`doc:SETTINGS-TOOL.md` D-ST16 与 `doc:MCP.md` §6.5 改指）。**零新语义**（= 台账 #57 既定设计与 settings 脱敏批候选 C1 的成文）。
+- 2026-09-29（**provider-config-family 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-29-provider-config-family.md` §3 轮次 1 发现 1 ∕ 2）：§6.3 解析点集**五处 → 六处**（补「会话标题生成径」+ 标题径非致命兜底句）；§6.2 补**值位显式引用 ≠ 配置通道**边界句 + D-CF5 补注（与 §6.3 双向指）。**零新语义**（= 评审发现的直接导出项）。
+- 2026-09-30（**doc-sweep 批 · 行宽收正 · eng-designer**——承 `docs/batches/2026-09-30-doc-sweep.md` §2 · 台账 #664）：provider-config-family 设计轮条（原单行 332 字符）**折行**（仅换行 ∕ 语义零改——doc-check 行宽闸收正）。**零新语义**。

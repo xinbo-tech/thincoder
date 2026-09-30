@@ -1,0 +1,246 @@
+{
+  "boot": "ok",
+  "phases": {
+    "cap1": {
+      "appeared": true,
+      "question": {
+        "promptId": "c18cbc1a-3c62-4034-a07a-560c76c2da89",
+        "text": "❯ Agent reached 2 turns (limit). Continue from here?ContinueStopSendCancel",
+        "options": [
+          "Continue",
+          "Stop"
+        ]
+      },
+      "queue": [],
+      "running": true
+    },
+    "legB": {
+      "modeEntered": true,
+      "toast": null,
+      "q2Appeared": true,
+      "post": {
+        "question": {
+          "promptId": "714a4d2f-bb67-44b3-ad1d-dee91d626ebd",
+          "text": "❯ Agent reached 2 turns (limit). Continue from here?ContinueStopSendCancel",
+          "options": [
+            "Continue",
+            "Stop"
+          ]
+        },
+        "input": "",
+        "queue": [],
+        "userTexts": [
+          "c3 开场",
+          "腿B 首消息",
+          "B 携文"
+        ],
+        "flowText": "❯ You: 22:34c3 开场ThinCoderc3 开场回执❯ You: 22:35腿B 首消息ThinCoderread\"probe-notes.md\"done0.0s→ 6 linesread\"probe-notes.md\"done0.0s→ 6 lines❯ You: 22:35B 携文ThinCoderread\"probe-notes.md\"done0.0s→ 6 linesread\"probe-notes.md\"done0.0s→ 6 lines[stopped]❯ Agent reached 2 turns (limit). Continue from here?ContinueStopSendCancel",
+        "q1Gone": true,
+        "rejectLogs": [],
+        "toastLate": null
+      }
+    },
+    "legAPre": {
+      "queue": [
+        "腿A 排队 1",
+        "腿A 排队 2",
+        "腿A 排队 3",
+        "腿A 排队 4",
+        "腿A 排队 5",
+        "腿A 排队 6",
+        "腿A 排队 7",
+        "腿A 排队 8"
+      ],
+      "pending": 8,
+      "question": {
+        "promptId": "714a4d2f-bb67-44b3-ad1d-dee91d626ebd",
+        "text": "❯ Agent reached 2 turns (limit). Continue from here?ContinueStopSendCancel",
+        "options": [
+          "Continue",
+          "Stop"
+        ]
+      },
+      "toast": null,
+      "running": true,
+      "calls": 4,
+      "fillWaits": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    "legA": {
+      "modeEntered": true,
+      "toast": null,
+      "post": {
+        "input": "",
+        "question": {
+          "promptId": "01682a65-e888-4b5f-9240-c1c3cd4c9f46",
+          "text": "❯ Agent reached 2 turns (limit). Continue from here?ContinueStopSendCancel",
+          "options": [
+            "Continue",
+            "Stop"
+          ]
+        },
+        "queue": [],
+        "pending": 0,
+        "running": true,
+        "calls": 6,
+        "toastLate": null,
+        "word": "Task running — the queue is full (8 messages); wait for them to be processed before submitting again.",
+        "rejectLogs": []
+      }
+    }
+  },
+  "readings": {
+    "projectOpen": {
+      "cwd": "C:\\Users\\liwei\\AppData\\Local\\Temp\\carryover-c3-proj-bu9HUG"
+    },
+    "key": "1",
+    "stubChatCalls": 6,
+    "pageErrors": [],
+    "consoleTail": [
+      {
+        "type": "error",
+        "text": "[renderer] ledger:read failed: no-project"
+      },
+      {
+        "type": "error",
+        "text": "[renderer] batch:status failed: missing"
+      }
+    ]
+  },
+  "checks": {
+    "fBootOk": true,
+    "fProjectOpened": true,
+    "fSessionActive": true,
+    "bCapQuestion1": true,
+    "fQueueEmptyAtStart": true,
+    "bInterruptModeEntered": true,
+    "bNoToastAccepted": true,
+    "bNoRejectLog": true,
+    "bQuestionSettled": true,
+    "bNextCapQuestion2": true,
+    "bDeliveredUserBlock": true,
+    "bQueueConsumed": true,
+    "bInputNoReinject": true,
+    "aQueueFilled8": true,
+    "aPreNoToast": true,
+    "aPreQuestionPending": true,
+    "aInterruptModeEntered": true,
+    "aToast": false,
+    "aRejectLog": false,
+    "aInputReinjected": false,
+    "aQuestionKept": false,
+    "aQueueUnchanged": false,
+    "aPendingUnchanged": false,
+    "aStillRunning": true,
+    "aNoNewModelCall": false
+  },
+  "detail": {
+    "fBootOk": "ok",
+    "fProjectOpened": {
+      "cwd": "C:\\Users\\liwei\\AppData\\Local\\Temp\\carryover-c3-proj-bu9HUG"
+    },
+    "fSessionActive": "1",
+    "bCapQuestion1": {
+      "appeared": true,
+      "question": {
+        "promptId": "c18cbc1a-3c62-4034-a07a-560c76c2da89",
+        "text": "❯ Agent reached 2 turns (limit). Continue from here?ContinueStopSendCancel",
+        "options": [
+          "Continue",
+          "Stop"
+        ]
+      },
+      "queue": [],
+      "running": true
+    },
+    "fQueueEmptyAtStart": [],
+    "bInterruptModeEntered": true,
+    "bNoToastAccepted": {
+      "window": null,
+      "late": null
+    },
+    "bNoRejectLog": [],
+    "bQuestionSettled": {
+      "q1Gone": true,
+      "promptId": "714a4d2f-bb67-44b3-ad1d-dee91d626ebd"
+    },
+    "bNextCapQuestion2": "714a4d2f-bb67-44b3-ad1d-dee91d626ebd",
+    "bDeliveredUserBlock": {
+      "matches": 1,
+      "flowHas": true
+    },
+    "bQueueConsumed": [],
+    "bInputNoReinject": "",
+    "aQueueFilled8": {
+      "queue": [
+        "腿A 排队 1",
+        "腿A 排队 2",
+        "腿A 排队 3",
+        "腿A 排队 4",
+        "腿A 排队 5",
+        "腿A 排队 6",
+        "腿A 排队 7",
+        "腿A 排队 8"
+      ],
+      "pending": 8,
+      "fillWaits": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    "aPreNoToast": null,
+    "aPreQuestionPending": "714a4d2f-bb67-44b3-ad1d-dee91d626ebd",
+    "aInterruptModeEntered": true,
+    "aToast": {
+      "toast": null,
+      "word": "Task running — the queue is full (8 messages); wait for them to be processed before submitting again."
+    },
+    "aRejectLog": [],
+    "aInputReinjected": "",
+    "aQuestionKept": {
+      "promptId": "01682a65-e888-4b5f-9240-c1c3cd4c9f46",
+      "text": "❯ Agent reached 2 turns (limit). Continue from here?ContinueStopSendCancel",
+      "options": [
+        "Continue",
+        "Stop"
+      ]
+    },
+    "aQueueUnchanged": {
+      "queue": [],
+      "pending": 0
+    },
+    "aPendingUnchanged": 0,
+    "aStillRunning": true,
+    "aNoNewModelCall": {
+      "pre": 4,
+      "post": 6
+    }
+  },
+  "failed": [
+    "aToast",
+    "aRejectLog",
+    "aInputReinjected",
+    "aQuestionKept",
+    "aQueueUnchanged",
+    "aPendingUnchanged",
+    "aNoNewModelCall"
+  ],
+  "verdict": false,
+  "notes": [],
+  "ts": "2026-09-29T14:35:25.930Z",
+  "probeHash": "acf00b0e3837aa32437f817f173475578dd65190"
+}

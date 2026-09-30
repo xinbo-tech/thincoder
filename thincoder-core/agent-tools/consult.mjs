@@ -36,6 +36,8 @@ import { bindChildController, buildChildSignal, settleAsyncEntry } from "./async
 import { registerTurnCapCheckpoint } from "./checkpoint.mjs"
 import { drainInjectedQueue } from "./subagent-run.mjs"
 import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs" // B5（群 B 批 AGENT-LOOP.md §6.14 D-DG2）：digest 注入预算单源
+// #15 描述外置：描述文本单点 = tool-docs/{consult_start,consult_stop,main_history}.md（DESC 单解析面，缺档抛错语义不变）
+import { DESC } from "../tools/shared.mjs"
 
 // Named consult defaults (consult P2, 2026-08-30).
 const CONSULT_TIMEOUT_MS = 600_000 // default consult lifecycle timeout
@@ -85,11 +87,7 @@ export function makeMainHistoryTool(parentAgent) {
   return {
     name: "main_history",
     readonly: true,
-    description:
-      "Read the main agent's conversation history — what has been tried, the exact errors, recent context. " +
-      "Use it to ground your analysis in the actual failure trail instead of guessing.\n" +
-      "Parameters:\n" +
-      "- limit: Number of recent messages to return (default 20, max 100)",
+    description: DESC("main_history"),
     parameters: {
       type: "object",
       properties: { limit: { type: "number", description: "Recent messages (default 20, max 100)" } },
@@ -391,24 +389,12 @@ export const consultStartTool = {
   name: "consult_start",
   readonly: false,
   sideEffectExempt: true,
-  description:
-    "Start a parallel multi-model consultation (会诊) for a hard problem you are stuck on (repeated failures, no headway). " +
-    "Call it directly when the user asks for 会诊 / consult — an explicit user request applies even if you are not 'stuck'. " +
-    "Several configured models (agent.consultModels) analyze the same problem INDEPENDENTLY and in parallel. " +
-    "Non-blocking: returns immediately with a consult id; the consultants keep running in the background across turns. " +
-    "When EVERY model has replied (or failed), the full verdict text is delivered to you automatically — as a system " +
-    "reminder at the next run start, or digested on its own while the session is idle — judge and adopt each opinion " +
-    "yourself with your own tools (opinions are suggestions, not gates). To stop a session early (user changed their " +
-    "mind / wants the tokens back), call consult_stop(id) — a stopped session delivers no digest.\n" +
-    "Parameters:\n" +
-    "- problem (required): a brief — the symptom, what you already tried (failure trail), and entry-point files. " +
-    "Do NOT paste raw error logs; consultants pull the main session history themselves via their main_history tool.\n" +
-    "- models (optional): subset of agent.consultModels to run — an array of \"provider:model\", bare provider, or bare model names (case-insensitive). Omit to run all.",
+  description: DESC("consult_start"),
   parameters: {
     type: "object",
     properties: {
       problem: { type: "string", description: "Problem brief (symptom + failure trail + entry files)" },
-      models: { type: "array", items: { type: "string" }, description: 'Optional subset of agent.consultModels to run (default: all). Each entry is "provider:model", a bare provider name, or a bare model name (case-insensitive).' },
+      models: { type: "array", items: { type: "string" }, description: 'Optional subset of agent.consultModels to run (default: all) — each entry "provider:model", a bare provider, or a bare model name (case-insensitive).' },
     },
     required: ["problem"],
   },
@@ -455,13 +441,7 @@ export const consultStopTool = {
   name: "consult_stop",
   readonly: false,
   sideEffectExempt: true,
-  description:
-    "Cancel a still-running consultation session (会诊) — the user changed their mind, the problem resolved, or you want the tokens back. " +
-    "Aborts every consultant that is still running; a stopped session delivers NO digest (R17 — its already-collected partial replies are dropped). " +
-    "Sessions that finished on their own are no longer cancellable — their verdict text is delivered automatically.\n" +
-    "Returns JSON {abandoned: <pending count>, cancelled: true} — or {error: \"unknown consult id\"} (already finished/cancelled).\n" +
-    "Parameters:\n" +
-    "- id (required): the consult id from consult_start",
+  description: DESC("consult_stop"),
   parameters: {
     type: "object",
     properties: {

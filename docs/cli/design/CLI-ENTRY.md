@@ -48,7 +48,7 @@
 ## 3. shell 补全发射契约
 
 - **发射面** = `printCompletion(shell)`（`thincoder-cli/src/completions.mjs`）；`completion` 分支在 `bin/thincoder.mjs` 分发（非法 shell ⇒ usage + 退出 1）。
-- **横深对齐**：三套脚本须覆盖 §2 表内旗标词面——**现状不齐**（缺口在册 = `docs/cli/design/CLI-DEBT.md` §3 尾项 T1 / T2）。
+- **横深对齐**：三套脚本须覆盖 §2 表内旗标词面——**ledger 族已对齐（#677 I8 已落）**；余缺口在册 = `session gc ∕ index` 旗标（`docs/cli/design/CLI-DEBT.md` §3-T1）。
 - **bash 源文本形 vs 发射字节形**（防改形漂移；同族各分支行逐字节同形）：
   - 源档形（写入 `completions.mjs` 模板字面量内——**两反斜杠**）：`\\$(compgen -W "<词表>" -- "\\$cur")`
   - 发射形（`thincoder completion bash` 输出——**单反斜杠**）：`\$(compgen -W "<词表>" -- "\$cur")`
@@ -73,5 +73,6 @@
 - 判据源 = 实装面 + 各批裁定（补全面 / 机检形逐条注实装源——§2 / §4）。
 
 ## 变更记录
+- 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§3 横深对齐句收正（ledger 族已补——#677 I8；余缺口 = T1）。**零新语义**。
 
 - 2026-09-25（**cli-small-items 批 · 台账 #350 命令入口面载体收口**）：建档——承设计评审轮 1 发现 11（命令入口面设计档归属缺位）：① §2 命令树与旗标全集（as-of 实读 · 词表基准）；② §3 补全发射契约（源文本形 / 发射字节形 / 沙箱纪律）；③ §4 #350 机检形三例（含 A4 耦合义务）；④ §5 边界与缺口指针（`docs/cli/design/CLI-DEBT.md` §3 尾项 T1–T3）。

@@ -4,7 +4,7 @@
 > **v2 就地更新**（2026-09-17 退役批）：M10 模块设计语义融入（门禁简化——见 §10；原旁路档 `_archive/modules/ENGINEERING-MODE-V2-MODULE-TEST-DISCIPLINE.md` 已归档 `_archive/modules/`）。
 > §1 = **分层纪律与测试门**（活语义 = 收口分工：舱内单元 ∕ 链终仓套件（收口跑）；**门禁权威 = §10**）· §4 = **集成集承载与执行**（v2 = 并入单入口——§4.2 / §4.3）· §3 测试生命周期 = **现行**（口径 = 需求 F6–F14——单元档留存归档 ∕ 永不互转，2026-09-28 定；§10 F4 只涉台账仪式面）。
 > 需求层指针 = `requirements/TESTING.md`（§1 总体 / §2 F1–F14 / §3 N1–N9 ∕ N19–N21 / §5 F15–F22 · N10–N12）。
-> 兄弟档：无——原 `design/E2E-HARNESS.md`（CLI 自动验证面）**已删除**（2026-09-15 · 错轴退役；终端程序自动验证面的设计面 = 待重做另轮）。 （迁移期引文）
+> 兄弟档：无——原 `design/E2E-HARNESS.md`（CLI 自动验证面）**已删除**（2026-09-15 · 错轴退役）；终端程序自动验证面的判据面现住需求档 `requirements/TESTING.md` §6（内联判据）+ `TOOLS.md` §4.7（能力面判定句）——无第二设计档（2026-09-30 · 台账 #677）。
 > 权威源（实现）：`thincoder-cli/test/run.mjs`（单入口——仓套件（收口跑））+ `thincoder-cli/test/slow.mjs`（`slow` 纯别名）+ 三包 `package.json` scripts（`test` 一条测试入口）。
 > **多实现面（语义同源 · 各面原文自持 · 不做字节一致 · 不加面间同步依赖）**：CLI 面（上行所列）· VSC 对端面（其 `test/` 同构 runner 族）· **核树面**（`thincoder-core/test/run.mjs` + `thincoder-core/package.json` scripts——无集成层）
 > **桌面面**：`thincoder-desktop/test/run.mjs` + `thincoder-desktop/package.json` scripts——单入口，单元 + 集成同清单（集成域 = `thincoder-desktop/test/integration/`）；驱动 / 隔离 / 截图面单源 = `docs/desktop/design/E2E-TESTING.md`。
@@ -449,3 +449,5 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 - 2026-09-16（**批 6 · 评审修正轮（轮 1）** · eng-designer）：§1.2 核树面措辞收正为「**设计态 / 待落**」（首部多实现面行 + §1.2 节头——评审轮 1 #5）。
 - 2026-09-26（**桌面端 E2E 基建批 · 放行落笔轮** · eng-designer）：首部多实现面行补**桌面面**（`thincoder-desktop/test/run.mjs` + `thincoder-desktop/package.json` scripts——单入口；集成域 = `thincoder-desktop/test/integration/`）
   §10 边界行收正为「**运行期零第三方依赖（守）∥ 测试面 `devDependencies` 不在此限（放开）**」（本批 `playwright-core` = 测试面驱动，非运行期依赖——判据 = 不进 `dependencies`；裁决 = 用户 2026-09-26 放行 · 批档 `docs/batches/2026-09-26-desktop-e2e-infra.md` §1）。
+
+- 2026-09-30（**跨线清零轮 · 设计档收正 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2 · 台账 #677）：首部兄弟档行收正——`design/E2E-HARNESS.md` 已删除（2026-09-15 · 错轴退役）；终端程序自动验证面判据面现住需求档 `requirements/TESTING.md` §6（内联判据）+ `TOOLS.md` §4.7；「设计面 = 待重做（另轮）」句退场（无承接对象）。**零机制改**。

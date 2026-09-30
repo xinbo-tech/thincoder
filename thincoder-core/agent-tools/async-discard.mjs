@@ -13,6 +13,11 @@
  * - 保留 ⟺ 其余——存活条目（controller 未中止——报告沿自动通道到达）/ done-in-pool（回合尾
  *   收集 / 挂起 sweep 消化）/ cancelled（settle cancelled 分支收尾）。
  *
+ * #9 后台 bash 任务族（三族同面并入——D9-7 收尾档②）：bg 条目的「已死」不由 controller 杀达
+ * ——其控制器链只作**判据**（杀 ⟺ 控制器已中止），杀树动作经本收尾面 `spec.dispose` 钩子落
+ * `bash-async.mjs` 杀单点（`killBgTree`）；回合中断（Ctrl+I）经 `bindChildController`
+ * interrupt 豁免不中止控制器 ⇒ 本面零动作（F2 同款豁免——池保留）。
+ *
  * 判据口径（D-AD6）：两接线点**均不传 `ctx`** ⇒ 实走 controller 支（`parentAborted(null, entry)`）
  * ——与对侧有效判据同判（对侧传入的 `ctx` 为死参）；`ctx` 保留为签名备用面（直调用例 / 对侧收敛）。
  * 「controller 已中止 = 条目真死」由 `bindChildController` 单点保证（`async-settle.mjs:88-98`
@@ -36,6 +41,8 @@ import { carrierField, getAsyncPool, parentAborted, writeTombstone } from "./asy
 import { pushReal } from "../context.mjs"
 import { escapeXml } from "../agent/helpers.mjs"
 import { logEvent } from "../log.mjs"
+// #9（后台 bash 任务族——收尾档②）：杀单点（树杀）经 `bash-async.mjs` 落面。
+import { killBgTree } from "./bash-async.mjs"
 
 /** 提醒模板（verbatim 同源 = 对侧 `async-discard.mjs:37-44`；测试断关键子串，不逐行断）。 */
 const subagentReminderText = (n, list) =>
@@ -46,6 +53,11 @@ const subagentReminderText = (n, list) =>
 const advisorReminderText = (n, list) =>
   `[System reminder: ${n} background advisor review(s) were discarded by the user's Stop — their reports will NOT arrive: ${list}.\n` +
   "No design token was issued for a discarded design review; launch the review again if it is still needed.]"
+
+/** #9 后台 bash 任务族提醒模板（同族形态——报告不可达的可视化：进程已杀，全量 log 仍在盘上）。 */
+const bgReminderText = (n, list) =>
+  `[System reminder: ${n} background bash task(s) were killed by the user's Stop — their processes are gone and no digest will arrive: ${list}. ` +
+  "Full output logs remain on disk (paths were given in the start ack).]"
 
 /** 列表词（wasStatus 数据源）：queued → "(was queued — never started)"；其余 "(was running)"。 */
 const wasPhrase = (wasStatus) => (wasStatus === "queued" ? " (was queued — never started)" : " (was running)")
@@ -87,6 +99,7 @@ function discardRole(parent, spec, ctx) {
     if (!discardable(entry, ctx)) continue
     out.discarded.push(spec.describe(entry))
     ids.add(String(entry.id))
+    spec.dispose?.(entry) // 族特有处置（#9 bg：杀树——判据成立即条目真死；其余族无此钩子）
     writeTombstone(parent, entry.id, "discarded", spec.roleOf(entry))
     removeFromPool(map, entry.id)
   }
@@ -124,6 +137,20 @@ const ADVISOR_SPEC = {
   pruneQueue: (parent, ids) => pruneQueue(parent, ids, "_asyncAdvisorQueue"),
 }
 
+/** #9 后台 bash 任务族 spec（收尾档②）：dispose = 杀树（杀单点 `killBgTree`）+ 标记 discarded
+ *  （settle 面据此不注入——报告不可达）；无队列面（超限 = 起跑显式拒，无排队语义）。 */
+const BG_SPEC = {
+  pool: "bg",
+  describe: (entry) => ({ id: entry.id, role: "bg", command: entry.command }),
+  roleOf: () => "bg",
+  listPhrase: (d) => `bash#${d.id} (\`${d.command}\`)`,
+  reminder: bgReminderText,
+  dispose: (entry) => {
+    entry.discarded = true
+    killBgTree(entry)
+  },
+}
+
 /**
  * 中止收尾（F1–F3）：只清已死子代理条目——写 `discarded` 墓碑 + 出池 + 队列剔除 + 整批一次提醒。
  * @param parent agent 形态（载体双形经 `getAsyncPool` / `writeTombstone` 吸收）
@@ -144,4 +171,16 @@ export function discardAbortedPool(parent, ctx = null) {
  */
 export function discardAbortedAdvisors(parent, ctx = null) {
   return discardRole(parent, ADVISOR_SPEC, ctx)
+}
+
+/**
+ * 中止收尾（#9 后台 bash 任务族——收尾档②）：只清已死条目——逐条**杀树**（判据成立 ⟺ 条目
+ * 控制器已中止；杀单点经 `killBgTree`）+ `discarded` 墓碑 + 出池 + 整批一次提醒；回合中断
+ * （Ctrl+I）不中止控制器 ⇒ 本面零动作（池保留——F2 同款豁免）。
+ * @param parent agent 形态
+ * @param ctx 判据 ctx（接线点不传——controller 支，同上）
+ * @returns {{discarded: Array<{id, role: "bg", command}>, kept: number}}
+ */
+export function discardAbortedBgTasks(parent, ctx = null) {
+  return discardRole(parent, BG_SPEC, ctx)
 }

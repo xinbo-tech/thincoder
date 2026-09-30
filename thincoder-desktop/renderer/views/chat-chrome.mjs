@@ -1,10 +1,10 @@
 /**
  * chat-chrome.mjs — 对话流**帧尾态刷面**（拆分产出 —— 「对齐第三批」触碰批执行在册预案：`renderer/views/chat.mjs`
  * 越 300 在册、本批触碰 ⇒ 出档；登记面 = `docs/desktop/design/PROJECT.md` §4.2 本批行）：
- *   ① 根锚四（`chromeProps`）+ 帧尾态刷 `syncChrome`（摘要块 / **压缩行** / 消化行组 / **到期触发行组** / 停止痕 / 台账行组 /
- *      审批卡 / 药丸 / **真置焦执行** —— 幂等 · 与档位解耦 · `none` 帧同刷）；② 尾组的构树（`summaryNode` / `digestGroupNode` /
+ *   ① 根锚四（`chromeProps`）+ 帧尾态刷 `syncChrome`（摘要块 / **压缩行** / 消化行族 / **到期触发行组** / 停止痕 / 台账行组 /
+ *      审批卡 / 药丸 / **真置焦执行** —— 幂等 · 与档位解耦 · `none` 帧同刷）；② 尾组的构树（`summaryNode` /
  *      `timerGroupNode` / `stoppedNode` / `ledgerGroupNode` / `pillNode`）与插点锚（`blockAnchor` 等 —— 单源：
- *      族内序 = 压缩行〔R4 增 —— 构树 ∕ 态刷 ∕ 锚出档 `renderer/views/compress-status.mjs`〕→ 消化行组 → 到期触发行组 → 停止痕 → 台账行）；
+ *      族内序 = 压缩行〔R4 增 —— 构树 ∕ 态刷 ∕ 锚出档 `renderer/views/compress-status.mjs`〕→ 消化行族〔structure-split-2 —— digest 全族出档 `renderer/views/chat-digest.mjs`（构树 ∥ 在场判据 ∥ 界锚再出口；帧刷引调）—— 流内落位批改**逐轮元素 · 流内就地**〕→ 到期触发行组 → 停止痕 → 台账行 —— **压缩行例外 = 流元素冻结点**〔创建点定位 —— `blockAnchor` 链不收本行，新块随流居其下〕）；
  *   ③ 帧尾真置焦执行 `focusAutofocus`（F-置焦 · 「对齐第三批」重核入册）。
  * 依赖单向：`renderer/views/chat.mjs` → 本档（构树与帧尾两径引调）；反向无引用 ⇒ 无环。
  * 文案一律经 `t()`（零硬编码；`+` / `−` / 游标字形住 `renderer/chat.css`）；零 `node:` / 零裸包。
@@ -16,6 +16,9 @@ import { syncGuide } from "./chat-guide.mjs"
 import { wire } from "./chat-tool.mjs"
 // 流内压缩状态行（R4 —— 构树 / 帧尾态刷 / 插点锚三件出档；本档引态刷与锚两件）。
 import { compressAnchorOf, syncCompress } from "./compress-status.mjs"
+// 流内消化行族（structure-split-2 拆分产出 —— digest 全族三段出档 `renderer/views/chat-digest.mjs`；本档引帧刷一件，构树 ∥ 在场判据 ∥ 界锚再出口保名）。
+import { syncDigest } from "./chat-digest.mjs"
+export { digestBoundaryOf, digestPresent, digestRoundNode } from "./chat-digest.mjs"
 
 /** 根锚四（单源 —— `chatTree` 与 `syncChrome` 同用）：`data-blocks` = 已渲染块数（= DOM 块节点数）。 */
 export function chromeProps(model) {
@@ -25,33 +28,6 @@ export function chromeProps(model) {
     "data-hidden": model.hidden,
     "data-following": model.following ? "1" : "0",
   }
-}
-
-/** 计数读数归一（`n` / `ms` 非数 ⇒ 0 —— 沿归约面 `countOf` 同判；零抛）。 */
-function countOf(value) {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0
-}
-
-/** 起跑标签行文（两档 —— 单源 = 核字典 `digest.*`：`tier === "ask"` ⇒ `digest.turnLabelAsk` 携 `from` / `msg`〔核 `upstreamAskLabelVars`〕；
- *  余 ⇒ `digest.turnLabel`；缺参回落 `?` / `…` —— 沿 VSC `chat-status.js:74-78` 同式）。 */
-function digestLabel(slice) {
-  return slice.tier === "ask"
-    ? t("digest.turnLabelAsk", { from: slice.from ?? "?", msg: slice.msg ?? "…" })
-    : t("digest.turnLabel")
-}
-
-/** 计数行文（起跑态 —— 核字典 `digest.start`；`n` = 起跑 pending 数）。 */
-function digestCount(slice) {
-  return t("digest.start", { n: countOf(slice.n) })
-}
-
-/** 消化状态行组（**非块节点组** —— 沿尾部各组先例：零 `data-block-id` ⇒ 不占块序 / 不动 `data-blocks` 不变式）：
- *  两行 = 起跑标签行 + `n > 0` 计数行（`n = 0` 轮零计数行 —— 沿 VSC `.digest-status` 规则，幻影行禁出）；
- *  词面 = 核字典 `digest.*` 经 `t()` 投影直取（**零新键** · 值同源零复制）；单源 = `thincoder-vscode/webview/chat-status.js:69-122`。 */
-export function digestGroupNode(slice) {
-  const rows = [{ tag: "div", props: { class: "digest-turn", "data-digest-label": "" }, children: [digestLabel(slice)] }]
-  if (countOf(slice.n) > 0) rows.push({ tag: "div", props: { class: "digest-status", "data-digest-count": "" }, children: [digestCount(slice)] })
-  return { tag: "div", props: { class: "chat-digest", "data-digest": "" }, children: rows }
 }
 
 /** 显示裁（CLI 同规 —— 提醒镜像口径 `REMINDER_CAP` = 3）：> 3 行 ⇒ 前 3 行 + `…`（逐行落子节点 —— 免依赖样式面）。 */
@@ -69,7 +45,7 @@ export function timerGroupNode(slice) {
 }
 
 /** 帧尾组同步（幂等）：在场 ⟺ 本键切片在场（`ev:timer` 归约面写——同键就地替换）；内容逐行等价 ⇒ 零写；
- *  切片换代 ⇒ 原位换（零序跳）；缺席 ⇒ 摘除。`anchor` = 尾插点（停止痕 / 台账行之前 —— 恒居消化行组之右）。 */
+ *  切片换代 ⇒ 原位换（零序跳）；缺席 ⇒ 摘除。`anchor` = 尾插点（停止痕 / 台账行之前 —— 恒居消化行族之右）。 */
 function syncTimer(root, model, anchor = null) {
   if (!root || typeof root.querySelector !== "function") return
   const slice = model?.timer ?? null
@@ -126,53 +102,6 @@ export function pillNode(model, handlers) {
   }
 }
 
-/** 组内容等价判据（帧刷幂等）：标签行逐字等 ∧ 计数行在场 / 文面逐字等 ⇒ 零 DOM 写。 */
-function equivalentDigest(node, slice) {
-  const label = node.querySelector("[data-digest-label]")
-  if (label === null || label.textContent !== digestLabel(slice)) return false
-  const row = node.querySelector("[data-digest-count]")
-  if (countOf(slice.n) > 0) return row !== null && row.textContent === digestCount(slice)
-  return row === null
-}
-
-/** 终态行就地更新（`end` ⇒ **先更新**）：计数行改终态句（`ok !== false` ⇒ `digest.done` 携 `n` / `seconds`；
- *  否则 `digest.aborted` 携 `seconds`）+ 终态 class 落笔；`n = 0` 轮零计数行 ⇒ **零动作**（不造幻影行 —— 沿 VSC 同判）。 */
-function updateDigestRows(node, slice) {
-  const row = node.querySelector("[data-digest-count]")
-  if (row === null || row === undefined) return
-  const seconds = (countOf(slice.ms) / 1000).toFixed(1)
-  if (slice.ok === false) {
-    text(row, t("digest.aborted", { seconds }))
-    row.setAttribute("class", "digest-status digest-failed")
-    return
-  }
-  text(row, t("digest.done", { n: countOf(slice.n), seconds }))
-  row.setAttribute("class", "digest-status digest-done")
-}
-
-/** 帧尾组同步（幂等）：在场 ⟺ 本键切片 = 起跑态（`start`）；`end` ⇒ **先原地更新本键游标行**（先更新后摘）后摘除
- *  （单源 = `docs/desktop/design/RENDERER.md` §1.1 事件归约面条 / 帧尾态刷条）；`anchor` = 尾插点（组恒居块序列之后、
- *  停止痕 / 台账行之前）；内容等价 ⇒ 零写；组换代 ⇒ 原位换（零序跳）。 */
-function syncDigest(root, model, anchor = null) {
-  if (!root || typeof root.querySelector !== "function") return
-  const slice = model?.digest ?? null
-  const node = root.querySelector("[data-digest]")
-  if (slice === null || slice.status !== "start") {
-    if (node === null || node === undefined) return
-    if (slice?.status === "end") updateDigestRows(node, slice)
-    node.remove()
-    return
-  }
-  if (node !== null && node !== undefined && equivalentDigest(node, slice)) return
-  const fresh = build(digestGroupNode(slice))
-  if (node !== null && node !== undefined) {
-    node.replaceWith(fresh)
-    return
-  }
-  if (typeof root.insertBefore === "function") root.insertBefore(fresh, anchor)
-  else root.append(fresh)
-}
-
 /** 尾节点态刷（幂等 · 插点锚定）：在场 ⟺ 判据；缺席 ∧ 判据真 ⇒ 插于 `anchor`（`null` ⇒ 末位）；在场 ∧ 判据假 ⇒ 摘。
  *  两用 = 停止痕（项 6 —— 常文节点 ⇒ 换代零题）/ 台账行组（项 12 —— 内容换代判据归 `syncLedger`）。 */
 function syncTailNode(root, selector, want, make, anchor) {
@@ -185,7 +114,7 @@ function syncTailNode(root, selector, want, make, anchor) {
 }
 
 /** 台账行组态刷（幂等）：在场 ⟺ 本键行集非空；**行集换代（引用变）⇒ 原位换**（内容面逐字更新；同引用 ⇒ 零写）；
- *  锚 = 台账行之前（族内序：消化行组 → 到期触发行组 → 停止痕 → 台账行）。 */
+ *  锚 = 台账行之前（族内序：消化行族 → 到期触发行组 → 停止痕 → 台账行）。 */
 function syncLedger(root, model, anchor) {
   if (!root || typeof root.querySelector !== "function") return
   const lines = Array.isArray(model?.ledger) && model.ledger.length > 0 ? model.ledger : null
@@ -210,9 +139,10 @@ function chromeSlot(root, selector, want, make, update, atStart = false) {
   else root.append(built)
 }
 
-/** 帧尾态刷（刷新面单点 · 幂等 · 与档位解耦 —— `none` 帧同刷）：根锚四 + 引导节点 / 摘要块 / **压缩行** / **消化行组** / **到期触发行组** / **停止痕** /
+/** 帧尾态刷（刷新面单点 · 幂等 · 与档位解耦 —— `none` 帧同刷）：根锚四 + 引导节点 / 摘要块 / **压缩行** / **消化行族** / **到期触发行组** / **停止痕** /
  *  **台账行组** / 审批卡 / 药丸随判据（尾组 = 流内非块节点 —— 在场 ⟺ 各自本键切片；
- *  落点 = 块后卡前，族内序 = 压缩行 → 消化行组 → 到期触发行组 → 停止痕 → 台账行）；**帧尾真置焦执行** = `focusAutofocus`。
+ *  落点 = 块后卡前，族内序 = 压缩行 → 消化行族 → 到期触发行组 → 停止痕 → 台账行）；**帧尾真置焦执行** = `focusAutofocus`。
+ *  **压缩行例外 = 流元素冻结点、不在块插入点上** —— 插入点纪律单源 = `docs/desktop/design/RENDERER.md` §1.1（`blockAnchor` 链不收本行）。
  *  `none` 态零块节点化不破：诸控件判据皆含 `state !== "none"`（卡面由 `chatModel` 归零）⇒ 零插入（只摘——
  *  引导节点同此面纪律：缺席 ⇒ 零动作 · 判据空 ⇒ 摘，「只摘不插」）；卡面态刷住 `renderer/views/chat-cards.mjs`。 */
 export function syncChrome(root, model, handlers = {}) {
@@ -230,7 +160,7 @@ export function syncChrome(root, model, handlers = {}) {
     true,
   )
   syncCompress(root, live ? model.compress : null, compressAnchorOf(root))
-  syncDigest(root, live ? model : { digest: null }, digestAnchorOf(root))
+  syncDigest(root, live ? model : { digest: null }, blockAnchor(root)) // 新轮元素插点 = 流末（与常规新块同锚面 —— 轮行之下）
   syncTimer(root, live ? model : { timer: null }, timerAnchorOf(root))
   syncTailNode(root, "[data-stopped]", live && model.stopped === true, () => stoppedNode(), stoppedAnchorOf(root))
   syncLedger(root, live ? model : { ledger: null }, ledgerAnchorOf(root))
@@ -254,25 +184,20 @@ export function focusAutofocus(root) {
   if (typeof node.focus === "function") node.focus()
 }
 
-/** 块节点插点锚（单源 —— 尾段挂载与头侧前插同用）：首个**压缩行**之前（族首——行在则块恒居其前）、无行 ⇒ 首个**消化行组**之前、
- *  无组 ⇒ 首个**到期触发行组**之前、无组 ⇒ 首个**停止痕**之前、无痕 ⇒ 首个**台账行组**之前、无组 ⇒ 首个**卡节点**之前（三族任一 —— 卡序判据面 = 卡序单源）、
- *  无卡 ⇒ 药丸之前；两锚皆缺 ⇒ `null`（末位）。**待发送块不入流**（收正轮 B12 新口径：住输入区带 —— 本档零参）。 */
+/** 块节点插点锚（单源 —— 尾段挂载与头侧前插同用）：首个**到期触发行组**之前、无组 ⇒ 首个**停止痕**之前、
+ *  无痕 ⇒ 首个**台账行组**之前、无组 ⇒ 首个**卡节点**之前（三族任一 —— 卡序判据面 = 卡序单源）、
+ *  无卡 ⇒ 药丸之前；两锚皆缺 ⇒ `null`（末位）。**消化行族元素不在链上**（流内落位批收正 —— 终态 = 逐轮元素：常规新块
+ *  随流落轮行**之下**；归档块（`kind: "subagent"`）走 `digestBoundaryOf`——唯经块序守卫；单源 = `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条）。
+ *  **压缩行不在链上**（R4 定位语义收正 —— 行 = 流元素冻结点：创建点定位后
+ *  新块随流居其下；VSC D-C3 append-once 对齐 —— 单源 = `renderer/views/compress-status.mjs` 档头）。**待发送块不入流**（收正轮 B12 新口径：住输入区带 —— 本档零参）。 */
 export function blockAnchor(root) {
   if (typeof root?.querySelector !== "function") return null
-  return root.querySelector("[data-compress]") ?? root.querySelector("[data-digest]") ?? root.querySelector("[data-timer]") ?? root.querySelector("[data-stopped]") ?? root.querySelector("[data-ledger]")
+  return root.querySelector("[data-timer]") ?? root.querySelector("[data-stopped]") ?? root.querySelector("[data-ledger]")
     ?? root.querySelector("[data-card]") ?? root.querySelector("[data-pill]")
 }
 
-/** 消化行组插点锚（组恒居**块后、到期触发行组 / 停止痕 / 台账行前** —— 族内序 = 消化行组 → 到期触发行组 → 停止痕 → 台账行）：
- *  首个停止痕 ∨ 台账行组 ∨ 卡节点 ∨ 药丸 ∨ `null`（末位）。 */
-function digestAnchorOf(root) {
-  if (typeof root?.querySelector !== "function") return null
-  return root.querySelector("[data-stopped]") ?? root.querySelector("[data-ledger]")
-    ?? root.querySelector("[data-card]") ?? root.querySelector("[data-pill]")
-}
-
-/** 到期触发行组插点锚（组恒居**块后、停止痕 / 台账行前** —— 族内序 = 消化行组 → 本组 → 停止痕）：
- *  首个停止痕 ∨ 台账行组 ∨ 卡节点 ∨ 药丸 ∨ `null`（末位 —— 消化行组在场时本组仍落其右：同锚前插）。 */
+/** 到期触发行组插点锚（组恒居**块后、停止痕 / 台账行前** —— 族内序 = 消化行族 → 本组 → 停止痕）：
+ *  首个停止痕 ∨ 台账行组 ∨ 卡节点 ∨ 药丸 ∨ `null`（末位 —— 消化行族在场时本组仍落其右：同锚前插）。 */
 function timerAnchorOf(root) {
   if (typeof root?.querySelector !== "function") return null
   return root.querySelector("[data-stopped]") ?? root.querySelector("[data-ledger]")

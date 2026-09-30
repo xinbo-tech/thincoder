@@ -33,6 +33,7 @@
         "batches"
       ]
     },
-    "exemptions": []
+    "exemptions": [],
+    "lineCounts": [{ "doc": "docs/desktop/design/PROJECT.md", "section": "4.1 本端文件清单与行数预算" }]
   }
 }

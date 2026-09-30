@@ -610,8 +610,8 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
   本条 = §9.9 清单 8 的收口闭合。
 - **计数同变面（D3 · 「预设 20」在盘 **12** 处——2026-09-20 收口复读逐行实证）**：测试面 **7 处**（CLI `thincoder-cli/test/config-merge.test.mjs:5`/`:26`/`:28`
   + VSC `thincoder-vscode/test/config-merge.test.mjs:4`/`:130`/`:132` + `thincoder-vscode/test/files.mjs:21`〔本清单补入的第 12 处——批次档 §5.4 DR-3／§5.1 越清单披露〕）· 设计面 **2 处**（`docs/core/design/PROVIDER.md:168` §6.11 +
-  `:274` §6.19——均**设计轮笔已落**〔`:171-175` / `:284-289`〕；§6.19 的计数与来源坐标收正详该节）· 需求档 1 处 `docs/core/requirements/PROJECT.md:30`（**父侧笔已落**——现记 21）· 产品文案 2 处 `thincoder-cli/README.md:18` +
-  `thincoder-vscode/README.md:22`（**随实施轮已落**——twenty-one / 21 provider presets）；归档面（`_archive/**`）不改。另 `thincoder-vscode/README.md:92` 的
+  `:274` §6.19——均**设计轮笔已落**〔`:171-175` / `:284-289`〕；§6.19 的计数与来源坐标收正详该节）· 需求档 1 处 `docs/core/requirements/PROJECT.md:30`（**父侧笔已落**——现记 **22**〔provider-config-family 批同步：计数 21→22，2026-09-29〕）· 产品文案 2 处 `thincoder-cli/README.md:18` +
+  `thincoder-vscode/README.md:22`（**随实施轮已落**——twenty-one / 21 provider presets；后 provider-config-family 批 21→22 同变，2026-09-29）；归档面（`_archive/**`）不改。另 `thincoder-vscode/README.md:92` 的
   `doubao-pro-32k` 行属 D-13 **改值**同变面（非计数）⇒ 计入 §9.9 上报清单 5（已随实施轮改指新值）。清单已列全（**12** 处），逐处落位见各 file:line。
 
 ### 9.8 验收标准回指（逐条指回批次档 §1.3 + §1.7-① 新登 AC-9）
@@ -680,11 +680,10 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
    `thincoder-cli/README.md:18`（twenty providers）/ `thincoder-vscode/README.md:22`（20 provider presets）+ VSC README 预设表
    `:92` 的 `doubao-pro-32k` 行（随 D-13 改值）。设计侧改两处：`docs/core/design/PROVIDER.md:168`（§6.11 计数）+ `:274`（§6.19 计数与来源坐标，评审轮 1 #1）。
    **收口实况（2026-09-20 逐处复核）**：需求档 / 两 README / VSC README `:92` / 设计侧两处均已落（21 与改值名在盘）——本条留存 = 上报面完整性。
-6. **§9.11 发现（不阻塞）**：VSC 思考下拉的枚举源 = spec（`thincoder-vscode/src/extension/provider-probe-window.mjs:66`
-   `spec.reasoningEffortEnum || (spec.thinking ? ["enabled"] : [])`；快照面 = `thincoder-vscode/src/extension/settings.mjs:210-215`
-   `:213`，下拉构造 = `thincoder-vscode/webview/settings-state.js:36-49`）⇒ 两 preview 名空档 = 已认账（D-11）；而 **CLI 侧下拉
-   对未在册名回退全档**（含 `max`/`xhigh`）⇒ 同一症状两端行为不一致（VSC 空 / CLI 全档），批次档 AC-6 字面只覆盖 VSC ⇒
-   本批 **CLI 侧零改**（已入 §9.10 边界），差异登记待父侧处置（可入台账巡检）。
+6. **§9.11 发现（不阻塞）**：VSC 思考下拉的枚举源 = **端单源 `thincoder-vscode/src/specs.mjs` `effortEnumForModel`**（#677 I7 已落——消费三档 = 探针 `thincoder-vscode/src/extension/provider-probe-window.mjs:66` ∕ 供体 `thincoder-vscode/src/extension/settings.mjs`（`effortEnums`）∕ 下拉构造
+   `thincoder-vscode/webview/settings-state.js:36-49`）⇒ 未在册名（含两 preview）回退档 = CLI 托底集（对齐已落）；而 **CLI 侧下拉
+   对未在册名回退全档**（含 `max`/`xhigh`）——同一症状两端行为已对齐（VSC 原空档已消；#677 I7），批次档 AC-6 字面只覆盖 VSC ⇒
+   本批 **CLI 侧零改**（已入 §9.10 边界）——**已落（2026-09-30 · #677 I7）：VSC 侧补回退全档（对齐 CLI）**。
 7. **五新名的 VSC 端差默认档未登记（评审轮 1 #6 · 修法越批 ⇒ 只上抛）**：端差默认档表 `EFFORT_DEFAULT_PREFIXES`
    （`thincoder-vscode/src/specs.mjs:22-36`，13 条前缀）只覆盖 deepseek / kimi / glm / qwen 族，五新名全不命中 ⇒ 落兑底链
    「`entry.effortDefault`（未命中 = `undefined`）`|| levels[0] || null`」（`thincoder-vscode/src/specs.mjs:38-52` +
@@ -710,7 +709,7 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
 - 不修 VSC 端差默认档面（五新名未登记 `EFFORT_DEFAULT_PREFIXES` ⇒ 面板默认档落枚举首项）：本批 VSC 侧零改，认账与上抛 = §9.11 / §9.9 清单 7。
 - 不做 TokenPlan 订阅端点（`api.lkeap.cloud.tencent.com/plan/v3` 同 key 401 ⇒ 未订阅）与方舟 Coding 订阅端点（`/api/coding/v3` 400 `InvalidSubscription`）——`docs/batches/2026-09-20-channel-onboarding.md:§1.4`。
 - 不引入自动探测 / 在线校正——规格仍人工登记（`docs/batches/2026-09-20-channel-onboarding.md:§1.4`）。
-- 不改 CLI 思考档位下拉的托底形态（未在册名回退全档 = `thincoder-cli/src/tui/cmd-think.mjs:16` 现状；两端差异已上报 §9.9 清单 6）。
+- 不改 CLI 思考档位下拉的托底形态（未在册名回退全档 = `thincoder-cli/src/tui/cmd-think.mjs:19` 现状）——**VSC 侧对齐 = 已裁（#677）· 实施清单 I7**。
 - AC-9 **不区分**「用户显式 off」与「内部静默 off」（`thinking:null` 单标记，三处生产者见 §9.6 副作用面）⇒ 不得为区分而新增
   provider 字段或改 `resolveEnableThinking`（百炼主机门控专属，上条已列边界）。
 - 本节不落实现——改码 = eng-coder，需本批 designToken。
@@ -1886,6 +1885,9 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 2. **`glm-5.2` / `glm-5` 的 `thinkAlwaysOn`——取证已落（2026-09-29）**（承 `docs/batches/2026-09-28-tech-debt-closeout.md` §5 · 台账 #356）：渠道校验级读数 = `{type:"disabled"}` **受理且生效**（载荷 200 · `reasoning_content` 缺席——off 路径存在，族形态与 `glm-5.3` 族相反）⇒ **维持不标**（D-11）· 判据默认侧（可宣称 OFF）成立。
 
 ## 变更记录
+- 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§9.9 清单 6 引文回锚（VSC 枚举源 = 端单源 `thincoder-vscode/src/specs.mjs` `effortEnumForModel`——#677 I7 已落）。**零新语义**。
+
+- 2026-09-30（**doc-sweep 批 · 计数收正 · eng-designer**——承 `docs/batches/2026-09-30-doc-sweep.md` §2 · 台账 #676）：§9.7 计数同变面句收正——需求档现记 **22**（21⇒22，provider-config-family 批同变；产品文案两 README 现行句二十-two / 22）。**零新语义**（计数收正）。
 
 - 2026-09-29（**doc-sync-residuals 批 · 设计面残留收正轮 · eng-designer**——承 `docs/batches/2026-09-28-tech-debt-closeout.md` §1.19 收正行 ③ · 台账 #356）：§16.3 未取证句 + §16.12 上抛 2 收正——`glm-5.2` ∕ `glm-5` 渠道校验级读数入档（`{type:"disabled"}` 受理且生效 ⇒ `thinkAlwaysOn` 维持不标 · 判据默认侧成立）。**零新语义**（取证读数入档）。
 

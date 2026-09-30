@@ -1,12 +1,14 @@
 /**
  * memory/sweep.mjs — origin 级库治理（命令面 + 安全设计 · MEMORY.md §6.13 · 台账 #175 · 2026-09-25）。
  *
- * 命令面（CLI 壳 = `thincoder-cli/src/cli/memory-command.mjs`）：`thincoder memory sweep [--origin <o>] [--dry-run|--confirm]`。
+ * 命令面（CLI 壳 = `thincoder-cli/src/cli/memory-command.mjs`）：`thincoder memory sweep [--origin <o>] [--path <sub>] [--dry-run|--confirm]`。
  * 两档判据（单源 = §6.13——本档不另立规则）：
  *   · **全扫（缺省）** = 信号 A 折叠（`normalizeOrigin(o) !== o` ⇒ 并入归一形，**不删**）+ 信号 B 删除
  *     （**树亡** = 原样 / 归一形两路径皆 ENOENT ⇒ 可删）；
  *   · **`--origin` 档** = 靶向整档删除（显式点名 ≠ 树亡推断——不以树存活为判据、不走信号 A/B）：
  *     范围 = 三表内 `normalizeOrigin(origin) = normalizeOrigin(<o>)` 的全部行（非归一变体随删；活树亦可整删）。
+ *   · **`--path` 档**（§6.14 面①-3 存量剪枝——须与 `--origin` 同用）：删除范围收窄至 `path` 前缀命中行
+ *     （恰等 ∨ 后随 `/`——与 `index.excludePaths` 同语义；code ∕ doc 两表，`files` 表不涉）。
  * 安全三件（§6.13）：① **备份前置**（`VACUUM INTO <dbPath>.sweep-backup-<UTC yyyymmddHHMMSS>`，
  * 判据 = 存在 ∧ 大小 > 0 ∧ `PRAGMA integrity_check` = ok；目标已存在 / 判据不过 ⇒ **中止零写**）；
  * ② **干跑默认**（`--confirm` 才写；零写判据 = 库字节 / 行数不变）；③ **审计**（逐 origin 动作 + 计数 +
@@ -56,19 +58,42 @@ function originCounts(db) {
 
 const ACTION_RANK = { delete: 0, fold: 1, keep: 2 }
 
+/** `--path` 前缀归一（与 `index.excludePaths` 同款：trim ∕ `\`→`/` ∕ 首部 `./` 剥离 ∕ 去尾斜杠）。 */
+function normalizePrefix(p) {
+  const s = String(p ?? "").trim().replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/+$/, "")
+  if (!s) throw new Error("memory sweep: `--path` 需要一个非空前缀")
+  return s
+}
+
+/** 前缀命中行数（恰等 ∨ 后随 `/`——与 §6.14 面① 谓词同语义；raws = 归入目标键的原样键集）。 */
+function pathHitCount(db, table, raws, sub) {
+  if (raws.length === 0) return 0
+  const ph = raws.map(() => "?").join(", ")
+  const { n } = db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE origin IN (${ph}) AND (path = ? OR substr(path, 1, ?) = ?)`).get(...raws, sub, sub.length + 1, `${sub}/`)
+  return Number(n ?? 0)
+}
+
 /**
  * 干跑计划（**零写**）。row = { origin（归一形）, raws（归入本键的原样键集）, foldFrom（信号 A 的原样键）,
  * alive, unknown, action, code / doc / files / total }。
  * 动作三态：`fold`（信号 A）/ `delete`（信号 B 树亡，或 `--origin` 档显式点名）/ `keep`（其余）。
  */
-export function planSweep(memory, { origin = null } = {}) {
+export function planSweep(memory, { origin = null, path = null } = {}) {
+  if (path !== null && origin === null) throw new Error("memory sweep: `--path` 须与 `--origin` 同用")
   const counts = originCounts(memory.db)
+  const sub = path === null ? null : normalizePrefix(path)
   const rows = []
   if (origin !== null) {
     const target = normalizeOrigin(origin)
     const raws = [...counts.keys()].filter((o) => normalizeOrigin(o) === target)
     const agg = emptyCounts()
-    for (const o of raws) for (const k of KEYS) agg[k] += counts.get(o)[k]
+    if (sub === null) {
+      for (const o of raws) for (const k of KEYS) agg[k] += counts.get(o)[k]
+    } else {
+      // §6.14 面①-3：`--path` 档——计数收窄至两表前缀命中行（files 表不涉——记忆层非项目文件）
+      agg.code = pathHitCount(memory.db, "code_chunks", raws, sub)
+      agg.doc = pathHitCount(memory.db, "doc_chunks", raws, sub)
+    }
     const state = treeState(target)
     rows.push({
       origin: target, raws, foldFrom: null, alive: state.alive, unknown: state.unknown,
@@ -89,7 +114,7 @@ export function planSweep(memory, { origin = null } = {}) {
   const totals = emptyCounts()
   for (const r of rows) for (const k of KEYS) totals[k] += r[k]
   totals.total = totalOf(totals)
-  return { mode: origin !== null ? "origin" : "full", target: origin !== null ? normalizeOrigin(origin) : null, rows, totals }
+  return { mode: origin !== null ? "origin" : "full", target: origin !== null ? normalizeOrigin(origin) : null, path: sub, rows, totals }
 }
 
 /** 备份路径（§6.13）：`<dbPath>.sweep-backup-<UTC yyyymmddHHMMSS>`（同目录）。 */
@@ -137,13 +162,31 @@ function foldKey(db, key, raws) {
   return touched
 }
 
-/** 写后回读判据（§6.13「按档分列」，不过 ⇒ 抛 ⇒ 事务回滚 ⇒ 零写）。 */
-function readBack(db, { mode, target }, before) {
+/** 写后回读判据（§6.13「按档分列」，不过 ⇒ 抛 ⇒ 事务回滚 ⇒ 零写）；`hitsByRaw` = `--path` 档逐原样键命中数。 */
+function readBack(db, plan, before, hitsByRaw = null) {
+  const { mode, target } = plan
   const after = originCounts(db)
   const totalBefore = [...before.values()].reduce((n, c) => n + totalOf(c), 0)
   const totalAfter = [...after.values()].reduce((n, c) => n + totalOf(c), 0)
   if (totalAfter > totalBefore) throw new Error(`memory sweep read-back failed: COUNT(*) grew (${totalBefore} → ${totalAfter})`)
-  if (mode === "origin") {
+  if (mode === "origin" && plan.path) {
+    // `--path` 档：命中行 0（两表，目标原样键集）∧ 非目标键逐表等前值 ∧ 目标键：files 零变 ∕ code-doc 恰减命中数
+    const raws = [...new Set(plan.rows.flatMap((r) => r.raws))]
+    for (const t of ["code_chunks", "doc_chunks"]) {
+      if (pathHitCount(db, t, raws, plan.path) !== 0) throw new Error(`memory sweep read-back failed: --path hit rows remain in ${t}`)
+    }
+    for (const [o, c] of before) {
+      const now = after.get(o) ?? emptyCounts()
+      if (!raws.includes(o)) {
+        if (KEYS.some((k) => now[k] !== c[k])) throw new Error(`memory sweep read-back failed: non-target origin changed (${o})`)
+        continue
+      }
+      const hits = hitsByRaw?.get(o) ?? { code: 0, doc: 0 }
+      if (now.files !== c.files || now.code !== c.code - hits.code || now.doc !== c.doc - hits.doc) {
+        throw new Error(`memory sweep read-back failed: --path target rows changed beyond hits (${o})`)
+      }
+    }
+  } else if (mode === "origin") {
     // `--origin` 档：目标归一键三表零命中 ∧ 非目标 origin 零变（逐键等前值）
     for (const [o] of after) if (normalizeOrigin(o) === target) throw new Error(`memory sweep read-back failed: --origin target key still indexed (${o})`)
     for (const [o, c] of before) {
@@ -162,7 +205,8 @@ function readBack(db, { mode, target }, before) {
 }
 
 /** 写面（`--confirm` 档）：单事务 —— ① 折叠（先于删除，死树键的变体行随键级删除一并清掉）② 键级删除
- *  ③ 写后回读判据（不过 ⇒ 回滚 + 抛）。返回实际触碰行数 { folded, deleted }。 */
+ *  （`--path` 档：仅两表前缀命中行，逐原样键记命中数供回读判据）③ 写后回读判据（不过 ⇒ 回滚 + 抛）。
+ *  返回实际触碰行数 { folded, deleted }。 */
 function applySweep(db, plan) {
   const before = originCounts(db)
   const foldGroups = new Map()
@@ -175,14 +219,27 @@ function applySweep(db, plan) {
   }
   const deleteKeys = plan.rows.filter((r) => r.action === "delete").map((r) => [...new Set([r.origin, ...r.raws])])
   const affected = { folded: 0, deleted: 0 }
+  const hitsByRaw = plan.path ? new Map() : null
   db.exec("BEGIN IMMEDIATE")
   try {
     for (const [key, raws] of foldGroups) affected.folded += foldKey(db, key, [...raws])
     for (const raws of deleteKeys) {
       const ph = raws.map(() => "?").join(", ")
-      for (const { table } of TABLES) affected.deleted += Number(db.prepare(`DELETE FROM ${table} WHERE origin IN (${ph})`).run(...raws).changes)
+      if (plan.path) {
+        // §6.14 面①-3：仅 code ∕ doc 两表按前缀删（files 表不涉）；逐原样键记命中数
+        for (const raw of raws) {
+          const hits = { code: 0, doc: 0 }
+          for (const [t, k] of [["code_chunks", "code"], ["doc_chunks", "doc"]]) {
+            hits[k] = Number(db.prepare(`DELETE FROM ${t} WHERE origin = ? AND (path = ? OR substr(path, 1, ?) = ?)`).run(raw, plan.path, plan.path.length + 1, `${plan.path}/`).changes)
+          }
+          hitsByRaw.set(raw, hits)
+          affected.deleted += hits.code + hits.doc
+        }
+      } else {
+        for (const { table } of TABLES) affected.deleted += Number(db.prepare(`DELETE FROM ${table} WHERE origin IN (${ph})`).run(...raws).changes)
+      }
     }
-    readBack(db, plan, before)
+    readBack(db, plan, before, hitsByRaw)
     db.exec("COMMIT")
   } catch (e) {
     try { db.exec("ROLLBACK") } catch { /* 已回滚 / 事务未开 */ }
@@ -196,10 +253,10 @@ function applySweep(db, plan) {
  * （判据不过即抛 ⇒ 零写），再单事务执行折叠 / 删除并跑写后回读判据。
  * 返回：{ mode, target, dryRun, rows, totals, hits, backupPath, affected }。
  */
-export function sweepMemory(memory, { origin = null, confirm = false, dbPath = null, now = new Date() } = {}) {
-  const plan = planSweep(memory, { origin })
+export function sweepMemory(memory, { origin = null, path = null, confirm = false, dbPath = null, now = new Date() } = {}) {
+  const plan = planSweep(memory, { origin, path })
   const hits = plan.rows.reduce((n, r) => n + (r.action === "keep" ? 0 : r.total), 0)
-  const result = { mode: plan.mode, target: plan.target, dryRun: !confirm, rows: plan.rows, totals: plan.totals, hits, backupPath: null, affected: null }
+  const result = { mode: plan.mode, target: plan.target, path: plan.path, dryRun: !confirm, rows: plan.rows, totals: plan.totals, hits, backupPath: null, affected: null }
   if (!confirm) return result
   if (hits > 0) {
     if (typeof dbPath !== "string" || !dbPath || dbPath === ":memory:") {
@@ -214,7 +271,7 @@ export function sweepMemory(memory, { origin = null, confirm = false, dbPath = n
 /** 审计输出形态（§6.13）：逐 origin 一行 `origin=<归一形> · 树存活=<是|否> · code / doc / files / 合计`
  *  （活树附警示行）+ 折叠映射行 + 删除行数 + 末行合计 + 备份路径（`--confirm` 档）/ 实写读数。 */
 export function formatSweepReport(result) {
-  const mode = result.mode === "origin" ? `--origin ${result.target}` : "全扫"
+  const mode = result.mode === "origin" ? `--origin ${result.target}${result.path ? ` --path ${result.path}` : ""}` : "全扫"
   const lines = [`memory sweep ${mode} · ${result.dryRun ? "dry-run（零写）" : "confirm（写档）"}`]
   for (const r of result.rows) {
     lines.push(`origin=${r.origin} · 树存活=${r.alive ? "是" : "否"} · code=${r.code} / doc=${r.doc} / files=${r.files} / 合计=${r.total}`)

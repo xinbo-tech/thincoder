@@ -11,12 +11,15 @@
  * 回执：
  * ```
  * { origin, tables: { files, code: { files, chunks }, doc: { files, chunks } },
- *   totals: { files, chunks }, indexed }
+ *   totals: { files, chunks }, indexed, dbBytes, origins: [{ origin, code, doc }] }
  * ```
  * `tables.files` = 记忆层（`files` 表：project ∕ team 两层 markdown 记忆）行数；`code` ∕ `doc` 各 =
  * 去重文件数（`COUNT(DISTINCT path)`）与分块数（`COUNT(*)`）；`totals` = code + doc 合计（端侧既有
  * 索引读数同口径）；`indexed` = 合计文件数 > 0（「本项目已建索引」读数 —— 读数非承诺）。
+ * P1 新增读数（§6.14 面③）：`dbBytes` = 库文件 `statSync` 字节数（非文件型 ∕ 不可读 ⇒ null）；
+ * `origins` = 逐 origin 行数（code ∕ doc 两表并集，键 = 库内**原样** origin，按名排序）。
  */
+import { statSync } from "node:fs"
 import { normalizeOrigin } from "./memory/origin.mjs"
 
 /** 单表计数：`key` 非 null ⇒ 追加 `WHERE origin = ?`（三表皆有 origin 列 —— v5 ∕ v8 起）。 */
@@ -42,5 +45,25 @@ export function memoryStatus(memory, { origin } = {}) {
     tables: { files, code, doc },
     totals: { files: totalFiles, chunks: code.chunks + doc.chunks },
     indexed: totalFiles > 0,
+    dbBytes: dbBytesOf(memory),
+    origins: originRows(memory),
   }
+}
+
+/** 库文件字节数（P1——`statSync` 实读；非文件型 ∕ 不可读 ⇒ null）。 */
+function dbBytesOf(memory) {
+  try { return memory.dbPath ? statSync(memory.dbPath).size : null } catch { return null }
+}
+
+/** 逐 origin 行数（P1——code ∕ doc 两表并集；键 = 库内原样 origin，按名排序）。 */
+function originRows(memory) {
+  const map = new Map()
+  for (const [table, key] of [["code_chunks", "code"], ["doc_chunks", "doc"]]) {
+    for (const r of memory.db.prepare(`SELECT origin, COUNT(*) AS n FROM ${table} GROUP BY origin`).all()) {
+      const cur = map.get(r.origin) ?? { origin: r.origin, code: 0, doc: 0 }
+      cur[key] = Number(r.n)
+      map.set(r.origin, cur)
+    }
+  }
+  return [...map.values()].sort((a, b) => (a.origin < b.origin ? -1 : a.origin > b.origin ? 1 : 0))
 }

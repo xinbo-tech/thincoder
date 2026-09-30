@@ -13,6 +13,7 @@ import { providerSpec } from "@thincoder/core/config.mjs"
 import { t } from "@thincoder/core/i18n.mjs" // 停滞轻显形（TUI.md §7.7）：句式键 status.quiet——词面单源（CLI 直取）
 // #363②（off 形族单源——MODEL-SPECS.md §16.2 / §16.4）：顶栏 think 徽标的 off 判据引核（本档零副本）。
 import { thinkOffShape, thinkOffPath } from "@thincoder/core/think-off.mjs"
+import { isRealUserMsg } from "@thincoder/core/history-window.mjs" // B6 回退链：首条真实 user 消息谓词（纯件单源）
 import { computeLayout, subagentVisibleLines } from "./layout.mjs"
 import { basename } from "node:path"
 import { readFileSync } from "node:fs"
@@ -353,6 +354,16 @@ function inputBoxStyle(state) {
   return { borderColor, title }
 }
 
+/** 标题回退链（B6 消 · #677——对位 VSC `panel-session.mjs:243-247` 链值 `title → "firstMessage" → "(empty)"`；
+ *  截断逐字同该链 `truncate(s, 40)`——生成前 ∕ 失败期两端同值）。首条真实 user 消息 = 活读单源：
+ *  绑定态取槽摘要字段（`counters().firstMessage`——与 VSC `listSlots` 同字段）；未绑定回退内存人读线。 */
+function sessionTitleFallback(agent) {
+  const fm = (agent?._recordStore?.counters?.().firstMessage ?? "")
+    || (agent?._fullHistory ?? agent?.history ?? []).find(isRealUserMsg)?.content
+  if (typeof fm !== "string" || fm === "") return "(empty)"
+  return `"${fm.length <= 40 ? fm : fm.slice(0, 39) + "…"}"`
+}
+
 function buildStatusLine(state, agent, { cols, slashCommands }) {
   const scrollHint = state.scroll > 0 ? ` │ scrolled ${state.scroll}` : ""
   const rawInput = state.input.join("")
@@ -440,8 +451,10 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   const timers = agent._pendingTimers ?? []
   const timerHint = timers.length === 0 ? "" : ` │ ${timers.some((t) => t.expiresAt <= Date.now()) ? `${ansi.reset}${C.warn}⏰${timers.length}${ansi.reset}${ansi.dim}` : `⏰${timers.length}`}`
   // D8（2026-09-21 块标题行对齐批——会话标题常显 · `docs/cli/design/TUI.md` §7.4）：状态段簇尾
-  // （ledgerHint 后、键位组前）；取值 = `agent.title` 活读（每帧 recompute）· 空值零注入。
+  // （ledgerHint 后、键位组前）；取值 = `agent.title` 活读（每帧 recompute）· 40 列截断。
+  // B6 消（#677）：空白 ⇒ 回退链值（对位 VSC 顶栏——生成前 ∕ 失败期两端同值；值逐字，行级超宽走 statusMax）。
   const titleRaw = typeof agent.title === "string" ? agent.title.trim() : ""
-  const titleHint = titleRaw ? ` │ ${stringWidth(titleRaw) > 40 ? sliceByWidth(titleRaw, 39) + "…" : titleRaw}` : ""
+  const titleShown = titleRaw ? (stringWidth(titleRaw) > 40 ? sliceByWidth(titleRaw, 39) + "…" : titleRaw) : sessionTitleFallback(agent)
+  const titleHint = ` │ ${titleShown}`
   return ` ${statusText}${taskHint}${turnHint}${tokenHint}${ctxHint}${scrollHint}${ledgerHint}${timerHint}${titleHint} │ ${enterHint} │ /: commands │ wheel/PgUp/PgDn: scroll │ Ctrl+I: inject │ Ctrl+C: exit (×2)`
 }

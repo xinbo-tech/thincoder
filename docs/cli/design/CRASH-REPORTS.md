@@ -31,7 +31,7 @@
 - **落点更正（实测）**：`report.*.json` 实测落 `~/.thincoder/crash-reports/`——`process.report.directory` 已由进程内设定，
   **非 CWD**。
 - 接口（注入缝）：`prepareCrashReporting({ dir, heapSnapshot = true, armHeapSnapshot })`（`thincoder-cli/src/crash-reports.mjs` 导出）
-  ——默认参数保**其余调用点**（如 `thincoder-cli/test/fixtures/r25-oom.mjs` 无参调用）零改（生产判定单点 = bin 入口读配置键 `diagnostics.heapSnapshot` 后显式传入——§3.2）；`dir` 选项同时服务 mkdir / `report.directory` / purge / 返回。返回值 = 目录路径。
+  ——默认参数保**其余调用点**（如 `thincoder-cli/test/fixtures/r25-oom.mjs` 无参调用）零改（生产判定单点 = bin 入口读配置键 `diagnostics.heapSnapshot` 后显式传入——§3.2）；`dir` 选项同时服务 mkdir / `report.directory` / purge / 返回。返回值 = 目录路径。 （迁移期引文——档已删）
 
 ### 2.2 JS 异常记录与启动提示
 

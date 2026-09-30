@@ -23,15 +23,17 @@
  *   ④ **封顶自滚**（E1 —— 封顶 = 列高（布局骨架差异在册：VSC 横带 32vh）；自滚 = 宿主 `overflow: auto` +
  *      `overscroll-behavior: contain`（`renderer/pool.css` 该条注））。核件消费面（`subblocks/*`）零改。
  * **让位修复批（2026-09-29 · 台账 #603 · KD-47）**：`mountPool` **三径** = ① `none` ∕ `empty` ⇒ `clear` + 零节点 ·
- *  ② 壳缺位（首挂 ∕ 换代后）⇒ 建树全挂 · ③ **壳在位 ∧ `pool` ⇒ 原位领用**（头 ∕ 审批 ∕ 队列族原位重建；子 agent
- *  族祖先链零摘离 ∕ 零移动——块内容区 ∕ 池自身滚动位保真）；尾接**帧尾复核扫**（`applySubBlockFollow`）。
+ *  ② 壳缺位（首挂 ∕ 换代后）⇒ 建树全挂 · ③ **壳在位 ∧ 会话账匹配 ⇒ 原位领用**（头原位重建；审批 ∕ 队列族 =
+ *  **键控差分**〔#606③：键 = `promptId` ∕ 标题，条目跨帧身份存续〕；子 agent 族祖先链零摘离 ∕ 零移动——
+ *  块内容区 ∕ 池自身滚动位保真）；尾接**帧尾复核扫**（`applySubBlockFollow`）。**#660（KD-47 ⑤）**：③ 径门撤
+ *  `blocks > 0`（零块帧同领用——弃账收窄 + 空族支；R5 零块弃账语义保持）。
  */
 import { build, clear } from "../dom.mjs"
 import { clearActivityNew, syncActivityNew, maybePinPool } from "./activity-new.mjs"
 // 子 agent 族键控差分（R5 先拆后改出档）+ 帧尾复核扫（让位修复批——应用点契约「帧尾复核」）。
 import { syncSubBlocks, applySubBlockFollow } from "./pool-subagents.mjs"
 // 纯构树族（让位修复批预案出档——「纯构树 ∕ 薄挂载」两层分家）：模型 ∕ 树 ∕ 节点族居该档，本档只引编排所需件。
-import { poolModel, poolTree, headNode, familyNode, approvalItemNode, queueItemNode, subFamilyNode, familyLabel } from "./pool-tree.mjs"
+import { poolModel, poolTree, headNode, approvalItemNode, queueItemNode, subFamilyNode, familyLabel } from "./pool-tree.mjs"
 // 兼容面（结构拆分零语义——原取件路径保名：批次归档件 ∕ 只读读件仍可解析；定义单源 = `./pool-tree.mjs`）。
 export { poolModel, poolTree } from "./pool-tree.mjs"
 
@@ -39,39 +41,75 @@ export { poolModel, poolTree } from "./pool-tree.mjs"
 // 族内六件（元素构造 ∕ 行重放 ∕ 冻结着装 ∕ 同键更新 ∕ 出生 ∕ 键控差分）+ 帧尾复核扫 = `./pool-subagents.mjs`；
 // 纯构树族（模型 ∕ 树 ∕ 节点族）= `./pool-tree.mjs`；本档留：容器标签刷 + 挂载编排（三径 ∕ 头 / 两族 / 弃容器）。
 
-/** 常驻族容器标签刷（语言切 ⇒ 词面随动；容器身份与项元素零扰 —— 原位换标签）。 */
-function bindFamilyLabel(family) {
+/** 族容器标签刷（语言切 ⇒ 词面随动；容器身份与项元素零扰 —— 原位换标签；等值 ⇒ 零写）。 */
+function bindFamilyLabel(family, word = "pool.family.subagents") {
   const label = family.querySelector(".pool-family-label")
-  const next = build(familyLabel("pool.family.subagents"))
-  if (label !== null && label !== undefined) label.replaceWith(next)
-  else family.prepend(next)
+  const next = build(familyLabel(word))
+  if (label === null || label === undefined) family.prepend(next)
+  else if (label.textContent !== next.textContent) label.replaceWith(next)
 }
 
-/** 壳原位领用（③ 径 · 让位修复批 KD-47 ∕ `docs/desktop/design/RENDERER.md` §1.1）：头 ∕ 审批族 ∕ 队列族
- *  **原位重建**（节点内零滚动件——重建零损失）；**子 agent 族容器及其项元素零摘离 ∕ 零移动**（祖先链
- *  host → `[data-pool-body]` → family → block → `.advisor-content` 跨帧不动 ⇒ 块内容区 ∕ 池自身滚动位保真）。
- *  **位置对账**：族序固定（审批 → 子 agent → 队列）——审批 ∕ 队列节点在族容器两侧原位增删；折叠态 ⇒ 三族
- *  摘离（族容器存 `_poolSub`——用户手势触发，复位可接受 · 登记）；展开 ⇒ 复用重插（队列族之前）。 */
+/** 条目内容签名（零写判据：逐子件 标签 + 类 + 文本序 —— 标称 ∕ 状态词 ∕ 操作钮词面面）。 */
+const entrySig = (node) => [...node.children].map((child) => `${child.tagName}|${child.className}|${child.textContent}`).join("~")
+
+/** 族键控差分（#606③ —— 族容器原位 ∕ 条目按键复用：删差额 + 逆序定位 + 内容异 ⇒ 原位换子件（条目身份存续））。
+ *  `rows` = `[键, 条目]` 对（键 = 审批族 `promptId` 串 ∕ 队列族标题；键 `null` ⇒ 非复用——每帧重建防御径）；
+ *  `nodeKey(node)` = 现件键读面；族空 ⇒ 摘容器（零节点）；缺容器 ⇒ 建壳（序：审批居首 ∕ 队列居尾）。 */
+function syncFamily(body, name, word, rows, nodeKey, entryOf) {
+  const family = body.querySelector(`[data-family="${name}"]`)
+  if (rows.length === 0) { if (family !== null && family !== undefined) family.remove(); return }
+  const node = family ?? build({ tag: "div", props: { class: "pool-family", "data-family": name }, children: [familyLabel(word)] })
+  if (family === null || family === undefined) body.insertBefore(node, name === "approvals" ? body.firstChild : null)
+  bindFamilyLabel(node, word)
+  const live = new Map()
+  for (const entry of node.querySelectorAll("[data-pool-item]")) {
+    const key = nodeKey(entry)
+    if (key === null || live.has(key)) { entry.remove(); continue }
+    live.set(key, entry)
+  }
+  for (const [key, entry] of live) if (!rows.some(([row]) => row === key)) { entry.remove(); live.delete(key) }
+  let cursor = null
+  for (let i = rows.length - 1; i >= 0; i -= 1) {
+    const [key, item] = rows[i]
+    let entry = key === null ? null : live.get(key) ?? null
+    const fresh = build(entryOf(item))
+    if (entry === null) entry = fresh
+    else if (entrySig(entry) !== entrySig(fresh)) entry.replaceChildren(...[...fresh.childNodes])
+    if (entry.parentNode !== node || entry.nextSibling !== cursor) node.insertBefore(entry, cursor)
+    cursor = entry
+  }
+}
+
+/** 壳原位领用（③ 径 · 让位修复批 KD-47 ∕ #606③ ∕ `docs/desktop/design/RENDERER.md` §1.1）：头原位重建；
+ *  审批 ∕ 队列族 = **键控差分**（条目按键复用——跨帧身份存续；#660 起零块帧同走本径）；**子 agent 族容器及
+ *  其项元素零摘离 ∕ 零移动**（祖先链 host → `[data-pool-body]` → family → block → `.advisor-content` 跨帧不动
+ *  ⇒ 块内容区 ∕ 池自身滚动位保真）。**位置对账**：族序固定（审批 → 子 agent → 队列）——审批 ∕ 队列节点在族
+ *  容器两侧原位增删；折叠态 ⇒ 三族摘离（族容器存 `_poolSub`——用户手势触发，复位可接受 · 登记）；展开 ⇒
+ *  复用重插（队列族之前）。**空族支**（#660）：零块 ⇒ 摘族壳 + 弃容器账（会话账存续）——R5 语义保持。 */
 function adoptPool(root, body, model, handlers, live) {
   const head = root.querySelector("[data-pool-head]")
   if (head !== null && head !== undefined) head.replaceWith(build(headNode(model, handlers)))
-  const prevApprovals = body.querySelector('[data-family="approvals"]')
-  const approvals = model.collapsed ? null : familyNode("approvals", "pool.family.approvals", model.approvals, (item) => approvalItemNode(item, handlers))
-  if (approvals !== null) {
-    const next = build(approvals)
-    if (prevApprovals !== null && prevApprovals !== undefined) prevApprovals.replaceWith(next)
-    else body.insertBefore(next, body.firstChild)
-  } else if (prevApprovals !== null && prevApprovals !== undefined) prevApprovals.remove()
-  const prevQueue = body.querySelector('[data-family="queue"]')
-  const queue = model.collapsed ? null : familyNode("queue", "pool.family.queue", model.queue, queueItemNode)
-  if (queue !== null) {
-    const next = build(queue)
-    if (prevQueue !== null && prevQueue !== undefined) prevQueue.replaceWith(next)
-    else body.appendChild(next)
-  } else if (prevQueue !== null && prevQueue !== undefined) prevQueue.remove()
+  if (model.collapsed) {
+    for (const name of ["approvals", "queue"]) {
+      const hit = body.querySelector(`[data-family="${name}"]`)
+      if (hit !== null && hit !== undefined) hit.remove()
+    }
+  } else {
+    syncFamily(body, "approvals", "pool.family.approvals", model.approvals.map((item) => [item?.promptId == null ? null : String(item.promptId), item]), (entry) => entry.getAttribute("data-prompt-id"), (item) => approvalItemNode(item, handlers))
+    syncFamily(body, "queue", "pool.family.queue", model.queue.map((item) => [typeof item?.title === "string" && item.title !== "" ? item.title : null, item]), (entry) => entry.querySelector('[data-seg="title"]')?.textContent ?? null, queueItemNode)
+  }
+  const mounted = body.querySelector('[data-family="subagents"]')
+  // 空族支（#660 · KD-47 ⑤）：零块 ⇒ 族壳摘离（族空零节点律）+ 弃容器账 · 会话账存续；零 `syncSubBlocks`
+  // 调用（防 null 族引用）——下次出生全新建元素（R5 零块弃账语义保持）。
+  if (model.blocks.length === 0) {
+    mounted?.remove()
+    root._poolSub = null
+    root._poolSubSession = model.key
+    syncActivityNew(root)
+    return
+  }
   // 子 agent 族容器：在位 ⇒ 零移动（链稳定）；折叠 ⇒ 摘离存账；缺位 ∕ 展开 ⇒ 重插（族缺 ⇒ 建壳——出生径）
   const family = live ?? build(subFamilyNode(model))
-  const mounted = body.querySelector('[data-family="subagents"]')
   if (model.collapsed) {
     if (mounted !== null && mounted !== undefined) mounted.remove()
   } else if (mounted !== family) {
@@ -91,8 +129,9 @@ function adoptPool(root, body, model, handlers, live) {
 /** 薄挂载（帧面 · **键控差分**）：壳（三态 / 头读数 / 折叠）与待审批 / 队列族照帧刷；子 agent 族容器**常驻**
  *  （`root._poolSub` —— 跨帧同一，项元素按 key 复用，不重建）。**键域 = 本会话**（`root._poolSubSession` ——
  *  会话变更 ⇒ 弃旧容器令族重建，禁沿用旧会话行账）。**三径**（让位修复批 · KD-47）：① `none` ∕ `empty` ⇒ `clear`
- *  + 零节点；② 壳缺位（首挂 ∕ 换代后 ∕ 零块帧【R5 弃账】）⇒ 建树全挂；③ 壳在位 ∧ `pool` ⇒ 原位领用（`adoptPool`
- *  —— 链稳定 ⇒ 位面保真；族缺 ⇒ 建壳——出生径）。**空态退场**（R10 E2 —— `none` ∕ `empty` ⇒ 零子节点 + 计数贴
+ *  + 零节点；② 壳缺位（首挂 ∕ 换代后）⇒ 建树全挂；③ 壳在位 ∧ 会话账匹配 ⇒ 原位领用（`adoptPool` —— 链稳定 ⇒
+ *  位面保真；族缺 ⇒ 建壳——出生径；**#660 零块帧同走本径**——空族支摘壳 · 弃容器账）。**空态退场**（R10 E2 ——
+ *  `none` ∕ `empty` ⇒ 零子节点 + 计数贴
  *  清账）。容器缺位 ⇒ 空转；回值 = 模型（调用面零分支）。 */
 export function mountPool(root, state, handlers = {}) {
   const model = poolModel(state)
@@ -112,9 +151,9 @@ export function mountPool(root, state, handlers = {}) {
   }
   // R5（#522① 随动）：模型零块 ⇒ 族容器弃账 —— 零块帧不产族壳（`subFamilyNode` 缺席）⇒ 容器 DOM 必陈旧
   //（复位 ∕ 全归档同判 ⇒ 下次出生重挂全新建元素）；计数贴随零块清（VSC `resetActivity` 同点清账）。
+  // #660（KD-47 ⑤）收窄：容器账弃（`_poolSub`）· **会话账保留**（`_poolSubSession`）——零块帧领用门同匹配。
   if (model.blocks.length === 0) {
     root._poolSub = null
-    root._poolSubSession = null
     clearActivityNew(root)
   }
   if (model.state === "none" || model.state === "empty") {
@@ -122,9 +161,10 @@ export function mountPool(root, state, handlers = {}) {
     clearActivityNew(root)
     return model
   }
-  // ③ 壳在位（body 在树 ∧ 同会话 ∧ 族在场）⇒ 原位领用；否则 ② 建树全挂（首挂 ∕ 换代后 ∕ 无壳态——既有路径）
+  // ③ 壳在位（body 在树 ∧ 会话账匹配）⇒ 原位领用（#660 · KD-47 ⑤ 门撤 `blocks > 0`——零块帧同领用）；
+  // 否则 ② 建树全挂（首挂 ∕ 换代后 ∕ 无壳态——既有路径）
   const body = root.querySelector('[data-pool-body]')
-  const adopt = body !== null && body !== undefined && model.blocks.length > 0 && root._poolSubSession === model.key
+  const adopt = body !== null && body !== undefined && root._poolSubSession === model.key
   if (adopt) {
     adoptPool(root, body, model, handlers, root._poolSub ?? null)
   } else {

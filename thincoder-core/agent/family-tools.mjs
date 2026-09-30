@@ -13,7 +13,7 @@
  *
  * 登记册**动态**载入：`agent-tools.mjs` 静态图经 consult/subagent 族可达核 agent 栈
  * （`../agent/setup.mjs` → `../memory.mjs` → `node:sqlite`）——静态引入会破端壳 W8 契约②
- * （`thincoder-vscode/test/engine-floor-guard.test.mjs`：端壳静态链不得到达 `node:sqlite`）。
+ * （W8 契约②判据（现载体 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`；单测树重建时回迁端侧单测档）：端壳静态链不得到达 `node:sqlite`）。
  * 核内先例 = 登记册头注「Loaded from agent.mjs via dynamic import to avoid ESM circular
  * dependencies」（本档先于 `agent/setup.mjs` 的调用点载入，同一语义）。
  */

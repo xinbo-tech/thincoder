@@ -8,7 +8,7 @@
  *    读 + validateManifest(obj)；缺键 → 产 missingKeys（非拒）→ 补默认值 →
  *    再校验通过；整档缺失 → { ok:false, reason:'missing' }（不静默 fallback）。
  *  - validateManifest(obj) → { ok, errors, missingKeys }：枚举 / version 数值 /
- *    docRoot 子键值形态（串 | 数组，F7）——**纯函数、零 fs**；不落盘。
+ *    docRoot 子键值形态（串 | 数组，F7）+ checkConfig.lineCounts 元素层形态——**纯函数、零 fs**；不落盘。
  *  - 三族声明键（`codePaths` / `index.{codeExtensions,docExtensions}` / `advisor.{docMap,standardsDoc}`——
  *    KD-M1-31 / M1-32）：缺键补默认；形态错 = 档非法（fail-closed，与 docRoot 子键同款）；
  *    读向 = `conventions.mjs` 经 `readManifest` / `manifestFilePath` 投影（单向——KD-M1-33）。
@@ -33,114 +33,14 @@
  * N1 零依赖：仅 node:fs / node:path + 标准库 JSON.parse——无第三方解析器、无 node:sqlite。
  * N3 可迁移：本模块不硬编码任何本仓路径（docRoot / checkConfig 由被开发项目声明）。
  */
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
-import { dirname, join, resolve } from "node:path"
-
-/** 数据档文件名（**每个项目一份**——项目根 = 带档目录；**git 非前提**。2026-09-17 / 2026-09-21 用户裁定）。 */
-export const MANIFEST_REL = "PROJECT-MANIFEST.json"
-/** 测试注入：强制项目根（测试 tmp 非 git 仓——同 ledger `_setLedgerDirForTest` 先例）。 */
-let _projectRootOverride = null
-export function _setProjectRootForTest(dir) { _projectRootOverride = dir }
-export function _resetProjectRootForTest() { _projectRootOverride = null }
-
-/**
- * 一层扫描内核（**模块私有**——两条梯表共用；KD-M1-23 / 设计 §2.2「单源结构」）：枚举锚的
- * **直接子目录**一层（不递归）+ 按名排序 + 谓词过滤 ⇒ 命中表（绝对路径）。
- * 全档唯一 `readdirSync` 落点（结构机判 T54）；锚不可读 ⇒ `[]`（不抛——调用方按「零命中」处置）。
- * @param {string} anchor 锚绝对路径
- * @param {(dir:string)=>boolean} isHit 子目录谓词
- * @returns {string[]} 命中子目录绝对路径（按名排序）
- */
-function scanChildren(anchor, isHit) {
-  try {
-    return readdirSync(anchor, { withFileTypes: true })
-      .filter((e) => e.isDirectory())
-      .map((e) => e.name)
-      .sort()
-      .map((e) => join(anchor, e))
-      .filter(isHit)
-  } catch { return [] }
-}
-
-/**
- * **项目发现**（项目梯五级——KD-M1-23 / 设计 `docs/core/design/MANIFEST.md` §2.2；**git 非前提**，
- * 2026-09-21 用户裁定）：① 锚自身带 `MANIFEST_REL` ⇒ 锚；② 锚含 `.git` ⇒ 锚（缺档 = 建档机会）；
- * ③ 直接子目录中**带档**者优先（非空即只看此级：恰一 ⇒ `unique` / ≥2 ⇒ `ambiguous`）；
- * ④ 零带档才看含 `.git` 的**裸仓**（同判）；⑤ 均无 ⇒ `none`（⇒ 建档流，落点 = 会话锚）。
- * `candidates` 一律**按名排序**（`self` / `none` ⇒ `[]`）；`matched` ∈ `manifest` / `git` / `null`
- * 记命中（或歧义）出自哪一级。**纯 fs**（只判存在性——不解析档内容）· **不抛** · **不向上** · **不递归**。
- * **覆盖位**（`_setProjectRootForTest` 在场）⇒ **头部短路**（测试注入面——先于真判据，同 `discoverRepos`）。
- * @param {string} [cwd] 会话锚（缺省 → 进程 cwd）
- * @returns {{kind:'self'|'unique'|'none'|'ambiguous', root:string|null, candidates:string[], matched:'manifest'|'git'|null}}
- */
-export function discoverProjects(cwd) {
-  if (_projectRootOverride) return { kind: "self", root: resolve(_projectRootOverride), candidates: [], matched: null }
-  const anchor = resolve(cwd ?? ".")
-  if (existsSync(join(anchor, MANIFEST_REL))) return { kind: "self", root: anchor, candidates: [], matched: "manifest" }
-  if (existsSync(join(anchor, ".git"))) return { kind: "self", root: anchor, candidates: [], matched: "git" }
-  const withManifest = scanChildren(anchor, (d) => existsSync(join(d, MANIFEST_REL)))
-  if (withManifest.length > 1) return { kind: "ambiguous", root: null, candidates: withManifest, matched: "manifest" }
-  if (withManifest.length === 1) return { kind: "unique", root: withManifest[0], candidates: [...withManifest], matched: "manifest" }
-  const bareRepos = scanChildren(anchor, (d) => existsSync(join(d, ".git")))
-  if (bareRepos.length > 1) return { kind: "ambiguous", root: null, candidates: bareRepos, matched: "git" }
-  if (bareRepos.length === 1) return { kind: "unique", root: bareRepos[0], candidates: [...bareRepos], matched: "git" }
-  return { kind: "none", root: null, candidates: [], matched: null }
-}
-
-/**
- * **仓发现**（仓梯——KD-M1-23 / `docs/core/design/TOOLS.md` §6.13；**单源** KD-M1-22——`git` 工具
- * 经此符号接线，禁第二份实现）：① 锚含 `.git` ⇒ 锚；② 直接子目录中 `.git` **∧** 带档者恰一 ⇒ 命中
- * （≥2 ⇒ 歧义）；③ **零个此类时才看**含 `.git` 的裸仓（恰一 ⇒ 命中 / ≥2 ⇒ 歧义）；④ 均无 ⇒ `none`。
- * 与 `discoverProjects` = **同一 walk 内核**（`scanChildren`）的两种梯表——差异只在谓词与级序。
- * `candidates` 按名排序；`matched` 记档位；纯 fs / 不抛 / 不递归 / 不向上；覆盖位 ⇒ 头部短路。
- * @param {string} [cwd] 会话锚（缺省 → 进程 cwd）
- * @returns {{kind:'self'|'unique'|'none'|'ambiguous', root:string|null, candidates:string[], matched:'manifest'|'git'|null}}
- */
-export function discoverRepos(cwd) {
-  if (_projectRootOverride) return { kind: "self", root: resolve(_projectRootOverride), candidates: [], matched: null }
-  const anchor = resolve(cwd ?? ".")
-  if (existsSync(join(anchor, ".git"))) return { kind: "self", root: anchor, candidates: [], matched: "git" }
-  const scoped = scanChildren(anchor, (d) => existsSync(join(d, ".git")) && existsSync(join(d, MANIFEST_REL)))
-  if (scoped.length > 1) return { kind: "ambiguous", root: null, candidates: scoped, matched: "manifest" }
-  if (scoped.length === 1) return { kind: "unique", root: scoped[0], candidates: [...scoped], matched: "manifest" }
-  const bare = scanChildren(anchor, (d) => existsSync(join(d, ".git")))
-  if (bare.length > 1) return { kind: "ambiguous", root: null, candidates: bare, matched: "git" }
-  if (bare.length === 1) return { kind: "unique", root: bare[0], candidates: [...bare], matched: "git" }
-  return { kind: "none", root: null, candidates: [], matched: null }
-}
-
-/**
- * **归属形单点**（KD-M1-30 / 设计 §2.9 A——2026-09-21 用户裁定「最近者优先」）：自 `target`
- * （目录含自身；文件路径自其父目录起）沿**祖先链**逐级上溯至盘根，取**最近**带 `MANIFEST_REL`
- * 的目录；无 ⇒ `null`（⇒ 调用方走发现兜底）。**嵌套合法**：子内归子、根其余归根。
- * **纯 fs**（只判存在性——不解析档内容 / 不问模式）· **不跨兄弟** · **无全局优先级**。
- * **覆盖位**（`_setProjectRootForTest` 在场）⇒ **头部短路**：直接返回覆盖值（不查档存在性——
- * 保「覆盖即覆盖值」语义，回归守卫 = `test/manifest.test.mjs` T42 覆盖断言）。
- * @param {string} [target] 目标路径（目录 / 文件）
- * @returns {string|null} 最近带档祖先目录绝对路径 / null
- */
-export function owningProject(target) {
-  if (_projectRootOverride) return resolve(_projectRootOverride)
-  let dir = resolve(target ?? ".")
-  for (;;) {
-    if (existsSync(join(dir, MANIFEST_REL))) return dir
-    const parent = dirname(dir)
-    if (parent === dir) return null // 盘根 → 祖先链无档
-    dir = parent
-  }
-}
-
-/**
- * 项目根解析（**归属 ∨ 发现**——KD-M1-30 / M1-24）：`owningProject(cwd) ?? discoverProjects(cwd).root`。
- * 带档路径与批前**逐字同**；变更面两条（设计 §2.2）：① 项目树内路径（祖先带档）⇒ **该项目根**
- * （批前回落 `resolve(cwd)`——错层建档面，本批修）；② 裸仓恰一 ⇒ 该仓根（零档降级 = 建档机会）。
- * `none` / `ambiguous` ⇒ `null`。调用方（`manifestFilePath` / `docRootBase` / `ledger-db.mjs` /
- * `ledger-cmd.mjs`）**零改**（行为随语义变更——设计 §2.5 键面条 / 错层条）。
- * @returns {string|null} 项目根绝对路径 / null
- */
-export function resolveProjectRoot(cwd) {
-  return owningProject(cwd) ?? discoverProjects(cwd).root
-}
+import { readFileSync, writeFileSync } from "node:fs"
+import { join, resolve } from "node:path"
+import { DEFAULT_MANIFEST, isValidDocRootValue, validateManifest, fillDefaults } from "./manifest-schema.mjs"
+import { MANIFEST_REL, discoverProjects, owningProject, resolveProjectRoot } from "./manifest-discovery.mjs"
+// 同名 re-export（2026-09-29 structure-split-2 · 台账 #620——缝 = 同名再出口）：发现 ∕ 归属族与校验 ∕ 默认值族出档
+// `manifest-discovery.mjs` ∕ `manifest-schema.mjs`；全迁移导出经本档转口——消费者 import 面零改。
+export { MANIFEST_REL, discoverProjects, discoverRepos, owningProject, resolveProjectRoot, _setProjectRootForTest, _resetProjectRootForTest } from "./manifest-discovery.mjs"
+export { DEFAULT_MANIFEST, MANIFEST_SCHEMA, isValidDocRootValue, validateManifest } from "./manifest-schema.mjs"
 
 /**
  * **按用点解析**的读侧单点（KD-M1-24 / M1-30——**非抛错 / 零写 / 无缓存**）：两段合成——
@@ -192,19 +92,6 @@ export function docRootBase(cwd) {
 }
 
 /**
- * `docRoot` 子键**值形态判据**（F7 / KD-M1-6 / KD-M1-8——判据单源）：非空字符串（`trim` 后
- * 非空），或非空数组且元素皆非空字符串（**同款口径**：元素 `trim` 后非空）；其余（空串 /
- * 空白串 / 空数组 / 数组含非串 / 空串 / 空白串元素 / 非串非数组）为非法。
- * @param {unknown} value docRoot 某子键的值
- * @returns {boolean}
- */
-export function isValidDocRootValue(value) {
-  if (typeof value === "string") return value.trim() !== ""
-  if (!Array.isArray(value) || value.length === 0) return false
-  return value.every((p) => typeof p === "string" && p.trim() !== "")
-}
-
-/**
  * `docRoot` 子键值 → **绝对路径数组**（F7 / §2.7 解析管线——全在本模块一处）：展开（串 /
  * 数组统一成列表）→ 逐元素 `trim` + `\` 归一 → `resolve(docRootBase(cwd), p)`（基数 =
  * 项目根，不回退原始 cwd）→ 去重（保序）。非法形态 → `[]`（零根——拒面在 `validateManifest`，
@@ -235,126 +122,6 @@ function writeRoot(cwd) {
  */
 export function manifestFilePath(cwd) {
   return join(writeRoot(cwd), MANIFEST_REL)
-}
-
-/** 默认八键（架构 §2.3 E1 五键 + 三族声明键——KD-M1-31）——整档初始化的写源与缺键 fallback 的补源。 */
-export const DEFAULT_MANIFEST = Object.freeze({
-  version: 1,
-  phase: "initial-dev",
-  docRoot: Object.freeze({
-    requirements: "docs/requirements",
-    specs: "docs/requirements/specs",
-    design: "docs/design",
-    modules: "docs/design/modules",
-    batches: "docs/batches",
-  }),
-  promptsLanding: "thincoder-core/prompts",
-  checkConfig: Object.freeze({
-    scanDirs: Object.freeze(["docs"]),
-    lineWidth: 300,
-    anchors: Object.freeze({ domain: "docs", exclude: Object.freeze(["_archive", "batches"]) }),
-    exemptions: Object.freeze([]),
-  }),
-  // 项目声明三族（2026-09-27 声明载体唯一化批并入——键名 / 形态逐字承前；来源档已退役）。
-  codePaths: Object.freeze(["src"]),
-  index: Object.freeze({ codeExtensions: Object.freeze([]), docExtensions: Object.freeze([]) }),
-  advisor: Object.freeze({ docMap: "", standardsDoc: "" }),
-})
-
-/** 校验判据（模块设计 §2.2）——枚举 / 键存在（fallback 用）；判据单源（KD-M1-4）。 */
-export const MANIFEST_SCHEMA = Object.freeze({
-  $anchor: "docs/core/design/MANIFEST.md",
-  enum: Object.freeze({
-    phase: Object.freeze(["initial-dev", "production"]),
-  }),
-  keys: Object.freeze(Object.keys(DEFAULT_MANIFEST)),
-  nestedKeys: Object.freeze({
-    docRoot: Object.freeze(Object.keys(DEFAULT_MANIFEST.docRoot)),
-    checkConfig: Object.freeze(Object.keys(DEFAULT_MANIFEST.checkConfig)),
-    index: Object.freeze(Object.keys(DEFAULT_MANIFEST.index)),
-    advisor: Object.freeze(Object.keys(DEFAULT_MANIFEST.advisor)),
-  }),
-})
-
-/** 三族声明键**元素层**判据（KD-M1-32）：数组且各元素为非空字符串（`trim` 后非空）；
- *  **数组层**自身可空（`[]` 合法——`codePaths:[]` = 无段名代码面 / `index.*:[]` = 追加零项）。 */
-function isNonEmptyStringArray(v) {
-  return Array.isArray(v) && v.every((e) => typeof e === "string" && e.trim() !== "")
-}
-
-/**
- * 形状校验（模块设计 §2.2）——枚举 / version 数值恒做；**纯函数、零 fs**（原 `{ cwd }`
- * 指针腿已随字段整链裁撤——KD-M1-5 墓志）；不落盘。键存在性入 missingKeys（非拒）：
- * 缺键 = 便利 fallback（补默认值），不是错（与整档缺失两分——KD-M1-2）。
- * @param {object} obj 待校验 manifest 对象
- * @returns {{ok:boolean, errors:string[], missingKeys:string[]}}
- */
-export function validateManifest(obj) {
-  const errors = []
-  const missingKeys = []
-  if (obj === null || typeof obj !== "object" || Array.isArray(obj)) {
-    return { ok: false, errors: ["manifest 顶层必须是 JSON 对象"], missingKeys }
-  }
-  for (const key of MANIFEST_SCHEMA.keys) {
-    if (!(key in obj)) missingKeys.push(key)
-  }
-  for (const [nested, subkeys] of Object.entries(MANIFEST_SCHEMA.nestedKeys)) {
-    const value = obj[nested]
-    if (value === null || typeof value !== "object" || Array.isArray(value)) {
-      missingKeys.push(nested) // 整键缺失/非对象 → 与整键缺同语义（整键补默认）
-      continue
-    }
-    for (const sub of subkeys) {
-      if (!(sub in value)) { missingKeys.push(`${nested}.${sub}`); continue } // 子键路径（AC-3 / T3b）
-      // docRoot 子键值形态（F7 / KD-M1-7）：串 | 非空串数组；非法 → 拒（不静默跳过）。
-      if (nested === "docRoot" && !isValidDocRootValue(value[sub])) {
-        errors.push(`docRoot.${sub} 值形态非法：${JSON.stringify(value[sub])}（须为非空字符串或非空字符串数组——KD-M1-6 / KD-M1-7）`)
-      }
-    }
-  }
-  // 三族声明键形态（KD-M1-32——fail-closed：非法即 errors，不静默跳过；缺键仍在 missingKeys）。
-  const strArrErr = (key, v) => { if (!isNonEmptyStringArray(v)) errors.push(`${key} 值形态非法：${JSON.stringify(v)}（须为非空字符串数组——KD-M1-32）`) }
-  const strErr = (key, v) => { if (typeof v !== "string") errors.push(`${key} 值形态非法：${JSON.stringify(v)}（须为字符串——KD-M1-32）`) }
-  const objErr = (key, v) => (v === null || typeof v !== "object" || Array.isArray(v)
-    ? `${key} 值形态非法：${JSON.stringify(v)}（须为对象——KD-M1-32）` : null)
-  if (obj.codePaths !== undefined) strArrErr("codePaths", obj.codePaths)
-  const idxBad = obj.index === undefined ? null : objErr("index", obj.index)
-  if (idxBad) errors.push(idxBad)
-  else if (obj.index !== undefined) for (const k of ["codeExtensions", "docExtensions"]) if (obj.index[k] !== undefined) strArrErr(`index.${k}`, obj.index[k])
-  const advBad = obj.advisor === undefined ? null : objErr("advisor", obj.advisor)
-  if (advBad) errors.push(advBad)
-  else if (obj.advisor !== undefined) for (const k of ["docMap", "standardsDoc"]) if (obj.advisor[k] !== undefined) strErr(`advisor.${k}`, obj.advisor[k])
-  if (obj.phase !== undefined && !MANIFEST_SCHEMA.enum.phase.includes(obj.phase)) {
-    errors.push(`phase 取值非法："${obj.phase}"（允许：${MANIFEST_SCHEMA.enum.phase.join(" | ")}）`)
-  }
-  if (obj.version !== undefined && (typeof obj.version !== "number" || !Number.isFinite(obj.version))) {
-    errors.push(`version 非法：${JSON.stringify(obj.version)}（须为数值）`)
-  }
-  return { ok: errors.length === 0, errors, missingKeys }
-}
-
-/** 缺键补默认值（module 设计 §2.2 管线）：顶层缺键补默认、嵌套键（docRoot/checkConfig/index/advisor）
- *  子键补默认（与整键缺同语义）；不覆写既有值。深拷贝默认源（structuredClone）——冻结常量永不外泄引用。
- *  三族键的非对象值**原样透传**（不洗白——再校验拒，KD-M1-32）。 */
-function fillDefaults(obj) {
-  const out = structuredClone(DEFAULT_MANIFEST)
-  for (const key of MANIFEST_SCHEMA.keys) {
-    if (!(key in obj)) continue
-    const def = out[key]
-    if (def !== null && typeof def === "object" && !Array.isArray(def)) {
-      const src = obj[key]
-      if (src === null || typeof src !== "object" || Array.isArray(src)) {
-        if (key === "index" || key === "advisor") out[key] = src // 形态错 → 透传（再校验拒）；docRoot/checkConfig 保持默认
-        continue
-      }
-      for (const sub of Object.keys(def)) {
-        if (sub in src) out[key][sub] = src[sub]
-      }
-    } else {
-      out[key] = obj[key]
-    }
-  }
-  return out
 }
 
 /**

@@ -52,8 +52,13 @@ export async function search(memory, query, { limit = 5 } = {}) {
   if (!memory.embedder) return ftsList.slice(0, limit)
 
   // ---- vector channel ----
-  try { await ensureEmbeddings(memory) } catch (e) {
+  let ensured
+  try { ensured = await ensureEmbeddings(memory) } catch (e) {
     console.error(`[memory] embedding ensure failed, falling back to FTS-only: ${e.message}`)
+    return ftsList.slice(0, limit)
+  }
+  if (ensured?.mismatch) { // §6.14 B7 读面零写：模型键失配 ⇒ 本面向量通道降级 FTS-only + 一行可见（失效执行归维护口）
+    console.warn("[memory] embedding model mismatch — vector channel degraded to FTS-only this run (rebuild runs at maintenance: sync tail / reindex)")
     return ftsList.slice(0, limit)
   }
   let qvec
@@ -143,7 +148,9 @@ export function fetchEntry(memory, uid) {
 
 /**
  * Lazy embedding: batch-compute vectors for entries that don't have them yet (slow first time, zero cost thereafter).
- * When the embedding model changes, clear all vectors and rebuild.
+ * When the embedding model changes the READ face performs ZERO writes (§6.14 B7): it only reports the
+ * mismatch back (`{ mismatch }`) so callers degrade to FTS-only; invalidation (clear + re-key) runs at
+ * the maintenance entry `invalidateStaleEmbeddings` (sync tail ∕ /reindex ∕ desktop ∕ VSC build).
  * Guarded by a module-level lock — concurrent fire-and-forget callers share the same promise,
  * so embedding API calls are never duplicated.
  */
@@ -157,39 +164,47 @@ export function ensureEmbeddings(memory) {
 async function _runEnsureEmbeddings(memory) {
   const modelKey = memory.embedder.model
   const stored = memory.db.prepare(`SELECT value FROM meta WHERE key = 'embedding_model'`).get()?.value
-  if (stored !== modelKey) {
-    // Invalidate all three tables + three meta keys in one go, to prevent stale vectors from dimension mismatch
-    memory.db.prepare(`UPDATE entries SET embedding = NULL`).run()
-    memory.db.prepare(`UPDATE files SET embedding = NULL`).run()
-    memory.db.prepare(`UPDATE code_chunks SET embedding = NULL`).run()
-    memory.db.prepare(`UPDATE doc_chunks SET embedding = NULL`).run()
-    const upsert = memory.db.prepare(`INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value`)
-    upsert.run("embedding_model", modelKey)
-    upsert.run("code_embedding_model", modelKey)
-    upsert.run("doc_embedding_model", modelKey)
+  // §6.14 B7 读面零写：失配 ⇒ **不执行**失效（不清向量 ∕ 不落键——执行归维护口）；本面回降级信号。
+  const mismatch = stored !== modelKey
+  if (!mismatch) {
+    const pendingEntries = memory.db.prepare(`SELECT id, title, content FROM entries WHERE embedding IS NULL LIMIT ${EMBED_BATCH_SIZE}`).all()
+    const pendingFiles = memory.db.prepare(`SELECT rowid, title, content FROM files WHERE embedding IS NULL LIMIT ${EMBED_BATCH_SIZE}`).all()
+    if (pendingEntries.length + pendingFiles.length > 0) {
+      const items = [...pendingEntries, ...pendingFiles]
+      const texts = items.map((r) => `${r.title}\n${safeSliceUTF16(r.content, EMBED_TEXT_MAX_LEN)}`)
+      const vecs = await embed(memory.embedder, texts)
+      const updateEntry = memory.db.prepare(`UPDATE entries SET embedding = ? WHERE id = ?`)
+      pendingEntries.forEach((r, i) => updateEntry.run(toBlob(vecs[i]), r.id))
+      const updateFile = memory.db.prepare(`UPDATE files SET embedding = ? WHERE rowid = ?`)
+      pendingFiles.forEach((r, i) => updateFile.run(toBlob(vecs[pendingEntries.length + i]), r.rowid))
+    }
   }
+  // 逐面判定 + 回填（code ∕ doc 面自持模型键——同判据；失配面同样零写回降级信号）
+  const { ensureCodeEmbeddings } = await import("./code-sync.mjs")
+  const { ensureDocEmbeddings } = await import("./docs.mjs")
+  const code = await ensureCodeEmbeddings(memory)
+  const doc = await ensureDocEmbeddings(memory)
+  return { mismatch, code: Boolean(code?.mismatch), doc: Boolean(doc?.mismatch) }
+}
 
-  const pendingEntries = memory.db.prepare(`SELECT id, title, content FROM entries WHERE embedding IS NULL LIMIT ${EMBED_BATCH_SIZE}`).all()
-  const pendingFiles = memory.db.prepare(`SELECT rowid, title, content FROM files WHERE embedding IS NULL LIMIT ${EMBED_BATCH_SIZE}`).all()
-  if (pendingEntries.length + pendingFiles.length === 0) {
-    // No pending memory entries — also backfill code and doc chunk vectors
-    await (await import("./code-sync.mjs")).ensureCodeEmbeddings(memory)
-    await (await import("./docs.mjs")).ensureDocEmbeddings(memory)
-    return
+/**
+ * 维护口失效**执行**（§6.14 B7 ∕ D-MEM25）：模型键失配的面 ⇒ 清该面向量 + 落键（一次性重写）。
+ * **读面禁调**（search ∕ codeSearch ∕ docSearch 只判定降级）；调用点 = 同步尾（codeSync ∕ docSync——
+ * 覆盖 /reindex ∕ 桌面 ∕ VSC 构建三条维护路径）。返回被清的面键（空数组 = 无失配，零写）。
+ */
+export function invalidateStaleEmbeddings(memory) {
+  if (!memory.embedder) return []
+  const modelKey = memory.embedder.model
+  const upsert = memory.db.prepare(`INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value`)
+  const faces = [["embedding_model", ["entries", "files"]], ["code_embedding_model", ["code_chunks"]], ["doc_embedding_model", ["doc_chunks"]]]
+  const invalidated = []
+  for (const [key, tables] of faces) {
+    if (memory.db.prepare(`SELECT value FROM meta WHERE key = ?`).get(key)?.value === modelKey) continue
+    for (const t of tables) memory.db.prepare(`UPDATE ${t} SET embedding = NULL`).run()
+    upsert.run(key, modelKey)
+    invalidated.push(key)
   }
-
-  const items = [...pendingEntries, ...pendingFiles]
-  const texts = items.map((r) => `${r.title}\n${safeSliceUTF16(r.content, EMBED_TEXT_MAX_LEN)}`)
-  const vecs = await embed(memory.embedder, texts)
-
-  const updateEntry = memory.db.prepare(`UPDATE entries SET embedding = ? WHERE id = ?`)
-  pendingEntries.forEach((r, i) => updateEntry.run(toBlob(vecs[i]), r.id))
-  const updateFile = memory.db.prepare(`UPDATE files SET embedding = ? WHERE rowid = ?`)
-  pendingFiles.forEach((r, i) => updateFile.run(toBlob(vecs[pendingEntries.length + i]), r.rowid))
-
-  // After each batch of embeddings, also backfill code and doc chunks
-  await (await import("./code-sync.mjs")).ensureCodeEmbeddings(memory)
-  await (await import("./docs.mjs")).ensureDocEmbeddings(memory)
+  return invalidated
 }
 
 /**

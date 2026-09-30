@@ -74,12 +74,16 @@ export const S = {
   _taskProgress: null,
   _lastUsage: null,
   _lastCtxPct: null,
+  _lastCtxTokens: null, // I16a（#677）：`context X% Yk` 的 `Yk` 绝对值（与 `_lastCtxPct` 同点产出——同源估算）
   // timer-wake 阶段 2（协议 §3.2 行 18 · §6.30.11 VSC 可见面）：`usage` 载荷 `timers { count, expired }`
   // 镜像两计数槽（读面 = status-bar `⏰N` 段）；缺省 / 零在途 ⇒ 段零节点（禁假造——旧 host 无字段同判）。
   _timerCount: 0,
   _timerExpired: 0,
   _planActive: false,
   _goalInfo: null,
+  // goal 面板开合态（#587 · 桌面 #554②对齐）：默认合；🎯 翻态出口写、渲染判据读（跨模块共享 ⇒ 入 S）；
+  // `clearPanels` ∕ 目标缺席不重置（构树重挂不丢态——桌面同语义）。
+  _goalPanelOpen: false,
   // Subagent/consultant activity-stream blocks (ACTIVITY-REWRITE-SIMPLE——簿记 map 删
   // ——单 map 单守卫——键 = 频道名——终态冻结后条目保留作幂等守卫直至 resetActivity)。
   _subBlocks: new Map(),
@@ -95,7 +99,6 @@ export const S = {
   // Panel preview caps (PANEL_PREVIEW_CHARS / PANEL_BLOCK_MAX retired with the
   // side tool panel — output now renders inline in the tool card / advisor block)
   _currentTool: null,  // name of the tool currently executing (CLI status parity)
-  _llmCalls: 0,        // LLM calls this turn (CLI turn-count parity)
   _turnStart: null,    // ms timestamp of the current turn (elapsed parity)
   // 停滞轻显形（WEBVIEW.md §4.7——2026-09-29 批 stall-indicator）：最近一次可见输出事件时刻（三类 =
   // 流式 ∕ 工具面 ∕ 子代理面；回合起刻 = 初始锚）；读面 = status-bar 静默段（`t("status.quiet")`）。

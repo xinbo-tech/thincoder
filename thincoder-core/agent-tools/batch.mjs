@@ -29,6 +29,8 @@
  */
 import { readFileSync, writeFileSync } from "node:fs"
 
+// 描述面 = `tool-docs/batch.md`（#15 描述外置统一——工厂形描述经 DESC 单一解析面，工厂调用期取值）
+import { DESC } from "../tools/shared.mjs"
 import { SEGMENT_BY_ROLE, readBatchStatusLine, sectionHeaderRe, findPlaceholderResidue, placeholderResidueError } from "./batch-skeleton.mjs"
 import { batchDocBases, resolveBatchDocPath } from "./batch-paths.mjs"
 import { closeBatchRecord, createBatchRecord, findInFlightBatch, statusBatchRecord } from "./batch-lifecycle.mjs"
@@ -230,18 +232,7 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
 export function batchTool(batchDoc = null, { review = false } = {}) {
   return {
     name: "batch",
-    description:
-      "Batch-record lifecycle tool (一段一作者 — six append-only sections, one author each). " +
-      "actions: create (depth-0 only — write a new six-section skeleton record; pass path + topic + source) · " +
-      "append (add text to the END of YOUR section — existing lines are never rewritten or deleted) · " +
-      "status (update YOUR section's `**状态行**：` line — the value must carry exactly ONE legal keyword of your section's STATUS_WORDS entry, decorated only by surrounding symbols / a trailing ISO date / whitespace; prose goes to the separate `note` field, which lands as a parenthetical) · " +
-      "close (depth-0 only — freeze the record: §1 → 「已收口 <date>」, every further write is refused). " +
-      "Identity fixes what you may write (段白名单): main agent (depth 0) — append §1/§4/§6, status §1 only, create/close; eng-designer — §2; eng-coder — §5; design review (review binding) — §3. A write outside your own section is refused. " +
-      "Skeleton placeholders (dead literals — `#<编号>` / `<板块>` and the older `<BATCH-ID>` / `<讨论来源>`) in the record header or in your target section block append/status: fill them first (the main agent fills the header right after create); `<§N 模板占位：…>` template lines are legal and never blocked. " +
-      "Target record: sub-agents and design reviews have NO path parameter in practice — the record arrives via the spawn binding / the review instance key (passing path is refused); depth-0 MAY pass path (若传则须可读), omitting it picks the unique in-flight record (0 or ≥2 in flight ⇒ refuse — pass path). " +
-      "A design review's append is stamped by the tool with a `### 轮次 N（评审子代理）` heading — N is tool-counted; do not write your own heading (it would be dropped). " +
-      "Credential values are stripped mechanically before writing (never write a token or designId value). " +
-      "Failures are hard and visible (no silent fallback): if a write is refused or fails, say so in your report — “§× 未写入”.",
+    description: DESC("batch"), // 模型可见文本 = tool-docs/batch.md
     parameters: {
       type: "object",
       properties: {

@@ -310,7 +310,7 @@
 | **迁移动作** | `git mv`（纯 rename）——**参照历史树内容一字不改**（零字节 diff；正文行数与内容均不变） |
 | **零改面** | 既有归档（VSC `design/_archive/` **17 档** · CLI `design/_archive/` **50 档**）原地不动；两产品树其余非 `docs/` 面零触碰 |
 | **发布面** | CLI `thincoder-cli/package.json:25`（`files` = `bin/` · `src/` · `README.md` · `CHANGELOG.md` · `LICENSE`）不含 `docs/` ✓ · VSC `.vscodeignore` 含 `docs/**` ✓ ⇒ **打包零影响**（本批零改两文件） |
-| **机检声明面** | **零改**（实核 `PROJECT-MANIFEST.json:20-33`）：`scanDirs` = `docs` · `anchors.domain` = `docs` · `anchors.exclude` 已含 `_archive` · `lineWidth` = 300 · `exemptions` 空。两产品树本不在源域（§2.5 前提 3）；`_archive` 亦已在 `SKIP_DIRS`（`scripts/doc-check-anchors.mjs:53`）⇒ 迁入即出机检域 |
+| **机检声明面** | **零改**（实核 `PROJECT-MANIFEST.json:24-38`）：`scanDirs` = `docs` · `anchors.domain` = `docs` · `anchors.exclude` 已含 `_archive` · `lineWidth` = 300 · `exemptions` 空。两产品树本不在源域（§2.5 前提 3）；`_archive` 亦已在 `SKIP_DIRS`（`scripts/doc-check-anchors.mjs:53`）⇒ 迁入即出机检域 |
 
 ### 10.3 逐树清单（源目录 → 目标目录；右列档名 = 逐档清单）
 

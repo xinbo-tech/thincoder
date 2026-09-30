@@ -21,7 +21,7 @@
  * 四档结构拆分批（2026-09-18 · VSC-DEBT §12.2.1）：回合执行循环 + controller 工厂迁出至
  * `panel-turn-loop.mjs`；回合阶段三段（provider/模型解析 · 收尾落盘 · 挂起接管）迁出至
  * `panel-turn-stages.mjs`——本档留入口守卫段（`ensurePanelAgent` / `ensureMemoryHandle` 同址——
- * 结构机检 `engine-floor-guard.test.mjs:152-154`）与行加载 / 回调装配段。
+ * 结构机检 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`——W8 契约②判据现载体，单测树重建时回迁端侧单测档）与行加载 / 回调装配段。
  */
 import * as vscode from "vscode"
 import { ensureMemoryHandle } from "../embed-config.mjs"

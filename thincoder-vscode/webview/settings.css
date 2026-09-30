@@ -275,6 +275,12 @@
   font-size: 12px;
 }
 
+/* #640：失败面段标（段名闭集出词；`panel` ∕ 闭集外零节点） */
+.settings-error-banner .settings-error-scope {
+  font-weight: 600;
+  margin-right: 6px;
+}
+
 .settings-card-body input.input-error { border-color: var(--red); }
 
 /* ─── First-run onboarding panel ─────────────── */

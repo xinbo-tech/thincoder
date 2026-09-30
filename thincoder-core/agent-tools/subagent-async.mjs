@@ -34,6 +34,8 @@ import {
 import { cancelAsyncAdvisor, noteMutations, refreshAdvisorQueuedTokens } from "./advisor-async.mjs"
 // #94（VSC 侧并入——异步机械族）：池读取载体吸收 + 墓碑写入单点（原 inline 写收口）。
 import { getAsyncPool, tombstoneOf, writeTombstone } from "./async-settle.mjs"
+// #9（TOOLS.md §6.19）：后台 bash 任务注入器（digest 单点族按 role="bg" 分发到本档）。
+import { injectBgResult } from "./bash-async.mjs"
 
 // agent-tools 共享：并行子代理的审批/继续弹窗经 owner 上命名 promise 链串行——
 // 永不叠弹窗（返回链供调用方 .then 续接）。
@@ -356,6 +358,9 @@ export async function runChildPipeline(child, input, childOpts, childRunOpts, { 
  * two paths (D-S3 "inject once" invariant).
  */
 export async function injectAsyncResult(agent, entry) {
+  // #9：后台 bash 任务族（role="bg"）单列——专用注入器（状态行 + 尾截 + 全量在 log）；
+  // 本函为 digest 注入单点族成员，消费面（run-start pending / 端壳残余注入）零改。
+  if (entry.role === "bg") return injectBgResult(agent, entry)
   const body = entry.error ?? entry.report ?? "(no report)"
   // F-2（BATCH-3-STRUCTURE）+ AGENT-LOOP.md §6.14 D-DG2（群 B 批 B5）：注入前查轮累计（单源）——超限条目不
   // inline 全文，改清单行（全文经 persistOverflowReport 落盘——path 随行）。首条豁免

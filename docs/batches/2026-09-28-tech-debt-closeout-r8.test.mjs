@@ -60,22 +60,25 @@ const tick = () => new Promise((r) => setImmediate(r))
 
 // ─── #429 · VSC 取批面放行（slash 不滞留）────────────────────────────────────
 
-test("#429: 复现读 + 判据置换——分类面仍判 slash（对拍面零改）· 旧 `kind===\"turn\"` 判据本会零消费", async () => {
-  const { planQueuedInput, consumableAction } = await import(vsc("queued-merge.mjs"))
+test("#429: 复现读 + 收编读——分类面仍判 slash（对拍面零改）· 旧 `kind===\"turn\"` 判据本会零消费 ⇒ 取项面 = 核件（计划首动作即消费）", async () => {
+  const { planQueuedInput } = await import(vsc("queued-merge.mjs"))
+  const core = await import(pathToFileURL(join(root, "thincoder-core/queued.mjs")).href)
   const plan = planQueuedInput(["/model", "hello"])
   // 复现读（前置条件已达）：slash 分支分类在盘——取批面旧判据（仅 turn）对之首动作零消费 ⇒ 堵队首。
   assert.equal(plan[0].kind, "slash")
   assert.equal(plan[0].count, 1)
   const legacyTakeable = (a) => a?.kind === "turn" // 旧判据逐字（对照——判据置换即修复面）
   assert.equal(legacyTakeable(plan[0]), false)
-  // 修复读：本端无斜杠面 ⇒ slash 同判可消费（单条 · 保序 · 不合并）。
-  assert.equal(consumableAction(plan[0]), true)
-  assert.equal(consumableAction({ kind: "turn", count: 1 }), true)
-  assert.equal(consumableAction(null), false)
+  // 收编读：统一语义 = 计划首动作即消费（核件 `takeQueuedBatchItem`——slash ⇒ 单条取，保序 · 不合并）。
+  const queue = [{ text: "/model" }, { text: "hello" }]
+  const first = core.takeQueuedBatchItem(queue)
+  assert.equal(first.item?.text, "/model")
+  assert.equal(first.merged, "/model")
+  assert.deepEqual(queue.map((q) => q.text), ["hello"]) // slash 消费后，后条不再被堵
 })
 
-test("#429: 载具取项面——slash 单条直达、后续条目随之可达（不滞留 ∕ 不堵队）", async () => {
-  const { takeQueuedBatchItem } = await import(vsc("queued-pickup.mjs"))
+test("#429: 载具取项面（收编归核）——slash 单条直达、后续条目随之可达（不滞留 ∕ 不堵队）", async () => {
+  const { takeQueuedBatchItem } = await import(pathToFileURL(join(root, "thincoder-core/queued.mjs")).href)
   const queue = [{ text: "/model" }, { text: "hello" }]
   const first = takeQueuedBatchItem(queue)
   assert.equal(first.merged, "/model") // 原文直发（单条合并文本 = 原文）

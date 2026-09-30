@@ -1,5 +1,5 @@
 /* chat-cards.css — 对话流**卡族段**（自 `renderer/chat.css` 四拆 —— 「桌面处理流 · VSC 对齐」批 §2.1 拆档定稿
-   「按面拆：卡族段 / 输入区段 / 小修族尾段」；链序 = theme → chrome → skin → chat → **chat-cards** → chat-composer → chat-fixes → core → pool → settings）。
+   「按面拆：卡族段 / 输入区段 / 小修族尾段」；链序 = theme → chrome → session-list → skin → chat → **chat-cards** → chat-composer → chat-fixes → core-markdown → core → pool → settings）。
    面 = 卡族三类（**皆流内非块节点** —— `docs/desktop/design/UI.md` §1 审批呈现 / 提问呈现 / 计划面行）：
      ① **池面审批操作区**（`views/activity.mjs` 池条目 —— `approvalExits` 描述符消费面；卡面出口已归核卡自带）；
      ② **审批卡**（核 `cards/permission.mjs` 产出 —— R1 直消费）：类名面 = 核产（`.permission-prompt*`），
@@ -36,10 +36,10 @@
    卡壳 / 首行 / 出口行三段逐值照搬（三态：逐项 / 批同壳）；`--vscode-inputValidation-warning*` = 警告角色
    别名（未声明 ⇒ 回退 VSC 默认值 —— 与 VSC 无主题变量时同形）。 */
 .permission-prompt {
-  margin: 12px 0;
+  margin: 0;
   padding: 10px 14px;
   border: 1px solid var(--vscode-inputValidation-warningBorder, rgba(204,167,0,0.35));
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--vscode-inputValidation-warningBackground, rgba(204,167,0,0.06));
   font-size: 12px;
   line-height: 1.5;
@@ -73,10 +73,10 @@
 /* ── 提问卡（核 `cards/question.mjs` 产出；值源 = VSC `base.css:296-366`）──────────────────────
    卡面沿审批卡同族同形（内边距 / 圆角 / 决策面强调色边）；选项列 / 作答行 / 文本控件逐值照搬。 */
 .question-card {
-  margin: 12px 0;
+  margin: 0;
   padding: 10px 14px;
   border: 1px solid var(--accent);
-  border-radius: 8px;
+  border-radius: 0;
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   font-size: var(--vscode-editor-font-size, 14px);
   line-height: 1.5;
@@ -124,7 +124,7 @@
   color: var(--fg);
   background: var(--vscode-input-background, transparent);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 0;
   outline: none;
 }
 .question-input:focus {
@@ -136,7 +136,7 @@
 .plan-card {
   padding: 8px 10px;
   margin-top: 8px;
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: var(--radius);
   background: var(--bg-raised);
 }
@@ -146,7 +146,7 @@
 .goal-card {
   padding: 8px 10px;
   margin-top: 8px;
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: var(--radius);
   background: var(--bg-raised);
 }

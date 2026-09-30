@@ -30,7 +30,7 @@ export function chatModel(state, limit = MAX_RENDER_BLOCKS) {
     inFlight: state?.history?.inFlight === true,
     locale: state?.locale,
     approval: mode === "none" ? [] : awaitingOf(state),
-    // 本键消化行切片（桌面空闲唤醒批 —— `[data-digest]` 组；非块节点）
+    // 本键消化轮集（桌面空闲唤醒批 —— `[data-digest]` 族〔逐轮元素〕；非块节点）
     digest: mode === "none" ? null : digestOf(state),
     // 本键压缩状态行切片（R4 —— `[data-compress]` 单元素四态；非块节点 —— 族首）
     compress: mode === "none" ? null : compressOf(state),
@@ -63,14 +63,14 @@ function awaitingOf(state) {
   return Array.isArray(list) ? list : []
 }
 
-/** 本键消化行切片（源 = `state.digest[活动会话键]` —— `ev:digest` 归约面写，起跑 / 终态两态；缺 / 非载体 ⇒ `null`：
- *  零组 —— 禁假造）。 */
+/** 本键消化轮集（源 = `state.digest[活动会话键]` —— `ev:digest` 归约面写，**多轮记录**（数组——每轮一记录：起跑 ∕ cap ∕ 终态；旧轮驻留）；
+ *  缺 / 非数组 / 空 ⇒ `null`：零组 —— 禁假造）。 */
 function digestOf(state) {
   const key = state?.activeSession ?? null
   const table = state?.digest
   if (key === null || table === null || typeof table !== "object") return null
   const slice = table[key]
-  return slice !== null && typeof slice === "object" ? slice : null
+  return Array.isArray(slice) && slice.length > 0 ? slice : null
 }
 
 /** 本键压缩状态行切片（源 = `state.compress[活动会话键]` —— `ev:compress` 归约面写，四态就地推进；缺 / 非载体 ⇒ `null`：

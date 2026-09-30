@@ -14,8 +14,9 @@
  * 递归回本文件（函数级静态环——模块求值期无顶层调用，环安全——session-slots ↔
  * session.mjs 同款先例）。
  */
-import { runAgent, ContinueError } from "@thincoder/core/agent.mjs"
+import { runAgent } from "@thincoder/core/agent.mjs"
 import { saveSession } from "@thincoder/core/session.mjs"
+import { continueDecision } from "@thincoder/core/agent/continue-decision.mjs" // #677 · I10 续跑判定单源（#127 ④ 双写退役）
 import { ansi, C } from "./ansi.mjs"
 import { buildToolCallbacks, sweepToolBlocks } from "./tool-events.mjs"
 import { freezeAllSubTasks } from "./subagent-blocks.mjs" // freezeReclaimDigestedBlocks 随 AGENT-LOOP-ASYNC-POOL.md §6.8 段迁 suspension-drive.mjs
@@ -32,8 +33,8 @@ import { pickupQueuedAtStepBoundary } from "./queued-pickup.mjs"
  *  never let shutdown hang on the background summary call. */
 const DISTILL_FLUSH_TIMEOUT_MS = 5000
 
-/** Provider 失败面 URL 脱敏（X8——判据与 VSC `panel-turn-loop.mjs:153` 同式；两端各自持有
- *  字面 = 双写登记——单源化须动 VSC/核写域，出本批射程，见批档 §2.3）。 */
+/** Provider 失败面 URL 脱敏（X8——判据与 VSC `panel-turn-loop.mjs` 的 `e.message` 首行脱敏处同式；两端各自持有
+ *  字面 = 双写登记——单源化须动 VSC/核写域，出本批射程）。 */
 const PROVIDER_URL_RE = /https?:\/\/[^\s,)"]+/g
 
 /**
@@ -145,7 +146,7 @@ async function runAgentTurnBody(ctx, text, opts) {
   // AGENT-LOOP-ASYNC-POOL.md §6.8 偏差修复 #3（会话 abort 全覆盖）：回合链 controller 登记。链头 = 非挂起会话内
   // 且非释放窗口期（suspended/_suspPending 均 false）开启的回合——登记表清零；队列
   // 递归回合（_suspPending 置位期）与会话内回合（suspended=true）继续累积。链条内每次
-  // 重建（Ctrl+I 续跑 / ContinueError 续跑 / AUTO 续跑）都登记——挂起会话的 abort 集合
+  // 重建（Ctrl+I 中断续跑 ∕ 撞帽续跑——核 `continueDecision` 两续跑格）都登记——挂起会话的 abort 集合
   // （_sessionAbortAll）必须在会话建立时覆盖进入会话以来的全部 controller：只 abort
   // 最后一个会让旧 controller 下 spawn 的 async children 逃逸中止（偏差 #3）。
   // 链头同时清掉上一链条残留的会话句柄（上一链 pool 先 live 后耗尽、未进入会话即结束
@@ -192,29 +193,26 @@ async function runAgentTurnBody(ctx, text, opts) {
         break // Normal completion, exit loop
       } catch (error) {
         flushStream()
-        if (error.name === "AbortError" || state.controller?.signal.aborted) {
-          const reason = state.controller?.signal?.reason
-          // AGENT-LOOP-ASYNC-POOL.md §6.8 D-C1（round1 #1 区分机制——2026-09-03）：interrupt 两种语义——
-          //  有 message（Ctrl+I 注入——key-modes handleInterruptMode）= 重建 controller
-          //  续跑（既有语义——agent loop 已把消息注入 history，中止的 signal 不能重试）；
-          //  无 message（Ctrl+C 首按停回合——key-handler abort({ interrupt: true })
-          //  不带 message——非挂起 processing 态 / 挂起态 digest·会话内回合）
-          //  = 停回合不续跑——池保留由 agent.mjs 回合收尾的 !interrupt 清池条件排除
-          //  实现（D-C2——agent.mjs 零改动）。
-          if (reason?.interrupt && reason?.message) {
-            state.controller = makeController()
-            resume = true
-            continue
-          }
+        // 续跑判定 = 核单源（#677 · I10——continueDecision；本端零第二分支——#127 ④ 双写退役）。
+        // reason = 回合 controller 的 `signal.reason`（中止面语义原源——D-C1 两义同式）。
+        const reason = state.controller?.signal?.reason
+        const decision = continueDecision(error, { autoTurn, autoApprove: agent.autoApprove, reason })
+        if (decision === "resume") {
+          // AGENT-LOOP-ASYNC-POOL.md §6.8 D-C1（round1 #1 区分机制——2026-09-03）：interrupt 有 message
+          // （Ctrl+I 注入——key-modes handleInterruptMode）⇒ 重建 controller 续跑（agent loop 已把消息注入
+          // history，中止的 signal 不能重试）。
+          state.controller = makeController()
+          resume = true
+          continue
+        }
+        if (decision === "stop") {
           if (reason?.interrupt) {
-            // 无 message interrupt 的注入副作用回滚：agent.mjs 中断三段（chat catch /
-            // response.interrupted / 工具执行中断）无条件把 "[User interrupt: <msg>]"
-            // 落 history，对 message 存在性无守卫——无 message 时成为 "[User interrupt:
-            // undefined]" 垃圾上下文（消息注入语义只属于 Ctrl+I 续跑——停回合无注入
-            // 消息）。D-C2 agent.mjs 零改动约束下在回合层回滚尾部垃圾（确定性：中断
-            // 注入恒为最后一条——break 前 history 不再追加）。partial 部分输出不回滚
-            // ——interrupt 家族语义（§2 Ctrl+I 同款"提交部分输出"）——advisor round1
-            // 🟡 裁定：回滚需区分工具/子代理路径的既有完整消息（history 层不可靠）。
+            // 无 message interrupt 的注入副作用回滚（Ctrl+C 首按停回合——key-handler abort({ interrupt: true })
+            // 不带 message；agent.mjs 中断三段无条件把 "[User interrupt: <msg>]" 落 history，对 message
+            // 存在性无守卫 ⇒ 无 message 时成为 "[User interrupt: undefined]" 垃圾上下文）。D-C2 agent.mjs
+            // 零改动约束下在回合层回滚尾部垃圾（确定性：中断注入恒为最后一条——break 前 history 不再追加）。
+            // partial 部分输出不回滚——interrupt 家族语义（§2 Ctrl+I 同款"提交部分输出"）；advisor round1 🟡
+            // 裁定：回滚需区分工具/子代理路径的既有完整消息（history 层不可靠）。
             const h = agent.history
             while (h?.length > 0 && String(h.at(-1)?.content ?? "") === "[User interrupt: undefined]") h.pop()
           }
@@ -225,15 +223,15 @@ async function runAgentTurnBody(ctx, text, opts) {
           if (opts?._logOutcome) opts._logOutcome.result = "stopped"
           break
         }
-        if (error instanceof ContinueError) {
-          if (autoTurn) {
-            // TURN-CAP-CONTINUE.md §1 #7 / D-TC15（2026-09-26）：digest 无人值守档**不再自续**
-            // （原 AUTO 自动 resume 支退役——静默续期 = F8 禁止；无人可答 ⇒ 撞帽即收口）。
-            // 部分消化留在历史，会话回挂起——结果不丢，只是不再烧轮次。
-            pushLine(t("digest.capStop", { turns: error.turn }), C.warn)
-            if (opts?._logOutcome) opts._logOutcome.result = "stopped"
-            break
-          }
+        if (decision === "cap-stop") {
+          // TURN-CAP-CONTINUE.md §1 #7 / D-TC15（2026-09-26）：digest 无人值守档**不再自续**
+          // （原 AUTO 自动 resume 支退役——静默续期 = F8 禁止；无人可答 ⇒ 撞帽即收口）。
+          // 部分消化留在历史，会话回挂起——结果不丢，只是不再烧轮次。
+          pushLine(t("digest.capStop", { turns: error.turn }), C.warn)
+          if (opts?._logOutcome) opts._logOutcome.result = "stopped"
+          break
+        }
+        if (decision === "ask") {
           pushLabel(`❯ Continue`, ansi.bold + C.warn)
           pushLine(`Ran ${error.turn} turns (limit ${error.turn}). Continue?`, C.warn)
           // Pause to ask: reuse permission mechanism
@@ -257,6 +255,7 @@ async function runAgentTurnBody(ctx, text, opts) {
           state.controller = makeController()
           continue
         }
+        // decision === "error"：其余异常 —— provider 失败面（X8 原语义）——
         // X8（2026-09-20 端差·显示面消差批）：provider 失败面 = 友好首行（判据同 VSC
         // panel-turn-loop.mjs:152-153：原文首行 + URL 脱敏）+ 诊断两行（Provider/Model）+ Retry
         // 询问（复用 permission 机制——同意 ⇒ 重建 controller + resume 重入，与 ContinueError

@@ -1,0 +1,693 @@
+{
+  "at": "2026-09-29T17:14:36.818Z",
+  "sandbox": "C:\\Users\\liwei\\AppData\\Local\\Temp\\e2-probe-5z4ooF",
+  "load": {
+    "key": "e2-probe",
+    "chunksPerAgent": 4000,
+    "toolChunks": 2000,
+    "batch": 8,
+    "thinkChunkSample": "推理流片段 1:0 —— E2 负载逼近（逐 chunk 追加，不合并）。\n",
+    "toolChunkSample": "工具输出行 0 —— E2 负载逼近（逐 chunk 追加，不合并）。\n"
+  },
+  "phases": {
+    "assembly": {
+      "boot": "ok"
+    },
+    "drive": [
+      {
+        "label": "think-21",
+        "id": 21,
+        "kind": "think",
+        "ms": 8760,
+        "chunks": 4000,
+        "startAt": 610,
+        "endAt": 9369,
+        "batches": 500,
+        "maxBatchMs": 1.4,
+        "maxFrameMs": 52.1,
+        "slow": [
+          {
+            "at": 6566,
+            "batchMs": 0.1,
+            "frameMs": 41.4
+          },
+          {
+            "at": 6799,
+            "batchMs": 0.1,
+            "frameMs": 40.1
+          },
+          {
+            "at": 6866,
+            "batchMs": 0,
+            "frameMs": 43
+          },
+          {
+            "at": 6916,
+            "batchMs": 0.1,
+            "frameMs": 40.4
+          },
+          {
+            "at": 7033,
+            "batchMs": 0.2,
+            "frameMs": 40.7
+          },
+          {
+            "at": 7100,
+            "batchMs": 0.1,
+            "frameMs": 40.6
+          },
+          {
+            "at": 7199,
+            "batchMs": 0.1,
+            "frameMs": 41.1
+          },
+          {
+            "at": 7266,
+            "batchMs": 0.1,
+            "frameMs": 41.4
+          },
+          {
+            "at": 7317,
+            "batchMs": 0,
+            "frameMs": 42.1
+          },
+          {
+            "at": 7384,
+            "batchMs": 0,
+            "frameMs": 42.8
+          },
+          {
+            "at": 7433,
+            "batchMs": 0.1,
+            "frameMs": 44.8
+          },
+          {
+            "at": 7499,
+            "batchMs": 0.1,
+            "frameMs": 45.6
+          }
+        ]
+      },
+      {
+        "label": "think-22",
+        "id": 22,
+        "kind": "think",
+        "ms": 8704,
+        "chunks": 4000,
+        "startAt": 10148,
+        "endAt": 18852,
+        "batches": 500,
+        "maxBatchMs": 2.5,
+        "maxFrameMs": 51,
+        "slow": [
+          {
+            "at": 14283,
+            "batchMs": 0.3,
+            "frameMs": 42.2
+          },
+          {
+            "at": 14984,
+            "batchMs": 0.1,
+            "frameMs": 47.4
+          },
+          {
+            "at": 15866,
+            "batchMs": 0.1,
+            "frameMs": 50.2
+          },
+          {
+            "at": 16051,
+            "batchMs": 0,
+            "frameMs": 40.7
+          },
+          {
+            "at": 16166,
+            "batchMs": 0.1,
+            "frameMs": 41.8
+          },
+          {
+            "at": 16217,
+            "batchMs": 0.1,
+            "frameMs": 40.5
+          },
+          {
+            "at": 16266,
+            "batchMs": 0.1,
+            "frameMs": 40.8
+          },
+          {
+            "at": 16599,
+            "batchMs": 0,
+            "frameMs": 42.3
+          },
+          {
+            "at": 16649,
+            "batchMs": 0.2,
+            "frameMs": 51
+          },
+          {
+            "at": 16716,
+            "batchMs": 0.1,
+            "frameMs": 40.5
+          },
+          {
+            "at": 16766,
+            "batchMs": 0.1,
+            "frameMs": 43.8
+          },
+          {
+            "at": 16833,
+            "batchMs": 0.2,
+            "frameMs": 43.2
+          }
+        ]
+      },
+      {
+        "label": "tool-23",
+        "id": 23,
+        "kind": "tool",
+        "ms": 4186,
+        "chunks": 2000,
+        "startAt": 19598,
+        "endAt": 23783,
+        "batches": 250,
+        "maxBatchMs": 0.6,
+        "maxFrameMs": 35.9,
+        "slow": []
+      }
+    ],
+    "equivalence": {
+      "readback": {
+        "21": {
+          "present": true,
+          "className": "advisor-text advisor-think",
+          "kids": 1,
+          "chars": 162890,
+          "expectedChars": 162890,
+          "eq_textContent": true,
+          "eq_range": true,
+          "eq_model": true,
+          "head": "推理流片段 1:0 —— E2 负载逼近（逐 c",
+          "tail": "2 负载逼近（逐 chunk 追加，不合并）。\n"
+        },
+        "22": {
+          "present": true,
+          "className": "advisor-text advisor-think",
+          "kids": 1,
+          "chars": 162890,
+          "expectedChars": 162890,
+          "eq_textContent": true,
+          "eq_range": true,
+          "eq_model": true,
+          "head": "推理流片段 2:0 —— E2 负载逼近（逐 c",
+          "tail": "2 负载逼近（逐 chunk 追加，不合并）。\n"
+        },
+        "23": {
+          "present": true,
+          "className": "advisor-tool-line",
+          "kids": 1,
+          "chars": 76890,
+          "expectedChars": 76890,
+          "eq_textContent": true,
+          "eq_range": true,
+          "eq_model": true,
+          "head": "工具输出行 0 —— E2 负载逼近（逐 chu",
+          "tail": "2 负载逼近（逐 chunk 追加，不合并）。\n"
+        }
+      },
+      "scroll": {
+        "scrollHeight": 66012,
+        "clientHeight": 60,
+        "backToTop": {
+          "scrollTop": 0,
+          "eq_expected": true
+        }
+      }
+    },
+    "longTasks": {
+      "observerAt": 550,
+      "segments": [
+        {
+          "label": "think-21",
+          "start": 610,
+          "end": 9369
+        },
+        {
+          "label": "think-22",
+          "start": 10148,
+          "end": 18852
+        },
+        {
+          "label": "tool-23",
+          "start": 19598,
+          "end": 23783
+        }
+      ],
+      "all": {
+        "count": 0,
+        "entries": []
+      },
+      "streaming": {
+        "count": 0,
+        "max": 0,
+        "entries": []
+      }
+    },
+    "final": {
+      "label": "final",
+      "gc": true,
+      "heapMb": {
+        "used": 3,
+        "total": 4
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 203,
+        "jsEventListeners": 67
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "pid": 17508,
+          "wsMb": 131,
+          "cpu": 2.1694425287561683
+        },
+        {
+          "type": "GPU",
+          "pid": 2656,
+          "wsMb": 101,
+          "cpu": 0.12935038948045452
+        },
+        {
+          "type": "Utility",
+          "pid": 16392,
+          "wsMb": 80,
+          "cpu": 0
+        },
+        {
+          "type": "Tab",
+          "pid": 18332,
+          "wsMb": 145,
+          "cpu": 7.695805195269232
+        }
+      ],
+      "census": {
+        "textNodes": 45,
+        "elements": 90,
+        "rowCount": 3,
+        "rowsTop": [
+          {
+            "cls": "advisor-text advisor-think",
+            "kind": "think",
+            "sub": "21",
+            "kids": 1,
+            "chars": 162890
+          },
+          {
+            "cls": "advisor-text advisor-think",
+            "kind": "think",
+            "sub": "22",
+            "kids": 1,
+            "chars": 162890
+          },
+          {
+            "cls": "advisor-tool-line",
+            "kind": "toolOutput",
+            "sub": "23",
+            "kids": 1,
+            "chars": 76890
+          }
+        ],
+        "subIds": [
+          "21",
+          "22",
+          "23"
+        ],
+        "toolLines": 1
+      }
+    },
+    "legacyAB": {
+      "ms": 141,
+      "curve": [
+        {
+          "chunks": 1000,
+          "textNodes": 1000,
+          "chars": 39890
+        },
+        {
+          "chunks": 2000,
+          "textNodes": 2000,
+          "chars": 80890
+        },
+        {
+          "chunks": 3000,
+          "textNodes": 3000,
+          "chars": 121890
+        },
+        {
+          "chunks": 4000,
+          "textNodes": 4000,
+          "chars": 162890
+        }
+      ],
+      "legacyFinal": {
+        "textNodes": 4000,
+        "chars": 162890,
+        "eq_source": true
+      },
+      "geometry": {
+        "sampleChars": 39890,
+        "textEq": true,
+        "fixed": {
+          "scrollHeight": 16500,
+          "rects": 2000,
+          "width": 336
+        },
+        "legacy": {
+          "scrollHeight": 16500,
+          "rects": 2000,
+          "width": 336
+        }
+      }
+    }
+  },
+  "prefixBaseline": {
+    "source": "2026-09-30-desktop-heap-freeze-readings.json（E1 批内件 · 修前同负载实测）",
+    "load": {
+      "ms": 23356,
+      "chunkCount": 8000,
+      "bigChars": 606208
+    },
+    "domNodes": 8176,
+    "textNodes": 8037,
+    "rows": [
+      {
+        "cls": "advisor-text advisor-think",
+        "kids": 4000,
+        "chars": 186890
+      },
+      {
+        "cls": "advisor-text advisor-think",
+        "kids": 4000,
+        "chars": 186890
+      }
+    ]
+  },
+  "curve": [
+    {
+      "label": "baseline",
+      "gc": true,
+      "heapMb": {
+        "used": 3,
+        "total": 4
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 133,
+        "jsEventListeners": 47
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "pid": 17508,
+          "wsMb": 138,
+          "cpu": 0
+        },
+        {
+          "type": "GPU",
+          "pid": 2656,
+          "wsMb": 101,
+          "cpu": 0
+        },
+        {
+          "type": "Utility",
+          "pid": 16392,
+          "wsMb": 80,
+          "cpu": 0
+        },
+        {
+          "type": "Tab",
+          "pid": 18332,
+          "wsMb": 113,
+          "cpu": 0
+        }
+      ],
+      "census": {
+        "textNodes": 31,
+        "elements": 61,
+        "rowCount": 0,
+        "rowsTop": [],
+        "subIds": [],
+        "toolLines": 0
+      }
+    },
+    {
+      "label": "after-think-21",
+      "gc": true,
+      "heapMb": {
+        "used": 3,
+        "total": 3
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 173,
+        "jsEventListeners": 57
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "pid": 17508,
+          "wsMb": 139,
+          "cpu": 0.2601714028625515
+        },
+        {
+          "type": "GPU",
+          "pid": 2656,
+          "wsMb": 100,
+          "cpu": 0.49871245074651316
+        },
+        {
+          "type": "Utility",
+          "pid": 16392,
+          "wsMb": 80,
+          "cpu": 0.010166239433850172
+        },
+        {
+          "type": "Tab",
+          "pid": 18332,
+          "wsMb": 133,
+          "cpu": 10.572342279558118
+        }
+      ],
+      "census": {
+        "textNodes": 41,
+        "elements": 80,
+        "rowCount": 1,
+        "rowsTop": [
+          {
+            "cls": "advisor-text advisor-think",
+            "kind": "think",
+            "sub": "21",
+            "kids": 1,
+            "chars": 162890
+          }
+        ],
+        "subIds": [
+          "21"
+        ],
+        "toolLines": 0
+      }
+    },
+    {
+      "label": "after-think-22",
+      "gc": true,
+      "heapMb": {
+        "used": 3,
+        "total": 4
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 188,
+        "jsEventListeners": 62
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "pid": 17508,
+          "wsMb": 136,
+          "cpu": 0.1911192021529207
+        },
+        {
+          "type": "GPU",
+          "pid": 2656,
+          "wsMb": 101,
+          "cpu": 0.5999920848504037
+        },
+        {
+          "type": "Utility",
+          "pid": 16392,
+          "wsMb": 80,
+          "cpu": 0.00848239929848579
+        },
+        {
+          "type": "Tab",
+          "pid": 18332,
+          "wsMb": 145,
+          "cpu": 10.946914075090026
+        }
+      ],
+      "census": {
+        "textNodes": 43,
+        "elements": 85,
+        "rowCount": 2,
+        "rowsTop": [
+          {
+            "cls": "advisor-text advisor-think",
+            "kind": "think",
+            "sub": "21",
+            "kids": 1,
+            "chars": 162890
+          },
+          {
+            "cls": "advisor-text advisor-think",
+            "kind": "think",
+            "sub": "22",
+            "kids": 1,
+            "chars": 162890
+          }
+        ],
+        "subIds": [
+          "21",
+          "22"
+        ],
+        "toolLines": 0
+      }
+    },
+    {
+      "label": "after-tool-23",
+      "gc": true,
+      "heapMb": {
+        "used": 3,
+        "total": 4
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 203,
+        "jsEventListeners": 67
+      },
+      "processes": [
+        {
+          "type": "Browser",
+          "pid": 17508,
+          "wsMb": 131,
+          "cpu": 0.07327820639365067
+        },
+        {
+          "type": "GPU",
+          "pid": 2656,
+          "wsMb": 101,
+          "cpu": 0.6305678852687038
+        },
+        {
+          "type": "Utility",
+          "pid": 16392,
+          "wsMb": 80,
+          "cpu": 0
+        },
+        {
+          "type": "Tab",
+          "pid": 18332,
+          "wsMb": 146,
+          "cpu": 6.127594505477018
+        }
+      ],
+      "census": {
+        "textNodes": 45,
+        "elements": 90,
+        "rowCount": 3,
+        "rowsTop": [
+          {
+            "cls": "advisor-text advisor-think",
+            "kind": "think",
+            "sub": "21",
+            "kids": 1,
+            "chars": 162890
+          },
+          {
+            "cls": "advisor-text advisor-think",
+            "kind": "think",
+            "sub": "22",
+            "kids": 1,
+            "chars": 162890
+          },
+          {
+            "cls": "advisor-tool-line",
+            "kind": "toolOutput",
+            "sub": "23",
+            "kids": 1,
+            "chars": 76890
+          }
+        ],
+        "subIds": [
+          "21",
+          "22",
+          "23"
+        ],
+        "toolLines": 1
+      }
+    }
+  ],
+  "verdict": {
+    "nodeBound": true,
+    "textEquivalence": true,
+    "scrollReadback": true,
+    "layoutEquivalence": true,
+    "zeroLongTasks": true,
+    "nodeReduction": true
+  },
+  "comparison": {
+    "before": {
+      "textNodes": 8037,
+      "domNodes": 8176,
+      "rows": [
+        4000,
+        4000
+      ]
+    },
+    "after": {
+      "textNodes": 45,
+      "domNodes": 203,
+      "rows": [
+        1,
+        1,
+        1
+      ]
+    },
+    "legacyAB": {
+      "curve": [
+        {
+          "chunks": 1000,
+          "textNodes": 1000,
+          "chars": 39890
+        },
+        {
+          "chunks": 2000,
+          "textNodes": 2000,
+          "chars": 80890
+        },
+        {
+          "chunks": 3000,
+          "textNodes": 3000,
+          "chars": 121890
+        },
+        {
+          "chunks": 4000,
+          "textNodes": 4000,
+          "chars": 162890
+        }
+      ],
+      "textNodes": 4000
+    }
+  },
+  "ok": true
+}

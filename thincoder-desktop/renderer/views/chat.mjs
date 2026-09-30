@@ -2,14 +2,15 @@
  * chat.mjs — 对话流视图面（`docs/desktop/design/RENDERER.md` §1.1 / §2 / §3 · `docs/desktop/design/UI.md` §1 对话流行）。
  * 三档沿 RENDERER.md §1.1：`chatModel`（纯模型 · 窗出口 —— 更新纪律收核批出档 `renderer/views/chat-model.mjs`）→
  * `chatTree`（纯构树 · 机检面）→ `mountChat`（薄挂载 =
- * 本档唯一清空 / 建树处）；DOM 面另两件 = 帧尾态刷 `syncChrome`（根锚四 + 摘要块 + 审批卡 + 药丸 + **消化行组** + **到期触发行组** + **停止痕** + **台账行组** + **真置焦执行** · 幂等 · 无帧豁免）· 帧尾六步 `settleFrame`（**读数按档裁剪** · `mounted` 记账直取 —— 更新纪律收核批）；
+ * 本档唯一清空 / 建树处）；DOM 面另两件 = 帧尾态刷 `syncChrome`（根锚四 + 摘要块 + 审批卡 + 药丸 + **消化行族** + **到期触发行组** + **停止痕** + **台账行组** + **真置焦执行** · 幂等 · 无帧豁免）· 帧尾六步 `settleFrame`（**读数按档裁剪** · `mounted` 记账直取 —— 更新纪律收核批）；
  * **卡面态刷**住 `renderer/views/chat-cards.mjs`（R3c 拆档 —— 在册预案 = 卡构树拆出；本档经 `syncCards` 调用）；
  * **排队期「待发送块」不在本档**（收正轮 B12 新口径 —— 住**输入行上方带**，硬验收 = 与输入面板恒定邻接；
  * 消费前流内零真块，交付时刻 `ev:queue` 消费回执才入流）；
- * **消化行组**（`[data-digest]` —— 桌面空闲唤醒批）本档自持：非块节点组（沿 `[data-pending]` 先例），在场 ⟺ 本键 `digest`
- * 切片起跑态（`start`）—— `end` ⇒ 先原地更新本键游标行后摘除（单源 = `docs/desktop/design/RENDERER.md` §1.1 两条纪律）；
+ * **消化行族**（`[data-digest]` —— 逐轮元素 · 流内就地：`start` 帧落流末、随流滚动）本档自持：非块节点（沿 `[data-pending]` 先例），在场判据经 `digestPresent`
+ * （**轮集非空** —— 含全终态轮「留存」；**逐轮元素**——每轮三行，旧元素驻留原位，零换代清除；判据 ∕ 同步单源 =
+ * `renderer/views/chat-digest.mjs`；单源 = `docs/desktop/design/RENDERER.md` §1.1 两条纪律）；
  * **到期触发行组**（`[data-timer]` —— timer-wake 阶段 2）：非块节点组 · 在场 ⟺ 本键 `timerNotice` 切片在场，
- * 构树 ∕ 帧尾同刷住 `renderer/views/chat-chrome.mjs`（与消化行组同族）；
+ * 构树 ∕ 帧尾同刷住 `renderer/views/chat-chrome.mjs`（与消化行族同族）；
  * **归档子 agent 块**住 `renderer/views/chat-subagent.mjs`（项 5 新档 —— 壳构树 + 核件回显补装）；
  * 工具卡面与折叠纯函数 `toggleExpanded` 住 `renderer/views/chat-tool.mjs`（§2.3 拆分预案落形 —— 依赖单向：本档 → 它）；**文本面（核 Markdown 呈现）+ 推理块 + 就地更新 + 说话人标签**住 `renderer/views/chat-text.mjs`（R3c · D19；项 1 / 4 增推理画笔分流 + 标签落笔，复制面对齐批迁入 `blockTextOf` —— 依赖单向：本档 → 它）；首启空白态引导面（判据
  * `guideOf` + 构树 `guideNode` + 帧尾只摘态刷 `syncGuide`）住 `renderer/views/chat-guide.mjs`（UI.md §1「批 B 追加注」项 1 —— 依赖单向：本档 → 它）。
@@ -21,40 +22,44 @@
  *      呈现（KD-RC-4 · R3c —— 单源 = `renderer/views/chat-text.mjs`；转义闸在核；原文逐字另存 `[data-raw]` 锚——就地更新判据面）；
  *      **说话人标签**（项 4）：用户块恒出 / 助手族块回合首出（判据 = `turnHeadOf` 单源 —— 活流与回放同判据）——
  *      标签为**块内子节点**（不入块序 / 不改 `data-blocks`），文本落笔归帧尾着装面；
- *   ③ 根子序 = [引导?] → [摘要块?] → 块序列 → [**压缩行**?] → [**消化行组**?] → [**到期触发行组**?] → [**停止痕**?] → [**台账行组**?] → [卡序列?] → [药丸?]（卡序 = 待审批 → 提问 → 计划 —— 单源 =
- *      `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条；五尾组 = 流内非块节点，族内序 = 压缩行〔R4〕→ 消化行组 → 到期触发行组 → 停止痕 → 台账行 —— 落点 = 块序列之后、
- *      卡序列之前；「对齐第三批」项 6 / 12 增停止痕与台账行组，F-置焦增置焦执行点）；块插入点 = 首个**尾组 / 卡节点**之前（`blockAnchor` 单源 —— 组在则块恒居其前 ⇒
+ *   ③ 根子序 = [引导?] → [摘要块?] → 块序列 → [**压缩行**?] → [**消化行族（逐轮元素 · 模型序）**?] → [**到期触发行组**?] → [**停止痕**?] → [**台账行组**?] → [卡序列?] → [药丸?]（卡序 = 待审批 → 提问 → 计划 —— 单源 =
+ *      `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条；**四尾组（压缩行除外）** = 流内非块节点，族内序 = 消化行族 → 到期触发行组 → 停止痕 → 台账行；压缩行〔R4〕单独列名（五名总序 = 压缩行 → 消化行族 → 到期触发行组 → 停止痕 → 台账行）—— 落点 = 块序列之后、
+ *      卡序列之前（**压缩行例外 = 流元素冻结点** —— 创建点定位后新块随流居其下，块插入点不收本行）；「对齐第三批」项 6 / 12 增停止痕与台账行组，F-置焦增置焦执行点）；**活流序 = 就地**（消化行族元素逐轮落流末、随流滚动 —— 块插入点不收族元素）；块插入点 = 首个**尾组（压缩行 ∕ 消化行族除外）∕ 卡节点**之前（`blockAnchor` 单源 —— 尾组在则块恒居其前 ⇒
  *      交接位置零跳；无组无卡 ⇒ `[data-pill]` 之前 · 两锚皆缺 ⇒ 末位）；本档挂载面只管审批族（提问 / 计划
  *      两族归 `renderer/mount-cards.mjs` —— 挂载零交叠，卡序判据共用一序单源）；
  *   ④ 工具卡面（三行）已拆出：`renderer/views/chat-tool.mjs`（批档 §2.3 拆分预案落形）——本档经 `toolCard` 调用；
  *      审批卡面（两形）住 `renderer/views/approval.mjs`（R1 —— 核卡工厂直取 + 端壳四件）——本档经
  *      `approvalCardNode` 调用（依赖单向：本档 → 它）；卡 = **非块节点** ⇒ 与块序列 / 药丸同层不破「DOM 块节点序 ≡ visible 逐位引用等」；
- *      接线两态沿 `renderer/views/sessions.mjs:161` 通则（handlers 给 ⇒ `onClick`；缺 ⇒ `disabled` —— 诚实非死控）；
+ *      接线两态沿 `renderer/views/chat-tool.mjs` 通则（handlers 给 ⇒ `onClick`；缺 ⇒ `disabled` —— 诚实非死控）；
  *   ⑤ 模型形 = `{ state, state.blocks, hidden, following, pendingNew, hasOlder, inFlight, locale, approval, guide, digest, timer,
  *      stopped, ledger, canRetry, configured, compress }`
  *      （`blocks` = 窗出口；`approval` = 本会话待决项 ⇒ 卡面；`guide` = 引导码 —— 非块节点，判据单源 = `chat-guide.mjs`；
- *      `digest` = 本键消化行切片 —— 起跑 / 终态两态，非块节点；**`compress`（R4）** = 本键压缩状态行切片 —— 单元素四态，非块节点；**「对齐第三批」四字段** = `stopped`（停止痕切片在场 ——
+ *      `digest` = 本键消化轮集（多轮记录 —— 每轮起跑 ∕ cap ∕ 终态三态；非块节点；**`compress`（R4）** = 本键压缩状态行切片 —— 单元素四态，非块节点；**「对齐第三批」四字段** = `stopped`（停止痕切片在场 ——
  *      项 6）· `ledger`（本键台账行集 —— 项 12）· `canRetry`（末 `user` 块在场 ⇒ 错误横幅重试钮在场 —— 项 9）·
  *      `configured`（provider 已配 —— 欢迎条文案二值 —— 项 15））。
  * 文案一律经 `t()`（零硬编码；`+` / `−` / 游标字形住 `renderer/chat.css`）；零 `node:` / 零裸包。
  */
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
+// 快照族（波 1 产物 —— #606④ 重挂保真：滚位 ∕ 域内焦点复填）
+import { captureView, restoreView } from "../view-state.mjs"
 import { attachCopyButtons } from "/rc/flow/stream.mjs"
 import { approvalCardNode } from "./approval.mjs"
 // 流内压缩状态行（R4 —— 单元素四态；构树件出档 `renderer/views/compress-status.mjs`，态刷 ∕ 锚居 `chat-chrome.mjs`）。
 import { compressNode } from "./compress-status.mjs"
 import { MAX_RENDER_BLOCKS, compensateTop, plannedMoves, stickToBottom, tailAction } from "./chat-scroll.mjs"
 import { chatModel } from "./chat-model.mjs"
-import { blockAnchor, chromeProps, digestGroupNode, ledgerGroupNode, pillNode, stoppedNode, summaryNode, syncChrome, timerGroupNode } from "./chat-chrome.mjs"
+import { blockAnchor, chromeProps, digestBoundaryOf, digestPresent, digestRoundNode, ledgerGroupNode, pillNode, stoppedNode, summaryNode, syncChrome, timerGroupNode } from "./chat-chrome.mjs"
 import { guideNode } from "./chat-guide.mjs"
 import { blockKey } from "./chat-stream.mjs"
-import { fillSubagentEcho, subagentNode, syncSubagentEcho } from "./chat-subagent.mjs"
+import { fillSubagentEcho, applyEchoOpen, echoOpenSet, subagentNode, syncSubagentEcho } from "./chat-subagent.mjs"
 import { labelNode, paintSpeakerLabels, patchTextBlock, pinReasoning, pinReasoningBlocks, reasoningNode, textFace } from "./chat-text.mjs"
+// 巨块分段挂载窗（E4-JS 支 —— 初窗 ∥ 重挂转移 ∥ 帧尾第 ⑦ 步；机制 ∕ 参数单源 = 批档 §2.15）
+import { captureSegmentWindows, mountSegmentWindows, mountSegments, segmentViewStep } from "./chat-text-segments.mjs"
 import { linkifyResult, patchToolCard, toolCard, wire } from "./chat-tool.mjs"
 
 // 帧尾态刷面出档 `renderer/views/chat-chrome.mjs`（拆分产出 —— 「对齐第三批」触碰批执行在册预案：本档越 300
-// 在册、本批触碰 ⇒ 出档）；本档引调面 = 构树五件（`chromeProps` / `summaryNode` / `digestGroupNode` / `stoppedNode` /
+// 在册、本批触碰 ⇒ 出档）；本档引调面 = 构树六件（`chromeProps` / `summaryNode` / `digestRoundNode` / `stoppedNode` /
 // `ledgerGroupNode` / `pillNode`）+ 插点锚 `blockAnchor` + 帧尾态刷 `syncChrome` ⇒ 依赖单向（本档 → 出档档，无环）。
 
 // ─── 三档之①：纯模型 —— 出档 `renderer/views/chat-model.mjs`（更新纪律收核批拆分产出：越 300 消解）──────
@@ -121,7 +126,7 @@ function blockNode(block, index, hidden, handlers, prev, canRetry = false) {
 
 /** 构树（卡族 = 核卡工厂元素直取 —— R1；审批族入树项由 `approvalCardNode` 产出**真元素**，余仍为描述符 ——
  *  `dom.mjs` `fill` 对真节点直挂 ⇒ 两形同树同序）：根 = 挂载根（props 四锚；宿主 `class` / `data-slot` 归 `renderer/index.html` 骨架）；子序 = [引导节点?] → [摘要块?] → [块序列] →
- *  [待发送块?] 不入本档（N/A）→ [审批卡?] → [药丸?] —— 四尾组（皆非块节点）居块序列之后、卡序列之前（族内序 = 消化行组 → 到期触发行组 → 停止痕 → 台账行）；`none` 帧 = 引导节点唯一子（零**块**节点 · 引导 = 非块节点 ⇒ 不入块序：`docs/desktop/design/UI.md` §1 批 B 追加注项 1）。 */
+ *  [压缩行?]〔R4 —— 流元素冻结点、非尾组成员，另列〕→ [四尾组?] → [待发送块?] 不入本档（N/A）→ [审批卡?] → [药丸?] —— 四尾组（皆非块节点）居块序列之后、卡序列之前（族内序 = 消化行族 → 到期触发行组 → 停止痕 → 台账行）；`none` 帧 = 引导节点唯一子（零**块**节点 · 引导 = 非块节点 ⇒ 不入块序：`docs/desktop/design/UI.md` §1 批 B 追加注项 1）。 */
 export function chatTree(model, handlers = {}) {
   const children = []
   const guide = guideNode(model, handlers)
@@ -129,13 +134,13 @@ export function chatTree(model, handlers = {}) {
   if (model.state !== "none") {
     if (model.hidden > 0) children.push(summaryNode(model, handlers))
     if (model.state === "flow") children.push(...model.blocks.map((block, index) => blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true)))
-    // 流内压缩状态行（R4 —— 非块节点 · 族首；在场 ⟺ 本键切片在场（四态皆在场））
+    // 流内压缩状态行（R4 —— 非块节点 · 族首 · 流元素冻结点（创建点定位 —— 新块随流居其下）；在场 ⟺ 本键切片在场（四态皆在场））
     if (model.compress !== null) children.push(compressNode(model.compress))
-    // 流内消化行组（非块节点 —— 块序列之后、卡序列之前；在场 ⟺ 本键切片起跑态）
-    if (model.digest?.status === "start") children.push(digestGroupNode(model.digest))
-    // 流内到期触发行组（非块节点 —— 块序列之后；在场 ⟺ 本键切片在场；族内序 = 消化行组 → 本组 → 停止痕）
+    // 流内消化行族（逐轮元素 · 模型序复列；非块节点 —— 块序列之后、卡序列之前；在场判据经 `digestPresent`（轮集非空），判据单源）
+    if (digestPresent(model.digest)) children.push(...model.digest.map(digestRoundNode))
+    // 流内到期触发行组（非块节点 —— 块序列之后；在场 ⟺ 本键切片在场；族内序 = 消化行族 → 本组 → 停止痕）
     if (model.timer !== null) children.push(timerGroupNode(model.timer))
-    // 停止痕（项 6 —— 流尾非块节点；族内序 = 消化行组 → 停止痕 → 台账行）
+    // 停止痕（项 6 —— 流尾非块节点；族内序 = 消化行族 → 停止痕 → 台账行）
     if (model.stopped === true) children.push(stoppedNode())
     // 台账行组（项 12 —— 流尾非块节点组；行集源 = 本键切片）
     if (Array.isArray(model.ledger) && model.ledger.length > 0) children.push(ledgerGroupNode(model.ledger))
@@ -163,9 +168,10 @@ function attachCodeCopies(root) {
 }
 
 /** 新块节点着装（帧尾尾段挂载 / 重建 / 前插三径内 —— **先于读数 `t0` / `t1`** ⇒ 高度计入本帧尾 / 头侧）：
- *  说话人标签落笔（项 4）+ 归档块核件回显补装（项 5）+ 推理块首帧钉底（项 1）+ 工具卡结果区链接着装（相抵②）
- *  + **代码块复制钮（gating —— 逐新节点，禁帧级全根扫）**。 */
-function dressNode(node, block) {
+ *  **巨块初窗（E4-JS —— 首步：先于一切读数）** + 说话人标签落笔（项 4）+ 归档块核件回显补装（项 5）
+ *  + 推理块首帧钉底（项 1）+ 工具卡结果区链接着装（相抵②）+ **代码块复制钮（gating —— 逐新节点，禁帧级全根扫）**。 */
+function dressNode(node, block, following = false) {
+  mountSegments(node, block, following)
   paintSpeakerLabels(node)
   fillSubagentEcho(node, block)
   if (block?.kind === "reasoning") pinReasoning(node)
@@ -174,35 +180,43 @@ function dressNode(node, block) {
 }
 
 /** 薄挂载（本档唯一清空 / 建树处）：根描述符四锚复制到宿主（**保留** `data-slot`）⇒ `clear` ⇒ 子节点入位。
- *  返回 `{ model, mounted }`；容器缺位 ⇒ 模型照给、零节点（非重挂帧的对齐输入 = 空序）。 */
+ *  返回 `{ model, mounted }`；容器缺位 ⇒ 模型照给、零节点（非重挂帧的对齐输入 = 空序）。
+ *  **#606④ 重挂保真**：重建前捕快照（滚位 ∕ 域内焦点）+ 归档块展开集 ⇒ 重建后展开集复填（高度先落）、快照复填。 */
 export function mountChat(root, state, handlers = {}, limit = MAX_RENDER_BLOCKS) {
   const model = chatModel(state, limit)
   if (!root || typeof root.setAttribute !== "function") return { model, mounted: [] }
+  const snap = captureView(root)
+  const openSet = echoOpenSet(root)
+  const segWindows = captureSegmentWindows(root) // 重挂转移：先捕旧账（后建新树）
   const tree = build(chatTree(model, handlers))
   for (const name of tree.getAttributeNames()) root.setAttribute(name, tree.getAttribute(name))
   clear(root)
   for (const child of [...tree.childNodes]) root.append(child)
+  mountSegmentWindows(root, model, segWindows) // 批量初窗 + 重挂转移复填（先于一切读数步）
   syncSubagentEcho(root, model)
+  applyEchoOpen(root, openSet) // 展开集复填（高度先落 —— 先于滚位复填）
   paintSpeakerLabels(root)
   // 重挂径推理块同「新建即落底」（尾段三径归 `dressNode`）
   pinReasoningBlocks(root)
   attachCodeCopies(root)
+  restoreView(root, snap) // 滚位末写（域内焦点同复填）
+  if (model.following === true) stickToBottom(root) // 跟滚 ⇒ 贴底覆盖（与帧尾三写同律）
   const mounted = mountedOf(root, model.blocks)
   // 工具卡结果区链接着装（相抵② 渲染半 —— 重挂径全根逐块；尾段三径归 `dressNode`）
   for (const item of mounted) if (item.block?.kind === "tool") linkifyResult(item.node, item.block)
   return { model, mounted }
 }
 
-/** 尾段挂载（帧尾第 ① 步 · 先于读数）：逐枚建块 ⇒ 插点 = `blockAnchor`；新建即着装（标签 / 归档回显 / 推理钉底 ——
- *  先于 `t0` ⇒ 高度计入本帧尾侧）。 */
+/** 尾段挂载（帧尾第 ① 步 · 先于读数）：逐枚建块 ⇒ 插点 = 常规块 `blockAnchor`（流末——轮行之下）∥ 归档块
+ *  `digestBoundaryOf`（末轮元素之前——唯经块序守卫；守卫不过 ⇒ 常规块插入点 —— 挂载点**逐枚现读**）；新建即着装
+ *  （标签 / 归档回显 / 推理钉底 —— 先于 `t0` ⇒ 高度计入本帧尾侧）。 */
 function mountTail(root, model, plan, handlers) {
   const start = model.blocks.length - plan.tail.length
-  const anchor = blockAnchor(root)
   plan.tail.forEach((block, step) => {
     const index = start + step
     const node = build(blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true))
-    root.insertBefore(node, anchor)
-    dressNode(node, block)
+    root.insertBefore(node, block?.kind === "subagent" ? digestBoundaryOf(root, blockAnchor(root)) : blockAnchor(root))
+    dressNode(node, block, model.following === true)
   })
 }
 /** 流式锚同刷（就地更新面）：`assistant` ∧ `streaming` ⇒ 落 `data-streaming`，否则摘（残锚不留）。 */
@@ -211,19 +225,20 @@ function setStreaming(node, on) {
   else node.removeAttribute?.("data-streaming")
 }
 
-/** 就地更新尾块（第 ① 步 · `patch` 档）：kind 变（tool ⇄ 文本族 ⇄ 他型）⇒ 单块重建（节点形变非就地可改）；
+/** 就地更新尾块（第 ① 步 · `patch` ∕ `patch-append` 档）：`patchAt` = 就地更新位（缺省 = 尾位 `blocks.length−1`；
+ *  组合档 = `visible.length−1−appended`）；kind 变（tool ⇄ 文本族 ⇄ 他型）⇒ 单块重建（节点形变非就地可改）；
  *  `tool` 卡 ⇒ 就地更新（`patchToolCard` —— 头行分段刷 + 结果区 O(1) 追加，**节点身份不变** —— #605 消）；
  *  文本族 ⇒ `patchTextBlock` + 流式锚同刷 + 重渲帧补代码块复制钮（gating —— 逐新节点，禁帧级全根扫）；
  *  非尾块零触碰。`mounted` = 上一帧记账（**尾节点直取 —— 零全块扫**）。 */
-function patchTail(root, model, handlers, mounted) {
-  const index = model.blocks.length - 1
+function patchTail(root, model, handlers, mounted, patchAt = model.blocks.length - 1) {
+  const index = patchAt
   const block = model.blocks[index]
   const node = mounted.length > 0 ? mounted[mounted.length - 1].node : null
   if (!node || !block) return
   if (node.getAttribute?.("data-block-kind") !== block.kind) {
     const fresh = build(blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true))
     node.replaceWith(fresh)
-    dressNode(fresh, block)
+    dressNode(fresh, block, model.following === true)
     return
   }
   if (block.kind === "tool") {
@@ -249,14 +264,15 @@ function headMoves(root, model, plan, handlers, mounted) {
     const node = build(blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true))
     root.insertBefore(node, anchor)
     // 前插 = 头侧 ⇒ 着装先于 `t1`（高度入补偿算式）
-    dressNode(node, block)
+    dressNode(node, block, model.following === true)
   }
   return evicted + prepends
 }
 
 /** 帧尾六步（非重挂帧 · 判据面 = `docs/desktop/design/RENDERER.md` §3 帧尾滚动作 —— **读数按档裁剪**：
  *  KD-RC-9 ② 禁逐 chunk 强制布局——跟滚帧零读（贴底 = 写超值）· 非跟滚 ∧ 头动作 > 0（补偿径）才读 `t0` ∕ `t1`）：
- *  ① 挂尾段（append / reset 档；`patch` 档就地更新；`none` 档 ∅）② 读数 `t0`（仅补偿径）③ `syncChrome`
+ *  ① 挂尾段（append / reset 档；`patch` 档就地更新；`patch-append` 档就地更新 `plan.patchAt` + 挂追加段 —— 同帧两动作；
+ *  `none` 档 ∅）② 读数 `t0`（仅补偿径）③ `syncChrome`
  *  ④ 头动作 ⑤ 读数 `t1`（仅补偿径）⑥ 帧尾三写（贴底 / 补偿算式 / 零写）。`mounted` = 上一帧记账（对齐步输入
  *  —— 尾 / 头节点直取）；返回新 `mounted`（由 DOM 重建 —— 对齐步下帧输入）。 */
 export function settleFrame(root, model, scroll, align, tier, handlers = {}, mounted = []) {
@@ -264,6 +280,10 @@ export function settleFrame(root, model, scroll, align, tier, handlers = {}, mou
   const plan = align ?? { evict: 0, prepend: 0, tail: [], ok: true }
   if (tier === "append" || tier === "reset") mountTail(root, model, plan, handlers)
   else if (tier === "patch") patchTail(root, model, handlers, mounted)
+  else if (tier === "patch-append") {
+    patchTail(root, model, handlers, mounted, plan.patchAt) // 尾块终稿：就地更新（节点身份存续）
+    mountTail(root, model, plan, handlers) // 追加段挂载（`plan.tail` —— 组合帧第二动作）
+  }
   const readMetrics = () => (typeof scroll?.readMetrics === "function" ? scroll.readMetrics() : {
     scrollTop: Number.isFinite(root.scrollTop) ? root.scrollTop : 0,
     scrollHeight: Number.isFinite(root.scrollHeight) ? root.scrollHeight : 0,
@@ -280,5 +300,6 @@ export function settleFrame(root, model, scroll, align, tier, handlers = {}, mou
     const t1 = readMetrics()
     root.scrollTop = compensateTop({ prevTop: t0.scrollTop, prevHeight: t0.scrollHeight, nextHeight: t1.scrollHeight })
   }
+  segmentViewStep(root, model, mounted) // 第 ⑦ 步（六步之后 —— 巨块段窗：独立显式补偿）
   return mountedOf(root, model.blocks)
 }

@@ -75,9 +75,9 @@ function stripTruncatedToolArgs(m) {
  *
  *  MODEL-MERGE-SESSION（F-4）applySession 重写为两支 + 删旧支（评审 #7/#9 措辞——防
  *  "三支"误读）：
- *  ① 槽 provider 存在 → provider/model 按槽值设（双字段恒非空——模型取 data.activeModel，
- *     legacy 槽 null/空串回该渠道默认模型 `providers[].model`（单值——2026-09-10 MODEL-SELECTION
- *     v2；老 models[] 首候选形态已退场））+ 重算
+ *  ① 槽 provider 存在 → provider/model 按槽值设（双字段恒非空——模型取 data.activeModel（**串值**；
+ *     非串 ∕ null ∕ 空串 = 未登记 ⇒ 回该渠道默认模型 `providers[].model` 单值——2026-09-10 MODEL-SELECTION
+ *     v2；老 models[] 首候选形态已退场）+ 重算
  *     compactThreshold（auto 时——按恢复后模型）——不看 config（defaultModel 只是新会话起点）；
  *  ② 槽 provider 没了 → D-S3 保留——静默保持现状（config 有效则有效——两方都无效由调用侧
  *     复验 validateProvider 弹重选）。
@@ -167,15 +167,17 @@ export function applySession(agent, data, opts = {}) {
     //    空槽 model 恒有值，provider.model 键不缺失）
     const prevName = agent.activeProvider
     const prevModel = agent.activeModel ?? null
-    const slotModel = data.activeModel || slotProvider.model
+    // #638（adoption 边界归一）：非串 `data.activeModel`（外端脏载 / 手工档）= 未登记 ⇒ 回退渠道
+    // 模型——类型脏值不入两状态字段（镜下方阈值重算门 ∕ 档位块 ∕ VSC `panel-turn-stages.mjs:53` 同形门）。
+    const slotModel = (typeof data.activeModel === "string" && data.activeModel) ? data.activeModel : slotProvider.model
     const switched = prevName !== slotProvider.name || prevModel !== slotModel
     agent.activeProvider = slotProvider.name
     agent.activeModel = slotModel
     agent.provider = { ...slotProvider }
     if (slotModel) agent.provider.model = slotModel
     // 重算 compactThreshold（auto 时——阈值跟模型走；原在 bin 的 switched 分支——收拢本处）。
-    // 非串 model（外端脏载 / 手工档）⇒ 不重算：`resolveCompactThreshold → providerSpec` 链在非串
-    // model 上 `.toLowerCase` 可抛（#441④ 抛错径收敛）；与下方档位块同口径——类型脏载不中断恢复。
+    // 非串 model（外端脏载 / 手工档）⇒ 不重算（#638 后查表族恒 total，本门保留为同形防御——与
+    // 下方档位块同口径）；类型脏载不中断恢复。
     if (switched && agent.config?.agent?.compactThresholdAuto && typeof agent.provider.model === "string" && agent.provider.model) {
       agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
     }
@@ -368,8 +370,8 @@ export function slotOccupancy(cwd, slot) {
  *  读数百分数（整数）。与 `applySession` 后读数**同源同式**（四事同判——组合既有件，零新公式）：
  *  ① 线选 = `contextHistory` 非空取之，否则 `history` 经 `stripTruncatedToolArgs` 回退（同 applySession）；
  *  ② 回声归并 = `mergeAdjacentAssistantEchoes`（同 applySession 装线前一步）；
- *  ③ 渠道合并 = `providers` 命中 `data.activeProvider` ⇒ `{ ...entry, model: data.activeModel || entry.model }`
- *     （模型合并支 ① 同判）；未命中 ⇒ `fallback`（支 ②「静默保持现状」的装配口径 = `loadConfig().provider`）；
+ *  ③ 渠道合并 = `providers` 命中 `data.activeProvider` ⇒ 串值 `activeModel` 覆盖 `entry.model`（非串 ∕
+ *     空串 = 未登记 ⇒ 回退 `entry.model`——模型合并支 ① 同归一）；未命中 ⇒ `fallback`（支 ②「静默保持现状」的装配口径 = `loadConfig().provider`）；
  *  ④ 公式 = `historyPercent`（`thincoder-core/token-window.mjs`——与 CLI 状态行 / VSC 同式）。
  *  **零副作用**：`data` / `providers` / `fallback` 皆入参（不读盘、不写盘、不改任何进程态）；
  *  `data` 非对象 ⇒ `0`（与空历史同值——「非正 ⇒ 零节点」显示门归端侧，沿 `historyPercent` 空历史口径）。 */
@@ -380,6 +382,9 @@ export function sessionReading(data, { providers, fallback } = {}) {
   const machine = (Array.isArray(ch) && ch.length > 0) ? ch : full.map(stripTruncatedToolArgs)
   const line = mergeAdjacentAssistantEchoes(machine)
   const entry = data.activeProvider ? providers?.find((pr) => pr.name === data.activeProvider) : null
-  const provider = entry ? { ...entry, model: data.activeModel || entry.model } : fallback
+  // #638：非串 `activeModel` 归一（与 applySession 模型合并支 ① 同判）——脏值不达 `historyPercent`。
+  const provider = entry
+    ? { ...entry, model: (typeof data.activeModel === "string" && data.activeModel) ? data.activeModel : entry.model }
+    : fallback
   return historyPercent(line, provider)
 }

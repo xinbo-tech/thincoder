@@ -67,7 +67,7 @@ export async function memoryCommand(memory, args, opts = {}) {
         return 1
       }
       try {
-        const result = sweepMemory(memory, { origin: parsed.origin, confirm: parsed.confirm, dbPath: opts.dbPath ?? loadConfig().memory.dbPath })
+        const result = sweepMemory(memory, { origin: parsed.origin, path: parsed.path, confirm: parsed.confirm, dbPath: opts.dbPath ?? loadConfig().memory.dbPath })
         for (const line of formatSweepReport(result)) console.log(line)
         if (result.dryRun) console.log("(dry-run——零写；要落写加 --confirm)")
       } catch (e) {
@@ -82,23 +82,27 @@ export async function memoryCommand(memory, args, opts = {}) {
   }
 }
 
-const SWEEP_USAGE = "Usage: thincoder memory sweep [--origin <o>] [--dry-run|--confirm]"
+const SWEEP_USAGE = "Usage: thincoder memory sweep [--origin <o>] [--path <sub>] [--dry-run|--confirm]"
 
-/** sweep 参数面：`--origin <o>` / `--origin=<o>` 两形 + 裸 `--dry-run` / `--confirm`（缺省 = 干跑；两者互斥）。 */
+/** sweep 参数面：`--origin <o>` ∕ `--path <sub>`（各两形：空格 ∕ `=`）+ 裸 `--dry-run` ∕ `--confirm`
+ *  （缺省 = 干跑；两者互斥）；`--path` 须与 `--origin` 同用（§6.14 面①-3 存量剪枝窄化档）。 */
 function parseSweepArgs(rest) {
-  let origin = null, sawDry = false, sawConfirm = false
+  let origin = null, path = null, sawDry = false, sawConfirm = false
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i]
-    const eq = a.match(/^--origin=(.*)$/)
-    if (eq) { origin = eq[1]; continue }
+    const eq = a.match(/^--(origin|path)=(.*)$/)
+    if (eq) { if (eq[1] === "origin") origin = eq[2]; else path = eq[2]; continue }
     if (a === "--origin") { origin = rest[++i] ?? ""; continue }
+    if (a === "--path") { path = rest[++i] ?? ""; continue }
     if (a === "--dry-run") { sawDry = true; continue }
     if (a === "--confirm") { sawConfirm = true; continue }
     return { error: `Unknown argument: ${a}` }
   }
   if (origin === "") return { error: "--origin 需要一个非空路径" }
+  if (path === "") return { error: "--path 需要一个非空前缀" }
+  if (path !== null && origin === null) return { error: "--path 须与 --origin 同用" }
   if (sawDry && sawConfirm) return { error: "--dry-run 与 --confirm 互斥" }
-  return { origin, confirm: sawConfirm }
+  return { origin, path, confirm: sawConfirm }
 }
 
 /** Layer directories for project/team file deletion — derived from the same config the agent uses. */

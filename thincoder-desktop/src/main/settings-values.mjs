@@ -4,7 +4,8 @@
  *
  * 面：遮罩单点（`MASK` = 核 `MASKED` ∕ `maskKey` —— 判据 = 核**导出** `isSensitiveKey`，明文零下发）· 配置档存在性
  * （`isConfigured` = `existsSync(_configPath())`）· 叶展平 / 深遮罩 / 字段表（`kindOf` ∕ `flatten` ∕
- * `maskDeep` ∕ `agentFields`）· 点分路径写（`setKeyPath`）· 深比较（`deepEqual` —— 档位判据用）。
+ * `maskDeep` ∕ `agentFields`）· **slot 权威键单源**（`SLOT_AUTHORITY_PATHS` —— S14a 随迁：读面经 `agentFields` 第五键
+ * `slotAuthority` 标注 ∕ 写面拒码取用）· 点分路径写（`setKeyPath`）· 深比较（`deepEqual` —— 档位判据用）。
  * 单一 owner = 本档；`settings.mjs` ∕ `providers.mjs` 经原 import 面取（settings.mjs 同名 re-export，
  * 导出面零改）。
  * 纪律：零自写盘（写面唯一执行体 = 核 `writeConfigAtomic`）；核未导出的 helper 才端侧自持
@@ -62,13 +63,21 @@ function maskDeep(prefix, value) {
   return maskKey(prefix, value)
 }
 
-/** 读面字段表：`{ path, value, sensitive, kind }`——值一律经 `maskDeep` 出口（遮罩单点）。 */
+/** **S14a（自 `settings.mjs` 随迁 —— 单源随迁：主进程 ∕ 渲染面同此一份）**：slot 权威键（会话槽面键 ——
+ *  唯一写面 = `session:flags` 模式位槽写）：通用保存不可达
+ *  （VSC 侧同裁 = `agent.engineering` 白名单删项 ∕ `agent.advisor.guard` 非 payload 字段）；拒码 `slot-authority`。
+ *  读面标注径 = `agentFields` 第五键（渲染面据此收窄为只读行 —— #617-CH；写面拒位住 `settings.mjs`）。 */
+export const SLOT_AUTHORITY_PATHS = Object.freeze(["agent.advisor.guard", "agent.engineering"])
+
+/** 读面字段表：`{ path, value, sensitive, kind, slotAuthority }`——值一律经 `maskDeep` 出口（遮罩单点）；
+ *  `slotAuthority` = 会话槽权威键族标注（读面权威位 —— 渲染面呈只读行，不入提交 patch）。 */
 export function agentFields(config) {
   return flatten(maskDeep("", config)).map(({ path, value }) => ({
     path,
     value,
     sensitive: isSensitiveKey(path),
     kind: kindOf(value),
+    slotAuthority: SLOT_AUTHORITY_PATHS.includes(path),
   }))
 }
 

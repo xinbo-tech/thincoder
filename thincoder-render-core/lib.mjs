@@ -62,8 +62,27 @@ export function patchLineType(line) {
   return "same"
 }
 
+/** 状态位族单行语法（**单源**——显示面 `toolStatusText` ∥ 判据面 `toolFailureStatus` 同引）。 */
+const STATUS_LINE = /^\((?:exit code (\d+)|killed: (.+)|spawn failed)\)$/
+
+/** 状态位族**展示文本**（显示面——#677 · I16b：含成功面 `(exit code 0)`，CLI 标尺归一）：**独立成行**的
+ * 状态位 ⇒ 首个命中标记文本（`N` 含 0）；无命中 ⇒ `""`。判据面 `toolFailureStatus` 语义不变、自持扫描。 */
+export function toolStatusText(text) {
+  const t = String(text ?? "").trim()
+  if (!t) return ""
+  for (const line of t.split("\n")) {
+    const m = STATUS_LINE.exec(line.trim())
+    if (!m) continue
+    if (m[1] === undefined && m[2] === undefined) return "(spawn failed)"
+    if (m[1] === undefined) return `(killed: ${m[2]})`
+    return `(exit code ${m[1]})`
+  }
+  return ""
+}
+
 /**
- * 工具结果终止状态行（F-W16 判据单源的一部分——与 `isToolFailure` 同住一处，零第二份语法）：
+ * 工具结果终止状态行（F-W16 判据单源的一部分——与 `isToolFailure` 同住一处，零第二份语法；显示面
+ * 孪生 = `toolStatusText`，语法定于 `STATUS_LINE`）：
  * **独立成行**的 `(exit code N≠0)` / `(killed: …)` / `(spawn failed)` ⇒ 返回该标记文本
  * （`"(exit code 1)"` / `"(killed: timeout 400ms)"` / `"(spawn failed)"`）；成功面 `(exit code 0)` /
  * 非独立成行 / `(stopped)`（`execute` 工具的用户中止自报形——不在判据集内）⇒ `""`。
@@ -74,7 +93,7 @@ export function toolFailureStatus(text) {
   const t = String(text ?? "").trim()
   if (!t) return ""
   for (const line of t.split("\n")) {
-    const m = /^\((?:exit code (\d+)|killed: (.+)|spawn failed)\)$/.exec(line.trim())
+    const m = STATUS_LINE.exec(line.trim())
     if (!m) continue
     if (m[1] === undefined && m[2] === undefined) return "(spawn failed)"
     if (m[1] === undefined) return `(killed: ${m[2]})`

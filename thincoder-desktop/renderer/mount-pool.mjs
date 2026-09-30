@@ -14,6 +14,8 @@ import { store as defaultStore, togglePool } from "./store.mjs"
 import { attachActivityNew } from "./views/activity-new.mjs"
 import { respondApproval } from "./views/approval.mjs"
 import { mountPool } from "./views/activity.mjs"
+// 快照族（波 1 产物 —— #606④ 包络：池宿主滚位 ∕ 域内焦点复填）
+import { captureView, restoreView } from "./view-state.mjs"
 
 export const POOL_SLOT = '[data-slot="pool"]' // 右列容器锚（= 滚动容器自身 —— 根描述符 props 复制到宿主）
 /** 重挂触发切片（`activeSession`：折叠态按会话记忆 + 块表键〔子 agent 面板随已载入页〕——　会话模型轮 R13：
@@ -84,12 +86,16 @@ export function attachPool(host) {
   /** 折叠出口（`data-action="pool:toggle"` · 回执 = 本会话键）：纯动作 ⇒ 翻态；非串 / 无变化 ⇒ 原引用 ⇒ 零通知。 */
   const onTogglePool = (key) => defaultStore.set(togglePool(defaultStore.get(), key))
   /** 右栏重挂（挂载面**纯读**现态；容器缺位 ⇒ `mountPool` 空转）+ ⏹ 委托注册（幂等 —— 一次）+ 计数贴接线
-   *  （R10 E6 —— 幂等；挂载面帧面重挂与事件接线两事分立）。 */
+   *  （R10 E6 —— 幂等；挂载面帧面重挂与事件接线两事分立）。**#606④ 包络**：帧前捕快照（池宿主滚位 ∕ 域内焦点）
+   *  ⇒ 帧后复填；滚位仅在**未跟底**（`_poolPin === false`）时复填 —— 跟底帧尾钉底已写位，复填会夺位（R10 E6 不反）。 */
   const paintPool = (state = defaultStore.get()) => {
     const root = document.querySelector(POOL_SLOT)
     bindSubagentStop(root, host)
     attachActivityNew(root)
-    return mountPool(root, state, { onApprove, onTogglePool })
+    const snap = captureView(root)
+    const model = mountPool(root, state, { onApprove, onTogglePool })
+    if (snap !== null) restoreView(root, root._poolPin === false ? snap : { scrolls: [], drafts: snap.drafts, focus: snap.focus })
+    return model
   }
   return { paintPool, handlers: { onApprove, onTogglePool } }
 }

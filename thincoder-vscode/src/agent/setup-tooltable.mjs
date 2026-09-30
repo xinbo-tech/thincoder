@@ -9,7 +9,8 @@
  * `tool-table.mjs`——缝 = re-export（KD-6）。2026-09-29 parity-b1（批档 §2.2 行 12）：
  * `buildToolTable` 收敛为**基础集**装配（家族段归核；装饰体经 `opts.toolDecorate` 供核）；
  * 旧拷贝项 `withPool` / `modeRoleField` 并入装饰体 ∕ 取核（§2.5「拷贝项取核或登记差额」）。
- * W8 契约②（`test/engine-floor-guard.test.mjs:129`——端壳静态闭包零 `node:sqlite`）：本档静态边
+ * W8 契约②（端壳静态闭包零 `node:sqlite`；判据现载体 = 批件
+ * `docs/batches/2026-09-29-residuals-round2.test.mjs`——单测树重建时回迁端侧单测档）：本档静态边
  * = setup.mjs 既有静态边之子集；核 `agent-tools/skill.mjs` / `eng.mjs` 两类面仍走**动态** import()
  * （见 `wireAgentToolSeams`）；`vscStatusTerminalEcho` 同法（住 `tool-table.mjs`）。
  */

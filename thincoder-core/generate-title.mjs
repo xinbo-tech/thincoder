@@ -9,9 +9,13 @@
  */
 
 import { proxyFetch } from "./proxy.mjs"
+import { resolveProviderSecrets } from "./env-ref.mjs"
 // D7（2026-09-21 块标题行对齐批——标题链单源）：首条真实 user 消息谓词收核单源
 // （`isRealUserMsg`——纯函数零依赖，无环）。
 import { isRealUserMsg } from "./history-window.mjs"
+// #632（缺面族批补 · @ 文件引用对齐 · 2026-09-29）：标题源剥离单源——注入形不得进标题请求（核件
+// `file-refs.mjs`；CLI 无注入 ⇒ 零动作；VSC 同位转口 = `panel-session-write.mjs:139`）。
+import { stripAtRefs } from "./file-refs.mjs"
 // #363③（off 形族单源——MODEL-SPECS.md §16.2 / §16.4）：禁思考形与「是否可禁」一律引核
 // （`thinkOffShape` / `thinkOffPath`——本档零副本）；spec 查表同单源（`specForModel`）。
 import { specForModel } from "./model-specs.mjs"
@@ -42,6 +46,9 @@ export async function generateTitle(userContent, provider) {
   const offShape = thinkOffPath(spec) ? thinkOffShape(spec) : null
 
   try {
+    // #57（provider-config-family 批）：凭据值位 `${env:VAR}` 消费侧解析（CONFIG.md §6.3）——解析抛错
+    // 落本函数既有非致命兜底（下方 catch ⇒ 标题回落 null——不破坏回合，与「无 key 不生成标题」同形）。
+    provider = resolveProviderSecrets(provider)
     const system = "Generate a concise title (max 40 chars, no quotes) for this conversation. Reply ONLY with the title."
     const text = userText.slice(0, 200)
     let url, body, extract
@@ -129,7 +136,8 @@ export async function ensureSessionTitle(agent) {
     let firstUser = agent._recordStore?.firstUserMessage?.() ?? null
     if (!firstUser) firstUser = (agent._fullHistory ?? agent.history).find(isRealUserMsg)
     if (firstUser) {
-      const title = await generateTitle(firstUser.content, agent.provider)
+      // #632：读源处剥离（注入形不得入标题请求——与恢复面同读一函数，零第二实现）
+      const title = await generateTitle(stripAtRefs(firstUser.content), agent.provider)
       if (title) agent.title = title
     }
   } catch {

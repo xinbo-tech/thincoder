@@ -1,6 +1,7 @@
 import { DESC, truncate, stripTags, htmlToText, isPrivateHost } from "./shared.mjs";
 import { URL } from "node:url";
 import { proxyFetch } from "../proxy.mjs";
+import { resolveEnvRefs } from "../env-ref.mjs";
 
 export const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 const FETCH_TIMEOUT = 15_000
@@ -46,7 +47,9 @@ const ENGINE_NAMES = ENGINES.map(e => e.name)
  *  { engine, results } or null to fall back to Bing HTML scraping.
  *  proxyUri: explicit per-call proxy (args.proxy) — never the config.json one. */
 async function fetchTavily(query, limit, ctx, proxyUri) {
-  const apiKey = ctx?.agent?.config?.websearch?.apiKey
+  // #57（provider-config-family 批）：值位 `${env:VAR}` 消费侧解析（CONFIG.md §6.3）——未设 ∕ 空串 ∕
+  // 畸形 ⇒ 抛错（不静默字面透传）；未配置 key 仍走 Bing 回落。
+  const apiKey = resolveEnvRefs(ctx?.agent?.config?.websearch?.apiKey)
   if (!apiKey) return null
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT)

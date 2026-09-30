@@ -1,7 +1,7 @@
 # ThinCoder — merged repository
 
 Single git repository hosting both ThinCoder products. Each product keeps its own package root,
-its own release chain and its own documentation tree; their only shared runtime code is the first-party `@thincoder/core`.
+its own release chain and its own documentation tree; their shared runtime code is the first-party `@thincoder/core` plus the shared render core `@thincoder/render-core`.
 
 ## Layout
 
@@ -9,6 +9,7 @@ its own release chain and its own documentation tree; their only shared runtime 
 |---|---|---|
 | `thincoder-cli/` | ThinCoder CLI (npm package `thincoder`) | npm `publish` — gate = lint → test |
 | `thincoder-vscode/` | ThinCoder VS Code extension (vsix `thincoder-vscode`) | Marketplace / Open VSX — gate = lint → test |
+| `thincoder-render-core/` | Shared render core — browser primitives embedded into the VS Code extension and desktop artifacts | — (never published — `private: true`) |
 | `.github/workflows/test.yml` | CI: one job per product (repo-root workflow) | GitHub Actions |
 | `.gitattributes` · `.gitignore` | repository-root settings shared by both products | — |
 

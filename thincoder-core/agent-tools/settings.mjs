@@ -3,17 +3,23 @@
  * 用户裁定：全量 config.json 任意键（点分路径）+ 单工具多动作 list/get/set + 双端同批。
  * 语义：set = 写盘（config.json——磁盘真相最小化：只写被设的键——默认值不固化）+
  * 热应用（ctx.agent.config 内存对象立即更新——回合边界键下回合生效）。
- * 护栏：敏感键（路径段命中词表 apiKey/key/token/secret/password/authorization/auth/cookie/credential，
- * 或段名 headers/env 整族）回显/错误文本永不出现明文
+ * `null` = **显式清除 ⇒ 删键**（盘删键 + 内存回填 `DEFAULTS` 默认值——全端同形；SETTINGS-TOOL.md §2.3）。
+ * 护栏：敏感键（路径段命中词表 apiKey/key/token/secret/password/authorization/auth/cookie/credential
+ * （含**段内复合名**——`refreshToken` ∕ `clientSecret` ∕ `privateKey` 类 camelCase ∕ 前缀复合；
+ * #677 · I13），或段名 headers/env 整族）回显/错误文本永不出现明文
  * （••••（masked）——防密钥泄漏进会话历史/trace）；已知键类型校验——非 null 叶子类型表
  * 自动派生自 config.mjs DEFAULTS（不手写防漂移——F-S1.5/N-S1.5）；null 默认值键与同族键
  * 走显式形状表（_NULL_LEAF_SHAPES 相等面 / _SIBLING_SHAPES 存在性面——按各自真实消费形态
  * 校验，完备性机械锁 + 一次性警告；SETTINGS-TOOL.md §8）；set 侧效走审批门（dispatch 动作级分类）。
  */
 import { DEFAULTS, configPath, writeConfigAtomic } from "../config.mjs"
+import { DESC } from "../tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/settings.md
 
-/** 敏感键段判定（完整点分路径的段级匹配——两句取或：词表段 ∨ 开口键族段；SETTINGS-TOOL.md §2.4） */
-const SENSITIVE_SEGMENT = /(^|[._-])(api[_-]?key|key|token|secret|password|authorization|auth|cookie|credential)($|[._-])/i
+/** 敏感键段判定（完整点分路径的段级匹配——两句取或：词表段 ∨ 开口键族段；SETTINGS-TOOL.md §2.4）。
+ *  #677 · I13（C2 裁定 · D-ST17）：段内复合敏感名入遮——词表句左界扩 `[a-z0-9]`（camelCase 复合，
+ *  `refreshToken` ∕ `clientSecret` ∕ `privateKey` 类）；右界仍须段界 ⇒ `maxTokens`（复数）∕
+ *  `tokenCount`（敏感词非末位）不误遮；假阳方向安全（只丢值、键名可见）。 */
+const SENSITIVE_SEGMENT = /(^|[._-]|[a-z0-9])(api[_-]?key|key|token|secret|password|authorization|auth|cookie|credential)($|[._-])/i
 /** 开口键族段判定（headers / env——段名命中 ⇒ 其下全部子键整族遮罩：头名 / 变量名不可枚举） */
 const SENSITIVE_FAMILY = /(^|[._-])(headers|env)($|[._-])/i
 /** 敏感键遮罩字面（**导出单源**——工具回显 ∕ 桌面 `settings-values.mjs` ∕ VSC `settings.mjs` 三端同源；B10 S13 转 export） */
@@ -61,6 +67,10 @@ function _buildShapeTable(obj, patch = null) {
   return patch ? Object.assign(out, patch) : out
 }
 const TYPE_MAP = _buildShapeTable(DEFAULTS)
+
+/** #645 放行面扩族：`null`（显式清除——删键回退默认）可接受者 = `object`（既有）∪ `number` ∕
+ *  `boolean`（本批扩）；`string` 类维持拒（消费面无「未设置」态——如 `memory.dbPath`）。 */
+const _NULL_CLEARABLE = new Set(["object", "number", "boolean"])
 
 /** null 叶子路径枚举（数组不递归——与派生表同域）。 */
 function _nullLeafPaths(obj, prefix = "", out = []) {
@@ -130,7 +140,8 @@ function _checkShape(path, spec, value) {
  * 已知键值校验（set 写盘前；违例抛错——磁盘/内存零变化）：
  * ① 形状表命中键（`_NULL_LEAF_SHAPES` / `_SIBLING_SHAPES` **两表都查**——表值 = 形状规格）→ 形状校验
  *    （`null` = 显式清除，放行）；② 非 null 叶子（派生表值 = `typeof` 串）→ 既有语义逐字保留
- *    （`want === "array"` 跳过 / `null` + `want === "object"` 放行）；③ 未知键 → 原样通过（全量域）。
+ *    （`want === "array"` 跳过 / `null` + `want ∈ _NULL_CLEARABLE` 放行——#645 扩 number/boolean）；
+ *  ③ 未知键 → 原样通过（全量域）。
  */
 function _checkKnownKeyValue(path, value) {
   const spec = _NULL_LEAF_SHAPES[path] ?? _SIBLING_SHAPES[path]
@@ -141,7 +152,7 @@ function _checkKnownKeyValue(path, value) {
   const want = TYPE_MAP[path]
   if (want && want !== "array") {
     const got = value === null ? "null" : typeof value
-    if (got !== want && !(value === null && want === "object")) throw _expectsError(path, want, value)
+    if (got !== want && !(value === null && _NULL_CLEARABLE.has(want))) throw _expectsError(path, want, value)
   }
 }
 
@@ -172,6 +183,17 @@ function setKeyPath(obj, path, value) {
   const old = cur[last]
   cur[last] = value
   return old
+}
+
+/** 点分路径删键（#645：`null` = 显式清除 ⇒ 删键——沿桌面 `settings-values.mjs` 同形；缺段 ⇒ 无操作）。 */
+function deleteKeyPath(obj, path) {
+  const segs = String(path).split(".")
+  let cur = obj
+  for (let i = 0; i < segs.length - 1; i++) {
+    if (cur === null || typeof cur !== "object") return
+    cur = cur[segs[i]]
+  }
+  if (cur !== null && typeof cur === "object") delete cur[segs[segs.length - 1]]
 }
 
 /** 递归展平 config 对象（数组下标段形态）→ 排序的 { path, value } 列表 */
@@ -210,13 +232,7 @@ export function settingsTool(opts = {}) {
 
   return {
     name: "settings",
-    description:
-      "Adjust ThinCoder runtime configuration — persisted to config.json AND hot-applied to the live agent config.\n" +
-      "Actions: list (all keys + values, flattened) | get <key> | set <key> <value> — dot paths into config.json (agent.maxTurns, traces.enabled, providers.0.model, any nesting).\n" +
-      "set persists to disk (only the set key is written — defaults are never baked in) and takes effect in the running session immediately (turn-boundary keys apply next turn); the value survives restarts.\n" +
-      "Known keys are type-checked: scalar keys against the built-in defaults (agent.maxTurns a number, traces.enabled a boolean); keys whose default is null against their real consumption shape — defaultModel \"provider:model\", agent.subagentModel / shell non-empty string, memory.team object with a repo — so a value the app would silently drop is refused (null clears the key). Unknown keys under a known section are stored as given. Values parse as JSON first (true/false/numbers/objects/arrays), else stay strings.\n" +
-      "SENSITIVE keys (path segment matching apiKey/key/token/secret/password/authorization/auth/cookie/credential, or any key under a headers/env segment) are NEVER echoed in plaintext — list/get/set replies show ••••（masked）; setting a sensitive key is allowed and stored, but never echoed back.\n" +
-      "list/get are read-only (planMode ok, no approval); set is a side effect (approval gate). The /config TUI command is the human equivalent.",
+    description: DESC("settings"), // #15 外置：文本单点 = tool-docs/settings.md
     parameters: {
       type: "object",
       properties: {
@@ -251,15 +267,25 @@ export function settingsTool(opts = {}) {
       const value = parseValue(args.value)
       // 已知键校验（形状表两表都查 + 派生类型表——SETTINGS-TOOL.md §8.3；未知键 JSON 原样）
       _checkKnownKeyValue(String(args.key), value)
-      // 写盘（D-F5b：磁盘真相最小化——writeConfigAtomic 磁盘新鲜读 + 只改被设键 + mtime
-      // 门控——默认不固化；冲突/畸形抛错，内存不热应用（零虚假成功））+ 热应用（内存对象）
+      // 写盘（D-F5b：磁盘真相最小化——默认不固化；冲突/畸形抛错，内存不热应用（零虚假成功））+
+      // 热应用（内存对象）。#645 写形归一（全端同形）：`null` = 显式清除 ⇒ **盘删键**（回退
+      // DEFAULTS）+ 内存删键后回填该键 DEFAULTS 默认值（等价 loadConfig 重载；未登记键 ⇒ 零回填）。
       const r = await writeConfigAtomic(cfgPath, (disk) => {
-        setKeyPath(disk, args.key, value)
+        if (value === null) deleteKeyPath(disk, args.key)
+        else setKeyPath(disk, args.key, value)
       })
       if (!r.ok) throw new Error("config changed on disk concurrently — retry (settings set not applied)")
-      setKeyPath(config, args.key, value)
-      const shown = isSensitiveKey(String(args.key)) ? MASKED : value
-      return `settings set: ${args.key} = ${shown} (${Array.isArray(value) ? "array" : typeof value})${isSensitiveKey(String(args.key)) ? " — stored（值不回显）" : " — persisted + hot-applied（运行中已生效）"}`
+      if (value === null) {
+        deleteKeyPath(config, args.key)
+        const d = resolvePath(DEFAULTS, String(args.key))
+        if (d.ok) setKeyPath(config, args.key, d.value) // 回填默认（形状表键默认 null ⇒ 与今日同形）
+      } else setKeyPath(config, args.key, value)
+      const sensitive = isSensitiveKey(String(args.key))
+      const shown = sensitive ? MASKED : value
+      const suffix = value === null
+        ? " — key removed（键已删除——回退默认）"
+        : sensitive ? " — stored（值不回显）" : " — persisted + hot-applied（运行中已生效）"
+      return `settings set: ${args.key} = ${shown} (${_kindOf(value)})${suffix}`
     },
   }
 }

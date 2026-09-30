@@ -6,6 +6,7 @@ import { INIT_TIMEOUT_MS, withTimeout, sanitizeToolName } from "./mcp/helpers.mj
 import { stdioTransport } from "./mcp/transport-stdio.mjs"
 import { httpTransport } from "./mcp/transport-http.mjs"
 import { wsTransport } from "./mcp/transport-ws.mjs"
+import { resolveMcpServerSecrets } from "./env-ref.mjs"
 
 /** F6/D-5：config.token → `Authorization: Bearer <token>` 合成（仅当 headers 未显式给
  *  Authorization——显式优先，向后兼容）。合成发生在传给 transport 前，不写回 config。 */
@@ -52,7 +53,9 @@ export const _mcpHooks = {
 
 /** 按 config 创建并完成握手的 transport（findTransportConfig 与 vscode 对齐）。 */
 async function createConnectedTransport(rawConfig, serverName) {
-  const config = withBearerToken(rawConfig) // F6/D-5：token 合成（不写回原 config）
+  // #57（provider-config-family 批）：值位 `${env:VAR}` 消费侧解析（CONFIG.md §6.3）——传输建连单点
+  // （connect ∕ probe ∕ 重连同享）；指纹 ∕ 漂移比对仍按存储原文（connectMcpServer 的 configFingerprint 零改）。
+  const config = withBearerToken(resolveMcpServerSecrets(rawConfig)) // F6/D-5：token 合成（不写回原 config）
   let transport
   if (config.wsUrl) {
     transport = wsTransport(config.wsUrl, config.headers ?? {})

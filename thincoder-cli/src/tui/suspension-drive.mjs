@@ -109,7 +109,8 @@ function driveTurn(ctx, item, opts = {}) {
 }
 
 /** 取项缝（核 `ctx.takeInput`——缺省 shift）：按合并计划取批 + 消费回执行（TUI.md §7.5）；
- *  `/cmd` 首动作 = 防御面（斜杠 busy 禁发 ⇒ 队内不应出现）⇒ null 零动作（条目不消费，落核第 2 步）。 */
+ *  `/cmd` 首动作 = 不可达支（斜杠 busy 禁发——`key-handler-busy.mjs:24` ∕ `key-handler-edit.mjs:59`
+ *  双门禁）⇒ null 零动作（条目不消费，落核第 2 步）。 */
 function takeTurnInput(ctx, queue) {
   const action = planQueuedInput(queue)[0]
   if (action.kind !== "turn") return null

@@ -43,7 +43,8 @@ import { refillAdvisorQueue } from "./advisor-async.mjs"
 /**
  * 载体字段读取吸收（#94——「VSC 的跨 runAgent 存活载体面按核内结构归一」）：
  * §2.3 载体口径 = `_asyncSubagents` · `_asyncAdvisors` · `_consultSessions` ·
- * `_pendingAsyncResults` · `_suspended`（AGENT-LOOP.md §2.3 seam 表）。
+ * `_pendingAsyncResults` · `_suspended`（AGENT-LOOP.md §2.3 seam 表）；#9 后台任务池
+ * `_bgTasks` 同列（写侧父字段 + 借用/别名 history——见 `bash-async.mjs` `ensureBgPool`）。
  * CLI 形：字段直接挂 agent（跨 run 存活）；VSC 形：字段挂 depth-0 `history`
  * （agent per-run 重建——run 起始把 history 容器绑到 agent 字段，绑定不变式）。
  * 本函数吸收两形为同一读取：父对象字段优先，缺字段回退 `parent.history`。
@@ -111,11 +112,12 @@ export function bindChildController(ctrl, baseSignal) {
 // ─── D1 池 accessor（吸收双池）────────────────────────────────────────────────
 
 /** 池 accessor（D1）：role "advisor" → `_asyncAdvisors`（独立评审池——无队列独立调度）·
- *  role "consult" → `_consultSessions`（会话池）· 其余 → `_asyncSubagents`（子代理/飞刀
- *  共享槽位队列池）。载体经 `carrierField` 吸收（#94）；未初始化返 null——调用方以
- *  `?? new Map()` / 可选链处置。 */
+ *  role "consult" → `_consultSessions`（会话池）· role "bg" → `_bgTasks`（#9 后台 bash
+ *  任务池）· 其余 → `_asyncSubagents`（子代理/飞刀共享槽位队列池）。载体经 `carrierField`
+ *  吸收（#94）；未初始化返 null——调用方以 `?? new Map()` / 可选链处置。 */
 export function getAsyncPool(parent, role) {
-  const field = role === "advisor" ? "_asyncAdvisors" : role === "consult" ? "_consultSessions" : "_asyncSubagents"
+  const field = role === "advisor" ? "_asyncAdvisors" : role === "consult" ? "_consultSessions"
+    : role === "bg" ? "_bgTasks" : "_asyncSubagents"
   return carrierField(parent, field) ?? null
 }
 

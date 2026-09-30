@@ -79,12 +79,15 @@ function updateSubBlock(element, entry) {
   refreshBlock(element)
 }
 
-/** 新块出生（族尾 append）：说明行（会话首个活动块 · 一次性 —— 核 `renderSubDesc` 插 `.advisor-content` 之前）；
+/** 新块出生（族尾 append）：说明行（**挂载根级旗标** `root._subDescShown` —— #630 对齐 VSC `webview/state.js:42` `_subDescShown` 面板级判据；插 `.advisor-content` 之前 ∕ 元素形零改）；
  *  出生点判据（R10 E6 —— VSC `activity.js:60-63` 同点：跟底 ⇒ 区钉底；未跟底 ⇒ 计数贴 +1）；
  *  挂 DOM 后重刷（⏹ 门控读 `isConnected` —— 核首刷发生在挂载前）。 */
 function createSubBlock(root, family, entry) {
   const element = subElementOf(entry)
-  if (family.querySelectorAll(".sub-block").length === 0 && family.querySelector(".sub-desc") === null) {
+  // #630：判据 = 挂载根级旗标（一次置位不重置 —— root 跨会话 ∕ 跨族重建恒在；app 重载 ⇒ 新 root 归零
+  // = VSC webview 重载同判）；旧「族内零块 ∧ 无 `.sub-desc`」DOM 探针退场（族换代可跨会话重插）。
+  if (root !== null && root !== undefined && root._subDescShown !== true) {
+    root._subDescShown = true
     element.insertBefore(renderSubDesc(), element.querySelector(".advisor-content"))
   }
   family.append(element)
@@ -95,8 +98,10 @@ function createSubBlock(root, family, entry) {
 }
 
 /** 键控差分（项 3）：同 key ⇒ 复用元素就地更新；新 key ⇒ 尾追出生；出表（归档墓碑过滤后缺席 / 取消）⇒ 摘除。
- *  块表序 = 插入序 ∧ 新增恒在尾 ⇒ DOM 序 ≡ 模型序（不重排）。 */
+ *  块表序 = 插入序 ∧ 新增恒在尾 ⇒ DOM 序 ≡ 模型序（不重排）。**空族守卫（#660 · KD-47 ⑤）**：族缺 / 非元素
+ *  ⇒ 零动作（同 `applySubBlockFollow` 形——调用面空族支已断，本守卫为防御面）。 */
 export function syncSubBlocks(root, family, model) {
+  if (!family || typeof family.querySelectorAll !== "function") return
   const items = [...family.querySelectorAll(".sub-block")]
   const byKey = new Map()
   for (const element of items) {

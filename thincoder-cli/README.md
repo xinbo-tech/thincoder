@@ -17,8 +17,8 @@ resolved from the npm registry for releases).
 - **Checkpoint system**: auto-snapshot before every user task, `list`/`create`/`rewind` tools for the model, single-file restore — rewinding itself is reversible (pre-rewind state auto-saved)
 - **Codebase understanding** ⭐0.5.0: `repo_outline` (dependency outline, auto-injected at startup), `code_search` (source FTS5 + vectors + JSDoc extraction), `doc_search` (docs chunked by ## headings) — background indexing, auto-incremental updates on file writes, three tools
 guided by "structure → intent → details"
-- **Model adaptation** ⭐: top-tier only, latest only. Built-in flagship models from twenty-one providers — DeepSeek / Kimi / Kimi For Coding / GLM / GLM Coding Plan (智谱 Coding) / Qwen / Qwen Token Plan / MiMo (小米) / MiMo Token Plan (小米套餐) / MiniMax / OpenAI / Claude / Gemini /
-Grok / Mistral / Volcengine Ark (豆包) / Hunyuan (腾讯混元) / Tencent TokenHub (腾讯混元网关) / SiliconFlow (硅基流动) / OpenRouter / Groq. No legacy model compatibility. Auto-matched context windows, truncation-resume protocols (prefix/partial), thinking-mode APIs (thinking.type /
+- **Model adaptation** ⭐: top-tier only, latest only. Built-in flagship models from twenty-two providers — DeepSeek / Kimi / Kimi For Coding / GLM / GLM Coding Plan (智谱 Coding) / Qwen / Qwen Token Plan / MiMo (小米) / MiMo Token Plan (小米套餐) / MiniMax / OpenAI / Claude / Gemini /
+Grok / Mistral / Volcengine Ark (豆包) / Hunyuan (腾讯混元) / Tencent TokenHub (腾讯混元网关) / Huawei Cloud MaaS (华为云 MaaS) / SiliconFlow (硅基流动) / OpenRouter / Groq. No legacy model compatibility. Auto-matched context windows, truncation-resume protocols (prefix/partial), thinking-mode APIs (thinking.type /
 reasoning_effort), reasoning_content echo strategies (reasoningEcho), output limits, temperature range clamping — all deeply adapted.
 - **Toolset**: `read` / `write` / `edit` / `bash` / `glob` (supports `**`) / `grep` / `websearch` / `ls` / `fetch` + `read_image` (image/video paste) + three retrieval tools + MCP — all zero-dependency, file tools confined to the working directory
 - **Memory system**: three layers (personal/project/team), FTS5 + vector RRF hybrid retrieval, git-friendly markdown format
@@ -80,6 +80,8 @@ thincoder
 First launch walks you through a setup wizard: arrow keys to pick a provider (built-in presets or a custom endpoint) → enter API key → optionally enter an embedding key (SiliconFlow, enables vector memory search, skippable) → arrow keys to pick a model — no hand-editing config
 files. Adjust anytime with `/model` (add/remove providers, set keys, custom endpoints) or `/config embedkey`. `chat`/`distill` also offer in-place interactive setup when no key is configured in a terminal (in pipes/CI they exit with an error and instructions).
 
+Any OpenAI-compatible endpoint works without a built-in preset: pick **add provider → custom** in `/model` (name + baseURL + model), or hand-write the entry in `providers[]`. Regional endpoint variants work the same way — e.g. Huawei Cloud MaaS `https://api-ap-southeast-1.modelarts-maas.com/openai/v1`.
+
 You can also hand-write `~/.thincoder/config.json` (see "Configuration" below), then:
 
 ```bash
@@ -111,7 +113,8 @@ encoding/command issues), `/think` (thinking mode toggle and reasoning effort), 
 sessions), `/reindex` (rebuild the index), `/extract` (extract knowledge from the current session), `/restore` (restore checkpoint), `/clear`, `/exit`. High-frequency commands support abbreviations: `/h` `/x` `/m` `/p` `/t` `/c` `/n`. Typing `/` shows live matching hints in the
 status bar. Model picker supports search/filter — type to narrow down results.
 
-Configuration comes exclusively from `~/.thincoder/config.json` — no environment-variable configuration is supported.
+Configuration comes exclusively from `~/.thincoder/config.json` — the single source of truth. Sensitive value fields (e.g. a provider's `apiKey` or `websearch.apiKey`)
+may hold a `${env:VAR}` reference, resolved at use time — the value is then taken from the environment variable. There is no environment-variable-only configuration channel and no env-only override.
 
 > **Kimi note**: Kimi has **two separate platforms with non-interchangeable API keys** — Moonshot (`https://api.moonshot.cn/v1`, keys `sk-...`, platform.moonshot.cn) and **Kimi For Coding** (`https://api.kimi.com/coding/v1`, keys `sk-kimi-...`, platform.kimi.com, model ID `k3`).
 > Use the `kimi` preset for Moonshot and `kimi-code` for Kimi For Coding — putting one platform's key on the other's endpoint fails with 401 (a hint is appended when the key/baseURL look mismatched).

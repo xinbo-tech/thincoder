@@ -21,7 +21,7 @@
  *  ④ 取词 = **注册面**（非 deps 项）：核内取词走核 `../i18n.mjs` `t`，端侧 `setStrings` 单点注册；
  *  ⑤ `hooks`——跨面副作用 ∕ 状态同步（`openSettings`（控件行第 7 钮）· `onTitleHint`（会话标题提示）·
  *     `onStatusRefresh(status?)`（状态行刷新——`status` = 可选 `{ phase }` 面板态快照，`setLoading` 径给）·
- *     `onTurnStart`（回合起点动作：`_turnStart` ∕ `_llmCalls` 归零 + `clearPanels`（含 `_suspended` 条件）+
+ *     `onTurnStart`（回合起点动作：`_turnStart` 归零 + `clearPanels`（含 `_suspended` 条件）+
  *     工具结果位清）· `onUserEcho(text, ts) → 用户气泡`（`addUser`）· `onWelcomeDismiss`（欢迎条移除）·
  *     `onAgentSettings(settings)`（设置面板刷新）· `syncModeState(flags)`（模式位跨面镜像）·
  *     `confirmRemoveProvider(onConfirm)`（删条确认门）· `closeSiblingDropdowns`（邻面下拉让位））。
@@ -296,7 +296,7 @@ export function createComposerPanel(deps = {}) {
     // 多槽 + 待发送标记 · `WEBVIEW-INPUT.md` §1）：busy 提交**一律排队**——判据 = `running`（`_suspended`
     // 不再分流：挂起会话内与普通回合同判据）⇒ 本地气泡先行（送达时即该消息 user 回声面）+ 出泡即标记
     // （「待发送」态）+ `queuedUserMessage` 上行（host 队列两载体，容量 8；不 setLoading 不清面板
-    // ——回合仍跑在既有流上）；回合态簿记（`_turnStart` / `_llmCalls`）归下一回合起点——零触碰。
+    // ——回合仍跑在既有流上）；回合态簿记（`_turnStart`）归下一回合起点——零触碰。
     if (busyState() === "running") {
       // C-B2-6 细则① 二次提交守卫（fix 轮 2026-09-22 · queue-visible 批阈值收正 = 容量 8）：队列满
       // （第 9 条——host 权威镜像）⇒ 提交不出泡 / 不清框 + toast
@@ -325,7 +325,7 @@ export function createComposerPanel(deps = {}) {
     if (h[h.length - 1] !== text) h.push(text) // dedupe consecutive repeats
     ctx._historyIdx = -1
     ctx._inputDraft = ""
-    hooks.onTurnStart?.() // 回合起点动作（`_turnStart` ∕ `_llmCalls` 归零 + 面板清 + 工具位清——端侧绑定）
+    hooks.onTurnStart?.() // 回合起点动作（`_turnStart` 归零 + 面板清 + 工具位清——端侧绑定）
     hooks.onWelcomeDismiss?.()
     ctx.inputEl.value = ""
     ctx.inputEl.style.height = "auto"

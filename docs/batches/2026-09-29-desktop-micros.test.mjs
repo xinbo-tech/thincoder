@@ -7,7 +7,7 @@
  *    （与桌面 `timerFaceOf` 同形）∧ 导入面 `timerWakeEnabled` 自 `./timer-watch.mjs`（核 re-export 名恒在）；
  *  - L-B（J-4 · #578② 值核）：theme.css 亮色两值提取 = `#8a6100` ∕ `#047990` ∧ WCAG 复算对 `--bg` ∕ `--bg-raised`
  *    皆 ≥4.5（读数 5.21 ∕ 5.54 ∕ 4.77 ∕ 5.07）∧ 暗色块两值零动（`#cca700` ∕ `#11a8cd`）；
- *  - L-C（J-5 · #578③ 结构核）：`mount-sessions.mjs` `session.deleteFailed` 恰 2 处（两失败径——回执拒 ∕ 抛，
+ *  - L-C（J-5 · #578③ 结构核）：`session-wire.mjs` `session.deleteFailed` 恰 2 处（两失败径——回执拒 ∕ 抛，
  *    形同 `session.openFailed` 族先例）∧ `i18n-views.mjs` 该键恰 2 处（两语）+ 组注计数「四键」。
  * 复跑：`node --test docs/batches/2026-09-29-desktop-micros.test.mjs`（临时位同跑 —— 路径基准 = 档位两深，
  * `.thincoder/tmp` 与 `docs/batches` 同深 ⇒ `../../` = 仓根，两处均可跑）。
@@ -24,7 +24,8 @@ const text = (rel) => readFileSync(resolve(ROOT, rel), "utf8")
 const CLI_SUSP = "thincoder-cli/src/tui/suspension-drive.mjs"
 const CLI_WATCH = "thincoder-cli/src/tui/timer-watch.mjs"
 const THEME = "thincoder-desktop/renderer/theme.css"
-const MOUNT = "thincoder-desktop/renderer/mount-sessions.mjs"
+// 越线档结构轮（#536）改指：接线面随批出档 `renderer/session-wire.mjs`（二失败径串皆居该档——复跑绿）
+const MOUNT = "thincoder-desktop/renderer/session-wire.mjs"
 const I18N = "thincoder-desktop/renderer/i18n-views.mjs"
 
 // ─── L-A · #576（J-1）结构核 ─────────────────────────────────────────────────
@@ -91,7 +92,7 @@ test("L-B #578② · 亮色两值 + WCAG 复算 ≥4.5（对 --bg ∕ --bg-raise
 
 // ─── L-C · #578③（J-5）结构核 ───────────────────────────────────────────────
 
-test("L-C #578③ · mount-sessions 两失败径恰 2 处（形同 openFailed 族先例）", () => {
+test("L-C #578③ · session-wire 两失败径恰 2 处（形同 openFailed 族先例）", () => {
   const src = text(MOUNT)
   assert.equal((src.match(/session\.deleteFailed/g) ?? []).length, 2, "键恰 2 处（两失败径）")
   assert.ok(src.includes('showToast(t("session.deleteFailed", { reason: reasonOf(receipt) }))'), "回执拒径（同族形）")

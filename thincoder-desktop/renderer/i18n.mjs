@@ -46,7 +46,7 @@
  *      R7 本次增 **47** 键（第二档 ⑪ 设置补充族 —— 逐键清单 = `renderer/i18n-views.mjs` ⑪ 组）⇒ 前值实读 **350**
  *      —— R2 +7 ∕ R4 +2 ∕ R5 +1 ∕ R6 +5 等前段未逐笔续计，本行起为最新链值；
  *      **R9 增二键**（承 #486 失败面可见性：`session.openFailed` ∕ `session.loadFailed` —— 第二档 ⑤ 组；消费面 =
- *      `renderer/mount-sessions.mjs` toast）⇒ `VIEWS_DICT`（第二档）104 ⇒ **106**；`HOST_DICT`（**合并表** —— 两语展开含第二 ∕ 三档）
+ *      `renderer/session-wire.mjs` toast）⇒ `VIEWS_DICT`（第二档）104 ⇒ **106**；`HOST_DICT`（**合并表** —— 两语展开含第二 ∕ 三档）
  *      265 ⇒ **267**（= 本行二键经合并点随动）；`COMPOSER_DICT`（第三档）= 28 不变（两语同拍、键集相等）；
  *      **复制面对齐批退二增四**（复制面对齐 VSC 批 · 台账 #557 ∕ #558：退自建复制面两键（块级 ∕ 末条两控件可及名，消费面归零
  *      ⇒ 键面随退）；增 `menu.edit.*` 四键（主进程右键编辑菜单文案 ——
@@ -61,6 +61,14 @@
  *      并行舱键增未逐笔续计，后落者续链；**收口复读**〔父侧 · 2026-09-29 · #603 §6 实测〕：三档单语键数 = `HOST_DICT` **295** ∕ `VIEWS_DICT`（第二档）**124** ∕ `COMPOSER_DICT`（第三档）**28**（两语同拍、键集相等——其间多舱增键未逐笔续计，本行为最新链值）。
  *      **状态行 ⇒ CLI 补漏批退一键**（项目级读数族末键两语退场 —— 段 11 改常驻、消费归零 ⇒ 键面随退，零残键；
  *      `status.usage` 仅值改、零增退）⇒ 实读 `HOST_DICT`（**合并表**）**295 ⇒ 294**（两语同拍、键集相等；届盘实读续链）。
+ *      **i18n 拆分批（2026-09-29 · 台账 #614 · 顶格消解）**：`settings.*` 族 **55** 键出档（→ `renderer/i18n-settings.mjs`
+ *      （第四档））⇒ 本档自有 **142 ⇒ 87**、四档单语键数 = `HOST_DICT`（**合并表**，值零动）**294** 不变 ∕ `VIEWS_DICT` **124** ∕
+ *      `COMPOSER_DICT` **28** ∕ `SETTINGS_DICT` **55**（两语同拍、键集相等；机检 = 批内件）。
+ *      **撤会话头批退三键**（会话头三字段标两语同退 —— 台账 #668；消费面随面退场 ⇒ 键面随退，零残键）
+ *      ⇒ 实读 `HOST_DICT`（**合并表**）**295 ⇒ 292**（两语同拍、键集相等；届盘实读续链）。
+ *      **S3 分档批增一键**（#673 · 2026-09-29：`settings.reason.hostBusy` 两语同增 —— 渠行行标分档词，
+ *      消费面 = `renderer/views/settings-sections.mjs`）⇒ `SETTINGS_DICT`（第四档）**55 ⇒ 56** ∕
+ *      `HOST_DICT`（**合并表**，经合并点随动）**292 ⇒ 293**（两语同拍、键集相等）。
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；
@@ -76,6 +84,7 @@
  * 零落盘 · 零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
 import { COMPOSER_DICT } from "./i18n-composer.mjs"
+import { SETTINGS_DICT } from "./i18n-settings.mjs"
 import { VIEWS_DICT } from "./i18n-views.mjs"
 
 /** 宿主 UI 专有键（两语键序同 = 对位阅读 · 键集相等 = 用例机检面）：`rail.*` = 会话控制条残余族（打开目录 ∕
@@ -87,17 +96,13 @@ import { VIEWS_DICT } from "./i18n-views.mjs"
  *  消费面 = `src/main/context-menu.mjs` `contextMenuLabels`，主进程直取本表）· `pool.*` = 活动池（标题 / 三族标 / 折叠控件两态 `aria-label` / 空态提示 ——
  *  折叠字形住 `renderer/pool.css`）· `approval.*` = 审批卡两形三出口词面 + 批形计数（`${count}` 占位；
  *  键位闭集住 `renderer/views/approval.mjs`）· `question.*` = 提问卡（文本控件 `aria-label` / 提交键 / 取消键 ——
- *  键位闭集住 `renderer/views/question.mjs`）· `settings.*` = 设置面（标题 / 关闭 / 语言控件两键 = 目标语自名 /
- *  四段名 / 两段态 / 十二失败码 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
- *  当前标 · 两增键 / agent 段：只读标 · 保存 / 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
- *  移除 · 增键 —— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）·
+ *  键位闭集住 `renderer/views/question.mjs`）· `settings.*` = 设置面（**56 键** —— 单源 = `renderer/i18n-settings.mjs`）·
  *  `wizard.*` = 首启向导（标题 / 退场 / 三步名 / 两推进键 / 渠道提交键 / 目录步两词）·
  *  `composer.*` = 输入区（**换装后残余两族**：B21 发送失败行 `composer.send.failed`〔住 `renderer/i18n-views.mjs`〕+
  *  B22 降级提示行两键 `composer.attach.nonvision` ∕ `composer.attach.partial`——三键皆端侧自有词，非 VSC 源；
  *  旧三词（输入框 `aria-label` ∕ 中断控件词 ∕ 满队提示行）+ 附件条移除控件名随自建树退场——核件控件词归
  *  `renderer/i18n-composer.mjs`）·
- *  `head.*` = 会话头（三字段标 = `provider` / `model` / `effort` 三 `select` 可及名 —— 值面 = 供给串原样，
- *  视图不造词；键位面 = `renderer/views/chrome.mjs`）· `effort.*` = 档位两特值词（`auto` = 未设（`null`）·
+ *  `effort.*` = 档位两特值词（`auto` = 未设（`null`）·
  *  `off` = 关思考 —— 逐模型枚举成员**零词键**、原字面投影）· `status.*` = 状态行（上下文读数串 `context ${percent}%${tokens}` —— 令牌尾串 `␣<fmtK>`、0 ∕ 缺 ⇒ 缺席 = 半态〔状态行 ⇒ CLI 补漏批改形〕——
  *  未至 / 非正数 ⇒ 零节点，键面不落空串；段词十六键 = 注意力 / 当前工具 / 耗时 / 任务计数 / 令牌三件 / 计时 /
  *  排队两句 + 静息词 / 输入提示静息态 / banner 四态（代号字面 —— 两语同形）＋ **R4 增状态文本 index 两形二键**
@@ -171,62 +176,8 @@ export const HOST_DICT = Object.freeze({
     "question.input": "Your answer",
     "question.answer": "Send answer",
     "question.cancel": "Cancel",
-    // ── 设置面（批 9：`views/settings.mjs` + `views/settings-sections.mjs`）──
-    "settings.title": "Settings",
-    "settings.close": "Close settings",
-    "settings.lang.en": "English",
-    "settings.lang.zh": "中文",
-    "settings.section.providers": "Providers",
-    "settings.section.model": "Model & tier",
-    "settings.section.agent": "Agent options",
-    "settings.section.mcp": "MCP",
-    "settings.state.none": "Not configured",
-    "settings.state.loading": "Loading…",
-    "settings.reason.mtimeConflict": "Config changed elsewhere — reload before saving",
-    "settings.reason.invalidShape": "Invalid config shape",
-    "settings.reason.invalidKey": "Unknown config key",
-    "settings.reason.invalidValue": "Invalid value",
-    "settings.reason.invalidPatch": "Invalid patch",
-    "settings.reason.noProject": "No project open",
-    "settings.reason.missing": "Config file missing",
-    "settings.reason.invalidManifest": "Invalid project manifest",
-    "settings.reason.unavailable": "Unavailable",
-    "settings.reason.timeout": "Timed out",
-    "settings.reason.malformed": "Malformed response",
-    "settings.reason.probeFailed": "Probe failed",
-    "settings.providers.nameLabel": "Name",
-    "settings.providers.presetLabel": "Preset",
-    "settings.providers.baseURLLabel": "Base URL",
-    "settings.providers.modelLabel": "Model",
-    "settings.providers.formatLabel": "Format",
-    "settings.providers.keyLabel": "API key",
-    "settings.providers.activeToggle": "Set as active provider",
-    "settings.providers.addCustom": "Add custom provider",
-    "settings.providers.addPreset": "Add preset provider",
-    "settings.providers.verify": "Verify",
-    "settings.providers.verify.ok": "Verified · ${count} models",
-    "settings.providers.verify.fail": "Verification failed: ${reason}",
-    "settings.providers.noKey": "No API key",
-    "settings.providers.remove": "Remove ${name}",
-    "settings.providers.active": "Active",
-    "settings.proxyRow": "proxy",
-    "settings.proxyRowTitle": "Route this provider's model requests through the proxy (needs global proxy.model on)",
-    "settings.fetchModels": "Fetch Models",
-    "settings.connecting": "Connecting…",
-    "settings.connOk": "✓ Connected — ${count} models",
-    "settings.providerUrlRequired": "baseURL required",
-    "settings.secretDeleteConfirm": "Delete? This cannot be undone — the original credential cannot be recovered; you would have to reconfigure it or get a new one from the provider.",
-    "settings.agent.readonly": "Read-only",
-    "settings.agent.save": "Save",
-    "settings.model.current": "Current model",
-    "settings.model.empty": "No models yet",
-    "settings.model.use": "Use",
-    "settings.model.tier": "Tier",
-    "settings.mcp.kind.url": "URL",
-    "settings.mcp.kind.command": "Command",
-    "settings.mcp.remove": "Remove ${name}",
-    "settings.mcp.nameLabel": "Name",
-    "settings.mcp.add": "Add server",
+    // 「i18n 拆分批」设置面词族第四档（单源 = `renderer/i18n-settings.mjs` —— 合并式两语展开，键序原位）
+    ...SETTINGS_DICT.en,
     // ── 首启向导（批 9：`views/onboarding.mjs`）──
     "wizard.title": "Initial setup",
     "wizard.dismiss": "Close setup",
@@ -238,10 +189,7 @@ export const HOST_DICT = Object.freeze({
     "wizard.dir.hint": "Pick a project folder — you can change it later.",
     "wizard.dir.pick": "Choose folder…",
     "wizard.save": "Save provider",
-    // ── 批 B 面（`views/chrome.mjs`：会话头三字段标 / 档位两特值词 / 状态栏读数串 —— 键名本档拟定，登记面即此处）──
-    "head.field.provider": "Provider",
-    "head.field.model": "Model",
-    "head.field.effort": "Tier",
+    // ── 批 B 面（档位两特值词 / 状态栏读数串 —— 键名本档拟定，登记面即此处）──
     "effort.auto": "Auto",
     "effort.off": "Off",
     "status.usage": "context ${percent}%${tokens}",
@@ -333,62 +281,8 @@ export const HOST_DICT = Object.freeze({
     "question.input": "你的回答",
     "question.answer": "提交作答",
     "question.cancel": "取消",
-    // ── 设置面（批 9：`views/settings.mjs` + `views/settings-sections.mjs`）──
-    "settings.title": "设置",
-    "settings.close": "关闭设置",
-    "settings.lang.en": "English",
-    "settings.lang.zh": "中文",
-    "settings.section.providers": "渠道",
-    "settings.section.model": "模型与档位",
-    "settings.section.agent": "agent 参数",
-    "settings.section.mcp": "MCP",
-    "settings.state.none": "未配置",
-    "settings.state.loading": "载入中…",
-    "settings.reason.mtimeConflict": "配置已在别处变更——请重载后再保存",
-    "settings.reason.invalidShape": "配置形态非法",
-    "settings.reason.invalidKey": "未知配置键",
-    "settings.reason.invalidValue": "取值非法",
-    "settings.reason.invalidPatch": "补丁非法",
-    "settings.reason.noProject": "未打开项目",
-    "settings.reason.missing": "配置文件缺失",
-    "settings.reason.invalidManifest": "项目清单非法",
-    "settings.reason.unavailable": "不可用",
-    "settings.reason.timeout": "超时",
-    "settings.reason.malformed": "响应格式畸形",
-    "settings.reason.probeFailed": "探活失败",
-    "settings.providers.nameLabel": "名称",
-    "settings.providers.presetLabel": "预设",
-    "settings.providers.baseURLLabel": "Base URL",
-    "settings.providers.modelLabel": "模型",
-    "settings.providers.formatLabel": "协议格式",
-    "settings.providers.keyLabel": "API 密钥",
-    "settings.providers.activeToggle": "设为当前渠道",
-    "settings.providers.addCustom": "添加自定义渠道",
-    "settings.providers.addPreset": "添加预设渠道",
-    "settings.providers.verify": "校验",
-    "settings.providers.verify.ok": "校验通过 · ${count} 个模型",
-    "settings.providers.verify.fail": "校验失败：${reason}",
-    "settings.providers.noKey": "未配置密钥",
-    "settings.providers.remove": "移除 ${name}",
-    "settings.providers.active": "当前",
-    "settings.proxyRow": "代理",
-    "settings.proxyRowTitle": "该 provider 的模型请求走代理（需全局 proxy.model 开启）",
-    "settings.fetchModels": "拉取模型",
-    "settings.connecting": "连接中…",
-    "settings.connOk": "✓ 连接成功 — ${count} 个模型",
-    "settings.providerUrlRequired": "需要 baseURL",
-    "settings.secretDeleteConfirm": "确定删除？删除后无法恢复——凭证原文不可复得，只能重新配置或回服务商重取。",
-    "settings.agent.readonly": "只读",
-    "settings.agent.save": "保存",
-    "settings.model.current": "当前模型",
-    "settings.model.empty": "暂无模型",
-    "settings.model.use": "采用",
-    "settings.model.tier": "档位",
-    "settings.mcp.kind.url": "URL",
-    "settings.mcp.kind.command": "命令",
-    "settings.mcp.remove": "移除 ${name}",
-    "settings.mcp.nameLabel": "名称",
-    "settings.mcp.add": "添加服务器",
+    // 「i18n 拆分批」设置面词族第四档（单源 = `renderer/i18n-settings.mjs` —— 合并式两语展开，键序原位）
+    ...SETTINGS_DICT.zh,
     // ── 首启向导（批 9：`views/onboarding.mjs`）──
     "wizard.title": "初始设置",
     "wizard.dismiss": "关闭向导",
@@ -400,10 +294,7 @@ export const HOST_DICT = Object.freeze({
     "wizard.dir.hint": "选择项目目录——之后也可以更改。",
     "wizard.dir.pick": "选择目录…",
     "wizard.save": "保存渠道",
-    // ── 批 B 面（`views/chrome.mjs`：会话头三字段标 / 档位两特值词 / 状态栏读数串 —— 键名本档拟定，登记面即此处）──
-    "head.field.provider": "渠道",
-    "head.field.model": "模型",
-    "head.field.effort": "档位",
+    // ── 批 B 面（档位两特值词 / 状态栏读数串 —— 键名本档拟定，登记面即此处）──
     "effort.auto": "自动",
     "effort.off": "关闭",
     "status.usage": "上下文 ${percent}%${tokens}",

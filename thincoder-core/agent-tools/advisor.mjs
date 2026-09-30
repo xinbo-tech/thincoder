@@ -24,6 +24,8 @@ import {
 // F30/F31（2026-09-18 顾问面治理批）：类型门判定 / 拒发串 / 对象标识行——单源 `advisor/notice.mjs`
 // （文案逐字 = ADVISOR-GUARDS.md §2.4 / §2.5）；零计数载体（计数护栏随撤 cap 整体退场）。
 import { typeGateCriterion, buildTypeGateRefusal, scopeSummary, withIdentityLine } from "../advisor/notice.mjs"
+// #15 描述外置：描述文本单点 = tool-docs/advisor.md（DESC 单解析面，缺档抛错语义不变）
+import { DESC } from "../tools/shared.mjs"
 
 // Design-token utilities moved to advisor-async.mjs (the async settle shares
 // them — no wrapper↔runner module cycle); validateDesignToken stays exported
@@ -32,36 +34,14 @@ export { validateDesignToken } from "./advisor-async.mjs"
 
 export const advisorTool = {
   name: "advisor",
-  description:
-    "Run an independent review on your work. " +
-    "type is REQUIRED — exactly one of the two legal values: type='design' reviews design / requirement documents before implementation (pass documents=[...] with the explicit list of doc paths; plus batchDoc when a batch record is in flight); type='code' reviews the code you changed after implementation (pass paths=[...] to scope files/directories — documents=[...] adds acceptance-criteria context). " +
-    "A call without a type (or with a conflicting object.type) is refused — there is no default and no silent fallback. " +
-    "The advisor is an independent read-only sub-agent that explores the codebase, " +
-    "reads files, and traces callers via grep/lsp. " +
-    "For code review: round 1 does a full review, round 2 verifies the agent's fix claims, " +
-    "round 3+ strictly checks only the fix claims — convergence, not divergence. " +
-    "For design review: single-pass review against methodology and requirements. " +
-    "Review criteria come from .thincoder/advisor.md (if present) or sensible defaults. " +
-    "After the review, you MUST produce a response table (see discipline rules for format). " +
-    "If advisor says all clear, call verify. " +
-    "Optionally pass object={type,target,status,reason,exclude} to anchor the review target " +
-    " (the review-object declaration is mechanically injected into the review message); " +
-    "absent → legacy behavior (no injection). " +
-    "ASYNC: at depth 0 the review runs in the BACKGROUND by default " +
-    "(async:true or omitted) — the call returns an ack immediately, the turn ends, and the report " +
-    "arrives automatically in a digest turn when the review finishes; background reviews share one pool — " +
-    "at most agent.poolLimits.advisor concurrent reviews (default 4 — configurable via /config 并发池 or " +
-    "config.json; pool-full and same-scope refusals state the current limit) — launch reviews one at a time. " +
-    "Inside a child (depth>0 — eng-coder self-review) " +
-    "reviews are always synchronous; async:true is rejected there. " +
-    "Returns the review report — the advisor's findings verdict: all-clear (call verify) or a findings list to fix.",
+  description: DESC("advisor"),
   parameters: {
     type: "object",
     properties: {
       type: { type: "string", enum: ["code", "design"], description: "Review type (required): 'design' for design doc review, 'code' for code review. Omitting it is refused — there is no default." },
       async: {
         type: "boolean",
-        description: "Background review: default at depth 0 = true (async — ack now, report via digest); async:false forces the blocking review (mechanism parameter — top-level launches are async by default). depth>0 → always sync (async:true rejected).",
+        description: "Background review: default at depth 0 = true (ack now, report via digest); async:false forces the blocking review. depth>0 → always sync.",
       },
       object: {
         type: "object",
@@ -72,21 +52,21 @@ export const advisorTool = {
           reason: { type: "string", description: "Why this review runs: user-initiated / delivery verification" },
           exclude: { type: "string", description: "Explicit exclusion list — approved/implemented items NOT in this review" },
         },
-        description: "Review-object declaration: mechanically injected at the start of the review user message so the advisor does not re-derive the review target. Absent → no injection (legacy behavior).",
+        description: "Review-object declaration — mechanically injected at the start of the review message. Absent → no injection (legacy behavior).",
       },
       paths: {
         type: "array",
         items: { type: "string" },
-        description: "Code files or directories to review (for code review). Required unless documents is provided. The advisor reads the files/directories listed here — it has no git tool and never inspects diffs.",
+        description: "Code files or directories to review (for code review). Required unless documents is provided. The advisor reads exactly these — it has no git tool and never inspects diffs.",
       },
       documents: {
         type: "array",
         items: { type: "string" },
-        description: "Explicit list of doc paths to review (design docs, requirements docs, referenced docs). The advisor reviews ONLY these — it does NOT scan git diff. Use for both design review and code review to pass the task's Docs involved list.",
+        description: "Doc paths to review (design / requirements / referenced docs). The advisor reviews ONLY these — no git diff scan. Use for both review types to pass the task's docs list.",
       },
       batchDoc: {
         type: "string",
-        description: "Design review only: path to the batch record currently in flight. Validated WHENEVER passed (any review type) — a value that is not a readable file is refused with an error rather than ignored; for design reviews the reviewer then ALSO gets the `batch` write channel (transition alias `batch_segment`) to record its findings table + VERDICT + counts into §3. Omit when no batch record is in flight — the review then runs unchanged with no write channel (zero regression).",
+        description: "Design review only: the in-flight batch record path — validated whenever passed (unreadable ⇒ refused, not ignored); the reviewer then also gets the `batch` write channel (transition alias `batch_segment`) to record its findings + verdict. Omit when no batch record is in flight (no write channel — zero regression).",
       },
     },
     required: ["type"],

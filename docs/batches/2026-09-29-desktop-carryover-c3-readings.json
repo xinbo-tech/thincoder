@@ -1,0 +1,273 @@
+{
+  "boot": "ok",
+  "phases": {
+    "cap1": {
+      "appeared": true,
+      "question": {
+        "promptId": "826a74ac-97ec-4f3f-8fc7-28a85500f962",
+        "text": "❯ Agent reached 2 turns (limit). Continue from here?ContinueStopSendCancel",
+        "options": [
+          "Continue",
+          "Stop"
+        ]
+      },
+      "queue": [],
+      "running": true
+    },
+    "legB": {
+      "modeEntered": true,
+      "toast": null,
+      "q2Appeared": true,
+      "post": {
+        "question": {
+          "promptId": "da810d8e-8381-428b-891a-223eb3de2b82",
+          "text": "❯ Agent reached 2 turns (limit). Continue from here?ContinueStopSendCancel",
+          "options": [
+            "Continue",
+            "Stop"
+          ]
+        },
+        "input": "",
+        "queue": [],
+        "userTexts": [
+          "c3 开场",
+          "腿B 首消息",
+          "B 携文"
+        ],
+        "flowText": "❯ You: 22:35c3 开场ThinCoderc3 开场回执❯ You: 22:35腿B 首消息ThinCoderread\"probe-notes.md\"done0.0s→ 6 linesread\"probe-notes.md\"done0.0s→ 6 lines❯ You: 22:35B 携文ThinCoderread\"probe-notes.md\"done0.0s→ 6 linesread\"probe-notes.md\"done0.0s→ 6 lines[stopped]❯ Agent reached 2 turns (limit). Continue from here?ContinueStopSendCancel",
+        "q1Gone": true,
+        "rejectLogs": [],
+        "toastLate": null
+      }
+    },
+    "legAPre": {
+      "queue": [
+        "腿A 排队 1",
+        "腿A 排队 2",
+        "腿A 排队 3",
+        "腿A 排队 4",
+        "腿A 排队 5",
+        "腿A 排队 6",
+        "腿A 排队 7",
+        "腿A 排队 8"
+      ],
+      "pending": 8,
+      "question": {
+        "promptId": "da810d8e-8381-428b-891a-223eb3de2b82",
+        "text": "❯ Agent reached 2 turns (limit). Continue from here?ContinueStopSendCancel",
+        "options": [
+          "Continue",
+          "Stop"
+        ]
+      },
+      "toast": null,
+      "running": true,
+      "calls": 4,
+      "fillWaits": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    "legA": {
+      "modeEntered": true,
+      "toast": {
+        "visible": true,
+        "text": "Task running — the queue is full (8 messages); wait for them to be processed before submitting again."
+      },
+      "post": {
+        "input": "A 携文",
+        "question": {
+          "promptId": "da810d8e-8381-428b-891a-223eb3de2b82",
+          "text": "❯ Agent reached 2 turns (limit). Continue from here?ContinueStopSendCancel",
+          "options": [
+            "Continue",
+            "Stop"
+          ]
+        },
+        "queue": [
+          "腿A 排队 1",
+          "腿A 排队 2",
+          "腿A 排队 3",
+          "腿A 排队 4",
+          "腿A 排队 5",
+          "腿A 排队 6",
+          "腿A 排队 7",
+          "腿A 排队 8"
+        ],
+        "pending": 8,
+        "running": true,
+        "calls": 4,
+        "toastLate": {
+          "visible": true,
+          "text": "Task running — the queue is full (8 messages); wait for them to be processed before submitting again."
+        },
+        "word": "Task running — the queue is full (8 messages); wait for them to be processed before submitting again.",
+        "rejectLogs": [
+          "[composer] msg:interrupt failed: queue-full"
+        ]
+      }
+    }
+  },
+  "readings": {
+    "projectOpen": {
+      "cwd": "C:\\Users\\liwei\\AppData\\Local\\Temp\\carryover-c3-proj-BTo3uw"
+    },
+    "key": "1",
+    "stubChatCalls": 4,
+    "pageErrors": [],
+    "consoleTail": [
+      {
+        "type": "error",
+        "text": "[renderer] ledger:read failed: no-project"
+      },
+      {
+        "type": "error",
+        "text": "[renderer] batch:status failed: missing"
+      },
+      {
+        "type": "error",
+        "text": "[composer] msg:interrupt failed: queue-full"
+      }
+    ]
+  },
+  "checks": {
+    "fBootOk": true,
+    "fProjectOpened": true,
+    "fSessionActive": true,
+    "bCapQuestion1": true,
+    "fQueueEmptyAtStart": true,
+    "bInterruptModeEntered": true,
+    "bNoToastAccepted": true,
+    "bNoRejectLog": true,
+    "bQuestionSettled": true,
+    "bNextCapQuestion2": true,
+    "bDeliveredUserBlock": true,
+    "bQueueConsumed": true,
+    "bInputNoReinject": true,
+    "aQueueFilled8": true,
+    "aPreNoToast": true,
+    "aPreQuestionPending": true,
+    "aInterruptModeEntered": true,
+    "aToast": true,
+    "aRejectLog": true,
+    "aInputReinjected": true,
+    "aQuestionKept": true,
+    "aQueueUnchanged": true,
+    "aPendingUnchanged": true,
+    "aStillRunning": true,
+    "aNoNewModelCall": true
+  },
+  "detail": {
+    "fBootOk": "ok",
+    "fProjectOpened": {
+      "cwd": "C:\\Users\\liwei\\AppData\\Local\\Temp\\carryover-c3-proj-BTo3uw"
+    },
+    "fSessionActive": "1",
+    "bCapQuestion1": {
+      "appeared": true,
+      "question": {
+        "promptId": "826a74ac-97ec-4f3f-8fc7-28a85500f962",
+        "text": "❯ Agent reached 2 turns (limit). Continue from here?ContinueStopSendCancel",
+        "options": [
+          "Continue",
+          "Stop"
+        ]
+      },
+      "queue": [],
+      "running": true
+    },
+    "fQueueEmptyAtStart": [],
+    "bInterruptModeEntered": true,
+    "bNoToastAccepted": {
+      "window": null,
+      "late": null
+    },
+    "bNoRejectLog": [],
+    "bQuestionSettled": {
+      "q1Gone": true,
+      "promptId": "da810d8e-8381-428b-891a-223eb3de2b82"
+    },
+    "bNextCapQuestion2": "da810d8e-8381-428b-891a-223eb3de2b82",
+    "bDeliveredUserBlock": {
+      "matches": 1,
+      "flowHas": true
+    },
+    "bQueueConsumed": [],
+    "bInputNoReinject": "",
+    "aQueueFilled8": {
+      "queue": [
+        "腿A 排队 1",
+        "腿A 排队 2",
+        "腿A 排队 3",
+        "腿A 排队 4",
+        "腿A 排队 5",
+        "腿A 排队 6",
+        "腿A 排队 7",
+        "腿A 排队 8"
+      ],
+      "pending": 8,
+      "fillWaits": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    "aPreNoToast": null,
+    "aPreQuestionPending": "da810d8e-8381-428b-891a-223eb3de2b82",
+    "aInterruptModeEntered": true,
+    "aToast": {
+      "toast": {
+        "visible": true,
+        "text": "Task running — the queue is full (8 messages); wait for them to be processed before submitting again."
+      },
+      "word": "Task running — the queue is full (8 messages); wait for them to be processed before submitting again."
+    },
+    "aRejectLog": [
+      "[composer] msg:interrupt failed: queue-full"
+    ],
+    "aInputReinjected": "A 携文",
+    "aQuestionKept": {
+      "promptId": "da810d8e-8381-428b-891a-223eb3de2b82",
+      "text": "❯ Agent reached 2 turns (limit). Continue from here?ContinueStopSendCancel",
+      "options": [
+        "Continue",
+        "Stop"
+      ]
+    },
+    "aQueueUnchanged": {
+      "queue": [
+        "腿A 排队 1",
+        "腿A 排队 2",
+        "腿A 排队 3",
+        "腿A 排队 4",
+        "腿A 排队 5",
+        "腿A 排队 6",
+        "腿A 排队 7",
+        "腿A 排队 8"
+      ],
+      "pending": 8
+    },
+    "aPendingUnchanged": 8,
+    "aStillRunning": true,
+    "aNoNewModelCall": {
+      "pre": 4,
+      "post": 4
+    }
+  },
+  "failed": [],
+  "verdict": true,
+  "notes": [],
+  "ts": "2026-09-29T14:36:01.603Z",
+  "probeHash": "acf00b0e3837aa32437f817f173475578dd65190"
+}

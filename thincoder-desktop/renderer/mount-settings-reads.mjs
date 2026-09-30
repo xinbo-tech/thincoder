@@ -13,6 +13,8 @@
  * （只刷行面 `effort` 现值 —— 档位写后刷新用，零候选清空）；无激活渠道 ⇒ 段归 `none` 且**零请求**（禁假造候选）。
  * R7 两读数要点：`loadTools` 段态判据仍以**索引面**为准（R2 口径不动——`indexOk` 假 ⇒ 段归 `none`），
  * 两 key 面色随行渲染（各自失败另落 `report`）；`loadEnv` 的 `test` 结果 = 瞬时读数（复读保留原值）。
+ * **#671 读面并持**：`loadProviders` 三写皆**并持现切片** —— 草稿四切片 `edit` ∕ `keyDraft` ∕ `probe` ∕ `draft` **读面零复位**
+ * （复位权仅在出口族显式点：开 ∕ 关面 · 取消 · 钥存 ∕ 删钥成功；`state` ∕ `presets` ∕ 名单照刷）。
  * 纪律：零 `node:` / 零裸包 · 逐通道回执形单源 = IPC.md §2。
  */
 
@@ -50,17 +52,18 @@ export function createReads(deps = {}) {
     setSettings({ providers: { ...store.get().settings?.providers, state: "loading" } })
     const receipt = await ask("provider:list")
     if (receipt.ok !== true) {
-      setSettings({ providers: { state: "none", presets: [], providers: [] } })
+      setSettings({ providers: { ...store.get().settings?.providers, state: "none", presets: [], providers: [] } }) // #671 失败写并持现切片
       report("providers", receipt, "provider:list")
       return null
     }
     const { provider, current } = activeModel(receipt)
     const held = store.get().settings?.model ?? {}
     const kept = options.models === false && held.provider === provider
+    // #671 ready 写并持现切片（草稿四切片读面零复位 —— 同失败径）；`presets` ∕ 名单两键照刷。
     setSettings({
       notice: null,
       defaultModel: current,
-      providers: { state: "ready", presets: listOf(receipt.presets), providers: listOf(receipt.providers) },
+      providers: { ...store.get().settings?.providers, state: "ready", presets: listOf(receipt.presets), providers: listOf(receipt.providers) },
       model: { state: held.state ?? "none", provider, current, models: kept ? listOf(held.models) : [] },
     })
     if (!kept) await loadModels(provider)

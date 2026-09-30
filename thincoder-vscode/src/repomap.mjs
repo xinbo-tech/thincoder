@@ -8,6 +8,7 @@
 
 import { workspace } from "vscode"
 import { relative as _relPath } from "node:path"
+import { loadToolDoc } from "@thincoder/core/prompt-files.mjs" // #15 收正：描述单源（tool-docs/repo_outline.md）
 
 // ─── Parse helpers ──────────────────────────
 
@@ -200,11 +201,9 @@ export async function buildSummary(cwd) {
 export const repoOutlineTool = {
   name: "repo_outline",
   readonly: true,
-  description:
-    "Show the project's file dependency outline: which files import/export from which, and what symbols they export. " +
-    "Use when you need to understand the project structure, find where a function is defined, or see what files depend on a module. " +
-    "Pass a path to focus on a single file's relationships. " +
-    "For symbol-level lookups use code_search or lsp.",
+  // #15 收正（2026-09-29）：描述单源 = @thincoder/core/tool-docs/repo_outline.md（与核 DESC("repo_outline")
+  // 同档同文本）；旧端自持内联副本已除——本工具不再保留第二份描述文本。
+  description: loadToolDoc("repo_outline"),
   parameters: {
     type: "object",
     properties: {

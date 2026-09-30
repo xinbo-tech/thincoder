@@ -1,0 +1,145 @@
+{
+  "at": "2026-09-29T20:30:00.268Z",
+  "ok": true,
+  "mount": {
+    "ms": 516,
+    "chars": 606208,
+    "eq": true,
+    "spans": 51,
+    "visible": [
+      49,
+      50
+    ],
+    "tasks": [
+      87
+    ],
+    "census": {
+      "text": 606208,
+      "spans": 51,
+      "distinct": 51,
+      "maxSeg": 50,
+      "visible": [
+        49,
+        50
+      ],
+      "joined": 606208,
+      "joinedPrefix": true,
+      "blockHeight": 8045
+    }
+  },
+  "scroll": {
+    "steps": 30,
+    "changes": 47,
+    "maxPerFrame": 2,
+    "visibleMax": 4,
+    "driftMax": 0.38,
+    "segMin": 25,
+    "segMax": 50,
+    "tasks": [],
+    "measured": 30,
+    "skipped": 0,
+    "hot": [],
+    "crossed": 25,
+    "frames": 27
+  },
+  "streaming": {
+    "ms": 3070,
+    "steps": 24,
+    "chars": 606216,
+    "faceChars": 606216,
+    "eq": true,
+    "spans": 51,
+    "distinct": 51,
+    "visible": [
+      49,
+      50
+    ],
+    "follows": true,
+    "diff": null,
+    "windows": [
+      {
+        "step": 19,
+        "chars": 479921,
+        "faceChars": 479921,
+        "spans": 40,
+        "distinct": 40,
+        "visible": [
+          38,
+          39
+        ]
+      },
+      {
+        "step": 20,
+        "chars": 505180,
+        "faceChars": 505180,
+        "spans": 43,
+        "distinct": 43,
+        "visible": [
+          41,
+          42
+        ]
+      },
+      {
+        "step": 21,
+        "chars": 530439,
+        "faceChars": 530439,
+        "spans": 45,
+        "distinct": 45,
+        "visible": [
+          43,
+          44
+        ]
+      },
+      {
+        "step": 22,
+        "chars": 555698,
+        "faceChars": 555698,
+        "spans": 47,
+        "distinct": 47,
+        "visible": [
+          45,
+          46
+        ]
+      },
+      {
+        "step": 23,
+        "chars": 580957,
+        "faceChars": 580957,
+        "spans": 49,
+        "distinct": 49,
+        "visible": [
+          47,
+          48
+        ]
+      },
+      {
+        "step": 24,
+        "chars": 606216,
+        "faceChars": 606216,
+        "spans": 51,
+        "distinct": 51,
+        "visible": [
+          49,
+          50
+        ]
+      }
+    ],
+    "tasks": []
+  },
+  "remount": {
+    "ms": 333,
+    "spansBefore": 51,
+    "spansAfter": 51,
+    "visibleBefore": [
+      49,
+      50
+    ],
+    "visibleAfter": [
+      49,
+      50
+    ],
+    "transferOk": true,
+    "chars": 606216,
+    "tasks": []
+  }
+}

@@ -1,5 +1,6 @@
 import { loadSkills, readSkill } from "../skills.mjs"
 import { escapeXml } from "../agent.mjs"
+import { DESC } from "../tools/shared.mjs"
 
 // ─── skill loader 注入缝（#88——「同步 loader 面按核内结构归一」的端侧覆盖面）──────────
 /**
@@ -17,14 +18,11 @@ export function resetSkillLoader() { injectedLoader = null }
 
 /**
  * skill tool: load project skill files on demand (.thincoder/skills/*.md).
- * After loading, skill content is injected into the conversation wrapped in <skill-loaded> for subsequent reference.
- * Use action="list" to see all available skills.
+ * 描述面 = `tool-docs/skill.md`（DESC() 加载）；加载内容经 <skill-loaded> 注入会话。
  */
 export const skillTool = {
   name: "skill",
-  description:
-    "Load a project skill from .thincoder/skills/. Skills contain reusable instructions, workflows, or reference material. Use this when the user references a skill by name, or when a task matches a known skill's description. Call with action='list' to see available skills; call with action='load' and name=<skill> to activate one. " +
-    "Returns the skill list ('list'), the load confirmation ('load' — instructions arrive in the next message), or Error: ... with the available skills.",
+  description: DESC("skill"),
   parameters: {
     type: "object",
     properties: {

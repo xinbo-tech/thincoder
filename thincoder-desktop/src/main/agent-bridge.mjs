@@ -7,6 +7,8 @@
  * **R3b（D20 · `docs/desktop/design/UI.md` §1 本批注项 2 / `docs/desktop/design/IPC.md` §1 `ev:subagent` 行）**：
  *  ① relay 分流——relay 前缀 token（`⟦ev⟧` / `[model]` 族）⇒ `ev:subagent`（映射**单源** = 核
  *     `@thincoder/render-core` `relayEventToSubPatch`；前缀剥除在核 ⇒ 渲染面零析 `role#id/`）；
+ *     **#599**：核返 `null` 双义 ⇒ 以 `relayPathOf(text).rest` 前缀复核（逐字同 VSC `panel-subagent-relay.mjs:107-108`）——
+ *     事件面已消费 ⇒ 零载荷消费（现行为保持）；否则不消费，落 ② 内容面（含 `⟦ev⟧` 字面的内层内容 chunk 不被静默吞）；
  *  ② 前缀内容 chunk（text / think / 工具调用行 / 工具输出行）⇒ **内容面**（「对齐第二批」项 3 KD-RC-6 收正：
  *     内容回显 = 核件 tail-3 / 展开）——四面分流 ⇒ `ev:subchunk`（载荷 `{ role, id, kind, text, sub?, tool?, face?, cmd? }`
  *     —— 前缀剥除在本档 ⇒ 渲染面零析 `role#id/`；内容渲染单源 = 核件）；
@@ -15,15 +17,15 @@
  * `{ key, text }`——与正文同形；续写判据 = 尾块 `kind === "reasoning"`，归约面 `renderer/events.mjs` 同源）。
  * **对齐第三批（`docs/desktop/design/UI.md` §1 本批注 · `docs/desktop/design/IPC.md` §1 载荷五处增键）**：
  *  ① 工具失败判据 = 核 `isToolFailure` 单源（项 2）；② `onPermissionRequired` 四参缝 ⇒ 载荷 `owner` / `diff`
- *  （B1 / 相抵①）；③ `onSubagentApproval` ⇒ `ev:subagent { status: "approval" }`（B5）；④ `onTurnEnd` ⇒
- *  `ev:activity { event: "turnBreak" }`（A7）；⑤ advisor 轮次采样 ⇒ `ev:tool-call` `round` / `model`（A14）；
+ *  （B1 / 相抵①）；③ `onSubagentApproval` ⇒ `ev:subagent { status: "approval" }`（B5）；④ `onSubTurnBreak` ⇒
+ *  `ev:activity { event: "turnBreak" }`（A7 窄义 ∕ #628 改挂）；⑤ advisor 轮次采样 ⇒ `ev:tool-call` `round` / `model`（A14）；
  *  ⑥ `ev:tool-result` 增 `links`（验存文件链接——相抵② · KD-39）。后三项各由注入面供料（见下 `createBridge`）。
  * **R3（#520 · `onDistilled` 蒸馏落位）**：回调桥增 `onDistilled`（核 `explore-distill.mjs:150` —— 蒸馏落地时点）
  *  ⇒ 经注入面 `persistDistilled(key)` **立即重落盘**（**非出站通道**；落盘动作在注入面 —— 桥零宿主依赖律不破；
  *  端侧装配 = `agent-host.mjs` ⇒ `session-io.mjs` `saveDistilledSlot`；CLI `tool-events.mjs:397` ∕ VSC
  *  `panel-callbacks.mjs:242` 同式）。
  * **R4（提示锚 + 状态面 · `docs/batches/2026-09-28-desktop-feature-parity.md` §2.4 R4）**：增四回调 ——
- *  `onWait`（核 `agent.mjs:285` 透传 provider 链 ⇒ `ev:statusText`；相位 → kind 映射 = 核单源
+ *  `onWait`（核 `chat-call.mjs:33` 透传 provider 链 ⇒ `ev:statusText`；相位 → kind 映射 = 核单源
  *  `provider/wait-status.mjs` `waitStatusOf`，`warn` ∕ 未知相位 ⇒ 零载波）· `onCompressStart` ∕ `onCompress` ∕
  *  `onCompressFail`（核 `context.mjs:304` ∕ `agent/run-stages.mjs:89/:98/:106` ⇒ `ev:compress` 四态载荷
  *  ——起跑 ∕ 完成 ∕ 降级 ∕ 失败；形 = VSC `panel-callbacks.mjs:175-183` 同式，词面渲染归渲染面）。
@@ -153,8 +155,12 @@ export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf,
             syncLiveOf: typeof syncLiveOf === "function" ? (head) => syncLiveOf(key, head) === true : undefined,
             now,
           })
-          if (patch) sub(patch)
-          return true
+          if (patch) { sub(patch); return true }
+          // ①b null 复核（#599 —— 与 VSC `panel-subagent-relay.mjs:107-108` 逐字同判）：核返 `null` 双义 ——
+          // `rest` 起于事件字面（`⟦ev⟧` ∕ `[model]`）⇒ 本面已消费（剥除 ∕ async / 表外 ⟦ev⟧ —— 零载荷，现行为保持）；
+          // 未命中 ⇒ **非事件面**（`rest` 为内容文本——含字面形态的内层内容 chunk）⇒ 不消费，落 ② 内容面。
+          const path = relayPathOf(String(text ?? ""))
+          if (path !== null && (path.rest.startsWith("⟦ev⟧") || path.rest.startsWith("[model]"))) return true
         }
         // ② 前缀内容 chunk（无 ⟦ev⟧ / [model] 字面 ⇒ 非事件面）：relay 前缀 ⇒ `ev:subchunk` 的 text 面
         //（「对齐第二批」项 3 收正：内容回显 = 核件 tail-3 / 展开；前缀字面不得泄漏入主流）。
@@ -263,9 +269,10 @@ export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf,
         if (id == null || role == null) return false
         return sub({ status: "approval", role, id, model: info?.model ?? null, tool: info?.tool ?? null })
       },
-      // 子回合边界（核 `onTurnEnd(agent, turn)` ⇒ `ev:activity { event: "turnBreak" }` —— 「对齐第三批」A7 ·
-      // `IPC.md` §1 该通道「四形」）：**无 `fields`**（内联形判别键不得在场 —— 判别写死见同段）；非回合尾。
-      onTurnEnd: () => at("ev:activity", { event: "turnBreak" }),
+      // 子回合边界（核 `onSubTurnBreak()` ⇒ `ev:activity { event: "turnBreak" }` —— 「对齐第三批」A7 ∕ #628 窄义改挂 ·
+      // `IPC.md` §1 该通道「四形」）：**无 `fields`**（内联形判别键不得在场 —— 判别写死见同段）；非回合尾 ——
+      // 中断注入 ∕ 工具批尾（核 `onTurnEnd` 超集两负向点）不再产 turnBreak（与 VSC 窄义同判）。
+      onSubTurnBreak: () => at("ev:activity", { event: "turnBreak" }),
       // 作答门（`question` 工具 ⇒ 用户真作答）：转口 `askQuestion` ⇒ 返**悬起 Promise**（出站与结算住
       // `suspensions.mjs` —— 桥零文案）；工具结果 = 作答串 ∥ 取消串（`QUESTION_CANCELLED`）。
       onQuestion: (question, options) => askQuestion(key, question, options),
@@ -273,11 +280,11 @@ export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf,
       // 蒸馏落位（R3 · #520 —— 核 `explore-distill.mjs:150`）：机器行已被压缩版替换 ⇒ 注入面按本键立即
       // 重落盘（落盘动作经端侧装配 —— 桥零宿主依赖律不破；缺注入 ⇒ 零动作，不假造落盘）。
       onDistilled: () => { if (typeof persistDistilled === "function") persistDistilled(key) },
-      // 用量回调（R3a · 核 `callbacks.onUsage(response.usage)` —— `thincoder-core/agent.mjs:353`）：**非独立通道** ——
+      // 用量回调（R3a · 核 `callbacks.onUsage(response.usage)` —— `thincoder-core/agent/turn-loop.mjs:154`）：**非独立通道** ——
       // 逐次响应累入本键会话级令牌表（`tokensOf(key)` 注入；表缺 ⇒ 零动作），随宿主回合尾 `ev:usage` 载荷出
       // （`docs/desktop/design/IPC.md` §1 `ev:usage` 行「载荷扩」）。
       onUsage: (usage) => accumulateTokens(tokensOf?.(key), usage),
-      // 等待相位（R4 —— 核 `callbacks.onWait`（`agent.mjs:285` 透传 provider 链）⇒ `ev:statusText`）：映射 = 核单源
+      // 等待相位（R4 —— 核 `callbacks.onWait`（`chat-call.mjs:33` 透传 provider 链）⇒ `ev:statusText`）：映射 = 核单源
       // `waitStatusOf`（→ `{ kind, seconds }` ∕ `{ kind, message }`）；`null`（`warn` ∕ 未知相位）⇒ **零载波**
       //（禁假造——本端零相位枚举 ∕ 零自铸词；文案取词归渲染面 `status.*` 核字典投影）。
       onWait: (info) => {
@@ -295,7 +302,7 @@ export function createBridge({ post, askSingle, askBatch, askQuestion, tokensOf,
       }),
       onCompressFail: (err) => at("ev:compress", { status: "failed", error: err?.message ?? String(err ?? "unknown error") }),
       // 注：本对象为**回调桥**（核 `runAgent` 消费面）——键集与 `docs/desktop/design/SHELL.md` §4 回调表同源；
-      // 「对齐第三批」三接缝（`onPermissionRequired` / `onSubagentApproval` / `onTurnEnd`）皆并入既有通道，非新通道。
+      // 「对齐第三批」三接缝（`onPermissionRequired` / `onSubagentApproval` / `onSubTurnBreak`）皆并入既有通道，非新通道。
     }
   }
   /** scope 回收（宿主 `dispose` 面 —— R3b：会话删除 / 装配实例清除时调用；防同键重开继承陈旧 pending / queued 缓存）。 */

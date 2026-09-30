@@ -56,10 +56,10 @@ CREATE TABLE IF NOT EXISTS items (
 key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0, 16)
 ```
 
-- **归一步** = `session-slots.mjs` `normalizeCwd`（Windows 盘符统一大写）——跨端契约「两端同 cwd 同一 hash」；同契约消费面 = session / checkpoint / traces / peers。
+- **归一步** = `session-slots.mjs` `normalizeCwd`（Windows 盘符统一大写——**盘符步 = `normalizeCwd` 直调**；分隔符折叠自持）——跨端契约「两端同 cwd 同一 hash」；同契约消费面 = session / checkpoint / traces / peers。
 - **`resolve()` 既有规范化**覆盖分隔符（`/`→`\`）· 点段折叠 · 去尾斜杠——归一函数只补**盘符大小写**一维；残差即本批断口（VSC `uri.fsPath` 小写盘符 vs CLI `process.cwd()` 大写）。
 - **键不变性**：盘符本已大写（CLI 侧）⇒ 归一恒等 ⇒ **CLI 现状键零变**；小写盘符（VSC 侧）并入同键 ⇒ 两端同库。判据 = AC-M2-11。
-- **级联面**：`findProject` / `discoverFamily` / `buildScan` / 去重档 `notifyKey` 全链随键收敛——**不新增归一函数、不改各调用点**（键只在 `ledgerKey` 一处生成；`notifyKey` 的路径归一保持自身单源）。
+- **级联面**：`findProject` / `discoverFamily` / `buildScan` / 去重档 `notifyKey` 全链随键收敛——**不新增归一函数、不改各调用点**（键只在 `ledgerKey` 一处生成；`notifyKey` 盘符步 = `normalizeCwd` 直调、分隔符折叠自持）。
 - **单源判据射程**（AC-M2-11 第三分句）：grep 域限**台账键生成面**（`ledgerKey` 所在链）——他面哈希（去重档 / 会话 / checkpoint / 迁移报告等合法同形哈希）**不属本判据**。
 
 **不做（边界）**：`realpath` / 符号链接解析；**非盘符段大小写折叠**（POSIX 大小写敏感 + origin 语义——同 `MEMORY.md` §6.11「不做」）；别名路径（subst / junction / 8.3 短名 = 已知限制）。
@@ -223,6 +223,8 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 | **触发字段** | `trigger` 三枚举 CHECK：`归批` / `条件` / `认账不排期`（合法选项，区别于遗忘）；`NULL` → 审计面「待处置」（不判红）；取值非三枚举 → INSERT 即拒（CHECK） |
 | **老化报告（审计模式）** | 行龄源 = SQLite 时间戳（`created_at`/`updated_at` 距今 > `AGING_DAYS`=30 天）——**弃 git blame**（SQLite 路径无 md 行；时间戳更可靠）。「距上次编辑」语义变「距建档/更新」——两者都度量「挂账多久」，阈值边界略有偏移（行为变更已登记） |
 | **归属与落笔** | 写命令仅**主 agent** 装配（`family-tools.mjs` depthOnly 分支——子代理装配面不挂写命令，fail-closed）；台账档不入任何子代理 `files` |
+
+**暂缓批的行状态（2026-09-29 · 批 batch-mechanics · 台账 #559）**：批档**暂缓**（口径 = `docs/core/design/BATCH-RECORD.md` §5.1 L8——批档侧机读位在 §1 状态行）**不改本库行状态**——挂靠行保持 `在途`（六态零扩 · 迁移表零改 · 写门零触）；暂缓动作的纪律面 = 行 `evidence` 补一行指针「暂缓 · 复核条件见批档 §1 状态行」（条件文本单源 = 批档 §1——本库不复制条件句）；复启 ∕ 核销照既有通道。
 
 ## 6. 机检面（v2 收编）
 
@@ -470,3 +472,5 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 - 2026-09-28（**守卫族微修批 · 设计轮** · eng-designer——承 `docs/batches/2026-09-28-guard-face-micro.md` §1 · 台账 #473 / #474）：§3.2 守卫扩读面（判据句改五工具 · 落点改拆分后工具档 · 字段判据表增 `ledger_query` / `ledger_count` 行 · 新增拒面⑦⑧ · 受影响面① 拆分落地 · 射程改五入口 · 开放项句落定）；§3.1 增 `null` 口径句；§8 增 AC-M2-16；用例表增 T43 / T44 + 档名在位于标记收正；§9 边界行随动。
 - 2026-09-28（**守卫族微修批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承 `docs/batches/2026-09-28-guard-face-micro.md` §3 轮次 1 发现 1 / 3 / 4 / 5 / 7 / 10）：
   §3.1 优先级句收口为两分句（进边 / 出边——去「统一」歧义）；§3.2 受影响面收正（`ledger.mjs` 移出零改面 · 用例档单一读数「在位 · 198 行 ⇒ 本批 ≈240 行」· 状态标记一式「待建 / 在位 + as-of」）；§8 删重编号溯源注四处 · AC-M2-16 回指补「需求侧补行已落」· 用例表档注随动。零新语义。
+- 2026-09-29（**批 batch-mechanics · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-batch-mechanics.md` §1 · 台账 #559）：§5 增**暂缓批的行状态**句——暂缓不改行状态（行保持 `在途`）+ `evidence` 指针行（条件文本单源 = 批档 §1）。**零机制语义**（六态 ∕ 迁移表 ∕ 写门零改）。
+- 2026-09-29（**residuals-round2 批 · 文档面实施轮 · eng-designer**——承批档 `docs/batches/2026-09-29-residuals-round2.md` §2 #585）：§2.1 归一步 ∕ 级联面句收正——`notifyKey` 盘符步 = `normalizeCwd` 直调、分隔符折叠自持（内联盘符归一退役）。**零新语义**（输出逐字节不变）。

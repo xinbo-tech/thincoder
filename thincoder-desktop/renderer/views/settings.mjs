@@ -12,7 +12,7 @@
  * 段体经 `deps` 注入取用。兄弟档：段体 = `renderer/views/settings-sections.mjs`（300 行层拆分 ——
  * 渠道 / 模型 / MCP 三形；agent 段 = `-agent.mjs`；tools 段 = `-tools.mjs`；env 段 = `-env.mjs`；
  * models 段 = `-models.mjs`——后两者 R7 增，前两者本档 re-export 面零改）；项目级信息行 =
- * `renderer/views/info-row.mjs`（本档 `reasonWord` 供其失败面出词）。**共用面 `syncHostProps`** = 宿主属性面复位表
+ * `renderer/mount-info.mjs`（本档 `reasonWord` 供其失败面出词）。**共用面 `syncHostProps`** = 宿主属性面复位表
  * （薄挂载属性应收单源 —— 向导 / 信息行两档同取，零副本；判据 = `docs/desktop/design/RENDERER.md` §1 退场口径 · 属性面）。
  * 纪律：零 DOM（构造点 = `dom.mjs` `build`）；
  * 文案一律经 `t()`、零字形字面（字形住 `renderer/settings.css` content）；缺 handlers ⇒ `wire` 落 `disabled: true`。
@@ -143,6 +143,8 @@ export function settingsModel(state) {
       rows: listOf(settings.providers?.providers).filter((p) => p && typeof p.name === "string"),
       verify: settings.verify !== null && typeof settings.verify === "object" ? settings.verify : null,
       edit: str(settings.providers?.edit), probe: objOf(settings.providers?.probe), draft: objOf(settings.providers?.draft),
+      // #615②：失败径草稿种子（`{ name, value }` ∕ `null` —— 消费面 = 渠道段钥行输入回填，`settings-sections.mjs` `keyControls`）
+      keyDraft: objOf(settings.providers?.keyDraft),
     },
     model: {
       state: stateOf(settings.model),
@@ -237,7 +239,7 @@ function sectionStateNode(state) {
  *  新段 = `ready` 才落行（`none` / `loading` ⇒ 零行节点 —— 防未读达即落默认值〔假读数〕）；`agent` 沿旧
  *  （`loading` 期零体）；`providers` ∕ `model` ∕ `mcp` ∕ `tools` 沿各自旧判（零行为改）。 */
 function sectionBody(name, model, handlers) {
-  const deps = { channelForm: channelFormTree, verifyControl, reasonWord, formats: FORMATS, edit: model?.providers?.edit ?? null }
+  const deps = { channelForm: channelFormTree, verifyControl, reasonWord, formats: FORMATS, edit: model?.providers?.edit ?? null, keyDraft: model?.providers?.keyDraft ?? null }
   if (name === "providers") return [sectionStateNode(model.providers.state), ...providersBody(model.providers, handlers, deps)]
   if (name === "model") return [sectionStateNode(model.model.state), ...modelBody(model.model, handlers)]
   if (name === "agent") {
@@ -311,7 +313,7 @@ export function settingsTree(model, handlers = {}) {
 /** 宿主属性面复位表（`root` → 上次薄挂载所落属性名集）：**不入 DOM 属性面**（弱引用 —— 宿主离场随收）。 */
 const hostProps = new WeakMap()
 
-/** 薄挂载属性面（**单源** —— `views/onboarding.mjs` / `views/info-row.mjs` 两挂载共用本表）：本次树声明的属性落宿主，
+/** 薄挂载属性面（**单源** —— `views/onboarding.mjs` / `renderer/mount-info.mjs` 两挂载共用本表）：本次树声明的属性落宿主，
  *  **上次所落而本次未再声明的摘除**（退场 / 换树 ⇒ 前任所加属性零残留 · 骨架属性不入表 ⇒ 零摘除）；判据 =
  *  「退场后宿主属性集 ⊆ 挂载前属性集」（只增不减 ⇒ 判据不达 · `docs/desktop/design/RENDERER.md` §1 退场口径 · 属性面）。 */
 export function syncHostProps(root, tree) {

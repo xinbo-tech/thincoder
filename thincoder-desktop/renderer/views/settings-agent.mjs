@@ -132,12 +132,14 @@ function effortOptions(section, current) {
   return selectOptions(["none", ...levels], current, t("settings.noneMark"))
 }
 
-/** agent 字段行（泛化兜底面 —— 表外标量键）：敏感 / 非标量 ⇒ 只读回显（遮罩值直传，防把遮罩写回）；标量 ⇒ `name` = 点分路径。
+/** agent 字段行（泛化兜底面 —— 表外标量键）：敏感 / 非标量 / **slot 权威键**（`field.slotAuthority` —— #617-CH 读面收窄：
+ *  会话槽面键通用保存必拒〔`slot-authority`〕⇒ 呈只读、零控件，假可供性消；提示词 = 既有拒写词键 `settings.reason.slotAuthority`）
+ *  ⇒ 只读回显（出值直传，防把遮罩值写回）；标量 ⇒ `name` = 点分路径。
  *  **P14 类型加工**：控件型按 `field.kind` 三值（`string` ⇒ `text` ∥ `number` ⇒ `number` ∥ `boolean` ⇒ `checkbox`）；
  *  出值规范化归取值面（`renderer/mount-settings-exits.mjs` —— 本档零值逻辑）。 */
 function agentFieldNode(field) {
   const label = { tag: "label", props: { class: "settings-field-label", for: field.path }, children: [field.path] }
-  const editable = field.sensitive !== true && EDITABLE_KINDS.includes(field.kind)
+  const editable = field.sensitive !== true && field.slotAuthority !== true && EDITABLE_KINDS.includes(field.kind)
   if (editable) {
     const control = field.kind === "boolean"
       ? { tag: "input", props: { class: "settings-field", id: field.path, name: field.path, type: "checkbox", checked: field.value === true ? true : undefined } }
@@ -155,7 +157,7 @@ function agentFieldNode(field) {
     tag: "div",
     props: { class: "settings-field-row", "data-field": field.path, "data-readonly": "" },
     children: [label, { tag: "span", props: { class: "settings-field-readonly" }, children: [String(field.value ?? "")] },
-      { tag: "span", props: { class: "settings-readonly-hint" }, children: [t("settings.agent.readonly")] }],
+      { tag: "span", props: { class: "settings-readonly-hint" }, children: [t(field.slotAuthority === true ? "settings.reason.slotAuthority" : "settings.agent.readonly")] }],
   }
 }
 
@@ -203,9 +205,10 @@ function namedFieldNode(entry, field, section, handlers) {
 }
 
 /** agent 段体：**具名控件区**（十八键 · P15 —— 字段缺位亦在场〔空值控件，禁假造值〕；自持值面三型
- *  〔model ∕ effort ∕ guard〕不受读面类型门约束；字段在场而敏感 / 非标量 ⇒ 不落具名控件，归下行只读面）
- *  + **泛化兜底行**（表外标量键 —— 保留编辑 + 保存键：零能力削减）+ 保存控件
- *  （零泛化可编辑字段 ⇒ 控件仍在场但 `disabled` —— 缺 handler 同判；具名面不经此键）。 */
+ *  〔model ∕ effort ∕ guard〕不受读面类型门约束；字段在场而敏感 / 非标量 / slot 权威键（`slotAuthority`）⇒ 不落具名控件，
+ *  归下行只读面）
+ *  + **泛化兜底行**（表外标量键 —— 保留编辑 + 保存键：零能力削减；slot 权威键行只读 ⇒ 零控件 ∕ 不入保存集）
+ *  + 保存控件（零泛化可编辑字段 ⇒ 控件仍在场但 `disabled` —— 缺 handler 同判；具名面不经此键）。 */
 export function agentBody(section, handlers) {
   const fields = listOf(section?.fields)
   const byPath = new Map()
@@ -217,7 +220,7 @@ export function agentBody(section, handlers) {
   })
   const taken = new Set(named.map((entry) => entry.path))
   const rows = fields.filter((field) => !taken.has(field.path))
-  const editable = rows.some((f) => f.sensitive !== true && EDITABLE_KINDS.includes(f.kind))
+  const editable = rows.some((f) => f.sensitive !== true && f.slotAuthority !== true && EDITABLE_KINDS.includes(f.kind))
   const onSave = editable && typeof handlers?.onSaveAgent === "function" ? handlers.onSaveAgent : undefined
   return [...named.map((entry) => namedFieldNode(entry, byPath.get(entry.path), section, handlers)), ...rows.map(agentFieldNode), {
     tag: "button",

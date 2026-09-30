@@ -9,6 +9,8 @@
  *     现值命中候选 ⇒ 选中该项 + 自定义框空 ∕ 不命中 ⇒ 选中哨兵 `__custom__` + 自定义框 = 现值）+
  *     自定义路径输入（空值 = 未完成输入 ⇒ **零发送**，沿 VSC 路径册 #3）。
  * 三态：`none` / `loading` ⇒ 段态词承载（本档零节点）；`ready` ⇒ 上述面。
+ * **#604 增**：shell 自定义路径输入携 `data-draft`（总闸捕获域 —— 「未完成输入」先例；proxy 族与
+ * shell `select` ＝即改即存控件 ⇒ 不入域（负向锁面 —— 批档 §2.2 判据 M-604b ∕ M-604c））。
  * 纪律：零 DOM（描述符树）；文案一律经 `t()`；缺 handlers ⇒ 控件 `disabled`（诚实非死控）；
  * 零 `node:` ∕ 零裸包。
  */
@@ -127,7 +129,8 @@ export function envBody(section, handlers = {}) {
       props: { class: "settings-field-row", "data-field": "shell.path" },
       children: [
         { tag: "label", props: { class: "settings-field-label", for: "shell-path" }, children: [t("settings.shellPath")] },
-        { tag: "input", props: changeProps({ class: "settings-field", id: "shell-path", name: "shell.path", type: "text", value: isCustom ? current : "" }, onShellCustom) },
+        // `data-draft` = 草稿申报标记（#604 总闸捕获域 —— 自定义路径＝未完成输入先例；`id` 键 = `shell-path`）。
+        { tag: "input", props: changeProps({ class: "settings-field", id: "shell-path", name: "shell.path", type: "text", "data-draft": "", "data-draft-scope": "env:shell", value: isCustom ? current : "" }, onShellCustom) },
       ],
     },
   ]

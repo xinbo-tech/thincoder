@@ -6,6 +6,7 @@
  */
 
 import { RETRYABLE_STATUS } from "./provider/index.mjs"
+import { resolveEnvRefs } from "./env-ref.mjs"
 const MAX_RETRIES = 3
 const BATCH_SIZE = 32 // max texts per request (within SiliconFlow limits)
 
@@ -16,7 +17,8 @@ export function createEmbedder(config) {
   if (!config?.model) throw new Error("embedding config: model is required — configure embedding.model in ~/.thincoder/config.json")
   return {
     baseURL: config.baseURL.replace(/\/+$/, ""),
-    apiKey: config.apiKey,
+    // #57（provider-config-family 批）：值位 `${env:VAR}` 消费侧解析（CONFIG.md §6.3）——embedder 持解析值，请求侧零改。
+    apiKey: resolveEnvRefs(config.apiKey),
     model: config.model,
   }
 }

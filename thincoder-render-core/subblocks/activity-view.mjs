@@ -10,8 +10,11 @@
 import { t } from "../i18n.mjs"
 
 // Roles whose header carries the sync/async mode word (CLI SUBAGENT_ROLES +
-// advisor parity — consult/escalate keys embed their model instead).
+// advisor parity — consult/escalate 无模式词；模型段 = headerText 单点补携).
 export const FAMILY_ROLES = ["explore", "plan", "coder", "eng-coder", "eng-designer", "advisor"]
+// Cancelable role set = FAMILY_ROLES ∪ consult/escalate (#673 · 2026-09-29): the ⏹ gate.
+// FAMILY_ROLES itself stays untouched — the header-word face keeps its six-role semantics.
+export const CANCELABLE_ROLES = Object.freeze([...FAMILY_ROLES, "consult", "escalate"])
 const TAIL_LINES = 3
 
 /** Meta word helpers — visible wording rides locale keys (fallback raw). */
@@ -62,11 +65,13 @@ function headerText(meta, now) {
     if (meta.status !== "error" && meta.note) note = String(meta.note)
   }
   let head = `[${icon} ${meta.label}`
-  // Mode word: family roles only (consult/escalate keys already carry their model).
+  // Mode word: family roles only（consult/escalate 无模式词——六员语义不动；模型段另行补携）。
   if (FAMILY_ROLES.includes(meta.role) && meta.pool != null && !meta.queued) {
     head += " · " + (meta.pool ? W.async() : W.sync())
   }
-  if (meta.model && !["consult", "escalate"].includes(meta.role)) head += " · " + meta.model
+  // 模型段：#677 · I16c（B7 族 `WEBVIEW-PROTOCOL.md:243` 裁定）——consult/escalate 同携（端侧键不含
+  // 模型段——模型经 `[model]` token 达 `meta.model`；与 CLI 标尺同形）。
+  if (meta.model) head += " · " + meta.model
   if (verb && !meta.awaitingDigest) head += ` · ${verb} ${sec}s` // awaiting：括号去 verb（C-2）
   else head += ` · ${sec}s`
   if (meta.maxTurns > 0 && (meta.turn ?? 0) > 0) head += ` · turn ${meta.turn}/${meta.maxTurns}`
@@ -144,9 +149,9 @@ export function refreshBlock(block) {
   updateStopButton(block)
 }
 
-/** ⏹ overlay：live + cancelable family 角色时可见——running+pool（stop）、queued 等待
- *  头（cancel queue——F-2 QUEUED-VISIBILITY）或 **running+syncLive**（X10：宿主确证可中止的
- *  sync 子代理——核 registry 只读判定）时可见。标签区分两动作（sync =停标签同 async）；
+/** ⏹ overlay：live + cancelable 角色（`CANCELABLE_ROLES` = 头词六员 ∪ consult ∕ escalate —— #673）
+ *  时可见——running+pool（stop）、queued 等待头（cancel queue——F-2 QUEUED-VISIBILITY）或 **running+syncLive**
+ *  （X10：宿主确证可中止的 sync 子代理——核 registry 只读判定）时可见。标签区分两动作（sync =停标签同 async）；
  *  title 每次刷新（幂等——queued→running 翻转重挂 title，locale 重设在内）。冻结块随 freeze
  *  移除按钮（无 ⏹）。 */
 function updateStopButton(block) {
@@ -156,7 +161,7 @@ function updateStopButton(block) {
   const want = meta
     && !meta.frozen
     && ((meta.status === "running" && (meta.pool === true || meta.syncLive === true)) || cancelingQueued)
-    && FAMILY_ROLES.includes(meta.role)
+    && CANCELABLE_ROLES.includes(meta.role)
     && block.isConnected
   if (want) {
     if (!btn) {

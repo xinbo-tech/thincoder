@@ -15,7 +15,8 @@ import { logEvent, errText } from "../log.mjs"
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor（absorb 双池——advisor 独立池无队列）
 import { getAsyncPool, releaseSettledEntry } from "../agent-tools/async-settle.mjs"
 // 批 4 CLI-ASYNC-DISCARD（AGENT-LOOP-ASYNC-POOL.md §6.20）：中止分支「只清已死」收尾单点
-import { discardAbortedPool, discardAbortedAdvisors } from "../agent-tools/async-discard.mjs"
+// （#9：+ 后台 bash 任务族——逐条杀树 + 出池 + 墓碑）
+import { discardAbortedPool, discardAbortedAdvisors, discardAbortedBgTasks } from "../agent-tools/async-discard.mjs"
 // R10 L3 (MULTI-INSTANCE-COLLAB §2a.5 D-L3a)：回合末域登记 flush（写工具钩子累积 →
 // 整写一次本实例 peers 文件——无写入跳过；失败容忍不抛）
 import { flushPeerDomains } from "../peer-domains.mjs"
@@ -188,12 +189,15 @@ export async function finalizeAgentTurn(agent, ctx) {
   if (signal?.aborted && !signal?.reason?.interrupt) {
     const subPool = getAsyncPool(agent, "subagent")
     const advPool = getAsyncPool(agent, "advisor")
-    if ((subPool?.size ?? 0) > 0 || (advPool?.size ?? 0) > 0) {
-      logEvent("ev:stopped", { poolN: (subPool?.size ?? 0) + (advPool?.size ?? 0), where: "turn-end-abort" })
+    const bgPool = getAsyncPool(agent, "bg") // #9：后台 bash 任务池（第三域）
+    if ((subPool?.size ?? 0) > 0 || (advPool?.size ?? 0) > 0 || (bgPool?.size ?? 0) > 0) {
+      logEvent("ev:stopped", { poolN: (subPool?.size ?? 0) + (advPool?.size ?? 0) + (bgPool?.size ?? 0), where: "turn-end-abort" })
     }
-    // §6.20：只清已死条目（存活/已 settle 留池——收尾见 async-discard.mjs；原无条件清池已弃）。
+    // §6.20：只清已死条目（存活/已 settle 留池——收尾见 async-discard.mjs；原无条件清池已弃）；
+    // #9：后台 bash 任务同面（杀 ⟺ 控制器已中止——逐条杀树 + 出池 + 墓碑）。
     discardAbortedPool(agent)
     discardAbortedAdvisors(agent)
+    discardAbortedBgTasks(agent)
     // R17: the consult family dies with the user stop (marked stopped — no digest).
     cleanupConsultSessions(agent)
     // ASYNC-RESULT-CONTAINER.md D2：pending 单容器——中止丢弃 consult/escalate 族停靠

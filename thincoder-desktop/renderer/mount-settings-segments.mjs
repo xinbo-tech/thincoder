@@ -11,6 +11,7 @@
  * 语义锚（`docs/desktop/design/IPC.md` §2 设置族注）：出站失败 ⇒ **零乐观写**（不摘项、不改段读数）；
  * 写成功 ⇒ 清失败串 + 复读本段（单源 = 读数供给族 `mount-settings-reads.mjs`）；端侧形判不齐 ⇒ **零发送**
  * （`console.error` 零静默）。基线判据（VSC 同律）：屏值 = 现值 ⇒ **零发送**（幂等门）。
+ * **#679 草稿失效声明（四径落三）**：MCP 增 ∕ 改 · tools 钥存（+ 删钥）· env shell 三成功径在**复位写前**声明（`invalidateDrafts(scope)` 注入 —— 作用域取值面 = 视图档 `[data-draft-scope]`；失败径零声明）。
  * **B10 W2 · S6**：两密钥键行删除 ∕ MCP 行移除 ⇒ **不可复得类删除前置确认**（`settings-confirm.mjs`；
  * 驳回 ⇒ 零写；确认 ⇒ 既有删除径 —— 本档两出口换形为「确认门 + 执行径」两层）。
  * **B10 W3 · S8 ∕ S9**：MCP 表单结构化（名 + 类型 select + 三型字段组 —— JSON textarea 退场）——新增
@@ -65,7 +66,7 @@ function mcpConfigFrom(data, type) {
  * `deps.slot` = 设置槽锚（key 输入现读作用域）；`deps.formOf` = 表单自取（`mount-settings-exits.mjs` 共用点）。
  */
 export function createSegmentExits(deps = {}) {
-  const { ask, store, setSettings, report, clearReport, reads, slot, formOf } = deps
+  const { ask, store, setSettings, report, clearReport, reads, slot, formOf, invalidateDrafts } = deps
   const { loadEnv, loadTools, loadMcp, loadAgent } = reads ?? {}
 
   /** 段切片局部写（引用不变 ⇒ 零通知 —— 同值写零重绘）。 */
@@ -84,13 +85,16 @@ export function createSegmentExits(deps = {}) {
 
   /* ── env 族（`settings:env`：proxy ∕ shell ∕ TestProxy）────────────────────────────────── */
 
-  /** env 写出口（单次 patch；成功 ⇒ 清失败串 + 复读）：失败 ⇒ 段级失败面（**零乐观写**）。 */
+  /** env 写出口（单次 patch；成功 ⇒ 清失败串 + 复读）：失败 ⇒ 段级失败面（**零乐观写**）。
+   *  **#679**：shell 写成功 ⇒ 该表单草稿一次性作废（作用域 = 视图档 `[data-draft-scope]` 值 `env:shell`；
+   *  proxy 写无草稿面 ⇒ 零声明 —— 取 patch 键判，失败径零声明）。 */
   async function saveEnv(patch) {
     const receipt = await ask("settings:env", { patch })
     if (receipt.ok !== true) {
       report("env", receipt, "settings:env")
       return
     }
+    if (patch?.shell !== undefined) invalidateDrafts?.("env:shell")
     clearReport()
     await loadEnv()
   }
@@ -150,6 +154,7 @@ export function createSegmentExits(deps = {}) {
       report("tools", receipt, "settings:tools")
       return
     }
+    invalidateDrafts?.(`tools:${kind}`) // #679 成功径：该行草稿一次性作废（值形与视图档 `[data-draft-scope]` 同模板 `tools:<kind>`）
     clearReport()
     setToolsSlice({ edit: null })
     await loadTools()
@@ -162,6 +167,7 @@ export function createSegmentExits(deps = {}) {
       report("tools", receipt, "settings:tools")
       return
     }
+    invalidateDrafts?.(`tools:${kind}`) // #679 同族随修（删钥成功）—— 静止态输入件离场，值形同 `keySave`
     clearReport()
     setToolsSlice({ edit: null })
     await loadTools()
@@ -204,6 +210,7 @@ export function createSegmentExits(deps = {}) {
       report("mcp", receipt, "mcp:save")
       return
     }
+    invalidateDrafts?.(typeof form.getAttribute === "function" ? form.getAttribute("data-draft-scope") : null) // #679 成功径：该表单草稿一次性作废（作用域自表单携）
     clearReport()
     setMcpSlice({ form: null })
     await loadMcp()
@@ -266,6 +273,7 @@ export function createSegmentExits(deps = {}) {
       report("mcp", receipt, "mcp:update")
       return
     }
+    invalidateDrafts?.(typeof form.getAttribute === "function" ? form.getAttribute("data-draft-scope") : null) // #679 成功径：该表单草稿一次性作废（作用域自表单携）
     clearReport()
     setMcpSlice({ form: null })
     await loadMcp()

@@ -1,0 +1,5 @@
+Start a parallel multi-model consultation (会诊) for a hard problem you are stuck on (repeated failures, no headway). Call it directly when the user asks for 会诊 / consult — an explicit user request applies even if you are not 'stuck'.
+
+Several configured models (agent.consultModels — at most 5; an unconfigured pool is an explicit error) analyze the same problem INDEPENDENTLY and in parallel. Non-blocking: returns immediately with a consult id; the consultants keep running in the background across turns. When EVERY model has replied (or failed), the full verdict text is delivered to you automatically — as a system reminder at the next run start, or digested on its own while the session is idle — judge and adopt each opinion yourself with your own tools (opinions are suggestions, not gates). To stop a session early (user changed their mind / wants the tokens back), call consult_stop(id) — a stopped session delivers no digest.
+
+The brief should carry the symptom, what you already tried (the failure trail), and entry-point files; do NOT paste raw error logs — consultants pull the main session history themselves via their main_history tool.

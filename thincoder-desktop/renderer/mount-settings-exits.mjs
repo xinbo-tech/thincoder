@@ -17,7 +17,8 @@
  * agent 面三触点原拆点；本档装配合并，单一 `handlers` 表对外零改）；开 ∕ 关面面态复位同拍扩 MCP 表单态
  * （`form` —— S8 编辑态不跨面驻留）。
  * 语义锚（`docs/desktop/design/IPC.md` §2 设置族注）：出站失败 ⇒ **零乐观写**（不摘项、不改段读数）；畸形 JSON ⇒ **零发送**；
- * 写成功 ⇒ 清失败串 + 重读本段。**P14 出值规范化**（数值 ⇒ `Number(v)`〔空 / 非数 ⇒ 零发送〕· 布尔 ⇒ `.checked` · 串 ⇒ 原串；无效值 ⇒ 控件回退现值）· **P15 具名控件即改即存**（单键 patch 直发 —— 写路随 W3 迁 `mount-settings-segments-agent.mjs`）· **F-Esc 关面板**（Esc ⇒ 既有 `closeSettings` 出口，单一实现 —— 绑定宿主 = `document`）。
+ * 写成功 ⇒ 清失败串 + 重读本段。**#652**：写成功径（渠道两形提交 ∕ 钥存）在复位写前声明草稿失效（`invalidateDrafts(scope)`
+ * 注入 —— 作用域取值面 = 视图档 `[data-draft-scope]` 自携；失败径零声明 —— 草稿保真）。**P14 出值规范化**（数值 ⇒ `Number(v)`〔空 / 非数 ⇒ 零发送〕· 布尔 ⇒ `.checked` · 串 ⇒ 原串；无效值 ⇒ 控件回退现值）· **P15 具名控件即改即存**（单键 patch 直发 —— 写路随 W3 迁 `mount-settings-segments-agent.mjs`）· **F-Esc 关面板**（Esc ⇒ 既有 `closeSettings` 出口，单一实现 —— 绑定宿主 = `document`）。
  * 纪律：零 `node:` / 零裸包 · 逐通道回执形单源 = IPC.md §2。
  */
 import { initDict } from "./i18n.mjs"
@@ -46,7 +47,7 @@ const reasonOf = (receipt) => (typeof receipt?.reason === "string" && receipt.re
  * = 装配面重绘口（无效数值回退现值用）；`deps.slot` = 设置槽锚（表单现选自读 ∕ 泛化兜底行作用域）。
  */
 export function createExits(deps = {}) {
-  const { ask, store, setSettings, report, clearReport, occupies, slot, paintSettings, onProvidersChanged } = deps
+  const { ask, store, setSettings, report, clearReport, occupies, slot, paintSettings, onProvidersChanged, invalidateDrafts } = deps
   const { loadProviders, loadAgent, loadMcp, loadEnv, loadTools } = deps.reads ?? {}
 
   /** 渠道表单提交（两形同一路）：载荷按形直取（表内 `name` = 载荷键）—— 空名 ⇒ 端侧形判 `invalid-shape` 零发送。 */
@@ -70,6 +71,8 @@ export function createExits(deps = {}) {
       report("providers", receipt, "provider:save")
       return
     }
+    // #652 写成功径：该表单草稿一次性作废（作用域 = 表单自携 `data-draft-scope` —— 单源在视图档；失败径零声明）。
+    invalidateDrafts?.(typeof form.getAttribute === "function" ? form.getAttribute("data-draft-scope") : null)
     clearReport()
     setSettings({ verify: null })
     await loadProviders()
@@ -143,16 +146,16 @@ export function createExits(deps = {}) {
 
   /** 段出口族（env ∕ 工具与服务 ∕ MCP **十八**项 + models 八项 —— 合 **26**）随 R7 ∕ W3 迁 `mount-settings-segments.mjs` ∕
    *  `mount-settings-segments-models.mjs`（段出口族工厂 —— 共享项注入，本档零副本）；`formOf` 回注
-   *  （单一 owner 在本档）。 */
+   *  （单一 owner 在本档）；**#679**：`invalidateDrafts` 随注入（段族三径声明 —— MCP 增 ∕ 改 · tools 钥存 ∕ 删钥 · env shell）。 */
   const segments = createSegmentExits({
-    ask, store, setSettings, report, clearReport, reads: deps.reads ?? {}, slot, formOf,
+    ask, store, setSettings, report, clearReport, reads: deps.reads ?? {}, slot, formOf, invalidateDrafts,
   })
   const modelSegments = createModelsExits({ ask, store, setSettings, report, clearReport, reads: deps.reads ?? {} })
   /** 渠道面出口族（S1 ∕ S2 ∕ S5 —— 随本批按族拆出 `mount-settings-segments-providers.mjs`：
    *  本档装配即合并，单一 `handlers` 表对外零改；`loadProviders` 绑定 `{ models: false }` —— 渠行面
    *  复读不重探模型面（候选面随动另路 = `onProvidersChanged`））。 */
   const providerSegments = createProviderExits({
-    ask, store, setSettings, report, clearReport, onProvidersChanged, slot, formOf,
+    ask, store, setSettings, report, clearReport, onProvidersChanged, slot, formOf, invalidateDrafts,
     loadProviders: () => loadProviders({ models: false }),
   })
   /** agent 段出口族（S10 ∕ S11 ∕ S14b —— 随本批按族拆出 `mount-settings-segments-agent.mjs`：本档装配
@@ -172,11 +175,11 @@ export function createExits(deps = {}) {
   }
 
   /** 设置面开（**两入口**：信息行 ∕ 输入区控件行第 7 钮 —— 后者经句柄面转口 `renderer/mount-composer.mjs`）：开 + 失败串清位 ⇒ 七段读数随动（段态 `none` → `loading` → `ready`）。
-   *  S1 ∕ S2：渠道段面态复位（钥编辑态 ∕ 探果 ∕ 暂存值——**钥暂存不跨面驻留**）；S8：MCP 编辑态复位（`form`）。 */
+   *  S1 ∕ S2：渠道段面态复位（钥编辑态 ∕ 探果 ∕ 暂存值 ∕ 失败草稿〔#615②〕——**钥暂存不跨面驻留**）；S8：MCP 编辑态复位（`form`）。 */
   function openSettings() {
     const providers = store.get().settings?.providers ?? {}
     const mcp = store.get().settings?.mcp ?? {}
-    setSettings({ open: true, notice: null, providers: { ...providers, edit: null, probe: null, draft: null }, mcp: { ...mcp, form: null } })
+    setSettings({ open: true, notice: null, providers: { ...providers, edit: null, probe: null, draft: null, keyDraft: null }, mcp: { ...mcp, form: null } })
     void loadProviders()
     void loadAgent()
     void loadMcp()
@@ -185,12 +188,12 @@ export function createExits(deps = {}) {
   }
 
   /** 设置面关（退场 = 零子节点 —— 订阅面重绘清容器）：同清确认弹层（S6 —— 弹层挂 `document.body`，
-   *  不在容器内 ⇒ 关面须显式清；先例 = VSC `closeSettings` 同清）+ 渠道段面态复位（S1 ∕ S2）+ MCP 编辑态复位（S8）。 */
+   *  不在容器内 ⇒ 关面须显式清；先例 = VSC `closeSettings` 同清）+ 渠道段面态复位（S1 ∕ S2 —— 含失败草稿 `keyDraft`〔#615②〕）+ MCP 编辑态复位（S8）。 */
   function closeSettings() {
     closeSettingsConfirm()
     const providers = store.get().settings?.providers ?? {}
     const mcp = store.get().settings?.mcp ?? {}
-    setSettings({ open: false, notice: null, providers: { ...providers, edit: null, probe: null, draft: null }, mcp: { ...mcp, form: null } })
+    setSettings({ open: false, notice: null, providers: { ...providers, edit: null, probe: null, draft: null, keyDraft: null }, mcp: { ...mcp, form: null } })
   }
 
   /** 设置面出口族（锚名逐字 = 视图 `data-action` 同域；具名控件面 = 单键同路；段族 **26** 项经 `segments` ∕

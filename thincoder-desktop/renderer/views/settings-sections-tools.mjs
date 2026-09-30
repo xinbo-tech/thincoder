@@ -4,7 +4,7 @@
  * 两键行，**零改名搬迁**）。
  * 面形（R7 终态 = 三族行：embedding ∕ websearch ∕ 索引状态）：
  *  ① **密钥键行**（源 = VSC `settings-tools.js`：`websearchRowHtml` ∕ `embedRowHtml` + `keyRowEdit` 行内编辑）：
- *     名 + 键面（配置 ⇒ `••••`〔键值恒不下发〕∕ 未配 ⇒ 「—」）—— 键行只在**键面读数在场**时落（`keys` 缺位
+ *     名 + 键面（配置 ⇒ `****`〔键值恒不下发〕∕ 未配 ⇒ 「—」）—— 键行只在**键面读数在场**时落（`keys` 缺位
  *     〔读数未达 ∕ 失败〕⇒ **两行零节点**，段态词 + 段级失败面承载 —— 零假造）—— + 静止态两控件
  *     （`Add Key` ∕ `Change` + 删除；未配 ⇒ 零删除控件）+ 编辑态（密码输入 + `Save` ∕ `Cancel`）；
  *  ② **索引族行**（源 = VSC `settings-tools.js:330-350`（`renderIndexStatus`）· `:148-153`（构建钮绑定））：
@@ -17,6 +17,7 @@
  *  段级失败面承载 —— 零假造）；④ 有状态 ⇒ built ∕ not-built 两词面。
  * 纪律：零 DOM（描述符树）；文案一律经 `t()`；缺 handlers ∥ 禁用态 ⇒ `wire` 落 `disabled: true`
  * （诚实非死控）；零 `node:` ∕ 零裸包（渲染面静态闭包判据）。
+ * **#604 增**：编辑态密钥输入携 `data-draft`（总闸捕获域 —— 无 `id` ⇒ 标记取值作显式键 = `kind`）。
  */
 import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
@@ -89,7 +90,8 @@ function keyRowNode(kind, words, hasKey, editing, handlers) {
     })
   }
   const editingControls = [
-    { tag: "input", props: { class: "settings-field", type: "password", "data-key-input": kind, "aria-label": t(words.aria), placeholder: t(words.placeholder) } },
+    // `data-draft` = 草稿申报标记（#604 总闸捕获域；无 `id` 控件 ⇒ 标记取值作显式键 = `kind`）。
+    { tag: "input", props: { class: "settings-field", type: "password", "data-draft": kind, "data-draft-scope": `tools:${kind}`, "data-key-input": kind, "aria-label": t(words.aria), placeholder: t(words.placeholder) } },
     {
       tag: "button",
       props: wire({

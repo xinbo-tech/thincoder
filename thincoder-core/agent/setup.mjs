@@ -19,6 +19,8 @@ import {
 } from "./helpers.mjs"
 import { pushEnvStateReminder, pushPeerReminder, pushInjections } from "./setup-reminders.mjs"
 import { assembleFamilyTools } from "./family-tools.mjs"
+import { normalizeOrigin } from "../memory/origin.mjs"
+import { INDEX_ORIGIN_ROW_WARN } from "../memory/schema.mjs"
 
 const DEFAULT_COMPACT_THRESHOLD = 100_000
 const DOC_SEARCH_LIMIT = 5
@@ -96,7 +98,8 @@ export async function prepareRun(agent, input, callbacks, {
       if (agent.memory && !agent.history.some((m) => typeof m.content === "string" && m.content.startsWith(OUTLINE_INJECT_PREFIX))) {
         try {
           const { buildSummary } = await import("../tools/repomap.mjs")
-          const summary = await buildSummary(agent.memory.db, agent.cwd)
+          // §6.14 B4：origin 限定 + 文件数上界（越界 ⇒ 提示行 + 跳过大纲构建——见 repomap.mjs）
+          const summary = await buildSummary(agent.memory.db, agent.cwd, { origin: normalizeOrigin(agent.memory.codeOrigin) })
           if (summary && !summary.startsWith("(no indexed")) {
             agent.history.push({ role: "user", content: `${OUTLINE_INJECT_PREFIX}\n${summary}]`, transient: true })
           }
@@ -108,8 +111,15 @@ export async function prepareRun(agent, input, callbacks, {
     if (agent.memory && depth === 0) {
       const docs = await docSearch(agent.memory, input, { limit: DOC_SEARCH_LIMIT })
       if (docs.length > 0) {
-        const count = agent.memory.db.prepare(`SELECT COUNT(*) AS n FROM doc_chunks`).get()?.n ?? 0
-        const more = count > docs.length ? ` (${count} chunks indexed total — call doc_search if you need more)` : ""
+        // §6.14 B3：origin 限定 + 有界计数（子查询 LIMIT = WARN+1 形——越界回「20000+」；跨 origin 全扫不再回升）
+        const docOrigin = normalizeOrigin(agent.memory.codeOrigin)
+        const bound = INDEX_ORIGIN_ROW_WARN + 1
+        const countRow = agent.memory.db.prepare(
+          `SELECT COUNT(*) AS n FROM (SELECT 1 FROM doc_chunks${docOrigin ? " WHERE origin = ?" : ""} LIMIT ${bound})`,
+        ).get(...(docOrigin ? [docOrigin] : []))
+        const count = Number(countRow?.n ?? 0)
+        const countLabel = count >= bound ? `${INDEX_ORIGIN_ROW_WARN}+` : String(count)
+        const more = count > docs.length ? ` (${countLabel} chunks indexed total — call doc_search if you need more)` : ""
         agent.history.push({
           role: "user",
           content:

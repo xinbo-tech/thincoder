@@ -10,7 +10,7 @@
  * maxRows flows in from every caller; omitted/0 → uncapped (tests, odd envs).
  */
 import { ansi, C } from "./ansi.mjs"
-import { formatTables, sanitizeDisplay, sliceByWidth, wrapText } from "./render.mjs"
+import { formatTables, sanitizeDisplay, sliceByWidth, stringWidth, wrapText } from "./render.mjs"
 import {
   isExpanded, foldHintLine, renderExpandedBlock, renderBlockTimeline,
   renderMathAndMarkdown, foldCapRows, renderFoldedHead, foldTailLines,
@@ -200,6 +200,15 @@ function highlightSearchMatches(text, query, matchesInLine, globalCurrentIndex, 
   return result
 }
 
+/** 编号态首行预算收窄（#677 · TUI.md §7.5 宽度口径）：首行折宽 = `width − firstDeduct`（`i. ` 编号占位），余行逐字照 `wrapText`；`0` ⇒ 逐行同形（单条态负向锁）。 */
+function wrapTextHead(text, width, firstDeduct) {
+  const nl = text.indexOf("\n"), head = nl < 0 ? text : text.slice(0, nl), rest = nl < 0 ? null : text.slice(nl + 1)
+  const budget = Math.max(1, width - firstDeduct)
+  if (stringWidth(head) <= budget) return rest === null ? [head] : [head, ...wrapText(rest, width)]
+  const cut = sliceByWidth(head, budget), over = head.slice([...cut].length)
+  return [cut, ...wrapText(rest === null ? over : `${over}\n${rest}`, width)]
+}
+
 /**
  * Build the conversation lines for the given state.
  * maxRows: terminal rows for the 60% expansion cap (undefined → uncapped —
@@ -374,8 +383,8 @@ function buildConvLines(state, cols, maxRows) {
     const indent = multi ? "  " : ""
     const wrapCols = cols - 1 // 与正文同口径（`sanitizeDisplay` + `wrapText`——TUI.md §7.5 逐字）
     for (let qi = 0; qi < queuedItems.length; qi++) {
-      const rows = wrapText(sanitizeDisplay(String(queuedItems[qi])), wrapCols)
       const head = multi ? `${qi + 1}. ` : ""
+      const rows = wrapTextHead(sanitizeDisplay(String(queuedItems[qi])), wrapCols, stringWidth(head))
       for (let ri = 0; ri < Math.min(rows.length, QUEUED_ITEM_MAX_LINES); ri++) {
         convLines.push({ text: `${ri === 0 ? head : indent}${rows[ri]}`, color: C.dim, _skipDimFold: true })
       }

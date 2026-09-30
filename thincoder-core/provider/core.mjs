@@ -5,6 +5,7 @@
  */
 
 import { providerSpec, resolveEnableThinking } from "../config.mjs"
+import { resolveProviderSecrets } from "../env-ref.mjs"
 import { proxyFetch } from "../proxy.mjs"
 import { escapeMessages, stripLocalMessageFields } from "../escape.mjs"
 import { logEvent, errText, classifyErr, headText } from "../log.mjs"
@@ -115,6 +116,10 @@ export async function chat(provider, opts = {}) {
 
 /** chat 本体（LOG(LLM) 事件包装之外——见上方 chat 包装器）。 */
 async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWait, signal, streamRules, firedPatterns, toolChoice, parallelToolCalls, logCtx }) {
+  // #57（provider-config-family 批）：凭据值位 `${env:VAR}` 消费侧解析——单源 `../env-ref.mjs`
+  // （CONFIG.md §6.3）。格式分派之前：四 transport ∕ 续写 ∕ advisor ∕ 子代理 ∕ 压缩同享；
+  // 未设 ∕ 空串 ∕ 畸形 ⇒ 此处抛错（点名变量，无回退）。
+  provider = resolveProviderSecrets(provider)
   // Sanitize BEFORE format dispatch — image poisoning bricks anthropic/google sessions
   // the same way it bricks OpenAI-format ones (all raster-only).
   // providerSpec: spec with the provider-level context override (PROVIDER.md §6.15) — the

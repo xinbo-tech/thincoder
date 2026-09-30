@@ -121,8 +121,10 @@ test("①B 通道四件套一致（结构机检：白名单 ↔ 注册表 ↔ �
   const rows = [...registry.slice(head, registry.indexOf("\n})", head)).matchAll(/^\s{2}"([^"]+)":\s*([A-Za-z_$][\w$]*),/gm)].map((match) => ({ channel: match[1], handler: match[2] }))
   assert.deepEqual(rows.map((row) => row.channel).sort(), [...channels].sort(), "白名单 ↔ 注册表逐项一致")
   const ipc = readFileSync(resolve(ROOT, "thincoder-desktop/src/main/ipc.mjs"), "utf8")
-  for (const row of rows) assert.ok(ipc.includes(row.handler), `处理体在 ipc.mjs 在场：${row.handler}`)
-  assert.ok(/function modelCatalogChannel\(\) \{ return modelCatalog\(\) \}/.test(ipc), "model:catalog 转口 = modelCatalog")
+  const ipcRelays = readFileSync(resolve(ROOT, "thincoder-desktop/src/main/ipc-relays.mjs"), "utf8")
+  const ipcAll = `${ipc}\n${ipcRelays}`
+  for (const row of rows) assert.ok(ipcAll.includes(row.handler), `处理体在 ipc.mjs ∕ ipc-relays.mjs 在场：${row.handler}`)
+  assert.ok(/function modelCatalogChannel\(\) \{ return modelCatalog\(\) \}/.test(ipcAll), "model:catalog 转口 = modelCatalog")
 })
 
 test("② store 纯动作：切片形 { models, unavailable } + 引用判据（同引用回原态）", () => {

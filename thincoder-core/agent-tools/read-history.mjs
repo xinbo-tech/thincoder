@@ -44,6 +44,8 @@
 import { openSync, readSync, closeSync, readFileSync, existsSync, statSync } from "node:fs"
 import { isAbsolute, resolve } from "node:path"
 import { listSlots, slotPath } from "../session-slots.mjs"
+// #15 描述外置：描述文本单点 = tool-docs/read_history.md（DESC 单解析面，缺档抛错语义不变）
+import { DESC } from "../tools/shared.mjs"
 
 const DEFAULT_LIMIT = 50
 const MAX_LIMIT = 200
@@ -63,9 +65,6 @@ export const READ_HISTORY_MAX_MESSAGES = 50_000
 /** 超限错误文案（SESSION.md §6.13——逐字定稿——T-R19.7 断言）。 */
 const TOO_LARGE_ERROR = JSON.stringify({ error: "session too large — refine keyword or since/until" })
 
-/** 检索/记忆族消歧总纲（SESSION.md §6.13 D-R19b——逐字定稿——read_history 描述尾段——T-R19.5 锚）。 */
-const SEARCH_FAMILY_GUIDE =
-  "检索/记忆族选哪个：查**本会话**说过/裁定过 → read_history（默认）；查**别的会话/项目**旧对话 → read_history 带 path/cwd 参数；查**本 run 改过哪些文件** → recent_changes；查**跨会话已存知识/约定**（memory）→ memory search；查**项目设计文档** → doc_search；查**代码实现** → code_search；查 git 历史快照 → checkpoint cat/versions。read_history 只查会话消息——文件级改动用 recent_changes——知识与约定用 memory——互相不替代。"
 
 /** Message text for keyword matching + output: strings pass through; multimodal content arrays → text parts joined (never crashes, empty parts skipped, images ignored). */
 function messageText(m) {
@@ -311,34 +310,18 @@ async function queryAllSessions(filters, current = null) {
 
 export const readHistoryTool = {
   name: "read_history",
-  description:
-    "Query message history — THIS session by default, any session on disk with `path`. " +
-    "Default (no path): THIS session's full record (never compacted, audit-complete) — recall what " +
-    "was said or done earlier: design decisions, tool-call timing, past rulings. " +
-    "Filters combine with AND: role / keyword (case-insensitive substring of message text) / " +
-    "tool (tool result messages by name AND the assistant messages that declared the call — pair with tool_call_id / ts for timing) / " +
-    "since-until (epoch ms time window; only messages with ts can match) / limit (default 50, clamped to 200) / direction (which end of the matches to take). " +
-    "Returns a JSON array in chronological order: [{ts, role, name?, tool_call_id?, content (≈500 chars, truncated marker), tool_calls ([{name, arguments}] — arguments capped at 300 chars)}]. " +
-    "Messages without ts return ts:null. Content is truncated — the full text is in the session file. " +
-    "Cross-session (path, optional): a session file path deep-queries THAT session's history with the same filters " +
-    "(relative paths resolve against the project cwd) — answered from the derived session index when it covers that session, " +
-    "otherwise from the session file itself (a file over 50,000 messages or 200,000 lines is refused as \"session too large\"). " +
-    "\"cwd:<dir>\" lists every session slot stored for that directory — one line per slot: slot number + full session file path + " +
-    "title + message count + updatedAt; copy a listed file path into path= to deep-query it. " +
-    "\"all\" searches EVERY INDEXED session at once (cross-project; keyword = FTS words / phrases; each row carries session.file for the follow-up deep query) — " +
-    "`all` covers the derived index only: sessions never indexed yet are invisible there (query them with path=<file>, or index everything first with the CLI `thincoder session index --rebuild`).\n" +
-    SEARCH_FAMILY_GUIDE,
+  description: DESC("read_history"),
   parameters: {
     type: "object",
     properties: {
       role: { type: "string", enum: ["user", "assistant", "tool"], description: "Only messages with this role." },
-      keyword: { type: "string", description: "Case-insensitive substring of the message text (multimodal messages match on their text parts); with path=\"all\" it is matched as FTS words / phrases over the indexed text." },
-      tool: { type: "string", description: "Only messages for this tool: role=tool messages with name=tool, plus assistant messages that declared a call to it." },
-      since: { type: "integer", description: "Earliest ts to match, epoch ms, INCLUSIVE. Messages without ts never match a time window." },
-      until: { type: "integer", description: "Latest ts to match, epoch ms, INCLUSIVE. since > until yields an empty result." },
-      limit: { type: "integer", description: "Maximum messages to return (default 50; larger values are clamped to 200)." },
+      keyword: { type: "string", description: "Case-insensitive substring of the message text (multimodal matches on text parts); with path=\"all\" matched as FTS words / phrases." },
+      tool: { type: "string", description: "Only messages for this tool: role=tool messages with name=tool, plus assistant messages that declared a call to it (pair with tool_call_id / ts for timing)." },
+      since: { type: "integer", description: "Earliest ts to match, epoch ms, INCLUSIVE; messages without ts never match." },
+      until: { type: "integer", description: "Latest ts to match, epoch ms, INCLUSIVE; since > until yields empty." },
+      limit: { type: "integer", description: "Maximum messages to return (default 50; clamped to 200)." },
       direction: { type: "string", enum: ["oldest", "newest"], description: "Take the limit window from the oldest or newest end of the matched set (default newest)." },
-      path: { type: "string", description: "Optional — query another session instead of this one: a session file path (as listed by a \"cwd:<dir>\" call) deep-queries that session; \"cwd:<dir>\" lists that directory's session slots (slot number + full file path + title + message count + updatedAt); \"all\" searches every indexed session across projects (FTS words / phrases; rows carry session.file)." },
+      path: { type: "string", description: "Optional — another session instead of this one: a session file path deep-queries that session; \"cwd:<dir>\" lists that directory's session slots (slot + file path + title + count + updatedAt); \"all\" searches every indexed session across projects (FTS words / phrases; rows carry session.file)." },
     },
   },
   readonly: true,

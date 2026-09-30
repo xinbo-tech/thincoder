@@ -8,6 +8,10 @@
  * 预设项标签 = `name — desc (model)` 串形（`form.presets[].desc` 由主侧转发）。
  * **单一 owner** —— 消费面 = 设置面渠道段体（经 `renderer/views/settings.mjs` 段体分派 `deps` 注入）
  * 与首启向导第二步（`renderer/views/onboarding.mjs`）；`settings.mjs` **同名 re-export** ⇒ 导出面零改。
+ * **#604 增草稿申报标记**：表单可输入控件携 `data-draft`（总闸捕获域 —— 键取 `id`；值 = 空串）——
+ * 组四 = `fieldPair`（`baseURL` ∕ `model` ∕ `key`）× 两形 ∥ 自定形 `name` 文本 ∥ 两 `select`（预设 `name` ∕ 自定形 `format`）∥ `active` 复选。
+ * **#652 增草稿作用域**：表单携 `data-draft-scope`（两形各一骨 = `add:preset` ∕ `add:custom`）—— 写成功径失效声明自读本值
+ * （提交一击只废本形草稿；跨形 ∕ 他表单草稿零误伤）。
  * 纪律：零 DOM（描述符树）；文案一律经 `t()`、零字形字面；缺 handlers ⇒ `wire` 落 `disabled: true`。
  */
 import { t } from "../i18n.mjs"
@@ -19,11 +23,12 @@ const listOf = (value) => (Array.isArray(value) ? value : [])
 /** 候选面 `datalist` id（面板内唯一 —— 自定形单表单；`input[list=…]` 引用点同锚）。 */
 const MODEL_CANDIDATE_LIST_ID = "settings-model-candidates"
 
-/** 字段两片（标词 + 输入）：`name` = 载荷键、`id` / `for` 同源。 */
+/** 字段两片（标词 + 输入）：`name` = 载荷键、`id` / `for` 同源。
+ *  `data-draft` = **草稿申报标记**（#604 总闸捕获域 —— 值 = 空串；键取 `id`：`baseURL` ∕ `model` ∕ `key`）。 */
 function fieldPair(name, type, labelWord, extra = {}) {
   return [
     { tag: "label", props: { class: "settings-field-label", for: name }, children: [t(labelWord)] },
-    { tag: "input", props: { class: "settings-field", id: name, name, type, ...extra } },
+    { tag: "input", props: { class: "settings-field", id: name, name, type, "data-draft": "", ...extra } },
   ]
 }
 
@@ -76,7 +81,8 @@ export function channelFormTree(form, handlers = {}) {
   const seed = (key) => (draft !== null && typeof draft[key] === "string" && draft[key] !== "" ? { value: draft[key] } : {})
   const candidates = shape === "custom" ? listOf(form?.modelCandidates).filter((m) => typeof m === "string" && m !== "") : []
   if (shape === "custom") {
-    children.push({ tag: "input", props: { class: "settings-field", id: "name", name: "name", type: "text", ...seed("name") } })
+    // 自定形名文本（非经 `fieldPair` 建 —— 单独申报；`id` 键 = `name`）。
+    children.push({ tag: "input", props: { class: "settings-field", id: "name", name: "name", type: "text", "data-draft": "", ...seed("name") } })
     children.push(...fieldPair("baseURL", "text", "settings.providers.baseURLLabel", seed("baseURL")))
     if (onFetch !== undefined) children.push(fetchRowNode(form?.probe, onFetch)) // S2：拉取模型（暂存值直探，不落盘）
     children.push(...fieldPair("model", "text", "settings.providers.modelLabel", {
@@ -86,13 +92,13 @@ export function channelFormTree(form, handlers = {}) {
     children.push({ tag: "label", props: { class: "settings-field-label", for: "format" }, children: [t("settings.providers.formatLabel")] })
     children.push({
       tag: "select",
-      props: { class: "settings-field", id: "format", name: "format" },
+      props: { class: "settings-field", id: "format", name: "format", "data-draft": "" },
       children: formats.map((f) => ({ tag: "option", props: draft?.format === f ? { value: f, selected: true } : { value: f }, children: [f] })),
     })
   } else {
     children.push({
       tag: "select",
-      props: { class: "settings-field", id: "name", name: "name" },
+      props: { class: "settings-field", id: "name", name: "name", "data-draft": "" },
       children: presets.map((p) => ({ tag: "option", props: { value: p.name }, children: [presetLabel(p)] })),
     })
   }
@@ -100,7 +106,7 @@ export function channelFormTree(form, handlers = {}) {
   children.push({ tag: "label", props: { class: "settings-field-label", for: "active" }, children: [t("settings.providers.activeToggle")] })
   children.push({
     tag: "input",
-    props: { class: "settings-field", id: "active", name: "active", type: "checkbox", checked: form?.activeDefault === true ? true : undefined },
+    props: { class: "settings-field", id: "active", name: "active", type: "checkbox", "data-draft": "", checked: form?.activeDefault === true ? true : undefined },
   })
   children.push({
     tag: "button",
@@ -111,7 +117,8 @@ export function channelFormTree(form, handlers = {}) {
     }, onSubmit),
     children: [t(form?.submitKey ?? (shape === "custom" ? "settings.providers.addCustom" : "settings.providers.addPreset"))],
   })
-  return { tag: "form", props: { class: "settings-form", "data-form": shape, "data-form-shape": shape }, children }
+  // #652 草稿作用域（表单身份面；两形各一骨 —— 写成功径失效声明自读本值，提交一击只废本形草稿）。
+  return { tag: "form", props: { class: "settings-form", "data-form": shape, "data-form-shape": shape, "data-draft-scope": shape === "custom" ? "add:custom" : "add:preset" }, children }
 }
 
 /** **导出面②** —— 校验控件：`name` 给 ⇒ 携标（`data-name`）；缺 ⇒ 提交端自读表单现选。 */

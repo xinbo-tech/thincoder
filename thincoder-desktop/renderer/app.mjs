@@ -7,11 +7,10 @@
  * 转接（切会话 / 新建 / 改名确认 / 删除确认 / 开项目）；面内开合 ∕ 换形态住面内记账（原 store 两切片随裁撤退场）。
  * 本档只留接线串与目录出口链。
  * 帧出口（唯一）= 帧合并件（核 `createFrameMerge` —— 触发源 = store 变更 ⇒ `mark`；单飞 rAF + `FRAME_MIN_MS`(50) · `flush` = 同步尾帧）
- * ⇒ 六面分派（`renderer/frame-dispatch.mjs`）；对话流面 `paintChat`：帧前判据 `paintPlan`（重挂键 = `activeSession` / `locale`）
+ * ⇒ 五面分派（`renderer/frame-dispatch.mjs`）；对话流面 `paintChat`：帧前判据 `paintPlan`（重挂键 = `activeSession` / `locale`）
  * ⇒ 重挂面（`mountChat` + 同帧态刷）或增量面（`alignPlan` ⇒ `settleFrame` 六步）；窗限 `chatLimit` **只增**（`nextWindow` 收束沿 + 本页**实并入块数**）。
  * 出档面：池面一族 = `renderer/mount-pool.mjs` · 会话族 = `renderer/mount-sessions.mjs` · 输入区 = `renderer/mount-composer.mjs`
  * （面板主体 = 核件工厂 —— 输入面板上提批；发送面三件随 `renderer/composer-send.mjs` 退役入核件 ∕ 本档 deps 边）
- * · 会话头接线 = `renderer/mount-head.mjs`（候选面 / 写路 `session:prefs` / 回执刷行 —— 头面刷行调用点仍住本档）
  * · 状态行 = `renderer/mount-status.mjs`（D17 / D22 承载 17 段单点重建 + 面内差分门 + 切片键面 `STATUS_KEYS`）
  * · 卡族两族 = `renderer/mount-cards.mjs`（提问 / 计划 —— 挂载 + 作答 / 取消出口）
  * · 事件归约 + 页应用 = `renderer/events.mjs` · 订阅接线 = `renderer/events-subscribe.mjs`；本档接线两处 = `attachScroll`
@@ -31,7 +30,6 @@ import { createFrameMerge } from "/rc/flow/frame.mjs"
 import { setStrings } from "/rc/i18n.mjs"
 import { attachCards } from "./mount-cards.mjs"
 import { attachComposer } from "./mount-composer.mjs"
-import { attachHead } from "./mount-head.mjs"
 import { POOL_SLOT, attachPool } from "./mount-pool.mjs"
 import { attachStatus } from "./mount-status.mjs"
 import {
@@ -41,7 +39,6 @@ import {
 import { attachSettings } from "./mount-settings.mjs"
 import { attachSearch } from "./search.mjs"
 import { configuredFlag, patchSettings, returnToBottom, setFollowing, store } from "./store.mjs"
-import { mountHead } from "./views/chrome.mjs"
 import { MAX_RENDER_BLOCKS, attachScroll, nextWindow } from "./views/chat-scroll.mjs"
 import { alignPlan, paintPlan } from "./views/chat-stream.mjs"
 import { chatModel, retrySourceOf } from "./views/chat-model.mjs"
@@ -54,9 +51,8 @@ import { bindFileLinks, toggleExpanded } from "./views/chat-tool.mjs"
 setStringsSink(setStrings)
 
 const host = globalThis.thincoder // 窄桥（装配面 = `src/preload/preload.cjs`）
-const HEAD_SLOT = '[data-slot="session-head"]' // 会话头槽（状态行槽锚随状态行族出档 —— `renderer/mount-status.mjs`）
 const FLOW_SLOT = '[data-slot="flow"]' // 对话流容器锚（= 滚动容器自身 —— 挂载根不清宿主）
-// 六面重挂触发切片（`SESSION_KEYS` / `HEAD_KEYS` / `CHAT_KEYS`）随分派体出档 `renderer/frame-dispatch.mjs`（更新纪律收核批 —— 键面 = 分派语义；装配面只留帧接线与面回调表）。
+// 重挂触发切片（`SESSION_KEYS` / `CHAT_KEYS` …… 各面自持处为单源）随分派体出档 `renderer/frame-dispatch.mjs`（更新纪律收核批 —— 键面 = 分派语义；装配面只留帧接线与面回调表）。
 const { paintPool, handlers: poolHandlers } = attachPool(host) // 池面一族（右栏重挂 + 两出口 —— 出档 `renderer/mount-pool.mjs`）
 const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —— 挂载 + 作答 / 取消出口；出档 `renderer/mount-cards.mjs`）
 // 设置面 / 向导 / 信息行一族（自持订阅 —— 出档 `renderer/mount-settings.mjs`；目录出口复用项目面链）；
@@ -65,7 +61,6 @@ const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —�
 const settingsFace = attachSettings(host, { onProjectOpened: openDir, onProvidersChanged: () => composer.refreshCandidates() })
 // 输入区一族（挂载 + deps 构造 → 核件工厂；出档 `renderer/mount-composer.mjs`）：`openSettings` = 控件行第 7 钮出口 ∕ `submit` = 直发径单副本（错误横幅重试消费）。
 const composer = attachComposer(host, { openSettings: () => settingsFace.openSettings() })
-const head = attachHead({ host, onRepaint: () => paintHead() }) // 会话头接线一族（候选面 + 写路 `session:prefs` —— 出档 `renderer/mount-head.mjs`）
 const { paintStatus } = attachStatus() // 状态行一族（D17 / D22 承载 17 段单点重建 —— 出档 `renderer/mount-status.mjs`）
 
 /** 载荷形判据（`config:read` 往返：`{ config, locale, dict }`——三字段齐备才算往返成立）。 */
@@ -87,11 +82,6 @@ function paintSessionBar(state = store.get()) {
     onDelete: deleteSession, // 确认 popover「删除」键出口
     onOpenProject: () => openDir(), // 项目钮 = 引导面同出口（`project:open` 单一实现）
   })
-}
-
-/** 会话头刷行（单行调用点 —— 供写路回退 / 候选面后到 / 活动会话切换三径；handlers 两出口 = 候选面纯读 + 写路）。 */
-function paintHead(state = store.get()) {
-  mountHead(document.querySelector(HEAD_SLOT), state, { candidates: head.candidates, onField: head.onField })
 }
 
 /** `project:open`（打开目录 / 点最近项）：`path` 给定时直用、缺省走主进程原生目录选择；成功后同链刷新 +
@@ -181,7 +171,7 @@ function paintChat(state = store.get(), changedKeys = []) {
     syncChrome(root, model, handlers)
     paintCards(state)
   } else {
-    const align = alignPlan(chatFrame?.mounted ?? [], model.blocks, plan.tier === "patch")
+    const align = alignPlan(chatFrame?.mounted ?? [], model.blocks, plan.tier === "patch" || plan.tier === "patch-append" ? plan.tier : false, plan.appended ?? 0)
     if (align.ok) {
       paintCards(state) // 先于读数 t0：卡高不入头侧增量
       mounted = settleFrame(root, model, chatScroll, align, plan.tier, handlers, chatFrame?.mounted ?? []) // `mounted` = 上一帧记账（尾 / 头节点直取 —— 零全块扫）
@@ -215,8 +205,8 @@ function settleBoot(value, reason) {
   return setBoot(value)
 }
 
-/** 引导：窄桥 ⇒ `config:read` 往返 ⇒ 词表置位 + 数据面刷新 ⇒ `boot = "ok"`（任一不合 ⇒ `"error"`）
- *  + 首屏引导层随动（R1 —— 见 `settleBoot`）。 */
+/** 引导：窄桥 ⇒ `config:read` 往返 ⇒ 词表置位 + 数据面刷新 ⇒ **重载补启**（D9 —— 项目在场 ⇒ 恰一次
+ *  `session:resume`）⇒ `boot = "ok"`（任一不合 ⇒ `"error"`）+ 首屏引导层随动（R1 —— 见 `settleBoot`）。 */
 async function boot() {
   if (!host || typeof host.invoke !== "function") {
     const reason = "preload bridge missing: window.thincoder.invoke unavailable"
@@ -234,6 +224,10 @@ async function boot() {
     store.set({ ...patchSettings(store.get(), { configured: configuredFlag(payload.configured) }), locale: initDict(payload) })
     composer.refresh() // 词面到位 ⇒ 输入面板重派生（面板挂载先于词表下发 —— 注册面后到，缺 ⇒ 占位符停留为键名）
     await refreshRail() // 会话列表数据面（读失败不改 boot 判据 —— 读面自持错误面，不抬高引导位）
+    // 重载补启（D9 · 批档 §2.14a）：主进程仍持项目（`cwd` 非空串）⇒ 活跃会话自动接续 —— 复用「点开即续」同路
+    // （`session:resume` ⇒ 端记录判据 ⇒ `openPage` + `refreshRail`）；冷启（`cwd` 空 ∥ 读面失败）零触发；失败沿既有
+    // R9 toast 面 —— `resumeOpened` 自持 catch（不抛 ∥ 不抬高 boot 判据）。
+    if (typeof store.get().project?.cwd === "string" && store.get().project.cwd !== "") await resumeOpened()
     return settleBoot("ok")
   } catch (error) {
     console.error("[renderer] config:read failed:", error)
@@ -244,12 +238,15 @@ async function boot() {
 document.addEventListener("DOMContentLoaded", boot)
 
 /** 滚动接线（装配一次 · 批 6 + 批 8 回填档）：容器 = 对话流宿主自身（骨架 `data-slot="flow"`）；三出口 + 只读口
- *  只经 store 纯动作读写切片（`onBackfill` 判据单源 = `beginBackfill`）；容器缺位 ⇒ `null`（帧尾零写）。 */
+ *  只经 store 纯动作读写切片（`onBackfill` 判据单源 = `beginBackfill`）；容器缺位 ⇒ `null`（帧尾零写）。
+ *  **`onScrollTick`**（E4-JS 支）：平滑窗门后每 scroll 事件 ⇒ `frame.mark(["segView"])`（**哨兵键 —— 非切片**；
+ *  巨块段窗滚动作 —— 帧合并节流 ≥50ms ⇒ ≤20 拍 ∕ 秒）。 */
 chatScroll = attachScroll(document.querySelector(FLOW_SLOT), {
   onBackfill: backfill,
   onFollow: () => store.set(setFollowing(store.get(), true)),
   onUnfollow: () => store.set(setFollowing(store.get(), false)),
   guards: () => ({ hasOlder: store.get().history?.hasOlder === true, inFlight: store.get().history?.inFlight === true }),
+  onScrollTick: () => frame.mark(["segView"]),
 })
 
 /** 事件面接线（装配一次 · 批 8 · 批档 §2.11）：多通道订阅 ⇒ 值面写者单源 = `renderer/events.mjs`（归约）+ `renderer/events-subscribe.mjs`
@@ -276,16 +273,12 @@ function heartbeatTick() {
 const heartbeat = createHeartbeat({ tick: heartbeatTick })
 globalThis.addEventListener?.("unload", () => heartbeat.stop())
 
-// 会话头候选面首取（渠道候选一次入缓存 ⇒ 头面选项集就位；活动 provider 的模型候选待会话激活后随 `sync` 取）。
-void head.sync(store.get())
-
-/** 帧分派面表（六面回调注入 —— 每面每帧至多一次；面序 = 会话控制条 → 会话头 → 状态行 → 对话流 → 池区 → 卡面）。 */
+/** 帧分派面表（五面回调注入 —— 每面每帧至多一次；面序 = 会话控制条 → 状态行 → 对话流 → 池区 → 卡面）。 */
 const faces = {
   sessionBar: paintSessionBar, status: paintStatus, chat: paintChat, pool: paintPool, cards: paintCards,
-  head: (state) => { paintHead(state); void head.sync(state) }, // 头面：刷行 + 候选面随动（单点调用）
 }
 
-/** 帧出口（apply · 每帧至多一次）：帧时刻**现读** `store.get()`（禁 mark 时刻取态快照）—— `locale` 镜像 `dataset.locale` + 六面按键集分派。 */
+/** 帧出口（apply · 每帧至多一次）：帧时刻**现读** `store.get()`（禁 mark 时刻取态快照）—— `locale` 镜像 `dataset.locale` + 五面按键集分派。 */
 function applyFrame(dirtyKeys) {
   const state = store.get()
   if (dirtyKeys.includes("locale")) document.documentElement.dataset.locale = state.locale
@@ -295,5 +288,5 @@ function applyFrame(dirtyKeys) {
 /** 帧合并件（单源 = 核档 §2 KD-RC-9）：触发源 = store 变更 ⇒ `mark`；`flush` 消费点 = `returnToLatest` + 测试 ∕ 探针确定性。 */
 const frame = createFrameMerge({ apply: applyFrame })
 
-/** 订阅随动（**O(1) 脏键集** —— 订阅回调零渲染）：store 变更 ⇒ `frame.mark(changedKeys)`（帧触发后分派六面）。 */
+/** 订阅随动（**O(1) 脏键集** —— 订阅回调零渲染）：store 变更 ⇒ `frame.mark(changedKeys)`（帧触发后分派五面）。 */
 store.subscribe((_state, changedKeys) => { frame.mark(changedKeys) })

@@ -37,10 +37,11 @@ export function renderStatusBar(m) {
   if (hitText !== null) parts.push(`hit${hitText}%`)
   const ctxPct = (m && m.ctxPct != null) ? m.ctxPct : S._lastCtxPct
   if (ctxPct != null) {
-    // CLI parity: context utilization ≥80% renders in warning color
+    // CLI parity: context utilization ≥80% renders in warning color; `Yk` 绝对数随补（I16a · #677）
+    const suffix = S._lastCtxTokens > 0 ? ` ${fmtK(S._lastCtxTokens)}` : ""
     parts.push(ctxPct >= 80
-      ? `<span style="color:var(--vscode-editorWarning-foreground, #cca700)">context ${ctxPct}%</span>`
-      : `context ${ctxPct}%`)
+      ? `<span style="color:var(--vscode-editorWarning-foreground, #cca700)">context ${ctxPct}%${suffix}</span>`
+      : `context ${ctxPct}%${suffix}`)
   }
   // C2 (F-C2c——修 H-E): thinking 态 = S._phase 标记——由本函数（#status-line 唯一
   // writer）绘制——loading 消息不再 innerHTML 覆写状态行（徽标/挂起计数同线保留）。
@@ -95,14 +96,20 @@ export function renderStatusBar(m) {
     }
   }
   wire("task-badge", "task-panel")
-  wire("goal-badge", "goal-panel")
+  // #587（2026-09-29 · 桌面 #554②对齐）：goal 支 = **翻态出口**——开合态住 `S._goalPanelOpen`
+  // （显隐判据同源 = panels.js `renderGoalPanel`）；点按翻态 + 按态施用 display；task 支零动。
+  const goalBadge = document.getElementById("goal-badge")
+  if (goalBadge) goalBadge.onclick = (e) => {
+    e.stopPropagation()
+    S._goalPanelOpen = !S._goalPanelOpen
+    document.getElementById("goal-panel").style.display = S._goalPanelOpen ? "block" : "none"
+  }
 }
 
-/** usage message: cache the numbers, count the LLM call, repaint the bar. */
+/** usage message: cache the numbers, repaint the bar. */
 export function handleUsageMessage(m) {
   S._lastUsage = m.usage || {}
-  S._llmCalls++ // one LLM call per usage report (CLI turn parity)
-  if (m.ctxPct != null) S._lastCtxPct = m.ctxPct
+  if (m.ctxPct != null) { S._lastCtxPct = m.ctxPct; S._lastCtxTokens = m.ctxTokens ?? 0 } // Yk 同点缓存（I16a——pct 在场 ⇔ tokens > 0）
   // timer-wake 阶段 2（协议 §3.2 行 18 / §6.30.11）：timer 计数随载荷落槽（核 `_pendingTimers`
   // 活读投影）；缺省 / 零在途 ⇒ 0（段零节点——旧 host 无字段同判）。
   S._timerCount = m.timers?.count ?? 0

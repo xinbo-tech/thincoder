@@ -15,7 +15,7 @@
  * 每函数收 ChatPanel 实例为 `panel`（webview postMessage 出口）。
  */
 import { connectMcpServer, probeMcpServer, _sessions } from "@thincoder/core/mcp.mjs"
-import { getMcpServers, saveMcpServer } from "./settings.mjs"
+import { getMcpServers, saveMcpServer, postProviderError } from "./settings.mjs"
 
 // ─── 端壳增量①：client-id 注册表 + 面板工具投影（name-key 核面 → 端壳面适配）─────
 
@@ -126,7 +126,7 @@ export function pushMcpStatus(panel) {
 export async function reconnectMcp(panel, name) {
     const servers = getMcpServers()
     const srv = servers.find((s) => s.name === name)
-    if (!srv) { panel._panel?.webview.postMessage({ type: "providerError", text: `No MCP server named "${name}"` }); return }
+    if (!srv) { postProviderError(panel, "mcp", `No MCP server named "${name}"`); return }
     try {
       mcpDisconnectByName(name)
       await mcpConnect({
@@ -137,7 +137,7 @@ export async function reconnectMcp(panel, name) {
       // 无消费者推送（`mcpReconnected`）已删——重连的用户可见效果由本函数尾 pushMcpStatus 全量覆盖
       // （发面处置 = 删；`WEBVIEW-PROTOCOL.md` §12 表行随退场）
     } catch (e) {
-      panel._panel?.webview.postMessage({ type: "providerError", text: `MCP reconnect ${name} failed: ${e.message}` })
+      postProviderError(panel, "mcp", `MCP reconnect ${name} failed: ${e.message}`)
     }
     pushMcpStatus(panel)
   }
@@ -148,7 +148,7 @@ export async function reconnectMcp(panel, name) {
 export async function testMcp(panel, name) {
     const servers = getMcpServers()
     const srv = servers.find((s) => s.name === name)
-    if (!srv) { panel._panel?.webview.postMessage({ type: "providerError", text: `No MCP server named "${name}"` }); return }
+    if (!srv) { postProviderError(panel, "mcp", `No MCP server named "${name}"`); return }
     const r = await probeMcpServer({
       name: srv.name,
       command: srv.command, args: srv.args, env: srv.env,
@@ -162,6 +162,6 @@ export async function testMcp(panel, name) {
    *  变更在下一轮生效（runAgent 每 turn 重建工具表——热插拔，MCP.md D2）；然后回推状态。 */
 export function editMcp(panel, name, config) {
     const err = saveMcpServer(name, config)
-    if (err) panel._panel?.webview.postMessage({ type: "providerError", text: err })
+    if (err) postProviderError(panel, "mcp", err)
     pushMcpStatus(panel)
   }

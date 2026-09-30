@@ -6,8 +6,8 @@
         空容器 / 关态（`:empty` + `[data-state="closed"]` 整层退场），否则定层盖住主 UI。
      ② `[data-slot="info"]` = 左列底行（rail 内 · 会话区之后 —— 唯一入口 = 设置面开）。
    树面锚（本档零新类名）：`views/settings.mjs`（头 / 段 / 体）· `views/settings-sections.mjs`（四段体 · 行 / 表单）·
-   `views/onboarding.mjs`（向导）· `views/info-row.mjs`（信息行）。字形面 = 关闭 / 退场两控件的 ✕（`content` ——
-   **视图档零字形字面**，沿 `pool.css` 折叠控件同纪律）；变量单源 = `styles.css` `:root`（零新变量 · 零断点常量）。 */
+   `views/onboarding.mjs`（向导）· `renderer/mount-info.mjs`（信息行）。字形面 = 关闭 / 退场两控件的 ✕（`content` ——
+   **视图档零字形字面**，沿 `pool.css` 折叠控件同纪律）；变量单源 = `theme.css` `:root`（零新变量 · 零断点常量）。 */
 
 /* ── ① 设置 / 向导：窗口级覆盖层面 ─────────────────────────────────────── */
 [data-slot="settings"] {

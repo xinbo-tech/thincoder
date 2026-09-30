@@ -10,6 +10,7 @@
     <title>ThinCoder</title>
     <link rel="stylesheet" href="./theme.css" />
     <link rel="stylesheet" href="./chrome.css" />
+    <link rel="stylesheet" href="./session-list.css" />
     <link rel="stylesheet" href="./skin.css" />
     <link rel="stylesheet" href="./chat.css" />
     <link rel="stylesheet" href="./chat-cards.css" />
@@ -29,15 +30,14 @@
       <div class="boot-spinner" aria-hidden="true"></div>
       <p class="boot-reason" id="boot-reason" hidden></p>
     </div>
-    <!-- 两列骨架（`docs/desktop/design/UI.md` §1 布局行）：中区 = 会话（会话控制条 + 会话头 + 对话流）· 右栏 = 活动池。
+    <!-- 两列骨架（`docs/desktop/design/UI.md` §1 布局行）：中区 = 会话（会话控制条 + 对话流）· 右栏 = 活动池。
          状态栏 = **窗口级底行**（`.app` 第 3 子元素 ⇒ 跨两列 · 两列框外一行——位置单源 = `UI.md` §1 状态栏行；需求图 `docs/desktop/requirements/PROJECT.md` §3.1 同形）。
-         各区容器 = 视图批填充锚（`data-slot`）：中区四槽（`session-control` / `session-head` / `status` = 批 4 · 对话流槽 `flow` = 批 6〔挂载根 = 滚动容器自身〕· 输入区槽 `composer` = 批 A〔`.session` 内 · 对话流之后 —— 可见面恒在〕）；会话控制条 = `.session` 首子元素（VSC 形 —— 会话模型轮 R13：原标签条 ∕ 左列两面随裁撤退场）。
+         各区容器 = 视图批填充锚（`data-slot`）：中区三槽（`session-control` = 批 4 · 对话流槽 `flow` = 批 6〔挂载根 = 滚动容器自身〕· 输入区槽 `composer` = 批 A〔`.session` 内 · 对话流之后 —— 可见面恒在〕；`status` = 窗口级底行另计）；会话控制条 = `.session` 首子元素（VSC 形 —— 会话模型轮 R13：原标签条 ∕ 左列两面随裁撤退场）。
          批 9 一容器：设置 / 向导 = `settings`（**窗口级覆盖层面** —— 两列栅格之外 · body 末子元素 · 一容器两树互斥 · 样式住 `settings.css`）。
          **零面向用户字符串**——词表供给面 = `config:read` 语言面下发（同档 §1 i18n 行：本端不另立词表源）⇒ 文案随视图批，经 `renderer/i18n.mjs`。例外仅 `<title>`（窗口标题 = 产品名，非词表项）。 -->
     <div class="app" id="app">
       <main class="session">
         <div data-slot="session-control"></div>
-        <header class="session-head" data-slot="session-head"></header>
         <div class="flow" data-slot="flow"></div>
         <div class="composer" data-slot="composer"></div>
       </main>

@@ -85,17 +85,19 @@ async function runInVisibleTerminal(command, timeout, ctx) {
     const interrupt = () => term.sendText("\x03") // Ctrl+C the foreground process
     const timer = setTimeout(() => {
       interrupt()
-      finish(`(killed — timeout ${timeout || BASH_TIMEOUT_MS}ms; interrupted in the terminal)\n[stdout]:\n${out.trim() || "(empty)"}`)
+      // 状态位族形态（族单源 = `webview/lib.js` `isToolFailure`——#677 I4：旧破折号形判据不认）
+      finish(`(killed: timeout ${timeout || BASH_TIMEOUT_MS}ms)\n[stdout]:\n${out.trim() || "(empty)"}`)
     }, timeout || BASH_TIMEOUT_MS)
     if (ctx.signal) {
-      const onAbort = () => { interrupt(); finish(`(stopped)\n[stdout]:\n${out.trim() || "(empty)"}`) }
+      // 中止面对齐核形（#677 I3：`killed: user interrupted` = 核 `bash.mjs:222` 同词；旧自报形退场）
+      const onAbort = () => { interrupt(); finish(`(killed: user interrupted)\n[stdout]:\n${out.trim() || "(empty)"}`) }
       if (ctx.signal.aborted) onAbort()
       else ctx.signal.addEventListener("abort", onAbort, { once: true })
     }
     ;(async () => {
       try {
         for await (const chunk of stream) out += stripAnsi(chunk)
-        finish(`[stdout]:\n${out.trim() || "(empty)"}\n(exit code unavailable in terminal mode — watch the terminal if it matters)`)
+        finish(`[stdout]:\n${out.trim() || "(empty)"}\n(exit code unavailable in terminal mode)`)
       } catch (e) {
         finish(`Error: terminal execution failed: ${e.message}`)
       }
@@ -234,16 +236,15 @@ export const bashTool = {
         if (error && error.name === "AbortError") {
           // signal 双保险回归实证（2026-09-05）：signal option 下 Node 内部 handler 先杀
           // 进程 → 本回调**先于**下方 onAbort 到达（实验：callback@3501 vs onAbort@3502）
-          // ——必须同带已收集输出（否则 partial 丢——裸 "(stopped)" 回归）——与 onAbort
+          // ——必须同带已收集输出（否则 partial 丢——裸状态位回归）——与 onAbort
           // 的 collectedResult 语义一致；进程已死——outBuf 已含全部已到数据
-          finish(outBuf.trim() || errBuf.trim() ? collectedResult("stopped") : "(stopped)")
+          finish(outBuf.trim() || errBuf.trim() ? collectedResult("killed: user interrupted") : "(killed: user interrupted)")
           return
         }
         if (error && error.killed) {
           // 超时形态收正（2026-09-18 工具失败判据同族残项批）：判据族认 `killed: ` 冒号形
-          // （既有成员——本档背景/exit 面 `killed: <signal>` 已是冒号形）；旧破折号形
-          // `(killed — timeout …)` 判据不认 ⇒ 卡读绿 + 折叠，本批收正。
-          // （终端可见路同族形 `:85` 无测试 harness ⇒ 本批登记不修——批档 §2.8 #8 ①。）
+          // （既有成员——本档背景/exit 面 `killed: <signal>` 已是冒号形）；旧破折号形判据不认
+          // ⇒ 卡读绿 + 折叠；终端可见路同形 = #677 I4 已按族改写（`runInVisibleTerminal`）。
           finish(`(killed: timeout ${timeout || BASH_TIMEOUT_MS}ms)`)
           return
         }
@@ -307,8 +308,8 @@ export const bashTool = {
       if (ctx.signal) {
         const onAbort = () => {
           killProcessTree(child)
-          const collected = collectedResult("stopped")
-          finish(outBuf.trim() || errBuf.trim() ? collected : "(stopped)")
+          const collected = collectedResult("killed: user interrupted")
+          finish(outBuf.trim() || errBuf.trim() ? collected : "(killed: user interrupted)")
         }
         if (ctx.signal.aborted) onAbort()
         else ctx.signal.addEventListener("abort", onAbort, { once: true })

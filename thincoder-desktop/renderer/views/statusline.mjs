@@ -64,7 +64,8 @@ export function statusModel({
   const active = activeSession == null ? null : String(activeSession)
   const codes = badgeCodes(badges, active)
   const flags = sessionFlags !== null && typeof sessionFlags === "object" ? sessionFlags[active] : undefined
-  // 段 3 支①源 = `ev:susp` 计数切片（桌面空闲唤醒批）；支③源 = `ev:statusText` 状态文本切片（R4）
+  // 段 3 支①源 = `ev:susp` 计数切片（桌面空闲唤醒批）；支③源 = `ev:statusText` 状态文本切片（R4）；
+  // 段 14 窗在场判据同源（重建保真 ∕ 留端清算族批 · #581 —— 窗内 Enter = 入队）
   const suspend = susp !== null && typeof susp === "object" ? susp[active] : undefined
   const statusSlice = statusText !== null && typeof statusText === "object" ? statusText[active] : undefined
   // 非段位元素源 = `ev:goal` 切片（R5）；在场判据随核件（闸内 = 非段位元素 —— 不入段集）
@@ -83,7 +84,7 @@ export function statusModel({
     ledgerSegment(ledgerMarker, ledgerDetail),
     timerSegment(timers, active),
     titleSegment(sessions, active),
-    enterSegment(pending, active, codes),
+    enterSegment(pending, active, codes, suspend),
   ].filter((segment) => segment !== null)
   const alerts = []
   for (const row of rows) {

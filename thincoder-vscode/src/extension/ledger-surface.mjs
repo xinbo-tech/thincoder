@@ -12,7 +12,8 @@
  * `render`（item 刷新）。
  *
  * M2/KD-M2-3：核台账面**动态 import**（`ledger.mjs` 静态链 `node:sqlite`——静态 import 会把
- * `node:sqlite` 拽进端壳静态闭包、破 W8 契约②；机检 = `test/engine-floor-guard.test.mjs`）。
+ * `node:sqlite` 拽进端壳静态闭包、破 W8 契约②；机检 = 批件
+ * `docs/batches/2026-09-29-residuals-round2.test.mjs`——W8 契约②判据现载体，单测树重建时回迁端侧单测档）。
  * 载入失败 = 低宿主 / 打包缺件 → 本面降级不崩（N1），刷新拍重试。
  */
 import * as vscode from "vscode"

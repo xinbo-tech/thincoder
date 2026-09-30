@@ -18,7 +18,7 @@
 | `timeout` | `Advisor: review timeout after {S}s.` | `thincoder-core/advisor/loop.mjs`（另两处同判）；尾文案居 `thincoder-core/advisor/compaction.mjs` |
 | `empty` | `Advisor: empty response — review was inconclusive` | `thincoder-core/advisor/loop.mjs:195` |
 | `interrupted` | `Advisor: interrupted.` | `thincoder-core/advisor/loop.mjs:100`（另 :184 同判） |
-| `review_failed` | `Advisor: review failed` | `thincoder-core/advisor/run.mjs:185`（catch 内字符串 resolve——不 throw） |
+| `review_failed` | `Advisor: review failed` | `thincoder-core/advisor/run.mjs:195`（catch 内字符串 resolve——不 throw） |
 
 **匹配规则**：**块首行扫描**（按空行分块，逐块取首行 trim 后测前缀）——时间线渲染以空行连接时间线与尾 ⇒ 六条尾均以块首行形态落地（`review_failed` 为独立返回串 = 文本首行）；
 **不得**只测首行（既有失败串锚只认 `^` 前缀，即漏「时间线 + 尾」形态）。
@@ -208,7 +208,7 @@ Wait for the report, or cancel the review first (subagent action:'cancel' id:'{i
 **参与者边界（写面一致性——如实注）**：拦集 = 预闸可见的父侧自身写面；判陈旧集另含预闸不可达的**子代理合入**写入——「致陈旧却没拦」只可出自不可达面；bash / 文件操作类盲区不记账不判陈旧。
 
 **旧子 id 映射（引文相容——代码注释按「本节 E-x」引；子标源自归档 `thincoder-cli/docs/_archive/design/ADVISOR-CONVERGENCE.md` §14 的 E 族）**：E-1 问题陈述 → 本节「归因与实证」∕「机制复核」· E-2 方案选型 → 「规则面选型」∕「机制面选型」段 · E-3 契约五（逐字）→ 本节「契约（逐字）」（子标字母同对应：**E-3c** = (c) 拦截与回执文案 · **E-3d** = (d) 实现要点）·
-E-4 受影响文件 → §12 表「受影响文件清单」行（不并项——快照口径）· E-5 关键决策记录 → 本节选型段（否决句）· E-6 后续登记项 → §11 边界 + 本节「参与者边界」尾注 · **E-7 测试层用例表** → 用例集 T-CG15–T-CG18（批次材料——§12 表；宿主 = `thincoder-cli/test/advisor-chain-guards.test.mjs`；验收行 = §10 A-AG7）· E-8 验收标准 → §10。
+E-4 受影响文件 → §12 表「受影响文件清单」行（不并项——快照口径）· E-5 关键决策记录 → 本节选型段（否决句）· E-6 后续登记项 → §11 边界 + 本节「参与者边界」尾注 · **E-7 测试层用例表** → 用例集 T-CG15–T-CG18（批次材料——§12 表；宿主 = `thincoder-cli/test/advisor-chain-guards.test.mjs`；验收行 = §10 A-AG7）· E-8 验收标准 → §10。 （机检豁免——用例退场登记）
 
 ## 6. 同步面记账（F16——消费同谓词）
 
@@ -266,7 +266,7 @@ Options: 1. proceed as-is (no usable conclusion — design: no token, implementa
 ```
 
 - **尝试表行 = 本次尝试**（`#` = 该实例的尝试序号）——**不设跨次记录的载体**（零载体）：反复性由父侧从逐次结论块读出（机制侧贡献 = 每次载 `criterion=`）。
-- **`round` 值语义（与尝试表 `#` 同值）**：结论块在**结算出口**追加（此时 `thincoder-core/agent-tools/advisor-settle.mjs:136` 的 `run.round++` 已执行）⇒ `round` = 本次**已结算**尝试号（**不是**「下一轮将使用的编号」——§2.5 字段行的失败族读法即本条）；尝试表 `#` 记同值。**断言**：块首 `round=N` ∧ 尝试表 `#=N`（用例 T-AF16）。
+- **`round` 值语义（与尝试表 `#` 同值）**：结论块在**结算出口**追加（此时 `thincoder-core/agent-tools/advisor-settle.mjs:136` 的 `run.round++` 已执行）⇒ `round` = 本次**已结算**尝试号（**不是**「下一轮将使用的编号」——§2.5 字段行的失败族读法即本条）；尝试表 `#` 记同值。**断言**：块首 `round=N` ∧ 尝试表 `#=N`（用例 T-AF16）。 （机检豁免——用例退场登记）
 - **选项三值**（承 F29）：继续（无可用结论——实现仍闩 / 该面仍未被评审覆盖） / 改变或缩小范围后重跑 / 停下上报——**均不自动执行**（发起权在父侧 / 用户）。
 - **零凭证值**：块内零 token / designId 值（用例 UUID 形扫描零命中）。
 - **零封禁**：结论块是出口，不是封禁——下一次发起照常受理（检查点已撤——见下）。
@@ -366,7 +366,7 @@ export function advisorContextBudget(provider) {
 - 不拦截代码评审的在途写（仅设计评审）；不覆盖 bash / 文件操作类写入面（登记）。
 - 不碰在途链文件；不改判定族 / 六条尾文案 / 压缩阈值。
 - **零 UI 面**（拒绝文案落工具结果、冻结句落工具返回——无渲染面改动）。
-- **类型门登记（非发起点——零改，判据见 §2.4 / §10 A-AG13）**：核记账面 `thincoder-core/agent/record-results.mjs`（类型门分支已随取核归位——判定后恒为枚举值，语义等价）· CLI 显示面 `thincoder-cli/src/tui/tool-args.mjs:51`（`a.type ?? "review"` 渲染兜底——不参与发轨判定，被拒调用照原样渲染）。
+- **类型门登记（非发起点——零改，判据见 §2.4 / §10 A-AG13）**：核记账面 `thincoder-core/agent/record-results.mjs`（类型门分支已随取核归位——判定后恒为枚举值，语义等价）· CLI 显示面 `thincoder-core/tool-args.mjs:49`（`a.type ?? "review"` 渲染兜底——不参与发轨判定，被拒调用照原样渲染）。
   **对象声明面** `thincoder-core/agent-tools/advisor.mjs:66`（`object` schema——自述为调用方声明的评审类型，只描述评审对象、**不选轨**；一致性校验 = §2.4 冲突分支）。
 - 不写实现代码（工具 / 守卫 / 检查点 = eng-coder 写域）。
 

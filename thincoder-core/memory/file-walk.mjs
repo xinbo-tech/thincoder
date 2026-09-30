@@ -68,12 +68,14 @@ export function createUnlistedTally(knownExts) {
  * silently dropped.
  * @param {string} dir — project root
  * @param {Set<string>} exts — extensions to keep (lower-case, leading dot)
- * @param {{maxFiles?: number, knownExts?: Set<string>|null}} [opts]
+ * @param {{maxFiles?: number, knownExts?: Set<string>|null, isExcluded?: ((rel: string) => boolean)|null}} [opts]
  *   knownExts → also tally files whose extension is in NO index list
+ *   isExcluded → caller-injected exclusion predicate (§6.14 面① 剪枝形): a hit prunes the
+ *   subtree (never expanded — zero readdir, no MAX_WALK_FILES budget spent) or drops the file
  * @returns {Promise<{files: {abs: string, rel: string}[], truncated: boolean,
  *   unlisted: {count: number, exts: {ext: string, count: number}[]}}>}
  */
-export async function walkProjectFiles(dir, exts, { maxFiles = MAX_WALK_FILES, knownExts = null } = {}) {
+export async function walkProjectFiles(dir, exts, { maxFiles = MAX_WALK_FILES, knownExts = null, isExcluded = null } = {}) {
   const files = []
   const tally = knownExts ? createUnlistedTally(knownExts) : null
   let truncated = false
@@ -88,10 +90,11 @@ export async function walkProjectFiles(dir, exts, { maxFiles = MAX_WALK_FILES, k
       const rel = cur.rel ? `${cur.rel}/${ent.name}` : ent.name
       if (ent.isSymbolicLink()) continue // never follow symlinks
       if (ent.isDirectory()) {
-        if (!isSkippedRelPath(rel)) stack.push({ abs: join(cur.abs, ent.name), rel })
+        // §6.14 面① 剪枝：排除子树零展开（不耗 MAX_WALK_FILES 预算）
+        if (!isSkippedRelPath(rel) && !isExcluded?.(rel)) stack.push({ abs: join(cur.abs, ent.name), rel })
         continue
       }
-      if (!ent.isFile() || isSkippedRelPath(rel)) continue
+      if (!ent.isFile() || isSkippedRelPath(rel) || isExcluded?.(rel)) continue
       const ext = extensionOf(ent.name)
       if (!ext || !exts.has(ext)) {
         tally?.note(rel)

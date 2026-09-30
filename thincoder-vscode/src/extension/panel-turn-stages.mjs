@@ -7,7 +7,7 @@
  *   · 收尾 `finalizeTurn`（原 `:311-350` finally 体）——落盘 / 标题 / 忙态归位；
  *   · 段 B `enterSuspensionTurn`（原 `:352-382`）——挂起会话接管。
  * 留主档（`panel-chat.mjs`）= 入口守卫段（`ensurePanelAgent` / `ensureMemoryHandle` 同址——
- * `test/engine-floor-guard.test.mjs:152-154` 结构机检）+ 行加载 / 回调装配段 + 循环调用。
+ * 结构机检 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`——W8 契约②判据现载体，单测树重建时回迁端侧单测档）+ 行加载 / 回调装配段 + 循环调用。
  *
  * 搬运契约（§12.2.1 A-1–A-5 / B-1–B-3）：
  *   · 段 A 三处提前 `return`（impl 内 = 退出并触发 finally）⇒ 判别式回传 `{ done: true }`，
@@ -24,7 +24,7 @@ import { providerNames, getKey, buildProvider } from "./presets.mjs"
 import { specForModel } from "../specs.mjs"
 import { t } from "../i18n.mjs"
 import { _cwd, pushBusyQueued } from "./panel-messages.mjs"
-import { takeQueuedBatchItem } from "./queued-pickup.mjs"
+import { takeQueuedBatchItem } from "@thincoder/core/queued.mjs"
 import { suspensionSession, poolLive, backgroundStatus, loadSuspensionCore } from "./suspension.mjs"
 import { syncTimerWatch } from "./timer-watch.mjs" // §6.30.11 VSC 空闲面：回合尾武装点（单例惰性建 + 活体重读）
 // C-B2-6 细则⑥（busy-injection 批 fix 轮 2026-09-22）：送达侧贴图降级判决（已抽入
@@ -242,7 +242,7 @@ export async function enterSuspensionTurn(panel, { turnSlot, distillSlot, histor
 async function deliverBusyQueued(panel, busyQueued, runChat) {
   if (!panel._panel || busyQueued.length === 0) return
   const { item, merged } = takeQueuedBatchItem(busyQueued)
-  if (!item) return // /cmd 首动作（防御支——#429 取批面放行：`slash` ∕ `turn` 同判可消费，恒不触）——零动作
+  if (!item) return // 空队防御支（首动作恒可消费——环守卫在先）——零动作
   pushBusyQueued(panel, merged ?? undefined) // C-B2-6 细则①：消费即清（webview 镜像 + 标记面）
   const d = await downgradeNonVisionImages(panel, { text: item.text, images: item.images, providerName: item.providerName, modelOverride: item.modelOverride, cwd: _cwd() || process.cwd(), visionReader: item.visionReader })
   await runChat(panel, { text: d.text, modelOverride: item.modelOverride, reasoning: item.reasoning, providerName: item.providerName, images: d.images })

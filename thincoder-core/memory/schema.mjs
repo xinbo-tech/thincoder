@@ -15,10 +15,15 @@ import { segmentCJK } from "../fts-text.mjs"
 export { segmentCJK } from "../fts-text.mjs"
 
 export const VALID_TYPES = new Set(["rule", "knowledge", "decision", "pattern"])
-export const SCHEMA_VERSION = 9
+export const SCHEMA_VERSION = 10
 export const SQLITE_BUSY_TIMEOUT = 3000
 /** WAL 回收后的文件截断上界（§6.12 修法①——防复胀；实测曾达 587 MB）。 */
 export const WAL_SIZE_LIMIT_BYTES = 64 * 1024 * 1024
+
+/** 索引行预算（§6.14 面③ P2——每 origin 库内行数 code+doc 合计）：WARN 线出**一行**可见警示
+ *  （≈0.5 s 趟量级）；CAP 线起同步跳过后列文件（只停新增——存量行不失效）。B3 ∕ B4 复用 WARN 值。 */
+export const INDEX_ORIGIN_ROW_WARN = 20000
+export const INDEX_ORIGIN_ROW_CAP = 100000
 
 // Code index: source file extensions. Curated DEFAULTS — a project can declare
 // more (union) through PROJECT-MANIFEST.json → index.codeExtensions
@@ -87,7 +92,7 @@ export function createMemory({ dbPath }) {
   `)
 
   migrate(db)
-  return { db }
+  return { db, dbPath }
 }
 
 /** Step-by-step migration by user_version. Single transaction — any step failure rolls back, no half-finished schema left behind. */
@@ -444,6 +449,16 @@ export function migrate(db) {
       END;
     `)
     db.exec(`PRAGMA user_version = 9`)
+  }
+  if (version < 10) {
+    // v10: 每回合 embedding 回填探针（B2）的部分索引——`WHERE embedding IS NULL` 改走 seek（原无索引全表扫）。
+    // 键列 = `embedding`（**`rowid` 不可作索引键列**——D-MEM22 本机实测 `no such column: rowid`）。
+    // 只增索引（无表结构 ∕ 行级变更）；探针调用点 SQL 形不变（计划改走索引——预期 `SEARCH … USING INDEX`）。
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS code_chunks_embedding_null ON code_chunks(embedding) WHERE embedding IS NULL;
+      CREATE INDEX IF NOT EXISTS doc_chunks_embedding_null ON doc_chunks(embedding) WHERE embedding IS NULL;
+    `)
+    db.exec(`PRAGMA user_version = 10`)
   }
   db.exec("COMMIT")
   } catch (err) {

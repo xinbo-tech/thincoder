@@ -18,7 +18,7 @@ import { applyI18nToDOM } from "./i18n-dom.js"
 import { onToken, onReasoning, onTurnBreak, finish, subagentChunk } from "./streaming.js"
 import { resetActivity, applySubagentApproval } from "./activity.js"
 import { renderStatusBar, handleUsageMessage } from "./status-bar.js"
-import { handleTaskProgress, handleSubagentMessage, handleGoalMessage, handleSuspensionMessage, handleTurnStateMessage } from "./panels.js"
+import { clearPanels, handleTaskProgress, handleSubagentMessage, handleGoalMessage, handleSuspensionMessage, handleTurnStateMessage } from "./panels.js"
 import { updateSessionTitle, handleProjectMessage } from "./session-bar.js"
 import { showWelcomePanel, maybeShowWelcome } from "./onboarding.js"
 import { handleAutoApprove, handleAgentSettings, handlePlanMode } from "./mode-buttons.js"
@@ -120,6 +120,7 @@ export function initMessageLoop(deps) {
         ctx.messagesEl.replaceChildren()
         ctx.currentBubble = null; ctx.currentBlock = null; ctx.currentTools = []; ctx.currentRaw = ""; ctx.currentReasoning = null; ctx.currentReasoningRaw = ""
         S._digestBoundary = null; S._statusText = null; S._turnFrame = null; resetActivity()
+        clearPanels() // #642：会话切换 ∕ 载入清面板态（重置点归位——回合起点不再清；跨会话零残留）
         ctx._hasOlder = false
         ctx._nextIdx = 0
         S._loadingOlder = false
@@ -149,8 +150,9 @@ export function initMessageLoop(deps) {
         maybeShowWelcome(S._lastProviderStatus, m.keyOk)
         updateWelcomeStatus(ctx) // keyOk 到达可能晚于 showWelcome（初始渲染）——刷新欢迎条文案态
         break
+      // #640 载荷 v2：`{scope, reason}`（段标 + 词化码 ∕ 原样串——段名闭集与词表住 settings.js）
       case "providerError":
-        showSettingsError(m.text)
+        showSettingsError(m.scope, m.reason)
         break
       case "autoApprove":      handleAutoApprove(m); break
       case "agentSettings":    handleAgentSettings(m, updateAgentSettings); notifyAgentSettingsRefreshed(); break

@@ -1,21 +1,14 @@
 // F-CC4（CONTEXT-COMPACTION.md §6.16.5）：goal 任一状态变更 ⇒ 方向转换轻推（本档只调用；文案/去重单源 = agent-tools/context.mjs）
 import { pushContextNudge } from "./context.mjs"
+import { DESC } from "../tools/shared.mjs"
 
 /**
  * goal tool: lifecycle management for long-running autonomous goals (completion contract).
- * Three states: active / complete / blocked. Completion must pass a verify evidence threshold;
- * blocked is only accepted after the same condition persists 3 consecutive times.
- * The system injects status + budget progress + audit discipline every turn.
+ * 描述面 = `tool-docs/goal.md`（DESC() 加载）；完成阈 / 阻塞计次 / 每回合注入 = execute 内实现注。
  */
 export const goalTool = {
   name: "goal",
-  description:
-    "Manage a long-running autonomous goal. " +
-    "action='set': create or replace the goal — must have a verifiable completion criterion (a machine-checkable proof, not vague effort). " +
-    "action='complete': mark achieved — only after the criterion's check has actually passed. " +
-    "action='blocked': report an impasse (requires 'reason') — only after 3 genuine attempts. " +
-    "action='cancel': abandon the goal. " +
-    "Returns a status line — the goal set/updated/completed/blocked/cancelled confirmation, or Error: ... with the reason.",
+  description: DESC("goal"),
   parameters: {
     type: "object",
     properties: {

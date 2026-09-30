@@ -33,7 +33,7 @@ export const GIT_NET_TIMEOUT_MS = 300_000
 /** 网路面五动作（300s 档——合法耗时可远超本地；依据 = 需求档 §4.7 TTY-DRIVE N3 候选参照值）。 */
 const GIT_NET_ACTIONS = new Set(["push", "fetch", "pull", "clone", "ls-remote"])
 
-/** 测试态缝（模块级 · 缺省 null = 生产零行为变——先例 `manifest.mjs:40-41` · `session-gc.mjs:136`）。
+/** 测试态缝（模块级 · 缺省 null = 生产零行为变——先例 `manifest-discovery.mjs:15-20` · `session-gc.mjs:186`）。
  *  用例 `finally` 复位；不经用户参数面（边界：不新增参数 / 用户选项）。 */
 let gitTimeoutOverride = null
 export function _setGitTimeoutForTest(ms) { gitTimeoutOverride = ms }

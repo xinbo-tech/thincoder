@@ -14,6 +14,7 @@
  */
 import { loadConsultPool } from "../extension/presets.mjs"
 import { readImageTool } from "../tools.mjs"
+import { wireMemoryFace } from "../memory-tool.mjs"
 import { specForModel } from "../specs.mjs"
 // 子代面排除集（核单源——TOOLS.md §6.16；核 `agent/helpers.mjs` 静态安全——W8 扫描实测）
 import { SUBAGENT_TOOL_EXCLUSIONS } from "@thincoder/core/agent/helpers.mjs"
@@ -157,6 +158,11 @@ export async function buildToolTable({ depth, role, engineering, provider, mcpSe
   // M2 台账查询两工具（核 `tools/index.mjs:61` 同法——全角色面）：动态 import——ledger 链静态
   // 达 `node:sqlite`（W8 契约②）；写命令族已随核 `assembleFamilyTools` 在端可达（核装配块）。
   const { ledgerQueryTool, ledgerCountTool } = await import("@thincoder/core/ledger.mjs")
+
+  // I9（#677——memory 描述面收口）：描述 ∕ 参数面核单源注入（端零自持描述字面；端面只留
+  // layer 值域守卫）。动态 import：`memory.mjs` 链静态达 `node:sqlite`——W8 契约②，同档纪律。
+  const { memoryTools } = await import("@thincoder/core/memory.mjs")
+  wireMemoryFace(memoryTools(null, {})[0])
 
   // ── ③ 基础集：subagent role-based tool filtering —— explore/plan/consult get read-only tools only；
   // depth>0 面另剔 depth-excluded 工具（核单源 `SUBAGENT_TOOL_EXCLUSIONS`——TOOLS.md §6.16）。

@@ -3,8 +3,8 @@
  *
  * 收编自 `spawn-child.mjs`（2026-09-20 端差·显示面消差批 §2.2 X6 实现轮）：端壳侧需**静态**
  * 导入锚点做块头注记判定，而 `spawn-child.mjs` 静态链经核 agent 栈可达 `node:sqlite`
- * ⇒ 端壳静态闭包禁达（W8 契约②；`thincoder-vscode/test/engine-floor-guard.test.mjs`
- * fail-closed 红）⇒ 锚点下沉**零依赖叶**（先例 = `relay-prefix.mjs` 同因下沉）。`spawn-child.mjs`
+ * ⇒ 端壳静态闭包禁达（W8 契约②判据（现载体 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`；
+ * 单测树重建时回迁端侧单测档）：fail-closed 红）⇒ 锚点下沉**零依赖叶**（先例 = `relay-prefix.mjs` 同因下沉）。`spawn-child.mjs`
  * 原样再导出 ⇒ 既有 import 面（核 agent-tools 族 / CLI `tool-events.mjs`）零改。
  *
  * 语义：消费端用 `includes()` 检出锚点 ⇒ 合成块头注记（"work may be partial"）——两端各一处：

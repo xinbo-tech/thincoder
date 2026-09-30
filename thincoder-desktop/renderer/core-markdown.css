@@ -15,19 +15,19 @@
   font-family: var(--mono);
   font-size: 14px;
   line-height: 1.55;
+  contain: layout style paint; /* 巨块渲染夹层（批档 §2.14-B）：文本面 ∕ 推理面容器三隔——不含 size（高度确定性保持）；零语义（只增） */
 }
 
-/* 面 2 段落留白（首子归零规则已删 —— VSC 首件保留自身上边距；容器级尾子归零保留 = 壳层留白口径）。 */
+/* 面 2 段落留白（首子归零已删 —— VSC 首件保留自身上边距）。**容器臂收窄（2026-09-29 · 批
+   `docs/batches/2026-09-29-hatch-clearance-2.md` · #673）**：`> :last-child { margin-bottom: 0 }` ⇒
+   **`p:last-child` 单条**（逐字对齐 VSC `chat.css:68-69`——非 p 尾件〔代码块 ∕ 表格〕底距两端同；
+   收窄前该臂把非 p 尾件自携底距也归零 ⇒ 尾件底距小于 VSC）。 */
 .block-text p,
 .reasoning-content p {
   margin: 0 0 6px;
 }
 .block-text p:last-child,
 .reasoning-content p:last-child {
-  margin-bottom: 0;
-}
-.block-text > :last-child,
-.reasoning-content > :last-child {
   margin-bottom: 0;
 }
 
@@ -60,7 +60,7 @@
   padding: 6px 12px;
   border-left: 3px solid var(--line);
   background: var(--hover-bg-strong);
-  border-radius: 0 4px 4px 0;
+   border-radius: 0;
 }
 
 /* 面 6 行内码。 */
@@ -70,7 +70,7 @@
   font-size: 0.9em;
   background: var(--hover-bg-strong);
   padding: 1px 5px;
-  border-radius: 3px;
+   border-radius: 0;
   word-break: break-word;
 }
 
@@ -81,7 +81,7 @@
   margin: 8px 0;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 6px;
+   border-radius: 0;
   background: var(--overlay);
   overflow: hidden;
 }
@@ -167,7 +167,7 @@
 .block-text img,
 .reasoning-content img {
   max-width: 100%;
-  border-radius: 4px;
+   border-radius: 0;
 }
 
 /* 面 16 分隔线。 */

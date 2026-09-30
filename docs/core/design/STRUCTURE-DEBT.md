@@ -17,7 +17,7 @@
 
 | # | 债 | 现状判 | 证据（实核） |
 |---|---|---|---|
-| **#3** | **`_` 状态字段摊平 + 手写生命周期清单**：agent 对象的运行态字段无 schema / 无封装，复位与继承靠**手写键清单**；新增或漏删字段即状态泄漏 | **现行** | 继承 = 手写键清单：`thincoder-core/agent.mjs:147`（`_inheritedGuard` 逐键回灌）；复位 = 逐字段块：`thincoder-core/agent.mjs:142`–`:159` |
+| **#3** | **`_` 状态字段摊平 + 手写生命周期清单**：agent 对象的运行态字段无 schema / 无封装，复位与继承靠**手写键清单**；新增或漏删字段即状态泄漏 | **现行** | 继承 = 手写键清单：`thincoder-core/agent/run-start.mjs:73-76`（`_inheritedGuard` 逐键回灌）；复位 = 逐字段块：`thincoder-core/agent/run-start.mjs:66-91`（两处 2026-09-29 P2 三拆自 `thincoder-core/agent.mjs:142`–`:159` 迁入——旧坐标 as-of） |
 | **#4** | **eng-token 语义跨端重复**：核内已单点化，VSC 端无同名实现——自持槽语义与校验副本 | **跨端仍分叉**（CLI / 核侧已消解） | 核内单点 = `thincoder-core/token-ttl.mjs`（286 行）；VSC 侧自持面 = `thincoder-vscode/src/agent-tools/subagent-spawn-gate.mjs`（**该端档已退役**——W12 删除集：端面收留 = `thincoder-vscode/src/agent/tool-gates.mjs` 核 `design-token.mjs` 消费面） （迁移期引文） |
 | **#8** | **跨仓复制漂移**（架构伞项）：state / tools / prompts / advisor 层双端整片存在 | **收敛中**（核统一批推进） | 「一个核 + 两个薄壳」= `docs/core/design/CORE-UNIFICATION.md`；跨端剩余差面登记 = `docs/vsc/design/VSC-MIGRATION.md` |
 | **#9** | **扫描面四档越 300 软线**（职责边界待评估——本批**只登记不执行**） | **现行** | 实核行数（2026-09-18 · `wc -l`）：`thincoder-core/memory/schema.mjs` **453** · `memory/docs.mjs` **421** · `memory/code-sync.mjs` **417** · `thincoder-core/memory/core.mjs` **301**；来源 = TUI 假死批 §2.4「软线 300 状态与拆分立场」块（批档 `docs/batches/2026-09-18-tui-freeze.md`）；拆分立场的复评触发 = 该面下次触碰 |
@@ -75,4 +75,5 @@
   ③ 全部坐标改现状路径并经实核（`thincoder-core/**` · 两产品 `src/**`）。
 - 2026-09-15（**S2 W14 落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W14）：§2 注行（`#6` VSC 侧对位面）补迁核注——VSC 自持 `more-file.mjs`（多工具合装面）已删，现体 = 核 `thincoder-core/tools/{file.mjs, patch.mjs, search.mjs}`；机制条文零改。
 - 2026-09-18（**TUI 假死批 · 父侧直接执行**）：§2 新增 **#9 扫描面四档越 300 软线**（`memory/schema.mjs` **453** · `memory/docs.mjs` **421** · `memory/code-sync.mjs` **417** · `thincoder-core/memory/core.mjs` **301**——登记不执行，复评触发 = 该面下次触碰）；来源 = 批档 `docs/batches/2026-09-18-tui-freeze.md` §2.4「软线 300 状态与拆分立场」块。
+- 2026-09-29（**core-hygiene 批 · P3 文档收正 · eng-designer**——承批档 `docs/batches/2026-09-29-core-hygiene.md` §2.8 行 4）：§2 #3 行证据坐标收正——复位 ∕ 继承块新家 = `thincoder-core/agent/run-start.mjs`（2026-09-29 P2 三拆；原 `thincoder-core/agent.mjs:142`–`:159` 坐标 as-of）。债务判定（仍现行）与机制条文零改。
 

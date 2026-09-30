@@ -1,12 +1,12 @@
 /**
  * plan tool: enter/exit plan mode.
- * In plan mode only read-only tools are allowed — explore code, design solutions, no code writing.
- * Exit plan mode to present the plan for the user's approval; implement only after they approve.
+ * 描述面 = `tool-docs/plan.md`（DESC() 加载）。
  *
  * Reminder cadence (kimi-code style): while plan mode is active the agent loop
  * re-injects reminders — sparse every 2 turns, full every 5 turns or when the
  * user sends a new message — so the constraint never fades from context.
  */
+import { DESC } from "../tools/shared.mjs"
 
 const PLAN_FULL_REMINDER =
   "[System reminder: plan mode is ON. Workflow: (1) explore/read codebase with read-only tools, " +
@@ -88,8 +88,7 @@ export function planReminderForTurn(agent, userMessageSince) {
 
 export const planTool = {
   name: "plan",
-  description:
-    "Enter or exit plan mode. In plan mode you are restricted to READ-ONLY tools: read files, search code, run read-only shell commands. Use plan mode before complex multi-step tasks — explore the codebase, design the architecture, present a plan to the user. Exit plan mode to present the plan for the user's approval; implement only after they approve. For simple single-file edits, skip plan mode and just make the change.",
+  description: DESC("plan"),
   parameters: {
     type: "object",
     properties: {

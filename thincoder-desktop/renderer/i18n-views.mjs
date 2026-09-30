@@ -48,14 +48,16 @@ export const VIEWS_DICT = Object.freeze({
     "welcome.heading": "Welcome to ThinCoder",
     "welcome.text": "Choose a provider and enter its API key to get started.",
     "welcome.textConfigured": "Ask about this workspace — the agent can read files, run commands, and edit code.",
-    // 端差登记：VSC 行含 `@` 文件引用段（桌面 @-补全 = 缺整面族）⇒ 本端键位行只取真有之键。
-    "welcome.shortcuts": "Enter to send · Shift+Enter for newline",
+    // 缺面族批补（#632 · 2026-09-29 登记兑现）：`@` 段补全 —— plain-text 形 = VSC `welcome.shortcutsHtml` 去标记同序。
+    "welcome.shortcuts": "Type @ for file references · Enter to send · Shift+Enter for newline",
     // 排队期「待发送块」（收正轮 B12 新口径 · 参照 CLI `TUI.md` §7.5 逐字对位 —— 提示行 ⏳ + 不打断当前执行）
     "chat.pending.single": "⏳ Queued · Won't interrupt the current run — sent automatically",
     "chat.pending.multi": "⏳ Queued · ${count} messages (won't interrupt the current run, sent together)",
     "chat.pending.more": "… [${lines} lines — shown in full once sent]",
     // ── ② 输入区（P26 发送失败 / P22 非栅格粘贴拒——`:${type}` 值逐字同 VSC）──
     "composer.send.failed": "Send failed (${reason}) — the text was kept",
+    // 引导形（#673）：`provider-invalid` 词 —— 值逐字同 VSC `locales/en.json` `error.provider`（基准归一——两端可见面同词）。
+    "composer.send.noProvider": "No provider configured — click ⚙ to set API keys",
     "paste.unsupportedFormat": "Only png / jpg / gif / webp images are supported (got ${type})",
     // ── ③ 审批面（相抵① 超阈降级 = 摘要 + 计数，零外部查看器）──
     "approval.diff.large": "Large diff — ${n} lines (preview omitted)",
@@ -76,7 +78,9 @@ export const VIEWS_DICT = Object.freeze({
     "session.rename": "Rename",
     "session.delete": "Delete",
     "session.deleteConfirm": "Delete session \"${title}\"? This cannot be undone.",
-    // R9 · #486 失败面可见性（四键 —— 本端拟定；消费面 = `renderer/mount-sessions.mjs` toast；`renameFailed` = #556 增；`deleteFailed` = #578③ 增）
+    // #637（受占切换警告半幅——非失败面：核受占 = 切换成立 + 次存 fork；值沿 U-E 核定 ∕ CLI `cmd-session.mjs:119` 语义）
+    "session.occupied": "This session is in use by another live process — continuing will create a new copy on the next save.",
+    // R9 · #486 失败面可见性（四键 —— 本端拟定；消费面 = `renderer/session-wire.mjs` toast；`renameFailed` = #556 增；`deleteFailed` = #578③ 增）
     "session.openFailed": "Could not open the session (${reason})",
     "session.loadFailed": "Could not load the session content",
     "session.renameFailed": "Could not rename the session (${reason})",
@@ -191,13 +195,15 @@ export const VIEWS_DICT = Object.freeze({
     "welcome.heading": "欢迎使用 ThinCoder",
     "welcome.text": "选择一个 provider 并填入 API key，即可开始使用。",
     "welcome.textConfigured": "就此工作区提问——agent 可以读取文件、运行命令、修改代码。",
-    "welcome.shortcuts": "Enter 发送 · Shift+Enter 换行",
+    "welcome.shortcuts": "输入 @ 引用文件 · Enter 发送 · Shift+Enter 换行",
     // 排队期「待发送块」（逐字 = CLI `render-conversation.mjs:370-371` / `:383`）
     "chat.pending.single": "⏳ 待发送 · 不打断当前执行，自动发送",
     "chat.pending.multi": "⏳ 待发送 · ${count} 条消息（不打断当前执行，合并发送）",
     "chat.pending.more": "… [该条共 ${lines} 行——发送后完整显示]",
     // ── ② 输入区 ──
     "composer.send.failed": "发送失败（${reason}）——文本已保留",
+    // 引导形（#673）：`provider-invalid` 词 —— 值逐字同 VSC `locales/zh.json` `error.provider`（基准归一——两端可见面同词）。
+    "composer.send.noProvider": "未配置 API 密钥 — 点击 ⚙ 设置",
     "paste.unsupportedFormat": "仅支持 png / jpg / gif / webp 图片（收到 ${type}）",
     // ── ③ 审批面 ──
     "approval.diff.large": "改动较大——${n} 行（预览省略）",
@@ -218,7 +224,9 @@ export const VIEWS_DICT = Object.freeze({
     "session.rename": "重命名",
     "session.delete": "删除",
     "session.deleteConfirm": "确定删除会话 \"${title}\"？此操作不可恢复。",
-    // R9 · #486 失败面可见性（四键 —— 本端拟定；消费面 = `renderer/mount-sessions.mjs` toast；`renameFailed` = #556 增；`deleteFailed` = #578③ 增）
+    // #637（受占切换警告半幅——非失败面：核受占 = 切换成立 + 次存 fork；值沿 U-E 核定 ∕ CLI `cmd-session.mjs:119` 语义）
+    "session.occupied": "该会话正被另一活进程使用——继续将在下次保存时创建新副本。",
+    // R9 · #486 失败面可见性（四键 —— 本端拟定；消费面 = `renderer/session-wire.mjs` toast；`renameFailed` = #556 增；`deleteFailed` = #578③ 增）
     "session.openFailed": "会话打开失败（${reason}）",
     "session.loadFailed": "会话内容加载失败",
     "session.renameFailed": "会话改名失败（${reason}）",

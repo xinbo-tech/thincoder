@@ -34,7 +34,7 @@ const vsix = resolve(arg ?? join(ROOT, `${PKG.name}-${PKG.version}.vsix`))
 if (!existsSync(vsix)) { console.error(`✘ vsix 不存在：${vsix}（先 \`npm run package\`）`); process.exit(1) }
 const IN_VSIX = "extension/node_modules/@thincoder/core/"
 const IN_VSIX_RC = "extension/node_modules/@thincoder/render-core/"
-const EXPECT = { prompts: 16, "tool-docs": 24 } // 档数口径（T-C7 / `CORE-UNIFICATION.md` §2.8——枚举 16 + 24；prompts 由 15 收正为 16 = escalation-canon 批 · 父侧直接执行 · 可 revert；tool-docs 由 25 收正为 24 = 实盘计数——一致性同步批 §4 批 2 · 父侧直接执行 · 可 revert）
+const EXPECT = { prompts: 16, "tool-docs": 52 } // 档数口径（T-C7 / `CORE-UNIFICATION.md` §2.8——枚举 16 + 52；prompts 由 15 收正为 16 = escalation-canon 批 · 父侧直接执行 · 可 revert；tool-docs 由 24 收正为 52 = #15 描述外置波后实盘计数 2026-09-29 · 父侧直接执行 · 可 revert）
 const sha = (buf) => createHash("sha256").update(buf).digest("hex")
 
 const failures = []

@@ -18,14 +18,14 @@
    口径三律 = ①宿主主题色角色对位 ②语义常量值照搬 ③核件面自携盒值〔VSC 面级盒值原样落核类名 —— 对话流块壳零盒〕）；
    本档注释内「面 N」= 该表行号。 */
 
-/* ── ② 推理块（核件结构）：盒值（边框 ∕ 圆角 6px ∕ `--tool-bg` 角色对位 ⇒ `--overlay` ∕ 字号 12px ∕ `overflow: hidden`）+
+/* ── ② 推理块（核件结构）：盒值（边框 0 ∕ 圆角 0〔扁平化 2026-09-30〕 ∕ `--tool-bg` 角色对位 ⇒ `--overlay` ∕ 字号 12px ∕ `overflow: hidden`）+
    行内边距（summary `4px 10px` ∕ 内容区 `6px 10px`）= VSC `webview/chat.css:277-294` ∕ `:393-401` 逐值——
-   盒层单层律随块壳去盒退场（R12 会话流对齐：盒值归面级；`margin: 4px 0` = 件级外边距 ⇒ 落
-   `.block + .block-reasoning { margin-top: 4px }`（`chat.css` 件级外边距段——扁平化模型下由块级块距承担）。 ── */
+   盒层单层律随块壳去盒退场（R12 会话流对齐：盒值归面级；件级外边距由块级模型通管——
+   现值 = 盒块规则 8px〔扁平化 ∥ 间距批 2026-09-30〕）。 ── */
 .reasoning-block {
   margin: 0;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  border: 0;
+  border-radius: 0;
   overflow: hidden;
   font-size: 12px;
   background: var(--overlay);
@@ -48,7 +48,6 @@
    前景色 = `--fg`（VSC 不单设 ⇒ 继承 `body`）。 */
 .reasoning-content {
   padding: 6px 10px;
-  border-top: 1px solid var(--line);
   color: var(--fg);
   font-size: 12px;
   opacity: 0.65;
@@ -59,7 +58,14 @@
 }
 
 /* 面 20 推理块内 Markdown（VSC `.reasoning-content` 段实值 —— 覆盖 ① 共享项；`li` / `strong` / `em` 与 ① 同值）；
-   代码块不来推（端差② —— 面 7 / 9 全局件同形，不复制 VSC 的 `.reasoning-content pre` 灰底覆盖）。 */
+   **代码块来推（端差② 消 · 2026-09-29 · 批 `docs/batches/2026-09-29-hatch-clearance-2.md` · #673）**：
+   VSC `chat.css:404-413` 覆盖段照落 —— ① pre 面值 = VSC `:408` 逐值（灰底 = `--bg2` 缺省回退值
+   `rgba(127,127,127,.12)` ∕ 圆角 6 ∕ `padding: 8px 10px` ∕ `overflow-x: auto` ∕ `margin: 6px 0`；
+   并复位面 7 壳的正文同形值（边框——VSC 该段不落壳规则 ⇒ 推理内 pre 无边框）；`position: relative`
+   保留（复制钮锚点，零视觉面）；② `code` 归零 = VSC `:409`（`background: none` ∕ `padding: 0`）——
+   并复位面 9 正文代码体（块级 ∕ `8px 10px` ∕ 0.88em ∕ 行高 1.5 ∕ 无圆角；VSC 推理内代码仅承 `:407`
+   行内值：行内流 ∕ 0.92em ∕ 行高继承 ∕ 圆角 3px）；③ `.code-lang` 零样式（VSC 推理内无 `.content`
+   祖先 ⇒ 语言条零规则命中）——复位面 8 语言条（块级 ∕ padding ∕ 底边框 ∕ 10px ∕ 半透明）。 */
 .reasoning-content h1, .reasoning-content h2, .reasoning-content h3 { margin: 8px 0 4px; font-weight: 700; }
 .reasoning-content p { margin: 0 0 5px; }
 .reasoning-content code {
@@ -70,6 +76,32 @@
   border-radius: 3px;
 }
 .reasoning-content ul, .reasoning-content ol { margin: 4px 0 6px; padding-left: 18px; }
+/* 推理内代码块（VSC `:408-409` 照落 —— 选择器带容器前缀压面 7 ∕ 9 全局件值；见上注）。 */
+.reasoning-content .code-block {
+  background: rgba(127,127,127,.12);
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  margin: 6px 0;
+}
+.reasoning-content .code-block code {
+  display: inline;
+  padding: 0;
+  font-size: 0.92em;
+  line-height: inherit;
+  background: none;
+  border-radius: 3px;
+}
+.reasoning-content .code-lang {
+  display: inline;
+  padding: 0;
+  border-bottom: 0;
+  font-size: inherit;
+  font-family: inherit;
+  color: inherit;
+  opacity: inherit;
+}
 
 /* ── ③ 代码块复制钮（核 `attachCopyButtons`）：绝对定位 ⇒ 不入文档流高度（帧尾补偿算式零扰）。 ── */
 /* 面 21 复制钮（`.copied` = `--green` 着色；静息 `opacity: 0.4` ⇒ hover 全显）。 */
@@ -97,8 +129,8 @@
    沿面 7 代码块壳同变量）。 */
 .advisor-block {
   margin: 4px 0;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  border: 0;
+  border-radius: 0;
   overflow: hidden;
   font-size: 12px;
   background: var(--overlay);
@@ -121,6 +153,7 @@
   font-family: var(--mono);
   font-size: 11px;
   line-height: 1.5;
+  contain: layout style paint; /* 巨块渲染夹层（批档 §2.14-B）：核件长段容器三隔——不含 size（高度确定性保持）；零语义（只增） */
 }
 /* A13：首块活动说明行（核 `renderSubDesc` 产出）。 */
 .sub-desc {
@@ -222,7 +255,6 @@
   font-size: 10px;
   opacity: 0.5;
   padding-bottom: 4px;
-  border-bottom: 1px solid var(--border);
   margin-bottom: 4px;
 }
 .task-item {
@@ -274,7 +306,7 @@
 .goal-status-badge {
   display: inline-block;
   padding: 1px 8px;
-  border-radius: 10px;
+  border-radius: 0;
   font-size: 10px;
   font-weight: 600;
   margin-top: 4px;
@@ -291,9 +323,9 @@
 .ledger-line { padding: 1px 0; line-height: 1.5; opacity: 0.85; white-space: pre-wrap; overflow-wrap: anywhere; }
 .ledger-line.warn { color: var(--warn); opacity: 1; }
 /* 文件链接值 = VSC 逐值（R12 收口修复轮 —— 三值差消除）：基态补 `text-underline-offset: 2px`（`webview/chat.css:251`）·
-   补 hover 实线（`:254`）· `:focus-visible` 取 VSC 类规则值 `1px solid` + `border-radius: 2px`（`:255`）**并携 `outline-offset: 2px`**
+   补 hover 实线（`:254`）· `:focus-visible` 取 VSC 类规则值 `1px solid` + 圆角 0（扁平化 2026-09-30；原 2px——`webview/chat.css:255` 值随扁平化改）**并携 `outline-offset: 2px`**
    （VSC 有效 offset 来自全局 `:focus-visible { outline-offset: 2px }`（`webview/base.css:445`）——`outline` 简写不含 offset；
-   桌面无全局同规则 ⇒ 本规则自携，使有效 focus 环与 VSC 同效：`1px solid` + 圆角 2px + 外扩 2px）。 */
+   桌面无全局同规则 ⇒ 本规则自携，使有效 focus 环与 VSC 同效：`1px solid` + 圆角 0 + 外扩 2px）。 */
 .file-link { color: var(--accent); cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
 .file-link:hover { text-decoration-style: solid; }
-.file-link:focus-visible { outline: 1px solid var(--accent); border-radius: 2px; outline-offset: 2px; }
+.file-link:focus-visible { outline: 1px solid var(--accent); border-radius: 0; outline-offset: 2px; }

@@ -1,6 +1,6 @@
 # ThinCoder 架构总览（ARCHITECTURE）
 
-> 板块 = **架构总览**（横切薄枢纽）；本档 = 合并仓的**模块地图 + 硬约束 + 设计原则 + 接口速览**的唯一权威处。
+> 板块 = **架构总览**（横切薄枢纽）；本档 = 合并仓的**模块地图 + 硬约束 + 设计原则 + 模块级接口速览**的唯一权威处（**符号级**接口索引 = `docs/core/design/API-CONTRACT.md`——D2：本档只留模块级速览）。
 > 逐板块机制正文各归其档（`docs/core/design/<板块>.md`）——本档**只留速览与指针，不复制**（D2 单一权威源）。
 > 需求侧 = `docs/core/requirements/PHILOSOPHY.md`（三观——最高层需求）；产品级定性 = `docs/core/requirements/PROJECT.md`（CLI 侧旧档已并入）；VSC 专有面 = `docs/vsc/requirements/PROJECT.md`。
 > 桌面端（第四端）专有面 = 需求 `docs/desktop/requirements/PROJECT.md` + 设计**五档**（`docs/desktop/design/PROJECT.md` 总览 · `docs/desktop/design/SHELL.md` 宿主适配层 · `docs/desktop/design/IPC.md` 通道契约 · `docs/desktop/design/UI.md` 界面形态 · `docs/desktop/design/RENDERER.md` 渲染工艺）。
@@ -43,6 +43,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 │   ├── TODO.md · TODO-archive.md   ← 项目级台账（单仓单账）
 │   └── batches/                    ← 批次档
 ├── scripts/                        ← 仓根统一机检族（单引擎四档：doc-check.mjs 入口 + doc-check-anchors.mjs 锚 / doc-check-targets.mjs 采集 / doc-check-width.mjs 行宽；判据全读 manifest 声明面。台账机检腿随台账面 SQLite 化退役 · mirror-divergence 度量已退役 2026-09-17）
+│                                   ← **报告态两档（不入闸）**：api-contract.mjs（接口索引——生成 ∥ --check）· tool-schema-size.mjs（schema 体量读数——拟新增）
 │
 ├── thincoder-core/                 ← 核包（@thincoder/core——共享机制实现 + 共享提示词与工具描述）
 │   ├── agent.mjs                   主循环（createAgent / runAgent）——见 AGENT-LOOP
@@ -67,6 +68,10 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 │   └── session*.mjs · config*.mjs · context.mjs · token-ttl.mjs · memory.mjs …
 │                                   会话（store / slots / gc / guard / migrate / rename / segments / slot-write）·
 │                                   配置（config / config-io / config-migrate / config-presets）· 压缩 · 令牌结算
+│
+├── thincoder-render-core/          ← 共享渲染核（@thincoder/render-core——DOM 构件 + 纯函数；扩展端 / 桌面端内嵌带发）
+│   ├── flow/ · cards/ · subblocks/ · composer/   会话流 / 卡片族 / 子块 / 输入面板构件族（浏览器原生 ESM）
+│   └── md.mjs · highlight.mjs · diff.mjs · search.mjs · i18n.mjs · lib.mjs · tool-summary.mjs · toast.mjs   渲染原语
 │
 ├── thincoder-cli/                  ← CLI 产品（npm 包 thincoder）
 │   ├── bin/thincoder.mjs           命令分发入口（tui / chat / memory / upgrade / session gc / acp / completion）
@@ -107,6 +112,8 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 
 ## 4. 模块接口速览
 
+> 本表 = **模块级**速览（模块 → 关键导出 → 一句话 → 指针）；**符号级**接口索引（符号 ∥ 签名 ∥ 返回值 ∥ 副作用——按需查阅）= `docs/core/design/API-CONTRACT.md`（两区制：生成区 ∥ 语义区）。
+
 | 模块 | 关键导出 | 一句话 | 详细设计 |
 |---|---|---|---|
 | agent 主循环 | `createAgent` / `runAgent` | 读→想→写→测；主循环分段住 `thincoder-core/agent/` | `docs/core/design/AGENT-LOOP.md` |
@@ -114,7 +121,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | tools | `builtinTools` / `assembleBuiltinTools` | 内置工具静态表 + 实例绑定面（memory / 检索 / repomap / settings / peer） | `docs/core/design/TOOLS.md` |
 | context | `estimateTokens` / `compressIfNeeded` | 双结构 history 压缩 | `docs/core/design/CONTEXT-COMPACTION.md` |
 | memory | 记忆工具族 + 检索 | 三层记忆（personal / project / team）+ 代码 / 文档索引 | `docs/core/design/MEMORY.md` |
-| config | `loadConfig` / `saveConfig` | 配置加载与迁移 + provider 预设 | `docs/core/design/CONFIG.md` |
+| config | `loadConfig` / `writeConfigAtomic` | 配置加载与迁移 + provider 预设（写面 = `thincoder-core/config-io.mjs`） | `docs/core/design/CONFIG.md` |
 | session 族 | 槽位模型（认领避让 / cwd 归一化） | 双端统一会话存储 | `docs/core/design/SESSION.md` |
 | advisor | 评审入口 + 引擎 | 独立设计 / 代码评审 | `docs/core/design/CONSULTATION.md` |
 | mcp | 工具动态展开 | MCP 服务器工具并入 builtinTools | `docs/core/design/MCP.md` |
@@ -213,6 +220,12 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 | VSC 源档 §1 设计原则（与 core §2 重叠者） · §2 整体架构图 · 文首未决 / 待办状态行 · 变更记录 | 重叠面 / 时点面 / 流水 | **不并**——VSC 专属取向已并入 §4.1；待办状态行与变更流水 = 时点材料（(d) 类） |
 
 ## 变更记录
+
+- 2026-09-29（**tools-carryover 批 · 设计档舱 D · eng-designer**——承批档 `docs/batches/2026-09-29-tools-carryover.md` §2.3.4）：§4 补**符号级接口索引指针**（`docs/core/design/API-CONTRACT.md`——两区制）· 档头「接口速览」句精度收正为「**模块级**接口速览」（一处）·
+  §3 模块地图 scripts 行补**报告态两档注**（`api-contract.mjs` ∥ `tool-schema-size.mjs`——不入闸）· §4 config 行死符号收正（`saveConfig` ⇒ `writeConfigAtomic`——全仓代码面无 `saveConfig` 具名导出）。**零新语义**（指针 ∕ 形态 ∕ 一致性收正）。
+
+- 2026-09-29（**doc-backfill 批 · 波 1 · eng-designer**——承 `docs/batches/2026-09-29-doc-backfill.md` §2 ∕ §2.13 发现 1 · 台账 #560）：§3 模块地图补 **`thincoder-render-core/`** 块（共享包位——`thincoder-core/` 邻位；
+  值源 = `docs/render-core/design/RENDER-CORE.md` §10 B ∕ KD-RC-1）；§4 render-core 行已在位（desktop-residuals-sweep 批 · 波 D——零改）。**零新语义**。
 
 - 2026-09-29（**desktop-residuals-sweep 批 · 波 D（非冻结档面）· eng-designer**——承 `docs/batches/2026-09-29-desktop-residuals-sweep.md` §2 · 台账 #560）：§4 模块接口速览表尾补 **render-core** 行（扩展端 / 桌面端共用宿主无关渲染核——**不入发布序列**；值源 = `docs/render-core/design/RENDER-CORE.md` §10 B ∕ KD-RC-1）。**零新语义**。
 

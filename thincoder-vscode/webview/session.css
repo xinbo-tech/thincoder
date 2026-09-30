@@ -150,6 +150,14 @@
   color: var(--accent);
 }
 
+/* Keyboard-reachable focus arm (#673 · 2026-09-29): tab focus reveals the row buttons the
+   same way hover does — mirrors the desktop gesture (desktop arm kept at
+   thincoder-desktop/renderer/session-list.css .session-*:focus-visible; a11y parity, not a cut). */
+.session-rename:focus-visible,
+.session-delete:focus-visible {
+  opacity: 1;
+}
+
 #new-session-btn {
   flex-shrink: 0;
   width: 28px;

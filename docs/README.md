@@ -70,14 +70,15 @@
   需求 5：`ACP-CLIENT.md` · `CRASH-REPORTS.md` · `FEATURES.md` · `TUI-TOOL-OUTPUT.md` · `TUI.md`（P2——2026-09-15 首迁 2 档后历批续迁；`design/RELEASE.md` 已随三端合一迁根 = `docs/RELEASE.md`——2026-09-20）；
 - `vsc/` **11 档**：`design/` = `VSC-MIGRATION.md` · `SETTINGS.md` · `PROJECT-SWITCHER.md` · `WEBVIEW.md` · `WEBVIEW-PROTOCOL.md` · `WEBVIEW-INPUT.md` · `VSC-DEBT.md` · `VSC-MIGRATION-INVENTORY.md`；`requirements/` = `VSC-MIGRATION.md` · `WEBVIEW.md` · `PROJECT.md`。
 
-**`core/design/` 其余 33 档（工具 · 机制 · 流程面——批 11 补登 · 判据 = `core/design/DOC-MIGRATION.md` §9.3 A21 · 计数随批收正 2026-09-23）**：
+**`core/design/` 其余 35 档（工具 · 机制 · 流程面——批 11 补登 · 判据 = `core/design/DOC-MIGRATION.md` §9.3 A21 · 计数随批收正 2026-09-30）**：
 - 文件 / 编辑工具面 **7 档**：`APPLY-PATCH.md` · `EDIT.md` · `EDIT-HELPERS.md` · `HASHLINE-EDIT.md` · `INSERT-AFTER.md` · `TOOL-OUTPUT-LIMITS.md` · `WRITE.md`；
 - 顾问 / 协作 / 子代理面 **9 档**：`ADVISOR-CONVERGENCE.md` · `ADVISOR-GUARDS.md` · `AGENT-LOOP-ASYNC-POOL.md` · `AGENT-LOOP-SUBAGENT.md` · `AGENT-LOOP-UPSTREAM.md` · `ESCALATE.md` · `MULTI-INSTANCE-COLLAB.md` · `PROXY.md` · `SEND-STALL-DISTILL.md`；
 - 令牌 / 参数 / 设置面 **5 档**：`AGENT-PARAMS.md` · `DESIGN-TOKEN-SETTLEMENT.md` · `ENG-TOKEN-BINDING.md` · `SETTINGS-TOOL.md` · `VERIFY-REDESIGN.md`；
-- 流程 / 文档机制面 **10 档**：`ANCHOR-DEBT-REPAIR.md` · `BATCH-RECORD.md` · `DOC-CODE-RECONCILE.md` · `DOC-DISCIPLINE.md` · `ENGINEERING-MODE-V2.md` · `LEDGER.md` · `LEDGER-SELF-CONTAINED.md` · `MANIFEST.md` · `TESTING.md` · `TURN-CAP-CONTINUE.md`；
+- 流程 / 文档机制面 **12 档**：`ANCHOR-DEBT-REPAIR.md` · `BATCH-RECORD.md` · `DOC-CODE-RECONCILE.md` · `DOC-DISCIPLINE.md` · `ENGINEERING-MODE-V2.md` · `LEDGER.md` · `LEDGER-SELF-CONTAINED.md` · `LIGHT-CHANNEL.md`（轻通道机制——细节面受控旁路设计；2026-09-30 建档）·
+  `MANIFEST.md` · `TESTING.md` · `TURN-CAP-CONTINUE.md` · `API-CONTRACT.md`（核接口按需索引——生成区 ∥ 语义区两区制；2026-09-29 建档）；
 - 基准测试面 **2 档**：`MODEL-BENCH.md`（模型基准测试套件——仓级 `bench/` 工具的设计面；2026-09-23 model-bench 批建档）· `MODEL-SPECS.md`（模型规格表设计档——bench 名单面规格行承载；2026-09-24 参数批建行）；
-- **计数核对（复跑 as-of 2026-09-25 · hygiene-ab 批 · 档面车道 · 按名对账）**：`core/design/` 实档 **55** = 本图登记 **55** + **待补登 0**（逐名相等；幻影 `ENGINEERING-MODE.md` 撤登 · `MODEL-SPECS.md` 补登 · 工作流档 `CORE-UNIFICATION.md` 计入——登记位 = 下行）。
-  （前值 **51 = 51** 为 as-of 2026-09-17 读数；此后实增四档：`MODEL-SPECS.md`（他批）+ `AGENT-LOOP-ASYNC-POOL.md` · `AGENT-LOOP-UPSTREAM.md`（structure-debt 批同批登记）+ `MODEL-BENCH.md`（model-bench 批同批登记）。）
+- **计数核对（复跑 as-of 2026-09-30 · 轻通道机制批 · 按名对账）**：`core/design/` 实档 **57** = 本图登记 **57** + **待补登 0**（逐名相等；+ `LIGHT-CHANNEL.md`——2026-09-30 建档）。
+  （前值 **51 = 51** 为 as-of 2026-09-17 读数；此后实增五档：`MODEL-SPECS.md`（他批）+ `AGENT-LOOP-ASYNC-POOL.md` · `AGENT-LOOP-UPSTREAM.md`（structure-debt 批同批登记）+ `MODEL-BENCH.md`（model-bench 批同批登记）+ `LIGHT-CHANNEL.md`（轻通道机制批 · 2026-09-30）。）
 
 **工作流档** = `core/design/CORE-UNIFICATION.md`（注册表 · 事实基线 · 核形态 · 选型 · 分段执行 · 决策 · 验收 · 契约策略 · 测试——**计入上条实档计数**）——子系统档由它索引、**不复制**其内容（D2 单一权威源）；裁决行的**列定义**亦住该档 §2.5。
 
@@ -91,6 +92,10 @@
 - **五部分不各设地图**——本 README = 五部分（`core/` · `cli/` · `vsc/` · `desktop/` · `render-core/`）的唯一地图（目标结构 `core/design/DOC-SYSTEM.md` §4）；`cli/` · `vsc/` 两产品面档所对应的产品树旧档（`thincoder-cli/docs/**` · `thincoder-vscode/docs/**`）= 迁移期参照历史（§2 政策——保留 ≠ 维护）。
 
 ## 变更记录
+
+- 2026-09-30（**轻通道机制批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-09-30-light-channel-mechanism.md`）：§4 流程 / 文档机制面 **11 → 12 档**（+ `LIGHT-CHANNEL.md`——轻通道机制（细节面受控旁路）设计档；2026-09-30 建档）；计数核对行收正为 **实档 57 = 登记 57 + 待补登 0**（复跑 as-of 2026-09-30）。
+
+- 2026-09-29（**tools-carryover 批 · 设计档舱 D · eng-designer**——承批档 `docs/batches/2026-09-29-tools-carryover.md` §2.3.4 · 台账 #418）：§4 其余组 **33 → 34 档**（+ `API-CONTRACT.md`——核接口按需索引：生成区 ∥ 语义区两区制；2026-09-29 建档）+ 流程 / 文档机制面 **10 → 11 档**；计数核对行收正为 **实档 56 = 登记 56 + 待补登 0**（复跑 as-of 2026-09-29）。
 
 - 2026-09-27（**对齐重定位批 · 文档布局收正轮 · eng-designer——用户 2026-09-27 裁定「目录要分开」**）：地图补第五部分——§1 部分档行改「五部分」（落点补 `render-core/design/`；档数 32 → **33** = cli 14 + vsc 11 + desktop 7 + render-core 1）· §2 第 6 条 → 五部分 ·
   §4「其它板块」行同收正 · §5「四部分不各设地图」→ 五部分；`RENDER-CORE.md` 由 `docs/core/design/` 迁 `docs/render-core/design/`（模块镜像——先例 = desktop 2026-09-25）；联动 = `core/design/DOC-SYSTEM.md` 同轮五部分收正。

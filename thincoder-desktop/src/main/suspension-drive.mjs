@@ -4,8 +4,10 @@
  * 职责：① 会话寄存器（key → 窗 · 同键至多一窗——重入 = 零动作；跨键各自独立）② 入口（回合尾结算后 `poolLive` 判真 ⇒
  * 核件装配 + 会话控制器 + 载体挂 `_sessionAbort` ∕ `_sessionSignal`）③ 端侧钩子（计数 ⇒ `ev:susp`；边界 ⇒ `ev:digest`
  * 〔autoTurn 支起跑 ∕ 收尾两发〕；回收 ⇒ 消化完成逐条补发 `ev:subagent { status:"done" }`〔`settled` 驻留块归档入流——
- * VSC `reclaimDigestedBlocks` 同形〕；冻结 ⇒ 退出兜底同型）④ 输入 ∕ 关闭路由（`pushInput` + `wake` ∕ `abort`）+ **窗队
- * 共镜**（挂起窗径批 ∥ 窗队列批：窗输入队投影 ∕ 四帧出站〔受理 ∕ 消费 ∕ 残续发 ∕ 中止清队〕——消费 ∕ 残续发两径降级窗占位 = `hold`（起窗 ∕ 查位 ∕ `release` 沿链径现式）——出档 `window-queue.mjs`）
+ * VSC `reclaimDigestedBlocks` 同形〕；冻结 ⇒ 退出兜底同型）④ 输入 ∕ 关闭路由（`pushInput` + `wake` ∕ `abort`——容量满判先行
+ * 〔#625：`pending.length >= QUEUED_MAX_ITEMS` ⇒ 零受理返 `"full"`〕）+ **窗队共镜**（挂起窗径批 ∥ 窗队列批：窗输入队投影 = 载体
+ * `entry.pending`（核输入队列同数组——受理 ∕ 消费 ∕ 残值 ∕ 清队零第二写者）∥ **五帧**出站〔受理 ∕ 步边界消费 ∕ 窗内消费 ∕ 残续发 ∕ 中止清队〕
+ * ——消费 ∕ 残续发两径降级窗占位 = `hold`（守卫序列出档 `suspension-guard.mjs`）——帧面 ∕ 步边界取批出档 `window-queue.mjs`）
  * ⑤ 提示面触发（用户回合完成 —— 档①）⑥ **残输入兜底**（出窗残值非空 ⇒ 以普通回合续发——
  * 不静默丢；VSC 队列兜底同形 —— 对位表「关闭」行）⑦ **timer 面装配**（timer-wake 阶段 2 —— §6.30.11 桌面块：
  * 空闲 deadline 闩（`timer-watch.mjs` 键面）装配 ∥ 三武装点（回合尾接管未入窗 ⇒ 武装 ∕ 出窗结算后 ⇒ 重武装 ∕
@@ -14,9 +16,9 @@
  * `tier` 随 `upstreamTurn`；收尾在 `finally`——非 Abort 失败径同样出 `end`）。核件 `hooks.onDigest` 为**备用面**
  * （核钩在非 Abort 失败径不出 `end` ⇒ 不可作主取点）：本档不注册该钩 —— **零双帧**。
  * **残输入兜底**（KD-34）：核件 `pendingInput` 出窗未及消费项（两窄径 = 窗退出等待期落槽 ∥ 消化轮非 Abort 失败）由本档
- * `entry.pending` 投影承接（富条目 `{ text, ts, images? }`——载具层携图；核 `done` 兑现值在非 Abort 失败径不物化
- * ——`done` 拒绝 ⇒ 两径同取投影，单一来源），出窗链
- * 读该投影 ⇒ 逐条经 `runTurn`（宿主既有三径结算提取面，`send` 同源）以**普通回合**续发；会话中止径（`abort` = dispose ∕
+ * `entry.pending` 载具承接（**与核输入队列同数组**——单一来源；富条目 `{ text, ts, images? }`——载具层携图；核 `done` 兑现值在非 Abort
+ * 失败径不物化——`done` 拒绝 ⇒ 两径同取载体），出窗链
+ * 读该载体 ⇒ **按核件取项分批**（合并批 ∕ 携图退化逐条——同一取项循环）经 `runTurn`（宿主既有三径结算提取面，`send` 同源）以**普通回合**续发；会话中止径（`abort` = dispose ∕
  * 切项目级联）不续发——会话已亡，消息随会话终止（VSC `panel._panel` 守卫同形，记错一行；含**续发期**窗已摘后的中止，
  * 经 `resuming` ∕ 中止墓碑检查点落位——零复活窗）。
  * 零宿主依赖（`post` ∕ `runTurn` ∕ `reloadSlot` ∕ `notify` ∕ `busyOf` ∕ `takeOver` ∕ `postQueue` ∕ `prepare` ∕ `degrade` ∕ `hold` ∕ 三时钟缝皆注入）⇒ 平 node 直测；零文案。
@@ -24,7 +26,10 @@
 import { backgroundCounts, poolLive, startSuspension } from "@thincoder/core/agent/suspension.mjs"
 import { upstreamAskLabelVars } from "@thincoder/core/agent-tools/parent-channel.mjs"
 import { pendingTimerDeadline } from "@thincoder/core/agent/timers.mjs"
+import { pushReal } from "@thincoder/core/context.mjs"
+import { QUEUED_MAX_ITEMS, takeQueuedBatchItem } from "@thincoder/core/queued.mjs"
 import { cleanupTurn } from "./attachments.mjs"
+import { guardedDeliver } from "./suspension-guard.mjs"
 import { createTimerWatch, deliverExpiredTimers, fireTimerWake, timerWakeEnabled } from "./timer-watch.mjs"
 import { createWindowQueue } from "./window-queue.mjs"
 
@@ -33,13 +38,13 @@ import { createWindowQueue } from "./window-queue.mjs"
  *  （§2.2 会话钉定；缺省 = 零动作）· `notify` = 提示面策略（`thincoder-desktop/src/main/notify.mjs`；缺省 = 零动作）·
  *  `busyOf(key)` = 在飞回合判据（宿主在飞表单向读面——空闲火面用；缺省 ⇒ 恒假）· `takeOver(key, agent)` = 宿主回合尾
  *  接管面（timer 轮后同判——池活 ⇒ 入窗消化；缺省 ⇒ 回落闩重同步）· `postQueue(key, delivered?)` = `ev:queue` 出站
- *  （= 链 `postQueue`——窗队四帧定点；缺省 ⇒ 零出站）· `prepare(text, images, agent)` ∕ `degrade(attached, agent, signal)` = 送达面两转口（缺省 ⇒ 无附件径）· `hold(key)` = 降级窗占位（W2 三件——消费 ∕ 残续发两径起窗 ∕ 查位 ∕ `release` 沿链径现式；缺省 ⇒ 零占位）· `timer` ∕ `clear` ∕ `now` = 闩时钟三扇注入缝。 */
+ *  （= 链 `postQueue`——窗队五帧定点；缺省 ⇒ 零出站）· `prepare(text, images, agent)` ∕ `degrade(attached, agent, signal)` = 送达面两转口（缺省 ⇒ 无附件径）· `hold(key)` = 降级窗占位（W2 三件——消费 ∕ 残续发两径起窗 ∕ 查位 ∕ `release` 守卫序列 `suspension-guard.mjs`；缺省 ⇒ 零占位）· `timer` ∕ `clear` ∕ `now` = 闩时钟三扇注入缝。 */
 export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify = null, busyOf = () => false, takeOver = null, postQueue = null, prepare = null, degrade = null, hold = null, timer = setTimeout, clear = clearTimeout, now = Date.now } = {}) {
   if (typeof post !== "function") throw new Error("[suspension-drive] post required (out-bound channel)")
   if (typeof runTurn !== "function") throw new Error("[suspension-drive] runTurn required (single-turn face)")
   /** 窗表：key → entry（`entry` = `{ key, agent, cwd, controller, frozen, handle, pending }`；`pending` = 残输入投影（富条目 `{ text, ts, images? }`——与忙态队同形））。 */
   const windows = new Map()
-  /** 窗队投影 ∕ 帧构造面（出档 `window-queue.mjs` —— 受理 ∕ 消费 ∕ 残倾出 ∕ 清队 + 四帧定点出站）。 */
+  /** 窗队投影 ∕ 帧构造面（出档 `window-queue.mjs` —— 受理 ∕ 步边界取批 ∕ 残倾出 ∕ 清队 + 五帧定点出站）。 */
   const queue = createWindowQueue({ postQueue, prepare, degrade })
   /** 续发期键集（窗已摘、残值续发链在跑——`abort` 的第二落点，免「中止窗口期」盲区）。 */
   const resuming = new Set()
@@ -126,39 +131,46 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
   /** 提示面档①（用户回合完成 —— `!autoTurn` 且成功径）：调用面两处 = 宿主 `send` 成功径（窗内 ⇒ 本档包装收尾）。 */
   function turnDone(key, agent) { return notify?.turnDone?.({ key, agent }) ?? false }
 
+  /** 窗取项缝（核 `ctx.takeInput`——缺省 `shift`）：核件取项（合并批 ∕ 携图退化逐条——与尾径 ∕ 残值同一
+   *  取项单源）；返回富条目（`null` ⇒ 本步零动作、条目留队——落核第 2 步）。送达面 ∕ 消费帧由 `driveTurn`
+   *  用户回合支完成（零二次取）。 */
+  function takeQueuedInput(list) { return takeQueuedBatchItem(list).item }
+
+  /** 窗步边界取批（步边界缝读面窗半——`turn-driver` 组合为「窗优先」）：计划首动作即消费（`slash` 同判——
+   *  统一语义）+ 携图批整批让位（同步缝不可降级——与链径同判据）+ `pushReal` + 消费回执行（消费即帧——快照整置）；
+   *  返回是否注入（未入窗 ∕ 空队 ∕ 让位 ⇒ false——零动作零帧）。 */
+  function stepBoundaryPickup(key, agent) {
+    const entry = windows.get(key)
+    if (!entry) return false
+    const picked = queue.stepPickup(entry.pending)
+    if (picked === null) return false
+    pushReal(agent, { role: "user", content: picked.text }) // 下一步生效（非中断通道）
+    postQueue(key, { text: picked.text, ts: picked.ts }) // 消费回执行（消费即帧——快照整置）
+    return true
+  }
+
   /** 窗内单回合（用户回合 ∥ 消化轮 ∥ 唤醒轮）：每轮起跑前重装本窗键槽（§2.2）；autoTurn 支两发边界。
    *  失败向核件抛回（核 catch 语义：AbortError ⇒ 回合级重入；非 Abort ⇒ 端侧入口 catch）。
-   *  用户回合 = 残输入投影的**消费点**（核件 shift 后同步调用 ⇒ 同点移除——投影恒等于「已受理未消费」；
-   *  取项 ⇒ 起窗（`hold` 占位）⇒ 送达面（携图径，判决随 `delivered.degraded`）⇒ 消费帧——`delivered` 单写者；
-   *  窗后占位被摘 ⇒ 零起跑 + 本径落盘件自清 ∧ 不重投（裁定 (i) 同不变量 —— 判据同链径）。 */
-  async function driveTurn(entry, text, opts = {}) {
+   *  用户回合 = 核件取项（`takeInput` 缝——零二次取）后的**送达点**（起窗（`hold` 占位）⇒ 送达面（携图径，
+   *  判决随 `delivered.degraded`）⇒ 消费帧——`delivered` 单写者）；窗后占位被摘 ⇒ 零起跑 + 本径落盘件自清
+   *  ∧ 不重投（裁定 (i) 同不变量 —— 判据同链径）。 */
+  async function driveTurn(entry, item, opts = {}) {
     const { key, agent, cwd, controller } = entry
     const autoTurn = opts.autoTurn === true
     const upstreamTurn = opts.upstreamTurn === true
     const timerTurn = opts.timerTurn === true
     // 边界帧面 = 消化 ∕ 上行两族（`ev:digest`）；timer 轮的可见面 = `ev:timer` 落流（CLI 同判——timer 轮不冒充消化边界）
     const boundary = autoTurn && !timerTurn
-    let body = text
+    let body = typeof item === "string" ? item : ""
     let attached = null
-    if (!autoTurn) { // 消费投影（用户回合）：核件出窗时未及消费者即残值；取项 ⇒ 起窗（占位）⇒ 送达面（携图径）⇒ 消费帧
-      const taken = queue.take(entry.pending, text)
-      if (taken !== null) {
-        const held = typeof hold === "function" ? hold(key) : null // 起窗（降级 await 窗占位 —— 单驱动器不变量；缺省 ⇒ 零占位）
-        let stillHeld = true
-        let consumed = null
-        try {
-          consumed = await queue.consume(key, taken, agent, held?.signal ?? null) // 送达面（携图径）⇒ 消费帧（降级信号 = 占位）
-          stillHeld = held?.active?.() ?? true // 窗后查位（裁定 (i)：「占位仍在」判据）
-        } finally {
-          held?.release?.() // 占位释放（链径现式 —— 幂等且仅当占位仍属本刻）
-        }
-        if (!stillHeld) { // 窗后零起跑判据：零起跑 ∧ 不重投（条目已摘——不复位；消费帧已出——不追回）
-          cleanupTurn(consumed?.attached?.paths ?? []) // 本径落盘件自清（回合尾清理面不达）
-          return
-        }
-        body = consumed.text
-        attached = consumed.attached
+    if (!autoTurn) { // 用户回合（取项已由 `takeInput` 缝完成——核件取项，零二次取）：送达面 ⇒ 消费帧
+      const { stillHeld, consumed } = await guardedDeliver(key, hold, (signal) => queue.consume(key, item, agent, signal))
+      if (!stillHeld) { // 窗后零起跑判据：零起跑 ∧ 不重投（条目已摘——不复位；消费帧已出——不追回）
+        cleanupTurn(consumed?.attached?.paths ?? []) // 本径落盘件自清（回合尾清理面不达）
+        return
       }
+      body = consumed.text
+      attached = consumed.attached
     }
     const started = Date.now()
     if (boundary) {
@@ -179,31 +191,28 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
     if (!autoTurn) turnDone(key, agent) // 档①：窗内用户回合完成（成功径——与宿主 `send` 径同一判据）
   }
 
-  /** 残输入兜底（KD-34 —— 出窗残值非空 ⇒ 以**普通回合**续发，不静默丢；VSC 队列兜底同形）：逐条（送达面 ⇒
-   *  消费帧）`runTurn`（宿主既有三径结算提取面——`send` 同源，零新径）+ 档①（成功径，同 `send` 判据）；续发毕回合尾接管同形
-   *  （池仍 live ⇒ 新窗——池内残余自愈链的常规入口）。残值为空 ⇒ 零动作（不接管：池内自愈 = 下一回合尾，同设计失败面）。
-   *  **降级窗占位**（`hold`——两调用点同判）：逐条起窗 ∕ 查位 ∕ `release`；窗后占位被摘 ⇒ 零起跑 + 本径落盘件自清 ∧ 不重投。
-   *  **中止检查点**（续发期窗已摘 ⇒ `abort` 经 `resuming` ∕ `abortTombstones` 落位）：每轮起跑前 + 接管前查位——
+  /** 残输入兜底（KD-34 —— 出窗残值非空 ⇒ 以**普通回合**续发，不静默丢；VSC 队列兜底同形）：**按核件取项分批**
+   *  （合并批 ∕ 携图退化逐条——同一取项循环）⇒ 送达面 ⇒ 消费帧 ⇒ `runTurn`（宿主既有三径结算提取面——`send` 同源，
+   *  零新径）+ 档①（成功径，同 `send` 判据）；续发毕回合尾接管同形（池仍 live ⇒ 新窗——池内残余自愈链的常规入口）。
+   *  残值为空 ⇒ 零动作（不接管：池内自愈 = 下一回合尾，同设计失败面）。
+   *  **降级窗占位**（`hold`——两调用点同判，守卫序列 `guardedDeliver`）：逐批起窗 ∕ 查位 ∕ `release`；窗后占位被摘 ⇒
+   *  零起跑 + 本径落盘件自清 ∧ 不重投。
+   *  **中止检查点**（续发期窗已摘 ⇒ `abort` 经 `resuming` ∕ `abortTombstones` 落位）：每批起跑前 + 接管前查位——
    *  命中 ⇒ 停链（余值随会话终止——记错一行，非静默）且**不接管**（会话已亡 ⇒ 零复活窗）。 */
   async function resumeResidual(entry) {
-    const items = queue.drain(entry.pending)
+    const items = queue.drain(entry.pending) // 残值倾出（倾出后按核件取项分批）
     if (items.length === 0) return
     resuming.add(entry.key)
-    let ran = 0
+    let dropped = 0
     try {
-      for (const item of items) {
-        if (abortTombstones.has(entry.key)) break // 续发期中止 ⇒ 停链
-        const held = typeof hold === "function" ? hold(entry.key) : null // 起窗（逐条同判 —— 缺省 ⇒ 零占位）
-        let stillHeld = true
-        let consumed = null
-        try {
-          consumed = await queue.consume(entry.key, item, entry.agent, held?.signal ?? null) // 送达面（逐条同判）⇒ 消费帧（逐条；降级信号 = 占位）
-          stillHeld = held?.active?.() ?? true // 窗后查位（裁定 (i)：「占位仍在」判据）
-        } finally {
-          held?.release?.() // 占位释放（链径现式 —— 幂等且仅当占位仍属本刻）
-        }
+      for (;;) {
+        if (abortTombstones.has(entry.key)) { dropped = items.length; break } // 续发期中止 ⇒ 停链
+        const { item } = takeQueuedBatchItem(items) // 核件取项（合并批 ∕ 携图退化逐条——同一取项单源）
+        if (item === null) break
+        const { stillHeld, consumed } = await guardedDeliver(entry.key, hold, (signal) => queue.consume(entry.key, item, entry.agent, signal))
         if (!stillHeld) { // 窗后零起跑判据：零起跑 ∧ 不重投（条目已摘——不复位；消费帧已出——不追回）
           cleanupTurn(consumed?.attached?.paths ?? []) // 本径落盘件自清（回合尾清理面不达）
+          dropped = items.length
           break // 停链（占位被摘 ⇒ 零起跑——链径现式）
         }
         try {
@@ -212,13 +221,12 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
         } catch (err) {
           console.error(`[suspension-drive] window ${entry.key} residual turn failed: ${err?.message ?? err}`)
         }
-        ran += 1
       }
     } finally {
       resuming.delete(entry.key)
     }
     if (abortTombstones.delete(entry.key)) { // 续发期中止（含末轮后落位）：停链 + 零接管
-      if (ran < items.length) console.error(`[suspension-drive] window ${entry.key} aborted mid-resume — ${items.length - ran} accepted message(s) dropped with the session`)
+      if (dropped > 0) console.error(`[suspension-drive] window ${entry.key} aborted mid-resume — ${dropped} accepted message(s) dropped with the session`)
       return
     }
     start(entry.key, entry.agent, { cwd: entry.cwd })
@@ -239,8 +247,10 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
     agent._sessionSignal = controller.signal
     const handle = startSuspension({
       carrier: agent,
+      inputQueue: entry.pending, // 载体数组单一（受理 ∕ 消费 ∕ 残值 ∕ 清队同数组——零第二写者）
       abortSignal: controller.signal,
       runTurn: (text, opts) => driveTurn(entry, text, opts),
+      takeInput: (list) => takeQueuedInput(list), // 取项缝（核件取项——合并批 ∕ 携图退化逐条）
       injectResidual: (item) => injectResidual(agent, item),
       timerFace: timerFaceOf(key, agent), // opt-in timer 面（§6.30.10）：窗内到期 ⇒ 兑现开 timer 轮（不等池空）
       hooks: {
@@ -293,17 +303,18 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
   return {
     start,
     turnDone,
-    /** 窗内输入路由：窗在场 ⇒ 核件入槽 + 唤醒（用户输入优先序沿核件）；返回是否受理（未入窗 ⇒ false —— 调用方回落既有径）。
-     *  残输入投影同点受理（`entry.pending`——出窗兜底面；消费点 = `driveTurn` 用户回合）⇒ **受理帧**；
-     *  **载具层携图**：`images`（渲染面 `toImages` 投影原样）随条目投影——核件输入面 = 文本单形不变
-     *  （`handle.pushInput` 仍收串——核零改）。 */
+    stepBoundaryPickup, // 步边界取批（窗面——`turn-driver` 组合线「窗优先」消费）
+    /** 窗内输入路由：窗在场 ⇒ 核件入槽 + 唤醒（用户输入优先序沿核件）；返回受理三态——`true` = 受理 ∕ `"full"`
+     *  = 容量拒（#625：满判先行——零受理 ∕ 零投影 ∕ 零帧 ∕ 零唤醒）∕ `false` = 未入窗（调用方回落既有径）。
+     *  载体同数组受理（`entry.pending`——核输入队列；消费点 = 核件取项缝 ∕ 步边界窗面）⇒ **受理帧**；
+     *  **载具层携图**：`images`（渲染面 `toImages` 投影原样）随条目——核件输入面 = 文本单形不变。 */
     pushInput(key, text, images) {
       const entry = windows.get(key)
       if (!entry) return false
+      if (entry.pending.length >= QUEUED_MAX_ITEMS) return "full" // 容量判满（对齐 VSC ≥MAX 拒——核零改）
       const msg = String(text)
-      queue.accept(key, entry.pending, msg, images) // 投影受理（富条目）+ 受理帧
-      entry.handle.pushInput(msg) // 核件输入面 = 文本单形
-      entry.handle.wake()
+      queue.accept(key, entry.pending, msg, images) // 受理（富条目——与核输入队列同数组）+ 受理帧
+      entry.handle.wake() // 核件唤醒（新条目已在同数组——零第二写者）
       return true
     },
     /** 窗在场判据（`msg:send` 路由分岔点 —— 键面路由 = `docs/desktop/design/PROJECT.md` §2.2）。 */

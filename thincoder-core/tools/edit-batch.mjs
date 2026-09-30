@@ -12,13 +12,13 @@
  */
 import { readFile } from "node:fs/promises"
 import { resolveInCwd, normalizeEOL, joinWithEol, gitDiffOne, autoSyntaxCheck } from "./shared.mjs"
-// edit-batch ↔ edit-diff 循环引用（#69 后同型）：两侧导入的都是函数声明（提升初始化），
+// edit-batch ↔ edit-diff 循环引用：两侧导入的都是函数声明（提升初始化），
 // 仅在调用期使用——ESM 循环下安全（无模块求值期取值）。
-// 写盘经单一写路径点（§2.13.5）——本档不再直调 fs；回执组装迁 composeEditReceipt（#69）。
+// 写盘经单一写路径点（§2.13.5）——本档不再直调 fs；回执组装共用 edit-diff 的 composeEditReceipt。
 import { writeThroughPath } from "./write-path.mjs"
 // EDIT.md §6：批量条目判定+应用共用 edit-diff（EDIT.md §4 分支 0 单行替换 + 行级 LCS——零重叠→替换即删）；
 // EDIT.md §5：edits 互斥错误文本随前置校验分支迁出至 edit-diff.mjs。
-// #69：回执组装共用 edit-diff 的 composeEditReceipt（回执形态按端注入——缺省 = CLI 形态）。
+// 回执组装共用 edit-diff 的 composeEditReceipt（单点——缺省回执 = base + 写入点上下文）。
 import { assertEditArgsExclusive, assertEditsContainer, assertEditEntries, validateEditEntry, computeEditEntry, splitLines, EMPTY_NEW_STRING_LINE, EDIT_ENTRY_NO_PATH, EDIT_ABORT_PREFIX, editEntryLabel, deleteTarget, composeEditReceipt } from "./edit-diff.mjs"
 
 /**

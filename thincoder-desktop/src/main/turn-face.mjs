@@ -20,9 +20,17 @@
  * （自 `agent-host.mjs` 提取后为 `ev:error` 唯一出站点）。
  * **R3（#505 · 撞帽续跑 —— KD-T8）**：续跑循环接纳**撞帽三径**（核 `agent/helpers.mjs:237` `ContinueError`；
  * 抛出点 `agent.mjs:451`）：`autoTurn`（消化 ∕ 上行 ∕ timer 轮——无人值守档）⇒ **cap 即收口**（核 D-TC15 同支，
- * 零自续）；用户回合 ⇒ **「继续？」薄形询问**（`askContinue` 注入面 —— 载体 = 既有待决门，不造第二交互面）⇒
+ * 零自续）；**#541**：边界轮（`autoTurn ∧ ¬timerTurn`）撞帽另出 `ev:digest { status:"cap", mode, turns }` 帧
+ * （渲染面 cap 行 —— 对位 VSC `panel-turn-loop.mjs:251` ⇒ `postDigestCap(panel, "stop", e.turn)`；timer 轮不冒充
+ * 消化边界 —— 沿 `suspension-drive.mjs` `boundary` 同判）；
+ * 用户回合 ⇒ **「继续？」薄形询问**（`askContinue` 注入面 —— 载体 = 既有待决门，不造第二交互面）⇒
  * 同意 = 重建 controller + `resume: true` 重入同回合（历史已在 ⇒ 不重推用户消息）∕ 拒绝（∥ 缺注入 ∥ 会话已中止
  * 墓碑命中）⇒ `stopped` 结算（同中止三径序：落盘 → 读数 → 终局事件）。
+ * **#543（裁定 A · 用户输入零丢失）**：撞帽询问**待答期携消息**中断（`interrupt` ⇒ `abort({ interrupt, message })`
+ * + `denyGates` ⇒ 询问按取消结算）⇒ 拒结算处读本代 `signal.reason`，携消息 ⇒ 经注入缝 `onCapCancelled(key, message)`
+ * 交宿主**核结算通知**（#656 · KD-52 ④：入队单点已前移至 `interrupt` 入口 —— 本缝零二次入队；缺省 ⇒ 零动作；
+ * 裸停 —— reason 无消息 —— 零变）。**非 cap 结算径撤回臂**（#656 · KD-52 ④ · 防御）：中断续跑径（下述换代重入 ——
+ * 消息经核注入径落历史）⇒ 经 `withdrawCapEntry(key)` 按条目引用摘回预入队条目（幂等；缺省 ⇒ 零动作）。
  */
 import { ContinueError } from "@thincoder/core/agent.mjs"
 import { ensureSessionTitle } from "@thincoder/core/generate-title.mjs"
@@ -41,9 +49,13 @@ function techInfoOf(err) {
  *  `flights` = 在飞表（key → AbortController —— 单驱动器不变量）·
  *  `queuedPickup(key)` = 步边界取批缝供面（「回合中插入」批 —— 返回核 `consumeQueuedInput` 回调 ∥ `null`；缺省 ⇒ 不接缝）·
  *  `turnGate` = 回合代次面（`{ stamp(key, agent), revoked(key, agent) }` —— 中止墓碑两查位同源；缺省 ⇒ 零落位 ∥ 恒不判失）·
- *  `askContinue(key, turn)` = 撞帽询问缝（R3 · #505 —— 返回是否同意续跑；缺省 ∥ 非函数 ⇒ 视为拒绝：收口零静默续）。
+ *  `askContinue(key, turn)` = 撞帽询问缝（R3 · #505 —— 返回是否同意续跑；缺省 ∥ 非函数 ⇒ 视为拒绝：收口零静默续）·
+ *  `onCapCancelled(key, message)` = 撞帽拒径携文**核结算通知**（#543 裁定 A ∕ #656 · KD-52 ④ —— 询问按取消结算且本代 reason 携消息时单点消费；
+ *  入队单点已前移至 `interrupt` 入口 ⇒ 本缝零二次入队；缺省 ⇒ 零动作）·
+ *  `withdrawCapEntry(key)` = 非 cap 结算径**撤回臂**（#656 · KD-52 ④ · 防御 —— 中断续跑径按条目引用摘回预入队条目；缺省 ⇒ 零动作）·
+ *  `injectUserText(text)` = 用户文本注入缝（#632 · @ 文件引用对齐 —— 用户回合起跑前单点；缺省 ∥ 非函数 ⇒ 原样，向后兼容）。
  *  返回 `{ executeTurn }`。 */
-export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPickup = null, turnGate = null, askContinue = null }) {
+export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPickup = null, turnGate = null, askContinue = null, injectUserText = null, onCapCancelled = null, withdrawCapEntry = null }) {
   /** 中止墓碑查位（U-7）：本回合代次 ≠ 当前代次 ⇒ 会话中止径（`dispose` ∕ 切项目）⇒ 落盘零写；
    *  `turnGate` 缺省 ∥ 代理未落代次 ⇒ 恒假（零回归）。 */
   const revokedTurn = (key, agent) => turnGate?.revoked?.(key, agent) === true
@@ -80,6 +92,10 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
     // 步边界取批缝（「回合中插入」批 · KD-40 ②）：**用户回合传 ∕ 消化轮（`autoTurn`）不传**
     //（沿 VSC 分流 `panel-turn-loop.mjs` —— `autoTurn ? null : …`；系统轮不接步边界 pickup）。
     const pickup = opts.autoTurn === true || typeof queuedPickup !== "function" ? null : queuedPickup(key)
+    // #632（缺面族批补 · @ 文件引用对齐）：用户回合 ⇒ 起跑前单点注入（**恰一次**——`body` 住循环外，
+    // resume 复用同一 body；核 `resume` 不重推用户消息 `agent/setup.mjs:134`）；系统轮（`autoTurn`）不扫
+    //（判据同上「pickup 分流」）；缺缝 ⇒ 原样（向后兼容）。
+    const body = opts.autoTurn === true || typeof injectUserText !== "function" ? text : injectUserText(text)
     /** 续跑循环（内层 —— 两族同环：Ctrl+I 同上下文续跑 ∕ 撞帽续跑）：判据源 = **本代 controller 的
      *  `signal.reason`**（核 `annotateAbort` 不保 `err.reason` ⇒ 以信号面为准 —— CLI `agent-turn.mjs:166-167` 同取法）；
      *  `interrupt` 真 ∧ `message` 非空串 ⇒ 换代（新 controller 重绑会话信号 + 落 `flights`）并
@@ -88,7 +104,7 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
     const runWithResume = async () => {
       for (let resume = false; ; resume = true) {
         try {
-          await run(agent, text, bridge(key), {
+          await run(agent, body, bridge(key), {
             signal: live.signal,
             resume,
             autoTurn: opts.autoTurn === true,
@@ -102,15 +118,32 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
           const reason = live.signal.reason
           if (err?.name === "AbortError" && reason?.interrupt === true) {
             if (typeof reason.message !== "string" || reason.message === "") throw err // 无 message 的 interrupt = 停回合不续跑
+            // #656（KD-52 ④ · 非 cap 结算径撤回臂 · 防御）：本径消息由核注入径落历史（不经营队列）⇒ 预入队条目
+            // （若在 —— 实际不可达）按条目引用摘回（幂等）——零双投；缺省 ∥ 无预入队 ⇒ 零动作。
+            if (typeof withdrawCapEntry === "function") withdrawCapEntry(key)
             live = bindSession(new AbortController())
             flights.set(key, live) // 换代（后续 Stop ∕ 会话中止命中新代 —— 单在飞表不变量保位）
             continue
           }
           // 撞帽三径（R3 · #505 —— 核 `ContinueError(maxTurns)` 抛出点 `agent.mjs:451`）：
           if (err instanceof ContinueError) {
-            if (opts.autoTurn === true) return "stopped" // 无人值守档（消化 ∕ 上行 ∕ timer 轮）⇒ cap 即收口（核 D-TC15 同支，零自续）
+            if (opts.autoTurn === true) {
+              // #541：消化边界轮撞帽 ⇒ cap 帧出站（部分消化不静默 —— 对位 VSC `postDigestCap`）；判据 = 边界轮
+              //（`autoTurn ∧ ¬timerTurn` —— 沿 `suspension-drive.mjs` `boundary` 同判：timer 轮不冒充消化边界）。
+              if (opts.timerTurn !== true) post("ev:digest", { key, status: "cap", mode: "stop", turns: err.turn })
+              return "stopped" // 无人值守档（消化 ∕ 上行 ∕ timer 轮）⇒ cap 即收口（核 D-TC15 同支，零自续）
+            }
             const consent = await consentOf(key, err.turn)
-            if (consent !== true || revokedTurn(key, agent)) return "stopped" // 拒绝 ∥ 会话已中止（墓碑命中）⇒ stopped 结算
+            if (consent !== true || revokedTurn(key, agent)) { // 拒绝 ∥ 会话已中止（墓碑命中）⇒ stopped 结算
+              // #543（裁定 A · 用户输入零丢失）∥ #656（KD-52 ④）：待答期携消息的 Ctrl+I（`interrupt` ⇒ `abort({ interrupt,
+              // message })` + `denyGates` ⇒ 本询问按取消结算）—— 本代 `signal.reason` 携消息 ⇒ 经注入缝作**核结算通知**
+              // （入队单点已前移至 `interrupt` 入口 —— 本处零二次入队；缺省 ⇒ 零动作）；裸停（reason 无消息）零变。
+              // 消费 = 下一回合边界（忙态径同律）。
+              const capReason = live.signal.reason
+              const capMessage = capReason?.interrupt === true && typeof capReason.message === "string" ? capReason.message : ""
+              if (capMessage !== "" && typeof onCapCancelled === "function") onCapCancelled(key, capMessage)
+              return "stopped"
+            }
             live = bindSession(new AbortController()) // 同意 ⇒ 重建 controller（同 Ctrl+I 换代式：终局同释新代）
             flights.set(key, live)
             continue // 重入同回合（核 `agent.mjs:150`：resume 不重推用户消息）

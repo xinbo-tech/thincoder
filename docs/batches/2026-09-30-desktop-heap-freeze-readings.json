@@ -1,0 +1,819 @@
+{
+  "at": "2026-09-29T20:30:14.311Z",
+  "sandbox": "C:\\Users\\liwei\\AppData\\Local\\Temp\\heap-freeze-probe-555z0N",
+  "ok": true,
+  "launch": "ok",
+  "phases": {
+    "assembly": {
+      "boot": "ok",
+      "crashDirCreated": true
+    },
+    "calibration": {
+      "chars": 606208,
+      "mountActive": true,
+      "wholeMs": 15362.5,
+      "windowMs": 21.7,
+      "spans": 51,
+      "visible": 2,
+      "windowChars": 606208,
+      "windowEq": true,
+      "window": {
+        "count": 51,
+        "first": 0,
+        "last": 1
+      },
+      "stepMs": 8.6,
+      "offActive": false
+    },
+    "baseline": {
+      "processes": [
+        {
+          "type": "Browser",
+          "pid": 23332,
+          "wsMb": 143,
+          "cpu": 0
+        },
+        {
+          "type": "GPU",
+          "pid": 18332,
+          "wsMb": 108,
+          "cpu": 0
+        },
+        {
+          "type": "Utility",
+          "pid": 22536,
+          "wsMb": 88,
+          "cpu": 0
+        },
+        {
+          "type": "Tab",
+          "pid": 8848,
+          "wsMb": 6679,
+          "cpu": 0
+        }
+      ],
+      "heapMb": {
+        "used": 5,
+        "total": 6
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 243,
+        "jsEventListeners": 47
+      },
+      "census": {
+        "textNodes": 31,
+        "elements": 61,
+        "advisorTexts": 0,
+        "advisorTop": [],
+        "advisorTextNodeSum": 0,
+        "flowChildren": 1,
+        "idxBlocks": 0
+      }
+    },
+    "load": {
+      "flood": {
+        "ms": 227,
+        "settleMs": 533,
+        "settle": true,
+        "chunkCount": 8000,
+        "longTasks": [
+          66,
+          144
+        ],
+        "frames": [
+          0.3,
+          13.8,
+          66.5,
+          146.3,
+          7.2
+        ],
+        "frameMax": 146.3,
+        "flowScrollHeight": 521
+      },
+      "bigBlock": {
+        "ms": 40,
+        "settleMs": 346,
+        "settle": true,
+        "bigChars": 606208,
+        "longTasks": [],
+        "frames": [
+          0.8,
+          38.8,
+          15.6
+        ],
+        "frameMax": 38.8,
+        "chars": 606208,
+        "eq": true,
+        "blockHeight": 8040,
+        "flowScrollHeight": 8338
+      }
+    },
+    "loadedFlood": {
+      "processes": [
+        {
+          "type": "Browser",
+          "pid": 23332,
+          "wsMb": 144,
+          "cpu": 2.305542496127323
+        },
+        {
+          "type": "GPU",
+          "pid": 18332,
+          "wsMb": 108,
+          "cpu": 0.04396009348986772
+        },
+        {
+          "type": "Utility",
+          "pid": 22536,
+          "wsMb": 88,
+          "cpu": 0
+        },
+        {
+          "type": "Tab",
+          "pid": 8848,
+          "wsMb": 137,
+          "cpu": 8.368796008930369
+        }
+      ],
+      "heapMb": {
+        "used": 3,
+        "total": 12
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 173,
+        "jsEventListeners": 61
+      },
+      "census": {
+        "textNodes": 38,
+        "elements": 76,
+        "advisorTexts": 2,
+        "advisorTop": [
+          {
+            "cls": "advisor-text advisor-think",
+            "kids": 1,
+            "chars": 186890
+          },
+          {
+            "cls": "advisor-text advisor-think",
+            "kids": 1,
+            "chars": 186890
+          }
+        ],
+        "advisorTextNodeSum": 2,
+        "flowChildren": 2,
+        "idxBlocks": 0
+      }
+    },
+    "snapshotLanding": {
+      "baseline": {
+        "path": "D:\\teamcode\\thincoder\\.thincoder\\tmp\\heap-freeze-snap\\hf-baseline.heapsnapshot",
+        "bytes": 7553076
+      },
+      "loaded": {
+        "path": "D:\\teamcode\\thincoder\\.thincoder\\tmp\\heap-freeze-snap\\hf-loaded.heapsnapshot",
+        "bytes": 10214493
+      }
+    },
+    "snapshotDiff": {
+      "nodeCount": {
+        "before": 86863,
+        "after": 114276
+      },
+      "top": [
+        {
+          "key": "native",
+          "countDelta": 9263,
+          "kbDelta": 1308,
+          "countAfter": 35165
+        },
+        {
+          "key": "string",
+          "countDelta": 8281,
+          "kbDelta": 410,
+          "countAfter": 26024
+        },
+        {
+          "key": "object·Object",
+          "countDelta": 8022,
+          "kbDelta": 219,
+          "countAfter": 8632
+        },
+        {
+          "key": "code",
+          "countDelta": 1398,
+          "kbDelta": 153,
+          "countAfter": 22516
+        },
+        {
+          "key": "array",
+          "countDelta": 30,
+          "kbDelta": 111,
+          "countAfter": 1826
+        },
+        {
+          "key": "object shape",
+          "countDelta": 124,
+          "kbDelta": 6,
+          "countAfter": 5832
+        },
+        {
+          "key": "concatenated string",
+          "countDelta": 97,
+          "kbDelta": 2,
+          "countAfter": 301
+        },
+        {
+          "key": "synthetic",
+          "countDelta": 0,
+          "kbDelta": 0,
+          "countAfter": 32
+        },
+        {
+          "key": "number",
+          "countDelta": 106,
+          "kbDelta": 0,
+          "countAfter": 6388
+        },
+        {
+          "key": "symbol",
+          "countDelta": 0,
+          "kbDelta": 0,
+          "countAfter": 69
+        },
+        {
+          "key": "closure·forEach",
+          "countDelta": 0,
+          "kbDelta": 0,
+          "countAfter": 20
+        },
+        {
+          "key": "closure·includes",
+          "countDelta": 0,
+          "kbDelta": 0,
+          "countAfter": 13
+        },
+        {
+          "key": "closure·indexOf",
+          "countDelta": 0,
+          "kbDelta": 0,
+          "countAfter": 13
+        },
+        {
+          "key": "closure·join",
+          "countDelta": 0,
+          "kbDelta": 0,
+          "countAfter": 8
+        },
+        {
+          "key": "closure·push",
+          "countDelta": 0,
+          "kbDelta": 0,
+          "countAfter": 5
+        }
+      ]
+    },
+    "loadedBigBlock": {
+      "processes": [
+        {
+          "type": "Browser",
+          "pid": 23332,
+          "wsMb": 144,
+          "cpu": 3.3324794812676855
+        },
+        {
+          "type": "GPU",
+          "pid": 18332,
+          "wsMb": 109,
+          "cpu": 0.03648272928419854
+        },
+        {
+          "type": "Utility",
+          "pid": 22536,
+          "wsMb": 88,
+          "cpu": 0
+        },
+        {
+          "type": "Tab",
+          "pid": 8848,
+          "wsMb": 167,
+          "cpu": 4.296278894108647
+        }
+      ],
+      "heapMb": {
+        "used": 5,
+        "total": 7
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 279,
+        "jsEventListeners": 61
+      },
+      "census": {
+        "textNodes": 89,
+        "elements": 130,
+        "advisorTexts": 2,
+        "advisorTop": [
+          {
+            "cls": "advisor-text advisor-think",
+            "kids": 1,
+            "chars": 186890
+          },
+          {
+            "cls": "advisor-text advisor-think",
+            "kids": 1,
+            "chars": 186890
+          }
+        ],
+        "advisorTextNodeSum": 2,
+        "flowChildren": 3,
+        "idxBlocks": 0
+      }
+    },
+    "gcNormalized": {
+      "processes": [
+        {
+          "type": "Browser",
+          "pid": 23332,
+          "wsMb": 144,
+          "cpu": 0.0904537275689345
+        },
+        {
+          "type": "GPU",
+          "pid": 18332,
+          "wsMb": 108,
+          "cpu": 0.005738451123958325
+        },
+        {
+          "type": "Utility",
+          "pid": 22536,
+          "wsMb": 88,
+          "cpu": 0
+        },
+        {
+          "type": "Tab",
+          "pid": 8848,
+          "wsMb": 134,
+          "cpu": 0.7537324320381268
+        }
+      ],
+      "heapMb": {
+        "used": 5,
+        "total": 6
+      },
+      "dom": {
+        "documents": 1,
+        "nodes": 279,
+        "jsEventListeners": 61
+      },
+      "census": {
+        "textNodes": 89,
+        "elements": 130,
+        "advisorTexts": 2,
+        "advisorTop": [
+          {
+            "cls": "advisor-text advisor-think",
+            "kids": 1,
+            "chars": 186890
+          },
+          {
+            "cls": "advisor-text advisor-think",
+            "kids": 1,
+            "chars": 186890
+          }
+        ],
+        "advisorTextNodeSum": 2,
+        "flowChildren": 3,
+        "idxBlocks": 0
+      }
+    },
+    "e4js": {
+      "session": "hf-probe",
+      "window": {
+        "text": 606208,
+        "spans": 51,
+        "visible": [
+          49,
+          50
+        ],
+        "visibleMin": 49,
+        "visibleMax": 50,
+        "joined": 606208,
+        "joinedPrefix": true,
+        "blockHeight": 8040
+      },
+      "scroll": {
+        "steps": 30,
+        "changes": 15,
+        "maxPerFrame": 2,
+        "visibleMax": 4,
+        "driftMax": 0.06,
+        "segMin": 41,
+        "segMax": 50,
+        "tasks": [],
+        "visibleNow": [
+          41,
+          42,
+          43
+        ],
+        "driftMeasured": 30,
+        "frames": 11,
+        "crossed": 9,
+        "top": 6846
+      },
+      "windowAfterScroll": {
+        "text": 606208,
+        "spans": 51,
+        "visible": [
+          41,
+          42,
+          43
+        ],
+        "visibleMin": 41,
+        "visibleMax": 43,
+        "joined": 606208,
+        "joinedPrefix": true,
+        "blockHeight": 15869
+      },
+      "streaming": {
+        "ms": 3339,
+        "steps": 24,
+        "chars": 606216,
+        "spans": 51,
+        "eq": true,
+        "visible": [
+          49,
+          50
+        ],
+        "faceChars": 606216,
+        "follows": true,
+        "tail": 50,
+        "windowMoved": true,
+        "windows": [
+          {
+            "step": 22,
+            "chars": 555698,
+            "spans": 47,
+            "visible": [
+              45,
+              46
+            ]
+          },
+          {
+            "step": 23,
+            "chars": 580957,
+            "spans": 49,
+            "visible": [
+              47,
+              48
+            ]
+          },
+          {
+            "step": 24,
+            "chars": 606216,
+            "spans": 51,
+            "visible": [
+              49,
+              50
+            ]
+          }
+        ],
+        "tasks": []
+      },
+      "remount": {
+        "ms": 278,
+        "spansBefore": 51,
+        "spansAfter": 51,
+        "visibleBefore": [
+          49,
+          50
+        ],
+        "visibleAfter": [
+          49,
+          50
+        ],
+        "transferOk": true,
+        "chars": 606216,
+        "tasks": []
+      }
+    },
+    "freezeSelfHeal": {
+      "triggered": false,
+      "tapsSent": 49,
+      "focused": true,
+      "note": "60s 内未见现场（12s 自限环内 unresponsive 未触发——触发时延标定：>12s）"
+    },
+    "freezeKill": {
+      "triggered": true,
+      "latencyMs": 34484,
+      "tapsSent": 39,
+      "trigger": "ping-timeout",
+      "source": "ping",
+      "actions": [
+        {
+          "type": "unresponsive",
+          "source": "ping",
+          "at": 1790713942847
+        },
+        {
+          "type": "reload",
+          "at": 1790713965879
+        },
+        {
+          "type": "gone",
+          "at": 1790713965892,
+          "reason": "crashed"
+        }
+      ],
+      "snapshot": {
+        "skipped": "renderer-replaced",
+        "at": 1790713965879
+      },
+      "renderer": {
+        "before": {
+          "osPid": 8848,
+          "crashed": false,
+          "url": "app://desktop/index.html"
+        },
+        "after": {
+          "osPid": 9840,
+          "crashed": false,
+          "boot": "ok"
+        },
+        "replaced": true,
+        "recoveredBoot": true
+      },
+      "appAlive": true
+    },
+    "d9": {
+      "manualSelection": false,
+      "marker": "D9-MARK 存量页标记 —— 重载补启真机腿",
+      "project": "D:\\teamcode\\thincoder",
+      "opened": {
+        "cwd": "D:\\teamcode\\thincoder",
+        "recent": [
+          {
+            "cwd": "D:\\teamcode\\thincoder",
+            "mtimeMs": 1790713967196.2988
+          }
+        ]
+      },
+      "created": {
+        "ok": true,
+        "reason": null,
+        "cwd": "D:\\teamcode\\thincoder",
+        "slot": 1
+      },
+      "resumed": {
+        "ok": true,
+        "reason": null,
+        "cwd": "D:\\teamcode\\thincoder",
+        "slot": 1
+      },
+      "slot": "1",
+      "slotFile": "02a338af07b1ba5c490ef87e8648b7ee6334df77.json.1",
+      "staged": "1",
+      "preReload": {
+        "boot": "ok",
+        "activeSession": "1",
+        "projectCwd": null,
+        "sessionMetaKeys": [],
+        "subRows": {
+          "1": [
+            {
+              "key": "sub:advisor#hf-d9",
+              "frozen": false,
+              "rows": 3
+            }
+          ]
+        },
+        "poolRunning": 1,
+        "blockTexts": []
+      },
+      "rendererBefore": {
+        "osPid": 9840,
+        "crashed": false,
+        "url": "app://desktop/index.html"
+      },
+      "reload": {
+        "ok": true
+      },
+      "rendererAfter": {
+        "osPid": 21920,
+        "crashed": false,
+        "url": "app://desktop/index.html"
+      },
+      "autoReturn": {
+        "boot": "ok",
+        "activeSession": "1",
+        "projectCwd": "D:\\teamcode\\thincoder",
+        "sessionMetaKeys": [
+          "1"
+        ],
+        "subRows": {},
+        "poolRunning": 0,
+        "blockTexts": [
+          "D9-MARK 存量页标记 —— 重载补启真机腿"
+        ]
+      },
+      "autoReturnOk": true,
+      "pageReloadOk": true,
+      "postReload": {
+        "boot": "ok",
+        "activeSession": "1",
+        "projectCwd": "D:\\teamcode\\thincoder",
+        "sessionMetaKeys": [
+          "1"
+        ],
+        "subRows": {
+          "1": [
+            {
+              "key": "sub:advisor#hf-d9",
+              "frozen": false,
+              "rows": 3
+            }
+          ]
+        },
+        "poolRunning": 1,
+        "blockTexts": [
+          "D9-MARK 存量页标记 —— 重载补启真机腿"
+        ]
+      },
+      "subagentLiveOk": true
+    },
+    "e4": {
+      "cssApplied": {
+        "block": "content",
+        "blockText": "content",
+        "reasoning": "content",
+        "advisor": "content"
+      },
+      "session": {
+        "created": {
+          "active": "2"
+        },
+        "slot": "2",
+        "slotFile": "02a338af07b1ba5c490ef87e8648b7ee6334df77.json.2",
+        "resumed": true,
+        "page": {
+          "boot": "ok",
+          "active": "2",
+          "blocks": 200,
+          "hasOlder": true,
+          "page": 60,
+          "meta": [
+            "1",
+            "2"
+          ]
+        }
+      },
+      "giant": {
+        "injected": true,
+        "chars": 606208,
+        "eq": true,
+        "spans": 51,
+        "visible": [
+          49,
+          50
+        ]
+      },
+      "follow": {
+        "following": true,
+        "atBottom": true,
+        "pill": false,
+        "before": {
+          "scrollTop": 18344,
+          "scrollHeight": 18865,
+          "clientHeight": 521
+        },
+        "after": {
+          "scrollTop": 18366,
+          "scrollHeight": 18887,
+          "clientHeight": 521
+        },
+        "ok": true
+      },
+      "unfollow": {
+        "following": false,
+        "pill": true,
+        "anchorId": "179",
+        "anchorConnected": true,
+        "anchorTopBefore": -60,
+        "anchorTopAfter": -60.4,
+        "anchorDelta": -0.4,
+        "scrollDelta": -114,
+        "before": {
+          "scrollTop": 9183,
+          "scrollHeight": 21529,
+          "clientHeight": 521
+        },
+        "after": {
+          "scrollTop": 9069,
+          "scrollHeight": 21697,
+          "clientHeight": 521
+        },
+        "ok": true
+      },
+      "backfill": {
+        "guard": {
+          "hasOlder": true,
+          "inFlight": false,
+          "page": 60
+        },
+        "landed": true,
+        "blocksBefore": 203,
+        "blocksAfter": 263,
+        "hasOlderAfter": false,
+        "inFlightAfter": false,
+        "anchorId": "53",
+        "anchorConnected": true,
+        "anchorTopBefore": 102,
+        "anchorTopAfter": 102.3,
+        "anchorDelta": 0.3,
+        "scrollTopAfter": 4214,
+        "heightDelta": 4214,
+        "scrollTopCorrected": true,
+        "before": {
+          "scrollTop": 9069,
+          "scrollHeight": 21697,
+          "clientHeight": 521
+        },
+        "after": {
+          "scrollTop": 4214,
+          "scrollHeight": 25911,
+          "clientHeight": 521
+        },
+        "ok": true
+      },
+      "segments": {
+        "spans": 51,
+        "visible": [
+          43,
+          44
+        ],
+        "chars": 606368
+      }
+    }
+  },
+  "calibrationVerdict": {
+    "windowFast": true,
+    "layoutSaved": true,
+    "windowEq": true,
+    "formApplied": true
+  },
+  "calibrationPass": true,
+  "partial": "e4js-landed",
+  "verdict": {
+    "assembly": true,
+    "snapshotLanding": true,
+    "freezeGate": true,
+    "recoverySequence": true,
+    "unresponsiveFired": false,
+    "noStandaloneGoneScene": true,
+    "d9AutoResume": true,
+    "d9SubagentLive": true,
+    "e4CssApplied": true,
+    "e4TextEq": true,
+    "e4NoJump": true,
+    "e4LongTaskGiant": true,
+    "e4LongTaskFlood": false,
+    "e4jsCalibration": true,
+    "e4jsLongTask": true,
+    "e4jsWindowEq": true,
+    "e4jsScroll": true,
+    "e4jsBounded": true,
+    "e4jsStreaming": true,
+    "e4jsRemount": true,
+    "e4jsBackfill": true
+  },
+  "scenesTotal": [
+    {
+      "name": "desktop-freeze-1790713942847-23332.json",
+      "trigger": "ping-timeout",
+      "actions": [
+        "unresponsive",
+        "reload",
+        "gone"
+      ]
+    },
+    {
+      "name": "desktop-freeze-1790713968119-23332.json",
+      "trigger": "render-process-gone",
+      "actions": [
+        "gone"
+      ]
+    },
+    {
+      "name": "desktop-freeze-1790714002885-23332.json",
+      "trigger": "ping-timeout",
+      "actions": [
+        "unresponsive",
+        "reload"
+      ]
+    }
+  ],
+  "incidents": [
+    "rejected:Target crashed"
+  ]
+}

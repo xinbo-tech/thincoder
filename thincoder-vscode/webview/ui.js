@@ -5,10 +5,15 @@
  *
  * R2 换接（§3 行 51）：四构件面（块容器 / 工具卡 / 恢复面 / 错误横幅）单源 = 核包
  * `flow/block.mjs` + `flow/tool-card.mjs`——本档留端 = `ctx` 装配面
- * （`currentBlock` / `_toolRefs` / `_nextIdx` 簿记、append 位、滚动族、消息窗裁剪、欢迎条与
- * 横幅）与唯一出站 `retry` 的 `postMessage` 绑定。类名 / 结构契约 = KD-RC-7（核逐字承源档）。
+ * （`currentBlock` / `_toolRefs` / `_nextIdx` 簿记、append 位、消息窗裁剪、欢迎条与横幅）
+ * 与唯一出站 `retry` 的 `postMessage` 绑定。类名 / 结构契约 = KD-RC-7（核逐字承源档）。
+ *
+ * 滚动族（2026-09-29 留端清算 ∕ 批 `docs/batches/2026-09-29-desktop-rebuild-fidelity.md` §2.5）：判据 ∕
+ * 写门 ∕ 旗标维护 = **核抽核件 `scroll.mjs` 工厂消费**（旗标宿主 = `ctx`——`_pinBottom` / `_pinActivity`
+ * 键面与跨档共读面保持；事件集 `wheel` / `touchmove` / `scroll` 保持）；本档留帧调用点（四函数）。
  */
 import { esc as escHtml } from "../node_modules/@thincoder/render-core/md.mjs"
+import { applyPin, createPinWatch } from "../node_modules/@thincoder/render-core/scroll.mjs"
 import { t } from "./i18n.js"
 import {
   buildAdvisorBlock, appendAdvisorChunk, buildUserMessage as coreUserMessage,
@@ -175,21 +180,22 @@ export function showError(ctx, text, techInfo) {
 /** Follow-scroll: pinned to the bottom by default; the user scrolling up unpins
  *  (reading history), scrolling back to the bottom repins. Stream-driven callers use
  *  maybeScrollDown; explicit user actions (the scroll-bottom button) call scrollDown. */
+
 export function scrollDown(ctx) {
-  // 用超大值替代读 scrollHeight，避免强制同步布局（代价随 DOM 变大而涨）
-  ctx.messagesEl.scrollTop = Number.MAX_SAFE_INTEGER
-  ctx._pinBottom = true
+  // 用超大值替代读 scrollHeight，避免强制同步布局（代价随 DOM 变大而涨）—— 写口 = 核工厂 `applyPin`
+  applyPin(ctx.messagesEl, true)
+  ctx._pinBottom = true // 重 pin（显式动作——旗标键面 = 跨档共读面，保持）
 }
 
 export function maybeScrollDown(ctx) {
-  if (ctx._pinBottom !== false) ctx.messagesEl.scrollTop = Number.MAX_SAFE_INTEGER
+  applyPin(ctx.messagesEl, ctx._pinBottom)
 }
 
 /** 活动区 pin（§12.3 第 7 条——同 `#messages` 口径）：默认钉底；buildBlock 与流式帧
  *  （streaming.js rAF 尾）驱动——上滚解 pin、回底重 pin（initScrollFollow 区监听）。 */
 export function maybeScrollActivity(ctx) {
-  if (ctx._pinActivity === false || !ctx.activityEl) return
-  ctx.activityEl.scrollTop = Number.MAX_SAFE_INTEGER
+  if (!ctx.activityEl) return
+  applyPin(ctx.activityEl, ctx._pinActivity)
 }
 
 /** 窗口化裁剪：顶层内容块超过上限时删最旧的，防 DOM 无界增长（webview 输入卡顿治本）。
@@ -205,17 +211,12 @@ export function trimOldMessages(ctx) {
   ctx._hasOlder = true
 }
 
-/** Wire the pin/unpin listeners once. Threshold ~24px counts "near the bottom" as bottom.
- *  活动区（§12.3 第 7 条）同口径独立 pin——同一 watch 闭包双目标；`?.` 空安全：
- *  夹具缺区 id 零抛错。 */
+/** Wire the pin/unpin listeners once（核工厂直写模式 —— 近底直写；事件集 `wheel` / `touchmove` / `scroll` 保持）。
+ *  活动区（§12.3 第 7 条）同口径独立 pin——两 watch 各自宿主键面；`?.` 空安全：
+ *  夹具缺区 id 零抛错（缺 el ⇒ `attach` 零动作）。 */
 export function initScrollFollow(ctx) {
   ctx._pinBottom = true
   ctx._pinActivity = true
-  const watch = (el, key) => {
-    const onScroll = () => { ctx[key] = el.scrollHeight - el.scrollTop - el.clientHeight < 24 }
-    // §5.5（2026-09-19 批）：`scroll` 为唯一「滚动已生效」后触发者（键盘 / 拖条 / 程序写入全覆盖）
-    for (const ev of ["wheel", "touchmove", "scroll"]) el?.addEventListener(ev, onScroll, { passive: true })
-  }
-  watch(ctx.messagesEl, "_pinBottom")
-  watch(ctx.activityEl, "_pinActivity")
+  createPinWatch(ctx.messagesEl, { holder: ctx, flagKey: "_pinBottom" }).attach()
+  createPinWatch(ctx.activityEl, { holder: ctx, flagKey: "_pinActivity" }).attach()
 }

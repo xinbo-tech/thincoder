@@ -13,12 +13,11 @@
  *    `lastBubbleWithRaw` 只扫在连 DOM ⇒ 残项须重建泡）。**生产可达**：宿主按批取（多批 =
  *    多回合）⇒ 推 `{items: 残项, merged: 本批}`（`panel-turn-stages.mjs` / `suspension.mjs`
  *    消费点；形 = `test/queued-mark.test.mjs`「合并批 + 残项」）。
- * ② 本批**新建泡**不入本批 items 匹配（源档 `addUser` 新泡对 items 循环可见）——两形：
- *    · `merged ∈ items`：多条批 `merged` = 编号格式，单条批走清标保留路径 ⇒ 不可达；
- *    · **同文重项 + 盘面零气泡**（Reload 冷启 / 清屏后重推 `items: ["x","x"]`）：核按 items
- *      逐条新建（N 泡），源档第二条经 `lastBubbleWithRaw` 复用首条（1 泡）——**可达边角**；
- *      R2b 登记为待裁差异（`WEBVIEW-INPUT.md` §1 C-B2-6 细则⑦ 两支读法两可：三支判据序按
- *      盘面逐条 vs 批内自产泡也算「已标记同文」），本件未裁。
+ * ② 本批**新建泡**入本批 items 匹配（源档 `addUser` 新泡对 items 循环可见 —— **消**：
+ *    2026-09-29 · 批 `docs/batches/2026-09-29-hatch-clearance-2.md` · #673）：同文重项
+ *    （Reload 冷启 / 清屏后重推 `items: ["x","x"]`）⇒ 第二条认领首条**本批新建泡**、不重复建泡
+ *    （回源档 1 泡口径）；`merged ∈ items` 形不可达不变（多条批 `merged` = 编号格式，单条批走
+ *    清标保留路径）。
  */
 import { t } from "../i18n.mjs"
 import { fmtTime } from "../lib.mjs"
@@ -65,7 +64,7 @@ function lastIndexOfRaw(bubbles, raw, claimed, removed) {
  *   ② 合并（`merged` 在场）：单条批（文本 = 某已标记气泡原文）⇒ 清标保留；
  *      多条批且有已标记气泡 ⇒ 移除全部已标记气泡 + 追加一条合并气泡（`mark: false`）；
  *   ③ 逐条标记：`items` 每条——已标记同文 ⇒ 保持；另有同文未标记气泡 ⇒ 就地标记（末条优先）；
- *      再没有 ⇒ 追加并标记（`mark: true`）；
+ *      本批已建同文泡 ⇒ 保持（不重复建泡 —— #673）；再没有 ⇒ 追加并标记（`mark: true`）；
  *   ④ 防悬空：已标记但本批未认领 ⇒ 移除。
  *
  * 入参 `bubbles` = 会话流内**在连**用户气泡（DOM 序）`[{ raw, marked }]`——DOM 与快照来源留端。
@@ -91,11 +90,14 @@ export function planBusyQueued(bubbles = [], snap = {}) {
   const items = (Array.isArray(snap.items) ? snap.items : []).map((s) => String(s))
   const claimed = new Set()
   const dropped = new Set(remove) // 合并批已删气泡：源档此刻已出 DOM ⇒ items 认领不可见（残项重建泡）
+  const born = [] // 本批**新建泡**原文（`append` 产出 —— 源档新泡对 items 循环可见）
   for (const item of items) {
     const i = marked.find((i) => !claimed.has(i) && bubbles[i].raw === item)
     if (i !== undefined) { claimed.add(i); continue } // 已存在 ⇒ 保持
     const hit = lastIndexOfRaw(bubbles, item, claimed, dropped)
     if (hit !== null) { mark.push(hit); claimed.add(hit); continue }
+    if (born.includes(item)) continue // 「本批新建泡」匹配：同文重项 ⇒ 首泡已建，不重复建泡
+    born.push(item)
     append.push({ raw: item, mark: true })
   }
   for (const i of marked) if (!claimed.has(i)) remove.push(i) // 防悬空（已被消费且无回声面）

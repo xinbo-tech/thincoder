@@ -113,7 +113,8 @@ npm publish --access public    # scoped 包默认 private——首发必须显�
 **发布窗两条纪律（2026-09-29 · 台账 #470）**：
 
 - **先 bump + publish 核、再做物化 ∕ 打包**：核版本未上 registry 时先物化，会把 registry 旧快照烙进产物（实证：`@thincoder/core@0.9.5` tarball 无 `think-off.mjs`——registry 落后源树）；**打包物化一律源自源树**。
-- **`npm install` 覆盖 junction 后的恢复收敛序**：先 `npm install`（lock 回 link 形）**再** `npm link @thincoder/core`——序反会把 lock 写成 packed 形。（`file:` 目录依赖在 `--install-links` 态 `npm ls` 报 `ELSPROBLEMS/invalid` = npm 11 固有，非本项目缺陷。）
+- **`npm install` 覆盖 junction 后的恢复收敛序**：先 `npm install`（lock 回 link 形）**再** `npm link @thincoder/core`，**最后** `node scripts/dev-link.mjs`（在 `thincoder` 仓根跑——链接规范形收敛 ∕ 判：`npm link` 目标串随调用进程 cwd 拼写原样存储（cli 侧曾漂 `d:\`），本工具重建规范形链；`--check` 复判 = 0）；
+  序反会把 lock 写成 packed 形。（`file:` 目录依赖在 `--install-links` 态 `npm ls` 报 `ELSPROBLEMS/invalid` = npm 11 固有，非本项目缺陷。）
 
 ### 5.4 阶段 2 · 发 CLI（`thincoder`）
 
@@ -147,6 +148,10 @@ npm install --install-links             # link → registry 真实拷贝
 ```
 
 发完可恢复开发链接（`npm link @thincoder/core`——dev / prod 双态见 §2.6.1）。
+
+**render-core（`@thincoder/render-core`）不入发布序列**：永不发布（`private: true`）；两打包窗（VSC vsix ∕ 桌面产物）内嵌形 = **link 形 + `--follow-symlinks`**——
+`npm install --install-links` 物化对其不可执行（vsce 依赖检测 `ELSPROBLEMS/invalid` ⇒ 打包硬失败；R1 打包窗实测 475 件）；内嵌面收窄 = 仅运行必需（`.mjs` + `package.json`）。
+本步 `@thincoder/core` 物化纪律不动。单源 = `docs/render-core/design/RENDER-CORE.md` §1.3 ∕ §10 B。
 
 **第 2 步 · 凭据预验**（防无 TTY 静默假成功——npm 的 exit-0 判定**不可**推广到 vsce/ovsx）：
 
@@ -271,3 +276,7 @@ OSS_KEY=… OSS_SECRET=… node scripts/deploy-oss.mjs    # 实传（脚本亦�
   「核发布面」解体：为什么先发核 → §5.3 引言 · 核首发前置 → §5.3 · 核守卫 → §5.4/§5.5 · 核版本号 → §4 · 凭据纪律 → N6；核端独立需求表不再存在（F5/N5/N6 + 主线内上下文 = 全部承载）。
 - 2026-09-23（**官网同步环**——用户「发布计划以后要带上官网的更新」）：§5 增**阶段 5 · 官网同步**（站点仓域：提取 → 站点更新 → 部署 → 判据 + 失败处置 + 执行角色——跨仓 = 主 agent 轮）；新增 **§6 官网更新方案**（版本面对外两端口径 · changelog 分节与逐版骨架 · 追平窗口与承位条目 · 半自动生成裁定 · 判据与边界）。
 - 2026-09-23（**评审修正轮 · 按号 1/2/3/4/5/6**）：完成判定号改占位（`v` + 本次号——消同档多套现值口径）· §4.3 加「as-of 快照 / 下一号以发布前实查为准」注 · 依赖声明收正现时态（`^0.9.4`——N5 / §4.4 / §5.2）· §6.5 判据细化（各端分节顶部 · 比较归一）并同步 §5.7 · §6.3 VSC 条数与日期兜底口径 · §6.6 补「站点内容页不适用仓内源码档位」依据 · §5.7 / §6.4 核档取材面写明。
+- 2026-09-29（**core-hygiene 批 · P3 文档收正 · eng-designer**——承批档 `docs/batches/2026-09-29-core-hygiene.md` §2.8 行 2 · 台账 #577）：§5.3 发布窗纪律「恢复收敛序」补第三步——`node scripts/dev-link.mjs`（链接规范形收敛 ∕ 判；`npm link` 拼写漂移面收敛）。机制条文零改。
+
+- 2026-09-29（**doc-backfill 批 · 波 1 · eng-designer**——承 `docs/batches/2026-09-29-doc-backfill.md` §2 · 台账 #560）：§5.5 步 1 邻位补段——
+  **render-core 不入发布序列**（永不发布——`private: true`；两打包窗内嵌形 = link 形 + `--follow-symlinks`〔物化对其不可执行〕；内嵌面收窄 = 运行必需件；单源 = `docs/render-core/design/RENDER-CORE.md` §1.3 ∕ §10 B）。**零新语义**（发布档登记）。

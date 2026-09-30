@@ -24,9 +24,11 @@
  * `at:complete { query, seq }`（回执 seq ≠ 现存 seq ⇒ **迟到丢弃**）· `selectModel` ∕ `selectReasoning` ⇒
  * `session:prefs { key, patch }` · 四模式位写 ⇒ `session:flags { key, patch }`（回执 `flags` 活值 ⇒ `applyFlags`
  * 切片写）· footer 三出口（`addProvider` ∕ `removeProvider` ∕ `setKey`）⇒ 设置面（A8 唯一映射点）。
+ * **#656（cap 待答径队满可见形 · KD-52 ③ —— 回注缝供面）**：`createComposerWire` 注入缝 `slotFullNotice(text)`
+ * 落本档 —— 核件 toast（词键复用 `input.slotFull` —— i18n 零增）+ 文本回注输入框（零丢失；回注缝 = 挂载面注入小口）。
  *
  * B12（本地先行出泡 · 裁定①准）：**直发径** = 受理时刻本地出泡（`onUserEcho` 写用户块 + 并笔回底，与回放块同形）；
- * **忙态径** = 零本地块 —— 该径「待发送」气泡 = 队镜面面（`ev:queue` ⇒ `pending` 切片 ⇒ 流内待发送气泡组 + 帧尾核
+ * **忙态径** = 零本地块 —— 该径「待发送」气泡 = 队镜面面（`ev:queue` ⇒ `pending` 切片 ⇒ 输入区上方待发送带 + 帧尾核
  * `markPending` 落笔）；两径同屏 = 同条两现（双泡）⇒ 忙态径交镜面。**出泡不变式** = 每受理消息恰一枚**真块**：
  * 直发径 = 本地先行；忙态径 = 流尾派生块（交付时刻才入流）；**回执兜底** = 忙态径收直发回执（忙位读数滞后反径）⇒
  * 回执处补写。**零真块**（收正轮 B12 新口径 · 参照 CLI）：本地块被回执言为队形（忙位读数滞后**正径**）⇒ **退流**
@@ -45,8 +47,10 @@
  * 纪律：零 `node:` / 零裸包（渲染面静态闭包判据）；控制台诊断串非面向用户文案（不经 `t()`）。
  */
 import { createComposerPanel } from "/rc/composer/panel.mjs"
+import { showToast } from "/rc/toast.mjs"
 import { createComposerWire } from "./composer-wire.mjs"
 import { createComposerSync, effortOf } from "./composer-sync.mjs"
+import { t } from "./i18n.mjs"
 import { degradedCode, toImages } from "./attach.mjs"
 import { applyFlags } from "./events-flags.mjs"
 import { appendBlock, returnToBottom, setAttachDegraded, store as defaultStore } from "./store.mjs"
@@ -124,12 +128,25 @@ export function attachComposer(host, deps = {}) {
   // ─── 写面（出档 `renderer/composer-wire.mjs` —— 收正轮 · 越 500 硬限前的在册拆分预案落形）────────
   // 通道往返 ∕ 逐类型 handler ∕ 本地先行块标记三态 ∕ B21 失败态皆住该档；本档只注入 deps 并取回 `post`。
 
+  /** cap 待答径队满可见形（#656 · KD-52 ③ —— 回注缝 = 挂载面注入小口）：核件 toast（词键复用 `input.slotFull`
+   *  —— i18n 零增；先例 = 忙态径 `thincoder-render-core/composer/panel.mjs:304-306`）+ 文本回注输入框（零丢失）。
+   *  回注形 = 空框直置 ∕ 非空框尾并换行（零覆盖 —— 用户已续键入的稿不吞）；`panel` 装配后置位 ⇒ 惰性取用。 */
+  function slotFullNotice(text) {
+    showToast(t("input.slotFull"))
+    const el = panel === null ? null : panel.inputEl
+    if (el === null || el === undefined || typeof text !== "string" || text === "") return
+    el.value = el.value === "" ? text : `${el.value}\n${text}`
+    el.dispatchEvent(new Event("input")) // 核件自适应重算（高度写面单源 = 核 `adjustInputHeight` —— 缓存 `_lastInputHeight` 与实高同源；直写 `style.height` 会越缓存）
+    el.focus()
+  }
+
   const wire = createComposerWire({
     store, activeKey, call, push,
     panelOf: () => panel, // 直发失败径复位 loading
     repaint: (state1) => sync.paintNotices(state1), // 提示行重挂（派生面档 `paintNotices` 单源）
     onLoadingReset: () => { sync.resetBusy() }, // 忙态派生缓存复位（收正轮 · 行 8）
     suspIdleOf, // 挂起空闲复位判据（挂起窗径批：窗内直发径未起跑 ⇒ loading 门禁归位）
+    slotFullNotice, // #656：cap 待答径队满可见形缝（toast + 文本回注单点）
     toImages, degradedCode, effortOf, withUserBlock, setAttachDegraded, applyFlags,
     openSettings: () => openSettings?.(), // footer 三出口（A8 唯一映射点）
   })
@@ -195,6 +212,19 @@ export function attachComposer(host, deps = {}) {
     }
   }
 
+  /** 扁平化 v4（用户 2026-09-30 走查）：`#attach-btn` ∥ `#send-btn` ∥ `#abort-btn` 自 `#input-row` 迁入
+   *  `#controls-row`（与模式钮同排 · 右端 `margin-left:auto` 靠齐）——装配期一次性**节点搬移**：
+   *  监听 ∥ 工厂持有的引用随节点同行（零行为改）；核件工厂 ∥ 结构零触（VSC 零影响）。 */
+  function relocateActionButtons(root) {
+    const controlsRow = root.querySelector("#controls-row")
+    const inputRow = root.querySelector("#input-row")
+    if (controlsRow === null || inputRow === null) return
+    for (const id of ["#attach-btn", "#send-btn", "#abort-btn"]) {
+      const btn = inputRow.querySelector(id)
+      if (btn !== null) controlsRow.append(btn)
+    }
+  }
+
   /** 槽装配（一次）：核件样式引入 ⇒ 槽赋 `id="toolbar"`（核件样式规则命中物）⇒ 提示锚 ⇒ 核件面板（工厂按 VSC
    *  序 append 四子树）。槽缺 ∕ 平 node ⇒ `null`（记错一次 —— 零静默）。 */
   function mount() {
@@ -208,7 +238,9 @@ export function attachComposer(host, deps = {}) {
     noticesAnchor = document.createElement("div")
     noticesAnchor.setAttribute(NOTICES_ANCHOR, "")
     container.append(noticesAnchor)
-    return createComposerPanel({ root: container, post, state: sync.state, hooks })
+    const built = createComposerPanel({ root: container, post, state: sync.state, hooks })
+    relocateActionButtons(container) // 扁平化 v4：三钮迁入控件行（用户 2026-09-30 走查）
+    return built
   }
 
   panel = mount()

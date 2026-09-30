@@ -28,6 +28,7 @@
 import { statSync } from "node:fs"
 import { manifestPath, loadManifest, getSessionId, sessionEnd } from "./session-slots.mjs"
 import { batchAlive, batchAliveAsync, probeCmdlinesAsync, classifyEnd, isProductProc } from "./process-probe.mjs"
+import { DESC } from "./tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/peer_instances.md
 
 export { batchAlive } // 既有 import 面（peer-domains.mjs）零破——实现已外提 process-probe.mjs
 
@@ -160,14 +161,11 @@ export async function peerInstances(cwd) {
 /**
  * L2 只读查询工具（MULTI-INSTANCE-COLLAB §3.3）——挂本模块导出。schema
  * description 逐字锚（评审修正 #7——2026-09-06 定稿，双端照抄——禁止自行解释）：
- * "peer_instances — read-only: list other live ThinCoder instances sharing this
- * workspace cwd. Returns [{ pid, end, sessionId, slots }]; never includes self;
- * pure read — writes nothing."
+ * 文本本体 = `tool-docs/peer_instances.md`（DESC() 加载；#15 外置——文本逐字零改）。
  */
 export const peerInstancesTool = {
   name: "peer_instances",
-  description:
-    "peer_instances — read-only: list other live ThinCoder instances sharing this workspace cwd. Returns [{ pid, end, sessionId, slots }]; never includes self; pure read — writes nothing.",
+  description: DESC("peer_instances"), // #15 外置：文本单点 = tool-docs/peer_instances.md（逐字锚）
   parameters: { type: "object", properties: {} },
   readonly: true,
   async execute(args, ctx) {

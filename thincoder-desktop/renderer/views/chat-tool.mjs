@@ -46,7 +46,7 @@ export const DIFF_LINE_FLOOR = 200
 
 const hasText = (value) => typeof value === "string" && value.length > 0
 
-/** 接线两态（通则沿 `renderer/views/sessions.mjs:161`）：handlers 给 ⇒ `onClick`（不落 `disabled`）；缺 ⇒ `disabled: true`。 */
+/** 接线两态（两态原语单源 = 本档 `wire` ∕ `withKey`）：handlers 给 ⇒ `onClick`（不落 `disabled`）；缺 ⇒ `disabled: true`。 */
 export function wire(props, onClick) {
   if (typeof onClick === "function") props.onClick = onClick
   else props.disabled = true
@@ -97,7 +97,8 @@ export function changeTotals(changes) {
 function headSegments(block) {
   const word = STATUS_WORD[block?.status]
   const timed = TIMED_STATUS.includes(block?.status) && Number.isFinite(block?.durationMs)
-  const summary = hasText(block?.result) ? formatToolSummary(block?.name, block.result) : null
+  // #631（摘要半截补齐）：清扫后（`interrupted`）⇒ 摘要槽值 = 逐字 `(interrupted)`（值源 = VSC `webview/streaming.js:111` 清扫覆盖；覆盖 `formatToolSummary` 派生——已结算卡零改写）。
+  const summary = block?.status === "interrupted" ? "(interrupted)" : hasText(block?.result) ? formatToolSummary(block?.name, block.result) : null
   return [
     { code: "name", value: block?.name },
     { code: "round", value: roundTag(block) },

@@ -1,0 +1,9 @@
+Run an independent review of your work. `type` is REQUIRED — one of exactly two values: 'design' reviews design / requirement documents BEFORE implementation (documents=[...] with the explicit doc paths; plus batchDoc when a batch record is in flight); 'code' reviews the code you changed AFTER implementation (paths=[...] to scope files/directories; documents=[...] adds acceptance-criteria context). A call without a type (or with a conflicting object.type) is refused — no default, no silent fallback.
+
+The advisor is an independent read-only sub-agent (explores the codebase, reads files, traces callers via grep/lsp). Code review converges: round 1 full review → round 2 verifies the agent's fix claims → round 3+ re-checks only the fix claims. Design review is a single pass against methodology and requirements. Criteria come from .thincoder/advisor.md (if present) or sensible defaults. After the review you MUST produce a response table (format = discipline rules); on all-clear, call verify.
+
+object={type,target,status,reason,exclude} optionally anchors the review target — mechanically injected at the start of the review message; absent = no injection.
+
+ASYNC (depth 0 only): the review runs in the BACKGROUND by default — ack immediately, the report arrives automatically in a digest turn. One shared pool (agent.poolLimits.advisor, default 4 — configurable via /config 并发池 or config.json; pool-full and same-scope launches are refused stating the current limit) — launch reviews one at a time. Inside a child (depth>0) reviews are always synchronous (async:true rejected).
+
+Returns the verdict: all-clear (call verify) or a findings list to fix.

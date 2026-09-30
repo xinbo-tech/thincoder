@@ -21,6 +21,8 @@ import { configDir } from "./config.mjs"
 import { ledgerDbPath, PENDING_STATUSES } from "./ledger-db.mjs"
 import { ledgerQuery } from "./ledger-cmd.mjs"
 import { executorTail } from "./ledger-executors.mjs"
+// 归一步单源（#585——盘符大写契约直引 `session-slots.mjs`；先例 = `ledger-db.mjs:23`）。
+import { normalizeCwd } from "./session-slots.mjs"
 
 /** 老化阈值（天——口径 = 需求档；`days` 参数可覆盖）。 */
 export const AGING_DAYS = 30
@@ -183,9 +185,10 @@ export function planChangeLines(prev, scan) {
 
 /** 去重档键 = 台账库绝对路径·正斜杠 + **盘符大写**（跨端同规则——CLI 的 `process.cwd()` 盘符大写、
  *  VSC 的 `uri.fsPath` 小写（`session-slots.mjs` `normalizeCwd` 同一契约——session / checkpoint /
- *  trace 跨端共享即赖此）；CLI 写的键 VSC 须逐字认得）。 */
+ *  trace 跨端共享即赖此）；盘符步 = `normalizeCwd` 直调（单源——#585；先例 = `ledger-db.mjs:23`）、
+ *  分隔符折叠自持；CLI 写的键 VSC 须逐字认得）。 */
 export function notifyKey(ledger) {
-  return resolve(ledger).replace(/\\/g, "/").replace(/^([a-z]):/, (_, d) => `${d.toUpperCase()}:`)
+  return normalizeCwd(resolve(ledger).replace(/\\/g, "/"))
 }
 
 /** 去重档读（缺失 / 坏 JSON → 空态——N1 降级不崩）。 */

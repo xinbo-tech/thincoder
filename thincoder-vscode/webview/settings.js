@@ -39,11 +39,13 @@ export function initSettings({ onClose, getModels }) {
   // Request detected shells once (extension caches the detection — CLI /shell parity)
   window._vscode.postMessage({ type: "getShellCandidates" })
 
-  // Single-click delete — the re-fillable class only (provider rows — SETTINGS.md §2.10 ruling exception).
+  // Single-click delete — the re-fillable class only (no live call sites: every delete entry
+  // goes through _confirmSecretDelete below — SETTINGS.md §2.10).
   window._confirmDelete = function(btn, action) { action() }
   // Unrecoverable class (credential originals vanish with the entry — keys / tokens / headers /
-  // MCP server rows; the rows show no original (only the edit form's fields do), so it can only
-  // be reconfigured or re-issued): one explicit confirmation (F-W17 — class criterion = SETTINGS.md §2.10).
+  // provider rows / MCP server rows; the rows show no original (only the edit form's fields do),
+  // so it can only be reconfigured or re-issued): one explicit confirmation
+  // (F-W17 — class criterion = SETTINGS.md §2.10).
   // btn is kept for call-site symmetry with _confirmDelete; the popover is centered, not anchored.
   window._confirmSecretDelete = function(btn, action) {
     showConfirmPopover({
@@ -57,18 +59,63 @@ export function initSettings({ onClose, getModels }) {
   return { openSettings, closeSettings, renderMcpList, updateMcpTools, updateMcpTestResult, updateProviderStatus, updateIndexStatus, updateAgentSettings, notifyAgentSettingsRefreshed, updateWebsearchSettings, updateTestProviderResult, updateShellCandidates, updateProxySettings, updateProxyTestResult, showSettingsError }
 }
 
-/** Error banner at the top of the settings panel (extension-side failures). */
-export function showSettingsError(text) {
+/** 失败面段名词表（`providerError.scope` 闭集 → 既有段名词键；`panel` ∕ 闭集外 ⇒ 零段标——沿桌面判）。 */
+const SCOPE_WORD = Object.freeze({
+  providers: "settings.providersSection",
+  mcp: "settings.mcpSection",
+  agent: "settings.agentSection",
+  consultAdvisor: "settings.consultAdvisorSection",
+  tools: "settings.toolsSection",
+  env: "settings.envSection",
+})
+
+/** 失败码词表（码 → 词键）：表内出词、表外原样直传（桌面 `REASON_WORD` 同式；v1 = 恰可达集
+ *  ——现仅写冲突一类可判码，表随新码产者一行扩张）。 */
+const REASON_WORD = Object.freeze({
+  "mtime-conflict": "settings.reason.mtimeConflict",
+})
+
+/** 码 → 词：表内出词；表外（含站内原生错误串）原样直传；缺 ∕ 空 ⇒ `null`（零节点）。 */
+function reasonWord(reason) {
+  if (reason === null || reason === undefined || reason === "") return null
+  const key = Object.hasOwn(REASON_WORD, reason) ? REASON_WORD[reason] : null
+  return key === null ? String(reason) : t(key)
+}
+
+/** 失败面单槽（#640）：消息面瞬态状态（非面板字段状态——不触 §1 单一状态源原则）。最后一条胜；
+ *  面板关时到达 ⇒ 落槽待显（关面板不丢）；`closeSettings()` ⇒ 清槽（关 = 销账）。 */
+let _lastFailure = null
+
+/** 失败面渲染：单实例 banner（段标 + 文本两子节点，携 `data-scope`）；面板关 ∕ 空 reason ⇒ 零节点。 */
+function renderSettingsError() {
+  document.getElementById("settings-error-banner")?.remove()
+  const text = reasonWord(_lastFailure?.reason)
   const panel = document.getElementById("settings-panel")
   const body = document.getElementById("settings-body")
-  if (!panel || !body || panel.style.display === "none") return
-  document.getElementById("settings-error-banner")?.remove()
+  if (text === null || !panel || !body || panel.style.display === "none") return
   const el = document.createElement("div")
   el.id = "settings-error-banner"
   el.className = "settings-error-banner"
-  el.textContent = text
+  el.setAttribute("data-scope", _lastFailure.scope ?? "")
+  if (Object.hasOwn(SCOPE_WORD, _lastFailure.scope)) {
+    const scopeEl = document.createElement("span")
+    scopeEl.className = "settings-error-scope"
+    scopeEl.textContent = t(SCOPE_WORD[_lastFailure.scope])
+    el.appendChild(scopeEl)
+  }
+  const textEl = document.createElement("span")
+  textEl.className = "settings-error-text"
+  textEl.textContent = text
+  el.appendChild(textEl)
   body.prepend(el)
-  setTimeout(() => el.remove(), 6000)
+}
+
+/** Extension-side failure banner at the top of the settings panel（#640 载荷 v2 = `{scope, reason}`）：
+ *  段标（闭集出词）+ 文本（词化码 ∕ 原样串）两子节点；面板开时驻留（无 6s 自散——替换 ∕ 关面板止）；
+ *  面板关时到达 ⇒ 落槽，`buildSettings()` 尾补渲（关面板不丢）。 */
+export function showSettingsError(scope, reason) {
+  _lastFailure = { scope, reason }
+  renderSettingsError()
 }
 
 function openSettings() {
@@ -118,6 +165,9 @@ function closeSettings() {
   panel.style.display = "none"
   panel.setAttribute("aria-hidden", "true")
   closeConfirmPopover() // 取消路径 #4：关面板同清确认弹框 + 遮罩（零发值）
+  // #640 失败面销账：关 = 清槽（关后重开不复现——与「关面板不丢」互补）
+  _lastFailure = null
+  document.getElementById("settings-error-banner")?.remove()
   // inputEl.focus() — caller should handle this via the returned closeSettings
 }
 
@@ -135,4 +185,6 @@ function buildSettings() {
   bindEnvControls()
   // MCP form/list, index build, MCP status request
   bindToolsControls()
+  // #640：失败面补渲（关面板时落槽的一条在开面板建面后补显）
+  renderSettingsError()
 }

@@ -1,8 +1,10 @@
 /**
- * ops.mjs — operational tools: file_ops (move/copy/rename), process (list),
+ * ops.mjs — operational tools: file_ops (move/copy/rename), process (list/kill),
  * get_current_time, wait_for (condition wait). Each exists so the model reaches
  * for a dedicated tool instead of shelling out to `bash` for the same operation
  * (parity with thinworker).
+ * #9：process 收编 `kill`（靶 = pid ∥ 后台 bash 任务 id——欠面收正：原须绕 bash taskkill）；
+ * wait_for 条件族 +`bash id:N done`。list ∥ 既有条件面零变。
  */
 import { DESC, resolveInCwd, truncate } from "./shared.mjs"
 // 单一写路径点（编辑器编辑径注入缝——CORE-UNIFICATION §2.13.5）：路径操作也经它落盘
@@ -51,11 +53,21 @@ export const processTool = {
   parameters: {
     type: "object",
     properties: {
-      name: { type: "string", description: "Optional name substring filter (case-insensitive)" },
+      action: { type: "string", enum: ["list", "kill"], description: "list (default) — show running processes; kill — terminate a process tree (target: pid) or a background bash task (target: id)" },
+      name: { type: "string", description: "Optional name substring filter for list (case-insensitive)" },
+      pid: { type: "number", description: "kill target: process id — the whole tree is terminated (taskkill /T /F on win32; POSIX group kill)" },
+      id: { type: "number", description: "kill target: background bash task id (bash#N from the bash async ack)" },
     },
   },
-  readonly: true,
-  async execute({ name }, ctx) {
+  // #9：动作分级——list 保持只读分类（dispatch-gates `isSubagentReadonlyAction`：planMode 放行/
+  // 免审批）；kill 是破坏性动作（审批门）。`parallel` 保既有调度形（list 恒可批并行）。
+  readonly: false,
+  parallel: true,
+  async execute(args = {}, ctx = {}) {
+    const action = args?.action ?? "list"
+    if (action === "kill") return await executeKill(args, ctx)
+    if (action !== "list") return `Error: action must be list | kill (got "${action}")`
+    const { name } = args
     const filter = typeof name === "string" && name.trim() ? name.trim().toLowerCase() : null
     let rows
     try {
@@ -67,6 +79,24 @@ export const processTool = {
     if (rows.length === 0) return filter ? `No running processes match "${name}"` : "(no processes)"
     return truncate(rows.map((r) => `${r.name}\tPID ${r.pid}${r.mem ? `\t${r.mem}` : ""}`).join("\n"))
   },
+}
+
+/** #9 kill 执行体（靶 = pid ∥ 后台任务 id 二选一；两靶皆树杀）。动态 import（W8 契约②：
+ *  agent-tools 链静态达 node:sqlite——端壳静态闭包须保持零命中）。 */
+async function executeKill({ pid, id }, ctx) {
+  const hasPid = pid !== undefined && pid !== null && String(pid).trim() !== ""
+  const hasId = id !== undefined && id !== null && String(id).trim() !== ""
+  if (hasPid === hasId) {
+    return "Error: kill requires exactly one target — pid (process id) or id (background bash task id)"
+  }
+  const { killBgTask, killBgPid } = await import("../agent-tools/bash-async.mjs")
+  if (hasPid) {
+    if (!killBgPid(pid)) return `Error: kill pid: "${String(pid)}" is not a valid process id`
+    return `killed process tree ${Number(pid)} (taskkill /T /F on win32; POSIX group kill)`
+  }
+  const res = killBgTask(ctx?.agent, id)
+  if (res.status === "error") return `Error: ${res.error}`
+  return `killed background bash#${res.id} — its process tree was terminated; no digest will arrive${res.logPath ? ` — log so far: ${res.logPath}` : ""}`
 }
 
 function listWindows() {
@@ -139,10 +169,11 @@ export function parseWaitForCondition(condition) {
   if (c === "advisor settled") return { kind: "advisor", arg: null }
   if (c === "consult done") return { kind: "consult", arg: null }
   if ((m = c.match(/^subagent id:\s*(\d+) done$/))) return { kind: "subagent", arg: String(Number(m[1])) }
+  if ((m = c.match(/^bash id:\s*(\d+) done$/))) return { kind: "bash", arg: String(Number(m[1])) }
   if ((m = c.match(/^file exists:\s*(.+)$/))) return { kind: "file", arg: m[1].trim() }
   if ((m = c.match(/^port open:\s*(\d+)$/))) return { kind: "port", arg: Number(m[1]) }
   throw new Error(
-    `wait_for: unsupported condition "${c}" — supported: "advisor settled", "subagent id:N done", "consult done", "file exists:path", "port open:N"`,
+    `wait_for: unsupported condition "${c}" — supported: "advisor settled", "subagent id:N done", "consult done", "bash id:N done", "file exists:path", "port open:N"`,
   )
 }
 
@@ -234,6 +265,12 @@ export async function evaluateWaitForCondition(condition, ctx) {
       return advisorSettled(agent)
     case "subagent":
       return asyncEntryDone(agent, parsed.arg)
+    case "bash": {
+      // #9：后台 bash 任务判据（池内 done ∥ 出池即 done——`bash-async.mjs` 单点）。
+      // 动态 import（W8 契约②：agent-tools 链静态达 node:sqlite——端壳静态闭包零命中）。
+      const { bgTaskDone } = await import("../agent-tools/bash-async.mjs")
+      return bgTaskDone(agent, parsed.arg)
+    }
     case "consult":
       return consultAllDone(agent)
     case "file":
@@ -256,7 +293,7 @@ export const waitForTool = {
   parameters: {
     type: "object",
     properties: {
-      condition: { type: "string", description: 'Condition expression — "advisor settled", "subagent id:N done", "consult done", "file exists:path", "port open:N"' },
+      condition: { type: "string", description: 'Condition expression — "advisor settled", "subagent id:N done", "consult done", "bash id:N done", "file exists:path", "port open:N"' },
       interval_ms: { type: "integer", description: "Poll interval in ms (default 1000, floor 100)" },
       timeout_ms: { type: "integer", description: "Overall timeout in ms (default 30000, cap 600000; config.json agent.waitForTimeoutMs overrides the default)" },
     },

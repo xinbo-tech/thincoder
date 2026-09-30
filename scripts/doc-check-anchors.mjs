@@ -48,6 +48,8 @@ const SPAN_RE = /`([^`\n]+)`/g;
 const IDENT_RE = /[A-Za-z_$][A-Za-z0-9_$]*/g;
 const TOKEN_RE = /[A-Za-z0-9_.\-]+\/[A-Za-z0-9_.\-\/]*|[A-Za-z0-9_\-]+/g;
 const PTR_RE = /file:(\d+)|file:(\d+)\s*[-~]\s*(\d+)|:(\d+)/g;
+/** 指针形（v1 整形抽取复原 · I14 · #677）：`源 =` ∕ `删除记录 =` 后随 token 整体区间——指针本体不入自由豁免面（注记不得以悬空指针为据）。 */
+const PTR_FORM_RE = /(?:源|删除记录)\s*=\s*/g;
 const SECTION_AFTER_RE = /#(?:[A-Za-z0-9_-]+|L\d+)/;
 const EXT_SEG_RE = /[A-Za-z0-9_-]+\./g;
 const DOT_DIR_RE = /(?:^|\/)\.[^\/]/;
@@ -95,7 +97,7 @@ function tokenIn(list, t) {
 }
 
 /** 行内反引号码段（跨段单段内代码串连读）；路径形态码段（含 `/`）不产符号锚（§4.2.1 V5-C——窄宽同法）。 */
-function codeSpanIdentifiers(line) {
+export function codeSpanIdentifiers(line) {
   const out = [];
   for (const m of line.matchAll(SPAN_RE)) {
     const span = m[1];
@@ -110,13 +112,15 @@ function codeSpanIdentifiers(line) {
   return out;
 }
 
-/** 行内指针坐标区间（自由豁免射程）。 */
-function pointerRanges(line) {
+/** 行内指针坐标区间（自由豁免射程）。v1 整形抽取复原（I14）：`源 =` ∕ `删除记录 =` 后随 token 覆盖（指针本体受 V5-A 判定）；片段命中同取整体区间（勿退化为 `:NN` 零长）。 */
+export function pointerRanges(line) {
   const out = [];
-  for (const m of line.matchAll(PTR_RE)) {
-    const body = m[0].split(/:\s*/)[0] ?? m[0];
-    out.push([m.index, m.index + body.length]);
+  for (const m of line.matchAll(PTR_FORM_RE)) {
+    const rest = line.slice(m.index + m[0].length);
+    const t = /^\s*(\S+)/.exec(rest);
+    if (t) out.push([m.index, m.index + m[0].length + t[0].length]);
   }
+  for (const m of line.matchAll(PTR_RE)) out.push([m.index, m.index + m[0].length]);
   return out;
 }
 
@@ -155,7 +159,7 @@ export function extractAnchors(line) {
 }
 
 /** 路径解析序（§4.2.4.2）：仓根 → 锚域根 → 本档目录 → 锚域前缀剥离。 */
-function resolveFile(env, docDir, token) {
+export function resolveFile(env, docDir, token) {
   const norm = token.replace(/\\/g, "/"), segs = norm.split("/");
   const stripped = segs[0] === basename(env.anchorRoot) ? segs.slice(1).join("/") : null;
   const cands = [resolve(env.root, norm), resolve(env.anchorRoot, norm), resolve(docDir, norm)];
@@ -164,7 +168,7 @@ function resolveFile(env, docDir, token) {
 }
 
 /** 路径状态（挂靠 §4.2.4.2 ①-⑥）：可解析 → null；唯一 basename（域内 / 仓根）→ null；否则悬空。 */
-function pathState(env, docDir, a) {
+export function pathState(env, docDir, a) {
   if (resolveFile(env, docDir, a.token)) return null;
   const n = env.basenames.get(basename(a.token)) ?? 0;
   if (n === 1) return null;
@@ -210,7 +214,7 @@ function buildCaseIndex(base, files) {
 }
 
 /** 域内唯一 basename 索引。 */
-function buildBasenames(root) {
+export function buildBasenames(root) {
   const m = new Map();
   for (const f of walk(root)) m.set(basename(f), (m.get(basename(f)) ?? 0) + 1);
   return m;

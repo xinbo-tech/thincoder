@@ -34,6 +34,11 @@ export const PROVIDER_PRESETS = {
   // TokenHub = Tencent MaaS 聚合网关（另一主机；`hy3` 在本规格表有行）。`thinking` / `reasoningEffort` /
   // `maxTokens` 一律**不设 = 不发**（两新渠道的 thinking 载荷与 max_tokens 行为未测 —— MODEL-SPECS §9.6 D-13）。
   tokenhub: { baseURL: "https://tokenhub.tencentmaas.com/v1", model: "hy3", desc: "Tencent TokenHub (腾讯混元网关)" },
+  // Huawei Cloud MaaS（ModelArts Studio）——OpenAI 兼容 `…/openai/v1`（区域端点变体走自定义渠道
+  // 自助路径——PROVIDER.md §6.21）。默认模型 `glm-5.3` = 官方口径（MaaS 最佳实践 ∕ 快速体验页的
+  // QS 示例模型 · 官方 API 样例 `model` 逐字）· **待验（无 key——未实拉 /models；接入后按实拉取值复核）**；
+  // `thinking` / `reasoningEffort` / `maxTokens` 不设 = 不发（载荷面未测——D-13）。
+  huawei: { baseURL: "https://api.modelarts-maas.com/openai/v1", model: "glm-5.3", desc: "Huawei Cloud ModelArts Studio (华为云 MaaS)" },
   siliconflow: { baseURL: "https://api.siliconflow.cn/v1", model: "deepseek-ai/DeepSeek-V3", maxTokens: 32_000, desc: "SiliconFlow (硅基流动)" },
   openrouter: { baseURL: "https://openrouter.ai/api/v1", model: "anthropic/claude-sonnet-4", maxTokens: 32_000, desc: "OpenRouter" },
   groq:     { baseURL: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile", maxTokens: 32_000, desc: "Groq" },

@@ -69,7 +69,7 @@
 
 > 读数锚 = 需求档 `docs/cli/requirements/TUI.md` §3 **N12**（启动等待不随存量劣化）；机制单源 = `docs/core/design/SESSION.md` §6.17（会话 GC）· `docs/core/design/TRACES.md` §6.4（轨迹清理）。
 
-- **序**：wrapped 父 spawn 子（`thincoder-cli/src/tui/wrapped-spawn.mjs:27`——父段先写 loading 行）→ 子进程 import → `resumeSlot`（`thincoder-cli/bin/thincoder.mjs:322`）→ 装配（同档 `:323`）
+- **序**：wrapped 父 spawn 子（`thincoder-cli/src/tui/wrapped-spawn.mjs:27`——父段先写 loading 行）→ 子进程 import → `resumeSlot`（`thincoder-cli/bin/thincoder.mjs:322`）（as-of 2026-09-29）→ 装配（同档 `:323`）
   → `writeStartupSequence`（alt buffer 接管；`thincoder-cli/src/tui/input-face.mjs:39`）+ `writeLoadingLine`（同档 `:45`）→ 首帧 render（全屏重绘自然覆盖 loading 行）。
 - **纪律**：启动关键路径零同步 fs 阻塞（判据 ≤50ms）——会话 GC 与轨迹清理均为**异步非阻塞**面，且不在纯信息命令启动时执行（触发闸见 `docs/core/design/SESSION.md` §6.17 / `docs/core/design/TRACES.md` §6.4）。
 - **读数（2026-09-21 基线）**：启动到 TTY 门 9.6–16s（sessions 20,227 项 + 轨迹 15,610 个）⇒ 目标 ≤2s；空 HOME 对照 0.495s。
@@ -411,15 +411,15 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 
 | 入口 | 落点 | 存活闸 |
 |---|---|---|
-| 回合尾 / 会话退出清扫 `freezeAllSubTasks` | `agent-turn.mjs:244` · `thincoder-cli/src/tui/suspension-drive.mjs:296` → `subagent-freeze.mjs:142-154` | **无**——对 `state.subTasks` 全部条目无条件冻结 〔① 注〕 |
-| `⟦ev⟧done` / `⟦ev⟧stopped` 事件分支 | `subagent-blocks.mjs:235-257` | **无**——按 key 直接冻结 |
-| tool 结果面 `finishSubTaskKey` + `freezeDoneSubTasks` | `tool-events.mjs:219-221` | **有**（async ack 守卫 `isAsyncSpawnResult`——`running` / `queued`） |
+| 回合尾 / 会话退出清扫 `freezeAllSubTasks` | `agent-turn.mjs:310` · `thincoder-cli/src/tui/suspension-drive.mjs:174` → `subagent-freeze.mjs:212-225` | **无**——对 `state.subTasks` 全部条目无条件冻结 〔① 注〕 |
+| `⟦ev⟧done` / `⟦ev⟧stopped` 事件分支 | `subagent-blocks.mjs:257-279` | **无**——按 key 直接冻结 |
+| tool 结果面 `finishSubTaskKey` + `freezeDoneSubTasks` | `tool-events.mjs:224-228` | **有**（async ack 守卫 `isAsyncSpawnResult`——`running` / `queued`） |
 
 ⇒ 修法落在**墓碑生效点单一收口**，不逐触发源打补丁（D-ZB1）。
 
-**① 行可达条件（评审 #11 收正——落点不改）**：`agent-turn.mjs:244` 站点仅在 `!willSuspend && !inSessionTurn` 时执行
+**① 行可达条件（评审 #11 收正——落点不改）**：`agent-turn.mjs:310` 站点仅在 `!willSuspend && !inSessionTurn` 时执行
 （`:232` / `:240`；`willSuspend = poolLive(agent)`）⇒ 执行时两池必空 ⇒ P0-b 对该站点恒 no-op（存活条目**不可达**）；
-**P0-b 真实生效面 = `thincoder-cli/src/tui/suspension-drive.mjs:296`**（挂起会话退出：中止路径经 discard 只清已死条目 ⇒ 池内存活者在场）。
+**P0-b 真实生效面 = `thincoder-cli/src/tui/suspension-drive.mjs:174`**（挂起会话退出：中止路径经 discard 只清已死条目 ⇒ 池内存活者在场）。
 
 **6.8.3.2 设计与逐字契约**
 
@@ -447,14 +447,14 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 **helper 归址**：`livePoolHas` / `removeFrozenSubTaskLine` 定义于 `subagent-freeze.mjs`（与墓碑写点 `freezeSubTaskLines` 同址——
 墓碑条件 / 墓碑写入 / 载体行增删单一权威）。import 方向 blocks → freeze 既存（`subagent-blocks.mjs:31`）⇒ **无环**。
 
-**P0-b 清扫存活跳过**（`subagent-freeze.mjs:142-154` `freezeAllSubTasks`）：遍历时对**存活** key **跳过**（不置 done、
+**P0-b 清扫存活跳过**（`subagent-freeze.mjs:212-225` `freezeAllSubTasks`）：遍历时对**存活** key **跳过**（不置 done、
 不 `freezeSubTaskLines`、不出 `subTasks`）——**存活判据（逐字）**：**条目在池 ∧ `entry.done !== true` ∧ `entry.cancelled !== true`（running/queued）**；
-**已终态（含 done-in-pool——`entry.done` 置位 = `async-settle.mjs:194`，settle 后未收集条目仍留池：`async-settle.mjs:259` / `thincoder-core/agent-tools/async-discard.mjs:13-14`）照旧冻结清场**；
+**已终态（含 done-in-pool——`entry.done` 置位 = `async-settle.mjs:203`，settle 后未收集条目仍留池：`async-settle.mjs:259` / `thincoder-core/agent-tools/async-discard.mjs:13-14`）照旧冻结清场**；
 池外条目照旧冻结（中断 ghost 语义不变）。
 
 **P1 禁静默留痕**（批次档 §1.3 判据 3）：① 复活分支留痕——**走日志面** `logEvent("ev:subagent-block-revived")`；
 **每次复活记一条（无去重状态）**——墓碑删后可再次命中复活，逐次留痕；若要「同 key 去重」须新增载体 = 第二份存活账，
-否决（D-ZB3 同源）。② `refreshQueuedTokens` 的 `catch {}`（`subagent-scheduler.mjs:340-342`）保持不破坏池状态，
+否决（D-ZB3 同源）。② `refreshQueuedTokens` 的 `catch {}`（`subagent-scheduler.mjs:357-359`）保持不破坏池状态，
 补 `logEvent("ev:queued-paint-failed")` 留痕。
 **UI 决策（已定——不悬空）**：本批**不新增**会话流提示行与面板形态——用户的可见证据 = **块回归本身**
 （活动流恢复跟随）；留痕只走日志面（机判可查）。
@@ -467,7 +467,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 |---|---|---|
 | 池读取 | `state._agent?._asyncSubagents` / `_asyncAdvisors`（Map） | 存活单一事实源；键 `String(id)`；**存活判据（逐字）**：**条目在池 ∧ `entry.done !== true` ∧ `entry.cancelled !== true`（running/queued）**（done-in-pool 留池 = `async-settle.mjs:259` / `thincoder-core/agent-tools/async-discard.mjs:13-14`） |
 | helper 归址 | `livePoolHas(state, key)` / `removeFrozenSubTaskLine(state, key)` 定义于 `subagent-freeze.mjs`，导出供 `subagent-blocks.mjs` import | import 方向 blocks → freeze 既存（`subagent-blocks.mjs:31`）——**无环** |
-| key 匹配 | **写死映射**：最后 `#` 切分 → `role` + `id`；命中 = `pool.has(String(id))` ∧ `entry.role === role`；非池键（`compress#N` 等）= false | 池键 = `String(id)`（`subagent-run.mjs:187` / `advisor-async.mjs:410`）⇒ `pool.has(key)` 恒 miss；与 `_frozenSubKeys` / `subTasks` 同命名空间；存活判据（逐字）同 §6.8.3.2 P0-a |
+| key 匹配 | **写死映射**：最后 `#` 切分 → `role` + `id`；命中 = `pool.has(String(id))` ∧ `entry.role === role`；非池键（`compress#N` 等）= false | 池键 = `String(id)`（`subagent-run.mjs:202` / `advisor-async.mjs:441`）⇒ `pool.has(key)` 恒 miss；与 `_frozenSubKeys` / `subTasks` 同命名空间；存活判据（逐字）同 §6.8.3.2 P0-a |
 | 挂载 | `index.mjs` 已挂 `state._agent`（§6.8.1 降级路径条） | 既有先例：`thincoder-cli/src/tui/subagent-panel.mjs:123` 读 `_syncChildAborts` |
 | 降级 | `state._agent` 缺省 ⇒ 无存活信息 | 维持丢弃（零回归） |
 
@@ -522,9 +522,9 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 
 **6.8.3.8 边界（本批不做）**
 
-- **不改发射面**：`subagent-run.mjs:147-149` 两 token 锚点、`subagent-scheduler.mjs:331-344` queued 发射——E1 已证无缺陷。
+- **不改发射面**：`subagent-run.mjs:163-165` 两 token 锚点、`subagent-scheduler.mjs:331-344` queued 发射——E1 已证无缺陷。
 - **不新增按族分支**：墓碑是共享单点，修复天然覆盖 subagent / escalate / advisor / consult / compress 五族，但**不新增任何按族代码**（非「扩族」）；**复活可达面** = 键可映射到 §6.8.3.3 两池条目者（subagent / escalate / advisor）；非池键（`compress#N` 等）判 false ⇒ 维持既有丢弃语义（零回归——非本批修面）。
-- **不改**：`isAsyncSpawnResult` 判定面（`tool-display.mjs:119-126`）· `⟦ev⟧cancelled` 出队语义（`subagent-blocks.mjs:180-192`）· awaitingDigest 驻留与 `_freezeAt` 锚点（§6.8.1 已结算待消化驻留零动——用户裁定）· `computePanelBlocks` 现算面。
+- **不改**：`isAsyncSpawnResult` 判定面（`tool-display.mjs:119-126`）· `⟦ev⟧cancelled` 出队语义（`subagent-blocks.mjs:189-199`）· awaitingDigest 驻留与 `_freezeAt` 锚点（§6.8.1 已结算待消化驻留零动——用户裁定）· `computePanelBlocks` 现算面。
 - **不引入**块落盘恢复；不改提示词 / 需求档 / `_archive/**`。
 - **VSC 对位不在本批**（VSC `panel-callbacks.mjs` / `suspension.mjs` 为独立实现）——登记为观察项（批次档 §2.7 同源）。
 
@@ -579,7 +579,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 
 ### 7.3 模式 banner（ENG / PLAN / AUTO / ADVISOR）——工具驱动变更的显示契约（#45）
 
-- **位置**：`renderStatus` 行首 banner 段（`thincoder-cli/src/tui/render-frame.mjs:226-230`）——`AUTO│` / `PLAN│` / `ADVISOR│` / `ENG│` 四段，其中 PLAN / ENG 即**模式指示器**。
+- **位置**：`renderStatus` 行首 banner 段（`thincoder-cli/src/tui/render-frame.mjs:233-237`）——`AUTO│` / `PLAN│` / `ADVISOR│` / `ENG│` 四段，其中 PLAN / ENG 即**模式指示器**。
 - **契约（每帧 recompute——本批登记的结构性属性）**：banner 从**活对象**直读（`agent.planMode` / `agent.config.agent.engineering` / `agent.autoApprove` / `agent.config.advisor.guard`），**零缓存副本、零推送链**。
 - **后果（本批核实）**：agent 经工具翻转模式（`eng` / `plan` 工具）⇒ banner 在帧内反映——回合中 1s ticker + 行 diff 重绘（`thincoder-cli/src/tui/agent-turn.mjs` 回合驱动器）⇒ **CLI 端无需任何联动改动**（台账 #45 的 CLI 半）。
 - **参数面同款（本批补核——设计评审轮 1 发现 8）**：状态栏 turn / token / context 段与模型段同取**活对象 / TUI 状态**
@@ -592,13 +592,12 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 
 - **落点**：`buildStatusLine`（`thincoder-cli/src/tui/render-frame.mjs`）**状态段簇尾**——`ledgerHint` 之后、键位组（` │ ${enterHint}`）之前；与「L1 台账常驻标记」同区（先例 = LEDGER-SURFACE，`:401-406`）。
 - **取值 = 活对象单读**：`agent.title`（写点四处：载入 `applySession` / 新建 `resetSessionState` / 回合尾 `ensureSessionTitle` / `/rename`）。每帧 recompute——零缓存副本、零推送链（§7.3 同纪律）。
-- **形态**：` │ <title>`；段宽 = `sliceByWidth` 截断至 **40 显示列**（超宽补 `…`）；**空值零注入**（`title` 空 ⇒ 零字节——半态逐字节等价，负向锁同 §7.2）。
+- **形态**：` │ <title>`；段宽 = `sliceByWidth` 截断至 **40 显示列**（超宽补 `…`）；**空值回退链**（`title` 空白 ⇒ 显回退值——`firstMessage` ≤40 截断 ∥ `"(empty)"`；#677 I2 已落）。
 - **宽度预算**：标题段入既有 `statusMax` 链（整行 ≤ `cols − 1` 口径不变）；宽度紧张时键位组先让位（标题在键位组之前 ⇒ 标题存活优先）。
 - **可见态**：idle / processing 常态在行；模态提示态（question / permission / picker / wizard / slash 提示）状态行整行让位（既有形态，零改）。
-- **VSC 对位**：顶栏常显（`#session-title`）保持、端侧零改；**列表面**（`/session` / VSC `pushSessions`）两端同字段（`title`）同回退链（`listSlots` 派生——VSC `panel-session.mjs:227-231`）；
-  本段取值 = `agent.title` 活读 · **空值零注入**（非回退链）；空窗差（生成前 / 失败期：VSC 顶栏显回退链值 ∥ 本段零注入）= 已登记端差（**A9 保留 · 三件齐**：① 结构性不对称 = 宿主面——顶栏恒需占位 ∥ 状态行段可零注入；② 证据 = `thincoder-vscode/src/extension/panel-session.mjs:227-231` 回退链；
-  ③ 显式裁定 = 2026-09-21 父侧代裁（vsc-block-title-align 批 · D8 行）——复核（台账 #185）= 2026-09-25 misc-four 批确认）。
-- **可机判**：`renderStatus` 纯函数直驱——`agent.title` 置值 / 清空两次调用，strip-ANSI 文本读「含 ` │ <title>` / 零注入」两段（用例 = `test/session-title-surface.test.mjs`）。
+- **VSC 对位**：顶栏常显（`#session-title`）保持、端侧零改；**列表面**（`/session` / VSC `pushSessions`）两端同字段（`title`）同回退链（`listSlots` 派生——VSC `panel-session.mjs:235-243`）；
+  本段取值 = `agent.title` 活读 · 空值回退链（`sessionTitleFallback`——值同 VSC：`firstMessage` ≤40 截断 ∥ `"(empty)"`）；空窗差（生成前 / 失败期）= **消**（已落——对位 `thincoder-vscode/src/extension/panel-session.mjs:235-243`；#677 I2）。
+- **可机判**：`renderStatus` 纯函数直驱——`agent.title` 置值 / 清空两次调用，strip-ANSI 文本读「含 ` │ <title>` / 空值 ⇒ 含回退值（`"(empty)"` 形）」两段（用例 = 批内件 `docs/batches/2026-09-30-crossline-clearance-cli.test.mjs` T-XL2——单测树重建时回迁）。
 
 ### 7.5 queued 反馈面（F16 · busy-extend 批 2026-09-22 扩面 · 排队期可见 = queue-visible 批 2026-09-24）
 
@@ -631,9 +630,9 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **形态（逐字——单条 / 多条两形）**：标签行单条 = `⏳ 待发送 · 不打断当前执行，自动发送`（`C.warn`）；多条 = `⏳ 待发送 · N 条消息（不打断当前执行，合并发送）`（N ≥ 2）。
   **标签行不声明时机**（面无关——用户回合 / 系统轮两面的精确时机 = 状态栏 `enterHint` 逐字：见下「消费时机」段）；正文 = 逐条直排（`C.dim`——`sanitizeDisplay` + `wrapText(text, cols - 1)`，与正文同口径）：多条带 `i. ` 编号首行 + 续行 2 空格缩进（**编号 = 模型将看到的合并形态预览**——§“合并消费”）；单条不加编号。块前空行（同主输出呼吸行约定）。
 - **体行折叠豁免（`_skipDimFold`——收口轮补述）**：原文行 / 尾标记行携 `_skipDimFold`（`thincoder-cli/src/tui/render-conversation.mjs:380` / `:383`）——连 dim 折叠 pass（`FOLD_LINES` = 8）命中任一带标记行 ⇒ 整块不折（`:398`；零新机制——复用既有豁免，先例 = 思考流 / advisor 收缩尾）；N ≥ 3 时 dim 连跑可过 8 ⇒「永不被折走」由显式豁免保证（N ≤ 2 连跑 ≤ 8，本在阈下）。
-- **宽度口径（收口轮补述）**：折行宽 = `cols - 1`（`wrapText` 作用于逐条原文；多条态 `i. ` 编号前缀**不预先扣除**——`thincoder-cli/src/tui/render-conversation.mjs:375`）；编号首行总显示宽可超 `cols - 1` 至多 3 列（终端软折行——登记：如需扣前缀另轮评估）。
+- **宽度口径（收口轮补述）**：折行宽 = `cols - 1`（`wrapText` 作用于逐条原文）；多条态编号首行**预扣除**——`wrapTextHead(text, width, firstDeduct)`（首行折宽 = `width − firstDeduct`，`firstDeduct` = 编号前缀显示宽；单条态 / 续行照 `wrapText`）；编号首行总显示宽 ≤ `cols − 1`。实位 = `thincoder-cli/src/tui/render-conversation.mjs:387`（#677 I6 已落）。
 - **上限**：每条原文行至多 `QUEUED_ITEM_MAX_LINES`（3）；超限 ⇒ 该条尾标记行 `… [该条共 N 行——发送后完整显示]`（`C.dim`）。**队容量** = `QUEUED_MAX_ITEMS`（8——**常量单源** = `thincoder-core/queued.mjs`（核件；CLI 经转口档 `queued-merge.mjs`（已落 · 实读 **12** · 内容行计）导出，显示面 / 输入门禁同源 import；与合并批上限 `MAX_MERGE_ITEMS`（8）**同值不同名**——同住核件）；块超视口时条数可见性由状态栏段兜底。
-- **缓存键参与**：`convCacheKey`（`thincoder-cli/src/tui/render-conversation.mjs:121-168`）增排队签名（条数 + 各条长度 + 首 8 字——同 `blocksSig` 口径）；漏挂 ⇒ 缓存命中出陈旧帧（块不现 / 不消）。
+- **缓存键参与**：`convCacheKey`（`thincoder-cli/src/tui/render-conversation.mjs:125-176`）增排队签名（条数 + 各条长度 + 首 8 字——同 `blocksSig` 口径）；漏挂 ⇒ 缓存命中出陈旧帧（块不现 / 不消）。
 - **跟随（F4「新提交消息 → 恢复跟随」）**：入槽即 `state.scroll = 0` + `state._followTail = true`（`thincoder-cli/src/tui/turn-face.mjs:32-33` submit 同款两行；两条入槽路径同款——busy 门禁 / 挂起态 Enter）。
 - **合并消费（R15 攒批恢复）**：消费点按同一计划 `planQueuedInput`（纯函数——核单源 `thincoder-core/queued.mjs`；CLI 经转口档 `thincoder-cli/src/tui/queued-merge.mjs`（已落 · 实读 **12** · 内容行计））取数：连续非 `/` 条目攒批**合并为一条消息、一次回合**
   （单批 ≤ `MAX_MERGE_ITEMS`（8）条 ∧ 合并文本 ≤ `MAX_MERGE_CHARS`（2000）字符；超限截批先行、余下下批；单条 > 2000 字符直发；`/cmd` 逐条保序）；形态逐字 = `你排队了 N 条消息：` + `1. …` + `——一次处理`。
@@ -648,16 +647,16 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
   **分流（系统轮不参与步边界）**：digest / 上行唤醒轮域文本 = 整理域，手动档机械门禁（无权限 handler ⇒ 写被拒；`_inAutoTurn && !autoApprove` ⇒ spawn 拒）会把用户指令降格 ⇒ 该两轮不传 pickup 回调（机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8「步边界 pickup」）。
   **与 Ctrl+I 区分（逐字）**：Ctrl+I = 立即中断当前回合（在飞段立断）+ 注入 `[User interrupt: …]` + 续跑；本通道 = 零 abort / 零中断标记 + 步边界以普通 user 消息落历史（下一步生效）。
 - **消费转正（单帧切换 + 合并成形）**：**三时机**（上「消费时机」表——步边界 pickup（`thincoder-cli/src/tui/queued-pickup.mjs`（已落 · 实读 **34**））/ `thincoder-cli/src/tui/agent-turn.mjs:334-353` 回合尾兜底转正 + 队列续发 / `thincoder-cli/src/tui/suspension-drive.mjs:246-257` driver 输入优先）按计划取批
-  ⇒ 派生块随判据同帧消失；同一同步段内推回执 + `❯ You:` + **本批合并文本**落 `state.lines`（`thincoder-cli/src/tui/agent-turn.mjs:84-87`）
+  ⇒ 派生块随判据同帧消失；同一同步段内推回执 + `❯ You:` + **本批合并文本**落 `state.lines`（`thincoder-cli/src/tui/agent-turn.mjs:84-87`）（as-of 2026-09-29）
   ⇒ 渲染帧合并调度（`thincoder-cli/src/tui/render-loop.mjs:38-56`——nextTick + 16ms 节流）只出**一帧**：N 条待发送块 → 回执行 + 一条合并用户消息（零空窗 / 零重复；位置 = 同一流尾）。
-- **边界**：中止残余（`thincoder-cli/src/tui/suspension-drive.mjs:308-311`——按合并计划转 `state.queue`）**不渲染待发送块**（既有提示行明示去向）；吞面四（模态 / 斜杠 / 空 / 队满）零入队 ⇒ 零渲染；F13 豁免（零注意力色对）不变。
+- **边界**：中止残余（`thincoder-cli/src/tui/suspension-drive.mjs:198-201`——按合并计划转 `state.queue`）**不渲染待发送块**（既有提示行明示去向）；吞面四（模态 / 斜杠 / 空 / 队满）零入队 ⇒ 零渲染；F13 豁免（零注意力色对）不变。
 
 **可机判**：`renderStatus` 纯函数直驱——四态各取一条状态字面量：队列非空（N = 2）⇒ strip-ANSI 含 `已排队 2 条消息`；队空 + 非挂起 ⇒ 含 `主会话处理中 — Enter 排队（当前步骤结束后自动发送）`；队空 + 挂起 + `agent._inAutoTurn` 假 ⇒ 含 `会话内回合处理中 — Enter 排队（当前步骤结束后自动发送）`；队空 + 挂起 + `agent._inAutoTurn` 真 ⇒ 含 `会话内回合处理中 — Enter 排队（本轮结束后优先发送）`；
 四态全程零 `\x1b[43m`（F13 豁免）；非 `processing` ⇒ `Enter: send`。
 **排队块面（单条 / 多条两形）**：`renderConversation` / `buildConvLines` 直驱——N = 1 ⇒ 含 `⏳ 待发送 · 不打断当前执行，自动发送` + 原文行；N = 2 ⇒ 含 `1. ` / `2. ` 编号行 ∧ 标签行逐字 = `⏳ 待发送 · 2 条消息（不打断当前执行，合并发送）`；每条超 3 行 ⇒ 含该条尾标记行；队列空 ⇒ 零该串 ∧ 逐字节等价；全程零 `\x1b[43m`。
 **步边界 pickup 面（fix 轮新增）**：`pickupQueuedAtStepBoundary`（`thincoder-cli/src/tui/queued-pickup.mjs`（已落 · 实读 34））直驱——桩 agent + 队列 2 条 ⇒ history 尾恰 +1 条 user 消息（内容 = R15 合并文本）∧ `state.lines` 含 `[sending queued message]` ∧ `❯ You:` ∧ 合并文本 ∧ `pendingInput` 空 ∧ 零 `[User interrupt:]`（非中断锁）；队列空 ⇒ 逐字节等价（零推送）。
 **合并消费面**：`planQueuedInput` / `formatMergedMessages` 纯函数直驱——2 条短消息 ⇒ 单动作（`merged:true`，文本逐字 = 头 `你排队了 2 条消息：` + 编号 + 尾 `——一次处理`）∧ 跨 8 条 ⇒ 截批（首动作 count ≤ 8）∧ 单条 > 2000 字符 ⇒ `merged:false` 直发。
-用例宿主 = 2026-09-25 file-tier-sweep 批按族拆分后三档（`busy-injection.test.mjs`（留守）· `busy-injection-render.test.mjs` · `busy-injection-consume.test.mjs`）——T-F16-6 随渲染族入 `busy-injection-render.test.mjs`；逐例映射见 `docs/batches/2026-09-25-file-tier-sweep.md` §2「四·S4」。
+用例宿主 = 2026-09-25 file-tier-sweep 批按族拆分后三档（`busy-injection.test.mjs`（留守）· `busy-injection-render.test.mjs` · `busy-injection-consume.test.mjs`）——T-F16-6 随渲染族入 `busy-injection-render.test.mjs`；逐例映射见 `docs/batches/2026-09-25-file-tier-sweep.md` §2「四·S4」。 （机检豁免——用例退场登记）
 
 **VSC 对位**：**busy 即排队面**（`running`——挂起会话内与普通回合同判据；队列载体两态（容量 8）：会话在飞入会话队列 `susp.pendingInput` / 无会话入 `_busyQueued`）——
 机制单源 = `WEBVIEW-INPUT.md` §1 C-B2-6；webview 反馈 = 本地气泡（提交入槽即现 / 送达即 user 回声面——形态各端自落，语义同源）；
@@ -721,12 +720,12 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 
 | 面 | CLI | VSC | 桌面 |
 |---|---|---|---|
-| 显示位 | 状态行处理簇 = `elapsed` 之后（`thincoder-cli/src/tui/render-frame.mjs:396` `statusText` 串邻位） | 状态行 `#status-line` = 耗时之后（`thincoder-vscode/webview/status-bar.js:47` 邻位） | 状态行承载段 = `quiet`（序 = `elapsed` 之后——`thincoder-desktop/renderer/views/statusline.mjs:41-43` `STATUS_SEGMENTS`） |
-| 起算锚（回合起刻） | `thincoder-cli/src/tui/agent-turn.mjs:141`（`processingStarted` 邻位——新增 `state.lastOutputAt`） | `thincoder-vscode/webview/input.js:97`（`_turnStart` 邻位——新增 `S._lastOutputAt`） | `thincoder-desktop/renderer/events.mjs` `onActivity` turn 形（`turnStarts` 邻位——新增切片 `lastOutputAt`） |
-| 重置点 ①流式 | `thincoder-cli/src/tui/tool-events.mjs:103` ∕ `:111` 邻位 | `thincoder-vscode/webview/chat-messages.js:54-55`（`token` ∕ `reasoning`） | `ev:token` ∕ `ev:reasoning`（`reduce` 单点） |
-| 重置点 ②工具 | `thincoder-cli/src/tui/tool-events.mjs:129` ∕ `:181` 邻位 | `chat-messages.js:61-70`（`toolCall` ∕ `toolOutput` ∕ `toolResult`） | `ev:tool-call` ∕ `ev:tool-output` ∕ `ev:tool-result`（同单点） |
-| 重置点 ③子代理 | `thincoder-cli/src/tui/subagent-blocks.mjs:97-112` 邻位 | `chat-messages.js:227` ∕ `:230` ∕ `:238`（`subagent` ∕ `subagentApproval` ∕ `toolPanel`（`sub:` 前缀）） | `ev:subagent` ∕ `ev:subchunk`（同单点） |
-| 跳秒（1s 步进） | 既有 1s 拍（`agent-turn.mjs:172-174`——零改） | `thincoder-vscode/webview/panels.js:49-52` `_panelTimer` 收正为 **1000**（现盘 2000） | `thincoder-desktop/renderer/heartbeat.mjs:15` `HEARTBEAT_MS` 收正为 **1000**（现盘 2000） |
+| 显示位 | 状态行处理簇 = `elapsed` 之后（`thincoder-cli/src/tui/render-frame.mjs:409` `statusText` 定义行） | 状态行 `#status-line` = 耗时之后（`thincoder-vscode/webview/status-bar.js:47` 邻位） | 状态行承载段 = `quiet`（序 = `elapsed` 之后——`thincoder-desktop/renderer/views/statusline.mjs:48-50` `STATUS_SEGMENTS`） |
+| 起算锚（回合起刻） | `thincoder-cli/src/tui/agent-turn.mjs:144`（`state.lastOutputAt` 写点；字段声明 = `thincoder-cli/src/tui/tui-state.mjs:43`） | `thincoder-vscode/webview/input.js:97`（`_turnStart` 邻位——新增 `S._lastOutputAt`） | `thincoder-desktop/renderer/events.mjs` `onActivity` turn 形（`turnStarts` 邻位——新增切片 `lastOutputAt`） |
+| 重置点 ①流式 | `thincoder-cli/src/tui/tool-events.mjs:104` ∕ `:113` | `thincoder-vscode/webview/chat-messages.js:59-60`（`token` ∕ `reasoning`） | `ev:token` ∕ `ev:reasoning`（`reduce` 单点） |
+| 重置点 ②工具 | `thincoder-cli/src/tui/tool-events.mjs:132` ∕ `:185` ∕ `:333`（输出流写点） | `chat-messages.js:66-92`（`toolCall` ∕ `toolOutput` ∕ `toolResult`） | `ev:tool-call` ∕ `ev:tool-output` ∕ `ev:tool-result`（同单点） |
+| 重置点 ③子代理 | `thincoder-cli/src/tui/subagent-blocks.mjs:114`（`ensureSubTaskKey` 单点）· 块状态 `:175` ∕ `:197` · 压缩面板填充 `:417` ∕ `:428` ∕ `:448` ∕ `:461` | `chat-messages.js:227` ∕ `:230` ∕ `:238`（`subagent` ∕ `subagentApproval` ∕ `toolPanel`（`sub:` 前缀）） | `ev:subagent` ∕ `ev:subchunk`（同单点） |
+| 跳秒（1s 步进） | 既有 1s 拍（`agent-turn.mjs:172-174`——零改） | `thincoder-vscode/webview/panels.js:49-52`（as-of 2026-09-29） `_panelTimer` 收正为 **1000**（现盘 2000） | `thincoder-desktop/renderer/heartbeat.mjs:15` `HEARTBEAT_MS` 收正为 **1000**（现盘 2000） |
 | 终态消失 | `state.processing` 落 ⇒ 零注入 | `_turnState` 离 `running`（回合尾——`thincoder-vscode/webview/streaming.js:148` 邻位同清） | 位标 `running` 摘（回合尾三径）⇒ 段零节点 |
 | 阈值常量 | `QUIET_MS = 10000`（`render-frame.mjs`） | `QUIET_MS = 10000`（`status-bar.js`） | `QUIET_MS = 10000`（`statusline-segments.mjs`——沿 `USAGE_WARN` 先例） |
 
@@ -768,6 +767,12 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | VSC webview 对位 | webview 渲染 / 消息协议 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异如实登记——登记 ≠ 默认保留；**登记面 = 记录已裁的保留项**，✗ 非未决差项兜底；端差默认 = 消，保留须结构性不对称 + 证据 + 显式裁定（A9）；各端独立实现只述实现形态，✗ 不构成差异保留依据；**已裁保留 · A9 三件齐**：① 结构性不对称 = 渲染宿主不同（VSC webview DOM + 宿主↔面板消息协议 ∥ CLI 裸 ANSI 终端行内渲染；消息协议仅单侧存在）；② 证据 = 两实现树（`thincoder-vscode/webview/**` + `WEBVIEW-PROTOCOL.md` ∥ `thincoder-cli/src/tui/**`）；③ 显式裁定 = 2026-09-14「逻辑 / 渲染分家」（同判据 · `CORE-UNIFICATION.md` §2.5 端特有桶）+ 2026-09-25 misc-four 批确认（台账 #185）） |
 
 ## 变更记录
+- 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§7.4 标题段收正（空值回退链已落——#677 I2；可机判行同变）；§7.5 宽度口径收正（编号前缀预扣除已落——#677 I6；指位 `:375` → `:387`）。**零新语义**。
+
+- 2026-09-30（**跨线清零轮 · 设计档收正（修正轮 1 补落变更记录）· eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2 · 台账 #677）：§7.4 空窗差行 = 消（本段补同款回退链，对位 `thincoder-vscode/src/extension/panel-session.mjs:235-243`——实施清单 I2）；§7.5 宽度口径行 = 消（编号前缀预扣除——实施清单 I6）。**零机制改**。
+
+- 2026-09-29（**doc-backfill 批 · 波 1 · eng-designer**——承 `docs/batches/2026-09-29-doc-backfill.md` §2 · 台账 #598）：§7.7 一致性表 CLI 列坐标按届盘实读重锚（
+  显示位 `:396` → `:409` · 起算锚 `:141` → `:144` + 字段声明 `tui-state.mjs:43` · 重置点① `:104 ∕ :113` · 重置点② `:132 ∕ :185 ∕ :333` · 重置点③ `:114` + `:175 ∕ :197` + `:417 ∕ :428 ∕ :448 ∕ :461`）。**零新语义**（坐标重锚）。
 
 - 2026-09-29（**stall-indicator 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-stall-indicator.md` §1 · 台账 #568）：新增 **§7.7**（停滞轻显形——在飞回合静默读数：语义单源 + 三端口径一致性表）；VSC ∕ 桌面实现面 = `docs/vsc/design/WEBVIEW.md` §4.7 ∕ `docs/desktop/design/UI.md` §1 本批注。**零机制改 ∕ 零新定时器**（本批零实施——CLI 侧零码触面）。
 

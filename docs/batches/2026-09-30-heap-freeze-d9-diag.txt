@@ -1,0 +1,16 @@
+# 2026-09-30 · D9 恢复序真机诊断实录（批内件 scratch；诊断件 = `hf-d9-diag{,2,3}.mjs`，本档 = 输出摘录）
+
+沙箱：临时 HOME + 独立 `--user-data-dir`；Electron 44.4.5 · Windows。读数通道 = `app.evaluate`（主进程侧）。
+
+| 格 | 序 | 观测 | 结论 |
+|---|---|---|---|
+| A1 | 空闲渲染面 · **同 tick** `forcefullyCrashRenderer(); reload()`（产品原序） | 12s 窗内 `crashed=true ∥ osPid=0` 全程 | **未恢复**——同 tick reload 被吞 |
+| A2 | 已崩态 · 再发同 tick 对 | 3s 内 `crashed=false ∥ osPid=19256` | 恢复（reload 落定在崩溃结算后） |
+| B | 忙环渲染面 · `render-process-gone` ⇒ `reload()` | 3s 内 `crashed=false ∥ osPid=10136` | **恢复**——事件驱动序可靠 |
+| diag2 | 空闲 · crash → 9s → reload | 3s 内 `crashed=false ∥ osPid=19760` | 恢复 |
+
+附读：`webContents.getProcessId()` = Chromium 内 id（实测恒 `4`——非 OS pid）；`getOSProcessId()` = 真 pid。
+playwright `page` 对象**不跨崩**（`Target crashed` 持续）；`app.evaluate`（主进程侧）跨崩可用。
+
+**裁定（实施期核认腿 → 实现修正）**：`electron.d.ts:18227`「Calling `reload()` immediately after」承诺与实测相抵 ⇒
+装配层 `reload` 修为：已崩态直 reload ∥ 未崩态 `once("render-process-gone", reload)`（实测 ≤3s 换代恢复）。

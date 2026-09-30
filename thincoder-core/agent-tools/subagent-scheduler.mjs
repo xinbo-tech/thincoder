@@ -396,13 +396,15 @@ export function maybeRefillAsync(parent) {
  * next = max(counter ?? 0, poolMax) + 1——取号后 counter 同步（首取号初始化）。id 作用
  * 域 = 进程内（不做槽持久化——reload 后池清块消失，新进程从 1 无冲突——设计范围边界）。
  * spawn（subagent-spawn.mjs async 分支）、escalate（escalate-async.mjs）、async-advisor
- * 池（advisor-async.mjs——§6.10 跨池共号）共用；executeAsyncSpawn 直读 counter（分配与
+ * 池（advisor-async.mjs——§6.10 跨池共号）、**后台 bash 任务池**（bash-async.mjs——#9：
+ * `_bgTasks` 同入扫描域——VSC 形计数器不随 run 存活，缺此扫描会与在途 bg 条目撞号）共用；
+ * executeAsyncSpawn 直读 counter（分配与
  * 消费同步——无 await 间隙）。CLI 两池键均为字符串（set(String(id))——解析分支防御保留）。
  * @returns {number} 全池唯一的下一 id（单调——进程内）
  */
 export function nextSubagentId(parent) {
   let poolMax = 0
-  for (const pool of [carrierField(parent, "_asyncSubagents"), carrierField(parent, "_asyncAdvisors")]) {
+  for (const pool of [carrierField(parent, "_asyncSubagents"), carrierField(parent, "_asyncAdvisors"), carrierField(parent, "_bgTasks")]) {
     if (!pool || pool.size === 0) continue
     for (const k of pool.keys()) {
       const n = typeof k === "number" ? k : Number.parseInt(k, 10)

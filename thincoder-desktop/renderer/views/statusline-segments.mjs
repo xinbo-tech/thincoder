@@ -212,13 +212,16 @@ export function titleSegment(sessions, key) {
   return { code: "title", parts: [{ text: word }] }
 }
 
-/** 段 14 · 输入提示三态（表行 14 · 「对齐第二批」项 2 · **「回合中插入」批收正**：**源 = 本会话队快照镜面**
- *  —— `pending[活动会话键]`；权威 = 宿主，渲染面 = 镜面；右列队列族不再承载用户排队消息）：
- *  队 ≥ 1 ⇒ 条数句 · 忙 ∧ 队空 ⇒ Enter 排队句 · 静 ⇒ `Enter: send`（词键
- *  `status.enter.send` —— 对位 CLI enterHint 静息值；静息态恒在场 = 打开态可亮面）。 */
-export function enterSegment(pending, key, codes) {
+/** 段 14 · 输入提示（表行 14 · 「对齐第二批」项 2 · **「回合中插入」批收正**：**源 = 本会话队快照镜面**
+ *  —— `pending[活动会话键]`；权威 = 宿主，渲染面 = 镜面；右列队列族不再承载用户排队消息。
+ *  **重建保真 ∕ 留端清算族批（#581）收正 —— 判据四路**（单源 = `docs/desktop/design/UI.md` 表行 14）：
+ *  队 ≥ 1 ⇒ 条数句 · （忙 ∨ 挂起窗在场）∧ 队空 ⇒ Enter 排队句 · 静（非忙 ∧ 无窗 ∧ 队空）⇒ `Enter: send`
+ *  （词键 `status.enter.send` —— 对位 CLI enterHint 静息值；静息态恒在场 = 打开态可亮面）。
+ *  窗在场判据 = `suspend?.active` 严格真（与 `views/chrome.mjs` `suspActiveOf` 同式——窗内 Enter = 入队；
+ *  原该角落出 send 句 = 显示说谎残留）。 */
+export function enterSegment(pending, key, codes, suspend) {
   const queue = key !== null && pending !== null && typeof pending === "object" && Array.isArray(pending[key]) ? pending[key] : []
   if (queue.length > 0) return { code: "enter", parts: [{ text: t("status.queue.n", { n: queue.length }) }] }
-  if (codes.includes("running")) return { code: "enter", parts: [{ text: t("status.queue.enter") }] }
+  if (codes.includes("running") || suspend?.active === true) return { code: "enter", parts: [{ text: t("status.queue.enter") }] }
   return { code: "enter", parts: [{ text: t("status.enter.send") }] }
 }

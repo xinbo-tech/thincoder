@@ -130,12 +130,12 @@
 
 | # | file:line | 现形态（末句——as-of 设计轮） | 处置 |
 |---|---|---|---|
-| P1 | `thincoder-core/prompts/discipline-normal.md:126` | `Max 5 rounds total.` | **已落**——§3.1 逐字句（父侧落笔 · 2026-09-18） |
+| P1 | `thincoder-core/prompts/discipline-normal.md:126`（as-of 2026-09-29） | `Max 5 rounds total.` | **已落**——§3.1 逐字句（父侧落笔 · 2026-09-18） |
 | P2 | `thincoder-core/prompts/persona-engineering.md:88` | 同句（轮次衰减条） | 同上（已落） |
 | P3 | `docs/core/design/prompts/discipline-normal.md:125` | `总共最多 5 轮。` | 同上（已落 · 中文逐字句） |
 | P4 | `docs/core/design/prompts/persona-engineering.md:86` | 同句 | 同上（已落） |
 | P5 | `thincoder-core/prompts/persona-engineering.md:50` · `docs/core/design/prompts/persona-engineering.md:48` | §5 修正轮上限 5 轮 / §3「cap 豁免」/ >3 轮停止判据 | **同族 · 未落**——§3.5 行 1 / 行 2（待用户裁）；本批只登记 |
-| P6 | `thincoder-core/prompts/persona-eng-coder.md:26` · `docs/core/design/prompts/persona-eng-coder.md:26` | `self-fix (max 5 correction rounds)` / 「自修（最多 5 轮修正）」 | **同族 · 未落**——§3.5 行 3（非本批射程） |
+| P6 | `thincoder-core/prompts/persona-eng-coder.md:22` · `docs/core/design/prompts/persona-eng-coder.md:22` | `self-fix (max 5 correction rounds)` / 「自修（最多 5 轮修正）」 | **同族 · 未落**——§3.5 行 3（非本批射程） |
 
 **② 需求面（只登记、不改文——需求档笔在父侧；截至 2026-09-18：三行未落）**
 

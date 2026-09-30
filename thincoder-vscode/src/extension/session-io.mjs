@@ -20,7 +20,7 @@
  *      绝不判死、绝不抢"可能活着"属主的号）；
  *   ② `resumeSlot` 包装器 → **async**（核同名件同形）；本档新增 `cachedSlot(cwd)`，见下。
  */
-import { existsSync, unlinkSync } from "node:fs"
+import { existsSync, statSync, unlinkSync } from "node:fs"
 // 本档体内使用（其余名面 = 纯转口，见下 `export … from`）。
 import { loadSlotFile } from "@thincoder/core/session.mjs"
 import { newSlotData } from "@thincoder/core/session-slot-write.mjs"
@@ -144,10 +144,13 @@ export async function newSlot(cwd) {
   let slot = 1
   while (m.slots[slot] || existsSync(slotPath(cwd, slot)) || liveClaimed(slot)) slot++
   const data = newSlotData(cwd)
-  writeSessionFile(slotPath(cwd, slot), data)
+  const p = slotPath(cwd, slot)
+  writeSessionFile(p, data)
   m.slotSessions ??= {}
   m.slotSessions[slot] = mySessionId
-  m.slots[slot] = slotDigest(data)
+  // 摘要 `ts` 地板（#677 I12——对位核 `session-slot-verify.mjs:99` / `session-slot-write.mjs:112` 同族）：写后 mtime（读失败 ⇒ `0` = 不可得）。
+  const wroteMtime = (() => { try { return statSync(p).mtimeMs } catch { return 0 } })()
+  m.slots[slot] = slotDigest(data, wroteMtime)
   m.active = slot
   const deletions = deadSlots.length
     ? {

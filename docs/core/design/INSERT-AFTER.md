@@ -50,8 +50,8 @@ insert_after 定位基于行号 / 正则；文件若在 `read` 之后被别的�
 
 | 面 | 落点 | 实核 |
 |---|---|---|
-| 工具对象 / 执行 | `thincoder-core/tools/file.mjs:280`（`insertAfterTool`） | 导出在位 |
-| dirty 护栏判定 | `thincoder-core/tools/file.mjs:305`（`lastWriteOf(abs)`） | 调用点在受影响区判定内 |
+| 工具对象 / 执行 | `thincoder-core/tools/file.mjs:284`（`insertAfterTool`） | 导出在位 |
+| dirty 护栏判定 | `thincoder-core/tools/file.mjs:309`（`lastWriteOf(abs)`） | 调用点在受影响区判定内 |
 | 记账面（dirty / lastWrite 容器） | `thincoder-core/tools/write-path.mjs:33`（`markDirty`）· `:35`（`isDirty`）· `:41`（`recordWrite`） | 由 `file.mjs:43` re-export |
 | 拒绝文案 | `thincoder-core/tools/write-path.mjs:74`（`dirtyRefusalMessage`） | 导出在位 |
 | 描述面（模型可见） | `thincoder-core/tool-docs/insert_after.md` | 在位（`DESC()` 加载） |

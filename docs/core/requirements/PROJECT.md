@@ -25,9 +25,9 @@ ThinCoder 产品族 = **三个独立产品**（终端 CLI + VS Code 扩展 + 桌
 
 | # | 契约 | 内容 |
 |---|---|---|
-| **C1** | 配置共享 | 各端读写 `~/.thincoder/config.json`（`providers[]` + `activeProvider`）；`apiKey` 缺省回退环境变量；旧 VS Code settings 一次性迁移后停用 |
+| **C1** | 配置共享 | 各端读写 `~/.thincoder/config.json`（`providers[]` + 顶层 `defaultModel`——`provider:model` 复合，新会话起点）；`activeProvider` = 派生读面（迁移期旧字段，迁移即删——非存储契约）；敏感值位可携 `${env:VAR}` **显式引用**（消费侧解析——未设 ∕ 空串即抛错，**无隐式回退**）；旧 VS Code settings 一次性迁移后停用 |
 | **C2** | 会话共享 | `~/.thincoder/sessions/`（完整 sha1(cwd) + 槽位）——各端互读，可无缝接续同一会话 |
-| **C3** | Provider 预设权威 | preset 表以核 `thincoder-core/config-presets.mjs` 的 `PROVIDER_PRESETS` 为唯一权威（当前全集 **21** 个，含 `kimi-code` / `glm-code` / `mimo` / `mimoplan` / `claude`（format: anthropic）/ `gemini`（format: google））——各端不再各自硬编码（避免漂移）。〔2026-09-20 渠道接入批同步：旧述权威路径 `thincoder-cli/src/config.mjs` 已不存在（#129 融合后表体住核）；计数 20→21 与 `thincoder-core/config-presets.mjs` 同变〕 |
+| **C3** | Provider 预设权威 | preset 表以核 `thincoder-core/config-presets.mjs` 的 `PROVIDER_PRESETS` 为唯一权威（当前全集 **22** 个，含 `kimi-code` / `glm-code` / `mimo` / `mimoplan` / `claude`（format: anthropic）/ `gemini`（format: google）/ `huawei`）——各端不再各自硬编码（避免漂移）。〔2026-09-20 渠道接入批同步：旧述权威路径 `thincoder-cli/src/config.mjs` 已不存在（#129 融合后表体住核）；计数 20→21 与 `thincoder-core/config-presets.mjs` 同变〕〔2026-09-29 provider-config-family 批同步：计数 21→22（+ `huawei`——华为云 MaaS；批档 `docs/batches/2026-09-29-provider-config-family.md`）〕 |
 | **C4** | custom 三协议 | 手动输入 name / baseURL / model，并选 API format：`openai`（默认）/ `anthropic` / `google`，写入 `provider.format`；三协议均有 transport |
 | **C5** | 模型选择两级结构 | provider → 模型 两级 + add / remove / key 管理项（对齐 CLI `openModelPicker → openModelListForProvider`）；各端按各自界面形态实现（VSC 端形态见 `docs/vsc/requirements/PROJECT.md`） |
 | **C6** | 添加 / 删除 provider 流程 | 对齐 CLI `addProviderFlow` / `removeProviderFlow` / `setKeyFlow`：添加 = 选 preset（过滤已添加）→ 自动填 baseURL / model → 输入 API key（custom 走 C4 手动流程）；删除 = 列出非 active 的 provider；key 管理 = 单独入口 |
@@ -160,6 +160,8 @@ v1 不需要团队记忆、先把 agent 主干做薄做扎实；存储 / 记忆�
 | CLI 侧同名档（`thincoder-cli/docs/requirements/PROJECT.md`） | CLI 产品定性正文（更完整） | **已并入（2026-09-15 CLI 尾部真批——按其档头自注对账合并）**——产品级定性面入 §5；(d) 类入 §6.1；VSC 专有面本就不在该档（CLI 档无 VSC 面） |
 
 ## 变更记录
+
+- 2026-09-30（**doc-sweep 批 · C1 收正** · 主 agent——需求档笔权）：§3 C1 行按现盘收正——① `providers[]` + **顶层 `defaultModel`**（`provider:model` 复合，新会话起点；`thincoder-core/config.mjs:34`）替旧述「`activeProvider`」（= 派生读面 ∕ 迁移期旧字段，迁移即删——`config-io.mjs:143/:167-173` · `config-migrate.mjs:33-44`）；② 「`apiKey` 缺省回退环境变量」⇒ 敏感值位 **`${env:VAR}` 显式引用**（消费侧解析——未设 ∕ 空串即抛错，无隐式回退；设计 CONFIG §6.2 ∕ §6.3 · D-CF5）。依据 = `docs/batches/2026-09-30-doc-sweep.md` §2.4-1（转出项 1）。
 
 - 2026-09-25（**桌面端立项** · 需求面实施轮 · 主 agent——需求档笔权）：产品族由两产品扩为三产品——§1 产品族句 · §2 依赖行补桌面端宿主 · §3 契约主体改「各端」（C1 / C2 / C8）· §4 改「三端关系」表（原 CLI↔VSC 双端图）；§5.1 品类接入面枚举补「桌面端」；§5.3 边界补「桌面端不含文件视图与编辑器（暂缓）」；§5.6 撤「桌面 GUI」不做项（用户裁定立项）。新档 = `docs/desktop/requirements/PROJECT.md`（第四部分首档）。
 

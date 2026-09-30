@@ -16,6 +16,8 @@ import { isCodePath, isDocPath, loadProjectDeclaration } from "../conventions.mj
 // 全部经核内执行面单点（默认径 = execFileSync 等价——CLI 语义零行为变；端侧 injected ⇒
 // 可中断执行器）；编辑器诊断段经 `configureVerifyDiagnostics` 注入（缺省不注入）。
 import { runCommand } from "../tools/exec-run.mjs"
+// #15 描述外置：描述文本单点 = tool-docs/verify.md（DESC 单解析面，缺档抛错语义不变）
+import { DESC } from "../tools/shared.mjs"
 import { existsSync } from "node:fs"
 import { resolve } from "node:path"
 
@@ -74,22 +76,21 @@ function appendBlockGuidance(lines, codeFiles) {
  */
 export const verifyTool = {
   name: "verify",
-  description:
-    "Generic pre-completion verification gate — language/framework/project agnostic. verify does NOT run any test/verification command for you and does NOT require a test per change. You DECLARE your verification status via the verification argument: { status: 'passed' | 'failed' | 'skipped', command?, summary? }. 'passed' → allowed; 'failed' → blocked (cannot claim done); 'skipped' → allowed but requires a summary reason. Whether/how to verify is described in natural language in the project's AGENTS.md and is decided + executed by you — verify only mechanically gates on your declaration. Also reports changed files (git diff), an advisory node --check hint on changed .js/.mjs (not gating), the task list, and a self-review checklist. Call this BEFORE declaring a coding task complete — do not say 'done' until verify passes.",
+  description: DESC("verify"),
   parameters: {
     type: "object",
     properties: {
       verification: {
         type: "object",
-        description: "The model's declaration of whether it already ran the project's verification and its outcome. verify does not execute the command — it is self-reported evidence.",
+        description: "Your declaration of whether you already ran the project's verification and its outcome — self-reported evidence (verify does not execute the command).",
         properties: {
           status: { type: "string", enum: ["passed", "failed", "skipped"], description: "The verification outcome you declare: 'passed' → allowed; 'failed' → blocked; 'skipped' → allowed but requires a summary reason." },
-          command: { type: "string", description: "Optional: the verification command you ran (self-reported — verify does not execute it)." },
-          summary: { type: "string", description: "Optional: summary/result of the verification. Required when status='skipped' — a concrete reason (e.g. \"project has no automated tests — verified by manual review\")." },
+          command: { type: "string", description: "Optional: the verification command you ran (self-reported)." },
+          summary: { type: "string", description: "Optional: the result. Required when status='skipped' — a concrete reason (e.g. \"project has no automated tests — verified by manual review\")." },
         },
         required: ["status"],
       },
-      workdir: { type: "string", description: "Optional: run verify in this subdirectory (relative to cwd or absolute) — for monorepos" },
+      workdir: { type: "string", description: "Optional: run verify in this subdirectory (relative to cwd or absolute) — monorepos" },
     },
   },
   readonly: true,

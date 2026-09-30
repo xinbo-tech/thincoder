@@ -83,6 +83,7 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
 ### 6.4 连接装配与热插拔
 
 - **启动装配**：顶层 agent 装配时批量连接 `config.mcp.servers`——读取项目级 `.mcp.json`（`mcpServers` 为**对象**形态时并入——`config.json` 同名 server 优先；数组形态非规范 → 跳过并记录）；并发连接（`Promise.allSettled`）；**失败不阻塞**（死 server 只记 warning，`agent._mcpWarnings` 携带，下一条 user 消息注入提醒）；成功展开的工具并入 `agent.tools`。
+- **项目文件源补裁定（2026-09-30 · 台账 #691——CLI ∕ 桌面同判）**：**发现面** = 项目根单层（`join(cwd, ".mcp.json")`，无向上多级搜索；文件缺 ⇒ 零读零效果）；**信任面** = 装配期零交互确认（项目文件与 `config.mcp.servers` 同信任域，不设首次信任 ∕ 端别门）；读 ∕ 解析失败非致命——记录不阻断装配。（VSC 端第三面未并 `.mcp.json`——端差在册：台账 #701，归 VSC 对齐轮。）
 - **幂等连接（registry 键控）**：registry（`_sessions`，serverName → session，模块级存活）已存在**同 name 活连接且 fingerprint 一致** → 直接复用已展开工具、不重建；fingerprint = config 关键字段（command / args / url / wsUrl / env / headers / token）的 JSON 归一；**config 变更**（fingerprint 不一致）→ 主动关旧连接（不触发 onDead 重连）+ 丢弃 session + 重建。
 - **每轮重建与热插拔**：每轮 runAgent 重新装配 tools 数组——registry 状态变化天然在下一轮生效；已连 server 的展开工具**不因重建而丢失**（幂等复用）。
 - **生命周期收口**：`closeAllMcp(agent)` 退出时关闭全部 session；`removeMcpTools(agent, serverName)` 把工具移出并关该 session。
@@ -91,7 +92,7 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
 
 - **按传输的 config 形态**：`stdio: { name, command, args?, env? }` · `HTTP: { name, url, token?, headers? }` · `WS: { name, wsUrl, token?, headers? }`；name 是唯一键控名（不可改）；`headers` / `env` 为键值对象；`token` 为**一等可选字段**（HTTP/WS）；项目级 `.mcp.json` 亦可提供 server，但 `/mcp` 管理入口操作的仍是 `config.json` 的 `mcp.servers`。
 - **token 合成规则**：client 自动合成 `headers.Authorization = "Bearer " + token`——**仅当 headers 未显式含 Authorization 时**（显式 headers 优先）；合成发生在传给 transport 前，**不写回 config**；WS 经 **subprotocol**（`bearer.<token>`）传递（Node 内置 WebSocket 无法自定义请求头；不注入 URL query——防日志泄露凭证）；
-**fingerprint 计入 `token` 字段**（改 token → 指纹变更 → 重连）；token 明文存 `config.json`（不引入 keychain）。
+**fingerprint 计入 `token` 字段**（改 token → 指纹变更 → 重连）；token 明文存 `config.json`（不引入 keychain）——`token` ∕ `headers` ∕ `env` 值亦可存 `${env:VAR}` 引用（落盘不落明文；解析 = MCP 传输建连侧，单源 = `doc:CONFIG.md:§6.3`；指纹 ∕ 漂移比对仍按存储原文——env 变更不伪装为配置漂移；重连按当时环境重解析）。
 - **headers / env 键值对输入**：统一为**逗号分隔**（`key=value, key2=value2`，value 可含空格）——取代旧空格 `split`（后者把 `Authorization=Bearer xxx` 截成 `"Bearer"`，token 丢失）。字段输入语义：空输入 = 不变；`-` = 删除可选字段；`key=`（空 value）= 删除该项；required 字段（name / url / wsUrl / command）拒绝 `-`。
 
 ### 6.6 传输层与活性（isAlive 三态）
@@ -212,3 +213,5 @@ MCP 工具、下轮重试）。**子代理不含 MCP**：装配仅 depth-0 展�
 - 2026-09-15（**VSC 轮并入 · 批 7**）：§6.10 新增 **VS Code Settings 面板 MCP 页**（无 `/mcp` 命令面端差 / config-mcp 读写 / depth-0 装配 / 命连接 / 探活镜像 / 生命周期 / agent 代配差异）· §7 补 **D-MC16** · §8.2 补 1 行不并项登记；来源 = `thincoder-vscode/docs/design/MCP.md`（**旧档一字未改**）；坐标按现状实核（`panel-mcp.mjs:8,28` · `config-mcp.mjs:12,19,37,63`）。
 - 2026-09-15（**S2 W7 落地**）：VSC 自持镜像已迁核删除（`thincoder-vscode/src/mcp.mjs` + `src/mcp/**` 6 档——删除记录 = 批次档 `2026-09-15-vsc-core-wiring.md` §5）；§1 归属表两列收正（两侧同核单源）· §2.2 #144–#147 行加现状注 · §6.2 网关废弃行 / §6.10（坐标 + name 键 session 面 + 端壳增量 + 面板展开器载荷契约）/ §7 D-MC2 / §8.2 同批收正（只收正形态，机制条文零改）。
 - 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。
+- 2026-09-29（**provider-config-family 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-provider-config-family.md` · 台账 #57）：§6.5 配置机制补值引用（`${env:VAR}`）注——解析单源 = `doc:CONFIG.md:§6.3`；指纹语义零改（按存储原文比对）。**零新语义**。
+- 2026-09-30（**桌面 MCP 装配补 `.mcp.json` 项目文件源批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-mcp-json-source.md` · 台账 #691）：§6.4 补项目文件源两裁定（**发现面 = 项目根单层** ∕ **信任面 = 零交互确认**——独立句）+ 失败面注（读 ∕ 解析非致命）；合并语义 ∕ 优先级句零改（原句即基准）。**零新语义**（裁定落档）。

@@ -9,6 +9,8 @@
  * `projectInfo`（三读数 + 超阈标 + 相位 + 失败串）——**值面归接线层**（`renderer/mount-settings.mjs` 只经
  * `patchSettings` 落值），本档只持槽位 + 四条纯动作；`configured` 为**三态读数**（`null` = 未知）。
  * **B10 W2 增三键**（`settings.providers` 切片 —— S1 ∕ S2 面）：`edit`（行内钥编辑态 = 渠名；写者 = 出口，`loadProviders` ∕ 关面复位）· `probe`（自定形「拉取模型」三态果 `{ state, models, reason }`）· `draft`（表单暂存值回填快照 —— 探果写切片致重挂时救回未落盘输入）。
+ * **桌面残余三轮 · 波 C 增一键**（#615② —— 改钥失败径草稿种子）：`keyDraft`（`{ name, value }` ∕ `null` —— 设 ∕ 改钥失败 ⇒ 键入值落此槽，重挂后行内输入按名回填；
+ *  成功 ∕ 取消 ∕ 开面 ∕ 关面四处复位；写者 = `renderer/mount-settings-segments-providers.mjs`）。
  * R3a 增四槽（D17 状态行读数面 —— `renderer/views/statusline.mjs` 读面）：`turns` / `turnStarts` / `tokens` / `timers`（后两槽 = `ev:usage` 载荷扩）。
  * **timer-wake 阶段 2 增一槽** `timerNotice`（**到期触发切片** —— 写者 = 归约面 `ev:timer`；读面 = 流内触发行 `renderer/views/chat-chrome.mjs`；
  *  与 `timers` 读数槽两回事（后者 = 在途计数投影）；非落盘件 ⇒ 首屏页读整置即失 —— `renderer/page-read.mjs`）。
@@ -29,7 +31,7 @@
  *   ② `set(next)` 逐键 `Object.is` 比较（`next` = 补丁（局部键）或整态（全键）—— 同一路径：
  *      `store.set(appendBlock(store.get(), block))`），**至少一键变更才通知**；回执 = `(state, changedKeys)`；
  *   ③ 通知期内的再 `set` **入队** —— 当前轮通知跑完再发（不递归、不丢、合并后一次性通知）；
- *   ④ 工艺常量（`MAX_RENDER_BLOCKS = 200` / 跟滚 24px / 药丸 420ms 窗 / 标签宽）归**视图批** —— 数据面只收参数
+ *   ④ 工艺常量（`MAX_RENDER_BLOCKS = 150` / 跟滚 24px / 药丸 420ms 窗 / 标签宽）归**视图批** —— 数据面只收参数
  *      （`limit` / `{ page }`），不内联常量（批档 §2.6 D-4 ·
  *      `docs/desktop/design/RENDERER.md` §2 / §3）；
  *   ⑤ 监听器异常面：逐个捕获（记 `console.error`）+ `draining` 由 `finally` 复位 —— 单个监听器抛错
@@ -37,8 +39,8 @@
  */
 
 /** 初态：`locale` 由引导面置位；`project` / `sessions` / `pool` 槽位在、消费面随后续批。
- *  `tabBadges` / `sessionMeta` / `poolCollapsed` = **槽位注册**（消费面已在册 —— `views/chrome.mjs` 会话头读
- *  `sessionMeta`、会话控制条目位标 ∕ 状态行告警位读 `tabBadges`、池面折叠读 `poolCollapsed`）⇒ 注册后零行为变化；
+ *  `tabBadges` / `sessionMeta` / `poolCollapsed` = **槽位注册**（消费面已在册 —— 输入区候选面读
+ *  `sessionMeta`（`renderer/composer-sync.mjs`）、会话控制条目位标 ∕ 状态行告警位读 `tabBadges`、池面折叠读 `poolCollapsed`）⇒ 注册后零行为变化；
  *  三切片与 `pool` 族（待审批 / 队列两族）皆 = **供给面写入**（值面未落 ⇒ 零节点 —— 禁假造）。
  *  `usage` 为**槽位注册**（写者 = `ev:usage` 归约 · 按会话 `key` 写）；消费面 = 状态栏读数节点
  *  （`docs/desktop/design/UI.md` §1）—— 消费未落 ⇒ 注册后零行为变化。
@@ -52,12 +54,12 @@
  *  同源（活动会话在飞块数——范归约面写；`pool` 切片不再载 `blocks`——摘工具行）。`goal` = **目标面切片**（R5 · B10：
  *  按会话键存 `{ status, objective, criteria }`（写者 = 归约面 `ev:goal`——宿主桥按核 `agent.goal` 单源投影；
  *  读面 = 目标卡 `renderer/views/goal.mjs` ∥ 状态行 🎯 非段位元素）；非载体 / 缺键 ⇒ 该会话零节点 —— 禁假造）。`ledger` = **账本警示切片**
- *  （账本可靠批 · 桌面微轮：写者 = `renderer/mount-sessions.mjs` `refreshRail` 唯一写路径；读面 = 会话控制下拉首行注记）。
+ *  （账本可靠批 · 桌面微轮：写者 = `renderer/session-wire.mjs` `refreshRail` 唯一写路径；读面 = 会话控制下拉首行注记）。
  *  `pending` = **排队消息切片**（「对齐第二批」项 2 · **「回合中插入」批收正**）：`{ [会话键]: string[] }`
  *  —— A9 收正形：元素 = 文本串（宿主出站 `items` 恰形；`ts` 留宿主内部载体）；
  *  **宿主单源快照的镜面**（写者 = `renderer/events.mjs` `ev:queue` 归约 ∥ `renderer/page-read.mjs` `applyPage`
- *  首屏重建 —— 原输入区三纯动作退场）；读面 = 流内待发送气泡组（输入区上方）/ 状态行段 14（本会话队）。
- *  同笔 `pool.queue` = **席位保留 · 零写者**（用户排队消息改住流内 —— 右列「队列」族不再承载；族空 ⇒ 零节点恒不在场）。
+ *  首屏重建 —— 原输入区三纯动作退场）；读面 = 输入区上方待发送带 / 状态行段 14（本会话队）。
+ *  同笔 `pool.queue` = **席位保留 · 零写者**（用户排队消息改住输入区上方待发送带（`pending` 镜面）—— 右列「队列」族不再承载；族空 ⇒ 零节点恒不在场）。
  *  `attachDegraded` = **附件降级码切片**（「回合中插入」批）：按会话键存降级码（`non-vision` / `partial`）——
  *  写者两处 = `ev:queue` 消费回执（`delivered.degraded` 浮出）∥ 输入区直发回执；读面 = 输入区提示行
  *  （`renderer/mount-composer.mjs` 挂件锚 `data-composer-notices` 内 —— 经 `degradedCode` 过闸，表外码 ⇒ 零节点）。
@@ -100,7 +102,7 @@ export function initialState() {
       configured: null,
       defaultModel: null,
       wizard: { step: 1, dismissed: false, notice: null },
-      providers: { state: "none", presets: [], providers: [], edit: null, probe: null, draft: null },
+      providers: { state: "none", presets: [], providers: [], edit: null, probe: null, draft: null, keyDraft: null },
       verify: null,
       model: { state: "none", provider: null, current: null, models: [] },
       agent: { state: "none", fields: [] },

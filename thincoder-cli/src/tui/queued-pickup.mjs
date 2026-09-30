@@ -14,9 +14,9 @@ import { planQueuedInput } from "./queued-merge.mjs"
 /**
  * 步边界取批（核循环头回调——空队列 no-op，headless / 直连面零开销）。
  * 取数 = 计划首动作（`planQueuedInput`——2 条短消息 ⇒ 合并批一次消费）；`/cmd` 首动作 =
- * 防御面（斜杠 busy 禁发 ⇒ 队内不应出现——`TUI-INPUT-BOX.md` §4.1 条件 3）⇒ 不消费，
- * 留给既有消费点（回合尾 queue / driver）。呈现 = 回执行 + `❯ You:` + 本批文本（与
- * `agent-turn.mjs` 回合起点同形——下一步 LLM 请求即含该消息）。
+ * 不可达支（斜杠 busy 禁发——`key-handler-busy.mjs:24` ∕ `key-handler-edit.mjs:59` 双门禁；
+ * `TUI-INPUT-BOX.md` §4.1 条件 3）⇒ 不消费，留给既有消费点（回合尾 queue / driver）。呈现 =
+ * 回执行 + `❯ You:` + 本批文本（与 `agent-turn.mjs` 回合起点同形——下一步 LLM 请求即含该消息）。
  * @param {object} ctx TUI 上下文（agent / state / pushLine / pushLabel / render）
  */
 export function pickupQueuedAtStepBoundary(ctx) {

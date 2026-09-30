@@ -1,0 +1,98 @@
+{
+  "capturedAt": "2026-09-29T14:48:13.194Z",
+  "tools": [
+    {
+      "name": "memory",
+      "schemaChars": 3660,
+      "descChars": 2194,
+      "descSha": "aae24200969f9f1e",
+      "paramsSha": "29a4de6685b3d51b",
+      "description": "Manage long-term memory in ONE tool — the action parameter picks the operation:\n- search — find knowledge saved in previous sessions (query, optional layer/limit); result rows start with a [layer] tag and carry the entry id (id prefix = the layer)\n- put — save a piece of knowledge for future sessions (type: rule = coding standards, knowledge = project facts, decision = architecture decisions, pattern = debugging/workflow patterns; title/content/tags; layer defaults to personal)\n- list — inventory what memory holds (optional layer/type/keyword filters, limit default 50); one row per entry: [layer] id [type] title (date); a truncated list notes the full count\n- delete — SINGLE: {id, layer} removes the entry shown in put/search/list output — layer is optional: when passed it is validated against the id prefix (a mismatch is refused — guards against deleting the wrong entry); when omitted the id prefix routes the delete, so any id search/list returned is directly deletable. BATCH (no id): {layer, type and/or keyword} removes every matching entry in that layer — layer and at least one of type/keyword are required, plus confirm:true (without confirm it returns the count plus a preview); layer-wide wipes without filters are refused on every layer\n- clear — {layer: \"personal\", confirm: true} wipes ALL personal memory entries. clear is personal-only: a missing layer or a project/team layer is refused (use delete batch filters on shared layers)\nLayer is the memory tier: personal (private), project (shared via this repo's .thincoder/memory/), team (CLI only, git-synced). The [layer] tag on search/list result rows, the row's id prefix, and the layer parameter are the same concept — pass a result row's [layer] as layer, or omit it on a single delete to auto-route by the id prefix.\nDeleting project/team (CLI) entries removes the local markdown file and its index row — team deletion is local only and a later team sync may resurrect the file while the remote still has it.\nSave bugs, conventions, and preferences here — they persist across sessions.\nSession message history (what was said in this or past sessions) is NOT in memory — search session messages with read_history."
+    },
+    {
+      "name": "code_search",
+      "schemaChars": 677,
+      "descChars": 437,
+      "descSha": "2ceaf3dd61037d4d",
+      "paramsSha": "90d5ac225f4fbeba",
+      "description": "Search the project's source code for relevant code. Use this to find functions, classes, or code patterns across the codebase. Supports natural language queries and code snippets. Returns matching code chunks with file paths and line numbers. Prefer doc_search for the intended design (design docs, conventions); code_search for the implementation as written. For what was said in a session (conversation/chat history), use read_history."
+    },
+    {
+      "name": "doc_search",
+      "schemaChars": 733,
+      "descChars": 510,
+      "descSha": "b60127763898fe82",
+      "paramsSha": "5730ed5a25736a5b",
+      "description": "Search the project's documentation (README, design docs, guides, markdown files) for relevant information. Use this to find design decisions, coding conventions, architecture docs, or project rules. Prefer this over code_search when you need to understand the project's intended design rather than existing implementation. Returns matching doc chunks: path, heading, line range, relevance score, content excerpt. For what was said in sessions (conversation/chat history — decisions, rulings), use read_history."
+    },
+    {
+      "name": "repo_outline",
+      "schemaChars": 529,
+      "descChars": 343,
+      "descSha": "0bec2ecddbbeed8e",
+      "paramsSha": "9287c29e35ff5812",
+      "description": "Show the project's file dependency outline: which files import/export from which, and what symbols they export. Use when you need to understand the project structure, find where a function is defined, or see what files depend on a module. Pass a path to focus on a single file's relationships. Find code by keyword or snippet with code_search."
+    },
+    {
+      "name": "settings",
+      "schemaChars": 2074,
+      "descChars": 1558,
+      "descSha": "2e00ce911db9a37e",
+      "paramsSha": "0d64b5d1417f894c",
+      "description": "Adjust ThinCoder runtime configuration — persisted to config.json AND hot-applied to the live agent config.\nActions: list (all keys + values, flattened) | get <key> | set <key> <value> — dot paths into config.json (agent.maxTurns, traces.enabled, providers.0.model, any nesting).\nset persists to disk (only the set key is written — defaults are never baked in) and takes effect in the running session immediately (turn-boundary keys apply next turn); the value survives restarts.\nKnown keys are type-checked: scalar keys against the built-in defaults (agent.maxTurns a number, traces.enabled a boolean); keys whose default is null against their real consumption shape — defaultModel \"provider:model\", agent.subagentModel / shell non-empty string, memory.team object with a repo — so a value the app would silently drop is refused (null clears the key: the entry is removed from config.json and the built-in default applies; string-typed keys refuse null — no \"unset\" state to fall back to). Unknown keys under a known section are stored as given. Values parse as JSON first (true/false/numbers/objects/arrays), else stay strings.\nSENSITIVE keys (path segment matching apiKey/key/token/secret/password/authorization/auth/cookie/credential, or any key under a headers/env segment) are NEVER echoed in plaintext — list/get/set replies show ••••（masked）; setting a sensitive key is allowed and stored, but never echoed back.\nlist/get are read-only (planMode ok, no approval); set is a side effect (approval gate). The /config TUI command is the human equivalent."
+    },
+    {
+      "name": "peer_instances",
+      "schemaChars": 247,
+      "descChars": 182,
+      "descSha": "63a97fe8897b6042",
+      "paramsSha": "8243f0af367f188a",
+      "description": "peer_instances — read-only: list other live ThinCoder instances sharing this workspace cwd. Returns [{ pid, end, sessionId, slots }]; never includes self; pure read — writes nothing."
+    },
+    {
+      "name": "ledger_query",
+      "schemaChars": 563,
+      "descChars": 103,
+      "descSha": "987e3d283b4873dc",
+      "paramsSha": "bb22da385b361cad",
+      "description": "台账查询（需求池 / 技术待办）——SQLite 行集，只读、全角色可用。未决四态 = 待讨论 / 待设计 / 在途 / 待核销；已核销 / 已废弃 = 归档态（软删除，行保留）。过滤参数缺省 = 全部行。"
+    },
+    {
+      "name": "ledger_count",
+      "schemaChars": 263,
+      "descChars": 51,
+      "descSha": "90c8fad7acb6eb9a",
+      "paramsSha": "fd05bdb7780604e4",
+      "description": "台账计数单源：未决四态（待讨论 / 待设计 / 在途 / 待核销）COUNT(*)，只读、全角色可用。"
+    },
+    {
+      "name": "ledger_add",
+      "schemaChars": 799,
+      "descChars": 107,
+      "descSha": "5c7bdeac5345ea1d",
+      "paramsSha": "256098855a5f2125",
+      "description": "台账新增条目（写命令，仅主 agent）——入待讨论（六态状态机入口）。kind = requirement（需求池）/ tech_todo（技术待办）；trigger = 归批 / 条件 / 认账不排期（可空）。"
+    },
+    {
+      "name": "ledger_update",
+      "schemaChars": 969,
+      "descChars": 106,
+      "descSha": "3cb19cd6bb6d314b",
+      "paramsSha": "2d4f0b29ce8ef6b9",
+      "description": "台账更新条目（写命令，仅主 agent）——状态迁移按六态允许迁移表：待讨论→待设计 / 待设计→在途 / 在途→待核销 / 待核销→已核销 / 任意态→已废弃；表外迁移被拒。status 缺省 = 仅更新字段。"
+    },
+    {
+      "name": "ledger_close",
+      "schemaChars": 500,
+      "descChars": 132,
+      "descSha": "bca16744b38d9af7",
+      "paramsSha": "35a73926a7ca22b8",
+      "description": "台账收口（写命令，仅主 agent）——勾销：待核销 → 已核销；追认核销：待讨论 / 待设计 → 已核销（须已有 evidence，缺则拒）；在途 → 已核销 不可跳（仍经 待核销）；撤回：任意态 → 已废弃。归档 = 软删除（写 closed_at，行保留）。"
+    }
+  ],
+  "totals": {
+    "count": 11,
+    "schemaChars": 11014,
+    "descChars": 5723
+  }
+}

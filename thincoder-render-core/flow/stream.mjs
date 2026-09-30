@@ -11,17 +11,17 @@
  *   `reasoning()` / `token()` 取当前目标 `{ el, raw } | null`（端 ctx 指针，帧内现取——与源档同形）；
  *   `subScroll(blocks)` 逐块应用跟滚；`frameEnd()` = 帧尾（源档 maybeScrollDown + maybeScrollActivity）。
  */
-import { md } from "../md.mjs"
+import { paintLiveMd } from "./live-md.mjs"
 import { t as coreT } from "../i18n.mjs"
 import { capText, MAX_TOOL_OUTPUT } from "../lib.mjs"
 
 /** 长回复降频：全量 md() 重渲染限到 ≥50ms 一次（源档常量）。 */
 export const STREAM_RENDER_MIN_MS = 50
 
-/** 单目标重渲：md 全量重渲，失败回退原文（源档 try/catch 形——两目标同面）。 */
+/** 单目标重渲：增量 md 画件（冻结点分片 ∕ 热区换代——单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-10）；
+ *  签名 ∕ 兜底语义不变（画件内部兜底 = `textContent = raw` + 复位）。 */
 export function paintStreamTarget(el, raw) {
-  if (!el) return
-  try { el.innerHTML = md(raw) } catch { el.textContent = raw }
+  paintLiveMd(el, raw)
 }
 
 /** 推理目标重渲（+ 追加滚动到底——源档 `:50` 行为）。 */

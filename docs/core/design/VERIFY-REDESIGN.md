@@ -68,9 +68,9 @@ verify 的强制面住在完成路径，不住 verify 本体：
 | guard 首闸 | `thincoder-core/agent/completion.mjs:81` | `thincoder-vscode/src/agent/run-stages.mjs:86` |
 | guard 重试 | `thincoder-core/agent/completion.mjs:94` | `thincoder-vscode/src/agent/run-stages.mjs:99` |
 | guard 耗尽 | `thincoder-core/agent/completion.mjs:109` | `thincoder-vscode/src/agent/run-stages.mjs:113` |
-| code-mutations 层 | `thincoder-core/agent/completion.mjs:76`（`hasCodeMutations`） | `thincoder-vscode/src/agent/run-helpers.mjs:71` |
-| 打回报告 | `thincoder-core/agent-tools/verify.mjs` | `thincoder-vscode/src/agent-tools/verify.mjs:142`（`rejectionReport`） |
-| goal 门禁 | `thincoder-core/agent-tools/goal.mjs:52` | `thincoder-vscode/src/agent-tools/goal.mjs:38` |
+| code-mutations 层 | `thincoder-core/agent/completion.mjs:80`（`hasCodeMutations`） | `thincoder-vscode/src/agent/run-helpers.mjs:71` |
+| 打回报告 | `thincoder-core/agent-tools/verify.mjs` | `thincoder-vscode/src/agent-tools/verify.mjs:142`（as-of 2026-09-29）（`rejectionReport`） |
+| goal 门禁 | `thincoder-core/agent-tools/goal.mjs:52` | `thincoder-vscode/src/agent-tools/goal.mjs:38` （迁移期引文——档已迁核） |
 
 - **提示词面**：测试执行职责**已从 verify 挪回模型**——模型从项目 `AGENTS.md` 读验证方式，自决跑哪一层（迭代期只跑本任务面单元测试；全量 ∕ 集成 = 收口恰一次、父侧——见 `requirements/TESTING.md` §2 F1–F4），verify 只**收声明**。提示词正本 = `docs/core/design/prompts/**`（本档只留机制边界，D2）。
 - **测试纪律不进 verify 代码**：纪律靠 `AGENTS.md` / 提示词自然语言指导，不硬编码进工具。

@@ -205,6 +205,19 @@ function normalizeCodePaths(v) {
   return out
 }
 
+/** 排除前缀归一（§6.14 面① `index.excludePaths`）：首部 `./` 剥离 · `\`→`/` · 去尾斜杠 · 空 ∕ 非串剔除 · 去重保序。 */
+function normalizeExcludePaths(v) {
+  if (!Array.isArray(v)) return []
+  const out = []
+  for (const e of v) {
+    if (typeof e !== "string") continue
+    const s = e.trim().replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/+$/, "")
+    if (!s || out.includes(s)) continue
+    out.push(s)
+  }
+  return out
+}
+
 function normalizeString(v) {
   return typeof v === "string" && v.trim() ? v.trim() : ""
 }
@@ -220,17 +233,19 @@ function buildDeclaration(m, root = null) {
   const codePaths = normalizeCodePaths(m?.codePaths) ?? [...DEFAULT_MANIFEST.codePaths]
   const codeExtensions = normalizeExtensions(m?.index?.codeExtensions)
   const docExtensions = normalizeExtensions(m?.index?.docExtensions)
+  const excludePaths = normalizeExcludePaths(m?.index?.excludePaths)
   const docMap = normalizeString(m?.advisor?.docMap)
   const standardsDoc = normalizeString(m?.advisor?.standardsDoc)
   const defaults = normalizeCodePaths(DEFAULT_MANIFEST.codePaths) ?? []
   const pathsDiffer = codePaths.length !== defaults.length || codePaths.some((p, i) => p !== defaults[i])
-  const declared = pathsDiffer || codeExtensions.length > 0 || docExtensions.length > 0 || Boolean(docMap) || Boolean(standardsDoc)
+  const declared = pathsDiffer || codeExtensions.length > 0 || docExtensions.length > 0 || excludePaths.length > 0 || Boolean(docMap) || Boolean(standardsDoc)
   return Object.freeze({
     declared,
     codePaths: Object.freeze(codePaths),
     index: Object.freeze({
       codeExtensions: Object.freeze(codeExtensions),
       docExtensions: Object.freeze(docExtensions),
+      excludePaths: Object.freeze(excludePaths),
     }),
     advisor: Object.freeze({ docMap, standardsDoc }),
     root,
@@ -240,6 +255,15 @@ function buildDeclaration(m, root = null) {
 /** Full-default declaration (no manifest / unusable manifest) — the fallback every
  *  consumer gets; built from `DEFAULT_MANIFEST` so the default values stay single-source. */
 export const DEFAULT_DECLARATION = buildDeclaration(null)
+
+/** 排除前缀谓词（单源——§6.14 面①）：`rel`（项目根相对）命中声明前缀（恰等 ∨ 后随 `/`——
+ *  `openclaw` 不吞 `openclaw-fork`）⇒ true；缺省 `[]` ⇒ 恒 false（零行为变化）。 */
+export function isExcludedRelPath(rel, decl) {
+  const list = decl?.index?.excludePaths
+  if (!Array.isArray(list) || list.length === 0) return false
+  const s = String(rel ?? "").replace(/\\/g, "/")
+  return list.some((p) => p && (s === p || s.startsWith(`${p}/`)))
+}
 
 const _cache = new Map()
 
@@ -266,7 +290,7 @@ function warnRetiredCarrier(root) {
  * per cache miss (content zero-parsed, zero effect on the readings — KD-M1-34).
  * @param {string} cwd — project dir / anchor (root resolved by manifest.mjs)
  * @returns {Readonly<{declared: boolean, codePaths: readonly string[],
- *   index: {codeExtensions: string[], docExtensions: string[]},
+ *   index: {codeExtensions: string[], docExtensions: string[], excludePaths: string[]},
  *   advisor: {docMap: string, standardsDoc: string}, root: string|null}>}
  */
 export function loadProjectDeclaration(cwd) {

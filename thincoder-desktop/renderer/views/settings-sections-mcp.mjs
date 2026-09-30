@@ -18,6 +18,8 @@
  * 三态：`loading` 期零表单（载入中不落半形）；`details` 缺该项 ⇒ 零展开面（禁假造）。
  * 纪律：零 DOM（描述符树）；文案一律经 `t()`；缺 handlers ⇒ `wire` 落 `disabled: true`（诚实非死控）；
  * 零 `node:` ∕ 零裸包。
+ * **#604 增**：表单字段组（`fieldNode` 可编辑态）携 `data-draft` —— 总闸捕获域；类型 `select` ＝写触发
+ * 控件（改即写切片）⇒ 不入域（负向锁面 —— 批档 §2.2 判据 M-604b ∕ M-604c）。
  */
 import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
@@ -91,7 +93,9 @@ function kvToInput(value) {
   return Object.entries(value).map(([k, v]) => `${k}=${v}`).join(", ")
 }
 
-/** 表单字段行（标签 + 文本输入；`name` 属性 = FormData 载荷键）。 */
+/** 表单字段行（标签 + 文本输入；`name` 属性 = FormData 载荷键）。
+ *  `data-draft` = **草稿申报标记**（#604 总闸捕获域 —— 键取 `id` = `mcp-<name>`）；
+ *  `readOnly` 态（编辑态名）＝模型镜像（非草稿）⇒ 不申报（入域会掩蔽编辑目标切换）。 */
 function fieldNode(labelKey, name, value, readOnly = false) {
   return [
     { tag: "label", props: { class: "settings-field-label", for: `mcp-${name}` }, children: [t(labelKey)] },
@@ -100,7 +104,7 @@ function fieldNode(labelKey, name, value, readOnly = false) {
       props: {
         class: "settings-field", id: `mcp-${name}`, name, type: "text",
         value: typeof value === "string" ? value : "",
-        ...(readOnly ? { readOnly: true } : {}),
+        ...(readOnly ? { readOnly: true } : { "data-draft": "" }),
       },
     },
   ]
@@ -108,7 +112,8 @@ function fieldNode(labelKey, name, value, readOnly = false) {
 
 /** MCP 表单（S8 结构化 —— 名 + 类型 + 三型字段组 + 存 ∕ 消；`form` 缺 ⇒ 新增态空表单）。
  *  编辑态：名只读（不变量）+ 现值直取行 `config` 预填；类型切换 = 出口写切片致重挂（`onMcpFormType`），
- *  未落盘输入经 `form.draft` 快照回填（切换不丢手 —— 沿 S2 `draft` 先例）。 */
+ *  未落盘输入经 `form.draft` 快照回填（切换不丢手 —— 沿 S2 `draft` 先例）。
+ *  `data-draft-scope` = 表单身份面（#604 总闸作用域键：新增 ∕ 改名各一骨 —— 身份换 ⇒ 旧草稿不复填）。 */
 function mcpFormNode(section, handlers) {
   const form = section?.form !== null && typeof section?.form === "object" ? section.form : null
   const editing = form !== null && typeof form.editing === "string" && form.editing !== "" ? form.editing : null
@@ -159,7 +164,7 @@ function mcpFormNode(section, handlers) {
   }
   return {
     tag: "form",
-    props: { class: "settings-form", "data-form": "mcp", "data-mcp-form": editing === null ? "add" : "edit" },
+    props: { class: "settings-form", "data-form": "mcp", "data-mcp-form": editing === null ? "add" : "edit", "data-draft-scope": editing === null ? "add" : `edit:${editing}` },
     children: [
       ...fieldNode("settings.mcp.nameLabel", "name", editing !== null ? editing : valueOf("name", ""), editing !== null),
       { tag: "label", props: { class: "settings-field-label", for: "mcp-type" }, children: [t("settings.mcp.type")] },

@@ -18,6 +18,8 @@ import { ENG_ON_REMINDER, ENG_OFF_REMINDER } from "../agent.mjs"
 import { clearPlanMode } from "./plan.mjs"
 import { purgeExpiredDesignTokens } from "../token-ttl.mjs"
 import { resolveEngineeringManifest } from "../manifest.mjs"
+// 描述面 = `tool-docs/eng.md`（#15 描述外置统一——DESC 单一解析面，与内置工具族同径）
+import { DESC } from "../tools/shared.mjs"
 
 // ─── 持久化镜像 / 面板提示注入缝（#91——「写盘镜像 / 面板提示按端注入」，形态参 §2.13.5 注入缝）──
 /**
@@ -41,9 +43,7 @@ async function mirrorNotice(enabled, ctx) {
 
 export const engTool = {
   name: "eng",
-  description:
-    "Enter or exit engineering mode. In engineering mode, follow design-before-code: write a design document, run advisor design review, get user approval, then implement via eng-coder subagents. " +
-    "Returns the mode state — 'Engineering mode activated/exited' (an already-active state is acknowledged).",
+  description: DESC("eng"),
   parameters: {
     type: "object",
     properties: {

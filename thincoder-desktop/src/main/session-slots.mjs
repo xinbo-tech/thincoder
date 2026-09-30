@@ -54,6 +54,8 @@ import { loadConfig } from "@thincoder/core/config.mjs"
 import { HISTORY_PAGE_SIZE, historyWindow } from "@thincoder/core/history-window.mjs"
 // 会话级偏好写面（本批增）：核写口转口 —— 本档零算法副本（只补回读投影）。
 import { setSlotPrefs as coreSetSlotPrefs } from "@thincoder/core/session-slot-write.mjs"
+// 恢复面剥离（#632 · 缺面族批补——@ 文件引用对齐）：端薄壳转核件单源（`node:fs` 探针端侧注入）。
+import { stripAtRefs } from "./file-refs.mjs"
 
 // 单源转口（核面 —— 调用方 import 路径与名面不变）：路径 / manifest / 写 / 摘要 / 认领 / 沙箱缝。
 export {
@@ -115,8 +117,8 @@ export function slotOfKey(key) {
   return /^\d+$/.test(raw) ? Number(raw) : null
 }
 
-/** 会话元信息（回执面）：**三键** = 会话头三值（`provider` / `model` / `effort`）**只落非空串**（UI.md §1
- *  会话头行「字段值由**供给面出串**」——消费面 `views/chrome.mjs:8-9` 判据 = 非串 / 空串 ⇒ 零节点）；
+/** 会话元信息（回执面）：**三键** = 会话级三值（`provider` / `model` / `effort`）**只落非空串**
+ *  （字段值由**供给面出串** —— 消费面判据 = 非串 / 空串 ⇒ 零节点）；
  *  键缺（老槽）⇒ 零节点（不猜形）。两模式位（`engineering` / `autoApprove`）随状态栏对齐批撤出本投影 ——
  *  两态呈现面单源 = 状态行 banner 段（供面 = 回执 `flags`；单源 = `docs/desktop/design/IPC.md` §2「模式位投影注」）。
  *  `effort` 值只由本槽字段出串（会话级写面记录 —— 未设 ⇒ 零节点，**不回落**配置面：PROJECT.md T-DSK28）。 */
@@ -172,7 +174,10 @@ export function pageHistory(cwd, payload) {
   if (!data) return { ok: false, reason: "slot-missing" }
   const history = Array.isArray(data.history) ? data.history : []
   const before = payload?.before ?? null
-  const { messages, hasOlder } = historyWindow(history, before)
+  const { messages: rawMessages, hasOlder } = historyWindow(history, before)
+  // #632（缺面族批补 · @ 文件引用对齐）：恢复面显示边界 —— user 消息文本过核件剥离（同位 = VSC
+  // `panel-session.mjs:184-185`；assistant ∕ tool 零动）；盘面零触碰（注入形 = 落盘形，只剥离显示面）。
+  const messages = rawMessages.map((m) => (m.kind === "user" ? { ...m, text: stripAtRefs(m.text) } : m))
   const total = history.length
   const end = before == null ? total : Math.max(0, Math.min(before, total))
   const next = hasOlder ? Math.max(0, end - HISTORY_PAGE_SIZE) : null

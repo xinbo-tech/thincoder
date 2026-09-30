@@ -77,6 +77,7 @@ export function saveAgentSettingsFromPanel(payload) {
   }
   if (payload.compactThreshold !== undefined) patch.compactThreshold = payload.compactThreshold === "" ? undefined : (Number(payload.compactThreshold) || undefined)
   if (payload.verifyGuard !== undefined) patch.verifyGuard = !!payload.verifyGuard
+  if (payload.autoThink !== undefined) patch.autoThink = !!payload.autoThink // 显式布尔写（false 亦写——同 verifyGuard 式）
   if (payload.consultTurns != null) patch.consultTurns = Number(payload.consultTurns) || undefined
   if (payload.consultTimeoutMs != null) patch.consultTimeoutMs = Number(payload.consultTimeoutMs) || undefined
   // Consultation models (CONSULTATION.md): array of {provider, model}, ≤5, validated.

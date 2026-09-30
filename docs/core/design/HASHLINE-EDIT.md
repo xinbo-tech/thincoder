@@ -49,8 +49,8 @@ hashline_edit = **按内容哈希寻址编辑**（非字符串匹配）——**�
 
 | 面 | 落点 | 实核 |
 |---|---|---|
-| 工具对象 / 执行 | `thincoder-core/tools/file.mjs:380`（`hashlineEditTool`） | 导出在位 |
-| hash 计算 | `thincoder-core/tools/file.mjs:376`（`hashLine`） | 导出在位 |
+| 工具对象 / 执行 | `thincoder-core/tools/file.mjs:384`（`hashlineEditTool`） | 导出在位 |
+| hash 计算 | `thincoder-core/tools/file.mjs:380`（`hashLine`） | 导出在位 |
 | U+FFFD 常量 | `thincoder-core/tools/shared.mjs` `:162`（`FFFD_WARNING`） | 导出在位（逐字与 `EDIT-HELPERS.md` §5 同） |
 | 描述面（模型可见） | `thincoder-core/tool-docs/hashline_edit.md` | 在位（`DESC()` 加载） |
 | VSC 对位实现 | `thincoder-vscode/src/tools/hashline-edit.mjs`（W14 已迁核——自持镜像已删，现体 = 核 `thincoder-core/tools/file.mjs`） | 同名机制 · 独立实现 （迁移期引文） |

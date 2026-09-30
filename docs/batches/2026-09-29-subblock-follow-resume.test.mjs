@@ -618,71 +618,34 @@ test("⑥A10·留端清算：六档规范面 grep `调用时机留端` 零命中
   }
 })
 
-test("⑥A10·核件档头读回（KD-RC-9 一致）：两半归属四条在场；旧「调用时机留端」措辞不在", () => {
-  const header = readRepo("thincoder-render-core/subblocks/block.mjs").split("\n").slice(0, 20).join("\n")
-  for (const clause of ["原语 ∕ 旗标 ∕ 出口钮 ∕ 核应用器住本档", "应用点契约住核档", "触发源在端", "帧合并 ∕ 更新纪律已收核", "滚动策略族契约句"]) {
+test("⑥A10·核件档头读回（KD-RC-9 ∕ KD-RC-8 ④）：两半归属五条款在场；旧措辞不在（重锚 2026-09-29 · 滚动策略族抽核后）", () => {
+  const header = readRepo("thincoder-render-core/subblocks/block.mjs").split("\n").slice(0, 30).join("\n")
+  for (const clause of ["核抽核件 `../scroll.mjs`", "应用点契约住核档", "触发源在端", "帧合并 ∕ 更新纪律已收核", "滚动策略族四件"]) {
     assert.ok(header.includes(clause), `档头缺条款：${clause}`)
   }
   assert.ok(!header.includes("调用时机留端"), "旧措辞已退场（失效表达删除——A10 读回面）")
 })
 
-test("⑥A11·滚动策略族契约对拍：四载体判据逐字同式（近底 24px ∕ 旗标门 ⇒ MAX 写 ∕ 清账路）", () => {
-  const nearBottom = (src, ref) => new RegExp(`scrollHeight - ${src}\\.scrollTop - ${src}\\.clientHeight < ${ref}`)
+test("⑥A11·滚动策略族契约对拍（重锚 2026-09-29 · 工厂上提后）：四载体零判据副本 ∕ 零 `24` 字面（除工厂）；载体皆引工厂导出", () => {
+  const criterion = /scrollHeight\s*-\s*[^;{}]*scrollTop/
+  const lit24 = /(?<![\d-])24(?![\d])/
   const carriers = [
-    {
-      name: "块内容区",
-      file: "thincoder-render-core/subblocks/block.mjs",
-      checks: [
-        [/NEAR_BOTTOM_PX = 24/, "近底阈 = 24（常量单源）"],
-        [nearBottom("content", "NEAR_BOTTOM_PX"), "近底判据 `< 24`（严格小于——同式）"],
-        [/_pinFollow !== false\) content\.scrollTop = Number\.MAX_SAFE_INTEGER/, "旗标门 `!== false` ⇒ 写 `scrollTop = MAX`"],
-        [/_pinFollow === false/, "旗标假 = 零写（不夺阅读位）"],
-        // 清账三路：① 点击（钮）② 近底复跟（旗标翻真）③ 元素重建（旗标挂内容元素 ⇒ 随元素灭）
-        [/next\.addEventListener\("click"/, "清账①：钮点击"],
-        [/content\._pinFollow = true \/\/ ① 近底无条件翻真/, "清账②：近底复跟"],
-        [/content\._pinFollow = /, "清账③：旗标挂元素（元素重建 ⇒ 随元素灭——零模块级账）"],
-      ],
-    },
-    {
-      name: "活动区（VSC）",
-      file: "thincoder-vscode/webview/ui.js",
-      checks: [
-        [/< 24/, "近底阈 = 24（字面——同式）"],
-        [/_pinBottom !== false/, "旗标门 `!== false` ⇒ 写（对话流载体）"],
-        [/_pinActivity === false/, "旗标门（活动区载体）"],
-        [/scrollTop = Number\.MAX_SAFE_INTEGER/, "写 `scrollTop = MAX`"],
-        [/\["wheel", "touchmove", "scroll"\]/, "更新点三事件（近底自愈面）"],
-      ],
-    },
-    {
-      name: "池列",
-      file: "thincoder-desktop/renderer/views/activity-new.mjs",
-      checks: [
-        [/FOLLOW_PX/, "近底阈引用同源常量（= 对话流 `FOLLOW_PX`）"],
-        [nearBottom("root", "FOLLOW_PX"), "近底判据 `< 24`（同式）"],
-        [/_poolPin === false/, "旗标门 `=== false` ⇒ 零写（不夺阅读位）"],
-        [/scrollTop = Number\.MAX_SAFE_INTEGER/, "跟底 ⇒ 写 `scrollTop = MAX`"],
-        // 清账三路：① 点击（钮）② 近底（scroll 判定）③ 世代重置（mountPool 换代 ∕ 零块清账）
-        [/clearActivityNew\(root\)/, "清账：点击 ∕ 近底 ∕ 重置三路共用清账口"],
-      ],
-    },
-    {
-      name: "对话流",
-      file: "thincoder-desktop/renderer/views/chat-scroll.mjs",
-      checks: [
-        [/FOLLOW_PX = 24/, "近底阈 = 24（常量单源——与契约同值）"],
-        [new RegExp("scrollHeight - scrollTop - clientHeight < FOLLOW_PX"), "近底判据 `< 24`（同式）"],
-        [/following === true/, "旗标门（跟滚 ⇒ 写；非跟 ⇒ 零写）"],
-        [/stickToBottom/, "写口 = 贴底（幂等）"],
-        [/compensate/, "非跟滚径 = 补偿（不夺阅读位）"],
-      ],
-    },
+    { name: "块内容区", file: "thincoder-render-core/subblocks/block.mjs", refs: ['from "../scroll.mjs"', "NEAR_BOTTOM_PX", "createPinWatch", "applyPin"] },
+    { name: "活动区（VSC）", file: "thincoder-vscode/webview/ui.js", refs: ["render-core/scroll.mjs", "createPinWatch", "applyPin"] },
+    { name: "池列", file: "thincoder-desktop/renderer/views/activity-new.mjs", refs: ['from "/rc/scroll.mjs"', "createPinWatch", "applyPin", "createUnreadCounter"] },
+    { name: "对话流", file: "thincoder-desktop/renderer/views/chat-scroll.mjs", refs: ['from "/rc/scroll.mjs"', "NEAR_BOTTOM_PX as FOLLOW_PX", "nearBottom", "applyPin"] },
   ]
   assert.equal(core.NEAR_BOTTOM_PX, FOLLOW_PX, "核阈 = 对话流阈（单值 24——判据漂移 = 缺陷）")
   for (const carrier of carriers) {
     const src = readRepo(carrier.file)
-    for (const [re, why] of carrier.checks) {
-      assert.ok(re.test(src), `${carrier.name}（${carrier.file}）契约漂移：${why}`)
+    const rows = src.split("\n")
+    const windows = rows.map((line, i) => (i === 0 ? line : `${rows[i - 1]}\n${line}`))
+    for (const window of windows) {
+      assert.ok(!criterion.test(window), `${carrier.name}（${carrier.file}）判据副本未清：${window.trim().replace(/\n/g, "⏎").slice(0, 100)}`)
     }
+    for (const line of rows) {
+      assert.ok(!lit24.test(line), `${carrier.name}（${carrier.file}）「24」字面残留：${line.trim().slice(0, 100)}`)
+    }
+    for (const ref of carrier.refs) assert.ok(src.includes(ref), `${carrier.name}（${carrier.file}）工厂引用缺：${ref}`)
   }
 })

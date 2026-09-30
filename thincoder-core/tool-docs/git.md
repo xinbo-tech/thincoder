@@ -1,54 +1,28 @@
 Run a git command. Only works inside a git repository.
 
-**Route to git instead of bash:** `git status`→status, `git log`→log, `git diff`→diff, `git show`→show, `git add`→add, `git rm`→rm, `git commit -m`→commit, `git push <remote> <branch> <tag>`→push, `git tag`→tag, `git branch`→branch, `git checkout`→checkout, `git restore`→restore, `git stash`→stash, `git fetch/pull`→fetch/pull, `git reset`→reset, `git revert`→revert, `git merge`→merge, `git cherry-pick`→cherry-pick, `git ls-remote`→ls-remote, `git clone`→clone, `git init`→init, `git rebase`→rebase, `git remote`→remote, `git clean`→clean, `git switch`→switch, `git apply`→apply, `git worktree`→worktree, `git archive`→archive, `git blame`→blame, `git mv`→mv.
+**Route to git instead of bash** — every sub-command maps to the same-named action: status / log / diff / show / add / rm / commit / push / tag / branch / checkout / restore / stash / fetch / pull / reset / revert / merge / cherry-pick / ls-remote / clone / init / rebase / remote / clean / switch / apply / worktree / archive / blame / mv.
 
-- action='diff': unified diff — what changed since last commit. staged=true for staged-only; ref=<ref> to compare a commit/branch; path=<dir> to scope.
-- action='status': working tree state — staged / unstaged / untracked / conflicts, categorized.
-- action='log': recent commits. count (default 10), oneline=true compact, path=<file> for one file's history.
-- action='show': a commit's details (--stat). ref=<ref> (default HEAD).
-- action='add': stage files — path=<file> (granular) or all changes when path omitted.
-- action='commit': commit. message required; path=<file> → `git commit --only <paths>` — commits those files' working-tree content only (other staged batches are NOT mixed in — atomic); without path → add -A + full commit. New (untracked) files aren't committable by path alone — `git add` them first (staging extra is safe: --only still commits only the listed files).
-- action='rm': untrack a file/dir (git rm --cached, kept on disk). path required.
-- action='push'/'fetch'/'pull': sync with remote. remote=<origin>, ref=<branch or tag> (space-separated for multiple), tags=true for --tags.
-- action='tag': manage tags. tagAction=list (optional filter) / create (name, optional ref) / delete (name; snapshots first).
-- action='branch': manage branches. branchAction=list / create (name, optional ref) / switch (name) / delete (name; snapshots first).
-- action='checkout': switch to ref=<branch/commit>, or restore a file path=<file> (discards its working-tree changes; snapshots first).
-- action='restore': restore a file from index/HEAD. path required; staged=true restores the staged copy; snapshots first.
-- action='stash': manage the stash. stashAction=list / push (message) / pop (snapshots first).
-- action='reset': reset to ref (default HEAD). mode=soft/mixed/hard; hard snapshots the tree first (drops working-tree changes).
-- action='revert': revert a commit (safe). ref=<commit> (default HEAD).
-- action='merge': merge ref=<branch/commit>; conflicts reported for you to resolve.
-- action='cherry-pick': cherry-pick ref=<commit>.
-- action='ls-remote': light remote-ref check — which refs a remote has (read-only, network). remote=<origin>, ref=<branch/tag> optional, config for proxy.
-- action='clone': clone a repo. remote required (URL or local path); path optional (target dir).
-- action='init': init a repo in the current (work)dir.
-- action='rebase': rebase onto ref. rebaseAction=start (ref required) / abort / continue（操作前自动快照，checkpointAction=rewind 恢复）.
-- action='remote': manage remotes. remoteAction=list / add / remove / set-url; remoteUrl for add/set-url.
-- action='clean': remove untracked files/dirs. dryRun for -n preview（真删除操作前自动快照，checkpointAction=rewind 恢复）.
-- action='switch': switch branch. name required; create for -c (new branch).
-- action='apply': apply a patch. path required (patch file).
-- action='worktree': manage worktrees. worktreeAction=list / add (path, ref) / remove (path).
-- action='archive': write a tar of ref (default HEAD). path required (output file).
-- action='blame': file blame. path required.
-- action='mv': rename/move. path (source) + dest required.
-- action='checkpoint': git snapshots. checkpointAction=list/create/rewind/cat/versions; checkpointId required for rewind/cat.
-- Destructive ops (checkout -- path / restore / reset --hard / stash pop / branch|tag delete / clean / rebase) auto-snapshot first — restore via checkpointAction=rewind.
-
-Parameters:
-- action (required): diff / status / log / show / checkpoint / add / rm / commit / push / tag / branch / checkout / restore / stash / fetch / pull / reset / revert / merge / cherry-pick / ls-remote / clone / init / rebase / remote / clean / switch / apply / worktree / archive / blame / mv
-- workdir: run git in this subdirectory (monorepo / multi-repo). Path relative to cwd — no directory restriction. Default: the discovered project repo root（缺省 = 发现的项目仓根；显式 workdir 优先）
-- config: (network actions push/fetch/pull/ls-remote/clone) git -c overrides, e.g. ["http.proxy=http://10.2.2.112:3128"] for blocked remotes
-- path: (diff/log/add/commit/checkout/restore/rm/apply/archive/blame/mv/worktree) file or directory to scope / stage / restore
-- ref: (show/diff/checkout/reset/revert/merge/cherry-pick/tag:create/branch:create/rebase/worktree:add/archive) commit/branch/ref; (push/pull/fetch) the branch or tag (space-separated for multiple)
-- name: (branch/tag/switch) the branch or tag name
-- remote: (push/fetch/pull/remote/clone) remote name (e.g. origin) or URL; default: current upstream
-- tags: (push) also push all tags (--tags)
-- staged: (diff) staged changes; (restore) the staged copy
-- count: (log) number of commits (default 10)
-- oneline: (log) one-line-per-commit
-- message: (commit) commit message — required; (stash:push) stash message
-- mode: (reset) soft / mixed / hard — hard snapshots the tree first + needs confirmation
-- tagAction: (tag) list / create / delete — branchAction: (branch) list / create / delete / switch — stashAction: (stash) push / pop / list
-- filter: (read-only actions) keep only output lines matching this regex (case-insensitive)
-- checkpointAction: (checkpoint) list / create / rewind / cat / versions — checkpointId: snapshot id (rewind/cat)
-- remoteAction: (remote) list / add / remove / set-url — remoteUrl: (remote add/set-url) URL — rebaseAction: (rebase) start / abort / continue — dryRun: (clean) -n preview — create: (switch) -c — dest: (mv) destination — worktreeAction: (worktree) list / add / remove
+- diff: unified diff since last commit (`staged` — staged only; `ref` — compare a commit/branch; `path` — scope).
+- status: working tree state — staged / unstaged / untracked / conflicts.
+- log: recent commits (`count`, `oneline`, `path` — one file's history).
+- show: one commit with --stat (`ref`, default HEAD).
+- add: stage files — `path` (granular) or all changes.
+- rm: untrack a file/dir (`git rm --cached` — kept on disk; `path` required).
+- commit: `message` required. With `path` → `git commit --only <paths>`: commits those files' working-tree content only, atomic — other staged batches are NOT mixed in; without → add -A + full commit. New (untracked) files: `git add` them first (staging extra is safe — `--only` commits only the listed files).
+- push / fetch / pull: sync with remote — `remote`, `ref` (space-separated for multiple); `tags` for --tags.
+- tag / branch: manage via `tagAction` / `branchAction` — list / create (name, optional ref) / delete (snapshots first); branch also switch (name).
+- checkout: switch to `ref`; with `path`, restore a file from the index (discards its working-tree changes — snapshots first).
+- restore: restore a file from index/HEAD (`path` required; `staged` restores the staged copy — snapshots first).
+- stash: `stashAction` push (message) / pop / list (pop snapshots first).
+- reset: `ref` (default HEAD), `mode` soft / mixed / hard — hard drops working-tree changes (snapshots first).
+- revert: revert a commit (safe, `ref` default HEAD); merge: `ref` — conflicts come back for you to resolve; cherry-pick: `ref`.
+- rebase: `rebaseAction` start / abort / continue (snapshots first).
+- ls-remote: light remote-ref check — read-only, network (`remote`, optional `ref`).
+- clone: `remote` required (URL or local path), optional `path` (target dir); init: create a repo in the current workdir.
+- remote: manage remotes — `remoteAction` list / add / remove / set-url (`remoteUrl` for add / set-url).
+- clean: remove untracked files/dirs — `dryRun` previews (-n; the real clean snapshots first).
+- switch: switch branch (`name` required; `create` = -c); apply: apply a patch (`path` required); archive: tar of a `ref` (`path` required, output file); blame: file blame (`path` required); mv: rename/move (`path` + `dest` required); worktree: `worktreeAction` list / add / remove.
+- checkpoint: local snapshots — `checkpointAction` list / create / rewind / cat / versions (`checkpointId` for rewind / cat).
+- Destructive ops (checkout -- path / restore / reset --hard / stash pop / branch|tag delete / clean / rebase) auto-snapshot first; restore a snapshot via `checkpointAction=rewind`.
+- Failures come back as errors — `git <action> failed: <reason>` — nothing is silently swallowed.
+- `filter` narrows any read-only action's output (case-insensitive regex); `config` (git -c overrides, e.g. a proxy) applies to the network actions (push / fetch / pull / ls-remote / clone). Other parameter defaults and applicability live in the schema.

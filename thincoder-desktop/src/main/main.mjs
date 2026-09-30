@@ -14,8 +14,14 @@ import { ipcStats, setAgentHost, setLedgerEmit } from "./ipc.mjs"
 import { registerIpcHandlers } from "./ipc-registry.mjs" // #28 拆点：表 ∕ 注册序出档（处理体本体住 `ipc.mjs`）
 import { createAgentHost } from "./agent-host.mjs"
 import { currentCwd } from "./projects.mjs"
+// S3 宿主忙证据面（#673）：事件循环采样器 —— ready 起拍 ∕ 窗口关收拍（`hostBusy()` fail-open）。
+import { startSampler, stopSampler } from "./loop-sampler.mjs"
 // 会话维护线（R1 · 桌面功能对位批）：启动拍供面（GC ∕ 索引两枚延迟拍 —— 处理体同档）。
 import { scheduleSessionMaintenancePasses } from "./session-maintenance.mjs"
+// 堆遥测与冻结取证（KD-53 · 批档 §2.11 D7–D9 · 台账 #694）：策略面出档 `heap-watch.mjs`（零 `electron`
+// 顶层 import——四缝合件）；本档 = 装配面（三注入 + `diagnostics.*` 两键消费 + 冻结钩族 + 恢复动作序）。
+import { createHeapWatch, mainHeapReading, PING_TIMEOUT_MS } from "./heap-watch.mjs"
+import { loadConfig } from "@thincoder/core/config.mjs"
 // 台账刷新面收尾（R8 —— 拍面随开项目链重锚；窗口关 = 退出径同点——`stopLedgerRefresh` 幂等、核 interval 已 unref）。
 import { stopLedgerRefresh } from "./project-info.mjs"
 import { NEGATIVE_PROBE_COUNT, createWindow, probesSatisfied, runSmoke } from "./window.mjs"
@@ -82,6 +88,9 @@ async function main() {
   registerAppScheme() // ready 前 · 仅一次
   await app.whenReady()
   serveAppProtocol()
+  // S3 宿主忙证据面（#673 · `src/main/loop-sampler.mjs`）：随主进程活——探针失败分档的端侧证据源
+  // （`providers.mjs` 失败支经 `overrideAdmissionIfHostBusy` 覆盖落账；`hostBusy()` 纯内存零 I/O）。
+  startSampler()
   // 出站面（webContents 发送单点）：宿主 emit 与台账行出站共用（建窗晚于注入 ⇒ 闭包读 `win`；建窗前零事件 ⇒ 丢弃）。
   const emit = (channel, payload) => {
     if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
@@ -105,11 +114,54 @@ async function main() {
   setLedgerEmit(emit)
   registerIpcHandlers()
   win = createWindow(recordError)
+  // 堆遥测 ∕ 冻结取证装配（KD-53 ∕ §2.11 D7–D9）：两键读一次（`diagnostics.heapWatch` ∕ `heapSnapshot`；
+  // 读抛 ⇒ 默认开——CLI 同口径）；electron 原语全落本处（策略面留 `heap-watch.mjs`）：三注入
+  // （`sample` ∕ `snapshot` ∕ `log`）+ 冻结 ∕ 恢复动作原语（`ping` ∕ `killRenderer` ∕ `reload`）。
+  let diagnostics = {}
+  try { diagnostics = loadConfig()?.diagnostics ?? {} } catch { /* 配置缺失/损坏 ⇒ 默认开（零风险） */ }
+  const heapWatch = createHeapWatch({
+    enabled: diagnostics.heapWatch !== false,
+    snapshotEnabled: diagnostics.heapSnapshot !== false,
+    // 采样：主进程自读（node 侧 `mainHeapReading`）+ 子进程逐进程读数（`app.getAppMetrics()`——type ∕ pid ∕ workingSet ∕ cpu）
+    sample: () => ({
+      main: mainHeapReading(),
+      processes: app.getAppMetrics().map((m) => ({
+        type: m.type, pid: m.pid,
+        workingSetMb: Math.round((m.memory?.workingSetSize ?? 0) / 1024), // Electron 面单位 = KB ⇒ MB
+        cpu: m.cpu?.percentCPUUsage ?? null,
+      })),
+    }),
+    // 渲染快照（D8-1 ∕ D8-2 取径共用）：取前 native 预告（通知先例 = 上方 notify 装配）；失败由策略面记 `skipped`
+    snapshot: async ({ kind, path }) => {
+      try { new Notification({ body: "快照采集中——界面或短暂停顿" }).show() } catch { /* 预告失败不阻断 */ }
+      await win.webContents.takeHeapSnapshot(path)
+      return { path, kind }
+    },
+    // ping 兜底（D7）：`executeJavaScript` 竞速超时（先例 = window.mjs 引导位读回）——超时 ⇒ false
+    ping: () => Promise.race([
+      win.webContents.executeJavaScript("1").then(() => true, () => false),
+      new Promise((resolve) => { const t = setTimeout(() => resolve(false), PING_TIMEOUT_MS); t.unref?.() }),
+    ]),
+    killRenderer: () => win.webContents.forcefullyCrashRenderer(),
+    // 恢复 reload（D9）。**实测修正（2026-09-30 · Electron 44 · Windows）**：同 tick `forcefullyCrashRenderer();
+    // reload()` 的 reload 会被吞（渲染进程保持 crashed ≥12s——`electron.d.ts:18227` 的「immediately after」
+    // 承诺与实测相抵）；可靠序 = `render-process-gone` 事件驱动 reload（实测 ≤3s 换代恢复）。已崩态
+    // （事件已过）⇒ 直 reload。诊断实录 = 批档 §5（A1 ∕ A2 ∕ B 三格）。
+    reload: () => {
+      const contents = win.webContents
+      if (contents.isCrashed()) { contents.reload(); return }
+      contents.once("render-process-gone", () => { try { contents.reload() } catch { /* 已亡——尽力面 */ } })
+    },
+    log: (line) => console.error(line),
+  })
+  win.webContents.on("unresponsive", () => heapWatch.onUnresponsive())
+  win.webContents.on("responsive", () => heapWatch.onResponsive())
+  win.webContents.on("render-process-gone", (_event, details) => heapWatch.onGone(details))
   // config 热更感知（R8 · C3——核 `config-watch.mjs` 桌面消费）：外部写盘（手编 ∕ CLI 端）⇒ 去抖 + 元组真变
   // ⇒ `ev:config`（宿主自产推送；渲染面设置面复读）；自写抑制 = 核 `onConfigSelfWrite`（核件缺省内接——端零自持，
   // 自身写盘不抖动）。生命周期随窗口：窗口 closed ⇒ 撤监视（单窗应用 = 退出径同点）。
   const configWatch = startConfigWatch({ onChange: () => emit("ev:config", { at: Date.now() }) })
-  win.on("closed", () => { configWatch.dispose(); stopLedgerRefresh() }) // 生命周期随窗口：两长活面（监视 + 台账拍面）同点收尾
+  win.on("closed", () => { configWatch.dispose(); stopLedgerRefresh(); stopSampler(); heapWatch.stop() }) // 生命周期随窗口：四长活面（监视 + 台账拍面 + 采样器 + 堆看门狗）同点收尾
   // 启动拍（R1 · 会话维护 · KD-T4② 端层显式点火）：窗口起后两枚延迟拍（核侧 3s 启动窗外；异步非阻塞、
   // 失败静默 —— 索引 = 派生品）。GC 拍须项目 cwd：开机未开项目 ⇒ 此处零动作，由恢复入口（`ipc.mjs`
   // `session:resume` 成功径）同款点火；索引拍 = 全根扫描（无需 cwd），此处恒点火（核内每进程一次去重）。

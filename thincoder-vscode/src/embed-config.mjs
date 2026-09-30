@@ -8,8 +8,8 @@
  * Guard contract（W8 引擎护栏接线契约②——`extension.mjs:47` 消费契约）：核记忆面说
  * `node:sqlite`，故本档**只经动态 `import()`** 载入它——此处（或端壳静态闭包内任何一处）
  * 静态引入 ⇒ 低宿主模块加载期硬失败（`extension.mjs` 加载即败 · `activate()` 未及执行 ·
- * 护栏静默失效）。机判 = `test/engine-floor-guard.test.mjs` 自 `extension.mjs` 静态闭包
- * 扫 `node:sqlite` 可达性 = 0。
+ * 护栏静默失效）。机判 = W8 契约②判据（现载体 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`；
+ * 单测树重建时回迁端侧单测档）自 `extension.mjs` 静态闭包扫 `node:sqlite` 可达性 = 0。
  */
 
 import { dirname, isAbsolute, join } from "node:path"

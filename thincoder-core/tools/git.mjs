@@ -26,9 +26,6 @@ async function runGitRaw(cwd, cmdArgs, config = []) {
   }
 }
 
-
-
-
 /** Resolve workdir relative to cwd — no boundary assertion
  *  (§10.1 2026-09-02: workspace confinement removed; git itself is not
  *  directory-limited — same boundary as bash). */
@@ -52,22 +49,6 @@ function ambiguousRepoMessage(candidates, cwd, matched) {
     : `Ambiguous git repo at ${cwd}: ${candidates.length} subdirectories carry .git and ${MANIFEST_REL}`
   return `${head} — pass workdir to run git in the intended one (no silent pick):\n` + candidates.map((c) => `- ${c}`).join("\n")
 }
-
-// ─── 审批门注入缝（#59——「只读判定 / 审批门按端注入」，形态参 §2.13.5 注入缝）────────
-/**
- * 审批门注入位（**缺省不覆盖** = 无审批面：全部动作照常执行——CLI 语义，零行为变；端装配层
- * 可覆盖为本端审批 / 只读判定。核内零端名分支（契约 5——本档只认 `gate` 函数名）。
- * 契约：`gate(args, ctx) → string | null | Promise<同>`——非空字符串 = 拒执行（该串原样作为
- * 工具结果返回）；null / undefined / 其他值 = 放行。每个 execute 恰问一次（workdir 归一后）。
- */
-let injectedApproval = null
-export function configureGitApproval(impl) {
-  injectedApproval = impl && typeof impl.gate === "function" ? impl.gate : null
-}
-/** 撤销注入（测试与端装配生命周期用——缺省态 = 无审批门）。 */
-export function resetGitApproval() { injectedApproval = null }
-
-
 
 export const gitTool = {
   name: "git",
@@ -126,11 +107,6 @@ export const gitTool = {
         ctx = { ...ctx, cwd: discovered.root }
         repoNote = `(repo: ${discovered.root})`
       }
-    }
-    // #59：审批门（端注入面）——缺省无门（CLI 语义）；非空字符串返回 ⇒ 拒执行（拒串原样、不加注记）。
-    if (injectedApproval) {
-      const refusal = await injectedApproval(args, ctx)
-      if (typeof refusal === "string" && refusal.length > 0) return refusal
     }
     const out = await gitActionCore.dispatch(args, ctx)
     return repoNote ? `${repoNote}\n${out}` : out

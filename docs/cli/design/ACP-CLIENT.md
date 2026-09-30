@@ -130,7 +130,7 @@ ACP 官方 SDK 是 npm 依赖——违反零依赖哲学，故自写精简层。
 
 **判据**：**函数档是第一判据**——文件 ≤500 行而内含 ≥300 行单体函数**仍不合规**
 （`docs/core/requirements/METHODOLOGY.md` F3-1「函数 ≥300 必拆」+ `docs/core/design/prompts/advisor-design.md` 第 8 条）。
-现状 `buildAcpHandlers`（`acp.mjs:99`–`:466` = **368 行**，含 jsdoc 375 行）越线；本批既改其大半正文（12 个 handler 中 10 个改形），**当轮拆**——不留给「下次触碰」。
+现状 `buildAcpHandlers`（`acp.mjs:99`–`:466` = **368 行**，含 jsdoc 375 行）（as-of 2026-09-29）越线；本批既改其大半正文（12 个 handler 中 10 个改形），**当轮拆**——不留给「下次触碰」。
 
 | 模块（新档名——无扩展名形态，见下注） | 装什么 | 关键缝 |
 |---|---|---|
@@ -275,8 +275,8 @@ last-write-wins 于内部状态（**不落 config.json**）；set 成功后 noti
 - **动机**：ACP 会话是**无交互 UI 的 headless 通道**——工具面不得提供本通道不存在的交互能力（模型可见即会调用，调用即必错）。
 - **机制**：`thincoder-cli/src/acp.mjs:77` 导出 `ACP_EXCLUDED_TOOLS = ["question"]`；
   `defaultCreateSession`（`:83`）传 `assembleAgent({ excludeTools: ACP_EXCLUDED_TOOLS })`。
-- **过滤实现**：`thincoder-cli/src/cli/make-agent.mjs:15` 导出纯函数 `applyToolExclusions(tools, excludeTools = [])`（按 `name` 过滤），
-  在 `createAgent` 前应用（`:113`）——schema 逐请求派生自 `agent.tools`，故工具不可见。
+- **过滤实现**：`thincoder-cli/src/cli/make-agent.mjs:21` 导出纯函数 `applyToolExclusions(tools, excludeTools = [])`（按 `name` 过滤），
+  施用点 = 核 `toolsFinalize` 缝（挂点 `:39` ∕ 施用 `:101`——位次：工具装配后、`createAgent` 前）——schema 逐请求派生自 `agent.tools`，故工具不可见。
 - **剔除点选型理由**：装配期参数（schema 直接少一条；通道知识住 `acp.mjs`）——事后变异绕装配契约、bridge 层无装配权。
 - **工具描述面**：`thincoder-core/tool-docs/question.md` 经 `{{inject:question-ui-face}}` 锚注入可用性行
   （取值表 = `thincoder-cli/src/prompt-injections.mjs:35`）——明写「无交互面（headless / 子代理）返回错误，问题放正文回复」。
@@ -319,12 +319,12 @@ export function relayPrefixOf(label, id) // → `${label}#${id}/`
   `cancelled`（`thincoder-core/agent-tools/subagent-async.mjs:262`——取消路径，ACP 面无取消入口时不可达，登记为同族风险）
   ⇒ 二者随 `agent_message_chunk` 进 ACP 客户端**可见面**（token 字面量泄漏：`⟦ev⟧queued\x1eslot\x1e…`）。
 - **修法（形态取代枚举）**：`if (/^⟦ev⟧[a-z]+\x1e/.test(payload)) return`——事件名域 = ASCII 小写 + 终止符 `\x1e`；**枚举退役**（新增事件名零维护）。
-- **形态依据（既有先例，非新造 · 评审 #8 收正）**：VSC 宿主面消费单点 `thincoder-vscode/src/extension/panel-callbacks.mjs:44`（`includes("⟦ev⟧")` 识别）+
-  `:85`（`startsWith("⟦ev⟧")` **兜底消费**——注释原文「其余核事件：消费不泄漏」）即形态判据；核生成侧（`thincoder-core/agent/spawn-child.mjs:99-101` `EVENT_PHASE` / `EVENT_TYPE`）系**枚举**放行判据——**不引为形态先例**（枚举面 = D13 所否同形；**不在本批修法范围**）。
+- **形态依据（既有先例，非新造 · 评审 #8 收正）**：VSC 宿主面消费单点 `thincoder-vscode/src/extension/panel-callbacks.mjs:44`（`includes("⟦ev⟧")` 识别）（as-of 2026-09-29）+
+  `:85`（`startsWith("⟦ev⟧")` **兜底消费**——注释原文「其余核事件：消费不泄漏」）即形态判据；核生成侧（`thincoder-core/agent/spawn-child.mjs:114-115` `EVENT_PHASE` / `EVENT_TYPE`）系**枚举**放行判据——**不引为形态先例**（枚举面 = D13 所否同形；**不在本批修法范围**）。
   ⇒ 本修法 = ACP 面与 VSC 面既有**形态判据**对齐，不是新语义。
-- **面覆盖注（评审 #2）**：事件 token 生成侧发射**全走 `callbacks.onToken`**（逐点实核：`thincoder-core/agent.mjs:208` · `dispatch.mjs:296` · `subagent-scheduler.mjs:337` · `subagent-async.mjs:262` · `async-settle.mjs:228/:262/:264` · `subagent.mjs:359` · `subagent-run.mjs:143` ·
-  `thincoder-core/agent-tools/subagent-panel.mjs:98` · `consult.mjs:249` · `spawn-child.mjs:162`）；
-  `onReasoning`（`bridge.mjs:188-194`——只剥 relay 前缀；事件 token 不经此面）与 `agent_thought_chunk` / 工具卡 `title` / `request_permission` 文本面**不产** `⟦ev⟧` ⇒ 其余面残余向量 = **模型伪造**（非事件泄漏）——**接受**该边界（伪造面按核生成侧 strip 判据另行处置，不在本批）。
+- **面覆盖注（评审 #2）**：事件 token 生成侧发射**全走 `callbacks.onToken`**（逐点实核：`thincoder-core/agent.mjs:208` · `dispatch.mjs:296` · `subagent-scheduler.mjs:337` · `subagent-async.mjs:262` · `async-settle.mjs:228/:262/:264` · `subagent.mjs:359` · `subagent-run.mjs:143` ·（as-of 2026-09-29）
+  `thincoder-core/agent-tools/subagent-panel.mjs:98` · `consult.mjs:249` · `spawn-child.mjs:162`）；（as-of 2026-09-29）
+  `onReasoning`（`bridge.mjs:201-207`——只剥 relay 前缀；事件 token 不经此面）与 `agent_thought_chunk` / 工具卡 `title` / `request_permission` 文本面**不产** `⟦ev⟧` ⇒ 其余面残余向量 = **模型伪造**（非事件泄漏）——**接受**该边界（伪造面按核生成侧 strip 判据另行处置，不在本批）。
 - **CLI 侧已有形态判据先例（非缺陷——同一判据家族已在位）**：`thincoder-cli/src/tui/render.mjs:245-256` 已是形态剥（结构化 `/⟦ev⟧[^\x1e…]*\x1e…/` + 末行 `/⟦ev⟧[A-Za-z]*/` 兜底）——**其注释记载了必须避开的否决形态**：`/⟦ev⟧[^\x1e\x1d]*/`（吞到行尾）**吃过真实正文**（`render.mjs:250-252` 注：正文里描述桥剥离行为的表格被一并吃掉）⇒ 本批修法**保留终止符约束**（`\x1e` 同现才剥），**不得**放宽为无终止符形态。
 - **另一消费点已自洽（非缺陷——登记为观察项）**：`thincoder-cli/src/tui/subagent-blocks.mjs:46` 的 `SUB_EVENT_RE` 枚举（含 `queued`、**不含** `cancelled`）之外另有 `:172` 显式 `cancelled` 分支 + `:187` `startsWith("⟦ev⟧")` 兜底 ⇒ 无泄漏面，本批**不改**。
 - **嵌套形态顺序不变**：relay 前缀由桥先剥（本节表①「信号检查改在 payload 上」）；前缀后 token 落 payload 首 ⇒ 同一判据命中。
@@ -365,9 +365,9 @@ ACP 不转发工具输出流式增量——**父工具与子代理工具同口�
 | D14 | onWait 三消费点（TUI / headless / ACP 日志）= **调用核单源映射** | 相位值域（五相：`gate` / `retry` / `overloaded` 带秒 · `warn` / `quota` 带 message）无单源 ⇒ 三处各自 `else` 兜底，`warn` / `quota` 渲染 `undefined`。否决「三处各自补两支」（漂移根因不除）、否决「CLI 侧建 i18n 层」（新范围）。映射表与判据见 `docs/core/design/PROVIDER.md` §6.20 |
 | D15 | **认证门 = 凭据即时判据**（撤 `authenticated` 闩锁） | 契约上 `authenticate` 是**可选**流程（`NewSessionRequest` 逐字：「**May** return an `auth_required` error … **if** the agent requires authentication」）⇒ 闩锁使「不调 `authenticate` 的客户端」会话一律起不来（编排器常见姿势——本批核心缺陷）。否决「保留闩锁 + 在 `initialize` 里置真」（= 永不返回 `-32000`，把契约门变成装饰） |
 | D16 | `authMethods` = **对象数组 + `clientCapabilities.auth.terminal` 门控** | schema `AuthMethodTerminal` 逐字：「Agents **MUST** advertise this method **only when the client enabled its terminal authentication capability**」+ 必填 `id`/`name`；裸字符串 `"terminal"` 既不匹配 `anyOf` 任一分支也无 `id`。否决 `_meta['terminal-auth']` legacy 兜底（v1 已把 `terminal` 升为一等 `type`；legacy 面需 agent 侧给 `command` 绝对路径，我们拿不到可靠值——kimi `auth-methods.ts:48-63` 属旧 SDK 过渡面） |
-| D17 | 凭据面**收回文档声称**：本批**不实现** env fallback | 项目现行裁定 = 「env vars are not a key source」（`DOC-CODE-RECONCILE` A6 · 2026-09-15「实装为准改文档」），四处逐字在位（`model-picker.mjs:37` · `presets.mjs:30/64/94` · `embed-config.mjs:5` · `subagent-async.mjs:137`）；仅在 ACP 面实现 = 同一产品两套凭据语义（把一处漂移换成更深的语义分裂）。且无 TTY 的真实阻塞是 D15 与 `defaultModel` 弱文案，不是 key 来源少一条。env 通道属 CONFIG / PROVIDER 板块（§11.9 登记） |
+| D17 | 凭据面**收回文档声称**：本批**不实现** env fallback | 项目现行裁定 = 「env vars are not a key source」（`DOC-CODE-RECONCILE` A6 · 2026-09-15「实装为准改文档」），四处逐字在位（`model-picker.mjs:37` · `presets.mjs:30/64/94` · `embed-config.mjs:5` · `subagent-async.mjs:137`）；（as-of 2026-09-29）仅在 ACP 面实现 = 同一产品两套凭据语义（把一处漂移换成更深的语义分裂）。且无 TTY 的真实阻塞是 D15 与 `defaultModel` 弱文案，不是 key 来源少一条。env 通道属 CONFIG / PROVIDER 板块（§11.9 登记） |
 | D18 | **契约形状以 schema 逐字段为准**，不以「某客户端能跑就行」为准 | 本批实核出四处响应形状不合契约（§11.3 G2 族）：`agentCapabilities` 键名 · `session/new` 必填 `sessionId` · `session/prompt` 必填 `params.prompt` · `session/list` 条目 `sessionId`（另 `configOptions[]` 的 `id`/`name`）。否决「只修原 G2 的 `initialize`」——另三处使「可挂可用」不可达 |
-| D19 | fs 反向 RPC **按客户端能力位门控**，未宣告 ⇒ 回落本地 | schema `FileSystemCapabilities` 默认 `false` + 文档「MUST treat all capabilities omitted … as UNSUPPORTED」；现状无条件发 `fs/*` ⇒ 不支持者干等 30s（`bridge.mjs:106/114/291`）。判据同构 = kimi `server.ts:626-636`（皆否 ⇒ 回落 `LocalKaos`）；能力位来源 = §3.4 快照（“initialize 单次交换”语义） |
+| D19 | fs 反向 RPC **按客户端能力位门控**，未宣告 ⇒ 回落本地 | schema `FileSystemCapabilities` 默认 `false` + 文档「MUST treat all capabilities omitted … as UNSUPPORTED」；现状无条件发 `fs/*` ⇒ 不支持者干等 30s（`bridge.mjs:106/114/291`）（as-of 2026-09-29）。判据同构 = kimi `server.ts:626-636`（皆否 ⇒ 回落 `LocalKaos`）；能力位来源 = §3.4 快照（“initialize 单次交换”语义） |
 
 **登记项（后续批 / 父侧裁）**
 
@@ -447,10 +447,10 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 
 | # | 现状（file:line） | 契约要求 | 后果 |
 |---|---|---|---|
-| G1-a | `acp.mjs:140` `authMethods: ["terminal"]` **裸字符串**（`:141` = §11.3 所引的 `capabilities` 行——**行号收正 · 评审 #11**） | `AuthMethod` 对象（required `id` + `name`） | 不匹配 `anyOf` 任一分支 ⇒ 客户端**无法呈现**任何登录方式 |
+| G1-a | `acp.mjs:140` `authMethods: ["terminal"]` **裸字符串**（`:141` = §11.3 所引的 `capabilities` 行——**行号收正 · 评审 #11**）（as-of 2026-09-29） | `AuthMethod` 对象（required `id` + `name`） | 不匹配 `anyOf` 任一分支 ⇒ 客户端**无法呈现**任何登录方式 |
 | G1-b | 同上：**无条件**宣告 `terminal` | 仅当 `clientCapabilities.auth.terminal === true` 才可宣告（MUST） | 违反 MUST（对不支持者宣告） |
-| G1-c | `acp.mjs:112` `authenticated` **闩锁**（初值 `false`；唯一置真路径 **`:146`**——行号收正 · 评审 #11） | schema `session/new` 方法描述逐字：「May return an `auth_required` error if the agent requires authentication.」；schema `authenticate` 方法描述：「Called when the agent requires authentication before allowing session creation.」（**锚收正**——原文住方法描述，非 `*Request` def） | **不调 `authenticate` 的客户端（编排器常见姿势）会话一律起不来**——本批核心缺陷 |
-| G1-d | `bin/thincoder.mjs:402-406` `case "acp"` **不读 `args`**；全量 switch（`:143-432`）**无 `login`** | `args` 语义 = 追加到已配置的 agent 调用 | `thincoder acp --login` **静默进服务模式**（stdin 无 TTY ⇒ 挂死等 `initialize`）——宣告出去也**无处执行** |
+| G1-c | `acp.mjs:112` `authenticated` **闩锁**（初值 `false`；唯一置真路径 **`:146`**——行号收正 · 评审 #11）（as-of 2026-09-29） | schema `session/new` 方法描述逐字：「May return an `auth_required` error if the agent requires authentication.」；schema `authenticate` 方法描述：「Called when the agent requires authentication before allowing session creation.」（**锚收正**——原文住方法描述，非 `*Request` def） | **不调 `authenticate` 的客户端（编排器常见姿势）会话一律起不来**——本批核心缺陷 |
+| G1-d | `bin/thincoder.mjs:402-406`（as-of 2026-09-29） `case "acp"` **不读 `args`**；全量 switch（`:143-432`）**无 `login`** | `args` 语义 = 追加到已配置的 agent 调用 | `thincoder acp --login` **静默进服务模式**（stdin 无 TTY ⇒ 挂死等 `initialize`）——宣告出去也**无处执行** |
 
 **改法（四条，最小面）**
 
@@ -463,7 +463,7 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
    - **不做 `command`**：schema 逐字「The descriptor **cannot** provide a command」——`command` 由客户端配置派生（否决 `_meta['terminal-auth']`：见 D16）。
 3. **`authenticate` 语义收敛**：`methodId` 不属于**当前已宣告**的方法 → `-32602`（判据同构 = kimi `server.ts:656-661`）；凭据不可解析 → `-32000`；通过 → **空结果 `{}`**（`AuthenticateResponse` 只有 `_meta`，现返回的 `{authenticated:true}` 是多余额外键）。
 4. **CLI 侧入口**：`case "acp"` 读 `args`；`--login` → `runAcpLogin()`（住 `acp/login` 新档，经 `src/acp.mjs` 再导出——§3.5），**不进 stdio 服务**。
-   流程 = 复用既有 `setupWizard()`（`src/cli/setup-wizard.mjs`；与 `bin/thincoder.mjs:172` 同源）→ 成功后**校验并补齐 `defaultModel`**（§11.5 判据）→ **exit 0**；失败（含非 TTY）→ stderr 一行可行动文案 + **exit 1**（契约：「A zero exit status signals success; any other termination signals failure.」）。
+   流程 = 复用既有 `setupWizard()`（`src/cli/setup-wizard.mjs`；与 `bin/thincoder.mjs:172`（as-of 2026-09-29） 同源）→ 成功后**校验并补齐 `defaultModel`**（§11.5 判据）→ **exit 0**；失败（含非 TTY）→ stderr 一行可行动文案 + **exit 1**（契约：「A zero exit status signals success; any other termination signals failure.」）。
    **用户面（评审 #10 收正）**：`bin/thincoder.mjs` 的 `USAGE`（`:101`–`:124`）在 `thincoder acp` 行后**补一行**（逐字，与上行左对齐）：
 
    ```text
@@ -490,14 +490,14 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 
 | # | 现状（file:line） | 契约要求 | 后果 |
 |---|---|---|---|
-| G2-1 | `acp.mjs:141` 返回键 `capabilities` | `agentCapabilities` | 客户端读不到 agent 能力 ⇒ 全部按 UNSUPPORTED |
+| G2-1 | `acp.mjs:141`（as-of 2026-09-29） 返回键 `capabilities` | `agentCapabilities` | 客户端读不到 agent 能力 ⇒ 全部按 UNSUPPORTED |
 | G2-2 | 同上：无 `loadSession` | `AgentCapabilities.loadSession` | 已实现的 `session/load` **客户端永不调用** |
 | G2-3 | 同上：无 `sessionCapabilities` | `{ list:{}, resume:{}, delete:{}, close:{} }` | `list` / `resume` / `delete` / `close` **客户端永不调用** |
-| G2-4 | `acp.mjs:137` `initialize: ()` **不读 params** | `InitializeRequest.required=["protocolVersion"]`；`clientCapabilities` 是**唯一**能力来源 | 无版本协商；且是 G1-b / G3 的**共同根因**（无能力快照） |
-| **G2-5** 🔴 | `acp.mjs:184` 返回 `{ id, configOptions }` | `NewSessionResponse.required=["sessionId"]` | **客户端拿不到会话 id ⇒ 后续方法全部不可用** |
-| **G2-6** 🔴 | `acp.mjs:194-195` 读 `params.content` | `PromptRequest.required=["sessionId","prompt"]` | **每个 prompt 都走 `-32602` ⇒ 会话不可用** |
-| G2-7 | `acp.mjs:234-240` list 条目键 `id` | `SessionInfo.required=["sessionId","cwd"]` | 列表项被判非法/跳过 |
-| G2-8 | `acp.mjs:184/297/346` `configOptions:[{configId}]` | `SessionConfigOption.required=["id","name"]`（注：**请求**侧 `SetSessionConfigOptionRequest` 用 `configId`，**响应**侧用 `id`——不对称属契约本身） | 配置项被 `x-deserialize-skip-invalid-items` 静默跳过 ⇒ 能力不可见 |
+| G2-4 | `acp.mjs:137`（as-of 2026-09-29） `initialize: ()` **不读 params** | `InitializeRequest.required=["protocolVersion"]`；`clientCapabilities` 是**唯一**能力来源 | 无版本协商；且是 G1-b / G3 的**共同根因**（无能力快照） |
+| **G2-5** 🔴 | `acp.mjs:184`（as-of 2026-09-29） 返回 `{ id, configOptions }` | `NewSessionResponse.required=["sessionId"]` | **客户端拿不到会话 id ⇒ 后续方法全部不可用** |
+| **G2-6** 🔴 | `acp.mjs:194-195`（as-of 2026-09-29） 读 `params.content` | `PromptRequest.required=["sessionId","prompt"]` | **每个 prompt 都走 `-32602` ⇒ 会话不可用** |
+| G2-7 | `acp.mjs:234-240`（as-of 2026-09-29） list 条目键 `id` | `SessionInfo.required=["sessionId","cwd"]` | 列表项被判非法/跳过 |
+| G2-8 | `acp.mjs:184/297/346`（as-of 2026-09-29） `configOptions:[{configId}]` | `SessionConfigOption.required=["id","name"]`（注：**请求**侧 `SetSessionConfigOptionRequest` 用 `configId`，**响应**侧用 `id`——不对称属契约本身） | 配置项被 `x-deserialize-skip-invalid-items` 静默跳过 ⇒ 能力不可见 |
 
 > **G2-5 / G2-6 是「可挂可用」的硬阻塞**，与原 G2（G2-1/2/3/4 = `initialize` 面）**同族同修**——详见 D18。
 > `session/load` / `session/resume` 响应 `required = []`（只含 `modes` / `configOptions`）⇒ 两处返 `{id,…}` 属**多余键**，不阻塞，但同批收敛为契约形态。
@@ -518,7 +518,7 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 - `mcpCapabilities` **省略** = 不支持（G7 不在本批，如实声明）；`sessionCapabilities.additionalDirectories` 不声明（G4 单 cwd 模型，做不了就不说）。
 - 会话方法响应统一契约形状：`session/new` → `{ sessionId, configOptions }`；`session/load` / `resume` → `{ configOptions }`；`session/list` 条目 → `{ sessionId, cwd, … }`；`configOptions` 条目 → `{ id, name }`（`name` 取值 = 人类可读标签）。
 
-**id 命名空间边界（本批只改字段名、不改语义 · 评审 #7 收正）**：`session/list` 条目 `sessionId` 的**取值**仍是**持久化槽位号**（`acp.mjs:235` `String(s.slot)`）；`session/load` / `resume` / `delete` 也按槽位号解析（`Number(params.sessionId)`）。
+**id 命名空间边界（本批只改字段名、不改语义 · 评审 #7 收正）**：`session/list` 条目 `sessionId` 的**取值**仍是**持久化槽位号**（`acp.mjs:235` `String(s.slot)`）（as-of 2026-09-29）；`session/load` / `resume` / `delete` 也按槽位号解析（`Number(params.sessionId)`）。
 而 `session/prompt` / `cancel` / `close` / `set_config_option` / `set_mode` 认的是 **ACP 会话 id**（`nextId++` 分配、`sessions` Map 的键——与槽位号**不同物**，§6.1）。
 ⇒ **把 `session/list` 的输出直喂 `session/prompt` 仍会 `unknown session`**（原 G5——本批不做，登记保留在 §11.9）。本行 = **边界可见**，不是修法。
 
@@ -526,7 +526,7 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 
 **契约**：`FileSystemCapabilities.{readTextFile,writeTextFile}` 默认 **`false`**；schema 逐字：「Only available if the client advertises the `fs.writeTextFile` capability.」；文档「MUST treat all capabilities omitted … as UNSUPPORTED」。
 
-**现状**：`bridge.mjs:104-118`（`readBuffer` / `writeBuffer`）与 `:285-307`（`toolRouter` 的 write / edit 分支）**无条件**发 `fs/*`；
+**现状**：`bridge.mjs:104-118`（`readBuffer` / `writeBuffer`）（as-of 2026-09-29）与 `:285-307`（`toolRouter` 的 write / edit 分支）**无条件**发 `fs/*`；
 不回应该面的客户端 ⇒ 每次 `write` / `edit` **干等 30s**（`bridge.mjs:106` · `:114` · `:291` 的 `timeoutMs: 30000`），再走错误分支。
 
 **改法**：能力位（§3.4 快照，`session/new` 时刻取值，会话生命周期内不变）**AND** 工具形态：
@@ -538,7 +538,7 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 
 ### 11.5 G8 · 凭据面（裁定）
 
-**现状（实核）**：`acp.mjs:70-76` `defaultIsConfigured()` = `loadConfig().provider?.apiKey`；
+**现状（实核）**：`acp.mjs:39-45` `defaultIsConfigured()` = `loadConfig().provider?.apiKey`；
 而 `config.provider`（`thincoder-core/config.mjs:319-322`）= `resolveRuntimeProvider(providers, defaultModel)` ⇒ **强绑 `defaultModel`**：
 `providers[].apiKey` 齐全但 `defaultModel` 空/无效 ⇒ `provider = {}` ⇒ 判为「未配置」→ `-32000`（且**无任何文案**指向 `defaultModel`）。
 
@@ -612,8 +612,8 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 |---|---|
 | **G4** 单 cwd 模型（`acp.mjs:163-167`） | 多 cwd 需改 agent 的 confine / 核侧工作目录语义——超 ACP 面；本批以「不声明 `additionalDirectories`」**如实**处理 |
 | **G5** id 命名空间（`session/list` 返槽位号 vs `prompt/cancel` 认 ACP id） | 本批只统一**字段名**（`id` → `sessionId`），**命名空间语义不动**（槽位 ⇄ 会话 id 映射属会话层数据模型） |
-| **G6** `session/prompt` 只取首个 text 块（`acp.mjs:194-195`） | 本批只改**读取位置**（`content` → `prompt`），**取块策略不变**；多块 / image / resource 丢弃照旧 |
-| **G7** `mcpServers` 静默忽略（`acp.mjs:168-170`） | 转发面（含能力声明与传输协商）是独立设计面；本批以「不声明 `mcpCapabilities`」如实处理 |
+| **G6** `session/prompt` 只取首个 text 块（`acp.mjs:194-195`）（as-of 2026-09-29） | 本批只改**读取位置**（`content` → `prompt`），**取块策略不变**；多块 / image / resource 丢弃照旧 |
+| **G7** `mcpServers` 静默忽略（`acp.mjs:168-170`）（as-of 2026-09-29） | 转发面（含能力声明与传输协商）是独立设计面；本批以「不声明 `mcpCapabilities`」如实处理 |
 | **G9** ACP 端到端测试网 | 另批建网；本批 AC 用 handler 直调 + 单条 stdio 冒烟覆盖 |
 | **env 凭据通道** | CONFIG / PROVIDER 板块（D17 理由 3） |
 | **`_meta['terminal-auth']` legacy 兜底** | 旧 SDK 客户端过渡面，非 v1 契约（D16） |
@@ -644,3 +644,4 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
   ③ **§11.5 判据拆分重写**（② 的判据 = 姐妹探针 `providerStatus()` → `{ok, keyPresent, reason}`，落点 = 门助手 / `session/new`·评审 #1；注释面两处收正给逐字目标·评审 #2）；
   ④ §11.3 补 **id 命名空间边界**行（list/load/resume/delete 认槽位号；prompt/cancel/close 认会话 id·评审 #7）；⑤ §11.8 回归面补 `manifest-flip-refusal.test.mjs`（形状收敛不破·评审 #8）；
   ⑥ §11.1 补一手 schema **实物留档指针**（SHA256 + `$def` 摘录 = 批次档 §2.8·评审 #4）；⑦ §11 补现状坐标 as-of 注 + §2.1 / §3.3 键名同步（`sessionId` / `{id,name}`）；⑧ §11.7 判据 4 补门文案分流。**逐条落位表 = 批次档 §2.8。**
+- 2026-09-29（**residuals-round2 批 · 文档面实施轮 · eng-designer**——承批档 `docs/batches/2026-09-29-residuals-round2.md` §2.3 #589）：§7.1 过滤实现两处引注收正——导出点 = `thincoder-cli/src/cli/make-agent.mjs:21`；施用点 = 核 `toolsFinalize` 缝（挂点 `:39` ∕ 施用 `:101`）。**零新语义**。

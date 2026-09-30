@@ -23,7 +23,7 @@ export function guideOf({ live, cwd, visible }) {
 
 /** 三码词键（闭集 · `no-message` = 欢迎条三行构树 —— 项 15）· 两码动作控件（句柄名 / 动作锚 / 词键 = 会话控制条同键）。 */
 const WORDS = { "no-project": "chat.guide.noProject", "no-session": "chat.guide.noSession" }
-/** 欢迎条四键（两语各四 —— 词面住 `renderer/i18n.mjs`；文案二值取定归 `welcomeNode`）。 */
+/** 欢迎条四键（两语各四 —— 词面住 `renderer/i18n-views.mjs`；文案二值取定归 `welcomeNode`）。 */
 const WELCOME = { heading: "welcome.heading", text: "welcome.text", textConfigured: "welcome.textConfigured", shortcuts: "welcome.shortcuts" }
 const ACTIONS = {
   "no-project": { handle: "onOpenDir", action: "project:open", word: "rail.action.openDir" },
@@ -33,7 +33,8 @@ const ACTIONS = {
 /** 引导节点（纯构树 · 表外码 ⇒ `null` —— 禁假造）：`div.chat-empty[data-guide]`，子序 = 文案 → [控件?]；
  *  控件 = `button[data-action]`（词面住文本子）；句柄缺 ⇒ 退纯文案（零假按钮）。
  *  `no-message` 帧（「对齐第三批」项 15）= **欢迎条三行**（抬头 / 文案二值 / 快捷键行 —— 对位 VSC `.welcome` 三行）；
- *  端差登记：VSC 快捷键行含 `@` 文件引用段（桌面 @-补全 = 缺整面族 ⇒ 该段随缺面族批补 —— 词条 `welcome.shortcuts`）。 */
+ *  `@` 段随缺面族批补在位（#632 · 2026-09-29）：VSC 快捷键行含 `@` 文件引用段——本端 `welcome.shortcuts`
+ *  已同步该段（plain-text 形，词条见 `renderer/i18n-views.mjs`）。 */
 export function guideNode(model, handlers = {}) {
   const code = model?.guide
   if (code === "no-message") return welcomeNode(model)

@@ -43,6 +43,8 @@ import { carrierField, getAsyncPool, tombstoneOf, wakeAsyncWaiters } from "./asy
 import { pushReal } from "../context.mjs"
 import { escapeXml } from "../agent/helpers.mjs"
 import { logEvent } from "../log.mjs"
+// #15 描述外置：描述文本单点 = tool-docs/notify_parent.md（DESC 单解析面，缺档抛错语义不变）
+import { DESC } from "../tools/shared.mjs"
 
 /** message 长度上限（字符——闸三上界）。 */
 export const UPSTREAM_MSG_MAX = 1500
@@ -180,19 +182,7 @@ export function drainChildUpstream(agent) {
  */
 export const parentChannelTool = {
   name: "notify_parent",
-  description:
-    "A one-way channel to your PARENT (the agent that spawned you) — you are a subagent, so there is no user to ask.\n" +
-    "Queue a message on the parent's side; your turn is not interrupted and nothing is consumed from it.\n" +
-    "- kind:'ask' — a question whose answer changes your next step and that you cannot answer from the materials you can read\n" +
-    "  (task book / design doc / repo). The parent replies with subagent action:'send'; you receive it as an ordinary\n" +
-    "  instruction at your next turn boundary. One ask at a time while the previous one is still waiting in the parent's queue.\n" +
-    "- kind:'note' — an FYI that needs no answer (a premise you found broken, a conflict you resolved and want visible early).\n" +
-    "- NON-BLOCKING: the call returns immediately. Keep working on the unaffected parts; keep the affected part pending.\n" +
-    "  There is no fetch and no waiting — if you finish first, report the unanswered part as not done (never idle, never poll).\n" +
-    "- SYNCHRONOUS SPAWN: if the parent is blocked on your run (sync spawn), nothing can be sent back to you — the reply path (`send`) reaches only a RUNNING ASYNC child. The message is read when the parent's call returns (it may re-spawn you with an answer); report the unanswered part as not done.\n" +
-    "- Out of scope: naming / implementation / wording details, anything a read or a command would answer, trade-offs the\n" +
-    "  task book already states. When in doubt use the stop-and-report discipline — this is not an escape from your own judgment.\n" +
-    "- Availability: subagents only (depth > 0). At depth 0 you talk to the user through your normal reply or the question tool.",
+  description: DESC("notify_parent"),
   parameters: {
     type: "object",
     properties: {

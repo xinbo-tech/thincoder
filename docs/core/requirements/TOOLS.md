@@ -48,7 +48,7 @@
 工具是模型作用于外部世界的**唯一入口**。工具系统必须做到：注册面单一可枚举、调度确定、安全边界可解释、
 描述文本足以让模型正确路由、**配置申报与消费一一对应（无死键）**。
 
-### 4.2 功能性需求（F1–F13）
+### 4.2 功能性需求（F1–F15）
 
 | # | 需求 | 说明 |
 |---|---|---|
@@ -65,6 +65,8 @@
 | F11 | `batch` 工具**词面协议结构化**（台账 #215） | 状态语义与散文分离，词面错误从人眼抓变机器拦：① `status` 动作的 `value` 参数 **enum 化**（按段词表 = `batch-skeleton.mjs:30` STATUS_WORDS 单源）——散文说明走独立 `note` 字段落状态行括注（或拒绝再入）；② `create` 补 `source` 参数（来源句，填 `来源 = <讨论来源>` 占位）+ `prev` 传入值自动剥 `前情 = ` 前缀归一化（`<BATCH-ID>` 占位 = create 自动清除或生成）；③ append/status 落笔时档内 `<...>` 模板占位符残留 ⇒ **拒绝并列清单**（残留机检——判据 = 设计档 `TOOLS.md` §6.15 裁定点④：骨架死占位枚举单源；`<§N 模板占位>` 行 = 合法暂存不拦）。**边界**：六段 append-only 语义、一段一作者写域、冻结门语义全部零变；散文纪律句不删（机判加在纪律之上）。**判定句**：`status value="讨论已收口 2026-09-21"`（非法词）⇒ 拒绝+词表回显；`status value="进行中" note="..."` ⇒ 状态行 = 关键词 + 括注；create 带 prev 值「前情 = X」⇒ 落盘行 = `前情 = X`（单前缀）；append 时档内占位符 ⇒ 拒绝并列出残留行号。 |
 | F12 | `question` 工具**子代面过滤**（台账 #289） | **depth>0 工具表一律不含 `question`**——交互工具要有活人在环，子代无用户可问（路由指引已在各人格档）；排除 = 装配层按面裁表（与只读过滤同族），**单源** = 核 `thincoder-core/agent/helpers.mjs` 的排除集 + 谓词；四个子代装配点（spawn / escalate 同步·异步 / consult）同过、排除随绑定值传子。**边界**：工具本体（含机械门）/ 静态注册表 / 主会话与 headless 面的**机制**零改（**注入措辞面**不在本句射程——`question` 注入值按当批批档 §2.5 收正）/ 人格档文案零改；不加配置开关。**判定句**：子代工具表（四装配点）名集不含 `question` ∧ 主会话面（`assembleBuiltinTools`）含 `question`；VSC 端 depth>0 基础集同判据（端侧字面归核单源）。判据 = 设计档 `TOOLS.md` §6.16 + 批档 §2.7（A30–A33）；批 = `docs/batches/2026-09-25-question-tool-filter.md`。 |
 | F13 | `edit` 工具**入参守卫与成形错误**（台账 #325） | **非数组 `edits` 容器与非对象条目 ⇒ 成形错误（含期望形态 / 下标），不得裸 JS 错误外泄**——弱模型常见乱调形（JSON 字符串化 / 对象包裹 / `[null]`）下工具调用须以**可自纠的成形文案**终结（用户与模型都不该看到裸 `TypeError` / `Cannot read properties`）；`touchedPaths` 钩子**零抛**（非数组 ⇒ 零触达 · 非对象条目 ⇒ 按「缺 path」尽力提取——错误统一落 `execute` 成形面）。**单源** = 核 `thincoder-core/tools/edit-diff.mjs`（两守卫 + 五文案）；核 `edit-batch.mjs` 与 ACP 桥 `bridge.mjs` 一律引用调用（桥零字面副本）。**边界**：edit 语义 / schema / 描述面 / `applyEditBatch` 既有行为零改；钩子消费点未守卫族与 `args=null` 边界不入本句（台账 #327 归批）。**判定句**：`edits` 为字符串 / 对象 / 数字 / 空数组 ⇒ 容器成形文案 ∧ 零裸抛；`edits[i]` 为 `null` / 字符串 / 数字 / 数组 ⇒ 条目级成形错误含下标 ∧ 零裸抛；桥面同判据（经 `toolRouter` catch 渲染 `Error: <msg>`）。判据 = 设计档 `EDIT.md` §5 / §8 D-6·D-7；批 = `docs/batches/2026-09-25-edit-arg-guard.md`。 |
+| F14 | `bash` 工具**异步 / 后台执行**（台账 #9） | **长任务不占回合**：`bash` 增 `async` 参数——起跑即返 ack（含 id ∥ log 路径），退出 ⇒ settle 注入恰一次（零丢失）；池化（第 5 起显式拒——零静默丢）；终止 = pid ∥ id 两靶杀树（幂等）；超时 = 异步缺省不杀（显式 `timeout` 到点杀 + `killed: timeout`）；收尾两档（回合中断不杀 ∥ 会话中止逐条杀树）；口径同源 = consult ∥ escalate 族（形与对照表在册）。**边界**：同步径逐字零变 ∥ 既有工具语义零变（新增面 = `bash` `async` 参数 ∥ `process` `kill` action ∥ `wait_for` 条件（含 `bash id:N done`））。**判定句**：`bash({command, async:true})` ⇒ ack 含 id ∧ 同步径快照对照零变；异步退出 ⇒ settle 恰一次；第 5 起 ⇒ 显式拒；`process({action:"kill"})` ⇒ 树灭 + 出池 + 墓碑。判据 = 设计档 `TOOLS.md` §6.19；批 = `docs/batches/2026-09-29-tools-carryover.md`。 |
+| F15 | 工具 schema **上下文占用优化**（描述外置统一 + 瘦身）（台账 #15） | **工具描述 / schema 的上下文成本纪律**：预算表**唯一权威处 = `PROMPT-SYSTEM.md`** 描述面节（`TOOLS.md` §6.9 邻位 = 指针行——D2）；单档 ≤8,000 字符（「档」= 工具 schema 条目：`JSON.stringify({description, parameters})` 字符——与基线同式）；总量基线 = 10.5 万字符实测口径 ∥ 目标 −25%；三杠杆用尽仍未达 ⇒ **不硬削**（降档为报告态 + 上抛，零静默降级）。**边界**：工具语义 ∥ 行为零变；schema 字段面零改（只动描述文本量与放置）。**判定句**：预算表复算与 §2.2.1 口径同式（基线集 = depth-0 装配面全集 · 去重键 = 工具名）；单档超 8k ⇒ 逐档给由（不静默）。判据 = 设计档 `TOOLS.md`（§6.9 邻位 ∥ 预算节）；批 = `docs/batches/2026-09-29-tools-carryover.md`。 |
 ### 4.3 非功能性需求（N1–N9）
 
 | # | 维度 | 标准 |
@@ -205,3 +207,4 @@ thincoder 自身的 CLI / TUI **不定义**本能力——它只是其中一个�
 - 2026-09-25（**批 edit-arg-guard · 需求新增 · 父侧直接执行 · 可 revert**——承用户 06:26 实报 VSC 端「`args.edits.map is not a function`」（Provider xiaomimimo · Model mimo-v2.6-flash）；台账 #325）：新增 **§4.2 F13**「edit 工具入参守卫与成形错误」；
   （非数组容器 / 非对象条目 ⇒ 成形错误含下标 · 零裸 TypeError · 守卫与文案单源 = 核 `edit-diff.mjs` · 核与 ACP 桥同口径 · `touchedPaths` 钩子零抛）；§4.2 标题计数 F1–F12 → **F1–F13**（D3）；
   源 = `docs/batches/2026-09-25-edit-arg-guard.md`（设计 = #106 · 桥面扩面 = #109）；**本档新增需求 1 条**。（折三行 = 行宽收正 · 零语义 · 可 revert）
+- 2026-09-29（**tools-carryover 批 · 需求新增 · 父侧直接执行 · 可 revert**——承用户 20:45 追问「陈年导入你就不管了吗？」；台账 #9 ∥ #15）：新增 **§4.2 F14**「`bash` 工具异步 / 后台执行」（#9——起跑即返 ∥ 池化帽 ∥ 杀树 ∥ 收尾两档；口径同源 = consult ∥ escalate 族）+ **F15**「工具 schema 上下文占用优化（描述外置统一 + 瘦身）」（#15——预算表单源 ∥ 单档 ≤8k；削不动 ⇒ 不硬削）；§4.2 标题计数 F1–F13 → **F1–F15**（D3）；源 = `docs/batches/2026-09-29-tools-carryover.md`（设计 §2.1 ∥ §2.2）；**本档新增需求 2 条**。

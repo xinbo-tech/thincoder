@@ -241,8 +241,8 @@ thincoder/                                  ← 合并仓根（git 仓）
 
 ### 8.2 声明面（接口契约 · **v2 承接**）
 
-**现行（v2）声明面 = manifest `checkConfig`**（`PROJECT-MANIFEST.json:21`）：判据项 **5** = `scanDirs` / `lineWidth` / `anchors.domain` / `anchors.exclude` / `exemptions`；整档缺失 ⇒ **fail-closed**（拒入，不静默 fallback）。
-**机制单源 = `docs/core/design/DOC-DISCIPLINE.md` §7**（F2 声明面判据行 + 四档接口段 + 产物包域取向段）——本档不重述（D2）。
+**现行（v2）声明面 = manifest `checkConfig`**（`PROJECT-MANIFEST.json:24`）：判据项 **6** = `scanDirs` / `lineWidth` / `anchors.domain` / `anchors.exclude` / `exemptions` / `lineCounts`；整档缺失 ⇒ **fail-closed**（拒入，不静默 fallback）。
+**机制单源 = `docs/core/design/DOC-DISCIPLINE.md` §7**（F2 声明面判据行 + 五档接口段 + 产物包域取向段）——本档不重述（D2）。
 **可迁移性判据**（原「不得回退硬编码本仓路径」）= AC-M8-3（同处：全仓无硬编码本仓 `docs/` 路径于机检判据）。
 
 **v1 方案（存史 · 不推进）**：本节原给 `.thincoder/docs-face.json` 的 schema（域表 / 排除集 / 外部参照面 / 引擎映射）与三判据句——
@@ -392,6 +392,8 @@ thincoder/                                  ← 合并仓根（git 仓）
 6. **本档不含 UI / 交互决策**（本板块无用户界面）——**显式声明豁免**，非遗漏。
 
 ## 16. 变更记录
+
+- 2026-09-29（**doc-check-face 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-29-doc-check-face.md` §2 同族追加 · 台账 #546）：§8.2 声明面行随 `checkConfig.lineCounts` 键落地收正——判据项 **5 ⇒ 6**（+ `lineCounts`）· 同句指针 `PROJECT-MANIFEST.json:21 ⇒ :24`；§8.2 机制单源句「四档接口段 ⇒ **五档接口段**」。**零新语义**。
 
 - 2026-09-27（**对齐重定位批 · 文档布局收正轮 · eng-designer**——用户 2026-09-27 裁定「目录要分开」· 先例 = desktop 2026-09-25）：**四部分 → 五部分**收正——档头 · §3.1 判据 ③（代码面对应枚举补 `render-core`）· §3.1 判据表行 2 ④ · §3.2 问题定式 · §4 目录树 · §4 部分 id 表（增 `render-core` 行）+ **模块镜像**判据句 · §4 去向表行；
   §5.1 P3 / P5（冲突序补「模块镜像优先于 P1」）· §9 ① · §12 决策 9 · §13 A1；§4 增「第五部分（`render-core`）无迁移底本」段；首档 = `docs/render-core/design/RENDER-CORE.md`（自 `docs/core/design/` 迁入）。

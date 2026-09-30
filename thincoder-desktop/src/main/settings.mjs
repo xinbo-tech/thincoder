@@ -37,7 +37,7 @@ import { thinkOffPath, thinkOffShape, applyAdvisorEffort } from "@thincoder/core
 import { _checkKnownKeyValue } from "@thincoder/core/agent-tools/settings.mjs"
 import { readIndexCounts } from "./index-status.mjs"
 // 值面 ∕ 遮罩族（R7 先拆后改拆出 —— 导出面零改：本档同名 re-export）。
-import { agentFields, deepEqual, deleteKeyPath, isConfigured, setKeyPath } from "./settings-values.mjs"
+import { SLOT_AUTHORITY_PATHS, agentFields, deepEqual, deleteKeyPath, isConfigured, setKeyPath } from "./settings-values.mjs"
 export { MASK, deepEqual, isConfigured, maskKey } from "./settings-values.mjs"
 
 /**
@@ -155,10 +155,6 @@ export async function modelList(payload) {
  *  回执（零写）；拒码闭集不因该窗口泄入核 / 端错误串。 */
 const VANISHED = Symbol("vanished-provider")
 
-/** **S14a**：slot 权威键（会话槽面键——唯一写面 = `session:flags` 模式位槽写）：通用保存不可达
- *  （VSC 侧同裁 = `agent.engineering` 白名单删项 ∕ `agent.advisor.guard` 非 payload 字段）；拒码 `slot-authority`。 */
-const SLOT_AUTHORITY_PATHS = Object.freeze(["agent.advisor.guard", "agent.engineering"])
-
 /** **S11**：advisor 推理档写键（三态写语义经核 `applyAdvisorEffort`——本档只做 spec 解引用）。 */
 const ADVISOR_EFFORT_PATH = "agent.advisor.reasoningEffort"
 
@@ -233,7 +229,7 @@ function tierAgent(config, tier) {
 /**
  * `index:status`（无入参）⇒ `{ ok, status }`（R2 · 桌面功能对位批）：状态读数**装配** —— 计数 = 核只读
  * 出口（转口 `index-status.mjs`，**端侧零 SQL ∕ 零表名**）；`hasEmbedder` = 配置面判据（`embedding.apiKey`
- * 在场 —— 同 `agent-assemble.mjs:68` 装配判据）；`built` = 本项目 code + doc 文件数 > 0（核出口 `indexed`
+ * 在场 —— 同 `thincoder-core/agent/assemble.mjs:76` 装配判据）；`built` = 本项目 code + doc 文件数 > 0（核出口 `indexed`
  * 同源）。无本项目 ⇒ 零计数（读数仍成回执 —— 「未建」态非错误；跨项目读全库不授权）。
  */
 export function indexStatus({ dir = null } = {}) {

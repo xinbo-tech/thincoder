@@ -14,6 +14,8 @@
  *      非落盘件）；两机制**别名登记**（VSC `ui.js:199-206` 150 块 DOM 裁剪 ⇄ 桌面 200 块渲染窗 —— 值差 = 在册
  *      显式裁，`docs/render-core/design/RENDER-CORE.md` 行 13「各自 · 数值差登记」）；归档块**两窗口皆含**
  *      （VSC 裁剪集含 `.sub-block` ⇄ 桌面 `visibleWindow` 含 `kind === "subagent"`）。
+ *   ⑤ **展开集捕获 ∕ 复填协作件**（#606④⑤ —— `echoOpenSet` ∕ `applyEchoOpen`；重挂径消费 = `renderer/views/chat.mjs`
+ *      `mountChat`：重建前捕展开块键集 ⇒ 重建后 `open` 回真（**不强制关闭**）；冻结块静态面零改）。
  * 核件消费（「对齐第二批」项 3 同源面）：`renderSubBlock` / `renderSubagentChunk`（`/rc/subblocks/block.mjs`）·
  * `refreshBlock`（`/rc/subblocks/activity-view.mjs`）。**让位修复批（2026-09-29 · #603）**：归档重建径尾接
  * `initBlockFollow`（接线一致性——出生 ∕ 接管 ∕ 重放三径同件）；冻结块零行为变更（出口钮不建、零写）。
@@ -75,4 +77,24 @@ export function syncSubagentEcho(root, model) {
   nodes.forEach((node, index) => {
     if (blocks[index] !== undefined) fillSubagentEcho(node, blocks[index])
   })
+}
+
+/** 展开集捕获（重挂前 —— #606④⑤）：回显 `details` 展开件在场块键集（`[data-block-id]` 键；缺根 ⇒ 空集）。 */
+export function echoOpenSet(root) {
+  if (!root || typeof root.querySelectorAll !== "function") return []
+  const open = []
+  for (const node of root.querySelectorAll('[data-block-kind="subagent"]')) {
+    if (node.querySelector(".advisor-block")?.open === true) open.push(node.getAttribute("data-block-id"))
+  }
+  return open
+}
+
+/** 展开集复填（重建后 —— #606④⑤）：同键回显 `open` 回真；缺件零动作；**不强制关闭**（未捕获者零写）。 */
+export function applyEchoOpen(root, keys) {
+  if (!root || typeof root.querySelectorAll !== "function" || !Array.isArray(keys) || keys.length === 0) return
+  for (const node of root.querySelectorAll('[data-block-kind="subagent"]')) {
+    if (!keys.includes(node.getAttribute("data-block-id"))) continue
+    const echo = node.querySelector(".advisor-block")
+    if (echo !== null && echo !== undefined) echo.open = true
+  }
 }

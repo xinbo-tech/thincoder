@@ -6,7 +6,7 @@
  * 硬限；三归约体 + 共件 `countOf` 迁入该档，本档引三件分派，无环）；
  * 位标面出档 `renderer/badges.mjs`（桌面残余批拆档产物 —— `clearQuestion` 本档 re-export 保导出名面）；
  * **页读径出档 `renderer/page-read.mjs`**（「对齐第二批」拆分产出 —— 硬限 500 顶格，在册预案本批执行：
- * `applyPage` / `blockOfMessage` 两消费面改引该档 = `renderer/mount-sessions.mjs` / 测试面；本档不引页读档，无环）；
+ * `applyPage` / `blockOfMessage` 两消费面改引该档 = `renderer/session-wire.mjs` / 测试面；本档不引页读档，无环）；
  * **子 agent 归约径出档 `renderer/subagent-reduce.mjs`**（同批续拆 —— 子 agent 面（`ev:subagent` / `ev:subchunk`）
  * + 池读数两助手纯搬移；本档反向引该档两分派支 + 两助手，无环）；
  * **模式位归约径出档 `renderer/events-flags.mjs`**（输入面板上提批 · §2.4 Q8 ∕ §2.7「裁定②本批承接」——本档 498 行
@@ -34,7 +34,8 @@
  *   `isTurnTail(ev)`           回合尾判据**单源**（**三径** = `ev:activity` 无 `fields` 的 `done` / `stopped` ∥ `ev:error` —— `onActivity` / `onError` 与订阅面 `events-subscribe.mjs` 同用）
  *
  * 纪律：块面写（`blocks`）须 `ev.key === state.activeSession`（否则原引用 —— 非活动会话的事件不落本会话流）；
- *   `tabBadges` 任意键可写 · `sessionMeta` / `usage` / 卡面两切片（`questions` / `tasks`）· 挂起 / 消化两切片（`susp` / `digest` —— 空闲唤醒批）· 到期触发切片（`timerNotice` —— timer-wake 阶段 2）按 key 写（切片同键就地替换 · 首写自种 · 零键门 —— 切回即见，单源 = `docs/desktop/design/RENDERER.md` §1.1 事件归约面条）（§2.2(e) 值面写者表）· 状态行读数槽五（`turns` / `turnStarts` /
+ *   `tabBadges` 任意键可写 · `sessionMeta` / `usage` / 卡面两切片（`questions` / `tasks`）· 挂起 / 消化两切片（`susp` / `digest` —— 空闲唤醒批）· 到期触发切片（`timerNotice` —— timer-wake 阶段 2）按 key 写（切片同键就地替换 · 首写自种 · 零键门 —— 活态切片「切回即见」；
+ *   **行痕族例外**：`digest` 轮集随首屏页读四清（存量轮切回即失——未结末轮保），单源 = `docs/desktop/design/RENDERER.md` §1.1 事件归约面条）（§2.2(e) 值面写者表）· 状态行读数槽五（`turns` / `turnStarts` /
  *   `tokens` / `timers` / `lastOutputAt`〔停滞轻显形批 —— 写径 = `reduce` 可见输出通道集单点 + `onActivity` turn 起刻〕）同判（R3a · D17 承载段数据源）· `subBlocks` 按会话键分槽（R3b · D20 —— 归约径住
  *   `renderer/subagent-reduce.mjs`：块面内容回显 = 核件 tail-3 / 展开（「对齐第二批」项 3 收正：原「零内容回显」
  *   口径撤销）；态机单源 = 核 `/rc/subblocks/state.mjs` `subBlocksReduce`）· 池切片 **摘工具行**（`pool.blocks` 不再在册 —— 工具调用面 = 对话流工具卡；折叠头

@@ -29,7 +29,8 @@ import { paintPendingOverflow, pendingGroupNode } from "./views/chat-pending.mjs
 const REASONING_NONE = "none"
 
 /** 重探链轮数上限 ∕ 步进（ms）—— 对位 VSC `PROBE_RETRY_MAX` ∕ `PROBE_RETRY_DELAY_MS`
- *  （`provider-probe-window.mjs`；桌面无宿主忙采样器 ⇒ 无忙让位——端差登记，见批档 §2.3）。 */
+ *  （`provider-probe-window.mjs`）；**宿主忙证据（S3 · #673）住主进程采样器** `src/main/loop-sampler.mjs`
+ *  （行面 ∕ 回执分档消费）；本重探链不读该证据 ⇒ 渲染面重探无忙让位闸。 */
 const RETRY_MAX = 2
 const RETRY_DELAY_MS = 2000
 
@@ -45,10 +46,16 @@ function reasoningOf(effort) {
   return effort === "off" ? REASONING_NONE : effort
 }
 
+/** 行签名（#606⑤ 零写门判据）：结构 + 文本（函数位占位 —— handlers 逐帧稳定，不入签名）。 */
+function noticeSig(row) {
+  return JSON.stringify(row, (key, value) => (typeof value === "function" ? "[fn]" : value))
+}
+
 /** 派生面工厂（一次装配 —— 会话期常驻；宿主锚与 `panel` 装配期后置位 ⇒ 访问器读面）。 */
 export function createComposerSync({ store, activeKey, call, push, pushSubs, wire, panelOf, noticesOf, retryDelayMs: retryDelayIn, delay: delayIn }) {
   let lastBusy = null // 忙态派生读数（防重派；`null` = 未派生）
   let lastFlags = null // 模式位推送签名（同签名零重推）
+  let lastNotices = null // 提示带行集记账（`{ sigs, nodes }` —— #606⑤ 零写门）
   // 候选面状态（全渠扇出批：单飞 + 尾随一轮 —— 在飞期新触发只记位标）：
   let attempted = false // 首次取数已发起（#1 装配首跑恰一次闸；显式刷新口不受此闸）
   let seq = 0 // 单调取数序号（响应落地复核 —— 陈旧响应零写零推）
@@ -63,10 +70,14 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
   const retryDelayMs = Number.isFinite(retryDelayIn) ? retryDelayIn : RETRY_DELAY_MS // 重探步进（测试缝；缺省回退 = 生产径）
   const wait = typeof delayIn === "function" ? delayIn : (ms) => new Promise((resolve) => setTimeout(resolve, ms)) // 等待缝
 
-  /** B21 发送失败行（`composer-notice` 单形 · 行形不动；载体 = 挂件锚）：reason 缺 / 非串 / 空 ⇒ `null`（禁假造）。 */
+  /** B21 发送失败行（`composer-notice` 单形 · 行形不动；载体 = 挂件锚）：reason 缺 / 非串 / 空 ⇒ `null`（禁假造）。
+   *  **供应商无效 ⇒ 引导形（#673 · 2026-09-29 · 承 `docs/batches/2026-09-29-hatch-clearance-2.md` §2.7 行 3「消——基准实读后归一」）**：
+   *  `provider-invalid` 改携 VSC 基准词 `error.provider`（值逐字 = `thincoder-vscode/locales/{en,zh}.json`——
+   *  「未配置 API 密钥 — 点击 ⚙ 设置」/ en 同源；两端可见面同词 · 零新控件与流程）；余码仍走 `composer.send.failed`（含 `${reason}` 原码）。 */
   function failedNotice(reason) {
     if (typeof reason !== "string" || reason === "") return null
-    return { tag: "div", props: { class: "composer-notice", "data-notice": "send-failed" }, children: [t("composer.send.failed", { reason })] }
+    const word = reason === "provider-invalid" ? t("composer.send.noProvider") : t("composer.send.failed", { reason })
+    return { tag: "div", props: { class: "composer-notice", "data-notice": "send-failed" }, children: [word] }
   }
 
   /** 候选行投影（全渠扇出行 `{ provider, id, effortEnum, thinkOff }` ⇒ 核件面形 —— VSC `provider-probe-window.mjs:64-67`
@@ -118,7 +129,8 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
 
   /** 提示行带重挂（序 = [待发送块?, 降级?, 失败?]；空 ⇒ 零节点）。失败行源 = 写面档 `wire.failure()`（B21）。
    *  **待发送块**（收正轮 B12 新口径 · 参照 CLI）：派生于队镜面（判据 = 非空）—— 本锚贴输入框上沿 ⇒ 与输入面板
-   *  **恒定邻接**（任意内容高度 ∕ 任意滚动位置 —— 硬验收：不得浮在会话区上方远处）；非真块（无 `[data-block-kind]`）。 */
+   *  **恒定邻接**（任意内容高度 ∕ 任意滚动位置 —— 硬验收：不得浮在会话区上方远处）；非真块（无 `[data-block-kind]`）。
+   *  **#606⑤ 行集等价零写门**：行签名同 ∧ 现件仍在锚 ⇒ 零 DOM 写（重挂保态）；变 ⇒ 最小重建（同签名位序复用现件）。 */
   function paintNotices(state1 = store.get()) {
     const noticesAnchor = noticesOf()
     if (noticesAnchor === null) return
@@ -130,8 +142,16 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
     if (degraded !== null) rows.push(degraded)
     const failedRow = failedNotice(wire.failure())
     if (failedRow !== null) rows.push(failedRow)
+    const sigs = rows.map(noticeSig)
+    const live = lastNotices !== null && lastNotices.sigs.length === sigs.length
+      && sigs.every((sig, index) => sig === lastNotices.sigs[index])
+      && lastNotices.nodes.every((node) => node.parentNode === noticesAnchor)
+    if (live) return // 行集等价 —— 零 DOM 写
+    const nodes = rows.map((row, index) => (lastNotices !== null && lastNotices.sigs[index] === sigs[index]
+      && lastNotices.nodes[index]?.parentNode === noticesAnchor ? lastNotices.nodes[index] : build(row)))
+    lastNotices = { sigs, nodes }
     clear(noticesAnchor)
-    for (const node of rows) noticesAnchor.append(build(node))
+    for (const node of nodes) noticesAnchor.append(node)
     paintPendingOverflow(noticesAnchor) // 逐条超限尾标记量面（帧尾 —— 真机才有版式面）
   }
 

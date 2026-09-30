@@ -2,7 +2,7 @@
  * file-links.mjs — 验存文件链接（「对齐第三批」相抵② · KD-39；**R2 上提后 = 核件单源 + 端侧探针注入**）。
  *
  * **R2 上提（处理流批 · 2026-09-28）**：解析纯函数（路径 token ∕ 去重 ∕ 封顶 ∕ 盘上存在闸判据）上提
- * 核件 `@thincoder/core/file-links.mjs`（单源——原「多实现面各自落地」句随上提失效；设计档收正归设计面轮）；本档只留端胶水：
+ * 核件 `@thincoder/core/file-links.mjs`（单源——原「多实现面各自落地」句随上提失效）；本档只留端胶水：
  * ① `extractFileLinks(cwd, text)` = 核件 + **`node:fs` 探针端侧注入**（`existsSync` ∕ `statSync` 同名面）；
  * ② `fileOpenTarget(payload)` = `file:open` 载荷的纯判据（路径串合格性 —— `ipc.mjs` 出口消费）——保留端侧。
  * 判据 = **盘上存在闸**（存在 ∧ 是文件）：路径 token 只在真实存在时才成链接 —— URL / 日志噪音 /
@@ -26,8 +26,8 @@ export function extractFileLinks(cwd, text) {
 /** `file:open` 载荷判据（纯函数 · 零抛）：`path` = 非空**绝对**串 ⇒ 原样；否则 `null`（调用面出 `bad-path`）。
  *  绝对性判据（`isAbsolute`）= 契约「盘上绝对路径（验存件）」（`docs/desktop/design/IPC.md` §2 `file:open` 行）——
  *  相对串零静默拒（`shell.openPath` 会按主进程 cwd 解析 ⇒ 假目标）；
- *  `line` 本批不施加（`shell.openPath` 无行参 —— 载荷备用；端差登记 = `docs/desktop/design/UI.md` §1
- *  「本批注（对齐第三批 · 小修族）」相抵②）。 */
+ *  `line` 施加面 = `editor-open.mjs` CLI 径（`--goto path:line` —— 端差清算轮 #627 已消解）；探测未命中 ⇒
+ *  `shell.openPath` 兜底无行参（预期——系统默认程序无行定位面）。 */
 export function fileOpenTarget(payload) {
   const path = payload?.path
   return typeof path === "string" && path !== "" && isAbsolute(path) ? path : null

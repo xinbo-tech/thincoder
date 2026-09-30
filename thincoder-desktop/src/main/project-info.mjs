@@ -108,7 +108,7 @@ async function ledgerDetailLines(anchor) {
  * `notifyFile` = 去重档注入面（生产缺省 = 核 `NOTIFY_FILE`——跨端共享档；用例注入 tmp 档）。
  * 出站三键：`lines`（核行产——变化行 ∕ 启动拍含明细行）· `detailLines`（本档明细行集——状态行
  * tooltip 载波）· `marker`（核状态位——状态行段 11 常驻标记载波 · 状态行 ⇒ CLI 补漏批增）；
- * 三键皆无变化 ⇒ 零出站。调用点 `void`（`ipc.mjs`）零消费返回值。
+ * 三键皆无变化 ⇒ 零出站。调用点（`ipc.mjs`）挂**拒绝处理器**（#686 —— `.catch` 落 `console.error`，零未处理拒绝逃逸）。
  */
 export async function pushLedgerLines({ cwd, key, post, notifyFile } = {}) {
   if (typeof cwd !== "string" || cwd === "" || typeof post !== "function") return null
@@ -151,7 +151,7 @@ export async function pushLedgerLines({ cwd, key, post, notifyFile } = {}) {
       }
       if (payload.lines === undefined && payload.detailLines === undefined && payload.marker === undefined) return
       try { post("ev:ledger", { key, ...payload }) } catch (error) {
-        console.error("[project-info] ledger emit failed:", error) // 出站抛自吞（零静默）—— 调用点 `void` ⇒ 不落未处理拒绝
+        console.error("[project-info] ledger emit failed:", error) // 出站抛自吞（零静默）；回执级失败（整体拒绝）⇒ 调用点 `.catch` 兜底（#686）
       }
     } finally { flushing = false }
   }

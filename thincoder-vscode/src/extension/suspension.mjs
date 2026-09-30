@@ -36,8 +36,8 @@ import { pendingTimerDeadline, timerWakeEnabled } from "@thincoder/core/agent/ti
 // 任务可见性族投递通道（第 10 批 §5.1.4 第 3 条）：环 import（panel-callbacks ↔ 本模块——
 // postSubagentEvent 为函数声明（hoist）——只在调用期读——环安全）。
 import { postSubagentEvent, queuedInfoOf } from "./panel-callbacks.mjs"
-// queue-visible 批（2026-09-24 · 台账 #249）：合并计划取批（R15 恢复——与 CLI 同名同值）
-import { takeQueuedBatchItem } from "./queued-pickup.mjs"
+// queue-visible 批（2026-09-24 · 台账 #249）：取项面收编归核（取项单源——本档零本地副本）
+import { takeQueuedBatchItem } from "@thincoder/core/queued.mjs"
 
 // ─── W8 契约②（装载面）：核驱动动态装载 —— 缓存引用保 sync 出口（对外语义零变） ─────────────────
 // B1-P3 单源不变：驱动本体 = 核 `agent/suspension.mjs`（三端消费）；本档 = 装配面。`loadSuspensionCore()`
@@ -134,8 +134,8 @@ function postSuspensionEnd(panel, { freeze, interrupted = false }) {
   panel._panel?.webview.postMessage({ type: "suspension", active: false, freeze, interrupted: interrupted === true })
 }
 
-/** 取项缝（核 `ctx.takeInput`——缺省 `shift`）：合并批取（`takeQueuedBatchItem`——B2 面单源）+ 消费即清
- *  快照（`pushBusyQueued`；动态 import = 零新增静态边）。首动作不可消费（防御支——#429 取批面放行：`slash` ∕ `turn` 同判可消费，恒不触）
+/** 取项缝（核 `ctx.takeInput`——缺省 `shift`）：合并批取（`takeQueuedBatchItem`——取项单源）+ 消费即清
+ *  快照（`pushBusyQueued`；动态 import = 零新增静态边）。空队防御支（首动作恒可消费，恒不触）
  *  ⇒ null 零动作、条目不消费（落核第 2 步）。 */
 async function takeQueuedInput(panel, queue) {
   const { item, merged } = takeQueuedBatchItem(queue)
@@ -277,7 +277,7 @@ export async function suspensionSession(panel, entry) {
       const leftover = exitInput ?? susp.pendingInput
       while (leftover.length > 0) {
         const { item, merged } = takeQueuedBatchItem(leftover) // 按合并计划取批（多批 = 多回合）
-        if (!item) break // /cmd 首动作（防御支——#429 取批面放行：`slash` ∕ `turn` 同判可消费，恒不触）——不消费（防死循环）
+        if (!item) break // 空队防御支（首动作恒可消费，恒不触）——不消费（防死循环）
         const { pushBusyQueued } = await import("./panel-messages.mjs")
         pushBusyQueued(panel, merged ?? undefined) // 消费即清（待发送标记随实况收敛）
         try { await entry.runTurn(item) } catch { /* surfaced by the turn runner */ }

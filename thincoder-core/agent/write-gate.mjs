@@ -17,16 +17,17 @@
  *    （KD-M6-1——同源不重复实现；落 dispatch.mjs 会让 advisor 反向 import 门禁簇成环）。
  * 2. `freezeWindowConflict(agent, absPaths)` —— D5 冻结窗口判据组装：被审文件集 =
  *    声明文档集（`inflightDesignReviewConflict` 同源 docAbs 腿）+ 批次档（`run.batchDoc`
- *    腿——评审绑定批档在途时，写批档同样致 stale）。dispatch.mjs / VSC tool-gates.mjs
+ *    腿——评审绑定批档在途时，写批档同样致 stale）。dispatch.mjs
  *    只 import 消费，不再各自直连 `advisor-settle.mjs`。
  * 3. `batchRecordWriteConflict(agent, depth, absPaths)` —— 批次档写门判据组装（#309 ·
  *    `AGENT-LOOP-SUBAGENT.md` §6.29.1）：判据与拒绝文案同址（文案字面只出本档）。
- *    两端取用 = 核 `agent/dispatch.mjs` Phase 1 / VSC `agent/tool-gates.mjs` `preGateBlocked`。
+ *    2026-09-29 收窄（台账 #545）：自身批次伴随件（非 `.md` · 同目录 · 词干族 = 三合取）放行——
+ *    批次档本体 ∕ 他批伴随件 ∕ 异目录伴随件照拒；两端取用 = 核 `agent/dispatch.mjs` Phase 1（两端同径）。
  *
  * 继承零改面（本档不碰）：token 门资格判据（anyLiveDesignSlot / validateDesignToken）、
  * 代码路径判定（conventions.mjs 单一权威分类——KD-M4-1 保留为代码路径判定用）。
  */
-import { basename, resolve } from "node:path"
+import { basename, dirname, resolve } from "node:path"
 import { DEFAULT_MANIFEST, docRootPaths, readManifest } from "../manifest.mjs"
 // advisor-settle 无上游依赖本簇（dispatch → write-gate → advisor-settle 单向）。normAbs
 // 权威本体 = review-facts.mjs（第 33 批迁入），advisor-settle re-export；本档再 re-export
@@ -116,10 +117,26 @@ function underBase(targetKey, baseAbs, cwd) {
   return targetKey === root || targetKey.startsWith(root.endsWith("/") ? root : root + "/")
 }
 
+/** 自身批次伴随件判据（三合取——`AGENT-LOOP-SUBAGENT.md` §6.29.1 · 2026-09-29 收窄 · 台账 #545）：
+ *  ① 目标非 `.md`（批次档本体永在门内——含近词干 `<词干>-v2.md`；`.md` 判定大小写不敏感 = fail-closed 侧）；
+ *  ② 目标与绑定档同目录；③ 目标基名以 `<词干>.` 或 `<词干>-` 打头（词干 = 绑定档基名剥 `.md`）。
+ *  入参 = 比较键（gateKey 归一后——win32 大小写归一同覆盖 ②③ 的字面比较）。
+ *  @returns {boolean} 三合取全中 = true（放行面）；余者 false（照拒） */
+function isOwnBatchCompanion(targetKey, boundKey) {
+  const targetBase = basename(targetKey)
+  if (targetBase.toLowerCase().endsWith(".md")) return false // ① 批次档本体（任何 `.md`）永在门内
+  if (dirname(targetKey) !== dirname(boundKey)) return false // ② 同目录（按比较键）
+  const boundBase = basename(boundKey)
+  const stem = boundBase.toLowerCase().endsWith(".md") ? boundBase.slice(0, -3) : boundBase
+  return targetBase.startsWith(stem + ".") || targetBase.startsWith(stem + "-") // ③ 词干族（`.` ∕ `-` 前缀）
+}
+
 /**
- * 批次档写门判据（#309 · `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.29.1——containment）：
+ * 批次档写门判据（#309 · `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.29.1——containment；
+ * 2026-09-29 收窄 · 台账 #545）：
  * 工程角色子代理（`depth > 0` ∧ `agent._batchDoc` 在场）对**批次档文件**的写 ⇒ 目标 ≠ 绑定档
- * ⇒ 冲突（fail-closed；写自己绑定的档 = 正常面放行）。比较键 = 绝对路径 + win32 大小写归一。
+ * **且非绑定批次的伴随件**（见 `isOwnBatchCompanion`）⇒ 冲突（fail-closed；写自己绑定的档 ∥
+ * 自身批次伴随件 = 正常面放行）。比较键 = 绝对路径 + win32 大小写归一。
  * 界面：depth 0（主 agent——跨档处置是父侧职责）· 无 `_batchDoc`（非工程绑定族）· 主基底外的
  * 普通文件写 —— 三种形态均不进本门（返回 null，行为零变）。判据集由调用方限定 = `FILE_MUTATORS`
  * （`file_ops` / 读类不在门内——§6.29.1 边界）。
@@ -145,10 +162,11 @@ export function batchRecordWriteConflict(agent, depth, absPaths) {
     const targetKey = gateKey(target)
     if (targetKey === boundKey) continue // 写自己绑定的档 = 正常面
     if (!bases.some((b) => underBase(targetKey, b, cwd))) continue // 非批次档文件（含缺 manifest 的基底外盘面）
+    if (isOwnBatchCompanion(targetKey, boundKey)) continue // 自身批次伴随件 = 放行面（三合取——见判据）
     return {
       bound: boundAbs,
       target,
-      message: `write refused — cross-batch batch-record write: this child is bound to ${basename(boundAbs)}; ${basename(target)} is a different batch record. Write only your own bound record (the batch tool targets your bound record); the parent agent handles other batch records.`,
+      message: `write refused — cross-batch batch-record write: this child is bound to ${basename(boundAbs)}; ${basename(target)} belongs to a different batch. Write only your own bound record and its companion files (the batch tool targets your bound record); the parent agent handles other batch records.`,
     }
   }
   return null

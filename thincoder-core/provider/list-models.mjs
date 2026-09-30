@@ -14,6 +14,7 @@
  * 解析保持防御性（字段缺失即跳过该项）。候选不过滤非对话模型（embedding 等——§16.6 #14）。
  */
 import { proxyFetch } from "../proxy.mjs"
+import { resolveProviderSecrets } from "../env-ref.mjs"
 
 const LIST_TIMEOUT_MS = 15_000
 /** 翻页上限（cursor loop 防死循环——任一分页失败即整体抛出，不部分返回）。 */
@@ -94,6 +95,8 @@ async function listGoogle(provider, signal) {
 
 /** List available model IDs from the provider's /models endpoint (format 分派——M1)。 */
 export async function listModels(provider, { signal } = {}) {
+  // #57（provider-config-family 批）：清单拉取入口凭据值位解析（CONFIG.md §6.3）——三 format 分支共享。
+  provider = resolveProviderSecrets(provider)
   const base = String(provider?.baseURL ?? "").replace(/\/+$/, "")
   if (!base) throw new Error("GET /models failed: baseURL is missing") // §2.5 #115 并入（VSC 明确报错）
   const format = provider?.format

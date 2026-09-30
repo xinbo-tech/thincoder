@@ -1,13 +1,15 @@
 /**
  * agent-tools/context.mjs — `context` 工具（CONTEXT-COMPACTION.md §6.16 · context-tool 批 2026-09-21）。
  * 单一工具三操作（用户定形 F-CC5）：`stats`（感知 F-CC1）· `prune`（噪声清理 F-CC3）· `compact`（主动压缩 F-CC2，携 focus + 自动附任务/目标 + 可回查锚——裁令 A/D）。
- * 内联 description（**不新增 tool-docs 档**——24 档族计数零动）；装配面 = 登记册 `agent-tools.mjs`（#83）+ `agent/family-tools.mjs` 的 depth-0 段（`depthOnly`）——两端自动同表；**depth>0 不给**（§6.16.6）。
+ * 描述外置（tool-docs/context.md——#15 统一面：文本单点 = tool-docs，DESC 加载）；装配面 = 登记册 `agent-tools.mjs`（#83）+ `agent/family-tools.mjs` 的 depth-0 段（`depthOnly`）——两端自动同表；**depth>0 不给**（§6.16.6）。
  * 本档同时是**注记文案 / 轻推行 / 回执文案的单源**（核与 VSC 的 run-stages 消费点经动态 import 取用——零新增静态边）。
  * 机械面：`stats` 不新增第三口径（阈值取本回合判定值；百分比走 `historyPercent` 与状态行同式）；`prune` = 合格集（`token-window.mjs` 单源）+「原位换内容」应用面（`context.mjs`）；`compact` **当次零执行**（只登记 `agent._pendingCompact`，由下一安全点消费——§6.16.2）。
  */
 import { contextUsage, estimateTokens, collectStaleToolOutputs, historyPercent, PRUNE_MIN_TOKENS } from "../token-window.mjs"
 import { pruneStaleToolOutputs, COMPRESS_FAILURE_LIMIT } from "../context.mjs"
 import { slotPath } from "../session-slots.mjs"
+// #15 描述外置：描述文本单点 = tool-docs/context.md（DESC 单解析面，缺档抛错语义不变）
+import { DESC } from "../tools/shared.mjs"
 
 /** 轻推行前缀（单活体去重判据——§6.16.5「同前缀旧行先滤」）。 */
 export const CONTEXT_NUDGE_PREFIX = "[System reminder: task/goal changed —"
@@ -125,25 +127,7 @@ function compactReceipt(agent, focus, replaced) {
 
 export const contextTool = {
   name: "context",
-  description:
-    "Manage your own context window — see how full it is, drop stale tool output, or compact the earlier " +
-    "conversation into a summary at a moment of your own choosing.\n" +
-    "- action='stats': current usage — total vs the compaction threshold, per-segment shares, and how much " +
-    "is prunable / reclaimable.\n" +
-    "- action='prune': drop the CONTENT of stale tool results (older than the protected tail) and replace it " +
-    "with a short stub — tool pairing stays intact, the session record keeps the full text, and the tool can " +
-    "simply be re-run.\n" +
-    "- action='compact': compact the earlier conversation now, with 'focus' — write what the UPCOMING work " +
-    "needs (1–3 sentences: the goal, the files, the constraints that must survive). The summary is written to " +
-    "serve that focus; the current task list and goal are attached automatically. It runs at the next safe " +
-    "point (before the next request — never mid-exchange) through the same machine as the automatic " +
-    "compaction: same summary chain, same panel, same failure chain (3 consecutive failures degrade to a " +
-    "deterministic truncation). The receipt carries this session's record path, so nothing is lost for good.\n" +
-    "Nothing here runs on its own — the automatic threshold compaction stays in place as a fallback; whether " +
-    "to compact is your call. Errors come back as 'Error: ...' and change nothing.\n" +
-    "Parameters:\n" +
-    "- action (required): stats | prune | compact\n" +
-    "- focus (required for compact): what the upcoming work needs — the summary is weighted toward it",
+  description: DESC("context"),
   parameters: {
     type: "object",
     properties: {

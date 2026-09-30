@@ -38,8 +38,8 @@ export function effortEnumFor(modelId) {
   const levels = entry?.reasoning || []
   if (levels.length > 0) return levels.filter((x) => x !== "enabled")
   // Fallback: the agentSettings snapshot carries spec-derived enums — available even
-  // before the model-list network probe returns.
-  return SS.agentSettings?.effortEnums?.[modelId] || []
+  // before the model-list network probe returns. I7（#677）：插补面同施 `enabled` 哨兵过滤（两源同判据）。
+  return (SS.agentSettings?.effortEnums?.[modelId] || []).filter((x) => x !== "enabled")
 }
 // 归一链单源（§15.4-1——设置面板 / 聊天面板 picker / advisor 读面三面共用同一个 value）已搬核：
 // `composer/model-menu.mjs`（上提批 `2026-09-28-desktop-input-vsc-align.md` §2.7 P7——VSC `:44-56` 原地）。

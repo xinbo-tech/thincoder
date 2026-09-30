@@ -117,9 +117,9 @@ test("W1 AC-3 窗内受理 = 受理帧（状态形）∥ 消费帧（回执形�
   runs[0].res("done")
   drive.abort(KEY)
   await until(() => drive.active(KEY) === false)
-  // busy 分支形（竞态防御档——实际不可达：判据与取窗同值域，此处核结构单源）
-  const driverSrc = text("thincoder-desktop/src/main/turn-driver.mjs")
-  assert.match(driverSrc, /suspension\.pushInput\(key, String\(text \?\? ""\), images\) \? \{ ok: true, queued: true \} : \{ ok: false, reason: "busy" \}/, "窗支回执：受理 ⇒ queued 同形；否则 busy（竞态防御档）")
+  // 回执三态形（受理 ⇒ queued ∕ 满 ⇒ queue-full（#625）∕ busy 竞态防御档——此处核结构单源）
+  const driverSrc = text("thincoder-desktop/src/main/turn-input.mjs")
+  assert.match(driverSrc, /suspension\.pushInput\(key, String\(text \?\? ""\), images\)[\s\S]{0,600}?routed === "full"[\s\S]{0,200}?queue-full[\s\S]{0,300}?routed \? \{ ok: true, queued: true \} : \{ ok: false, reason: "busy" \}/, "窗支回执三态：受理 ⇒ queued 同形；满 ⇒ queue-full（#625）；否则 busy（竞态防御档）")
 })
 
 test("W2 AC-1 消费前零流内块 ∧ 待发送带在场（归约面 + 带面构树 + 抑制面结构）", () => {

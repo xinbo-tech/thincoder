@@ -85,7 +85,7 @@ api.updateMcpTools({ name: "srv", error: "fail" })
 api.updateProxyTestResult({ ok: true, status: 200 })
 api.updateIndexStatus(null)
 api.renderMcpList()
-showSettingsError("test error")
+showSettingsError("panel", "test error")
 api.closeSettings()
 
 // Protocol: init must have requested shell candidates, and openSettings must now

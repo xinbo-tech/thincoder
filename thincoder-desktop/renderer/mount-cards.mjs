@@ -22,6 +22,8 @@ import { store as defaultStore } from "./store.mjs"
 import { goalCardNode, goalPanelOpen } from "./views/goal.mjs"
 import { planCardNode } from "./views/plan.mjs"
 import { questionCardNode, respondQuestion } from "./views/question.mjs"
+// 快照族（波 1 产物 —— #606④ 包络：卡面域内焦点复填）
+import { captureView, restoreView } from "./view-state.mjs"
 
 /** 卡族挂载根（与块序列同宿对话流根 —— 骨架属性住 `renderer/index.html`）。 */
 export const CARDS_SLOT = '[data-slot="flow"]'
@@ -152,6 +154,14 @@ export function attachCards(host, deps = {}) {
     })
   }
   const onAnswered = () => focusComposer() // P3②（核卡 `deps.onAnswered` 注入点）
-  const paintCards = (state = store.get()) => mountCards(document.querySelector(CARDS_SLOT), state, { onAnswer, onAnswered })
+  const paintCards = (state = store.get()) => {
+    const root = document.querySelector(CARDS_SLOT)
+    const snap = captureView(root)
+    const model = mountCards(root, state, { onAnswer, onAnswered })
+    // #606④ 包络：域内焦点复填；**滚位不复填**（挂载根 = 对话流共享滚动容器 —— 滚位归 chat 面帧尾律，
+    // 且复填会夺新卡置焦的滚入；报告父侧文档层）
+    if (snap !== null) restoreView(root, { scrolls: [], drafts: snap.drafts, focus: snap.focus })
+    return model
+  }
   return { paintCards, handlers: { onAnswer, onAnswered } }
 }

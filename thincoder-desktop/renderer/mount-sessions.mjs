@@ -1,8 +1,8 @@
 /**
- * mount-sessions.mjs — 会话控制面**挂载与交互** + 会话族接线（会话模型轮 R13：原标签条 ∕ 左列两面随会话模型
- * 裁撤退场 —— 本档由「会话族接线」扩为「VSC 形会话控制面 + 接线」；**硬限拆分**：纯构树三件
- * 〔`sessionModel` ∕ `sessionBarTree` ∕ `sessionDropdownTree` + 节点助手〕随 `renderer/views/session-control.mjs`
- * 出档〔该档 588 行越 500 硬限〕—— **结构拆分零语义**：面不变 ∕ 判据不变，只换宿主档）。
+ * mount-sessions.mjs — 会话控制面**挂载与交互**（会话族**接线**面随本批出档 `renderer/session-wire.mjs` —— 越线档结构轮 · 台账 #536；
+ * 会话模型轮 R13：原标签条 ∕ 左列两面随会话模型裁撤退场 —— 本档由「会话族接线」扩为「VSC 形会话控制面 + 接线」〔旧述〕；
+ * **硬限拆分**：纯构树三件〔`sessionModel` ∕ `sessionBarTree` ∕ `sessionDropdownTree` + 节点助手〕随 `renderer/views/session-control.mjs`
+ * 出档〔该档 588 行越 500 硬限〕；接线面随本批出档——**结构拆分零语义**：面不变 ∕ 判据不变，只换宿主档）。
  * 基准 = `thincoder-vscode/webview/session-bar.js` 三件〔项目钮 ∕ 下拉选择器 ∕ 新建钮〕，值面 = `webview/session.css`；
  * 需求句 = `docs/desktop/requirements/PROJECT.md` §3.1「会话控制（面板内 · VSC 形）」行。
  *
@@ -12,33 +12,29 @@
  *   （点条目 ⇒ 关下拉）· 改名 `session:rename`（✎ ⇒ 条目原位换形〔文本控件 + 取消 ∕ 确认两键〕⇒ 通道）·
  *   删除 `session:delete`（✕ ⇒ 内联确认 popover〔`.auto-confirm` 族：背板 + 两键 + 默认焦点取消〕⇒ 通道）。
  *
- * 接线：会话路三出口**同一路**（`session:switch` / `session:create` / `session:resume`）⇒ 共用尾 `openResult`
- * （开页 `openPage` + 列表刷新 `refreshRail`）；`backfill` = 触顶回填出口；删会话 `ok` ⇒ 列表刷新 + **删活动会话 ⇒
- * 邻位接管**（会话列表形：同位置行，越界取末行；列表空 ⇒ 关页）—— `ok:false`（核拒：末项门 ∕ 槽缺）
- * ⇒ **零动作** + 记错。**换形态态 ∕ 开合态住面内 DOM 记账**（`FACE` WeakMap —— 原 store `railForm` ∕ `pendingClose`
- * 两切片随裁撤退场）；重绘（外部刷新）草稿保护 = 值 / 焦点 / 光标按同锚捕获复填（沿原左列挂载先例）。
+ * **换形态态 ∕ 开合态住面内 DOM 记账**（`FACE` WeakMap —— 原 store `railForm` ∕ `pendingClose` 两切片随裁撤退场）；
+ * 重绘保真 = **键控差分**（#606① —— 壳原位 ∕ 条目复用：下拉 scrollTop ∕ 悬停 ∕ 跨帧点按保真；改名草稿随输入
+ * 节点存续 —— 全建径仅壳缺位首挂）；接线描述（三出口同一路 ∕ 邻位接管律）随出档居 `renderer/session-wire.mjs` 档头。
  *
- * 导出面 = `renderer/app.mjs` 消费集：`SESSION_SLOT` · `refreshRail`（启动 / 切项目 / 会话路三出口后 —— **唯一写
- * 路径**）· `backfill` · `resumeOpened` · `activateSession` · `createSession` · `confirmRename` / `deleteSession`
- * （两出口 ∥ popover 确认）· `mountSessionBar`（薄挂载）；纯树面三件住 `renderer/views/session-control.mjs`；
- * `isProject` / `slotOf` / `loadPage` / `openPage` / `openResult` = 本档私有。
- * 窄桥 = 本档模块级 `globalThis.thincoder`（装配面 = `src/preload/preload.cjs` —— 与 `renderer/app.mjs` 同源同刻读取）。
- * 纪律：读面失败一律 `console.error` + **核件 toast 可见提示**（R9 · #486：会话开回执拒 ∕ 调用抛 ∕ 页读抛三失败面；
- * **#556 增改名失败两径**（回执拒 ∕ 抛）· **#578③ 增删除失败两径**（回执拒 ∕ 抛）——载体 = 核 `toast.mjs`，词面 = 端词表）+ 零切片写；零 `node:` / 零裸包（守卫 = `test/guard-closure.test.mjs`）。
+ * 导出面（`renderer/app.mjs` 消费集九名 = 名面零改）：`SESSION_SLOT` · `mountSessionBar`（薄挂载——本档实现）＋
+ * `refreshRail` ∕ `backfill` ∕ `resumeOpened` ∕ `activateSession` ∕ `createSession` ∕ `confirmRename` / `deleteSession`
+ * **七名同名再出口**（接线面出档 `renderer/session-wire.mjs`——缝 = 同名再出口：本档不持实现，`app.mjs` 导入面零改）；
+ * 另 `isProject` ∕ `slotOf` / `loadPage` / `openPage` / `openResult` 随接线面出档（同档），纯树面三件住 `renderer/views/session-control.mjs`。
+ * 纪律：读面失败一律 `console.error`（不静默）+ 零切片写；零 `node:` / 零裸包（守卫 = `test/guard-closure.test.mjs`）。
+ * 失败面可见提示（toast —— R9 · #486 ∕ #556 ∕ #578③ 三族）随接线面住 `renderer/session-wire.mjs` 档头 ∕ 实现。
  */
-import { openSession } from "./events.mjs"
-// 页读径拆分产出（「对齐第二批」）——硬限拆档，结构拆分零语义
-import { applyPage } from "./page-read.mjs"
 import { build, clear, el } from "./dom.mjs"
 import { t } from "./i18n.mjs"
-import { beginBackfill, endBackfill, store } from "./store.mjs"
-// 会话控制面纯构树三件（R13 硬限拆分产出 —— 树面单源；本档只挂载与接线）
-import { sessionBarTree, sessionModel } from "./views/session-control.mjs"
-// 失败面可见提示载体（R9 · #486 —— 核件 toast；词面 = 端词表 `session.*`）
-import { showToast } from "/rc/toast.mjs"
-
-// 窄桥（装配面 = `src/preload/preload.cjs`）
-const host = globalThis.thincoder
+import { store } from "./store.mjs"
+// 会话控制面树面单源（R13 硬限拆分产出）+ 差分辅助件（槽序 ∕ 空态行 ∕ 注记 ∕ 条目构建：挂载面同引）
+import { ITEM_SLOTS, emptyRowNode, itemNode, ledgerNoticeNode, sessionBarTree, sessionDropdownTree, sessionModel } from "./views/session-control.mjs"
+// 快照族（波 1 产物 —— 重建保真「位置 ∕ 状态」半边：#606④ 包络，壳全建径复填滚位 ∕ 域内焦点）
+import { captureView, restoreView } from "./view-state.mjs"
+// 同名 re-export（越线档结构轮 · #536 —— 缝 = 同名再出口）：会话族接线面随本批出档 `renderer/session-wire.mjs`；
+// `app.mjs` 导入面零改（七名经本档转口 ∕ 名面与引用同为直导出——单模块实例）。
+export {
+  activateSession, backfill, confirmRename, createSession, deleteSession, refreshRail, resumeOpened,
+} from "./session-wire.mjs"
 
 /** 会话控制条容器锚（骨架 = `renderer/index.html`：`.session` 首子元素槽 —— 原标签条槽改锚）。 */
 export const SESSION_SLOT = '[data-slot="session-control"]'
@@ -78,42 +74,103 @@ function overlayHost(root) {
   return root !== null && root !== undefined && typeof root.append === "function" ? root : null
 }
 
-/** 草稿捕获（重绘前）：在形文本控件的值 / 焦点 / 光标区间；无在形控件 ⇒ `null`。 */
-function readDraft(root) {
-  const node = root.querySelector?.(NAME_INPUT) ?? null
-  if (node === null) return null
-  return {
-    value: String(node.value ?? ""),
-    focused: root.ownerDocument?.activeElement === node,
-    start: typeof node.selectionStart === "number" ? node.selectionStart : null,
-    end: typeof node.selectionEnd === "number" ? node.selectionEnd : null,
+// ─── 键控差分（#606① —— 壳原位 ∕ 条目复用：下拉 scrollTop ∕ 悬停 ∕ 跨帧点按保真）──────────────────
+
+/** 部件签名（零写判据：标签 + 文本 + `aria-label`）。 */
+const partSig = (node) => `${node.tagName}|${node.textContent}|${node.getAttribute("aria-label") ?? ""}`
+
+/** 条目槽对账（槽序单源 = `ITEM_SLOTS`）：等值 ⇒ 零写；异 ⇒ 原位换件；缺 ⇒ 补位（首个后槽件之前）。 */
+function syncSlots(node, children) {
+  ITEM_SLOTS.forEach((sel, index) => {
+    const cur = node.querySelector(sel)
+    const want = children[index] ?? null
+    if (want === null) { if (cur !== null) cur.remove(); return }
+    const fresh = build(want)
+    if (cur === null) {
+      const ref = ITEM_SLOTS.slice(index + 1).map((next) => node.querySelector(next)).find((hit) => hit !== null) ?? null
+      node.insertBefore(fresh, ref)
+    } else if (partSig(cur) !== partSig(fresh)) cur.replaceWith(fresh)
+  })
+}
+
+/** 条目原位更新（身份保真 = 条目节点复用）：活动态原位写；**换形两向 = 换件**（监听面随换 —— 形内点按冒泡不得误触选择出口）；
+ *  在位 ⇒ 槽对账；回值 = 现件（换件径返回新节点 —— 调用面位置对账用）。 */
+function patchItemNode(node, item, handlers, canDelete, inForm) {
+  node.setAttribute("class", item.active === true ? "session-item active" : "session-item")
+  node.setAttribute("aria-selected", String(item.active === true))
+  const held = node.getAttribute("data-form") === "rename"
+  if (held !== (inForm === true)) {
+    const fresh = build(itemNode(item, handlers, canDelete, inForm === true))
+    node.replaceWith(fresh)
+    return fresh
   }
+  if (inForm !== true) syncSlots(node, itemNode(item, handlers, canDelete, false).children)
+  return node
 }
 
-/** 草稿复填（重建后，同锚）：值恒复填（改形重绘不丢字）；焦点 / 光标择位防御（换形已收 ⇒ 跳过）。 */
-function restoreDraft(root, draft) {
-  const node = root.querySelector?.(NAME_INPUT) ?? null
-  if (node === null) return
-  node.value = draft.value
-  if (draft.focused !== true || typeof node.focus !== "function") return
-  node.focus()
-  if (draft.start !== null && typeof node.setSelectionRange === "function") node.setSelectionRange(draft.start, draft.end ?? draft.start)
+/** 下拉差分（壳不摘 ⇒ scrollTop 自保）：注记 ∕ 条目键控（删差额 · 逆序定位 · 逐件原位）∕ 空态行对账。 */
+function syncDropdown(dropdown, model, handlers, face) {
+  dropdown.setAttribute("data-open", face.open === true ? "1" : "0") // 值域 1 ∕ 0（CSS 锚 `[data-open="1"]` —— 与构树面同字面）
+  if (dropdown.getAttribute("aria-label") !== t("session.title")) dropdown.setAttribute("aria-label", t("session.title")) // 词面随 `locale`
+  const notice = dropdown.querySelector("[data-ledger-notice]")
+  const wantNotice = ledgerNoticeNode(model.ledger)
+  if (wantNotice === null) { if (notice !== null) notice.remove() }
+  else if (notice === null) dropdown.prepend(build(wantNotice))
+  else if (notice.textContent !== wantNotice.children.join("")) notice.replaceWith(build(wantNotice))
+  const empty = dropdown.querySelector(".session-empty")
+  const byKey = new Map()
+  for (const node of dropdown.querySelectorAll(".session-item")) {
+    const key = node === empty ? null : node.getAttribute("data-slot")
+    if (key === null || byKey.has(key) || !model.items.some((item) => item.key === key)) { if (node !== empty) node.remove(); continue }
+    byKey.set(key, node)
+  }
+  let cursor = empty
+  for (let i = model.items.length - 1; i >= 0; i -= 1) {
+    const item = model.items[i]
+    let node = byKey.get(item.key)
+    if (node === undefined) node = build(itemNode(item, handlers, model.canDelete, face.form === item.key))
+    else node = patchItemNode(node, item, handlers, model.canDelete, face.form === item.key) // 回值 = 现件（换形径可能换件）
+    if (node.parentNode !== dropdown || node.nextSibling !== cursor) dropdown.insertBefore(node, cursor)
+    cursor = node
+  }
+  if (model.items.length === 0) { if (empty === null) dropdown.append(build(emptyRowNode())); else if (empty.textContent !== t("session.empty")) empty.textContent = t("session.empty") }
+  else if (empty !== null) empty.remove()
 }
 
-/** 薄挂载（面内态直读 ⇒ 重挂保态；容器缺位 ⇒ 空转）：清槽 → 条体树（开时含下拉）→ 草稿复填 ∕ 置焦 → 点外关注册。 */
+/** 壳原位对账（#606①）：项目钮 ∕ 选择器 ∕ 下拉三件就地更新（`aria-label` 词面随 `locale` 同刷 —— 原位写）；壳缺位 ⇒ 假（挂载面全建径）。 */
+function syncBar(root, model, handlers, face) {
+  const selector = root.querySelector(".session-selector")
+  if (selector === null) return false
+  const project = root.querySelector(".session-project")
+  const label = model.project === null ? t("rail.action.openDir") : model.project.name
+  const cwd = model.project === null ? "" : model.project.cwd
+  if (project !== null && project.textContent !== label) project.textContent = label
+  if (project !== null && (project.getAttribute("title") ?? "") !== cwd) project.setAttribute("title", cwd)
+  for (const [node, word] of [[project, t("rail.action.openDir")], [root.querySelector(".session-new"), t("rail.action.newSession")]]) if (node !== null && node.getAttribute("aria-label") !== word) node.setAttribute("aria-label", word)
+  if (selector.getAttribute("aria-label") !== t("session.title")) selector.setAttribute("aria-label", t("session.title"))
+  selector.setAttribute("aria-expanded", String(face.open === true))
+  const title = selector.querySelector(".session-title")
+  if (title !== null && title.textContent !== model.title) title.textContent = model.title
+  const dropdown = selector.querySelector(".session-dropdown")
+  if (face.open !== true) { if (dropdown !== null) dropdown.remove() }
+  else if (dropdown === null) selector.append(build(sessionDropdownTree(model, handlers, face)))
+  else syncDropdown(dropdown, model, handlers, face)
+  return true
+}
+
+/** 薄挂载（面内态直读 ⇒ 重挂保态；容器缺位 ⇒ 空转）：快照捕获 → 壳键控差分（壳缺位 ⇒ 全建）→ 域内复填
+ *  → 在形置焦 → 点外关注册。**改名草稿随输入节点存续**（键控差分下无重建擦写——原 `readDraft` ∕ `restoreDraft` 随退役）。 */
 export function mountSessionBar(root, state, handlers = {}) {
   if (!root || typeof root.append !== "function") return null
   const model = sessionModel(state)
   const face = setFace(root, { handlers })
-  const draft = face.open === true && face.form !== null ? readDraft(root) : null
-  clear(root)
-  root.append(build(sessionBarTree(model, wireFace(root, handlers), face)))
+  const snap = captureView(root)
+  const wired = wireFace(root, handlers)
+  if (syncBar(root, model, wired, face) !== true) { clear(root); root.append(build(sessionBarTree(model, wired, face))) }
+  restoreView(root, snap)
   bindOutsideClose(root)
-  if (face.open === true && face.form !== null) {
-    const input = root.querySelector?.(NAME_INPUT) ?? null
-    if (draft !== null) restoreDraft(root, draft)
-    else if (typeof input?.focus === "function") input.focus()
-  }
+  const active = docOf(root)?.activeElement ?? null // 形内焦点不夺（现焦已在形内 ⇒ 零动作 —— 只在形外 ∕ 新起形时置焦）
+  if (face.open === true && face.form !== null && active?.closest?.('[data-form="rename"]') == null) root.querySelector?.(NAME_INPUT)?.focus?.()
   return model
 }
 
@@ -239,168 +296,4 @@ function showDeleteConfirm(root, item, handlers) {
   confirmFace = { popover, backdrop }
   // 安全默认：焦点落「取消」（VSC `session-bar.js:126` 同径：+50ms）
   setTimeout(() => popover.querySelector?.(".auto-confirm-no")?.focus?.(), 50)
-}
-
-// ─── 会话族接线（批 5 · 批档 §2.2（f）· 批 8 补页读两径）────────────────────────
-
-/** `{ cwd, recent }` 形判据（`project:recent` 面；`cwd` = 未打开项目时 `null`）。 */
-function isProject(payload) {
-  return payload !== null && typeof payload === "object" && Array.isArray(payload.recent)
-}
-
-/** 列表刷新（启动 / 切项目 / 会话路三出口后 —— **唯一写路径**）：两读面并发 ⇒ 写切片 ⇒ 订阅面重挂（下拉列表供给）。 */
-export async function refreshRail() {
-  try {
-    const [project, list] = await Promise.all([host.invoke("project:recent"), host.invoke("sessions:list")])
-    if (!isProject(project) || !Array.isArray(list?.sessions)) {
-      console.error("[renderer] session list payload shape unexpected:", project, list)
-      return
-    }
-    store.set({ project: { cwd: project.cwd ?? null, recent: project.recent }, sessions: list.sessions, ledger: list.ledger ?? null })
-  } catch (error) {
-    console.error("[renderer] session list refresh failed:", error)
-  }
-}
-
-/** 槽号回代：视图面行键 / 条目键是**串**（键域），通道载荷 `{ slot }` 是槽号域 —— 核写本端记录时**原值落盘**
- *  （`thincoder-core/session-slots.mjs:133`）且读面要求整数槽（同档 `:126` `Number.isInteger`）⇒ 串入会使本端记录
- *  退化为「缺失」。纯类型回代（非整数 ⇒ 原值直传，交核判 —— 端层**零预校验**：判据单源 = 核）。 */
-function slotOf(key) {
-  const slot = Number(key)
-  return Number.isInteger(slot) ? slot : key
-}
-
-/** 失败因归一（端既有口径 = `composer-wire.mjs` `reasonOf`：非空串直取，余回落 `unknown`）—— toast 插值面。 */
-function reasonOf(receipt) {
-  return typeof receipt?.reason === "string" && receipt.reason !== "" ? receipt.reason : "unknown"
-}
-
-/** 页读（首屏 `before = null` / 回填 = 页游标）：`history:page` ⇒ `applyPage` 落态；抛 / 拒绝 ⇒ 记错 + 清在途（成败皆清）。 */
-async function loadPage(key, before) {
-  try {
-    const receipt = await host.invoke("history:page", { key, before })
-    store.set(applyPage(store.get(), receipt, { key, before }))
-  } catch (error) {
-    console.error("[renderer] history:page failed:", error)
-    showToast(t("session.loadFailed")) // R9 · #486：页读失败 ⇒ 可见提示（载入失败不静默）
-    store.set(endBackfill(store.get()))
-  }
-}
-
-/** 开页（三路开会话**同一路**）：键面动作（`openSession` ⇒ `activeSession` + 清本键 `done` 位标）+ 首屏页读。 */
-function openPage(key) {
-  store.set(openSession(store.get(), key))
-  void loadPage(key, null)
-}
-
-/** 触顶回填（接线态）：判据单源 = store `beginBackfill`（无更早页 / 重入 ⇒ 原引用 ⇒ 零动作、零页读）；受理 ⇒ 页读。 */
-export function backfill() {
-  const state = store.get()
-  const next = beginBackfill(state, { page: state.history?.page ?? null })
-  if (next === state) return
-  store.set(next)
-  void loadPage(next.activeSession, next.history.page)
-}
-
-/** 会话路三出口**共用尾**（三路 = 同一路）：`ok` ⇒ 开页 + 列表刷新；否则记错 + **可见提示**（R9 · #486 ——
- *  VSC 会话族三档 `showWarningMessage` 对位；零切片写、界面照旧）。 */
-async function openResult(channel, receipt, context) {
-  if (receipt?.ok !== true) {
-    if (context !== undefined) console.error(`[renderer] ${channel} failed:`, receipt?.reason, "slot:", context)
-    else console.error(`[renderer] ${channel} failed:`, receipt?.reason)
-    showToast(t("session.openFailed", { reason: reasonOf(receipt) }))
-    return false
-  }
-  openPage(String(receipt.slot))
-  await refreshRail()
-  return true
-}
-
-/** 点开即续（`project:open` 成功后自动一次 —— 该通道恒 `ok`：核判据兜底分配新槽）。 */
-export async function resumeOpened() {
-  try {
-    await openResult("session:resume", await host.invoke("session:resume"))
-  } catch (error) {
-    console.error("[renderer] session:resume failed:", error)
-    showToast(t("session.openFailed", { reason: String(error?.message ?? error) })) // R9 · #486：调用抛同理可见
-  }
-}
-
-/** 切会话（下拉点条目 —— **同一路**：切换即开页）：`session:switch` ⇒ 共用尾。 */
-export async function activateSession(key) {
-  try {
-    return await openResult("session:switch", await host.invoke("session:switch", { slot: slotOf(key) }), key)
-  } catch (error) {
-    console.error("[renderer] session:switch failed:", error)
-    showToast(t("session.openFailed", { reason: String(error?.message ?? error) })) // R9 · #486：调用抛同理可见
-    return false
-  }
-}
-
-/** 新建会话（新建钮出口）：`session:create` ⇒ 共用尾。 */
-export async function createSession() {
-  try {
-    return await openResult("session:create", await host.invoke("session:create"))
-  } catch (error) {
-    console.error("[renderer] session:create failed:", error)
-    showToast(t("session.openFailed", { reason: String(error?.message ?? error) })) // R9 · #486：调用抛同理可见
-    return false
-  }
-}
-
-/** 改名出口（下拉条目 ✎ 换形后的确认键 —— 通道既有）：`ok` 真 ⇒ 列表刷新（新标题可见）+ 回 `true`（面收形）；
- *  `ok:false`（核拒：`invalid-slot` ∕ `mtime-conflict` 等四值闭集直传）∕ 抛 ⇒ **零写零收形**（草稿不丢）+ 记错
- *  + **可见提示**（toast —— #556：对位 VSC `panel-messages-session.mjs:96` 改名失败提示；词面同 `session.openFailed` 族）。 */
-export async function confirmRename(key, text) {
-  try {
-    const receipt = await host.invoke("session:rename", { slot: slotOf(key), title: text })
-    if (receipt?.ok !== true) {
-      console.error("[renderer] session:rename failed:", receipt?.reason, "slot:", key)
-      showToast(t("session.renameFailed", { reason: reasonOf(receipt) })) // #556：失败面可见（回执拒径）
-      return false
-    }
-    await refreshRail()
-    return true
-  } catch (error) {
-    console.error("[renderer] session:rename failed:", error)
-    showToast(t("session.renameFailed", { reason: String(error?.message ?? error) })) // #556：调用抛同理可见
-    return false
-  }
-}
-
-/** 删除出口（确认 popover 的「删除」键 —— 通道既有）：`ok` 真 ⇒ 列表刷新 + **删活动会话 ⇒ 邻位接管**
- *  （`closeTab` 同律的会话列表形：同位置行〔越界取末行〕⇒ `session:switch` 同一路；列表空 ⇒ 关页）；
- *  `ok:false`（核拒：末项门 `last-session` ∕ `slot-missing`）∕ 抛 ⇒ **零动作**（不造死页）+ 记错
- *  + **可见提示**（toast —— #578③：删除失败径同 toast 面；词面同 `session.openFailed` 族）。 */
-export async function deleteSession(key) {
-  try {
-    const before = store.get()
-    const rows = Array.isArray(before.sessions) ? before.sessions : []
-    const index = rows.findIndex((row) => String(row?.slot) === String(key))
-    const wasActive = String(before.activeSession ?? "") === String(key)
-    const receipt = await host.invoke("session:delete", { slot: slotOf(key) })
-    if (receipt?.ok !== true) {
-      console.error("[renderer] session:delete failed:", receipt?.reason, "slot:", key)
-      showToast(t("session.deleteFailed", { reason: reasonOf(receipt) })) // #578③：失败面可见（回执拒径）
-      return false
-    }
-    await refreshRail()
-    if (wasActive) await takeover(index)
-    return true
-  } catch (error) {
-    console.error("[renderer] session:delete failed:", error)
-    showToast(t("session.deleteFailed", { reason: String(error?.message ?? error) })) // #578③：调用抛同理可见
-    return false
-  }
-}
-
-/** 删活动会话后的接管（**邻位接管律**会话列表形）：同位置行（越界取末行）⇒ 切会话同一路；列表空 ⇒ 关页。 */
-async function takeover(index) {
-  const rows = store.get().sessions ?? []
-  if (rows.length === 0) {
-    store.set(openSession(store.get(), null))
-    return
-  }
-  const at = Math.min(Math.max(index, 0), rows.length - 1)
-  await activateSession(String(rows[at]?.slot))
 }

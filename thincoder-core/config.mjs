@@ -132,11 +132,12 @@ export function isBailianHost(baseURL) {
  *   provider.reasoningEffort   → true      (effort tier implies thinking on; rides with reasoning_effort)
  *   otherwise                  → undefined (field omitted — server default stays, no behavior change)
  * NOTE: spec carries no model field today — the name comes from provider.model (spec?.model is
- * a forward-compatible fallback). Keep the body byte-aligned with thincoder-vscode config.mjs
- * (cross-repo parity test compares them).
+ * a forward-compatible fallback). 非串 model（脏载 / 手工档）归一等价空串（未登记 ⇒ undefined）——
+ * 本函数恒 total、不因类型脏载抛（#638 查表族同归一）。
  */
 export function resolveEnableThinking(provider, spec) {
-  const model = (provider?.model ?? spec?.model ?? "").toLowerCase()
+  const raw = provider?.model ?? spec?.model ?? ""
+  const model = (typeof raw === "string" ? raw : "").toLowerCase()
   if (!model.startsWith("qwen") || model.startsWith("qwen3-coder")) return undefined
   if (!isBailianHost(provider?.baseURL)) return undefined
   if (provider.thinking === null) return false

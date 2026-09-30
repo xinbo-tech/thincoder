@@ -13,7 +13,6 @@ import { ctx, S, vscode } from "./state.js"
 import { t } from "./i18n.js"
 import { createComposerPanel } from "../node_modules/@thincoder/render-core/composer/panel.mjs"
 import { addUser } from "./ui.js"
-import { clearPanels } from "./panels.js"
 import { renderStatusBar } from "./status-bar.js"
 
 /** ⑤ hooks（跨面副作用 ∕ 跨面状态同步）。`openSettings` ∕ `onAgentSettings` 两枚由装配点回填
@@ -93,12 +92,11 @@ Object.defineProperty(ctx, "isRunning", {
 
 // ⑤ hooks 端侧绑定（逐条 = §2.3 四条跨面依赖 + 源档逐字搬移）
 composerHooks.onTurnStart = () => {
-  // 回合起点动作（`send.js:62-63,69,72` 同点并钩）：簿记归零 + 工具结果位清 + 面板清（含 `_suspended` 条件）
+  // 回合起点动作（`send.js:62-63,69,72` 同点并钩）：簿记归零 + 工具结果位清
+  // （#642：面板清已退场——重置点归位会话边界；#643：死计数行清）
   S._turnStart = Date.now()
   S._lastOutputAt = S._turnStart // 停滞轻显形：回合起刻 = 静默初始锚（WEBVIEW.md §4.7——`_turnStart` 邻位同置）
-  S._llmCalls = 0
   ctx.hadToolResult = false
-  if (!S._suspended) clearPanels()
 }
 composerHooks.onUserEcho = (text, ts) => addUser(ctx, text, ts) // `send.js:54,73`——本地气泡（返回元素供待发送标记）
 composerHooks.onWelcomeDismiss = () => { // `send.js:46-47,64-65`
@@ -124,4 +122,4 @@ composerHooks.closeSiblingDropdowns = () => { // `model-picker.js:96-98`（会�
   ctx.sessionDropdown.style.display = "none"
   ctx.sessionSelector?.setAttribute("aria-expanded", "false")
 }
-composerHooks.confirmRemoveProvider = (onConfirm) => window._confirmSecretDelete(null, onConfirm) // `model-picker.js:26`
+composerHooks.confirmRemoveProvider = (onConfirm) => window._confirmSecretDelete(null, onConfirm) // 核 `model-menu.mjs:304`（footer 出口——F-W17 确认门）

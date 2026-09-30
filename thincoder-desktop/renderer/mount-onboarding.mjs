@@ -7,7 +7,8 @@
  *   ① 步号闭集 1..3（步进 = store 纯动作 `setWizardStep`；步入步 2 ⇒ 模型候选面随动）。
  *   ② 步 3 目录出口走装配面项目面链（`onProjectOpened` = `app.mjs` `openDir`，含刷新 + 「点开即可续」）
  *      —— 本档零算法副本；信息行两读数由装配面随动复读。
- *   ③ 收尾复读配置闸（`config:read` ⇒ 三态归一）⇒ 落槽；仍未配 ⇒ 退场旗（会话内幂等，下次冷启动重新过闸）。
+ *   ③ 收尾复读配置闸（`config:read` ⇒ 三态归一）⇒ 落槽；仍未配 ⇒ 退场旗（会话内幂等，下次冷启动重新过闸）；
+ *      成功判据 = 回执携布尔 `configured`（该通道无 `ok` 旗标——读失败 fail-loud 抛出；形源 = `thincoder-desktop/src/main/ipc.mjs:103-104`）。
  *   ④ 失败面零静默：目录钩缺 / 收尾读失败 ⇒ `deps.report` 落面串（表内码 / 核错误串直传，词面归视图 `reasonWord`）。
  * 纪律：零 `node:` / 零裸包 · 本档 import 只 `store.mjs` 纯动作（**零反向** —— 装配面单向往回，无环）。
  */
@@ -61,10 +62,11 @@ export function createWizard(deps = {}) {
   /** 向导收尾：复读配置闸（`config:read` ⇒ 三态归一）⇒ 落槽；仍未配 ⇒ 退场旗（会话内幂等，下次冷启动重新过闸）。 */
   async function finishWizard() {
     const receipt = await ask("config:read")
-    const configured = receipt.ok === true
+    const read = typeof receipt?.configured === "boolean" // 成功判据 = 回执携布尔 configured（该通道无 ok 旗标——单源 = IPC.md §2）
+    const configured = read
       ? configuredFlag(receipt.configured)
       : (store.get().settings?.configured ?? null)
-    if (receipt.ok === true) clearReport()
+    if (read) clearReport()
     else report("panel", receipt, "config:read") // 两臂互斥：失败串留面（禁「先清后报」—— 向导占槽路会把刚落的串同 tick 抹除）
     const next = patchSettings(store.get(), { configured })
     store.set(configured === true ? next : dismissWizard(next))

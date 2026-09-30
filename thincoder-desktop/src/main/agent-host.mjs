@@ -82,6 +82,16 @@ export function advisorMeta(agent) {
   return { round: (agent._advisorRound ?? 0) + 1, model: agent.provider?.model ?? null }
 }
 
+/** `ev:usage` 帧门判据（R3 端差① 修 · 2026-09-29 · 批 `docs/batches/2026-09-29-hatch-clearance-2.md` · #673）：
+ *  `pct > 0` ∨ 本帧携新读数（tokens ∕ timers —— 非正 ∕ 缺 ⇒ 不携）⇒ 发；否则不发（零读数帧不复发）。
+ *  取整 0 回合（`historyPercent` = `Math.round` ⇒ 小历史回 0）——有 tokens ∕ timers 读数即照达
+ *  （判据句「取整 0 回合三读数照达」）。纯函数、零副作用。 */
+export function usageFrameWanted(ctxPct, ctxTokens, timers) {
+  if (typeof ctxPct === "number" && ctxPct > 0) return true
+  if (typeof ctxTokens === "number" && ctxTokens > 0) return true
+  return typeof timers?.count === "number" && timers.count > 0
+}
+
 /** 宿主装配桥：`emit(channel, payload)` = 出站面（主进程注入）· `run` = 回合运行器 · `assemble` = 装配函数（皆可注入）。
  *  `projects` = 项目面（`currentCwd()` 供装配取值）；返回正文面 + 子 agent 面（`subagent-face.mjs` 展开：
  *  `stopSubagent` / `heartbeatBeat` / `startHeartbeat` / `stopHeartbeat`）+ `flagsOf` + `table` / `agents`。
@@ -138,16 +148,21 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   }
 
   /** 回合尾用量读数（`docs/desktop/design/IPC.md` §1 `ev:usage` 行 —— 产出方 = 宿主回合尾结算）：
-   *  载荷 = `{ key, ctxPct, ctxTokens, usage, timers }` —— `ctxPct` = 核 `historyPercent` 投影（**端侧零重算** · 门 = 有效读数〔数字 ∧ `> 0`〕，
-   *  不假造）；`ctxTokens` = 核 `estimateTokens(agent.history)` 投影（状态行 ⇒ CLI 补漏批增——与 `ctxPct` 同点产出；
-   *  发门 = `ctxPct` 单判——`ctxTokens` 0 ∕ 缺不抑事件，渲染面自持「非正 ⇒ 尾串缺席」）；`usage` = 本键会话累计（桥面 `onUsage` 累加 ·
+   *  载荷 = `{ key, ctxPct, ctxTokens, usage, timers }` —— `ctxPct` = 核 `historyPercent` 投影（**端侧零重算**，不假造）；
+   *  `ctxTokens` = 核 `estimateTokens(agent.history)` 投影（状态行 ⇒ CLI 补漏批增——与 `ctxPct` 同点产出）；
+   *  **发门 = `usageFrameWanted`**（`pct > 0` ∨ 本帧携新读数（tokens ∕ timers）⇒ 发 · 否则不发——R3 端差① 修，
+   *  2026-09-29 · 批 #673：取整 0 回合三读数照达（判据句）；单源 = `docs/render-core/design/RENDER-CORE.md`
+   *  §9 R3 端差①；`ctxTokens` 0 ∕ 缺不抑事件，渲染面自持「非正 ⇒ 尾串缺席」）；
+   *  `usage` = 本键会话累计（桥面 `onUsage` 累加 ·
    *  五键 = VSC 键面 · CLI 同源映射）· `timers` = 核 `_pendingTimers` 活读（空在途 ⇒ 零值——显示面自持「非正 ⇒ 零节点」）。
    *  **三径同点调用**：落盘之后、终局事件之前 · **不抛前提** = `agent.history` 恒数组
    *  （核装配缺省 `thincoder-core/agent.mjs:54` · 接续恒置 `thincoder-core/session-lifecycle.mjs:113`）⇒ 本读数不改结算链。 */
   function postUsage(key, agent) {
     const ctxPct = historyPercent(agent?.history ?? [], agent?.provider)
-    if (typeof ctxPct !== "number" || !(ctxPct > 0)) return
-    post("ev:usage", { key, ctxPct, ctxTokens: estimateTokens(agent?.history ?? []), usage: { ...tokensOf(key) }, timers: pendingTimers(agent) })
+    const ctxTokens = estimateTokens(agent?.history ?? [])
+    const timers = pendingTimers(agent)
+    if (!usageFrameWanted(ctxPct, ctxTokens, timers)) return
+    post("ev:usage", { key, ctxPct, ctxTokens, usage: { ...tokensOf(key) }, timers })
   }
 
   /** 装配 + 装载本键槽：`loadAgentSlot` 在**宿主内**（假 `assemble` 注入同走装载 —— §1.14 ① 的语义面

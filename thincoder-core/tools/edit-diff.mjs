@@ -387,29 +387,10 @@ export async function runSingleEdit(args, ctx) {
   })
 }
 
-// ─── edit 回执形态注入缝（#69——「回执形态按端注入」，形态参 §2.13.5 注入缝）──────────
 /**
- * 回执组装注入位（**缺省不覆盖** = CLI 回执形态（base + 写入点上下文）——零行为变；
- * 端装配层可覆盖为本端回执形态）。核内零端名分支（契约 5——本档只认 `format` 函数名）。
- * 契约：`format(fields) → string | null | undefined | Promise<同>`——null / undefined =
- * 未处理 ⇒ 回默认回执；其余返回值即该条回执。
- */
-let injectedReceipt = null
-export function configureEditReceipt(impl) {
-  injectedReceipt = impl && typeof impl.format === "function" ? impl : null
-}
-/** 撤销注入（测试与端装配生命周期用——缺省态 = CLI 回执）。 */
-export function resetEditReceipt() { injectedReceipt = null }
-
-/**
- * edit 回执组装单点（单形态 / 数组形态共用——#69）：先组默认回执（base + 写入点上下文），
- * 注入面命中 ⇒ 以其 format(fields) 返回值为准（`fields.default` = 默认回执原文，供端侧改写）。
+ * edit 回执组装单点（单形态 / 数组形态共用）：`base` + 写入点上下文——唯一形态
+ * （#69 注入面已退场；余字段为调用面统一形，不参与组装）。
  */
 export async function composeEditReceipt(fields) {
-  const defaultText = await appendWriteContext(fields.abs, fields.writeLine, fields.base)
-  if (injectedReceipt) {
-    const out = await injectedReceipt.format({ ...fields, default: defaultText })
-    if (out !== null && out !== undefined) return String(out)
-  }
-  return defaultText
+  return await appendWriteContext(fields.abs, fields.writeLine, fields.base)
 }

@@ -5,7 +5,7 @@
  * 三面（皆**宿主自产**，非回调映射 —— 单源 = `docs/desktop/design/IPC.md` §1 三行）：
  *   ① `onSusp`（`ev:susp` —— 挂起窗计数切片；空闲唤醒批）+ **R5（#522②）**：`active:false` 出窗帧兼走
  *      **退出兜底**（本键子 agent 块全体归档 —— `freezeAllSubBlocks` 直取；挂起窗内 live 块随窗退收口）
- *   ② `onDigest`（`ev:digest` —— 消化轮边界切片；空闲唤醒批）
+ *   ② `onDigest`（`ev:digest` —— 消化轮边界切片（**多轮记录**——`start` 追轮 ∕ `cap`·`end` 就末轮更新）；空闲唤醒批）
  *   ③ `onTimer`（`ev:timer` —— 到期触发切片；timer-wake 阶段 2）
  * 共件 `countOf`（三切片共用归一口径 —— 随迁，单一实现零副本）。
  * 依赖单向：本档 → `renderer/events-flags.mjs`（`sameRecord`）· `renderer/subagent-reduce.mjs`（退出兜底）；
@@ -37,26 +37,42 @@ export function onSusp(state, ev, now) {
   return ev.active === true ? sliced : freezeAllSubBlocks(sliced, ev, now)
 }
 
-/** `ev:digest`——消化轮边界切片（按会话 `key` · 同键就地替换——**起跑 / 终态两态**）：
- *  `start` 写起跑态（`n` = 起跑 pending 数 · `tier: "ask"` 档随行 `from` / `msg`——核 `upstreamAskLabelVars`）；
- *  `end` **原地更新本键游标**（保留起跑 `n` —— 终态句 `digest.done` 需 n；`ok` 缺省 ⇒ 真，沿宿主 `ok !== false` 判据）。
- *  表外 `status` ⇒ 零写；同键同值 ⇒ 原引用。消费 = 流内消化行组 `[data-digest]`（`renderer/views/chat.mjs`）。 */
+/** `ev:digest`——消化轮边界切片（按会话 `key` · **多轮记录**——`state.digest[key] = rounds[]`；末轮 = 本轮）：
+ *  `start` **追一轮**（起跑态：`n` = 起跑 pending 数 · `tier: "ask"` 档随行 `from` / `msg`——核 `upstreamAskLabelVars`）；
+ *  `cap`（#541 —— 撞帽边界帧）**并末轮记撞帽事实**（`cap: { mode, turns }` —— 保起跑 `n`）；
+ *  `end` **就地更新末轮**（保留起跑 `n` —— 终态句 `digest.done` 需 n；`ok` 缺省 ⇒ 真，沿宿主 `ok !== false` 判据；
+ *  并末轮 ⇒ 撞帽事实跨 `end` 存续——终态轮**留存**，不摘）；下一轮 `start` 追一轮 ⇒ 旧轮行驻留（零换代清除）。
+ *  表外 `status` ⇒ 零写；**无轮**（`cap` ∕ `end` 而轮集空）⇒ **零写**（防守档——宿主轮序守恒下不可达；VSC 死游标
+ *  零动作只系 `end`）；同值 ⇒ 原引用（`cap` 支例外 —— `cap` 为对象载荷，按引用判不等 ⇒ 重投产新 state；该帧每轮恰一发，零重绘影响）。消费 = 流内消化行组 `[data-digest]`（`renderer/views/chat-digest.mjs`）。 */
 export function onDigest(state, ev) {
   const table = state.digest ?? {}
-  const prev = table[ev.key]
-  let record = null
+  const rounds = Array.isArray(table[ev.key]) ? table[ev.key] : []
   if (ev.status === "start") {
-    record = {
+    const round = {
       status: "start", n: countOf(ev.n),
       tier: ev.tier === "ask" ? "ask" : null,
       from: typeof ev.from === "string" ? ev.from : null,
       msg: typeof ev.msg === "string" ? ev.msg : null,
     }
-  } else if (ev.status === "end") {
-    record = { ...(prev ?? {}), status: "end", ok: ev.ok !== false, ms: countOf(ev.ms) }
-  } else return state
+    return { ...state, digest: { ...table, [ev.key]: [...rounds, round] } }
+  }
+  if (ev.status !== "cap" && ev.status !== "end") return state
+  const prev = rounds[rounds.length - 1]
+  if (prev === undefined) return state // 无轮 ⇒ 零写（防守档——宿主轮序守恒下不可达）
+  let record = null
+  if (ev.status === "cap") {
+    // 撞帽事实（渲染面 cap 行 —— 对位 VSC `chat-status.js:97-105`）：`mode` 归一（表外 ⇒ `auto` —— 两分支
+    // 逐字镜像）；`turns` 非数 ⇒ `null`（词面 `?` 兜底归渲染面）。
+    record = {
+      ...prev, status: "cap",
+      cap: {
+        mode: ev.mode === "stop" ? "stop" : "auto",
+        turns: typeof ev.turns === "number" && Number.isFinite(ev.turns) ? ev.turns : null,
+      },
+    }
+  } else record = { ...prev, status: "end", ok: ev.ok !== false, ms: countOf(ev.ms) }
   if (sameRecord(prev, record)) return state
-  return { ...state, digest: { ...table, [ev.key]: record } }
+  return { ...state, digest: { ...table, [ev.key]: [...rounds.slice(0, -1), record] } }
 }
 
 /** `ev:timer`——到期触发切片（按会话 `key` 分槽 · 同键就地替换——**最近一次交付**；行文 = 交付原文）：

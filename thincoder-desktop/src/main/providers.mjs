@@ -20,6 +20,9 @@
  * B10 W2 增四出口 + 行面三键（parity-b10-ui §2.6 S1 ∕ S2 ∕ S3 ∕ S5 ∕ S7）：S1 `provider:setKey` ∕ `delKey` ·
  * S5 `provider:setProxy`（`true` 写 ∕ `false` 删键，沿 VSC `handleSetProviderProxy`）· S2 `provider:models`
  * （暂存值不落盘 ∕ 不入账）· S3 写径后 fire-and-forget 探 + 行补 `proxy` ∕ `available?` ∕ `unavailableReason?` · S7 转发 `desc`。
+ * **S3 分档增（#673 · 2026-09-29）**：行面增 `failure` 分档键（票面「消（补做——欠做，非能力缺失）」第三件——
+ * 渲染面 `hostBusy` ⇒ 「宿主繁忙」+ 抑制失败句）；两探径失败支经 `loop-sampler.mjs` `overrideAdmissionIfHostBusy`
+ * 以宿主证据覆盖落账分类（`reason` 逐字不动——核 `deps.hostBusyOverride` 缝同判）。
  */
 import { PROVIDER_PRESETS, loadConfig, normalizeProxy, parseModelRef } from "@thincoder/core/config.mjs"
 import {
@@ -32,6 +35,8 @@ import { proxyFetch } from "@thincoder/core/proxy.mjs"
 import { specForModel } from "@thincoder/core/model-specs.mjs"
 import { thinkOffShape } from "@thincoder/core/think-off.mjs"
 import { deepEqual, maskKey } from "./settings.mjs"
+// S3 宿主忙证据面（#673）：主进程事件循环采样器（port 源 = VSC `src/extension/loop-sampler.mjs`）。
+import { overrideAdmissionIfHostBusy } from "./loop-sampler.mjs"
 
 /** 形表（端侧形判）：两形 = 预设形 / 自定形；自定形协议域 = 核 `FORMATS`（三协议单源 —— R8 起经
  *  `customFieldsError` 消费，本档不再自持值域副本）。 */
@@ -73,7 +78,7 @@ export function effortOf(entry, model) {
 
 /**
  * `provider:list` ⇒ `{ ok, presets:[{ name, desc, baseURL, model }], providers:[{ name, shape, baseURL, model?, hasKey, maskedKey, active, proxy, effort, available?, unavailableReason? }], active }`。
- * `presets` = 核预设表投影（21 条 · 序 = 核表声明序——供设置面渠道段与首启向导第一步选预设，
+ * `presets` = 核预设表投影（22 条 · 序 = 核表声明序——供设置面渠道段与首启向导第一步选预设，
  * 消费面无第二份表）；`shape` = 名在核预设表 ⇒ `preset`，否则 `custom`；
  * `active` 单源 = 核 `resolveProviders().activeProvider`
  * （= `defaultModel` 的 provider 段 ⇒ 命中行同时 `provider.active` 与顶层 `active` 双读一致）。
@@ -105,6 +110,10 @@ export function providerList() {
         ...(admission ? { available: admission.ok === true } : {}),
         ...(admission && admission.ok === false && typeof admission.reason === "string" && admission.reason !== ""
           ? { unavailableReason: admission.reason } : {}),
+        // S3 分档键（#673）：失败**分档**（`hostBusy` ⇒ 展示面「宿主繁忙」+ 抑制失败句——渲染面判据）；
+        // 未落账 ∕ 非串 ⇒ 键缺席——禁假造。
+        ...(admission && admission.ok === false && typeof admission.failure === "string" && admission.failure !== ""
+          ? { failure: admission.failure } : {}),
       }
     }),
   }
@@ -119,7 +128,9 @@ export function probeAfterWrite(name) {
   void (async () => {
     const provider = resolveProviders().providers.find((p) => p.name === name)
     if (!provider) return
-    await probeAdmission(name, provider) // 探 + 失败分档 + 落账单源 = 核流程族（内部全捕获，绝不抛）
+    const probe = await probeAdmission(name, provider) // 探 + 失败分档 + 落账单源 = 核流程族（内部全捕获，绝不抛）
+    // S3（#673）：宿主忙 = 端侧证据 ⇒ 覆盖落账分类为 `hostBusy`（核零宿主观测——`SETTINGS.md` §2.12 同判）。
+    if (probe.ok !== true) overrideAdmissionIfHostBusy(name, probe.error)
   })().catch(() => { /* 探针不阻断写面：零落账 ⇒ 行面保持既有读数（禁假造） */ })
 }
 
@@ -226,11 +237,13 @@ export function providerSetProxy(payload) {
 }
 
 /**
- * `provider:verify(payload)` ⇒ `{ ok:true, models }` ∥ `{ ok:false, reason }`——`reason` 闭集
+ * `provider:verify(payload)` ⇒ `{ ok:true, models }` ∥ `{ ok:false, reason, failure? }`——`reason` 闭集
  * `timeout` / `malformed` / `unavailable`。
  * 真探一次 + 失败分档 = 核流程族 `probeAdmission(name, provider)`（R8 —— **绝不抛**、分档「读账优先 ∕
  * 未落账回落现算」住核，端侧零再分类副本）；reason 映射 `timeout` ⇒ `"timeout"`、其余（含 `hostBusy`）⇒
- * `"malformed"`（端侧闭集，零改）。`unavailable` = 渠道不存在（核无此面——端侧判定）。探不通**仍可保存**
+ * `"malformed"`（端侧闭集，零改）。**parity-b10 S3 增（#673 · 载荷面契约 = `docs/desktop/design/IPC.md` §2
+ * 本行）**：回执另携 `failure` 分档键——宿主忙证据覆盖后**读账**现取（分档同 `provider:list` 行注；未落账 ⇒
+ * 回落探时分类）。`unavailable` = 渠道不存在（核无此面——端侧判定）。探不通**仍可保存**
  * （本通道只回报，不拦写）。
  */
 export async function providerVerify(payload) {
@@ -239,7 +252,9 @@ export async function providerVerify(payload) {
   if (!provider) return { ok: false, reason: "unavailable" }
   const probe = await probeAdmission(name, provider)
   if (probe.ok) return { ok: true, models: probe.models }
-  return { ok: false, reason: probe.failure === "timeout" ? "timeout" : "malformed" }
+  overrideAdmissionIfHostBusy(name, probe.error) // S3（#673）：宿主忙证据覆盖落账（reason 逐字不动）
+  const failure = admissionOf(name)?.failure ?? probe.failure // 覆盖后读账现取（分档键——禁假造）
+  return { ok: false, reason: probe.failure === "timeout" ? "timeout" : "malformed", failure }
 }
 
 /**

@@ -23,6 +23,8 @@ export function agentCardHtml() {
   html += `<div class="key-field"><label title="${t("settings.poolAdvisorHelp")}">${t("settings.poolAdvisor")}</label><input id="ag-pool-advisor" type="number" min="1" value="${pool.advisor ?? 4}"></div>`
   html += `<div class="key-field"><label title="${t("settings.compactThresholdHelp")}">${t("settings.compactThreshold")}</label><input id="ag-compact" type="number" min="0" placeholder="auto" value="${as.compactThreshold ?? ""}"></div>`
   html += `<label class="switch" title="${t("settings.verifyGuardHelp")}"><input type="checkbox" id="ag-verifyguard" ${as.verifyGuard ? "checked" : ""}> ${t("settings.verifyGuard")}</label>`
+  // #17：autoThink 档位开关（verifyGuard 后位；两态 = `SS.agentSettings.autoThink` 驱动——键面 ∕ 控型与桌面同）
+  html += `<label class="switch"><input type="checkbox" id="ag-autothink" ${as.autoThink ? "checked" : ""}> ${t("settings.agent.autoThink")}</label>`
   html += `<div class="settings-subtitle">${t("settings.submodelSection")}</div>`
   html += `<div class="key-field"><label title="${t("settings.submodelHelp")}">${t("settings.submodelGlobal")}</label><span id="submodel-slot-global" class="submodel-slot" data-value="${escHtml(as.subagentModel || "")}"></span></div>`
   html += `${["explore", "plan", "coder", "eng-coder", "eng-designer"].map((role) => `
@@ -118,6 +120,7 @@ export function bindAgentControls() {
         consultTurns: get("consult-turns") || undefined,
         consultTimeoutMs: (() => { const m = get("consult-timeout"); return m ? String(Math.round(Number(m) * 60000)) : undefined })(),
         verifyGuard: chk("ag-verifyguard"),
+        autoThink: chk("ag-autothink"),
         advisor: {
           // null (not undefined) for empty slots: JSON serialization drops undefined
           // keys, so "slot missing" and "explicitly cleared" would arrive identical —
@@ -136,30 +139,40 @@ export function bindAgentControls() {
   // Direct save on change — the payload writes a few KB to config.json (local IO);
   // change events fire once per completed interaction, so no debounce is needed.
   // The consult-echo race is handled by the shadow merge below, not by timing.
-  const autoSaveAgent = () => {
+  // P2-3（#677 I15）：差异提交——change 只发被编辑控件所属字段（未编辑字段不入载荷 ⇒ 默认值不物化）；
+  // `fields === null`（无主控件路径）⇒ 全量兜底；池 ∕ 槽 ∕ consult 组 = 其载荷字段（写面原子单位）。
+  const EDIT_FIELDS = {
+    "ag-maxturns": ["maxTurns"], "ag-subturns": ["subagentTurns"], "ag-compact": ["compactThreshold"],
+    "ag-verifyguard": ["verifyGuard"], "ag-autothink": ["autoThink"], "ag-pool-engcoder": ["poolLimits"],
+    "ag-pool-other": ["poolLimits"], "ag-pool-advisor": ["poolLimits"],
+    "consult-turns": ["consultTurns"], "consult-timeout": ["consultTimeoutMs"], "adv-effort": ["advisor"],
+  }
+  const SLOT_FIELDS = ["subagentModel", "subagentModels", "advisor", "consultModels"]
+  const autoSaveAgent = (fields = null) => {
     try {
       const { settings } = buildAgentPayload()
+      const send = fields === null ? settings : Object.fromEntries(fields.map((f) => [f, settings[f]]))
       // Optimistic merge: the shadow IS what we just saved — merge the whole payload so
       // push echoes and later rebuilds never resurrect a value the user just cleared.
-      SS.agentSettings = { ...(SS.agentSettings || {}), ...settings }
-      window._vscode.postMessage({ type: "saveAgentSettings", settings })
+      SS.agentSettings = { ...(SS.agentSettings || {}), ...send }
+      window._vscode.postMessage({ type: "saveAgentSettings", settings: send })
       // The status line renders once at panel build; the panel no longer rebuilds on push
       // (by design) — sync it here so adding the first consult model flips OFF → active.
       const status = document.getElementById("consult-status")
       if (status) {
-        const n = settings.consultModels?.length ?? 0
+        const n = SS.agentSettings?.consultModels?.length ?? 0
         status.textContent = n > 0 ? t("settings.consultActive", { n }) : t("settings.consultInactive")
       }
       const badge = document.getElementById("agent-saved-badge")
       if (badge) { badge.textContent = t("settings.autoSaved"); badge.classList.add("visible"); setTimeout(() => badge.classList.remove("visible"), 1200) }
     } catch (e) { console.error("[settings] agent auto-save failed:", e) }
   }
-  agCard.querySelectorAll("input, select").forEach((el) => el.addEventListener("change", autoSaveAgent))
+  agCard.querySelectorAll("input, select").forEach((el) => el.addEventListener("change", (ev) => autoSaveAgent(EDIT_FIELDS[ev.target.id] ?? null)))
   // Consult & Advisor is a SEPARATE card since the reorg — its static controls live outside
   // agCard and must be bound explicitly. Consult rows and the advisor model slot already save
   // via fireAgentSave/consult-rows-changed, so only these two need the generic save binding here.
   for (const id of ["consult-turns", "consult-timeout"]) {
-    document.getElementById(id)?.addEventListener("change", autoSaveAgent)
+    document.getElementById(id)?.addEventListener("change", () => autoSaveAgent(EDIT_FIELDS[id] ?? null))
   }
   // adv-guard is NOT part of the generic agent save: its value is a session-slot flag, not a
   // config field — it posts its own message instead (`setAdvisorGuard` = slot write + push).
@@ -171,9 +184,9 @@ export function bindAgentControls() {
   // pick 后 refreshAdvisorEffort/refreshRowEffort 替换出的 select 才带监听。用户只改档位
   // 不碰 model → 静默不保存（split 遗留的同类断链）。绑定 build 时存在的
   // 全部 effort select；替换件自带监听，这里不会重复。
-  document.getElementById("adv-effort")?.addEventListener("change", autoSaveAgent)
-  document.querySelectorAll("#consult-rows .consult-effort").forEach((el) => el.addEventListener("change", autoSaveAgent))
-  document.getElementById("consult-rows")?.addEventListener("consult-rows-changed", autoSaveAgent)
+  document.getElementById("adv-effort")?.addEventListener("change", () => autoSaveAgent(EDIT_FIELDS["adv-effort"]))
+  document.querySelectorAll("#consult-rows .consult-effort").forEach((el) => el.addEventListener("change", () => autoSaveAgent(["consultModels"])))
+  document.getElementById("consult-rows")?.addEventListener("consult-rows-changed", () => autoSaveAgent(SLOT_FIELDS))
   // Mount model-menu triggers into their slots + wire consult interactions
   try { mountModelMenus(); bindConsultRows() } catch (e) { console.error("[settings] model-menu mount failed:", e) }
 }

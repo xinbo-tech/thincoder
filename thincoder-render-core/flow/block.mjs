@@ -29,6 +29,14 @@ export function buildAdvisorBlock(roundLabel) {
   return details
 }
 
+/** 续写并入末文本节点：末子为文本节点 ⇒ `appendData`（原地并写，文本节点 ∕ 行 O(1)）；末子非文本
+ *  节点 ⇒ 维持新建文本节点（兜底——既不丢串、也不改写他节点）。两处续写支共用（RAW 拼接零分隔符）。 */
+function appendIntoLastTextNode(parent, str) {
+  const tail = parent.lastChild
+  if (tail?.nodeType === 3) tail.appendData(str)
+  else parent.appendChild(document.createTextNode(str))
+}
+
 /** 顾问块内容追加（承 `ui.js:45-85` 逐字——合并判据 / 冻结守卫 / §5.6 toolOutput RAW 拼接语义全同）。
  *  `block` = 块元素（含 `.advisor-content`）；返回零值（DOM 原地追加）。 */
 export function appendAdvisorChunk(block, kind, text, sub, meta) {
@@ -46,7 +54,7 @@ export function appendAdvisorChunk(block, kind, text, sub, meta) {
     // （零分隔符）；不满足（调用行 / 旧形无 face·tool / 不同 sub）⇒ 恒新行。
     if (face === "toolOutput" && tool && last?.classList.contains("advisor-tool-line")
       && last.dataset.face === "toolOutput" && last.dataset.tool === tool && (last.dataset.sub ?? "") === (subLabel ?? "")) {
-      last.appendChild(document.createTextNode(str)); return
+      appendIntoLastTextNode(last, str); return
     }
     const line = document.createElement("div")
     line.className = "advisor-tool-line"
@@ -61,8 +69,8 @@ export function appendAdvisorChunk(block, kind, text, sub, meta) {
   const sameRow = last && last.classList.contains("advisor-text")
     && last.dataset.kind === k && (last.dataset.sub ?? "") === (subLabel ?? "")
   if (sameRow) {
-    // 续写 = 追加文本节点（chunk RAW 拼接零分隔符；首行 `textContent = str` 同效）
-    last.appendChild(document.createTextNode(str))
+    // 续写 = 并入末文本节点（chunk RAW 拼接零分隔符——文本节点 ∕ 行 O(1)；首行 `textContent = str` 同效）
+    appendIntoLastTextNode(last, str)
   } else {
     const div = document.createElement("div")
     div.className = "advisor-text" + (k === "think" ? " advisor-think" : "")

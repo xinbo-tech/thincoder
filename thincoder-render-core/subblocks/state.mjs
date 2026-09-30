@@ -8,8 +8,8 @@
  * 逐轮帧 / 审批态写点。**判据族**（键文法 / 身份键集 / 终态 kind / 补桩表 / 补桩前置）住
  * `channel.mjs`——本档只住迁移面（档位纪律）。
  * 留端 = 出生位（活动区 `#subagent-activity` 区尾 append）/ 归档入流（`#messages` 边界插或尾追）/
- * DOM 属性效果（class 翻转 / `open=false` / ⏹ 移除）/ 痕迹（`activity-diag.js`）/ 2s 定时刷新
- * （`refreshLiveHeaders`）/ `resetActivity`。
+ * DOM 属性效果（class 翻转 / `open=false` / ⏹ 移除）/ 痕迹（端观测面——桌面无上行面 ⇒ 不接（给由）；
+ * VSC = `activity-diag.js`）/ 2s 定时刷新（`refreshLiveHeaders`）/ 端复位面（VSC `resetActivity` ∕ 桌面 `resetSubBlocks`）。
  *
  * 模型（`list` 元素——端持有；DOM 块由端按 `key` 映射）：
  *   { key, label, role, id, model, startedAt, pool, syncLive, turn, maxTurns, status, stateWord,
@@ -36,7 +36,7 @@
  * 痕迹钩分面（once / always——源档 `traceSub` vs `traceSubOnce`，成文于此）：`reassert-hit` /
  * `drop-tombstone` 走**去重版**（`traceSubOnce`）；`birth` / `takeover` / `drop-frozen` /
  * `drop-unknown-role` / `late-terminal-stub` 走 `traceSub`。内容面 chunk 丢弃痕在端
- * （`renderSubagentChunk` 调用侧）——同为去重版（源档 `streaming.js:251-252`）。
+ * （`renderSubagentChunk` 调用侧）——同为去重版（源档 `streaming.js:251-252`）。**桌面接线（#608①② · 2026-09-29）——痕迹 = 端观测面——桌面无上行面 ⇒ 不接（给由）**（`subagent-reduce.mjs` deps 仅 `{ now }`——丢弃径静默 return；缺省 no-op ⇒ 零行为差异；到期 = 桌面诊断面需求出现）。
  */
 
 // 判据族（parseChannel / findBlockNames / terminalKindOf / terminalStubKind / stubAllowed）住

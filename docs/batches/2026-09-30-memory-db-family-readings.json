@@ -1,0 +1,21 @@
+{
+  "at": "2026-09-29T18:33:03.836Z",
+  "probe": "L-②-5 单回合召回墙钟（docSearch 向量通道——分块扫描 + 有界 top-K；embedding 桩）",
+  "fixture": {
+    "baselineDefaultWorkingSet": {
+      "origin": "D:/fxt/ws-baseline",
+      "rows": 19000,
+      "recallMs": 46.2
+    },
+    "capLevel": {
+      "origin": "D:/fxt/ws-cap",
+      "rows": 100000,
+      "recallMs": 226.5
+    },
+    "embeddingDim": 32,
+    "note": "夹具 blob = 32 维（128 B ∕ 行）——绝对读数较真库偏轻（真库 bge-m3 1024 维）；判别按设计换算口径（缺省工作集基线档 ≤ 1.9 万行 ⇒ < 0.5 s ⇒ 不触发），真库只读复测 = 复测面"
+  },
+  "triggerLineMs": 500,
+  "conversion": "26 µs ∕ 行 ⇒ 0.5 s ≙ ≈1.9 万行（设计换算；基线档 ≤ 1.9 万行 ⇒ 读数 < 0.5 s ⇒ 不触发）",
+  "verdict": "缺省工作集基线档 < 0.5 s ⇒ 不触发（CAP 档读数 = 结构量级参考，不作触发判别）"
+}

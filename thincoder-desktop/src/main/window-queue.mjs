@@ -8,16 +8,17 @@
  * §1 `ev:queue` 行）：
  *   ① 条目形 = 富条目 `{ text, ts, images? }`（与忙态队条目同形 —— `queued-input.mjs`）；**图不入快照**（投影恰形
  *      `{ text, ts }` —— `dataURL` 不回传渲染面，两端同形）。
- *   ② 窗队投影 = 每窗一表（载体 = 窗条目 `entry.pending`；本档只操作不持有）：受理入队 · 按 `text` 首中消费 ·
- *      残值倾出 · 窗中止清队。
- *   ③ 四帧（推送点 = 窗内受理 ∕ 窗内消费 ∕ 残输入续发 ∕ 窗中止清队）：受理 ∕ 清队 ⇒ 状态形（快照整置 · 幂等）；
- *      消费 ∕ 残续发 ⇒ 消费回执形（`delivered = { text, ts?, degraded? }`）。帧出站经注入 `postQueue`（= 链
+ *   ② 窗队投影 = 每窗一表（载体 = 窗条目 `entry.pending`；本档只操作不持有）：受理入队 · 步边界取批（`stepPickup`）·
+ *      残值倾出 · 窗中止清队；取项 = 核件 `takeQueuedBatchItem`（**取项单源——本档零第二判据**）。
+ *   ③ 五帧（推送点 = 窗内受理 ∕ 步边界消费 ∕ 窗内消费 ∕ 残输入续发 ∕ 窗中止清队）：受理 ∕ 清队 ⇒ 状态形（快照整置 · 幂等）；
+ *      消费 ∕ 残续发 ∕ 步边界消费 ⇒ 消费回执形（`delivered = { text, ts?, degraded? }`）。帧出站经注入 `postQueue`（= 链
  *      `postQueue` —— **帧构造单点保位 `turn-chain.mjs`**，本档只定点不造形）。
  *   ④ 送达面（携图径 —— 与 `turn-chain.mjs` **同判据**）：`prepare` 判决 ⇒ `degrade` 定局（非视觉读图：成功 = 描述
  *      注文 ∕ 失败 = 原文 + 说明行），`delivered.degraded` 取定局后判决码（零弃 ⇒ 键缺席）。
  *
  * 零宿主依赖（`postQueue` ∕ `prepare` ∕ `degrade` 三注入，缺省 ⇒ 零出站 ∕ 无附件径）⇒ 平 node 直测。
  */
+import { planQueuedInput, takeQueuedBatchItem } from "@thincoder/core/queued.mjs"
 import { entryTimeOf, textOf } from "./queued-input.mjs"
 
 /** 受理条目投影（`{ text, ts }` 逐字 ∕ 入队现刻 ms；`images` 非空数组才携 —— 与忙态队条目同形，缺 ⇒ 无附件径）。 */
@@ -27,10 +28,13 @@ function entryOf(text, images) {
   return entry
 }
 
+/** 贴图判定（步边界让位 —— 图片随条目元数据走降级面，不静默丢）。 */
+const hasImages = (q) => Array.isArray(q?.images) && q.images.length > 0
+
 /** 窗队工厂：`postQueue(key, delivered?)` = `ev:queue` 出站（链 `postQueue` 注入 —— 快照源 = 两源合并读面）·
  *  `prepare(text, images, agent)` = 送达面附件装配转口（`prepareTurnAttachments`）· `degrade(attached, agent, signal)`
  *  = 非视觉降级转口（`degradeTurnAttachments` —— 两件皆与 `turn-chain.mjs` 同源单点，缺省 ⇒ 无附件径）。
- *  返回 `{ accept, take, drain, consume, clear, snapshot }`。 */
+ *  返回 `{ accept, stepPickup, drain, consume, clear, snapshot }`。 */
 export function createWindowQueue({ postQueue = null, prepare = null, degrade = null } = {}) {
   /** 帧出站（`delivered` 缺 ⇒ 状态形；帧形构造单点住链 —— 本档只定点）。 */
   const emit = (key, delivered = null) => { if (typeof postQueue === "function") postQueue(key, delivered) }
@@ -57,18 +61,26 @@ export function createWindowQueue({ postQueue = null, prepare = null, degrade = 
       pending.push(entryOf(text, images))
       emit(key)
     },
-    /** 窗内消费：按 `text` 首中定位并摘除（与既有 `indexOf` 同判 —— 零第二判据）；未中 ⇒ `null`（零消费零帧）。 */
-    take(pending, text) {
-      const index = pending.findIndex((entry) => textOf(entry) === text)
-      return index < 0 ? null : pending.splice(index, 1)[0]
+    /** 步边界取批（**纯件** —— 同步缝；`turn-driver` 组合线「窗优先」消费）：计划首动作即消费（`slash` ⇒ 单条
+     *  同判）；批内含图 ⇒ **整批让位**（同步缝不可降级 —— 留给送达径）；返回待注入 `{ text, ts } | null`
+     *  （空队 ∕ 让位 ⇒ `null` —— 零消费零帧）。`text` = 注入文本（合并批 = 合并格式 ∕ 单条 = 原文）。 */
+    stepPickup(pending) {
+      const list = Array.isArray(pending) ? pending : []
+      if (list.length === 0) return null
+      const action = planQueuedInput(list.map(textOf))[0]
+      const count = action.kind === "turn" ? action.count : 1
+      if (list.slice(0, count).some(hasImages)) return null // 批内含图 ⇒ 整批让位（与链径同判据）
+      const { item, merged } = takeQueuedBatchItem(list) // 核件取项（就地消费 —— 单源）
+      return item === null ? null : { text: merged, ts: entryTimeOf(item) }
     },
-    /** 残输入倾出（出窗残值续发链 —— 逐条路由，逐条消费帧）。 */
+    /** 残输入倾出（出窗残值续发链 —— 倾出后按核件取项分批路由，逐批消费帧）。 */
     drain(pending) { return pending.splice(0) },
     /** 消费（窗内消费 ∕ 残续发两同点）：送达面（`prepare` 判决 ⇒ `degrade` 定局）⇒ 消费帧（`delivered` 单写者
      *  入流恰一枚的宿主半）；返回回合入参 `{ text, attached }`（`text` = 送达文本——无附件径 ∕ 送达面违约（非串）
      *  ⇒ 该条文本逐字；判据与链径 `turn-chain.mjs:94` 同式）。
      *  **时序面（占位 ∕ 中断语义）**：`signal` = 调用方占位信号（`hold.signal`——缺缝 ∥ 零占位 ⇒ `null`，沿链径缺省式）；
-     *  窗内 `msg:interrupt` 命中占位 ⇒ 降级信号 abort（读图 fail-fast）——起窗 ∕ 查位 ∕ `release` 与窗后零起跑判据住两调用点（`driveTurn` ∕ `resumeResidual`）。 */
+     *  窗内 `msg:interrupt` 命中占位 ⇒ 降级信号 abort（读图 fail-fast）——起窗 ∕ 查位 ∕ `release` 与窗后零起跑
+     *  判据住守卫件 `suspension-guard.mjs`（两调用点 `driveTurn` ∕ `resumeResidual` 经其守卫）。 */
     async consume(key, entry, agent, signal = null) {
       const prepared = attachmentsOf(entry, agent)
       const attached = prepared === null || degrade === null ? prepared : await degrade(prepared, agent, signal)

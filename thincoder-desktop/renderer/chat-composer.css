@@ -1,5 +1,5 @@
 /* chat-composer.css — 对话流**输入区段**（自 `renderer/chat.css` 四拆 —— 「桌面处理流 · VSC 对齐」批 §2.1 拆档定稿；
-   链序 = theme → chrome → skin → chat → chat-cards → **chat-composer** → chat-fixes → core → pool → settings）。
+   链序 = theme → chrome → session-list → skin → chat → chat-cards → **chat-composer** → chat-fixes → core-markdown → core → pool → settings）。
    面 = 输入区挂件面 + 两交互态组（**面板族本体样式单源 = 核件 `composer/composer.css`** —— 输入面板上提批；
    本档旧 `.composer` 族已退场，只留**变量别名块**（C2 · 唯一桥）与**提示行锚**（桌面胶水））。
 
@@ -35,7 +35,29 @@
   flex: 1 1 100%;
 }
 
-/* 交互态组（D24 项 2 · 本注定形）：按下 `--hover-bg-strong` · 聚焦三值（outline 2px + offset -2px + 底）——沿 `.rail-row:focus-visible` 先例；
+/* ── 扁平化覆盖（2026-09-30 用户裁决 v3）：容器 ∥ 输入盒 ∥ 面板 = 直角；**按钮族恢复圆角**
+   （用户原话：「按钮什么的的圆角没了，我觉按钮的圆角还是要的，主输入框倒是方的好」）。
+   核件 `composer/composer.css` 带 VSC 逐字锁 ⇒ 零触——桌面侧覆盖层、`.composer` 前缀取特征度。 ── */
+.composer #input-row { border-radius: 0; }
+.composer #send-btn, .composer #abort-btn { border-radius: 16px; }
+.composer #attach-btn { border-radius: 16px; }
+.composer .ctrl-btn { border-radius: 14px; }
+.composer .paste-chip { border-radius: 10px; }
+.composer .dropdown, .composer #at-dropdown { border-radius: 6px; }
+body .paste-toast { border-radius: 0; }
+body .auto-confirm { border-radius: 0; }
+body .auto-confirm-yes, body .auto-confirm-no { border-radius: 6px; }
+
+/* ── 扁平化 v4（用户 2026-09-30）：Attach ∥ Send ∥ Stop 迁入控件行（装配期搬移见 `mount-composer.mjs`）——
+   输入框右侧按钮位退场（左右对称内边距）· 三钮与模式钮同排右端靠齐、同高 26px、圆角 14px 同族。 ── */
+.composer #input-row { padding-right: 14px; }
+.composer #controls-row { align-items: center; }
+.composer #controls-row #attach-btn { margin-left: auto; }
+.composer #controls-row #attach-btn,
+.composer #controls-row #send-btn,
+.composer #controls-row #abort-btn { height: 26px; border-radius: 14px; padding: 0 12px; }
+
+/* 交互态组（D24 项 2 · 本注定形）：按下 `--hover-bg-strong` · 聚焦三值（outline 2px + offset -2px + 底）——沿 `.session-item:focus-visible` 先例；
    `.chat-pill` 实色支例外：按下沿 hover（无第二档）· 聚焦底不随落。输入区成员（`.composer-interrupt`）随换装退场 ⇒ **组内重锚**（余成员不动 —— U-R1-2a 已裁）；
    复制面两成员（块级 ∕ 末条两控件）随复制面对齐批退场（余成员零动）。 */
 .chat-backfill:not(:disabled):active { background: var(--hover-bg-strong); }

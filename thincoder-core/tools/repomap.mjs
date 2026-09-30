@@ -6,7 +6,8 @@
 import { existsSync } from "node:fs"
 import { readFile, stat } from "node:fs/promises"
 import { join } from "node:path"
-import { normalizeEOL } from "./shared.mjs"
+import { DESC, normalizeEOL } from "./shared.mjs" // #15 描述外置：文本单点 = tool-docs/repo_outline.md（DESC 单解析面）
+import { INDEX_ORIGIN_ROW_WARN } from "../memory/schema.mjs" // §6.14 B4 文件数上界（WARN 值复用）
 
 /** Extract JS/TS file import paths (normalize by stripping .ts/.js/.mjs suffixes) */
 function parseImports(lines, ext) {
@@ -111,13 +112,22 @@ function normalizeExt(p) {
   return p.replace(/\.(m?js|jsx|tsx?)$/i, "")
 }
 
+/** B4 越界提示行（跳过大纲构建；指路 = 声明 ∕ 剪枝）——两入口（buildSummary ∕ buildOutline）同文；
+ *  `origin` 给出时才缀「for this origin」（repo_outline 工具缝不传 origin——跨 origin 行不假称本 origin）。 */
+function outlineOverLimit(origin = null) {
+  return `(code index too large for an outline: > ${INDEX_ORIGIN_ROW_WARN} files${origin ? " for this origin" : ""} — declare index.excludePaths in PROJECT-MANIFEST.json, or prune: thincoder memory sweep --origin <o> --path <sub>)`
+}
+
 /**
  * Internal: scan all files, build forward dependency graph + reverse reference graph.
  * Returns { deps, importers, fileCount } shared by buildOutline / buildSummary.
  */
-async function _buildDepGraph(db, cwd) {
-  const allFiles = db.prepare(`SELECT DISTINCT path FROM code_chunks ORDER BY path`).all().map((r) => r.path)
+async function _buildDepGraph(db, cwd, { origin = null } = {}) {
+  // §6.14 B4：origin 限定 + 文件数上界（文件行 `LIMIT = WARN+1` 形——越界不构建大纲，返回信号）
+  const limit = INDEX_ORIGIN_ROW_WARN + 1
+  const allFiles = db.prepare(`SELECT DISTINCT path FROM code_chunks ${origin ? "WHERE origin = ? " : ""}ORDER BY path LIMIT ${limit}`).all(...(origin ? [origin] : [])).map((r) => r.path)
   if (allFiles.length === 0) return null
+  if (allFiles.length >= limit) return { overLimit: true, fileCount: allFiles.length }
 
   const deps = new Map()      // path → { imports: Set, exports: Set, size: number, dir: string }
   const importers = new Map() // importee → Set<importer>
@@ -182,8 +192,9 @@ async function _buildDepGraph(db, cwd) {
  *  3. Entry points (files with no importers — startup/top-level entry points)
  * Output is naturally bounded (~1000-2000 chars), no more OUTLINE_INJECT_MAX hard truncation.
  */
-export async function buildSummary(db, cwd) {
-  const graph = await _buildDepGraph(db, cwd)
+export async function buildSummary(db, cwd, { origin = null } = {}) {
+  const graph = await _buildDepGraph(db, cwd, { origin })
+  if (graph?.overLimit) return outlineOverLimit(origin)
   if (!graph) return "(no indexed source files; run codeSync or /reindex first)"
   const { deps, importers, fileCount } = graph
 
@@ -257,8 +268,9 @@ export async function buildSummary(db, cwd) {
 }
 
 /** Get known file list from code_chunks (reuse index), parse by path to generate outline text */
-export async function buildOutline(db, cwd, focusPath) {
-  const graph = await _buildDepGraph(db, cwd)
+export async function buildOutline(db, cwd, focusPath, { origin = null } = {}) {
+  const graph = await _buildDepGraph(db, cwd, { origin })
+  if (graph?.overLimit) return outlineOverLimit(origin)
   if (!graph) return "(no indexed source files; run codeSync or /reindex first)"
   const { deps, importers } = graph
 
@@ -296,8 +308,7 @@ export async function buildOutline(db, cwd, focusPath) {
 export function repoOutlineTool(db, cwd) {
   return {
     name: "repo_outline",
-    description:
-      "Show the project's file dependency outline: which files import/export from which, and what symbols they export. Use when you need to understand the project structure, find where a function is defined, or see what files depend on a module. Pass a path to focus on a single file's relationships. Find code by keyword or snippet with code_search.",
+    description: DESC("repo_outline"), // #15 外置：文本单点 = tool-docs/repo_outline.md（工具名逐字对核）
     parameters: {
       type: "object",
       properties: {

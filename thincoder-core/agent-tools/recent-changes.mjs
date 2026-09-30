@@ -3,13 +3,12 @@
  * More precise than git status — only looks at this session's changes, independent of git tracking.
  * Helps the model recall what it already modified during long tasks.
  */
+// 描述面 = `tool-docs/recent_changes.md`（#15 描述外置统一——DESC 单一解析面，与内置工具族同径）
+import { DESC } from "../tools/shared.mjs"
+
 export const recentChangesTool = {
   name: "recent_changes",
-  description:
-    "Show files modified in this agent run (write/edit/insert_after/delete). " +
-    "Use when you need to remember which files you've already touched — during long multi-file tasks, " +
-    "it's easy to lose track. This is scoped to the current run, unlike git status which shows all uncommitted changes. " +
-    "For session-level history (what was said in a session), use read_history.",
+  description: DESC("recent_changes"),
   parameters: {
     type: "object",
     properties: {},

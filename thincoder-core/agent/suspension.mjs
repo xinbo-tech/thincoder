@@ -9,7 +9,8 @@
  *
  * 载体注入（端差面 = 池 / pending / 标志挂谁）：`ctx.carrier` = 字段集按核内异步面
  * 现行口径的对象（`_asyncSubagents` · `_asyncAdvisors` · `_consultSessions` ·
- * `_pendingAsyncResults` · `_suspended`）——CLI 形 = `agent` 对象；VSC 形 = depth-0
+ * `_pendingAsyncResults` · `_suspended`；#9 后台 bash 任务池 `_bgTasks` 同列）
+ * ——CLI 形 = `agent` 对象；VSC 形 = depth-0
  * `history` 数组（附加属性不污染会话文件）。机制对载体零预设（空字段一律 `?.` 读）。
  *
  * 核内零文案、零渲染、零端名分支（契约 5 / 10）：状态行文本 / 提示行 / 消息族全在宿主侧，
@@ -53,11 +54,13 @@ function consultRunningChildren(carrier) {
 
 /** 后台池存活判据（D-S2/F5 口径——CLI 为准）：running/queued 的池条目，或已 settle 未注入
  * （pending 非空 = D-S3「未注入」），或运行中 consult children（会诊跨回合）。回合尾与每次
- * 轮末都评估退出。 */
+ * 轮末都评估退出。**#9 三域并入**：`_bgTasks`（后台 bash 任务）在途亦为 live——settle 经
+ * pending 停靠驱动消化轮（`bash-async.mjs` 恒停靠）。 */
 export function poolLive(carrier) {
   const sub = carrier?._asyncSubagents
   const adv = carrier?._asyncAdvisors
-  return (sub && sub.size > 0) || (adv && adv.size > 0)
+  const bg = carrier?._bgTasks
+  return (sub && sub.size > 0) || (adv && adv.size > 0) || (bg && bg.size > 0)
     || (carrier?._pendingAsyncResults?.length ?? 0) > 0
     || consultRunningChildren(carrier) > 0
 }
@@ -112,9 +115,10 @@ function consultLiveCount(carrier) {
  */
 export async function finishSuspension(carrier, { aborted = false, injectResidual = null } = {}) {
   if (aborted) {
-    const { discardAbortedPool, discardAbortedAdvisors } = await import("../agent-tools/async-discard.mjs")
+    const { discardAbortedPool, discardAbortedAdvisors, discardAbortedBgTasks } = await import("../agent-tools/async-discard.mjs")
     discardAbortedPool(carrier)
     discardAbortedAdvisors(carrier)
+    discardAbortedBgTasks(carrier) // #9 收尾档②：后台 bash 任务逐条杀树 + 出池 + 墓碑（杀 ⟺ 控制器已中止）
     carrier._pendingAsyncResults = []
     if (carrier._consultSessions instanceof Map) {
       const { cleanupConsultSessions } = await import("../agent-tools/consult.mjs")

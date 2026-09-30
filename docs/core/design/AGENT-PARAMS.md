@@ -71,7 +71,7 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 | advisor 配置 promote | `thincoder-core/config.mjs:335` | `merged.advisor = { ...merged.agent.advisor }` |
 | advisor 默认块（含 timeoutMs 说明） | `thincoder-core/config.mjs:49` | 注释在位 |
 | `maxTurns` 默认 | `thincoder-core/config.mjs:36` · `thincoder-core/agent/helpers.mjs:24` | 均 200 |
-| `maxTurns` 三级回退 | `thincoder-core/agent/setup.mjs:44` | 在位 |
+| `maxTurns` 三级回退 | `thincoder-core/agent/setup.mjs:50` | 在位 |
 | TUI 显示兜底 | `thincoder-cli/src/tui/cmd-config.mjs:340` · `:341` · `:366` · `:438` | 四处 `?? 200` |
 | 子代理轮次读取 | `thincoder-core/agent-tools/subagent-async.mjs:387` · `thincoder-core/agent-tools/subagent-actions.mjs:418` · `thincoder-core/agent-tools/escalate-async.mjs:218` | 三处同形回退 |
 
@@ -86,16 +86,16 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 
 | 面 | VSC 落点（实核） |
 |---|---|
-| 评审超时默认 + re-export | `thincoder-vscode/src/advisor/compaction.mjs:33`（`REVIEW_TIMEOUT_MS` = 600 000）· `thincoder-core/advisor/run.mjs:19` re-export |
+| 评审超时默认 + re-export | `thincoder-core/advisor/compaction.mjs:36`（`REVIEW_TIMEOUT_MS` = 600 000）· `thincoder-core/advisor/run.mjs:19` re-export |
 | 评审检查点（配置覆盖 + 非法回退） | `thincoder-vscode/src/advisor/loop.mjs:98`（`Number.isFinite(cfg) && cfg > 0` → 缺省回退常量） |
 | advisor 配置读取链 | `thincoder-vscode/src/agent/setup.mjs:210`（初始 `{ guard: false }`）· `:232`（`raw.agent?.advisor ?? { guard: false }`） |
-| 面板保存透传 timeoutMs（P4——不静默丢） | `thincoder-vscode/src/extension/settings-panel-write.mjs:45`（`saveAgentSettingsFromPanel`）· `:112`–`:116`（合法 payload 胜，否则保留 current——不合并会丢字段；`thincoder-vscode/src/config-io.mjs:26` re-export） |
+| 面板保存透传 timeoutMs（P4——不静默丢） | `thincoder-vscode/src/extension/settings-panel-write.mjs:64`（`saveAgentSettingsFromPanel`）· `:112`–`:116`（合法 payload 胜，否则保留 current——不合并会丢字段；`thincoder-vscode/src/config-io.mjs:26` re-export） |
 | explore 30 硬帽已移除 | `thincoder-vscode/src/agent-tools/subagent.mjs:311`（`parent.config?.agent?.subagentTurns ?? 100`——无 `Math.min(30, …)`；与 async/escalate 路径一致） |
-| maxTurns 默认 200 | `thincoder-vscode/src/agent/run-helpers.mjs:15` · `thincoder-vscode/src/config-io.mjs:313`（`AGENT_DEFAULTS`）· `thincoder-vscode/src/agent/setup.mjs:219`（初始）/ `:241`（读取兜底 `?? 200`） |
+| maxTurns 默认 200 | `thincoder-vscode/src/agent/run-helpers.mjs:15` · `thincoder-vscode/src/config-io.mjs:313`（as-of 2026-09-29）（`AGENT_DEFAULTS`）· `thincoder-vscode/src/agent/setup.mjs:219`（初始）/ `:241`（读取兜底 `?? 200`） |
 | 面板显示兜底 | `thincoder-vscode/webview/settings-agent.js:16`（`as.maxTurns ?? 200`） |
 | 面板 UI 无 timeoutMs 输入框 | 保持现状（config.json 手写即可——保存路径已透传，见上行） |
 
-**VSC 侧不动项**：`goalTurns` / `consultTurns` / `subagentTurns` 默认值语义独立、本批不并（VSC 源档 §2.3 明载「均 100/40、本次不动」——与本档 §5 总表同构）。**默认值单一来源**纪律两端同构：VSC 评审超时默认只住 `compaction.mjs` 常量、不进 `AGENT_DEFAULTS.advisor`（`thincoder-vscode/src/config-io.mjs:323` 注释即此登记）。
+**VSC 侧不动项**：`goalTurns` / `consultTurns` / `subagentTurns` 默认值语义独立、本批不并（VSC 源档 §2.3 明载「均 100/40、本次不动」——与本档 §5 总表同构）。**默认值单一来源**纪律两端同构：VSC 评审超时默认只住 `compaction.mjs` 常量、不进 `AGENT_DEFAULTS.advisor`（`thincoder-vscode/src/config-io.mjs:323`（as-of 2026-09-29） 注释即此登记）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 

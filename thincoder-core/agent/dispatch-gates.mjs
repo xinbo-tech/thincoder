@@ -76,6 +76,9 @@ export function isSubagentReadonlyAction(toolName, args) {
     const action = args?.action
     return action === "list" || action === "get"
   }
+  // #9（TOOLS.md §6.19）：process 动作分级——list 保持只读分类（planMode 放行/免审批/可批并行）；
+  // kill 是破坏性动作（审批门 + planMode 拒）。
+  if (toolName === "process") return args?.action !== "kill"
   if (toolName !== "subagent" || !args || typeof args !== "object") return false
   const action = args.action
   // AGENT-LOOP-SUBAGENT.md §6.7.5: check 动作已删除——只读面仅剩 status（planMode 放行/免权限审批/可批并行）

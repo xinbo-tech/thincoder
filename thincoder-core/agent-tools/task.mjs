@@ -1,5 +1,6 @@
 // F-CC4（CONTEXT-COMPACTION.md §6.16.5）：task 列表变更 ⇒ 方向转换轻推（本档只调用；文案/去重单源 = agent-tools/context.mjs）
 import { pushContextNudge } from "./context.mjs"
+import { DESC } from "../tools/shared.mjs"
 
 /** Common synonyms LLMs tend to use — normalize to canonical values */
 const STATUS_ALIASES = {
@@ -26,18 +27,11 @@ function normalizeStatus(raw) {
 
 /**
  * task tool: multi-step task planning and progress tracking (Claude Code's todo mode).
- * Each call replaces the entire list; only modifies agent internal state (no external world), so readonly.
- * Accesses the caller agent via ctx.agent (injected by runAgent).
+ * 描述面 = `tool-docs/task.md`（DESC() 加载）；仅改 agent 内部状态（readonly）；ctx.agent 由 runAgent 注入。
  */
 export const taskTool = {
   name: "task",
-  description:
-    "Plan and track a task list for complex multi-step work. Each call replaces the entire list. " +
-    "Keep exactly one item in_progress at a time; mark items done as you complete them; never mark done if tests fail or work is partial. " +
-    "Statuses: pending | in_progress | done — synonyms (completed/finished/complete, todo/open/waiting, active/running/working, …) are accepted and normalized with a warning. " +
-    "IMPORTANT: title is required and must be a non-empty string — items with empty titles are silently dropped. " +
-    "For cross-session / project-level tracking, use `/ledger`. " +
-    "Returns the updated task list (or the new item's ID on add).",
+  description: DESC("task"),
   parameters: {
     type: "object",
     properties: {

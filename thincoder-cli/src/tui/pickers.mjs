@@ -122,6 +122,7 @@ export function createPickers(ctx) {
   }
 
   // /model 两级面 + selectModel + 渠道管理 + pickModelForSlot —— 迁 model-picker.mjs
+  // （2026-09-29 结构拆分：渠道管理四流再迁 provider-admin.mjs——本层与会话面转发零改。）
   // （MODEL-MERGE-SESSION——pick 后本文件 ≤450）。createModelPicker 返回同名单函数，
   // 经本层原样转发（index.mjs/wizard/slash-commands 消费面零变化）。
   const modelPicker = createModelPicker({

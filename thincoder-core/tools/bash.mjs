@@ -41,13 +41,16 @@ function posixSyntaxHint(command) {
 // ====================================================================
 // bash — command execution with safety gates
 // ====================================================================
+// #9：异步 ∥ 后台执行（`async: true`——池/起跑/结算/杀单点 = `agent-tools/bash-async.mjs`；
+// 本档 = 薄接线：参数面 + depth 第二道 + 起跑 ack）。同步径（缺省）**逐字零变**。
 
 /**
  * Build environment for child process.
  * Passes through all parent env vars, with non-interactive overrides (EDITOR/PAGER/TERM).
  * Sets PYTHONIOENCODING on Windows to override GBK default for Python scripts.
+ * #9：导出面 = 后台径（`agent-tools/bash-async.mjs`）同源复用（env 单源——勿另建副本）。
  */
-function buildBashEnv() {
+export function buildBashEnv() {
   const isWindows = process.platform === "win32"
   return {
     ...process.env,
@@ -238,8 +241,9 @@ export const bashTool = {
     type: "object",
     properties: {
       command: { type: "string", description: "Shell command to execute" },
-      timeout: { type: "number", description: `Timeout in ms (default ${BASH_TIMEOUT_MS})` },
-      filter: { type: "string", description: "Optional: only return output lines matching this regex (case-insensitive)" },
+      timeout: { type: "number", description: `Timeout in ms (default ${BASH_TIMEOUT_MS} for synchronous runs; background runs have no default — an explicit timeout still applies)` },
+      async: { type: "boolean", description: "Run in the background (default false): returns an ack at once (bash#<id>, log path) and the result arrives as a digest when the process exits. Depth-0 only." },
+      filter: { type: "string", description: "Optional: only return output lines matching this regex (case-insensitive; synchronous runs only)" },
     },
     required: ["command"],
   },
@@ -250,7 +254,28 @@ export const bashTool = {
     // guard anyway. Instead: snapshot every uncommitted file first, then ALLOW
     // the command. The snapshot makes the rollback reversible (defense in depth:
     // the wide matcher also covers variants like `git checkout HEAD -- .`).
+    // 前置两件（guard ∥ hint）同步 ∥ 后台两径同保留（#9）。
     const guard = await gitGuardSnapshot(args.command, ctx.cwd)
+    const hint = posixSyntaxHint(args.command)
+    if (args.async === true) {
+      // depth 第二道（schema 主门 = agent/helpers.mjs excludeSubagentTools 删参——异步面只到
+      // 子代理实装亦拒：留一条显式文案，不静默转同步）。
+      if ((ctx.depth ?? 0) > 0) {
+        return "Error: bash async is depth-0 only — a child agent has no background task pool (run the command synchronously)"
+      }
+      // 动态 import（W8 契约②：agent-tools 静态链达 node:sqlite——端壳静态闭包须保持零命中）。
+      const { launchBgTask } = await import("../agent-tools/bash-async.mjs")
+      const launched = await launchBgTask(ctx.agent, ctx, {
+        command: args.command,
+        timeout: args.timeout ?? null,
+        shell: ctx.agent?.config?.shell ?? null,
+      })
+      if (launched?.error) return `Error: ${launched.error}`
+      // filter 对后台径不适用（无同步结果可滤）——显式注记，不静默丢参。
+      const filterNote = args.filter ? "\n[note: filter applies to synchronous runs only — for this background task read the log and grep it instead]" : ""
+      const body = `${hint ? `${hint}\n` : ""}${launched.ack}${filterNote}`
+      return guard ? `${guard.notice}\n\n${body}` : body
+    }
     const result = await runBash(args.command, ctx.cwd, {
       timeout: args.timeout ?? BASH_TIMEOUT_MS,
       signal: ctx.signal,
@@ -258,7 +283,6 @@ export const bashTool = {
       shell: ctx.agent?.config?.shell ?? null,
     })
     const filtered = args.filter ? applyLineFilter(result, args.filter) : result
-    const hint = posixSyntaxHint(args.command)
     const body = guard ? `${guard.notice}\n\n${filtered}` : filtered
     return hint ? `${hint}\n${body}` : body
   },

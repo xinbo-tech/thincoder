@@ -1,4 +1,5 @@
 import { listSlots, ledgerHealth } from "@thincoder/core/session.mjs"
+import { stripAtRefs } from "@thincoder/core/file-refs.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
 import { slimToolResultForDisplay } from "./tool-events.mjs"
@@ -39,9 +40,11 @@ export function historyToLines(history, startIdx, endIdx) {
       // text on restore — the image is invisible to the terminal and the user
       // just saw it live. A label with no content under it is noise (user
       // report 2026-08-30: stray "❯ You:" after the read_image block).
+      // B5 消（#677 · 跨线清零批）：恢复面剥离——注入展开文 → `@原文`（核单源 `stripAtRefs`，零第二实现；
+      // 手打 `[File: x]` 形近文本零误伤 = 核件 fail-closed 判据——与 VSC `panel-session.mjs` 同款逆变换）。
       const userText = typeof m.content === "string"
-        ? m.content
-        : (Array.isArray(m.content) ? m.content.find((p) => p?.type === "text")?.text ?? "" : "")
+        ? stripAtRefs(m.content)
+        : (Array.isArray(m.content) ? stripAtRefs(m.content.find((p) => p?.type === "text")?.text ?? "") : "")
       const displayable = typeof m.content === "string" ? !!m.content : !!(userText && userText.trim())
       if (!displayable) continue
       if (lines.length > 0) lines.push({ text: "", color: C.dim })

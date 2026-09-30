@@ -13,7 +13,7 @@
  * 端参绑定 / 转口单源 = `./session-slots.mjs`（本档零核导入）。
  */
 import {
-  deleteSlot, listSlots, newSession, renameSlot, resumeSlot, switchToSlot,
+  deleteSlot, listSlots, newSession, renameSlot, resumeSlot, slotOccupancy, switchToSlot,
 } from "./session-slots.mjs"
 
 /** 成功信封：`slot` = 请求槽号（成功 ⇒ 核已判定其为清单内整数槽；取数 = 信封类型归一 —— 与 `sessions:list`
@@ -40,10 +40,16 @@ export async function createSession(cwd) {
 }
 
 /** `session:switch({ slot })`（同步）：核返回体非 `null` ⇒ 切换成立（清单指针 + 本端记录落点随核）；
- *  `null` ⇒ `slot-missing`。**零端层槽号预校验** —— 非整数槽同判（判据单源 = 核）。 */
+ *  `null` ⇒ `slot-missing`。**零端层槽号预校验** —— 非整数槽同判（判据单源 = 核）。
+ *  **#637（受占切换半幅）**：受占判定 = **切换前**事实（经 `./session-slots.mjs` 转口核 `slotOccupancy` ——
+ *  零算法副本；核语义 = 受占不认领 + 次存 fork、**切换仍成立**）⇒ 成立回执增键 `occupied: true`
+ *  （非受占 ⇒ 键缺席——既有形零回归；可见警告面居渲染面）。 */
 export function switchSession(cwd, slot) {
+  const occupied = !blank(cwd) && slotOccupancy(cwd, slot)?.occupied === true
   const data = switchToSlot(cwd, slot)
-  return data === null || data === undefined ? fail("slot-missing", cwd) : ok(cwd, Number(slot))
+  if (data === null || data === undefined) return fail("slot-missing", cwd)
+  const receipt = ok(cwd, Number(slot))
+  return occupied ? { ...receipt, occupied: true } : receipt
 }
 
 /** `session:rename({ slot, title })`：成功判据 = 核 `ok === true`；否则核 reason **直传**（四值闭集）。

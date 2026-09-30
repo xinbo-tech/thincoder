@@ -87,8 +87,8 @@
 - **整删支计数口径（D-TR11）**：整删支的 `removed` 计数 = 该批内 `.jsonl` 条目数（与 ③ 支逐文件计入同口径；非 `.jsonl` 不计数）——既有断言面保持（`thincoder-vscode/test/trace-store.test.mjs:248-249` `removed === 2`：含非 `.jsonl` 的目录落 ③、纯 `.jsonl` 过期目录落 ①，两路合计数不变）。
 - **非日期名 / 非法日目录归类（D-TR11）**：目录名不以 `YYYY-MM-DD` 解析（日期解析 NaN），**或为非法日（解析归一后 ≠ 原日**——如 `2026-02-31`）⇒ ①② 两条件恒假 ⇒ **回落 ③ 逐文件支**（现行语义；非 `.jsonl` 一律不碰）。
 - **D-TR12 每写 prune 节流**：`maybePruneTraces`（`recordChatTrace` 写盘成功后调用）——模块级窗口 `PRUNE_THROTTLE_MS`（10 分钟）+ 在飞合并；`cleanupTraces` 本体保持无状态（启动面 / 手动面直调）。判据 = 同窗 3 连写 ⇒ 扫描 ≤1 次。
-  **测试缝（D-TR12）**：节流为模块级状态（**跨用例残留**）——缝 = 既有先例 `_resetTraceStateForTest`（`thincoder-core/traces/trace-store.mjs:103`）扩展为**一并复位节流窗**（或给节流面注入 now 缝），用例须显式复位。
-- **D-TR13 启动清理触发面收窄（白名单）+ 启动窗外延迟拍**：启动清理仅在**会话型命令白名单**执行——`tui`（**含无参默认路径 `command === undefined`**，`thincoder-cli/bin/thincoder.mjs:312-313` `case "tui": case undefined:`）/ `chat` / `acp`；
+  **测试缝（D-TR12）**：节流为模块级状态（**跨用例残留**）——缝 = 既有先例 `_resetTraceStateForTest`（`thincoder-core/traces/trace-store.mjs:106`）扩展为**一并复位节流窗**（或给节流面注入 now 缝），用例须显式复位。
+- **D-TR13 启动清理触发面收窄（白名单）+ 启动窗外延迟拍**：启动清理仅在**会话型命令白名单**执行——`tui`（**含无参默认路径 `command === undefined`**，`thincoder-cli/src/command-table.mjs:93-94` `case "tui": case undefined:`）/ `chat` / `acp`；
   白名单外命令一律零启动清理（一次性 / 信息命令 `--version` / `-v` / `--help` / `completion`，及 `memory` / `sync` / `reindex` / `distill` / `upgrade` / `session`）；闸位 = 命令解析之后（同档 `:40`）；启动清理白名单判定 = 同档 `:144`；
   判据 = `--version` 总时长 ≤0.5s（对照 12.9s）+ **无参启动仍执行启动清理**（两用例见批档 §2 用例表）；策略裁决不变——清理照常执行，只是不在白名单外命令启动时执行。
   **启动清理 = 启动窗外延迟拍（2026-09-21 · 收口前机制微修 2）**：复测 8 轮（无参启动至拒印 1.3–2.9s、≤2s 仅 4/8）⇒ 残余竞争者 = 本清理的 fs 爆发仍落在启动窗内、与启动链争同一事件循环。

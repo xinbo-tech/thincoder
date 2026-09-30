@@ -2,7 +2,7 @@
  * session-control.mjs — 会话控制面**纯构树三件**（会话模型 ∕ 条体树 ∕ 下拉树 + 节点助手）。
  * 会话模型轮 R13 硬限拆分产物：自 `renderer/mount-sessions.mjs` 出档（该档 588 行越 500 硬限）——
  * **结构拆分零语义**（面不变 / 判据不变，只换宿主档）；挂载与交互（开合 ∕ 点内不关 ∕ 点外关 ∕
- * 改名换形 ∕ 删除 popover）与接线留 `renderer/mount-sessions.mjs`。基准 = `thincoder-vscode/webview/session-bar.js`
+ * 改名换形 ∕ 删除 popover）留 `renderer/mount-sessions.mjs`；接线随批出档 `renderer/session-wire.mjs`。基准 = `thincoder-vscode/webview/session-bar.js`
  * 三件〔项目钮 ∕ 下拉选择器 ∕ 新建钮〕，值面 = `webview/session.css`；需求句 = `docs/desktop/requirements/PROJECT.md`
  * §3.1「会话控制（面板内 · VSC 形）」行。
  *
@@ -92,12 +92,10 @@ export function sessionBarTree(model, handlers = {}, face = {}) {
  *  不吞则条目 ∕ 换形键点按会连带 toggle（真 DOM 事件冒泡下必现）。 */
 export function sessionDropdownTree(model, handlers = {}, face = {}) {
   const children = []
-  const notice = ledgerNotice(model.ledger)
+  const notice = ledgerNoticeNode(model.ledger)
   if (notice !== null) children.push(notice)
   for (const item of model.items) children.push(itemNode(item, handlers, model.canDelete, face.form === item.key))
-  if (model.items.length === 0) {
-    children.push({ tag: "div", props: { class: "session-item session-empty" }, children: [t("session.empty")] })
-  }
+  if (model.items.length === 0) children.push(emptyRowNode())
   return {
     tag: "div",
     props: {
@@ -119,7 +117,9 @@ function projectNode(model, handlers) {
   return { tag: "button", props: { ...wire(props, handlers.onOpenProject) }, children: [label] }
 }
 
-/** 下拉选择器（开合锚 = `aria-expanded` + 下拉 `data-open`；Enter ∕ Space 键触发 —— VSC `session-bar.js:20-25` 同径）。 */
+/** 下拉选择器（开合锚 = `aria-expanded` + 下拉 `data-open`；Enter ∕ Space 键触发 —— VSC `session-bar.js:20-25` 同径；
+ *  **形内让行**（#659）：键源住改名形内 ⇒ 零 `preventDefault` ∕ 零 `onToggle`（空格可键入 ∕ Enter 不关形）——
+ *  不用 `stopPropagation`（形内键面不外溢阻断，语义过宽）。 */
 function selectorNode(model, handlers, face) {
   const open = face.open === true
   return {
@@ -129,6 +129,7 @@ function selectorNode(model, handlers, face) {
       "aria-expanded": String(open), "aria-label": t("session.title"),
       onClick: handlers.onToggle,
       onKeydown: (event) => {
+        if (event?.target?.closest?.('[data-form="rename"]') != null) return // 形内判源：让行（键归形）
         if (event?.key !== "Enter" && event?.key !== " ") return
         event?.preventDefault?.()
         if (typeof handlers.onToggle === "function") handlers.onToggle()
@@ -142,9 +143,21 @@ function selectorNode(model, handlers, face) {
   }
 }
 
+/** 条目子件槽序（**单源** —— 构树 ∕ 挂载面键控差分（`renderer/mount-sessions.mjs`）同引；槽位序 ≡ 条目子件序）。 */
+export const ITEM_SLOTS = Object.freeze([
+  ".session-item-title", ".session-item-meta", ".session-item-badge",
+  '[data-action="session:rename"]', '[data-action="session:delete"]',
+])
+
+/** 空态行（零条目在场形 —— 挂载面差分与构树同引）。 */
+export function emptyRowNode() {
+  return { tag: "div", props: { class: "session-item session-empty" }, children: [t("session.empty")] }
+}
+
 /** 条目（标题 + 元数据 + 位标 + 行内 ✎ ∕ ✕〔>1 才显 ✕〕—— 对位 VSC `.session-item`）。
- *  本键在形（改名形）⇒ 子序 [文本控件, 取消, 确认]（条目控件原位退出 —— 同旧左列换形律）。 */
-function itemNode(item, handlers, canDelete, inForm) {
+ *  本键在形（改名形）⇒ 子序 [文本控件, 取消, 确认]（条目控件原位退出 —— 同旧左列换形律）；
+ *  常规形子件序对齐 `ITEM_SLOTS`（槽位对账面 —— 挂载面键控差分按此对账）。 */
+export function itemNode(item, handlers, canDelete, inForm) {
   const props = {
     class: item.active === true ? "session-item active" : "session-item",
     "data-slot": item.key, role: "option", "aria-selected": String(item.active === true),
@@ -202,8 +215,9 @@ function renameForm(item, handlers) {
   ]
 }
 
-/** 账本警示注记（账本可靠批 · 端既有面迁位 = 下拉首行 · 非可点）：主句 + `scene === true` 条件附句（两键合成）。 */
-function ledgerNotice(ledger) {
+/** 账本警示注记（账本可靠批 · 端既有面迁位 = 下拉首行 · 非可点）：主句 + `scene === true` 条件附句（两键合成）。
+ *  导出面 = 挂载面注记对账（`renderer/mount-sessions.mjs`）。 */
+export function ledgerNoticeNode(ledger) {
   if (ledger === null || typeof ledger !== "object") return null
   const children = [t("rail.ledger.notice", { reason: ledger.reason })]
   if (ledger.scene === true) children.push(NOTICE_SEP[locale()] ?? NOTICE_SEP.en, t("rail.ledger.notice.scene"))

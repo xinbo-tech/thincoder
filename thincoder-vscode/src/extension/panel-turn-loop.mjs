@@ -6,7 +6,7 @@
  * ——runOpts 构造 + ContinueError/Ctrl+I 续跑 + 错误/中止持久化分支）+ 回合 controller 工厂
  * `newTurnController`（原 `:43-65`）。
  * 留主档（`panel-chat.mjs`）= 入口守卫段（`ensurePanelAgent` / `ensureMemoryHandle` 同址——
- * 结构机检约束 `test/engine-floor-guard.test.mjs:152-154`）+ 行加载 / 回调装配段 +
+ * 结构机检约束 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`——W8 契约②判据现载体，单测树重建时回迁端侧单测档）+ 行加载 / 回调装配段 +
  * `runPanelChat` 包装 + `agentSlotMatches` / `ensurePanelAgent`。
  *
  * 缝保持（KD-12 · 承 KD-13）：`newTurnController` 迁出 + 主档 re-export（消费档
@@ -22,7 +22,7 @@
  * `callbacks.onComplete`（🔴 P4-I 断缝闭证——核 loop 零调用点 ⇒ 干净返回处补调）；③ 工具推送腿
  * `callbacks.onTurnEnd`（件 1「面板推送腿」行——旧循环 `agent.mjs:397-417` 逐字迁入）。
  */
-import { ContinueError } from "../agent.mjs"
+import { continueDecision } from "@thincoder/core/agent/continue-decision.mjs" // #677 · I10 续跑判定单源（#127 ④ 双写退役）
 import { hydrateRun, setupAgentRun } from "../agent/setup.mjs"
 import { agentState } from "../agent/run-helpers.mjs"
 import { syncToolDrivenDisplayState } from "../agent/agent-state.mjs"
@@ -33,7 +33,7 @@ import { postDigestCap } from "./panel-callbacks.mjs"
 import { pickupQueuedAtStepBoundary } from "./queued-pickup.mjs"
 
 /** AGENT-LOOP-ASYNC-POOL.md §6.8 D-S9 controller 登记（2026-09-02 偏差修复 #3）：池 children 在 spawn 时刻持有当时的
- * turn controller signal——Ctrl+I / ContinueError / AUTO resume 重建 controller 后，旧
+ * turn controller signal——Ctrl+I ∕ 撞帽续跑重建 controller 后，旧
  * controller 的 children 仍在跑。每次重建都登记进 panel._turnControllers：会话入口快照为
  * susp.abortControllers，Stop 统一 abort——否则会话中止句柄只取最后一个 controller，旧
  * children 逃逸中止（跑完整个 turn 预算 + mergeChildMutations 写入 guard 标记被下次重建
@@ -232,31 +232,29 @@ export async function runTurnLoop(panel, deps) {
       break
     } catch (e) {
       traceStop(`runAgent: threw ${e?.name} — unwinding`, panel._stopClickTs)
-      // Ctrl+I interrupt: the abort carries reason.interrupt — rebuild the
-      // controller and RESUME the same turn (the interrupt message is already in
-      // history; the model continues from there). CLI agent-turn.mjs parity.
-      // 判据两源：抛出物 `.reason`（核 `abortError` 形态）优先 ∕ 回落 controller `signal.reason`（核
-      // interrupted-response 抛出物不设 `.reason`——`agent.mjs:363`；CLI `agent-turn.mjs:193` 同式）。Stop（无 reason）两源皆空 ⇒ 走下方
-      // 中止分支（与旧端同判）。
-      const abortReason = e?.reason ?? panel._abortController?.signal?.reason
-      if (e?.name === "AbortError" && abortReason?.interrupt) {
+      // 续跑判定 = 核单源（#677 · I10——continueDecision；本端零第二分支——#127 ④ 双写退役）。
+      // reason = 回合 controller 的 `signal.reason`（单源——与 CLI 同式 · #677 修正轮对齐；异信号窄边归一为 CLI 形，实证命中 ⇒ 二端同改另轮）。
+      const abortReason = panel._abortController?.signal?.reason
+      const decision = continueDecision(e, { autoTurn, autoApprove: panel._autoApprove, reason: abortReason })
+      if (decision === "resume") {
+        // Ctrl+I interrupt: the abort carries reason.interrupt — rebuild the controller and RESUME the
+        // same turn (the interrupt message is already in history; the model continues from there).
         newTurnController(panel)
         continue
       }
-      if (e instanceof ContinueError) {
-        if (autoTurn) {
-          // TURN-CAP-CONTINUE.md §1 #7 / D-TC15 (2026-09-26): the digest path no longer self-resumes —
-          // an unattended tier has no one to answer, so the cap settles the turn (a partial digest
-          // stays in history — no lost reports).
-          postDigestCap(panel, "stop", e.turn) // §14 C-10：cap 行（stop——部分消化）
-          tLog.result = "stopped"
-          break
-        }
+      if (decision === "cap-stop") {
+        // TURN-CAP-CONTINUE.md §1 #7 / D-TC15 (2026-09-26): the digest path no longer self-resumes —
+        // an unattended tier has no one to answer, so the cap settles the turn (a partial digest
+        // stays in history — no lost reports).
+        postDigestCap(panel, "stop", e.turn) // §14 C-10：cap 行（stop——部分消化）
+        tLog.result = "stopped"
+        break
+      }
+      if (decision === "ask") {
         // Turn-cap exhaustion: offer to continue from the current context, NOT error
-        // (CLI agent-turn.mjs parity — "Ran N turns. Continue?"). Rebuilding the
-        // controller + resume re-runs the loop from the SAME history (the user message
-        // is already pushed; resume=true skips re-pushing it). Unlimited continues —
-        // the user can Stop at any prompt.
+        // (CLI agent-turn.mjs parity — "Ran N turns. Continue?"). Rebuilding the controller +
+        // resume re-runs the loop from the SAME history (the user message is already pushed;
+        // resume=true skips re-pushing it). Unlimited continues — the user can Stop at any prompt.
         const willContinue = await askInPanel(
           `Agent reached ${e.turn} turns (limit). Continue from here?`,
           ["Continue", "Stop"],
@@ -269,17 +267,13 @@ export async function runTurnLoop(panel, deps) {
         tLog.result = "stopped"
         break
       }
-      // Persist the interrupted/errored turn: the user message and any partial output
-      // were already pushed into both lines by runAgent (pushReal). Without this save,
-      // an abort/error loses the whole turn from disk (CLI parity: at most half a turn lost).
-      // (The finally block below also saves unconditionally — CLI agent-turn.mjs parity —
-      // so this catch-block save is now redundant on this path, but harmless.)
+      // "stop" ∕ "error" 两格：先持久化本回合（interrupted/errored turn —— finally 亦恒落盘，此存幂等）。
       try {
         panel._saveLines(fullHistory, history, slotStamp, turnSlot)
       } catch (saveErr) {
         console.error("[chat-panel] save after abort/error failed:", saveErr.message)
       }
-      if (e.name === "AbortError") {
+      if (decision === "stop") {
         panel._panel?.webview.postMessage({ type: "aborted" })
         tLog.result = "stopped"
       } else {

@@ -9,14 +9,14 @@ import {
   PRESETS, providerNames, isProviderConfigured, storeProviderKey, removeProviderKey,
   providerLabel, readProviders, sanitizeConsultModels, warnConsultModelsFiltered,
 } from "./presets.mjs"
-import { loadRaw, resolveProviders, addProviderEntry, removeProviderEntry } from "@thincoder/core/config-io.mjs"
+import { loadRaw, resolveProviders, addProviderEntry, removeProviderEntry, conflictError, CONFIG_CONFLICT_HINT } from "@thincoder/core/config-io.mjs"
 import { DEFAULTS, normalizeProxy } from "@thincoder/core/config.mjs"
 import { loadMcpServers, addMcpServer, updateMcpServer, removeMcpServer } from "../config-mcp.mjs"
 import { vscPersistRaw, saveAgentSettingsFromPanel, saveShellSettingsFromPanel } from "./settings-panel-write.mjs"
 import { probeProviderAdmission } from "./provider-flows.mjs"
 import { listModels, admissionOf } from "@thincoder/core/provider/list-models.mjs"
 import { MASKED } from "@thincoder/core/agent-tools/settings.mjs"
-import { specForModel } from "../specs.mjs"
+import { effortEnumForModel } from "../specs.mjs"
 import { loadModelPrefs, loadSlot } from "./session-io.mjs"
 import { _probeWindow, _probeBatch, _retryFailed } from "./provider-probe-window.mjs"
 
@@ -134,6 +134,7 @@ export function agentSettings(session) {
     subagentModels: s.subagentModels,
     compactThreshold: s.compactThreshold, // null = auto
     verifyGuard: s.verifyGuard,
+    autoThink: s.autoThink, // #17：读链补环（loadAgentSettings 已载；此前 push 快照未携）
     engineering: slotData?.engineering ?? s.engineering,
     consultTurns: s.consultTurns,
     consultTimeoutMs: s.consultTimeoutMs,
@@ -151,7 +152,7 @@ export function agentSettings(session) {
     effortEnums: Object.fromEntries(
       [...(s.consultModels ?? []).map((m) => m.model), s.advisor?.model]
         .filter(Boolean)
-        .map((id) => [id, specForModel(id).reasoningEffortEnum || null])
+        .map((id) => [id, effortEnumForModel(id)]) // I7（#677）：未在册名回退全档（对齐 CLI 托底）
         .filter(([, v]) => v)
     ),
   }
@@ -213,18 +214,27 @@ export async function testProviderConnection({ baseURL, apiKey, format }) {
   }
 }
 
-/** Persist proxy settings from the panel. payload: { uri?, web?, model? } (uri '' = clear). */
+/** Persist proxy settings from the panel. payload: { uri?, web?, model? } (uri '' = clear).
+ *  P2-5（#677 I15）：URI 形态校验前置——缺 scheme ∕ 非 http(s) ⇒ 拒（零写盘），错误串回调用面。 */
 export function saveProxySettingsFromPanel(payload) {
-  vscPersistRaw((raw) => {
+  const uri = payload.uri !== undefined ? String(payload.uri).trim() : ""
+  if (uri) {
+    let parsed = null
+    try { parsed = new URL(uri) } catch { /* malformed ⇒ 同拒 */ }
+    if (!parsed) return `Invalid proxy URI: "${uri}" — expected http://host:port`
+    if (!["http:", "https:"].includes(parsed.protocol)) return `Unsupported proxy protocol: "${parsed.protocol}" — use http:// or https://`
+  }
+  // 写结果归一（评审 R2 · 同族两写面同式）：并发冲突（mtime-conflict）回调用面——`env` 段失败面承载。
+  return conflictError(vscPersistRaw((raw) => {
     const current = normalizeProxy(raw.proxy) ?? { uri: "", web: true, model: false }
-    const uri = payload.uri !== undefined ? payload.uri.trim() : current.uri
+    const uri = payload.uri !== undefined ? String(payload.uri).trim() : current.uri
     if (!uri) { delete raw.proxy; return }
     raw.proxy = {
       uri,
       web: payload.web !== undefined ? !!payload.web : current.web,
       model: payload.model !== undefined ? !!payload.model : current.model,
     }
-  })
+  }))
 }
 
 /** Test the proxy connection from the extension host (webview cannot run Node code).
@@ -291,6 +301,14 @@ export function saveMcpServer(name, config) {
 
 export function deleteMcpServer(name) {
   return removeMcpServer(name)
+}
+
+/** 设置面失败面单源（#640 载荷 v2 = `{ type:"providerError", scope, reason }`）：8 站点统一经此。
+ *  `CONFIG_CONFLICT_HINT`（核 `conflictError` 的唯一非空返回）⇒ 判定码 `"mtime-conflict"`（webview
+ *  词表出词）；其余 ⇒ 原样串直传（表外通道）。 */
+export function postProviderError(panel, scope, err) {
+  const reason = err === CONFIG_CONFLICT_HINT ? "mtime-conflict" : err
+  panel?._panel?.webview.postMessage({ type: "providerError", scope, reason })
 }
 
 export function pushStatus(panel) {

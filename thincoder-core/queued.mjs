@@ -7,8 +7,9 @@
  * 形态文案 / 批语义逐字）；对拍锚 = CLI 副本 `thincoder-cli/src/tui/queued-merge.mjs`（同名同值）。
  *
  * 消费面：计划面（常量 ∕ 合并串 ∕ 计划）由桌面排队面消费（`thincoder-desktop/src/main/queued-input.mjs`）；
- * `takeQueuedBatchItem` = 载具取项面（携图批退化逐条 ∕ slash 零动作），桌面按 KD-40 取项边缘**暂不消费**
- * （该档头注列据）——消解 = VSC ∕ CLI 迁移消费核件批（其后源端自持副本退场）。
+ * `takeQueuedBatchItem` = **取项单源**（携图批退化逐条 ∕ slash 单条取——统一语义 = 计划首动作即消费），
+ * 消费点在册五处 = VSC 三径（`panel-turn-stages.mjs` 退出兜底 ∕ `suspension.mjs` 取项缝 ∕ 同档退出残余）
+ * + 桌面两径（`turn-chain.mjs` 尾径 ∕ `suspension-drive.mjs` 窗输入面）。
  *
  * 留端（载体面不迁——各端 adapter 各持）：队容器（按会话键 `Map` ∥ 单容器）· 容量门与满队回执 ·
  * 快照投影 · 步边界守卫与送达面（附件判决 ∕ 回合链出站）· 显示面。
@@ -72,8 +73,8 @@ export function planQueuedInput(items) {
 const hasImages = (q) => Array.isArray(q?.images) && q.images.length > 0
 
 /**
- * 载体条目面取批（纯函数——就地消费）：首动作为 `turn` ⇒ 按计划取一批并返回待送达条目；
- * `slash` 首动作 ⇒ 零动作 `{ item: null, merged: null }`。
+ * 载体条目面取批（纯函数——就地消费；**统一语义 = 计划首动作即消费**）：`turn` 首动作 ⇒ 按计划取一批
+ * （多条合并 ∕ 超长直发）；`slash` 首动作 ⇒ 单条取（count 1 ∕ 原文——保序 ∕ 不合并）。
  * **贴图批退化逐条**（批内任一条目携 `images` ⇒ count = 1——图片随条目元数据走降级面）；
  * 无贴图 ⇒ 多条合并为一条（头条目元数据 + 合并文本）。
  * @param {Array} queue 载体条目数组（条目 `{ text, images?, ... }`——就地 `splice` 消费）
@@ -82,7 +83,6 @@ const hasImages = (q) => Array.isArray(q?.images) && q.images.length > 0
 export function takeQueuedBatchItem(queue) {
   if (!Array.isArray(queue) || queue.length === 0) return { item: null, merged: null }
   const action = planQueuedInput(queue.map((q) => String(q?.text ?? "")))[0]
-  if (action.kind !== "turn") return { item: null, merged: null }
   const count = queue.slice(0, action.count).some(hasImages) ? 1 : action.count
   const taken = queue.splice(0, count)
   const text = count > 1 ? action.text : String(taken[0]?.text ?? "")

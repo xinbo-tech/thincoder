@@ -122,7 +122,7 @@ export function approvalItemNode(item, handlers) {
 }
 
 /** 队列条目：标题串（供给面出串）+ 状态词（同闭枚举 —— 表外码两处皆零）。席位保留 · 零写者（项 2 —— 用户
- *  排队消息改住流内 `pending`；族空 ⇒ 零节点恒不在场）。 */
+ *  排队消息改住输入区上方待发送带（`pending` 镜面）；族空 ⇒ 零节点恒不在场）。 */
 export function queueItemNode(entry) {
   const word = statusWord(entry?.status)
   return {

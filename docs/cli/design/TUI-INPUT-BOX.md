@@ -122,7 +122,7 @@
 + `state.scroll = 0` + `state._followTail = true`（F4「新提交消息 → 恢复跟随」——排队提交同列；与 `thincoder-cli/src/tui/turn-face.mjs:32-33` submit 同款两行，两条入槽路径同款：本档 busy 门禁 / `key-handler-edit.mjs:65-70` 挂起态）
 （与挂起态入队分支同款清理——`state.input` 永不被后台事件读写的不变量（§4）保持：入队是**前台**按键路径写自己的队列）。
 **挂起面入队后同款唤醒**：`state.suspended || state._suspPending` ⇒ `state._suspWake?.()`（§4 既有挂起分支同款）；
-busy 期该槽恒 null ⇒ 零动作——证据 = `thincoder-cli/src/tui/suspension-drive.mjs:122`（等待结束清理即置 null）· `:137`（仅在 `waitForSettleOrWake` 等待窗口注入；唯一调用点 `:279`）
+busy 期该槽恒 null ⇒ 零动作——证据 = `thincoder-cli/src/tui/suspension-drive.mjs:122`（等待结束清理即置 null）· `:137`（仅在 `waitForSettleOrWake` 等待窗口注入；唯一调用点 `:279`）（as-of 2026-09-29）
 ⇒ 轮末 driver 步骤 1 恒接走；普通 busy 面零唤醒（现状零改）。批档 §2 用例面「挂起内入槽」格断言 `wakes` 计数（= 呼叫点执行——桩注入 spy；生产 busy 期零副作用）。
 
 **再提交与满队（容量 8）= 拒 + 提示 + 文本保留**：容量内再提交 ⇒ 连续入队（多槽——每条各占一项）；满队再提交 ⇒ 拒 + 提示 + 文本保留
@@ -133,7 +133,7 @@ busy 期该槽恒 null ⇒ 零动作——证据 = `thincoder-cli/src/tui/suspen
 
 **消费回执（送达链路侧——每批一行 dim 行）**：`[sending queued message]` 在**消费时**按批推送（批 = 合并计划取数单位）——
 ① **步边界 pickup**（`queued-pickup.mjs`（已落 · 实读 **34**）——核循环头回调取批后；本批新增）；② 回合尾兜底转正点（`agent-turn.mjs` 队列 while 取批后）；③ 挂起 driver 消费点（`suspension-drive.mjs` pendingInput 取批后）。
-形态对位既有 `[continuing…]`（`agent-turn.mjs:220`，`C.tool`）——消费事实的可见锚，回执在则顺序自然
+形态对位既有 `[continuing…]`（`agent-turn.mjs:255`，`C.tool`）——消费事实的可见锚，回执在则顺序自然
 （queued dim 行 → 回合尾 → `❯ You:` 标签 + 消息行）。**否决气泡行编辑**（改写 queued 行为送达态）：
 生命周期簿记两处编辑点 + 行 diff 键漂移风险，消费回执行零簿记同效。
 
@@ -219,7 +219,7 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 | `thincoder-cli/src/tui/input-face.mjs` | stdin 层 `translateShiftEnter` 接线（`:151`）+ 键盘 / 鼠标后置挂载入口（`mountKeys` / `mountMouse`） |
 | `thincoder-cli/src/tui/index.mjs` | `startTUI` 装配序列（命令层 / 启动屏 / resize / render loop）；启动 `keyboardPush` / 退出 `keyboardPop`（序列体 = `tui-lifecycle.mjs`——启动调用点 = `input-face.mjs:39`） |
 | `thincoder-cli/test/input-lock.test.mjs` · `thincoder-cli/test/arrow-editing.test.mjs` | 按键分发锁（含 busy 门禁）+ 方向键编辑用例 |
-| `thincoder-cli/test/busy-injection.test.mjs`（留守）· `busy-injection-render.test.mjs` · `busy-injection-consume.test.mjs`（2026-09-25 file-tier-sweep 批按族拆分产物） | F16 用例宿主——按族三档：留守 T-F16-1 / 3 / 4 / 8 / 13 · 渲染族 6 / 10 / 11 / 12 / 14 / 17 · 消费族 2 / 5 / 9 / 15 / 16 / 18 / 19；T-F16-7 = `input-lock.test.mjs` 侧；逐例映射见批档 §2「四·S4」 |
+| `thincoder-cli/test/busy-injection.test.mjs`（留守）· `busy-injection-render.test.mjs` · `busy-injection-consume.test.mjs`（2026-09-25 file-tier-sweep 批按族拆分产物） | F16 用例宿主——按族三档：留守 T-F16-1 / 3 / 4 / 8 / 13 · 渲染族 6 / 10 / 11 / 12 / 14 / 17 · 消费族 2 / 5 / 9 / 15 / 16 / 18 / 19；T-F16-7 = `input-lock.test.mjs` 侧；逐例映射见批档 §2「四·S4」 （机检豁免——用例退场登记） |
 
 ## 7. question 自由文本输入态：光标与编辑键
 
@@ -368,7 +368,7 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 
 - 2026-09-22（**busy-extend 批 · 设计评审轮 1 修正** · eng-designer——承 `docs/batches/2026-09-22-busy-extend.md` §3 轮次 1 发现 #8 / #9 / #12）：
   §4.1 执行序槽满句钉提示形态（= `TUI.md` §7.5 表第 1 行逐字 `已排队 1 条消息`）+ 先例坐标收正（`key-handler.mjs:440-444`）；
-  挂起面唤醒句补证据行（`thincoder-cli/src/tui/suspension-drive.mjs:122` / `:137` / `:279`）+ 批档 §2 用例面「挂起内入槽」格期望注；§6 用例宿主范围收正（T-F16-1…9）。**判据表 / 语义零变**。
+  挂起面唤醒句补证据行（`thincoder-cli/src/tui/suspension-drive.mjs:122` / `:137` / `:279`）+ 批档 §2 用例面「挂起内入槽」格期望注；§6 用例宿主范围收正（T-F16-1…9）。**判据表 / 语义零变**。 （机检豁免——用例退场登记）
 
 - 2026-09-22（**busy-extend 批 · 设计评审轮 2 修正** · eng-designer——承 `docs/batches/2026-09-22-busy-extend.md` §3 轮次 2 发现 #3 / #7）：
   §4 Enter 条容器名收正（「`state.pendingInput` 队列」→ **单槽（至多一条——见 §4.1）**）；§9.2「挂起决策 / 队列机制的正文」去向行的节号收正

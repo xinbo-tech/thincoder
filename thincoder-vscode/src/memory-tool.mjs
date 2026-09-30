@@ -3,8 +3,10 @@
  *
  * W8（`docs/batches/2026-09-15-vsc-core-wiring.md` §2 · 2026-09-15）：存储 / 检索已归一核面
  * （`@thincoder/core/memory.mjs`——sqlite；端壳文件制镜像 `src/memory.mjs` 随本单元删除）。
- * **工具面（五动作 · layer 参数 · 无 team 层）仍是本端自持**；执行器与输出契约取自核工具
- * 生成器（`memoryTools`——MEMORY.md §6.6.4「两端同文」单一契约，不再留第二实现）。
+ * **工具面（五动作 · layer 参数 · 无 team 层）曾为本端自持**；执行器 / 输出契约 / **描述 ∕ 参数面
+ * （I9 · #677）** 均取核工具生成器（`memoryTools`——MEMORY.md §6.6.4「两端同文」单一契约，
+ * 不再留第二实现）——描述 ∕ 参数面 = 装配期动态注入（`wireMemoryFace`，见下），端面只留
+ * layer 值域守卫（enum 收窄 personal|project + team 拒回——MEMORY.md §6.9）。
  * 核面经动态 `import()` 载入（`execute()` 内）——端壳静态闭包不得到达 `node:sqlite`
  * （护栏契约见 `embed-config.mjs` 头注）。
  *
@@ -14,51 +16,29 @@
  */
 
 import { loadMemoryFace, memoryFor, projectMemoryDir } from "./embed-config.mjs"
+import { DESC } from "@thincoder/core/tools/shared.mjs" // 描述单源（核 `memoryTools` 同加载器 ∕ 同档——端零自持描述字面）
 
 // ─── tools ────────────────────────────────────────────────────
 
-/** §3 merged memory tool — five actions on the personal/project layers (this extension has
- *  no team layer and rejects team with CLI guidance). The tool surface speaks `layer`
- *  end-to-end (param/schema/description/rows/outputs); search/list are read-only actions
- *  (isReadonlyAction — execute-tools.mjs: plan mode passes, no permission ask,
- *  readonly-parallel batches); put/delete/clear keep their side-effect gates —
- *  confirm:true is the batch-delete/clear tool-level gate (direct-delete ruling:
- *  the confirm parameter IS the gate, no second human step). */
 const MEMORY_ACTIONS = ["search", "put", "list", "delete", "clear"]
 const VSC_LAYERS = ["personal", "project"]
-const MEMORY_TOOL_DESCRIPTION =
-  "Manage long-term memory in ONE tool — the action parameter picks the operation:\n" +
-  "- search — find knowledge saved in previous sessions (query, optional layer/limit); every result row starts with a [layer] tag and carries the entry id — 会话消息历史不在 memory——用 read_history\n" +
-  "- put — save a piece of knowledge for future sessions (type: rule = coding standards, knowledge = project facts, decision = architecture decisions, pattern = debugging/workflow patterns; title/content/tags; layer defaults to personal)\n" +
-  "- list — inventory what memory holds: optional layer/type/keyword filters, limit default 50; one row per entry: [layer] id [type] title (date); a truncated list notes the full count\n" +
-  "- delete — SINGLE: {id, layer} deletes one entry by the id shown in search/list output — layer is OPTIONAL: pass it to verify the entry really lives in that layer (a mismatch is refused — protection against deleting the wrong entry); omit it to route by where the id actually lives. BATCH (no id): {layer + type and/or keyword} deletes every matching entry in that layer — a call without confirm:true is refused and returns the count plus a preview (re-send with confirm:true to execute); a layer-wide wipe without filters is refused on every layer\n" +
-  "- clear — {layer: \"personal\", confirm: true} wipes ALL personal memory entries. clear is personal-only: a missing layer or a project layer is refused (use delete batch filters on shared layers)\n" +
-  "layer = the memory tier an entry lives in: personal (private) or project (shared via this repo's .thincoder/memory/). The [layer] tag on search/list result rows and delete's layer parameter are the same concept — pass a result row's [layer] into delete, or omit layer and delete auto-routes by the id's actual location.\n" +
-  "Save bugs, conventions, and preferences here — they persist across sessions. For project-level task tracking use `/ledger`; for reusable project instructions use skill."
 
 /** team layer refusal — this end has no team layer (MEMORY.md §6.6「layer 值域按端」). */
 const teamRefusal = (action) => `Error: memory ${action}: VS Code memory has no team layer — team memory is managed by the CLI`
 
+/** 核参数面注入（I9）：装配缝（`buildToolTable`）把核生成器工具面交给本档——端零自持描述字面；
+ *  端唯一收窄 = layer 值域（enum ⇒ `VSC_LAYERS`；team 由 `execute` 拒回）。 */
+export function wireMemoryFace(face) {
+  if (!face?.parameters) return
+  const p = face.parameters
+  memoryTool.parameters = { ...p, properties: { ...p.properties, layer: { ...p.properties.layer, enum: VSC_LAYERS } } }
+}
+
 export const memoryTool = {
   name: "memory",
-  description: MEMORY_TOOL_DESCRIPTION,
-  parameters: {
-    type: "object",
-    properties: {
-      action: { type: "string", enum: MEMORY_ACTIONS, description: "Operation to run (required)" },
-      layer: { type: "string", enum: VSC_LAYERS, description: "Which layer the entry lives in: personal (private) or project (shared via this repo's .thincoder/memory/); team is managed by the CLI. put defaults to personal; search/list cover every layer when omitted; delete single: optional (omitted = auto-route by where the id actually lives); delete batch & clear: required (clear accepts only personal)" },
-      type: { type: "string", enum: ["rule", "knowledge", "decision", "pattern"], description: "Entry type: put = what to save; list/delete batch = filter by type" },
-      title: { type: "string", description: "put: short title" },
-      content: { type: "string", description: "put: full content to remember" },
-      tags: { type: "string", description: "put: space-separated tags" },
-      query: { type: "string", description: "search: natural-language query" },
-      keyword: { type: "string", description: "list/delete batch: filter matching title/content" },
-      id: { type: "string", description: "delete single: the entry id from put/search/list output" },
-      limit: { type: "number", description: "Max rows: list 50 by default, search 5 by default" },
-      confirm: { type: "boolean", description: "delete batch/clear: must be true — without it the tool refuses" },
-    },
-    required: ["action"],
-  },
+  description: DESC("memory"), // 核单源（`tool-docs/memory.md`——与核 `memoryTools` 同文）
+  // 占位骨架（装配期由 `wireMemoryFace` 换核面；本档零自持描述字面）
+  parameters: { type: "object", properties: { action: { type: "string", enum: MEMORY_ACTIONS } }, required: ["action"] },
   readonly: false,
   // §3 action-level classification (execute-tools.mjs reads this): search/list are read-only
   isReadonlyAction(args) {

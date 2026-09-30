@@ -27,10 +27,11 @@ function currentFields(state) {
   return current
 }
 
-/** 行出值（P14）：`checkbox` ⇒ `.checked`；`number` ⇒ `Number(v)`；余 ⇒ 原串。**无效数值（空 / 非数）⇒ `undefined`**
- *  —— 父侧裁定（2026-09-28）：真删键经 `settings:agent` 不可达（契约 = `docs/desktop/design/IPC.md` §2「档位控件注」：`patch` 表达不了删键）
- *  ⇒ 落「**零发送**（不写盘 · 零乐观改 · 控件回退现值）」；消解路 = 主侧写链 + 核清除形扩族（另批）。**数值 0 照发**（核类型表只校 `typeof`）。
- *  **B10 W3 消解**：主侧写链已落显式清除面（值 = `null` ⇒ 删键）；本径数值行仍沿零发送（选择器型另走 `namedOut`）。 */
+/** 行出值（P14）：`checkbox` ⇒ `.checked`；`number` ⇒ `Number(v)`；余 ⇒ 原串。**无效数值（空 ∕ 非数）⇒ `undefined`**
+ *  —— 真删键经 `settings:agent` **今仍不可达**（核 `_checkKnownKeyValue` 类型表对数值已知键的 `null` 抛错 ——
+ *  `thincoder-core/agent-tools/settings.mjs:141-145`；「显式清除」语义现只对形状表键族——`docs/desktop/design/UI.md:400` 在册）⇒ 落
+ *  「**零发送**（不写盘 · 零乐观改 · 控件回退现值）」+ 记错；消解路 = 核清除形扩族（**另批**）。**数值 0 照发**（核类型表只校 `typeof`）。
+ *  #635 残句收正：旧「B10 W3 消解」半句退场（W3 的 null ⇒ 删键面只覆盖形状表键族，数值行零发送维持）。 */
 function rowValue(input) {
   if (input?.type === "checkbox") return input.checked === true
   const raw = typeof input.value === "string" ? input.value : ""
@@ -83,7 +84,8 @@ export function createAgentExits(deps = {}) {
 
   /** 具名控件出值（P14 × P15 单键）：`boolean` ⇒ `.checked`；数值 ⇒ `Number(v)`（× `scale` —— 分钟面回毫秒）；
    *  `model` ∕ `effort` 两新型（B10 W3）⇒ 串原样、**空选 ⇒ `null`**（显式清除 —— 主侧删键：S10 槽清空 ∕
-   *  S11 中性档）；余 ⇒ 原串；无效数值（同 `rowValue`）/ 目标缺位 ⇒ `undefined`（调用面零发送）。 */
+   *  S11 中性档；形状表键族对 null 放行）；余 ⇒ 原串；无效数值（同 `rowValue` —— 数值键 null 被核类型表拒，故零发送）
+   *  ∕ 目标缺位 ⇒ `undefined`（调用面零发送）。 */
   function namedOut(entry, event) {
     const target = event?.target ?? event?.currentTarget ?? null
     if (target === null) return undefined

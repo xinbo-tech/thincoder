@@ -90,7 +90,7 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 | 落盘主函数 + 写时自清理 | `thincoder-core/agent/helpers.mjs:124` · `:114`（清理判定）· `:127`（清理调用） | 在位 |
 | 主链路调用点 | `thincoder-core/agent/dispatch.mjs:428` | 非 multimodal 结果过守卫 |
 | 共享 UTF-16 安全切片 | `thincoder-core/text-budget.mjs:55` · `:69` | 单一来源（agent 捕获 + TUI 额度共用） |
-| advisor 上限常量 | `thincoder-core/advisor/compaction.mjs:37`（`MAX_RESULT_CHARS`） | 由 `thincoder-core/advisor/run.mjs:20` re-export |
+| advisor 上限常量 | `thincoder-core/advisor/compaction.mjs:37`（`MAX_RESULT_CHARS`） | 由 `thincoder-core/advisor/run.mjs:16` re-export |
 | advisor 双端截断 | `thincoder-core/advisor/truncate.mjs:14` · 调用 `thincoder-core/advisor/loop.mjs:290` | 头/尾预算行级累加 |
 | read 双端返回 | `thincoder-core/tools/file.mjs:30`（`READ_TAIL_LINES`）· `:104`（判别）· `:111`（尾区起点） | `MAX_READ_LINES` = `thincoder-core/tools/shared.mjs:20` |
 
@@ -105,13 +105,13 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 
 | 面 | VSC 落点（实核） |
 |---|---|
-| 落盘阈值 + preview 三常量 | `thincoder-vscode/src/agent/run-helpers.mjs:77`（`MAX_TOOL_RESULT` = 64 × 1024）· `:78`（`TOOL_RESULT_PREVIEW_HEAD`）· `:79`（`TOOL_RESULT_PREVIEW_TAIL`——实际 = 65536 − head − noteLen，tail 优先） |
+| 落盘阈值 + preview 三常量 | `thincoder-vscode/src/agent/run-helpers.mjs:25`（`MAX_TOOL_RESULT` = 64 × 1024）· `:26`（`TOOL_RESULT_PREVIEW_HEAD`）· `:27`（`TOOL_RESULT_PREVIEW_TAIL`——实际 = 65536 − head − noteLen，tail 优先） |
 | 双端切片（UTF-16 安全） | `thincoder-vscode/src/agent/run-helpers.mjs:97`（`safeSliceUTF16`）· `:115`（`safeSliceUTF16Tail`） |
-| preview 构造 | `thincoder-vscode/src/agent/run-helpers.mjs:132`（`buildHeadTailPreview`——head + 省略注 + tail 预算） |
+| preview 构造 | `thincoder-vscode/src/agent/run-helpers.mjs:56`（`buildHeadTailPreview`——head + 省略注 + tail 预算） |
 | 落盘 + 写时自清理 | `thincoder-vscode/src/agent/run-helpers.mjs:167`（`offloadToolResult`）· `:86`（`TMP_RETENTION_MS` = 3 天）· `:181`（mtime 清理判定） |
 | 主链路调用点 | 核 `thincoder-core/agent/dispatch-run.mjs`（非 read_image 结果统一过落盘守卫——端已取核） |
 | advisor 上限 + 双端截断 | `thincoder-vscode/src/advisor/compaction.mjs:34`（`MAX_RESULT_CHARS` = 64 × 1024）· `thincoder-vscode/src/advisor/truncate.mjs`（`truncateAdvisorResult`——头行 ~60% + 中段注 + 尾行余预算）· 调用 `thincoder-vscode/src/advisor/loop.mjs:266`（`thincoder-core/advisor/run.mjs:19` re-export） |
-| 实时显示同宽 | `thincoder-vscode/src/extension/panel-callbacks.mjs:165`（`onToolResult` `slice(0, 64 * 1024)`） |
+| 实时显示同宽 | `thincoder-vscode/src/extension/panel-callbacks.mjs:203`（`onToolResult` `slice(0, 64 * 1024)`） |
 | 历史页工具卡同宽 | `thincoder-vscode/src/extension/panel-session.mjs:195`（tool 卡）· `:199`（tool 结果数组同限） |
 | webview DOM 上限 | `thincoder-vscode/webview/lib.js:27`（`MAX_TOOL_OUTPUT` = 64 × 1024）· `:30`（`capText`） |
 | read 双端返回 | （W14 已迁核——VSC 自持 `thincoder-vscode/src/tools/file.mjs` 与 `tools/shared.mjs` 已删，现体 = 核 `thincoder-core/tools/file.mjs`：`READ_TAIL_LINES` / 双端返回形态；`MAX_READ_LINES` = 核 `thincoder-core/tools/shared.mjs`） （迁移期引文） |

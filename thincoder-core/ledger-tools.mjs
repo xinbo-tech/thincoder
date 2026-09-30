@@ -8,6 +8,7 @@
  * 消费侧一律动态 import `ledger.mjs`（ledger-db.mjs 静态 import node:sqlite ⇒ W8 契约②）。
  */
 import { ledgerAdd, ledgerClose, ledgerCount, ledgerQuery, ledgerUpdate } from "./ledger-cmd.mjs"
+import { DESC } from "./tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/ledger_*.md（DESC 单解析面）
 
 /** 工具 cwd 供值面（缺省 → 当前项目根）。 */
 const cwdOf = (ctx) => ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
@@ -71,7 +72,7 @@ function assertToolArgs(tool, args) {
 
 export const ledgerQueryTool = {
   name: "ledger_query",
-  description: "台账查询（需求池 / 技术待办）——SQLite 行集，只读、全角色可用。未决四态 = 待讨论 / 待设计 / 在途 / 待核销；已核销 / 已废弃 = 归档态（软删除，行保留）。过滤参数缺省 = 全部行。",
+  description: DESC("ledger_query"), // #15 外置：文本单点 = tool-docs/ledger_query.md（两池词表逐字保留）
   parameters: {
     type: "object",
     properties: {
@@ -91,7 +92,7 @@ export const ledgerQueryTool = {
 
 export const ledgerCountTool = {
   name: "ledger_count",
-  description: "台账计数单源：未决四态（待讨论 / 待设计 / 在途 / 待核销）COUNT(*)，只读、全角色可用。",
+  description: DESC("ledger_count"), // #15 外置：文本单点 = tool-docs/ledger_count.md
   parameters: {
     type: "object",
     properties: { cwd: { type: "string", description: "项目根目录——台账按项目根关联存储于用户数据目录（工作树外、不进 git）。相对路径按当前工作目录解析；查/写别的项目请给绝对路径。缺省 = 当前会话项目根" } },
@@ -106,7 +107,7 @@ export const ledgerCountTool = {
 
 export const ledgerAddTool = {
   name: "ledger_add",
-  description: "台账新增条目（写命令，仅主 agent）——入待讨论（六态状态机入口）。kind = requirement（需求池）/ tech_todo（技术待办）；trigger = 归批 / 条件 / 认账不排期（可空）。",
+  description: DESC("ledger_add"), // #15 外置：文本单点 = tool-docs/ledger_add.md（两池词表逐字保留）
   parameters: {
     type: "object",
     required: ["kind", "title"],
@@ -133,7 +134,7 @@ export const ledgerAddTool = {
 
 export const ledgerUpdateTool = {
   name: "ledger_update",
-  description: "台账更新条目（写命令，仅主 agent）——状态迁移按六态允许迁移表：待讨论→待设计 / 待设计→在途 / 在途→待核销 / 待核销→已核销 / 任意态→已废弃；表外迁移被拒。status 缺省 = 仅更新字段。",
+  description: DESC("ledger_update"), // #15 外置：文本单点 = tool-docs/ledger_update.md
   parameters: {
     type: "object",
     required: ["id"],
@@ -168,7 +169,7 @@ export const ledgerUpdateTool = {
 
 export const ledgerCloseTool = {
   name: "ledger_close",
-  description: "台账收口（写命令，仅主 agent）——勾销：待核销 → 已核销；追认核销：待讨论 / 待设计 → 已核销（须已有 evidence，缺则拒）；在途 → 已核销 不可跳（仍经 待核销）；撤回：任意态 → 已废弃。归档 = 软删除（写 closed_at，行保留）。",
+  description: DESC("ledger_close"), // #15 外置：文本单点 = tool-docs/ledger_close.md
   parameters: {
     type: "object",
     required: ["id", "status"],

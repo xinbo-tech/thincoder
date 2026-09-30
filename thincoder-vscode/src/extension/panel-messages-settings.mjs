@@ -21,7 +21,7 @@
 import { loadRaw } from "@thincoder/core/config-io.mjs"
 import { loadMcpServers } from "../config-mcp.mjs"
 import { addProviderFlow, removeProviderFlow, setKeyFlow, probeProviderAdmission, ui } from "./provider-flows.mjs"
-import { handleAddProvider as persistAddProvider, handleRemoveProvider as persistRemoveProvider, handleSetProviderProxy as persistSetProviderProxy, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection } from "./settings.mjs"
+import { handleAddProvider as persistAddProvider, handleRemoveProvider as persistRemoveProvider, handleSetProviderProxy as persistSetProviderProxy, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection, postProviderError } from "./settings.mjs"
 import { setSlotAdvisorGuard, setSlotEngineering } from "./session-io.mjs"
 import { _cwd } from "./panel-messages.mjs"
 
@@ -56,7 +56,7 @@ export async function handleAddProvider(panel, msg) {
   if (msg.preset || msg.custom) {
     const err = persistAddProvider({ preset: msg.preset, custom: msg.custom, key: msg.key })
     if (err) {
-      panel._panel?.webview.postMessage({ type: "providerError", text: err })
+      postProviderError(panel, "providers", err)
       panel._pushSettings()
       return
     }
@@ -68,7 +68,7 @@ export async function handleAddProvider(panel, msg) {
     if (name) {
       const probe = await probeProviderAdmission(name)
       if (!probe.ok) {
-        panel._panel?.webview.postMessage({ type: "providerError", text: probe.error })
+        postProviderError(panel, "providers", probe.error)
         panel._pushStatus() // 准入展示态刚更新——状态行重推（行内标 `不可用`）
       }
     }
@@ -81,7 +81,7 @@ export async function handleAddProvider(panel, msg) {
 export async function handleRemoveProvider(panel, msg) {
   if (msg.name) {
     const err = persistRemoveProvider(msg.name)
-    if (err) panel._panel?.webview.postMessage({ type: "providerError", text: err })
+    if (err) postProviderError(panel, "providers", err)
     panel._pushSettings()
   } else {
     await removeProviderFlow(ui, () => panel._pushSettings())
@@ -140,7 +140,8 @@ export async function handleMcpTools(panel, msg) {
 
 /** 迁出自 `panel-messages.mjs` 的 case "saveAgentSettings"。 */
 export function handleSaveAgentSettings(panel, msg) {
-  saveAgentSettingsFromPanel(msg.settings ?? {})
+  const err = saveAgentSettingsFromPanel(msg.settings ?? {})
+  if (err) postProviderError(panel, "agent", err)
   panel._pushSettingsLight()
 }
 
@@ -191,9 +192,10 @@ export function handleSaveShellSettings(panel, msg) {
   panel._pushSettingsLight()
 }
 
-/** 迁出自 `panel-messages.mjs` 的 case "saveProxySettings"。 */
+/** 迁出自 `panel-messages.mjs` 的 case "saveProxySettings"。P2-5（#677）：校验拒 ⇒ 零写盘 + 失败面（`env` 段）。 */
 export function handleSaveProxySettings(panel, msg) {
-  saveProxySettingsFromPanel(msg.settings ?? {})
+  const err = saveProxySettingsFromPanel(msg.settings ?? {})
+  if (err) postProviderError(panel, "env", err)
   panel._pushSettingsLight()
 }
 
