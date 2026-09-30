@@ -29,8 +29,9 @@
 /* 件级外边距：扁平化（用户 2026-09-30 裁决）后块距归零——原三件型覆写规则随批撤销（块距 = 0 通管）。 */
 
 /* 盒块间呼吸（轻通道 #716 · 用户 2026-09-30「工具和思考块之间都没间隔……你觉得呢」——父侧建议小间隔；CLI 参照 =
-   `render-conversation.mjs:375` 块前空行；桌面盒块（工具/思考/错误/归档）非带签者获 8px 上距——扁平化前工具块历史值）。 */
-.block + .block:is(.block-tool, .block-reasoning, .block-error, .block-subagent):not(:has(> .msg-label)) {
+   `render-conversation.mjs:375` 块前空行；桌面盒块（思考/错误/归档）非带签者获 8px 上距——扁平化前工具块历史值）。
+   **工具块出列**（轻通道轮二 · 用户 2026-09-30 15:13「工具块之间的间距也没必要了」——去底后同灰板并底前提消失 ⇒ 工具块零距相连）。 */
+.block + .block:is(.block-reasoning, .block-error, .block-subagent):not(:has(> .msg-label)) {
   margin-top: 8px;
 }
 
@@ -41,11 +42,11 @@
 }
 
 /* 非块插层承接（轮一收尾修复 · 评审发现 6 · 2026-09-30）：消化行（`.chat-digest`——流内就地非块节点）
-   插于两块之间时 `+` 相邻选择器不命中 ⇒ 以本两条承接（带签 16 ∥ 盒块 8 同值同义）。 */
+   插于两块之间时 `+` 相邻选择器不命中 ⇒ 以本两条承接（带签 16 ∥ 盒块 8 同值同义；工具块出列随轮二笔 2）。 */
 .chat-digest + .block:has(> .msg-label) {
   margin-top: 16px;
 }
-.chat-digest + .block:is(.block-tool, .block-reasoning, .block-error, .block-subagent):not(:has(> .msg-label)) {
+.chat-digest + .block:is(.block-reasoning, .block-error, .block-subagent):not(:has(> .msg-label)) {
   margin-top: 8px;
 }
 
@@ -82,14 +83,15 @@
 }
 
 /* 工具卡（三行：头行（可折叠 ⇒ `button` 形）· 改动摘要行 · 展开结果区）：盒 = VSC `.tool-call`（`webview/chat.css:179-187`）逐值 ——
-   边框 0 ∕ 圆角 0〔扁平化 2026-09-30〕 ∕ `--tool-bg` 角色对位 ⇒ `--overlay` ∕ 字号 12px ∕ `overflow: hidden`；件级外边距由块级模型通管
+   边框 0 ∕ 圆角 0〔扁平化 2026-09-30〕 ∕ 字号 12px ∕ `overflow: hidden`；盒底 = **透明**（轻通道笔 · 用户 2026-09-30「不要背景了，只要hover上去有反应就行了」——`--tool-bg` ⇒ `--overlay` 旧值退场）；
+   hover 反馈 = 头行既有面（`.tool-head:hover`——本档 `:158` 邻位）。件级外边距由块级模型通管
    （现值 = 盒块规则 `.block + .block:is(…) { margin-top: 8px }`——扁平化 ∥ 间距批 2026-09-30；原三覆写之一已退场）。 */
 .block-tool {
   border: 0;
   border-radius: 0;
   overflow: hidden;
   font-size: 12px;
-  background: var(--overlay);
+  background: transparent;
 }
 /* 盒面内的说话人标签（回合首块 = 工具卡时）：盒壳零内边距（VSC 头行 ∕ 主体自携内边距）⇒ 标签自携同等缩进
    （桌面标签为块内子节点 —— VSC 标签在盒外、盒顶；零缩进那么标签贴边）。 */
