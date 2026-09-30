@@ -5,13 +5,14 @@
  * 含重建径**按记录位次复列**）→ `mountChat`（薄挂载 = 本档唯一清空 / 建树处）；
  * DOM 面另两件 = 帧尾态刷 `syncChrome`（根锚四 + 摘要块 + 审批卡 + 药丸 + **消化行族** + **到期触发行组** +
  * **停止痕** + **台账行组** + **真置焦执行** · 幂等 · 无帧豁免）· 帧尾六步 `settleFrame`（**读数按档裁剪** ·
- * `mounted` 记账直取 —— 更新纪律收核批；**④′ 痕位次落位** = 留档批 · #719）。
+ * `mounted` 记账直取 —— 更新纪律收核批；**④′ 落位两件** = 留档批 · #719 位次复列 ∥ #747 座次落位）。
  * **卡面态刷**住 `renderer/views/chat-cards.mjs`（R3c 拆档 —— 在册预案 = 卡构树拆出；本档经 `syncCards` 调用）；
  * **排队期「待发送块」不在本档**（收正轮 B12 新口径 —— 住**输入行上方带**，硬验收 = 与输入面板恒定邻接；
  * 消费前流内零真块，交付时刻 `ev:queue` 消费回执才入流）；
- * **消化行族**（`[data-digest]` —— 逐轮元素 · 流内就地）判据 ∕ 同步 ∥ 位次面四件住 `renderer/views/chat-digest.mjs`
- * （**留档批 · #719**：行入流（与内容同生态）；重建 ∥ 回填径按记录位次复列，在场面 = 记录位次落于已渲染块区——
- * 随窗；元素为非块节点 —— 不占块序 ∥ 不计 `data-blocks`）；
+ * **消化行族**（`[data-digest]` —— **逐轮行族 · 流内就地**〔**无轮容器**：行元素 = 流内并列兄弟——#747〕）判据 ∕ 同步 ∥
+ * 位次面 ∥ 座次面住 `renderer/views/chat-digest.mjs`（#747：行族逐轮累积（零摘除）∥ 标签行恒在 ∥ 归档块落位 =
+ * 消费轮**边界物形**（`boundaryRowOf` 取边界行）；**留档批 · #719**：行入流（与内容同生态）；重建 ∥ 回填径按记录位次复列，
+ * 在场面 = 记录位次落于已渲染块区——随窗；元素为非块节点 —— 不占块序 ∥ 不计 `data-blocks`）；
  * **到期触发行组**（`[data-timer]` —— timer-wake 阶段 2）：非块节点组 · 在场 ⟺ 本键 `timerNotice` 切片在场，
  * 构树 ∕ 帧尾同刷住 `renderer/views/chat-chrome.mjs`（与消化行族同族）；
  * **归档子 agent 块**住 `renderer/views/chat-subagent.mjs`（项 5 新档 —— 壳构树 + 核件回显补装）；
@@ -25,10 +26,10 @@
  *      呈现（KD-RC-4 · R3c —— 单源 = `renderer/views/chat-text.mjs`；转义闸在核；原文逐字另存 `[data-raw]` 锚——就地更新判据面）；
  *      **说话人标签**（项 4）：用户块恒出 / 助手族块回合首出（判据 = `turnHeadOf` 单源 —— 活流与回放同判据）——
  *      标签为**块内子节点**（不入块序 / 不改 `data-blocks`），文本落笔归帧尾着装面；
- *   ③ 根子序 = [引导?] → [摘要块?] → **流序**（块序列 × 消化轮**按记录位次复列** —— 留档批 · #719；位次件无 ⇒ 退化为
+ *   ③ 根子序 = [引导?] → [摘要块?] → **流序**（块序列 × 消化轮**按记录位次复列 + 消费轮配对** —— 留档批 · #719 ∥ #747；位次件无 ⇒ 退化为
  *      块序列 → 轮序列）→ [**压缩行**?] → [**到期触发行组**?] → [**停止痕**?] → [**台账行组**?] → [卡序列?] → [药丸?]（卡序 = 待审批 → 提问 → 计划 —— 单源 =
  *      `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条；**四尾组** = 流内非块节点，族内序 = 消化行族 → 到期触发行组 → 停止痕 → 台账行 —— 落点 = 流序之后、卡序列之前（**压缩行例外 = 流元素冻结点** —— 创建点定位后新块随流居其下，块插入点不收本行）；「对齐第三批」项 6 / 12 增停止痕与台账行组，F-置焦增置焦执行点）；
- *      **活流序 = 就地**（消化行族元素逐轮落流末、随流滚动 —— 块插入点不收族元素）；块插入点 = 首个**尾组（压缩行 ∕ 消化行族除外）∕ 卡节点**之前（`blockAnchor` 单源 —— 尾组在则块恒居其前 ⇒
+ *      **活流序 = 就地**（消化行族行元素逐轮落流末、随流滚动；归档块落位 = 边界物形（#747）——常规新块随流居行族之下；块插入点 = 首个**尾组（压缩行 ∕ 消化行族除外）∕ 卡节点**之前（`blockAnchor` 单源 —— 尾组在则块恒居其前 ⇒
  *      交接位置零跳；无组无卡 ⇒ `[data-pill]` 之前 · 两锚皆缺 ⇒ 末位）；本档挂载面只管审批族（提问 / 计划
  *      两族归 `renderer/mount-cards.mjs` —— 挂载零交叠，卡序判据共用一序单源）；
  *   ④ 工具卡面（三行）已拆出：`renderer/views/chat-tool.mjs`（批档 §2.3 拆分预案落形）——构树面经 `toolCard` 调用；
@@ -49,12 +50,12 @@ import { captureView, restoreView } from "../view-state.mjs"
 import { attachCopyButtons } from "/rc/flow/stream.mjs"
 import { MAX_RENDER_BLOCKS, compensateTop, plannedMoves, stickToBottom, tailAction } from "./chat-scroll.mjs"
 import { chatModel } from "./chat-model.mjs"
-import { blockAnchor, digestBoundaryOf, syncChrome } from "./chat-chrome.mjs"
+import { blockAnchor, syncChrome } from "./chat-chrome.mjs"
 // 构树面出档（留档批 · #719 拆分预案执行 —— 原 `errorNode` / `blockNode` / `chatTree` 迁入；重建径按记录位次复列）。
 import { blockNode, chatTree } from "./chat-tree.mjs"
 export { chatTree } // 保名面（旧 import 面零改 —— 沿 `chat-chrome.mjs` 再出口先例）
-// 消化行族（位次面 —— 建树采纳 ∥ 缺位预判 ∥ 帧尾 ④′ 落位；单源 = `renderer/views/chat-digest.mjs`）。
-import { adoptDigestRounds, pendingDigestSeats, seatDigestRounds } from "./chat-digest.mjs"
+// 消化行族（位次 ∥ 座次面 —— 建树采纳 ∥ 缺位预判 ∥ 帧尾 ④′ 落位 ∥ 边界行取面；单源 = `renderer/views/chat-digest.mjs`）。
+import { adoptDigestRounds, boundaryRowOf, pendingDigestSeats, pendingLiveSeats, seatDigestRounds, seatLiveRounds } from "./chat-digest.mjs"
 import { blockKey } from "./chat-stream.mjs"
 import { fillSubagentEcho, applyEchoOpen, echoOpenSet, syncSubagentEcho } from "./chat-subagent.mjs"
 import { paintSpeakerLabels, patchTextBlock, pinReasoning, pinReasoningBlocks } from "./chat-text.mjs"
@@ -64,18 +65,20 @@ import { linkifyResult, patchToolCard } from "./chat-tool.mjs"
 
 // 帧尾态刷面出档 `renderer/views/chat-chrome.mjs`（拆分产出 —— 「对齐第三批」触碰批执行在册预案：本档越 300
 // 在册、本批触碰 ⇒ 出档）；构树面出档 `renderer/views/chat-tree.mjs`（留档批 · #719 拆分执行 —— 本档越 300 结构性
-// 触碰）。本档引调面 = 帧尾态刷 `syncChrome` + 插点锚 `blockAnchor` + 归档界锚 `digestBoundaryOf`
+// 触碰）。本档引调面 = 帧尾态刷 `syncChrome` + 插点锚 `blockAnchor` + 归档界行 `boundaryRowOf`
 // ⇒ 依赖单向（本档 → 两出档档，无环）。
 
 // ─── 三档之③：薄挂载 + DOM 面两件 ────────────────────────────────
 
 /** DOM 块节点序 ⇒ 记账形（`{ node, block }`）：DOM ≡ `visible` 不变式下的逐位配对（帧层下帧输入）。
- *  **位次标 `_blockAt` 同点写下**（帧层记账 —— 消化轮位次锚读面 `renderer/views/chat-digest.mjs` 消费；零新 DOM 属性）。 */
+ *  **两标同点写下**（帧层记账 —— 消化轮位次锚读面 `renderer/views/chat-digest.mjs` ∥ 座次段读面
+ *  `seatLiveRounds` 消费；零新 DOM 属性）：`_blockAt` = 块位次（重建块）· `_blockSeat` = 座次段标（归档块——#747）。 */
 function mountedOf(root, blocks) {
   const nodes = typeof root?.querySelectorAll === "function" ? [...root.querySelectorAll("[data-block-kind]")] : []
   return nodes.map((node, index) => {
     const block = blocks[index]
     node._blockAt = typeof block?.at === "number" && Number.isFinite(block.at) ? block.at : null
+    node._blockSeat = typeof block?.seat === "number" && Number.isFinite(block.seat) ? block.seat : null
     return { node, block }
   })
 }
@@ -94,6 +97,7 @@ function attachCodeCopies(root) {
  *  + 推理块首帧钉底（项 1）+ 工具卡结果区链接着装（相抵②）+ **代码块复制钮（gating —— 逐新节点，禁帧级全根扫）**。 */
 function dressNode(node, block, following = false) {
   node._blockAt = typeof block?.at === "number" && Number.isFinite(block.at) ? block.at : null
+  node._blockSeat = typeof block?.seat === "number" && Number.isFinite(block.seat) ? block.seat : null
   mountSegments(node, block, following)
   paintSpeakerLabels(node)
   fillSubagentEcho(node, block)
@@ -133,15 +137,17 @@ export function mountChat(root, state, handlers = {}, limit = MAX_RENDER_BLOCKS)
   return { model, mounted }
 }
 
-/** 尾段挂载（帧尾第 ① 步 · 先于读数）：逐枚建块 ⇒ 插点 = 常规块 `blockAnchor`（流末——轮行之下）∥ 归档块
- *  `digestBoundaryOf`（末轮元素之前——唯经块序守卫；守卫不过 ⇒ 常规块插入点 —— 挂载点**逐枚现读**）；新建即着装
+/** 尾段挂载（帧尾第 ① 步 · 先于读数）：逐枚建块 ⇒ 插点 = 常规块 `blockAnchor`（流末——轮行之下）∥
+ *  **归档块 = 边界物形**（#747 —— `insertBefore(块, 边界)`：边界 = 消费轮标签行，`boundaryRowOf` 取面；
+ *  边界失效 ∥ 未设 ⇒ 常规块插入点退化——迟来 `done` ∕ 会话重挂；挂载点**逐枚现读**）；新建即着装
  *  （标签 / 归档回显 / 推理钉底 —— 先于 `t0` ⇒ 高度计入本帧尾侧）。 */
 function mountTail(root, model, plan, handlers) {
   const start = model.blocks.length - plan.tail.length
   plan.tail.forEach((block, step) => {
     const index = start + step
     const node = build(blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true))
-    root.insertBefore(node, block?.kind === "subagent" ? digestBoundaryOf(root, blockAnchor(root)) : blockAnchor(root))
+    const boundary = block?.kind === "subagent" ? boundaryRowOf(root, model) : null
+    root.insertBefore(node, boundary ?? blockAnchor(root))
     dressNode(node, block, model.following === true)
   })
 }
@@ -199,8 +205,8 @@ function headMoves(root, model, plan, handlers, mounted) {
  *  KD-RC-9 ② 禁逐 chunk 强制布局——跟滚帧零读（贴底 = 写超值）· 非跟滚 ∧ 头侧动作 > 0（补偿径）才读 `t0` ∕ `t1`）：
  *  ① 挂尾段（append / reset 档；`patch` 档就地更新；`patch-append` 档就地更新 `plan.patchAt` + 挂追加段 —— 同帧两动作；
  *  `none` 档 ∅）② 读数 `t0`（仅补偿径 —— 预判 = 块头动作 + **痕位次落位**待落数；同判据两径）③ `syncChrome`
- *  ④ 头动作 ④′ **痕位次落位**（留档批 · #719 —— `seatDigestRounds`：块挂载后按记录位次复列；头侧变更
- *  ⇒ 计入补偿区间）⑤ 读数 `t1`（仅补偿径）⑥ 帧尾三写（贴底 / 补偿算式 / 零写）。
+ *  ④ 头动作 ④′ **落位**（留档批 · #719 —— `seatDigestRounds`：块挂载后按记录位次复列；#747 —— `seatLiveRounds`：
+ *  运行期轮行族归其座次；两者皆头侧变更 ⇒ 计入补偿区间）⑤ 读数 `t1`（仅补偿径）⑥ 帧尾三写（贴底 / 补偿算式 / 零写）。
  *  `mounted` = 上一帧记账（对齐步输入 —— 尾 / 头节点直取）；返回新 `mounted`（由 DOM 重建 —— 对齐步下帧输入）。 */
 export function settleFrame(root, model, scroll, align, tier, handlers = {}, mounted = []) {
   if (!root || typeof root.querySelector !== "function") return []
@@ -217,12 +223,16 @@ export function settleFrame(root, model, scroll, align, tier, handlers = {}, mou
     clientHeight: Number.isFinite(root.clientHeight) ? root.clientHeight : 0,
   })
   // 读数裁剪：头侧动作数先于读数确定（`plannedMoves` 与 `headMoves` 夹取同源 ⇒ 预判 = 实动数；
-  // 痕位次落位 = 头侧变更一员 —— `pendingDigestSeats` 与 `seatDigestRounds` 同判据 ⇒ 预判 = 实动数）
-  const seats = pendingDigestSeats(root, model).length
+  // 痕位次落位 ∥ 座次落位 = 头侧变更一员 —— `pendingDigestSeats`/`pendingLiveSeats` 与落位两径同判据
+  // ⇒ 预判 = 实动数（#747 —— seatLiveRounds 实动亦入预判：non-following 补偿径不落 `t0` 空读））
+  const seatAnchor = blockAnchor(root)
+  const seats = pendingDigestSeats(root, model).length + pendingLiveSeats(root, model, seatAnchor)
   const moves = plannedMoves(plan, mounted.length, model.blocks.length) + seats
   const t0 = model.following === true || moves === 0 ? null : readMetrics()
   syncChrome(root, model, handlers)
-  const moved = headMoves(root, model, plan, handlers, mounted) + seatDigestRounds(root, model, blockAnchor(root))
+  const moved = headMoves(root, model, plan, handlers, mounted)
+    + seatDigestRounds(root, model, seatAnchor) // ④′ 重建径位次落位（#719）
+    + seatLiveRounds(root, model, seatAnchor) // ④′ 运行期轮座次落位（#747）
   const writing = tailAction({ following: model.following, headMoves: moved })
   if (writing === "stick") stickToBottom(root)
   else if (writing === "compensate") {

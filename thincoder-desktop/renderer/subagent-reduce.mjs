@@ -11,8 +11,8 @@
  * 平 node 直测不受影响。
  * 形态 / 判据单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 3 / 5 ·
  * `docs/desktop/design/RENDERER.md` §1.1。
- * **归档入流（项 5 · KD-33）**：终态 ⇒ ① 表项墓碑（`region: "flow"` —— 池内退场）② 流内尾追块
- * （`kind: "subagent"` —— **留档块**，页读域第六型）③ 表项 `rows` 随归档交快照（内容单留存处）；原
+ * **归档入流（项 5 · KD-33）**：终态 ⇒ ① 表项墓碑（`region: "flow"` —— 池内退场）② 流内归档块
+ * （`kind: "subagent"` —— **留档块**，页读域第六型；**#747 两径** = 消化回收（`atBoundary`）按**座次位**入模 ∥ 余尾追）③ 表项 `rows` 随归档交快照（内容单留存处）；原
  * 「下回合起清出」（`archiveFrozen`）口径**退场**；核 effects 表**不逐条执行**（端面动作由模型态幂等派生 ——
  * 改造据 = 端差登记 `docs/desktop/design/PROJECT.md` §10 AZ）。
  * **留档批 · #719（本批增）**：① 归档派生点增 `record:append` 出站（快照 ⇒ 人读线记录经请求通道落宿主 ——
@@ -137,43 +137,94 @@ function emitRecords(key, blocks) {
 }
 
 /** 归档入流派生（「对齐第二批」项 5 · KD-33 —— 端面动作由模型态幂等派生，核 effects 表不逐条执行）：
- *  归档态判据 = **已折叠（`frozen`）∧ 非驻留（`!awaitingDigest`）∧ 未入流（`region !== "flow"`）**；
- *  `settled`（驻留待消化）不归档，后到 `done` 折叠时归档（前态判据同径）；**旧代接管归档**（旧块被替出列表，
+ *  归档态判据 = **已折叠（`frozen`）∧ 非等待消化（`!awaitingDigest`）∧ 未入流（`region !== "flow"`）**；
+ *  `settled`（等待消化）不归档，后到 `done` 折叠时归档（前态判据同径）；**旧代接管归档**（旧块被替出列表，
  *  核 `takeoverBlock` ⇒ `archive` 效果）由**前后对照**捕获（前态块缺席后表 ∧ 已折叠 ∧ 未入流 ⇒ 归档）。
  *  **每笔皆换块对象引用（R10 E4 补——视图面帧触发判据的块级同源）**：核态机**原地变更**模型块（`freezeMeta` ∕
  *  `block.approval = …` 等）⇒ 块对象引用不变 ⇒ 视图面 `updateSubBlock` 的同一性短路（`known === entry`）恒真
  *  ⇒ 终态折叠 ∕ `awaitingDigest` 态词 ∕ 审批态永不落 DOM（仅靠 2 s 拍残刷）。本处按核 `effects` 的**键集**
  *  对**被触碰块**换新对象（未触碰块保持原引用——零多余重刷；VSC 同义 = 每条状态消息覆盖式刷新被触及块）。
- *  返回 `{ list, blocks }`：`list` = 表项（归档者换**墓碑** = 复本 + `region: "flow"` − `rows`）；
- *  `blocks` = 流内尾追快照（`{ kind: "subagent", meta, rows }` —— `meta` 供核件 `renderSubBlock` /
- *  `refreshBlock`，`rows` = 内容行单留存处）。 */
-function archiveIntoFlow(before, after, touched) {
+ *  返回 `{ list, blocks, seats }`：`list` = 表项（归档者换**墓碑** = 复本 + `region: "flow"` − `rows`）；
+ *  `blocks` = 流内归档快照（`{ kind: "subagent", meta, rows }` —— `meta` 供核件 `renderSubBlock` ∕
+ *  `refreshBlock`，`rows` = 内容行单留存处）；**`seats`** = 其中**消化回收**者（核 `archive` 效果 `atBoundary`
+ *  真——#747 座次入模读面）子集。 */
+function archiveIntoFlow(before, after, touched, reclaimed = new Set()) {
   const alive = new Set(after)
-  const snapshots = []
+  const sources = [] // { block, reclaimed }（到达序——两循环同序入）
   for (const block of before) {
     if (alive.has(block) || block?.frozen !== true || block.region === "flow") continue
-    snapshots.push(block) // 旧代接管：驻留块替出 ⇒ 归档（核 archive 效果同序 —— 先归档后改绑）
+    sources.push({ block, reclaimed: false }) // 旧代接管：等待消化块替出 ⇒ 归档（尾追——核 archive 效果同序）
   }
   const list = after.map((raw) => {
     const block = touched.has(raw?.key) === true ? { ...raw } : raw // 触碰块换新引用（见上注）
     if (block?.frozen !== true || block.awaitingDigest === true || block.region === "flow") return block
-    snapshots.push(block)
+    sources.push({ block, reclaimed: reclaimed.has(block.key) === true })
     const { rows, ...meta } = block
     return { ...meta, region: "flow" } // 墓碑：池内退场（读面按 `region` 过滤）——迟来事件按 `drop-frozen` 消化
   })
-  const blocks = snapshots.map((block) => {
+  const blocks = sources.map(({ block }) => {
     const { rows, ...meta } = block
     return { kind: "subagent", meta, rows: boundedRows(rows) }
   })
-  return { list, blocks }
+  const seats = new Set()
+  sources.forEach(({ reclaimed: hit }, index) => { if (hit) seats.add(blocks[index]) })
+  return { list, blocks, seats }
+}
+
+/** 消化回收键集（核 `archive` 效果 `atBoundary` 真 —— #747 座次入模判据面）。 */
+function reclaimedOf(effects) {
+  return new Set(effects.filter((effect) => effect?.type === "archive" && effect.atBoundary === true).map((effect) => effect?.key))
+}
+
+/** 消费轮座次取面（#747 —— 末轮且**带边界标者**；边界 = `ev:digest start` 设 ∥ `ev:susp` 收帧清 ——
+ *  `renderer/events-wake.mjs`；无轮 ∥ 边界已清 ∥ 座次无形 ⇒ `null`）。 */
+function digestSeatOf(state, key) {
+  const rounds = state.digest?.[key]
+  const last = Array.isArray(rounds) ? rounds[rounds.length - 1] : null
+  if (last === null || last?.boundary !== true) return null
+  const seat = last.seat
+  return typeof seat === "number" && Number.isFinite(seat) ? Math.max(0, Math.floor(seat)) : null
+}
+
+/** 座次段末位（模型面）：自座次水位起跨过同座次标块（到达序 —— 同段顶携 `seat` 标）。 */
+function seatIndexOf(blocks, seat) {
+  let index = Math.max(0, Math.min(seat, blocks.length))
+  while (index < blocks.length && blocks[index]?.seat === seat) index += 1
+  return index
+}
+
+/** 归档快照入模（#747 —— **座次入模** ∥ 尾追两径 —— 调用面两处同源）：消化回收（`atBoundary` 真）⇒ 入其
+ *  消费轮**座次位**（= 起跑水位；座次段末位 —— 到达序 ∥ 先于该轮行族；对位 VSC `activity.js:108`
+ *  `insertBefore(块, 边界)`——`DOM ≡ visible` 零破）；余（即时归档 ∕ 终态补桩 ∕ 旧代接管 ∕ 冻结）⇒ 尾追。
+ *  无轮 ∥ 边界已清（迟来 `done`）⇒ 尾追退化。座次段标只落**流内副本**（记录载荷零触——同对象两消费者：
+ *  `record:append` 先于本函数取面）。 */
+function appendArchived(state, key, archived) {
+  const seat = digestSeatOf(state, key)
+  let next = state
+  for (const block of archived.blocks) {
+    if (seat === null || archived.seats.has(block) !== true) {
+      next = appendBlock(next, block)
+      continue
+    }
+    const flow = { ...block, seat }
+    const blocks = Array.isArray(next.blocks) ? next.blocks : []
+    const at = seatIndexOf(blocks, seat)
+    next = {
+      ...next, blocks: [...blocks.slice(0, at), flow, ...blocks.slice(at)],
+      // 未读数沿 `store.mjs` `appendBlock` 同式（停跟用户 +1）：座次位插入亦为「未见的新内容」一员（有意取舍）
+      pendingNew: next.following ? next.pendingNew : next.pendingNew + 1,
+    }
+  }
+  return next
 }
 
 /** `ev:subagent` —— 子 agent 块面（D20 单源 = `docs/desktop/design/UI.md` §1 本批注项 2 / 3 / 5）：按会话键写 `subBlocks`
  *  切片；态机**单源** = 核 `/rc/subblocks/state.mjs` `subBlocksReduce`（出生 / 接管 / 终态折叠 / **审批态**四迁 ——
- *  桌面端零 DOM：不注入 `connectedOf` / `regionOf`，本端全量重建）；**归档入流**（终态 ⇒ 墓碑 + 流内尾追块 ——
- *  仅活动会话有流面可入；非活动键只落墓碑，内容随运行期面即失 = 端差登记）；块模型**原地变更**（核态机形）⇒
- *  每笔皆换切片数组引用**＋（R10）被触碰块换块对象引用**（帧触发唯一判据 —— 同值短路在此不成立，随本件登记）；
- *  触碰集 = 核 `effects` 键集（`refresh` / `fold` / `awaiting` / `archive` 逐迁在册）。 */
+ *  桌面端零 DOM：不注入 `connectedOf` / `regionOf`，本端全量重建）；**归档入流**（终态 ⇒ 墓碑 + 流内归档块 ——
+ *  **#747：消化回收（`atBoundary`）者按座次入模、余尾追**；仅活动会话有流面可入；非活动键只落墓碑，内容随
+ *  运行期面即失 = 端差登记）；块模型**原地变更**（核态机形）⇒ 每笔皆换切片数组引用**＋（R10）被触碰块换块对象引用**
+ *  （帧触发唯一判据 —— 同值短路在此不成立，随本件登记）；触碰集 = 核 `effects` 键集（`refresh` / `fold` /
+ *  `awaiting` / `archive` 逐迁在册）；`atBoundary` 集 = 其中 `archive` 且真者（座次入模判据 —— #747）。 */
 export function onSubagent(state, ev, now) {
   const key = typeof ev.key === "string" && ev.key !== "" ? ev.key : null
   const patch = key === null ? null : subPatchOf(ev)
@@ -183,11 +234,11 @@ export function onSubagent(state, ev, now) {
   const list = [...before]
   // 核态机 deps：`now` 为**读钟函数**（`state.mjs` 每迁现刻取值 —— 出生起刻 / 冻结 `doneAt`）。
   const { effects } = subBlocksReduce(list, patch, { now: () => now })
-  const archived = archiveIntoFlow(before, list, new Set(effects.map((effect) => effect?.key)))
+  const archived = archiveIntoFlow(before, list, new Set(effects.map((effect) => effect?.key)), reclaimedOf(effects))
   emitRecords(key, archived.blocks) // 归档记录出站（含非活动键 —— 先于流内键门；留档批 · #719）
   const next = withSubBlocks(state, { ...table, [key]: archived.list }, key)
   if (archived.blocks.length === 0 || key !== state.activeSession) return next
-  return archived.blocks.reduce((acc, block) => appendBlock(acc, block), next)
+  return appendArchived(next, key, archived)
 }
 
 /** `ev:subchunk` —— 子 agent 内容增量入块模型 `rows`（**重挂重放单源** —— 视图面按 `rows` 逐条重放核件
@@ -214,7 +265,7 @@ export function onSubchunk(state, ev, now = Date.now()) {
 
 /** `resetActivity` 语义接（R5 · #522① —— VSC `webview/activity.js:180-189` 同义）：**键级复位** ——
  *  会话中止（回合尾 `stopped` ∧ 本键非挂起 —— 池子随回合死）/ 清屏（`openSession` 键变）⇒ 该键切片整删
- *  （live + 驻留 + 墓碑全清；流内归档块 = 会话历史不动）＋活动键 ⇒ 折叠头 `running` 读数归 0（**池面 +
+ *  （live + 等待消化 + 墓碑全清；流内归档块 = 会话历史不动）＋活动键 ⇒ 折叠头 `running` 读数归 0（**池面 +
  *  表复位**）。他键零扰（切片级动作）；该键本就不在场 ⇒ **原引用**（幂等）。复位只清**存量** —— 迟来事件按核
  *  出生闸**重新出生**（与 VSC 清 map 同义；幂等守卫只挡冻结 ∕ 墓碑键）；活块由 2s 存活投影自愈重投。 */
 export function resetSubBlocks(state, key) {
@@ -228,7 +279,7 @@ export function resetSubBlocks(state, key) {
 /** `subBlocksFreezeAll`（R5 · #522② —— **退出兜底**；VSC `webview/activity.js:141-144` 同义）：挂起窗
  *  退出帧（`ev:susp {active:false}`）⇒ 本键**全体归档** —— live ⇒ 折叠（核 `freezeMeta`；`interrupted`
  *  注记只随载荷真值落 —— 出窗帧今携该键（`suspension-drive.mjs` `postSuspEnd` 端帧 · #554①），
- *  键缺 ∕ 假 ⇒ 恒零注记，不假造）· 驻留（`awaitingDigest`）⇒ 清驻留 +
+ *  键缺 ∕ 假 ⇒ 恒零注记，不假造）· 等待消化（`awaitingDigest`）⇒ 清态标 +
  *  归档 · 已墓碑（`region:"flow"`）⇒ 不动（`regionOf` 注入 = 桌面区判据：**墓碑外皆「在区」**）。归档入流
  *  单源 = 核效果表 + 本档 `archiveIntoFlow` 派生（与 `onSubagent` 同径 —— 单一实现零副本）。 */
 export function freezeAllSubBlocks(state, ev, now = Date.now()) {
@@ -242,9 +293,9 @@ export function freezeAllSubBlocks(state, ev, now = Date.now()) {
     regionOf: (block) => (block?.region === "flow" ? "flow" : "activity"),
     interrupted: ev.interrupted === true,
   })
-  const archived = archiveIntoFlow(before, list, new Set(effects.map((effect) => effect?.key)))
+  const archived = archiveIntoFlow(before, list, new Set(effects.map((effect) => effect?.key)), reclaimedOf(effects))
   emitRecords(key, archived.blocks) // 归档记录出站（含非活动键 —— 先于流内键门；留档批 · #719）
   const next = withSubBlocks(state, { ...table, [key]: archived.list }, key)
   if (archived.blocks.length === 0 || key !== state.activeSession) return next
-  return archived.blocks.reduce((acc, block) => appendBlock(acc, block), next)
+  return appendArchived(next, key, archived)
 }

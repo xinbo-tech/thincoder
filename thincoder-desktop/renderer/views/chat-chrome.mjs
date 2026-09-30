@@ -4,7 +4,7 @@
  *   ① 根锚四（`chromeProps`）+ 帧尾态刷 `syncChrome`（摘要块 / **压缩行** / 消化行族 / **到期触发行组** / 停止痕 / 台账行组 /
  *      审批卡 / 药丸 / **真置焦执行** —— 幂等 · 与档位解耦 · `none` 帧同刷）；② 尾组的构树（`summaryNode` /
  *      `timerGroupNode` / `stoppedNode` / `ledgerGroupNode` / `pillNode`）与插点锚（`blockAnchor` 等 —— 单源：
- *      族内序 = 压缩行〔R4 增 —— 构树 ∕ 态刷 ∕ 锚出档 `renderer/views/compress-status.mjs`〕→ 消化行族〔structure-split-2 —— digest 全族出档 `renderer/views/chat-digest.mjs`（构树 ∥ 在场判据 ∥ 界锚再出口；帧刷引调 ∥ **留档批 · #719 位次面四件**）—— 流内落位批改**逐轮元素 · 流内就地**；
+ *      族内序 = 压缩行〔R4 增 —— 构树 ∕ 态刷 ∕ 锚出档 `renderer/views/compress-status.mjs`〕→ 消化行族〔structure-split-2 —— digest 全族出档 `renderer/views/chat-digest.mjs`（构树 ∥ 在场判据再出口；帧刷引调 ∥ **留档批 · #719 位次面四件** ∥ **三端消化面统一批 · #747 座次面**）—— 流内落位批改**逐轮行族 · 流内就地**〔无轮容器——#747〕；
  *      构树消费面 = 构树出档 `renderer/views/chat-tree.mjs`（留档批拆分 —— 按记录位次复列）〕→ 到期触发行组 → 停止痕 → 台账行 —— **压缩行例外 = 流元素冻结点**〔创建点定位 —— `blockAnchor` 链不收本行，新块随流居其下〕）；
  *   ③ 帧尾真置焦执行 `focusAutofocus`（F-置焦 · 「对齐第三批」重核入册）。
  * 依赖单向：`renderer/views/chat.mjs` → 本档（构树与帧尾两径引调）；反向无引用 ⇒ 无环。
@@ -19,8 +19,8 @@ import { wire } from "./chat-tool.mjs"
 import { compressAnchorOf, syncCompress } from "./compress-status.mjs"
 // 流内消化行族（structure-split-2 拆分产出 —— digest 全族三段出档 `renderer/views/chat-digest.mjs`；本档引帧刷一件，构树 ∥ 在场判据 ∥ 界锚再出口保名）。
 import { syncDigest } from "./chat-digest.mjs"
-// `digestPresent` = 保名面（在场判据现形 = `shownDigestRounds` —— 逐轮元素化后；旧名唯一消费面 = 前批 parity 件，随 `digestGroupNode` 退役归 #708 二择）：待该件收口后同拍摘除。
-export { digestBoundaryOf, digestPresent, digestRoundNode } from "./chat-digest.mjs"
+// `digestPresent` = 保名面（在场判据现形 = 逐轮行族非空 —— #747；旧名唯一消费面 = 前批 parity 件，随 `digestGroupNode` 退役归 #708 二择）：待该件收口后同拍摘除。
+export { digestPresent } from "./chat-digest.mjs"
 
 /** 根锚四（单源 —— `chatTree` 与 `syncChrome` 同用）：`data-blocks` = 已渲染块数（= DOM 块节点数）。 */
 export function chromeProps(model) {
@@ -190,8 +190,8 @@ export function focusAutofocus(root) {
 
 /** 块节点插点锚（单源 —— 尾段挂载与头侧前插同用）：首个**到期触发行组**之前、无组 ⇒ 首个**停止痕**之前、
  *  无痕 ⇒ 首个**台账行组**之前、无组 ⇒ 首个**卡节点**之前（三族任一 —— 卡序判据面 = 卡序单源）、
- *  无卡 ⇒ 药丸之前；两锚皆缺 ⇒ `null`（末位）。**消化行族元素不在链上**（流内落位批收正 —— 终态 = 逐轮元素：常规新块
- *  随流落轮行**之下**；归档块（`kind: "subagent"`）走 `digestBoundaryOf`——唯经块序守卫；单源 = `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条）。
+ *  无卡 ⇒ 药丸之前；两锚皆缺 ⇒ `null`（末位）。**消化行族元素不在链上**（流内落位批收正 —— 逐轮行族：常规新块
+ *  随流落轮行**之下**；归档块（`kind: "subagent"`）走 `boundaryRowOf`——唯边界物；单源 = `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条）。
  *  **压缩行不在链上**（R4 定位语义收正 —— 行 = 流元素冻结点：创建点定位后
  *  新块随流居其下；VSC D-C3 append-once 对齐 —— 单源 = `renderer/views/compress-status.mjs` 档头）。**待发送块不入流**（收正轮 B12 新口径：住输入区带 —— 本档零参）。 */
 export function blockAnchor(root) {

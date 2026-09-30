@@ -63,7 +63,7 @@ function awaitingOf(state) {
   return Array.isArray(list) ? list : []
 }
 
-/** 本键消化轮集（源 = `state.digest[活动会话键]` —— `ev:digest` 归约面写，**多轮记录**（数组——每轮一记录：起跑 ∕ cap ∕ 终态；旧轮驻留）；
+/** 本键消化轮集（源 = `state.digest[活动会话键]` —— `ev:digest` 归约面写，**多轮记录**（数组——每轮一记录：起跑 ∕ cap ∕ 终态；**逐轮累积**——旧轮在流（零摘除）；#747）；
  *  缺 / 非数组 / 空 ⇒ `null`：零组 —— 禁假造）。 */
 function digestOf(state) {
   const key = state?.activeSession ?? null
