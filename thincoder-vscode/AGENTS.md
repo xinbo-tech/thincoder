@@ -89,7 +89,7 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 | extension → webview | `turnBreak` | — (machine-only sub-turn boundary: advisor/verify/pending-task guard pushback → the webview resets its block pointers so the next reasoning/content starts a fresh block; covers non-thinking models) |
 | extension → webview | `toolCall` / `toolResult` | `{ name, args? / text }` |
 | extension → webview | `complete` / `loading` / `aborted` / `error` | `{ text? }` |
-| extension → webview | `providerInfo` | `{ text, keyOk, needsSetup?, settings? }` |
+| extension → webview | `providerStatus` | `{ keyOk, status }` — provider 配置态与状态快照（开面板拍回批序末段：`indexStatus → providerStatus → proxySettings → websearchSettings → shellCandidates → agentSettings`；`settings.mjs:317` 发射） |
 | extension → webview | `autoApprove` | `{ value }` (session-level AUTO state, pushed on session load and on approve-all) |
 | extension → webview | `models` | `[{ id, label, provider, group, reasoning[] }]` |
 | extension → webview | `sessions` | `{ sessions: [{ name, title, count, active, updated }], active, ledger? }` — `ledger` = session-ledger anomaly notice (`{ refused, reason, scene }`, carried only when anomalous — `../docs/vsc/design/WEBVIEW-PROTOCOL.md` §2) |
@@ -101,6 +101,12 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 | extension → webview | `turnState` | `{ state, counts? }` — single busy-state broadcast: `state` ∈ `idle`/`running`/`susp`; `counts` = `{ running, queued, pending, done }` background-pool numbers riding the susp publishes (C2 — authoritative prose in WEBVIEW.md §8, mirrored here without duplication) |
 | extension → webview | `userMessage` | `{ text }` (history replay; also the quick-input `sendMessage` command echo) |
 | extension → webview | `clearMessages` | — |
+| webview → extension | `queuedUserMessage` | `{ text, model, reasoning, provider, images }` — busy 期排队注入上行（队列载体两态 · 容量 8；本地气泡先行 + `busyQueued` 镜像回撑） |
+| extension → webview | `busyQueued` | `{ pending, count?, items?, text?, merged? }` — busy 排队队列快照（`count` / `items` = 剩余实况；`merged` = 本批合并文本；满队守卫 `count >= 8`） |
+| extension → webview | `workspaceGuard` | `{ active }` — 无工作区守卫态（面板拒发 + 占位符第三态；守卫面 = `docs/vsc/design/PROJECT-SWITCHER.md` §4.1） |
+| extension → webview | `usage` | `{ …, timers?: { count, expired }, ctxTokens? }` — 状态行计数源（`timers` = 计时活读投影 ∥ `ctxTokens` = 上下文占用量——状态行 `⏰N` / `context X% Yk` 段源） |
+| extension → webview | `timer` | `{ status: "fired", text }` — timer 到点交付行（`text` = 交付原文，显示裁 ≤3 行） |
+| extension → webview | `providerError` | `{ scope, reason }` — 写/连失败统一面（`scope` = 段名闭集 + `panel`；`reason` = 码 ∕ 原样串；八站点汇聚 = `postProviderError`） |
 
 ## Agent Lifecycle
 
