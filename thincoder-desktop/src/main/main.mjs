@@ -13,7 +13,7 @@ import { protocolStats, registerAppScheme, serveAppProtocol } from "./protocol.m
 import { ipcStats, setAgentHost, setLedgerEmit } from "./ipc.mjs"
 import { registerIpcHandlers } from "./ipc-registry.mjs" // #28 拆点：表 ∕ 注册序出档（处理体本体住 `ipc.mjs`）
 import { createAgentHost } from "./agent-host.mjs"
-import { currentCwd } from "./projects.mjs"
+import { currentCwd, restoreLastProject } from "./projects.mjs"
 // S3 宿主忙证据面（#673）：事件循环采样器 —— ready 起拍 ∕ 窗口关收拍（`hostBusy()` fail-open）。
 import { startSampler, stopSampler } from "./loop-sampler.mjs"
 // 会话维护线（R1 · 桌面功能对位批）：启动拍供面（GC ∕ 索引两枚延迟拍 —— 处理体同档）。
@@ -113,6 +113,10 @@ async function main() {
   // 台账行出站面（「对齐第三批」KD-38）：`session:resume` 成功径挂调用（`ipc.mjs`）——项目级自产事件，非会话回调。
   setLedgerEmit(emit)
   registerIpcHandlers()
+  // 重启自动重开（KD-56 · 台账 #734）：窗口创建前一次恢复 —— 本端记录面回读「上次打开」的项目
+  // ⇒ `project:recent` 的 `cwd` 非空 ⇒ 渲染面 boot 既有接续门（`renderer/app.mjs:230`）自动一次
+  // `session:resume`（项目 + 会话一条链；渲染面零改）。降级三档同归冷态 —— 见 `projects.mjs`。
+  restoreLastProject()
   win = createWindow(recordError)
   // 堆遥测 ∕ 冻结取证装配（KD-53 ∕ §2.11 D7–D9）：两键读一次（`diagnostics.heapWatch` ∕ `heapSnapshot`；
   // 读抛 ⇒ 默认开——CLI 同口径）；electron 原语全落本处（策略面留 `heap-watch.mjs`）：三注入

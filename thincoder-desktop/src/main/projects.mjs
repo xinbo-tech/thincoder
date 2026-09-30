@@ -1,10 +1,11 @@
 /**
- * projects.mjs — 项目面（`docs/desktop/design/IPC.md` §2）：当前项目（主进程内存态）+ 最近目录（核槽面回读）。
+ * projects.mjs — 项目面（`docs/desktop/design/IPC.md` §2）：当前项目（主进程内存态）+ 最近目录（核槽面回读）
+ * + 重启自动重开（本端记录面回读 —— KD-56）。
  *
  * 纯逻辑档（零 `electron` 导入 ⇒ 平 node 可测 · 批档 §2.6 D-2）：picker 以 `pick` 回调注入
  * （`ipc.mjs` 注入原生 `dialog`；测试注入假函数）。
- * 零新存储（`docs/desktop/design/PROJECT.md:45` KD-9）：最近目录 = `sessionsDir()` 的族事实回读 ——
- * 不建列表文件、不加配置字段。族判据/分组/最新 mtime 单源 = 核纯函数 `groupSessionEntries`
+ * 零新存储（`docs/desktop/design/PROJECT.md` §2 KD-9 ∥ KD-56）：最近目录 ∥ 重启自动重开 = `sessionsDir()`
+ * 的族事实回读 —— 不建列表文件、不加配置字段。族判据/分组/最新 mtime 单源 = 核纯函数 `groupSessionEntries`
  * （`thincoder-core/session-stale.mjs:56`；`:46` 的族正则为该档模块内常量，不可 import）。
  * 载入序不变量（批档 §2.4（a））：本档顶层静态 import 端壳 ⇒ 端名 `"desktop"` 先于任何物化写声明。
  * 读数面 = **同步扫描**（`readdirSync` / `statSync` / `readFileSync` 主进程内联、不异步化）：与核同类
@@ -13,10 +14,13 @@
 import { readdirSync, readFileSync, statSync } from "node:fs"
 import { basename, join } from "node:path"
 import { groupSessionEntries } from "@thincoder/core/session-stale.mjs"
-import { newSlotData, sessionPath, sessionsDir, writeSessionFile } from "./session-slots.mjs"
+import { END, newSlotData, sessionPath, sessionsDir, writeSessionFile } from "./session-slots.mjs"
 
 /** 最近列表上限（`docs/desktop/design/IPC.md:50`：前 10）。 */
 export const RECENT_LIMIT = 10
+
+/** 本端记录文件后缀（`.manifest.{end}` —— 端名单源 = 端壳 `END`，本档零 `"desktop"` 字面）：重启自动重开的读面族（KD-56）。 */
+const MARKER_SUFFIX = `.manifest.${END}`
 
 /** 当前项目（主进程内存态 —— 唯一持有点；不落盘）。 */
 let current = null
@@ -93,6 +97,13 @@ function isDirectory(cwd) {
   try { return statSync(cwd).isDirectory() } catch { return false }
 }
 
+/** 落位（打开 ∥ 重启恢复**共用** —— 零第二套校验）：目录谓词过 ⇒ `current` 落位；不过 ⇒ 当前项目不变。 */
+function locate(cwd) {
+  if (!isDirectory(cwd)) return false
+  current = cwd
+  return true
+}
+
 /** 选择器调用（无 `pick` ⇒ null；picker 抛错按取消降级 —— D-6：本批无异常消费面）。 */
 async function pickCwd(pick) {
   if (typeof pick !== "function") return null
@@ -109,12 +120,56 @@ function materialize(cwd) {
   writeSessionFile(sessionPath(cwd), newSlotData(cwd))
 }
 
-/** 打开项目 → `{ cwd, recent }`；`path` 给定时直接采用，缺省走 `await pick()`。
+/** 重启自动重开（KD-56 · 台账 #734 · 机制单源 = `docs/desktop/design/IPC.md` §2 项目面注项 7）：
+ *  本端记录面（`{族前缀}.manifest.desktop` 全家）取 mtime 最新一条（**并列定序 = 同级按族哈希升序** ——
+ *  沿 `recentDirs` 先例，两次调用等值）→ 其族数据文件回读 `cwd`（与「最近目录」同族机制：
+ *  `groupSessionEntries` + `candidateOf` + `readCwd`）。「上次打开」判据 = 本端**认领时点**（打开 ⇒ 接续
+ *  ⇒ 核 `resumeSlot` 写本端记录）——非活跃序（组最新 mtime ∥ 数据文件 mtime）；他端记录（`.cli` /
+ *  `.vscode`）不入本判据（端分离 NF1）。
+ *  降级（返回 null）：无记录（首启常态）零日志；标记在盘而族无可读 `cwd` ⇒ **候选级终止**（不误落
+ *  次新族）+ `console.error` 一行（零静默）。纯读 —— 盘面零改动。 */
+export function lastOpenedCwd() {
+  const { dir, entries } = snapshot()
+  // 族名判据单源 = 核 `groupSessionEntries`（非本族名一律不碰 —— 标记按族前缀定位，零名字面解析）。
+  const groups = groupSessionEntries(entries)
+  const byName = new Map(entries.map((entry) => [entry.name, entry.mtimeMs]))
+  const markers = []
+  for (const group of groups.values()) {
+    const mtimeMs = byName.get(`${group.prefix}${MARKER_SUFFIX}`)
+    if (mtimeMs !== undefined) markers.push({ prefix: group.prefix, mtimeMs })
+  }
+  if (markers.length === 0) return null // 无记录 —— 首启常态（零日志）
+  // 最新记录定序：mtime 降序 ∥ 同级按族哈希升序（定序 —— 两次调用等值）。
+  markers.sort((a, b) => (b.mtimeMs - a.mtimeMs) || (a.prefix < b.prefix ? -1 : a.prefix > b.prefix ? 1 : 0))
+  const prefix = markers[0].prefix
+  const name = candidateOf(groupOf(groups, prefix), prefix)
+  const cwd = name === null ? null : readCwd(dir, name)
+  if (cwd === null) {
+    console.error(`[projects] last-opened record has no readable cwd: ${prefix}`)
+    return null
+  }
+  return cwd
+}
+
+/** 重启恢复（启动单线内一次 —— 窗口创建前）：记录面读（`lastOpenedCwd`）⇒ `isDirectory` 门 ⇒ `current`
+ *  落位（与 `openProject` **共用落位动作** —— 零第二套校验）。纯读：盘面零改动、记录零触碰（自愈 =
+ *  下一次成功打开改写最新）。返回已恢复的 cwd；未恢复（三档同归冷态）⇒ null —— 「目录不在盘」档记
+ *  `console.error` 一行（零静默；另两档见 `lastOpenedCwd`）。 */
+export function restoreLastProject() {
+  const cwd = lastOpenedCwd()
+  if (cwd === null) return null
+  if (!locate(cwd)) {
+    console.error(`[projects] last-opened project missing on disk: ${cwd}`)
+    return null
+  }
+  return cwd
+}
+
+/** 打开项目 → `{ cwd, recent }`；`path` 给定时直接采用，缺省走 `await pick()`（落位 = `locate` —— 与重启恢复共用）。
  *  取消 / 路径无效 ⇒ fail-soft：当前项目不变 + 盘面零改动。 */
 export async function openProject({ path, pick } = {}) {
   const chosen = typeof path === "string" && path !== "" ? path : await pickCwd(pick)
-  if (!isDirectory(chosen)) return { cwd: current, recent: recentDirs() }
-  current = chosen
+  if (!locate(chosen)) return { cwd: current, recent: recentDirs() }
   materialize(chosen)
   return { cwd: current, recent: recentDirs() }
 }
