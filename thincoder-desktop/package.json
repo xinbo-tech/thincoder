@@ -9,7 +9,8 @@
     "test": "node test/run.mjs",
     "start": "electron .",
     "package": "electron-builder",
-    "postpackage": "node scripts/check-dist.mjs"
+    "postpackage": "node scripts/check-dist.mjs",
+    "quickcheck": "node tools/web-quickcheck/run.mjs"
   },
   "dependencies": {
     "@thincoder/core": "^0.9.5",
