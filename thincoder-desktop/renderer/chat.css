@@ -51,12 +51,11 @@
 }
 
 /* 消化行上距（轻通道轮一 · 收尾期补笔 6 · 用户 2026-09-30「前面希望留点间距，不要跟上面的内容挨在一起」）：
-   新轮消化行（`.chat-digest`）与上方内容间呼吸 8px；多轮相接保持 0（同一波活动不散）。 */
+    新轮消化行（`.chat-digest`）与上方内容间呼吸 8px；在场 ≤ 1（单元素在场口径——归位批 · #738）⇒ 轮间相邻
+    选择器（`.chat-digest + .chat-digest`）不可达，随批清理（死规则退场；单源 = `docs/desktop/design/UI.md` §1
+    「本批注（流内竖向间距 · 2026-09-30）」项 5）。 */
 .chat-digest {
   margin-top: 8px;
-}
-.chat-digest + .chat-digest {
-  margin-top: 0;
 }
 /* 助手文本内边距 = VSC `.message.assistant .bubble { padding: 8px 0 }`（落文本面容器 —— 标签行与 VSC 同位：消息顶；user `.bubble` = `padding: 0` ⇒ 零规则）。 */
 .block-assistant > .block-text {
@@ -295,10 +294,10 @@
   font-style: italic;
 }
 
-/* 消化行族（桌面空闲唤醒批 · 流内落位批改逐轮元素 —— 流内非块节点 `[data-digest]`〔每轮一元素〕；落点 = 流内就地 ——
+/* 消化行族（桌面空闲唤醒批 · 流内落位批改**当轮元素 · 流内就地**〔在场 ≤ 1 —— 归位批 · #738〕—— 流内非块节点 `[data-digest]`；落点 = 流内就地 ——
    单源 = `docs/desktop/design/RENDERER.md` §1.1 两条纪律；形 = VSC `webview/base.css:203-247` 逐值 —— turn 行 = 纯行（无边 ∕ 无底）· status 行 = 盒行）：
-   ① 起跑态（起跑标签行 + `n > 0` 计数行 —— 计数行同形于状态条，标签行同族小字；**行集逐轮重复——每轮一元素**)∥
-   ② 终态（`end` 就末轮元素更新后**留存** —— 行入流（与内容同生态）：无专门「摘 ∥ 留」处理；重建按记录位次复列（段界可辨；刷新 ∥ 重载 ∥ 切走切回均在——留档批 · #719）；`digest-failed` = 错误色显形〔opacity 不覆盖 —— 沿 VSC 继承 0.85〕，`digest-done` = 信息色显形）；
+   ① 起跑态（起跑标签行 + `n > 0` 计数行 —— 计数行同形于状态条，标签行同族小字；**行集随 status**：终态非 ask ⇒ 标签行退场 ∕ ask 档终态保留）∥
+   ② 终态（`end` 就本轮元素更新 —— 行入流（与内容同生态）；重建按记录位次复列（段界可辨；刷新 ∥ 重载 ∥ 切走切回均在——留档批 · #719）；`digest-failed` = 错误色显形〔opacity 不覆盖 —— 沿 VSC 继承 0.85〕，`digest-done` = 信息色显形）；
    **③ 撞帽行（#541 —— 轮尾 `.digest-cap`；`end` 更新毕随轮留存——`data-digest-cap` 跨 `end` 存续）**。
    `--bg-raised` ∕ `--line` = `editorWidget-background` ∕ `-border` 角色对位；done ∕ failed 两底色 = `infoBackground` ∕ `errorBackground` 角色对位（accent 8% 先例 = `.question-card`）。 */
 .chat-digest .digest-turn {

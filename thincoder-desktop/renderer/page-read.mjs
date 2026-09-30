@@ -4,10 +4,10 @@
  * 文本面 `textOf` / `toolBlock`）自归约核心档**纯搬移**，结构拆分零语义）。
  * **留档批 · #719（本批增）**：记录折叠重建 —— 页回执（核 `historyWindow` opt-in 直通）逐条携留档记录
  * （`digest` ∥ `subagent` 两族；形 / 在场 / 判据单源 = `docs/desktop/design/RENDERER.md` §1.1「留档记录」条）：
- *  ① `digest` 记录 ⇒ **终态轮**（归约体**直复用** `renderer/events-wake.mjs` `onDigest` —— 记录形 = 事件形；
- *     只产终态轮（末轮无 `end` 不产 —— 防双份：未结末轮由运行期切片承接）；终态轮携**位次** `at` = 起跑记录
- *     全局 `idx`（痕面重建按记录位次复列读面））；首屏 ∥ 回填两径同源（首屏 = 清点后留场轮居尾 ⇒ 折叠轮前插；
- *     回填 = 折叠轮（更旧）前插）；机器线零触（记录不入 `agent.history` —— 落库面 = 宿主）。
+ *  ① `digest` 记录 ⇒ **最新一条终态轮**（归约体**直复用** `renderer/events-wake.mjs` `onDigest` —— 记录形 = 事件形；
+ *     每轮到终态即取快照 ⇒ 末轮未结不产该轮、仍产上一终态轮 —— 防双份：未结末轮由运行期切片承接）；携**位次** `at` = 起跑记录
+ *     全局 `idx`（痕面重建按记录位次复列读面））；首屏 ∥ 回填两径同源（场内存续优先，切片无轮 ⇒ 采折叠最新一条）；
+ *     机器线零触（记录不入 `agent.history` —— 落库面 = 宿主）。
  *  ② `subagent` 记录 ⇒ **留档块**（`blockOfMessage` 同形 —— 与活流归档同一形状；页读域第六型）。
  *  ③ 页读块携位次 `at`（= 消息全局 `idx` —— 痕面位次对位 ∥ 重建径复列锚读面）。
  * 依赖单向：本档 → `renderer/events.mjs`（`applyFlags` 模式位写点 —— 共用件单一实现零副本）· → `renderer/store.mjs`
@@ -106,37 +106,43 @@ export function blockOfMessage(msg) {
   return blocks
 }
 
-/** 消化记录折叠（留档批 · #719 —— 归约体**直复用** `renderer/events-wake.mjs` `onDigest`：记录形 = 事件形，
- *  单一实现零副本）：逐条按页序折入草稿切片，**只产终态轮**（`status === "end"` —— 末轮无 `end` 不产，
- *  防双份：未结末轮由运行期切片承接）；终态轮携位次 `at` = 起跑记录全局 `idx`（起跑位次 —— 起跑行须居
- *  内容之上；`cap` ∥ `end` 记录就轮更新，位置仍归起跑记录）。跨页截断（起跑 ∥ 终态记录分居两页）⇒ 本页
- *  不产（记录面残留列报 —— 批档 §5）。 */
+/** 消化记录折叠（留档批 · #719；归位批 · #738 收正 —— **只产最新一条终态轮**：逐条直复用 `onDigest`（全替语义 ⇒
+ *  草稿恒为本轮 —— 单一实现零副本），每轮到达终态即取快照；产出 = **最近的一条终态轮**（末轮未结 ⇒ 不产该轮、
+ *  仍产上一终态轮 —— 防双份：未结末轮由运行期切片承接）；零终态 ⇒ 零产。位次 `at` = 该终态轮起跑记录全局 `idx`
+ *  （起跑位次 —— 起跑行须居内容之上；`cap` ∥ `end` 记录就轮更新，位置仍归起跑记录）。跨页截断（起跑 ∥ 终态记录
+ *  分居两页）⇒ 该轮本页**零产**（`open` 闸：起跑未载的 `cap` ∥ `end` 不入折 —— 防并轮错位；记录面残留列报，批档 §5）。 */
 function foldDigest(messages, key) {
   let scratch = { digest: {} }
-  const starts = []
+  let at = null
+  let open = false // 本页「本轮 start 已见 ∧ 未终态」——截断记录（起跑居前页）不入折
+  let latest = null // 最近一条终态轮快照（后续 start 全替草稿而不覆写本快照）
   for (const msg of messages) {
     if (msg?.kind !== "digest") continue
-    if (msg.status === "start") starts.push(typeof msg.idx === "number" && Number.isFinite(msg.idx) ? msg.idx : null)
+    if (msg.status === "start") {
+      at = typeof msg.idx === "number" && Number.isFinite(msg.idx) ? msg.idx : null
+      open = true
+    } else if (!open) {
+      continue // 跨页截断：起跑未载 ⇒ 该轮本页零产（零并轮零借位）
+    }
     scratch = onDigest(scratch, { ...msg, key })
+    const round = scratch.digest[key]?.[0] // 全替语义 ⇒ 本轮（≤ 1）
+    if (round?.status === "end") {
+      latest = { round, at }
+      open = false
+    }
   }
-  const rounds = scratch.digest[key]
-  if (!Array.isArray(rounds)) return []
-  const out = []
-  rounds.forEach((round, index) => {
-    if (round.status !== "end") return
-    const at = starts[index] ?? null
-    out.push(at === null ? round : { ...round, at })
-  })
-  return out
+  if (latest === null) return []
+  return [latest.at === null ? latest.round : { ...latest.round, at: latest.at }]
 }
 
-/** 轮集并入（折叠轮前插 —— 两径同式：首屏 = 清点后留场轮（未结末轮）居尾 ∥ 回填 = 现轮集（更旧轮在前）；
- *  折叠轮恒旧于留场 ∥ 现轮集（页序 ∥ 位次序单调）⇒ 前插即保序）。空折叠 ∥ 原样 ⇒ **原引用**（零写）。 */
+/** 轮集并入（**只留当轮** —— 合并后 ≤ 1；留档批 · #719 · 归位批 · #738 收正）：场内存续优先 —— 切片有轮（运行期真值）
+ *  ⇒ **原引用**（未结末轮活态保真；终态轮 = 最新显示轮 —— 更旧折叠轮不入显示，回填径零回退）；切片无轮 ⇒ 采折叠
+ *  最新一条（重建复列最新一条）；空折叠 ⇒ 原引用（零写）。 */
 function withFoldedDigest(table, key, folded) {
   if (folded.length === 0) return table
   const current = Array.isArray(table?.[key]) ? table[key] : []
-  const merged = [...folded, ...current]
-  return { ...(table ?? {}), [key]: merged }
+  if (current.length > 0) return table
+  return { ...(table ?? {}), [key]: [folded[folded.length - 1]] }
 }
 
 /** 停止痕清点（「对齐第三批」项 6 · 单源 = 本档）：首屏页读（`before == null`）⇒ 摘本键痕（运行期痕 ——
@@ -176,7 +182,7 @@ function clearCompress(table, key) {
  *  （`seed` ⇒ `tasks[key]` / `usage[key]` 同笔 —— 判据住 `seedPatch`）+ **排队镜面重建**
  *  （`queue` 键 ⇒ `applyQueue` —— 「回合中插入」批 · KD-40 ④；仅首屏读）；
  *  回填 ⇒ 前插 + `history` 落态（`hasOlder === false ⇒ next = null`；高度补偿归 `settleFrame` 六步既有）+
- *  **折叠并入**（回填页记录 ⇒ 更旧终态轮前插 —— 留档批 · #719）。 */
+ *  **折叠并入**（回填页记录 ⇒ 折叠最新一条 —— 场内存续优先（更旧轮不入显示）；留档批 · #719 ∥ 归位批 · #738）。 */
 export function applyPage(state, receipt, { key, before } = {}) {
   if (receipt?.ok !== true) return endBackfill(state)
   const flagged = applyFlags(state, key, receipt.flags)
@@ -188,7 +194,7 @@ export function applyPage(state, receipt, { key, before } = {}) {
   const history = { hasOlder, inFlight: false, page: next }
   const messages = Array.isArray(receipt.messages) ? receipt.messages : []
   const page = messages.flatMap((msg) => blockOfMessage(msg))
-  const folded = foldDigest(messages, key) // 留档记录折叠（终态轮 · 携位次）
+  const folded = foldDigest(messages, key) // 留档记录折叠（最新一条终态轮 · 携位次）
   if (before == null) {
     const stopMark = clearStopMark(flagged.stopMark, key)
     const timerNotice = clearTimerNotice(flagged.timerNotice, key)
