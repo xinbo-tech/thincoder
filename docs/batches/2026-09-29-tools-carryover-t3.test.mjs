@@ -2,6 +2,7 @@
  * 2026-09-29-tools-carryover-t3.test.mjs — 批次本地件 · 舱 T3（#15 第二波）
  *   面：`eng` ∥ `recent_changes` ∥ `batch` 三档描述外置（tool-docs）＋ `edit.md` ∥ `execute.md` 瘦身。
  * 不进仓套件；复跑 = 仓根 `node --test <本档>`。
+ * **退役注（2026-10-01 · 别名撤除批收尾）**：`batch_segment` 已撤除（批 `2026-09-29-alias-removal-unblock`）⇒ T1b 白名单断言（`:79` ∥ `:89-90`）随之失效——**留档不再复跑**；复跑必红属预期（勿修）。
  * **落位 = #545 立即形**：终位（`docs/batches/2026-09-29-tools-carryover-t3.test.mjs`）子写者被写门
  * fail-closed 拒（跨批批档写门——运行进程未载放宽版判据）⇒ 暂存 `.thincoder/tmp/`，由父侧收位
  * （暂存位与终位两层深一致、cwd 恒为仓根 ⇒ 命令形态不变）。

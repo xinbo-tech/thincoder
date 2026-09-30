@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-09-29 · 来源 = 用户 20:35 直问「这几个这么重要就这么挂着？」触发（台账 #369 待设计面深查）——父侧 20:36 实查发现触发判据结构不可达。
 > 台账 = #369（批次工具 · 别名撤除解阻 · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-01
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 **状态行**：🔄 进行中（2026-09-29 20:38 · 立批——设计轮已派）
@@ -145,4 +145,117 @@
 **执行窗口修正（父侧 2026-09-30 23:55 · 用户令驱动）**：原设计「撤除窗口 = §4.14 判据输出转空时刻（零点）」**豁免**——用户 2026-09-30 23:44 令「别的也不该等」⇒ 撤除**立即执行**（承 §3 轮 3 复审 pass 重签发）。判由 = ①在飞批现役面全用主名 `batch`（`batch_segment` 别名 = 09-21 起弃用）；②E① 全扫 + 加载烟测兜底；③零点窗口 = 设计自设保守门（非硬约束）——用户明令不等即是更高权威。**批准面** = 本行 + 原 §4（2026-09-29 批准在档）。**实施舱** = eng-coder（A ∥ B 面先行）。
 
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（A ∥ B ∥ C ∥ D 面全落 · 审计 2 轮 clean · 代码评审 3 轮 pass（A ∥ B = 2026-09-30；C ∥ D = 2026-10-01））
+
+
+
+**A ∥ B 面实施（窗口修正后立即执行 · 2026-09-30 · eng-coder）**
+
+**交付摘要**：A 核码面（A1–A4）∥ B VSC 面全落——删档 1 + 改档 7。
+- 删档 = `thincoder-core/agent-tools/batch-segment.mjs`；A5 零触面（错误串前缀 ∕ 沿革注 ∕ `CHANGELOG.md:76`）与 C ∥ D 面零触守住（C/D = 他舱面，本轮零触）。
+- E① 全扫（`batch_segment|batch-segment|batchSegmentTool|§4\.14`）对 A+B 面残留 = **2 处**（均设计明裁保留）：`thincoder-core/agent/family-tools.mjs:162` 退役句〔A3「保句义」〕∥ `thincoder-vscode/src/agent/setup-tooltable.mjs:27` 删除前沿革注〔B 明裁零触〕。
+- A5 在册面（核锚错误串 `batch_segment:` 前缀 ∕ 沿革注）= 非残留（2026-09-21 改名批裁定）。
+- 验证读数：`node --check` 7/7 过；W8 闭包判据复跑 = **12 pass ∕ 0 fail**；`batch.mjs` 加载烟测 = `batchTool` 在 ∕ `batchSegmentTool` 无 ∕ shim 路径 = `ERR_MODULE_NOT_FOUND`。
+
+**逐项落点（届盘实读重锚后）**：
+
+| 项 | 落点（现行盘） | 动作 |
+|---|---|---|
+| A1 | `thincoder-core/agent-tools/batch-segment.mjs`（原 18 行） | 删档 |
+| A2 | `thincoder-core/agent-tools/batch.mjs:8` ∕ `:20-22` ∕ `:38-39`；工厂块（原 `:318-357`） | 头注别名句三处删 + `batchSegmentTool` 工厂删；`:36` re-export 行保留 |
+| A3 | `agent-tools.mjs:24`（删行）· `agent/family-tools.mjs:163`（去括注）· `agent-tools/subagent-spawn.mjs:348`（改指 `batch`）· `tools/write-path.mjs:9`（指称 → `batch.mjs`） | 注释随动 |
+| A4 | `agent-tools/advisor.mjs:69`（描述去 transition alias）· `:157`（注去别名名） | 描述串随动 |
+| B | `thincoder-vscode/src/agent/setup-tooltable.mjs:19`（import 改指 `@thincoder/core/agent-tools/batch.mjs`）· `:25`（注记档名随改）；`:27` 零触 | VSC 面改指 |
+
+**决策透明表**：
+- 坐标漂移按 E④ 届盘实读重锚（禁偏移推算）：A2 工厂设计 `:328-366` → 现盘块 `:318-357`；A2「shim 导出全超集」句设计 `:39-41` → 现盘 `:41-43`；A4 设计 `:89/:177` → 现盘 `:69/:157`（非等偏移）；A1 ∕ A3 ∕ B 坐标相符。
+- A2「shim 导出全超集」句实读两处同义（`:24` 括注 + `:42` 句，均属设计 `:20-24` ∕ `:39-41` 项本体）——两处均删（独立偏差审计轮 1 复核 = 非超面）。
+- fix 轮 1（承代码评审 🔵）：`setup-tooltable.mjs:19` 行尾理由句收正——「叶子（node:fs/node:path）」→「静态链零 node:sqlite（W8 契约②）」；评审轮 2 fix 复核 pass。
+- 保留区实读零改：`configureBatchSegment` ∕ `resetBatchSegment`（#84 缝）· `findInFlightBatch` · status 词表 · 冻结面。
+
+**审计与代码评审轮次与终态**：explore 偏差审计 **1 轮 = clean**（四类偏差 0）；advisor 代码评审 **2 轮**（轮 1 全审 pass：🟡2 + 🔵1；🔵 自修后轮 2 fix 复核 pass）——**终态 = clean**（修正轮 = 1，评审驱动）。
+
+**E⑤ 受影响文件表（L7 取数面 · 现行 = `split("\n").length − 1` 口径）**：
+
+| 文件 | 模块 | 现行行数 | Δ | 档位 |
+|---|---|---|---|---|
+| `thincoder-core/agent-tools/batch.mjs` | M3 | 313 | −44 | >300（在册——拆分评估见下） |
+| `thincoder-core/agent-tools/batch-segment.mjs` | M3 | 0（删档；原 18） | −18 | — |
+| `thincoder-core/agent-tools.mjs` | M3 | 29 | −1 | <300 |
+| `thincoder-core/agent/family-tools.mjs` | M3 | 187 | ±0（行内改） | <300 |
+| `thincoder-core/agent-tools/subagent-spawn.mjs` | M3 | 438 | ±0（行内改） | >300（预存档） |
+| `thincoder-core/tools/write-path.mjs` | M3 | 191 | ±0（行内改） | <300 |
+| `thincoder-core/agent-tools/advisor.mjs` | M3 | 260 | ±0（行内改） | <300 |
+| `thincoder-vscode/src/agent/setup-tooltable.mjs` | M3 | 103 | ±0（行内改） | <300 |
+
+**L7 复核 = 1 模块（M3）** ⇒ ≤2 达标（不触发拆批）。口径 = 该行改动所服务的 M 族机制面（先例：`docs/batches/2026-09-21-batch-lifecycle-tool.md:81-86` 同族文件记 M3；口径句 = `docs/batches/2026-09-25-ledger-key-normalize.md:154`）。
+
+**拆分评估（>300 两档）**：
+- `batch.mjs` 313 ⇒ **维持登记不拆**（净减 −44 ∥ 在册拆分位〔append 迁移面 ≈61 行外提〕零触 ∥ ≪500 硬限）。**留父侧裁**：既有预估「撤别名后 ≈273」（`docs/batches/2026-09-28-tech-debt-closeout.md:405`）失准；若按登记「消解条件 = 该档下次实质改动时」字面执行拆分 = 结构动作（超本批 A/B 面）。
+- `subagent-spawn.mjs` 438 ⇒ 预存档（在册拆分候选 = `docs/core/design/ENGINEERING-MODE-V2.md:69`）；本轮 ±0 行内注释，维持登记。
+
+**域外见闻（上报父侧 · 非本舱处置）**：
+- ① 两档批件测试（`docs/batches/2026-09-29-tools-carryover-15.test.mjs:210/:212` · `docs/batches/2026-09-29-tools-carryover-t3.test.mjs:90`）别名白名单断言随撤除复跑必红——设计 §2「零测试消费」表述失准；建议记录面「用例退场登记」。
+- ② `docs/core/design/API-CONTRACT.md:532/:549` 生成区仍指删档 ∕ 删导出（未在设计 E② 已知命中表内）——需重生成（`node scripts/api-contract.mjs --write`）或 D 面处置。
+- ③ `thincoder-core/agent-tools/batch-skeleton.mjs:43-44`「导出面等价保持」分句随 shim 删档语义偏旧——A5 面主复核。
+
+**C ∥ D 面实施（窗口修正后立即执行 · 2026-10-01 · eng-coder）**
+
+**交付摘要**：别名撤除收尾——C 提示词面（双源 14 处）× D 设计档面（§4.14 全块删 + BR-26 删 + 同册指针 6 处 + 外册 5 处 + 变更记录一行）全落。改档 17（14 提示词 + 3 设计档）；产品码零触 ∥ A ∥ B 面零动（两处明裁保留行未触：`thincoder-core/agent/family-tools.mjs:162` ∥ `thincoder-vscode/src/agent/setup-tooltable.mjs:27`）。
+
+**逐项落点（届盘实读重锚后 · 现盘坐标）**：
+
+| 项 | 落点 | 动作 |
+|---|---|---|
+| C 核源 | `thincoder-core/prompts/`：`advisor-design.md:29` ∕ `advisor-round2.md:30` ∕ `advisor-round3.md:26` ∕ `common.md:166` ∕ `persona-eng-coder.md:35` ∕ `persona-eng-designer.md:46` ∕ `persona-engineering.md:96` | 删「过渡别名 `batch_segment`」注记括注、余文逐字 |
+| C 镜像 | `docs/core/design/prompts/`：`:46` ∕ `:41` ∕ `:38` ∕ `:124` ∕ `:35` ∕ `:46` ∕ `:94`（同位档名序） | 同上（双源同轮） |
+| D1 | `BATCH-RECORD.md` §4.14 全块（届盘 `:231-275`） | 全块删 + 变更记录一行（`:427`） |
+| D2 | `BATCH-RECORD.md:153`（BR-26 行） | 行删；编号不重编（BR-25 → BR-27） |
+| D3 | `BATCH-RECORD.md`：`:66` ∕ `:98` ∕ `:169` ∕ §4.15 判据行（现盘 `:294`）∕ §7 D-BR20 行 ∕ §7 D-BR24 行（现盘 `:399`） | 端点收正 ∕ 分句删 ×2 ∕ 替换式 ∕ 行删 ∕ 行内存留指称删 |
+| D4 | `ENGINEERING-MODE-V2.md:67/:92/:243` ∥ `AGENT-LOOP-SUBAGENT.md:722/:763` | 端点收正 ∕ 去别名分句与 §4.14 指针（保句义） |
+| D5 零触 | `:52` 明裁保留沿革注 ∕ 记录面（变更记录各行 ∕ `docs/batches/**` ∕ `_archive/**` ∕ 核 `CHANGELOG.md`） | 零触 |
+
+**E 对账读数（终态 · 2026-10-01）**：
+- E① 全扫（`batch_segment|batch-segment|batchSegmentTool|§4\.14`；扫面 = 设计声明 6 域，683 档）：**91 命中，逐类在册**——**C ∥ D 面 = 0**（目标达成）；明裁保留 = 3（`family-tools.mjs:162` ∕ `setup-tooltable.mjs:27` ∕ `BATCH-RECORD.md:52`）；A5 在册面 = 22（`batch.mjs` 18 ∕ `batch-skeleton.mjs` 4）；E② 在册存量 = 19（坐标复扫逐条核，漂移在册）；记录面 = 12（变更记录 ∕ 需求档 changelog）；沿革叙述 = 24（ALS §6.28）；迁移描述 = 3（V2 命名沿革形）；要求文档 = 2（`FEATURES.md:90/:196`——主 agent 笔）；生成面 = 2（`API-CONTRACT.md:532/:549`）；误报 = 2（需求档自身 §4.14 = timer 节号）；遗留 TODO 档 = 2。
+- E③：W8 闭包判据复跑 = **12 pass ∕ 0 fail**（`node --test docs/batches/2026-09-29-residuals-round2.test.mjs`）；`batch.mjs` 加载烟测 = `batchTool` 在 ∕ `batchSegmentTool` 无 ∕ `configureBatchSegment` 在 ∕ shim 路径 = `ERR_MODULE_NOT_FOUND`。
+- 行宽机扫（`^[^|].{300,}`）：本档命中仅 `:429`（2026-09-30 他批存量行）；本舱新行 `:427` 闸内（≤300）。
+- 未跑仓套件（遵派单——收口轮父侧恰跑一次）。
+
+**决策透明表**：
+- 坐标漂移按内容重锚（禁推算）：C 面设计 `common.md:165`→现盘 `:166` ∕ `persona-engineering.md:88`→`:96`、镜像 `common.md:123`→`:124` ∕ `persona-engineering.md:86`→`:94`；D1 块设计 `:231-274`（自报 `:230-269`）→届盘 `:231-275` 删程；D-BR20 设计 `:436`→删前现盘 `:441`。
+- 「——fix 轮 #9」随别名分句同删（`:169` ∥ V2 `:92` 同式统一——避轮 2 发现 1 同类不一致）。
+- BR-26 行删经 E① 复扫补落（首轮编辑漏项 → 非静默，复扫抓出即补）。
+- 变更记录行 = 日期 + 撤除要点 + E① 读数；设计项「实跑空读数」因窗口豁免不适用（改记实际读数）；「（编号不重编）」未入行（≤300 行宽取舍——口径 = 本表本行）。
+- 「行删」与「行内存留指称删」区分（D-BR20 = 行删；D-BR24 = 行内存留，`:399` 在场）（承 advisor 🔵1 口径）。
+- V2 `:92/:243` 命名沿革形保留（与 `:52` ∕ A5 同族）；计「明标沿革保留」（承 advisor 🔵3）。
+- 行宽断言 as-of：`:429` 存量超宽 + D6 断言刷新 → 转交收口轮（承 advisor 🔵2）。
+
+**审计与代码评审轮次与终态**：explore 偏差审计 **1 轮 = clean**（四类偏差 0；观测 1 = §7 表内空行 `:396`——git diff 定谳 = 预存、非本舱引入）；advisor 代码评审 **1 轮 = pass**（🔵 3：记录面口径 ∕ 行宽 as-of ∕ V2 沿革计数——均记录面项，无必须修复 ∕ 无文件重修 ∕ 无复评轮；host 引用核验 5/9，4 条部分引用标 unverified——不涉发现表结论）——**终态 = clean**（修正轮 = 0）。
+
+**E⑤ 受影响文件表（现行行数 = `split(/\r?\n/)` 去尾空行口径 · 现测 2026-10-01）**：
+
+| 文件 | 模块 | 现行行数 | Δ（本舱） | 档位 |
+|---|---|---|---|---|
+| `docs/core/design/BATCH-RECORD.md` | M3 | 486 | −45（块 −45 ∕ BR-26 −1 ∕ D-BR20 −1 ∕ 变更记录 +2） | >300（预存档；≪500 硬限） |
+| `docs/core/design/ENGINEERING-MODE-V2.md` | — | 600 | ±0（行内改） | >300（预存档） |
+| `docs/core/design/AGENT-LOOP-SUBAGENT.md` | — | 999 | ±0（行内改） | >300（预存档；拆分登记在案） |
+| `thincoder-core/prompts/*.md`（7 档） | M9 | 43 ∕ 46 ∕ 42 ∕ 168 ∕ 37 ∕ 79 ∕ 190 | ±0（行内删字） | <300 |
+| `docs/core/design/prompts/*.md`（7 档） | M9 | 73 ∕ 61 ∕ 58 ∕ 126 ∕ 37 ∕ 79 ∕ 190 | ±0（行内删字） | <300 |
+
+**L7 复核 = M3 + M9 = 2 模块** ⇒ ≤2 达标（A ∥ B 面 + 本舱面合计）。
+
+**上抛项（父侧 · 非本舱处置）**：
+- ① `thincoder-core/agent-tools/batch.mjs:7` 头注「用例 BR-1–26」——设计 D2 半项（去范围数字「用例 §4.8」形）；本舱令「产品码零触」、A ∥ B 舱落点表未列 ⇒ 需派单/登记。
+- ② E② 库外残留 21 条（批档 §3 轮 3 在册）：`FEATURES.md:90/:196`（主 agent 笔）· `TOOLS.md:245` · `AGENT-LOOP-UPSTREAM.md:31` · `API-CONTRACT.md:532/:549`（生成区）· `MANIFEST.md` ∕ `CORE-UNIFICATION.md` ∕ `AGENT-LOOP.md` ∕ `ARCHITECTURE.md` ∕ `DOC-DISCIPLINE.md` ∕ `TESTING.md` ∕ `ANCHOR-DEBT-REPAIR.md` ∕ `docs/TODO.md:51`——收口轮逐条裁/派。
+- ③ 他批批件测试残留（`docs/batches/2026-09-29-tools-carryover-15.test.mjs:210/:212` ∕ `…-t3.test.mjs:90`）——随撤除复跑必红；建议「用例退场登记」（承 A ∥ B 舱域外见闻①）。
+- ④ 本档 §6 收口链（C ∥ D 记录 = 本段）；结算待父侧。
+
 ## §6 验证与收口（父代理）
+
+**交付核验（四面）**：A ∥ B（#12 舱 · §5 在盘）· C ∥ D（#35 舱 · §5 在盘 4226 字符）——父侧抽核：`BATCH-RECORD.md` 规范面 §4.14 ∥ BR-26 零残留（`grep` 命中全在变更记录 ∥ 沿革面 = **记录面照留** ✓）∥ prompts 双源 14 处清扫（E① C/D 面读数 = **0**）✓ ∥ `2026-09-29-residuals-round2.test.mjs` 12/12 ✓ ∥ 产品码 = 明裁保留 2 处未动（`thincoder-core/agent/family-tools.mjs:162` ∥ `thincoder-vscode/src/agent/setup-tooltable.mjs:27`）✓。
+
+**收口轮随办（就地落 · 父侧直接执行）**：① 他批批件两档白名单断言随撤除失效 ⇒ **退役注**就地落（`docs/batches/2026-09-29-tools-carryover-15.test.mjs:3` ∥ `docs/batches/2026-09-29-tools-carryover-t3.test.mjs:5`——复跑必红属预期）；② 需求档活面两处 `batch_segment` ⇒ 收正为 `batch`（`docs/cli/requirements/FEATURES.md:90` 工具行 ∥ `:196` 清点句——需求笔）。
+
+**台账/移交**：残余项入台账（技术待办「别名撤除收尾残留」）——`thincoder-core/agent-tools/batch.mjs:7` 头注失效范围（设计 D2 半项）∥ 库外残留（`docs/core/design/TOOLS.md:245` ∥ `AGENT-LOOP-UPSTREAM.md:31` ∥ `API-CONTRACT.md:532/:549` 生成区）∥ 行宽 as-of 刷新。E② 全量清单 = §5 在册。
+
+**暂缓批复核：无**。

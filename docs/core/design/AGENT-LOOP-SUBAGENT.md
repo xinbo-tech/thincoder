@@ -719,7 +719,7 @@ depth-0 段 `agent/family-tools.mjs:141`（`batchTool(null)`）· eng-coder `:17
 
 **保缝面（三处——非改名面，禁触）**：① `configureBatchSegment`（#84 记账缝契约名——`setup-tooltable.mjs:19/:29`
 消费、`batch-segment.test.mjs:19/:204` 镜像注册）；② shim 直调用例（T59/T66/T-FZ3 的 `batchSegmentTool` 直调—— （机检豁免——用例退场登记）
-别名等价载体，等价性由核 BATCH-RECORD §4.14 撤除判据守护）；③ 核错误串前缀断言
+别名等价载体，等价性由核撤除判据守护）；③ 核错误串前缀断言
 `batch-segment.test.mjs:126`（`/^batch_segment: the text contains a section header line/`——核 `batch.mjs:251`
 对子代理身份的错误串**逐字保持** `batch_segment:` 前缀 = 核锚；该断言锁核契约，非残留）。
 
@@ -760,7 +760,7 @@ A-3 机检（单行 · cmd.exe · cwd = `thincoder-vscode/`；§3 复评 🔵#3 
  if(/\\.(mjs|js)$/.test(x))fs.readFileSync(q,'utf8').split(/\\r?\\n/).forEach(l=>{if(l.includes('batch_segment'))n++})}};['src','test','webview'].forEach(w);console.log(n)"`
 → 期望输出 = `1`（唯一命中 = 豁免集③ `batch-segment.test.mjs:126` 核错误串前缀断言；命中面 = 0——camelCase 缝名与连字符路径形态不含 snake_case 字面，天然不入命中）。
 
-**边界（本批不做）**：不改核侧（`0b45957c` 已收口）；不动 #84 缝契约名；不删 shim 档与别名（核 §4.14 撤除判据
+**边界（本批不做）**：不改核侧（`0b45957c` 已收口）；不动 #84 缝契约名；不删 shim 档与别名（核撤除判据
 归核批）；错误串 `batch_segment:` 前缀零改（核 §4.1 锚）；T5 已定性机械面（fixture 钉改前形状），零行为裁决；
 `thincoder-vscode/src/agent/setup.mjs` 现量 **421**（as-of 2026-09-22 实测——拆分后；本批 ±0）——该档后续净增的拆分归父侧派单登记。
 

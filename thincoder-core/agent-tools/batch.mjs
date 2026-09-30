@@ -5,7 +5,7 @@
  * 单工具 `batch`，action = create（建档，§4.11）/ append（段写入——原 batch-segment.mjs 语义
  * 逐字迁移，§4.1 全表）/ status（段属主状态行流转，§4.12）/ close（收口冻结，§4.13）。
  * 权威规格 = `docs/core/design/BATCH-RECORD.md` §4（契约/挂载/用例 BR-1–26/骨架 §4.10/
- * 参数面 §4.11–§4.13/别名 §4.14）；骨架与判定字面单源 = `batch-skeleton.mjs`；lifecycle 面 =
+ * 参数面 §4.11–§4.13）；骨架与判定字面单源 = `batch-skeleton.mjs`；lifecycle 面 =
  * `batch-lifecycle.mjs`。**依赖单向（KD-4）：skeleton ← lifecycle ← 主档**。
  *
  * 身份判据（D-BR17/D-BR18/D-BR21）：主 agent 调用 ctx 带 `depth === 0`（dispatch 装配）；
@@ -17,11 +17,9 @@
  * ——轮 2 #3 裁定②）。append 迁移面错误串**逐字保持 "batch_segment:" 前缀**（§4.1 全表锚断言）；
  * "batch:" 前缀 = 本批新增错误面（create/close/status/findInFlight/path 门/dispatch）。
  *
- * 导出面：`batchTool`（主名）· `batchSegmentTool`（**过渡别名**——name 仍 "batch_segment"，
- * schema 仅 {segment,text}、描述逐字，execute ⇒ append 同一执行体；撤除判据 = BATCH-RECORD
- * §4.14）· `resolveBatchDocPath` · `batchDocBases` · `batchDocForReview` ·
+ * 导出面：`batchTool`（主名）· `resolveBatchDocPath` · `batchDocBases` · `batchDocForReview` ·
  * `configureBatchSegment` / `resetBatchSegment`（#84 记账缝——契约名不变，AC-11 零改）·
- * `MAX_TEXT_CHARS` · `SEGMENT_BY_ROLE`（re-export——shim 导出全超集需要）。
+ * `MAX_TEXT_CHARS` · `SEGMENT_BY_ROLE`。
  *
  * #84 记账面（CORE-UNIFICATION §2.13.4）：写入成功后的记账**按端注入**——核内缺省 no-op = CLI
  * 语义零行为变；端装配经 `configureBatchSegment({ onWrite })` 覆盖（VSC 侧现形 = `_touchedFiles`
@@ -38,8 +36,7 @@ import { closeBatchRecord, createBatchRecord, findInFlightBatch, statusBatchReco
 export { SEGMENT_BY_ROLE, batchDocBases, resolveBatchDocPath }
 
 /** text 单次上限（BATCH-RECORD.md §4.1——超出引导分段追加，不承诺"不新盖戳"）。append 迁移域私有区常量
- *  （随执行体自 batch-segment.mjs 迁入——骨架档只住骨架/状态行单源，lifecycle 档头枚举口径）；
- *  export = shim 导出全超集（旧 `batch-segment.mjs` 导出面等价保持）。 */
+ *  （随执行体自 batch-segment.mjs 迁入——骨架档只住骨架/状态行单源，lifecycle 档头枚举口径）。 */
 export const MAX_TEXT_CHARS = 20000
 /** 工具写入的轮次节标题形态（N 计数口径 = 该形态行；`### 轮次与发现（…）` 骨架行不匹配）。 */
 const ROUND_HEADING_RE = /^### 轮次 \d+（评审子代理）/
@@ -311,47 +308,6 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
         default:
           throw new Error(`batch: unknown action ${JSON.stringify(args?.action ?? null)} — pass one of create / append / status / close.`)
       }
-    },
-  }
-}
-
-/**
- * 过渡别名（BATCH-RECORD §4.14——撤除判据见该节）：name 仍 "batch_segment"、schema 仅
- * {segment, text}、描述**逐字**保持原 batch-segment.mjs 基准；execute ⇒ append（同一执行体，
- * 行为等价——AC-2/AC-9）。生产挂载面已全切主名 `batch`（BATCH-RECORD §4.3）；本工厂仅供
- * 过渡 shim 导出面（旧测试 / VSC 侧 import 消费）与撤除判据实跑使用。
- * @param {string|null} batchDoc — 绑定的目标档（spawn：`child._batchDoc`；评审：实例键）
- * @param {{review?: boolean}} [opts] — review=true 表示"设计评审实例"形态（写 §3 + 工具盖戳）
- */
-export function batchSegmentTool(batchDoc = null, { review = false } = {}) {
-  const tool = batchTool(batchDoc, { review })
-  const own = review ? "§3" : null
-  return {
-    name: "batch_segment",
-    description:
-      "Append your own section of the batch record (一段一作者). " +
-      "There is NO path parameter: the target record is bound to you (at spawn for eng-designer/eng-coder, per review instance for a design review) and your identity fixes the section you may write " +
-      "(eng-designer → §2, design review → §3, eng-coder → §5) — a write outside your own section is refused. " +
-      "Append-only: the text lands at the end of your section; existing lines are never rewritten or deleted. " +
-      "Credential values are stripped mechanically before writing (never write a token or designId value). " +
-      "A design review's append is stamped by the tool with a `### 轮次 N（评审子代理）` heading — N is tool-counted; do not write your own heading (it would be dropped). " +
-      "Failures are hard and visible (no silent fallback): if the write is refused or fails, say so in your report — “§× 未写入”.",
-    parameters: {
-      type: "object",
-      properties: {
-        segment: {
-          type: "string",
-          description: `The batch-record section you are writing${own ? ` — yours is ${own}` : ""}. Declares the section number only; your identity decides what is actually writable.`,
-        },
-        text: {
-          type: "string",
-          description: "The markdown to append (verbatim — findings table + VERDICT + counts for a design review §3). Limit 20000 characters per call; longer content is refused — split it into multiple calls (each call becomes its own section, N continues).",
-        },
-      },
-      required: ["segment", "text"],
-    },
-    async execute(args, ctx) {
-      return tool.execute({ action: "append", segment: args?.segment, text: args?.text }, ctx)
     },
   }
 }

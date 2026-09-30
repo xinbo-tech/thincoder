@@ -64,7 +64,7 @@
 |---|---|---|---|---|
 | M1 | 项目状态档 manifest | `thincoder-core/manifest.mjs`（**新增**，v1 无对应物）——机制代码在核，操作对象 = 被开发项目**项目根（= 带 manifest 的目录——**git 非前提**；归属 = 最近祖先优先 / 发现梯 = 纯向下一层；2026-09-21 用户裁定——明细 = `docs/core/design/MANIFEST.md` §2.2 / §2.9）**的 `PROJECT-MANIFEST.json`（数据档，N3 迁移点）；`thincoder-core/agent/setup-reminders.mjs` + `thincoder-core/agent/run-stages.mjs`（**修改**——情境行注入，E5.1） | JSON schema + 读/写/校验（五键 version/phase/docRoot/promptsLanding/checkConfig + 声明三族 codePaths/index/advisor——共八键）+ 情境值 → 模型注入行 | §5.1 · §6 · §9 |
 | M2 | 台账（SQLite） | `thincoder-core/ledger.mjs`（228 行·**修改**）+ `ledger-surface.mjs`（77 行·**修改**）+ CLI/VSC 端 `ledger-surface.mjs`（70/119 行·**修改**，完整清单见接线表） | md 读面 → `node:sqlite` 读面 + 写命令 + 六态 CHECK schema | §5.2 |
-| M3 | 批次档生命周期工具 | `thincoder-core/agent-tools/batch-segment.mjs` → **改名 `batch.mjs`**（265 行·**修改**——action 分发扩 create/status/close，超硬顶则拆 `batch-skeleton.mjs` 模板档） | 批次档生命周期（create/append/status/close）+ 段白名单 + 状态行冻结拒写 | §5.3 · `design/BATCH-RECORD.md` §4.11–§4.14 |
+| M3 | 批次档生命周期工具 | `thincoder-core/agent-tools/batch-segment.mjs` → **改名 `batch.mjs`**（265 行·**修改**——action 分发扩 create/status/close，超硬顶则拆 `batch-skeleton.mjs` 模板档） | 批次档生命周期（create/append/status/close）+ 段白名单 + 状态行冻结拒写 | §5.3 · `design/BATCH-RECORD.md` §4.11–§4.13 |
 | M4 | 写权门禁（token 门 + 冻结窗口） | `thincoder-core/agent/dispatch.mjs`（490 行·**修改**，**拆分候选**——近 500 硬上限，拆出 `write-gate.mjs`）+ 新档 `write-gate.mjs`（`resolveReviewTargetPaths` + 冻结窗口判据组装）+ VSC `tool-gates.mjs`（165 行·**修改**，完整清单见接线表） | token 门 + D5 冻结窗口——评审对象/被审文件读 manifest `docRoot`（去硬编码 docs/） | §7 · §8.5 |
 | M5 | 委派与 spawn 门 | `thincoder-core/agent-tools/subagent-spawn.mjs`（484 行·**修改**，**拆分候选**——as-of 2026-09-17 实测；F3 拆除后 ~469）+ `subagent-scheduler.mjs`（428 行·**修改**，**拆分候选**） | 任务书强制字段（轮次）+ files 声明面拦截 | §8.1–8.2 · §9.3 |
 | M6 | 评审凭证（advisor + token） | `thincoder-core/advisor.mjs`（274 行·**修改**）+ `token-ttl.mjs`（286 行·**零改（继承）**）+ `agent-tools/design-token.mjs`（118 行·**零改（继承）**） | 评审对象来源读 `docRoot`（唯一微调，继承 v1 不重写） | §8.5 |
@@ -89,7 +89,7 @@
 |---|---|---|---|
 | M1 manifest | 新增 `manifest.mjs` + 修改 `thincoder-core/agent/setup-reminders.mjs` / `thincoder-core/agent/run-stages.mjs`（情境行注入——E5.1） | 修改 `src/cli/make-agent.mjs`（装配层读/初始化 manifest） | 修改 `thincoder-vscode/src/agent/setup.mjs`（装配层读/初始化 manifest）+ `thincoder-vscode/src/agent.mjs` / `thincoder-vscode/src/agent/setup-reminders.mjs`（情境行端镜） |
 | M2 台账 | 修改 `ledger.mjs` + `ledger-surface.mjs` + 命令注册 `thincoder-core/tools/index.mjs` + `family-tools.mjs` | 修改 `thincoder-cli/src/tui/ledger-surface.mjs`（70 行） | 修改 `thincoder-vscode/src/extension/ledger-surface.mjs`（119 行） |
-| M3 批次档 | 修改 `agent-tools/batch-segment.mjs`（改名 `batch.mjs`——符号名随批改 `batchTool`；`batchSegmentTool` = 过渡别名，映射权威 = BATCH-RECORD §4.14——fix 轮 #9） | 零改（核内工具，端经 import 装配） | 零改（核内工具，端经 import 装配） |
+| M3 批次档 | 修改 `agent-tools/batch-segment.mjs`（改名 `batch.mjs`——符号名随批改 `batchTool`） | 零改（核内工具，端经 import 装配） | 零改（核内工具，端经 import 装配） |
 | M4 写权门禁 | 修改 `agent/dispatch.mjs` | 零改（核内门禁） | 修改 `src/agent/tool-gates.mjs`（165 行——VSC 独立同语义镜像） （迁移期引文——档已迁核） |
 | M5 委派 spawn | 修改 `subagent-spawn.mjs` + `subagent-scheduler.mjs` | 零改（端经核单源 import） | 零改（端经核单源 import） |
 | M6 评审凭证 | 修改 `advisor.mjs` + `token-ttl.mjs` + `agent-tools/design-token.mjs` | 零改 | 零改（`tool-gates.mjs` 已 import `validateDesignToken` 自核） |
@@ -240,7 +240,7 @@ M10 测试（独立简化，无依赖）
 | 层面 | 门禁 | 落点 | 继承 |
 |---|---|---|---|
 | 机械面 | token 门（eng-coder 写产品代码需活 designToken） | M4 `dispatch.mjs` | v1 |
-| 机械面 | `batch` append 段白名单（越段即拒） | M3 `batch` 工具（原 `batch-segment`——过渡别名见 BATCH-RECORD §4.14） | v1 |
+| 机械面 | `batch` append 段白名单（越段即拒） | M3 `batch` 工具（原 `batch-segment`） | v1 |
 | 机械面 | `batchDoc` 参数门（缺参/不可读即拒） | M5 spawn 门 | v1 |
 | 机械面 | 台账/清单写命令仅主 agent 装配（SQLite 写门） | M2 ledger 命令装配 | **新增** |
 | 机械面 | manifest 写门（唯一作者 = 主 agent） | M1 manifest 读写装配 | **新增** |

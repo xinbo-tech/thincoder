@@ -87,7 +87,7 @@
 | `skill` | 项目技能列出 / 调用 |
 | `read_history` | 读会话历史（检索会话面消息） |
 | `recent_changes` | 显示本次运行改过的文件 |
-| `batch_segment` | 批次档分段写入（一段一作者——按调用者身份定段） |
+| `batch` | 批次档生命周期（建档 ∥ 段写入 ∥ 状态行流转 ∥ 收口冻结——一段一作者，按调用者身份定段） |
 | `consult_start` / `consult_stop` | 多模型并行会诊（只读顾问；需配置 `agent.consultModels`） |
 | `peer_instances` | 列出同工作区的其它实例（多实例协作面） |
 
@@ -193,7 +193,7 @@
 
 **清点面收正（本批 · 实核）**：旧档清单基于 2026-09-07 时点，与现行登记面相比**缺列现行能力**——
 `lsp` · `execute` · `file_ops` · `process` · `get_current_time` · `wait_for` · `tree` ·
-`settings` · `peer_instances` · `read_history` · `batch_segment`；且 `escalate` 已并入 `subagent` 动作（不再独立成工具）。
+`settings` · `peer_instances` · `read_history` · `batch`；且 `escalate` 已并入 `subagent` 动作（不再独立成工具）。
 本批按**现行登记面**清点（§2），逐项坐标 = `thincoder-core/tools/index.mjs` · `thincoder-core/agent-tools.mjs`。
 
 ### 4.2 不并项登记（跨板块 / 一次性材料——**不并**，逐项登记）

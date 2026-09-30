@@ -16,13 +16,13 @@
  */
 import * as vscode from "vscode"
 import { resolve } from "node:path"
-import { configureBatchSegment } from "@thincoder/core/agent-tools/batch-segment.mjs" // 叶子（node:fs/node:path）——静态面安全
+import { configureBatchSegment } from "@thincoder/core/agent-tools/batch.mjs" // 静态链零 node:sqlite（W8 契约②）——静态面安全
 import { configureVerifyDiagnostics } from "@thincoder/core/agent-tools/verify.mjs" // 叶子面（闭包 4 档零 node:sqlite）——静态面安全
 import { loadSkills, readSkill } from "../extension/skills.mjs"
 import { setSlotEngineering } from "../extension/session-slot-write.mjs"
 
 // ─── W9（2026-09-15）：batch 记账面注入（核缝 #84 —— `configureBatchSegment`）──────────
-// VSC 特有增量随删旧迁入端壳（四步协议 ②）：核 `agent-tools/batch-segment.mjs` 的写入回调默认
+// VSC 特有增量随删旧迁入端壳（四步协议 ②）：核 `agent-tools/batch.mjs` 的写入回调默认
 // no-op；本端在装配层注册 = 写入成功即记绑定档绝对路径入 `agent._touchedFiles`（与删除前
 // `src/agent-tools/batch-segment.mjs:184` 逐字同语义——Array.isArray 守卫 + includes 去重）——
 // 冻结窗口 / 子代理合入记账（execute-tools 的 recordFileMutation 同一载体）行为不变。
