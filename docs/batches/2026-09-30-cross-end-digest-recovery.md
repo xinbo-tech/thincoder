@@ -166,4 +166,37 @@ VERDICT: pass
 **验收** = §2 §五：核/CLI/VSC 三面机检腿（批内件）+ 真机项（父侧闭合）。
 
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（2026-09-30 · 核缝面先行舱 · K1–K4 全绿（4/4）· 审计 clean ∥ advisor pass · fix round = 0 · 待裁 1（读面 delta 三腿归属））
+
+
+
+**核缝面先行舱（eng-coder · 2026-09-30）—— 实施记录**
+
+**一、落改（file:line = 交付时点值）**
+
+- `thincoder-core/context.mjs` **440 ⇒ 455 行**：新增导出 `pushRecord(agent, record)`（`:105-117`）——`pushReal` 双胞（直复用 = 零算法副本）：`ts` 打点 ∥ `_recordStore?.append`（尽力面）∥ 尾窗驱逐三面同源；**机器线零触** = 半提取载体形 `{ _fullHistory, _recordStore, _historyWindow, history: [] }`（`history` 弃数组承接——沿桌面先例 `thincoder-desktop/src/main/session-io.mjs:58-65`）；载体缺位（null ∥ 非对象）⇒ 零动作、零抛。
+- 批内件 `docs/batches/2026-09-30-cross-end-digest-recovery.test.mjs`（**新档**）：核面腿 K1–K4——K1 写缝（两族记录 ⇒ 人读线形/序/`ts` + 存储同点追加 + 尾窗驱逐；既有 `ts` 不覆写）∥ K2 机器线零触负控（`pushReal` 正控对照——判据可判别）∥ K3 尽力面（未绑 ∥ 存储失败 ⇒ 零抛；载体缺位零动作；载体最小形零驱逐）∥ K4 读缝默认关逐字等价（三径同值 + spacer 全页径等价 + 冻结字面 + `turnStart` 跨记录回扫）+ `{records:true}` opt-in 在位核验。
+- `thincoder-core/history-window.mjs` **零改**（读缝已备——`{ records: true }` opt-in `:117/:175-178` 在位核对）；CLI ∥ VSC ∥ 桌面产品码零触（产品树 `pushRecord` 调用点 = 0）。记录形零改（透传——K1 断言形零改名）。
+
+**二、验证读数（定向件）**
+
+- `node --check`：`thincoder-core/context.mjs` ✓ ∥ 批内件 ✓。
+- `node --test docs/batches/2026-09-30-cross-end-digest-recovery.test.mjs`（仓根 `thincoder/`）⇒ **4/4 绿**（K1–K4，~328ms）。仓套件未跑（收口轮父侧 = 唯一一次）。
+
+**三、审计与代码评审（轮次与终态）**
+
+- 内部探索审计（explore · 只读）= **clean**——四类偏差零命中（部分实现 ∥ 静默降级 ∥ 文档漂移 ∥ 清单外改动）；范围注记 2 条 = ① §5 本段（作于其后，本段即落）② `API-CONTRACT.md` 生成区滞后（生成器唯一笔——收口轮机械重跑）。
+- 内部代码评审（advisor · code）= **pass**（🔴×0 · 🟡×2 · 🔵×3）——🟡① `context.mjs` 455 行越 300 顾问线（既有债 ∥ 500 硬限内；拆分预案建议 = 下次实质触碰登记）；🟡② 批档 §2 内部不一致：§五 核腿列 2 项 vs 收正表「核腿 +1」（读面 delta 三腿——归属未落定，见「五」）；🔵① 核口无外层 try/catch（桌面薄壳有 ∥ §6.26:978「行为等价」仅非抛出径——规格零抛面已达标）∥ 🔵② 载体 `_fullHistory` 非数组 ⇒ 记录静默落一次性载体（未锁——建议 VSC 舱承接时按 §6.26:977 保证进场）∥ 🔵③ 跑法守卫句式（沿先例——诊断体验）。
+- **fix round = 0**（无 must-fix：🟡×2 非阻塞 ∥ 🔵×3 维持现状）。终态 = `clean`。
+
+**四、决策透明表（实现形裁定 —— 3 条）**
+
+- ① `pushRecord` 实现形 = **直复用 `pushReal` + 内部半提取载体**（`history: []` 弃数组承接）——判由：§6.26:971「`pushReal` 双胞 + `history` 以一次性弃数组承接」逐字落位 ∥ 桌面先例同形 ∥ §6.26:978 桌面改调核口「行为等价」保证 ∥ 零算法副本；CLI 传活 agent（§6.26:973/976）⇒ 弃数组必内置于核口，否则机器线受触。
+- ② 核口载体缺位守卫（null ∥ 非对象 ⇒ 零动作、零抛）——判由：§6.26:979 失败面；「日志一行」归端侧（VSC 宿主侧明载 `WEBVIEW.md:465` ∥ CLI `TUI-SESSION-VIEW.md:188` 零动作）。
+- ③ 批内件腿数 = K1–K4（调用者任务书判据：pushRecord 四项 + 读缝默认关负控——全覆盖）；读面 delta 三腿未实施——归属未落定，见下「五」。
+
+**五、上抛/待裁（1）**
+
+- **读面 delta 三腿**（伪存储混录负控 ∥ 空壳行 ∥ JSON⇄索引两面相等——登记 `SESSION.md:986` + §2 收正表「核腿 +1」）本舱未实施：调用者任务书判据列举 = pushRecord 四项 + 读缝默认关负控（已全绿）；该三腿落点（本舱批内件补 K ∥ 另舱 ∥ 收口轮）待父侧裁定。
+
 ## §6 验证与收口（父代理）
