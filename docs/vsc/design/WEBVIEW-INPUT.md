@@ -181,7 +181,7 @@
 | 5 | 机检面（新增档 ≤500 行 · 无 >300 字符单行 · 文档锚零悬空） | N-M3 · N-M2 |
 
 **用例面**：`thincoder-vscode/test/`（`webview-input-enter.test.mjs` · `webview-input-history.test.mjs` · `md-render-escape.test.mjs` · `activity-flow.test.mjs` ·
-`busy-injection-vsc.test.mjs` · `busy-injection-vsc-webview.test.mjs`（C-B2-6 面——含本批扩面行：会话在飞入槽 / 三支送达；「槽满跨载体」= T-V16-8——2026-09-25 file-tier-sweep 批拆分迁入）· 细则⑦ 面对拍锁 = `docs/batches/2026-09-29-parity-b2-queued.test.mjs`（批次本地件）· （机检豁免——用例退场登记）
+`busy-injection-vsc.test.mjs` · `busy-injection-vsc-webview.test.mjs`（C-B2-6 面——含本批扩面行：会话在飞入槽 / 三支送达；「槽满跨载体」= T-V16-8——2026-09-25 file-tier-sweep 批拆分迁入）· 细则⑦ 面对拍锁 = `docs/batches/2026-09-29-parity-b2-queued.test.mjs`（单元测试档）· （机检豁免——用例退场登记）
 `chat-panel-messages.test.mjs`（busy 分流族））——用例表归测试层，本档不复制（D2）。
 
 ## 变更记录

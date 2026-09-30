@@ -173,7 +173,7 @@ name 空槽丢弃并计数、缺 id 合成 `call_N`。告警（`droppedToolCalls
   （baseURL `https://tokenhub.tencentmaas.com/v1`，默认模型 `hy3`，**不带** thinking / reasoningEffort / maxTokens 字段 =
   该载荷面未实测，不设即不发）；`volcengine` = 火山方舟，默认模型 = `doubao-seed-2-0-code-preview-260215`（实测在册；
   改值动因与旧值 = 批次档 `2026-09-20-channel-onboarding.md` §1.2–§1.3）。既有 `hunyuan` 预设 = 另一主机，本轮未实测 ⇒ **不动**。
-  行集与逐字段取值 = `doc:MODEL-SPECS.md:§9`；护栏用例 = 预置↔规格漂移白名单（只减不增）——现形 = 批次本地件（2026-09-28 测试树全清后，护栏随批重立于 `docs/batches/2026-09-29-provider-config-family.test.mjs`）。
+  行集与逐字段取值 = `doc:MODEL-SPECS.md:§9`；护栏用例 = 预置↔规格漂移白名单（只减不增）——现形 = 单元测试档（2026-09-28 测试树全清后，护栏随批重立于 `docs/batches/2026-09-29-provider-config-family.test.mjs`）。
 - **华为云 MaaS 入表（2026-09-29 provider-config-family 批 · 台账 #176）**：`huawei` = 华为云 ModelArts Studio（MaaS）——baseURL
   `https://api.modelarts-maas.com/openai/v1`（OpenAI 兼容；区域端点变体走自定义渠道自助路径——§6.21）；默认模型 = **实施轮实拉 `/models` 取值**
   （取数规则与证据等级 = `docs/batches/2026-09-29-provider-config-family.md` §2；无 key 时按官方口径记名并标「待验」）；`thinking` / `reasoningEffort` / `maxTokens`
@@ -486,7 +486,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - 2026-09-25（**off 形族收尾批 · eng-designer**——承 `docs/batches/2026-09-25-off-family-closeout.md` §2 · 台账 #334 / #335 / #346）：§6.12 补 **「有效 off 路径」判据与回执可宣称性**指针（生产者全表 + 单源实现 `thincoder-core/think-off.mjs`（拟新增）——真源 = `doc:MODEL-SPECS.md:§16`）；谓词本体零改。
 - 2026-09-25（**off 形族收尾批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-25-off-family-closeout.md` §3 轮次 1 + §2 修正块 · 台账 #334 / #335 / #346）：
   §6.9 规格字段清单补 `thinkAlwaysOn`（服务端强制思考标记——语义单源 = `doc:MODEL-SPECS.md:§16.3`，循 `cacheMode` 同笔同步先例）；§6.19 旧形字面收正（`"off"` 载荷**按族取形**——真源 = `doc:MODEL-SPECS.md:§16.2`）。谓词本体零改。
-- 2026-09-29（**provider-config-family 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-provider-config-family.md` · 台账 #176 ∕ #177）：§6.11 预设计数 21 → **22**（D3 计数与清单同变）+ 新登 `huawei` 预置（华为云 MaaS——端点钉定 ∕ 默认模型 = 实施轮实拉取值 ∕ 未测载荷字段不带）+ 护栏句重锚（批次本地件形态）；§6.19 计数与名单同变；
+- 2026-09-29（**provider-config-family 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-provider-config-family.md` · 台账 #176 ∕ #177）：§6.11 预设计数 21 → **22**（D3 计数与清单同变）+ 新登 `huawei` 预置（华为云 MaaS——端点钉定 ∕ 默认模型 = 实施轮实拉取值 ∕ 未测载荷字段不带）+ 护栏句重锚（单元测试档形态）；§6.19 计数与名单同变；
   §6.17 新登值引用指针（`${env:VAR}` 解析单源 → `doc:CONFIG.md:§6.3`）；新增 **§6.21 预设收录判据与长尾渠道自助路径**（三判据 + 运营商三家结论 + 自助路径）。**零新语义**（= 台账 #176 ∕ #177 既定内容的成文；另含结构面自修一项：§7 标题行补立——D-PR 决策表原为无标题表块）。
 - 2026-09-29（**provider-config-family 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-29-provider-config-family.md` §3 轮次 1 发现 6）：§6.19 `presetToEntry` 坐标收正——`thincoder-core/config-presets.mjs:41` ⇒ **`:44`**（函数体行；原注落 JSDoc 前位）。**零新语义**。
 - 2026-09-30（**doc-sweep 批 · 行宽收正 · eng-designer**——承 `docs/batches/2026-09-30-doc-sweep.md` §2 · 台账 #664）：provider-config-family 设计轮条（原单行 439 字符）**折行**（仅换行 ∕ 语义零改——doc-check 行宽闸收正）。**零新语义**。

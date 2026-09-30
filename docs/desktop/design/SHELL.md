@@ -1,7 +1,7 @@
 # 桌面端（DESKTOP）· 宿主适配层
 
 > 板块 = **桌面端宿主适配层**——三层进程与目录形态 · 宿主面职责（窗口 / 菜单 / 系统主题 · `app://` 供给 · 预载窄桥 · 启动自检）· 与核的接口面**七面** · 壳装配第三份。
-> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D29 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
+> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D31 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
 > 同部分相关档：总览 / 决策 / 受影响文件 / 发行 / 验收 = `docs/desktop/design/PROJECT.md` · 主 ↔ 渲染通道契约 = `docs/desktop/design/IPC.md` · 界面形态与交互 = `docs/desktop/design/UI.md` · 渲染面实现工艺 = `docs/desktop/design/RENDERER.md`。
 > 核机制面（agent 主循环 / 工具 / 记忆 / 配置 / 会话）**只住核**——本档只做**接入面**设计，不重述核语义（单一权威源）。
 > 文档体系落点（第四部分）判别与命名 = `docs/core/design/DOC-SYSTEM.md`；全仓模块地图与硬约束 = `docs/core/design/ARCHITECTURE.md`。
@@ -17,7 +17,7 @@ thincoder-desktop/                  ← 本端产品包
 ├── src/main/                       ← 主进程（Node / ESM——唯一持 Node 能力者）
 │   ├── main.mjs                    ← 入口：单实例锁 → 协议注册 → 窗口前恢复（重启自动重开——`docs/desktop/design/PROJECT.md` §2 KD-56）→ 窗口 · 启动自检（同档 §2 KD-7）；ready 前初始化一律 await
 │   ├── host-floor.mjs              ← 宿主下限谓词 + `node:sqlite` 探针（`main.mjs` 同面拆分 · 零 `electron` 导入的叶子——预算 = `docs/desktop/design/PROJECT.md` §4.1）
-│   ├── window.mjs                  ← BrowserWindow 生命周期 / 菜单 / 系统主题 / 窗口态（**复制面对齐批**：右键编辑菜单落子——`context-menu` 事件 ⇒ `Menu.popup`）
+│   ├── window.mjs                  ← BrowserWindow 生命周期 / 菜单 / 系统主题 / 窗口态（**复制面对齐批**：右键编辑菜单落子——`context-menu` 事件 ⇒ `Menu.popup`；**窗口重启最大化批（2026-09-30）**：启动即最大化——隐建 ⇒ `maximize` ⇒ `show`）
 │   ├── context-menu.mjs            ← 右键编辑菜单（**复制面对齐批**新档）：`contextMenuLabels(locale)` + `contextMenuTemplate(params, labels)` 两纯函数（零 `electron` ⇒ 平 node 直测；条目集 / 文案面单源 = `docs/desktop/design/UI.md` §1「本批注（复制面对齐 VSC · 2026-09-29）」）
 │   ├── protocol.mjs                ← app:// 供给 + 路径逃逸防护
 │   ├── ipc.mjs                     ← IPC 通道注册与分发（`docs/desktop/design/IPC.md` §1 / §2）
@@ -95,7 +95,7 @@ thincoder-desktop/                  ← 本端产品包
  · goal.mjs · chrome.mjs · statusline.mjs · statusline-segments.mjs · statusline-banner.mjs · activity.mjs · pool-subagents.mjs · activity-new.mjs · settings.mjs · settings-sections.mjs · settings-sections-{env,mcp,models,tools}.mjs · settings-agent.mjs · settings-controls.mjs · onboarding.mjs
 ├── scripts/check-dist.mjs          ← 产物校验（照扩展端 check-vsix 先例）
 └── test/                           ← run.mjs（单入口 · 实读 **49**）+ files.mjs（显式清单——**2026-09-28 全清重置后 = 空清单** · 实读 **3**）+ rc-resolve.mjs（现盘三档——单源 = `docs/desktop/design/PROJECT.md` §4.1）
-                                      （单元 = 批次本地件（名随批次档 · 住 `docs/batches/` · 不登记 · 随批留存）——单源 = `docs/batches/2026-09-28-test-layer-prompts.md` §1.15–§1.23；集成件 = 落盘时登记 +1）
+                                      （单元 = 单元测试档（名随批次档 · 住 `docs/batches/` · 不登记 · 随批留存）——单源 = `docs/batches/2026-09-28-test-layer-prompts.md` §1.15–§1.23；集成件 = 落盘时登记 +1）
 ```
 
 **作用域注**：本树只落**模块形态与一行职责**；逐文件**行数预算**单源 = `docs/desktop/design/PROJECT.md` §4.1——本树不复制预算列。
@@ -114,7 +114,7 @@ thincoder-desktop/                  ← 本端产品包
 | 面 | 形态 | 落点 |
 |---|---|---|
 | 入口与单实例 | `main.mjs` = 单实例锁 → 协议注册 → **窗口前恢复**（重启自动重开——`docs/desktop/design/PROJECT.md` §2 **KD-56**）→ 窗口；ready 前初始化一律 await | `docs/desktop/design/PROJECT.md` §4.1 |
-| 窗口 · 菜单 · 系统主题 | `window.mjs` = BrowserWindow 生命周期 / 菜单 / 系统主题；**菜单（首版）= 原生菜单只挂主进程动作**（窗口 / 缩放 / 退出 / 开发者工具 ＋ **平台惯例 Edit 组**〔内建 `role:`，非通道〕——通道面注 = `docs/desktop/design/IPC.md` §1） | `docs/desktop/design/PROJECT.md` §4.1 |
+| 窗口 · 菜单 · 系统主题 | `window.mjs` = BrowserWindow 生命周期 / 菜单 / 系统主题；**菜单（首版）= 原生菜单只挂主进程动作**（窗口 / 缩放 / 退出 / 开发者工具 ＋ **平台惯例 Edit 组**〔内建 `role:`，非通道〕——通道面注 = `docs/desktop/design/IPC.md` §1）；**启动即最大化**（D31——隐建 ⇒ `maximize` ⇒ `show`，「永远」语义；单源 = `docs/desktop/design/PROJECT.md` §2 **KD-59**） | `docs/desktop/design/PROJECT.md` §4.1 |
 | 右键编辑菜单 | `window.mjs`（落子）+ `context-menu.mjs`（新档——模板两纯函数）：`webContents.on("context-menu")` ⇒ 按 `params`（`isEditable` / `selectionText` / `editFlags`）构模板 ⇒ `Menu.popup`（条目集 = 可编辑四件 ∕ 选中两件 ∕ 空选零菜单）；文案面 = `menu.edit.*` 四键两语（主进程 `loadConfig().locale` 现读） | `docs/desktop/design/PROJECT.md` §2 **KD-43** |
 | `app://` 供给 | 自定义标准协议（standard + secure + supportFetchAPI）+ 路径逃逸防护；不直载 `file://` | `docs/desktop/design/PROJECT.md` §2 KD-2 |
 | 预载窄桥 | 沙箱 CJS 预载 + `contextBridge` 暴露白名单通道为 `window.thincoder`；渲染面零 Node | `docs/desktop/design/PROJECT.md` §2 KD-3 · `docs/desktop/design/IPC.md` §1 / §2 |
@@ -218,7 +218,7 @@ thincoder-desktop/                  ← 本端产品包
 - 2026-09-29（**复制面对齐 VSC 批 · 修正轮 1 · eng-designer**——评审轮 1 发现 1 ∕ 2 同办）：§1 树 `mount-composer.mjs` 行实读按盘收正（**322 ⇒ 238**——与 `docs/desktop/design/PROJECT.md` §4.1 同值）。明细 = 批档 §2 修正轮节。
 - 2026-09-29（**复制面对齐 VSC 批 · 修正轮 2（评审 #58 · §3 轮次 2 · 发现 3 ∕ 4）· eng-designer**）：§1 树同步——CSS 行全量（11 档 + `index.html`）· `views/` 行全量重写（R13 后退场档除名 ∕ 现盘新档补入）· `src/main/` 补 **19** 档（R1–R8 拆档 ∕ 新档——
 含 10 处历史漏登）· 渲染面根 12 档补入（`events-*` ∕ `questions` ∕ `composer-wire` ∕ `i18n-composer` ∕ `mount-settings-*`）· 行内实读值九处按盘收正（与 `docs/desktop/design/PROJECT.md` §4.1 同值）。明细 = 批档 §2.10。
-- 2026-09-29（**复制面对齐 VSC 批 · 修正轮 3（§3 轮次 3 · 评审 #76 · 发现 1–11 逐号点修）· eng-designer**）：发现 5（§1 树 `test/` 行按 §4.1 现盘同步——全清重置后三档 ∕ 空清单 ∕ 批次本地件惯例）+ 发现 8（回调桥 **十九回调**——与 `PROJECT.md` ∕ `IPC.md` 同拍）+ 发现 10（§4 项 4 补 **#517 结算序**（标题 → 落盘 → 读数 → 终局事件 · `turn-face.mjs` `settleTurn`——或指 KD-41））。明细 = 批档 §2.11。
+- 2026-09-29（**复制面对齐 VSC 批 · 修正轮 3（§3 轮次 3 · 评审 #76 · 发现 1–11 逐号点修）· eng-designer**）：发现 5（§1 树 `test/` 行按 §4.1 现盘同步——全清重置后三档 ∕ 空清单 ∕ 单元测试档惯例）+ 发现 8（回调桥 **十九回调**——与 `PROJECT.md` ∕ `IPC.md` 同拍）+ 发现 10（§4 项 4 补 **#517 结算序**（标题 → 落盘 → 读数 → 终局事件 · `turn-face.mjs` `settleTurn`——或指 KD-41））。明细 = 批档 §2.11。
 - 2026-09-29（**parity-b10-ui 批 · W6 文档随动轮 · eng-designer**——承 `docs/batches/2026-09-29-parity-b10-ui.md` §2.7 文档随动表 + §5 三舱实施记录）：§1 树增三档（`mount-settings-segments-providers.mjs` ∕ `mount-settings-segments-agent.mjs` ∕ `settings-confirm.mjs`——
 B10 拆出 ∕ 新档）+ 四行按盘收正（`settings.mjs` 多面清单 / `providers.mjs` 八通道 / `mcp-servers.mjs` 六通道 / `settings-env.mjs` S17 薄壳）；§2 启动自检行补**冒烟读数契约**（P3——字段闭集 ∕ `ok` 条件 ∕ 出口码 ∕ 20s ∕ `MIN_NODE` 三 scope 对准）。明细 = 批档 §2。
 - 2026-09-29（**residuals-round2 批 · 文档面实施轮 · eng-designer**——承批档 `docs/batches/2026-09-29-residuals-round2.md` §2 #586）：§1 分层铁律行引文改指——W8 契约②判据现载体 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`（单测树重建时回迁端侧单测档）。**零新语义**。
@@ -231,3 +231,6 @@ B10 拆出 ∕ 新档）+ 四行按盘收正（`settings.mjs` 多面清单 / `pr
 - 2026-09-30（**桌面残债清付批 · 实施后档面轮 · eng-designer**——承 `docs/batches/2026-09-30-desktop-residuals.md` §2.12）：§1 树增 `ipc-relays.mjs` 节点行（转口族——自 `ipc.mjs` 拆出 · 2026-09-30）。**零新语义**（登记）。
 - 2026-09-30（**桌面重启自动重开批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-desktop-reopen-last-project.md` §1 · 台账 #734）：§1 树两行随动（`main.mjs` 行补**窗口前恢复**；`projects.mjs` 行补重启自动重开）+ §2 「入口与单实例」行同拍；
   单源 = `docs/desktop/design/PROJECT.md` §2 **KD-56** ∕ `docs/desktop/design/IPC.md` §2 项目面注项 7。**零新语义**（登记）。
+- 2026-09-30（**右栏宽度拖动批 · 修复轮随修 · eng-designer**——评审范围外注 ①（同 #2 类））：档头需求侧行 **D1–D29 ⇒ D1–D30**——零语义枚举随动。明细 = 批档 §2 修复轮块。
+- 2026-09-30（**窗口重启最大化批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-window-maximize.md` §1 · 台账 #745）：§1 树 `window.mjs` 行 + §2「窗口 · 菜单 · 系统主题」行补**启动即最大化**；
+  隐建 ⇒ `maximize` ⇒ `show`（单源 = `docs/desktop/design/PROJECT.md` §2 **KD-59**）；档头 D 号 **D1–D30 ⇒ D1–D31**。**零新语义**（登记）。明细 = 批档 §2。

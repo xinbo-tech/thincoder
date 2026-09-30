@@ -105,7 +105,7 @@
 | 20 | `lib.js` | **核** | 纯工具集（`:15` `tailTruncate` · `:27` `MAX_TOOL_OUTPUT` · `:73` `toolFailureStatus` · `:94`）——零 DOM 零宿主 |
 | 21 | `loading.js` | 端 | 忙态门 / 按钮换位（`:67` / `:86`） |
 | 22 | `md.js` | **核** | Markdown 渲染 + **全量转义闸**（`:67` / `:106` / `:146` / `:151`） |
-| 23 | `mode-buttons.js` | 端 | 端模式钮（桌面会话头自持） |
+| 23 | `mode-buttons.js` | 端 | 端模式钮（桌面端面自持——**模式钮住输入区控件行（写路 `session:flags`）∥ 四态呈现 = 状态行行首 banner 四段**；撤会话头批（2026-09-29）后收正） |
 | 24 | `model-menu.js` | 端 | 端选择器（内联 CSS 用宿主变量 `:40-69`） |
 | 25 | `model-picker.js` | 端 | 端模型钮 + 推理下拉（`:13` / `:40-68`） |
 | 26 | `onboarding.js` | 端 | 端引导（桌面首启向导自持） |
@@ -243,7 +243,7 @@
 **内容面视觉映射口径（三律 · 下表判据）**：
 
 1. **宿主主题色角色对位**——VSC `--vscode-*` 族（前景 / 边框 / 链接 / 错误）落桌面主题表对应变量（`--fg` / `--line` / `--accent` / `--warn`）：**角色对齐 · 值随端主题**（桌面主题体系零动——需求 D21 边界）。
-2. **语义常量值照搬**——语法配色 / 叠加层 rgba / 尺寸 / 圆角 / 透明度 / 字号比例：VSC 实值逐字为源（新增变量入主题表亮暗两套）；**字族栈例外 = `--mono`**（角色对位 / 近似——宿主编辑器字族，见变量表）。
+2. **语义常量值照搬**——语法配色 / 叠加层 rgba / 尺寸 / 圆角 / 透明度 / 字号比例：VSC 实值逐字为源（新增变量入主题表亮暗两套）；**字族栈例外 = `--mono`**（角色对位 / 近似——宿主编辑器字族，见变量表）；**排版通道限定（2026-09-30 · 排版统一批（D29））**——字族 ∥ 字号 ∥ 行高 ∥ 字距以 §5「排版统一覆盖」块为准（本律「字号比例」枚举于该通道被接管；结构 ∥ 盒值 ∥ 色面零改）。
 3. **盒层单层律**——文本面**内嵌件**（代码块 / 表格 / 引用 / 行内码 / 复制钮）的盒模型值照搬；**块壳已承载者不搬**（块内边距 / 边框 / 圆角归桌面壳层 `chat.css`）——两处内边距叠加即观感偏离（端差登记 = §9）。
 
 **桌面主题表新增变量（12 个 · 亮 / 暗两值 · 单源 = `thincoder-desktop/renderer/theme.css`）**：
@@ -275,7 +275,7 @@
 | 4 | 列表 ul / ol / li + 嵌套 | `thincoder-vscode/webview/chat.css:111-112` · `:129` · `:130-132` | `ul, ol { margin: 4px 0 6px; padding-left: 20px }` · `ol { list-style: decimal }` · `li { margin: 2px 0; line-height: 1.5 }` · 嵌套三条同值（**直接值**）；现值 `8px 0` / `22px` ⇒ 本值 |
 | 5 | 引用 blockquote | `thincoder-vscode/webview/chat.css:134-141` | `margin: 6px 0` · `padding: 6px 12px` · `border-left: 3px solid var(--line)`（**复用**）· `background: var(--hover-bg-strong)`（**新增变量**）· `border-radius: 0 4px 4px 0`（**直接值**）· **`color` 撤 `--fg-muted`**（VSC `--textSecondary` 未定义 ⇒ `--fg`） |
 | 6 | 行内码 code | `thincoder-vscode/webview/chat.css:71-78` | `font-family: var(--mono)` · `font-size: 0.9em` · `background: var(--hover-bg-strong)`（**新增变量**）· `padding: 1px 5px` · `border-radius: 3px` · `word-break: break-word`（**直接值**） |
-| 7 | 代码块壳 `pre.code-block` | `thincoder-vscode/webview/chat.css:80-88` | `margin: 8px 0` · `padding: 0` · `border: 1px solid var(--line)`（**复用**）· `border-radius: 6px` · `overflow: hidden` · `background: var(--overlay)`（**新增变量**）· `position: relative`（既有）；现值 `padding: 8px 10px` / `overflow: auto` / `var(--bg)` ⇒ 本值 |
+| 7 | 代码块壳 `pre.code-block` | `thincoder-vscode/webview/chat.css:80-88` | `margin: 8px 0` · `padding: 0` · `border: 1px solid var(--line)`（**复用**）· `border-radius: 6px ⇒ 0`（**扁平化（2026-09-30）收正**——代码块族归零；单源 = `docs/desktop/design/UI.md` §1「本批注（扁平化 ∥ 按钮族圆角恢复 ∥ 按钮迁行 · 2026-09-30）」项 2；推理内残留 6px ∥ 3px 观察在册 = 批档 `docs/batches/2026-09-30-light-round-1.md` §2） · `overflow: hidden` · `background: var(--overlay)`（**新增变量**）· `position: relative`（既有）；现值 `padding: 8px 10px` / `overflow: auto` / `var(--bg)` ⇒ 本值 |
 | 8 | 语言条 `.code-lang` | `thincoder-vscode/webview/chat.css:90-98` | `display: block` · `padding: 3px 10px` · `font-size: 10px` · `color: var(--fg)`（**复用**）· `opacity: 0.5` · `border-bottom: 1px solid var(--line)` · `font-family: var(--mono)`；现值 `--fg-muted` / `12px` / `margin-bottom: 4px` ⇒ 本值 |
 | 9 | 代码体 `.code-block code` | `thincoder-vscode/webview/chat.css:100-109` | `display: block` · `padding: 8px 10px` · `overflow-x: auto` · `font-family: var(--mono)` · `font-size: 0.88em` · `line-height: 1.5` · `background: transparent` · `border-radius: 0`；现值 `12.5px` / `padding: 0` ⇒ 本值 |
 | 10 | 语法高亮 `tk-*`（9 类） | `thincoder-vscode/webview/base.css:371-379`（变量 = `thincoder-vscode/webview/base.css:27-33` / `:51-57`） | **桌面现零 `tk-*` 规则 = 高亮不可见（本批首要缺口）** ⇒ 9 条规则照落：`.tk-keyword` → `--syn-kw` · `.tk-string` → `--syn-str` · `.tk-comment` → `--syn-cmt` + `font-style: italic` · `.tk-number` → `--syn-num` · `.tk-type` → `--syn-type` · `.tk-property` → `--syn-prop` · `.tk-atrule` → `--syn-atrule` · `.tk-class` → `--syn-type` · `.tk-id` → `--syn-atrule`（**新增变量 7**） |
@@ -292,9 +292,21 @@
 | 21 | 代码块复制钮 `.code-copy-btn` | `thincoder-vscode/webview/base.css:386-401` | `position: absolute; top: 6px; right: 6px`（既有）· `padding: 3px 8px` · `font-size: 11px` · `border: 1px solid var(--line)`（**复用**）· `border-radius: 4px` · `background: var(--overlay)`（**新增变量**）· `color: var(--fg)`（**复用**）· `opacity: 0.4` · `transition: opacity 0.15s, background 0.15s` · `:hover { opacity: 1; background: var(--hover-bg-strong) }` · `.copied { opacity: 1; color: var(--green); border-color: var(--green) }`（**新增变量**）；现值 `--fg-muted` / `--bg-raised` / `.copied` 用 `--accent` ⇒ 本值 |
 
 **计数（D3 · 内容面口径）**：**21 面**（1–21 = 正文 ∥ 段落 ∥ 标题 ∥ 列表 ∥ 引用 ∥ 行内码 ∥ 代码块壳 ∥ 语言条 ∥ 代码体 ∥ 高亮 ∥ 表格 ∥ 表头单元格 ∥ 链接 ∥ 强调 ∥ 图片 ∥ 分隔线 ∥ 勾选框 ∥ 推理摘要 ∥ 推理内容 ∥ 推理内 md ∥ 复制钮）；新增变量 **12**（`--mono` / `--hover-bg` / `--hover-bg-strong` / `--overlay` / `--green` / `--syn-*` 七）；端差 **0**（内容面——① 盒层单层 已落 ∕ ② 推理内代码块同形 消；2026-09-29 · 批 #673）。
+**排版统一覆盖（D29 · 桌面侧 · 2026-09-30 · 台账 #736）**——需求 §4 D29 ∥ 决策单源 = `docs/desktop/design/PROJECT.md` §2 **KD-57**；本块修正**桌面侧**排版通道（字族 ∥ 字号 ∥ 行高 ∥ 字距 ∥ 字重强调通道）——上表（21 面）相应面按本块收正；**结构 ∥ 盒值 ∥ 色面 ∥ 语法配色仍随 VSC**（D21 三律余域零改）；**VSC 侧 ∥ 核包零改**。
+基线与修饰（桌面侧）——基线 = 字族 `--font`（⇒ `--mono` 栈）∥ 字号 `var(--fs)`（14px）∥ 行高 `var(--lh)`（1.5）∥ 字距 `var(--ls)`（`normal`）；修饰 = **相对（em）或非尺度通道**（粗体 ∥ 斜体 ∥ 色 ∥ 底 ∥ 边框）——**绝对 px 清零**。逐面收正（面号 = 上表）：
+
+- 面 1 正文：`line-height: 1.55 ⇒ var(--lh)`；族 ∥ 号取基线变量（值同现——零观感位移）。
+- 面 3 标题 ∥ 面 6 行内码 ∥ 面 9 代码体 ∥ 面 11 表格：**相对修饰值不动**（1.3–0.9em ∥ 0.9em ∥ 0.88em ∥ 0.9em——「基线 + 相对修饰」；语义来源 = 用户「除了 markdown 里标了的」；**读法待核准 = 批档 §2 上抛②**）。
+- 面 8 语言条：`font-size: 10px ⇒ var(--fs)`（绝对岛清零）。
+- 面 12 表头 ∥ 面 14 行内强调：`th 600` ∥ `strong 700` **不动**（markdown 标记豁免）。
+- 面 18 推理摘要 ∥ 面 19 推理内容：`12px ⇒ var(--fs)`；面 19 行高 `1.45 ⇒ var(--lh)`。
+- 面 21 复制钮：`11px ⇒ var(--fs)`。
+- 余面（2 ∥ 4 ∥ 5 ∥ 7 ∥ 10 ∥ 13 ∥ 15 ∥ 16 ∥ 17 ∥ 20）：**零改**（间距 ∥ 盒 ∥ 色 ∥ 结构面）。
+- 落点 = `thincoder-desktop/renderer/core-markdown.css` ∥ `thincoder-desktop/renderer/core.css`（值改零增行）；核包（`thincoder-render-core/**`——含 `composer/composer.css` 逐字锁）**零改**——核件消费面（输入面板 ∥ 模型菜单 ∥ 搜索条）收敛走桌面覆盖段（`thincoder-desktop/renderer/chat-composer.css`）。
+- ★上抛①（字族）= **全端排版基线**（`--font: var(--mono)`——观感变化最大一项）；否决 ⇒ 回退配方 = `docs/desktop/design/PROJECT.md` §2 **KD-57** ⑥。
+- **`select` 本体行高豁免（真机判据 · 平台面）**：Blink 把 `select` 本体 computed `line-height` 固定 `normal`（内联 ∥ 表则 ∥ `!important` 均不可达——页面 CSS 不可承载）⇒ 白名单外平台豁免（同壳 `option` ∥ `input` ∥ `button` 可控已归基线）；证据 = 批内件读数 `selectExemption` 段。
 **会话面板面（桌面会话控制面）映射表 = `docs/desktop/design/UI.md` §1 本批注项 2**（端壳面，非核产出件——本档不重述）。
 **落点与预算（内容面口径）**：`thincoder-desktop/renderer/core.css` **140 ⇒ 299（现读 2026-09-29）⇒ 本批 +面 20 段覆盖 ≈ +10（越 300 ⇒ 拆分预案 = 推理盒族出档 `thincoder-desktop/renderer/core-reasoning.css`（拟新增）· 消解窗口 = 下个结构性触碰的批——批 `docs/batches/2026-09-29-hatch-clearance-2.md` §2.8）**；`thincoder-desktop/renderer/theme.css` **R13 四拆后 = 89（现读 2026-09-29；主题表 12 变量在册）**；含会话面板面之全批预算 = `docs/desktop/design/PROJECT.md` §4.2；逐面真机比对 = 需求 §4 D21 验收面。
-**★上抛①（字族）**：正文面字族随 VSC = 编辑器等宽栈（`--mono`）——**观感变化最大一项**；若用户否决 ⇒ 单点回退 = 删该行（恢复 `--font` 系统 UI 栈），余 20 面不受影响。
 
 ## 6. 受影响文件与测试面（三端 · 实施分批随动）
 
@@ -334,7 +346,7 @@
 **块级跟滚提核随动（2026-09-29 · `docs/batches/2026-09-28-desktop-subblock-follow.md`）**：核 `thincoder-render-core/subblocks/block.mjs` **45 ⇒ ≈66**（+2 导出——纯搬移 · 档头留端清单同拍；**实读 2026-09-29 = 71**——#518 预测未回填；现行值见本节「块跟滚让位修复随动」段）；
 VSC `thincoder-vscode/webview/activity.js` **190 ⇒ ≈176**（删两本地函数 ⇒ 改指核件；`thincoder-vscode/webview/streaming.js` **182** 零改——转口保留）；
 桌面 `views/pool-subagents.mjs` **108 ⇒ ≈118**（**实读 2026-09-29 = 115**）· `views/activity-new.mjs` **100 ⇒ ≈109** · `views/activity.mjs` **259 ⇒ ≈262** · `renderer/core.css` **281 ⇒ ≈287**（+两值规则——值源 = `thincoder-vscode/webview/chat.css:466-467`）；
-测试面 = 批次本地件 `docs/batches/2026-09-28-desktop-subblock-follow.test.mjs`（拟新增 · 随批留存）。
+测试面 = 单元测试档 `docs/batches/2026-09-28-desktop-subblock-follow.test.mjs`（拟新增 · 随批留存）。
 
 **块跟滚让位修复随动（2026-09-29 · `docs/batches/2026-09-29-subblock-follow-resume.md`）**：核 `thincoder-render-core/subblocks/block.mjs` **71 ⇒ ≈120**（+≤50：旗标手势门（600ms · `wheel` / `touchmove` / `pointerdown`）+ 出口钮三件（`sub-follow-btn` 建 / 更 / 删 + 两态词键 + 点击回底）+ 档注随改）——语义单源 = 本档 §2 **KD-RC-8**；VSC = 零逻辑改（随核同收）+ 两键入 `locales/{en,zh}.json` + `base.css` 钮样式；桌面 = 端面三轴（池壳原位领用 ∕ 帧尾逐块复钉 ∕ 归档重建径接线——逐档「现行 ⇒ 预期」= `docs/desktop/design/PROJECT.md` §4.2 本批行）。
 
@@ -489,3 +501,4 @@ VSC `thincoder-vscode/webview/session.css` **215 ⇒ ≈219**（两钮（Rename 
 - 2026-09-29（**口子清零二轮 · 实施轮 · eng-coder**——承 `docs/batches/2026-09-29-hatch-clearance-2.md` §2 · §5）：§4 **行 13 定谳**（E10 消——桌面 `MAX_RENDER_BLOCKS` 200 ⇒ **150**（`chat-scroll.mjs`），对齐 VSC `MAX_MESSAGE_BLOCKS`（`ui.js:204`）；方向裁 = 批 §4 建议㈠；对位档 `docs/desktop/design/RENDERER.md` §2 三处同拍）；核件两处落形（`flow/queued-mark.mjs` 补「本批新建泡」匹配 · `subblocks/activity-view.mjs` `CANCELABLE_ROLES`）；§5 行 2 容器臂收窄与行 20 代码块来推随实施落盘（`renderer/core-markdown.css` ∕ `renderer/core.css`）。明细 = 批档 §5。
 - 2026-09-29（**口子清零二轮 · 实施随动收正轮（父侧裁）· eng-designer**——承批档 `docs/batches/2026-09-29-hatch-clearance-2.md` §4 ∕ §5.6）：§9「对齐第二批」块残句收正——④ 走时刷新值 ∕ 态按盘收正（2s ∕ 不落 ⇒ **1s ∕ 已落**——镜像 = `docs/desktop/design/UI.md:308` 现文）；②③⑤ 实读与 owning 档（`docs/desktop/design/PROJECT.md` §10 AZ ∕ BA · KD-33）同拍零触。**零新语义**（值 ∕ 态收正）。明细 = 批档 §2.10。
 - 2026-09-30（**桌面堆取证修复批 · E2 命中分支落档轮 · eng-designer**——承 `docs/batches/2026-09-30-desktop-heap-freeze.md` §1.3c ∕ §2.13 · 台账 #694）：§2 增 **KD-RC-11**（续写支文本节点合并——`appendAdvisorChunk` 两处；语义等价）；§6 增本批随动段（核 `flow/block.mjs` **145 ⇒ ≈150**；后收正实读 **153**——2026-09-30 ∥ 桌面 ∕ VSC 消费面零改）。**零新语义**（实测命中登记 + 语义等价修设计）。明细 = 批档 §2.13。
+- 2026-09-30（**排版统一批（D29）· 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-desktop-typography-unify.md` §1 · 台账 #736 · 需求 D29）：§5 增**排版统一覆盖块**（桌面侧排版通道收正——面 1 ∥ 3 ∥ 6 ∥ 8 ∥ 9 ∥ 11 ∥ 12 ∥ 14 ∥ 18 ∥ 19 ∥ 21 逐面；结构 ∥ 盒值 ∥ 色面仍随 VSC）+ ★上抛①（字族）随 D29 收正句。**零机制语义**（值域收正）。明细 = 批档 §2。

@@ -104,7 +104,7 @@ The report must contain: what changed / why, the paths of files touched, how you
 - Before declaring completion: run the project's own verification per its AGENTS.md method and declare the outcome to `verify` via verification.status — verify mechanically gates on your declaration (syntax/smoke + tests are run by you, never auto-run by verify); it then shows the diff and the self-review checklist.
 - Code changes must be verified — unit tests are development-time tools (write them to get the change right; their retention afterwards follows the project's test-lifecycle policy).
 - Integration tests are project assets — never augmented per single change; the release gate is the project's full verification chain.
-- Keep test volume from ballooning with the project — permanent tests tax every related change; never accumulate (unit files stay batch-local, integration sets stay inside their budget); **verification spend ∝ cost of failure, not code volume**.
+- Keep test volume from ballooning with the project — permanent tests tax every related change; never accumulate (unit test files stay with their batch record, integration sets stay inside their budget); **verification spend ∝ cost of failure, not code volume**.
 - **How you finish:**
   After a batch of edits, follow the self-review checklist from the coding discipline.
   Then run the project's verification per its AGENTS.md method and call verify declaring the outcome via verification.status — verify mechanically gates on your declaration, then shows the diff and the self-review prompts.

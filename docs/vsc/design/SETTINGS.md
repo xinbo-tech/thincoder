@@ -443,7 +443,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   ④ 关面板态调用 ⇒ 零节点 ∧ 开面板（buildSettings 后）⇒ 复现（关面板不丢）；⑤ 单实例（二次调用替换）；⑥ `closeSettings()` 后复开 ⇒ 不复现（关 = 销账）。
   ⑦ 源锁：`showSettingsError`（`:113-119`）体内**零 `setTimeout`**（不自散；同档打开等待定时器 `:142-151`——250ms 回退，**不在锁域**）；⑧ 闭集外 scope（如 `"bogus"`）⇒ 零段标；⑨ 空 reason（缺 ∕ `undefined` 同判）⇒ 零节点。
 真机腿（父侧）：制造写冲突 ⇒ 段标 + 词句驻留（无 6s 自散）∧ 关面板重开仍见。
-**机检面**：`docs/batches/2026-09-29-vsc-carryover-settings.test.mjs`（九腿 + 扩展侧文本锁）· 站点 7⇒8 接入（本批）= `docs/batches/2026-09-30-vsc-residuals.test.mjs`（批次本地件）；冒烟 = `thincoder-vscode/test/smoke-settings.mjs:88`（调用形 `showSettingsError("panel", "test error")`）。
+**机检面**：`docs/batches/2026-09-29-vsc-carryover-settings.test.mjs`（九腿 + 扩展侧文本锁）· 站点 7⇒8 接入（本批）= `docs/batches/2026-09-30-vsc-residuals.test.mjs`（单元测试档）；冒烟 = `thincoder-vscode/test/smoke-settings.mjs:88`（调用形 `showSettingsError("panel", "test error")`）。
 
 ## 3. 已知待办与已知限制
 
