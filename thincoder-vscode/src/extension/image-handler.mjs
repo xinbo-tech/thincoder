@@ -2,7 +2,7 @@
  * image-handler.mjs — 贴图落盘 ∕ 非视觉降级（**薄壳** —— parity-b4 W1）：本体核单源
  * `@thincoder/core/attachments.mjs`（落盘管线 + 降级判决）∕ `@thincoder/core/vision-reader.mjs`（跑者）。
  * 本档只承端侧壳三件：
- *  ① 落盘 fs 注入缝（`node:fs` `{ mkdirSync, writeFileSync }` —— 核缝 fail-loud）；
+ *  ① 落盘 fs 注入缝（`node:fs` `{ mkdirSync, writeFileSync }` —— 核缝 fail-loud）+ 写时扫除（核 `cleanupOldToolResults` 复用——见 `savePastedImages` 注）；
  *  ② 降级窗 busy-lock ∕ `visionAbort` 载体（A12——窗内 Stop 定向中止）与返形 `{ text, images, visionAbort }`；
  *  ③ 跑者父面：真父面（`panel._agent`）在场恒用；首回合窗（agent 未建）以核渠道表
  *     （`resolveProviders()` 单源）合成最小父面；记忆句柄 = 宿主单源（`ensureMemoryHandle()`，
@@ -11,13 +11,20 @@
  * `panel-messages.mjs`（idle 面）∕ `panel-turn-stages.mjs:191/:237`（返形逐行保旧 ⇒ 后两档零改）。
  */
 import { mkdirSync, writeFileSync } from "node:fs"
+import { join } from "node:path"
 import { savePastedImages as coreSavePastedImages, downgradeNonVisionImages as coreDowngrade, isNonVisionModel } from "@thincoder/core/attachments.mjs"
+import { cleanupOldToolResults } from "@thincoder/core/agent/helpers.mjs"
 import { runVisionReader } from "@thincoder/core/vision-reader.mjs"
 import { resolveProviders } from "@thincoder/core/config-io.mjs"
 import { ensureMemoryHandle } from "../embed-config.mjs"
 
-/** 落盘管线（核件 + 端 fs 探针）：dataURL 串列 ⇒ `{ paths, dropped }`（调用点消费 `.paths`）。 */
+/** 落盘管线（核件 + 端 fs 探针 + 写时扫除）：dataURL 串列 ⇒ `{ paths, dropped }`（调用点消费 `.paths`）。
+ *  写时扫除（#735 · 2026-09-30 批 · 机制单源 `PROVIDER.md` §6.18）：落盘前对 `<cwd>/.thincoder/tmp` 发核
+ *  `cleanupOldToolResults`（3 天窗单源；fire-and-forget 免 await 窗，失败静默）——闸 = 非空表 ∧ 有效 cwd（同形对位 = 核 `attachments.mjs:71`，改动须同拍）。 */
 export function savePastedImages(dataUrls, cwd) {
+  if (Array.isArray(dataUrls) && dataUrls.length > 0 && typeof cwd === "string" && cwd !== "") {
+    cleanupOldToolResults(join(cwd, ".thincoder", "tmp")).catch(() => { /* 扫除失败不得影响落盘 */ })
+  }
   return coreSavePastedImages(dataUrls, cwd, { fs: { mkdirSync, writeFileSync } })
 }
 

@@ -268,7 +268,7 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
 **图片输入链（VSC）**：粘贴 / 拖拽 / 附加按钮 → webview 传 dataURL → `thincoder-vscode/src/extension/panel-messages.mjs` `routeUserTurn`（`:59`）内
 `savePastedImages`（`:82`）落盘 `<cwd>/.thincoder/tmp/paste-<id>-<i>.<ext>`（`src/extension/image-handler.mjs`；raster png / jpg / gif / webp 白名单 + >15MB 跳过）→
 `thincoder-vscode/src/agent/setup-reminders.mjs:22` `appendImagePointer` 给真实 user 消息追加 `[Attached images: …] — use the read_image tool to view them before answering.`（**非多模态模型直接 throw**——可见错误不静默丢）→
-模型调 `read_image` 带图进载荷。历史内容保持字符串（不回放 images）；文件随 offload 写时自清理。
+模型调 `read_image` 带图进载荷。历史内容保持字符串（不回放 images）；贴图临时件清理 = 端侧时序面（核件零回收）：桌面 = 回合尾 `cleanupTurn` ∥ VSC = 贴图落盘写时 mtime 扫除（3 天窗——核 `thincoder-core/agent/helpers.mjs` `cleanupOldToolResults` 单源）；CLI = 未接（留存）。
 
 **贴图降级链（非视觉模型自动降级）**：非视觉模型贴图不再硬报错——自动降级为视觉模型子代理读图、文本描述注入主会话——用户无感换模型（VSC 主；CLI 镜像软引导）。触发点 = `routeUserTurn`（savePastedImages 后、主回合 LLM 请求前）：
 非视觉模型（`specForModel(provider.model).multimodal` 假）+ images 非空 + depth-0 → ① 视觉渠道查找（`thincoder-vscode/src/extension/vision-channel.mjs`——resolveProviders 扫 multimodal；判据与 appendImagePointer / read_image 注册门同源 = MODEL_SPECS multimodal）
@@ -490,3 +490,5 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
   §6.17 新登值引用指针（`${env:VAR}` 解析单源 → `doc:CONFIG.md:§6.3`）；新增 **§6.21 预设收录判据与长尾渠道自助路径**（三判据 + 运营商三家结论 + 自助路径）。**零新语义**（= 台账 #176 ∕ #177 既定内容的成文；另含结构面自修一项：§7 标题行补立——D-PR 决策表原为无标题表块）。
 - 2026-09-29（**provider-config-family 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-29-provider-config-family.md` §3 轮次 1 发现 6）：§6.19 `presetToEntry` 坐标收正——`thincoder-core/config-presets.mjs:41` ⇒ **`:44`**（函数体行；原注落 JSDoc 前位）。**零新语义**。
 - 2026-09-30（**doc-sweep 批 · 行宽收正 · eng-designer**——承 `docs/batches/2026-09-30-doc-sweep.md` §2 · 台账 #664）：provider-config-family 设计轮条（原单行 439 字符）**折行**（仅换行 ∕ 语义零改——doc-check 行宽闸收正）。**零新语义**。
+- 2026-09-30（**VSC 贴图件清理批**——承 `docs/batches/2026-09-30-vsc-paste-cleanup.md` §2 · 台账 #735）：§6.18 「文件随 offload 写时自清理」句收正——临时件清理 = 端侧时序面（桌面 = 回合尾 `cleanupTurn`；
+  VSC = 贴图落盘写时 mtime 扫除〔3 天窗——核 `thincoder-core/agent/helpers.mjs` `cleanupOldToolResults` 单源〕；CLI = 未接（留存））；VSC 侧接线落地（`thincoder-vscode/src/extension/image-handler.mjs` 写时扫除）。
