@@ -6,7 +6,7 @@
  * 一律以 `process.cwd()` 为仓根解析 ⇒ 暂存位与终位同一命令形态）。
  *
  * 腿一（#439①）：键面全链路 spawn 腿——`diagnostics.{heapWatch,heapSnapshot}` → bin 读键
- *   （`thincoder-cli/bin/thincoder.mjs:51-54`）→ 形参（`:59` / `:66`）→ 两消费者调用
+ *   （`thincoder-cli/bin/thincoder.mjs:52-55`）→ 形参（`:60` / `:67`）→ 两消费者调用
  *   （`src/crash-reports.mjs:87-89` `armHeapSnapshot(1)` · `src/heap-watch.mjs:70-71` timer 注册）。
  *   探针 = `--import` 先载（**file:// URL**——Windows 裸盘符 ERR_UNSUPPORTED_ESM_URL_SCHEME）：
  *   `globalThis.setInterval` 包裹计数（heap-watch 定时器）+ `require("node:v8")
