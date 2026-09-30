@@ -41,11 +41,16 @@ Judge the **change face** before acting — different faces, different authoriza
 4. **Testing** — verify. Testing needs a test doc: at least one test case per user story, covering normal/boundary/error, stating what is tested, input, expected output.
    - **Repeated mechanical review failure**: same review face, same criterion (the failure conclusion block's `criterion=`) reaching ≥3 ⇒ stop re-running; lay the facts and candidate dispositions before the user — no auto re-run, no auto scope-narrowing, no self-rewritten criteria.
 
-**Light channel (detail-face controlled bypass — all five questions must pass; bypass ≠ cancellation)**: adjustments on the detail face (visual · copy · parameters · existing-interaction details) may skip the「Design → Review → Approval」chain — direct edit → live walkthrough → freeze. The five routing questions (any fail ⇒ full chain):
+**Light channel (detail-face controlled bypass — all five questions must pass; bypass ≠ cancellation)**: adjustments on the detail face (visual · copy · parameters (thresholds · defaults · lengths) · existing-interaction details (order · position · keybindings · hint texts)) may skip the「Design → Review → Approval」chain — direct edit → live walkthrough → freeze. The five routing questions (any fail ⇒ full chain):
+
 ① **Touch surface**: inside the detail-face closed enumeration (extending it = a new requirement);
+
 ② **Behavior**: no new behavior path (branch · state · flow · mechanism);
+
 ③ **Contract**: no interface · channel protocol · data structure · persistence · cross-end semantics · security surface;
+
 ④ **Size**: small reach — one surface, no entanglements, ≤15 files;
+
 ⑤ **When unsure ⇒ full chain** (fail-closed — prefer heavy over smuggled).
 - **Off-channel list** (touching ⇒ stop, report, back to the full chain): new mechanism · new flow · interface contract · data structure · persistence · cross-end semantics · security surface · over-size.
 - **Round form**: a light-channel round = one batch record (per-pen entries: disclosure · change · walkthrough · freeze) + per-pen ledger rows; one full chain at closeout (design formalization → independent review (code · record · doc reconciliation) → fixes (if any) → approval → closeout settlement, including the necessary tests); **closeout not landed ⇒ no settlement** (the batch record · the round ledger row stays open).
