@@ -90,7 +90,7 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
   文案 = 主句键 `session.ledgerNotice`（含 reason 与「打开会话即自动补回」）**+ `scene === true` 时条件附句键 `session.ledgerNotice.scene`**（「损坏现场档保留 30 天」——与 CLI 同口径：**条件合成，恒附改条件附**），见 `WEBVIEW-PROTOCOL.md` §6.3。
   **异常清 ⇒ 两腿**（单源 = 核 `ledgerHealth(cwd)`）：`scene` 腿 = 损坏现场档清 ⇒ 注记消失（零历史态）∥ `refused` 腿 = 核**本进程累计**（不清零）⇒ 进程内一旦拒写，注记持续在场**至重启**（有界）。
 - **模型选择 UI**：主下拉列 provider 行 + hover flyout 子菜单选模型（两级菜单——`model-picker.js` / `model-menu.js`）；底部含 add / remove / key 管理入口。
-- **挂起与忙态 UI**：settled → awaitingDigest 驻留（带提示）；digest 回收 → 归档落流；会话退出 = 区全体归档（§5.1）。
+- **挂起与忙态 UI**：settled → `awaitingDigest`（等待消化，带提示）；digest 回收 → 归档落流；会话退出 = 区全体归档（§5.1）。
   状态行（⏳ 后台 N 子代理 + 待消化计数——`status-bar.js:51-60`）；输入框永不锁（`loading.js`），
   send 出口拒发保留（`send.js:19`——Enter 与发送按钮同经此拒；可继续录入）；
   **Send 按钮 running 期隐藏**（`loading.js:56`），Stop 只在 running 显（`loading.js:57`；susp 纯池跑不显——子代理停止靠区内逐块 ⏹）。
@@ -205,7 +205,7 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 | 出生 | `started`（**不限角色族 / 不限 `pool`**——§5.3 出生面）或 `queued` | 建块 append 区尾（区钉底 / 未钉底计数钮 + 块级跟滚监听接入） | `activity.js:108-111` |
 | live | chunk / turn 帧 / 审批态 | 覆盖式刷新头词与状态区（不重挂元素） | `activity.js:290-307` |
 | 折叠 | 终态 | class `sub-live`→`sub-frozen` + `open=false` + ⏹ 移除 + 头词换 | `activity.js:176-188` |
-| 准终态 | `settled` | 折叠 + `awaitingDigest` 驻留（块**不移动**） | `activity.js:356-358` |
+| 准终态 | `settled` | 折叠 + `awaitingDigest`（等待消化——块**不移动**） | `activity.js:356-358` |
 | 归档 | 消化回收 `done` 命中 awaiting 块 | `insertBefore(块, 本轮边界)`（CLI 序：块在 digest 文本前） | `activity.js:196-206` |
 | 归档 | 其余终态（`done`/`error`/运行中 `cancelled`/`terminated`/`failed`/`answered`） | 折叠 + 即时归档（尾追 `#messages`） | `activity.js:322-361` |
 | 取消 | `cancelled` 且 `was: "queued"`（从未启动） | 头移除（不冻结） | `activity.js:310-320` |
@@ -403,7 +403,8 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - **DOM 窗上限 150 块**：`thincoder-vscode/webview/ui.js:198`（`MAX_MESSAGE_BLOCKS`）+ `trimOldMessages`（`:199-206`）——计数选择器含 `.message` / `.tool-call` / `.advisor-block` / `.sub-block`（**归档块随窗出窗**）；区驻留块不在其容器，不计。
 - **懒历史锚**：`thincoder-vscode/webview/history.js:29`（加载指示插位）与 `:56`（分页 prepend 锚）选择器同含 `.sub-block`——归档块与懒历史页共存时插位正确。
 - **分页**：首窗 = 末页（`older=false`）+ `hasOlder`；`scrollTop ≤ 40` 触发 `loadOlder`（`history.js:87`）；prepend 后按 `scrollHeight` 增量补偿 `scrollTop`（`:57-61`）。页大小常量 = `thincoder-vscode/src/extension/history-window.mjs:22`（`HISTORY_PAGE_SIZE = 200`——跨端首窗对齐）。
-- 归档块**不补 `data-idx`**（不出现在历史回填中——登记项）。
+- 归档块锚面（按径分述）：**live 归档块不补 `data-idx`**（活流落点 = 当前轮首之前——记录 `idx` 为流末追加位次、与视觉位次不重合 ⇒ 不入回填游标面；出窗后经记录重建径回填）；**重建块携 `data-idx`**（= 记录全局 `idx`——§5.7 重建径；分页游标面完整性所系：`minLoadedIdx` 含重建元素 ⇒ 更早页游标正确）。
+- **防双渲染判据（live ∥ 重建两径）**：重建插入前按同位 `[data-idx]` 去重（命中 ⇒ 跳过——幂等）；**live 块不回溯补锚**（锚面 = 重建径独占）——同一 DOM 世代内一条记录至多产一元素（重建径仅产自页快照内含之记录 ∥ live 径仅产自快照后新归档——两径不相交）。
 
 ### 5.5 live 块跟滚与内容区高度
 
@@ -454,6 +455,22 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 
 **判据**：T-G1–T-G8（`thincoder-vscode/test/render-granularity.test.mjs`）——同工具连续输出三片段 ⇒ 段数 2（先红 = 3）；工具改 ⇒ 新段；调用行恒新段；kind / `sub` 交替恒分段；旧生产者降级；kind 缺省 ⇒ 文本行。
 
+### 5.7 消化面记录恢复（痕 ∥ 归档块 · 2026-09-30 · #726）
+
+> 机制（记录形 ∥ 写缝 ∥ 读缝 ∥ 重建义务 ∥ 容差）单源 = `docs/core/design/SESSION.md` §6.26；需求 = F-W1（恢复后存续）∥ I-7（收窄——未归档块不恢复）。本端承接 = 写面（宿主同点追加 + webview 出站）∥ 读面（opt-in 直通）∥ 重建（痕元素逐条位次 ∥ 归档块原形态）。live 归档面 = §5.1 生命周期表（零改）。
+> **本端不绑记录存储**（记录走槽 JSON 投影——`docs/core/design/SESSION.md` §6.14 兼容红线逐字保持：sidecar 对本端可见面零暴露；全量绑定 = 窗口驱逐伤本端全量人读线 + 保存面重构，超批不取）。
+
+- **写面（两产生面）**：
+  - digest 三型 = **宿主同点追加**（与发帧同点双动作——核 `pushRecord`）：`start`/`end` = `src/extension/suspension.mjs:167/:178`；`cap` = `postDigestCap`（`panel-callbacks.mjs:83` 发射行——全调用面同收）。
+  - subagent 快照 = **webview 归档派生点出站**（`webview/activity.js` `archiveBlock` 同点——幂等守卫内，每块恰一次）：构建 `{kind:"subagent", meta, rows}`（`meta` = 块头事实（已知字段子集——核契约字段）；`rows` = 块内容行集（`.advisor-content` 行文本派生，`{kind,text}` 形——保尾上界同核契约））⇒ `vscode.postMessage({type:"recordAppend", record})`（协议登记 = `WEBVIEW-PROTOCOL.md` §3.2 行 22——§13 行实施轮落）；宿主 `panel-messages.mjs` 分派 ⇒ 处理体取**当前会话活行载体人读线数组**（`(panel._liveLines ?? panel._susp?.lines).fullHistory`——`saveLines` 所写 `history` 槽字段之源）经核 `pushRecord` 追加（入参映射钉定 = core §6.26 产生面条；fail-soft——载体缺位 ⇒ 零动作 + 日志）。
+- **读面**：`panel-session.mjs:150/:176` 两处 `historyWindow(…, { records: true })`（opt-in——页尺核常量）⇒ `historyPage.messages` 随携记录（`sendHistoryPage` 清洗面零改——记录过清洗原样）。
+- **重建**（`webview/history.js` 页级 pass + 重建件（`webview/record-restore.js` **拟新增**）；元素携 `data-idx`（位次锚——分页游标 ∥ 防双渲染））：
+  - `digest` 记录 ⇒ 痕元素：`start` ⇒ `.digest-turn` 标签（tier 两档逐字——ask 携 `from`/`msg`）+ `n>0` ⇒ `.digest-status`（`dataset.n`）；`cap` ⇒ `.digest-cap`（stop 档类）；`end` ⇒ **同页本轮元素**原地更新（`digest-done`/`digest-failed` + 文案——构形件化后**与 live 同调**（`webview/chat-status.js`——单一实现零副本））。**页内只产完整轮**（start + end 同页——半轮零元素，与桌面同构）。
+  - `subagent` 记录 ⇒ 归档块元素 = **活形同构**（核 `subblocks` 原语直消费 + `rows` 回放 + 冻结节 + tail-3）+ 落点镜式（**当前轮首之前**——与 live `archiveBlock` 同规则；页内无本轮首（跨页）⇒ 页段尾追加）。
+  - 负控 = 记录缺 ⇒ 恢复面逐字等价；未归档块（live / 在飞）**不重建**（I-7 收窄——池内块非记录对象）。
+- **容差（本端状态）**：① 跨页分裂轮页内不产（**沿用**——与桌面同构；页 200 条低频 ∥ 数据零损；重开条件 = 实测走查命中 ⇒ 另批）；② 归档快照落盘晚一拍（**沿用**——出站异步 ⇒ 记录随**下一次** `saveLines` 落槽；「重载可见性 = 至最后一次落盘」）。
+- **验收回指**：F-W1 判定句 + I-7 收窄负控 + 批内件腿（批档 §2 §五）；真机 = 面板重开 ∥ reload（父侧走查）。
+
 ## 6. 关键决策记录（含否决备选）
 
 | # | 决策 | 否决备选 / 理由 |
@@ -462,10 +479,10 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | D-W2 | 区高度自适应 + 32vh 封顶 + 区内自滚 + pin 跟随 | 否决固定高（单块白占）· 否决不封顶/不 pin（挤死会话区 / 新块不可见） |
 | D-W3 | ⏹ 单委托点迁区（`chat.js:94` 挂 `ctx.activityEl`，空安全绑定） | 否决双委托（`messagesEl` 残留死码） |
 | D-W4 | 终态去向 = **消化后归档落流**（轮边界插入；失效退化尾追） | 否决旧 DOM-move 锚链（§7 退场名单）· 否决折后移除（内容不可读）· 否决一律尾追（序反 CLI——仅作降级路径） |
-| D-W5 | `awaitingDigest` = 冻结态上的**单标志**驻留（CLI 行形态头词） | 否决第二状态机（旧驻留双态）· 否决 settled 即时折叠（用户点名缺口） |
+| D-W5 | `awaitingDigest` = 冻结态上的**单标志**（等待消化；CLI 行形态头词） | 否决第二状态机（旧驻留双态）· 否决 settled 即时折叠（用户点名缺口） |
 | D-W6 | 区保留上限退役（`MAX_REGION_FOLDED` / `enforceRegionCap` 已删） | 新语义下无折叠块常驻——上限成死码 |
 | D-W7 | `resetActivity` 只清**区子树** | 否决全域清扫（会删流内归档块 = 会话历史） |
-| D-W8 | 会话退出 = 区**全体**归档（flushing 兜底） | 否决仅 live 折叠（awaiting 块悬空驻留） |
+| D-W8 | 会话退出 = 区**全体**归档（flushing 兜底） | 否决仅 live 折叠（awaiting 块悬空——不落流） |
 | D-W9 | 出生事件队列化 + 就绪/清屏后再断言（**只带 live 条目**） | 否决逐处门控（未知路径防不住）· 否决扩 settled 重建（与已撤池快照同族） |
 | D-W10 | 终态补块前置 = **合法 id + 合法角色段（`[\w-]+`）+ 回读解析一致**（2026-09-19 收窄：`FAMILY_ROLES` 白名单退场——consult / escalate 纳入；仍否决无条件建块） | 否决无条件建块（未知 role 的块无法解读）· 否决 answered / queued-cancel 补桩（既有裁决） |
 | D-W11 | 频道名 `sub:<role>#<id>` 与 chunk 路由契约**不变** | 否决加代际后缀（连带改频道命名/子标挂载/CLI 面板路由） |
@@ -510,7 +527,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 |---|---|---|
 | 头注（来源 / 状态 / 约束行） | 时点材料（「自 `ARCHITECTURE.md` §11/§12 迁出重组 · 状态：当前态」） | 迁移材料——本档首注已给来源与口径 |
 | §15 变更记录（75 行逐批流水） | 逐批施工记录 | 历史叙述——完整历史见 git log |
-| §12 头注 + §12.1 + §12.2 Q1/Q4 + §12.3 第 3/4 条 + §12.5 D-A1/D-A2/D-A5/D-A7 + §12.8 AC-R3 | **区内原地保留 + 折叠块上限 20 + settled 即时折叠**（2026-09-11 活动区回归批的选定项） | **已被 2026-09-12 收口批反转**——现态 = 终态清退落流 / awaitingDigest 驻留 / 上限退役（§5.1） |
+| §12 头注 + §12.1 + §12.2 Q1/Q4 + §12.3 第 3/4 条 + §12.5 D-A1/D-A2/D-A5/D-A7 + §12.8 AC-R3 | **区内原地保留 + 折叠块上限 20 + settled 即时折叠**（2026-09-11 活动区回归批的选定项） | **已被 2026-09-12 收口批反转**——现态 = 终态清退落流 / `awaitingDigest`（等待消化） / 上限退役（§5.1） |
 | §5 旧版正文 + §5.1.1–§5.1.3 + §5.1.8 | 块流尾出生 · 「出生即计 150」· 第 10 批问题陈述与两案选型 | 位置语义已被活动区回归取代；施工过程 = 一次性材料（结论入 §5.3） |
 | §5.1.6 / §5.1.7 / §5.1.9 | 第 10 批受影响文件 / 用例表 / 边界（VSC 端） | 一次性施工面清单——测试资产归测试层（`thincoder-vscode/test/`） |
 | §12.6 / §12.7 / §12.8 / §12.9 · §13.1 / §13.2 / §13.5–§13.9 · §14.1 / §14.2 / §14.6–§14.10 | 各批受影响文件 / 用例表 / 验收标准 / 边界 / 现场核实 / 选型表 | 一次性批次材料——结论已入 §5 契约与 §6 决策；测试用例号归测试层 |
@@ -585,6 +602,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | 14 | 状态行 context 段单口径（M2） | 台账 #124（段位对位表 = `WEBVIEW-PROTOCOL.md` §6.1——本档不重述，D2） |
 | 15 | 块头注记与 ⏹ 门控扩支 · digest 两档（X6 · X10 · X11 · M4） | F-A4 · F-W7 · 台账 #125 |
 | 16 | 内容行合并粒度（CLI `pushBlock` 对齐 · 协议字段 `face` · RAW 拼接 + `pre-wrap` · 工具结果行面删净） | F-W1 · N-W5 · 台账 #148 |
+| 17 | 消化面记录恢复（痕元素 ∥ 归档块——记录承接 ∥ `recordAppend` 出站 ∥ 页级重建 ∥ 容差二态） | F-W1 · I-7 · core §4.4 F-S7 |
 
 **用例面**：本板块的测试资产在 `thincoder-vscode/test/`（`activity-flow` · `activity-closure` · `activity-live-ux` ·
 `async-visibility` · `history-window` · `history-restore` · `session-boot`）——用例表归测试层，本档不复制（D2）。
@@ -615,6 +633,10 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 **边界（本节不做）**：不做常驻仪表（默认一次性探针）；不加 webview `performance` 标记（真画证据归真机 QA · 台账 #162）；口径 A 不入本批。**读数留档** = 批次档 §5 / §6（一次性材料）；探针撤除后 `git diff` 空 = 方案自身验证面。
 
 ## 变更记录
+- 2026-09-30（**跨端消化面恢复批 · 修正轮（评审轮 1 · 发现 1 ∥ 4 ∥ 7）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §3 轮次 1）：§5.7 出站字面统一 `recordAppend`（协议登记面同拍）；写面处理体载体收正（人读线数组 `fullHistory` 同引用 + 载体缺位失败面）；§5.4 归档块锚面按径分述（live 不补锚 ∥ 重建携锚）+ 防双渲染判据；§5.7 cap 坐标 `:82-83` ⇒ `:83`；§10 行 17 同拍。**零既有语义改**。
+
+- 2026-09-30（**跨端消化面恢复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2 · 台账 #726）：新增 **§5.7**（消化面记录恢复——写面两产生面 ∥ 读面 opt-in ∥ 重建 ∥ 容差；记录形 ∥ 缝 ∥ 义务单源 = `docs/core/design/SESSION.md` §6.26）· §10 补行 17。**零既有语义改**（承接新增）；`WEBVIEW-PROTOCOL.md` §13 补 `appendRecord` 行（同批）。
+
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§4.3 状态位族双出口收正（语法单源 = `STATUS_LINE`——#677 I16b；同族扫 `:124`）；端差二处实施状态回填（成功面归一 ∕ `verify` 支已落）；中止面 ∕ 终端两形坐标回锚（`:93 ∕ :241 ∕ :311`、`:89 ∕ :100`）。**零新语义**。
 
 - 2026-09-29（**stall-indicator 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-stall-indicator.md` §1 · 台账 #568）：新增 **§4.7**（停滞轻显形段——在飞回合静默读数：载体重置点 ∕ 拍收正 1s ∕ 判据 ∕ 边界）；语义单源 = `docs/cli/design/TUI.md` §7.7；段位登记 = `WEBVIEW-PROTOCOL.md` §6.1（本批已补行）。**零协议改 ∕ 零宿主改**。

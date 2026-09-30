@@ -73,7 +73,7 @@
 
 **冻结门控 + 消化完成逐条回收**：
 
-- **settle 延迟冻结（两态统一 · 块到达时点归位批 · #746）**：settle 一律发 `⟦ev⟧settled`（**挂起态 ∥ 非挂起态同**——`thincoder-core/agent-tools/async-settle.mjs:272-278`），区块头保持中间态（`done · awaiting digestion` 驻留面板）；**`⟦ev⟧done` = 消费面补发**（桌面 = 起跑窗 ∥ reclaim ∥ 退出 freeze；VSC = reclaim ∥ 退出 freeze；CLI = 本端 reclaim ∥ freezeAll 冻结，无补发）——冻结 ∥ 归档恒落消费时点（块不于运行中回合中途入流——「块与轮同刻同邻」）。**驻留分流（pending ∕ 留池）不变**：挂起态 ⇒ 入 `_pendingAsyncResults` + 出池；非挂起态 ⇒ 留池 done-in-pool（回合尾直注入兜底 ∥ 挂起会话 sweep 两消费链照旧）。
+- **settle 延迟冻结（两态统一 · 块到达时点归位批 · #746）**：settle 一律发 `⟦ev⟧settled`（**挂起态 ∥ 非挂起态同**——`thincoder-core/agent-tools/async-settle.mjs:272-278`），区块头保持中间态——等待消化（`done · awaiting digestion`；仍在面板）；**`⟦ev⟧done` = 消费面补发**（桌面 = 起跑窗 ∥ reclaim ∥ 退出 freeze；VSC = reclaim ∥ 退出 freeze；CLI = 本端 reclaim ∥ freezeAll 冻结，无补发）——冻结 ∥ 归档恒落消费时点（块不于运行中回合中途入流——「块与轮同刻同邻」）。**settle 分流（pending ∕ 留池）不变**：挂起态 ⇒ 入 `_pendingAsyncResults` + 出池；非挂起态 ⇒ 留池 done-in-pool（回合尾直注入兜底 ∥ 挂起会话 sweep 两消费链照旧）。
 - **digest 消化完成即逐条补发冻结回收**（不等池空）：pending 条目注入后按 settle 锚点 splice 落位（冻结块位于其 digest 总览文本**之前**）；池空 freeze-out 仅兜底未消化残项。
 - **settle 锚点 splice**：`sub._freezeAt` = settle 时刻流位置；多锚点按 `_freezeAt` **降序**冻结（splice 是绝对位置插入——先插小锚点会把大锚点目标后移一位）；>5000 行头裁切处按净位移校正锚点。
 
@@ -832,5 +832,5 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 
 - 2026-09-30（**跨线清零轮 · 设计档收正 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2 · 台账 #677）：§6.30.1 端差行收正——VSC 每 run 清空 `_pendingTimers` 旧句（「另批对齐」）退场；现态 = 跨 run timer 两端同存活（消解 = #445 轮——见 §6.30.11）。**零机制改**。
 
-- 2026-09-30（**块到达时点归位批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-block-arrival-timing.md` §1 · 台账 #746）：§6.8「挂起态 settle 延迟冻结」条 ⇒ **settle 延迟冻结（两态统一）**——非挂起态 settle 不再发 `⟦ev⟧done`（与挂起态同发 `⟦ev⟧settled`；`⟦ev⟧done` = 消费面补发：桌面起跑窗 ∥ reclaim ∥ 退出 freeze）；时序边界句 ∥ 回合尾语义句同拍（原「完成即冻结」表述退场）。机制单源 = `thincoder-core/agent-tools/async-settle.mjs`（驻留分流保留——仅事件面统一）。明细 = 批档 §2。
+- 2026-09-30（**块到达时点归位批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-block-arrival-timing.md` §1 · 台账 #746）：§6.8「挂起态 settle 延迟冻结」条 ⇒ **settle 延迟冻结（两态统一）**——非挂起态 settle 不再发 `⟦ev⟧done`（与挂起态同发 `⟦ev⟧settled`；`⟦ev⟧done` = 消费面补发：桌面起跑窗 ∥ reclaim ∥ 退出 freeze）；时序边界句 ∥ 回合尾语义句同拍（原「完成即冻结」表述退场）。机制单源 = `thincoder-core/agent-tools/async-settle.mjs`（settle 分流保留——仅事件面统一）。明细 = 批档 §2。
 - 2026-09-30（**块到达时点归位批 · 修复轮（评审轮 1 · 发现 1 ∕ 2 · 父侧裁 = 全采纳）· eng-designer**——承批档 §3）：§6.8 条删修订式残句（「原…分流退场」——现行口径不动）；§6.20.4 拆分计划增 `async-settle.mjs` 越线登记行（**302 → ≈306**——候选拆分面 = 墓碑族 ∥ 消解窗口在册；「未触碰」句旧读数退场）。**零机制改**。

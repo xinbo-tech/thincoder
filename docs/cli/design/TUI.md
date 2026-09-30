@@ -338,7 +338,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
    若同 key 条目仍存活（未来重启路径清终态位）⇒ 闸门摘墓碑 + 重建块（`ev:subagent-block-revived` 留痕）——**不构成永久失明**。
    同一幻影的**另一面已同批封死（c1）**：补位不启动终态条目（`AGENT-LOOP-SUBAGENT.md` §6.9）——「取消后仍被 settle」的燃料族无关消失。
 - **冻结头**：`[✓ explore#1 · sync · model · done 45s]`——**图标三态互斥（M5）**：`⏸`（审批态）→ `⏹`（`stopped`）→ `✓`（其余），与动词同源（`thincoder-cli/src/tui/render-segments.mjs` `frozenSubTaskLines` 图标行；跨端标尺 = VSC `webview/activity-view.js` 的 cancelled → `⏹`；运行中面板头无 `stopped` 分支 ⇒ 不并）；
-  动词按状态（cancel 冻结 → `stopped`；interrupt 清场 → `interrupted` 标）；挂起期**已结算待消化中间态**驻留面板显示 `done · awaiting digestion`。
+  动词按状态（cancel 冻结 → `stopped`；interrupt 清场 → `interrupted` 标）；挂起期**已结算待消化中间态**——等待消化，面板显示 `done · awaiting digestion`。
 - **advisor 块**：运行中 = 对话流内可折叠框（key = `advisor-blocks`，单实例；头 `[advisor · review] N lines` + tail 3；
   展开 = `renderBlockTimeline` 有序块时间线——think ↔ tool 交替按发射序）；完成 → 冻结 `_frozenAdvisor` 载体；
   async advisor ⏹ = 取消后台评审；压缩以同款面板块渲染（`docs/core/design/CONTEXT-COMPACTION.md` §8 权威）。
@@ -355,7 +355,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
 - **面板手工镜像退役——读时现算**：`computePanelBlocks(state)`（subTasks 活值纯推导）；`agent._panelSnapshot` 读写全删，
   `index.mjs` 反向挂载 `agent._tuiState = state`——**门控语义零动**（状态变更点不再手动刷镜——单账本）。
 - **降级路径**：无 TUI 装配（headless / VSC / 子代理）→ 现算返 null → view 降级池视图 + freeze 报不可用。
-- **已结算待消化驻留零动**：settled 三态机 / `_freezeAt` settle 锚 splice / `shiftFreezeAnchors` 头裁补偿 /
+- **已结算待消化态零动**：settled 三态机 / `_freezeAt` settle 锚 splice / `shiftFreezeAnchors` 头裁补偿 /
   降序 splice / `freezeReclaimDigestedBlocks` 逐条回收 / `panelFreezeGate` 门控全部保留。
 
 #### 6.8.2 嵌套子代理：内层活动并入外层流
@@ -432,7 +432,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 后续 token → ensureSubTaskKey：墓碑命中 → ★存活闸（新）
               存活   → 摘墓碑 + 重建块 + 摘旧冻结载体行 + 留痕（日志面一行 / 每次复活一条）                    [P0-a 复活]
               不存活（池外 / done / cancelled）→ 丢弃（现状——迟到 chunk 正常面，不留痕）               [不变]
-回合尾清扫 freezeAllSubTasks → ★存活跳过（新）：池内存活条目保留 live 驻留（已终态照旧冻结）                     [P0-b]
+回合尾清扫 freezeAllSubTasks → ★存活跳过（新）：池内存活条目保留 live（等待消化；已终态照旧冻结）                     [P0-b]
 ```
 
 **P0-a 存活复活**（`subagent-blocks.mjs:80-99` `ensureSubTaskKey`）：墓碑命中时，先以 key（`role#id`）调
@@ -524,7 +524,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 
 - **不改发射面**：`subagent-run.mjs:163-165` 两 token 锚点、`subagent-scheduler.mjs:331-344` queued 发射——E1 已证无缺陷。
 - **不新增按族分支**：墓碑是共享单点，修复天然覆盖 subagent / escalate / advisor / consult / compress 五族，但**不新增任何按族代码**（非「扩族」）；**复活可达面** = 键可映射到 §6.8.3.3 两池条目者（subagent / escalate / advisor）；非池键（`compress#N` 等）判 false ⇒ 维持既有丢弃语义（零回归——非本批修面）。
-- **不改**：`isAsyncSpawnResult` 判定面（`tool-display.mjs:119-126`）· `⟦ev⟧cancelled` 出队语义（`subagent-blocks.mjs:189-199`）· awaitingDigest 驻留与 `_freezeAt` 锚点（§6.8.1 已结算待消化驻留零动——用户裁定）· `computePanelBlocks` 现算面。
+- **不改**：`isAsyncSpawnResult` 判定面（`tool-display.mjs:119-126`）· `⟦ev⟧cancelled` 出队语义（`subagent-blocks.mjs:189-199`）· `awaitingDigest`（等待消化）与 `_freezeAt` 锚点（§6.8.1 已结算待消化驻留零动——用户裁定）· `computePanelBlocks` 现算面。
 - **不引入**块落盘恢复；不改提示词 / 需求档 / `_archive/**`。
 - **VSC 对位不在本批**（VSC `panel-callbacks.mjs` / `suspension.mjs` 为独立实现）——登记为观察项（批次档 §2.7 同源）。
 
