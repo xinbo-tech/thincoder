@@ -76,7 +76,7 @@ reasoning, provider, images? } → extension _chat()
 
 历史断链事故：只改发射端与渲染端、漏桥 ⇒ `model` 字段自发布首日被丢弃（2026-08-26 修复 + 锁桥测试）。string / 对象双分支在 payload 构造处统一推导（对象载荷字段透传、string 分支字段 `undefined` 安全降级）。
 
-### 3.2 协议增量登记（二十一项——只增不改）
+### 3.2 协议增量登记（二十二项——只增不改）
 
 | # | 消息面 | 增量 | 发射点 | 接收点 |
 |---|---|---|---|---|
@@ -101,8 +101,9 @@ reasoning, provider, images? } → extension _chat()
 | 19 | `timer`（**新消息**——host → webview） | `{ status: "fired", text }`——`text` = 交付原文（`[System reminder: ⏰ timer — …]` 逐字；显示裁 = ≤3 行 + `…`——CLI 同规） | `thincoder-vscode/src/extension/timer-watch.mjs`（已落——空闲 deadline 闩到点交付点） | `webview/chat-messages.js`（流内触发行渲染） |
 | 20 | `providerError`（**既有载荷替换**——`{text}` ⇒ `{scope, reason}`） | 载荷 v2 = `{ type:"providerError", scope, reason }`——`scope` = 段名（六段闭集 + `panel`；`panel` ∕ 闭集外 ⇒ 零段标）；`reason` = 码 ∕ 原样串（webview：表内出词、表外原样直传、空 ⇒ 零节点）。**纪律句「不改既有字段语义」之明文例外** | 8 站点统一助手 `postProviderError`（`thincoder-vscode/src/extension/settings.mjs:302`——`CONFIG_CONFLICT_HINT` ⇒ `"mtime-conflict"`；`panel-mcp.mjs` ×4 ∕ `panel-messages-settings.mjs` ×4） | `webview/chat-messages.js:154` `case` → `webview/settings.js` `showSettingsError(scope, reason)`（段标 + 词化码 ∕ 单槽驻留——机制单源 = `SETTINGS.md` §2.15） |
 | 21 | `usage`（增字段） | `ctxTokens`（上下文占用量绝对数——状态行 `Yk` 尾串源；缺 ⇒ 尾串缺席） | `panel-callbacks.mjs` `usage` 发射点（累计 ∕ transports 映射——同 `reasoning_tokens` 行） | `status-bar.js` ctx 段（`context X% Yk` 拼接——#677 I16a） |
+| 22 | `recordAppend`（**新消息**——webview → host 留档记录出站） | `{ record: { kind:"subagent", meta, rows } }`——归档时点快照（形 ∥ 判据单源 = `docs/core/design/SESSION.md` §6.26；每块恰一次——归档幂等守卫内） | `webview/activity.js` `archiveBlock` 同点（拟增——#726 实施批落） | `panel-messages.mjs` `case`（拟增——处理体取活行载体 + 核 `pushRecord`） |
 
-纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–21 即全部在案增量；表外增量不入）。发射 / 接收落点：
+纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–22 即全部在案增量；表外增量不入）。发射 / 接收落点：
 `thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:29` ·
 `thincoder-vscode/webview/chat.js:260` · `thincoder-vscode/webview/status-bar.js:27-30/46`。
 
@@ -207,7 +208,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 - 实现落点：`thincoder-vscode/webview/chat-status.js:69`（`showDigestStatus`）· 样式 `thincoder-vscode/webview/base.css`（`.digest-status` 族沿用 + `.digest-turn` / `.digest-cap`）。
 - 跨轮 = **新元素随流追加**（漂移消除）——`start` 连发亦各成独立元素（非 ask 轮的 `end` 更新其前最近未结的本轮元素）。
 - 投递 = **直投**（不走 outbox——digest 只在面板活跃且 webview 已就绪后发生；outbox 语义 = 出生事件族）。
-- host 发射点：`thincoder-vscode/src/extension/suspension.mjs:167`（起跑——`tier` 判据同点）· `:178`（收尾）· `thincoder-vscode/src/extension/panel-callbacks.mjs:84`（cap 两档）。
+- host 发射点：`thincoder-vscode/src/extension/suspension.mjs:167`（起跑——`tier` 判据同点）· `:178`（收尾）· `thincoder-vscode/src/extension/panel-callbacks.mjs:83`（cap 两档——`postDigestCap` 发射行；定义 `:82-84`）。
 
 ## 6. 状态行与块头字段对位
 
@@ -324,7 +325,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | D-P8 | 状态文本载体 = **结构化 `statusText` 消息**（kind 判别 → webview 按 locale 渲染） | 否决 host 直发成品文本（host 不知 locale——复制 i18n = 双源）· 否决不做（判定句要求用例锁新增状态文本） |
 | D-P9 | Send 可见性 = running 期**隐藏** | 否决禁用态（双范式 + 仍占位） |
 | D-P10 | `scrolled N` 段不设——滚动状态 = 悬浮回底钮（§6.1 滚动行：实证例外——行为证据） | 否决补文本段（N 需新造单位 + 与钮重复） |
-| D-P11 | 协议增量 = **只增不改**、**二十项**登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
+| D-P11 | 协议增量 = **只增不改**、**二十二项**登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
 | D-P12 | 合并权限卡**并入 `promptId` 族**（单一释放通道 `releasePermission` + id 精确匹配 + 孤儿回写） | 否决单开释放语义（同语义两通道 · 消费者按类分支）；`shift()` 队列头匹配已驳（D-P4 同据——陈旧卡不误 resolve） |
 | D-P13 | `waiting` 判据含**批权限队列** + **释放即刷**（刷新点 = 释放通道单点 `releasePermission`） | 否决逐路径各补 `_refreshStatus()`（散点——漏一处即残留）· 否决判据只列权限 / question（批卡停驻期读作 idle——状态栏失去「需你输入」语义） |
 | D-P14 | 诊断上行 `panelDiag` = **新消息（行 8 登记）**——出生 / 终态事件面痕迹入主侧日志 | 否决只留 webview 环形日志（DevTools 不可回读——本次事故正因不可回读而盲；理由详见 `WEBVIEW.md` D-W22）· 否决并入既有上行消息字段（无同缝——`webviewReady` 是一次性启动拍） |
@@ -514,6 +515,10 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 **方向口径**：本表只收 webview → host。**「删」= host 消费位在位而 webview 发射恒无（死 handler）**——处置逐条入批档（`docs/batches/2026-09-18-vsc-settings-wiring.md` §2）并已随实现落地（三删 + 一接线转活——**本表现零 `删` 行**）；**删除落地 ⇒ 源零位 ⇒ 表行同步退场**（不留悬空行——同 §12 口径）。**「补」= 发射在位而 host 缺消费位**（本表现零行）。
 
 ## 变更记录
+- 2026-09-30（**跨端消化面恢复批 · 修正轮（评审轮 1 · 发现 1 ∥ 3 ∥ 8 ∥ 9）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §3 轮次 1）：§13 `recordAppend` 行**移出本表**（移至实施轮补行——两表只收实测在位行，先例 = 本档 :667/:669/:684）；§3.2 行 22 留案（字面 `recordAppend`——SESSION ∥ WEBVIEW 两档文面同拍）；§7 D-P11 计数同拍 **二十二项**；§5 digest host 发射点 `:84` ⇒ **`:83`**（发射行口径——定义 `:82-84`）。**零既有语义改**（登记面收正）。
+
+- 2026-09-30（**跨端消化面恢复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2 · 台账 #726）：§13 补 `recordAppend` 行 + §3.2 补行 22（计数 21 → 22）——webview → host（subagent 快照留档记录出站；坐标 `（拟增）` 标记——实施批落）。记录形 ∥ 缝 ∥ 义务单源 = `docs/core/design/SESSION.md` §6.26。**零既有语义改**。
+
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§3.2 补行 21（`usage` ∕ `ctxTokens`——#677 I16a 已落；计数 20 → 21）；§6.1 ctx 行坐标回锚（`status-bar.js:38-45` 实位）。**零新语义**。
 
 - 2026-09-29（**vsc-carryover 批 · 设计档落点（V1 舱随动）· eng-designer**——承 `docs/batches/2026-09-29-vsc-carryover.md` §2（含两轮修正块）+ §5 V1 舱）：§3.2 **十九 → 二十项**（+ 行 20 = `providerError` **既有载荷替换** `{text}` ⇒ `{scope, reason}`——「只增不改」纪律句之**明文例外**；D3：计数与列表同改）+ 纪律行与 §7 D-P11 计数同改；

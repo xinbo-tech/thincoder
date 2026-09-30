@@ -1,9 +1,13 @@
 /**
  * 2026-09-30-digest-reflow-anchor.test.mjs — 批次本地单元件（台账 #738 · 消化回流归位批 · 实施轮）·
- * 任务书 = `docs/batches/2026-09-30-digest-reflow-anchor.md` §2 ∥ §4（机检腿六条）。
+ * 任务书 = `docs/batches/2026-09-30-digest-reflow-anchor.md` §2 ∥ §4（机检腿六条）+ #738 修复轮（落位腿四条）。
  * 六腿：① 起跑窗补发序（`done` 先于回合执行）② `done` 幂等（重复零动作）③ `start` 全替（切片 = [本轮]）
  *      ④ `foldDigest` 最新一条（含未结末轮优先）⑤ 行集（终态非 ask 标签退场 ∥ ask 保留 ∥ live 双行）
  *      ⑥ 落位两序（假 DOM：挂早 ∥ 挂晚皆 [归档块][行族] + 换代末位重锚）。
+ * 落位腿（#738 修复轮 —— 行恒居原位：终态 ∥ 复列 ∥ 后续动作三径零漂）：
+ *      ⑦ 形 A（出窗折叠轮：低于窗下界 ⇒ 零插入；无下界 ⇒ 落尾——绝不插流首）
+ *      ⑧ 形 B（运行期尾段内的位次轮：不落首枚未标块之前 ⇒ 落尾组锚）
+ *      ⑨ 出生即定（活元素转位次 ⇒ 原位存续零重座）⑩ 三径链（终态 ∥ 复列 ∥ 后续动作 ⇒ 与块恒相邻）。
  * 随批留存 · 不进仓套件（全清令：仓套件不写 ∕ 不改 ∕ 不跑）。
  * 复跑（cwd = 仓库根，即含 `thincoder-core/` 的目录）：node --test docs/batches/2026-09-30-digest-reflow-anchor.test.mjs
  * 纪律：行为断言优先（真归约体 ∥ 真帧路 ∥ 真驱动装配）；真机三径 = 父侧闭合（D16 义务）——本档只落机检面。
@@ -19,7 +23,7 @@ const ROOT = process.cwd()
 if (!existsSync(join(ROOT, "thincoder-core"))) throw new Error(`从仓库根（含 thincoder-core/）运行：cwd = ${ROOT}`)
 const mod = (rel) => import(pathToFileURL(resolve(ROOT, rel)).href)
 
-const [wake, pageRead, i18n, i18nCore, seat, subagentReduce, driveMod, chat, chatModel, chatStream, chatScroll] = await Promise.all([
+const [wake, pageRead, i18n, i18nCore, seat, subagentReduce, driveMod, chat, chatModel, chatStream] = await Promise.all([
   mod("thincoder-desktop/renderer/events-wake.mjs"), // `ev:digest` 归约（只留当轮）
   mod("thincoder-desktop/renderer/page-read.mjs"), // 页读径（foldDigest ∥ withFoldedDigest）
   mod("thincoder-desktop/renderer/i18n.mjs"), // 词面投影（t）
@@ -30,7 +34,6 @@ const [wake, pageRead, i18n, i18nCore, seat, subagentReduce, driveMod, chat, cha
   mod("thincoder-desktop/renderer/views/chat.mjs"), // 挂载 ∥ 帧尾（真路）
   mod("thincoder-desktop/renderer/views/chat-model.mjs"), // 帧模型
   mod("thincoder-desktop/renderer/views/chat-stream.mjs"), // 对齐步（alignPlan —— 帧输入同源）
-  mod("thincoder-desktop/renderer/views/chat-scroll.mjs"), // 窗限（MAX_RENDER_BLOCKS）
 ])
 
 const KEY = "1"
@@ -467,6 +470,177 @@ test("腿 6·落位两序：挂早 ∥ 挂晚皆 [归档块][行族]；行族后
       assert.equal(roundIdx, root.childNodes.length - 1, "6c 新轮行族恒居流末（末位重锚）")
       assert.equal(mounted3.length, 2, "6c 块记账两枚（DOM ≡ visible 不变式不破）")
       assert.equal(root.getAttribute("data-blocks"), "2", "根锚 data-blocks 随帧")
+    }
+  })
+})
+
+// ─── 腿 7：形 A（出窗折叠轮）——低于窗下界 ⇒ 零插入；无下界 ⇒ 落尾（绝不插流首）────────
+
+test("腿 7·形 A（出窗折叠轮）：低于窗下界 ⇒ 零插入；无下界 ⇒ 落尾（绝不插流首）", async () => {
+  await withFakeDom(async () => {
+    zh()
+    const old = { status: "end", ok: true, ms: 500, n: 1, at: 50 }
+    // 7a 无已标块（下界未知）⇒ 在位但落尾（绝不流首——座/复列两径同判）
+    {
+      const root = new FakeNode("div")
+      root.__connected = true
+      const live = { kind: "assistant", text: "活" }
+      const s1 = baseState({ blocks: [live] })
+      mount(root, s1)
+      const s2 = { ...s1, digest: { [KEY]: [{ ...old }] } }
+      frame(root, s2, "none", EMPTY_PLAN)
+      const rounds = directRounds(root)
+      const blocks = directBlocks(root)
+      assert.equal(rounds.length, 1, "7a 无下界 ⇒ 在位（零信息零动作）")
+      assert.ok(indexOf(root, rounds[0]) > indexOf(root, blocks[blocks.length - 1]), "7a 落尾（绝不插流首）")
+    }
+    // 7b 首枚已标块（下界）之下 ⇒ 零插入（座位 ∥ 复列两径）
+    {
+      const root = new FakeNode("div")
+      root.__connected = true
+      const live = { kind: "assistant", text: "活" }
+      const deep = { kind: "assistant", text: "深", at: 3712 }
+      const s1 = baseState({ blocks: [live, deep] })
+      mount(root, s1)
+      const s2 = { ...s1, digest: { [KEY]: [{ ...old }] } }
+      frame(root, s2, "none", EMPTY_PLAN)
+      assert.equal(directRounds(root).length, 0, "7b 座位径：低于窗下界 ⇒ 零插入（绝不插块#0 前）")
+    }
+    {
+      const root = new FakeNode("div")
+      root.__connected = true
+      const live = { kind: "assistant", text: "活" }
+      const deep = { kind: "assistant", text: "深", at: 3712 }
+      const s1 = baseState({ blocks: [live, deep], digest: { [KEY]: [{ ...old }] } })
+      mount(root, s1)
+      assert.equal(directRounds(root).length, 0, "7b 复列径：低于窗下界 ⇒ 不进树（绝不插流首）")
+    }
+  })
+})
+
+// ─── 腿 8：形 B（运行期尾段内的位次轮）——不落首枚未标块之前 ⇒ 落尾组锚 ────────
+
+test("腿 8·形 B（运行期尾段内的位次轮）：不落首枚未标块之前 ⇒ 落尾组锚", async () => {
+  await withFakeDom(async () => {
+    zh()
+    const head = { kind: "assistant", text: "前", at: 100 }
+    const sub = { kind: "subagent", meta: { ...SUB_META }, rows: [{ kind: "text", text: "行一" }] }
+    const tail = { kind: "assistant", text: "后" }
+    const round = { status: "end", ok: true, ms: 500, n: 1, at: 500 }
+    // 8a 座位径：已标锚皆位次更小 ⇒ 无合格锚 ⇒ 落尾（不落首枚未标块之前）
+    {
+      const root = new FakeNode("div")
+      root.__connected = true
+      const s1 = baseState({ blocks: [head, sub, tail] })
+      mount(root, s1)
+      const s2 = { ...s1, digest: { [KEY]: [{ ...round }] } }
+      frame(root, s2, "none", EMPTY_PLAN)
+      const rounds = directRounds(root)
+      const blocks = directBlocks(root)
+      assert.equal(rounds.length, 1, "8a 在位")
+      assert.ok(indexOf(root, rounds[0]) > indexOf(root, blocks[blocks.length - 1]), "8a 落尾（不落块#38 式中段）")
+    }
+    // 8b 复列径（mount）：同判
+    {
+      const root = new FakeNode("div")
+      root.__connected = true
+      const s1 = baseState({ blocks: [head, sub, tail], digest: { [KEY]: [{ ...round }] } })
+      mount(root, s1)
+      const rounds = directRounds(root)
+      const blocks = directBlocks(root)
+      assert.equal(rounds.length, 1, "8b 在位")
+      assert.ok(indexOf(root, rounds[0]) > indexOf(root, blocks[blocks.length - 1]), "8b 落尾（不落首枚未标块之前）")
+    }
+  })
+})
+
+// ─── 腿 9：出生即定——活元素转位次 ⇒ 原位存续（零重座）────────────────────
+
+test("腿 9·出生即定：同轮已有元素（未标活元素）⇒ 转位次后原位存续（零重座）", async () => {
+  await withFakeDom(async () => {
+    zh()
+    const head = { kind: "assistant", text: "前", at: 100 }
+    const live = { kind: "assistant", text: "活" }
+    const s1 = baseState({ blocks: [head, live], digest: { [KEY]: [{ status: "start", n: 1, tier: null }] } })
+    const root = new FakeNode("div")
+    root.__connected = true
+    mount(root, s1)
+    const el = directRounds(root)[0]
+    assert.ok(el !== undefined, "活轮元素在场")
+    const at0 = indexOf(root, el)
+    assert.ok(el.querySelector("[data-digest-label]") !== null, "live：标签行在场")
+    const s2 = { ...s1, digest: { [KEY]: [{ status: "end", ok: true, ms: 900, n: 1, at: 500 }] } }
+    frame(root, s2, "none", EMPTY_PLAN)
+    assert.equal(directRounds(root).length, 1, "恰一枚（零重座 ∥ 零双影）")
+    assert.equal(directRounds(root)[0], el, "出生即定：元素身份存续（绝不再座）")
+    assert.equal(indexOf(root, el), at0, "原位存续（零搬移）")
+    assert.equal(el.querySelector("[data-digest-label]"), null, "行就地更新（终态标签退场）")
+  })
+})
+
+// ─── 腿 10：三径链（终态 ∥ 复列 ∥ 后续动作）——行恒居其块相邻区 ────────────────
+
+test("腿 10·三径链（终态 ∥ 复列 ∥ 后续动作）：行恒居其块相邻区", async () => {
+  await withFakeDom(async () => {
+    zh()
+    const head = { kind: "assistant", text: "前", at: 100 }
+    const mid = { kind: "assistant", text: "中", at: 101 }
+    const sub = { kind: "subagent", meta: { ...SUB_META }, rows: [{ kind: "text", text: "行" }] }
+    const root = new FakeNode("div")
+    root.__connected = true
+    // 径 1：起跑（活流就地）——[前][中][归档块][轮]
+    const s1 = baseState({ blocks: [head, mid] })
+    const m1 = mount(root, s1)
+    const s2 = { ...s1, blocks: [head, mid, sub] }
+    const m2 = frame(root, s2, "append", chatStream.alignPlan(m1.mounted, s2.blocks, false, 0), m1.mounted)
+    const s3 = { ...s2, digest: { [KEY]: [{ status: "start", n: 1, tier: null }] } }
+    frame(root, s3, "none", EMPTY_PLAN, m2)
+    const el = directRounds(root)[0]
+    assert.ok(el !== undefined, "径1：轮元素在场")
+    assert.equal(indexOf(root, directBlocks(root)[2]) + 1, indexOf(root, el), "径1：起跑 ⇒ [归档块][轮] 相邻")
+    // 径 2：终态转换（原地零漂）
+    const s4 = { ...s3, digest: { [KEY]: [{ status: "end", ok: true, ms: 900, n: 1 }] } }
+    frame(root, s4, "none", EMPTY_PLAN)
+    assert.equal(directRounds(root)[0], el, "径2：终态 ⇒ 元素身份存续")
+    assert.equal(indexOf(root, directBlocks(root)[2]) + 1, indexOf(root, el), "径2：相邻序保持（原地零漂）")
+    // 径 3：复列（记录重建 ⇒ 轮随其块相邻）+ 后续动作（后续帧零搬移）
+    const receipt = {
+      ok: true,
+      messages: [
+        { kind: "assistant", text: "前", idx: 10, timestamp: 1 },
+        { kind: "digest", status: "start", n: 1, idx: 20 },
+        { kind: "subagent", meta: { ...SUB_META }, rows: [{ kind: "text", text: "行" }], idx: 21 },
+        { kind: "digest", status: "end", ok: true, ms: 500, idx: 22 },
+        { kind: "assistant", text: "后", idx: 30, timestamp: 2 },
+      ],
+      hasOlder: false, next: null, meta: {}, flags: null, queue: null,
+    }
+    const s5 = pageRead.applyPage(baseState(), receipt, { key: KEY, before: null })
+    const root2 = new FakeNode("div")
+    root2.__connected = true
+    const m5 = mount(root2, s5)
+    const el2 = directRounds(root2)[0]
+    const sBlocks = directBlocks(root2)
+    const subAt = sBlocks.findIndex((node) => node.getAttribute("data-block-kind") === "subagent")
+    assert.ok(subAt >= 0, "径3：复列含归档块")
+    assert.equal(Math.abs(indexOf(root2, el2) - indexOf(root2, sBlocks[subAt])), 1, "径3：复列 ⇒ 与归档块相邻（绝不流首/中段）")
+    const s6 = { ...s5, blocks: [...s5.blocks, { kind: "assistant", text: "新", at: 40 }] }
+    frame(root2, s6, "append", chatStream.alignPlan(m5.mounted, s6.blocks, false, 0), m5.mounted)
+    assert.equal(directRounds(root2)[0], el2, "后续动作：元素身份存续")
+    assert.equal(Math.abs(indexOf(root2, el2) - indexOf(root2, directBlocks(root2)[subAt])), 1, "后续动作：相邻序保持（零漂）")
+    // 径 3b：复列·混窗剖面（已标前缀 + 未标运行期尾段 —— 真机 109/150 同形）⇒ 轮不落首枚未标块之前
+    {
+      const root3 = new FakeNode("div")
+      root3.__connected = true
+      const pre = { kind: "assistant", text: "前", at: 100 }
+      const liveSub = { kind: "subagent", meta: { ...SUB_META }, rows: [{ kind: "text", text: "行" }] }
+      const after = { kind: "assistant", text: "后" }
+      const s7 = baseState({ blocks: [pre, liveSub, after], digest: { [KEY]: [{ status: "end", ok: true, ms: 500, n: 1, at: 500 }] } })
+      mount(root3, s7)
+      const rounds3 = directRounds(root3)
+      const blocks3 = directBlocks(root3)
+      assert.equal(rounds3.length, 1, "径3b 在位")
+      assert.ok(indexOf(root3, rounds3[0]) > indexOf(root3, blocks3[blocks3.length - 1]), "径3b 复列·混窗：落尾（不落流首/中段）")
     }
   })
 })

@@ -70,6 +70,7 @@
 **本批（MANIFEST-WRITE-GUARD · 2026-09-28）落点表** = `docs/batches/2026-09-28-manifest-write-guard.md` §2（唯一承载面——一次性批次材料）；本档 §6.23 承载写前分类判据 / 拒写与现场保全 / loud 信号 / 自愈明裁 / 与 §6.22 零交叠 / 边界情形 / 验收回指。
 **本批（桌面残余批 · D17 恢复态播种 / D19 用户块 md 深度 · 2026-09-28）落点表** = `docs/batches/2026-09-28-desktop-residuals.md` §2（唯一承载面——一次性批次材料）；本档 §6.24 承载打开态读数出口 / 同源同式三事 / 端壳转口 / 边界情形 / 验收回指。
 **本批（LEDGER-RELIABILITY · 2026-09-28）落点表** = `docs/batches/2026-09-28-ledger-reliability.md` §2（唯一承载面——一次性批次材料）；本档 §6.25 承载零权威 / 可重建全自动 / 丢失自愈两落点与预算 / 失效可见 / 写安全判据句 + 边界情形 + 验收回指。
+**本批（跨端消化面恢复 · 2026-09-30）落点表** = `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2（唯一承载面——一次性批次材料）；本档 §6.26 承载机制单源（记录形 ∥ 写缝 ∥ 读缝契约 ∥ 端侧重建义务 ∥ 容差登记 ∥ 读面 delta）+ 验收回指。
 
 ## 6. 机制面（自 CLI 产品档并入 · 2026-09-14 · B 轮）
 
@@ -958,6 +959,42 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 不改槽 JSON 形态 / `version` / VSC 兼容红线 · 不改认领 / `active` / `deletions` / 释放判据 / 槽号分配 · 不改 `loadManifest` 降级读 ·
 不引入锁文件 / 不建索引 / 不落新存储 · 不改记录存储（sidecar）面 · 桌面五档（评审 **#32** 冻结窗）零写 · 不碰在途批面（#25 / #26）。
 
+### 6.26 消化生命周期面记录（跨端单源 · 2026-09-30 · #726）
+
+> 问题：消化生命周期两面（auto-turn 消化痕 ∥ 被消化的子 agent 块）原为**渲染期瞬态**（刷新 ∥ 重载 ∥ 重启即失——用户 2026-09-30 报）；各端以**记录条目**承接。需求 = §4.4 **F-S7**；桌面实施批 = `docs/batches/2026-09-30-digest-persistence.md`；跨端承接批 = `docs/batches/2026-09-30-cross-end-digest-recovery.md`。
+> **本节点 = 记录形 ∥ 写缝 ∥ 读缝契约 ∥ 端侧重建义务 ∥ 容差登记的跨端单源**——桌面设计档（`docs/desktop/design/RENDERER.md` §1.1「留档记录」条）自本批只留桌面侧呈现细节；CLI ∥ VSC 承接细则各住其设计档（`docs/cli/design/TUI-SESSION-VIEW.md` §6 ∥ `docs/vsc/design/WEBVIEW.md` §5.7）。
+
+- **两族记录形**（人读线条目——`history` 数组元素；追加 ∥ 落盘 ∥ 读取三面同一形）：
+  - ① `digest`（三型——与 `ev:digest` 帧三形一一映射，零新语义）：`{ kind: "digest", status: "start" | "cap" | "end", n?, tier?, from?, msg?, mode?, turns?, ok?, ms?, ts }`——`start`：`n` = 起跑待消化数（可 0）· `tier` ∈ `ask` ∥ `digest`；`tier === "ask"` 携 `from`（提问者 `role#id`）∥ `msg`（问题摘要）；`cap`：`mode` ∈ `stop` ∥ `auto` · `turns`；`end`：`ok` · `ms`。
+  - ② `subagent`（归档快照——一块一条）：`{ kind: "subagent", meta, rows, ts }`——`meta` = 归档时点**块头事实**（对象；消费面按已知字段读：`key` ∥ `role` ∥ `model?` ∥ `startedAt?` ∥ `doneAt?` ∥ `turn?` ∥ `maxTurns?` ∥ `status?` ∥ `note?` ∥ `error?`；未知字段原样携带）；
+    `rows` = 内容行集 `Array<{ kind: string, text: string }>`（未知 `kind` 消费面按文本行）；**有界保尾** = 显示行 ≤ **500**（超界弃最旧 ⇒ 前置省略标记行 `… [rows truncated: N lines omitted]`——N = 实弃显示行数、标记自身不占额度；单行超界保末行）。
+- **写缝**（单点 = 核 `thincoder-core/context.mjs` **`pushRecord(agent, record)`**——`pushReal` 双胞）：`ts` 打点 ∥ 记录存储追加（`_recordStore?.append`——§6.14）∥ 尾窗驱逐三面同 `pushReal`；**机器线零触** = `history` 以一次性弃数组承接 ⇒ 记录不入 `agent.history` / `contextHistory`（不喂模型）；追加失败不阻断（尽力面 N-S6 承接）。未绑定（`_recordStore` 缺）⇒ 人读线追加照常 ∥ 存储腿空转（零抛——模式 F 零回归）。
+- **产生面 = 各端进程内同点追加**（与用户可见帧/行**同点双动作**——`ts` 与帧/行同时序）：桌面 = 宿主发帧点三型（`cap` 帧点 = `thincoder-desktop/src/main/turn-face.mjs:142-143`）∥ 渲染面归档派生点经 `record:append` 通道（subagent 快照——含非活动键）；
+  CLI = 痕行 ∥ 冻结行产生点（`pushRecord(state._agent ∥ ctx.agent, …)`）；VSC = 宿主发帧点三型（`thincoder-vscode/src/extension/suspension.mjs:167` ∥ `:178` ∥ `panel-callbacks.mjs:83` `postDigestCap`）∥ webview 归档派生点经 `recordAppend` 出站（宿主处理体落 `pushRecord`）。
+  **落盘节律 = 与消息同节律**（不新造即时落盘面）：记录随本端既有保存链落槽投影（本端人读线真值 = CLI ∥ 桌面为记录存储、VSC 为槽 JSON 投影——见端侧面）。
+  **入参对象 ∥ 载体对应（端侧钉定——记录须落进本端保存链所写人读线同一数组，否则随落盘丢失）**：`pushRecord(agent, record)` 人读线追加目标 = 入参对象的 `_fullHistory`——
+  CLI = `state._agent ∥ ctx.agent` 活对象（绑定态另携 `_recordStore`；`_fullHistory` = 保存链同一数组）；
+  VSC = **活行载体对象** `{ _fullHistory: (panel._liveLines ?? panel._susp?.lines).fullHistory, history: [] }`（`fullHistory` = `saveLines` 所写 `history` 槽字段之源——**同引用**；不绑记录存储 ⇒ `_recordStore` 缺省 ∥ `_historyWindow` 缺省 ⇒ 零窗口驱逐，本端全量人读线保持；`history` 弃数组 = 机读线零触）；
+  桌面 = **写面薄壳在册**（`session-io.appendRecord` 现行 = 复用 `pushReal` 半提取载体形 `{ _fullHistory, _recordStore, _historyWindow, history: [] }`——消解路径 = 端壳下次触碰改调核 `pushRecord`，行为等价）。
+  **失败面**：追加失败不阻断（尽力面——N-S6）；载体缺位（CLI = `state._agent` ∥ `ctx.agent` 双缺；VSC = `_liveLines` ∥ `_susp?.lines` 皆缺——无活跃会话）⇒ 零动作 + 日志一行（零抛）。
+- **读缝**（单点 = 核 `history-window.mjs` `historyWindow(history, before, pageSize, opts)`——`opts.records === true` **opt-in**）：`digest` ∥ `subagent` 两型记录**原样入窗**（`{ ...record, idx }`——字段零改名；占条目位、游标按条目推进；不入回合 ∥ 可见性谓词）；**默认关**（缺 `opts` ∥ 非 `true`）⇒ 输出与改前逐字等价（负控——存量读面零破）。
+- **读面 delta 登记（记录 = 人读线条目——检索消费面按字段面天然分化）**：记录与消息同住人读线、同用 `idx` 空间；四消费面处置如下（构造面零改；§6.13 护栏 ∥ §6.14 读面契约 ∥ §6.19 索引建模三处既有句之射程以本条界定）：
+  - `read_history` 输出行形（本会话 ∥ 回落 ∥ 索引三读径同判）：输出构造 / 字段 / limit 默认值与上限**零改**——匹配集按字段面分化：`role` ∥ `keyword` ∥ `tool` 三面**零命中**（记录无 `role` / `name` / `content`）；**无滤 ∥ 仅 since-until** ⇒ 记录随集，行形 = `{ts, role:null, content:""}`（空壳如实；limit 窗口按条目取端）。
+  - 会话索引面行：记录**占行**（`idx` 只数可解析行 ⇒ 连续面保持；「一行 = 一条消息」句之射程 = 消息行）：`role` / `content` 空 ∥ 无声明 ∥ FTS 零词元（零命中）；`path=<文件>` ∥ `path:"all"` 索引面与 JSON 面**逐条等价保持**（记录混入后两路同判）。
+  - 两道检索护栏计数：`READ_HISTORY_SCAN_MAX`（物理行——记录不改行形态）∥ `READ_HISTORY_MAX_MESSAGES`（条目数——**含记录**，与 `messageCount` 同口径）；常量 / 文案零改。
+  - `cwd:` 发现面行：`messages:` 数 = `messageCount`（**含记录**——同本节点「兼容与边界」条口径；计数不可得 ⇒ `—` 判据零改）。
+  - 判据（机检腿落批档 §2）：伪存储混录 ⇒ ① `role` ∥ `keyword` ∥ `tool` 检索与消息-only 基线逐字等价；② 无滤 ∥ since-until ⇒ 记录空壳行在场（形如上）；③ JSON 面 ∥ 索引面逐条相等。
+- **端侧重建义务**（各端自做——语义同源、实现各端；总则 = **记录位次复列**：记录按其全局 `idx` 位次重建为该端既有呈现形，行入流 = 与内容同生态——无专门「摘 ∥ 留」处理；`digest` ⇒ 痕形 ∥ `subagent` ⇒ 归档块形（与活流归档同一形状）；记录缺 ⇒ 恢复面与改前逐字等价（负控））：
+  - **CLI**（`docs/cli/design/TUI-SESSION-VIEW.md` §6）：痕行逐条复列（标签 ∥ 计数 ∥ cap ∥ 终态行——文案与活流同算式）；终态行 `n` 页内缺席 ⇒ **存储回扫**补齐（跨页零损——容差①于本端不成立）；`subagent` 记录 ⇒ `_frozenSubTask` 合成件（渲染端零改）。
+  - **VSC**（`docs/vsc/design/WEBVIEW.md` §5.7）：痕元素逐条复列（**页内只产完整轮**——start + end 同页）；归档块重建 = 活形同构（核 `subblocks` 原语直消费）∥ 落点镜式（当前轮首之前——与 live `archiveBlock` 同规则）；**不绑记录存储**（记录走槽 JSON 投影——VSC 兼容红线保持：sidecar 对本端可见面零暴露；绑定的窗口 ∥ 保存面重构越本批，超批不取）。
+  - **桌面**（`docs/desktop/design/RENDERER.md` §1.1）：折叠终态轮（末轮无 `end` 不产——防双份）∥ 留档块。
+- **容差登记（跨端）**：
+  - ① **跨页分裂**（起跑 ∥ 终态记录分居两页）：桌面 ∥ VSC = 页内折叠只产完整轮（该轮页内不产；数据零损；重开条件 = 实测走查命中 ⇒ 另批跨页承接）；CLI = **消**（逐条复列 + 存储回扫）。
+  - ② **归档快照落盘晚一拍**（快照产生面在呈现层——出站异步）：桌面 = 在册（显式容忍）；VSC = 沿用（随**下一次**保存落槽——全端内容同节律）；CLI = **消**（产生面 = 进程内冻结点（先于回合落盘）∥ 读径 = 存储直读——追加即达）。
+  - ③ **CLI 复活径双记录**（墓碑复活 ⇒ 同键两代冻结 ⇒ 重建面双块 ∥ 活流单块——低频异常修复径 ∥ 数据零损；重开条件 = 实测走查命中 ⇒ 另批）。
+- **兼容与边界**：槽 JSON `version` / 字段形态 / `history` 全量数组零改（**VSC 兼容红线**逐字保持）；`messageCount` 口径含记录（与桌面 KD-55 ⑤ 同口径容忍——「N msgs = 人读线条目数」）；不改机器线（`contextHistory`）语义。
+- **落点与行数（本批承载）**：file 级落点表 + 行数读数 + 验收腿 = 批档 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2（一次性批次材料——本档不复制）。
+
 ## 7. 关键决策记录（D-SE1–D-SE68）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -1067,6 +1104,10 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | 源档 §10 注入序的 `loadSession` 同步会话级 UI（_autoApprove/planMode 面板标志 + 工具条按钮同步） | VSC 装配细节 | 面板 UI 同步 = VSC 专有面（`thincoder-vscode/**`）；注入序本体已入 §6.15 |
 
 ## 变更记录
+- 2026-09-30（**跨端消化面恢复批 · 修正轮（评审轮 1 · 发现 1 ∥ 2 ∥ 4 ∥ 9 ∥ 10）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §3 轮次 1）：§6.26 补**读面 delta 登记**条（`read_history` 行形 ∥ 索引面行 ∥ 两道护栏计数 ∥ `cwd:` 发现行 + 判据）∥ 产生面补**入参对象 ∥ 载体对应（钉定）与失败面**（VSC 载体 `fullHistory` 同引用；桌面薄壳在册）；VSC 出站字面统一 `recordAppend`（协议登记面同拍）；cap 帧点坐标对盘 `:83`（发射行）；§5 补本批指针行。**零机制改**（登记 / 收正）。
+
+- 2026-09-30（**跨端消化面恢复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2 · 台账 #726）：新增 **§6.26 消化生命周期面记录（跨端单源）**——两族记录形 ∥ 写缝（核 `pushRecord` 单点）∥ 读缝（`historyWindow` opt-in）∥ 端侧重建义务（CLI ∥ VSC ∥ 桌面）∥ 容差登记（3 —— 跨页分裂 ∥ 快照晚一拍 ∥ CLI 复活双记录）；机制单源自桌面档 §1.1 **上提本档**（跨端承接批裁；桌面档通用句指针化）。需求 = §4.4 F-S7（node = VSC F-W1/I-7 ∥ CLI F18）。**邻面语义零改**（§6.14 记录存储 / 兼容红线逐字保持；不绑 VSC 存储——记录走槽 JSON）。
+
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§6.7 读/展示环收正——CLI 段空值回退链已落（#677 I2）；空窗差「已登记端差」句退场 ⇒ 三端同显回退值。**零新语义**（实施后实况回填）。
 
 > 分段口径：**上段 = 拆档后各批（条目自顶向下倒序累积——找「最后变更」看上段首条）** · **下段 = 建档期逐批累积（升序）**。
