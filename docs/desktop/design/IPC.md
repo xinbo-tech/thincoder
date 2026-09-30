@@ -1,7 +1,7 @@
 # 桌面端（DESKTOP）· 主 ↔ 渲染契约（IPC）
 
 > 板块 = **桌面端主 ↔ 渲染 IPC 契约（窄面）**——通道族与载荷语义的单源；主进程侧注册面 = `thincoder-desktop/src/main/ipc-registry.mjs`（`HANDLERS` 表 + 注册序——#28 拆点）+ 分发实现 = `thincoder-desktop/src/main/ipc.mjs`（**265**）+ 转口族 = `thincoder-desktop/src/main/ipc-relays.mjs`（**70**——#685 拆档 · 2026-09-30）。
-> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D31 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
+> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D33 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
 > 同部分相关档：进程与目录形态 · 与核的接口面 · 壳装配第三份（装配侧回调映射）= `docs/desktop/design/SHELL.md` · 渲染面消费（store 订阅与增量渲染）= `docs/desktop/design/RENDERER.md` · 总览 / 决策 / 发行 / 验收 = `docs/desktop/design/PROJECT.md`。
 > 核机制面（agent 主循环 / 工具 / 记忆 / 配置 / 会话）**只住核**——本档只定**通道面与载荷语义**，不重述核回调语义（单一权威源）。
 > 建档：2026-09-25（桌面端设计批 1 · 分档轮）；本档坐标 = as-of 2026-09-25 实核（仓根 = `thincoder/`）。
@@ -457,3 +457,4 @@
 - 2026-09-30（**三端消化面统一批 · 预评审收正轮（随拍）· eng-designer**——承批档 `docs/batches/2026-09-30-triple-end-digest-unify.md` §2 收正块）：§1 `ev:digest` 行差异框首句随裁 ⇒『已裁：并入本批（cap 行位置 ∥ 轮容器形态——对位 VSC 收正）』（与 `docs/desktop/design/RENDERER.md` §1.1 同句副本同拍——一致性面）。**零新语义**。明细 = 批档 §2。
 - 2026-09-30（**三端消化面统一批 · 修复轮（评审轮 1 · 发现 1 · ① 落形裁）· eng-designer**——承批档 `docs/batches/2026-09-30-triple-end-digest-unify.md` §3 轮次 1）：§1 `ev:digest` 行形面差异框 ⇒ **收正形**（无轮容器 ∥ cap 行尾追——对位 VSC `chat-status.js:72-89` ∥ `:97-105`；形单源 = `docs/desktop/design/RENDERER.md` §1.1）。**通道集 ∕ 载荷 ∥ 白名单计数零变**。另：`:429`「cap 行驻留」∥ `:436`「终端轮驻留至首屏页读整清」两处 = **留场义**（非态名——记录面行）——保留（判由在册 = 用户 2026-09-30 22:26 范围增补口径）。明细 = 批档 §2 修复轮块。
 - 2026-09-30（**三端消化面统一批 · 实施后收正轮（#747 实施交付）· eng-designer**——承批档 `docs/batches/2026-09-30-triple-end-digest-unify.md` §5 ∥ §2）：本档**零内容改**（收正落于 `docs/desktop/design/PROJECT.md` §4.1 ∕ §4.2 ∥ §7 与 `docs/desktop/design/RENDERER.md` §1.1——本行 = 登记面随动）。**零新语义**。明细 = 批档 §2 实施后收正轮块。
+- 2026-09-30（**主题切换批 · 随修（一致性收扫）· eng-designer**——评审范围外注同族）：档头需求侧行 **D1–D31 ⇒ D1–D33**——零语义枚举随动（本批 = 渲染面面零通道——IPC 面零改）。明细 = 批档 §2。

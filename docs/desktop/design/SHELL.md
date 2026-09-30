@@ -1,7 +1,7 @@
 # 桌面端（DESKTOP）· 宿主适配层
 
 > 板块 = **桌面端宿主适配层**——三层进程与目录形态 · 宿主面职责（窗口 / 菜单 / 系统主题 · `app://` 供给 · 预载窄桥 · 启动自检）· 与核的接口面**七面** · 壳装配第三份。
-> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D31 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
+> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D33 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
 > 同部分相关档：总览 / 决策 / 受影响文件 / 发行 / 验收 = `docs/desktop/design/PROJECT.md` · 主 ↔ 渲染通道契约 = `docs/desktop/design/IPC.md` · 界面形态与交互 = `docs/desktop/design/UI.md` · 渲染面实现工艺 = `docs/desktop/design/RENDERER.md`。
 > 核机制面（agent 主循环 / 工具 / 记忆 / 配置 / 会话）**只住核**——本档只做**接入面**设计，不重述核语义（单一权威源）。
 > 文档体系落点（第四部分）判别与命名 = `docs/core/design/DOC-SYSTEM.md`；全仓模块地图与硬约束 = `docs/core/design/ARCHITECTURE.md`。
@@ -114,7 +114,7 @@ thincoder-desktop/                  ← 本端产品包
 | 面 | 形态 | 落点 |
 |---|---|---|
 | 入口与单实例 | `main.mjs` = 单实例锁 → 协议注册 → **窗口前恢复**（重启自动重开——`docs/desktop/design/PROJECT.md` §2 **KD-56**）→ 窗口；ready 前初始化一律 await | `docs/desktop/design/PROJECT.md` §4.1 |
-| 窗口 · 菜单 · 系统主题 | `window.mjs` = BrowserWindow 生命周期 / 菜单 / 系统主题；**菜单（首版）= 原生菜单只挂主进程动作**（窗口 / 缩放 / 退出 / 开发者工具 ＋ **平台惯例 Edit 组**〔内建 `role:`，非通道〕——通道面注 = `docs/desktop/design/IPC.md` §1）；**启动即最大化**（D31——隐建 ⇒ `maximize` ⇒ `show`，「永远」语义；单源 = `docs/desktop/design/PROJECT.md` §2 **KD-59**） | `docs/desktop/design/PROJECT.md` §4.1 |
+| 窗口 · 菜单 · 系统主题 | `window.mjs` = BrowserWindow 生命周期 / 菜单 / 系统主题；**菜单（首版）= 原生菜单只挂主进程动作**（窗口 / 缩放 / 退出 / 开发者工具 ＋ **平台惯例 Edit 组**〔内建 `role:`，非通道〕——通道面注 = `docs/desktop/design/IPC.md` §1）；**启动即最大化**（D31——隐建 ⇒ `maximize` ⇒ `show`，「永远」语义；单源 = `docs/desktop/design/PROJECT.md` §2 **KD-59**）；**主题切换（D33 · 2026-09-30）** = 渲染面 `data-theme` 状态面（本档只持系统事实——画布色 `resolveTheme()`；单源 = `docs/desktop/design/UI.md` §1「本批注（主题切换 · D33 · 2026-09-30）」） | `docs/desktop/design/PROJECT.md` §4.1 |
 | 右键编辑菜单 | `window.mjs`（落子）+ `context-menu.mjs`（新档——模板两纯函数）：`webContents.on("context-menu")` ⇒ 按 `params`（`isEditable` / `selectionText` / `editFlags`）构模板 ⇒ `Menu.popup`（条目集 = 可编辑四件 ∕ 选中两件 ∕ 空选零菜单）；文案面 = `menu.edit.*` 四键两语（主进程 `loadConfig().locale` 现读） | `docs/desktop/design/PROJECT.md` §2 **KD-43** |
 | `app://` 供给 | 自定义标准协议（standard + secure + supportFetchAPI）+ 路径逃逸防护；不直载 `file://` | `docs/desktop/design/PROJECT.md` §2 KD-2 |
 | 预载窄桥 | 沙箱 CJS 预载 + `contextBridge` 暴露白名单通道为 `window.thincoder`；渲染面零 Node | `docs/desktop/design/PROJECT.md` §2 KD-3 · `docs/desktop/design/IPC.md` §1 / §2 |
@@ -234,3 +234,4 @@ B10 拆出 ∕ 新档）+ 四行按盘收正（`settings.mjs` 多面清单 / `pr
 - 2026-09-30（**右栏宽度拖动批 · 修复轮随修 · eng-designer**——评审范围外注 ①（同 #2 类））：档头需求侧行 **D1–D29 ⇒ D1–D30**——零语义枚举随动。明细 = 批档 §2 修复轮块。
 - 2026-09-30（**窗口重启最大化批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-window-maximize.md` §1 · 台账 #745）：§1 树 `window.mjs` 行 + §2「窗口 · 菜单 · 系统主题」行补**启动即最大化**；
   隐建 ⇒ `maximize` ⇒ `show`（单源 = `docs/desktop/design/PROJECT.md` §2 **KD-59**）；档头 D 号 **D1–D30 ⇒ D1–D31**。**零新语义**（登记）。明细 = 批档 §2。
+- 2026-09-30（**主题切换批（D33 · 台账 #743）· 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-theme-switch.md` §1 骨架 + 需求 D33）：§2「窗口 · 菜单 · 系统主题」行补**主题切换 = 渲染面面**（本档只持系统事实——画布色；单源 = `docs/desktop/design/UI.md` §1 本批注）；档头需求侧行 **D1–D31 ⇒ D1–D33**。**零新语义**（登记）。明细 = 批档 §2。

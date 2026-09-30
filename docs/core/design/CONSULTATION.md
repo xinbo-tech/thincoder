@@ -129,7 +129,7 @@ R17（2026-09-06）以 **digest 自动注入**取代旧的 `consult_check` 回�
 - **注入容量**：超长 → 既有 digest 截断 / 落盘机制（XML-escaped，>64K offload 预览 + 路径）。
 - **`consult_stop` 保留为取消语义**：`{ abandoned, cancelled: true }`——已答部分丢弃、不入 pending；会话 settle 即移出 map。
 - **消费驱动**：digest auto-turn 驱动判据 = pending 单容器非空（四族统一）；挂起活度钩子 = running 会诊会话纳入 `poolLive`——空闲 settle 也触发消化轮。
-- **每 consultant 活动块在 child settle 即冻结**（per-child key——不再经 check 消费冻结）。
+- **每 consultant 活动块随会话消费归档**（per-child key——不再经 check 消费冻结）：child settle ⇒ `⟦ev⟧settled` 驻留（等待消化），会话 digest 消费窗补发 `⟦ev⟧done` 折叠入流（桌面 ∥ VSC = 会话条目 `childIds` 展开；CLI = reclaim 消费判据）；会话 stopped ⇒ `⟦ev⟧stopped` 即折（消费永不来）——机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8（consult 子块条）。
 - **`wait_for "consult done"` 条件保留**（会话 settle 即移出 map）。
 
 ### 6.3 工具契约
@@ -170,7 +170,7 @@ consult_stop
 
 **会话状态**：`Session = { controllers, replies, pending, waiters, failed, terminated, stopped, total, received }`。settle 语义：正常回复入队；`session.stopped` 后被 abort 的计 `terminated`（不入队）；报错计 `failed`（入队，带失败 note）。全失败时会话照常 settle 并注入 digest（失败按 per-model 标注）——不挂死。
 
-**TUI 可观测**：每顾问一条活动卡，relay 前缀 `consult#<childRelayN>/` 复用 subagent 通道（relay 号非会话 id——会话自持 `_consultIdCounter`）；child settle 即冻结（`⟦ev⟧done`），并行顾问互不覆盖。
+**TUI 可观测**：每顾问一条活动卡，relay 前缀 `consult#<childRelayN>/` 复用 subagent 通道（relay 号非会话 id——会话自持 `_consultIdCounter`）；**child 卡随会话消费归档**（settle ⇒ `⟦ev⟧settled` 驻留；消费窗补发 `⟦ev⟧done`；会话 stopped ⇒ `⟦ev⟧stopped` 即折——同 subagent 族，机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8），并行顾问互不覆盖。
 
 ### 6.4 CLI 实现接线（现状坐标）
 
@@ -255,3 +255,5 @@ consult_stop
 - 2026-09-15（**W12 收正 · VSC 壳接线批**）：§6.5 加 W12 状态行；坐标收正：`runConsultChild` = 核 `thincoder-core/agent-tools/consult.mjs:215`、`makeMainHistoryTool` = 同档 `:82`（端档删旧退役）。机制条文零改。
 - 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。
 - 2026-09-25（**hygiene-ab 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-ab.md` §2 · 台账 #239）：§2.3 行 109 前提校验列 VSC 侧坐标 `src/advisor/tools.mjs:29-37`（盘上无）**改指**核现体 `thincoder-core/advisor/loop.mjs:31`（检索面恒在句——承接实核 = `grep code_search thincoder-core/advisor/*.mjs`）。**语义零改**。
+- 2026-09-30（**consult 同族收齐批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-consult-family.md` §1 · 台账 #748）：§6.2 ∥ §6.3 两处「child settle 即冻结」收正 = **随会话消费归档**（settle ⇒ `⟦ev⟧settled` 驻留 → 消费窗补发 `⟦ev⟧done`；会话 stopped ⇒ `⟦ev⟧stopped` 即折）；
+  机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8（本档不重述）。明细 = 批档 §2。

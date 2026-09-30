@@ -356,7 +356,7 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
   `index.mjs` 反向挂载 `agent._tuiState = state`——**门控语义零动**（状态变更点不再手动刷镜——单账本）。
 - **降级路径**：无 TUI 装配（headless / VSC / 子代理）→ 现算返 null → view 降级池视图 + freeze 报不可用。
 - **已结算待消化态零动**：settled 三态机 / `_freezeAt` settle 锚 splice / `shiftFreezeAnchors` 头裁补偿 /
-  降序 splice / `freezeReclaimDigestedBlocks` 逐条回收 / `panelFreezeGate` 门控全部保留。
+  降序 splice / `freezeReclaimDigestedBlocks` 逐条回收（consult 子块按会话消费判据——consult 同族收齐批 · #748） / `panelFreezeGate` 门控（同判据）全部保留。
 
 #### 6.8.2 嵌套子代理：内层活动并入外层流
 
@@ -890,3 +890,5 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
   ③ 模块地图按**现文件结构**重建（补入旧档未收的三档与拆分后新增的 cmd-* 族——行数列不并）；
   ④ §12–§15 四个批次节的**机制结论**并入对应机制节（选择面 → 命令档 / attention → §7 / 内存 → 会话视图档），批次材料入 §8.1；
   ⑤ 坐标全量改**现状路径**并实核；⑥ 「嵌套子代理」按现行机制（内层活动并入外层流）重建，旧子块小节形态入 §8.1。
+- 2026-09-30（**consult 同族收齐批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-consult-family.md` §1 · 台账 #748）：§6.8.1 已结算待消化态条——`freezeReclaimDigestedBlocks` ∥ `panelFreezeGate` 补 **consult 子块消费判据**注。
+  **CLI 产品码随动** = 回收函数 consumed 形参 + reclaim 接线；机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8。明细 = 批档 §2。

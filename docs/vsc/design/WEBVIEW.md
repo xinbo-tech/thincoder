@@ -217,6 +217,7 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 
 - **归档落点二值**（`activity.js:196-206`）：① 消化回收且本轮边界 `S._digestBoundary` 有效（`isConnected`）→ 边界之前；② 其余（普通终态 / 补桩 / 会话退出 flush / 边界失效 / 无边界）→ `#messages` 尾追。同批多块 = 消息到达序；幂等 = 已归档（`parentNode === messagesEl`）即 no-op。
 - **消化回收（host 侧）**：`thincoder-vscode/src/extension/suspension.mjs:112-119`（`reclaimDigestedBlocks`）对该轮已消化条目逐条补发 `{type:"subagent", status:"done"}`——**直投不入队**（非出生事件，属收尾通知）。
+  **consult 会话条目**（本体无 webview 行）⇒ 按其 `childIds` 逐子块补发同形 `done`（consult 同族收齐批 · #748——子块 settled 驻留 ⇒ 消费点归档；机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8）。
 - **消化轮起跑档位（F-UC8——批 SUBAGENT-SIGNAL-LINES）**：宿主起跑载荷携 `tier` ∈ `ask` / `digest`（**按因两档**——ask 因优先；旗标取核既有载体，**禁新造第二判据**；判据与 CLI **同源同式**）；webview 按 `tier` 取键：`digest.turnLabel`（digest 档 / 缺省档）/ `digest.turnLabelAsk`（ask 档——**携参**）。
 - **ask 档携参**（载荷 `from` / `msg`——仅 ask 档条件携带）：`from` = 提问者 `role#id`；`msg` = 问题摘要（显示串——单行 + 截断 ≤120 字符，核单点 `upstreamAskLabelVars`）。
 - **计数元素随 `n > 0`**（两档同规）：`n > 0` ⇒ 建本轮计数元素（`dataset.n` = 起跑数）；`n = 0`（ask-only 轮）⇒ 不建（`_digestRoundEl` 置空）∧ end 侧**零动作**（禁兜底建元素——`dataset.n = "?"` 幻影行禁出）。起跑判据 = **本轮起跑即发**（`n` 可 0）。
@@ -770,3 +771,4 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
   §4.4：空窗差 = 消（CLI 补回退链）· N-W6 = 消（CLI 补对位剥离）；§5.5 块面 = 实证例外（视觉等价——维持 R3 面门）。**零机制改**。
 
 - 2026-09-30（**跨线清零轮 · 修正轮 1（评审轮 1 · 发现 2）· eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.11）：§4.6 三处收正——`:183` 渲染句改「`context X% Yk`」（补 `Yk` 绝对数）· `:184` 边界「不做项（类判据 + U-P5）」句退场 · D-W33 否决列同扫（与 `WEBVIEW-PROTOCOL.md` §6.1 context 行 ∕ U-P5 单口径一致）。**零机制改**。
+- 2026-09-30（**consult 同族收齐批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-consult-family.md` §1 · 台账 #748）：§5.1 消化回收条补 **consult 会话条目展开**（`childIds` 逐子块补发 `done`）。**VSC 产品码随动 = `reclaimDigestedBlocks` 展开**；机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8。明细 = 批档 §2。

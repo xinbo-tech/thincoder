@@ -49,15 +49,16 @@
 
 - **发射面** = `printCompletion(shell)`（`thincoder-cli/src/completions.mjs`）；`completion` 分支在 `bin/thincoder.mjs` 分发（非法 shell ⇒ usage + 退出 1）。
 - **横深对齐**：三套脚本须覆盖 §2 表内旗标词面——**ledger 族已对齐（#677 I8 已落）**；余缺口在册 = `session gc ∕ index` 旗标（`docs/cli/design/CLI-DEBT.md` §3-T1）。
-- **bash 源文本形 vs 发射字节形**（防改形漂移；同族各分支行逐字节同形）：
-  - 源档形（写入 `completions.mjs` 模板字面量内——**两反斜杠**）：`\\$(compgen -W "<词表>" -- "\\$cur")`
-  - 发射形（`thincoder completion bash` 输出——**单反斜杠**）：`\$(compgen -W "<词表>" -- "\$cur")`
-  - 判据 = 与同族既有分支行（`chat` / `memory` 子命令与旗标 / `distill` / `completion` / 顶层词表行）同形；断言面 = 机检形 MS-2 的字节断言（§4）。
+- **bash 源文本形 ≡ 发射字节形**（防改形漂移；同族各分支行逐字节同形；2026-09-30 缺陷修复批 #704 收正——发射脚本即真实 shell 脚本，`\$(…)` 非命令替换）：
+  - 形（源档 `completions.mjs` 模板字面量内直写 = 发射字节，**零反斜杠**）：`$(compgen -W "<词表>" -- "$cur")`；分派行 = `case "$prev" in`。
+  - **JS 插值险位例外**：发射面须含字面 `${…}` 的段（`"\${COMP_WORDS[1]}"` 一类）在源档保留 `\${` 转义（模板字面量内 `\$` ⇒ 发射 `$`）。
+  - zsh 同族：分派行 = `case "$state" in` ∕ `case "$words[1]" in` ∕ `case "$words[2]" in`（发射面零 `\$`——双引号内 `\$` = 字面 `$` ⇒ 分派永不匹配；2026-09-30 同批收正）。
+  - 判据 = 与同族既有分支行（`chat` / `memory` 子命令与旗标 / `distill` / `completion` / 顶层词表行）同形；断言面 = 机检形 MS-2 的字节断言（§4）+ `bash -n` 语法腿（真机走查）。
 - **测试沙箱纪律**：任何驱动 `node bin/thincoder.mjs …` 的子进程用例须以临时目录作 `HOME` / `USERPROFILE`（先例 = `thincoder-cli/test/session-gc-cli.test.mjs` 沙箱段）——入口无条件 `prepareCrashReporting()`（mkdir + 30 天 purge）⇒ 无沙箱会**真触** `~/.thincoder/crash-reports/`。**禁触真实 `~/.thincoder`**。
 
 ## 4. 机检形（#350 契约）
 
-**宿主** = `thincoder-cli/test/memory-sweep-cli.test.mjs`（已落 · 实读 **79**——CLI 两层 glob 自动收集，零登记）。三例：
+**宿主（as-of 2026-09-30 收正）**：原宿主 `thincoder-cli/test/memory-sweep-cli.test.mjs` 随**测试树全清重置（2026-09-28）**退场——现载体 = 缺陷修复批 #704 批内件 `docs/batches/2026-09-30-defect-fixes-cli.test.mjs`（MS-2 锁定形含 §3 发射字节形 + zsh 分派行）；**回迁 = 测试体系重建轮**（口径先例 = 台账 #698）。三例：
 
 - **MS-1 · 源码 token 机检**：读 `bin/thincoder.mjs` + `src/command-table.mjs` + `src/cli/memory-command.mjs` 源文本，断言 `case "memory"` 分发面 · `case "sweep"` 分支 · `SWEEP_USAGE` 行 · 三旗标 token。
   **耦合义务**：命令分发表外提（触发在册 = `docs/cli/design/CLI-DEBT.md` §2.1 A4）**已履行（拆档批 R4——2026-09-28）**：读取面锁点随分发落点改指 `src/command-table.mjs`。
@@ -73,6 +74,7 @@
 - 判据源 = 实装面 + 各批裁定（补全面 / 机检形逐条注实装源——§2 / §4）。
 
 ## 变更记录
+- 2026-09-30（**缺陷修复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-defect-fixes.md` §2 ∥ 台账 #704）：§3 发射契约收正（**源档形 ≡ 发射字节形**——原单反斜杠形致 `bash -n` 语法错 ∕ zsh 分派不匹配；JS 插值险位 `\${` 例外写明）；§4 MS-2 宿主行收正（原宿主随测试树全清退场——现载体 = 批内件，回迁随重建轮）。
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§3 横深对齐句收正（ledger 族已补——#677 I8；余缺口 = T1）。**零新语义**。
 
 - 2026-09-25（**cli-small-items 批 · 台账 #350 命令入口面载体收口**）：建档——承设计评审轮 1 发现 11（命令入口面设计档归属缺位）：① §2 命令树与旗标全集（as-of 实读 · 词表基准）；② §3 补全发射契约（源文本形 / 发射字节形 / 沙箱纪律）；③ §4 #350 机检形三例（含 A4 耦合义务）；④ §5 边界与缺口指针（`docs/cli/design/CLI-DEBT.md` §3 尾项 T1–T3）。

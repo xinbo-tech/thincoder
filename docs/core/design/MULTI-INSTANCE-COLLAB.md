@@ -53,7 +53,7 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
 - 读 manifest `slotSessions` → 按 sessionId（`{pid}-{ts}-{rand}` 进程级）去重分组 → slots 数组；
 - **一次批量判活**（`batchAlive(pids)`——`thincoder-core/process-probe-exec.mjs:96`，单次 tasklist/ps 全量比对）；探测失败（null）≠ 全死——按「无活伴」降级（不显示幽灵同伴）；
 - self = `sessionId === getSessionId()`（本进程恒活不查）；
-- **端字段**：`probeCmdlines(pids)`（`thincoder-core/process-probe-exec.mjs:146`）一次 exec 拿全部 pid+cmdline，`VSC_END_RE`（extensionHost 族）命中 → `vscode`；桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段）命中 → `desktop`；其余 → `cli`〔2026-09-29 parity-b1 收正轮〕；失败 → end 缺省；
+- **端字段**：`probeCmdlines(pids)`（`thincoder-core/process-probe-exec.mjs:146`）一次 exec 拿全部 pid+cmdline，`VSC_END_RE`（extensionHost 族）命中 → `vscode`；桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段 ∥ `node_modules/electron/dist/` 段〔2026-09-30 缺陷修复批 #707 扩〕）命中 → `desktop`；其余 → `cli`〔2026-09-29 parity-b1 收正轮〕；失败 → end 缺省；
 - **惰性缓存（TUI 假死批收正 · 2026-09-18）**：命中判据 = **manifest mtime 未变 ∨ 快照年龄 < `PEER_PROBE_TTL_MS = 5000` ms** ⇒ 直接返回缓存快照（零 exec 零读）；
   缺失 / 损坏 → `[]`（不缓存空结果）；缓存上限 `CACHE_MAX = 64`；快照记 `probedAt`（上次实探时刻）。
   **可测缝（TTL 两侧）**：模块级 `nowFn`（缺省 `Date.now`——经 `_setPeerInstancesTestImpl` 注入、`??` 兜底、测试 finally 恢复）
@@ -68,7 +68,7 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
   同步面仅剩**两处有界同步消费**（同束 `probeOwnersSync`，`SYNC_PROBE_MS` = 2 s 紧界）：① `activeSlot` 冷路径；② 占用判定 `slotOccupancy`（`thincoder-core/session.mjs`，拆分后随 `session-lifecycle.mjs`）。
   两处均带**零探测早退**（粘性早退 / 无属主或本进程属主）——详面 = `SESSION.md` §6.2；测试锚 = 本档「判据（测试层 · F-MI7）」条 ③。
 - **活判定身份校验（本批 · F-MI6 / N-MI6 · 2026-09-16 · 评审 #3 落点澄清）**：身份过滤**不进 `batchAlive`**（保持**纯存在性**——`thincoder-core/peer-domains.mjs` 死文件清理语义零变、**零改**）；过滤落点 = **读面 `peerInstances()`**（存在性结果 × 命令行复核）+ **清理面 `filterDeadOwners`**（详面见下条判据单源）。命令行命中**本产品标记族**才计为活同伴。
-  标记族 = ① CLI 入口族（命令行含 `thincoder.cjs` / `thincoder.mjs` / `thincoder-cli` 路径段）· ② VSC 宿主族（既有 `VSC_END_RE`——extensionHost）· ③ 桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段；2026-09-29 parity-b1 收正轮补入）；
+  标记族 = ① CLI 入口族（命令行含 `thincoder.cjs` / `thincoder.mjs` / `thincoder-cli` 路径段）· ② VSC 宿主族（既有 `VSC_END_RE`——extensionHost）· ③ 桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段 ∥ `node_modules/electron/dist/` 段〔2026-09-30 缺陷修复批 #707 实测扩入——桌面 dev 相对路径启动形〕；2026-09-29 parity-b1 收正轮初入）；
   命令**明确可得且不命中** ⇒ 不列为同伴（消除 pid 复用假阳性——台账实测 `docs/TODO.md:27`）；命令探测失败 / 该 pid 缺行 ⇒ **保守保留**（探测失败 ≠ 死；既有降级语义不变）。
 - **判据单源**：身份判据实现住 **`thincoder-core/process-probe.mjs`**——`batchAlive` / `probeCmdlines` / `isProductProc(cmdline)` / `classifyEnd` / `filterDeadOwners`；
   **感知面（读）与陈旧记录清理面（写）调用同一实现**，零第二套标记正则（清理面 = `thincoder-core/session-slots.mjs` `cleanDeadOwners`（as-of 2026-09-18 `:205-219`）（机制面 = `SESSION.md` §6.2）——`isProcessAlive` 之外加身份复核，pid 活 + 身份不符 ⇒ 条目可删）。
@@ -83,7 +83,7 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
   **失败 ⇒ `aliveSet = null`（未知）**：判据层按「保留 / 不可认领」降级（三态判据），**任何调用面不得把 `null` 当「全死」**。
 - **已知局限（本批登记）**：manifest 记录不含 cwd、进程 cwd 无跨平台可移植获取面 ⇒ 被他 cwd 的**真实** thincoder 实例（或他窗口 VS Code 宿主）复用 pid 时仍可能误报——根因 = 身份判据不含 cwd（§8 D-MI9 已否决 cwd 匹配）；处置方向 = **保守保留**（D-MI10 不对称）；**消解路径未定**（登记为已知局限，非本批可解）。
 - **已知局限（误删方向 · 本批登记 · 复审 #3）**：标记族**假阴性**——真实本产品实例命令行不含 `thincoder.cjs` / `thincoder.mjs` / `thincoder-cli` 路径段且非 extensionHost（如包装器 / 新入口形态）⇒ 清理面会删**活**属主槽条目——正是 `D-SE3` 要防的「双进程同槽」方向（`D-MI10` 不对称只护「探测失败 / 缺行」）。
-  接受边界 = 入口族命中面（CLI 入口段 / extensionHost）内无此方向；族外残差接受（放宽标记族 = 复引入 pid 复用误报——`D-MI11` 判据零改）；消解路径 = 实测出现该形态时按形态补进标记族（单源改点 = `isProductProc`）。
+  接受边界 = 入口族命中面（CLI 入口段 / extensionHost）内无此方向；族外残差接受（放宽标记族 = 复引入 pid 复用误报——`D-MI11` 判据零改）；消解路径 = 实测出现该形态时按形态补进标记族（单源改点 = `isProductProc`）。**2026-09-30 兑现（#707）**：桌面 dev 相对路径启动形按此路径补入桌面族；同批含「误删风险面」负控腿（活属主 + 该形 ⇒ 不判死 / 不删）。
 - **判据（测试层 · 需求档 F-MI6 / N-MI6）**：读面 = `thincoder-core/test/peer-instances.test.mjs`（注入缝 `:37/:44` 首用——身份不符 ⇒ **不列为同伴**；身份符 / 探测失败 / 缺行 ⇒ **保留**）；清理面 = `thincoder-core/test/session-slot-write.test.mjs`（同判据：不符 ⇒ 删，不确定 ⇒ 不删）；
   本批受影响文件（当前行数 / 增量）= 批次档 `docs/batches/2026-09-18-init-block.md` §2.3 + 同档 §2「fix 轮附录」（实施面受影响文件；F-MI6 侧沿革 = 批次档 `docs/batches/2026-09-15-core-defect-fixes.md` §四）。
 - **判据（测试层 · 需求档 F-MI7 · 本批锚 · 2026-09-18）**：测试档 = `thincoder-core/test/process-probe.test.mjs`（束 API / 三态 / 注入缝计数 / 零同步 exec 扫描——核半）· `thincoder-core/test/session-slot-write.test.mjs`（扩——有界同步例外锚）· `thincoder-vscode/test/zero-sync-exec.test.mjs`（零同步 exec 扫描——端半；随 2026-09-28 测试树全清重置退场——重建时恢复）；四路锚：
@@ -438,4 +438,5 @@ VSC 侧无此形态（各路径现用现读）。
 
 - 2026-09-29（**doc-backfill 批 · 波 1 · eng-designer**——承 `docs/batches/2026-09-29-doc-backfill.md` §2 · 台账 #612）：档名收正——`agent/dispatch.mjs` 引用六处改指现体 `agent/dispatch-run.mjs`（2026-09-28 拆分；写前 `:52` ∕ 写后 `:65` ∕ `:115`）；
   §4.4.6 钩点行读数收正（拆分后 `dispatch.mjs` **254** ∕ `dispatch-run.mjs` **167**——原 499 贴硬限面已消解）；零同步 exec 扫描端半档两处补退场标注（随 2026-09-28 测试树全清重置退场——重建时恢复）。**零新语义**（坐标 ∕ 读数 ∕ 退场标注）。
+- 2026-09-30（**缺陷修复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-defect-fixes.md` §2 ∥ 台账 #707）：§3.1 桌面族成员扩（+ `node_modules/electron/dist/` 段——桌面 dev 相对路径启动形实测消解；端字段行同拍）；「已知局限（误删方向）」条落**兑现注**（已登记消解路径「实测补族」执行 + 负控腿登记）。判据（`ownerState` 三态 ∕ `D-MI10` 不对称）零改。
 

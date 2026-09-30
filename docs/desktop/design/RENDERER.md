@@ -1,7 +1,7 @@
 # 桌面端（DESKTOP）· 渲染面实现工艺
 
 > 板块 = **桌面端渲染面（前端）实现工艺**——零框架 DOM 层 · 单状态树 `store` · 渲染粒度与流式缝合 · 有界渲染窗口 · 回填与跟滚。
-> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D31 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
+> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D33 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
 > 同部分相关档：进程与目录形态（渲染面目录与模块注）= `docs/desktop/design/SHELL.md` §1 · 通道与载荷 = `docs/desktop/design/IPC.md` · 界面形态与交互 · 借用清单形态面 = `docs/desktop/design/UI.md` · 逐文件预算（§4.1）= `docs/desktop/design/PROJECT.md`。
 > 核机制面（agent 主循环 / 工具 / 记忆 / 配置 / 会话）**只住核**——本档只做**接入面**设计，不重述核语义（单一权威源）。
 > 建档：2026-09-25（桌面端设计批 1 · 分档轮）；本档坐标 = as-of 2026-09-25 实核（仓根 = `thincoder/`）。
@@ -21,10 +21,11 @@
 | 更新纪律（帧合并 · 收核） | 触发源 = store 变更 ⇒ 核帧合并件 `mark`；单飞 rAF + `FRAME_MIN_MS`(50) 间隔；每帧每面至多绘一次 + 布局节俭 + 帧尾动作；帧内组合（就地改 + 追加）= `patch-append` 档——不回落重挂 | 本档 §1.2 · `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-9 |
 | 设置面 / 向导（批 9） | 两形构树（`thincoder-desktop/renderer/views/settings.mjs` / `thincoder-desktop/renderer/views/onboarding.mjs`）+ 薄挂载出档（`thincoder-desktop/renderer/mount-settings.mjs`）；**零新事件通道**（请求通道）；向导闸 = `config:read` 回执 `configured` | 本档 §1.1 · `docs/desktop/design/UI.md` §1 设置面 / 首启向导行 |
 | 提问与计划卡 · 输入区（批 A） | 提问卡 / 计划卡 = 流内非块节点，纯构树（`thincoder-desktop/renderer/views/question.mjs` / `thincoder-desktop/renderer/views/plan.mjs`——零 `store` import）· 输入区 = 中区底行挂载出档（`thincoder-desktop/renderer/mount-composer.mjs`，自 `app.mjs` 拆出）· 卡族挂载与出站 = `thincoder-desktop/renderer/mount-cards.mjs`（批 A 修正轮——`question:respond` 出站 + 清本键 `questions` 切片 + 清位标） | 本档 §1.1 · `docs/desktop/design/UI.md` §1 输入区 / 提问呈现 / 计划面行 |
-| 挂起窗与消化轮（桌面空闲唤醒） | 宿主挂起驱动（消费核件）= 空闲子任务 settle ⇒ 自唤醒消化轮；两事件面 `ev:susp`（计数：状态行段 3 第三态）· `ev:digest`（边界：流内消化状态行）；挂起空闲输入开放；块归档（**回收窗（reclaim 形）**——消化完成点对 `consumed` 实参逐条补发 `done`（`hooks.reclaim` = **主面**；对位 VSC `thincoder-vscode/src/extension/suspension.mjs:112-119` ∥ CLI `thincoder-cli/src/tui/suspension-drive.mjs:173`）；退出 freeze = 兜底同型（`ev:susp {active:false}` 径）；**待消化块来源 = 全族 settle**——非挂起态亦发 `settled`（块到达时点归位批 · #746——本批以其落地为依赖）） | 本档 §1.1 · `docs/desktop/design/PROJECT.md` §2 KD-34–36 · `docs/desktop/design/IPC.md` §1 |
+| 挂起窗与消化轮（桌面空闲唤醒） | 宿主挂起驱动（消费核件）= 空闲子任务 settle ⇒ 自唤醒消化轮；两事件面 `ev:susp`（计数：状态行段 3 第三态）· `ev:digest`（边界：流内消化状态行）；挂起空闲输入开放；块归档（**回收窗（reclaim 形）**——消化完成点对 `consumed` 实参逐条补发 `done`（consult 会话条目 ⇒ 按其 `childIds` 逐子块补发——consult 同族收齐批 · #748；`hooks.reclaim` = **主面**；对位 VSC `thincoder-vscode/src/extension/suspension.mjs:112-119` ∥ CLI `thincoder-cli/src/tui/suspension-drive.mjs:173`）；退出 freeze = 兜底同型（`ev:susp {active:false}` 径）；**待消化块来源 = 全族 settle**——非挂起态亦发 `settled`（块到达时点归位批 · #746——本批以其落地为依赖）） | 本档 §1.1 · `docs/desktop/design/PROJECT.md` §2 KD-34–36 · `docs/desktop/design/IPC.md` §1 |
 | 有界渲染窗口 | 见本档 §2 | 本档 |
 | 回填与跟滚 | 见本档 §3 | 本档 |
 | 右栏宽度拖动（chrome 级直写 · D30） | 拖柄三段交互 + 内联 `--pool-w` 直写（rAF 合帧）· 界 = CSS `clamp` 单落点 · 持久化 = `localStorage`（端自有 UI 态） | 本档 §1.3 · `docs/desktop/design/UI.md` §1 本批注 |
+| 主题三态（chrome 级状态 · D33） | `data-theme` 状态（单写者 `theme.mjs`）+ 单块 `light-dark()` 值对 + `localStorage` 持久化 · 零 IPC | 本档 §1.4 · `docs/desktop/design/UI.md` §1 本批注 |
 
 ### 1.1 视图面形态：纯描述符 + 薄挂载
 
@@ -44,7 +45,7 @@
   **流内压缩状态行** `[data-compress]`（R4 增）= 非块节点组同侧单元素四态（start ∕ done ∕ fallback ∕ failed——形 / 在场 / 生命期 = `docs/desktop/design/IPC.md` §1 `ev:compress` 行；构树面 = `thincoder-desktop/renderer/views/compress-status.mjs`）；**定位 = 流元素冻结点**（单源 = 本档 §1.1 插入点纪律条）
   · **卡序闭集 += `goal`（尾位）**（R5 增——核件 `renderGoalPanel` 直取；卡序单源 = `thincoder-desktop/renderer/mount-cards.mjs` `CARD_ORDER`）· **`ledgerDetail` 行**（R8 增——`ev:ledger` `detailLines` 切片 ⇒ 状态行段 11 tooltip 载波，非块节点）；
   **在场 / 出现 / 更新 / 退场路径**：在场 ⟺ 轮集非空（逐轮累积）；出现 = `start` 帧**落座次**（= 起跑帧当刻流末〔起跑水位 = 起跑时已有块数〕；起跑后常规新块随流居其下；归档块按到达序入其消费轮座次位——先于该轮行族）∥ 行族缺 ∧ 本轮在场 ⇒ 构树自愈（座次插）∥ 更新 = **本轮计数行就地换文**（`end`——标签行零动）∥ 退场 = **零摘除**（旧轮随流自然卷走；重挂 ∕ 首屏整置 = 唯一清点）；**行元素为非块节点 ⇒ 不占块序 ∥ 不计 `data-blocks`**（**随窗**——重建径在场面 = 记录位次落于已渲染块区——留档批 · #719；沿本档 §1.1 ∕ §2 口径）**；插入点 / 根子序与帧尾态刷成员 = 本档 §1.1 两条纪律（两处皆本族点名）；
-  **块归档面**（**回收窗（reclaim 形）**：消化完成点 = `hooks.reclaim(consumed)` 实参逐条补发 `ev:subagent { status: "done" }`（`thincoder-desktop/src/main/suspension-drive.mjs` `reclaim` 钩——**主面**；对位 VSC `thincoder-vscode/src/extension/suspension.mjs:112-119` 逐条补发 ∥ CLI `thincoder-cli/src/tui/suspension-drive.mjs:173` reclaim → `freezeReclaimDigestedBlocks`）——`settled` 待消化块（**含非挂起态 settle——块到达时点归位批 · #746**）归档入流、**居消费行族之前**（落位 = 本档 §1.1 插入点纪律条）；退出 freeze = 兜底同型（`ev:susp {active:false}` 径——对位 VSC `suspension.mjs:132-135` freeze 消息）；迟来 `done`（回合窗已闭——边界已清）⇒ 常规块插入点退化）；状态行段 3 三态与词键 = `docs/desktop/design/IPC.md` §1「挂起 ∕ 消化词键注」。
+  **块归档面**（**回收窗（reclaim 形）**：消化完成点 = `hooks.reclaim(consumed)` 实参逐条补发 `ev:subagent { status: "done" }`（consult 会话条目 ⇒ 按其 `childIds` 逐子块补发——consult 同族收齐批 · #748；`thincoder-desktop/src/main/suspension-drive.mjs` `reclaim` 钩——**主面**；对位 VSC `thincoder-vscode/src/extension/suspension.mjs:112-119` 逐条补发 ∥ CLI `thincoder-cli/src/tui/suspension-drive.mjs:173` reclaim → `freezeReclaimDigestedBlocks`）——`settled` 待消化块（**含非挂起态 settle——块到达时点归位批 · #746**）归档入流、**居消费行族之前**（落位 = 本档 §1.1 插入点纪律条）；退出 freeze = 兜底同型（`ev:susp {active:false}` 径——对位 VSC `suspension.mjs:132-135` freeze 消息）；迟来 `done`（回合窗已闭——边界已清）⇒ 常规块插入点退化）；状态行段 3 三态与词键 = `docs/desktop/design/IPC.md` §1「挂起 ∕ 消化词键注」。
 - **池切片清点口径（批 8 落）**：池条目入池 = `ev:tool-call`（开始）、`ev:tool-result` 只收束 `status`——**清点 = 全量在场**（收束不摘除 ⇒ 长会话池切片单调增长）；
   **窗限 / 归档 = open**（登记 = `docs/desktop/design/PROJECT.md` §10 · `docs/desktop/design/UI.md` §2 项 1）；**队列族（批 A 落 · 「回合中插入」批收正）** = **零写者 · 席位保留**（用户排队消息改宿主单源 + `pending` 镜面——`pool.queue` 写面退场；单源 = `docs/desktop/design/UI.md` §1「本批注（回合中插入 · 步边界 pickup）」项 2）。
 - **回合尾三径（判据单源 · 批 A 修正轮）**：回合尾 = `ev:activity`（无 `fields`）的 `done` ∨ `stopped` ∨ **`ev:error`**（宿主错误结算——`ev:error` 行单源 = `docs/desktop/design/IPC.md` §1）；三径**同判据**（谓词 `isTurnTail` 住 `thincoder-desktop/renderer/events.mjs`）：**谓词入参形（点名）** = 吃**两通道形**——
@@ -138,6 +139,17 @@
   `pointermove`（相对算式 ⇒ 内联 `--pool-w` 写（**写径 = CSSOM**）；**rAF 合帧**——每帧至多一写）⇒ `pointerup` / `pointercancel`（**落定前置（刷一拍）**：rAF 待写在场 ⇒ 撤帧 + 同步落待值（末次 move 位）⇒ 再**读回实宽** ⇒ 归一写回 + 存储写入 + 撤类——落定后零迟到写）。
 - **界 = CSS 单落点**（`thincoder-desktop/renderer/chrome.css` 栅格行 `clamp`）：窗口 resize 零 JS（随窗重算）；模块侧零界常量（禁双实现）。
 - **持久化**（`localStorage` 键 `thincoder.desktop.poolWidth` · 整数 px）：读 ∥ 写皆捕获 + `console.error`（零静默）；读失败 ∥ 非法值 ⇒ 视同未拖过（零内联写）；写时机 = 仅落定一刻。
+
+### 1.4 主题三态面：`data-theme` 状态（D33 · 2026-09-30）
+
+- **面判定**：本面 = **chrome 级状态直写**（渲染面 · 零 IPC ∥ 零 `events` 依赖 ∥ 主进程零行为面）——先例 = §1.3（宽度面）+ `dataset.locale` 帧写径；**用户值覆写系统缺省**（`system` = 缺省态——非零态）。
+- **模块缝**（拟新增 `thincoder-desktop/renderer/theme.mjs`）：注入缝 `{ doc, storage }`（缺省 = `document` / `localStorage`）⇒ 平 node 直测；
+  导出 = `initTheme`（装配入口：读存储 ⇒ 归一 ⇒ 写 `documentElement.dataset.theme` ⇒ 返值）∥ `setTheme(value)`（出口：三值闭集校验 ⇒ 应用 + 落存储 ⇒ 返落地值；表外 ⇒ `null` + `console.error`）；常量 = 键 `thincoder.desktop.theme` ∥ `THEMES`（三值闭集——控件序单源）。
+- **装配两点**（`thincoder-desktop/renderer/app.mjs` / `thincoder-desktop/renderer/mount-settings-exits.mjs`）：① 装配期一次 `initTheme()` ⇒ `store.set({ theme })`（切片播种——先于首绘可及面，同 `initPoolWidth` 位）；② 设置面出口 `onSetTheme`（`setTheme` ⇒ 切片写——重绘触发键 = `mount-settings.mjs` `SETTINGS_KEYS` 增 `theme`）。
+- **值面**（`thincoder-desktop/renderer/theme.css`）：单块 `light-dark()` 值对（色值对 **24**——原双块收敛；`--error-fg` 同值单列）+ `color-scheme` 三态（`light dark` 缺省 ∥ 两枚 `:root[data-theme]` 覆写）；`@media (prefers-color-scheme: dark)` 退场。
+  值对函数支持面 = Chromium 123+（宿主实读 = Electron 44.4.5 ∕ Chromium 152.0.7977.130——`releases.electronjs.org`，2026-09-30）。
+- **持久化**（`localStorage` 键 `thincoder.desktop.theme` · 三值闭集串）：读 = 装配期一次 ∥ 写 = 点按即刻；读 ∥ 写皆捕获 + `console.error`——读失败 / 表外 ⇒ `system`（降级）；写失败 ⇒ 会话内照常（fail-soft）。
+- **单写者纪律**：`documentElement.dataset.theme` 写径全仓仅 `theme.mjs` 一处（机检负控腿）；任一 `theme` 切片写入须先经 `theme.mjs`。
 
 ## 2. 有界渲染窗口
 
@@ -284,6 +296,7 @@
 - 2026-09-30（**消化痕口径收正（用户 2026-09-30 15:4x ∥ 15:53 走查裁定）· eng-designer**——承 `docs/batches/2026-09-30-digest-persistence.md` §2 增量注记）：§1.1 涉句收正——**行入流（与内容同生态）**：无专门「摘 ∥ 留」处理；重建按记录位次复列（段界可辨）；「多轮就地累积 ∥ 驻留原位 ∥ 终态不摘」框架句清、留存语境 VSC 引用收为形面（对位基准纠偏 = VSC 无「留存不摘」行为——`chat-status.js:69-122` 零删除 ∥ `ui.js:205-212` 裁集不含消化行 = 残存现象非行为；来路 = R10 标签化 → #670 升格桌面目标——无用户点名 ∥ 用户腿未跑即收口，台账 #728 实查 v2 在册）。
 - 2026-09-30（**消化面留档批 · 回填轮（实施 A+B 落定）· eng-designer**——承批档 `docs/batches/2026-09-30-digest-persistence.md` §5 ∥ §2 回填轮注记）：本档 §1.1「留档记录」条随实读收正——`cap` 帧点坐标 `turn-face.mjs:122 ⇒ :134-135`（发帧 ∥ 记录同点双动作）；**写面薄壳登记**（端核隐式契约——`pushReal` 字段面）；**修单在册（待落）** = `end` 记录写点前移（结算序先于槽落盘）∥ **在册容差（2）**（跨页截断轮页内不产 ∥ 归档快照族落盘晚一拍）。**零新语义**（坐标 ∥ 裁定 ∥ 容差归置）。明细 = 批档 §2 回填轮注记。
 - 2026-09-30（**跨端承接批 · 机制单源上提 · eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2 · 台账 #726）：§1.1「留档记录」条**通用句指针化**——记录形 ∥ 写缝 ∥ 读缝契约 ∥ 重建义务 ∥ 容差登记单源上提 `docs/core/design/SESSION.md` §6.26（跨端承接批裁）；本档留 = 桌面侧呈现细节 + 写面薄壳消解路径登记（端壳下次触碰改调核 `pushRecord`）。**零桌面语义改 ∥ 桌面产品码零触**。
+- 2026-09-30（**主题切换批（D33 · 台账 #743）· 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-theme-switch.md` §1 骨架 + 需求 D33）：§1 索引增「主题三态（chrome 级状态 · D33）」行 + 新增 **§1.4**（面判定 ∥ 模块缝 ∥ 装配两点 ∥ 值面 ∥ 持久化 ∥ 单写者纪律）；档头需求侧行 **D1–D31 ⇒ D1–D33**；形态 ∥ 判据单源 = `docs/desktop/design/UI.md` §1「本批注（主题切换 · D33 · 2026-09-30）」∥ `docs/desktop/design/PROJECT.md` §2 **KD-61**。明细 = 批档 §2。
 - 2026-09-30（**消化回流归位批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-digest-reflow-anchor.md` §2 · 台账 #738）：§1 挂起窗行（块归档句 = **消化起跑窗**——`done` 于 `ev:digest start` 点补发；`reclaim` 兜底幂等）；§1.1 归约面条（**只留当轮** + 记录 ∥ 显示两面分离）、流内消化行族条（当轮元素 ≤ 1 · 行集 · 终态非 ask 标签行退场）、在场 ∕ 出现 ∕ 更新 ∕ 退场条（换代 = 旧轮退场）、块归档面（起跑窗语义）、插入点纪律条（补时点句）、根子序条 ∥ 留档记录条（复列最新一条）。**口径收正 = 用户 2026-09-30 15:4x ∥ 18:53 字面**（「只留当前」= 现行规格）。明细 = 批档 §2。
 - 2026-09-30（**跨端承接批 · 修正轮（评审轮 1 · 发现 5）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §3 轮次 1）：§1.1 留档记录条**容差（2）副本收敛为指针**（单源 = `docs/core/design/SESSION.md` §6.26 容差登记 ①/②；桌面特异半句保留）。**零桌面语义改 ∥ 桌面产品码零触**。
 - 2026-09-30（**消化回流归位批 · 修复轮（评审轮 1 · 发现 2 ∕ 3 ∕ 7 逐号）· eng-designer**——承批档 `docs/batches/2026-09-30-digest-reflow-anchor.md` §3 轮次 1）：§1.1 帧尾态刷成员句 ⇒ **当轮元素〔在场 ≤ 1〕**（原「逐轮元素」——同档两义收一）；在场 ∕ 出现 ∕ 更新 ∕ 退场条**换代钉径**（复用径亦须末位重锚——新轮行族落位唯一）；
@@ -300,3 +313,5 @@
 - 2026-09-30（**三端消化面统一批 · 预评审收正轮（歧义收正 + 三裁落位）· eng-designer**——承批档 `docs/batches/2026-09-30-triple-end-digest-unify.md` §2 收正块 · 台账 #747 · 父侧预评审自查〔22:0x〕）：§1.1『座次』表述三处**统一**（`:43` ∥ `:46` ∥ `:72`——座次 = 起跑帧当刻流末（起跑水位 = 起跑时已有块数）；起跑后常规新块随流居其下；归档块按到达序入其消费轮座次位——先于该轮元素）；行族遗留差异两条**随裁并入本批**（cap 行位置 ∥ 轮容器形态——对位 VSC 收正）；同裁副本同拍 = `docs/desktop/design/IPC.md` §1 ∥ `docs/desktop/design/PROJECT.md` §10 **DA** ② ∥ **KD-60** 上抛栏。**零新语义 ∥ 机制本体零改**。明细 = 批档 §2。
 - 2026-09-30（**三端消化面统一批 · 修复轮（评审轮 1 · 发现 1 ∥ 6 ∥ ① 落形裁）· eng-designer**——承批档 `docs/batches/2026-09-30-triple-end-digest-unify.md` §3 轮次 1）：§1 挂起窗行 ∥ §1.1 块归档面**起跑窗残句删**（现行口径 = 回收窗（reclaim 形）单留）；§1.1 **行族形态规范句落**（**无轮容器**——行元素 = 流内并列兄弟；**cap 行 = 尾追形**（本轮元素族末位）——对位 VSC 实形）——流内消化行族条 ∥ 在场条 ∥ 帧尾态刷成员 ∥ 流内非块节点族条 ∥ 插入点纪律条（座次句 ∥ 边界设施句）同拍；根子序句残句删（留档批 · #719——复列 = 页内全量轮）。**零新语义 ∥ 机制本体零改（除裁定落形）**。明细 = 批档 §2 修复轮块。
 - 2026-09-30（**三端消化面统一批 · 实施后收正轮（#747 实施交付）· eng-designer**——承批档 `docs/batches/2026-09-30-triple-end-digest-unify.md` §5 ∥ §2）：§1.1 **cap 行两径钉词**——**活流径 = cap 帧到达于流末锚补建 ∥ 重建径 = 族内紧邻**（**两径并存为设计**；**重挂后位次差 = 在册行为、非缺陷**——对位 VSC 同形：到达即 `appendChild` ∥ 重建按记录）；流内非块节点族条同拍。**零新语义**（父裁落档）。明细 = 批档 §2 实施后收正轮块。
+- 2026-09-30（**consult 同族收齐批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-consult-family.md` §1 · 台账 #748）：§1 挂起窗行 ∥ §1.1 块归档面——回收补发补 **consult 子块**口径（会话条目 ⇒ 按其 `childIds` 逐子块补发 `done`；子块 settle ⇒ `settled` 驻留）。
+  **桌面产品码随动 = `reemitDone` 展开**；机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8。明细 = 批档 §2。

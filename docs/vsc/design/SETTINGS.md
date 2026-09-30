@@ -48,6 +48,8 @@
 
 共享 `config.json` 的 `mcp.servers[]`（两产品同格式）；旧 VS Code settings 已一次性迁移。重名拒绝、args 空格分隔、env `KEY=value`。
 
+**装配面第二源（2026-09-30 · 台账 #701）**：MCP **装配面**（`thincoder-vscode/src/extension/panel-turn-loop.mjs` ro 载荷——实施落点）另并项目根 `.mcp.json`——单层发现（`join(cwd, ".mcp.json")`）· 零交互信任 · config 同名优先 ∕ 异名追加（机制单源 = `doc:MCP.md:§6.4`）；**管理面**（本节列表 ∕ 增删改 ∕ 重连 ∕ 探活）仍 config 单源（`.mcp.json` 源不进管理列表——沿 CLI `/mcp` 口径）。
+
 ### 2.5 语义索引（校验可见面）
 
 embedding key + 构建按钮 + 状态；向量维度 / 模型切换的校验与可见面归 `MEMORY（VSC 侧）` §4（索引有效性面）——
@@ -626,3 +628,4 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   §2.8 ∕ §2.10 三处 `settings.js` 坐标按现盘收正（`:78-100`⇒`:142-161` · `:116-122` + `:120` ⇒ `:163-172` + `:167` · `:131`⇒`:181`）。**零新语义**（站点接入 = 本批设计导出项；余为纯坐标收正）。
 - 2026-09-30（**vsc-residuals 批 · 实施后随动重锚轮 · eng-designer**——承 `docs/batches/2026-09-30-vsc-residuals.md` §2.11 · 台账 #675 ∕ #680）：
   §2.11（F-W18）锚 `panel-messages-settings.mjs:186` ⇒ `:186-187`（同档 JSDoc ∕ 函数行）· §2.15 站点锚 `:143` ⇒ `:143-144`（err 捕获 ∕ 发射两行）· §2.14 `handleSetAdvisorGuard:161-167` 实读在位（零改）。坐标口径 = 实施轮落盘后终态实读（as-of 2026-09-30）。**零新语义**。
+- 2026-09-30（**vsc-cleanup 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-vsc-cleanup.md` §2 · 台账 #701）：§2.4 补**装配面第二源**句（项目根 `.mcp.json` 并入装配——单层发现 ∕ 零交互信任 ∕ config 同名优先；管理面仍 config 单源；机制单源 = `doc:MCP.md:§6.4`）。**零新语义**（已裁形态的 VSC 面落档）。

@@ -516,7 +516,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 
 1. **声明键（新增）**：`PROJECT-MANIFEST.json → index.excludePaths`——项目根相对路径前缀数组；元素 = trim 后非空串、**首部 `./` 剥离**（归一为项目根相对形）、`/` 归一、去尾斜杠、去重保序；缺省 `[]`（零行为变化）。schema ∕ 校验 ∕ 缺省 = `manifest-schema.mjs`（`MANIFEST.md` §2.2 同批收正）；投影出口 = `conventions.mjs` `loadProjectDeclaration().index.excludePaths`。
 2. **过滤谓词（单源）**：`conventions.mjs` 新出口 `isExcludedRelPath(rel, decl)`——前缀命中 = 恰等 ∨ 后随 `/`（`openclaw` 不吞 `openclaw-fork`）；比较基 = 项目根相对面（与 D17 段匹配面同基）。
-   **语义保证 = 会话于项目根启动**（实装比较基 = 会话 cwd 相对 `rel`——cwd = 项目根时等义于项目根相对面 ∕ 判据腿全成立；cwd 深于项目根 ⇒ 排除不命中 ∕ 同名前缀可误伤 cwd 子树；**统一基面 = 台账 #700**，条件项）。
+   **基面换算（2026-09-30 缺陷修复批 #700 落）**：谓词携 `base`（调用面 cwd/origin——`rel` 的相对基）：`rel` 经 `resolve` + `relative` 换算至 `decl.root` 根面再比前缀（各起效点携本面 `base`；cwd = 项目根时与既有行为逐字等义）；换算越出根面（`..` 头 ∕ 根外）⇒ **不命中**（保守不排除——沉默洞方向收窄）；`base` 缺省 = `rel` 原样（等价于根起步调用面）。
    **过滤起效点三处**：① `listProjectFiles`（git ∕ walk 两径同一谓词）——**walk 径 = 遍历中剪枝**：排除子树不展开（目录展开守卫位接谓词，零 `readdir`）、不耗 `MAX_WALK_FILES` 预算；接线 = `file-walk.mjs:94`（目录展开）∕ `:97`（文件守卫）双守卫位（实施后实读），谓词由调用方注入；git 径 = `git ls-files` 列表面逐行过滤（无预算耦合）。② `gitSync` diff 表。③ `reindexFile` 单文件缝。
    **收尾保护位（第四接线 · 非过滤起点）**：同步收尾 stale 删除对排除命中路径**短路**——被排除但存在的路径之存量行不因声明删除（受保护成员集：`isExcludedRelPath` 命中 ⇒ 跳删）；此类行仅经 `sweep --path` 收敛（安全三件不被同步旁路）。不引入按存在性的逐行 stat（预算零增）；`excludePaths` 缺省 `[]` ⇒ 短路恒不命中（零行为变化）。
 3. **存量剪枝执行路径（ops 面 · 父侧执行）**：`memory sweep` 新增 **`--path <sub>` 档**（须与 `--origin` 同用）：删除范围 = `origin = normalizeOrigin(o)` ∧ `path` 命中前缀 `<sub>` 的 `code_chunks` ∕ `doc_chunks` 行（`files` 表不涉——记忆层非项目文件）；安全三件与 §6.13 同款（备份前置 · 干跑默认 · 审计 + 写后回读：命中行 0 ∧ 非命中行逐键等前值）；零命中 ⇒ 不取备份、零写。
@@ -644,7 +644,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - **CLI 人类命令面**（`thincoder memory <list|search|put|remove|sweep>`）：`list` / `search` / `put` 为 personal-only 核心面（search limit 10、list 支持 `--type`）；`remove` 走同一 `deleteByUid` 路由（uid 全 layer + 裸数字兼容）——命令行与工具核心路由复用，无漂移；命令面**无**共享层 list / 过滤形态、**无** clear / 批量删（那些是 agent 工具面能力）。
 - **`sweep` 子命令（2026-09-25 新增）**：`thincoder memory sweep [--origin <o>] [--dry-run|--confirm]`——origin 级库治理（缺省 = 死 origin 全扫；`--origin` = 靶向整档删除）；干跑默认、写档 `--confirm`；机制 / 安全设计 / 执行分工 = §6.13。与上列 personal-only 面并列（命令面写闸 = `--confirm`）——**不属** agent 工具面能力（`clear` / 批量删仍无）。
 
-- **索引范围声明的边界（§6.14）**：`index.excludePaths` 只辖**未来**同步（含单文件缝）；存量行收敛 = `sweep --path`（ops）——**同步收尾删除对排除路径短路**（存量行零触碰——同步不代行剪枝）。前缀语义不展开通配（glob ∕ 正则不做——出现实测需求再补）。**语义保证 = 会话于项目根启动**（实装比较基 = 会话 cwd 相对 `rel`——cwd = 项目根时与声明基等义；cwd 深于项目根 ⇒ 排除不命中 ∕ 同名前缀可误伤 cwd 子树；统一基面 = 台账 #700，条件项）。
+- **索引范围声明的边界（§6.14）**：`index.excludePaths` 只辖**未来**同步（含单文件缝）；存量行收敛 = `sweep --path`（ops）——**同步收尾删除对排除路径短路**（存量行零触碰——同步不代行剪枝）。前缀语义不展开通配（glob ∕ 正则不做——出现实测需求再补）。**比较基 = 项目根相对面（实装同步——2026-09-30 #700 落）**：排除谓词携 `base` 换算（cwd 深于项目根亦等义）；换算越出根面 ⇒ 不命中（保守不排除）。
 - **行预算常量不可声明（§6.14 P2）**：WARN ∕ CAP 为核常量；需要按项目调节时另立声明键（触发 = 实测需要）。
 - **`D:/dgx-spark` 系 origin（含变体）与未归一变体 `D:\teamcode`**：存量行处置 = sweep 面（信号 A 折叠 + 用户裁定的 origin ∕ 子树删除）；非本批默认动作。
 
@@ -705,3 +705,4 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - 2026-09-30（**memory.db 家族批 · 设计评审修正轮 2（发现 3 ∕ 4 ∕ 5）· eng-designer**——承 `docs/batches/2026-09-30-memory-db-family.md` §3 轮次 2 · §2.13）：§6.14 面① 第 2 件——walk 径排除 = **遍历中剪枝**语义钉死（`file-walk.mjs:91` ∕ `:94` 双守卫位接线）+ 新增**收尾保护位**（同步收尾 stale 删除对排除命中路径短路——存量行不因声明删除，收敛仅经 `sweep --path`）；L-①-2 扩为**四半条**（+ walk 剪枝判别 ∕ `reindexFile` 零写断言形 ∕ 声明加入后存量行逐键不变）；B6 行 ∕ 面① 第 3 件分工句 ∕ §8.3 边界句随动。**产品码零触**（实施轮另起）。
 
 - 2026-09-30（**memory.db 家族批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-memory-db-family.md` §5 实施回执 + §1.12 父裁）：§6.14 面② B6 行 ∕ 面③ P2 行——收尾 ∕ 预算段坐标收正（实施后现体 = `memory/sync-tail.mjs`：`sweepStaleRows:65-80` ∕ `createRowBudget:35-56` 单源，两同步入口消费）；面① 第 2 件 + §8.3 边界行加**嵌套 cwd 限定句**（语义保证 = 会话于项目根启动；统一基面 = 台账 #700，条件项）；P3 措辞收正（库字节读数面 = `memoryStatus` 核出口——删「开库」限定）。**产品码零触**。
+- 2026-09-30（**缺陷修复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-defect-fixes.md` §2 ∥ 台账 #700）：§6.14 面① 第 2 件 + §8.3 边界行——`isExcludedRelPath` 基面收正（谓词携 `base` 换算至根面；越出根面不命中；各起效点携 base）；「语义保证 = 会话于项目根启动」限制句删除（限制已消解）。**产品码零触**（实施轮另起）。
