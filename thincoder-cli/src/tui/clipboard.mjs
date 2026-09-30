@@ -1,3 +1,9 @@
+import { mkdirSync, writeFileSync } from "node:fs"
+import { readFile, stat, unlink } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { IMAGE_MAX_BYTES, savePastedImages } from "@thincoder/core/attachments.mjs"
+import { cleanupOldToolResults } from "@thincoder/core/agent/helpers.mjs"
 import { C } from "./ansi.mjs"
 
 /** Windows clipboard-read command: force UTF-8 console output so Get-Clipboard's bytes
@@ -132,49 +138,87 @@ export function stripKeyboardProtocol(text) {
   return text.replace(/\x1b\[\d+;\d+u/g, "").replace(/\x1b\[27;\d+;\d+~/g, "")
 }
 
-/** Ctrl+V / Alt+V: read clipboard image → write temp file in working directory → insert read_image command into input box.
- *  Extracted from index.mjs.
- *  ctx: { agent, state, pushLine, render } */
-export async function pasteClipboardImage(ctx) {
-  const { agent, state, pushLine, render } = ctx
+/** 平台剪贴板图像捕获（缺省实现——写 staging ∥ 无图抛）：Windows = PowerShell
+ *  System.Windows.Forms（无图 ⇒ exit 1 ⇒ 抛）；macOS = osascript PNGf；其余 = xclip → wl-paste 回退。
+ *  截图直接写 `dest`（系统临时区 staging——不入项目树）。 */
+async function captureClipboardImage(dest) {
   const { execFile } = await import("node:child_process")
-  const { stat, unlink } = await import("node:fs/promises")
-  const { join } = await import("node:path")
-
   const run = (cmd, args) => new Promise((resolve, reject) => {
     execFile(cmd, args, { timeout: 10000 }, (err, stdout) => { if (err) reject(err); else resolve(stdout) })
   })
-
-  const dest = join(agent.cwd, `.thincoder-paste-${Date.now()}.png`)
   const isWin = process.platform === "win32"
   const isMac = process.platform === "darwin"
+  if (isWin) {
+    const psScript = `Add-Type -AssemblyName System.Windows.Forms; if ([System.Windows.Forms.Clipboard]::ContainsImage()) { [System.Windows.Forms.Clipboard]::GetImage().Save('${dest.replace(/\\/g, "\\\\")}', [System.Drawing.Imaging.ImageFormat]::Png); exit 0 } else { exit 1 }`
+    await run("powershell", ["-NoProfile", "-Command", psScript])
+  } else if (isMac) {
+    const script = `try; set f to (POSIX file "${dest}"); set img to the clipboard as «class PNGf»; set fd to open for access f with write permission; write img to fd; close access fd; end try`
+    await run("osascript", ["-e", script])
+  } else {
+    await run("bash", ["-c", `xclip -selection clipboard -t image/png -o > "${dest}" 2>/dev/null || { which wl-paste >/dev/null 2>&1 && wl-paste -t image/png > "${dest}" 2>/dev/null; } || exit 1`])
+  }
+}
 
+/** 贴图 buffer ⇒ 核正路落盘（**唯一写盘者 = 核 `savePastedImages`**）：写时扫除
+ *  （`cleanupOldToolResults(<cwd>/.thincoder/tmp)`——3 天窗 mtime 回收；扫除失败不影响落盘）⇒
+ *  构 dataURL ⇒ 调核 `savePastedImages(dataUrls, cwd, { fs })` ⇒ 路径 ∥ null（核弃项 ∥ 写败）。
+ *  @returns {Promise<string|null>} `<cwd>/.thincoder/tmp/paste-<id>-0.png` 绝对路径 / null */
+export async function savePastedImageBuffer(buffer, cwd) {
+  const tmpDir = join(cwd, ".thincoder", "tmp")
+  await cleanupOldToolResults(tmpDir)
+  const dataUrl = `data:image/png;base64,${buffer.toString("base64")}`
+  // 契约「路径 ∥ null」——核内异常（未接线等）归「写败」径，不越出本函数
   try {
-    if (isWin) {
-      const psScript = `Add-Type -AssemblyName System.Windows.Forms; if ([System.Windows.Forms.Clipboard]::ContainsImage()) { [System.Windows.Forms.Clipboard]::GetImage().Save('${dest.replace(/\\/g, "\\\\")}', [System.Drawing.Imaging.ImageFormat]::Png); exit 0 } else { exit 1 }`
-      await run("powershell", ["-NoProfile", "-Command", psScript])
-    } else if (isMac) {
-      const script = `try; set f to (POSIX file "${dest}"); set img to the clipboard as «class PNGf»; set fd to open for access f with write permission; write img to fd; close access fd; end try`
-      await run("osascript", ["-e", script])
-    } else {
-      await run("bash", ["-c", `xclip -selection clipboard -t image/png -o > "${dest}" 2>/dev/null || { which wl-paste >/dev/null 2>&1 && wl-paste -t image/png > "${dest}" 2>/dev/null; } || exit 1`])
-    }
+    const { paths } = savePastedImages([dataUrl], cwd, { fs: { mkdirSync, writeFileSync } })
+    return paths[0] ?? null
+  } catch {
+    return null
+  }
+}
+
+/** Ctrl+V / Alt+V：读剪贴板图像 → 系统临时区 staging（不入项目树）→ 读 buffer ⇒ staging 用毕即清
+ *  （读取后——与失败径同口径）⇒ `savePastedImageBuffer` 落 `<cwd>/.thincoder/tmp/paste-<id>-0.png`
+ *  → 插入 `read_image <最终绝对路径>`。
+ *  失败径（dim 提示行 ×3）：无图（捕获抛 ∥ 零字节）· 超阈（`IMAGE_MAX_BYTES` 单源早筛——stat 后
+ *  读前，不读巨件）· 写败（核落盘 ≤0 项）——均零插入、返回 null。
+ *  @param {{agent:{cwd:string}, state, pushLine:Function, render:Function}} ctx
+ *  @param {((dest:string)=>Promise<void>)|null} [captureImpl] — 捕获面测试缝（写 staging ∥ 无图抛）；
+ *    缺省 null ⇒ 平台捕获实现（生产调用点零改；参数作用域——零跨调用残留）
+ *  @returns {Promise<{insert:string, path:string}|null>} 成功 = 插入文本 + 最终绝对路径；失败 = null */
+export async function pasteClipboardImage(ctx, captureImpl = null) {
+  const { agent, state, pushLine, render } = ctx
+  const staging = join(tmpdir(), `thincoder-paste-${Date.now()}.png`)
+  const capture = captureImpl ?? captureClipboardImage
+  try {
+    await capture(staging)
   } catch {
     pushLine("Clipboard does not contain an image, or clipboard access failed", C.dim)
-    try { await unlink(dest) } catch {}
-    return
+    try { await unlink(staging) } catch {}
+    return null
   }
-
-  const st = await stat(dest).catch(() => null)
+  const st = await stat(staging).catch(() => null)
   if (!st || st.size === 0) {
     pushLine("Clipboard does not contain an image, or clipboard access failed", C.dim)
-    try { await unlink(dest) } catch {}
-    return
+    try { await unlink(staging) } catch {}
+    return null
   }
-
-  const cmd = `read_image ${dest}`
-  state.input.splice(state.cursor, 0, ...[...cmd])
-  state.cursor += cmd.length
-  pushLine(`[image pasted → ${dest}]`, C.tool)
+  if (st.size > IMAGE_MAX_BYTES) {
+    pushLine("Clipboard image too large (max 15MB)", C.dim)
+    try { await unlink(staging) } catch {}
+    return null
+  }
+  const buffer = await readFile(staging)
+  try { await unlink(staging) } catch {}
+  const path = await savePastedImageBuffer(buffer, agent.cwd)
+  if (!path) {
+    pushLine("Clipboard image could not be saved (write failed)", C.dim)
+    return null
+  }
+  const insert = `read_image ${path}`
+  const chars = [...insert] // codepoint 数组（同 insertPastedText 口径——cwd 含星平面字符时游标不漂）
+  state.input.splice(state.cursor, 0, ...chars)
+  state.cursor += chars.length
+  pushLine(`[image pasted → ${path}]`, C.tool)
   render()
+  return { insert, path }
 }

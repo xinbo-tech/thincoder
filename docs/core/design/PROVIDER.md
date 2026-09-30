@@ -268,7 +268,7 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
 **图片输入链（VSC）**：粘贴 / 拖拽 / 附加按钮 → webview 传 dataURL → `thincoder-vscode/src/extension/panel-messages.mjs` `routeUserTurn`（`:59`）内
 `savePastedImages`（`:82`）落盘 `<cwd>/.thincoder/tmp/paste-<id>-<i>.<ext>`（`src/extension/image-handler.mjs`；raster png / jpg / gif / webp 白名单 + >15MB 跳过）→
 `thincoder-vscode/src/agent/setup-reminders.mjs:22` `appendImagePointer` 给真实 user 消息追加 `[Attached images: …] — use the read_image tool to view them before answering.`（**非多模态模型直接 throw**——可见错误不静默丢）→
-模型调 `read_image` 带图进载荷。历史内容保持字符串（不回放 images）；贴图临时件清理 = 端侧时序面（核件零回收）：桌面 = 回合尾 `cleanupTurn` ∥ VSC = 贴图落盘写时 mtime 扫除（3 天窗——核 `thincoder-core/agent/helpers.mjs` `cleanupOldToolResults` 单源）；CLI = 未接（留存）。
+模型调 `read_image` 带图进载荷。历史内容保持字符串（不回放 images）；贴图临时件清理 = 端侧时序面（核件零回收）：桌面 = 回合尾 `cleanupTurn` ∥ CLI ∥ VSC = 贴图落盘写时 mtime 扫除（3 天窗——核 `thincoder-core/agent/helpers.mjs` `cleanupOldToolResults` 单源）。
 
 **贴图降级链（非视觉模型自动降级）**：非视觉模型贴图不再硬报错——自动降级为视觉模型子代理读图、文本描述注入主会话——用户无感换模型（VSC 主；CLI 镜像软引导）。触发点 = `routeUserTurn`（savePastedImages 后、主回合 LLM 请求前）：
 非视觉模型（`specForModel(provider.model).multimodal` 假）+ images 非空 + depth-0 → ① 视觉渠道查找（`thincoder-vscode/src/extension/vision-channel.mjs`——resolveProviders 扫 multimodal；判据与 appendImagePointer / read_image 注册门同源 = MODEL_SPECS multimodal）
@@ -492,3 +492,4 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - 2026-09-30（**doc-sweep 批 · 行宽收正 · eng-designer**——承 `docs/batches/2026-09-30-doc-sweep.md` §2 · 台账 #664）：provider-config-family 设计轮条（原单行 439 字符）**折行**（仅换行 ∕ 语义零改——doc-check 行宽闸收正）。**零新语义**。
 - 2026-09-30（**VSC 贴图件清理批**——承 `docs/batches/2026-09-30-vsc-paste-cleanup.md` §2 · 台账 #735）：§6.18 「文件随 offload 写时自清理」句收正——临时件清理 = 端侧时序面（桌面 = 回合尾 `cleanupTurn`；
   VSC = 贴图落盘写时 mtime 扫除〔3 天窗——核 `thincoder-core/agent/helpers.mjs` `cleanupOldToolResults` 单源〕；CLI = 未接（留存））；VSC 侧接线落地（`thincoder-vscode/src/extension/image-handler.mjs` 写时扫除）。
+- 2026-09-30（**批 core-tools-pairfix · 实施后收正** · eng-coder——承 `docs/batches/2026-09-30-core-tools-pairfix.md` §2 · 台账 #733）：§6.18 CLI 子句按落地真值收终形——`CLI ∥ VSC = 贴图落盘写时 mtime 扫除（3 天窗）`（CLI 侧接线落地 = `thincoder-cli/src/tui/clipboard.mjs` 写时扫除；「CLI = 未接（留存）」随撤）。核件 ∥ 桌面 ∥ VSC 零触。

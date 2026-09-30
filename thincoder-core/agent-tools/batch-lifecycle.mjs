@@ -150,9 +150,10 @@ export function createBatchRecord({ args, ctx, review, cwd, bases, onWritten }) 
 
 /**
  * 段内状态行单行改写（status/close 共用——append-only 的唯一豁免，域限状态行）：
- * 定位 `## §N` 段（sectionHeaderRe 单源），段内找 STATUS_LINE_RE 行整行替换为
- * `**状态行**：<value>`；缺失则段首（标题行后）插状态行 + 空行。段界外字节零变；
- * EOL 形态（\r\n | \n）随档保持。段标题缺失 ⇒ throw（create 是骨架唯一权威入口）。
+ * 定位 `## §N` 段（sectionHeaderRe 单源），段内逐行扫描 STATUS_LINE_RE 首命中行原位替换
+ * （行尾随命中行自身）；缺失则标题行后偏移插入状态行 + 空行（插入块行尾 = 标题行自身
+ * 行尾——锚行后首二字节判读）。段界外字节零变（行切分 = /\r?\n/：EOL 形态无关）。
+ * 段标题缺失 ⇒ throw（create 是骨架唯一权威入口）。
  */
 function updateSectionStatusLine(src, seg, value) {
   const hdr = sectionHeaderRe(seg).exec(src)
@@ -163,13 +164,15 @@ function updateSectionStatusLine(src, seg, value) {
   nextRe.lastIndex = hdr.index + hdr[0].length
   const next = nextRe.exec(src)
   const endIdx = next ? next.index : src.length
-  const eol = src.includes("\r\n") ? "\r\n" : "\n"
-  const lines = src.slice(hdr.index, endIdx).split(eol)
   const line = `**状态行**：${value}`
-  const idx = lines.findIndex((l) => STATUS_LINE_RE.test(l))
-  if (idx >= 0) lines[idx] = line
-  else lines.splice(1, 0, line, "", "")
-  return src.slice(0, hdr.index) + lines.join(eol) + src.slice(endIdx)
+  const parts = src.slice(hdr.index, endIdx).split(/(\r?\n)/) // 保留分隔符（奇数下标 = 行尾）——替换只动命中行
+  const idx = parts.findIndex((p) => STATUS_LINE_RE.test(p))
+  if (idx >= 0) { parts[idx] = line } else {
+    const eol = parts[1] === "\r\n" ? "\r\n" : "\n" // 缺行插入块行尾 = 标题行自身行尾
+    if (parts.length === 1) parts.splice(1, 0, eol, line, eol, "", eol, "")
+    else parts.splice(2, 0, line, eol, "", eol, "", eol)
+  }
+  return src.slice(0, hdr.index) + parts.join("") + src.slice(endIdx)
 }
 
 /** §6 段体非空白内容判据（#422①——close 前闸：段头行余文（标题文本）不计入内容；

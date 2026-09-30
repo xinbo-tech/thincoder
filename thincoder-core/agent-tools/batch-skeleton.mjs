@@ -117,7 +117,7 @@ export function readBatchStatusLine(src) {
   nextRe.lastIndex = s1.index + s1[0].length
   const next = nextRe.exec(src)
   const body = src.slice(s1.index + s1[0].length, next ? next.index : src.length)
-  const m = body.split("\n").map((line) => STATUS_LINE_RE.exec(line)).find(Boolean)
+  const m = body.split(/\r?\n/).map((line) => STATUS_LINE_RE.exec(line)).find(Boolean)
   if (!m) return "unknown"
   const value = m[1].trim()
   if (value.includes(STATUS_WORDS[1].closed)) return "closed"
@@ -140,7 +140,7 @@ export function sectionHasStatusLine(src, seg) {
   nextRe.lastIndex = hdr.index + hdr[0].length
   const next = nextRe.exec(src)
   const body = src.slice(hdr.index + hdr[0].length, next ? next.index : src.length)
-  return body.split("\n").some((line) => STATUS_LINE_RE.test(line))
+  return body.split(/\r?\n/).some((line) => STATUS_LINE_RE.test(line))
 }
 
 /**

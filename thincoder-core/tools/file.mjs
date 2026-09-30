@@ -19,7 +19,7 @@ import { runSingleEdit } from "./edit-diff.mjs";
 import { writeThroughPath, clearDirty, clearLastWrite, lastWriteOf, isDirty } from "./write-path.mjs";
 import { specForModel } from "../config.mjs";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, stat, unlink } from "node:fs/promises";
+import { mkdir, readFile, stat } from "node:fs/promises";
 import { join, relative, dirname } from "node:path";
 
 const MAX_FILE_READ_BYTES = 10_000_000
@@ -178,11 +178,6 @@ export const readImageTool = {
       text: `[read_image: ${args.path} (${mime}, ${bytes} bytes)]`,
       images: [{ type: "image_url", image_url: { url: `data:${mime};base64,${b64}` } }],
     })
-    // Paste-created temp files: delete after use, no litter
-    const basename = abs.includes("/") ? abs.slice(abs.lastIndexOf("/") + 1) : abs.slice(abs.lastIndexOf("\\") + 1)
-    if (basename.startsWith(".thincoder-paste-")) {
-      try { await unlink(abs) } catch { /* can't delete, so be it */ }
-    }
     return result
   },
 }
