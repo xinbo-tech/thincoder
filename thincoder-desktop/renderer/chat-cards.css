@@ -41,8 +41,8 @@
   border: 1px solid var(--vscode-inputValidation-warningBorder, rgba(204,167,0,0.35));
   border-radius: 0;
   background: var(--vscode-inputValidation-warningBackground, rgba(204,167,0,0.06));
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--fs);
+  line-height: var(--lh);
 }
 .permission-prompt-text {
   color: var(--vscode-inputValidation-warningForeground, #cca700);
@@ -55,10 +55,12 @@
 }
 /* 卡内出口钮 = 核卡裸类按钮（`.approve` ∕ `.approve-all` ∕ `.deny` ∕ `.one-by-one`）：VSC 两源（`base.css` 与
    VS Code webview 默认样式表）皆**无按钮规则** ⇒ 实形 = UA 默认；VSC `base.css:1-5` 的 `* { margin:0; padding:0 }`
-   全局 reset 为其唯一形塑 ⇒ 本档等效映射该两值（余承 UA 默认 —— 零自造样式）。 */
+   全局 reset 为其唯一形塑 ⇒ 本档等效映射该两值（`margin` ∕ `padding` —— 零自造盒值）。
+   **D29 排版统一（2026-09-30）**：字体通道（族 ∥ 号 ∥ 行高）归基线（`font: inherit`——原承 UA 控件字体）；盒值零动。 */
 .permission-prompt button {
   margin: 0;
   padding: 0;
+  font: inherit; /* 排版统一（D29）：卡内出口钮原承 UA 控件字体（13.3px ∥ Arial ∥ lh normal）⇒ 归基线（盒值零动）。 */
 }
 .permission-prompt button:focus-visible {
   outline: 2px solid var(--accent);
@@ -71,26 +73,26 @@
 }
 
 /* ── 提问卡（核 `cards/question.mjs` 产出；值源 = VSC `base.css:296-366`）──────────────────────
-   卡面沿审批卡同族同形（内边距 / 圆角 / 决策面强调色边）；选项列 / 作答行 / 文本控件逐值照搬。 */
+   卡面沿审批卡同族同形（内边距 / 圆角 / 决策面强调色边）；选项列 / 作答行 / 文本控件逐值照搬（**字体通道 = D29 归基线**——族 ∥ 号 ∥ 行高；盒值 ∥ 布局零动）。 */
 .question-card {
   margin: 0;
   padding: 10px 14px;
   border: 1px solid var(--accent);
   border-radius: 0;
   background: color-mix(in srgb, var(--accent) 8%, transparent);
-  font-size: var(--vscode-editor-font-size, 14px);
-  line-height: 1.5;
+  font-size: var(--fs);
+  line-height: var(--lh);
 }
 .question-card .perm-btn {
-  font-size: var(--vscode-editor-font-size, 14px);
+  font-size: var(--fs);
   font-weight: 400;
 }
 .question-card .question-input {
-  font-size: var(--vscode-editor-font-size, 14px);
+  font-size: var(--fs);
 }
 .question-mark {
   color: var(--accent);
-  font-weight: 700;
+  font-weight: 400;
 }
 .question-text {
   color: var(--fg);
@@ -119,8 +121,9 @@
   flex: 1;
   min-width: 140px;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--fs);
   font-family: inherit;
+  line-height: var(--lh); /* `input` 本体承 UA `line-height: normal`（真机扫描所得）⇒ 归基线。 */
   color: var(--fg);
   background: var(--vscode-input-background, transparent);
   border: 1px solid var(--border);

@@ -1,0 +1,373 @@
+{
+ "probe": "2026-09-30-desktop-typography-unify-probe",
+ "at": "2026-09-30T11:29:41.687Z",
+ "phases": {
+  "settings": {
+   "steps": {
+    "base": {
+     "face": "base（流 ∥ 工具卡 ∥ 状态行 ∥ 池 ∥ 输入区）",
+     "candidates": 51,
+     "violations": [],
+     "families": [
+      "ui-monospace"
+     ],
+     "seen": {
+      "button": 13,
+      "span": 11,
+      "div": 1,
+      "h1": 1,
+      "h2": 1,
+      "h3": 1,
+      "h4": 1,
+      "h5": 1,
+      "h6": 1,
+      "p": 2,
+      "strong": 1,
+      "em": 1,
+      "s": 1,
+      "code": 2,
+      "a": 1,
+      "blockquote": 1,
+      "li": 6,
+      "th": 2,
+      "td": 2,
+      "textarea": 1
+     }
+    },
+    "modelMenu": {
+     "face": "模型菜单（.mm-panel 在场）",
+     "candidates": 55,
+     "violations": [],
+     "families": [
+      "ui-monospace"
+     ],
+     "seen": {
+      "button": 13,
+      "span": 11,
+      "div": 5,
+      "h1": 1,
+      "h2": 1,
+      "h3": 1,
+      "h4": 1,
+      "h5": 1,
+      "h6": 1,
+      "p": 2,
+      "strong": 1,
+      "em": 1,
+      "s": 1,
+      "code": 2,
+      "a": 1,
+      "blockquote": 1,
+      "li": 6,
+      "th": 2,
+      "td": 2,
+      "textarea": 1
+     }
+    },
+    "reasoningDropdown": {
+     "face": "推理下拉",
+     "candidates": 53,
+     "violations": [],
+     "families": [
+      "ui-monospace"
+     ],
+     "seen": {
+      "button": 13,
+      "span": 12,
+      "div": 2,
+      "h1": 1,
+      "h2": 1,
+      "h3": 1,
+      "h4": 1,
+      "h5": 1,
+      "h6": 1,
+      "p": 2,
+      "strong": 1,
+      "em": 1,
+      "s": 1,
+      "code": 2,
+      "a": 1,
+      "blockquote": 1,
+      "li": 6,
+      "th": 2,
+      "td": 2,
+      "textarea": 1
+     }
+    },
+    "autoConfirm": {
+     "face": "AUTO 确认 popover",
+     "candidates": 56,
+     "violations": [],
+     "families": [
+      "ui-monospace"
+     ],
+     "seen": {
+      "button": 15,
+      "span": 12,
+      "div": 3,
+      "h1": 1,
+      "h2": 1,
+      "h3": 1,
+      "h4": 1,
+      "h5": 1,
+      "h6": 1,
+      "p": 2,
+      "strong": 1,
+      "em": 1,
+      "s": 1,
+      "code": 2,
+      "a": 1,
+      "blockquote": 1,
+      "li": 6,
+      "th": 2,
+      "td": 2,
+      "textarea": 1
+     }
+    },
+    "search": {
+     "face": "搜索条（#search-bar 在场）",
+     "candidates": 57,
+     "violations": [],
+     "families": [
+      "ui-monospace"
+     ],
+     "seen": {
+      "button": 16,
+      "span": 12,
+      "div": 2,
+      "h1": 1,
+      "h2": 1,
+      "h3": 1,
+      "h4": 1,
+      "h5": 1,
+      "h6": 1,
+      "p": 2,
+      "strong": 1,
+      "em": 1,
+      "s": 1,
+      "code": 2,
+      "a": 1,
+      "blockquote": 1,
+      "li": 6,
+      "th": 2,
+      "td": 2,
+      "input": 1,
+      "textarea": 1
+     },
+     "present": {
+      "bar": true,
+      "input": "14px",
+      "count": "14px",
+      "button": "14px"
+     }
+    },
+    "settings": {
+     "face": "设置面（[data-settings] open）",
+     "candidates": 256,
+     "violations": [],
+     "families": [
+      "ui-monospace"
+     ],
+     "seen": {
+      "button": 29,
+      "span": 35,
+      "div": 7,
+      "h1": 1,
+      "h2": 2,
+      "h3": 8,
+      "h4": 1,
+      "h5": 1,
+      "h6": 1,
+      "p": 2,
+      "strong": 1,
+      "em": 1,
+      "s": 1,
+      "code": 2,
+      "a": 1,
+      "blockquote": 1,
+      "li": 6,
+      "th": 2,
+      "td": 2,
+      "input": 28,
+      "textarea": 1,
+      "label": 63,
+      "select": 15,
+      "option": 45
+     },
+     "dark": false,
+     "bg": "rgb(247, 248, 250)"
+    },
+    "settingsDark": {
+     "face": "设置面 · 暗模式（全文档同扫）",
+     "candidates": 256,
+     "violations": [],
+     "families": [
+      "ui-monospace"
+     ],
+     "seen": {
+      "button": 29,
+      "span": 35,
+      "div": 7,
+      "h1": 1,
+      "h2": 2,
+      "h3": 8,
+      "h4": 1,
+      "h5": 1,
+      "h6": 1,
+      "p": 2,
+      "strong": 1,
+      "em": 1,
+      "s": 1,
+      "code": 2,
+      "a": 1,
+      "blockquote": 1,
+      "li": 6,
+      "th": 2,
+      "td": 2,
+      "input": 28,
+      "textarea": 1,
+      "label": 63,
+      "select": 15,
+      "option": 45
+     },
+     "dark": true,
+     "bg": "rgb(21, 23, 28)"
+    },
+    "selectExemption": {
+     "before": "normal",
+     "inline": "normal",
+     "inlineImportant": "normal",
+     "optionLh": "21px",
+     "note": "Blink 把 select 本体 computed line-height 固定为 normal（内联 ∥ 表则 ∥ !important 均不可达）——同 select 的 option ∥ input ∥ button 可控且已归基线"
+    },
+    "synthetic": {
+     "face": "合成面（审批 ∥ 提问 ∥ 计划 ∥ 目标 ∥ 推理 ∥ 子代 ∥ 消化 ∥ 台账 ∥ 错误 ∥ diff ∥ 欢迎条族）",
+     "candidates": 182,
+     "violations": [],
+     "families": [
+      "ui-monospace"
+     ],
+     "seen": {
+      "button": 44,
+      "span": 55,
+      "div": 41,
+      "h1": 1,
+      "h2": 3,
+      "h3": 2,
+      "h4": 1,
+      "h5": 1,
+      "h6": 1,
+      "p": 3,
+      "strong": 1,
+      "em": 1,
+      "s": 1,
+      "code": 4,
+      "a": 1,
+      "blockquote": 1,
+      "li": 7,
+      "th": 2,
+      "td": 2,
+      "input": 4,
+      "textarea": 2,
+      "summary": 3,
+      "pre": 1
+     }
+    },
+    "syntheticPresence": {
+     "permission": 1,
+     "question": 1,
+     "advisor": 1,
+     "code": 3,
+     "codeBlock": 2,
+     "table": 1,
+     "h1": 1,
+     "strong": 1,
+     "toolCard": 1,
+     "poolItems": 1,
+     "statusSegs": 4
+    }
+   },
+   "errors": []
+  },
+  "wizard": {
+   "steps": {
+    "wizard": {
+     "face": "首启向导（零 config ⇒ 向导树占槽）",
+     "candidates": 52,
+     "violations": [],
+     "families": [
+      "ui-monospace"
+     ],
+     "seen": {
+      "button": 18,
+      "span": 1,
+      "div": 1,
+      "textarea": 1,
+      "h2": 1,
+      "li": 3,
+      "label": 3,
+      "select": 1,
+      "option": 22,
+      "input": 1
+     }
+    },
+    "wizardPresence": {
+     "wizard": 1,
+     "steps": 3
+    }
+   },
+   "errors": []
+  }
+ },
+ "summary": {
+  "settings": [
+   {
+    "step": "base",
+    "candidates": 51,
+    "violations": 0
+   },
+   {
+    "step": "modelMenu",
+    "candidates": 55,
+    "violations": 0
+   },
+   {
+    "step": "reasoningDropdown",
+    "candidates": 53,
+    "violations": 0
+   },
+   {
+    "step": "autoConfirm",
+    "candidates": 56,
+    "violations": 0
+   },
+   {
+    "step": "search",
+    "candidates": 57,
+    "violations": 0
+   },
+   {
+    "step": "settings",
+    "candidates": 256,
+    "violations": 0
+   },
+   {
+    "step": "settingsDark",
+    "candidates": 256,
+    "violations": 0
+   },
+   {
+    "step": "synthetic",
+    "candidates": 182,
+    "violations": 0
+   }
+  ],
+  "wizard": [
+   {
+    "step": "wizard",
+    "candidates": 52,
+    "violations": 0
+   }
+  ]
+ }
+}

@@ -62,19 +62,19 @@
 .block-assistant > .block-text {
   padding: 8px 0;
 }
-/* 错误横幅 = VSC `webview/chat.css:417-427` `.error-banner` 逐值（无边框；红底 ∕ 错误色；内边距 6px 10px ∕ 圆角 0〔扁平化 2026-09-30〕；字号 12px —— 同 VSC banner 对其内容的覆盖）。 */
+/* 错误横幅 = VSC `webview/chat.css:417-427` `.error-banner` 逐值（无边框；红底 ∕ 错误色；内边距 6px 10px ∕ 圆角 0〔扁平化 2026-09-30〕；字号 = D29 排版统一归基线 `var(--fs)`）。 */
 .block-error {
   padding: 6px 10px;
   border-radius: 0;
   background: var(--diff-del-bg);
   color: var(--error-fg);
-  font-size: 12px;
-  line-height: 1.45;
+  font-size: var(--fs);
+  line-height: var(--lh);
   display: flex;
   flex-direction: column;
 }
 .block-error .error-text {
-  font-size: 12px;
+  font-size: var(--fs);
 }
 /* 流式游标：末块追加态 ⇒ 文本尾随 `▌`（`content` 不入 DOM ⇒ 不入选区 / 不入断言面）。 */
 .block-assistant[data-streaming="1"]::after {
@@ -83,14 +83,14 @@
 }
 
 /* 工具卡（三行：头行（可折叠 ⇒ `button` 形）· 改动摘要行 · 展开结果区）：盒 = VSC `.tool-call`（`webview/chat.css:179-187`）逐值 ——
-   边框 0 ∕ 圆角 0〔扁平化 2026-09-30〕 ∕ 字号 12px ∕ `overflow: hidden`；盒底 = **透明**（轻通道笔 · 用户 2026-09-30「不要背景了，只要hover上去有反应就行了」——`--tool-bg` ⇒ `--overlay` 旧值退场）；
+   边框 0 ∕ 圆角 0〔扁平化 2026-09-30〕 ∕ 字号（D29 归基线 `var(--fs)`） ∕ `overflow: hidden`；盒底 = **透明**（轻通道笔 · 用户 2026-09-30「不要背景了，只要hover上去有反应就行了」——`--tool-bg` ⇒ `--overlay` 旧值退场）；
    hover 反馈 = 头行既有面（`.tool-head:hover`——本档 `:158` 邻位）。件级外边距由块级模型通管
    （现值 = 盒块规则 `.block + .block:is(…) { margin-top: 8px }`——扁平化 ∥ 间距批 2026-09-30；原三覆写之一已退场）。 */
 .block-tool {
   border: 0;
   border-radius: 0;
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--fs);
   background: transparent;
 }
 /* 盒面内的说话人标签（回合首块 = 工具卡时）：盒壳零内边距（VSC 头行 ∕ 主体自携内边距）⇒ 标签自携同等缩进
@@ -119,12 +119,13 @@
 .tool-head[data-status="done"] [data-seg="status"] {
   color: #4ec9b0;
 }
-/* 头行段样式四组 = VSC `webview/chat.css:216-244` 逐值（段面 = 桌面 `[data-seg]` 子节点）：
+/* 头行段样式四组 = VSC `webview/chat.css:216-244` 逐值（段面 = 桌面 `[data-seg]` 子节点）——
+   **D29 排版统一（2026-09-30）**：字号 ∥ 字重段值归基线（name 600 ⇒ 400；三处 11px ⇒ `var(--fs)`）；余省略 ∥ 降显值与 VSC 同：
    name `:216-219` 字重 600 + `color: var(--accent)` ∕ args `:221-228` `color: var(--fg)` + 省略四值 + 降显 .5 ∕
    status `:230-233` 11px + .6 ∕ summary `:235-244` 11px + .75 + `margin-left: 8px` + `max-width: 45%` +
    `flex-shrink: 1` + 省略三值；耗时段（`time` —— 段产出面 = `views/chat-tool.mjs`）11px ∕ .6（#25 裁①）随落。 */
 .tool-head [data-seg="name"] {
-  font-weight: 600;
+  font-weight: 400;
   color: var(--accent);
 }
 .tool-head [data-seg="args"] {
@@ -136,15 +137,15 @@
   flex: 1;
 }
 .tool-head [data-seg="status"] {
-  font-size: 11px;
+  font-size: var(--fs);
   opacity: 0.6;
 }
 .tool-head [data-seg="time"] {
-  font-size: 11px;
+  font-size: var(--fs);
   opacity: 0.6;
 }
 .tool-head [data-seg="summary"] {
-  font-size: 11px;
+  font-size: var(--fs);
   opacity: 0.75;
   margin-left: 8px;
   overflow: hidden;
@@ -163,14 +164,14 @@
   margin-top: 6px;
   padding: 0 10px 6px; /* 桌面独有行 —— 缩进与头行 ∕ 结果区同缘（VSC 无对位行） */
   color: var(--fg-muted);
-  font-size: 12px;
+  font-size: var(--fs);
 }
 /* 每文件行：`path` + 增删数节点（字形 = 本档 `::before`，数 = 视图档文本 ⇒ 字形不入数据面）。 */
 .tool-file {
   display: flex;
   gap: 8px;
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--fs);
 }
 .tool-file [data-add]::before {
   content: "+";
@@ -178,12 +179,12 @@
 .tool-file [data-del]::before {
   content: "−";
 }
-/* 结果区 = VSC `.tool-call-body`（`webview/chat.css:257-272`）逐值（等宽栈 ∕ 11px ∕ `opacity: .75` ∕ 行高 1.45 ∕ 封顶 180px 自滚）；顶线分隔随扁平化（2026-09-30）退场。 */
+/* 结果区 = VSC `.tool-call-body`（`webview/chat.css:257-272`）逐值（等宽栈 ∕ 字号 ∥ 行高 D29 归基线 ∕ `opacity: .75` ∕ 封顶 180px 自滚）；顶线分隔随扁平化（2026-09-30）退场。 */
 .tool-result {
   padding: 6px 10px;
   font-family: var(--mono);
-  font-size: 11px;
-  line-height: 1.45;
+  font-size: var(--fs);
+  line-height: var(--lh);
   opacity: 0.75;
   max-height: 180px;
   overflow-y: auto;
@@ -198,7 +199,7 @@
   gap: 8px;
   margin-bottom: 0;
   color: var(--fg-muted);
-  font-size: 12px;
+  font-size: var(--fs);
 }
 .chat-backfill {
   padding: 2px 8px;
@@ -241,8 +242,8 @@
    （含 `❯` / `:` / 时间 span）；助手回合首块 = 端侧同字面 —— 两字形（`❯` / `:`）住本档 `content`
    （视图档零字形字面）；`data-label` 分色（用户 / 助手两面同 accent） */
 .msg-label {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs);
+  font-weight: 400;
   margin-bottom: 6px;
   color: var(--fg-muted);
 }
@@ -257,7 +258,7 @@
   content: ":";
 }
 .msg-time {
-  font-size: 11px;
+  font-size: var(--fs);
   font-weight: 400;
   opacity: 0.45;
   margin-left: 8px;
@@ -274,13 +275,13 @@
 }
 .chat-pending-label {
   color: var(--warn);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--fs);
+  font-weight: 400;
 }
 .chat-pending-item,
 .chat-pending-more {
   color: var(--fg-muted);
-  font-size: 12px;
+  font-size: var(--fs);
 }
 .chat-pending-body {
   display: -webkit-box;
@@ -302,7 +303,7 @@
    `--bg-raised` ∕ `--line` = `editorWidget-background` ∕ `-border` 角色对位；done ∕ failed 两底色 = `infoBackground` ∕ `errorBackground` 角色对位（accent 8% 先例 = `.question-card`）。 */
 .chat-digest .digest-turn {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--fs);
   opacity: 0.7;
   color: var(--fg-muted);
 }
@@ -312,7 +313,7 @@
   border: 1px solid var(--line);
   border-radius: 0;
   background: var(--bg-raised);
-  font-size: 11px;
+  font-size: var(--fs);
   opacity: 0.85;
 }
 .chat-digest .digest-status.digest-done {
@@ -329,7 +330,7 @@
    角色对位 = `--fg-muted` ∕ `--warn`）。 */
 .chat-digest .digest-cap {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--fs);
   opacity: 0.75;
   color: var(--fg-muted);
 }

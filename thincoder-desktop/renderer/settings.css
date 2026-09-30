@@ -21,7 +21,7 @@
   overflow: auto;
   background: var(--bg);
   color: var(--fg);
-  font: 14px/1.5 var(--font);
+  font: var(--fs)/var(--lh) var(--font);
 }
 /* 内容列：顶节点居中成可读列宽（容器自身满窗 —— 覆盖面不透底）。 */
 [data-slot="settings"] > * {
@@ -52,7 +52,8 @@
 .settings-title,
 .wizard-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--fs);
+  font-weight: 400; /* 排版统一（D29）：`h2` 承 UA 粗体 ⇒ 显式归零（自有文字零粗体 — 颜色通道强调）。 */
 }
 .settings-lang { margin-left: auto; }
 .wizard-dismiss { margin-left: auto; }
@@ -99,7 +100,7 @@
 .settings-close::before,
 .wizard-dismiss::before {
   content: "✕";
-  line-height: 1;
+  line-height: var(--lh);
 }
 
 /* 失败面（核错误串直传）：段标 + 串 —— 警示色沿 `pool.css` 错误条目同档。 */
@@ -126,8 +127,8 @@
 .settings-section-title {
   margin: 0;
   color: var(--fg-muted);
-  font-size: 12px;
-  letter-spacing: 0.04em;
+  font-size: var(--fs);
+  font-weight: 400; /* 排版统一（D29）：`h3` 承 UA 粗体 ⇒ 显式归零（同族 = 标题行上一条注）。 */
   text-transform: uppercase;
 }
 .settings-section-body {
@@ -154,19 +155,19 @@
   border-color: transparent;
   background: color-mix(in srgb, var(--accent) 14%, var(--bg-raised));
 }
-.settings-row-name { font-weight: 600; }
+.settings-row-name { font-weight: 400; }
 .settings-row-value,
 .settings-key {
   color: var(--fg-muted);
 }
-.settings-row-action { margin-left: auto; }
+.settings-row-action { margin-left: auto; font: inherit; } /* 排版统一（D29）：行内动作钮（真机扫描所得——原承 UA 控件字体 13.3px ∥ Arial）⇒ 归基线。 */
 .settings-key[data-key="none"] { font-style: italic; }
 .settings-mark {
   padding: 0 6px;
   border: 1px solid var(--accent);
   border-radius: var(--radius);
   color: var(--accent);
-  font-size: 12px;
+  font-size: var(--fs);
 }
 /* 校验读数两态（`ok` / `fail`）。 */
 .settings-verify { color: var(--fg-muted); }
@@ -214,8 +215,11 @@ input.settings-field[type="checkbox"] {
 .settings-readonly-hint {
   color: var(--fg-muted);
 }
-.settings-readonly-hint { font-size: 12px; }
+.settings-readonly-hint { font-size: var(--fs); }
 .settings-submit { align-self: flex-start; }
+/* 原生下拉内部件 `option`（真机全文本判据——承 UA `line-height: normal`）⇒ 行高归基线。
+   注：`select` 本体的 computed `line-height` 由 Blink 固定为 `normal`（真机实测：内联 ∥ 表则 ∥ `!important` 均不可达——`select` 行高不由页面 CSS 承载 ⇒ 扫描面按原生控件豁免，见批内探针口径注）。 */
+[data-slot="settings"] option { line-height: var(--lh); }
 
 /* ── ③ 首启向导：步标 / 体 / 足 ────────────────────────────────────────── */
 .wizard-steps {
@@ -227,11 +231,11 @@ input.settings-field[type="checkbox"] {
 }
 .wizard-step {
   color: var(--fg-muted);
-  font-size: 12px;
+  font-size: var(--fs);
 }
 .wizard-step[data-current] {
   color: var(--fg);
-  font-weight: 600;
+  font-weight: 400;
 }
 .wizard-body {
   display: flex;
@@ -249,7 +253,7 @@ input.settings-field[type="checkbox"] {
 [data-slot="info"] {
   padding: 8px 12px;
   border-top: 1px solid var(--line);
-  font-size: 12px;
+  font-size: var(--fs);
 }
 [data-slot="info"],
 .info {
@@ -258,7 +262,7 @@ input.settings-field[type="checkbox"] {
   align-items: center;
   gap: 8px;
 }
-.info-title { font-weight: 600; }
+.info-title { font-weight: 400; }
 .info-read,
 .info-phase {
   display: flex;

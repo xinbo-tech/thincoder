@@ -12,9 +12,9 @@
 /* 面 1 正文（字族 = 编辑器等宽栈；断词沿壳层 `.block` 的 `overflow-wrap: anywhere`，本档零重复落）。 */
 .block-text,
 .reasoning-content {
-  font-family: var(--mono);
-  font-size: 14px;
-  line-height: 1.55;
+  font-family: var(--font);
+  font-size: var(--fs);
+  line-height: var(--lh);
   contain: layout style paint; /* 巨块渲染夹层（批档 §2.14-B）：文本面 ∕ 推理面容器三隔——不含 size（高度确定性保持）；零语义（只增） */
 }
 
@@ -48,7 +48,7 @@
   padding-left: 20px;
 }
 .block-text ol, .reasoning-content ol { list-style: decimal; }
-.block-text li, .reasoning-content li { margin: 2px 0; line-height: 1.5; }
+.block-text li, .reasoning-content li { margin: 2px 0; line-height: var(--lh); }
 .block-text ul ul, .block-text ol ul, .reasoning-content ul ul, .reasoning-content ol ul { margin: 0 0 2px; }
 .block-text ul ol, .block-text ol ol, .reasoning-content ul ol, .reasoning-content ol ol { margin: 0 0 2px; }
 .block-text li > ul, .block-text li > ol, .reasoning-content li > ul, .reasoning-content li > ol { margin: 2px 0 0; }
@@ -90,7 +90,7 @@
 .code-lang {
   display: block;
   padding: 3px 10px;
-  font-size: 10px;
+  font-size: var(--fs);
   color: var(--fg);
   opacity: 0.5;
   border-bottom: 1px solid var(--line);
@@ -106,7 +106,7 @@
   overflow-x: auto;
   font-family: var(--mono);
   font-size: 0.88em;
-  line-height: 1.5;
+  line-height: var(--lh);
   background: transparent;
   border-radius: 0;
   white-space: pre;

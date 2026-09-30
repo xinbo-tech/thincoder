@@ -52,8 +52,8 @@
 .session-item-title {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--fs);
+  font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -65,7 +65,7 @@
   min-width: 0;
   gap: 4px;
   color: var(--fg);
-  font-size: 11px;
+  font-size: var(--fs);
   opacity: 0.4;
   white-space: nowrap;
 }
@@ -80,7 +80,7 @@
 .session-item-badge {
   flex: 0 0 auto;
   color: var(--fg-muted);
-  font-size: 12px;
+  font-size: var(--fs);
   white-space: nowrap;
 }
 /* 空态行（`session.empty` —— 半透明 · 非可点）。 */
@@ -105,7 +105,7 @@
   background: transparent;
   color: var(--fg);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs);
   opacity: 0;
 }
 .session-rename::before { content: "✎"; }

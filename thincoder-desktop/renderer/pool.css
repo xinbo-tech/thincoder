@@ -26,11 +26,11 @@
   background: var(--bg-raised);
 }
 .pool-title {
-  font-weight: 600;
+  font-weight: 400;
 }
 .pool-read {
   color: var(--fg-muted);
-  font-size: 12px;
+  font-size: var(--fs);
 }
 .pool-read::before {
   content: "·";
@@ -67,8 +67,8 @@
   background: var(--hover-bg);
   color: var(--fg);
   font: inherit;
-  font-size: 11px;
-  line-height: 1.4;
+  font-size: var(--fs);
+  line-height: var(--lh);
   white-space: nowrap;
 }
 
@@ -79,8 +79,7 @@
 }
 .pool-family-label {
   color: var(--fg-muted);
-  font-size: 12px;
-  letter-spacing: 0.04em;
+  font-size: var(--fs);
   text-transform: uppercase;
 }
 .pool-item {

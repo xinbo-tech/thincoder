@@ -17,7 +17,12 @@
   --radius: 0; /* 扁平化（用户 2026-09-30 裁决）：圆角归零——全族 `var(--radius)` 一处收口。 */
   --gap: 12px;
   --pool-w: 36rem;
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+  /* 排版统一（D29 · 2026-09-30 · 台账 #736）：基线四值单源 —— 字族（`--font` 指 `--mono` 等宽栈）∥ 字号 ∥ 行高
+     ∥ 字距（`--ls`）；`--ls` 消费 = `body` 面独立 `letter-spacing` 行（`font` 简写不载字距——全栈唯一声明点）。 */
+  --font: var(--mono);
+  --fs: 14px;
+  --lh: 1.5;
+  --ls: normal;
   /* D21 内容面 / 会话面板面变量（值 = VSC webview 实值 —— 逐面映射表 = `docs/render-core/design/RENDER-CORE.md` §5 ·
      `docs/desktop/design/UI.md` §1 项 2）：语法配色族 / 叠加层 rgba / 字族栈 / 语义色。 */
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -84,6 +89,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font: 14px/1.5 var(--font);
+  font: var(--fs)/var(--lh) var(--font);
+  letter-spacing: var(--ls);
   -webkit-font-smoothing: antialiased;
 }

@@ -68,3 +68,71 @@ body .auto-confirm-yes, body .auto-confirm-no { border-radius: 6px; }
   background: var(--hover-bg-strong);
 }
 .chat-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ── 排版统一覆盖段（D29 · 2026-09-30 · 台账 #736；设计单源 = `docs/desktop/design/UI.md` §1
+   「本批注（排版统一 · D29）」项 4 ∥ 批档 `docs/batches/2026-09-30-desktop-typography-unify.md` §2 §六-C）：
+   核件消费面（输入面板 ∥ 模型菜单 ∥ 搜索条 ∥ `auto-confirm` 同位族）收基线——核件（`thincoder-render-core/**`）
+   ∥ VSC 侧零改 ⇒ 本段以**特征度提升选择器**覆盖核件静态档值（沿扁平化覆盖先例；盒值 ∥ 描边 ∥ 布局零动）。
+   基线四值单源 = `renderer/theme.css`（族 `--font` ∥ 号 `--fs` ∥ 行高 `--lh` ∥ 字距 `--ls`）。
+   **搜索条锚注**：核 `search.mjs` 把 `#search-bar` 插在 `#toolbar` **之前**（兄弟节点——`toolbar.parentNode.insertBefore(bar, toolbar)`）
+   ⇒ 设计清单的 `#toolbar …` 前缀与其 DOM 面不符，本段按实际锚（`#search-bar …`）× 特征度提升落。 ── */
+
+/* 字号归基线（核件 10 ∥ 11 ∥ 12px 绝对岛清零）。 */
+.composer #paste-bar,
+body .paste-toast,
+.composer .paste-chip,
+.composer .paste-chip-del,
+.composer .dropdown-item,
+.composer .dropdown-item .check,
+.composer .dropdown-item .dropdown-sub,
+.composer .dropdown-item .submenu-arrow,
+.composer .dropdown-manage,
+.composer #at-dropdown .dropdown-item,
+.composer .at-file-path,
+body .mm-panel,
+body .mm-flyout,
+body .mm-row .mm-sub,
+body .mm-manage,
+body .mm-filter,
+#search-bar #search-input,
+#search-bar #search-count,
+body #search-bar button {
+  font-size: var(--fs);
+}
+/* 搜索钮：行高归基线（钮承 UA `line-height: normal`）。 */
+#search-bar #search-input {
+  line-height: var(--lh); /* `input` 本体承 UA `line-height: normal`（真机扫描所得）⇒ 归基线。 */
+}
+body #search-bar button { line-height: var(--lh); }
+/* 模型菜单过滤框（核件 `.mm-filter` = `input`——承 UA 控件字体）：族 ∥ 行高归基线。 */
+body .mm-filter { font-family: var(--font); line-height: var(--lh); }
+
+/* 字号 + 字重归零（核件 600 档——强调走颜色通道）+ 族 ∥ 行高归基线（钮承 UA 控件字体 ⇒ 显式回收）。 */
+.composer #send-btn, .composer #abort-btn, .composer #attach-btn, .composer .at-file-name,
+body .auto-confirm-yes, body .auto-confirm-no {
+  font-size: var(--fs);
+  font-weight: 400;
+}
+.composer #send-btn, .composer #abort-btn, .composer #attach-btn {
+  font-family: var(--font);
+  line-height: var(--lh);
+}
+
+/* 字号 + 行高归基线。 */
+.composer .ctrl-btn, body .auto-confirm-text {
+  font-size: var(--fs);
+  line-height: var(--lh);
+}
+
+/* 输入框：族 ∥ 号 ∥ 行高全取基线（核件 `font-size: inherit` + `lh:1.45` 上行覆盖）。 */
+.composer #input {
+  font-family: var(--font);
+  font-size: var(--fs);
+  line-height: var(--lh);
+}
+
+/* 推理钮：字号 + 字距归基线（核件 `letter-spacing: 0.5px` tracking 撤——值取基线单源）。 */
+.composer #reasoning-btn {
+  font-size: var(--fs);
+  letter-spacing: var(--ls);
+}
