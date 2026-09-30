@@ -35,6 +35,7 @@ export async function handleConfigCommand(ctx, args = []) {
   let ac = agent.config?.agent ?? {}
   let ec = agent.config?.embedding ?? {}
   let tc = agent.config?.traces ?? {}
+  let dc = agent.config?.diagnostics ?? {}
 
   // agent.config.proxy 已被 loadConfig 归一化为 { uri, web, model } | undefined
   function proxySummary() {
@@ -341,6 +342,7 @@ export async function handleConfigCommand(ctx, args = []) {
     ac = agent.config?.agent ?? {}
     ec = agent.config?.embedding ?? {}
     tc = agent.config?.traces ?? {}
+    dc = agent.config?.diagnostics ?? {}
     const consultCount = (ac.consultModels ?? []).length
     const pl = ac.poolLimits ?? {}
     const cur = poolCur(pl, DEFAULTS)
@@ -354,6 +356,7 @@ export async function handleConfigCommand(ctx, args = []) {
       { type: "item", text: `agent.verifyGuard = ${ac.verifyGuard === true ? "on" : "off"}`, action: "agent.verifyGuard" },
       { type: "item", text: `traces.enabled = ${tc.enabled === false ? "off" : "on"}（轨迹存档——发布默认关——隐私）`, action: "traces.enabled" },
       { type: "item", text: `traces.retentionHours = ${tc.retentionHours ?? 24} h（超期文件启动时清理）`, action: "traces.retentionHours" },
+      { type: "item", text: `diagnostics.heapSnapshot = ${dc.heapSnapshot === true ? "on" : "off"}（堆快照采集——默认关——桌面会话即时生效）`, action: "diagnostics.heapSnapshot" },
       { type: "item", text: `agent.consultModels = ${consultCount} model(s)${consultCount ? ` (${(ac.consultModels ?? []).map((m) => m.provider + ":" + m.model).join(", ")})` : ""}`, action: "consult" },
       { type: "item", text: `agent.consultTurns = ${ac.consultTurns ?? 40}`, action: "agent.consultTurns" },
       { type: "item", text: `agent.consultTimeoutMs = ${Math.round((ac.consultTimeoutMs ?? 600000) / 60000)} min`, action: "agent.consultTimeoutMs" },
@@ -377,6 +380,7 @@ export async function handleConfigCommand(ctx, args = []) {
       pushLine(`agent.verifyGuard: ${ac.verifyGuard === true ? "on" : "off"}`, C.dim)
       pushLine(`traces.enabled: ${tc.enabled === false ? "off" : "on"}（默认 off——发布隐私——本地分析可开）`, C.dim)
       pushLine(`traces.retentionHours: ${tc.retentionHours ?? 24}（超期文件启动清理——D-TR10）`, C.dim)
+      pushLine(`diagnostics.heapSnapshot: ${dc.heapSnapshot === true ? "on" : "off"}（堆快照采集——默认关——桌面会话即时生效）`, C.dim)
       pushLine(`agent.consultModels: ${(ac.consultModels ?? []).map((m) => `${m.provider}:${m.model}${m.effort ? ` (${m.effort})` : ""}`).join(", ") || "(none)"}`, C.dim)
       pushLine(`agent.poolLimits: { engCoder: ${cur("engCoder")}, other: ${cur("other")}, advisor: ${cur("advisor")} }（async 分域上限——默认 4/4/4——agent.poolLimits 可配）`, C.dim)
       pushLine(`agent.consultTurns: ${ac.consultTurns ?? 40}`, C.dim)
@@ -433,6 +437,18 @@ export async function handleConfigCommand(ctx, args = []) {
         })
         pushLabel("❯ Config", ansi.bold + C.tool)
         pushLine(`traces.enabled = ${newVal ? "on" : "off"}${newVal ? "（轨迹落盘 ~/.thincoder/traces/——保留 " + (tc.retentionHours ?? 24) + "h）" : ""}`, C.tool)
+      } catch (error) { pushLine(`Save failed: ${error.message}`, C.error) }
+      continue // 回主菜单（Esc 退出）
+    }
+
+    if (choice.action === "diagnostics.heapSnapshot") {
+      const newVal = dc.heapSnapshot !== true // 显式写布尔（默认关——fail-closed 显示判定同向）
+      try {
+        await saveProxy((raw) => {
+          raw.diagnostics = { ...(raw.diagnostics ?? {}), heapSnapshot: newVal }
+        })
+        pushLabel("❯ Config", ansi.bold + C.tool)
+        pushLine(`diagnostics.heapSnapshot = ${newVal ? "on" : "off"}（桌面会话即时生效 ∕ 本进程下次启动）`, C.tool)
       } catch (error) { pushLine(`Save failed: ${error.message}`, C.error) }
       continue // 回主菜单（Esc 退出）
     }

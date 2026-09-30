@@ -86,8 +86,10 @@ export const DEFAULTS = {
     enabled: false,  // §18.6 D-TR6 修订（2026-09-05 用户裁定——发布隐私："不希望用户那边也采集"）：轨迹存档默认 OFF——新用户零采集；本地调试分析可显式开（~/.thincoder/config.json traces.enabled:true）
     retentionHours: 24, // D-TR10：轨迹文件保留小时数——CLI 启动时删除超过该时长的文件（默认 24h）
   },
-  // 诊断开关（用户面 ① 配置键——CONFIG.md §6.2 名录；默认开，设 false 关闭）
-  diagnostics: { heapWatch: true, heapSnapshot: true },
+  // 诊断开关（用户面 ① 配置键——CONFIG.md §6.2 名录）：`heapWatch` 默认开（设 false 关闭）——自愈臂
+  // 遥测；`heapSnapshot` 默认关——采集 opt-in（堆转储敏感度 ≥ traces ⇒ 对齐发布隐私先例 D-TR6；
+  // 2026-09-30 采集收网批；桌面端运行期热读 ∥ CLI 本进程下次启动）
+  diagnostics: { heapWatch: true, heapSnapshot: false },
 }
 
 // Model capability table + spec lookup live in model-specs.mjs (2026-08-31

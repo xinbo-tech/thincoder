@@ -8,8 +8,8 @@
  *   自动写 report.*.json。实现批实测（2026-09-07）：目录缺失时 Node 对 fatal 静默不写
  *   报告——预建是必要动作而非"零成本保险"。
  *   F3①：同点武装近堆上限堆快照（v8.setHeapSnapshotNearHeapLimit——对象级证据，回答
- *   "谁在持内存"；全路径单源，默认开、配置键 `diagnostics.heapSnapshot` 可关（bin 入口读键后
- *   经 `heapSnapshot` 参数显式传入——F3②）。
+ *   "谁在持内存"；全路径单源，默认关、配置键 `diagnostics.heapSnapshot` 取 `true` 才武装
+ *   （fail-closed；bin 入口读键后经 `heapSnapshot` 参数显式传入——F3②）。
  * - writeCrashRecord()（F-R25a）：JS 异常钩子同步落盘 crash-{ts}-{pid}.json（ts = epoch ms
  *   UTC + pid——跨进程同 ms 防覆盖——复审 #3）——权限 0600（config.json 先例）。
  * - recentCrashHint()（F-R25c）：启动扫描 24h 窗内记录（两类文件模式定死——评审 #8：
@@ -70,10 +70,10 @@ function purgeOldCrashReports(dir) {
 /**
  * F-R25b：入口最前调用（一切重活前——缩编程期窗口）——预建目录 + process.report 启用。
  * 任何失败不阻断启动（尽力面——record 路径自带降级）。返回目录路径。
- * F3①：同点武装近堆上限堆快照（默认开——全路径单源；开关 = bin 入口读配置键后经 `heapSnapshot` 传入）。
+ * F3①：同点武装近堆上限堆快照（默认关——fail-closed，显式 `true` 才武装；全路径单源；开关 = bin 入口读配置键后经 `heapSnapshot` 传入）。
  * @param {object} [opts] 注入缝（默认参数 = 生产常态）
  * @param {string} [opts.dir] 目录注入（测试用——同时服务 mkdir / report / purge / 返回）
- * @param {boolean} [opts.heapSnapshot] 快照武装开关（bin 入口经配置键判定后显式传入；默认开）
+ * @param {boolean} [opts.heapSnapshot] 快照武装开关（bin 入口经配置键判定后显式传入；配置默认关、显式 `true` 才武装——fail-closed；形参缺省 = 内部约定，生产调用点恒显式传值）
  * @param {(n: number) => void} [opts.armHeapSnapshot] 武装实现注入（测试用）——默认真实 node:v8 API
  */
 export function prepareCrashReporting({ dir = crashReportsDir(), heapSnapshot = true, armHeapSnapshot = v8.setHeapSnapshotNearHeapLimit } = {}) {

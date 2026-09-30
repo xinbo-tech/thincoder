@@ -7,8 +7,9 @@
  * **隔离形（禁令）= 策略面零 `electron` 顶层 import**：electron 原语全经注入缝（`sample` ∕ `snapshot`
  * ∕ `log` 三缝 + `ping` ∕ `killRenderer` ∕ `reload` 冻结 ∕ 恢复动作原语）；装配住 `src/main/main.mjs`
  * （先例 = KD-35 `notify.mjs`）⇒ 本档平 node 可 import 直测。
- * 键面（读点 = main.mjs，一次；读抛 ⇒ 默认开——CLI 同口径）：`diagnostics.heapWatch`（武装门——关 ⇒
- * 全静默）· `diagnostics.heapSnapshot`（快照门——关 ⇒ 零快照，冻结门 ∕ 恢复动作不受影响）。
+ * 键面：`diagnostics.heapWatch`（武装门——开机单读；关 ⇒ 零采样 ∕ 零快照 ∕ 零现场，唯运行期过渡行照记）· `diagnostics.heapSnapshot`（快照门——
+ * 默认关〔fail-closed〕；桌面端运行期热读——装配面两源调用句柄 `setSnapshotEnabled` 应用；关 ⇒ 零快照，
+ * 冻结门 ∕ 恢复动作不受影响）。
  * purge 核对（实施期，2026-09-30）：CLI `crash-reports.mjs` 四模式（`crash-*` ∕ `report.*` ∕ `tui-stderr-*` ∕ `Heap.*`）
  * 不含 `desktop-freeze-*.json`（且不得冒充 `crash-*`——会误触 CLI「上次运行异常终止」提示）⇒ 本档按**同策**（30 天）
  * 自清：现场 = 自名族；快照 = 与 CLI 同式 `/^Heap\..+\.heapsnapshot$/`（覆盖自名 ∥ 主臂 V8 名）。
@@ -69,9 +70,11 @@ function purgeOwnFiles(dir, nowMs) {
 }
 
 /**
- * 启动看门狗（返回句柄：`stop()` ∕ `checkNow()`（直驱一次采样）+ 冻结钩族 `onUnresponsive` ∕
- * `onResponsive` ∕ `onGone`）。`enabled: false` ⇒ 零武装（不注册定时器 ∕ 不预建目录 ∕ 不武装快照）。
- * 注入缝：`sample` ∕ `snapshot` ∕ `log` + `ping` ∕ `killRenderer` ∕ `reload`；时钟 ∕ 定时器可注入（平 node 直测）。
+ * 启动看门狗（返回句柄：`stop()` ∕ `checkNow()`（直驱一次采样）+ 运行期快照门 `setSnapshotEnabled(enabled)`
+ * + 冻结钩族 `onUnresponsive` ∕ `onResponsive` ∕ `onGone`）。`enabled: false` ⇒ 零武装（不注册定时器 ∕
+ * 不预建目录 ∕ 不武装快照）；`snapshotEnabled` = 快照门**初始值**（判定归装配面——运行期热读经句柄应用）。
+ * 注入缝：`sample` ∕ `snapshot` ∕ `log` + `ping` ∕ `killRenderer` ∕ `reload` + `armMainSnapshot`（臂调用观测）；
+ * 时钟 ∕ 定时器可注入（平 node 直测）。
  */
 export function createHeapWatch({
   enabled = true,
@@ -109,6 +112,7 @@ export function createHeapWatch({
   let pressureTaken = false
   let lastReading = { main: null, processes: [] }
   let seq = 0
+  let armDone = false // 近上限臂一次性安装标记（Node API 一次性 ⇒ 补装门 = `armed ∧ ¬armDone`）
 
   const rendererWorkingSet = () => (lastReading.processes ?? []).reduce((max, p) => (
     RENDERER_TYPES.has(p?.type) && Number.isFinite(p.workingSetMb) ? Math.max(max, p.workingSetMb) : max
@@ -263,10 +267,21 @@ export function createHeapWatch({
     closeEpisode()
   }
 
+  /** 运行期快照门应用（装配面两源调用——config-watch `onChange` ∥ 核 `onConfigSelfWrite` 订阅）：
+   *  同值 ⇒ 零动作（幂等——不重复记过渡行）；`false` ⇒ 渲染径即时零取；`false→true` 且武装开启 ⇒
+   *  近上限臂补装恰一次（`armDone` 闸——Node 一次性 API：不可重装 ∥ 已装态不可撤）。 */
+  const setSnapshotEnabled = (value) => {
+    const next = value === true
+    if (next === snapshotEnabled) return
+    snapshotEnabled = next
+    log(`[heap] snapshot collection ${next ? "enabled" : "disabled"} (runtime)`)
+    if (next && armed && !armDone) { armDone = true; try { armMainSnapshot(1) } catch { /* 补装失败不阻断 */ } }
+  }
+
   if (armed) { // 武装：crash-reports 预建 + 自清 + 主进程近上限快照 + 双定时器（unref——不拖宿主退出）
     try { mkdirSync(sceneDir, { recursive: true }) } catch { /* 预建失败不阻断（写时重试） */ }
     purgeOwnFiles(sceneDir, now())
-    if (snapshotEnabled) { try { armMainSnapshot(1) } catch { /* 武装失败不阻断 */ } }
+    if (snapshotEnabled) { armDone = true; try { armMainSnapshot(1) } catch { /* 武装失败不阻断 */ } }
     sampleHandle = timer(() => { void checkNow() }, intervalMs)
     try { sampleHandle?.unref?.() } catch { /* 尽力面 */ }
     pingHandle = timer(() => { void pingTick() }, pingIntervalMs)
@@ -276,6 +291,7 @@ export function createHeapWatch({
   return {
     stop,
     checkNow,
+    setSnapshotEnabled,
     onUnresponsive: () => beginFreeze("unresponsive", "event"),
     onResponsive: () => { if (episode !== null && !episode.recovered) void recover(episode, "responsive-event") },
     onGone: (details) => {

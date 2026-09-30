@@ -113,7 +113,8 @@ function assertCase(res, { state, interval, snapshot }) {
 // ─── 腿一（#439①）：4 态矩阵 ────────────────────────────────────────────────
 
 const MATRIX = [
-  { state: "缺省（无 config 文件）", diagnostics: null, interval: 1, snapshot: 1 },
+  // 取代注（用例退场登记）：缺省快照面 2026-09-30 采集收网批翻转默认关——旧契约期望废止，见 `docs/batches/2026-09-30-heap-snapshot-switch.md` §2
+  { state: "缺省（无 config 文件）", diagnostics: null, interval: 1, snapshot: 0 },
   { state: "全关", diagnostics: { heapWatch: false, heapSnapshot: false }, interval: 0, snapshot: 0 },
   { state: "独关 watch", diagnostics: { heapWatch: false, heapSnapshot: true }, interval: 0, snapshot: 1 },
   { state: "独关 snapshot", diagnostics: { heapWatch: true, heapSnapshot: false }, interval: 1, snapshot: 0 },

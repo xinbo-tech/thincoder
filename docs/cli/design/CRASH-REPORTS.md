@@ -75,7 +75,7 @@
 ### 3.2 开关（配置键）
 
 - 键：`diagnostics.heapSnapshot`（布尔；判定 / 默认在 `thincoder-core/config.mjs` 装载面）；**判定单点 = bin 入口读键后以显式参数传入**（`prepareCrashReporting({ heapSnapshot })`——包装器不判定，防两处判定漂移）。
-- 取关：键值 `false` → **不武装**；缺省 / 其余值 → **默认开**（fail-open 向取证）。
+- 判定：键值 `true` → 武装；缺省 / 其余值 / 读失败 → **不武装**（默认关——2026-09-30 采集收网批：隐私默认〔traces D-TR6 同族〕；判定形 fail-closed）。**显式开的生效时点分端**：桌面会话热读（运行期即时）∥ CLI 本进程下次启动（判定单点 = 进程启动读键）。
 - 通道纪律（自有配置禁经 env）= `CONFIG.md` §6.2。
 - 包装器的 `--diagnostic-dir` **无条件注入**（开关已关时该参数无副作用面——报告目录由 `process.report.directory` 决定，同值）。
 
@@ -122,7 +122,7 @@
 
 ### 4.3 开关与预警行
 
-- **开关（单点）**：配置键 `diagnostics.heapWatch`（布尔）——`false` → 不启动；缺省 / 其余值 → 启动（默认开；与 §3.2 同约定）。
+- **开关（单点）**：配置键 `diagnostics.heapWatch`（布尔）——`false` → 不启动；缺省 / 其余值 → 启动（默认开——遥测默认面；判定形 `!== false`，与 §3.2 快照面默认相反〔快照默认关〕）。
   bin 入口读键后经显式参数传入（`startHeapWatch({ enabled })`——模块不读配置）。
 - **预警行（逐字——进测试断言）**：
 
@@ -198,3 +198,5 @@
   ④ 旧档批次材料（选型表 / 实测矩阵 / 受影响文件 / 用例 / AC / 问题陈述）入 §6.1；⑤ 三节机制按主题重排为 §1–§5。
 - 2026-09-27（**env-config-purge 批 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §1.5）：§3.2 由「env 开关」改**配置键** `diagnostics.heapSnapshot`（判定单点移 bin 入口 → 参数传入；关值集合消失）· §4.2 契约签名去 `env` 形参、加 `enabled = true` · §4.3 开关改 `diagnostics.heapWatch`。通道纪律单源 = `CONFIG.md` §6.2。
 - 2026-09-27（**env-config-purge 批 · 设计评审轮 1 修正轮 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §3 轮次 1 发现 1）：§2.1 注入接口行去 `env` 形参、列 `heapSnapshot = true`（与 §3.2 判定单点同形）；`heapSnapshot` 来源句补「bin 入口读配置键后显式传入」。**零语义**：§3.2 / §4.2 / §4.3 机制句零改。
+- 2026-09-30（**采集收网批 · eng-designer**——承 `docs/batches/2026-09-30-heap-snapshot-switch.md` §2）：§3.2 判定句翻转（键值 `true` ⇒ 武装；缺省 ∕ 读失败 ⇒ 不武装——隐私默认关 ∥ fail-closed）；§4.3「与 §3.2 同约定」随动收正（两键默认自此相反）。武装 ∕ 注入缝 ∕ 代价表机制面零改。
+- 2026-09-30（**采集收网批 · 设计收正轮（§3 轮次 1 发现 4）· eng-designer**——承 `docs/batches/2026-09-30-heap-snapshot-switch.md`）：§3.2 判定句「运行期可显式开」收紧为**分端生效时点**（桌面会话热读 ∥ CLI 本进程下次启动——判定单点 = 进程启动读键）。**零语义**（措辞级——防读作 CLI 进程运行期热生效）。

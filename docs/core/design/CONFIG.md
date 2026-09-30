@@ -139,7 +139,7 @@
 |---|---|---|
 | `THINCODER_LOG_DIR` | ③ 缝 | `thincoder-core/log.mjs`：`_setLogsDirForTest` / `_resetLogsDirForTest`（写门 = `NODE_TEST_CONTEXT` ∧ 未设缝） |
 | `THINCODER_TRACES_DIR` | ③ 缝 | `thincoder-core/traces/trace-store.mjs`：`_setTracesRootForTest` / `_resetTracesRootForTest`（同门形） |
-| `THINCODER_HEAP_SNAPSHOT` | ① 键 | `diagnostics.heapSnapshot`（默认 `true`）→ `prepareCrashReporting({ heapSnapshot })`（`thincoder-cli/src/crash-reports.mjs`） |
+| `THINCODER_HEAP_SNAPSHOT` | ① 键 | `diagnostics.heapSnapshot`（默认 `false`——2026-09-30 采集收网批：隐私默认关〔traces D-TR6 同族〕；桌面端运行期热读）→ `prepareCrashReporting({ heapSnapshot })`（`thincoder-cli/src/crash-reports.mjs`） |
 | `THINCODER_HEAP_WATCH` | ① 键 | `diagnostics.heapWatch`（默认 `true`）→ `startHeapWatch({ enabled })`（`thincoder-cli/src/heap-watch.mjs`） |
 | `THINCODER_TUI_WRAPPED` | ④ argv | bin 顶部剥离 `--tui-wrapped`（注入点 = `thincoder-cli/src/tui/wrapped-spawn.mjs`） |
 | `THINCODER_TEST_CRASH` / `THINCODER_TEST_TUI_ACTIVE` | ④ argv | bin 崩溃钩 `--test-crash` / `--test-tui-active`（生产零路径） |
@@ -232,3 +232,4 @@
   机制单源 = 本节（`doc:SETTINGS-TOOL.md` D-ST16 与 `doc:MCP.md` §6.5 改指）。**零新语义**（= 台账 #57 既定设计与 settings 脱敏批候选 C1 的成文）。
 - 2026-09-29（**provider-config-family 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-29-provider-config-family.md` §3 轮次 1 发现 1 ∕ 2）：§6.3 解析点集**五处 → 六处**（补「会话标题生成径」+ 标题径非致命兜底句）；§6.2 补**值位显式引用 ≠ 配置通道**边界句 + D-CF5 补注（与 §6.3 双向指）。**零新语义**（= 评审发现的直接导出项）。
 - 2026-09-30（**doc-sweep 批 · 行宽收正 · eng-designer**——承 `docs/batches/2026-09-30-doc-sweep.md` §2 · 台账 #664）：provider-config-family 设计轮条（原单行 332 字符）**折行**（仅换行 ∕ 语义零改——doc-check 行宽闸收正）。**零新语义**。
+- 2026-09-30（**采集收网批 · eng-designer**——承 `docs/batches/2026-09-30-heap-snapshot-switch.md` §2）：§6.2 名录 `THINCODER_HEAP_SNAPSHOT` 行**默认值收正**（`true` ⇒ `false`——采集隐私默认关〔D-TR6 同族〕；桌面端运行期热读＝本批新机制）。**四类通道 ∥ D-CF5 ∥ D-CF6 零改**。

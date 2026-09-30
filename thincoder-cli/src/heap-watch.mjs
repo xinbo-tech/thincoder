@@ -9,7 +9,7 @@
  * 无绝对 MB 常量）；双档边缘触发（每档一次/进程——不重复刷屏）；零常态开销
  * （60s 一次 memoryUsage()，无输出——D-HW5）。
  *
- * 开关：配置键 `diagnostics.heapWatch`（默认开——与 F3① 同约定）——bin 入口读键后经
+ * 开关：配置键 `diagnostics.heapWatch`（默认开——判定形 `!== false`，与 F3 快照面默认相反〔快照默认关〕）——bin 入口读键后经
  * `enabled` 参数显式传入；关 ⇒ 不注册定时器（返回惰性句柄）。
  *
  * 注入缝（N5 可测）：`sample` / `heapLimit` / `timer`——测试以假实现 + `checkNow()`

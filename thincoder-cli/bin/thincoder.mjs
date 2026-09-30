@@ -46,17 +46,18 @@ if ((command === undefined || command === "tui") && !_tuiWrapped) {
 }
 const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version
 
-// CONFIG.md §6.2 ①（用户面两开关——默认开）：判定单点 = 本入口——读配置键
-// `diagnostics.{heapSnapshot,heapWatch}` 一次，经显式参数传入下方两消费者（读抛 ⇒ 视为默认开）。
+// CONFIG.md §6.2 ①（用户面两开关——默认各向）：判定单点 = 本入口——读配置键
+// `diagnostics.{heapSnapshot,heapWatch}` 一次，经显式参数传入下方两消费者；读抛 ⇒ 各向默认
+// （watch 开 ∥ 快照关——fail-closed）。
 let _diagnostics = {}
 try {
   _diagnostics = loadConfig().diagnostics ?? {}
-} catch { /* 配置缺失/损坏 → 默认开（零风险） */ }
+} catch { /* 配置缺失/损坏 → 各向默认（watch 开 ∥ 快照关——fail-closed） */ }
 
 // R25（F-R25b）：crash-reports 预建 + process.report 启用——入口最前（一切重活前——缩编程
 // 期窗口）——V8 OOM/原生 fatal 自动写 report.*.json（实现批实测：目录缺失时 Node 静默不写
 // ——预建为必要动作）。失败不阻断启动（尽力面）。
-prepareCrashReporting({ heapSnapshot: _diagnostics.heapSnapshot !== false })
+prepareCrashReporting({ heapSnapshot: _diagnostics.heapSnapshot === true })
 // TUI-OOM-ROOTCAUSE（CRASH-REPORTS.md §8.3 武装点——全命令同源单点）：堆遥测/看门狗——
 // 60s 采样 + 双档（70/85%）比例边缘预警（stderr + TUI 行 + 事件日志）；定时器 unref
 // （一次性命令自然退出零阻塞）；默认开（配置键 `diagnostics.heapWatch` 取 `false` 可不启）。
