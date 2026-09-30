@@ -106,15 +106,15 @@ export function providerStatus() {
 export function handleAddProvider(payload) { return addProviderEntry(payload) }
 export function handleRemoveProvider(name) { return removeProviderEntry(name) }
 
-/** Set/clear a provider's per-provider proxy flag (false → delete the field, CLI injectProxy parity). */
+/** Set/clear a provider's per-provider proxy flag (false → delete the field, CLI injectProxy parity).
+ *  #695：写结果归一（`conflictError`——mtime 冲突 → 提示串；站点接 `providers` 段失败面）。 */
 export function handleSetProviderProxy(name, proxy) {
-  vscPersistRaw((raw) => {
+  return conflictError(vscPersistRaw((raw) => {
     const entry = Array.isArray(raw.providers) ? raw.providers.find((p) => p?.name === name) : null
     if (!entry) return
     if (proxy === true) entry.proxy = true
     else delete entry.proxy
-  })
-  return null
+  }))
 }
 
 /** Agent/Advisor settings snapshot for the panel (from shared config.json).
@@ -174,23 +174,23 @@ export function websearchSettings() {
   return { hasKey: !!ws.apiKey }
 }
 
-/** Persist the Tavily web-search API key (empty → clear). */
+/** Persist the Tavily web-search API key (empty → clear). #695：写结果归一回调用面（`tools` 段失败面）。 */
 export function saveWebsearchKeyFromPanel(key) {
-  vscPersistRaw((raw) => {
+  return conflictError(vscPersistRaw((raw) => {
     const ws = raw.websearch ?? {}
     ws.apiKey = key?.trim() || ""
     if (!ws.apiKey) delete ws.apiKey
     raw.websearch = ws
-  })
+  }))
 }
 
-/** Remove the Tavily web-search API key. */
+/** Remove the Tavily web-search API key. #695：写结果归一回调用面。 */
 export function deleteWebsearchKeyFromPanel() {
-  vscPersistRaw((raw) => {
+  return conflictError(vscPersistRaw((raw) => {
     const ws = raw.websearch ?? {}
     delete ws.apiKey
     raw.websearch = ws
-  })
+  }))
 }
 
 /**
@@ -267,14 +267,15 @@ export async function testProxyConnection(uri) {
 /** Store a provider API key (settings provider command face — writes go through the panel write channel). */
 export async function saveProviderKey(name, key) {
   // storeProviderKey performs the same !key || !key.trim() guard — delegate only.
-  await storeProviderKey(name, key)
+  const err = await storeProviderKey(name, key) // #695：核写结果（mtime 冲突 → 提示串）穿透返回
   // M9：设 API key = 配置写入面——探一次 GET /models（探不通 → 标不可用 + 不入候选；
   // 不阻断保存——key 已落盘）。探针失败不缓存——下次配置动作重探。
   await probeProviderAdmission(name)
+  return err
 }
 
 export async function deleteProviderKey(name) {
-  await removeProviderKey(name)
+  const err = await removeProviderKey(name) // #695：主写结果穿透返回（custom 清理 = 次级写——不叠回）
   // A bare "custom" entry with no baseURL/model is useless — drop it entirely
   if (name === "custom") {
     vscPersistRaw((raw) => {
@@ -284,6 +285,7 @@ export async function deleteProviderKey(name) {
       }
     })
   }
+  return err
 }
 
 export function getMcpServers() {
@@ -303,7 +305,7 @@ export function deleteMcpServer(name) {
   return removeMcpServer(name)
 }
 
-/** 设置面失败面单源（#640 载荷 v2 = `{ type:"providerError", scope, reason }`）：8 站点统一经此。
+/** 设置面失败面单源（#640 载荷 v2 = `{ type:"providerError", scope, reason }`）：**19 站点**统一经此（既有 9 + #695 批 10——闭集 = `docs/vsc/design/SETTINGS.md` §2.15）。
  *  `CONFIG_CONFLICT_HINT`（核 `conflictError` 的唯一非空返回）⇒ 判定码 `"mtime-conflict"`（webview
  *  词表出词）；其余 ⇒ 原样串直传（表外通道）。 */
 export function postProviderError(panel, scope, err) {

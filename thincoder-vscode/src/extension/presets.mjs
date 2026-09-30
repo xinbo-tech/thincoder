@@ -39,15 +39,16 @@ export function isProviderConfigured(name) {
   }
 }
 
-/** Store an API key into config.json (kept async for call-site compatibility). */
+/** Store an API key into config.json (kept async for call-site compatibility).
+ *  #695：核写结果（`{ok:false,reason:"mtime-conflict"}` → 提示串）穿透返回。 */
 export async function storeProviderKey(name, key) {
   if (!key || !key.trim()) return
-  setProviderKey(name, key.trim())
+  return setProviderKey(name, key.trim())
 }
 
-/** Remove an API key from config.json (the provider entry itself stays). */
+/** Remove an API key from config.json (the provider entry itself stays). #695：核写结果穿透返回。 */
 export async function removeProviderKey(name) {
-  removeProviderKeyFromConfig(name)
+  return removeProviderKeyFromConfig(name)
 }
 
 /** All configured providers as a name → entry map. */

@@ -106,7 +106,7 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 | extension → webview | `workspaceGuard` | `{ active }` — 无工作区守卫态（面板拒发 + 占位符第三态；守卫面 = `docs/vsc/design/PROJECT-SWITCHER.md` §4.1） |
 | extension → webview | `usage` | `{ …, timers?: { count, expired }, ctxTokens? }` — 状态行计数源（`timers` = 计时活读投影 ∥ `ctxTokens` = 上下文占用量——状态行 `⏰N` / `context X% Yk` 段源） |
 | extension → webview | `timer` | `{ status: "fired", text }` — timer 到点交付行（`text` = 交付原文，显示裁 ≤3 行） |
-| extension → webview | `providerError` | `{ scope, reason }` — 写/连失败统一面（`scope` = 段名闭集 + `panel`；`reason` = 码 ∕ 原样串；八站点汇聚 = `postProviderError`） |
+| extension → webview | `providerError` | `{ scope, reason }` — 写/连失败统一面（`scope` = 段名闭集 + `panel`；`reason` = 码 ∕ 原样串；**19 站点**汇聚 = `postProviderError`——#695 收口） |
 
 ## Agent Lifecycle
 

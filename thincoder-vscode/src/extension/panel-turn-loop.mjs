@@ -26,7 +26,7 @@ import { continueDecision } from "@thincoder/core/agent/continue-decision.mjs" /
 import { hydrateRun, setupAgentRun } from "../agent/setup.mjs"
 import { agentState } from "../agent/run-helpers.mjs"
 import { syncToolDrivenDisplayState } from "../agent/agent-state.mjs"
-import { getMcpServers } from "./settings.mjs"
+import { assemblyMcpServers } from "../config-mcp.mjs" // #701：装配面并项目根 `.mcp.json`（ro 载荷唯一供给点）
 import { collectEditorInjection } from "./editor-context.mjs"
 import { traceStop } from "./stop-trace.mjs"
 import { postDigestCap } from "./panel-callbacks.mjs"
@@ -162,7 +162,7 @@ export async function runTurnLoop(panel, deps) {
   const ro = {
     agent: panel._agent, // §11 单例：存在且绑定匹配（ensurePanelAgent）→ hydrateRun 复用同一对象
     // ↑ 该初值仅保键序/可读：下方 bindPanelAgent 立即把本槽改为 ⇄ panel._agent 访问器（#133）
-    mcpServers: getMcpServers(), images, history, fullHistory,
+    mcpServers: await assemblyMcpServers(cwd), images, history, fullHistory,
     injections: [collectEditorInjection(cwd)].filter(Boolean), // A1 序位 = env → peer → injections → time（核 prepareRun）
     distillSignal: panel._distillController?.signal,
     engPersist: { cwd, slot: turnSlot },

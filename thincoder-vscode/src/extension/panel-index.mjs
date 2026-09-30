@@ -106,12 +106,14 @@ export async function saveEmbeddingConfig(panel, { apiKey }) {
       const existing = loadEmbeddingConfig() ?? {}
       const baseURL = existing.baseURL || "https://api.siliconflow.cn/v1"
       const model = existing.model || "BAAI/bge-m3"
-      saveEmbeddingConfigToFile({ apiKey, baseURL, model })
+      const err = saveEmbeddingConfigToFile({ apiKey, baseURL, model }) // #695：写结果捕获
+      if (err) return err // 写失败（mtime 冲突）⇒ 不触运行态缓存（防盘 ∕ 内存分叉）；失败面经站点发射
       resetEmbedder()
       setVSCodeEmbedder({ baseURL, model, apiKey })
     } else {
       // Delete key — remove from shared config.json and reset the cached embedder
-      saveEmbeddingConfigToFile({ apiKey: "" })
+      const err = saveEmbeddingConfigToFile({ apiKey: "" }) // #695：写结果捕获
+      if (err) return err
       resetEmbedder()
     }
     panel._pushSettings()

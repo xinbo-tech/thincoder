@@ -25,17 +25,31 @@ import { handleAddProvider as persistAddProvider, handleRemoveProvider as persis
 import { setSlotAdvisorGuard, setSlotEngineering } from "./session-io.mjs"
 import { _cwd } from "./panel-messages.mjs"
 
-/** 迁出自 `panel-messages.mjs` 的 case "saveProviderKey"。 */
-export async function handleSaveProviderKey(panel, msg) { await panel._saveProviderKey(msg.name, msg.key) }
+/** 迁出自 `panel-messages.mjs` 的 case "saveProviderKey"（#695：写结果捕获——冲突 ⇒ `providers` 段失败面）。 */
+export async function handleSaveProviderKey(panel, msg) {
+  const err = await panel._saveProviderKey(msg.name, msg.key)
+  if (err) postProviderError(panel, "providers", err)
+}
 
-/** 迁出自 `panel-messages.mjs` 的 case "deleteProviderKey"。 */
-export async function handleDeleteProviderKey(panel, msg) { await panel._deleteProviderKey(msg.name) }
+/** 迁出自 `panel-messages.mjs` 的 case "deleteProviderKey"（#695：同式）。 */
+export async function handleDeleteProviderKey(panel, msg) {
+  const err = await panel._deleteProviderKey(msg.name)
+  if (err) postProviderError(panel, "providers", err)
+}
 
-/** 迁出自 `panel-messages.mjs` 的 case "saveMcpServer"。 */
-export async function handleSaveMcpServer(panel, msg) { await panel._saveMcpServer(msg.name, msg.config); panel._pushMcpStatus() }
+/** 迁出自 `panel-messages.mjs` 的 case "saveMcpServer"（#695：写结果捕获——冲突 ⇒ `mcp` 段失败面）。 */
+export async function handleSaveMcpServer(panel, msg) {
+  const err = await panel._saveMcpServer(msg.name, msg.config)
+  if (err) postProviderError(panel, "mcp", err)
+  panel._pushMcpStatus()
+}
 
-/** 迁出自 `panel-messages.mjs` 的 case "deleteMcpServer"。 */
-export async function handleDeleteMcpServer(panel, msg) { await panel._deleteMcpServer(msg.name); panel._pushMcpStatus() }
+/** 迁出自 `panel-messages.mjs` 的 case "deleteMcpServer"（#695：同式）。 */
+export async function handleDeleteMcpServer(panel, msg) {
+  const err = await panel._deleteMcpServer(msg.name)
+  if (err) postProviderError(panel, "mcp", err)
+  panel._pushMcpStatus()
+}
 
 // MCP.md §4 F5/D-4：reconnectMcp（既有死按钮修复——webview 已在发此消息，路由拆分时
 // 丢失）+ edit/test（CLI /mcp edit/test parity，交互随面板惯例）。
@@ -88,26 +102,41 @@ export async function handleRemoveProvider(panel, msg) {
   }
 }
 
-/** 迁出自 `panel-messages.mjs` 的 case "setProviderProxy"。 */
+/** 迁出自 `panel-messages.mjs` 的 case "setProviderProxy"（#695：写结果捕获——冲突 ⇒ `providers` 段失败面）。 */
 export function handleSetProviderProxy(panel, msg) {
-  persistSetProviderProxy(msg.name, msg.proxy === true)
+  const err = persistSetProviderProxy(msg.name, msg.proxy === true)
+  if (err) postProviderError(panel, "providers", err)
   panel._pushSettingsLight()
 }
 
 /** 迁出自 `panel-messages.mjs` 的 case "setKey"。 */
 export async function handleSetKey(panel) { await setKeyFlow(ui, () => panel._pushSettings()) }
 
-/** 迁出自 `panel-messages.mjs` 的 case "saveEmbedKey"。 */
-export async function handleSaveEmbedKey(panel, msg) { await panel._saveEmbeddingConfig({ apiKey: msg.key }) }
+/** 迁出自 `panel-messages.mjs` 的 case "saveEmbedKey"（#695：写结果捕获——冲突 ⇒ `tools` 段失败面）。 */
+export async function handleSaveEmbedKey(panel, msg) {
+  const err = await panel._saveEmbeddingConfig({ apiKey: msg.key })
+  if (err) postProviderError(panel, "tools", err)
+}
 
-/** 迁出自 `panel-messages.mjs` 的 case "deleteEmbedKey"。 */
-export async function handleDeleteEmbedKey(panel) { await panel._saveEmbeddingConfig({ apiKey: "" }) }
+/** 迁出自 `panel-messages.mjs` 的 case "deleteEmbedKey"（#695：同式）。 */
+export async function handleDeleteEmbedKey(panel) {
+  const err = await panel._saveEmbeddingConfig({ apiKey: "" })
+  if (err) postProviderError(panel, "tools", err)
+}
 
-/** 迁出自 `panel-messages.mjs` 的 case "saveWebsearchKey"。 */
-export function handleSaveWebsearchKey(panel, msg) { saveWebsearchKeyFromPanel(msg.key); panel._pushSettingsLight() }
+/** 迁出自 `panel-messages.mjs` 的 case "saveWebsearchKey"（#695：写结果捕获——冲突 ⇒ `tools` 段失败面）。 */
+export function handleSaveWebsearchKey(panel, msg) {
+  const err = saveWebsearchKeyFromPanel(msg.key)
+  if (err) postProviderError(panel, "tools", err)
+  panel._pushSettingsLight()
+}
 
-/** 迁出自 `panel-messages.mjs` 的 case "deleteWebsearchKey"。 */
-export function handleDeleteWebsearchKey(panel) { deleteWebsearchKeyFromPanel(); panel._pushSettingsLight() }
+/** 迁出自 `panel-messages.mjs` 的 case "deleteWebsearchKey"（#695：同式）。 */
+export function handleDeleteWebsearchKey(panel) {
+  const err = deleteWebsearchKeyFromPanel()
+  if (err) postProviderError(panel, "tools", err)
+  panel._pushSettingsLight()
+}
 
 /** 迁出自 `panel-messages.mjs` 的 case "testProvider"。 */
 export async function handleTestProvider(panel, msg) {
@@ -186,9 +215,10 @@ export async function handleSetPlanMode(panel, msg) {
 /** 迁出自 `panel-messages.mjs` 的 case "getShellCandidates"（F-W18：异步探测——await 回批）。 */
 export async function handleGetShellCandidates(panel) { panel._panel?.webview.postMessage({ type: "shellCandidates", candidates: await shellCandidates(), current: loadRaw().shell ?? null }) }
 
-/** 迁出自 `panel-messages.mjs` 的 case "saveShellSettings"。 */
+/** 迁出自 `panel-messages.mjs` 的 case "saveShellSettings"（#695：返回契约已到位、接线补全——冲突 ⇒ `env` 段失败面）。 */
 export function handleSaveShellSettings(panel, msg) {
-  saveShellSettingsFromPanel(msg.value)
+  const err = saveShellSettingsFromPanel(msg.value)
+  if (err) postProviderError(panel, "env", err)
   panel._pushSettingsLight()
 }
 

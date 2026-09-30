@@ -10,7 +10,7 @@ import * as vscode from "vscode"
 import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
-import { endProbeWindow } from "./settings.mjs" // F-W19（探针窗口终止）——消费点在 resolveWebviewView/dispose（本档留守面）
+import { endProbeWindow, postProviderError } from "./settings.mjs" // F-W19（探针窗口终止）——消费点在 resolveWebviewView/dispose（本档留守面）；postProviderError = #695 面②兜底
 import { loadLocaleStrings } from "../i18n.mjs"
 import { handlePanelMessage, routeUserTurn, _cwd, setProjectFolder, clearProjectOverride, stopLiveHeartbeat } from "./panel-messages.mjs"
 import { createVscNotify } from "./notify.mjs" // parity-b4 W1：完成提示宿主包装（策略 ∕ 词键 ∕ 语言取值在核）
@@ -31,6 +31,15 @@ import { providerStatus, saveProviderKey, deleteProviderKey, saveMcpServer, dele
 import { initLedgerSurface, dispose as disposeLedgerSurface } from "./ledger-surface.mjs" // LEDGER-SURFACE（§2.30.3.5）
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+
+/** #695 面②（分发表单点收口）：handler 抛点（如畸形 config 的 `config file not parseable` 穿透）⇒
+ *  面板可见失败面——`console.error` 保留（宿主日志面）+ `panel` scope（设计内「零段标」形——原样串
+ *  直传；reason = 首行，多行消息词面只取首行）。 */
+export function reportHandlerError(panel, e) {
+  const msg = e?.message ?? String(e)
+  console.error("[chat-panel] message handler:", msg)
+  postProviderError(panel, "panel", msg.split("\n")[0])
+}
 
 export class ChatPanel {
   /** @param {vscode.ExtensionContext} context */
@@ -193,7 +202,7 @@ export class ChatPanel {
     initStopTrace(this._context, vscode)
 
     webviewView.webview.onDidReceiveMessage((msg) => {
-      handlePanelMessage(this, msg).catch((e) => console.error("[chat-panel] message handler:", e.message))
+      handlePanelMessage(this, msg).catch((e) => reportHandlerError(this, e))
     })
 
     this._initStatusBar()

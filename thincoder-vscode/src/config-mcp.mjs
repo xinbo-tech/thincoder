@@ -6,6 +6,8 @@
  * this file's entry points are now the end-shell consumers (extension/settings.mjs / panel-messages.mjs).
  */
 
+import { existsSync, readFileSync } from "node:fs"
+import { join } from "node:path"
 import { loadRaw, conflictError } from "@thincoder/core/config-io.mjs"
 import { vscPersistRaw } from "./extension/settings-panel-write.mjs"
 
@@ -69,4 +71,34 @@ export function removeMcpServer(name) {
     raw.mcp.servers = (raw.mcp.servers ?? []).filter((s) => s?.name !== name)
   })
   return conflictError(r)
+}
+
+// ─── 装配面第二源（#701 · 2026-09-30 · 台账 #701——对齐 CLI `make-agent.mjs:61-79` ∕ 桌面
+// `agent-assemble.mjs:58-79`；机制单源 = `docs/core/design/MCP.md` §6.4）：MCP **装配面**
+// （会话 ro 载荷）另并项目根 `.mcp.json`；**管理面**（列表 ∕ 增删改 ∕ 重连 ∕ 探活）仍 config
+// 单源（`loadMcpServers` 零改——文件源条目不进管理列表，沿 CLI `/mcp` 口径）。
+
+/** 装配连接集 = config `mcp.servers`（前）＋ 项目根 `.mcp.json`（后——单层发现、零上溯）。
+ *  合并 = config 同名优先 ∕ 异名追加；`mcpServers` 须对象形（数组形 ⇒ 跳过 + 记录）；条目 =
+ *  `{ name, ...server }`（非对象 ∕ 数组 ⇒ 跳过）；读 ∕ 解析失败非致命（仅记录）；非变异（零回写 config）。
+ *  @param {string} cwd — 会话当前项目根；空 ∕ 非串 ⇒ 零读零并入（恒等 `loadMcpServers()`） */
+export async function assemblyMcpServers(cwd) {
+  const servers = loadMcpServers()
+  if (typeof cwd !== "string" || cwd === "") return servers
+  try {
+    const mcpJsonPath = join(cwd, ".mcp.json")
+    if (!existsSync(mcpJsonPath)) return servers
+    const mcpServers = JSON.parse(readFileSync(mcpJsonPath, "utf8"))?.mcpServers
+    if (Array.isArray(mcpServers)) console.error("[mcp] .mcp.json: mcpServers must be a plain object, got array — skipped")
+    if (!mcpServers || typeof mcpServers !== "object" || Array.isArray(mcpServers)) return servers
+    const configNames = new Set(servers.map((s) => s.name))
+    for (const [name, server] of Object.entries(mcpServers)) {
+      if (configNames.has(name)) continue // config.json takes priority
+      if (!server || typeof server !== "object" || Array.isArray(server)) continue
+      servers.push({ name, ...server })
+    }
+  } catch (e) {
+    console.error(`[mcp] Failed to read .mcp.json: ${e.message}`) // 非致命（沿 CLI 判——零中断）
+  }
+  return servers
 }

@@ -23,13 +23,15 @@ export function providerStatus(panel) {
 }
 
 export async function saveProviderKey(panel, name, key) {
-  await settingsSaveProviderKey(name, key)
+  const err = await settingsSaveProviderKey(name, key) // #695：穿透返回（站点接失败面）
   panel._pushStatus()
+  return err
 }
 
 export async function deleteProviderKey(panel, name) {
-  await settingsDeleteProviderKey(name)
+  const err = await settingsDeleteProviderKey(name) // #695：穿透返回（站点接失败面）
   panel._pushStatus()
+  return err
 }
 
 export function saveMcpServer(panel, name, config) {
