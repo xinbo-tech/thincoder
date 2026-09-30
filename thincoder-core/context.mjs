@@ -103,6 +103,20 @@ export function pushReal(agent, msg) {
 }
 
 /**
+ * pushRecord — 人读线留档记录单点（消化生命周期面 · #726；形 ∥ 写缝 ∥ 判据单源 = SESSION.md §6.26）。
+ * `pushReal` 双胞（直复用——零算法副本）：`ts` 打点 ∥ 记录存储追加（`_recordStore?.append`——§6.14）∥
+ * 尾窗驱逐三面同源；**机器线零触** = `history` 以一次性弃数组承接 ⇒ 记录不入 `agent.history` /
+ * `contextHistory`（不喂模型）。未绑定（`_recordStore` 缺）⇒ 人读线追加照常 ∥ 存储腿空转（零抛——模式 F
+ * 零回归）；载体缺位（无活跃会话）⇒ 零动作（零抛——日志归端侧）。
+ */
+export function pushRecord(agent, record) {
+  if (!agent || typeof agent !== "object") return // 载体缺位：零动作（零抛——§6.26 失败面）
+  if (!Array.isArray(agent._fullHistory)) agent._fullHistory = []
+  // 载体形人读线半提取（先例 = 桌面 `session-io.appendRecord`）：`history` 弃数组承接 ⇒ 机器线零触
+  pushReal({ _fullHistory: agent._fullHistory, _recordStore: agent._recordStore, _historyWindow: agent._historyWindow, history: [] }, record)
+}
+
+/**
  * Content-shape-safe prefixing (D-CC18, generalized for D-CC19 merge reuse):
  * string → text + blank line + original; multimodal array → text part prepended;
  * empty string / null / undefined / other → text alone.
