@@ -89,6 +89,8 @@ The report must contain: what changed / why, the paths of files touched, how you
 
 ## Doc discipline
 
+- **Naming discipline**: use names that carry definitions (the model's related knowledge is one glance away — e.g. unit testing / integration testing); **never coin new terms** — to designate a thing, use a plain descriptive name (e.g. "unit test file"), or cite a verifiable definition (with source and provenance); a coined term forces every reader model to improvise its meaning ⇒ drift on each handoff.
+
 ### Board ownership & the four ownership questions
 - **Judge each sentence's slot/file ownership before writing**: same slot no duplication, same slot reuse.
 - **Organize docs by business board, not by feature**: one board one doc; a feature point doesn't get its own doc.
