@@ -2,12 +2,15 @@
  * i18n-settings.mjs — 设置面词族第四档（i18n 拆分批 `docs/batches/2026-09-29-i18n-split.md` §2 · 台账 #614
  * 顶格消解：主档 `renderer/i18n.mjs` 内容行 500 顶格 ⇒ 自有 `settings.*` 族 55 键整族出档，本档承接）。
  *
- * 键面（**56 键** · 两语键集相等且同序）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 /
+ * 键面（**60 键** · 两语键集相等且同序）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
  * 四段名 / 两段态 / 十三失败码 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
  * 当前标 · 两增键 / agent 段：只读标 · 保存 / 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
  * 移除 · 增键 —— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）。
  * S3 分档增（#673 · 2026-09-29）：失败码族补 `settings.reason.hostBusy`（渠行行标分档词 —— 消费面 =
  * `renderer/views/settings-sections.mjs`；值源 = VSC 硬编码词「宿主繁忙」同形，两语同增）。
+ * 主题切换批增（#743 · 2026-09-30）：面头主题三态族四键（`settings.theme` ∥ `.system` ∥ `.light` ∥ `.dark` ——
+ * 值 = 设计给定（en：Theme ∕ System ∕ Light ∕ Dark；zh：主题 ∕ 跟随系统 ∕ 亮色 ∕ 暗色）；消费面 =
+ * `renderer/views/settings.mjs` `themeNode`）—— **56 ⇒ 60 键**（`HOST_DICT` 合并表 295 ⇒ 299 经合并点随动）。
  *
  * 值源：搬前主档原链注全述（键名 ∕ 两语值**逐字保原** —— 出档 = 纯搬零改；合并表两语键序同理零变，
  * 原位展开于 `question.cancel` 与向导注释之间）。
@@ -26,6 +29,10 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.close": "Close settings",
     "settings.lang.en": "English",
     "settings.lang.zh": "中文",
+    "settings.theme": "Theme",
+    "settings.theme.system": "System",
+    "settings.theme.light": "Light",
+    "settings.theme.dark": "Dark",
     "settings.section.providers": "Providers",
     "settings.section.model": "Model & tier",
     "settings.section.agent": "Agent options",
@@ -85,6 +92,10 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.close": "关闭设置",
     "settings.lang.en": "English",
     "settings.lang.zh": "中文",
+    "settings.theme": "主题",
+    "settings.theme.system": "跟随系统",
+    "settings.theme.light": "亮色",
+    "settings.theme.dark": "暗色",
     "settings.section.providers": "渠道",
     "settings.section.model": "模型与档位",
     "settings.section.agent": "agent 参数",

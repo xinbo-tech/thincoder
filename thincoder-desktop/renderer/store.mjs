@@ -63,6 +63,9 @@
  *  `attachDegraded` = **附件降级码切片**（「回合中插入」批）：按会话键存降级码（`non-vision` / `partial`）——
  *  写者两处 = `ev:queue` 消费回执（`delivered.degraded` 浮出）∥ 输入区直发回执；读面 = 输入区提示行
  *  （`renderer/mount-composer.mjs` 挂件锚 `data-composer-notices` 内 —— 经 `degradedCode` 过闸，表外码 ⇒ 零节点）。
+ *  **主题切换批增一槽**（D33 · 台账 #743）：`theme`（顶层切片 —— 三值闭集 `system` ∥ `light` ∥ `dark`；写者两处 =
+ *  装配播种 ∥ 设置面出口（`renderer/theme.mjs` = `data-theme` 唯一状态写者，本切片 = 其镜面）；读面 = 设置面头三态钮
+ *  —— `renderer/mount-settings.mjs` `SETTINGS_KEYS` 重绘键）。
  *  `modelCandidates` = **模型候选切片**（输入面板上提批 · R1 ∕ 全渠扇出批收正 —— 核件面板读面③ `state.models()`
  *  的端侧来源）：`{ models, unavailable }`（`models` = 逐项 `{ id, label, provider, group, reasoning }` —— **核件面形**；
  *  投影 = `renderer/composer-sync.mjs` 候选面：`model:catalog` 回执投影；`unavailable` = 失败渠 `{ provider, reason }`
@@ -70,6 +73,7 @@
 export function initialState() {
   return {
     locale: "en",
+    theme: "system", // 主题三态切片（D33——装配播种 ∥ 出口写；缺省 `system`；`data-theme` 应用住 `renderer/theme.mjs`）
     project: { cwd: null, recent: [] },
     sessions: [],
     activeSession: null,

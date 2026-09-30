@@ -6,7 +6,7 @@
  * ——#533：`menuLabels(locale)` 消费——zh = 语义直译值（#533 裁定）；en 表 = 回归面现值）
  * + 右键编辑菜单落子（复制面对齐批 · D27 ∕ KD-43：`webContents.on("context-menu")` ⇒ 按 `params` 构模板 ⇒
  * `Menu.popup`；条目集 ∕ 空选零菜单 ∕ 文案四键 = `context-menu.mjs` 两纯函数 + `loadConfig().locale` 现读）。
- * 主题 = CSS `prefers-color-scheme` 消费（本批零主题通道）；`resolveTheme()` 只作同事实对照（批档 §2.6 D-8）。
+ * 主题 = 渲染面 `data-theme` 状态消费（D33 · 台账 #743——用户值覆写系统缺省，单写者 `renderer/theme.mjs`）；`resolveTheme()` 只作画布色 ∥ 原生面系统事实对照（批档 §2.6 D-8）。
  * 探针用 `net.fetch`（官方档 `net`：「differs from Node's fetch(), which uses Node.js's HTTP stack」+
  * 「requests made with net.fetch can be made to custom protocols」）——Node 全局 `fetch` 对自定义 scheme 无保证。
  */
@@ -58,7 +58,7 @@ const BOOT_READBACK = "document.documentElement.dataset.boot ?? \"none\""
 const BOOT_WAIT_MS = 5000
 const BOOT_POLL_MS = 50
 
-/** 系统主题（系统事实唯一持有者 = `nativeTheme`；渲染面经 CSS 直接得，零通道）。 */
+/** 系统主题（系统事实唯一持有者 = `nativeTheme`；渲染面主题三态自持其面（D33——用户值覆写系统缺省），本函数只供画布色 ∥ 原生面系统事实——零通道）。 */
 export function resolveTheme() {
   return nativeTheme.shouldUseDarkColors ? "dark" : "light"
 }

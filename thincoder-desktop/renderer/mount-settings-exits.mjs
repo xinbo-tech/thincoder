@@ -16,6 +16,8 @@
  * —— S10 ∕ S11 ∕ S14b）随族拆出 `renderer/mount-settings-segments-agent.mjs`（拆分债注③预案落形：本批
  * agent 面三触点原拆点；本档装配合并，单一 `handlers` 表对外零改）；开 ∕ 关面面态复位同拍扩 MCP 表单态
  * （`form` —— S8 编辑态不跨面驻留）。
+ * **D33（主题切换批 · 2026-09-30 · 台账 #743）**：主题出口 `onSetTheme` —— 单写者 = `renderer/theme.mjs`
+ * （`setTheme` 落 `data-theme` + 存储）⇒ 切片写（`SETTINGS_KEYS` 含 `theme` ⇒ 设置面头三钮当前态随动）；表外值 ⇒ `null`（零写零改）。
  * 语义锚（`docs/desktop/design/IPC.md` §2 设置族注）：出站失败 ⇒ **零乐观写**（不摘项、不改段读数）；畸形 JSON ⇒ **零发送**；
  * 写成功 ⇒ 清失败串 + 重读本段。**#652**：写成功径（渠道两形提交 ∕ 钥存）在复位写前声明草稿失效（`invalidateDrafts(scope)`
  * 注入 —— 作用域取值面 = 视图档 `[data-draft-scope]` 自携；失败径零声明 —— 草稿保真）。**P14 出值规范化**（数值 ⇒ `Number(v)`〔空 / 非数 ⇒ 零发送〕· 布尔 ⇒ `.checked` · 串 ⇒ 原串；无效值 ⇒ 控件回退现值）· **P15 具名控件即改即存**（单键 patch 直发 —— 写路随 W3 迁 `mount-settings-segments-agent.mjs`）· **F-Esc 关面板**（Esc ⇒ 既有 `closeSettings` 出口，单一实现 —— 绑定宿主 = `document`）。
@@ -23,6 +25,7 @@
  */
 import { initDict } from "./i18n.mjs"
 import { configuredFlag, patchSettings } from "./store.mjs"
+import { setTheme } from "./theme.mjs"
 import { presetValue } from "./mount-onboarding.mjs"
 import { createSegmentExits } from "./mount-settings-segments.mjs"
 import { createModelsExits } from "./mount-settings-segments-models.mjs"
@@ -174,6 +177,13 @@ export function createExits(deps = {}) {
     store.set({ ...patchSettings(store.get(), { configured: configuredFlag(receipt.configured), notice: null }), locale })
   }
 
+  /** 主题出口（D33 · 台账 #743 —— 单写者 = `renderer/theme.mjs`）：`setTheme` 落 `data-theme` + 存储 ⇒ 返落地值；
+   *  落地值非 `null` ⇒ 切片写（`SETTINGS_KEYS` 含 `theme` ⇒ 设置面头三钮当前态随动）；表外值 ⇒ `null`（零写零改 —— 面零变更）。 */
+  function setThemeFace(target) {
+    const landed = setTheme(target)
+    if (landed !== null) store.set({ theme: landed })
+  }
+
   /** 设置面开（**两入口**：信息行 ∕ 输入区控件行第 7 钮 —— 后者经句柄面转口 `renderer/mount-composer.mjs`）：开 + 失败串清位 ⇒ 七段读数随动（段态 `none` → `loading` → `ready`）。
    *  S1 ∕ S2：渠道段面态复位（钥编辑态 ∕ 探果 ∕ 暂存值 ∕ 失败草稿〔#615②〕——**钥暂存不跨面驻留**）；S8：MCP 编辑态复位（`form`）。 */
   function openSettings() {
@@ -204,6 +214,7 @@ export function createExits(deps = {}) {
     ...providerSegments.handlers,
     ...agentSegments.handlers,
     onToggleLang: (target) => void toggleLang(target),
+    onSetTheme: (target) => setThemeFace(target),
     onCloseSettings: () => closeSettings(),
     onSubmit: (event) => void submitChannel(event),
     onVerify: (name) => void verifyChannel(name),

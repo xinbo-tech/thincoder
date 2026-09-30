@@ -33,8 +33,8 @@ import { SECTIONS, mountSettings } from "./views/settings.mjs"
 
 /** 设置 / 向导容器锚（**一容器两树互斥** —— 骨架属性住 `index.html`）。 */
 export const SETTINGS_SLOT = '[data-slot="settings"]'
-/** 重挂触发切片：`settings`（设置族全态）/ `locale`（词表切换重挂）。 */
-export const SETTINGS_KEYS = Object.freeze(["settings", "locale"])
+/** 重挂触发切片：`settings`（设置族全态）/ `locale`（词表切换重挂）/ `theme`（主题三态 —— 设置面头当前态随动；D33 · 台账 #743）。 */
+export const SETTINGS_KEYS = Object.freeze(["settings", "locale", "theme"])
 
 /** 段名闭集（**由视图 `SECTIONS` 派生** —— 同源单份，零双抄；失败面段标域；表外 ⇒ `panel`）。 */
 const SCOPES = Object.freeze(SECTIONS.map((section) => section.name))

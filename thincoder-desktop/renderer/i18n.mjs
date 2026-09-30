@@ -70,6 +70,9 @@
  *      消费面 = `renderer/views/settings-sections.mjs`）⇒ `SETTINGS_DICT`（第四档）**55 ⇒ 56** ∕
  *      `HOST_DICT`（**合并表**，经合并点随动）**292 ⇒ 293**（两语同拍、键集相等）。
  *      **右栏宽度拖动批增一键**（#742 · 2026-09-30：`pool.resize` 两语同增 —— 拖柄 `aria-label` 词，消费面 = `renderer/pool-width.mjs` `refreshResizerLabel`）⇒ 实读 `HOST_DICT`（**合并表**）**294 ⇒ 295**（两语同拍、键集相等；届盘实读续链——链文前值 293 系滞后值，并行批增键未逐笔续计）。
+ *      **主题切换批增四键**（#743 · 2026-09-30：面头主题三态族 `settings.theme` ∥ `.system` ∥ `.light` ∥ `.dark` 两语同增 ——
+ *      值 = 设计给定；消费面 = `renderer/views/settings.mjs` `themeNode`）⇒ `SETTINGS_DICT`（第四档）**56 ⇒ 60** ∕
+ *      `HOST_DICT`（**合并表**，经合并点随动）**295 ⇒ 299**（两语同拍、键集相等；届盘实读续链）。
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；
@@ -97,7 +100,7 @@ import { VIEWS_DICT } from "./i18n-views.mjs"
  *  消费面 = `src/main/context-menu.mjs` `contextMenuLabels`，主进程直取本表）· `pool.*` = 活动池（标题 / 三族标 / 折叠控件两态 `aria-label` / 空态提示 ——
  *  折叠字形住 `renderer/pool.css`）· `approval.*` = 审批卡两形三出口词面 + 批形计数（`${count}` 占位；
  *  键位闭集住 `renderer/views/approval.mjs`）· `question.*` = 提问卡（文本控件 `aria-label` / 提交键 / 取消键 ——
- *  键位闭集住 `renderer/views/question.mjs`）· `settings.*` = 设置面（**56 键** —— 单源 = `renderer/i18n-settings.mjs`）·
+ *  键位闭集住 `renderer/views/question.mjs`）· `settings.*` = 设置面（**60 键** —— 单源 = `renderer/i18n-settings.mjs`）·
  *  `wizard.*` = 首启向导（标题 / 退场 / 三步名 / 两推进键 / 渠道提交键 / 目录步两词）·
  *  `composer.*` = 输入区（**换装后残余两族**：B21 发送失败行 `composer.send.failed`〔住 `renderer/i18n-views.mjs`〕+
  *  B22 降级提示行两键 `composer.attach.nonvision` ∕ `composer.attach.partial`——三键皆端侧自有词，非 VSC 源；

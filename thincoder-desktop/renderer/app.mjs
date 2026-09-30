@@ -40,6 +40,7 @@ import { attachSettings } from "./mount-settings.mjs"
 import { initPoolWidth, refreshResizerLabel } from "./pool-width.mjs" // 右栏宽度拖动（D30 · #742 —— chrome 级直写面）
 import { attachSearch } from "./search.mjs"
 import { configuredFlag, patchSettings, returnToBottom, setFollowing, store } from "./store.mjs"
+import { initTheme } from "./theme.mjs" // 主题三态（D33 · #743 —— chrome 级状态直写面；装配期一次 + 切片播种）
 import { MAX_RENDER_BLOCKS, attachScroll, nextWindow } from "./views/chat-scroll.mjs"
 import { alignPlan, paintPlan } from "./views/chat-stream.mjs"
 import { chatModel, retrySourceOf } from "./views/chat-model.mjs"
@@ -266,6 +267,10 @@ attachSearch()
 
 /** 右栏宽度拖动（D30 · 台账 #742 —— 出档 `renderer/pool-width.mjs`）：装配期一次（读存储 ⇒ 内联 `--pool-w` ⇒ 拖柄接线；先于首绘可及面 —— 引导层在场期完成 ⇒ 零可见跳变）；词面注入两处 = boot 词表置位点 + 帧分派 `locale` 支。 */
 initPoolWidth()
+
+/** 主题三态（D33 · 台账 #743 —— 出档 `renderer/theme.mjs`）：装配期一次（读存储 ⇒ 归一 ⇒ 写 `data-theme` ⇒ 切片播种
+ *  —— 先于首绘可及面，同 `initPoolWidth` 位）；`dataset.theme` 写仍同步不经帧（设置面重绘键 = `SETTINGS_KEYS` 含 `theme`）。 */
+store.set({ theme: initTheme() })
 
 /** 1s 拍（P7 —— 渲染面**首个定时器** · 单点 `setInterval` + 卸载清点；停滞轻显形批 2s ⇒ 1s）：① 池面在飞块逐块核件 `refreshBlock`（走时词面）
  *  ② 本键位标含 `running` ⇒ 状态行重挂（耗时段 ∕ 静默段走时）；拍体 = `renderer/heartbeat.mjs`。 */

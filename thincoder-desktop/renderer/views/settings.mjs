@@ -4,7 +4,8 @@
  * `tools`〔R2 增：embedding ∕ websearch ∕ 索引状态〕/ `models`〔R7 增：consult ∕ advisor 行〕）
  * 各三态（`data-state` = `none` / `loading` /
  * `ready`）：`none` / `loading` ⇒ 词表提示、`ready` ⇒ 行内容；表单在 `loading` 外常在；失败面 = `notice` 节点
- * （**核错误串直传** —— `REASON_WORD` 表内码出词、表外原样，不吞、不自造码）；面头 = 标题 + 语言控件
+ * （**核错误串直传** —— `REASON_WORD` 表内码出词、表外原样，不吞、不自造码）；面头 = 标题 + **主题三态钮族**
+ * （D33 · 台账 #743：锚 `settings:theme` + `data-theme` 目标值 —— 居语言控件左侧）+ 语言控件
  * （**锚名逐字** `settings:lang`，在关闭控件**左侧** —— 点按经 `config:write(locale)` 同回带重刷词面）+ 关闭锚
  * `settings:close`（**零 Esc 绑定** —— Esc 关闭归出口族 `document` 键面）。
  * **两导出面（单一 owner —— 首启向导复用，零副本，批档 §2.3）**：`channelFormTree` ∕ `verifyControl`——
@@ -19,6 +20,7 @@
  */
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
+import { THEMES } from "../theme.mjs"
 import { wire } from "./chat-tool.mjs"
 import { channelFormTree, verifyControl } from "./settings-controls.mjs"
 import { agentBody, envBody, mcpBody, modelBody, modelIdOf, modelsBody, providersBody, tierFace, toolsBody } from "./settings-sections.mjs"
@@ -76,6 +78,11 @@ const LANG_TARGET = Object.freeze({ en: "zh", zh: "en" })
 function langOf(state) {
   const current = Object.hasOwn(LANG_TARGET, state?.locale) ? state.locale : "en"
   return { current, target: LANG_TARGET[current] }
+}
+
+/** 主题三态读数（D33 · 台账 #743）：顶层切片 `theme` —— 闭集（`THEMES` 单源）；表外 / 缺 ⇒ `system`（不猜 —— 缺省态）。 */
+function themeOf(state) {
+  return THEMES.includes(state?.theme) ? state.theme : "system"
 }
 
 /** 列表切片：缺 / 非数组 ⇒ 空表（零节点 —— 禁假数据）。 */
@@ -136,6 +143,7 @@ export function settingsModel(state) {
   return {
     open: settings.open === true,
     lang: langOf(state),
+    theme: themeOf(state),
     notice: notice === null ? null : { scope, text: reasonWord(notice.reason) },
     providers: {
       state: stateOf(settings.providers),
@@ -264,7 +272,27 @@ function noticeNode(notice) {
   }
 }
 
-/** 面头：标题 + 语言控件（**锚名逐字** `settings:lang` —— 在关闭控件**左侧**）+ 关闭控件
+/** 主题三态钮族（D33 · 台账 #743）：容器 `settings-theme`（`role="group"` + `aria-label`）；三钮锚 `settings:theme` +
+ *  `data-theme` = 目标值；序 = `THEMES` 单源（跟随系统 ∥ 亮色 ∥ 暗色 —— 缺省态居首）；当前态 = `data-active` +
+ *  `aria-pressed="true"`（三钮恰一）；缺 handlers ⇒ 三钮 `disabled`（沿 `wire` 两态通则）。 */
+function themeNode(model, handlers) {
+  const onSet = typeof handlers?.onSetTheme === "function" ? handlers.onSetTheme : null
+  const current = model?.theme ?? "system"
+  return {
+    tag: "div",
+    props: { class: "settings-theme", role: "group", "aria-label": t("settings.theme") },
+    children: THEMES.map((value) => {
+      const props = { class: "settings-theme-opt", type: "button", "data-action": "settings:theme", "data-theme": value }
+      if (value === current) {
+        props["data-active"] = ""
+        props["aria-pressed"] = "true"
+      }
+      return { tag: "button", props: wire(props, onSet === null ? undefined : () => onSet(value)), children: [t(`settings.theme.${value}`)] }
+    }),
+  }
+}
+
+/** 面头：标题 + 主题三态钮族（居语言控件**左侧**）+ 语言控件（**锚名逐字** `settings:lang` —— 在关闭控件**左侧**）+ 关闭控件
  *  （**锚名逐字** `settings:close`；字形住 `settings.css` content）。 */
 function headNode(model, handlers) {
   const lang = model?.lang ?? langOf(null)
@@ -275,6 +303,7 @@ function headNode(model, handlers) {
     props: { class: "settings-head" },
     children: [
       { tag: "h2", props: { class: "settings-title" }, children: [t("settings.title")] },
+      themeNode(model, handlers),
       {
         tag: "button",
         props: wire({
