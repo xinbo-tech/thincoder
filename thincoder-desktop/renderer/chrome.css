@@ -8,7 +8,7 @@
 /* 扁平化（2026-09-30）：块内相连 ∥ 去圆角 ∥ 去分割线。 */
 .app {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--pool-w);
+  grid-template-columns: minmax(0, 1fr) clamp(15rem, var(--pool-w), max(36rem, 100vw - 30rem));
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 0;
   height: 100%;
@@ -31,6 +31,18 @@
   display: flex;
   flex-direction: column;
 }
+
+/* 右栏宽度拖动（D30 · 2026-09-30 · 台账 #742）：拖柄 = `.pool` 首子竖条（贴左缘 · 6px · 静息透明 ∥ hover `--line` ∥ 拖动 `--accent`
+   —— 2px 竖线 · `touch-action: none` 防触控手势接管）；`.pool` 增 `position: relative` = 其唯一几何前提；拖动期 `body.pool-resizing`
+   = 全局 col-resize + 禁选。界 = 上方栅格行 `clamp` 单落点（模块侧零界常量；窗 resize 零 JS——CSS 随窗重算）。 */
+.pool {
+  position: relative;
+}
+.pool-resizer { position: absolute; inset-block: 0; inset-inline-start: 0; width: 6px; cursor: col-resize; touch-action: none; }
+.pool-resizer::before { content: ""; position: absolute; inset-block: 0; inset-inline-start: 2px; width: 2px; background: transparent; }
+.pool-resizer:hover::before { background: var(--line); }
+body.pool-resizing { cursor: col-resize; user-select: none; }
+body.pool-resizing .pool-resizer::before { background: var(--accent); }
 
 .pool-body,
 .flow {

@@ -69,6 +69,7 @@
  *      **S3 分档批增一键**（#673 · 2026-09-29：`settings.reason.hostBusy` 两语同增 —— 渠行行标分档词，
  *      消费面 = `renderer/views/settings-sections.mjs`）⇒ `SETTINGS_DICT`（第四档）**55 ⇒ 56** ∕
  *      `HOST_DICT`（**合并表**，经合并点随动）**292 ⇒ 293**（两语同拍、键集相等）。
+ *      **右栏宽度拖动批增一键**（#742 · 2026-09-30：`pool.resize` 两语同增 —— 拖柄 `aria-label` 词，消费面 = `renderer/pool-width.mjs` `refreshResizerLabel`）⇒ 实读 `HOST_DICT`（**合并表**）**294 ⇒ 295**（两语同拍、键集相等；届盘实读续链——链文前值 293 系滞后值，并行批增键未逐笔续计）。
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；
@@ -163,6 +164,7 @@ export const HOST_DICT = Object.freeze({
     "pool.family.queue": "Queued",
     "pool.collapse": "Collapse activity",
     "pool.expand": "Expand activity",
+    "pool.resize": "Resize activity panel",
     "composer.attach.nonvision": "Images not sent — this model does not accept images",
     "composer.attach.partial": "Some images were dropped (over the limit or failed to save) — the rest were sent",
     "approval.once": "Allow once",
@@ -268,6 +270,7 @@ export const HOST_DICT = Object.freeze({
     "pool.family.queue": "队列",
     "pool.collapse": "折叠活动池",
     "pool.expand": "展开活动池",
+    "pool.resize": "拖动调整活动栏宽度",
     "composer.attach.nonvision": "图片未随发——该模型不支持图片",
     "composer.attach.partial": "部分图片已丢弃（超限或保存失败）——其余照发",
     "approval.once": "允许一次",

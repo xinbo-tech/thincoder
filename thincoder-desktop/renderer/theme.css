@@ -16,6 +16,7 @@
   --mode-advisor: #0a7b0a; /* 亮色暗化（#534 · 2026-09-29）：状态行 banner「ADVISOR ∕ ENG」字色 —— CLI `C.advisor` = `ESC[92m` 亮绿（同档 `:47`；两段同常量）；色相源 = VSC 终端 ANSI 亮绿亮默认（`terminal.ansiBrightGreen` `#14ce14`），原值对 `--bg` 对比 2.00:1 不可读 ⇒ 同色相暗化（现 **5.13:1** ∕ 白底 5.45）；暗色块保留原值零动（同族注释 = 暗色块行）。 */
   --radius: 0; /* 扁平化（用户 2026-09-30 裁决）：圆角归零——全族 `var(--radius)` 一处收口。 */
   --gap: 12px;
+  /* 右栏宽（D30 · 台账 #742）：默认值 ∥ 用户值经内联覆写（CSSOM 变量写 —— `renderer/pool-width.mjs`）；界 = 消费点单源（`chrome.css` 栅格行 `clamp`——本档值零改）。 */
   --pool-w: 36rem;
   /* 排版统一（D29 · 2026-09-30 · 台账 #736）：基线四值单源 —— 字族（`--font` 指 `--mono` 等宽栈）∥ 字号 ∥ 行高
      ∥ 字距（`--ls`）；`--ls` 消费 = `body` 面独立 `letter-spacing` 行（`font` 简写不载字距——全栈唯一声明点）。 */

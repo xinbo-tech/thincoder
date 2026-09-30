@@ -37,6 +37,7 @@ import {
   refreshRail, resumeOpened,
 } from "./mount-sessions.mjs"
 import { attachSettings } from "./mount-settings.mjs"
+import { initPoolWidth, refreshResizerLabel } from "./pool-width.mjs" // 右栏宽度拖动（D30 · #742 —— chrome 级直写面）
 import { attachSearch } from "./search.mjs"
 import { configuredFlag, patchSettings, returnToBottom, setFollowing, store } from "./store.mjs"
 import { MAX_RENDER_BLOCKS, attachScroll, nextWindow } from "./views/chat-scroll.mjs"
@@ -223,6 +224,7 @@ async function boot() {
     // 词表置位（返回归一后的语言 ⇒ `locale` 切片同源）+ 首启闸随新档态（`configuredFlag` 三态归一：档缺 ⇒ false；畸形 / 缺 ⇒ null ⇒ 向导不进）+ 订阅面随即首绘会话控制条。
     store.set({ ...patchSettings(store.get(), { configured: configuredFlag(payload.configured) }), locale: initDict(payload) })
     composer.refresh() // 词面到位 ⇒ 输入面板重派生（面板挂载先于词表下发 —— 注册面后到，缺 ⇒ 占位符停留为键名）
+    refreshResizerLabel() // 同因（词面到位 ⇒ 拖柄可及名注入 —— en 首启等值零通知窗不达 locale 支，父侧 2026-09-30 裁决 B）
     await refreshRail() // 会话列表数据面（读失败不改 boot 判据 —— 读面自持错误面，不抬高引导位）
     // 重载补启（D9 · 批档 §2.14a）：主进程仍持项目（`cwd` 非空串）⇒ 活跃会话自动接续 —— 复用「点开即续」同路
     // （`session:resume` ⇒ 端记录判据 ⇒ `openPage` + `refreshRail`）；冷启（`cwd` 空 ∥ 读面失败）零触发；失败沿既有
@@ -262,6 +264,9 @@ bindFileLinks(document.querySelector(FLOW_SLOT), openFile)
  *  扫描 ∕ 高亮容器 = 对话流宿主；条插入锚 `#toolbar` ∕ 关闭置焦 `#input` 皆文档级 id（核件内直取）。 */
 attachSearch()
 
+/** 右栏宽度拖动（D30 · 台账 #742 —— 出档 `renderer/pool-width.mjs`）：装配期一次（读存储 ⇒ 内联 `--pool-w` ⇒ 拖柄接线；先于首绘可及面 —— 引导层在场期完成 ⇒ 零可见跳变）；词面注入两处 = boot 词表置位点 + 帧分派 `locale` 支。 */
+initPoolWidth()
+
 /** 1s 拍（P7 —— 渲染面**首个定时器** · 单点 `setInterval` + 卸载清点；停滞轻显形批 2s ⇒ 1s）：① 池面在飞块逐块核件 `refreshBlock`（走时词面）
  *  ② 本键位标含 `running` ⇒ 状态行重挂（耗时段 ∕ 静默段走时）；拍体 = `renderer/heartbeat.mjs`。 */
 function heartbeatTick() {
@@ -278,10 +283,13 @@ const faces = {
   sessionBar: paintSessionBar, status: paintStatus, chat: paintChat, pool: paintPool, cards: paintCards,
 }
 
-/** 帧出口（apply · 每帧至多一次）：帧时刻**现读** `store.get()`（禁 mark 时刻取态快照）—— `locale` 镜像 `dataset.locale` + 五面按键集分派。 */
+/** 帧出口（apply · 每帧至多一次）：帧时刻**现读** `store.get()`（禁 mark 时刻取态快照）—— `locale` 镜像 `dataset.locale` + 拖柄可及名随动（`refreshResizerLabel` —— 两处之二，另一处 = boot 词表置位点）+ 五面按键集分派。 */
 function applyFrame(dirtyKeys) {
   const state = store.get()
-  if (dirtyKeys.includes("locale")) document.documentElement.dataset.locale = state.locale
+  if (dirtyKeys.includes("locale")) {
+    document.documentElement.dataset.locale = state.locale
+    refreshResizerLabel()
+  }
   return dispatchFrame({ dirtyKeys, state, faces })
 }
 
