@@ -71,7 +71,7 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
   标记族 = ① CLI 入口族（命令行含 `thincoder.cjs` / `thincoder.mjs` / `thincoder-cli` 路径段）· ② VSC 宿主族（既有 `VSC_END_RE`——extensionHost）· ③ 桌面族（`DESKTOP_END_RE`——`thincoder-desktop` 路径段 ∥ `node_modules/electron/dist/` 段〔2026-09-30 缺陷修复批 #707 实测扩入——桌面 dev 相对路径启动形〕；2026-09-29 parity-b1 收正轮初入）；
   命令**明确可得且不命中** ⇒ 不列为同伴（消除 pid 复用假阳性——台账实测 `docs/TODO.md:27`）；命令探测失败 / 该 pid 缺行 ⇒ **保守保留**（探测失败 ≠ 死；既有降级语义不变）。
 - **判据单源**：身份判据实现住 **`thincoder-core/process-probe.mjs`**——`batchAlive` / `probeCmdlines` / `isProductProc(cmdline)` / `classifyEnd` / `filterDeadOwners`；
-  **感知面（读）与陈旧记录清理面（写）调用同一实现**，零第二套标记正则（清理面 = `thincoder-core/session-slots.mjs` `cleanDeadOwners`（as-of 2026-09-18 `:205-219`）（机制面 = `SESSION.md` §6.2）——`isProcessAlive` 之外加身份复核，pid 活 + 身份不符 ⇒ 条目可删）。
+  **感知面（读）与陈旧记录清理面（写）调用同一实现**，零第二套标记正则（清理面 = `thincoder-core/session-slot-claims.mjs` `cleanDeadOwners`（定义 `:78`；转口 = `session-slots.mjs:48`；调用 `:305`）（机制面 = `SESSION.md` §6.2）——`isProcessAlive` 之外加身份复核，pid 活 + 身份不符 ⇒ 条目可删）。
   注入缝（R6 形态）= `process-probe.mjs` 模块级 `_setProcessProbeTestImpl({ aliveFn, cmdlineFn })` + `??` 默认 + 测试 finally 恢复；
   清理面 API = `filterDeadOwners(pid, { alive, cmdline }) → boolean`——**`alive` 三态**（`true` 活 / `false` 死 / `undefined` 未知，**缺省 = 未知**）：
   `false` ⇒ `true`（可删，pid 死语义原样）；`true` ⇒ 命令明确可得且非本产品 ⇒ `true`；**未知 / 缺行 ⇒ `false`（保守保留，D-MI10）**。
@@ -294,7 +294,7 @@ VSC 侧无此形态（各路径现用现读）。
 
 | 面 | 落点 |
 |---|---|
-| 感知面 L1/L2 | `thincoder-core/peer-instances.mjs`（`peerInstances` · `peerInstancesTool` · `groupSlotSessions`（具名导出——端侧引核，§3.1） · 测试缝 `:48/:55`）+ **`thincoder-core/process-probe.mjs`（探测与判据单源）**：`batchAlive` / `probeCmdlines` 及其 `*Async` 对偶 · `probeOwnersSync` / `probeOwnersAsync` 束（2026-09-18 增） · `ownerState` / `isProductProc` / `classifyEnd` / `filterDeadOwners` · **`isProcessAlive`（2026-09-18 自 `session-slots.mjs` 移居——单 pid 兼容面，同步有界 2 s）**；陈旧清理面 = `thincoder-core/session-slots.mjs`（`cleanDeadOwners`——探针入参化，零自有 exec） |
+| 感知面 L1/L2 | `thincoder-core/peer-instances.mjs`（`peerInstances` · `peerInstancesTool` · `groupSlotSessions`（具名导出——端侧引核，§3.1） · 测试缝 `:48/:55`）+ **`thincoder-core/process-probe.mjs`（探测与判据单源）**：`batchAlive` / `probeCmdlines` 及其 `*Async` 对偶 · `probeOwnersSync` / `probeOwnersAsync` 束（2026-09-18 增） · `ownerState` / `isProductProc` / `classifyEnd` / `filterDeadOwners` · **`isProcessAlive`（2026-09-18 自 `session-slots.mjs` 移居——单 pid 兼容面，同步有界 2 s）**；陈旧清理面 = `thincoder-core/session-slot-claims.mjs`（`cleanDeadOwners`——定义 `:78`；转口 = `session-slots.mjs:48`；探针入参化，零自有 exec） |
 | 域面 L3 | `thincoder-core/peer-domains.mjs`（`HOT_WINDOW_MS:37` · `peerWriteTargets:79` · `peerDomains:175` · `conflicts:186` · `peerCollabNote:214` · `recordPeerWrites:254` · `flushPeerDomains:273` · 测试缝 `:50/:58`；`pathsOverlap` 归口 `thincoder-core/peer-claims.mjs:74`——本档 re-export `:34`） |
 | 意图认领面 | `thincoder-core/peer-claims.mjs`（认领存储 / 租约 / 命中 / 文案 / 合并写 / `nowFn` 缝；peers 路径与 `pathsOverlap` 归口于此）· 接线 = `thincoder-core/peer-domains.mjs` §4.4.6 · 端 = `thincoder-vscode/src/extension/peer-domains.mjs` + `thincoder-vscode/src/extension/peer-claims.mjs`（认领块——越 300 软线外提）+ 钩点 = 核 `thincoder-core/agent/dispatch-run.mjs`（端已取核） |
 | L1 注入装配 | `thincoder-core/agent/setup-reminders.mjs`（`pushPeerReminder`）· `thincoder-core/agent/setup.mjs`（注入时序：env-state 后 time 前） |
@@ -439,4 +439,5 @@ VSC 侧无此形态（各路径现用现读）。
 - 2026-09-29（**doc-backfill 批 · 波 1 · eng-designer**——承 `docs/batches/2026-09-29-doc-backfill.md` §2 · 台账 #612）：档名收正——`agent/dispatch.mjs` 引用六处改指现体 `agent/dispatch-run.mjs`（2026-09-28 拆分；写前 `:52` ∕ 写后 `:65` ∕ `:115`）；
   §4.4.6 钩点行读数收正（拆分后 `dispatch.mjs` **254** ∕ `dispatch-run.mjs` **167**——原 499 贴硬限面已消解）；零同步 exec 扫描端半档两处补退场标注（随 2026-09-28 测试树全清重置退场——重建时恢复）。**零新语义**（坐标 ∕ 读数 ∕ 退场标注）。
 - 2026-09-30（**缺陷修复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-defect-fixes.md` §2 ∥ 台账 #707）：§3.1 桌面族成员扩（+ `node_modules/electron/dist/` 段——桌面 dev 相对路径启动形实测消解；端字段行同拍）；「已知局限（误删方向）」条落**兑现注**（已登记消解路径「实测补族」执行 + 负控腿登记）。判据（`ownerState` 三态 ∕ `D-MI10` 不对称）零改。
+- 2026-10-01（**缺陷修复批 · 评审后修复轮 1 · eng-designer**——承 `docs/batches/2026-09-30-defect-fixes.md` §3 轮次 1 发现 7）：§3.1 ∕ §7 `cleanDeadOwners` 坐标收正（定义现体 = `session-slot-claims.mjs:78`；转口 = `session-slots.mjs:48`；调用 = `:305`）。**零新语义**（坐标收正）。
 

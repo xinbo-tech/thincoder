@@ -208,7 +208,7 @@
 **跨包对拍锁** = `docs/batches/2026-09-29-parity-b7-minor.test.mjs`（F2——文法副本漂移锁 ∕ RM-4 复建：`relayPathOf` ∕ `RELAY_PREFIX_RE` ∥ 权威 `thincoder-core/agent/relay-prefix.mjs` 逐字对；F4——CLI `routeSubToken` ∥ rc `relayEventToSubPatch` 语义同判）；旧件 `thincoder-vscode/test/render-core-relay-map.test.mjs`（RM-3 ∕ RM-4）已随 B7 退场。
 
 **落位不变式（两条 · 2026-09-29 留端清算）**：① **出生位 = 活动区区尾 append**（端实现锚 = VSC `thincoder-vscode/webview/activity.js:60`；桌面 `thincoder-desktop/renderer/views/pool-subagents.mjs:85-95`）；
-  ② **归档入流 = 消化边界前插入、边界失效 ⇒ 尾追**（VSC `thincoder-vscode/webview/activity.js:104-110`；桌面 `thincoder-desktop/renderer/subagent-reduce.mjs:93-112`）——与核效果表 `archive`（`atBoundary`）同口径；单源 = 批 `docs/batches/2026-09-29-desktop-rebuild-fidelity.md` §2.5。
+  ② **归档入流 = 消费轮边界前插入、边界失效 ⇒ 常规块插入点退化**（VSC `thincoder-vscode/webview/activity.js:104-110`；桌面 = 同形——`insertBefore(块, 边界)`：边界 = `ev:digest start` 标签行、收帧清边界；座次入模；三端消化面统一批 · #747——单源 = `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条）——与核效果表 `archive`（`atBoundary`）同口径。
 
 3. **构件族（DOM）**——`renderBlock({ idx, withLabel })` · `renderToolCard({…})` / `finishToolCard(ref, name, text, links, truncated, deps?)` / `renderToolHistory(name, text, idx)` · `renderReasoning(model, deps?)`；
    `renderApprovalCard(model, deps?)` / `renderBatchApprovalCard(model, deps?)` · `renderQuestionCard(model, deps?)` · `renderTaskPanel(progress, deps?) → { el, visible }` / `renderGoalPanel(goal, deps?)` ·
@@ -423,7 +423,7 @@ VSC `thincoder-vscode/webview/session.css` **215 ⇒ ≈219**（两钮（Rename 
   ① **行内动作钮键盘可达臂 ⇒ 消（增强向 · 用户 2026-09-29 裁定）**：VSC `session.css` 两钮（Rename ∕ Delete）补 `:focus-visible { opacity: 1 }` 臂（对齐桌面手势；桌面臂保留 `session-list.css:130-133`——a11y 不回退）；
   ② **「不追面」重审（2026-09-29 · 核心项列举——全清单七条 = `docs/desktop/design/UI.md` §1 本批注项 2）**——「不追面」分类词退场：面板容器皮肤 ∕ 会话选择器交互两条 = **已消**（R13 换装 + D21 后两端构同形——实读 `session.css:13-59` ⟷ `session-list.css:8-46`）；会话条对位句 = **已消**（对位物退役——标签条 R13 裁撤 ∕ 会话头退场；对位 = VSC `#session-bar` 三件，R13-A 形换装已落）；`#project-btn` = **不适用**（需求边界——本端单项目模型）；`.dropdown-section` 无对位句保留（说明）。
 - **「对齐第二批」端差 / 登记（2026-09-28 · 源 = `docs/batches/2026-09-28-desktop-vsc-align-2.md` §2）**：① 助手说话人标签原语收拢候选 = **撤项**（非端差——零可见差；2026-09-29 · 批 #673；§10 **G** 同拍）；② `queued-mark` 的 `planBusyQueued` / `clearPending` 不消费（宿主快照对账面 / 节点换代交接——登记）· 核 effects 表不逐条执行（端面动作由模型态幂等派生）；
-③ 桌面无 digest 边界物 ⇒ 归档 `atBoundary` 恒按尾追（= VSC 边界失效退化径同形）；④ **1s 走时刷新（块头 elapsed）已落**（VSC `panels.js` 同点——原归第三批「小修族」）；⑤ 运行期可见面两件（待发送气泡 / 归档子 agent 块——页读整置即失）。
+③ 桌面归档边界物 = **已消**（三端消化面统一批 · #747——桌面收编 VSC 边界物形：`insertBefore(块, 边界)` ∥ 座次入模；单源 = `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条）；④ **1s 走时刷新（块头 elapsed）已落**（VSC `panels.js` 同点——原归第三批「小修族」）；⑤ 运行期可见面两件（待发送气泡 / 归档子 agent 块——页读整置即失）。
 - **「桌面空闲唤醒」端差 ∕ 登记（2026-09-28 · 源 = `docs/batches/2026-09-28-desktop-idle-wake.md` §2）**：① 消化状态行 = 端侧自持（VSC `chat-status.js` 同判「端」——核不夺）；② 子 agent 块**回收面**（消化完成逐条发 `done` ⇒ 归档入流）住桌面宿主驱动（核件 hooks 供给——与 VSC `reclaimDigestedBlocks` 同形）；③ 状态行挂起句 = 端侧词表（zh = CLI 逐字 ∕ en = VSC 逐字——双端值源登记）。
 
 ## 10. 上抛与报告项
@@ -502,3 +502,5 @@ VSC `thincoder-vscode/webview/session.css` **215 ⇒ ≈219**（两钮（Rename 
 - 2026-09-29（**口子清零二轮 · 实施随动收正轮（父侧裁）· eng-designer**——承批档 `docs/batches/2026-09-29-hatch-clearance-2.md` §4 ∕ §5.6）：§9「对齐第二批」块残句收正——④ 走时刷新值 ∕ 态按盘收正（2s ∕ 不落 ⇒ **1s ∕ 已落**——镜像 = `docs/desktop/design/UI.md:308` 现文）；②③⑤ 实读与 owning 档（`docs/desktop/design/PROJECT.md` §10 AZ ∕ BA · KD-33）同拍零触。**零新语义**（值 ∕ 态收正）。明细 = 批档 §2.10。
 - 2026-09-30（**桌面堆取证修复批 · E2 命中分支落档轮 · eng-designer**——承 `docs/batches/2026-09-30-desktop-heap-freeze.md` §1.3c ∕ §2.13 · 台账 #694）：§2 增 **KD-RC-11**（续写支文本节点合并——`appendAdvisorChunk` 两处；语义等价）；§6 增本批随动段（核 `flow/block.mjs` **145 ⇒ ≈150**；后收正实读 **153**——2026-09-30 ∥ 桌面 ∕ VSC 消费面零改）。**零新语义**（实测命中登记 + 语义等价修设计）。明细 = 批档 §2.13。
 - 2026-09-30（**排版统一批（D29）· 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-desktop-typography-unify.md` §1 · 台账 #736 · 需求 D29）：§5 增**排版统一覆盖块**（桌面侧排版通道收正——面 1 ∥ 3 ∥ 6 ∥ 8 ∥ 9 ∥ 11 ∥ 12 ∥ 14 ∥ 18 ∥ 19 ∥ 21 逐面；结构 ∥ 盒值 ∥ 色面仍随 VSC）+ ★上抛①（字族）随 D29 收正句。**零机制语义**（值域收正）。明细 = 批档 §2。
+- 2026-09-30（**文档清账批 · eng-designer**——承台账 #708 · 批 `docs/batches/2026-09-30-doc-settlement.md`）：§5 落位不变式 ② 桌面侧形态收正（消费轮边界物形——`insertBefore(块, 边界)`：边界 = `ev:digest start` 标签行 ∥ 座次入模；三端消化面统一批 · #747 落形）+
+  §9「对齐第二批」端差 ∥ 登记块 ③ 转 **已消**（桌面收编 VSC 边界物形——KD-33；单源 = 桌面 `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条）。**零新语义**（跨板随动 ∥ 时态收正）。

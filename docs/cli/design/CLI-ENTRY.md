@@ -49,10 +49,10 @@
 
 - **发射面** = `printCompletion(shell)`（`thincoder-cli/src/completions.mjs`）；`completion` 分支在 `bin/thincoder.mjs` 分发（非法 shell ⇒ usage + 退出 1）。
 - **横深对齐**：三套脚本须覆盖 §2 表内旗标词面——**ledger 族已对齐（#677 I8 已落）**；余缺口在册 = `session gc ∕ index` 旗标（`docs/cli/design/CLI-DEBT.md` §3-T1）。
-- **bash 源文本形 ≡ 发射字节形**（防改形漂移；同族各分支行逐字节同形；2026-09-30 缺陷修复批 #704 收正——发射脚本即真实 shell 脚本，`\$(…)` 非命令替换）：
+- **bash 源文本形 ≡ 发射字节形**（防改形漂移；同族各分支行逐字节同形）：
   - 形（源档 `completions.mjs` 模板字面量内直写 = 发射字节，**零反斜杠**）：`$(compgen -W "<词表>" -- "$cur")`；分派行 = `case "$prev" in`。
   - **JS 插值险位例外**：发射面须含字面 `${…}` 的段（`"\${COMP_WORDS[1]}"` 一类）在源档保留 `\${` 转义（模板字面量内 `\$` ⇒ 发射 `$`）。
-  - zsh 同族：分派行 = `case "$state" in` ∕ `case "$words[1]" in` ∕ `case "$words[2]" in`（发射面零 `\$`——双引号内 `\$` = 字面 `$` ⇒ 分派永不匹配；2026-09-30 同批收正）。
+  - zsh 同族：分派行 = `case "$state" in` ∕ `case "$words[1]" in` ∕ `case "$words[2]" in`（发射面零 `\$`——双引号内 `\$` = 字面 `$` ⇒ 分派永不匹配）。
   - 判据 = 与同族既有分支行（`chat` / `memory` 子命令与旗标 / `distill` / `completion` / 顶层词表行）同形；断言面 = 机检形 MS-2 的字节断言（§4）+ `bash -n` 语法腿（真机走查）。
 - **测试沙箱纪律**：任何驱动 `node bin/thincoder.mjs …` 的子进程用例须以临时目录作 `HOME` / `USERPROFILE`（先例 = `thincoder-cli/test/session-gc-cli.test.mjs` 沙箱段）——入口无条件 `prepareCrashReporting()`（mkdir + 30 天 purge）⇒ 无沙箱会**真触** `~/.thincoder/crash-reports/`。**禁触真实 `~/.thincoder`**。
 

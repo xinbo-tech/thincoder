@@ -1084,7 +1084,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 
 **口径**：本小节 = 核内逐档行数的**设计侧落点**（R24a；T-C14 检查对象）；**设计侧现行登记面 = 本小节子表**（新超线档须入表 + 拆分计划——防回潮）；核内读数侧（机检门）= `thincoder-core/test/core-hygiene.test.mjs` 的 `SOFT_LINE_REGISTRY`——**运行面随 2026-09-28 测试树全清退场，该门义务随测试体系重建恢复**。行数 = `wc -l`；**>300（软线）档须带拆分计划**。
 **读数 as-of = 2026-09-14**（本轮逐档实跑复核——13 档表 + 拆分计划子表 9 档 + 次优先列表 8 档，与树逐档一致）；
-`wc -l` 语义 = 核内机检 `thincoder-core/test/core-hygiene.test.mjs:98` 的口径（**2026-09-25 file-tier-sweep 批复测刷新——面 = 主表行 4–11 · 14 与子表行 1 · 4–9 · 11 · 14–17；未列行保留各自 as-of**）。
+`wc -l` 语义 = 核内机检 `thincoder-core/test/core-hygiene.test.mjs:98` 的口径（**2026-09-25 file-tier-sweep 批复测刷新——面 = 主表行 4–11 · 14 与子表行 1 · 4–9 · 11 · 14–17；未列行保留各自 as-of**；**2026-09-30 文档清账批补登——子表行 23（`wc -l` 实读 2026-09-30）**）。
 
 | # | 档（`thincoder-core/` 内） | 当前行数 | 来源 / 落点（裁决行） | 拆分计划 |
 |---|---|---|---|---|
@@ -1106,16 +1106,16 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 
 **覆盖口径**：本表 = S1 落地新增 / 拆分产物档（**15 档** = §2.8 表「核包（S1 新建）」行的逐档展开 + **S1 续轮两档**——#184 / #185 + **S1 续轮第四批两档**——#123 / #126 + **init-block 批一档**——`session-slots-manifest.mjs`（拆分产物；同批 `session-lifecycle.mjs` **>300** ⇒ 归下子表行 11）＋ **显示面消差批一档**——`agent/child-marks.mjs`（X6 常量下沉产物））。
 `SOFT_LINE_REGISTRY`（`thincoder-core/test/core-hygiene.test.mjs`）在册 **47 档**（2026-09-29 structure-split-2 复算：49 − 2——`provider/responses.mjs` **273** ∥ `manifest.mjs` **249** 两档拆后回落 < 300 ⇒ 移出；
-本批三新档 **237** ∥ **155** ∥ **119** 均 < 300 ⇒ 免登记。运行面随测试体系重建落册——2026-09-28 全清后不在盘）＋ **tools-carryover 批登记义务 3 档**（子表行 20–22——随测试体系重建恢复时落册）：
-拆分计划已登 **23 档**（`config.mjs` + 收正轮 3 补 4 档 + 收尾轮补 4 档 + **U0 修轮补 1 档** + **init-block 批补 2 档** + **渠道接入批补 2 档**〔test 面首次入册——子表行 12 / 13〕 + **bench 参数批补 1 档**〔`model-specs.mjs`——子表行 14〕 + 
+本批三新档 **237** ∥ **155** ∥ **119** 均 < 300 ⇒ 免登记。运行面随测试体系重建落册——2026-09-28 全清后不在盘）＋ **tools-carryover 批登记义务 3 档**（子表行 20–22——随测试体系重建恢复时落册）＋ **文档清账批登记义务 1 档**（子表行 23——随测试体系重建恢复时落册）：
+拆分计划已登 **24 档**（`config.mjs` + 收正轮 3 补 4 档 + 收尾轮补 4 档 + **U0 修轮补 1 档** + **init-block 批补 2 档** + **渠道接入批补 2 档**〔test 面首次入册——子表行 12 / 13〕 + **bench 参数批补 1 档**〔`model-specs.mjs`——子表行 14〕 + 
 **file-tier-sweep 批补 3 档**〔`context.mjs` / `tools/edit-diff.mjs` / `tools/file.mjs`——子表行 15–17〕 + **env-config-purge 批补 1 档**〔`traces/trace-store.mjs`——子表行 18〕 + **structure-split-2 批补 1 档**〔`manifest.mjs`——子表行 19〕 +
-**tools-carryover 批补 3 档**〔`ops.mjs` / `async-settle.mjs` / `suspension.mjs`——子表行 20–22〕——后 **22** 档见下子表）；
-**其余 27 档待补**（2026-09-29 structure-split-2 复算：29 − 2——两档拆后 < 300 移出；补登范围与时点另定；其中 **≥437 六档**已列次优先）。
+**tools-carryover 批补 3 档**〔`ops.mjs` / `async-settle.mjs` / `suspension.mjs`——子表行 20–22〕 + **文档清账批补 1 档**〔`agent-tools/batch-lifecycle.mjs`——子表行 23〕——后 **23** 档见下子表）；
+**其余 26 档待补**（2026-09-30 文档清账批复算：29 − 2 − 1〔`agent-tools/batch-lifecycle.mjs` 补登——子表行 23〕；补登范围与时点另定；其中 **≥437 六档**已列次优先）。
 其中距 500 硬限最近五档（**481 / 481 / 481 / 473 / 468**——`thincoder-core/agent/helpers.mjs` · `agent-tools/advisor-async.mjs` · `agent-tools/consult.mjs` · `thincoder-core/tools/shared.mjs` · `tools/file.mjs`；读数 = `wc -l` 实读 2026-09-29——structure-split-2 批届盘复读；
 计划：advisor-async ∥ shared ∥ file 见下子表行 8 / 9 / 17，consult 见次优先列表，helpers 待补）。
 次优先面 = 其余 **≥437 六档**（见下；`thincoder-core/tools/shared.mjs` / `tools/file.mjs` 已补登计划、移出该列表——2026-09-25；`agent-tools/subagent-spawn.mjs` 读数 **407** 跌破 437 ⇒ 移出〔仍 >300、在册，补登时点随其下次实质改动〕）。
 
-**在册超软线档拆分计划（S1 逐字随迁面——收正轮 3 补 4 档；收尾轮补 ≥450 面 4 档；U0 修轮补 1 档；init-block 批补 2 档；渠道接入批补 2 档〔test 面〕；bench 参数批补 1 档〔`model-specs.mjs`〕；structure-split-2 批补 1 档〔`manifest.mjs`——子表行 19〕；tools-carryover 批补 3 档〔子表行 20–22〕；**
+**在册超软线档拆分计划（S1 逐字随迁面——收正轮 3 补 4 档；收尾轮补 ≥450 面 4 档；U0 修轮补 1 档；init-block 批补 2 档；渠道接入批补 2 档〔test 面〕；bench 参数批补 1 档〔`model-specs.mjs`〕；structure-split-2 批补 1 档〔`manifest.mjs`——子表行 19〕；tools-carryover 批补 3 档〔子表行 20–22〕；**文档清账批补 1 档〔`agent-tools/batch-lifecycle.mjs`——子表行 23〕；**
 **读数 = `wc -l`——本批触及行实读 2026-09-19 · 其余实核 2026-09-14 · test 面两档实读 2026-09-20 · `model-specs.mjs` 实读 2026-09-24 · file-tier-sweep 批：补 3 档〔行 15–17〕+ 复测行 = 行 1 · 4–9 · 11 · 14–17（实读 2026-09-25——未列行保留各自 as-of））**
 
 | # | 档（`thincoder-core/` 内） | 当前行数 | 拆分计划 |
@@ -1143,6 +1143,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 20 | `thincoder-core/tools/ops.mjs` | **330**（`wc -l` 实读 2026-09-29） | **>300——须带（tools-carryover 批先行登记——本批不拆）**：拆点 = `wait_for` 族（`parseWaitForCondition` ∥ 条件族 ∥ 轮询体——≈180 行，含新 `bash id:N done` 条件）外提姊妹档（`wait-for.mjs`（拟新增）式；拆后主档 ≈163）；备选 = `process` 族（≈50 行——新 `kill` action 随族）；**消解条件 = 越 500 硬限前或该档下次实质改动时** |
 | 21 | `thincoder-core/agent-tools/async-settle.mjs` | **301**（`wc -l` 实读 2026-09-29） | **>300——须带（同批先行登记——本批不拆）**：拆点 = 结算 ∕ 唤醒段（`releaseSettledEntry` ∥ `settleAsyncEntry` ∥ `wakeAsyncWaiters`——≈135 行）外提姊妹档；备选 = 池 ∕ 墓碑段（`:52-141`）；**消解条件 = 越 500 硬限前或该档下次实质改动时** |
 | 22 | `thincoder-core/agent/suspension.mjs` | **300**（`wc -l` 实读 2026-09-29） | **贴线（300）——同批先行登记（本批不拆）**：拆点 = 池状态快照族（`poolLive` ∥ `sweepSettledToPending` ∥ `backgroundCounts`）外提姊妹档；**消解条件 = 越 500 硬限前或该档下次实质改动时** |
+| 23 | `thincoder-core/agent-tools/batch-lifecycle.mjs` | **332**（`wc -l` 实读 2026-09-30——pairfix 批 ①-3 后） | **>300——须带（文档清账批补登——本批不拆；计划原案 = `docs/core/design/TOOLS.md:741-742`）**：拆点 = create 面（`createBatchRecord` + `assertInsideBases` ≈55 行）外提姊妹档 `batch-lifecycle-create.mjs`（余量预计 ≈267）；**消解条件 = 越 500 硬限前或该档下次实质改动时** |
 
 **tools-carryover 批免登记余档（同批触及面——读数 = `wc -l` 实读 2026-09-29）**：`thincoder-core/tools/bash.mjs` **289**（贴线——<300）· `thincoder-core/agent-tools/bash-async.mjs` **281**（本批新档）· `thincoder-core/agent-tools/async-discard.mjs` **186** · `thincoder-core/agent/helpers.mjs` **481**（既有在册——300–500 段）。
 
@@ -2031,5 +2032,8 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 
 - 2026-09-30（**doc-sweep 批 · #688 收口轮 · eng-designer**——承 `docs/batches/2026-09-30-doc-sweep.md` §2 · 台账 #688）：「24 档」断言簇余留**十二处**收正为 **52 档**（`:164` ∥ `:166` ∥ `:410` ∥ `:643` ∥ `:1009` ∥ `:1014` ∥ `:1016` ∥ `:1037` ∥ `:1059` ∥ `:1189` ∥ `:1545` ∥ `:1546`——现盘 `thincoder-core/tool-docs/` 实测）；
   §2.8.1 口径句（`:1085`）收正——**设计侧现行登记面 = 本小节子表**；`SOFT_LINE_REGISTRY` 运行面随 2026-09-28 测试树全清退场，**机检门义务随测试体系重建恢复**。**零新语义**（计数 ∕ 时态收正）。
+
+- 2026-09-30（**文档清账批 · eng-designer**——承台账 #737 · 批 `docs/batches/2026-09-30-doc-settlement.md`）：§2.8.1 子表**补行 23**（`thincoder-core/agent-tools/batch-lifecycle.mjs` **332**——`wc -l` 实读 2026-09-30（pairfix 批 ①-3 后）；
+  拆点 ∕ 落点 ∕ 消解窗口 = `docs/core/design/TOOLS.md:741-742` 逐字）+ 计数句同改（已登 **23 → 24** · 后 **22 → 23** 档 · 其余 **27 → 26**）+ 子表题行补「文档清账批补 1 档」+ 登记义务行补 1 档。**零新语义**（登记落位 ∕ 读数收正）。
 
 
