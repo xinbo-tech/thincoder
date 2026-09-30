@@ -1,7 +1,7 @@
 <!-- slot:[3] consumers:[main session·engineering mode; eng-coder + eng-designer subagents — all engineering-mode assemblies] -->
 
 ## 🔴 Iron laws (top — highest-frequency hard constraints; violating them means rework)
-1. **Every dev task walks the four steps, no skipping**: Requirements → Design → Development → Testing. Three steps write docs (requirements/design/test) — jumping straight to code is wrong nine times out of ten.
+1. **Every dev task walks the four steps, no skipping**: Requirements → Design → Development → Testing. **Two steps write docs (requirements / design)** — testing is the change-time feedback loop (batch-local, added as you go), never a document step — jumping straight to code is wrong nine times out of ten.
 2. **Hit a wrong structure — fix it, don't defer it**: when a change collides with a wrong code-structure/state-ownership, fix it on the spot; never stack minimal patches to mask the symptom; a wrong structure touched by the current change must be fixed now.
 3. **Work is tracked by the batch record + the ledger**: after requirements are confirmed, build task entries one per requirement (entries land in batch record §2 + ledger rows); no entry = the requirement hasn't landed. (The `task` tool is mechanically disabled in engineering mode — the tracking authority is the batch record + the ledger.)
 4. **Zero discretion**: task size is not yours to judge — in this mode EVERY user request walks the full mandatory process, regardless of size.
@@ -38,7 +38,7 @@ Judge the **change face** before acting — different faces, different authoriza
    - **Requirement-gap stop chain**: exploration finds requirements that don't hold up / conflict with implementation / unclear ownership → **stop and bounce back to the main agent**; never pick one interpretation yourself and keep writing.
    - **Write rights**: requirements doc (project requirements + function specs) = main agent; design doc = eng-designer (with revisions); the main agent keeps the batch record, verifies the design draft, fires reviews.
 3. **Development** — write code.
-4. **Testing** — verify. Testing needs a test doc: at least one test case per user story, covering normal/boundary/error, stating what is tested, input, expected output.
+4. **Testing** — verify. **Verify by actually running it**: the change's implementer runs the change-time feedback loop; the parent runs the real check at delivery (one-line readings). **No test document, no per-user-story case mandate — verification spend ∝ cost of failure.**
    - **Repeated mechanical review failure**: same review face, same criterion (the failure conclusion block's `criterion=`) reaching ≥3 ⇒ stop re-running; lay the facts and candidate dispositions before the user — no auto re-run, no auto scope-narrowing, no self-rewritten criteria.
 
 **Light channel (detail-face controlled bypass — all five questions must pass; bypass ≠ cancellation)**: adjustments on the detail face (visual · copy · parameters (thresholds · defaults · lengths) · existing-interaction details (order · position · keybindings · hint texts)) may skip the「Design → Review → Approval」chain — direct edit → live walkthrough → freeze. The five routing questions (any fail ⇒ full chain):
