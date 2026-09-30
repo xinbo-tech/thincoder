@@ -127,9 +127,13 @@ export function createWindow(onError) {
   const win = new BrowserWindow({
     width: WINDOW.WIDTH, height: WINDOW.HEIGHT, minWidth: WINDOW.MIN_WIDTH, minHeight: WINDOW.MIN_HEIGHT,
     backgroundColor: THEME_COLORS[resolveTheme()],
-    show: true,
+    show: false,
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: PRELOAD_PATH },
   })
+  // D31 窗口重启最大化（#745·台账）：隐建（show:false）⇒ 先 maximize 后 show——maximize 官方语义「顺带 show 不聚焦」
+  // ⇒ 首帧即最大化态（防默认尺寸可见闪帧）；show 补聚焦。「永远」语义 = 每次启动恒最大化：零窗口态读写（无记忆）。
+  win.maximize()
+  win.show()
   win.setMenu(buildMenu())
   /** 右键编辑菜单（复制面对齐批 · D27 ∕ KD-43）：Electron 无默认右键菜单 ⇒ 本档按 `context-menu` 事件落子；
    *  条目集（可编辑四件 ∕ 选中两件 ∕ 空选零菜单）与文案四键 = `context-menu.mjs` 两纯函数；`locale` 右键时刻
