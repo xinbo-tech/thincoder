@@ -15,7 +15,7 @@ thincoder-desktop/                  ← 本端产品包
 ├── electron-builder.yml            ← 三平台产物声明（拟新增）
 ├── .gitignore                      ← 忽略 `thincoder-desktop/test/artifacts/`（运行期产物不进 git——单源 = `docs/desktop/design/E2E-TESTING.md` KD-10）
 ├── src/main/                       ← 主进程（Node / ESM——唯一持 Node 能力者）
-│   ├── main.mjs                    ← 入口：单实例锁 → 协议注册 → 窗口 · 启动自检（`docs/desktop/design/PROJECT.md` §2 KD-7）；ready 前初始化一律 await
+│   ├── main.mjs                    ← 入口：单实例锁 → 协议注册 → 窗口前恢复（重启自动重开——`docs/desktop/design/PROJECT.md` §2 KD-56）→ 窗口 · 启动自检（同档 §2 KD-7）；ready 前初始化一律 await
 │   ├── host-floor.mjs              ← 宿主下限谓词 + `node:sqlite` 探针（`main.mjs` 同面拆分 · 零 `electron` 导入的叶子——预算 = `docs/desktop/design/PROJECT.md` §4.1）
 │   ├── window.mjs                  ← BrowserWindow 生命周期 / 菜单 / 系统主题 / 窗口态（**复制面对齐批**：右键编辑菜单落子——`context-menu` 事件 ⇒ `Menu.popup`）
 │   ├── context-menu.mjs            ← 右键编辑菜单（**复制面对齐批**新档）：`contextMenuLabels(locale)` + `contextMenuTemplate(params, labels)` 两纯函数（零 `electron` ⇒ 平 node 直测；条目集 / 文案面单源 = `docs/desktop/design/UI.md` §1「本批注（复制面对齐 VSC · 2026-09-29）」）
@@ -32,7 +32,7 @@ thincoder-desktop/                  ← 本端产品包
 │   ├── session-slots.mjs           ← 端壳：端名声明 END = "desktop" + `setSessionEnd(END)` + **转口八项**（marker 三项〔端参绑定〕+ 会话族五项：端参绑定 3〔`resumeSlot` / `switchToSlot` / `deleteSlot`〕· 同形转口 1〔`newSession`〕· 纯 re-export 1〔`renameSlot`〕）（零算法副本——`docs/desktop/design/PROJECT.md` §2 KD-5）
 │   ├── session-actions.mjs         ← 会话族动作层：五通道（create / switch / rename / delete / resume）+ 回执信封 `{ ok, reason: null|string, cwd, slot }`（`docs/desktop/design/IPC.md` §2 会话族注）
 │   ├── sessions.mjs                ← 会话族读面：`sessions:list` 载荷投影（核 `listSlots` 条目 → 会话控制条目）——零新增算法（`docs/desktop/design/IPC.md` §2 会话族注）
-│   ├── projects.mjs                ← 当前项目（内存态）与最近目录面——读面 = 核会话槽面回读、零新存储（`docs/desktop/design/IPC.md` §2 项目面注 · `docs/desktop/design/PROJECT.md` §2 KD-9）
+│   ├── projects.mjs                ← 当前项目（内存态）与最近目录面 + 重启自动重开（本端记录面回读——`docs/desktop/design/PROJECT.md` §2 KD-56）——读面 = 核会话槽面回读、零新存储（`docs/desktop/design/IPC.md` §2 项目面注 · 同档 §2 KD-9）
 │   ├── settings.mjs                ← 设置族多面（`config:write`——键白名单仅 `locale` · `model:list` / `model:catalog` · `settings:agent`（**B10 W3**：slot 权威键拒 `slot-authority` ∕ patch `null` 清除面 ∕ advisor 档 helper 单源）· `index:status` 读数装配）——共用核 `loadConfig` / `writeConfigAtomic`
 │   ├── providers.mjs               ← 渠道族八通道（`provider:list` / `save` / `remove` / `verify` + **B10 W2 四增**：`setKey` ∕ `delKey` ∕ `models` ∕ `setProxy`——值面住核、端侧零形状构造；S3 写后探单点）
 │   ├── mcp-servers.mjs             ← MCP 族六通道（`mcp:list` / `save` / `remove` / `tools` + **B10 W3 两增**：`update`（仅落盘） ∕ `reconnect`（先断后连）——探活失败 ⇒ 零写盘）
@@ -113,7 +113,7 @@ thincoder-desktop/                  ← 本端产品包
 
 | 面 | 形态 | 落点 |
 |---|---|---|
-| 入口与单实例 | `main.mjs` = 单实例锁 → 协议注册 → 窗口；ready 前初始化一律 await | `docs/desktop/design/PROJECT.md` §4.1 |
+| 入口与单实例 | `main.mjs` = 单实例锁 → 协议注册 → **窗口前恢复**（重启自动重开——`docs/desktop/design/PROJECT.md` §2 **KD-56**）→ 窗口；ready 前初始化一律 await | `docs/desktop/design/PROJECT.md` §4.1 |
 | 窗口 · 菜单 · 系统主题 | `window.mjs` = BrowserWindow 生命周期 / 菜单 / 系统主题；**菜单（首版）= 原生菜单只挂主进程动作**（窗口 / 缩放 / 退出 / 开发者工具 ＋ **平台惯例 Edit 组**〔内建 `role:`，非通道〕——通道面注 = `docs/desktop/design/IPC.md` §1） | `docs/desktop/design/PROJECT.md` §4.1 |
 | 右键编辑菜单 | `window.mjs`（落子）+ `context-menu.mjs`（新档——模板两纯函数）：`webContents.on("context-menu")` ⇒ 按 `params`（`isEditable` / `selectionText` / `editFlags`）构模板 ⇒ `Menu.popup`（条目集 = 可编辑四件 ∕ 选中两件 ∕ 空选零菜单）；文案面 = `menu.edit.*` 四键两语（主进程 `loadConfig().locale` 现读） | `docs/desktop/design/PROJECT.md` §2 **KD-43** |
 | `app://` 供给 | 自定义标准协议（standard + secure + supportFetchAPI）+ 路径逃逸防护；不直载 `file://` | `docs/desktop/design/PROJECT.md` §2 KD-2 |
@@ -229,3 +229,4 @@ B10 拆出 ∕ 新档）+ 四行按盘收正（`settings.mjs` 多面清单 / `pr
 - 2026-09-29（**口子清零二轮 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-hatch-clearance-2.md` §2 · 台账 #673）：§4 两项显式端差收正——**裁 = 消（补做）**（MCP 连接 ∕ `attachManifest`——非宿主能力面）；机制零改。**零新语义**（处置句收正）。明细 = 批档 §2。
 - 2026-09-30（**桌面 MCP 装配补 `.mcp.json` 项目文件源批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-mcp-json-source.md` §2 · 台账 #691）：§4 补「装配 MCP 缝体 = 双源」句（发现 ∕ 信任 ∕ 优先级单源 = `docs/core/design/MCP.md` §6.4）。**零新语义**。
 - 2026-09-30（**桌面残债清付批 · 实施后档面轮 · eng-designer**——承 `docs/batches/2026-09-30-desktop-residuals.md` §2.12）：§1 树增 `ipc-relays.mjs` 节点行（转口族——自 `ipc.mjs` 拆出 · 2026-09-30）。**零新语义**（登记）。
+- 2026-09-30（**桌面重启自动重开批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-desktop-reopen-last-project.md` §1 · 台账 #734）：§1 树两行随动（`main.mjs` 行补**窗口前恢复**；`projects.mjs` 行补重启自动重开）+ §2 「入口与单实例」行同拍（单源 = `docs/desktop/design/PROJECT.md` §2 **KD-56** ∕ `docs/desktop/design/IPC.md` §2 项目面注项 7）。**零新语义**（登记）。

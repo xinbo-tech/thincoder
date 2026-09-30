@@ -15,7 +15,8 @@
  *   ③ `sessionsDir()` 访问器（核未导出根目录 —— 由核 `sessionPath` 反推，随核 `configDir`
  *      与核沙箱缝自动随动，本档零副本）；
  *   ④ 历史页读面（本批增）：`pageHistory` —— 槽读转口核 `loadSlotFile`、窗口切分转口核 `historyWindow`
- *      （页尺 = 核常量 `HISTORY_PAGE_SIZE`；端层只做页游标注与元信息面 ⇒ 零算法副本）；
+ *      （页尺 = 核常量 `HISTORY_PAGE_SIZE`；端层只做页游标注与元信息面 ⇒ 零算法副本；**留档批 · #719**：
+ *      `{ records: true }` 开直通 —— 留档记录随页入回执）；
  *   ⑤ 会话级偏好写面（本批增）：`writeSlotPrefs` —— 核 `setSlotPrefs` 转口（键闭集 / 值归一 / 原子写皆
  *      在核）+ 回读 `loadSlotFile` 经 `slotMeta` 出串（回执 `meta` 与 `history:page` **同源同形**）；
  *   ⑥ 打开态播种面（桌面残余批 · D17）：`pageHistory` 首屏回执携 `seed` —— `tasks` = 槽数据直取、
@@ -165,7 +166,8 @@ function openingSeed(data) {
 /** `history:page(payload)` 读面：载荷 `{ key, before }` ⇒ `{ ok:true, messages, hasOlder, next, meta, seed? }`；
  *  坏键 / 槽缺（含坏档、异项目档 —— 核 `loadSlotFile` 三因同出口回 null）⇒ `{ ok:false, reason }`
  *  （码 = `bad-key` / `slot-missing`，单源 `docs/desktop/design/IPC.md`:52；**不抛** —— 读面 fail-soft）。
- *  窗口切分 = 核 `historyWindow`（页尺缺省 = 核常量）；`next` = 更旧一页的 `before`（`hasOlder === false ⇒ null`）。
+ *  窗口切分 = 核 `historyWindow`（页尺缺省 = 核常量）—— **留档批 · #719**：以 `{ records: true }` 开直通
+ *  （留档记录随页入回执；记录计入页量 —— 三式零改）；`next` = 更旧一页的 `before`（`hasOlder === false ⇒ null`）。
  *  `seed` = 打开态播种面：**仅首屏读**（`before == null`）在场——回填读不携（防回填以盘上旧值覆盖活切片）。 */
 export function pageHistory(cwd, payload) {
   const slot = slotOfKey(payload?.key)
@@ -174,7 +176,9 @@ export function pageHistory(cwd, payload) {
   if (!data) return { ok: false, reason: "slot-missing" }
   const history = Array.isArray(data.history) ? data.history : []
   const before = payload?.before ?? null
-  const { messages: rawMessages, hasOlder } = historyWindow(history, before)
+  // 留档批 · #719：`{ records: true }` 直通 —— 留档记录（`digest` ∥ `subagent` 两型）随页入回执
+  //（形 ∥ 在场 ∥ 判据单源 = `docs/desktop/design/RENDERER.md` §1.1「留档记录」条；页尺 = 核常量 —— 零字面量）。
+  const { messages: rawMessages, hasOlder } = historyWindow(history, before, HISTORY_PAGE_SIZE, { records: true })
   // #632（缺面族批补 · @ 文件引用对齐）：恢复面显示边界 —— user 消息文本过核件剥离（同位 = VSC
   // `panel-session.mjs:184-185`；assistant ∕ tool 零动）；盘面零触碰（注入形 = 落盘形，只剥离显示面）。
   const messages = rawMessages.map((m) => (m.kind === "user" ? { ...m, text: stripAtRefs(m.text) } : m))

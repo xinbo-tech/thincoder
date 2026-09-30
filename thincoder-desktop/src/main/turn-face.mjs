@@ -21,8 +21,8 @@
  * **R3（#505 · 撞帽续跑 —— KD-T8）**：续跑循环接纳**撞帽三径**（核 `agent/helpers.mjs:237` `ContinueError`；
  * 抛出点 `agent.mjs:451`）：`autoTurn`（消化 ∕ 上行 ∕ timer 轮——无人值守档）⇒ **cap 即收口**（核 D-TC15 同支，
  * 零自续）；**#541**：边界轮（`autoTurn ∧ ¬timerTurn`）撞帽另出 `ev:digest { status:"cap", mode, turns }` 帧
- * （渲染面 cap 行 —— 对位 VSC `panel-turn-loop.mjs:251` ⇒ `postDigestCap(panel, "stop", e.turn)`；timer 轮不冒充
- * 消化边界 —— 沿 `suspension-drive.mjs` `boundary` 同判）；
+ * （留档批 · #719：记录同点双动作 ⇒ 人读线 cap 行；渲染面 cap 行 —— 对位 VSC `panel-turn-loop.mjs:251` ⇒
+ *  `postDigestCap(panel, "stop", e.turn)`；timer 轮不冒充消化边界 —— 沿 `suspension-drive.mjs` `boundary` 同判）；
  * 用户回合 ⇒ **「继续？」薄形询问**（`askContinue` 注入面 —— 载体 = 既有待决门，不造第二交互面）⇒
  * 同意 = 重建 controller + `resume: true` 重入同回合（历史已在 ⇒ 不重推用户消息）∕ 拒绝（∥ 缺注入 ∥ 会话已中止
  * 墓碑命中）⇒ `stopped` 结算（同中止三径序：落盘 → 读数 → 终局事件）。
@@ -31,11 +31,14 @@
  * 交宿主**核结算通知**（#656 · KD-52 ④：入队单点已前移至 `interrupt` 入口 —— 本缝零二次入队；缺省 ⇒ 零动作；
  * 裸停 —— reason 无消息 —— 零变）。**非 cap 结算径撤回臂**（#656 · KD-52 ④ · 防御）：中断续跑径（下述换代重入 ——
  * 消息经核注入径落历史）⇒ 经 `withdrawCapEntry(key)` 按条目引用摘回预入队条目（幂等；缺省 ⇒ 零动作）。
+ * **留档批 · #719（修复轮 3 · 写点前移）**：边界轮（`autoTurn ∧ ¬timerTurn` —— 与挂起驱动 `boundary` 同判）
+ * 收尾 `end`（记录 ∥ 发帧同点双动作 —— 先例 = cap 记录：撞帽径，先于落盘同序）出在本档**结算序前**（两径 `settleTurn`
+ * 之前）：`end` 随槽落盘 ⇒ 收束后即时重载末轮痕可重建；挂起驱动 `driveTurn` 收尾半随移出（净简化）。
  */
 import { ContinueError } from "@thincoder/core/agent.mjs"
 import { ensureSessionTitle } from "@thincoder/core/generate-title.mjs"
 import { cleanupTurn } from "./attachments.mjs"
-import { saveAgentSlot } from "./session-io.mjs"
+import { appendRecord, saveAgentSlot } from "./session-io.mjs"
 
 /** 错误详情载波（「对齐第三批」项 9 · KD-37）：`techInfo` = 宿主 `err.stack` —— 缺 ∥ 非串 ∥ 空串 ⇒ **键缺席**
  *  （错误横幅 `details` 面据此在场；载荷形单源 = `docs/desktop/design/IPC.md` §1 `ev:error` 行）。纯函数、零抛。 */
@@ -89,6 +92,11 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
     /** **现代** controller（中断续跑换代 ⇒ 此处同换）——结算判据 / 释放在飞两查位同读。 */
     let live = controller
     const attached = opts.attached ?? null
+    // 留档批 · #719（**修复轮 3** · 写点前移）：边界轮 `end`（记录 ∥ 发帧同点双动作；先例 = `runWithResume`
+    // 撞帽径 cap 记录 —— 先于落盘同序）出在**本档结算序前**（两径 `settleTurn` 之前 ⇒ `end` 随槽落盘）；
+    // 判据与挂起驱动 `driveTurn` 同判（`autoTurn ∧ ¬timerTurn` —— timer 轮不冒充消化边界）；`started` = 该发计时锚。
+    const boundary = opts.autoTurn === true && opts.timerTurn !== true
+    const started = Date.now()
     // 步边界取批缝（「回合中插入」批 · KD-40 ②）：**用户回合传 ∕ 消化轮（`autoTurn`）不传**
     //（沿 VSC 分流 `panel-turn-loop.mjs` —— `autoTurn ? null : …`；系统轮不接步边界 pickup）。
     const pickup = opts.autoTurn === true || typeof queuedPickup !== "function" ? null : queuedPickup(key)
@@ -130,7 +138,10 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
             if (opts.autoTurn === true) {
               // #541：消化边界轮撞帽 ⇒ cap 帧出站（部分消化不静默 —— 对位 VSC `postDigestCap`）；判据 = 边界轮
               //（`autoTurn ∧ ¬timerTurn` —— 沿 `suspension-drive.mjs` `boundary` 同判：timer 轮不冒充消化边界）。
-              if (opts.timerTurn !== true) post("ev:digest", { key, status: "cap", mode: "stop", turns: err.turn })
+              if (opts.timerTurn !== true) { // 留档批 · #719：记录与发帧同点双动作（人读线 cap 行 —— 机器线零触）
+                post("ev:digest", { key, status: "cap", mode: "stop", turns: err.turn })
+                appendRecord(agent, { kind: "digest", status: "cap", mode: "stop", turns: err.turn })
+              }
               return "stopped" // 无人值守档（消化 ∕ 上行 ∕ timer 轮）⇒ cap 即收口（核 D-TC15 同支，零自续）
             }
             const consent = await consentOf(key, err.turn)
@@ -152,12 +163,25 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
         }
       }
     }
+    /** 边界轮 `end` 出站（#719 · 修复轮 3 · 写点前移；**恰一次** —— 成功径先发 ⇒ 失败径零重发，防双份）：
+     *  `ms` 单算式 ⇒ 记录 ∥ 发帧同值；非边界轮零动作（`boundary` 假 —— timer 轮 ∥ 非 autoTurn 两径；**上行轮属边界**）。
+     *  不查回合墓碑（`revokedTurn`）：盘面零写由 `settleTurn` 墓碑门守（U-7 不破 —— 记录 ∥ 帧同点口径使然）。 */
+    let endEmitted = false
+    const emitDigestEnd = (ok) => {
+      if (!boundary || endEmitted) return
+      endEmitted = true
+      const ms = Date.now() - started
+      post("ev:digest", { key, status: "end", ok, ms }) // 边界帧（同点双动作 —— 发帧 ∥ 记录）
+      appendRecord(agent, { kind: "digest", status: "end", ok, ms }) // 留档记录（#719 —— 人读线半，机器线零触）
+    }
     try {
       const outcome = await runWithResume()
+      emitDigestEnd(true) // #719 修复轮 3：`end` 写点前移（先于结算落盘 —— 末轮痕随槽落盘）
       await settleTurn(key, agent) // 结算：标题 → 落盘（先于终局事件 —— §1.14 ②；中止径零写 —— U-7）
       postUsage(key, agent) // 回合尾读数（同点：落盘后 · 终局事件前）
       post("ev:activity", { key, event: outcome === "stopped" ? "stopped" : "done" }) // 收口两径同序：done ∕ stopped（R3）
     } catch (err) {
+      emitDigestEnd(false) // 失败径同出（非 Abort 失败径同样出 `end` —— 同先于结算落盘；恰一次）
       await settleTurn(key, agent) // 三路同序（CLI 先例 = 回合 finally 尾部保存；中止径零写 —— U-7）
       postUsage(key, agent) // 三径同点（中断 / 错误同样出本回合读数）
       if (live.signal.aborted) post("ev:activity", { key, event: "stopped" })

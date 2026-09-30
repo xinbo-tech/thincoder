@@ -4,7 +4,8 @@
  *   ① 根锚四（`chromeProps`）+ 帧尾态刷 `syncChrome`（摘要块 / **压缩行** / 消化行族 / **到期触发行组** / 停止痕 / 台账行组 /
  *      审批卡 / 药丸 / **真置焦执行** —— 幂等 · 与档位解耦 · `none` 帧同刷）；② 尾组的构树（`summaryNode` /
  *      `timerGroupNode` / `stoppedNode` / `ledgerGroupNode` / `pillNode`）与插点锚（`blockAnchor` 等 —— 单源：
- *      族内序 = 压缩行〔R4 增 —— 构树 ∕ 态刷 ∕ 锚出档 `renderer/views/compress-status.mjs`〕→ 消化行族〔structure-split-2 —— digest 全族出档 `renderer/views/chat-digest.mjs`（构树 ∥ 在场判据 ∥ 界锚再出口；帧刷引调）—— 流内落位批改**逐轮元素 · 流内就地**〕→ 到期触发行组 → 停止痕 → 台账行 —— **压缩行例外 = 流元素冻结点**〔创建点定位 —— `blockAnchor` 链不收本行，新块随流居其下〕）；
+ *      族内序 = 压缩行〔R4 增 —— 构树 ∕ 态刷 ∕ 锚出档 `renderer/views/compress-status.mjs`〕→ 消化行族〔structure-split-2 —— digest 全族出档 `renderer/views/chat-digest.mjs`（构树 ∥ 在场判据 ∥ 界锚再出口；帧刷引调 ∥ **留档批 · #719 位次面四件**）—— 流内落位批改**逐轮元素 · 流内就地**；
+ *      构树消费面 = 构树出档 `renderer/views/chat-tree.mjs`（留档批拆分 —— 按记录位次复列）〕→ 到期触发行组 → 停止痕 → 台账行 —— **压缩行例外 = 流元素冻结点**〔创建点定位 —— `blockAnchor` 链不收本行，新块随流居其下〕）；
  *   ③ 帧尾真置焦执行 `focusAutofocus`（F-置焦 · 「对齐第三批」重核入册）。
  * 依赖单向：`renderer/views/chat.mjs` → 本档（构树与帧尾两径引调）；反向无引用 ⇒ 无环。
  * 文案一律经 `t()`（零硬编码；`+` / `−` / 游标字形住 `renderer/chat.css`）；零 `node:` / 零裸包。
@@ -18,6 +19,7 @@ import { wire } from "./chat-tool.mjs"
 import { compressAnchorOf, syncCompress } from "./compress-status.mjs"
 // 流内消化行族（structure-split-2 拆分产出 —— digest 全族三段出档 `renderer/views/chat-digest.mjs`；本档引帧刷一件，构树 ∥ 在场判据 ∥ 界锚再出口保名）。
 import { syncDigest } from "./chat-digest.mjs"
+// `digestPresent` = 保名面（在场判据现形 = `shownDigestRounds` —— 逐轮元素化后；旧名唯一消费面 = 前批 parity 件，随 `digestGroupNode` 退役归 #708 二择）：待该件收口后同拍摘除。
 export { digestBoundaryOf, digestPresent, digestRoundNode } from "./chat-digest.mjs"
 
 /** 根锚四（单源 —— `chatTree` 与 `syncChrome` 同用）：`data-blocks` = 已渲染块数（= DOM 块节点数）。 */
@@ -160,7 +162,9 @@ export function syncChrome(root, model, handlers = {}) {
     true,
   )
   syncCompress(root, live ? model.compress : null, compressAnchorOf(root))
-  syncDigest(root, live ? model : { digest: null }, blockAnchor(root)) // 新轮元素插点 = 流末（与常规新块同锚面 —— 轮行之下）
+  // 消化行族帧刷（逐轮元素 · 位次对位 —— 位次轮不于此插入：帧尾 ④′ 步 `seatDigestRounds` 按记录位次落位；
+  // 留档批 · #719）。新轮元素插点 = 流末（与常规新块同锚面 —— 轮行之下）。
+  syncDigest(root, live ? model : { digest: null }, blockAnchor(root))
   syncTimer(root, live ? model : { timer: null }, timerAnchorOf(root))
   syncTailNode(root, "[data-stopped]", live && model.stopped === true, () => stoppedNode(), stoppedAnchorOf(root))
   syncLedger(root, live ? model : { ledger: null }, ledgerAnchorOf(root))

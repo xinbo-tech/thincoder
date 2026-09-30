@@ -43,7 +43,7 @@ export function onSusp(state, ev, now) {
  *  `end` **就地更新末轮**（保留起跑 `n` —— 终态句 `digest.done` 需 n；`ok` 缺省 ⇒ 真，沿宿主 `ok !== false` 判据；
  *  并末轮 ⇒ 撞帽事实跨 `end` 存续——终态轮**留存**，不摘）；下一轮 `start` 追一轮 ⇒ 旧轮行驻留（零换代清除）。
  *  表外 `status` ⇒ 零写；**无轮**（`cap` ∕ `end` 而轮集空）⇒ **零写**（防守档——宿主轮序守恒下不可达；VSC 死游标
- *  零动作只系 `end`）；同值 ⇒ 原引用（`cap` 支例外 —— `cap` 为对象载荷，按引用判不等 ⇒ 重投产新 state；该帧每轮恰一发，零重绘影响）。消费 = 流内消化行组 `[data-digest]`（`renderer/views/chat-digest.mjs`）。 */
+ *  零动作只系 `end`）；同值 ⇒ 原引用（`cap` 支例外 —— 对象载荷按引用判不等 ⇒ 重投产新 state；该帧每轮恰一发，零重绘影响）。消费 = 流内消化行组 `[data-digest]`（`renderer/views/chat-digest.mjs`）。**留档批 · #719**：本归约体**直复用于重建复列**（`renderer/page-read.mjs` 记录折叠 —— 记录形 = 事件形；单一实现零副本）。 */
 export function onDigest(state, ev) {
   const table = state.digest ?? {}
   const rounds = Array.isArray(table[ev.key]) ? table[ev.key] : []

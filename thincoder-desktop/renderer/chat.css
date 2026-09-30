@@ -297,7 +297,7 @@
 /* 消化行族（桌面空闲唤醒批 · 流内落位批改逐轮元素 —— 流内非块节点 `[data-digest]`〔每轮一元素〕；落点 = 流内就地 ——
    单源 = `docs/desktop/design/RENDERER.md` §1.1 两条纪律；形 = VSC `webview/base.css:203-247` 逐值 —— turn 行 = 纯行（无边 ∕ 无底）· status 行 = 盒行）：
    ① 起跑态（起跑标签行 + `n > 0` 计数行 —— 计数行同形于状态条，标签行同族小字；**行集逐轮重复——每轮一元素**)∥
-   ② 终态（`end` 就末轮元素更新后**留存** —— 元素驻留至首屏页读清点（运行期痕四清）；`digest-failed` = 错误色显形〔opacity 不覆盖 —— 沿 VSC 继承 0.85〕，`digest-done` = 信息色显形）；
+   ② 终态（`end` 就末轮元素更新后**留存** —— 行入流（与内容同生态）：无专门「摘 ∥ 留」处理；重建按记录位次复列（段界可辨；刷新 ∥ 重载 ∥ 切走切回均在——留档批 · #719）；`digest-failed` = 错误色显形〔opacity 不覆盖 —— 沿 VSC 继承 0.85〕，`digest-done` = 信息色显形）；
    **③ 撞帽行（#541 —— 轮尾 `.digest-cap`；`end` 更新毕随轮留存——`data-digest-cap` 跨 `end` 存续）**。
    `--bg-raised` ∕ `--line` = `editorWidget-background` ∕ `-border` 角色对位；done ∕ failed 两底色 = `infoBackground` ∕ `errorBackground` 角色对位（accent 8% 先例 = `.question-card`）。 */
 .chat-digest .digest-turn {
@@ -339,7 +339,7 @@
   color: var(--warn);
 }
 
-/* 归档子 agent 块（「对齐第二批」项 5 —— 运行期块）：零边距透传容器（内嵌核件 `.advisor-block` 自持边距 / 边框 ——
+/* 归档子 agent 块（「对齐第二批」项 5 —— **留档块**（留档批 · #719））：零边距透传容器（内嵌核件 `.advisor-block` 自持边距 / 边框 ——
    样式单源 = `renderer/core.css` ④ 核件子 agent 块面族）。 */
 .block-subagent {
   padding: 0;

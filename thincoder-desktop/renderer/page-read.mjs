@@ -2,7 +2,16 @@
  * page-read.mjs — **页读径**（「对齐第二批 · 六件」**拆分产出**：`renderer/events.mjs` 硬限 500 顶格 ⇒
  * 在册拆分预案本批执行 —— 页读径 `applyPage` / `blockOfMessage` + 私有面（`seedPatch` / `metaOf` /
  * 文本面 `textOf` / `toolBlock`）自归约核心档**纯搬移**，结构拆分零语义）。
- * 依赖单向：本档 → `renderer/events.mjs`（`applyFlags` 模式位写点 —— 共用件单一实现零副本）· → `renderer/store.mjs`（`endBackfill` 清在途）；归约核心档**不引**本档（无环）。
+ * **留档批 · #719（本批增）**：记录折叠重建 —— 页回执（核 `historyWindow` opt-in 直通）逐条携留档记录
+ * （`digest` ∥ `subagent` 两族；形 / 在场 / 判据单源 = `docs/desktop/design/RENDERER.md` §1.1「留档记录」条）：
+ *  ① `digest` 记录 ⇒ **终态轮**（归约体**直复用** `renderer/events-wake.mjs` `onDigest` —— 记录形 = 事件形；
+ *     只产终态轮（末轮无 `end` 不产 —— 防双份：未结末轮由运行期切片承接）；终态轮携**位次** `at` = 起跑记录
+ *     全局 `idx`（痕面重建按记录位次复列读面））；首屏 ∥ 回填两径同源（首屏 = 清点后留场轮居尾 ⇒ 折叠轮前插；
+ *     回填 = 折叠轮（更旧）前插）；机器线零触（记录不入 `agent.history` —— 落库面 = 宿主）。
+ *  ② `subagent` 记录 ⇒ **留档块**（`blockOfMessage` 同形 —— 与活流归档同一形状；页读域第六型）。
+ *  ③ 页读块携位次 `at`（= 消息全局 `idx` —— 痕面位次对位 ∥ 重建径复列锚读面）。
+ * 依赖单向：本档 → `renderer/events.mjs`（`applyFlags` 模式位写点 —— 共用件单一实现零副本）· → `renderer/store.mjs`
+ *（`endBackfill` 清在途）· → `renderer/events-wake.mjs`（`onDigest` —— 折叠重建直复用）；归约核心档**不引**本档（无环）。
  * 消费面两处：`renderer/session-wire.mjs`（首屏 / 回填两径）· 测试面（`test/events-page.test.mjs` /
  * `test/events-reduce.test.mjs`）。
  * 纪律：纯函数（零 DOM / 零 IPC / 零 `node:` / 零裸包 —— 渲染面静态闭包判据）。
@@ -14,6 +23,8 @@ import { endBackfill } from "./store.mjs"
 import { applyQueue } from "./queue.mjs"
 // 消化轮集清点（运行期痕**四清**之四 —— 判据单源 = 消化行组档 `renderer/views/chat-digest.mjs`）。
 import { clearDigest } from "./views/chat-digest.mjs"
+// 消化记录折叠（留档批 · #719 —— 归约体**直复用**：记录形 = 事件形，单一实现零副本）。
+import { onDigest } from "./events-wake.mjs"
 
 /** 会话级三值字段白名单（判据：非串 / 空串 ⇒ 不落键 —— 数据面原样，非词表）——
  *  **三值**（状态栏对齐批：两模式位撤出本投影 —— 呈现面单源 = 状态行 banner 段，供面 = 回执 `flags`）。 */
@@ -48,6 +59,11 @@ function textOf(value) {
   return typeof value === "string" ? value : null
 }
 
+/** 块位次（留档批 · #719 —— 页读条目全局 `idx`；缺 / 非数 ⇒ 键缺席 —— 运行期件无位次）。 */
+function atOf(msg) {
+  return typeof msg?.idx === "number" && Number.isFinite(msg.idx) ? { at: msg.idx } : {}
+}
+
 /** 核 message / 内嵌 tool → 工具块（**不落** `status` / `durationMs` —— 决策 D8-8 两面差异）。 */
 function toolBlock(tool) {
   const block = { kind: "tool", name: tool?.name ?? null }
@@ -61,25 +77,66 @@ function toolBlock(tool) {
  *  推理先于正文（序单源 = 核 `thincoder-render-core/flow/block.mjs:97-105`；旧序 `[text, reasoning, ...tools]` 退场）。
  *  **说话人时间面载波**（「对齐第二批」项 4）：`user` 块携 `ts`（核 message `timestamp` —— 缺 / 非数 ⇒ 键缺席，
  *  「无 ts 不显示」纪律由核 `paintLabel` 同判据承接）。
+ *  **留档批 · #719**：`subagent` 记录 ⇒ 留档块（**与活流归档同一形状** —— `{ kind, meta, rows }` 单源）；
+ *  两族记录位次 `at`（全局 `idx`）随块 —— 痕面位次对位 ∥ 重建复列锚读面。
  *  **边界**：页读面（历史卡）**零链接**（VSC 同径 —— `links` 只走活流 `ev:tool-result` 载波；单源 = UI.md 相抵② 边界）。 */
 export function blockOfMessage(msg) {
   const kind = msg?.kind
+  const at = atOf(msg)
   if (kind === "user") {
-    const block = { kind: "user", text: textOf(msg.text) }
+    const block = { kind: "user", text: textOf(msg.text), ...at }
     if (typeof msg.timestamp === "number" && Number.isFinite(msg.timestamp)) block.ts = msg.timestamp
     return [block]
   }
-  if (kind === "error") return [{ kind: "error", text: textOf(msg.text) }]
-  if (kind === "tool") return [toolBlock(msg)]
+  if (kind === "error") return [{ kind: "error", text: textOf(msg.text), ...at }]
+  if (kind === "tool") return [{ ...toolBlock(msg), ...at }]
+  // 留档记录 · subagent 快照（活流归档同形 —— `renderer/subagent-reduce.mjs` `archiveIntoFlow` 单源）
+  if (kind === "subagent") {
+    const meta = msg.meta !== null && typeof msg.meta === "object" ? msg.meta : {}
+    return [{ kind: "subagent", meta, rows: Array.isArray(msg.rows) ? msg.rows : [], ...at }]
+  }
   if (kind !== "assistant") return []
   const blocks = []
   const reasoning = textOf(msg.reasoning)
-  if (reasoning !== null && reasoning !== "") blocks.push({ kind: "reasoning", text: reasoning })
+  if (reasoning !== null && reasoning !== "") blocks.push({ kind: "reasoning", text: reasoning, ...at })
   const text = textOf(msg.text)
-  if (text !== null && text !== "") blocks.push({ kind: "assistant", text })
+  if (text !== null && text !== "") blocks.push({ kind: "assistant", text, ...at })
   const tools = Array.isArray(msg.tools) ? msg.tools : []
-  for (const tool of tools) blocks.push(toolBlock(tool))
+  for (const tool of tools) blocks.push({ ...toolBlock(tool), ...at })
   return blocks
+}
+
+/** 消化记录折叠（留档批 · #719 —— 归约体**直复用** `renderer/events-wake.mjs` `onDigest`：记录形 = 事件形，
+ *  单一实现零副本）：逐条按页序折入草稿切片，**只产终态轮**（`status === "end"` —— 末轮无 `end` 不产，
+ *  防双份：未结末轮由运行期切片承接）；终态轮携位次 `at` = 起跑记录全局 `idx`（起跑位次 —— 起跑行须居
+ *  内容之上；`cap` ∥ `end` 记录就轮更新，位置仍归起跑记录）。跨页截断（起跑 ∥ 终态记录分居两页）⇒ 本页
+ *  不产（记录面残留列报 —— 批档 §5）。 */
+function foldDigest(messages, key) {
+  let scratch = { digest: {} }
+  const starts = []
+  for (const msg of messages) {
+    if (msg?.kind !== "digest") continue
+    if (msg.status === "start") starts.push(typeof msg.idx === "number" && Number.isFinite(msg.idx) ? msg.idx : null)
+    scratch = onDigest(scratch, { ...msg, key })
+  }
+  const rounds = scratch.digest[key]
+  if (!Array.isArray(rounds)) return []
+  const out = []
+  rounds.forEach((round, index) => {
+    if (round.status !== "end") return
+    const at = starts[index] ?? null
+    out.push(at === null ? round : { ...round, at })
+  })
+  return out
+}
+
+/** 轮集并入（折叠轮前插 —— 两径同式：首屏 = 清点后留场轮（未结末轮）居尾 ∥ 回填 = 现轮集（更旧轮在前）；
+ *  折叠轮恒旧于留场 ∥ 现轮集（页序 ∥ 位次序单调）⇒ 前插即保序）。空折叠 ∥ 原样 ⇒ **原引用**（零写）。 */
+function withFoldedDigest(table, key, folded) {
+  if (folded.length === 0) return table
+  const current = Array.isArray(table?.[key]) ? table[key] : []
+  const merged = [...folded, ...current]
+  return { ...(table ?? {}), [key]: merged }
 }
 
 /** 停止痕清点（「对齐第三批」项 6 · 单源 = 本档）：首屏页读（`before == null`）⇒ 摘本键痕（运行期痕 ——
@@ -114,10 +171,12 @@ function clearCompress(table, key) {
  *  `flags` 与 `meta` **同一写点**（`applyFlags` —— 状态栏对齐批；每次页读皆携 ⇒ 回填径同写）；
  *  `key !== activeSession` ⇒ 跳块 / 历史写（`sessionMeta[key]` / `sessionFlags[key]` 仍写）；
  *  首屏（`before == null`）⇒ 块整置 + 回底（`following = true` / `pendingNew = 0`；空页同径）+ **运行期痕四清**
- *  （停止痕 `stopMark` ∕ 到期触发痕 `timerNotice` ∕ 压缩行 `compress`（R4）∕ 消化轮集 `digest`（终端轮整清——未结末轮保）—— 同首屏门）+ **打开态播种**
+ *  （停止痕 `stopMark` ∕ 到期触发痕 `timerNotice` ∕ 压缩行 `compress`（R4）∕ 消化轮集 `digest`（终态轮整清——未结末轮保）—— 同首屏门）
+ *  + **留档记录折叠**（`digest` 记录 ⇒ 终态轮前插 —— 留档批 · #719） + **打开态播种**
  *  （`seed` ⇒ `tasks[key]` / `usage[key]` 同笔 —— 判据住 `seedPatch`）+ **排队镜面重建**
  *  （`queue` 键 ⇒ `applyQueue` —— 「回合中插入」批 · KD-40 ④；仅首屏读）；
- *  回填 ⇒ 前插 + `history` 落态（`hasOlder === false ⇒ next = null`；高度补偿归 `settleFrame` 六步既有）。 */
+ *  回填 ⇒ 前插 + `history` 落态（`hasOlder === false ⇒ next = null`；高度补偿归 `settleFrame` 六步既有）+
+ *  **折叠并入**（回填页记录 ⇒ 更旧终态轮前插 —— 留档批 · #719）。 */
 export function applyPage(state, receipt, { key, before } = {}) {
   if (receipt?.ok !== true) return endBackfill(state)
   const flagged = applyFlags(state, key, receipt.flags)
@@ -129,11 +188,12 @@ export function applyPage(state, receipt, { key, before } = {}) {
   const history = { hasOlder, inFlight: false, page: next }
   const messages = Array.isArray(receipt.messages) ? receipt.messages : []
   const page = messages.flatMap((msg) => blockOfMessage(msg))
+  const folded = foldDigest(messages, key) // 留档记录折叠（终态轮 · 携位次）
   if (before == null) {
     const stopMark = clearStopMark(flagged.stopMark, key)
     const timerNotice = clearTimerNotice(flagged.timerNotice, key)
     const compress = clearCompress(flagged.compress, key)
-    const digest = clearDigest(flagged.digest, key)
+    const digest = withFoldedDigest(clearDigest(flagged.digest, key), key, folded)
     const first = {
       ...flagged, ...(stopMark === flagged.stopMark ? {} : { stopMark }), ...(timerNotice === flagged.timerNotice ? {} : { timerNotice }),
       ...(compress === flagged.compress ? {} : { compress }), ...(digest === flagged.digest ? {} : { digest }),
@@ -142,5 +202,6 @@ export function applyPage(state, receipt, { key, before } = {}) {
     // 排队镜面重建（仅首屏读 —— 回填读不重建：防在途快照覆盖活镜面）；键缺 / 非数组 ⇒ `applyQueue` 拒收（零写）。
     return applyQueue(first, key, receipt.queue)
   }
-  return { ...flagged, blocks: [...page, ...(flagged.blocks ?? [])], sessionMeta, history }
+  const digest = withFoldedDigest(flagged.digest, key, folded)
+  return { ...flagged, blocks: [...page, ...(flagged.blocks ?? [])], sessionMeta, history, ...(digest === flagged.digest ? {} : { digest }) }
 }

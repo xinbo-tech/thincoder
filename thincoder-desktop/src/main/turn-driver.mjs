@@ -150,7 +150,7 @@ export function createTurnDriver({
   })
   /** 提示面（KD-35：失焦门 + 两档合句 + 点击聚焦 —— 策略面 ∕ 平台面分家，见 `notify.mjs`）。 */
   const notifier = createNotifier({ notify, focused, reveal })
-  /** 挂起驱动（KD-34：消费核件 —— 会话寄存器 + 端侧钩子（计数 ∕ 回收 ∕ 冻结）+ 边界两发（窗内单回合包装 `autoTurn` 支）
+  /** 挂起驱动（KD-34：消费核件 —— 会话寄存器 + 端侧钩子（计数 ∕ 回收 ∕ 冻结）+ 边界起跑发（窗内单回合包装 `autoTurn` 支 —— 收尾 `end` 在 `turn-face.mjs` 结算序，修复轮 3）
    *  + 输入 ∕ 关闭路由 + 提示面两档；`runTurn` = 本档单回合执行面 —— `send` ∕ 驱动同源）。 */
   suspension = createSuspensionDrive({
     post, runTurn: executeTurn, notify: notifier,

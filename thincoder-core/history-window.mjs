@@ -9,6 +9,11 @@
  *
  * 承接：会话数据面的「人读线」窗口切分（分段恢复 / 逐页回看）——与磁盘会话档
  * 同源（`{hash}.json.N`），本档只读数组、不触盘。
+ *
+ * 留档记录直通（opt-in · 消化面留档批 · #719）：`digest` ∕ `subagent` 两型记录
+ * 原样入窗（携 `idx`；字段零改名）；默认关 ⇒ 输出与改前逐字等价（CLI ∕ VSC 读面
+ * 零改零破）——`kindOf` 认 `kind` 键；形 / 在场 / 判据单源 =
+ * `docs/desktop/design/RENDERER.md` §1.1「留档记录」条。
  */
 
 /** Real user message predicate (shared by the slot metadata digest and the window).
@@ -32,7 +37,7 @@ function tsOf(m) {
 }
 
 function kindOf(m) {
-  return m?.type ?? m?.role
+  return m?.type ?? m?.role ?? m?.kind
 }
 
 function toolCallsOf(m) {
@@ -103,10 +108,16 @@ function pairToolEntries(history) {
  * takes the LAST page (first paint); otherwise the page [s, e) ending just before
  * `before`. Half-open [s, e) keeps loadOlder pages from re-rendering the boundary
  * message. `idx` values are GLOBAL history indexes — pagination never renumbers.
+ *
+ * `opts.records === true`（opt-in —— 留档批 · #719）⇒ `digest` ∕ `subagent` 两型
+ * 记录原样入窗（`{ ...record, idx }`，字段零改名）并占条目位（游标按条目推进）；
+ * 记录不参与 turn ∕ 可见性谓词（`visible` 面语义不动）。**默认关** ⇒ 输出与改前
+ * 逐字等价（负控腿）；缺 `opts` ∕ 非 `true` ⇒ 同默认径。
  */
-export function historyWindow(history, before, pageSize = HISTORY_PAGE_SIZE) {
+export function historyWindow(history, before, pageSize = HISTORY_PAGE_SIZE, opts = {}) {
   const total = Array.isArray(history) ? history.length : 0
   if (total === 0) return { messages: [], hasOlder: false }
+  const records = opts?.records === true
   const { frameResults, ownerOf } = pairToolEntries(history)
   const end = before == null ? total : Math.max(0, Math.min(before, total))
   const start = Math.max(0, end - pageSize)
@@ -161,6 +172,10 @@ export function historyWindow(history, before, pageSize = HISTORY_PAGE_SIZE) {
         turnStart: prevVisibleKind === null || prevVisibleKind === "user",
         tools,
       })
+    } else if (records && (kind === "digest" || kind === "subagent")) {
+      // 留档记录直通（opt-in）：人读线条目原样入窗 + 携位次（字段零改名 —— 形单源 =
+      // `docs/desktop/design/RENDERER.md` §1.1「留档记录」条）
+      messages.push({ ...m, idx: i })
     } else if (kind === "tool") {
       // A consumed tool entry produces no message of its own (rendered with its frame) —
       // only a true orphan falls back to the top level (rules 3/4)

@@ -1,6 +1,6 @@
 /**
  * chat-subagent.mjs — 流内**归档子 agent 块**（「对齐第二批 · 六件」项 5 · 新档 —— `docs/desktop/design/UI.md`
- * §1「本批注（对齐第二批 · 六件）」项 5 / §2 项 1 · `docs/desktop/design/RENDERER.md` §1.1 块型表 · §2 运行期块记账）：
+ * §1「本批注（对齐第二批 · 六件）」项 5 / §2 项 1 · `docs/desktop/design/RENDERER.md` §1.1 块型表 · §2 留档块记账）：
  *   ① `subagentNode(block, key, withLabel)` —— 归档块壳（纯描述符）：`div.block.block-subagent[data-block-kind="subagent"]`
  *      = **零边距透传容器**（样式住 `renderer/chat.css`）+ 说话人标签容器（回合首块判据归 `renderer/views/chat.mjs`）；
  *   ② `fillSubagentEcho(node, block)` —— 回显着装（**核件元素**：`details.advisor-block.sub-block` 冻结形
@@ -10,16 +10,17 @@
  *      帧尾径 = 逐块 `fillSubagentEcho`（`chat.mjs` `dressNode`）；两径同件）；冻结块**静态** —— 不重放第二遍。
  *   ④ **归档位置 ∕ 裁剪面（R10 E4 ∕ E10 判据 —— 逐值对表结论）**：归档块 = 流内**尾追块**（入块序；序 = 归档序
  *      —— 块恒居尾组（消化行组等）之前 ⇒ 与 VSC `activity.js:104-110`「本轮边界前插入 ∕ 失效尾追」同位，零消差项）；
- *      **窗口 ∕ 裁剪** = 随既有尾窗（`MAX_RENDER_BLOCKS`）：出窗即弃、不计 `data-hidden`、非回填对象（运行期块
- *      非落盘件）；两机制**别名登记**（VSC `ui.js:199-206` 150 块 DOM 裁剪 ⇄ 桌面 200 块渲染窗 —— 值差 = 在册
- *      显式裁，`docs/render-core/design/RENDER-CORE.md` 行 13「各自 · 数值差登记」）；归档块**两窗口皆含**
- *      （VSC 裁剪集含 `.sub-block` ⇄ 桌面 `visibleWindow` 含 `kind === "subagent"`）。
+ *      **窗口 ∕ 裁剪 = 留档块记账（留档批 · #719 收正 —— 与五型同规）**：退窗 ⇒ 计 `data-hidden` ∥ 折摘要块 ∥ 可回填
+ *      （留档件 —— 页读有源；原「运行期块」三账（出窗即弃 ∕ 不计 `data-hidden` ∕ 非回填对象）退场）；
+ *      两机制**别名登记**（VSC `ui.js:199-206` 150 块 DOM 裁剪 ⇄ 桌面 150 块渲染窗 —— 值差在册，
+ *      `docs/render-core/design/RENDER-CORE.md` 行 13「各自 · 数值差登记」）；归档块**两窗口皆含**
+ *      （VSC 裁剪集含 `.sub-block` ⇄ 桌面 `visibleWindow` 全型计数）。
  *   ⑤ **展开集捕获 ∕ 复填协作件**（#606④⑤ —— `echoOpenSet` ∕ `applyEchoOpen`；重挂径消费 = `renderer/views/chat.mjs`
  *      `mountChat`：重建前捕展开块键集 ⇒ 重建后 `open` 回真（**不强制关闭**）；冻结块静态面零改）。
  * 核件消费（「对齐第二批」项 3 同源面）：`renderSubBlock` / `renderSubagentChunk`（`/rc/subblocks/block.mjs`）·
  * `refreshBlock`（`/rc/subblocks/activity-view.mjs`）。**让位修复批（2026-09-29 · #603）**：归档重建径尾接
  * `initBlockFollow`（接线一致性——出生 ∕ 接管 ∕ 重放三径同件）；冻结块零行为变更（出口钮不建、零写）。
- * 域外零触：归档块为**运行期块**（页读整置即失 —— 端差登记）。
+ * 域外零触（留档批 · #719 收正）——归档块 = **留档块**（页读域第六型：人读线记录承接，页读重建同形）；
  * 依赖单向：本档 → `renderer/views/chat-text.mjs`（`labelNode`）+ 核件四件；零 `node:` / 零裸包；本档零文案。
  */
 import { renderSubagentChunk, renderSubBlock, initBlockFollow } from "/rc/subblocks/block.mjs"

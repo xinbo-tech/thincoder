@@ -131,13 +131,14 @@ export function appendBlock(state, block) {
   return { ...state, blocks: [...state.blocks, block], pendingNew }
 }
 
-/** 窗口切片（T-DSK17 数据面 · **运行期块记账** = `docs/desktop/design/RENDERER.md` §2）：`visible` = 尾 `limit` 块
- *  （**引用等值**）；`hidden` = 未渲染更早块数 = **页读域可回填块数** —— 运行期块（`kind === "subagent"`：
- *  归档入流块，非落盘件 / 回填无源）**退出尾窗不计入**（不落摘要块 ⇒ `hidden > 0` 判据不被其扰动）；
+/** 窗口切片（T-DSK17 数据面 · **留档块记账** = `docs/desktop/design/RENDERER.md` §2）：`visible` = 尾 `limit` 块
+ *  （**引用等值**）；`hidden` = 未渲染更早块数 = **页读域可回填块数** —— 留档块（`kind === "subagent"`：
+ *  **留档批 · #719 收正** —— 页读域第六型，**页读有源**）与五型同规：退出尾窗 ⇒ **计入** `data-hidden` ∥
+ *  折摘要块 ∥ 可回填（原「运行期块退出尾窗不计入」例外退场）；
  *  正整数 `limit` ⇒ 尾窗切片；`limit ≤ 0` / 非整数 ⇒ 防御档（`visible` 空、未渲染 = 全量）。 */
 export function visibleWindow(blocks, limit) {
   const shown = Number.isInteger(limit) && limit > 0 ? Math.min(limit, blocks.length) : 0
-  const hidden = blocks.slice(0, blocks.length - shown).filter((block) => block?.kind !== "subagent").length
+  const hidden = blocks.length - shown
   return { visible: blocks.slice(blocks.length - shown), hidden }
 }
 

@@ -6,13 +6,17 @@
  * （态机单源）；**不引** `renderer/events.mjs`（无环 —— 归约核心档反向引本档两支）。
  * 消费面：`renderer/events.mjs` `reduce` 分派（两通道两支）+ 池读数两助手（`poolOf` / `liveCount` ——
  * 归约面折叠头 / 开页 / 待决两族同引，单一实现零副本）。
- * 纪律：纯函数（零 DOM / 零 IPC / 零 `node:` / 零裸包 —— 渲染面静态闭包判据）。
+ * 纪律：纯函数（零 DOM / 零 `node:` / 零裸包 —— 渲染面静态闭包判据）；**归约体例外一件（留档批 · #719）**：
+ * 归档派生点 `record:append` 出站 —— 窄桥**惰性读面**（`globalThis.thincoder`，缺位 / 非函数 ⇒ 零动作零抛），
+ * 平 node 直测不受影响。
  * 形态 / 判据单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第二批 · 六件）」项 3 / 5 ·
  * `docs/desktop/design/RENDERER.md` §1.1。
  * **归档入流（项 5 · KD-33）**：终态 ⇒ ① 表项墓碑（`region: "flow"` —— 池内退场）② 流内尾追块
- * （`kind: "subagent"` —— 运行期块，页读整置即失）③ 表项 `rows` 随归档交快照（内容单留存处）；原
+ * （`kind: "subagent"` —— **留档块**，页读域第六型）③ 表项 `rows` 随归档交快照（内容单留存处）；原
  * 「下回合起清出」（`archiveFrozen`）口径**退场**；核 effects 表**不逐条执行**（端面动作由模型态幂等派生 ——
  * 改造据 = 端差登记 `docs/desktop/design/PROJECT.md` §10 AZ）。
+ * **留档批 · #719（本批增）**：① 归档派生点增 `record:append` 出站（快照 ⇒ 人读线记录经请求通道落宿主 ——
+ * **含非活动键**，一并取宽）；② 快照 `rows` 保尾上界（`RECORD_ROWS_MAX_LINES` —— 沿核件尾环既有一致口径）。
  * **R5（子代理面 · #521 ∕ #522 —— 三面）**：① `resetSubBlocks`（`resetActivity` 语义接 —— 会话中止 ∕ 清屏 ⇒
  *  本键表复位 + 池面随动；两触发住 `renderer/events.mjs`）② `freezeAllSubBlocks`（退出兜底 —— 核
  *  `subBlocksFreezeAll` 直取；触发 = `ev:susp {active:false}` 出窗帧）③ `onSubchunk` 出生闸 = 核
@@ -79,6 +83,59 @@ function withSubBlocks(state, table, key) {
   return pool.running === running ? next : { ...next, pool: { ...pool, running } }
 }
 
+/** 记录行集上界（留档批 · #719 —— 沿核件尾环既有一致口径：CLI N2 500 显示行 ∕ 子，
+ *  `thincoder-cli/src/tui/subagent-children.mjs:26` `SUB_BLOCK_LINE_LIMIT`；超界 ⇒ 保尾截断 + 省略标记行，
+ *  **明示** —— 行数真值不静默（N6 同义））。 */
+export const RECORD_ROWS_MAX_LINES = 500
+
+/** 省略标记行（行数真值 —— CLI 省略计数同义；数据面非用户文案 —— 字面沿 CLI 先例 `thincoder-cli/src/distill.mjs:114`
+ *  `...[... omitted ...]...`：核 ∕ 宿主词表无此键，故不走 `t()`）。 */
+const rowsTruncMarker = (lines) => `… [rows truncated: ${lines} lines omitted]`
+
+/** 行显示行数（核 `countBlockLines` 同式：按 `\n` 切分、文末换行不计）。 */
+function rowLines(row) {
+  const lines = String(row?.text ?? "").split("\n")
+  return lines[lines.length - 1] === "" ? lines.length - 1 : lines.length
+}
+
+/** 快照 `rows` 保尾上界（归档派生点单点 —— 活流块 ∥ 记录两消费者同源）：自尾向前累计显示行 ≤ 上界；
+ *  弃最旧行 ⇒ 前置省略标记行（标记自身不占额度 —— 沿 N6）；单行超界 ⇒ 行 = 最小单元（不可切行中）——保尾即保末行；
+ *  未超 ⇒ **原引用**（零写）。 */
+export function boundedRows(rows) {
+  const list = Array.isArray(rows) ? rows : []
+  let total = 0
+  let start = list.length
+  for (let index = list.length - 1; index >= 0; index -= 1) {
+    total += rowLines(list[index])
+    if (total > RECORD_ROWS_MAX_LINES) break
+    start = index
+  }
+  if (start === list.length && list.length > 0) start = list.length - 1 // 单行超界：保末行（保尾）
+  if (start === 0) return list
+  let dropped = 0
+  for (let index = 0; index < start; index += 1) dropped += rowLines(list[index])
+  return [{ kind: "text", text: rowsTruncMarker(dropped) }, ...list.slice(start)]
+}
+
+/** 归档记录出站（留档批 · #719 —— 归档派生点：每枚快照 ⇒ 人读线记录（`{ kind, meta, rows }`，与流内归档块
+ *  **同一对象同形**）经 `record:append` 请求通道落宿主（`pushReal` 同面 —— `ts` 打点住宿主）；
+ *  **含非活动键**（一并取宽 —— 消「非活动键内容即失」端差；键门只限流内块追加面）；窄桥**惰性读面**
+ *  （缺位 / 非函数 ⇒ 零动作零抛）；失败 ⇒ `console.error`（不静默）。 */
+function emitRecords(key, blocks) {
+  if (typeof key !== "string" || key === "" || blocks.length === 0) return
+  const bridge = globalThis.thincoder
+  if (bridge === null || typeof bridge !== "object" || typeof bridge.invoke !== "function") return
+  for (const block of blocks) {
+    try {
+      void Promise.resolve(bridge.invoke("record:append", { key, record: block })).catch((error) => {
+        console.error("[subagent] record:append failed:", error)
+      })
+    } catch (error) {
+      console.error("[subagent] record:append failed:", error)
+    }
+  }
+}
+
 /** 归档入流派生（「对齐第二批」项 5 · KD-33 —— 端面动作由模型态幂等派生，核 effects 表不逐条执行）：
  *  归档态判据 = **已折叠（`frozen`）∧ 非驻留（`!awaitingDigest`）∧ 未入流（`region !== "flow"`）**；
  *  `settled`（驻留待消化）不归档，后到 `done` 折叠时归档（前态判据同径）；**旧代接管归档**（旧块被替出列表，
@@ -106,7 +163,7 @@ function archiveIntoFlow(before, after, touched) {
   })
   const blocks = snapshots.map((block) => {
     const { rows, ...meta } = block
-    return { kind: "subagent", meta, rows: Array.isArray(rows) ? rows : [] }
+    return { kind: "subagent", meta, rows: boundedRows(rows) }
   })
   return { list, blocks }
 }
@@ -127,6 +184,7 @@ export function onSubagent(state, ev, now) {
   // 核态机 deps：`now` 为**读钟函数**（`state.mjs` 每迁现刻取值 —— 出生起刻 / 冻结 `doneAt`）。
   const { effects } = subBlocksReduce(list, patch, { now: () => now })
   const archived = archiveIntoFlow(before, list, new Set(effects.map((effect) => effect?.key)))
+  emitRecords(key, archived.blocks) // 归档记录出站（含非活动键 —— 先于流内键门；留档批 · #719）
   const next = withSubBlocks(state, { ...table, [key]: archived.list }, key)
   if (archived.blocks.length === 0 || key !== state.activeSession) return next
   return archived.blocks.reduce((acc, block) => appendBlock(acc, block), next)
@@ -185,6 +243,7 @@ export function freezeAllSubBlocks(state, ev, now = Date.now()) {
     interrupted: ev.interrupted === true,
   })
   const archived = archiveIntoFlow(before, list, new Set(effects.map((effect) => effect?.key)))
+  emitRecords(key, archived.blocks) // 归档记录出站（含非活动键 —— 先于流内键门；留档批 · #719）
   const next = withSubBlocks(state, { ...table, [key]: archived.list }, key)
   if (archived.blocks.length === 0 || key !== state.activeSession) return next
   return archived.blocks.reduce((acc, block) => appendBlock(acc, block), next)

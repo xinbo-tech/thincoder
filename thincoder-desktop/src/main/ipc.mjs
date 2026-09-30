@@ -1,12 +1,12 @@
 /**
- * ipc.mjs — IPC 通道处理体本体 + 宿主注入面（`docs/desktop/design/IPC.md` §1 / §2）：**四十五项**白名单面 =
+ * ipc.mjs — IPC 通道处理体本体 + 宿主注入面（`docs/desktop/design/IPC.md` §1 / §2）：**四十六项**白名单面（消化面留档批 · #719 落 `record:append`）=
  * 本档（配置读取 + 项目面 `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` /
  * `session:switch` / `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` +
  * 作答响应 `question:respond` —— `question` 工具真作答面 + 历史页 `history:page` + 回合驱动 `msg:send` /
  * `msg:interrupt`（宿主未注入 ⇒ fail-loud）+ 会话级偏好写面 `session:prefs` + 子 agent 停止出口 `subagent:stop`
  * （R3b 落）+ 文件链接打开 `file:open`（「对齐第三批」相抵② · KD-39 —— 编辑器 CLI 探测 ⇒ spawn
  * (`editor-open.mjs`)；兜底 `shell.openPath`；纯判据面住 `file-links.mjs`）+ R1 输入面板两项 `session:flags` /
- * `at:complete` + 会话维护线两项 `session:gc` / `session:index` —— 白名单末位）+ **转口群二十四项出档
+ * `at:complete` + 会话维护线两项 `session:gc` / `session:index` + **消化面留档批一**（`record:append` —— 末位 46）—— 白名单末位）+ **转口群二十四项出档
  * `ipc-relays.mjs`**（#685 拆点 —— 331 ⇒ 两档 ⇒ 越 300 回线）：索引数据面两 + 设置族十九（provider 八 /
  * model 两 / agent 参数 / MCP 六 / env / tools）+ 台账相位两 / 配置写——逐项一参数纯转口（本档零算法副本）。
  * 跨档接线：两档同取 `currentCwd`；本档**新导出** `liveAgents`（mcp 四转口随动面取用 —— 单向
@@ -99,7 +99,7 @@ function readConfig() {
 export {
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
-  questionRespond, sessionPrefs, subagentStop, fileOpen, sessionFlags, atComplete, sessionGc, sessionIndex,
+  questionRespond, sessionPrefs, subagentStop, fileOpen, sessionFlags, atComplete, recordAppend, sessionGc, sessionIndex,
   liveAgents,
 }
 
@@ -254,6 +254,11 @@ function sessionFlags(payload) { return requireAgentHost().setFlags(payload?.key
  *  @ 补全面（处理体出档 `at-complete.mjs`：项目树枚举过滤，排除面 ∕ 封顶照 VSC；**`seq` 原样回携** ——
  *  迟到丢弃 = 消费面判据）。宿主未注入 ⇒ fail-loud 直抛。 */
 function atComplete(payload) { return requireAgentHost().atComplete(payload?.query, payload?.seq) }
+
+/** `record:append(payload)` ⇒ `{ ok, reason }`（**留档记录追加** —— 消化面留档批 · #719）：载荷 `{ key, record }`
+ *  —— 转口宿主记录面（处理体住 `agent-host.mjs`：装配表命中门 + `appendRecord`；reason 闭集 = `bad-key` ∥
+ *  `unknown-key`）。宿主未注入 ⇒ fail-loud 直抛（沿 `subagent:stop` 先例）。 */
+function recordAppend(payload) { return requireAgentHost().recordAppend(payload?.key, payload?.record) }
 
 /** R1 · 会话维护线两处理体转口（出档 `session-maintenance.mjs`）：`session:gc` ⇒ `{ ok, candidates, confirmed,
  *  deleted, files, skipped, skippedFiles }`；`session:index` ⇒ `{ ok, sessions, changed, messages, toolCalls,

@@ -9,6 +9,7 @@
  * ⑥ 模式位投影（`flagsOf` **活值**四布尔 —— 状态栏对齐批：`approval:respond` 成功径回执叠加 `{ key, flags }`；
  * 页读供面同函数 —— 槽投影兜底面住 `session-slots.mjs` `slotFlags`）。
  * ＋R1 会话维护面一枚 `syncTitle`（改名内存标题同步，#525）。
+ * ＋留档记录面一枚 `recordAppend`（消化面留档批 · #719 —— `record:append` 处理体转口 + 装配表命中门）。
  * **R3 拆点（本批落形）**：`send` ∕ `interrupt` ∕ `drive` ∕ `takeOver` ∕ `dispose` ∕ `abortSuspensions` +
  * 在飞表 + 中止墓碑 ⇒ `turn-driver.mjs`（连同其私有装配：排队面 ∕ 续发链 ∕ 挂起驱动 ∕ 提示面）；本档经
  * 同名返回面转口 ⇒ `ipc.mjs` 调用面零改（拆后本档 ≤300 顾问线）。
@@ -41,7 +42,7 @@ import { slotOfKey, writeSlotPrefs } from "./session-slots.mjs"
 import { createBridge } from "./agent-bridge.mjs" // 含「对齐第三批」两采样面注入（见下）
 import { extractFileLinks } from "./file-links.mjs" // 验存文件链接（相抵② · KD-39 —— 盘上存在闸）
 import { createGates } from "./suspensions.mjs"
-import { loadAgentSlot, saveDistilledSlot } from "./session-io.mjs"
+import { appendRecord, loadAgentSlot, saveDistilledSlot } from "./session-io.mjs"
 import { createSubagentFace } from "./subagent-face.mjs"
 // 装配面（状态栏对齐批出档 —— 原档装配段逐字搬运）：本档取其默认装配函数与名面转口。
 import { assembleFor } from "./agent-assemble.mjs"
@@ -244,6 +245,19 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     if (agent) agent.title = title
   }
 
+  /** `record:append(payload)` 处理体（消化面留档批 · #719 —— `docs/desktop/design/IPC.md` §2 该行）：载荷
+   *  `{ key, record }` ⇒ `{ ok, reason }`（reason 闭集 = `bad-key`（`slotOfKey` 坏键 —— 与 `subagent:stop` 同判）∥
+   *  `unknown-key`（装配表无该键 —— 事件面只在装代理上流，实际不可达 —— 防御档））+ 转口 `appendRecord`
+   *  （`pushReal` 同面 + fail-soft —— `session-io.mjs`）；**到达族 = `subagent`**（`digest` 族产生面 = 宿主发帧点
+   *  同点双动作，经本通道不可达 —— 防双份）。 */
+  function recordAppend(key, record) {
+    if (slotOfKey(key) === null) return { ok: false, reason: "bad-key" }
+    const agent = agents.get(String(key))
+    if (!agent) return { ok: false, reason: "unknown-key" }
+    appendRecord(agent, record)
+    return { ok: true, reason: null }
+  }
+
   /** 作答 / 审批出口（待决门 `respond` 转口 + **成功径叠加** —— `docs/desktop/design/IPC.md` §2 该行 +
    *  「模式位投影注」项 5 · 状态栏对齐批）：**成功径 ∧ 审批门** ⇒ 回执叠加 `{ key, flags }`（`flagsOf` 活值 ——
    *  桌内 AUTO 翻转〔`always` 放行置位 = `suspensions.mjs`〕后渲染面即刷新）；**提问门径 / 失败径零叠加**
@@ -269,7 +283,7 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   // verdict ⇒ `bad-verdict` · 非串且非 `null` 作答 ⇒ `bad-answer`；四档皆不 resolve —— 挂起保留；成功径叠加见上）。
   subagentFace.startHeartbeat() // 出生自愈起拍（起在装配期；停 `stopHeartbeat()` / 逐键清 `dispose(key)`）
   return {
-    ensure, setPrefs, respond: respondTo, flagsOf, syncTitle,
+    ensure, setPrefs, recordAppend, respond: respondTo, flagsOf, syncTitle,
     setFlags, atComplete, // R1 输入面板移植两通道宿主入口（`ipc.mjs` 两 handler 转口 —— 处理体各住其档）
     ...turnDriver, // 回合驱动族六件 + 两只读面（`send` ∕ `interrupt` ∕ `dispose` ∕ `abortSuspensions` ∕ `queueSnapshot` 等 —— `turn-driver.mjs`）
     ...subagentFace, table, agents,
