@@ -1,7 +1,7 @@
 # 桌面端（DESKTOP）· 主 ↔ 渲染契约（IPC）
 
 > 板块 = **桌面端主 ↔ 渲染 IPC 契约（窄面）**——通道族与载荷语义的单源；主进程侧注册面 = `thincoder-desktop/src/main/ipc-registry.mjs`（`HANDLERS` 表 + 注册序——#28 拆点）+ 分发实现 = `thincoder-desktop/src/main/ipc.mjs`（**265**）+ 转口族 = `thincoder-desktop/src/main/ipc-relays.mjs`（**70**——#685 拆档 · 2026-09-30）。
-> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D27 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
+> 需求侧 = `docs/desktop/requirements/PROJECT.md`（§4 功能点 D1–D29 · §7 验收 A1–A4 · §8 依赖面 P1–P4）。
 > 同部分相关档：进程与目录形态 · 与核的接口面 · 壳装配第三份（装配侧回调映射）= `docs/desktop/design/SHELL.md` · 渲染面消费（store 订阅与增量渲染）= `docs/desktop/design/RENDERER.md` · 总览 / 决策 / 发行 / 验收 = `docs/desktop/design/PROJECT.md`。
 > 核机制面（agent 主循环 / 工具 / 记忆 / 配置 / 会话）**只住核**——本档只定**通道面与载荷语义**，不重述核回调语义（单一权威源）。
 > 建档：2026-09-25（桌面端设计批 1 · 分档轮）；本档坐标 = as-of 2026-09-25 实核（仓根 = `thincoder/`）。
@@ -231,7 +231,8 @@
 2. **切当前项目**：主进程**内存态**（不落盘——`docs/desktop/design/PROJECT.md` §2 KD-9）；唯一持有点 = `thincoder-desktop/src/main/projects.mjs`；会话根 = 由核 `sessionPath` 反推（照扩展端端壳访问器先例 `thincoder-vscode/src/extension/session-slots.mjs:56-58`——`sessionsDir()`）。
 3. **刷新与接续（批 5 落）**：返回 `{ cwd, recent }` 后，渲染面经 `sessions:list` 刷会话控制面（`refreshRail`）；`project:open` 成功 ⇒ 渲染面**自动一次** `session:resume`（「点开即可续」——需求 §3.1）⇒ `ok` ⇒ 开页 + 两读面刷新；此后开页走 `session:switch`（点条目**同一路**——激活即切换会话）。
    - **「成功」判据（fail-soft 通道——无成功旗标）**：回执 `cwd` 变更 ∨ `cwd` = 请求 `fsPath`（取消 / 无效路径同返 `{ cwd, recent }`：`thincoder-desktop/src/main/projects.mjs:114-120`）；同目录经选择框重选（无 `fsPath`）不重复接续。
-4. **`project:recent` 读面 = 核会话槽面回读（零新存储）**：扫 `~/.thincoder/sessions/` 的 40 位哈希族（族判据单源 = `thincoder-core/session-stale.mjs:46` 的 `GROUP_RE`；纯函数 `groupSessionEntries` 实读 `:56`，给每组最新 mtime）→ 每组取一份数据文件回读 `cwd` → 按组最新 mtime 降序取前 10（**位次 = 组最新 mtime**——组内任一条目（数据文件 ∥ 清单 ∥ 本端记录）写入即随动；自动接续批起「打开既有族」亦随动（点开即续 ⇒ 本端记录写）——实读 `thincoder-desktop/src/main/projects.mjs:28-37` 逐条目 `mtimeMs` 全员计入）。不落新文件、不落新配置字段（需求档 §2「不得另立存储格式」）；重启后列表仍在 = 槽面事实。
+4. **`project:recent` 读面 = 核会话槽面回读（零新存储）**：扫 `~/.thincoder/sessions/` 的 40 位哈希族（族判据单源 = `thincoder-core/session-stale.mjs:46` 的 `GROUP_RE`；纯函数 `groupSessionEntries` 实读 `:56`，给每组最新 mtime）→ 每组取一份数据文件回读 `cwd` → 按组最新 mtime 降序取前 10（**位次 = 组最新 mtime**）。不落新文件、不落新配置字段（需求档 §2「不得另立存储格式」）；重启后列表仍在 = 槽面事实。
+   - **位次随动面**：组内任一条目（数据文件 ∥ 清单 ∥ 本端记录）写入即随动——自动接续批起「打开既有族」亦随动（点开即续 ⇒ 本端记录写）；实读 `thincoder-desktop/src/main/projects.mjs:28-37` 逐条目 `mtimeMs` 全员计入。
 5. **原 `dialog:openFolder` 行折入 `project:open`**——渲染面单通道，目录选择不单列。
 6. 通道注册面 = `thincoder-desktop/src/main/ipc-registry.mjs`（`HANDLERS` 表 + 注册序——#28 拆点）；分发面 = `thincoder-desktop/src/main/ipc.mjs`。
 7. **重启自动重开（本端「上次打开」· 2026-09-30 · 台账 #734——机制单源）**：读面 = 本端记录面（`{族前缀}.manifest.desktop` 全家；端名声明 = `thincoder-desktop/src/main/session-slots.mjs:72`）取 mtime 最新一条 → 其族数据文件回读 `cwd` → `isDirectory` 门 → 主进程当前项目落位（内存态——KD-9「不落盘」不变：本条零新存储面）。
@@ -443,4 +444,5 @@
   · 页游标注增**项 4**（记录计入页量裁决——按条目推进；负控逐字等价）。明细 = 批档 §3。
 - 2026-09-30（**消化面留档批 · 修复轮 2（评审轮 2 · 发现 1）· eng-designer**——承批档 `docs/batches/2026-09-30-digest-persistence.md` §3 轮次 2）：白名单面计数**时态收正**（「已实给 46 项」⇒「**现行 45 项 ⇒ 本批设计目标 46 项**——消化面留档批 · #719 实施批落」；组合末位 46 注同拍——沿「39 ⇒ 45」先例式）。**零新语义**（时态 ∕ 计数口径）。明细 = 批档 §3 轮次 2。
 - 2026-09-30（**消化面留档批 · 回填轮（实施 A+B 落定）· eng-designer**——承批档 `docs/batches/2026-09-30-digest-persistence.md` §5 ∥ §2 回填轮注记）：白名单计数**落定收正**（「现行 45 项 ⇒ 设计目标 46 项（实施批落）」⇒「**46 项（已落）**」——白名单面段 ∥ 组合末位注 ∥ 三注（账本 / 播种 / 模式位「46 项」）同拍）；§1 `ev:digest` 行 `cap` 帧坐标 `turn-face.mjs:122 ⇒ :134-135`（发帧 ∥ 记录同点双动作）。**零新语义**（计数落定 ∥ 坐标收正）。明细 = 批档 §2 回填轮注记。
-- 2026-09-30（**桌面重启自动重开批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-desktop-reopen-last-project.md` §1 · 台账 #734 · 需求 D1 判据扩展）：项目面注增**项 7「重启自动重开」**（读 ∕ 写 ∕ 启动接线 ∕ 降级三档 ∕ 边界——机制单源；设计单源 = `docs/desktop/design/PROJECT.md` §2 **KD-56**）；**项 4 位次句收正**（组最新 mtime = 组内任一条目写入即随动——「打开既有族不刷新」旧句与盘面实读相抵）。**通道集 ∕ 白名单 ∕ 载荷零变**（零新通道；零新存储面）。
+- 2026-09-30（**桌面重启自动重开批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-desktop-reopen-last-project.md` §1 · 台账 #734 · 需求 D1 判据扩展）：项目面注增**项 7「重启自动重开」**（读 ∕ 写 ∕ 启动接线 ∕ 降级三档 ∕ 边界——机制单源；设计单源 = `docs/desktop/design/PROJECT.md` §2 **KD-56**）；
+  **项 4 位次句收正**（组最新 mtime = 组内任一条目写入即随动——「打开既有族不刷新」旧句与盘面实读相抵）。**通道集 ∕ 白名单 ∕ 载荷零变**（零新通道；零新存储面）。
