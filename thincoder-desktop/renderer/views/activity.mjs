@@ -16,7 +16,7 @@
  * **R10（子代理面板 ∕ live 面 ⇒ VSC 对齐 · 2026-09-28）挂载面四点**：
  *   ① **空态退场**（E2 —— `none` ∕ `empty` 两态一致：**零子节点**；VSC `#subagent-activity:empty{display:none}`
  *      的**内容面同形**（区域盒 = 常驻右列卡 —— 骨架差异在册）—— 原 `empty` 词表提示面退场；`data-state` 三态锚保留）；
- *   ② **生命期**（E4 —— 终态折叠含 `settled`（`awaitingDigest`）**同折**：VSC fold 效果无 awaiting 分支，驻留态词
+ *   ② **生命期**（E4 —— 终态折叠含 `settled`（`awaitingDigest`）**同折**：VSC fold 效果无 awaiting 分支，等待消化态词
  *      `sub.awaitingDigest` 由核 `refreshBlock` 落头行）；
  *   ③ **出生计数贴**（E6 / U-2 —— `renderer/views/activity-new.mjs`：块出生点判据「跟底 ⇒ 区钉底；未跟底 ⇒ 计数」
  *      + 帧面重挂复原；会话切换 ∕ 空态退场 ⇒ 清账）；

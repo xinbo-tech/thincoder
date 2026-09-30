@@ -50,7 +50,7 @@ function replayRows(element, entry) {
 
 /** 冻结着装（终态折叠 —— 核 fold 效果逐值同形：`sub-live ⇒ sub-frozen` + 折叠 + ⏹ 移除）。R10 E4：
  *  `settled`（`awaitingDigest`）与其余终态**同折**（VSC `activity.js:80-86` fold 效果无 awaiting 分支 ——
- *  驻留态词 `sub.awaitingDigest` 由核 `refreshBlock` 照常落头行）。幂等（已着装重复调用零新写）。 */
+ *  等待消化态词 `sub.awaitingDigest` 由核 `refreshBlock` 照常落头行）。幂等（已着装重复调用零新写）。 */
 function foldIfFrozen(element, entry) {
   if (entry?.frozen !== true) return
   element.classList.remove("sub-live")
