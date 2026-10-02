@@ -169,4 +169,4 @@ export function isAuxPath(p, conv) {
 // 迁出面（2026-10-01 拆分批 · #755 ∥ #786）：声明装载面外提 `declaration.mjs`——本档经
 // 转口保名（消费面 / 批内件 import 面零改；`DEFAULT_DECLARATION` 另供本档分类裁判缺省取用）。
 // ─────────────────────────────────────────────────────────────────────────────
-export { loadProjectDeclaration, DEFAULT_DECLARATION, isExcludedRelPath, clearDeclarationCache } from "./declaration.mjs"
+export { loadProjectDeclaration, DEFAULT_DECLARATION, isExcludedRelPath, declaredPublicRoots, clearDeclarationCache } from "./declaration.mjs"

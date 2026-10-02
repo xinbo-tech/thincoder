@@ -1,6 +1,8 @@
 /**
  * doc-check-anchors.mjs — M8 单锚引擎（机检：文档锚一致性）。
  * 权威设计 = M8 机检引擎模块设计（ENGINEERING-MODE-V2-MODULE-MACHINE-CHECK）§2.2 · 判据权威 = DOC-DISCIPLINE §4（单一权威源）；本档 = 双引擎（V5 + VSC）收敛后的单引擎。
+ * 2026-10-03 #832 批（父侧直接执行——工程工具面 · 可 revert）：解析序 ⑥ 声明源候选（未核列报）∥
+ *   抽取面声明前缀例外 ∥ 入参 declaredRoots（单一定义 = declaredPublicRoots，不得二写）。
  * 收敛落点（KD-M8-3 / KD-M8-4）：
  *   - 判据读声明面：扫描目录 = checkConfig.scanDirs；锚域 = checkConfig.anchors.domain；
  *     豁免段 = checkConfig.anchors.exclude；行级豁免串 = checkConfig.exemptions（空表 = 惰性）。
@@ -10,7 +12,8 @@
  *     test 树 = 域根下全部 `test` 树（全深走 · 目录名判；§4.2.2）。
  *   路径/坐标：路径 token（可带坐标尾 :N / :N-M / :N/:M 并列组——坐标尾不参与存在性判、
  *     仅紧邻 token 生效、无路径的裸坐标不成锚）；存在性 = 解析序（仓根 → 锚域根 → 本档目录 →
- *     锚域前缀剥离）+ 唯一 basename 索引（域内 / 仓根）。
+ *     锚域前缀剥离）→ 唯一 basename 索引（域内 / 仓根）→ ⑥ 声明源候选（#832：首段 = 声明公共仓
+ *     目录名 ⇒ 于该仓根解析余段；仓缺位 ⇒ 未核列报（不入闸）；单一定义 = declaredPublicRoots）。
  *   符号：反引号标识符 + 定义谓词（闭枚举 13 词——窄形态）；路径形态码段（含 `/`）不产锚；
  *     宽形态仅报告（不入闸）。
  * 注记豁免：注记标记集（闭枚举）+ 并档叙述 + 声明面 exemptions（行级）——命中即过。
@@ -22,6 +25,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { readManifest } from "../thincoder-core/manifest.mjs";
+import { declaredPublicRoots } from "../thincoder-core/declaration.mjs";
 import { inCodeSpan, isExecutableLine } from "./doc-check-width.mjs";
 import { collectCaseTitles, collectCodeTokens, collectSourceDomain, collectTestTrees } from "./doc-check-targets.mjs";
 
@@ -130,7 +134,7 @@ export function pointerRanges(line) {
  * 与宽（报告面）。fenced 块由调用方整块跳过。
  * 标识符来源 = 非路径形态码段（§4.2.1 V5-C）：路径形态码段切出的段名（`thincoder` / `core` / `tools`）不入集。
  */
-export function extractAnchors(line) {
+export function extractAnchors(line, opts = {}) {
   const out = { cases: [], paths: [], symbols: [], wide: [] };
   for (const m of line.matchAll(CASE_RE)) {
     if (/^T\d+\.\d+$/.test(m[1])) continue; // 版本号形态（如 T1.12）非用例号
@@ -142,7 +146,7 @@ export function extractAnchors(line) {
     if (/[<>{}*?…]/.test(token)) continue; // 元字符 = 模式串，不判
     if (PLACEHOLDERS.has(basename(token).replace(/\.[A-Za-z0-9]+$/, "").toLowerCase())) continue;
     if (DOT_DIR_RE.test(token)) continue; // 隐含目录
-    if ((token.match(EXT_SEG_RE) ?? []).length >= 2) continue; // 多扩展段（模式串）
+    if ((token.match(EXT_SEG_RE) ?? []).length >= 2 && !(opts.declaredNames?.has(token.split("/")[0]))) continue; // 多扩展段（模式串）；声明源前缀 token 免（#832）
     if (isExecutableLine(line)) continue; // 命令 / 搜索模式串码段保字面
     const after = line.slice(m.index + m[0].length);
     if (token.endsWith(".md") && SECTION_AFTER_RE.test(after)) continue; // 小节引用（页面锚，非路径锚）
@@ -158,13 +162,25 @@ export function extractAnchors(line) {
   return out;
 }
 
-/** 路径解析序（§4.2.4.2）：仓根 → 锚域根 → 本档目录 → 锚域前缀剥离。 */
+/** 声明源匹配（⑥ · #832）：token 首段 vs 各声明根目录名（归一形）；同名多仓 ⇒ 声明序首者（确定性）。 */
+function matchDeclared(env, token) {
+  const segs = token.replace(/\\/g, "/").split("/");
+  if (segs.length < 2) return null;
+  const d = (env.declared ?? []).find((x) => x.name === segs[0]);
+  return d ? { root: d.root, name: d.name, exists: d.exists, rest: segs.slice(1).join("/") } : null;
+}
+
+/** 路径解析序（§4.2.4.2）：仓根 → 锚域根 → 本档目录 → 锚域前缀剥离 → ⑥ 声明源候选（置后追加——绿面零动）。 */
 export function resolveFile(env, docDir, token) {
   const norm = token.replace(/\\/g, "/"), segs = norm.split("/");
   const stripped = segs[0] === basename(env.anchorRoot) ? segs.slice(1).join("/") : null;
   const cands = [resolve(env.root, norm), resolve(env.anchorRoot, norm), resolve(docDir, norm)];
   if (stripped) cands.push(resolve(env.anchorRoot, stripped));
-  return cands.find(isFile) ?? null;
+  const hit = cands.find(isFile);
+  if (hit) return hit;
+  const d = matchDeclared(env, token); // ⑥（#832）：仓缺位 ⇒ 本步不参与（未核态由 pathState 判）
+  if (d && d.exists && isFile(resolve(d.root, d.rest))) return resolve(d.root, d.rest);
+  return null;
 }
 
 /** 路径状态（挂靠 §4.2.4.2 ①-⑥）：可解析 → null；唯一 basename（域内 / 仓根）→ null；否则悬空。 */
@@ -174,6 +190,9 @@ export function pathState(env, docDir, a) {
   if (n === 1) return null;
   if (n >= 2 && a.token.includes("/")) return null;
   if ((env.repoBasenames.get(basename(a.token)) ?? 0) === 1) return null;
+  // ⑥ 未核态（#832）：声明源前缀命中 ∧ 仓缺位 ⇒ 列报不入闸（非悬空）；在场 ∧ 目标档缺 ⇒ 照旧悬空
+  const d = matchDeclared(env, a.token);
+  if (d && !d.exists) return "unverified";
   return "dangling";
 }
 
@@ -221,27 +240,30 @@ export function buildBasenames(root) {
 }
 
 /** 引擎内核（单引擎）：源域 = collectSourceDomain（声明面）→ 逐行三类锚判 + 注记豁免 + 拟新增计数。 */
-function runScan(base, cfg, { gate = true, root = base } = {}) {
+function runScan(base, cfg, { gate = true, root = base, declaredRoots = [] } = {}) {
   const rootAbs = resolve(root);
   const baseAbs = resolve(base);
   const anchorRoot = resolve(baseAbs, cfg.anchors.domain);
   const exclude = cfg.anchors.exclude ?? [];
   const exemptions = cfg.exemptions ?? [];
   const files = collectSourceDomain(baseAbs, cfg.scanDirs, exclude);
+  const declared = declaredRoots.map((p) => { const r = resolve(p); let exists = false; try { exists = statSync(r).isDirectory(); } catch {} return { root: r, name: basename(r), exists }; });
   const env = {
     root: rootAbs,
     anchorRoot,
     basenames: buildBasenames(anchorRoot),
     repoBasenames: buildBasenames(rootAbs),
+    declared,
+    declaredNames: new Set(declared.map((d) => d.name)),
   };
   const defs = buildCaseIndex(baseAbs, files);
   const titles = collectCaseTitles(baseAbs);
   const codeIds = collectCodeTokens(baseAbs);
-  const rows = [], wideRows = [], redundantRows = [];
+  const rows = [], wideRows = [], redundantRows = [], unverifiedRows = [];
   const cand = { case: 0, path: 0, symbol: 0, wide: 0 };
   const exempt = { case: 0, path: 0, symbol: 0, wide: 0 };
   const dang = { case: 0, path: 0, symbol: 0 };
-  let pendingTotal = 0, citationTotal = 0;
+  let pendingTotal = 0, citationTotal = 0, unverifiedTotal = 0;
   for (const f of files) {
     const rel = relative(baseAbs, f).replace(/\\/g, "/");
     const docDir = dirname(f);
@@ -259,7 +281,7 @@ function runScan(base, cfg, { gate = true, root = base } = {}) {
       const newMarked = line.includes(NEW_MARKER);
       const citeMarked = line.includes(CITATION_MARKER);
       const citeHist = citeMarked && HISTORY_PREDICATES.some((p) => line.includes(p));
-      const { cases, paths, symbols, wide } = extractAnchors(line);
+      const { cases, paths, symbols, wide } = extractAnchors(line, { declaredNames: env.declaredNames });
       for (const a of cases) {
         cand.case++;
         if (free(a.idx)) { exempt.case++; continue; }
@@ -269,9 +291,15 @@ function runScan(base, cfg, { gate = true, root = base } = {}) {
       for (const a of paths) {
         cand.path++;
         if (free(a.idx)) { exempt.path++; continue; }
-        if (pathState(env, docDir, a) === null) {
+        const st = pathState(env, docDir, a);
+        if (st === null) {
           // §4.2.10「标记冗余」（报告面 · 不入闸）：① 标记在场 ∧ 无 ② 史实谓词 ∧ 锚可解析（无红可言）
           if (citeMarked && !citeHist) redundantRows.push({ file: rel, line: i + 1, anchor: a.anchor, clazz: "标记冗余" });
+          continue;
+        }
+        if (st === "unverified") { // ⑥（#832）：声明源缺位——列报不入闸（无标记参与；与豁免族分列）
+          unverifiedTotal++;
+          unverifiedRows.push({ file: rel, line: i + 1, anchor: a.anchor, clazz: "声明源缺位" });
           continue;
         }
         if (newMarked) {
@@ -304,23 +332,24 @@ function runScan(base, cfg, { gate = true, root = base } = {}) {
   }
   return {
     gate, root: rootAbs, scanRoot: baseAbs, scanDirs: cfg.scanDirs, files: files.length,
-    rows, wideRows, redundantRows, cand, exempt, dang, pendingTotal, citationTotal,
+    rows, wideRows, redundantRows, unverifiedRows, cand, exempt, dang, pendingTotal, citationTotal, unverifiedTotal,
     danglingTotal: dang.case + dang.path + dang.symbol,
   };
 }
 
 /** 引擎入口（单引擎——M8 模块设计 §2.2 数据流）：checkAnchors(域, checkConfig) → 统一结果。 */
-export function checkAnchors(domain, checkConfig, { gate = true, root = domain } = {}) {
-  return runScan(domain, checkConfig, { gate, root });
+export function checkAnchors(domain, checkConfig, { gate = true, root = domain, declaredRoots = [] } = {}) {
+  return runScan(domain, checkConfig, { gate, root, declaredRoots });
 }
 
 /** 兼容入口（声明面）：scanDocAnchors(仓根, {gate, domain})——判据读 manifest checkConfig（fail-closed）。 */
-export function scanDocAnchors(root, { gate = true, domain = null } = {}) {
+export function scanDocAnchors(root, { gate = true, domain = null, declaredRoots = null } = {}) {
   const rootAbs = resolve(root);
   const base = domain ? resolve(rootAbs, domain) : rootAbs;
   const read = readManifest(rootAbs);
   if (!read.ok) {
     throw new Error("scanDocAnchors: manifest 不可读——" + (read.reason ?? read.errors.join("；")) + "（fail-closed，不静默 fallback）");
   }
-  return runScan(base, read.manifest.checkConfig, { gate, root: rootAbs });
+  const roots = declaredRoots ?? declaredPublicRoots(rootAbs); // §6.15 单一定义（#832——缺省 [] ⇒ 零行为）
+  return runScan(base, read.manifest.checkConfig, { gate, root: rootAbs, declaredRoots: roots });
 }

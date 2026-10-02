@@ -11,9 +11,10 @@
  * 消费侧静态 import 会破 W8 契约②）。
  */
 import { statSync } from "node:fs"
-import { resolve } from "node:path"
+import { basename, resolve } from "node:path"
 import { ALLOWED_MIGRATIONS, nowIso, openLedger, PENDING_STATUSES } from "./ledger-db.mjs"
 import { resolveProjectRoot } from "./manifest.mjs"
+import { declaredPublicRoots } from "./declaration.mjs"
 
 /** 查询（只读，全角色）：SELECT 行集（status/kind/board 过滤，缺省 = 全部行；id 升序）。库不在 = 空账。 */
 export function ledgerQuery({ cwd, status = null, kind = null, board = null } = {}) {
@@ -48,7 +49,8 @@ const isFile = (p) => { try { return statSync(p).isFile() } catch { return false
  *  判位与迁移表判同层（落盘前）；文案前缀 = 调用函数名（与同函数既有两条文案同款）。
  *  基准 `base` = **与台账库关联键同源**（2026-09-18 fix 轮 · O1 收正）：`resolveProjectRoot(cwd) ??
  *  resolve(cwd ?? ".")`——同表达式见 `ledger-db.mjs` `ledgerDbPath`；容器根会话（锚 cwd 下唯一注册
- *  子仓 P）与子仓会话 ⇒ 库键与指针基准同取 P（同库同基准；原实现 `resolve(cwd, …)` = 原始 cwd 会误拒）。 */
+ *  子仓 P）与子仓会话 ⇒ 库键与指针基准同取 P（同库同基准；原实现 `resolve(cwd, …)` = 原始 cwd 会误拒）。
+ *  #832：声明源前缀形同判（§6.15——首段 = 声明公共仓目录名 ⇒ 于该声明根解析；可核 ⇒ 通过；缺位拒）。 */
 function assertTaskBookGate(cwd, fnName, status, taskBook) {
   if (status !== "在途" && status !== "待核销") return
   if (taskBook == null) throw new Error(`${fnName}：task_book 必填（在途 / 待核销 须携任务书指针）`)
@@ -56,7 +58,15 @@ function assertTaskBookGate(cwd, fnName, status, taskBook) {
   if (!part) throw new Error(`${fnName}：task_book 不可解析（缺文件部分）：${taskBook}`)
   const base = resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")
   const abs = resolve(base, part)
-  if (!isFile(abs)) throw new Error(`${fnName}：task_book 指向的档不存在：${taskBook}（解析 = ${abs}）`)
+  // §6.15 声明源候选（#832 · LEDGER.md §6.1-4）：首段 = 声明公共仓目录名 ⇒ 该声明根解析余段（同名多仓 ⇒ 声明序首者）；未声明 ∥ 缺位 ⇒ 照旧拒。
+  if (isFile(abs)) return
+  const segs = part.replace(/\\/g, "/").split("/").filter(Boolean)
+  for (const root of declaredPublicRoots(base)) {
+    if (segs[0] !== basename(root)) continue
+    if (segs.length > 1 && isFile(resolve(root, segs.slice(1).join("/")))) return
+    break
+  }
+  throw new Error(`${fnName}：task_book 指向的档不存在：${taskBook}（解析 = ${abs}）`)
 }
 
 /** 新增（写命令，仅主 agent）：INSERT——入待讨论（六态状态机入口）。 */

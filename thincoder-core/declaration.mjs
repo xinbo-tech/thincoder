@@ -48,8 +48,8 @@ function normalizeCodePaths(v) {
   return out
 }
 
-/** 排除前缀归一（§6.14 面① `index.excludePaths`）：首部 `./` 剥离 · `\`→`/` · 去尾斜杠 · 空 ∕ 非串剔除 · 去重保序。 */
-function normalizeExcludePaths(v) {
+/** 路径列表归一（单源——`index.excludePaths` §6.14 ∥ `index.publicRepos` §6.15 同款）：首部 `./` 剥离 · `\`→`/` · 去尾斜杠 · 空 ∕ 非串剔除 · 去重保序。 */
+function normalizePathList(v) {
   if (!Array.isArray(v)) return []
   const out = []
   for (const e of v) {
@@ -76,12 +76,13 @@ function buildDeclaration(m, root = null) {
   const codePaths = normalizeCodePaths(m?.codePaths) ?? [...DEFAULT_MANIFEST.codePaths]
   const codeExtensions = normalizeExtensions(m?.index?.codeExtensions)
   const docExtensions = normalizeExtensions(m?.index?.docExtensions)
-  const excludePaths = normalizeExcludePaths(m?.index?.excludePaths)
+  const excludePaths = normalizePathList(m?.index?.excludePaths)
+  const publicRepos = normalizePathList(m?.index?.publicRepos)
   const docMap = normalizeString(m?.advisor?.docMap)
   const standardsDoc = normalizeString(m?.advisor?.standardsDoc)
   const defaults = normalizeCodePaths(DEFAULT_MANIFEST.codePaths) ?? []
   const pathsDiffer = codePaths.length !== defaults.length || codePaths.some((p, i) => p !== defaults[i])
-  const declared = pathsDiffer || codeExtensions.length > 0 || docExtensions.length > 0 || excludePaths.length > 0 || Boolean(docMap) || Boolean(standardsDoc)
+  const declared = pathsDiffer || codeExtensions.length > 0 || docExtensions.length > 0 || excludePaths.length > 0 || publicRepos.length > 0 || Boolean(docMap) || Boolean(standardsDoc)
   return Object.freeze({
     declared,
     codePaths: Object.freeze(codePaths),
@@ -89,6 +90,7 @@ function buildDeclaration(m, root = null) {
       codeExtensions: Object.freeze(codeExtensions),
       docExtensions: Object.freeze(docExtensions),
       excludePaths: Object.freeze(excludePaths),
+      publicRepos: Object.freeze(publicRepos),
     }),
     advisor: Object.freeze({ docMap, standardsDoc }),
     root,
@@ -118,6 +120,26 @@ export function isExcludedRelPath(rel, decl, base = null) {
   return list.some((p) => p && (s === p || s.startsWith(`${p}/`)))
 }
 
+/**
+ * 声明公共仓**绝对根集**（§6.15 解析层——检索同步 ∥ 读面 origin 集 ∥ 引用解析三消费面共用的单一定义，
+ * 不得二写）：值形层逐项 `resolve(decl.root, p)` ⇒ 绝对根集（去重保序）；存在性判归消费面（本层不判）。
+ * 缺省 `[]` ⇒ `[]`（零行为）。
+ * @param {string} [cwd] 会话锚（项目根经 manifest.mjs 解析）
+ * @returns {string[]} 绝对路径（去重保序）
+ */
+export function declaredPublicRoots(cwd) {
+  const decl = loadProjectDeclaration(cwd)
+  const list = decl?.index?.publicRepos
+  if (!Array.isArray(list) || list.length === 0) return []
+  const base = typeof decl.root === "string" && decl.root !== "" ? decl.root : resolve(cwd ?? ".")
+  const out = []
+  for (const p of list) {
+    const abs = resolve(base, p)
+    if (!out.includes(abs)) out.push(abs)
+  }
+  return out
+}
+
 const _cache = new Map()
 
 /** Drop the per-data-file-path cache (test seam — declarations are read once per path). */
@@ -143,7 +165,7 @@ function warnRetiredCarrier(root) {
  * per cache miss (content zero-parsed, zero effect on the readings — KD-M1-34).
  * @param {string} cwd — project dir / anchor (root resolved by manifest.mjs)
  * @returns {Readonly<{declared: boolean, codePaths: readonly string[],
- *   index: {codeExtensions: string[], docExtensions: string[], excludePaths: string[]},
+ *   index: {codeExtensions: string[], docExtensions: string[], excludePaths: string[], publicRepos: string[]},
  *   advisor: {docMap: string, standardsDoc: string}, root: string|null}>}
  */
 export function loadProjectDeclaration(cwd) {

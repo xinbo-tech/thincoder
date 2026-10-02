@@ -100,7 +100,7 @@
   · **覆盖位定形（本批 fix 轮 · 发现 5）**：`owningProject` 与 `discoverProjects` **两处头部短路**（`discoverRepos` 既有短路零改）⇒ 覆盖在场时 `resolveProjectRoot`（归属先行）与 `projectView`（归属段先行）均**不落真判据**。
     批前「覆盖即覆盖值」语义保持（回归守卫 = 批内件 `docs/batches/2026-10-02-manifest-resolution-fix.test.mjs` 覆盖位腿：`_setProjectRootForTest(base)` ⇒ `resolveProjectRoot("ignored") === resolve(base)`）。
 - `MANIFEST_SCHEMA`（对象：`phase` 枚举、`docRoot` 五键存在、`checkConfig` 六键存在、`index` / `advisor` 子键存在、`promptsLanding` 存在、`version` 数值、**三族声明键形态**——KD-M1-32）。
-- `DEFAULT_MANIFEST`（对象：默认八键——`version:1`、`phase:"initial-dev"`、`docRoot` 默认五路径、`promptsLanding` 默认落地路径、`checkConfig` 默认判据、`codePaths:["src"]`、`index:{codeExtensions:[],docExtensions:[],excludePaths:[]}`、`advisor:{docMap:"",standardsDoc:""}`）。
+- `DEFAULT_MANIFEST`（对象：默认八键——`version:1`、`phase:"initial-dev"`、`docRoot` 默认五路径、`promptsLanding` 默认落地路径、`checkConfig` 默认判据、`codePaths:["src"]`、`index:{codeExtensions:[],docExtensions:[],excludePaths:[],publicRepos:[]}`、`advisor:{docMap:"",standardsDoc:""}`）。
 - `readManifest(cwd)` → `{ ok, manifest, missingKeys, errors, reason }`：读 + `validateManifest(obj)`；缺键 → 产 `missingKeys`（非拒）→ 补默认值 → 再校验通过；整档缺失 → `{ok:false, reason:'missing'}`。
 - `validateManifest(obj)` → `{ ok, errors, missingKeys }`：形状校验（枚举 / `version` 数值 / 键存在 / **`docRoot` 子键值形态**——F7 / **`checkConfig.lineCounts` 元素层形态**——#546 / **三族声明键形态**——KD-M1-32）；**纯函数、不读 fs、不落盘**。
 - `requireManifest(cwd)` → 装配钩子入口 = `readManifest(cwd)`：`ok:true` 返回补默认值后的 manifest；`reason:'missing'` 由调用方走**建档流**（**工程模式会话**口径——梯②④⑤ 就地建档，**不拒会话**；KD-M1-29）；模式门 + 建档分支见下方两端装配钩子）。
@@ -117,13 +117,15 @@
 **三族声明键（本批并入——2026-09-27 用户裁定「必须的功能并入 project-manifest」；来源 = `.thincoder/conventions.json` 退役）：**
 
 - `codePaths`（**顶层平级键**）：路径**段名**数组（任意深度匹配）；**声明即替换**默认（默认 `["src"]`——非并集）；空数组 = 合法（明确「无段名代码面」——与 `docRoot` 空数组拒面有意不同：`docRoot` 空 = 文档层静默消失，`codePaths` 空 = 段面收空而兜底分类仍在）。
-- `index`（嵌套对象）：`codeExtensions` / `docExtensions`（各自缺省 `[]`）；对内置扩展名表**追加**（并集，只增不减）；`excludePaths`（缺省 `[]`）= 项目根相对路径**前缀**数组（首部 `./` 剥离 · `/` 归一 · 去尾斜杠 · 去重保序；前缀命中 = 恰等 ∨ 后随 `/`——索引用途 = `MEMORY.md` §6.14 面①）。
+- `index`（嵌套对象）：`codeExtensions` / `docExtensions`（各自缺省 `[]`）；对内置扩展名表**追加**（并集，只增不减）；`excludePaths`（缺省 `[]`）= 项目根相对路径**前缀**数组（首部 `./` 剥离 · `/` 归一 · 去尾斜杠 · 去重保序；前缀命中 = 恰等 ∨ 后随 `/`——索引用途 = `MEMORY.md` §6.14 面①）；
+  `publicRepos`（缺省 `[]`）= **公共仓路径数组**（**从本仓根可解析**——相对 ∥ 绝对同收，同级 `../` 合法；归一 = 首部 `./` 剥离 · `/` 归一 · 去尾斜杠 · 去重保序；元素层宽容 ∕ 数组层 fail-closed）。
+  **用途 = 公共仓索引接入 ∥ 跨仓引用解析**（值形 ∥ 解析单一定义 = `declaredPublicRoots`；机制 = `MEMORY.md` §6.15 · 引用解析序 = `DOC-DISCIPLINE.md` §4.2.2 · 记录面例外 = `LEDGER-SELF-CONTAINED.md` §5.1）。
 - `advisor`（嵌套对象）：`docMap` / `standardsDoc`（各自缺省 `""`）；项目根相对**文件路径**单指针；空串 = 未声明（消费面走探测 / 降级句）。
 - 形态判据（`validateManifest`，**非法即 `errors`——与 `docRoot` 子键同款**）两层分列：
-  · **元素层**：`codePaths` / `index.{codeExtensions,docExtensions}` 各元素须为非空字符串（`trim` 后非空）；`index.excludePaths` 元素层宽容（空 ∕ 非串元素由归一剔除——数组层仍 fail-closed）；`advisor.*` = 字符串（空串 = 未声明）。
+  · **元素层**：`codePaths` / `index.{codeExtensions,docExtensions}` 各元素须为非空字符串（`trim` 后非空）；`index.excludePaths` / `index.publicRepos` 元素层宽容（空 ∕ 非串元素由归一剔除——数组层仍 fail-closed）；`advisor.*` = 字符串（空串 = 未声明）。
   · **数组层**：`codePaths` / `index.*` 数组**自身可空**（`[]` 合法）——空数组语义逐键：`codePaths:[]` = 无段名代码面（合法）；`index.*:[]` = 追加零项 ∕ 排除零项（合法，即默认）。
 - 缺键 fallback（F4 同语义）：三族键 / 其子键缺 → 补默认值 + `missingKeys` 记键路径（不拒）。
-- **读向（单源）**：`thincoder-core/conventions.mjs` 经 `readManifest` / `manifestFilePath` 投影三族键（新增 `loadProjectDeclaration(cwd)`——`conventions.mjs` → `manifest.mjs` 单向；本模块保持叶子零项目依赖——KD-M1-33）。
+- **读向（单源）**：`thincoder-core/declaration.mjs`（声明装载面——2026-10-01 core 拆分批自 `conventions.mjs` 迁出；经其转口可达）经 `readManifest` / `manifestFilePath` 投影三族键（`loadProjectDeclaration(cwd)`——该档 → `manifest.mjs` 单向；本模块保持叶子零项目依赖——KD-M1-33）。
 - `docRoot` ∥ `advisor.docMap` **并存**（结构不对称）：前者 = 文档层**根集合**（多根 / 目录语义；消费面 = 机检 / 批次档落点 / 评审根），后者 = 地图**文件**单指针（消费面 = 评审注入）——合并须强造「每根一个地图文件」的约定，实况无此约定（理由 = KD-M1-31）。
 
 **两端装配钩子**：
@@ -277,8 +279,9 @@
 | KD-M1-30 | **归属形** = `owningProject(target)`（沿祖先链取最近带档目录）；`projectView` = **归属 ⇒ 发现兜底** 两段合成；`resolveProjectRoot` = `owningProject ?? discoverProjects().root` | 用户 11:29 裁定（嵌套/重叠：**最近者优先**——子优于根 ✗ 嵌套合法 ✗ 不跨兄弟 ✗ 无全局优先级）。两段分离的理由：**归属（向上）**解「谁的参数」（含嵌套子项目）；**发现（向下）**解「锚在哪落地 / 锚项目是谁」——保批前容器语义（本仓锚 `D:\teamcode` ⇒ 向下恰一 ⇒ `thincoder`）。被拒备选：① 只用归属（容器锚 ⇒ 无档 ⇒ 无项目——本仓现状倒退：容器锚的多项目工作区失去解析）② 只用发现（嵌套子项目失效——子内目标归到根） |
 | KD-M1-31 | **三族声明键并入 schema**（`codePaths` / `index.{codeExtensions,docExtensions}` / `advisor.{docMap,standardsDoc}`）——顶层平级 + 缺省值入 `DEFAULT_MANIFEST`（`["src"]` / `[]` / `""`）；键名 / 形态逐字承前；`docRoot` ∥ `advisor.docMap` 并存 | 用户 2026-09-27 19:39 裁定（退役 `.thincoder/conventions.json`——「必须的功能并入 project-manifest，不要同时保留二者」）⇒ 单一项目声明档；键名逐字承前 = 用户项目迁移零改名（必要性判据 = 三族对任意用户项目各有正当性：分类段位 / 索引扩展名 / 评审指针，均解决一类不可硬编码的布局差异）；声明归属随项目归属（`owningProject`）⇒ 与档位解析同判据。**被否候选**：◎包一层 `conventions` 对象（三族分属三消费族——包层零收益）· ◎三族键不入 `DEFAULT_MANIFEST`（`fillDefaults` 只搬已知键——不入则读面取不到，或须另造「可选识别键」第三类键）· ◎`docMap` 与 `docRoot` 合并（**结构不对称**：根集合（多根 / 目录 / 机检与落点消费）vs 文件单指针（评审注入消费）——合并须强造映射约定） |
 | KD-M1-32 | 三族键**形态错 = `errors`（fail-closed）**；消费面（分类 / 索引 / 注入）遇档不可用 ⇒ 三族逐条回默认 + 可见（缺档静默；非法 / 读错加 `console.warn` + 日志事件）（**例外**：`index.excludePaths` 元素层宽容——空 ∕ 非串元素由归一剔除，数组层仍 fail-closed；§2.2 `:118`） | 与 `docRoot` 子键同款（KD-M1-7：静默跳过 = 静默失踪——旧的逐键降级在 VS Code 扩展宿主里近乎不可见）；两层各归其位：档面 fail-closed（工程入口 / 翻转面既有语义零改）、运行面不崩不静默（N2）。**被否候选**：◎逐键降级（两套校验语义 + 弱可见）· ◎非法即静默按默认（静默失效类） |
-| KD-M1-33 | 读向**单向**：`thincoder-core/conventions.mjs` 经 `readManifest` / `manifestFilePath` 投影三族键（新增 `loadProjectDeclaration`）；本模块零出边 | 同一档禁两份读取器 / 第二份根解析（KD-M1-18 同族）；两模块同属**模式无关面**（全模式消费）⇒ 耦合非模式耦合。**被否候选**：◎投影落本模块（分类归一 / 扩展名归一挤入项目模型模块——两个所有者）· ◎裁判档内自读（第二读取器 + 第二根解析） |
+| KD-M1-33 | 读向**单向**：`thincoder-core/declaration.mjs`（2026-10-01 core 拆分批自 `conventions.mjs` 迁出——经其转口可达）经 `readManifest` / `manifestFilePath` 投影三族键（`loadProjectDeclaration`）；本模块零出边 | 同一档禁两份读取器 / 第二份根解析（KD-M1-18 同族）；两模块同属**模式无关面**（全模式消费）⇒ 耦合非模式耦合。**被否候选**：◎投影落本模块（分类归一 / 扩展名归一挤入项目模型模块——两个所有者）· ◎裁判档内自读（第二读取器 + 第二根解析） |
 | KD-M1-34 | 退役旧档的在场处置 = **一行可见告警**（`console.warn` + `logEvent('declaration:retired-file')`）+ 存在性检查（**内容零解析**、零回退） | 用户裁定「不要同时保留二者」= 零并存；告警 ≠ 机制（零读零回退），但静默停用 = 哨兵失效不可见（`PORTABILITY.md` 问题本体）——可迁移纪律要求可见。**被否候选**：◎静默不读（旧声明静默失效）· ◎兼容读 + 告警（双机制并存）· ◎自动迁移（一次性动作造第二条写路径——KD-M1-11 同族） |
+| KD-M1-35 | **`index.publicRepos` 并入 index 族**（缺省 `[]`；元素层宽容 ∕ 数组层 fail-closed）——值形 = **从本仓根可解析的路径**；**值形 ∥ 解析两层定义**（值形 = 归一后相对串（声明投影）∥ 解析 = 绝对根集（`normalizeOrigin` 消费）——细则单源 = `MEMORY.md` §6.15）= `declaredPublicRoots(cwd)`（`declaration.mjs` 新导出——检索同步 ∥ 读面 origin 集 ∥ 引用解析三消费面共用，不得二写） | 台账 #832（公共仓读取——声明位）：嵌 index 族 = 检索范围声明（同款先例 = `index.excludePaths`）⇒ 顶层键族与默认档计数零扰动；`fillDefaults` 已知键搬运自动覆盖本键（未知键静默丢弃 = #802 在册面——不因本键消解）。被否候选：◎顶层平级新键（「三族→四族」计数族全档连带）· ◎工作区级声明档（新机制 + 跨仓协调面）· ◎约定位置发现（不可声明 ∥ 不可核） |
 
 ### 2.5 与既有纪律冲突核对
 
@@ -596,8 +599,9 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 | AC-29 | **写门 / schema / 二道防线零碰**（回归）：既有五键集合 · `REVIEW_ROOT_KEYS` · `docRoot` 值形态 · `writeManifest` writer 闸 · spawn `files` 域拒 manifest——本批零改 | 规格 ②.1 / ②.5 / AC-M1-8 | ✅ 既有用例组零改全绿（`manifest.test.mjs` / `spawn-gates.test.mjs` 等） |
 | AC-31 | **三族键 schema 落地**：`DEFAULT_MANIFEST` 含三族默认（`codePaths:["src"]` · `index:{codeExtensions:[],docExtensions:[]}` · `advisor:{docMap:"",standardsDoc:""}`）；五键档（既有档）读入 ⇒ `ok:true` + 三族补默认 + `missingKeys` 含三族键 | **AC-M1-9** · 批档 §2 · KD-M1-31 | ✅ `readManifest` 夹具（五键档）逐键断言 + `initManifest` 落盘含三族键 |
 | AC-32 | **形态判据（fail-closed）**：`codePaths` 非数组 / 含非串或空白串元素、`index.*` / `advisor.*` 形态错 ⇒ `validateManifest` `ok:false`（`errors` 点名键）；对照合法：`codePaths:[]` · `advisor.docMap:""` | **AC-M1-9** · 批档 §2 · KD-M1-32 | ✅ 逐例断言 `{ok, errors}` |
-| AC-33 | **读向单向 + 投影**：`conventions.mjs` 经 `readManifest` / `manifestFilePath` 取三族（源码面：该档无 `readFileSync` 读 manifest + 本模块零 `conventions` 出边） | **AC-M1-9** · KD-M1-33 | ✅ 源码面结构断言（禁第二读取器） |
+| AC-33 | **读向单向 + 投影**：`declaration.mjs`（2026-10-01 core 拆分批自 `conventions.mjs` 迁出——经其转口可达）经 `readManifest` / `manifestFilePath` 取三族（源码面：该档无 `readFileSync` 读 manifest + 本模块零 `conventions` 出边） | **AC-M1-9** · KD-M1-33 | ✅ 源码面结构断言（禁第二读取器） |
 | AC-34 | **旧档在场 = 一行告警 + 内容零生效**：`.thincoder/conventions.json` 在场（含哨兵声明 / 坏 JSON 两态）⇒ 声明读数与无档逐条等值 + warn + 日志事件；内容零解析 | **AC-M1-9** · KD-M1-34 · 批档 §2 | ✅ 两态夹具断言（读数等值 + warn 在场 + 哨兵未生效）+ **告警基准断言**（旧档落项目根 = `manifestFilePath` 基准目录——cwd 深于项目根亦命中） |
+| AC-37 | **`index.publicRepos` 落 schema**：`DEFAULT_MANIFEST.index` 含 `publicRepos:[]`；缺键档读入 ⇒ `ok:true` + 补默认 + `missingKeys` 含 `index.publicRepos`；形态 = 数组层 fail-closed（非数组 ⇒ `errors`）/ 元素层宽容（`["./x/","",7]` ⇒ 归一 `["x"]`——**值形层**（归一后相对串）；解析层 = 绝对根集——细则单源 = `MEMORY.md` §6.15）；缺省 `[]` ⇒ 声明读数与基线等值（零行为） | **AC-M1-9** · 批档 §2 · KD-M1-35 | ✅ `readManifest` 夹具逐键断言 + 归一读数 |
 | AC-30 | **归属形（最近祖先 / 嵌套）**：`owningProject` 沿祖先链取最近带档目录（target 为目录 ⇒ 含自身）；**子优于根**；**不跨兄弟**（无档分叉不取旁支）；祖先链无档 ⇒ `null`（⇒ 发现兜底）；`projectView` 两段合成逐格归位 | 规格 §⑥（归属形） | ✅ tmp 多层夹具（盘 / 容器 / 根项目 / 子项目 / 兄弟）逐格断言（T48） |
 | AC-35 | **`projectRootView` 基座（本批）**：三态结构化——`ok`（唯一解析）⇒ `root` 非空 ∥ `candidates` = `[]`；`ambiguous`（≥2 候选）⇒ `root` = `null` ∥ 候选全列**按名排序**；`none` ⇒ 双空；覆盖位在场 ⇒ 头部短路（`ok` + 覆盖值）；**薄委托等价**：`resolveProjectRoot(cwd)` ≡ `projectRootView(cwd).root` 逐格全等（含覆盖位） | 批次档 §2.2（判定单点） | ✅ 夹具三态逐态断 `{state, root, candidates}` + 覆盖位断言 + 等价逐格对（回归守卫 = 批内件 `docs/batches/2026-10-02-manifest-resolution-fix.test.mjs` 基座腿 + `docs/batches/2026-09-29-structure-split-2.test.mjs` 导出枚举探针） |
 | AC-36 | **歧义锚三族收口（零写 + 列候选）**：① 台账缺省（歧义锚）⇒ `openLedger` 拒——零写 + 列候选（`LEDGER.md` §8 AC-M2-17）；② 批档 create 无所属 ⇒ 显式拒（零写 + 列候选）∥ 目标所属 ⇒ 落其基底（`BATCH-RECORD.md` §4.8 BR-39–BR-42）；③ 文件工具 = **零改**（结语——无新行为面）；`ok` / `none` 两态逐一回归零变 | 批次档 §2.2 ∥ §2.6（AC-1–AC-5）· `LEDGER.md` §8 · `BATCH-RECORD.md` §4.15 | ✅ 批档 §2.6 同夹具（歧义锚双带档 tmp + 实景 `d:\teamcode` 双跑）；拒面断言 = 零写 + 列候选；文件工具零改 ⇒ 无断言面（结语口径） |
@@ -678,6 +682,10 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 AC-16 接线锁（`bin` 源码序）零改 · **AC-N5 / T13 收正**（门控第三腿「`agent.manifest` 缺失」⇒「无锚」（KD-M1-27）——无既往好值格归 T46 / T47）· AC-N1–AC-N4 / AC-N6 / T8–T12 / T14 零改。
 
 ## 4. 变更记录
+
+- 2026-10-03（**公共仓读取批 · 修正轮 1（评审 #20 发现 3 ∥ 6 · 父侧全采纳）· eng-designer**——承批档 `docs/batches/2026-10-02-public-repo-read.md` §3 轮次 1 ∥ §2 修正轮 1 · 台账 #832）：【#6】§2.2 读向行 ∥ §2.4 KD-M1-33 指路随正为 **`declaration.mjs`**（2026-10-01 core 拆分批自 `conventions.mjs` 迁出——转口可达）。【#3】KD-M1-35「值形 ∥ 解析」句补**两层输出**（值形 = 归一后相对串 ∥ 解析 = 绝对根集——细则单源 = `MEMORY.md` §6.15）+ AC-37 标**值形层**。**零新语义**（评审发现逐号落位）。
+
+- 2026-10-02（**公共仓读取批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-public-repo-read.md` §2 · 台账 #832）：§2.2 三族块 `index` 行补 **`publicRepos`**（值形 ∥ 解析单一定义 = `declaredPublicRoots`）+ 元素层宽容句同拍；§2.2 `DEFAULT_MANIFEST` 行补 `publicRepos:[]`；§2.4 补 **KD-M1-35**；§3.1 补 **AC-37**。**实现 = 本批实施轮**。
 
 - 2026-10-02（**会话锚解析修复批 · 设计微修正轮 2（#13 上抛两项处置：① 悬空指针 ∥ ② 坐标漂移）· eng-designer**——承父侧派单；批档 = `docs/batches/2026-10-02-manifest-resolution-fix.md`）：① 悬空守卫指针收正——§2.2 `projectRootView` 契约行（`:91-92`——行宽门拆两行）∥ 覆盖位定形注（`:101`）∥ §3.1 AC-35（`:602`）：`thincoder-core/test/manifest.test.mjs:297` ⇒ 实守卫批内件 `docs/batches/2026-10-02-manifest-resolution-fix.test.mjs`（基座三态 ∥ 覆盖位 ∥ 薄委托等价逐格）+ `docs/batches/2026-09-29-structure-split-2.test.mjs` 导出枚举探针（AC-35 处）；② §2.3 行 47（`:204`）`memoizedBatchBases` 坐标随正——`:110-116` ⇒ **`:116-122`**（现盘实读）。**零新语义**（指针 ∥ 坐标收正——判据不动）。
 

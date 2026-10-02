@@ -13,6 +13,7 @@
 import { relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { readManifest } from "../thincoder-core/manifest.mjs";
+import { declaredPublicRoots } from "../thincoder-core/declaration.mjs";
 import { checkAnchors } from "./doc-check-anchors.mjs";
 import { checkDocWidths, discoverDomains } from "./doc-check-width.mjs";
 import { checkLineCounts } from "./doc-check-linecounts.mjs";
@@ -30,7 +31,8 @@ export function formatReport(r) {
   }
   for (const x of r.wideRows) out.push(`报告 ${x.file}:${x.line} ${x.anchor}（${x.clazz}——报告面，不入闸）`);
   for (const x of r.redundantRows ?? []) out.push(`报告 ${x.file}:${x.line} ${x.anchor}（标记冗余——报告面，不入闸）`);
-  out.push(`汇总：候选 ${sum(r.cand)} · 悬空 ${r.danglingTotal} · 注记豁免 ${sum(r.exempt)} · 拟新增 ${r.pendingTotal} · 迁移期引文 ${r.citationTotal}`);
+  for (const x of r.unverifiedRows ?? []) out.push(`报告 ${x.file}:${x.line} ${x.anchor}（声明源缺位——未核 · 不入闸）`);
+  out.push(`汇总：候选 ${sum(r.cand)} · 悬空 ${r.danglingTotal} · 注记豁免 ${sum(r.exempt)} · 拟新增 ${r.pendingTotal} · 迁移期引文 ${r.citationTotal} · 声明源缺位 ${r.unverifiedTotal ?? 0}`);
   out.push(`  用例号：候选 ${r.cand.case} · 悬空 ${r.dang.case} · 注记豁免 ${r.exempt.case}`);
   out.push(`  路径/坐标：候选 ${r.cand.path} · 悬空 ${r.dang.path} · 注记豁免 ${r.exempt.path}`);
   out.push(`  符号·窄：候选 ${r.cand.symbol} · 悬空 ${r.dang.symbol} · 注记豁免 ${r.exempt.symbol}`);
@@ -52,6 +54,7 @@ export function main(argv = process.argv.slice(2), { cwd = process.cwd(), log = 
     return 1;
   }
   const cfg = read.manifest.checkConfig;
+  const declaredRoots = declaredPublicRoots(root); // §6.15 单一声明源根集（#832——声明源候选入参；缺省 [] ⇒ 零行为）
   // D3 计数纪律：判据键清单 = 单一数组（计数 = 列表长度——加键时改一处，计数自动同改）。
   // 派生自 checkConfig 实际键面：scanDirs / lineWidth / anchors.domain / anchors.exclude / exemptions / lineCounts / widthExemptZones。
   const CRITERIA_KEYS = ["scanDirs", "lineWidth", "anchors.domain", "anchors.exclude", "exemptions", "lineCounts", "widthExemptZones"];
@@ -62,7 +65,7 @@ export function main(argv = process.argv.slice(2), { cwd = process.cwd(), log = 
   const zoneNote = zones.length ? `（区带豁免在效——${zones.join(" ∥ ")}；区带内超宽行不计）` : "";
   let fail = 0;
   for (const base of bases) {
-    const r = checkAnchors(base, cfg, { gate: true, root });
+    const r = checkAnchors(base, cfg, { gate: true, root, declaredRoots });
     for (const line of formatReport(r)) log(line);
     const widths = checkDocWidths(base, { lineWidth: cfg.lineWidth, scanDirs: cfg.scanDirs, exclude: cfg.anchors.exclude ?? [], exemptZones: zones });
     for (const h of widths) log(`✗ 行宽 ${relative(root, h.file).replace(/\\/g, "/")}:${h.line}（${h.len} 字符）`);

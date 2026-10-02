@@ -9,7 +9,8 @@ import { normalizeOrigin } from "./origin.mjs"
 import { MAX_DOC_FILE_BYTES } from "./schema.mjs"
 import { buildFtsQuery, invalidateStaleEmbeddings, EMBED_TEXT_MAX_LEN } from "./core.mjs"
 import { _upsertDocFile, yieldTick } from "./code-index.mjs"
-import { markIndexedCommit, listProjectFiles, indexExtensions } from "./code-sync.mjs"
+import { markIndexedCommit, listProjectFiles, indexExtensions, declaredRootEntries } from "./code-sync.mjs"
+import { searchOrigins } from "./code-search.mjs"
 import { createRowBudget, rowCountOfPath, sweepStaleRows } from "./sync-tail.mjs"
 import { loadProjectDeclaration } from "../conventions.mjs" // 排除谓词本档不直调（经 `decl` 传 `sweepStaleRows`）
 import { logEvent } from "../log.mjs"
@@ -19,11 +20,18 @@ import { DESC } from "../tools/shared.mjs" // #15 描述外置：文本单点 = 
 const DOC_EMBED_BATCH = 64
 
 /**
- * Sync doc index: scan all .md/.mdc/.txt/.rst/.adoc under dir → chunk → upsert into doc_chunks.
- * Incremental by mtime. opts seam (§6.14 M3): `yieldFn` ∕ `nowFn` ∕ `yieldMs` — stale-loop yield
- * budget injectable for deterministic tests (same seam style as scan.mjs).
+ * §6.15 同步展开（写侧入口）：入口 dir + 声明公共仓逐根（一层不递归）；回执 = 入口根（契约零改）。
+ * 单根内胆 = `syncDocRoot`：.md/.mdc/.txt/.rst/.adoc → chunk → doc_chunks（mtime 增量；opts seam =
+ * `yieldFn` ∕ `nowFn` ∕ `yieldMs`——stale-loop 让出可确定性断言，同 scan.mjs）。
  */
-export async function docSync(memory, dir, { onProgress, yieldFn = yieldTick, nowFn = Date.now, yieldMs = SCAN_YIELD_MS } = {}) {
+export async function docSync(memory, dir, opts = {}) {
+  const res = await syncDocRoot(memory, dir, opts)
+  for (const root of declaredRootEntries(dir)) await syncDocRoot(memory, root, opts)
+  return res
+}
+
+/** 单根内胆（doc 全扫径）：原 `docSync` 体——零语义改动；导出供 `gitSync` 两条回退支跨档调用（不展开声明根）。 */
+export async function syncDocRoot(memory, dir, { onProgress, yieldFn = yieldTick, nowFn = Date.now, yieldMs = SCAN_YIELD_MS } = {}) {
   const origin = normalizeOrigin(dir) // §6.11 写缝归一（目录/git I/O 用原样 dir；库面 origin 一律归一值）
   const decl = loadProjectDeclaration(dir)
   const { entries, unlisted } = await listProjectFiles(dir, indexExtensions(dir).doc)
@@ -101,11 +109,10 @@ export async function docSearch(memory, query, { limit = 5 } = {}) {
   const ftsQuery = buildFtsQuery(query)
   if (!ftsQuery && !memory.embedder) return []
 
-  // §6.11 读缝归一（单点取名——函数体内一律用归一值）
-  const codeOrigin = normalizeOrigin(memory.codeOrigin)
-  const ftsOriginFilter = codeOrigin ? `AND d.origin = ?` : ""
-  const vecOriginFilter = codeOrigin ? `AND origin = ?` : ""
-  const originParams = codeOrigin ? [codeOrigin] : []
+  // §6.15 读面 origin 集（项目 ∪ 声明公共仓；单 origin ⇒ 逐字零行为——快径 SQL 形零改）
+  const origins = searchOrigins(memory)
+  const ftsOriginFilter = origins.length === 1 ? `AND d.origin = ?` : origins.length > 1 ? `AND d.origin IN (${origins.map(() => "?").join(", ")})` : ""
+  const originParams = origins
 
   const ftsList = ftsQuery ? memory.db.prepare(`
     SELECT d.rowid, d.path, d.language, d.heading, d.content, d.line_start, d.line_end, bm25(doc_chunks_fts) AS rank
@@ -133,13 +140,17 @@ export async function docSearch(memory, query, { limit = 5 } = {}) {
   // TUI-OOM-ROOTCAUSE（MEMORY.md §10.3）：分块扫描 + 有界 top-K（原全表 .all()——峰值 = 块 + K）
   // TUI 假死批（§6.10 修法 A1/A2）：游标 = PK 去等值过滤前缀列（有 origin 过滤 ⇒ 2 元组；
   // 无过滤 ⇒ 全 PK）；scanVectors = async（让出）。SELECT 须携键列（游标值源）。
-  const cursorKey = codeOrigin ? ["path", "line_start"] : ["origin", "path", "line_start"]
+  const cursorKey = origins.length > 0 ? ["path", "line_start"] : ["origin", "path", "line_start"]
   const keyCols = cursorKey.join(", ")
   const top = createTopK(Math.max(limit * 4, 20))
-  await scanVectors(memory.db, `SELECT rowid, ${keyCols}, embedding FROM doc_chunks WHERE embedding IS NOT NULL ${vecOriginFilter}`, originParams, {
-    cursorKey,
-    onRow: (r) => top.push({ id: r.rowid, rowid: r.rowid, score: cosine(qvec, fromBlob(r.embedding)) }),
-  })
+  // §6.15 多 origin ⇒ 逐 origin 分趟（每趟单 origin 等值 + 游标键去等值前缀列——与单 origin 快径同形）
+  const vecSql = `SELECT rowid, ${keyCols}, embedding FROM doc_chunks WHERE embedding IS NOT NULL ${origins.length ? "AND origin = ?" : ""}`
+  for (const origin of origins.length ? origins : [null]) {
+    await scanVectors(memory.db, vecSql, origin ? [origin] : [], {
+      cursorKey,
+      onRow: (r) => top.push({ id: r.rowid, rowid: r.rowid, score: cosine(qvec, fromBlob(r.embedding)) }),
+    })
+  }
   const vecList = top.list().map((c) => ({ rowid: c.id, score: c.score }))
 
   const K = 60

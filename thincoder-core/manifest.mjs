@@ -9,9 +9,10 @@
  *    再校验通过；整档缺失 → { ok:false, reason:'missing' }（不静默 fallback）。
  *  - validateManifest(obj) → { ok, errors, missingKeys }：枚举 / version 数值 /
  *    docRoot 子键值形态（串 | 数组，F7）+ checkConfig.lineCounts 元素层形态——**纯函数、零 fs**；不落盘。
- *  - 三族声明键（`codePaths` / `index.{codeExtensions,docExtensions}` / `advisor.{docMap,standardsDoc}`——
+ *  - 三族声明键（`codePaths` / `index.{codeExtensions,docExtensions,publicRepos}` / `advisor.{docMap,standardsDoc}`——
  *    KD-M1-31 / M1-32）：缺键补默认；形态错 = 档非法（fail-closed，与 docRoot 子键同款）；
- *    读向 = `conventions.mjs` 经 `readManifest` / `manifestFilePath` 投影（单向——KD-M1-33）。
+ *    读向 = `declaration.mjs`（2026-10-01 自 `conventions.mjs` 迁出——经其转口可达）经 `readManifest` /
+ *    `manifestFilePath` 投影（单向——KD-M1-33）；`index.publicRepos` 绝对根集 = `declaredPublicRoots`（§6.15）。
  *  - isValidDocRootValue(value) / docRootPaths(value, cwd)（F7 判据单源 KD-M1-8）：值形态谓词
  *    + 值 → 绝对路径数组（展开 / trim + `\` 归一 / 基数 = 项目根 / 去重保序）。
  *  - requireManifest(cwd) → 装配钩子入口 = readManifest(cwd)。

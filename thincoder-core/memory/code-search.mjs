@@ -8,11 +8,20 @@
 import { embed, cosine, toBlob, fromBlob } from "../embedding.mjs"
 import { scanVectors, createTopK } from "./scan.mjs"
 import { normalizeOrigin } from "./origin.mjs"
+import { declaredPublicRoots } from "../conventions.mjs"
 import { buildFtsQuery, ensureEmbeddings, EMBED_TEXT_MAX_LEN } from "./core.mjs"
 import { safeSliceUTF16 } from "../text-budget.mjs"
 import { DESC } from "../tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/code_search.md
 
 const CODE_EMBED_BATCH = 64
+
+/** 读面 origin 集（§6.15）：项目 origin ∪ 声明公共仓 origin（归一 ∥ 去重 ∥ 升序——BINARY 序 = PK 序；趟序 ∕ 到达序无关）；无项目 ⇒ 空集。 */
+export function searchOrigins(memory) {
+  const project = normalizeOrigin(memory.codeOrigin)
+  if (!project) return []
+  const set = new Set([project, ...declaredPublicRoots(memory.codeOrigin).map((p) => normalizeOrigin(p))])
+  return [...set].sort((a, b) => Buffer.compare(Buffer.from(a, "utf8"), Buffer.from(b, "utf8")))
+}
 
 /**
  * Code search: FTS5(BM25) + optional vector cosine, RRF merged.
@@ -22,11 +31,10 @@ export async function codeSearch(memory, query, { limit = 5 } = {}) {
   const ftsQuery = buildFtsQuery(query)
   if (!ftsQuery && !memory.embedder) return []
 
-  // §6.11 读缝归一（单点取名——函数体内一律用归一值）
-  const codeOrigin = normalizeOrigin(memory.codeOrigin)
-  const ftsOriginFilter = codeOrigin ? `AND c.origin = ?` : ""
-  const vecOriginFilter = codeOrigin ? `AND origin = ?` : ""
-  const originParams = codeOrigin ? [codeOrigin] : []
+  // §6.15 读面 origin 集（项目 ∪ 声明公共仓；单 origin ⇒ 逐字零行为——快径 SQL 形零改）
+  const origins = searchOrigins(memory)
+  const ftsOriginFilter = origins.length === 1 ? `AND c.origin = ?` : origins.length > 1 ? `AND c.origin IN (${origins.map(() => "?").join(", ")})` : ""
+  const originParams = origins
 
   const ftsList = ftsQuery ? memory.db.prepare(`
     SELECT c.rowid, c.path, c.language, c.symbol_name, c.content, c.line_start, c.line_end, bm25(code_chunks_fts) AS rank
@@ -54,13 +62,17 @@ export async function codeSearch(memory, query, { limit = 5 } = {}) {
   // TUI-OOM-ROOTCAUSE（MEMORY.md §10.3）：分块扫描 + 有界 top-K（原全表 .all()——峰值 = 块 + K）
   // TUI 假死批（§6.10 修法 A1/A2）：游标 = PK 去等值过滤前缀列（有 origin 过滤 ⇒ 2 元组；
   // 无过滤 ⇒ 全 PK）；scanVectors = async（让出）。SELECT 须携键列（游标值源）。
-  const cursorKey = codeOrigin ? ["path", "line_start"] : ["origin", "path", "line_start"]
+  const cursorKey = origins.length > 0 ? ["path", "line_start"] : ["origin", "path", "line_start"]
   const keyCols = cursorKey.join(", ")
   const top = createTopK(Math.max(limit * 4, 20))
-  await scanVectors(memory.db, `SELECT rowid, ${keyCols}, embedding FROM code_chunks WHERE embedding IS NOT NULL ${vecOriginFilter}`, originParams, {
-    cursorKey,
-    onRow: (r) => top.push({ id: r.rowid, rowid: r.rowid, score: cosine(qvec, fromBlob(r.embedding)) }),
-  })
+  // §6.15 多 origin ⇒ 逐 origin 分趟（每趟单 origin 等值 + 游标键去等值前缀列——与单 origin 快径同形）
+  const vecSql = `SELECT rowid, ${keyCols}, embedding FROM code_chunks WHERE embedding IS NOT NULL ${origins.length ? "AND origin = ?" : ""}`
+  for (const origin of origins.length ? origins : [null]) {
+    await scanVectors(memory.db, vecSql, origin ? [origin] : [], {
+      cursorKey,
+      onRow: (r) => top.push({ id: r.rowid, rowid: r.rowid, score: cosine(qvec, fromBlob(r.embedding)) }),
+    })
+  }
   const vecList = top.list().map((c) => ({ rowid: c.id, score: c.score }))
 
   const K = 60

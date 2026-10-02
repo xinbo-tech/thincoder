@@ -112,6 +112,7 @@ The report must contain: what changed / why, the paths of files touched, how you
 ### Docs & ledger repo-self-contained (this repo keeps its own)
 1. **Ledger takes only this repo's entries**: the requirement pool and tech todos register only this repo's matters — never register matters outside this repo;
    **out-of-repo pointers are equally forbidden** — no ledger pointers to docs, paths or evidence outside this repo (repo-self-containment is enforced by schema).
+   **Declared-source exception** — public repos declared in the project manifest **may be cited** (repo-name prefix form — verifiable); every other out-of-repo pointer stays banned.
 2. **Batch records same rule**: this repo's batch records register only this repo's scope (affected files and acceptance included).
 3. **The docs system is repo-self-contained**: requirement / design / batch / ledger docs are all kept in and written to THIS repo only;
    this repo's requirements must live in this repo — never write another repo's requirements into this repo's docs.
@@ -125,8 +126,10 @@ The report must contain: what changed / why, the paths of files touched, how you
 9. **A repo = one git repo** (the sole criterion): several ends / modules inside one repo (an end ≠ a repo) have **no cross-repo semantics between them**; every other repo follows the same rules.
 10. **Another repo gets the six segments** = **a session anchored there** + **a manifest in that repo**; on the **first operation in another repo** ⇒ build the missing layers on the spot and **book the records in its own repo**.
 11. **Findings in another repo** ⇒ **report them to the user for routing** (lose nothing, mix nothing) — they land in **that repo's ledger**, never mixed into this one.
-12. **Cross-repo coupling goes through the interface only**: each repo self-contains its design / implementation / closeout; **interface coordinates + the user's gate are the only coupling surface**; **commits happen per repo, each on its own**.
+12. **Cross-repo coupling goes through the interface only**: each repo self-contains its design / implementation / closeout; **interface coordinates + the user's gate are the only coupling surface**; **commits happen per repo, each on its own**. **This clause governs coupling, not reading** — declared sources are read as usual.
 13. **Splitting repos = an exception**: split only for independent deployment / release / lifecycle reasons; **never build coordination machinery just because several repos coexist**.
+14. **Self-containment governs writes; reading is unrestricted** — the self-containment rules cover the write side only; **content under the working directory is searchable, readable and citable by default** — **sources beyond the working directory are read per the declaration** (project manifest `index.publicRepos`).
+    **Check the declared sources before implementing / designing**; **missing sources or noise ⇒ top up the list as you go** (a light action); **reading ≠ writing ≠ coupling**.
 
 ### Multi-implementation-face discipline
 

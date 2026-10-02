@@ -45,7 +45,7 @@ export const DEFAULT_MANIFEST = Object.freeze({
   }),
   // 项目声明三族（2026-09-27 声明载体唯一化批并入——键名 / 形态逐字承前；来源档已退役）。
   codePaths: Object.freeze(["src"]),
-  index: Object.freeze({ codeExtensions: Object.freeze([]), docExtensions: Object.freeze([]), excludePaths: Object.freeze([]) }),
+  index: Object.freeze({ codeExtensions: Object.freeze([]), docExtensions: Object.freeze([]), excludePaths: Object.freeze([]), publicRepos: Object.freeze([]) }),
   advisor: Object.freeze({ docMap: "", standardsDoc: "" }),
 })
 
@@ -112,7 +112,7 @@ export function validateManifest(obj) {
   }
   // 三族声明键形态（KD-M1-32——fail-closed：非法即 errors，不静默跳过；缺键仍在 missingKeys）。
   // `index.excludePaths`（§6.14 面①）：**数组层** fail-closed（非数组 ⇒ 拒）；元素层宽容——空 ∕ 非串
-  // 元素由归一剔除（L-①-1 夹具 `["./openclaw/","refs",""]` ⇒ `["openclaw","refs"]`）。
+  // 元素由归一剔除（L-①-1 夹具 `["./openclaw/","refs",""]` ⇒ `["openclaw","refs"]`）；`index.publicRepos`（§6.15）同款。
   const strArrErr = (key, v) => { if (!isNonEmptyStringArray(v)) errors.push(`${key} 值形态非法：${JSON.stringify(v)}（须为非空字符串数组——KD-M1-32）`) }
   const strErr = (key, v) => { if (typeof v !== "string") errors.push(`${key} 值形态非法：${JSON.stringify(v)}（须为字符串——KD-M1-32）`) }
   const objErr = (key, v) => (v === null || typeof v !== "object" || Array.isArray(v)
@@ -124,6 +124,9 @@ export function validateManifest(obj) {
     for (const k of ["codeExtensions", "docExtensions"]) if (obj.index[k] !== undefined) strArrErr(`index.${k}`, obj.index[k])
     if (obj.index.excludePaths !== undefined && !Array.isArray(obj.index.excludePaths)) {
       errors.push(`index.excludePaths 值形态非法：${JSON.stringify(obj.index.excludePaths)}（须为数组——非数组 fail-closed；空 ∕ 非串元素由归一剔除）`)
+    }
+    if (obj.index.publicRepos !== undefined && !Array.isArray(obj.index.publicRepos)) {
+      errors.push(`index.publicRepos 值形态非法：${JSON.stringify(obj.index.publicRepos)}（须为数组——非数组 fail-closed；空 ∕ 非串元素由归一剔除）`)
     }
   }
   const advBad = obj.advisor === undefined ? null : objErr("advisor", obj.advisor)

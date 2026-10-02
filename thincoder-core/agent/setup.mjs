@@ -20,6 +20,7 @@ import {
 import { pushEnvStateReminder, pushPeerReminder, pushInjections } from "./setup-reminders.mjs"
 import { assembleFamilyTools } from "./family-tools.mjs"
 import { normalizeOrigin } from "../memory/origin.mjs"
+import { searchOrigins } from "../memory/code-search.mjs"
 import { INDEX_ORIGIN_ROW_WARN } from "../memory/schema.mjs"
 
 const DEFAULT_COMPACT_THRESHOLD = 100_000
@@ -111,12 +112,13 @@ export async function prepareRun(agent, input, callbacks, {
     if (agent.memory && depth === 0) {
       const docs = await docSearch(agent.memory, input, { limit: DOC_SEARCH_LIMIT })
       if (docs.length > 0) {
-        // §6.14 B3：origin 限定 + 有界计数（子查询 LIMIT = WARN+1 形——越界回「20000+」；跨 origin 全扫不再回升）
-        const docOrigin = normalizeOrigin(agent.memory.codeOrigin)
+        // §6.14 B3 + §6.15：origin 集限定 + 有界计数（子查询 LIMIT = WARN+1 形——越界回「20000+」；跨 origin 全扫不再回升）
+        const origins = searchOrigins(agent.memory)
         const bound = INDEX_ORIGIN_ROW_WARN + 1
+        const countFilter = origins.length === 1 ? " WHERE origin = ?" : origins.length > 1 ? ` WHERE origin IN (${origins.map(() => "?").join(", ")})` : ""
         const countRow = agent.memory.db.prepare(
-          `SELECT COUNT(*) AS n FROM (SELECT 1 FROM doc_chunks${docOrigin ? " WHERE origin = ?" : ""} LIMIT ${bound})`,
-        ).get(...(docOrigin ? [docOrigin] : []))
+          `SELECT COUNT(*) AS n FROM (SELECT 1 FROM doc_chunks${countFilter} LIMIT ${bound})`,
+        ).get(...origins)
         const count = Number(countRow?.n ?? 0)
         const countLabel = count >= bound ? `${INDEX_ORIGIN_ROW_WARN}+` : String(count)
         const more = count > docs.length ? ` (${countLabel} chunks indexed total — call doc_search if you need more)` : ""

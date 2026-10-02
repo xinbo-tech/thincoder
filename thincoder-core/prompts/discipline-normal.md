@@ -36,6 +36,8 @@
 ### Docs self-contained (this repo keeps its own docs)
 1. **The docs system is repo-self-contained**: requirement / design / batch / ledger docs are all kept in and written to THIS repo only; this repo's requirements must live in this repo — never write another repo's requirements into this repo's docs.
 2. **Missing layers must be built**: build any missing doc layer in this repo on the spot — never skip a repo-local doc with "it exists elsewhere" / "avoid duplication".
+3. **Self-containment governs writes; reading is unrestricted** — the self-containment rules cover the write side only; **content under the working directory is searchable, readable and citable by default** — **sources beyond the working directory are read per the declaration** (project manifest `index.publicRepos`).
+    **Check the declared sources before starting work**; **missing sources or noise ⇒ top up the list as you go** (a light action); **reading ≠ writing**.
 
 ### UI & interface design
 - A value with a FIXED set of choices (enum, level, mode, flag) must be OPTIONS — picker / menu / choices / buttons. Never free-text input.

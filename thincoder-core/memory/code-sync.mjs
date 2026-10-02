@@ -1,6 +1,7 @@
 /**
- * memory/code-sync.mjs — code index sync, incremental update (retrieval / tool generation → code-search.mjs; 2026-10-01 split)
+ * memory/code-sync.mjs — code index sync, incremental update (retrieval / tool generation → code-search.mjs; 2026-10-01 split; §6.15 声明根集展开 2026-10-03)
  */
+import { existsSync } from "node:fs"
 import { readFile, stat } from "node:fs/promises"
 import { join, relative } from "node:path"
 import { SCAN_YIELD_MS } from "./scan.mjs"
@@ -10,7 +11,7 @@ import { ensureEmbeddings, invalidateStaleEmbeddings } from "./core.mjs"
 import { detectLanguage, _upsertCodeFile, _upsertDocFile, yieldTick } from "./code-index.mjs"
 import { isSkippedRelPath, extensionOf } from "./file-walk.mjs"
 import { createRowBudget, rowCountOfPath, sweepStaleRows } from "./sync-tail.mjs"
-import { loadProjectDeclaration, isExcludedRelPath } from "../conventions.mjs"
+import { loadProjectDeclaration, isExcludedRelPath, declaredPublicRoots } from "../conventions.mjs"
 import { logEvent } from "../log.mjs"
 import { indexExtensions, listProjectFiles } from "./file-list.mjs"
 
@@ -20,13 +21,36 @@ const DIFF_FULL_SYNC_THRESHOLD = 200
  *  旧单键在而本键缺 ⇒ 视为无锚（该 origin 全扫一次）；旧键清退 = 全部 origin 落锚后（ops）。 */
 const anchorKey = (origin) => `last_indexed_commit:${origin}`
 
-/**
- * git-driven incremental indexing: use git diff to find files changed since
- * the last index, and only rebuild FTS5 chunks for those files (vectors are untouched).
- * An order of magnitude faster than full mtime scanning.
- * Returns { updated, removed, skipped } or null (git unavailable).
- */
-export async function gitSync(memory, dir, { onProgress } = {}) {
+/** 声明公共仓根集（§6.15——入口 dir 之外；缺位整根跳过 + 一行 logEvent；归一去重保序）。 */
+export function declaredRootEntries(dir) {
+  const seen = new Set([normalizeOrigin(dir)])
+  const out = []
+  for (const abs of declaredPublicRoots(dir)) {
+    const o = normalizeOrigin(abs)
+    if (seen.has(o)) continue
+    seen.add(o)
+    if (!existsSync(abs)) { logEvent("index:root-missing", { dir, origin: o }); continue }
+    out.push(abs)
+  }
+  return out
+}
+
+/** §6.15 同步展开（git 入口）：入口 dir + 声明公共仓逐根（一层不递归）；回执 = 入口根（契约零改）。
+ *  单根内胆 = `gitSyncDir`（git diff 增量——原 `gitSync` 体，零语义改动）；null = git 不可得。 */
+export async function gitSync(memory, dir, opts = {}) {
+  const res = await gitSyncDir(memory, dir, opts)
+  if (res === null) return null // 入口 dir null 契约保持——公共仓随调用方回退（codeSync ∥ docSync）展开覆盖
+  for (const root of declaredRootEntries(dir)) {
+    if ((await gitSyncDir(memory, root, opts)) !== null) continue // 增量可行 ⇒ 增量（per-origin 锚既有）
+    await codeSyncDir(memory, root, opts) // 增量不可行 ⇒ 全扫（同入口款）
+    const { syncDocRoot } = await import("./docs.mjs")
+    await syncDocRoot(memory, root, opts)
+  }
+  return res
+}
+
+/** 单根内胆（git 增量径）：原 `gitSync` 体——零语义改动。 */
+async function gitSyncDir(memory, dir, { onProgress } = {}) {
   const origin = normalizeOrigin(dir) // §6.11 写缝归一（git / 文件 I/O 用原样 dir；库面 origin 一律归一值）
   const decl = loadProjectDeclaration(dir)
   const { execFile: _execFile } = await import("node:child_process")
@@ -58,9 +82,9 @@ export async function gitSync(memory, dir, { onProgress } = {}) {
 
   if (diffOut.length > DIFF_FULL_SYNC_THRESHOLD) {
     // diff too large, incremental is useless — fall back to full sync and update anchor
-    await codeSync(memory, dir, { onProgress })
-    const { docSync } = await import("./docs.mjs")
-    await docSync(memory, dir, { onProgress })
+    await codeSyncDir(memory, dir, { onProgress })
+    const { syncDocRoot } = await import("./docs.mjs")
+    await syncDocRoot(memory, dir, { onProgress })
     return { updated: -1, removed: 0, skipped: 0, failed: 0, errors: [], fallback: true }
   }
 
@@ -116,12 +140,17 @@ export async function gitSync(memory, dir, { onProgress } = {}) {
 }
 
 /**
- * Sync code index: scan all source files under dir → chunk → upsert into code_chunks.
- * Incremental by mtime — only rebuilds chunks for files that have changed.
- * opts seam (§6.14 M3): `yieldFn` ∕ `nowFn` ∕ `yieldMs` — the stale-loop yield budget is
- * injectable so the yield behaviour is deterministic in tests (same seam style as scan.mjs).
+ * §6.15 同步展开（写侧入口）：入口 dir + 声明公共仓逐根（一层不递归）；回执 = 入口根（契约零改）。
+ * 单根内胆 = `codeSyncDir`（原 `codeSync` 体——mtime 增量 + 行预算 + stale 收尾；opts seam 同 scan.mjs）。
  */
-export async function codeSync(memory, dir, { onProgress, yieldFn = yieldTick, nowFn = Date.now, yieldMs = SCAN_YIELD_MS } = {}) {
+export async function codeSync(memory, dir, opts = {}) {
+  const res = await codeSyncDir(memory, dir, opts)
+  for (const root of declaredRootEntries(dir)) await codeSyncDir(memory, root, opts)
+  return res
+}
+
+/** 单根内胆（code 全扫径）：原 `codeSync` 体——零语义改动。 */
+async function codeSyncDir(memory, dir, { onProgress, yieldFn = yieldTick, nowFn = Date.now, yieldMs = SCAN_YIELD_MS } = {}) {
   const origin = normalizeOrigin(dir) // §6.11 写缝归一（遍历/git I/O 用原样 dir；库面 origin 一律归一值）
   const decl = loadProjectDeclaration(dir)
   const { code: exts } = indexExtensions(dir)
