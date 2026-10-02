@@ -50,7 +50,7 @@ function logBatchDocRefs(parent, role, task, boundAbs) {
   const cwd = parent?.cwd ?? process.cwd()
   const text = typeof task === "string" ? task : ""
   const key = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
-  const bases = batchDocBases(cwd)
+  const bases = batchDocBases(cwd) // 歧义锚 ⇒ 候选项目基底并集（#828——入基底判据覆盖面随之对齐）
   const seen = new Set()
   for (const m of text.matchAll(MD_PATH_TOKEN)) {
     const token = m[0]

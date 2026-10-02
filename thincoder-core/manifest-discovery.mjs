@@ -91,7 +91,8 @@ export function discoverRepos(cwd) {
  * 的目录；无 ⇒ `null`（⇒ 调用方走发现兜底）。**嵌套合法**：子内归子、根其余归根。
  * **纯 fs**（只判存在性——不解析档内容 / 不问模式）· **不跨兄弟** · **无全局优先级**。
  * **覆盖位**（`_setProjectRootForTest` 在场）⇒ **头部短路**：直接返回覆盖值（不查档存在性——
- * 保「覆盖即覆盖值」语义，回归守卫 = `test/manifest.test.mjs` T42 覆盖断言）。
+ * 保「覆盖即覆盖值」语义，回归守卫 = 本批批内件基座腿（`docs/batches/2026-10-02-manifest-resolution-fix.test.mjs`——
+ * 基座三态 + 覆盖位 + 薄委托等价逐格）+ `docs/batches/2026-09-29-structure-split-2.test.mjs` 导出枚举探针（`Object.keys` 名面核））。
  * @param {string} [target] 目标路径（目录 / 文件）
  * @returns {string|null} 最近带档祖先目录绝对路径 / null
  */
@@ -106,14 +107,25 @@ export function owningProject(target) {
   }
 }
 
-/**
- * 项目根解析（**归属 ∨ 发现**——KD-M1-30 / M1-24）：`owningProject(cwd) ?? discoverProjects(cwd).root`。
- * 带档路径与批前**逐字同**；变更面两条（设计 §2.2）：① 项目树内路径（祖先带档）⇒ **该项目根**
- * （批前回落 `resolve(cwd)`——错层建档面，本批修）；② 裸仓恰一 ⇒ 该仓根（零档降级 = 建档机会）。
- * `none` / `ambiguous` ⇒ `null`。调用方（`manifestFilePath` / `docRootBase` / `ledger-db.mjs` /
- * `ledger-cmd.mjs`）**零改**（行为随语义变更——设计 §2.5 键面条 / 错层条）。
- * @returns {string|null} 项目根绝对路径 / null
- */
+/** **项目根解析的歧义直读形**（判定单点——设计 `MANIFEST.md` §2.2 `projectRootView` 契约行 / §2.5
+ *  「多档解析消费面收口」条）：`ok`（唯一解析：归属命中 ∥ 发现 `self` / `unique`）/ `ambiguous`
+ *  （≥2 候选 ⇒ `root` null + 候选全列**按名排序**）/ `none`（无项目 ⇒ 双空）；覆盖位在场 ⇒
+ *  头部短路（`ok` + 覆盖值）。**非抛错 / 零写**；`resolveProjectRoot` 薄委托本函数（行为逐字零变）。
+ *  @returns {{state:'ok'|'ambiguous'|'none', root:string|null, candidates:string[]}} */
+export function projectRootView(cwd) {
+  const owning = owningProject(cwd)
+  if (owning) return { state: "ok", root: owning, candidates: [] }
+  const d = discoverProjects(cwd)
+  if (d.root) return { state: "ok", root: d.root, candidates: [] }
+  if (d.kind === "ambiguous") return { state: "ambiguous", root: null, candidates: d.candidates }
+  return { state: "none", root: null, candidates: [] }
+}
+
+/** 项目根解析（**归属 ∨ 发现**——KD-M1-30 / M1-24）：**薄委托** `projectRootView(cwd).root`（判定
+ *  单点见上——#828）。带档路径与批前**逐字同**；变更面两条（设计 §2.2 同条）：① 项目树内路径
+ *  （祖先带档）⇒ 该项目根；② 裸仓恰一 ⇒ 该仓根（零档降级 = 建档机会）。`none` / `ambiguous` ⇒
+ *  `null`。调用方零改（行为随语义变更——设计 §2.5 键面条 / 错层条）。
+ *  @returns {string|null} 项目根绝对路径 / null */
 export function resolveProjectRoot(cwd) {
-  return owningProject(cwd) ?? discoverProjects(cwd).root
+  return projectRootView(cwd).root
 }

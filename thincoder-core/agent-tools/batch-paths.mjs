@@ -7,18 +7,31 @@
  * 契约（§4.15 逐字）：**候选序** = cwd → 项目根 → 逐基底（基底 = `batchDocBases` 声明面单源）；
  * **判据分野** = 读面取首个**可读**文件 / create 取首个**落基底根内**者；**锚定防嵌套** = 串以任一基底的
  * 「项目根相对前缀」打头且前缀后为**路径段边界** ⇒ 只解析项目根形（不二次拼接；不落基底内 ⇒ fail-closed）；
- * **零变面** = 绝对路径照旧、三个错误文案逐字、「参数在 + 路径可读」判据句。
+ * **歧义锚**（条 5 · 2026-10-02 · #828）= create 按目标所属项目落基底 ∥ 无所属显式拒；读面候选腿追加；
+ * 在飞 ∥ 写门基底集 = 候选并集（`batchDocBases`）；**零变面** = 绝对路径照旧、三个错误文案逐字、
+ * 「参数在 + 路径可读」判据句、`ok` / `none` 两态。
  *
  * 依赖（KD-4 单向）：本档为**叶档**——只 import `node:*` 与 `../manifest.mjs`；主档 re-export 保既有面。
  */
 import { existsSync, statSync } from "node:fs"
 import { isAbsolute, relative, resolve, sep } from "node:path"
 
-import { docRootBase, docRootPaths, readManifest, resolveProjectRoot } from "../manifest.mjs"
+import { docRootBase, docRootPaths, owningProject, projectRootView, readManifest, resolveProjectRoot } from "../manifest.mjs"
 
 /** 可读文件判据（存在且为文件——目录 / 缺失同判不可读）。 */
 function readableFile(abs) {
   try { return existsSync(abs) && statSync(abs).isFile() } catch { return false }
+}
+
+/** 歧义锚候选（判定单点 = `projectRootView`——`ambiguous` 态 ⇒ 候选全列**按名排序**；余者 null）。 */
+function ambiguousCandidates(cwd) {
+  const view = projectRootView(cwd ?? process.cwd())
+  return view.state === "ambiguous" ? view.candidates : null
+}
+
+/** 路径同一性比较（win32 大小写不敏感——同越基底判据口径）。 */
+function samePath(a, b) {
+  return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b
 }
 
 /** 「项目根」取根单源（§4.15 条 1——归属 ∨ 发现，无 manifest ⇒ `resolve(cwd ?? ".")` 兜底且**单值**）：
@@ -37,9 +50,16 @@ function declaredBases(cwd) {
 
 /** 批次档基底根数组（**声明面单源**——create / 在飞扫描 / 锚定判据共用）：manifest `docRoot.batches`
  *  （串 | 多根数组）→ 声明基底；缺失 / 非法 ⇒ 回退默认基底 `"docs/batches"`（恒返回非空数组）。
+ *  **歧义锚**（条 5）⇒ 候选项目基底**并集**（候选按名排序、并集保序）——在飞扫描 / 写门基底集同取此值。
  *  @param {string} cwd
  *  @returns {string[]} */
 export function batchDocBases(cwd) {
+  const amb = ambiguousCandidates(cwd)
+  if (amb) {
+    const union = []
+    for (const c of amb) for (const b of batchDocBases(c)) if (!union.includes(b)) union.push(b)
+    return union
+  }
   const roots = declaredBases(cwd)
   return roots.length ? roots : [resolve(docRootBase(cwd), "docs/batches")]
 }
@@ -76,6 +96,21 @@ function insideBases(abs, bases) {
 const outsideBasesError = (raw) => new Error(`batch: create path resolves outside the batch-record base roots — a batch record must live under the declared docRoot.batches base (fail-closed). Path: ${raw}`)
 /** create 锚定但落基底外（§4.15 新文案逐字——不二次拼接）。 */
 const anchoredEscapeError = (raw) => new Error(`batch: create path is anchored at a batch base root but does not resolve under the declared docRoot.batches root(s) — refusing to nest it (fail-closed). Path: ${raw}`)
+/** 歧义锚 create 拒面（**文案逐字** = `BATCH-RECORD.md` §4.15 条 5——机检锚 `ambiguous session anchor`）。 */
+const ambiguousCreateError = (raw, candidates) => new Error(`batch: ambiguous session anchor — create target "${raw}" belongs to no candidate project; pass an explicit project path (e.g. "${candidates[0]}/docs/batches/<file>.md"). Candidates: ${candidates.join(", ")}`)
+
+/** 歧义锚读面候选腿（条 5）：逐候选项目——项目根形（`resolve(candidate, p)`）∥ 声明基底形
+ *  （候选按名排序、并集保序——「首个可读」在此即为确定判读）。 */
+function ambiguousReadLegs(cwd, p) {
+  const amb = ambiguousCandidates(cwd)
+  if (!amb) return []
+  const out = []
+  for (const c of amb) {
+    out.push(resolve(c, p))
+    for (const b of declaredBases(c)) out.push(resolve(b, p))
+  }
+  return out
+}
 
 /**
  * **读面**解析（append / status / close 与评审门 / spawn 门共用）：首个**可读**候选胜；无 ⇒ null
@@ -93,7 +128,7 @@ export function resolveBatchReadPath(cwd, given) {
     const abs = resolve(batchProjectRoot(base), p)
     return readableFile(abs) ? abs : null
   }
-  const candidates = [resolve(base, p), resolve(batchProjectRoot(base), p), ...declaredBases(base).map((b) => resolve(b, p))]
+  const candidates = [resolve(base, p), resolve(batchProjectRoot(base), p), ...declaredBases(base).map((b) => resolve(b, p)), ...ambiguousReadLegs(base, p)]
   for (const abs of candidates) if (readableFile(abs)) return abs
   return null
 }
@@ -116,6 +151,8 @@ export function resolveBatchDocPath(cwd, given) {
 /**
  * **create 面**解析（§4.15 条 2/3）：绝对路径照旧取用（仍过越基底判据）；相对路径 = 候选序中首个**落基底
  * 根内**者（新档不存在——可读性无判别力）；锚定串只解析项目根形，不落基底内 ⇒ fail-closed 新文案。
+ *  **歧义锚**（条 5）：目标所属项目（`owningProject`）∈ 锚候选集 ⇒ 基底 = 该项目声明面（落其基底内；
+ *  越出 ⇒ 既有 fail-closed）；无所属 ⇒ **显式拒**（列候选 + 显式路径指引——不静默落锚）。
  * @param {string} cwd 会话锚
  * @param {string} given create `path` 原值
  * @param {string[]} bases 已解析的基底根数组（`batchDocBases` 单源；调用方传入以免重复读档）
@@ -125,18 +162,25 @@ export function resolveBatchCreatePath(cwd, given, bases) {
   const base = cwd ?? process.cwd()
   const raw = String(given ?? "").trim()
   const p = raw.replace(/\\/g, "/")
+  let roots = bases
+  const amb = ambiguousCandidates(base)
+  if (amb) {
+    const owner = owningProject(isAbsolute(raw) ? resolve(raw) : resolve(base, p))
+    if (!owner || !amb.some((c) => samePath(c, owner))) throw ambiguousCreateError(raw, amb)
+    roots = batchDocBases(owner)
+  }
   if (isAbsolute(raw)) {
     const abs = resolve(raw)
-    if (!insideBases(abs, bases)) throw outsideBasesError(raw)
+    if (!insideBases(abs, roots)) throw outsideBasesError(raw)
     return abs
   }
-  if (anchoredPrefix(p, basePrefixes(base, bases))) {
+  if (anchoredPrefix(p, basePrefixes(base, roots))) {
     const abs = resolve(batchProjectRoot(base), p)
-    if (!insideBases(abs, bases)) throw anchoredEscapeError(raw)
+    if (!insideBases(abs, roots)) throw anchoredEscapeError(raw)
     return abs
   }
-  for (const abs of [resolve(base, p), resolve(batchProjectRoot(base), p), ...bases.map((b) => resolve(b, p))]) {
-    if (insideBases(abs, bases)) return abs
+  for (const abs of [resolve(base, p), resolve(batchProjectRoot(base), p), ...roots.map((b) => resolve(b, p))]) {
+    if (insideBases(abs, roots)) return abs
   }
   throw outsideBasesError(raw)
 }

@@ -162,6 +162,10 @@
 | BR-36 | 正常 | 主 agent `§1 status({value:"进行中", note:"暂缓 · 复核条件 = …"})` | 状态行 = `进行中（暂缓 · 复核条件 = …）`；gate 放行（含「进行中」）；暂缓扫描（§5.1 L8）命中该档 |
 | BR-37 | 正常 | 复启：同工具 `status({value:"进行中"})`（note 缺省） | 括注清空（行 = `进行中`）；扫描不再命中；§2 ∕ §3 ∕ §5 写入照常（gate 零变） |
 | BR-38 | 边界 | note 含状态词表关键字（如「实施完成」）∥ 含换行 | 拒（note 校验既有判据——改写条件句 ∕ 单行化；「暂缓」本身非关键字） |
+| BR-39 | 正常 | 歧义锚 + create 显式目标（`<候选项目>/docs/batches/<x>.md`——所属 ∈ 候选集） | 落该候选项目基底（按用点解析——§4.15 条 5） |
+| BR-40 | 错误 | 歧义锚 + create 无所属目标（裸 `docs/batches/<x>.md` ∥ 非候选项目路径） | 显式拒（列候选 + 显式路径指引——不静默落锚；**文案 = 条 5 逐字**——机检锚 `ambiguous session anchor`） |
+| BR-41 | 正常 | 歧义锚 + 读面 ∥ spawn 门相对串（在档于候选项目基底内） | 解析成功（候选腿补齐——**次序单源** = 条 5：候选按名排序序内首个可读） |
+| BR-42 | 边界 | `ok`（锚有项目）∥ `none`（无项目）两态 → create / 读面 | 零改（既有候选序 ∥ 兜底——回归锚 BR-27–BR-35） |
 
 ### 4.9 状态行冻结拒写 + `docRoot.batches` 双基底（v2——M3 增量）
 
@@ -235,13 +239,21 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 
 1. **候选序（相对路径）**：① `resolve(cwd, p)` → ② `resolve(项目根, p)` → ③ 逐基底 `resolve(基底, p)`（**基底取值两段**：**声明面** = manifest `docRoot.batches`；**缺省回退默认值** = 声明面为空时 `resolve(docRootBase(cwd), "docs/batches")`（docRootBase = 项目根 ?? cwd））。
    **取面分野（基底腿）**：**create / 在飞扫描 / 锚定面**取「声明面 + 缺省回退」合体（`batchDocBases(cwd)`——恒非空）；**读面 ③ 腿只取声明面**（无 manifest ⇒ **无基底腿**——读面零回归）。
-   **「项目根」取根单源** = `resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")`（归属 ∨ 发现两段——`thincoder-core/manifest.mjs` `resolveProjectRoot`；`no-project` / 无 manifest ⇒ `resolve(cwd ?? ".")` 兜底；同式 = 库键式的同一子表达式，`design/LEDGER.md` §6.1 口径 2）。
+   **「项目根」取根单源** = `resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")`（归属 ∨ 发现两段——`thincoder-core/manifest.mjs` `resolveProjectRoot`；`no-project` / 无 manifest ⇒ `resolve(cwd ?? ".")` 兜底；同式 = 库键式的同一子表达式，`design/LEDGER.md` §6.1 口径 2）；**歧义锚**（≥2 候选——`projectRootView` 判定）⇒ 专用条 5（不静默回退）。
    **单值**——基底可多根，项目根不受基底数影响（多基底不产生多项目根）。
 2. **判据分野（唯一差异）**：**读面**选候选序中**首个可读文件**（判据仍「参数在 + 路径可读」逐字不变）；**create** 选候选序中**首个落在基底根内**者（新档不存在，可读性无判别力）。
 3. **防嵌套（锚定规则）**：`p`（归一 `/`）以**任一基底的「项目根相对前缀」**（如 `docs/batches`）打头**且前缀后为路径段边界（`/` 或串尾）** ⇒ **只解析项目根形**（候选②，跳过 ①③）——已含基底相对前缀的串不再二次拼接；项目根形不落基底内 ⇒ fail-closed 带提示。**段边界例**：`docs/batches-old/<x>.md`（前缀同形、`-` 非段边界）⇒ **不锚定**，照候选序解析、不触发 fail-closed（BR-35）。
 4. **零变面**：绝对路径照旧取用（create 仍过越基底判据）；「参数在 + 路径可读」判据句、冻结门、段白名单、错误文案（spawn 门逐字 / `resolveBatchDocPath` 逐字）全部零变。
+5. **歧义锚面（多项目并存——2026-10-02 · #828）**：会话锚无唯一项目（`projectRootView` `ambiguous` 态）⇒ **不静默回退锚基底**。
+   create：目标**所属项目**（`owningProject`）∈ 锚候选集 ⇒ 基底 = 该项目声明面（落其基底内；越出 ⇒ 既有 fail-closed）；无所属 ⇒ **显式拒**（列候选 + 显式路径指引——如 `thincoder/docs/batches/<x>.md`；**拒面文案 = 逐字——见下**）。
+   读面：候选腿追加各候选项目的项目根形 ∥ 声明基底形（仍取首个可读——**腿间次序单源** = 候选**按名排序**（同 `discoverProjects` / `projectView` 契约），并集**保序**）。在飞扫描 / 写门基底集：候选项目基底**并集**（唯一在飞批照取 / ≥2 照列）。
+   **`ok`（锚有项目）∥ `none`（无项目）两态零改**（#827 ⑤ 语义保持——跨仓 create 照拒）。
 
-**行为变更登记（有意收正）**：① create 收根相对串（原静默嵌套）；② create 在 cwd = 子目录 / 上级 时收 cwd 相对串（原嵌套）；③ 读面在 cwd ≠ 项目根时收根相对串（原 throw）；④ 读面不再命中「同前缀嵌套幽灵档」（防御性收窄）。其余当前成功路径逐字零变（读面候选序对既有命中为**追加**关系——**唯一序内边界 = ② 先于 ③**：`<项目根>/p` 与 `<基底>/p` 并存且皆可读 ⇒ 读面取 ②；该优先级即本条登记面）。
+**歧义锚拒面文案（逐字）**：`batch: ambiguous session anchor — create target "<raw>" belongs to no candidate project; pass an explicit project path (e.g. "<candidate>/docs/batches/<file>.md"). Candidates: <candidate1>, <candidate2>`（机检锚 = `ambiguous session anchor`；候选 = 按名排序全列——绝对路径）。
+
+**行为变更登记（有意收正）**：① create 收根相对串（原静默嵌套）；② create 在 cwd = 子目录 / 上级 时收 cwd 相对串（原嵌套）；③ 读面在 cwd ≠ 项目根时收根相对串（原 throw）；④ 读面不再命中「同前缀嵌套幽灵档」（防御性收窄）。
+⑤ **歧义锚**（2026-10-02 本批）：create 原静默落锚基底 ⇒ 按目标所属项目落 / 无所属显式拒；⑥ 读面 ∥ 在飞 ∥ 写门基底集在多档锚下补**候选并集**（原「基底外」漏检 / 漏扫 ⇒ 覆盖）。
+其余当前成功路径逐字零变（读面候选序对既有命中为**追加**关系——**唯一序内边界 = ② 先于 ③**：`<项目根>/p` 与 `<基底>/p` 并存且皆可读 ⇒ 读面取 ②；该优先级即本条登记面）。
 
 **fail-closed 新文案（逐字）**：`batch: create path is anchored at a batch base root but does not resolve under the declared docRoot.batches root(s) — refusing to nest it (fail-closed). Path: <raw>`
 
@@ -423,6 +435,10 @@ node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/b
 | 一次性勘察读数 | 行数剖析、评审轮次处置流水 | 一次性材料 |
 
 ## 变更记录
+
+- 2026-10-02（**会话锚解析修复批 · fix 轮（评审轮次 1 发现 1–8 · 父侧 8/8 采纳）· eng-designer**——承批档 `docs/batches/2026-10-02-manifest-resolution-fix.md` §3）：§4.15 条 5 补**读面次序单源**（候选按名排序——并集保序）∥ **歧义锚拒面逐字文案**（机检锚 `ambiguous session anchor`）∥ 条 5 尾 / BR-42 状态名统一（`ok` / `none`）；§4.8 BR-40 / BR-41 随拍。**行为面收口——实现 = 本批实施轮**。
+
+- 2026-10-02（**会话锚解析修复批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-manifest-resolution-fix.md` §1 · 台账 #828）：§4.15 增条 5「歧义锚面」（create 按所属项目落底 ∥ 无所属显式拒；读面 / 在飞 / 写门补候选并集）+ 条 1 取根单源补注；§4.8 增 BR-39–BR-42；行为变更登记 +2 项。**锚有项目 ∥ none 两态零改**（#827 ⑤ 保持）。
 
 - 2026-10-01（**残留收口 · 父侧直接执行 · 可 revert**——承 `docs/batches/2026-09-30-core-tools-pairfix.md` §6 残留②）：§4.12 句「插入块逐字节随旧形〔含空行数〕」收正为「插入块 = 状态行 + 其后空行（**形态单源 = 实装 `thincoder-core/agent-tools/batch-lifecycle.mjs:172-173`**）」——消「空行数」未落值；零语义变更（指针化）。
 

@@ -107,9 +107,9 @@ const EXPORT_SETS = {
   [PA]: ["cascadeRemoveProvider", "createProviderAdmin"],
   [RESP]: ["buildBody", "builtinToolsFor", "chat", "isChainInvalidError", "isStoreRequiredHost", "parseStream"],
   [REQ]: ["buildBody", "builtinToolsFor", "isStoreRequiredHost", "normalizeUsage"],
-  [MAN]: ["DEFAULT_MANIFEST", "MANIFEST_REL", "MANIFEST_SCHEMA", "_resetProjectRootForTest", "_setProjectRootForTest", "discoverProjects", "discoverRepos", "docRootBase", "docRootPaths", "initManifest", "isValidDocRootValue", "manifestFilePath", "owningProject", "projectView", "readManifest", "requireManifest", "resolveEngineeringManifest", "resolveProjectRoot", "validateManifest", "writeManifest"],
+  [MAN]: ["DEFAULT_MANIFEST", "MANIFEST_REL", "MANIFEST_SCHEMA", "_resetProjectRootForTest", "_setProjectRootForTest", "discoverProjects", "discoverRepos", "docRootBase", "docRootPaths", "initManifest", "isValidDocRootValue", "manifestFilePath", "owningProject", "projectRootView", "projectView", "readManifest", "requireManifest", "resolveEngineeringManifest", "resolveProjectRoot", "validateManifest", "writeManifest"],
   [SCHEMA]: ["DEFAULT_MANIFEST", "MANIFEST_SCHEMA", "fillDefaults", "isValidDocRootValue", "validateManifest"],
-  [DISC]: ["MANIFEST_REL", "_resetProjectRootForTest", "_setProjectRootForTest", "discoverProjects", "discoverRepos", "owningProject", "resolveProjectRoot"],
+  [DISC]: ["MANIFEST_REL", "_resetProjectRootForTest", "_setProjectRootForTest", "discoverProjects", "discoverRepos", "owningProject", "projectRootView", "resolveProjectRoot"],
   [CHROME]: ["blockAnchor", "chromeProps", "digestGroupNode", "digestPresent", "focusAutofocus", "ledgerGroupNode", "pillNode", "stoppedNode", "summaryNode", "syncChrome", "timerGroupNode"],
   [DIGEST]: ["digestAnchorOf", "digestGroupNode", "digestPresent", "syncDigest"],
   [DRIVER]: ["createTurnDriver"],
@@ -119,7 +119,7 @@ const EXPORT_SETS = {
 const SEAM_IDENTITY = [
   [MP, PA, ["cascadeRemoveProvider"]],
   [RESP, REQ, ["buildBody", "isStoreRequiredHost", "builtinToolsFor"]],
-  [MAN, DISC, ["MANIFEST_REL", "discoverProjects", "discoverRepos", "owningProject", "resolveProjectRoot", "_setProjectRootForTest", "_resetProjectRootForTest"]],
+  [MAN, DISC, ["MANIFEST_REL", "discoverProjects", "discoverRepos", "owningProject", "projectRootView", "resolveProjectRoot", "_setProjectRootForTest", "_resetProjectRootForTest"]],
   [MAN, SCHEMA, ["DEFAULT_MANIFEST", "MANIFEST_SCHEMA", "isValidDocRootValue", "validateManifest"]],
   [CHROME, DIGEST, ["digestGroupNode", "digestPresent"]],
 ]

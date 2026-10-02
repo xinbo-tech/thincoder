@@ -103,7 +103,8 @@ export function freezeWindowConflict(agent, absPaths) {
 }
 
 /** 批次档写门基底集**按 run 记忆化**（每 run 一次 manifest 读——§6.29.1；键 = agent 对象）。
- *  载体 = WeakMap（agent 回收即随 GC——无跨 run 残留）；cwd 变更即失效重读。 */
+ *  载体 = WeakMap（agent 回收即随 GC——无跨 run 残留）；cwd 变更即失效重读。
+ *  **歧义锚**（多项目并存 · #828）⇒ 基底 = 候选项目基底**并集**（`batchDocBases` 解析单点——覆盖随之对齐）。 */
 const batchGateBasesMemo = new WeakMap()
 
 /** 比较键（绝对形态归一：`.` 段归位 + 分隔符归一 `/` + win32 大小写归一——§6.29.1 判据）。 */

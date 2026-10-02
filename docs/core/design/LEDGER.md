@@ -61,6 +61,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 - **键不变性**：盘符本已大写（CLI 侧）⇒ 归一恒等 ⇒ **CLI 现状键零变**；小写盘符（VSC 侧）并入同键 ⇒ 两端同库。判据 = AC-M2-11。
 - **级联面**：`findProject` / `discoverFamily` / `buildScan` / 去重档 `notifyKey` 全链随键收敛——**不新增归一函数、不改各调用点**（键只在 `ledgerKey` 一处生成；`notifyKey` 盘符步 = `normalizeCwd` 直调、分隔符折叠自持）。
 - **单源判据射程**（AC-M2-11 第三分句）：grep 域限**台账键生成面**（`ledgerKey` 所在链）——他面哈希（去重档 / 会话 / checkpoint / 迁移报告等合法同形哈希）**不属本判据**。
+- **根解析面（歧义拒——2026-10-02 · #828）**：根式兜底（`resolve(cwd ?? ".")`）**只属「无项目」（none）**——建档流语义；**歧义（≥2 候选）⇒ 不产键**：`openLedger`（存取入口单点）显式拒——列候选 + 指明显式项目根（判定 = `projectRootView`——`manifest-discovery.mjs` 新导出；文案族「项目不可解析」）。消「静默回退到锚」双面症（缺省空读 / 错写落锚）。键式函数本体（`ledgerKey`）零改。
 
 **不做（边界）**：`realpath` / 符号链接解析；**非盘符段大小写折叠**（POSIX 大小写敏感 + origin 语义——同 `MEMORY.md` §6.11「不做」）；别名路径（subst / junction / 8.3 短名 = 已知限制）。
 
@@ -69,7 +70,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 两侧均出自**同一 anchor 的单进程同源谱系**，不跨端比较裸路径串；跨端一致性只经**库键与 `notifyKey`** 承载。
 判定 = 零缺陷、零代码改；守卫 = 新增比较点不得跨端直比裸路径串（须经 `normalizeCwd` / `notifyKey`）。**验证面**：零代码改 ⇒ **无独立守卫用例**——验证 = 静态审计在册（本段）；T22 = **间接守卫**（级联面同契约下游回归：`findProject` / `notifyKey` 同键——非两处 `===` 点的直测）。
 
-**指针**：导出契约 = §7.1；验收 = §8 AC-M2-11；存量收正 = §2.2。
+**指针**：导出契约 = §7.1；验收 = §8 AC-M2-11 ∥ AC-M2-17（根解析面）；存量收正 = §2.2。
 
 ### 2.2 存量迁移（同项目变体键合并 · 命令面 · 2026-09-25 批）
 
@@ -243,7 +244,8 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 **口径（三条）**：
 
 1. **文件部分 = 首个 `§` 之前的子串**（trim 后）。`§` 之后 = 节号 / 注记，**不参与存在性判定**（现盘 13 个取值含三形态——无后缀 · `…md§2` · `…md§1.5（括注）`——全按此口径通过）。
-2. **解析基准 = `resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")`**（**= 库键式的同一子表达式**——键式另加 `normalizeCwd` 一步，见 §2.1 键式单源；解析基准本身不归一）：`resolve(base, 文件部分)`；绝对路径按 Node `path.resolve` 语义原样取用。（父侧直改·可 revert · 承写门 fix 轮 O1 收正——原口径写「调用 `cwd`」在容器根形态与库键自相矛盾；2026-09-25 批改述「逐字同源」——键在子表达式外另有 `normalizeCwd`）
+2. **解析基准 = `resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")`**（**= 库键式的同一子表达式**——键式另加 `normalizeCwd` 一步，见 §2.1 键式单源；解析基准本身不归一）：`resolve(base, 文件部分)`；绝对路径按 Node `path.resolve` 语义原样取用。（父侧直改·可 revert · 承写门 fix 轮 O1 收正——原口径写「调用 `cwd`」在容器根形态与库键自相矛盾；2026-09-25 批改述「逐字同源」——键在子表达式外另有 `normalizeCwd`）。
+   **#828 批补注**（2026-10-02）：歧义锚 ⇒ 上游 `openLedger` 先拒（本门该态不可达）；其余态两式同值——「同源」关系不变。
 3. **缺指针 / 缺文件部分**：`task_book == null`（缺指针）⇒ 拒（「必填」文案）；`§2` / 空串 / 全空白（缺文件部分）⇒ 不可解析 ⇒ **拒**（fail-closed，同状态行解析先例）。
 
 **射程** = **结果行状态**属 `{在途, 待核销}` 的写入；`待讨论 / 待设计` 行带任意 `task_book` 不判（判据句只管在途 / 待核销——逐字）。
@@ -371,6 +373,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 | AC-M2-14 | 收口两源：待讨论 / 待设计 → 已核销 **直通**（`evidence` 非空）；缺 `evidence` ⇒ 拒（行不变）；在途 → 已核销 ⇒ 拒（不可跳 待核销）；已核销 / 已废弃 现态 ⇒ 拒；撤回路径零改 | ②.2（2026-09-25 本批 · 用例 T33–T36） |
 | AC-M2-15 | 工具层参数守卫：写命令三工具非法入参（非对象 / 未知键 / 缺必填（含显式 `null`）/ 错型 / 非枚举 / `title` 空串 / 全空白）⇒ 拒（throw，零写、零库动作）+ 文案逐字（§3.2 P1–P6）；合法形（含复杂文本 / 可空 `null` 字段 / `cwd` 缺省）零回归 | §3.2（2026-09-27 快车道修复 · Gitee #IKIQGK / 台账 #472；需求档补行已落——AC-M2-15 + 变更记录 2026-09-27（父侧）） |
 | AC-M2-16 | 读命令守卫 + `executor` 空值口径（2026-09-28 · 台账 #473 / #474）：`ledger_query` / `ledger_count` 非法过滤参数（非对象 / 未知键 / 枚举外值（含数组 / 错型值）/ 错型）⇒ 拒（throw，零库动作）+ 文案逐字（§3.2 P1–P6）；合法形（缺省 / 可空 `null` / 过滤命中）零回归；`ledger_update` 显式 `executor: null` 与略去同判（进「在途」自动写会话 sessionId——§3.1 优先级链） | §3.1 / §3.2（需求侧补行**已落**——AC-M2-15 射程注 + AC-M2-16 新增，2026-09-28（父侧）） |
+| AC-M2-17 | **根解析面歧义拒**（2026-10-02 · #828）：歧义锚（≥2 候选——`projectRootView` `ambiguous` 态）⇒ `openLedger` 显式拒——**零写**（库档不建 / 不落行）+ 列候选（全列按名排序）+ 显式项目根指引；`ok` / `none` 两态零回归（none ⇒ `resolve(cwd ?? ".")` 兜底照旧）。断言 = 按族锚（「项目不可解析」——不逐字形） | §2.1（根解析面 · fix 轮） |
 
 **用例表（摘）**：T1 入条目 → 新行 id 自增 · T2 状态迁移 → status 更新 + `updated_at` 刷新 · T3 勾销 → status 已核销 + `closed_at` 写入、行保留（软删除）· T4 未决四态计数（混入归档行）· T5 `trigger=NULL` 通过 · T6 非法 status 拒 · T7 在途缺 task_book 拒 · T8 非主 agent 写 → 命令不存在 · T9 status NULL 拒 · T10 迁移表外迁移拒（行不变）。
 
@@ -417,6 +420,9 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 - T42 错误：缺指针形——`待设计` 行（`task_book` = `null` 常态）迁「在途」⇒ 写门拒（「必填」文案逐字）+ 行不变（仍 待设计）+ 零 SQLite 原文（中文文案断言）。
 - T43 错误：读命令守卫——`ledger_query` 非法形逐条（`status: 123` / `status: []` / `kind: "bogus"` / `board: 9` / `cwd: 3` / 未知键 / 入参非对象）⇒ 拒（文案逐字 · 零库动作）；`ledger_count` 同判；合法形（缺省 / 显式 `null` / 合法过滤命中 = 直调核函数等值）零回归。
 - T44 边界：`ledger_update` 显式 `executor: null` ≡ 略去——`待设计 → 在途`（带在档 `task_book`）⇒ 行 `executor` = 本会话 sessionId（`getSessionId()`）；显式串仍优先；非迁移纯字段更新读数零变。
+
+**用例表（续——根解析面（歧义拒），2026-10-02 批（#828）；实现面 = `thincoder-core/ledger-db.mjs` `openLedger`）**：
+- T45 错误：歧义锚（tmp 夹具——双带档子目录）⇒ 缺省径拒（读 / 写五工具同门）——**零写**（台账目录 / 库档不建 / 不落行）+ 文案含候选全列（绝对路径——按名排序）；none 态夹具 ⇒ 兜底键零改（既有空读行为回归）。
 
 ## 9. 边界（本档不做）
 
@@ -474,3 +480,5 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
   §3.1 优先级句收口为两分句（进边 / 出边——去「统一」歧义）；§3.2 受影响面收正（`ledger.mjs` 移出零改面 · 用例档单一读数「在位 · 198 行 ⇒ 本批 ≈240 行」· 状态标记一式「待建 / 在位 + as-of」）；§8 删重编号溯源注四处 · AC-M2-16 回指补「需求侧补行已落」· 用例表档注随动。零新语义。
 - 2026-09-29（**批 batch-mechanics · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-batch-mechanics.md` §1 · 台账 #559）：§5 增**暂缓批的行状态**句——暂缓不改行状态（行保持 `在途`）+ `evidence` 指针行（条件文本单源 = 批档 §1）。**零机制语义**（六态 ∕ 迁移表 ∕ 写门零改）。
 - 2026-09-29（**residuals-round2 批 · 文档面实施轮 · eng-designer**——承批档 `docs/batches/2026-09-29-residuals-round2.md` §2 #585）：§2.1 归一步 ∕ 级联面句收正——`notifyKey` 盘符步 = `normalizeCwd` 直调、分隔符折叠自持（内联盘符归一退役）。**零新语义**（输出逐字节不变）。
+- 2026-10-02（**会话锚解析修复批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-manifest-resolution-fix.md` §1 · 台账 #828）：§2.1 增「根解析面（歧义拒）」条——歧义锚不产键 / `openLedger` 显式拒（列候选）；§6.1 口径 2 补注（歧义 ⇒ 上游先拒，同源关系不变）。**键式本体零改**（实现 = 本批实施轮）。
+- 2026-10-02（**会话锚解析修复批 · fix 轮（评审轮次 1 发现 1–8 · 父侧 8/8 采纳）· eng-designer**——承批档 `docs/batches/2026-10-02-manifest-resolution-fix.md` §3）：§8 增 **AC-M2-17**（根解析面歧义拒——零写 + 列候选；断言 = 按族锚「项目不可解析」）+ 用例 **T45**；§2.1 指针行补指 AC-M2-17。**键式 / 写门语义零改**（拒绝面 = `openLedger` 上游——实现 = 本批实施轮）。

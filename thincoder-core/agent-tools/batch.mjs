@@ -181,7 +181,7 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
     }
     abs = resolveBatchDocPath(cwd, givenPath)
   } else if (depth0) {
-    abs = findInFlightBatch(cwd, batchDocBases(cwd))
+    abs = findInFlightBatch(cwd, batchDocBases(cwd)) // 歧义锚 ⇒ 基底 = 候选并集（#828——唯一在飞批照取 / ≥2 照列）
   } else {
     if (!batchDoc) {
       throw new Error("batch_segment: no batch record is bound to this caller — there is no path parameter by design (the target arrives via the spawn binding / the review instance key). Report the section as not written.")
@@ -280,7 +280,7 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
     async execute(args, ctx) {
       const agent = ctx?.agent ?? {}
       const cwd = agent.cwd ?? process.cwd()
-      const bases = batchDocBases(cwd)
+      const bases = batchDocBases(cwd) // 歧义锚 ⇒ 候选项目基底并集（#828——create / 在飞 / 写门基底集同源）
       const onWritten = injectedOnWrite
       /** depth-0 目标定位（D-BR21）：path 传 ⇒ 可读性门；缺省 ⇒ 唯一在飞批（depth-0）/
        *  绑定解析（子代理/评审）。status/close 经此注入 lifecycle；append 自带同款分支。 */

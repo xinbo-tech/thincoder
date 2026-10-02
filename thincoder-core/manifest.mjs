@@ -21,7 +21,8 @@
  *  - owningProject(target) → 归属形单点（沿祖先链取**最近带档目录**——KD-M1-30）。
  *  - projectView(target) → { state, root, path, manifest?, candidates?, errors?, matched }：**按用点解析**
  *    的读侧单点（归属 ∨ 发现兜底 / 五态 / 非抛错 / **零写**——KD-M1-24）。
- *  - resolveProjectRoot(cwd) = owningProject(cwd) ?? discoverProjects(cwd).root（KD-M1-30）。
+ *  - resolveProjectRoot(cwd)：项目根（归属 ∨ 发现——KD-M1-30）= `projectRootView(cwd).root`（薄委托）；
+ *    projectRootView(cwd) → { state: ok|ambiguous|none, root, candidates }：歧义直读形（判定单点——§2.2）。
  *  - resolveEngineeringManifest(cwd, { writer, init }) → 入口决策树（**非抛错**——KD-M1-20）：
  *    两端入口钩子与翻转面（拒翻）共用同一张树（判据单源；§2.8 F1）——失败码五枚
  *    `missing` / `invalid` / `no-project` / `ambiguous` / `init-failed`（KD-M1-28）。名中 `Engineering` = 历史命名（沿用不改名）；消费面 = 两端入口钩子 + 翻转面——**非**「模式拥有本模块」。
@@ -39,7 +40,7 @@ import { DEFAULT_MANIFEST, isValidDocRootValue, validateManifest, fillDefaults }
 import { MANIFEST_REL, discoverProjects, owningProject, resolveProjectRoot } from "./manifest-discovery.mjs"
 // 同名 re-export（2026-09-29 structure-split-2 · 台账 #620——缝 = 同名再出口）：发现 ∕ 归属族与校验 ∕ 默认值族出档
 // `manifest-discovery.mjs` ∕ `manifest-schema.mjs`；全迁移导出经本档转口——消费者 import 面零改。
-export { MANIFEST_REL, discoverProjects, discoverRepos, owningProject, resolveProjectRoot, _setProjectRootForTest, _resetProjectRootForTest } from "./manifest-discovery.mjs"
+export { MANIFEST_REL, discoverProjects, discoverRepos, owningProject, projectRootView, resolveProjectRoot, _setProjectRootForTest, _resetProjectRootForTest } from "./manifest-discovery.mjs"
 export { DEFAULT_MANIFEST, MANIFEST_SCHEMA, isValidDocRootValue, validateManifest } from "./manifest-schema.mjs"
 
 /**

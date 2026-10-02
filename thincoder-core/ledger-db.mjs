@@ -18,7 +18,7 @@ import { join, resolve } from "node:path"
 import { DatabaseSync } from "node:sqlite"
 
 import { configDir } from "./config-io.mjs"
-import { resolveProjectRoot } from "./manifest.mjs"
+import { projectRootView, resolveProjectRoot } from "./manifest.mjs"
 // 归一步单源（KD-LN1——直引，不抽新 util：先例 = peer-domains.mjs / traces/trace-store.mjs）。
 import { normalizeCwd } from "./session-slots.mjs"
 
@@ -102,9 +102,17 @@ export function ensureExecutorColumn(db, { exists } = {}) {
 
 /** 开库（cwd = 项目根——仅作关联键）→ DatabaseSync 句柄 + 幂等建表 + 老库幂等迁移（executor 列）。
  *  读面（create=false）：库文件不存在 → 返回 null（空账——读面不建库、无副作用）。
- *  写面（create=true）：库文件不存在自动建（台账目录随之创建）；项目根目录不存在 → 抛友好错误。 */
+ *  写面（create=true）：库文件不存在自动建（台账目录随之创建）；项目根目录不存在 → 抛友好错误。
+ *  **歧义锚**（≥2 候选——`projectRootView` `ambiguous` 态）⇒ **显式拒**（列候选 + 显式项目根指引；
+ *  零写——不静默回退锚；族锚「项目不可解析」，AC-M2-17）；兜底 `resolve(cwd ?? ".")` 只属 none 态。 */
 export function openLedger(cwd, { create = false } = {}) {
   const dir = resolve(cwd ?? ".")
+  // 歧义锚 ⇒ 显式拒（零写——消「缺省空读 / 错写落锚」双面症；读 / 写五工具同经本门）。
+  const view = projectRootView(dir)
+  if (view.state === "ambiguous") {
+    const list = view.candidates.map((c) => `- ${c}`).join("\n")
+    throw new Error(`项目不可解析：cwd ${dir} 下候选项目不是恰好一个（下列 ${view.candidates.length} 个）——台账按项目根键控，请显式给出项目根 cwd：\n${list}`)
+  }
   const file = ledgerDbPath(dir)
   if (!existsSync(dir)) {
     throw new Error(`项目目录不存在：${dir}——cwd 请给存在的项目根（相对路径按当前工作目录解析；缺省 = 会话项目根）`)
