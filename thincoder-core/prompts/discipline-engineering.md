@@ -119,17 +119,22 @@ The report must contain: what changed / why, the paths of files touched, how you
 
 ### Docs & ledger repo-self-contained (this repo keeps its own)
 1. **Ledger takes only this repo's entries**: the requirement pool and tech todos register only this repo's matters — never register matters outside this repo;
-   **out-of-repo pointers are equally forbidden** — no ledger pointers to docs, paths or evidence outside this repo.
+   **out-of-repo pointers are equally forbidden** — no ledger pointers to docs, paths or evidence outside this repo (repo-self-containment is enforced by schema).
 2. **Batch records same rule**: this repo's batch records register only this repo's scope (affected files and acceptance included).
 3. **The docs system is repo-self-contained**: requirement / design / batch / ledger docs are all kept in and written to THIS repo only;
    this repo's requirements must live in this repo — never write another repo's requirements into this repo's docs.
 4. **Missing layers must be built**: build any missing doc layer in this repo on the spot — never skip a repo-local doc with "it exists elsewhere" / "avoid duplication".
-5. **Ledger repo-self-containment**: the ledger takes only this repo's entries — never register matters outside this repo; **out-of-repo pointers are equally forbidden** (repo-self-containment is enforced by schema — same semantics, minus the "header" concept).
-6. **One batch = one implementation round, each with its own batch record**: one batch = one implementation round — each round carries ITS batch record (`batchDoc` = this batch's batch record).
-7. **Subagents write only this repo**: any subagent (eng-designer / eng-coder) writes ONLY this repo's files — including its own segment of this repo's batch record;
+5. **One batch = one implementation round, each with its own batch record**: one batch = one implementation round — each round carries ITS batch record (`batchDoc` = this batch's batch record).
+6. **Subagents write only this repo**: any subagent (eng-designer / eng-coder) writes ONLY this repo's files — including its own segment of this repo's batch record;
    writing anything outside this repo (including ghost-writing, incidental fixes, or any write to an out-of-repo path) = **violation**.
-8. **Out-of-repo changes = stop and report**: when this round genuinely needs to touch out-of-repo files, **stop and report** (what / why),
+7. **Out-of-repo changes = stop and report**: when this round genuinely needs to touch out-of-repo files, **stop and report** (what / why),
    and the main agent handles it **in a separate round** — never write outside this repo in this round.
+8. **Several repos coexisting = a normal state**: before writing, fix the **target repo** — write surfaces (batch record ∥ ledger ∥ write gate) take an **explicit target** (several candidates ⇒ an **explicit absolute path**); on an ambiguous resolution ⇒ **list the candidates, never choose for the user**; on a repeated failure ⇒ **report it and retry with an explicit path** (never brick the session).
+9. **A repo = one git repo** (the sole criterion): several ends / modules inside one repo (an end ≠ a repo) have **no cross-repo semantics between them**; every other repo follows the same rules.
+10. **Another repo gets the six segments** = **a session anchored there** + **a manifest in that repo**; on the **first operation in another repo** ⇒ build the missing layers on the spot and **book the records in its own repo**.
+11. **Findings in another repo** ⇒ **report them to the user for routing** (lose nothing, mix nothing) — they land in **that repo's ledger**, never mixed into this one.
+12. **Cross-repo coupling goes through the interface only**: each repo self-contains its design / implementation / closeout; **interface coordinates + the user's gate are the only coupling surface**; **commits happen per repo, each on its own**.
+13. **Splitting repos = an exception**: split only for independent deployment / release / lifecycle reasons; **never build coordination machinery just because several repos coexist**.
 
 ### Multi-implementation-face discipline
 
