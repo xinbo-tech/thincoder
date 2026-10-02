@@ -120,9 +120,16 @@ export const advisorTool = {
       const roots = resolveReviewTargetPaths(agent).map((r) => r.replace(/[\\/]/g, sep))
       // 按用点解析（2026-09-21 之裁收口 · 台账 #828）：逐文档按**其所属项目**（最近带档祖先）
       // 的 docRoot 判定；无主档文档回退会话根集判定（原行为零变）。
+      const ownerRootsCache = new Map()
       const ownRoots = (abs) => {
         const owner = owningProject(abs)
-        return owner ? resolveReviewRootsFor(owner).map((r) => r.replace(/[\\/]/g, sep)) : []
+        if (!owner) return []
+        let r = ownerRootsCache.get(owner)
+        if (!r) {
+          r = resolveReviewRootsFor(owner).map((x) => x.replace(/[\\/]/g, sep))
+          ownerRootsCache.set(owner, r)
+        }
+        return r
       }
       const invalidDocs = documents.filter((doc) => {
         const n = normAbs(doc, agent.cwd).replace(/[\\/]/g, sep)

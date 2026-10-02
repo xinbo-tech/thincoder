@@ -15,6 +15,8 @@
  *    KD-M1-12）：CLI make-agent.mjs / VSC setup.mjs 同判）；读错（权限等）→ 上抛不伪装成缺失（manifest.mjs 契约）。
  *    M6 的 `advisor.mjs` design-review 分类分支消费本导出
  *    （KD-M6-1——同源不重复实现；落 dispatch.mjs 会让 advisor 反向 import 门禁簇成环）。
+ *    **按用点形（2026-10-02 收口 · 台账 #828）**：`resolveReviewRootsFor(dir)`——同单点
+ *    非第二实现（按目标目录 ∥ 所属项目根解析；多档锚下各文档按各自项目判定）。
  * 2. `freezeWindowConflict(agent, absPaths)` —— D5 冻结窗口判据组装：被审文件集 =
  *    声明文档集（`inflightDesignReviewConflict` 同源 docAbs 腿）+ 批次档（`run.batchDoc`
  *    腿——评审绑定批档在途时，写批档同样致 stale）。dispatch.mjs
@@ -55,7 +57,10 @@ export function resolveReviewTargetPaths(agent) {
 }
 
 /** 同单点之**按用点解析**增量（2026-09-21「参数按用点解析」之裁收口 · 台账 #828）：按**目标目录**
- *  （其所属项目根——最近带档祖先）解析评审目标根集——多档锚下各文档按各自项目判定。 */
+ *  （其所属项目根——最近带档祖先）解析评审目标根集——多档锚下各文档按各自项目判定。
+ *  @param {string} dir 目标目录（项目根——最近带档祖先）
+ *  @returns {string[]} 评审目标目录绝对路径（去重）
+ */
 export function resolveReviewRootsFor(dir) {
   const man = readManifest(dir)
   const root = man.ok && man.manifest?.docRoot && typeof man.manifest.docRoot === "object"

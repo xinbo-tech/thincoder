@@ -270,6 +270,10 @@
 - **嵌套归属 / 错层两收正（本批）**：① **错层建档修**——目标路径在项目树内时 `writeRoot` / `manifestFilePath` 归**项目根**（批前：`resolveProjectRoot` 回落 `resolve(cwd)` ⇒ 会在子目录里造出第二份档——「错层」）；② **嵌套归属**：根 / 子双档时子内归子、根其余归根、不跨兄弟（§⑥ 归属形）。
 - **写门 / schema 计数 / 值形态零改**：五键集合 · `REVIEW_ROOT_KEYS` · `docRoot` 值形态（F7）· `writeManifest` writer 闸 · spawn 二道防线（AC-M1-8）——均零碰。
 - **消费面登记的空缺（本批不改）**：`write-gate.resolveReviewTargetPaths` 整档缺失仍回退 `DEFAULT_MANIFEST.docRoot`（**静默**——现状）；「该动作报明」在本批的模型侧承载 = 情境行（§2.6），动作侧仅机检 fail-closed 一族已报明。写门 / 台账是否加报明 = 后续批。**后续批登记（本批 fix 轮 · 发现 8）**：「非锚项目缺档 ⇒ 动作侧报明 / 建档」——需求 ②.3 的全消费面承接（本批只落锚项目情境行 + 会话起点建档；非锚项目动作面的报明 / 建档留后续批）。
+- **advisor 评审门文档合法根集（按用点收口 · 2026-10-02）**：设计评审文档合法性判定 = **会话根集**（`resolveReviewTargetPaths(agent)`——原函数行为零变）∪ **逐文档所属项目根集**（文档路径 `owningProject` ⇒ `resolveReviewRootsFor(owner)`——`thincoder-core/agent/write-gate.mjs` 同单点新导出，非第二实现）；**无主档文档**（祖先链无档）回退会话根集判定（原行为零变）。
+  **依据 / 落地** = §2.9 A 解析轴——2026-09-21 裁「参数按用点解析，会话不绑定项目」之评审门消费面收口（台账 #828——本族首笔；落地 = `thincoder-core/agent/write-gate.mjs` ∥ `thincoder-core/agent-tools/advisor.mjs` 两档单链 · 可 revert）。
+  **验收** = 功能级红绿（旧码 10/10 拒 ⇒ 新码 7/7 可；另 3 档 = `thincoder-core/prompts` 运行时提示词档——非文档层，不入评审文档清单）+ 行为级（会话重启后 `#827` 设计评审受理启动）+ 回归锚 `docs/batches/2026-10-02-light-round-7.test.mjs`（4 例）。
+  **边界 = 校验强度不变**（`criterion=scope-not-doc` 判据本体 ∥ 拒文案 ∥ `REVIEW_ROOT_KEYS` 键集零改——无主档回退会话根集判定 ∥ 声明外照拒，fail-closed 不减）；M4 单点 / M6 消费语义指针 = `docs/core/design/ENGINEERING-MODE-V2.md` §2.3 E6 ∥ §2.4 M6→M4 行 ∥ `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` F3（D2——本档不复述）。
 - **需求侧口径（已收正——单源指针）**：① `SPEC-MANIFEST.md` AC-M1-2（`:41`）= 会话权威值口径下「**不拒会话**（按用点报明 / 协助建档）」；② `PORTABILITY.md:63` FR11 = 2026-09-21 收正文本（**git 非前提** / 无项目 ⇒ 不拒翻、走建档流 / 可拒面 = 歧义 · 档非法两格）。本档只挂指针，不复述口径（D2）。
 
 - **写门二道防线归属**：AC-M1-5「非主 agent 写 → 拒」的**机械主门** = 本模块 `writeManifest` 的 `writer` 闸；**二道防线** = M5 spawn 门 `files` 域排除 `PROJECT-MANIFEST.json`（子代理无法声明该路径为写域）。二道防线不在本模块实现，仅记录承接关系——与 M4 档 KD-M4-2「manifest 写门落 M1」同源（架构 §2.3 E3）。
@@ -641,6 +645,8 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 AC-16 接线锁（`bin` 源码序）零改 · **AC-N5 / T13 收正**（门控第三腿「`agent.manifest` 缺失」⇒「无锚」（KD-M1-27）——无既往好值格归 T46 / T47）· AC-N1–AC-N4 / AC-N6 / T8–T12 / T14 零改。
 
 ## 4. 变更记录
+
+- 2026-10-02（**轻通道轮七 · 收尾设计形式化（advisor 评审门多档解析修复）· eng-designer**——承批档 `docs/batches/2026-10-02-light-round-7.md` §1；台账 #829 ∥ #828——本族首笔）：§2.5 新增「advisor 评审门文档合法根集（按用点收口）」条——判定形态（会话根集 ∪ 逐文档所属项目根集；无主档回退）+ 依据链（2026-09-21 裁 ⇒ 本笔收口）/ 验收（红绿 + 回归锚）/ 边界（校验强度不变）/ M4·M6 指针。**本档机制条文零改**（记录面——行为已随轻通道修复在盘）。
 
 - 2026-10-02（**文档清账轮 · 执行轮 1（core/design 前段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 4 处 R2 改指（`batch-paths.mjs` 现坐标——承名按届盘实核；§2 读面边界 ∥ 消费点表 ∥ F2 读面句）。**零新语义**。
 
