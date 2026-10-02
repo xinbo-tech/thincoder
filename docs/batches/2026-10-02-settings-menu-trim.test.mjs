@@ -81,7 +81,7 @@ test("腿① 六项集：条目序 ∥ 六项 emit 闭集 ∥ 「模型与档位
   }
   assert.equal(actions.some((entry) => entry[2] === "model"), false, "emit 零第七名（`model`）")
 
-  // 两子组 = 行为零改（gc ∥ index / help / about）∥ 帮助组零动（同二项第二入口）
+  // 两子组 = 行为零改（gc ∥ index / help / about）∥ 帮助组 = 检查更新… 首项 + sep（2026-10-03 桌面发布·阶段二批随正——父侧·可 revert）∥ 同二项第二入口
   const maintenance = group[9]
   assert.deepEqual(maintenance.submenu.map((i) => i.label), ["清理会话数据…", "重建会话索引"])
   maintenance.submenu[0].click()
@@ -92,7 +92,7 @@ test("腿① 六项集：条目序 ∥ 六项 emit 闭集 ∥ 「模型与档位
   aboutShortcuts.submenu[1].click()
   assert.deepEqual(natives, [["gc"], ["index"], ["about"]], "宿主自办三缝零改")
   assert.deepEqual(actions.at(-1), ["help"], "命令与快捷键 ⇒ emit(help) 零改")
-  assert.deepEqual(template[4].submenu.map((i) => i.label), ["命令与快捷键…", "关于 ThinCoder…"], "帮助组零动")
+  assert.deepEqual(template[4].submenu.map((i) => i.label ?? i.type), ["检查更新…", "separator", "命令与快捷键…", "关于 ThinCoder…"], "帮助组 = 检查更新… 首项 + sep（桌面发布·阶段二批新增——父侧随正 2026-10-03）∥ 命令与快捷键… ∥ 关于 ThinCoder…")
 })
 
 // ─── 腿 ② · 跨面闭集一致性（镜像 ≡ 视图名序去「模型与档位」∥ 读取面键序同值 ∥ 七段零动 pin）──────

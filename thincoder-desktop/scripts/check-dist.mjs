@@ -6,12 +6,14 @@
  * 依赖镜像纪律（打包带镜像）：`ELECTRON_MIRROR` ∥ `ELECTRON_BUILDER_BINARIES_MIRROR`——单源 = `docs/desktop/design/PROJECT.md` §5.7。
  * 用法：`node scripts/check-dist.mjs [dist 目录]`（缺省 = 包根 `dist/`；`postpackage` 自动跑 = 打包闸）。
  *
- * 断言项两形态（本表单源）：
+ * 断言项三形态（本表单源）：
  *   `{ rel, note }` —— 产物树相对路径存在性（安装包——名形携源版本）；
- *   `{ asar, entry, note }` —— asar 应用包内条目存在（核包随产物 R1 落；预载 ∥ 渲染面本批落）。
+ *   `{ asar, entry, note }` —— asar 应用包内条目存在（核包随产物 R1 落；预载 ∥ 渲染面本批落）；
+ *   更新面块（+4 · 2026-10-03 桌面发布·阶段二批——`docs/desktop/design/PACKAGING.md` §2.8.2）——latest.yml 两读 ∥ sha512 对盘 ∥ app-update.yml；基 64 填充不敏感（形 = 实施窗钉定）。
  * 版本面（P1 · 对位 check-vsix 断言 B ∕ F——父侧 2026-09-29）：两包内嵌版本逐字 = 源 `thincoder-core` ∕`thincoder-render-core` package.json；
  * D 族（prompts ∕ tool-docs 集合 + sha256）= 另轮登记（KD-B10-3 裁窄）。
  */
+import { createHash } from "node:crypto"
 import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -174,6 +176,39 @@ try {
   }
 } catch { /* dist 不可列——上方断言已逐条报 */ }
 
+// ── 更新面断言（+4——`docs/desktop/design/PACKAGING.md` §2.8.2；闸内 · fail-closed）──
+// 契约：publish = generic ⇒ 构建生成 latest.yml（dist 根）∥ app-update.yml（随包）；上传恒走站点小件（无上传面）。
+const UPDATE_URL = "https://thincoder.com/downloads/"
+const latestPath = join(distDir, "latest.yml")
+if (!existsSync(latestPath)) {
+  failures.push("missing artifact: latest.yml（dist 根——更新 feed 三件之一；§2.8.2①）")
+} else {
+  const latestYml = readFileSync(latestPath, "utf8")
+  const version = /^version:\s*(.+?)\s*$/m.exec(latestYml)?.[1]
+  if (version !== sourceVersion) failures.push(`latest.yml version 不符：${version} ≠ 源 ${sourceVersion}（§2.8.2①）`)
+  const fileUrl = /^files:\s*\n\s*-\s*url:\s*(.+?)\s*$/m.exec(latestYml)?.[1]
+  if (fileUrl !== INSTALLER_NAME) failures.push(`latest.yml files[0].url 不符：${fileUrl} ≠ ${INSTALLER_NAME}（§2.8.2②——逐字）`)
+  const fileSha = /^files:\s*\n\s*-\s*url:\s*.+?\n\s*sha512:\s*(.+?)\s*$/m.exec(latestYml)?.[1]
+  const installerPath = join(distDir, INSTALLER_NAME)
+  if (!existsSync(installerPath)) {
+    failures.push(`missing artifact: ${INSTALLER_NAME}（latest.yml sha512 对盘缺件；§2.8.2③）`)
+  } else if (fileSha === undefined) {
+    failures.push("latest.yml files[0].sha512 缺位（§2.8.2③）")
+  } else {
+    const actual = createHash("sha512").update(readFileSync(installerPath)).digest("base64").replace(/=+$/, "")
+    if (fileSha.replace(/=+$/, "") !== actual) failures.push(`latest.yml files[0].sha512 不符：安装包实算值 ≠ ${fileSha}（§2.8.2③——基 64（填充不敏感））`)
+  }
+}
+const appUpdatePath = join(distDir, "win-unpacked/resources/app-update.yml")
+if (!existsSync(appUpdatePath)) {
+  failures.push("missing artifact: win-unpacked/resources/app-update.yml（随包；§2.8.2④）")
+} else {
+  const appUpdateYml = readFileSync(appUpdatePath, "utf8")
+  if (!/^provider:\s*generic\s*$/m.test(appUpdateYml)) failures.push("app-update.yml provider 不符（须 generic；§2.8.2④）")
+  const url = /^url:\s*(.+?)\s*$/m.exec(appUpdateYml)?.[1]
+  if (url !== UPDATE_URL) failures.push(`app-update.yml url 不符：${url} ≠ ${UPDATE_URL}（§2.8.2④）`)
+}
+
 // ── 签名态信息行（§5.5——**不闸**；发布版要求 = 已签）──
 if (existsSync(join(distDir, INSTALLER_NAME))) {
   const certSize = peCertificateTableSize(join(distDir, INSTALLER_NAME))
@@ -187,4 +222,4 @@ if (existsSync(join(distDir, INSTALLER_NAME))) {
 for (const failure of failures) console.error(`✖ ${failure}`)
 if (failures.length > 0) process.exit(1)
 
-console.log(`✔ dist check passed: ${distDir}（断言 ${CHECKS.length} 条 + 版本逐字 B ∕ F）`)
+console.log(`✔ dist check passed: ${distDir}（断言 ${CHECKS.length} 条 + 版本逐字 B ∕ F + 更新面 4 条）`)

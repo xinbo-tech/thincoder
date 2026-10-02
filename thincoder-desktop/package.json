@@ -2,7 +2,7 @@
   "name": "thincoder-desktop",
   "version": "0.10.1",
   "private": true,
-  "description": "ThinCoder desktop — Electron shell (main / preload / renderer), zero-build, zero third-party runtime deps beyond the in-repo packages @thincoder/core and @thincoder/render-core (the latter = file: link, never published).",
+  "description": "ThinCoder desktop — Electron shell (main / preload / renderer), zero-build; runtime deps = the in-repo packages @thincoder/core and @thincoder/render-core (the latter = file: link, never published) plus electron-updater (the one third-party runtime dependency — desktop auto-update).",
   "type": "module",
   "main": "src/main/main.mjs",
   "scripts": {
@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "@thincoder/core": "^0.9.5",
-    "@thincoder/render-core": "file:../thincoder-render-core"
+    "@thincoder/render-core": "file:../thincoder-render-core",
+    "electron-updater": "^6.8.9"
   },
   "devDependencies": {
     "electron": "^44.4.5",

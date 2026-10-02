@@ -4,7 +4,7 @@
 
 Electron desktop shell for the ThinCoder AI coding agent: a main process (`src/main/`), a sandboxed preload bridge (`src/preload/preload.cjs`), and a zero-build renderer (`renderer/`) served over the privileged `app://desktop/` scheme. Shared mechanisms live in the core package `@thincoder/core`; shared UI pieces live in `@thincoder/render-core` (the same source the VS Code webview consumes).
 
-Zero third-party runtime dependencies beyond the two in-repo packages above. ESM `.mjs` throughout, no build/bundling step.
+One third-party runtime dependency: `electron-updater` (desktop auto-update; single channel — generic feed, see `../docs/desktop/design/PACKAGING.md` §2.8); everything else is the two in-repo packages above. ESM `.mjs` throughout, no build/bundling step.
 
 ## Commands
 

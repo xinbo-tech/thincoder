@@ -1,6 +1,6 @@
 # electron-builder.yml — ThinCoder 桌面端打包配置（阶段一 = Windows NSIS x64 安装包）。
-# 单源 = docs/desktop/design/PROJECT.md §5.1（配置契约——逐值照抄）；构建序列 = §5.2；签名 = §5.3；图标 = §5.4。
-# 构建 = `npm run package`（prepackage 物化 → electron-builder → postpackage = check-dist 闸）；镜像纪律 = §5.7。
+# 单源 = docs/desktop/design/PACKAGING.md §2.1（配置契约——逐值照抄）；构建序列 = §2.2；签名 = §2.3；图标 = §2.4。
+# 构建 = `npm run package`（prepackage 物化 → electron-builder → postpackage = check-dist 闸）；镜像纪律 = §2.7。
 appId: com.thincoder.desktop
 productName: ThinCoder
 
@@ -17,8 +17,12 @@ files:
 # 应用包 = dist/win-unpacked/resources/app.asar（缺省即 true——核包断言读面）
 asar: true
 
-# 显式不发布（官网托管独立通道）——消 v26 update-info ∥ app-update.yml 路径（缺省 ⇒ nsis 尾段 channel null 崩溃、postpackage 闸被截断）——§5.1
-publish: null
+# 更新面总闸（KD-71 · 桌面发布·阶段二批——§2.1 行）：generic provider 契约 ⇒ update-info（`latest.yml`）∥
+# `app-update.yml` 随构建生成（缺省 ∥ `null` 均不产——缺省还会触发 v26 nsis 尾段 channel null 崩溃、postpackage 闸被截断）；
+# generic 无上传面——上传恒走站点小件（§2.8.3）。
+publish:
+  provider: generic
+  url: https://thincoder.com/downloads/
 
 win:
   target:
@@ -27,9 +31,9 @@ win:
         - x64
   icon: build/icon.ico
   signtoolOptions:
-    # 签名 hook（两态同管线）：证书在位 ⇒ 实签；缺席 ⇒ 跳过 + 明示（构建零失败）——§5.3
+    # 签名 hook（两态同管线）：证书在位 ⇒ 实签；缺席 ⇒ 跳过 + 明示（构建零失败）——§2.3
     sign: scripts/win-sign.mjs
-    # 单算法显式（v26 缺省 = sha1 + sha256 ⇒ 自定义 hook 每文件被调两轮；运行面单轮）——§5.1
+    # 单算法显式（v26 缺省 = sha1 + sha256 ⇒ 自定义 hook 每文件被调两轮；运行面单轮）——§2.1
     signingHashAlgorithms: ["sha256"]
 
 nsis:
@@ -38,5 +42,5 @@ nsis:
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
 
-# 产物名（NSIS 安装包）——版本随源 package.json（check-dist §5.5 断言面）
+# 产物名（NSIS 安装包）——版本随源 package.json（check-dist §2.5 断言面）
 artifactName: ThinCoder-Setup-${version}.${ext}

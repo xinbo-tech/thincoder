@@ -483,6 +483,10 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
   **核两档** = `thincoder-core/history-window.mjs` **194**（记录直通 opt-in——核面例外登记 = §6.2 A4 ∥ §8）∥ `thincoder-core/context.mjs` **440（零改）**；
   测试面 = 批内件 `docs/batches/2026-09-30-digest-persistence.test.mjs`（**九腿**（原五腿 + 复盘腿 6 + 修复轮 3 腿 7）· **9/9 绿**——父侧复跑 ✓）+ 原两 digest 批内件随动 ∥ 退役二择归 #708；逐行「现行 ⇒ 实读落值」表 = §4.2 本批块。
 
+**本批（桌面发布·阶段二批 · #810 · 2026-10-02）触碰越层一档 ⇒ 越 300 咨询线**：`thincoder-desktop/src/main/window.mjs` **288 ⇒ 336**（实施落盘实读 2026-10-03——`onNative` +`update` 转口 ∥ 更新对话框族（确认 ∥ 结果两态）——逐档「现行 ⇒ 实读」= `docs/desktop/design/PACKAGING.md` §3.3 行 7 ∥ `docs/desktop/design/MENU.md` §3.5 行 3）；
+  **拆分预案** = 冒烟读数族出档评估（拟新增 `thincoder-desktop/src/main/smoke.mjs`——`PROBES` ∥ `runSmoke` ∥ `probesSatisfied` 族；消费面 = `main.mjs` 冒烟链）；
+  **消解窗口** = 该档下次**结构性**触碰的批（注释 ∕ 坐标 ∥ 词值 ∥ 行级小修不计）。
+
 **测试面三分落点**（对回上表用例模块行）：
 
 - **自动**（本端单入口 `thincoder-desktop/test/run.mjs`）：`host-floor` 启动下限自检 T-DSK15 · `guard-closure` 渲染面静态闭包守卫 T-DSK16 · `session-contract` 会话族与跨端接续 T-DSK3 / T-DSK12 · `store` 状态树与增量渲染 T-DSK17–T-DSK20 · `views` 左列三态与词表（T-DSK1 / T-DSK2 / T-DSK3 的渲染面 + 中区外壳结构面 T-DSK20 / T-DSK3 标签条语义行——U45–U52）。
@@ -895,7 +899,7 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
 
 ## 6. 验收判据回指需求
 
-### 6.1 功能点 D1–D39
+### 6.1 功能点 D1–D41
 
 （**D35 设计面 = `docs/desktop/design/ACTIVITY.md` §2「本批注（右栏池极多实例可滚动 · D35）」**（2026-10-02 建——实读结论 ∥ 复现判据两腿 ∥ 候选映射 ∥ 收口规则）；实现形随复现收口（台账 #801）。）
 
@@ -981,6 +985,8 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
 **（设置面样式收正批批块——迁出）** → 见 `docs/desktop/design/SETTINGS.md` §4（验收面批块——需求回指 ∥ 设计单源 ∥ 机检面 ∥ 真机面 ∥ 离线不可产面句；as-of 2026-10-02）。
 
 **（设置菜单升级批批块——迁出）** → 见 `docs/desktop/design/MENU.md` §4（菜单半）∥ `docs/desktop/design/SETTINGS.md` §4（设置半）（验收面批块——需求回指 **D38 ∥ D39** ∥ 设计单源 ∥ 机检面 ∥ 真机面 ∥ 离线不可产面句；as-of 2026-10-02）。
+
+**（桌面发布·阶段二批批块——迁出）** → 见 `docs/desktop/design/PACKAGING.md` §4.3（验收面批块——需求回指 **D40 ∥ D41** ∥ 设计单源 ∥ 机检面 ∥ 真机面 ∥ 离线不可产面句；as-of 2026-10-02）。
 
 ### 6.2 验收 A1–A4 与依赖面 P1–P4
 
@@ -1758,3 +1764,5 @@ T-DSK30 的机检面 = `thincoder-desktop/test/views-attach.test.mjs`（附件�
 - 2026-10-02（**桌面 UX 收尾批 · 收口补充轮（#31）· eng-designer**——承批档 `docs/batches/2026-10-02-desktop-ux-closeout.md` §1 · 台账 #697）：§4.1 越层段三档读数随正（`thincoder-desktop/renderer/i18n.mjs` **404 ⇒ 408**——键数链注续链（同笔按语义边界折行——消超宽）∥ `thincoder-desktop/renderer/i18n-views.mjs` **362 ⇒ 374**（P1 两键两语 + 组注 ∕ 键面注）∥ `thincoder-desktop/src/main/settings.mjs` **320 ⇒ 325**（`indexStatus()` 回执 +2 键透传）——各携前读链）。**零新语义**（读数随正）。明细 = 批档 §2。
 - 2026-10-02（**文档清账轮 · 执行轮 5（桌面重段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 25 处处置（R1 改指 13 处——承接全路径：`thincoder-desktop/` ×11 ∥ `thincoder-render-core/` ×1 ∥ `thincoder-cli/src/tui/` ×1；R3 裸名化 12 处——`chat-digest.mjs` ×9 ∥ `chat-digest-seat.mjs` ×2 ∥ `mount-head.mjs` ×1，已删 ∕ 改名档去目录段）；宽面销项 17 行 + 1 行改指越线同轮折（182 ∥ 370 ∥ 372 ∥ 390 ∥ 396 ∥ 397 ∥ 443 ∥ 446 ∥ 449 ∥ 450 ∥ 453 ∥ 930 ∥ 1043 ∥ 1046 ∥ 1047 ∥ 1048 ∥ 1067 ∥ 445——语义零改）。**零新语义**。
 - 2026-10-02（**桌面发布·阶段二批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-desktop-release-stage2.md` §1 · 台账 #810 ∥ #826）：§2 KD 索引增两行（**KD-71** ∥ **KD-72** ⇒ `docs/desktop/design/PACKAGING.md` §1）；§5 指针收正（发行业两面补列——自动更新 §2.8 ∥ 官网桌面面 §2.9 ∥ 承接 §2.10）；§8 边界三处翻正（本轮排除列表 ∥ 两批行「检查更新 ∥ 自动更新」——桌面发布·阶段二批落标）+ 本批边界行新立；§7 增 **T-DSK60** 指针行；§10 增 **DK** 指针行。**产品码零触（设计轮）**。明细 = 批档 §2。
+- 2026-10-03（**桌面发布·阶段二批 · 修复轮（评审轮 1 · 发现 1 ∥ 3 逐号 · 父侧裁 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-02-desktop-release-stage2.md` §3 轮次 1 · 台账 #810 ∥ #826）：§6.1 表头 **D1–D39 ⇒ D1–D41** + 本批批块指针行（→ `docs/desktop/design/PACKAGING.md` §4.3）；§4.1 越层段新立本批行（`thincoder-desktop/src/main/window.mjs` **288 ⇒ ≈305**——新越层档 ⇒ 预案 = 冒烟读数族出档评估（拟新增 `thincoder-desktop/src/main/smoke.mjs`）· 消解窗口 = 下次结构性触碰的批）。**零新语义**（收正 ∥ 登记）。明细 = 批档 §2 修复轮块。
+- 2026-10-03（**桌面发布·阶段二批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-02-desktop-release-stage2.md` §2 ∥ §5 · 台账 #810）：§4.1 越层段本批行册值收正（`thincoder-desktop/src/main/window.mjs` **288 ⇒ ≈305** ⇒ **288 ⇒ 336**——实施落盘实读 2026-10-03；逐档「现行 ⇒ 实读」= `docs/desktop/design/PACKAGING.md` §3.3 行 7 ∥ `docs/desktop/design/MENU.md` §3.5 行 3）。**零新语义**（回填）。明细 = 批档 §2 回填轮块。

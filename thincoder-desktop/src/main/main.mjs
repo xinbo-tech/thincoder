@@ -5,9 +5,13 @@
  * （调用点先于协议 / 窗口注册——U4）→ `registerAppScheme()`（ready 前）→ `await app.whenReady()` → `serveAppProtocol()`
  * → `registerIpcHandlers()` → `createWindow()` → 加载完 → 冒烟读回 → 单行 JSON → `app.exit(0)`；常态（无 `--smoke`）= 窗口常驻。
  * **桌面空闲唤醒批**：通知装配注入三行（`Notification` 构造 ∕ 焦态 ∕ 聚焦——闭包读 `win`；策略面住 `notify.mjs`）。
+ * **桌面发布·阶段二批（KD-71）**：自动更新装配——`createRequire` 取 `autoUpdater`（CJS 互操作）∥ 注入五缝
+ * （`updater` ∥ `notify` ∥ `menuRefresh` ∥ `dialog` ∥ `log`）∥ 延时自检点火（10s 一次——武装门 = `isPackaged ∧ 非 --smoke`）；
+ * 策略面零 electron 住 `update.mjs`。
  * stdout 只许一行 JSON（读数面；日志与栈一律 stderr）——`process.stdout.write` 仅本档一处。
  */
 import { app, Notification } from "electron"
+import { createRequire } from "node:module" // 自动更新（KD-71）：CJS 互操作——`require("electron-updater")` 取 `autoUpdater`
 import { hostFloorMet, MIN_NODE, sqliteAvailable } from "./host-floor.mjs"
 import { protocolStats, registerAppScheme, serveAppProtocol } from "./protocol.mjs"
 import { ipcStats, setAgentHost, setLedgerEmit } from "./ipc.mjs"
@@ -25,7 +29,12 @@ import { loadConfig } from "@thincoder/core/config.mjs"
 import { onConfigSelfWrite } from "@thincoder/core/config-io.mjs" // 快照门运行期源②（同进程自写——config-watch 按设计抑制自写）
 // 台账刷新面收尾（R8 —— 拍面随开项目链重锚；窗口关 = 退出径同点——`stopLedgerRefresh` 幂等、核 interval 已 unref）。
 import { stopLedgerRefresh } from "./project-info.mjs"
-import { NEGATIVE_PROBE_COUNT, createWindow, probesSatisfied, runSmoke } from "./window.mjs"
+import {
+  NEGATIVE_PROBE_COUNT, createWindow, probesSatisfied, refreshMenu, runSmoke,
+  setUpdateFace, updateConfirmDialog, updateResultDialog,
+} from "./window.mjs"
+import { menuLabels } from "./menu-words.mjs" // 更新面词表现读注入（KD-71——语言随动；值面单源 = 同档）
+import { createUpdateFace } from "./update.mjs" // 更新面策略面（零 electron ∕ 零库 import——五缝注入装配于本档）
 // config 写盘感知（R8 · 桌面功能对位批 · C3）：核件 `config-watch` 桌面壳（`node:fs.watch` 源 + 自写抑制）。
 import { startConfigWatch } from "./config-watch.mjs"
 // 提示锚取值表（R4 · 桌面功能对位批 · #519）：核缝供值面（`prompt-files.mjs` `configurePromptInjections`）。
@@ -35,6 +44,11 @@ import { DESKTOP_PROMPT_INJECTIONS } from "./prompt-injections.mjs"
 // 提示锚注册：**进程入口、任何装配之前**一次性（先例 = CLI `bin/thincoder.mjs:32` ∕ VSC `extension.mjs:92`）——
 // 调用期应用（工具表装配晚于本行）⇒ 无导入序要求；漏配 ⇒ 锚字面静默进模型工具描述。
 configurePromptInjections(DESKTOP_PROMPT_INJECTIONS)
+
+// 自动更新（KD-71 ∥ §2.8.1 · 桌面发布·阶段二批）：`electron-updater`（6.8.9）= CJS ⇒ `createRequire` 取 `autoUpdater`
+// （electron 原语全落本装配面；策略面 `update.mjs` 零 electron ∕ 零本库顶层 import——注入缝形）。
+const require = createRequire(import.meta.url)
+const { autoUpdater } = require("electron-updater")
 
 const SMOKE = process.argv.includes("--smoke")
 const TIMEOUT_MS = 20_000
@@ -182,6 +196,31 @@ async function main() {
   // 自身写盘不抖动；端侧同源订阅另见上方源②）。生命周期随窗口：窗口 closed ⇒ 撤监视（单窗应用 = 退出径同点）。
   const configWatch = startConfigWatch({ onChange: () => { emit("ev:config", { at: Date.now() }); syncHeapSnapshot() } }) // 外部写盘：出站推送 + 快照门热读同拍
   win.on("closed", () => { configWatch.dispose(); unsubscribeSelfWrite(); stopLedgerRefresh(); stopSampler(); heapWatch.stop() }) // 生命周期随窗口：五长活面（监视 + 自写订阅 + 台账拍面 + 采样器 + 堆看门狗）同点收尾
+  // （更新面（KD-71）不入本列：启动定时器 = 一次性且 `unref`；`autoUpdater` 监听 = 进程寿命面——`autoInstallOnAppQuit` 需其存活至退出径。）
+  // 桌面自动更新（KD-71 ∥ §2.8.1 · 桌面发布·阶段二批）：装配面——`autoUpdater`（CJS 取——见上）+ 注入五缝
+  // （`updater` ∥ `notify` ∥ `menuRefresh` ∥ `dialog` ∥ `log`）+ 词表现读注入（`menuLabels`——语言随动）；武装门 =
+  // `app.isPackaged ∧ 非 --smoke`（未打包 ⇒ 库自身 `isUpdaterActive()` 返回 false——双保险；`--smoke` 读数面零增字段）。
+  const updateFace = createUpdateFace({
+    enabled: app.isPackaged && !SMOKE,
+    updater: autoUpdater,
+    words: () => {
+      try { return menuLabels(loadConfig()?.locale) } catch (error) {
+        console.error("[update] menu words readback failed:", error)
+        return menuLabels("en")
+      }
+    },
+    // 通知落子（原生 `Notification`；点击 ⇒ 聚焦主窗——**不直接安装**：安装入口唯一 = 菜单项）
+    notify: ({ title, body }) => {
+      const toast = new Notification({ ...(title ? { title } : {}), body })
+      toast.on("click", () => { if (win && !win.isDestroyed()) { win.show(); win.focus() } })
+      toast.show()
+    },
+    menuRefresh: refreshMenu, // 状态迁移 ⇒ 菜单重建（重建点⑥）
+    dialog: { confirmRestart: updateConfirmDialog, result: updateResultDialog }, // 更新对话框族（落子 = `window.mjs`）
+    log: (line) => console.error(line),
+  })
+  setUpdateFace(updateFace) // 转口：`onNative("update")` 落子 + 帮助组项 label 读面（`window.mjs` 持有）
+  updateFace.scheduleStartupCheck() // 启动自检：ready 后延时 10s 一次/会话（未武装 ⇒ 不点——武装门内判）
   // 启动拍（R1 · 会话维护 · KD-T4② 端层显式点火）：窗口起后两枚延迟拍（核侧 3s 启动窗外；异步非阻塞、
   // 失败静默 —— 索引 = 派生品）。GC 拍须项目 cwd：开机未开项目 ⇒ 此处零动作，由恢复入口（`ipc.mjs`
   // `session:resume` 成功径）同款点火；索引拍 = 全根扫描（无需 cwd），此处恒点火（核内每进程一次去重）。

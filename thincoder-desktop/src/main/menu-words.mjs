@@ -1,16 +1,22 @@
 /**
- * menu-words.mjs — 应用菜单**词表单源**（#533 立档 ∥ 菜单体系批扩至全菜单 —— D36 · 台账 #811；决策单源 =
- * `docs/desktop/design/PROJECT.md` §2 **KD-65 ③** ∥ 设置菜单升级批 · #817 **KD-67 ③**）：组名五（文件 ∥ 编辑 ∥ 视图 ∥
+ * menu-words.mjs — 应用菜单**与更新面词表单源**（#533 立档 ∥ 菜单体系批扩至全菜单 —— D36 · 台账 #811；决策单源 =
+ * `docs/desktop/design/PROJECT.md` §2 **KD-65 ③** ∥ 设置菜单升级批 · #817 **KD-67 ③** ∥ 桌面发布·阶段二批 **KD-71**
+ * 〔`docs/desktop/design/PACKAGING.md` §1 ∥ §2.8.1——更新面十一键〕）：组名五（文件 ∥ 编辑 ∥ 视图 ∥
  * **设置** ∥ 帮助）+ 条目 + role 标签 + 主题三值 + 最近/关于/占位词 + 设置组三键（`settings` ∥ `settingsOpen` ∥
- * `aboutShortcuts`）—— 应用菜单词值只住本档（逐键 zh/en 双值；en 回落）。
+ * `aboutShortcuts`）+ 更新面十一键（菜单四 = `checkUpdate` ∥ `checkingUpdate` ∥ `downloadingUpdate` ∥ `restartUpdate`；
+ * 对话框/通知七 = `updateDialogTitle` ∥ `updateNotice` ∥ `updateUpToDate` ∥ `updateFailed` ∥ `updateRestartConfirm` ∥
+ * `updateRestartOk` ∥ `updateRestartCancel`）—— 应用菜单与更新面词值只住本档（逐键 zh/en 双值；en 回落）。
  *   与右键编辑菜单词表（`src/main/context-menu.mjs` —— 经渲染面宿主表 `menu.edit.*` 键取值）**分档**：菜单面不同
  *   （应用菜单 ∕ 右键菜单）· 值源形不同（主进程自持常量对 ∕ 宿主表词键投影）—— 两词表两事不混，**键面零重叠**
  *   （`menu.edit.*` 四值经 `contextMenuLabels(locale)` 读取复用 —— 编辑四值零第二份，键不入本表）。
  *   **设置组（#817）**：顶级组名 = 新键 `settings`（「设置」/「Settings」——原「维护」改名）；`maintenance` 键
  *   **保留**（值「维护」/「Maintenance」不变 —— 现役 = 设置组内子组标签）；六组段名经 `settingsSectionLabels(locale)`
  *   读器投影（值单源 = 渲染面 `HOST_DICT` `settings.section.*` —— 零第二份；枚举 = 菜单六组名——收窄批 #820）。
+ *   **更新面（KD-71 · 桌面发布·阶段二批）**：菜单四项注入 `app-menu.mjs`（状态机 label）；对话框/通知七项注入
+ *   `update.mjs`（消费 = 装配面 `main.mjs` 以 `words()` 现读注入）——`updateNotice` ∥ `updateUpToDate` ∥
+ *   `updateRestartConfirm` 三句携 `{version}` 占位（消费面替换；括注形 = 各语言自持）。
  *   `menuLabels(locale)` = 纯函数（零 `electron` ∕ 零 `node:` ⇒ 平 node 直测）：语言经核归一（`zh-CN` ⇒ `zh`；
- *   缺 ∕ 空 ∕ 未知 ⇒ en —— 沿 `context-menu.mjs` 同款归一）；返回键集 = 全菜单键集（32 键，见 WORDS）。
+ *   缺 ∕ 空 ∕ 未知 ⇒ en —— 沿 `context-menu.mjs` 同款归一）；返回键集 = 全菜单与更新面键集（43 键，见 WORDS）。
  *   **zh 词值**（#533 裁定形：按 en 项语义直译；组名随译 = 是）；en 现值 = 回归面字面（组名 ∥ role 默认文案 ∥
  *   条目旧字面逐字；role 默认文案 = Electron 英文硬编码，直采即 en-only 债 ⇒ 显式覆写，单源 = D27 批实读）。
  *   窗口组（minimize/zoom）随 D36 退场，零键。
@@ -54,6 +60,18 @@ const WORDS = Object.freeze({
     aboutShortcuts: "About & Shortcuts",
     helpCommands: "Commands & Shortcuts…",
     about: "About ThinCoder…",
+    // 更新面（KD-71 · 桌面发布·阶段二批）：菜单四 + 对话框/通知七；`{version}` 占位 = 消费面替换
+    checkUpdate: "Check for Updates…",
+    checkingUpdate: "Checking for updates…",
+    downloadingUpdate: "Downloading update…",
+    restartUpdate: "Restart to install update",
+    updateDialogTitle: "ThinCoder Update",
+    updateNotice: "Update ready — restart to install automatically (v{version})",
+    updateUpToDate: "You're up to date (v{version})",
+    updateFailed: "Update check failed",
+    updateRestartConfirm: "Restart and install the update (v{version})? In-progress tasks will be interrupted.",
+    updateRestartOk: "Restart & Install",
+    updateRestartCancel: "Cancel",
   }),
   zh: Object.freeze({
     file: "文件",
@@ -88,6 +106,18 @@ const WORDS = Object.freeze({
     aboutShortcuts: "关于与快捷键",
     helpCommands: "命令与快捷键…",
     about: "关于 ThinCoder…",
+    // 更新面（KD-71 · 桌面发布·阶段二批）：菜单四 + 对话框/通知七；`{version}` 占位 = 消费面替换
+    checkUpdate: "检查更新…",
+    checkingUpdate: "正在检查更新…",
+    downloadingUpdate: "正在下载更新…",
+    restartUpdate: "重启以安装更新",
+    updateDialogTitle: "ThinCoder 更新",
+    updateNotice: "更新已就绪——重启后自动安装（v{version}）",
+    updateUpToDate: "已是最新版本（v{version}）",
+    updateFailed: "检查更新失败",
+    updateRestartConfirm: "重启并安装更新（v{version}）？进行中的任务将被中断。",
+    updateRestartOk: "重启安装",
+    updateRestartCancel: "取消",
   }),
 })
 

@@ -2,6 +2,12 @@
 
 All notable changes to ThinCoder Desktop are documented here.
 
+## [Unreleased]
+
+### Added
+
+- **自动更新（Windows）**：启动后自动检查更新——新版本后台静默下载（不打断会话），下载完成在菜单「帮助 → 检查更新」重启安装，或下次退出应用时自动完成安装；手动下载覆盖安装兜底（配置与会话不丢）。更新源 = 官网 `downloads/`（generic feed）；不自动发布——上传恒走发布窗小件。详见 `../docs/desktop/design/PACKAGING.md` §2.8（号 = 发布窗定号）。
+
 ## [0.10.1] — 2026-10-01
 
 > 首发（桌面端新号段 —— CalVer 各端同制，单源 = `../docs/RELEASE.md` §4）

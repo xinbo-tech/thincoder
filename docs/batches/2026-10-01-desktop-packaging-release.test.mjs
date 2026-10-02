@@ -6,10 +6,13 @@
  *   L3 check-dist 断言（fixture 树 + 负控缺件判红——子进程走真实 CLI，收 exit code）
  *   L4 签名 hook 纯函数（`scripts/win-sign.mjs`——探测 ∥ 载体二择 ∥ 命令构造；**不跑签名路径**）
  *   L5 配置契约（`electron-builder.yml` §5.1 逐值 + electron-builder scheme 真校验）
+ *   （**2026-10-03 桌面发布·阶段二批 · 父侧随正·可 revert**：L3 fixture 补更新面两件〔latest.yml ∥ app-update.yml〕
+ *    + 更新面负控一腿〔check-dist +4 断言 = `PACKAGING.md` §2.8.2〕∥ L5 `publish` 断言 ⇒ provider 契约。）
  * fixture 落 `.thincoder/tmp/`（跑完自清理）；单源 = `docs/desktop/design/PROJECT.md` §5 ∥ 批档 §2.3。
  */
 import { strict as assert } from "node:assert"
 import { spawnSync } from "node:child_process"
+import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs"
 import { createRequire } from "node:module"
 import { dirname, join, resolve } from "node:path"
@@ -246,12 +249,36 @@ const ASAR_ENTRIES = () => [
   ["renderer/index.html", Buffer.from("<!doctype html>\n")],
 ]
 
-function buildDistFixture(name, { installer = true, certSize = 0, entries = ASAR_ENTRIES(), extras = [] } = {}) {
+function buildDistFixture(name, { installer = true, certSize = 0, entries = ASAR_ENTRIES(), extras = [], updateFace = true } = {}) {
   const dir = freshDir(name)
   const resources = join(dir, "win-unpacked", "resources")
   mkdirSync(resources, { recursive: true })
   writeFileSync(join(resources, "app.asar"), buildAsar(entries))
-  if (installer) writeFileSync(join(dir, INSTALLER_NAME), buildPe(certSize))
+  if (installer) {
+    const installerBuf = buildPe(certSize)
+    writeFileSync(join(dir, INSTALLER_NAME), installerBuf)
+    if (updateFace) {
+      // 更新面两件（check-dist +4 断言 · §2.8.2）：latest.yml（dist 根）+ app-update.yml（随包）；sha512 自实算同源。
+      const sha = createHash("sha512").update(installerBuf).digest("base64")
+      writeFileSync(join(dir, "latest.yml"), [
+        `version: ${sourceVersion}`,
+        "files:",
+        `  - url: ${INSTALLER_NAME}`,
+        `    sha512: ${sha}`,
+        `    size: ${installerBuf.length}`,
+        `path: ${INSTALLER_NAME}`,
+        `sha512: ${sha}`,
+        "releaseDate: '2026-10-01T00:00:00.000Z'",
+        "",
+      ].join("\n"))
+      writeFileSync(join(resources, "app-update.yml"), [
+        "provider: generic",
+        "url: https://thincoder.com/downloads/",
+        "updaterCacheDirName: thincoder-desktop-updater",
+        "",
+      ].join("\n"))
+    }
+  }
   for (const extra of extras) writeFileSync(join(dir, extra), buildPe(0))
   return dir
 }
@@ -294,6 +321,13 @@ test("L3 check-dist · 负控：旧构建残留（版本不匹配）判红（exi
   assert.match(result.stderr, /版本不匹配：dist 含 ThinCoder-Setup-0\.0\.1\.exe/)
 })
 
+test("L3 check-dist · 负控：更新面缺件（latest.yml ∥ app-update.yml 无）判红（exit 1 · fail-closed——§2.8.2）", () => {
+  const result = runCheckDist(buildDistFixture("dist-no-update-face", { updateFace: false }))
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /missing artifact: latest\.yml/)
+  assert.match(result.stderr, /missing artifact: .*app-update\.yml/)
+})
+
 test("L3 check-dist · 负控：dist 缺位判红（exit 1 · 明示）", () => {
   const result = runCheckDist(join(TMP, "dist-absent"))
   assert.equal(result.status, 1)
@@ -319,7 +353,7 @@ test("L5 配置 · §5.1 逐值照抄（appId ∥ productName ∥ nsis x64 ∥ i
   assert.equal(builderConfig.win.signtoolOptions.sign, "scripts/win-sign.mjs")
   assert.ok(existsSync(join(DESKTOP, builderConfig.win.signtoolOptions.sign)), "hook 档在包根相对位（resolveFunction 解析基数 = cwd = 包根）")
   assert.deepEqual(builderConfig.win.signtoolOptions.signingHashAlgorithms, ["sha256"], "单算法显式（v26 缺省 = sha1 + sha256 ⇒ hook 每文件被调两轮）——§5.1")
-  assert.equal(builderConfig.publish, null, "显式不发布（官网托管独立通道）——消 v26 update-info ∥ app-update.yml 路径（§5.1）")
+  assert.deepEqual(builderConfig.publish, { provider: "generic", url: "https://thincoder.com/downloads/" }, "provider 契约（generic——桌面发布·阶段二批 §2.1；构建生成 latest.yml ∥ app-update.yml，上传恒走站点小件 §2.8.3）")
   assert.equal(builderConfig.nsis.oneClick, false)
   assert.equal(builderConfig.nsis.perMachine, false)
   assert.equal(builderConfig.nsis.allowToChangeInstallationDirectory, true)

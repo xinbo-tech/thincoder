@@ -6,6 +6,9 @@
  * ——#533：`menuLabels(locale)` 消费——zh = 语义直译值（#533 裁定）；en 表 = 回归面现值）
  * + 右键编辑菜单落子（复制面对齐批 · D27 ∕ KD-43：`webContents.on("context-menu")` ⇒ 按 `params` 构模板 ⇒
  * `Menu.popup`；条目集 ∕ 空选零菜单 ∕ 文案四键 = `context-menu.mjs` 两纯函数 + `loadConfig().locale` 现读）。
+ * + 更新面宿主落子（桌面发布·阶段二批 · KD-71 ∥ `docs/desktop/design/PACKAGING.md` §2.8.1：`onNative("update")` ⇒
+ * 策略面 `update.mjs`（`setUpdateFace` 转口注入 —— 沿 `setMenuTheme` 先例）；更新对话框族（确认 ∥ 结果两态）；
+ * 帮助组项 label 读面 = `updateFace.currentState()`——本档只做 electron 落子）。
  * 主题 = 渲染面 `data-theme` 状态消费（D33 · 台账 #743——用户值覆写系统缺省，单写者 `renderer/theme.mjs`）；`resolveTheme()` 只作画布色 ∥ 原生面系统事实对照（批档 §2.6 D-8）。
  * 探针用 `net.fetch`（官方档 `net`：「differs from Node's fetch(), which uses Node.js's HTTP stack」+
  * 「requests made with net.fetch can be made to custom protocols」）——Node 全局 `fetch` 对自定义 scheme 无保证。
@@ -38,6 +41,8 @@ const THEME_COLORS = Object.freeze({ dark: "#15171c", light: "#f7f8fa" })
 let menuTheme = null
 /** 当前窗口（菜单重建面持有 —— `createWindow` 登记；`refreshMenu` 经其幂等重建）。 */
 let activeWin = null
+/** 更新面句柄（桌面发布·阶段二批 · KD-71——`setUpdateFace` 转口登记；菜单 label 读面 + `onNative("update")` 落子）。 */
+let updateFace = null
 
 /** 探针（批档 §2.11 收正⑧ 5 枚 + R1 双根 3 枚 + R9 门①正读数 1 枚）：正 3 + 负 6；各负探针命中的门见 stderr 归属行。 */
 const PROBES = Object.freeze([
@@ -78,8 +83,9 @@ export function resolveTheme() {
  *  ⇒ 回落 en + 记错，零静默 —— 沿右键菜单 locale 现读同形）；编辑四值经 `contextMenuLabels(locale)`（两菜单同词面
  *  —— 零第二份）；设置六组段名经 `settingsSectionLabels(locale)`（HOST_DICT `settings.section.*` 投影注入 —— 零第二份）。
  *  动作面两缝：`onAction` = **六动作**通道闭集（+`openSettings` —— `sendMenuAction` ⇒ `ev:menu` 下行；旧「零 IPC
- *  依赖项」口径随 D36 退场）；`onNative` = 宿主自办三项（维护两项 ⇒ `runMaintenance` —— 与 `session:gc` ∥
- *  `session:index` 两通道同处理体；关于 ⇒ 原生面板）；勾选态 = `menuTheme` 回读缓存（报告未达 ⇒ 全零勾 —— fail-open 零误勾）。 */
+ *  依赖项」口径随 D36 退场）；`onNative` = 宿主自办四项（维护两项 ⇒ `runMaintenance` —— 与 `session:gc` ∥
+ *  `session:index` 两通道同处理体；关于 ⇒ 原生面板；**更新 ⇒ `updateFace.menuClick()`**——桌面发布·阶段二批）；
+ *  勾选态 = `menuTheme` 回读缓存（报告未达 ⇒ 全零勾 —— fail-open 零误勾）；更新项 label 读 `updateFace` 状态（缺 ⇒ 回 idle）。 */
 function buildMenu() {
   let words
   let edit
@@ -97,12 +103,14 @@ function buildMenu() {
   }
   return Menu.buildFromTemplate(menuTemplate({
     words, edit, sections, recent: recentDirs(), theme: menuTheme,
+    update: updateFace === null ? null : { state: updateFace.currentState() }, // 更新面状态 ⇒ label ∥ enabled（KD-71）
     onAction: sendMenuAction, onNative: runNativeAction,
   }))
 }
 
-/** 菜单重建（幂等 —— 五重建点同引：① 启动建窗 ∥ ② `project:open` 成功径（`ipc.mjs`）∥ ③ 语言写径
- *  （`config:write` 成功径 —— `ipc-relays.mjs`）∥ ④ 主题态报告径（`setMenuTheme`）∥ ⑤ 窗口 `focus`）。
+/** 菜单重建（幂等 —— 六重建点同引：① 启动建窗 ∥ ② `project:open` 成功径（`ipc.mjs`）∥ ③ 语言写径
+ *  （`config:write` 成功径 —— `ipc-relays.mjs`）∥ ④ 主题态报告径（`setMenuTheme`）∥ ⑤ 窗口 `focus`
+ *  ∥ ⑥ 更新面状态迁移（桌面发布·阶段二批——`update.mjs` `menuRefresh()` 注入 ⇒ 本函数））。
  *  窗口缺 ∕ 已毁 ⇒ 零动作（fail-open）。 */
 export function refreshMenu() {
   if (activeWin === null || activeWin.isDestroyed()) return
@@ -121,6 +129,18 @@ export function setMenuTheme(theme) {
   return { ok: true }
 }
 
+/** 更新面转口（桌面发布·阶段二批 · KD-71——`main.mjs` 装配登记，沿 `setMenuTheme` 先例）：句柄两出口校验
+ *  （`currentState` ∥ `menuClick`）⇒ 登记 + 重建；表外 ⇒ 记错 + `{ ok:false, reason:"invalid-face" }`（零静默）。 */
+export function setUpdateFace(face) {
+  if (face === null || typeof face?.currentState !== "function" || typeof face?.menuClick !== "function") {
+    console.error(`[window] update face refused: ${String(face)}`)
+    return { ok: false, reason: "invalid-face" }
+  }
+  updateFace = face
+  refreshMenu()
+  return { ok: true }
+}
+
 /** 命令下行（`ev:menu` 主→渲染单向）：载荷 `{ action, path?, value? }`（`path` 仅最近项 ⇒ `openProject` 携；
  *  `value` 携主二（`theme` 三值 ∥ `openSettings` 组名六值——缺 ⇒ 开设置面）；不携 `key` —— 非会话面）；
  *  `isDestroyed` 守卫（已毁 ⇒ 零发送）。 */
@@ -132,7 +152,8 @@ function sendMenuAction(action, path, value) {
   activeWin.webContents.send("ev:menu", payload)
 }
 
-/** 宿主自办项（`onNative` 缝 —— 不经通道）：维护两项 ⇒ 既有 `runMaintenance`；关于 ⇒ 原生面板；表外 ⇒ 记错零动作。 */
+/** 宿主自办项（`onNative` 缝 —— 不经通道）：维护两项 ⇒ 既有 `runMaintenance`；关于 ⇒ 原生面板；更新 ⇒ 更新面
+ *  `menuClick()`（桌面发布·阶段二批——句柄内部不抛，fail-soft）；表外 ⇒ 记错零动作。 */
 function runNativeAction(action) {
   if (action === "gc" || action === "index") {
     void runMaintenance(action)
@@ -140,6 +161,14 @@ function runNativeAction(action) {
   }
   if (action === "about") {
     app.showAboutPanel()
+    return
+  }
+  if (action === "update") {
+    if (updateFace === null) {
+      console.error("[window] native menu action refused: update face not registered")
+      return
+    }
+    void updateFace.menuClick()
     return
   }
   console.error(`[window] native menu action refused: ${String(action)}`)
@@ -154,6 +183,25 @@ export async function confirmRecycle({ count } = {}) {
     detail: "The files are moved to the sessions-trash recycle bin (recoverable for 7 days).",
   })
   return response === 0
+}
+
+/** 更新对话框族（桌面发布·阶段二批 · KD-71 ∥ §2.8.1——策略面经 `dialog` 注入缝调用；本档只做 electron 落子）：
+ *  ① 确认框（`ready` 态菜单点按径——句面值源 = `menu-words.mjs`，装配面注入）：默认 ∥ 取消键 = 「取消」⇒ 驳回 ∥
+ *  Esc ⇒ `false`（**零安装动作**——沿 `confirmRecycle` 同形）；
+ *  ② 结果框两态（`kind` = `up-to-date` ⇒ info ∥ `failed` ⇒ error + 一行原因 `detail`；手动检查三果之二）。 */
+export async function updateConfirmDialog({ title, message, ok, cancel } = {}) {
+  const { response } = await dialog.showMessageBox({
+    type: "question", title, message, buttons: [ok ?? "OK", cancel ?? "Cancel"], defaultId: 1, cancelId: 1,
+  })
+  return response === 0
+}
+
+export async function updateResultDialog({ kind, title, message, detail } = {}) {
+  await dialog.showMessageBox({
+    type: kind === "failed" ? "error" : "info", title, message,
+    ...(typeof detail === "string" && detail !== "" ? { detail } : {}),
+    buttons: ["OK"],
+  })
 }
 
 /** 菜单维护出口（R1 · 会话维护线）：处理体（核数据面）住 `session-maintenance.mjs`（零 electron）——
