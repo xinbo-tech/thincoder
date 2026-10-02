@@ -20,7 +20,7 @@ Judge the **change face** before acting — different faces, different authoriza
 | **Product-code face** | **default face** — every path not in the other two faces (fail-closed; incl. **product-text face**) | Requirements → Design → Review → eng-coder (full flow; token gate) |
 
 - **Default classification (fills the enumeration gap)**: **any path not listed under the engineering-tools and doc faces is treated as product-code face** (fail-closed — prefer walking the process, never default to direct edits). The **product-text face** (outward-facing text inside the product repo: `README.md` / `package.json` / release manifests / product `AGENTS.md`) is singled out for a reason: it is the shipped artifact, a user-visible external contract — **not** engineering-tools face.
-- **Three hard constraints on direct engineering-tools edits**: ① mechanical change ⇒ direct edit + **actually run it and report the reading**; ② **changes to judgment semantics** (extracted predicates / thresholds / what counts as a violation) ⇒ **still go through design**; ③ any direct edit ⇒ report it as "parent direct execution" + single-commit revertable.
+- **Two hard constraints on direct engineering-tools edits**: ① mechanical change ⇒ direct edit + **actually run it and report the reading**; ② any direct edit ⇒ report it as "parent direct execution" + single-commit revertable.
 - **Authorization criterion ≠ gate bypass**: the routing gives you an **authorization criterion**; the gate (token gate / product-code write gate — implementation location per project declaration) **prevails** — when they disagree ⇒ **stop and report**, never bypass the gate on the strength of routing.
 - **Judgment line**: paths not in the enumeration ⇒ full flow as product-code face (fail-closed); mechanical engineering-tools edits ⇒ direct edit + run + report "parent direct execution".
 
@@ -41,27 +41,19 @@ Judge the **change face** before acting — different faces, different authoriza
 4. **Testing** — verify. **Verify by actually running it**: the change's implementer runs the change-time feedback loop; the parent runs the real check at delivery (one-line readings). **No test document, no per-user-story case mandate — verification spend ∝ cost of failure.**
    - **Repeated mechanical review failure**: same review face, same criterion (the failure conclusion block's `criterion=`) reaching ≥3 ⇒ stop re-running; lay the facts and candidate dispositions before the user — no auto re-run, no auto scope-narrowing, no self-rewritten criteria.
 
-**Light channel (detail-face ∥ convergence-face controlled bypass — all admission checks must pass; bypass ≠ cancellation)**: adjustments on the detail face (visual · copy · parameters (thresholds · defaults · lengths) · existing-interaction details (order · position · keybindings · hint texts)) may skip the「Design → Review → Approval」chain — direct edit → live walkthrough → freeze. Two admission classes (any fail ⇒ full chain) — **Class A · the five routing questions (detail face)**:
+**Light channel (detail-face ∥ convergence-face controlled bypass — hit one of the three ⇒ walk; bypass ≠ cancellation)**: any one of the three below ⇒ skip the「Design → Review → Approval」chain — direct edit → live walkthrough → freeze:
 
-① **Touch surface**: inside the detail-face closed enumeration (extending it = a new requirement);
+1. **Detail / cosmetics** — visual ∥ copy ∥ parameters (thresholds ∥ defaults ∥ lengths) ∥ existing-interaction details (order ∥ position ∥ keybindings ∥ hint texts);
 
-② **Behavior**: no new behavior path (branch · state · flow · mechanism);
+2. **Defect fix** — **a defect ⇒ walk** (the implementation contradicts an existing source: requirement ∥ design ∥ record ∥ the user's words on the spot — the work = bringing the implementation back to the source, not adding semantics);
 
-③ **Contract**: no interface · channel protocol · data structure · persistence · cross-end semantics · security surface;
+3. **Problems named on the spot during a walkthrough** — routed by the first two (detail class straight through by default; behavior class = defect fix).
 
-④ **Size**: small reach — one surface, no entanglements, ≤15 files;
+**One-sentence boundary**: **new mechanism ∥ major change ⇒ full chain**. Everything else falls to the **closeout full chain** as the backstop — a mis-admission gets formalized ∥ caught in review at closeout (the threshold yields to "no leak").
 
-⑤ **When unsure ⇒ full chain** (fail-closed — prefer heavy over smuggled).
+**Annotations**: diagnostics / probes = zero-chain (read-only + temp area, no classification); performance-observation class = no structural change ∧ before/after readings provable; **a light-channel pen = main-agent direct edit** (the disclosure carries "revertable"; big fixes still go to eng-coder).
 
-**Class B · convergence face** (the target behavior already has a source — requirement ∥ design ∥ record ∥ the user's words on the spot; the work = bringing the implementation into line with it — not adding semantics):
-- **Defect fix** (all five must pass): ① the source is identifiable and the current implementation contradicts it; ② the means add nothing new (no interface ∥ channel protocol ∥ data structure ∥ persistence ∥ cross-end semantics ∥ security surface); ③ **red-then-green** (reproduce first, fix after; no red/green pair ⇒ root cause not located ⇒ full chain); ④ root cause = implementation error (pointing to a design ∥ structure defect ⇒ stop and turn to the full chain); ⑤ reach ≤15 files · single chain · revertable.
-- **Diagnostics zero-chain**: read-only + temp area (product face unchanged) — no classification needed; once the product face is touched ⇒ back to this table, item by item.
-- **Walkthrough fixes (explicit light channel)**: user-named on the spot — **detail class (visual · interaction details · copy · parameters) goes explicitly to the light channel** (**default straight-through — no more per-pen agonizing over classification**; disclose-then-go as before) ∥ behavior class by defect fix (all five must pass); a boundary touch ⇒ stop and re-disclose (full chain).
-- **Performance observation class**: proposed admission = no structural change ∧ before/after readings provable; run 1–2 pens before formal admission.
-- **Guard lines stay**: new behavior ∥ new mechanism ∥ new interface ⇒ the five questions as before (fail-closed); "try X" sketches ⇒ full chain; a disputed "how to fix" ∥ multiple options pending ⇒ a design question ⇒ full chain; structure ∥ cross-face ∥ contract touched ⇒ stop and turn to the full chain.
-
-- **Off-channel list** (touching ⇒ stop, report, back to the full chain): new mechanism · new flow · interface contract · data structure · persistence · cross-end semantics · security surface · over-size.
-- **Round form**: a light-channel round = one batch record (per-pen entries: disclosure · change · walkthrough · freeze) + per-pen ledger rows; **start-up booking** — at round open (before the first pen) create the round batch record + the round ledger row first (the account precedes the pen; a pen without an account = not established); one full chain at closeout (design formalization → independent review (code · record · doc reconciliation) → fixes (if any) → approval → closeout settlement, including the necessary tests — class B = the red-then-green reproduction pair ∥ the before/after reading pair); **closeout not landed ⇒ no settlement** (the batch record · the round ledger row stays open).
+- **Round form**: a light-channel round = one batch record (per-pen entries: disclosure · change · walkthrough · freeze) + per-pen ledger rows; **start-up booking** — at round open (before the first pen) create the round batch record + the round ledger row first (the account precedes the pen; a pen without an account = not established); one full chain at closeout (design formalization → independent review (code · record · doc reconciliation) → fixes (if any) → approval → closeout settlement, including the necessary tests — **convergence-face pens = the red-then-green reproduction pair ∥ the before/after reading pair**); **closeout not landed ⇒ no settlement** (the batch record · the round ledger row stays open).
 - **Exercise**: routing = the main agent judges per pen and discloses per pen (the user can overrule); subagents neither route nor invoke this channel.
 - **Boundary (never)**: off-boundary content through the channel · closeout skipping · substituting the full chain (the mechanism itself · major changes stay full-chain).
 
