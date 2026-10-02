@@ -51,14 +51,18 @@ const REVIEW_ROOT_KEYS = ["requirements", "specs", "design", "modules", "batches
  * @returns {string[]} 评审目标目录的绝对路径（去重）
  */
 export function resolveReviewTargetPaths(agent) {
-  const cwd = agent?.cwd ?? process.cwd()
-  // 读错上抛（manifest.mjs:readManifest 契约——不伪装成缺失）；整档缺失/非法 → {ok:false}。
-  const man = readManifest(cwd)
+  return resolveReviewRootsFor(agent?.cwd ?? process.cwd())
+}
+
+/** 同单点之**按用点解析**增量（2026-09-21「参数按用点解析」之裁收口 · 台账 #828）：按**目标目录**
+ *  （其所属项目根——最近带档祖先）解析评审目标根集——多档锚下各文档按各自项目判定。 */
+export function resolveReviewRootsFor(dir) {
+  const man = readManifest(dir)
   const root = man.ok && man.manifest?.docRoot && typeof man.manifest.docRoot === "object"
     ? man.manifest.docRoot
     : DEFAULT_MANIFEST.docRoot
   const out = []
-  for (const key of REVIEW_ROOT_KEYS) out.push(...docRootPaths(root?.[key], cwd))
+  for (const key of REVIEW_ROOT_KEYS) out.push(...docRootPaths(root?.[key], dir))
   return [...new Set(out)]
 }
 

@@ -29,9 +29,191 @@
 
 **本批建档即遇实例（落点事故 · 已在案）**：本档 create 时相对路径经歧义回退落到工作区锚（`d:\teamcode\docs\batches\`）⇒ 父侧即迁 `thincoder/docs/batches/`——**教训入条款面**：多候选并存时**建/写一律显式绝对路径**（⑤ 的行为面延伸——设计轮一并处置）。
 
+**在途大签入 errata（2026-10-02 22:0x · 父侧）**：用户 22:03 裁「先把多仓机制落地了再干别的」⇒ 同拍完成**全在途签入保底**（2026-10-01 以来全部在途——桌面诸批 ∥ 提示词面 ∥ 记录形 ∥ 清账 ∥ 打包链 ∥ 本批前身）：thincoder 提交 **`16d5882a`**（354 档 · +35480/−5460）+ **双远端已推**（origin gitee ✓ ∥ github 代理 ✓）；thincoder.com 提交 **`ee492bb`**（manifest + 站点档）+ origin ✓。**签入面清理**：`thincoder-desktop/.gitignore` 补 `dist-*/`（构建树不入库——`dist-r3/r4` 留盘 Untracked）；根 `.gitignore` 补 `_*.out`/`_nat_test_out.txt`（会话临时输出）。**注**：已收口冻结批档不回写——哈希以本条为 errata 落点（先例形）。
+
+**授权记录（用户 2026-10-02 22:05）**：「那你先把多仓机制那个自动跑到落地吧。」⇒ **全自动链授权**：代点火评审 ∥ 修正轮派发 ∥ §4 代签∥ 实施派发 ∥ 复核 ∥ 收口核销 ∥ 提交（双远端）。**自缚三条**（本仓惯例）：① 代签仅当三条件齐备（评审 pass 0🔴 ∧ 修正已落地并逐条核验 ∧ token 已签发）；② 新范围 ∥ 用户口径裁决 ⇒ 停；③ 破坏性/不可逆 ⇒ 先停。**时序**：本批落地前不开别的（用户 22:03 裁）——stage-2 全程候账。
+
 ## §2 批次任务与设计（eng-designer）
-**状态行**：（eng-designer 写入时更新）
+**状态行**：设计完成（多仓操作机制提示词面——条款全集落点表 §2.2 ∥ 双面逐字草案 §2.3 ∥ 需求侧落点 §2.9-U1 ∥ 设计档三处已落 §2.5；上抛 7；机检：refs 零命中 ∥ doc-check exit 0（悬空 0）∥ CN 新行 ≤128 字符 ∥ 零 `##` 增（设计口径））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
+
+**本批 = 多仓操作机制 · 提示词面 · 设计轮（不实施）**——把 §1 条款集（12 条 + 定界句 + 建档事故教训）落成**运行期真读的提示词条款**。件源核对：spawn 给号 = 台账 #827（多仓机制 · 归批）；§1 讨论段实读 ✓（条款集 / 层级候选 / 交付面 / 建档事故实录）。
+
+**任务书依据**：spawn 派单（目标 / 设计范围 / 已知事实 / 验收标准） + 台账 #827 + §1 条款集。
+
+### 2.0 任务书（覆盖 ∥ 边界）
+
+- **轮次 = initial**；本批覆盖 = 交付六项（§1 验收）：① 条款全集落点表（§2.2）② 双面对应表（§2.4）③ 需求侧落点 + 验收（§2.9-U1）④ 机检口径（§2.7）⑤ 各档变更记录一行（§2.5——设计三档已落）⑥ §2 就位（本段）。
+- **本批不做（边界）**：产品码零触 ∥ 越八档面（实际用 common ∥ discipline-engineering ∥ persona-engineering 三档 × 双面 = 六档）∥ 既有条款语义零改（微调 = §2.2 逐处列明 + 理由）∥ 他批档零触 ∥ 机械门零加 ∥ 普通模式提示词零触（理由 = 设计档 §6.14 边界）。
+- **笔路**：CN 正本（`docs/core/design/prompts/**`）∥ EN 运行面（`thincoder-core/prompts/**`）= **本批实施轮落笔**（逐字 = §2.3 围栏块 A–C；EN 按 M9 翻译回写、非 cp）；需求面 = 主 agent 笔（§2.9-U1）；设计档登记 = 本席（§2.5——**本轮已在盘**）。
+- **测试面**：批内件 = 无（提示词 / 文档文本笔——承提示词面批先例）；机检 = `prompt-refs-check`（零命中——基线已复跑）∥ `##` 块计数守恒 ∥ CN 行宽 ≤300 ∥ `doc-check` 本批 authored 零新增；仓套件 = 父侧收口一次。
+
+### 2.1 现状实读（届盘 file:line 证据）
+
+- **双面六档现行读数**（内容行口径）：CN/EN = common **127 ∥ 169** · discipline-engineering **171 ∥ 179** · persona-engineering **192 ∥ 192**；`##` 计数 = **14 ∥ 14 ∥ 8 ∥ 8 ∥ 16 ∥ 17**。
+- **既有自持段**：CN `docs/core/design/prompts/discipline-engineering.md:117`「文档与台账自持（本仓记本仓的）」8 项——item 1 `:118` ∨ item 5 `:124`（**同规则重复** + 残句「……语义不变，去掉『头部』概念」）∨ item 7 `:126` ∨ item 8 `:128`；EN `thincoder-core/prompts/discipline-engineering.md:120` 同节（item 5 = `:127`）。
+- **批次档常识**：CN `common.md:121` §14 起（末行 `:127`「结构权威」）；EN `common.md:163` §14 起（末行 `:169`）。
+- **项目状态档**：CN `persona-engineering.md:52-58`（「建档 = 用到时的轻动作」`:57` ∥「不砖死」`:58`）；EN `persona-engineering.md:52-58` 同构。
+- **多仓操作提示词现状**：`跨仓` 双面 grep **零命中**——§1「四事实」的操作纪律尚未入文；旧设计句 `DOC-DISCIPLINE.md:1153`（「跨仓批派单三条……入纪律层双副本——逐字文本归提示词落笔轮」）仍为「待落笔」态（提示词面无对应——实证）。
+- **机制码面（§1 已知事实引用，免再探；本批零触）**：`thincoder-core/agent-tools/batch-paths.mjs`（`declaredBases` `:31` ∥ `batchDocBases` `:42` ∥ create 越基底 fail-closed `:124-141`）∥ `manifest-discovery.mjs`（归属 ∨ 发现）∥ manifest 写门 = `thincoder-core/manifest.mjs:229-231`（`writer !== 'main'` 拒——fail-closed；子代理 `files` 列 manifest = 机检拒 `spawn-gates.mjs:105`）。
+- **spawn 层位指认校正（观察）**：派单称「公共层现有『文档 / 台账各仓自持』条款」——**实况 = 该族住两纪律层**（工程 `discipline-engineering.md:117` 起 ∥ 普通 `discipline-normal.md:36` 起）；公共层无自持段。设计按实况落点（本批公共层接触面 = §14 批次档常识）；指认校正上报（§2.9-U3）。
+
+### 2.2 裁定与落点（逐条定形）
+
+**落点表（条号 → 档 → 层 → 措辞 = §2.3 逐字块）**：
+
+| 条 | 落点（档 ∥ 层） | 处置 | 逐字块 |
+|---|---|---|---|
+| 定界（仓 = git 仓 ∥ 端 ≠ 仓） | discipline-engineering ∥ 工程纪律层 | 新增 item 9 | B2 |
+| ① 多仓并存正常态 | discipline-engineering ∥ 工程纪律层 | 新增 item 8 | B1 |
+| ② 一档一仓 | **既有覆盖**（item 1/2/3；普通侧自持 item 1） | 零新文本 | — |
+| ③ 子代理只写本仓 | **既有覆盖**（item 7/8） | 零新文本 | — |
+| ④ 他仓享六段机制 | discipline-engineering ∥ 工程纪律层 | 新增 item 10 前半 | B3 |
+| ⑤ 批档基根 = 会话锚声明 | common §14 ∥ 公共层 | 新增 1 段 | A |
+| ⑥ 无 manifest 先建档 | persona-engineering ∥ 人格层 | 新增 1 行 | C |
+| ⑦ 跨多仓任务 ⇒ 各仓各批 | common §14 ∥ 公共层 | 同段（A） | A |
+| ⑧ 分仓 = 例外 | discipline-engineering ∥ 工程纪律层 | 新增 item 13 | B6 |
+| ⑨ 首次操作他仓 | 分解覆盖：建档 = C ∥ 补层 = item 4（关键锚点重复·编写纪律 #10）∥ 记录落位 = item 10/11 | item 10 后半 | B3 |
+| ⑩ 他仓发现物路由 | discipline-engineering ∥ 工程纪律层 | 新增 item 11 | B4 |
+| ⑪ 接口 = 唯一耦合面 | discipline-engineering ∥ 工程纪律层 | 新增 item 12 前半 | B5 |
+| ⑫ 签入按仓各自 | discipline-engineering ∥ 工程纪律层 | 同 item 12 | B5 |
+| 建档事故教训（显式路径） | discipline-engineering ∥ 工程纪律层 | 并入 item 8（显式目标 / 显式路径） | B1 |
+
+**层次判定（四问 → 三处）与 §1 候选收正**：
+- ①组（定界 / ① / ④ / ⑧ / ⑨ / ⑩ / ⑪ / ⑫）= 「该模式下怎么干活」的机制操作规则 ⇒ 纪律层；受众 = 工程主会话 + 工程子代理（既有自持节 = 本家族提示词落点，逐条续入）。
+- ②组（⑤ / ⑦）= 批次档机制常识（两模式同一的文档体系；公共层 §14 = 该机制常识节）⇒ 公共层（§14 节内增段）。
+- ③组（⑥）= 主 agent 独属写权动作（manifest 写权 `writer:'main'` 专权、子代理不可达）⇒ 人格层「项目状态档」（落点 = manifest 节）。
+- **收正说明（对 §1「①⑧⑨⑩⑪⑫ ≈ 公共层」候选）**：实投 = 仅 ⑤⑦ 落公共层（承载面 = §14；其余公共层节面 = 主题不符 + 零 `##` 增为硬口径 ⇒ 不新建节）；⑥ 由公共层收正至人格层（写权面——「写权独属动作不落共享层」同台账判例）；①⑧⑨⑩⑪⑫ 归工程纪律层（操作规则；受众多含子代理——「两模式逐句都要的协作基础」判定不过）。
+
+**既有段微调（逐处列明 + 理由）**：自持节 item 5（台账本仓自持）与 item 1 = **同规则重复**、且携修订式残句「（本仓自持由 schema 校验——语义不变，去掉『头部』概念）」⇒ 处置 = **item 5 删、唯一事实「本仓自持由 schema 校验」并入 item 1、序号顺缩**（CN `:124` 删 → item 6/7/8 ⇒ 5/6/7；EN `:127` 删 → 同）。理由 = D8（失效表达必删）+ 重复即缺陷；**语义零变**（规则本体 = item 1 原样）。
+
+**KD 索引（全文 = 设计档）**：KD-1 = 三处落点（→ `PROMPT-SYSTEM.md` §7 D-PS17）∥ KD-2 = 既有段微调（→ D-PS18）∥ KD-3 = 旧落笔面收口（→ D-PS19）。
+
+### 2.3 逐字草案（一次性材料——落地档 ↔ 本块一次性比对基线；CN 正本 ∥ EN 运行面）
+
+围栏块 A（⑤ + ⑦ —— common §14 末增 1 段）：
+
+```text
+A. common.md「批次档常识」§14 末「结构权威」行后新增 1 段：
+[CN]（docs/core/design/prompts/common.md——现 :127 后）
+**多仓按仓各自**：批档住本仓（基根 = 会话锚的项目声明）；**跨仓建档会被拒——那是正确行为**（不绕道）；跨多仓任务 ⇒ **各仓分别建档、分别开批**。
+[EN]（thincoder-core/prompts/common.md——现 :169 后）
+**Per repo, its own record**: batch records live in their own repo — the base root resolves from the session anchor's project declaration; **a cross-repo create is refused — that is the correct behavior** (never work around it); a task spanning several repos ⇒ **each repo gets its own record and its own batch**.
+```
+
+围栏块 B（自持节——微调 B0 + 6 项续入 B1–B6）：
+
+```text
+B0. 微调（item 5 删并——逐处理由 = §2.2「既有段微调」）：
+[CN]（docs/core/design/prompts/discipline-engineering.md）
+- :118-119 item 1 句尾「……路径或证据」后追加「（本仓自持由 schema 校验）」。
+- :124 item 5 整行删；:125 item 6 序号 ⇒ 5；:126-127 item 7 ⇒ 6；:128-129 item 8 ⇒ 7。
+[EN]（thincoder-core/prompts/discipline-engineering.md）
+- :121-122 item 1 句尾 "…outside this repo" 后追加 " (repo-self-containment is enforced by schema)"。
+- :127 item 5 整行删；:128 item 6 ⇒ 5；:129-130 item 7 ⇒ 6；:131-132 item 8 ⇒ 7。
+
+B1–B6. 新项（微调后 = item 7「另起一轮处置」行后）：
+[B1-CN]
+8. **多仓并存 = 正常态**：写面（批档 ∥ 台账 ∥ 写门）先定**目标仓**——**显式目标**（多候选并存 ⇒ **显式路径**）；解析歧义 ⇒ **列候选、绝不代选**；同类失败 ⇒ **报告 + 显式路径重试**（不砖会话）。
+[B2-CN]
+9. **仓 = 一个 git 仓**（唯一判据）：同一仓内的多个端 / 模块（端 ≠ 仓）之间**无跨仓语义**；他仓同规。
+[B3-CN]
+10. **他仓享六段机制** = **锚在那仓的会话** + **那仓持 manifest**；首次操作他仓 ⇒ 缺层就地补齐、**记录落它本仓**。
+[B4-CN]
+11. **他仓发现物** ⇒ **报用户路由**（勿丢勿混）——落**它本仓**，不混入本仓。
+[B5-CN]
+12. **跨仓只经接口耦合**：各仓自持设计 / 实现 / 收口；**接口坐标 + 用户门是唯一耦合面**；**签入按仓各自进行**。
+[B6-CN]
+13. **分仓 = 例外**：独立部署 / 发布 / 生命周期理由才分；**不为「多仓」造协调机器**。
+[B1-EN]
+8. **Several repos coexisting = a normal state**: before writing, fix the **target repo** — write surfaces (batch record ∥ ledger ∥ write gate) take an **explicit target** (several candidates ⇒ an **explicit path**); on an ambiguous resolution ⇒ **list the candidates, never choose for the user**; on a repeated failure ⇒ **report it and retry with an explicit path** (never brick the session).
+[B2-EN]
+9. **A repo = one git repo** (the sole criterion): several ends / modules inside one repo (an end ≠ a repo) have **no cross-repo semantics between them**; every other repo follows the same rules.
+[B3-EN]
+10. **Another repo gets the six segments** = **a session anchored there** + **a manifest in that repo**; on the **first operation in another repo** ⇒ build the missing layers on the spot and **book the records in its own repo**.
+[B4-EN]
+11. **Findings in another repo** ⇒ **report them to the user for routing** (lose nothing, mix nothing) — they belong to **that repo**, never mixed into this one.
+[B5-EN]
+12. **Cross-repo coupling goes through the interface only**: each repo self-contains its design / implementation / closeout; **interface coordinates + the user's gate are the only coupling surface**; **commits happen per repo, each on its own**.
+[B6-EN]
+13. **Splitting repos = an exception**: split only for independent deployment / release / lifecycle reasons; **never build coordination machinery just because several repos coexist**.
+```
+
+围栏块 C（⑥ —— persona 项目状态档）：
+
+```text
+C. persona-engineering.md「项目状态档」——新增 1 行：
+[CN]（docs/core/design/prompts/persona-engineering.md——现 :57「建档 = 用到时的轻动作……」行后）
+**操作一个仓之前，它没有 manifest ⇒ 先就地建档**（轻动作——**写权只在你**）。
+[EN]（thincoder-core/prompts/persona-engineering.md——"Landing one is a light action at the point of use" 行后）
+**Before you first operate in a repo that has no manifest ⇒ land one on the spot** (a light action — **you are its only writer**).
+```
+
+### 2.4 双面对应表
+
+| # | 面 | 档 | 落点 | 现读数 | Δ |
+|---|---|---|---|---|---|
+| 1 | CN 正本 | `docs/core/design/prompts/common.md` | §14 末 +1 段（A） | 127 | +1 |
+| 2 | EN 运行面 | `thincoder-core/prompts/common.md` | §14 末 +1 段（A） | 169 | +1 |
+| 3 | CN 正本 | `docs/core/design/prompts/discipline-engineering.md` | 自持节：+6 项、−1 项（B0/B1–B6） | 171 | +5 |
+| 4 | EN 运行面 | `thincoder-core/prompts/discipline-engineering.md` | 同（B0/B1–B6） | 179 | +5 |
+| 5 | CN 正本 | `docs/core/design/prompts/persona-engineering.md` | 项目状态档 +1 行（C） | 192 | +1 |
+| 6 | EN 运行面 | `thincoder-core/prompts/persona-engineering.md` | 同（C） | 192 | +1 |
+
+逐字对应：CN ↔ EN = 语义对等翻译（M9）；同一语言面 = 落地档 ↔ §2.3 围栏块一次性比对（批次收尾核对步——承 §6.1 纪律）。
+
+### 2.5 设计档落点（本席笔——本轮已在盘）
+
+- `docs/core/design/PROMPT-SYSTEM.md`：**§6.14 新增**（多仓操作机制——来源 ∥ 机制三处 ∥ 四问归属 + 候选收正 ∥ 既有段微调逐处 ∥ 旧落笔面收口 ∥ 落点 ∥ 机检面 ∥ 边界）∥ §7 **D-PS17 ∥ D-PS18 ∥ D-PS19** ∥ §6.1 应用实例补 ∥ 变更记录行（591 → **619**，+28）。
+- `docs/core/design/DOC-DISCIPLINE.md`：§4.4「提示词落笔面」句随正（跨仓批派单 = 已落（多仓泛化形）∥ 反查脚本一条 = 未落（在册））∥ 变更记录行（1639 → **1641**，+2）。
+- `docs/core/design/LEDGER-SELF-CONTAINED.md`：变更记录行（§6.2 行为面增量定形——指针 = `PROMPT-SYSTEM.md` §6.14 ∥ 批档 §2）（328 → **330**，+2）。
+
+### 2.6 受影响文件（现行数 = 落笔前读数 → 预计 Δ；笔路）
+
+| # | 档 | 现行数（内容行） | Δ | 面 | 笔 |
+|---|---|---|---|---|---|
+| 1 | `docs/core/design/prompts/common.md` | 127 | +1 | CN 正本 | 实施轮 |
+| 2 | `thincoder-core/prompts/common.md` | 169 | +1 | EN 运行面 | 实施轮 |
+| 3 | `docs/core/design/prompts/discipline-engineering.md` | 171 | +6 −1 = +5 | CN 正本 | 实施轮 |
+| 4 | `thincoder-core/prompts/discipline-engineering.md` | 179 | +6 −1 = +5 | EN 运行面 | 实施轮 |
+| 5 | `docs/core/design/prompts/persona-engineering.md` | 192 | +1 | CN 正本 | 实施轮 |
+| 6 | `thincoder-core/prompts/persona-engineering.md` | 192 | +1 | EN 运行面 | 实施轮 |
+| 7 | `docs/core/design/PROMPT-SYSTEM.md` | 591 | +28（本轮已落——现 619） | 设计面 | 本席 |
+| 8 | `docs/core/design/DOC-DISCIPLINE.md` | 1639 | +2（本轮已落——现 1641） | 设计面 | 本席 |
+| 9 | `docs/core/design/LEDGER-SELF-CONTAINED.md` | 328 | +2（本轮已落——现 330） | 设计面 | 本席 |
+| 10 | `docs/core/requirements/PROMPT-SYSTEM.md` | 256 | 登记块 + 行 14 随动（落点 = §2.9-U1） | 需求面 | 主 agent |
+
+### 2.7 验收对照（回指交付六项——机判 / 可核逐条）
+
+- **①** 条款全集落点表 = §2.2（条号 → 档 → 层 → 逐字块锚）；**双面对应 = §2.4**。
+- **②** 逐字 = §2.3 围栏块 A ∥ B（B0–B6）∥ C——CN + EN 全集（六档落笔面全覆盖）。
+- **③** 需求侧落点 + 验收 = §2.9-U1。
+- **④** 机检口径：a) `node scripts/prompt-refs-check.mjs` **零命中**（基线已复跑：提示词面 84 档 ∥ 代码面 409 档 ∥ 命中 0）；b) **零 `##` 增**——六档 `##` = 14/14/8/8/16/17 前后不变（设计口径——实施轮复核）；c) **CN 新行 ≤300 字符**——实测 87 ∥ 128 ∥ 70 ∥ 83 ∥ 55 ∥ 75 ∥ 60 ∥ 55（A ∥ B1–B6 ∥ C）；d) `doc-check` 本批 authored 零新增（设计三档——复跑读数补记，见下段）。
+- **⑤** 各档变更记录一行：设计三档 changelog 已落（§2.5）；提示词档无变更记录面（惯例——记录只落设计 / 需求档）。
+- **⑥** §2 就位（本 append 序列）。
+- **实施轮核对步**：落地档 ↔ §2.3 围栏块一次性比对（逐行；输出入 §5）；EN = M9 翻译回写（逐字 = EN 稿、非 cp）。
+
+### 2.8 关键决策（索引——全文 = 设计档）
+
+- **KD-1** = 三处落点体系（公共 §14 ∥ 工程纪律自持节 ∥ 人格项目状态档；否决 新建节 / 全落公共 / 全落纪律）→ `docs/core/design/PROMPT-SYSTEM.md` §7 **D-PS17**；
+- **KD-2** = 既有段微调（item 5 删并；D8 + 重复即缺陷；语义零变）→ **D-PS18**；
+- **KD-3** = 旧「跨仓批派单」落笔面收口（多仓泛化形落 + 反查脚本半句在册）→ **D-PS19** ∥ `docs/core/design/DOC-DISCIPLINE.md` §4.4 随正。
+
+### 2.9 上抛项（主 agent / 父侧域）
+
+- **U1（需求笔 · 主 agent）**：`docs/core/requirements/PROMPT-SYSTEM.md` 落点——建议：① §2.3 公共层现 #800 块（as-of :100-105）后新增**登记块**（多仓操作机制 · 提示词面：来源 / 功能点（三层落点）/ 边界 / 验收 / 依赖）；② 本表行 14（§2.3「管什么」列）补「多仓按仓各自」面。**块内验收建议**（逐字 = 批档 §2）：双面六档在位且与 §2.3 围栏块一次性比对全等 ∥ `prompt-refs-check` 零命中 ∥ 零 `##` 增（14/14/8/8/16/17）∥ CN 新行 ≤300；实施 = 本批实施轮（EN 按 M9 翻译回写）。
+- **U2（裁 · 主 agent）**：`DOC-DISCIPLINE.md` §4.4「**反查脚本一条**」提示词落笔未做（对象 `thincoder-cli/scripts/doc-impact.mjs` 在盘）——去留：① 补落（其自有轮）∥ ② 判对象失义、撤句。本批零触（§4.4 已随正为「在册」）。
+- **U3（观察 · 层位指认校正）**：spawn 称「公共层现有『文档 / 台账各仓自持』条款」——实况 = 两纪律层（§2.1）；设计按实况落点。
+- **U4（观察 · 存量滞后）**：`DOC-CODE-RECONCILE.md:411-412`「落点（现状）」句 CN 坐标 `discipline-engineering.md:89` 与现况（自持节 `:117` 起）不符——本批零触；建议随其下次修订收正。
+- **U5（观察 · 已随批列明）**：自持节 item 5 重复 + 残句——本批已列处置（§2.2 微调 / B0）；如需还原 = 单点 revert（两处）。
+- **U6（观察 · 普通面）**：多仓机制主体 = 工程机制面；普通侧经公共层 §14 覆盖批次档面；如另需普通侧「写目标纪律」全模式化 ⇒ 另裁小幅补行（候选 = `discipline-normal.md` 自持节 +1 行）。
+- **U7（观察 · 台账读面空）**：`ledger_query` 双根（thincoder ∥ teamcode）均返回空行集（无过滤）——疑键控根 / 环境差；#827 号照引派单与 §1 所载（本批零动作）。
+
+**doc-check / refs 复跑读数（补记 · 本席）**：
+- `node scripts/doc-check.mjs --root .` ⇒ **exit 0**；汇总 = 候选 44955 · **悬空 0**（闸态——阈值 0）· 注记豁免 319 · 拟新增 48 · 迁移期引文 297；行宽 OK（源域 .md 无 >300 单行——区带豁免在效）。
+- 本批 authored 复核：设计三档（PROMPT-SYSTEM ∥ DOC-DISCIPLINE ∥ LEDGER-SELF-CONTAINED）命中性列报逐条 = **既有**「迁移期引文 / 报告面 · 不入闸」行（**0 行落本批新增区间**）⇒ **本批 authored 零新增 ✗ / 报告**。
+- `node scripts/prompt-refs-check.mjs` ⇒ **exit 0**；提示词面 84 档 ∥ 代码面 409 档 · **命中 0**（J1/J2/J3 零命中）。
+
 ## §3 设计评审（评审子代理）
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）

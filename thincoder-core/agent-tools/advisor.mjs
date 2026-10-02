@@ -12,7 +12,8 @@ import { resolveBatchDocPath } from "./batch.mjs"
 // M6（模块设计 §2.1 F3）：评审对象来源读 manifest docRoot（声明面）——复用 M4 的
 // write-gate.mjs 单一权威源（KD-M6-1），替代 v1 的逐档分类面（isDocPath）；
 // normAbs 同源 re-export（指针非副本）。不 import dispatch.mjs（簇间回边，环风险）。
-import { resolveReviewTargetPaths, normAbs } from "../agent/write-gate.mjs"
+import { resolveReviewTargetPaths, resolveReviewRootsFor, normAbs } from "../agent/write-gate.mjs"
+import { owningProject } from "../manifest-discovery.mjs"
 import { sep } from "node:path"
 import {
   generateDesignToken,
@@ -117,9 +118,16 @@ export const advisorTool = {
     // elsewhere declares them in PROJECT-MANIFEST.json docRoot).
     if (reviewType === "design" && documents) {
       const roots = resolveReviewTargetPaths(agent).map((r) => r.replace(/[\\/]/g, sep))
+      // 按用点解析（2026-09-21 之裁收口 · 台账 #828）：逐文档按**其所属项目**（最近带档祖先）
+      // 的 docRoot 判定；无主档文档回退会话根集判定（原行为零变）。
+      const ownRoots = (abs) => {
+        const owner = owningProject(abs)
+        return owner ? resolveReviewRootsFor(owner).map((r) => r.replace(/[\\/]/g, sep)) : []
+      }
       const invalidDocs = documents.filter((doc) => {
         const n = normAbs(doc, agent.cwd).replace(/[\\/]/g, sep)
-        return !roots.some((r) => n === r || n.startsWith(r + sep))
+        const under = (r) => n === r || n.startsWith(r + sep)
+        return !roots.some(under) && !ownRoots(n).some(under)
       })
       if (invalidDocs.length > 0) {
         if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
