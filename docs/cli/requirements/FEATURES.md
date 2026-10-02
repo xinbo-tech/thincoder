@@ -99,18 +99,18 @@
 |---|---|
 | `git` | 综合工具：diff / status / log / checkpoint / add / commit / push / tag / branch / checkout / restore / stash / reset / revert / merge / cherry-pick 等动作族；快照为全量副本 |
 
-### 2.9 Slash 命令（26 个 · 实核）
+### 2.9 Slash 命令（27 个 · 实核——2026-10-01 父侧收正：26 ⇒ 27，补 `/timers`；登记面指针随动）
 
-登记面 = `thincoder-cli/src/tui/slash-commands.mjs:39`。
+登记面 = `thincoder-cli/src/tui/slash-commands.mjs:40`。
 
 | 分组 | 命令 |
 |---|---|
-| Agent | `/plan` · `/auto` · `/eng` · `/advisor` · `/model` · `/submodel` · `/goal` · `/think` |
+| Agent | `/plan` · `/auto` · `/eng` · `/advisor` · `/model` · `/submodel` · `/goal` · `/timers` · `/think` |
 | Session | `/new` · `/session` · `/rename` · `/clear` · `/copy` · `/fold` · `/undo` |
 | Project | `/init` · `/skills` · `/mcp` · `/reindex` · `/extract` |
 | System | `/shell` · `/upgrade` · `/config` · `/restore` · `/exit` · `/help` |
 
-**别名**（`thincoder-cli/src/tui/slash-commands.mjs:69`）：`/h` → `/help` · `/x` → `/exit` · `/m` → `/model` · `/p` → `/plan` · `/t` → `/think` · `/c` → `/clear` · `/n` → `/new`。
+**别名**（`thincoder-cli/src/tui/slash-commands.mjs:71`）：`/h` → `/help` · `/x` → `/exit` · `/m` → `/model` · `/p` → `/plan` · `/t` → `/think` · `/c` → `/clear` · `/n` → `/new`。
 
 ### 2.10 模型适配
 

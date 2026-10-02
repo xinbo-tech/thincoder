@@ -68,7 +68,7 @@ function walk(dir, out = []) {
   let names = [];
   try { names = readdirSync(dir); } catch { return out; }
   for (const n of names) {
-    if (SKIP_DIRS.has(n)) continue;
+    if (SKIP_DIRS.has(n) || n.startsWith("dist-")) continue;
     const p = join(dir, n);
     let st;
     try { st = statSync(p); } catch { continue; }

@@ -137,7 +137,8 @@ VSC 侧对应面住 `thincoder-vscode/src/extension/session-io.mjs` · `session-
 - **F-S4（read_history 走盘）**：本会话检索（无 `path`）读记录存储；跨会话 `path=` **索引优先 + 主存回落**（索引命中 ⇒ 索引检索；索引不可用 / 库内无行 ⇒ 既有槽文件 JSON 读径与护栏——逐字保留、零回归）。
 - **F-S5（完整性对账 + 崩溃恢复）**：存储 append-only；启动恢复时对账——存储 ≥ 槽 JSON → 以存储为准；JSON 更长 → 以 JSON 为准并重建存储。
 - **F-S6（生命周期联动）**：删除槽 → 连带删除其记录存储；冷项目清理（`session gc`）连带删除；`/new` 换槽后新记录落新槽存储。
-- **F-S7（消化生命周期面记录——2026-09-30 · #726）**：消化生命周期面**两族**（`digest` 痕三型〔`start` ∕ `cap` ∕ `end`〕+ `subagent` 归档快照）以**记录条目**入本槽记录存储（**人读线**——`pushReal` 同面追加 ∥ **不入机器线**——不喂模型）；读面 = `historyWindow` `{records: true}` **opt-in 直通**（**默认关 ⇒ 存量读面零破**——CLI ∥ VSC 现行径逐字等价）；槽 JSON 投影与消息同节律（回合尾）。**端侧恢复重建**（痕 ∥ 归档块）为各端消费义务；机制形状与单源位置 = 跨端承接批设计裁定（现单源住桌面设计档 `docs/desktop/design/RENDERER.md` §1.1「留档记录」条）。
+- **F-S7（消化生命周期面记录——2026-09-30 · #726）**：消化生命周期面**两族**（`digest` 痕三型〔`start` ∕ `cap` ∕ `end`〕+ `subagent` 归档快照）以**记录条目**入本槽记录存储（**人读线**——`pushReal` 同面追加 ∥ **不入机器线**——不喂模型）；
+  读面 = `historyWindow` `{records: true}` **opt-in 直通**（**默认关 ⇒ 存量读面零破**——CLI ∥ VSC 现行径逐字等价）；槽 JSON 投影与消息同节律（回合尾）。**端侧恢复重建**（痕 ∥ 归档块）为各端消费义务；机制形状与单源位置 = 跨端承接批设计裁定（现单源住桌面设计档 `docs/desktop/design/RENDERER.md` §1.1「留档记录」条）。
 
 **非功能**：N-S1 有界性可测 · N-S2 零回归 · N-S3 **VSC 兼容红线**（槽 JSON version 2 字段与形态不变、`history` 仍为全量数组、sidecar 对 VSC 不可见）· N-S4 恢复速度 · N-S5 可移植 · N-S6 尽力面（追加失败不阻断回合）。
 
@@ -156,7 +157,8 @@ N-S3 CLI 写出的槽文件 `history` 数组与旧实现同构（version 2 + his
 语义同源——VSC 档 F-N1–F-N8 / N-N1–N-N5 与 §4.1–§4.4 逐条同义（不重并）；**VSC 端差（登记）**：① marker `END = "vscode"`——只写 `.manifest.vscode`、永不碰 `.cli`（认领面隔离）·
 ② 历史分页步长 **200**（`HISTORY_PAGE_SIZE`——`thincoder-vscode/src/extension/history-window.mjs:18-22`，对端 20）· ③ 恢复呈现 = assistant 帧容器 + 嵌套工具卡（配对语义同源）·
 ④ 冷 cwd 手动 GC 无 shell 通道（只接线自动残留 GC）——**注销（2026-09-21）**：VSC 已补命令入口 `thincoder.sessionGc`（数据面 API——双端同面；见 `docs/core/design/SESSION.md` §6.17 D-SE38）
-· ⑤ 记录存储形态 = **端面事实**（本端零该机制——非端差，如实登记）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。坐标（实核 · 2026-09-28 复读）＝ `thincoder-vscode/src/extension/session-slots.mjs`（76 行）· `session-io.mjs`（246 行）· `panel-session.mjs`（312 行）· `session-gc.mjs`（21 行）——原 400 / 437 / 339 为 2026-09-21 读数，端壳归核瘦身（2026-09-26）后失真。
+· ⑤ 记录存储形态 = **端面事实**（本端零该机制——非端差，如实登记；**写缝 = `pushRecord` 注入面**（`thincoder-core/context.mjs`——`pushReal` 双胞）；承载 = 端面 ∥ 单源 = §4.4 F-S7）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。
+坐标（实核 · 2026-09-28 复读）＝ `thincoder-vscode/src/extension/session-slots.mjs`（76 行）· `session-io.mjs`（246 行）· `panel-session.mjs`（312 行）· `session-gc.mjs`（21 行）——原 400 / 437 / 339 为 2026-09-21 读数，端壳归核瘦身（2026-09-26）后失真。
 用例面 = `test/session-boot.test.mjs`（490 行 / 8 例，2026-09-28 复读）· `test/history-window.test.mjs`（192 行 / 8 例）· `test/history-restore.test.mjs`（236 行 / 9 例）· 集成 `test/integration/scenario-04-session-recovery.test.mjs`（141 行 / 5 例）。
 
 **二态化裁定行（2026-09-25 · 台账 #339① 需求层复核）**：① = **已裁保留**（结构性不对称——端 marker 单侧存在：只写 `.manifest.vscode`、永不碰 `.cli`）；②③⑥ = **已裁保留**（形态类——显示 / 互斥面；类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）；④ = **已注销**（2026-09-21 VSC 补命令入口，双端同面——零动作）；⑤ = **端面事实**（非端差——行内改述）。
@@ -209,3 +211,5 @@ N-S3 CLI 写出的槽文件 `history` 数组与旧实现同构（version 2 + his
 - 2026-09-28（**§4.6 F-L3 收正 · 用户裁定 · 主 agent 落笔**——用户 06:08「可以懒刷新的，碰到 0 或者没有的时候就去核实一下更新一下」）：F-L3 定为**懒核实**（读面遇不可信摘要（含计数不可得）⇒ 当场核实该档 + 回写 ⇒ 回快路不重复；首答不得被拖慢）。
 - 2026-09-28（**§4.6 补依赖段 + D23 形态对盘 · 主 agent 落笔**〔父侧直接执行 · 可 revert〕——承设计 §6.25 判据句 4）：§4.6 增「依赖（上下游）」（五要素齐）；D23 显示形态与设计对盘——桌面 = **段缺席**（既有 `Number.isFinite` 门，零改）∥ CLI / VSC / `read_history` = 「—」。
 - 2026-09-30（**#726 · F-S7 新增 · 主 agent 落笔**〔父侧直接执行 · 可 revert〕——承批 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §1 · 用户 18:24 ∥ 18:28 令）：§4.4 新增 **F-S7**（消化生命周期面记录——`digest` 痕三型 + `subagent` 归档快照入记录存储（人读线 ∥ 不入机器线）；读面 `historyWindow {records:true}` opt-in（默认关 ⇒ 存量读面零破）；端侧重建为各端消费义务；机制单源位置 = 跨端承接批设计裁定）；源 = #726（#719 U1 承接：用户可见端差默认消灭）。
+- 2026-10-01（**#726 U2 父侧笔〔可 revert〕**——承批档 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §七 U2）：§4.5⑤ 补注——「端面事实」加**写缝 = `pushRecord` 注入面**（`thincoder-core/context.mjs`——`pushReal` 双胞）∥ 承载 = 端面 ∥ 单源 = §4.4 F-S7；§4.4 边界句 ∥ N-S3 **逐字复核保持成立**（零改）。**零新语义**（需求侧补注）。
+- 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 2 行折行（140 ∥ 159——语义零改）。**零新语义**。

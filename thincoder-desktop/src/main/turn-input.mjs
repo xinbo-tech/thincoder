@@ -5,15 +5,15 @@
  * （`agent-host.mjs` ∥ `ipc.mjs` 零改）。登记面 = `docs/desktop/design/PROJECT.md` §4.1 越层段 ∥ §4.2 本批行；
  * 切点 = 批档 `docs/batches/2026-09-29-structure-split-2.md` §2.2-E。
  * 依赖面（皆注入 —— 宿主在飞 ∥ 队 ∥ 链 ∥ 窗 ∥ 关联面**引用共享**）：`post` ∥ `ensure` ∥ `flights`（Map）∥
- * `queued` ∥ `chain` ∥ `suspension` ∥ `drive`（回合驱动尾）∥ `projects` ∥ `denyGates` ∥ `capPending` ∥ `capQueued`
- * （cap 两表 = #656 登记面 —— 与宿主 `askContinue` ∥ `dispose` ∥ 撤回臂同表）；本档自 import = 附件三件
+ * `queued` ∥ `chain` ∥ `suspension` ∥ `drive`（回合驱动尾）∥ `projects` ∥ `denyGates` ∥ `capPending`
+ * （cap 登记表 = #656 登记面 —— 与宿主 `askContinue` ∥ `dispose` 共享）；本档自 import = 附件三件
  * （装配 ∕ 降级 ∕ 清理）∥ 槽键（`slotOfKey`）。**零环**：宿主 → 本档单向。
  */
 import { cleanupTurn, degradeTurnAttachments, prepareTurnAttachments } from "./attachments.mjs"
 import { slotOfKey } from "./session-slots.mjs"
 
 /** 回合输入面工厂（msg 双通道族 —— 见档头）：返回 `{ send, interrupt }`（逐字迁出自 `turn-driver.mjs`）。 */
-export function createTurnInput({ post, ensure, flights, queued, chain, suspension, drive, projects, denyGates, capPending, capQueued }) {
+export function createTurnInput({ post, ensure, flights, queued, chain, suspension, drive, projects, denyGates, capPending }) {
   /** `msg:send`：坏键 ⇒ bad-key · **窗内 ⇒ 入挂起队列**（回执 `{ ok: true, queued: true }` 与忙态受理同形；含附件 ⇒
    *  **同受理**——载具层携图，窗条目携 `images`、送达判决随 `delivered.degraded`；`busy` = 窗径竞态防御档）·
    *  **在飞 ⇒ 按会话键入队**（`{ok:true, queued:true}`；满 ⇒ `queue-full` 零入队 —— KD-40 ②）·
@@ -108,7 +108,6 @@ export function createTurnInput({ post, ensure, flights, queued, chain, suspensi
     if (text !== null && capPending.has(key)) { // cap 待答径预检（#656 · KD-52 ②④）：先执入队权威判——满 ⇒ 零中止零入队
       const entry = { text, ts: Date.now() }
       if (queued.add(key, entry).ok !== true) return { ok: false, reason: "queue-full" }
-      capQueued.set(key, entry) // 条目引用登记（结算通知消费 ∕ 撤回臂按引用）
     }
     if (text === null) controller.abort()
     else controller.abort({ interrupt: true, message: text })

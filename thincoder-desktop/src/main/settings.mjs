@@ -230,14 +230,19 @@ function tierAgent(config, tier) {
  * `index:status`（无入参）⇒ `{ ok, status }`（R2 · 桌面功能对位批）：状态读数**装配** —— 计数 = 核只读
  * 出口（转口 `index-status.mjs`，**端侧零 SQL ∕ 零表名**）；`hasEmbedder` = 配置面判据（`embedding.apiKey`
  * 在场 —— 同 `thincoder-core/agent/assemble.mjs:76` 装配判据）；`built` = 本项目 code + doc 文件数 > 0（核出口 `indexed`
- * 同源）。无本项目 ⇒ 零计数（读数仍成回执 —— 「未建」态非错误；跨项目读全库不授权）。
+ * 同源）。**P1 两键（KD-69）**：`dbBytes` ∥ `origins` 随 `counts` 透传（设置面两读行消费）。
+ * 无本项目 ⇒ 零计数（读数仍成回执 —— 「未建」态非错误；跨项目读全库不授权）。
  */
 export function indexStatus({ dir = null } = {}) {
   const config = loadConfig()
   const counts = readIndexCounts({ dir })
   return {
     ok: true,
-    status: { built: counts.indexed, files: counts.files, chunks: counts.chunks, hasEmbedder: Boolean(config.embedding?.apiKey) },
+    status: {
+      built: counts.indexed, files: counts.files, chunks: counts.chunks,
+      dbBytes: counts.dbBytes, origins: counts.origins,
+      hasEmbedder: Boolean(config.embedding?.apiKey),
+    },
   }
 }
 

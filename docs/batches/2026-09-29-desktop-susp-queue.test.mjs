@@ -52,7 +52,7 @@ const [slices, pending, wireMod, driveMod, driverMod, slots] = await Promise.all
   mod("thincoder-desktop/renderer/composer-wire.mjs"), // 写面（队形退流 ∕ 复位 ∕ 失败径）
   mod("thincoder-desktop/src/main/suspension-drive.mjs"),
   mod("thincoder-desktop/src/main/turn-driver.mjs"),
-  mod("thincoder-core/session-slots.mjs"),
+  mod("thincoder-desktop/node_modules/@thincoder/core/session-slots.mjs"),
 ])
 
 const KEY = "1"

@@ -695,7 +695,7 @@ if (agent._spawnSystemBlock) systemPrompt += `\n\n${agent._spawnSystemBlock}`
 ## 6.28 VSC 端 batch 改名镜面修复（2026-09-21 · 批 VSC-BATCH-RENAME-FIX · 核 `0b45957c` 遗留 5 红）
 
 **问题陈述（as-of 2026-09-21 实测）**：核批 `0b45957c`（batch 生命周期工具单名化——主名 `batch` 单工具四 action，
-`thincoder-core/agent-tools/batch.mjs:270`；过渡别名 `batchSegmentTool` 降 shim 导出面，`:366`）落地后，VSC 全量
+`thincoder-core/agent-tools/batch.mjs:270`；过渡别名 `batchSegmentTool` 降 shim 导出面（机检豁免——过渡别名退场登记），`:366`）落地后，VSC 全量
 876 测试中 **5 红**——红源全部为 **VSC 测试断言面钉改前形状**（生产码零红）。核挂载面（VSC 装配同源，四处全主名）：
 depth-0 段 `agent/family-tools.mjs:141`（`batchTool(null)`）· eng-coder `:170` / eng-designer `:171`
 （`batchTool(batchDoc)`）· 设计评审 `advisor/loop.mjs:45`（`batchTool(batchDoc, { review: true })`）。
@@ -725,7 +725,7 @@ depth-0 段 `agent/family-tools.mjs:141`（`batchTool(null)`）· eng-coder `:17
 
 **关键决策**：
 
-- **D-1** 登记册**换名不加名**（仍 15 名——实读 `thincoder-core/agent-tools.mjs:24`：`batchSegmentTool` 过渡别名不入登记册，仅 shim 导出面）。
+- **D-1** 登记册**换名不加名**（仍 15 名——实读 `thincoder-core/agent-tools.mjs:24`：`batchSegmentTool` 过渡别名不入登记册，仅 shim 导出面（机检豁免——过渡别名退场登记））。
 - **D-2** T60 **四处全改**（非仅 2 红）——`:183/:188` 在旧名下恒真（主名世界里代码评审既不含旧名也不含新名）， （机检豁免——用例退场登记）
   断言力已失；随主名改后 `!has("batch")` 恢复强断言。
 - **D-3** `:109` 改走主名 execute 形——`required:["action"]`（`batch.mjs:321`）+ action 分发（`:342`）实读：
@@ -997,3 +997,5 @@ spawn 门区（`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `batchDoc` �
   「核驱动 = 参考实现（唯一消费者 = 核测）· 挂起面权威 = 两端驱动（已分叉 · 判保留）」**已由本批全修收编取代**：**挂起面单源 = 核驱动（三端消费）**——CLI ∕ VSC ∕ desktop 皆以 `startSuspension` 为唯一驱动，端差只在装配面（carrier ∕ hooks ∕ 输入缝）。
   依据 = 用户 2026-09-29 全修令 ＋「用户可见端差 = 缺陷；唯一例外 = 宿主能力面（须实证）；登记后保留通道已废」判据（2026-09-28）。规范面收正坐标 = 批档 §2.9。
 - 2026-09-29（**core-hygiene 批 · P3 文档收正 · eng-designer**——承批档 `docs/batches/2026-09-29-core-hygiene.md` §2.8 行 5）：C2 行 ∕ 系统消息组装点与 `systemPrompt` 面坐标按 **P2 三拆**收正（组装 = `agent/chat-call.mjs:18`；取值 = `agent/run-start.mjs`；压缩开销 = `agent/turn-loop.mjs:39-45`）；档头补三拆坐标注。机制条文零改。
+
+- 2026-10-02（**文档清账轮 · 执行轮 1（core/design 前段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 2 处 R5 注记（过渡别名 `batchSegmentTool` 退场登记——§6.28 两行）。**零新语义**。

@@ -73,6 +73,17 @@
  *      **主题切换批增四键**（#743 · 2026-09-30：面头主题三态族 `settings.theme` ∥ `.system` ∥ `.light` ∥ `.dark` 两语同增 ——
  *      值 = 设计给定；消费面 = `renderer/views/settings.mjs` `themeNode`）⇒ `SETTINGS_DICT`（第四档）**56 ⇒ 60** ∕
  *      `HOST_DICT`（**合并表**，经合并点随动）**295 ⇒ 299**（两语同拍、键集相等；届盘实读续链）。
+ *      **斜径命令面批增三键**（#761 · 2026-10-01：`slash.unknown` ∥ `slash.busy` ∥ `slash.args` 两语同增 ——
+ *      消费面 = 核件 `composer/panel.mjs` 斜径拦截段；键面单源 = `renderer/i18n-views.mjs` ⑬ 组）⇒
+ *      `VIEWS_DICT`（第二档）**126 ⇒ 129**（链文前值 124 系滞后值——并行批增键未逐笔续计；本届盘实读续链） ∕
+ *      `HOST_DICT`（**合并表**，经合并点随动）**299 ⇒ 302**（两语同拍、键集相等）。
+ *      **`/help` 增量增六键**（同批 2026-10-01②：`slash.help.label` ∥ `slash.desc.{model,auto,plan,eng,help}` 两语同增 ——
+ *      消费面 = 端装配面 `printHelp` 口经核 `formatHelp` 取词；键面单源 = `renderer/i18n-views.mjs` ⑬ 组）⇒
+ *      `VIEWS_DICT`（第二档）**129 ⇒ 135** ∕ `HOST_DICT`（**合并表**，经合并点随动）**302 ⇒ 308**（两语同拍、键集相等）。
+ *      **桌面 UX 收尾批增二键**（#697 · 2026-10-02 · KD-69：P1 两读两键 `settings.indexDbSizeLabel` ∥
+ *      `settings.indexOriginCounts` 两语同增 —— 消费面 = `renderer/views/settings-sections-tools.mjs`；键面单源
+ *      = `renderer/i18n-views.mjs` ⑦ 组）⇒ `VIEWS_DICT`（第二档）**135 ⇒ 137**（其间设置六轮批 +2 未逐笔续计
+ *      —— 届盘实读续链） ∕ `HOST_DICT`（**合并表**，经合并点随动）**308 ⇒ 312**（两语同拍、键集相等）。
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；

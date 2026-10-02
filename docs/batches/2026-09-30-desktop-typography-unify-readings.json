@@ -1,6 +1,6 @@
 {
  "probe": "2026-09-30-desktop-typography-unify-probe",
- "at": "2026-09-30T11:29:41.687Z",
+ "at": "2026-10-01T15:41:39.575Z",
  "phases": {
   "settings": {
    "steps": {
@@ -9,7 +9,7 @@
      "candidates": 51,
      "violations": [],
      "families": [
-      "ui-monospace"
+      "Cascadia Mono"
      ],
      "seen": {
       "button": 13,
@@ -39,7 +39,7 @@
      "candidates": 55,
      "violations": [],
      "families": [
-      "ui-monospace"
+      "Cascadia Mono"
      ],
      "seen": {
       "button": 13,
@@ -69,7 +69,7 @@
      "candidates": 53,
      "violations": [],
      "families": [
-      "ui-monospace"
+      "Cascadia Mono"
      ],
      "seen": {
       "button": 13,
@@ -99,7 +99,7 @@
      "candidates": 56,
      "violations": [],
      "families": [
-      "ui-monospace"
+      "Cascadia Mono"
      ],
      "seen": {
       "button": 15,
@@ -129,7 +129,7 @@
      "candidates": 57,
      "violations": [],
      "families": [
-      "ui-monospace"
+      "Cascadia Mono"
      ],
      "seen": {
       "button": 16,
@@ -163,13 +163,13 @@
     },
     "settings": {
      "face": "设置面（[data-settings] open）",
-     "candidates": 256,
+     "candidates": 259,
      "violations": [],
      "families": [
-      "ui-monospace"
+      "Cascadia Mono"
      ],
      "seen": {
-      "button": 29,
+      "button": 32,
       "span": 35,
       "div": 7,
       "h1": 1,
@@ -199,13 +199,13 @@
     },
     "settingsDark": {
      "face": "设置面 · 暗模式（全文档同扫）",
-     "candidates": 256,
+     "candidates": 259,
      "violations": [],
      "families": [
-      "ui-monospace"
+      "Cascadia Mono"
      ],
      "seen": {
-      "button": 29,
+      "button": 32,
       "span": 35,
       "div": 7,
       "h1": 1,
@@ -237,19 +237,19 @@
      "before": "normal",
      "inline": "normal",
      "inlineImportant": "normal",
-     "optionLh": "21px",
+     "optionLh": "18.2px",
      "note": "Blink 把 select 本体 computed line-height 固定为 normal（内联 ∥ 表则 ∥ !important 均不可达）——同 select 的 option ∥ input ∥ button 可控且已归基线"
     },
     "synthetic": {
      "face": "合成面（审批 ∥ 提问 ∥ 计划 ∥ 目标 ∥ 推理 ∥ 子代 ∥ 消化 ∥ 台账 ∥ 错误 ∥ diff ∥ 欢迎条族）",
-     "candidates": 182,
+     "candidates": 174,
      "violations": [],
      "families": [
-      "ui-monospace"
+      "Cascadia Mono"
      ],
      "seen": {
-      "button": 44,
-      "span": 55,
+      "button": 43,
+      "span": 48,
       "div": 41,
       "h1": 1,
       "h2": 3,
@@ -296,7 +296,7 @@
      "candidates": 52,
      "violations": [],
      "families": [
-      "ui-monospace"
+      "Cascadia Mono"
      ],
      "seen": {
       "button": 18,
@@ -348,17 +348,17 @@
    },
    {
     "step": "settings",
-    "candidates": 256,
+    "candidates": 259,
     "violations": 0
    },
    {
     "step": "settingsDark",
-    "candidates": 256,
+    "candidates": 259,
     "violations": 0
    },
    {
     "step": "synthetic",
-    "candidates": 182,
+    "candidates": 174,
     "violations": 0
    }
   ],

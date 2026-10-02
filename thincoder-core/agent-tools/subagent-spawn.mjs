@@ -345,7 +345,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   child._historyWindow = RECORD_WINDOW_MESSAGES
 
   // BATCH-RECORD.md §2 批次档段写入通道绑定（第 4 批）：工程角色（eng-coder/eng-designer）把批次档
-  // 绝对路径记在 child 上——setup 挂载 batch_segment 时读它。无路径参数的工具靠这条
+  // 绝对路径记在 child 上——setup 挂载 `batch` 时读它。无路径参数的工具靠这条
   // 绑定决定目标档（spawn 门已保证「参数在 + 路径可读」）。
   if (engineeringRole) child._batchDoc = batchDocAbs
 

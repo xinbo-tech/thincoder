@@ -70,8 +70,9 @@ export function clearActivityNew(root) {
   root.querySelector(NEW_BTN)?.remove()
 }
 
-/** 钮同步（幂等 —— 出生点与**帧面重挂后补装**同用）：`N > 0` ⇒ 建 / 更（池头带首子 —— 区首；头带缺位 ⇒
- *  零动作，下帧再补）；`N = 0` ⇒ 摘。 */
+/** 钮同步（幂等 —— 出生点与帧面补挂同用）：`N > 0` ⇒ 建 / 更（池头带首子 —— 区首；头带缺位 ⇒
+ *  零动作，下帧再补）；`N = 0` ⇒ 摘。**补挂 = 幂等兜底**（池头逐件就地差分后钮身份存续——钮在场 ⇒ 零
+ *  动作；不再有「换代毁钮 ⇒ 补挂」补偿径 · 2026-10-01 复核收正批）。 */
 export function syncActivityNew(root) {
   if (!root || typeof root.querySelector !== "function") return
   const count = counterOf(root).read()

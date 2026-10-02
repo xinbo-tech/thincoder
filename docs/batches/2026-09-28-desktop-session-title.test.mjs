@@ -16,9 +16,9 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync }
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { pushReal } from "../../thincoder-core/context.mjs"
-import { _resetSessionsDirForTest, _setSessionsDirForTest, slotPath } from "../../thincoder-core/session-slots.mjs"
-import { newSession, renameSlot } from "../../thincoder-core/session.mjs"
+import { pushReal } from "../../thincoder-desktop/node_modules/@thincoder/core/context.mjs"
+import { _resetSessionsDirForTest, _setSessionsDirForTest, slotPath } from "../../thincoder-desktop/node_modules/@thincoder/core/session-slots.mjs"
+import { newSession, renameSlot } from "../../thincoder-desktop/node_modules/@thincoder/core/session.mjs"
 import { loadAgentSlot } from "../../thincoder-desktop/src/main/session-io.mjs"
 import { listSessions } from "../../thincoder-desktop/src/main/sessions.mjs"
 import { createTurnDriver } from "../../thincoder-desktop/src/main/turn-driver.mjs"

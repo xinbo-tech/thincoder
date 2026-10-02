@@ -257,7 +257,8 @@ function providerRow(provider, group, models, value, onPick, overlay) {
  *  - `post(type, payload)`（② 出站）· `state`（③ `models()` 初值读面）· `hooks.confirmRemoveProvider(onConfirm)` ∕
  *    `hooks.closeSiblingDropdowns()`（⑤ 跨面）· `blocked()`（忙态门判据——单点在 `panel.mjs`）；
  *  - `modelBtn` ∕ `reasoningBtn` ∕ `controlsRow` = 控件行调用方已建的元素与容器（两浮层由本档建 + 挂入）。
- * 返回：`{ close, closeReasoning, applyModels, models, selection, reasoningDropdown, modelDropdown }`。
+ * 返回：`{ open, close, closeReasoning, applyModels, models, selection, reasoningDropdown, modelDropdown }`——
+ * `open` = 模型钮 handler 提取件（斜径 `/model` 同钮同门消费；见其函数注）。
  */
 export function createModelMenu(deps) {
   const { post, state = {}, hooks = {}, modelBtn, reasoningBtn, controlsRow, blocked = () => false } = deps
@@ -288,27 +289,33 @@ export function createModelMenu(deps) {
 
   // ── 两钮接线（`model-picker.js:13-36` 逐字；DOM 查询 → 调用方给的元素引用）──
 
-  modelBtn.addEventListener("click", (e) => {
-      e.stopPropagation()
-      if (blocked()) return // F-W14：忙态门（零浮层、零写槽；读面仍由按钮显示承载）
-      openModelMenu({
-        anchorEl: modelBtn,
-        models: _models,
-        value: { provider: selectedProvider, model: selectedModel },
-        onPick: ({ provider, model }) => {
-          const m = _models.find((x) => x.id === model && (x.provider || "") === provider)
-          if (m) selectModel(m)
-        },
-        footer: [
-          { label: t("model.addProvider"), onClick: () => post("addProvider") },
-          { label: t("model.removeProvider"), onClick: () => hooks.confirmRemoveProvider?.(() => post("removeProvider")) },
-          // ↑ F-W17 确认门（SETTINGS.md §2.10 入口册 #6——删条即失 apiKey 原文）；VSC 绑 = `window._confirmSecretDelete(null, cb)`
-          // （settings.js:47）+ footer onClick 被 model-menu.js:132 调用时不传参 ⇒ 无元素可给（btn=null 口径随注入面）。
-          { label: t("model.setKey"), onClick: () => post("setKey") },
-        ],
-        up: true,
-      })
+  /**
+   * 模型钮 handler **提取件**（`docs/render-core/design/RENDER-CORE.md` §5 条 6 动作句柄面）：斜径 `/model`
+   * 与钮点击走**同一函数**（同钮同门——忙态门 `blocked()` 随函数）。返值 = 斜径契约：`true` = **已受理**
+   * （浮层在场）· `false` = 未受理（忙态门拒 ⇒ 面板层出条目 `rejectKey` toast）；钮径忽略返值 ⇒ **零行为改**。
+   */
+  function open() {
+    if (blocked()) return false // F-W14：忙态门（零浮层、零写槽；读面仍由按钮显示承载）
+    openModelMenu({
+      anchorEl: modelBtn,
+      models: _models,
+      value: { provider: selectedProvider, model: selectedModel },
+      onPick: ({ provider, model }) => {
+        const m = _models.find((x) => x.id === model && (x.provider || "") === provider)
+        if (m) selectModel(m)
+      },
+      footer: [
+        { label: t("model.addProvider"), onClick: () => post("addProvider") },
+        { label: t("model.removeProvider"), onClick: () => hooks.confirmRemoveProvider?.(() => post("removeProvider")) },
+        // ↑ F-W17 确认门（SETTINGS.md §2.10 入口册 #6——删条即失 apiKey 原文）；VSC 绑 = `window._confirmSecretDelete(null, cb)`
+        // （settings.js:47）+ footer onClick 被 model-menu.js:132 调用时不传参 ⇒ 无元素可给（btn=null 口径随注入面）。
+        { label: t("model.setKey"), onClick: () => post("setKey") },
+      ],
+      up: true,
     })
+    return true
+  }
+  modelBtn.addEventListener("click", (e) => { e.stopPropagation(); open() })
   reasoningBtn.addEventListener("click", () => {
     if (blocked()) return // F-W14：同谓词（两写槽入口同读）
     toggleDropdown(reasoningDropdown, () => buildReasoningDropdown())
@@ -437,6 +444,7 @@ export function createModelMenu(deps) {
   })
 
   return {
+    open,
     close: closeModelMenu,
     closeReasoning: () => { reasoningDropdown.style.display = "none" },
     applyModels,

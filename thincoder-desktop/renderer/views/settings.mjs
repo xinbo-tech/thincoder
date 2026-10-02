@@ -12,11 +12,12 @@
  * **R7 先拆后改**：随 `fieldPair` 出档 `renderer/views/settings-controls.mjs`（本档同名 re-export ⇒ 导出面零改）；
  * 段体经 `deps` 注入取用。兄弟档：段体 = `renderer/views/settings-sections.mjs`（300 行层拆分 ——
  * 渠道 / 模型 / MCP 三形；agent 段 = `-agent.mjs`；tools 段 = `-tools.mjs`；env 段 = `-env.mjs`；
- * models 段 = `-models.mjs`——后两者 R7 增，前两者本档 re-export 面零改）；项目级信息行 =
- * `renderer/mount-info.mjs`（本档 `reasonWord` 供其失败面出词）。**共用面 `syncHostProps`** = 宿主属性面复位表
- * （薄挂载属性应收单源 —— 向导 / 信息行两档同取，零副本；判据 = `docs/desktop/design/RENDERER.md` §1 退场口径 · 属性面）。
+ * models 段 = `-models.mjs`——后两者 R7 增，前两者本档 re-export 面零改）。**共用面 `syncHostProps`** = 宿主属性面复位表
+ * （薄挂载属性应收单源 —— 向导档取用，零副本；判据 = `docs/desktop/design/RENDERER.md` §1 退场口径 · 属性面）。
  * 纪律：零 DOM（构造点 = `dom.mjs` `build`）；
  * 文案一律经 `t()`、零字形字面（字形住 `renderer/settings.css` content）；缺 handlers ⇒ `wire` 落 `disabled: true`。
+ * **D39（设置菜单升级批 · #817）增**：`settingsModalTree`（单组弹窗树——复用档内私有 `noticeNode` ∥ `sectionStateNode`
+ * ∥ `sectionBody`，零第二实现；宿主 = `renderer/settings-modal.mjs`；决策单源 = `docs/desktop/design/SETTINGS.md` §1 **KD-68**）。
  */
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
@@ -339,10 +340,42 @@ export function settingsTree(model, handlers = {}) {
   return { tag: "div", props: { "data-settings": "", "data-state": open ? "open" : "closed", class: "settings" }, children }
 }
 
+/** 弹窗树（D39 ∥ D38 · #817 **KD-68** —— 单组树：背板 + 卡〔`role="dialog"` + `aria-modal`；头 = 组名 + ✕；
+ *  体 = 失败串（`notice.scope` = 本组 ∨ `panel`——他组隐）+ 段态词 + 段体，段标题不复述〕；复用档内私有三件
+ *  （`noticeNode` ∥ `sectionStateNode` ∥ `sectionBody`）⇒ 零第二实现；三关 handler 全在树面（背板 ∥ ✕ ∥ 卡内 Esc
+ *  〔`stopPropagation` —— 不连带触 F-Esc 关页〕）；表外组 ⇒ `null`（防御档——调用面已验 `SCOPES`）。
+ *  体节点携 `data-state` = 组段态（装配面第二闸在途判据面 —— 与页侧 `[data-state="loading"]` 同形）。 */
+export function settingsModalTree(state, group, handlers = {}) {
+  const model = settingsModel(state)
+  const section = SECTIONS.find((s) => s.name === group)
+  if (section === undefined) return null
+  const onClose = typeof handlers?.onCloseModal === "function" ? handlers.onCloseModal : undefined
+  const close = () => { if (typeof onClose === "function") onClose() }
+  const notice = model.notice !== null && (model.notice.scope === group || model.notice.scope === "panel") ? model.notice : null
+  const groupState = model[group]?.state ?? "none"
+  return {
+    backdrop: { tag: "div", props: { class: "settings-modal-backdrop", onClick: close }, children: [] },
+    card: {
+      tag: "div",
+      props: {
+        class: "settings-modal", role: "dialog", "aria-modal": "true", "aria-label": t(section.word),
+        onKeydown: (event) => { if (event?.key !== "Escape") return; event.stopPropagation?.(); close() },
+      },
+      children: [
+        { tag: "header", props: { class: "settings-head" }, children: [
+          { tag: "h2", props: { class: "settings-title" }, children: [t(section.word)] },
+          { tag: "button", props: wire({ class: "settings-close", type: "button", "data-action": "settings:modalClose", "aria-label": t("settings.close") }, onClose), children: [] },
+        ] },
+        { tag: "div", props: { class: "settings-modal-body", "data-state": groupState }, children: [noticeNode(notice), sectionStateNode(groupState), ...sectionBody(group, model, handlers)] },
+      ],
+    },
+  }
+}
+
 /** 宿主属性面复位表（`root` → 上次薄挂载所落属性名集）：**不入 DOM 属性面**（弱引用 —— 宿主离场随收）。 */
 const hostProps = new WeakMap()
 
-/** 薄挂载属性面（**单源** —— `views/onboarding.mjs` / `renderer/mount-info.mjs` 两挂载共用本表）：本次树声明的属性落宿主，
+/** 薄挂载属性面（**单源** —— `views/onboarding.mjs` 向导挂载取用本表）：本次树声明的属性落宿主，
  *  **上次所落而本次未再声明的摘除**（退场 / 换树 ⇒ 前任所加属性零残留 · 骨架属性不入表 ⇒ 零摘除）；判据 =
  *  「退场后宿主属性集 ⊆ 挂载前属性集」（只增不减 ⇒ 判据不达 · `docs/desktop/design/RENDERER.md` §1 退场口径 · 属性面）。 */
 export function syncHostProps(root, tree) {

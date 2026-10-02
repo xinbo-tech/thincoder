@@ -66,7 +66,7 @@ export const advisorTool = {
       },
       batchDoc: {
         type: "string",
-        description: "Design review only: the in-flight batch record path — validated whenever passed (unreadable ⇒ refused, not ignored); the reviewer then also gets the `batch` write channel (transition alias `batch_segment`) to record its findings + verdict. Omit when no batch record is in flight (no write channel — zero regression).",
+        description: "Design review only: the in-flight batch record path — validated whenever passed (unreadable ⇒ refused, not ignored); the reviewer then also gets the `batch` write channel to record its findings + verdict. Omit when no batch record is in flight (no write channel — zero regression).",
       },
     },
     required: ["type"],
@@ -154,7 +154,7 @@ export const advisorTool = {
     // scopes agent._advisorRound/_lastAdvisorOutput so the message builder and
     // the run.mjs cap read THIS instance's round/prior (multi-review isolation).
     const resolved = resolveAdvisorLaunch(agent, reviewType, { documents })
-    // BATCH-RECORD.md §4.2 评审侧批次档门禁 + 实例键绑定（batch_segment 的唯一路径来源）：
+    // BATCH-RECORD.md §4.2 评审侧批次档门禁 + 实例键绑定（评审实例的唯一路径来源）：
     // 口径 = **「若传则须可读」**（空/不可读 → throw；不强制必传——无批次档的在途设计评审
     // 零回归，N5）；绑定落在 resolved.run（评审实例键，与 reviewType/round/designId 同族）——
     // 并发设计评审各绑各档，不用单值会话态（BATCH-RECORD.md §4.7 #6）。

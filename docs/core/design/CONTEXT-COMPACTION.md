@@ -172,7 +172,7 @@
 
 - **CLI `splitHistory` 无「reverse 保护」**（VSC 旧镜像 `thincoder-vscode/src/compact.mjs` **已删**——W6 迁核后本差异退场；旧 VSC 侧判据 `callsGapAfter` / `reverseProtectTail` 随删档退场）：CLI 不需要——`repairHistory` 在 run 起点已保证 tool_calls→tool 顺序、run 中 append 保序，倒序无法产生； （迁移期引文）
   边界微差（`i > headEnd` vs `i >= headEnd` 等）为 off-by-one 粒度差、不改语义。若将来两端 history 来源出现倒序，应回植该保护（W6 后回植点 = 核内笔——超本批写域）。
-- **提示词单源（W6 / W15 迁核后收正 · 2026-09-18 · 评审 #6）**：`SUMMARIZE_PROMPT`（`thincoder-core/context.mjs:18`——本批 `:15` 新增 import 行的 +1 位移已收正 · 2026-09-18 实施后修正轮）
+- **提示词单源（W6 / W15 迁核后收正 · 2026-09-18 · 评审 #6）**：`SUMMARIZE_PROMPT`（`thincoder-core/context.mjs:20`——行号 as-of 2026-10-01 实读）
   与 `EXPLORE_SUMMARY_PROMPT`（`thincoder-core/explore-distill.mjs:23`）现体均为**核单源**。
   两端副本随旧档退场（VSC 旧档 `compact.mjs` 已删——W6 迁核；`explore-distill.mjs` 现为**调用期适配器**——只 import 核面）——旧「两端措辞微差 / byte-identical」口径随之退役（比对对象已不存在，一致性由单源承接）。
 
@@ -180,11 +180,11 @@
 
 | 机制 | CLI | VS Code |
 |---|---|---|
-| 压缩 / 预算 / tail / 截断 / 摘要主体（`applyCompression` / `splitHistory` / `compressIfNeeded` / `compressFallback` / `shrinkOversized` / `summarizeRunExplorations` / `tightenTailByBudget` / `repairedTailStart` / `tailBudgetTokens`） | `thincoder-core/context.mjs` | `thincoder-vscode/src/compact.mjs` **已删**（W6 迁核——旧 `compactHistory` / `estimateTokens` / `tailStartByBudget` 退场）；端侧判定点封装 = `thincoder-vscode/src/agent/run-stages.mjs` （迁移期引文） |
-| 常量（`IMAGE_TOKEN_ESTIMATE` / `TAIL_BUDGET_FRACTION` / `SUMMARY_TOKEN_ESTIMATE = 1000` / `TAIL_FLOOR_MESSAGES`） | `thincoder-core/context.mjs` | 旧档 `thincoder-vscode/src/compact.mjs`（`SUMMARY_SEGMENT_ESTIMATE = 1100`）**已删**——W6 端差退场、单源 = 核列常量 （迁移期引文） |
+| 压缩 / 预算 / tail / 截断 / 摘要主体（`applyCompression` / `splitHistory` / `compressIfNeeded` / `compressFallback` / `shrinkOversized` / `summarizeRunExplorations` / `tightenTailByBudget` / `tailBudgetTokens`） | `thincoder-core/context.mjs`（`applyCompression` / `compressIfNeeded` / `compressFallback`）· `thincoder-core/token-window.mjs`（`splitHistory` / `tightenTailByBudget` / `repairedTailStart` / `tailBudgetTokens`）· `thincoder-core/context-degrade.mjs`（`shrinkOversized`）· `thincoder-core/explore-distill.mjs`（`summarizeRunExplorations`）——后三者经 `context.mjs` 转口可达；归属 as-of 2026-10-01 实读 | `thincoder-vscode/src/compact.mjs` **已删**（W6 迁核——旧 `compactHistory` / `estimateTokens` / `tailStartByBudget` 退场）；端侧判定点封装 = `thincoder-vscode/src/agent/run-stages.mjs` （迁移期引文） |
+| 常量（`IMAGE_TOKEN_ESTIMATE` / `TAIL_BUDGET_FRACTION` / `SUMMARY_TOKEN_ESTIMATE = 1000` / `TAIL_FLOOR_MESSAGES`） | `thincoder-core/token-window.mjs`（2026-09-21 计量 / 尾族迁出面——as-of 2026-10-01 实读） | 旧档 `thincoder-vscode/src/compact.mjs`（`SUMMARY_SEGMENT_ESTIMATE = 1100`）**已删**——W6 端差退场、单源 = 核列常量 （迁移期引文） |
 | run 钩子（`_compressFailures` 重置 / `_runStartHistoryLen` / onCompress* 接线） | `thincoder-core/agent/run-start.mjs`（复位块 ∕ `_runStartHistoryLen`——三拆前 `agent.mjs`）+ `thincoder-core/agent/turn-loop.mjs`（压缩检查调用点）+ `thincoder-cli/src/tui/agent-turn.mjs` | W6 后：`thincoder-vscode/src/agent/run-stages.mjs`（判定点转发）+ `thincoder-vscode/src/agent.mjs`（安全点调用） |
 | 压缩面板渲染 | `thincoder-cli/src/tui/tool-events.mjs` + `thincoder-cli/src/tui/subagent-blocks.mjs` | webview 会话状态渲染 |
-| SUMMARIZE_PROMPT / EXPLORE_SUMMARY_PROMPT | `thincoder-core/context.mjs`（export） | 旧档 `thincoder-vscode/src/compact.mjs`（export：`SUMMARIZE_PROMPT` = `:115`）**已删**——现体 = 核 export（单源）；`thincoder-vscode/src/explore-distill.mjs` 现为**调用期适配器**（W15 已落——只 import 核面） （迁移期引文） |
+| SUMMARIZE_PROMPT / EXPLORE_SUMMARY_PROMPT | `thincoder-core/context.mjs`（`SUMMARIZE_PROMPT` export——as-of 2026-10-01 行号 `:20`）；`EXPLORE_SUMMARY_PROMPT` = `thincoder-core/explore-distill.mjs`——经 `context.mjs` 转口 export | 旧档 `thincoder-vscode/src/compact.mjs`（export：`SUMMARIZE_PROMPT` = `:115`）**已删**——现体 = 核 export（单源）；`thincoder-vscode/src/explore-distill.mjs` 现为**调用期适配器**（W15 已落——只 import 核面） （迁移期引文） |
 
 ### 6.13 VS Code 端接线面（VSC 轮并入 · 2026-09-15；**W6 迁核后收正**）
 
@@ -494,9 +494,10 @@ export const contextTool = {
 | **失败路径复用** | 摘要在途失败 ⇒ 既有失败链原样（`_compressFailures++` → `onCompressFail` → 连续 3 次 `compressFallback`）；AbortError 照旧透传（不落注记）；模型面另落**失败注记一行**（旧式无人告知的缺口在本面补齐——见下）。`context compact` **不另起**任何失败 / 降级 / 面板机制 |
 | **回执面** | ① **工具回执**（`compact` 调用当次返回）：排队事实 + focus 回显 + 落点说明 + **可回查锚**（见 6.16.7）；② **结果注记**（机器行一条，`transient: true`，直推 `agent.history`）：仅两种情况落——**no-op**（`nothing to compact right now (no middle section…)`）与**失败**（`context compact failed (attempt N of 3): <msg>`）；**成功不落注记**（压缩注记 + 摘要本身就是结果，重复即噪音） |
 
-- **强制面第三去向（有损收缩已处理 · 登记）**：`force` ∧ `!split`（无中段）∧ 单条消息体 > `OVERSIZE_CONTENT_LIMIT`（8000 字符——`thincoder-core/context.mjs:393`）⇒ `shrinkOversized` 命中（`:403-432` 返 true）——该安全点按**一次成功压缩**记账：**不落 no-op 注记**（有损收缩已发生，「nothing to compact」不实）、**不跑阈值面**。
-  等价性（判「现状语义自洽、非缺口」之据）：该形下阈值面的唯一杠杆 = **同一** `shrinkOversized`（`:285-289`）⇒ 跳过与执行**可观察结果等价**——`split` 输入（条数 / 角色序）不因收缩改变仍为 null，已截体落限内（keepHead 4000 + stub + keepTail 2000 < 8000）⇒ 重复调用恒 false。
-  模型面可观察 = 被截条目的体内标记 `[... N chars truncated — single message too large for context window ...]`（`:421` 逐字）；该去向含 `tokens <= threshold` 形——`force` 已跳过阈值早退（模型判定优先于阈值）。
+- **强制面第三去向（有损收缩已处理 · 登记）**：`force` ∧ `!split`（无中段）∧ 单条消息体 > `OVERSIZE_CONTENT_LIMIT`（8000 字符——`thincoder-core/context-degrade.mjs:42`）⇒ `shrinkOversized` 命中（`thincoder-core/context-degrade.mjs:52-81` 返 true——经 `context.mjs` 转口）——
+  该安全点按**一次成功压缩**记账：**不落 no-op 注记**（有损收缩已发生，「nothing to compact」不实）、**不跑阈值面**。
+  等价性（判「现状语义自洽、非缺口」之据）：该形下阈值面的唯一杠杆 = **同一** `shrinkOversized`（`thincoder-core/context.mjs:178`——`compressIfNeeded` 内调用点）⇒ 跳过与执行**可观察结果等价**——`split` 输入（条数 / 角色序）不因收缩改变仍为 null，已截体落限内（keepHead 4000 + stub + keepTail 2000 < 8000）⇒ 重复调用恒 false。
+  模型面可观察 = 被截条目的体内标记 `[... N chars truncated — single message too large for context window ...]`（`thincoder-core/context-degrade.mjs:70` 逐字）；该去向含 `tokens <= threshold` 形——`force` 已跳过阈值早退（模型判定优先于阈值）。
   机判形（登记 · 现无专属用例——C5① 覆盖摘要路、C7 覆盖无收缩命中的 no-op 路）：短历史 ∧ 单条 >8000 字符 + `compact` ⇒ 零摘要请求 ∧ 体内截断标记 ∧ 零 no-op 注记。
 
 **focus 指令块（摘要请求尾段追加——`context.mjs`）**：

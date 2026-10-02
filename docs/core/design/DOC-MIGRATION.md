@@ -1,6 +1,6 @@
 # 文档迁移台账（DOC-MIGRATION）· CLI 树 84 档二分与落点
 
-> 归属 = **文档体系板块**（`docs/core/design/DOC-SYSTEM.md` 的下游执行表）；本档 = **CLI 树 84 档的逐档二分（活 / 历史）+ 落点 + 批次分组**的唯一权威表。
+> 归属 = **文档体系板块**（`docs/core/design/DOC-SYSTEM.md` 的下游执行表）；本档 = **CLI 树 84 档的逐档二分（活 / 历史）+ 落点 + 批次分组**的唯一权威表；并载后续迁移执行方案（§10 v1 文档退役 ∥ §11 桌面端设计档按域拆分）。
 > 判据（**本节不复制**）→ `docs/core/design/DOC-SYSTEM.md` §5.1（P1–P5 归属判据句）· §4（目标目录结构）· §6（命名规则）。
 > 迁法（用户 2026-09-14 裁定「**明显应该是 B**」）= **旧档留原地一字不改 + 内容补写 / 重建进根层**。
 > 底本口径 = `thincoder-cli/docs/design/*.md`（47）+ `thincoder-cli/docs/requirements/*.md`（37）= **84 档**（不含 `design/prompts/` · `design/_archive/` · `docs/batches/`）。
@@ -35,7 +35,7 @@
 | 8 | CHECKPOINT | 已清 | 对账：CLI §2–§8 ↔ 根层 §6.1–§6.8 + §7（§5.5 与附录由根层 §8.2 登记不并） | 无动作 |
 | 9 | CONSULTATION | 已清 | 对账：CLI §2.1–§2.6 ↔ 根层 §6.1–§6.4 + §7 | 无动作 |
 | 10 | CONTEXT-COMPACTION | 已清 | 对账：CLI §1–§12 ↔ 根层 §6.1–§6.12（D1–D13 / H1 / E1 全在场） | 无动作 |
-| 11 | CRASH-REPORTS | **本批迁** | 活——根层无对应；实装 `thincoder-cli/src/crash-reports.mjs` · `src/heap-watch.mjs` 在位；VSC 无此面；**状态行漂移按现状收正**（三批机制均已实装—测试档在位） | 已落 `docs/cli/design/CRASH-REPORTS.md` |
+| 11 | CRASH-REPORTS | **本批迁** | 活——根层无对应；实装 `thincoder-cli/src/crash-reports.mjs` · `thincoder-cli/src/heap-watch.mjs` 在位；VSC 无此面；**状态行漂移按现状收正**（三批机制均已实装—测试档在位） | 已落 `docs/cli/design/CRASH-REPORTS.md` |
 | 12 | DESIGN-TOKEN-SETTLEMENT | **本批迁** | 活——根层无对应；代码注释直引其 D3（`thincoder-core/token-ttl.mjs:20`）；结算面坐标经实核 | 已落 `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` |
 | 13 | EDIT-HELPERS | **本批迁** | 根层无档名（`TOOLS.md` §6.6 末「共享 helper 权威 = 编辑辅助面」）；VSC 同名对位 | 已落 `docs/core/design/EDIT-HELPERS.md` |
 | 14 | EDIT | **本批迁** | 同编辑族（`TOOLS.md` §8.2 登记）；VSC 同名对位 | 已落 `docs/core/design/EDIT.md` |
@@ -411,7 +411,7 @@
 | AC-4 零新增 | 批档 §2 验收 ⑤ | 终态 `汇总` 悬空 = **S0 基线值**（本批新增 **0**）· 行宽不增（差值式——**读数标与漂移说明 = AC 补充注 ②**） | 前后两次 `node scripts/doc-check.mjs` 对读 |
 | AC-5 测试 | §2.5 前提 2 | **差值式**：终态套件结果 vs **S0 基线** ⇒ **无新增失败**（绝对全绿不作判据——**既有红以 S0 基线为准，不假定具体档**）；**③/⑤ 重定宿主两例列必过项**（`prompts-mirror-anchors.test.mjs` 的 ③ 镜像源 / ⑤ 扫描根）+ 轮 B 同族例（`prompts-dual-source.test.mjs`） | S0 / S7 两次 `npm test` 对读（VSC 包；CLI 包随轮 B）+ 逐档 `node --test` |
 | AC-6 发布面 | §10.2 行 5 | CLI `package.json` / VSC `.vscodeignore` **零改**（`git status` 不含两文件） | `git status --porcelain` |
-| AC-7 声明面 | §10.2 行 6 | `checkConfig` 五键**零改**（D3：键清单 = 列表长度） | `git diff PROJECT-MANIFEST.json` 空 |
+| AC-7 声明面 | §10.2 行 6 | `checkConfig` 五键（= 声明面五项——`§10.2` 行 6）**零改**（**as-of 2026-09-18**；D3：键清单 = 列表长度） | `git diff PROJECT-MANIFEST.json` 空 |
 
 **AC 补充注（修正轮 · as-of 2026-09-18 05:2x）**：
 
@@ -443,6 +443,160 @@
 ### 10.9 open / 未决
 
 ① **执行窗口点火**（用户 / 父侧——§2.5 窗口：在途文档债批收口 ∧ 用户点火）；② **族 B 4 行的措辞落笔**（改指 canonical vs 退场注记——执行轮按 §10.4 判据择一，若涉语义转换则回父侧）；③ **`docs/README.md` §3 待迁清单**的 phase-1 三档（`TWO-REPO-MERGE*`）——**已结清：暂留原地**（父侧裁定 2026-09-18 05:3x；生效读数 139 / 50——§10.3 已结清块）。
+
+## 11. 桌面端设计档按域拆分 · 执行方案（2026-10-02 定形）
+
+**问题陈述**：桌面端设计五档（2026-09-25 拆分）中 `PROJECT.md`（2283 行）∥ `UI.md`（933 行）已是单热点——每一笔设计必动其一，并行批只得串行（四笔设计舱 #9–#12 排队）；档头 `D1–D37` 类范围计数使五档同拍（跨档同改面）。判据 = `docs/core/design/DOC-DISCIPLINE.md` §3.14（M-2 ∥ M-3 成片命中）+ §3.16（本条工序单源——**不重述**，D2）；触发先例登记 = `docs/batches/2026-09-25-desktop-design.md` §1.8–§1.9。
+
+**来源**：用户 2026-10-02 10:49 令 ∥ 10:50 放行 ∥ 10:56 追加（按域分界原则落提示词体系——§11.7）；承 `docs/batches/2026-10-02-doc-structure-reorg.md` §1。
+
+### 11.1 目标结构（14 档域清单 —— 现址锚 as-of 2026-10-02 实读）
+
+域清单 = **候选形状**——行级归属（KD 行 ∥ UI 块）以波 0 届盘逐行钉死为准（§11.10 open ①）；本表给域边界与现址锚。
+
+| # | 目标档（`docs/desktop/design/`） | 域 | 内容边界（现址锚） |
+|---|---|---|---|
+| 1 | `PROJECT.md`（降格 · 总览） | 总览 + 跨域决策 + 索引 | 现 §1（`:13`）· §2 跨域三条（KD-1 ∥ KD-4 ∥ KD-42——余 63 行按域迁）· §3（`:142`）收编为全库索引 · §8 边界（`:1667`）· 变更记录（`:1818–2283` 整块转「迁移前历史段」） |
+| 2 | `SHELL.md`（保持） | 壳与宿主面 | 现 `SHELL.md` 全档 ∥ `PROJECT.md` §2：KD-2 ∥ 3 ∥ 7 ∥ 43 ∥ 53 ∥ 54 ∥ 59 · §4.1 宿主族行 · §4.2 宿主族块 · §6.1 D31 行 · §7 T-DSK53 · §10 CP ∥ CQ ∥ CY |
+| 3 | `IPC.md`（保持） | 主↔渲染通道 | 现 `IPC.md` 全档 ∥ `PROJECT.md` §2 通道行 · §4.1 ipc ∥ preload 行 · 白名单计数句 |
+| 4 | `SESSIONS.md`（新） | 会话族 | KD-5 ∥ 9 ∥ 15 ∥ 16 ∥ 28 ∥ 41 ∥ 56 · `UI.md` 会话控制面行（`:28`）+ 会话族本批注（`:132` 表行 ∥ `:152` ∥ `:206`）· §4.1 会话族行 · §6.1 D1 ∥ D2 ∥ D18 ∥ D23 ∥ D26 行 · §7 会话族用例 · §10 CU |
+| 5 | `CHAT.md`（新） | 对话流与卡面 | KD-8 ∥ 14 ∥ 22 ∥ 23 ∥ 24 ∥ 37 ∥ 39 · `UI.md` 对话流（`:18`）∥ 审批（`:21`）∥ 提问（`:22`）∥ 计划（`:23`）∥ 目标（`:24`）∥ 工具卡（`:25`）行 + 相关本批注（`:66` ∥ `:342` 对话流面 ∥ `:455` ∥ `:464` ∥ `:506`）· §6.1 D3 ∥ D5 ∥ D19 相关行 · §7 对话族用例 |
+| 6 | `COMPOSER.md`（新） | 输入区 · 队列 · 三值 | KD-17 ∥ 18 ∥ 19 ∥ 21 ∥ 31 ∥ 40 ∥ 51 ∥ 52 · `UI.md` 输入区行（`:19`）+ 批 B 注附件 ∥ 三值项（`:38–53`）∥ `:426` ∥ `:520` ∥ `:528` ∥ `:569` · §6.1 D6 ∥ D13 ∥ D25 ∥ D34 行 · §7 输入族用例 |
+| 7 | `ACTIVITY.md`（新） | 活动池 · 子代理 · 挂起消化 | KD-26 ∥ 32 ∥ 33 ∥ 34 ∥ 35 ∥ 36 ∥ 47 ∥ 55 ∥ 58 ∥ 60 ∥ 62 · `UI.md` §2 项 1（`:649`）∥ 子 agent 块注（`:487` ∥ `:496`）· `PROJECT.md` §2.2（`:117`）· §6.1 D4 ∥ D20 ∥ D28 ∥ D30 ∥ D35 行 · §7 活动族用例 · §10 CZ ∥ DA ∥ CR |
+| 8 | `SETTINGS.md`（新） | 设置与首启 | KD-10 ∥ 11 ∥ 12 ∥ 13 ∥ 44 ∥ 45 ∥ 46 ∥ 49 ∥ 66（KD-45 ∥ 46 的通道半 ∥ 渲染半随行核）· `UI.md` 设置面（`:29`）∥ 首启向导（`:30`）∥ 启动态（`:27`）行 + `:554` ∥ `:628` · §6.1 D7 ∥ D8 ∥ D9 ∥ D11 ∥ D16 ∥ D37 行 · §7 设置族用例 · §10 CH |
+| 9 | `MENU.md`（新） | 菜单体系 | KD-65 · `UI.md` 菜单注（`:619`）· §6.1 D36 行 · §7 T-DSK57 · §10 DG |
+| 10 | `UI.md`（降格 · 总则） | 界面总则 · 状态行 · 视觉基线 | 保留：布局（`:14`）∥ 断点（`:15`）∥ 状态词（`:16`）∥ 交互（`:17`）∥ 状态栏（`:20`）∥ 键盘可达（`:32`）∥ i18n（`:33`）∥ 主题（`:31`）+ 视觉族本批注（`:186` ∥ `:221` ∥ `:447` ∥ `:537` ∥ `:546` ∥ `:590`）· KD-20 ∥ 25 ∥ 29 ∥ 30 ∥ 38 ∥ 57 ∥ 61 · §7 状态行族用例 |
+| 11 | `RENDERER.md`（保持） | 渲染工艺 | 现 `RENDERER.md` 全档 ∥ KD-27 ∥ 48 ∥ 50 ∥ 63 · §6.1 D19 机制半 |
+| 12 | `PACKAGING.md`（新） | 打包与发行 | `PROJECT.md` §5（`:1329–1411`）全段 ∥ KD-6 ∥ 64 · §4.1 打包族行 · §6.1 D12 ∥ D32 行 · §7 T-DSK14 ∥ T-DSK55 · §10 DE |
+| 13 | `E2E-TESTING.md` | 测试基建 | 保持（零迁） |
+| 14 | `WEB-QUICKCHECK.md` | web 快筛 | 保持（零迁） |
+
+**跨档计数热点消除（O-2 实例）**：五档档头的 `需求侧 D1–D37` 范围计数**摘除**、改稳定指针；档数枚举（「设计侧 N 档」类）只住总览档索引节（单源）；`§4.1 本端文件清单与行数预算` 行族按域拆、每域档自持族账（声明面随动 = §11.5 ②）。
+
+**档名查重结果（O-6 ④ 实核）**：14 名中唯 `SETTINGS.md` 与既有 `docs/vsc/design/SETTINGS.md` 同名——域内（`docs`）裸名引用面实测**零命中**（命中仅在 `docs/batches/**` = 闸域外）⇒ 处置 = 引用一律全路径形态（N-c 扩用），无需改名。
+
+### 11.2 迁法规则（实例口径 —— 工序单源 = §3.16 O-5，不重述）
+
+本方案实例面三件：① **基线件**（迁移前 `doc-check` 读数 + 逐档计数表——波 0 产出，冻结为相对判据基线）；② **改指表**（跨档引用清单——逐波产出、随波销项；锚形态对策：编号锚 ∥ 节名锚优先，`:line` 仅 as-of）；③ **保位形态**（原址一行「→ `<域档名>` §节（as-of 2026-10-02）」；原址零正文副本）。
+
+**剪枝位置（钉死）**：原址剪枝 = **每域闭环收尾步**——域内「建/收编 → 剪枝 → 改指 → 复跑」一步完成，**不设后置统一剪枝**；波内并行面 = **域档**（各域目标档互异），**共享档（`PROJECT.md` ∥ `UI.md`）剪枝段 = 串行段**（文件级调度——O-4）。
+
+**剪枝操作纪律**：区间置换**降序**（防行号漂移）∥ **内容锚**定位（不以行号为唯一锚）∥ 终态 **grep** 复核。
+
+### 11.3 需求档分卷提案（同轮设计;执行 = 主 agent 笔）
+
+现 `docs/desktop/requirements/PROJECT.md`（302 行 · D1–D37）按域分卷：
+
+| 卷（`docs/desktop/requirements/`） | D 行 |
+|---|---|
+| `SESSIONS.md` | D1 ∥ D2 ∥ D18 ∥ D23 ∥ D26 |
+| `CHAT.md` | D3 ∥ D5 ∥ D19 |
+| `COMPOSER.md` | D6 ∥ D13 ∥ D25 ∥ D34 |
+| `ACTIVITY.md` | D4 ∥ D20 ∥ D28 ∥ D30 ∥ D35 |
+| `SETTINGS.md` | D7 ∥ D8 ∥ D9 ∥ D11 ∥ D16 ∥ D37 |
+| `MENU.md` | D36 |
+| `PACKAGING.md` | D12 ∥ D32 |
+| `UI.md` | D10 ∥ D15 ∥ D17 ∥ D21 ∥ D22 ∥ D24 ∥ D29 ∥ D33 |
+| `SHELL.md` | D27 ∥ D31 |
+| 总览（`PROJECT.md` 留） | 模块目标 · 边界 · 非功能 · 依赖 + D 表索引 |
+
+D14（E2E）归属届盘定（`E2E-TESTING` 镜像 ∥ 总览——分卷执行波判）。**37 行零遗漏零重复** = 分卷验收判据（§11.8 AC-6）；表 = 提案，主 agent 可裁。
+
+### 11.4 执行波次
+
+| 波 | 内容 | 笔权 ∥ 验收 |
+|---|---|---|
+| 波 0 · 前置（同窗） | 届盘逐行实读（KD 行 ∥ UI 块级归属钉死）· 基线件（§11.2 ①）· 档名查重复核 · 改指清单初扫 | 执行批（eng-designer）· 父侧书证；产出 = 基线件 + 钉死表 |
+| 波 1 · 样板两域 | `MENU.md` + `PACKAGING.md` 建 + 对应内容迁出（验证两类迁法：行级 KD ∥ 整段） | 执行批；验收 = §11.8 AC-2 单域判 |
+| 波 2a · 渲染族 | `CHAT` ∥ `COMPOSER` ∥ `ACTIVITY` 建 + `RENDERER` 收编 | 同波内域档零交 + 共享档（`PROJECT.md` ∥ `UI.md`）剪枝段串行（文件级调度——O-4）；验收 = AC-1 ∥ AC-2 |
+| 波 2b · 会话设置壳族 | `SESSIONS` ∥ `SETTINGS` 建 + `SHELL` ∥ `IPC` 收编 | 同上（四域同判：域档零交 + 共享档剪枝段串行） |
+| 波 2c · 降格收尾 | `UI.md` 降格 + `PROJECT.md` 降格（索引 ∥ 跨域 ∥ 历史段） | 顺序执行（须各域闭环先齐——域档全 ∧ 剪枝已落）；验收 = AC-1 ∥ AC-3 |
+| 波 3 · 需求分卷 + 收尾 | 需求分卷（主 agent）· 索引 ∥ 地图改指收尾（§11.5 ④）· 终扫 | 主 agent + 执行批；验收 = AC-6 ∥ AC-1 |
+
+避让：各波开工前按在飞批文件域调度（`docs/desktop/**` 冻结窗在批——D5 照旧）；同波并行 = 允许（域档零交；共享档剪枝段串行），波间 = 顺序。
+
+### 11.5 机检随动清单
+
+| # | 面 | 内容 | 笔权 |
+|---|---|---|---|
+| ① | 扫描域 | 新档自动入 `checkConfig.scanDirs`（`docs` 全深）——零声明改；内容过锚 ∥ 宽门 | —（零改） |
+| ② | `lineCounts` 声明 | 单条 `{PROJECT.md, 4.1}` 扩为与域档一一对应的多条目——**执行前实核多条目支持**（节遍历口径） | main 直写（M1 专权——本批已落，`docs/core/design/DOC-DISCIPLINE.md` §3.9 附加口径 ②） |
+| ③ | 档头 | 跨档范围计数摘除（§11.1 热点消除行） | 执行批 |
+| ④ | 索引 ∥ 映射 | `docs/README.md` §1 ∥ §4 行、`DOC-SYSTEM.md` §4 第四部分段（现「设计侧五档」句**已陈旧**——实为七档；随迁移波一并收正为 14 档）、各档头互指行（验收 = AC-1） | 执行批 ∥ 父侧 |
+| ⑤ | 锚面 | 每波 `doc-check` 相对判据（基线 = 波 0 件）；保位指针 ∥ 新档名解析 | 执行批 |
+| ⑥ | 评审面 | 文档 scope 按域收窄（`documents` 列表）——零改，既有机制 | —（零改） |
+
+### 11.6 并发验证矩阵
+
+| 面 | 现状（2026-10-02 实证） | 拆分后（预计） | 判 |
+|---|---|---|---|
+| 设计决策面 | `PROJECT.md` §2 单档 66 行 KD——每笔设计必动 | 各域 KD 行落各域档；总览只留跨域三条 | 消 |
+| 界面形态面 | `UI.md` 933 行——渲染四族 + 设置 + 菜单全挤一档 | 各域档分持；`UI` = 总则 + 状态行 + 视觉基线 | 消 |
+| 档头计数面 | 五档档头同写 `D1–D37` | 档头摘除（稳定指针） | 消 |
+| 文件账 ∥ 批块 | `PROJECT.md` §4.1 ∥ §4.2 单档巨块 | 各域档自持 | 消 |
+| 评审 scope | 同 scope 第二发拒发（菜单 ∥ 设置实证） | 域集互异 ⇒ 并行评审（`docSetKey` 不同） | 消 |
+| 同域两批 | — | 同域档交集非空 ⇒ 串行 | 残（正确语义） |
+| 共享真实文件（如 `window.mjs`） | — | 两批触同一文件 ⇒ 文件级调度串行 | 残（正确） |
+
+**反例（预期不消）**：菜单批 ∥ 用户最大化批——两批真实共触 `window.mjs` ⇒ 串行 = 正确（文件级调度即判面）；同域两批串行 = 预期（O-4）。
+
+### 11.7 提示词随动（按域分界原则落提示词体系）
+
+**落点**：正本 `docs/core/design/prompts/discipline-engineering.md`「文档纪律」族——新子节「按域分界（创建即留并行面）」，插入位 = 「板块归属与归属判定四问」子节后（as-of `:92–:99` 段尾）；落地镜像 `thincoder-core/prompts/discipline-engineering.md` 同族同序（as-of `:94–:101`）。
+
+**措辞草案（逐字固化——正本 · 中文）**：
+
+> ### 按域分界（创建即留并行面）
+>
+> - **创建或改组任何工作面（文档为主）时，先按「域」划界**：谁跟谁总是一起动 ⇒ 同一份档；谁跟谁从不同时动 ⇒ 分开写。
+> - **热点面最小化**：不让一份档（或一个节）成为多路不相干工作的必经之处——共享面只承真正共享的事实；随多路工作变动的计数、枚举行从共享档上摘走，每个数只住一处。
+> - **并行写者错开**：两件互不相干的工作各自只写各自的档面；同一面只放同一类工作。
+> - **一句话判据**：并行进行的两个任务会不会写到同一个文件——会 ⇒ 再分界；分不开 ⇒ 同域顺位（串行）＝预期，不是缺陷。
+> - **改组已有内容时**：逐字搬迁（重组不改字），原位留一行指针、不留副本；计数随内容对拍守恒。
+
+**措辞草案（逐字固化——落地 · 英文）**：
+
+> ### Partition by domain (leave parallel room at creation time)
+>
+> - **When creating or reorganizing any work surface (docs above all), partition by domain first**: things that always move together ⇒ one document; things that never move together ⇒ separate documents.
+> - **Minimize hot surfaces**: never let one document (or one section) become the mandatory stop for several unrelated workstreams — a shared surface carries only genuinely shared facts;
+>   move counters and enumerations that shift with several workstreams off the shared document — every number lives in exactly one place.
+> - **Stagger parallel writers**: two unrelated workstreams write only their own surfaces; one surface hosts one class of work.
+> - **One-line criterion**: would two tasks running in parallel write the same file — if yes ⇒ split further; if it cannot be split ⇒ same-domain sequencing (serial) = expected, not a defect.
+> - **When reorganizing existing content**: move text verbatim (restructuring changes no wording); leave a one-line pointer at the old site — no duplicate copy; counts reconcile against the moved content.
+
+**随动面**：① 双面同批同改（正本 + 落地；**节名对应**——各面取该面草案名逐字：正本中文名 ∥ 落地英文名）；② 计数——两档无「N 节」类外露计数（落笔后回读核）；③ 指针——他档行号引用位于插入位之上（`docs/core/design/TOOLS.md:782` 的 `:6` ∥ `:35` as-of 2026-09-21）⇒ 零漂；`PROMPT-SYSTEM.md:115` 族 = 分叉分析登记（他面文件，零随动）——落笔后复核零新悬空；④ 笔权 = 主 agent 内容权 + eng-coder 落笔（D1）；⑤ 波次 = 实施波（本设计轮**零写提示词**）。
+
+### 11.8 验收（逐条回指 §3.16 ∥ 批档条目）
+
+| # | 判据 | 回指 |
+|---|---|---|
+| AC-1 | 14 档域清单逐档在位 ∧ 每档过 `doc-check`（零悬空 ∥ 零区带外超宽）∧ 索引 ∥ 地图指向齐（§11.5 ④） | O-1 ∥ O-3 |
+| AC-2 | 逐波迁移零语义——逐域闭环、波末已迁域全闭合（剪枝 = 域收尾步，§11.2）：`doc-check` 相对判据（新增悬空 0 ∥ 区带外新增超宽 0）∧ 计守恒对拍逐项全等 ∧ 保位指针解析命中 ∧ 原址零正文副本 | O-5 |
+| AC-3 | 机检随动四件（§11.5 ①–③ + §11.1 档名查重行）落齐：扫描域零声明改 ∧ 声明面多条目跑绿 ∧ 档头计数摘除 ∧ 档名查重过 | O-6 |
+| AC-4 | 并发面实测：夹具 = 菜单批 `{MENU, SHELL, IPC, COMPOSER}` ∥ 设置批 `{SETTINGS}`（2026-10-02 实证两笔）——拆分后写域交集 = ∅ ∧ 评审 `docSetKey` 互异（复跑 = `docSetKey(两集, cwd)` 对拍——导出 = `thincoder-core/agent-tools/review-facts.mjs`；现状同 scope 拒发 = 对照基线）；矩阵「消」行 ≥2 组逐行实证 | O-4 |
+| AC-5 | 提示词双面同批落（正本 + 落地；节名对应——各面取该面草案名逐字）∧ 零新悬空引用 ∧ 无外露计数 | §11.7 |
+| AC-6 | 需求分卷与 D 行全集对拍（37 行零遗漏零重复——分卷执行波判） | §11.3 |
+
+**AC-4 复跑口径**（cwd = thincoder）：两集各跑 `docSetKey(集, '.')` 对拍（导出 = `thincoder-core/agent-tools/review-facts.mjs`）——键异 ⇒ 并行放行；对照 = 现状两笔同 scope（`PROJECT.md` +5）⇒ 键同 ⇒ 拒发（2026-10-02 实证）。
+复跑命令：`node -e "import('./thincoder-core/agent-tools/review-facts.mjs').then(m=>{const p='docs/desktop/design/';console.log(m.docSetKey([p+'MENU.md',p+'SHELL.md',p+'IPC.md',p+'COMPOSER.md'],'.')!==m.docSetKey([p+'SETTINGS.md'],'.'))})"`
+
+### 11.9 用例表（结构机检口径——正常 ∥ 边界 ∥ 错误）
+
+| 类 · 名字 | 夹具 | 期望 |
+|---|---|---|
+| 正常 · 单域迁移 | 样板域（`MENU` + `PACKAGING`）迁移 | 保位指针解析命中 ∧ 计守恒全等 ∧ `doc-check` 零新增 |
+| 边界 · 跨域块 | 块内项分属两域（如 `PROJECT.md` §2.2 ∥ `UI.md` 批注块） | 按项边界拆迁（逐字）∧ 两域档合计守恒 ∧ 原址零残留正文 |
+| 错误 · 迁移断点 | 半波停写（已完成域闭合——含剪枝；未迁域原样） | 逐域闭环 ⇒ 允许（断点落在域边界）；域未闭合（正文两处并存——剪枝未落）⇒ 违规（重跑该域） |
+| 正常 · 机检对照 | 每波迁后复跑 | 新增悬空 0 ∧ 区带外新增超宽 0（相对基线） |
+
+### 11.10 边界（本设计不做）
+
+**不执行**：本方案 = 设计轮产物（执行 = 后续波次批——点火照旧）；`docs/desktop/**` 与菜单批档**零触**（D5 冻结窗）；提示词面**零写**（实施波落）；产品码 ∥ `scripts/**` 零触。不拆 `E2E-TESTING` ∥ `WEB-QUICKCHECK`；不动 core ∥ cli ∥ vsc 各树（M-6 逐触发）。**不预建空档**（未触发域不建——M-6）。
+
+### 11.11 open / 未决
+
+① KD 行 ∥ UI 块级归属在波 0 逐行钉死前为**候选**（本表 = 域边界 + 现址锚形状）；② 需求分卷表 = 提案（主 agent 裁）；③ `SETTINGS.md` 同名处置 = 全路径形态（§11.1 查重行）；④ 变更记录整块留原址的「迁移前（≤ 迁移日）」标记形态——波 0 定形；⑤ `DOC-DISCIPLINE.md` §3.14 既有「`DOC-SYSTEM.md` §3.4 行 M-2 实例」登记不变（零随动）。
 
 ## 变更记录
 
@@ -506,3 +660,16 @@
   **本批实迁 9 档**：`docs/core/design/` 的 ARCHITECTURE · PORTABILITY · STRUCTURE-DEBT · TWO-REPO-MERGE，`docs/cli/design/` 的 RELEASE，`docs/cli/requirements/` 的 FEATURES，`docs/core/requirements/` 的 PHILOSOPHY · RELEASE · TWO-REPO-MERGE。
 - 2026-09-15（**迁移批 · 二分 + 当场迁第一批 · eng-designer**）：建档——承 `DOC-SYSTEM.md` §11 拆分规划，把该档 §5.2 初分类表精化搬入本档并逐档补证据（`file:line`）；新增 §5 小计闭合 · §6 后续批分组；§3 待核 9 档（两种读法）；第一批已迁 6 档（编辑工具族——见 §2.1 第 5 / 13 / 14 / 18 / 19 / 47 行）。
 - 2026-09-20（**库存清账批 · v1 测试门词面收正 · eng-designer**——承 `docs/batches/2026-09-20-residual-sweep-batch.md` §2 · 台账 #128）：§9.3 A23 行词面收正（补入单入口 / 守卫随单入口可跑后销——v2 `slow` 纯别名）。**零新语义**。
+
+- 2026-10-02（**文档体系重组批（#813）· 设计轮 · eng-designer**——承 `docs/batches/2026-10-02-doc-structure-reorg.md` §1）：新增 **§11 桌面端设计档按域拆分 · 执行方案**（目标结构 14 档域清单 ∥ 需求分卷提案 ∥ 执行波次 ∥ 机检随动清单 ∥ 并发验证矩阵 ∥ 提示词随动（措辞双面逐字固化）∥ 验收 AC-1–AC-6 ∥ 用例表 ∥ 边界 ∥ open）；档头范围句补「并载后续迁移执行方案」（§10 ∥ §11——D3 计数与清单同改）。判据 ∥ 工序单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.16（本档不复制——D2）。**零执行（设计轮）· 冻结面零触**。
+
+- 2026-10-02（**文档体系重组批（#813）· 修复轮（评审轮 1 发现 1–5 + 父补 1 处置）· eng-designer**——承 `docs/batches/2026-10-02-doc-structure-reorg.md` §3 轮次 1〔changes-required〕∕ §2 修复轮 1）：① F1 剪枝位置钉死——「剪枝 = 每域闭环收尾步」；并行面改「域档零交 ∥ 共享档剪枝段串行」（§11.2 ∕ §11.4 ∕ AC-2 ∕ §11.9 四处同拍；2b 划分同模型复核——四域同判；2c 去「保位回收」）；
+  ② F2 AC-3 回指改「§11.5 ①–③ + §11.1 档名查重行」；③ F3 §11.5 ② 笔权 = **coder 轮**（数据档 E 面——对齐 §3.9 附加口径 ②）；④ F4 AC-4 钉夹具（菜单批 ∥ 设置批 + `docSetKey` 复跑口径）；⑤ F5 §11.7 ① ∕ AC-5 改「节名对应」。**零机检门 · 冻结面零触**。
+
+- 2026-10-02（**文档体系重组批（#813）· 波 2a 补轮 · eng-designer**——承 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 波 2a 补轮块）：§11.2 补**剪枝操作纪律**行（区间置换**降序** ∥ **内容锚**定位 ∥ 终态 **grep** 复核）。**零机检门 · 冻结面零触**。
+
+- 2026-10-02（**文档体系重组批（#813）· 修正轮 #40（父侧裁定 3 件）· eng-designer**——承 `docs/batches/2026-10-02-doc-structure-reorg.md` §1 ∕ §2 修正轮 #40）：§11.5 ② `lineCounts` 声明修改笔权 = **main 直写**（M1 专权——本批已落；对齐 `docs/core/design/DOC-DISCIPLINE.md` §3.9 附加口径 ② 收正；2026-10-02 双实证）。**零机检门 · 冻结面零触**。
+
+- 2026-10-02（**文档清账批 · 直落轮 · eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2 · 台账 #803）：§10.6 AC-7「`checkConfig` 五键**零改**」补 **as-of 2026-09-18** 标记（批代验收行——键数保留为批代值，不误读为现役计数；D3 句零改）。**零新语义**。
+
+- 2026-10-02（**文档清账轮 · 执行轮 1（core/design 前段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R1 改指（`heap-watch.mjs` 补 `thincoder-cli/` 前缀——§2.1 表第 11 行）。**零新语义**。

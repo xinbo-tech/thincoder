@@ -13,7 +13,9 @@
 
 import { chat } from "./provider/index.mjs"
 import { buildCompressMessages } from "./compress-form.mjs"
-import { contextUsage, estimateTokens, collectStaleToolOutputs, keepTailSize, splitHistory, tailBudgetTokens } from "./token-window.mjs"
+import { contextUsage, estimateTokens, keepTailSize, splitHistory, tailBudgetTokens } from "./token-window.mjs"
+import { COMPACTION_PLACEHOLDER, withPlaceholderPrefix } from "./context-echo.mjs"
+import { shrinkOversized } from "./context-degrade.mjs"
 
 export const SUMMARIZE_PROMPT = `The conversation above is our work log so far — summarize it into a compact summary for use as context in the ongoing conversation.
 Requirements:
@@ -33,9 +35,6 @@ const COMPACTION_PREFIX =
   "[Context was automatically compacted. Below is a summary of earlier work. " +
   "Treat it as notes, not proof — trust its conclusions (don't redo what it reports as done) " +
   "but re-verify transient state with tools. Check memory search for any missing decisions.]\n\n"
-
-/** Placeholder assistant reply committed right after compaction (D9); D-CC18 merges it into an adjacent tail assistant instead of emitting it as a separate message */
-const COMPACTION_PLACEHOLDER = "Understood. I'll continue from these notes, re-verifying anything transient."
 
 /** After this many consecutive compaction summary failures, degrade to deterministic truncation (losing info is better than task-killing 400 errors) */
 export const COMPRESS_FAILURE_LIMIT = 3
@@ -69,129 +68,6 @@ function anchorText(agent) {
   if (g?.objective) lines.push(`- goal [${g.status}] ${g.objective}${g.criteria ? ` — done when: ${g.criteria}` : ""}`)
   for (const t of agent?.tasks ?? []) lines.push(`- [${t.status}] ${t.title}`)
   return lines.length > 0 ? lines.join("\n") : null
-}
-
-/**
- * pushReal — the single entry point for REAL conversation messages.
- * A real message (user input, assistant reply, tool result, multimodal image) is appended to BOTH:
- *   agent.history      — the machine context (compaction shrinks this)
- *   agent._fullHistory — the human-readable record (persistence source)
- * Machine-only messages ([System reminder:...], compaction notes, task/plan/checkpoint re-injections)
- * are pushed directly to agent.history WITHOUT going through here, so they never enter _fullHistory.
- * The two lines are written independently at the source — no after-the-fact delta sync.
- * Message timestamps (SESSION.md §6.9): stamped HERE once at push time (epoch ms) — a single
- * point covers every real message. Pre-existing ts (e.g. from another end writing the shared slot)
- * is preserved; restored old messages keep no ts rather than getting a misleading backdate (D-S3).
- * ts is a LOCAL-ONLY field — the send layer strips it before any provider request (T-S3).
- *
- * TUI-OOM-ROOTCAUSE 批（SESSION.md §6.14）——人读线内存有界 + 磁盘为准：
- *   ① `agent._recordStore?.append(msg)`：记录同步追加（磁盘为准——append-only sidecar）；
- *   ② 窗口驱逐：绑定态（agent._historyWindow = 200）下 _fullHistory 只保最近窗口条——
- *      更早内容仅存磁盘（翻页/检索/保存从盘按需读）。未绑定（模式 F）不驱逐（零回归）。
- * 追加失败不阻断回合（独立 try/catch——尽力面 N-S6；store 内部另置 degraded 并停写）。
- */
-export function pushReal(agent, msg) {
-  if (!Array.isArray(agent._fullHistory)) agent._fullHistory = []
-  if (msg && msg.ts === undefined) msg.ts = Date.now()
-  agent._fullHistory.push(msg)
-  try { agent._recordStore?.append(msg) } catch { /* 尽力面：落盘失败不阻断回合（N-S6） */ }
-  const win = agent._historyWindow
-  if (win > 0 && agent._fullHistory.length > win) {
-    agent._fullHistory.splice(0, agent._fullHistory.length - win)
-  }
-  agent.history.push(msg)
-}
-
-/**
- * pushRecord — 人读线留档记录单点（消化生命周期面 · #726；形 ∥ 写缝 ∥ 判据单源 = SESSION.md §6.26）。
- * `pushReal` 双胞（直复用——零算法副本）：`ts` 打点 ∥ 记录存储追加（`_recordStore?.append`——§6.14）∥
- * 尾窗驱逐三面同源；**机器线零触** = `history` 以一次性弃数组承接 ⇒ 记录不入 `agent.history` /
- * `contextHistory`（不喂模型）。未绑定（`_recordStore` 缺）⇒ 人读线追加照常 ∥ 存储腿空转（零抛——模式 F
- * 零回归）；载体缺位（无活跃会话）⇒ 零动作（零抛——日志归端侧）。
- */
-export function pushRecord(agent, record) {
-  if (!agent || typeof agent !== "object") return // 载体缺位：零动作（零抛——§6.26 失败面）
-  if (!Array.isArray(agent._fullHistory)) agent._fullHistory = []
-  // 载体形人读线半提取（先例 = 桌面 `session-io.appendRecord`）：`history` 弃数组承接 ⇒ 机器线零触
-  pushReal({ _fullHistory: agent._fullHistory, _recordStore: agent._recordStore, _historyWindow: agent._historyWindow, history: [] }, record)
-}
-
-/**
- * Content-shape-safe prefixing (D-CC18, generalized for D-CC19 merge reuse):
- * string → text + blank line + original; multimodal array → text part prepended;
- * empty string / null / undefined / other → text alone.
- */
-function prefixContent(content, text) {
-  if (typeof content === "string" && content.length > 0) return `${text}\n\n${content}`
-  if (Array.isArray(content)) return [{ type: "text", text }, ...content]
-  return text
-}
-
-/**
- * D-CC18 echo safety: prefix the placeholder onto an existing assistant message's content.
- * Thin wrapper over prefixContent (behavioral semantics unchanged).
- */
-function withPlaceholderPrefix(content) {
-  return prefixContent(content, COMPACTION_PLACEHOLDER)
-}
-
-/**
- * D-CC19 restore-path echo merge (2026-09-16 ENGINE-DEBT 批 ED-1): persisted `contextHistory`
- * is loaded back VERBATIM on session restore, so the D-CC18 pathological shape (an assistant
- * WITHOUT reasoning_content directly followed by another assistant — DeepSeek-family thinking
- * mode rejects the first request with 400) can revive from disk. Pure in-core function: scans
- * only at restore time, never prompts the user, never rewrites the session file. Merge direction
- * matches D-CC18 (the reasoning-less message is absorbed INTO its follower — the follower's
- * tool_calls / reasoning_content / other fields are kept verbatim; texts joined with a blank
- * line). Iterates to a fixed point (chains collapse in full). Copy-on-write: messages may be
- * shared with other lines, so the merged message is always a NEW object; clean input returns
- * the SAME array reference (zero copy).
- */
-
-/** Pair predicate: prev = assistant with no/empty reasoning_content and no tool_calls,
- * directly followed by another assistant. (Prev WITH tool_calls is never merged — pairing
- * safety, F-3.) */
-export function isAssistantEchoPair(prev, next) {
-  return prev?.role === "assistant"
-    && next?.role === "assistant"
-    && !prev.reasoning_content
-    && !(Array.isArray(prev.tool_calls) && prev.tool_calls.length > 0)
-}
-
-/** Text of a message content in any supported shape (string / parts array / null-ish). */
-function contentTextOf(content) {
-  if (typeof content === "string") return content
-  if (Array.isArray(content)) {
-    return content.filter((p) => p?.type === "text").map((p) => p.text ?? "").join("\n\n")
-  }
-  return ""
-}
-
-/** Absorb prev's text into next's content (blank-line join; empty prev text → next unchanged). */
-function absorbEchoContent(prevContent, nextContent) {
-  const text = contentTextOf(prevContent)
-  if (text.length === 0) return nextContent
-  return prefixContent(nextContent, text)
-}
-
-export function mergeAdjacentAssistantEchoes(history) {
-  if (!Array.isArray(history)) return history
-  let src = history
-  for (;;) {
-    let changed = false
-    const next = []
-    for (let i = 0; i < src.length; i++) {
-      if (i + 1 < src.length && isAssistantEchoPair(src[i], src[i + 1])) {
-        next.push({ ...src[i + 1], content: absorbEchoContent(src[i].content, src[i + 1].content) })
-        i += 1
-        changed = true
-      } else {
-        next.push(src[i])
-      }
-    }
-    if (!changed) return src === history ? history : src
-    src = next
-  }
 }
 
 /** Replace middle with a note, then re-inject task/plan state (shared by LLM summary and truncation fallback) */
@@ -356,37 +232,6 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   return true
 }
 
-/** prune stub 逐字（§6.16.3）：只给「已清理 + 原长度 + 重跑路径」——prune 是**删**不是摘要，不声称可复原。 */
-const pruneStub = (chars) => `[pruned: stale tool output dropped (${chars} chars) — re-run the tool if you need it again.]`
-
-/**
- * 陈旧工具输出清理（F-CC3 · §6.16.3）：合格集 = `token-window.mjs` 单源（保护尾外 ∧ `role:"tool"` ∧ ≥ 门槛）；
- * 命中项**原位换「内容」**（`history[i] = { ...m, content: stub }`——数组引用 / 长度 / 索引 / `tool_call_id` 全不变
- * ⇒ 配对**结构上不可能被拆**）。记录面零改（copy-on-write：消息对象与人读线共享）；基线失效同 `shrinkOversized` 先例。
- * @returns {{pruned:number, freed:number, candidates:number, tailKept:number, belowMin:number}}
- */
-export function pruneStaleToolOutputs(agent) {
-  const history = agent.history
-  const stale = collectStaleToolOutputs(history, agent.provider)
-  const counts = {
-    pruned: stale.indexes.length,
-    freed: stale.tokens,
-    candidates: stale.candidates,
-    tailKept: stale.tailKept,
-    belowMin: stale.belowMin,
-  }
-  if (counts.pruned === 0) return counts
-  for (const i of stale.indexes) {
-    const m = history[i]
-    // 多模态 tool 结果（content 数组）整体替换为 stub ⇒ 图像 part 丢弃（不可再取——prune 是删；回执只给重跑路径）
-    const chars = typeof m.content === "string" ? m.content.length : JSON.stringify(m.content ?? "").length
-    history[i] = { ...m, content: pruneStub(chars) }
-  }
-  agent._lastPromptTokens = null
-  agent._usageAtLen = null
-  return counts
-}
-
 /**
  * Deterministic truncation fallback: called when the summary LLM fails repeatedly, no network call.
  * Drops the middle so the task can continue. Returns whether truncation happened.
@@ -403,50 +248,12 @@ export function compressFallback(agent) {
   return true
 }
 
-/** Hard truncation limit for a single message body: when exceeded and the splitter can't find a middle section, truncate to a stub (prevents one giant message from blocking compaction) */
-const OVERSIZE_CONTENT_LIMIT = 8_000
-
-/**
- * Deterministic shrinking: last resort when splitHistory can't find a middle section (history too short) but threshold is exceeded. No LLM call.
- * Truncates user/tool message bodies exceeding OVERSIZE_CONTENT_LIMIT to a stub (keeps head + tail);
- * does not touch reasoning_content (DeepSeek/Kimi echo protocol) or tool_calls pairing structure — no protocol 400
- * risk from this path (this module's echo-safety face is `applyCompression`: the compaction placeholder is never
- * committed as a separate reasoning-less assistant next to another assistant — D-CC18, 2026-09-16 batch).
- * Only called after compressIfNeeded determines threshold is exceeded. Returns whether any message was truncated.
- */
-function shrinkOversized(agent, limit = OVERSIZE_CONTENT_LIMIT) {
-  let shrunk = false
-  // Copy-on-write: build a NEW array and replace only truncated entries. pushReal stores the SAME
-  // message object in both `agent.history` (machine line) and `agent._fullHistory` (human/persistence
-  // line), so in-place `m.content = ...` would ALSO truncate the never-compacted human line and lose
-  // the original pasted content on session persist (session.mjs persists _fullHistory). VS Code port
-  // already copies (`history.map(m => ({ ...m }))`); this brings CLI to parity.
-  const next = agent.history.map((m) => {
-    if ((m.role !== "user" && m.role !== "tool") || typeof m.content !== "string") return m
-    if (m.content.length <= limit) return m
-    // Truncate keeping head + tail, insert stub in between; keepHead/keepTail proportional but not exceeding 50%/25% of limit
-    const keepHead = Math.min(Math.floor(limit * 0.5), 4000)
-    const keepTail = Math.min(Math.floor(limit * 0.25), 2000)
-    shrunk = true
-    return {
-      ...m,
-      content:
-        m.content.slice(0, keepHead) +
-        `\n[... ${m.content.length - keepHead - keepTail} chars truncated — single message too large for context window ...]\n` +
-        m.content.slice(-keepTail),
-    }
-  })
-  if (shrunk) {
-    agent.history = next
-    // Same as compaction: measured token baseline is invalidated by the changed history, fall back to estimation until next response
-    agent._lastPromptTokens = null
-    agent._usageAtLen = null
-  }
-  return shrunk
-}
-
 // ─── 迁出面（import 面保持：TUI / verify-compress / VSC 对拍经本档取——先例 = 下方 explore-distill 再导出）──
 export { estimateTokens }
+// ─── 拆分转口（2026-10-01 拆分批 · #755 ∥ #786）：写缝 ∥ 回声 ∥ 降级三面外提——消费面 / 批内件 import 面零改 ───
+export { pushReal, pushRecord } from "./context-push.mjs"
+export { isAssistantEchoPair, mergeAdjacentAssistantEchoes } from "./context-echo.mjs"
+export { pruneStaleToolOutputs } from "./context-degrade.mjs"
 // ─── End-of-run exploration distillation（2026-09-05 module-split：524 > 500 硬限——verbatim
 // 迁至 explore-distill.mjs，语义零变——VS Code compact.mjs 同款联动；cross-repo parity 锚改指
 // explore-distill.mjs——消费方 import 面不变（re-export））───────────────────────

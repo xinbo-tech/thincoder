@@ -1,0 +1,180 @@
+{
+  "checks": {
+    "会话键在场": {
+      "ok": true
+    },
+    "autoApprove 置位": {
+      "ok": true,
+      "detail": {
+        "ok": true
+      }
+    },
+    "msg:send 受理": {
+      "ok": true,
+      "detail": {
+        "ok": true
+      }
+    },
+    "≥6 并发子代理在飞 ∥ 溢出成立": {
+      "ok": true,
+      "detail": {
+        "blocks": 24,
+        "running": 24,
+        "approvals": 0,
+        "sh": 1127,
+        "ch": 950,
+        "st": 178,
+        "pin": true
+      }
+    },
+    "腿 B：上滚 ×3 三拍内必动（scrollTop 减）": {
+      "ok": true,
+      "detail": {
+        "bottom": 404,
+        "ticks": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "腿 B：`_poolPin` 翻假": {
+      "ok": true,
+      "detail": {
+        "pin": false
+      }
+    },
+    "风暴持续（读数时 ≥6 在飞）": {
+      "ok": true,
+      "detail": {
+        "blocks": 24,
+        "running": "24"
+      }
+    }
+  },
+  "open": {
+    "cwd": "C:\\Users\\liwei\\AppData\\Local\\Temp\\legb-storm-kxHFA7\\proj",
+    "recent": [
+      {
+        "cwd": "C:\\Users\\liwei\\AppData\\Local\\Temp\\legb-storm-kxHFA7\\proj",
+        "mtimeMs": 1790942342594.852
+      }
+    ]
+  },
+  "key": "1",
+  "flags": {
+    "ok": true
+  },
+  "send": {
+    "ok": true
+  },
+  "storm": {
+    "blocks": 24,
+    "running": 24,
+    "approvals": 0,
+    "sh": 1127,
+    "ch": 950,
+    "st": 178,
+    "pin": true
+  },
+  "scroll": {
+    "bottom": {
+      "st": 404,
+      "pin": true,
+      "max": 404,
+      "blocks": 24,
+      "running": "24"
+    },
+    "ticks": [
+      {
+        "st": 0,
+        "pin": false,
+        "max": 331,
+        "blocks": 24,
+        "running": "24"
+      },
+      {
+        "st": 0,
+        "pin": false,
+        "max": 331,
+        "blocks": 24,
+        "running": "24"
+      },
+      {
+        "st": 0,
+        "pin": false,
+        "max": 331,
+        "blocks": 24,
+        "running": "24"
+      }
+    ]
+  },
+  "mockSeen": [
+    {
+      "tools": [
+        "read",
+        "write",
+        "edit",
+        "insert_after"
+      ],
+      "last": "user",
+      "text": "[System reminder: AUTO mode is active — all tool calls are automatically approve"
+    },
+    {
+      "tools": [
+        "read",
+        "write",
+        "edit",
+        "insert_after"
+      ],
+      "last": "tool",
+      "text": "{\"id\":\"24\",\"role\":\"coder\",\"status\":\"queued\",\"position\":20}"
+    },
+    {
+      "tools": [
+        "read",
+        "write",
+        "edit",
+        "insert_after"
+      ],
+      "last": "user",
+      "text": "[System reminder: current time is 2026-10-02 19:59:03 (local; timezone Asia/Hong"
+    },
+    {
+      "tools": [
+        "read",
+        "write",
+        "edit",
+        "insert_after"
+      ],
+      "last": "user",
+      "text": "[System reminder: current time is 2026-10-02 19:59:03 (local; timezone Asia/Hong"
+    },
+    {
+      "tools": [
+        "read",
+        "write",
+        "edit",
+        "insert_after"
+      ],
+      "last": "user",
+      "text": "[System reminder: current time is 2026-10-02 19:59:03 (local; timezone Asia/Hong"
+    },
+    {
+      "tools": [
+        "read",
+        "write",
+        "edit",
+        "insert_after"
+      ],
+      "last": "user",
+      "text": "[System reminder: current time is 2026-10-02 19:59:03 (local; timezone Asia/Hong"
+    },
+    {
+      "tools": [],
+      "last": "user",
+      "text": "STORM: spawn six background subagents"
+    }
+  ],
+  "verdict": true
+}

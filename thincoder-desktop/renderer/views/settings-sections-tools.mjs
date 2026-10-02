@@ -2,7 +2,8 @@
  * settings-sections-tools.mjs — 设置面「工具与服务」段体（R2 · 桌面功能对位批 · 批档 §2.4 R2 #7；先拆后改：
  * 段体随本批索引族行落 —— 自 `renderer/views/settings-sections.mjs` 拆出；R7 增 embedding ∕ websearch
  * 两键行，**零改名搬迁**）。
- * 面形（R7 终态 = 三族行：embedding ∕ websearch ∕ 索引状态）：
+ * 面形（R7 终态 = 三族行：embedding ∕ websearch ∕ 索引状态 + **P1 两读**（#697 · KD-69：库大小行 ∥
+ * 逐 origin 行数行 —— `section.status` 携 `dbBytes` ∕ `origins` 时落，缺位 ⇒ 零节点））：
  *  ① **密钥键行**（源 = VSC `settings-tools.js`：`websearchRowHtml` ∕ `embedRowHtml` + `keyRowEdit` 行内编辑）：
  *     名 + 键面（配置 ⇒ `****`〔键值恒不下发〕∕ 未配 ⇒ 「—」）—— 键行只在**键面读数在场**时落（`keys` 缺位
  *     〔读数未达 ∕ 失败〕⇒ **两行零节点**，段态词 + 段级失败面承载 —— 零假造）—— + 静止态两控件
@@ -151,13 +152,57 @@ function indexRowNode(section, handlers) {
   }
 }
 
+/** 字节数归一读数（P1 —— 非有限 ∕ 负 ⇒ `null`（零节点）；< 1024 ⇒ `B`，否则逐级 `KB` ∕ `MB` ∕ `GB` 一位小数）。 */
+function formatBytes(value) {
+  if (!Number.isFinite(value) || value < 0) return null
+  if (value < 1024) return `${value} B`
+  const kb = value / 1024
+  if (kb < 1024) return `${kb.toFixed(1)} KB`
+  const mb = kb / 1024
+  if (mb < 1024) return `${mb.toFixed(1)} MB`
+  return `${(mb / 1024).toFixed(1)} GB`
+}
+
+/** 库大小读数行（P1 · KD-69）：`dbBytes` 非有限 ⇒ **零节点**（禁假造 —— 缺位不落行）。 */
+function dbSizeRowNode(section) {
+  const value = formatBytes(section?.status?.dbBytes)
+  if (value === null) return null
+  return {
+    tag: "div",
+    props: { class: "settings-row", "data-index": "db" },
+    children: [
+      { tag: "span", props: { class: "settings-row-name" }, children: [t("settings.indexDbSizeLabel")] },
+      { tag: "span", props: { class: "settings-row-value" }, children: [value] },
+    ],
+  }
+}
+
+/** 逐 origin 行数读数行（P1 · KD-69）：每 origin 一行（名 = origin 原样；值 = code ∕ doc 计数）；
+ *  缺 ∕ 非数组 ∕ 空 ⇒ **零节点**（零假造）。 */
+function originRows(section) {
+  const list = Array.isArray(section?.status?.origins) ? section.status.origins : []
+  return list
+    .filter((row) => row !== null && typeof row === "object")
+    .map((row) => ({
+      tag: "div",
+      props: { class: "settings-row", "data-index": "origin" },
+      children: [
+        { tag: "span", props: { class: "settings-row-name" }, children: [String(row.origin ?? "")] },
+        { tag: "span", props: { class: "settings-row-value" }, children: [t("settings.indexOriginCounts", { code: countOf(row.code), doc: countOf(row.doc) })] },
+      ],
+    }))
+}
+
 /** 工具与服务段体：两密钥键行（embedding ∕ websearch —— **键面读数缺位 ⇒ 两行零节点**，零假造）+ 索引族行
- *  （状态缺位 ⇒ 该行零节点）。`section.keys` 非对象〔未读达 ∕ 读失败〕⇒ 两键行皆不落。 */
+ *  （状态缺位 ⇒ 该行零节点）+ **P1 两读（KD-69）**：库大小行 + 逐 origin 行数行（缺位 ⇒ 零节点）。
+ *  `section.keys` 非对象〔未读达 ∕ 读失败〕⇒ 两键行皆不落。 */
 export function toolsBody(section, handlers) {
   const keys = section?.keys !== null && typeof section?.keys === "object" ? section.keys : null
   return [
     keys === null ? null : keyRowNode("embedding", KEY_WORD.embedding, keys.embedding?.hasKey === true, section?.edit ?? null, handlers),
     keys === null ? null : keyRowNode("websearch", KEY_WORD.websearch, keys.websearch?.hasKey === true, section?.edit ?? null, handlers),
     indexRowNode(section, handlers),
+    dbSizeRowNode(section),
+    ...originRows(section),
   ]
 }

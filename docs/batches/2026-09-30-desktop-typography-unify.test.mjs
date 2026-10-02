@@ -8,7 +8,7 @@
  *   ① font-size：全档 ∈ {`var(--fs)`} ∪ 白名单（`core-markdown.css` ∥ `core.css` 内 em 修饰选择器集
  *      ——标题 h1–h6 ∥ code ∥ `.code-block code` ∥ table）∪ {`inherit`}；**零 px/rem 字面**。
  *   ② font-weight：≤ 400 ∪ 白名单（`strong` ∥ h1–h6 ∥ `th`）。
- *   ③ `theme.css` 三变量在位（`--fs: 14px` ∥ `--lh: 1.5` ∥ `--ls: normal`）∧ `--font` 指 `var(--mono)`。
+ *   ③ `theme.css` 三变量在位（`--fs: 14px` ∥ `--lh: 1.3` ∥ `--ls: normal`）∧ `--font` 指 `var(--mono)`。
  *   ④ `chat-composer.css` 覆盖段选择器清单在位（批档 §2 §六-C —— 搜索条三锚按实盘 DOM 面收正，见下）。
  *   ⑤ letter-spacing：值一律取单源 `var(--ls)`（零 tracking 字面）；声明点 = `theme.css` 基面 + 覆盖段推理钮复位
  *      （核件 `composer/composer.css` 逐字锁载 `letter-spacing: 0.5px`——真机判据⑤ `letter-spacing = normal` 须由
@@ -150,11 +150,12 @@ test("③ theme.css：三变量在位 ∧ `--font` 指 `var(--mono)`", () => {
   const { raw, rules } = rulesOf("thincoder-desktop/renderer/theme.css")
   const decls = rules.flatMap((rule) => declsOf("theme.css", raw, rule))
   const get = (prop) => decls.filter((d) => d.prop === prop).map((d) => d.value)
+  // 轻通道轮三 ∥ 轮四 ∥ 轮五（2026-10-01 · 台账 #759 ∥ #808）随盘收正：族首 Cascadia Mono（轮三）∥ 14px ⇒ 12px ∥ 1.5 ⇒ 1.3（轮四）∥ 12px ⇒ 14px（轮五 定版）。
   assert.deepEqual(get("--fs"), ["14px"])
-  assert.deepEqual(get("--lh"), ["1.5"])
+  assert.deepEqual(get("--lh"), ["1.3"])
   assert.deepEqual(get("--ls"), ["normal"])
   assert.deepEqual(get("--font"), ["var(--mono)"])
-  assert.ok(get("--mono").some((v) => v.startsWith("ui-monospace")), "--mono 等宽栈缺失")
+  assert.ok(get("--mono").some((v) => v.startsWith("\"Cascadia Mono\"") && v.includes("ui-monospace")), "--mono 等宽栈缺失")
   // 变量单源：余十档零 `--font` / `--mono` 重声明。
   for (const rel of CSS_FILES.filter((f) => !f.endsWith("theme.css"))) {
     const r = rulesOf(rel)

@@ -1,12 +1,11 @@
 /**
  * store.mjs — 渲染面单状态树（`docs/desktop/design/SHELL.md:32` · `docs/desktop/design/RENDERER.md:17`）：
  * 单一持有点 + 订阅（**变更触发** · 等值零通知 · 通知中再变更不递归）。
- * 面域 = 会话 / 块与历史 / 活动池 / 设置族 / 项目级信息 —— 数据面切片 = 块 / 历史回填 / 跟滚（会话模型轮 R13：
+ * 面域 = 会话 / 块与历史 / 活动池 / 设置族 —— 数据面切片 = 块 / 历史回填 / 跟滚（会话模型轮 R13：
  * 标签族三切片 `tabs` ∕ `activeTab` ∕ `pendingClose`＋关闭确认四纯动作、左列行形态 `railForm` 两纯动作随会话模型
  * 裁撤退场 —— 活动会话单源 = `activeSession`，会话控制面内态〔开合 ∕ 换形〕归 `renderer/mount-sessions.mjs` 面内记账）；
  * 会话族与活动池切片随各自批次填充。
- * 批 9 增两切片：`settings`（开合 / 四段三态 / 向导 / 校验结果 —— `docs/desktop/design/UI.md` §1 设置面行）与
- * `projectInfo`（三读数 + 超阈标 + 相位 + 失败串）——**值面归接线层**（`renderer/mount-settings.mjs` 只经
+ * 批 9 增 `settings` 切片（开合 / 四段三态 / 向导 / 校验结果 —— `docs/desktop/design/UI.md` §1 设置面行）——**值面归接线层**（`renderer/mount-settings.mjs` 只经
  * `patchSettings` 落值），本档只持槽位 + 四条纯动作；`configured` 为**三态读数**（`null` = 未知）。
  * **B10 W2 增三键**（`settings.providers` 切片 —— S1 ∕ S2 面）：`edit`（行内钥编辑态 = 渠名；写者 = 出口，`loadProviders` ∕ 关面复位）· `probe`（自定形「拉取模型」三态果 `{ state, models, reason }`）· `draft`（表单暂存值回填快照 —— 探果写切片致重挂时救回未落盘输入）。
  * **桌面残余三轮 · 波 C 增一键**（#615② —— 改钥失败径草稿种子）：`keyDraft`（`{ name, value }` ∕ `null` —— 设 ∕ 改钥失败 ⇒ 键入值落此槽，重挂后行内输入按名回填；
@@ -69,7 +68,9 @@
  *  `modelCandidates` = **模型候选切片**（输入面板上提批 · R1 ∕ 全渠扇出批收正 —— 核件面板读面③ `state.models()`
  *  的端侧来源）：`{ models, unavailable }`（`models` = 逐项 `{ id, label, provider, group, reasoning }` —— **核件面形**；
  *  投影 = `renderer/composer-sync.mjs` 候选面：`model:catalog` 回执投影；`unavailable` = 失败渠 `{ provider, reason }`
- *  诊断面（现时视图零消费 —— 诊断主载 = 核落账，禁假造）；未取 / 取失败 ⇒ 空表（禁假造）；写者单点 = 纯动作 `setModelCandidates`。 */
+ *  诊断面（现时视图零消费 —— 诊断主载 = 核落账，禁假造）；未取 / 取失败 ⇒ 空表（禁假造）；写者单点 = 纯动作 `setModelCandidates`。
+ *  `helpLines` = **`/help` 行集切片**（`/help` 增量 · 2026-10-01② · 台账 #761）：按会话键存 `{ kind, text }` 行集（核 `formatHelp` 产出）；写者单点 = 纯动作 `setHelpLines`
+ *  （端装配面 `printHelp` 口）；读面 = 流内帮助行族（非块节点 · 尾组槽位 —— `renderer/views/chat-chrome.mjs`）；非落盘件 ⇒ 首屏页读整置即失（同 `timerNotice` 族）。 */
 export function initialState() {
   return {
     locale: "en",
@@ -89,12 +90,14 @@ export function initialState() {
     timerNotice: {},
     statusText: {}, // R4：状态文本切片（按会话键 —— 五 kind；写者 = 归约面 `ev:statusText`；读面 = 状态行段 3 支③）
     compress: {}, // R4：压缩状态行切片（按会话键 —— 单元素四态；写者 = 归约面 `ev:compress`；读面 = 流内压缩行）
+    helpLines: {}, // `/help` 行集切片（按会话键 —— `{ kind, text }[]`；写者 = `setHelpLines`；读面 = 流内帮助行族）
     goal: {}, // R5：目标面切片（按会话键 —— `{ status, objective, criteria }`；写者 = 归约面 `ev:goal`；读面 = 目标卡 ∕ 状态行 🎯）
     subBlocks: {},
     pending: {},
     attachDegraded: {},
     modelCandidates: { models: [], unavailable: [] },
     blocks: [],
+    flowOps: [], // 流面作业单（结构变更由发生点带上 —— 写口单点 = `withFlowOp`；段 = 帧出口结算后清账）
     history: { hasOlder: false, inFlight: false, page: null },
     following: true,
     pendingNew: 0,
@@ -103,6 +106,7 @@ export function initialState() {
     settings: {
       open: false,
       notice: null,
+      modal: null, // 组弹窗切片（D39 ∥ D38 · #817：`null` ∥ 组名七值闭集；写者 = `renderer/mount-settings.mjs` `openSettingsModal` ∥ `closeSettingsModal`）
       configured: null,
       defaultModel: null,
       wizard: { step: 1, dismissed: false, notice: null },
@@ -121,7 +125,6 @@ export function initialState() {
         advisorPicker: { provider: "", rows: [], model: null },
       },
     },
-    projectInfo: { counts: null, thresholdReached: null, phase: null, notice: null },
   }
 }
 
@@ -133,6 +136,15 @@ export function appendBlock(state, block) {
   if (block === undefined) return state
   const pendingNew = state.following ? state.pendingNew : state.pendingNew + 1
   return { ...state, blocks: [...state.blocks, block], pendingNew }
+}
+
+/** 流面作业单写口（**唯一写口** —— 与 `blocks` 写同笔；单源 = `docs/desktop/design/RENDERER.md` §1.1「流面作业单」条）：
+ *  结构变更由**发生点**带上作业（有序单；帧出口结算后清账）——`{ kind: "build" }`（整置 —— 页回执首屏 ∥ 换会话 ∥
+ *  关页 ∥ 摘至零块）· `{ kind: "prepend", count }`（回填并入 —— 首前插）· `{ kind: "insert", index }`（按位插入 ——
+ *  座次位）· `{ kind: "cut", index }`（退流 —— 本地先行回声按引用摘）；**新块到达零作业**（追加由账自明）。
+ *  入单校验面 = 帧侧 `flowStep`（畸形项静默跳过，帧尾随清账）。 */
+export function withFlowOp(state, op) {
+  return { ...state, flowOps: [...(state.flowOps ?? []), op] }
 }
 
 /** 窗口切片（T-DSK17 数据面 · **留档块记账** = `docs/desktop/design/RENDERER.md` §2）：`visible` = 尾 `limit` 块
@@ -216,6 +228,18 @@ export function setAttachDegraded(state, key, code) {
   if (next === null) delete out[key]
   else out[key] = next
   return { ...state, attachDegraded: out }
+}
+
+/** `/help` 行集切片写（纯动作 —— `/help` 增量：端装配面 `printHelp` 口唯一写点）：键无效 ⇒ **原引用**；行集非数组 ∥ 空 ⇒ **清本键**；同值（同引用）⇒ 原引用；否则落新引用。 */
+export function setHelpLines(state, key, rows) {
+  if (typeof key !== "string" || key === "") return state
+  const table = state?.helpLines ?? {}
+  const next = Array.isArray(rows) && rows.length > 0 ? rows : null
+  if ((table[key] ?? null) === next) return state
+  const out = { ...table }
+  if (next === null) delete out[key]
+  else out[key] = next
+  return { ...state, helpLines: out }
 }
 
 /** 模型候选切片写（纯动作 —— 输入面板上提批 ∕ 全渠扇出批收正：核件面板读面③ `state.models()` 唯一写点）：

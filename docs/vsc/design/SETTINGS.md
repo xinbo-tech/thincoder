@@ -55,6 +55,11 @@
 embedding key + 构建按钮 + 状态；向量维度 / 模型切换的校验与可见面归 `MEMORY（VSC 侧）` §4（索引有效性面）——
 状态行在不匹配时显示「索引模型 ≠ 当前模型 + 重建入口」（`settings.indexMismatch`），提示面同源扩展。
 
+**P1 读数扩面（2026-10-02 · 桌面 UX 收尾批 · 台账 #697）**：`pushIndexStatus` 载荷扩两键——`dbBytes`（库文件字节数）∥ `origins`（逐 origin code ∥ doc 行数）。
+  取值 = 核只读出口 `memoryStatus()` 回执透传（单源——不另造 SQL；`thincoder-vscode/src/extension/panel-index.mjs:47-61` → 载荷 `{built, files, chunks, dbBytes, origins, hasEmbedder}`）；
+  `#index-status` 区增两读（库大小 + 逐 origin 行数；**词键 ∥ 形 = 实施定形**——词键 = `settings.indexDbSize`（整行模板：`Database size: ${size}` ∕ `库大小：${size}`）∥ `settings.indexOriginCounts`（计数片段：`code ${code} · doc ${doc}` ∕ `代码 ${code} · 文档 ${doc}`——两语两面同值）；形 = `#index-db-size` ∥ `#index-origins` 两读——缺位 ⇒ 隐藏（零假造））；
+  刷新拍 = 既有推送时点（打开 ∥ 构建后 `pushIndexStatus`——零新通道）；决策单源 = `docs/desktop/design/PROJECT.md` §2 **KD-69**。
+
 ### 2.6 配置路径字段 `~` 展开（端差面）
 
 - **机制单源** = `docs/core/design/MEMORY.md` §6.7（家目录展开——单一规范化点 / 只读归一）。本档**不重述机制**，只登记 VSC 端的事实与端差。
@@ -127,10 +132,10 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 | 3 | `#sh-custom` 清空 | **无**（空自定义路径 = 未完成输入，不发值） | change 且值为空 ⇒ 零发值 + 控件按快照**就地回显**（回显式 = §2.9「回显全表达式」） |
 | 4 | agent 卡 `null` 清空 · poolLimits 逐键 · 元素缺席形态 | —— | 本批登记不修——消解路径 + 到期条件 = `requirements/WEBVIEW.md` 在册（P2-3 / P2-4） |
 
-- **extension 侧删除语义零改**（空 uri ⇒ 删键 · 空 shell 值 ⇒ 删键——`thincoder-vscode/src/extension/settings.mjs:276-287` 与 `thincoder-vscode/src/extension/settings-panel-write.mjs:162-169`）——本批只把「触发」收紧到显式用户动作。
+- **extension 侧删除语义零改**（空 uri ⇒ 删键 · 空 shell 值 ⇒ 删键——`thincoder-vscode/src/extension/settings.mjs:231` 与 `thincoder-vscode/src/extension/settings-panel-write.mjs:180`）——本批只把「触发」收紧到显式用户动作。
 
 - **路径册 #1 子路径（边界——登记不修）**：磁盘**无** `proxy.uri` 时勾 `#px-web` / `#px-model` ⇒ change 发 `{web:true}` / `{model:true}`（无 `uri` 键），
-  而宿主 `!uri` 即 `delete raw.proxy; return`（`thincoder-vscode/src/extension/settings.mjs:279-280`）⇒ **零落盘**；
+  而宿主 `!uri` 即 `delete raw.proxy; return`（`thincoder-vscode/src/extension/settings.mjs:231`）⇒ **零落盘**；
   发射路径仍 `flashSaved(...)`（`thincoder-vscode/webview/settings-env.js:115`）⇒ 可见态（「已保存」）与磁盘不一致——`!uri` 早退是显式删键语义的副作用，不是静默清除。消解路径 + 到期条件见 §3 残留登记。
 
 **机检面**：本节的用例资产 = `thincoder-vscode/test/settings-open-snapshots.test.mjs` · `thincoder-vscode/test/settings-empty-no-write.test.mjs` · `thincoder-vscode/test/settings-refill.test.mjs`——三条先红后绿在册（`requirements/WEBVIEW.md` N-W8）；
@@ -386,7 +391,8 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 | 「—」（未注册占位） | 删 `reasoningEffort` 键；**不动** `advisor.thinking`（off 形 `null` 的跨保存存活 = 写面种子循环 carve-out——`doc:MODEL-SPECS.md:§15.4-5`） |
 | 旧 `effort` 键 | 读面兜底：`reasoningEffort` 缺席时按 `effort` 日值显示（且 `thinking` off 形 ⇒ 预选 `none`；优先级 = `doc:MODEL-SPECS.md:§15.4-4`）；保存时删旧键（不回写的死键不得复活） |
 | select 未渲染（枚举空） | 载荷**不发** `reasoningEffort` 字段（缺席 ≠ 清空）——手写键存活 |
-| 读面（预选取值） | `advisorEffortCurrent`（`settings-state.js`）：`thinking` off 形 ⇒ `none` > `advisor.reasoningEffort` > legacy `advisor.effort` > 「—」（规则单源 = `doc:MODEL-SPECS.md:§15.4-4`）；**off 哨兵 × 档枚举无 `none` 的族 ⇒ 预选「—」（不落注册默认档——`doc:MODEL-SPECS.md:§16.5`）**；快照面（`thincoder-vscode/src/extension/settings.mjs:145`）为 spread 透传（新旧两键与 `thinking` 均随行）——端侧零改 |
+| 读面（预选取值） | `advisorEffortCurrent`（`settings-state.js`）：`thinking` off 形 ⇒ `none` > `advisor.reasoningEffort` > legacy `advisor.effort` > 「—」（规则单源 = `doc:MODEL-SPECS.md:§15.4-4`）；**off 哨兵 × 档枚举无 `none` 的族 ⇒ 预选「—」（不落注册默认档——`doc:MODEL-SPECS.md:§16.5`）**； |
+| | 快照面（`thincoder-vscode/src/extension/settings.mjs:145`）为 spread 透传（新旧两键与 `thinking` 均随行）——端侧零改 |
 
 **归一规则（两 select 同源）**：`doc:MODEL-SPECS.md:§15.4` 的 `effortSelection`（已存值∈枚举 > 注册默认∈枚举 > 中性档）；面板渲染面 = `effortSelectView`（「—」恒首项）。
 
@@ -434,8 +440,8 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - banner = **单实例**（`renderSettingsError` `:90-111`）：段标 + 文本两子节点（携 `data-scope`）；**零自散**（无 6s 定时器——替换 ∕ 关面板止）。段标样式 = `thincoder-vscode/webview/settings.css:278-282`。
 - **关面板不丢**：模块级**单槽 `_lastFailure`**（`:87`——最后一条胜）：面板关时到达 ⇒ 落槽；`buildSettings()` 尾补渲（`:189`）；`closeSettings()` 清槽（`:169-170`——**关 = 销账**）。
 
-**extension 面**（8 站点统一助手）：`postProviderError(panel, scope, err)`（`thincoder-vscode/src/extension/settings.mjs:300-303`——载荷构造单源）：`err === CONFIG_CONFLICT_HINT`（核 `conflictError` 的唯一非空返回；import = `thincoder-vscode/src/extension/settings.mjs:12`）⇒ `reason = "mtime-conflict"`；其余 ⇒ 原样串直传。
-站点 = `thincoder-vscode/src/extension/panel-mcp.mjs:129 ∕ :140 ∕ :151 ∕ :165`（scope `mcp`）· `thincoder-vscode/src/extension/panel-messages-settings.mjs:59 ∕ :71 ∕ :84`（scope `providers`）· 同档 `:143-144`（scope `agent`——本批接入）。
+**extension 面**（**19 站点**统一助手——既有 9（含 P2-5 `:198`）＋本批接入 10）：`postProviderError(panel, scope, err)`（`thincoder-vscode/src/extension/settings.mjs:309-312`——载荷构造单源）：`err === CONFIG_CONFLICT_HINT`（核 `conflictError` 的唯一非空返回；import `:12`）⇒ `reason = "mtime-conflict"`；其余 ⇒ 原样串直传。
+站点 = 既有 9：`panel-mcp.mjs:129 ∕ :140 ∕ :151 ∕ :165`（`mcp`）· `panel-messages-settings.mjs:59 ∕ :71 ∕ :84`（`providers`）· 同档 `:143-144`（`agent`）· 同档 `:198`（`env`——P2-5）；本批 #695 新增 10 = `:190`（`env`）· `:107 ∕ :110` ∥ `:101 ∕ :104`（`tools`）· `:92` ∥ `:29 ∕ :32`（`providers`）· `:35 ∕ :38`（`mcp`）。
 
 **i18n**：`settings.reason.mtimeConflict`（两语；`thincoder-vscode/locales/en.json:186` / `thincoder-vscode/locales/zh.json:186`——值 = 桌面同值逐字）。
 
@@ -453,7 +459,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - 设计 round2 专用提示词、架构档 NFR 补全等开放项 = 仓根台账 `docs/TODO.md`（项目级唯一台账）。
 - **进程内缓存不随外部写同步**（§2.7 边界）：embedder `_tried` 缓存 / 会话槽不因外部写盘重载——登记（非本板块范围）。
 - **无 `proxy.uri` 时勾 web / model 零落盘**（观感面 · §2.8 路径册 #1 子路径）：宿主 `!uri` 即 `delete raw.proxy; return`
-  （`thincoder-vscode/src/extension/settings.mjs:279-280`）⇒ 两开关的改写静默失效，而 UI 闪「已保存」（`thincoder-vscode/webview/settings-env.js:115`）；
+  （`thincoder-vscode/src/extension/settings.mjs:231`）⇒ 两开关的改写静默失效，而 UI 闪「已保存」（`thincoder-vscode/webview/settings-env.js:115`）；
   消解路径 = 代理面「URI 缺席 ⇒ 其余字段保留」与该删除语义一并复核（或保存回执改由宿主返回、徽标按回执亮）；到期 = 代理面下次被触碰时。
 - **快照未达拍的代理控件渲染值**（观感面 · §2.8 登记）：`#px-web` 在快照缺席时按渲染默认显示为勾选——打开拍必达落地后该拍仅在推送丢失时出现，且发值门（§2.8 基线判据）已消除其危害；消解路径 = 若日后引入推送回执 / 超时可见化，则在同一处显式化该拍；到期 = 设置面下次被触碰时。
 - **确认弹框形态三处同族重复**（结构面 · §2.10 登记）：同一弹框件现有三处实现——
@@ -545,6 +551,10 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 
 ## 变更记录
 
+- 2026-10-02（**桌面 UX 收尾批 · 设计轮（VSC 侧）· eng-designer**——承批档 `docs/batches/2026-10-02-desktop-ux-closeout.md` §2 · 台账 #697）：§2.5 增「P1 读数扩面」条（`pushIndexStatus` 载荷 +2 键 ∥ `#index-status` 区增两读 ∥ 刷新拍 = 既有推送时点；决策单源 = `docs/desktop/design/PROJECT.md` §2 **KD-69**）。**零新语义**（读数扩面定形）。
+
+- 2026-10-02（**桌面 UX 收尾批 · 回填/随动轮（VSC 侧）· eng-designer**——承批档 `docs/batches/2026-10-02-desktop-ux-closeout.md` §5 · 台账 #697）：§2.5 P1 条坐标实读收正（`panel-index.mjs:43-56` ⇒ **`:47-61`**——`pushIndexStatus` 函数体）。**零新语义**（坐标）。明细 = 批档 §2。
+
 - 2026-09-29（**vsc-carryover 批 · 设计档落点（V1 舱随动）· eng-designer**——承 `docs/batches/2026-09-29-vsc-carryover.md` §2（含两轮修正块）+ §5 V1 舱）：
   新增 **§2.15**（设置面失败面 S15 收正——载荷 v2 `{scope, reason}` ∕ 段标+词化码 ∕ 单槽 `_lastFailure` 驻留 ∕ 关=销账 ∕ 关系句；九腿验收面在册）+ **§2.3** 增 autoThink 三链句 + **§1** Agent 行控件枚举补 `autoThink`；
   **§2.10** 收正：门调用点清单 6 处（含 `webview/input.js:125`——入口 6 经 hook 链路）+ `settings.js` 三处坐标按现盘收正（`:44` ∕ `:49` ∕ `:50-57`）；入口 6 段按现盘重述（footer `onClick` = hook 注入；`model-picker.js:25 ∕ :26` 系坐标退场 ⇒ 核 `model-menu.mjs:304` + 桥 `webview/input.js:33`）+ 判据域边界 ∕ 范围限制两处显式名单（`model-picker.js` ⇒ `input.js`）；
@@ -629,3 +639,6 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - 2026-09-30（**vsc-residuals 批 · 实施后随动重锚轮 · eng-designer**——承 `docs/batches/2026-09-30-vsc-residuals.md` §2.11 · 台账 #675 ∕ #680）：
   §2.11（F-W18）锚 `panel-messages-settings.mjs:186` ⇒ `:186-187`（同档 JSDoc ∕ 函数行）· §2.15 站点锚 `:143` ⇒ `:143-144`（err 捕获 ∕ 发射两行）· §2.14 `handleSetAdvisorGuard:161-167` 实读在位（零改）。坐标口径 = 实施轮落盘后终态实读（as-of 2026-09-30）。**零新语义**。
 - 2026-09-30（**vsc-cleanup 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-vsc-cleanup.md` §2 · 台账 #701）：§2.4 补**装配面第二源**句（项目根 `.mcp.json` 并入装配——单层发现 ∕ 零交互信任 ∕ config 同名优先；管理面仍 config 单源；机制单源 = `doc:MCP.md:§6.4`）。**零新语义**（已裁形态的 VSC 面落档）。
+- 2026-10-01（**vsc-cleanup 批 · 设计修复轮 1（评审轮 1 发现 7 ∕ 10）· eng-designer**——承 `docs/batches/2026-09-30-vsc-cleanup.md` §3）：§2.15 计数收正（「8 站点」⇒ 19 = 既有 9 ＋本批接入 10）+ 站点表补齐（`:198` ＋本批 10 站）；`:437` 助手坐标收正（`:300-303`⇒`:309-312`）；§2.8 ∕ §3 删除语义坐标重锚（`:276-287` ∕ `:279-280` ⇒ `:231`）。**零新语义**（评审发现 + 坐标收正）。
+- 2026-10-01（**记录清账批 · 文档面收正轮 · eng-designer**——承 `docs/batches/2026-10-01-records-docs-reconcile.md` §2 · 台账 #696）：超宽表行断行收形 1 处（`:389`「读面（预选取值）」——表行续行拆分（空首列续行）——单行 ≤300 ∥ 内容逐字零改 ∥ 条目数不变）。**零新语义**（断行）。明细 = 批档 §2。
+- 2026-10-02（**桌面 UX 收尾批 · 收口补充轮（VSC 侧）· eng-designer**——承批档 `docs/batches/2026-10-02-desktop-ux-closeout.md` §1 ∥ §5 · 台账 #697）：§2.5 P1 条定形值回填（词键 = `settings.indexDbSize` 整行模板 ∥ `settings.indexOriginCounts` 计数片段——两语值在册；形 = `#index-db-size` ∥ `#index-origins` 两读——缺位隐藏）；同笔按语义边界折行（原 442 超宽 ⇒ 四行 ≤300——零语义）。**零新语义**（回填 ∥ 折行）。明细 = 批档 §2。

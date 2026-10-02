@@ -5,17 +5,19 @@
  * 出窗交接由宿主调用面触发）② 窗内 `timerFace` 注入（核件 opt-in，§6.30.10 —— `deadline` 现算 + `deliver` 交付）
  * ③ 空闲火面（`fireTimerWake` 触发 + 轮后链尾接管）；**中止代次**（#515③ 陈旧点火闸）同持：武装刻代次 ↔ 现状比对，
  * `bump` 由宿主 `abort` ∕ `abortAll` 落位 ⇒ 「已点火（回调在队）恰逢中止」零交付 ∥ 零开轮。
- * 宿主供四枚读缝（`post` 出站 ∥ `runTurn` 单回合 ∥ `busyOf` 在飞判据 ∥ `inWindow` 窗表判据 ∥ `takeOver` 回合尾接管）
+ * 宿主供五枚读缝（`post` 出站 ∥ `runTurn` 单回合 ∥ `busyOf` 在飞判据 ∥ `inWindow` 窗表判据 ∥ `takeOver` 回合尾接管）
  * + 时钟三扇（`timer` ∕ `clear` ∥ `now`）——零宿主依赖 ⇒ 平 node 直测；零文案。
+ * **槽重装缝**（`reloadSlot` —— #799 修复轮）：窗内 `deliver` 内**重装先于投递**（整换 `agent.history` ⇒ 序反吞行——明细 = 核 `AGENT-LOOP-ASYNC-POOL.md` §6.30.17）。
  */
 import { pendingTimerDeadline } from "@thincoder/core/agent/timers.mjs"
 import { createTimerWatch, deliverExpiredTimers, fireTimerWake, timerWakeEnabled } from "./timer-watch.mjs"
 
 /** 时效面工厂：`post(channel, payload)` = 出站面 · `runTurn(key, agent, text, opts)` = 单回合执行面 ·
  *  `busyOf(key)` = 在飞回合判据（缺省 ⇒ 恒假）· `inWindow(key)` = 窗在场判据（缺省 ⇒ 恒假）·
- *  `takeOver(key, agent)` = 回合尾接管面（缺省 ⇒ 回落闩重同步）· `timer` ∕ `clear` ∕ `now` = 闩时钟三扇注入缝。
+ *  `takeOver(key, agent)` = 回合尾接管面（缺省 ⇒ 回落闩重同步）· `reloadSlot(key, agent, cwd)` = 本窗键槽重装（同源缝 = `createSuspensionDrive` 转口；先于投递调用——**须同步**；缺省 `null` ⇒ 零动作）·
+ *  `timer` ∕ `clear` ∕ `now` = 闩时钟三扇注入缝。
  *  返回 `{ faceOf, bump, sync, disarm, disarmAll, size, keys }`（键面五件 = 闩表武装 ∕ 撤清 ∕ 读数——撤闩编排归宿主）。 */
-export function createSuspensionTimers({ post, runTurn, busyOf = () => false, inWindow = () => false, takeOver = null, timer = setTimeout, clear = clearTimeout, now = Date.now } = {}) {
+export function createSuspensionTimers({ post, runTurn, busyOf = () => false, inWindow = () => false, takeOver = null, reloadSlot = null, timer = setTimeout, clear = clearTimeout, now = Date.now } = {}) {
   /** 中止代次（每键 —— #515③）：`bump` 由宿主中止面调用；到点回调携**武装刻代次**与现值比对 ⇒ 陈旧点火丢弃。 */
   const gens = new Map()
   const genOf = (key) => gens.get(key) ?? 0
@@ -30,12 +32,17 @@ export function createSuspensionTimers({ post, runTurn, busyOf = () => false, in
     timer, clear, now,
   })
 
-  /** 窗内 timer 面（核件 opt-in 三注入项之一 —— §6.30.10）：`deadline()` 每轮现算（开关关 ⇒ `null` ⇒ 零注册）；
-   *  `deliver()` = 到期批交付（**严格布尔**——交付真 ⇒ 核件开 timer 轮；交付面同点落 `ev:timer`）。 */
-  function faceOf(key, agent) {
+  /** 窗内 timer 面（核件 opt-in 三注入项之一 —— §6.30.10 ∥ #799 修复轮）：`deadline()` 每轮现算（开关关 ⇒ `null` ⇒ 零注册）；
+   *  `deliver()` = 到期批交付（**严格布尔**——交付真 ⇒ 核件开 timer 轮；交付面同点落 `ev:timer`）：**零在途早退**
+   *  （`pendingTimerDeadline === null` ⇒ 直接返 `false`——零重装 ∥ 零投递）；否则**先**重装本窗键槽**再**投递（投递行落重装后机读线 = 该轮将读数组；序反 = 整换吞行）。 */
+  function faceOf(key, agent, cwd) {
     return {
       deadline: () => (timerWakeEnabled(agent) ? pendingTimerDeadline(agent) : null),
-      deliver: () => deliverExpiredTimers(agent, key, { post, now }) > 0,
+      deliver: () => {
+        if (pendingTimerDeadline(agent) === null) return false // 零在途早退（零重装 ∥ 零投递）
+        reloadSlot?.(key, agent, cwd) // 同步缝（本面契约同 `deliver`）——重装先于投递
+        return deliverExpiredTimers(agent, key, { post, now }) > 0
+      },
     }
   }
 

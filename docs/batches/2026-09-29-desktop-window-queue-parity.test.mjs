@@ -36,7 +36,7 @@ const [wqMod, deskAtt, driveMod, driverMod, wireMod, slots] = await Promise.all(
   mod("thincoder-desktop/src/main/suspension-drive.mjs"),
   mod("thincoder-desktop/src/main/turn-driver.mjs"),
   mod("thincoder-desktop/renderer/composer-wire.mjs"),
-  mod("thincoder-core/session-slots.mjs"),
+  mod("thincoder-desktop/node_modules/@thincoder/core/session-slots.mjs"),
 ])
 
 const VISION = "claude-sonnet-4-5" // spec.multimodal === true

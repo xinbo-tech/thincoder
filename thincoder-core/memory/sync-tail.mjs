@@ -59,15 +59,16 @@ export function createRowBudget(memory, origin, kind, dir) {
  * §6.14 B6 ∕ M3：收尾 stale 删除循环（同款让出 + 收尾保护位）。返回删除行数（文件级）。
  * @param {object} memory 句柄
  * @param {{table: string, origin: string, indexed: Map<string, number>, seen: Set<string>, decl: object,
- *   yieldFn?: Function, nowFn?: Function, yieldMs?: number}} opts
- *   `indexed` = 库内 path→mtime（开趟读）；`seen` = 本趟列文件；`decl` = `loadProjectDeclaration()` 回执
+ *   base?: string|null, yieldFn?: Function, nowFn?: Function, yieldMs?: number}} opts
+ *   `indexed` = 库内 path→mtime（开趟读）；`seen` = 本趟列文件；`decl` = `loadProjectDeclaration()` 回执；
+ *   `base` = `indexed`/`seen` 里 `rel` 的相对基（调用面 dir——#700 等价换算；缺省 = 根相对）
  */
-export async function sweepStaleRows(memory, { table, origin, indexed, seen, decl, yieldFn = yieldTick, nowFn = Date.now, yieldMs = SCAN_YIELD_MS }) {
+export async function sweepStaleRows(memory, { table, origin, indexed, seen, decl, base = null, yieldFn = yieldTick, nowFn = Date.now, yieldMs = SCAN_YIELD_MS }) {
   let removed = 0
   let checked = 0
   let lastYieldAt = nowFn()
   for (const stale of indexed.keys()) {
-    if (!seen.has(stale) && !isExcludedRelPath(stale, decl)) {
+    if (!seen.has(stale) && !isExcludedRelPath(stale, decl, base)) {
       memory.db.prepare(`DELETE FROM ${table} WHERE origin = ? AND path = ?`).run(origin, stale)
       removed++
     }

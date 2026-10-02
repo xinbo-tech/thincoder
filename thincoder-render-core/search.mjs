@@ -24,7 +24,7 @@
  * 取词 = 核 i18n（`./i18n.mjs` `t`）——源档 `./i18n.js` 即本模块的再出口（VSC 同实例，零改）；桌面供给面 =
  * `renderer/app.mjs` 单点注册 `setStringsSink(setStrings)`（键族 `search.*` 由宿主词表供给）。
  *
- * 返回面：`{ openSearch, closeSearch, performSearch, jumpSearch }`——端壳现刻零消费点（侧效应构造）；
+ * 返回面：`{ openSearch, closeSearch, performSearch, jumpSearch }`——端壳消费 = 桌面 `renderer/app.mjs:277` 捕获 + `:70` `openSearch` 分派（菜单批接线）∥ VSC 既有宿主键位注册（同件零副本）；
  * 探针 ∕ 后续程序化驱动可及（工厂化面，非源档新增语义）。
  */
 import { t } from "./i18n.mjs"

@@ -26,6 +26,7 @@
  * `bad-key`）照旧仅诊断一行（既有形零变）。
  */
 import { clearRunning } from "./badges.mjs"
+import { withFlowOp } from "./store.mjs"
 
 /** 回执 `reason` 归一（缺 ∕ 非串 ∕ 空串 ⇒ `fallback`）—— 诊断串单源（mount 侧候选面同引）。 */
 export function reasonOf(receipt, fallback = "unknown") {
@@ -236,7 +237,10 @@ export function createComposerWire(deps = {}) {
    *  （不变式 = 消费前流内零块 —— 待发送件住输入区带）；按引用定位摘除 —— 块已不在序列（重挂 ∕ 换页 /
    *  窗口溢出）⇒ 零写（诚实回归，禁假造）。
    *  **#613 尝试守卫**：`attempt` = 本回执所在尝试的本地令牌（三调用面全住 `sendDirect`——`attempt` 直取）；
-   *  槽内认领 ≠ 本令牌（槽被后提交覆盖 ∕ 未认领）⇒ **零动作**（滞后回执不得错摘后提交块）。 */
+   *  槽内认领 ≠ 本令牌（槽被后提交覆盖 ∕ 未认领）⇒ **零动作**（滞后回执不得错摘后提交块）。
+   *  **结构作业（流面作业单）**：摘除同笔带 `cut{index}`（单源 = `docs/desktop/design/RENDERER.md` §1.1）——
+   *  结算步据此按位摘块节点（不再依赖逐位配对判定）；**摘至零块**（本即唯一块）⇒ 同笔并 `build` —— 空窗引导面
+   *  只归构造径（沿关页同款先例；`cut` = 唯一减块作业 ⇒ 该条件即全覆盖）。 */
   function retractEcho(key, attempt) {
     const target = lastEcho
     if (target === null || target.key !== key) return
@@ -247,7 +251,11 @@ export function createComposerWire(deps = {}) {
     const index = blocks.findIndex((block) => block === target.block)
     if (index < 0) return
     lastEcho = null
-    store.set({ blocks: [...blocks.slice(0, index), ...blocks.slice(index + 1)] })
+    const next = [...blocks.slice(0, index), ...blocks.slice(index + 1)]
+    // 结构作业（流面作业单）：`cut{index}` = 退流摘；**摘至零块**（本即唯一块）⇒ 同笔并 `build` —— 空窗
+    // 引导面只归构造径承接（沿关页同款先例；`cut` = 唯一减块作业 ⇒ 该条件即全覆盖）。
+    const cut = withFlowOp({ blocks: next }, { kind: "cut", index })
+    store.set(next.length === 0 ? withFlowOp(cut, { kind: "build" }) : cut)
   }
 
   return { post, noteEcho, retractEcho, failure: () => failed }

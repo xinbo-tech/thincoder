@@ -217,7 +217,7 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 
 **参数**：`value`（合法关键字集内的值——**STATUS_WORDS 分段词表常量单源**，评审发现 #1：§1 项 = gate 词表 `{进行中, 已收口}`（gate 只消费 §1 项——单源仍成立），§2/§3/§5 段内各带生命周期词表（如「设计完成」「评审完成」「实施完成」）；emoji / 括注 / 日期容忍同 gate）；`path`（可选——仅 depth-0，取值规则见 §4.1 / D-BR21）。
 **写域**：调用者**自己段内**的 `**状态行**：` 行（**段内多命中 ⇒ 改写首条**——as-of 2026-09-30 工具面实读 = `thincoder-core/agent-tools/batch-lifecycle.mjs:169` **逐行扫描**（行切分 `/\r?\n/`——EOL 形态无关）首命中、**命中行原位替换**（行尾随命中行自身、其余字节零变）；
-其余同前缀行 = append 载荷的记录面行，非机读位、零变；缺失则标题行后**偏移插入**状态行 + 空行（**插入块行尾 = 标题行自身行尾**——锚行后首二字节判读：`\r\n` ⇒ CRLF ∥ 其余 ⇒ `\n`；插入块逐字节随旧形〔含空行数〕——纯态等值实读校验））——eng-designer → §2 · 评审 → §3 · eng-coder → §5；
+其余同前缀行 = append 载荷的记录面行，非机读位、零变；缺失则标题行后**偏移插入**状态行 + 空行（**插入块行尾 = 标题行自身行尾**——锚行后首二字节判读：`\r\n` ⇒ CRLF ∥ 其余 ⇒ `\n`；插入块 = 状态行 + 其后空行——**形态单源 = 实装 `thincoder-core/agent-tools/batch-lifecycle.mjs:172-173`**——纯态等值实读校验））——eng-designer → §2 · 评审 → §3 · eng-coder → §5；
 主 agent → §1（**轮 2 裁定 #3**：写域收为 §1 单段——§4/§6 状态面走普通文档写，与 D-BR18 分工一致、零新词表）。**冻结真值不变**：gate 冻结判定只读 §1（§4.9）——子代理流转自己段状态行不改冻结态；冻结后 status 同拒。
 **否决备选**：status 允许改任意段（越权——状态行属主 = 段作者）；status 独立词表（两处字面 = 漂移源，D-BR19）。
 
@@ -424,9 +424,12 @@ node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/b
 
 ## 变更记录
 
+- 2026-10-01（**残留收口 · 父侧直接执行 · 可 revert**——承 `docs/batches/2026-09-30-core-tools-pairfix.md` §6 残留②）：§4.12 句「插入块逐字节随旧形〔含空行数〕」收正为「插入块 = 状态行 + 其后空行（**形态单源 = 实装 `thincoder-core/agent-tools/batch-lifecycle.mjs:172-173`**）」——消「空行数」未落值；零语义变更（指针化）。
+
 - 2026-10-01（**批 alias-removal-unblock · 撤除执行（C ∥ D 面）** · eng-coder——承批档 §4 执行窗口修正〔用户令豁免零点〕）：别名 `batch_segment` 撤除——C 提示词双源 14 处注记删；D 本档 §4.14 全块删、§4.8 BR-26 删、同册指针随删（`:66` ∕ `:98` ∕ `:169` ∕ §4.15 ∕ §7 D-BR20 行 ∕ D-BR24）、外册随删（`ENGINEERING-MODE-V2.md` ∕ `AGENT-LOOP-SUBAGENT.md`）；E① 复扫 = C ∥ D 面清零。
 
-- 2026-09-30（**批 core-tools-pairfix · 实施后收正** · eng-coder——承 `docs/batches/2026-09-30-core-tools-pairfix.md` §2 · 台账 #732）：§4.9 解析规格补**行尾形态无关**句（LF ∥ CRLF ∥ 混排同判——`\r` 归行分隔；行切分 = `/\r?\n/`）；§4.12 写面机制注刷新（**逐行扫描** ∥ **命中行原位替换**〔行尾随命中行自身〕∥ 缺行插入支行尾随标题行——字节保真）+ as-of 坐标重锚 `thincoder-core/agent-tools/batch-lifecycle.mjs:169`（旧 `:159` 替换，不并存堆叠）。`STATUS_LINE_RE` 字面零改、冻结门语义零改。
+- 2026-09-30（**批 core-tools-pairfix · 实施后收正** · eng-coder——承 `docs/batches/2026-09-30-core-tools-pairfix.md` §2 · 台账 #732）：§4.9 解析规格补**行尾形态无关**句（LF ∥ CRLF ∥ 混排同判——`\r` 归行分隔；行切分 = `/\r?\n/`）；
+  §4.12 写面机制注刷新（**逐行扫描** ∥ **命中行原位替换**〔行尾随命中行自身〕∥ 缺行插入支行尾随标题行——字节保真）+ as-of 坐标重锚 `thincoder-core/agent-tools/batch-lifecycle.mjs:169`（旧 `:159` 替换，不并存堆叠）。`STATUS_LINE_RE` 字面零改、冻结门语义零改。
 
 - 2026-09-29（**批 alias-removal-unblock · 设计评审轮 2 修正** · eng-designer——fix 轮；承批档 §3 轮次 2 发现 1–7 父侧裁定）：D3 `:98` 删整分句（同 `:169`）· `:335` 改完整替换式 · 「在飞扫描」明裁保留零改（所指 = `findInFlightBatch`）；E① 补 `batchSegmentTool` 形 + VSC 侧 ∕ 注入缝两裁 + E④ 扩 A–D 面 + E⑤ 新设（行数列义务）；D 面次序注（删块 = 末步）；D2 去范围数字（「用例 §4.8」形）。
 

@@ -19,7 +19,9 @@
  * —— 消费面 = 核卡（经注册面投影入核 i18n），**值逐字同 VSC locales**（`thincoder-vscode/locales/*` 同名键）；
  * ⑦ **工具与服务段（R2 · 桌面功能对位批）**：`views/settings-sections-tools.mjs` 取词（段名 / 索引族名 /
  * 态词三 / 钮标二）—— 值逐字同 VSC locales（段名键 = 端侧键名 `settings.section.tools`，值取 VSC
- * `settings.toolsSection`；余键 = VSC 同名键逐字）；
+ * `settings.toolsSection`；余键 = VSC 同名键逐字）；**P1 增两键（#697 · KD-69）** = `settings.indexDbSizeLabel`（本端
+ * 拟定 —— 行面名 ∕ 值分列，组成式与 VSC `settings.indexDbSize` 整行模板不同）∥ `settings.indexOriginCounts`（值逐字同
+ * VSC 同名键）；
  * ⑧ **核件搜索面（R6 · 桌面功能对位批）**：核 `search.mjs` 取词五键（占位 ∕ 上一跳 ∕ 下一跳 ∕ 关闭 ∕ 无匹配）
  * —— 键名与两语值皆 VSC `locales/{en,zh}.json:254-258` 逐字。
  * ⑨ **状态文本段 index 两形（R4 · 桌面功能对位批）**：`renderer/views/statusline-segments.mjs` 取词（index kind 两相位
@@ -38,6 +40,11 @@
  * MCP 表单结构化九键 + 两钮（值逐字同 VSC `settings.mcp.*` 同名键）· 重连两词（本端拟定）·
  * `settings.submodelGlobal`（VSC 逐字）· `settings.advisorGuard`（VSC 逐字）· `settings.reason.slotAuthority`（本端拟定）。
  * 两语键集须相等（增键两语同增、禁单语落键）。
+ * ⑬ **斜径命令面（斜径命令面批 · 2026-10-01 · 台账 #761）**：核件 `composer/panel.mjs` 斜径拦截段取词（三键）——
+ * 值面单源 = `docs/desktop/design/UI.md` §1「本批注（slash 命令面 · 2026-10-01）」项 5（en `slash.unknown` = CLI
+ * 前段逐字 + 携 `/help` 指引 ∥ 二键本端拟定）；`/plan` ENG 态拒复用在册键 `toolbar.planDisabled`（零新键）。
+ * **`/help` 增量（同批 2026-10-01②）六键**（`slash.help.label` ∥ `slash.desc.{model,auto,plan,eng,help}`）——
+ * 消费面 = 端装配面 `printHelp` 口经核 `formatHelp` 取词（非面板拦截段）；en 值 = CLI 同名命令 `desc` 逐字（机检面）。
  * 零落盘 · 零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
 export const VIEWS_DICT = Object.freeze({
@@ -111,6 +118,11 @@ export const VIEWS_DICT = Object.freeze({
     "settings.indexNotBuilt": "Index not built. Vector search is inactive.",
     // B10 W2 · S12：embedding key 缺态词（值逐字同 VSC `locales/en.json:178`）
     "settings.indexNoKey": "No embedding API key configured.",
+    // ── P1 两读两键（#697 · KD-69 —— 消费面 = `views/settings-sections-tools.mjs`）：`indexDbSizeLabel` = 本端
+    //    拟定（·名键，同族先例 `settings.*Label`；值面 ≠ VSC 同名键 `settings.indexDbSize` 整行模板）；
+    //    `indexOriginCounts` = 计数片段（两语值逐字同 VSC `locales` 同名键——VSC 行首 origin 前缀在其渲染面拼装）──
+    "settings.indexDbSizeLabel": "Database size",
+    "settings.indexOriginCounts": "code ${code} · doc ${doc}",
     // ── ⑧ 核件搜索面（R6 —— 核 `search.mjs` 取词键；键名与两语值皆 VSC 逐字：`thincoder-vscode/locales/en.json:254-258`）──
     "search.placeholder": "Search messages…",
     "search.prev": "Previous match",
@@ -187,6 +199,17 @@ export const VIEWS_DICT = Object.freeze({
     "settings.submodelGlobal": "Global default",
     "settings.advisorGuard": "Require advisor review",
     "settings.reason.slotAuthority": "Session-level option — change it from the input panel",
+     // ── ⑬ 斜径命令面（斜径命令面批 · 2026-10-01 · 台账 #761 —— 消费面 = 核件 `composer/panel.mjs` 斜径拦截段
+     //    ∥ `/help` 六键 = 端装配面 `printHelp` 口经核 `formatHelp` 取词；值面单源 = `docs/desktop/design/UI.md` §1 本批注项 5）──
+     "slash.unknown": "Unknown command: ${name} (/help for available commands)",
+     "slash.busy": "Unavailable while the turn is running — try again when it finishes",
+     "slash.args": "This command does not take arguments here",
+     "slash.help.label": "❯ Help",
+     "slash.desc.model": "select model & manage providers",
+     "slash.desc.auto": "toggle auto-approve",
+     "slash.desc.plan": "toggle plan mode (design first, then implement)",
+     "slash.desc.eng": "toggle engineering mode — strict methodology enforcement",
+     "slash.desc.help": "this list",
   },
   zh: {
     // ── ① 对话流 ──
@@ -257,6 +280,11 @@ export const VIEWS_DICT = Object.freeze({
     "settings.indexNotBuilt": "索引未构建，向量搜索未启用。",
     // B10 W2 · S12：embedding key 缺态词（值逐字同 VSC `locales/zh.json:178`）
     "settings.indexNoKey": "未配置 embedding API key。",
+    // ── P1 两读两键（#697 · KD-69 —— 消费面 = `views/settings-sections-tools.mjs`）：`indexDbSizeLabel` = 本端
+    //    拟定（·名键，同族先例 `settings.*Label`；值面 ≠ VSC 同名键 `settings.indexDbSize` 整行模板）；
+    //    `indexOriginCounts` = 计数片段（两语值逐字同 VSC `locales` 同名键——VSC 行首 origin 前缀在其渲染面拼装）──
+    "settings.indexDbSizeLabel": "库大小",
+    "settings.indexOriginCounts": "代码 ${code} · 文档 ${doc}",
     // ── ⑧ 核件搜索面（R6 —— 核 `search.mjs` 取词键；键名与两语值皆 VSC 逐字：`thincoder-vscode/locales/zh.json:254-258`）──
     "search.placeholder": "搜索消息…",
     "search.prev": "上一个匹配",
@@ -332,5 +360,15 @@ export const VIEWS_DICT = Object.freeze({
     "settings.submodelGlobal": "全局默认",
     "settings.advisorGuard": "强制 advisor 评审",
     "settings.reason.slotAuthority": "会话级选项——请从输入面板修改",
+     // ── ⑬ 斜径命令面（同上一一对应 —— 三键消费面 = 核件面板；`/help` 六键 = `printHelp` 口；zh 值面单源 = UI.md §1 本批注项 5）──
+     "slash.unknown": "未知命令：${name}（/help 查看可用命令）",
+     "slash.busy": "回合运行中不可用——请等回合结束后重试",
+     "slash.args": "此命令在此不接受参数",
+     "slash.help.label": "❯ 帮助",
+     "slash.desc.model": "选择模型并管理渠道",
+     "slash.desc.auto": "切换自动批准",
+     "slash.desc.plan": "切换计划模式（先设计，再实现）",
+     "slash.desc.eng": "切换工程模式——严格方法论约束",
+     "slash.desc.help": "本清单",
   },
 })

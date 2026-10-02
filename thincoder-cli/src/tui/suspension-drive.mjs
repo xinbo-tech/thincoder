@@ -15,18 +15,20 @@
 // 经 suspensionSession 进入本文件——互相 import（求值期无顶层调用，环安全）。
 import { runAgentTurn } from "./agent-turn.mjs"
 import { deliverExpiredTimers, timerWakeEnabled } from "./timer-watch.mjs"
-import { freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-blocks.mjs"
+import { freezeAllSubTasks, freezeReclaimDigestedBlocks, freezeSubTaskLines } from "./subagent-blocks.mjs"
 import { sweepToolBlocks } from "./tool-events.mjs"
 import { planQueuedInput } from "./queued-merge.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 import { pendingTimerDeadline } from "@thincoder/core/agent/timers.mjs"
 import { C } from "./ansi.mjs"
-// OOM 释放面（AGENT-LOOP.md §6.15 消费点③）；ask 携参 ∕ 消化行文案 = 核单源
+// OOM 释放面（AGENT-LOOP.md §6.15 消费点③）；ask 携参 = 核单源
 import { releaseSettledEntry } from "@thincoder/core/agent-tools/async-settle.mjs"
 import { upstreamAskLabelVars } from "@thincoder/core/agent-tools/parent-channel.mjs"
-import { t } from "@thincoder/core/i18n.mjs"
 // B1-P3：驱动本体 = 核单源（本档 re-export 保端内 import 面——agent-turn.mjs 零改）
 import { poolLive, startSuspension } from "@thincoder/core/agent/suspension.mjs"
+// #726 写点①：痕行 ∥ 起跑·收尾记录同点双动作（记录形/文案 = lifecycle-records 单一实现）
+import { pushRecord } from "@thincoder/core/context.mjs"
+import { digestEndRecord, digestStartRecord, digestTraceLines, recordCarrier } from "./lifecycle-records.mjs"
 
 export { poolLive }
 
@@ -65,7 +67,7 @@ export function pendingFamiliesNonEmpty(agent) {
   return pendingFamilyCount(agent) > 0
 }
 
-/** pending 单容器条目（freezeReclaimDigestedBlocks 的归属比对表——四族同容器）。 */
+/** pending 单容器条目（保留读面——导出面沿 parity 批保留名；回收点归属判据现 = `consumed` 实参——#748）。 */
 export function allPendingEntries(agent) {
   return [...(agent?._pendingAsyncResults ?? [])]
 }
@@ -81,23 +83,64 @@ function backgroundStatusText(agent) {
 }
 
 /** 消化轮：系统驱动的 auto-turn（D-S6）。手动档不传权限/问答 handler（D-S7——denied 不弹面板
- *  不悬挂）；F-UC8：标签按因两档、两行同守 `pend0 > 0`、终态 ≠ ok ⇒ aborted。 */
-async function digestTurn(ctx, upstream = false) {
-  const { agent, pushLine } = ctx
+ *  不悬挂）；F-UC8：标签按因两档、两行同守 `pend0 > 0`、终态 ≠ ok ⇒ aborted。
+ *  #726 写点①：起跑 ∥ 收尾各「可见行 + 记录」同点双动作——文案 = lifecycle-records 单一实现
+ *  （live ∥ 重建同调）；`ms` 与行文案 `seconds` 同值单算式（同一 `ms` 派生）。
+ *  **本批 2026-10-01（自然形跟正 · 台账 #768 —— 用户 08:21「CLI/VSC也跟。」）**：① 行出即留——
+ *  起跑行 ∥ 计数行 ∥ cap 行 ∥ 终态行：不改 ∥ 不删 ∥ 不退场（零清理机器；退场机随拆）；② 起跑窗
+ *  （沿 #754 裁 A）——起跑行族落盘后 ⇒ 起跑快照（起跑刻 pending 单容器）逐条冻结入流，落位 = 本族之后；
+ *  ③ 终态行 = **到达序追加于当刻流末**（`pushLine`——零就地换文 ∥ 不动原起跑行）。
+ *  导出面 = 批内件直驱（生产唯一调用 = 本档 `driveTurn`）。 */
+export async function digestTurn(ctx, upstream = false) {
+  const { agent, state, pushLine } = ctx
   const manual = !agent.autoApprove
   const pend0 = pendingFamilyCount(agent) // 起跑数前置（起跑行与收尾行同源）
   const ask = upstream ? upstreamAskLabelVars(agent) : null
-  pushLine(ask ? t("digest.turnLabelAsk", ask) : t("digest.turnLabel"), C.dim)
-  if (pend0 > 0) pushLine(t("digest.start", { n: pend0 }), C.dim)
+  const carrier = recordCarrier(state, agent)
+  const startRec = digestStartRecord({ n: pend0, upstream, ask })
+  for (const l of digestTraceLines(startRec)) pushLine(l.text, l.color)
+  pushRecord(carrier, startRec) // 起跑记录（与起跑行同点——核写缝尽力面）
+  // 起跑窗（起跑行族落盘后——沿 #754 裁 A）：起跑快照逐条冻结入流（主面；`reclaim` = 兜底幂等）
+  const tail = state.lines.length
+  freezeStartSnapshot(state, agent, tail)
   const digestCtx = manual
     ? { ...ctx, askPermission: null, askBatchPermission: null, askQuestion: null }
     : ctx
   const d0 = Date.now()
   logEvent("digest:start", { pendingN: pend0, ...(upstream ? { upstream: true } : {}) })
   const outcome = await runAgentTurn(digestCtx, "", { autoTurn: true, upstreamTurn: upstream, skipSession: true })
-  logEvent("digest:end", { pendingN: pendingFamilyCount(agent), ms: Date.now() - d0, ...(upstream ? { upstream: true } : {}) })
-  const seconds = ((Date.now() - d0) / 1000).toFixed(1)
-  if (pend0 > 0) pushLine(t(outcome === "ok" ? "digest.done" : "digest.aborted", { n: pend0, seconds }), C.dim)
+  const ms = Date.now() - d0
+  logEvent("digest:end", { pendingN: pendingFamilyCount(agent), ms, ...(upstream ? { upstream: true } : {}) })
+  const endRec = digestEndRecord({ ok: outcome === "ok", ms })
+  // ③ 终态行 = 到达序追加于当刻流末（自然形——零就地换文 ∥ 不动原起跑行）
+  for (const l of digestTraceLines(endRec, pend0)) pushLine(l.text, l.color)
+  pushRecord(carrier, endRec) // 收尾记录（与终态行同点）
+}
+
+/** 起跑快照逐条冻结入流（**本批 2026-10-01 —— 起跑窗主面**）：起跑刻 pending 单容器（= 本轮将消费的驻留条目）
+ *  对应的盘面块 ⇒ 冻结载体行入流；**落位 = 本族之后**（显式锚 = 族尾 + 到达序位——`freezeSubTaskLines` 第三参，
+ *  逐条落于前枚之后；与桌面「起跑窗 ∥ 居消费行族之后」∥ VSC 同形）；consult 会话本体无行——按 `childIds`
+ *  展开子块键（consult 同族收齐批 · #748——子块按会话消费判据起跑刻冻结；VSC ∥ 桌面 `reemitDone` 同判）；
+ *  返回冻结数。 */
+function freezeStartSnapshot(state, agent, tail) {
+  const entries = Array.isArray(agent?._pendingAsyncResults) ? agent._pendingAsyncResults : []
+  const keys = new Set()
+  for (const e of entries) {
+    if (e === null || e === undefined || e.id === undefined || e.id === null) continue
+    if (e.role === "consult") { // #748：会话本体无行——展开子块键（子块各居一行）
+      for (const cid of e.childIds ?? []) keys.add(`consult#${cid}`)
+      continue
+    }
+    keys.add(`${e.role ?? "subagent"}#${e.id}`)
+  }
+  let frozen = 0
+  for (const sub of Object.values(state.subTasks ?? {})) {
+    if (keys.has(sub.key) !== true || sub.awaitingDigest !== true) continue
+    freezeSubTaskLines(state, sub, tail + frozen) // 落位 = 起跑族尾（本批 —— 显式锚；逐条落于前枚之后）
+    delete state.subTasks[sub.key]
+    frozen += 1
+  }
+  return frozen
 }
 
 /** 回合执行器（核 `ctx.runTurn`）：用户回合（取项缝产物 text）/ 消化轮 / 唤醒轮 / timer 轮。
@@ -169,8 +212,8 @@ export async function suspensionSession(ctx) {
     },
     hooks: {
       onCounts: () => { state.status = backgroundStatusText(agent); render() },
-      // 回收：比对表 = pending 单容器实况；冻结：退出兜底补发（T-S14）
-      reclaim: () => freezeReclaimDigestedBlocks(state, allPendingEntries(agent)),
+      // 回收：consumed 实参（本 run 已消费条目——核 hooks.reclaim 直传；#748）；冻结：退出兜底补发（T-S14）
+      reclaim: (consumed) => freezeReclaimDigestedBlocks(state, consumed),
       freezeAll: () => { freezeAllSubTasks(state); sweepToolBlocks(state); state.status = "Ready"; render() },
     },
     timer: ctx.timer,

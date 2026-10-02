@@ -1,5 +1,5 @@
 /* chrome.css — 中区外壳面（`docs/desktop/design/UI.md` §1 布局 ∕ 会话控制 ∕ 状态栏行；自
-   `renderer/styles.css` 四拆 —— 会话模型轮 R13：原标签条 ∕ 左列两面随会话模型裁撤退场，会话控制条 = VSC 形换装
+   `renderer/styles.css` 四拆 —— 会话模型轮 R13：会话控制条 = VSC 形换装
    〔对位 `thincoder-vscode/webview/session.css`，值面沿桌面调色板变量〕；窄窗断点随左列裁撤消解
    〔余两列无折叠行为 —— 零断点〕）。
 

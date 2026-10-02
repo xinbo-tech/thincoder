@@ -4,9 +4,10 @@
  * 零语义；口径 = `docs/desktop/design/PROJECT.md` §2 KD-T7「越层档一律先拆后改」）。
  * 三面（皆**宿主自产**，非回调映射 —— 单源 = `docs/desktop/design/IPC.md` §1 三行）：
  *   ① `onSusp`（`ev:susp` —— 挂起窗计数切片；空闲唤醒批）+ **R5（#522②）**：`active:false` 出窗帧兼走
- *      **退出兜底**（本键子 agent 块全体归档 —— `freezeAllSubBlocks` 直取；挂起窗内 live 块随窗退收口）
- *   ② `onDigest`（`ev:digest` —— 消化轮边界切片（**逐轮累积**——`start` **追加本轮**（旧轮零动）∕ `cap`·`end` 就末轮更新；
- *      三端消化面统一批 · #747）——含**座次**（起跑水位）与**边界**（归档落位锚；`ev:susp` 收帧清）；空闲唤醒批）
+ *      **退出兜底**（本键子 agent 块全体归档 —— `freezeAllSubBlocks` 直取；挂起窗内 live 块出窗即收口）
+ *   ② `onDigest`（`ev:digest` —— 消化轮切片（**全轮累积**——`start` **追加本轮**（切片 = […旧轮, 本轮]；
+ *      行**出即留**——零清理机器）∕ `cap`·`end` 就末轮更新；本批 2026-10-01 收正——用户 2026-10-01 07:54 ∥ 07:58）；
+ *      空闲唤醒批）——轮记录 = `{ status, n, tier, from, msg }`（**零位置面**：位置 ∥ 编号 ∥ 轮序标随拆净 —— 本批 #765）
  *   ③ `onTimer`（`ev:timer` —— 到期触发切片；timer-wake 阶段 2）
  * 共件 `countOf`（三切片共用归一口径 —— 随迁，单一实现零副本）。
  * 依赖单向：本档 → `renderer/events-flags.mjs`（`sameRecord`）· `renderer/subagent-reduce.mjs`（退出兜底）；
@@ -28,8 +29,8 @@ function countOf(value) {
  *  同键同值 ⇒ **原引用**（零重绘）；`active` 只收严格真；四计数非数 ⇒ 归一 0（不落 `NaN` 入词面）。
  *  **R5（#522②）**：`active:false`（出窗帧）兼走**退出兜底** —— 本键子 agent 块全体归档
  *  （`freezeAllSubBlocks`；与切片写**两事不互匝** —— 同值帧亦须走兜底）。
- *  **三端消化面统一批 · #747：收帧清边界**——任一本键 `ev:susp` 帧 ⇒ 消化行族**边界清点**（末轮 `boundary` 落假；
- *  对位 VSC `chat-messages.js:236` 收帧清；边界语义见下 `onDigest`）。 */
+ *  **本批 2026-10-01 · #765**：旧「收帧清边界」件随位置面设施拆净 —— 消化行 = 流内普通项（无边界可清；
+ *  帧刷单轮对位，比对面 = `renderer/views/chat-digest-rows.mjs`）。 */
 export function onSusp(state, ev, now) {
   const record = {
     active: ev.active === true,
@@ -37,42 +38,24 @@ export function onSusp(state, ev, now) {
   }
   const table = state.susp ?? {}
   const sliced = sameRecord(table[ev.key], record) ? state : { ...state, susp: { ...table, [ev.key]: record } }
-  const sealed = clearDigestBoundary(sliced, ev.key) // 收帧清边界（#747 —— 任一本键 susp 帧；末轮已清 ⇒ 原引用）
-  return ev.active === true ? sealed : freezeAllSubBlocks(sealed, ev, now)
+  return ev.active === true ? sliced : freezeAllSubBlocks(sliced, ev, now)
 }
 
-/** 边界清点（#747 —— `ev:susp` 收帧清；对位 VSC `chat-messages.js:236`）：本键末轮 `boundary: true` ⇒ 落假；
- *  无轮 ∕ 末轮已清 ⇒ **原引用**（零写—— `sameRecord` 短路面不扩）。 */
-function clearDigestBoundary(state, key) {
-  if (key === null || key === undefined) return state
-  const table = state.digest ?? {}
-  const rounds = Array.isArray(table[key]) ? table[key] : []
-  const last = rounds[rounds.length - 1]
-  if (last === undefined || last.boundary !== true) return state
-  return { ...state, digest: { ...table, [key]: [...rounds.slice(0, -1), { ...last, boundary: false }] } }
-}
-
-/** 轮序标生成（行族身份面 —— 切片内单调；切片清点 ⇒ 计数重起〔重挂 ∥ 首屏整置清屏 ⇒ 同代零歧〕）。 */
-function nextRid(rounds) {
-  let top = 0
-  for (const round of rounds) {
-    const rid = typeof round?.rid === "number" && Number.isFinite(round.rid) ? round.rid : 0
-    if (rid > top) top = rid
-  }
-  return top + 1
-}
-
-/** `ev:digest`——消化轮边界切片（按会话 `key` · **逐轮累积**——`start` **追加本轮**；旧轮零动——行入流，与内容
- *  同生态，口径终正 = 用户 2026-09-30 21:40）：`cap`（#541 —— 撞帽边界帧）**就末轮**记撞帽事实
+/** `ev:digest`——消化轮切片（按会话 `key` · **全轮累积**——`start` **追加本轮**（切片 = […旧轮, 本轮]；行**出即留**
+ *  ——零清理机器；本批 2026-10-01 收正 = 用户 07:54 直斥（「多此一举的自我感动」）∥ 07:58 转写失真认账）：
+ *  `cap`（#541 —— 撞帽边界帧）**就末轮**记撞帽事实
  *  （`cap: { mode, turns }` —— 保起跑 `n`）；`end` **就末轮**更新（保留起跑 `n` —— 终态句 `digest.done` 需 n；
  *  `ok` 缺省 ⇒ 真，沿宿主 `ok !== false` 判据；并末轮 ⇒ 撞帽事实跨 `end` 存续）；**记录面全量照留**
  *  （人读线 `digest` 记录 —— 显示 ∥ 记录两面同在档）。
- *  **座次（#747）**：`start` 记起跑水位 `seat` = 起跑帧当刻流末（= 起跑时已有块数）——归档块入模锚点
- *  （`renderer/subagent-reduce.mjs` 读）∥ 行族落位锚（`renderer/views/chat-digest.mjs` 读）；
- *  **边界**（`boundary: true`）= 本端「本轮标签行」的模型指称（设边界 = 本支 start；收帧清 = `onSusp`；
- *  对位 VSC `chat-status.js:92` ∥ `chat-messages.js:236`）。
- *  表外 `status` ⇒ 零写；**无轮**（`cap` ∕ `end` 而轮集空）⇒ **零写**（防守档——宿主轮序守恒下不可达；VSC 死游标
- *  零动作只系 `end`）；同值 ⇒ 原引用（`cap` 支例外 —— 对象载荷按引用判不等 ⇒ 重投产新 state；该帧每轮恰一发，零重绘影响）。消费 = 流内消化行族 `[data-digest]`（`renderer/views/chat-digest.mjs`）。**留档批 · #719**：本归约体**直复用于重建复列**（`renderer/page-read.mjs` 记录折叠 —— 记录形 = 事件形；折出轮 = 页内全量完整轮——单一实现零副本）。 */
+ *  轮记录 = `{ status, n, tier, from, msg }`（本批 2026-10-01 · #765 精收：**零位置面**——位置 ∥ 编号 ∥ 身份标
+ *  随拆净）；行族出生 ∥ 终态追加（零就地换文 ∥ 零摘除）归帧面 `renderer/views/chat-digest-rows.mjs`
+ *  （自然形收正批 · 2026-10-01）。
+ *  表外 `status` ⇒ 零写；**无轮**（`cap` ∕ `end` 而轮集空）⇒ **零写**（防守档——**可达面 = 起跑帧未及**（轮在飞时渲染面新接入——
+ *  其后 `cap` ∥ `end` 帧零写）；渲染面自该轮起跑帧在连 ⇒ 不可达——归属规则（活流侧优先）保运行期未结轮跨首屏存续；
+ *  VSC 死游标零动作只系 `end`）；同值 ⇒ 原引用（`cap` 支例外 —— 对象载荷按引用判不等 ⇒ 重投产新 state；该帧每轮恰一发，零重绘影响）。
+ *  消费 = 流内消化行族 `[data-digest]`（`renderer/views/chat-digest-rows.mjs`）。**留档批 · #719**：本归约体
+ *  **直复用于复列**（`renderer/page-read.mjs` 记录折叠 —— 记录形 = 事件形；折出轮 = **全量**（未结轮照现——
+ *  消化重放口径批 · 2026-10-01）——单一实现零副本）。 */
 export function onDigest(state, ev) {
   const table = state.digest ?? {}
   const rounds = Array.isArray(table[ev.key]) ? table[ev.key] : []
@@ -82,18 +65,14 @@ export function onDigest(state, ev) {
       tier: ev.tier === "ask" ? "ask" : null,
       from: typeof ev.from === "string" ? ev.from : null,
       msg: typeof ev.msg === "string" ? ev.msg : null,
-      // 座次（#747）= 起跑帧当刻流末（起跑水位 = 起跑时已有块数）；边界 = 本轮（归档落位锚——`onSusp` 收帧清）；
-      // 轮序标 = 行族身份面（切片内单调 —— 清点后计数重起：重挂 ∥ 首屏整置清屏 ⇒ 同代零歧）。
-      seat: Array.isArray(state.blocks) ? state.blocks.length : 0,
-      rid: nextRid(rounds),
-      boundary: true,
     }
-    // 逐轮累积（#747）：追加本轮——旧轮零动（零全替 ∥ 零摘除）；重载复列 = 页内全量轮（`renderer/page-read.mjs`）。
+    // 全轮累积（本批 2026-10-01 收正 · 台账 #768）：`start` **追加本轮** —— 切片 = [...旧轮, 本轮]（行出即留）；
+    // 记录面零动（轮事件三型全量逐条入人读线记录 —— 单源 = `docs/desktop/design/RENDERER.md` §1.1 归约面条）。
     return { ...state, digest: { ...table, [ev.key]: [...rounds, round] } }
   }
   if (ev.status !== "cap" && ev.status !== "end") return state
   const prev = rounds[rounds.length - 1]
-  if (prev === undefined) return state // 无轮 ⇒ 零写（防守档——宿主轮序守恒下不可达）
+  if (prev === undefined) return state // 无轮 ⇒ 零写（防守档——可达面 = 起跑帧未及；自该轮起跑帧在连 ⇒ 不可达）
   let record = null
   if (ev.status === "cap") {
     // 撞帽事实（渲染面 cap 行 —— 对位 VSC `chat-status.js:97-105`）：`mode` 归一（表外 ⇒ `auto` —— 两分支

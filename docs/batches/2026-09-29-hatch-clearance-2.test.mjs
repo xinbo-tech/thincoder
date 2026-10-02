@@ -135,7 +135,7 @@ test("L7 S3：分档映射 ∥ 抑制形 ∥ 宿主忙落账覆盖", async () =>
 
   // 采样器（port 件）：落账覆盖两向 + 窗口过期 + 起停幂等
   const { hostBusy, overrideAdmissionIfHostBusy, startSampler, stopSampler, _setLoopSamplerForTest } = await import(at("thincoder-desktop/src/main/loop-sampler.mjs"))
-  const { admissionOf, recordAdmission, _setProbeImplForTest } = await import(at("thincoder-core/provider/list-models.mjs"))
+  const { admissionOf, recordAdmission, _setProbeImplForTest } = await import(at("thincoder-desktop/node_modules/@thincoder/core/provider/list-models.mjs"))
   assert.equal(hostBusy(), false, "未启动 ⇒ fail-open（恒 false）")
   assert.equal(overrideAdmissionIfHostBusy("p1", "reason"), false, "非忙 ⇒ 零覆盖")
   let now = 1_000_000
@@ -158,7 +158,7 @@ test("L7 S3：分档映射 ∥ 抑制形 ∥ 宿主忙落账覆盖", async () =>
   // 回执面同源（临时 config 缝 + 探径桩）：`provider:verify` 回执另携 `failure`（IPC.md §2 本行契约）
   const cfgPath = join(mkdtempSync(join(tmpdir(), "hx-l7-")), "config.json")
   writeFileSync(cfgPath, JSON.stringify({ providers: [{ name: "p9", baseURL: "https://api.invalid/v1", model: "m9", apiKey: "k9" }], defaultModel: "p9:m9" }))
-  const cfgIo = await import(at("thincoder-core/config-io.mjs"))
+  const cfgIo = await import(at("thincoder-desktop/node_modules/@thincoder/core/config-io.mjs"))
   const { providerVerify, providerList } = await import(at("thincoder-desktop/src/main/providers.mjs"))
   cfgIo._setConfigPathForTest(cfgPath)
   try {

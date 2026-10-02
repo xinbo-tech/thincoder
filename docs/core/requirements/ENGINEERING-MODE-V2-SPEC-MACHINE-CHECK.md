@@ -9,7 +9,7 @@
 ## ② 功能点
 
 1. **单引擎**：保留内核 = ① 锚检查（段引用可解析）② 行宽检查（单行 > 阈值）③ 台账一致性（由 SQLite schema 承接，`check-ledger` 作废）。
-2. **声明面判据**：扫描域（`scanDirs`）/ 行宽阈值（`lineWidth`）/ 锚域（`anchors.domain`）/ 豁免（`exemptions` / `anchors.exclude`）全读 `checkConfig`——改 manifest 即改行为。
+2. **声明面判据**：扫描域（`scanDirs`）/ 行宽阈值（`lineWidth`）/ **宽面豁免区带（`widthExemptZones`）** / 锚域（`anchors.domain`）/ 豁免（`exemptions` / `anchors.exclude`）/ **行数面声明（`lineCounts`）** 全读 `checkConfig`——改 manifest 即改行为。
 3. **砍掉**（v1 过度工程）：
    - 双引擎
    - 三套源域
@@ -35,7 +35,7 @@
 | AC-M8-3 | 全仓无硬编码本仓 `docs/` 路径于机检判据 | grep |
 | AC-M8-4 | 台账一致性由 schema 承接（无 `check-ledger`） | 文件不存在 |
 | AC-M8-5 | 锚检查 / 行宽检查可跑并出红绿 | 跑脚本 |
-| AC-M8-6 | 判据项计数与 `checkConfig` 键一致（D3） | 计数比对 |
+| AC-M8-6 | 判据项计数 = `checkConfig` 键数 + `anchors` 拆分 1（D3；如「7 = 6 + 1」） | 计数比对 |
 | AC-M8-8 | 判据句 ⇄ 实装一致（抽核四面：右界守卫转义 · 谓词闭枚举 13 词 · 用例定义面 · 两族三态） | `node --test thincoder-cli/test/doc-check.test.mjs` |
 | AC-M8-9 | 判据面自测护栏在册且随 `npm test` 常驻（零落仓 + 并发免疫） | 跑用例 + 扫描域前后快照比对 |
 

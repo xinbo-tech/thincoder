@@ -19,8 +19,9 @@
  * prefix `consult#<childRelayN>/` (one per consultant child — the shared subagent
  * relay channel; the child relay number is NOT the session id — sessions key
  * their own `_consultIdCounter`), not onSubagent/onToolPanel.
- * Each child settles its own TUI block with a ⟦ev⟧done event at settle (R17 —
- * the old in-turn check consumption is gone).
+ * Each child settles its own TUI block with a ⟦ev⟧settled event at settle (consult
+ * 同族收齐批 · #748; a cancelled session's children emit ⟦ev⟧stopped — R17: the old
+ * in-turn check consumption is gone; consumed blocks archive at the consumption window).
  */
 import { createAgent, runAgent, readonlyToolNames, excludeSubagentTools } from "../agent.mjs"
 import { resolveChildProvider } from "./subagent.mjs"
@@ -144,8 +145,8 @@ export function makeMainHistoryTool(parentAgent) {
  * is woken (settle-event parity with the async pools) so an idle settle still
  * triggers the digestion round (T-R17j).
  * D3：公共收尾统一走 settleAsyncEntry 共享 helper（四族同机制）——consult 族参数：
- * 无池（会话池无条目——settle 即出池）、无 ctx（无 TUI 冻结事件——子块各自 settle 时
- * 已冻结）、无 onAccounting；helper 按 role "consult" 恒停靠 pending（非挂起期也停靠）。
+ * 无池（会话池无条目——settle 即出池）、无 ctx（无 TUI 冻结事件——子块由消费窗三端
+ * 收口——#748）、无 onAccounting；helper 按 role "consult" 恒停靠 pending（非挂起期也停靠）。
  * Cancelled sessions produce no digest (T-R17c).
  */
 function sessionSettled(agent, session) {
@@ -156,6 +157,7 @@ function sessionSettled(agent, session) {
     role: "consult",
     report: composeConsultDigest(session),
     error: null, done: true, status: "done", cancelled: false,
+    childIds: [...(session.childIds ?? [])], // #748：随 settle 携子块映射表（消费窗三端展开同源）
     relayPrefix: null, startedAt: null, _settle: null, _settleSeq: 0,
   }
   settleAsyncEntry(agent, entry, { pool: null, ctx: null })
@@ -197,7 +199,11 @@ export async function injectConsultResult(agent, entry) {
   })
 }
 
-function settleChild(agent, session, id, label, ok, payload, emitDone) {
+/** Per-child settle 路由（consult 同族收齐批 · 2026-09-30 · 台账 #748）：settle 一律发
+ *  `⟦ev⟧settled`（区块驻留「done · awaiting digestion」——冻结 ∥ 归档落消费窗，三端补发面同源）；
+ *  取消径（会话 stopped——consult_stop ∥ cleanup）⇒ `⟦ev⟧stopped` 即折（消费永不来——与四族取消面同判）。
+ *  无块子块（relayPrefix 缺省——spawn 前失败，从未开块）零发射；测试缝 = 最小导出接桩（会话桩直调）。 */
+export function settleChild(agent, session, id, label, ok, payload, relayPrefix, emit) {
   if (ok) {
     session.received++
     session.replies.push({ model: label, reply: payload })
@@ -208,7 +214,10 @@ function settleChild(agent, session, id, label, ok, payload, emitDone) {
     session.replies.push({ model: label, reply: `(consultation failed: ${payload})`, failed: true })
   }
   session.pending--
-  emitDone?.() // per-child TUI block freeze at settle (R17 — child's activity card is done)
+  if (relayPrefix) {
+    const kind = session.stopped ? "stopped" : "settled" // 块发射两态（消费面口径 = AGENT-LOOP-ASYNC-POOL.md §6.8）
+    emit?.(`${relayPrefix}⟦ev⟧${kind}\x1e0\x1e0\x1e${kind}\x1e`)
+  }
   if (session.pending === 0) sessionSettled(agent, session)
 }
 
@@ -243,11 +252,9 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     else logEvent("child:error", { ...base, err: errText(payload, 200) })
   }
   // R17: relay prefix assigned before the child runner arms — the per-child TUI
-  // block freeze emits only when a block actually exists (relay established).
+  // block event emits only when a block actually exists (relay established).
   let relayPrefix = null
-  const settle = (ok, payload) => settleChild(agent, session, id, label, ok, payload, relayPrefix
-    ? () => ctx.callbacks?.onToken?.(`${relayPrefix}⟦ev⟧done\x1e0\x1e0\x1edone\x1e`)
-    : null)
+  const settle = (ok, payload) => settleChild(agent, session, id, label, ok, payload, relayPrefix, ctx.callbacks?.onToken)
   try {
     // Provider resolution: consultModels entries are { provider, model, effort? } — resolve
     // via the subagent's provider resolver ("provider:model" handles cross-provider picks).
@@ -295,6 +302,9 @@ async function runConsultChild(ctx, session, id, m, problem, ctrl) {
     relayPrefix = makeRelay(agent, "consult", ctx.callbacks?.onToken, provider.model ?? "")
     // LOGGING：arm（spawn 事件——relay 建立后；子内事件归属 _logId）
     childLogId = relayPrefix.slice(0, -1)
+    // #748：会话自持 `childIds`（= 子块 relay 号——块键形 `consult#<N>` 的 N）；无块子块不入表
+    // （relayPrefix 缺省 = spawn 前失败——从未开块）。消费窗三端按该表逐子块展开（同源）。
+    session.childIds.push(childLogId.slice(childLogId.lastIndexOf("#") + 1))
     child._logId = childLogId
     logT0 = Date.now()
     logArmed = true
@@ -415,7 +425,7 @@ export const consultStartTool = {
     agent._consultSessions ??= new Map()
     const id = String((agent._consultIdCounter = (agent._consultIdCounter ?? 0) + 1))
     const session = {
-      id, controllers: [], replies: [], pending: 0,
+      id, controllers: [], replies: [], childIds: [], pending: 0,
       failed: 0, terminated: 0, stopped: false, received: 0, total: run.length,
       models: run.map(consultLabel),
     }

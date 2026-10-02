@@ -9,8 +9,9 @@
  *   ③ `focus` = `{ chain, path } | null` —— 域内 `document.activeElement` 键回退链
  *      （`id` → `data-field` → `data-action`〔同键多例 ⇒ 以 `data-slot` 祖先限定〕→ 结构路径兜底）。
  * 解析语义（复填侧）：键命中 ⇒ 同键件集内按捕获位序（`nth`）取件（同键多例消歧 —— 文档序相对位序
- * 跨重建稳定）；位序不达 ⇒ 结构路径就近者；键零命中 ⇒ 结构路径兜底。**作用域**：草稿项携最近
- * `[data-draft-scope]` 祖先取值（表单身份面 —— 身份换 ⇒ 键不达，不复填）；键件缺失 ∕ 滚位写入未落
+ * 跨重建稳定）；位序不达 ⇒ 键集内结构就近者；键零命中 ⇒ `null`（不复填——入残件）；结构路径只留给焦点链
+ * 末环（`restoreFocus`）。**作用域**：草稿项携最近 `[data-draft-scope]` 祖先取值（表单身份面 —— 身份换 ⇒
+ * 键不达，不复填）；键件缺失 ∕ 滚位写入未落
  * （内容短 ⇒ 截断）⇒ 入**残件**返回（复填未落件，供调用面跨在途重建携带 —— `mergeViewSnaps`）。
  * 复填序 = 焦点 → 草稿 → 滚位末写（焦点默认滚动 ∕ 选区落位先行 —— 滚位不被其内滚扰动）。
  * 纪律：零 `node:` / 零裸包；容器缺位 ⇒ 捕获 `null`、复填零动作；键面字面 `data-*` 与视图档同源。
@@ -121,15 +122,9 @@ function pickByKey(root, loc, path) {
   return hits[0]
 }
 
-/** 键 ∥ 路径双面解析（复填件通用）：键命中优先，零命中 ⇒ 结构路径兜底（作用域不符 ⇒ 零取 —— 免跨表单身份写）。 */
+/** 复填件解析：键命中 ⇒ 取件（`pickByKey` —— 作用域不符在 `locate` 内已零取）；**键零命中 ⇒ `null`** —— 零域外写（入残件）。 */
 function resolveTarget(root, loc, path) {
-  const hit = pickByKey(root, loc, path)
-  if (hit !== null) return hit
-  const fallback = byPath(root, path)
-  if (fallback === null) return null
-  const scope = loc !== null && typeof loc === "object" ? loc.scope : undefined
-  if (scope !== undefined && scope !== scopeOf(fallback, root)) return null
-  return fallback
+  return pickByKey(root, loc, path)
 }
 
 /** 键面同一判定（`attr` + `value` + `scope` + `nth` 全等 —— 并合去重口径）。 */
@@ -170,7 +165,7 @@ function marked(root, attr) {
 /** 滚位读数归一（非有限数 ⇒ 0）。 */
 const scrollTopOf = (el) => (Number.isFinite(el?.scrollTop) ? el.scrollTop : 0)
 
-/** 草稿项显式键：`id` 优先；无 `id` ⇒ 标记取值作显式键；两者皆缺 ⇒ `null`（复填走结构路径）；带作用域与捕获位序。 */
+/** 草稿项显式键：`id` 优先；无 `id` ⇒ 标记取值作显式键；两者皆缺 ⇒ `null`（键缺席 ⇒ 不复填——入残件）；带作用域与捕获位序。 */
 function draftLoc(el, root) {
   const id = keyAttr(el, "id")
   if (id !== null) return withNth(root, el, { attr: "id", value: id, scope: scopeOf(el, root) })
@@ -251,7 +246,7 @@ function restoreFocus(root, focus) {
   return focusLanded(byPath(root, focus.path)) ? null : focus
 }
 
-/** 草稿复填：值 ∕ `checked` ∕ 光标区间逐控件回写（键不达 ⇒ 结构路径兜底件）；未落件入残件。 */
+/** 草稿复填：值 ∕ `checked` ∕ 光标区间逐控件回写（键零命中 ⇒ 入残件——不复填）；未落件入残件。 */
 function restoreDrafts(root, drafts) {
   const rest = []
   for (const entry of Array.isArray(drafts) ? drafts : []) {

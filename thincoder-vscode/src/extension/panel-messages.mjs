@@ -26,6 +26,8 @@ import { savePastedImages, downgradeNonVisionImages } from "./image-handler.mjs"
 // queue-visible 批（2026-09-24 · 台账 #249）：队容量单源 = `queued-merge.mjs`（与 CLI 同名同值）
 import { QUEUED_MAX_ITEMS } from "./queued-merge.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
+// #726（2026-10-01 · 跨端消化面恢复批）：留档记录写缝（核口——`pushReal` 双胞；机制单源 = SESSION.md §6.26）。
+import { pushRecord } from "@thincoder/core/context.mjs"
 import { createLiveBeat, LIVE_HEARTBEAT_MS as CORE_LIVE_HEARTBEAT_MS } from "@thincoder/core/agent/live-beat.mjs"
 import { backgroundStatus, reassertLiveChildren } from "./suspension.mjs"
 // 无工作区守卫（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：② 回合入口守卫（leaf——无环）
@@ -116,6 +118,19 @@ export function pushBusyQueued(panel, merged) {
 /** 两载体条目合计（容量判据 / 快照单源——无会话 `_busyQueued` ∪ 会话在飞 `susp.pendingInput`）。 */
 function busyQueueItems(panel) {
   return [...(panel._busyQueued ?? []), ...(panel._susp?.pendingInput ?? [])]
+}
+
+/** 留档记录出站处理体（#726 · 协议 §3.2 行 22 `recordAppend`；VSC 承接细则 = `WEBVIEW.md` §5.7）：
+ *  webview 归档派生点上行（`{ record: {kind:"subagent", meta, rows} }`）⇒ 取**当前会话活行载体**人读线
+ *  （`panel._liveLines ?? panel._susp?.lines`——`saveLines` 所写 `history` 槽字段之源）经核 `pushRecord`
+ *  追加；**不绑记录存储**（记录走槽 JSON 投影——VSC 兼容红线）；fail-soft——载体缺位（无活跃会话）⇒
+ *  零动作 + 日志一行（零抛）。 */
+export function handleRecordAppend(panel, msg) {
+  const record = msg?.record
+  if (!record || typeof record !== "object") return
+  const lines = panel?._liveLines ?? panel?._susp?.lines
+  if (!lines?.fullHistory) { logEvent("ev:recordappend", { ok: false, reason: "no-live-lines" }); return }
+  pushRecord({ _fullHistory: lines.fullHistory, history: [] }, record)
 }
 
 /**
@@ -268,6 +283,8 @@ export async function handlePanelMessage(panel, msg) {
     case "atComplete": await handleAtComplete(panel, msg); break
     case "permissionResponse": await handlePermissionResponse(panel, msg); break
     case "batchPermissionResponse": handleBatchPermissionResponse(panel, msg); break
+    // 留档记录出站（#726 · 协议 §3.2 行 22——webview → host；处理体落活行载体人读线）
+    case "recordAppend": handleRecordAppend(panel, msg); break
     // 设置族（本批迁出——handler 住 panel-messages-settings.mjs；case 标签与分发零改——缝保持）
     case "saveProviderKey": await handleSaveProviderKey(panel, msg); break
     case "deleteProviderKey": await handleDeleteProviderKey(panel, msg); break

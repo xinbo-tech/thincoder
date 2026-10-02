@@ -7,9 +7,12 @@
  * 出口（六件）：钥行编辑态两件（开 ∕ 消）· 设 ∕ 改钥 · 删钥（确认门经 `settings-confirm.mjs`）·
  * 渠级代理开关 · 「拉取模型」（暂存值直探）。
  * **桌面残余三轮 · 波 C（#615②）**：改钥失败径 ⇒ 键入值落 `providers.keyDraft`（重挂后行内输入按名回填 —— 失败不丢键入）；
- * 复位四点 = 成功 ∕ 取消（本档两件）＋ 开面 ∕ 关面（`mount-settings-exits.mjs`）；读面种子消费 = `views/settings-sections.mjs` `keyControls`。
+ * 复位四点（`keyDraft` 族）= 成功 ∕ 取消（本档两件）＋ 开面 ∕ 关面（`mount-settings-exits.mjs`）；读面种子消费 = `views/settings-sections.mjs` `keyControls`。
  * **#652**：成功径在复位写前声明该行草稿失效（`invalidateDrafts(scope)` 注入 —— 作用域 = 输入件自携 `data-draft-scope`；
  * 失败径零声明：种子 ∕ 草稿两路皆保真）。
+ * **2026-10-01 复核扫面收正批（M2）**：复位点表补第五点 = **提交成功径**（`mount-settings-exits.mjs` `submitChannel` 成功同清
+ * `providers.draft` —— 专件不跨提交存续；本点只及 `draft` 一件，`probe` 探果保留）；`probe ∕ draft` 复位点 = 开面 ∕ 关面
+ * （`mount-settings-exits.mjs`）＋ 本档下一探针写 ＋ 本点（读面恒并持 · 零复位）。
  * 语义锚（`docs/desktop/design/IPC.md` §2 设置族注）：出站失败 ⇒ **零乐观写**（不摘项、不改段读数）；
  * 写成功 ⇒ 清失败串 + 复读本段（`loadProviders` —— 单一 owner = 读数供给族）。
  * S2 面纪律：探针载荷 = **表单暂存值**（不落盘）；探果写切片 ⇒ 树重挂 ⇒ 表单现值以 `draft` 快照回填

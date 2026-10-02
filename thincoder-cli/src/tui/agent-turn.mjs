@@ -22,8 +22,10 @@ import { buildToolCallbacks, sweepToolBlocks } from "./tool-events.mjs"
 import { freezeAllSubTasks } from "./subagent-blocks.mjs" // freezeReclaimDigestedBlocks 随 AGENT-LOOP-ASYNC-POOL.md §6.8 段迁 suspension-drive.mjs
 import { ensureSessionTitle } from "@thincoder/core/generate-title.mjs"
 import { logEvent, errText } from "@thincoder/core/log.mjs"
-import { t } from "@thincoder/core/i18n.mjs"
+import { pushRecord } from "@thincoder/core/context.mjs"
 import { suspensionSession, poolLive } from "./suspension-drive.mjs"
+// #726 写点②：cap 行 ∥ cap 记录同点双动作（文案/形 = lifecycle-records 单一实现）
+import { digestCapRecord, digestTraceLines, recordCarrier } from "./lifecycle-records.mjs"
 import { timerWakeArmed } from "./timer-watch.mjs" // §6.30.3 门三件③：在途 timer ∧ 开关开 ⇒ 唤醒会武装
 import { planQueuedInput } from "./queued-merge.mjs"
 import { pickupQueuedAtStepBoundary } from "./queued-pickup.mjs"
@@ -227,7 +229,10 @@ async function runAgentTurnBody(ctx, text, opts) {
           // TURN-CAP-CONTINUE.md §1 #7 / D-TC15（2026-09-26）：digest 无人值守档**不再自续**
           // （原 AUTO 自动 resume 支退役——静默续期 = F8 禁止；无人可答 ⇒ 撞帽即收口）。
           // 部分消化留在历史，会话回挂起——结果不丢，只是不再烧轮次。
-          pushLine(t("digest.capStop", { turns: error.turn }), C.warn)
+          // #726 写点2：cap 可见行 ∥ cap 记录同点双动作（文案 = lifecycle-records 单一实现）。
+          const capRec = digestCapRecord(error.turn)
+          for (const l of digestTraceLines(capRec)) pushLine(l.text, l.color)
+          pushRecord(recordCarrier(state, agent), capRec)
           if (opts?._logOutcome) opts._logOutcome.result = "stopped"
           break
         }
@@ -291,9 +296,9 @@ async function runAgentTurnBody(ctx, text, opts) {
     state.processing = false
     state._advisorBlocks = []
     // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S1/D-S8：回合正常结束且后台池仍 live → 挂起会话：子agent 区块保持 live
-    // （不冻结——各 settle 事件自行处理），本次回合 controller 交会话层作 abort 句柄
+    // （不冻结——冻结落消费窗：起跑窗 ∥ reclaim ∥ 退出兜底），本次回合 controller 交会话层作 abort 句柄
     // （挂起期 Ctrl+C 中止全部后台子代理）；池空 / 中断 / 错误 → 现状 freezeAllSubTasks
-    // （中断态块标 interrupted；正常态块已在 settle 时各自冻结）。
+    // （中断态块标 interrupted；正常态块已在消费窗各自冻结）。
     const willSuspend = poolLive(agent)
     // AGENT-LOOP-ASYNC-POOL.md §6.8：挂起会话内回合（digest/会话内用户回合——skipSession 且 suspended）的
     // 收尾**不冻结驻留块**——已消化（pinned 且条目已注入）块由 suspensionSession 在

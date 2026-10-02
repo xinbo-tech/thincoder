@@ -40,7 +40,11 @@ function readIndexCounts(memory, cwd) {
   return { files: (code.files ?? 0) + (doc.files ?? 0), chunks: (code.chunks ?? 0) + (doc.chunks ?? 0) }
 }
 
-export function pushIndexStatus(panel) {
+/** P1 读数扩面（KD-69 · 台账 #697）：推送载荷 +2 键 —— `dbBytes`（库文件字节数）∥ `origins`（逐 origin
+ *  code ∥ doc 行数）——取值 = 核只读出口 `memoryStatus()` 回执透传（**不另造 SQL**）；刷新拍 = 既有推送
+ *  时点（打开 ∥ 构建后 `_pushIndexStatus`——零新通道）。async：核记忆面按守卫契约只经动态 import 载入
+ *  （`embed-config.mjs` 档头——`loadMemoryFace`），同拍内取出口。*/
+export async function pushIndexStatus(panel) {
     const cwd = _cwd()
     if (!cwd) return
     const embedder = getEmbedder()
@@ -49,8 +53,9 @@ export function pushIndexStatus(panel) {
     if (memory) {
       try {
         const { files, chunks } = readIndexCounts(memory, cwd)
-        status = { built: files > 0, files, chunks, hasEmbedder: !!embedder }
-      } catch { status = { built: false, files: 0, chunks: 0, hasEmbedder: !!embedder } }
+        const { dbBytes, origins } = (await loadMemoryFace()).memoryStatus(memory, { origin: cwd })
+        status = { built: files > 0, files, chunks, dbBytes, origins, hasEmbedder: !!embedder }
+      } catch { status = { built: false, files: 0, chunks: 0, dbBytes: null, origins: [], hasEmbedder: !!embedder } }
     }
     panel._panel?.webview.postMessage({ type: "indexStatus", status, hasEmbedder: !!embedder })
   }

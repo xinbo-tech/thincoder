@@ -48,8 +48,12 @@ const CLI_ENTRY_RE = /thincoder\.cjs|thincoder\.mjs|thincoder-cli/i
 
 /** 桌面端（Electron 主进程）判别标记族（台账 #584 实读定形——`electron .` 启动形态）：真机捕获
  *  命令行 = `"…\thincoder-desktop\node_modules\electron\dist\electron.exe" .`——产品树路径段可判
- *  （打包件 exe 名同族）。补入本族 = §3.1「标记族假阴性」已知局限的实测消解路径（原族外形态）。 */
-const DESKTOP_END_RE = /thincoder-desktop/i
+ *  （打包件 exe 名同族）。补入本族 = §3.1「标记族假阴性」已知局限的实测消解路径（原族外形态）。
+ *  #707 扩（2026-09-30 实测 · 台账 #707）：桌面 dev 启动形 = `node_modules\electron\dist\electron.exe
+ *  --remote-debugging-port=9222 --remote-allow-origins=* .`（**相对路径**，无 `thincoder-desktop` 段）
+ *  ⇒ 原族假阴性（活属主判 dead——误删方向）⇒ 补 `node_modules[\\/]electron[\\/]dist[\\/]` 段；
+ *  超集面（他 electron dev 应用）与 VSC 宿主族同向——宁可多留（误保留=噪音／误删=双进程同槽破坏级）。 */
+const DESKTOP_END_RE = /thincoder-desktop|node_modules[\\/]electron[\\/]dist[\\/]/i
 
 /** 本产品身份判据（单源）：命令行命中 CLI 入口族 ∕ VSC 扩展宿主族 ∕ 桌面端族 ⇒ 本产品进程。
  *  命令未知（undefined / 空串）⇒ `false`——**调用方须自行区分「未知」与「明确不符」**

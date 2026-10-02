@@ -46,10 +46,14 @@ reasoning, provider, images? } → extension _chat()
 
 | 消息 | 方向 | 载荷 / 语义 |
 |---|---|---|
-| `toolPanel` | ext → wv | `{ type, name, kind, text, round, model, sub }`——活动流 chunk（advisor / 子代理 / consult / escalate）；`kind` = start / think / text / tool；`sub` = 嵌套子标（string chunk 分支恒 `undefined`）；**增字段** `tool`（工具名——工具调用面与工具输出面同携）/ `cmd`（参数摘要 ≤60——无则不携）/ `face`（内容 chunk 来源面 ∈ `text` / `think` / `toolCall` / `toolOutput`——`WEBVIEW.md` §5.6 合并判据源）。**生产者双源** = `onToolPanel` 缝 + 子代内容 chunk 中继（relay 前缀分流——`panel-callbacks.mjs` `relaySubagentContentChunk`）；`cmd` ≤60 截断落层 = **webview 块头渲染**（`activity-view.js` `noteChunk`——超 60 截为 59+…），桥与生产者透传原串 |
-| `subagent` | ext → wv | `{ ...info }` 展开透传——`started`（池条目带 `pool: true`）/ `settled` / `done` / `error` / `cancelled` / `terminated` / `failed` / `answered` 终态 + turn / maxTurns 终值快照；**增 status 值** `"turn"`（`{ id, role, turn, maxTurns }` 逐轮进展帧）；**增字段** `note`（块头停因注记——X6）/ `syncLive`（sync 可中止事实——X10） |
+| `toolPanel` | ext → wv | `{ type, name, kind, text, round, model, sub }`——活动流 chunk（advisor / 子代理 / consult / escalate）；`kind` = start / think / text / tool；`sub` = 嵌套子标（string chunk 分支恒 `undefined`）；**增字段** `tool`（工具名——工具调用面与工具输出面同携）/ `cmd`（参数摘要 ≤60——无则不携） |
+| | | / `face`（内容 chunk 来源面 ∈ `text` / `think` / `toolCall` / `toolOutput`——`WEBVIEW.md` §5.6 合并判据源）。**生产者双源** = `onToolPanel` 缝 + 子代内容 chunk 中继（relay 前缀分流——`panel-callbacks.mjs` `relaySubagentContentChunk`）；`cmd` ≤60 截断落层 = **webview 块头渲染**（`activity-view.js` `noteChunk`——超 60 截为 59+…）， |
+| | | 桥与生产者透传原串 |
+| `subagent` | ext → wv | `{ ...info }` 展开透传——`started`（池条目带 `pool: true`）/ `settled` / `done` / `error` / `cancelled` / `terminated` / `failed` / `answered` 终态 + turn / maxTurns 终值快照；**增 status 值** `"turn"`（`{ id, role, turn, maxTurns }` 逐轮进展帧）；**增字段** `note`（块头停因注记——X6） |
+| | | / `syncLive`（sync 可中止事实——X10） |
 | `subagentApproval` | ext → wv | `{ id, role, model?, tool }`——审批态（`tool = null` 清除）→ 块头 `⏸` + 态词 `等待审批: <tool>` |
-| `cancelSubagent` | wv → ext | `{ id, role }`——⏹ 点击路由 → 池条目定向 abort（role 交叉校验防陈旧按钮误停；未知 no-op）；**advisor role 复用同路由**——与子代理族**同经** `executeCancelAction`（**不得**走专用直调分支；收尾口径 = `AGENT-LOOP-ASYNC-POOL.md` 的 §6.11 第 3 条「端侧路径收口」）⇒ 取消事件经中继转 `subagent` 协议消息（queued 命中 = `cancelled(was:"queued")`——等待头移除；running 命中 = `cancelled`——块定格） |
+| `cancelSubagent` | wv → ext | `{ id, role }`——⏹ 点击路由 → 池条目定向 abort（role 交叉校验防陈旧按钮误停；未知 no-op）；**advisor role 复用同路由**——与子代理族**同经** `executeCancelAction`（**不得**走专用直调分支；收尾口径 = `AGENT-LOOP-ASYNC-POOL.md` 的 §6.11 第 3 条「端侧路径收口」） |
+| | | ⇒ 取消事件经中继转 `subagent` 协议消息（queued 命中 = `cancelled(was:"queued")`——等待头移除；running 命中 = `cancelled`——块定格） |
 | `permissionRequest` | ext → wv | `{ tool, args, diff, owner, promptId }`——逐项权限卡；`owner` = 子代理归属标签（`<role>#<id>` / `escalate <model> #<id>`（尖括号为字面 · model = 池条目值——2026-09-16 残环批收正：前引 `<tag>` = 前引擎值；`continue` 询问卡 = `<role>#<id>`〔args.agent 机器键——同批〕）——depth-0 为 `null`）；`promptId` = 响应匹配键 |
 | `permissionResponse` | wv → ext | `{ approved, promptId }`——按 promptId 精确匹配队列条目（无 promptId 回退队头——旧 webview） |
 | `permissionWithdrawn` | ext → wv | `{ promptId }`——host 侧释放（条目取消（⏹/cancel——signal 链）/ 中止 / approve-all 连带 / **合并卡 Stop·Ctrl+I 释放** / **孤儿响应**）→ 移除对应卡（逐项 / 合并同选择器——§4.6） |
@@ -59,8 +63,10 @@ reasoning, provider, images? } → extension _chat()
 | `digest` | ext → wv | `{ status:"start"/"end"/"cap", n, ok?, ms?, mode?, turns? }`——消化轮起跑 / 收尾 / turn-cap 指示（呈现契约见 §5）；**增字段** `tier`（起跑档位 `ask` / `digest`——§5）+ `from` / `msg`（仅 ask 档条件携带——提问者 `role#id` 与问题摘要（单行 + 截断 ≤120 字符，核单点）） |
 | `suspension` | ext → wv | 挂起态行 / 冻结通知（`settled → done` 补发 / `active:false + freeze`）——计数载荷与 `turnState` 双通道同源；**增字段** `interrupted`（会话中止事实——X11） |
 | `turnState` | ext → wv | `{ state, counts? }`——忙态单一广播（§4.4 权威锚） |
-| `workspaceGuard` | ext → wv | `{ active }`——无工作区守卫态（拒启 + 提示；判据 / 守卫面 / 提示面 = `docs/vsc/design/PROJECT-SWITCHER.md` §4.1）。发射 = `src/extension/workspace-guard.mjs` `pushWorkspaceGuard`（推送点 = `panel-session.mjs` 的 `openSessionContent` 两分支 / `chat-panel.mjs` 工作区变化处理）；消费 = `webview/chat.js` `case`（§3.2 行 15）。机检②/③ 列坐标 = §12 行 |
-| `busyQueued` | ext → wv | `{ pending, count?, items?, text?, merged? }`——busy 排队**队列快照**（`count` = 剩余条数；`items` = 队列剩余项原文（按队列序）；`text` = 队列末项原文（队列非空即携——受理 / 消费 / 忙判 / 握手各推送点同式；webview 不读）；`merged` = 本批消费的合并文本（仅消费推送携））。webview 消费 = 二次提交守卫（`count >= 8`）+ 待发送气泡（逐条标记 / 单条批清标保留 / 多条批合并成形——判据 / 清除 / 标记 = `WEBVIEW-INPUT.md` §1 C-B2-6 ①⑦）。发射 = `src/extension/panel-messages.mjs` `pushBusyQueued`（受理 / **五个消费点**（含步边界 pickup） / 忙分支判决 / `webviewReady` 握手重推）；消费 = `webview/chat-messages.js` `case`（§3.2 行 17）。机检②/③ 列坐标 = §12 行 |
+| `workspaceGuard` | ext → wv | `{ active }`——无工作区守卫态（拒启 + 提示；判据 / 守卫面 / 提示面 = `docs/vsc/design/PROJECT-SWITCHER.md` §4.1）。发射 = `src/extension/workspace-guard.mjs` `pushWorkspaceGuard`（推送点 = `panel-session.mjs` 的 `openSessionContent` 两分支 / `chat-panel.mjs` 工作区变化处理）； |
+| | | 消费 = `webview/chat.js` `case`（§3.2 行 15）。机检②/③ 列坐标 = §12 行 |
+| `busyQueued` | ext → wv | `{ pending, count?, items?, text?, merged? }`——busy 排队**队列快照**（`count` = 剩余条数；`items` = 队列剩余项原文（按队列序）；`text` = 队列末项原文（队列非空即携——受理 / 消费 / 忙判 / 握手各推送点同式；webview 不读）；`merged` = 本批消费的合并文本（仅消费推送携））。webview 消费 = 二次提交守卫（`count >= 8`） |
+| | | + 待发送气泡（逐条标记 / 单条批清标保留 / 多条批合并成形——判据 / 清除 / 标记 = `WEBVIEW-INPUT.md` §1 C-B2-6 ①⑦）。发射 = `src/extension/panel-messages.mjs` `pushBusyQueued`（受理 / **五个消费点**（含步边界 pickup） / 忙分支判决 / `webviewReady` 握手重推）；消费 = `webview/chat-messages.js` `case`（§3.2 行 17）。机检②/③ 列坐标 = §12 行 |
 | `statusText` | ext → wv | `{ kind:"rateWait"/"rateLimited"/"overloaded"/"quota"/"index", seconds?/message?/phase?/done?/total? }`——限流 / 索引状态段 |
 | `turnFrame` | ext → wv | `{ turn, maxTurns }`——顶层逐轮进展段 |
 | `questionCancelled` | ext → wv | `{ promptId }`——abort 释放未答 question 卡（§4.2） |
@@ -94,14 +100,20 @@ reasoning, provider, images? } → extension _chat()
 | 12 | `subagent`（增字段） | `note`（停因注记——turn-cap / 用户停止）· `syncLive`（可中止事实） | `panel-callbacks.mjs` `settleSyncSubagent`（`note`）· `panel-subagent-relay.mjs` 出生面 / `suspension.mjs` 存活投影（`syncLive`） | `activity.js` `_subMeta` → `activity-view.js` 块头注记 / ⏹ 门控（`WEBVIEW.md` §5.2） |
 | 13 | `suspension`（增字段） | `interrupted`（会话中止事实——自然退出 false） | `suspension.mjs` `postSuspensionEnd` | `panels.js` → `activity.js` `freezeLiveBlocks`（`— interrupted` 注记） |
 | 14 | `digest`（增字段） | `from` / `msg`（ask 档携参——提问者 + 问题摘要；`msg` = 单行 + 截断 ≤120 字符，核单点 `upstreamAskLabelVars`） | `suspension.mjs` 起跑点（ask 档条件携带） | `chat.js` `showDigestStatus`（`digest.turnLabelAsk` 携参取键——§5） |
-| 15 | `workspaceGuard`（**新消息**——host → webview） | `{ active:boolean }`——无工作区守卫态（面板拒发 + 占位符第三态；判据 / 守卫面 = `PROJECT-SWITCHER.md` §4.1） | `src/extension/workspace-guard.mjs` `pushWorkspaceGuard`（推送点 = `panel-session.mjs` `openSessionContent` 两分支 / `chat-panel.mjs` 工作区变化处理；机检发点坐标 = `src/extension/workspace-guard.mjs:38`） | `webview/chat-messages.js:102` `case "workspaceGuard"` |
-| 16 | `queuedUserMessage`（**新消息**——webview → host 输入上行） | `{ text, model, reasoning, provider, images }`——busy 期排队注入（busy 即排队面 = `running`；host 队列载体两态（容量 8）= 无会话 `panel._busyQueued` ∥ 会话在飞 `susp.pendingInput`；细则 = `WEBVIEW-INPUT.md` §1 C-B2-6） | `thincoder-render-core/composer/panel.mjs:321`（出口分流——本地气泡先行） | `panel-messages.mjs:207` `case` → `routeUserTurn` 入槽 |
-| 17 | `busyQueued`（状态镜像 · **增字段 `count` / `items` / `text` / `merged`**） | `{ pending:boolean, count?:number, items?:string[], text?:string, merged?:string }`——队列快照（`count` / `items` = 剩余实况（守卫 = `count >= 8`；Reload 重建源 = `items`）；`text` = 队列末项原文（队列非空即携——受理 / 消费 / 忙判 / 握手各推送点同式；webview 不读）；`merged` = 本批合并文本（仅消费推送——多条批合泡源）；`WEBVIEW-INPUT.md` §1 C-B2-6 ①⑦） | `src/extension/panel-messages.mjs` `pushBusyQueued`（受理 / **五个消费点**（含步边界 pickup） / 忙分支判决 / `webviewReady` 握手重推） | `webview/chat-messages.js` `case "busyQueued"` → `S._busyQueuedCount` / `S._busyQueuedPending` + 待发送气泡（逐条标记 / 清标 / 合并成形） |
+| 15 | `workspaceGuard`（**新消息**——host → webview） | `{ active:boolean }`——无工作区守卫态（面板拒发 + 占位符第三态；判据 / 守卫面 = `PROJECT-SWITCHER.md` §4.1） | `src/extension/workspace-guard.mjs` `pushWorkspaceGuard`（推送点 = `panel-session.mjs` `openSessionContent` 两分支 / `chat-panel.mjs` 工作区变化处理； | |
+| | | | 机检发点坐标 = `src/extension/workspace-guard.mjs:38`） | `webview/chat-messages.js:102` `case "workspaceGuard"` |
+| 16 | `queuedUserMessage`（**新消息**——webview → host 输入上行） | `{ text, model, reasoning, provider, images }`——busy 期排队注入（busy 即排队面 = `running`；host 队列载体两态（容量 8）= 无会话 `panel._busyQueued` ∥ 会话在飞 `susp.pendingInput`；细则 = `WEBVIEW-INPUT.md` §1 C-B2-6） | | |
+| | |  | `thincoder-render-core/composer/panel.mjs:321`（出口分流——本地气泡先行） | `panel-messages.mjs:207` `case` → `routeUserTurn` 入槽 |
+| 17 | `busyQueued`（状态镜像 · **增字段 `count` / `items` / `text` / `merged`**） | `{ pending:boolean, count?:number, items?:string[], text?:string, merged?:string }`——队列快照（`count` / `items` = 剩余实况（守卫 = `count >= 8`；Reload 重建源 = `items`）；`text` = 队列末项原文（队列非空即携——受理 / 消费 / 忙判 / 握手各推送点同式； | | |
+| | | webview 不读）；`merged` = 本批合并文本（仅消费推送——多条批合泡源）；`WEBVIEW-INPUT.md` §1 C-B2-6 ①⑦） | `src/extension/panel-messages.mjs` `pushBusyQueued`（受理 / **五个消费点**（含步边界 pickup） / 忙分支判决 / `webviewReady` 握手重推） | |
+| | | |  | `webview/chat-messages.js` `case "busyQueued"` → `S._busyQueuedCount` / `S._busyQueuedPending` + 待发送气泡（逐条标记 / 清标 / 合并成形） |
 | 18 | `usage`（增字段） | `timers`（`{ count, expired }`——核 `_pendingTimers` 活读投影；零在途 ⇒ 段零节点） | `panel-callbacks.mjs` `usage` 发射点（累计 ∕ transports 映射——同 `reasoning_tokens` 行） | `status-bar.js` `⏰N` 段 + `state.js` 两计数槽 |
 | 19 | `timer`（**新消息**——host → webview） | `{ status: "fired", text }`——`text` = 交付原文（`[System reminder: ⏰ timer — …]` 逐字；显示裁 = ≤3 行 + `…`——CLI 同规） | `thincoder-vscode/src/extension/timer-watch.mjs`（已落——空闲 deadline 闩到点交付点） | `webview/chat-messages.js`（流内触发行渲染） |
-| 20 | `providerError`（**既有载荷替换**——`{text}` ⇒ `{scope, reason}`） | 载荷 v2 = `{ type:"providerError", scope, reason }`——`scope` = 段名（六段闭集 + `panel`；`panel` ∕ 闭集外 ⇒ 零段标）；`reason` = 码 ∕ 原样串（webview：表内出词、表外原样直传、空 ⇒ 零节点）。**纪律句「不改既有字段语义」之明文例外** | **19 站点**统一助手 `postProviderError`（`thincoder-vscode/src/extension/settings.mjs:311`——`CONFIG_CONFLICT_HINT` ⇒ `"mtime-conflict"`；`panel-mcp.mjs` ×4 ∕ `panel-messages-settings.mjs` ×15——#695 收口） | `webview/chat-messages.js:154` `case` → `webview/settings.js` `showSettingsError(scope, reason)`（段标 + 词化码 ∕ 单槽驻留——机制单源 = `SETTINGS.md` §2.15） |
+| 20 | `providerError`（**既有载荷替换**——`{text}` ⇒ `{scope, reason}`） | 载荷 v2 = `{ type:"providerError", scope, reason }`——`scope` = 段名（六段闭集 + `panel`；`panel` ∕ 闭集外 ⇒ 零段标）；`reason` = 码 ∕ 原样串（webview：表内出词、表外原样直传、空 ⇒ 零节点）。 | | |
+| | | **纪律句「不改既有字段语义」之明文例外** | **19 站点**统一助手 `postProviderError`（`thincoder-vscode/src/extension/settings.mjs:311`——`CONFIG_CONFLICT_HINT` ⇒ `"mtime-conflict"`；`panel-mcp.mjs` ×4 ∕ `panel-messages-settings.mjs` ×15——#695 收口） | |
+| | | |  | `webview/chat-messages.js:154` `case` → `webview/settings.js` `showSettingsError(scope, reason)`（段标 + 词化码 ∕ 单槽驻留——机制单源 = `SETTINGS.md` §2.15） |
 | 21 | `usage`（增字段） | `ctxTokens`（上下文占用量绝对数——状态行 `Yk` 尾串源；缺 ⇒ 尾串缺席） | `panel-callbacks.mjs` `usage` 发射点（累计 ∕ transports 映射——同 `reasoning_tokens` 行） | `status-bar.js` ctx 段（`context X% Yk` 拼接——#677 I16a） |
-| 22 | `recordAppend`（**新消息**——webview → host 留档记录出站） | `{ record: { kind:"subagent", meta, rows } }`——归档时点快照（形 ∥ 判据单源 = `docs/core/design/SESSION.md` §6.26；每块恰一次——归档幂等守卫内） | `webview/activity.js` `archiveBlock` 同点（拟增——#726 实施批落） | `panel-messages.mjs` `case`（拟增——处理体取活行载体 + 核 `pushRecord`） |
+| 22 | `recordAppend`（**新消息**——webview → host 留档记录出站） | `{ record: { kind:"subagent", meta, rows } }`——归档时点快照（形 ∥ 判据单源 = `docs/core/design/SESSION.md` §6.26；每块恰一次——归档幂等守卫内） | `webview/activity.js:124`（`archiveBlock` 同点——归档派生点调用，幂等守卫内恰一次；载荷字面量构造 `:190`） | `panel-messages.mjs:287` `case` → `handleRecordAppend`（`:123-134`——处理体取活行载体 + 核 `pushRecord`；fail-soft） |
 
 纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–22 即全部在案增量；表外增量不入）。发射 / 接收落点：
 `thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:29` ·
@@ -195,20 +207,20 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 
 ## 5. digest 轮可见面与 turn-cap
 
-**契约**（元素级落点 = `thincoder-vscode/webview/chat-status.js:69`（`showDigestStatus`））：
+**契约**（元素级落点 = `thincoder-vscode/webview/chat-status.js:71`（`showDigestStatus`））：
 
 - **载荷** = `{ status:"start"/"end"/"cap", n, ok?, ms?, mode?, turns?, tier?, from?, msg? }`；`tier` ∈ `ask` / `digest`（按因两档）；`from` / `msg` 仅 ask 档携带（档位判据 / 零影响证据 / 边界 = `WEBVIEW.md` §5.1「消化轮起跑档位」——本档只记元素级契约）。
 - `digest start` → ① 追加 `.digest-turn` 标签行——按 `tier` 取键：`ask` ⇒ `digest.turnLabelAsk`（携参 `{ from, msg }`）/ **其余（含 `tier` 缺省——旧载荷）** ⇒ `digest.turnLabel`；
-  ② **`n > 0`** ⇒ 追加**本轮独立** `.digest-status` 计数元素（`id="digest-status"` 退役；`dataset.n` = 起跑数）——**两档同规**；`n = 0`（ask-only 轮）⇒ 零计数元素（`_digestRoundEl` 置空）；③ 记本轮边界 `S._digestBoundary = 标签行`（归档落点）；
+  ② **`n > 0`** ⇒ 追加**本轮独立** `.digest-status` 计数元素（`id="digest-status"` 退役；`dataset.n` = 起跑数）——**两档同规**；`n = 0`（ask-only 轮）⇒ 零计数元素（`_digestRoundEl` 置空）；③ 记本轮边界 `S._digestBoundary`（归档落点——计数元素 ∥ 无 ⇒ 标签元素）；
   ④ `ctx.assistantLabeled = false`（本轮 assistant 输出带一次回合标签）。
-- `digest end` → **本轮**计数元素原地更新（`digest.done`；`ok:false` ⇒ `digest.aborted`——异常不留「仍在消化」假象；计数取元素自带起跑数）；
+- `digest end` → **追加终态元素**（`.digest-status` + `digest-done`；`ok:false` ⇒ `digest.aborted` + `digest-failed`——异常不留「仍在消化」假象；计数 = 本轮起跑数（自本轮计数元素 `dataset.n` 取——同源）；**不动原计数元素**（零就地换文——恒起跑文 `digest.start`））；
   **本轮无计数元素（ask-only 轮 · `n = 0`）⇒ 零动作**（禁兜底建元素——`dataset.n = "?"` 幻影行禁出）。
 - `digest cap` → `.digest-cap` 行（`mode:"auto"` dim / `mode:"stop"` warn）。
 
-- 实现落点：`thincoder-vscode/webview/chat-status.js:69`（`showDigestStatus`）· 样式 `thincoder-vscode/webview/base.css`（`.digest-status` 族沿用 + `.digest-turn` / `.digest-cap`）。
-- 跨轮 = **新元素随流追加**（漂移消除）——`start` 连发亦各成独立元素（非 ask 轮的 `end` 更新其前最近未结的本轮元素）。
+- 实现落点：`thincoder-vscode/webview/chat-status.js:71`（`showDigestStatus`）· 样式 `thincoder-vscode/webview/base.css`（`.digest-status` 族沿用 + `.digest-turn` / `.digest-cap`）。
+- 跨轮 = **新元素随流追加**（漂移消除）——`start` 连发亦各成独立元素；`end` ⇒ **追加终态元素**（零就地换文——原计数元素恒起跑文）。
 - 投递 = **直投**（不走 outbox——digest 只在面板活跃且 webview 已就绪后发生；outbox 语义 = 出生事件族）。
-- host 发射点：`thincoder-vscode/src/extension/suspension.mjs:167`（起跑——`tier` 判据同点）· `:178`（收尾）· `thincoder-vscode/src/extension/panel-callbacks.mjs:83`（cap 两档——`postDigestCap` 发射行；定义 `:82-84`）。
+- host 发射点：`thincoder-vscode/src/extension/suspension.mjs:190`（起跑——`tier` 判据同点）· `:214`（收尾）· `thincoder-vscode/src/extension/panel-callbacks.mjs:83`（cap 两档——`postDigestCap` 发射行；定义 `:82-84`）。
 
 ## 6. 状态行与块头字段对位
 
@@ -226,13 +238,15 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 任务 | `✓N/M` | task 徽标 `✓d/total`（`:48`） | 等价 |
 | 轮次 | `turn N/M` | `turn N/M`（`:46`）——旧 `轮次 N` 段退役 | 采用（C-12#2） |
 | token | `↑X ↓Y ✦R hitN%` | `↑X ↓Y hitN%`（`:31-33`）——✦ 仅 `reasoning_tokens > 0` | 采用（C-12#6） |
-| context | `context X% Yk` | `context X%`（`status-bar.js:38-45`——实施后实位；≥80% 警告色） | **消（已落——本端补 `Yk` 绝对数，对齐 CLI 形 `context X% Yk`；#677 I16a）**（本端 pct 源 = 核 `estimateTokens(history)` 分子 ÷ `providerSpec(provider).context`，**与 CLI 状态行同源同式**；派生单点 = `thincoder-vscode/src/specs.mjs` `ctxPercentForHistory`——详 `WEBVIEW.md` §4.6） |
+| context | `context X% Yk` | `context X%`（`status-bar.js:38-45`——实施后实位；≥80% 警告色） | **消（已落——本端补 `Yk` 绝对数，对齐 CLI 形 `context X% Yk`；#677 I16a）**（本端 pct 源 = 核 `estimateTokens(history)` 分子 ÷ `providerSpec(provider).context`，**与 CLI 状态行同源同式**； |
+| | | | 派生单点 = `thincoder-vscode/src/specs.mjs` `ctxPercentForHistory`——详 `WEBVIEW.md` §4.6） |
 | 滚动 | `scrolled N` | 悬浮回底钮（`thincoder-vscode/webview/scroll.js:29-34`） | **实证例外（行为证据——滚动状态两端可见：CLI `scrolled N` 文本 ∥ 本端回底钮在场）** |
 | 输入提示 / 键位串 | enterHint + 键位串 | 无（按钮 / 占位符承载） | **实证例外（行为证据——提示功能两端在位：CLI 文本提示串 ∥ 本端占位符 + 钮承载）** |
 | 横幅 | PLAN / AUTO / ADVISOR / ENG + attention chip | 工具条按钮 active + plan 徽标（`:23`） | **实证例外（行为证据——模式可见面两端在位：CLI 横幅 ∥ 本端工具条态 + plan 徽标）**；attention chip = 范围决定（非端差——权限 / 提问卡流内可见） |
 | 后台段 | `后台 N 子代理运行中 · M 完成待消化` | `⏳ …`（`:51-60`——running+queued / pending+done 两段） | 等价 |
 | 计时器段（⏰N——timer-wake 阶段 2） | ` │ ⏰N`（状态段簇尾——`thincoder-cli/src/tui/render-frame.mjs:422`；含过期项 ⇒ 警示色） | （已落——`thincoder-vscode/webview/status-bar.js` `⏰N` 段（`:62` 起）；源 = `usage` 载荷 `timers { count, expired }`——本档 §3.2 行 18） | 等价 |
-| 静默段（`quiet`——2026-09-29 · 批 stall-indicator） | ` Quiet Xs`（耗时之后——`thincoder-cli/src/tui/render-frame.mjs:406-407` 邻位；zh 值 =「已静默 Xs」——键面单源 = 核字典 `status.quiet`） | `Quiet Xs` 段（`status-bar.js:59-60` 邻位——纯 webview 自算：`running` ∧ 静默 ≥ 10s ⇒ 段在场；**无消息面**〔无协议行 ∕ 无载荷改〕） | 对齐（语义单源 = `docs/cli/design/TUI.md` §7.7；实现面 = `docs/vsc/design/WEBVIEW.md` §4.7） |
+| 静默段（`quiet`——2026-09-29 · 批 stall-indicator） | ` Quiet Xs`（耗时之后——`thincoder-cli/src/tui/render-frame.mjs:406-407` 邻位；zh 值 =「已静默 Xs」——键面单源 = 核字典 `status.quiet`） | `Quiet Xs` 段（`status-bar.js:59-60` 邻位——纯 webview 自算：`running` ∧ 静默 ≥ 10s ⇒ 段在场；**无消息面**〔无协议行 ∕ 无载荷改〕） | |
+| | |  | 对齐（语义单源 = `docs/cli/design/TUI.md` §7.7；实现面 = `docs/vsc/design/WEBVIEW.md` §4.7） |
 
 ### 6.2 块头字段对位（本端 × CLI）
 
@@ -249,7 +263,8 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 状态区·queued | `queued · position N（槽满等位）` / 依赖 detail 原文 | `排队中 · 位置 N（槽满等位）` / 原因原文 | 对齐（C-11②） |
 | 审批态 | `等待审批: X` | `⏸` + `等待审批: <tool>`（`thincoder-render-core/subblocks/activity-view.mjs:55` · `:91`） | **已实装**——两端同形 |
 | 待消化 | `done · awaiting digestion`（状态区） | 块头态词同文案（`thincoder-render-core/subblocks/activity-view.mjs:92`） | 对齐 |
-| 冻结头 + tail-3 | `[✓ key · … · done Ns · turn]` + tail-3（`│ ` 前缀独立行——`render-segments.mjs:101-105`）+ 注记 ` — <note>`（停因 / interrupted——`:88-93`） | `[✓ key · … · done Ns · turn]` + tail-3（`│ ` 前缀——`activity-view.js` `refreshBlock`；容器 = `<details>/<summary>` 原生）+ 注记 ` — <note>`（载体 `meta.note`——契约 = `WEBVIEW.md` §5.2；`tailLines` = `thincoder-render-core/subblocks/activity-view.mjs:103`） | 对齐（D4 消：tail-3 行文归一 = `│ ` 前缀独立行） |
+| 冻结头 + tail-3 | `[✓ key · … · done Ns · turn]` + tail-3（`│ ` 前缀独立行——`render-segments.mjs:101-105`）+ 注记 ` — <note>`（停因 / interrupted——`:88-93`） | `[✓ key · … · done Ns · turn]` + tail-3（`│ ` 前缀——`activity-view.js` `refreshBlock`；容器 = `<details>/<summary>` 原生） | |
+| | | + 注记 ` — <note>`（载体 `meta.note`——契约 = `WEBVIEW.md` §5.2；`tailLines` = `thincoder-render-core/subblocks/activity-view.mjs:103`） | 对齐（D4 消：tail-3 行文归一 = `│ ` 前缀独立行） |
 
 ### 6.3 i18n 键表（27 键 · zh/en 逐字）
 
@@ -398,7 +413,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `clearMessages` | src/extension/panel-session.mjs:147 | webview/chat-messages.js:119 | `活` | — |
 | `complete` | src/extension/panel-callbacks.mjs:228 | webview/chat-messages.js:103 | `活` | — |
 | `compress` | src/extension/panel-callbacks.mjs:175/:176/:183 | webview/chat-messages.js:181 | `活` | — |
-| `digest` | src/extension/panel-callbacks.mjs:83/thincoder-vscode/src/extension/suspension.mjs:167/:178 | webview/chat-messages.js:189 | `活` | `status` 两型 = 一条消息（over-count #3 已证伪）；载荷增 `tier`（两档——§5 / §3.2 行 11）+ `from` / `msg`（ask 档携参——§3.2 行 14） |
+| `digest` | src/extension/panel-callbacks.mjs:83/thincoder-vscode/src/extension/suspension.mjs:190/:214 | webview/chat-messages.js:189 | `活` | `status` 两型 = 一条消息（over-count #3 已证伪）；载荷增 `tier`（两档——§5 / §3.2 行 11）+ `from` / `msg`（ask 档携参——§3.2 行 14） |
 | `error` | src/extension/chat-panel.mjs:406/src/extension/panel-turn-loop.mjs:178/src/extension/panel-turn-stages.mjs:77（共 5 处） | webview/chat-messages.js:105 | `活` | — |
 | `goal` | src/extension/panel-callbacks.mjs:184 | webview/chat-messages.js:225 | `活` | — |
 | `historyPage` | src/extension/panel-session.mjs:195 | webview/chat-messages.js:129 | `活` | — |
@@ -414,7 +429,8 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `permissionWithdrawn` | src/extension/panel-messages-turn.mjs:209/src/extension/permission-gate.mjs:42 | webview/chat-messages.js:204 | `活` | 第二发射点 = 孤儿响应回写（`batchPermissionResponse` 零命中 ⇒ 可见处置——§4.6） |
 | `planMode` | src/extension/panel-callbacks.mjs:158/src/extension/panel-session.mjs:141/src/extension/panel-settings-push.mjs:62（共 4 处） | webview/chat-messages.js:220 | `活` | — |
 | `project` | src/extension/panel-project.mjs:27 | webview/chat-messages.js:136 | `活` | — |
-| `providerError` | thincoder-vscode/src/extension/settings.mjs:311（助手 `postProviderError`——**19 站点**汇聚——#695） | webview/chat-messages.js:154 | `活` | 载荷 v2 = `{ scope, reason }`（#640——§3.2 行 20）；段标 + 词化码 ∕ 单槽驻留（机制单源 = `SETTINGS.md` §2.15）；②③ 列 = 2026-09-29 vsc-carryover 实施后实读 ∥ #695 批（2026-10-01）计数终值复核 |
+| `providerError` | thincoder-vscode/src/extension/settings.mjs:311（助手 `postProviderError`——**19 站点**汇聚——#695） | webview/chat-messages.js:154 | `活` | 载荷 v2 = `{ scope, reason }`（#640——§3.2 行 20）；段标 + 词化码 ∕ 单槽驻留（机制单源 = `SETTINGS.md` §2.15）； |
+| | | | | ②③ 列 = 2026-09-29 vsc-carryover 实施后实读 ∥ #695 批（2026-10-01）计数终值复核 |
 | `providerStatus` | thincoder-vscode/src/extension/settings.mjs:358 | webview/chat-messages.js:138 | `活` | — |
 | `proxySettings` | src/extension/panel-settings-push.mjs:104/:93 | webview/chat-messages.js:161 | `活` | 打开拍回批（F-W8） |
 | `proxyTestResult` | src/extension/panel-messages-settings.mjs:204 | webview/chat-messages.js:164 | `活` | — |
@@ -424,17 +440,18 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `sessions` | src/extension/panel-session.mjs:262 | webview/chat-messages.js:134 | `活` | 载荷增 `ledger`（账本异常注记——LEDGER-RELIABILITY 批；渲染 / 文案 = `WEBVIEW.md` §4）；② 列收正 = 实施后现位（原记 `:249`——实读 2026-09-28） |
 | `shellCandidates` | src/extension/panel-messages-settings.mjs:187/src/extension/panel-settings-push.mjs:106/src/extension/panel-settings-push.mjs:95 | webview/chat-messages.js:163 | `活` | 打开拍回批（F-W8）；另有 `getShellCandidates` 拉取路径 |
 | `statusText` | src/extension/panel-callbacks.mjs:168/src/extension/panel-index.mjs:29 | webview/chat-messages.js:195 | `活` | `kind` 族 = 载荷变体（不单列——over-count #1 已证伪） |
-| `sub:*` | src/extension/panel-subagent-relay.mjs:187/:235/:98 | webview/chat-messages.js:240 | `活` | 动态段归一（`sub:<role>#<id>` → `sub:*`）；role 段 = **键文法 `[\w-]+`**（含 consult / escalate——键形收正见 `WEBVIEW.md` §5.3）；`thincoder-render-core/subblocks/activity-view.mjs:14` 的 `FAMILY_ROLES` 只判 ⏹ 可见性 / sync-async 词，**非**键枚举 |
-| `subagent` | src/extension/panel-subagent-relay.mjs:217/:253/src/extension/suspension.mjs:89/:96 | webview/chat-messages.js:229 | `活` | `status` 族 = 载荷变体（不单列——over-count #2 已证伪）；载荷增 `note`（X6 停因注记）/ `syncLive`（X10 可中止事实——§3.2 行 12） |
-| `subagentApproval` | src/extension/panel-subagent-relay.mjs:217/:253 | webview/chat-messages.js:224 | `活` | — |
-| `suspension` | src/extension/panel-messages.mjs:314/thincoder-vscode/src/extension/suspension.mjs:125/:134 | webview/chat-messages.js:234 | `活` | 载荷增 `interrupted`（X11 会话中止注记——§3.2 行 13） |
+| `sub:*` | src/extension/panel-subagent-relay.mjs:139/:141 | webview/chat-messages.js:240 | `活` | 动态段归一（`sub:<role>#<id>` → `sub:*`）；role 段 = **键文法 `[\w-]+`**（含 consult / escalate——键形收正见 `WEBVIEW.md` §5.3）； |
+| | | | | `thincoder-render-core/subblocks/activity-view.mjs:14` 的 `FAMILY_ROLES` 只判 ⏹ 可见性 / sync-async 词，**非**键枚举 |
+| `subagent` | src/extension/panel-subagent-relay.mjs:215/:221/src/extension/suspension.mjs:91/:97 | webview/chat-messages.js:229 | `活` | `status` 族 = 载荷变体（不单列——over-count #2 已证伪）；载荷增 `note`（X6 停因注记）/ `syncLive`（X10 可中止事实——§3.2 行 12） |
+| `subagentApproval` | src/extension/panel-subagent-relay.mjs:215/:221 | webview/chat-messages.js:224 | `活` | — |
+| `suspension` | src/extension/panel-messages.mjs:331/thincoder-vscode/src/extension/suspension.mjs:137/:146 | webview/chat-messages.js:234 | `活` | 载荷增 `interrupted`（X11 会话中止注记——§3.2 行 13） |
 | `taskProgress` | src/extension/panel-callbacks.mjs:156 | webview/chat-messages.js:219 | `活` | — |
 | `testProviderResult` | src/extension/panel-messages-settings.mjs:116 | webview/chat-messages.js:155 | `活` | — |
 | `timer` | thincoder-vscode/src/extension/timer-watch.mjs:39 | webview/chat-messages.js:191 | `活` | timer-wake 阶段 2 触发落流一行（载荷 `{ status:"fired", text }`——§3.2 行 19 登记；`text` = 交付原文逐字 · 显示裁 ≤3 行 + `…` = webview 侧）；② ③ 列 = 2026-09-28 提取器（`--emit`）读数 |
 | `token` | src/extension/panel-callbacks.mjs:141 | webview/chat-messages.js:53 | `活` | — |
 | `toolCall` | src/extension/panel-callbacks.mjs:201 | webview/chat-messages.js:66 | `活` | 载荷增 `round` · `model`（X2——advisor 专属，非 advisor 零字段——§3.2 行 9） |
 | `toolOutput` | src/extension/panel-callbacks.mjs:224 | webview/chat-messages.js:77 | `活` | `text` 端边界归一为串（M3——非串取 `.text`）；`kind` 可选随行 |
-| `toolPanel` | src/extension/panel-subagent-relay.mjs:217/:253 | webview/chat-messages.js:227 | `活` | — |
+| `toolPanel` | src/extension/panel-subagent-relay.mjs:124-126 | webview/chat-messages.js:227 | `活` | — |
 | `toolResult` | src/extension/panel-callbacks.mjs:215 | webview/chat-messages.js:76 | `活` | 载荷增 `truncated`（X5——64K 切片点事实旗标——§3.2 行 10） |
 | `turnBreak` | src/extension/panel-callbacks.mjs:151 | webview/chat-messages.js:55 | `活` | — |
 | `turnFrame` | src/extension/panel-callbacks.mjs:170 | webview/chat-messages.js:188 | `活` | — |
@@ -486,6 +503,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `questionResponse` | webview/question.js:16（发射位——绑定 `:15`） | src/extension/panel-messages.mjs:266 | `活` | 形状 = 局部对象绑定 |
 | `queuedUserMessage` | thincoder-render-core/composer/panel.mjs:321 | src/extension/panel-messages.mjs:207 | `活` | busy 期排队注入上行（busy 即排队面 = `running`——webview 本地气泡先行 + host 队列载体两态（容量 8）：`_busyQueued` ∥ `susp.pendingInput`；登记 = §3.2 行 16） |
 | `reconnectMcp` | webview/settings-tools.js:227 | src/extension/panel-messages.mjs:279 | `活` | — |
+| `recordAppend` | webview/activity.js:124（归档派生点调用——`archiveBlock` 幂等守卫内恰一次；载荷字面量构造 `:190`） | src/extension/panel-messages.mjs:287 | `活` | 留档记录出站（subagent 快照——§3.2 行 22）；形 ∥ 判据单源 = `docs/core/design/SESSION.md` §6.26；处理体 = `handleRecordAppend`（`panel-messages.mjs:123-134`——活行载体 + 核 `pushRecord`；fail-soft）；② ③ 列 = 2026-10-01 实读（VSC 舱交付随落笔——新增行） |
 | `removeProvider` | thincoder-render-core/composer/model-menu.mjs:304/webview/settings-providers.js:68 | src/extension/panel-messages.mjs:280 | `活` | — |
 | `renameSession` | webview/session-bar.js:68 | src/extension/panel-messages.mjs:249 | `活` | — |
 | `retry` | webview/ui.js:171 | src/extension/panel-messages.mjs:251 | `活` | — |
@@ -515,6 +533,11 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 **方向口径**：本表只收 webview → host。**「删」= host 消费位在位而 webview 发射恒无（死 handler）**——处置逐条入批档（`docs/batches/2026-09-18-vsc-settings-wiring.md` §2）并已随实现落地（三删 + 一接线转活——**本表现零 `删` 行**）；**删除落地 ⇒ 源零位 ⇒ 表行同步退场**（不留悬空行——同 §12 口径）。**「补」= 发射在位而 host 缺消费位**（本表现零行）。
 
 ## 变更记录
+- 2026-10-01（**跨端消化面恢复批 · 收尾轮（#27 报备之未及项）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2 随落笔轮随见 ∥ §3 轮次 4 发现 3 同族）：§12 `subagent` 行 ② 列 `thincoder-vscode/src/extension/suspension.mjs:89/:96` ⇒ **`:91/:97`**；§12 `suspension` 行 ② 列 `thincoder-vscode/src/extension/suspension.mjs:125/:134` ⇒ **`:137/:146`**（两行 = 两发射行实读 · as-of 2026-10-01）。**零新语义**（坐标收正——④ 处置列 ∥ 载荷字段 ∥ 首列判别式集零变）。
+- 2026-10-01（**跨端消化面恢复批 · VSC 舱交付随落笔轮 · eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §5 VSC 舱 ∥ §2 随落笔轮）：§13 补 `recordAppend` 行（实施落地实测在位——② `webview/activity.js:124` ∥ ③ `panel-messages.mjs:287`；先例 = 两表只收实测在位行）；§3.2 行 22「（拟增）」标去（落位坐标实读）；§5 host 发射点 `:177/:198` ⇒ **`:190/:214`**（发射行口径 · 现盘实读）；§12 `digest` 行 ② 列同拍。**消息名 ∥ 载荷字段 ∥ 判值列零变**（坐标收正 + 落地登记）。
+- 2026-10-01（**跨端消化面恢复批 · 收正轮（评审轮次 3 · 发现 2）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §3 轮次 3）：§5 host 发射点 `:167/:178` ⇒ **`:177/:198`**（发射行口径 · 现盘实读；cap `:83` ∥ 定义 `:82-84` 不变）；§12 `digest` 行 ② 列同拍（`:167/:178 ⇒ :177/:198`）。**消息名 ∥ 载荷字段 ∥ 判值列零变**（坐标收正）。
+- 2026-10-01（**消化行自然形 · 两端跟正批（VSC 面）· 实施后随动轮 · eng-designer**——承批档 `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §5）：§5 元素级落点坐标对盘收正——`thincoder-vscode/webview/chat-status.js:69 ⇒ :71`（`showDigestStatus` 定义行现位；两处引用同拍——漂移非本批引入）。**零新语义**。明细 = 批档 §2 随动块。
+- 2026-10-01（**消化行自然形 · 两端跟正批（VSC 面）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §1 ∥ §2 · 台账 #768）：§5 元素级契约收正——`digest end` ⇒ **追加终态元素**（零就地换文 ∥ 原计数元素恒起跑文）；跨轮句同拍；边界取面对盘收正（`S._digestBoundary` = 计数元素 ∥ 无 ⇒ 标签元素——消「= 标签行」旧字面）。**零新语义**（桌面判据随正）。明细 = 批档 §2。
 - 2026-09-30（**跨端消化面恢复批 · 修正轮（评审轮 1 · 发现 1 ∥ 3 ∥ 8 ∥ 9）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §3 轮次 1）：§13 `recordAppend` 行**移出本表**（移至实施轮补行——两表只收实测在位行，先例 = 本档 :667/:669/:684）；§3.2 行 22 留案（字面 `recordAppend`——SESSION ∥ WEBVIEW 两档文面同拍）；§7 D-P11 计数同拍 **二十二项**；§5 digest host 发射点 `:84` ⇒ **`:83`**（发射行口径——定义 `:82-84`）。**零既有语义改**（登记面收正）。
 
 - 2026-09-30（**跨端消化面恢复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2 · 台账 #726）：§13 补 `recordAppend` 行 + §3.2 补行 22（计数 21 → 22）——webview → host（subagent 快照留档记录出站；坐标 `（拟增）` 标记——实施批落）。记录形 ∥ 缝 ∥ 义务单源 = `docs/core/design/SESSION.md` §6.26。**零既有语义改**。
@@ -702,3 +725,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
   §3.2 行 20 站点计数 7⇒8（`panel-messages-settings.mjs` ×3⇒×4）；§12 `providerError` 行「7 站点汇聚」⇒「8 站点汇聚」；`shellCandidates` 行 ② 列 `panel-messages-settings.mjs:186` ⇒ `:187`；`proxyTestResult` 行 ② 列 `:204` 实读在位（零改）。坐标口径 = 实施轮落盘后终态实读（as-of 2026-09-30）。**零新语义**（纯计数 ∕ 坐标收正）。
 
 - 2026-09-30（**vsc-residuals 批 · 父侧直接执行 · 可 revert——承实施后重锚轮上抛 2**）：§12 表两行发射坐标收正——`mcpTools` 行 ② 列 `panel-messages-settings.mjs:136/:138` ⇒ `:135/:137`；`testProviderResult` 行 ② 列 `:117` ⇒ `:116`（实施后终态实读；两处均 < `:143`、本批位移不涉——属历史漂移收正）。**零新语义**（纯坐标收正）。
+- 2026-10-01（**记录清账批 · 文档面收正轮 · eng-designer**——承 `docs/batches/2026-10-01-records-docs-reconcile.md` §2 · 台账 #696）：超宽表行断行收形 14 处（按批档 §2 清单逐处落形——表行续行拆分（空首列续行）——单行 ≤300 ∥ 内容逐字零改 ∥ 条目数不变）。**零新语义**（断行）。明细 = 批档 §2。
+- 2026-10-01（**零语义清账批 #2 · 文档面轮 · eng-designer**——承批档 `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §2 · 台账 #791）：§12 表载值收正——`subagent` ∥ `subagentApproval` 两行 ② 列 `panel-subagent-relay.mjs:217/:253` ⇒ `:215/:221`（两转口发射现位）；`suspension` 行 ② 列 `panel-messages.mjs:314` ⇒ `:331`（发射现位）。**零新语义**（坐标收正）。明细 = 批档 §2。
+- 2026-10-01（**零语义清账批 #2 · 修复轮（评审轮 1 · 发现 2）· eng-designer**——承批档 `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §3 轮次 1 · 台账 #791）：§12 表两行 ② 列载值收正——`sub:*` 行 `:187/:235/:98` ⇒ `:139/:141`（键构造 ∥ 内容面发射调用现位）∥ `toolPanel` 行 `:217/:253` ⇒ `:124-126`（`emitToolPanel` 单点）。**零新语义**（坐标收正）。明细 = 批档 §2 修复轮块。
+- 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 2 处 R1 改指（`suspension.mjs` 补 `thincoder-vscode/src/extension/` 前缀——变更记录行 ×2）。**零新语义**。

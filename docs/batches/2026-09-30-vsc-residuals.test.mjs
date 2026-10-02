@@ -27,7 +27,7 @@ process.env.USERPROFILE = _tmpHome
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url)) // 仓根（docs/batches 两层深）
 const vsc = (rel) => pathToFileURL(join(ROOT, "thincoder-vscode", rel)).href
-const core = (rel) => pathToFileURL(join(ROOT, "thincoder-core", rel)).href
+const core = (rel) => pathToFileURL(join(ROOT, "thincoder-vscode", "node_modules", "@thincoder", "core", rel)).href
 
 // ─── vscode 桩（宿主模块短接——VSC 扩展链只供装载）────────────────────────────
 

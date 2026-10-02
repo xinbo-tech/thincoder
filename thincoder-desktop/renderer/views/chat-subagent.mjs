@@ -45,17 +45,22 @@ function foldEcho(element) {
   refreshBlock(element)
 }
 
+/** 冻结穿闸 helper（本档导出 · 单源）：`frozen` 真 ⇒ 临时未冻态过核件追加闸，`finally` 还原本相（正常 ∥ 异常两径）。 */
+export function withThawedSubMeta(element, meta, run) {
+  if (meta?.frozen !== true) return run()
+  element._subMeta = { ...meta, frozen: false }
+  try { return run() } finally { element._subMeta = meta }
+}
+
 /** 核件回显元素（快照 → DOM）：块壳 + 内容行重放（`rows` 逐条 `renderSubagentChunk` —— 文本 / think / 工具两行同径）。
  *  **重放闸**：核件 `appendAdvisorChunk` 拒冻结块追加（运行态增量守卫）—— 归档块为**历史重放**（非增量）⇒
- *  临时以未冻态过闸，重放毕还原本相（折叠着装随其后落定）。 */
+ *  以 `withThawedSubMeta` 临时过闸（还原本相 —— 折叠着装随其后落定）。 */
 function echoOf(block) {
   const meta = block?.meta ?? {}
   const rows = Array.isArray(block?.rows) ? block.rows : []
   // 核件：块壳 + data 面 + toggle + 首刷
   const element = renderSubBlock(meta)
-  element._subMeta = { ...meta, frozen: false }
-  for (const row of rows) renderSubagentChunk(element, row)
-  element._subMeta = meta
+  withThawedSubMeta(element, meta, () => { for (const row of rows) renderSubagentChunk(element, row) })
   foldEcho(element)
   initBlockFollow(element) // 让位修复批：归档重建径同源接线（冻结块 —— 出口钮不建、零写）
   return element

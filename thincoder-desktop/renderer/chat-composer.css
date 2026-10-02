@@ -1,10 +1,9 @@
 /* chat-composer.css — 对话流**输入区段**（自 `renderer/chat.css` 四拆 —— 「桌面处理流 · VSC 对齐」批 §2.1 拆档定稿；
-   链序 = theme → chrome → session-list → skin → chat → chat-cards → **chat-composer** → chat-fixes → core-markdown → core → pool → settings）。
+   链序 = theme → chrome → session-list → skin → chat → chat-cards → **chat-composer** → chat-fixes → core-markdown → core → /rc/search.css → pool → settings）。
    面 = 输入区挂件面 + 两交互态组（**面板族本体样式单源 = 核件 `composer/composer.css`** —— 输入面板上提批；
-   本档旧 `.composer` 族已退场，只留**变量别名块**（C2 · 唯一桥）与**提示行锚**（桌面胶水））。
+   本档 = **变量别名块**（C2 · 唯一桥）∥ **提示行锚**（桌面胶水）∥ **扁平化覆盖段**（v3 圆角 ∥ v4 迁行））。
 
-   输入区（换装出档 —— 输入面板上提批 §2.4 Q5：旧 `.composer` ∕ `.composer-input` ∕ `.composer-interrupt` 三族退场，
-   面板族样式单源 = 核件 `composer/composer.css`；核件零变量声明 ⇒ 本块 = **变量别名块（C2）**，两变量族唯一桥）：
+   输入区（换装出档 —— 输入面板上提批 §2.4 Q5：面板族样式单源 = 核件 `composer/composer.css`；核件零变量声明 ⇒ 本块 = **变量别名块（C2）**，两变量族唯一桥）：
    VSC 变量名 ⇒ 桌面调色板（引用式赋值 —— 亮暗自随，随 `renderer/theme.css` 两套）；`--vscode-*` 八键 = 核件两浮层
    ∕ 过滤框消费（**不声明**则取 VSC 硬编码暗色回退值 —— 亮色主题下会呈暗面 ⇒ 逐键映射回端调色板）。
    消费面另含核卡族变量名（`--border` / `--red` / `--green` / `--vscode-input-*` —— R1 直消费三核卡）。 */
@@ -29,8 +28,7 @@
 }
 
 /* 挂件锚（宿主容器 —— 属桌面胶水，非核件结构）：提示行族（B21 发送失败 ∕ B22 附件降级两保留行，面板子树之前 ——
-   行形 ∕ 词键住 `renderer/mount-composer.mjs` ∕ `renderer/attach.mjs`；行 = block 常态，空锚零高）。
-   （复制面对齐批：原末条复制控件右对齐尾锚随自建复制面摘除。） */
+   行形 ∕ 词键住 `renderer/mount-composer.mjs` ∕ `renderer/attach.mjs`；行 = block 常态，空锚零高）。 */
 .composer-notice {
   flex: 1 1 100%;
 }
@@ -58,8 +56,8 @@ body .auto-confirm-yes, body .auto-confirm-no { border-radius: 6px; }
 .composer #controls-row #abort-btn { height: 26px; border-radius: 14px; padding: 0 12px; }
 
 /* 交互态组（D24 项 2 · 本注定形）：按下 `--hover-bg-strong` · 聚焦三值（outline 2px + offset -2px + 底）——沿 `.session-item:focus-visible` 先例；
-   `.chat-pill` 实色支例外：按下沿 hover（无第二档）· 聚焦底不随落。输入区成员（`.composer-interrupt`）随换装退场 ⇒ **组内重锚**（余成员不动 —— U-R1-2a 已裁）；
-   复制面两成员（块级 ∕ 末条两控件）随复制面对齐批退场（余成员零动）。 */
+   `.chat-pill` 实色支例外：按下沿 hover（无第二档）· 聚焦底不随落。
+   组内成员 = `.chat-backfill` ∕ `.chat-pill`（二族）。 */
 .chat-backfill:not(:disabled):active { background: var(--hover-bg-strong); }
 .chat-pill:not(:disabled):active { background: var(--bg); }
 .chat-backfill:focus-visible {

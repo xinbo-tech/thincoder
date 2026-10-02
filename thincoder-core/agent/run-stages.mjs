@@ -245,8 +245,8 @@ export async function finalizeAgentTurn(agent, ctx) {
  * maybeRefillAsync runs in both modes (starts queued heads whose slot freed).
  * Single ownership: entries settled inside a suspension session were moved to
  * _pendingAsyncResults by the settle callback, so this only sees user-turn
- * settles (no double inject — D-S3 points ①/②). The ⟦ev⟧done freeze is NOT
- * emitted here — each settle callback emits it (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A3).
+ * settles (no double inject — D-S3 points ①/②). settle 回调只发 ⟦ev⟧settled；
+ * ⟦ev⟧done 冻结落消费窗（#746 · ASYNC-POOL §6.8）。
  * 2026-09-05 实践轮：自 agent.mjs 迁入（agent.mjs 内仅 finalize 引用——随收尾同迁）。
  */
 async function collectSettledAsync(agent, { suspDriven = false } = {}) {

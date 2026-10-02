@@ -10,8 +10,9 @@ Zero third-party runtime dependencies beyond the two in-repo packages above. ESM
 
 ```bash
 npm start          # launch the desktop instance (electron .)
-npm test           # test suite (test/run.mjs — explicit manifest, see test/files.mjs)
-npm run package    # electron-builder packaging (electron-builder.yml lands with the packaging batch)
+npm test           # suite entry (test/run.mjs — explicit manifest test/files.mjs; empty after the 2026-09-28 reset — zero tests = green; unit tests = docs/batches/, integration scenarios = test/integration/) — current state: ../docs/core/design/TESTING.md §2.3
+npm run package    # Windows x64 NSIS installer (stage 1): prepackage materializes the two core deps (scripts/materialize-deps.mjs — junctions become real source-tree copies), then electron-builder (electron-builder.yml), then postpackage = scripts/check-dist.mjs (artifact gate). macOS / Linux artifacts = stage 2
+npm run quickcheck # renderer quick-check in a real browser (tools/web-quickcheck/run.mjs — not a suite; ../docs/desktop/design/WEB-QUICKCHECK.md)
 ```
 
 ## Key Conventions

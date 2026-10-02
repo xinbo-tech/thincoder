@@ -9,11 +9,11 @@
 
 | 类 | 位置 | 形态 |
 |---|---|---|
-| 发布流程 · 需求（统一面） | `docs/RELEASE.md` | 2026-09-20 用户裁定迁根（原 `core/requirements/`）+ **三端合一**（23:23「把各端的 release.md 整合成一个」⇒ CLI 链设计档并回 ✗ 单档承载）——**总发布计划**（三发布单元：核 / CLI / VSC · 顺序 = 核 → CLI → VSC） |
+| 发布流程 · 需求（统一面） | `docs/RELEASE.md` | 2026-09-20 用户裁定迁根（原 `core/requirements/`）+ **三端合一**（23:23「把各端的 release.md 整合成一个」⇒ CLI 链设计档并回 ✗ 单档承载）——**总发布计划**（**四发布单元**：核 / CLI / VSC / 桌面〔阶段一：Windows 安装包 ∥ 官网托管——2026-10-01 入主线；**阶段二：自动更新 feed ∥ 官网桌面面——2026-10-02**〕· 顺序 = 核 → CLI → VSC → 桌面〔桌面按需〕） |
 | 台账（项目级唯一真相） | SQLite——用户数据目录键控库 `~/.thincoder/ledger/<sha1(项目根)>.db`（2026-09-17 落点裁定：不在项目目录） | ✅ 唯一台账面 = SQLite（`/ledger` 查询）；`TODO.md` · `TODO-archive.md` = 退役历史（md 形态，无机械校验） |
 | 板块档（需求 / 设计） | `core/requirements/` · `core/design/` | ✅ 核心统一已迁入（2026-09-13）；后续新板块档直接落此。**子系统档（设计 / 需求各 15 档）见 §4** |
 | 批次档 | `batches/` | ✅ 核心统一已迁入（2026-09-13） |
-| 部分档（各端面） | `cli/requirements/` · `cli/design/` · `vsc/requirements/` · `vsc/design/` · `desktop/requirements/` · `desktop/design/` · `render-core/design/` | ✅ **五部分**落点齐（`core/` · `cli/` · `vsc/` · `desktop/` · `render-core/`）——**33 档**（`cli/` 14 = design 9 + requirements 5 · `vsc/` 11 = design 8 + requirements 3 · `desktop/` 7 = design 6 + requirements 1 · `render-core/` 1 = design 1；2026-09-15 建 · desktop 部分 2026-09-25 随桌面端立项建 · render-core 部分 2026-09-27 随渲染核立项建（模块镜像裁定）；实盘对账 as-of 2026-09-27）；desktop 设计**六档** = `PROJECT.md`（产品面总览）/ `SHELL.md` / `IPC.md` / `UI.md` / `RENDERER.md` / `E2E-TESTING.md`（E2E 测试基建 · 2026-09-26 增）（按板块拆分 · 非迁移档）；render-core 设计**一档** = `RENDER-CORE.md`（共享渲染核面单源 · 2026-09-27 落） |
+| 部分档（各端面） | `cli/requirements/` · `cli/design/` · `vsc/requirements/` · `vsc/design/` · `desktop/requirements/` · `desktop/design/` · `render-core/design/` | ✅ **五部分**落点齐（`core/` · `cli/` · `vsc/` · `desktop/` · `render-core/`）——**50 档**（`cli/` 14 = design 9 + requirements 5 · `vsc/` 11 = design 8 + requirements 3 · `desktop/` 24 = design 14 + requirements 10 · `render-core/` 1 = design 1；2026-09-15 建 · desktop 部分 2026-09-25 随桌面端立项建 · render-core 部分 2026-09-27 随渲染核立项建（模块镜像裁定）；实盘对账 as-of 2026-09-27；2026-10-01 随 web 快筛档增补；2026-10-02 文档体系重组批（DOC-MIGRATION）· 波 1 增两档（desktop 设计 7 ⇒ 9）· **波 2a 增三档**（desktop 设计 9 ⇒ 12——渲染族迁移：对话流 / 输入区 / 活动池三域出档）· **波 2b 增两档**（desktop 设计 12 ⇒ 14——会话域 / 设置域出档）· **波 3 增九档**（desktop 需求 1 ⇒ 10——需求分卷：D1–D37 出九域卷））；desktop 设计**十四档** = `PROJECT.md`（产品面总览）/ `SHELL.md` / `IPC.md` / `UI.md` / `RENDERER.md` / `E2E-TESTING.md`（E2E 测试基建 · 2026-09-26 增）/ `WEB-QUICKCHECK.md`（web 快筛 · 2026-10-01 增）/ `MENU.md`（菜单体系 · 2026-10-02 增）/ `PACKAGING.md`（打包与发行 · 2026-10-02 增）/ `CHAT.md`（对话流域 · 2026-10-02 增）/ `COMPOSER.md`（输入区域 · 2026-10-02 增）/ `ACTIVITY.md`（活动池与消化面域 · 2026-10-02 增）· `SESSIONS.md`（会话域——会话端标识 ∥ 控制面 ∥ 列表读面 ∥ 标题链 ∥ 重启自动重开 · 2026-10-02 波 2b 增）· `SETTINGS.md`（设置域——设置面板七段 ∥ 首启向导 ∥ 样式收正 D37 · 2026-10-02 波 2b 增）（按板块拆分 · 非迁移档）；desktop 需求**十档** = `PROJECT.md`（总览 ∥ D 表索引）+ 九域卷（`SESSIONS` ∥ `CHAT` ∥ `COMPOSER` ∥ `ACTIVITY` ∥ `SETTINGS` ∥ `MENU` ∥ `PACKAGING` ∥ `UI` ∥ `SHELL`——D1–D37 按域分卷 · 2026-10-02 波 3）；render-core 设计**一档** = `RENDER-CORE.md`（共享渲染核面单源 · 2026-09-27 落） |
 
 ## 2. 迁移政策（2026-09-13 用户裁定——「逐步建立 · 旧档留参照 · 不一刀切」；2026-09-14 层级裁定——根仓 `docs/` = 基准层，产品 `docs/**` = 迁移期保留的参照历史）
 
@@ -74,7 +74,7 @@
 - 文件 / 编辑工具面 **7 档**：`APPLY-PATCH.md` · `EDIT.md` · `EDIT-HELPERS.md` · `HASHLINE-EDIT.md` · `INSERT-AFTER.md` · `TOOL-OUTPUT-LIMITS.md` · `WRITE.md`；
 - 顾问 / 协作 / 子代理面 **9 档**：`ADVISOR-CONVERGENCE.md` · `ADVISOR-GUARDS.md` · `AGENT-LOOP-ASYNC-POOL.md` · `AGENT-LOOP-SUBAGENT.md` · `AGENT-LOOP-UPSTREAM.md` · `ESCALATE.md` · `MULTI-INSTANCE-COLLAB.md` · `PROXY.md` · `SEND-STALL-DISTILL.md`；
 - 令牌 / 参数 / 设置面 **5 档**：`AGENT-PARAMS.md` · `DESIGN-TOKEN-SETTLEMENT.md` · `ENG-TOKEN-BINDING.md` · `SETTINGS-TOOL.md` · `VERIFY-REDESIGN.md`；
-- 流程 / 文档机制面 **12 档**：`ANCHOR-DEBT-REPAIR.md` · `BATCH-RECORD.md` · `DOC-CODE-RECONCILE.md` · `DOC-DISCIPLINE.md` · `ENGINEERING-MODE-V2.md` · `LEDGER.md` · `LEDGER-SELF-CONTAINED.md` · `LIGHT-CHANNEL.md`（轻通道机制——细节面受控旁路设计；2026-09-30 建档）·
+- 流程 / 文档机制面 **12 档**：`ANCHOR-DEBT-REPAIR.md` · `BATCH-RECORD.md` · `DOC-CODE-RECONCILE.md` · `DOC-DISCIPLINE.md` · `ENGINEERING-MODE-V2.md` · `LEDGER.md` · `LEDGER-SELF-CONTAINED.md` · `LIGHT-CHANNEL.md`（轻通道机制——细节面 ∥ 收敛面受控旁路设计；2026-09-30 建档 · 2026-10-02 扩容）·
   `MANIFEST.md` · `TESTING.md` · `TURN-CAP-CONTINUE.md` · `API-CONTRACT.md`（核接口按需索引——生成区 ∥ 语义区两区制；2026-09-29 建档）；
 - 基准测试面 **2 档**：`MODEL-BENCH.md`（模型基准测试套件——仓级 `bench/` 工具的设计面；2026-09-23 model-bench 批建档）· `MODEL-SPECS.md`（模型规格表设计档——bench 名单面规格行承载；2026-09-24 参数批建行）；
 - **计数核对（复跑 as-of 2026-09-30 · 轻通道机制批 · 按名对账）**：`core/design/` 实档 **57** = 本图登记 **57** + **待补登 0**（逐名相等；+ `LIGHT-CHANNEL.md`——2026-09-30 建档）。
@@ -92,6 +92,18 @@
 - **五部分不各设地图**——本 README = 五部分（`core/` · `cli/` · `vsc/` · `desktop/` · `render-core/`）的唯一地图（目标结构 `core/design/DOC-SYSTEM.md` §4）；`cli/` · `vsc/` 两产品面档所对应的产品树旧档（`thincoder-cli/docs/**` · `thincoder-vscode/docs/**`）= 迁移期参照历史（§2 政策——保留 ≠ 维护）。
 
 ## 变更记录
+
+- 2026-10-02（**桌面发布·阶段二批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-desktop-release-stage2.md` §1 · 台账 #810 ∥ #826）：§1 地图行收正——`docs/RELEASE.md` 总发布计划桌面端补「阶段二：自动更新 feed ∥ 官网桌面面（2026-10-02）」；发布链与站点规格单源 = `docs/desktop/design/PACKAGING.md` §2.8 ∥ §2.9。
+
+- 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 波 3 · 主 agent**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：**需求分卷**——desktop 需求 **1 ⇒ 10**（`docs/desktop/requirements/` 九域卷 = `SESSIONS` ∥ `CHAT` ∥ `COMPOSER` ∥ `ACTIVITY` ∥ `SETTINGS` ∥ `MENU` ∥ `PACKAGING` ∥ `UI` ∥ `SHELL`——D1–D37 按域分卷；总览 §4 改 D 表索引）；desktop 部分 **15 ⇒ 24**；全档总数 **41 ⇒ 50**（§1 地图行同笔收正）。
+
+- 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 波 2a–2c · eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：**波 2a–2b 增五档**——desktop 设计 **9 ⇒ 14**（波 2a：`CHAT.md` ∥ `COMPOSER.md` ∥ `ACTIVITY.md`；波 2b：`SESSIONS.md` ∥ `SETTINGS.md`）；desktop 部分 **10 ⇒ 15**；全档总数 **36 ⇒ 41**（§1 地图行随波收正同批）。**波 2c = 降格收尾**：`PROJECT.md` ⇒ 索引 ∥ 跨域段 ∥ 历史段；`UI.md` ⇒ 总则 + 状态行 + 视觉基线（档数零动 ∥ 零新语义）。
+
+- 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 波 1 · eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：desktop 设计 **七档 ⇒ 九档**（+ `MENU.md`（菜单体系——应用菜单 ∥ 窄通道）· `PACKAGING.md`（打包与发行——打包链 ∥ Windows 安装包 ∥ 官网托管）；**域拆分 · 波 1**——2026-10-02 建档）；desktop 部分 **8 ⇒ 10**；全档总数 **34 ⇒ 36**。
+
+- 2026-10-01（**桌面打包发布批 · 阶段一 · eng-designer**——承批档 `docs/batches/2026-10-01-desktop-packaging-release.md` §2 · 台账 #807）：§1 地图行收正——`docs/RELEASE.md` 总发布计划 **三发布单元 ⇒ 四发布单元**（+ 桌面端（阶段一：Windows 安装包 ∥ 官网托管）；顺序 = 核 → CLI → VSC → 桌面（桌面按需））。
+
+- 2026-10-01（**web 快筛批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-09-30-web-quickcheck.md` §1 ∥ §2 · 台账 #434）：desktop 设计 **6 ⇒ 7 档**（+ `WEB-QUICKCHECK.md`——web 快筛（渲染面脱 Electron）设计档；2026-10-01 建档）；desktop 部分 **7 ⇒ 8**（= design 7 + requirements 1）；全档总数 **33 ⇒ 34**。
 
 - 2026-09-30（**轻通道机制批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-09-30-light-channel-mechanism.md`）：§4 流程 / 文档机制面 **11 → 12 档**（+ `LIGHT-CHANNEL.md`——轻通道机制（细节面受控旁路）设计档；2026-09-30 建档）；计数核对行收正为 **实档 57 = 登记 57 + 待补登 0**（复跑 as-of 2026-09-30）。
 

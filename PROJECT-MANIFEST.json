@@ -26,6 +26,7 @@
       "docs"
     ],
     "lineWidth": 300,
+    "widthExemptZones": ["变更记录", "历史沿革"],
     "anchors": {
       "domain": "docs",
       "exclude": [
@@ -34,6 +35,21 @@
       ]
     },
     "exemptions": [],
-    "lineCounts": [{ "doc": "docs/desktop/design/PROJECT.md", "section": "4.1 本端文件清单与行数预算" }]
+    "lineCounts": [
+      { "doc": "docs/desktop/design/PROJECT.md", "section": "4.1 本端文件清单与行数预算" },
+      { "doc": "docs/desktop/design/UI.md", "section": "4.1 本端文件清单与行数预算（本域族行 · 迁自 `PROJECT.md` §4.1——逐字）" },
+      { "doc": "docs/desktop/design/SHELL.md", "section": "5.1 本端文件清单与行数预算（宿主族行）" },
+      { "doc": "docs/desktop/design/IPC.md", "section": "3.1 本端文件清单与行数预算（通道族行）" },
+      { "doc": "docs/desktop/design/SESSIONS.md", "section": "3.1 本端文件清单与行数预算（会话族行）" },
+      { "doc": "docs/desktop/design/SETTINGS.md", "section": "3.1 本端文件清单与行数预算（设置族行 · 迁自 `PROJECT.md` §4.1——逐字）" },
+      { "doc": "docs/desktop/design/CHAT.md", "section": "3.1 本端文件清单与行数预算（本域族行 · 迁自 `PROJECT.md` §4.1）" },
+      { "doc": "docs/desktop/design/COMPOSER.md", "section": "3.1 本端文件清单与行数预算（本域族行 · 迁自 `PROJECT.md` §4.1——逐字）" },
+      { "doc": "docs/desktop/design/ACTIVITY.md", "section": "4.1 本端文件清单与行数预算（本域族行 · 迁自 `PROJECT.md` §4.1）" },
+      { "doc": "docs/desktop/design/RENDERER.md", "section": "5.1 本端文件清单与行数预算（本域族行 · 迁自 `PROJECT.md` §4.1——逐字）" },
+      { "doc": "docs/desktop/design/MENU.md", "section": "3.1 本端文件清单与行数预算（菜单族行）" },
+      { "doc": "docs/desktop/design/PACKAGING.md", "section": "3.1 本端文件清单与行数预算（打包族行）" },
+      { "doc": "docs/desktop/design/E2E-TESTING.md", "section": "9.1 本端文件清单与行数预算（测试基建族行 · 迁自 `PROJECT.md` §4.1——逐字；切片 3 判域迁入——`.gitignore` 混合行按 KD-10 单源归本域，`dist/` 半随行在册）" },
+      { "doc": "docs/desktop/design/WEB-QUICKCHECK.md", "section": "9.1 本端文件清单与行数预算（web 快筛族行 · 迁自 `PROJECT.md` §4.1——逐字）" }
+    ]
   }
 }

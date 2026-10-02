@@ -129,7 +129,8 @@ N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自
 | F-IDG-2 | fallback 可读 | 无视觉渠道 / spawn 失败 / 超时 / 空返回 → 保留现可读报错（不静默丢）；降级窗内 ⏹ 有效（启动即中止——at-most-half-a-turn） |
 | F-IDG-3 | CLI 镜像软引导 | CLI 非视觉 read_image 错误文案含「spawn 视觉模型子代理读图」引导（不硬自动降级） |
 
-**非功能**：N-IDG-1 视觉模型路径零回归（read_image 注入不变）· N-IDG-2 引擎级 spawn 通道零新建（降级 = extension 内 runAgent 一次性直跑）· **N-IDG-3 VSC 贴图临时件有界**（2026-09-30 · #735）：贴图落盘写时对 `<cwd>/.thincoder/tmp` 执行 mtime 扫除（窗 = 3 天；核 `cleanupOldToolResults` 单源，与 CLI 同形）。判定句：置超龄件（mtime > 3 天）后经一次贴图落盘 ⇒ 超龄件被回收 ∧ 未超龄件保留 ∧ 落盘出口 `{paths, dropped}` 零变。
+**非功能**：N-IDG-1 视觉模型路径零回归（read_image 注入不变）· N-IDG-2 引擎级 spawn 通道零新建（降级 = extension 内 runAgent 一次性直跑）· **N-IDG-3 VSC 贴图临时件有界**（2026-09-30 · #735）：贴图落盘写时对 `<cwd>/.thincoder/tmp` 执行 mtime 扫除（窗 = 3 天；核 `cleanupOldToolResults` 单源，与 CLI 同形）。
+  判定句：置超龄件（mtime > 3 天）后经一次贴图落盘 ⇒ 超龄件被回收 ∧ 未超龄件保留 ∧ 落盘出口 `{paths, dropped}` 零变。
 **范围边界（不做 / 移出）**：UI 前置（模型下拉 vision 标记 + 贴图前提示）= UX 增强后批（F-4 移出本批）；`depth>0` 子代理回合非视觉贴图沿用现报错（不降级）；非 raster（svg / heic）现 toast 不变；retry 不回带 images（另行登记）；`maxTurns` 固定 10（观察登记——候选按图数伸缩）。
 
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
@@ -152,3 +153,4 @@ N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自
 - 2026-09-16（**批 1 CORE-DEFECT-FIXES** · eng-designer）：§2.1 新增条目——`onWait` 相位值域与状态文案映射单源在核（消费面禁各自枚举 · 禁 `undefined` 文案 · 禁兜底误标）；源 = 设计档 §6.20；条目号 **F-PV1**（批次档 §2 / 设计档 §6.20 同号引用）。
 - 2026-09-29（**provider-config-family 批 · 需求新增 · 父侧直接执行 · 可 revert**——承用户 20:45 请求「陈年导入你就不管了吗？」；台账 #177）：§2.1 新增条目「渠道收录判据成文」（判据单源 = 设计档 `PROVIDER.md` §6.21；本批同时新增 `huawei` 预设——`PROJECT.md` C3 计数 21→22 已随动）；**本档新增需求 1 条**。
 - 2026-09-30（**#735 · N-IDG-3 新增 · 主 agent 落笔**〔父侧直接执行 · 可 revert〕——承批 `docs/batches/2026-09-30-vsc-paste-cleanup.md` §2.7（设计轮草案）· 用户 18:24 ∥ 18:28 令）：§4.5 非功能段新增 **N-IDG-3**（VSC 贴图临时件有界——写时 mtime 3 天窗扫除 ∥ 核 `cleanupOldToolResults` 单源）；源 = 台账 #735（pairfix §2 F-1 上抛：VSC 贴图件无自动清理实锤）。
+- 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 1 行折行（132——语义零改）。**零新语义**。

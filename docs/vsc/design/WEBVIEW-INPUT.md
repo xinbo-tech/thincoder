@@ -12,11 +12,17 @@
 
 | # | 契约点 | 规则 | 落点 |
 |---|---|---|---|
-| C-B2-1 | 组合期 Enter 归输入法 | `e.isComposing` → 直接返回——**不 preventDefault**（键归输入法）、不发送 / 不注入 / 不接受建议。三处 Enter 分支同规；**无模块状态**（只读事件字段——组合结束后语义即时恢复，不粘滞） | `thincoder-render-core/composer/panel.mjs:126-132`（中断模态——组合守卫 `:128`）· `:161-170`（常规发送——组合守卫 `:163`）· `thincoder-render-core/composer/atmenu.mjs:119-129`（接受建议——组合守卫 `:121`） |
-| C-B2-2 | @ 下拉与 send 的 Enter 协调 | 下拉打开时 Enter **只由 autocomplete 接受建议**（插入引用 + 关闭下拉），composer 核件不发送——让位 = 提前 `return` 且**保留 preventDefault**（防 Enter 默认换行落入输入框）；下拉关闭时 Enter 照常 `send()`（正控）。**注册次序前提**：composer 核件的 keydown 先于 @ 面（atmenu）注册 | `thincoder-render-core/composer/panel.mjs:123`（键位监听）先于 `:243`（`atMenu` 创建）——次序前提句 `:167-168` |
+| C-B2-1 | 组合期 Enter 归输入法 | `e.isComposing` → 直接返回——**不 preventDefault**（键归输入法）、不发送 / 不注入 / 不接受建议。三处 Enter 分支同规；**无模块状态**（只读事件字段——组合结束后语义即时恢复，不粘滞） | `thincoder-render-core/composer/panel.mjs:126-132`（中断模态——组合守卫 `:128`）· `:161-170`（常规发送——组合守卫 `:163`） |
+| | | | · `thincoder-render-core/composer/atmenu.mjs:119-129`（接受建议——组合守卫 `:121`） |
+| C-B2-2 | @ 下拉与 send 的 Enter 协调 | 下拉打开时 Enter **只由 autocomplete 接受建议**（插入引用 + 关闭下拉），composer 核件不发送——让位 = 提前 `return` 且**保留 preventDefault**（防 Enter 默认换行落入输入框）；下拉关闭时 Enter 照常 `send()`（正控）。**注册次序前提**：composer 核件的 keydown 先于 @ 面（atmenu）注册 |  |
+| | | | `thincoder-render-core/composer/panel.mjs:123`（键位监听）先于 `:243`（`atMenu` 创建）——次序前提句 `:167-168` |
 | C-B2-3 | 打开态判据硬化 | 打开态判据 = `isOpen()`：`dropdown.style.display !== "none"`（单判据——元素恒在 ∕ 工厂恒建，无缺失支） | `thincoder-render-core/composer/atmenu.mjs:86-88`；让位调用点 = `thincoder-render-core/composer/panel.mjs:169` ∕ `:180` |
-| C-B2-5 | 无工作区拒发可见提示（2026-09-21 批） | `send()` 出口判 `S._workspaceRequired`（host `workspaceGuard` 消息置位）→ 拒发 + `showToast(t("workspace.required"))`（**先于** `addUser` / `setLoading`——无假气泡）；占位符第三态 = `t("workspace.requiredPlaceholder")`（守卫 > busy > 常态） | `thincoder-render-core/composer/panel.mjs` `send()`（守卫出口——`:291-293`）· `webview/loading.js` `applyBusyLock` · `webview/chat.js` `case "workspaceGuard"` · `locales/{en,zh}.json` +2 键；判据 / 守卫面 = `docs/vsc/design/PROJECT-SWITCHER.md` §4.1 |
-| C-B2-6 | busy 排队注入（对称修 · busy-injection 批 2026-09-21 · busy-extend 批 2026-09-22 扩面 · queue-visible 批 2026-09-24 多槽 + 合并消费 + fix 轮步边界消费） | busy 提交**一律排队**：判据 = `S._turnState === "running"`（`_suspended` 不再分流——挂起会话内与普通回合同判据）⇒ `addUser` 本地气泡 + `queuedUserMessage` postMessage（不 `setLoading` 不清面板）→ host **队列**（**容量 8 条**；满队 = 不提交，见细则①）。队列载体两态：无会话 ⇒ `panel._busyQueued`；会话在飞（`panel._susp`）⇒ 会话队列 `susp.pendingInput`（既有 `_chat` 分流——driver 步骤 1 优先取批）。**步边界消费（主）= 用户回合在飞时核循环头投递回调**（核 opts `consumeQueuedInput`——装配点 = `thincoder-vscode/src/extension/panel-turn-loop.mjs`；系统轮不传回调——同 CLI 判据）。**零改面**：纯挂起等待（`susp`）既有队列零改；空输入 = 既有静默（`send()` 出口——`thincoder-render-core/composer/panel.mjs:287`）；无工作区守卫（C-B2-5）零改。细则 · 送达 · 落点见下方列表；CLI 对位 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1 |
+| C-B2-5 | 无工作区拒发可见提示（2026-09-21 批） | `send()` 出口判 `S._workspaceRequired`（host `workspaceGuard` 消息置位）→ 拒发 + `showToast(t("workspace.required"))`（**先于** `addUser` / `setLoading`——无假气泡）；占位符第三态 = `t("workspace.requiredPlaceholder")`（守卫 > busy > 常态） | |
+| | |  | `thincoder-render-core/composer/panel.mjs` `send()`（守卫出口——`:291-293`）· `webview/loading.js` `applyBusyLock` · `webview/chat.js` `case "workspaceGuard"` · `locales/{en,zh}.json` +2 键；判据 / 守卫面 = `docs/vsc/design/PROJECT-SWITCHER.md` §4.1 |
+| C-B2-6 | busy 排队注入（对称修 · busy-injection 批 2026-09-21 · busy-extend 批 2026-09-22 扩面 · queue-visible 批 2026-09-24 多槽 + 合并消费 + fix 轮步边界消费） | busy 提交**一律排队**：判据 = `S._turnState === "running"`（`_suspended` 不再分流——挂起会话内与普通回合同判据） |
+| | | ⇒ `addUser` 本地气泡 + `queuedUserMessage` postMessage（不 `setLoading` 不清面板）→ host **队列**（**容量 8 条**；满队 = 不提交，见细则①）。队列载体两态：无会话 ⇒ `panel._busyQueued`；会话在飞（`panel._susp`）⇒ 会话队列 `susp.pendingInput`（既有 `_chat` 分流——driver 步骤 1 优先取批）。**步边界消费（主）= 用户回合在飞时核循环头投递回调** |
+| | | （核 opts `consumeQueuedInput`——装配点 = `thincoder-vscode/src/extension/panel-turn-loop.mjs`；系统轮不传回调——同 CLI 判据）。**零改面**：纯挂起等待（`susp`）既有队列零改；空输入 = 既有静默（`send()` 出口——`thincoder-render-core/composer/panel.mjs:287`）；无工作区守卫（C-B2-5）零改。细则 · 送达 · 落点见下方列表； |
+| | | CLI 对位 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1 |
 
 - **C-B2-6 细则**：
   - ① 满队再提交（容量 8）= 拒绝 + 提示 + 文本保留——host 侧：`routeUserTurn` busy 分支队满（`count >= QUEUED_MAX_ITEMS`）⇒ 拒收 + 提示（`showWarningMessage`——外部入口兜底）；队内既有消息不被覆盖。
@@ -168,7 +174,8 @@
 | U-I5 | 行内代码内容一律字面；代码范围外原始 HTML 全转义 | 已定（§4 · D-I10） |
 | U-I6 | 登记（未做，非 open）：真机 IME 矩阵 · 折行竖移 · 代码内反斜杠折叠 · 跨界配对族外溢 | 已定（§1–§4 逐条登记） |
 | U-I7 | 无工作区拒发 = 保留文本 + 瞬时 toast（同 U-I2 形态）+ 占位符第三态；Send 按钮保持可见（点击即提示） | 已定（§1 C-B2-5 · `PROJECT-SWITCHER.md` §4.1） |
-| U-I8 | busy 排队注入（busy 即排队面 = `S._turnState === "running"`——挂起会话内与普通回合同判据）= 本地气泡 + 队列（**容量 8**；载体两态：无会话 ⇒ `_busyQueued`；会话在飞 ⇒ 队列 `susp.pendingInput`）+ 满队守卫（**两载体合计 ≥8** ⇒ 不出泡 / 不清框 / toast——对位 CLI 满队面）；纯挂起等待（`susp`）既有队列零改；送达 = 四支（**步边界（主——用户回合在飞：核循环头 `consumeQueuedInput` 回调）** / driver 步骤 1 / 装载① 预填 / 装载② 归位——携贴图同过 F-1 降级判定）+ **合并消费**；**排队期待发送标记**（逐条气泡 `pending` 标记 + 标签行 `⏳`——标记 / 清标 / 合并成形 = 细则⑦） | 已定（§1 C-B2-6） |
+| U-I8 | busy 排队注入（busy 即排队面 = `S._turnState === "running"`——挂起会话内与普通回合同判据）= 本地气泡 + 队列（**容量 8**；载体两态：无会话 ⇒ `_busyQueued`；会话在飞 ⇒ 队列 `susp.pendingInput`）+ 满队守卫（**两载体合计 ≥8** ⇒ 不出泡 / 不清框 / toast——对位 CLI 满队面）；纯挂起等待（`susp`）既有队列零改；送达 = 四支（**步边界（主——用户回合在飞：核循环头 `consumeQueuedInput` 回调）** | |
+| |  / driver 步骤 1 / 装载① 预填 / 装载② 归位——携贴图同过 F-1 降级判定）+ **合并消费**；**排队期待发送标记**（逐条气泡 `pending` 标记 + 标签行 `⏳`——标记 / 清标 / 合并成形 = 细则⑦） | 已定（§1 C-B2-6） |
 
 ## 9. 验收与需求回指
 
@@ -243,4 +250,7 @@
   §1 ∕ §2 输入面坐标按盘重锚——`input.js`（127 行）· `send.js`（12 行）· `autocomplete.js`（15 行）= 上提批搬核后接线档；
   键位 ∕ 历史 ∕ 判据落点改指核 `thincoder-render-core/composer/panel.mjs` ∕ `thincoder-render-core/composer/atmenu.mjs`；
   C-B2-3 收正为现态（`isOpen()` 单判据——缺元素支随工厂化退场）。**契约点 ∕ 判别式零变**。
-- 2026-09-30（**vsc-residuals 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-vsc-residuals.md` §2 · 台账 #680）：C-B2-3 行 ∕ vsc-carryover 条（2026-09-29）两处短形路径锚（`composer/panel.mjs` ∕ `composer/atmenu.mjs`）收正为 `thincoder-render-core/` 前缀全限定；后者同笔断行（行宽 ≈330 ⇒ 合规）。**零新语义**（坐标 ∕ 断行）。
+- 2026-09-30（**vsc-residuals 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-vsc-residuals.md` §2 · 台账 #680）：C-B2-3 行 ∕ vsc-carryover 条（2026-09-29）两处短形路径锚（`panel.mjs` ∕ `atmenu.mjs`）收正为 `thincoder-render-core/` 前缀全限定；后者同笔断行（行宽 ≈330 ⇒ 合规）。**零新语义**（坐标 ∕ 断行）。
+- 2026-10-01（**记录清账批 · 文档面收正轮 · eng-designer**——承 `docs/batches/2026-10-01-records-docs-reconcile.md` §2 · 台账 #696）：超宽表行断行收形 5 处（`:15` ∥ `:16` ∥ `:18` ∥ `:19` ∥ `:171`——表行续行拆分（空首列续行）——单行 ≤300 ∥ 内容逐字零改 ∥ 条目数不变）。**零新语义**（断行）。明细 = 批档 §2。
+- 2026-10-01（**记录清账批 · 修复轮（评审轮 1 · 发现 3——父侧采纳）· eng-designer**——承 `docs/batches/2026-10-01-records-docs-reconcile.md` §3 轮次 1）：C-B2-6 段续行重切 1 处（切点移至强调跨度闭合之后——原切点落跨度内部 ⇒ 两行未配对标记）；守恒 ∥ 单行 ≤300 ∥ 条目数不变 ∥ 重切 ±0 行。**零新语义**（断行）。明细 = 批档 §2。
+- 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R3 裸名化（记录行两处短形引用去目录段——`panel.mjs` ∕ `atmenu.mjs`）。**零新语义**。

@@ -15,18 +15,18 @@
 }
 
 /* 块（六型单序列）：文本面经**核 Markdown**呈现（R3c · KD-RC-4 —— 渲染面单源 = `renderer/views/chat-text.mjs`；核产出面样式 = `renderer/core.css`）；
-   块壳 = **透明无卡壳**（无边框 ∕ 无底 ∕ 零内边距 —— VSC `webview/chat.css:20-48` `.message` 族逐值：面宽全型 100%〔基础行 90% 被 user ∕ assistant 两覆盖行落至 100%——有效值〕· 块距：块块相连 + 带签 16 ∕ 盒块 8 两例外〔扁平化 ∥ 间距批 2026-09-30；单源 = `docs/desktop/design/UI.md`「流内竖向间距」注〕；文本内边距 user `0` ∕ assistant `8px 0`）；
+   块壳 = **透明无卡壳**（无边框 ∕ 无底 ∕ 零内边距 —— VSC `webview/chat.css:20-48` `.message` 族逐值：面宽全型 100%〔基础行 90% 被 user ∕ assistant 两覆盖行落至 100%——有效值〕· 块距：块块相连 + 带签 8 ∕ 盒块 8 两例外〔扁平化 ∥ 间距批 2026-09-30 ⇒ 轻通道轮四归一 8px；单源 = `docs/desktop/design/UI.md`「流内竖向间距」注〕；文本内边距 user `0` ∕ assistant `8px 0`）；
    面内件各自携盒值（本档 = 工具卡 ∕ 错误横幅；推理块 = `renderer/core.css` ② 核类名映射面）；`pre-wrap` 保留（核 md 产出无裸换行 · 行内块件自持 `white-space`），流式游标住 `.block-assistant[data-streaming="1"]`。 */
 .block {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   contain: layout style paint; /* 巨块渲染夹层（批档 §2.14-B）：块壳三隔——不含 size（高度确定性保持——回填 ∕ 跟滚补偿算式单源不动）；零语义（只增） */
 }
-/* 块距：扁平化（用户 2026-09-30 裁决）块块相连——归零（原 VSC 逐值 14px）。 */
+/* 块距：扁平化（用户 2026-09-30 裁决）块块相连——归零。 */
 .block + .block {
   margin-top: 0;
 }
-/* 件级外边距：扁平化（用户 2026-09-30 裁决）后块距归零——原三件型覆写规则随批撤销（块距 = 0 通管）。 */
+/* 件级外边距：块距 = 0 通管（扁平化 · 用户 2026-09-30 裁决）。 */
 
 /* 盒块间呼吸（轻通道 #716 · 用户 2026-09-30「工具和思考块之间都没间隔……你觉得呢」——父侧建议小间隔；CLI 参照 =
    `render-conversation.mjs:375` 块前空行；桌面盒块（思考/错误/归档）非带签者获 8px 上距——扁平化前工具块历史值）。
@@ -38,27 +38,35 @@
 /* 消息前留距（轻通道 #715 · 用户 2026-09-30「会话流里有点挤，❯ You:/❯ ThinCoder: 前面留大一点间隔」）：
    凡带签名标签的块获上距（用户块恒带；助手族回合首块 = 推理/工具/文本/错误/归档任一型）——工具 ∥ 思考等无签块仍零距相连。 */
 .block + .block:has(> .msg-label) {
-  margin-top: 16px;
+  margin-top: 8px;
 }
+/* 间距归一（轻通道轮四 笔 3–4 · 2026-10-01：16 ∥ 8 起 → 试 10 ∥ 5 → **定：全族统一 8px**——用户「工具块之间的距离没变」→「还是不均匀」；工具块链内零距（用户 9-30 15:13 原裁）与 VSC 锁定内距（工具头 5px ∥ 文本 8px 等）不动）。 */
 
 /* 非块插层承接（轮一收尾修复 · 评审发现 6 · 2026-09-30）：消化行（`.chat-digest`——流内就地非块节点）
-   插于两块之间时 `+` 相邻选择器不命中 ⇒ 以本两条承接（带签 16 ∥ 盒块 8 同值同义；工具块出列随轮二笔 2）。 */
+   插于两块之间时 `+` 相邻选择器不命中 ⇒ 以本两条承接（带签 8 ∥ 盒块 8 同值同义；工具块出列随轮二笔 2）。 */
 .chat-digest + .block:has(> .msg-label) {
-  margin-top: 16px;
+  margin-top: 8px;
 }
 .chat-digest + .block:is(.block-reasoning, .block-error, .block-subagent):not(:has(> .msg-label)) {
   margin-top: 8px;
 }
 
 /* 消化行上距（轻通道轮一 · 收尾期补笔 6 · 用户 2026-09-30「前面希望留点间距，不要跟上面的内容挨在一起」）：
-     新轮消化行（`.chat-digest`）与上方内容间呼吸 8px；**轮间 = 累积后可达（#747 收正）**——轮族相邻 ⇒ 轮间 0
-     （#718 注册口径；行元素面落（无轮容器）——单源 = `docs/desktop/design/UI.md` §1
-     「本批注（流内竖向间距 · 2026-09-30）」项 5）。 */
+      族首行与上方内容间呼吸 8px（基规则）；**族内相邻行上距 0**（`.chat-digest + .chat-digest`——行型
+      各自的 `margin: 0` 出列（2026-10-01 V4 修复：其覆盖基规则致族首行上距恒 0——真机 5/5 处实测））；
+      **轮间承接 8px**（行出即留后轮间相邻成常态——新轮起跑标签行居上轮末行之下）。
+      （行元素面落（无轮容器）——单源 = `docs/desktop/design/UI.md` §1
+      「本批注（流内竖向间距 · 2026-09-30）」项 5）。 */
 .chat-digest {
   margin-top: 8px;
 }
+/* 族内相邻行上距 0（V4 修复 2026-10-01——族首行获基规则 8px；行型 `margin: 0` 已出列）。 */
 .chat-digest + .chat-digest {
   margin-top: 0;
+}
+/* 轮间承接（自然形收正批 · 2026-10-01——轮间相邻成常态：标签行 = 每轮首行，居上轮末行（终态行 ∥ cap 行）之下 ⇒ 8px；特征度高于上条）。 */
+.chat-digest + .chat-digest[data-digest-label] {
+  margin-top: 8px;
 }
 /* 助手文本内边距 = VSC `.message.assistant .bubble { padding: 8px 0 }`（落文本面容器 —— 标签行与 VSC 同位：消息顶；user `.bubble` = `padding: 0` ⇒ 零规则）。 */
 .block-assistant > .block-text {
@@ -85,9 +93,9 @@
 }
 
 /* 工具卡（三行：头行（可折叠 ⇒ `button` 形）· 改动摘要行 · 展开结果区）：盒 = VSC `.tool-call`（`webview/chat.css:179-187`）逐值 ——
-   边框 0 ∕ 圆角 0〔扁平化 2026-09-30〕 ∕ 字号（D29 归基线 `var(--fs)`） ∕ `overflow: hidden`；盒底 = **透明**（轻通道笔 · 用户 2026-09-30「不要背景了，只要hover上去有反应就行了」——`--tool-bg` ⇒ `--overlay` 旧值退场）；
+   边框 0 ∕ 圆角 0〔扁平化 2026-09-30〕 ∕ 字号（D29 归基线 `var(--fs)`） ∕ `overflow: hidden`；盒底 = **透明**（轻通道笔 · 用户 2026-09-30「不要背景了，只要hover上去有反应就行了」）；
    hover 反馈 = 头行既有面（`.tool-head:hover`——本档 `:158` 邻位）。件级外边距由块级模型通管
-   （现值 = 盒块规则 `.block + .block:is(…) { margin-top: 8px }`——扁平化 ∥ 间距批 2026-09-30；原三覆写之一已退场）。 */
+   （现值 = 盒块规则 `.block + .block:is(…) { margin-top: 8px }`——扁平化 ∥ 间距批 2026-09-30）。 */
 .block-tool {
   border: 0;
   border-radius: 0;
@@ -98,7 +106,7 @@
 /* 盒面内的说话人标签（回合首块 = 工具卡时）：盒壳零内边距（VSC 头行 ∕ 主体自携内边距）⇒ 标签自携同等缩进
    （桌面标签为块内子节点 —— VSC 标签在盒外、盒顶；零缩进那么标签贴边）。 */
 .block-tool > .msg-label {
-  padding: 5px 10px 0;
+  padding: 0 10px; /* 笔 5：上 5 撤——并入行律。 */
 }
 .tool-head {
   display: flex;
@@ -106,15 +114,14 @@
   align-items: center;
   gap: 6px; /* VSC `.tool-call-header` */
   width: 100%;
-  padding: 5px 10px; /* VSC `.tool-call-header` */
+  padding: 0 10px; /* 行律归位（轻通道轮四 笔 5 · 2026-10-01——用户「两个连续工具块的文字距离 = 内容行间」；原 5px 上下 = VSC 值，用户明令不管内外距）。 */
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
   text-align: left;
 }
-/* 头行色 = VSC 逐值（`docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」项 2 —— 已裁）：
-   两态色归 **status 段**（`[data-status]` 整行两态色退场——非 VSC 形；值源 = VSC 内联 `flow/tool-card.mjs:111/:114`）。 */
+/* 头行色 = VSC 逐值（值源 = VSC 内联 `flow/tool-card.mjs:111/:114`）：两态色归 **status 段**。 */
 .tool-head[data-status="error"] [data-seg="status"] {
   color: #f14c4c;
 }
@@ -162,9 +169,12 @@
 .tool-head:not(:disabled):hover {
   background: var(--hover-bg); /* VSC `.tool-call-header:hover` */
 }
+/* 前导箭头（轻通道轮四 笔 6 · 2026-10-01——用户「向 CLI 看齐：前面有个箭头」；两态：折叠 ▸ ∥ 展开 ▼——字形同 CLI。仅可开关头（带 toggle 接线）落箭头。 */
+.tool-head[data-action="chat:tool-toggle"]::before { content: "▸"; color: var(--fg-muted); }
+.block-tool:has(> .tool-result) .tool-head[data-action="chat:tool-toggle"]::before { content: "▼"; }
 .tool-changes {
-  margin-top: 6px;
-  padding: 0 10px 6px; /* 桌面独有行 —— 缩进与头行 ∕ 结果区同缘（VSC 无对位行） */
+  margin-top: 0;
+  padding: 0 10px; /* 笔 5：上 6 ∥ 下 6 撤——并入行律（缩进保持）。 */
   color: var(--fg-muted);
   font-size: var(--fs);
 }
@@ -172,7 +182,7 @@
 .tool-file {
   display: flex;
   gap: 8px;
-  margin-top: 2px;
+  margin-top: 0;
   font-size: var(--fs);
 }
 .tool-file [data-add]::before {
@@ -181,9 +191,12 @@
 .tool-file [data-del]::before {
   content: "−";
 }
-/* 结果区 = VSC `.tool-call-body`（`webview/chat.css:257-272`）逐值（等宽栈 ∕ 字号 ∥ 行高 D29 归基线 ∕ `opacity: .75` ∕ 封顶 180px 自滚）；顶线分隔随扁平化（2026-09-30）退场。 */
+/* 结果区 = VSC `.tool-call-body`（`webview/chat.css:257-272`）逐值（等宽栈 ∕ 字号 ∥ 行高 D29 归基线 ∕ `opacity: .75` ∕ 封顶 180px 自滚）。 */
 .tool-result {
-  padding: 6px 10px;
+  padding: 0 10px; /* 笔 5：上下 6 撤——并入行律。 */
+  border-left: 2px solid var(--fg-muted); /* 展开体左流线（笔 6 落形 ∥ 笔 7 加粗加深 3px ∥ 笔 8 细回 2px——线心仍 ≈14px；margin 12.5 ⇒ 13 随宽校正）。 */
+  margin-left: 13px;
+  padding-left: 6px;
   font-family: var(--mono);
   font-size: var(--fs);
   line-height: var(--lh);
@@ -300,18 +313,17 @@
 /* 消化行族（桌面空闲唤醒批 · 流内落位批改**逐轮行族 · 流内就地**〔**无轮容器**——#747：行元素 = 流内并列兄弟·族标逐行承载〕
      —— 流内非块节点 `[data-digest]`；落点 = 流内就地 ——
     单源 = `docs/desktop/design/RENDERER.md` §1.1 两条纪律；形 = VSC `webview/base.css:203-258` 逐值 —— turn 行 = 纯行（无边 ∕ 无底）· status 行 = 盒行）：
-    ① 起跑态（起跑标签行 + `n > 0` 计数行 —— 计数行同形于状态条，标签行同族小字；**标签行恒在**（终态不撤 —— #747））∥
-    ② 终态（`end` 就本轮计数行更新 —— 行入流（与内容同生态）；重建按记录位次复列（段界可辨；刷新 ∥ 重载 ∥ 切走切回均在——留档批 · #719）；`digest-failed` = 错误色显形〔opacity 不覆盖 —— 沿 VSC 继承 0.85〕，`digest-done` = 信息色显形）；
+    ① 起跑态（起跑标签行 + `n > 0` 计数行 —— 计数行同形于状态条，标签行同族小字；**标签行恒在**（零摘除——#768）∥ **计数行恒起跑文**）∥
+    ② 终态（`end` ⇒ **追加终态行**（锚 `data-digest-end`——词 = `digest.done` ∕ `digest.aborted`，复用本节两底色；**不动原 digesting 行**）；行入流（与内容同生态）；
+    重建按记录位次复列（段界可辨；刷新 ∥ 重载 ∥ 切走切回均在——留档批 · #719）；`digest-failed` = 错误色显形〔opacity 不覆盖 —— 沿 VSC 继承 0.85〕，`digest-done` = 信息色显形）；
     **③ 撞帽行（#541 —— **尾追形**（cap 帧到达即随流尾追）`.digest-cap`；`.digest-cap-stop` 为 `.chat-digest.digest-cap-stop`）**。
     `--bg-raised` ∕ `--line` = `editorWidget-background` ∕ `-border` 角色对位；done ∕ failed 两底色 = `infoBackground` ∕ `errorBackground` 角色对位（accent 8% 先例 = `.question-card`）。 */
 .chat-digest.digest-turn {
-  margin: 0;
   font-size: var(--fs);
   opacity: 0.7;
   color: var(--fg-muted);
 }
 .chat-digest.digest-status {
-  margin: 0;
   padding: 6px 12px;
   border: 1px solid var(--line);
   border-radius: 0;
@@ -332,7 +344,6 @@
 /* 撞帽行（#541 —— 对位 VSC `webview/base.css:248-258` 逐值：auto = dim〔同族观感〕、stop = warn〔部分消化——用户需知〕；
     角色对位 = `--fg-muted` ∕ `--warn`）。 */
 .chat-digest.digest-cap {
-  margin: 0;
   font-size: var(--fs);
   opacity: 0.75;
   color: var(--fg-muted);

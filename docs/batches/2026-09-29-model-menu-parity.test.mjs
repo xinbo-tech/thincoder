@@ -26,8 +26,8 @@ const tick = (ms = 15) => new Promise((resolveTick) => setTimeout(resolveTick, m
 const LONG = (status) => `该渠道不提供模型列表（GET /models ${status}）——无法选择模型，请改用其他渠道`
 
 // ─── 面装载 ───（`/rc/` 解析钩子须先于渲染档装载 —— 平 node 取核件路径）
-const coreConfigIo = await mod("thincoder-core/config-io.mjs")
-const coreProbe = await mod("thincoder-core/provider/list-models.mjs")
+const coreConfigIo = await mod("thincoder-desktop/node_modules/@thincoder/core/config-io.mjs")
+const coreProbe = await mod("thincoder-desktop/node_modules/@thincoder/core/provider/list-models.mjs")
 const settings = await mod("thincoder-desktop/src/main/settings.mjs")
 await mod("thincoder-desktop/test/rc-resolve.mjs")
 const storeMod = await mod("thincoder-desktop/renderer/store.mjs")

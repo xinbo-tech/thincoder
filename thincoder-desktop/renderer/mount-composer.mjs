@@ -10,12 +10,16 @@
  * 槽 = 核件 `#toolbar` 样式规则命中物（VSC 静态容器 id）⇒ 装配期赋 `id="toolbar"` —— 核件样式值零复写
  * （样式单源 = 核件 `composer/composer.css`，装配期注 `<link>` 引入；变量别名块住 `renderer/chat.css`，C2）。
  *
- * deps（注入面五项 —— §2.3；④ 取词 = **注册面**，非本档项：注册单点 = `renderer/app.mjs` `setStringsSink`）：
+ * deps（注入面六项 —— §2.3；④ 取词 = **注册面**，非本档项：注册单点 = `renderer/app.mjs` `setStringsSink`）：
  * ① `root` = 槽自身；② `post` = 通道映射表（下）；③ `state` = store 切片读面；⑤ `hooks` 绑三件 =
  * `openSettings`（控件行第 7 钮）· `onUserEcho`（B12 出泡）· `confirmRemoveProvider`（footer ⇒ 设置面）；
  * **不绑**（列明给由）＝ `onTurnStart` ∕ `onStatusRefresh` ∕ `onTitleHint` ∕ `onWelcomeDismiss` ∕ `syncModeState`
  * ∕ `onAgentSettings` ∕ `closeSiblingDropdowns` —— 桌面同面各有既有单源（回合起点动作归宿主事件面；状态行刷新 =
  * store 订阅；标题 = 回合尾刷新；欢迎条 = 帧面随块；模式位 = `sessionFlags` 切片；设置面自持读面；邻面下拉端无）。
+ * ⑥（2026-10-01 批 · 斜径面 · §2 KD-RC-12 ∥ §5 条 6）：`slash = { commands }` —— 命令表 =
+ * 端侧构造（本档 `./slash-commands.mjs` **一处装配**；**`/help` 增量 = 打印口闭包注入**（表构造时绑定——条目 `run`
+ * 仍只返布尔 ⇒ 面板 ∥ `ctx` 零触）；行文 = 端表本体经核 `formatHelp`）；`actions` 由核件面板装配（钮 handler
+ * 提取出的同一函数——同钮同门）；核件收 `deps.slash` 为**可选**（不传 ⇒ 现行为零变 —— VSC 零接缝）。
  *
  * 写面（映射表 §2.5 D1–D5 —— **出档 `renderer/composer-wire.mjs`**，收正轮拆分；本档只注入 deps）：`userMessage` ∕
  * `queuedUserMessage` ⇒ `msg:send { key, text, images? }`（images 经 `toImages` 投影为 dataURL 串列 —— A1 收正 ∕ VSC 同形）· `abort` ∕
@@ -48,13 +52,15 @@
  */
 import { createComposerPanel } from "/rc/composer/panel.mjs"
 import { showToast } from "/rc/toast.mjs"
+import { formatHelp } from "/rc/composer/slash.mjs"
 import { createComposerWire } from "./composer-wire.mjs"
 import { createComposerSync, effortOf } from "./composer-sync.mjs"
 import { t } from "./i18n.mjs"
 import { degradedCode, toImages } from "./attach.mjs"
 import { applyFlags } from "./events-flags.mjs"
-import { appendBlock, returnToBottom, setAttachDegraded, store as defaultStore } from "./store.mjs"
+import { appendBlock, returnToBottom, setAttachDegraded, setHelpLines, store as defaultStore } from "./store.mjs"
 import { busyOf, suspActiveOf } from "./views/chrome.mjs"
+import { createSlashCommands } from "./slash-commands.mjs"
 
 /** 输入区容器锚（骨架属性住 `renderer/index.html`）。 */
 export const COMPOSER_SLOT = '[data-slot="composer"]'
@@ -90,10 +96,11 @@ function withUserBlock(state, key, block) {
   return returnToBottom(appendBlock(state, block))
 }
 
-/** 挂载（接线面句柄式）：返回 `{ submit, refresh, keys, detach, refreshCandidates }` —— `submit(text)` = **直发径单副本**
+/** 挂载（接线面句柄式）：返回 `{ submit, refresh, keys, detach, refreshCandidates, printHelp }` —— `submit(text)` = **直发径单副本**
  *  （错误横幅重试 · 项 9：写值 ⇒ 触发发送键，零第二实现）；`refresh()` = 词面到位重派生（`boot` `initDict` 之后一次 ——
  *  注册面后到，见其函数注）；`keys` = 重绘触发切片面；`detach` = 退订句柄；`refreshCandidates()` = 候选面**强制刷新口**
- *  （全渠扇出批 · #2 ∕ #3 接线消费 —— `renderer/app.mjs`；在飞期调用 = 位标，见 `composer-sync.mjs`）。 */
+ *  （全渠扇出批 · #2 ∕ #3 接线消费 —— `renderer/app.mjs`；在飞期调用 = 位标，见 `composer-sync.mjs`）；
+ *  `printHelp()` = `/help` 流内打印口（D36 —— 菜单「命令与快捷键…」出口消费面；返 `true` = 已打印）。 */
 export function attachComposer(host, deps = {}) {
   const store = deps.store ?? defaultStore
   const openSettings = typeof deps.openSettings === "function" ? deps.openSettings : undefined
@@ -189,6 +196,18 @@ export function attachComposer(host, deps = {}) {
     confirmRemoveProvider: () => openSettings?.(), // 删除渠道 = 设置面事（确认门 ∕ 执行面皆住该面）
   }
 
+  // ─── 斜径面（2026-10-01 批 · `/help` 增量）：打印口经**端侧构造点闭包注入**（表构造时绑定 ⇒ 面板 ∥ `ctx` 零触；
+  // 行文 = 端表本体经核 `formatHelp`）；条目 `run` 仍只返布尔。
+
+  /** `/help` 打印口（端装配面：返 `true` = 已打印 ⇒ 面板清框 + 入历史）：键空 ⇒ `false`（防御——守卫先于斜径，不可达）；否则行集落切片 + 回底（打印 = 出内容 ⇒ 复跟回底）。 */
+  function printHelp() {
+    const key = activeKey()
+    if (key === null) return false
+    store.set(returnToBottom(setHelpLines(store.get(), key, formatHelp(slashCommands, t))))
+    return true
+  }
+  const slashCommands = createSlashCommands(printHelp) // 命令表一处构造（`/help` 条闭包持打印口）
+
   // ─── 装配 ────────────────────────────────────────────────────────────────
 
   /** 核件面板样式引入（P10 桌面落位 = 引 `/rc/composer/` **两静态档** —— 面板 `composer.css` + 菜单 `model-menu.css`
@@ -238,7 +257,9 @@ export function attachComposer(host, deps = {}) {
     noticesAnchor = document.createElement("div")
     noticesAnchor.setAttribute(NOTICES_ANCHOR, "")
     container.append(noticesAnchor)
-    const built = createComposerPanel({ root: container, post, state: sync.state, hooks })
+    // 斜径面（2026-10-01 批 · §2 KD-RC-12 ∥ §5 条 6）：命令表 = 端侧构造（一处装配；`/help` 条已闭包持打印口）
+    // ⇒ 核件面板收 `deps.slash.commands`，`actions` 由面板装配（钮 handler 提取出的同一函数）；不传 ⇒ 现行为零变（VSC 零接缝）。
+    const built = createComposerPanel({ root: container, post, state: sync.state, hooks, slash: { commands: slashCommands } })
     relocateActionButtons(container) // 扁平化 v4：三钮迁入控件行（用户 2026-09-30 走查）
     return built
   }
@@ -272,5 +293,5 @@ export function attachComposer(host, deps = {}) {
     sync.syncPanel()
   }
 
-  return { submit, refresh, keys: COMPOSER_KEYS, detach, refreshCandidates: sync.refreshCandidates }
+  return { submit, refresh, keys: COMPOSER_KEYS, detach, refreshCandidates: sync.refreshCandidates, printHelp }
 }

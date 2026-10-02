@@ -19,7 +19,7 @@ export const STATUS_SLOT = '[data-slot="status"]' // 状态栏容器锚（= 窗�
  *  〔原 `tabs` ∕ `activeTab` 两键随标签裁撤退场——跨会话告警位源改 `sessions` 行投影〕）。 */
 export const STATUS_KEYS = [
   "activeSession", "tabBadges", "locale", "usage", "tasks", "turns", "turnStarts",
-  "tokens", "timers", "projectInfo", "sessions", "pending", "blocks",
+  "tokens", "timers", "sessions", "pending", "blocks",
   "sessionFlags", // 模式位四布尔切片（banner 四段源 —— D22；写径 = 页读 / 出站回执两处，同归约点）
   "susp", // 挂起计数切片（段 3 支①挂起句源 —— 桌面空闲唤醒批；写径 = 归约面 `ev:susp`）
   "statusText", // 状态文本切片（段 3 支③五 kind 源 —— R4；写径 = 归约面 `ev:statusText`）

@@ -114,8 +114,8 @@ export function settleToolBlock(state, name, toolId, summary) {
 
 /** Async spawn detection (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1): the subagent tool's async:true result is a
  *  status JSON ({id, role, status: running|queued}), NOT a report — the child
- *  keeps running, so its activity block must not be frozen at spawn time (it
- *  freezes via the ⟦ev⟧done event at settle — §6.7.3 D-A3). */
+ *  keeps running, so its activity block must not be frozen at spawn time（块保 live——settle 发
+ *  ⟦ev⟧settled；冻结落消费窗——#746 · ASYNC-POOL §6.8）。 */
 export function isAsyncSpawnResult(result) {
   try {
     const o = JSON.parse(result)

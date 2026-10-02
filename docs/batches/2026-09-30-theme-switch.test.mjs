@@ -15,15 +15,16 @@
  *   腿 6 设置面头：三钮 ∥ `data-action` / `data-theme` 锚齐 ∥ 当前态（`data-active` + `aria-pressed="true"`）恰一 ∥
  *        缺 handlers ⇒ 三钮 `disabled`（描述符树平 node 直测）。
  * 附臂（测试面随修随加 · 不占设计条目）：词键四键两语值（en：Theme ∕ System ∕ Light ∕ Dark；zh：主题 ∕ 跟随系统 ∕ 亮色 ∕ 暗色）。
- * 夹具口径：全假件（假 doc ∥ 假 storage —— 注入缝 `{ doc, storage }`）；设置视图链经 `/rc/` 取核件 ⇒ 跑法带解析钩。
- * 本件不进仓套件（批内件 · 随批留存）；跑法（仓根 `thincoder/`）：
- *   node --test --import ./thincoder-desktop/test/rc-resolve.mjs docs/batches/2026-09-30-theme-switch.test.mjs
+ * 夹具口径：全假件（假 doc ∥ 假 storage —— 注入缝 `{ doc, storage }`）；设置视图链经 `/rc/` 取核件 ⇒ 件内静态预载解析钩（跑法零 `--import`）。
+ * 本件不进仓套件（批内件 · 随批留存）；跑法（仓根 `thincoder/`——件内静态预载解析钩，零 `--import`）：
+ *   node --test docs/batches/2026-09-30-theme-switch.test.mjs
  */
 import test from "node:test"
 import assert from "node:assert/strict"
 import { readFileSync, readdirSync, statSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
+import "../../thincoder-desktop/test/rc-resolve.mjs" // `/rc/` 解析钩子（须先于任何渲染档取件注册）
 
 const ROOT = process.cwd()
 const rel = (p) => resolve(ROOT, p)
@@ -185,8 +186,8 @@ test("腿 5 · CSS 结构：@media 退场 ∥ 值对恰 24 ∥ 两枚覆写规�
   assert.match(css, /:root\s*\{[^}]*color-scheme:\s*light dark;/s, "缺省 color-scheme: light dark")
   assert.match(css, /:root\[data-theme="light"\]\s*\{\s*color-scheme:\s*light;\s*\}/, "light 强制态覆写")
   assert.match(css, /:root\[data-theme="dark"\]\s*\{\s*color-scheme:\s*dark;\s*\}/, "dark 强制态覆写")
-  // 基线四值（D29 守界）逐字零动
-  for (const line of ["--font: var(--mono);", "--fs: 14px;", "--lh: 1.5;", "--ls: normal;"]) {
+  // 基线四值（D29 守界；轻通道轮四 ∥ 轮五 2026-10-01 · #759 ∥ #808 随盘收正：14 ⇒ 12px ∥ 1.5 ⇒ 1.3（轮四）∥ 12 ⇒ 14px（轮五 定版））逐字在位
+  for (const line of ["--font: var(--mono);", "--fs: 14px;", "--lh: 1.3;", "--ls: normal;"]) {
     assert.ok(css.includes(line), `基线四值逐字零动：${line}`)
   }
   // 暗值逐字保原（抽样三项 —— 双块收敛零值改）

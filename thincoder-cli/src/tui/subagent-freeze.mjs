@@ -12,6 +12,9 @@
 
 import { C } from "./ansi.mjs"
 import { closeOpenSubChildren } from "./subagent-children.mjs"
+// #726 写点③：冻结载体行 ∥ 归档快照记录同点双动作（记录形/行集 = lifecycle-records 单一实现）
+import { pushRecord } from "@thincoder/core/context.mjs"
+import { subagentRecord } from "./lifecycle-records.mjs"
 // TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5.3 落点表末行）：state.lines 总量账——splice 插入路径过账。
 // zero-block 批（§6.8.3.2）：摘除路径负向出账——releaseLine（增删均须过账）。
 import { accountLine, releaseLine } from "./display-budget.mjs"
@@ -78,22 +81,27 @@ export function finishSubTaskKey(state, key, lastError = null) {
  *  ② 语义照旧（防御性保留——无正读者、不设断言；显示契约 docs/design/TUI.md §6）。
  *  锚点插入（2026-09-03 修复轮）：settled 块带 _freezeAt（settle 时刻流位置）——
  *  splice 落位使挂起期补发冻结块位于其 digest 总览文本之前；无锚点尾推不变；
- *  多锚点批量冻结按降序（绝对位置 splice——先插小锚点会移走大锚点目标）。 */
-export function freezeSubTaskLines(state, sub) {
+ *  多锚点批量冻结按降序（绝对位置 splice——先插小锚点会移走大锚点目标）。
+ *  **本批 2026-10-01（台账 #754 —— 用户 02:21 裁 A）**：第三参 `anchor` = 显式落位锚
+ *  （起跑窗 = 起跑族尾——`digestTurn` 逐条传入；缺省 ⇒ `_freezeAt` settle 锚 ∥ 流末）——
+ *  落位语义 = 「固化块居本族文档序末元素之后」（与桌面 ∥ VSC 同形同义）。 */
+export function freezeSubTaskLines(state, sub, anchor = undefined) {
   if (!sub) return
   closeOpenSubChildren(sub) // R23 D-R23c2——开子块随外层冻结定格 stopped（SUBAGENT-TAIL：② 防御性保留）
   state._frozenSubKeys ??= new Set()
   state._frozenSubKeys.add(sub.key)
   sub.done = true
   sub.doneAt = sub.doneAt ?? Date.now()
-  const anchor = sub._freezeAt ?? state.lines.length
+  const at = anchor ?? sub._freezeAt ?? state.lines.length
   const line = {
     text: `subagent activity: ${sub.key}`, color: C.dim, _frozenSubTask: sub,
   }
-  state.lines.splice(Math.min(anchor, state.lines.length), 0, line)
+  state.lines.splice(Math.min(at, state.lines.length), 0, line)
   // TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5.3 落点表末行「冻结子代理 splice 插入——经
   // syncLineBudget 同款对账」）：冻结行进 state.lines 总量账（splice 插入路径）。
   accountLine(state, line)
+  // #726 写点③：归档快照记录（与冻结载体行插入同点）；载体缺位（headless ∕ 子代理内）⇒ 核口零动作
+  pushRecord(state?._agent, subagentRecord(sub))
 }
 
 /** 键级墓碑（af 批 c2——§6.8.3.3 墓碑写入单点同址）：key 计入 `_frozenSubKeys` ⇒ 后续 token
@@ -182,23 +190,6 @@ export function freezeDoneSubTasks(state) {
   }
 }
 
-/** 按角色整组标记 done——consult N 并行 children 的会话级 settle（2026-08-30；
- *  F-2 收窄后 finishSubTask 已退役 no-op——本函数为唯一按角色完成面）。 */
-export function finishSubTasksByRole(state, roles, lastError = null) {
-  state.subTasks ??= {}
-  const roleSet = new Set(Array.isArray(roles) ? roles : [roles])
-  for (const sub of Object.values(state.subTasks)) {
-    if (!sub.done && roleSet.has(sub.role)) {
-      sub.done = true
-      sub.doneAt = Date.now()
-      sub.currentTool = null
-      sub.approval = null
-      if (lastError) sub.lastError = lastError
-      sub.blockEpoch = (sub.blockEpoch ?? 0) + 1
-    }
-  }
-}
-
 /** 回合尾/挂起退出清扫（runAgentTurn finally / suspensionSession finally）：冻结全部
  *  剩余块——中断（Ctrl+C/错误）不留下钉住输入框的 ghost；未 done 者
  *  lastError="interrupted"（Ready 态跳过）。AGENT-LOOP-ASYNC-POOL.md §6.8：挂起自然退出时本函数只兜底
@@ -227,16 +218,27 @@ export function freezeAllSubTasks(state) {
 /** 消化完成逐条冻结回收（2026-09-03 实测修订 + round1 #1 位置裁定）：digest/会话内
  *  用户回合消化完 pending 条目（run 首行已注入）后调用——把"已消化但仍驻留面板"的
  *  awaitingDigest 块立即冻结进流（不等池空——块回收与池空解耦；池空 freezeAllSubTasks
- *  仅兜底未消化残项）。归属不变式：会话内任何 run 开始前 pinned 块的条目必在 pending
- *  （settle 即移交）；run 消费后条目不在 pending 的 pinned 块 = 本 run 消化者——无需
- *  快照即精确归属。位置（round1 #1 裁定——与早版文本的矛盾已消解；digest 面 =
- *  AGENT-LOOP-ASYNC-POOL.md §6.8）：**settle 锚点 splice 落位——digest 总览文本之前**——同
- *  docs/cli/design/TUI.md §6.8 D4 修复轮/D-S8 锚点语义（T-S6/T-S14 位置断言同口径）——锚点降序逐块冻结
+ *  仅兜底未消化残项）。**归属 = `consumed` 实参**（核 `hooks.reclaim(consumed)` 直传——本 run
+ *  已消费条目；consult 同族收齐批 · #748 收正：原「pending 全表反查」被否——回收点判据与两端不同源）。
+ *  **本批 2026-10-01（台账 #754）**：起跑窗（`digestTurn`）已逐条冻结起跑快照
+ *  ⇒ 本径 = **兜底幂等**（起跑窗漏口 ∥ 迟结算面——已冻结者已出 `subTasks` ⇒ 零命中）。
+ *  **consult 条目（#748）**：会话本体无行——按其 `childIds` 展开子块键（`consult#<N>`——子块各居一行）。
+ *  位置（round1 #1 裁定——与早版文本的矛盾已消解；digest 面 =
+ *  AGENT-LOOP-ASYNC-POOL.md §6.8）：**settle 锚点 splice 落位**——启动窗径居起跑族尾（显式锚）∥
+ *  本径 = settle 锚（迟结算块之 settle 位次在族输出区内 ⇒ 恒居本族之后）；锚点降序逐块冻结
  *  （splice 绝对位互不位移）。@returns {number} 回收块数 */
-export function freezeReclaimDigestedBlocks(state, pendingList) {
-  const pend = pendingList ?? []
+export function freezeReclaimDigestedBlocks(state, consumed) {
+  const keys = new Set()
+  for (const e of consumed ?? []) {
+    if (e === null || e === undefined || e.id === undefined || e.id === null) continue
+    if (e.role === "consult") { // #748：会话本体无行——展开子块键（childIds = 子块 relay 号）
+      for (const cid of e.childIds ?? []) keys.add(`consult#${cid}`)
+      continue
+    }
+    keys.add(`${e.role ?? "subagent"}#${e.id}`)
+  }
   const targets = Object.values(state.subTasks ?? {})
-    .filter((s) => s.awaitingDigest && !pend.some((e) => `${e.role}#${e.id}` === s.key))
+    .filter((s) => s.awaitingDigest && keys.has(s.key))
     .sort((a, b) => (b._freezeAt ?? -1) - (a._freezeAt ?? -1)) // 锚点降序（同 freezeAllSubTasks）
   for (const sub of targets) {
     freezeSubTaskLines(state, sub) // splice 落 settle 锚点（digest 总览文本之前）

@@ -8,8 +8,8 @@ import { esc as escHtml } from "../md.mjs"
 import { t as coreT } from "../i18n.mjs"
 
 /** 提问卡（承 `question.js:10-89` 构树）。`model` = `{ question, options?, promptId? }`；
- *  返回卡元素。作答（选项 / 自由文本 / 取消）⇒ 卡自移除 + `emit("questionResponse", { answer, promptId? })`
- *  （取消 ⇒ `answer: null`）+ `deps.onAnswered(value)`。 */
+ *  返回卡元素。作答（选项 / 自由文本 / 取消）⇒ `emit("questionResponse", { answer, promptId? })`
+ *  （取消 ⇒ `answer: null`）+ `deps.onAnswered(value)`；**卡去留 = 端侧**——核零摘除。 */
 export function renderQuestionCard(model = {}, deps = {}) {
   const t = deps.t ?? coreT
   const el = document.createElement("div")
@@ -27,7 +27,6 @@ export function renderQuestionCard(model = {}, deps = {}) {
   el.appendChild(textEl)
 
   const answer = (value) => {
-    el.remove()
     const payload = { answer: value ?? null }
     if (model.promptId != null) payload.promptId = model.promptId
     deps.emit?.("questionResponse", payload)

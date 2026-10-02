@@ -121,9 +121,16 @@ export function channelFormTree(form, handlers = {}) {
   return { tag: "form", props: { class: "settings-form", "data-form": shape, "data-form-shape": shape, "data-draft-scope": shape === "custom" ? "add:custom" : "add:preset" }, children }
 }
 
-/** **导出面②** —— 校验控件：`name` 给 ⇒ 携标（`data-name`）；缺 ⇒ 提交端自读表单现选。 */
-export function verifyControl(name, handlers = {}) {
+/** **导出面②** —— 校验控件：`name` 给 ⇒ 携标（`data-name`）；缺 ⇒ 提交端自读表单现选。
+ *  **state**（null ∥ `"ok"` ∥ `"fail"`——轮六）：渠行给 ⇒ 态词换形（「校验通过」∕「校验失败」短形 + `data-verify-state` 锚），
+ *  缺 ∥ null ⇒ 原「校验」词（首启向导径零变）。 */
+export function verifyControl(name, handlers = {}, state = null) {
   const onClick = typeof handlers?.onVerify === "function" ? () => handlers.onVerify(name ?? null) : undefined
+  const word = state === "ok"
+    ? t("settings.providers.verify.okShort")
+    : state === "fail"
+      ? t("settings.providers.verify.failShort")
+      : t("settings.providers.verify")
   return {
     tag: "button",
     props: wire({
@@ -131,7 +138,8 @@ export function verifyControl(name, handlers = {}) {
       type: "button",
       "data-action": "settings:verify",
       "data-name": typeof name === "string" && name ? name : undefined,
+      "data-verify-state": state === "ok" || state === "fail" ? state : undefined,
     }, onClick),
-    children: [t("settings.providers.verify")],
+    children: [word],
   }
 }

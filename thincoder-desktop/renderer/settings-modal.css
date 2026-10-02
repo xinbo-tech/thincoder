@@ -1,0 +1,49 @@
+/* settings-modal.css — 设置组弹窗样式（D39 ∥ D38 · 2026-10-02 · 台账 #817；决策单源 = `docs/desktop/design/SETTINGS.md` §1 **KD-68**）。
+   面 = 背板（z-20）+ 居中卡（z-21）—— z 族 = 设置面 10 < 弹窗 20/21 < 确认弹层 40/41（确认盖弹窗 —— 删除确认族零改）
+   < 引导层 200；零新变量（变量单源 = `renderer/theme.css` + `renderer/chat-composer.css` 别名块）∥ 零新断点（零 `@media`）。
+   挂载 = `renderer/settings-modal.mjs`（`document.body` 直挂 —— 出设置面溢出裁面）；树面 = `renderer/views/settings.mjs`
+   `settingsModalTree`；卡宽 = min(48rem, 视口 − 2gap)（对齐设置面 48rem 列宽 —— `renderer/settings.css` 同级值）；
+   高 ≤ 视口 − 2gap + 内滚；`.settings-modal .settings-close` 复用 `.settings-close` 形（字形 ∥ 两态 ∥ 聚焦背圈
+   住 `renderer/settings.css` —— 本档只补 ✕ 行尾锚位）。**头行粘顶（轮六 · 2026-10-02 · 轻通道 · 台账 #819）**：
+   卡内滚 ⇒ `.settings-modal .settings-head` sticky 常驻——标题 ∥ ✕ 不随体滚出。 */
+
+.settings-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: var(--overlay);
+}
+.settings-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 21;
+  width: min(48rem, calc(100vw - 2 * var(--gap)));
+  max-height: calc(100vh - 2 * var(--gap));
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: calc(var(--gap) * 1.5) var(--gap);
+  background: var(--bg-raised);
+  color: var(--fg);
+  font: var(--fs)/var(--lh) var(--font);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+/* 头：组名标题（`.settings-title` 形复用）+ ✕（`.settings-close` 形复用；行尾锚位 = 头内无语言 ∥ 主题族时补 `auto`）。 */
+.settings-modal .settings-close { margin-left: auto; }
+/* 头行粘顶（轮六·笔二）：卡内滚 ⇒ 头行钉住（不透明底 = 卡底同色，防体内容透底）。 */
+.settings-modal .settings-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-raised);
+}
+/* 体列：失败串（本组 ∨ panel）+ 段态词 + 段体（单组 —— 段标题不复述）。 */
+.settings-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}

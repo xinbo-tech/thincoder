@@ -122,14 +122,15 @@ consult 会话（agent._consultSessions = Map<id, Session>，跨回合存活）
 R17（2026-09-06）以 **digest 自动注入**取代旧的 `consult_check` 回合内轮询消费模型：
 
 - **唯一消费通道 = digest 自动注入**；`consult_check` 工具已删除（描述零残留）。
-- **settle 判定**：某 id pending=0（全部模型回复 / 失败 settle）→ 会话升格完整 entry（`{id, role:"consult", report, done:true}`）移入 pending 单容器 `_pendingAsyncResults`（+role——原 `_pendingConsultResults` 独立族流退役）
+- **settle 判定**：某 id pending=0（全部模型回复 / 失败 settle）→ 会话升格完整 entry（`{id, role:"consult", report, done:true, childIds}`）移入 pending 单容器 `_pendingAsyncResults`（+role——原 `_pendingConsultResults` 独立族流退役）
   → 下回合（用户回合或 digest auto-turn）run 首行注入 `[System reminder: consultation #id finished — N of M models replied (F failed)]` + 逐条意见全文（失败按 per-model 标注——部分 / 全失败同规则）。
 - **部分 settle 不提前注入**——全 settle 才入 digest 流（意见全貌才可判断）。
 - **消化轮动作域**：会诊 = 建议非门禁——消化指令语义 = 「逐条判断采纳与否并处置」；**动作域按消费回合档位**（既有规则：用户回合 / AUTO 档 = 正常决策域；手动档 auto-turn = **整理禁写**——同 advisor digest，无「consult 可写」例外）。
 - **注入容量**：超长 → 既有 digest 截断 / 落盘机制（XML-escaped，>64K offload 预览 + 路径）。
 - **`consult_stop` 保留为取消语义**：`{ abandoned, cancelled: true }`——已答部分丢弃、不入 pending；会话 settle 即移出 map。
 - **消费驱动**：digest auto-turn 驱动判据 = pending 单容器非空（四族统一）；挂起活度钩子 = running 会诊会话纳入 `poolLive`——空闲 settle 也触发消化轮。
-- **每 consultant 活动块随会话消费归档**（per-child key——不再经 check 消费冻结）：child settle ⇒ `⟦ev⟧settled` 驻留（等待消化），会话 digest 消费窗补发 `⟦ev⟧done` 折叠入流（桌面 ∥ VSC = 会话条目 `childIds` 展开；CLI = reclaim 消费判据）；会话 stopped ⇒ `⟦ev⟧stopped` 即折（消费永不来）——机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8（consult 子块条）。
+- **每 consultant 活动块随会话消费归档**（per-child key——不再经 check 消费冻结）：child settle ⇒ `⟦ev⟧settled` 驻留（等待消化），会话消费面补发 `⟦ev⟧done` 折叠入流（起跑窗（主面）∥ `reclaim` ∥ 退出 freeze（兜底幂等）· 三端同形——桌面 ∥ VSC = 起跑刻 `childIds` 逐子块补发；CLI = 起跑刻直接冻结）；
+  会话 stopped ⇒ `⟦ev⟧stopped` 即折（消费永不来）——机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8（consult 子块条）。
 - **`wait_for "consult done"` 条件保留**（会话 settle 即移出 map）。
 
 ### 6.3 工具契约
@@ -195,7 +196,7 @@ consult_stop
 | 系统 prompt | role `"consult"` → consult-base 底座（瘦——不背主 agent persona / 工具引用） |
 | 工具注册 | setup.mjs：`consultModels` 非空即注册 `consult_start` / `consult_stop`——空池不注册 |
 | 会话跨 run 容器 | `history._consultSessions`（`_asyncSubagents` 同款载体——agent per-run 重建） |
-| settle → digest | 全 settle park `history._pendingConsultResults` → agent.mjs run-start 注入（**单注入点**——splice 即 consumed）；超长走 offload + 预览；部分 settle 不提前注入 |
+| settle → digest | 全 settle park 单容器 `_pendingAsyncResults`（+role）→ agent.mjs run-start 注入（**单注入点**——splice 即 consumed）；超长走 offload + 预览；部分 settle 不提前注入 |
 | 驱动 / 中止 | `thincoder-vscode/src/extension/suspension.mjs` poolLive + 消化判据（任一 pending 族非空）；`cleanupConsultSessions`（普通回合收尾不再 abort——仅中止分支）；`sessionSignal ?? turn signal` 逐链中止，interrupt（Ctrl+I 停回合续跑）**不**逐链中止在飞会诊（F2 同款豁免——否则意见丢为失败注记） |
 | 消化轮动作域 | 手动档 auto-turn = `AUTO_TURN_DIGEST_DOMAIN` 禁写禁 spawn（同 advisor/escalate——无「consult 可写」例外）；机械拒绝 = 手动档 auto-turn 内 `consult_start` execute 门拒绝；`consult_stop` 保留放行（控制类豁免） |
 | 面板可见性 | `onSubagent` consult 事件 → 底部活动面板 / 冻结入流（reply preview ≤8KB）；每 consultant 一条活动块、回复预览随 answered 事件 |
@@ -242,6 +243,8 @@ consult_stop
 
 ## 变更记录
 
+- 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 1 行折行（132——语义零改）。**零新语义**。
+
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #1 / #40 / #41 / #93 / #95 / #104–#110 / #159–#161 + 四要素明细 · §2.5.1 A24）；**语义零改**，行号沿用原编号。
 - 2026-09-14（S1 收口轮）：§5 补**核内落点行数**指针（`agent-tools/panel-blocks.mjs`——#159 · #180 收正）。
 - 2026-09-14（markdown 面小收正轮）：§1 / §2.4 裸名点名补路径前缀（`advisor/provider.mjs` · `advisor/tools.mjs` · `thincoder-core/agent-tools/subagent-panel.mjs`——与 `src/provider.mjs` / `src/tools.mjs` / `thincoder-cli/src/tui/subagent-panel.mjs` 同名不同物；**消除歧义不改判据**）〔W10/W12 后该轮点名端点已退役——本条为历史记录〕 （迁移期引文）
@@ -257,3 +260,5 @@ consult_stop
 - 2026-09-25（**hygiene-ab 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-ab.md` §2 · 台账 #239）：§2.3 行 109 前提校验列 VSC 侧坐标 `src/advisor/tools.mjs:29-37`（盘上无）**改指**核现体 `thincoder-core/advisor/loop.mjs:31`（检索面恒在句——承接实核 = `grep code_search thincoder-core/advisor/*.mjs`）。**语义零改**。
 - 2026-09-30（**consult 同族收齐批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-consult-family.md` §1 · 台账 #748）：§6.2 ∥ §6.3 两处「child settle 即冻结」收正 = **随会话消费归档**（settle ⇒ `⟦ev⟧settled` 驻留 → 消费窗补发 `⟦ev⟧done`；会话 stopped ⇒ `⟦ev⟧stopped` 即折）；
   机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8（本档不重述）。明细 = 批档 §2。
+- 2026-10-01（**consult 同族收齐批 · 修复轮（评审轮 1 · 发现 3 ∕ 8 · 父侧裁 = 全采纳）· eng-designer**——承 `docs/batches/2026-09-30-consult-family.md` §3）：§6.5 接线表 settle→digest 行落点容器收正 = **单容器 `_pendingAsyncResults`（+role）**（消同档两处异述——发现 3）；§6.2 条目形状字面补 `childIds`（子块映射表——机制单源 = 池档 §6.8）。**零机制改**。
+- 2026-10-01（**consult 同族收齐批 · 修复轮（评审轮 2 · 发现 1 · 父侧裁 = 全采纳）· eng-designer**——承 `docs/batches/2026-09-30-consult-family.md` §3 轮次 2）：§6.2 消费面半句重锚 = **起跑窗（主面）∥ `reclaim` ∥ 退出 freeze（兜底幂等）· 三端同形**（桌面 ∥ VSC = 起跑刻 `childIds` 逐子块补发；CLI = 起跑刻直接冻结）；原「CLI = reclaim 消费判据」句退场。**零新语义**（机制单源 = 池档 §6.8）。

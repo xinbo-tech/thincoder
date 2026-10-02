@@ -182,6 +182,8 @@
   "settings.indexNotBuilt": "索引未构建，向量搜索未启用。",
   "settings.indexBuilding": "构建中…",
   "settings.indexBuilt": "✓ 索引已构建：${files} 个文件，${chunks} 个块",
+  "settings.indexDbSize": "库大小：${size}",
+  "settings.indexOriginCounts": "代码 ${code} · 文档 ${doc}",
   "settings.secretDeleteConfirm": "确定删除？删除后无法恢复——凭证原文不可复得，只能重新配置或回服务商重取。",
   "settings.reason.mtimeConflict": "配置已在别处变更——请重载后再保存",
   "settings.proxyTestRunning": "测试中…",

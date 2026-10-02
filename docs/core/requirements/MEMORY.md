@@ -210,9 +210,12 @@ ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `
 | F-S7 大库操作面处置 | 每回合的 embedding 回填**探针**走部分索引（schema v10——只增索引）；`COUNT` ∕ 大纲面 **origin 限定 + 有界形**；全量同步**收尾 stale 删除循环**同款让出；**读面零写**（模型失效判定留读面 = 降级 FTS-only + 一行可见，失效执行移维护口） | 不引 worker_thread（升级触发 = 修复后单回合召回墙钟仍 ≥ 0.5 s）；不改召回语义 ∕ limit ∕ RRF；不建 ANN |
 | F-S8 体积护栏与增量维护 | `memoryStatus` 出 `dbBytes` + 逐 origin 行数；每 origin 行预算（WARN 20k ∕ CAP 100k——只停新增，行序确定性）；commit 锚改 **per-origin** 键（旧键兼容 = 全扫一次）；`gitSync` diff 表带 `--relative`（路径形态与索引同形） | 无自动删除 ∕ 自动 VACUUM；不做写侧 checkpoint；`D:/dgx-spark` 系存量 = 用户裁定项 |
 
-**非功能**：N-S4 **剪枝安全可机判**（零命中 ⇒ 无备份；`--confirm` 后命中行 0 ∧ 非命中行逐键等前值 ∧ `integrity_check` ok）· N-S5 **成本可证**（探针计划含 `USING INDEX`；预算越界返回「+」形）· N-S6 **零行为变化（排除面 ∕ v10 面）**（`excludePaths` 缺省 `[]`、v10 只增索引）；**默认面行为变化（在册）** = ① M1 锚 per-origin 化（旧单键 ⇒ 该 origin 首扫一次）② M2 子目录 origin 落行 path 形态收正 ③ B3 ∕ B4 越界返回「+」形 ∕ 提示行。
+**非功能**：N-S4 **剪枝安全可机判**（零命中 ⇒ 无备份；`--confirm` 后命中行 0 ∧ 非命中行逐键等前值 ∧ `integrity_check` ok）· N-S5 **成本可证**（探针计划含 `USING INDEX`；预算越界返回「+」形）· N-S6 **零行为变化（排除面 ∕ v10 面）**（`excludePaths` 缺省 `[]`、v10 只增索引）；
+  **默认面行为变化（在册）** = ① M1 锚 per-origin 化（旧单键 ⇒ 该 origin 首扫一次）② M2 子目录 origin 落行 path 形态收正 ③ B3 ∕ B4 越界返回「+」形 ∥ 提示行。
 
-**判定句**：F-S6 —— manifest 夹具投影 `["./openclaw/","refs",""] → ["openclaw","refs"]`；`openclaw-fork/**` 不被 `openclaw` 吞；`sweep --path` 干跑 = 仅命中行动作 `delete`；`--confirm`（沙箱库）⇒ 命中行 0 ∧ 非命中行逐键不变 ∧ 备份 `integrity_check` ok；零命中 ⇒ 无备份零写。F-S7 —— `user_version=10` ∧ `sqlite_master` 两枚部分索引在 ∧ 两探针计划无 `SCAN`；`search ∕ docSearch ∕ codeSearch` 经 spy 句柄零 `UPDATE∕INSERT∕DELETE`。F-S8 —— `dbBytes` = `statSync`；CAP 越界 `budgetSkipped > 0` 且两跑跳过集逐字相等；两 origin 锚键互不覆盖；子目录 origin touch 后 `gitSync` 重索引（非删除支）。
+**判定句**：F-S6 —— manifest 夹具投影 `["./openclaw/","refs",""] → ["openclaw","refs"]`；`openclaw-fork/**` 不被 `openclaw` 吞；`sweep --path` 干跑 = 仅命中行动作 `delete`；`--confirm`（沙箱库）⇒ 命中行 0 ∧ 非命中行逐键不变 ∧ 备份 `integrity_check` ok；零命中 ⇒ 无备份零写。
+  F-S7 —— `user_version=10` ∧ `sqlite_master` 两枚部分索引在 ∧ 两探针计划无 `SCAN`；`search ∕ docSearch ∕ codeSearch` 经 spy 句柄零 `UPDATE∕INSERT∕DELETE`。
+  F-S8 —— `dbBytes` = `statSync`；CAP 越界 `budgetSkipped > 0` 且两跑跳过集逐字相等；两 origin 锚键互不覆盖；子目录 origin touch 后 `gitSync` 重索引（非删除支）。
 
 **设计侧 = `docs/core/design/MEMORY.md` §6.14 + §7 D-MEM23–D-MEM28**（批次档 `docs/batches/2026-09-30-memory-db-family.md` §2 **三方一致**）——本档不复制。
 
@@ -237,3 +240,4 @@ ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `
 - 2026-09-18（**TUI 假死批 · 父侧直接执行**）：新增 §4.9「扫描面响应性 / origin 归一 / WAL 卫生」（F-S1–F-S5 / N-S1–N-S3——评审 §3 发现的 3 项缺位条目补齐）；另 §4.6 **N-M3 措辞收正**（「无迭代器则 rowid 分页」→「键序分页」，语义 = 可移植分页不变）；源 = 批次档 `docs/batches/2026-09-18-tui-freeze.md` §2 与设计档 `MEMORY.md` §6.10–§6.12。
 - 2026-09-25（**end-diff-registry 批 · 需求层二态化轮 · eng-designer**——承 `docs/batches/2026-09-25-end-diff-registry.md` §2 上抛①〔父侧明示委托本轮落〕 · 台账 #339①）：§4.7 端差五行二态化——存储 / 索引两行 = 已消解（零动作）；层数行 = **已裁保留**（结构性）；配置面行改述为**形态（非登记项）**；命名面行标**同源**（非端差）；裁定行落地。**零新语义**。
 - 2026-09-30（**memory.db 家族批 · 设计轮 · 父侧笔**——承 `docs/batches/2026-09-30-memory-db-family.md` §2 上抛① · 台账 #693）：新增 §4.10「索引规模治理与大库操作面」（F-S6–F-S8 / N-S4–N-S6 + 判定句——与设计档 §6.14 ∕ D-MEM23–28、批次档 §2 三方一致）。
+- 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 2 行折行（213 ∥ 215——语义零改）。**零新语义**。

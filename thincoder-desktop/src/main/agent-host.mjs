@@ -44,8 +44,8 @@ import { extractFileLinks } from "./file-links.mjs" // 验存文件链接（相�
 import { createGates } from "./suspensions.mjs"
 import { appendRecord, loadAgentSlot, saveDistilledSlot } from "./session-io.mjs"
 import { createSubagentFace } from "./subagent-face.mjs"
-// 装配面（状态栏对齐批出档 —— 原档装配段逐字搬运）：本档取其默认装配函数与名面转口。
-import { assembleFor } from "./agent-assemble.mjs"
+// 装配面（状态栏对齐批出档 —— 原档装配段逐字搬运）：本档取其默认装配函数与名面转口 + 词面构造（KD-70）。
+import { assembleFor, mcpWarningReminder } from "./agent-assemble.mjs"
 import { createTurnDriver } from "./turn-driver.mjs"
 // R1 输入面板移植（桌面宿主面）：模式位四写面 ∕ @ 补全面两处理体出档（新增两面零入档 —— 拆分评审结论见档头）。
 import { createSessionFlags } from "./session-flags.mjs"
@@ -167,11 +167,18 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   }
 
   /** 装配 + 装载本键槽：`loadAgentSlot` 在**宿主内**（假 `assemble` 注入同走装载 —— §1.14 ① 的语义面
-   *  是「装配出的代理必须持槽值」，不在装配函数里）；槽缺 ⇒ 新建形（代理原样）。 */
+   *  是「装配出的代理必须持槽值」，不在装配函数里）；槽缺 ⇒ 新建形（代理原样）。
+   *  **MCP 警告消费（KD-70）**：装配尾入队 —— 装载后（`applySession` 重设 `_pendingReminders`）∥ 装配一次
+   *  推送一次（同 key 复用不重推）；词面 = `agent-assemble.mjs` `mcpWarningReminder`（首两段逐字同 CLI）。 */
   async function assembleAndLoad(key, slot) {
     const cwd = projects.currentCwd()
     const agent = await assemble({ cwd, slot, key, deps })
     loadAgentSlot(agent, cwd, slot)
+    const reminder = mcpWarningReminder(agent._mcpWarnings)
+    if (reminder !== null) {
+      agent._pendingReminders = agent._pendingReminders ?? []
+      agent._pendingReminders.push(reminder)
+    }
     return agent
   }
 

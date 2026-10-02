@@ -20,7 +20,7 @@
 | `thincoder-cli/src/tui/suspension-drive.mjs` | 挂起会话驱动器（`suspensionSession`）——状态机行表以 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8 为权威 |
 | `thincoder-cli/src/tui/display-budget.mjs` | 显示层字符额度：常量单源 + `lineChars` + `syncLineBudget` 对账（§5） |
 | `thincoder-cli/src/tui/tool-events.mjs` | 工具事件 → TUI 状态（回合期回调装配点——显示面契约见 `docs/cli/design/TUI-TOOL-OUTPUT.md`） |
-| `thincoder-cli/src/tui/lifecycle-records.mjs` | 消化生命周期记录承载件（**拟新增** · #726）：记录形构建（`digest` 痕三型 ∥ `subagent` 快照）∥ 痕行文本 live ∥ 重建同调（单一实现）∥ rows 保尾 ∥ 终态行回扫——写点三处 + 恢复面同调（§6） |
+| `thincoder-cli/src/tui/lifecycle-records.mjs` | 消化生命周期记录承载件（#726）：记录形构建（`digest` 痕三型 ∥ `subagent` 快照）∥ 痕行文本 live ∥ 重建同调（单一实现）∥ rows 保尾 ∥ 终态行回扫——写点三处 + 恢复面同调（§6） |
 
 **不在本档**：界面骨架（渲染 / 按键 / 折叠）→ `docs/cli/design/TUI.md`；命令与选择面 → `docs/cli/design/TUI-COMMANDS.md`。
 
@@ -181,16 +181,21 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 > 机制（记录形 ∥ 写缝 ∥ 读缝 ∥ 重建义务 ∥ 容差）单源 = `docs/core/design/SESSION.md` §6.26；需求 = `docs/cli/requirements/TUI.md` **F18**（node = core §4.4 F-S7）。本档 = **CLI 侧承接细则**：写点 ∥ 恢复重建 ∥ 翻页 ∥ 容差。
 
 - **写点（三处——进程内同点追加，核 `pushRecord(agent, record)` 单点）**：
-  - 痕起跑 ∥ 收尾 = `thincoder-cli/src/tui/suspension-drive.mjs` `digestTurn`：起跑（`:90-91` 两行同点）⇒ `{ kind:"digest", status:"start", n:pend0, tier:upstream?"ask":"digest", ...(ask ?? {}) }`；
-    收尾（`:99-100`）⇒ `{ kind:"digest", status:"end", ok:outcome==="ok", ms }`（`ms` 与行文案 `seconds` **同值单算式**——`(ms/1000).toFixed(1)`）。
-  - cap = `thincoder-cli/src/tui/agent-turn.mjs:226-232`（`cap-stop` 分支——`:230` 行同点）⇒ `{ kind:"digest", status:"cap", mode:"stop", turns:error.turn }`（CLI 现无 auto 档产者——读取面按契约前向兼容）。
-  - 归档快照 = `thincoder-cli/src/tui/subagent-freeze.mjs` `freezeSubTaskLines`（冻结载体行插入同点）⇒ `{ kind:"subagent", meta, rows }`：`meta` = 冻结时点块头事实（`key ∥ role ∥ model ∥ startedAt(=sub.started) ∥ doneAt ∥ turn ∥ maxTurns ∥ status`——`stopped` ⇒ `"stopped"` ∥ `lastError` 在场 ⇒ `"error"` ∥ 其余 `"done"`）；`rows` = `sub.blocks` 行集（条目形 `{kind,text}` 同备）+ `sub.dropped > 0` ⇒ 前置省略标记行（行数真值）。
+  - 痕起跑 ∥ 收尾 = `thincoder-cli/src/tui/suspension-drive.mjs` `digestTurn`：起跑（`:101` 两行同点）⇒ `{ kind:"digest", status:"start", n:pend0, tier:upstream?"ask":"digest", ...(ask ?? {}) }`；
+    收尾（`:116`）⇒ `{ kind:"digest", status:"end", ok:outcome==="ok", ms }`（`ms` 与行文案 `seconds` **同值单算式**——`(ms/1000).toFixed(1)`）。
+  - cap = `thincoder-cli/src/tui/agent-turn.mjs:233-235`（`cap-stop` 分支——`:235` 行同点）⇒ `{ kind:"digest", status:"cap", mode:"stop", turns:error.turn }`（CLI 现无 auto 档产者——读取面按契约前向兼容）。
+  - 归档快照 = `thincoder-cli/src/tui/subagent-freeze.mjs` `freezeSubTaskLines`（冻结载体行插入同点）⇒ `{ kind:"subagent", meta, rows }`：`meta` = 冻结时点块头事实（`key`（写面归一 = 规范形 `sub:<role>#<id>`——#790）
+    ∥ `role ∥ model ∥ startedAt(=sub.started) ∥ doneAt ∥ turn ∥ maxTurns ∥ status` ∥ `pool?` ∥ `queued?`——`stopped` ⇒ `"stopped"` ∥ `lastError` 在场 ⇒ `"error"` ∥ 其余 `"done"`；
+    `pool` = `sub.async === true` 显式两写（非排队）∥ 排队 ⇒ `queued:true` 且 `pool` 不写；字段文法单源 = core `SESSION.md` §6.26）；`rows` = `sub.blocks` 行集（条目形 `{kind,text}` 同备）+ `sub.dropped > 0` ⇒ 前置省略标记行（行数真值）。
   - 追加失败不阻断（核尽力面）；`state._agent` ∥ `ctx.agent` 缺席（headless / 子代理内）⇒ 零动作。
-  - **承载件** = 新档 `thincoder-cli/src/tui/lifecycle-records.mjs`（记录形构建 ∥ 痕行文本（live ∥ 重建同调——单一实现零副本）∥ rows 保尾 ∥ 终态行回扫——三写点 + 恢复面同调）。
+  - **承载件** = `thincoder-cli/src/tui/lifecycle-records.mjs`（记录形构建 ∥ 痕行文本（live ∥ 重建同调——单一实现零副本）∥ rows 保尾 ∥ 终态行回扫——三写点 + 恢复面同调）。
 - **恢复重建**（`thincoder-cli/src/tui/startup.mjs` `historyToLines` 增记录分支——渲染面零改）：
+  - **复列 = 全量**（2026-10-01 自然形跟正 · 台账 #768）：多轮 `digest` 记录逐轮按其记录位次复列——**记录序 ≡ 恢复序**（零截点；未结轮照现（无 `end` 记录 ⇒ 起跑行 ∥ 计数行 ∥ cap 行照出；三端同判——消化重放口径批 · 2026-10-01 · 台账 #771））。
   - `digest` 记录 ⇒ 痕行：`start` ⇒ 标签行（`tier==="ask"` 携 `from`/`msg` 取 `digest.turnLabelAsk` ∥ `digest.turnLabel`）+ `n>0` 计数行（`digest.start`）；`cap` ⇒ `digest.capStop`（`turns`）；`end` ⇒ 终态行（`ok!==false` ⇒ `digest.done`（`n` + `seconds`）∥ `digest.aborted`（`seconds`）——**文案与活流同算式**）。
-  - **终态行 `n` 解析**：页内（含 ±1 页沿）有本轮 `start` ⇒ 直用；缺席（跨页分裂）⇒ **存储回扫**（`store.page` 向更早逐段回读，至命中本轮 `start` 止）⇒ **跨页零损（容差①于 CLI 不成立）**。解析由调用面（`restoreLines` ∥ `createLoadOlder`——持有存储读口）预完成；`historyToLines` 仅增分支（形零改）。
-  - `subagent` 记录 ⇒ 冻结载体行 `{ text:"subagent activity: <key>", color:C.dim, _frozenSubTask: 合成件 }`——合成件 = 由 `meta`/`rows` 构建（`key ∥ role ∥ model ∥ done:true ∥ doneAt ∥ blocks(=rows 行集) ∥ stopped ∥ _charCount(=行集字符和——账实一致 §5.4）），**渲染端零改**（`render-segments.mjs` 折叠头 + tail-3 原式消费）。
+  - **终态行 `n` 解析**：页内（含 ±1 页沿）有本轮 `start` ⇒ 直用；缺席（跨页分裂）⇒ **存储回扫**（`store.page` 向更早逐段回读，至命中本轮 `start` 止）⇒ **跨页零损（容差①于 CLI 不成立——绑定态；模式 F 未绑 ⇒ 不适用——模式 F = 未绑定，单源 = `docs/core/design/SESSION.md` §6.26）**。解析由调用面（`restoreLines` ∥ `createLoadOlder`——持有存储读口）预完成；`historyToLines` 仅增分支（形零改）。
+  - `subagent` 记录 ⇒ 冻结载体行 `{ text:"subagent activity: <key>", color:C.dim, _frozenSubTask: 合成件 }`——合成件 = 由 `meta`/`rows` 构建（`key`（剥 `sub:` 前缀——显示 = 本地无前缀形；行文取值同源自合成件 `key`）
+    ∥ `role ∥ model ∥ done:true ∥ doneAt ∥ blocks(=rows 行集) ∥ stopped ∥ _charCount(=行集字符和——账实一致 §5.4）` ∥ `async(= meta.pool === true)` ∥ `queued(= meta.queued === true)`），**渲染端零改**（`render-segments.mjs` 折叠头 + tail-3 原式消费——模式词 waiting/async/sync 三态照出）。
+    **停面词判据（#795）**：合成件 `stopped` = 记录 `status` 停止面词集（词面判据单源 = `docs/core/design/SESSION.md` §6.26——本档不复述）。
   - 负控 = 记录缺 ⇒ 恢复面逐字等价；未绑（模式 F）⇒ 既有径零改（无 sidecar 存储腿——记录入人读线、落盘随既有保存链）。
 - **翻页**：数据源零改（`store.page`——记录已在存储、随页自然可见）；「N more earlier messages」与「N messages」口径含记录（与桌面 KD-55 ⑤ 同口径容忍）。
 - **容差（CLI 侧状态）**：① 跨页分裂 = **消**（上「`n` 解析」）；② 归档快照晚一拍 = **消**（产生面 = 进程内冻结点，先于回合落盘 ∥ 读径 = 存储直读——追加即达）；③ 复活径双记录（墓碑复活 ⇒ 同键两代冻结 ⇒ 重建面双块 ∥ 活流单块）——**在册**（低频异常修复径 ∥ 数据零损；重开条件 = 实测走查命中 ⇒ 另批）。
@@ -224,6 +229,24 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 | 显示层额度的常量数值来源 | 常量本体 | `thincoder-cli/src/tui/display-budget.mjs`（单源——本档引用不复制数值之外的口径） |
 
 ## 变更记录
+
+- 2026-10-02（**记录形残项批（#795）· 设计档随动轮 · eng-designer**——承批档 `docs/batches/2026-10-02-record-shape-residuals.md` §2 随动表）：§6 合成件补**停面词判据句**（`stopped` = 记录 `status` 停止面词集——词面判据单源 = `docs/core/design/SESSION.md` §6.26）。**零新语义**（判据单源落位）。
+
+- 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 2 行折行（187 ∥ 194——语义零改）。**零新语义**。
+
+- 2026-10-01（**消化重放口径批 · 修复轮（评审轮 1 · 发现 9）· eng-designer**——承批档 `docs/batches/2026-10-01-digest-replay-choices.md` §3 轮次 1 · 台账 #771 ∥ #773）：§6 名义随动（「复列口径统一批」⇒「消化重放口径批」——随批档题名）。**零新语义**（名随动）。明细 = 批档 §2 修复轮块。
+
+- 2026-10-01（**零语义清账批 #2 · 修复轮（评审轮 1 · 发现 3 ∕ 5）· eng-designer**——承批档 `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §3 轮次 1 · 台账 #791）：§6 `:193`「模式 F」补单源指针（未绑定括注 + 单源 = `docs/core/design/SESSION.md` §6.26——与单源句同拍）。**零新语义**（指针补）。明细 = 批档 §2 修复轮块。
+
+- 2026-10-01（**消化重放口径批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-01-digest-replay-choices.md` §1 ∥ §2 · 台账 #771 ∥ #773）：§6 复列句「未结末轮照现（沿现行口径）」⇒ 统一口径（未结轮照现——起跑 ∥ 计数 ∥ cap 照出；三端同判）。**零新语义**（口径收正）。明细 = 批档 §2。
+
+- 2026-10-01（**零语义清账批 #2 · 文档面轮 · eng-designer**——承批档 `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §2 · 台账 #791）：§6 cap 坐标对盘收正（`agent-turn.mjs:226-232`/`:230` ⇒ `:233-235`/`:235`——实盘 ∥ 批档 `2026-09-30-cross-end-digest-recovery.md` :357 ∥ :413 单源）+ 「容差①于 CLI 不成立」补**绑定态限定**（模式 F 未绑 ⇒ 不适用）。**零新语义**（坐标 ∥ 限定句收正）。明细 = 批档 §2。
+
+- 2026-10-01（**消化行自然形 · 两端跟正批（CLI 面）· 实施后随动轮 · eng-designer**——承批档 `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §5）：§6 写点坐标对盘收正——起跑 `thincoder-cli/src/tui/suspension-drive.mjs:90-91 ⇒ :101` ∥ 收尾 `:99-100 ⇒ :116`（实施净删后实读）。**零新语义**。明细 = 批档 §2 随动块。
+
+- 2026-10-01（**消化行自然形 · 两端跟正批（CLI 面）· 修复轮（评审轮 1 · 发现 8）· eng-designer**——承批档 `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §3 轮次 1）：§1 模块地图行 ∥ §6 承载件句**撤「拟新增」/「新档」标记**（实读：`thincoder-cli/src/tui/lifecycle-records.mjs` 在盘——写点三处 ∥ 恢复面接线在位）。**零新语义**。明细 = 批档 §2 修复轮块。
+
+- 2026-10-01（**消化行自然形 · 两端跟正批（CLI 面）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §1 ∥ §2 · 台账 #768）：§6 增**复列 = 全量**句（记录序 ≡ 恢复序——零截点；未结末轮照现沿现行口径）。**零新语义**（桌面判据随正）。明细 = 批档 §2。
 
 - 2026-09-30（**跨端消化面恢复批 · 修正轮（评审轮 1 · 发现 6 ∥ 11）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §3 轮次 1）：§1 模块地图补新档行 `thincoder-cli/src/tui/lifecycle-records.mjs`（**拟新增**——同批回写义务）；§6 负控措辞收正（记录入人读线、落盘随既有保存链——消「仅内存形」误读）。**零既有语义改**。
 

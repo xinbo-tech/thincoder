@@ -7,6 +7,8 @@ import { countConvLines } from "./render-conversation.mjs"
 // TUI-OOM-ROOTCAUSE（TUI-SESSION-VIEW.md §5.3/§5.4）：恢复/翻页行过额度 + state.lines 总量对账。
 import { capLine, accountLine, accountAll, releaseLine, syncLineBudget } from "./display-budget.mjs"
 import { shiftFreezeAnchors } from "./subagent-blocks.mjs"
+// #726 记录分支承载（痕行文案 live∥重建同调 ∥ 跨页回扫 ∥ subagent 合成件）
+import { digestTraceLines, resolveSplitTerminalNs, resolvedStartN, synthSubTask } from "./lifecycle-records.mjs"
 
 /** Lazy history window (parity with VS Code HISTORY_PAGE_SIZE): first paint loads
  *  the latest INITIAL_HISTORY_MESSAGES, then PgUp-at-top loads HISTORY_PAGE_MESSAGES
@@ -21,6 +23,8 @@ export const HISTORY_PAGE_MESSAGES = 20
  */
 export function historyToLines(history, startIdx, endIdx) {
   const lines = []
+  // 痕行复列 = 全量（本批 2026-10-01 · 台账 #768 自然形跟正）：逐记录出（记录序 ≡ 恢复序——零截点；
+  // 未结末轮照现——沿现行口径）。
   // Cross-page turn state: if the message BEFORE this page is a tool/assistant,
   // the page starts mid-turn and must NOT emit a fresh "❯ ThinCoder:" label
   // (a turn gets ONE label in the live run; history stores one assistant
@@ -110,6 +114,17 @@ export function historyToLines(history, startIdx, endIdx) {
           },
         })
       }
+    } else if (m.kind === "digest") {
+      // #726 记录分支：痕行逐条复列（文案 = lifecycle-records 单一实现——与活流同算式）；
+      // **本批 2026-10-01（台账 #768 自然形跟正）**：复列 = **全量**（记录序 ≡ 恢复序——零截点；
+      // 未结末轮照现——沿现行口径）；
+      // end 的 `n` 解析序 = 预解析注记（跨页回扫产物）→ 页内（含 ±1 页沿）回扫。
+      const startN = m.status === "end" ? resolvedStartN(history, i) : null
+      lines.push(...digestTraceLines(m, startN))
+    } else if (m.kind === "subagent") {
+      // #726 记录分支：归档快照 ⇒ 冻结载体行 + 合成件（渲染端零改消费）；#790：行文取值同源自合成件 `key`
+      const frozen = synthSubTask(m) // 读面已剥 `sub:` 前缀——显示 = 本地无前缀形（与活流冻结载体同形）
+      lines.push({ text: `subagent activity: ${frozen.key}`, color: C.dim, _frozenSubTask: frozen })
     }
   }
   return lines
@@ -134,6 +149,8 @@ export function restoreLines(state, desc) {
   const loaded = Math.min(INITIAL_HISTORY_MESSAGES, total)
   const start = total - loaded
   state._lineIdCounter = state._lineIdCounter ?? 0
+  // #726 终态行 `n` 预解析（跨页分裂 ⇒ 存储回扫——调用面持有存储读口；页内直用者零回扫）
+  resolveSplitTerminalNs(window, base, state._agent?._recordStore)
   const fresh = historyToLines(window, Math.max(0, start - base), window.length)
   for (const l of fresh) l.text = capLine(l.text) // 行额度（§5.3 恢复行过 capText）
   // Stable per-line ids (P1, 2026-08-30): fold keys for tool blocks derive from
@@ -178,6 +195,8 @@ export function createLoadOlder({ agent, state, render }) {
     let older
     if (store?.page) {
       const { messages, base } = store.page(start, end, { margin: 1 })
+      // #726 终态行 `n` 预解析（页内（含 ±1 页沿）缺席本轮 start ⇒ 存储回扫）
+      resolveSplitTerminalNs(messages, base, store)
       older = historyToLines(messages, Math.max(0, start - base), Math.min(messages.length, end - base))
     } else {
       older = historyToLines(agent._fullHistory ?? [], start, end)

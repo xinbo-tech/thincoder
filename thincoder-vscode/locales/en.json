@@ -182,6 +182,8 @@
   "settings.indexNotBuilt": "Index not built. Vector search is inactive.",
   "settings.indexBuilding": "Building…",
   "settings.indexBuilt": "✓ Index built: ${files} files, ${chunks} chunks",
+  "settings.indexDbSize": "Database size: ${size}",
+  "settings.indexOriginCounts": "code ${code} · doc ${doc}",
   "settings.secretDeleteConfirm": "Delete? This cannot be undone — the original credential cannot be recovered; you would have to reconfigure it or get a new one from the provider.",
   "settings.reason.mtimeConflict": "Config changed elsewhere — reload before saving",
   "settings.proxyTestRunning": "Testing…",

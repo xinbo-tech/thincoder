@@ -11,7 +11,7 @@
  * 「requests made with net.fetch can be made to custom protocols」）——Node 全局 `fetch` 对自定义 scheme 无保证。
  */
 import { resolve } from "node:path"
-import { BrowserWindow, Menu, dialog, nativeTheme, net, shell } from "electron"
+import { BrowserWindow, Menu, app, dialog, nativeTheme, net, shell } from "electron"
 import { loadConfig } from "@thincoder/core/config.mjs"
 import { HOST, SCHEME, isAppNavigation, protocolStats } from "./protocol.mjs"
 // 右键编辑菜单（复制面对齐批 · D27 ∕ KD-43）：模板两纯函数出档 `context-menu.mjs` —— 本档只做宿主面落子。
@@ -19,7 +19,11 @@ import { contextMenuLabels, contextMenuTemplate } from "./context-menu.mjs"
 // 会话维护线（R1 · 桌面功能对位批）：两枚处理体出档（本档只做宿主面 —— 确认 ∕ 结果两枚原生对话框）；
 // 维护面词表出档 `menu-words.mjs`（#533 —— 词表单源；本档只做词面消费落子）。
 import { gcSummaryText, indexSummaryText, runSessionGcMaintenance, runSessionIndexMaintenance } from "./session-maintenance.mjs"
-import { menuLabels } from "./menu-words.mjs"
+import { menuLabels, settingsSectionLabels } from "./menu-words.mjs"
+// 菜单结构出档（D36 · 菜单体系批）：模板纯函数 `menuTemplate` + 主题三值 `THEME_VALUES`（报告校验面共用 × 零第二份）。
+import { THEME_VALUES, menuTemplate } from "./app-menu.mjs"
+// 最近项目读取（构建时读 —— 数据面只读复用 `recentDirs`，零改；D36 重建点五处）。
+import { recentDirs } from "./projects.mjs"
 
 /** 预载绝对路径（隔离面唯一入口；`ipc.mjs` 亦引本常量读取白名单）。 */
 export const PRELOAD_PATH = resolve(import.meta.dirname, "../preload/preload.cjs")
@@ -29,6 +33,11 @@ const WINDOW = Object.freeze({ WIDTH: 1200, HEIGHT: 800, MIN_WIDTH: 800, MIN_HEI
 
 /** 画布色镜像（非通道面）：与 `theme.css` 主题变量（`--bg` 两态）同值，防首帧白闪；单源在 `theme.css` ⇒ 改色须两处同步（待修正轮定形）。 */
 const THEME_COLORS = Object.freeze({ dark: "#15171c", light: "#f7f8fa" })
+
+/** 菜单勾选态回读缓存（D36 —— `theme:state` 到达置位；报告未达窗 ⇒ `null` ⇒ 主题▸全零勾，fail-open 零误勾）。 */
+let menuTheme = null
+/** 当前窗口（菜单重建面持有 —— `createWindow` 登记；`refreshMenu` 经其幂等重建）。 */
+let activeWin = null
 
 /** 探针（批档 §2.11 收正⑧ 5 枚 + R1 双根 3 枚 + R9 门①正读数 1 枚）：正 3 + 负 6；各负探针命中的门见 stderr 归属行。 */
 const PROBES = Object.freeze([
@@ -63,32 +72,77 @@ export function resolveTheme() {
   return nativeTheme.shouldUseDarkColors ? "dark" : "light"
 }
 
-/** 原生菜单：只挂主进程动作面（窗口 / 缩放 / 退出 / 开发者工具 + Chromium 原生编辑 role + 维护两项）
- *  ——零 IPC 依赖项；维护两项出口 = 本档 `runMaintenance`（与 `session:gc` ∕ `session:index` 两通道同处理体）。
- *  维护面词面 = `menu-words.mjs` `menuLabels`（#533 —— 词表单源；`locale` 现读取 `loadConfig()`；读失败
- *  ⇒ 回落 en + 记错（零静默 —— 沿右键菜单 locale 现读同形））。 */
+/** 原生菜单（D36 · 菜单体系批 ∥ 设置菜单升级批 · #817 —— 决策单源 = `docs/desktop/design/PROJECT.md` §2 **KD-65**
+ *  ∥ **KD-67**）：五组双语（文件 ∥ 编辑 ∥ 视图 ∥ **设置** ∥ 帮助）—— 模板纯函数 = `app-menu.mjs`（`menuTemplate`
+ *  —— 零 electron ⇒ 平 node 直测）；词面单源 = `menu-words.mjs` `menuLabels`（`locale` 现读 `loadConfig()`；读失败
+ *  ⇒ 回落 en + 记错，零静默 —— 沿右键菜单 locale 现读同形）；编辑四值经 `contextMenuLabels(locale)`（两菜单同词面
+ *  —— 零第二份）；设置六组段名经 `settingsSectionLabels(locale)`（HOST_DICT `settings.section.*` 投影注入 —— 零第二份）。
+ *  动作面两缝：`onAction` = **六动作**通道闭集（+`openSettings` —— `sendMenuAction` ⇒ `ev:menu` 下行；旧「零 IPC
+ *  依赖项」口径随 D36 退场）；`onNative` = 宿主自办三项（维护两项 ⇒ `runMaintenance` —— 与 `session:gc` ∥
+ *  `session:index` 两通道同处理体；关于 ⇒ 原生面板）；勾选态 = `menuTheme` 回读缓存（报告未达 ⇒ 全零勾 —— fail-open 零误勾）。 */
 function buildMenu() {
-  const group = (label, roles) => ({
-    label,
-    submenu: roles.map((role) => (typeof role === "string" ? { role } : role)),
-  })
   let words
+  let edit
+  let sections
   try {
-    words = menuLabels(loadConfig()?.locale)
+    const locale = loadConfig()?.locale
+    words = menuLabels(locale)
+    edit = contextMenuLabels(locale)
+    sections = settingsSectionLabels(locale)
   } catch (error) {
     console.error("[window] menu locale readback failed:", error)
     words = menuLabels("en")
+    edit = contextMenuLabels("en")
+    sections = settingsSectionLabels("en")
   }
-  return Menu.buildFromTemplate([
-    group("File", ["close", { type: "separator" }, "quit"]),
-    group("Edit", ["undo", "redo", { type: "separator" }, "cut", "copy", "paste", "selectAll"]),
-    group("View", ["reload", "forceReload", "toggleDevTools", { type: "separator" }, "resetZoom", "zoomIn", "zoomOut", { type: "separator" }, "toggleFullscreen"]),
-    group("Window", ["minimize", "zoom"]),
-    group(words.maintenance, [
-      { label: words.cleanUp, click: () => void runMaintenance("gc") },
-      { label: words.rebuildIndex, click: () => void runMaintenance("index") },
-    ]),
-  ])
+  return Menu.buildFromTemplate(menuTemplate({
+    words, edit, sections, recent: recentDirs(), theme: menuTheme,
+    onAction: sendMenuAction, onNative: runNativeAction,
+  }))
+}
+
+/** 菜单重建（幂等 —— 五重建点同引：① 启动建窗 ∥ ② `project:open` 成功径（`ipc.mjs`）∥ ③ 语言写径
+ *  （`config:write` 成功径 —— `ipc-relays.mjs`）∥ ④ 主题态报告径（`setMenuTheme`）∥ ⑤ 窗口 `focus`）。
+ *  窗口缺 ∕ 已毁 ⇒ 零动作（fail-open）。 */
+export function refreshMenu() {
+  if (activeWin === null || activeWin.isDestroyed()) return
+  activeWin.setMenu(buildMenu())
+}
+
+/** 勾选态回读收面（`theme:state` 处理体转口 —— 渲染→主单向；D36 ∥ KD-65 ②）：三值闭集校验（`THEME_VALUES`
+ *  单源）⇒ 缓存 + 重建；表外值 ⇒ 零变更 + 记错 + `{ ok:false, reason:"invalid-theme" }`（防御档 —— 零静默）。 */
+export function setMenuTheme(theme) {
+  if (!THEME_VALUES.includes(theme)) {
+    console.error(`[window] theme:state refused out-of-range theme: ${String(theme)}`)
+    return { ok: false, reason: "invalid-theme" }
+  }
+  menuTheme = theme
+  refreshMenu()
+  return { ok: true }
+}
+
+/** 命令下行（`ev:menu` 主→渲染单向）：载荷 `{ action, path?, value? }`（`path` 仅最近项 ⇒ `openProject` 携；
+ *  `value` 携主二（`theme` 三值 ∥ `openSettings` 组名六值——缺 ⇒ 开设置面）；不携 `key` —— 非会话面）；
+ *  `isDestroyed` 守卫（已毁 ⇒ 零发送）。 */
+function sendMenuAction(action, path, value) {
+  if (activeWin === null || activeWin.isDestroyed()) return
+  const payload = { action }
+  if (typeof path === "string" && path !== "") payload.path = path
+  if (typeof value === "string" && value !== "") payload.value = value
+  activeWin.webContents.send("ev:menu", payload)
+}
+
+/** 宿主自办项（`onNative` 缝 —— 不经通道）：维护两项 ⇒ 既有 `runMaintenance`；关于 ⇒ 原生面板；表外 ⇒ 记错零动作。 */
+function runNativeAction(action) {
+  if (action === "gc" || action === "index") {
+    void runMaintenance(action)
+    return
+  }
+  if (action === "about") {
+    app.showAboutPanel()
+    return
+  }
+  console.error(`[window] native menu action refused: ${String(action)}`)
 }
 
 /** 回收确认（**原生模态** —— 菜单与 `session:gc` 通道同源）：默认 ∕ 取消键 = 「Cancel」⇒ 驳回 ∕ Esc ⇒
@@ -128,13 +182,18 @@ export function createWindow(onError) {
     width: WINDOW.WIDTH, height: WINDOW.HEIGHT, minWidth: WINDOW.MIN_WIDTH, minHeight: WINDOW.MIN_HEIGHT,
     backgroundColor: THEME_COLORS[resolveTheme()],
     show: false,
-    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: PRELOAD_PATH },
+    // #787 后台不节流：窗口后台（遮挡/隐藏）期照常出帧与交换——消「停摆—复显」相变（RENDERER.md §1.5）。
+    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: PRELOAD_PATH,
+      backgroundThrottling: false },
   })
   // D31 窗口重启最大化（#745·台账）：隐建（show:false）⇒ 先 maximize 后 show——maximize 官方语义「顺带 show 不聚焦」
   // ⇒ 首帧即最大化态（防默认尺寸可见闪帧）；show 补聚焦。「永远」语义 = 每次启动恒最大化：零窗口态读写（无记忆）。
   win.maximize()
   win.show()
-  win.setMenu(buildMenu())
+  activeWin = win // 菜单重建面持有（D36）——启动建窗 = 重建点①（`refreshMenu` 幂等）
+  // 关于面（D36 ∥ KD-65 ⑥ —— 建窗时一次）：应用名 ∥ 版本（`app.getVersion()` 动态）∥ 版权行（源 = D32 签名主体）。
+  app.setAboutPanelOptions({ applicationName: "ThinCoder", applicationVersion: app.getVersion(), copyright: "© 2026 Shanghai Xinbo Technology Co., Ltd." })
+  refreshMenu()
   /** 右键编辑菜单（复制面对齐批 · D27 ∕ KD-43）：Electron 无默认右键菜单 ⇒ 本档按 `context-menu` 事件落子；
    *  条目集（可编辑四件 ∕ 选中两件 ∕ 空选零菜单）与文案四键 = `context-menu.mjs` 两纯函数；`locale` 右键时刻
    *  现读（语言切换即时随动）；读失败 ⇒ 回落 en + 记错（零静默）；空模板 ⇒ 不 popup（非编辑空选 = 零菜单）。 */
@@ -150,6 +209,8 @@ export function createWindow(onError) {
     if (template.length === 0) return
     Menu.buildFromTemplate(template).popup({ window: win })
   })
+  /** 菜单重建点⑤（D36）：窗口 `focus` —— 外部盘面漂移兜底（最近项目 ∥ 语言面；主题勾随报告面即时重建）。 */
+  win.on("focus", () => refreshMenu())
   /** 加固（设计档未定形）：窗口内不开新窗，外链交系统浏览器；**窗口自身导航**（#389③）只许应用源 ——
    *  外部 URL ⇒ 拒（判据单源 = `protocol.mjs` `isAppNavigation`；refused 记 stderr——零静默）。 */
   win.webContents.setWindowOpenHandler(({ url }) => {

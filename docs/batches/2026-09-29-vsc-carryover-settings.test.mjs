@@ -318,7 +318,7 @@ test("L17-① 读链源锁：push 快照携 autoThink（读面半在场补齐）
 })
 
 test("L17-② 写链行为腿（纯 Node 直驱）：显式布尔写（true ∕ false ∕ 缺席零动）", async () => {
-  const coreIo = await import("../../thincoder-core/config-io.mjs")
+  const coreIo = await import("../../thincoder-vscode/node_modules/@thincoder/core/config-io.mjs")
   const { saveAgentSettingsFromPanel } = await import("../../thincoder-vscode/src/extension/settings-panel-write.mjs")
   const dir = mkdtempSync(join(tmpdir(), "vsc-carryover-17-"))
   const cfg = join(dir, "config.json")

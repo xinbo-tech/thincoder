@@ -126,5 +126,17 @@ export async function assembleFor({ cwd, slot, deps = {} }) {
   return agent
 }
 
+/** MCP 连接失败提醒构造（KD-70 —— 桌面消费词面；装配尾经 `agent-host.mjs` `assembleAndLoad` 入队）。
+ *  首两段逐字同 CLI（`thincoder-cli/src/command-interactive.mjs:151-155`：计数 + 逐条）；末行指路
+ *  **桌面可达出口**（设置面 MCP 段「重连」——CLI 的 `/mcp connect <name>` 桌面不存在，逐字照搬即误导）。
+ *  零警告 ⇒ `null`（**零写** —— 调用方零入队）；纯函数、零副作用。 */
+export function mcpWarningReminder(warnings) {
+  const list = Array.isArray(warnings) ? warnings : []
+  if (list.length === 0) return null
+  return `[System reminder: ${list.length} MCP server(s) failed to connect at startup:\n` +
+    list.map((w) => `  - ${w}`).join("\n") +
+    "\nYou can try reconnecting from the Settings panel (MCP section → Reconnect).]"
+}
+
 // ─── 装配期缝接线（R3 · #523② —— 模块装配期一次；VSC `tools/shared.mjs:104-105` 同形）────────
 installExecRunSeams()

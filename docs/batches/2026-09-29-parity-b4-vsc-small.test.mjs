@@ -11,7 +11,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { createServer } from "node:http"
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
@@ -19,14 +19,15 @@ import { pathToFileURL } from "node:url"
 const ROOT = process.cwd()
 if (!existsSync(join(ROOT, "thincoder-core"))) throw new Error(`从仓库根（thincoder/）运行（cwd = ${ROOT}）`)
 const mod = (rel) => import(pathToFileURL(resolve(ROOT, rel)).href)
+const canon = (rel) => realpathSync(resolve(ROOT, rel)).toLowerCase()
 const [liveBeat, fileLinks, att, vision, flows, policy, deskAtt, chainMod, driverMod, queuedMod, configIo, slots] = await Promise.all([
   mod("thincoder-core/agent/live-beat.mjs"), mod("thincoder-core/file-links.mjs"), mod("thincoder-core/attachments.mjs"),
   mod("thincoder-core/vision-reader.mjs"), mod("thincoder-core/provider-flows.mjs"), mod("thincoder-core/notify-policy.mjs"),
   mod("thincoder-desktop/src/main/attachments.mjs"), mod("thincoder-desktop/src/main/turn-chain.mjs"),
   mod("thincoder-desktop/src/main/turn-driver.mjs"), mod("thincoder-desktop/src/main/queued-input.mjs"),
-  mod("thincoder-core/config-io.mjs"), mod("thincoder-core/session-slots.mjs"),
+  mod("thincoder-desktop/node_modules/@thincoder/core/config-io.mjs"), mod("thincoder-desktop/node_modules/@thincoder/core/session-slots.mjs"),
 ])
-assert.equal((await mod("thincoder-desktop/node_modules/@thincoder/core/config-io.mjs")).resolveProviders, configIo.resolveProviders, "跨包链接 ∕ 直链解析同模块实例（seam 注入前提）")
+assert.equal(canon("thincoder-desktop/node_modules/@thincoder/core/config-io.mjs"), canon("thincoder-core/config-io.mjs"), "挂载判据：junction 目标 = 活核树同一文件（canon 形——先例 = b1:117）")
 
 const VISION = "claude-sonnet-4-5" // spec.multimodal === true
 const TEXT = "deepseek-chat" // 非视觉（default spec）

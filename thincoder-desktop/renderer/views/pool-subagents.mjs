@@ -9,7 +9,7 @@
  * 退出兜底（归档后模型 `frozen` ⇒ `foldIfFrozen` 着装）· 出生闸（新块 ⇒ `createSubBlock` 出生）。
  * 依赖单向：本档 → 核件（`/rc/subblocks/block.mjs` `renderSubagentChunk` ∕ `renderSubBlock` ∕ `renderSubDesc` ∕
  * `initBlockFollow` ∕ `maybeScrollBlock`；`/rc/subblocks/activity-view.mjs` `refreshBlock`）· `./activity-new.mjs`
- * （出生点判据总口）；主档反向引本档两导出（`syncSubBlocks` / `applySubBlockFollow`）—— **无环**。
+ * （出生点判据总口）· `./chat-subagent.mjs`（`withThawedSubMeta` —— 冻结穿闸单源）；主档反向引本档两导出（`syncSubBlocks` / `applySubBlockFollow`）—— **无环**。
  * **#518 块内容区跟滚（四点接线 · 核原语直消费）**：① 出生 ∕ 接管（`subElementOf` 尾 `initBlockFollow`）·
  * ② 内容增量（`replayRows` 追加后）· ③ 挂载补钉（`createSubBlock` `family.append` 后）· ④ 接管径补钉
  * （`updateSubBlock` `replaceWith` 后）——余三点 = `maybeScrollBlock` 应用（让位旗标为假 ⇒ 零写）。
@@ -21,6 +21,7 @@
 import { renderSubagentChunk, renderSubBlock, renderSubDesc, initBlockFollow, maybeScrollBlock } from "/rc/subblocks/block.mjs"
 import { refreshBlock } from "/rc/subblocks/activity-view.mjs"
 import { notePoolBirth } from "./activity-new.mjs"
+import { withThawedSubMeta } from "./chat-subagent.mjs"
 
 /** 核件块元素（新代 / 首见）：块壳（`renderSubBlock` —— 含 data 面 + toggle + 首刷）⇒ 内容行重放
  *  （`entry.rows` 逐条 `renderSubagentChunk` —— 重挂重放单源）⇒ 冻结着装 ⇒ 末刷（挂 DOM 后补 —— 首见径 `createSubBlock` ∕ 接管径 `updateSubBlock` 同序）。 */
@@ -38,11 +39,8 @@ function replayRows(element, entry) {
   const rows = Array.isArray(entry?.rows) ? entry.rows : []
   const pending = rows.slice(element._rowsDone ?? 0)
   if (pending.length > 0) {
-    // 冻结块重放（重建 / 会话切回两径 —— 历史面，非运行态增量）：临时以未冻态过核件追加闸，毕还原本相
-    const thaw = entry?.frozen === true
-    if (thaw) element._subMeta = { ...entry, frozen: false }
-    for (const row of pending) renderSubagentChunk(element, row)
-    if (thaw) element._subMeta = entry
+    // 冻结块重放（重建 / 会话切回两径 —— 历史面，非运行态增量）：单源过闸（`withThawedSubMeta` —— 毕还原本相）
+    withThawedSubMeta(element, entry, () => { for (const row of pending) renderSubagentChunk(element, row) })
     maybeScrollBlock(element) // ② 内容增量 ⇒ 跟滚应用（让位旗标为假 ⇒ 零写；折叠 ∕ 未挂 = 核原语 no-op）
   }
   element._rowsDone = rows.length

@@ -34,7 +34,7 @@
 | KD-W1 | 权威面 = 真 Electron（走查 + E2E）；快筛 = 开发期回路，不作验收判据 | 实读：宿主面（白名单 ∥ 真 IPC ∥ `app://`）不可脱 ⇒ 快筛替代 = 假绿面。否决：以快筛替代走查 ∥ E2E（缺宿主面）；否决：给快筛挂验收级判据（第二权威源） |
 | KD-W2 | 实现落点 = `thincoder-desktop/tools/web-quickcheck/`（`serve.mjs` ∥ `host-shim.mjs` ∥ `run.mjs`） | 工具 ≠ 套件：`test/` 树 = 单入口套件域（`thincoder-desktop/test/run.mjs:35-37` 对未登记 `*.test.mjs` 反查即红）；本工具 = 零登记运行路径。否决：落 `test/`（域界 = 目录界被抹平）；否决：落 `scripts/`（与打包链工具 `check-dist.mjs` 混面） |
 | KD-W3 | 静态服务 = 自持 `node:http`（三根 + MIME 白名单 + 逃逸 ∥ 点段门 + `127.0.0.1` 绑定） | 语义对齐 `thincoder-desktop/src/main/protocol.mjs`（双根 = `:34-37` ∥ MIME = `:24-31` ∥ 门 = `:53-61`）但**不同源**——本机开发工具、loopback 唯一入口（安全门语义本职在 Electron 侧）。否决：复用 `protocol.mjs`（顶层 `import { protocol } from "electron"`——平 node 不可装载）；否决：抽共用模块（本批产品码零触）。漂移控制 = §3.4 对齐表 + §6 WQ-2 行为腿 |
-| KD-W4 | host shim = **服务端静态注入**（`/` 的 HTML 把 shim 脚本行插在 `app.mjs` 前）+ 有限 stub 表（7 通道） | 同源注入 ⇒ Playwright 与手动浏览同一形；CSP `script-src 'self'` 放行同源脚本（`thincoder-desktop/renderer/index.html:7`）。否决：`page.addInitScript` 单用（手动浏览无 shim——半残）；否决：改 renderer 加缝（产品码零触） |
+| KD-W4 | host shim = **服务端静态注入**（`/` 的 HTML 把 shim 脚本行插在 `app.mjs` 前）+ 有限 stub 表（5 通道） | 同源注入 ⇒ Playwright 与手动浏览同一形；CSP `script-src 'self'` 放行同源脚本（`thincoder-desktop/renderer/index.html:7`）。否决：`page.addInitScript` 单用（手动浏览无 shim——半残）；否决：改 renderer 加缝（产品码零触） |
 | KD-W5 | 浏览器 = **系统浏览器 channel**（缺省 `msedge`；`--browser=` 覆盖）；不引浏览器下载 | `playwright-core` 零 postinstall、不下载浏览器（`E2E-TESTING.md` KD-1 依据守恒）；本机 Edge ∥ Chrome 两在（2026-10-01 实查）；通道选项在册（`thincoder-desktop/node_modules/playwright-core/types/types.d.ts:17554` `channel?: string`）。否决：引 `playwright` 全包（新增下载面 ∥ 与 #433 依赖面分叉）；否决：缺省静默回退（失败必明示） |
 | KD-W6 | 冒烟面 = 引导链（boot ∥ 骨架 ∥ 引导面 ∥ 会话条 ∥ 输入面板）+ **一真事件径**（会话下拉开合）+ CSS ∥ 布局读数 + 截图 + 干净面 | 断言锚全为已登记契约面（§3.3 逐锚实读）；深浅平衡 = 一条覆盖 boot 全链，不叠形状敏感 stub。否决：设置面开合（+≥6 通道 stub——形状敏感、面大值低）；否决：`project:open` 真点链（级联 resume ∥ history 面） |
 | KD-W7 | 不入套件、零登记、单入口工具调用（`npm run quickcheck`——scripts +1） | 快筛 ≠ 验收门（KD-W1）；仓套件单入口规则零破（`docs/core/design/TESTING.md` §10 F1/F2）。否决：登记进 `thincoder-desktop/test/files.mjs`（并入套件 ⇒ 慢路复发 + 权威面冲突）；否决：第二 test runner |
@@ -60,7 +60,7 @@
 
 `window.thincoder`（= `globalThis.thincoder`）逐形同窄桥：
 
-- `invoke(channel, payload) → Promise<receipt>`——channel ∈ 下表（7 通道 = 引导链实际调用集）⇒ 回定形回执；**表外 ⇒ `Promise.reject(Error("[quickcheck] channel not stubbed: " + channel))`**（沿 preload 表外 reject 先例——`thincoder-desktop/src/preload/preload.cjs:73`）。
+- `invoke(channel, payload) → Promise<receipt>`——channel ∈ 下表（5 通道 = 引导链实际调用集）⇒ 回定形回执；**表外 ⇒ `Promise.reject(Error("[quickcheck] channel not stubbed: " + channel))`**（沿 preload 表外 reject 先例——`thincoder-desktop/src/preload/preload.cjs:73`）。
 - `on(name, cb) → off`——登记入记录面后返回空退订（v1 零事件发射——事件面不在本冒烟）。
 - 记录面 `globalThis.__quickcheck = { calls: [], unstubbed: [], subscriptions: [] }`——冒烟末断言 `unstubbed` 为空（**产品 boot 新增通道时此处红** ⇒ 同批扩表——防静默漏面）。
 
@@ -73,12 +73,9 @@ stub 表（回执逐形 = 实读锚）：
 | `sessions:list` | `{ sessions: [], ledger: null }` | `thincoder-desktop/renderer/session-wire.mjs:44-48` |
 | `model:catalog` | `{ ok: true, models: [], unavailable: [] }` | `thincoder-desktop/renderer/composer-sync.mjs:205-219`（两空 ⇒ 零推送） |
 | `provider:list` | `{ ok: true, active: null, presets: [], providers: [] }` | `thincoder-desktop/renderer/mount-settings-reads.mjs:51-71`（无激活 ⇒ 模型段零请求） |
-| `ledger:read` | `{ ok: true, counts: null, thresholdReached: false }` | `thincoder-desktop/renderer/mount-info.mjs:22-30` |
-| `batch:status` | `{ ok: true, phase: null }` | `thincoder-desktop/renderer/mount-info.mjs:31-35` |
-
-**7 通道来源**（引导链实际调用点实读——逐通道）：`config:read` = `renderer/app.mjs:219`（boot 往返）∥ `project:recent` + `sessions:list` = `renderer/session-wire.mjs:43`（`refreshRail` 并发两读）
-∥ `model:catalog` = `renderer/composer-sync.mjs:232`（装配首跑恰一次）∥ `provider:list` = `renderer/mount-settings.mjs:162`（`reads.loadProviders()`）
-∥ `ledger:read` + `batch:status` = `renderer/mount-info.mjs:22`——装配链 = `renderer/mount-settings.mjs:163`（`infoFace.refreshInfo()`，装配末调用 ⇒ 本面接线）。表外行为 = 拒 + 记录——**不猜、不造回执**。
+**5 通道来源**（引导链实际调用点实读——逐通道）：`config:read` = `renderer/app.mjs:213`（boot 往返）∥ `project:recent` + `sessions:list` = `renderer/session-wire.mjs:43`（`refreshRail` 并发两读）
+∥ `model:catalog` = `renderer/composer-sync.mjs:232`（装配首跑恰一次）∥ `provider:list` = `renderer/mount-settings.mjs:158`（`reads.loadProviders()`）。
+表外行为 = 拒 + 记录——**不猜、不造回执**。
 
 ### 3.3 冒烟路径（`run.mjs` · 九段）
 
@@ -117,13 +114,13 @@ stub 表（回执逐形 = 实读锚）：
 
 | 档 | 现行 | 预期 | 说明 |
 |---|---|---|---|
-| `thincoder-desktop/tools/web-quickcheck/serve.mjs`（拟新增） | 0 | **≈110**（预估——实施后对账） | 静态服务（§3.1） |
-| `thincoder-desktop/tools/web-quickcheck/host-shim.mjs`（拟新增） | 0 | **≈80**（预估——实施后对账） | host shim（§3.2） |
-| `thincoder-desktop/tools/web-quickcheck/run.mjs`（拟新增） | 0 | **≈160**（预估——实施后对账） | 快筛冒烟（§3.3） |
+| `thincoder-desktop/tools/web-quickcheck/serve.mjs`（已落） | 0 | **144**（实读 2026-10-02） | 静态服务（§3.1） |
+| `thincoder-desktop/tools/web-quickcheck/host-shim.mjs`（已落） | 0 | **42**（实读 2026-10-02） | host shim（§3.2） |
+| `thincoder-desktop/tools/web-quickcheck/run.mjs`（已落） | 0 | **191**（实读 2026-10-02） | 快筛冒烟（§3.3） |
 | `thincoder-desktop/package.json` | **23**（实读 2026-10-01——内容行数口径） | 24（+1 行——`quickcheck` script） | `devDependencies` 零改（`playwright-core` 在册复用；`dependencies` 零改） |
-| `docs/batches/2026-09-30-web-quickcheck.test.mjs`（拟新增——批内件） | 0 | ≈150（预估——实施后对账） | 服务路由 ∥ 门 ∥ shim 契约 ∥ 注入锚面腿；随批留存 · 不进仓套件 |
+| `docs/batches/2026-09-30-web-quickcheck.test.mjs`（已建成 · 137 行——批内件） | 0 | **137**（实读 2026-10-02） | 服务路由 ∥ 门 ∥ shim 契约 ∥ 注入锚面腿；随批留存 · 不进仓套件 |
 | `docs/desktop/design/WEB-QUICKCHECK.md` | 0 | 本档 | 设计单源 |
-| `docs/desktop/design/PROJECT.md` | 1891 | §4.1 三行（拟新增）+ 值列随动（`package.json` 23 ⇒ 24）· §4.2 本批块 · §5 script 行 · 变更记录 | 已落（设计轮） |
+| `docs/desktop/design/PROJECT.md` | 1891 | §4.1 三行（已落——实读回填）+ 值列随动（`package.json` 23 ⇒ 24）· §4.2 本批块 · §5 script 行 · 变更记录 | 已落（设计轮） |
 | `docs/desktop/design/SHELL.md` | 238 | §1 树一行 + `package.json` 行随动 + 变更记录 | 已落（设计轮） |
 | `docs/README.md` | 141 | 地图（desktop 设计 6 ⇒ 7 ∕ 部分 7 ⇒ 8 ∕ 总 33 ⇒ 34）+ 变更记录 | 已落（设计轮） |
 
@@ -135,7 +132,7 @@ stub 表（回执逐形 = 实读锚）：
 
 | 判据（台账 #434 消解径） | 本档落点 | 机检形 |
 |---|---|---|
-| ① host shim 契约 | §3.2 + `host-shim.mjs` | 批内件腿（7 通道逐形 ∥ 表外 reject ∥ 记录面）；冒烟 §3.3 步 9 `unstubbed = 0` |
+| ① host shim 契约 | §3.2 + `host-shim.mjs` | 批内件腿（5 通道逐形 ∥ 表外 reject ∥ 记录面）；冒烟 §3.3 步 9 `unstubbed = 0` |
 | ② 静态服务 | §3.1 + `serve.mjs` | 批内件腿（`/` 携注入 ∥ `/rc/` 实供 ∥ 逃逸 404 ∥ 表外扩展名 404） |
 | ③ 一条真浏览器冒烟 | §3.3 + `run.mjs` | `npm run quickcheck` exit 0（本机 `msedge`）+ 步 9 截图存在 + PNG magic；错误径（WQ-4）= 不存在通道名 ⇒ 非零退出 + stderr 含该通道名 |
 | ④ 权威面关系判据 | §1 裁定 + §3.4 纪律句 | 本批 diff 零触 `test/`（运行期产物根 `test/artifacts/` 除外——冒烟截图落点，已 gitignore） ∥ `src/` ∥ `renderer/`（触碰面 = `tools/` ∥ `package.json` ∥ `docs/`）；套件 `npm test` 面零改 |
@@ -170,7 +167,37 @@ stub 表（回执逐形 = 实读锚）：
 3. **需求档笔**：`docs/desktop/requirements/PROJECT.md` 是否补「web 快筛 = 开发工具面（非验收）」条目——需求笔 = 主 agent（现承载 = 台账 #434）。
 4. **`docs/README.md` 地图随动**：已落（desktop 设计 6 ⇒ 7——本档入册）。
 
+## 9. 文件账（本域 · 迁自 `PROJECT.md` §4.1 ∥ §4.2——as-of 2026-10-02）
+
+### 9.1 本端文件清单与行数预算（web 快筛族行 · 迁自 `PROJECT.md` §4.1——逐字）
+
+| 文件 | 预估行数 | 说明 |
+|---|---|---|
+| `thincoder-desktop/tools/web-quickcheck/serve.mjs`（已落 · web 快筛批） | **144**（实读 2026-10-02） | 静态服务（三根映射：`/rc/` → 核包根 ∥ `/` → `renderer/` ∥ `/__quickcheck/` → 工具资产；MIME 白名单 + 逃逸 ∥ 点段门；`/` 注入 host shim 脚本行；`127.0.0.1` 绑定 · 端口 0）——机制 ∕ 判据单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.1 |
+| `thincoder-desktop/tools/web-quickcheck/host-shim.mjs`（已落 · web 快筛批） | **42**（实读 2026-10-02） | host shim（`window.thincoder` 窄桥同形 + 有限 stub 表（7 通道）+ 表外拒 + `__quickcheck` 记录面）——单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.2 |
+| `thincoder-desktop/tools/web-quickcheck/run.mjs`（已落 · web 快筛批） | **191**（实读 2026-10-02） | 快筛冒烟（系统浏览器 channel（缺省 `msedge`）+ 九段断言序 + 截图落 `thincoder-desktop/test/artifacts/quickcheck-boot.png`）——单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.3 |
+
+**行数面机检**：本表迁出后，`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`）读取面 = `docs/desktop/design/PROJECT.md` §4.1（运行根单读）——本表行按同值同步；后续本域新档由落盘批在本表补行（沿 §4.1 纪律）。
+**原址指针**：本族各行在 `docs/desktop/design/PROJECT.md` §4.1 已改一行指针（as-of 2026-10-02）。
+
+### 9.2 现有文件改动 · 批块（本域 · 迁自 `PROJECT.md` §4.2——逐字）
+
+**本批（web 快筛 · 设计轮 · 2026-10-01 · 台账 #434 · 批 `docs/batches/2026-09-30-web-quickcheck.md`）行「现行 ⇒ 预期」**（实读 2026-10-01——内容行数口径；机制 ∕ 判据单源 = 批档 §2 ∥ `docs/desktop/design/WEB-QUICKCHECK.md`；**设计轮——产品码零触**）：
+
+| # | 档 | 现行 ⇒ 预期 | 面 |
+|---|---|---|---|
+| 1 | `thincoder-desktop/package.json` | **23 ⇒ 24**（scripts +`quickcheck` 一条（`node tools/web-quickcheck/run.mjs`）；devDeps 零改——`playwright-core` 在册复用） | 脚本面 |
+| 2 | `thincoder-desktop/tools/web-quickcheck/`（已落 · 新目录） | 0 ⇒ **377**（= 144 + 42 + 191——实读 2026-10-02）（`serve.mjs` ∥ `host-shim.mjs` ∥ `run.mjs`——逐档行 = `docs/desktop/design/PROJECT.md` §4.1） | 工具面 |
+| 3 | 批内件 | `docs/batches/2026-09-30-web-quickcheck.test.mjs`（已建成 · 137 行 · 实读 2026-10-02——服务路由 ∥ 门 ∥ shim 契约 ∥ 注入锚面；随批留存 · 不进仓套件） | 全批 |
+| 4 | 设计档 | `docs/desktop/design/WEB-QUICKCHECK.md`（新档——本批主交付）· `docs/desktop/design/PROJECT.md` §4.1 三行 + 值列随动 ∥ §4.2 本块 ∥ §5 script 行 ∥ 变更记录 · `docs/desktop/design/SHELL.md` §1 树一行 + 变更记录 · `docs/README.md`（地图 6 ⇒ 7） | 全批 |
+
+零触面：产品码全域（`thincoder-desktop/src/**` ∥ `thincoder-desktop/renderer/**`——宿主注入形已是缝，零加缝）∥ 套件面（`thincoder-desktop/test/**`——单入口 ∥ 清单零登记）
+∥ `thincoder-desktop/src/main/protocol.mjs`（供给语义权威——镜像不改）∥ `thincoder-desktop/.gitignore`（产物根沿用）∥ E2E-TESTING.md（#433 面——状态随动 = 设计档 §8 上抛 U1）
+∥ `thincoder-core` ∥ `thincoder-render-core` ∥ 三端测试面。
+
 ## 变更记录
 
 - 2026-10-01 建档：web 快筛设计（静态服务 + host shim + 真浏览器冒烟 · 九段；权威面 = Electron 裁定；KD-W1–W7；与 #433 复用 ∥ 边界在册）。
 - 2026-10-01（修复轮 · 评审轮次 1 · 发现 3/4/5）：WQ-4 机检形定形（不存在通道名 ⇒ 非零退出 + stderr 含通道名——§5③ ∥ §6 同拍）；§3.2「7 通道来源」改逐通道对应 + 装配链注（`mount-settings` → `mount-info`）；§5④ ∥ §7-4 零触句补「运行期产物根 `test/artifacts/` 除外」；`app.mjs` 调用点坐标实读收正 `:218 ⇒ :219`。
+- 2026-10-01（**复核扫面收正批（M7 派生）· 文档簇落地轮 · eng-designer**——承 `docs/batches/2026-10-01-audit-remediation.md` §2 · 台账 #769）：stub 表两行退场（`ledger:read` ∥ `batch:status`——复读面删）+ 通道计数 **7 ⇒ 5** 四处同拍（KD-W4 ∥ §3.2 表引 ∥ 来源注 ∥ §6 验收面）+ 装配链注届盘实读收正（`app.mjs:213` ∥ `mount-settings.mjs:158`）。明细 = 批档 §2。
+- 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 2c 前置步 · 文件账分片轮（切片 3 · 余量收尾）· eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：**§9 新立**（文件账）——§9.1 本域族行 **3** 行（`serve.mjs` ∥ `host-shim.mjs` ∥ `run.mjs`——自 `docs/desktop/design/PROJECT.md` §4.1 逐字迁入）＋ §9.2 批块 **1 块**（web 快筛——迁自 §4.2）。**零新语义**（迁移 ∥ 指针）。

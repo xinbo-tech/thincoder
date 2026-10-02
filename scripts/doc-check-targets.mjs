@@ -21,7 +21,7 @@ function walkMd(dir, exclude, out = []) {
   let names = [];
   try { names = readdirSync(dir); } catch { return out; }
   for (const n of names) {
-    if (SKIP_DIRS.has(n) || exclude.includes(n)) continue;
+    if (SKIP_DIRS.has(n) || n.startsWith("dist-") || exclude.includes(n)) continue;
     const p = join(dir, n);
     let st;
     try { st = statSync(p); } catch { continue; }
@@ -64,7 +64,7 @@ export function collectTestTrees(root) {
     let names = [];
     try { names = readdirSync(dir); } catch { return; }
     for (const n of names) {
-      if (SKIP_DIRS.has(n)) continue;
+      if (SKIP_DIRS.has(n) || n.startsWith("dist-")) continue;
       const p = join(dir, n);
       let st;
       try { st = statSync(p); } catch { continue; }
@@ -84,7 +84,7 @@ export function collectCaseTitles(root) {
     let names = [];
     try { names = readdirSync(dir); } catch { return; }
     for (const n of names) {
-      if (SKIP_DIRS.has(n)) continue;
+      if (SKIP_DIRS.has(n) || n.startsWith("dist-")) continue;
       const p = join(dir, n);
       let st;
       try { st = statSync(p); } catch { continue; }
@@ -115,7 +115,7 @@ export function collectCodeTokens(root) {
     let names = [];
     try { names = readdirSync(dir); } catch { return; }
     for (const n of names) {
-      if (SKIP_DIRS.has(n)) continue;
+      if (SKIP_DIRS.has(n) || n.startsWith("dist-")) continue;
       const p = join(dir, n);
       let st;
       try { st = statSync(p); } catch { continue; }

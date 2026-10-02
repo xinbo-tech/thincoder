@@ -23,7 +23,7 @@
  *   ④ **封顶自滚**（E1 —— 封顶 = 列高（布局骨架差异在册：VSC 横带 32vh）；自滚 = 宿主 `overflow: auto` +
  *      `overscroll-behavior: contain`（`renderer/pool.css` 该条注））。核件消费面（`subblocks/*`）零改。
  * **让位修复批（2026-09-29 · 台账 #603 · KD-47）**：`mountPool` **三径** = ① `none` ∕ `empty` ⇒ `clear` + 零节点 ·
- *  ② 壳缺位（首挂 ∕ 换代后）⇒ 建树全挂 · ③ **壳在位 ∧ 会话账匹配 ⇒ 原位领用**（头原位重建；审批 ∕ 队列族 =
+ *  ② 壳缺位（首挂 ∕ 换代后）⇒ 建树全挂 · ③ **壳在位 ∧ 会话账匹配 ⇒ 原位领用**（头 = **逐件就地差分**〔M4 —— 就地更新、表外件零触〕；审批 ∕ 队列族 =
  *  **键控差分**〔#606③：键 = `promptId` ∕ 标题，条目跨帧身份存续〕；子 agent 族祖先链零摘离 ∕ 零移动——
  *  块内容区 ∕ 池自身滚动位保真）；尾接**帧尾复核扫**（`applySubBlockFollow`）。**#660（KD-47 ⑤）**：③ 径门撤
  *  `blocks > 0`（零块帧同领用——弃账收窄 + 空族支；R5 零块弃账语义保持）。
@@ -80,15 +80,31 @@ function syncFamily(body, name, word, rows, nodeKey, entryOf) {
   }
 }
 
-/** 壳原位领用（③ 径 · 让位修复批 KD-47 ∕ #606③ ∕ `docs/desktop/design/RENDERER.md` §1.1）：头原位重建；
- *  审批 ∕ 队列族 = **键控差分**（条目按键复用——跨帧身份存续；#660 起零块帧同走本径）；**子 agent 族容器及
+/** 池头件位（选择器形 —— 件序与 `pool-tree.mjs` `headNode` 逐位同拍：标题 → 两读数 → 折叠控件）。 */
+const HEAD_PIECES = [".pool-title", '[data-read="running"]', '[data-read="approval"]', '[data-action="pool:toggle"]']
+
+/** 池头就地差分（M4 —— 逐件匹配：就地更新文本 ∥ `aria-*`（等值零写）∥ 读数缺席 ⇒ 摘该件 ∥ 缺件按件位补插；表外件零触 ∥ 零整头建树；件身份 props ∥ `onClick`/`disabled` 由建壳帧定——`onTogglePool` 恒在场）。 */
+function syncHead(head, model, handlers) {
+  if (head === null || head === undefined) return
+  const pieces = headNode(model, handlers).children
+  HEAD_PIECES.forEach((sel, index) => {
+    const desc = pieces[index] ?? null
+    const held = head.querySelector(sel)
+    if (desc === null) { held?.remove(); return }
+    if (held === null) return head.insertBefore(build(desc), HEAD_PIECES.slice(index + 1).map((next) => head.querySelector(next)).find((node) => node !== null) ?? null)
+    if (held.textContent !== (desc.children ?? []).join("")) held.textContent = (desc.children ?? []).join("")
+    for (const name of ["aria-expanded", "aria-label"]) if (desc.props?.[name] !== undefined && held.getAttribute(name) !== String(desc.props[name])) held.setAttribute(name, String(desc.props[name]))
+  })
+}
+
+/** 壳原位领用（③ 径 · 让位修复批 KD-47 ∕ #606③ ∕ `docs/desktop/design/RENDERER.md` §1.1）：头**逐件就地差分**（`syncHead` —— 就地更新 ∥ 缺件按件位补插；表外件零触）；审批 ∕ 队列族 =
+ *  **键控差分**（条目按键复用——跨帧身份存续；#660 起零块帧同走本径）；**子 agent 族容器及
  *  其项元素零摘离 ∕ 零移动**（祖先链 host → `[data-pool-body]` → family → block → `.advisor-content` 跨帧不动
  *  ⇒ 块内容区 ∕ 池自身滚动位保真）。**位置对账**：族序固定（审批 → 子 agent → 队列）——审批 ∕ 队列节点在族
  *  容器两侧原位增删；折叠态 ⇒ 三族摘离（族容器存 `_poolSub`——用户手势触发，复位可接受 · 登记）；展开 ⇒
  *  复用重插（队列族之前）。**空族支**（#660）：零块 ⇒ 摘族壳 + 弃容器账（会话账存续）——R5 语义保持。 */
 function adoptPool(root, body, model, handlers, live) {
-  const head = root.querySelector("[data-pool-head]")
-  if (head !== null && head !== undefined) head.replaceWith(build(headNode(model, handlers)))
+  syncHead(root.querySelector("[data-pool-head]"), model, handlers)
   if (model.collapsed) {
     for (const name of ["approvals", "queue"]) {
       const hit = body.querySelector(`[data-family="${name}"]`)

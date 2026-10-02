@@ -64,7 +64,7 @@
 |---|---|---|---|---|
 | M1 | 项目状态档 manifest | `thincoder-core/manifest.mjs`（**新增**，v1 无对应物）——机制代码在核，操作对象 = 被开发项目**项目根（= 带 manifest 的目录——**git 非前提**；归属 = 最近祖先优先 / 发现梯 = 纯向下一层；2026-09-21 用户裁定——明细 = `docs/core/design/MANIFEST.md` §2.2 / §2.9）**的 `PROJECT-MANIFEST.json`（数据档，N3 迁移点）；`thincoder-core/agent/setup-reminders.mjs` + `thincoder-core/agent/run-stages.mjs`（**修改**——情境行注入，E5.1） | JSON schema + 读/写/校验（五键 version/phase/docRoot/promptsLanding/checkConfig + 声明三族 codePaths/index/advisor——共八键）+ 情境值 → 模型注入行 | §5.1 · §6 · §9 |
 | M2 | 台账（SQLite） | `thincoder-core/ledger.mjs`（228 行·**修改**）+ `ledger-surface.mjs`（77 行·**修改**）+ CLI/VSC 端 `ledger-surface.mjs`（70/119 行·**修改**，完整清单见接线表） | md 读面 → `node:sqlite` 读面 + 写命令 + 六态 CHECK schema | §5.2 |
-| M3 | 批次档生命周期工具 | `thincoder-core/agent-tools/batch-segment.mjs` → **改名 `batch.mjs`**（265 行·**修改**——action 分发扩 create/status/close，超硬顶则拆 `batch-skeleton.mjs` 模板档） | 批次档生命周期（create/append/status/close）+ 段白名单 + 状态行冻结拒写 | §5.3 · `design/BATCH-RECORD.md` §4.11–§4.13 |
+| M3 | 批次档生命周期工具 | `batch-segment.mjs` → **改名 `batch.mjs`**（265 行·**修改**——action 分发扩 create/status/close，超硬顶则拆 `batch-skeleton.mjs` 模板档） | 批次档生命周期（create/append/status/close）+ 段白名单 + 状态行冻结拒写 | §5.3 · `design/BATCH-RECORD.md` §4.11–§4.13 |
 | M4 | 写权门禁（token 门 + 冻结窗口） | `thincoder-core/agent/dispatch.mjs`（490 行·**修改**，**拆分候选**——近 500 硬上限，拆出 `write-gate.mjs`）+ 新档 `write-gate.mjs`（`resolveReviewTargetPaths` + 冻结窗口判据组装）+ VSC `tool-gates.mjs`（165 行·**修改**，完整清单见接线表） | token 门 + D5 冻结窗口——评审对象/被审文件读 manifest `docRoot`（去硬编码 docs/） | §7 · §8.5 |
 | M5 | 委派与 spawn 门 | `thincoder-core/agent-tools/subagent-spawn.mjs`（484 行·**修改**，**拆分候选**——as-of 2026-09-17 实测；F3 拆除后 ~469）+ `subagent-scheduler.mjs`（428 行·**修改**，**拆分候选**） | 任务书强制字段（轮次）+ files 声明面拦截 | §8.1–8.2 · §9.3 |
 | M6 | 评审凭证（advisor + token） | `thincoder-core/advisor.mjs`（274 行·**修改**）+ `token-ttl.mjs`（286 行·**零改（继承）**）+ `agent-tools/design-token.mjs`（118 行·**零改（继承）**） | 评审对象来源读 `docRoot`（唯一微调，继承 v1 不重写） | §8.5 |
@@ -78,7 +78,7 @@
 
 - 三包结构：`thincoder-core/`（核，单一权威源）· `thincoder-cli/`（CLI 端）· `thincoder-vscode/`（VSC 端）。两端均经 `@thincoder/core` 引入核，端侧只保留薄装配面 / 面特有段。
 - `thincoder-core/tools/checklist.mjs` + `checklist-sync.mjs` **非死文件纯清理**——仍挂载核侧工具表（`thincoder-core/tools/index.mjs:11,25,35`）+ VSC 工具表（`thincoder-vscode/src/tools/index.mjs:20,165,175`），上下文注入仍在（核 `thincoder-core/agent/setup.mjs:126-139` · VSC `context-injections.mjs:177-205`）。 （迁移期引文——机制已废）
-  并有死指针（`task.mjs:36` · `memory-tool.mjs:37`）与 `subagent-scheduler.mjs:38,56` 门禁族；受影响文件清单以 M7 spec 为准。
+  并有死指针（`task.mjs:36` · `memory-tool.mjs`）与 `subagent-scheduler.mjs:38,56` 门禁族；受影响文件清单以 M7 spec 为准。
 - 机检脚本落仓根 `scripts/`（**工程工具面**，非三包产品代码）：`check-doc-width*.mjs` 双引擎 + `doc-anchors*.mjs` 四套 + `check-ledger*.mjs` 双引擎 = M8 合并/砍的对象。
 
 **两端接线（core + CLI + VSC）**：
@@ -89,7 +89,7 @@
 |---|---|---|---|
 | M1 manifest | 新增 `manifest.mjs` + 修改 `thincoder-core/agent/setup-reminders.mjs` / `thincoder-core/agent/run-stages.mjs`（情境行注入——E5.1） | 修改 `src/cli/make-agent.mjs`（装配层读/初始化 manifest） | 修改 `thincoder-vscode/src/agent/setup.mjs`（装配层读/初始化 manifest）+ `thincoder-vscode/src/agent.mjs` / `thincoder-vscode/src/agent/setup-reminders.mjs`（情境行端镜） |
 | M2 台账 | 修改 `ledger.mjs` + `ledger-surface.mjs` + 命令注册 `thincoder-core/tools/index.mjs` + `family-tools.mjs` | 修改 `thincoder-cli/src/tui/ledger-surface.mjs`（70 行） | 修改 `thincoder-vscode/src/extension/ledger-surface.mjs`（119 行） |
-| M3 批次档 | 修改 `agent-tools/batch-segment.mjs`（改名 `batch.mjs`——符号名随批改 `batchTool`） | 零改（核内工具，端经 import 装配） | 零改（核内工具，端经 import 装配） |
+| M3 批次档 | 修改 `batch-segment.mjs`（改名 `batch.mjs`——符号名随批改 `batchTool`） | 零改（核内工具，端经 import 装配） | 零改（核内工具，端经 import 装配） |
 | M4 写权门禁 | 修改 `agent/dispatch.mjs` | 零改（核内门禁） | 修改 `src/agent/tool-gates.mjs`（165 行——VSC 独立同语义镜像） （迁移期引文——档已迁核） |
 | M5 委派 spawn | 修改 `subagent-spawn.mjs` + `subagent-scheduler.mjs` | 零改（端经核单源 import） | 零改（端经核单源 import） |
 | M6 评审凭证 | 修改 `advisor.mjs` + `token-ttl.mjs` + `agent-tools/design-token.mjs` | 零改 | 零改（`tool-gates.mjs` 已 import `validateDesignToken` 自核） |
@@ -138,6 +138,7 @@ M10 测试（独立简化，无依赖）
   "checkConfig": {
     "scanDirs": ["docs"],
     "lineWidth": 300,
+    "widthExemptZones": [],
     "anchors": { "domain": "docs", "exclude": ["_archive", "batches"] },
     "exemptions": [],
     "lineCounts": []
@@ -497,7 +498,7 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 |---|---|---|
 | AC1 | 七条目 E1–E7 各有架构级方案，无空条目 | E1–E7（覆盖） |
 | AC2 | 模块划分（§2.2）每行带 v2 依据（章号落在 §5–§9）+ 锚定现有代码模块（现有 file/dir → 变更类型），无抽象目标模块、无缺失行 | §2.2（覆盖） |
-| AC3 | manifest schema 字段枚举完整（**八键**：`version` / `phase` / `docRoot` / `promptsLanding` / `checkConfig` / `codePaths` / `index` / `advisor`——枚举判据 = phase 取值 · docRoot 五子键 · checkConfig 五子键 · 三族声明键形态） | E1/E2/E5 |
+| AC3 | manifest schema 字段枚举完整（**八键**：`version` / `phase` / `docRoot` / `promptsLanding` / `checkConfig` / `codePaths` / `index` / `advisor`——枚举判据 = phase 取值 · docRoot 五子键 · checkConfig 六子键 · 三族声明键形态） | E1/E2/E5 |
 | AC4 | 台账 schema 含六态 CHECK 枚举 + 咬合必填约束 | E1 |
 | AC5 | 写权矩阵每条写权能答「靠哪个门禁」（机械/行为） | E3（N1 结构优先） |
 | AC6 | 机检引擎 = 单引擎 + 声明面（`checkConfig`），无硬编码本仓路径 | E4（N3 可迁移） |
@@ -529,6 +530,8 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 | T14 | 错误：普通模式零回归 | 普通模式装配 / `/plan` 切换 / ACP `mode:"plan"` / 槽 `planMode:true` 恢复 | 四条路径全带宽不变（**除本批所列矩阵镜像收正**——`host-shape-spawn.test.mjs` T5：两条工程行删 `plan` + 增 explore 工程行——外，既有测试零改全绿） |
 
 ## 4. 变更记录
+
+- 2026-10-01（**行宽清账批 · 设计补缺轮 · eng-designer**——承 `docs/batches/2026-10-01-docwidth-settlement.md` §2.13 · 台账 #779）：E1 键面随 `checkConfig.widthExemptZones` 键落地收正——§2.3 E1 JSON 示例补 `widthExemptZones: []`（默认形态）；§3.1 AC3 枚举判据「checkConfig 五子键 ⇒ **六子键**」。**本档机制条文零改**。
 
 - 2026-09-29（**doc-check-face 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-29-doc-check-face.md` §2 同族追加 · 台账 #546）：E1 键面随 `checkConfig.lineCounts` 键落地收正——§2.3 E1 JSON 示例补 `lineCounts: []`（默认形态）；§3.1 AC3 枚举判据「checkConfig 四子键 ⇒ **五子键**」。**本档机制条文零改**。
 
@@ -598,3 +601,5 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
   ② 🔵#13——VSC 旁路面判据（T10）落点钉定 = `host-shape-spawn.test.mjs` T5 增 explore + engineering=true 一例（`engState.enabled` 驱动 ⇒ 名集不含 `plan`）；受影响文件表该行改动面同步 + T14 括注同步。
 - 2026-09-21（**SIGNAL-LINES 批 · 设计微修三轮 · eng-designer · 清单外机械项**——父侧可 revert）：`:419` 行超 300 字符（306）⇒ 折为两行，逐字不变（零语义）。
 - 2026-09-29（**口子清零二轮 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-hatch-clearance-2.md` §2 · 台账 #673）：两处 CLI 坐标按盘重锚（`render-frame.mjs:228,231 ⇒ :234 ∕ :237`——判据链图 ∕ §2.4 依赖表 M11 行；2026-09-29 停滞批增行后）。**零新语义**。
+
+- 2026-10-02（**文档清账轮 · 执行轮 1（core/design 前段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 3 处 R3 形退场（改名对照行 `batch-segment.mjs` 两处 ∥ 死指针行 `memory-tool.mjs` 一处）。**零新语义**。

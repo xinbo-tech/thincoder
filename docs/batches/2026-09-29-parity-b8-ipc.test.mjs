@@ -23,8 +23,8 @@ const here = dirname(fileURLToPath(import.meta.url))
 const root = join(here, "..", "..") // 仓根（docs/batches 两层深；`.thincoder/tmp` 暂存期同深 ⇒ 相对面一致）
 const require = createRequire(import.meta.url)
 const deskUrl = (rel) => pathToFileURL(join(root, "thincoder-desktop", rel)).href
-/** 核件相对面（与 `@thincoder/core` 同 realpath —— symlink 解析 ⇒ 与宿主同一模块实例，注入缝同实例生效）。 */
-const coreUrl = (rel) => pathToFileURL(join(root, "thincoder-core", rel)).href
+/** 核件相对面（经 desktop junction 取——与宿主同拼写同 realpath ⇒ 同一模块实例，注入缝同实例生效；拼写一致 = 前提）。 */
+const coreUrl = (rel) => pathToFileURL(join(root, "thincoder-desktop", "node_modules", "@thincoder", "core", rel)).href
 
 // ─── ① 请求面两向：白名单 ⇔ 注册表 ──────────────────────────────────────────
 

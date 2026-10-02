@@ -20,7 +20,9 @@
  * （`setTheme` 落 `data-theme` + 存储）⇒ 切片写（`SETTINGS_KEYS` 含 `theme` ⇒ 设置面头三钮当前态随动）；表外值 ⇒ `null`（零写零改）。
  * 语义锚（`docs/desktop/design/IPC.md` §2 设置族注）：出站失败 ⇒ **零乐观写**（不摘项、不改段读数）；畸形 JSON ⇒ **零发送**；
  * 写成功 ⇒ 清失败串 + 重读本段。**#652**：写成功径（渠道两形提交 ∕ 钥存）在复位写前声明草稿失效（`invalidateDrafts(scope)`
- * 注入 —— 作用域取值面 = 视图档 `[data-draft-scope]` 自携；失败径零声明 —— 草稿保真）。**P14 出值规范化**（数值 ⇒ `Number(v)`〔空 / 非数 ⇒ 零发送〕· 布尔 ⇒ `.checked` · 串 ⇒ 原串；无效值 ⇒ 控件回退现值）· **P15 具名控件即改即存**（单键 patch 直发 —— 写路随 W3 迁 `mount-settings-segments-agent.mjs`）· **F-Esc 关面板**（Esc ⇒ 既有 `closeSettings` 出口，单一实现 —— 绑定宿主 = `document`）。
+ * 注入 —— 作用域取值面 = 视图档 `[data-draft-scope]` 自携；失败径零声明 —— 草稿保真）。**2026-10-01 复核扫面收正批（M2）**：
+ * 渠道提交成功径同清**草稿专件** `providers.draft`（复位点表第五点 —— 现役注面 = `mount-settings-segments-providers.mjs` 档头）。**P14 出值规范化**（数值 ⇒ `Number(v)`〔空 / 非数 ⇒ 零发送〕· 布尔 ⇒ `.checked` · 串 ⇒ 原串；无效值 ⇒ 控件回退现值）· **P15 具名控件即改即存**（单键 patch 直发 —— 写路随 W3 迁 `mount-settings-segments-agent.mjs`）· **F-Esc 关面板**（Esc ⇒ 既有 `closeSettings` 出口，单一实现 —— 绑定宿主 = `document`）。
+ * **D39（设置菜单升级批 · #817 ∥ KD-68）**：`resetFacets(state, group)` = 本组面态复位原语（modal 开 ∥ 关**限本组** —— 开 ∥ 关面整复位同源取用）；`closeSettings` 同拍清 `modal`；F-Esc 闸增 `modal != null` 守卫（弹窗体自持卡内 Esc —— 不连带关页）。
  * 纪律：零 `node:` / 零裸包 · 逐通道回执形单源 = IPC.md §2。
  */
 import { initDict } from "./i18n.mjs"
@@ -77,7 +79,10 @@ export function createExits(deps = {}) {
     // #652 写成功径：该表单草稿一次性作废（作用域 = 表单自携 `data-draft-scope` —— 单源在视图档；失败径零声明）。
     invalidateDrafts?.(typeof form.getAttribute === "function" ? form.getAttribute("data-draft-scope") : null)
     clearReport()
-    setSettings({ verify: null })
+    // M2（2026-10-01 复核扫面收正批）：成功径同清**草稿专件** `providers.draft`（S2 暂存值快照 —— 不清 ⇒ 重挂经种子
+    // 回填旧值含钥）；复位点表第五点（#671 裁定现役注面 = `mount-settings-segments-providers.mjs` 档头）；失败径零清。
+    const providers = store.get().settings?.providers ?? {}
+    setSettings({ verify: null, providers: { ...providers, draft: null } })
     await loadProviders()
     onProvidersChanged?.() // 全渠扇出批 · #3：provider 写成功 ⇒ 输入区候选面强制刷新（渠道集已变 —— 首启向导同路）
   }
@@ -94,10 +99,10 @@ export function createExits(deps = {}) {
     const receipt = await ask("provider:verify", { name: target })
     if (receipt.ok === true) {
       clearReport()
-      setSettings({ verify: { kind: "ok", count: listOf(receipt.models).length, reason: null } })
+      setSettings({ verify: { kind: "ok", count: listOf(receipt.models).length, reason: null, name: target } })
       return
     }
-    setSettings({ verify: { kind: "fail", count: null, reason: reasonOf(receipt) } })
+    setSettings({ verify: { kind: "fail", count: null, reason: reasonOf(receipt), name: target } })
   }
 
   /** 渠道移除**执行径**（确认面「是」⇒ 本径；S6 前 = 直删）：失败（含激活渠道保护）⇒ 核文案直传
@@ -178,18 +183,37 @@ export function createExits(deps = {}) {
   }
 
   /** 主题出口（D33 · 台账 #743 —— 单写者 = `renderer/theme.mjs`）：`setTheme` 落 `data-theme` + 存储 ⇒ 返落地值；
-   *  落地值非 `null` ⇒ 切片写（`SETTINGS_KEYS` 含 `theme` ⇒ 设置面头三钮当前态随动）；表外值 ⇒ `null`（零写零改 —— 面零变更）。 */
+   *  落地值非 `null` ⇒ 切片写（`SETTINGS_KEYS` 含 `theme` ⇒ 设置面头三钮当前态随动）+ **勾选态回读报告**（D36 · 两写作点②）；
+   *  表外值 ⇒ `null`（零写零改 —— 面零变更；报告零发）。 */
   function setThemeFace(target) {
     const landed = setTheme(target)
-    if (landed !== null) store.set({ theme: landed })
+    if (landed === null) return
+    store.set({ theme: landed })
+    // D36 勾选态回读（两写作点②）：报告落地值 ⇒ 主进程菜单主题▸带勾；失败 ⇒ 记错（零静默 —— 菜单侧 fail-open 全零勾）。
+    void ask("theme:state", { theme: landed }).then((receipt) => {
+      if (receipt?.ok !== true) console.error(`[renderer] theme:state failed: ${receipt?.reason ?? "unknown"}`)
+    })
   }
 
-  /** 设置面开（**两入口**：信息行 ∕ 输入区控件行第 7 钮 —— 后者经句柄面转口 `renderer/mount-composer.mjs`）：开 + 失败串清位 ⇒ 七段读数随动（段态 `none` → `loading` → `ready`）。
-   *  S1 ∕ S2：渠道段面态复位（钥编辑态 ∕ 探果 ∕ 暂存值 ∕ 失败草稿〔#615②〕——**钥暂存不跨面驻留**）；S8：MCP 编辑态复位（`form`）。 */
+  /** 本组面态复位（D39 ∥ KD-68 ④ —— modal 开 ∥ 关**限本组**；原语与开 ∥ 关面整复位同口径：providers →
+   *  `edit/probe/draft/keyDraft`（S1 ∕ S2 ∕ #615②）∥ mcp → `form`（S8）；他组零动）。返回 `setSettings` 补丁。 */
+  function resetFacets(state, group) {
+    if (group === "providers") {
+      const providers = state.settings?.providers ?? {}
+      return { providers: { ...providers, edit: null, probe: null, draft: null, keyDraft: null } }
+    }
+    if (group === "mcp") {
+      const mcp = state.settings?.mcp ?? {}
+      return { mcp: { ...mcp, form: null } }
+    }
+    return {}
+  }
+
+  /** 设置面开（**现役入口 = 输入区控件行第 7 钮**（经句柄面转口 `renderer/mount-composer.mjs`）+ `renderer/composer-wire.mjs` footer 三出口映射 —— 原「信息行」入口随会话模型轮 R13 已裁撤，本行收正）：开 + 失败串清位 ⇒ 七段读数随动（段态 `none` → `loading` → `ready`）。
+   *  S1 ∕ S2：渠道段面态复位（钥编辑态 ∕ 探果 ∕ 暂存值 ∕ 失败草稿〔#615②〕——**钥暂存不跨面驻留**）；S8：MCP 编辑态复位（`form`）——本组复位原语 = `resetFacets`。 */
   function openSettings() {
-    const providers = store.get().settings?.providers ?? {}
-    const mcp = store.get().settings?.mcp ?? {}
-    setSettings({ open: true, notice: null, providers: { ...providers, edit: null, probe: null, draft: null, keyDraft: null }, mcp: { ...mcp, form: null } })
+    const state = store.get()
+    setSettings({ open: true, notice: null, ...resetFacets(state, "providers"), ...resetFacets(state, "mcp") })
     void loadProviders()
     void loadAgent()
     void loadMcp()
@@ -198,12 +222,12 @@ export function createExits(deps = {}) {
   }
 
   /** 设置面关（退场 = 零子节点 —— 订阅面重绘清容器）：同清确认弹层（S6 —— 弹层挂 `document.body`，
-   *  不在容器内 ⇒ 关面须显式清；先例 = VSC `closeSettings` 同清）+ 渠道段面态复位（S1 ∕ S2 —— 含失败草稿 `keyDraft`〔#615②〕）+ MCP 编辑态复位（S8）。 */
+   *  不在容器内 ⇒ 关面须显式清；先例 = VSC `closeSettings` 同清）+ 渠道段面态复位（S1 ∕ S2 —— 含失败草稿 `keyDraft`〔#615②〕）+ MCP 编辑态复位（S8）；
+   *  **D39 同拍清 `modal`**（组弹窗随关 —— 页 ∥ 弹窗不并存于关态）。 */
   function closeSettings() {
     closeSettingsConfirm()
-    const providers = store.get().settings?.providers ?? {}
-    const mcp = store.get().settings?.mcp ?? {}
-    setSettings({ open: false, notice: null, providers: { ...providers, edit: null, probe: null, draft: null, keyDraft: null }, mcp: { ...mcp, form: null } })
+    const state = store.get()
+    setSettings({ open: false, notice: null, modal: null, ...resetFacets(state, "providers"), ...resetFacets(state, "mcp") })
   }
 
   /** 设置面出口族（锚名逐字 = 视图 `data-action` 同域；具名控件面 = 单键同路；段族 **26** 项经 `segments` ∕
@@ -224,15 +248,17 @@ export function createExits(deps = {}) {
   }
 
   /** Esc 关闭（F-Esc —— 一律经既有 `closeSettings` 出口，单一实现；向导态不在本项）：**绑定宿主 = `document`**（面板为窗口级覆盖层
-   *  ⇒ 绑面板节点收不到本键）；闸取**现刻**态（开 ∧ 非向导占槽）；宿主无 `addEventListener` 面 ⇒ 零绑定。 */
+   *  ⇒ 绑面板节点收不到本键）；闸取**现刻**态（开 ∧ 非向导占槽 ∧ **组弹窗不在场**——弹窗体自持卡内 Esc〔`stopPropagation`〕，
+   *  本闸零连带；D39 ∥ KD-68 ⑥）；宿主无 `addEventListener` 面 ⇒ 零绑定。 */
   if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
     document.addEventListener("keydown", (event) => {
       if (event?.key !== "Escape") return
       const state = store.get()
       if (state?.settings?.open !== true || occupies(state)) return
+      if (state?.settings?.modal != null) return // 弹窗在场 ⇒ 页保持开（D39 ∥ KD-68 ⑥——卡内 Esc 自持）
       closeSettings()
     })
   }
 
-  return { handlers, openSettings, closeSettings }
+  return { handlers, openSettings, closeSettings, resetFacets }
 }

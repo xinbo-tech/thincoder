@@ -69,7 +69,7 @@ export function labelNode(role) {
   return { tag: "div", props: { class: "msg-label", "data-label": role }, children: [] }
 }
 
-/** 就地更新文本块（帧尾 `patch` 档 —— `renderer/views/chat.mjs` `patchTail` 调用；RENDERER.md §3 帧尾滚动作
+/** 就地更新文本块（帧尾**刷项** —— `renderer/views/chat.mjs` `refreshNode` 调用；RENDERER.md §3 帧尾滚动作
  *  零改）：文本面（`[data-raw]`）**值变才写**（`data-raw` + md 重渲同刷 —— 幂等帧零写）；**推理块分流** =
  *  重渲走核专用画笔 `paintReasoningTarget`（核 `flow/stream.mjs` —— 通用画笔 + `scrollTop = scrollHeight` 钉底；
  *  「对齐第二批」项 1 改接），其余走 `paintStreamTarget`（无钉底 —— 对拍有牙）；`key` = 块键
@@ -96,8 +96,9 @@ export function pinReasoning(node) {
   if (face) face.scrollTop = face.scrollHeight
 }
 
-/** 全根推理块首帧钉底（**重挂径逐块同径** —— 切会话 / 词表置位 / 零重合回落三径新建的推理块同「新建即落底」；
- *  尾段挂载 / 重建 / 前插三径归 `renderer/views/chat.mjs` `dressNode` 逐块钉底）。 */
+/** 全根推理块首帧钉底（构造径一次 —— 首帧 ∥ 词面变 ∥ 整置（页回执首屏 ∥ 换会话 ∥ 关页 ∥ 退流清空）诸径新建的
+ *  推理块同「新建即落底」；结算径造项（尾段 ∥ 中洞 ∥ 头段）与型变单块节点换归 `renderer/views/chat.mjs`
+ *  `dressNode` 逐块钉底）。 */
 export function pinReasoningBlocks(root) {
   if (!root || typeof root.querySelectorAll !== "function") return
   for (const node of root.querySelectorAll('[data-block-kind="reasoning"]')) pinReasoning(node)

@@ -292,13 +292,13 @@ export function getMcpServers() {
   return loadMcpServers()
 }
 
-/** Add an MCP server (duplicate → update). Returns error string or null.
+/** Add or update an MCP server (existing name → in-place update). Returns error string or null.
  *  F5/MCP.md §4：面板 [Edit] 复用同一表单——已存在即原位更新（CLI /mcp edit parity，
- *  保持数组序 + token 字段落盘）。 */
+ *  保持数组序 + token 字段落盘）。分流按存在性判：add 侧失败（含并发冲突）原串上抛（#757）。 */
 export function saveMcpServer(name, config) {
-  const err = addMcpServer(name, config)
-  if (err === null) return null
-  return updateMcpServer(name, config)
+  const exists = loadMcpServers().some((s) => s.name === name)
+  if (exists) return updateMcpServer(name, config)
+  return addMcpServer(name, config)
 }
 
 export function deleteMcpServer(name) {

@@ -23,7 +23,7 @@ import { openSession } from "./events.mjs"
 // 页读径拆分产出（「对齐第二批」）——硬限拆档，结构拆分零语义
 import { applyPage } from "./page-read.mjs"
 import { t } from "./i18n.mjs"
-import { beginBackfill, endBackfill, store } from "./store.mjs"
+import { beginBackfill, endBackfill, store, withFlowOp } from "./store.mjs"
 // 失败面可见提示载体（R9 · #486 —— 核件 toast；词面 = 端词表 `session.*`）
 import { showToast } from "/rc/toast.mjs"
 
@@ -187,11 +187,14 @@ export async function deleteSession(key) {
   }
 }
 
-/** 删活动会话后的接管（**邻位接管律**会话列表形）：同位置行（越界取末行）⇒ 切会话同一路；列表空 ⇒ 关页。 */
+/** 删活动会话后的接管（**邻位接管律**会话列表形）：同位置行（越界取末行）⇒ 切会话同一路；列表空 ⇒ 关页
+ *  （`openSession(state, null)` ∥ **结构作业**：同笔带 `build`（流面作业单 —— 单源 =
+ *  `docs/desktop/design/RENDERER.md` §1.1）——本径无页回执，缺本作业则结算径无可造项（引导节点只归构树），
+ *  `none` 态引导面将由构造径承接）。 */
 async function takeover(index) {
   const rows = store.get().sessions ?? []
   if (rows.length === 0) {
-    store.set(openSession(store.get(), null))
+    store.set(withFlowOp(openSession(store.get(), null), { kind: "build" }))
     return
   }
   const at = Math.min(Math.max(index, 0), rows.length - 1)

@@ -20,7 +20,7 @@
 | **#3** | **`_` 状态字段摊平 + 手写生命周期清单**：agent 对象的运行态字段无 schema / 无封装，复位与继承靠**手写键清单**；新增或漏删字段即状态泄漏 | **现行** | 继承 = 手写键清单：`thincoder-core/agent/run-start.mjs:73-76`（`_inheritedGuard` 逐键回灌）；复位 = 逐字段块：`thincoder-core/agent/run-start.mjs:66-91`（两处 2026-09-29 P2 三拆自 `thincoder-core/agent.mjs:142`–`:159` 迁入——旧坐标 as-of） |
 | **#4** | **eng-token 语义跨端重复**：核内已单点化，VSC 端无同名实现——自持槽语义与校验副本 | **跨端仍分叉**（CLI / 核侧已消解） | 核内单点 = `thincoder-core/token-ttl.mjs`（286 行）；VSC 侧自持面 = `thincoder-vscode/src/agent-tools/subagent-spawn-gate.mjs`（**该端档已退役**——W12 删除集：端面收留 = `thincoder-vscode/src/agent/tool-gates.mjs` 核 `design-token.mjs` 消费面） （迁移期引文） |
 | **#8** | **跨仓复制漂移**（架构伞项）：state / tools / prompts / advisor 层双端整片存在 | **收敛中**（核统一批推进） | 「一个核 + 两个薄壳」= `docs/core/design/CORE-UNIFICATION.md`；跨端剩余差面登记 = `docs/vsc/design/VSC-MIGRATION.md` |
-| **#9** | **扫描面四档越 300 软线**（职责边界待评估——本批**只登记不执行**） | **现行** | 实核行数（2026-09-18 · `wc -l`）：`thincoder-core/memory/schema.mjs` **453** · `memory/docs.mjs` **421** · `memory/code-sync.mjs` **417** · `thincoder-core/memory/core.mjs` **301**；来源 = TUI 假死批 §2.4「软线 300 状态与拆分立场」块（批档 `docs/batches/2026-09-18-tui-freeze.md`）；拆分立场的复评触发 = 该面下次触碰 |
+| **#9** | **扫描面四档越 300 软线**（职责边界待评估） | **部分消解（2026-10-01）** | 实核行数（2026-09-18 · `wc -l`）：`thincoder-core/memory/schema.mjs` **453** · `memory/docs.mjs` **421** · `memory/code-sync.mjs` **417** · `thincoder-core/memory/core.mjs` **301**；**2026-10-01 收正（core 拆线批 #755/#786）**：`docs.mjs` **421 ⇒ 222**（拆 `memory-tool.mjs` 230——已消解）∥ `code-sync.mjs` **417 ⇒ 258**（拆 `code-search.mjs` 138 ∥ `file-list.mjs` 90——已消解）；余两档（`schema.mjs` 453 ∥ `core.mjs` 301）照挂——复评触发 = 该面下次触碰；来源 = TUI 假死批 §2.4（批档 `docs/batches/2026-09-18-tui-freeze.md`） |
 
 
 **注**：`#6` 的 VSC 侧对位面仍开放——`thincoder-vscode/src/tools/more-file.mjs`（多工具合装）；**CLI / 核侧已归位**（见 §3）。该面归 VSC 轮，不计入核面债。（W14 已迁核——自持镜像已删，现体 = 核 `thincoder-core/tools/{file.mjs, patch.mjs, search.mjs}`） （迁移期引文）
@@ -69,11 +69,16 @@
 
 ## 变更记录
 
+- 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R1 改指（核面 `core.mjs` 补 `thincoder-core/memory/` 前缀）。**零新语义**。
+
 - 2026-09-15（**B 式迁移轮 · 第 2 批**）：建档——`thincoder-cli/docs/design/STRUCTURE-DEBT.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
   ① 择**现行债账**重建：§2 现行债（逐条实核现状判 + 证据）· §3 已消解（留证据行防回潮）· §4 清理纪律；
   ② 旧档 §2 评估方法 · §3 前身评估 · §6 as-of 行数清单 · §7 分批路线 · §8 批 A 计划 · 状态行与变更流水 → §5 逐项登记不并；
   ③ 全部坐标改现状路径并经实核（`thincoder-core/**` · 两产品 `src/**`）。
 - 2026-09-15（**S2 W14 落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W14）：§2 注行（`#6` VSC 侧对位面）补迁核注——VSC 自持 `more-file.mjs`（多工具合装面）已删，现体 = 核 `thincoder-core/tools/{file.mjs, patch.mjs, search.mjs}`；机制条文零改。
 - 2026-09-18（**TUI 假死批 · 父侧直接执行**）：§2 新增 **#9 扫描面四档越 300 软线**（`memory/schema.mjs` **453** · `memory/docs.mjs` **421** · `memory/code-sync.mjs` **417** · `thincoder-core/memory/core.mjs` **301**——登记不执行，复评触发 = 该面下次触碰）；来源 = 批档 `docs/batches/2026-09-18-tui-freeze.md` §2.4「软线 300 状态与拆分立场」块。
+
 - 2026-09-29（**core-hygiene 批 · P3 文档收正 · eng-designer**——承批档 `docs/batches/2026-09-29-core-hygiene.md` §2.8 行 4）：§2 #3 行证据坐标收正——复位 ∕ 继承块新家 = `thincoder-core/agent/run-start.mjs`（2026-09-29 P2 三拆；原 `thincoder-core/agent.mjs:142`–`:159` 坐标 as-of）。债务判定（仍现行）与机制条文零改。
+
+- 2026-10-01（**core 拆线批（#755/#786）· 收口轮 · 主 agent**〔父侧直接执行 · 可 revert〕——承批档 `docs/batches/2026-10-01-core-split-line.md` §6）：§2 **#9** 状态收正——`memory/docs.mjs`（421 ⇒ **222**）∥ `memory/code-sync.mjs`（417 ⇒ **258**）两档**已消解**（各拆出 `memory-tool.mjs` **230** ∥ `code-search.mjs` **138** + `file-list.mjs` **90**；转口保名）；余 `memory/schema.mjs` **453** ∥ `thincoder-core/memory/core.mjs` **301** 照挂。**零新语义**。台账 #755 ∥ #786。
 

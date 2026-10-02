@@ -9,7 +9,8 @@
  *      `session-maintenance.mjs` 同批先例）。
  *   ② `readIndexCounts` —— 状态读数：核**只读出口** `memoryStatus()`（R2 · 台账 #412 正解）单点，端侧
  *      **零 SQL ∕ 零表名**（判据：端侧直读核内表不授权——`docs/desktop/design/PROJECT.md` §10 N 行）；
- *      按归一 origin 限定本项目（核 `memoryStatus` 内归一，端侧原样传目录）。
+ *      按归一 origin 限定本项目（核 `memoryStatus` 内归一，端侧原样传目录）；**P1 扩两键（KD-69 · 台账
+ *      #697）**：`dbBytes` ∥ `origins` 核出口透传（设置面两读行供给面——`renderer/views/settings-sections-tools.mjs`）。
  *
  * 纪律：**零 `electron` 依赖**（宿主面 = 回执 —— 平 node 可直测）；**无本项目 ⇒ 读数零计数 ∕ 构建
  * `no-project`**（禁假造：不跨项目读全库、不落假计数）；**库不在盘 ⇒ 读数零计数且不建库**（读面零副作用
@@ -28,18 +29,22 @@ function openMemory(config) {
   return memory
 }
 
-/** ② 状态读数（本项目 origin 限定）⇒ `{ indexed, files, chunks }`：
+/** ② 状态读数（本项目 origin 限定）⇒ `{ indexed, files, chunks, dbBytes, origins }`：
  *  - `dir` 缺 ∕ 非非空串 ⇒ 零计数（**不跨项目读全库**）；
  *  - 库不在盘 ⇒ 零计数且**不建库**（读面零副作用）；
- *  - 计数 = 核 `memoryStatus()` 的 `totals`（code + doc 两表：去重文件数 ∕ 分块数）。 */
+ *  - 计数 = 核 `memoryStatus()` 的 `totals`（code + doc 两表：去重文件数 ∕ 分块数）；
+ *  - **P1 两读（KD-69）**：`dbBytes`（库文件字节数）∥ `origins`（逐 origin code ∥ doc 行数）——核出口透传。 */
 export function readIndexCounts({ dir = null } = {}) {
-  if (typeof dir !== "string" || dir === "") return { indexed: false, files: 0, chunks: 0 }
+  if (typeof dir !== "string" || dir === "") return { indexed: false, files: 0, chunks: 0, dbBytes: null, origins: [] }
   const config = loadConfig()
-  if (!existsSync(config.memory.dbPath)) return { indexed: false, files: 0, chunks: 0 }
+  if (!existsSync(config.memory.dbPath)) return { indexed: false, files: 0, chunks: 0, dbBytes: null, origins: [] }
   const memory = openMemory(config)
   try {
     const status = memoryStatus(memory, { origin: dir })
-    return { indexed: status.indexed, files: status.totals.files, chunks: status.totals.chunks }
+    return {
+      indexed: status.indexed, files: status.totals.files, chunks: status.totals.chunks,
+      dbBytes: status.dbBytes ?? null, origins: Array.isArray(status.origins) ? status.origins : [],
+    }
   } finally { memory.db.close() }
 }
 

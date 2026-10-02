@@ -9,6 +9,7 @@
  * 落盘前两查位同源）——**标题先于落盘**（渲染面回合尾刷新读到即新值）；核件 `generate-title.mjs` 只接不改。
  * **点修轮（U-6 ∕ U-7）**：回合起跑落**回合代次**（`turnGate.stamp`）· 回合尾落盘前查位（`turnGate.revoked` ——
  * 会话中止径 ⇒ 零写：已删会话不得被回合尾落盘复活）；两查位同源 = 回合驱动族 `turn-driver.mjs` 中止墓碑单点。
+ * **#782（本批）**：边界轮 `cap` 腿同源查位（`!revokedTurn` —— 帧 ∥ 记录同抑制；判据沿 `emitDigestEnd` 同源单点）。
  * 失败**抛回调用面**：`send` 径自吞（终局事件已出）；驱动径消费核件 catch 语义（AbortError = 回合级 ⇒ 核件循环重入）。
  * **输入逻辑收正轮（Ctrl+I 同上下文续跑）**：`run` 调用收进内层续跑循环 —— 中止携 `signal.reason.interrupt + message`
  * （宿主 `interrupt` 的核 abort 面 / VSC `panel-messages-turn.mjs:129-138`）⇒ 换代 controller 并 `resume: true` 重入
@@ -29,8 +30,7 @@
  * **#543（裁定 A · 用户输入零丢失）**：撞帽询问**待答期携消息**中断（`interrupt` ⇒ `abort({ interrupt, message })`
  * + `denyGates` ⇒ 询问按取消结算）⇒ 拒结算处读本代 `signal.reason`，携消息 ⇒ 经注入缝 `onCapCancelled(key, message)`
  * 交宿主**核结算通知**（#656 · KD-52 ④：入队单点已前移至 `interrupt` 入口 —— 本缝零二次入队；缺省 ⇒ 零动作；
- * 裸停 —— reason 无消息 —— 零变）。**非 cap 结算径撤回臂**（#656 · KD-52 ④ · 防御）：中断续跑径（下述换代重入 ——
- * 消息经核注入径落历史）⇒ 经 `withdrawCapEntry(key)` 按条目引用摘回预入队条目（幂等；缺省 ⇒ 零动作）。
+ * 裸停 —— reason 无消息 —— 零变）。
  * **留档批 · #719（修复轮 3 · 写点前移）**：边界轮（`autoTurn ∧ ¬timerTurn` —— 与挂起驱动 `boundary` 同判）
  * 收尾 `end`（记录 ∥ 发帧同点双动作 —— 先例 = cap 记录：撞帽径，先于落盘同序）出在本档**结算序前**（两径 `settleTurn`
  * 之前）：`end` 随槽落盘 ⇒ 收束后即时重载末轮痕可重建；挂起驱动 `driveTurn` 收尾半随移出（净简化）。
@@ -55,10 +55,9 @@ function techInfoOf(err) {
  *  `askContinue(key, turn)` = 撞帽询问缝（R3 · #505 —— 返回是否同意续跑；缺省 ∥ 非函数 ⇒ 视为拒绝：收口零静默续）·
  *  `onCapCancelled(key, message)` = 撞帽拒径携文**核结算通知**（#543 裁定 A ∕ #656 · KD-52 ④ —— 询问按取消结算且本代 reason 携消息时单点消费；
  *  入队单点已前移至 `interrupt` 入口 ⇒ 本缝零二次入队；缺省 ⇒ 零动作）·
- *  `withdrawCapEntry(key)` = 非 cap 结算径**撤回臂**（#656 · KD-52 ④ · 防御 —— 中断续跑径按条目引用摘回预入队条目；缺省 ⇒ 零动作）·
  *  `injectUserText(text)` = 用户文本注入缝（#632 · @ 文件引用对齐 —— 用户回合起跑前单点；缺省 ∥ 非函数 ⇒ 原样，向后兼容）。
  *  返回 `{ executeTurn }`。 */
-export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPickup = null, turnGate = null, askContinue = null, injectUserText = null, onCapCancelled = null, withdrawCapEntry = null }) {
+export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPickup = null, turnGate = null, askContinue = null, injectUserText = null, onCapCancelled = null }) {
   /** 中止墓碑查位（U-7）：本回合代次 ≠ 当前代次 ⇒ 会话中止径（`dispose` ∕ 切项目）⇒ 落盘零写；
    *  `turnGate` 缺省 ∥ 代理未落代次 ⇒ 恒假（零回归）。 */
   const revokedTurn = (key, agent) => turnGate?.revoked?.(key, agent) === true
@@ -126,9 +125,6 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
           const reason = live.signal.reason
           if (err?.name === "AbortError" && reason?.interrupt === true) {
             if (typeof reason.message !== "string" || reason.message === "") throw err // 无 message 的 interrupt = 停回合不续跑
-            // #656（KD-52 ④ · 非 cap 结算径撤回臂 · 防御）：本径消息由核注入径落历史（不经营队列）⇒ 预入队条目
-            // （若在 —— 实际不可达）按条目引用摘回（幂等）——零双投；缺省 ∥ 无预入队 ⇒ 零动作。
-            if (typeof withdrawCapEntry === "function") withdrawCapEntry(key)
             live = bindSession(new AbortController())
             flights.set(key, live) // 换代（后续 Stop ∕ 会话中止命中新代 —— 单在飞表不变量保位）
             continue
@@ -138,7 +134,8 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
             if (opts.autoTurn === true) {
               // #541：消化边界轮撞帽 ⇒ cap 帧出站（部分消化不静默 —— 对位 VSC `postDigestCap`）；判据 = 边界轮
               //（`autoTurn ∧ ¬timerTurn` —— 沿 `suspension-drive.mjs` `boundary` 同判：timer 轮不冒充消化边界）。
-              if (opts.timerTurn !== true) { // 留档批 · #719：记录与发帧同点双动作（人读线 cap 行 —— 机器线零触）
+              // #782：墓碑查位（记录腿自带门 —— 与 `emitDigestEnd` 同源判据）——已撤销 ∥ 已删会话 ⇒ 帧 ∥ 记录同抑制。
+              if (opts.timerTurn !== true && !revokedTurn(key, agent)) { // 留档批 · #719：记录与发帧同点双动作（人读线 cap 行 —— 机器线零触）
                 post("ev:digest", { key, status: "cap", mode: "stop", turns: err.turn })
                 appendRecord(agent, { kind: "digest", status: "cap", mode: "stop", turns: err.turn })
               }
@@ -165,10 +162,12 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
     }
     /** 边界轮 `end` 出站（#719 · 修复轮 3 · 写点前移；**恰一次** —— 成功径先发 ⇒ 失败径零重发，防双份）：
      *  `ms` 单算式 ⇒ 记录 ∥ 发帧同值；非边界轮零动作（`boundary` 假 —— timer 轮 ∥ 非 autoTurn 两径；**上行轮属边界**）。
-     *  不查回合墓碑（`revokedTurn`）：盘面零写由 `settleTurn` 墓碑门守（U-7 不破 —— 记录 ∥ 帧同点口径使然）。 */
+     *  **查**回合墓碑（`revokedTurn`）：记录腿不经 `settleTurn` 门（`end` 先于结算落盘）⇒ 自带门 —— 已撤销 ∥
+     *  已删会话 ⇒ 零帧 ∥ 零记录（`endEmitted` 不置 —— U-7 不破）。 */
     let endEmitted = false
     const emitDigestEnd = (ok) => {
       if (!boundary || endEmitted) return
+      if (revokedTurn(key, agent)) return // 墓碑查位（记录腿自带门 —— 已撤销 ∥ 已删会话零帧零记录）
       endEmitted = true
       const ms = Date.now() - started
       post("ev:digest", { key, status: "end", ok, ms }) // 边界帧（同点双动作 —— 发帧 ∥ 记录）

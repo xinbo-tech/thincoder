@@ -1,5 +1,6 @@
 /**
  * 2026-09-30-desktop-digest-instream.test.mjs — 批内件（桌面消化行流内落位批 · 台账 #706）。
+ * ⚠ 断代（2026-10-01 · 台账 #765 拆批）：import 断——`views/chat-digest.mjs` 已删；复跑必红为预期（留档对照 · 勿复跑）。
  *
  * 判据表 = 批档 `docs/batches/2026-09-30-desktop-digest-instream.md` §2 §五（腿 1–3）+ 修正轮块 ①（守卫形权威句）。
  * 覆盖：

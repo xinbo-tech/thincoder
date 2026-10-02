@@ -29,6 +29,8 @@
  * `panel-chat`——环安全）。
  */
 import { logEvent } from "@thincoder/core/log.mjs"
+// #726（2026-10-01 · 跨端消化面恢复批）：留档记录写缝（核口——`pushReal` 双胞；机制单源 = SESSION.md §6.26）。
+import { pushRecord } from "@thincoder/core/context.mjs"
 // §6.30.11 VSC 面：窗内送达（挂起会话期 timer 轮）+ 挂起退出武装点
 import { deliverExpiredTimers, syncTimerWatch } from "./timer-watch.mjs"
 // §6.30.11 窗内 deadline：核到期件读面 + 开关判据（最近到期时点；零依赖叶 ⇒ 静态引入安全）
@@ -105,15 +107,25 @@ export function reassertLiveChildren(panel) {
   return n
 }
 
+/** consult 子块展开（consult 同族收齐批 · 台账 #748）：会话条目本体无 webview 行——按 `childIds`
+ *  （= 子块 relay 号）逐子块补发 `{type:"subagent", status:"done"}` ⇒ webview 归档各子块（起跑窗 ∥
+ *  `reclaimDigestedBlocks` 兜底两径共用）。返回是否 consult 条目（false ⇒ 调用方按本体 id 补发）。 */
+function remitConsultChildBlocks(panel, e) {
+  if (e?.role !== "consult") return false
+  for (const cid of e.childIds ?? []) panel._panel?.webview.postMessage({ type: "subagent", id: cid, role: "consult", status: "done" })
+  return true
+}
+
 /** §6.8 消化完成逐条冻结回收（2026-09-03 实测修订——CLI parity）：消化完 pending 条目（run 首行
  *  已注入）后调用——对本轮已消化条目（核 `hooks.reclaim(consumed)` 实参）逐条补发 {type:"subagent",
  *  status:"done"} → webview 把 awaitingDigest 驻留块**归档落流**（块回收与池空解耦；会话退出 freeze
- *  仅兜底未消化残项）。会诊条目（role=consult）无 webview 行（activity 流承载）——钩内过滤。 */
+ *  仅兜底未消化残项）。**本批 2026-10-01（台账 #754）**：起跑窗（`driveTurn`）已逐条补发起跑快照
+ *  ⇒ 本径 = **兜底幂等**（起跑窗漏口 ∥ 迟结算面）。consult 会话本体无行——按 `childIds` 逐子块展开（#748）。 */
 function reclaimDigestedBlocks(panel, history, consumed) {
   const pend = history._pendingAsyncResults ?? [] // D2 pending 单容器
   for (const e of consumed) {
-    if (e?.role === "consult") continue // 无 webview 行——不回收
-    if (pend.includes(e)) continue // 未消费——留驻等下轮消化
+    if (pend.includes(e)) continue // 未消费——留驻等下轮消化（consult 同拍）
+    if (remitConsultChildBlocks(panel, e)) continue // #748：consult 本体无行——逐子块展开
     panel._panel?.webview.postMessage({ type: "subagent", id: e.id, role: e.role, status: "done" })
   }
 }
@@ -134,6 +146,16 @@ function postSuspensionEnd(panel, { freeze, interrupted = false }) {
   panel._panel?.webview.postMessage({ type: "suspension", active: false, freeze, interrupted: interrupted === true })
 }
 
+/** 留档记录写出（#726 · §6.26 端侧钉定）：活行载体 = `panel._liveLines ?? panel._susp?.lines` 的人读线
+ *  对象（`fullHistory` = `saveLines` 所写 `history` 槽字段之源——同引用）；**不绑记录存储**（`_recordStore`
+ *  缺省 ⇒ 零窗口驱逐）∥ `history` 弃数组（机器线零触）。载体缺位（无活跃会话）⇒ 零动作 + 日志一行（零抛）。
+ *  注：本档导出面（W8 修单装载面——五名）不动——本件 = 模块私有；宿主分派侧同式内联。 */
+function pushLiveRecord(panel, record) {
+  const lines = panel?._liveLines ?? panel?._susp?.lines
+  if (!lines?.fullHistory) { logEvent("ev:recordappend", { ok: false, reason: "no-live-lines" }); return }
+  pushRecord({ _fullHistory: lines.fullHistory, history: [] }, record)
+}
+
 /** 取项缝（核 `ctx.takeInput`——缺省 `shift`）：合并批取（`takeQueuedBatchItem`——取项单源）+ 消费即清
  *  快照（`pushBusyQueued`；动态 import = 零新增静态边）。空队防御支（首动作恒可消费，恒不触）
  *  ⇒ null 零动作、条目不消费（落核第 2 步）。 */
@@ -146,7 +168,8 @@ async function takeQueuedInput(panel, queue) {
 }
 
 /** 回合执行器（核 `ctx.runTurn`）：用户回合（富条目）/ 消化轮 / 上行唤醒轮 / timer 轮。消化 ∕ 上行
- *  两族（`autoTurn ∧ ¬timerTurn`）带可见边界：起止两帧 + `digest:*` 日志（档头已述：不注册核钩）。 */
+ *  两族（`autoTurn ∧ ¬timerTurn`）带可见边界：起止两帧 + `digest:*` 日志 + **留档记录同点追加**（#726——
+ *  档头已述：不注册核钩）。 */
 async function driveTurn(panel, entry, item, opts = {}) {
   const history = entry.lines.history
   const payload = typeof item === "string" ? { ...opts, text: item } : { ...item, ...opts }
@@ -165,6 +188,18 @@ async function driveTurn(panel, entry, item, opts = {}) {
   // （核单点 `upstreamAskLabelVars`——显示串跨端同源）；M4：起跑即发（`n` 可 0）。
   const ask = upstreamAskFn ? upstreamAskFn(history) : null
   panel._panel?.webview.postMessage({ type: "digest", status: "start", n: pendingN, tier: upstream ? "ask" : "digest", ...(ask ?? {}) })
+  // #726 同点双动作（与上帧同行值面）：留档记录入活行载体人读线（形单源 §6.26；机器线零触）。
+  pushLiveRecord(panel, { kind: "digest", status: "start", n: pendingN, tier: upstream ? "ask" : "digest", ...(ask ?? {}) })
+  // 起跑窗（**本批 2026-10-01 —— 台账 #754 裁 A「两端随正」；主面**）：宿主起跑点对**起跑快照**（起跑刻
+  // `_pendingAsyncResults` 单容器）逐条补发 `{type:"subagent", status:"done"}`——**直投不入队**（非出生事件，
+  // 属收尾通知）⇒ webview 把 awaitingDigest 驻留块归档落流（居本族文档序末元素之后）；`reclaimDigestedBlocks`
+  // = **兜底幂等**（迟结算面——已归档者 `archiveBlock` no-op）。consult 会话本体无行——按 `childIds` 逐子块
+  // 展开（#748——与桌面 `reemitDone` 同判）。
+  for (const e of history._pendingAsyncResults ?? []) {
+    if (!e || e.id === undefined || e.id === null) continue
+    if (remitConsultChildBlocks(panel, e)) continue // #748：consult 本体无行——逐子块展开
+    panel._panel?.webview.postMessage({ type: "subagent", id: e.id, role: e.role, status: "done" })
+  }
   let ok = true
   try {
     await entry.runTurn(payload)
@@ -175,7 +210,10 @@ async function driveTurn(panel, entry, item, opts = {}) {
     if (e?.name === "AbortError") logEvent("digest:stopped", { pendingN })
     throw e
   } finally {
-    panel._panel?.webview.postMessage({ type: "digest", status: "end", ok, ms: Date.now() - d0 })
+    const ms = Date.now() - d0
+    panel._panel?.webview.postMessage({ type: "digest", status: "end", ok, ms })
+    // #726 同点双动作：终态记录（`ms` 与上帧同值单算式——`ok` 同源）。
+    pushLiveRecord(panel, { kind: "digest", status: "end", ok, ms })
   }
   const left = history._pendingAsyncResults?.length ?? 0 // D2 单容器
   logEvent("digest:end", { pendingN: left, ms: Date.now() - d0, ...(upstream ? { upstream: true } : {}) })

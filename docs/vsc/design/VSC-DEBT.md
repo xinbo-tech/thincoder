@@ -69,7 +69,8 @@
 **枚举口径（唯一，先定后提）**：只取**顶级消息判别式**——host 侧 = `postMessage` 载荷的顶级 `type` / `name`；webview 侧 = 顶级 `switch (msg.type)` / `case` 分发标签 **∪ 顶级 `name` 比较字面量**（`m.name === "<lit>"` / `m.name.startsWith("sub:")` 形态；
 动态段归一口径 `sub:<role>#<id>` → `sub:*`——role 枚举复用常量 `FAMILY_ROLES`（`thincoder-render-core/subblocks/activity-view.mjs:14`；`activity.js:44`（as-of 2026-09-29）为其镜像——勿重写字面量））。方向 = **host → webview**（webview → host 的 `postMessage` 不在本表）。
 
-**子判别式不单列**（登记为所属消息的载荷变体，避免过度计数）：`statusText.kind` 族（`webview/status-bar.js`：`busy` / `blocks` / `tokens` / `turn` / `thinking` / `model` / `modelStream` 等）· `subagent.status` 族（`thincoder-render-core/subblocks/state.mjs:79-80` 起 `done` / `queued` / `running` …）· `compress` 状态族 · `digest` 两型（一型 = 一条消息）。
+**子判别式不单列**（登记为所属消息的载荷变体，避免过度计数）：`statusText.kind` 族（`webview/status-bar.js`：`busy` / `blocks` / `tokens` / `turn` / `thinking` / `model` / `modelStream` 等）
+· `subagent.status` 族（`thincoder-render-core/subblocks/state.mjs:79-80` 起 `done` / `queued` / `running` …）· `compress` 状态族 · `digest` 两型（一型 = 一条消息）。
 ⇒ **三处已证伪的过度计数**（前次提取把载荷内取值当 `type` 计）：`statusText` 内 kind（over-count #1）· `subagent.status` 值（over-count #2）· `digest` 两型计两条（over-count #3）。
 
 **提取规则（含 1-hop 辅助发射点解析）**：辅助发点必须解析到其载荷构造处，否则漏计数——坐标 as-of 2026-09-16 实核：
@@ -762,4 +763,5 @@
 
 - 2026-09-29（**residuals-round2 批 · 设计轮上抛处置轮 · eng-designer**——承批档 `docs/batches/2026-09-29-residuals-round2.md`〔父侧裁②〕）：§12.1 追加**越线拆分登记（补登）**——`panel-turn-loop.mjs` 311（首登见 B1 块）⇒ 触发式（未预拆）+ 候选线（循环外适配 ∕ 绑定族出档〔新档名实施批定〕）+ 消解窗口（该档下次结构性触碰的批）。**零语义**（登记面）。
 - 2026-09-29（**residuals-round2 批 · 文档面实施轮 · eng-designer**——承批档 `docs/batches/2026-09-29-residuals-round2.md` §2 #586）：三处引文改指（`:353 ∕ :559 ∕ :692`）——判官载体 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`（单测树重建时回迁端侧单测档）。**零新语义**。
+- 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 1 行折行（72——语义零改）。**零新语义**。
 

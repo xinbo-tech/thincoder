@@ -27,7 +27,8 @@ import { wire } from "./chat-tool.mjs"
 /** 列表切片：缺 / 非数组 ⇒ 空表（零节点 —— 禁假数据）。 */
 const listOf = (value) => (Array.isArray(value) ? value : [])
 
-/** MCP 行：名 + 形词（表外原样）+ 摘要（主侧出口——不含密钥面）+ Tools ∕ Edit ∕ Test ∕ Reconnect 四钮 + 移除控件。 */
+/** MCP 行：名 + 形词（表外原样）+ 摘要（主侧出口——不含密钥面；**D37**：`data-mcp-summary` = 中段伸缩省略点）
+ *  + Tools ∕ Edit ∕ Test ∕ Reconnect 四钮 + 移除控件。 */
 function mcpRowNode(row, handlers) {
   const onRemove = typeof handlers?.onRemoveMcp === "function" ? () => handlers.onRemoveMcp(row.name) : undefined
   const onTools = typeof handlers?.onMcpTools === "function" ? () => handlers.onMcpTools(row.name) : undefined
@@ -46,7 +47,7 @@ function mcpRowNode(row, handlers) {
     children: [
       { tag: "span", props: { class: "settings-row-name" }, children: [row.name] },
       { tag: "span", props: { class: "settings-row-value" }, children: [kind] },
-      { tag: "span", props: { class: "settings-row-value" }, children: [String(row.summary ?? "")] },
+      { tag: "span", props: { class: "settings-row-value", "data-mcp-summary": "" }, children: [String(row.summary ?? "")] },
       button("settings:mcpTools", t("settings.mcp.tools"), t("settings.mcp.tools"), onTools),
       button("settings:mcpEdit", t("settings.mcp.edit"), t("settings.mcp.edit"), onEdit),
       button("settings:mcpTest", t("settings.mcp.test"), t("settings.mcp.test"), onTest),
@@ -57,7 +58,8 @@ function mcpRowNode(row, handlers) {
 }
 
 /** MCP 展开面（R7 —— `mcp:tools` 回执落点 + S9 重连回执）：逐工具行（名 + 描述 + params）∕ 探活回执 ∕
- *  重连回执 ∕ 失败面（连接错误串经 `deps.reasonWord` 直传）—— `detail` 缺 ⇒ 零节点。 */
+ *  重连回执 ∕ 失败面（连接错误串经 `deps.reasonWord` 直传）—— `detail` 缺 ⇒ 零节点。
+ *  **D37**：工具行 = 竖排三段 + 展开面缩进 24px（VSC `.mcp-tool-row` 同形——样式面住 `renderer/settings.css`）。 */
 function mcpDetailNode(name, detail, deps) {
   if (detail === null || typeof detail !== "object") return null
   const rows = listOf(detail.tools).map((tool) => ({

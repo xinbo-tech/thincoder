@@ -14,7 +14,6 @@
  * 快照投影（`snapshot`）= `{ text, ts }` —— 图不入快照（`dataURL` 不回传渲染面；形 ∕ 推送点单源 =
  * `docs/desktop/design/IPC.md` §1 `ev:queue` 行）。
  * 边界：队列 = 运行期内存（重启即失）；会话中止（`dispose` ∕ 切项目）⇒ `clear` ∕ `clearAll`（零续发）。
- * **#656（KD-52 ④）**：增 `remove(key, entry)` —— 按引用摘回（非 cap 结算径撤回臂 · 幂等；防御面）。
  * 纯数据面（零宿主依赖 ∕ 零 IO / 零模块态）⇒ 平 node 直测。
  */
 import { QUEUED_MAX_ITEMS, planQueuedInput, takeQueuedBatchItem } from "@thincoder/core/queued.mjs"
@@ -73,17 +72,6 @@ export function createQueuedInput() {
     },
     /** 清本键（会话中止 —— `dispose`）：返回本键是否有条目被清（`false` ⇒ 零动作 / 空快照零帧）。 */
     clear(key) { return table.delete(key) },
-    /** 按引用摘回（#656 · KD-52 ④ 撤回臂 —— 防御面 · 幂等）：命中 ⇒ 摘除且返 `true`；未命中 ⇒ 零动作。
-     *  匹配面 = **引用同一**（调用方持条目引用 —— 同文两条互不误伤；先例 = 渲染面 `retractEcho` 按引用定位）。 */
-    remove(key, entry) {
-      const list = listOf(key)
-      const index = list.indexOf(entry)
-      if (index < 0) return false
-      const next = list.filter((item) => item !== entry)
-      if (next.length === 0) table.delete(key)
-      else table.set(key, next)
-      return true
-    },
     /** 清全表（切项目级联 —— `abortSuspensions`）：返回被判清的键列表（调用面逐键出空快照）。 */
     clearAll() { const keys = [...table.keys()]; table.clear(); return keys },
   }

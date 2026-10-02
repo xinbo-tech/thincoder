@@ -16,8 +16,11 @@ import { TURN_CAP_MARK, STOPPED_MARK } from "@thincoder/core/agent/child-marks.m
 // X2（显示面消差批 §2.1）：advisor 生效模型解析——核单源（CLI `tool-events.mjs:131` 同函数；try/catch 降 null；静态链不达 node:sqlite）。
 import { resolveAdvisorProvider } from "@thincoder/core/advisor/run.mjs"
 import { extractFileLinks } from "./file-links.mjs"
+import { logEvent } from "@thincoder/core/log.mjs"
 import { permissionGate, batchPermissionGate } from "./permission-gate.mjs"
 import { backgroundStatus } from "./suspension.mjs"
+// #726（2026-10-01 · 跨端消化面恢复批）：留档记录写缝（核口——`pushReal` 双胞；机制单源 = SESSION.md §6.26）。
+import { pushRecord } from "@thincoder/core/context.mjs"
 // W15（R5 · 事件中继面）：核 relay 前缀解析（`role#id/` 文法单一权威——零依赖）。
 import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
 // F1（2026-09-16 缺陷修复——承 `docs/batches/2026-09-16-vsc-autoapprove-misalign.md` §2 F1）：child
@@ -78,9 +81,14 @@ export function statusTextPayload(info) {
   return null
 }
 
-/** digest turn-cap 行发射（C-10）：auto = AUTO 档续跑（CLI agent-turn.mjs:188）、stop = 手动档停止（:192）。 */
+/** digest turn-cap 行发射（C-10）：auto = AUTO 档续跑（CLI agent-turn.mjs:188）、stop = 手动档停止（:192）。
+ *  #726（2026-10-01 · 跨端消化面恢复批）：同点双动作——行帧 + 留档记录（全调用面同收；形单源 §6.26——
+ *  载体 = 活行载体人读线对象，不绑记录存储 ∥ `history` 弃数组；载体缺位⇒零动作 + 日志一行，零抛）。 */
 export function postDigestCap(panel, mode, turns) {
   panel._panel?.webview.postMessage({ type: "digest", status: "cap", mode, turns })
+  const lines = panel?._liveLines ?? panel?._susp?.lines
+  if (!lines?.fullHistory) { logEvent("ev:recordappend", { ok: false, reason: "no-live-lines" }); return }
+  pushRecord({ _fullHistory: lines.fullHistory, history: [] }, { kind: "digest", status: "cap", mode, turns })
 }
 
 /** ⑥（2026-09-19）sync 子代理完成锚：`<role>#<id>` 键 → `done` 载荷（键文法单源 = `parseRelayPath`）。

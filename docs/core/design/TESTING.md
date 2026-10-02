@@ -66,6 +66,35 @@
 
 - 执行形：**纪律判据**——不配机械闸（承需求 §1.3）；守闸读数（现集成数 ∕ 窗口）随**收口测试行 ②半**（§3.3）逐批带出——零新增簿记。
 
+### 2.2 批内件挂载面规范（双实例族防御 · #788）
+
+批内件（`docs/batches/*.test.mjs`）在「平 node 直测」下，凡取**产品码经 `@thincoder/*` junction 解析的件**（核件 ∕ render-core），取件路由必须与**消费面同源**：经**任一产品 junction**（`thincoder-desktop` ∥ `thincoder-vscode` ∥ `thincoder-cli` 的 `node_modules/@thincoder/<包>/…`）；渲染面经 `rc-resolve` 钩子同路。
+**禁直取仓根兄弟目录**（`thincoder-core/…` 直路）用于 `instanceof` ∕ 单例 ∕ 注入缝（seam）面。
+
+- 机制（单源引用）：Windows junction 目标 = 规范形拼写（`scripts/dev-link.mjs` 单一产生口 ∥ `docs/core/design/CORE-UNIFICATION.md` §2.6.1）；直路拼写与 junction 目标不一致时（常见触发 = 小写 `d:` 拼写进程），同一文件生成两个 ESM URL 键 ⇒ 双实例（`instanceof` ∥ 单例比较 ∥ 缝注入失效；潜伏面）。
+- 跨路恒等断言（「直路实例 === junction 实例」类）一律改形：**同路取件**（缝真效）+ **canonical realpath 同文件断言**（挂载面判据；`canon` 形先例 = `docs/batches/2026-09-29-parity-b1-vsc-core.test.mjs:117`）。
+- 已修先例（本规范收编）：`2026-09-29-desktop-carryover-c3.test.mjs:54` ∥ `2026-09-30-cross-end-digest-recovery.test.mjs:50` ∥ `2026-10-01-audit-remediation.test.mjs:816`。
+- 归口批 = `docs/batches/2026-10-01-batch-file-mount-normalize.md`（#788——18+2+2 逐件清单住其 §2）。
+
+### 2.3 现行态认账（#792 二择——「认账为骨架」· 2026-10-01）
+
+> 缘起 = 2026-09-28 全清重置后「五包 `npm test` = 空清单零用例即绿」的现状**正式落账**（#792 二择：单元面重建 ∥ 认账——裁 ②「认账为骨架」，用户 2026-10-01 全自动代选）。
+> 本块 = 该现状的**唯一权威陈述面**（D2——包级文档引本块、不各自重述）；「认账」= 显式接受现状并使之可读、可见——**非**「测试已就绪」的宣称（自动绿不得被误读为未测面已被验证——承需求 `requirements/TESTING.md` §6.2 F26 同判据）。
+
+**五包读数（as-of 2026-10-01；复跑命令 = 各包 `node test/run.mjs`）**：
+
+| 包 | 启动期检查（空清单下仍跑） | 读数形 |
+|---|---|---|
+| cli ∥ desktop ∥ vscode | 收集面自检（在盘 ∥ 无漏收集/登记 ∥ 软链目录拒绝——空树下平凡过）+ 空清单守卫直通 | `ℹ test manifest is empty — zero tests = green (2026-09-28 full reset).` + exit 0 |
+| core | 收集面自检（②' 无漏收集 ∥ ②'' 软链目录拒绝）+ 空清单守卫（无 ③④ 面——实测） | 同上（空清单行 + exit 0） |
+| render-core | 收集面自检 + **③ 包面自检（零依赖 ∥ 核内 import 面）∥ ④ 全档语法面（`node --check`）**——自检红 ⇒ `✖ test manifest check failed: …` + exit 1 | 自检过 ⇒ 空清单行 + exit 0 |
+
+**单元面现行 = 批内件形态**（`docs/batches/*.test.mjs`——as-of 2026-10-01；件数随批流动、不落固定读数——复算口径 = 取证批 `docs/batches/2026-10-01-test-manifest-evidence.md` §2.9：逐档计数、后缀即匹配式；随批次档留存归档、**不进套件**、零维护；生命口径 = §3.1）：**复跑口径** = 单档直跑 `node --test docs/batches/<档>.test.mjs`（平 node；取件按 §2.2 挂载面规范）——按需 ∥ 定向复跑；零新增命令 ∥ 零新机制。
+
+**认账 ≠ 丢弃**：批内件**总体统留**——含锁族 ∥ 断代/勿复跑件 14 件（as-of 2026-10-01；判据式 = 件内「锁」∧非「快照」∕「断代」∨「勿复跑」——复算口径 = 取证批 `docs/batches/2026-10-01-test-manifest-evidence.md` §2.9；锁族计数随批流动、不落固定读数）。断代 ∥ 勿复跑件件内自持标注（留存面 ∥ 复跑面按标注区分）；本认账**零处置动作**（零删 ∥ 零移 ∥ 零改注）。
+
+**集成面 = 重建期**：现量 0（cli = 集成目录未建〔两层 glob 零命中〕；vscode ∥ desktop = 集成目录在、零例档；核仓按需求 §3 N20 不设集成域）；起步 = §5.1（需求 N8 最小集）。**发布门欠账显式**：集成集 = 发布门依据（需求 F12）而现量 0 ⇒ 空绿不掩欠账；守闸读数（现集成数 ∥ 窗口 50–100）随收口测试行 ②半带出（需求 F9）。
+
 ## 3. 测试生命周期（三层来源）
 
 > 术语辨异：**技法层**（单元 = 最小可测单元 ∕ 隔离依赖〔桩 ∕ 假件〕· 集成 = 组件组合与交互〔真实装配、可贯穿整条链〕——口径 = 需求 §1 总纲；**两技法永不互转**）· **来源层**（①②③——测试的出身与寿命）· **收口分工**（舱内单元 ∕ 链终仓套件（收口跑）——一次改动何时跑什么；口径 = `requirements/TESTING.md` §2 F1–F4）——**三者正交**，勿混。
@@ -170,6 +199,22 @@
 | ⑦ 配置装载与 provider 选路 | 正常：HOME 重定向 + 真 config → 子进程启动（请求抵达选中 provider 的本地 mock——model / baseURL 匹配）；边界：指定不存在的 provider 名 → 明确报错（不静默落第一个）；错误：坏配置 → 软失败引导（不崩溃；退出码 + 可读文案） |
 | 种子组（③层首收编——生产反馈） | 生产问题按 §3.4 收编，改写成业务语气场景（断言只写业务可观察结果）；既有单测档不因收编移除——随档留存（不进套件） |
 
+### 5.1 起步批量（N8 最小集——2026-10-01 认账轮定形）
+
+**选例**：起步 = 场景 **① 普通模式完整工具流**（需求 `requirements/TESTING.md` §2 F13 点名必选）× **三前端各自实例化**（需求 F14）；三态（正常 ∥ 边界 ∥ 错误）齐全——判据摘要 = §5 场景① 行。选例原则 = 用户可见入口 ∥ 业务场景（需求 §1.1）——不从单元档转换（需求 F8）。
+
+**例数窗 3–9**：满形 = 三端 × 三态 = 9；某态在某端结构性不可产时按端减例（以证据登记）——三态齐全 = 集级判据（需求 F13）。
+
+| 端 | 落位（例档） | 清单接线（既有机制——零 runner 改动） |
+|---|---|---|
+| cli | `thincoder-cli/test/integration/<场景名>.test.mjs` | 两层 glob 自动收（零清单档——§4.2） |
+| vsc | `thincoder-vscode/test/integration/<场景名>.test.mjs` | 登记 `thincoder-vscode/test/integration/files.mjs`（清单↔盘上两向自检——§4.3） |
+| desktop | `thincoder-desktop/test/integration/<场景名>.test.mjs` | 登记 `thincoder-desktop/test/files.mjs`（单册——walk 递归覆盖） |
+
+- **门** = `npm test` 单入口全绿（§10 F1——不新增入口 ∥ 不新增 script）；收口跑 = 父侧恰一次（§1.1）；空清单守卫在清单非空时自然让位（走 `node --test`）。
+- **驱动面**各端自持（§4.4）：desktop = 单源 `docs/desktop/design/E2E-TESTING.md`；vsc = 扩展模块 + 宿主 mock；cli = 真子进程 ∥ 模块直驱 + 脚本化 provider。核仓零集成（需求 §3 N20）。
+- **扩面**（超起步批量）只走 §3.4 两个入口（业务设立 ∥ 生产收编）——不预防性铺量（需求 N8）。
+
 ## 6. 散文锚退役（PROSE-ANCHOR-RETIRE）
 
 ### 6.1 判据（执行版）与口径裁定
@@ -241,6 +286,8 @@
 | A-TS14 | 集成集射程 = 三前端（cli ∕ vsc ∕ desktop）；核仓（`thincoder-core` ∕ `thincoder-render-core`）零集成档 / 零集成清单 | §3 N20 |
 | A-TS15 | 集成集规模窗口在位——一仓 **50–100 用例**（超窗裁减回窗内；§2.1 映射 · 落点 §2 ∕ §4）；守闸读数（现集成数 ∕ 窗口）随收口测试行 ②半带出（§3.3） | §3 N19 |
 | A-TS16 | 防膨胀机制映射在位（§2.1——总量不随规模增长：两闸〔① 不累积 = 单元单元测试档 · 永不进套件；② 有上限 = 集成窗口〕＋根判据「验证投入 ∝ 失败代价，与代码量脱钩」）；执行形 = 纪律判据（不配机械闸） | §1.3 · §3 N21 |
+| A-TS17 | 现行态认账在位（§2.3——五包读数表 ∥ 单元面复跑口径 ∥ 「认账 ≠ 丢弃」留存句 ∥ 集成欠账显式句）；包级收正面 5 处（cli `AGENTS.md` ∥ cli `README.md` ∥ core `README.md` ∥ desktop `AGENTS.md` ∥ vsc `AGENTS.md`）无陈旧声明（`offline unit tests` ∥ `offline unit suite` ∥ `Full suite` 零命中） | F6 ∥ F8 ∥ F9 ∥ F12 |
+| A-TS18 | 起步批量定形在位（§5.1——选例 = 场景①〔F13 点名〕∥ 例数窗 3–9 ∥ 三端落位与清单接线 ∥ 门 = `npm test` 单入口——四要素齐） | N8 ∥ F12 ∥ F13 ∥ F14 ∥ N20 |
 
 **用例表（正常 / 边界 / 错误——摘）**：
 
@@ -255,6 +302,7 @@
 | TS-7 | 错误 | 新增断言写读档句子断言 | 判红（禁令；结构机检枚举外） |
 | TS-8 | 正常 | 核面 `npm test` | 仓套件（收口跑）执行；退出码 0 |
 | TS-9 | 边界 | 核面仓套件（收口跑）（本地 / CI 同一入口 `npm test`） | 退出码 0（CI 覆盖不降） |
+| TS-10 | 正常 | 五包 `node test/run.mjs`（2026-09-28 重置后空清单态） | 空清单行（`ℹ test manifest is empty …`）+ exit 0 ×5；render-core 先经 ③④ 自检（自检红 ⇒ 非零退出） |
 
 ## 8. 边界（本档不做）
 
@@ -400,6 +448,14 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 ## 变更记录
 
+- 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R3 裸名化（已删档 `E2E-HARNESS.md` 去目录段）。**零新语义**。
+
+- 2026-10-01（**测试清单收口轮 · 设计评审修正轮 1 · eng-designer**——承批档 `docs/batches/2026-10-01-test-manifest-settlement.md` §3（findings 1–3））：§2.3 读数句两处收正——批内件 ∥ 锁族计数改挂复算口径（读数随批流动、不落固定读数；口径 = 取证批 `docs/batches/2026-10-01-test-manifest-evidence.md` §2.9）；面 1 残句收正 ∥ 面 2–5 给句补指针（修正块 = 承批档 §2.9——随实施轮落）。**零机制改**。
+
+- 2026-10-01（**测试清单收口轮（#792 二择裁后——「认账为骨架」）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-01-test-manifest-settlement.md` §2）：新增 **§2.3 现行态认账**（五包读数表 ∥ 复跑口径 ∥ 认账≠丢弃〔锁族 36 ∥ 断代/勿复跑 14〕∥ 集成欠账显式）；新增 **§5.1 起步批量**（场景①三前端三态——选例 ∥ 例数窗 3–9 ∥ 落位与接线 ∥ 门）；§7 增 **A-TS17 ∥ A-TS18** + **TS-10**。**零机制新增**。
+
+- 2026-10-01（**批内件挂载面归一（#788）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-01-batch-file-mount-normalize.md` §2）：新增 **§2.2 批内件挂载面规范**（junction 同源取件 ∥ 恒等断言改形；背景 = 小写盘符拼写下 ESM 双实例族 18+2 实例）。**零机制新增**（纪律收编既有先例）。
+
 - 2026-09-29（**防膨胀回指行补（fix · 承 `docs/batches/2026-09-28-test-layer-prompts.md` §2.10 O1 · 父侧裁 = 加行）** · eng-designer）：§7 新增 **A-TS15**（N19——集成窗口 50–100 ∕ 仓 + 守闸读数挂收口测试行 ②半）· **A-TS16**（N21——防膨胀机制映射：两闸 + 根判据）；防膨胀三件（N19–N21）回指齐备。**零新语义**（只引用不重述——D2）。
 
 - 2026-09-29（**防膨胀机制映射轮（fix · 承 `docs/batches/2026-09-28-test-layer-prompts.md` §1.33 派单）** · eng-designer——口径 = 需求 `requirements/TESTING.md` §1.3 ∕ N21）：新增 **§2.1 防膨胀机制映射**（两闸：单元测试档 = 不累积 ∕ 集成窗口 50–100 = 有上限；根判据 = 成本取舍总纲；守闸读数挂收口测试行 ②半）；§3.3 ②半 补窗口读数 · 需求层指针补 N21。**零新增机制 ∕ 零新语义**（只引用不重述——D2）。
@@ -450,4 +506,4 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 - 2026-09-26（**桌面端 E2E 基建批 · 放行落笔轮** · eng-designer）：首部多实现面行补**桌面面**（`thincoder-desktop/test/run.mjs` + `thincoder-desktop/package.json` scripts——单入口；集成域 = `thincoder-desktop/test/integration/`）
   §10 边界行收正为「**运行期零第三方依赖（守）∥ 测试面 `devDependencies` 不在此限（放开）**」（本批 `playwright-core` = 测试面驱动，非运行期依赖——判据 = 不进 `dependencies`；裁决 = 用户 2026-09-26 放行 · 批档 `docs/batches/2026-09-26-desktop-e2e-infra.md` §1）。
 
-- 2026-09-30（**跨线清零轮 · 设计档收正 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2 · 台账 #677）：首部兄弟档行收正——`design/E2E-HARNESS.md` 已删除（2026-09-15 · 错轴退役）；终端程序自动验证面判据面现住需求档 `requirements/TESTING.md` §6（内联判据）+ `TOOLS.md` §4.7；「设计面 = 待重做（另轮）」句退场（无承接对象）。**零机制改**。
+- 2026-09-30（**跨线清零轮 · 设计档收正 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2 · 台账 #677）：首部兄弟档行收正——`E2E-HARNESS.md` 已删除（2026-09-15 · 错轴退役）；终端程序自动验证面判据面现住需求档 `requirements/TESTING.md` §6（内联判据）+ `TOOLS.md` §4.7；「设计面 = 待重做（另轮）」句退场（无承接对象）。**零机制改**。

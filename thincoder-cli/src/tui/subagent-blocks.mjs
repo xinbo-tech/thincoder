@@ -30,13 +30,13 @@ export { SUB_BLOCK_LINE_LIMIT, appendSubBlock } from "./subagent-children.mjs"
 // routeSub*/compression panel 内部用本地 import；re-export 保外部 import 面（index.mjs 等）
 // CLI-ACTIVITY-DEBLOAT F-3（2026-09-10）：面板手工镜像退役——re-export 面换现算导出
 // computePanelBlocks（读时现算），本文件全部刷镜调用点删除（单账本——变更点不再手动同步）。
-import { freezeSubTaskLines, finishSubTaskKey, finishSubTask, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks, shiftFreezeAnchors, livePoolHas, removeFrozenSubTaskLine, tombstoneSubKey } from "./subagent-freeze.mjs"
-export { computePanelBlocks, finishSubTask, finishSubTaskKey, freezeSubTaskLines, shiftFreezeAnchors, freezeDoneSubTasks, finishSubTasksByRole, freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-freeze.mjs"
+import { freezeSubTaskLines, finishSubTaskKey, finishSubTask, freezeDoneSubTasks, freezeAllSubTasks, freezeReclaimDigestedBlocks, shiftFreezeAnchors, livePoolHas, removeFrozenSubTaskLine, tombstoneSubKey } from "./subagent-freeze.mjs"
+export { computePanelBlocks, finishSubTask, finishSubTaskKey, freezeSubTaskLines, shiftFreezeAnchors, freezeDoneSubTasks, freezeAllSubTasks, freezeReclaimDigestedBlocks } from "./subagent-freeze.mjs"
 
 // 前缀文法/解析已迁 src/agent/relay-prefix.mjs（第 27 批）——本文件不自持副本。
 /** ⟦ev⟧ token parser：`⟦ev⟧<name>\x1e<n>\x1e<max>\x1e<phase>\x1e<detail>`。phase done
- *  = async 完成即冻结（settle 时发）；settled = 挂起期完成——冻结延迟至 digest 消化
- *  完成（AGENT-LOOP-ASYNC-POOL.md §6.8 freezeReclaimDigestedBlocks 逐条回收——不等池空）或池空退出兜底补发；
+ *  = 消费面补发（#746：settle 一律发 settled）——收即冻结；settled = 完成（挂起 ∥ 非挂起两态）——
+ *  冻结延迟至消费窗（AGENT-LOOP-ASYNC-POOL.md §6.8 freezeReclaimDigestedBlocks 逐条回收——不等池空 ∥ 退出兜底补发）；
  *  stopped（AGENT-LOOP-SUBAGENT.md §6.7.2 D-M6）= cancel 中止——interrupted 语义立即冻结（标题 "stopped"）；
  *  queued（AGENT-LOOP-SUBAGENT.md §6.9 D-SD3b）= 排队 spawn 返回即建 waiting 块（round2 #2 事件通道——
  *  `⟦ev⟧queued\x1e<kind>\x1e<position>\x1equeued\x1e<detail>`——kind slot/wait/depc）——
@@ -52,8 +52,7 @@ export const SUB_EVENT_RE = /^⟦ev⟧(turn|approval|done|settled|stopped|queued
 
 /** N1: render-layer throttle for child tool-output appends (generation relays verbatim). */
 export const SUB_RELAY_THROTTLE_MS = 250
-/** Roles a subagent tool child can take（⏹ 门控/渲染角色判据；F-2 后角色匹配完成面 =
- *  finishSubTasksByRole——finishSubTask 已收窄 no-op）。 */
+/** Roles a subagent tool child can take（⏹ 门控/渲染角色判据）. */
 export const SUBAGENT_ROLES = ["sub", "explore", "plan", "coder", "eng-coder", "eng-designer"]
 
 let _subRenderLast = 0
@@ -201,9 +200,9 @@ export function routeSubToken(state, t, scheduleRender) {
   }
   const sub = ensureSubTaskKey(state, path.head, path.head.slice(0, path.head.lastIndexOf("#")))
   if (!sub) return true // frozen tombstone — late token from an aborted child: drop
-  // ⟦ev⟧：turn/approval 进度 → 仅头部（D1——不进 blocks/主流）；done（AGENT-LOOP-SUBAGENT.md §6.7.3 D-A3）=
-  // 完成即冻结（settle 时发）；settled（AGENT-LOOP-ASYNC-POOL.md §6.8 D-S8）= 挂起期完成——驻留面板中间态
-  // "done · awaiting digestion"，池空补发冻结；stopped（AGENT-LOOP-SUBAGENT.md §6.7.2）= cancel——立即冻结；
+  // ⟦ev⟧：turn/approval 进度 → 仅头部（D1——不进 blocks/主流）；done（AGENT-LOOP-SUBAGENT.md §6.7.3 D-A3）= 消费面补发（#746：
+  // settle 一律发 ⟦ev⟧settled）——收即冻结；settled（AGENT-LOOP-ASYNC-POOL.md §6.8 D-S8）= 完成（挂起 ∥ 非挂起两态）——
+  // 驻留面板中间态 "done · awaiting digestion"，冻结延迟至消费窗（回收 ∥ 退出兜底）；stopped（AGENT-LOOP-SUBAGENT.md §6.7.2）= cancel——立即冻结；
   // queued（§6.9 D-SD3b）= 排队 spawn 等待块（spawn 返回即建/状态变迁刷新——覆盖式
   // 更新 sub.queued——块不可展开（无活动流）；启动后 async 事件清标转 running）。
   if (payload.startsWith("⟦ev⟧")) {

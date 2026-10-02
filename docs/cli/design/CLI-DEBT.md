@@ -42,7 +42,7 @@
 | A13 | `test/session-store.test.mjs` | **416** | 84 | 触发式（未预拆） | 候选面（评估项）：按用例族 + 夹具自持分档（先例 = KD-23） | 本册首登（≥400 普查面） |
 | A14 | `test/async-settle.test.mjs` | **411** | 89 | 触发式（未预拆） | 候选面（评估项）：digest 批量预算族（`:242` 起）/ 四族接线族（`:339` 起）二分 | 本册首登（≥400 普查面） |
 | A15 | `test/input-lock.test.mjs` | **403** | 97 | 触发式（未预拆） | 候选面（评估项）：busy 门禁族用例抽档 | `docs/batches/2026-09-24-busy-queue-visible.md` §:458 · `docs/batches/2026-09-19-upstream-channel-availability.md` §:116 |
-| A16 | `src/tui/agent-turn.mjs` | **418**（读数 as-of 2026-09-29 · **doc-backfill 批**实读） | 82 | 触发式（未预拆）· **越 400 首登**（#448② 实改档：386 ⇒ 407 · +21） | 候选面：送达 ∕ 兜底面抽档（原案）；回合收口层（`runAgentTurnInner` 重武装守卫族）为 #448② 后档内新主体面——拆点届盘按现盘择一 | 原 B2 行转正（源 = `docs/batches/2026-09-24-busy-queue-visible.md` §:459）+ `docs/batches/2026-09-28-tech-debt-closeout.md` §1.19 收正行 ⑥ |
+| A16 | `src/tui/agent-turn.mjs` | **422**（读数 as-of 2026-10-01——届盘实读（consult 同族 ∥ 清账批列报复核）；回填链 407 ⇒ 418（doc-backfill）⇒ 422） | 78 | 触发式（未预拆）· **越 400 首登**（#448② 实改档：386 ⇒ 407 · +21） | 候选面：送达 ∕ 兜底面抽档（原案）；回合收口层（`runAgentTurnInner` 重武装守卫族）为 #448② 后档内新主体面——拆点届盘按现盘择一 | 原 B2 行转正（源 = `docs/batches/2026-09-24-busy-queue-visible.md` §:459）+ `docs/batches/2026-09-28-tech-debt-closeout.md` §1.19 收正行 ⑥ |
 
 ### 2.2 表 B：<400 · 裁定 / 登记案在册（口径 §1-3——7 档）
 
@@ -115,6 +115,7 @@
 - 2026-09-29（**micros 批 · 档面波（解冻后）· eng-designer**——承 `docs/batches/2026-09-29-desktop-micros.md` §2 档面笔清单 P5）：B5 读数刷新 **341 ⇒ 210**（届盘实读 2026-09-29——B1-P3 取核重写 + #576 笔后）。**零语义**（读数与登记面）。
 
 - 2026-09-29（**doc-backfill 批 · 波 1 · eng-designer**——承 `docs/batches/2026-09-29-doc-backfill.md` §2 · 台账 #598）：表 A 四行读数刷新（口径 §1-2 行维护①——stall-indicator 批触碰后届盘实读）：A9 **453 ⇒ 462**（余 38）· A10 **449 ⇒ 454**（余 46）· A12 **434 ⇒ 447**（余 53）· A16 **407 ⇒ 418**（余 82）。**零语义**（读数与登记面）。
+- 2026-10-01（**缺陷修复批收口 ∥ 零语义清账批列报 · 主 agent 笔〔③ 类机械 · 可 revert〕**——承 `docs/batches/2026-09-30-defect-fixes.md` §6 ∥ `docs/batches/2026-10-01-zero-semantic-sweep.md` §2.13）：表 A **A16 读数刷新 418 ⇒ 422**（届盘实读——余量 82 ⇒ 78）。**零语义**（读数与登记面）。
 
 - 2026-09-29（**structure-split-2 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-09-29-structure-split-2.md` §1 ∕ §2.2-A · 台账 #620）：**A1 行转「本批执行」**（届盘实读 499 未变；两段切点 ∕ 预算 ≈315 ∕ ≈200 落行；`pickers.mjs` **import ∥ 装配面零改**——注释指针一行级随批）；拆后行移 §4 已消解 = 实施轮义务。**零语义**（登记面 ∕ 方案落位）。
 

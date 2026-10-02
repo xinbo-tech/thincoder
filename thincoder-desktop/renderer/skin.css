@@ -1,5 +1,5 @@
 /* skin.css — 皮肤与交互态尾段（自 `renderer/styles.css` 四拆 —— 会话模型轮 R13：滚动条皮肤留存；
-   原左列 ∕ 标签条 ∕ 会话头三面成员随面裁撤退场，会话控制面交互态随面住 `chrome.css`）。 */
+   会话控制面交互态随面住 `chrome.css`）。 */
 
 /* 滚动条皮肤（D24 R6 · 全局 · 零变量）：10px · 轨 / 角透明 · thumb = `--fg` 22%（2px 透明边 · clip padding-box · 圆角 0——扁平化 2026-09-30）· hover ⇒ 35%——盖各滚动容器与设置面板。 */
 ::-webkit-scrollbar { width: 10px; height: 10px; }

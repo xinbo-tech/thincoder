@@ -10,7 +10,7 @@
  */
 import test from "node:test"
 import assert from "node:assert/strict"
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, utimesSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, utimesSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { basename, join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
@@ -18,12 +18,12 @@ import { pathToFileURL } from "node:url"
 const ROOT = process.cwd()
 if (!existsSync(join(ROOT, "thincoder-core"))) throw new Error(`从仓库根（thincoder/）运行（cwd = ${ROOT}）`)
 const mod = (rel) => import(pathToFileURL(resolve(ROOT, rel)).href)
+const canon = (rel) => realpathSync(resolve(ROOT, rel)).toLowerCase()
 const [shell, helpers] = await Promise.all([
   mod("thincoder-vscode/src/extension/image-handler.mjs"),
-  mod("thincoder-core/agent/helpers.mjs"),
+  mod("thincoder-vscode/node_modules/@thincoder/core/agent/helpers.mjs"),
 ])
-assert.equal((await mod("thincoder-vscode/node_modules/@thincoder/core/agent/helpers.mjs")).cleanupOldToolResults,
-  helpers.cleanupOldToolResults, "跨包联结同模块实例——薄壳扫除 = 核件单源（非第二实现在场）")
+assert.equal(canon("thincoder-vscode/node_modules/@thincoder/core/agent/helpers.mjs"), canon("thincoder-core/agent/helpers.mjs"), "挂载判据：junction 目标 = 活核树同一文件（canon 形——先例 = b1:117）")
 
 const WINDOW = helpers.TMP_RETENTION_MS
 const HOUR = 3600_000

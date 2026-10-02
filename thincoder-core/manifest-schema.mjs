@@ -38,6 +38,7 @@ export const DEFAULT_MANIFEST = Object.freeze({
   checkConfig: Object.freeze({
     scanDirs: Object.freeze(["docs"]),
     lineWidth: 300,
+    widthExemptZones: Object.freeze([]),
     anchors: Object.freeze({ domain: "docs", exclude: Object.freeze(["_archive", "batches"]) }),
     exemptions: Object.freeze([]),
     lineCounts: Object.freeze([]), // 行数面机检声明（#546）：[] = 未载惰性（doc-check 行数族）

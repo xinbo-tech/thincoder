@@ -84,6 +84,9 @@ export function toolsCardHtml() {
   html += `<div class="settings-subtitle">${t("settings.indexSection")}</div>`
   html += embedRowHtml()
   html += `<div id="index-status" style="font-size:12px;opacity:0.7;padding:4px 0">—</div>`
+  // P1 两读（KD-69 · 台账 #697）：库大小行 ∥ 逐 origin 行数行（缺位 ⇒ 隐藏——零节点；`pre-line` 供逐行）
+  html += `<div id="index-db-size" style="font-size:12px;opacity:0.7;padding:2px 0;display:none"></div>`
+  html += `<div id="index-origins" style="font-size:12px;opacity:0.7;padding:2px 0;display:none;white-space:pre-line"></div>`
   html += `<button id="index-build-btn" class="key-btn">${t("settings.indexBuild") || "Build Index"}</button>`
   html += `</div></section>`
   return html
@@ -327,6 +330,37 @@ export function updateIndexStatus(s) {
   renderIndexStatus()
 }
 
+/** 字节数归一读数（P1）：非有限 ∕ 负 ⇒ `null`；< 1024 ⇒ `B`，否则逐级 `KB` ∕ `MB` ∕ `GB` 一位小数。 */
+function formatBytes(value) {
+  if (!Number.isFinite(value) || value < 0) return null
+  if (value < 1024) return `${value} B`
+  const kb = value / 1024
+  if (kb < 1024) return `${kb.toFixed(1)} KB`
+  const mb = kb / 1024
+  if (mb < 1024) return `${mb.toFixed(1)} MB`
+  return `${(mb / 1024).toFixed(1)} GB`
+}
+
+/** P1 两读渲染（KD-69 —— 库大小行 ∥ 逐 origin 行数行）：值缺 ⇒ 隐藏（零节点，禁假造）；
+ *  `textContent` 承载（origin 为盘径原串——零 HTML 注入面）；origin 行首前缀住本渲染面拼装。 */
+function renderIndexReadings(status) {
+  const size = document.getElementById("index-db-size")
+  if (size) {
+    const text = formatBytes(status?.dbBytes)
+    if (text === null) { size.textContent = ""; size.style.display = "none" }
+    else { size.textContent = t("settings.indexDbSize", { size: text }); size.style.display = "" }
+  }
+  const origins = document.getElementById("index-origins")
+  if (origins) {
+    const rows = Array.isArray(status?.origins) ? status.origins.filter((r) => r !== null && typeof r === "object") : []
+    if (rows.length === 0) { origins.textContent = ""; origins.style.display = "none" }
+    else {
+      origins.textContent = rows.map((r) => `${String(r.origin ?? "")} — ${t("settings.indexOriginCounts", { code: Number.isFinite(r.code) ? r.code : 0, doc: Number.isFinite(r.doc) ? r.doc : 0 })}`).join("\n")
+      origins.style.display = ""
+    }
+  }
+}
+
 function renderIndexStatus() {
   // D-W5：`#row-embed` 键行同拍重绘（indexStatus 为异步推送——可能晚于 agentSettings 触发拍；
   // 不扩则建面后到达时保持 `—` = 假阴性）
@@ -334,6 +368,7 @@ function renderIndexStatus() {
   const el = document.getElementById("index-status")
   if (!el) return
   const btn = document.getElementById("index-build-btn")
+  renderIndexReadings(SS.indexStatus)
   if (!SS.indexStatus) {
     el.textContent = t("settings.indexNoKey")
     if (btn) btn.disabled = true

@@ -41,7 +41,7 @@ Judge the **change face** before acting — different faces, different authoriza
 4. **Testing** — verify. **Verify by actually running it**: the change's implementer runs the change-time feedback loop; the parent runs the real check at delivery (one-line readings). **No test document, no per-user-story case mandate — verification spend ∝ cost of failure.**
    - **Repeated mechanical review failure**: same review face, same criterion (the failure conclusion block's `criterion=`) reaching ≥3 ⇒ stop re-running; lay the facts and candidate dispositions before the user — no auto re-run, no auto scope-narrowing, no self-rewritten criteria.
 
-**Light channel (detail-face controlled bypass — all five questions must pass; bypass ≠ cancellation)**: adjustments on the detail face (visual · copy · parameters (thresholds · defaults · lengths) · existing-interaction details (order · position · keybindings · hint texts)) may skip the「Design → Review → Approval」chain — direct edit → live walkthrough → freeze. The five routing questions (any fail ⇒ full chain):
+**Light channel (detail-face ∥ convergence-face controlled bypass — all admission checks must pass; bypass ≠ cancellation)**: adjustments on the detail face (visual · copy · parameters (thresholds · defaults · lengths) · existing-interaction details (order · position · keybindings · hint texts)) may skip the「Design → Review → Approval」chain — direct edit → live walkthrough → freeze. Two admission classes (any fail ⇒ full chain) — **Class A · the five routing questions (detail face)**:
 
 ① **Touch surface**: inside the detail-face closed enumeration (extending it = a new requirement);
 
@@ -52,8 +52,16 @@ Judge the **change face** before acting — different faces, different authoriza
 ④ **Size**: small reach — one surface, no entanglements, ≤15 files;
 
 ⑤ **When unsure ⇒ full chain** (fail-closed — prefer heavy over smuggled).
+
+**Class B · convergence face** (the target behavior already has a source — requirement ∥ design ∥ record ∥ the user's words on the spot; the work = bringing the implementation into line with it — not adding semantics):
+- **Defect fix** (all five must pass): ① the source is identifiable and the current implementation contradicts it; ② the means add nothing new (no interface ∥ channel protocol ∥ data structure ∥ persistence ∥ cross-end semantics ∥ security surface); ③ **red-then-green** (reproduce first, fix after; no red/green pair ⇒ root cause not located ⇒ full chain); ④ root cause = implementation error (pointing to a design ∥ structure defect ⇒ stop and turn to the full chain); ⑤ reach ≤15 files · single chain · revertable.
+- **Diagnostics zero-chain**: read-only + temp area (product face unchanged) — no classification needed; once the product face is touched ⇒ back to this table, item by item.
+- **Walkthrough fixes (explicit light channel)**: user-named on the spot — **detail class (visual · interaction details · copy · parameters) goes explicitly to the light channel** (**default straight-through — no more per-pen agonizing over classification**; disclose-then-go as before) ∥ behavior class by defect fix (all five must pass); a boundary touch ⇒ stop and re-disclose (full chain).
+- **Performance observation class**: proposed admission = no structural change ∧ before/after readings provable; run 1–2 pens before formal admission.
+- **Guard lines stay**: new behavior ∥ new mechanism ∥ new interface ⇒ the five questions as before (fail-closed); "try X" sketches ⇒ full chain; a disputed "how to fix" ∥ multiple options pending ⇒ a design question ⇒ full chain; structure ∥ cross-face ∥ contract touched ⇒ stop and turn to the full chain.
+
 - **Off-channel list** (touching ⇒ stop, report, back to the full chain): new mechanism · new flow · interface contract · data structure · persistence · cross-end semantics · security surface · over-size.
-- **Round form**: a light-channel round = one batch record (per-pen entries: disclosure · change · walkthrough · freeze) + per-pen ledger rows; one full chain at closeout (design formalization → independent review (code · record · doc reconciliation) → fixes (if any) → approval → closeout settlement, including the necessary tests); **closeout not landed ⇒ no settlement** (the batch record · the round ledger row stays open).
+- **Round form**: a light-channel round = one batch record (per-pen entries: disclosure · change · walkthrough · freeze) + per-pen ledger rows; **start-up booking** — at round open (before the first pen) create the round batch record + the round ledger row first (the account precedes the pen; a pen without an account = not established); one full chain at closeout (design formalization → independent review (code · record · doc reconciliation) → fixes (if any) → approval → closeout settlement, including the necessary tests — class B = the red-then-green reproduction pair ∥ the before/after reading pair); **closeout not landed ⇒ no settlement** (the batch record · the round ledger row stays open).
 - **Exercise**: routing = the main agent judges per pen and discloses per pen (the user can overrule); subagents neither route nor invoke this channel.
 - **Boundary (never)**: off-boundary content through the channel · closeout skipping · substituting the full chain (the mechanism itself · major changes stay full-chain).
 
@@ -100,6 +108,15 @@ The report must contain: what changed / why, the paths of files touched, how you
   3. "How work gets done in this mode (process/rules/tool view)" → discipline layer
   4. Only project-related → project layer (cwd); conflict judgment: persona layer > common layer (persona defines the boundary, common must not cross it)
 
+### Partition by domain (leave parallel room at creation time)
+
+- **When creating or reorganizing any work surface (docs above all), partition by domain first**: things that always move together ⇒ one document; things that never move together ⇒ separate documents.
+- **Minimize hot surfaces**: never let one document (or one section) become the mandatory stop for several unrelated workstreams — a shared surface carries only genuinely shared facts;
+  move counters and enumerations that shift with several workstreams off the shared document — every number lives in exactly one place.
+- **Stagger parallel writers**: two unrelated workstreams write only their own surfaces; one surface hosts one class of work.
+- **One-line criterion**: would two tasks running in parallel write the same file — if yes ⇒ split further; if it cannot be split ⇒ same-domain sequencing (serial) = expected, not a defect.
+- **When reorganizing existing content**: move text verbatim (restructuring changes no wording); leave a one-line pointer at the old site — no duplicate copy; counts reconcile against the moved content.
+
 ### Docs & ledger repo-self-contained (this repo keeps its own)
 1. **Ledger takes only this repo's entries**: the requirement pool and tech todos register only this repo's matters — never register matters outside this repo;
    **out-of-repo pointers are equally forbidden** — no ledger pointers to docs, paths or evidence outside this repo.
@@ -138,8 +155,8 @@ the difference register records **ruled host-capability exceptions only** — it
 3. **Exceptions must carry a resolution window**: any registered exception must state its **resolution path and expiry condition** — an exception without an expiry condition is a permanent precedent.
 4. **Booking form (engineering mode)** — a debt found at any point (implementation / review / exploration alike) is **booked the same day** as a ledger row (`trigger` bare enum: `归批` / `条件` / `认账不排期` — batch name / condition sentence into `evidence`) or **escalated to the parent**.
 
-### Doc update discipline (D1–D7)
-Sole authorship is only necessary; the doc system is maintained by discipline. Seven doc-update disciplines:
+### Doc update discipline (D1–D8)
+Sole authorship is only necessary; the doc system is maintained by discipline. Eight doc-update disciplines:
 
 1. **D1 write-rights matrix** — doc category → sole author: batch record = main agent · requirement docs (project requirements + function specs) = main agent · design docs (architecture + module design) = eng-designer · prompts = main agent content authority + eng-coder landing.
 2. **D2 single authority source** — a mechanism is described in detail in exactly ONE place; everywhere else references it, never restates it.
@@ -150,6 +167,7 @@ Sole authorship is only necessary; the doc system is maintained by discipline. S
 7. **D7 change trail + settlement sync** — every batch settlement runs the **settlement sync checklist** (batch record §6): role table / status line / counts / pointers / changelog / todo check-offs
    (including the **prior-batch leftover cross-check** — entry done, anchor batch record unclosed ⇒ the **fallback settlement path**) / **ledger visible surface (settlement line)**.
    The settlement line = the ledger `/ledger` query surface's summary output — kept in the session flow (no md-summary export, no direct DB reads).
+8. **D8 invalidated expressions must be deleted** — on the **normative face** (feature points / AC / judgment lines / discipline lines / boundaries / status statements) an expression once invalidated (ruled out / its object gone / superseded) ⇒ **delete it** — no `~~strikethrough~~` / no "previously X ⇒ corrected Y" / no "void / scrapped" corpses; history belongs to the **record face**.
 
 ### Docs must be human-readable
 When writing/editing docs (requirement layer `docs/requirements/`, design layer `docs/design/`) — **content complete, format readable**: markdown with normal line breaks (headings/tables/lists/rules separated by blank lines and breaks), **never compress a whole section/table/rule into an over-long single line** (no single line >300 chars), changelog entries as one-line notes rather than per-batch log piles. Docs are read by humans (reviewers/leaders included) — an unreadable doc equals an unwritten one. Check: verify per the project's own doc conventions (generic criteria: no >300-char single line, normal breaks and separations; project declarations win where they exist).

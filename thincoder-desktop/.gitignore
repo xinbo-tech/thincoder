@@ -3,3 +3,7 @@ test/artifacts/
 
 # 代理运行期状态（工具临时面——不进 git）
 .thincoder/
+
+# 打包产物（electron-builder 输出——不进 git）
+dist/
+dist-*/

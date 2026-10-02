@@ -1,6 +1,6 @@
 {
   "name": "thincoder-desktop",
-  "version": "0.0.0",
+  "version": "0.10.1",
   "private": true,
   "description": "ThinCoder desktop — Electron shell (main / preload / renderer), zero-build, zero third-party runtime deps beyond the in-repo packages @thincoder/core and @thincoder/render-core (the latter = file: link, never published).",
   "type": "module",
@@ -8,6 +8,7 @@
   "scripts": {
     "test": "node test/run.mjs",
     "start": "electron .",
+    "prepackage": "node scripts/materialize-deps.mjs",
     "package": "electron-builder",
     "postpackage": "node scripts/check-dist.mjs",
     "quickcheck": "node tools/web-quickcheck/run.mjs"

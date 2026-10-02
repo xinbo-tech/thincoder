@@ -20,15 +20,14 @@
 
 /* ── ② 推理块（核件结构）：盒值（边框 0 ∕ 圆角 0〔扁平化 2026-09-30〕 ∕ `--tool-bg` 角色对位 ⇒ `--overlay` ∕ 字号（D29 归基线 `var(--fs)`） ∕ `overflow: hidden`）+
    行内边距（summary `4px 10px` ∕ 内容区 `6px 10px`）= VSC `webview/chat.css:277-294` ∕ `:393-401` 逐值——
-   盒层单层律随块壳去盒退场（R12 会话流对齐：盒值归面级；件级外边距由块级模型通管——
-   现值 = 盒块规则 8px〔扁平化 ∥ 间距批 2026-09-30〕）。 ── */
+   盒值归面级 ∥ 件级外边距由块级模型通管（R12 会话流对齐）——现值 = 盒块规则 8px〔扁平化 ∥ 间距批 2026-09-30〕）。 ── */
 .reasoning-block {
   margin: 0;
   border: 0;
   border-radius: 0;
   overflow: hidden;
   font-size: var(--fs);
-  background: var(--overlay);
+  /* 底色撤（轻通道轮四 笔 7 · 2026-10-01——用户「有了竖线以后思考块的背景色就不需要了」；原 `background: var(--overlay)`）。 */
 }
 /* 面 18 推理摘要（`padding: 4px 10px` = VSC 逐值）。 */
 .reasoning-summary {
@@ -39,7 +38,11 @@
   opacity: 0.5;
   cursor: pointer;
   user-select: none;
+  list-style: none; /* 笔 7：原生 marker 退位——自绘箭头取其位（与工具头箭头同几何：左缘 10px ∥ 中心 ≈14px）。 */
 }
+.reasoning-summary::-webkit-details-marker { display: none; }
+.reasoning-summary::before { content: "▸"; margin-right: 6px; color: var(--fg-muted); }
+.reasoning-block[open] > .reasoning-summary::before { content: "▼"; }
 /* 摘要尾缀（核件同形 = `t("status.thinking") + "..."`）—— 字形住样式档（视图档零字形字面）。 */
 .reasoning-summary::after {
   content: "…";
@@ -60,11 +63,11 @@
 /* 面 20 推理块内 Markdown（VSC `.reasoning-content` 段实值 —— 覆盖 ① 共享项；`li` / `strong` / `em` 与 ① 同值）；
    **代码块来推（端差② 消 · 2026-09-29 · 批 `docs/batches/2026-09-29-hatch-clearance-2.md` · #673）**：
    VSC `chat.css:404-413` 覆盖段照落 —— ① pre 面值 = VSC `:408` 逐值（灰底 = `--bg2` 缺省回退值
-   `rgba(127,127,127,.12)` ∕ 圆角 6 ∕ `padding: 8px 10px` ∕ `overflow-x: auto` ∕ `margin: 6px 0`；
+   `rgba(127,127,127,.12)` ∕ 圆角 0〔扁平化 2026-09-30〕 ∕ `padding: 8px 10px` ∕ `overflow-x: auto` ∕ `margin: 6px 0`；
    并复位面 7 壳的正文同形值（边框——VSC 该段不落壳规则 ⇒ 推理内 pre 无边框）；`position: relative`
    保留（复制钮锚点，零视觉面）；② `code` 归零 = VSC `:409`（`background: none` ∕ `padding: 0`）——
    并复位面 9 正文代码体（块级 ∕ `8px 10px` ∕ 0.88em ∕ 行高 1.5 ∕ 无圆角；VSC 推理内代码仅承 `:407`
-   行内值：行内流 ∕ 0.92em ∕ 行高继承 ∕ 圆角 3px）；③ `.code-lang` 零样式（VSC 推理内无 `.content`
+   行内值：行内流 ∕ 0.92em ∕ 行高继承 ∕ 圆角 0〔扁平化 2026-09-30〕）；③ `.code-lang` 零样式（VSC 推理内无 `.content`
    祖先 ⇒ 语言条零规则命中）——复位面 8 语言条（块级 ∕ padding ∕ 底边框 ∕ 10px ∕ 半透明）。 */
 .reasoning-content h1, .reasoning-content h2, .reasoning-content h3 { margin: 8px 0 4px; font-weight: 700; }
 .reasoning-content p { margin: 0 0 5px; }
@@ -73,14 +76,16 @@
   font-size: 0.92em;
   background: rgba(127,127,127,.15);
   padding: 1px 4px;
-  border-radius: 3px;
+  border-radius: 0;
 }
 .reasoning-content ul, .reasoning-content ol { margin: 4px 0 6px; padding-left: 18px; }
+/* 展开体左流线（轻通道轮四 笔 6 · 2026-10-01——用户「向 CLI 看齐：展开区块左边有条竖线」；CLI `│ ` 行内线对位）。 */
+.reasoning-content { border-left: 2px solid var(--fg-muted); margin-left: 13px; padding-left: 10px; } /* 笔 7：3px ∥ 笔 8：3 ⇒ 2px（线心仍 ≈14px——margin 12.5 ⇒ 13）+ 左留白 6 ⇒ 10（用户「都挨着线了」）。 */
 /* 推理内代码块（VSC `:408-409` 照落 —— 选择器带容器前缀压面 7 ∕ 9 全局件值；见上注）。 */
 .reasoning-content .code-block {
   background: rgba(127,127,127,.12);
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   padding: 8px 10px;
   overflow-x: auto;
   margin: 6px 0;
@@ -91,7 +96,7 @@
   font-size: 0.92em;
   line-height: inherit;
   background: none;
-  border-radius: 3px;
+  border-radius: 0;
 }
 .reasoning-content .code-lang {
   display: inline;
@@ -325,7 +330,7 @@
 .ledger-line { padding: 1px 0; line-height: var(--lh); opacity: 0.85; white-space: pre-wrap; overflow-wrap: anywhere; }
 .ledger-line.warn { color: var(--warn); opacity: 1; }
 /* 文件链接值 = VSC 逐值（R12 收口修复轮 —— 三值差消除）：基态补 `text-underline-offset: 2px`（`webview/chat.css:251`）·
-   补 hover 实线（`:254`）· `:focus-visible` 取 VSC 类规则值 `1px solid` + 圆角 0（扁平化 2026-09-30；原 2px——`webview/chat.css:255` 值随扁平化改）**并携 `outline-offset: 2px`**
+   补 hover 实线（`:254`）· `:focus-visible` 取 VSC 类规则值 `1px solid` + 圆角 0（扁平化 2026-09-30）**并携 `outline-offset: 2px`**
    （VSC 有效 offset 来自全局 `:focus-visible { outline-offset: 2px }`（`webview/base.css:445`）——`outline` 简写不含 offset；
    桌面无全局同规则 ⇒ 本规则自携，使有效 focus 环与 VSC 同效：`1px solid` + 圆角 0 + 外扩 2px）。 */
 .file-link { color: var(--accent); cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }

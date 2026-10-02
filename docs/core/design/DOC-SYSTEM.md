@@ -140,7 +140,10 @@ thincoder/                                  ← 合并仓根（git 仓）
 | `thincoder-vscode/docs/{design,requirements}/**` | 按同一判据落到 `docs/core/` ∥ `docs/vsc/` | 同上 |
 | `thincoder-cli/docs/batches/**` · `thincoder-vscode/docs/batches/**` | 随触发批并入 `docs/batches/`（或入 `_archive/`） | 批档 = 时序日志（README §3.4） |
 
-**第四部分（`desktop`）无迁移底本**：桌面端 = 新增端，需求 / 设计两档自建档即落基准层（无产品树旧档可迁）；其代码面 `thincoder-desktop/`（已建 · 实施批建）与文档面同批立起。该部分的落点判据沿用 §5.1（P1–P5）无须扩充——首件 = 需求单档（`PROJECT`），设计侧**五档**：`PROJECT` = 板块镜像对（N-b），其余四档（`SHELL` / `IPC` / `UI` / `RENDERER`）无需求侧镜像——**N-b 为一对多口径**（同板块：需求单档 ↔ 设计多档），设计侧其余四档不判违例。
+**第四部分（`desktop`）无迁移底本**：桌面端 = 新增端，需求 / 设计两档自建档即落基准层（无产品树旧档可迁）；其代码面 `thincoder-desktop/`（已建 · 实施批建）与文档面同批立起。该部分的落点判据沿用 §5.1（P1–P5）无须扩充——首件 = 需求单档（`PROJECT`）。
+设计侧**十四档**（2026-10-02 实况 · 文档体系重组批后）：`PROJECT` = 板块镜像对（N-b），其余十三档（`SHELL` / `IPC` / `UI` / `RENDERER` / `E2E-TESTING` / `WEB-QUICKCHECK` / `MENU` / `PACKAGING` / `CHAT` / `COMPOSER` / `ACTIVITY` / `SESSIONS` / `SETTINGS`）不判违例——**N-b 为一对多口径**（同板块：需求侧总览单档 ↔ 设计多档）。
+其中九档有需求侧同名卷（`SHELL` / `UI` / `MENU` / `PACKAGING` / `CHAT` / `COMPOSER` / `ACTIVITY` / `SESSIONS` / `SETTINGS`——2026-10-02 波 3 需求分卷后）；`IPC` / `RENDERER` / `E2E-TESTING` / `WEB-QUICKCHECK` 四档无需求侧同名档。
+需求侧**十档**（2026-10-02 波 3 · 需求分卷后）：总览 `PROJECT`（模块目标 ∥ 定位 ∥ 界面形态 ∥ 边界 ∥ 非功能 ∥ 验收 ∥ 依赖 + §4 **D 表索引**）+ 九域卷（`SESSIONS` / `CHAT` / `COMPOSER` / `ACTIVITY` / `SETTINGS` / `MENU` / `PACKAGING` / `UI` / `SHELL`——D1–D37 按域分卷；D14 留总览）。
 
 **第五部分（`render-core`）无迁移底本**：模块 = 新顶层包 `thincoder-render-core/`（已建 · R1 实施批建）；文档面随模块立项落基准层——首档 = 设计侧 `docs/render-core/design/RENDER-CORE.md`（2026-09-27 落 · 对齐重定位批）；落点判据 = 本节**模块镜像**句。
 
@@ -241,7 +244,7 @@ thincoder/                                  ← 合并仓根（git 仓）
 
 ### 8.2 声明面（接口契约 · **v2 承接**）
 
-**现行（v2）声明面 = manifest `checkConfig`**（`PROJECT-MANIFEST.json:24`）：判据项 **6** = `scanDirs` / `lineWidth` / `anchors.domain` / `anchors.exclude` / `exemptions` / `lineCounts`；整档缺失 ⇒ **fail-closed**（拒入，不静默 fallback）。
+**现行（v2）声明面 = manifest `checkConfig`**（`PROJECT-MANIFEST.json:24`）：判据项 **7** = `scanDirs` / `lineWidth` / `anchors.domain` / `anchors.exclude` / `exemptions` / `lineCounts` / `widthExemptZones`；整档缺失 ⇒ **fail-closed**（拒入，不静默 fallback）。
 **机制单源 = `docs/core/design/DOC-DISCIPLINE.md` §7**（F2 声明面判据行 + 五档接口段 + 产物包域取向段）——本档不重述（D2）。
 **可迁移性判据**（原「不得回退硬编码本仓路径」）= AC-M8-3（同处：全仓无硬编码本仓 `docs/` 路径于机检判据）。
 
@@ -393,8 +396,13 @@ thincoder/                                  ← 合并仓根（git 仓）
 
 ## 16. 变更记录
 
+- 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 波 3 · 终扫轮 · eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：§4 第四部分段收正——需求侧**十档**（总览 + 九域卷，2026-10-02 波 3）；设计侧「无需求侧镜像」句按分卷后实况收正（九档有需求侧同名卷）。**零新语义**（实况枚举）。
+
+- 2026-10-01（**行宽清账批 · 设计补缺轮 · eng-designer**——承 `docs/batches/2026-10-01-docwidth-settlement.md` §2.13 · 台账 #779）：§8.2 声明面行随 `checkConfig.widthExemptZones` 键落地收正——判据项 **6 ⇒ 7**（+ `widthExemptZones`）。**零新语义**。
+
 - 2026-09-29（**doc-check-face 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-29-doc-check-face.md` §2 同族追加 · 台账 #546）：§8.2 声明面行随 `checkConfig.lineCounts` 键落地收正——判据项 **5 ⇒ 6**（+ `lineCounts`）· 同句指针 `PROJECT-MANIFEST.json:21 ⇒ :24`；§8.2 机制单源句「四档接口段 ⇒ **五档接口段**」。**零新语义**。
 
+- 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 波 2c（降格收尾）· eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：§4 第四部分段设计侧枚举 **五档 ⇒ 十四档**（实点 2026-10-02——`E2E-TESTING` ∥ `WEB-QUICKCHECK` ∥ `MENU` ∥ `PACKAGING` ∥ `CHAT` ∥ `COMPOSER` ∥ `ACTIVITY` ∥ `SESSIONS` ∥ `SETTINGS` 入枚举；N-b 一对多口径零变）。**零新语义**（实况枚举收正）。
 - 2026-09-27（**对齐重定位批 · 文档布局收正轮 · eng-designer**——用户 2026-09-27 裁定「目录要分开」· 先例 = desktop 2026-09-25）：**四部分 → 五部分**收正——档头 · §3.1 判据 ③（代码面对应枚举补 `render-core`）· §3.1 判据表行 2 ④ · §3.2 问题定式 · §4 目录树 · §4 部分 id 表（增 `render-core` 行）+ **模块镜像**判据句 · §4 去向表行；
   §5.1 P3 / P5（冲突序补「模块镜像优先于 P1」）· §9 ① · §12 决策 9 · §13 A1；§4 增「第五部分（`render-core`）无迁移底本」段；首档 = `docs/render-core/design/RENDER-CORE.md`（自 `docs/core/design/` 迁入）。
 

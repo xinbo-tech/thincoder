@@ -1,10 +1,10 @@
 // 2026-09-29-tools-carryover-t4.test.mjs — 舱 T4（#15 第二波 · 实例绑定族）批次本地单测。
 // 口径（承批档 §2.2 · AC15-1/2/4/5）：
 //   ① 外置覆盖 100%：11 档 description === tool-docs/<name>.md（独立读档对拍——非 DESC 自证）；
-//   ② 内联残留 = 0：六具源档零旧描述字面 ∧ DESC("<name>") 逐档在位；
+//   ② 内联残留 = 0：七具源档零旧描述字面 ∧ DESC("<name>") 逐档在位；
 //   ③ schema 结构 diff = 仅描述文本：parameters 逐档 sha 同冻结基线 ∧ 单档 schema ≤8,000（AC15-3；
 //     描述字数不冻结——父侧 U2 终审定稿可调整文本，不设快照计数红面）；
-//   ④ node --check：六具源档语法绿。
+//   ④ node --check：七具源档语法绿。
 // 基线 = 2026-09-29 舱 T4 改前读数（探针 snapshot；原档 = .thincoder/tmp/2026-09-29-tools-carryover-t4-readings.json）。
 // 复跑：node --test docs/batches/2026-09-29-tools-carryover-t4.test.mjs（终位；现暂存 .thincoder/tmp/ 待父侧收位）。
 import { readFileSync } from "node:fs"
@@ -37,8 +37,9 @@ const BASELINE = {
 
 /** 源档 → 该档承载的工具名（内联残留扫描面）。 */
 const SOURCES = {
-  "memory/docs.mjs": ["memory", "doc_search"],
-  "memory/code-sync.mjs": ["code_search"],
+  "memory/docs.mjs": ["doc_search"],
+  "memory/memory-tool.mjs": ["memory"],
+  "memory/code-search.mjs": ["code_search"],
   "agent-tools/settings.mjs": ["settings"],
   "peer-instances.mjs": ["peer_instances"],
   "ledger-tools.mjs": ["ledger_query", "ledger_count", "ledger_add", "ledger_update", "ledger_close"],
@@ -88,7 +89,7 @@ test("① 外置覆盖：11 档 description === tool-docs/<name>.md（独立读�
   }
 })
 
-test("② 内联残留 = 0：六具源档零旧描述字面 ∧ DESC(\"<name>\") 逐档在位", () => {
+test("② 内联残留 = 0：七具源档零旧描述字面 ∧ DESC(\"<name>\") 逐档在位", () => {
   for (const [rel, names] of Object.entries(SOURCES)) {
     const src = readFileSync(join(CORE, rel), "utf8")
     for (const name of names) {
@@ -108,7 +109,7 @@ test("③ schema 结构 diff = 仅描述文本：parameters 逐档 sha 同基线
   }
 })
 
-test("④ node --check：六具源档语法绿", () => {
+test("④ node --check：七具源档语法绿", () => {
   for (const rel of Object.keys(SOURCES)) {
     const r = spawnSync(process.execPath, ["--check", join(CORE, rel)], { encoding: "utf8" })
     assert.equal(r.status, 0, `${rel}: node --check 失败\n${r.stderr}`)

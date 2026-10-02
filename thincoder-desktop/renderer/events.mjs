@@ -28,14 +28,14 @@
  *                              回执三径同点；`flags` 非载体 ⇒ 零写）——**re-export 自 `renderer/events-flags.mjs`**
  *   `sameRecord(a, b)`         读数同值判（浅比 —— 页读径与归约面读数槽共用 —— 单一实现零副本）——同上 re-export
  *   `openSession(state, key)`  `activeSession` 写者（置键 / `null` 关页 + 清本键 `done` 位标）
- *   `clearApproval(state, promptId)`  出站成功后摘项（写者表隐含 —— 见 §2.11⑦；调用面 = `renderer/mount-pool.mjs`）
+ *   `clearApproval(state, promptId)`  出站成功后摘项（写者表隐含 —— 见 §2.11⑦；调用面 = `renderer/mount-pool.mjs`；**清码判据 = 两族皆清**）
  *   `clearQuestion(state, key)`  提问出场 ⇒ 摘本键项 + 清本键 `approval` 位（两调用面 = 出站 `ok` 真 ∥ `stopped` 终局；
  *                              住 `renderer/questions.mjs`——本档 re-export 保名面）
  *   `isTurnTail(ev)`           回合尾判据**单源**（**三径** = `ev:activity` 无 `fields` 的 `done` / `stopped` ∥ `ev:error` —— `onActivity` / `onError` 与订阅面 `events-subscribe.mjs` 同用）
  *
  * 纪律：块面写（`blocks`）须 `ev.key === state.activeSession`（否则原引用 —— 非活动会话的事件不落本会话流）；
  *   `tabBadges` 任意键可写 · `sessionMeta` / `usage` / 卡面两切片（`questions` / `tasks`）· 挂起 / 消化两切片（`susp` / `digest` —— 空闲唤醒批）· 到期触发切片（`timerNotice` —— timer-wake 阶段 2）按 key 写（切片同键就地替换 · 首写自种 · 零键门 —— 活态切片「切回即见」；
- *   **行痕族例外**：`digest` 轮集随首屏页读四清（存量轮切回即失——未结末轮保），单源 = `docs/desktop/design/RENDERER.md` §1.1 事件归约面条）（§2.2(e) 值面写者表）· 状态行读数槽五（`turns` / `turnStarts` /
+ *   **行痕族例外**：`digest` 轮集随首屏页读五清（存量轮切回即失——未结末轮保），单源 = `docs/desktop/design/RENDERER.md` §1.1 事件归约面条）（§2.2(e) 值面写者表）· 状态行读数槽五（`turns` / `turnStarts` /
  *   `tokens` / `timers` / `lastOutputAt`〔停滞轻显形批 —— 写径 = `reduce` 可见输出通道集单点 + `onActivity` turn 起刻〕）同判（R3a · D17 承载段数据源）· `subBlocks` 按会话键分槽（R3b · D20 —— 归约径住
  *   `renderer/subagent-reduce.mjs`：块面内容回显 = 核件 tail-3 / 展开（「对齐第二批」项 3 收正：原「零内容回显」
  *   口径撤销）；态机单源 = 核 `/rc/subblocks/state.mjs` `subBlocksReduce`）· 池切片 **摘工具行**（`pool.blocks` 不再在册 —— 工具调用面 = 对话流工具卡；折叠头
@@ -49,7 +49,7 @@ import { clearQuestion, onQuestion, onTask } from "./questions.mjs"
 export { clearQuestion }
 // 位标面单源（同批拆出——`events.mjs` 500 行硬限顶格）；本档 `onApproval` / `onActivity` / `onError` /
 // `openSession` / `clearApproval` 与 `renderer/questions.mjs` 同引。
-import { badgeStamps } from "./badges.mjs"
+import { badgeStamps, hasPendingFor } from "./badges.mjs"
 // 子 agent 归约径（「对齐第二批」续拆产出 —— 子 agent 面两分派支 + 池读数两助手）；本档 `reduce` 分派两通道，
 // `withPool` / `openSession` / 待决两族引两助手（单一实现零副本）。
 import { liveCount, onSubagent, onSubchunk, poolOf, freezeAllSubBlocks, resetSubBlocks } from "./subagent-reduce.mjs"
@@ -96,13 +96,15 @@ function withPool(state, { approvals = null, running = null } = {}) {
 
 // ─── 纯归约（二十二通道 → 切片；`ev:config` = 纯信号窄口不入归约）────────────
 
-/** `ev:approval`——待决项入池（键白名单 + 去 `undefined` ⇒ 零新键）· `pool.approval` = 待决数 ·
+/** `ev:approval`——待决项入池（载荷白名单 `APPROVAL_KEYS` + 去 `undefined` ⇒ 零新载荷键；条目另携**起源键**
+ *  `item.key = ev.key ?? null` —— 内部簿记，消费面读取集零扩）· `pool.approval` = 待决数 ·
  *  `tabBadges[key] ⊇ {approval}`（位标任意键可写）。同 `promptId` 复现 ⇒ 就地替换（不叠条）。
  *  **不按会话分池**：`pool.approvals` 无会话键维度（不过键门 —— 设计未给池的会话键口径）；位标键源 =
- *  事件 `ev.key`（置）/ `activeSession`（清，见 `clearApproval`）——两源不一处，缺口随 §5 登记。 */
+ *  事件 `ev.key`（置 ∥ 清 —— 条目携起源键，见 `clearApproval`）——单源。 */
 function onApproval(state, ev) {
   const item = {}
   for (const field of APPROVAL_KEYS) if (ev[field] !== undefined) item[field] = ev[field]
+  item.key = ev.key ?? null // 起源键（清位判据源 —— 内部簿记，白名单零改）
   const list = poolOf(state).approvals
   const index = list.findIndex((entry) => entry?.promptId === item.promptId)
   const approvals = index < 0 ? [...list, item] : [...list.slice(0, index), item, ...list.slice(index + 1)]
@@ -251,15 +253,19 @@ export function openSession(state, key) {
 }
 
 /** 出站回执**成功** ⇒ 摘项（§2.11⑦：失败零摘除 —— 调用面以回执 `ok === true` 为唯一判据，禁乐观摘除）：
- *  `pool.approval` 随摘项重算；列表清空 ⇒ 顺带清本会话 `approval` 位标（待审批位标 = 有项才亮）。
- *  位标键源 = `activeSession`（与置位标源 `ev.key` 不同源 —— 见 `onApproval` 注 · 缺口随 §5 登记）。
+ *  `pool.approval` 随摘项重算；**清位按条目起源键** —— 被摘条目的起源键在**剩余两族**（审批池起源键 ∥ 提问切片）皆无项
+ *  ⇒ 清该键位标（有项才亮 ∥ 跨会话零误清 ∥ **跨族零误清** —— #780 共享判据，两清径同引 `renderer/badges.mjs`；
+ *  与置位标源同源 = `ev.key`——见 `onApproval` 注）。
  *  未命中 `promptId` ⇒ 原引用（幂等 —— 重复回执不二次摘除）。 */
 export function clearApproval(state, promptId) {
   const approvals = poolOf(state).approvals
-  const remaining = approvals.filter((entry) => entry?.promptId !== promptId)
-  if (remaining.length === approvals.length) return state
+  const hit = approvals.find((entry) => entry?.promptId === promptId)
+  if (hit === undefined) return state
+  const remaining = approvals.filter((entry) => entry !== hit)
   const next = withPool(state, { approvals: remaining })
-  if (remaining.length > 0) return next
-  const cleared = badgeStamps(next.tabBadges ?? {}, next.activeSession, "approval", false)
+  const key = hit.key ?? null
+  if (key === null) return next // 无起源键 ⇒ 零位标写（保位）
+  if (hasPendingFor(next, key)) return next // 本键任一族尚有项 ⇒ 零位标写（#780：清码 = 两族皆清）
+  const cleared = badgeStamps(next.tabBadges ?? {}, key, "approval", false)
   return cleared.changed ? { ...next, tabBadges: cleared.badges } : next
 }

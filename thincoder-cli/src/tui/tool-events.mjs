@@ -22,7 +22,7 @@ import { describeToolArgs, toolArgsLines } from "./tool-args.mjs"
 import { ADVISOR_THINKING_PLACEHOLDER, resolveAdvisorProvider } from "@thincoder/core/advisor/run.mjs"
 import {
   SUBAGENT_ROLES, routeSubToken, routeSubReasoning, routeSubToolCall,
-  routeSubToolOutput, finishSubTask, finishSubTaskKey, finishSubTasksByRole, freezeDoneSubTasks,
+  routeSubToolOutput, finishSubTask, finishSubTaskKey, freezeDoneSubTasks,
   ensureCompressPanel, markCompressFailed, markCompressDone, markCompressFallback,
   shiftFreezeAnchors,
 } from "./subagent-blocks.mjs"
@@ -205,7 +205,7 @@ export function buildToolCallbacks(deps) {
         settleToolBlock(state, name, toolId, "completed")
         // Async spawn (AGENT-LOOP-SUBAGENT.md §6.7.3 D-A1): the result is a status JSON, not a report — the
         // child KEEPS running; skip the freeze (it would tombstone a live block and
-        // drop its relay stream). The block freezes on the ⟦ev⟧done settle event.
+        // drop its relay stream). 块保 live——settle 发 ⟦ev⟧settled；冻结落消费窗（#746 · ASYNC-POOL §6.8）。
         if (!isAsyncSpawnResult(result)) {
           // §6.8 sync spawn 完成精确冻结：结果按 key 归属三支——
           // ① dispatch 同步成功路径带 subKey（ctx._subagentKey = relayPrefix 去尾）：
@@ -238,8 +238,8 @@ export function buildToolCallbacks(deps) {
         settleToolBlock(state, name, toolId, "completed")
         // ESCALATE.md §5 D-R17b (R17): async escalate ack ({id, role:"escalate", status:
         // running|queued}) — the child KEEPS running — skip the freeze like the
-        // async spawn path (the block freezes on the ⟦ev⟧done/stopped settle
-        // event at flight end). Sync results (async:false) freeze below.
+        // async spawn path (settle ⇒ ⟦ev⟧settled 驻留；冻结落消费窗——#746 · ASYNC-POOL §6.8；
+        // cancel 径 ⟦ev⟧stopped 即冻——照旧). Sync results (async:false) freeze below.
         if (!isAsyncSpawnResult(result)) {
           // §6.8（round1 #2）：escalate 成功返回带 subKey（escalate#N）→ 精确冻；
           // 失败/老回调无 subKey → 不冻结任何块（F-2 收窄——finishSubTask 恒 no-op，
@@ -255,12 +255,12 @@ export function buildToolCallbacks(deps) {
           freezeDoneSubTasks(state)
         }
       } else if (name === "consult_stop") {
-        // R17（CONSULTATION.md §6.2 D-R17a——check 已删）：consult_stop = 取消指定会诊会话。被 abort 的
-        // children 各自 settle（settleChild）时发 ⟦ev⟧done 冻结自己的卡——此处**不做按
-        // 角色整组清扫**（会诊会话可并发——按角色会误冻其他仍在运行的会话的卡，冻结即
-        // 截断其活动流——tool-events advisor 复评 🟡1 修正）；取消的即时可见性由 abort
-        // settle 事件承担（abort 解绕通常在同回合内完成——卡片在其 child settle 即冻结）。
-        // 仅结果本身落本工具调用自己的载体块（下方通用分支）。
+        // R17（CONSULTATION.md §6.2 D-R17a——check 已删）：consult_stop = 取消指定会诊会话。被取消会话的
+        // children 各自 settle（settleChild）时发 ⟦ev⟧stopped 即折自己的卡（cancel 径——消费永不来）；
+        // 未取消边 settled 的子块驻留待消化（消费窗三端收口——#748）——此处**不做按角色整组
+        // 清扫**（会诊会话可并发——按角色会误冻其他仍在运行的会话的卡，冻结即截断其活动流——
+        // tool-events advisor 复评 🟡1 修正）；取消的即时可见性由 abort settle 事件承担（abort
+        // 解绕通常在同回合内完成——卡片在其 child settle 即折）。仅结果本身落本工具调用自己的载体块（下方通用分支）。
       }
       if (!isSubagent && !isEscalate && name !== "advisor") {
         // Result lands INSIDE the block (restore parity — the restored carrier

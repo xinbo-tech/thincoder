@@ -1,5 +1,6 @@
 /**
  * 2026-09-30-digest-reflow-anchor.test.mjs — 批次本地单元件（台账 #738 · 消化回流归位批 · 实施轮）·
+ * ⚠ 断代（2026-10-01 · 台账 #765 拆批）：import 断——`views/chat-digest-seat.mjs` 已删；复跑必红为预期（留档对照 · 勿复跑）。
  * 任务书 = `docs/batches/2026-09-30-digest-reflow-anchor.md` §2 ∥ §4（机检腿六条）+ #738 修复轮（落位腿四条）。
  * 六腿：① 起跑窗补发序（`done` 先于回合执行）② `done` 幂等（重复零动作）③ `start` 全替（切片 = [本轮]）
  *      ④ `foldDigest` 最新一条（含未结末轮优先）⑤ 行集（终态非 ask 标签退场 ∥ ask 保留 ∥ live 双行）

@@ -3,16 +3,17 @@
  * 机制句 ∕ 对位表 = 批档 `docs/batches/2026-09-28-desktop-idle-wake.md` §2.3）。零宿主依赖 ⇒ 平 node 直测；零文案。
  * 职责：① 会话寄存器（key → 窗 · 同键至多一窗——重入 = 零动作；跨键各自独立）② 入口（回合尾结算后 `poolLive` 判真 ⇒
  * 核件装配 + 会话控制器 + 载体挂 `_sessionAbort` ∕ `_sessionSignal`）③ 端侧钩子（计数 ⇒ `ev:susp`；边界 ⇒ `ev:digest`
- * 〔autoTurn 支**起跑**一发 —— 收尾 `end` 写点前移入 `turn-face.mjs` 结算序，修复轮 3〕；**归档 ⇒ 回收窗（reclaim 形）**
- * （三端消化面统一批 · #747：消化完成点 `hooks.reclaim(consumed)` 实参逐条补发 `ev:subagent { status:"done" }` = **主面**
- * ——`settled` 待消化块归档入流、居消费行族之前〔对位 VSC `suspension.mjs:112-119` ∥ CLI `suspension-drive.mjs:173`〕；
- * 起跑窗补发〔归位批 · #738 形〕已撤——重复 done 幂等守卫不变〔冻结块 `drop-frozen` ∥ 已归档墓碑零动作〕）；
+ * 〔autoTurn 支**起跑**一发 —— 收尾 `end` 写点前移入 `turn-face.mjs` 结算序，修复轮 3〕；**归档 ⇒ 起跑窗（本批 2026-10-01 复位）**
+ * （用户 2026-09-30 18:49 ∥ 2026-10-01 02:08：消化起跑点（`ev:digest start` 发帧点）= 对本轮将消费驻留条目（起跑快照 =
+ * 起跑刻 pending 单容器）逐条补发 `ev:subagent { status:"done" }` = **主面**——`settled` 待消化块随起跑归档入流、居消费轮行族之后；
+ * `hooks.reclaim` = **兜底幂等**（迟结算面；已冻结块零动作）〔对位 VSC `suspension.mjs:112-119` ∥ CLI `suspension-drive.mjs:182`〕）；
  * 冻结 ⇒ 退出兜底同型）④ 输入 ∕ 关闭路由（`pushInput` + `wake` ∕ `abort`——容量满判先行
  * 〔#625：`pending.length >= QUEUED_MAX_ITEMS` ⇒ 零受理返 `"full"`〕）+ **窗队共镜**（窗输入队投影 = 载体 `entry.pending`——核输入队列同数组，零第二写者 ∥ **五帧**出站；降级窗占位 `suspension-guard.mjs` ∕ 帧面 `window-queue.mjs`）
  * ⑤ 提示面触发（用户回合完成 —— 档①）⑥ **残输入兜底**（出窗残值非空 ⇒ 以普通回合续发——不静默丢）⑦ **留档记录起跑半**
  * （消化面留档批 · #719）：digest `start` 与发帧**同点双动作** ⇒ 人读线记录（`session-io.mjs` `appendRecord`）；
  * 收尾 `end` 同族写点前移入 `turn-face.mjs` 结算序（**修复轮 3** —— 先于槽落盘；本档零发）；
- * **窗内时效面**（timer 面 ∕ 空闲火面 ∕ 中止代次）出档 `suspension-timers.mjs`（本档只持接线）。
+ * **窗内时效面**（timer 面 ∕ 空闲火面 ∕ 中止代次）出档 `suspension-timers.mjs`（本档只持接线 + `reloadSlot` 转口
+ * ——#799 修复轮：timer 轮重装前移入该档 `deliver`（先于投递），本档 `driveTurn` 对 timer 轮零重装）。
  * **边界取点** = 窗内单回合包装（`driveTurn` 的 autoTurn 支：起跑读核 `backgroundCounts(agent).pending` = 起跑数，`tier` 随 `upstreamTurn`；
  * 收尾 `end`（发帧 ∥ 记录）随写点前移入 `turn-face.mjs` —— 先于槽落盘 · 成功 ∥ 失败（含 Abort）两径同出 · 修复轮 3）。核件 `hooks.onDigest` 为**备用面**（非 Abort 失败径不出 `end` ⇒ 不可作主取点）：本档不注册该钩 —— **零双帧**。
  * **残输入兜底**（KD-34 —— 取项 ∕ 接管细节见 `resumeResidual`）：核件 `pendingInput` 出窗未及消费项由本档 `entry.pending` 载具承接（**与核输入队列同数组**；富条目 `{ text, ts, images? }`——载具层携图）
@@ -43,11 +44,12 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
   const resuming = new Set()
   /** 续发期中止墓碑（键集）：链每轮起跑前 + 接管前查位——命中 ⇒ 停链，余值随会话终止（记错一行）。 */
   const abortTombstones = new Set()
-  /** 窗内时效面（timer 面 ∕ 空闲火面 ∕ 中止代次 —— 出档 `suspension-timers.mjs`）：宿主只供读缝（`inWindow` =
-   *  窗表判据 ∥ `busyOf` ∥ `takeOver`）+ 时钟三扇；闩面三武装点接线住本档（`start` ∕ `closeWindow` ∕ `abort`）。 */
+  /** 窗内时效面（timer 面 ∕ 空闲火面 ∕ 中止代次 —— 出档 `suspension-timers.mjs`）：宿主供读缝（`inWindow` =
+   *  窗表判据 ∥ `busyOf` ∥ `takeOver`）+ **槽重装缝**（`reloadSlot` —— #799 窗内投递存活）+ 时钟三扇；
+   *  闩面三武装点接线住本档（`start` ∕ `closeWindow` ∕ `abort`）。 */
   const timers = createSuspensionTimers({
-    post, runTurn, busyOf, inWindow: (key) => windows.has(key), takeOver, timer, clear, now,
-  })
+    post, runTurn, busyOf, inWindow: (key) => windows.has(key), takeOver, reloadSlot, timer, clear, now,
+  }) // `reloadSlot` 同源缝转口（#799：窗内 `deliver` 内先于投递重装——timer 轮重装单点）
 
   /** 计数帧（`ev:susp` —— 核 `backgroundCounts` 直传：`{ key, active, running, queued, pending, done }`）。 */
   const postSusp = (key, agent, active, counts = null) => post("ev:susp", { key, active, ...(counts ?? backgroundCounts(agent)) })
@@ -68,13 +70,17 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
   }
 
   /** 逐条补发 `done`（`settled` 等待消化块 ⇒ 归档入流；块回收与池空解耦——不等池空）。载荷形 = VSC 收回面同款。
-   *  **两守卫照搬 VSC 对位物**（`thincoder-vscode/src/extension/suspension.mjs:115-116`）：`consult` 族**零渲染面**
-   *  （无行可归档——补发只会造假归档块）⇒ 跳过；「仍在 pending」在 reclaim 径由 `consumed` 差集**结构性满足**
-   *  （回收到者 = 已离容器者），freezeAll 径沿用冻结残项语义（`resident` 快照即冻结面）。 */
+   *  **会话本体零渲染行（consult）——不跳过**：按会话条目 `childIds` 逐子块补发（块键形 `consult#<N>`，
+   *  consult 同族收齐批 · 台账 #748——三路径同件：起跑支 ∥ `reclaim` ∥ `freezeAll`；VSC 对位物 `remitConsultChildBlocks`（两径共用）同判）。
+   *  「仍在 pending」在 reclaim 径由 `consumed` 差集**结构性满足**（回收到者 = 已离容器者）。 */
   function reemitDone(key, entries) {
     for (const e of entries) {
       if (!e || e.id === undefined || e.id === null) continue
-      if (e.role === "consult") continue // VSC 同判：consult 无渲染行——不回收
+      if (e.role === "consult") {
+        // #748：会话本体无行——逐子块展开（无块子块不入表 ⇒ 表空 = 零发）；本体 id 零补发
+        for (const cid of e.childIds ?? []) post("ev:subagent", { key, role: "consult", id: cid, status: "done" })
+        continue
+      }
       post("ev:subagent", { key, role: e.role ?? "subagent", id: e.id, status: "done" })
     }
   }
@@ -112,8 +118,13 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
     return true
   }
 
-  /** 窗内单回合（用户回合 ∥ 消化轮 ∥ 唤醒轮）：每轮起跑前重装本窗键槽（§2.2）；autoTurn 支**起跑**一发边界（`start` 记录同点双动作 —— #719）；
-   *  **归档 = 回收窗（reclaim 形）**——消化完成点由核 `hooks.reclaim(consumed)` 逐条补发 `done`（#747 主面），本支零补发。收尾 `end` 写点前移入 `turn-face.mjs` —— 修复轮 3）。
+/** 起跑快照（本批 2026-10-01 —— 起跑窗**主面**）：起跑刻 pending 单容器（= 本轮将消费的驻留条目；
+ *  D2 核单源 `_pendingAsyncResults`）——浅拷快照（补发期间容器可能被回合注入器消费）。 */
+function pendingSnapshot(agent) {
+  return Array.isArray(agent?._pendingAsyncResults) ? [...agent._pendingAsyncResults] : []
+}
+
+/** 窗内单回合（用户回合 ∥ 消化轮 ∥ 唤醒轮）：每轮起跑前重装本窗键槽（§2.2）；autoTurn 支**起跑**一发边界（`start` 记录同点双动作 —— #719；**归档 = 起跑窗** —— 本批 2026-10-01 复位：起跑支对起跑快照逐条补发 `done` = 主面 ∥ `hooks.reclaim` = 兜底幂等）。收尾 `end` 写点前移入 `turn-face.mjs`。
    *  失败向核件抛回（核 catch 语义：AbortError ⇒ 回合级重入；非 Abort ⇒ 端侧入口 catch）。
    *  用户回合 = 核件取项（`takeInput` 缝——零二次取）后的**送达点**（起窗（`hold` 占位）⇒ 送达面（携图径，判决随 `delivered.degraded`）⇒ 消费帧——`delivered` 单写者）；
    *  窗后占位被摘 ⇒ 零起跑 + 本径落盘件自清 ∧ 不重投（裁定 (i) 同不变量 —— 判据同链径）。 */
@@ -141,9 +152,12 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
       const start = { status: "start", n, ...(upstreamTurn ? { tier: "ask", ...(ask ?? {}) } : {}) } // 记录 ∥ 帧同源形
       post("ev:digest", { key, ...start }) // 边界帧（同点双动作 —— 发帧 ∥ 记录）
       appendRecord(agent, { kind: "digest", ...start }) // 留档记录（#719 —— 人读线半，机器线零触）
-      // 归档 = 回收窗（reclaim 形 · #747）：本支零补发——核 `hooks.reclaim(consumed)`（下方钩址）逐条补发 `done`。
+      // 起跑窗复位（本批 2026-10-01 裁 A —— **主面**）：起跑刻 pending 快照逐条补发 `done` ⇒ `settled`
+      // 待消化块随起跑归档入流（居消费轮行族之后）；`hooks.reclaim` = 兜底幂等。
+      reemitDone(key, pendingSnapshot(agent))
     }
-    reloadSlot?.(key, agent, cwd) // 会话钉定：回合落槽面 = 本窗键槽（非现刻 activeSession —— 切会话零影响）
+    if (!timerTurn) reloadSlot?.(key, agent, cwd) // 会话钉定：回合落槽面 = 本窗键槽（非现刻 activeSession —— 切会话零影响）；
+    // timer 轮零重装（#799）：该轮重装已前移入 `suspension-timers.mjs` `deliver`（先于投递）——二次重装会再吞一行。
     // 收尾边界 `end`（发帧 ∥ 记录）随写点前移入 `turn-face.mjs` 结算序（修复轮 3 —— 先于槽落盘 ⇒
     // 「收束后即时重载末轮痕缺」消解）；失败径同出（抛出直达调用面 —— 本档零 catch 包裹，净简化）。
     await runTurn(key, agent, body, { autoTurn, upstreamTurn, timerTurn, sessionSignal: controller.signal, attached })
@@ -209,10 +223,10 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
       runTurn: (text, opts) => driveTurn(entry, text, opts),
       takeInput: (list) => takeQueuedInput(list), // 取项缝（核件取项——合并批 ∕ 携图退化逐条）
       injectResidual: (item) => injectResidual(agent, item),
-      timerFace: timers.faceOf(key, agent), // opt-in timer 面（§6.30.10）：窗内到期 ⇒ 兑现开 timer 轮（不等池空）
+      timerFace: timers.faceOf(key, agent, cwd), // opt-in timer 面（§6.30.10）：窗内到期 ⇒ 兑现开 timer 轮（不等池空；#799：`deliver` 内先重装后投递）
       hooks: {
         onCounts: (counts) => postSusp(key, agent, true, counts), // 计数 ⇒ `ev:susp`（核单点直传）
-        reclaim: (consumed) => reemitDone(key, consumed), // 回收 ⇒ 消化完成逐条补发 done
+        reclaim: (consumed) => reemitDone(key, consumed), // 回收 ⇒ 兜底幂等（起跑窗漏口 ∥ 迟结算面——本批 2026-10-01）
         freezeAll: () => { // 冻结 ⇒ 退出兜底同型（残项逐条补发；abort 径用中止前快照）
           const frozen = entry.frozen ?? resident(agent)
           entry.frozen = null

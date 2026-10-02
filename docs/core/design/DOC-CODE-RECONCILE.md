@@ -272,7 +272,7 @@ run_in_background（外部产品工具名）· CLAUDE.md（外部产品配置档
 | S2 | 内层 `F` 编号口径冲突——**真冲突面 = §1.19**：正文 `F1–F14`（`ENGINEERING-MODE-MECHANISM.md` `F10` `:290` · `F14` `:294`）∥「不并项与历史沿革」表引「§1.19 `F15–F17`」（`:425`）；§1.20 正文 = `F1–F13`（`:338` / `:342` / `:344` / `:346`——`F13` 系批 2 追加轮增；批档 §2.8（二）行 3 的 `F1–F12` 系 as-of 读数） | **已消**（`CRITERIA-FACE` 批 9 落档——表行去编号化；#677 追认闭环） |
 | S3 | 反查脚本域常量未收正（本档 `:169` 已登记缺陷） | **已消**（载体 `reconcile-lookup` 退役 ⇒ 缺陷消解——「已消解」句 = 本档 §4；#677 追认闭环） |
 | S4 | VSC 侧 3 坐标实核 | 裁-D——归实施轮先核 |
-| S5 | `README:97` `/submodel` 括注列 `global + explore/plan/coder/eng-coder`（4 类）∥ 实装类型清单 5 类（`src/tui/slash-commands.mjs:45`——含 `eng-designer`） | **待主 agent 裁**——修正轮实核发现；与 A2 同面同行的括注语义，裁入则随 3b 步同行收正 |
+| S5 | `README:97` `/submodel` 括注列 `global + explore/plan/coder/eng-coder`（4 类）∥ 实装类型清单 5 类（`thincoder-cli/src/tui/slash-commands.mjs:46`——含 `eng-designer`） | **待主 agent 裁**——修正轮实核发现；与 A2 同面同行的括注语义，裁入则随 3b 步同行收正 |
 
 **修正轮登记（2026-09-16 · 设计评审 §3 处置导出）**
 
@@ -349,7 +349,8 @@ run_in_background（外部产品工具名）· CLAUDE.md（外部产品配置档
 
 #### 5.1.12 README 列举 ↔ 实装映射判定表（US-DOC1 覆盖面 · 修正轮）
 
-**判据句**：README 现态列举的 slash 命令 ⊆ 实装可达面（层 0-3 ②——能力在位即应收正文档）。**口径**：命令级（别名另计；括注语义面仅 A2 / S5 已登记项在判）。**实装可达面** = `src/tui/slash-commands.mjs` `SLASH_COMMANDS`（`:39`–`:66`，26 条）+ `SLASH_ALIASES`（`:69`）+ `HANDLERS` 挂接（`:73`–`:98`，26 条一一在接）+ 分派（`:110`–`:127`，含别名解析与未知命令兜底）；`/help` 清单同源（`:108`）。
+**判据句**：README 现态列举的 slash 命令 ⊆ 实装可达面（层 0-3 ②——能力在位即应收正文档）。**口径**：命令级（别名另计；括注语义面仅 A2 / S5 已登记项在判）。
+**实装可达面** = `thincoder-cli/src/tui/slash-commands.mjs` `SLASH_COMMANDS`（`:39`–`:66`，26 条）+ `SLASH_ALIASES`（`:69`）+ `HANDLERS` 挂接（`:73`–`:98`，26 条一一在接）+ 分派（`:110`–`:127`，含别名解析与未知命令兜底）；`/help` 清单同源（`:108`）。
 
 | # | README 列举（`:97`） | 实装落点（`slash-commands.mjs`） | 判定 |
 |---|---|---|---|
@@ -468,3 +469,5 @@ run_in_background（外部产品工具名）· CLAUDE.md（外部产品配置档
 
 - 2026-09-30（**doc-sweep 批 · 重锚收正 · eng-designer**——承 `docs/batches/2026-09-30-doc-sweep.md` §2 · 台账 #682）：A6 行补**重锚注**（旧坐标 ∕ 所引句随 cli README 重排退场——实质由现行末句承接；见 §A 面表下补注）。**零新语义**。
 - 2026-09-18（**失效表达清理批 · 本批直接执行 · 可 revert**——承用户 2026-09-18 裁定「修订式表达很害人，失效的表达一定要删掉」）：§3.9 **E-3 判据句**去「（同「域外」口径）」括注（指点对象随两仓合并**整类退场**——见 §8.1 沿革行；判据句本体 = 「独立计数不入阈值判定」照留）。历史沿革 = 本档既有历史段 + 批档 `docs/batches/2026-09-18-stale-expression-purge.md`。
+
+- 2026-10-02（**文档清账轮 · 执行轮 1（core/design 前段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 2 处 R1 改指（`slash-commands.mjs` 补 `thincoder-cli/` 前缀——S5 行 ∥ §5.1.12 判据句；S5 行坐标随回读收正 `:45 ⇒ :46`）。**零新语义**。

@@ -1,5 +1,5 @@
 /* chat-cards.css — 对话流**卡族段**（自 `renderer/chat.css` 四拆 —— 「桌面处理流 · VSC 对齐」批 §2.1 拆档定稿
-   「按面拆：卡族段 / 输入区段 / 小修族尾段」；链序 = theme → chrome → session-list → skin → chat → **chat-cards** → chat-composer → chat-fixes → core-markdown → core → pool → settings）。
+   「按面拆：卡族段 / 输入区段 / 小修族尾段」；链序 = theme → chrome → session-list → skin → chat → **chat-cards** → chat-composer → chat-fixes → core-markdown → core → /rc/search.css → pool → settings）。
    面 = 卡族三类（**皆流内非块节点** —— `docs/desktop/design/UI.md` §1 审批呈现 / 提问呈现 / 计划面行）：
      ① **池面审批操作区**（`views/activity.mjs` 池条目 —— `approvalExits` 描述符消费面；卡面出口已归核卡自带）；
      ② **审批卡**（核 `cards/permission.mjs` 产出 —— R1 直消费）：类名面 = 核产（`.permission-prompt*`），
@@ -10,7 +10,7 @@
         （`.question-card` / `.question-*`，值源 = VSC `base.css:296-366`）；计划族 = 端壳包壳 `.plan-card` + 核体
         （核体类名面 `.panel-desc` / `.task-*` 归 `renderer/core.css` ⑤ 核卡族段）。
    `.perm-btn` 族（提问卡三钮/选项共用，核产）亦归 `renderer/core.css` ⑤ —— 与核控件族同列。
-   卡间 / 卡块相邻留白 = 核卡自带 margin（`12px 0`，块流页边距折叠）⇒ 本档零相邻补足规则（原桌面自造卡类随退场）。 */
+   卡间 / 卡块相邻留白 = 核卡自带 margin（`12px 0`，块流页边距折叠）⇒ 本档零相邻补足规则。 */
 
 /* ── 池面审批操作区（`views/activity.mjs` 条目三出口 —— 卡面出口归核卡，此段只服务池条目；键位锚同一表）── */
 .approval-actions {

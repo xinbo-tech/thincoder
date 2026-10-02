@@ -20,6 +20,27 @@ function blockKeyIn(container, key) {
   return entries.some((e) => `${e.role}#${e.id}` === key)
 }
 
+/** consult 子块键形态（#748）：`consult#<N>`（N = 子块 relay 号——会话条目 `childIds` 表元素同形）。 */
+function consultChildKey(key) {
+  const k = String(key ?? "")
+  return k.startsWith("consult#") && !k.includes("/") && k.length > "consult#".length
+}
+
+/** consult 子块消费判读（#748——与回收 ∥ 补发判据同源）：会话在跑（`_consultSessions` 内未 stopped
+ *  会话携该 relay 号）∥ 会话条目在 pending（`childIds` 携该号）⇒ **未消化**（报告未达模型——
+ *  冻结 ∥ 回收即破坏消化顺序）。非 consult 子块键 ⇒ 恒 false。 */
+function consultChildUndigested(agent, key) {
+  if (!consultChildKey(key)) return false
+  const id = String(key).slice("consult#".length)
+  for (const s of agent?._consultSessions?.values() ?? []) {
+    if (s.stopped !== true && (s.childIds ?? []).includes(id)) return true
+  }
+  for (const e of agent?._pendingAsyncResults ?? []) {
+    if (e?.role === "consult" && (e.childIds ?? []).includes(id)) return true
+  }
+  return false
+}
+
 /**
  * AGENT-LOOP-SUBAGENT.md §6.7.2 D-P3 冻结门控（安全）：仅允许冻结 awaitingDigest 且池（_asyncSubagents/
  * _asyncAdvisors——经 getAsyncPool accessor——D1）无对应运行条目 + pending 单容器
@@ -28,6 +49,7 @@ function blockKeyIn(container, key) {
  * - pending 仍有对应（报告未达模型）→ 拒绝（提前回收破坏消化顺序——T-P3）
  * - 不存在的 key / 仍 running / done 的块 → 拒绝（T-P4——running 块 settle 时自冻）
  * - 无面板（现算返 null）→ 拒绝（headless/VS Code——freeze 不可用——T-P5）
+ * - consult 子块（#748）：会话在跑 ∥ 会话条目在 pending（`childIds` 携该号）→ 拒绝（同判据——与回收 ∥ 补发同源）
  * 错误信息明确（模型可解释 + 自助修正）。返回 { ok:true } 或 { err }。
  */
 function panelFreezeGate(ctx, key) {
@@ -55,9 +77,13 @@ function panelFreezeGate(ctx, key) {
     return { err: `block ${key} still has a live pool entry — it is NOT a digested-stuck block (freeze refused; status action shows the pool)` }
   }
   // ASYNC-RESULT-CONTAINER.md D2：pending 单容器（四族统一——原 escalate/consult
-  // 独立族退役）。
-  if (blockKeyIn(ctx.agent._pendingAsyncResults, key)) {
+  // 独立族退役）。#748：consult 子块键不经裸键比对（会话条目键 `consult#<sessionId>` 与
+  // 子块键可数字撞键）——改判消费判据（会话在跑 ∥ 会话条目在 pending——与回收 ∥ 补发同源）。
+  if (!consultChildKey(key) && blockKeyIn(ctx.agent._pendingAsyncResults, key)) {
     return { err: `block ${key} is still genuinely awaiting digestion — its report is still pending and has NOT reached the model yet; freezing now would break the digestion order (wait for the digest run, which reclaims it automatically)` }
+  }
+  if (consultChildUndigested(ctx.agent, key)) {
+    return { err: `block ${key} belongs to a consultation whose digest has not been consumed — the session is still running, or its session entry is still pending (freeze refused; the block is reclaimed at the consumption window)` }
   }
   return { ok: true }
 }
@@ -151,8 +177,11 @@ export function executePanelAction(args, ctx) {
       // 读时交叉（round1 #3）：pending/池均无对应 = 报告已消化（注入即从两者移除）——
       // 块驻留 = 状态滞后——digested:true（freeze 候选——模型可定位异常块）。
       // ASYNC-RESULT-CONTAINER.md D2：pending 单容器参与比对（四族统一）。
-      out.digested = !blockKeyIn(agent._pendingAsyncResults, b.key)
-        && !blockKeyIn(getAsyncPool(agent, "subagent"), b.key) && !blockKeyIn(getAsyncPool(agent, "advisor"), b.key)
+      // #748：consult 子块按消费判据（会话在跑 ∥ 会话条目在 pending ⇒ 未消化）——与门控同源。
+      out.digested = consultChildKey(b.key)
+        ? !consultChildUndigested(agent, b.key)
+        : !blockKeyIn(agent._pendingAsyncResults, b.key)
+          && !blockKeyIn(getAsyncPool(agent, "subagent"), b.key) && !blockKeyIn(getAsyncPool(agent, "advisor"), b.key)
     }
     return out
   })

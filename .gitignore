@@ -29,3 +29,7 @@ ledger.db-*
 # 大件基准产物（PDF——本地保留，不入库）
 bench/results/*.pdf
 
+
+# 会话期临时输出（根目录——不进 git）
+_*.out
+_nat_test_out.txt

@@ -194,9 +194,10 @@
   ① 落点 = `docs/cli/design/`（P2：CLI 单端面，VSC 无对应能力）；
   ② **状态行漂移按现状收正**（台账 §2.1 第 11 行提示项）：旧档档头「已落档——待设计评审」（2026-09-11 时点）——
   实核三批机制（F3 取证 / F4 遥测 / F5 恢复）均已实现且测试档在位 ⇒ 本档按**现行态**落笔，去在途状态表述；
-  ③ 坐标全量改**现状路径**并实核（`thincoder-cli/src/crash-reports.mjs` · `src/heap-watch.mjs` · `src/tui/wrapped-spawn.mjs` · `src/tui/tui-lifecycle.mjs` · `bin/thincoder.mjs`）；
+  ③ 坐标全量改**现状路径**并实核（`thincoder-cli/src/crash-reports.mjs` · `thincoder-cli/src/heap-watch.mjs` · `src/tui/wrapped-spawn.mjs` · `src/tui/tui-lifecycle.mjs` · `bin/thincoder.mjs`）；
   ④ 旧档批次材料（选型表 / 实测矩阵 / 受影响文件 / 用例 / AC / 问题陈述）入 §6.1；⑤ 三节机制按主题重排为 §1–§5。
 - 2026-09-27（**env-config-purge 批 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §1.5）：§3.2 由「env 开关」改**配置键** `diagnostics.heapSnapshot`（判定单点移 bin 入口 → 参数传入；关值集合消失）· §4.2 契约签名去 `env` 形参、加 `enabled = true` · §4.3 开关改 `diagnostics.heapWatch`。通道纪律单源 = `CONFIG.md` §6.2。
 - 2026-09-27（**env-config-purge 批 · 设计评审轮 1 修正轮 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §3 轮次 1 发现 1）：§2.1 注入接口行去 `env` 形参、列 `heapSnapshot = true`（与 §3.2 判定单点同形）；`heapSnapshot` 来源句补「bin 入口读配置键后显式传入」。**零语义**：§3.2 / §4.2 / §4.3 机制句零改。
 - 2026-09-30（**采集收网批 · eng-designer**——承 `docs/batches/2026-09-30-heap-snapshot-switch.md` §2）：§3.2 判定句翻转（键值 `true` ⇒ 武装；缺省 ∕ 读失败 ⇒ 不武装——隐私默认关 ∥ fail-closed）；§4.3「与 §3.2 同约定」随动收正（两键默认自此相反）。武装 ∕ 注入缝 ∕ 代价表机制面零改。
 - 2026-09-30（**采集收网批 · 设计收正轮（§3 轮次 1 发现 4）· eng-designer**——承 `docs/batches/2026-09-30-heap-snapshot-switch.md`）：§3.2 判定句「运行期可显式开」收紧为**分端生效时点**（桌面会话热读 ∥ CLI 本进程下次启动——判定单点 = 进程启动读键）。**零语义**（措辞级——防读作 CLI 进程运行期热生效）。
+- 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R1 改指（`heap-watch.mjs` 补 `thincoder-cli/` 前缀——§6.1 第 6 批记录行）。**零新语义**。

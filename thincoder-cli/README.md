@@ -201,7 +201,7 @@ src/
                          key handling, mouse/clipboard, the cmd-* command family, subagent panels
   tui.mjs                re-export shim → src/tui/index.mjs
   upgrade.mjs            version check and self-upgrade
-test/               node:test offline unit tests (npm test)
+test/               suite entry (npm test) — integration set; unit tests = batch-local files (docs/batches/) — current state: ../docs/core/design/TESTING.md §2.3
 scripts/            repo-side scripts — release check, doc-impact, syntax/endpoint probes,
                     real-environment verification (compaction, team sync)
 ```
@@ -218,7 +218,7 @@ Key design decisions:
 ## Development
 
 ```bash
-npm test                          # offline unit tests (node:test, with local mock servers)
+npm test                          # repo suite (integration set, offline) — empty manifest after the 2026-09-28 reset; unit tests = docs/batches/ — current state: ../docs/core/design/TESTING.md §2.3
 node scripts/verify-compress.mjs  # real-API verification of context compaction (needs valid config)
 node scripts/verify-team.mjs      # team memory A->git->B full-chain verification (local git, offline)
 ```

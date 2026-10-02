@@ -1,8 +1,8 @@
 /**
  * chat-model.mjs — 对话流**模型族**（拆分产出 —— 更新纪律收核批：`renderer/views/chat.mjs` 越 300 在册、
  * 本批结构性触碰 ⇒ 按窗口执行拆分；登记面 = `docs/desktop/design/PROJECT.md` §4.2 本批行）：
- * `chatModel`（纯模型 · 窗出口）+ 六件派生判据（`retrySourceOf` ∕ `awaitingOf` ∕ `digestOf` ∕ `compressOf` ∕
- * `timerNoticeOf` ∕ `ledgerOf`）。原族**逐字搬运**（零语义改）；三档沿 `docs/desktop/design/RENDERER.md` §1.1
+ * `chatModel`（纯模型 · 窗出口）+ 七件派生判据（`retrySourceOf` ∕ `awaitingOf` ∕ `digestOf` ∕ `compressOf` ∕
+ * `timerNoticeOf` ∕ `ledgerOf` ∕ `helpLinesOf`）。原族**逐字搬运**（零语义改）；三档沿 `docs/desktop/design/RENDERER.md` §1.1
  * 「纯描述符 + 薄挂载」两层分家——本档零 DOM / 零 `node:` / 零裸包。
  * 依赖单向：`renderer/views/chat.mjs`（`mountChat` 内取模型）→ 本档；`renderer/app.mjs` 引调 `chatModel` ∕
  * `retrySourceOf`（引调面单处）；反向无引用 ⇒ 无环。
@@ -39,6 +39,8 @@ export function chatModel(state, limit = MAX_RENDER_BLOCKS) {
     // 「对齐第三批」：停止痕（项 6 —— 本键切片在场；页读整置即失）· 台账行（项 12 —— 本键行集）
     stopped: mode !== "none" && state?.stopMark?.[state.activeSession] === true,
     ledger: mode === "none" ? null : ledgerOf(state),
+    // `/help` 行集（`/help` 增量 · 2026-10-01② —— `[data-help]` 行族；非块节点 · 尾组槽位）
+    help: mode === "none" ? null : helpLinesOf(state),
     // 重试钮在场判据（项 9）：可重发源在场（= 末个「`user` ∧ 文本为串」块）—— 与出口同谓词（`retrySourceOf` 单源）
     canRetry: mode !== "none" && retrySourceOf(state?.blocks) !== null,
     // 欢迎条文案二值（项 15）：provider 已配 ⇒ `welcome.textConfigured` ∥ 余（未配 / 未知）⇒ `welcome.text`
@@ -63,7 +65,8 @@ function awaitingOf(state) {
   return Array.isArray(list) ? list : []
 }
 
-/** 本键消化轮集（源 = `state.digest[活动会话键]` —— `ev:digest` 归约面写，**多轮记录**（数组——每轮一记录：起跑 ∕ cap ∕ 终态；**逐轮累积**——旧轮在流（零摘除）；#747）；
+/** 本键消化轮集（源 = `state.digest[活动会话键]` —— `ev:digest` 归约面写，**全轮累积**（切片 = […旧轮, 本轮]——
+ *  行出即留；每轮一记录：起跑 ∕ cap ∕ 终态三态；自然形收正批 · 2026-10-01 · 台账 #768）；
  *  缺 / 非数组 / 空 ⇒ `null`：零组 —— 禁假造）。 */
 function digestOf(state) {
   const key = state?.activeSession ?? null
@@ -101,4 +104,14 @@ function ledgerOf(state) {
   if (key === null || table === null || typeof table !== "object") return null
   const lines = table[key]
   return Array.isArray(lines) && lines.length > 0 ? lines : null
+}
+
+/** 本键 `/help` 行集（源 = `state.helpLines[活动会话键]` —— 端装配面 `printHelp` 口写；缺 / 非数组 / 空 ⇒ `null`：
+ *  零族 —— 禁假造；生命期 = 运行期痕（首屏页读整置即失 —— 同 `[data-timer]` 族）。 */
+function helpLinesOf(state) {
+  const key = state?.activeSession ?? null
+  const table = state?.helpLines
+  if (key === null || table === null || typeof table !== "object") return null
+  const rows = table[key]
+  return Array.isArray(rows) && rows.length > 0 ? rows : null
 }

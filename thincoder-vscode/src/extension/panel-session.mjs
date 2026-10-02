@@ -147,7 +147,9 @@ export function loadSession(panel) {
     panel._panel?.webview.postMessage({ type: "clearMessages" })
     // Lazy history: only the LAST page is sent on load; older pages arrive via
     // loadOlder (webview scroll-back). idx values are global history indexes.
-    const { messages, hasOlder } = historyWindow(history, null)
+    // #726（2026-10-01 · 跨端消化面恢复批）：读面 opt-in `{records:true}`——`digest` ∥ `subagent`
+    // 记录随页携（重建径消费 = `webview/record-restore.js`；默认关零回归故需显式开）。
+    const { messages, hasOlder } = historyWindow(history, null, undefined, { records: true })
     sendHistoryPage(panel, messages, hasOlder, false)
     // 2026-09-11 第 10 批（§5.1.4 第 4 条）：clearMessages（:155）与 historyPage
     // （sendHistoryPage 内部投递）**之后同 tick** 再断言存活任务——期望位置 = 流尾
@@ -173,9 +175,10 @@ export function loadSession(panel) {
   /** Older-history page for the webview's scroll-back lazy loading. */
 export function loadOlder(panel, before) {
     const history = activeHistory(panel)
-    const { messages, hasOlder } = historyWindow(history, typeof before === "number" ? before : null)
+    // #726：读面 opt-in（同上——记录随页携；跨页轮由重建面按「完整轮」判收）。
+    const { messages, hasOlder } = historyWindow(history, typeof before === "number" ? before : null, undefined, { records: true })
     sendHistoryPage(panel, messages, hasOlder, true)
-  }
+}
 
 export function sendHistoryPage(panel, messages, hasOlder, older) {
     // Machine-only editor-context injections must never surface in the UI (parity

@@ -5,7 +5,7 @@
  *   ① 卡根 `data-card="question"` 锚装饰（核卡自带 `data-prompt-id` / 类 `question-card`；端补端挂载 ∕ 同步面不变式锚）；
  *   ② 出站桥（端壳适配 g）：核 `deps.emit("questionResponse", { answer, promptId? })` ⇒ 端出口 `handlers.onAnswer`
  *      （⇒ `renderer/mount-cards.mjs` `submitAnswer` —— `question:respond` 回执径保留：**卡退场非乐观**，回执 `ok` 真
- *      才清切片；核卡点按即摘 + 失败径挂载面重挂 ⇒ 卡复现可重试）；
+ *      才清切片 ⇒ 帧挂载摘卡；核零摘除 ∥ 失败 ⇒ 零 DOM 写（卡恒在场可重试））；
  *   ③ 作答后回焦输入区（P3② 归核面注入点 `deps.onAnswered` —— 核卡作答 ∕ 取消同一路回调；落点 = `handlers.onAnswered`）。
  *   **P2（Enter 提交）随核卡内建**（`cards/question.mjs:46-51` —— 组字门 = 核件小修，组合期回车归输入法）；
  *   **P3①（新卡聚焦）** = 端壳挂载面插入时聚焦核卡作答控件（`renderer/mount-cards.mjs`）。

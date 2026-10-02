@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-09-30 · 来源 = 台账 #707 ∥ #704 ∥ #750 ∥ #699（真缺陷族）；用户 2026-09-30 23:42 批次点火令「实活都做了」。
 > 台账 = #707 ∥ #704 ∥ #750 ∥ #699 ∥ #700（真缺陷族 · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-01
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（五条（#707 ∕ #704 ∕ #750 ∕ #699 ∕ #700）· 档落三处）
@@ -147,6 +147,115 @@
 **计数**：🔴 0 ∥ 🟡 5 ∥ 🔵 4。
 VERDICT: pass
 
+### 轮次 2（评审子代理）
+
+**评审执行（设计评审 · 轮次 2 · 跨重启重签放行前终审 · 2026-10-01）**——对象 = 批档 §2（含「修复轮（轮 1）」块）+ 三处设计档实落（`docs/core/design/MULTI-INSTANCE-COLLAB.md` §3.1 · `docs/cli/design/CLI-ENTRY.md` §3–§4 · `docs/core/design/MEMORY.md` §6.14 ∕ §8.3）。
+
+**核验（本轮全数实读）**：轮 1 九条逐条核位——① `conventions.mjs` 读取工具实读 **320**（定义 `:261` ∥ 注释 `:259-260` 在位；>300 档位句在册）⇒ 号 1 落位 ✓；② `2026-09-30-crossline-clearance-cli.test.mjs` 实读 **151**、`:139 ∥ :140 ∥ :143-145` 五行旧形逐字在位 ⇒ 号 2 落位 ✓；③ `CLI-ENTRY.md:52 ∥ :55` 修订残迹零残留（活形条款留；沿革 = `:77`）⇒ 号 3 落位 ✓；④ U1 载「主 agent 笔 ∥ 随本批落地」（本档 :95 ∥ §4 :154 载体随签）⇒ 登记在位（未落地·协调项）；⑤ 零触腿三件（主判 ∥ 灵敏度先证 ∥ 对照臂）在位 ⇒ 号 5 落位 ✓；⑥ 625 档位状态 + 拆分候选登记在册 ⇒ 号 6 落位 ✓；⑦ `MULTI-INSTANCE-COLLAB.md:74 ∥ :297 ∥ :442` 新坐标在位（定义 `:78` ∥ 转口 `session-slots.mjs:48` ∥ 调用 `:305`）⇒ 号 7 落位 ✓；⑧ #699 定稿限域「本块设置族十六」在位；16 ∕ 19 算式对 `ipc-relays.mjs:2-3`（8+2+1+6+1+1 = 19）与 `:30-32` 差额三项实核 ✓；⑨ WSL 探针读数在册（无发行版 ⇒ 维持披露制）✓。另核 #700 底座：`code-sync.mjs` 458 行、四接线坐标 `:91 ∥ :155 ∥ :426 ∥ sync-tail.mjs:65` 全在位、`:68/:69` `--relative` 在位（base=dir 成立）；`file-walk.mjs:94 ∥ :97` 注入形（零改结论成立）；#704 点账逐点全中（137 行）；digest 件 `sandbox()` = 单缝（`:267`，归因成立）；批内件三档均未创建（「拟新增」为真）。
+
+**发现表（轮次 2）**：
+
+| # | 来源 | 面 | 级别 | 状态 | 说明 |
+|---|---|---|---|---|---|
+| 1 | 轮 2 复核（R5 · 协调项） | 批档 :95 ∥ :154（落点 = `docs/core/requirements/MULTI-INSTANCE-COLLAB.md:34`） | 🟡 | 未闭（非缺陷·不阻塞） | F-MI6 家族枚举随动未落地——已定主 agent 笔 ∥ 随本批落地；不得越批存活（R7e：文档态矛盾不阻放行） |
+| 2 | 新增（R4 · 腿环境敏感） | 批档 §2 修复轮 :114 | 🔵 | 新 | 真实 sessions 目录跑前 ∥ 跑后「逐字一致」判据 ⇒ 任一并发活实例回合末写 manifest（`saveSession` 每回合重写——`MEMORY.md:61`）即假红；建议判据收在本次 cwd-hash 族 ∕ 明载「并发扰动 ⇒ 重跑」归因规则 |
+| 3 | 新增（R7c · 读数口径） | 批档 §2 修复轮 :110 ∥ :61 ∥ :108 | 🔵 | 新（±1 容差内） | 抽核两档与表注差 1：`process-probe.mjs` 表注 163（读取工具实读 164）· digest 件表注 625（实读 626）；轮 1「±1 内吻合」同判，不影响增量 ∕ 档位判断 |
+
+**计数**：🔴 0 ∥ 🟡 1（协调项）∥ 🔵 2（新增）。
+VERDICT: pass
+
 ## §4 用户批准（主 agent）
+
+**批准（全链自动授权 · 代签）**——用户 2026-10-01 令（全链自动授权：代签 ∥ 代点火 ∥ 代派）+ 本刻「A/B/D 先开始处理」续令（2026-10-01 13:0x）；依 §3 轮次 1 = pass（🟡5 · 🔵4——九号全修在册）⇒ 批准实施。
+
+**载体随签**：U1（需求档 F-MI6 家族枚举随动）= 父侧笔随签落地 ∥ U2（真实 `~/.thincoder/sessions/` 两对测试临时档）= 父侧清理 ∥ U3（`desktop-debug.cmd` 已落事实）= 计入 §5 实施记录（由实施舱如实登记）。
+
+**签发状态**：设计 token 面随派单核（跨重启有效性以机制回执为准——被拒则重走评审）。
+
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（四条全量落地 + #750 归因/退役登记（父侧裁）；批内件 11/11 ∥ 5/5 ∥ 2/2 绿；内审 pass ∥ 代码评审 pass（终态 clean））
+
+
+
+**实施记录（eng-coder · 2026-10-01）**
+
+**交付摘要**：五条中四条全量落地（#707 ∥ #704 ∥ #699 ∥ #700 + 批内件三档全绿）；#750 = 归因完成 + 件退役登记（父侧裁，归因见下）。跨批两件按父侧裁分置：crossline 5 行 = 父侧执行（字面清单在册）；digest-persistence = 退役、零触。越表项 = 零。
+
+**逐号落点（file:line = 终态实读）**
+- #707：`thincoder-core/process-probe.mjs:56`（`DESKTOP_END_RE` 扩 `node_modules[\\/]electron[\\/]dist[\\/]` 段）+ `:49-55` 注释收正（实测形 + 2026-09-30 + 台账 #707 + 超集披露）；两消费面 `:63`（isProductProc）∥ `:71`（classifyEnd）单源随动（零第二套正则）。
+- #704：`thincoder-cli/src/completions.mjs` —— bash 11 行 `$(compgen`（`:18 ∥ :21-24 ∥ :27-29 ∥ :31 ∥ :32 ∥ :34`）∥ 11 处 `"$cur"` ∥ 2 处 `case "$prev" in`（`:20 ∥ :26`）；zsh 4 处直写（`:49 ∥ :65 ∥ :68 ∥ :73`）；`\${COMP_WORDS…}` 三行保留（`:15-17`）；fish 零改；头注 `:5-8`（发射契约自限：bash 直写形零反斜杠 ∥ 余反斜杠仅续行保留 ∥ `\${` 险位例外）。
+- #699：`thincoder-desktop/src/main/ipc-relays.mjs:34`（定稿句逐字：转口群十九项处理体（本块设置族十六 ∕ 配置写一 ∕ 台账相位两）：转口四档模块）∥ `thincoder-desktop/src/preload/preload.cjs:11`（设置族二十项句逐字）。
+- #700：`thincoder-core/conventions.mjs:265-276`（`isExcludedRelPath(rel, decl, base = null)`：resolve+relative 换算至 `decl.root` ∥ 越界（`..` 头∕根外绝对形）⇒ 不命中 ∥ 缺省=根相对等义 ∥ 注释同拍）；起效点 `thincoder-core/memory/code-sync.mjs:91 ∥ :155 ∥ :426` ∥ `thincoder-core/memory/sync-tail.mjs:66 ∥ :71`（`sweepStaleRows` base 参）；消费携 base = `code-sync.mjs:268 ∥ docs.mjs:87`。
+- 批内件三（新 · 不进仓套件）：`docs/batches/2026-09-30-defect-fixes-core.test.mjs`（197 行 · 11 腿）∥ `-cli.test.mjs`（99 行 · 5 腿）∥ `-desktop.test.mjs`（60 行 · 2 腿）。
+
+**实跑读数（仓根 `thincoder/`；各件直接 `node --test <file>`）**
+- core 件 ⇒ **11/11**（L707-1..4：实测相对形判活 ∥ 误删风险面负控 + 三对照臂 ∥ 五态回归 ∥ 显示面；L700-1..6：等义 ∥ 正腿 ∥ 反腿 ∥ 越界 ∥ 接线两面 ∥ 缺省）。
+- cli 件 ⇒ **5/5**（MS-2 三 shell 旗标 + 顶层 ledger ∥ bash 直写形逐字 ∥ zsh 分派行 ∥ 旧形零残留 ∥ fish 锁）。
+- desktop 件 ⇒ **2/2**（新句在场 ∥ 旧句零命中 ∥ 计数自证：注释下 19 导出口 ∥ 白名单设置族 20 = 8+2+1+6+1+1+1）。
+- #704 真机腿（Git Bash `C:\Program Files\Git\bin\bash.exe`，sha-free）：发射 bash 脚本 `bash -n` ⇒ **exit 0**（语法洁）∥ `source` 冒烟 ⇒ `complete -p thincoder` 回读 `complete -F _thincoder thincoder`（注册成立）。**zsh ∥ fish 真壳未跑**（WSL 无发行版——设计披露制在册，`:123`）。
+- 零残留：源面 grep（`thincoder-*/**/*.{mjs,js,cjs}`）`设置族十二项` = 0 ∥ `转口三档模块` = 0；`completions.mjs` 含 `\$` 仅头注说明形 + `:15-17` 险位三行（发射面零 `\$` 由 cli 件机检）。
+- 真实面零触：诊断跑（HOME 重定向）与 scratch 实验（真实 HOME）前后对 `~/.thincoder/sessions/` 快照 = **零新增 ∥ 零变更**。
+- 仓套件零跑（父侧收口单跑——纪律）。
+- crossline 件现读（我侧改动后 ∥ 父侧换写前）⇒ 3/4（T-XL8 红 = 旧字节锁 5 行，按预期）；**换写后绿 = 未实跑**（以等价 scratch 预演替代：同内容 + 同 5 行替换 ⇒ 4/4 绿）。
+
+**#750 归因（父侧裁：归因完成 + 件退役登记）**
+- 复跑签名（2026-10-01）⇒ **4/9**（红：腿 2 ∥ 3 ∥ 4 ∥ 6 ∥ 7）。
+- 逐腿归因（scratch 缝对齐实验——`sandbox()` 兼设端壳 re-export 缝 ⇒ 6/9）：
+
+| 腿 | 无缝对齐 | 缝对齐后 | 红因 |
+|---|---|---|---|
+| 腿 2 | 红（:350 回执 false——端壳读真面 slot-missing） | **红**（:373 痕元素恰一枚 4≠1） | 接线下游 + **语义撤销**：自然形行族每轮 1–4 行皆携 `data-digest`（无轮容器）——旧「痕元素恰一枚 ∥ 位次」形已随 #765 拆除 |
+| 腿 3 | 红（:399 留档块入块序 0≠5——同 slot-missing） | **绿** | 纯接线（块重建语义仍立） |
+| 腿 4 | 红（:436 `.some` of undefined——同 slot-missing） | **红**（:453 `chatStream.alignPlan is not a function`） | 接线下游 + **API 面消亡**（alignPlan 随后续批移除；「痕随窗摘除」与自然形「零摘除」相抵） |
+| 腿 6 | 红（:543 alignPlan 非函数） | **红**（同） | **API 面消亡**（alignPlan ∥ 旧 settleFrame 形） |
+| 腿 7 | 红（ENOENT——端壳写真面） | **绿** | 纯接线 |
+
+- **退役判由**：①断言对象不存在（座次机随 #765 拆除；alignPlan/旧 settleFrame 随后续批移除）；②缝对齐只解接线面（腿 3 ∥ 7 + 腿 2/4 初红），余红 = 语义撤销/API 消亡（非接线可解）；③缝对齐补丁 ∥ 零触腿均不落（父侧裁）；④件自带断代标（`2026-09-30-digest-persistence.test.mjs:3`：2026-10-01 · #765 拆批 · 留档对照·勿复跑）与批复一致。
+- **覆盖关系（与 #765/#768/#769 新件）**：#765 digest-teardown 件（7/7 腿）覆盖座次机拆除后的行族形与记录面；#768 natural-form 件（8/8 腿）覆盖自然形行族 + 重载复列；#769 audit-remediation 件（39/39 腿）覆盖复核收正面；本件独有面（记录直通 ∥ 折叠 ∥ 恢复）× 新件三已同覆（记录流转 + 折叠 + 复列）——无覆盖洞。
+- **偏差登记（设计前提不成立 · 缘于批间演化）**：§2 条 3 写作（2026-09-30）时「缝对齐 ⇒ 9/9」成立于当时盘面；#754/#765/#768（2026-10-01 03:55–08:0x）拆除座次机 ∥ 自然形收正后腿断言对象演进 ⇒ 9/9 不可达（非接线可解）⇒ 父侧裁改判「归因完成 + 件退役登记」。
+- U2 登记：真实 `~/.thincoder/sessions/` 两对临时哈希档（20:54 ∥ 23:48 落）= 父侧已清（本席复核盘面零残留）。
+
+**crossline 5 行清单（父侧执行；行号 = 现读；命令集字面零变——仅去转义）**
+
+| 行 | old ⇒ new |
+|---|---|
+| :139 | `bash.includes('ledger) case "\\$prev" in') && bash.includes('"migrate audit" -- "\\$cur"')` ⇒ `bash.includes('ledger) case "$prev" in') && bash.includes('"migrate audit" -- "$cur"')` |
+| :140 | `zsh.includes('ledger) case "\\$words[2]" in')` ⇒ `zsh.includes('ledger) case "$words[2]" in')` |
+| :143 | `bash.includes('COMPREPLY=( \\$(compgen -W "tui chat acp memory sync reindex distill upgrade completion session ledger -v --version -h --help" -- "\\$cur") )')` ⇒ 同句 `\\$(` → `$(` ∥ `\\$cur` → `$cur` |
+| :144 | `…'COMPREPLY=( \\$(compgen -W "list search put remove sweep" -- "\\$cur") )'` ⇒ 去转义同形 |
+| :145 | `…'COMPREPLY=( \\$(compgen -W "--origin= --dry-run --confirm" -- "\\$cur") )'` ⇒ 去转义同形 |
+
+**U3 登记**（§4 载体随签）：`scripts/desktop-debug.cmd` 绝对路径启动形 = 已落事实——`:5` `cd /d "%~dp0..\thincoder-desktop"` ∥ `:7` `"%CD%\node_modules\electron\dist\electron.exe" --remote-debugging-port=9222 --remote-allow-origins=* .`；git 归属 `d7f7612b9`；本批零触。**注（供父侧酌处）**：`:6` 注释括注「相对路径形会判成非本产品」已被 #707 超集覆盖（相对形现亦命中 electron/dist 段）⇒ 该括注语义过期；本批禁扩面未动。
+
+**行数对账（读取工具口径；±1 容差在册）**
+
+| 档 | 批档预期 | 终态实读 | 注 |
+|---|---|---|---|
+| `process-probe.mjs` | ≈172 | 168 | 注释 + regex |
+| `conventions.mjs` | ≈335 | 330 | 谓词 + 注释 |
+| `code-sync.mjs` | ≈461 | 458 | 四起效点 = 行内改（零增行） |
+| `sync-tail.mjs` | ≈84 | 82 | base 参 + 注释 |
+| `docs.mjs` | ≈438 | 437 | 行内携 base |
+| `completions.mjs` | ≈139 | 141 | 头注 4 行 |
+| `ipc-relays.mjs` ∥ `preload.cjs` | 71 ∥ 80 | 71 ∥ 81 | 注释行换文（±1） |
+| 批内件三（core ∥ cli ∥ desktop） | ≈230 ∥ ≈100 ∥ ≈60 | 197 ∥ 99 ∥ 60 | 紧写，腿全 |
+
+**内审与代码评审（本会话内闭环）**
+- explore 发散审计（1 轮）：**pass**——四类偏差（部分实现 ∥ 静默简化 ∥ 设计偏差 ∥ 越表）**零**；2 观察：§5 盘面空缺（即本段）∥ 头注宽述（已修——措辞自限，comment-only）。
+- advisor 代码评审（1 轮）：**pass**（🔴 零；4×🟡 + 2×🔵）；固定轮 1（自修）：L700-5a 腿判别力修复——`build` 属内建 SKIP_DIRS（`code-sync` 系 `file-walk.mjs:26 ∥ :94` 先于谓词剪枝）⇒ 夹具改 `sub/gen` + 增「零谓词照列」对照臂 ⇒ 复跑 11/11 绿。
+- 遗留（非阻塞，供收口轮酌处）：`conventions.mjs` 330 ∥ `code-sync.mjs` 458 ∥ `docs.mjs` 437 越 300 建议线（存量债；code-sync ∥ docs 档位审视句未载）∥ `MEMORY.md:518` 谓词签名两参旧形（与 `:519` 换算句并存）∥ crossline 换写后复跑（父侧落盘后）。
+- **终态 = clean**（无未决阻塞项）。
+
+**决策透明表**
+
+| # | 决策 | 依据 / 披露 |
+|---|---|---|
+| 1 | crossline 5 行 = 父侧笔 | 写门实证拒（cross-batch batch-record write：「the parent agent handles other batch records」）；父侧裁定同向 |
+| 2 | digest-persistence = 退役、零触 | 父侧裁（前提不成立）；归因表 + 覆盖关系在册 |
+| 3 | scratch 实验（`.thincoder/tmp/dx750-scratch.test.mjs` ∥ `dx704-crossline-scratch.test.mjs`）= 诊断专用、用后即删 | 非交付面；真实面零触（快照实证）；盘面复核零残留 |
+| 4 | #704 头注措辞自限（comment-only） | 内审观察 #2 吸收；零语义 |
+| 5 | L700-5a 夹具改名 + 对照臂 | 评审发现 #3 吸收；行为断言不变（判别力增） |
+
 ## §6 验证与收口（父代理）
+
+**收口轮（父侧 · 2026-10-01）**：① **父侧亲跑复验**：批内件三段独立复跑 = **18/18 绿**（core 11 ∥ cli 5 ∥ desktop 2）；`crossline-clearance-cli.test.mjs` 5 行换写（父侧执行——字面照 #10 清单）后 **4/4 绿**（T-XL1/2/6/8——「换写后仍绿」达成，原「未实跑」注记消解）。② **crossline 父侧笔回执**：`:139 ∥ :140 ∥ :143 ∥ :144 ∥ :145` 去转义（命令集字面零变、零增删——仅 `\\` 剥除）。③ **#750 改判交付**：归因完成（逐腿表 §5）＋ 件退役登记（断代留档——不落缝对齐 ∥ 不落零触腿）；偏差（设计前提不成立·缘于批间演化）在册；真实 HOME 残档 U2 = 父侧已清（复核零残留）。④ **尾项**：`MEMORY.md:518` 签名三参收正（父侧笔〔③类〕+ 变更记录）；`scripts/desktop-debug.cmd:6` 过期括注收正（#707 超集覆盖——可执行行零变）；三档 >300 存量债（`conventions.mjs` 330 ∥ `code-sync.mjs` 458 ∥ `docs.mjs` 437）= 登记 **#786**（拆分预案·触发式）。⑤ **台账结算**：#707 ∥ #704 ∥ #699 ∥ #700 ∥ #750 → **已核销**（5 笔——随本收口轮落地）。⑥ **D7 对账**：角色表 §1–§6 ✓ ∥ 状态行 ✓ ∥ 计数（5 条 ∥ 8 产品档 ∥ 3 批内件）✓ ∥ 指针（批档 ↔ 台账 ↔ 修复面）✓ ∥ 变更记录（MEMORY.md ✓）∥ 遗留（zsh ∕ fish 真壳 = 披露制在册 ∥ 越线债 #786 在册）。**收口完成 ⇒ 冻结。**

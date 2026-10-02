@@ -813,7 +813,7 @@ VSC（`thincoder-vscode/`）：
 | U8 | `src/memory/schema.mjs` | 452 |
 | U8 | `src/embedding.mjs` | 120 |
 | U9 | `src/agent-tools.mjs` | 17 |
-| U9 | `src/agent-tools/batch-segment.mjs` | 195 |
+| U9 | `batch-segment.mjs` | 195 |
 | U9 | `src/agent-tools/digest-budget.mjs` | 76 |
 | U9 | `src/agent-tools/eng.mjs` | 67 |
 | U9 | `src/agent-tools/goal.mjs` | 119 （迁移期引文——档已迁核） |
@@ -1134,7 +1134,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 12 | `test/model-specs.test.mjs` | **477**（`wc -l` 实读 2026-09-22——mimo26 批后；09-20 首次登记读数 414） | **>300——须带（渠道接入批补登——登记不拆档，批次档 §1.10-④ 预裁；test 面首次入册；2026-09-22 mimo26 批重裁：维持登记不拆——该批只承载 M-5 微改）**：用例族 = A-1..A-12（五名逐字段 · 证据等级行注 · 转售命中面 · 既有族零回归）整体承载 = 单档内聚；登记已落（`thincoder-core/test/core-hygiene.test.mjs:55`）；**消解条件 = 越 500 硬限前或该档下次实质改动时重裁**；细节面 = `docs/core/design/MODEL-SPECS.md` §9.7 |
 | 13 | `test/provider-merge.test.mjs` | **306**（`wc -l` 实读 2026-09-20） | **>300——须带（渠道接入批补登——登记不拆档，同 12）**：载荷族 = B-1..B-6 + T-8 / T-9（D-14 off 补发 + 五 guard 零变面）整体承载 = 单档内聚；登记已落（同 `:55`）；**消解条件 = 越 500 硬限前或该档下次实质改动时重裁**；细节面 = `docs/core/design/MODEL-SPECS.md` §9.7 |
 | 14 | `model-specs.mjs` | **348**（实读 2026-09-25） | **>300——须带（bench 参数批登记（2026-09-24 · `docs/batches/2026-09-24-bench-params-judge.md`）——本子表补登）**：拆点 = `MODEL_SPECS` 表块（行 + 行注）外提；落点 `thincoder-core/model-specs-table.mjs`（拟新增——主档 re-export 保 import 面零改）；连带面 = 测试档文本扫描 helpers（`SPEC_SOURCE` 族）随拆分批改读两档；**消解条件 = 越 500 硬限前或该档下次实质改动时**；细节面 = `docs/core/design/MODEL-SPECS.md` §13.6「行数处置」段 |
-| 15 | `context.mjs` | **440**（实读 2026-09-25——file-tier-sweep 批补登） | **>300——须带（立案「无计划行」补登 · 承台账 #301）**：拆点 = **压缩族**（`applyCompression` `:184-275` · `compressIfNeeded` `:275-354` · `compressFallback` `:380-393` · `shrinkOversized` `:403-435` 约 180 行）外提姊妹档（`context-compress.mjs` 式，re-export 保 import 面）；余量预计 ≈**260** · 新档预计 ≈**180**；**消解条件 = 越 500 硬限前或该档下次实质改动时** |
+| 15 | `context.mjs` | **262**（实读 2026-10-01——core 拆线批（#755/#786）兑现：440 ⇒ 262；产物 `context-push.mjs` **52** ∥ `context-echo.mjs` **89** ∥ `context-degrade.mjs` **82**——三族外提、压缩族留主档；前读 440 = file-tier-sweep 批补登 2026-09-25） | **已消解（2026-10-01）**——原计划（压缩族外提 `context-compress.mjs` 式）未采：实际拆点 = push ∥ echo ∥ degrade 三族（四档全 ≤300）；转口保名（import 面零改） |
 | 16 | `tools/edit-diff.mjs` | **415**（实读 2026-09-25——file-tier-sweep 批补登） | **>300——须带（edit-arg-guard 批 §2.4 三面候选 · 承台账 #254）**：拆点 = **守卫 / 校验族**（`assertEditArgsExclusive` `:141` · `assertEditsContainer` `:149` · `assertEditEntries` `:155` · `validateEditEntry` `:170` + 五文案 `:48-58`）外提姊妹档（`edit-diff-guards.mjs` 式）；余面 = diff 内核 / 执行体与回执；**消解条件 = 越 500 硬限前或该档下次实质改动时** |
 | 17 | `tools/file.mjs` | **468**（实读 2026-09-25——file-tier-sweep 批补登 · 自次优先面移入） | **>300——须带（edit-arg-guard 批 §2.4 候选 · 承台账 #254）**：拆点 = **按工具族四面**（read `:64` · write `:192` · insert_after `:284` · hashline_edit `:384`——先例 `git-ext.mjs` 拆出）；借用面 = `thincoder-core/tools/index.mjs` 注册面 + `edit-diff.mjs` 的 `appendWriteContext` 导入；**消解条件 = 越 500 硬限前或该档下次实质改动时** |
 | 18 | `traces/trace-store.mjs` | **299 → ≈305**（本批 +6——`diagnostics` 键面 / 通道纪律注；读数 = `wc -l`） | **>300——须带（env-config-purge 批触碰越线 ⇒ 随批补登）**：拆点 = **序列化面**（`OMIT` / `scalarJson` / `writeValue`——`:157-202` 约 46 行）外提姊妹档（`jsonl.mjs` 式，re-export 保 import 面）；**同批义务 = `SOFT_LINE_REGISTRY`（`thincoder-core/test/core-hygiene.test.mjs`）补登该档**（现 48 项无该档——未登 = 硬红）；**消解条件 = 越 500 硬限前或该档下次实质改动时** |
@@ -1322,7 +1322,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | `configureExecRun` / `runCommand`（执行面单点） | `thincoder-core/tools/exec-run.mjs:31`（`configureExecRun`；**140 行** · **已落 2026-09-14**；**`runInterruptible` 上提 2026-09-29 · R3**〔纯搬 + 转口零语义改〕· §5 交付读数） | 端装配层 | CLI = 不注入（默认径 = `execFileSync` CLI 语义） · VSC = 可中断执行器（现形 = 核 `runInterruptible`〔`thincoder-core/tools/exec-run.mjs:59`——上提单源〕；VSC 壳 = `thincoder-vscode/src/tools/shared.mjs:21` ∕ `:104`〔导入 ∕ 注入〕；VSC 侧 linter / verify / ops 消费） | 双夹具 + 结构机检（执行面单点：linter / verify 零直调 `child_process`）——见 `thincoder-core/test/tool-seams.test.mjs` |
 
 **族余项（登记——S2 取值补登）**：同款 module-level `configure*` 缝另有 **9 组**已物化（本轮实核坐标）：
-`configureBatchSegment`（`agent-tools/batch-segment.mjs:43`）· `configureTreeResolve`（`tools/tree.mjs:24`）· `configureProcessTreeKill`（`tools/execute.mjs:82`）·
+`configureBatchSegment`（`thincoder-core/agent-tools/batch.mjs:55`）· `configureTreeResolve`（`tools/tree.mjs:24`）· `configureProcessTreeKill`（`tools/execute.mjs:82`）·
 `configureGitApproval`（`tools/git.mjs:42`）· `configureLspHost`（`tools/lsp.mjs:30`）· `configureEditReceipt`（`tools/edit-diff.mjs:371`）·
 `configureSkillLoader`（`agent-tools/skill.mjs:12`）· `configureEngMirror`（`agent-tools/eng.mjs:25`）· `configureVerifyDiagnostics`（`agent-tools/verify.mjs:30`）——S2 消费方 / 两端取值逐档补登（现以 §2.13.4 行内坐标为对位面）。
 
@@ -1358,7 +1358,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | #66 `tools/lsp.mjs` 宿主语言服务径 | **有**（注入缝已落 2026-09-14——`configureLspHost`（null / undefined = 未处理 ⇒ 回核内 JSON-RPC 径）；`thincoder-core/tools/lsp.mjs:30`） | 端侧接线——**已接**（VSC `thincoder-vscode/src/tools/index.mjs:157` 供值 `configureLspHost`；CLI = 缺省径） |
 | #68 `tools/file.mjs` 编辑器编辑径（**写路径**） | **有**（写路径缝已落 2026-09-14 · `tools/write-path.mjs`——8 写点全经注入面） | 见 §2.13.5（**写路径缝**）——**已接**（VSC `thincoder-vscode/src/tools/shared.mjs:99` 供值 `{openDoc, isDirty, applyEdit}`；CLI = 不注入） |
 | #69 `tools/edit-diff.mjs` 回执形态 | **有**（注入缝已落 2026-09-14——`configureEditReceipt` / `composeEditReceipt`（单 / 数组形态共用）；`thincoder-core/tools/edit-diff.mjs:371`） | 端侧接线——**未接**（2026-09-28 实核：两树零消费者——休眠缝） |
-| #84 `agent-tools/batch-segment.mjs` `_touchedFiles` 记账 | **有**（注入缝已落 2026-09-14——`configureBatchSegment` / `resetBatchSegment`（缺省 no-op）；`thincoder-core/agent-tools/batch-segment.mjs:43,47`——直写点 :210 保持） | 端侧接线——**已接**（VSC `thincoder-vscode/src/agent/setup-tooltable.mjs:32` 注入 `configureBatchSegment({ onWrite })`） |
+| #84 `thincoder-core/agent-tools/batch.mjs` `_touchedFiles` 记账 | **有**（注入缝已落 2026-09-14——`configureBatchSegment` / `resetBatchSegment`（缺省 no-op）；`thincoder-core/agent-tools/batch.mjs:55,59`——直写点 :217 保持） | 端侧接线——**已接**（VSC `thincoder-vscode/src/agent/setup-tooltable.mjs:32` 注入 `configureBatchSegment({ onWrite })`） |
 | #91 `agent-tools/eng.mjs` 持久化镜像 / 面板提示 | **有**（注入缝已落 2026-09-14——`configureEngMirror`（状态翻转后调用、观察新态）；`thincoder-core/agent-tools/eng.mjs:25`） | 端侧接线——**已接**（VSC `thincoder-vscode/src/agent/setup-tooltable.mjs:85-86` 供值 `configureEngMirror`） |
 | #96 `agent-tools/verify.mjs` 编辑器诊断段 / 可中断 | **有（双面）**（注入缝已落 2026-09-14——信息段 `configureVerifyDiagnostics`（`thincoder-core/agent-tools/verify.mjs:30`；advisory）+ 执行方式经 `exec-run` 单点） | 端侧接线——**已接**（VSC `thincoder-vscode/src/agent/setup-tooltable.mjs:77` 供值 `vscodeDiagnosticsSection`）；缝位口径注记见 §2.13.5 补正③ |
 | #170 `skills.mjs` fs 面（同步 / 异步） | **有**（并入缝已落 2026-09-14——同步面 `loadSkillsSync` / `readSkillSync`（`thincoder-core/skills.mjs:214,224`）+ `configureSkillLoader`（缺省 = 核内异步 loader；`thincoder-core/agent-tools/skill.mjs:12`）） | 端侧接线——**已接**（VSC `thincoder-vscode/src/agent/setup-tooltable.mjs:83-84` 供值 `configureSkillLoader`） |
@@ -1403,7 +1403,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
   VSC 另有 2 处尾句为 `Save or discard first.`（`thincoder-vscode/src/tools/more-file.mjs:266,380`）⇒ **S2 接线后该两处用户可见文案随核内句统一**（本项只登记口径——端侧改动属 S2）。（W14 已迁核——该档已删，文案统一已在 W14 随核单源落地） （迁移期引文）
 - **补正③（登记——S2 接线前须定，2026-09-14）**：① `#96` 信息段缝位与入参口径（阻塞三态含段 vs VSC 现形不含；`codeFiles` vs `files`）；② `copy` 面门禁口径（src / dest 两面照过门禁——「所有 op 统一先问 src」；dest 面覆盖 move / rename / copy）。既定口径见批次档 §5「S1 续轮第三批」决策表 7 / 未决 2。
 - **范围注（结构机检域）**：验收② 机检域 = `tools/**`（工具写面）。核内域外档（存储 / 日志 / 快照 / trace / 配置等面 + 测试夹具）另含 fs 写、**不在本机检域**；
-  其中**模型面直写 `agent-tools/batch-segment.mjs`（#84）**已单列 **S2 前置门**（见 §2.13.4 #84 行 / §2.13.6 第 5 条）。原「核内单点」字样按落地口径收正为「**工具写面单点**（8 写点全经缝）+ `tools/**` 白名单机检」。
+  其中**模型面直写 `thincoder-core/agent-tools/batch.mjs`（#84）**已单列 **S2 前置门**（见 §2.13.4 #84 行 / §2.13.6 第 5 条）。原「核内单点」字样按落地口径收正为「**工具写面单点**（8 写点全经缝）+ `tools/**` 白名单机检」。
 
 **同源缺口（核内面已于 2026-09-14 闭合——执行面缝）**：`runInterruptible`（#61 / #63 / #96 的可中断执行面）与「编辑器诊断段」（#96）同类——**执行面单点 `thincoder-core/tools/exec-run.mjs` 已落**（`configureExecRun` / `runCommand`；linter / verify 已改经单点）；其余模块直调 `execFileSync` / `spawn` 属**既定边界**（批次档 §5「S1 续轮第三批」未决 3）；
   **VSC 注入 `runInterruptible` 已接（2026-09-15 · W14）；`runInterruptible` 上提核（2026-09-29 · R3）——壳注入点改指 `thincoder-vscode/src/tools/shared.mjs:104`（本端零副本）**。
@@ -2035,5 +2035,9 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 
 - 2026-09-30（**文档清账批 · eng-designer**——承台账 #737 · 批 `docs/batches/2026-09-30-doc-settlement.md`）：§2.8.1 子表**补行 23**（`thincoder-core/agent-tools/batch-lifecycle.mjs` **332**——`wc -l` 实读 2026-09-30（pairfix 批 ①-3 后）；
   拆点 ∕ 落点 ∕ 消解窗口 = `docs/core/design/TOOLS.md:741-742` 逐字）+ 计数句同改（已登 **23 → 24** · 后 **22 → 23** 档 · 其余 **27 → 26**）+ 子表题行补「文档清账批补 1 档」+ 登记义务行补 1 档。**零新语义**（登记落位 ∕ 读数收正）。
+
+- 2026-10-01（**core 拆线批（#755 ∥ #786）· 收口轮 · 主 agent**〔父侧直接执行 · 可 revert〕——承批档 `docs/batches/2026-10-01-core-split-line.md` §5 ∥ §6）：§2.8.1 子表行 15（`context.mjs`）**兑现收正**（440 ⇒ **262**；产物 `context-push.mjs` 52 ∥ `context-echo.mjs` 89 ∥ `context-degrade.mjs` 82——三族外提，压缩族留主档）；同批三档收正——`conventions.mjs` **330 ⇒ 172**（拆 `declaration.mjs` 173）∥ `memory/docs.mjs` **437 ⇒ 222**（拆 `memory-tool.mjs` 230）∥ `memory/code-sync.mjs` **458 ⇒ 258**（拆 `code-search.mjs` 138 ∥ `file-list.mjs` 90）——十一档全 ≤300；转口保名（消费面 42 档零改）。**零新语义**（读数与登记面）。台账 #755 ∥ #786。
+
+- 2026-10-02（**文档清账轮 · 执行轮 1（core/design 前段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 5 处处置（R2 改指 `batch.mjs` 现坐标 4 处 ∥ R3 裸名化 1 处——§2.6.3 ∥ §2.13.3 ∥ §2.13.4 ∥ §2.13.5）。**零新语义**。
 
 

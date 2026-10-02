@@ -4,7 +4,7 @@
  *
  * 单工具 `batch`，action = create（建档，§4.11）/ append（段写入——原 batch-segment.mjs 语义
  * 逐字迁移，§4.1 全表）/ status（段属主状态行流转，§4.12）/ close（收口冻结，§4.13）。
- * 权威规格 = `docs/core/design/BATCH-RECORD.md` §4（契约/挂载/用例 BR-1–26/骨架 §4.10/
+ * 权威规格 = `docs/core/design/BATCH-RECORD.md` §4（契约/挂载/用例 §4.8/骨架 §4.10/
  * 参数面 §4.11–§4.13）；骨架与判定字面单源 = `batch-skeleton.mjs`；lifecycle 面 =
  * `batch-lifecycle.mjs`。**依赖单向（KD-4）：skeleton ← lifecycle ← 主档**。
  *

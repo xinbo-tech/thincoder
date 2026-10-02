@@ -2,7 +2,7 @@
  * i18n-settings.mjs — 设置面词族第四档（i18n 拆分批 `docs/batches/2026-09-29-i18n-split.md` §2 · 台账 #614
  * 顶格消解：主档 `renderer/i18n.mjs` 内容行 500 顶格 ⇒ 自有 `settings.*` 族 55 键整族出档，本档承接）。
  *
- * 键面（**60 键** · 两语键集相等且同序）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
+ * 键面（**62 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
  * 四段名 / 两段态 / 十三失败码 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
  * 当前标 · 两增键 / agent 段：只读标 · 保存 / 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
  * 移除 · 增键 —— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）。
@@ -14,9 +14,9 @@
  *
  * 值源：搬前主档原链注全述（键名 ∕ 两语值**逐字保原** —— 出档 = 纯搬零改；合并表两语键序同理零变，
  * 原位展开于 `question.cancel` 与向导注释之间）。
- * 消费面（设置面 9 档 · 皆 `t()` 取词、导入面零改动）：`renderer/settings-confirm.mjs`（密钥删除确认）·
+ * 消费面（设置面 **10** 档 · 皆 `t()` 取词、导入面零改动）：`renderer/settings-confirm.mjs`（密钥删除确认）·
  * `renderer/views/settings.mjs`（标题 ∕ 关闭 ∕ 语言 ∕ 段名 ∕ 态词 ∕ 失败码三表出词）· `views/settings-agent.mjs` ·
- * `views/settings-controls.mjs` · `views/settings-sections.mjs` · `views/settings-sections-env.mjs` ·
+ * `views/settings-controls.mjs` · `views/settings-sections.mjs` · `views/settings-sections-providers.mjs` · `views/settings-sections-env.mjs` ·
  * `views/settings-sections-mcp.mjs` · `views/settings-sections-models.mjs` · `views/settings-sections-tools.mjs`。
  * 合并点 = `renderer/i18n.mjs` `HOST_DICT` 两语展开 —— 单一装配点仍 = `initDict`（本档零装配逻辑，纯词表）。
  * 两语键集须相等（增键两语同增、禁单语落键）；零落盘 · 零 `node:` / 零裸包 · 零 `/rc/` 静态导入
@@ -64,6 +64,8 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.providers.verify": "Verify",
     "settings.providers.verify.ok": "Verified · ${count} models",
     "settings.providers.verify.fail": "Verification failed: ${reason}",
+    "settings.providers.verify.okShort": "Verified",
+    "settings.providers.verify.failShort": "Failed",
     "settings.providers.noKey": "No API key",
     "settings.providers.remove": "Remove ${name}",
     "settings.providers.active": "Active",
@@ -127,6 +129,8 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.providers.verify": "校验",
     "settings.providers.verify.ok": "校验通过 · ${count} 个模型",
     "settings.providers.verify.fail": "校验失败：${reason}",
+    "settings.providers.verify.okShort": "校验通过",
+    "settings.providers.verify.failShort": "校验失败",
     "settings.providers.noKey": "未配置密钥",
     "settings.providers.remove": "移除 ${name}",
     "settings.providers.active": "当前",

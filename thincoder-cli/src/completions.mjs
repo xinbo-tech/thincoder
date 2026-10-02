@@ -2,6 +2,10 @@
  * completions.mjs — `thincoder completion <shell>` shell 补全脚本发射（bash/zsh/fish）。
  * bin/thincoder.mjs case "completion" 直写段拆分（2026-09-08——500 行硬限触碰执行：
  * 段逐字迁出，脚本字节与既有输出一致）。
+ * 发射契约（CLI-ENTRY.md §3 —— #704 收正 2026-09-30）：**源档形 ≡ 发射字节形**——bash 直写形零反斜杠
+ * `\$(...)` 非命令替换 ⇒ `bash -n` 语法错；zsh 分派行同排直写（双引号内 `\$` = 字面 `$` ⇒ 分派永不匹配）；
+ * 余反斜杠仅续行 `\\`（行尾接续，发射 `\`）——保留。
+ * 例外（JS 插值险位）：须发射字面 `${…}` 的段在源档保留 `\${` 转义。
  */
 export function printCompletion(shell) {
     if (shell === "bash") {
@@ -11,23 +15,23 @@ export function printCompletion(shell) {
   cur="\${COMP_WORDS[COMP_CWORD]}"
   prev="\${COMP_WORDS[COMP_CWORD-1]}"
   case "\${COMP_WORDS[1]}" in
-    chat)    COMPREPLY=( \\$(compgen -W "--auto" -- "\\$cur") ) ;;
+    chat)    COMPREPLY=( $(compgen -W "--auto" -- "$cur") ) ;;
     memory)
-      case "\\$prev" in
-        memory) COMPREPLY=( \\$(compgen -W "list search put remove sweep" -- "\\$cur") ) ;;
-        list)   COMPREPLY=( \\$(compgen -W "--type=rule --type=knowledge --type=decision --type=pattern" -- "\\$cur") ) ;;
-        put)    COMPREPLY=( \\$(compgen -W "--type= --title= --content= --tags=" -- "\\$cur") ) ;;
-        sweep)  COMPREPLY=( \\$(compgen -W "--origin= --dry-run --confirm" -- "\\$cur") ) ;;
+      case "$prev" in
+        memory) COMPREPLY=( $(compgen -W "list search put remove sweep" -- "$cur") ) ;;
+        list)   COMPREPLY=( $(compgen -W "--type=rule --type=knowledge --type=decision --type=pattern" -- "$cur") ) ;;
+        put)    COMPREPLY=( $(compgen -W "--type= --title= --content= --tags=" -- "$cur") ) ;;
+        sweep)  COMPREPLY=( $(compgen -W "--origin= --dry-run --confirm" -- "$cur") ) ;;
       esac ;;
-    ledger) case "\\$prev" in
-        ledger)  COMPREPLY=( \\$(compgen -W "migrate audit" -- "\\$cur") ) ;;
-        migrate) COMPREPLY=( \\$(compgen -W "--dry-run --confirm --from" -- "\\$cur") ) ;;
-        audit)   COMPREPLY=( \\$(compgen -W "--root" -- "\\$cur") ) ;;
+    ledger) case "$prev" in
+        ledger)  COMPREPLY=( $(compgen -W "migrate audit" -- "$cur") ) ;;
+        migrate) COMPREPLY=( $(compgen -W "--dry-run --confirm --from" -- "$cur") ) ;;
+        audit)   COMPREPLY=( $(compgen -W "--root" -- "$cur") ) ;;
       esac ;;
-    distill) COMPREPLY=( \\$(compgen -W "--yes --layer=" -- "\\$cur") ) ;;
-    completion) COMPREPLY=( \\$(compgen -W "bash zsh fish" -- "\\$cur") ) ;;
+    distill) COMPREPLY=( $(compgen -W "--yes --layer=" -- "$cur") ) ;;
+    completion) COMPREPLY=( $(compgen -W "bash zsh fish" -- "$cur") ) ;;
     *)
-      COMPREPLY=( \\$(compgen -W "tui chat acp memory sync reindex distill upgrade completion session ledger -v --version -h --help" -- "\\$cur") ) ;;
+      COMPREPLY=( $(compgen -W "tui chat acp memory sync reindex distill upgrade completion session ledger -v --version -h --help" -- "$cur") ) ;;
   esac
 }
 complete -F _thincoder thincoder
@@ -42,7 +46,7 @@ _thincoder() {
     '1: :->cmd' \\
     '*:: :->args'
 
-  case "\\$state" in
+  case "$state" in
     cmd)
       _values 'command' \\
         'tui[Launch the interactive TUI]' \\
@@ -58,15 +62,15 @@ _thincoder() {
         'ledger[Ledger variants: migrate / audit]'
       ;;
     args)
-      case "\\$words[1]" in
+      case "$words[1]" in
         chat)    _arguments '--auto[Auto-approve all tool calls]' ;;
         memory)
-          case "\\$words[2]" in
+          case "$words[2]" in
             list) _arguments '--type=[Filter by type]' ;;
             put)  _arguments '--type=[Entry type]' '--title=[Title]' '--content=[Content]' '--tags=[Space-separated tags]' ;;
             sweep) _arguments '--origin=[Origin path]' '--dry-run[Report only]' '--confirm[Apply writes]' ;;
           esac ;;
-        ledger) case "\\$words[2]" in
+        ledger) case "$words[2]" in
             migrate) _arguments '--dry-run[Report only]' '--confirm[Apply migration]' '--from:Source key:' ;;
             audit)   _arguments '--root:Scan root dir:' ;; esac ;;
         distill) _arguments '--yes[Skip confirmation]' '--layer=[Layer filter]' ;;

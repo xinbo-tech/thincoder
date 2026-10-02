@@ -82,7 +82,9 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
 
 ### 6.4 连接装配与热插拔
 
-- **启动装配**：顶层 agent 装配时批量连接 `config.mcp.servers`——读取项目级 `.mcp.json`（`mcpServers` 为**对象**形态时并入——`config.json` 同名 server 优先；数组形态非规范 → 跳过并记录）；并发连接（`Promise.allSettled`）；**失败不阻塞**（死 server 只记 warning，`agent._mcpWarnings` 携带，下一条 user 消息注入提醒）；成功展开的工具并入 `agent.tools`。
+- **启动装配**：顶层 agent 装配时批量连接 `config.mcp.servers`——读取项目级 `.mcp.json`（`mcpServers` 为**对象**形态时并入——`config.json` 同名 server 优先；数组形态非规范 → 跳过并记录）；并发连接（`Promise.allSettled`）；
+  **失败不阻塞**（死 server 只记 warning，`agent._mcpWarnings` 携带；**消费面 = CLI ∥ 桌面**——装配后入 `agent._pendingReminders`（CLI `thincoder-cli/src/command-interactive.mjs:151-155` ∥ 桌面 `thincoder-desktop/src/main/agent-host.mjs` 装配尾——2026-10-02 桌面 UX 收尾批 · 台账 #702 定形（已落）），下一条 user 消息注入提醒；
+  VSC 面未并——端差在册）；成功展开的工具并入 `agent.tools`。
 - **项目文件源补裁定（2026-09-30 · 台账 #691——CLI ∕ 桌面同判）**：**发现面** = 项目根单层（`join(cwd, ".mcp.json")`，无向上多级搜索；文件缺 ⇒ 零读零效果）；**信任面** = 装配期零交互确认（项目文件与 `config.mcp.servers` 同信任域，不设首次信任 ∕ 端别门）；读 ∕ 解析失败非致命——记录不阻断装配。（VSC 端第三面未并 `.mcp.json`——端差在册：台账 #701，归 VSC 对齐轮。）
 - **幂等连接（registry 键控）**：registry（`_sessions`，serverName → session，模块级存活）已存在**同 name 活连接且 fingerprint 一致** → 直接复用已展开工具、不重建；fingerprint = config 关键字段（command / args / url / wsUrl / env / headers / token）的 JSON 归一；**config 变更**（fingerprint 不一致）→ 主动关旧连接（不触发 onDead 重连）+ 丢弃 session + 重建。
 - **每轮重建与热插拔**：每轮 runAgent 重新装配 tools 数组——registry 状态变化天然在下一轮生效；已连 server 的展开工具**不因重建而丢失**（幂等复用）。
@@ -140,7 +142,7 @@ server 行 action 用 `@name:` 命名空间（与 `add` / `refresh` 保留动作
 MCP 页**——`pushMcpStatus`（`thincoder-vscode/src/extension/panel-mcp.mjs:96`）推 `mcpStatus { servers: [{ name,
 desc, connected, toolCount, config }] }`（●/○ 连接态 + N tools + 原始 config 供表单预填）。动作消息 →
 `reconnectMcp`（`:116`——断开 + 重连）、`testMcp`（核 `probeMcpServer`）、`editMcp`（`saveMcpServer` =
-add-or-update 原位 → 推状态）。面板 [Edit] 与 [Add] 复用同一表单（add 失败（重复）则 update）。工具展开器
+add-or-update 原位 → 推状态）。面板 [Edit] 与 [Add] 复用同一表单（已存在 ⇒ 原位 update；add 侧失败（含并发冲突）原串上抛）。工具展开器
 （行内 [tools]）载荷 = 面板契约投影 `{ name, description, inputSchema }`（S2 W7：端壳 `panelToolList` 自核原生
 工具投影——schema 取 `parameters`；工具名 = 原生 `{server}_{tool}` 名）。
 - **config-mcp.mjs（config.json `mcp.servers[]` 读写——纯 Node，extension host 外可单测）**：`loadMcpServers`
@@ -210,8 +212,12 @@ MCP 工具、下轮重试）。**子代理不含 MCP**：装配仅 depth-0 展�
 
 - 2026-09-13：建档——自 `docs/core/design/CORE-UNIFICATION.md` 拆出（§2.5 #81 / #144–#148）；**语义零改**，行号沿用原编号。
 - 2026-09-14（**B 轮并入 · 第 2 批**）：新增 §6 **机制面**（定位与术语 / 工具展开 / execute 契约 / 连接装配与热插拔 / 配置机制 / 传输与活性 / 探活 / `/mcp` 交互 / 失效语义）· §7 **关键决策记录（D-MC1–15）** · §8 **不并项与历史沿革** · 来源 = `thincoder-cli/docs/design/MCP.md`（**旧档一字未改**——原地作参照历史）；需求侧已并入本层 `docs/core/requirements/MCP.md`；首部加机制面指针一行。
+- 2026-10-02（**桌面 UX 收尾批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-desktop-ux-closeout.md` §2 · 台账 #702）：§6.4 启动装配句收正——`_mcpWarnings` **消费面 = CLI ∥ 桌面**（桌面装配尾入 `_pendingReminders`——本批定形，实施随批；VSC 未并列报）；句义由单端事实扩为双端事实。**零新语义**（消费面事实收正；决策单源 = `docs/desktop/design/PROJECT.md` §2 **KD-70**）。
 - 2026-09-15（**VSC 轮并入 · 批 7**）：§6.10 新增 **VS Code Settings 面板 MCP 页**（无 `/mcp` 命令面端差 / config-mcp 读写 / depth-0 装配 / 命连接 / 探活镜像 / 生命周期 / agent 代配差异）· §7 补 **D-MC16** · §8.2 补 1 行不并项登记；来源 = `thincoder-vscode/docs/design/MCP.md`（**旧档一字未改**）；坐标按现状实核（`panel-mcp.mjs:8,28` · `config-mcp.mjs:12,19,37,63`）。
 - 2026-09-15（**S2 W7 落地**）：VSC 自持镜像已迁核删除（`thincoder-vscode/src/mcp.mjs` + `src/mcp/**` 6 档——删除记录 = 批次档 `2026-09-15-vsc-core-wiring.md` §5）；§1 归属表两列收正（两侧同核单源）· §2.2 #144–#147 行加现状注 · §6.2 网关废弃行 / §6.10（坐标 + name 键 session 面 + 端壳增量 + 面板展开器载荷契约）/ §7 D-MC2 / §8.2 同批收正（只收正形态，机制条文零改）。
 - 2026-09-20（**卫生族批 · 台账 #138 · eng-designer**）：首部机制面节区改 `§6–§8` + 历史节号指称清理（行数规则废除批残留）；设计源 = `docs/batches/2026-09-20-hygiene-sweep-batch.md` §2。
 - 2026-09-29（**provider-config-family 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-provider-config-family.md` · 台账 #57）：§6.5 配置机制补值引用（`${env:VAR}`）注——解析单源 = `doc:CONFIG.md:§6.3`；指纹语义零改（按存储原文比对）。**零新语义**。
 - 2026-09-30（**桌面 MCP 装配补 `.mcp.json` 项目文件源批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-mcp-json-source.md` · 台账 #691）：§6.4 补项目文件源两裁定（**发现面 = 项目根单层** ∕ **信任面 = 零交互确认**——独立句）+ 失败面注（读 ∕ 解析非致命）；合并语义 ∕ 优先级句零改（原句即基准）。**零新语义**（裁定落档）。
+- 2026-10-01（**VSC MCP add 冲突面小修批 · 设计轮 · eng-designer**——承 `docs/batches/2026-10-01-vsc-mcp-add-conflict.md` · 台账 #757）：§6.10 面板分流括注收正——add ∕ update 分流按存在性（已存在 ⇒ 原位 update；add 侧失败原串上抛——并发冲突串不再被 not-found 串顶替）。**描述随动**（与同批实现同步生效）。
+- 2026-10-02（**桌面 UX 收尾批 · 回填/随动轮 · eng-designer**——承批档 `docs/batches/2026-10-02-desktop-ux-closeout.md` §5 · 台账 #702）：§6.4 消费面句时态收正（桌面侧「实施随批」⇒「已落」——装配尾入队已落；VSC 未并句保持）。**零新语义**（时态收正）。明细 = 批档 §2。
+- 2026-10-02（**文档清账轮 · 行宽清账（#806 · 轮 6）· eng-designer**——承批档 `docs/batches/2026-10-02-doc-settlement-round.md` §2.12：§6.4 启动装配行折行（475 ⇒ 三段 ≤300——语义零改）。台账 #806。）

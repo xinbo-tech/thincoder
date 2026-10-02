@@ -160,7 +160,7 @@ export async function assembleFamilyTools({
     // (it does not fire reviews) and no verify (its deliverable is documents, not code).
     // BATCH-RECORD §4.3 挂载表（批次档生命周期工具化批）：eng 两分支各挂主名 `batch`
     // （绑定段 append/status；目标 = spawn 绑定 `child._batchDoc`）——BATCH-RECORD.md §4.2 的 batch_segment
-    // 挂载形态已随单名化收口退役（过渡别名 §4.14 不入生产挂载面）；depth-0 主 agent 同表挂载
+    // 挂载形态已随单名化收口退役；depth-0 主 agent 同表挂载
     // `batch`（D-BR18 扩权——create/close + append §1/§4/§6 + status §1（轮 2 裁定②：§4/§6
     // 状态面走普通文档写），目标走可选 path / 在飞扫描）。
     // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-UPSTREAM.md §6.27.4 装配接线）：子代理上行通道

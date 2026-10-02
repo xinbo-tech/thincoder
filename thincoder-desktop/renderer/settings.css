@@ -1,13 +1,13 @@
-/* settings.css — 设置面 / 首启向导 / 项目级信息行三面样式（形态单源 = `docs/desktop/design/UI.md` §1 设置面 / 信息行 · 批档 §2.12–§2.15）。
+/* settings.css — 设置面 / 首启向导两面样式（形态单源 = `docs/desktop/design/UI.md` §1 设置面 · 批档 §2.12–§2.15）。
    分档理由（沿 `pool.css` / `chat.css` 先例：零搬移 · 零断点 · 零重立变量）：`styles.css` 实读 284 行贴 300 层
-   （批档 §2.13 表）⇒ 三面随视图出档。挂载面（两容器住 `renderer/index.html`）：
+   （批档 §2.13 表）⇒ 两面随视图出档。挂载面（一容器住 `renderer/index.html`）：
      ① `[data-slot="settings"]` = **窗口级覆盖层面**（三列栅格之外 —— body 末子元素）：**一容器两树互斥占槽**
         （向导 ∥ 设置 —— 占槽裁决 = `renderer/mount-settings.mjs`）；两退场都清容器（构零子节点）⇒ 本档兜住
         空容器 / 关态（`:empty` + `[data-state="closed"]` 整层退场），否则定层盖住主 UI。
-     ② `[data-slot="info"]` = 左列底行（rail 内 · 会话区之后 —— 唯一入口 = 设置面开）。
-   树面锚（本档零新类名）：`views/settings.mjs`（头 / 段 / 体）· `views/settings-sections.mjs`（四段体 · 行 / 表单）·
-   `views/onboarding.mjs`（向导）· `renderer/mount-info.mjs`（信息行）。字形面 = 关闭 / 退场两控件的 ✕（`content` ——
-   **视图档零字形字面**，沿 `pool.css` 折叠控件同纪律）；变量单源 = `theme.css` `:root`（零新变量 · 零断点常量）。 */
+   树面锚：`views/settings.mjs`（头 / 段 / 体）· `views/settings-sections*.mjs`（段体 · 行 / 表单——D37 渠道族拆出
+   `views/settings-sections-providers.mjs`）· `views/onboarding.mjs`（向导）。字形面 = 关闭 / 退场两控件的 ✕（`content` ——
+   **视图档零字形字面**，沿 `pool.css` 折叠控件同纪律）；变量单源 = `theme.css` `:root`（零新变量 · 零断点常量）。
+   **越 300 在册**（D37 修复轮 ①④ 补则落码后实读 **304**——父侧裁 2026-10-02：在册越线不拆（可读性优先）；拆分预案 = 控件族出档评估（拟新增 `renderer/settings-controls.css`）· 消解窗口 = 本档下次结构性触碰的批（注释 ∕ 坐标 ∕ 词值 ∕ 行级小修不计））。 */
 
 /* ── ① 设置 / 向导：窗口级覆盖层面 ─────────────────────────────────────── */
 [data-slot="settings"] {
@@ -61,8 +61,8 @@
 .settings-theme { display: flex; gap: 4px; }
 .settings-theme-opt[data-active] { color: var(--fg); background: var(--hover-bg); }
 
-/* 控件形（关闭 / 退场 / 提交 / 推进 / 语言 / 入口 / 主题钮族 —— 同一形；未接线态不另立样式：诚实非死控）。
-   D24：描边归零（保位）+ 四值族——次级 7（关闭 / 退场 / 提交 / 语言 / 入口族 / 主题钮族）生效；强调 2（`.wizard-next` / `.wizard-finish`）accent 框保留（下行 border-color 覆写）。 */
+/* 控件形（关闭 / 退场 / 提交 / 推进 / 语言 / 主题钮族 —— 同一形；未接线态不另立样式：诚实非死控）。
+   D24：描边归零（保位）+ 四值族——次级 6（关闭 / 退场 / 提交 / 语言 / 主题钮族）生效；强调 2（`.wizard-next` / `.wizard-finish`）accent 框保留（下行 border-color 覆写）。 */
 .settings-lang,
 .settings-close,
 .settings-submit,
@@ -70,7 +70,6 @@
 .wizard-submit,
 .wizard-next,
 .wizard-finish,
-.info-entry,
 .settings-theme-opt {
   padding: 2px 8px;
   border: 1px solid transparent;
@@ -82,7 +81,6 @@
 .settings-lang,
 .settings-close,
 .wizard-dismiss,
-.info-entry,
 .settings-theme-opt {
   color: var(--fg-muted);
 }
@@ -98,7 +96,6 @@
 .wizard-submit:not(:disabled),
 .wizard-next:not(:disabled),
 .wizard-finish:not(:disabled),
-.info-entry:not(:disabled),
 .settings-theme-opt:not(:disabled) {
   cursor: pointer;
 }
@@ -145,28 +142,41 @@
 .settings-section-state,
 .settings-empty { color: var(--fg-muted); }
 
-/* 行（名 + [值] + 行动作）：渠道 / 模型 / MCP 三体共形（单源）——D24：结构框归零 + 升底 `--bg-raised`；活动 / 当前行 = accent 14% 混同（不透明）。 */
+/* 行（名 + [值] + 行动作）：渠道 / 模型 / MCP 三体共形（单源）——D37 收正：卡界 = VSC 实形（1px `--line` 描边 + 圆角 6px）；卡底零独立填充（升底让位）；断行恒定（`nowrap`）；活动 / 当前行 = accent 14% 混同（基色 = 行域静息底 `--bg`，不透明）。 */
 .settings-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 6px;
 }
 .settings-row[data-active],
-.settings-row[data-current] {
-  border-color: transparent;
-  background: color-mix(in srgb, var(--accent) 14%, var(--bg-raised));
-}
+.settings-row[data-current] { background: color-mix(in srgb, var(--accent) 14%, var(--bg)); }
 .settings-row-name { font-weight: 400; }
+.settings-row-name,
+.settings-row-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* D37 四则①：中段单点省略（四件）。 */
+/* 渠道卡（D37 项 2）：行根纵排（主行 + 副行 + 条件第三行）——两行间距 4px。 */
+.settings-row[data-provider] { flex-direction: column; align-items: stretch; gap: 4px; }
+.settings-row-main,
+.settings-row-sub { display: flex; align-items: center; gap: 8px; }
+.settings-row-sub > .settings-row-value { flex: 1 1 auto; }
+.settings-row-sub > .settings-field-label { margin-left: auto; } /* D37 项 2：代理件行尾锚定（串缺席 ∥ 零值态亦右靠——无串态兜底）。 */
+/* 第三行（条件）= 不可用原因句：色 `--accent`（对齐 VSC 失败句红系语义）+ 折行豁免（保 `normal`——豁免锚 = `[data-unavailable-reason]`）。 */
 .settings-row-value,
 .settings-key {
   color: var(--fg-muted);
 }
+.settings-row [data-unavailable-reason] { color: var(--accent); white-space: normal; }
 .settings-row-action { margin-left: auto; font: inherit; } /* 排版统一（D29）：行内动作钮（真机扫描所得——原承 UA 控件字体 13.3px ∥ Arial）⇒ 归基线。 */
+.settings-row-action ~ .settings-row-action { margin-left: 0; } /* D37 四则②：动作簇 = 行尾单簇（簇内续钮零化——修多钮各自 auto 散开）。 */
+/* MCP 展开面（D37 项 3）：工具行竖排三段 + 展开面缩进 24px（VSC `.mcp-tool-row` 同形）。 */
+.settings-mcp-detail { padding-left: 24px; }
+.settings-row[data-mcp-tool] { flex-direction: column; align-items: stretch; }
+/* D37 补则②（代码评审两裁）：展开面 = 全显豁免——域内值面（工具行描述 ∥ params ∥ 回执词行）恢复自然折行；行族通则本体 ∥ 折叠面摘要行零动。 */
+.settings-mcp-detail .settings-row-value { white-space: normal; overflow-wrap: anywhere; }
+.settings-row [data-mcp-summary] { flex: 1 1 auto; }
 .settings-key[data-key="none"] { font-style: italic; }
 .settings-mark {
   padding: 0 6px;
@@ -193,7 +203,7 @@
 }
 .settings-field-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* D37 四则① 带上：字段行（agent ∥ env ∥ 表单控件行）断行恒定。 */
   align-items: center;
   gap: 8px;
 }
@@ -214,14 +224,36 @@ textarea.settings-field {
   flex: 1;
   min-width: 0;
 }
+/* 复选 = 拨杆形（D37 项 4 · VSC `.switch` 对位）：轨道 30×16（圆角 8 · 底 `--line`）+ 圆钮 12px `#fff` + 选中 `--accent`（钮右移 16px）——值全取既有令牌（零新变量）。 */
 input.settings-field[type="checkbox"] {
+  appearance: none;
+  position: relative;
   align-self: flex-start;
+  width: 30px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: var(--line);
+  cursor: pointer;
 }
+input.settings-field[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #fff;
+}
+input.settings-field[type="checkbox"]:checked { background: var(--accent); }
+input.settings-field[type="checkbox"]:checked::after { left: 16px; }
 .settings-field-readonly,
 .settings-readonly-hint {
   color: var(--fg-muted);
 }
-.settings-readonly-hint { font-size: var(--fs); }
+/* D37 补则①（代码评审两裁）：只读行收束——值面省略四件（沿行族同四件）∥ 提示面定尺不缩（短词面禁截）。 */
+.settings-field-readonly { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settings-readonly-hint { flex: 0 0 auto; font-size: var(--fs); }
 .settings-submit { align-self: flex-start; }
 /* 原生下拉内部件 `option`（真机全文本判据——承 UA `line-height: normal`）⇒ 行高归基线。
    注：`select` 本体的 computed `line-height` 由 Blink 固定为 `normal`（真机实测：内联 ∥ 表则 ∥ `!important` 均不可达——`select` 行高不由页面 CSS 承载 ⇒ 扫描面按原生控件豁免，见批内探针口径注）。 */
@@ -255,49 +287,17 @@ input.settings-field[type="checkbox"] {
   justify-content: flex-end;
 }
 
-/* ── ④ 项目级信息行（左列底行）─────────────────────────────────────────── */
-[data-slot="info"] {
-  padding: 8px 12px;
-  border-top: 1px solid var(--line);
-  font-size: var(--fs);
-}
-[data-slot="info"],
-.info {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.info-title { font-weight: 400; }
-.info-read,
-.info-phase {
-  display: flex;
-  gap: 4px;
-  color: var(--fg-muted);
-}
-.info-read-value { color: var(--fg); }
-/* 标词 `.info-read-label`：零专规则 —— 承 `.info-read` / `.info-phase` 灰阶（值另色 = `.info-read-value`）。 */
-/* 超阈标（与核台账同词「可开批」）· 项目未发现等提示串。 */
-.info-threshold,
-.info-notice {
-  color: var(--accent);
-}
-.info-state {
-  color: var(--fg-muted);
-  font-style: italic;
-}
-
-/* 交互态组（D24 项 5 · 次级 7 键）：hover `--hover-bg` · 按下 `--hover-bg-strong` · 聚焦三值（强调 2 键保留 accent 框，零动）。 */
+/* 交互态组（D24 项 5 · 次级 6 键）：hover `--hover-bg` · 按下 `--hover-bg-strong` · 聚焦三值（强调 2 键保留 accent 框，零动）。 */
 .settings-lang:not(:disabled):hover, .settings-close:not(:disabled):hover, .settings-submit:not(:disabled):hover,
-.wizard-dismiss:not(:disabled):hover, .wizard-submit:not(:disabled):hover, .info-entry:not(:disabled):hover, .settings-theme-opt:not(:disabled):hover {
+.wizard-dismiss:not(:disabled):hover, .wizard-submit:not(:disabled):hover, .settings-theme-opt:not(:disabled):hover {
   background: var(--hover-bg);
 }
 .settings-lang:not(:disabled):active, .settings-close:not(:disabled):active, .settings-submit:not(:disabled):active,
-.wizard-dismiss:not(:disabled):active, .wizard-submit:not(:disabled):active, .info-entry:not(:disabled):active, .settings-theme-opt:not(:disabled):active {
+.wizard-dismiss:not(:disabled):active, .wizard-submit:not(:disabled):active, .settings-theme-opt:not(:disabled):active {
   background: var(--hover-bg-strong);
 }
 .settings-lang:focus-visible, .settings-close:focus-visible, .settings-submit:focus-visible,
-.wizard-dismiss:focus-visible, .wizard-submit:focus-visible, .info-entry:focus-visible, .settings-theme-opt:focus-visible {
+.wizard-dismiss:focus-visible, .wizard-submit:focus-visible, .settings-theme-opt:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
   background: var(--hover-bg-strong);

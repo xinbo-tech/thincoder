@@ -1,8 +1,8 @@
 /**
  * 2026-09-30-desktop-typography-unify-probe.mjs — 批内件（排版统一批 · D29 · 台账 #736 · **真机 computed 扫描腿**）。
  * 判据 = 批档 `docs/batches/2026-09-30-desktop-typography-unify.md` §2 §九「机检判据 · 真机 computed 扫描腿」①–⑦：
- *   ① 全文本元素 `font-size = 14px`（修饰白名单除外——h1–h6 ∥ code ∥ `.code-block code` ∥ table，期望值 = 批档 §2）;
- *   ② `font-weight ≤ 400`（`strong` ∥ h1–h6 ∥ `th` 除外）；③ 族首项 = `ui-monospace`；④ `line-height = 21px`（**例外 = `select` 本体**——Blink 把其 computed `line-height` 固定 `normal`（内联 ∥ 表则 ∥ `!important` 均不可达；同类 `input` ∥ `button` ∥ `option` 可控已归基线）；豁免证据随读数落盘 = `selectExemption` 段）；
+ *   ① 全文本元素 `font-size = 14px`（修饰白名单除外——h1–h6 ∥ code ∥ `.code-block code` ∥ table，期望值 = 基线 × em 因子；轻通道轮五 2026-10-01 · #808 定版 12 ⇒ 14 随算）;
+ *   ② `font-weight ≤ 400`（`strong` ∥ h1–h6 ∥ `th` 除外）；③ 族首项 = `ui-monospace`；④ `line-height` = 号 × 1.3（基线 18.2px——轻通道轮四 ∥ 轮五 2026-10-01 随算；**例外 = `select` 本体**——Blink 把其 computed `line-height` 固定 `normal`（内联 ∥ 表则 ∥ `!important` 均不可达；同类 `input` ∥ `button` ∥ `option` 可控已归基线）；豁免证据随读数落盘 = `selectExemption` 段）；
  *   ⑤ `letter-spacing = normal`；⑥ 覆盖面在场性（模型菜单 ∥ 搜索条 ∥ 设置 ∥ 向导——同扫）；⑦ 读数落盘
  *   （`docs/batches/2026-09-30-desktop-typography-unify-readings.json`）。
  * 形状：真 Electron（playwright-core `_electron`）· 两启程（有 config ⇒ 设置面；零 config ⇒ 向导面）· 随批留存 · 不进仓套件。
@@ -47,6 +47,7 @@ async function launch(fx) {
 /** 扫描器注入（页面面）：候选 = 直接携文本的元素 ∪ 文本控件；判据按批档 §2 白名单表。 */
 const INSTALL_SCAN = () => {
   const MOD = [
+    // 值面 = 基线 × em 因子（core-markdown.css ∥ core.css）；轻通道轮四 ∥ 轮五 2026-10-01（#759 ∥ #808）基线 14 ⇒ 12 ⇒ 14（定版）⇒ 整表随算。
     [".reasoning-content .code-block code", 12.88],
     [".block-text .code-block code", 12.32],
     [".reasoning-content code", 12.88],
@@ -96,13 +97,13 @@ const INSTALL_SCAN = () => {
       if (weight > 400 && !el.matches(WEIGHT_FREE)) push("font-weight", cs.fontWeight, "<=400")
       const family = cs.fontFamily.split(",")[0].trim().replace(/['"]/g, "")
       out.families.add(family)
-      if (family !== "ui-monospace") push("font-family", cs.fontFamily, "ui-monospace…")
-      // 行高期望 = 号 × 1.5（`--lh` = 无单位 1.5，逐元素按自身字号取用值）；base 面 = 21px。
+      if (family !== "Cascadia Mono") push("font-family", cs.fontFamily, "Cascadia Mono…（轻通道轮三族首收正）")
+      // 行高期望 = 号 × 1.3（`--lh` = 无单位 1.3〔轻通道轮四 2026-10-01 · #759 随盘收正〕，逐元素按自身字号取用值）；base 面 = 18.2px（轻通道轮五 · #808 定版随算）。
       // `select` 例外：Blink 把其 computed `line-height` 固定为 `normal`（实测：内联 ∥ 表则 ∥ `!important` 均不可达；
       // 同类 `input` ∥ `button` ∥ `option` 可控且已归基线）——控件本体行高不由页面 CSS 承载 ⇒ 该元素不入本条判据。
       const lh = Number.parseFloat(cs.lineHeight)
       const lhExempt = el.tagName === "SELECT"
-      if (!lhExempt && (!Number.isFinite(lh) || Math.abs(lh - round2(expected * 1.5)) > 0.06)) push("line-height", cs.lineHeight, `${round2(expected * 1.5)}px`)
+      if (!lhExempt && (!Number.isFinite(lh) || Math.abs(lh - round2(expected * 1.3)) > 0.06)) push("line-height", cs.lineHeight, `${round2(expected * 1.3)}px`)
       if (cs.letterSpacing !== "normal") push("letter-spacing", cs.letterSpacing, "normal")
       out.seen[el.tagName.toLowerCase()] = (out.seen[el.tagName.toLowerCase()] || 0) + 1
     }
@@ -146,7 +147,7 @@ const MD_SAMPLE = [
   "收尾段落。",
 ].join("\n")
 
-/** 合成面（离线不可达的核卡 ∥ 小修族件——按产品类名 ∥ 结构逐件造，验证 CSS 级联落值；扫描后移除）。 */
+/** 合成面（离线不可达的核卡 ∥ 小修族件——按产品类名 ∥ 结构逐件造，验证 CSS 级联落值；扫描后移除）。info 行族（`data-slot="info"` ∥ `.info-*`）随扁平化随动收口（#713 ∥ #776）整体退场——夹具已剔（2026-10-01 轮五收口）。 */
 const SYNTH_HTML = `
 <div id="typo-synth" style="padding:12px">
   <div class="permission-prompt">
@@ -217,7 +218,6 @@ const SYNTH_HTML = `
   <ol class="wizard-steps"><li class="wizard-step" data-current="">步骤</li></ol>
   <div class="wizard-body"><div class="wizard-hint">提示</div><h2 class="wizard-title">Initial setup</h2><div class="wizard-notice">失败面</div></div>
   <div class="wizard-foot"><button class="wizard-dismiss"></button><button class="wizard-next">Next</button><button class="wizard-finish">Finish</button><button class="wizard-submit">Submit</button></div>
-  <div class="info"><span class="info-title">信息</span><span class="info-read"><span class="info-read-label">标</span><span class="info-read-value">值</span></span><span class="info-phase">相位</span><span class="info-threshold">阈值</span><span class="info-notice">提示</span><span class="info-state">状态</span><button class="info-entry">设置</button></div>
   <div class="chat-empty">空态提示</div>
 </div>`
 

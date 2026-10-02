@@ -9,7 +9,7 @@
  *   M-679a–d  草稿失效声明（#679）：MCP 增 ∕ tools 钥存 ∕ env shell 三成功径 ⇒ 本形草稿零复活（失败径零声明）；
  *             作用域件在场；跨形零误伤；scope=null 永不误伤（`dropDrafts` 直调）；agent 径零改（源扫）。
  *   M-685a–c  拆档落形（#685）：`ipc.mjs` ≤300 内容行 + 转口群档 24 导出；注册面零改（`registerIpcHandlers` 真跑 ——
- *             45 项全解析为函数 ∕ 注册序 = 白名单序）；转口直传抽查（源抽取 + 替身注入 —— 回执恒等 ∕ 两缝注入）。
+ *             46 项全解析为函数 ∕ 注册序 = 白名单序）；转口直传抽查（源抽取 + 替身注入 —— 回执恒等 ∕ 两缝注入）。
  *   M-686a–c  拒绝面（#686）：调用点注入恒拒 ⇒ `console.error` 落 ∧ 回执正常返回 ∧ 零未处理拒绝逃逸；`void` 语义锁
  *             （回执不候后台面）；静态面零裸 `void pushLedgerLines`。
  * 形态：electron 桩 = data: URL `registerHooks`（主侧三档装载面 —— 沿 enddiff 件先例）；设置面 = 真接线
@@ -358,14 +358,14 @@ test("M-685a · `ipc.mjs` ≤300 内容行回线 + 转口群档在位（24 导�
   assert.equal(typeof ipcMod.providerListChannel, "undefined", "转口名不在核心档（去 24 转口名）")
 })
 
-test("M-685b · 注册面零改：`registerIpcHandlers` 真跑 —— 45 项全解析为函数 ∕ 注册序 = 白名单序", () => {
-  assert.equal(ipcMod.CHANNELS.length, 45, "白名单 45 项（单源 = 预载档）")
+test("M-685b · 注册面零改：`registerIpcHandlers` 真跑 —— 46 项全解析为函数 ∕ 注册序 = 白名单序", () => {
+  assert.equal(ipcMod.CHANNELS.length, 46, "白名单 46 项（单源 = 预载档）")
   globalThis.__ipcHandles.length = 0
   registryMod.registerIpcHandlers()
   const rows = [...globalThis.__ipcHandles]
-  assert.deepEqual(rows.map((row) => row.channel), [...ipcMod.CHANNELS], "注册 45 项且序 = 白名单序（零缺 ∕ 零增）")
-  assert.ok(rows.every((row) => typeof row.handler === "function"), "HANDLERS 全 45 项解析为函数（缺 ⇒ 注册期抛，未抛即证）")
-  assert.equal(rows[rows.length - 1].channel, "mcp:reconnect", "定序末位不动")
+  assert.deepEqual(rows.map((row) => row.channel), [...ipcMod.CHANNELS], "注册 46 项且序 = 白名单序（零缺 ∕ 零增）")
+  assert.ok(rows.every((row) => typeof row.handler === "function"), "HANDLERS 全 46 项解析为函数（缺 ⇒ 注册期抛，未抛即证）")
+  assert.equal(rows[rows.length - 1].channel, "record:append", "定序末位 = 白名单现末位（record:append）")
 })
 
 test("M-685c · 转口直传抽查（源抽取 + 替身注入 ⇒ 回执恒等 ∕ `liveAgents` ∖ `currentCwd` 两缝）", () => {
@@ -463,6 +463,6 @@ test("M-689a · 注面口径统一：零「五尾组」残留 ∕ 压缩行单�
   const chat = read("thincoder-desktop/renderer/views/chat.mjs")
   const chrome = read("thincoder-desktop/renderer/views/chat-chrome.mjs")
   assert.equal(chat.includes("五尾组") || chrome.includes("五尾组"), false, "零「五尾组」残留")
-  assert.equal(chat.includes("四尾组（压缩行除外）"), true, "尾组 = 四名（压缩行除外）")
+  assert.equal(chat.includes("四尾组") && chat.includes("压缩行例外 = 流元素冻结点"), true, "尾组 = 四名 + 压缩行例外句（字面组合）")
   assert.equal(chrome.includes("压缩行例外 = 流元素冻结点、不在块插入点上"), true, "压缩行例外句在档（插入点纪律单源）")
 })

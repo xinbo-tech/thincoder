@@ -141,7 +141,9 @@ verify 的强制面住在完成路径，不住 verify 本体：
 
 ## 变更记录
 
+- 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R1 改指（`goal.mjs` 补 `thincoder-core/agent-tools/` 前缀）。**零新语义**。
+
 - 2026-09-28（**测试按层收口·设计对齐轮 · eng-designer**——承 `docs/batches/2026-09-28-test-layer-prompts.md` §1.4 派单 + 父侧裁定（声明外追加 · 父侧已裁））：
   §5 提示词面句回收正——旧分层列举（L0 即时验证 ∕ L1 项目快测试 ∕ L2 全量）退场，改「迭代期只跑本任务面单元测试；全量 ∕ 集成 = 收口恰一次、父侧」（指针 = 需求 `requirements/TESTING.md` §2 F1–F4）；同行「verify 三层都」→「verify 只」（去旧轴字面）。**机制条文零改**。
 
-- 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/VERIFY-REDESIGN.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；坐标改写为现状路径并实核（`agent-tools/verify.mjs` · `agent/completion.mjs` · `agent-tools/goal.mjs` · VSC 对位四档）；「相 1 / 相 2」批次流水与 G 编号审计清单入 §8；同一事实只详述一处（guard 文案只留语义判据，逐字文案归提示词面）。
+- 2026-09-15（**B 式迁移轮 · 第 3 批**）：建档——`thincoder-cli/docs/design/VERIFY-REDESIGN.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；坐标改写为现状路径并实核（`agent-tools/verify.mjs` · `agent/completion.mjs` · `thincoder-core/agent-tools/goal.mjs` · VSC 对位四档）；「相 1 / 相 2」批次流水与 G 编号审计清单入 §8；同一事实只详述一处（guard 文案只留语义判据，逐字文案归提示词面）。

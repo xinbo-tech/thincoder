@@ -6,8 +6,7 @@
  *      （2026-09-29 留端清算 ∕ 批 `docs/batches/2026-09-29-desktop-rebuild-fidelity.md` §2.5——`nearBottom` ∕ `applyPin`）；
  *   ② `scrollAction(metrics, guards)`：序 backfill → follow → unfollow（触顶回填优先于贴底判）；
  *   ③ `compensateTop`（帧尾视口补偿算式）/ `nextWindow`（限增宽窗 = 现限 + 本页**实并入块数**）/ `smoothWindowOpen`（平滑窗判据）；
- *   ④ `tailAction`（帧尾三写判据）+ `stickToBottom`（贴底出口：**写超值不读 `scrollHeight`**，幂等）+ `plannedMoves`
- *      （帧尾**读数裁剪**预判 —— 头动作数先于读数确定）；
+ *   ④ `tailAction`（帧尾三写判据）+ `stickToBottom`（贴底出口：**写超值不读 `scrollHeight`**，幂等）；
  *   ⑤ `attachScroll(root, deps)`：`scroll` 订阅（`passive`）⇒ 平滑窗门 ⇒ `onScrollTick?`（巨块段窗滚动拍）⇒ 三读数 ⇒
  *      `scrollAction` ⇒ 对应出口。
  * 程序化滚动（药丸回底）经返回 handle 出 —— 不占 `deps` 键；`SMOOTH_MS` 窗内不派发 = 抑制程序化回波
@@ -77,12 +76,6 @@ export function stickToBottom(root) {
   if (!root) return null
   applyPin(root, true)
   return STICK_TOP
-}
-
-/** 头动作预判（帧尾**读数裁剪**判据 —— 动作数先于读数确定）：`evict` ∕ `prepend` 各受在位块数 ∕ 目标块数夹取；
- *  `renderer/views/chat.mjs` `headMoves` 按同式取数（两处同源 ⇒ 预判 = 实动数）。 */
-export function plannedMoves({ evict = 0, prepend = 0 } = {}, mountedCount = 0, blockCount = 0) {
-  return Math.max(0, Math.min(evict, mountedCount)) + Math.max(0, Math.min(prepend, blockCount))
 }
 
 /**

@@ -28,7 +28,7 @@
 | S1 | 下行在飞（父→子） | `thincoder-core/agent-tools/subagent-actions.mjs:74-75`（push `entry._injected`）→ `thincoder-core/agent/turn-loop.mjs:87`（回合边界 `consumeInjected?.(agent)`——三拆前 `thincoder-core/agent.mjs:214-218`）→ `thincoder-core/agent-tools/subagent-run.mjs:34`（`drainInjectedQueue` → `pushReal`） | ✅ 既有 |
 | S2 | 上行终态（子→父） | `thincoder-core/agent-tools/async-settle.mjs:200-293`（settle）→ `thincoder-core/agent-tools/subagent-async.mjs:358-392`（`injectAsyncResult` → `pushReal`） | ✅ 既有 |
 | S3 | 上行在飞（子→父） | —— | **缺**（本条目补位） |
-| S4 | 子代理侧工具面 | `thincoder-core/agent/family-tools.mjs:141-175` | eng-coder `[advisor, verify, batch_segment, subagent(勘察)]` · eng-designer `[batch_segment, subagent(勘察)]` · coder `[verify, advisor]` · consult `[recent_changes]` · explore / plan `[]` |
+| S4 | 子代理侧工具面 | `thincoder-core/agent/family-tools.mjs:141-175` | eng-coder `[advisor, verify, batch, subagent(勘察)]` · eng-designer `[batch, subagent(勘察)]` · coder `[verify, advisor]` · consult `[recent_changes]` · explore / plan `[]` |
 | S5 | 子代理内 `question` | `thincoder-core/tools/question.mjs:20` | 无 `ctx.onQuestion` ⇒ **抛错**（子代理无交互 UI） |
 | S6 | 父侧消费点 | `thincoder-core/agent.mjs:85`（`consumeInjected = null` 缺省——签名解构行；三拆前 `:96`） | depth-0 调用方**不传** ⇒ 父侧无「子→父在飞」消费点 |
 | S7 | depth 门现状（§6.7.2） | `thincoder-core/agent-tools/subagent.mjs:179-181` · `subagent-actions-query.mjs:95-99` / `:229-230` · `subagent-actions.mjs:47-48` | 除 `spawn` 外全部动作 **depth-0 专有** |

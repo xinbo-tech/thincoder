@@ -5,7 +5,7 @@
  * 单引擎：锚检查 + 行宽检查 + 行数面同一 main 驱动、同一报告；台账一致性不并入（由 M2 SQLite schema 承接，
  * check-ledger* 家族随单引擎作废——无文件）。
  * 声明面：判据全部读 manifest checkConfig（scanDirs / lineWidth / anchors.domain / anchors.exclude /
- * exemptions / lineCounts）——无硬编码路径 / 阈值；整档缺失 fail-closed（readManifest 拒，不静默 fallback）。
+ * exemptions / lineCounts / widthExemptZones）——无硬编码路径 / 阈值；整档缺失 fail-closed（readManifest 拒，不静默 fallback）。
  * 本档不写 manifest（写门 = M1 writeManifest，writer:'main' 专权——唯一写 manifest 的路径）。
  * 用法：node scripts/doc-check.mjs [--root <仓根>] [--domain <产品域>]
  * 导出：main / formatReport。
@@ -53,20 +53,22 @@ export function main(argv = process.argv.slice(2), { cwd = process.cwd(), log = 
   }
   const cfg = read.manifest.checkConfig;
   // D3 计数纪律：判据键清单 = 单一数组（计数 = 列表长度——加键时改一处，计数自动同改）。
-  // 派生自 checkConfig 实际键面：scanDirs / lineWidth / anchors.domain / anchors.exclude / exemptions / lineCounts。
-  const CRITERIA_KEYS = ["scanDirs", "lineWidth", "anchors.domain", "anchors.exclude", "exemptions", "lineCounts"];
+  // 派生自 checkConfig 实际键面：scanDirs / lineWidth / anchors.domain / anchors.exclude / exemptions / lineCounts / widthExemptZones。
+  const CRITERIA_KEYS = ["scanDirs", "lineWidth", "anchors.domain", "anchors.exclude", "exemptions", "lineCounts", "widthExemptZones"];
   log(`判据项 ${CRITERIA_KEYS.length} 项（${CRITERIA_KEYS.join(" / ")} = checkConfig 声明面——D3）`);
   const bases = domainArg ? [resolve(root, domainArg)] : discoverDomains(root);
   if (!bases.length) bases.push(root);
+  const zones = (Array.isArray(cfg.widthExemptZones) ? cfg.widthExemptZones : []).filter((z) => typeof z === "string" && z !== "");
+  const zoneNote = zones.length ? `（区带豁免在效——${zones.join(" ∥ ")}；区带内超宽行不计）` : "";
   let fail = 0;
   for (const base of bases) {
     const r = checkAnchors(base, cfg, { gate: true, root });
     for (const line of formatReport(r)) log(line);
-    const widths = checkDocWidths(base, { lineWidth: cfg.lineWidth, scanDirs: cfg.scanDirs, exclude: cfg.anchors.exclude ?? [] });
+    const widths = checkDocWidths(base, { lineWidth: cfg.lineWidth, scanDirs: cfg.scanDirs, exclude: cfg.anchors.exclude ?? [], exemptZones: zones });
     for (const h of widths) log(`✗ 行宽 ${relative(root, h.file).replace(/\\/g, "/")}:${h.line}（${h.len} 字符）`);
     log(widths.length
-      ? `FAIL(行宽): ${widths.length} 行超 ${cfg.lineWidth} 字符——文档人类可读判据。`
-      : `OK(行宽): 源域全部 .md 无 >${cfg.lineWidth} 字符单行。`);
+      ? `FAIL(行宽): ${widths.length} 行超 ${cfg.lineWidth} 字符${zoneNote}——文档人类可读判据。`
+      : `OK(行宽): 源域全部 .md 无 >${cfg.lineWidth} 字符单行${zoneNote}。`);
     if (r.danglingTotal > 0 || widths.length) fail = 1;
   }
   // —— 行数面（#546）：声明读取面 = 运行根单读；执行域 = 运行根一次；差异 = 报告态（KD-2）——

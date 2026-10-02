@@ -20,8 +20,7 @@
  * 直传段构建器；判据 / 空集零 title 归 `statusline-segments.mjs` `ledgerSegment`）。
  * **状态行 ⇒ CLI 补漏批（2026-09-29 · 台账 #600）**：段 9 上下文读数改 CLI 形（令牌源 = 切片 `usageTokens` ——
  * `ev:usage` `ctxTokens` 投影；两语词面 = `status.usage`）；段 11 在场判据改**常驻**（源 = 切片 `ledgerMarker` ——
- * `ev:ledger` `marker` 键转发 ∕ 核 `formatMarker` 逐字；原 `projectInfo.thresholdReached` 段面消费退场，
- * `mount-info` 复读面零改 —— R13 遗留面另账）；逐段判据 = 段构建器族档。
+ * `ev:ledger` `marker` 键转发 ∕ 核 `formatMarker` 逐字）；逐段判据 = 段构建器族档。
  * 判据（D17 · KD-25）：**未至 / 非正 / 缺片 ⇒ 该段零节点**（禁假造）；段锚 = `data-seg`（闭集 = `STATUS_SEGMENTS`）·
  * 段内件锚 = `data-part`（令牌三件）；跨会话告警位（**他会话**的待审批 / 运行提示 —— 源 = `sessions` 行投影，
  * 会话模型轮 R13：原标签键表随标签裁撤退场）沿既有面（`data-alert` —— 非 17 段之一）。
@@ -54,10 +53,10 @@ const ALERT_CODES = Object.freeze(["approval", "running"])
 
 /** 状态行模型：`segments` = 承载 17 段在场集（序 = CLI 序；缺段不占位）· `alerts` = 跨会话告警位（**他会话**两码，
  *  序 = 会话列表序 —— 会话模型轮 R13：源 = `sessions` 行投影〔原 `tabs` 键表随标签裁撤退场〕）。
- *  入参 = 切片面（缺 / 非载体 ⇒ 该段零节点；段 3 支③源 = `statusText[<会话键>]` 切片 —— R4）；`projectInfo` = R13 保留面（段 11 改锚后段面零消费 —— 随信息行收尾批退役）；`now` 可注入（耗时段 ∕ 静默段现刻 —— 测试缝）。 */
+ *  入参 = 切片面（缺 / 非载体 ⇒ 该段零节点；段 3 支③源 = `statusText[<会话键>]` 切片 —— R4）；`now` 可注入（耗时段 ∕ 静默段现刻 —— 测试缝）。 */
 export function statusModel({
   activeSession = null, badges = {}, usage = {}, usageTokens = {}, sessions = [], pending = {},
-  blocks = [], tasks = {}, turns = {}, turnStarts = {}, lastOutputAt = {}, tokens = {}, timers = {}, projectInfo = null,
+  blocks = [], tasks = {}, turns = {}, turnStarts = {}, lastOutputAt = {}, tokens = {}, timers = {},
   sessionFlags = {}, susp = {}, statusText = {}, goal = {}, ledgerDetail = [], ledgerMarker = null, now = Date.now(),
 } = {}) {
   const rows = Array.isArray(sessions) ? sessions : []
@@ -190,7 +189,6 @@ export function mountStatus(root, state) {
     lastOutputAt: state?.lastOutputAt ?? {},
     tokens: state?.tokens ?? {},
     timers: state?.timers ?? {},
-    projectInfo: state?.projectInfo ?? null,
     ledgerDetail: state?.ledgerDetail ?? [],
     ledgerMarker: state?.ledgerMarker ?? null,
     sessionFlags: state?.sessionFlags ?? {},

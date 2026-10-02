@@ -154,7 +154,7 @@ globalThis.window = {}
 // ─── 端词典装配（核件取词经注册端出 —— 沿 #518 先例）+ 被验面取件 ───────────────────────────────
 
 const { initDict, setStringsSink } = await import("../../thincoder-desktop/renderer/i18n.mjs")
-const { setStrings } = await import("../../thincoder-render-core/i18n.mjs")
+const { setStrings } = await import("/rc/i18n.mjs") // #788：与消费面同路同实例（rc-resolve 钩子经 desktop junction realpath）——直路 `thincoder-render-core/i18n.mjs` 在小写拼写下 = 第二实例（静默断链）
 const { projectDictionary } = await import("../../thincoder-core/i18n.mjs")
 setStringsSink(setStrings)
 initDict({ locale: "en", dict: projectDictionary("en") })
@@ -212,8 +212,9 @@ test("M-660a·零块 ∧ 审批 ∕ 队列在场帧连发：条目引用不变 +
   assert.equal(body2.querySelectorAll('[data-pool-item="approval"]').length, 1, "审批条目唯一（复用不重插）")
   assert.equal(body2.querySelectorAll('[data-pool-item="queue"]').length, 1, "队列条目唯一（复用不重插）")
   assert.equal(body2.querySelector('[data-family="subagents"]'), null, "领用径零块帧不产族壳")
-  assert.equal(root.querySelectorAll("[data-pool-head]").length, 1, "头恰一（原位重建）")
-  assert.notEqual(head2, head0, "头原位重建（引用换新）")
+  assert.equal(root.querySelectorAll("[data-pool-head]").length, 1, "头恰一（原位存续）")
+  // 2026-10-01 复核扫面收正批（M4 池头逐件就地差分）——锁点随动：头引用存续（原「引用换新」断言随 M4 作废）。
+  assert.equal(head2, head0, "头同引用存续（逐件就地差分）")
   assert.equal(head2, root.firstElementChild, "头原位（宿主首元素 —— 零重排）")
   assert.equal(root._poolSub, null, "零块帧 ⇒ 弃容器账（R5 语义保持）")
   assert.equal(root._poolSubSession, "1", "会话账存续（#660 收窄）")

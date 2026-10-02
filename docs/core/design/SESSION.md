@@ -138,7 +138,9 @@
 
 - **双线写入契约**：真实消息（用户输入 / assistant 回复 / tool 结果 / 多模态图像）走 `pushReal` → 同时进 `history` 与 `contextHistory`；**机读消息**（`[System reminder:` / `[User interrupt:` / 压缩 note / task·plan 回注）只进机读线；**transient 消息**（编辑器上下文注入等）**人读线落盘时过滤**、**机读线保留**——恢复必须逐字节重建 provider 前缀缓存所见的序列。
 - **`slimForDisplay`（人读线落盘瘦身）**：copy-on-write 映射（**绝不原地改**——两线共享对象引用）；assistant `tool_calls[].function.arguments` 截 300 字符；`tool` 消息 content 截 500 字符（head + 截断标记）；多模态 user content 数组保留 text part、**丢弃 image_url base64 part**；**`contextHistory` 一字不动**。
-- **消息时间戳 `ts`**：每条真实消息 `pushReal` 单点打点（epoch ms）；压缩重建注入的 note 同刻打点；**「Understood」占位并入尾首 assistant 时随该条原 ts**（2026-09-16 并入分支——`thincoder-core/context.mjs` 并入分支）；**旧消息（恢复自存档）不补 ts**（补近似值误导取证）；`slimForDisplay` 保留 ts；ts 是**本地字段**（发送层剥离、UI 不渲染——仅 read_history 输出 / 会话 JSON 可见）。
+- **消息时间戳 `ts`**：每条真实消息 `pushReal` 单点打点（epoch ms）；压缩重建注入的 note 同刻打点；**「Understood」占位并入尾首 assistant 时随该条原 ts**
+  （2026-09-16 并入分支——分支体（`applyCompression`）住 `thincoder-core/context.mjs`；占位常量 = `thincoder-core/context-echo.mjs`；`pushReal` 写缝 = `thincoder-core/context-push.mjs`——2026-10-01 拆分批 as-of）；**旧消息（恢复自存档）不补 ts**（补近似值误导取证）；
+  `slimForDisplay` 保留 ts；ts 是**本地字段**（发送层剥离、UI 不渲染——仅 read_history 输出 / 会话 JSON 可见）。
 
 ### 6.4 保存与恢复
 
@@ -174,7 +176,7 @@
 
 - **源 = 首条真实 user 消息**，谓词单源 = `isRealUserMsg`（`thincoder-core/history-window.mjs:17-19`：角色为 `user` ∧ content 为串 ∧ 非 `[System reminder:` 前缀）。
   CLI ∕ 桌面同经核件 `ensureSessionTitle`：绑定态取记录存储 `firstUserMessage()`（桌面绑定面 = `thincoder-desktop/src/main/session-io.mjs:25` 恒传槽）；
-  未绑定（含桌面首回合新建态）回退内存人读线——`thincoder-core/generate-title.mjs:132-133`（新建态首条由 `pushReal` 落人读线——`thincoder-core/context.mjs:93-103`）；
+  未绑定（含桌面首回合新建态）回退内存人读线——`thincoder-core/generate-title.mjs:132-133`（新建态首条由 `pushReal` 落人读线——`thincoder-core/context-push.mjs:27-37`）；
   VSC 取内存人读线——端壳传原数组、以同一谓词取首条（`messages.find(isRealUserMsg)`，`thincoder-vscode/src/extension/panel-session-write.mjs:134`；**等价注**：端壳不按 `keepReal` 预过滤（该过滤属槽落盘面）；两路径标题源同经核谓词 `isRealUserMsg` ⇒ 今日等价）。
 - **生成** = 核 `generateTitle(userContent, provider)`（`thincoder-core/generate-title.mjs:33`）：三格式分派 · **显式禁用思考**（OpenAI 兼容 body 加 `thinking:{type:"disabled"}`；anthropic / google 分支不传即不思考）· `max_tokens` 100 · 标题规范 ≤40 字符无引号 · 超时 10s · 失败静默返 null。
   三端同调该函数（CLI ∕ 桌面 = 核件直调——桌面触发 = `thincoder-desktop/src/main/turn-face.mjs` 回合尾结算；VSC 端壳 `thincoder-vscode/src/extension/generate-title.mjs` 只做 key / provider 解析——无第二请求实现）。
@@ -850,7 +852,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 **判据句 2（与 applySession 后读数同源同式 · 三事同判）**：读数 = `historyPercent(mergeAdjacentAssistantEchoes(machineLine), mergedProvider)`——与 `applySession` 后的 `historyPercent(agent.history, agent.provider)` 同输入同公式：
 
 - **线选**：`contextHistory` 非空 ⇒ 取之；否则 `history` 经 `stripTruncatedToolArgs` 回退（v1 老档同径——与 `applySession` 机读线选择同判）。
-- **回声归并**：`mergeAdjacentAssistantEchoes`（`thincoder-core/context.mjs`——`applySession` 装线前同一步；干净输入同引用返回）。
+- **回声归并**：`mergeAdjacentAssistantEchoes`（`thincoder-core/context-echo.mjs`——经 `context.mjs` 转口可达；`applySession` 装线前同一步；干净输入同引用返回）。
 - **渠道合并**：槽 `activeProvider` 命中渠道表 ⇒ `{ ...entry, model: data.activeModel || entry.model }`（模型合并支 ① 同判）；未命中 ⇒ `fallback`（支 ②「静默保持现状」的装配口径 = `loadConfig().provider`）。
 - **公式**：`historyPercent`（`thincoder-core/token-window.mjs`——与 CLI 状态行 / VSC `ctxPercentForHistory` 同式；不新增第三口径）。
 
@@ -918,7 +920,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 - **数据面（不可得 = `null`）**：计数不可得 ⇒ `listSlots` 行 `messageCount` / `turnCount` = **`null`**（**不是 0**——真 0 与「不知道」必须可分）。
   落点：`thincoder-core/session-slot-scan.mjs` `mergeFields` 计数两字段缺省 `0 → null`（**值替换 · 净增 0 行**）· `thincoder-core/session-slots.mjs` `listSlots` 投影 `?? 0 → ?? null`。
   存量「计数 0 与未知二义」登记（§6.22 判据句 3 / D-SE56）**随之注销**（不可得以 `null` 表达）。
-- **显示面（不可得标 · 禁显示数值 0）**：形态随渲染面既有能力——**段缺席**（结构化渲染面：桌面左列行元数据族既有 `Number.isFinite` 门 = `thincoder-desktop/renderer/views/sessions.mjs:186` ⇒ **零改**）
+- **显示面（不可得标 · 禁显示数值 0）**：形态随渲染面既有能力——**段缺席**（结构化渲染面：桌面左列行元数据族既有 `Number.isFinite` 门 = `thincoder-desktop/renderer/views/session-control.mjs:58-59` ⇒ **零改**）
   ∥ **`—` 占位**（文本行面：CLI `/session` 行 `— turns` = `thincoder-cli/src/tui/cmd-session.mjs:77` · VSC 会话栏 `—msgs` = `thincoder-vscode/webview/session-bar.js:53` · `read_history` 的 `cwd:` 发现行 `messages: —` = `thincoder-core/agent-tools/read-history.mjs:238`）。
 - **账本异常 ⇒ 用户可见信号**：新出口 `ledgerHealth(cwd)`（判据单源住 `thincoder-core/session-slots-manifest.mjs`）返回 `{ refused, lastReason, lastPath, lastAt, scene }`——`refused` = 本进程累计（§6.23 拒写 + 判据句 5 读回失败）；`scene` = 该 cwd 的 `{manifest}.corrupted` 在盘（损坏现场）。
   · **本批接线（CLI · 两处）**：`/session` 列表头部行（`thincoder-cli/src/tui/cmd-session.mjs`）∧ 启动会话提示行（`thincoder-cli/src/tui/startup.mjs:234-237` 邻位）——`refused > 0 ∨ scene` ⇒ 追加一行警示（含 reason 与「打开会话即自动补回」指引；`scene` 在场附「现场档保留 30 天」）。
@@ -965,12 +967,26 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 > **本节点 = 记录形 ∥ 写缝 ∥ 读缝契约 ∥ 端侧重建义务 ∥ 容差登记的跨端单源**——桌面设计档（`docs/desktop/design/RENDERER.md` §1.1「留档记录」条）自本批只留桌面侧呈现细节；CLI ∥ VSC 承接细则各住其设计档（`docs/cli/design/TUI-SESSION-VIEW.md` §6 ∥ `docs/vsc/design/WEBVIEW.md` §5.7）。
 
 - **两族记录形**（人读线条目——`history` 数组元素；追加 ∥ 落盘 ∥ 读取三面同一形）：
-  - ① `digest`（三型——与 `ev:digest` 帧三形一一映射，零新语义）：`{ kind: "digest", status: "start" | "cap" | "end", n?, tier?, from?, msg?, mode?, turns?, ok?, ms?, ts }`——`start`：`n` = 起跑待消化数（可 0）· `tier` ∈ `ask` ∥ `digest`；`tier === "ask"` 携 `from`（提问者 `role#id`）∥ `msg`（问题摘要）；`cap`：`mode` ∈ `stop` ∥ `auto` · `turns`；`end`：`ok` · `ms`。
-  - ② `subagent`（归档快照——一块一条）：`{ kind: "subagent", meta, rows, ts }`——`meta` = 归档时点**块头事实**（对象；消费面按已知字段读：`key` ∥ `role` ∥ `model?` ∥ `startedAt?` ∥ `doneAt?` ∥ `turn?` ∥ `maxTurns?` ∥ `status?` ∥ `note?` ∥ `error?`；未知字段原样携带）；
-    `rows` = 内容行集 `Array<{ kind: string, text: string }>`（未知 `kind` 消费面按文本行）；**有界保尾** = 显示行 ≤ **500**（超界弃最旧 ⇒ 前置省略标记行 `… [rows truncated: N lines omitted]`——N = 实弃显示行数、标记自身不占额度；单行超界保末行）。
-- **写缝**（单点 = 核 `thincoder-core/context.mjs` **`pushRecord(agent, record)`**——`pushReal` 双胞）：`ts` 打点 ∥ 记录存储追加（`_recordStore?.append`——§6.14）∥ 尾窗驱逐三面同 `pushReal`；**机器线零触** = `history` 以一次性弃数组承接 ⇒ 记录不入 `agent.history` / `contextHistory`（不喂模型）；追加失败不阻断（尽力面 N-S6 承接）。未绑定（`_recordStore` 缺）⇒ 人读线追加照常 ∥ 存储腿空转（零抛——模式 F 零回归）。
+  - ① `digest`（三型——与 `ev:digest` 帧三形一一映射，零新语义）：`{ kind: "digest", status: "start" | "cap" | "end", n?, tier?, from?, msg?, mode?, turns?, ok?, ms?, ts }`——`start`：`n` = 起跑待消化数（可 0）· `tier` ∈ `ask` ∥ `digest`；
+  `tier === "ask"` 携 `from`（提问者 `role#id`）∥ `msg`（问题摘要）；`cap`：`mode` ∈ `stop` ∥ `auto` · `turns`；`end`：`ok` · `ms`。
+  - ② `subagent`（归档快照——一块一条）：`{ kind: "subagent", meta, rows, ts }`——`meta` = 归档时点**块头事实**（对象；消费面按已知字段读：`key` ∥ `role` ∥ `model?` ∥ `startedAt?` ∥ `doneAt?` ∥ `turn?` ∥ `maxTurns?` ∥ `status?` ∥ `pool?` ∥ `queued?` ∥ `note?` ∥ `error?`；未知字段原样携带）；
+    `rows` = 内容行集 `Array<{ kind: string, text: string }>`（未知 `kind` 消费面按文本行——**跨端退化在册**：`kind` 为开放词表、各端自有行模型取值（VSC = `.advisor-content` 行派生），读他端写的快照时未命中本端行模型 ⇒ 按文本行呈现（零丢失；在册行为，不钉最小词表））；**有界保尾** = 显示行 ≤ **500**（超界弃最旧 ⇒ 前置省略标记行 `… [rows truncated: N lines omitted]`——N = 实弃显示行数、标记自身不占额度；单行超界保末行）。
+    - **字段增补（2026-10-01 · 记录形跨端契约勘定 · 台账 #790）**：`pool?: boolean` = spawn 模式事实（`true` = async 池 spawn ∥ `false` = sync 已启动确证；
+      缺省 ∥ `null` = 未知（未启动等）——重建头模式词段在场性判据 = `pool != null`）；`queued?: boolean` = 冻结时**未启动**（排队中；缺省 = 非排队）。
+      命名映射：CLI 本地 `async` ⇄ 记录 `pool`（同真值；`async` 不设独立字段——双载体会破单源）。
+      **零版本机**：增补可选字段 ∥ 三端读面皆字段式容缺省 ∥ 存量记录无新字段 ⇒ 回退 = 改前显示；零版本标记 ∥ 零迁移 ∥ 零回填。
+    - **`key` 规范形 = `sub:<role>#<id>`**（写面归一——CLI 原无前缀形收正（含非族键 `compress#N` ⇒ `sub:compress#N`）；VSC ∥ 桌面已规范、零改）；
+      读面必容**旧形**（存量无前缀记录 append-only 不可迁移）：CLI 读面剥 `sub:` 前缀（显示 ∥ 折叠键 = 本地无前缀形）∥ VSC 读面补 `sub:` 再解析。
+    - **词面判据三条（`status` 读面归一——跨端单源 · 2026-10-02 · #794 ∥ #795）**：① 停止面 = `stopped` ∥ `cancelled` ∥ `terminated` ⇒ ⏹ + stopped；② 错误面 = `error` ∥ `failed` ⇒ ⏹ + error（+ 文本注记）；③ done 面 = `done` ∥ `settled` ∥ `answered` ∥ 缺省 ∥ 未知 ⇒ ✓ + done。
+      **写面词表零动**（三端各写各词——CLI `stopped` ∥ VSC ∥ 桌面 `cancelled`）；读面按本三条容多写词（各端自做）；CLI error 面维持文本载（显示面差在册）。
+    - **读面归一义务（字段级——沿上 `key` 读义务先例）**：他端记录读入 ⇒ 归一到本端归档块同形（产物 = 读面新对象——记录 ∥ 存储零写）：`key` 非空且无 `sub:` 前缀 ⇒ 补前缀；`label` ∥ `role` ∥ `id` 由 `key` 派生（头文载体 ∥ `dataset.subid` 门）∥ `frozen` 恒 `true`（记录 = 归档快照）∥ `status` 按上三条词面归一 ∥
+      两时间戳互填（缺 `doneAt` ⇒ `startedAt` ∥ 缺 `startedAt` ⇒ `doneAt ?? 0`——冻结耗时算式）；其余字段原样携带。
+    - **两形值域（互查面）**：digest `ask` 的 `from`（显示形域 = `role#id`）∥ `subagent.meta.key`（规范形域异形同轴）；读面义务 = **按键互查须前缀归一**（按 `from` 查块 ∥ 按 `key` 匹配提问者——现盘未见此类消费面，预防性在册）。
+- **写缝**（单点 = 核 `thincoder-core/context-push.mjs` **`pushRecord(agent, record)`**——经 `context.mjs` 转口可达；`pushReal` 双胞）：
+  `ts` 打点 ∥ 记录存储追加（`_recordStore?.append`——§6.14）∥ 尾窗驱逐三面同 `pushReal`；**机器线零触** = `history` 以一次性弃数组承接 ⇒ 记录不入 `agent.history` / `contextHistory`（不喂模型）；追加失败不阻断（尽力面 N-S6 承接）。
+  未绑定（`_recordStore` 缺）⇒ 人读线追加照常 ∥ 存储腿空转（零抛——模式 F 零回归）。
 - **产生面 = 各端进程内同点追加**（与用户可见帧/行**同点双动作**——`ts` 与帧/行同时序）：桌面 = 宿主发帧点三型（`cap` 帧点 = `thincoder-desktop/src/main/turn-face.mjs:142-143`）∥ 渲染面归档派生点经 `record:append` 通道（subagent 快照——含非活动键）；
-  CLI = 痕行 ∥ 冻结行产生点（`pushRecord(state._agent ∥ ctx.agent, …)`）；VSC = 宿主发帧点三型（`thincoder-vscode/src/extension/suspension.mjs:167` ∥ `:178` ∥ `panel-callbacks.mjs:83` `postDigestCap`）∥ webview 归档派生点经 `recordAppend` 出站（宿主处理体落 `pushRecord`）。
+  CLI = 痕行 ∥ 冻结行产生点（`pushRecord(state._agent ∥ ctx.agent, …)`）；VSC = 宿主发帧点三型（`thincoder-vscode/src/extension/suspension.mjs:190` ∥ `:214` ∥ `panel-callbacks.mjs:83` `postDigestCap`）∥ webview 归档派生点经 `recordAppend` 出站（宿主处理体落 `pushRecord`）。
   **落盘节律 = 与消息同节律**（不新造即时落盘面）：记录随本端既有保存链落槽投影（本端人读线真值 = CLI ∥ 桌面为记录存储、VSC 为槽 JSON 投影——见端侧面）。
   **入参对象 ∥ 载体对应（端侧钉定——记录须落进本端保存链所写人读线同一数组，否则随落盘丢失）**：`pushRecord(agent, record)` 人读线追加目标 = 入参对象的 `_fullHistory`——
   CLI = `state._agent ∥ ctx.agent` 活对象（绑定态另携 `_recordStore`；`_fullHistory` = 保存链同一数组）；
@@ -984,12 +1000,13 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
   - 两道检索护栏计数：`READ_HISTORY_SCAN_MAX`（物理行——记录不改行形态）∥ `READ_HISTORY_MAX_MESSAGES`（条目数——**含记录**，与 `messageCount` 同口径）；常量 / 文案零改。
   - `cwd:` 发现面行：`messages:` 数 = `messageCount`（**含记录**——同本节点「兼容与边界」条口径；计数不可得 ⇒ `—` 判据零改）。
   - 判据（机检腿落批档 §2）：伪存储混录 ⇒ ① `role` ∥ `keyword` ∥ `tool` 检索与消息-only 基线逐字等价；② 无滤 ∥ since-until ⇒ 记录空壳行在场（形如上）；③ JSON 面 ∥ 索引面逐条相等。
-- **端侧重建义务**（各端自做——语义同源、实现各端；总则 = **记录位次复列**：记录按其全局 `idx` 位次重建为该端既有呈现形，行入流 = 与内容同生态——无专门「摘 ∥ 留」处理；`digest` ⇒ 痕形 ∥ `subagent` ⇒ 归档块形（与活流归档同一形状）；记录缺 ⇒ 恢复面与改前逐字等价（负控））：
-  - **CLI**（`docs/cli/design/TUI-SESSION-VIEW.md` §6）：痕行逐条复列（标签 ∥ 计数 ∥ cap ∥ 终态行——文案与活流同算式）；终态行 `n` 页内缺席 ⇒ **存储回扫**补齐（跨页零损——容差①于本端不成立）；`subagent` 记录 ⇒ `_frozenSubTask` 合成件（渲染端零改）。
-  - **VSC**（`docs/vsc/design/WEBVIEW.md` §5.7）：痕元素逐条复列（**页内只产完整轮**——start + end 同页）；归档块重建 = 活形同构（核 `subblocks` 原语直消费）∥ 落点镜式（当前轮首之前——与 live `archiveBlock` 同规则）；**不绑记录存储**（记录走槽 JSON 投影——VSC 兼容红线保持：sidecar 对本端可见面零暴露；绑定的窗口 ∥ 保存面重构越本批，超批不取）。
-  - **桌面**（`docs/desktop/design/RENDERER.md` §1.1）：折叠终态轮（末轮无 `end` 不产——防双份）∥ 留档块。
+- **端侧重建义务**（各端自做——语义同源、实现各端；总则 = **记录位次复列**：记录按其全局 `idx` 位次重建为该端既有呈现形（**未结轮照现**——无 `end` 记录之轮照出其已有记录；可证面 = 轮间 ∥ 末页）、行入流 = 与内容同生态——无专门「摘 ∥ 留」处理；`digest` ⇒ 痕形 ∥ `subagent` ⇒ 归档块形（与活流归档同一形状）；记录缺 ⇒ 恢复面与改前逐字等价（负控））：
+  - **CLI**（`docs/cli/design/TUI-SESSION-VIEW.md` §6）：痕行逐条复列（标签 ∥ 计数 ∥ cap ∥ 终态行——文案与活流同算式；**未结轮照现**——零截点）；终态行 `n` 页内缺席 ⇒ **存储回扫**补齐（跨页零损——容差①于本端不成立——绑定态；模式 F 未绑 ⇒ 不适用）；`subagent` 记录 ⇒ `_frozenSubTask` 合成件（渲染端零改）。
+  - **VSC**（`docs/vsc/design/WEBVIEW.md` §5.7）：痕元素逐条复列（**轮锚 = 起跑记录**——起跑 ∥ `n > 0` 计数 ∥ cap 元素随轮出；终态元素需 `n`（同页起跑）；**未结轮照现**（可证面 = 轮间 ∥ 末页）；起跑未载的 `cap` ∥ `end` 记录零产——容差①）；
+  归档块重建 = 活形同构（核 `subblocks` 原语直消费）∥ 落点 = **记录位次原位（零配对）**（重建径）——与 live `archiveBlock` 到达序（**当刻流末**）**两径并存**；**不绑记录存储**（记录走槽 JSON 投影——VSC 兼容红线保持：sidecar 对本端可见面零暴露；绑定的窗口 ∥ 保存面重构越本批，超批不取）。
+  - **桌面**（`docs/desktop/design/RENDERER.md` §1.1）：逐轮复列（**未结轮照现**——无 `end` 记录 ⇒ 起跑行 ∥ 计数行 ∥ cap 行照出；可证面 = 轮间 ∥ 末页；起跑未载的 `cap` ∥ `end` 记录零产——容差①）∥ **位次门**（`at` 不可得 ⇒ 该轮零产——#773）∥ 留档块。
 - **容差登记（跨端）**：
-  - ① **跨页分裂**（起跑 ∥ 终态记录分居两页）：桌面 ∥ VSC = 页内折叠只产完整轮（该轮页内不产；数据零损；重开条件 = 实测走查命中 ⇒ 另批跨页承接）；CLI = **消**（逐条复列 + 存储回扫）。
+  - ① **跨页分裂**（起跑 ∥ 终态记录分居两页）：桌面 ∥ VSC = **不可证面零产**（起跑未载的 `cap` ∥ `end` 记录不入 ∥ 非末页尾残起跑不入——该轮终态侧字面缺失；数据零损；重开条件 = 实测走查命中 ⇒ 另批跨页承接）；CLI = **消**（逐条复列 + 存储回扫）。
   - ② **归档快照落盘晚一拍**（快照产生面在呈现层——出站异步）：桌面 = 在册（显式容忍）；VSC = 沿用（随**下一次**保存落槽——全端内容同节律）；CLI = **消**（产生面 = 进程内冻结点（先于回合落盘）∥ 读径 = 存储直读——追加即达）。
   - ③ **CLI 复活径双记录**（墓碑复活 ⇒ 同键两代冻结 ⇒ 重建面双块 ∥ 活流单块——低频异常修复径 ∥ 数据零损；重开条件 = 实测走查命中 ⇒ 另批）。
 - **兼容与边界**：槽 JSON `version` / 字段形态 / `history` 全量数组零改（**VSC 兼容红线**逐字保持）；`messageCount` 口径含记录（与桌面 KD-55 ⑤ 同口径容忍——「N msgs = 人读线条目数」）；不改机器线（`contextHistory`）语义。
@@ -1104,6 +1121,14 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | 源档 §10 注入序的 `loadSession` 同步会话级 UI（_autoApprove/planMode 面板标志 + 工具条按钮同步） | VSC 装配细节 | 面板 UI 同步 = VSC 专有面（`thincoder-vscode/**`）；注入序本体已入 §6.15 |
 
 ## 变更记录
+- 2026-10-02（**记录形残项批（#794 ∥ #795）· 设计档随动轮 · eng-designer**——承批档 `docs/batches/2026-10-02-record-shape-residuals.md` §2 随动表）：§6.26 补**词面判据三条**（`status` 读面归一——停止 ∥ 错误 ∥ done 三面词集 + 写面词表零动）＋**读面归一义务（字段级）**（他端记录 ⇒ 块头字段归一：`label`/`role`/`id` 由 `key` 派生 ∥ `frozen` 恒真 ∥ 两时间戳互填）。**零机制改**（判据单源落位）。
+
+- 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R2 改指（`session-control.mjs`——左列裁撤后行元数据族现体，坐标随读）；宽面 2 行折行（970 ∥ 1000——语义零改）。**零新语义**。
+
+- 2026-10-01（**零语义清账批 #2 · 修复轮（评审轮 1 · 发现 3）· eng-designer**——承批档 `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §3 轮次 1 · 台账 #791）：§6.26 CLI 重建句补**模式 F 限定**（容差①绑定态——未绑 ⇒ 不适用；与 `docs/cli/design/TUI-SESSION-VIEW.md` §6 同拍）。**零新语义**（限定句同拍）。明细 = 批档 §2 修复轮块。
+- 2026-10-01（**消化重放口径批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-01-digest-replay-choices.md` §1 ∥ §2 · 台账 #771 ∥ #773）：§6.26 端侧重建义务**重放口径统一**——未结轮照现（可证面 = 轮间 ∥ 末页）+ 位次门（`at` 不可得 ⇒ 零产）+ 容差① 收正（不可证面零产）；CLI ∥ VSC ∥ 桌面三行同拍。**零机制改**（口径收正）。明细 = 批档 §2。
+- 2026-10-01（**跨端消化面恢复批 · VSC 舱交付随落笔轮 · eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §5 VSC 舱 ∥ §2 随落笔轮）：§6.26 VSC 发帧点坐标对盘收正（`:177/:198` ⇒ **`:190/:214`**——发射行口径 · 现盘实读）；VSC 重建落位句**无效子句删除**（「页内无本轮〔跨页〕⇒ 页段尾追加」——「零配对 + 半轮零元素」约束下无可构造路径；判由 = 本批 §2 随落笔轮块）。**零机制改**（收正 ∥ 删无效子句）。
+- 2026-10-01（**跨端消化面恢复批 · 收正轮（评审轮次 3 · 发现 1 ∥ 2 ∥ 7）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §3 轮次 3）：§6.26 VSC 重建落位句收正（重建 = 记录位次原位 ∥ 跨页页段尾追加；live = 到达序当刻流末——两径并存）；VSC 宿主发帧点坐标对盘收正（`:167/:178 ⇒ :177/:198`——发射行口径 · 起跑/收尾）；`rows` 补**跨端退化在册**（未命中本端行模型的 `kind` ⇒ 按文本行，零丢失）。**零机制改**（收正 ∥ 登记）。
 - 2026-09-30（**跨端消化面恢复批 · 修正轮（评审轮 1 · 发现 1 ∥ 2 ∥ 4 ∥ 9 ∥ 10）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §3 轮次 1）：§6.26 补**读面 delta 登记**条（`read_history` 行形 ∥ 索引面行 ∥ 两道护栏计数 ∥ `cwd:` 发现行 + 判据）∥ 产生面补**入参对象 ∥ 载体对应（钉定）与失败面**（VSC 载体 `fullHistory` 同引用；桌面薄壳在册）；VSC 出站字面统一 `recordAppend`（协议登记面同拍）；cap 帧点坐标对盘 `:83`（发射行）；§5 补本批指针行。**零机制改**（登记 / 收正）。
 
 - 2026-09-30（**跨端消化面恢复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2 · 台账 #726）：新增 **§6.26 消化生命周期面记录（跨端单源）**——两族记录形 ∥ 写缝（核 `pushRecord` 单点）∥ 读缝（`historyWindow` opt-in）∥ 端侧重建义务（CLI ∥ VSC ∥ 桌面）∥ 容差登记（3 —— 跨页分裂 ∥ 快照晚一拍 ∥ CLI 复活双记录）；机制单源自桌面档 §1.1 **上提本档**（跨端承接批裁；桌面档通用句指针化）。需求 = §4.4 F-S7（node = VSC F-W1/I-7 ∥ CLI F18）。**邻面语义零改**（§6.14 记录存储 / 兼容红线逐字保持；不绑 VSC 存储——记录走槽 JSON）。

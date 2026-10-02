@@ -1,5 +1,6 @@
 /**
  * 2026-09-30-triple-end-digest-unify.test.mjs — 批次本地单元件（台账 #747 · 三端消化面统一批 · 实施轮）·
+ * ⚠ 断代（2026-10-01 · 台账 #765 拆批）：import 断——`views/chat-digest-seat.mjs` 已删；复跑必红为预期（留档对照 · 勿复跑）。
  * 任务书 = `docs/batches/2026-09-30-triple-end-digest-unify.md` §2 ∥ §4（判据载体 = §7「三端消化面统一批注」四腿）。
  * 四腿：① **行族累积**（`start` 逐轮追加 ∥ 旧轮零动 ∥ 零摘除 ∥ 无轮容器 ∥ cap 行尾追）
  *      ② **标签恒在**（`end` 只换计数行文 —— 标签行同节点 ∥ 同文）
@@ -10,6 +11,14 @@
  * 复跑（cwd = 仓库根，即含 `thincoder-core/` 的目录）：node --test docs/batches/2026-09-30-triple-end-digest-unify.test.mjs
  * 纪律：行为断言优先（真归约体 ∥ 真帧路 ∥ 真驱动装配）；真机一条 = 父侧闭合（D16 义务）——本档只落机检面。
  */
+/*
+ * ⚠️ **断代失效注（2026-10-01 · 台账 #754 收正 · 父侧直接执行 · 可 revert）**——本件四腿断言 = #747 语义
+ * （① 行族累积 ② 标签恒在 ③ reclaim 族前落位 ④ 全量复列），经用户 2026-10-01 裁定（「三端都不该有 ∥ 只留当轮」）
+ * 与 #754 批（`docs/batches/2026-10-01-digest-row-current-only.md`）**全数反转**（① `start` 全替 ② 终态非 ask
+ * 标签退场 ③ 归档居族末之后 ④ 复列末条）；本件**冻结不维护**（现 0/4 属预期断代读数）；现语义守卫 =
+ * `docs/batches/2026-10-01-digest-row-current-only.test.mjs`（八腿）。断代注形沿 #708 先例（`structure-split-2.test.mjs`）。
+ */
+
 import test from "node:test"
 import assert from "node:assert/strict"
 import { existsSync } from "node:fs"

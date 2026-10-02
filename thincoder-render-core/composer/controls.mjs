@@ -25,7 +25,8 @@ import { t } from "../i18n.mjs"
 /**
  * 控件行工厂。`deps`：`post` ∕ `state.flags()` 读面 ∕ `hooks`（见件头）· `inputRow`（`#input-row`——plan-active 类宿主）·
  * `inputEl`（浮层关后回焦）。返回：`{ el, modelBtn, reasoningBtn, applyModeButtons, applyAutoApprove,
- * applyAgentSettings, applyPlanMode, syncModeState }`。
+ * applyAgentSettings, applyPlanMode, syncModeState, toggleAuto, togglePlan, toggleEng }`——三 toggle = 各钮 handler
+ * 提取件（斜径 `/auto` ∥ `/plan` ∥ `/eng` 同钮同门消费；见其函数注）。
  */
 export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inputEl } = {}) {
   const row = document.createElement("div")
@@ -94,34 +95,47 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
     post("setAdvisorGuard", { value: _advisorOn })
     syncModeState()
   })
-  engBtn.addEventListener("click", () => {
-    _engOn = !_engOn
-    applyModeButtons()
-    post("setEngineeringEnabled", { value: _engOn })
-    syncModeState()
-  })
-  planBtn.addEventListener("click", () => {
-    // ENG-PLAN-EXCLUSION（FR31 ②）：工程模式点击守卫（disabled 的兜底——不依赖宿主回弹）。
-    if (_engOn === true) return
-    _planActive = !_planActive
-    applyModeButtons()
-    post("setPlanMode", { value: _planActive })
-    syncModeState()
-  })
-  settingsBtn.addEventListener("click", () => hooks.openSettings?.())
 
-  autoBtn.addEventListener("click", () => {
+  /** 三 toggle handler **提取件**（`docs/render-core/design/RENDER-CORE.md` §5 条 6 动作句柄面）：斜径
+   *  `/auto` ∥ `/plan` ∥ `/eng` 与各钮点击走**同一函数**（同钮同门——门随函数）。返值 = 斜径契约：
+   *  `true` = **已受理**（已执行 ∨ 二段交互在场）· `false` = 未受理（门拒 ⇒ 面板层出条目 `rejectKey` toast）；
+   *  钮径忽略返值 ⇒ **零行为改**。三钮均无忙态门（机制差异在册——桌面钮径本就忙期可用，见 §2.3）。 */
+  function toggleAuto() {
     if (!_autoApprove) {
       // Show inline confirmation instead of blocked confirm()
       showAutoConfirm()
-      return
+      return true // 二段交互在场 = 已受理（`/auto` 确认 popover 径同判：popover 在场 = 文本使命已尽）
     }
     // Turning OFF — no confirmation needed
     _autoApprove = false
     paintFlags()
     post("setAutoApprove", { value: false })
     syncModeState()
-  })
+    return true
+  }
+
+  function togglePlan() {
+    // ENG-PLAN-EXCLUSION（FR31 ②）：工程模式点击守卫（disabled 的兜底——不依赖宿主回弹）。
+    if (_engOn === true) return false // 门拒（斜径 ⇒ 面板层出 `rejectKey` = `toolbar.planDisabled`）
+    _planActive = !_planActive
+    applyModeButtons()
+    post("setPlanMode", { value: _planActive })
+    syncModeState()
+    return true
+  }
+
+  function toggleEng() {
+    _engOn = !_engOn
+    applyModeButtons()
+    post("setEngineeringEnabled", { value: _engOn })
+    syncModeState()
+    return true
+  }
+
+  engBtn.addEventListener("click", toggleEng)
+  planBtn.addEventListener("click", togglePlan)
+  settingsBtn.addEventListener("click", () => hooks.openSettings?.())
+  autoBtn.addEventListener("click", toggleAuto)
 
   function showAutoConfirm() {
     const existing = document.querySelector(".auto-confirm")
@@ -201,5 +215,5 @@ export function createControlsRow({ post, state = {}, hooks = {}, inputRow, inpu
   // 初值 ⇒ 同点补绘。缺省 flags（全假）下与 VSC 静态 HTML 起始面逐字同形（零差）；无跨面同步（构造非状态变更）。
   paintFlags()
 
-  return { el: row, modelBtn, reasoningBtn, applyModeButtons, applyAutoApprove, applyAgentSettings, applyPlanMode, syncModeState }
+  return { el: row, modelBtn, reasoningBtn, applyModeButtons, applyAutoApprove, applyAgentSettings, applyPlanMode, syncModeState, toggleAuto, togglePlan, toggleEng }
 }

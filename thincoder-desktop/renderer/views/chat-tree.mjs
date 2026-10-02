@@ -2,12 +2,15 @@
  * chat-tree.mjs — 对话流**构树面**出档（拆分产出 —— `docs/desktop/design/PROJECT.md` §4.1 越层段：`renderer/views/chat.mjs`
  * **305** 越 300、`docs/desktop/design/PROJECT.md` §4.2 本批行判「结构性触碰」（重建径按记录位次复列——树装配面参与）
  * ⇒ 拆分预案**构树面出档**随本批执行；原三件（`TURN_KINDS` / `turnHeadOf` / `errorNode` / `blockNode` / `chatTree`）
- * 自 `renderer/views/chat.mjs` **纯搬移**，本批增量 = **流序复列**（留档批 · #719）：
+ * 自 `renderer/views/chat.mjs` **纯搬移**，增量 = **流序复列**（留档批 · #719 —— 恢复序 ≡ 记录序；**复列全量（未结轮照现）**——
+ * 自然形收正批 · 2026-10-01 · 台账 #768；消化重放口径批 · 2026-10-01 · 台账 #771 收正）：
  * 重建径块序列 ∥ 消化轮按**记录位次**（`at`）复列 —— 有 `at` 的轮插于首位位次更大的块之前；无位次件
  * （运行期轮 ∥ 运行期块）落运行期尾段（轮恒居块后 —— 「流末插本元素」同序）。
- * **三端消化面统一批 · #747 增量** = **消费轮配对**（复列镜式）：`subagent` 记录居其消费轮行族之前（配对单源 =
- * `consumedRoundOf` —— `views/chat-digest.mjs`；与页读块序重排同判）+ 行元素出序（无轮容器 —— `digestRows` 逐行）。
- * 机制 ∕ 判据单源 = `docs/desktop/design/RENDERER.md` §1.1「留档记录」条 ∥ 根子序句（重建径 = 按记录位次复列 + 消费轮配对）。
+ * **本批 2026-10-01 · #765**：配对支拆除（归档块 = **普通块** —— 记录位次原位出，补发到达序自洽：
+ * `subagent` 记录居起跑记录之后 ⇒ [行族][归档块]）；行元素出序 = `digestRows` 逐行（无轮容器）。
+ * **自然形收正批 · 2026-10-01 · #768**：行族 = **全轮在流**（行出即留——本档只按记录序复列，零清理动作；单源 = §1.1
+ * 「消化行入流与重放规则」条）。
+ * 机制 ∕ 判据单源 = `docs/desktop/design/RENDERER.md` §1.1「留档记录」条 ∥ 根子序句（重建径 = 按记录位次复列）。
  * 视图面纪律（同档 §1.1）：纯构树（零 DOM / 零 `node:` / 零裸包 —— 渲染面静态闭包判据）；文案一律经 `t()`。
  * 依赖单向：`renderer/views/chat.mjs` → 本档（`mountChat` 建树引调）；反向无引用 ⇒ 无环。
  */
@@ -18,9 +21,9 @@ import { compressNode } from "./compress-status.mjs"
 import { labelNode, reasoningNode, textFace } from "./chat-text.mjs"
 import { blockKey } from "./chat-stream.mjs"
 import { subagentNode } from "./chat-subagent.mjs"
-import { consumedRoundOf, digestRows, roundAt, shownDigestRounds } from "./chat-digest.mjs"
+import { digestRows, roundAt } from "./chat-digest-rows.mjs"
 import { guideNode } from "./chat-guide.mjs"
-import { chromeProps, ledgerGroupNode, pillNode, stoppedNode, summaryNode, timerGroupNode } from "./chat-chrome.mjs"
+import { chromeProps, helpGroupNode, ledgerGroupNode, pillNode, stoppedNode, summaryNode, timerGroupNode } from "./chat-chrome.mjs"
 
 /** 助手族块型（回合首块判据射程 —— 归档 `subagent` 块在内）。 */
 const TURN_KINDS = Object.freeze(["assistant", "reasoning", "tool", "error", "subagent"])
@@ -80,55 +83,46 @@ export function blockNode(block, index, hidden, handlers, prev, canRetry = false
   }
 }
 
-/** 流序复列（**重建径 · 留档批 · #719 —— 按记录位次复列 + 消费轮配对**〔#747〕）：块序列逐枚走过，
- *  位次轮（`at` 非空）插于**首位位次更大的已标块**之前（修复轮 · #738：**未标块不作锚**——位次未知不落
- *  其前；原「位次轮恒居运行期块之前」在长会话窗把座位漂到中段）；**归档块配对**（复列镜式）= `subagent`
- *  记录按其消费轮（记录落于该轮 [start, end] 之后且中无块记录者——即消化回收落点）居该轮行族之前
- *  （对位 VSC #726「落点镜式」；跨页无本轮 ∥ 无配对 ⇒ 原位即记录位次）；余位次轮 ∥ 运行期轮（无位次）居
- *  块序列之后（模型序 —— 与活流「`start` 帧落流末」同序、与 §1.1 根子序「块序列 → 消化行族」同向）。 */
+/** 流序复列（**重建径 · 留档批 · #719 —— 按记录位次复列**；恢复序 ≡ 记录序 —— 本批 2026-10-01 · #765 收正：
+ *  配对支拆除；**复列全量（未结轮照现）**——自然形收正批 · 2026-10-01；消化重放口径批 · 2026-10-01 收正）：块序列逐枚走过，位次轮（`at` 非空）插于
+ *  **首位位次更大的已标块**之前（未标块位次未知 ⇒
+ *  不作锚）；余位次轮 ∥ 运行期轮（无位次）居块序列之后（模型序 —— 与活流「`start` 帧落流末」同序、
+ *  与 §1.1 根子序「块序列 → 消化行族」同向）；归档块 = **普通块**（原位 = 记录位次 —— 补发到达序自洽：
+ *  归档记录居起跑记录之后 ⇒ [行族][归档块]）。 */
 function pushFlow(children, model, handlers) {
-  const rounds = shownDigestRounds(model)
-  const atOf = (block) => (typeof block?.at === "number" && Number.isFinite(block.at) ? block.at : null)
-  const paired = new Set() // 配对块位序（随其消费轮族出——不随记录位次）
-  const pairsOf = new Map() // 轮对象 → 配对块序[]
-  model.blocks.forEach((block, index) => {
-    if (block?.kind !== "subagent") return
-    const round = consumedRoundOf(block, model.blocks, rounds) // 复列镜式（消费轮配对——单源）
-    if (round === null) return
-    paired.add(index)
-    const list = pairsOf.get(round)
-    if (list === undefined) pairsOf.set(round, [index])
-    else list.push(index)
-  })
-  const emitRound = (round) => {
-    for (const index of pairsOf.get(round) ?? []) {
-      children.push(blockNode(model.blocks[index], index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true))
-    }
-    children.push(...digestRows(round))
+  const blocks = Array.isArray(model?.blocks) ? model.blocks : []
+  // 在区轮集（窗判据就地两行）：位次轮 `at ≥ 首枚已标块位次` ∥ 运行期轮恒在场 ∥ 下界未知 ⇒ 在场
+  let floor = null
+  for (const block of blocks) {
+    if (typeof block?.at === "number" && Number.isFinite(block.at)) { floor = block.at; break }
   }
+  const rounds = (Array.isArray(model?.digest) ? model.digest : []).filter((round) => {
+    const at = roundAt(round)
+    return at === null || floor === null || at >= floor
+  })
+  const atOf = (block) => (typeof block?.at === "number" && Number.isFinite(block.at) ? block.at : null)
   let cursor = 0
   const flush = (bound) => {
     while (cursor < rounds.length) {
       const at = roundAt(rounds[cursor])
       if (at === null || bound === null || at >= bound) break
-      emitRound(rounds[cursor])
+      children.push(...digestRows(rounds[cursor])) // 重建轮于其记录位次复列
       cursor += 1
     }
   }
-  model.blocks.forEach((block, index) => {
-    if (paired.has(index)) return // 配对块随其消费轮族出（先于行族）
+  blocks.forEach((block, index) => {
     flush(atOf(block))
-    children.push(blockNode(block, index, model.hidden, handlers, model.blocks[index - 1], model.canRetry === true))
+    children.push(blockNode(block, index, model.hidden, handlers, blocks[index - 1], model.canRetry === true))
   })
   while (cursor < rounds.length) {
-    emitRound(rounds[cursor])
+    children.push(...digestRows(rounds[cursor])) // 未结轮 ∥ 余轮 = 流末（运行期尾段）
     cursor += 1
   }
 }
 
 /** 构树（卡族 = 核卡工厂元素直取 —— R1；审批族入树项由 `approvalCardNode` 产出**真元素**，余仍为描述符 ——
  *  `dom.mjs` `fill` 对真节点直挂 ⇒ 两形同树同序）：根 = 挂载根（props 四锚；宿主 `class` / `data-slot` 归 `renderer/index.html` 骨架）；子序 = [引导节点?] → [摘要块?] →
- *  [流序（块序列 × 消化轮按记录位次复列 + 消费轮配对 —— #747）?] → [压缩行?]〔R4 —— 流元素冻结点、非尾组成员，另列〕→ [四尾组?] → [审批卡?] → [药丸?] —— 四尾组（皆非块节点）居流序之后、卡序列之前（族内序 = 消化行族 → 到期触发行组 → 停止痕 → 台账行）；`none` 帧 = 引导节点唯一子（零**块**节点 · 引导 = 非块节点 ⇒ 不入块序：`docs/desktop/design/UI.md` §1 批 B 追加注项 1）。 */
+ *  [流序（块序列 × 消化轮按记录位次复列 —— 恢复序 ≡ 记录序 · 零配对〔本批 #765〕）?] → [压缩行?]〔R4 —— 流元素冻结点、非尾组成员，另列〕→ [尾组?] → [审批卡?] → [药丸?] —— 尾组（皆非块节点）居流序之后、卡序列之前（族内序 = 消化行族 → 到期触发行组 → 停止痕 → 台账行 → 帮助行族）；`none` 帧 = 引导节点唯一子（零**块**节点 · 引导 = 非块节点 ⇒ 不入块序：`docs/desktop/design/UI.md` §1 批 B 追加注项 1）。 */
 export function chatTree(model, handlers = {}) {
   const children = []
   const guide = guideNode(model, handlers)
@@ -144,6 +138,8 @@ export function chatTree(model, handlers = {}) {
     if (model.stopped === true) children.push(stoppedNode())
     // 台账行组（项 12 —— 流尾非块节点组；行集源 = 本键切片）
     if (Array.isArray(model.ledger) && model.ledger.length > 0) children.push(ledgerGroupNode(model.ledger))
+    // 帮助行族（`/help` 增量 · 2026-10-01② —— 流内非块行族；族内序 = 台账行组 → 本族 → 卡序列）
+    if (Array.isArray(model.help) && model.help.length > 0) children.push(helpGroupNode(model.help))
     children.push(...model.approval.map((item) => approvalCardNode(item, handlers)))
     if (!model.following) children.push(pillNode(model, handlers))
   }

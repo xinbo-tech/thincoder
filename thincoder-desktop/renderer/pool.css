@@ -7,8 +7,7 @@
    **R10（E1 ∕ E6 · 2026-09-28）**：① 封顶自滚 —— 封顶 = 池列高（骨架：`.pool` `min-height:0` + 栅格行
    `minmax(0,1fr)`；VSC 横带 32vh = 布局骨架差异在册 —— 位置已裁归右列）；自滚 = 宿主 `overflow:auto`
    （`chrome.css`）+ 本档 `overscroll-behavior: contain`（VSC `base.css:103-107` 同值角色）；② 出生计数贴钮
-   （`.activity-new-btn` —— VSC `base.css:113-117` 照搬；粘性由池头带承载，见该条注）；③ 空态提示规则
-   （`.pool-empty`）随 E2 空态退场删。 */
+   （`.activity-new-btn` —— VSC `base.css:113-117` 照搬；粘性由池头带承载，见该条注）。 */
 
 /* 宿主（`[data-slot="pool"]` = 池滚动容器自身）：自滚链断裂（VSC `#subagent-activity`
    `overscroll-behavior: contain` 同值角色 —— 池滚不波及页面 / 对话流）。 */

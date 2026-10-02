@@ -1,12 +1,12 @@
 /**
- * ipc.mjs — IPC 通道处理体本体 + 宿主注入面（`docs/desktop/design/IPC.md` §1 / §2）：**四十六项**白名单面（消化面留档批 · #719 落 `record:append`）=
+ * ipc.mjs — IPC 通道处理体本体 + 宿主注入面（`docs/desktop/design/IPC.md` §1 / §2）：**四十七项**白名单面（菜单体系批 · D36 落 `theme:state`；消化面留档批 · #719 落 `record:append`）=
  * 本档（配置读取 + 项目面 `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` /
  * `session:switch` / `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` +
  * 作答响应 `question:respond` —— `question` 工具真作答面 + 历史页 `history:page` + 回合驱动 `msg:send` /
  * `msg:interrupt`（宿主未注入 ⇒ fail-loud）+ 会话级偏好写面 `session:prefs` + 子 agent 停止出口 `subagent:stop`
  * （R3b 落）+ 文件链接打开 `file:open`（「对齐第三批」相抵② · KD-39 —— 编辑器 CLI 探测 ⇒ spawn
  * (`editor-open.mjs`)；兜底 `shell.openPath`；纯判据面住 `file-links.mjs`）+ R1 输入面板两项 `session:flags` /
- * `at:complete` + 会话维护线两项 `session:gc` / `session:index` + **消化面留档批一**（`record:append` —— 末位 46）—— 白名单末位）+ **转口群二十四项出档
+ * `at:complete` + 会话维护线两项 `session:gc` / `session:index` + **消化面留档批一**（`record:append` —— 末位 46）+ **菜单体系批一**（`theme:state` —— 勾选态回读，末位 47）—— 白名单末位）+ **转口群二十四项出档
  * `ipc-relays.mjs`**（#685 拆点 —— 331 ⇒ 两档 ⇒ 越 300 回线）：索引数据面两 + 设置族十九（provider 八 /
  * model 两 / agent 参数 / MCP 六 / env / tools）+ 台账相位两 / 配置写——逐项一参数纯转口（本档零算法副本）。
  * 跨档接线：两档同取 `currentCwd`；本档**新导出** `liveAgents`（mcp 四转口随动面取用 —— 单向
@@ -27,7 +27,7 @@ import { dialog, shell } from "electron"
 import { loadConfig } from "@thincoder/core/config.mjs"
 import { normalizeLocale, projectDictionary } from "@thincoder/core/i18n.mjs"
 import { releaseClaimsAll } from "@thincoder/core/session-slots-manifest.mjs"
-import { PRELOAD_PATH, confirmRecycle } from "./window.mjs"
+import { PRELOAD_PATH, confirmRecycle, refreshMenu, setMenuTheme } from "./window.mjs"
 import { currentCwd, openProject, recentDirs } from "./projects.mjs"
 import { listSessions } from "./sessions.mjs"
 import {
@@ -94,13 +94,13 @@ function readConfig() {
 
 /** 处理体**跨档引用面**（注册表族出档 `ipc-registry.mjs` —— #28 拆点；转口群出档 `ipc-relays.mjs` —— #685）：
  *  `HANDLERS` 表 ∕ 注册序住注册档，经注册档两源 import 取用（表 ∕ 定序 ∕ 白名单零改；新增通道 = 两列之一 +
- *  表行 + 预载白名单三处同拍）。**本档留用面** = 核心 21 通道 + `liveAgents`（#685 新导出 —— mcp 四转口随动面，
+ *  表行 + 预载白名单三处同拍）。**本档留用面** = 核心 23 通道 + `liveAgents`（#685 新导出 —— mcp 四转口随动面，
  *  单向供 `ipc-relays.mjs` 取用，零环）。 */
 export {
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
-  questionRespond, sessionPrefs, subagentStop, fileOpen, sessionFlags, atComplete, recordAppend, sessionGc, sessionIndex,
-  liveAgents,
+  questionRespond, sessionPrefs, subagentStop, fileOpen, sessionFlags, atComplete, recordAppend, themeState,
+  sessionGc, sessionIndex, liveAgents,
 }
 
 /** `project:open(payload)` ⇒ `{ cwd, recent }`：载荷 `{ fsPath }` **可选**（A7 收正形 —— VSC `setProject` 同键；
@@ -116,6 +116,7 @@ async function openProjectChannel(payload) {
   if (receipt?.cwd !== before) { // §2.2 切项目级联（cwd 实变）
     agentHost?.abortSuspensions() // 旧项目全键挂起窗中止
     if (before) releaseClaimsAll(before) // G-2 旧 cwd 认领释放（切出后本进程在该 cwd 零活绑定；无 manifest ∕ 零认领 ⇒ 核内零写早退）
+    refreshMenu() // D36 重建点②：最近项目随动（成功径 —— cwd 实变/物化后；窗口缺 ⇒ 零动作 fail-open）
   }
   return receipt
 }
@@ -259,6 +260,11 @@ function atComplete(payload) { return requireAgentHost().atComplete(payload?.que
  *  —— 转口宿主记录面（处理体住 `agent-host.mjs`：装配表命中门 + `appendRecord`；reason 闭集 = `bad-key` ∥
  *  `unknown-key`）。宿主未注入 ⇒ fail-loud 直抛（沿 `subagent:stop` 先例）。 */
 function recordAppend(payload) { return requireAgentHost().recordAppend(payload?.key, payload?.record) }
+
+/** `theme:state(payload)` ⇒ `{ ok:true }` ∥ `{ ok:false, reason:"invalid-theme" }`（**勾选态回读** —— 菜单体系批 · D36：
+ *  渲染→主单向；载荷 `{ theme }` 三值闭集）。缓存与菜单重建住 `window.mjs` `setMenuTheme` —— 本档只做转口
+ *  （表外值 ⇒ 零变更 + 记错，零静默）。 */
+function themeState(payload) { return setMenuTheme(payload?.theme) }
 
 /** R1 · 会话维护线两处理体转口（出档 `session-maintenance.mjs`）：`session:gc` ⇒ `{ ok, candidates, confirmed,
  *  deleted, files, skipped, skippedFiles }`；`session:index` ⇒ `{ ok, sessions, changed, messages, toolCalls,

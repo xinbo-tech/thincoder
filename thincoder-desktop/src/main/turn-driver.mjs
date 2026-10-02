@@ -18,7 +18,7 @@
  * **#543（裁定 A · 用户输入零丢失）**：撞帽询问**待答期携消息**中断 ⇒ 消息入宿主忙态队（`queued-input` 原语）；
  * 消费 = 下一回合边界（接管续发链同点）。**#656（KD-52）**：入队单点前移 = `interrupt` 入口（cap 待答 ∧ 携文
  * ⇒ 先执 `queued.add` 权威判；满 ⇒ 整调用回执 `queue-full` **零中止**——询问在场 ∕ 回合照旧 ∕ 零丢失）；
- * `onCapCancelled` 退为核结算通知（零二次入队）；非 cap 结算径撤回臂（按条目引用 · 幂等——防御）。
+ * `onCapCancelled` 退为核结算通知（零二次入队）。
  * 私有装配：排队面（`queued-input.mjs` 单例）· 续发链（`turn-chain.mjs`）· 挂起驱动（`suspension-drive.mjs`）·
  * 提示面（`notify.mjs`）—— 四枚在本档装配；六件为其唯一消费者。
  *
@@ -50,7 +50,7 @@ export function createTurnDriver({
   /** 在飞回合：key → AbortController（单驱动器 ⇒ 禁双 run 竞态）。 */
   const flights = new Map()
   /** 中止墓碑（U-6 ∕ U-7 · 回合代次）：key → 代次计数 —— `dispose` ∕ 切项目两径 +1 ⇒ **该刻前代次**的回合尾
-   *  三查位同失效（`takeOver` 零重注册 ∕ 步边界缝零取批 ∕ `turn-face.mjs` 回合尾落盘零写）。回合起跑在代理上落当前代次
+   *  四查位同失效（`takeOver` 零重注册 ∕ 步边界缝零取批 ∕ `turn-face.mjs` 回合尾落盘零写 ∕ 边界轮 `end`/`cap` 帧 ∥ 记录零写）。回合起跑在代理上落当前代次
    *  （`turn-face.mjs` 单点），查位 = 代次比对 ⇒ 会话重开后的新回合自动合法（**零清除面** —— 无「清墓碑」竞态窗）。*/
   const turnEpochs = new Map()
   /** 本键当前代次（未中止过 ⇒ 0）。 */
@@ -93,9 +93,6 @@ export function createTurnDriver({
   /** 撞帽待答登记（#656 · KD-52 ②）：key → 登记令牌 —— `interrupt` 入口预检判据（cap 待答 ∧ 携文）；
    *  询问结算（作答 ∥ 打断拒结算）即清（`.finally`；守卫 = 本次令牌 —— 防迟到清位误抹后次待答）。 */
   const capPending = new Map()
-  /** 撞帽拒径携文**预入队**登记（#656 · KD-52 ④ —— 入队单点 = `interrupt` 入口）：key → 条目引用 ——
-   *  核结算通知消费 ∕ 非 cap 结算径撤回（按条目引用 · 幂等）。 */
-  const capQueued = new Map()
   /** 撞帽续跑询问（R3 · #505 · KD-T8 薄形 —— 载体 = 既有待决门）：文案随 VSC `panel-turn-loop.mjs:144-147`
    *  原文（词面内容权 = 主 agent —— 沿 R1 先例登记）；缺注入 ⇒ `null`（turn-face 按拒绝收口）。
    *  #656：待答态按会话键登记（`capPending` —— `interrupt` 入口预检判据，落点 = 本包装）。 */
@@ -109,25 +106,15 @@ export function createTurnDriver({
     }
     : null
   /** 撞帽拒径携文**结算通知**（#543 裁定 A ∕ #656 · KD-52 ④）：入队单点已前移至 `interrupt` 入口（cap 待答 ∧
-   *  携文 ⇒ 预检成功即入队）⇒ 本缝**零二次入队** —— 只作队列帧出镜（镜面整置 · 幂等）；预入队条目引用消费
-   *  （结算即交付 —— 消费 = 下一回合边界，接管续发链同点）。`chain` 于装配后取用（调用恒在驱动装配完成后 ⇒
+   *  携文 ⇒ 预检成功即入队）⇒ 本缝**零二次入队** —— 只作队列帧出镜（镜面整置 · 幂等）；预入队条目消费
+   *  = 下一回合边界（结算即交付 —— 接管续发链同点）。`chain` 于装配后取用（调用恒在驱动装配完成后 ⇒
    *  惰性引用安全）。 */
   const onCapCancelled = (key) => {
-    capQueued.delete(key)
     chain.postQueue(key)
-  }
-  /** 非 cap 结算径**撤回臂**（#656 · KD-52 ④ · **防御**）：预入队条目未获核结算消费 ⇒ 按条目引用摘回
-   *  （幂等：未预入队 ∥ 已被消费 ∥ 已被他径摘除 ⇒ 零动作）。实际不可达（cap 待答径中断必达核结算）——
-   *  落地成本零。 */
-  const withdrawCapEntry = (key) => {
-    const entry = capQueued.get(key)
-    if (entry === undefined) return false
-    capQueued.delete(key)
-    return queued.remove(key, entry)
   }
   /** 单回合执行面（`send` ∕ 驱动同源 —— 出档 `turn-face.mjs`；本档供 `post` ∕ `run` ∕ 桥 ∕ 读数 ∕ 在飞表五件
    *  + 步边界取批缝 `queuedPickup`〔用户回合传 ∕ 消化轮不传 —— 分流判据住 turn-face〕
-   *  + 回合代次面 `turnGate`〔中止墓碑三查位同源 —— U-6 ∕ U-7〕+ 撞帽询问缝 `askContinue`〔R3 · #505〕）。 */
+   *  + 回合代次面 `turnGate`〔中止墓碑四查位同源 —— U-6 ∕ U-7〕+ 撞帽询问缝 `askContinue`〔R3 · #505〕）。 */
   const { executeTurn } = createTurnFace({
     post, run, bridge, postUsage, flights,
     // 步边界缝（U-6 第三臂）：中止墓碑同判据查位 —— 陈旧回合零取批（零旧代理消费新会话队 ∕ 迟到投递同族）；
@@ -136,7 +123,6 @@ export function createTurnDriver({
     turnGate, // 起跑落代次（stamp）∕ 回合尾落盘前查位（revoked）—— 判据住本档
     askContinue, // 撞帽询问（缺省 ⇒ 拒绝收口 —— 零静默自续）
     onCapCancelled, // #543 ∕ #656：撞帽拒径携文结算通知（入队单点已前移至 interrupt 入口 —— 零二次入队；缺省 ⇒ 零动作）
-    withdrawCapEntry, // #656：非 cap 结算径撤回臂（防御 —— 按条目引用 · 幂等；缺省 ⇒ 零动作）
     injectUserText, // 注入缝（#632 —— 用户回合起跑前单点；系统轮不扫，判据住 turn-face）
   })
   /** 回合尾续发链 + 排队面出站（出档 `turn-chain.mjs` —— 队列先于接管 · 续发起跑前查在飞表；KD-40 ②③④）。 */
@@ -167,9 +153,9 @@ export function createTurnDriver({
   })
 
   /** 回合输入面（msg 双通道族出档 `turn-input.mjs` —— 见档头 ⑤；返回面同名转口 ⇒ 调用面零改）：`interrupt` 预检
-   *  所需 cap 两表与宿主 `askContinue` ∥ `dispose` ∥ 撤回臂共享引用（#656）。 */
+   *  所需 cap 登记表与宿主 `askContinue` ∥ `dispose` 共享引用（#656）。 */
   const { send, interrupt } = createTurnInput({
-    post, ensure, flights, queued, chain, suspension, drive, projects, denyGates, capPending, capQueued,
+    post, ensure, flights, queued, chain, suspension, drive, projects, denyGates, capPending,
   })
 
   /** 回合驱动尾（`send` ∥ 续发两径**同源**）：成功径 ⇒ 档①通知 + 接管；失败径 ⇒ 接管（后台项不因回合失败而失管）。 */
@@ -218,8 +204,7 @@ export function createTurnDriver({
     if (flight) { flight.abort(); flights.delete(key) } // 在飞回合中止 + 清（`abort` 幂等 —— 窗内回合随会话信号已中止者同判）
     suspension.abort(key)
     if (queued.clear(key)) chain.postQueue(key) // 会话中止 ⇒ 队清 + 零续发（KD-40 边界；空快照出站 —— 镜面随清）
-    capPending.delete(key) // #656：cap 态两表随会话中止清点（防陈旧登记驻留；询问结算面 `.finally` 幂等 —— 零二次清）
-    capQueued.delete(key)
+    capPending.delete(key) // #656：cap 态登记表随会话中止清点（防陈旧登记驻留；询问结算面 `.finally` 幂等 —— 零二次清）
     forgetKey(key) // 装配表清：agents ∕ 在途装配 / 令牌表（装配面持有 —— 清点语义见入参）
     dropScope(key) // 桥面 relay scope 回收（防同键重开继承陈旧 pending / queued 缓存）
     denyGates(key)
@@ -238,8 +223,7 @@ export function createTurnDriver({
     }
     flights.clear() // 在飞表清（防陈旧回合迟到投递 —— 同 `dispose` 收口）
     for (const key of queued.clearAll()) chain.postQueue(key) // 切项目 ⇒ 忙态队清（§2.2 级联 —— 零续发）
-    capPending.clear() // #656：cap 态两表随级联清点（同 `dispose` —— 旧项目询问 ∕ 预入队登记零残余）
-    capQueued.clear()
+    capPending.clear() // #656：cap 态登记表随级联清点（同 `dispose` —— 旧项目询问登记零残余）
     forgetAll?.() // 级联清装配（#515① ∕ #507）：agents ∕ 在途装配 / 令牌表全清（缺省 ⇒ 零动作）
     return suspension.abortAll()
   }

@@ -7,7 +7,7 @@
  * 纪律：纯归约（零 DOM / 零 IPC / 零 `node:` / 零裸包）；键白名单闭集（零新键）· 零键门
  * （非活动会话的项与位标同样在场 —— 切回即见卡）。
  */
-import { badgeStamps } from "./badges.mjs"
+import { badgeStamps, hasPendingFor } from "./badges.mjs"
 
 /** 提问项键白名单（零新键 —— 卡面读取集 = `data-prompt-id` / 题干 / 给答项；载荷缺键 ⇒ 不落槽）。 */
 const QUESTION_KEYS = ["promptId", "question", "options"]
@@ -31,14 +31,17 @@ export function onTask(state, ev) {
 
 /** 提问出场 ⇒ 摘本键项 + 清本键 `approval` 位（§2.11⑦ 零乐观写 —— 两调用面 = 出站回执 `ok === true`（`renderer/mount-cards.mjs`）∥
  *  `stopped` 终局（归约面：中断径各门按取消结算 ⇒ 卡随事件面出场）；位标键源 = 切片键（与置位源 `ev.key` 同值同源）。
+ *  **清码判据 = 两族皆清**（#780 共享判据 —— 两清径同引 `renderer/badges.mjs`）：本键审批族（起源键）尚有项 ⇒ 位标留；
  *  无本键项 ⇒ 原引用（幂等 —— 重复回执 ∥ 无项终局零写）。 */
 export function clearQuestion(state, key) {
   const questions = state.questions
   if (questions === undefined || !Object.hasOwn(questions, key)) return state
   const remaining = { ...questions }
   delete remaining[key]
-  const cleared = badgeStamps(state.tabBadges ?? {}, key, "approval", false)
+  const next = { ...state, questions: remaining }
+  if (hasPendingFor(next, key)) return next // 审批族同键尚有项 ⇒ 位标留（#780：清码 = 两族皆清）
+  const cleared = badgeStamps(next.tabBadges ?? {}, key, "approval", false)
   return cleared.changed
-    ? { ...state, questions: remaining, tabBadges: cleared.badges }
-    : { ...state, questions: remaining }
+    ? { ...next, tabBadges: cleared.badges }
+    : next
 }

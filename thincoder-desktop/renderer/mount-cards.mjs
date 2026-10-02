@@ -9,7 +9,7 @@
  *      出口锚集 = 两核卡的**同值函数**（同载荷 ⇒ 同锚）⇒ 不另比；
  *   ④ 出站 `submitAnswer`：窄桥 `question:respond`（作答 / 取消两向 —— 取消 `answer: null`）；**零乐观摘除** ——
  *      回执 `ok` 真 ⇒ 纯动作 `clearQuestion`（`questions` 切片 + `approval` 位标同清，单源 =
- *      `renderer/events.mjs`）；失败 / 拒绝 / 抛 ⇒ **本档触发一次卡面重挂**（核卡点按即摘 ⇒ 重挂使卡复现在场可重试；
+ *      `renderer/events.mjs`）⇒ 帧挂载摘卡恰一次；失败 / 拒绝 / 抛 ⇒ **零 DOM 写**（核零摘除 ⇒ 卡恒在场可重试；
  *      抛 / 拒 ⇒ `respondQuestion` 自记错；**回执拒收**〔`ok` 假〕⇒ 本档记 `receipt.reason` —— 两半合「失败」全形，各自单记零双记）；
  *   ⑤ 会话键 = **入口现刻读**（本卡所属会话 —— 回执在途可能已切会话，按现刻 `activeSession` 摘会误摘别会话
  *      待答项）；摘项前验 `promptId` 仍是本项（已被事件面摘 ∥ 已被新项替换 ⇒ 零写，仅回执判定）；
@@ -54,8 +54,8 @@ function focusComposer() {
 }
 
 /** 提问出口核心（零 DOM · 两面可注入）：窄桥 `question:respond` ⇒ 回执 `ok` 真 ⇒ 摘本键提问项（切片 + 位标
- *  同清）；**卡退场非乐观** —— 核卡点按即摘（核实现）而切片零乐观写 ⇒ 失败径由**调用面**重挂使卡复现可重试。
- *  返回 = 出站是否被受理（`ok` 真）。 */
+ *  同清）；**卡退场非乐观** —— 核零摘除（卡留场）∥ 回执 `ok` 真 ⇒ 切片清 ⇒ 帧挂载摘卡；失败 ⇒ 零 DOM 写
+ *  （卡恒在场可重试）。返回 = 出站是否被受理（`ok` 真）。 */
 export async function submitAnswer({ store = defaultStore, host } = {}, promptId, answer) {
   const key = store.get()?.activeSession ?? null
   if (key === null) {
@@ -145,14 +145,11 @@ export function mountCards(root, state, handlers = {}) {
 // ─── 装配（接线形通则 = `docs/desktop/design/RENDERER.md` §1.1）────────────
 
 /** 卡族装配：`paintCards`（挂载面**纯读**现态 —— 容器缺位 ⇒ `mountCards` 空转）+ 两 handlers（薄壳 ——
- *  出站与清除判据全归 `submitAnswer`；失败径 ⇒ 本档重挂一次使卡复现）。 */
+ *  出站与清除判据全归 `submitAnswer`；失败径 ⇒ 零 DOM 写）。 */
 export function attachCards(host, deps = {}) {
   const store = deps.store ?? defaultStore
-  const onAnswer = (promptId, answer) => {
-    void submitAnswer({ store, host }, promptId, answer).then((accepted) => {
-      if (accepted !== true) paintCards() // 失败 / 拒绝 / 抛 ⇒ 卡面重挂（核卡点按即摘 ⇒ 复现在场可重试）
-    })
-  }
+  // 失败 / 拒绝 / 抛 ⇒ 零 DOM 写（核零摘除 ⇒ 卡恒在场可重试——本档零重挂）
+  const onAnswer = (promptId, answer) => { void submitAnswer({ store, host }, promptId, answer) }
   const onAnswered = () => focusComposer() // P3②（核卡 `deps.onAnswered` 注入点）
   const paintCards = (state = store.get()) => {
     const root = document.querySelector(CARDS_SLOT)

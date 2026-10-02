@@ -33,7 +33,7 @@ process.env.USERPROFILE = _home
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url)) // 仓根（docs/batches 两层深）
 const vsc = (rel) => pathToFileURL(join(ROOT, "thincoder-vscode", rel)).href
-const core = (rel) => pathToFileURL(join(ROOT, "thincoder-core", rel)).href
+const core = (rel) => pathToFileURL(join(ROOT, "thincoder-vscode", "node_modules", "@thincoder", "core", rel)).href
 const src = (rel) => readFileSync(join(ROOT, rel), "utf8")
 
 // ─── vscode 桩（registerHooks 短接——只供装载，行为面零触） ───────────────────────────────

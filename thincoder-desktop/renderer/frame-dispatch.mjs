@@ -17,11 +17,11 @@ import { STATUS_KEYS } from "./mount-status.mjs"
 export const SESSION_KEYS = ["project", "sessions", "activeSession", "tabBadges", "locale", "ledger"]
 /** 对话流帧触发切片（`locale` 在内：文案随词表 · `pool`：审批卡宿对话流 · `project`：引导码随 cwd——批 B 追加轮 ·
  *  `pending`：输入区上方待发送带——「对齐第二批」项 2 · `digest`：流内消化行组——桌面空闲唤醒批 · `compress`：流内压缩
- *  状态行——R4 · `timerNotice`：流内到期触发行组——timer-wake 阶段 2 · `stopMark` / `ledgerLines`：两尾组的单变触发
- *  —— 「对齐第三批」项 6 / 12；**`segView`：巨块段窗滚动拍（E4-JS 支 —— 哨兵键，非切片：无对应 store 切片，
+ *  状态行——R4 · `timerNotice`：流内到期触发行组——timer-wake 阶段 2 · `stopMark` / `ledgerLines` / `helpLines`：三尾组
+ *  （停止痕 ∥ 台账行 ∥ `/help` 行族）的单变触发——「对齐第三批」项 6 / 12 ∥ `/help` 增量；**`segView`：巨块段窗滚动拍（E4-JS 支 —— 哨兵键，非切片：无对应 store 切片，
  *  仅作对话流面帧触发**）；`settings` 不入表 —— 欢迎条文案二值随重挂径，且帧尾态刷判据 = 码面（见 `views/chat-guide.mjs`））
  *  ——自 `app.mjs` 迁入。 */
-export const CHAT_KEYS = ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "project", "pending", "digest", "compress", "timerNotice", "stopMark", "ledgerLines", "segView"]
+export const CHAT_KEYS = ["activeSession", "blocks", "history", "following", "pendingNew", "locale", "pool", "project", "pending", "digest", "compress", "timerNotice", "stopMark", "ledgerLines", "helpLines", "segView"]
 
 /** 五面表（**面序 = 派发序** —— 会话控制条 → 状态行 → 对话流 → 池区 → 卡面；键集 = 各行自持处单源）。 */
 export const FRAME_FACES = Object.freeze([

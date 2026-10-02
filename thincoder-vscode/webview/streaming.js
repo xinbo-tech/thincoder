@@ -122,8 +122,8 @@ export function finish(aborted) {
   // ——`agent-turn.mjs:265`）；必须先于下方 `ctx._toolRefs = {}` 复位。
   sweepUnsettledToolCards(ctx)
   // A turn end without an answer leaves a stale inline question card — drop it
-  // (aborted/error paths; a completed turn answers via questionResponse which
-  // removes its own card).
+  // (aborted/error paths; the card is removed by the shell on the answered path
+  // — `question.js` `onAnswered`).
   if (aborted) document.querySelectorAll(".question-card").forEach((el) => el.remove())
   if (aborted) {
     // Match CLI: push "[stopped]" as a line in the output stream
@@ -134,12 +134,12 @@ export function finish(aborted) {
       ctx.currentBubble.className = "bubble content"
       ctx.currentBlock.appendChild(ctx.currentBubble)
     }
-      ctx.currentRaw += "\n\n"
-      // Append the "[stopped]" indicator AFTER markdown rendering — raw HTML
-      // inside ctx.currentRaw would break if md() ever starts escaping HTML
-      // (security hardening) or if the i18n string contains < > &.
-      const indicator = `<span style="color:var(--vscode-editorWarning-foreground, #cca700);font-style:italic">${escHtml(t("status.stopped"))}</span>`
-      try { ctx.currentBubble.innerHTML = md(ctx.currentRaw) + indicator } catch { ctx.currentBubble.textContent = ctx.currentRaw + " " + t("status.stopped") }
+    ctx.currentRaw += "\n\n"
+    // Append the "[stopped]" indicator AFTER markdown rendering — raw HTML
+    // inside ctx.currentRaw would break if md() ever starts escaping HTML
+    // (security hardening) or if the i18n string contains < > &.
+    const indicator = `<span style="color:var(--vscode-editorWarning-foreground, #cca700);font-style:italic">${escHtml(t("status.stopped"))}</span>`
+    try { ctx.currentBubble.innerHTML = md(ctx.currentRaw) + indicator } catch { ctx.currentBubble.textContent = ctx.currentRaw + " " + t("status.stopped") }
   }
   if (ctx.currentBubble) attachCopyButtons(ctx.currentBubble)
   ctx.currentBubble = null; ctx.currentBlock = null; ctx.currentTools = []; ctx.currentRaw = ""; ctx.currentReasoning = null; ctx.currentReasoningRaw = ""; ctx.hadToolResult = false

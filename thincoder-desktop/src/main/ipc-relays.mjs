@@ -15,6 +15,8 @@ import { providerDelKey, providerList, providerModels, providerRemove, providerS
 import { mcpList, mcpReconnect, mcpRemove, mcpSave, mcpTools, mcpUpdate } from "./mcp-servers.mjs"
 import { batchStatus, ledgerRead } from "./project-info.mjs"
 import { runIndexBuild } from "./index-status.mjs"
+// 语言写径菜单重建（D36 重建点③ —— `config:write` 成功径 ⇒ 菜单随语言重建；单向 import `window.mjs` —— 零环）。
+import { refreshMenu } from "./window.mjs"
 
 /** R2 · 索引数据面两通道（构建处理体出档 `index-status.mjs` ∕ 读数装配出档 `settings.mjs`）：两通道
  *  **无载荷**——`dir` = 主进程当前项目内存态（`currentCwd()`）；未开项目 ⇒ 读数零计数（零假造）·
@@ -31,7 +33,7 @@ export function settingsEnvChannel(payload) { return settingsEnv(payload) }
 export function settingsToolsChannel(payload) { return settingsTools(payload) }
 export function mcpToolsChannel(payload) { return mcpTools(payload) }
 
-/* ─── 设置族十二项处理体：转口三档模块，本档零算法副本 ─── */
+/* ─── 转口群十九项处理体（本块设置族十六 ∕ 配置写一 ∕ 台账相位两）：转口四档模块，本档零算法副本 ─── */
 /** `provider:list`（无入参）⇒ `{ ok, providers, active }`（密钥只回遮罩值）。 */
 export function providerListChannel() { return providerList() }
 /** `provider:save(payload)` ⇒ `{ ok, reason }`：载荷 `{ name, shape, preset?, baseURL?, model?, key?, format?, active? }`。 */
@@ -62,8 +64,13 @@ export function mcpRemoveChannel(payload) { return mcpRemove(payload, { listAgen
 export function mcpUpdateChannel(payload) { return mcpUpdate(payload, { listAgents: liveAgents }) }
 /** `mcp:reconnect(payload)` ⇒ `{ ok, tools }` ∥ `{ ok:false, reason }`：载荷 `{ name }`（S9 行重连——先断后连）。 */
 export function mcpReconnectChannel(payload) { return mcpReconnect(payload, { listAgents: liveAgents }) }
-/** `config:write(payload)` ⇒ `{ ok, reason, locale, dict, configured }` ∥ `{ ok:false, reason }`：载荷 `{ patch }`（仅 `locale`）。 */
-export function configWriteChannel(payload) { return configWrite(payload) }
+/** `config:write(payload)` ⇒ `{ ok, reason, locale, dict, configured }` ∥ `{ ok:false, reason }`：载荷 `{ patch }`（仅 `locale`）；
+ *  写成功径 ⇒ 菜单重建（D36 重建点③ —— 语言随动；窗口缺 ⇒ 零动作 fail-open）。 */
+export function configWriteChannel(payload) {
+  const receipt = configWrite(payload)
+  if (receipt?.ok === true) refreshMenu()
+  return receipt
+}
 /** `ledger:read(payload)` ⇒ `{ ok, counts, thresholdReached }` ∥ `{ ok:false, reason }`：载荷 `{ cwd? }`。 */
 export function ledgerReadChannel(payload) { return ledgerRead(payload) }
 /** `batch:status(payload)` ⇒ `{ ok, phase }` ∥ `{ ok:false, reason }`：载荷 `{ cwd? }`（`missing`/`invalid`）。 */

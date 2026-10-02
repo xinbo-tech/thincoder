@@ -21,10 +21,9 @@
  *   M3  机检③：非 cap 态携文 ⇒ 核注入径零回归（reason 携文 ∕ 换代重入 `resume:true` ∕ 队零条目）
  *   M4  端侧可见形（真机腿①端侧机械面）：wire 收 `queue-full` ⇒ `slotFullNotice(message)` 恰一次
  *       （= 核件 toast + 文本回注触发单点）；负向两臂：`idle` ∕ `ok` ⇒ 零调用（既有形零变）；缺缝 ⇒ 零动作
- *   M5  结构核 ∕ 词键 ∕ 撤回原语：`input.slotFull` 词键两语在场（i18n 零增）· 回注缝供面（mount-composer 源面）
- *       · 撤回臂在位（turn-face 调用 + driver 注入）· `queued.remove` 纯动作（命中 ∕ 未命中 ∕ 跨键 ∕ 同文异引用 ∕ 幂等）
+ *   M5  结构核 ∕ 词键：`input.slotFull` 词键两语在场（i18n 零增）· 回注缝供面（mount-composer 源面）
  * 纪律：行为断言优先 ∕ 结构断言只落机器可核形；真机 Electron 面（询问卡实际在场 ∕ toast 实际在场 ∕ 输入框实际回注）
- * 归父侧探针闭合。撤回臂（KD-52 ④）为**防御**设计（§2.11 披露③：实际不可达）——本件只核载体（原语 + 调用点在位）。
+ * 归父侧探针闭合。
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -43,15 +42,16 @@ const until = async (fn, ms = 8000) => {
 }
 const tick = () => new Promise((r) => setTimeout(r, 0))
 
-const [driverMod, wireMod, queuedMod, i18nMod, coreQueued] = await Promise.all([
+const [driverMod, wireMod, i18nMod, coreQueued] = await Promise.all([
   mod("thincoder-desktop/src/main/turn-driver.mjs"),
   mod("thincoder-desktop/renderer/composer-wire.mjs"),
-  mod("thincoder-desktop/src/main/queued-input.mjs"),
   mod("thincoder-desktop/renderer/i18n.mjs"),
   mod("thincoder-core/queued.mjs"),
 ])
-// ContinueError 与 turn-face 同实例（`@thincoder/core/agent.mjs` → 同一 realpath 档 —— 平 node 同源解析）
-const { ContinueError } = await mod("thincoder-core/agent.mjs")
+// ContinueError 与 turn-face 同实例 —— 经**桌面端路径**取（junction 归一）：直取 `thincoder-core/agent.mjs` 在盘符
+// 大小写下会生成第二个 ESM URL 键（`d:` 直路 ∥ junction 目标 `D:`——2026-10-01 实测 `instanceof` 失效 ⋯ 撞帽径
+// 走错路）；本路与 turn-face 的 `@thincoder/core/agent.mjs` 解析同源（同 junction realpath）。
+const { ContinueError } = await mod("thincoder-desktop/node_modules/@thincoder/core/agent.mjs")
 const QUEUED_MAX_ITEMS = coreQueued.QUEUED_MAX_ITEMS
 const KEY = "1"
 
@@ -222,9 +222,9 @@ test("M4 端侧可见形：queue-full ⇒ slotFullNotice(message) 恰一次；id
   await tick() // 缺缝 ⇒ 零动作零抛（向后兼容：其它装配面不注入亦不炸）
 })
 
-// ─── M5 结构核 ∕ 词键 ∕ 撤回原语 ─────────────────────────────────────────────
+// ─── M5 结构核 ∕ 词键 ─────────────────────────────────────────────
 
-test("M5 结构核 ∕ 词键 ∕ 撤回原语：词键两语在场 · 回注缝供面 · 撤回臂在位 · queued.remove 纯动作", async () => {
+test("M5 结构核 ∕ 词键：词键两语在场 · 回注缝供面", async () => {
   // ① 词键复用（i18n 零增）：`input.slotFull` 两语在场（非键名回显）
   assert.notEqual(i18nMod.t("input.slotFull"), "input.slotFull", "词键在场（零新键）")
   assert.ok(typeof i18nMod.HOST_DICT.zh?.["input.slotFull"] === "string" && typeof i18nMod.HOST_DICT.en?.["input.slotFull"] === "string", "两语键集在场")
@@ -235,23 +235,7 @@ test("M5 结构核 ∕ 词键 ∕ 撤回原语：词键两语在场 · 回注缝
   assert.match(mount, /el\.value = el\.value === "" \? text :/, "文本回注写面在场（空框直置 ∕ 非空尾并 —— 零覆盖）")
   assert.match(mount, /el\.dispatchEvent\(new Event\("input"\)\)/, "自适应重算（高度写面单源 = 核件 —— 缓存同源）")
   assert.match(mount, /slotFullNotice, \/\/ #656/, "缝注入写面（装配面单点）")
-  // ③ 消费点 ∕ 撤回臂 ∕ 回执第三 reason（源面判据）
+  // ③ 消费点 ∕ 回执第三 reason（源面判据）
   assert.match(text("thincoder-desktop/renderer/composer-wire.mjs"), /queue-full" && typeof slotFullNotice === "function"\) slotFullNotice\(message\)/, "queue-full 单点消费（写面）")
-  assert.match(text("thincoder-desktop/src/main/turn-face.mjs"), /withdrawCapEntry\(key\)/, "撤回臂调用（非 cap 结算径 —— 防御）")
-  const driver = text("thincoder-desktop/src/main/turn-driver.mjs")
-  assert.match(driver, /withdrawCapEntry, \/\/ #656/, "撤回臂注入（driver → face）")
   assert.match(text("thincoder-desktop/src/main/turn-input.mjs"), /reason: "queue-full"/, "回执第三 reason 在场（interrupt 入口预检）")
-  // ④ 撤回原语：按引用（非等值）· 幂等 · 跨键零误伤
-  const queue = queuedMod.createQueuedInput()
-  const e1 = { text: "同文", ts: 1 }, e2 = { text: "同文", ts: 2 }, e3 = { text: "他键", ts: 3 }
-  queue.add(KEY, e1)
-  queue.add(KEY, e2)
-  queue.add("2", e3)
-  assert.equal(queue.remove(KEY, e1), true, "命中 ⇒ 摘除")
-  assert.deepEqual(queue.snapshot(KEY).map((e) => e.ts), [2], "同文异引用零误伤（按引用匹配）")
-  assert.equal(queue.remove(KEY, e1), false, "幂等：复摘零动作")
-  assert.equal(queue.remove("2", e2), false, "跨键零误伤")
-  assert.deepEqual(queue.snapshot("2").map((e) => e.text), ["他键"], "他键零动")
-  assert.equal(queue.remove(KEY, e2), true, "尾条摘除")
-  assert.deepEqual(queue.snapshot(KEY), [], "空队（零残留）")
 })

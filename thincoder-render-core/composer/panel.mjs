@@ -7,9 +7,11 @@
  * `#abort-btn`）∕ `#paste-bar>#paste-badge` ∕ `#controls-row`——ids ∕ 类名照 VSC `index.html:42-63` 输入段，
  * 结构单源 = 该骨架；`#status-line` 属状态行面（A12 本批外）不建）② 键位 B1–B7（Enter ∕ IME 门 ∕ Ctrl+C ∕
  * Ctrl+I 中断模态 ∕ Ctrl+U ∕ ↑↓ 历史 ∕ 自增高）③ 提交面（直发 ∕ 忙态排队出泡（B12 本地先行）∕ 满队 toast）④ 忙态派生
- * （占位符三态 守卫>busy>常态 ∕ 两钮显隐 ∕ 模型推理忙态门）⑤ 推送接线（五类经 ③ `state.subscribe`）。
+ * （占位符三态 守卫>busy>常态 ∕ 两钮显隐 ∕ 模型推理忙态门）⑤ 推送接线（五类经 ③ `state.subscribe`）
+ * ⑥ **斜径面**（2026-10-01 批 · §2 KD-RC-12 ∥ §5 条 6）：提交面拦截段（段序 =「空文本 → 无会话守卫」之后、「忙态入队」
+ * 之前）——命中 ∥ 未知回落一律**不进消息径**（零 `msg:send` ∥ `queuedUserMessage` ∥ 用户块 ∥ loading）；反馈键三键发射点 = §5 条 6。
  *
- * 注入面（五项）：
+ * 注入面（六项）：
  *  ① `root`——挂载根 DOM 锚（本档按 VSC 序 append 四个子树，不造 `#toolbar` 容器）；
  *  ② `post(type, payload)`——出站归一（端绑 `postMessage({ type, ...payload })`；`"abort"` 无载荷；
  *     `"interrupt" { message }` ∕ `"userMessage"` ∕ `"queuedUserMessage"` ∕ `"atComplete"` ∕
@@ -24,15 +26,18 @@
  *     `onTurnStart`（回合起点动作：`_turnStart` 归零 + `clearPanels`（含 `_suspended` 条件）+
  *     工具结果位清）· `onUserEcho(text, ts) → 用户气泡`（`addUser`）· `onWelcomeDismiss`（欢迎条移除）·
  *     `onAgentSettings(settings)`（设置面板刷新）· `syncModeState(flags)`（模式位跨面镜像）·
- *     `confirmRemoveProvider(onConfirm)`（删条确认门）· `closeSiblingDropdowns`（邻面下拉让位））。
+ *     `confirmRemoveProvider(onConfirm)`（删条确认门）· `closeSiblingDropdowns`（邻面下拉让位））；
+ *  ⑥ `slash`（**可选——不传 ⇒ 现行为零变**（VSC 零接缝）；2026-10-01 批 · §5 条 6）：`{ commands }` = 端侧命令表
+ *     （条目形 = `{ name, aliases?, rejectKey?, run(ctx) → boolean }`；落点 = `desktop/renderer/slash-commands.mjs`）——
+ *     `actions` 由本档装配（「斜径面装配」段 = 钮 handler 提取出的同一函数，同钮同门）。
  *
  * 忙态 ∕ 队列面触发点（端接线）：`loading` 推送 ⇒ `setLoading(on)`；`turnState` ∕ `suspension` 推送 ⇒
  * `setLoading()`（缺省 = 现刻 `isRunning`——VSC `panels.js:95,114` `setLoading(ctx, ctx.isRunning)` 同式）；
  * `workspaceGuard` 推送 ⇒ `applyBusyLock()`（VSC `chat-messages.js:99` 同式）。
  *
- * **拆分债注记**：本档 **440 行**（口径 = `read` 工具行数，同设计 §2.7 表头注）——越 300 顾问线（设计估值 ≈330；
- * 实读偏离 = 三档合流后逐字注释面实量），距 500 硬限余 **60**；触发 = 越 500 前 ∕ 下次实质触碰；候选拆分面 =
- * 忙态派生段（`applyModelSwitchGate` ∕ `applyBusyLock` ∕ `setLoading`——`loading.js` 面）出档。
+ * **拆分债注记**：本档 **489 行**（口径 = 内容行数（文末换行不计），同设计 §2.6 表头注）——越 300 顾问线（设计本批
+ * 预估 ≈474；实读偏离 = 斜径面（⑥）新增注释面实量），距 500 硬限余 **11**；触发 = 越 500 前 ∕ 下次实质触碰；
+ * 候选拆分面 = 忙态派生段（`applyModelSwitchGate` ∕ `applyBusyLock` ∕ `setLoading`——`loading.js` 面）出档。
  *
  * 回合起点钩的相对序（对 VSC 逐行的唯一近似，见 `send.js:62-72`）：`onTurnStart` 置于 `setLoading` **之前**——
  * 取「`_turnStart` 先于状态行刷新落位」（VSC `:62` 早于 `:68` 的同点，elapsed 段首帧即新回合）；其 `clearPanels`
@@ -45,6 +50,7 @@ import { createAtMenu } from "./atmenu.mjs"
 import { createAttachBar } from "./attach.mjs"
 import { createControlsRow } from "./controls.mjs"
 import { createModelMenu } from "./model-menu.mjs"
+import { routeSlash } from "./slash.mjs"
 
 /**
  * composer 面板工厂。返回端侧接线**最小面**：
@@ -53,9 +59,13 @@ import { createModelMenu } from "./model-menu.mjs"
  * （VSC `getModels` 接线面）。提交面（`send`）随两钮绑定内生，不出面。
  */
 export function createComposerPanel(deps = {}) {
-  const { root, post, state = {}, hooks = {} } = deps
+  const { root, post, state = {}, hooks = {}, slash: slashDeps } = deps
   if (!root) throw new Error("createComposerPanel: deps.root（挂载根 DOM 锚）必给")
   if (typeof post !== "function") throw new Error("createComposerPanel: deps.post(type, payload) 必给")
+
+  // ── 斜径面注入读面（§5 条 6——**可选**：不传 ⇒ 现行为零变）：`commands` = 端侧命令表（落点 =
+  // `desktop/renderer/slash-commands.mjs`）；`actions` = 本档装配（完整对键形——下「斜径面装配」段）。
+  const slashCommands = Array.isArray(slashDeps?.commands) ? slashDeps.commands : null
 
   // ── 面板态（VSC `ctx` 的 composer 面：input.js ∕ send.js ∕ loading.js 三档共享——核件内生）──
   const ctx = {
@@ -264,6 +274,15 @@ export function createComposerPanel(deps = {}) {
   inputRow.append(attach.fileInput, ctx.inputEl, attach.attachBtn, sendBtn, abortBtn)
   root.append(atMenu.el, inputRow, attach.pasteBar, controls.el)
 
+  // ── 斜径面装配（§5 条 6 动作句柄表——**同钮同门 ∥ 单一实现**）：各 = 钮 handler 提取出的同一函数（落点 = 两工厂
+  // 实例导出面 `model-menu.mjs` `open` ∥ `controls.mjs` 三 toggle；门随函数）；消费面 = `cmd.run` 的 `ctx.actions`。
+  const actions = {
+    openModelMenu: modelMenu.open,
+    toggleAuto: controls.toggleAuto,
+    togglePlan: controls.togglePlan,
+    toggleEng: controls.toggleEng,
+  }
+
   // ── 提交面（`send.js` 逐字；DOM 查询 → 元素引用；跨面副作用 → ⑤ hooks）──
 
   // 队列镜像（读面 = ③ `state.queue()`——"共享镜面"；本地先行增量 = 同 tick 二连 Enter 守卫，
@@ -292,6 +311,9 @@ export function createComposerPanel(deps = {}) {
       showToast(t("workspace.required"))
       return
     }
+    // ── 斜径拦截（§2 KD-RC-12 ∥ §5 条 6：段序 =「空文本 → 无会话守卫」之后、「忙态入队」之前）——
+    // 命中 ∥ 未知回落一律**不进消息径**；非斜径（`routeSlash` 返 `null`）⇒ 照下方既有径（忙态分流不动）。
+    if (slashCommands !== null && handleSlash(text)) return
     // C-B2-6（busy-injection 批 2026-09-21 · busy-extend 批 2026-09-22 扩面 · queue-visible 批 2026-09-24
     // 多槽 + 待发送标记 · `WEBVIEW-INPUT.md` §1）：busy 提交**一律排队**——判据 = `running`（`_suspended`
     // 不再分流：挂起会话内与普通回合同判据）⇒ 本地气泡先行（送达时即该消息 user 回声面）+ 出泡即标记
@@ -341,6 +363,34 @@ export function createComposerPanel(deps = {}) {
     post("userMessage", { text, model: sel.model, reasoning: sel.reasoning, provider: sel.provider, images })
     // If session title is auto-generated (Session N), show a hint that a better title is coming
     hooks.onTitleHint?.()
+  }
+
+  /** 斜径提交面拦截（解析 ∥ 路由 = `composer/slash.mjs`；拦截段 ∥ 返值语义 = §5 条 6）。返 `true` = 已拦（不再走
+   *  消息径——本段不触 `post` ∥ `setLoading` ∥ `hooks.onTurnStart` ∥ `hooks.onUserEcho`）；`false` = 非斜径。
+   *  反馈键发射点（§5 条 6 一行表）：`slash.unknown` ∥ `slash.args` = 本档 · 条目 `rejectKey`（`run` 返假径）。 */
+  function handleSlash(text) {
+    const hit = routeSlash(text, slashCommands)
+    if (hit === null) return false
+    if (hit.kind === "unknown") {
+      showToast(t("slash.unknown", { name: hit.name })) // 未知回落（CLI 同判：不发送）+ 文本保留
+      return true
+    }
+    if (hit.args !== "") {
+      showToast(t("slash.args")) // run 前门（本批在册命令均不收参 ⇒ 通用拒）+ 文本保留
+      return true
+    }
+    // `run` 返真 = **已受理**（已执行 ∨ 二段交互在场——`/auto` popover 径同判）⇒ 清框 + 入历史；返假 = 门拒 ⇒ 文本保留 +（`rejectKey` toast）。
+    if (hit.cmd.run({ args: hit.args, raw: text, post, actions }) !== true) {
+      if (typeof hit.cmd.rejectKey === "string") showToast(t(hit.cmd.rejectKey))
+      return true
+    }
+    const h = ctx._inputHistory
+    if (h[h.length - 1] !== text) h.push(text) // dedupe consecutive repeats（同提交面）
+    ctx._historyIdx = -1
+    ctx._inputDraft = ""
+    ctx.inputEl.value = ""
+    ctx.inputEl.style.height = "auto"
+    return true
   }
 
   // ── 忙态面（`loading.js` 逐字；DOM 查询 → 元素引用；renderStatusBar → ⑤ `onStatusRefresh`）──

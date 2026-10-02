@@ -238,6 +238,19 @@ _electron.launch({
 12. **本档「（拟新增）」标记的清除**：**已落**（2026-09-27 实施后对账轮——标记在实施落档后失据）；先例 = `docs/desktop/design/RENDERER.md` §1 去标记六处。
 13. **改善项（2026-09-27 登记；2026-09-29 收正——非缺口）**：核侧家目录隔离现经 `USERPROFILE` / `HOME` 覆写（核侧 `os.homedir()` 读取面——系统原语）；显式参数 seam = **可选**（用户 2026-09-27 口径「参数通道偏好 · 非禁令」）；现形已实证可用（§8 第 11 项）⇒ **非缺口**（「另批裁」句退场）；触发条件 = 核侧新增 home 依赖点令 E2E 隔离失效 ⇒ 随触面批补 seam。
 
+## 9. 文件账（本域 · 迁自 `PROJECT.md` §4.1——as-of 2026-10-02）
+
+### 9.1 本端文件清单与行数预算（测试基建族行 · 迁自 `PROJECT.md` §4.1——逐字；切片 3 判域迁入——`.gitignore` 混合行按 KD-10 单源归本域，`dist/` 半随行在册）
+
+| 文件 | 预估行数 | 说明 |
+|---|---|---|
+| `thincoder-desktop/test/run.mjs` · `thincoder-desktop/test/files.mjs` | **49 / 3**（实读 2026-09-29） | 单入口 + 显式清单（清单↔盘上两向自检——照 `docs/core/design/TESTING.md` §10 形态；`files.mjs` 值口径 = 内容行数）；`thincoder-desktop/test/` 现盘 = `files.mjs` ∕ `rc-resolve.mjs` ∕ `run.mjs` 三档（测试面全清重置后——单元 = 单元测试档不登记 ∕ 集成件 = 落盘时登记 +1；单源 = `docs/batches/2026-09-28-test-layer-prompts.md` §1.15–§1.23） |
+| 用例模块（原 48 档） | — | **2026-09-28 测试树全清重置**：存量测试全退（清单 = `thincoder-desktop/test/files.mjs` 空清单）；单元 = 单元测试档（名随批次档 · 住 `docs/batches/` · 不登记 · 随批留存）；集成件 = 落盘时登记 +1（单源 = `docs/batches/2026-09-28-test-layer-prompts.md` §1.15–§1.23；同上行） |
+| `thincoder-desktop/.gitignore` | **8**（实读 2026-10-01〔实施落盘〕；前读 5（实读 2026-09-29）；修复轮 +3——注释 ∥ `dist/` 条目） | 忽略 `thincoder-desktop/test/artifacts/`（运行期产物不进 git——KD 单源 = 本档 KD-10）∥ `dist/`（打包产物不进 git） |
+
+**行数面机检**：本表迁出后，`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`）读取面 = `docs/desktop/design/PROJECT.md` §4.1（运行根单读）——本表行按同值同步；后续本域新档由落盘批在本表补行（沿 §4.1 纪律）。
+**原址指针**：本族各行在 `docs/desktop/design/PROJECT.md` §4.1 已改一行指针（as-of 2026-10-02）。
+
 ## 变更记录
 
 - 2026-09-26 建档：桌面端 E2E 测试基建设计（`playwright-core` 驱动 · `thincoder-desktop/test/integration/` 首例 · 家目录隔离 · 固定 PNG 落点 · 单入口并入）。
@@ -287,3 +300,4 @@ _electron.launch({
   `[data-slot="projects"]`（R13 已裁撤）⇒ `[data-slot="session-control"]`（骨架 = `thincoder-desktop/renderer/index.html:40`；常量 = `thincoder-desktop/renderer/mount-sessions.mjs:37` `SESSION_SLOT`）。**零新语义**（锚面收正）。
 - 2026-09-29（**撤会话头 + 工具头色批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-desktop-head-toolcolor.md` §2 · 台账 #668）：§6 `T-DSK43` 行 ③ 句随动——「会话头三值控件 `disabled`」⇒ **「输入区模型 ∕ 推理钮 `disabled`」**（会话头面退场；三值居所 = 输入区控件行——单源 = `docs/desktop/design/UI.md` §1 输入区行）。**零新语义**（面名收正）。
 - 2026-09-29（**口子清零二轮 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-hatch-clearance-2.md` §2 · 台账 #673）：§8 项 13 收正——改善项 = **可选**（用户 2026-09-27 口径「参数通道偏好」）· 现形已实证 ⇒ **非缺口**（「另批裁」句退场）；触发条件 = 核侧新增 home 依赖点令隔离失效 ⇒ 随触面批补 seam。**零新语义**。明细 = 批档 §2。
+- 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 2c 前置步 · 文件账分片轮（切片 3 · 余量收尾）· eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：**§9 新立**（文件账）——§9.1 本域族行 **3** 行（`thincoder-desktop/test/run.mjs` · `thincoder-desktop/test/files.mjs` ∥ 用例模块行 ∥ `.gitignore`〔KD-10 单源——`dist/` 半随行〕——自 `docs/desktop/design/PROJECT.md` §4.1 逐字迁入；原址各改一行指针）。**零新语义**（迁移 ∥ 指针 ∥ 判域在册）。
