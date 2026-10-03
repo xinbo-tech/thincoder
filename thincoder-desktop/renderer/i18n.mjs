@@ -177,7 +177,7 @@ export const HOST_DICT = Object.freeze({
     "msg.assistant": "ThinCoder",
     "queued.pending": "Queued — sent automatically, no interruption",
     // ── 首启引导面（批 B 追加轮：`views/chat-guide.mjs` —— 两码文案）──
-    "chat.guide.noProject": "No project open — open a folder to start",
+    "chat.guide.noProject": "No working directory open — open a folder to start",
     "chat.guide.noSession": "No session yet — create one to start chatting",
     "pool.title": "Activity",
     "pool.family.approvals": "Approvals",
@@ -209,7 +209,7 @@ export const HOST_DICT = Object.freeze({
     "wizard.step.dir": "Folder",
     "wizard.next": "Next",
     "wizard.finish": "Finish",
-    "wizard.dir.hint": "Pick a project folder — you can change it later.",
+    "wizard.dir.hint": "Pick a working directory — you can change it later.",
     "wizard.dir.pick": "Choose folder…",
     "wizard.save": "Save provider",
     // ── 批 B 面（档位两特值词 / 状态栏读数串 —— 键名本档拟定，登记面即此处）──
@@ -283,7 +283,7 @@ export const HOST_DICT = Object.freeze({
     "msg.assistant": "ThinCoder",
     "queued.pending": "待发送 · 不打断当前执行，自动发送",
     // ── 首启引导面（批 B 追加轮：`views/chat-guide.mjs` —— 两码文案）──
-    "chat.guide.noProject": "未打开项目——先打开一个项目目录即可开始",
+    "chat.guide.noProject": "未打开工作目录——先打开一个目录即可开始",
     "chat.guide.noSession": "尚无会话——新建一个会话即可开始对话",
     "pool.title": "活动",
     "pool.family.approvals": "待审批",
@@ -315,7 +315,7 @@ export const HOST_DICT = Object.freeze({
     "wizard.step.dir": "目录",
     "wizard.next": "下一步",
     "wizard.finish": "完成",
-    "wizard.dir.hint": "选择项目目录——之后也可以更改。",
+    "wizard.dir.hint": "选择工作目录——之后也可以更改。",
     "wizard.dir.pick": "选择目录…",
     "wizard.save": "保存渠道",
     // ── 批 B 面（档位两特值词 / 状态栏读数串 —— 键名本档拟定，登记面即此处）──

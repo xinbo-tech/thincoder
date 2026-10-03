@@ -68,7 +68,8 @@
   连带 = 对话流帧触发键集须含 `project`（项目变更 ⇒ 中区随动——`project` 键承接 = 刷面（`syncGuide` 原位换），零重挂；单源 = `docs/desktop/design/RENDERER.md` §1.1「建」条；键名单单源 = `thincoder-desktop/renderer/frame-dispatch.mjs` `CHAT_KEYS`）。
    匹配面提醒：同一 `data-action` **可多处在场**（会话控制面项目钮 + 引导面动作控件）⇒ 用例 / 选择器须按集合或过滤取值，不得唯一查找。
 3. **输入区禁用判据不因引导而变**——`disabled` 判据恒 = **活动会话在场**（无 ⇒ `disabled: true` · 锚恒在）；`no-project` / `no-session` 引导面在场**不解除**禁用。依据 = 需求档首启链（选工作目录 ⇒ 可用 = `docs/desktop/requirements/PROJECT.md` §3.3）；本面作用 = 把「为何不能输入」与「下一步点哪」显式化，**不代行建会话**（建会话仍须经 `session:create` 出口）。
-4. **词键（两语各两键 · 共 2 键）** = `chat.guide.noProject` / `chat.guide.noSession`（住 `thincoder-desktop/renderer/i18n.mjs` 对话流段 = `chat.empty.hint` 邻位）。文本形（zh）=「未打开项目——先打开一个项目目录即可开始」/「尚无会话——新建一个会话即可开始对话」；（en）=「No project open — open a folder to start」/「No session yet — create one to start chatting」。
+4. **词键（两语各两键 · 共 2 键）** = `chat.guide.noProject` / `chat.guide.noSession`（住 `thincoder-desktop/renderer/i18n.mjs` 对话流段 = `chat.empty.hint` 邻位）。
+   文本形（zh）=「未打开工作目录——先打开一个目录即可开始」/「尚无会话——新建一个会话即可开始对话」；（en）=「No working directory open — open a folder to start」/「No session yet — create one to start chatting」。
    计数随动（同笔）：总键数 **122 ⇒ 124**（两语相等不变）· 对话流桶 **8 ⇒ 10**——单词表四处同笔为纪律（测试树 2026-09-28 全清重置后承载 = 随批单元证据）。
 
 **本批注（可见面修复 · 四件 · 2026-09-27）**：本注补本档 §1「对话流」/「输入区」/「工具卡」/「计划面」四行与 §2 项 1 行标注「可见面修复批修」的项（各行已就地指针）。
