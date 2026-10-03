@@ -60,14 +60,16 @@
   sessions: slots.map((s) => ({
     sessionId: String(s.slot),
     cwd: getCwd(),
-    updatedAt: Number.isFinite(s.updatedAt) ? new Date(s.updatedAt).toISOString() : undefined,
+    updatedAt: Number.isFinite(s.updatedAt) && Math.abs(s.updatedAt) <= 8.64e15
+      ? new Date(s.updatedAt).toISOString()
+      : undefined,
     title: s.title ?? "",
   })),
   ```
   - `s.updatedAt` 源 = 核 `listSlots` 条目 `updatedAt: meta.updatedAt ?? meta.ts`（epoch ms 数——`thincoder-core/session-slots.mjs:208`）。
-  - 非有限值 ⇒ `undefined`（JSON 序列化键缺席——schema 该键可空且非必填）。
+  - **值域钳**（防 `toISOString` RangeError ⇒ list 整方法 `-32603`）：`Number.isFinite(v) && Math.abs(v) <= 8.64e15`（ECMA-262 TimeClip 上限——域内 `toISOString()` 恒不抛）⇒ ISO 串；**非法 ∥ 超域**（非有限 ∥ `|v| > 8.64e15`）⇒ `undefined`（JSON 序列化 ⇒ 键缺席——= null 语义；schema 该键可空且非必填；既定形，不用 epoch 0 占位——0 会谎报 1970 活动）。
   - `title` 保留（`string` 合法；`""` 合法）。`messageCount` **删**（无 schema 位；客户端不可依赖）。
-- **验收判据**：有限 `updatedAt`（输入 = epoch 数）⇒ 发射值为 ISO 8601 串，且**对发射值**往返恒等——`new Date(emit(v)).toISOString() === emit(v)`（`emit(v)` = `session/list` 条目中该键的发射值）；非有限 ⇒ 键缺席；`messageCount` 键不在。用例 T4–T5。
+- **验收判据**：有限且 `|v| <= 8.64e15` 的 `updatedAt`（输入 = epoch 数）⇒ 发射值为 ISO 8601 串，且**对发射值**往返恒等——`new Date(emit(v)).toISOString() === emit(v)`（`emit(v)` = `session/list` 条目中该键的发射值）；非法 ∥ 超域 ⇒ 键缺席、方法零抛（`-32603` 不可达）；`messageCount` 键不在。用例 T4–T5。
 
 ### 2.3 #873 · `set_config_option` 响应补 `configOptions` + 全形判别键
 
@@ -105,8 +107,13 @@
     - `session/new`：**先** `const slot = await newSession(getCwd())`（认领 + 槽文件 + digest——`thincoder-core/session-lifecycle.mjs:226`），`const id = String(slot)`（createSession 的 id 在构造期烧入 callbacks——必须先行）；`session.agent._slot = slot` 由既有点位保留（零改）。
     - `session/load` / `resume`：`const id = String(params.sessionId)`（**客户端原文形态**——同值读回保续）；`sessions.set(id, session)`。
   - **失败回滚（new 的新序引入的孤儿面——必处置）**：`createSession` 抛错 ∥ `_providerInvalid` 分支 ⇒ `deleteSlot(getCwd(), slot)`（既有函数——文件 + manifest 条目 + 认领由 `session-slots.mjs` 单点清理；回滚以 `committed` 旗标守卫：仅在未 `sessions.set` 前生效）。
-  - **同 id 在存 ⇒ 替换（load/resume 共用）**：先按 `session/close` 同法处置旧实例（`cancel()` ∥ `sessions.delete(id)` ∥ 认领释放），再做占用检测与装载——置前理由：① 旧实例的钉槽不再计入 `sameProcessPinned`（重载同槽 ⇒ 可正常钉回原槽，不误 fork）；② 防旧实例成为不可达孤儿（计数器撤除后同 id 重载在 Map 上唯一）。
-    - **替换点钉定（拒载安全）**：替换在既有前置判据（`loadSlotFile` 缺失 `handlers-slots.mjs:64-67` ∥ 工程模式拒载 `:72-77`）**之后**、`createSession` **之前**——拒载路径零副作用（旧实例保留：不 `cancel`、不释放认领——不误杀在飞回合）。
+  - **同 id 在存 ⇒ 处置（new/load/resume 三途同法）**：按 `session/close` 同法处置旧实例（动作 = `cancel()` ∥ `sessions.delete(id)` ∥ 认领释放），再装载——共性理由：防旧实例成为不可达孤儿（同 id 在 Map 上唯一）；load/resume 另：旧实例的钉槽不再计入 `sameProcessPinned`（重载同槽 ⇒ 可正常钉回原槽，不误 fork）。位次按途钉定（下两条）。
+    - **load/resume 途替换点钉定（拒载安全）**：替换在既有前置判据（`loadSlotFile` 缺失 `handlers-slots.mjs:64-67` ∥ 工程模式拒载 `:72-77`）**之后**、`createSession` **之前**——拒载路径零副作用（旧实例保留：不 `cancel`、不释放认领——不误杀在飞回合）。
+    - **new 途处置点钉定（delete→new 槽号回收面）**：`session/delete` 删档后槽号回流（`thincoder-core/session-slots.mjs:226-229`），`session/new` 复得同号时 `sessions.set(id, session)` 撞**同键在存实例**——旧回合不 cancel、通知串流（D-4 被否类经 delete→new 入口）。
+      触发条件：键 = 槽号串而 `_slot` 已与键分离（fork/换钉）的旧实例不受 delete 重钉环处置（`handlers-slots.mjs:211-213` 按 `_slot` 匹配）。
+      处置点 = `sessions.set(id, session)` **直前**（`createSession` 成功与 `_providerInvalid` 排除之后）：`const stale = sessions.get(id); if (stale) { stale.cancel(); sessions.delete(id) }`——此前任何一步失败均不改动旧实例。
+    - **new 途认领释放位次**：`if (stale) releaseClosedSlot()` 置于 `sessions.set` 与 `committed` 置位**之后**——保留集须含新会话槽（`createSlotReleaser` 保留集 = 在存 Map 槽——`handlers-session.mjs:64-72`）：
+      先释后装会把 `newSession` 刚写的新认领当残留释放（`staleClaims` 谓词——`session-slot-claims.mjs:29-35`；认领写入 `session-lifecycle.mjs:273-274`）⇒ 复开 F2 双写窗口；置 `committed` 后 ⇒ 释放失败不误删已建会话。
   - **认领释放单点抽取**：现 `releaseClosedSessionSlot`（`handlers-session.mjs:135-141`）提为 `createSlotReleaser({ getCwd, sessions })` 工厂（导出）——`acp.mjs` 建一次入 `ctx.releaseClosedSlot`（同 `requireConfigured` 先例），new 失败回滚外三处（close ∥ load 替换 ∥ resume 替换）同源消费。
   - **`allocSessionId` / `nextId` 撤除**（零消费者——`acp.mjs` ctx 键删除；两 handler 模块解构同步删）。
   - **通知字段收正**：
@@ -130,8 +137,8 @@
   1. `uri` 非字符串 ⇒ 标记 `missing uri`（路径位取 `block.name ?? "unknown"`）。
   2. `new URL(uri)`：
      - 成功 ∧ `protocol === "file:"` ⇒ 路径 = `decodeURIComponent(url.pathname)`；UNC 主机（`hostname` 非空且非 `localhost`）⇒ `//<host><path>`；否则 `/C:/…` 形式剥前导 `/`（Windows 盘符）；解码失败 ⇒ 标记 `invalid percent-encoding`。
-     - 成功 ∧ 非 file 协议 ⇒ 标记 `unsupported scheme`（路径位 = 原 uri）。
-     - 失败 ⇒ 按纯路径处理（整串百分号解码；失败 ⇒ `invalid percent-encoding`）——**相对路径按 cwd 解析**（`path.resolve(cwd, p)`）。
+     - 成功 ∧ 非 file 协议 ⇒ 标记 `unsupported scheme`（路径位 = 原 uri）——含**裸盘符形**（`C:\…` / `C:/…`：`new URL` 成功、protocol = 单字母 `c:` ⇒ 本支；盘符剥前导 `/` 收正仅对 `file:` 形生效）。
+     - 失败 ⇒ 按纯路径处理（整串百分号解码；失败 ⇒ `invalid percent-encoding`）——**相对路径按 cwd 解析**（`path.resolve(cwd, p)`）——含**非 URL 形带片段**（如 `docs/a.md#L10-L20`：片段并入路径、**不解析选区**——选区只从 `url.hash` 取出；通常 `unreadable`）。
   3. 选区（仅 `url.hash`，格式 `#L<a>` ∥ `#L<a>-<b>` ∥ `#L<a>:<b>`（`b` 可带 `L` 前缀）——含 `#L5:15` / `#L10-L20` 两观察形）：`a`/`b` 均 1 基闭区间；`b < a` ⇒ 标记 `invalid selection`；`a > 总行数` ⇒ 标记 `lines out of range`；`b` 超尾 ⇒ 截到总行数。
   4. 读面：`stat` 失败 ⇒ 标记 `unreadable`；非普通文件 ⇒ `not a regular file`；`size > MAX_INLINE_BYTES`（10MB，**文件级**——先于读取）⇒ `too large (>10MB)`；读取抛错 ⇒ `unreadable`；缓冲含 NUL 字节 ⇒ `binary (NUL byte)`。
   5. 载荷级上限（**选区时作用于选区切片**，整文时作用于全篇）：行数 > 2000 ⇒ `too many lines (>2000)`；字符数 > 100k ⇒ `too long (>100000 chars)`。
@@ -154,7 +161,7 @@
   if (!text) return { error: { ...ACP_ERRORS.INVALID_PARAMS, message: "prompt requires a text or resource_link content block" } }
   ```
 - **验收判据**：T15–T20（正常 ∥ 边界 ∥ 降级 ∥ 上限 ∥ 无文本仅引用）。
-- **登记（§11 详表）**：多块 text 合流（首块策略残项）· 总量无闸（N 块各自独立上限）· 块级 `title/description/mimeType/size/annotations` 字段不消费。
+- **登记（§11 详表）**：多块 text 合流（首块策略残项）· 总量无闸（N 块各自独立上限）· 块级 `title/description/mimeType/size/annotations` 字段不消费 · 两形（裸盘符 ∥ 非 URL 形带片段——行为 = 上判定树，降级不中断）。
 
 ## 3. 接口契约（收正后形状）
 
@@ -172,7 +179,7 @@
 { "sessionId": "<槽位号字符串>", "cwd": "<绝对路径>", "updatedAt": "<ISO 8601>", "title": "<标签 ∥ 空串>" }
 ```
 
-- `updatedAt` 非有限 ⇒ 键缺席；`messageCount` 不存在。
+- `updatedAt` 非法 ∥ 超域（非有限 ∥ `|v| > 8.64e15`）⇒ 键缺席；`messageCount` 不存在。
 
 ### 3.3 `configOptions` 全形（响应 ∥ 通知共用——单源 `sessionConfigOptions`）
 
@@ -301,9 +308,9 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 | 判据 | 机检项 | 用例 |
 |---|---|---|
 | AC-1（#871a） | 每条 `usage_update` 含整数 `used`/`size`；`used` = prompt+completion；`size` = 规格 context ∥ 128_000 兜底 | T1–T3 |
-| AC-2（#871b） | `updatedAt` ISO 往返恒等 ∥ 非有限键缺席；`messageCount` 键不在 | T4–T5 |
+| AC-2（#871b） | `updatedAt` ISO 往返恒等 ∥ 非法 ∥ 超域键缺席；`messageCount` 键不在 | T4–T5 |
 | AC-3（#873） | `set_config_option` / `new` / `load` / `resume` 响应 `configOptions` 全形（判别键 + 现值 + select `options`） | T6–T8 |
-| AC-4（#872） | new id ∈ 随后 list；load/resume 原 id 全方法命中；同 id 重载替换；两通知字段收正 | T9–T14 |
+| AC-4（#872） | new id ∈ 随后 list；load/resume 原 id 全方法命中；同 id 在存处置（load/resume/new 三途）；两通知字段收正 | T9–T14 |
 | AC-5（#870） | 整文 ∥ 选区内联形；降级词表；上限三态；无文本仅引用可走；无 confine | T15–T20 |
 | AC-6（面） | 批内件全绿（先红后绿）+ `node scripts/doc-check.mjs` exit 0 + 语法检查 | 命令面 |
 | AC-7（#862） | 拆批裁定在档（§6）+ 台账维持待设计 | 记录面 |
@@ -318,14 +325,14 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 | T2 | 边界 | usage 缺字段 ∥ `{}` | `{used:0, size:<规格>}`——零抛 |
 | T3 | 边界 | 未知模型 ∥ 无 provider | `size` = 128_000 兜底 |
 | T4 | 正常 | list 夹具（槽 meta `updatedAt` = epoch 数） | `updatedAt` = ISO 串且往返恒等；`messageCount` 键缺席 |
-| T5 | 边界 | meta `updatedAt` 非有限 | `updatedAt` 键缺席 |
+| T5 | 边界 | meta `updatedAt` 非有限 ∥ 超域（`|v| > 8.64e15`） | `updatedAt` 键缺席；list 零抛 |
 | T6 | 正常 | `set_config_option`（model/thinking/mode 各一次） | 响应 `{configOptions}` 全形（判别键/现值/options） |
 | T7 | 正常 | `session/new` ∥ `load` ∥ `resume` | 三响应 `configOptions` 同形 |
 | T8 | 边界 | provider 无 model | model 项缺席；thinking/mode 在 |
 | T9 | 正常 | `session/new` → `session/list` | 返回 id = 槽号串；∈ list 集（不变量） |
 | T10 | 正常 | `session/new` → 新 handler 实例（模拟跨进程）`load(同 id)` → 原 id `prompt` | 全链命中（无 unknown session） |
 | T11 | 正常 | `resume(同 id)` → 原 id `cancel`/`close` | 命中；close 后释放认领 |
-| T12 | 边界 | 同 id 二次 load ∥ 同 id 在存 + 拒载形（槽文件缺失 ∥ 工程模式拒载） | 旧实例被替换（cancel 被调、Map 单条）；钉槽不误 fork ∥ 拒载时旧实例保留（cancel 未触——零副作用） |
+| T12 | 边界 | 同 id 二次 load ∥ 同 id 在存 + 拒载形（槽文件缺失 ∥ 工程模式拒载）∥ delete→new 回收槽号（旧实例在存） | 旧实例被替换（cancel 被调、Map 单条）；钉槽不误 fork ∥ 拒载时旧实例保留（cancel 未触——零副作用）∥ delete→new：旧实例被处置（cancel 被调、Map 单条） |
 | T13 | 正常 | `set_mode` | 通知 `currentModeId`（非 `mode`） |
 | T14 | 正常 | `set_config_option` | 通知 `configOptions` 全量数组（非 `{configId,value}`） |
 | T15 | 正常 | prompt = [text, resource_link(file:// 整文)] | 文本在前；`[File: …]` + 围栏全文 |
@@ -343,7 +350,10 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 - model select 候选模型列表不供货（`options` = 现值单项——候选机制登记）。
 - `usage_update` 的 `cost` 不供（无成本数据源）。
 - 会话 id fork 角（他进程占用 ⇒ 本次存续期 id 与落盘槽号分离——如实登记，不新增语义）。
+- delete→new 槽号回收面（`session/delete` 后 `session/new` 复用槽号）：同键在存 ⇒ 处置（定形 §2.4——`cancel` ∥ 删键 ∥ 认领释放，释放位次 = `sessions.set` 后）；id（槽号串）复用属既有槽号分配语义——复用后即新会话。
+- load/resume 替换的装配失败面：`createSession` 抛错 ⇒ 旧实例已撤、新实例未建（§2.4 只保证前置判据拒载零副作用）；恢复方案未定——登记（不新增语义）。
 - 多引用块**总量无闸**（各块独立上限——登记候选）。
+- `resource_link` 两形登记（行为按实装钉——均**降级不中断**）：① 裸盘符形（`C:\…` / `C:/…`）⇒ `unsupported scheme` 标记；② 非 URL 形带片段 ⇒ 片段并入路径、不选区 ⇒ 通常 `unreadable`。
 - #862 全项（拆批——§6）。
 - `thinking` 的 `currentValue` = **本地显式档**语义——`undefined`（未显式设置）⇒ `false`（§2.3 判据式 `th != null && …` 如此）；`thinkAlwaysOn` 族（`thincoder-core/model-specs.mjs:69`）为本地档、非服务端生效态——不探测服务端侧生效状态（登记）。
 
@@ -355,8 +365,10 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 4. 同拍收正 `docs/cli/design/ACP-CLIENT.md`（§5 表十处）+ `node scripts/api-contract.mjs --write`（生成区再生）。
 5. 需求面补笔 = 主 agent 笔（§1.3 / §7 表末行）——实施轮零触需求档。
 6. 边界登记（§11 各项）随收口入台账（父侧）。
+7. **修正轮实施令（交付登记 号 1 ∥ 号 2 收正——本档定形）**：① `session/new` 同键处置（§2.4——处置点 = `sessions.set` 直前；认领释放随 `sessions.set`/`committed` 之后）；② `session/list` `updatedAt` 值域钳（§2.2）；批内件随补 T5 超域腿 + T12 delete→new 腿（先红后绿）。
 
 ## 变更记录
 
 - 2026-10-04（**issue 修复批·二 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round2.md` §1 · 台账 #870 ∥ #871 ∥ #872 ∥ #873）：建档——① 复验 5/5 在档（§1.2）；② 四条收正目标形（usage_update ∥ list updatedAt ∥ configOptions 全形 ∥ 会话 id = 持久槽号 + 两通知字段）+ resource_link 基线支持（新档拟新增）；③ schema 复取复核（SHA 逐字同 2026-09-18）；④ ACP-CLIENT.md 同拍落点表；⑤ #862 拆批裁定 + 后续批 scope 草案。
 - 2026-10-04（**fix 轮 · 设计评审 #66 号 1–5 收正 · eng-designer**）：§1.2 行锚收正（`acp.mjs:101,108`）∥ §2.2 判据改发射值往返恒等 ∥ §2.4 增「替换点钉定（拒载安全）」+ §10 T12 拒载腿 ∥ §7 增拆分评审（本批不拆 + 后续拆分点；`bridge.mjs` 同注）∥ §11 增 thinking 语义登记。号 6 = 判据降级限制声明（保持）。
+- 2026-10-04（**fix 轮 · 交付登记四条（#75）收正 · eng-designer**——父侧裁定：① ② 就地修 ∥ ③ 记录接受 ∥ ④ 逐条登记）：§2.2 增**值域钳**（非法 ∥ 超域 ⇒ 键缺席 = null 语义）∥ §2.4 增 new 途处置点钉定 + 认领释放位次 ∥ §2.5 增两形行为（裸盘符 ∥ 非 URL 形带片段）∥ §11 增三登记行 ∥ §3.2 / §9 / §10 / §12 随动。
