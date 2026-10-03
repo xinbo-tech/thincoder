@@ -27,7 +27,7 @@
 - **无代理 / 未命中**：原生 `fetch` 直连（`proxyFetch` `:265`–`:266`）。
 - 统一出口 `proxyFetch(url, opts, proxyUri)`（`:266-275`）：无 `proxyUri` → `globalThis.fetch`（**直连分支 = 断流通道建设点**——见下）；`https:` → 隧道；`http:` → 转发。
 - 错误形态：坏代理串**友好报错**（`Invalid proxy URI: "…" — expected http://host:port`，`:189` / `:237`——融合自 VSC 侧）。
-- 超时语义：CONNECT/TLS 阶段用 `FETCH_TIMEOUT`（15s）；**响应头**用 `opts._headerTimeoutMs`（默认 60s，与直连 600s 语义区分）；**body 空闲**看门狗 `opts._bodyIdleMs`（默认 120s）。
+- 超时语义：CONNECT/TLS 阶段用 `FETCH_TIMEOUT`（15s）；**响应头**用 `opts._headerTimeoutMs`（默认 60s——消费面 = **代理分支**；直连面（无 `proxyUri`）无本仓头阶段超时〔纳入 = 设计轮面——在册；同族收窄 = `PROVIDER.md:102`〕）；**body 空闲**看门狗 `opts._bodyIdleMs`（默认 120s）。
 - **body 终止守卫（#16 · 崩溃族）**：body = 响应体 `PassThrough`（管线两端 = 源 `sock`（net socket）→ 目标 body；body 建于 `thincoder-core/proxy.mjs:77`、头到齐后 `:125` 处 `sock.pipe(body)` 写入）——头后失败 ∥ body 空闲看门狗以 `destroy(err)` 终止 body **前**，先挂**永久** no-op `'error'` 监听者
   （单点 `destroyBody(body, err)`——`thincoder-core/stream-destroy.mjs`（已落；proxy ∥ provider 三文件共用）；契约与理由 = §7 D-PX7）。
   无监听者瞬间的 `destroy(err)`（含 pipe 内部监听者触发即自摘后的重发）产生未处理 `'error'` ⇒ `uncaughtException` ⇒ **整个进程被杀**（2026-09-22/23 三份 crash-report 签名 `Response body timeout (idle)` = 此路径——GitHub #16）。
