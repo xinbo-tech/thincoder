@@ -88,6 +88,9 @@
  *      真因分类词（缺 ∥ 无效 `defaultModel`；状态陈述），消费面 = `renderer/composer-sync.mjs` `failedNotice`；
  *      键面单源 = `renderer/i18n-views.mjs` ② 组）⇒ `VIEWS_DICT`（第二档）**137 ⇒ 138** ∕ `HOST_DICT`
  *      （**合并表**，经合并点随动）**312 ⇒ 313**（两语同拍、键集相等；届盘实读续链）。
+ *      **轻通道轮八增一键**（2026-10-03：`composer.send.noDefaultModelFallback` 两语同增 —— fallback 明示行澄清半句；
+ *      键面单源 = `renderer/i18n-views.mjs` ② 组）⇒ `VIEWS_DICT`（第二档）**138 ⇒ 139** ∕ `HOST_DICT`
+ *      （**合并表**，经合并点随动）**313 ⇒ 314**（两语同拍、键集相等；届盘实读续链）。
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；

@@ -85,16 +85,18 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
   }
 
   /** provider 态明示行（#841 —— 提示带尾：`state === "fallback"` ∧ **非 invalid 类** ⇒ 行在场）：
-   *  词 = `composer.send.noDefaultModel`（**逐字复用 #840 键**——态陈述行，非发送失败行）；
+   *  词 = `composer.send.noDefaultModelFallback`（**澄清半句**「— 正在使用可用渠道」——与 VSC
+   *  `banner.defaultModelFallback` 同构；**轻通道轮八 · 2026-10-03 收正**：原「逐字复用 #840 键」使
+   *  可运行态读起来像错误 ⇒ 失败词 ∥ 态词分家——用户反馈「显示未配置模型但能用」）；
    *  `state === "ok"` ⇒ 零行（负向锁）；invalid 类（合成式 = `state === "invalid"` ∨ `invalidReason` 非空）
    *  ⇒ 本行零行（归发送失败行 —— #840 面）。判据 ∥ 行序单源 = `docs/desktop/design/IPC.md` §2「provider
-   *  态投影注」∥ `docs/desktop/design/COMPOSER.md` §2 本批注。 */
+   *  态投影注」∥ `docs/desktop/design/COMPOSER.md` §2 本批注（轮八收正）。 */
   function providerNotice(state1) {
     const face = state1?.providerState
     if (face === null || typeof face !== "object" || Array.isArray(face)) return null
     if (face.state !== "fallback") return null // ok ∥ invalid ⇒ 零行（负向锁）
     if (typeof face.invalidReason === "string" && face.invalidReason !== "") return null // invalid 类合成式（第二腿）
-    return { tag: "div", props: { class: "composer-notice", "data-notice": "provider-fallback" }, children: [t("composer.send.noDefaultModel")] }
+    return { tag: "div", props: { class: "composer-notice", "data-notice": "provider-fallback" }, children: [t("composer.send.noDefaultModelFallback")] }
   }
 
   /** 候选行投影（全渠扇出行 `{ provider, id, effortEnum, thinkOff }` ⇒ 核件面形 —— VSC `provider-probe-window.mjs:64-67`

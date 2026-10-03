@@ -68,6 +68,9 @@ export const VIEWS_DICT = Object.freeze({
     // 真因分类词（#840 · 2026-10-03）：`provider-invalid` ∧ `providerKind === "defaultModel"`（缺 ∥ 无效 defaultModel）
     // —— 状态陈述（指向真实可修的下一步）；本端拟定（消费面 = `renderer/composer-sync.mjs` `failedNotice`）。
     "composer.send.noDefaultModel": "Default model missing or invalid",
+    // fallback 明示行（轻通道轮八 · 2026-10-03）：澄清半句 —— 与 VSC `banner.defaultModelFallback` 同构（banner 版带 ⚠ 前缀）；
+    // 原「逐字复用 #840 键」收正（失败词 ∥ 态词分家）。消费面 = `renderer/composer-sync.mjs` `providerNotice`。
+    "composer.send.noDefaultModelFallback": "Default model missing or invalid — using an available channel",
     "paste.unsupportedFormat": "Only png / jpg / gif / webp images are supported (got ${type})",
     // ── ③ 审批面（相抵① 超阈降级 = 摘要 + 计数，零外部查看器）──
     "approval.diff.large": "Large diff — ${n} lines (preview omitted)",
@@ -233,6 +236,9 @@ export const VIEWS_DICT = Object.freeze({
     // 真因分类词（#840 · 2026-10-03）：`provider-invalid` ∧ `providerKind === "defaultModel"`（缺 ∥ 无效 defaultModel）
     // —— 状态陈述（指向真实可修的下一步）；本端拟定（消费面 = `renderer/composer-sync.mjs` `failedNotice`）。
     "composer.send.noDefaultModel": "默认模型未设置或无效",
+    // fallback 明示行（轻通道轮八 · 2026-10-03）：澄清半句 —— 与 VSC `banner.defaultModelFallback` 同构（banner 版带 ⚠ 前缀）；
+    // 原「逐字复用 #840 键」收正（失败词 ∥ 态词分家）。消费面 = `renderer/composer-sync.mjs` `providerNotice`。
+    "composer.send.noDefaultModelFallback": "默认模型未设置或无效 — 正在使用可用渠道",
     "paste.unsupportedFormat": "仅支持 png / jpg / gif / webp 图片（收到 ${type}）",
     // ── ③ 审批面 ──
     "approval.diff.large": "改动较大——${n} 行（预览省略）",
