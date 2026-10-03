@@ -967,7 +967,8 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 `thincoder-core/session-slots.mjs` 现读 **309 行** · 净增 **+17**（投影 `?? null` 两处 + `resumeSlot` 读序前移 + `healDigest` 调用 + `ledgerHealth` re-export）⇒ 落 **326 行**（>300 承既有形态——登记在册）。
 `thincoder-core/session-lifecycle.mjs` 现读 **377 行** · 净增 **+5**（切换落点补写 + 注释）⇒ 落 **382 行**。
 新档 `thincoder-core/session-slot-verify.mjs` 落 **299 行**（读面懒核实面：不可信清单调度 / 单飞 / 负缓存 / 预算 / 分块流式扫描；本批唯一新档，≤300 达成）。
-端侧随动档：`thincoder-cli/src/tui/cmd-session.mjs`（129 → ≈136）· `thincoder-cli/src/tui/startup.mjs`（297 → ≈300：**≈300 线位**〔未越 300 顾问线〕——该树无机械登记面〔core-hygiene 仅扫 core 树〕，**登记一行**：拆点候选 = 启动屏族 / 后台索引族外提（`backgroundIndex` 已函数化）；触发条件 = 越 500 硬限 ∥ 该档下次实质改动）。【**批·五触评 2026-10-04**：现读 **322**（承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §2.3 实读）；本批 #867 增量 ≤ +10（行级非结构性——home 判据 + 提示行）⇒ ≤332 ⇒ 拆分窗口顺延；触发条件不变。】·
+端侧随动档：`thincoder-cli/src/tui/cmd-session.mjs`（129 → ≈136）· `thincoder-cli/src/tui/startup.mjs`（297 → ≈300：**≈300 线位**〔未越 300 顾问线〕——该树无机械登记面〔core-hygiene 仅扫 core 树〕，**登记一行**：拆点候选 = 启动屏族 / 后台索引族外提（`backgroundIndex` 已函数化）；触发条件 = 越 500 硬限 ∥ 该档下次实质改动）。
+  【**批·五触评 2026-10-04**：现读 **322**（承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §2.3 实读）；本批 #867 增量 ≤ +10（行级非结构性——home 判据 + 提示行）⇒ ≤332 ⇒ 拆分窗口顺延；触发条件不变。】·
 `thincoder-vscode/webview/session-bar.js`（138 → ≈139）· `thincoder-core/agent-tools/read-history.mjs`（落 **408 行**——核座实读；已在 `SOFT_LINE_REGISTRY`〔`thincoder-core/test/core-hygiene.test.mjs:112`〕——无新拆档案）。
 
 **验收回指（需求档 §4.6 F-L1–F-L5）**：F-L1 → 判据句 1（用例组 L1）· F-L2 → 判据句 2（L2）· F-L3 → 判据句 3（L3）· F-L4 → 判据句 4（L4）· F-L5 → 判据句 5（L5）；用例面（L1–L5 组编号与夹具）= 批档 §2.4。
