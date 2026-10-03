@@ -1,4 +1,4 @@
-# electron-builder.yml — ThinCoder 桌面端打包配置（阶段一 = Windows NSIS x64 安装包）。
+# electron-builder.yml — ThinCoder 桌面端打包配置（Windows NSIS x64 安装包 · 阶段一；Linux AppImage + deb · D42——§2.11.2）。
 # 单源 = docs/desktop/design/PACKAGING.md §2.1（配置契约——逐值照抄）；构建序列 = §2.2；签名 = §2.3；图标 = §2.4。
 # 构建 = `npm run package`（prepackage 物化 → electron-builder → postpackage = check-dist 闸）；镜像纪律 = §2.7。
 appId: com.thincoder.desktop
@@ -41,6 +41,23 @@ nsis:
   perMachine: false
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
+
+# Linux（D42 · 2026-10-03 · 台账 #847——设计档 §2.11）：AppImage（免安装单文件——主 ∥ 自动更新单元）+ deb（手动升级单元）双目标 × x64
+linux:
+  target:
+    - target: AppImage   # 执行序：async 面先于非 async 面（deb）——app-builder-lib platformPackager.js（:107-123）⇒ AppImage 不携 package-type
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  icon: build/icon.png   # Linux 拒 .ico ⇒ PNG 入库（icon.ico 第 4 帧字节切片——§2.11.2（c））；显式形同 win.icon
+  category: Development  # 消缺省 Utility 警告（freedesktop 主类——§2.11.2（a））
+  syncDesktopName: true  # .desktop 文件名 ∥ StartupWMClass ∥ Electron app_id 三者同源（消窗口关联警告）
+
+deb:
+  # feed 分流（§2.11.2（a））：deb = 手动升级单元——目标级 publish null ⇒ 该目标零 update-info 条目（app-builder-lib PublishManager.js（:337-346））
+  publish: null
 
 # 产物名（NSIS 安装包）——版本随源 package.json（check-dist §2.5 断言面）
 artifactName: ThinCoder-Setup-${version}.${ext}

@@ -7,8 +7,9 @@
  * （`autoUpdater` 实例）∥ `notify`（原生通知）∥ `menuRefresh`（菜单重建）∥ `dialog`（确认 ∥ 结果两态）∥ `log`
  * （stderr 详情行）——另 `words()` 词表现读注入（语言随动；值面 = `menu-words.mjs`）；装配住 `main.mjs`
  * （`createRequire` 取库 + electron 原语落子——先例 = `heap-watch.mjs` 注入缝形）。
- * **武装门（判据）**：装配面注入 `enabled` = `app.isPackaged ∧ 非 --smoke`——未武装 ⇒ 零定时器 ∥ 检查面零动作
+ * **武装门（判据）**：装配面注入 `enabled` = `app.isPackaged ∧ 非 --smoke ∧ updaterMediumOk(...)`——未武装 ⇒ 零定时器 ∥ 检查面零动作
  * （库自身 `isUpdaterActive()` 返回 false = 第二道保险）；`--smoke` 读数面零增字段。
+ * **Linux 介质合项**：仅 AppImage 运行武装（`APPIMAGE` 在）——deb 安装零自检 ∥ 零网络 ∥ 零状态机；单源 = `docs/desktop/design/PACKAGING.md` §2.11.4。
  * **不打断会话（判据）**：检查 ∥ 下载全异步（事件驱动）——零模态框 ∥ 零窗口操作 ∥ 零会话面读写；下载期零 UI
  * （不接 `download-progress` 呈现——仅 stderr 详情行）。
  * **手动检查三果（§2.8.1）**：`update-available` ⇒ 转下载态（静默续跑）∥ `update-not-available` ⇒ 对话框
@@ -31,6 +32,15 @@ export const UPDATE_STATE_WORD_KEYS = Object.freeze({
   downloading: "downloadingUpdate",
   ready: "restartUpdate",
 })
+
+/**
+ * Linux 介质合项（武装门扩展——§2.11.4 · 台账 #847）：仅 AppImage 运行武装（`APPIMAGE` 环境变量在）；Linux 其余介质
+ * （deb ∥ 未打包运行）⇒ 不武装（零自检 ∥ 零网络 ∥ 零状态机——纵深第二层 = feed 无 deb 条目）。
+ * 纯谓词：零 electron ∥ 零库 ∥ 零 I/O——平 node 直测；装配注入实参 = `{ platform: process.platform, appImageEnv: process.env.APPIMAGE }`。
+ */
+export function updaterMediumOk({ platform, appImageEnv }) {
+  return platform !== "linux" || appImageEnv != null
+}
 
 /** 词句 `{version}` 占位替换（三句携占位——括注形各语言自持；version 非串 ⇒ 空串替换，防 "undefined" 面）。 */
 function fillVersion(text, version) {
@@ -140,7 +150,7 @@ export function createUpdateFace({
   /** 检查（自动 ∥ 手动同径）：自动面全静默、手动面三果对话框；`checking` ∥ `downloading` ∥ `ready` 重入 ⇒ busy。 */
   async function checkNow({ manual = false } = {}) {
     if (!armed) {
-      log("[update] check skipped — updater not armed (dev / --smoke)")
+      log("[update] check skipped — updater not armed (dev / --smoke / non-AppImage Linux)")
       return { ok: false, reason: "not-armed" }
     }
     if (state !== "idle") return { ok: false, reason: "busy" }
@@ -167,7 +177,7 @@ export function createUpdateFace({
   async function menuClick() {
     try {
       if (!armed) {
-        log("[update] menu action ignored — updater not armed (dev / --smoke)")
+        log("[update] menu action ignored — updater not armed (dev / --smoke / non-AppImage Linux)")
         return
       }
       if (state === "checking" || state === "downloading") return // disabled 双保险（库内重入返在途 promise）
@@ -196,7 +206,7 @@ export function createUpdateFace({
   /** 启动自检点火（装配面 ready 后调用）：延时一次/会话；未武装 ⇒ 零定时器（零重入：已点火再调 ⇒ false）。 */
   function scheduleStartupCheck() {
     if (!armed) {
-      log("[update] startup check not scheduled — updater not armed (dev / --smoke)")
+      log("[update] startup check not scheduled — updater not armed (dev / --smoke / non-AppImage Linux)")
       return false
     }
     if (startupHandle !== null) return false

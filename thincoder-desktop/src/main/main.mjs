@@ -6,7 +6,7 @@
  * → `registerIpcHandlers()` → `createWindow()` → 加载完 → 冒烟读回 → 单行 JSON → `app.exit(0)`；常态（无 `--smoke`）= 窗口常驻。
  * **桌面空闲唤醒批**：通知装配注入三行（`Notification` 构造 ∕ 焦态 ∕ 聚焦——闭包读 `win`；策略面住 `notify.mjs`）。
  * **桌面发布·阶段二批（KD-71）**：自动更新装配——`createRequire` 取 `autoUpdater`（CJS 互操作）∥ 注入五缝
- * （`updater` ∥ `notify` ∥ `menuRefresh` ∥ `dialog` ∥ `log`）∥ 延时自检点火（10s 一次——武装门 = `isPackaged ∧ 非 --smoke`）；
+ * （`updater` ∥ `notify` ∥ `menuRefresh` ∥ `dialog` ∥ `log`）∥ 延时自检点火（10s 一次——武装门 = `isPackaged ∧ 非 --smoke ∧ updaterMediumOk(...)`；Linux 介质合项 = §2.11.4）；
  * 策略面零 electron 住 `update.mjs`。
  * stdout 只许一行 JSON（读数面；日志与栈一律 stderr）——`process.stdout.write` 仅本档一处。
  */
@@ -35,7 +35,7 @@ import {
   setUpdateFace, updateConfirmDialog, updateResultDialog,
 } from "./window.mjs"
 import { menuLabels } from "./menu-words.mjs" // 更新面词表现读注入（KD-71——语言随动；值面单源 = 同档）
-import { createUpdateFace } from "./update.mjs" // 更新面策略面（零 electron ∕ 零库 import——五缝注入装配于本档）
+import { createUpdateFace, updaterMediumOk } from "./update.mjs" // 更新面策略面（零 electron ∕ 零库 import——五缝注入装配于本档）
 // config 写盘感知（R8 · 桌面功能对位批 · C3）：核件 `config-watch` 桌面壳（`node:fs.watch` 源 + 自写抑制）。
 import { startConfigWatch } from "./config-watch.mjs"
 // 提示锚取值表（R4 · 桌面功能对位批 · #519）：核缝供值面（`prompt-files.mjs` `configurePromptInjections`）。
@@ -220,9 +220,11 @@ async function main() {
   // （更新面（KD-71）不入本列：启动定时器 = 一次性且 `unref`；`autoUpdater` 监听 = 进程寿命面——`autoInstallOnAppQuit` 需其存活至退出径。）
   // 桌面自动更新（KD-71 ∥ §2.8.1 · 桌面发布·阶段二批）：装配面——`autoUpdater`（CJS 取——见上）+ 注入五缝
   // （`updater` ∥ `notify` ∥ `menuRefresh` ∥ `dialog` ∥ `log`）+ 词表现读注入（`menuLabels`——语言随动）；武装门 =
-  // `app.isPackaged ∧ 非 --smoke`（未打包 ⇒ 库自身 `isUpdaterActive()` 返回 false——双保险；`--smoke` 读数面零增字段）。
+  // `app.isPackaged ∧ 非 --smoke ∧ updaterMediumOk(...)`——Linux 介质合项（仅 AppImage 运行武装：`APPIMAGE` 在；
+  // deb 安装零自检 ∥ 零网络 ∥ 零状态机——§2.11.4）；未打包 ⇒ 库自身 `isUpdaterActive()` 返回 false——双保险；
+  // `--smoke` 读数面零增字段。
   const updateFace = createUpdateFace({
-    enabled: app.isPackaged && !SMOKE,
+    enabled: app.isPackaged && !SMOKE && updaterMediumOk({ platform: process.platform, appImageEnv: process.env.APPIMAGE }),
     updater: autoUpdater,
     words: () => {
       try { return menuLabels(loadConfig()?.locale) } catch (error) {

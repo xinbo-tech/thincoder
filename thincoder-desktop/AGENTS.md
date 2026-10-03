@@ -11,7 +11,9 @@ One third-party runtime dependency: `electron-updater` (desktop auto-update; sin
 ```bash
 npm start          # launch the desktop instance (electron .)
 npm test           # suite entry (test/run.mjs — explicit manifest test/files.mjs; empty after the 2026-09-28 reset — zero tests = green; unit tests = docs/batches/, integration scenarios = test/integration/) — current state: ../docs/core/design/TESTING.md §2.3
-npm run package    # Windows x64 NSIS installer (stage 1): prepackage materializes the two core deps (scripts/materialize-deps.mjs — junctions become real source-tree copies), then electron-builder (electron-builder.yml), then postpackage = scripts/check-dist.mjs (artifact gate). macOS / Linux artifacts = stage 2
+npm run package    # per-host platform build: Windows x64 NSIS installer (stage 1) / Linux x64 AppImage + deb (D42 — build machine;
+                   # spec = ../docs/desktop/design/PACKAGING.md §2.11). prepackage materializes the two core deps (scripts/materialize-deps.mjs — junctions become
+                   # real source-tree copies), then electron-builder (electron-builder.yml), then postpackage = scripts/check-dist.mjs (artifact gate — win32 / linux branches). macOS artifacts = later
 npm run quickcheck # renderer quick-check in a real browser (tools/web-quickcheck/run.mjs — not a suite; ../docs/desktop/design/WEB-QUICKCHECK.md)
 ```
 
