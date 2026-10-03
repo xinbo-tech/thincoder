@@ -144,6 +144,30 @@
 **自检读数（设计轮 · 已复跑）**：仓根 `node scripts/doc-check.mjs` ⇒ **exit 0**——`OK(锚): 0 条悬空` ∥ `OK(行宽): 无 >300 字符单行`；行数面报告 4 条 = 先行存在（desktop 三档 + E2E 一档，非本批面）。两设计档落笔后复跑零新增违规。
 
 ## §3 设计评审（评审子代理）
+
+### 轮次 1（评审子代理）
+
+评审对象：design/ADVISOR-CONVERGENCE.md §2.5（F32/F33 契约）∥ design/ADVISOR-GUARDS.md §3（四类失败 + 四面禁则 + 归宿面）∥ requirements/ADVISOR-CONVERGENCE.md §2.4（F32–F35）。F32–F35 逐条对照（含判定句与边界句）：覆盖面完整，未发现 🔴。
+
+| # | Category | Severity | Issue | Suggestion |
+|---|---|---|---|---|
+| 1 | Acceptance criteria / doc-state | 🟡 | `thincoder/docs/core/design/ADVISOR-GUARDS.md:368`（A-AG5）仍写「失败原因三分」，与本档 §3 `:122`「失败原因四类」及需求 `thincoder/docs/core/requirements/ADVISOR-CONVERGENCE.md:61`（F34「失败分类四分」）相抵；变更记录 `ADVISOR-GUARDS.md:407` 已载「三分 ⇒ 四类」而该验收行未随动（A-AG16 `:379` 只补形状类）。 | 将 A-AG5 的失败原因计数与 §3 现状对齐（或直接回指 §3），让四分分类有唯一逐字验收锚。 |
+| 2 | Doc hygiene（边界面残句） | 🟡 | `thincoder/docs/core/requirements/ADVISOR-CONVERGENCE.md:97`（§4 边界行）保留「（2026-10-03——原「不改评审侧提示词」句由 F32 落地作废）」——被作废句的沿革括注留在边界面（沿革已在变更记录 `:247` 有账）。 | 删除该括注，边界行只留现行命令句；沿革归变更记录面。 |
+| 3 | Consistency（判据射程） | 🟡 | `thincoder/docs/core/design/ADVISOR-CONVERGENCE.md:70` 括注把「修复未引入新 🔴」定为轮 2 另加，而 `:115`「轮 2 / 轮 3 同片」的逐字块 `:117`/`:119` 对两轮同含该条——轮 3+ 判据范围两说（轮 3+ 禁新问题使其多为惰性，字面冲突仍在）。 | 统一「修复未引入新 🔴」的轮次射程（一处说法），或明写该条在轮 3+ 为惰性。 |
+| 4 | Clarity | 🔵 | `ADVISOR-CONVERGENCE.md:137` 的 Approval Signal 尾行补定义「…does not block — anything else stays unresolved」无显式射程；同档 `:58` 又写「🟡/🔵 不阻断 approval」——「anything else」可被读成含 🟡，存在该回显 token 时误扣的风险。 | 为该尾句加显式射程（限 🔴），与 `:58` 口径对齐。 |
+| 5 | Completeness（窗的残留） | 🔵 | 窗语义（`ADVISOR-CONVERGENCE.md:67`–`:71`）只覆盖「携理由的不修项」：`Dispatched`（在途未落地，`:333`）不在 `Status` 归宿集（`:69`）内，其行在轮 2/3 表内的归宿未写；评审者拒不执行接受句 / 反复虚报 `Fixed` 的路径亦无对照 `:71` 零理由出口的出口句——`:68`「相持循环必然终止」仍依赖提示词层遵从。 | 补残留说明（非「不修」形态的不收敛路径的处置与上报出口），并写明 `Dispatched` 行在验证表中的归宿。 |
+| 6 | Acceptance criteria | 🔵 | `ADVISOR-CONVERGENCE.md:402`（A-AC12）「轮 1–2 可对不修理由出打回」中轮 1 无 prior（`:150`「窗语义不入」）——该半句不可成立；「表列 `Accepted` 形态可核」未给机判锚（对照 `:403` A-AC13 的「逐字在位」口径）。 | 把可打回轮次收实到实际成立的轮次（轮 2 起），并为「表列形态」给出可核面（提示词逐字 / 用例断言）。 |
+| 7 | Consistency（双源口径） | 🔵 | 收尾句 CN `ADVISOR-CONVERGENCE.md:130` 射程为「预算用尽收尾时」，EN `:128` 为任意「wrap up with items not fully verified」——双源不同宽。 | CN 射程与 EN 对齐（不限预算用尽）。 |
+| 8 | Doc hygiene（轻） | 🔵 | `ADVISOR-GUARDS.md` §3 规范句面保留沿革对照措辞：`:122`「（报告可判，替代单一 `file unreadable`）」、`:124`「省略号形不再报 mismatch」。 | 「替代 / 不再报」类对照句移入变更记录，规范面只留现行分类。 |
+| 9 | Doc state | 🔵 | `ADVISOR-CONVERGENCE.md:37` 轮次表行标「Round 3–5」为撤 cap 前残留，与本档 `:41`（无机械上限）、`:47`（≥2 已完成 ⇒ ROUND3）、`:68`（轮 3+）不一致。 | 行标改为「Round 3+」。 |
+| 10 | Consistency（轨射程） | 🔵 | `ADVISOR-CONVERGENCE.md:119`（轮 2/3 同片）把「any 🟡 the review marks as must-fix」列为 changes-required 触发项，而设计轨无 must-fix 🟡 类且 🟡/🔵 不阻断（`:58`；F33 边界「不改 must-fix ∥ optional 面语义」）。该句是否为现有提示词文本未核（unverified——提示词档不在评审范围）。 | 明写该条的轨射程（code 专有 / 设计轨惰性），与 `:58` 口径对齐。 |
+
+范围外注记（无严重级）：① 批档材料（受影响文件表 / 行数标注与拆分规划 / 用例表）不在评审范围（两档变更记录指向 `docs/batches/2026-10-03-advisor-convergence.md`：`ADVISOR-CONVERGENCE.md:422` / `ADVISOR-GUARDS.md:407`）——本批将触及的源档（`thincoder-core/advisor/messages.mjs`、`thincoder-core/advisor/convergence.mjs` 等）的行数标注在此不可核。② 范围外实现事实（unverified）：`ADVISOR-CONVERGENCE.md:72` 依据①（轮 2/3 提示词两轨共用——`thincoder-core/advisor.mjs` 轮次选择）、`:133` 构建面（`messages.mjs`）、四份提示词档现文、`ADVISOR-GUARDS.md:135`–`:139` 的 `convergence.mjs` 示例。③ 无文档地图 / 无项目标准档：Document ownership 按三档自身单一权威声明与需求档归属边界核过（无新档、未见重述，新增内容各落归属节）；跨仓通则与方法学核查降级（如实）。
+
+计数：🔴 0 / 🟡 3 / 🔵 7
+
+VERDICT: pass
+
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）

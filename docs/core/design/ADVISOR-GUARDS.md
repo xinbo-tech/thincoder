@@ -119,9 +119,9 @@ Nothing was sent: no review instance, no round consumed, no design token minted,
 
 **逐引文解析**：按候选顺序试 `resolve(root, file)`；命中判据三条件全中——① realpath 在 cwd 内（**围栏不变**）；② 可读；③ 该行内容包含引文内容。命中记录所用根。
 
-**失败原因四类（报告可判，替代单一 `file unreadable`）**：无任何候选文件存在 ⇒ `file unreadable`；存在但内容不符 ⇒ `content mismatch @ {解析到的相对路径}`；越围栏 ⇒ `path traversal`（不变）；
+**失败原因四类（报告可判）**：无任何候选文件存在 ⇒ `file unreadable`；存在但内容不符 ⇒ `content mismatch @ {解析到的相对路径}`；越围栏 ⇒ `path traversal`（不变）；
 **非连续引文**（引文内容含省略号 `…` / `...`——缩略形，非所引行的连续子串）⇒ `not a contiguous citation (ellipsis) @ {相对路径} — quote one contiguous excerpt`——**形状不符与内容造假分列**
-（省略号形不再报 mismatch；承 2026-10-03 用户裁定「省略号禁用于承担判断面」）。
+（承 2026-10-03 用户裁定「省略号禁用于承担判断面」）。
 报告头行 `[host-verified] N/M citations match current file state.` 与命中判据（所引行**连续子串** `includes`）零改；判定面 = 仅失败分类，零新增匹配路径、零模糊匹配。
 
 **引证形状写作禁则（评审提示词面——逐字建议，内容权在主 agent）**：四面（round1 / round2 / round3 / design，各 EN ⊗ CN）Host verification / Citation 段追加：
@@ -138,7 +138,7 @@ CN: 引证内禁用省略号（`…` / `...`）——引证必须是所引行的
 run.mjs:180: timeoutId = setTimeout(...)  ⇒  run.mjs:180: timeoutId = setTimeout(() => {
 ```
 
-**归宿面（不可验证 ⇒ 有结论——F28/F29 邻域，零新判定族）**：未通过机械核验的引用**不能支撑打回**（本体零改）；其条目不得悬置——每轮以明列 Status 收束（`Unfixed` 携状态 ∥ 经争议窗收口；`design/ADVISOR-CONVERGENCE.md` §2.5），评审收尾（预算用尽）时未验证条目逐一明列、**不得静默丢条目**；评审**不完整**（宿主截断族）⇒ 失败结论块逐次产出（§7——零改复核）。
+**归宿面（不可验证 ⇒ 有结论——F28/F29 邻域，零新判定族）**：未通过机械核验的引用**不能支撑打回**（本体零改）；其条目不得悬置——每轮以明列 Status 收束（`Unfixed` 携状态 ∥ 经争议窗收口；`design/ADVISOR-CONVERGENCE.md` §2.5），评审收尾时未验证条目逐一明列、**不得静默丢条目**；评审**不完整**（宿主截断族）⇒ 失败结论块逐次产出（§7——零改复核）。
 
 **取舍**：只按“声明范围 + 内容判据”扩充候选——**零新增假命中**（不会因同名文件而误命中：内容必须逐字包含）；残余如实报告：引用声明范围外、且其仓根不在声明范围时仍判 unreadable。
 
@@ -365,7 +365,7 @@ export function advisorContextBudget(provider) {
 | A-AG2 | 三个消费点共用同谓词；未签发提示逐字可 grep；正常通过路径零回归 | 同上 |
 | A-AG3 | 凭证链守卫：启动断言违反 ⇒ 拒绝报告且**不发请求**；拒绝前缀为稳定契约 | 凭证链 |
 | A-AG4 | 压缩定锚：压缩触发时 `pinned` 重新挂回；重复压缩幂等 | 凭证链 |
-| A-AG5 | 引文候选链：候选根序派生；失败原因三分；围栏不变 | 引文解析 |
+| A-AG5 | 引文候选链：候选根序派生；失败原因四类（逐字分类 = §3）；围栏不变 | 引文解析 |
 | A-AG6 | 预算硬墙：墙判定绑信号状态；两种运行时形态（抛错 / partial 不抛错）同判；0.75 提示每场至多一次 | 预算 |
 | A-AG7 | 冻结窗口：拦截判据与陈旧判定同源；被拒写入零落地；逃生门指引含 cancel；回执冻结句逐字 | 冻结窗口 |
 | A-AG8 | 同步面记账 parity 四行；拒绝 / 异步 ack 两分支零改 | 同步面 |
@@ -403,6 +403,11 @@ export function advisorContextBudget(provider) {
 | 对端差异登记（本端零改项） | 三条对位登记（异步结算面 / 冻结窗口盲区 / 池中止） | 登记项；判决（本端语义自洽）已并入 §11 |
 
 ## 变更记录
+
+- 2026-10-03（**轻量收正 · 父侧直接执行 · 可 revert**——承设计修复轮 #19 §3 另记）：§3 归宿面「评审收尾（预算用尽）时」 ⇒ 「评审收尾时」——射程与 `design/ADVISOR-CONVERGENCE.md` 收尾句（不限预算用尽）同口径（同轮发现 #7 同形残面）。**零语义改**（归宿面义务本体零动；只删射程括注）。
+
+- 2026-10-03（**advisor 收敛修批 · 设计评审轮 1 收正 · eng-designer**——承 `docs/batches/2026-10-03-advisor-convergence.md` §3 轮次 1：#1 / #8）：
+  §10 A-AG5 失败原因计数收正（三分 ⇒ 四类——逐字分类锚 = §3）；§3 规范面沿革对照语移入本条（「替代单一 `file unreadable`」·「省略号形不再报 mismatch」）——沿革追记：单一 `file unreadable` ⇒ 三分 ⇒ 四类；省略号形原报 `content mismatch` ⇒ 自本轮起报非连续引文类。
 
 - 2026-10-03（**advisor 收敛修批 · eng-designer**——承 `docs/batches/2026-10-03-advisor-convergence.md` · 台账 #849）：§3 失败原因三分 ⇒ 四类（加「非连续引文（省略号）」+ 改法；命中判据与报告头行零改）+ 引证形状写作禁则（四面逐字建议 + 示例替形）+ 归宿面契约；§10 增 A-AG16 / A-AG17。
 
