@@ -2,6 +2,31 @@
 
 All notable changes to ThinCoder VS Code are documented here.
 
+## [0.10.1] — 2026-10-03
+
+> 0.9.7 → 0.10.1（月切换——十月首发，发布时定号）
+
+### Added
+
+- **空闲唤醒**：挂起会话可被定时器唤醒——到点自动续跑（可见面 + `timerWake` 生产端）。
+- **台账健康信号**：台账库异常 ⇒ 视图警告行（空值以 `—` 占位）——与 CLI 同口径。
+- **页内搜索升级**：搜索面收进 render-core（双端同源——字节一致探针）+ i18n 键随动。
+- **流式子块跟随（#518）**：内容区自动跟随当前块（块跟随原语入核 ∥ VSC 重指向）。
+- **render-core 渲染层（R1 ∕ R2）**：组件层（flow ∕ cards ∕ subblocks）新包 + 双端装载管线（VSC 重接线）。
+- **`PROJECT-MANIFEST.json` 声明面**：codePaths ∕ index ∕ advisor 三键入驻（`conventions.json` 退役）；工程写门豁免 aux 路径（test/tests/scripts、`.thincoder/tmp`）。
+
+### Changed
+
+- **核依赖升级**：`@thincoder/core` `^0.9.5` → `^0.10.1`（公开仓读取 ∥ 会话锚解析 ∥ 多仓机制 ∥ 纪律面随核生效——vsix 内嵌核 = 本次号）。
+- **交互整批（parity B1–B10 + 走查轮）**：滚动退出 ∥ 挂起队列 ∥ 状态栏 ∥ 渲染性能 ∥ i18n ∥ 设置 ∥ 复制 ∥ 卡顿指示 ∥ 发送忙碌队列。
+- **测试面重整**：旧套件族退役（骨架保留——空 = 绿）；单测 = 批内件（随批档）。
+
+### Fixed
+
+- **tech-debt 轮 6 ∕ 7 ∕ 8**：slash 直通 ∥ 模态门 ∥ sticky bit 重臂 ∥ 级联清除 ∥ aborted reason ∥ advisor 槽守卫 ∥ 台账写者 ∥ timer 支收敛 ∥ 四拆（tooltable ∕ events ∕ composer ∕ core.css）+ 协议门。
+- **providerError 站点清扫 + 项目 `.mcp.json` 装配**（#695 ∕ #701）。
+- **粘贴临时件写时清扫**（#735——有界临时目录）；**会话台账读写守卫**（项目相对守卫面 + 读守卫）。
+
 ## [0.9.7] — 2026-09-25
 
 > 0.9.6 → 0.9.7（CalVer 月内序号——发布时定号）

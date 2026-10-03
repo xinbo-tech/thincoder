@@ -87,7 +87,7 @@ try {
 
 // ── 段 1：打包（仅未提供 vsix 时）——vscode:prepublish 全量门禁仅此 1 跑 ──
 if (!vsix) {
-  run(`npx @vscode/vsce package`, "① 打包 (vsce package — vscode:prepublish = lint + npm test 全量 ~72s，全量仅此 1 跑)")
+  run(`npx @vscode/vsce package --follow-symlinks`, "① 打包 (vsce package --follow-symlinks — vscode:prepublish = lint + npm test 全量 ~72s，全量仅此 1 跑)")
 }
 const artifact = vsix ?? join(ROOT, `${PKG.name}-${PKG.version}.vsix`)
 if (!existsSync(artifact)) {

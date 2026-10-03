@@ -3,6 +3,7 @@
 node_modules/**
 !node_modules/@thincoder/core/**
 !node_modules/@thincoder/render-core/**
+node_modules/@thincoder/render-core/test/**
 .gitignore
 .git/**
 test/**

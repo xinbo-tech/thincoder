@@ -1,7 +1,7 @@
 {
   "name": "thincoder-vscode",
   "displayName": "ThinCoder",
-  "version": "0.9.7",
+  "version": "0.10.1",
   "description": "ThinCoder AI coding assistant — prompts-driven, zero bloat",
   "publisher": "xinbo-tech",
   "license": "MIT",
@@ -30,7 +30,7 @@
     "vscode": "^1.104.0"
   },
   "dependencies": {
-    "@thincoder/core": "^0.9.5",
+    "@thincoder/core": "^0.10.1",
     "@thincoder/render-core": "file:../thincoder-render-core"
   },
   "type": "module",
@@ -124,7 +124,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run lint && npm test",
-    "package": "vsce package",
+    "package": "vsce package --follow-symlinks",
     "postpackage": "node scripts/check-vsix.mjs",
     "publish": "vsce publish",
     "publish:ovsx": "ovsx publish",
@@ -137,7 +137,6 @@
     "@happy-dom/global-registrator": "^20.11.2",
     "@vscode/vsce": "^3.4.0",
     "ovsx": "^1.1.1",
-    "vscode": "file:test/vscode-mock",
     "yauzl": "^3.4.0"
   }
 }
