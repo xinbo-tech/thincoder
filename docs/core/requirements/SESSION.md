@@ -159,7 +159,7 @@ N-S3 CLI 写出的槽文件 `history` 数组与旧实现同构（version 2 + his
 ④ 冷 cwd 手动 GC 无 shell 通道（只接线自动残留 GC）——**注销（2026-09-21）**：VSC 已补命令入口 `thincoder.sessionGc`（数据面 API——双端同面；见 `docs/core/design/SESSION.md` §6.17 D-SE38）
 · ⑤ 记录存储形态 = **端面事实**（本端零该机制——非端差，如实登记；**写缝 = `pushRecord` 注入面**（`thincoder-core/context.mjs`——`pushReal` 双胞）；承载 = 端面 ∥ 单源 = §4.4 F-S7）· ⑥ `turnBusy()` 拒新会话 / 删除 / 切换 / 换项目（回合互斥）。
 坐标（实核 · 2026-09-28 复读）＝ `thincoder-vscode/src/extension/session-slots.mjs`（76 行）· `session-io.mjs`（246 行）· `panel-session.mjs`（312 行）· `session-gc.mjs`（21 行）——原 400 / 437 / 339 为 2026-09-21 读数，端壳归核瘦身（2026-09-26）后失真。
-用例面 = `test/session-boot.test.mjs`（490 行 / 8 例，2026-09-28 复读）· `test/history-window.test.mjs`（192 行 / 8 例）· `test/history-restore.test.mjs`（236 行 / 9 例）· 集成 `test/integration/scenario-04-session-recovery.test.mjs`（141 行 / 5 例）。
+用例面 = `session-boot`（490 行 / 8 例，2026-09-28 复读）· `history-window`（192 行 / 8 例）· `history-restore`（236 行 / 9 例）· 集成 `scenario-04-session-recovery`（141 行 / 5 例）——**退场注**：四件随 2026-09-28 测试树全清重置退场（读数 = 退场前存档；批笔在册 = `docs/batches/2026-10-04-issue-fix-round4.md` §2.3）。
 
 **二态化裁定行（2026-09-25 · 台账 #339① 需求层复核）**：① = **已裁保留**（结构性不对称——端 marker 单侧存在：只写 `.manifest.vscode`、永不碰 `.cli`）；②③⑥ = **已裁保留**（形态类——显示 / 互斥面；类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）；④ = **已注销**（2026-09-21 VSC 补命令入口，双端同面——零动作）；⑤ = **端面事实**（非端差——行内改述）。
 
@@ -213,3 +213,4 @@ N-S3 CLI 写出的槽文件 `history` 数组与旧实现同构（version 2 + his
 - 2026-09-30（**#726 · F-S7 新增 · 主 agent 落笔**〔父侧直接执行 · 可 revert〕——承批 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §1 · 用户 18:24 ∥ 18:28 令）：§4.4 新增 **F-S7**（消化生命周期面记录——`digest` 痕三型 + `subagent` 归档快照入记录存储（人读线 ∥ 不入机器线）；读面 `historyWindow {records:true}` opt-in（默认关 ⇒ 存量读面零破）；端侧重建为各端消费义务；机制单源位置 = 跨端承接批设计裁定）；源 = #726（#719 U1 承接：用户可见端差默认消灭）。
 - 2026-10-01（**#726 U2 父侧笔〔可 revert〕**——承批档 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §七 U2）：§4.5⑤ 补注——「端面事实」加**写缝 = `pushRecord` 注入面**（`thincoder-core/context.mjs`——`pushReal` 双胞）∥ 承载 = 端面 ∥ 单源 = §4.4 F-S7；§4.4 边界句 ∥ N-S3 **逐字复核保持成立**（零改）。**零新语义**（需求侧补注）。
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 2 行折行（140 ∥ 159——语义零改）。**零新语义**。
+- 2026-10-04（**issue 修复批·四 · #825 需求侧 · 主 agent 直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-issue-fix-round4.md` §2.3 ⑤）：§4.5 用例面四件改**裸名 + 读数存档 + 退场注**（`session-boot` ∥ `history-window` ∥ `history-restore` ∥ 集成 `scenario-04-session-recovery`——2026-09-28 测试树全清重置退场；死 token 全形零命中）。**零新语义**（引用形收正）。
