@@ -31,6 +31,11 @@
 
 **权限**：手动模式下子代理非只读工具透传到父 agent 权限审批（人在回路）；**eng-coder 例外 = spawn 时任务域授权**（已批准设计 + 任务书即授权——内部写豁免逐写审批）；非 eng-coder 子代理手动档语义不变。
 
+**模型 override 解析（台账 #861 · 2026-10-04）**：子代理模型 = tool 参数 `model` > `config.agent.subagentModels[role]` > `config.agent.subagentModel` > 继承父 provider
+（`resolveChildProvider`——`thincoder-core/agent-tools/subagent-async.mjs`）。合法形态 = `"provider:model"` / 渠道名 / 模型名 / `"default"`（= 不覆盖）。**非法形态三层防线**：
+① config 加载期清洗——`subagentModel` / `subagentModels.*` 非「非空字符串」者不采纳（回退 `null` ∕ 剔除该键）+ 一次性警告（`loadConfig`——沿 `sanitizeConsultModels` 先例）；
+② 运行期解析入口对非字符串入参抛**明确错误**（不裸 TypeError；tool `model` 参数面同防）；③ settings 写面形状表拒非法（既有）。VSC 端壳自读 raw 配置（不经核 `loadConfig`）——运行期防线保不崩，加载期清洗端差登记。
+
 ### 6.7.2 单工具动作面（七动作）
 
 `spawn / status / observe / send / escalate / cancel / panel`（`check` 已删——§6.7.5）；`action` 缺省 = `spawn`——既有 subagent 调用（无 action）零迁移。**eng-coder role 覆盖**照旧（role 参数不影响工程协议）。
@@ -999,3 +1004,4 @@ spawn 门区（`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `batchDoc` �
 - 2026-09-29（**core-hygiene 批 · P3 文档收正 · eng-designer**——承批档 `docs/batches/2026-09-29-core-hygiene.md` §2.8 行 5）：C2 行 ∕ 系统消息组装点与 `systemPrompt` 面坐标按 **P2 三拆**收正（组装 = `agent/chat-call.mjs:18`；取值 = `agent/run-start.mjs`；压缩开销 = `agent/turn-loop.mjs:39-45`）；档头补三拆坐标注。机制条文零改。
 
 - 2026-10-02（**文档清账轮 · 执行轮 1（core/design 前段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 2 处 R5 注记（过渡别名 `batchSegmentTool` 退场登记——§6.28 两行）。**零新语义**。
+- 2026-10-04（**issue 修复批·一 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §2 · 台账 #861）：§6.7.1 补 **模型 override 解析段**（解析链 + 非法形态三层防线——加载期清洗 ∕ 运行期明确错误 ∕ 写面形状表）。**零新语义**（= 台账缺陷的修复设计导出项）。

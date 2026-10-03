@@ -138,6 +138,9 @@
 前缀（`title` / `heading || path` / `path :: symbol`）+ `content` 截断至 `EMBED_TEXT_MAX_LEN = 2000`。
 截断 = 核级单一来源 `thincoder-core/text-budget.mjs` 的 `safeSliceUTF16`（UTF-16 码元安全——截点落高代理时整对丢弃）。
 2026-09-15 缺陷修复：emoji 恰跨界曾被切成孤立代理 ⇒ 严格 UTF-16 解析端（硅基流动）400 / 20015；查询侧 `query` 不截断、原样送（非孤立代理生成点）。
+2026-10-04 缺陷修复（毒行族 · 台账 #859）：**发送前清洗**——embedding 请求体构造时逐条施 `sanitizeLoneSurrogates`（`thincoder-core/escape.mjs` 复用——消息面 sanitize 本不覆盖 embedding 路径）
+⇒ 孤立代理文本（含已入库毒行）发前净化；**毒行隔离**——补嵌三面（`entries`/`files` ∥ `code_chunks` ∥ `doc_chunks`）遇 400 类批失败改**逐条独试**：
+成功者照写、仍败者跳过 + 一行可见回执（backlog 不被单条毒行堵死）；400 不进 RETRYABLE（快速失败 = 隔离层判据）。机制单源 = §7 D-MEM31。
 
 **CJK 分段**（`segmentCJK`）：FTS5 的 unicode61 无中文分词器，将汉字 / 假名 / 谚文逐字以空格分隔；**写入与查询两侧用同一处理**才可召回（两字词如「分号」→「分 号」短语仍命中；ASCII 保持整词）。
 
@@ -645,6 +648,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 | D-MEM28 | 本批**不**引 worker_thread；升级触发 = 修复后单回合召回墙钟仍 ≥ 0.5 s（**缺省工作集 origin 复测**——基线 ∕ 判别换算式见 §6.14 L-②-5） | 三爆点皆可去废 ∕ 分片消解；worker 牵动三端句柄直用面；承 D-MEM17 登记不执行 |
 | D-MEM29 | 声明载体 = `PROJECT-MANIFEST.json → index.publicRepos`（嵌 index 族——顶层键族与默认档计数零扰动；缺省 `[]` = 零行为） | 声明载体唯一化既有裁定（KD-M1-31——单一项目声明档）；嵌 index 族的理由 = 检索范围声明（同款先例 = `index.excludePaths`——同为解析期路径列表，元素层归一宽容 ∕ 数组层 fail-closed）。被否候选：◎顶层新键（「三族→四族」与「默认八键→九键」计数族全档连带）· ◎工作区级声明档（无此概念 = 新机制 + 跨仓协调面，违仓自持）· ◎约定位置发现（隐式魔法——不可声明 ∥ 不可核） |
 | D-MEM30 | 接入形 = **多根同步 + 读面 origin 集**（复用既有 origin 机制——不新造索引系统；展开一层不递归；单 origin 快径逐字零变） | 机械根因 = 语料单根 + 读面等值过滤 ⇒ 修法 = 语料加根（多 origin）+ 读面集化；「不新造索引系统」= 既有 origin ∥ 同步 ∥ 读面机制原样。被否候选：◎读面全放开（跨项目污染——origin 隔离本为防串项目）· ◎只直读不接入（纪律单腿——检索面缺口不闭）· ◎独立第二索引（新系统——违边界） |
+| D-MEM31 | 毒行两道防线 = **发送前 `sanitizeLoneSurrogates`（主修）∥ 400 类批失败逐条隔离（兜底）** | 单条孤立代理毒行 ⇒ 硅基流动 400/20015 ⇒ 补嵌 backlog 永久堵死（22,957 待补嵌——每轮取同批头部）。清洗令存量毒行发前净化（根因消除）；逐条隔离只兜未知毒形（不引 schema 变更 / 持久标记——过度工程）。被否：400 加入 RETRYABLE（加重试税、无治愈）· 毒行持久登记（新存储面——清洗后已知毒源已消）。 |
 
 ## 8. 不并项与历史沿革
 
@@ -754,3 +758,4 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - 2026-09-30（**memory.db 家族批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-memory-db-family.md` §5 实施回执 + §1.12 父裁）：§6.14 面② B6 行 ∕ 面③ P2 行——收尾 ∕ 预算段坐标收正（实施后现体 = `memory/sync-tail.mjs`：`sweepStaleRows:65-80` ∕ `createRowBudget:35-56` 单源，两同步入口消费）；面① 第 2 件 + §8.3 边界行加**嵌套 cwd 限定句**（语义保证 = 会话于项目根启动；统一基面 = 台账 #700，条件项）；P3 措辞收正（库字节读数面 = `memoryStatus` 核出口——删「开库」限定）。**产品码零触**。
 - 2026-09-30（**缺陷修复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-defect-fixes.md` §2 ∥ 台账 #700）：§6.14 面① 第 2 件 + §8.3 边界行——`isExcludedRelPath` 基面收正（谓词携 `base` 换算至根面；越出根面不命中；各起效点携 base）；「语义保证 = 会话于项目根启动」限制句删除（限制已消解）。**产品码零触**（实施轮另起）。
 - 2026-10-01（**缺陷修复批 · 收口轮 · 主 agent 笔〔③ 类机械 · 可 revert〕**——承 `docs/batches/2026-09-30-defect-fixes.md` §5/§6）：§6.14 面① 第 2 件签名面收正——`isExcludedRelPath(rel, decl)` ⇒ **`isExcludedRelPath(rel, decl, base = null)`**（与 `:519` 基面换算句同形；实施终态实读）。**零新语义**。
+- 2026-10-04（**issue 修复批·一 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §2 · 台账 #859）：§6.3 补 **毒行族两防线**（嵌入发送前清洗 + 400 类逐条隔离）· §7 补 **D-MEM31**。**零新语义**（= 台账缺陷的修复设计导出项）。

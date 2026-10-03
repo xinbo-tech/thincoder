@@ -193,7 +193,7 @@
 | `thincoder-core/agent/child-marks.mjs` | 子代理报告文本锚点（`TURN_CAP_MARK` / `STOPPED_MARK`）**唯一定义**（零依赖叶——先例 `relay-prefix.mjs`；端壳静态导入面，W8 契约②）；`spawn-child.mjs:33` 原样再导出 ⇒ 既有 import 面零改 |
 | `thincoder-core/agent/run-stages.mjs` | 回合阶段骨架 / abort 分支 / pending 单容器过滤 / `finalizeAgentTurn`（收尾单点） |
 | `thincoder-core/agent/suspension.mjs` | 挂起 / 唤醒状态机（核内形态与载体契约见 §2.3） |
-| `thincoder-core/auto-think.mjs` | 任务难度分类 → 自动设置 reasoning effort（opt-in） |
+| `thincoder-core/auto-think.mjs` | 任务难度分类 → 自动设置 reasoning effort（opt-in）；分类调用先过**「可关思考」守卫**（不可关 ⇒ 跳过 + 一次可见警示）；失败一次可见——D-AL26 |
 | `thincoder-core/agent-tools/subagent*.mjs` | subagent 工具：spawn / status / observe / send / escalate / cancel / panel 动作面、async 池、调度器、审计任务书；`subagent-panel.mjs` = 面板执行器 |
 | `thincoder-core/agent-tools/async-settle.mjs` | async 结果容器统一共享 helper：`settleAsyncEntry` / `getAsyncPool` / `parkAsyncPending` / `parentAborted` 守卫 / `buildChildSignal` |
 | `thincoder-core/agent-tools/subagent-scheduler.mjs` | 任务调度器：`normalizeFileList` / `filesOverlap` / `depInfo` / `queueRunnable` / `assertNoDepCycle` / 停滞检测 |
@@ -477,6 +477,7 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 | D-AL23 | 释放点 = 注入完成后置空（三消费点同点 + 幂等守卫） | 池内窗口语义零变；否决「settle 时刻置空」（破坏未消化期 status / observe）·「不置空」（挂起期分钟级驻留） |
 | D-AL24 | VSC 侧接线面 = **只登记接线事实、不复制机制本体**（挂起 / 协议 / 呈现 / 权限门回指既有节） | 机制权威已单源（§2.3 / SUBAGENT 档 / WEBVIEW 档 / 工程模式板）——平行档 / 重复叙述 = 漂移源 |
 | D-AL25 | child permission gate **按现状并入**（C-2 契约——非「无此状态」） | 批 2 发现「审批态已实装」（activity-view.js ⏸ + 等待审批）——活档口径按现状（VSC 源档为参照历史） |
+| D-AL26 | auto-think 分类 = **可关思考守卫 + 关思考小预算请求 + 失败一次可见** | 思考型模型上分类调用 100% 失败（38/38 实测——思考吃光 `maxTokens: 10` + 无思考开关守卫；catch 静默 ⇒ 功能失效无感知）。修法：`thinkOffPath(spec)` 假 ⇒ 不调用（+ 一次 warn）；真 ⇒ `thinking = thinkOffShape(spec)` + `reasoningEffort` 清空 + `maxTokens = 32`；失败一次可见 warn（回退 null 语义不变）。被否：加大 maxTokens 让思考跑完（延迟 / 成本与 cheap 分类意图相悖）· 换分类渠道（超本批范围）。 |
 
 ## 8. 不并项与历史沿革
 
@@ -612,3 +613,4 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
   起跑前段 ∕ 回合环 ∕ 模型调用 = `agent/run-start.mjs` ∕ `agent/turn-loop.mjs` ∕ `agent/chat-call.mjs`；§6 坐标口径注补三拆 as-of 句。机制条文零改。
 - 2026-09-29（**residuals-round2 批 · 文档面实施轮 · eng-designer**——承批档 `docs/batches/2026-09-29-residuals-round2.md` §2 #586）：§6.18「上行通道消费 ∕ 唤醒面」行 ∕ 「端壳事件中继面」行两处验收机判引文改指——W8 契约②判据现载体 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`（单测树重建时回迁端侧单测档）。**零新语义**。
 - 2026-10-01（**零语义清账批 #2 · 文档面轮 · eng-designer**——承批档 `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §2 · 台账 #784）：§6.18「自持工具登记面（#83）」行记账缝指称收正为**主名 `batch`**（旧工具名同形措辞消歧——工具已更名；契约名 `configureBatchSegment` 零动）。**零新语义**（措辞收正）。明细 = 批档 §2。
+- 2026-10-04（**issue 修复批·一 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §2 · 台账 #860）：§6.1 模块表 `auto-think.mjs` 行补**分类守卫与失败可见**句 · §7 补 **D-AL26**。**零新语义**（= 台账缺陷的修复设计导出项）。
