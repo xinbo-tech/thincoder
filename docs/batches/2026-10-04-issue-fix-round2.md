@@ -14,7 +14,7 @@
 | 1 | #862 | ACP 结构化子代理事件（role/id/state/进度）——能力扩展 | `bridge.mjs:194-195`（仍注「另行跟踪」）∥ 全档零结构化映射 ∥ 活动面板（ACP 客户端侧）前置件 |
 | 2 | #870 | `session/prompt` 支持 `resource_link`（Zed @文件引用） | 全仓 `resource_link` 零命中 ∥ `handlers-session.mjs:204-206`（仅取首个 text 块）∥ 设计档 `ACP-CLIENT.md:616`（G6）∥ `:627`「建议立批」已登记；待实现 = `file://` 解码 + `#Lx-Ly` 选区 + 上限/二进制/降级三态 |
 | 3 | #871 | `usage_update` 形状收正 + `session/list` updatedAt 改 ISO | 3.3 已修（`client-caps.mjs:57-61` + `handlers-session.mjs:49-69`）；3.1 存活 = `bridge.mjs:208` 缺 `used/size`（官方 schema `UsageUpdate.required=[used,size]`）；3.2 半修 = `handlers-slots.mjs:48` 键已正 ∥ `:50` `updatedAt ?? 0` 仍发 epoch（schema 要 ISO 8601） |
-| 4 | #872 | 会话身份与状态同步（G5 id 命名空间归一 + 两处通知字段收正） | 2.1 load/resume 仍新分配 id 且只回 `{configOptions}`（`handlers-slots.mjs:79-80,108-114` ∥ `:139-140,161-164`）∥ 2.2 计数器 id 非持久身份（`acp.mjs:99,106` + `handlers-session.mjs:167`）∥ 2.3 通知字段 `mode:`（`:287`）∥ `{configId,value}`（`:266`）对 schema 相抵（`currentModeId/configOptions`）；设计档 `ACP-CLIENT.md:521-523,615` 明载 G5「本批不做」 |
+| 4 | #872 | 会话身份与状态同步（G5 id 命名空间归一 + 两处通知字段收正） | 2.1 load/resume 仍新分配 id 且只回 `{configOptions}`（`handlers-slots.mjs:79-80,108-114` ∥ `:139-140,161-164`）∥ 2.2 计数器 id 非持久身份（`acp.mjs:101,108` + `handlers-session.mjs:167`）∥ 2.3 通知字段 `mode:`（`:287`）∥ `{configId,value}`（`:266`）对 schema 相抵（`currentModeId/configOptions`）；设计档 `ACP-CLIENT.md:521-523,615` 明载 G5「本批不做」 |
 | 5 | #873 | `set_config_option` 响应补 `configOptions` + 判别键 `type` | 1.2/1.4 已修（`client-caps.mjs:28-37,62` ∥ `handlers-session.mjs:204`）；1.3 半修（`:191` sessionId 已修 ∥ `:32-36` configOptions 元素仍 `{id,name}` 无 `type`——schema oneOf select/boolean 必填）；1.1 存活（`:268` 仍返 `{}` vs `SetSessionConfigOptionResponse.required=[configOptions]`）；同拍收正设计档 `ACP-CLIENT.md:487/500` |
 
 **复验令（承用户 2026-09-25 先例）**：设计轮开工先逐条实读复验仍存在；已消/前提变者按实况登记（不硬做——#871/#873 各有半修项，逐条对现盘）。
@@ -24,7 +24,7 @@
 **边界**：在飞写域零触——#51（`thincoder-core/ledger-*.mjs` ∥ `thincoder-cli/src/**` ∥ `docs/cli/design/{CLI-ENTRY,ACP-CLIENT}.md` ∥ `docs/batches/2026-10-03-read-data-interface*`——**实施在跑**；本批设计轮 = 只写文档，但实施轮与 #51 写域交叠 ⇒ 实施须待 #51 收口后派发）∥ #54/#58（面板面）∥ #56（issue 批·一）∥ #57（菜单轮评审——只读）∥ 已收口批档。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（设计档 = docs/cli/design/ACP-PROTOCOL-COMPLIANCE.md · 复验 5/5 在档 · #862 拆批裁定在档 · 实施须待 #51 收口后派发）
+**状态行**：设计完成（设计档 = docs/cli/design/ACP-PROTOCOL-COMPLIANCE.md · 复验 5/5 在档 · #862 拆批裁定在档 · 实施须待 #51 收口后派发 · fix 轮收正（评审 #66 号 1–5 已落 · 号 6 保持；doc-check 复跑 = exit 0））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 **§2 批次任务与设计（eng-designer · 2026-10-04 · initial 轮）**
@@ -83,6 +83,28 @@
 4. **同拍面（实施轮落）**：ACP-CLIENT.md 十处收正（设计档 §5 表）+ API-CONTRACT 重生成 + doc-check 复跑 exit 0——均为验收项。
 5. **边界登记（随收口入台账 · 父侧）**：多块 text 合流残项 ∥ model 候选列表不供货 ∥ 多引用总量无闸 ∥ fork 角如实 ∥ resource_link 块级字段不消费（设计档 §11）。
 
+**§2 批次任务与设计 · fix 轮（eng-designer · 2026-10-04 · 设计评审 #66 号 1–5 收正——设计档同拍 · 号 6 保持）**
+
+（行锚 = 设计档 `docs/cli/design/ACP-PROTOCOL-COMPLIANCE.md` as-of 本次收正后；条目序 = 批档 §1）
+
+- 号 1（🟡 行数档）：§7 增「拆分评审（本批 · 判据 8 · 300 咨询档）」段（`:274-281`）——`handlers-session.mjs` 292 → ~345 **本批不拆**（理由三条 + 后续拆分点两条）；`bridge.mjs` 397 → ~406 同段注明（本批 Δ +~9——不拆）。
+- 号 2（🔵）：§2.4 增「替换点钉定（拒载安全）」子条（`:109`）——既有前置判据（`loadSlotFile` 缺失 `handlers-slots.mjs:64-67` ∥ 工程模式拒载 `:72-77`）之后、`createSession` 之前；拒载路径零副作用（旧实例保留）；§10 T12 补拒载腿（`:328`）。
+- 号 3（🔵）：§1.2 #872 行锚 `acp.mjs:99,106` ⇒ `:101,108`（`:25`——与 §2.4 `:100-108` 对齐）。
+- 号 4（🔵）：§2.2 验收句改「发射值往返恒等」（`:70`）——`new Date(emit(v)).toISOString() === emit(v)`。
+- 号 5（🔵）：§11 增 thinking 语义登记行（`:348`）——currentValue = 本地显式档（`undefined` ⇒ `false`；`thinkAlwaysOn` 族为本地档、非服务端生效态）。
+- 号 6（🔵）：保持（判据降级限制声明——无改法；父侧裁定）。
+- 机检复跑（`node scripts/doc-check.mjs` · thincoder 仓根 · 本批改后）= **exit 1**——闸红均非本批面（行宽 2 ∥ 悬空 7）：
+  - 行宽：`docs/core/design/CORE-UNIFICATION.md:1118`（337 字符——批一修轮（eng-designer#67）在飞面；父侧已裁＝零触、转交 #67 折行）∥ `docs/core/design/PROVIDER.md:104`（335 字符——他批在飞改动新引）。
+  - 悬空：`docs/core/design/AGENT-LOOP-SUBAGENT.md:37`（符号 ×2）∥ `docs/core/design/CORE-UNIFICATION.md:1109/1112/1118/1152/2046`（5 处裸段引用未带 `thincoder-core/` 前缀——`memory` ∥ `provider` 段）。
+  - 基线对照：开工实读 = 悬空 0 / 行宽 1（存证日志在案）；上列新增项系开工后他批在飞改动新引。**本批面零新增闸红**——本设计档仅 2 条「拟新增 · 列报 · 不入闸」（与基线同项），无行宽命中。
+- 同拍面照旧：他批在飞零触（含 `docs/core/design/CORE-UNIFICATION.md`）；号 1–5 逐条可回读（上列行锚）。
+
+**§2 fix 轮 · 追加（交付前复跑 · 2026-10-04 同日更晚时点）**
+
+- `node scripts/doc-check.mjs`（thincoder 仓根）= **exit 0**——悬空 0 ∥ 行宽 0（本批收正后终态）。
+- 本段前文所载中途漂移（悬空 7 ∥ 行宽 2——他批在飞面）已由各批自行消解（含批一 #67 折行 `docs/core/design/CORE-UNIFICATION.md:1118`）。
+- 本批验收两项达成：**本批面零新增闸红 ∧ 复跑 exit 0**。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -105,5 +127,14 @@
 VERDICT: pass
 
 ## §4 用户批准（主 agent）
+
+**父侧代签（用户 2026-10-04 00:31「都自动跑」——点火 / 代签 / 派发 / 收口全自动授权；自缚三条件齐备）**
+
+- ① **设计评审 pass** ✓：评审 #66（`VERDICT: pass` · 🔴 0 ∥ 🟡 1 ∥ 🔵 5——含 `handlers-session.mjs` 300 档拆分评审项）；
+- ② **修正落地核验** ✓：收正轮 #71 五条全落（拆分评审 `:274-281` ∥ 替换点钉定 `:109` ∥ 行锚收正 `:25` ∥ 判据改写 `:70` ∥ 语义登记 `:348`）；父侧抽验在盘；另两笔父侧直接执行（本档 §1 锚点随动 `:17` ∥ 设计档 §2.4 枚举残项重编号 `:108`）+ **需求面补笔已落**（`docs/cli/requirements/ACP-CLIENT.md`——R-A5.4 改述 + **R-A5.8–A5.10** + 变更记录；主 agent 笔）；
+- ③ **token 已签发** ✓（值不入档，纪律照守）。
+
+**批准面**：#870 ∥ #871 ∥ #872 ∥ #873（#862 拆批不实施——裁定在档）——**派实施**（eng-coder）。
+
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）
