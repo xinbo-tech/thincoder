@@ -91,7 +91,7 @@
 | # | 需求 | 判定句（验收口径——摘要） |
 |---|---|---|
 | R18 | 四遗漏通路补展开（顺序对齐 core：定制头前、内置头后） | 逐通路机验：定制头出现在该通路请求头里；同名冲突时内置头胜出；无定制头配置时头集合逐字一致 |
-| R19 | 测试面随件（逐通路行为锁） | `node --test test/provider-headers.test.mjs` 全绿；`npm test` 全绿 |
+| R19 | 测试面随件（逐通路行为锁） | `node --test test/provider-headers.test.mjs` 全绿（**载体已随 2026-09-28 测试树全清退场——本行判据 as-of 批次窗**）；`npm test` 全绿 |
 | R20 | 文档面随件 | 本档三层落档；机检本批文件新增违规 0 |
 
 **非功能**：N8 零行为回归（未配置 headers 时头集合逐字不变）· N9 覆盖语义对齐（同名时内置头胜出；`Authorization` 装载面剥离语义不变）。
@@ -154,3 +154,4 @@ N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自
 - 2026-09-29（**provider-config-family 批 · 需求新增 · 父侧直接执行 · 可 revert**——承用户 20:45 请求「陈年导入你就不管了吗？」；台账 #177）：§2.1 新增条目「渠道收录判据成文」（判据单源 = 设计档 `PROVIDER.md` §6.21；本批同时新增 `huawei` 预设——`PROJECT.md` C3 计数 21→22 已随动）；**本档新增需求 1 条**。
 - 2026-09-30（**#735 · N-IDG-3 新增 · 主 agent 落笔**〔父侧直接执行 · 可 revert〕——承批 `docs/batches/2026-09-30-vsc-paste-cleanup.md` §2.7（设计轮草案）· 用户 18:24 ∥ 18:28 令）：§4.5 非功能段新增 **N-IDG-3**（VSC 贴图临时件有界——写时 mtime 3 天窗扫除 ∥ 核 `cleanupOldToolResults` 单源）；源 = 台账 #735（pairfix §2 F-1 上抛：VSC 贴图件无自动清理实锤）。
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 1 行折行（132——语义零改）。**零新语义**。
+- 2026-10-03（**死指针收正 · 主 agent 直接执行 · 可 revert**——承 crash-guards 批修复轮报备）：§4 R19 载体注收正——`test/provider-headers.test.mjs` 已随 2026-09-28 测试树全清退场（本行判据 as-of 批次窗），消除死指针。**零新语义**。
