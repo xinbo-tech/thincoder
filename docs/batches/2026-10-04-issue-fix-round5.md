@@ -149,6 +149,38 @@
 
 VERDICT: changes-required
 
+### 轮次 2（评审子代理）
+
+**计数：🔴 0 ∥ 🟡 0 ∥ 🔵 0（共 0）——前表 11 条逐条复核 = 全消解（11/11）；本轮新增发现 = 0（只核前表，不猎新）**
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | 修复复核（原 🔴 尺寸标注） | 原 🔴 → 已消解 | 批档 §2.3 表重建三要件逐项成立：① 双列（「当前行数 ∥ 本轮增量」）全档在位（`2026-10-04-issue-fix-round5.md:51-74`——纯 .md 两行免；`bin/thincoder.cjs` ∥ `bin/node-version-gate.cjs` 两行随 #867 补入）；② 行数面结论块（`:76-84`）覆盖全部 >300 面（`memory/schema.mjs` 468 ∥ `advisor-async.mjs` 481 ∥ `startup.mjs` 322 ∥ 贴线 `verify.mjs` 296⇒≤310 越线判定+拆分预案 ∥ `ledger-migrate.mjs` 299）＋函数档声明（`migrate` ≈371 越线声明；四档最大函数 <300）；③ **越 500 面 = 零**（峰值 advisor ≤500「不得越」钉 ∥ 次高 schema ≤472 ∥ startup ≤332）；登记面两处触评移交 ∥ `CLI-ENTRY.md` §1 收正挂起均已披露（`:83-84`/`:125`）。 | —（已落；源码面行数不在评审文档集——集内交叉核一致：`SETTINGS.md` §3.1 载 192/164 ∥ `LEDGER.md` §3.2 载 `ledger-cmd` 拆分后 ≈140） |
+| 2 | 修复复核（原 🟡 状态面） | 原 🟡 → 已消解 | 陈旧「10 档」状态行已删——现 §2 单条状态行（`:20`，含「11 档」）；§2.5 `:90` 读数统一 11 档（枚举 11 档）；「10 档」仅存轮 1 发现记录面（`:113`/`:136`）。 | —（已落） |
+| 3 | 修复复核（原 🟡 用例撞号） | 原 🟡 → 已消解 | `LEDGER.md:438` 新用例 = **T55**（T46 `:437` 之后）；既有 T47–T54 块（`:442` 起）零碰；变更记录同拍（`LEDGER.md:514-515` 载「T47 ⇒ T55」）；批档 §2.1 `:36` 引「§8 T55」。 | —（已落） |
+| 4 | 修复复核（原 🟡 AC-835-1） | 原 🟡 → 已消解 | `MEMORY.md:599` 补句已点名 `index.publicRepos`（「`index.publicRepos` 非空 ⇒ `declared=true`」——同句两词共现，可机检）；AC 文本零改。 | —（已落；`PORTABILITY.md` ∥ `MANIFEST.md` 两处不在评审文档集——按轮 1 核读结论（已成立）照录） |
+| 5 | 修复复核（原 🟡 #842 向导链） | 原 🟡 → 已消解 | `SETTINGS.md:182-183` 条件句 ⇒ 同链钉死（同一 `loadModels` 注入引用——`mount-settings.mjs:214` ∥ `mount-onboarding.mjs:59-62`；「采用」同经 `onUseModel:216`）；§2.14 `:170` 随正；T-DSK62 `:339` +⑤ 向导腿；批档 AC-842-6 新设（`:46`）。 | —（已落；源码坐标不在评审文档集——unverified） |
+| 6 | 修复复核（原 🟡 console cap） | 原 🟡 → 已消解 | `AGENT-LOOP.md:286-288` 钉 `CONSOLE_CAPTURE_LIMIT = 64 * 1024`（= 65536 字符；与 `TOOL_RESULT_OFFLOAD_LIMIT` 同值声明）＋标记行逐字 `[console truncated at 65536 chars]`＋拼接先于 `offloadToolResult`；AC-863-3（批档 `:48`）同拍（含未超限零标记负向锁）。 | —（已落；「与 offload 同值」= 档内声明——`helpers.mjs` 在集外，unverified） |
+| 7 | 修复复核（原 🟡 #867 可测缝） | 原 🟡 → 已消解 | 校验点裁定 = `.cjs` shim 首行（先于 ESM 静态 import 求值）；纯函数 `nodeVersionError(version = process.versions.node)` ＋执行门 `enforceNodeMajor()`（新档 `bin/node-version-gate.cjs`）；AC-867-4 重写（纯函数直测假版本 ＋ 接线静态腿）；文件表补三行（`:71-73`——shim ∥ 新档 ∥ `thincoder.mjs` 零改）。 | —（已落；`CLI-ENTRY.md` 在集外——挂起按披露照录） |
+| 8 | 修复复核（原 🔵 单源） | 原 🔵 → 已消解 | `LEDGER.md:251-252` 口径 5 已补消费关系（声明源段 ≤ 消费 `declaredPublicRoots`——不二写）＋解析序单源回指（`DOC-DISCIPLINE.md` §4.2.2）；变更记录 `:515` 同拍。 | —（已落） |
+| 9 | 修复复核（原 🔵 标签改述） | 原 🔵 → 已消解 | `MEMORY.md:584` 改述 =「用户目录常用项（`Library`=macOS ∥ `go`=Go 工作区）」＋误剪接受面注明（与批档 `:49` 同拍）。 | —（已落） |
+| 10 | 修复复核（原 🔵 双面同拍） | 原 🔵 → 已消解 | `persona-engineering.md:79-80` EN 镜像补尾半句（「a basis present must be checkable, one absent must be marked — no format mandated, existing documents not retrofitted」——与中文尾句 `:77` 同义）。 | —（已落） |
+| 11 | 修复复核（原 🔵 指针收口） | 原 🔵 → 已消解 | 批档 §2.5 `:91` 落 doc-check 读数本体；§2.4 `:87` 指针改指 §2.5（「eng-designer 报告（收尾附）」死端仅存轮 1 发现记录面 `:145`）。 | —（已落） |
+
+核读补充：🔴 表重建三要件逐项成立（双列 ✓ ∥ 结论块覆盖全部 >300 面＋函数档 ✓ ∥ 越 500 = 零 ✓）；11/11 消解证据均在评审文档集内可核（集外源码面读数按档内引用照录——unverified）。
+局限：源码面（`*.mjs`）行数与坐标不在评审文档集；无项目标准档 ∥ 无文档地图声明（方法学 ∥ 归属维度按 Project Guide 降级评估）；集外档（`CLI-ENTRY.md` ∥ `PORTABILITY.md` ∥ `MANIFEST.md` ∥ `VERIFY-REDESIGN.md` ∥ `TUI-COMMANDS.md` ∥ `AGENT-LOOP-ASYNC-POOL.md` ∥ `SESSION.md` ∥ `CORE-UNIFICATION.md`）相关修复按批档披露照录——未独立复核。
+
+VERDICT: pass
+
 ## §4 用户批准（主 agent）
+
+**父侧代签（用户 2026-10-04 00:31「都自动跑」——点火 / 代签 / 派发 / 收口全自动授权；自缚三条件齐备）**
+
+- ① **设计评审 pass** ✓：轮次 2 复评 #81（`VERDICT: pass` · 🔴 0 ∥ 🟡 0 ∥ 🔵 0——**11/11 全消解**；🔴 表重建三要件成立）；
+- ② **修正落地核验** ✓：收正轮 #72 十一条全落（表重建 `:51-74` + 结论块 `:76-84` ∥ `LEDGER.md` T55 ∥ `MEMORY.md` 补句 ∥ `SETTINGS.md` 同链 ∥ `AGENT-LOOP.md` cap ∥ #867 三行 ∥ §2.5 读数）；父侧抽验在盘 + `doc-check` exit 0；**移交面处置** = `SESSION.md` 登记行已落（`7de21bd3`）∥ `CLI-ENTRY.md` §1 已落（`d16d5f40`）∥ `CORE-UNIFICATION.md` 行 8 触评已落（#78 解冻后）；
+- ③ **token 已签发** ✓（值不入档，纪律照守）。
+
+**批准面**：#834 ∥ #835 ∥ #842 ∥ #848 ∥ #863 ∥ #867——**两路派发**（core 9 档 ⇒ eng-coder 甲 ∥ cli/desktop 7 档 + 批内件 ⇒ eng-coder 乙（**dependsOn 甲**——批内件全量复跑需甲落））；**EN 提示词面**（`thincoder-core/prompts/persona-engineering.md`）＝主 agent 笔。
+
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）
