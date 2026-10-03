@@ -21,7 +21,7 @@ E2E 基建 = 在既有单入口测试骨架里**真启 Electron 应用**、驱�
 
 **④ 隔离 = 每用例独立临时家目录**。`launch` 的 `env` 显式把 HOME / USERPROFILE 与 APPDATA / XDG_CONFIG_HOME 重定向到用例自建 `mkdtemp` 目录，
 并预置其中 `.thincoder/config.json` = `{"locale":"en"}`。三重作用：零网络（不读真家 provider）· 消单实例锁撞车
-（`thincoder-desktop/src/main/main.mjs:70` 起 `app.requestSingleInstanceLock()`，锁落 userData ⇒ 两个并发 Electron 实例必须各有独立 userData）·
+（`thincoder-desktop/src/main/main.mjs:92` 起 `app.requestSingleInstanceLock()`，锁落 userData ⇒ 两个并发 Electron 实例必须各有独立 userData）·
 **模型段 `none` 兼作重定向生效的证据**（真家有 provider 时该段不为 `none`）。
 
 **就绪判据**（不用固定 sleep）：引导位 = `documentElement.dataset.boot`（置位面 `thincoder-desktop/renderer/dom.mjs:44-46`；
@@ -37,7 +37,7 @@ E2E 基建 = 在既有单入口测试骨架里**真启 Electron 应用**、驱�
 | KD-1 | 驱动依赖 = `playwright-core` | Electron 驱动在该包内且 `scripts` 缺省（无浏览器下载）；否决 `@playwright/test`：自带 runner ⇒ 第二 runner（`docs/core/design/TESTING.md` §4.2）；否决自研 CDP 直连：协议面自维护、成本高于收益；**失败退路**：安装后首步核验（`require("playwright-core")._electron` 可达 · §1① 四条依据不翻）；不成立 ⇒ 停手上抛、备选另裁（不就地改口径） |
 | KD-2 | E2E **并入既有 `test` 入口**，不新增 script | 沿用「脚本一条 · 清单登记 · walk 递归」既有形；否决 `test:e2e` 独立脚本：第二入口 = 漂移源（`docs/core/design/TESTING.md` §10 F1/F2） |
 | KD-3 | 用例落 `thincoder-desktop/test/integration/`（域界 = 目录界） | 判据 = `docs/core/design/TESTING.md` §4.1 承载选型（域界 = 目录界）+ §4.3 目录 / 命名契约；否决落 `thincoder-desktop/test/` 顶层（顶层 = 单元域，域界被抹平）；否决与单测混目录（同因） |
-| KD-4 | 隔离手段 = **家目录重定向**（env 面，主选）；退路 = 测试侧 `--user-data-dir` 启动参数 | 否决不隔离：真家 config 泄漏 ⇒ 断言不稳定 + 并发单实例锁撞车（`thincoder-desktop/src/main/main.mjs:70-73`：非主实例静默退出 ⇒ `firstWindow()` 挂起 / 超时）；否决**产品码内**改向（`app.setPath` 类 ⇒ 动产品码，本批禁止）；退路 = **测试侧** `launch.args` 项（不动产品码），落位实证与停手口径见 §3.2 |
+| KD-4 | 隔离手段 = **家目录重定向**（env 面，主选）；退路 = 测试侧 `--user-data-dir` 启动参数 | 否决不隔离：真家 config 泄漏 ⇒ 断言不稳定 + 并发单实例锁撞车（`thincoder-desktop/src/main/main.mjs:92-106`：非主实例弹模态框待点击（非 `--smoke` 径）⇒ 子进程阻塞待人工点击）；否决**产品码内**改向（`app.setPath` 类 ⇒ 动产品码，本批禁止）；退路 = **测试侧** `launch.args` 项（不动产品码），落位实证与停手口径见 §3.2 |
 | KD-5 | **不传 `executablePath`**，走缺省解析 | 缺省 = 包内 `node_modules/.bin/electron`（包类型声明 `Electron.launch` 的 `executablePath` 项注释）。逃生口（实施期若缺省落空）= `createRequire(import.meta.url)("electron")` —— electron 包入口尾行 `module.exports = getElectronPath()`（本机实读）⇒ 该 require 的**值**即二进制路径串，不写任何硬路径 |
 | KD-6 | 走**常态启动面**（窗口常驻），不用 `--smoke` | `--smoke` 语义 = 单行 JSON 读数后退出（`thincoder-desktop/src/main/main.mjs:4` 启动序）；与本条「开面板 ⇒ 交互 ⇒ 截图」不同面。冒烟读数归既有复核形 |
 | KD-7 | 断言面 = **DOM 契约**（`data-*` 锚与态值），非文案 | 文案随 locale 变；契约锚 = 产品自身登记的机读面 ⇒ 属 `docs/core/design/TESTING.md` §4.5「业务可观察结果」侧（不 import 应用内部 / 不锁私有形状；「子节点数 0」= 产品登记的退场契约——容器清空，`thincoder-desktop/renderer/views/settings.mjs:261`）；契约锚清单 = 本表下 **KD-7 注** |
@@ -73,7 +73,7 @@ _electron.launch({
 | 临时家 | `mkdtemp(join(tmpdir(), "tc-desktop-e2e-"))`，**每用例一枚** | KD-9「一用例一隔离」 |
 | fixture | `<临时家>/.thincoder/config.json` = `{"locale":"en"}`（**唯一预置内容**——用例 1 面；用例 2 见 §3.5） | 核 `thincoder-core/config-io.mjs:32` `configDir = join(homedir(), ".thincoder")` ⇒ 家目录改向即配置面改向；无 provider ⇒ 零网络 |
 | userData | 生效路径 = 测试侧 `launch.args` 传 `--user-data-dir=<临时家>/userData`（§3.2 生效路径段 · 不动产品码）；依据 = 实测 env 改向不达该面（Chromium 不采信 `APPDATA`——只给四 env 时 `app.getPath("userData")` 仍指系统真值）；**不用**产品 `setPath` | 实测读数（2026-09-27）= 落 `<临时家>/userData`；侧证 = 本用例 `model` 段应为 `none` |
-| userData 落位（实施首步实证） | 经 Electron 侧读 `app.getPath("userData")` ⇒ 断言 ∈ 临时家；两况须过 = 本机已有实例 · 并发实例 | 单实例锁落 userData（`thincoder-desktop/src/main/main.mjs:70-73`：非主实例静默退出 ⇒ `firstWindow()` 挂起 / 超时） |
+| userData 落位（实施首步实证） | 经 Electron 侧读 `app.getPath("userData")` ⇒ 断言 ∈ 临时家；两况须过 = 本机已有实例 · 并发实例 | 单实例锁落 userData（`thincoder-desktop/src/main/main.mjs:92-106`：非主实例弹模态框待点击（非 `--smoke` 径）⇒ 子进程阻塞待人工点击） |
 | 清理 | 用例尾递归删临时家 | KD-9 |
 
 **生效路径（userData 面）**：`launch.args` 传 `--user-data-dir=<临时家>`（测试侧传参 ⇒ 不改产品码；采信已实证——2026-09-27 落 `<临时家>/userData`）；该路亦不成立 ⇒ **停手上抛**（§8-6），不得就地改产品码。
@@ -301,3 +301,4 @@ _electron.launch({
 - 2026-09-29（**撤会话头 + 工具头色批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-desktop-head-toolcolor.md` §2 · 台账 #668）：§6 `T-DSK43` 行 ③ 句随动——「会话头三值控件 `disabled`」⇒ **「输入区模型 ∕ 推理钮 `disabled`」**（会话头面退场；三值居所 = 输入区控件行——单源 = `docs/desktop/design/UI.md` §1 输入区行）。**零新语义**（面名收正）。
 - 2026-09-29（**口子清零二轮 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-29-hatch-clearance-2.md` §2 · 台账 #673）：§8 项 13 收正——改善项 = **可选**（用户 2026-09-27 口径「参数通道偏好」）· 现形已实证 ⇒ **非缺口**（「另批裁」句退场）；触发条件 = 核侧新增 home 依赖点令隔离失效 ⇒ 随触面批补 seam。**零新语义**。明细 = 批档 §2。
 - 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 2c 前置步 · 文件账分片轮（切片 3 · 余量收尾）· eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：**§9 新立**（文件账）——§9.1 本域族行 **3** 行（`thincoder-desktop/test/run.mjs` · `thincoder-desktop/test/files.mjs` ∥ 用例模块行 ∥ `.gitignore`〔KD-10 单源——`dist/` 半随行〕——自 `docs/desktop/design/PROJECT.md` §4.1 逐字迁入；原址各改一行指针）。**零新语义**（迁移 ∥ 指针 ∥ 判域在册）。
+- 2026-10-03（**桌面第二实例提示轮 · 跨档随正轮 · eng-designer**——承批档 `docs/batches/2026-10-03-desktop-second-instance-notice.md` §1 · 台账 #838）：三处随正——§1④ `thincoder-desktop/src/main/main.mjs:70` ⇒ **`:92`**；**KD-4** ∥ §3.2 userData 行「非主实例静默退出 ⇒ `firstWindow()` 挂起 / 超时」⇒「非主实例弹模态框待点击（非 `--smoke` 径）⇒ 子进程阻塞待人工点击」（`thincoder-desktop/src/main/main.mjs:70-73` ⇒ **`:92-106`**）——隔离仍为唯一正解零改。**零新语义**（随正）。明细 = 批档 §2 形式化块。

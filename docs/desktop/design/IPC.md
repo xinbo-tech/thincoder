@@ -253,7 +253,7 @@
    - **启动接线**：`thincoder-desktop/src/main/main.mjs` 启动单线内**窗口创建前**一次恢复（单实例锁分支后）⇒ `project:recent` 的 `cwd` 非空 ⇒ 渲染面 boot 既有接续门（`thincoder-desktop/renderer/app.mjs:230`）自动一次 `session:resume` ⇒ **一条链**（项目 + 会话；渲染面零改）。
    - **降级（三档同归冷态）**：无记录 ∕ 族无可读 `cwd` ∕ 目录不在盘 ⇒ 不恢复（冷态照旧）；**日志分档** = 无记录（首启常态）零日志，仅「族无可读 `cwd`」∥「目录不在盘」两档真降级各记 `console.error` 一行（零静默）；本端记录**零触碰**（会话恢复记录——删 ∕ 改会动恢复语义；自愈 = 下一次成功打开改写最新）。
    - **写面零新增**：记录写点 = 既有认领写（`resumeSlot` ∕ `newSession` ∕ `switchToSlot` ∕ `deleteSlot`——端参绑定 `END`）；恢复面纯读（盘面零改动）。
-   - **边界**：多实例 = 单实例锁既有（`thincoder-desktop/src/main/main.mjs:76`——非主实例零窗口零恢复动作）；老版本档零迁移（记录面自既有恢复链写入——从未被桌面打开过的项目 ⇒ 无记录 ⇒ 冷态）。
+   - **边界**：多实例 = 单实例锁既有（`thincoder-desktop/src/main/main.mjs:92`——非主实例零窗口零恢复动作（**明示原因框**——非静默；`--smoke` 零弹框）∥ 主实例收 `second-instance` ⇒ **唤醒既有窗口**（`restore+show+focus`））；老版本档零迁移（记录面自既有恢复链写入——从未被桌面打开过的项目 ⇒ 无记录 ⇒ 冷态）。
 
 **设置族与项目级信息族注（批 9）**：
 
@@ -504,3 +504,4 @@
 - 2026-10-02（**设置菜单组项收窄批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-settings-menu-trim.md` §2 · 台账 #820 · 需求 D39 收正）：§1 `ev:menu` 行收正——`openSettings` `value` 域（**菜单发出闭集 = 六名**（= `SECTIONS` 名序去「模型与档位」）∥ 渲染面校验 = `SCOPES` 七名宽容（菜单不发 `model`——零改）；缺 ⇒ 开设置面）；动作闭集六 ∥ 通道集 ∥ 白名单计数零变。**零新语义**（收正）。明细 = 批档 §2。
 - 2026-10-02（**桌面 UX 收尾批 · 回填/随动轮 · eng-designer**——承批档 `docs/batches/2026-10-02-desktop-ux-closeout.md` §5 · 台账 #697）：§2 `index:status` 行回执键集收正（+`dbBytes` ∥ `origins`——P1 两键（KD-69 · 核只读出口透传）；已落）。**零新语义**（键集 ∥ 时态收正）。明细 = 批档 §2。
 - 2026-10-02（**文档清账轮 · 行宽清账（#806 · 轮 6）· eng-designer**——承批档 `docs/batches/2026-10-02-doc-settlement-round.md` §2.12：① §1 `ev:ledger` 行窄符号误锚六枚改述破要素（「核族扫描导出」⇒「核族扫描产出」——零语义）；② 两处短形锚补前缀（`thincoder-vscode/src/extension/settings.mjs:18` ∥ `thincoder-desktop/src/main/turn-face.mjs:122`）；③ 宽面 7 行折行（75 ∥ 97 ∥ 101 ∥ 151 ∥ 231 ∥ 323 ∥ 324——语义零改）。台账 #806。）
+- 2026-10-03（**桌面第二实例提示轮 · 跨档随正轮 · eng-designer**——承批档 `docs/batches/2026-10-03-desktop-second-instance-notice.md` §1 · 台账 #838）：§2 项目面注项 7 边界句按现行为随正（`thincoder-desktop/src/main/main.mjs:76` ⇒ **`:92`**；补「明示原因框（非静默）∥ 主实例 `second-instance` ⇒ 唤醒既有窗口」半句）。**零新语义**（随正）。明细 = 批档 §2 形式化块。
