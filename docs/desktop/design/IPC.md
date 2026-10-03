@@ -201,14 +201,14 @@
 4. **施加面**：活动会话 ⇒ 内存态即生效（模型合并语义 = 核 `applySession` 模型合并支单点；档位 = 核 `resolveEffortPatch(level, model)` 纯函数——族别 off 形经核 `think-off.mjs` `thinkOffShape`，档位值域单源 = `specForModel(model).reasoningEffortEnum`）；**非活动槽 ⇒ 只写盘**，switch 时由 `applySession` 生效。
 5. **零算法副本**：端侧不重算槽语义、不校验模型值域（候选面来自 `model:list`；写面取字面串——沿 `settings:agent` `defaultModel` 先例）；**档位枚举的校验面 = 端侧控件闭集**（写面不预校验——槽值可被跨端 / 手工改写，表外档位字面串 ⇒ `effort` 归一 `null`〔未设〕，沿核读侧容忍口径）。
 6. **端差登记（有意分歧）**：CLI `applyThink` 面批 B 不动——推理档位面端侧自有（用户 2026-09-15 裁定「核内无需位」；在案 = `thincoder-vscode/src/agent.mjs:260-265`）；桌面与 VSC 同义（各自端侧实现，核内零调用点）。
-7. **回执与失败径**：reason 闭集 = `invalid-patch`（非对象 / 空对象 / 表外键）· `model-required`（`provider` 变更未同送 `model`）· `bad-key`（键不合法）· `slot-missing`（槽不可读）· `busy`（回合在飞 ⇒ **零写**）；**成功携 `meta`（信封三键）· 失败缺 `meta` 键**；**选定写回径（项 8）成功另携条件性 `providerState`**（写后核读——键缺席 ⇒ 渲染面零写）；失败径一律零写（槽值不变）。
+7. **回执与失败径**：reason 闭集 = `invalid-patch`（非对象 / 空对象 / 表外键）· `model-required`（`provider` 变更未同送 `model`）· `bad-key`（键不合法）· `slot-missing`（槽不可读）· `busy`（回合在飞 ⇒ **零写**）；**成功 = 信封 + `meta`（三键）· 失败缺 `meta` 键**；**选定写回径（项 8）成功另携条件性 `providerState`**（写后核读——键缺席 ⇒ 渲染面零写）；失败径一律零写（槽值不变）。
 
 8. **选定写回（`defaultModel` 同拍写回 · 2026-10-03 · 台账 #880）**：**用户显式选定**（模型菜单选模型——模型钮 ∥ `/model` 斜径同一函数；`selectModel` ⇒ `session:prefs` 携 `provider` + `model` ∧ 槽值**实变**）⇒ 宿主同拍写回 config `defaultModel = "<provider>:<model>"`（本会话槽写照旧——既有语义零改；机制单源 = `docs/core/design/SESSION.md` §6.21 判据句 6）。四事：
    - **触发判据 = 槽面实变**（写盘前读 ∥ 写入值比对）：系统同步写（`models` 推送回声——会话切换 ∥ 闲时照发的同值回写）**不写**；只送 `effort` **不写**；`busy` / `bad-key` / `slot-missing` 拒径零写（判序不变）；系统回退自动采用**不写**。
    - **写面**：核 `writeConfigAtomic`（端侧零自写盘——沿设置面同款执行体）+ 写后探一次（S3 同律）；**复合等值 ⇒ 零写**；定序 = 槽先配置后——配置面失败（`mtime-conflict` 等）**不反扑**会话写（回执仍 `ok:true`；主侧 `console.error` 记错——零静默）。
      实现落点 = 写回单点 `thincoder-desktop/src/main/settings.mjs`（`defaultModel` 写 + 探一处）∥ 触发支 `thincoder-desktop/src/main/agent-host.mjs` `setPrefs`（选定支）。
    - **回执**：选定写回径成功回执另携 `providerState`（写后核读——**第四刷新点**；`docs/desktop/design/COMPOSER.md` §2 本批注；键缺席 ⇒ 渲染面零写）。
-   - **边界**：现四写点（**全链写点轴**——设置面「采用」∥ 渠道保存（含 #840 补写）∥ 向导（`useModel` 同一实现）∥ 迁移；**IPC 写口轴 ∥ 逐处 = 设置族注 8①**）语义零改（设置面「采用」仍只写全局默认、不写会话槽——两面不互相顶替，需求 §3.5 项 5/6；渠道保存首跑补全 ∥ 向导 ∥ 迁移照旧）；候选面 ∥ 词表 ∥ 通道集 ∥ 白名单零新。
+   - **边界**：**#880 前既有四写点**（**全链写点轴**——设置面「采用」∥ 渠道保存（含 #840 补写）∥ 向导（`useModel` 同一实现）∥ 迁移；**IPC 写口轴 ∥ 逐处 = 设置族注 8①**）语义零改（设置面「采用」仍只写全局默认、不写会话槽——两面不互相顶替，需求 §3.5 项 5/6；渠道保存首跑补全 ∥ 向导 ∥ 迁移照旧）；候选面 ∥ 词表 ∥ 通道集 ∥ 白名单零新。
 
 **打开态播种注（`history:page` 回执 `seed` · 单源 · 桌面残余批落）**：
 
@@ -326,7 +326,7 @@
 
 9. **档位控件注（批 B · ⑥ 设置面档位控件）**：设置面「模型与档位」段的档位 `select` = **渠道条目级默认**（写 `defaultModel` 复合串 provider 段的渠道条目 `provider.<P>.reasoningEffort` / `.thinking` 两键）；**逐模型精确控制 = 会话级档位**（本档 §2「会话级偏好注」）——两面不互相顶替（需求 §3.5 项 6）。四事单源：
 
-   - **写载荷（意图级）**：`settings:agent` 写形增 `{ tier: { provider, model, level } }`（与 `{ patch }` 二择一）。**意图级载荷**（三键族属主进程知识——渲染面零键名）；「`patch` 表达不了删键」旧说已消解——`patch` 表**显式清除面**（值 = `null` ⇒ 删键，S10 ∕ S11 两径即用；见「设置族与项目级信息族注」项 10）。
+   - **写载荷（意图级）**：`settings:agent` 写形增 `{ tier: { provider, model, level } }`（与 `{ patch }` 二择一）。**意图级载荷**（三键族属主进程知识——渲染面零键名）；`patch` 即**显式清除面**（值 = `null` ⇒ 删键，S10 ∕ S11 两径即用；见「设置族与项目级信息族注」项 10）。
      `level` = `"auto"` ∥ `"off"` ∥ `specForModel(model).reasoningEffortEnum` 表内字面串——`"none"` 不作独立档（其语义由 `"off"` 承载，沿 CLI 归一先例 `thincoder-cli/src/tui/cmd-think.mjs:111-142`）。
    - **写协议（统一式——先清不相容记号，再按档落形）**：`auto` ⇒ 删 `thinking` + 删 `reasoningEffort`；`off` ⇒ `thinking = thinkOffShape(spec)` + 删 `reasoningEffort`；
      member ⇒ 删 `thinking`（**仅当其值 deep-equal `thinkOffShape(spec)`**）+ `reasoningEffort = level`。判据单源 = 核 `thincoder-core/think-off.mjs:14`（`thinkOffShape`——effort 族 `null` ∥ 余族 `{type:"disabled"}`）/ `:22-26`（`thinkOffPath`）；**写后投影恒等**（读数 = 所选档——编辑器面硬要求）。
@@ -536,3 +536,5 @@
 - 2026-10-03（**会话选定写回批（default-model-carryover）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §2 · 台账 #880）：§2 `session:prefs` 行增选定写回径回执 `providerState`；「会话级偏好注」项 1 开例外 + 增**项 8**（选定写回——触发判据 ∥ 写面 ∥ 回执 ∥ 边界）；「provider 态投影注」项 3 增**第四刷新点**；设置族注 8① 写口两处 ⇒ **三处**（**轴 = IPC 写口**；**全链写点 = IPC 写口 + 向导 ∥ 迁移**——两轴明书同点）。**通道集 ∥ 白名单计数零变**。明细 = 批档 §2。
 - 2026-10-03（**会话选定写回批（default-model-carryover）· 修正轮（评审轮次 1 · 发现 1–7 ∥ 9 逐号 · 父侧裁定 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §3 轮次 1 · 台账 #880）：设置族注 8① 写口两轴明书（IPC 写口三处 ∥ 全链写点 = IPC 写口 + 向导 ∥ 迁移）+ `:211` ∥ `:534` 计数轴标注同拍；`session:prefs` 行 ∥ 项 7 补条件性 `providerState` 半句；第四刷新点落点点名（主侧写点 ∥ 渲染面消费档）；`ev:config` 行补自写抑制覆盖判据（选定写回同受抑制）。**零新语义 ∥ 通道集零变**。明细 = 批档 §2 修复轮块。
 - 2026-10-03（**ledger-family-aggregate 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-ledger-family-aggregate.md` §1 · 台账 #882）：§1 `ev:ledger` 行随动——`marker` `text` = **当前打开范围合计** ∥ `warn` = 范围内判位（范围判据单源 = `docs/core/design/LEDGER.md` §7.2）。**通道 ∥ 载荷键集零变**。明细 = 批档 §2。
+- 2026-10-03（**会话选定写回批（default-model-carryover）· 复评残余修复轮（评审轮次 2 · 发现 1 ∥ 3 · 父侧裁定 = 归 eng-designer）· eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §3 轮次 2 · 台账 #880）：「会话级偏好注」项 8 边界句时态限定（「现四写点」⇒「**#880 前既有四写点**」——与设置族注 8① 两轴公式对轴，消「同轴两值」误读）∥ 项 7 回执句「（信封三键）」⇒「信封 + `meta`（三键）」形（与 `:118` / `:183` 同形）。**零新语义 ∥ 通道集零变**。明细 = 批档 §2 复评残余修复块。
+- 2026-10-03（**D8 残留清理 · 父侧直接执行 · 可 revert**——承本批复评 #31 过后 #36 路遇上抛）：§2 档位控件注项 9 写载荷行删修订式从句（「patch 表达不了删键」旧说已消解——）——权威句直陈现状（`patch` 即显式清除面）。**零语义改**。

@@ -134,7 +134,8 @@
 
 ### 6.3 会话文件内容（v2 · 双线结构）
 
-字段集：`version`（1 = 旧单线；2 = 双线；> 2 只读不动）· `cwd` · `title` · `activeProvider` + `activeModel`（槽双字段**恒非空**）· `updatedAt` · `history`（人读线）· `contextHistory`（机读线）· `tasks` · `planMode` · `autoApprove` · `engineering` · `engDesignToken` · `goal` · `advisor` · `pendingReminders` · `sessionStart`
+字段集：`version`（1 = 旧单线；2 = 双线；> 2 只读不动）· `cwd` · `title` · `activeProvider` + `activeModel`（槽双字段**恒非空**——**限定 = 保存面成对写入**〔有 provider 即携带具体复合值〕；**全新空槽规范结构无此两键**）· `updatedAt` · `history`（人读线）· `contextHistory`（机读线）· `tasks`
+· `planMode` · `autoApprove` · `engineering` · `engDesignToken` · `goal` · `advisor` · `pendingReminders` · `sessionStart`
 · `effort`（会话级档位——值域 / 语义见 §6.21 判据句 1）· `createdBy`（创建端字段——§6.20 判据句 4；老槽可能无键 ⇒ 读数「未知」）。
 
 - **双线写入契约**：真实消息（用户输入 / assistant 回复 / tool 结果 / 多模态图像）走 `pushReal` → 同时进 `history` 与 `contextHistory`；**机读消息**（`[System reminder:` / `[User interrupt:` / 压缩 note / task·plan 回注）只进机读线；**transient 消息**（编辑器上下文注入等）**人读线落盘时过滤**、**机读线保留**——恢复必须逐字节重建 provider 前缀缓存所见的序列。
@@ -194,7 +195,7 @@
 
 触发场景：会话保存时用的 provider（或模型）已不存在，重进时 config 里已无 ⇒ 引导 UI 重选（TUI 不退出见 D-S2；headless 明确退出码见 D-S4）。
 
-- **模型 = 显式复合 `provider:model`**：config 顶层 `defaultModel` 是**新会话起点**；会话槽 `activeProvider` + `activeModel` 双字段恒非空——恢复 = 槽值（不看 config）。
+- **模型 = 显式复合 `provider:model`**：config 顶层 `defaultModel` 是**新会话起点**；会话槽 `activeProvider` + `activeModel` 双字段恒非空（**限定 = 保存面成对写入**〔有 provider 即携带具体复合值〕；**全新空槽规范结构无此两键**）——恢复 = 槽值（不看 config）。
 - **D-S1 启动前校验**：`loadConfig` 对 defaultModel 缺失 / 无效**不再抛错**——运行时 provider = 统一解析（`resolveProviderPlan`）入选渠道；**不可运行 ⇒ 置空 `{}`** + `providerInvalidReason`（「无效」判据收窄为三类：空值 / 缺冒号或段残缺 / 未知 provider——**不含「候选外」**）；
   `validateProvider` 幂等（判据 = model / baseURL / name 缺失；**MODEL_SPECS 成员资格不是 allowlist**）。不抛错、不退出（统一解析 ∥ `providerState` 三值 `ok` ∥ `fallback` ∥ `invalid`——单源 = `doc:PROVIDER.md:§6.22`）。
 - **TUI 路径**：仅在 `state === "invalid"`（无 provider/key）于 `startTUI` 前置 `agent.provider = null`（`fallback` 态 provider 有效——不清）。
@@ -1293,3 +1294,4 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 
 - 2026-10-03（**会话选定写回批（default-model-carryover）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §2 · 台账 #880）：§6.21 增**判据句 6**（用户显式选定 ⇒ `defaultModel` 同拍写回——「槽面实变」判据 ∥ 等值零写 ∥ 回退/回声不写 ∥ 写后探）+ 验收回指 ⑤ + 不做句收正（config 零写例外）。**产品码零触（设计轮）**。明细 = 批档 §2。
 - 2026-10-03（**会话选定写回批（default-model-carryover）· 修正轮（评审轮次 1 · 发现 1–7 ∥ 9 逐号 · 父侧裁定 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §3 轮次 1 · 台账 #880）：判据句 6 实变比对单元钉定（复合串 `provider:model` 是否变化——同渠道换模型亦触发）∥ 边界表补选定写回三行 ∥ 验收回指 ⑤ 扩端到端 + 取数链点名（新槽创建 = 核 `newSession` ∥ 装配取数 = `loadConfig` 归一链 `resolveProviderPlan`）∥ §5 补本批落点指针行。**产品码 ∥ 需求卷零触**。明细 = 批档 §2 修复轮块。
+- 2026-10-03（**会话选定写回批（default-model-carryover）· 复评残余修复轮（评审轮次 2 · 发现 2 · 父侧裁定 = 归 eng-designer）· eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §3 轮次 2 · 台账 #880）：§6.3 字段集行 ∥ §6.8 模型行两处「恒非空」补范围限定（**限定 = 保存面成对写入**〔有 provider 即携带具体复合值〕；**全新空槽规范结构无此两键**——与 §6.21 验收回指 ⑤ 取数链前提消歧）；§6.3 字段集行按行宽 300 折行。**零新语义**（限定词）。明细 = 批档 §2 复评残余修复块。
