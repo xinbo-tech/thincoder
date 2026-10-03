@@ -119,7 +119,26 @@ Nothing was sent: no review instance, no round consumed, no design token minted,
 
 **逐引文解析**：按候选顺序试 `resolve(root, file)`；命中判据三条件全中——① realpath 在 cwd 内（**围栏不变**）；② 可读；③ 该行内容包含引文内容。命中记录所用根。
 
-**失败原因三分（报告可判，替代单一 `file unreadable`）**：无任何候选文件存在 ⇒ `file unreadable`；存在但内容不符 ⇒ `content mismatch @ {解析到的相对路径}`；越围栏 ⇒ `path traversal`（不变）。报告头行 `[host-verified] N/M citations match current file state.` 不变。
+**失败原因四类（报告可判，替代单一 `file unreadable`）**：无任何候选文件存在 ⇒ `file unreadable`；存在但内容不符 ⇒ `content mismatch @ {解析到的相对路径}`；越围栏 ⇒ `path traversal`（不变）；
+**非连续引文**（引文内容含省略号 `…` / `...`——缩略形，非所引行的连续子串）⇒ `not a contiguous citation (ellipsis) @ {相对路径} — quote one contiguous excerpt`——**形状不符与内容造假分列**
+（省略号形不再报 mismatch；承 2026-10-03 用户裁定「省略号禁用于承担判断面」）。
+报告头行 `[host-verified] N/M citations match current file state.` 与命中判据（所引行**连续子串** `includes`）零改；判定面 = 仅失败分类，零新增匹配路径、零模糊匹配。
+
+**引证形状写作禁则（评审提示词面——逐字建议，内容权在主 agent）**：四面（round1 / round2 / round3 / design，各 EN ⊗ CN）Host verification / Citation 段追加：
+
+```text
+EN: Never abbreviate a quote with an ellipsis ("…" or "...") — a citation must be one CONTIGUOUS substring of the cited line;
+an abbreviated quote is reported as a non-contiguous citation (quote one contiguous excerpt instead).
+CN: 引证内禁用省略号（`…` / `...`）——引证必须是所引行的**一段连续子串**；缩略引文会被报为「非连续引文」（改引一段连续原文）。
+```
+
+逐字例随动（示例自身不得违规；`thincoder-core/advisor/convergence.mjs` 同笔）：
+
+```text
+run.mjs:180: timeoutId = setTimeout(...)  ⇒  run.mjs:180: timeoutId = setTimeout(() => {
+```
+
+**归宿面（不可验证 ⇒ 有结论——F28/F29 邻域，零新判定族）**：未通过机械核验的引用**不能支撑打回**（本体零改）；其条目不得悬置——每轮以明列 Status 收束（`Unfixed` 携状态 ∥ 经争议窗收口；`design/ADVISOR-CONVERGENCE.md` §2.5），评审收尾（预算用尽）时未验证条目逐一明列、**不得静默丢条目**；评审**不完整**（宿主截断族）⇒ 失败结论块逐次产出（§7——零改复核）。
 
 **取舍**：只按“声明范围 + 内容判据”扩充候选——**零新增假命中**（不会因同名文件而误命中：内容必须逐字包含）；残余如实报告：引用声明范围外、且其仓根不在声明范围时仍判 unreadable。
 
@@ -357,6 +376,8 @@ export function advisorContextBudget(provider) {
 | A-AG13 | 类型门（F30）：`args.type ∉ {code,design}`（缺失 / `null` / 空串 / 非法值 / 非字符串）⇒ 拒发串（前缀 + 两合法值各一行用途 + 标识行）+ `_advisorRefusals` 登记，零实例 / 零 token；显式 `code` / `design` ∧ `object.type` 未声明 / 一致 / 非枚举值 ⇒ 照常；**冲突对**（顶层显式合法值 ≠ `object.type` 的另一合法值）⇒ 同拒（`criterion=type-object-conflict` + 两路指引） | 类型门 |
 | A-AG14 | 对象标识行（F31）：三类文案首行载四项（type / scope / round / criterion）；既有稳定前缀逐字在位；类型门拒回 `type=absent\|invalid`（冲突拒回记顶层实收值 `code\|design`）；失败结论块 `type` = 实际评审轨（两轨共用） | 对象标识行 |
 | A-AG15 | 调用面零残留（F30 判定句 ③）：`advisor.mjs` 源内 `args.type \|\| "code"` 零命中 + 声明面三处 type `(default)` 旧句零命中；三树 `advisorTool.execute(` / `runAdvisorReview(` / `prepareAdvisorMessages(` 调用点逐处显式；**声明一致零残留**——三树 `*.mjs` 调用点 `object` 声明零命中（静态面；结构断言 + 口径命令可重跑） | 类型门 |
+| A-AG16 | 引证形状分类：省略号引文 ⇒ 非连续引文类（含改法），不再报 content mismatch；非省略号不匹配 ⇒ mismatch 照旧；命中判据与报告头行零改；四面禁则 + 示例替形在位（`setTimeout(...)` 示例零残留） | 引文解析 |
+| A-AG17 | 归宿面：未验证引用不支撑打回（既有断言零改）；「不得静默丢条目」收尾句在位；不完整 ⇒ 失败结论块（A-AG9 覆盖） | 引文解析 / 失败结论 |
 
 ## 11. 边界
 
@@ -382,6 +403,8 @@ export function advisorContextBudget(provider) {
 | 对端差异登记（本端零改项） | 三条对位登记（异步结算面 / 冻结窗口盲区 / 池中止） | 登记项；判决（本端语义自洽）已并入 §11 |
 
 ## 变更记录
+
+- 2026-10-03（**advisor 收敛修批 · eng-designer**——承 `docs/batches/2026-10-03-advisor-convergence.md` · 台账 #849）：§3 失败原因三分 ⇒ 四类（加「非连续引文（省略号）」+ 改法；命中判据与报告头行零改）+ 引证形状写作禁则（四面逐字建议 + 示例替形）+ 归宿面契约；§10 增 A-AG16 / A-AG17。
 
 - 2026-09-18（**顾问面治理批 · 实现后收正**——实现轮 id=91 终态 clean；落地批 = `docs/batches/2026-09-18-advisor-face.md`）：
   实现后坐标回填（as-of 2026-09-18）：§1 判定族生成点五处（`loop.mjs` ×4 = 前批漂移·同轮核过；`run.mjs` :233 → :185）· §2.4 判定点 `advisor.mjs` :98 → :110 并撤「cap / 停止预检」在场表述 · §2.4 启动拒绝前缀锚 `run.mjs` :33 → :23 · §2.4 前缀消费面两锚（`advisor.mjs` :247 → :250 · `advisor-settle.mjs` :144 → :147）· §7 `run.round++` 锚 :133 → :136。

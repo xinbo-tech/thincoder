@@ -55,9 +55,99 @@
 
 ### 2.4 通过 / 阻断判定
 
-- **通过 = 无未决 🔴**：全部 🔴 已解决、仅剩 🟡/🔵 → 评审通过（🟡/🔵 不阻断 approval——照列不隐藏）。任一 🔴 未决 → 不得声称 passed。
+- **通过 = 无未决 🔴**：全部 🔴 已解决（**fixed ∨ accepted**——accepted = 经争议窗收口的携理由不修项，§2.5）、仅剩 🟡/🔵 → 评审通过（🟡/🔵 不阻断 approval——照列不隐藏）。任一 🔴 未决（含零理由不修项）→ 不得声称 passed。
 - **宿主判定面**：评审的“通过/不通过”**不是宿主控制流输入**——宿主不做 findings/短语解析——guard 只消费“评审发生”+ 轮次预算；是否通过由主 agent 读评审输出自行判断。**唯一机械例外** = 设计评审的凭证回显即通过信号（凭证入槽 / 门禁解锁）。
 - **文档状态矛盾不卡 pass**：文档矛盾 / 状态不一致 → 🟡 报出即过（report-and-pass，评审只读不改）——**机制级描述不一致除外（= 🔴——必须处理后才可过）**。判据来源 = 判定铁律（`design/AGENT-LOOP-ASYNC-POOL.md` §6.19）——本档不重复铁律正文。
+
+### 2.5 争议裁决窗与非修项收口（F32 / F33）
+
+> 来源 = 2026-10-03 用户裁定（需求层 `docs/core/requirements/ADVISOR-CONVERGENCE.md` §2.4）——双方判定相持的红不得无限持续：被审方不修须携理由；前两轮评审者可评估理由并打回；**第三轮起接受携理由的不修项收口**。
+> 边界：轮次判定机制本体（确定性状态位 ∥ 周期界 ∥ 归零）零动；零计数器；零 LLM 输出解析（F6——表列词表 = 父侧阅读面，不驱动控制流）；pass 判据来源仍 = 评审者判。同步 / 异步共用轮次提示词（轮次语义单源 = 本档；异步实例机制零改）。
+
+- **争议项定义**：同一项上「评审者判应修 ∧ 被审方判不修」。非修形态 = 响应表 `Not an issue`（技术反驳 + 证据）∥ `Deferred`（认账不修 + 理由）——**每项不修必须携理由**；零理由（沉默 ∥ 回避 ∥ 无理由记录）不在接受之列。
+- **窗（时限与终局）**：**轮 1–2** 评审者可评估理由并打回（理由不成立 ⇒ 该项保持未解）；**轮 3+ 对已携理由的不修项接受收口**——不再评估理由成立性、不得再以同项打回。同一争议占轮 ≤ 2 轮窗（第 3 轮必收）⇒ 相持循环必然终止。
+- **表列形态（可核性——零解析）**：轮 2 / 3 验证表 `Status` 词表 = `Fixed` / `Accepted`（携理由不修——被接受收口）/ `Unfixed`（未解——含零理由项）/ `New`（仅轮 2）；`Accepted` 与未解项**都须入表列出**（收口不得自表中静默消失——父侧可核「prior 🔴 全部 ∈ {fixed, accepted}」）；每个前轮条目每轮须得其一（不悬置）。
+- **判据随动（F33）**：轮 3+ **pass = prior 🔴 全部 ∈ {fixed, accepted}**（轮 2 另加「修复未引入新 🔴」）；存在零理由未解项 ⇒ **不可 pass**。设计评审凭证回显条件同源随动（构建面句 = `thincoder-core/advisor/messages.mjs`）。
+- **零理由面的出口**（如实）：零理由项不受接受 ⇒ 保持未解（不可 pass）——出路 = 被审方补理由 ∥ 修复，或父侧上报用户裁（沿「未决 🔴 必须向用户呈现」纪律）；**接受收口只关评审者面，不免除父侧上报义务**。
+- **设计轨适用性**（需求档 F32 边界要求——「design 轨适用形由设计轮核」）：**两轨同形适用**。依据 = ① 轮 2 / 3 提示词两轨共用（`thincoder-core/advisor.mjs` 轮次选择——设计轮 2/3 与代码轨落同一对提示词）；② 争议结构同构（评审者 ⇄ 设计作者之响应表）；③ F33 的「解」定义轨无关；④ 设计评审 pass = 凭证回显——回显条件句随动后同受窗语义。
+- **归宿面（不可验证 ∥ 不完整 ⇒ 结论化）**：窗语义保证每个条目每轮有归宿（`Fixed` / `Accepted` / `Unfixed` 三态之一，无一悬置）；不可验证侧的精确分类与写作禁则 = `design/ADVISOR-GUARDS.md` §3；不完整（宿主截断族）⇒ 失败结论块 = 同档 §7（零改复核）。
+- **提示词面逐字建议**（**内容权在主 agent**——落地形态照 D1；双源 = 运行期 EN ⊗ 中文设计档 CN，同文口径）：
+
+**【轮 2 · 评估句】**替换 «not an issue» 评估句（`thincoder-core/prompts/advisor-round2.md` + 中文对位），并补状态词表行：
+
+```text
+EN:
+- For items left unfixed (marked "not an issue" / "Deferred", or not addressed at all): every non-fix MUST carry a reason —
+  a technical rebuttal with evidence, or an explicit acknowledged-not-fixed record; evaluate whether that reasoning holds.
+- Where it does not hold, the item stays unresolved — push back (this round is the last one where a reasoned non-fix can be
+  pushed back). Where it holds, close the item: list it with Status `Accepted`.
+- Zero-reason silence or evasion never closes an item — list it as `Unfixed`.
+- Status vocabulary: `Fixed` / `Accepted` (a reasoned non-fix — closed) / `Unfixed` (unresolved — including zero-reason non-fixes) / `New`.
+  Accepted closures and unresolved items must both be listed — an item must not vanish from the table silently.
+CN:
+- 未修项（标 `not an issue` / `Deferred`，或完全未回应）：每项不修必须携理由——技术反驳+证据，或认账不修的显式记录；评估理由是否成立。
+- 理由不成立 ⇒ 该项保持未解、可打回（本轮为最后一个可打回携理由不修项的轮次）；理由成立 ⇒ 以 `Accepted` 收口并列表。
+- 零理由的沉默/回避永不收口——列 `Unfixed`。
+- Status 词表：`Fixed` / `Accepted`（携理由不修——收口）/ `Unfixed`（未解——含零理由项）/ `New`；`Accepted` 与未解条目都必须入表——不得静默丢条目。
+```
+
+**【轮 3 · 接受句】**规则区追加（`thincoder-core/prompts/advisor-round3.md` + 中文对位）：
+
+```text
+EN:
+- For prior items the agent left unfixed with a reason (a technical rebuttal with evidence, or an explicit acknowledged-not-fixed
+  record): ACCEPT them — at this round a reasoned non-fix closes the item (do not re-adjudicate the reasoning here; list it with
+  Status `Accepted`); do not push back on the same item again.
+- Items with no reason (silence, evasion, a bare claim without justification) stay unresolved — list them with Status `Unfixed`;
+  a zero-reason non-fix is never accepted.
+- Status vocabulary: `Fixed` / `Accepted` (a reasoned non-fix — closed at this round) / `Unfixed` (unresolved — including
+  zero-reason non-fixes). Every prior item must receive one of these dispositions; accepted and unresolved items must be listed —
+  never drop an item silently.
+CN:
+- 前轮未修且携理由的条目（技术反驳+证据 ∥ 认账不修的显式记录）：接受收口——本轮起携理由的不修项以 `Accepted` 收口（不再评估理由成立性；列入表内），不得再以同项打回。
+- 零理由条目（沉默/回避/无理由记录）保持未解——列 `Unfixed`；零理由的不修项永不接受。
+- Status 词表：`Fixed` / `Accepted`（携理由不修——本轮收口）/ `Unfixed`（未解——含零理由项）；每个前轮条目须得其一——`Accepted` 与未解条目都必须入表，不得静默丢条目。
+```
+
+**【裁决句随动】**轮 2 / 3 裁决含义句同改（关键改动 = «resolved» 定义 + changes-required 补零理由项）：
+
+```text
+EN（轮 2 / 轮 3 同片）:
+- pass = every prior-review 🔴 issue is resolved — fixed (verified against the current files) or accepted (a reasoned non-fix,
+  closed at this round) — AND the fixes introduced no new 🔴.
+- changes-required = any prior 🔴 still unresolved (including any zero-reason non-fix — silence or evasion is never accepted),
+  any new 🔴 introduced by the fixes, or any 🟡 the review marks as must-fix.
+CN:
+- pass = 前轮所有 🔴 已解决——fixed（对照当前文件验证）或 accepted（携理由不修，本轮收口）——且修复未引入新 🔴。
+- changes-required = 前轮任何 🔴 未解决（含零理由的不修项——沉默/回避永不接受）、修复引入任何新 🔴、或任何被标为必修的 🟡。
+```
+
+**【收尾句（不悬置）】**轮 2 / 3 收尾规则句追加（归宿面——不可验证 ∥ 不完整 ⇒ 结论化）：
+
+```text
+EN: If you must wrap up with items not fully verified, list each of them explicitly with its state (Status `Unfixed`,
+evidence not verified this round) — never drop an item silently; the verdict line still closes the round with a conclusion.
+CN: 预算用尽收尾时：未验证完的条目逐一明列（`Unfixed`，证据本轮未核验）——不得静默丢条目；裁决行仍须给出本轮结论。
+```
+
+**【构建面回显条件句】**`thincoder-core/advisor/messages.mjs` Approval Signal（设计轨轮 2+ 的操作性载体）：
+
+```text
+- `finds NO 🔴 (Critical) issues` ⇒ `no unresolved 🔴 (Critical) issue remains`
+- 尾行补定义：a reasoned non-fix accepted by the reviewer does not block — anything else stays unresolved.
+```
+
+**【被审方义务面】**纪律档（`thincoder-core/prompts/discipline-normal.md` · `thincoder-core/prompts/persona-engineering.md` + 中文对位——轮次衰减句追加）：
+
+```text
+EN: Every non-fix must carry a reason (a technical rebuttal with evidence, or an explicit acknowledged-not-fixed record);
+the reviewer may push back on insufficient reasons through round 2, and from round 3 accepts reasoned non-fixes —
+a zero-reason refusal is never accepted and stays unresolved.
+CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式记录）；第 1–2 轮评审者可对理由不成立的不修项打回，
+第 3 轮起携理由的不修项被接受收口——零理由的沉默/回避永不接受、保持未解。
+```
+
+- 轮 1（代码）与设计评审轮 1 无 prior——窗语义不入（该两档除引证禁则外零改；轮 1 裁决句照旧 = 无 🔴 即 pass）。
 
 ## 3. 轮次与终止（无机械上限）
 
@@ -240,7 +330,7 @@ if (!pending                          // 异步评审在飞/排队 → 未决不
 纪律层的响应表纪律（**纯提示词纪律——不加机械解析**——响应表仍是“聚焦参考”，不驱动控制流）：
 
 1. **表头精确**：`| # | Action | Detail |`——运行时按此精确提取，保持逐字。每 issue 一行；`#` = advisor 的 issue 编号（**round2+ 用原编号**——不重编号）。
-2. **`Action` 四值封闭词表**：`Fixed`（**已落地**——已改代码/设计）、`Dispatched`（**修正轮在途——尚未落地**）、`Not an issue`（技术反驳，附证据）、`Deferred`（承认但不修，附理由——仅适用于 🟡/🔵 改进或需用户先拍板的 🔴，**不得用于静默丢弃真缺陷**）。`Detail` = 改了哪、在哪（file:line），或证据 / 理由。
+2. **`Action` 四值封闭词表**：`Fixed`（**已落地**——已改代码/设计）、`Dispatched`（**修正轮在途——尚未落地**）、`Not an issue`（技术反驳，附证据）、`Deferred`（承认但不修，附理由——适用于 🟡/🔵 改进、需用户先拍板的 🔴，或**携理由的认账不修 🔴**（争议窗自第 3 轮起收口，§2.5）；零理由即不接受，**不得用于静默丢弃真缺陷**）。`Detail` = 改了哪、在哪（file:line），或证据 / 理由。**不修即须携理由**——零理由的沉默 ∥ 回避不在接受之列（争议窗语义见 §2.5）。
 3. **禁止「pre-existing」借口**：评审双方拥有整个代码 / 设计——“之前就有”“不是我引入的”永远不是跳过修复的理由；问题何时出现不决定它该不该修。只能技术反驳或修，否则不算收敛。
 4. **工程模式收窄**：超出已批准设计范围的 finding → **surface 或提设计更新**（父代理不直接写实现代码）；一个 🔴 既不修也不 surface = **阻断收敛**。
 5. **收口时序**：见 §7.1。
@@ -309,6 +399,8 @@ advisor design review 标准维度补一条：
 | A-AC9 | 响应表 `Action` 四值封闭；`Dispatched` 行在批准请求前须收敛为 `Fixed` | 响应表 / 时序 |
 | A-AC10 | 需求契合度维度在位（声称 vs 实现 / 期望 vs 形态）；证据约束（无证据至多 🔵） | 需求契合 |
 | A-AC11 | 行数标注核查维度在位；函数档为第一判据 | 行数核查 |
+| A-AC12 | 争议窗与接受收口（F32）：轮 1–2 可对不修理由出打回、轮 3+ 对携理由不修项接受收口；零理由项任一轮保持未解（提示词逐字在位 + 表列 `Accepted` 形态可核） | §2.5 |
+| A-AC13 | pass 判据随动（F33）：轮 3+ prior 🔴 全部 ∈ {fixed, accepted} 才可 pass；零理由未解项 ⇒ 不可 pass（轮 2 / 3 裁决句逐字 + 设计回显条件句在位） | §2.4 / §2.5 |
 
 **工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：`thincoder-core/advisor/loop.mjs:205-215` 推入 `messages` 的 assistant 消息由核单点 `assistantToolCallMessage(response, providerSpec(provider))`（`thincoder-core/model-specs.mjs`）构造——`reasoningEcho:"required"`
  族（继承主 provider 或显式 `advisor.provider`，均按 `providerSpec` 判定）**恒带** `reasoning_content`（本轮无推理 ⇒ 空串）；`optional` / 未声明族恒不带。回归锚 = 核 `test/model-specs.test.mjs`（规则面）+
@@ -326,6 +418,8 @@ advisor design review 标准维度补一条：
 | 状态行与落笔流水 | 「实现未启动 / 待 coder / 已落」类状态句 | 运行时状态 |
 
 ## 变更记录
+
+- 2026-10-03（**advisor 收敛修批 · eng-designer**——承 `docs/batches/2026-10-03-advisor-convergence.md` · 台账 #849）：新增 **§2.5**（争议裁决窗与非修项收口——F32 / F33：两轮窗 / 第三轮接受收口 / 表列 `Accepted` 词表 / 设计轨适用判定 / 提示词面逐字建议）；§2.4 通过判据随动（fixed ∨ accepted）；§7 响应表 `Deferred` 适用面开「携理由认账不修 🔴」+ 不修须携理由句；§12 增 A-AC12 / A-AC13。
 
 - 2026-09-25（**hygiene-items 批 · 档面 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-items.md` §2 · 台账 #285）：头部兄弟档名录 + 权威边界两行 + §2.2 / §2.4 各一行共**五处**死指针改指——`design/AGENT-LOOP.md` §11.2 → `design/AGENT-LOOP-ASYNC-POOL.md` §6.10（异步评审池接入面）· §12.2 → 同档 §6.19（判定铁律 R1–R7）。**零新语义**（指向对象 = 已迁节现住档）。
 
