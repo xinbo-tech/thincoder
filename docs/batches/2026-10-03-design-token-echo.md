@@ -25,7 +25,7 @@
 **验收方向**：① 截断回显不再静默（按裁定形态机检可核）；② 失败路径恒定标记（模拟非回显 ⇒ 输出含标记）；③ 提示词加固句在位；④ 零回归（全串回显 ∥ 无回显 ∥ TTL ∥ 门禁恒等比对）。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（R1–R4 定形 · fix 轮：U1 折入（未完成径 ∥ stale 径 → 单源 stripDesignTokenEcho；受影响 6⇒7 档 · 批内件 T1⇒T10）· FR8 对盘无缺（已落）· 实施序 = 待 #28 落地后 ∥ doc-check exit 0）
+**状态行**：设计完成（R1–R4 定形 · fix 轮 3（评审 #47 收正——号 1–6 ∥ 8 折入：两源加固补档〔EN/CN〕+ §5.1 三处收正 · 号 7 驳回非缺陷）· 实施序门已开（#28 已落地）∥ doc-check exit 0）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 **§2 批次任务与设计（eng-designer · 2026-10-03 · initial 轮）**
@@ -174,7 +174,105 @@ return { passed: true, output: [clean, truncatedEcho ? M2 : null, run.approvedSu
 
 **自检读数（fix 轮 · 设计档落笔后复跑）**：仓根 `node scripts/doc-check.mjs` ⇒ **exit 0**——`OK(锚): 0 条悬空` ∥ `OK(行宽): 无 >300 字符单行`（行数面差异 5 条 = thincoder-desktop 先行存量 · 报告态）。
 
+**§2 追加 · fix 轮 2（eng-designer · 2026-10-03 · 同族第三处折入〔D1 落盘失败径〕）**
+
+**口径**：㈠ U1 折入已完成（上一轮——设计面）；本单 = 同族第三处（D1 落盘失败径）。㈡ 执行 = 折入设计（本轮）。㈢ 本轮不做 = 不动实现码 ∥ 需求档 ∥ #28 写域（注：#28 已落地——实施序门已开：#28 §5 = 实施完成、双席落齐〔`docs/batches/2026-10-03-advisor-convergence.md:214` 实读〕）。
+
+**机制设计 · D1 落盘失败径折入（同 U1 形——单源替换、零语义外扩；该径实读复核讫）**
+
+- ③ D1 落盘失败径（`thincoder-core/agent-tools/advisor-settle.mjs:179-181`——`:156` `settled.passed` 为真后落盘失败，报告按 `String(result)` 原文重建）：剥离链 → 单源调用 `stripDesignTokenEcho(String(result), entry.designToken)`。现态 = 只剥全串形；本设计截断容忍语义下该径可达截断形（pass + 落盘失败）⇒ 残片同可存活——折入后三形全剥。零语义外扩（D1 通知 ∥ 槽回滚 ∥ `persistFailed` 判定零改）；实施序 = 随整批（门已开——上）。
+
+**受影响表更新（delta——第 7 档改动面扩展；旧行 append-only 不打改，本行即现态）**
+
+| # | 操作 | 内容（行数预算） |
+|---|---|---|
+| 7 | 更新 | `thincoder-core/agent-tools/advisor-settle.mjs`——现读 **240** ⇒ ≈235–238（`:24` import 行随动〔`stripDesignTokenEcho` 置入；`makeDesignTokenRegex` 余用归零 ⇒ 除名〕；`:179-181` ∥ `:214-216` 各三行 → 单源调用）；实施序 = 即行（零交叠） |
+
+**T10 行更新（δ = 增 ③ D1 径——补断言；旧行 append-only 不打改，本行即现态）**
+
+| 用例 | 面 | 输入 / 操作 | 预期（机检断言） | 初态 |
+|---|---|---|---|---|
+| T10（折入） | 未完成径 ∥ stale 径 ∥ D1 落盘失败径剥离 | ① 未完成径：`settleDesignReview(…, { incomplete:"timeout" })`、正文含截断回显残片；② stale 径：`settleAdvisorRun` 陈旧分支同形；③ D1 径：`settleAdvisorRun`（截断回显 ⇒ pass + 落盘失败注入） | 三径输出均零 uuid 残留 ∥ 零 `[DESIGN-TOKEN:` 残留（单源三形全剥）；未完成 ∥ 陈旧 ∥ D1 标记在位 | **红**（现只剥全串形） |
+
+**T10-③ 落盘失败注入注（可执行性——实施轮按此构造）**：临时 cwd + 槽文件不可解析 + `agent._slotMtime` 缓存命中（守卫 `thincoder-core/session-guard.mjs:46-47` 跳过解析 ⇒ `thincoder-core/token-ttl.mjs:241` `JSON.parse` 复读抛 ⇒ `thincoder-core/agent-tools/advisor-settle.mjs:167-169` catch ⇒ `durable=false`）；注入只造「落盘失败」态，不改产品码。
+
+**设计档现态（第 3 档）**：`docs/core/design/ENG-TOKEN-BINDING.md` §5.1 ③ 枚举补该径 ∥ §6.1 行随动 ∥ 变更记录一行（本轮已落）——表 3 行 225 = initial 轮值（本轮前实读 228），本轮 +3 ⇒ 231。
+
+**报备现态更新**：上一轮「复核所得 · 报备（未落笔——待裁）」行（同族第三处）——父裁「修、随 U1 同折入、台账不另挂」⇒ 本轮已折入（见上；旧行 append-only 不改，本行即现态）。
+
+**报备（未落笔——待裁 · 非阻断）**：§5.1 ④ 末句「（在飞）」注（`docs/core/design/ENG-TOKEN-BINDING.md:92`）随 #28 落地已成过去态（现 = 实施完成）——本单未列该落点，未动；如需收正请另裁。
+
+**自检读数（fix 轮 2 · 设计档落笔后复跑）**：仓根 `node scripts/doc-check.mjs` ⇒ **exit 0**——`OK(锚): 0 条悬空` ∥ `OK(行宽): 无 >300 字符单行`；行数面差异 5 条 = thincoder-desktop 先行存量（报告态；比对 162 ∕ 跳过 184）。
+
+**§2 追加 · fix 轮 3（eng-designer · 2026-10-04 · 评审 #47〔§3 轮次 1〕收正——号 1–6 ∥ 8 折入）**
+
+**口径**：㈠ 判决表 = 批档 §3 轮次 1（🔴 0 ∥ 🟡 4 ∥ 🔵 4 · VERDICT pass）；父侧裁定 = 号 1–6 ∥ 8 折入修、**号 7 = 非缺陷（驳回，不动）**。㈡ 全部为文档面收正（零语义外扩；两源逐字纪律照守）。㈢ 本轮不做 = 实现码 ∥ 需求档 ∥ 已收口 advisor-convergence 批档 ∥ #28 写域档（`advisor/messages.mjs` 零触——加固句留本批实施轮）。
+
+**号 → 落点（逐条）**
+
+- **号 1（两档回显指令未加固——折入）**：设计档 §5.1④ 枚举扩至三档——补 b 档「评审员系统提示两源」（EN 运行期 ∥ CN 模板——同文口径逐字对应；加固形 = 与 messages.mjs 同款语义：逐字含冒号与 uuid 后数字位、截断回显被标记）。**坐标随动注**：同族核查 5 原引 `:23`/`:54` = #28 落地前读数（EN 43 行 ∥ CN 73 行）；#28 +1 行后实读 = **`:24` ∥ `:55`**（EN 44 行 ∥ CN 74 行）——设计档按现坐标落。受影响表增两行（见下现态全表第 8/9 档）。
+- **号 2（「（在飞）」收正）**：设计档实施序注收正为现态——配套批 `2026-10-03-advisor-convergence` 已落地、无剩余门（加固句随本批实施轮拼接）。（评审批档所引 `ENG-TOKEN-BINDING.md:92` 即该点。）
+- **号 3（标记位置不变式入机检面）**：T1 行更新（见下——`endsWith(suffix)` ∥ M2 起点 < suffix 起点）；AC-1 载体随动。
+- **号 4（归属口径）**：实读 `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` 全档——**无回显规则重述**（辖域 = 持久化 / 回读 / 消费；`:95` 迁移表坐标行仅提「echo 即裁决」名，无规则重述）。设计档头注 `:5` 收正 = 辖域分工明写（结算判定语义〔echo 即裁决 / 回显链判定〕= 本档 §5）+「2026-10-04 实核该档无回显规则重述」。需求档 `:6`「结算机制——同层」为关联指针，与收正后分工无矛盾——不改（需求档 = 主 agent 笔）。
+- **号 5（已知代价登记）**：截断判定 = 「uuid 值出现 ∧ 全串未见 ⇒ 认 pass」——reviewer 在非批准语境引用该 uuid 同认 pass（无负例用例）。**登记 · 本轮不改**（uuid = token 专属随机值、零附带；如需收窄到 `[DESIGN-TOKEN:` 语境形 = 另裁）。
+- **号 6（T10-③ 注入链核验义务）**：实施轮先核 T10-③ 注入链（`agent._slotMtime` 缓存命中 → 槽文件复读抛 → `durable=false`——耦合私有缓存语义，实现挪动即失效）；必要时改用可控 seam（模块级 setter / 参数覆写 + `??` 默认回退，默认行为不变，finally 还原）。**登记 · 实施轮履行**。
+- **号 7（批内件随批档——驳回）**：父裁 = **非缺陷，不动**——批内件随批档 = 项目现行纪律（单测件不占 `test/` 树、重跑 = 直跑该件）；长期回归承载即该纪律本身。
+- **号 8（D1 径标记策略注记）**：设计档 §5.1③ 补注 + 本档登记——D1 落盘失败径只剥净、**不追 M2**（有意：落盘失败 ⇒ 结算未成立、自带失败通知非静默；FR8① 截断标记语义〔按批准结算〕在该径不成立）——免与 FR8① 对盘误判。
+
+**受影响表现态（全表 9 档——旧轮次表 append-only 不打改，本表即现态；第 2 行实施序 ∥ 新增第 8/9 档加粗）**
+
+| # | file | 现读（内容行） | 预算 | 改动面 | 实施序 |
+|---|---|---|---|---|---|
+| 1 | `thincoder-core/agent-tools/design-token.mjs` | 117 | ≈145–155 | 单源剥离 + M1/M2（§5.1①–③） | 即行（零交叠） |
+| 2 | `thincoder-core/advisor/messages.mjs` | 299 | 299~301 | `:51-52` 句尾加固（§5.1④ a） | **即行——门已开（#28 已落地）** |
+| 3 | `docs/core/design/ENG-TOKEN-BINDING.md` | 243 | 本轮 +13（230⇒243） | §5.1③④ 收正 + 头注 + 变更记录 | 本轮已落 |
+| 4 | `docs/core/design/API-CONTRACT.md`（生成区） | 2949 | 自动 | 两新导出入区（`node scripts/api-contract.mjs --write`） | 收口轮 |
+| 5 | `docs/batches/2026-10-03-design-token-echo.test.mjs`（拟新增——批内件） | 0 | ~190–230 | T1–T10 | 随批（门已开） |
+| 6 | `docs/batches/2026-10-03-design-token-echo.md` | — | §2/§5/§6 | 批档三段 | 各作者 |
+| 7 | `thincoder-core/agent-tools/advisor-settle.mjs` | 240 | ≈235–238 | `:179-181` ∥ `:214-216` 单源剥离 | 即行（零交叠） |
+| 8 | `thincoder-core/prompts/advisor-design.md` | 44 | ±0（句内加固） | `:24` 句内加固（§5.1④ b〔EN〕——逐字） | 即行（门已开） |
+| 9 | `docs/core/design/prompts/advisor-design.md` | 74 | ±0（句内加固） | `:55` 句内加固（§5.1④ b〔CN〕——同文口径） | 即行（门已开） |
+
+**T1 行更新（δ = 增断言——标记位置不变式入机检面；旧行 append-only 不打改，本行即现态）**
+
+| 用例 | 面 | 输入 / 操作 | 预期（机检断言） | 初态 |
+|---|---|---|---|---|
+| T1（主腿） | 截断回显 | `settleDesignReview(agent, run, token, 文含裸 uuid 截断形)` | `passed=true`；槽值 = 全串 token；输出含 M2 英文核 `truncated echo`；**输出以 `run.approvedSuffix` 结尾（`endsWith` 真）**；**M2 起点 < suffix 起点（标记位置不变式——机器可判）**；零截断残片；`run.open=false` | 红 |
+
+**AC-1 载体随动**：T1（+ 本轮增断言：suffix 结尾 ∥ M2 居前）/ T5——「标记位置不变式」（设计档 §5.1②）自此入机检面。
+
+**同族核查 5 收口（号 1 折入——旧行 append-only 不打改，本行即现态）**：两档已**裁定折入本批**（父侧——#28 门已开）；设计档 §5.1④ b 档 + 受影响表第 8/9 档落笔；实施随本批实施轮。
+
+**设计档现态**：`docs/core/design/ENG-TOKEN-BINDING.md` = 243 内容行（fix 轮 3 已落：§5.1③ D1 注记 ∥ §5.1④ 三档 ∥ 实施序注收正 ∥ 头注辖域分工；变更记录一行）。**读数口径**：本表「现读」= 内容行（末行换行不计）——全表同口径。
+
+**自检读数（fix 轮 3 · 复跑）**：仓根 `node scripts/doc-check.mjs` ⇒ **exit 0**——`OK(锚): 0 条悬空（闸态——阈值 0）` ∥ `OK(行宽): 源域全部 .md 无 >300 字符单行（区带豁免在效——变更记录 ∥ 历史沿革）`；行数面差异 5 条 = thincoder-desktop 先行存量（报告态：SHELL/SESSIONS/SETTINGS/COMPOSER/E2E-TESTING）。
+
 ## §3 设计评审（评审子代理）
+**状态行**：评审完成（#884 设计面 · 🔴 0 · 🟡 4 · 🔵 4 · VERDICT pass）
+
+
+
+### 轮次 1（评审子代理）
+
+目标 = 设计面（#884）：`thincoder/docs/core/design/ENG-TOKEN-BINDING.md`（§5.1 ∥ §6.1 ∥ 变更记录）∥ 需求档 FR8 ∥ 批档 §2。核读三项：① 截断容忍语义下残片全枚举剥净 = 设计档 `:82-83`（结算三分支 + 未完成径 + stale 径 + D1 径）——批档 U1/fix 轮 2 折入记录一致 ✅；② 单源 `stripDesignTokenEcho` 四处消费 = 设计档 `:82-83` ↔ `:108`（§6.1）↔ 批档受影响/用例面一致 ✅；③ T10 断言面对位 = 三径（未完成 / stale / D1）零 uuid ∥ 零 `[DESIGN-TOKEN:` 残留 + 标记在位（批档 `:195`）✅。
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | Coordination | 🟡 | ③ 逐字复制加固只落 `thincoder-core/advisor/messages.mjs` 单点；批档同族核查 5（批档 `:130`）自报两处同载回显指令（`thincoder-core/prompts/advisor-design.md:23` ∥ `docs/core/design/prompts/advisor-design.md:54`）未随批加固——其解除条件「待 #28 后」现已满足（批档 `:179` 自述 #28 已落地），该项仍处未决报备。 | 裁定两档折入或登记台账（#28 门已开），并据此收口批档报备行。 |
+| 2 | Doc-state | 🟡 | 设计档 `thincoder/docs/core/design/ENG-TOKEN-BINDING.md:92` 规范面括注「（在飞）」已成过去态（配套批已落地，批档 `:179` 同批自述）。 | 收正该括注（或移入变更记录），规范面只留现态。 |
+| 3 | Acceptance | 🟡 | 「标记位置不变式」（M2 恒居 `approvedSuffix` 之前 / suffix 恒居文末——设计档 `:80`）无直接机检载体：T1（批档 `:93`）未断言 suffix 位置/结尾；AC-1 只覆盖「M2 在位 + 残片零残留」；KD-3（批档 `:119`）以该不变式为承重理由。 | T1 增断言（输出以 suffix 结尾 / M2 居 suffix 前），把不变式纳入机检面。 |
+| 4 | Ownership | 🟡 | 归属口径不齐：设计档 `:5` ∥ 需求档 `:6` 均把「结算（机制）」列为相邻档 `DESIGN-TOKEN-SETTLEMENT.md` 辖域，本批新语义却落 ENG-TOKEN-BINDING §5.1，批档 KD-6（`:122`）把相邻档描述为「持久化 / 回读 / 消费面」；相邻档不在本次范围，是否重述回显规则未核。 | 核实相邻档无同题重述（有则同步 / 加跨档指针），对齐两处口径；必要时在设计档头注记辖域分工。 |
+| 5 | Semantics note | 🔵 | 截断判定 = uuid 值出现 ∧ 全串未见 ⇒ 认 pass（设计档 `:64`）；token 于评审前注入 prompt（需求档 `:30` FR6）——reviewer 在非批准语境引用该 uuid 同样认 pass（无负例用例）。 | 登记该已知代价（如需可收窄到 `[DESIGN-TOKEN:` 语境形）——本轮不改。 |
+| 6 | Test seam | 🔵 | T10-③ 注入链（批档 `:197`）依赖内部细节（`agent._slotMtime` 缓存命中 → 槽文件复读 `JSON.parse` 抛 ⇒ `durable=false`）——耦合私有缓存语义，实现挪动即失效。 | 实施轮先核验注入链；必要时改用可控 seam（模块级 setter / 参数覆盖 + `??` 默认回退，默认行为不变，finally 还原）。 |
+| 7 | Verification carrier | 🔵 | 新测试落 `docs/batches/2026-10-03-design-token-echo.test.mjs`（批档 `:84` ∥ `:89`），不在主测试树 / `npm test` runner 路径内——长期回归承载未明（批内件惯例本次范围不可核）。 | 明确持续回归载体（或收口时登记是否并入主测试树）。 |
+| 8 | Signal face | 🔵 | D1 落盘失败径折入的是「剥净」；该径报告按原文重建（无 M2 截断标记）——与 FR8①「截断 ⇒ 截断标记」的对照关系未明示（该径自带失败通知，不构成静默）。 | 一行注记说明该径标记策略（有意不追加 M2），免与 FR8① 对盘误判。 |
+
+限制：无文档地图 / 标准档（ownership 判据降级）；源码与相邻档不在本次范围——行数面仅可核设计档 231 行（= 批档 `:199` 现值），其余（117 / 299 / 240 / 2949）未核。
+
+**VERDICT: pass**
+
+计数：🔴 0 · 🟡 4 · 🔵 4
+
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）

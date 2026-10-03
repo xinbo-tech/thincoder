@@ -2,7 +2,7 @@
 
 > 板块 = **工程模式凭证链（token 生命周期 + 写权门禁）**——token 是什么 · TTL 与格式 · 跨模式存活 · 清理时机 · **写权机械门（token 门 + D5 冻结窗口 + docRoot 声明面）**。
 > **v2 就地更新**（2026-09-17 退役批）：M4 模块设计语义融入（写权门禁——见 §9；原旁路档 `_archive/modules/ENGINEERING-MODE-V2-MODULE-WRITE-GATE.md` 已归档 `_archive/modules/`——§12 映射核正：WRITE.md 为 write 工具语义档，写权门禁归本档）。
-> 相邻权威 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md`（结算 / 持久化 / 回读 / 消费——本档**不重述**，D2）· `docs/core/design/CONSULTATION.md`（评审引擎）· `thincoder-cli/docs/_archive/design/ENGINEERING-MODE.md`（工程模式流程，CLI 树**未迁**）。
+> 相邻权威 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md`（结算的持久化 / 回读 / 消费面——结算**判定**语义〔echo 即裁决 / 回显链判定〕= 本档 §5 辖域；两辖域互不重述，D2——2026-10-04 实核该档无回显规则重述）· `docs/core/design/CONSULTATION.md`（评审引擎）· `thincoder-cli/docs/_archive/design/ENGINEERING-MODE.md`（工程模式流程，CLI 树**未迁**）。
 > 需求侧 = `docs/core/requirements/ENG-TOKEN-BINDING.md`（批 5 建档——源 = VSC 树需求档）；CLI 树需求档 `thincoder-cli/docs/requirements/ENG-TOKEN-BINDING.md` **未迁**（后续批）。
 > 建档：2026-09-15（**B 式迁移轮 · 第 3 批**——`thincoder-cli/docs/design/ENG-TOKEN-BINDING.md` 内容重建入基准层；旧档原地一字不改、留作参照历史；**旧档 §4/§5 口径陈旧 ⇒ 按现状收正**——见 §8.1）。
 > 本档坐标 = **as-of 2026-09-15 实核**（仓根 = `thincoder/`）。
@@ -79,16 +79,28 @@
 
 **标记位置不变式**：标记恒居 `approvedSuffix` **之前**——`stripApprovedSuffix`（`thincoder-core/agent-tools/design-token.mjs:29`）以「文本以 suffix 结尾」为精确截断判据（prior 清洗依赖此形）；任何在结算输出**尾部**追加文本的改动都不得破坏「suffix 恒居文末」。
 
-**③ 剥离单源**：`stripDesignTokenEcho`（本批新增）——全串回显 + 截断形（`makeDesignTokenPrefixRegex` 前缀形）+ 裸 uuid 三剥（uuid = token 专属随机值 ⇒ 零附带）；结算三分支 + 未完成径（`thincoder-core/agent-tools/design-token.mjs:86-94`）+ stale 径（`thincoder-core/agent-tools/advisor-settle.mjs:214-216`）的剥离统一走该单源。
+**③ 剥离单源**：`stripDesignTokenEcho`（本批新增）——全串回显 + 截断形（`makeDesignTokenPrefixRegex` 前缀形）+ 裸 uuid 三剥（uuid = token 专属随机值 ⇒ 零附带）；
+结算三分支 + 未完成径（`thincoder-core/agent-tools/design-token.mjs:86-94`）+ stale 径（`thincoder-core/agent-tools/advisor-settle.mjs:214-216`）+ D1 落盘失败径（`thincoder-core/agent-tools/advisor-settle.mjs:179-181`——pass 后落盘失败按原文重建，残片同须剥净）的剥离统一走该单源。
 
-**④ 回显指令加固（Approval Signal 构建面——`thincoder-core/advisor/messages.mjs` 句尾，逐字）**：
+**D1 落盘失败径标记注记（有意策略）**：该径只剥净、**不追加截断标记 M2**——落盘失败 ⇒ 结算未成立、自带 D1 失败通知（非静默）；FR8① 截断标记语义（「按批准结算」）在该径不成立——免对盘误判。
+
+**④ 回显指令加固（逐字——三档）**：
+
+**a. Approval Signal 构建面**（`thincoder-core/advisor/messages.mjs` 句尾）：
 
 ```text
 （:51——designId 在场形句尾）Copy BOTH values verbatim — every character, including the colon and the digits after the uuid inside the token brackets; a shortened echo is flagged as truncated.
 （:52——token-only 降级形句尾）Copy it verbatim — every character, including the colon and the digits after the uuid; a shortened echo is flagged as truncated.
 ```
 
-条件句面（凭证回显条件）= `docs/core/design/ADVISOR-CONVERGENCE.md` §2.5（本档不重述）；该档面实施序 = 待配套批 `2026-10-03-advisor-convergence`（在飞）落地后。
+**b. 评审员系统提示两源**（同文口径——EN 运行期 ∥ CN 模板逐字对应）：
+
+```text
+（EN——`thincoder-core/prompts/advisor-design.md:24` 句内加固）Copy BOTH values verbatim — every character, including the colon and the digits after the uuid inside the token brackets; a shortened echo is flagged as truncated. The designId must be the LAST thing you output.
+（CN——`docs/core/design/prompts/advisor-design.md:55` 句内加固）两个值逐字复制——每个字符都在内，包括冒号与 token 方括号内 uuid 之后的数字位；截断回显会被标记。designId 必须是你输出的**最后**一样东西。
+```
+
+条件句面（凭证回显条件）= `docs/core/design/ADVISOR-CONVERGENCE.md` §2.5（本档不重述）；实施序 = 配套批 `2026-10-03-advisor-convergence` 已落地——无剩余门（加固句随本批实施轮拼接）。
 
 **依据**：需求 `docs/core/requirements/ENG-TOKEN-BINDING.md:30`（FR6——「回显匹配……以代码判定为准」）+ `docs/core/requirements/ENG-TOKEN-BINDING.md:32`（FR8——回显异常零静默 × 复制纪律，2026-10-03 批）+ `docs/core/requirements/ADVISOR-CONVERGENCE.md:86`（N7 零静默）。
 **边界**：不改 token 格式 ∥ TTL ∥ 门禁恒等比对语义 ∥ 「非回显 ≠ 通过」本体。
@@ -104,7 +116,7 @@
 | 格式 + 过期单一权威 | `thincoder-core/token-ttl.mjs:42` · `:55` | 在位 |
 | fail-closed 校验 | `thincoder-core/agent-tools/design-token.mjs:53` | 在位 |
 | 结算（echo 即裁决） | `thincoder-core/agent-tools/design-token.mjs:82` | 在位 |
-| 回显链判定面（截断容忍 ∥ 恒定标记 ∥ 剥离单源——本批新增，§5.1） | `thincoder-core/agent-tools/design-token.mjs`（`stripDesignTokenEcho` · `makeDesignTokenPrefixRegex`——结算三分支 + 未完成径消费）· `thincoder-core/agent-tools/advisor-settle.mjs:214-216`（stale 径消费） | 本批（2026-10-03） |
+| 回显链判定面（截断容忍 ∥ 恒定标记 ∥ 剥离单源——本批新增，§5.1） | `thincoder-core/agent-tools/design-token.mjs`（`stripDesignTokenEcho` · `makeDesignTokenPrefixRegex`——结算三分支 + 未完成径消费）· `thincoder-core/agent-tools/advisor-settle.mjs:179-181`（D1 落盘失败径消费）· `:214-216`（stale 径消费） | 本批（2026-10-03） |
 | 开模式清过期（工具面） | `thincoder-core/agent-tools/eng.mjs:74` | 在位 |
 | 开模式清过期（TUI 面） | `thincoder-cli/src/tui/cmd-eng.mjs:49` | 在位 |
 | 恢复过滤 | `thincoder-core/session.mjs:304`–`:305` | 在位 |
@@ -204,6 +216,10 @@ token 门与冻结窗口判据复用 v1 现有导出（`anyLiveDesignSlot` / `in
 **边界（本增量不做）**：不做 token 签发（M6）；不做评审判据（advisor）；不重写 v1 门禁本体（继承 + 声明面微调）；不做语义写权判断（「谁写需求谁写设计」不可机判——落提示词层 + 互锁兜底）。
 
 ## 变更记录
+
+- 2026-10-04（**design-token 回显链缺陷修批 · fix 轮 3〔评审 #47 收正〕· eng-designer**——父裁号 1–6 ∥ 8 折入）：§5.1④ 枚举扩至三档（messages.mjs + 评审员系统提示两源〔EN `thincoder-core/prompts/advisor-design.md:24` ∥ CN `docs/core/design/prompts/advisor-design.md:55`——同文口径〕）；§5.1③ 补 D1 落盘失败径标记注记（只剥净、不追 M2）；§5.1④ 实施序注收正为现态（#28 已落地）；头注辖域分工收正（结算判定语义 = §5）+ 相邻档已核（2026-10-04——无回显规则重述）。
+
+- 2026-10-03（**design-token 回显链缺陷修批 · fix 轮 · eng-designer**——同族第三处折入〔父裁「修」〕）：§5.1 ③ 剥离单源枚举补 D1 落盘失败径（`thincoder-core/agent-tools/advisor-settle.mjs:179-181`——pass 后落盘失败按原文重建，残片同须剥净）；§6.1 行随动。**边界**：零语义外扩（判断 / 标记 / 槽存储 / 既有分支零改）。
 
 - 2026-10-03（**design-token 回显链缺陷修批 · fix 轮 · eng-designer**——U1 折入）：§5.1 ③ 剥离单源扩至未完成径（`design-token.mjs:86-94`）∥ stale 径（`advisor-settle.mjs:214-216`）；§6.1 行随动；§5.1 依据补指 FR8（需求档 `docs/core/requirements/ENG-TOKEN-BINDING.md:32`）。**边界**：零语义外扩（除剥净面）；实施待 #28。
 
