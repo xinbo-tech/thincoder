@@ -45,12 +45,17 @@ export function createSlotsHandlers(ctx) {
       const slots = listSlots(getCwd())
       return {
         // §11.3 G2-7：SessionInfo.required = ["sessionId","cwd"]（条目键 `id` 已收正）；
-        // §2.2：updatedAt = ISO 8601 字符串（核 `listSlots` 发出 epoch ms——此处收正；非有限
-        // ⇒ 键缺席——JSON 序列化省略）；`messageCount` 剔除（非 SessionInfo 字段——无 schema 位）。
+        // §2.2：updatedAt = ISO 8601 字符串（核 `listSlots` 发出 epoch ms——此处收正）；
+        // 值域钳（修正轮——防 `toISOString` RangeError ⇒ list 整方法 -32603）：有限 ∧
+        // `|v| <= 8.64e15`（ECMA-262 TimeClip 上限）⇒ ISO；非法 ∥ 超域 ⇒ `undefined`
+        //（JSON 序列化 ⇒ 键缺席——null 语义；不用 epoch 0 占位——0 谎报 1970）；
+        // `messageCount` 剔除（非 SessionInfo 字段——无 schema 位）。
         sessions: slots.map((s) => ({
           sessionId: String(s.slot),
           cwd: getCwd(), // single-cwd model (design §4.5)
-          updatedAt: Number.isFinite(s.updatedAt) ? new Date(s.updatedAt).toISOString() : undefined,
+          updatedAt: Number.isFinite(s.updatedAt) && Math.abs(s.updatedAt) <= 8.64e15
+            ? new Date(s.updatedAt).toISOString()
+            : undefined,
           title: s.title ?? "",
         })),
       }

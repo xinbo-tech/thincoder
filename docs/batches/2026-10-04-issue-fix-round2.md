@@ -148,7 +148,7 @@ VERDICT: pass
 **批准面**：#870 ∥ #871 ∥ #872 ∥ #873（#862 拆批不实施——裁定在档）——**派实施**（eng-coder）。
 
 ## §5 实施记录（eng-coder）
-**状态行**：实施完成（批内件 20/20（先红后绿）· doc-check exit 0 · 审计 clean ∥ 评审 pass（0🔴；🟡×3+🔵×3 均非 must-fix，登记待父侧裁决））
+**状态行**：实施完成 · 2026-10-04（initial 轮 + 修正轮（#75 号 1–2 就地修）——批内件 20/20+补腿（先红后绿）· doc-check exit 0 · 审计 clean ∥ 评审 pass（0🔴；🟡×3+🔵×3 登记待父侧裁决））
 
 
 
@@ -201,5 +201,25 @@ VERDICT: pass
 - `docs/core/design/API-CONTRACT.md` 重生成 = 工具整区替换语义 ⇒ 差异面含他批在飞坐标位移（panel/desktop 面——非本批笔）；本批面 = `sessionConfigOptions`/`createSlotReleaser`/resource-link 五导出增 + `CONFIG_OPTIONS` 撤 + 行号位移。
 
 **边界遵守**：需求档零触（主 agent 笔已落）∥ 在飞写域零触（面板面 ∥ 批五二档 ∥ 批三档 ∥ 批四档）∥ 已收口批档零触 ∥ #862 面零扩 ∥ 协议版本/方法面/initialize 形状零动。
+
+**§5 实施记录 · 修正轮（eng-coder · 2026-10-04 · #75 交付登记 号 1–2 就地修——设计定形 = 设计档 §2.4 :112-116 ∥ §2.2 :70 ∥ §12 实施令第 7 条；批档 §2 追加块 :108-117）**
+
+**号 → 改动（file:line = 本轮收正后 as-of；行数口径 = 内容行数）**
+
+- **号 1（delete→new 同键处置）**：`thincoder-cli/src/acp/handlers-session.mjs`（343 行 ∥ +14）new 途——`sessions.set` 直前同键处置 :216-224（`const stale = sessions.get(id); if (stale) { stale.cancel(); sessions.delete(id) }`——close 同法）；认领释放 `if (stale) releaseClosedSlot()` 置于 `sessions.set`/`committed` 之后 :225-231（set :225 ∥ committed :226 ∥ 释放 :231）。释放调用按定形置于 try 内（同 close 先例——释放异常走既有 catch；finally 因 committed 不回滚槽 ⇒ 释放失败不误删已建会话）。
+- **号 2（值域钳）**：`thincoder-cli/src/acp/handlers-slots.mjs`（223 行 ∥ +5）——:56-58 `Number.isFinite(s.updatedAt) && Math.abs(s.updatedAt) <= 8.64e15 ? new Date(s.updatedAt).toISOString() : undefined`；注释 :47-52 随动（非法 ∥ 超域 ⇒ 键缺席 = null 语义；无 epoch 0 占位）。
+- **批内件补腿**：`docs/batches/2026-10-04-issue-fix-round2.test.mjs`（494 行 ∥ +38）——T5 超域腿 :146-168（桩 :129-134 = NaN ∥ 9e15 ∥ −9e15 ∥ 边界 8.64e15）∥ T12 delete→new 腿 :322-346（换钉分离夹具——全真实流：预置槽 1 → new 得 2 → delete(1) 留孔 → delete(2) 重钉取孔 ⇒ 键 "2" / _slot 1 分离 → new 复得回收号撞键）。
+
+**先红后绿（逐腿读数）**
+
+- **红相位（补腿后 · 修前）**：18 绿 / 2 红。T5 红 = `AssertionError: Got unwanted exception`——`Actual: RangeError: Invalid time value`（`handlers-slots.mjs:53` `toISOString` 抛出）；T12 红 = `[读数] T12 delete→new: recycled=2 cancelled=0 size=1 claims={"1":"…","2":"…"}` + `AssertionError: 0 !== 1`（旧实例零处置 ∥ 旧认领残留）。
+- **绿相位（落形后 · 全量复跑）**：**20/20 pass（fail 0）**——T5 读数 = 三条目键缺席（JSON 面同判）+ 边界发射值 `"+275760-09-13T00:00:00.000Z"` 往返恒等；T12 读数 = `recycled=2 cancelled=1 size=1 claims={"2":"…"}`（旧认领（槽 1）已释放 ∥ 新认领（槽 2）保留——释放位次实证）。
+- 跑法：自 `thincoder/` 仓根 `node --test docs/batches/2026-10-04-issue-fix-round2.test.mjs`。
+
+**机检读数**：`node scripts/doc-check.mjs`（thincoder 仓根）= **exit 0**（`OK(锚): 0 条悬空` ∥ `OK(行宽): 无 >300 字符单行`；行数面差异 9 条 = 报告态、desktop/render-core 域——非本档面）∥ `node --check` 三档（两源码 + 批内件）全 OK。
+
+**边界遵守**：设计档零触（#86 已落）∥ 需求档零触 ∥ 在飞写域零触（diff 仅上列三档）∥ 已收口批档零触 ∥ 两笔外零扩。本轮不点火评审（按令）；仓级套件零跑（父侧收口跑——本轮无仓级验证读数）。
+
+**designId 回显**：未达——spawn 文本未携令牌字面值（授权于 spawn 时机械校验生效；本轮全部写操作经写闸落盘即证）；如需按值回显请父侧补发。
 
 ## §6 验证与收口（父代理）

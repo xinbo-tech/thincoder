@@ -113,10 +113,11 @@ test("T4 session/list·正常：updatedAt = ISO 往返恒等；messageCount 键�
   cleanup()
 })
 
-/** T5 夹具：`handlers-slots` 的协作面桩（`listSlots` 返回非有限 `updatedAt`）。
+/** T5 夹具：`handlers-slots` 的协作面桩（`listSlots` 返回非有限 ∥ 超域 `updatedAt`）。
  *  真实管线全链 `isNum` 守卫（`session-slot-scan.mjs` mergeFields / `session-slots.mjs`
- *  `meta.updatedAt ?? meta.ts`）⇒ 非有限值经公开管线不可达——单测以解析钩子提供第二模块
- *  实例 + 桩模块（协作面桩 = 单测正当手法；`registerHooks` 先例 = 面板批内件）。 */
+ *  `meta.updatedAt ?? meta.ts`）⇒ 非有限值经公开管线不可达（超域有限值须手改/损坏槽档
+ *  方达——设计 §11 登记）；单测以解析钩子提供第二模块实例 + 桩模块（协作面桩 = 单测
+ *  正当手法；`registerHooks` 先例 = 面板批内件）。 */
 let t5Armed = false
 function armT5Stub() {
   if (t5Armed) return
@@ -125,7 +126,12 @@ function armT5Stub() {
   created.push(shimDir)
   const realSession = new URL("thincoder-cli/node_modules/@thincoder/core/session.mjs", ROOT_URL).href
   const shimFile = join(shimDir, "session-stub.mjs")
-  writeFileSync(shimFile, `export * from ${JSON.stringify(realSession)}\nexport function listSlots() { return [{ slot: 42, updatedAt: NaN, title: "stub" }] }\n`, "utf8")
+  writeFileSync(shimFile, `export * from ${JSON.stringify(realSession)}\nexport function listSlots() { return [
+  { slot: 42, updatedAt: NaN, title: "stub" },
+  { slot: 43, updatedAt: 9e15, title: "big" },
+  { slot: 44, updatedAt: -9e15, title: "neg" },
+  { slot: 45, updatedAt: 8.64e15, title: "edge" },
+] }\n`, "utf8")
   const shimUrl = pathToFileURL(shimFile).href
   registerHooks({
     resolve(specifier, context, nextResolve) {
@@ -137,7 +143,7 @@ function armT5Stub() {
   })
 }
 
-test("T5 session/list·边界：meta updatedAt 非有限 ⇒ 键缺席（含 JSON 序列化面）", async () => {
+test("T5 session/list·边界：meta updatedAt 非有限 ∥ 超域 ⇒ 键缺席（含 JSON 序列化面）；list 零抛", async () => {
   armT5Stub()
   const hs = await mod("thincoder-cli/src/acp/handlers-slots.mjs?t5-stub")
   const handlers = hs.createSlotsHandlers({
@@ -146,11 +152,18 @@ test("T5 session/list·边界：meta updatedAt 非有限 ⇒ 键缺席（含 JSO
     createSession: async ({ id }) => mkStubSession(id),
     requireConfigured: () => ({}), releaseClosedSlot: () => {}, log: () => {},
   })
-  const r = handlers["session/list"]({})
+  let r
+  assert.doesNotThrow(() => { r = handlers["session/list"]({}) }, "list 零抛（非法 ∥ 超域不入 toISOString）")
   console.log(`[读数] T5: ${JSON.stringify(r.sessions)}`)
-  assert.equal(r.sessions.length, 1)
-  assert.equal(r.sessions[0].updatedAt, undefined, "非有限 ⇒ undefined")
-  assert.equal("updatedAt" in JSON.parse(JSON.stringify(r.sessions[0])), false, "JSON 序列化键缺席")
+  assert.equal(r.sessions.length, 4)
+  assert.equal(r.sessions[0].updatedAt, undefined, "非有限（NaN）⇒ undefined")
+  assert.equal(r.sessions[1].updatedAt, undefined, "超域（9e15）⇒ undefined")
+  assert.equal(r.sessions[2].updatedAt, undefined, "超域（−9e15）⇒ undefined")
+  assert.equal(typeof r.sessions[3].updatedAt, "string", "边界 |v| = 8.64e15 域内 ⇒ ISO（含 ≤ 判）")
+  assert.equal(new Date(r.sessions[3].updatedAt).toISOString(), r.sessions[3].updatedAt, "对发射值往返恒等")
+  for (const [i, e] of r.sessions.slice(0, 3).entries()) {
+    assert.equal("updatedAt" in JSON.parse(JSON.stringify(e)), false, `JSON 序列化键缺席（[${i}]）`)
+  }
   assert.equal(r.sessions[0].sessionId, "42")
 })
 
@@ -273,7 +286,7 @@ test("T11 会话身份·正常：resume(同 id) → 原 id cancel/close 命中�
   cleanup()
 })
 
-test("T12 会话身份·边界：同 id 二次 load ⇒ 替换；拒载形 ⇒ 旧实例零副作用保留", async () => {
+test("T12 会话身份·边界：同 id 二次 load ⇒ 替换；拒载形 ⇒ 零副作用保留；delete→new 回收槽号 ⇒ 旧实例被处置", async () => {
   const cwd = tmpDir("t12-cwd")
   const slot = await coreSession.newSession(cwd)
   const id = String(slot)
@@ -306,6 +319,31 @@ test("T12 会话身份·边界：同 id 二次 load ⇒ 替换；拒载形 ⇒ �
   assert.ok(rEng.error, "工程模式拒载")
   assert.equal(built.sessions.get(id2), third, "旧实例保留")
   assert.equal(third.cancelled, 0, "拒载路径：cancel 未触")
+  // ── delete→new 回收槽号（旧实例键 = 槽号串、`_slot` 已分离——换钉支）⇒ 旧实例被处置 ──
+  // 夹具（全真实流）：① 预置槽 1（无在存实例）；② new 得槽 2；③ delete(1) 留孔；④ delete(2)
+  // 触发重钉——newSession 取最低空号 = 1 ⇒ 旧实例键 "2" / _slot = 1（分离）；⑤ new 复得回收
+  // 号 2 ⇒ 撞同键在存实例。处置判据：cancel 被调 ∥ Map 单条 ∥ 旧认领释放（位次 = set 后）。
+  const cwd2 = tmpDir("t12b-cwd")
+  await coreSession.newSession(cwd2)
+  const built2 = await buildAcp({ cwd: () => cwd2, createSession: async ({ id }) => mkStubSession(id, { cwd: cwd2 }) })
+  const rB = await built2.handlers["session/new"]({})
+  const s2 = built2.sessions.get(rB.sessionId)
+  await built2.handlers["session/delete"]({ sessionId: "1" })
+  await built2.handlers["session/delete"]({ sessionId: rB.sessionId })
+  assert.equal(s2.agent._slot, 1, "夹具：旧实例 _slot 已与键分离（换钉）")
+  const rR = await built2.handlers["session/new"]({})
+  const fresh = built2.sessions.get(rR.sessionId)
+  const m2 = coreSession.loadManifest(cwd2)
+  console.log(`[读数] T12 delete→new: recycled=${rR.sessionId} cancelled=${s2.cancelled} size=${built2.sessions.size} claims=${JSON.stringify(m2.slotSessions)}`)
+  assert.equal(rR.sessionId, rB.sessionId, "夹具：槽号回收（同号复得）")
+  assert.equal(s2.cancelled, 1, "旧实例被处置（cancel 被调——close 同法）")
+  assert.ok(fresh && fresh !== s2, "同键新实例在存")
+  assert.equal(built2.sessions.size, 1, "Map 单条（同键唯一）")
+  assert.equal(m2.slotSessions?.[1], undefined, "旧实例认领已释放（释放位次 = sessions.set/committed 后）")
+  assert.ok(m2.slotSessions?.[2], "新会话认领保留（保留集含新槽——先释后装即误释此键）")
+  const rP = await built2.handlers["session/prompt"]({ sessionId: rR.sessionId, prompt: [{ type: "text", text: "hi" }] })
+  assert.equal(rP.stopReason, "end_turn", "新会话正常")
+  assert.deepEqual(fresh.runs, ["hi"])
   cleanup()
 })
 

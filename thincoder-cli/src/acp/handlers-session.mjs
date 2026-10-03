@@ -213,8 +213,22 @@ export function createSessionHandlers(ctx) {
         // TUI-OOM-ROOTCAUSE（SESSION.md §6.14）：新建槽绑定记录存储（baseHistory 空——
         // identity 待固化）——与 /new 同语义
         bindRecordStore(session.agent, { slotFile: slotPath(getCwd(), session.agent._slot), identity: session.agent._sessionStart ?? null, baseHistory: [] })
+        // §2.4 new 途处置点钉定（delete→new 槽号回收面 · 修正轮）：`session/delete` 删档后槽号
+        // 回流，`session/new` 复得同号时会撞**同键在存实例**（键 = 槽号串而 `_slot` 已与键分离
+        // 的旧实例不受 delete 重钉环处置——`handlers-slots.mjs` 按 `_slot` 匹配）——close 同法
+        // 处置：cancel ∥ 删键。位次 = `sessions.set` 直前——此前任何一步失败均不改动旧实例。
+        const stale = sessions.get(id)
+        if (stale) {
+          stale.cancel()
+          sessions.delete(id)
+        }
         sessions.set(id, session)
         committed = true
+        // §2.4 new 途认领释放位次（修正轮）：置于 `sessions.set`/`committed` 之后——保留集须含
+        // 新会话槽（`createSlotReleaser` 保留集 = 在存 Map 槽）；先释后装会把 `newSession` 刚写
+        // 的新认领当残留释放（`staleClaims` 谓词）⇒ 复开 F2 双写窗口；置 committed 后 ⇒ 释放
+        // 失败不误删已建会话（finally 回滚仅对未 committed 生效）。
+        if (stale) releaseClosedSlot()
         // §11.3 G2-5：NewSessionResponse.required = ["sessionId"]（`id` / `configId` 键已收正）；
         // configOptions = 全形（§2.3 单源投影）。
         return { sessionId: id, configOptions: sessionConfigOptions(session.agent) }
