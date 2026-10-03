@@ -11,7 +11,7 @@
  *   T3  B① 保存补写（临时 config · 核 `_setConfigPathForTest` 缝）：缺失 ⇒ 补 `name:model`（补后
  *       `loadConfig().provider` 有效 = 复现对 B 半）∥ 既有非空零覆盖 ∥ 无效-非空零触碰（KD-5）∥
  *       `active:true` 支照旧 ∥ 坏条目零写
- *   T4  B②③：`loadModels(null)` 候选负控（段归 `none` ∧ `models:[]` ∧ 零 `model:list` 请求）∥ 步 2 步入径
+ *   T4  B②③：无渠 ⇒ `model:catalog` 全渠扇出（catalog 失败 ⇒ 段归 `none` ∧ `models:[]` ∧ 报告在案——零静默；**2026-10-04 复锚：#842 收正**）∥ 步 2 步入径
  *       ⇒ `loadModels(现渠)` ∥ handlers 携 `onUseModel`（同一引用 —— 零第二实现；缺注入 ⇒ 零键）＋ 完成径零改
  *   T5  C 无效装配不入表（两次 send ⇒ 装配恰两次）∥ 有效 ⇒ 恰一次（同键复用保持）
  *   T6  KD-8 槽复验（真槽文件：槽无效 ⇒ 标记保持；槽有效 ⇒ 清标）+ 源码判据
@@ -253,7 +253,7 @@ test("T4 B②③：loadModels(null) 候选负控 ∥ 步 2 步入径 ⇒ loadMod
   const { createReads } = await mod("thincoder-desktop/renderer/mount-settings-reads.mjs")
   const { createWizard } = await mod("thincoder-desktop/renderer/mount-onboarding.mjs")
 
-  // ① 候选负控（改档判据：守卫态零候选）：无激活渠道 ⇒ 段归 "none" ∧ models:[] ∧ 零 `model:list` 请求
+  // ① 无渠态扇出（#842 收正）：无激活渠道 ⇒ `model:catalog` 全渠扇出；catalog 失败 ⇒ 段归 "none" ∧ models:[]（零静默）
   const asks = []
   let slices = {}
   const reads = createReads({
@@ -263,10 +263,12 @@ test("T4 B②③：loadModels(null) 候选负控 ∥ 步 2 步入径 ⇒ loadMod
     report: () => {},
   })
   await reads.loadModels(null)
-  assert.deepEqual(slices.model, { state: "none", provider: null, current: null, models: [] }, "无渠 ⇒ 段归 none ∧ models:[]（禁假造候选）")
-  assert.equal(asks.length, 0, "无渠 ⇒ 零 `model:list` 请求")
+  assert.deepEqual(slices.model, { state: "none", provider: null, current: null, models: [] }, "无渠 ∧ catalog 失败 ⇒ 段归 none ∧ models:[]（零静默——报告在案；禁假造候选）")
+  assert.equal(asks.length, 1, "无渠 ⇒ 全渠扇出（`model:catalog` 恰一次——#842 收正：原「零请求」契约已废）")
+  assert.equal(asks[0].channel, "model:catalog", "扇出面 = `model:catalog`")
   await reads.loadModels("")
-  assert.equal(asks.length, 0, "空串同判（零请求）")
+  assert.equal(asks.length, 2, "空串同判（同径扇出——#842）")
+  assert.equal(asks[1].channel, "model:catalog", "空串 ⇒ 同径")
 
   // ② 步 2 步入径：步 1 ⇒ 步 2 ＋ 现渠候选装载（渠空 ⇒ loadModels(null)）
   const loaded = []
