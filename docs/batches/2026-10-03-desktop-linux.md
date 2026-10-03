@@ -19,7 +19,7 @@
 **§1 补记二（同日 20:1x–20:26 · 构建机首跑 = 出产物）**：B 路线（内网构建机 `10.0.0.5` 代号 ha-proxy）**首跑全链实通**——配方 = gitee 浅克隆 → npmmirror registry + `ELECTRON_MIRROR` + `ELECTRON_BUILDER_BINARIES_MIRROR` → `npm install`（301 包）→ `materialize-deps` → `electron-builder --linux AppImage deb --publish never`。**实产**：`ThinCoder-Setup-0.10.2.AppImage`（127,048,532 B · sha256 2543559b…c616）∥ `ThinCoder-Setup-0.10.2.deb`（100,650,684 B · sha256 77710267…049d）∥ `latest-linux.yml`（350 B）；产物已拉回父侧 `D:\WSL\artifacts\`。**首跑挖出三处仓内缺项（入设计定形）**：① 图标——electron-builder 拒收 `.ico` ⇒ 须入库 `build/icon.png`（256×256，可从 icon.ico 内嵌帧直取）；② deb 元数据——fpm 要 `homepage` + `author.email`（补后即通）；③ feed 语义错位——latest-linux.yml 现指向 deb，与「AppImage 跟自动更新 ∥ deb 手动」相抵。设计轮 = eng-designer（本批 §2 + `docs/desktop/design/PACKAGING.md` Linux 段 + `RELEASE.md` §5 随动），已起跑。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（落点 = docs/desktop/design/PACKAGING.md §1 KD-73 ∥ §2.11 ∥ §3.4 ∥ §4.4 ∥ §5 T-DSK61–63 ∥ §6 D42 行；docs/RELEASE.md §5.6 Linux 臂 L1–L5；2026-10-03；机检红线修复轮（24 悬空 → 0 ∥ 6 超宽 → 0 · 复跑 exit 0））
+**状态行**：设计完成（落点 = docs/desktop/design/PACKAGING.md §1 KD-73 ∥ §2.11 ∥ §3.4 ∥ §4.4 ∥ §5 T-DSK61–63 ∥ §6 D42 行；docs/RELEASE.md §5.6 Linux 臂 L1–L5；2026-10-03；机检红线修复轮（24 悬空 → 0 ∥ 6 超宽 → 0）∥ 评审修复轮（10 号全落——复跑 exit 0））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 **§2 批次任务与设计（eng-designer）——桌面 Linux 产物（D42 · 台账 #847）· 设计轮（initial）**
@@ -74,7 +74,48 @@
 - 行数面 2 条（报告态——PACKAGING L329 ∥ E2E-TESTING L249）= 修复前基线同值——非本轮面，零触。
 - **状态 = 候评审就绪**（红线清零）。
 
+**评审修复轮（设计评审轮 1 · 10 号逐号 · 父侧裁 = 全采纳）· 2026-10-03 · eng-designer**
+
+来源 = 本档 §3 设计评审轮次 1（VERDICT pass——🔴 0 ∥ 🟡 5 ∥ 🔵 5）。处置 = 10 号逐条落地（纯形态 ∥ 口径 ∥ 粒度收正 + 定裁句——均落评审授权面内；判定阈值 ∥ 配置 ∥ 他批 ∥ 需求卷零触）：
+
+- **① §3.1/§3.3 收正**：CHANGELOG **19 ⇒ 27**（本批实读——重发窗并列）；main.mjs「242 = 该批 as-of」口径注（§3.3 头改「该批实施落盘 as-of 读数」——消同日双「现行」）。
+- **② §2.11.3 拆分评审结论**：保留单档（三理由：读面共享 ∥ 硬限余量 ∥ 先例）∥ 抽档预案 = Linux 臂出档独立模块（主档汇流）∥ 触发判据 = 实读迫 500 硬限；§3.4 行 4 随拍。
+- **③ §6 D42 ②** 翻「已收正（主 agent 笔面——已落）」+ 引需求卷 `docs/desktop/requirements/PACKAGING.md:16` ∥ `:24`；「现文」⇒「设计轮前案」（时点形）。
+- **④ §2.8.1 门行补指针**（Linux 介质合项 = §2.11.4）+ §2.11.4 补未武装态菜单项定裁（enabled = true ∥ label 不变 ∥ 点按零效果）+ §3.4 行 10 列 §2.8.1 ∥ §2.9.7。
+- **⑤ §2.11.5 站点区块按 §2.9.3 粒度补齐**：href 形 ∥ 按钮文案 ∥ 小字注 ∥ 系统要求句 ∥ 更新句。
+- **⑥ AppImage 执行位前置**：§2.11.5（desktop.html 节）∥ T-DSK62 ①（`chmod +x`——或文件管理器放行）。
+- **⑦ §4.4「提取三读数」⇒「四读数」**（对齐 §2.11.3 四项）；本段 ⑤「验收对照」行同口径随此收正（该正文行 append-only 不改——本块为准）。
+- **⑧ §3.4 行 9 补预估（~380 行）+ 档位适用定裁**（同 .mjs 代码档——300 建议 ∥ 500 硬限为闸）。
+- **⑨ cache-control 扩展名全集钉定**：§2.9.7 ∥ §2.11.5（含 `.AppImage`/`.deb`——「零改」成立：实测源读 `upload-download.mjs` 回退形已覆盖）。
+- **⑩ §2.11.1 补适用范围句**（`Node.js >= 24` = 本仓开发 ∥ 产品运行面；构建机 = 构建链脚本载体）+ 换版条款含 `node` 主版本。
+
+复跑 = 仓根 `node scripts/doc-check.mjs`：exit 0（悬空 0 ∥ 行宽 0——拟新增 ∥ 迁移期引文 ∥ 注记豁免与修复前同值，零净增）。`docs/RELEASE.md` 零触（10 号坐标全落 PACKAGING——逐号复核）。设计档变更记录 +1 行（PACKAGING.md）。
+
+- 附：机检行数面差异 **2 ⇒ 1**——① §3.1 CHANGELOG 声明收正（19 ⇒ 27）顺带解消前批在册的 PACKAGING 侧一条；余 1 = `docs/desktop/design/E2E-TESTING.md:249`（`.gitignore` 表 8 ⇒ 实读 9）——前批在册报告态项，非本面（零触）。
+
 ## §3 设计评审（评审子代理）
+
+### 轮次 1（评审子代理）
+
+**设计评审（桌面 Linux 产物批 · 台账 #847）**——目标 = `thincoder/docs/desktop/design/PACKAGING.md`（KD-73 + §2.11.1–2.11.6 + §3.4 + §4.4 + §5 T-DSK61–63 + §6 D42 行）∥ `thincoder/docs/RELEASE.md` §5.6 Linux 臂 L1–L5 ∥ `thincoder/docs/desktop/requirements/PACKAGING.md` D42 行；计数 = 🔴 0 ∥ 🟡 5 ∥ 🔵 5。
+
+| # | Category | Severity | Issue | Suggestion |
+|---|---|---|---|---|
+| 1 | Affected-file size annotations | 🟡 | §3.4「现行」读数与 §3.1/§3.3 实读不一致：`CHANGELOG.md` 计 19（`PACKAGING.md:335`、`:374`）vs §3.4 计 27（`:395`）——未自注；`main.mjs` 计 242（`:368`）vs 263（`:393`）——已自注「242 系该批 as-of 读数」，但 §3.3 头亦标「实读 2026-10-03」，同日双「现行」并存 | 把 §3.1/§3.3 两行收正到本批实读（或逐行补 as-of 口径注），消「现行」双值 |
+| 2 | Affected-file size annotations | 🟡 | `scripts/check-dist.mjs` 预期 225 ⇒ ~300（`:391` ∥ `:283`）——自认「越 300 顾问线」，但拆分评审仅「随实读登记」，无顾问线结论（500 硬限侧有「断言族抽档」预案） | 本设计轮给出顾问线拆分评审结论（保留并说明理由 ∥ 抽档形态与触发判据） |
+| 3 | Document ownership / cross-file state | 🟡 | §6 **D42** 行 ② 仍写需求卷「现文『GitHub Actions 云构建』⇒ 终态 = 内网构建机」且状态列「②上抛（主 agent 笔面）」（`PACKAGING.md:453`）；需求卷 D42 行现文已为「构建通道 = 内网构建机」（`requirements/PACKAGING.md:16`）且 `:24` 已记「设计轮收口…D42 两处收正」 | 按本档 §4.3「已落：D40 ∥ D41」先例，把 D42 ② 翻「已收正」并引需求卷行；「现文」措辞改时点形 |
+| 4 | Clarity | 🟡 | 武装门合项（`updaterMediumOk`）只落 `:293-294`（§2.11.4）；§2.8.1 `:115` 的门定义未随拍、§3.4 改档集 `:397` 亦不含 §2.8.1；未武装态（deb）菜单项行为仅见用例行「点按零效果」（`:442`），enabled/label 未定裁 | §2.8.1 门行补指针（Linux 介质合项 = §2.11.4）或列入改档集；§2.11.4 补一句未武装态菜单项定裁 |
+| 5 | Clarity | 🟡 | §2.11.5 站点区块规格（`:303-305`）粒度低于其自称体例：§2.9 承诺「零前置知识可实现（逐页 ∥ 逐段 ∥ 链接 ∥ 文案要点）」（`:164`），而 Linux 区块只写「AppImage ∥ deb 两直链 + 小字注」——无按钮文案/链接形；「系统要求行补 Linux 句」未给句面（对照 Windows 卡逐字 href/文案先例 `:188`） | 按 §2.9.3 粒度补齐 Linux 区块（href 形 ∥ 按钮文案 ∥ 系统要求句），或明示文案自由裁量 |
+| 6 | Acceptance criteria | 🔵 | AppImage 走查/文案均只写「双击运行（FUSE）」（`:305` ∥ `:442`）；站点下载件是否携执行位未定（前提 = 下载路径通常不携执行位——未验证） | desktop 页 Linux 节与 T-DSK62 前置补 `chmod +x`（或明示文件管理器放行路径） |
+| 7 | Clarity | 🔵 | §4.4 记「AppImage 提取三读数」（`:429`）vs §2.11.3 实列四项（app.asar ∥ `package-type` 不在 ∥ `.desktop` 名 ∥ 图标，`:285-286`） | 二处取一（建议按四项表述） |
+| 8 | Affected-file size annotations | 🔵 | 批内件新档（`docs/batches/2026-10-03-desktop-linux.test.mjs`）无行数预估（`:396`）；先例批内件 376–410 行，档位适用未定裁 | 补预估行数或一句豁免/适用定裁 |
+| 9 | Clarity | 🔵 | `:301` 称 upload-download.mjs cache-control「现档已覆盖（`.yml` ⇒ no-cache ∥ 余 ⇒ max-age=86400）——零改」；所引 §2.9.7 现文只列 `.yml`/`.exe`/`.blockmap`（`:215`），`.AppImage`/`.deb` 落点未列 | 覆盖判据钉成扩展名全集（含 `.AppImage`/`.deb`）再宣称零改 |
+| 10 | Feasibility | 🔵 | 构建机 `node v22.22.2`（`:234`「工具链固定」）与 Project Guide「Node.js >= 24 only」并存——适用范围（构建脚本 vs 运行时）未述 | 补适用范围句，或把 Node 主版本纳入「换版 ⇒ 复跑配方复验」面 |
+
+（范围外备注：需求卷 D40 行「Linux/mac ∥ 商店后加」分期句（`requirements/PACKAGING.md:14`）与 D42 落地后的现态表述可能需收正——不在本评审目标（目标 = D42 行），无严重度。）
+
+**VERDICT: pass**（🔴 0 ∥ 🟡 5 ∥ 🔵 5）
+
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）
