@@ -59,7 +59,7 @@ const LEDGER_STATE = { ledger: null }
 const LINE_COLORS = Object.freeze({ warn: true, dim: false })
 
 /** 台账状态位出站投影（纯函数 —— 用例缝）：核拍面写的 `state.ledger`（`{ marker, warn, scannedAt }` ——
- *  `ledger-surface.mjs:52`）⇒ 出站值 `{ text, warn }` ∕ `null`：`text` = 核 `formatMarker` 逐字（端零构造）；
+ *  `ledger-surface.mjs:54`）⇒ 出站值 `{ text, warn }` ∕ `null`：`text` = 核 `formatMarker` 逐字（端零构造）；
  *  未扫 ∕ 无当前项目（`marker` 空）⇒ `null`（出站 `null` = 清渲染面残影 —— 段 11 在场判据 = `text` 非空串）。 */
 export function ledgerMarkerOf(ledger) {
   const text = ledger !== null && typeof ledger === "object" && typeof ledger.marker === "string" && ledger.marker !== ""

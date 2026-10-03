@@ -65,7 +65,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 
 **不做（边界）**：`realpath` / 符号链接解析；**非盘符段大小写折叠**（POSIX 大小写敏感 + origin 语义——同 `MEMORY.md` §6.11「不做」）；别名路径（subst / junction / 8.3 短名 = 已知限制）。
 
-**路径串等值比较边界（登记 · VSC 侧 `===`）**：台账链路现存字符串等值比较两处——`ledger.mjs` `discoverFamily` 的 `p.root !== current.root`，
+**路径串等值比较边界（登记 · VSC 侧 `===`）**：台账链路现存字符串等值比较**三处**——（#882 批增）`ledger.mjs` `scopeMarkerOf` 范围滤取 `scan.root === family.current.root`（现盘 `:160` 邻位）；`ledger.mjs` `discoverFamily` 的 `p.root !== current.root`，
 `ledger-surface.mjs`（核与 VSC 两份）的 `s.root === family.current.root`。
 两侧均出自**同一 anchor 的单进程同源谱系**，不跨端比较裸路径串；跨端一致性只经**库键与 `notifyKey`** 承载。
 判定 = 零缺陷、零代码改；守卫 = 新增比较点不得跨端直比裸路径串（须经 `normalizeCwd` / `notifyKey`）。**验证面**：零代码改 ⇒ **无独立守卫用例**——验证 = 静态审计在册（本段）；T22 = **间接守卫**（级联面同契约下游回归：`findProject` / `notifyKey` 同键——非两处 `===` 点的直测）。
@@ -300,7 +300,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
    - **范围推导**：`current` 在场 ⇒ 范围 = `scans` 中 `root` = `family.current.root` 的 scan（**容器根自身带台账** ⇒ `findProject` 含自身命中 ⇒ 归属 = 具体项目锚——只显其自身数，不合计其下项目）；`current` 缺席（容器根锚）⇒ 族 = `discoverFamily` 既有枚举面 `projects`（向上（含锚）最近「含台账子目录」层取其子目录——族发现本体零改）。
    - **两参对账**：`family` 判归属 ∥ `scans` 载体——范围 = 归属 ∩ 已读（「已读」= 在 `scans` 中：构建期不可读项目已跳过）；`current` 缺席 ⇒ 范围 = `scans` 全体。
    - **文本产出**：`marker` 文本 = 委托 `formatMarker` 逐字模板（求和值入参；`formatMarker` 仍居调用链——§7.1）。
-- **标记范围批（#882）受影响面**：源/测试全清单（现行行数 × 增量——含批内单测件）= 批档 `docs/batches/2026-10-03-ledger-family-aggregate.md` §2.4；贴线判 = 本批有增量档全列 ≤300 顾问线（最高 ≈234——`ledger.mjs`）⇒ 零拆分义务。
+- **标记范围批（#882）受影响面**：源/测试全清单（现行行数 × 增量——含批内单测件）= 批档 `docs/batches/2026-10-03-ledger-family-aggregate.md` §2.4；贴线判 = 本批有增量档全列 ≤300 顾问线（最高 241——`ledger.mjs`·实读）⇒ 零拆分义务。
 - **条目键派生**（去重档 `aged` 集元素）：键 = 条目 `title` **归一化文本**——去首尾空白 + 连续空白折叠为单空格（SQLite 行天然单行，无需去条目前缀）。**位置无关**；**title 变更** = 键变 → 按新条目计；两端同规则（去重档跨端共享）。
 - **变化检测（去重）/ 送达门 / 去重档 schema**：与 v1 同口径（`{version:1, ledgers:{…}}`；缺失 / 坏 JSON → 空态；temp + rename）。
 - **行龄**：SQLite 时间戳距今（非 git / 无时间戳 → 标「年龄未知」照列、不判老化）。
