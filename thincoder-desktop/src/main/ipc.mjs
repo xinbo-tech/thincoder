@@ -1,12 +1,12 @@
 /**
- * ipc.mjs — IPC 通道处理体本体 + 宿主注入面（`docs/desktop/design/IPC.md` §1 / §2）：**四十七项**白名单面（菜单体系批 · D36 落 `theme:state`；消化面留档批 · #719 落 `record:append`）=
+ * ipc.mjs — IPC 通道处理体本体 + 宿主注入面（`docs/desktop/design/IPC.md` §1 / §2）：**四十八项**白名单面（菜单体系批 · D36 落 `theme:state`；消化面留档批 · #719 落 `record:append`；子代理面板批落 `panel:state`）=
  * 本档（配置读取 + 项目面 `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` /
  * `session:switch` / `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` +
  * 作答响应 `question:respond` —— `question` 工具真作答面 + 历史页 `history:page` + 回合驱动 `msg:send` /
  * `msg:interrupt`（宿主未注入 ⇒ fail-loud）+ 会话级偏好写面 `session:prefs` + 子 agent 停止出口 `subagent:stop`
  * （R3b 落）+ 文件链接打开 `file:open`（「对齐第三批」相抵② · KD-39 —— 编辑器 CLI 探测 ⇒ spawn
  * (`editor-open.mjs`)；兜底 `shell.openPath`；纯判据面住 `file-links.mjs`）+ R1 输入面板两项 `session:flags` /
- * `at:complete` + 会话维护线两项 `session:gc` / `session:index` + **消化面留档批一**（`record:append` —— 末位 46）+ **菜单体系批一**（`theme:state` —— 勾选态回读，末位 47）—— 白名单末位）+ **转口群二十四项出档
+ * `at:complete` + 会话维护线两项 `session:gc` / `session:index` + **消化面留档批一**（`record:append` —— 末位 46）+ **菜单体系批一**（`theme:state` —— 勾选态回读，末位 47）+ **子代理面板批一**（`panel:state` —— 渲染面实况回读上报（渲染→主单向；`PANEL-READBACK.md` §2.1），末位 48）—— 白名单末位）+ **转口群二十四项出档
  * `ipc-relays.mjs`**（#685 拆点 —— 331 ⇒ 两档 ⇒ 越 300 回线）：索引数据面两 + 设置族十九（provider 八 /
  * model 两 / agent 参数 / MCP 六 / env / tools）+ 台账相位两 / 配置写——逐项一参数纯转口（本档零算法副本）。
  * 跨档接线：两档同取 `currentCwd`；本档**新导出** `liveAgents`（mcp 四转口随动面取用 —— 单向
@@ -42,6 +42,7 @@ import { runSessionGcMaintenance, runSessionIndexMaintenance } from "./session-m
 import { fileOpenTarget } from "./file-links.mjs"
 // 行定位消解面（端差清算轮 #627 —— 外部编辑器 CLI 探测 ∕ argv 构造 / spawn 形；本档零算法副本）。
 import { buildEditorArgs, detectEditorCli, spawnEditorCli } from "./editor-open.mjs"
+import { panelLive } from "./panel-live.mjs" // 实况回读缓存（子代理面板批 —— `panel:state` 接收半；与装配面同单例）
 
 const require = createRequire(import.meta.url)
 
@@ -100,6 +101,7 @@ export {
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
   questionRespond, sessionPrefs, subagentStop, fileOpen, sessionFlags, atComplete, recordAppend, themeState,
+  panelState,
   sessionGc, sessionIndex, liveAgents,
 }
 
@@ -272,6 +274,20 @@ function recordAppend(payload) { return requireAgentHost().recordAppend(payload?
  *  渲染→主单向；载荷 `{ theme }` 三值闭集）。缓存与菜单重建住 `window.mjs` `setMenuTheme` —— 本档只做转口
  *  （表外值 ⇒ 零变更 + 记错，零静默）。 */
 function themeState(payload) { return setMenuTheme(payload?.theme) }
+
+/** `panel:state(payload)` ⇒ `{ ok:true }` ∥ `{ ok:false, reason }`（**渲染面实况回读上报** —— 子代理面板批 · 白名单末位 48；形判两档 `invalid-key` ∥ `invalid-blocks` —— 防御档，表外零变更 + 记错）：
+ *  载荷 `{ key, blocks }`（块形 = 判别六键 + `role`/`id` 随行；单源 = `PANEL-READBACK.md` §2.1）——渲染 → 主单向 ⇒ 读数缓存（`panel-live.mjs`，后报覆前报）⇒ 核 `panel` 工具 view ∥ freeze 读源；**限度 = 报告缓存**（报告未达 ⇒ 工具侧回落降级链）。 */
+function panelState(payload) {
+  const { key, blocks } = payload ?? {}
+  const shaped = Array.isArray(blocks) && blocks.every((b) => b !== null && typeof b === "object" && typeof b.key === "string" && b.key !== "")
+  if (typeof key !== "string" || key === "" || !shaped) {
+    const reason = typeof key !== "string" || key === "" ? "invalid-key" : "invalid-blocks"
+    console.error(`[ipc] panel:state refused malformed payload (reason=${reason})`)
+    return { ok: false, reason }
+  }
+  panelLive.report(key, blocks)
+  return { ok: true }
+}
 
 /** R1 · 会话维护线两处理体转口（出档 `session-maintenance.mjs`）：`session:gc` ⇒ `{ ok, candidates, confirmed,
  *  deleted, files, skipped, skippedFiles }`；`session:index` ⇒ `{ ok, sessions, changed, messages, toolCalls,

@@ -132,7 +132,7 @@ export const subagentTool = {
     properties: {
       action: { type: "string", enum: ["spawn", "status", "escalate", "cancel", "panel", "consume-design", "observe", "send"], description: "Which action — spawn (default) / status / observe / send / escalate / cancel / panel / consume-design; semantics per action in the tool description." },
       view: { type: "boolean", description: "action:'panel' only: true (default) = the live panel blocks as the user sees them; false without freeze = error. Mutually exclusive with freeze (freeze wins)." },
-      freeze: { type: "string", description: "action:'panel' only: block key of a digested-stuck block — reclaims it into the conversation; refused for running/done/unknown blocks or a still-pending report; requires the CLI TUI panel mirror." },
+      freeze: { type: "string", description: "action:'panel' only: block key of a digested-stuck block — reclaims it into the conversation; refused for running/done/unknown blocks or a still-pending report; works on the CLI TUI panel and on the desktop renderer panel (live readback of the blocks as the user sees them)." },
       task: { type: "string", description: "Required for action:'spawn' (the self-contained task brief) and action:'escalate' (goal, constraints, entry files, acceptance criteria)." },
       context: { type: "string", description: "Optional background the sub-agent needs (it cannot see this conversation); action:'spawn' only." },
       role: { type: "string", enum: ["explore", "plan", "coder", "eng-coder", "eng-designer"], description: "The sub-agent role — see the role matrix in the tool description. Exact spelling required. action:'spawn' only (escalate spawns its own expert internally)." },
@@ -188,7 +188,9 @@ export const subagentTool = {
       // CLI-ACTIVITY-DEBLOAT F-3（2026-09-10）接线：executePanelAction 经 ctx.state
       // （= agent._tuiState——startTUI 反向挂载）读时现算面板块（computePanelBlocks）——
       // 手工面板镜像已退役。headless/VSC 无挂载 → 现算返 null → 降级照旧。
-      if (action === "panel") return executePanelAction(args, { ...ctx, state: ctx.agent?._tuiState })
+      // 子代理面板批（2026-10-04）：另携 ctx.readout（= agent._panelReadout——桌面渲染面实况回读
+      // 上报缓存读面；agent-host 装配挂）——核内读源链 readout → state → 降级（PANEL-READBACK.md §2.1）。
+      if (action === "panel") return executePanelAction(args, { ...ctx, state: ctx.agent?._tuiState, readout: ctx.agent?._panelReadout })
       // SUBAGENT-OBSERVE-SEND：observe = readonly 查询（同 status——digest/planMode 放行）；
       // send = 控制类豁免（同 cancel——父回合内显式调用即授权）。深度门在各自执行器内。
       if (action === "observe") return executeObserveAction(args, ctx)

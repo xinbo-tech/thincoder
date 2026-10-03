@@ -39,6 +39,7 @@ import {
 } from "./mount-sessions.mjs"
 import { attachSettings } from "./mount-settings.mjs"
 import { createMenuActions } from "./menu-actions.mjs" // 菜单动作分派（D36 · #811 —— `ev:menu` 窄口消费；零第二实现）
+import { createPanelReadout } from "./panel-readout.mjs" // 实况回读上报（子代理面板批 —— `panel:state` 渲染→主单向；帧出口挂点见 `applyFrame`）
 import { initPoolWidth, refreshResizerLabel } from "./pool-width.mjs" // 右栏宽度拖动（D30 · #742 —— chrome 级直写面）
 import { attachSearch } from "./search.mjs"
 import { configuredFlag, patchSettings, returnToBottom, setFollowing, store } from "./store.mjs"
@@ -55,6 +56,8 @@ setStringsSink(setStrings)
 
 const host = globalThis.thincoder // 窄桥（装配面 = `src/preload/preload.cjs`）
 const FLOW_SLOT = '[data-slot="flow"]' // 对话流容器锚（= 滚动容器自身 —— 挂载根不清宿主）
+/** 实况回读上报器（子代理面板批 · 2026-10-04 —— 签名去重上报；推动点 = 帧出口尾，见 `applyFrame`）。 */
+const panelReadout = createPanelReadout({ invoke: (channel, payload) => host?.invoke(channel, payload) })
 // 重挂触发切片（`SESSION_KEYS` / `CHAT_KEYS` …… 各面自持处为单源）随分派体出档 `renderer/frame-dispatch.mjs`（更新纪律收核批 —— 键面 = 分派语义；装配面只留帧接线与面回调表）。
 const { paintPool, handlers: poolHandlers } = attachPool(host) // 池面一族（右栏重挂 + 两出口 —— 出档 `renderer/mount-pool.mjs`）
 const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —— 挂载 + 作答 / 取消出口；出档 `renderer/mount-cards.mjs`）
@@ -303,7 +306,7 @@ const faces = {
   sessionBar: paintSessionBar, status: paintStatus, chat: paintChat, pool: paintPool, cards: paintCardsOnce,
 }
 
-/** 帧出口（apply · 每帧至多一次）：帧时刻**现读** `store.get()`（禁 mark 时刻取态快照）—— 起帧复位卡面帧门（`cardsDrawn`）+ `locale` 镜像 `dataset.locale` + 拖柄可及名随动（`refreshResizerLabel` —— 两处之二，另一处 = boot 词表置位点）+ 五面按键集分派。 */
+/** 帧出口（apply · 每帧至多一次）：帧时刻**现读** `store.get()`（禁 mark 时刻取态快照）—— 起帧复位卡面帧门（`cardsDrawn`）+ `locale` 镜像 `dataset.locale` + 拖柄可及名随动（`refreshResizerLabel` —— 两处之二，另一处 = boot 词表置位点）+ 五面按键集分派 + 实况回读上报尾。 */
 function applyFrame(dirtyKeys) {
   cardsDrawn = false // 起帧复位（帧内一次性门 —— 卡面本帧可再绘一次）
   const state = store.get()
@@ -311,7 +314,11 @@ function applyFrame(dirtyKeys) {
     document.documentElement.dataset.locale = state.locale
     refreshResizerLabel()
   }
-  return dispatchFrame({ dirtyKeys, state, faces })
+  const painted = dispatchFrame({ dirtyKeys, state, faces })
+  // 实况回读上报（子代理面板批 —— 帧出口尾：五面分派后 DOM 已落；签名去重 ⇒ 状态迁转 ∥ 出生 ∥ 归档 ∥
+  // DOM 增减 ∥ 会话切换一报；流式 rows 不入签名——零逐 token 上报）。
+  panelReadout.settle(state)
+  return painted
 }
 
 /** 帧合并件（单源 = 核档 §2 KD-RC-9）：触发源 = store 变更 ⇒ `mark`；`flush` 消费点 = `returnToLatest` + 测试 ∕ 探针确定性。 */

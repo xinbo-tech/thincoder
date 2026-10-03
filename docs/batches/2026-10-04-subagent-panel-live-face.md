@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-04 · 来源 = 用户 2026-10-04 00:12 原话 + 00:15 裁定（㈠ 实况回读 = 明确要求的主交付，不得降级）+ #891 实报（#27/#40 挂留）+ #49 只读诊断（丢帧面收敛）+ 父侧槽文件法证（#27/#36/#40 = 零归档记录 trio）。
 > 台账 = #891 ∥ #892（面板面 · 归批）。前情 = 无（独立批——需求源 = 台账 #891 ∥ #892）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-04（21/21 ∥ 父侧复跑 EXIT 0 ∥ 实况回读已交付）
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 **本批性质**：用户两次裁定（00:12 设计批判 + 00:15 优先级修正）驱动的**面板面修复+兑现批**——`subagent panel` 工具须在桌面端兑现其契约（「exactly as the user sees them」），并根治「完成块永不消化」的实报。
@@ -97,5 +97,70 @@ VERDICT: pass
 计数：🔴 0 ∥ 🟡 2 ∥ 🔵 5（发现 7 条）
 
 ## §4 用户批准（主 agent）
+
+**父侧代签（用户 2026-10-04 00:31「都自动跑」——点火 / 代签 / 派发 / 收口全自动授权；自缚三条件齐备）**
+
+- ① **设计评审 pass** ✓：评审 #54（`VERDICT: pass` · 🔴 0 ∥ 🟡 2 ∥ 🔵 5）→ 收正轮 #58 七条全落；三项决策披露在档（号 3 取 try/catch 形 + T-A11 新红锚（同裁派生·披露）∥ 号 6 取「两端同宽」∥ 号 7 取「同笔收正」）；
+- ② **修正落地核验** ✓：父侧抽读复核——判别六键措辞 `:57` ∥ ≥1 发射＋归档恰一次不变量 `:70` ∥ try/catch `{ injected, left, error }` `:75` ∥ 四档超线登记 `:135-140` ∥ T-A9/A10/A11 `:163-165` ∥ AC-2 改述 `:180` ∥ AC-4 `:182` ∥ `IPC.md` 档头 `ipc.mjs` **283** `:3`——全落在盘；doc-check exit 0（自跑读数在档）；
+- ③ **token 已签发** ✓（值不入档，纪律照守）。
+
+**批准面**：#891 ∥ #892（㈠ 实况回读 = 主交付 · 归还补口 · 回收阀；④ 不做有给由）——**派实施**。
+
 ## §5 实施记录（eng-coder）
+
+**状态行**：✅ 实施完成 2026-10-04（四面全落（㈠ ∥ 归还 ∥ ③ ∥ ④ 不做在位）；批内件 21/21 绿 ∥ doc-check exit 0；独立评审 pass（0 🔴））
+
+**§5 内容（2026-10-04 · eng-coder · initial 轮）**
+
+**交付摘要**：四面全落（㈠ 实况回读 ∥ 归还补口 ∥ ③ 回收阀 ∥ ④ 不做在位），11 档触盘（10 源 + 1 批内件），对照 `PANEL-READBACK.md` §2.1 ∥ §2.2 ∥ §2.3 逐条同形；零语义外扩（实施自选项与未采纳项见下「决策透明表」）。
+
+**改动表（file:line → 内容）**：
+
+| 号/腿 | 文件 | 现盘内容行 | 改动 |
+|---|---|---|---|
+| ㈠ | `thincoder-desktop/renderer/panel-readout.mjs`（新） | 67 | 快照构形（判别六键 + role/id 随行）∥ 签名去重 ∥ `settle` 帧出口上报（注入面 queryDom ∥ invoke） |
+| ㈠ | `thincoder-desktop/renderer/app.mjs` | 328 | 帧出口尾挂 `panelReadout.settle(state)`（:320）+ import（:42）+ 实例（:60） |
+| ㈠ | `thincoder-desktop/src/main/panel-live.mjs`（新） | 37 | 读数缓存（report/get + receivedAt 单时钟；后报覆前报；模块级单例） |
+| ㈠ | `thincoder-desktop/src/main/ipc.mjs` | 299 | `panel:state` 处理体（:278-290；形判两档 `invalid-key` ∥ `invalid-blocks`）+ 导出面 + 档头计数 48 |
+| ㈠ | `thincoder-desktop/src/main/ipc-registry.mjs` | 94 | `HANDLERS` 行 `"panel:state"`（:81）+ import + 档头计数 48 |
+| ㈠ | `thincoder-desktop/src/preload/preload.cjs` | 85 | `CHANNELS` 末位 48（:48）+ 档头计数 ∥ 定序随动 |
+| ㈠ | `thincoder-desktop/src/main/agent-host.mjs` | 327 | 装配挂 `agent._panelReadout`（:188，per-key） |
+| ㈠③ | `thincoder-core/agent-tools/subagent.mjs` | 401 | panel 分流携 `readout`（:193）+ freeze 参数描述收正（:135） |
+| ㈠③ | `thincoder-core/agent-tools/subagent-panel.mjs` | 272 | `readPanelSource`（:55）∥ `normalizePanelKey`（:64）∥ 门控源链 + region 追加拒（:117-155）∥ 视图 `source:"renderer"`（:210-218）∥ 发射规范化键（:194） |
+| 归还 | `thincoder-core/agent/suspension.mjs` | 326 | 三支 reclaim 恒达窗（:240 ∥ :262 ∥ :291）∥ `finishSuspension` 返回 `{injected,left,error}`（:123-145）∥ 调用点 reclaim(left) → freezeAll → 首错重抛（:306-312） |
+| 批内件 | `docs/batches/2026-10-04-subagent-panel-live-face.test.mjs`（新） | 481 | 21 例（T-A1..A11 ∥ T-B1..B5 ∥ T-C1..C5） |
+
+**测试读数（先红后绿 · 逐腿）**：红读数取自查后终稿用例件对**未实施现盘**（同一件；首跑后发现两处夹具口径须收正——T-A2/A8/C4 的 settled 出生序须 started→settled、T-C5 加宽腿定位——定稿后重跑取读数）：7 过 ∥ 14 红。红锚逐腿 = **T-A3 / T-A4 / T-A5 / T-A6 / T-A9 / T-A10 / T-A11**——均断在「reclaim 未达（修前：零调用 ∥ 零发射）」，与设计 §6 修前红锚表逐条对上；另 T-B1/B2/B3 红于新档未建（MODULE_NOT_FOUND）、**T-B4** 红于 `source` 未产出（修前 `undefined` ≠ `"renderer"`）、**T-C1/C2** 红于门控 `panel unavailable`（readout 未被采纳）、**T-C5** 红于 `sub:` 写法未接受（有意放宽腿；既有字面/拒因腿修前已绿）。实施后复跑：**21/21 绿**（`node --test docs/batches/2026-10-04-subagent-panel-live-face.test.mjs` · 仓根）。
+**同面回归子集（既有批内件）**：`2026-09-29-parity-b1-vsc-core-susp.test.mjs` **6/6 绿** ∥ `2026-09-30-consult-family.test.mjs` **8/8 绿**（腿 D3 直测本批改动的 `executePanelAction`；腿 C 覆盖桌面 reemitDone）。
+**doc-check**：仓根 `node scripts/doc-check.mjs` **exit 0**（`OK(锚): 0 条悬空` ∥ `OK(行宽)`；行数面报告态 8 条——含本批触档 Δ，见下）。
+**边界遵守**：`docs/desktop/design/IPC.md` ∥ `docs/README.md` **零触**（登记面由设计轮落毕；本轮一字未改）；#51 写域（`thincoder-core/ledger-*.mjs` ∥ `thincoder-cli/src/**` ∥ `docs/cli/design/{CLI-ENTRY,ACP-CLIENT}.md` ∥ read-data-interface 批档）零触；#56/#59–62 设计面零触；已收口批档零触；渲染面归档机本体零动（`subagent-reduce.mjs` ∥ `/rc/subblocks/*` 零改——只保输入完备）。④ 对账自愈零实现（在位 = 不做）。
+
+**决策透明表（实施轮裁量项）**：
+
+| # | 决策 | 由 | 披露 |
+|---|---|---|---|
+| D1 | freeze 回执 `note` 按源分形（桌面 = renderer/record 口径 ∥ CLI = 逐字现状） | 实施自选 | 由 = 档内「注不误导模型」先例（原 note 写死「the TUI …」，对桌面为假）；CLI 径字面零变（回归锚保住） |
+| D2 | 逐态拒因文案的键统一用**规范化键**（原为原样入参回显） | 设计 §2.3「命中后②③④与发射全用规范化键」的显式化 | 非 `sub:` 写法（CLI 现有全部用法）逐字零变——仅新接受的 `sub:` 写法回显被归一 |
+| D3 | 上报失败**不重试**（评审 🔵#3 未采纳） | 实施自选 | 理由 = 「同签名零报」是设计明确去重语义；失败径仅渲染面 bug 防御档可达（处理体零抛）——采纳会引入未设计的重报环 |
+| D4 | 缓存**无失效面**（评审 🔵#4 未采纳） | 实施自选 | 窗可达性未证（渲染面 closeSession 清键面未核）；设计未给失效面——登记为「陈旧界」既定限度（§2.1） |
+| D5 | 批内件**不拆分**（评审 🟡#1 未采纳） | 实施自选 | 设计表判一件（21 例）；481 行 < 500 硬限；行数登记落本表（下） |
+
+**行数登记（现盘内容行数；口径 = 文末换行不计——项目现行）**：批内件 **481**（设计预算 ~260——超预算登记；< 500 硬限）；`suspension.mjs` **326**（设计表 300 → ~306——实落 +26；300 顾问线在册，< 500）；`subagent-panel.mjs` **272**（预算 ~234——< 300 顾问线）；`ipc.mjs` **299**（预算 283+14≈297——贴合，≤300）；`preload.cjs` **85** ∥ `ipc-registry.mjs` **94** ∥ `panel-live.mjs` **37** ∥ `panel-readout.mjs` **67**；`agent-host.mjs` **327** ∥ `app.mjs` **328** ∥ `subagent.mjs` **401**（三档 + `suspension.mjs` = 设计 §4 行数闸已登记四档——本批不触发拆分，不升级）。
+
+**审计与评审轮次（终态 = clean）**：
+- **内部密合审计**（explore · 只读；11 档对设计档 + 批档）：AC-1..AC-4/AC-6 逐条「met」；0 功能偏差 ∥ 0 out-of-list ∥ 0 partial ∥ 0 silent-simplification；🔵×3（行数记账漂移——已入上表）。
+- **独立代码评审**（advisor · type=code · 11 档 + 设计/批档）：**VERDICT: pass**（**0 🔴**；🟡×1 = 批内件 481 行超顾问线（可选·非 must-fix，处置 = 本表登记）；🔵×3 = 行数漂移 ∥ 上报失败无重试 ∥ 缓存无失效面（后两条见 D3/D4））。评审核验面（逐条实读命中）：回读链闭合（`subagent.mjs:193` → `agent-host.mjs:188` → `ipc.mjs:288`）· DOM 判别键（`sub-blocks/block.mjs:30` `dataset.subname` 单点，两区同经 `renderSubBlock`）· 发射链路（callbacks 真达工具态；`turn-face.mjs:120` `suspDriven:true` ⇒ C5 不达桌面）· `finishSuspension` 全域单调用方（返回面形变更安全）。
+- **fix round：0 代码轮**（评审无 must-fix；两条 🔵 采纳会引入未设计语义——D3/D4 给由未采纳，披露在案）；1 记账轮（本段）。
+
+**上抛/待父侧**：① 批内件 481 行 > 300 顾问线——设计行数闸未登记该档（拆分 vs 登记由父侧收口定）；② `IPC.md` `panel:state` 行仍携「设计目标态（实施批落）」时态标——实施已落，宜由文档层翻「已落」形（文档不属实施写面，本轮零触）；③ doc-check 行数面判据漂移（8 条）沿既有报告态回填流程；④ designId：spawn 未携具体值（无可回显——不伪造）。
+
+**§5 收正（2026-10-04 · eng-coder · 读回自检）**：上文「两处夹具口径须收正」措辞不准——实际仅**一处夹具修正**（T-A2 ∥ T-A8 ∥ T-C4 块的 settled 出生序须 started→settled：单条 edit 四 hunk，同一口径）；T-C5 项 = 首跑红读数的**定位澄清**（首跑 T-C5 红于第 465 行 `widened.status` = 有意放宽腿本身，非夹具缺陷——该腿修前红即设计预期），夹具未改。其余读数不受影响（红读数与绿读数均取自定义后的同一终稿用例件）。
+
 ## §6 验证与收口（父代理）
+
+**收口判词：已收口 2026-10-04**（设计（#52）→ 评审 #54（pass）→ 收正 #58（七条）→ §4 代签 → 实施 #65 → 父侧复跑 21/21 → 本节核销 → 签入）
+
+- **交付判据链**：**㈠ 实况回读（主交付）**——`source:"renderer"` + 判别六键 + `role`/`id` 随行 + `digested` 读时交叉 + `asOf`/`ageMs`（T-B1..B5 绿）∥ **归还补口**——三支恒达窗 + 残差 returning 面（7 枚红锚先红后绿；T-A1..A11）∥ **③ 回收阀**——门控源链 + 四类拒因 + 同字面发射（T-C1..C5）∥ ④ 不做在位 ∥ CLI 零回归锚（T-B4 ∥ T-C5）∥ **父侧复跑** = `node --test docs/batches/2026-10-04-subagent-panel-live-face.test.mjs` ⇒ **21/21 pass（EXIT 0）** ∥ 内部密合审计（0 偏差）+ 独立代码评审（pass）∥ `doc-check` exit 0 ∥ 同面回归子集（parity-b1 6/6 ∥ consult-family 8/8）∥ IPC.md 登记面翻已落（父侧直接执行——变更记录 `:545`；「拟新增」三处撤除）。
+- **残余（非阻断 · 在册）**：① 批内件 481 行越 300 顾问线（<500 硬限——记录接受路，§5 在档）；② doc-check 行数面报告态 8 条（含本批三档 Δ——沿既有回填流程）；③ 评审 🔵 两条未采纳（上报失败重试 ∥ 缓存失效面——给由在 §5；如他日报实问题可开小轮）；④ `suspension.mjs` 326 ∥ `subagent-panel.mjs` 234 等行数账入 §5 登记（下一随动轮材料）。
+- **用户门**：**有（建议）**——真机试 `subagent panel view`：应返回 `source:"renderer"` 的实况块表（你屏上所见与工具读数同源；trio 形卡块的判别四键齐）。
+- **结算**：台账 #891 ∥ #892 核销 ∥ 签入。

@@ -1,5 +1,5 @@
 /**
- * ipc-registry.mjs — 通道注册表族（`docs/desktop/design/IPC.md` §2「唯一入册面」）：**四十七项** =
+ * ipc-registry.mjs — 通道注册表族（`docs/desktop/design/IPC.md` §2「唯一入册面」）：**四十八项** =
  * 白名单逐项 → 处理体映射（`HANDLERS` 表）+ 注册序（`registerIpcHandlers`）——**#28 拆点出档**
  * （批档 §2.5「通道注册表族出档」；纯搬零语义改 —— 表 ∕ 注册 ∕ 定序逐行沿出档前 `ipc.mjs`）。
  *
@@ -17,6 +17,7 @@ import {
   readConfig, openProjectChannel, recentProjects, sessionList, sessionCreate, sessionSwitch,
   sessionRename, sessionDelete, sessionResume, approvalRespond, historyPage, msgSend, msgInterrupt,
   questionRespond, sessionPrefs, subagentStop, fileOpen, sessionFlags, atComplete, recordAppend, themeState,
+  panelState,
   sessionGc, sessionIndex,
 } from "./ipc.mjs"
 /** 转口群（#685 拆档）：二十四项设置族 ∕ 索引数据面 / 台账相位 / 配置写 —— 出档 `ipc-relays.mjs`（表行逐字不动）。 */
@@ -77,6 +78,7 @@ const HANDLERS = Object.freeze({
   "mcp:reconnect": mcpReconnectChannel,
   "record:append": recordAppend,
   "theme:state": themeState,
+  "panel:state": panelState,
 })
 
 /** 按白名单逐项注册（白名单项无处理体 ⇒ 抛——装配期即知，不静默）。 */

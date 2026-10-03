@@ -29,7 +29,8 @@
  *   - abortSignal       会话中止信号（兜底监听 + abort 清场判据）
  *   - hooks.onCounts(counts)      计数变化通知（{ running, queued, pending, done }）
  *   - hooks.onDigest(phase, counts) 消化轮边界（start / end）
- *   - hooks.reclaim(consumed)     消化完成条目逐条回收（不等池空）
+ *   - hooks.reclaim(consumed)     回收（消化完成 ∥ 残差离容 ∥ 丢弃三类离容逐条补发 done——
+ *                                  恒达窗：正常 ∥ Abort-continue ∥ 异常 ∥ 退出残差四窗同达）
  *   - hooks.freezeAll()           退出冻结（兜底残项）
  *   - injectResidual(entry)       残余注入面（idle 退出清场；宿主装配端注入器——CLI =
  *                                 逐族注入分发 / VSC = pending 单容器注入器）
@@ -112,6 +113,12 @@ function consultLiveCount(carrier) {
  *    单点，与核 run-stages 回合尾中止同式；存活 ∕ 已 settle 条目留池——settled 报告沿后续
  *    回合边界注入到达，不静默丢）+ pending 单容器清 + 会诊会话清理标记；
  *  - idle：残余直注入（极端竞态残项——结果零丢失；注入器由宿主注入，缺省 no-op 保残项）。
+ *
+ * 返回 `{ injected, left, error }`（子代理面板批 · 2026-10-04 —— `hooks.reclaim` 恒达窗的退出半）：
+ *  `left` = **离容全量**（splice 全取——注入失败条不缩水），供调用点 `reclaim(left)` 补发
+ *  （「消费 ⇒ 必发 done」不变量——C2 零发射口）；注入循环 try/catch 收口 ⇒ `injected` = 成功
+ *  前缀、`error` = 首错（调用点补发毕后重抛——fail-loud 保持）；abort ∥ 无注入器 ∥ 无残差 ⇒ 三键空值。
+ *  既有 C3/C4 快照径（中止冻结快照）零改。
  */
 export async function finishSuspension(carrier, { aborted = false, injectResidual = null } = {}) {
   if (aborted) {
@@ -124,12 +131,17 @@ export async function finishSuspension(carrier, { aborted = false, injectResidua
       const { cleanupConsultSessions } = await import("../agent-tools/consult.mjs")
       cleanupConsultSessions(carrier)
     }
-    return
+    return { injected: [], left: [], error: null }
   }
   const residual = carrier._pendingAsyncResults
-  if (residual?.length && typeof injectResidual === "function") {
-    for (const e of residual.splice(0)) await injectResidual(e)
+  if (!residual?.length || typeof injectResidual !== "function") return { injected: [], left: [], error: null }
+  const left = residual.splice(0)
+  const injected = []
+  for (const e of left) {
+    try { await injectResidual(e) } catch (error) { return { injected, left, error } } // 首错收口（前缀 = injected）
+    injected.push(e)
   }
+  return { injected, left, error: null }
 }
 
 /** 等待下一次 settle（池 waiter——核内异步面 settle 尾部唤醒）/ 宿主唤醒（wake——用户输入）/
@@ -179,7 +191,9 @@ function waitForSettleOrWake(carrier, abortSignal, latch, { deadline = null, tim
  *    注入由宿主 runTurn 首行完成——单注入点）；
  * 3. 池空（无 running / queued / 未注入）→ 自然退出；
  * 4. 等下一 settle / 宿主唤醒（handle.wake）/ timer 到期（opt-in——兑现真 ⇒ timer 轮）。
- * 每轮消化 / 用户回合后：hooks.reclaim(consumed) 逐条回收（不等池空）。
+ * 每轮消化 / 用户回合后：hooks.reclaim(consumed) 逐条回收（不等池空）——恒达窗形（子代理面板批 ·
+ * 2026-10-04）：正常 ∥ Abort-continue ∥ 异常抛三径同达，退出残差另经 `finishSuspension` 返回面补发
+ * （「消费 ⇒ 必发 done」不变量；发射不去重，归档/记录恰一次住幂等层）。
  */
 export function startSuspension(ctx) {
   const {
@@ -221,8 +235,10 @@ export function startSuspension(ctx) {
               await runTurn(item)
             } finally {
               carrier._suspended = true
+              // 回收恒达窗（子代理面板批 · 2026-10-04 · §2.2）：正常 ∥ 异常 ∥ 中止三径同达
+              // （「消费 ⇒ 必发 done」不变量）。
+              hooks.reclaim?.(afterRun())
             }
-            hooks.reclaim?.(afterRun())
             hooks.onCounts?.(backgroundCounts(carrier))
             continue
           }
@@ -242,9 +258,12 @@ export function startSuspension(ctx) {
               continue
             }
             throw e
+          } finally {
+            // 回收恒达窗（子代理面板批 · 2026-10-04 · §2.2）：正常 ∥ Abort-continue ∥ 异常抛三径同达；
+            // 中止径 catch 的 `onDigest("end")` 先行（continue 触 finally——既有语义序保持）。
+            hooks.reclaim?.(afterRun())
           }
           hooks.onDigest?.("end", backgroundCounts(carrier))
-          hooks.reclaim?.(afterRun())
           hooks.onCounts?.(backgroundCounts(carrier))
           continue
         }
@@ -267,8 +286,10 @@ export function startSuspension(ctx) {
             // 中止路径零边界、不补发轮后序钩子；池空 / pending 空自然退出——与消化支同判，§6.30.10）。
             if (e?.name === "AbortError" && !abortSignal?.aborted) continue
             throw e
+          } finally {
+            // 回收恒达窗（子代理面板批 · 2026-10-04 · §2.2）：正常 ∥ Abort-continue ∥ 异常抛三径同达。
+            hooks.reclaim?.(afterRun())
           }
-          hooks.reclaim?.(afterRun())
           hooks.onCounts?.(backgroundCounts(carrier))
           continue
         }
@@ -282,8 +303,13 @@ export function startSuspension(ctx) {
         // abort 以 AbortError 抛出、循环顶检查不会再执行——不合并会把清场误走 idle 注入）。
         const abortedNow = aborted || Boolean(abortSignal?.aborted)
         aborted = abortedNow
-        await finishSuspension(carrier, { aborted: abortedNow, injectResidual })
+        const flushed = await finishSuspension(carrier, { aborted: abortedNow, injectResidual })
+        // 残差离容补发（子代理面板批 · 2026-10-04 · §2.2——C2 零发射口）：补发面 = 离容全量
+        // （抛错径同覆）；与 freezeAll 双探针幂等（归档/记录恰一次住幂等层）。
+        hooks.reclaim?.(flushed.left)
         hooks.freezeAll?.()
+        // 注入器首错重抛（fail-loud 保持——清场两探针已行毕）。
+        if (flushed.error != null) throw flushed.error
       }
     }
     return { reason: aborted ? "aborted" : "idle", residualInput: pendingInput.splice(0) }

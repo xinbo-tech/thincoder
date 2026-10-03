@@ -51,6 +51,8 @@ import { createSubagentFace } from "./subagent-face.mjs"
 // `validateProvider` 除 re-export 外另**体内消费**（KD-8 槽复验 —— `assembleAndLoad` 内直调）。
 import { assembleFor, mcpWarningReminder, validateProvider } from "./agent-assemble.mjs"
 import { createTurnDriver } from "./turn-driver.mjs"
+// 渲染面实况回读缓存（子代理面板批 —— `panel:state` 接收半；与 `ipc.mjs` 处理体同单例——单源）。
+import { panelLive } from "./panel-live.mjs"
 // R1 输入面板移植（桌面宿主面）：模式位四写面 ∕ @ 补全面两处理体出档（新增两面零入档 —— 拆分评审结论见档头）。
 import { createSessionFlags } from "./session-flags.mjs"
 import { createAtComplete } from "./at-complete.mjs"
@@ -181,6 +183,9 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     const cwd = projects.currentCwd()
     const agent = await assemble({ cwd, slot, key, deps })
     loadAgentSlot(agent, cwd, slot)
+    // 实况回读读面（子代理面板批 · 2026-10-04 —— `PANEL-READBACK.md` §2.1 per-key）：核 `panel` 工具经
+    // `ctx.readout` 取值（`subagent.mjs` 接线）——桌面渲染面快照 ⇒ `source:"renderer"` / freeze 数据源。
+    agent._panelReadout = () => panelLive.get(key)
     if (agent._providerInvalid) validateProvider(agent, agent.config)
     const reminder = mcpWarningReminder(agent._mcpWarnings)
     if (reminder !== null) {
