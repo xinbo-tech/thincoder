@@ -57,29 +57,34 @@ export function modelHeadNode(model) {
   }
 }
 
-/** 候选行（**导出面** —— 同上）：行 + 空态词（`ready` 而零候选 ⇒ 禁假造）。 */
+/** 候选行（**导出面** —— 同上）：行 + 空态词（`ready` 而零候选 ⇒ 禁假造）。行形 = 行自带渠 `{ id, provider }`
+ *  （全渠扇出面 · #842）∥ 纯 id（常规面 —— 渠落段级）。 */
 export function modelChoicesTree(model, handlers = {}) {
-  const rows = listOf(model?.models).map((name) => modelRowNode(name, model, handlers))
+  const rows = listOf(model?.models).map((row) => modelRowNode(row, model, handlers))
   if (model?.state !== "ready" || rows.length > 0) return rows
   return [{ tag: "div", props: { class: "settings-empty", "data-empty": "" }, children: [t("settings.model.empty")] }]
 }
 
-/** 模型行：名 + 采用控件（当前项 / 无 provider ⇒ 非死控 = `disabled`）。 */
-function modelRowNode(name, model, handlers) {
-  const current = model.current === `${model.provider}:${name}`
-  const onUse = !current && typeof handlers?.onUseModel === "function" && model.provider !== null
-    ? () => handlers.onUseModel(model.provider, name)
+/** 模型行：名 + 采用控件（当前项 / 无渠 ⇒ 非死控 = `disabled`）。**#842**：行自带渠（全渠扇出面）⇒ 名显示
+ *  `provider · id`、「采用」按行自带渠（`onUseModel(provider, id)`）；行无渠 ⇒ 落段级激活渠（常规面判据零变）。 */
+function modelRowNode(row, model, handlers) {
+  const id = modelIdOf(row) ?? ""
+  const own = row !== null && typeof row === "object" && typeof row.provider === "string" && row.provider !== "" ? row.provider : null
+  const provider = own ?? (typeof model?.provider === "string" && model.provider !== "" ? model.provider : null)
+  const current = model.current === `${provider}:${id}`
+  const onUse = !current && typeof handlers?.onUseModel === "function" && provider !== null
+    ? () => handlers.onUseModel(provider, id)
     : undefined
   return {
     tag: "div",
-    props: { class: "settings-row", "data-model": name, "data-current": current ? "" : undefined },
-    children: [{ tag: "span", props: { class: "settings-row-name" }, children: [name] }, {
+    props: { class: "settings-row", "data-model": id, "data-current": current ? "" : undefined },
+    children: [{ tag: "span", props: { class: "settings-row-name" }, children: [own === null ? id : `${own} · ${id}`] }, {
       tag: "button",
       props: wire({
         class: "settings-row-action",
         type: "button",
         "data-action": "settings:useModel",
-        "data-model": name,
+        "data-model": id,
         "aria-label": t("settings.model.use"),
       }, onUse),
       children: [t("settings.model.use")],

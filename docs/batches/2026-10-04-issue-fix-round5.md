@@ -183,7 +183,7 @@ VERDICT: pass
 **批准面**：#834 ∥ #835 ∥ #842 ∥ #848 ∥ #863 ∥ #867——**两路派发**（core 9 档 ⇒ eng-coder 甲 ∥ cli/desktop 7 档 + 批内件 ⇒ eng-coder 乙（**dependsOn 甲**——批内件全量复跑需甲落））；**EN 提示词面**（`thincoder-core/prompts/persona-engineering.md`）＝主 agent 笔。
 
 ## §5 实施记录（eng-coder）
-**状态行**：实施完成（轮 2 复核 pass · 终态 clean（审计 0 偏差 ∥ 评审轮 1 pass ∥ fix 2 项 ∥ 轮 2 pass）· 交付报告已出 · 裁定㈡补落（record-results 次级守卫 · 探针 14/14 · doc-check exit 0））
+**状态行**：实施完成（甲面 core：轮 2 pass · 终态 clean（审计 0 偏差 ∥ 评审轮 1 pass ∥ fix 2 项 ∥ 轮 2 pass）；乙面 cli/desktop：轮 2 pass · 终态 clean（审计代码面 0 偏差 ∥ 评审轮 1 pass ∥ fix 4 处 ∥ 轮 2 pass））
 
 
 
@@ -268,5 +268,69 @@ VERDICT: pass
 | 3 | designId 回显 | spawn 载荷未携字面值——如实缺项（不猜、不以实例 id 充数） | 凭据值不落档（沿纪律）；写授权 = token 门在写时核验（本笔全部写获准 ⇒ token 在位） |
 
 **表外面**：探针档 + doc-check 日志留存（`.thincoder/tmp/r5-2-doc-check.log`，UTF-16 重定向形）+ 本段；产品码仅 `record-results.mjs` 一档。
+
+**§5 实施记录（eng-coder · cli/desktop 乙面 · 2026-10-04 · initial 轮）**
+
+**口径与执行面**：任务书 = 本档 §2 设计终态（含尾修正块 `:110-125`）∥ §3 评审终态。执行面 = cli/desktop 7 档（#842×2 ∥ #863×1 ∥ #867×4）+ 批内件 1 档 + 表外 2 档（`renderer/views/settings.mjs` ∥ `src/tui/index.mjs`——必要性见 5.13）。
+甲域（core 面）∥ `docs/**` 设计档 ∥ 在飞写域（round2/3/4 批档 ∥ `thincoder-core/proxy.mjs`）∥ 已收口批档 = 零触。
+
+**5.9 落笔清单（10 档 · 行数 = 内容行口径 · 实测）**
+
+| # | 档 | 改动点（file:line） | 行数 |
+|---|---|---|---|
+| #842 | `renderer/mount-settings-reads.mjs` | `loadModels` 缺渠 ⇒ `model:catalog` 全渠扇出（`:74-91`；失败 ⇒ none+report `:84-87`）；头注随正 `:12-14` | 192 → 204（+12 ≤ +30） |
+| | `renderer/views/settings-sections.mjs` | `modelChoicesTree`/`modelRowNode` 带渠行（`:60-87`——行自带渠优先 · 显示 `provider · id` · 采用 `onUseModel(provider,id)`） | 164 → 169（+5 ≤ +15） |
+| | `renderer/views/settings.mjs`（**表外**） | 投影带渠穿透（`:162-163`——`{id, provider}` 保留；不改则行自带渠丢失、#842 视图形不可能） | 398 → 399（+1） |
+| #863 | `thincoder-cli/src/tui/cmd-undo.mjs` | oversize 分支（`:45-49`——**先判 `oversize` 再判 `backup === null`**）+ 列表行分判（`:29-33`）+ 死副本清除（删 `snapshotForUndo`/`MAX_UNDO`；消费核导出 `:12`） | 88 → 66（净 −22——方向为减；表列 ≤+12 为上界未越） |
+| #867 | `thincoder-cli/src/tui/startup.mjs` | `isHomeDir`（`:268-270`）+ `backgroundIndex` 跳过 + 提示行（`:275-280`——先于 memory.mjs 动态 import） | 322 → 332（+10 = 恰达上限） |
+| | `thincoder-cli/src/tui/cmd-reindex.mjs` | home 守卫 + 提示（`:5-7`/`:13-16`——先于表删与三 sync） | 51 → 61（+10 = 恰达上限） |
+| | `thincoder-cli/bin/thincoder.cjs` | shim 首行接线（`:4-5`——`enforceNodeMajor()` 先于 `import("./thincoder.mjs")`） | 4 → 6（+2） |
+| | `thincoder-cli/bin/node-version-gate.cjs` | **新档**：纯函数 `nodeVersionError`（`:14-18`）+ 执行门 `enforceNodeMajor`（`:21-26`） | 新 28（设计 ≈20） |
+| | `thincoder-cli/src/tui/index.mjs`（**表外**） | `backgroundIndex` 调用点补 `pushLine`（`:250`——净 0 行；不传 ⇒ 提示口 TypeError） | 263 → 263（±0） |
+| 批内件 | `docs/batches/2026-10-04-issue-fix-round5.test.mjs` | 新档：11 腿（L1/L2 ∥ L3/L4 ∥ L5/L6 ∥ L6b/L7b ∥ L7/L8 ∥ L9——含甲面移录） | 新 434（设计 ≈200——差额登记） |
+
+**5.10 自测读数（先红后绿逐腿）**：`node --test docs/batches/2026-10-04-issue-fix-round5.test.mjs`（仓根）——**先红**（实施前）：3/9 绿（L1/L2/L6 = 甲面腿）+ 6 红（L3/L4/L5（后半）/L7/L8/L9）；**后绿**：**11/11 全绿**（fix 轮补 L6b/L7b + L9 双锁 + L8 win32 腿后复跑仍 11/11）。
+
+真机读数：#867 版本门——`node thincoder-cli/bin/thincoder.cjs -v` ⇒ `0.12.69` · exit 0（达标零误触）；假旧版子进程（`process.versions.node` 直写 `"20.0.0"`）⇒
+
+逐字 `thincoder requires Node.js >= 24 (current: 20.0.0)` + exit 1（**真旧版端到端可造面——优于设计预估「不可造面」，已入腿**）。
+
+`node scripts/doc-check.mjs`（仓根）⇒ **exit 0**（悬空 0 ∥ 行宽 OK ∥ 行数面差异 12 条 = 报告态——其中 3 条为我面档位、归设计面回填）。仓级套件未跑（父侧收口口径）。
+
+**5.11 审计与代码评审轮次与终态**：
+
+- **分歧审计（explore · 只读）**：DEVIATIONS = 2（均文档面：① `API-CONTRACT.md` 生成区三行随本批漂移〔`snapshotForUndo` 已删 ∥ 两处行号〕——待 `scripts/api-contract.mjs --write` 重跑；② `SETTINGS.md` §3.1 三行未回填 + §2.3/§2.15 未载 `views/settings.mjs` 投影档）；**PARTIAL ∥ 静默简化 ∥ 清单外未披露 = 0**（两表外档判「必要且最小」）；审计指我档红面清单漏记 L9 —— 即修。
+- **代码评审轮 1（advisor · code）**：**VERDICT: pass**（🔴 0 ∥ 🟡 3 ∥ 🔵 5）。
+- **fix 轮（响应表·4 处落笔）**：
+
+| 号 | 发现 | 处置 |
+|---|---|---|
+| 1 | 🟡 设计面回填（§2.3 漏列投影档 ∥ §3.1 行数） | **不改**（非本席写域）——报父侧/设计面 |
+| 2 | 🟡 保留件缺 AC-863-4/-5 ∥ AC-867-3 腿 | **采纳·已修**：L6b（advisor 回收 4 断言）+ L7b（SKIP_DIRS）——前提逐条核读 |
+| 3 | 🟡 >300 在册债（`settings.mjs` 399 ∥ `startup.mjs` 332 ∥ 批内件 434） | **不改**：在册预案（R3 不升级） |
+| 4 | 🔵 L9 负向锁失效（`\bMAX_UNDO\b` 永不命中） | **采纳·已修**：`!/MAX_UNDO[A-Z_]*\s*=/` + 正向断单源 import |
+| 5 | 🔵 `isHomeDir` 二拷贝 | **不改·登记** + 补 L8 win32 归一腿（两面同判锁） |
+| 6 | 🔵 提示行 excludePaths 出路不成立 | **不改·登记**：与设计文本逐字同款——归设计面 |
+| 7 | 🔵 §5 乙面记录缺位 ∥ `CLI-ENTRY.md`「（拟新增）」 | **半修**：本段即乙面记录；设计档不触 ⇒ 报父侧 |
+| 8 | 🔵 catalog 部分失败（`unavailable`）零消费 | **不改·登记**：沿设计「渠失败零行」口径 |
+
+- **评审轮 2（fix 复核）**：**VERDICT: pass**——发现 2 = 已修 ✓（L6b/L7b 在档 + 腿前提逐条核读为绿）∥ 发现 4 = 已修 ✓（双锁对现档零匹配）；新增 = 2 🔵 残项（探针 advisor 第 5 腿未移录〔非 AC 缺口〕∥ 新锁过配精度注）——可选、非阻塞。**终态 = clean**（分歧审计代码面 0 偏差 · 评审轮 1 pass · fix 4 处 · 轮 2 pass）。
+
+**5.12 决策透明表（本席裁量处）**：
+
+| # | 裁量点 | 决定 | 依据 |
+|---|---|---|---|
+| 1 | `views/settings.mjs` 投影改形（表外） | 落 | 行自带渠唯一通道；不改则 #842 视图形不可能；审计判「必要且最小」 |
+| 2 | `index.mjs` 调用点补 `pushLine`（表外） | 落（净 0 行） | home 提示行唯一出口 = pushLine；不传即 TypeError |
+| 3 | 常规面显示零变（仅行自带渠时显示 `provider · id`） | 落 | 「带渠形」= 行自带渠场景；AC-842-5 有渠态零变 + 旧夹具逐字同形 |
+| 4 | `isHomeDir` 二拷贝（不取共享档） | 落 | 设计表限两档各 ≤+10 且无新档位；L8 腿锁同判 |
+| 5 | oversize 选中 ⇒ 不回退且不 splice | 落 | 设计「提示 + 不回退」；splice 连带弃新条目（零收益破坏性） |
+| 6 | `cmd-undo.mjs` 净 −22（表列「≤+12 净小增」） | 保留 | 死副本 26 行清除所致；方向为减、上界未越 |
+
+**5.13 边界遵守**：零触甲域 ∥ `docs/**` 设计档 ∥ 在飞写域 ∥ 已收口批档；表外 = 2 档（`views/settings.mjs` ∥ `index.mjs`——语义中性 · 可 revert · 已审计判必要）+ 批内件新档；
+
+`git diff` 实读 = 本面 10 档（另 `round2/3/4.md` ∥ `proxy.mjs` = 他批在写，非本面）。临时区（`.thincoder/tmp/`）零新增落盘面（探针读取只读）。
+
+**5.14 未决/上抛（父侧收口看）**：① `API-CONTRACT.md` 生成区重跑（`scripts/api-contract.mjs --write`——本批 3 行漂移，甲面同类已登记）；② `SETTINGS.md` §3.1 行数三行回填 + §2.3/§2.15 补投影档（设计面）；③ `CLI-ENTRY.md:21`「（拟新增）」退场；④ `MEMORY.md:583` 提示措辞（excludePaths 出路）设计面裁；⑤ 探针 advisor 第 5 腿（结算守卫）未随批留存——可选补移录；⑥ 批内件实读 434 行（设计估 ≈200）——设计表行数随收口收正；⑦ 观察（审计记录面）：无渠态下 `effortOptions`（`settings-agent.mjs`）可自 catalog 行取 advisor 目标模型枚举（轻度放宽、设计未覆盖）——登记。
 
 ## §6 验证与收口（父代理）

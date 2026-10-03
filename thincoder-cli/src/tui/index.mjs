@@ -247,7 +247,7 @@ export async function startTUI(agent, opts = {}) {
   // 端壳契约 = **恒同步返回 `{ dispose }`**（K-LX3 归核后与核形一致——核句柄异步就绪后桥接；
   // 载入失败 ⇒ 空句柄）⇒ 退钩同步 `.dispose()`（零 TypeError）。
   process.on("exit", () => ledgerSurface.dispose())
-  backgroundIndex({ agent, state, render })
+  backgroundIndex({ agent, state, render, pushLine })
 
   // Check for updates (non-blocking, after startup screen)——实现 update-notice.mjs
   // （D-S1c）：有 picker 打开时不硬抢——挂到 state.pendingNotice，picker 全部关闭后由

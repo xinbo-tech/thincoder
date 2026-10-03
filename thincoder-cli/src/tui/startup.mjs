@@ -1,3 +1,5 @@
+import { homedir } from "node:os"
+import { resolve } from "node:path"
 import { listSlots, ledgerHealth } from "@thincoder/core/session.mjs"
 import { stripAtRefs } from "@thincoder/core/file-refs.mjs"
 import { ansi, C } from "./ansi.mjs"
@@ -263,12 +265,20 @@ export function showStartup(ctx) {
   render()
 }
 
+/** home 根防护（#867 · `MEMORY.md` §6.14 L-④）：`cwd` = 用户主目录（resolve 后；win32 大小写不敏感）。 */
+const isHomeDir = (dir) => typeof dir === "string" && dir !== "" &&
+  (process.platform === "win32" ? resolve(dir).toLowerCase() === resolve(homedir()).toLowerCase() : resolve(dir) === resolve(homedir()))
+
 /** Background indexing (runs after startup screen, non-blocking); progress shown in status bar, not conversation.
  *   Prefers git diff incremental (fast); falls back to full scan when git is unavailable or on first run. */
 export async function backgroundIndex(ctx) {
-  const { agent, state, render } = ctx
-  const { codeSync, docSync, gitSync } = await import("@thincoder/core/memory.mjs")
+  const { agent, state, render, pushLine } = ctx
   const cwd = agent.cwd
+  if (isHomeDir(cwd)) { // #867：home 根 ⇒ 跳过索引（三 sync 零调用；不阻断启动）
+    pushLine("[index] Skipped: working directory is the home directory — start in a project dir (or declare index.excludePaths to narrow scope)", C.warn)
+    return
+  }
+  const { codeSync, docSync, gitSync } = await import("@thincoder/core/memory.mjs")
   let codeFiles = 0, docFiles = 0
 
   state.status = "Indexing..."

@@ -10,7 +10,8 @@
  * （窄桥 ∕ 值面写入 ∕ 失败面归装配面，单一 owner —— 本档零副本、零 `store.mjs` 反向）。
  * 语义锚（`docs/desktop/design/IPC.md` §2 设置族注）：值面全经 store 纯动作落值（`patchSettings` → `store.set`）；
  * 写后回读；失败面零静默（核错误串直传，表内码出词归视图 `reasonWord`）；`options.models` 假 ⇒ **保留同渠道候选面**
- * （只刷行面 `effort` 现值 —— 档位写后刷新用，零候选清空）；无激活渠道 ⇒ 段归 `none` 且**零请求**（禁假造候选）。
+ * （只刷行面 `effort` 现值 —— 档位写后刷新用，零候选清空）；无激活渠道 ⇒ **全渠扇出**（`model:catalog` ——
+ * 缺 `defaultModel` 态补设路径 · #842 ∥ `SETTINGS.md` §2.15：候选行 `{ provider, id }`，渠失败零行沿 catalog 口径）。
  * R7 两读数要点：`loadTools` 段态判据仍以**索引面**为准（R2 口径不动——`indexOk` 假 ⇒ 段归 `none`），
  * 两 key 面色随行渲染（各自失败另落 `report`）；`loadEnv` 的 `test` 结果 = 瞬时读数（复读保留原值）。
  * **#671 读面并持**：`loadProviders` 三写皆**并持现切片** —— 草稿四切片 `edit` ∕ `keyDraft` ∕ `probe` ∕ `draft` **读面零复位**
@@ -70,22 +71,33 @@ export function createReads(deps = {}) {
     return provider
   }
 
-  /** 模型段候选面（`model:list`）：无激活渠道 ⇒ 段归 `none` 且**零请求**（禁假造候选）。 */
+  /** 模型段候选面（有激活渠 ⇒ `model:list` ∥ 无渠 ⇒ `model:catalog` 全渠扇出——缺 `defaultModel` 态补设路径 · #842）：
+   *  无渠态候选行 = `{ provider, id }`（全渠；渠失败零行沿 catalog 口径）；catalog 失败 ⇒ 段归 `none` + `report`（零静默）；
+   *  有渠态判据零变（`model:list` 失败 ⇒ `none` + `report`）。 */
   async function loadModels(provider) {
     const held = store.get().settings?.model ?? {}
-    if (typeof provider !== "string" || provider === "") {
-      setSettings({ model: { state: "none", provider: null, current: held.current ?? null, models: [] } })
+    const active = typeof provider === "string" && provider !== "" ? provider : null
+    if (active === null) {
+      setSettings({ model: { state: "loading", provider: null, current: held.current ?? null, models: [] } })
+      const receipt = await ask("model:catalog")
+      const current = store.get().settings?.model?.current ?? null
+      if (receipt.ok !== true) {
+        setSettings({ model: { state: "none", provider: null, current, models: [] } })
+        report("model", receipt, "model:catalog")
+        return
+      }
+      setSettings({ notice: null, model: { state: "ready", provider: null, current, models: listOf(receipt.models) } })
       return
     }
-    setSettings({ model: { state: "loading", provider, current: held.current ?? null, models: [] } })
-    const receipt = await ask("model:list", { provider })
+    setSettings({ model: { state: "loading", provider: active, current: held.current ?? null, models: [] } })
+    const receipt = await ask("model:list", { provider: active })
     const current = store.get().settings?.model?.current ?? null
     if (receipt.ok !== true) {
-      setSettings({ model: { state: "none", provider, current, models: [] } })
+      setSettings({ model: { state: "none", provider: active, current, models: [] } })
       report("model", receipt, "model:list")
       return
     }
-    setSettings({ notice: null, model: { state: "ready", provider, current, models: listOf(receipt.models) } })
+    setSettings({ notice: null, model: { state: "ready", provider: active, current, models: listOf(receipt.models) } })
   }
 
   /** agent 段读数（`settings:agent` 读 = `{}`）：`fields` 直落（值 + 敏感只读判据归视图/核）；

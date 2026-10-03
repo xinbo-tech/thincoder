@@ -1,9 +1,19 @@
+import { homedir } from "node:os"
+import { resolve } from "node:path"
 import { C } from "./ansi.mjs"
+
+/** home 根防护（#867 · `MEMORY.md` §6.14 L-④ · 同 startup.mjs）：`cwd` = 用户主目录（resolve 后；win32 大小写不敏感）。 */
+const isHomeDir = (dir) => typeof dir === "string" && dir !== "" &&
+  (process.platform === "win32" ? resolve(dir).toLowerCase() === resolve(homedir()).toLowerCase() : resolve(dir) === resolve(homedir()))
 
 /** /reindex command: rebuild memory index (files + code_chunks + doc_chunks).
  *  ctx: { agent, distillOpts, pushLine } */
 export async function handleReindexCommand(ctx) {
   const { agent, distillOpts, pushLine } = ctx
+  if (isHomeDir(agent.cwd)) { // #867：home 根 ⇒ 跳过（零表删 ∥ 三 sync 零调用；含出路提示）
+    pushLine("[reindex] Skipped: working directory is the home directory — start in a project dir (or declare index.excludePaths to narrow scope)", C.warn)
+    return
+  }
   const { syncDir, codeSync, docSync } = await import("@thincoder/core/memory.mjs")
   pushLine("[reindex] Rebuilding index...", C.tool)
   agent.memory.db.prepare("DELETE FROM files").run()

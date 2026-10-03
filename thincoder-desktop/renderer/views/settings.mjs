@@ -159,7 +159,8 @@ export function settingsModel(state) {
       state: stateOf(settings.model),
       provider: typeof settings.model?.provider === "string" ? settings.model.provider : null,
       current: typeof settings.model?.current === "string" ? settings.model.current : null,
-      models: listOf(settings.model?.models).map(modelIdOf).filter((id) => id !== null),
+      // #842：行保持带渠形（全渠扇出面 `{ provider, id }` 行穿透至视图——行自带渠；串行 / 无渠行 ⇒ `provider: null`）。
+      models: listOf(settings.model?.models).map((row) => ({ id: modelIdOf(row), provider: str(row?.provider) })).filter((row) => row.id !== null),
       tier: tierFace(settings),
     },
     agent: {

@@ -1,45 +1,16 @@
 /**
  * cmd-undo.mjs — /undo command: revert recent file modifications
  *
- * Tracks write/edit/delete/hashline_edit/apply_patch operations in agent._undoStack.
- * /undo opens a picker to select and revert an operation.
+ * Reads the snapshot stack (`agent._undoStack`) — snapshot single point = `thincoder-core/undo-stack.mjs`
+ * (`snapshotForUndo`；CLI 侧旧副本已删 —— 单源 = 核档 · CORE-UNIFICATION §2.5 #149）。
+ * /undo opens a picker to select and revert an operation; **oversize 占位**（无快照 —— 备份超
+ * `MAX_UNDO_BYTES`）**列表可见 · 不可回退**（#863 · `docs/cli/design/TUI-COMMANDS.md` §5.3）。
  */
 
-import { existsSync, writeFileSync, unlinkSync, readFileSync } from "node:fs"
+import { existsSync, writeFileSync, unlinkSync } from "node:fs"
 import { isAbsolute, join } from "node:path"
+import { MAX_UNDO_BYTES } from "@thincoder/core/undo-stack.mjs"
 import { ansi, C } from "./ansi.mjs"
-
-const MAX_UNDO = 50
-
-/**
- * Snapshot a file before a side-effect tool modifies it.
- * Called from dispatch.mjs before each write/edit/delete/apply_patch/hashline_edit.
- */
-export function snapshotForUndo(agent, toolName, args, cwd) {
-  if (!agent._undoStack) agent._undoStack = []
-  const path = args.path ?? args.file
-  if (!path || typeof path !== "string") return
-
-  // 绝对路径直接用（path.join 对绝对段不重置——Windows 反斜杠路径也不按 "/" 切分）；相对路径整段 join(cwd)。
-  const abs = isAbsolute(path) ? path : join(cwd, path)
-  let backup = null
-  try {
-    if (existsSync(abs)) {
-      backup = readFileSync(abs, "utf8")
-    }
-  } catch {
-    // can't read — maybe binary, skip
-    return
-  }
-
-  agent._undoStack.push({
-    tool: toolName,
-    path,
-    backup,
-    timestamp: Date.now(),
-  })
-  if (agent._undoStack.length > MAX_UNDO) agent._undoStack.shift()
-}
 
 export async function handleUndoCommand(ctx) {
   const { agent, pushLine, showPicker } = ctx
@@ -55,9 +26,11 @@ export async function handleUndoCommand(ctx) {
     ...stack.map((item, i) => {
       const relIdx = stack.length - i
       const time = new Date(item.timestamp).toLocaleTimeString()
-      const preview = item.backup === null
-        ? "(was created — undo will delete)"
-        : `(${item.backup.split("\n").length} lines — undo will restore)`
+      const preview = item.oversize === true
+        ? "(no snapshot — too large to undo)"
+        : item.backup === null
+          ? "(was created — undo will delete)"
+          : `(${item.backup.split("\n").length} lines — undo will restore)`
       return {
         type: "item",
         text: `#${relIdx} ${item.tool}: ${item.path} ${preview} — ${time}`,
@@ -69,6 +42,11 @@ export async function handleUndoCommand(ctx) {
   const e = await showPicker("Undo", entries)
   if (!e) return
   const item = stack[e.idx]
+  if (item.oversize === true) {
+    // #863：oversize 占位（无快照）——须先判 `oversize` 再判 `backup === null`，否则被当「文件创建」态误删档。
+    pushLine(`[undo] Cannot revert ${item.tool} ${item.path} — no snapshot (file larger than ${MAX_UNDO_BYTES / 1_000_000} MB)`, C.warn)
+    return
+  }
   const abs = isAbsolute(item.path) ? item.path : join(agent.cwd, item.path)
 
   try {
