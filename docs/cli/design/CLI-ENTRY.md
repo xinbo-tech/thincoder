@@ -17,7 +17,7 @@
   - **档位（行数）登记** = `docs/cli/design/CLI-DEBT.md`（本档不另设读数面）。
   - 补全面**缺口**在册 = `docs/cli/design/CLI-DEBT.md` §3 尾项 T1 / T2 / T3（本档只给契约，不复制缺口清单）。
 - 入口链 = `thincoder-cli/bin/thincoder.cjs`（CJS shim）→ `thincoder-cli/bin/thincoder.mjs`（分发主体）。
-- **启动前置校验**（2026-10-04 · #867）：入口壳顶层校验**运行时 Node 主版本 ≥ 24**（`package.json` `engines.node` 的运行期兑现）——不满足 ⇒ 一行显式错误（当前版本 + 要求）+ `exit 1`（fail-fast；`node:sqlite` 等核 API 在旧版行为不可期）。零依赖（主版本整数比较）。实现 = 本批实施轮。
+- **启动前置校验**（2026-10-04 · #867）：入口链首个可执行点 = `thincoder-cli/bin/thincoder.cjs`（shim）**首行**——先于 `.mjs` 链任何 ESM 静态 import 求值；校验 = 纯函数 `nodeVersionError(version = process.versions.node)`（`thincoder-cli/bin/node-version-gate.cjs`——供直测假版本），不满足 ⇒ 一行显式错误（当前版本 + 要求）+ `exit 1`（fail-fast；`node:sqlite` 等核 API 在旧版行为不可期）。零依赖（主版本整数比较）。实现 = 本批实施轮。
 - 与 `docs/cli/design/TUI-COMMANDS.md` 的分界：后者 = TUI 内 **slash 命令层**；本档 = **argv 命令层**（进程级）。
 
 ## 2. 命令树与旗标（as-of 2026-09-25 实读）
@@ -78,6 +78,7 @@
 
 ## 变更记录
 
+- 2026-10-04（**issue 修复批·五 · 修轮收正 · 父侧直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §2.3 注（eng-designer 预置文本 · 评审轮 1 号 7））：§1 启动前置校验条收正——校验点位钉 = **shim 首行**（先于 ESM 静态 import）∥ 校验体 = 纯函数 `nodeVersionError(version = process.versions.node)`（新档 `bin/node-version-gate.cjs`）。**零新语义**（预置文本落盘）。
 - 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #867）：§1 增**启动前置校验**条（运行时 Node 主版本 ≥24——fail-fast）。实现 = 本批实施轮。
 - 2026-10-04（**read-data-interface 批 · 实施轮随动 · eng-coder**——承批档 `docs/batches/2026-10-03-read-data-interface.md` §2 / 设计档 `docs/cli/design/READ-DATA-INTERFACE.md` §4）：① §2 表增 `ledger list` 行（`--json` 必需 · `--full` · `--family` · `--cwd <dir>` 空格形；实装源 = `thincoder-core/ledger-read.mjs`）；② §1 属主行补「`ledger list` → `docs/cli/design/READ-DATA-INTERFACE.md`」；③ 三套补全同轮随动（`list` 词 + 四旗标——bash / zsh / fish；§3 横深对齐句仍成立）。**零新语义**（词面登记）。
 - 2026-09-30（**缺陷修复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-defect-fixes.md` §2 ∥ 台账 #704）：§3 发射契约收正（**源档形 ≡ 发射字节形**——原单反斜杠形致 `bash -n` 语法错 ∕ zsh 分派不匹配；JS 插值险位 `\${` 例外写明）；§4 MS-2 宿主行收正（原宿主随测试树全清退场——现载体 = 批内件，回迁随重建轮）。
