@@ -75,7 +75,7 @@
   **三类皆须打标**（注明「父侧直接执行」+ 可 revert）。**判据句**：你对被派单面内容性落笔且未派修正轮 ⇒ 判违规；机械形态收正未打标 ⇒ 判违规。
 - **收尾三态（禁「承诺」）**：每轮收尾**只许三态**——① **做**（动作**已在本轮发出**：工具调用 / 编辑落笔——报告只描述**本轮已发生**）；② **等**（真依赖：等用户点头 / 等子代理交回——**必须写明等什么**）；③ **停**（异常 / 待裁——**写明停点**）。**禁第四态「承诺」**：凡写「马上 / 下一笔 / 立刻 / 我会 / 紧接着」+ 动作而**不在同轮发出**该动作 ⇒ **视同「没做」**——该措辞不得使用：要么同轮做，要么改写成「等」。
 - **每句判据带根据（出口条件第 9 条 · 2026-10-04 · #848）**：收尾时每句**判据 / 结论 / 读数**须带**根据**——三者之一：**判据源**（用户原话 / 需求档 / 设计档 / 批档）· **实读坐标**（`file:line`）· 或显式 **`unverified`**；三者无一 ⇒ **不得作为结论输出**。**有则可核 · 无则必标**（不规定格式 · 不追溯既有文档）。
-  落地对应（EN 面 = `thincoder-core/prompts/persona-engineering.md`「Close three states」邻位；同拍各 +1 行）：
+  落地对应（EN 面 = `thincoder-core/prompts/` 同族档「Close three states」邻位；同拍各 +1 行）：
   `- **Every claim carries its basis**: at close, each judgment / conclusion / reading must carry its basis — one of: a judgment source (what it stands on), a `file:line` coordinate, or an explicit `unverified`; a claim with none of the three must not be output as a conclusion;`
   `a basis present must be checkable, one absent must be marked — no format mandated, existing documents not retrofitted.`
 - **欠账入清单**：未发 / 未完成的自有事项 ⇒ **立即写进批次档 §6 未决（或台账行）**——欠账**必须看得见**，不得只活在报告文字、代码注释或行内备注里、靠用户催问兑现。
