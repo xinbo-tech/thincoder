@@ -3,13 +3,14 @@
  * `session/{list,load,resume,delete}` + the #41 engineering-manifest predicate
  * helpers (`slotEngineering` / `reattach`).
  *
- * id 命名空间边界（§11.3 · 评审 #7——本批只改字段名、不改语义）：本族按**持久化槽位号**
- * 解析 `params.sessionId`（`Number(params.sessionId)`）；而 `session/prompt` / `cancel` /
- * `close` / `set_*` 认的是 **ACP 会话 id**（入口分配器——与槽位号不同物，§6.1）⇒
- * 把 `session/list` 的输出直喂 `session/prompt` 仍会 `unknown session`（原 G5，本批不做）。
+ * id 语义（§2.4 · G5 收正）：**全族单一命名空间**——`session id = 持久槽位号字符串`。
+ * 本族按槽位号解析 `params.sessionId`（`Number(...)`——list/load/resume/delete）；
+ * `session/prompt` / `cancel` / `close` / `set_*` 认的 id 同源 = `session/new` 的槽号串 /
+ * load/resume 沿用的**客户端原文 id**（同字面读回即可命中）⇒ `session/list` 输出可直喂
+ * 全族方法（不变量：`session/new` 返回 id ∈ 随后 list 集）。
  */
 import { ACP_ERRORS } from "./transport.mjs"
-import { CONFIG_OPTIONS } from "./handlers-session.mjs"
+import { sessionConfigOptions } from "./handlers-session.mjs"
 import { loadConfig } from "@thincoder/core/config.mjs"
 import { resolveEngineeringManifest } from "@thincoder/core/manifest.mjs"
 import { replayHistory } from "./bridge.mjs"
@@ -17,7 +18,7 @@ import { listSlots, applySession, deleteSlot, loadSlotFile, slotOccupancy, loadM
 
 /** Build the persisted-slot family. Shared state arrives via the single `ctx` (§3.5). */
 export function createSlotsHandlers(ctx) {
-  const { getCwd, sessions, allocSessionId, notifyRef, requestRef, createSession, requireConfigured, log } = ctx
+  const { getCwd, sessions, notifyRef, requestRef, createSession, requireConfigured, releaseClosedSlot, log } = ctx
 
   /** #41 翻转族合值判据（MANIFEST.md §2.8 F3 触发条件口径 = §2.2 会话权威值）：「槽带
    *  `engineering` 字段 ? 槽值 : config 回退」。本路装配期（`applySession` 之前）无会话
@@ -43,13 +44,14 @@ export function createSlotsHandlers(ctx) {
       if (gate.error) return gate
       const slots = listSlots(getCwd())
       return {
-        // §11.3 G2-7：SessionInfo.required = ["sessionId","cwd"]（条目键 `id` 已收正）
+        // §11.3 G2-7：SessionInfo.required = ["sessionId","cwd"]（条目键 `id` 已收正）；
+        // §2.2：updatedAt = ISO 8601 字符串（核 `listSlots` 发出 epoch ms——此处收正；非有限
+        // ⇒ 键缺席——JSON 序列化省略）；`messageCount` 剔除（非 SessionInfo 字段——无 schema 位）。
         sessions: slots.map((s) => ({
           sessionId: String(s.slot),
           cwd: getCwd(), // single-cwd model (design §4.5)
-          updatedAt: s.updatedAt ?? 0,
+          updatedAt: Number.isFinite(s.updatedAt) ? new Date(s.updatedAt).toISOString() : undefined,
           title: s.title ?? "",
-          messageCount: s.messageCount ?? 0,
         })),
       }
     },
@@ -76,7 +78,18 @@ export function createSlotsHandlers(ctx) {
         }
       }
       try {
-        const id = allocSessionId()
+        // §2.4（G5 收正）：会话 id = **客户端原文形态**（同值读回保续——`"008"` 类非规范
+        // 字面按原文注册，同字面读回即可命中）；同 id 在存 ⇒ 替换（close 同法——置换点在
+        // 既有前置判据之后、`createSession` 之前：拒载路径零副作用，旧实例保留不误杀在飞
+        // 回合）。置前理由：① 旧实例的钉槽不再计入 `sameProcessPinned`（重载同槽 ⇒ 可正常
+        // 钉回原槽，不误 fork）；② 防旧实例成为不可达孤儿（同 id 在 Map 上唯一）。
+        const id = String(params.sessionId)
+        const stale = sessions.get(id)
+        if (stale) {
+          stale.cancel()
+          sessions.delete(id)
+          releaseClosedSlot()
+        }
         const session = await createSession({ id, notify: notifyRef.current, request: requestRef.current, log })
         // 2026-08-31 advisor round2 🟡：钉 _slot 前查活主——目标槽被另一活进程（CLI/另一
         // IDE）占用时不得钉回（双方 sessionStart 一致 → F2 永不轮转 → 同槽 last-write-wins
@@ -110,8 +123,9 @@ export function createSlotsHandlers(ctx) {
         // client renders the restored conversation.
         replayHistory({ sessionId: id, notify: notifyRef.current, history: data.history, log })
         log(`session ${slot} loaded as session ${id} (${data.history?.length ?? 0} messages replayed)${occ.occupied || sameProcessPinned ? ` — slot busy, forked to ${session.agent._slot}` : ""}`)
-        // §11.3：load/resume 响应 required = []（`id` / `cwd` 属多余键——同批收敛）
-        return { configOptions: [...CONFIG_OPTIONS] }
+        // §11.3：load/resume 响应 required = []（`id` / `cwd` 属多余键——同批收敛）；
+        // configOptions = 全形（§2.3 单源投影）。
+        return { configOptions: sessionConfigOptions(session.agent) }
       } catch (e) {
         return { error: { code: ACP_ERRORS.INTERNAL.code, message: `failed to load session ${slot}: ${e.message}` } }
       }
@@ -136,7 +150,15 @@ export function createSlotsHandlers(ctx) {
         }
       }
       try {
-        const id = allocSessionId()
+        // §2.4：同 session/load——id = 客户端原文形态（同值读回保续）；同 id 在存 ⇒ 替换
+        // （置换点在既有前置判据之后、`createSession` 之前——拒载路径零副作用）。
+        const id = String(params.sessionId)
+        const stale = sessions.get(id)
+        if (stale) {
+          stale.cancel()
+          sessions.delete(id)
+          releaseClosedSlot()
+        }
         const session = await createSession({ id, notify: notifyRef.current, request: requestRef.current, log })
         // 2026-08-31 advisor round2 🟡：同 session/load——活主占用的槽不钉回（防同槽双写，
         // 下次保存 fork 新槽）；空闲则认领后钉回。
@@ -161,7 +183,7 @@ export function createSlotsHandlers(ctx) {
         sessions.set(id, session)
         // resume: no history replay — the client keeps its own rendering.
         log(`session ${slot} resumed as session ${id} (no replay)${occ.occupied || sameProcessPinned ? ` — slot busy, forked to ${session.agent._slot}` : ""}`)
-        return { configOptions: [...CONFIG_OPTIONS] }
+        return { configOptions: sessionConfigOptions(session.agent) }
       } catch (e) {
         return { error: { code: ACP_ERRORS.INTERNAL.code, message: `failed to resume session ${slot}: ${e.message}` } }
       }

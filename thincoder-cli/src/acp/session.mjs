@@ -19,7 +19,7 @@ import { buildAcpCallbacks } from "./bridge.mjs"
 
 export function createAcpSession({ id, agent, notify, request = async () => { throw new Error("no request channel") }, log = () => {}, run = runAgent, save = saveSession, clientCaps = {} }) {
   let controller = new AbortController()
-  const callbacks = buildAcpCallbacks({ sessionId: id, notify, request, log, clientCaps })
+  const callbacks = buildAcpCallbacks({ sessionId: id, agent, notify, request, log, clientCaps })
   let queue = Promise.resolve()
   let busy = false
 

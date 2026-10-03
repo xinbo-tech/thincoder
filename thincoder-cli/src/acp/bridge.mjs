@@ -7,7 +7,8 @@
  * - thinking     → `agent_thought_chunk`  (same content shape)
  * - tool start   → `tool_call`  { toolCallId, title, kind, status: "in_progress", rawInput, content }
  * - tool result  → `tool_call_update`  { toolCallId, status: "completed"|"failed", content } (REPLACE semantics)
- * - usage        → `usage_update` { usage }
+ * - usage        → `usage_update` { used, size } (used = prompt + completion tokens;
+ *                  size = the model's context window — providerSpec single source)
  * - permission   → reverse-RPC request `session/request_permission`
  *                  { sessionId, options, toolCall } → client responds with
  *                  { outcome: { outcome: "selected", optionId } | { outcome: "cancelled" } }
@@ -25,6 +26,8 @@ import { computeEditEntry, validateEditEntry, assertEditArgsExclusive, assertEdi
 import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
 // 批 1 CORE-DEFECT-FIXES B3：onWait 相位值域 + 文案单源（本面仅日志——PROVIDER.md §6.20）
 import { waitStatusText } from "@thincoder/core/provider/wait-status.mjs"
+// §2.1（ACP-PROTOCOL-COMPLIANCE）：usage_update.size = 模型上下文窗口单源（含 providers[].context 覆写）。
+import { providerSpec } from "@thincoder/core/config.mjs"
 
 /** ACP ToolKind inference (schema v1 enum) — best-effort, clients render by kind. */
 function inferToolKind(name) {
@@ -54,12 +57,13 @@ function permissionToBoolean(response) {
 
 /**
  * Build the runAgent callbacks for an ACP session.
- * @param {{ sessionId: string, notify: (m, p) => void, request: (m, p, o?) => Promise<any>, log?: (s) => void,
+ * @param {{ sessionId: string, agent?: object, notify: (m, p) => void, request: (m, p, o?) => Promise<any>, log?: (s) => void,
  *           clientCaps?: { fs?: { readTextFile?: boolean, writeTextFile?: boolean } } }} deps
- *   `clientCaps` = the §3.4 snapshot (taken at `session/new`); capabilities omitted by the
+ *   `agent` = 会话的活引用（§2.4——`set_config_option` 切模型后 `usage_update.size` 随动；
+ *   不得在构造期固化数值）；`clientCaps` = the §3.4 snapshot (taken at `session/new`); capabilities omitted by the
  *   client are UNSUPPORTED ⇒ the fs reverse-RPC face stays local (§11.4 — never 30s 干等).
  */
-export function buildAcpCallbacks({ sessionId, notify, request, log = () => {}, clientCaps = {} }) {
+export function buildAcpCallbacks({ sessionId, agent, notify, request, log = () => {}, clientCaps = {} }) {
   const update = (sessionUpdate, extra = {}) =>
     notify("session/update", { sessionId, update: { sessionUpdate, ...extra } })
   // §11.4 fs 能力位（默认 false——文档「MUST treat all capabilities omitted … as UNSUPPORTED」）；
@@ -205,7 +209,14 @@ export function buildAcpCallbacks({ sessionId, notify, request, log = () => {}, 
       if (!payload) return
       update("agent_thought_chunk", { content: { type: "text", text: payload } })
     },
-    onUsage: (usage) => update("usage_update", { usage }),
+    // §2.1（ACP-PROTOCOL-COMPLIANCE）：`UsageUpdate.required = ["used","size"]`——
+    // used = 本轮 prompt + completion（量级近似「当前在上下文中的 token」）；size = 模型上下文
+    // 窗口（`providerSpec` 单源——含 providers[].context 覆写；未知模型 128_000 兜底）。
+    // agent 为活引用：切模型后 size 随动（不得构造期固化）。
+    onUsage: (usage) => update("usage_update", {
+      used: (usage?.prompt_tokens ?? 0) + (usage?.completion_tokens ?? 0),
+      size: providerSpec(agent?.provider).context,
+    }),
     onWait: (ev) => {
       const s = waitStatusText(ev)
       if (s) log(`[rate-limit] ${s}`)

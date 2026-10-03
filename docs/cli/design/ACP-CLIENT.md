@@ -34,12 +34,12 @@
 |---|---|---|
 | `initialize` | ✅ | 读 `params.protocolVersion`（单版本协商）+ `params.clientCapabilities`（**落客户端能力快照**，§3.4）；响应 = `protocolVersion` / `agentCapabilities`（`loadSession` + `sessionCapabilities`）/ `authMethods`（**对象数组 + `clientCapabilities.auth.terminal` 门控**）/ `agentInfo` —— §11.3 |
 | `authenticate` | ✅ | 校验 `methodId` 属于已宣告方法（否则 `-32602`）；校验凭据可解析（否则 `-32000`）；通过 → **空结果 `{}`**（契约无 `authenticated` 字段）。**非前置闸门**：客户端可不调 —— §11.2 |
-| `session/new` | ✅ | 接受 `cwd`（**必须等于进程工作目录**——v1 单 cwd 模型，见 §6.1）；忽略 `mcpServers` 并 warn；立即 `newSession` 认领独立槽；返回 `{ sessionId, configOptions: [{ id, name }] }`（契约形状收正见 §11.3） |
+| `session/new` | ✅ | 接受 `cwd`（**必须等于进程工作目录**——v1 单 cwd 模型，见 §6.1）；忽略 `mcpServers` 并 warn；立即 `newSession` 认领独立槽；返回 `{ sessionId, configOptions }`——`sessionId` = 本进程内该会话的持久槽位号（G5 收正，见 §6.1 / §11.3）、`configOptions` = 全形（§11.3） |
 | `session/load` | ✅ | 恢复会话存档，经 `session/update` 重放历史（role → 事件块映射，见 §6.4） |
 | `session/resume` | ✅ | 轻量变体（跳过历史重放，仅恢复 cwd + configOptions + 会话上下文） |
 | `session/list` | ✅ | 枚举会话存档（槽位数量 unlimited，见 §6.1） |
 | `session/delete` | ✅ | 删除会话存档（schema v1 有、参考实现未做——客户端清理会话的必需能力） |
-| `session/prompt` | ✅ | 接受 text content 块；流式 `agent_message_chunk`；返回 `{ stopReason: "end_turn" }`（取消 → `"cancelled"`） |
+| `session/prompt` | ✅ | 接受 `text` / `resource_link` content 块（引用解析与降级标记见 §11.9）；流式 `agent_message_chunk`；返回 `{ stopReason: "end_turn" }`（取消 → `"cancelled"`） |
 | `session/cancel` | ✅ | 中断当前轮（真实 `AbortController`，见 §3.2） |
 | `session/set_mode` | ✅ | plan / normal 切换（映射 `planMode`） |
 | `session/set_config_option` | ✅ | model / thinking / mode 分发（见 §5.3） |
@@ -111,9 +111,10 @@ ACP 官方 SDK 是 npm 依赖——违反零依赖哲学，故自写精简层。
 
 ### 3.3 方法 → agent 映射要点
 
-- `session/list`：`listSlots(cwd)` → `{ sessionId, cwd, updatedAt, title, messageCount }`（单 cwd 模型注入 cwd；**`sessionId` 取值 = 持久化槽位号**——命名空间边界见 §11.3）。
+- `session/list`：`listSlots(cwd)` → `{ sessionId, cwd, updatedAt(ISO 8601), title }`（单 cwd 模型注入 cwd；`messageCount` 已剔——非 SessionInfo 字段）；`sessionId` 取值 = 持久化槽位号——即**全族统一身份**（§11.3）。
 - `session/load` / `session/resume`：`loadSlotFile(cwd, slot)` → `applySession(agent, data)`；
   **槽占用检测** → 空闲认领钉回、占用则 `newSession` **fork 到新槽**（防同槽双写静默互覆盖）。load 后重放历史（§6.4）；resume 不重放。
+  **会话 id 沿用客户端传入值**（响应无 `sessionId`——id 不变语义）；同 id 在存 ⇒ 旧实例按 close 同法替换（§11.3）。
 - `session/delete`：`deleteSlot(cwd, slot)`；**被删槽的在存会话**（`_slot` 仍钉着）→ 立即 `newSession` 钉新槽
   （否则下次保存经 activeSlot 早退分支落回同进程活动槽 → 两会话写同一槽）。删除活跃会话仅删持久化存档，在存内存会话继续。
 - `session/set_mode` / `set_config_option`：改 agent 内存态，成功后经 notify 发 `current_mode_update` / `config_option_update`。
@@ -149,8 +150,8 @@ ACP 官方 SDK 是 npm 依赖——违反零依赖哲学，故自写精简层。
 > （同法先例 = 批次档 §2.7 修正3 手法①）；**逐字路径（含 `.mjs`）与行数预算 = 批次档 §2.3**。
 
 **共享态经单一 `ctx` 传入**（不散落成各模块私有闭包）：
-`{ getCwd, sessions, allocSessionId, notifyRef, requestRef, createSession, requireConfigured, log }`——
-`findSession` / 门助手 / id 分配器都由入口建一次、按引用传（**会话 id 与槽位族共享同一分配器**——命名空间不因拆分而裂）。
+`{ getCwd, sessions, notifyRef, requestRef, createSession, requireConfigured, releaseClosedSlot, log }`（`allocSessionId` 撤）——
+`findSession` / 门助手 / 认领释放单点都由入口建一次、按引用传（**会话 id = 持久槽号**——load/new 同命名空间；`releaseClosedSlot` = 认领释放单点）。
 **每模块 ≤300（函数与文件两档）；`acp.mjs` 目标 ≈130 行。** 受影响文件与逐档读数 = 批次档 §2.3（一次性材料，不入本档）。
 
 ## 4. 鉴权与配置
@@ -177,7 +178,7 @@ runAgent 的 callbacks 直接映射为 ACP 通知（`session/update` 事件块�
 | 工具开始 | `tool_call` `{ toolCallId, title, kind, status: "in_progress", rawInput, content }`（`title` = 剥 relay 前缀后的工具名） |
 | 工具结果 | `tool_call_update` `{ toolCallId, status: "completed", content }`（REPLACE 语义） |
 | 模型 / 模式变更 | `config_option_update` / `current_mode_update` |
-| `callbacks.onUsage` | `usage_update` |
+| `callbacks.onUsage` | `usage_update` `{ used, size }`（used = prompt + completion 之和；size = 上下文窗口——`providerSpec(agent.provider).context`，未知模型 128_000 兜底） |
 | 回合结束 | **非通知**——`session/prompt` resolve `{ stopReason: "end_turn" }` |
 | `callbacks.onWait` / `onCompress` | 仅 stderr 日志（rate-limit / auto-compacted）——onWait 日志文案取**核内单源映射**（`docs/core/design/PROVIDER.md` §6.20）；`warn` / 未知相位 ⇒ 不打印 |
 
@@ -239,8 +240,8 @@ last-write-wins 于内部状态（**不落 config.json**）；set 成功后 noti
 
 - `session/load` / `resume` 读会话存档（`thincoder-core/session.mjs`，双线历史 JSON）。
 - `session/list` 枚举存档槽位——**槽位数量 unlimited**，按实际存档全量返回。
-- **sessionId ↔ 槽位映射**：ACP sessionId = 槽位号（数字字符串，如 `"3"`）；load / resume / delete 按 id 解析槽位。
-  每 `session/new` / `load` / `resume` 的 ACP 会话 id 独立分配（`nextId++`），与持久化槽位号不同物。
+- **sessionId ↔ 槽位映射**：ACP sessionId = 槽位号字符串（如 `"3"`）；load / resume / delete 按 id 解析槽位。
+  `session/new` 的 id = 本轮认领槽号（装配失败 ⇒ 回滚释放，无孤儿槽）；load / resume 的 id 沿用客户端传入原文形态（原 `nextId++` 计数器已撤——G5 收正，见 §11.3）。
 - **单 cwd**：进程 cwd = 默认工作目录；`session/new` 的 cwd 必须等于进程 cwd。跨进程 / 多 cwd 会话不在 v1 范围。
 
 ### 6.2 load 语义
@@ -488,7 +489,8 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 - 版本协商（文档逐字）：「If the Agent supports the requested version, it **MUST** respond with the same version. Otherwise, the Agent **MUST** respond with the latest version it supports.」
 - 能力缺省（文档逐字）：「Clients and Agents **MUST** treat all capabilities omitted in the initialize request as **UNSUPPORTED**.」
 - `NewSessionResponse.required = ["sessionId"]`；`PromptRequest.required = ["sessionId","prompt"]`（`prompt` = `ContentBlock[]`）；
-  list 条目 `SessionInfo.required = ["sessionId","cwd"]`；`SessionConfigOption.required = ["id","name"]`。
+  list 条目 `SessionInfo.required = ["sessionId","cwd"]`、`SessionInfo.updatedAt` = ISO 8601 字符串；
+  `SessionConfigOption` = required `["id","name"]` + oneOf select/boolean 判别键 `type`（select 另需 `currentValue` + `options[]`；boolean 需 `currentValue`）。
 
 **现状 vs 契约（八项，逐项实核）**
 
@@ -520,11 +522,12 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 
 - `promptCapabilities` 全 `false` = **如实声明**（本面不接 image / audio / embeddedContext——与 §7.1 的通道裁剪同源）；**不虚报**。
 - `mcpCapabilities` **省略** = 不支持（G7 不在本批，如实声明）；`sessionCapabilities.additionalDirectories` 不声明（G4 单 cwd 模型，做不了就不说）。
-- 会话方法响应统一契约形状：`session/new` → `{ sessionId, configOptions }`；`session/load` / `resume` → `{ configOptions }`；`session/list` 条目 → `{ sessionId, cwd, … }`；`configOptions` 条目 → `{ id, name }`（`name` 取值 = 人类可读标签）。
+- 会话方法响应统一契约形状：`session/new` → `{ sessionId, configOptions }`；`session/load` / `resume` → `{ configOptions }`；`session/list` 条目 → `{ sessionId, cwd, … }`；`configOptions` 条目 → 全形（`{ id, name, type, currentValue, options? }`——`name` 取值 = 人类可读标签）。
 
-**id 命名空间边界（本批只改字段名、不改语义 · 评审 #7 收正）**：`session/list` 条目 `sessionId` 的**取值**仍是**持久化槽位号**（`acp.mjs:235` `String(s.slot)`）（as-of 2026-09-29）；`session/load` / `resume` / `delete` 也按槽位号解析（`Number(params.sessionId)`）。
-而 `session/prompt` / `cancel` / `close` / `set_config_option` / `set_mode` 认的是 **ACP 会话 id**（`nextId++` 分配、`sessions` Map 的键——与槽位号**不同物**，§6.1）。
-⇒ **把 `session/list` 的输出直喂 `session/prompt` 仍会 `unknown session`**（原 G5——本批不做，登记保留在 §11.9）。本行 = **边界可见**，不是修法。
+**id 语义（G5 已收正——全族单一命名空间）**：`session id` = **持久化槽位号字符串**——`session/new` 返回 = 本轮认领槽号、`session/list` 条目取值 = `String(s.slot)`；`session/load` / `resume` / `delete` 按槽位号解析（`Number(params.sessionId)`）。
+`session/prompt` / `cancel` / `close` / `set_config_option` / `set_mode` 认的 id 同源（`sessions` Map 的键）⇒ **`session/list` 输出可直喂全族方法**（不变量：`session/new` 返回 id ∈ 随后 list 集）。
+load / resume 的 id = **客户端传入原文形态**（同值读回保续；响应无 `sessionId`——id 不变语义）；同 id 在存 ⇒ 旧实例按 close 同法替换（先 cancel + 出容器 + 认领释放，再做占用检测与装载——拒载路径零副作用）。
+**fork 角（如实注）**：载入遇他进程占用槽 ⇒ 既有 fork 语义（`newSession` 新槽）保持——本次存续期 id 与落盘槽号分离（重载后 list 显示 fork 槽号）。
 
 ### 11.4 G3 · `fs` 反向 RPC 的客户端能力门控
 
@@ -616,8 +619,6 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 | 不做 | 理由 |
 |---|---|
 | **G4** 单 cwd 模型（`acp.mjs:163-167`） | 多 cwd 需改 agent 的 confine / 核侧工作目录语义——超 ACP 面；本批以「不声明 `additionalDirectories`」**如实**处理 |
-| **G5** id 命名空间（`session/list` 返槽位号 vs `prompt/cancel` 认 ACP id） | 本批只统一**字段名**（`id` → `sessionId`），**命名空间语义不动**（槽位 ⇄ 会话 id 映射属会话层数据模型） |
-| **G6** `session/prompt` 只取首个 text 块（`acp.mjs:194-195`）（as-of 2026-09-29） | 本批只改**读取位置**（`content` → `prompt`），**取块策略不变**；多块 / image / resource 丢弃照旧 |
 | **G7** `mcpServers` 静默忽略（`acp.mjs:168-170`）（as-of 2026-09-29） | 转发面（含能力声明与传输协商）是独立设计面；本批以「不声明 `mcpCapabilities`」如实处理 |
 | **G9** ACP 端到端测试网 | 另批建网；本批 AC 用 handler 直调 + 单条 stdio 冒烟覆盖 |
 | **env 凭据通道** | CONFIG / PROVIDER 板块（D17 理由 3） |
@@ -628,7 +629,7 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 
 1. **env 凭据通道**（`THINCODER_*_API_KEY` 类）——若采纳，须为**产品级凭据语义变更**（CLI / VSC / core 同步），不可只在 ACP 面落。
 2. **`_meta['terminal-auth']`**——若实测到仍不认一等 `type:"terminal"` 的在用客户端，再评估。
-3. **`session/prompt` 多块内容面**（原 G6）——G2-6 修复后 `session/prompt` **首次真正可用**，多块丢弃的影响面将**首次显现**；建议立批。
+3. **`session/prompt` 多块内容面**（原 G6 残项）——`resource_link` 已接；余**多块 text 合流**（首块策略残项）待立批。
 
 ## 变更记录
 
@@ -653,3 +654,8 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 · 台账 #841）：§11.8 回归面两档标注**不在盘**（2026-09-28 测试树全清重置后——引文 = 迁移期引文类；判据原文保留为历史记录）。**零新语义**（时态 ∥ 引文类）。明细 = 批档 §2 回填轮块。
 - 2026-10-03（**#841 设计修正轮（续 #10 上抛一）· eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2）：ACP 面随核统一解析收正——§11.5（现状段 · 门失败文案段 · 裁定理由 2）· §11.7-4 · §4 凭据文案行 · D17 行；「持 key ∧ 无有效 `defaultModel`」= 放行（协议面零提示行——提示通道未决）。2026-09-18 批 AC12 随之失效（② 分支默认接线不可达）。**产品码零触**。
 - 2026-10-04（**read-data-interface 批 · 实施轮随动 · eng-coder**——承批档 `docs/batches/2026-10-03-read-data-interface.md` §2 / 设计档 `docs/cli/design/READ-DATA-INTERFACE.md` §4）：① §2.1 增只读数据接口方法行（`ledger/list` · `ledger/count` · `batch/list`——过凭据门；协议版本 / `initialize` 能力面零动）；② §2.2 增变更通知行（`ledger/changed` · `batch/changed`——params 只 `{ cwd }`）；③ §3 枚举四 ⇒ 五 handler 模块（+ `acp/read-data.mjs`）+ §3.5 模块表增行；④ §3.5 入口行收正（合并五族；返回 + `watcher` 出参——原「返回不变」句改写）。**零新语义**（登记 + 收正）。
+- 2026-10-04（**issue 修复批·二（ACP 协议面）· 实施轮随动 · eng-coder**——承批档 `docs/batches/2026-10-04-issue-fix-round2.md` §2 /
+  设计档 `docs/cli/design/ACP-PROTOCOL-COMPLIANCE.md` §5）：① §2.1 两行形状收正（`session/new` 返回 / `session/prompt` 内容块）；
+  ② §3.3 list / load / resume 行收正（`updatedAt` ISO 8601 ∥ id 沿用客户端值 + 同 id 替换）；③ §3.5 ctx 键收正（`allocSessionId` 撤 → `releaseClosedSlot`）；
+  ④ §5 映射表 `usage_update` 形状收正（`{ used, size }`）；⑤ §6.1 / §11.3 id 语义改述为统一现态（G5 收正：load/new 同命名空间）；
+  ⑥ §11.9 G5 / G6 行删、登记项 3 改述（resource_link 已接；余多块 text 合流待立批）。**零新语义**（收正 + 登记）。

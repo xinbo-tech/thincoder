@@ -30,7 +30,7 @@ import { assembleAgent } from "./cli/make-agent.mjs"
 import { createAcpServer } from "./acp/transport.mjs"
 import { createAcpSession } from "./acp/session.mjs"
 import { createCapsHandlers } from "./acp/client-caps.mjs"
-import { createRequireConfigured, createSessionHandlers } from "./acp/handlers-session.mjs"
+import { createRequireConfigured, createSessionHandlers, createSlotReleaser } from "./acp/handlers-session.mjs"
 import { createSlotsHandlers } from "./acp/handlers-slots.mjs"
 import { createExtHandlers } from "./acp/ext.mjs"
 import { createReadDataHandlers } from "./acp/read-data.mjs"
@@ -98,20 +98,21 @@ export function buildAcpHandlers({
   const notifyRef = { current: notify }
   const requestRef = { current: async () => { throw new Error("no request channel") } }
   const sessions = new Map()
-  let nextId = 1
   /** §3.4 客户端能力快照：`initialize` 单次写入，之后只读（快照丢失 ⇒ 全取 false ⇒ 本地兜底）。 */
   const clientCaps = { current: {} }
-  /** 共享态经单一 `ctx` 传入（§3.5）——id 分配器与槽族共享，命名空间不因拆分而裂。 */
+  /** 共享态经单一 `ctx` 传入（§3.5）——会话 id = 持久槽位号串（load/new 同命名空间——G5 收正）；
+   *  `releaseClosedSlot` = 认领释放单点（close ∥ load/resume 替换 三处同源消费）。 */
   const ctx = {
     getCwd: cwd,
     sessions,
-    allocSessionId: () => String(nextId++),
     notifyRef,
     requestRef,
     // 能力位按「session/new 时刻取值」注入每个会话（§11.4——会话生命周期内不变）
     createSession: (opts) => createSession({ ...opts, clientCaps: clientCaps.current }),
     // 门助手由入口建一次、按引用传（§11.5——`session/new` 是门链首个触点）
     requireConfigured: createRequireConfigured({ isConfigured, providerStatus }),
+    // 认领释放单点由入口建一次、按引用传（§2.4——close ∥ load 替换 ∥ resume 替换同源）
+    releaseClosedSlot: createSlotReleaser({ getCwd: cwd, sessions }),
     log,
   }
 

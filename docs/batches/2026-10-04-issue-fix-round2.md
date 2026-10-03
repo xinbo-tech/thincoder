@@ -137,4 +137,58 @@ VERDICT: pass
 **批准面**：#870 ∥ #871 ∥ #872 ∥ #873（#862 拆批不实施——裁定在档）——**派实施**（eng-coder）。
 
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（批内件 20/20（先红后绿）· doc-check exit 0 · 审计 clean ∥ 评审 pass（0🔴；🟡×3+🔵×3 均非 must-fix，登记待父侧裁决））
+
+
+
+**§5 实施记录（eng-coder · 2026-10-04 · initial 轮——#870 ∥ #871 ∥ #872 ∥ #873 实施；#862 未实施 = 拆批在案）**
+
+**schema SHA 复核（实施轮首步 · 设计档 §4.1）**：gh-proxy 镜像复取（命令同 `docs/batches/2026-09-18-acp-external-drivers.md` §2.8）= **247168 字节 · SHA256 `3c17bd6385d90cf672d8a661fddc359d73422cf8b8ce6865213d25cfd4c0eca7` · 170 `$defs`**——三项与设计档记值逐字相符 ⇒ 按设计继续（无停下上报项）。
+
+**文件面与实测行数（Δ = 对设计 §7 预算；按盘回填面 = 本表）**
+
+| 文件 | 实测（Δ） | 落点（file:line） |
+|---|---|---|
+| `thincoder-cli/src/acp/resource-link.mjs`（新） | 124 行 | §2.5 判定树全量（导出 = `resolveResourceLink` / `buildPromptText` / `MAX_INLINE_BYTES` / `MAX_INLINE_LINES` / `MAX_INLINE_CHARS`） |
+| `thincoder-cli/src/acp/bridge.mjs` | 408（397 +11） | 头注 `:10-11` ∥ `providerSpec` import `:29-30` ∥ 签名增 `agent` `:66` ∥ onUsage `:212-219` |
+| `thincoder-cli/src/acp/session.mjs` | 54（Δ0——`:22` 单行改） | 调用点传 `agent`（活引用） |
+| `thincoder-cli/src/acp/handlers-session.mjs` | 329（292 +37） | 投影 `:40-53` ∥ 释放工厂 `:64-72` ∥ new 重排+回滚 `:185-229` ∥ prompt 接线 `:236-241` ∥ 两通知 `:298-304` / `:320-325` |
+| `thincoder-cli/src/acp/handlers-slots.mjs` | 218（196 +22） | list 条目 `:46-55` ∥ load/resume id+替换 `:80-92` / `:152-161` ∥ 两响应 `:126-128` / `:185-186` |
+| `thincoder-cli/src/acp.mjs` | 152（151 +1） | import `:33` ∥ ctx `:100-117`（计数器撤 ∥ `releaseClosedSlot` 入） |
+| `docs/cli/design/ACP-CLIENT.md` | 661（655 +6） | §5 表 R1–R10 十处 + G5/G6 行删 + 变更记录 `:657-661` |
+| `docs/core/design/API-CONTRACT.md` | 2972（重生成） | `node scripts/api-contract.mjs --write`（2862 条；`--check` = 骨架零漂移 · 636 档） |
+| `docs/batches/2026-10-04-issue-fix-round2.test.mjs`（新） | 456 行 | T1–T20（先红后绿——见下） |
+
+**批内件读数（先红后绿 · 逐腿）**
+
+- **红相位（旧盘 · 修前，最终版批内件）**：**19 红 / 1 绿**。逐腿红因：T1–T2 `{usage}` 包装键（无 used/size）∥ T3 size `undefined` ∥ T4 `updatedAt` = number（epoch）∥ T5 NaN 值直发 ∥ T6–T8 `configOptions` = `[{id,name}]` 无判别键（T6 响应 `{}`、T8 undefined）∥ T10 原 id prompt ⇒ `unknown session 2`（旧分配器注册为 `"1"`）∥ T11 原 id 查无会话 ∥ T12 首载不替换（`first.cancelled=0`、Map size=2）∥ T13 `mode` 键 ∥ T14 `{configId,value}` ∥ T15–T19 `resource-link.mjs` 模块缺失（ERR_MODULE_NOT_FOUND）∥ T20 旧文案。**唯一绿 = T9**（单会话下旧计数器 id 与槽号串巧合同值；其「失败回滚」两腿为**新序**结构护栏——旧序下 createSession 失败本就零认领 ⇒ 平绿，红性在新序缺回滚时显现——如实登记）。
+- **绿相位（落形后）**：**20/20 pass（EXIT 0）**。关键读数：T1 `{used:150,size:1000000}` ∥ T2 `{}`/无参 ⇒ `{used:0,size:1000000}` 零抛 ∥ T3 未知模型/无 provider ⇒ `128000` ∥ T4 `"updatedAt":"2026-10-03T17:16:04.890Z"`（发射值往返恒等）∥ T5 非有限 ⇒ `undefined`（JSON 序列化键缺席）∥ T6–T8 全形（`type`/`currentValue`/`options`；无 model ⇒ 缺席；四处同源）∥ T9 `id="1"` ∈ list + 回滚前后文件集等 ∥ T10 `keys=["2"]` 全链命中 ∥ T11 resume 原 id 命中 + close 后认领释放 ∥ T12 `first.cancelled=1 size=1` + 槽文件缺失/工程拒载双拒载腿（旧实例零副作用保留）∥ T13 `currentModeId:"plan"` ∥ T14 全量 `configOptions`（通知=响应同源）∥ T15 文本在前 + 围栏整文 ∥ T16 `lines 10–20`（en dash）行数正确 + `#L5:15` + 尾截断 + 单行形 ∥ T17 百分号解码/盘符剥前导 `/`/相对按 cwd ∥ T18 五类词表标记逐字 ∥ T19 四上限标记（行/字符/NUL/字节）∥ T20 `-32602` 新文案 + 畸形首块不吞后续合法块。
+- 跑法：自 `thincoder/` 仓根 `node --test docs/batches/2026-10-04-issue-fix-round2.test.mjs`（T5 协作面桩 = `registerHooks` 第二模块实例——`listSlots` 非有限值经真实管线不可达，如实登记于件内注释）。
+
+**机检读数**：`node scripts/doc-check.mjs` = **exit 0**（锚 0 悬空 ∥ 行宽 0 超限；行数面 8 条差异 = desktop 域报告态、非本批面）∥ `node scripts/api-contract.mjs --check` = 骨架零漂移 ∥ 六源档 + 批内件 `node --check` 全 OK。
+
+**AC 对照**：AC-1–AC-5 = T1–T20 绿（逐条见上）∥ AC-6 = 本段机检三项 + 批内件全绿 ∥ AC-7 = #862 零实施（源面零结构化子代理映射、剥离语义零改）——台账「待设计」由父侧核。
+
+**审计与评审轮次（终态 = clean）**
+
+- **内部密合审计**（explore · 只读 · 9 档对设计档 + 批档）：**四类偏差均未发现**（0 partial ∥ 0 silent-simplification ∥ 0 out-of-list 未报 ∥ 0 doc-drift）；AC-1–AC-5/AC-7/文档面/边界全 met；AC-6 静态 met（两条执行腿审计侧无 shell ⇒ unverified——读数归本段/报告面）。观察 O-1–O-4：O-1 §5 空 = 本段即补 ∥ O-2 批内件 456 行（见登记 3）∥ O-3 `nextId++` 注记（设计 §5 目标文本同形——R2「已剔」/R4「撤」/R9「已收正」house style，判可接受）∥ O-4 新档未入 §3.5 模块表（设计面留白，非实施偏差）。
+- **独立代码评审**（advisor · type=code · 7 档 + 设计/批档）：**VERDICT: pass**（**0 🔴**；🟡×3 + 🔵×3——均非 must-fix）。宿主机械核注 1 条引用不可解析（评审写作 `resource-link.mjs:55` 省前缀——该行实读 = `if (url.protocol !== "file:") return marker(raw, "unsupported scheme")`，与本批实施一致）。
+
+**评审登记（3 🟡 + 3 🔵——父侧裁决面；本轮零擅改 = 零语义外扩纪律）**
+
+1. 🟡 `handlers-session.mjs`——**id 复用覆盖面**（`session/delete` 后 `session/new` 回收槽号 ⇒ `sessions.set` 静默覆盖同键在存实例：旧回合不 cancel、通知串流；失败类 = D-4 被否项经 delete→new 入口）。评审建议 = `sessions.set` 前处置同键（与 load/resume 替换同法）∥ 或设计档 §11 登记。**待父侧裁决（本批小修 ∥ 登记）**。
+2. 🟡 `handlers-slots.mjs:53`——`Number.isFinite` 值域钳缺（有限但 |v| > 8.64e15 ⇒ `toISOString` RangeError ⇒ list 整方法 -32603；到达需手改/损坏槽档）。设计 §2.2 目标形同表达式 ⇒ 设计+代码同源面。**待父侧裁决**。
+3. 🟡 批内件 456 行 > 300 咨询档（且 > 自记预算 ~290/≤300；500 硬限未破）——建议拆两件 ∥ 抽夹具档；设计 §7 / 批档 §2 表待按盘回填（实测值 = 上表）。
+4. 🔵 `bridge.mjs` 408 ∥ `handlers-session.mjs` 329 > 300 咨询档——设计 §7 拆分评审在册（本批不拆），不重开、零动作。
+5. 🔵 `resource-link.mjs` 两形未登记（裸盘符 ⇒ `unsupported scheme` ∥ 非 URL 形带片段不选区）——建议设计档 §11 登记；代码零改。
+6. 🔵 load/resume 替换的 `createSession` 失败面（旧实例已撤、新实例未建）——设计 §2.4 只保证前置判据拒载零副作用；建议 §11 登记 ∥ 实施恢复。
+
+**越清单与披露（透明面）**
+
+- ACP-CLIENT.md 超出设计 §5 十处的两笔：§2.1 `session/prompt` 行（补 `resource_link`）+ §6.1（`nextId++` 残句改现态）——理由 = 失效句收正（对象已消/被取代；D8）；审计 + 评审均核「成立」。
+- 批内件 456 行超设计预算（~290/≤300）——如实登记（= 登记 3）。
+- `docs/core/design/API-CONTRACT.md` 重生成 = 工具整区替换语义 ⇒ 差异面含他批在飞坐标位移（panel/desktop 面——非本批笔）；本批面 = `sessionConfigOptions`/`createSlotReleaser`/resource-link 五导出增 + `CONFIG_OPTIONS` 撤 + 行号位移。
+
+**边界遵守**：需求档零触（主 agent 笔已落）∥ 在飞写域零触（面板面 ∥ 批五二档 ∥ 批三档 ∥ 批四档）∥ 已收口批档零触 ∥ #862 面零扩 ∥ 协议版本/方法面/initialize 形状零动。
+
 ## §6 验证与收口（父代理）
