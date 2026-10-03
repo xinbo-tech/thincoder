@@ -16,9 +16,10 @@ import { ALLOWED_MIGRATIONS, nowIso, openLedger, PENDING_STATUSES } from "./ledg
 import { resolveProjectRoot } from "./manifest.mjs"
 import { declaredPublicRoots } from "./declaration.mjs"
 
-/** 查询（只读，全角色）：SELECT 行集（status/kind/board 过滤，缺省 = 全部行；id 升序）。库不在 = 空账。 */
+/** 查询（只读，全角色）：SELECT 行集（status/kind/board 过滤，缺省 = 全部行；id 升序）。库不在 = 空账。
+ *  只读开库（readOnly 句柄 + 零 DDL/ALTER——read-data-interface 批 FR2③）；库档非台账库 ⇒ 空账。 */
 export function ledgerQuery({ cwd, status = null, kind = null, board = null } = {}) {
-  const db = openLedger(cwd)
+  const db = openLedger(cwd, { readOnly: true })
   if (!db) return []
   try {
     const where = [], args = []
@@ -29,9 +30,10 @@ export function ledgerQuery({ cwd, status = null, kind = null, board = null } = 
   } finally { db.close() }
 }
 
-/** 计数单源（只读，全角色）：COUNT(*) WHERE 未决四态——替代 v1 md 计数面（AC-M2-3）。库不在 = 0。 */
+/** 计数单源（只读，全角色）：COUNT(*) WHERE 未决四态——替代 v1 md 计数面（AC-M2-3）。库不在 = 0。
+ *  只读开库（同 ledgerQuery——零 DDL/ALTER）；库档非台账库 ⇒ 0。 */
 export function ledgerCount({ cwd } = {}) {
-  const db = openLedger(cwd)
+  const db = openLedger(cwd, { readOnly: true })
   if (!db) return 0
   try {
     const row = db.prepare(`SELECT COUNT(*) AS n FROM items WHERE status IN (${PENDING_STATUSES.map(() => "?").join(",")})`).get(...PENDING_STATUSES)

@@ -133,4 +133,77 @@ VERDICT: pass
 
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（11 代码面 ∥ 批内件 ∥ 随动两档全落 · 先红 12/12 → 后绿 12/12 · 内审 1 轮 + 代码评审 2 轮均 pass · 终态 clean）
+
+
+### 实施摘要（承批档 §2 任务书 ∥ 设计档 §3 冻结契约 · 2026-10-04 · eng-coder）
+
+11 个代码面 + 批内件 + 2 随动档全落形——零语义外扩 ∥ 零在飞写域触碰（`ledger.mjs` 零编辑 D-11 ∥ `DATA_COLUMNS` 零搬迁 D-10 ∥ `initialize` 零动 D-9 ∥ 通知 params 只 `{cwd}` D-12）。批内件运行 = 自 `thincoder/` 仓根 `node --test docs/batches/2026-10-03-read-data-interface.test.mjs`（≈45s；不入仓套件）。
+
+### 逐文件改动表（file:line = 落笔后实读）
+
+| 承接 | 文件 | 落点 |
+|---|---|---|
+| FR2③ ∥ N2 | `thincoder-core/ledger-db.mjs` | `:60` `LEDGER_SCHEMA_VERSION = 1`；`:111-124` `openReadOnly`（只读句柄 + sqlite_master items 探针缺 ⇒ null）；`:127-130` `markSchemaVersion`；`:139` `openLedger(cwd, { create, readOnly })`；`:152` 只读分支；`:158` 写面落标 |
+| FR2③ | `thincoder-core/ledger-cmd.mjs` | `:22` / `:36` `ledgerQuery` / `ledgerCount` 两读点切 `{ readOnly: true }`（签名零变） |
+| FR1 ∥ FR2 ∥ N1–N3 | `thincoder-core/ledger-read.mjs`（新 · 94 行） | `:28-36` `exportRow`（键集 = `DATA_COLUMNS` 单源；evidence 仅 full；缺列 null）；`:39-47` `readProject`（两开均只读：版本探针 + `ledgerQuery`）；`:50-63` `ledgerExport`（单范围 = 解析根一项 ∥ family = `discoverFamily` 发现序、不可读跳过）；`:65` LIST_USAGE；`:70-94` `runLedgerList`（严格解析 / 单段 JSON / 错误面单行） |
+| FR3③ | `thincoder-core/agent-tools/batch-skeleton.mjs` | `:138-154` `readSectionStatusWord`（段头 / 状态行正则 / 词表全消费单源；终态词优先；§4/§6 字面「无状态词」） |
+| FR3③ | `thincoder-core/agent-tools/batch-lifecycle.mjs` | `:63` `collectMarkdownFiles` 转导出（零行为变；注释 +1 行——现读 333 内容行） |
+| FR3③ | `thincoder-core/agent-tools/batch-read.mjs`（新 · 37 行） | `:22-36` `listBatchRecords`（bases 缺省 = `batchDocBases`；`/` 归一 + 路径升序；单档读错跳过） |
+| FR3 ∥ N1 | `thincoder-cli/src/acp/read-data.mjs`（新 · 127 行） | `:17` `WATCH_INTERVAL_MS`；`:52-87` 三方法（凭据门 + 参数类型校验 + INVALID_PARAMS 转述）；`:92-110` watcher（`inflight` 守卫 + 指纹差分 + `ctx.notifyRef` 到发）；`:113-124` start（unref）/ stop |
+| FR3 | `thincoder-cli/src/acp.mjs` | `:36` 工厂 import；`:119` 建面；`:127` handlers spread；`:132` `watcher` 出参；`:148` `built.watcher.start()` |
+| FR1 | `thincoder-cli/src/command-table.mjs` | `:164` `list` 分支（`:166` `runLedgerList(args.slice(1))`）；`:169` family usage 行 + list 形 |
+| FR1 词面 | `thincoder-cli/src/completions.mjs` | `:27` bash 子命令词；`:30` bash list 旗标；`:63` / `:76` zsh 描述 + list 分支；`:99` / `:138` / `:140` fish 词 + list 旗标行 |
+| FR1 词面 | `thincoder-cli/bin/thincoder.mjs` | `:139-140` USAGE 两行 |
+| RDI-1–12 | `docs/batches/2026-10-03-read-data-interface.test.mjs`（新 · 429 行） | 12 例全表（RDI-1 `:95` … RDI-12 `:429`） |
+| 随动登记 | `docs/cli/design/CLI-ENTRY.md` | `:16` §1 属主行（ledger 族拆分指针）；`:42` §2 `list` 行；`:78` 变更记录 |
+| 随动登记 | `docs/cli/design/ACP-CLIENT.md` | `:47` §2.1 方法行；`:55` §2.2 通知行；`:78` / `:83` / `:87` 五模块枚举；`:140` 入口行收正（+ `watcher` 出参）；`:145` §3.5 模块表行；`:655` 变更记录 |
+
+### 测试读数（先红后绿 · 零网络 ∥ 零真实 LLM）
+
+- **先红（实施前 · 面未存在相位）**：RDI-1–RDI-12 = **12/12 红**。红因逐腿：RDI-1/2/3/5/6/10/11 = 命令面不存在（`ledger list` 走 family usage exit 1）；**RDI-4(a) = 现行核读即 DDL/ALTER**——旧库哈希 `ce23109403f6dc109c2391917fa09f195181abda` → `e24007cfd08736ff5b36fcfe4b0de451a8bb6e6f`（负向锁成立）；RDI-7/8/12 = ACP 方法面不存在；RDI-9 = watcher 出参不存在。
+- **后绿（实施后复跑）**：**12/12 绿**——RDI-1 exit 0 · schemaVersion 1 · 单段 JSON · 与核逐 id 等；RDI-2 键集 12/13 + 剥 evidence 深等；RDI-3 `{"projects":[]}` + stderr 空；RDI-4 哈希等 + 版本 0→1 + 非台账库空集零改 + 零伴生档；RDI-5 family 与 `discoverFamily` 对拍逐项等；RDI-6 空族空集 + 混不可读跳过；RDI-7 CLI/ACP 载荷深等 + count 同源 + batches 形；RDI-8 files=full/plain/nested + 逐段词表；RDI-9 基线静默 + 两通知 + 静默轮零新增；RDI-10 两腿 exit 1 + usage；RDI-11 单行 + 零栈泄；RDI-12 三条 -32602。**修复轮后复跑仍 12/12 绿。**
+- **端到端探针（真 stdio · 零网络）**：真 `thincoder acp`——initialize（`protocolVersion:1`，形状零动）→ `ledger/count` = `{count:2}`（过凭据门）→ `batch/list` 实读 → 数据变更后真通道收 `ledger/changed` + `batch/changed`（params 只 `{cwd}`）——`runAcpServer` → `watcher.start` 接线证据。探针件 `.thincoder/tmp/rdi-acp-smoke.mjs` 用毕即删。
+- **CLI 冒烟**：`--help` 含 list 两行；bash/zsh/fish 补全含 list 词 + 旗标；bash 发射件 `bash -n` = OK。
+
+### 修复轮（自查 3 处 + 评审修复 2 条）
+
+| # | 触发 | 修复 | 证据 |
+|---|---|---|---|
+| 1 | 落形自查（RDI-8 红捕获） | `batch-read.mjs` 段号传参错形（`"§1"` 字符串 ⇒ 数形 1–6；`STATUS_WORDS` 键形错配致全段线「无状态词」） | RDI-8 红转绿 |
+| 2 | 落形自查 | 批内件两处断言收正：逐列对拍只对发射键集（默认零 evidence 键）；`ledgerCount` 期望 = 未决四态 2（已核销不计） | RDI-1 红转绿 |
+| 3 | doc-check 闸捕获 | `CLI-ENTRY.md:15` 349 字符越行宽闸 ⇒ 拆两行 | 行宽闸转 OK |
+| 4 | 代码评审 🔵（错误面） | `ledger-read.mjs:91` 错误消息折叠单行（多行诊断 ⇒ 单行、内容零丢；单行消息零回归） | 实拍：不存在路径 stderr 1 行；歧义锚（双带档子目录）stderr 由多行转 1 行（候选清单保留） |
+| 5 | 代码评审 🔵（观察器） | `read-data.mjs:92/95-96/109` `inflight` 守卫（先例 `ledger-surface.mjs` 同形；置位在首个 await 前、`finally` 复位） | RDI-9 复跑绿 |
+
+### 内审与代码评审（轮次与终态）
+
+- **偏离审计（read-only explore 子代理 · 1 轮）**：四类偏差（部分实现 / 静默简化 / 文档漂移 / 超文件表）**均无**；8 项验收判定全过（「先红后绿运行史 ∥ doc-check ∥ 仓套件」三项因审计工具面限制转呈）；无存活超范围改动。观察项 5 条（O1 批内件 429 行越顾问线 / O2 batch-lifecycle 行数微差 / O3 审计时点 §5 为空 / O4 tmp 件 / O5 CLI-ENTRY 超声明改动点已披露）——全部落本记录与交付报告。
+- **代码评审（内部 advisor · 2 轮）**：round 1 全量 = **pass**（🔴0 · 🟡2〔均不阻塞：batch-lifecycle 存量越 300 顾问线 ∥ 批内件 429 行越设计自定「~300」预算——未越 500 硬限〕· 🔵7）；修复轮（上表 #4/#5 两条 🔵 建议落地）→ round 2 修复核验 = **pass**（19/19 引文核验通过；无新缺陷；两修复点及邻域逐行实读）。**终态 = clean**（两轮均 pass、无未决 🔴）。
+- 评审其余 🔵（轮询成本属设计自定耦合之代价 / CLI-ENTRY 读数 as-of 快照 / 批档 §2 数值行他段写域 / FR3 批次级经 `sections["§1"]` 承载 / 档头计数口径）——不阻塞、逐条进交付报告；其中批档 §2 数值行属他段写域（本段不可改），CLI-ENTRY 读数随下轮刷新。
+
+### 验收对照读数（本实施轮实跑）
+
+- ① 批内件 RDI-1–RDI-12 先红后绿：**成立**（先红 12/12 · 后绿 12/12；修复轮后复跑仍绿）。
+- ② 只读闸（旧库哈希等 ∧ 无库不建 ∧ 零 DDL）：**成立**（RDI-4 五腿 (a)–(e) 全绿）。
+- ③ `node scripts/doc-check.mjs`：末次复跑 = **exit 0**（锚 0 悬空 ∥ 行宽闸 OK；首跑 FAIL 由本批 `CLI-ENTRY.md` 超宽行引起——已拆行修复；中途他批在飞档 `docs/desktop/design/PANEL-READBACK.md` 曾短暂产生非本批闸失败，已由其写域方修复、非本批文件）。
+- ④ 行数：新档 ledger-read 94 ∥ batch-read 37 ∥ read-data 127 ≤300；批内件 429（<500 硬限；越设计「~300」预算——见决策表 1）；batch-lifecycle 333（存量、零行为变）；余档 ≤241；`ledger.mjs` 241 = 零编辑。
+- ⑤ ACP-CLIENT 随动：§3 枚举四 ⇒ 五模块（`:78` / `:83` / `:87`）+ §3.5 模块表行（`:145`）**在档**。
+
+### 边界遵守
+
+在飞写域零触（design-token-echo 批 ∥ `ENG-TOKEN-BINDING.md` ∥ advisor-design 提示词与核内件 —— 本批零触；desktop 面零触）；`thincoder-core/ledger.mjs` 零编辑（D-11，只 import `discoverFamily`）；`DATA_COLUMNS` 零搬迁（D-10）；`initialize` 零动（D-9）；通知 params 只 `{cwd}`（D-12）。`docs/core/design/LEDGER.md` 登记（§2 面别 / §7.1 导出面）= 上抛协调项（#882 让渡后随动），本批未触。
+
+### 决策透明表（实施中自主判定——父侧可裁）
+
+| # | 判定 | 读法依据 |
+|---|---|---|
+| 1 | 批内件 429 行 > 设计自定「~300」预算——**不拆**（单件全表；拆分 = 对设计文件表的外扩） | 批档验收口径「超 500 = 拆」；评审 🟡/🔵 建议二择一——取「记录接受」路（本表即记录） |
+| 2 | 单范围读「坏档（非 SQLite）」⇒ 转 exit 1（读错）；族范围不可读 ⇒ 跳过 | 设计 §2.4 只写族面「不可读跳过」；§3.1 明列「读错 ⇒ exit 1」；单范围按最近读法 |
+| 3 | 观察域（`ctx.getCwd()`）变化 ⇒ 新域静默立基线 | 设计「首查立基线（静默）∥ 非观察项目不通知」的最近读法（域切换 = 新观察目标的首查） |
+| 4 | `--cwd` 值以 `--` 打头 ⇒ 视同缺值拒（fail-closed 边界读法） | §2.7 严格解析（未知参拒）的边界延伸 |
+| 5 | 三套补全除「list 词」外补登 list 四旗标 | CLI-ENTRY §3 横深对齐契约（三套须覆盖 §2 表内旗标词面）；设计 Δ 预算内 |
+| 6 | 错误面折叠单行 / watcher `inflight` 守卫 = 评审 🔵 建议的「改码」路（非「记例外」路） | 评审 round 1 建议其一；折叠即 §3.1 契约句的落形 |
+| 7 | 旧批内件 `2026-09-30-defect-fixes-cli.test.mjs` 的字面快照断言（bash ∥ fish「migrate audit」行）随词表演进失效——**未改该件**，归父侧 | 他批留存物；改动 = 重写历史 |
+
 ## §6 验证与收口（父代理）

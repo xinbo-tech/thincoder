@@ -159,7 +159,14 @@ export async function runCommandTable(command, args, ctx) {
         process.exitCode = await (args[0] === "migrate" ? m.runLedgerMigrate(args) : m.runLedgerAudit(args))
         break
       }
-      console.error("Usage: thincoder ledger migrate --dry-run | --confirm [--from <key>] | thincoder ledger audit [--root <dir>]")
+      // 只读数据接口（read-data-interface 批）：`ledger list --json [--full] [--family] [--cwd <dir>]`——
+      // 核内 runner（ledger-read.mjs）严格解析（缺 --json / 未知参 ⇒ usage + exit 1）；壳侧只分发。
+      if (args[0] === "list") {
+        const m = await import("@thincoder/core/ledger-read.mjs")
+        process.exitCode = m.runLedgerList(args.slice(1))
+        break
+      }
+      console.error("Usage: thincoder ledger migrate --dry-run | --confirm [--from <key>] | thincoder ledger audit [--root <dir>] | thincoder ledger list --json [--full] [--family] [--cwd <dir>]")
       exitSoon(1)
       break
     }

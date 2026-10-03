@@ -58,8 +58,9 @@ function assertMainAgentOnly(ctx, action, review) {
 
 /** 递归收集目录下全部 `*.md`（#369 · KD-4：显式嵌套路径为合法 create 面 ⇒ 顶层平扫会欠计
  *  ⇒ 复数情形漏判、默认定位可落非预期档）。只认真目录（`dirent.isDirectory()`——symlink 不入，
- *  防环）；单目录读错按无候选处理（尽力面，同旧平扫）。 */
-function collectMarkdownFiles(dir, out = []) {
+ *  防环）；单目录读错按无候选处理（尽力面，同旧平扫）。**转导出**（read-data-interface 批——
+ *  `batch/list` 读面文件集同源复用；零行为变）。 */
+export function collectMarkdownFiles(dir, out = []) {
   let entries = []
   try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return out }
   for (const e of entries) {

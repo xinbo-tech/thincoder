@@ -136,6 +136,8 @@ Usage:
                             messages / tool calls + coverage + size; --rebuild reindexes every session file
   thincoder ledger migrate --dry-run | --confirm   Ledger variant-key merge (dry-run report / backup then import; source recycled)
   thincoder ledger audit                           Read-only ledger dir audit (classify every db + suggestions)
+  thincoder ledger list --json [--full] [--family] [--cwd <dir>]
+                            Read-only ledger export as single-segment JSON (--full adds evidence; --family exports the discovered family)
   thincoder upgrade         Update to the latest version from npm
   thincoder completion <sh>  Generate shell completion script (bash / zsh / fish)
   thincoder -v, --version   Print version

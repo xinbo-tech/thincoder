@@ -44,6 +44,7 @@
 | `session/set_mode` | ✅ | plan / normal 切换（映射 `planMode`） |
 | `session/set_config_option` | ✅ | model / thinking / mode 分发（见 §5.3） |
 | `session/close` | ✅ | 返回 `{}` + stderr 日志；先 abort 在飞回合再删除 session |
+| `ledger/list` · `ledger/count` · `batch/list` | ✅ | 只读数据接口（扩展拉取面）——台账 / 批次档数据对外只读出口；params / result / 错误面契约 = `docs/cli/design/READ-DATA-INTERFACE.md` §3.3；过凭据门（同四族）；协议版本与 `initialize` 能力面零动（不进能力字段——先例 `checkpoint/*` · `memory/*`） |
 | `logout` | ❌ | 无账号体系 |
 
 ### 2.2 Client-side reverse-RPC（agent → IDE）
@@ -51,6 +52,7 @@
 | Method | 做 | 说明 |
 |---|---|---|
 | `session/update` | ✅ | 事件块见 §5（`agent_message_chunk` / `agent_thought_chunk` / `tool_call` / `tool_call_update` / `usage_update` / `config_option_update` / `current_mode_update` 等） |
+| `ledger/changed` · `batch/changed` | ✅ | 数据变更通知（观察周期内指纹变——5s 轮询；**信号面**：params 只 `{ cwd }`，数据经拉取方法取）；契约 = `docs/cli/design/READ-DATA-INTERFACE.md` §3.4 |
 | `session/request_permission` | ✅ | 工具审批 + 提问（审批通道的 ACP 实现；危险命令标注见 §5.4） |
 | `fs/read_text_file` | ✅ | **仅内部用于 edit 桥的读回**（读 IDE buffer 当前内容再算 diff）——独立 `read` 工具保持本地（两者不冲突）。**仅当客户端宣告 `fs.readTextFile` 时才发**（§11.4） |
 | `fs/write_text_file` | ✅ | write / edit 的写路径路由到 client（IDE diff 应用）。**仅当客户端宣告 `fs.writeTextFile` 时才发**；未宣告 ⇒ 回落本地写盘（§11.4） |
@@ -73,15 +75,16 @@ bin/thincoder.mjs ── "acp" 子命令 ──▶ thincoder-cli/src/acp.mjs
    (NDJSON JSON-RPC stdio      (AcpSession: 方法 → agent      (runAgent 事件桥
     层 + reverse-RPC)           + 会话生命周期/FIFO)            + 工具钩子 + 权限)
 
-   acp.mjs 的 handler 正文 = 四个模块（划分与判据见 §3.5）：
+   acp.mjs 的 handler 正文 = 五个模块（划分与判据见 §3.5）：
        acp/client-caps.mjs        initialize / authenticate（版本协商 · 能力快照 · authMethods 构造）
        acp/handlers-session.mjs   session/{new,prompt,cancel,close,set_mode,set_config_option}
        acp/handlers-slots.mjs     session/{list,load,resume,delete}（持久化槽族）
        acp/ext.mjs                checkpoint/* · memory/*
+       acp/read-data.mjs          ledger/list · ledger/count · batch/list + ledger/changed · batch/changed（只读数据接口）
        acp/login.mjs              `--login` 终端认证流程（非 stdio 服务模式）
 ```
 
-ACP 官方 SDK 是 npm 依赖——违反零依赖哲学，故自写精简层。`acp.mjs` 装配 transport / session / bridge 与四个 handler 模块，
+ACP 官方 SDK 是 npm 依赖——违反零依赖哲学，故自写精简层。`acp.mjs` 装配 transport / session / bridge 与五个 handler 模块，
 并为每个 JSON-RPC 方法建处理器（模块划分见 §3.5）；工具循环经 `callbacks.toolRouter` 拦截工具执行（默认空实现——TUI / CLI 路径行为不变）。
 
 ### 3.1 传输层（`thincoder-cli/src/acp/transport.mjs`）
@@ -134,11 +137,12 @@ ACP 官方 SDK 是 npm 依赖——违反零依赖哲学，故自写精简层。
 
 | 模块（新档名——无扩展名形态，见下注） | 装什么 | 关键缝 |
 |---|---|---|
-| `src/acp`（入口） | 常量（`VERSION` / `ACP_EXCLUDED_TOOLS`）· 注入默认（`defaultIsConfigured` / `defaultProviderStatus`）· `defaultCreateSession` · **`buildAcpHandlers` 装配**（合并四族）· `runAcpServer` | `buildAcpHandlers(deps)` 签名与返回 `{ handlers, sessions, notifyRef, requestRef }` **不变**（唯一外部契约——既有测档直驱它） |
+| `src/acp`（入口） | 常量（`VERSION` / `ACP_EXCLUDED_TOOLS`）· 注入默认（`defaultIsConfigured` / `defaultProviderStatus`）· `defaultCreateSession` · **`buildAcpHandlers` 装配**（合并五族）· `runAcpServer` | `buildAcpHandlers(deps)` 签名不变；返回 `{ handlers, sessions, notifyRef, requestRef, watcher }`（唯一外部契约——`watcher` = 变更观察器出参，`runAcpServer` 启动；既有测档直驱它） |
 | `acp/client-caps`（新） | 能力快照（§3.4）· 版本协商 · `authMethods` 构造 · `initialize` / `authenticate` handler | 快照 = 服务器级单例，构造期注入 |
 | `acp/handlers-session`（新） | 内存会话族：`session/new` · `prompt` · `cancel` · `close` · `set_mode` · `set_config_option` + `findSession` · `applyConfigOption` + **门助手** | 经 `ctx` 取共享态 |
 | `acp/handlers-slots`（新） | 持久化槽族：`session/list` · `load` · `resume` · `delete` + `slotEngineering` / `reattach`（#41 工程模式判据） | 同上 |
 | `acp/ext`（新） | `checkpoint/*` · `memory/*` + `ensureAcpMemory`（**纯搬迁**） | 同上 |
+| `acp/read-data`（追加——2026-10-04） | `ledger/list` · `ledger/count` · `batch/list` + 变更观察器（`ledger/changed` / `batch/changed`——5s 指纹轮询 · unref） | 经 `ctx` 取共享态；核模块动态 import（W8 契约②）；契约 = `docs/cli/design/READ-DATA-INTERFACE.md` §2.6 / §3.3 / §3.4 |
 | `acp/login`（新） | `runAcpLogin()`（`--login` 流程——§11.2 改法 4） | 独立入口，不进 stdio |
 
 > **档名形态注**：上表模块名按**无扩展名**形态书写（`.mjs` 省略）——新增档尚未创建，机检锚判据对不存在的档会报悬空
@@ -648,3 +652,4 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 - 2026-09-29（**residuals-round2 批 · 文档面实施轮 · eng-designer**——承批档 `docs/batches/2026-09-29-residuals-round2.md` §2.3 #589）：§7.1 过滤实现两处引注收正——导出点 = `thincoder-cli/src/cli/make-agent.mjs:21`；施用点 = 核 `toolsFinalize` 缝（挂点 `:39` ∕ 施用 `:101`）。**零新语义**。
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 · 台账 #841）：§11.8 回归面两档标注**不在盘**（2026-09-28 测试树全清重置后——引文 = 迁移期引文类；判据原文保留为历史记录）。**零新语义**（时态 ∥ 引文类）。明细 = 批档 §2 回填轮块。
 - 2026-10-03（**#841 设计修正轮（续 #10 上抛一）· eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2）：ACP 面随核统一解析收正——§11.5（现状段 · 门失败文案段 · 裁定理由 2）· §11.7-4 · §4 凭据文案行 · D17 行；「持 key ∧ 无有效 `defaultModel`」= 放行（协议面零提示行——提示通道未决）。2026-09-18 批 AC12 随之失效（② 分支默认接线不可达）。**产品码零触**。
+- 2026-10-04（**read-data-interface 批 · 实施轮随动 · eng-coder**——承批档 `docs/batches/2026-10-03-read-data-interface.md` §2 / 设计档 `docs/cli/design/READ-DATA-INTERFACE.md` §4）：① §2.1 增只读数据接口方法行（`ledger/list` · `ledger/count` · `batch/list`——过凭据门；协议版本 / `initialize` 能力面零动）；② §2.2 增变更通知行（`ledger/changed` · `batch/changed`——params 只 `{ cwd }`）；③ §3 枚举四 ⇒ 五 handler 模块（+ `acp/read-data.mjs`）+ §3.5 模块表增行；④ §3.5 入口行收正（合并五族；返回 + `watcher` 出参——原「返回不变」句改写）。**零新语义**（登记 + 收正）。

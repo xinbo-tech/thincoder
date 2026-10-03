@@ -24,9 +24,10 @@ export function printCompletion(shell) {
         sweep)  COMPREPLY=( $(compgen -W "--origin= --dry-run --confirm" -- "$cur") ) ;;
       esac ;;
     ledger) case "$prev" in
-        ledger)  COMPREPLY=( $(compgen -W "migrate audit" -- "$cur") ) ;;
+        ledger)  COMPREPLY=( $(compgen -W "migrate audit list" -- "$cur") ) ;;
         migrate) COMPREPLY=( $(compgen -W "--dry-run --confirm --from" -- "$cur") ) ;;
         audit)   COMPREPLY=( $(compgen -W "--root" -- "$cur") ) ;;
+        list)    COMPREPLY=( $(compgen -W "--json --full --family --cwd" -- "$cur") ) ;;
       esac ;;
     distill) COMPREPLY=( $(compgen -W "--yes --layer=" -- "$cur") ) ;;
     completion) COMPREPLY=( $(compgen -W "bash zsh fish" -- "$cur") ) ;;
@@ -59,7 +60,7 @@ _thincoder() {
         'upgrade[Update to latest version from npm]' \\
         'completion[Generate shell completion script]' \\
         'session[Session dir GC: session gc --dry-run|--confirm]' \\
-        'ledger[Ledger variants: migrate / audit]'
+        'ledger[Ledger variants: migrate / audit / list]'
       ;;
     args)
       case "$words[1]" in
@@ -72,6 +73,7 @@ _thincoder() {
           esac ;;
         ledger) case "$words[2]" in
             migrate) _arguments '--dry-run[Report only]' '--confirm[Apply migration]' '--from:Source key:' ;;
+            list)    _arguments '--json[Single-segment JSON output]' '--full[Include evidence]' '--family[Family scope]' '--cwd:Project anchor:' ;;
             audit)   _arguments '--root:Scan root dir:' ;; esac ;;
         distill) _arguments '--yes[Skip confirmation]' '--layer=[Layer filter]' ;;
         completion) _values 'shell' 'bash' 'zsh' 'fish' ;;
@@ -94,7 +96,7 @@ complete -c thincoder -a distill  -d 'Extract knowledge from session'
 complete -c thincoder -a upgrade  -d 'Update to latest version'
 complete -c thincoder -a completion -d 'Shell completion'
 complete -c thincoder -a session -d 'Session dir GC (session gc --dry-run|--confirm)'
-complete -c thincoder -a ledger -d 'Ledger variants: migrate / audit'
+complete -c thincoder -a ledger -d 'Ledger variants: migrate / audit / list'
 complete -c thincoder -a acp -d 'Agent Client Protocol server for IDEs'
 
 # Flags
@@ -133,8 +135,9 @@ complete -c thincoder -n '__fish_seen_subcommand_from distill' -l layer -d 'Laye
 complete -c thincoder -n '__fish_seen_subcommand_from completion' -a bash -d 'Bash completions'
 complete -c thincoder -n '__fish_seen_subcommand_from completion' -a zsh  -d 'Zsh completions'
 complete -c thincoder -n '__fish_seen_subcommand_from completion' -a fish -d 'Fish completions'
-complete -c thincoder -n '__fish_seen_subcommand_from ledger' -a 'migrate audit' -d 'Ledger variants: migrate / audit'
+complete -c thincoder -n '__fish_seen_subcommand_from ledger' -a 'migrate audit list' -d 'Ledger variants: migrate / audit / list'
 complete -c thincoder -n '__fish_seen_subcommand_from ledger' -l dry-run -l confirm -l from -l root -d 'Ledger flags'
+complete -c thincoder -n '__fish_seen_subcommand_from ledger; and __fish_seen_subcommand_from list' -l json -l full -l family -l cwd -d 'Ledger list flags'
 `)
     }
 }

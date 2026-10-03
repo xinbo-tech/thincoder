@@ -126,6 +126,34 @@ export function readBatchStatusLine(src) {
 }
 
 /**
+ * §N 段状态词解析（read-data-interface 批——`batch/list` 读面单源，设计档 §2.5）：段头
+ * （sectionHeaderRe）/ 状态行正则（STATUS_LINE_RE）/ 词表（STATUS_WORDS）全消费既有单源常量——
+ * 与冻结门字面零漂移。`§1`–`§3` / `§5`：段内首个状态行的值按**终态词优先**（closed / done 先于
+ * open——镜像冻结门取值序）命中已识别关键词 ⇒ 返回该关键词；段头缺失 / 无状态行 / 无命中 ⇒ null。
+ * `§4` / `§6` 无词条 ⇒ 字面 `无状态词`（不造词）。
+ * @param {string} src — 档全文
+ * @param {number|string} seg — 段号（`2` / `"2"`——同 sectionHeaderRe 消费形）
+ * @returns {string|null} 已识别关键词 / null / 字面「无状态词」（§4 / §6）
+ */
+export function readSectionStatusWord(src, seg) {
+  const words = STATUS_WORDS[seg]
+  if (!words) return "无状态词"
+  const hdr = sectionHeaderRe(seg).exec(src)
+  if (!hdr) return null
+  const nextRe = /^## §\d/gm
+  nextRe.lastIndex = hdr.index + hdr[0].length
+  const next = nextRe.exec(src)
+  const body = src.slice(hdr.index + hdr[0].length, next ? next.index : src.length)
+  const m = body.split(/\r?\n/).map((line) => STATUS_LINE_RE.exec(line)).find(Boolean)
+  if (!m) return null
+  const value = m[1].trim()
+  for (const w of [words.closed, words.done, words.open]) {
+    if (w !== undefined && value.includes(w)) return w
+  }
+  return null
+}
+
+/**
  * §N 段内「`**状态行**：` 行存在性」判据（#422③——close 对无状态行档自建机读位的**采集面**：
  * 与 readBatchStatusLine 的「值可解析」正交——无行 ⇒ 可自建；有行而值不可解析 ⇒ 仍 fail-closed）。
  * 段界定消费 sectionHeaderRe（同单源——`## §20` 不误命中 `§2`）。

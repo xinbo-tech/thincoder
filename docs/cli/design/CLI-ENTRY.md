@@ -12,7 +12,8 @@
 
 - **承载**：命令词面——命令树（有哪些命令 / 子命令 / 旗标）· 分发结构（`switch (command)` 族）· `USAGE` 对外文本 · 补全脚本三套发射（bash / zsh / fish）。
 - **不承载**（D2——单一权威源，各面各有其主）：
-  - 单命令**行为契约**（解析之后的执行语义）= 该命令所属板块设计档：`memory` → `docs/core/design/MEMORY.md` · `session gc` / `session index` → `docs/core/design/SESSION.md` · `ledger` → `docs/core/design/LEDGER.md` · `acp` → `docs/cli/design/ACP-CLIENT.md` · `chat` → agent 循环族档。本档只给词面（树形 / 旗标名 / 发射形态）。
+  - 单命令**行为契约**（解析之后的执行语义）= 该命令所属板块设计档：`memory` → `docs/core/design/MEMORY.md` · `session gc` / `session index` → `docs/core/design/SESSION.md` · `acp` → `docs/cli/design/ACP-CLIENT.md` · `chat` → agent 循环族档。本档只给词面（树形 / 旗标名 / 发射形态）。
+  - `ledger` 族：`migrate` / `audit` → `docs/core/design/LEDGER.md`；`list` → `docs/cli/design/READ-DATA-INTERFACE.md`。
   - **档位（行数）登记** = `docs/cli/design/CLI-DEBT.md`（本档不另设读数面）。
   - 补全面**缺口**在册 = `docs/cli/design/CLI-DEBT.md` §3 尾项 T1 / T2 / T3（本档只给契约，不复制缺口清单）。
 - 入口链 = `thincoder-cli/bin/thincoder.cjs`（CJS shim）→ `thincoder-cli/bin/thincoder.mjs`（分发主体）。
@@ -39,6 +40,7 @@
 | | `index` | `--status` / `--rebuild`（互斥；无参 = `--status`） | `thincoder-core/session-index-cmd.mjs` |
 | `ledger` | `migrate` | `--dry-run` / `--confirm`（互斥）· `--from <key>`（可重复） | `thincoder-core/ledger-migrate.mjs` |
 | | `audit` | `--root <dir>`（可重复） | `thincoder-core/ledger-migrate.mjs` |
+| | `list` | `--json`（必需）· `--full` · `--family` · `--cwd <dir>`（空格形） | `thincoder-core/ledger-read.mjs` |
 | `upgrade` | —— | —— | `bin/thincoder.mjs` |
 | `completion` | —— | 位置参 shell（`bash` / `zsh` / `fish`） | `src/completions.mjs` |
 | `-h` / `--help` · `-v` / `--version` | —— | —— | `bin/thincoder.mjs` |
@@ -74,6 +76,7 @@
 - 判据源 = 实装面 + 各批裁定（补全面 / 机检形逐条注实装源——§2 / §4）。
 
 ## 变更记录
+- 2026-10-04（**read-data-interface 批 · 实施轮随动 · eng-coder**——承批档 `docs/batches/2026-10-03-read-data-interface.md` §2 / 设计档 `docs/cli/design/READ-DATA-INTERFACE.md` §4）：① §2 表增 `ledger list` 行（`--json` 必需 · `--full` · `--family` · `--cwd <dir>` 空格形；实装源 = `thincoder-core/ledger-read.mjs`）；② §1 属主行补「`ledger list` → `docs/cli/design/READ-DATA-INTERFACE.md`」；③ 三套补全同轮随动（`list` 词 + 四旗标——bash / zsh / fish；§3 横深对齐句仍成立）。**零新语义**（词面登记）。
 - 2026-09-30（**缺陷修复批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-defect-fixes.md` §2 ∥ 台账 #704）：§3 发射契约收正（**源档形 ≡ 发射字节形**——原单反斜杠形致 `bash -n` 语法错 ∕ zsh 分派不匹配；JS 插值险位 `\${` 例外写明）；§4 MS-2 宿主行收正（原宿主随测试树全清退场——现载体 = 批内件，回迁随重建轮）。
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§3 横深对齐句收正（ledger 族已补——#677 I8；余缺口 = T1）。**零新语义**。
 

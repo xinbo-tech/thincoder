@@ -55,6 +55,10 @@ export function ledgerDbPath(cwd) {
 /** 未决四态（「活条目」口径 = 计数单源 WHERE 集；已核销 / 已废弃 = 归档态）。 */
 export const PENDING_STATUSES = ["待讨论", "待设计", "在途", "待核销"]
 
+/** 台账库结构版本（N2 标记**单源**——`PRAGMA user_version` 落标：写面开库 `v < 本值 ⇒ 置`；
+ *  读面如实回读（旧库未标 = 0）；结构变更（新列 / 新表）同步升号——2026-10-03 read-data-interface 批）。 */
+export const LEDGER_SCHEMA_VERSION = 1
+
 /** 六态允许迁移表（ledgerUpdate 迁移前判，不在表内 → 拒——规格 ②.2；设计档 §2.1）。 */
 export const ALLOWED_MIGRATIONS = {
   "待讨论": ["待设计", "已废弃"],
@@ -100,12 +104,39 @@ export function ensureExecutorColumn(db, { exists } = {}) {
   }
 }
 
+/** 只读态开库（read-data-interface 批 FR2③——readOnly 句柄 + **零 DDL / 零 ALTER**；先例 = 本包
+ *  `ledger-migrate.mjs` 的 `openRead`）：文件必已在盘；items 表缺失探针 ⇒ 视同空账返回 null
+ *  （非台账库的 SQLite 档 / 空档——观测面保持「空集」，文件零触）。不可开（坏档 / 非 SQLite）⇒
+ *  抛（调用方按面处置：单范围 = 读错；族范围 = 不可读跳过）。 */
+function openReadOnly(file) {
+  let db
+  try {
+    db = new DatabaseSync(file, { readOnly: true })
+    if (db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'items'").get() === undefined) {
+      db.close()
+      return null // 无 items 表 ⇒ 非台账库 ⇒ 空账（探针零写）
+    }
+    return db
+  } catch (e) {
+    try { db?.close() } catch { /* 已关 / 未开 */ }
+    throw new Error(`台账库打开失败：${file}（${e.message}）`)
+  }
+}
+
+/** 写面落标（N2）：`user_version` < 常量 ⇒ 置；≥ 常量不动（未来版本零回退）。只在写面开库调用。 */
+function markSchemaVersion(db) {
+  const v = Number(db.prepare("PRAGMA user_version").get().user_version ?? 0)
+  if (v < LEDGER_SCHEMA_VERSION) db.exec(`PRAGMA user_version = ${LEDGER_SCHEMA_VERSION}`)
+}
+
 /** 开库（cwd = 项目根——仅作关联键）→ DatabaseSync 句柄 + 幂等建表 + 老库幂等迁移（executor 列）。
  *  读面（create=false）：库文件不存在 → 返回 null（空账——读面不建库、无副作用）。
  *  写面（create=true）：库文件不存在自动建（台账目录随之创建）；项目根目录不存在 → 抛友好错误。
+ *  **只读态**（readOnly=true——读面专用）：只读句柄 + 零 DDL / ALTER + items 探针（见 openReadOnly）；
+ *  如实副作用：旧库（缺 executor 列）**读**不再自动补列——补列归写面开库；读出行缺列按 null 归一。
  *  **歧义锚**（≥2 候选——`projectRootView` `ambiguous` 态）⇒ **显式拒**（列候选 + 显式项目根指引；
  *  零写——不静默回退锚；族锚「项目不可解析」，AC-M2-17）；兜底 `resolve(cwd ?? ".")` 只属 none 态。 */
-export function openLedger(cwd, { create = false } = {}) {
+export function openLedger(cwd, { create = false, readOnly = false } = {}) {
   const dir = resolve(cwd ?? ".")
   // 歧义锚 ⇒ 显式拒（零写——消「缺省空读 / 错写落锚」双面症；读 / 写五工具同经本门）。
   const view = projectRootView(dir)
@@ -118,11 +149,13 @@ export function openLedger(cwd, { create = false } = {}) {
     throw new Error(`项目目录不存在：${dir}——cwd 请给存在的项目根（相对路径按当前工作目录解析；缺省 = 会话项目根）`)
   }
   if (!existsSync(file) && !create) return null
+  if (readOnly) return openReadOnly(file)
   try { mkdirSync(ledgerDir, { recursive: true }) } catch { /* 已存在 / 并发建目录竞争——忽略 */ }
   const db = new DatabaseSync(file)
   try {
     db.exec(DDL)
     ensureExecutorColumn(db)
+    markSchemaVersion(db)
   } catch (e) {
     db.close()
     throw new Error(`台账库打开失败：${file}（${e.message}）`)

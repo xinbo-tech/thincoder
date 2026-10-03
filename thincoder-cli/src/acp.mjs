@@ -3,15 +3,16 @@
  * Agent Client Protocol (schema v1) on stdio, so ACP clients (Zed, JetBrains
  * AI Chat, Paseo) can drive sessions directly.
  *
- * Handler bodies live in four modules (division + criteria = docs/cli/design/ACP-CLIENT.md
+ * Handler bodies live in five modules (division + criteria = docs/cli/design/ACP-CLIENT.md
  * §3.5 — the former 368-line single-function `buildAcpHandlers` split by method family):
  *   acp/client-caps.mjs       initialize / authenticate（版本协商 · 能力快照 · authMethods 构造）
  *   acp/handlers-session.mjs  session/{new,prompt,cancel,close,set_mode,set_config_option} + 门助手
  *   acp/handlers-slots.mjs    session/{list,load,resume,delete}（持久化槽族）
  *   acp/ext.mjs               checkpoint/* · memory/*
+ *   acp/read-data.mjs         ledger/list · ledger/count · batch/list + ledger/changed · batch/changed（只读数据接口）
  *   acp/login.mjs             `--login` terminal auth flow (non-stdio)
  * This file keeps constants, the injectable defaults and the assembly — the seam
- * `buildAcpHandlers(deps)` (signature + `{ handlers, sessions, notifyRef, requestRef }`)
+ * `buildAcpHandlers(deps)` (signature + `{ handlers, sessions, notifyRef, requestRef, watcher }`)
  * is the only external contract (both existing ACP test files drive it directly).
  *
  * #41（2026-09-18）：`session/load` / `session/resume` 两路工程模式会话改「先判后装载」
@@ -32,6 +33,7 @@ import { createCapsHandlers } from "./acp/client-caps.mjs"
 import { createRequireConfigured, createSessionHandlers } from "./acp/handlers-session.mjs"
 import { createSlotsHandlers } from "./acp/handlers-slots.mjs"
 import { createExtHandlers } from "./acp/ext.mjs"
+import { createReadDataHandlers } from "./acp/read-data.mjs"
 
 const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version
 
@@ -113,16 +115,21 @@ export function buildAcpHandlers({
     log,
   }
 
+  // 只读数据接口族（read-data-interface 批）：三方法 + 变更观察器（`runAcpServer` 启动）。
+  const readData = createReadDataHandlers(ctx)
+
   return {
     handlers: {
       ...createCapsHandlers({ version, clientCaps, requireConfigured: ctx.requireConfigured, log }),
       ...createSessionHandlers(ctx),
       ...createSlotsHandlers(ctx),
       ...createExtHandlers(ctx),
+      ...readData.handlers,
     },
     sessions,
     notifyRef,
     requestRef,
+    watcher: readData.watcher,
   }
 }
 
@@ -138,6 +145,7 @@ export async function runAcpServer() {
   const server = createAcpServer(built.handlers, { log })
   built.notifyRef.current = server.notify
   built.requestRef.current = server.request
+  built.watcher.start() // 变更观察器：首查立基线（静默）+ 5s 指纹轮询（进程终灭即止）
   log(`[acp] thincoder ${VERSION} — ACP v1 over stdio, waiting for initialize`)
   server.start()
 }
