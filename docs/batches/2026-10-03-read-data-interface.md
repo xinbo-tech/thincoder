@@ -17,7 +17,7 @@
 **授权口径**：全自动通道（用户 23:14「都自动跑完」沿——代点火评审 ∥ 派发 ∥ 代签 ∥ 落地）；止点 = 新范围 / 口径裁决 / 破坏性。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（设计档 docs/cli/design/READ-DATA-INTERFACE.md 落笔 · doc-check 复跑 exit 0 · 待父侧点火评审）
+**状态行**：设计完成（设计档 docs/cli/design/READ-DATA-INTERFACE.md · 设计评审 #41（轮次 1）九条收正 · doc-check 复跑 exit 0 · 待父侧复核）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 **本批条目（覆盖——需求档 `docs/cli/requirements/READ-DATA-INTERFACE.md` FR1–FR3 ∥ N1–N3）**
@@ -91,6 +91,26 @@
 2. 词面登记随动（`docs/cli/design/CLI-ENTRY.md` §2 行 ∥ `docs/cli/design/ACP-CLIENT.md` §2.1 / §2.2 行）——实施轮同步落；排期请父侧知悉。
 3. 计数收正披露（一致性面 · 已修）：`docs/README.md` §1 前值 `cli/` 14（design 9 + requirements 5）与实际 15（需求档 10-03 已落未登记）不符——本轮随档一并收正为 16（另 + 本设计档；全档总数 50 ⇒ 52）。
 4. 口径披露：`docs/core/design/LEDGER.md` §7.4 ⑤ 不变量（不新增命令 / 工具面 ∥ headless 零新增输出）= 展示面机制 v1 语境——与本批新出口板两不相抵（设计档 §1 已书面厘清，备评审复核）。
+
+**修复轮（设计评审 #41 收正 · 九条全采纳 · 2026-10-04 · eng-designer）**
+
+父侧裁定 = 九条全采纳；逐条落点（设计档 = `docs/cli/design/READ-DATA-INTERFACE.md`——行号 = 修复后盘上读数）：
+
+| # | 严重度 | 处置 | 设计档落点 |
+|---|---|---|---|
+| 1 | 🟡 | §4 表 ACP-CLIENT 行随动落点补两处：§3 枚举（`:76` ∥ `:84`——四 ⇒ 五 handler 模块，+ `acp/read-data.mjs`（拟新增））+ §3.5 模块表（+ 行）；Δ +7 ⇒ +9 · 预算 ~657 ⇒ ~659 | `:171` |
+| 2 | 🟡 | §2.6 ∥ §3.4 写死通知观察域（服务进程 cwd——每轮 `ctx.getCwd()` 求值，与 `params.cwd` 缺省同取值；非观察项目变更不通知） | `:66-67` ∥ `:136` |
+| 3 | 🟡 | §1 口径厘清补第二处（`docs/core/design/LEDGER.md:453` §9 边界——「不监听文件系统」= 非 `fs.watch` 监听）+ #882 让渡登记轮衔接语 | `:18-20` |
+| 4 | 🔵 | 引用收正「§7.4 ⑤」⇒「§7.8 不变量 ⑤」（`docs/core/design/LEDGER.md:361`）——本档上抛项 4 原文按本块收正 | `:19` ∥ 本块 |
+| 5 | 🔵 | §7 RDI-4 补一腿（文件在盘但非台账库——SQLite 可开、无 `items` 表 ⇒ `projects: []` ∧ 文件零改） | `:217` |
+| 6 | 🔵 | §4 表 README 行改「现行 ≈154 · Δ 0（本轮已落）」——实读 = 154（内容行口径——与全表同口径；评审记 155 = 尾随空行并入口径） | `:169` |
+| 7 | 🔵 | §3.3 `ledger/count` 行补语义（未决四态计数——单源 = 核 `ledgerCount`） | `:123` |
+| 8 | 🔵 | §3.2 写死 `root` / `name` 派生（与库键同源解析项目根——`resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")`；`name` = basename） | `:116` |
+| 9 | 🔵 | §4 表增模块列（本批 = M2 ∥ M3；余 `—`）+ L7 复核行（去重计数 = 2 ≤ 2——不拆批） | `:154-172` ∥ `:174` |
+
+- **L7 模块面（受影响文件归类——补批档本表模块标注）**：M2 = `ledger-db.mjs` ∥ `ledger-cmd.mjs` ∥ `ledger-read.mjs`（拟新增）∥ `ledger.mjs` ∥ `docs/core/design/LEDGER.md`；M3 = `batch-skeleton.mjs` ∥ `batch-read.mjs`（拟新增）∥ `batch-lifecycle.mjs`；余 `—`。复核 = 2 ≤ 2 ⇒ 不拆批（判定时点 = §2 表落表后复核；口径 = `docs/core/design/BATCH-RECORD.md` §5.1）。
+- **验收**：仓根 `node scripts/doc-check.mjs` 修复轮复跑 = **exit 0**（锚 0 悬空 ∥ 行宽闸 OK）。
+- 说明：本轮回填 = 文档面收正（零语义外扩）；设计档 §4 表 + 变更记录同笔落——本档仅追加本块（§1 ∥ §3–§6 零触）。
 
 ## §3 设计评审（评审子代理）
 
