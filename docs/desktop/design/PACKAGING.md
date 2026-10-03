@@ -1,7 +1,7 @@
 # 桌面端（DESKTOP）· 打包与发行（打包链 · Windows 安装包 · 官网托管）
 
 > 面 = **打包与发行面**——打包链（`electron-builder.yml`）· Windows NSIS x64 安装包（签名就绪）· 官网（thincoder.com）托管（阶段一）· **自动更新（electron-updater ∥ generic feed——§2.8）** · **官网桌面面（站点仓规格——§2.9）**；本档是该面的单源设计。
-> 需求侧 = 需求分卷（本域卷 = `docs/desktop/requirements/PACKAGING.md`——**D12 ∥ D32**；查卷口 = `docs/desktop/requirements/PROJECT.md` §4 **D 表索引**）；总览 ∥ 跨域决策 ∥ 索引 = `docs/desktop/design/PROJECT.md`；发布线 = `docs/RELEASE.md`（阶段 3b——桌面端首版已登记发布单元）。
+> 需求侧 = 需求分卷（本域卷 = `docs/desktop/requirements/PACKAGING.md`——**D12 ∥ D32 ∥ D40 ∥ D41 ∥ D42**；查卷口 = `docs/desktop/requirements/PROJECT.md` §4 **D 表索引**）；总览 ∥ 跨域决策 ∥ 索引 = `docs/desktop/design/PROJECT.md`；发布线 = `docs/RELEASE.md`（阶段 3b——桌面端首版已登记发布单元）。
 > 建档 = 2026-10-02（文档体系重组批 #813 · 波 1——内容逐字迁自 `docs/desktop/design/PROJECT.md` §2 / §4.1 / §4.2 / §5 / §6.1 / §7 / §10，as-of 2026-10-02；段号随迁重编（§5.x ⇒ §2.x）；迁移前原址 = 各源档保位指针）。
 > **行数纪律（300 建议 ∕ 500 硬限）只对代码档**（`.mjs` ∥ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
 
@@ -14,10 +14,11 @@
 
 | KD-71 | **桌面自动更新（阶段二）= electron-updater + generic feed（三件面同批落）**（桌面发布·阶段二批 · 2026-10-02 · 台账 #810）：① **应用侧**——`thincoder-desktop/src/main/update.mjs`（拟新增 · 策略面零 `electron` ∥ 零 `electron-updater` 顶层 import ∥ 注入缝——先例 = `heap-watch.mjs`）+ `main.mjs` 装配（`createRequire` 取 `autoUpdater`）；**行为合同** = 启动自检（`app.whenReady()` 后 10s 一次/会话；门 = `isPackaged ∧ 非 --smoke`）→ 静默下载（`autoDownload = true` 显式）→ 提示重启（通知一次/版本 + 帮助菜单「检查更新…」状态机——§2.8.1 表）；安装 = `autoInstallOnAppQuit = true`（退出即安静安装）∥ 菜单点按 = 确认框 ⇒ `quitAndInstall(true, true)`（安静 + 装后重拉——6.8.9 源读在册）；**零新事件通道**（主进程原生面——`onNative` 缝 +1〔`update` 第四项〕；`ev:menu` 六值 ∥ `EVENT_CHANNELS` 24 ∥ 白名单 47 零动；渲染面零接线）；② **构建侧**——`publish` = `{ provider: generic, url: https://thincoder.com/downloads/ }`（§2.1 行）；生成物 = `latest.yml`（落 dist 根）+ `app-update.yml`（随 `resources/`——源读在册——§2.8.2）；check-dist +4 断言；依赖 = `electron-updater ^6.8.9` 入 `dependencies`（**首个第三方运行依赖**——声明面三处收正）；③ **站点侧** = feed 三件（`thincoder.com/downloads/` 下：exe ∥ blockmap ∥ `latest.yml`——§2.8.3；上传序 exe→blockmap→latest.yml ∥ prune 豁免 ∥ 版本四点对盘）；**边界** = 单通道（beta ∥ 回滚 ∥ 降级不做）∥ 周期拍不做 ∥ 渲染面更新面不做（须新通道）∥ 发布动作 = 用户门 | 台账 #810（用户 2026-10-02 00:44 问询 + 「开始」令 = 采用）；可行性 = 标准件（electron-updater 6.8.9 ∥ v6.8.9 源读 2026-10-02）；触发面 = D36 菜单批「检查更新（归 #810）」挂点承接 | **被否**：`publish` 缺省（undefined ⇒ update-info 路径崩——#807 构建窗实证）· `autoDownload = false` 手动下载（违「静默下载」口径）· 渲染面提示面（须新 IPC 通道——违零新通道）· beta/alpha 通道（超范围）· 应用内进度 UI（打扰会话）· 周期拍（会话期单次自检足够） |
 | KD-72 | **官网桌面面（阶段二）= 站点仓页集扩建 + 发布随动（一次性规格）**（桌面发布·阶段二批 · 2026-10-02 · 台账 #826）：① **页集**——`thincoder.com/www/desktop.html`（拟新增——桌面新页，照 `cli.html`/`vscode.html` 先例，§2.9.2 章节规格）∥ `download.html` 桌面卡置首（直链安装包 + 版本 ∥ 系统要求行 ∥ 更新句——§2.9.3）∥ `index.html`（三条入口 ∥ meta——§2.9.4）∥ `about.html`（版本行 + 桌面——§2.9.5）∥ `changelog.html`（桌面节——首发 v0.10.1——§2.9.6）∥ 导航全站同拍（桌面项在 VS Code 后）∥ `sitemap.xml` ∥ **零图**（截图位 = 不设——沿全站零 `<img>` 先例）；② **脚本**——`gen-changelog.mjs` desktop 臂 ∥ `deploy-oss.mjs` prune 豁免 ∥ `upload-download.mjs` 新档（feed 上传——§2.9.7）；③ **版本面三处**（about ∥ download ∥ changelog 页头）= 号随发布（`docs/RELEASE.md` §6.1/§6.5 口径——桌面 = 源树）；**执行 = 父侧轮**（站点仓独立仓——子代理零写；本档 = 规格单源）；**边界** = 零样式 ∕ 零设计体系改动（只加内容面与既有类）∥ 零构建保持 ∥ `install.html` 主体不做（桌面安装步骤归 desktop 页——阶段一边界保持）∥ Linux ∕ mac 面不做 | 台账 #826（用户 2026-10-02 21:39「网站要更新加上桌面版的介绍」）；形态 = 照 cli/vscode 先例（父侧建议 · 用户「开始」= 采用）；与 #810 咬合面 = 更新 feed 托管（§2.8.3） | **被否**：截图区（全站零图先例——后续要点图另行小笔）· 并入 `install.html` 主体（阶段一边界——桌面手册归专页）· changelog 桌面节插在 VS Code 节前（RELEASE.md §6.2 定「随其后」）· `deploy-oss.mjs` 吞上传（全量遍历 + 大件重传——阶段一已否） |
+| KD-73 | **桌面 Linux 产物（AppImage ∥ deb · 构建机链 · 更新面分流）**（桌面 Linux 产物批 · 2026-10-03 · 台账 #847 · 需求 D42）：① **产物与目标**——`AppImage`（免安装单文件——主 ∥ 自动更新单元）+ `deb`（Debian/Ubuntu 系——手动升级单元）双目标 × x64；`artifactName` 承全局模板（`ThinCoder-Setup-${version}.${ext}`——首跑实产在册，零改）；② **构建通道 = 内网构建机**（代号 ha-proxy · `10.0.0.5` · Ubuntu 22.04.5 · x86_64 · 首跑全链实证——配方 = §2.11.1；**备用** = GitHub Actions（`.github/workflows/linux-build.yml` 在册——org 账单锁未解，零动）；WSL 两代判死 = 批档 §1 补记 ∥ 补记二）；③ **仓内修复三处**（现状 ⇒ 修法 ⇒ 判据 = §2.11.2 表 3）：**图标**（Linux 拒 `.ico` ⇒ 入库 `build/icon.png`（256×256 · 2872 B——`build/icon.ico` 第 4 帧字节切片 · 零转换）+ `linux.icon` 显式）∥ **deb 元数据**（fpm 要 homepage + author.email ⇒ `package.json` 补 `homepage` ∥ `author`——2026-10-03 用户定值）∥ **feed 分流**（`latest-linux.yml` 不得含 deb 条目 ⇒ `deb.publish: null`——deb = 手动升级单元，不产 update-info）；④ **更新面分流**（AppImage 跟 D40：feed 单条目 ⇒ `AppImageUpdater` 拾取；deb = **无自动更新**——双保险：feed 无 deb 条目 + 武装门扩「Linux 仅 AppImage 运行（`APPIMAGE` 在）」；上游事实在案：`electron-builder` 仍向 deb 资源面写 `package-type: deb` ∥ `app-update.yml`（`app-builder-lib/out/publish/PublishManager.js:193-194` 该径不过目标级 publish）⇒ 分流真值由我方门承担）；⑤ **产物校验** = check-dist **Linux 臂**（+9 断言——§2.11.3；平台分臂同脚本）；⑥ **验收**（可自动面 = check-dist 绿 + AppImage 结构提取读数；人工面 = 用户真机走查——**WSLg 面不可行**〔WSL2 判死〕⇒ 重裁 = §2.11.3）；⑦ **站点与发布**（feed 上传序 = AppImage → deb → `latest-linux.yml` 末传 ∥ `downloads/` prune 豁免沿用 ∥ 站点区块规格 = §2.11.5；发布线 = `docs/RELEASE.md` §5.6 Linux 臂）；⑧ **取回落位** = `D:\WSL\artifacts\<版本>\`（版本子目录——消 `latest-linux.yml` 跨版本覆盖面）；**边界** = rpm ∥ Snap ∥ macOS 不做（D42）∥ 构建机图形冒烟（xvfb/GUI 栈）不做 ∥ CI 矩阵待账单锁解 ∥ 站点执行 = 父侧轮 ∥ Linux 签名面不做（两产物均不签） | 需求 D42（用户 2026-10-03 17:27 ∥ 17:35）+ 批档 §1 补记二（首跑三缺项 + 实产读数）；机制实读 = `app-builder-lib@26.15.3` ∥ `electron-updater@6.8.9`（在盘）八坐标（`FpmTarget.js:133-141` ∥ `PublishManager.js:193-194` ∥ `:337-360` ∥ `AppImageTarget.js:135-143` ∥ `platformPackager.js:107-123` ∥ `LinuxTargetHelper.js:203-219` ∥ `:296-313` ∥ `iconConverter.js:190-207`；拾取面 = `Provider.js:74-90`） | **被否**：两目标分两次单跑（后跑覆盖 `latest-linux.yml`——首跑探针实证 deb-only 输出）；`deb.publish: {publishAutoUpdate:false}`（绕、键义偏移）；`linux.publish: null` 除 deb 资源面（AppImage 需 `app-update.yml`——同源不可分）；仅靠 feed 无 deb 条目、不设武装门（静默失败尝试 ∥ 语义靠巧合）；`artifactName` 去「Setup」（首跑实产 + 站点/校验同刻改名——无必要）；图标 512 重绘（品牌形零改；256 = ICO 帧上限） |
 
 ## 2. 打包链与发行面（需求卷 D12 ∕ D32）
 
-> **阶段（D32 分期令 · 2026-10-01）**：**阶段一 = 本批**——打包链（`electron-builder.yml`）+ **Windows 安装包**（NSIS x64 · 签名就绪）+ 官网（thincoder.com）托管下载；**阶段二 = 后批**——免安装包 ∥ macOS ∥ Linux 产物（构建机后补）∥ 应用商店（Windows 商店 ∥ Snap）∥ 自动更新。机制 ∕ 契约单源 = 本档 §1 **KD-64**（本节 = 实施与操作面展开）。
+> **阶段（D32 分期令 · 2026-10-01）**：**阶段一** = 打包链（`electron-builder.yml`）+ **Windows 安装包**（NSIS x64 · 签名就绪）+ 官网（thincoder.com）托管下载；**阶段二** = 免安装包 ∥ macOS ∥ 应用商店（Windows 商店 ∥ Snap）（后批）；**Linux 产物 = D42 批（§2.11）** ∥ **自动更新 = KD-71（§2.8）落**。机制 ∕ 契约单源 = 本档 §1 **KD-64**（本节 = 实施与操作面展开）。
 
 ### 2.1 打包配置契约（`thincoder-desktop/electron-builder.yml` · 阶段一）
 
@@ -93,7 +94,7 @@
 | 项 | 形态 |
 |---|---|
 | 工具 | `electron-builder`（构建期 devDep）；声明面 = `thincoder-desktop/electron-builder.yml`（本批落——§2.1） |
-| 目标（分期） | **阶段一** = Windows（NSIS 安装器 · x64）；**阶段二** = macOS（dmg + zip——签名 ∕ 公证随发布前置）· Linux（AppImage + deb）· 免安装 zip |
+| 目标（分期） | **Windows**（NSIS 安装器 · x64——阶段一落）；**Linux** = AppImage + deb（**D42 批——§2.11**）；**后批** = macOS（dmg + zip——签名 ∕ 公证随发布前置）· 免安装 zip |
 | script 六条（单源 · 本行） | `test` = `node test/run.mjs`；`start` = `electron .`；`prepackage` = `node scripts/materialize-deps.mjs`（物化自跑——§2.2）；`package` = `electron-builder`；`postpackage` = `node scripts/check-dist.mjs`（产物校验——§2.5）；`quickcheck` = `node tools/web-quickcheck/run.mjs`（渲染面 web 快筛——**非套件** ∥ 不作验收门；单源 = `docs/desktop/design/WEB-QUICKCHECK.md`）——分发走发布计划（`docs/RELEASE.md` §5.6——桌面端首版已登记发布单元），非 script 名 |
 | 验证面（三层） | ① **产物存在性**：check-dist（§2.5——机检闸）；② **产物可启**：真机冒烟（装 → 启 → 卸——§5 **T-DSK55**；CI 面随三平台 CI 批）；③ **三端共享契约零回归**：与另两端互读互写同一份配置与会话（需求档 A2） |
 | CI | `.github/workflows/test.yml` 增平台矩阵（需求档 A3：本机 Windows 实跑，另两平台以 CI 为验证面——随阶段二） |
@@ -224,6 +225,94 @@
 
 （另：#807 站点轮余项 → 本批吸收 = §2.9 ∥ §2.8.3；`deploy-oss` prune 加固与 `gen-changelog` desktop 臂 = 前批 §6 **DE ②∥④** 的落盘点——本批 §2.9.7 兑现。）
 
+### 2.11 Linux 打包链与发行面（D42 · 2026-10-03 · 台账 #847）
+
+> **定位**：Linux 双产物（**AppImage** 主 ∥ **deb**）——构建在**内网构建机**（非本机：WSL 两代判死 ∥ 云构建待账单锁——批档 §1 补记 ∥ 补记二）；机制 ∕ 契约单源 = §1 **KD-73**（本节 = 实施与操作面展开）。站点面 = §2.11.5（规格——执行 = 父侧轮）。
+
+**2.11.1 构建通道与流水线（构建机 = ha-proxy）**
+
+- **构建机读数（首跑实证 · 2026-10-03）**：Ubuntu 22.04.5 · x86_64 · 2C/1.6G/32G；`node v22.22.2` ∥ `npm 10.9.7` ∥ `git 2.34.1`；gitee ∥ npmmirror ∥ github 直连皆 200。**工具链固定** = 上述读数（不追新；换版 ⇒ 复跑配方复验，`node -v` ∥ `npm -v` 读数入构建记录）。
+- **配方（首跑全链实证——唯一入口）**：
+
+  ```bash
+  cd ~ && git clone --depth 1 https://gitee.com/shanghai-xinbo/thincoder.git     # 首次（~ = /home/<user>）
+  cd ~/thincoder/thincoder-desktop
+  npm config set registry https://registry.npmmirror.com                          # 机器级（一次性）
+  export ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
+  export ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/
+  npm install --no-audit --no-fund
+  npm run package    # prepackage（物化）→ electron-builder（linux 两目标）→ postpackage（check-dist Linux 臂 = 闸）
+  ```
+
+  （**镜像纪律**：npm registry ∥ Electron 二进制 ∥ electron-builder 工具三面 = 构建机纪律（npmmirror 族）；`npm run package` 一条链自足——物化自跑 ∥ check-dist 自跑，同 §2.2。构建机直连实证在册——镜像保确定性、非绕墙。）
+- **幂等重跑**（源码刷新 → 清产物 → 重走链）：`cd ~/thincoder && git fetch origin && git reset --hard FETCH_HEAD` → `rm -rf thincoder-desktop/dist`（消旧产物 ∥ 防 §2.6「版本不匹配」∥ 防 `latest-linux.yml` 混版）→ 重走配方（`npm install` 幂等）。
+- **重跑纪律（唯一边界）**：**不得单目标构建**——`--linux deb` 单跑会以 deb-only `latest-linux.yml` 覆盖既有 feed 产物（首跑探针实证在册）；feed 产物恒由**两目标同跑**的面产出。
+- **产物**（dist 根三件）：`ThinCoder-Setup-<号>.AppImage` ∥ `ThinCoder-Setup-<号>.deb` ∥ `latest-linux.yml`（另存 `linux-unpacked/` = 中间面——不入取回清单）。
+- **取回落位命名**：`D:\WSL\artifacts\<版本>\`（三件平铺——版本子目录消 `latest-linux.yml` 跨版本覆盖面；现行 `D:\WSL\artifacts\` 散件 = 首跑在案，不回迁）；取回 = scp/ssh 会话（**凭证 = 父侧自持、零入库**）；回取后读数 = 三件 sha256（与构建机对盘——记录入实施 §5）。
+
+**2.11.2 配置契约与仓内修复**
+
+**（a）`electron-builder.yml` linux ∥ deb 段（新增——逐值；列于 `nsis` 块后 ∥ `artifactName` 前，win 面零动）**：
+
+| 项 | 值 | 说明 |
+|---|---|---|
+| `linux.target` | `AppImage`(x64) ∥ `deb`(x64) | 双目标同跑；执行序 = async 面（AppImage）先于非 async 面（deb）（`app-builder-lib/out/platformPackager.js:107-123`）⇒ AppImage 打包发生在 deb 写资源面之前——AppImage 不携 `package-type` |
+| `linux.icon` | `build/icon.png` | 显式（缺省发现面存在——候选含 `icon.png`（`iconConverter.js:119-129`）；显式 = 读面自明 ∥ 消歧——同 `win.icon` 先例） |
+| `linux.category` | `Development` | 消缺省 `Utility` 警告（`LinuxTargetHelper.js:296-313`）；值 = freedesktop 主类 |
+| `linux.syncDesktopName` | `true` | `.desktop` 文件名 ∥ `StartupWMClass` ∥ Electron `app_id` 三者同源（`LinuxTargetHelper.js:203-219` ∥ `:249-259`）——消窗口关联警告 |
+| `deb.publish` | `null` | **feed 分流键**（官方「don't publish」形）：deb = 手动升级单元——目标级 `publish: null` ⇒ 该目标零 update-info 条目（`PublishManager.js:337-346`）；AppImage 条目不损 |
+| `artifactName`（零动） | 全局 `ThinCoder-Setup-${version}.${ext}` | 承现行模板（首跑实产 `…0.10.2.AppImage` ∥ `…0.10.2.deb` 在册） |
+
+**（b）`thincoder-desktop/package.json` 新增键（2026-10-03 用户定值）**：
+
+| 键 | 值 | 判据 |
+|---|---|---|
+| `homepage` | `https://thincoder.com` | fpm 硬前置（缺 ⇒ deb 目标失败——`FpmTarget.js:79-83`）；deb `Homepage` 字段源 |
+| `author` | `liwei <liwei@thincoder.com> (上海新舶)` | fpm 硬前置（`author.email` 缺 ⇒ 构建失败——`FpmTarget.js:85-93` ∥ `errorMessages.js:4`）；deb `Maintainer` 派生 = `liwei <liwei@thincoder.com>`（company 后缀不入派生） |
+| `desktopName` | `thincoder.desktop` | 窗口关联（Electron `app_id` ∥ WM_CLASS 源——与 `linux.syncDesktopName: true` 成对；`scheme.json` syncDesktopName 描述） |
+
+**（c）图标资产**：`build/icon.png` 入库——256×256 · 2872 B · `build/icon.ico` **第 4 帧字节切片**（零转换；本档实核：`icon.ico` 4 帧（16 ∥ 32 ∥ 48 ∥ 256），第 4 帧 offset 1279 · size 2872——与提取件逐字节相等，sha256 `08fe76b9…b57d`）；生成物入库形同 `build/icon.ico` 先例；**漂移检测** = 批内件断言「PNG ≡ ICO 第 4 帧」。
+
+**2.11.3 产物校验（check-dist Linux 臂）与验收**
+
+- **平台分臂（同脚本 `scripts/check-dist.mjs`）**：`win32` ⇒ 现行 Windows 臂零动；`linux` ⇒ 下述断言（闸 · fail-closed）；余平台 ⇒ 显式「无断言臂」非零退出（零静默）。
+- **Linux 臂断言（+9）**：① `linux-unpacked/resources/app.asar` 在（读面同 win 臂）；② 核包 ×2（core ∥ render-core）在 ∧ 版本逐字 = 源（对位 B ∕ F——读函数沿用，路径换 linux-unpacked）；③ 预载（`src/preload/preload.cjs`）在；④ 渲染面（`renderer/index.html`）在；⑤ `ThinCoder-Setup-<源版本>.AppImage` 在（名形 × 版本逐字）；⑥ `ThinCoder-Setup-<源版本>.deb` 在；⑦ `linux-unpacked/resources/app-update.yml` 在 ∧ `provider: generic` ∧ `url` = 契约值；⑧ `latest-linux.yml` 在 ∧ `version` = 源 ∧ `files[0].url` = AppImage 名（逐字）∧ `files` 恰一条 ∧ `path` = 同名 AppImage ∧ `sha512` = AppImage 实算（基 64 填充不敏感）**∧ 全条目不携 `.deb`**（feed 分流判据）；⑨ dist 残留扫（`.AppImage` ∥ `.deb` 名携非源版本 ⇒ 红——扩现行 guard）。
+  （行数：225 ⇒ ~300——越 300 顾问线 ⇒ 随实读登记（先例 = `src/main/window.mjs`）；迫 500 硬限 ⇒ 断言族抽档（预案在册）。）
+- **构建机命令级判据（check-dist 外——不可纯读面）**：`dpkg-deb -f dist/ThinCoder-Setup-<号>.deb Maintainer` = `liwei <liwei@thincoder.com>` ∧ `Homepage` = `https://thincoder.com`（deb 控制段 = xz 压缩——node 纯读不可及 ⇒ 住构建机清单；读数入 §5）。
+- **AppImage 结构提取读数（可自动面 ∥ 构建机）**：`./ThinCoder-Setup-<号>.AppImage --appimage-extract` ⇒ `squashfs-root/`：① `resources/app.asar` 在；② `resources/package-type` **不在**（AppImage 不得携 deb 面）；③ `.desktop` 文件名 = `thincoder.desktop` ∧ 含 `StartupWMClass=thincoder`；④ 图标在（`.DirIcon` ∥ `usr/share/icons/...`——读数记录）。提取不可执行 ⇒ 记读数 + 停下上报（不得静默略过）。
+- **冒烟面裁定（WSLg 面不可行——WSL2 判死（批档 §1 补记）；重裁三档）**：**可自动面** = check-dist 闸 + 上述提取读数（构建机 · 机检）；**人工面** = **T-DSK62**（用户 Linux 真机走查——AppImage 运行 ∥ deb 安装启动 ∥ 窗口关联 ∥ 数据共用）；**不做（后加）** = 构建机图形冒烟（xvfb + GTK 显示栈——构建机基线外）∥ CI 矩阵（账单锁待解）。
+
+**2.11.4 更新面（AppImage 分流 · deb 无自动更新）**
+
+- **AppImage 臂**：`latest-linux.yml` 单条目 = AppImage；运行期 `autoUpdater` ⇒ `AppImageUpdater`（`electron-updater/out/main.js:44-76` linux 缺省面；`APPIMAGE` 环境变量核对同档 `AppImageUpdater.js:17-28`）；行为合同照 D40 ∕ §2.8.1 零差（自检 10s 一次 ∥ 静默下载 ∥ 提示重启 ∥ `quitAndInstall` 两径）。
+- **deb 臂（无自动更新——双保险）**：① **feed 侧** = `deb.publish: null`（§2.11.2（a））——feed 无 deb 条目；② **应用侧** = 武装门扩——`update.mjs` 导出纯谓词 `updaterMediumOk({ platform, appImageEnv })`（`platform !== "linux" || appImageEnv != null`），装配注入 = `app.isPackaged && !SMOKE && updaterMediumOk({ platform: process.platform, appImageEnv: process.env.APPIMAGE })`（§2.8.1 门 +1 合项——deb 安装零自检 ∥ 零网络 ∥ 零状态机）。
+- **上游事实（在案——非我方可控面）**：`electron-builder` 仍向 deb 资源面写 `app-update.yml` + `package-type: deb`（`FpmTarget.js:133-141`——该径不过目标级 publish：`PublishManager.js:193-194`）⇒ 若武装门缺失，库会选 `DebUpdater` 并尝试更新（feed 无 deb ⇒ 下载前失败 · fail-soft）——**故 deb 的「无更新面」由我方门承担，不由库缺省承担**（纵深第二层 = feed 无 deb 条目）。
+- **边界**：deb 内嵌更新器文件（`app-update.yml` ∥ `package-type`）现态收敛 = 不做（上游面零控——照实记录；上游若开目标级资源面 ⇒ 复评）∥ beta ∥ 回滚（KD-71 边界沿）。
+
+**2.11.5 站点与发布对接（feed ∥ 上传序 ∥ 页面规格）**
+
+- **feed 面**（`thincoder.com/downloads/`）：`ThinCoder-Setup-<号>.AppImage` ∥ `latest-linux.yml`（**无 blockmap**——AppImage 整件更新面；首跑实产三件无 `.blockmap` 在册；差分面 = 库内嵌块图）。deb = **站点下载件**（非 feed 件）。
+- **上传序**：`AppImage → deb → latest-linux.yml`（feed 末传——消「新号已可见而包未就绪」窗；同 §2.8.3 纪律）；载体 = 站点小件 `upload-download.mjs`（键 = `downloads/` 前缀；cache-control 现档已覆盖（`.yml` ⇒ no-cache ∥ 余 ⇒ max-age=86400）——零改）；`deploy-oss.mjs` prune 豁免（`downloads/` 前缀）沿用——零改。
+- **版本对盘（发布窗判据）**：`latest-linux.yml.version` = 源 `package.json` `version` = AppImage 名内号 = 站点版本面号（四点——前两 = check-dist ∥ 后两 = 站点核验）。
+- **站点区块（规格——执行 = 父侧轮；沿 §2.9 体例 · 零样式改动 · 零新页）**：
+  - `download.html`：桌面卡内增 **Linux 区块**（AppImage ∥ deb 两直链 + 小字注（`x86_64 · v<号> · 约 127 MB ∥ 约 101 MB`）；系统要求行补 Linux 句；更新句补「Linux：AppImage 自动更新 ∥ deb 手动升级」）。
+  - `desktop.html`：安装节补 **Linux 节**（AppImage 双击运行（FUSE）；deb 安装（`sudo apt install ./ThinCoder-Setup-<号>.deb`）；自动更新面句 = AppImage 自动 ∥ deb 手动——与 Windows 节同构）。
+  - `about.html` ∥ `changelog.html`：版本面同号（桌面 = 源树——§6.1 口径）；changelog 桌面节条目随 `CHANGELOG.md` 句（§6.4 半自动沿）。
+  - 部署 = `deploy-oss.mjs` 全量（随 §5.8 阶段 5）。
+
+**2.11.6 失败面（Linux 链）**
+
+| 症状 | 根因 | 处置 |
+|---|---|---|
+| deb 目标失败（`Please specify author 'email'…` ∥ `project homepage`） | `package.json` 元数据缺 | §2.11.2（b）两键（现行已定形） |
+| Linux 图标面缺省（default Electron icon） | `build/icon.png` 缺 ∥ `linux.icon` 未指 | 入库 icon.png + 显式 `linux.icon`；批内件帧断言拦漂移 |
+| `latest-linux.yml` 含 deb ∥ 指向 deb | 单目标跑覆盖 ∥ `deb.publish` 未 null | 两目标同跑为唯一入口（§2.11.1）+ `deb.publish: null`；check-dist ⑧ 拦 |
+| Electron ∥ 工具二进制下载失败（`read ECONNRESET` 类） | 网络 ∥ 镜像缺 | 三镜像环境（§2.11.1 配方） |
+| check-dist「版本不匹配」红 | dist 旧产物残留 | 清 dist 重跑（§2.11.1 重跑序） |
+| 提取读数：`package-type` 在 AppImage 内 ∥ `.desktop` 名不符 | 构建序异常 ∥ syncDesktopName 缺 | 停下上报（序面 ∥ 配置面复评） |
+
+**边界（不做）**：rpm ∥ Snap ∥ macOS（D42 边界）；Linux 签名面（两产物均不签）；deb apt 仓库面（手动升级直链）；构建机图形冒烟 ∥ CI 矩阵（后加）；站点部署（父侧轮）。
+
 ## 3. 文件账
 
 ### 3.1 本端文件清单与行数预算（打包族行）
@@ -284,6 +373,25 @@
 零触面：`electron-builder.yml` 其余键 ∥ `materialize-deps.mjs` ∥ `win-sign.mjs` ∥ `make-icon.mjs` ∥ `build/icon.ico` ∥ `src/main/**` 其余档（`context-menu.mjs` ∥ `projects.mjs` ∥ …）∥ `renderer/**`（**渲染面零接线**——更新面全主进程）
   ∥ `src/preload/preload.cjs` ∥ `ipc.mjs` ∥ `ipc-registry.mjs` ∥ 通道集（事件 24 ∥ 白名单 47）∥ 核 ∥ CLI ∥ VSC ∥ `thincoder-render-core`；站点仓 = 父侧轮（规格 = §2.9）；测试面随修随加——不占设计条目（2026-09-27 裁定）。
 
+### 3.4 现有文件改动 · 桌面 Linux 产物批（设计轮——预期）
+
+**本批（桌面 Linux 产物批 · 2026-10-03 · 台账 #847 · 批 `docs/batches/2026-10-03-desktop-linux.md`）行「现行 ⇒ 预期」**（现行 = 实读 2026-10-03——内容行数口径；机制 ∕ 判据单源 = 本档 §1 **KD-73** ∥ §2.11；**设计轮——产品码零触**）：
+
+| # | 档 | 现行 ⇒ 预期 | 面 |
+|---|---|---|---|
+| 1 | `thincoder-desktop/electron-builder.yml` | **46 ⇒ ~62**（linux 段（target 两目标 ∥ icon ∥ category ∥ syncDesktopName）+ deb 段（`publish: null`）+ 注释） | 打包面 |
+| 2 | `thincoder-desktop/package.json` | **26 ⇒ ~29**（`homepage` ∥ `author` ∥ `desktopName`——用户定值；§2.11.2（b）） | 元数据面 |
+| 3 | `thincoder-desktop/build/icon.png`（新档 · 二进制） | **无 ⇒ 2872 B**（`icon.ico` 第 4 帧字节切片——生成物入库形同 `icon.ico` 先例） | 资产面 |
+| 4 | `thincoder-desktop/scripts/check-dist.mjs` | **225 ⇒ ~300**（平台分臂 + Linux 臂 +9 断言；越 300 顾问线 ⇒ 随实读登记——先例 = `src/main/window.mjs`） | 校验面 |
+| 5 | `thincoder-desktop/src/main/update.mjs` | **217 ⇒ ~228**（`updaterMediumOk` 导出 + 头注随正——§2.11.4） | 更新面 |
+| 6 | `thincoder-desktop/src/main/main.mjs` | **263 ⇒ ~267**（武装门注入 +1 合项；现行 263 = 本批实读——§3.3 行 4「242」系该批 as-of 读数） | 装配面 |
+| 7 | `thincoder-desktop/AGENTS.md` | **25 ⇒ ~27**（Commands 行：Linux 构建/校验面随正） | 文档面 |
+| 8 | `thincoder-desktop/CHANGELOG.md` | **27 ⇒ ~33**（`[Unreleased]` 段——Added Linux 句；段位随发布窗（F2 口径）） | 发布面 |
+| 9 | 批内件（新档） | `docs/batches/2026-10-03-desktop-linux.test.mjs`（新档——图标帧断言（PNG ≡ ICO 第 4 帧）∥ yml linux/deb 契约 ∥ package.json 三键 ∥ `updaterMediumOk` 真值表 ∥ check-dist 分臂源扫） | 全批 |
+| 10 | 设计档 ∥ 发布档 | 本档（§1 **KD-73** ∥ §2.11 ∥ §3.4 本块 ∥ §4.4 ∥ §5 **T-DSK61–63** ∥ §6 **D42** 行 ∥ 变更记录）；`docs/RELEASE.md`（§5.1 图行 ∥ §5.6 Linux 臂 ∥ §6.5 判据 4 扩 ∥ 变更记录） | 全批 |
+
+零触面：`electron-builder.yml` win 段 ∥ `materialize-deps.mjs` ∥ `win-sign.mjs` ∥ `make-icon.mjs` ∥ `build/icon.ico` ∥ `src/main/**` 其余档 ∥ `renderer/**` ∥ `src/preload/preload.cjs` ∥ 通道集（事件 24 ∥ 白名单 47）∥ 核 ∥ CLI ∥ VSC ∥ `thincoder-render-core` ∥ `.github/workflows/linux-build.yml`（备用通道零动）；站点仓 = 父侧轮（规格 = §2.11.5）；测试面随修随加——不占设计条目（2026-09-27 裁定）。
+
 ## 4. 验收回指（D12 ∥ D32）
 
 ### 4.1 功能点（D12）
@@ -307,6 +415,13 @@
 
 > **需求侧（已落：D40 ∥ D41）**：自动更新 ∥ 官网桌面面已入需求卷（主 agent 笔 · 2026-10-02）——引 `docs/desktop/requirements/PACKAGING.md:3` ∥ `:14-15` ∥ `:20`；本档验收回指 = D40 ∥ D41（§4.3 同拍）。
 
+### 4.4 桌面 Linux 产物批（验收面 · 2026-10-03 · 台账 #847）
+
+**桌面 Linux 产物批（#847）**：需求回指 = 需求卷 **D42**（AppImage ∥ deb ∥ 官网下载 ∥ AppImage 自动更新随 D40 ∥ deb 手动）∥ 批档 §1 ∥ §1 补记二（首跑三缺项 + 实产读数）；
+设计单源 = 本档 §1 **KD-73** ∥ §2.11（2.11.1–2.11.6）；
+机检面 = ① **check-dist Linux 臂** exit 0（+9 断言——§2.11.3）② 构建机命令读数（`dpkg-deb -f` 两字段 = 定值 ∥ AppImage 提取三读数）③ 批内件（图标帧 ∥ yml 契约 ∥ 三键 ∥ 门真值表）；
+真机面 = **T-DSK61**（构建机 · 机检）∥ **T-DSK62**（用户真机走查——AppImage ∥ deb）∥ **T-DSK63**（AppImage 自动更新链——发布窗）；**离线不可产面**（真机首屏 ∥ FUSE 运行 ∥ 窗口关联观感）= 人工走查 + 父侧真跑闭合（D16 义务）；测试档随修随加——不占设计条目（2026-09-27 裁定）。
+
 ## 5. 用例
 
 | 用例 | 场景 | 输入 | 预期输出 | 机检面 / 落点 |
@@ -316,6 +431,10 @@
 
 | T-DSK60 | 正常 / 边界 · 自动更新链（真机 · 发布窗） | 旧版已安装（vN——真发布 · **前置：vN 须为携更新面版本**——0.10.1 = 携更新面（2026-10-03 重发窗实读：产物含 `resources/app-update.yml` ∥ feed 三件已传）⇒ **首测点 = 0.10.1 → 0.10.2**（真机现刻可行）；或允许本地构建旧版）+ 新版本已发布（vN+1：feed 三件已上传） | ① 启动旧版 ⇒ 10s 内自动检查（log 行在）——**未点按前零打扰**（零模态框 ∥ 零窗口操作 ∥ 在飞回合不受扰）；② 下载完成 ⇒ 菜单 帮助→检查更新 变「重启以安装更新」+ 通知一条（一次/版本）；③ 菜单点按 ⇒ 确认框 ⇒ 安静安装 + 自动重拉 ⇒ 版本号 = vN+1；④ **另一径**：不点按、正常退出 ⇒ 再启 = vN+1（onQuit 安装）；⑤ 全程会话数据保留（`~/.thincoder` 零动）；⑥ 手查三果（`update-available` ⇒ 转下载态；`update-not-available` ⇒ 对话框「已是最新版本」；`error`（如断网）⇒ 对话框「检查更新失败」+ 一行原因、状态回 `idle`——下次可重试；「静默回转」限自动面（单源 = §2.8.1 失败面））；机检面 = 批内件（状态机替身面——事件注入） | 真机面 = 父侧真跑闭合 + 用户走查（D16 义务）；用例号自铸披露 = §6 **DK** |
 
+| T-DSK61 | 正常 / 边界 · Linux 构建链与产物形状（构建机 · D42） | 构建机（ha-proxy）+ 配方（§2.11.1）∥ 源 = 浅克隆当前树 | ① `npm run package` 全链 exit 0（物化 ∥ 两目标 ∥ check-dist Linux 臂 = 闸）；② dist 三件：`ThinCoder-Setup-<源号>.AppImage` ∥ `.deb` ∥ `latest-linux.yml`；③ `latest-linux.yml` = 单条目 AppImage（`version` ∥ `files[0].url` ∥ `path` ∥ `sha512` 四读对盘；无 `.deb`）；④ `dpkg-deb -f …deb Maintainer` = `liwei <liwei@thincoder.com>` ∧ `Homepage` = `https://thincoder.com`；⑤ AppImage 提取读数（`app.asar` 在 ∥ 无 `package-type` ∥ `.desktop` 名 ∥ `StartupWMClass`）；机检面 = check-dist + 构建机命令清单 | 构建机执行 = 父侧/实施轮；读数入 §5；用例号自铸披露 = §6 **D42** 行 |
+| T-DSK62 | 正常 / 边界 · 真机走查（AppImage ∥ deb——用户侧 · D42） | 产物三件（取回落位）+ 用户 Linux 真机（Ubuntu 22.04+ 桌面） | ① AppImage 双击（FUSE）⇒ 首屏（`app://desktop/`）；② 窗口 ∥ 任务栏归组与 `.desktop` 关联（`StartupWMClass=thincoder`）；③ deb 安装（`sudo apt install ./ThinCoder-Setup-<号>.deb` 或双击）⇒ 启动 ⇒ 首屏；④ 两端与 CLI ∥ VSC 共用 `~/.thincoder/`（任一端配置三端生效）；⑤ AppImage 端：帮助菜单「检查更新…」在（未点按前零打扰——自检 fail-soft）；deb 端：**无更新动作**（点按零效果——无自动更新语义；菜单项恒在场 = 既有形）；⑥ 卸载/清理（deb remove；AppImage = 删文件） | 真机面 = 用户走查 + 父侧核读（D16 义务）；用例号自铸披露 = §6 **D42** 行 |
+| T-DSK63 | 正常 · AppImage 自动更新链（真机 · 发布窗） | 旧版 AppImage（vN——须携更新面（本批起产物皆携）∥ 或本地构建旧版）+ 新版本已发布（vN+1：`AppImage` ∥ `latest-linux.yml` 已传） | ① 启动 vN ⇒ 10s 内自检（log 行）——未点按零打扰；② 静默下载完成 ⇒ 菜单「重启以安装更新」+ 通知一条；③ 点按 ⇒ 确认框 ⇒ 安静安装 ⇒ 重拉 ⇒ 版本 = vN+1（原位替换——`APPIMAGE` 路径面）；④ 另一径：退出即装（`autoInstallOnAppQuit`）；⑤ 全程 `~/.thincoder` 零动；⑥ **对照**：deb 端同窗（feed 新号在）⇒ 无任何更新动作（门 = 无自动更新） | 真机 = 用户走查（D16）；前置：第二个携更新 Linux 版本（或本地旧版构建）；用例号自铸披露 = §6 **D42** 行 |
+
 ## 6. 上抛与登记（DE ∥ DK）
 
 | 行 | 内容 | 状态 | 单源 |
@@ -323,6 +442,8 @@
 | DE | **桌面打包发布批（阶段一）上抛四件**：① **图标资产复用建议**——`build/icon.ico` 的源生成器可顺产 PNG（站点 OG ∕ 下载页卡面用）——站点轮可选采（跨仓 = 主 agent 轮）② **`deploy-oss.mjs` prune 加固**（站点仓）：`OSS_DELETE=1` 时 prune 面 = 全桶键 − 本地 `www/` 键（`thincoder.com/scripts/deploy-oss.mjs:230-238`）⇒ 桶内 `downloads/**` 会被判陈旧一并删除——建议 prune 面加 `downloads/` 前缀豁免（或维持 `OSS_DELETE` 恒关——现缺省）③ **签名时间戳 URL 实测选定**（GlobalSign RFC3161——实施期实测；落档 = 本档 §2.3）④ **站点仓 changelog 生成器（`thincoder.com/scripts/gen-changelog.mjs`）desktop 臂**：现只含 cli ∥ vsc（实读 2026-10-01——`--side` 两值）；`docs/RELEASE.md` §6.4 档面已含桌面 `CHANGELOG.md` 输入（本批随动已落）⇒ 余动作 = 该脚本增 desktop 臂（站点轮随动） | 上抛（①③④随站点 ∥ 实施轮；②站点仓加固） | 单源 = 本档 §1 **KD-64** ∥ §2；站点面 = 批档 §2「站点侧规格」 |
 
 | DK | **`T-DSK60` 用例号自铸披露 + 桌面发布·阶段二批（#810 ∥ #826）披露五件**（沿 T-DSK37–T-DSK59 先例——本批自铸；若实施批 ∥ 并行批占用同号 ⇒ 请父侧并号裁定）：① 用例行随测试档修加——不进设计面条目（2026-09-27 裁定）；② **`electron-updater` = 首个第三方运行依赖**（声明面三处收正：`package.json` description ∥ `AGENTS.md` ∥ 本档——「零第三方」旧句作废；由 = 差分更新 ∥ 安装器生命周期 ∥ 验签链均为库面能力，手搓 = 重造块图算法）；③ **桌面下载卡图标收正**（阶段一前案 `</>` ⇒ 🖥️——emoji 先例；`</>` 系品牌位形）；④ **RELEASE.md 指针代际**（`docs/desktop/design/PROJECT.md` §5 已迁 `docs/desktop/design/PACKAGING.md` §2——重组后死指针，本批收正；同族：CHANGELOG「拟新增」四标）；⑤ **需求卷侧已收正**（主 agent 笔面——已落）：**D40**（自动更新）∥ **D41**（官网桌面面）已入需求卷——引 `docs/desktop/requirements/PACKAGING.md:3` ∥ `:14-15` ∥ `:20` | 登记（自铸披露 + 四处披露；⑤ 已收正） | 单源 = 本档 §1 **KD-71** ∥ **KD-72** ∥ 批档 `docs/batches/2026-10-02-desktop-release-stage2.md` §2 |
+
+| D42 | **桌面 Linux 产物批（#847）披露与上抛**：① **用例号自铸**（T-DSK61–63——沿先例；若并行批占号 ⇒ 并号裁定）；② **需求卷收正需求（主 agent 笔面）**——D42 行两处：**构建通道**（现文「GitHub Actions 云构建」⇒ 终态 = 内网构建机（ha-proxy）为主 ∥ GH Actions = 备用（账单锁待解）——证据 = 批档 §1 补记二）∥ **验收冒烟面**（现文「WSLg 冒烟（可自动面）+ 真机走查」⇒ 重裁 = check-dist + AppImage 提取读数（可自动）∥ 真机走查（人工）——WSL2 判死证据 = §1 补记）；③ **站点执行 = 父侧轮**（规格 = §2.11.5——页面增量 ∥ feed 上传 ∥ 版本面）；④ `build/icon.png` = 二进制入库（生成物形——同 `build/icon.ico` 先例；源 = `icon.ico` 第 4 帧字节切片）；⑤ **构建机凭据零入库**（scp/ssh 会话 = 父侧自持） | ①③登记；②上抛（主 agent 笔面）；④⑤登记 | 单源 = 本档 §1 **KD-73** ∥ §2.11 ∥ 批档 `docs/batches/2026-10-03-desktop-linux.md` §1 |
 
 ## 变更记录
 
@@ -334,3 +455,4 @@
 - 2026-10-03（**桌面发布·阶段二批 · 修复轮（评审轮 1 · 发现 1 ∥ 2 ∥ 3 ∥ 6 ∥ 7 ∥ 8 逐号 · 父侧裁 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-02-desktop-release-stage2.md` §3 轮次 1 · 台账 #810 ∥ #826）：① 需求侧缺口注翻「已落：D40 ∥ D41」+ §4.3 回指补 D40/D41 + §6 **DK** ⑤ 转已收正（引需求卷行）；② §5 **T-DSK60** ⑥ 按 §2.8.1 收正（`error` 径 = 对话框「检查更新失败」+ 状态回 `idle`；「静默回转」限自动面；补第三果 `update-available` ⇒ 转下载态）+ 输入面补前置（vN 须携更新面——0.10.1 无更新器）；③ §3.3 行 7 补越线在册（拆分预案 ∥ 消解窗口 = `docs/desktop/design/PROJECT.md` §4.1 越层段本批行）；⑥ §2.5 补 +4 断言指针（= §2.8.2）；⑦ §2.8.3 绕缓存先例改指实出处（`docs/RELEASE.md` §5.6 步 4）。**零新语义**（收正 ∥ 登记 ∥ 指位）。明细 = 批档 §2 修复轮块。
 - 2026-10-03（**桌面发布·阶段二批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-02-desktop-release-stage2.md` §2 ∥ §5 · 台账 #810 ∥ #826）：§3.3 翻「实施落盘」形态（标题 ∥ 说明 ∥ 表头 ∥ 十二行实读回填——yml **46** ∥ package.json **26** ∥ update.mjs **217** ∥ main.mjs **242** ∥ app-menu **158** ∥ menu-words **145** ∥ window **336** ∥ check-dist **225** ∥ AGENTS.md **25**（净 0）∥ CHANGELOG **19** ∥ 批内件 **388** ∥ 前批随动 **410**）；§3.1 五行走读齐平（yml ∥ check-dist ∥ package.json ∥ CHANGELOG ∥ update.mjs——机检工单；package.json 说明面「零第三方不变」随正）；§2.8.1 手动检查段补下载期失败定裁半句（保留全静默——与自动面 fail-soft 同款）。**零新语义**（回填 ∥ 收正 ∥ 一句定裁）。明细 = 批档 §2 回填轮块。
 - 2026-10-03（**发布后收正 · 主 agent 直接执行 · 可 revert**）：§5 T-DSK60 输入面前提收正——「0.10.1 不含更新器」系设计轮旧前提，已为当日重发窗覆盖（产物含 `resources/app-update.yml` ∥ feed 三件已传，实读 = 批档 `docs/batches/2026-10-01-desktop-packaging-release.md` §1）⇒ 首测点 = **0.10.1 → 0.10.2**。
+- 2026-10-03（**桌面 Linux 产物批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-desktop-linux.md` §1 ∥ §1 补记二 · 台账 #847 · 需求 D42）：§1 增 **KD-73**（Linux 双产物 ∥ 构建机通道 ∥ 仓内修复三处 ∥ 更新面分流 ∥ check-dist Linux 臂 ∥ 站点 ∥ 取回落位；被否六候选）；**§2.11 新立**（2.11.1 流水线 ∥ 2.11.2 配置契约与修复 ∥ 2.11.3 校验与冒烟重裁 ∥ 2.11.4 更新面 ∥ 2.11.5 站点与发布 ∥ 2.11.6 失败面）；§2 引言 ∥ §2.7 目标行分期句收正（Linux = 本批 §2.11）；**§3.4 新立**（本批块——10 行）；**§4.4 新立**（验收面）；§5 增 **T-DSK61–63**；§6 增 **D42** 行（披露 + 上抛）；§2 页头需求卷标收正（D12 ∥ D32 ⇒ + D40 ∥ D41 ∥ D42）。**产品码零触（设计轮）**。明细 = 批档 §2。

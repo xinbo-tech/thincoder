@@ -151,7 +151,7 @@
       ↓
 [阶段 3 · 发 VSC]  verify-pat → npm run publish:all（VSC thincoder-vscode · 双市场）
       ↓
-[阶段 3b · 发桌面]  物化 → package（check-dist 闸）→ 签名（hook）→ 上传（安装包 ∥ blockmap ∥ latest.yml）→ 官网挂载（Windows 安装包 · 阶段一 · 按需）
+[阶段 3b · 发桌面]  物化 → package（check-dist 闸）→ 签名（hook）→ 上传（Windows 三件 ∥ Linux 三件：AppImage ∥ deb ∥ latest-linux.yml）→ 官网挂载（Windows ∥ Linux · 按需）
       ↓
 [阶段 4 · 收尾  ]  验证 → 失败处置原则
       ↓
@@ -251,10 +251,11 @@ npm run publish:all
 
 > **双远端推送（通则 · 2026-08-30 判例 · 代理固定）**：发版 commit + tag **两端皆推**；**github 固定走 proxy**——`git -c http.proxy=http://10.2.2.112:3128 push github main`，tag 同法。**漏推 github = 漏发布**（0.12.51 实测判例）。
 
-### 5.6 阶段 3b · 发桌面（`thincoder-desktop` · Windows 安装包 · 阶段一）
+### 5.6 阶段 3b · 发桌面（`thincoder-desktop` · Windows 安装包 ∥ Linux 产物）
 
-> **定位**：桌面 = **按需发布单元**（不随三端每轮必发）；**发布动作 = 用户门**。机制 ∕ 契约单源 = `docs/desktop/design/PACKAGING.md` §2（2.1 配置契约 ∥ 2.2 构建序列 ∥ 2.3 签名 ∥ 2.5 产物校验 ∥ 2.6 失败面 ∥ **2.8 自动更新** ∥ **2.10 发布窗承接**）；物化纪律（打包物化一律源自源树）= §5.3 同律——桌面窗同遵。
+> **定位**：桌面 = **按需发布单元**（不随三端每轮必发）；**发布动作 = 用户门**。机制 ∕ 契约单源 = `docs/desktop/design/PACKAGING.md` §2（2.1 配置契约 ∥ 2.2 构建序列 ∥ 2.3 签名 ∥ 2.5 产物校验 ∥ 2.6 失败面 ∥ **2.8 自动更新** ∥ **2.10 发布窗承接** ∥ **2.11 Linux 面**）；物化纪律（打包物化一律源自源树）= §5.3 同律——桌面窗同遵。
 > **构建机要求**（签名臂）：GlobalSign EV token（eToken 5300）在位 + SafeNet SAC 驱动在 + 签名时 PIN 弹窗（构建者在场）。
+> **构建机要求（Linux 臂）**：内网构建机（ha-proxy · Ubuntu 22.04 x86_64——配方 ∥ 读数 = `docs/desktop/design/PACKAGING.md` §2.11.1；凭据零入库（N6））；签名面 = 无（Linux 两产物均不签）。
 
 **步骤 1 · 定号 + CHANGELOG + bump**（同 §5.2 各步；桌面号段 = §4.2 步骤 5）：`thincoder-desktop/package.json` `version` 改到期望号（首版 = `0.10.1`）；`thincoder-desktop/CHANGELOG.md`（已建——首版 `0.10.1` 段在）段头改新号。
 
@@ -276,18 +277,26 @@ cd ..   # 回 `thincoder` 仓根——dev-link.mjs 住仓根 scripts/（步骤 2
 node scripts/dev-link.mjs --force && node scripts/dev-link.mjs --check   # 终态 = 0
 ```
 
-**步骤 4 · 上传（OSS 托管 · feed 三件）**：键形 = `downloads/` 前缀下三件——`ThinCoder-Setup-<号>.exe` ∥ 同名 `.blockmap` ∥ `latest.yml`（feed 三件——单源 = `docs/desktop/design/PACKAGING.md` §2.8.3）；上传 = 站点仓独立小件 `thincoder.com/scripts/upload-download.mjs`（拟新增——规格 = 同档 §2.9.7；凭证只走环境变量，N6）：
+**步骤 4 · 上传（OSS 托管 · feed 三件）**：键形 = `downloads/` 前缀——**Windows**：`ThinCoder-Setup-<号>.exe` ∥ 同名 `.blockmap` ∥ `latest.yml`（feed 三件——单源 = `docs/desktop/design/PACKAGING.md` §2.8.3）；**Linux（D42）**：`ThinCoder-Setup-<号>.AppImage` ∥ `ThinCoder-Setup-<号>.deb` ∥ `latest-linux.yml`（单源 = 同档 §2.11.5）；上传 = 站点仓独立小件 `thincoder.com/scripts/upload-download.mjs`（站点小件——规格 = 同档 §2.9.7；凭证只走环境变量，N6）：
 
 ```bash
 cd thincoder.com
 OSS_KEY=… OSS_SECRET=… node scripts/upload-download.mjs <exe> <blockmap> <latest.yml>   # 键形 = downloads/<文件名>；顺序 = exe → blockmap → latest.yml（latest.yml 末传）
 ```
 
-**判据**：三件取回（HTTP 200 ∥ 字节数 = 本地一致）+ **`latest.yml` 对盘**（`version` = 本次号 ∥ `files[0].sha512` = 本地 exe 实算）；同号重传 ⇒ URL 核验加查询串绕缓存（`?v=…`）。
+**判据**：三件取回（HTTP 200 ∥ 字节数 = 本地一致）+ **`latest.yml` 对盘**（`version` = 本次号 ∥ `files[0].sha512` = 本地 exe 实算）；同号重传 ⇒ URL 核验加查询串绕缓存（`?v=…`）。**Linux 判据**：三件取回（HTTP 200 ∥ 字节数一致）+ `latest-linux.yml` 对盘（`version` = 本次号 ∥ `files[0].url` = AppImage 名（逐字）∥ `path` = 同名 ∥ `files` 恰一条（**不含 deb**）∥ `files[0].sha512` = 本地 AppImage 实算）。
 
 **步骤 5 · 官网挂载** = §5.8 阶段 5 一并执行（下载卡 + 版本面三处——条目形见本档 §6.2 分节）。
 
-**完成判定**：check-dist 绿 + 签名态 = 已签（发布版）+ URL 可达（exe ∥ blockmap ∥ latest.yml 三件）+ 站点三处版本面 = 本次号。
+**Linux 臂（D42 · 构建机链——构建 → 校验 → 取回 → 上传 · 机制单源 = `docs/desktop/design/PACKAGING.md` §2.11）**：
+
+- **L1 · 构建（内网构建机）**：`~/thincoder` 浅克隆 → 三镜像环境（registry ∥ `ELECTRON_MIRROR` ∥ `ELECTRON_BUILDER_BINARIES_MIRROR`）→ `npm run package`（一条链：物化 → 两目标 AppImage ∥ deb → check-dist Linux 臂 = 闸）——配方逐字 = 同档 §2.11.1；重跑 = `git fetch` + `git reset --hard` + 清 `dist`；**不得单目标跑**（覆盖 feed 面——同档 §2.11.1 纪律）。
+- **L2 · 校验**：check-dist（闸内自跑）exit 0 + **构建机命令读数**（`dpkg-deb -f dist/ThinCoder-Setup-<号>.deb Maintainer Homepage` ∥ AppImage 提取读数——同档 §2.11.3）。
+- **L3 · 取回**：三件 → `D:\WSL\artifacts\<版本>\`（版本子目录）；sha256 对盘读数随实施记录。
+- **L4 · 上传**：同步骤 4（Linux 行——序 **AppImage → deb → latest-linux.yml**）。
+- **L5 · 官网挂载**：§5.8 阶段 5 一并（download 卡 Linux 区块 ∥ desktop 页 Linux 节 ∥ 版本面同号——规格 = 同档 §2.11.5）。
+
+**完成判定**：check-dist 绿 + 签名态 = 已签（发布版）+ URL 可达（exe ∥ blockmap ∥ latest.yml 三件）+ 站点三处版本面 = 本次号；**Linux 臂（D42）** = 构建机链 exit 0 + URL 可达（AppImage ∥ deb ∥ latest-linux.yml 三件）+ `latest-linux.yml` 对盘过（步骤 4 判据）+ 站点 Linux 区块 ∥ 版本面同号。
 
 **失败处置**：§5.7 失败总原则（从失败端重跑；已发端不重发）+ `docs/desktop/design/PACKAGING.md` §2.6 失败面表 ∥ §2.8.1 更新失败面（fail-soft）。
 
@@ -365,6 +374,7 @@ OSS_KEY=… OSS_SECRET=… node scripts/deploy-oss.mjs    # 实传（脚本亦�
 2. **changelog 页**：① **各端分节顶部条目 = 该端本次号**（每发布必跑——单端发布只核该端节）；② 窗口内**版本集合相等**（页面 ↔ registry / 市场，比较归一同上）——追平验收一次性跑。
 3. **线上**：取回 `https://thincoder.com/changelog.html` 含本次号（页面档 `no-cache` ⇒ 取回即现行）。
 4. **feed 面（自动更新源）**：`https://thincoder.com/downloads/latest.yml` 可取回 ∧ `version` = 源树号 ∧ `files[0].url` 指向的安装包 URL 可取回（比较归一 = 判据 1 同法）。
+   **Linux feed（D42）**：`https://thincoder.com/downloads/latest-linux.yml` 可取回 ∧ `version` = 源树号 ∧ `files[0].url` = `ThinCoder-Setup-<源号>.AppImage`（逐字）∧ 该 URL 可取回 ∧ `files` 恰一条（不含 deb——feed 分流判据）。
 
 ### 6.6 边界（本节不做）
 
@@ -404,3 +414,4 @@ OSS_KEY=… OSS_SECRET=… node scripts/deploy-oss.mjs    # 实传（脚本亦�
 - 2026-10-02（**桌面发布·阶段二批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-desktop-release-stage2.md` §1 · 台账 #810 ∥ #826）：**缺口核收正**——§5.6 定位单源指针代际收正（`docs/desktop/design/PROJECT.md` §5 已迁 `docs/desktop/design/PACKAGING.md` §2——同族：§5.5 行 ∥ §5.6 失败处置行）；CHANGELOG「拟新增」四标翻正（§5.2-2 ∥ §5.6 步 1 ∥ §6.3 桌面行）；**自动更新入流程**——§5.6 步 2 产物面句（`latest.yml` ∥ `app-update.yml`）+ 步骤 4 翻「feed 三件」（键形三 ∥ 上传序 ∥ 对盘判据）+ 完成判定补三件；§5.1 图行随动（上传三件）；§6.5 增判据 4（feed 面）；§6.6 边界句收正（页面集扩建 = 一次性变更——循环面零结构改）。**零新语义**（缺口核 ∥ 收正 ∥ 入流程面）。明细 = 批档 §2。
 - 2026-10-03（**桌面发布·阶段二批 · 修复轮（评审轮 1 · 发现 4 逐号 · 父侧裁 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-02-desktop-release-stage2.md` §3 轮次 1 · 台账 #810 ∥ #826）：§5.8 步骤 1 源「两端」⇒ **三端**（+ 桌面 `CHANGELOG.md`——与 §6.4 同拍）；步骤 2「系统要求两行」⇒ **三行**（桌面首行——单源 = `docs/desktop/design/PACKAGING.md` §2.9.3）。**零新语义**（收正）。明细 = 批档 §2 修复轮块。
 - 2026-10-03（**发布口径 · 一体发布（用户裁定 · 主 agent 直接执行 · 可 revert）**——用户「以后发布的时候拜托三端和网站要一起发布」）：§5.8 注补**一体发布**段（官网同步 = 本次发布的组成部分——同轮必做；**发布轮收口 = 三端 ∧ 官网同步**；未完成 ⇒ 不得收口 · 停下上报 → 修复 → 重跑）；F4 行补**发布轮**收口句。**零新机制**（口径强化——§5.8 ∥ §6 机制全文不动）。
+- 2026-10-03（**桌面 Linux 产物批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-desktop-linux.md` §1 ∥ §1 补记二 · 台账 #847 · 需求 D42）：§5.6 增 **Linux 臂**（构建 ∥ 校验 ∥ 取回 ∥ 上传 ∥ 挂载——L1–L5）+ 标题 ∥ 定位 ∥ 构建机要求行随动；§5.6 步骤 4 翻两平台键形（+ Linux 三件 ∥ 上传序）+ 判据补 Linux 行（`latest-linux.yml` 对盘 ∥ 不含 deb）；完成判定补 Linux 臂；§5.1 图行随动；§6.5 判据 4 补 **Linux feed** 行。**零新机制**（沿 §2.11 单源）。明细 = 批档 §2。

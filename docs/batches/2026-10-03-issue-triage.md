@@ -25,5 +25,13 @@
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 ## §3 设计评审（评审子代理）
 ## §4 用户批准（主 agent）
+
+**§4 用户批准（主 agent 记录）——B 线发出**
+
+- **批准**：用户 2026-10-03 20:31「那发」——批准按草稿原样发出（①–⑩ 回复+关单 ∥ ⑪ 仅回复）。
+- **执行回执（实读）**：11 条评论全部落地（HTTP 201 逐条）；关单 10 条（终态复核 11/11：IKIQGK ∥ IKGRAN ∥ IKF9AH ∥ IKEV9I ∥ IKC6IX ∥ IKD5XY ∥ IKEZ1C ∥ IKETT1 ∥ IKDCVV ∥ IKEOO0 = **closed**；IKEV9H = open 如约）。
+- **端点注记**：Gitee 企业仓 issue 状态更新经 `repos/...PATCH` = 404（`project or enterprise`）；改走 `enterprises/shanghai-xinbo/issues/<id>` = 200（与仓内脚本回退路一致；两路 GET 的 html_url 逐字同——同一对象，已核）。评论 POST 走 repos 路径正常（201）。
+- **未发面**：GitHub 侧 0 条（无整条已修可回）；C 线（修复批分组）裁定仍候用户。
+
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）
