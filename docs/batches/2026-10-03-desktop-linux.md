@@ -15,6 +15,8 @@
 - **待设计轮查实/定形**（不得预判）：WSL2 构建环境装配清单（发行版 ∥ Node 24 ∥ 依赖 ∥ 镜像 ∥ 目录布局与产物回取）∥ electron-builder Linux 段（targets ∥ artifactName 模板 ∥ deb 元数据 ∥ Linux 图标面（现仅 `build/icon.ico`——须 png 集）∥ AppImage 运行条件（FUSE ∥ Ubuntu 24 userns/AppArmor 面））∥ 更新器平台分支审计（`update.mjs`——win32 现状 vs linux/AppImage；deb 无更新语义）∥ 产物校验面（Linux 版断言集——含核 ∥ 版本逐字 ∥ 形状）∥ 站点/上传/发布流（`upload-download.mjs` 扩展 ∥ `RELEASE.md` §5 增行）∥ 验收（WSLg 冒烟 = 可自动面 ∥ 真机走查 = 用户侧）。
 - **本片边界**：不开工 macOS ∥ 不触 Windows 线（已发版）∥ 站点改动随发布窗（本轮零部署）∥ 构建机（WSL2 发行版）安装 = 用户门。
 
+**§1 补记（同日 · 构建通道改判 + 云构建就绪）**：WSL 通道经两轮实测**判死**——① **WSL2**：本机 = 阿里云 ECS（无嵌套虚拟化——`VMMonitorModeExtensions` ∥ `SLAT` 实测 False）⇒ VM 起不来（内核 MSI 重启后已装 5.10.16 ✓，但 VM 平台仍不可用）；② **WSL1**：已导入 Ubuntu 24.04（`D:\WSL\Ubuntu1`）且基础命令全通，但 **lxcore 拒载非 PIE（ET_EXEC）二进制**——node 官方包（段基址 0x400000）与发行版 node 双实测 `Exec format error`，而 `ld-linux … node -v` 直呼可跑（coreutils = PIE 全通）⇒ 构建链（node ∥ Go 类工具）不可行。**改判 = 用户「A试试」：GitHub Actions 云构建**——`.github/workflows/linux-build.yml` 已落并推送双远端（workflow_dispatch · ubuntu-latest · node 24 → `npm install` → `materialize-deps` → `electron-builder --linux AppImage deb --publish never` → upload-artifact 三件）；**当前阻塞 = GitHub 组织账号账单锁**（runner 起不来：「account is locked due to a billing issue」——属用户账号动作，待解）。需求 D42 构建通道条款已随改（同日在卷）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：（eng-designer 写入时更新）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>

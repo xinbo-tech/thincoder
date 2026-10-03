@@ -289,3 +289,4 @@
 - 2026-10-02（**文档清账轮 · 执行轮 4（render-core + 桌面轻段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 1 行折行（104——语义零改）。**零新语义**。
 - 2026-10-02（**D40 ∥ D41 新立 · 需求落笔 · 主 agent**〔父侧直接执行 · 可 revert〕——用户 21:39 三项需求（② 官网桌面介绍 ∥ ③ 自动更新落地）+ 台账 #826 ∥ #810；批 = `docs/batches/2026-10-02-desktop-release-stage2.md` 设计轮 U1 兑现）：D40 ∥ D41 ⇒ `requirements/PACKAGING.md`（自动更新 ∥ 官网桌面面——行文见卷）。**自本行起 D 表 = D1–D41**。
 - 2026-10-03（**D42 新立 · 需求落笔 · 主 agent**〔父侧直接执行 · 可 revert〕——用户 2026-10-03 17:27「能把linux版桌面端也做了吗？」+ 17:35「WSL2」构建通道裁定；台账 #847）：D42 ⇒ `requirements/PACKAGING.md`（Linux 桌面产物——AppImage ∥ deb ∥ 官网下载 ∥ AppImage 自动更新 ∥ WSL2 构建通道——行文见卷）。**自本行起 D 表 = D1–D42**。
+- 2026-10-03（同日）：**D42 构建通道改判**——WSL2 ⇒ GitHub Actions 云构建（WSL 实测不可行，证据 = 批档 `docs/batches/2026-10-03-desktop-linux.md` §1 补记）；卷体 D42 行同拍收正。
