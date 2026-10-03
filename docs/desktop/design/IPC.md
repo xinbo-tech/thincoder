@@ -141,6 +141,7 @@
 | `settings:tools` | **tools 族（R7）**——读 `{}` ⇒ `{ ok, reason:null, embedding: { hasKey }, websearch: { hasKey } }`（**值一律不下发**——密钥纪律）；写 `{ patch: { embedding?: { apiKey }, websearch?: { apiKey } } }`（空串 = 清键 ⇒ 摘键；embedding 置键回填核 `DEFAULTS` 的 `baseURL` ∕ `model`——缺位取核单源；`apiKey` 非串 ⇒ `invalid-patch` 零写）；写经核 `writeConfigAtomic` | 处理体 = `thincoder-desktop/src/main/settings-tools.mjs` |
 | `mcp:tools` | **MCP 工具清单 ∕ Test 探活（R7）**——① `{ name }` ⇒ `{ ok, tools: [{ name, description, params }] }`（连接列举——核 `connectMcpServer` 幂等；`params` = `parameters.properties` 键名逗号连；工具名 = 核构建面原形〔含 `<server>_` 前缀〕）；② `{ name, test: true }` ⇒ `{ ok, toolCount, latencyMs }` ∥ `{ ok:false, reason:"probe-failed", detail }`（核 `probeMcpServer` 一次——零副作用）；名不在配置 ⇒ `{ ok:false, reason:"unknown-server" }`（零连接） | 处理体 = `thincoder-desktop/src/main/mcp-servers.mjs` |
 | `theme:state` | **勾选态回读（D36 增——菜单体系批 · #811 修复轮 2；白名单末位 47——已落）**——载荷 `{ theme }`：`theme` = 三值闭集 `system` ∥ `light` ∥ `dark`（当前生效主题落地值——值面单源 = `thincoder-desktop/renderer/theme.mjs` `THEMES`）；**渲染 → 主单向状态报告**——发送 = 渲染面两写作点（装配初值 ∥ 设置面出口落地——单写者两调用位）；接收 = 主进程勾选态缓存 + `refreshMenu()`（`thincoder-desktop/src/main/window.mjs` `setMenuTheme`）；回执 `{ ok: true }` ∥ `{ ok: false, reason: "invalid-theme" }`（表外值 ⇒ 零变更 + 记错——防御档）；**限度 = 报告缓存**（主进程零直读渲染面 `localStorage` ∥ 零轮询；报告未达窗 = 主题▸全零勾——fail-open）；决策单源 = `docs/desktop/design/MENU.md` §1 **KD-65** | 处理体 = `thincoder-desktop/src/main/ipc.mjs`（`setMenuTheme` 转口——缓存与重建住 `thincoder-desktop/src/main/window.mjs`） |
+| `panel:state` | **渲染面实况回读上报（子代理面板批增——位次 48 · 设计目标态（实施批落））**——载荷 `{ key, blocks }`：`blocks` = 渲染面子代理块快照（六字段 `{ key, role, id, status, frozen, awaitingDigest, region, dom }`——判别面 ∥ 载荷形单源 = `docs/desktop/design/PANEL-READBACK.md` §2.1）；**渲染 → 主单向状态报告**——发送 = 渲染面帧出口（签名去重；`thincoder-desktop/renderer/panel-readout.mjs`（拟新增））；接收 = 主进程读数缓存（`thincoder-desktop/src/main/panel-live.mjs`（拟新增）——后报覆前报）⇒ 核 `panel` 工具 view ∥ freeze 读源（`agent._panelReadout`）；回执 `{ ok: true }` ∥ `{ ok: false, reason }`（键面 ∥ 形状校验——防御档）；**限度 = 报告缓存**（主进程零轮询 ∥ 零直读渲染面；报告未达 ⇒ 工具侧回落降级链——`PANEL-READBACK.md` §2.1） | 处理体 = `thincoder-desktop/src/main/ipc.mjs`（`panelLive.report` 转口——缓存住 `thincoder-desktop/src/main/panel-live.mjs`（拟新增）） |
 
 **页游标注（`history:page` 回执 · 单源）**：
 
@@ -149,10 +150,10 @@
 3. **无更早页** ⇒ `next = null`（判据 ⇔ 窗下界 `0`——即核 `hasOlder === false`，`thincoder-core/history-window.mjs:178`）。
 4. **记录计入页量（留档批 · #719）**：`{ records: true }` 直通时留档记录（`digest` ∥ `subagent`）**占条目位**——页量 200 条 = 人读线条目数（含记录）；`hasOlder` ∥ `next` 三式零改（游标按条目推进）；「零消息页」式同覆盖「仅记录页」（可视消息 0 ∧ 记录在场 ⇒ 游标必进，不粘滞）；负控 = 默认关 ⇒ 现行行为逐字等价。
 
-**白名单面（批 9 落 · 批 A 追加 · 批 B 追加 · 对齐重定位批追加 · 对齐第三批追加 · 输入面板移植批追加 · 桌面功能对位批追加 · 模型菜单全渠批追加 · parity-b10 批追加 · 消化面留档批追加 · 菜单体系批追加）**：白名单 = **47 项（已落）**（消化面留档批 · #719 已落；**菜单体系批 · #811 增 `theme:state`**）
+**白名单面（批 9 落 · 批 A 追加 · 批 B 追加 · 对齐重定位批追加 · 对齐第三批追加 · 输入面板移植批追加 · 桌面功能对位批追加 · 模型菜单全渠批追加 · parity-b10 批追加 · 消化面留档批追加 · 菜单体系批追加 · 子代理面板批追加）**：白名单 = **48 项**（已落 47：消化面留档批 · #719 ∥ **菜单体系批 · #811 `theme:state`**；**子代理面板批增 `panel:state`——末位 48 · 设计目标态（实施批落）**）
 （批 8 及以前 13 + 批 9 十二 + 批 A 一 + 批 B 一 + 对齐重定位批一 + 对齐第三批一（`file:open`）+ 输入面板移植二（`session:flags` ∕ `at:complete`）
 + 桌面功能对位批七（R1 二：`session:gc` ∕ `session:index`；R2 二：`index:build` ∕ `index:status`；R7 三：`settings:env` ∕ `settings:tools` ∕ `mcp:tools`）
-  + 模型菜单全渠批一（`model:catalog`——位次 39）+ **parity-b10 批六**（`provider:setKey` ∕ `provider:delKey` ∕ `provider:models` ∕ `provider:setProxy` ∕ `mcp:update` ∕ `mcp:reconnect`——末位 40–45）+ **消化面留档批一**（`record:append`——末位 46）+ **菜单体系批一**（`theme:state`——末位 47））。
+  + 模型菜单全渠批一（`model:catalog`——位次 39）+ **parity-b10 批六**（`provider:setKey` ∕ `provider:delKey` ∕ `provider:models` ∕ `provider:setProxy` ∕ `mcp:update` ∕ `mcp:reconnect`——末位 40–45）+ **消化面留档批一**（`record:append`——末位 46）+ **菜单体系批一**（`theme:state`——末位 47）+ **子代理面板批一**（`panel:state`——末位 48 · 设计目标态））。
 
 - **既有十三项**（序锁定 · 位次 1–13）：`config:read` · `project:open` · `project:recent` · `sessions:list` · `session:create` · `session:switch` · `session:rename` · `session:delete` · `session:resume` · `approval:respond` · `history:page` · `msg:send` · `msg:interrupt`。
 - **批 9 十二新**（追加于末位 · 位次 14–25 · 序 = 本列）：`provider:list` · `provider:save` · `provider:remove` · `provider:verify` · `model:list` · `settings:agent` · `mcp:list` · `mcp:save` · `mcp:remove` · `config:write` · `ledger:read` · `batch:status`。
@@ -168,6 +169,7 @@
 - **parity-b10 批六新**（追加末位 · 位次 40–45 · 序 = 本列）：`provider:setKey` · `provider:delKey` · `provider:models` · `provider:setProxy` · `mcp:update` · `mcp:reconnect`（载荷 / 回执见 §2 该两行 + 「设置族与项目级信息族注」表该六行）；明细 = `docs/batches/2026-09-29-parity-b10-ui.md` §2 ∕ §5。
 - **消化面留档批一新**（追加末位 · 位次 46）：`record:append`——留档记录追加（载荷 / 回执见 §2 该行；**通道族面** = `subagent` 到达族 ∥ `digest` 族经通道不可达——同点双动作）；明细 = `docs/batches/2026-09-30-digest-persistence.md` §2 ∕ §3。
 - **菜单体系批一新**（追加末位 · 位次 47）：`theme:state`——勾选态回读（载荷 / 回执见 §2 该行 · 限度 = 报告缓存）；明细 = `docs/batches/2026-10-02-desktop-menu-system.md` §2（修复轮 2）。
+- **子代理面板批一新**（追加末位 · 位次 48 · 设计目标态）：`panel:state`——渲染面实况回读上报（载荷 / 回执见 §2 该行 · 限度 = 报告缓存）；明细 = `docs/batches/2026-10-04-subagent-panel-live-face.md` §2 ∥ `docs/desktop/design/PANEL-READBACK.md`。
 - **逐条勘定**（批 9 · 该批范围 = 批次档 §1.2）：上列十二项 = **该批落**；索引状态读数面 = **已落**（桌面功能对位批 R2——`index:build` ∕ `index:status`，位次 34 ∕ 35；见 §2 该两行 + `docs/desktop/design/PROJECT.md` §6.1 D8 行）。
 - 唯一入册面 = `thincoder-desktop/src/main/ipc-registry.mjs`（`HANDLERS` 表 = 白名单逐项 → 处理体映射 + 注册序；#28 拆点）≡ `thincoder-desktop/src/preload/preload.cjs` 暴露表（两向相等 = 用例机检面）；分发面 = `thincoder-desktop/src/main/ipc.mjs`；表外通道 ⇒ 拒绝（零静默兜底）。
 
@@ -538,3 +540,4 @@
 - 2026-10-03（**ledger-family-aggregate 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-ledger-family-aggregate.md` §1 · 台账 #882）：§1 `ev:ledger` 行随动——`marker` `text` = **当前打开范围合计** ∥ `warn` = 范围内判位（范围判据单源 = `docs/core/design/LEDGER.md` §7.2）。**通道 ∥ 载荷键集零变**。明细 = 批档 §2。
 - 2026-10-03（**会话选定写回批（default-model-carryover）· 复评残余修复轮（评审轮次 2 · 发现 1 ∥ 3 · 父侧裁定 = 归 eng-designer）· eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §3 轮次 2 · 台账 #880）：「会话级偏好注」项 8 边界句时态限定（「现四写点」⇒「**#880 前既有四写点**」——与设置族注 8① 两轴公式对轴，消「同轴两值」误读）∥ 项 7 回执句「（信封三键）」⇒「信封 + `meta`（三键）」形（与 `:118` / `:183` 同形）。**零新语义 ∥ 通道集零变**。明细 = 批档 §2 复评残余修复块。
 - 2026-10-03（**D8 残留清理 · 父侧直接执行 · 可 revert**——承本批复评 #31 过后 #36 路遇上抛）：§2 档位控件注项 9 写载荷行删修订式从句（「patch 表达不了删键」旧说已消解——）——权威句直陈现状（`patch` 即显式清除面）。**零语义改**。
+- 2026-10-04（**子代理面板批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-subagent-panel-live-face.md` §2 · 台账 #891 ∥ #892）：§2 增 `panel:state` 行（渲染面实况回读上报——渲染→主单向 ∥ 读数缓存；白名单 47 ⇒ 48——设计目标态，实施批落）+ 白名单面段 ∥ 末位注 ∥ 批次条目同拍。明细 = 批档 §2。
