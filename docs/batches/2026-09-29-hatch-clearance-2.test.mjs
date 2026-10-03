@@ -15,7 +15,8 @@
  *   L7 S3 分档（词 ∕ 抑制形 ∥ 宿主忙落账覆盖 ∥ `provider:verify` 回执另携 `failure`）
  *   L8 MCP 装配缝 + M1 钩子（并入 ∕ 失败落警告 ∥ manifest 附着 + 槽值优先）
  *   L9 文档面旧串零命中（判据域 = 规范面 only；记录面 ∕ 批档豁免 + 延后序档点名排除）
- *   L10 引导形（`provider-invalid` ⇒ VSC `error.provider` 词逐字 · 两语 ── §2.7 行 3「消——基准实读后归一」）
+ *   L10 引导形（`provider-invalid` ⇒ VSC `error.provider` 词逐字 · 两语 ── §2.7 行 3「消——基准实读后归一」；
+ *       #840 续：路由按真因分类 —— `defaultModel` 类走新键，基准词路由保留）
  *
  * 批次本地单测件：名随批次档、住批次目录、不进仓套件（复跑 = 上行命令；改后盘 = 对拍锁）。
  */
@@ -26,7 +27,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { pathToFileURL } from "node:url"
 
-import "../../thincoder-desktop/test/rc-resolve.mjs" // `/rc/` 解析钩子（须先于任何 /rc/ 取件注册）
+import "../../thincoder-desktop/test/rc-resolve.mjs" // `/rc/` 解析钩子
 
 const root = process.cwd()
 const at = (rel) => pathToFileURL(join(root, rel)).href
@@ -189,9 +190,9 @@ test("L7 S3：分档映射 ∥ 抑制形 ∥ 宿主忙落账覆盖", async () =>
   recordAdmission("p1", { ok: true, ts: 1 }) // 复原落账面（免污染同进程后续用例）
 })
 
-// ─── L10 · 引导形（`provider-invalid` ⇒ VSC 基准词）─────────────────────────────
+// ─── L10 · 引导形（`provider-invalid` ⇒ VSC 基准词；#840 续：真因分类路由）────────────────
 
-test("L10 引导形：provider-invalid ⇒ VSC `error.provider` 词逐字（两语）", async () => {
+test("L10 引导形：provider-invalid ⇒ VSC `error.provider` 词逐字（两语）∥ 真因分类路由在档", async () => {
   const { initDict, t } = await import(at("thincoder-desktop/renderer/i18n.mjs"))
   const vscEn = JSON.parse(read("thincoder-vscode/locales/en.json"))
   const vscZh = JSON.parse(read("thincoder-vscode/locales/zh.json"))
@@ -200,7 +201,8 @@ test("L10 引导形：provider-invalid ⇒ VSC `error.provider` 词逐字（两�
   initDict({ locale: "en" })
   assert.equal(t("composer.send.noProvider"), vscEn["error.provider"], "en 词 = VSC error.provider 逐字")
   const src = read("thincoder-desktop/renderer/composer-sync.mjs")
-  assert.match(src, /reason === "provider-invalid" \? t\("composer.send.noProvider"\)/, "失败行路由：provider-invalid ⇒ 引导词（余码仍走原模板）")
+  assert.match(src, /reason === "provider-invalid"[\s\S]{0,120}?failure\?\.kind === "defaultModel"/, "失败行路由：provider-invalid 按真因分类（#840 续——defaultModel 类走新键）")
+  assert.match(src, /t\("composer\.send\.noProvider"\)/, "非 defaultModel 类 ⇒ 基准词路由保留（值逐字不动）")
   assert.match(src, /t\("composer.send.failed", \{ reason \}\)/, "余码原模板保留")
 })
 

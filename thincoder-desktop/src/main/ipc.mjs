@@ -187,7 +187,8 @@ function sessionPrefs(payload) { return requireAgentHost().setPrefs(payload?.key
  *  再回 —— `IPC.md` §2「附件注」项 4）∥ `{ ok:true, degraded }`（附件弃项两态 —— `IPC.md` §2「附件注」项 5）
  *  ∥ `{ ok:true, queued:true }`（**忙态入队** —— 「回合中插入」批 · KD-40 ②）∥ `{ ok:false, reason }`（`bad-key` /
  *  `busy`〔挂起窗附件面〕/ `queue-full`；**受理后失败径同形外加 `started:false`**〔宿主未受理 ⇒ 渲染面回收受理即置忙位〕：
- *  `provider-invalid` / `aborted`〔跨中止径 ∕ 降级窗后查位 ∕ 装配窗中止〕/ 装配抛〔err 文案原样〕· #597）：
+ *  `provider-invalid`（**另携真因分类 `providerKind`** —— 闭集 `defaultModel` ∥ `provider`，结构判定；`reason`
+ *  裸码零改 —— 首跑渠道提示修复批 · #840）/ `aborted`〔跨中止径 ∕ 降级窗后查位 ∕ 装配窗中止〕/ 装配抛〔err 文案原样〕· #597）：
  *  载荷 `{ key, text, images }`（`images` = dataURL 串列 —— A1），转口宿主回合驱动。 */
 function msgSend(payload) { return requireAgentHost().send(payload?.key, payload?.text, payload?.images) }
 

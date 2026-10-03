@@ -194,6 +194,17 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 - **判据（可机检）**：`S._turnState === "running"` ∧ `now − (S._lastOutputAt ?? S._turnStart) ≥ 10000` ⇒ 段在场（首显 = 10s）；不足阈值 ∕ 非 running ∕ 回合尾 ⇒ 零段（负向锁）；真机 = 父侧真跑闭合（D16 义务）。
 - **边界**：纯读数——零控件 ∕ 零打断 ∕ 零警示色；**零协议改**（本段纯 webview 自算——无新消息 ∥ 无新载荷 ∥ 无新通道）；核件 ∕ 宿主零改；段位对位表行 = `WEBVIEW-PROTOCOL.md` §6.1（本批已补）。
 
+### 4.8 provider 态横幅三态 + 动作（无有效 defaultModel · 2026-10-03 · 台账 #841）
+
+- **判据单源 = `docs/core/design/PROVIDER.md` §6.22**（U3 宽松+明示：`ok` ∥ `fallback` ∥ `invalid` 三态；本段只落本端呈现面与数据面）。
+- **数据面**：`providerStatus` 消息载荷增 `providerState` 键（`{ state, channel, model, reason }`——主侧 = `thincoder-vscode/src/extension/settings.mjs` `providerStatus()` ∥ `pushStatus`，经核统一解析出值）；刷新点 = `pushStatus` 现推点（面板就绪 / provider 写后 / 准入落账后）——**零新通道**。
+- **横幅三态**（`#provider-banner` · `webview/ui.js` `showBanner`）：`keyOk` 假 ⇒ 现键 `banner.notConfigured` 逐字不变；
+  `keyOk` 真 ∧ `state === "fallback"` ⇒ **新键 `banner.defaultModelFallback`**（zh `⚠ 默认模型未设置或无效 — 正在使用渠道默认模型` ∥ en 成对）+ **动作钮**「选择默认模型」（新键 `banner.chooseDefaultModel`）→ `openSettings()`（设置面默认模型段）；
+  `keyOk` 真 ∧ `state === "ok"` ⇒ 现键 `banner.configured`（不变）。
+- **动作落点避死端**：钮不开会话级模型菜单（写会话槽不修 `defaultModel`）；真修口 = 设置面默认模型段（与 `#840` 桌面 KD-3 同判）。
+- **链收正（机制面，本段不重述）**：`panel-turn-stages.mjs` 接入面自建回退链改核函数 ∥ `presets.mjs` `resolveDefaultModel` 改核转口（单源 = `doc:PROVIDER.md:§6.22`）；**可用性不得降**（渠道+key 已配 ⇒ 直接可发——事实标准不回退）。
+- **边界**：发送失败面（`error.provider` 词 ∥ `needsSetup` 径）零改；welcome 面板两键零改；`i18n-dom` 横幅键刷新面随三态键扩（`data-banner-key` 取值闭集）。
+
 ## 5. 子代理活动块与活动区
 
 子 agent / consult / escalate / advisor-async 的活动块**出生即 append 到固定活动区 `#subagent-activity` 区尾**（`thincoder-vscode/webview/activity.js:108`），在消息区与输入区之间——**live 固定可见，不随会话流滚动丢失**。
@@ -798,3 +809,4 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-10-01（**跨端消化面恢复批 · 收尾轮（#27 报备之未及项）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2 随落笔轮随见 ∥ §5 VSC 舱上抛②）：§5.7 读面坐标对盘收正（`panel-session.mjs:150/:176` ⇒ **`:152/:179`**——两处 `historyWindow` 调用行 · as-of 2026-10-01 实读）；§5.7「§13 行实施轮落」pending 措辞 ⇒ 现态（已落——`WEBVIEW-PROTOCOL.md:506`）；§5.7 重建件 `webview/record-restore.js`「拟新增」标去（在盘 116 行）。**零新语义**。
 - 2026-10-01（**消化重放口径批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-01-digest-replay-choices.md` §1 ∥ §2 · 台账 #771 ∥ #773）：§5.1 ∥ §5.7 复列句收正——**复列 = 全量（未结轮照现——可证面 = 轮间 ∥ 末页）**（轮锚 = 起跑记录；终态元素需 `n`）；容差① 收正（不可证面零产）。**零机制改**（口径收正）。明细 = 批档 §2。
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 7 锚销项（R1 改指 4——`suspension.mjs` 补 `thincoder-vscode/src/extension/` 前缀〔§5.7 写点行 ∥ 变更记录 3 行〕；R3 裸名化 1——死名 `webview-env.mjs`（§11 用例基建列）；R5 行注记 1（「机检豁免——用例退场登记」入 §5.6 判据行））；宽面 9 行折行（132 ∥ 190 ∥ 219 ∥ 225 ∥ 226 ∥ 418 ∥ 424 ∥ 468 ∥ 471——语义零改）。**零新语义**。
+- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 · 台账 #841）：新增 **§4.8 provider 态横幅三态 + 动作**（`providerState` 载荷 ∥ 三态横幅 ∥ 动作钮 → 设置面 ∥ 链收正指针）。**产品码零触（设计轮）**。机制单源 = `docs/core/design/PROVIDER.md` §6.22。

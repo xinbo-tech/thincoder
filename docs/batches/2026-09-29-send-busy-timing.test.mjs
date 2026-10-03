@@ -1,7 +1,7 @@
 /**
  * 2026-09-29-send-busy-timing.test.mjs — 批次本地单元件（发送忙态时机批 #597 · #596 并入 · 随批留存归档）。
  * 名随批次档 · 住批次目录 · 不进仓套件；复跑 = 从仓库根 `thincoder/`：
- *   node --test docs/batches/2026-09-29-send-busy-timing.test.mjs
+ *   node --import ./thincoder-desktop/test/rc-resolve.mjs --test docs/batches/2026-09-29-send-busy-timing.test.mjs
  * （导入按 `process.cwd()`（仓库根）相对解析；落位期暂存 `.thincoder/tmp/` 同名副本 = 留档，终位 = 本目录。）
  *
  * 用例 = 批次档 §2.5 测试面（① turn-driver 直测 ② composer-wire 直测 ③ badges 纯动作 ⑥ 结构核）+
@@ -9,7 +9,7 @@
  *   T1  受理即置：恰一发 `ev:activity{turn}`（无帧值）；忙态 ∕ 窗 ∕ bad-key 径零发射（AC1① 发射端）
  *   T2  清位径①：装配抛 ⇒ 非吞回执（err 文案原样 + started:false）
  *   T3  清位径②：装配 await 期跨中止（dispose）⇒ aborted + started:false
- *   T4  清位径③：provider 无效 ⇒ provider-invalid + started:false
+ *   T4  清位径③：provider 无效 ⇒ provider-invalid（携 providerKind）+ started:false（#840 改钉）
  *   T5  清位径④：降级窗后查位（窗内占位被摘）⇒ aborted + started:false + 落盘件自清
  *   T6  装配窗中止（新查位）：窗内 interrupt ⇒ 零起跑 + aborted + started:false（AC3）
  *   T7  writer 失败径三例：started:false ⇒ 清位；无 started 键 ⇒ 零清位；ok 真 ⇒ 零清位（AC2 渲染半）
@@ -138,10 +138,10 @@ test("T3 清位径②：装配 await 期跨中止（dispose）⇒ aborted + star
   assert.equal(runs.length, 0, "零起跑")
 })
 
-test("T4 清位径③：provider 无效 ⇒ provider-invalid + started:false", async () => {
+test("T4 清位径③：provider 无效 ⇒ provider-invalid（携 providerKind）+ started:false", async () => {
   const agent = makeAgent({ _providerInvalid: true })
   const { driver, runs } = driverOf({ ensure: async () => agent })
-  assert.deepEqual(await driver.send(KEY, "甲", null), { ok: false, reason: "provider-invalid", started: false })
+  assert.deepEqual(await driver.send(KEY, "甲", null), { ok: false, reason: "provider-invalid", providerKind: "provider", started: false }) // #840：分类键随回执（桩 config 无人证面 ⇒ provider 类——保守）
   assert.equal(driver.busyOf(KEY), false, "占位已摘")
   assert.equal(runs.length, 0, "零起跑")
 })
@@ -194,7 +194,7 @@ test("T7 失败径三例：started:false ⇒ 清位；无 started 键 / ok 真 �
   await p1
   await sleep(10) // `post` 同步派发（返 void）—— 等结算微task 落定
   assert.equal(one.running(), false, "位标回收（clearRunning 单点）")
-  assert.equal(one.wire.failure(), "aborted", "失败行（reason 原样）")
+  assert.equal(one.wire.failure()?.reason, "aborted", "失败行（reason 原样——载体 {reason, kind}，#840）")
   assert.equal(one.get().blocks.length, 0, "本地块退流")
   // ② 无 started 键（bad-key ∕ queue-full 等既有拒）：位标属在飞回合 ⇒ 零清位
   const two = wireOf()
@@ -204,7 +204,7 @@ test("T7 失败径三例：started:false ⇒ 清位；无 started 键 / ok 真 �
   await p2
   await sleep(10)
   assert.equal(two.running(), true, "在飞回合位标不动（非 started:false 径）")
-  assert.equal(two.wire.failure(), "queue-full", "失败行照旧")
+  assert.equal(two.wire.failure()?.reason, "queue-full", "失败行照旧")
   // ③ ok 真（受理径）：零清位
   const three = wireOf()
   three.set({ tabBadges: { [KEY]: ["running"] } })
@@ -224,9 +224,9 @@ test("T8 超时界：清位 + 失败行 timeout + 退流 + timer 清点（AC2 �
   one.set({ blocks: [block] })
   one.wire.noteEcho(KEY, block)
   await one.wire.post("userMessage", { text: "甲" }) // 回执悬挂 ⇒ timer 先到
-  await until(() => one.wire.failure() === "timeout")
+  await until(() => one.wire.failure()?.reason === "timeout")
   assert.equal(one.running(), false, "清位（本尝试仍最新 ∧ 位标在场）")
-  assert.equal(one.wire.failure(), "timeout", "失败行 timeout")
+  assert.equal(one.wire.failure()?.reason, "timeout", "失败行 timeout")
   assert.equal(one.get().blocks.length, 0, "退流")
   // ok 先到 ⇒ timer 清点（窗口过后零副作用）
   const two = wireOf({ sendTimeoutMs: 20 })
@@ -244,8 +244,8 @@ test("T9 迟到自愈分治：非队形 ⇒ 行清 + 块补；队形 ⇒ 行清 
   const one = wireOf({ sendTimeoutMs: 20 })
   one.set({ tabBadges: { [KEY]: ["running"] } })
   await one.wire.post("userMessage", { text: "甲" })
-  await until(() => one.wire.failure() === "timeout")
-  assert.equal(one.wire.failure(), "timeout", "超时先行")
+  await until(() => one.wire.failure()?.reason === "timeout")
+  assert.equal(one.wire.failure()?.reason, "timeout", "超时先行")
   one.calls[0].resolve({ ok: true })
   await until(() => one.wire.failure() === null)
   assert.equal(one.get().blocks.length, 1, "恰补一枚块（「每受理消息恰一枚块」不变式恢复）")
@@ -253,7 +253,7 @@ test("T9 迟到自愈分治：非队形 ⇒ 行清 + 块补；队形 ⇒ 行清 
   const two = wireOf({ sendTimeoutMs: 20 })
   two.set({ tabBadges: { [KEY]: ["running"] } })
   await two.wire.post("userMessage", { text: "乙" })
-  await until(() => two.wire.failure() === "timeout")
+  await until(() => two.wire.failure()?.reason === "timeout")
   two.calls[0].resolve({ ok: true, queued: true })
   await until(() => two.wire.failure() === null)
   assert.equal(two.get().blocks.length, 0, "队形 ⇒ 退流态保持（零块补）")
@@ -261,10 +261,10 @@ test("T9 迟到自愈分治：非队形 ⇒ 行清 + 块补；队形 ⇒ 行清 
   const three = wireOf({ sendTimeoutMs: 20 })
   three.set({ tabBadges: { [KEY]: ["running"] } })
   await three.wire.post("userMessage", { text: "丙" })
-  await until(() => three.wire.failure() === "timeout")
+  await until(() => three.wire.failure()?.reason === "timeout")
   three.calls[0].resolve({ ok: false, reason: "aborted" })
   await sleep(20)
-  assert.equal(three.wire.failure(), "timeout", "零追加（迟到失败不改行）")
+  assert.equal(three.wire.failure()?.reason, "timeout", "零追加（迟到失败不改行）")
   assert.equal(three.get().blocks.length, 0, "零块补")
 })
 
@@ -272,14 +272,14 @@ test("T10 陈旧守卫 + E4 扩例：重发在飞 + 首次迟到 ok ⇒ 零清�
   const w = wireOf({ sendTimeoutMs: 20 })
   w.set({ tabBadges: { [KEY]: ["running"] } })
   await w.wire.post("userMessage", { text: "甲" }) // #1 超时
-  await until(() => w.wire.failure() === "timeout")
-  assert.equal(w.wire.failure(), "timeout", "#1 超时先行")
+  await until(() => w.wire.failure()?.reason === "timeout")
+  assert.equal(w.wire.failure()?.reason, "timeout", "#1 超时先行")
   const p2 = w.wire.post("userMessage", { text: "甲" }) // 重发 #2（回执悬挂）
   w.set({ tabBadges: { [KEY]: ["running"] } }) // #2 受理位（受理即置）
   w.calls[0].resolve({ ok: true }) // #1 迟到 ok（陈旧）
   await until(() => w.get().blocks.length === 1)
   assert.equal(w.running(), true, "① 零清位追加（陈旧守卫 —— #2 受理位在场）")
-  assert.equal(w.wire.failure(), "timeout", "② 失败行不清（行槽属后续尝试面）")
+  assert.equal(w.wire.failure()?.reason, "timeout", "② 失败行不清（行槽属后续尝试面）")
   assert.equal(w.get().blocks.length, 1, "③ 恰补一枚块（#1 —— 消息级不变式）")
   w.calls[1].resolve({ ok: true }) // #2 回执照常
   await until(() => w.wire.failure() === null)

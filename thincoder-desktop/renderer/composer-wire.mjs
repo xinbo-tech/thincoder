@@ -3,7 +3,8 @@
  * 在册拆分预案落形 —— 单源 = `test/host-floor.test.mjs` U95 例外面登记「拆分预案 = 写面出档（`post` 映射表 + 逐
  * handler —— 候选面 = `renderer/composer-wire.mjs`）」）：通道往返归一 · 逐类型出站 handler（`msg:send` 直发 ∕
  * 队径 · `msg:interrupt` 停止 ∕ 中断注入 · `at:complete` · `session:prefs` · `session:flags` · footer 三出口 ⇒
- * 本地先行块登记与退流（`noteEcho` ∕ `retractEcho` —— B12 出泡面）· B21 失败态（`failed` 行源）。
+ * 本地先行块登记与退流（`noteEcho` ∕ `retractEcho` —— B12 出泡面）· B21 失败态（`failed` 行源 ——
+ * 载体 `{ reason, kind }`：`provider-invalid` 回执真因分类 `providerKind` 透传，#840）。
  *
  * 注入面（deps）：`store`（切片读写）· `activeKey()`（现刻活动会话）· `call(channel, payload)`（窄桥往返 ——
  * mount 侧归一失败形）· `push(message)`（核件推送 —— `atResults` 回投）· `panelOf()`（核件面板读数面 ——
@@ -57,10 +58,13 @@ export function createComposerWire(deps = {}) {
   let atSeq = 0 // @ 面请求 seq（迟到回执丢弃判据 —— VSC `autocomplete.js:29-34` 同式）
   const inFlight = new Map() // 本键最新发送尝试登记（key → 尝试令牌 —— 陈旧回执 ∕ 陈旧超时守卫单点 · #597）
 
-  /** 失败态记录（B21）：`reason` 入态 + 记错 + 提示行重挂。 */
+  /** 失败态记录（B21）：`{ reason, kind }` 入态 + 记错 + 提示行重挂。`kind` = `provider-invalid` 回执真因
+   *  分类（`providerKind` 键透传 —— 缺 ∕ 非串 ∕ 空 ⇒ `null`；批 #840 —— 渲染面按类出词）；其余失败径
+   *  `kind` 恒 `null`（负向锁）。**console 行逐字保持**（`${reason}` —— E2E 锚 `provider-invalid`）。 */
   function recordFailure(channel, receipt) {
-    failed = reasonOf(receipt)
-    console.error(`[composer] ${channel} failed: ${failed}`)
+    const kind = typeof receipt?.providerKind === "string" && receipt.providerKind !== "" ? receipt.providerKind : null
+    failed = { reason: reasonOf(receipt), kind }
+    console.error(`[composer] ${channel} failed: ${failed.reason}`)
     repaint()
   }
 

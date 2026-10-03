@@ -70,13 +70,17 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
   const retryDelayMs = Number.isFinite(retryDelayIn) ? retryDelayIn : RETRY_DELAY_MS // 重探步进（测试缝；缺省回退 = 生产径）
   const wait = typeof delayIn === "function" ? delayIn : (ms) => new Promise((resolve) => setTimeout(resolve, ms)) // 等待缝
 
-  /** B21 发送失败行（`composer-notice` 单形 · 行形不动；载体 = 挂件锚）：reason 缺 / 非串 / 空 ⇒ `null`（禁假造）。
-   *  **供应商无效 ⇒ 引导形（#673 · 2026-09-29 · 承 `docs/batches/2026-09-29-hatch-clearance-2.md` §2.7 行 3「消——基准实读后归一」）**：
-   *  `provider-invalid` 改携 VSC 基准词 `error.provider`（值逐字 = `thincoder-vscode/locales/{en,zh}.json`——
-   *  「未配置 API 密钥 — 点击 ⚙ 设置」/ en 同源；两端可见面同词 · 零新控件与流程）；余码仍走 `composer.send.failed`（含 `${reason}` 原码）。 */
-  function failedNotice(reason) {
+  /** B21 发送失败行（`composer-notice` 单形 · 行形不动；载体 = 挂件锚）：载体缺 ∕ `reason` 非串 ∕ 空 ⇒ `null`（禁假造）。
+   *  **真因分类 → 词路由（#840）**：`provider-invalid` ∧ `kind === "defaultModel"`（缺 ∥ 无效 `defaultModel`；
+   *  分类单源 = 主侧 `providerKind`）⇒ 新键 `composer.send.noDefaultModel`（状态陈述——指向真实可修的下一步）；
+   *  其余 `provider-invalid`（真无渠道 ∥ 条目结构不全 ∥ 分类缺）⇒ 现键 `composer.send.noProvider` 逐字不动；
+   *  余码仍走 `composer.send.failed`（含 `${reason}` 原码）。 */
+  function failedNotice(failure) {
+    const reason = failure?.reason
     if (typeof reason !== "string" || reason === "") return null
-    const word = reason === "provider-invalid" ? t("composer.send.noProvider") : t("composer.send.failed", { reason })
+    const word = reason === "provider-invalid"
+      ? (failure?.kind === "defaultModel" ? t("composer.send.noDefaultModel") : t("composer.send.noProvider"))
+      : t("composer.send.failed", { reason })
     return { tag: "div", props: { class: "composer-notice", "data-notice": "send-failed" }, children: [word] }
   }
 

@@ -12,12 +12,34 @@
 import { cleanupTurn, degradeTurnAttachments, prepareTurnAttachments } from "./attachments.mjs"
 import { slotOfKey } from "./session-slots.mjs"
 
+/** provider 无效**真因分类**（闭集 `defaultModel` ∥ `provider` —— `provider-invalid` 回执 `providerKind` 键单源；
+ *  批档 §2 补录 ∥ 修正轮发现 6）：**结构判定**（零字符串嗅探 ∥ 零解析副本）——取装配产物**已算值**：
+ *   ① `config.provider?.name` 非空 ⇒ `provider`（`defaultModel` 解析已通过 ⇒ 无效因在**条目结构**
+ *      〔缺 `baseURL` 等〕——修点在渠道面）；
+ *   ② `defaultModel` 非空而解析未过（未知渠 ∕ 模型段空 ∕ 形态非法）⇒ `defaultModel`；
+ *   ③ `defaultModel` 缺 ∥ 空 ⇒ 渠表空 ? `provider` : `defaultModel`（渠表非空而缺 `defaultModel` = 首跑
+ *      缺环实况 ⇒ 「选择模型」可修）；
+ *   ④ `config` 不可用（测试桩 ∥ 缺）⇒ `provider`（保守——落回现词）。
+ *  纯函数、零副作用（`renderer/composer-sync.mjs` 词路由按类出词）。 */
+export function providerKindOf(agent) {
+  const config = agent?.config
+  if (config === null || typeof config !== "object" || Array.isArray(config)) return "provider"
+  const name = config.provider?.name
+  if (typeof name === "string" && name !== "") return "provider"
+  const defaultModel = config.defaultModel
+  if (typeof defaultModel === "string" && defaultModel.trim() !== "") return "defaultModel"
+  const table = Array.isArray(config.providers) ? config.providers
+    : Array.isArray(config.providersList) ? config.providersList : []
+  return table.length === 0 ? "provider" : "defaultModel"
+}
+
 /** 回合输入面工厂（msg 双通道族 —— 见档头）：返回 `{ send, interrupt }`（逐字迁出自 `turn-driver.mjs`）。 */
 export function createTurnInput({ post, ensure, flights, queued, chain, suspension, drive, projects, denyGates, capPending }) {
   /** `msg:send`：坏键 ⇒ bad-key · **窗内 ⇒ 入挂起队列**（回执 `{ ok: true, queued: true }` 与忙态受理同形；含附件 ⇒
    *  **同受理**——载具层携图，窗条目携 `images`、送达判决随 `delivered.degraded`；`busy` = 窗径竞态防御档）·
    *  **在飞 ⇒ 按会话键入队**（`{ok:true, queued:true}`；满 ⇒ `queue-full` 零入队 —— KD-40 ②）·
-   *  provider 无效 ⇒ provider-invalid · **装配 `await` 期跨中止 ∕ 装配窗中止（窗内 Stop）⇒ `aborted`**（#515② ∕ #597 零起跑）；
+   *  provider 无效 ⇒ provider-invalid（**另携真因分类 `providerKind`** —— 闭集 `defaultModel` ∥ `provider`，
+   *  `providerKindOf` 结构判定；`reason` 裸码零改）· **装配 `await` 期跨中止 ∕ 装配窗中止（窗内 Stop）⇒ `aborted`**（#515② ∕ #597 零起跑）；
    *  否则建在飞（**受理即置忙位** —— `ev:activity{turn}` 无帧值先发，#597）、起跑、**立即回 `{ok:true}`**；失败径回执携 `started:false`。
    *  结算三映射（done / stopped / error）收尾清在飞 —— 三径各出一次回合尾 `ev:usage`（读数同点、终局事件之前）。
    *  三路结算**先落盘再出终局事件**（§1.14 ② —— 渲染侧收尾重读即可见本回合增量；CLI 先例 = 回合
@@ -63,7 +85,7 @@ export function createTurnInput({ post, ensure, flights, queued, chain, suspensi
     if (flights.get(key) !== controller) return { ok: false, reason: "aborted", started: false }
     if (agent._providerInvalid) {
       release()
-      return { ok: false, reason: "provider-invalid", started: false }
+      return { ok: false, reason: "provider-invalid", providerKind: providerKindOf(agent), started: false }
     }
     // 附件装配（项 1–4）：文本 / 路径 / 弃项 / 降级码四件——`cwd` = 项目根、`model` = 本回合实跑模型、
     // `locale` = 装配实例配置（`createAgent` 存本 —— 零二次 `loadConfig`），非视觉说明词面随之就地定局。

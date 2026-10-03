@@ -27,11 +27,15 @@ export function presetValue(slot) {
 
 /**
  * 向导接线族：`deps` = `{ store, ask, report, clearReport, loadModels, submitChannel, verifyChannel,
- * onProjectOpened }`（共享项注入 ⇒ 本档零副本）；返回 `{ handlers }`（六出口 —— 与视图同域）。
+ * useModel?, onProjectOpened }`（共享项注入 ⇒ 本档零副本；`useModel` = 模型步「采用」接线 —— 缺 ⇒ 不落键）；
+ * 返回 `{ handlers }`（六出口 + 可选 `onUseModel` —— 与视图同域）。
  */
 export function createWizard(deps = {}) {
   const { store, ask, report, clearReport, loadModels, submitChannel, verifyChannel } = deps
   const onProjectOpened = typeof deps.onProjectOpened === "function" ? deps.onProjectOpened : null
+  /** 模型步「采用」接线（B③ —— 单一实现 = 出口族 `onUseModel` 注入，本档零副本；**同一引用**直落视图
+   *  handler 键）：缺注入 ⇒ 不落键 ⇒ 视图 `wire` 落 `disabled`（诚实非死控，零假控件）。 */
+  const useModel = typeof deps.useModel === "function" ? deps.useModel : null
 
   /** 向导步 3 目录出口：走装配面项目面链（`openDir` —— 刷新 + 「点开即可续」，本档零副本）。 */
   async function pickDir() {
@@ -71,7 +75,8 @@ export function createWizard(deps = {}) {
     store.set(configured === true ? next : dismissWizard(next))
   }
 
-  /** 向导出口族（六出口 —— 与视图 `handlers?.on*` 同域；前三项 = 共享项注入直通）。 */
+  /** 向导出口族（六出口 + 可选 `onUseModel` —— 与视图 `handlers?.on*` 同域；前三项 = 共享项注入直通；
+   *  `onUseModel` = B③ 模型步采用接线（注入即落 —— 同一引用；缺 ⇒ 零键）。 */
   const handlers = {
     onSubmit: (event) => void submitChannel(event),
     onVerify: (name) => void verifyChannel(name),
@@ -83,6 +88,7 @@ export function createWizard(deps = {}) {
       const next = dismissWizard(state)
       if (next !== state) store.set(next)
     },
+    ...(useModel === null ? {} : { onUseModel: useModel }),
   }
 
   return { handlers }

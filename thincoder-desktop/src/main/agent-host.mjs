@@ -44,8 +44,9 @@ import { extractFileLinks } from "./file-links.mjs" // 验存文件链接（相�
 import { createGates } from "./suspensions.mjs"
 import { appendRecord, loadAgentSlot, saveDistilledSlot } from "./session-io.mjs"
 import { createSubagentFace } from "./subagent-face.mjs"
-// 装配面（状态栏对齐批出档 —— 原档装配段逐字搬运）：本档取其默认装配函数与名面转口 + 词面构造（KD-70）。
-import { assembleFor, mcpWarningReminder } from "./agent-assemble.mjs"
+// 装配面（状态栏对齐批出档 —— 原档装配段逐字搬运）：本档取其默认装配函数与名面转口 + 词面构造（KD-70）；
+// `validateProvider` 除 re-export 外另**体内消费**（KD-8 槽复验 —— `assembleAndLoad` 内直调）。
+import { assembleFor, mcpWarningReminder, validateProvider } from "./agent-assemble.mjs"
 import { createTurnDriver } from "./turn-driver.mjs"
 // R1 输入面板移植（桌面宿主面）：模式位四写面 ∕ @ 补全面两处理体出档（新增两面零入档 —— 拆分评审结论见档头）。
 import { createSessionFlags } from "./session-flags.mjs"
@@ -168,12 +169,16 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
 
   /** 装配 + 装载本键槽：`loadAgentSlot` 在**宿主内**（假 `assemble` 注入同走装载 —— §1.14 ① 的语义面
    *  是「装配出的代理必须持槽值」，不在装配函数里）；槽缺 ⇒ 新建形（代理原样）。
+   *  **KD-8 槽复验**（批 §2 补录 3 ∥ CLI 同型 `thincoder-cli/src/command-interactive.mjs:149`）：装载后
+   *  `_providerInvalid` 仍在 ⇒ `validateProvider(agent, agent.config)` 幂等复验——槽值有效（凡
+   *  `loadAgentSlot` 命中本键渠条目）⇒ 清两标 ⇒ 本次发送放行；槽无效 ⇒ 标照旧（下一径拦）。
    *  **MCP 警告消费（KD-70）**：装配尾入队 —— 装载后（`applySession` 重设 `_pendingReminders`）∥ 装配一次
    *  推送一次（同 key 复用不重推）；词面 = `agent-assemble.mjs` `mcpWarningReminder`（首两段逐字同 CLI）。 */
   async function assembleAndLoad(key, slot) {
     const cwd = projects.currentCwd()
     const agent = await assemble({ cwd, slot, key, deps })
     loadAgentSlot(agent, cwd, slot)
+    if (agent._providerInvalid) validateProvider(agent, agent.config)
     const reminder = mcpWarningReminder(agent._mcpWarnings)
     if (reminder !== null) {
       agent._pendingReminders = agent._pendingReminders ?? []
@@ -190,7 +195,10 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
       const agent = await pending
       // 级联清装配（`forgetKey` ∕ `forgetAll`）后不回流：本条装配若已被清（会话关闭 ∕ 切项目），结果只回
       // 调用方、不回表——同槽号键不得命中旧项目 agent（#515① ∕ #507；并发同键去重面不变）。
-      if (ensuring.get(key) === pending) agents.set(key, agent)
+      // **C · 无效装配不入表**（批 §2；KD-7）：`_providerInvalid` 仍真 ⇒ 不回表——下次发送按盘上新态
+      // 重装配（同键复用不缓存无效态 ⇒ 「失败发送 → 修正（补写 ∕ 槽选 ∕ 改钥）→ 再发」会话内自愈；
+      // usageTally ∥ 在途面零动）。复验清标（KD-8）后有效 ⇒ 入表照旧。
+      if (ensuring.get(key) === pending && agent._providerInvalid !== true) agents.set(key, agent)
       return agent
     } finally {
       if (ensuring.get(key) === pending) ensuring.delete(key)

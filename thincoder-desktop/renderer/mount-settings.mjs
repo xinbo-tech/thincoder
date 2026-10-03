@@ -208,10 +208,12 @@ export function attachSettings(host, deps = {}) {
     return model
   }
 
-  /** 向导出口族（六出口 —— 接线族住 `mount-onboarding.mjs`，共享项注入 ⇒ 本档零副本）。 */
+  /** 向导出口族（六出口 —— 接线族住 `mount-onboarding.mjs`，共享项注入 ⇒ 本档零副本；**B③**：模型步
+   *  「采用」接线随注入 —— 单一实现 = 出口族 `onUseModel`（同一引用，零第二实现））。 */
   const { handlers: wizardHandlers } = createWizard({
     store, ask, report, clearReport, loadModels: reads.loadModels,
     submitChannel: exits.handlers.onSubmit, verifyChannel: exits.handlers.onVerify,
+    useModel: exits.handlers.onUseModel,
     onProjectOpened,
   })
 

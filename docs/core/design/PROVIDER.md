@@ -383,6 +383,66 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 无需预设即可接入——CLI `/model` 菜单「add provider → custom」或 VSC `Add provider… → Custom`（name + baseURL + model [+ format]），或手写 `providers[]` 自由字段；
 用户指引条 = `thincoder-cli/README.md`（自定义渠道一条；VSC README 已有「+ custom OpenAI-compatible endpoint」覆盖）。
 
+### 6.22 运行时渠道/模型统一解析（三端同源 · U3「宽松 + 明示」· 2026-10-03 · 台账 #841）
+
+> **来源**：用户 2026-10-03 13:07 原则裁定「三端界面可以不一样，但是逻辑应该是一样的」+ 13:10 取 **U3 档**（宽松 + 明示）；批档 = `docs/batches/2026-10-03-provider-invalid-unify.md` §2。本节 = 该机制**长期单源**；三端消费面只留各自落点细节（D2）。
+
+**问题（实读）**：「缺 ∥ 无效 `defaultModel`」这一态的**判定与处置**三端不等——核 ∥ CLI ∥ 桌面 = 严格（解析未过即无效态：`config.mjs:328-335`）；VSC = 接入面**自建回退链**绕过核判据（`panel-turn-stages.mjs:57-74` + `presets.mjs:107-117`）——既是偏离、也是事实标准。⇒ 同一配置态，一端能发、两端不能发。
+
+**统一判据（核单源）**：核 `thincoder-core/model-ref.mjs` 导出 `resolveProviderPlan({ providers, defaultModel, slot })`（**纯函数 · 零 I/O**）——三端消费同一函数；`loadConfig` 的运行时 `provider` 取值切换至该函数（CLI ∥ 桌面经装配自动同源；VSC 回合面直调）。返回面：
+
+```
+{ state: "ok" | "fallback" | "invalid",
+  source: "slot" | "defaultModel" | "registry" | null,   // 入选来源
+  channel: string | null, model: string | null,           // 解析出的运行渠道/模型
+  provider: object,                                       // {...entry, model}；不可运行 ⇒ {}
+  reason: string | null }                                 // state≠ok 的原因（语义源；非契约，禁串嗅探——#840 KD-2 同源）
+```
+
+**回退序（渠道面 · 逐步）**：
+
+1. **会话槽渠道**：`slot.provider` 在场 ∧ 在册 ∧ **持 key** ⇒ 入选（`source="slot"`）；
+2. **defaultModel 渠道**：`parseModelRef` 通过 ∧ 该渠道持 key ⇒ 入选（`source="defaultModel"`）；
+3. **首个持 key 渠道**：按 `providers` 表序首个持 key 者 ⇒ 入选（`source="registry"`）；
+4. 无 ⇒ `state="invalid"`（渠表空 ∥ 全表无 key）。
+
+「**持 key**」判据 = `providers[].apiKey` trim 后非空（`config.mjs:11`——env 变量不是密钥源）；槽渠道无 key ⇒ **跳过**（不把不可运行渠道钉进运行态——与 VSC 现行链同判）。
+
+**模型面（逐步）**：① 入选来源 = 槽 ∧ 槽带模型 ⇒ 槽模型；② `defaultModel` 解析通过 ∧ 其渠道 == 入选渠道 ⇒ defaultModel 模型段；③ 入选渠道单值 `providers[].model`；④ 无 ⇒ `null`（合法——模型由运行期 `/models` 候选 ∥ 用户选择决定；消费者沿既有「model 缺失」处置）。
+
+**两类状态分界（明示口径 · 本节的判据核心）**：
+
+- `ok` — `defaultModel` **独立成立**（解析通过 ∧ 该渠道持 key）⇒ 零明示；
+- `fallback` —「**无有效 defaultModel**」类：`defaultModel` 缺 ∥ 不可解析 ∥ 所指渠道不在册 ∥ 所指渠道无 key；**且**全局存在可运行渠道 ⇒ **可运行 + 明示必达**；
+- `invalid` —「**无 provider/key**」类：渠表空 ∥ 全表无 key ⇒ **真无效 + 引导配置**。
+
+`loadConfig` 落三键：`provider` = `plan.provider`；`providerState`（三值：`ok` ∥ `fallback` ∥ `invalid`）+ `providerStateReason`（state≠ok 时非空）；`providerInvalidReason` 语义不变（provider 不完整时非空——装配校验 `validateProvider` 消费面照旧）。
+
+**reason 文本（语义源 · 逐档）**：`fallback` = 沿用 `defaultModelReason` 现两档（缺 ∥ 无效）+ 新档「`defaultModel` 渠道 "<name>" 无 API 密钥——已回退到可用渠道」；`invalid` = 渠表空 ⇒ 现串「未配置任何 provider」∥ 有渠无 key ⇒ 新档「未配置 API 密钥（providers[].apiKey）——请先配置渠道密钥」。
+
+**三端明示面对照表**（界面各自自定 ∥ 判据同源）：
+
+| 端 | 明示面 | `fallback` | `invalid` | 动作 |
+|---|---|---|---|---|
+| CLI | 启动提示行（TUI）∥ stderr 一行（headless） | 新行：「尚未设置默认模型：本次使用 `<渠道>:<模型>`——/config → 默认模型 设置一次；/model 仅改本会话」 | D-S2 picker + 提示行（措辞收正 = 渠道/密钥） | 选择器（invalid）· `/model` ∥ `/config` 入口（fallback） |
+| VSC | 横幅 `#provider-banner` | 新键 `banner.defaultModelFallback` + 动作钮「选择默认模型」→ 设置面 | 现词 `banner.notConfigured`（不变） | 钮 → 设置面默认模型段 |
+| 桌面 | composer 提示带行 | 词 `composer.send.noDefaultModel`（**逐字复用 #840 键**——词面-only） | 发送失败行现词（#840 面） | —（零动作面） |
+
+**VSC 收正（可用性不得降）**：`resolveTurnStage` 的接入面自建链改调核函数（`slot` = 显式 `providerName` ∥ 槽复合——key 门在核内）；`presets.mjs` `resolveDefaultModel` 改核转口。「渠道 + key 已配」在三端仍**直接可发**——事实标准不回退。
+
+**可机检断言形**：① 解析一致——夹具矩阵每行 P（临时配置路径缝 `_setConfigPathForTest`）：`loadConfig()` 的 `{state, provider.name, provider.model}`
+≡ VSC `resolveTurnStage` 核函数读 ≡ 桌面同径读（逐字段相等）；② 单源——VSC 树零自建扫描链（源码判据）+ CLI ∥ 桌面取值点唯一 = `loadConfig().provider`；
+③ 明示必达——`state==="fallback"` ⇒ 各端明示节点在场；`state==="ok"` ⇒ 零节点（负向锁）。机检件 = 批档 `docs/batches/2026-10-03-provider-invalid-unify.test.mjs`（随批留存）。
+
+**关键决策（含被否）**：
+
+- **KD-841-1 落点 = 核导出统一解析 + `loadConfig` 取值切换**（非「核内实现 + 端面缝」）：VSC 回合面要槽复合（config 级函数吃不下）——若只在核内实现，VSC 需端面复刻链（正是被归一对象）。被否：新核档（`model-ref.mjs` 已是解析面，禁第二面）；纯 loadConfig 内联（VSC 不可达）。
+- **KD-841-2 槽渠道 key 门入核**（统一序第 1 步「槽渠道（有 key）」）⇒ `applySession` 槽应用面同收（CLI ∥ 桌面共享）；被否：槽面保持无 key 门（同一态三端再分叉——VSC 事实标准为有 key）。
+- **KD-841-3 状态 = config 级**（slot 不参与三态判定——会话槽是会话选择，不是「默认模型缺失」的证据）：槽改写「谁在跑」，不改「默认模型是否有效」。被否：按最终运行渠道是否 == defaultModel 渠道判（用户每换一次会话模型就误报）。
+- **KD-841-4 结构要件（`baseURL` 等）不并入回退序**：仍归 `validateProvider` 单判据（防第二判据）；入选渠道结构不全 ⇒ 落既有标记 ⇒ 归「真无效 + 引导配置」类（#840 `provider` 类词面照旧）。被否：链内预检结构（判据增殖 + 与校验点语义重叠）。
+
+**边界（不做）**：改用户既有非空 `defaultModel` 的语义；静默兜底（U3 必带明示）；`env` 变量作密钥源；运行期 `/models` 探测；渠条目结构校验改判；发布链。
+
 ## 7. 关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -493,3 +553,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - 2026-09-30（**VSC 贴图件清理批**——承 `docs/batches/2026-09-30-vsc-paste-cleanup.md` §2 · 台账 #735）：§6.18 「文件随 offload 写时自清理」句收正——临时件清理 = 端侧时序面（桌面 = 回合尾 `cleanupTurn`；
   VSC = 贴图落盘写时 mtime 扫除〔3 天窗——核 `thincoder-core/agent/helpers.mjs` `cleanupOldToolResults` 单源〕；CLI = 未接（留存））；VSC 侧接线落地（`thincoder-vscode/src/extension/image-handler.mjs` 写时扫除）。
 - 2026-09-30（**批 core-tools-pairfix · 实施后收正** · eng-coder——承 `docs/batches/2026-09-30-core-tools-pairfix.md` §2 · 台账 #733）：§6.18 CLI 子句按落地真值收终形——`CLI ∥ VSC = 贴图落盘写时 mtime 扫除（3 天窗）`（CLI 侧接线落地 = `thincoder-cli/src/tui/clipboard.mjs` 写时扫除；「CLI = 未接（留存）」随撤）。核件 ∥ 桌面 ∥ VSC 零触。
+
+- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 · 台账 #841）：新增 **§6.22 运行时渠道/模型统一解析（三端同源 · U3 宽松+明示）**——核导出 `resolveProviderPlan`（回退序三步 + 模型面四步 + 两态分界 + reason 逐档 + 三端明示面对照表 + KD-841-1–4 + 边界）。**产品码零触（设计轮）**。
+
+- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #8（用户 13:43 更正——13:09 口径系拼音误打）· eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 更正块 · 台账 #841）：§6.22 三端明示面对照表**桌面行收正为词面-only 终形**——`fallback` 格去「+ 钮 `composer.send.chooseModel`」（该句柄实不可达——与 #840 同病）∥ 动作格「钮 → 模型菜单（同钮同门）」⇒ **—（零动作面）**；表头「（按钮倾向）」⇒「动作」（误读源词去）。CLI ∥ VSC 动作格零改（不在本更正射程——误读波及面只及桌面明示行）。**产品码零触（修正轮）**。

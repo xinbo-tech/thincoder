@@ -142,6 +142,8 @@ export function probeAfterWrite(name) {
  * `customFieldsError`，端码照旧）。
  * `active:true` ⇒ 同批追加写 `defaultModel = "<name>:<model>"`（核无「置激活」子 ⇒ 端侧经唯一写盘执行体
  * 落该键；模型缺失 ⇒ `invalid-shape`，零激活改写）。
+ * **B① 首跑补全**（批 §2 ∥ KD-4 ∥ KD-5；`active` 非真径）：条目有效 ∧ `defaultModel` **仅缺失** ⇒
+ * 同写盘执行体补写（既有非空——含无效-非空——**零覆盖**；两支排他——`active:true` 不重入补写支）。
  * 校验失败**零写盘**（核变更子内部生效前不落盘）。
  */
 export function providerSave(payload) {
@@ -168,8 +170,26 @@ export function providerSave(payload) {
     if (!model) return { ok: false, reason: "invalid-shape" }
     const w = writeConfigAtomic(_configPath(), (disk) => { disk.defaultModel = `${name}:${model}` })
     if (!w.ok) return { ok: false, reason: w.reason }
+  } else {
+    const backfill = backfillDefaultModel(name)
+    if (backfill !== null) return backfill
   }
   return { ok: true, reason: null }
+}
+
+/** B① 首跑补全（`defaultModel` **仅缺失** ⇒ 补写条目 `name:model` —— 批 §2）：保存成功径消费——
+ * 条件三件（条目有效 = `name+model+baseURL` 全非空 ∧ `defaultModel` 非串 ∥ trim 空 ∧ 写盘成功）；
+ * **既有非空（含无效-非空）零覆盖**（KD-5 —— 无效态归 A 词面引导）。返回 = `null`（未触发 ∥ 成功——
+ * 调用面落 `ok:true`）∥ 失败回执 `{ ok:false, reason }`（同 `active` 支形——写盘失败如实上报）。 */
+function backfillDefaultModel(name) {
+  const defaultModel = loadConfig()?.defaultModel
+  if (typeof defaultModel === "string" && defaultModel.trim() !== "") return null // 既有非空零覆盖
+  const entry = resolveProviders().providers.find((p) => p.name === name)
+  const model = typeof entry?.model === "string" ? entry.model : ""
+  const baseURL = typeof entry?.baseURL === "string" ? entry.baseURL : ""
+  if (!name || !model || !baseURL) return null // 条目有效判据三件（无效条目零写）
+  const w = writeConfigAtomic(_configPath(), (disk) => { disk.defaultModel = `${name}:${model}` })
+  return w.ok ? null : { ok: false, reason: w.reason }
 }
 
 /** `provider:remove(payload)` ⇒ `{ ok:true, reason:null }` ∥ `{ ok:false, reason }`（核错误串直传——

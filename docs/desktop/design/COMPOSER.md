@@ -103,6 +103,27 @@
    内容单源 = **表本体**（核 `formatHelp` 表→行集 ∥ 端 `printHelp` 口承载）；行族 `[data-help]` = 流内非块节点（尾组槽位：台账行组后 ∥ 卡序列前——`data-blocks` 不变式零破 ∥ 重挂径槽位固定零位次记忆）；生命周期 = 运行期痕（首屏页读整置即失——同 `[data-timer]` 族）；
    受理径 = 清框 + 入历史 + **回底**；无忙态门（打印零状态写）；未知反馈携 `/help` 指引；别名 `/h` 在册。逐面 = 批档 §2.10（CLI 实盘对位表 ∥ E10–E13）。
 
+**本批注（首跑渠道提示修复 —— `provider-invalid` 词面真因化 · 2026-10-03 · 台账 #840）**：本注定形输入区发送失败行的 `provider-invalid` 词面——真因分类 → 词。
+批档 = `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2；契约面 = `docs/desktop/design/IPC.md` §2 `msg:send` 行；设置 ∕ 向导面 = `docs/desktop/design/SETTINGS.md` §2.14。
+
+1. **回执携分类**：`msg:send` 失败回执 `provider-invalid` 另携 `providerKind`（闭集 `defaultModel` ∥ `provider`）——失败态载体（`thincoder-desktop/renderer/composer-wire.mjs` `recordFailure`）由裸串改携 `{ reason, kind }`；`failure()` 单消费点 = 本域 `renderer/composer-sync.mjs`。
+2. **类 → 词**（`thincoder-desktop/renderer/composer-sync.mjs` `failedNotice`）：`kind === "defaultModel"`（缺 ∥ 无效 `defaultModel`）⇒ **词 = 新键 `composer.send.noDefaultModel`**（zh `默认模型未设置或无效` ∥ en `Default model missing or invalid`——状态陈述）；
+   余（无渠道可解析 ∥ 条目结构不全 ∥ 分类缺）⇒ 现键 `composer.send.noProvider` 逐字不动（VSC 基准词）∥ 纯文本行照旧；余码仍 `composer.send.failed` + `${reason}`。
+3. **可修链**：模型菜单选取（候选 = `model:catalog` **全渠扇出**，不依赖激活渠道）⇒ 会话槽写（`session:prefs`，既有）⇒ 装配后**槽复验**（新 —— `thincoder-desktop/src/main/agent-host.mjs` `assembleAndLoad`：
+   `loadAgentSlot` 后 `if (agent._providerInvalid) validateProvider(agent, agent.config)`，CLI 同型）⇒ 下次发送放行。
+   **指路避死端**：设置面「模型与档位」段候选按激活渠道取数（`renderer/mount-settings-reads.mjs:33-39` / `:74-78`），本态零候选 ⇒ 不作指路。
+4. **判据**：**界面语句必须指向真实可修的下一步**（用户 12:56 走查原话精神）——「缺 key」误导句消；console 失败行逐字不动（E2E 锚 `[composer] msg:send failed: provider-invalid`）；词表单源 = `renderer/i18n-views.mjs`（两语成对，键集相等机检）。
+5. **边界**：`composer.send.noProvider` 值 ∥ 行形 ∥ 锚（`data-notice="send-failed"`）∥ 清位纪律（下次成功发送清）零改；核件 ∥ VSC 零触。
+
+**本批注（无效渠道态逻辑归一 —— fallback 明示行 · 2026-10-03 · 台账 #841）**：本注定形 composer 提示带上**态明示行**——「可运行 ∧ 无有效 `defaultModel`」（`fallback`）态的端侧呈现
+（判据单源 = `docs/core/design/PROVIDER.md` §6.22；承 #840 批注的字面——**零新键**）。批档 = `docs/batches/2026-10-03-provider-invalid-unify.md` §2；契约面 = `docs/desktop/design/IPC.md` §2「provider 态投影注」。
+
+1. **数据面**：`history:page` 回执（会话打开）与 `msg:send` 回执（发送刷新）新增 `providerState` 键（形 = `{ state, channel, model, reason }`）；渲染面落 store 切片（写点与 `meta` 同族）⇒ 提示带重派生（`paintNotices`）。
+2. **行面**：`state === "fallback"` ⇒ 本行在场——词 = `composer.send.noDefaultModel`（**逐字复用 #840 键**，词为**态陈述行**，非发送失败行）；`state === "ok"` ⇒ 零行（负向锁）；`state === "invalid"` ⇒ 本行零行（归发送失败行——#840 面）。
+3. **行序**：提示带尾（现序 [待发送? ∥ 降级? ∥ 失败?] 零动，本行追加于带尾）。
+4. **清位**：`state` 转 `ok` 的一次 `msg:send` 回执到达 ⇒ 行退场（态由回执刷——无第二清位机制）。
+5. **边界**：#840 的失败词路由零改；`providerKind` 判据换源（「渠表非空」→「有持 key 渠道」——全无 key 态出真·无 key 词）记于批档 §2 受影响表，不另立面。核件 ∥ VSC 零触。
+
 ## 3. 文件账（本域）
 
 ### 3.1 本端文件清单与行数预算（本域族行 · 迁自 `PROJECT.md` §4.1——逐字）
@@ -116,8 +137,8 @@
 | `thincoder-desktop/src/main/at-complete.mjs`（R1 输入面板移植新档） | **74**（实读 2026-09-29） | `at:complete` 文件枚举过滤（@ 前缀剥离 → 项目树枚举 → 过滤 → 封顶 20；零改 `file-links.mjs`） |
 | `thincoder-desktop/renderer/queue.mjs`（对齐第二批拆分产出） | **40**（实读 2026-09-29——宿主镜面收正后余快照应用） | 队列面出档（三纯动作 + `QUEUE_MAX`——自 `thincoder-desktop/renderer/store.mjs`） |
 | `thincoder-desktop/renderer/mount-composer.mjs` | **297**（实读 2026-10-02——菜单体系批实施落盘（296 ⇒ 297）；前读 **296**（实读 2026-10-01——**#761 落盘后**（`formatHelp` import ∥ `printHelp` 口 ∥ deps 键））；前读 **276**（实读 2026-09-30——扁平化 v4 迁行（+15）后；前读 261（桌面收尾批（#656）后 ∥ 模型菜单全渠批 +1）） | 输入区挂载出档（自 `thincoder-desktop/renderer/app.mjs` 拆出——批 A）：两态落形 · Enter / Shift+Enter 键位 · 忙态入队（受理交宿主任判——「回合中插入」批收正）· 满队提示（按键判）；**批 B**：附件条挂载（根锚 `data-attachments`——构树 / 采集住 `thincoder-desktop/renderer/attach.mjs`）+ 附件随 `msg:send` 载荷 `images` 出口 + `degraded` 提示行；**模型菜单全渠批**：`refreshCandidates` 透传导出（`sync.refreshCandidates`——`:243`）+ 句柄注；形态单源 = `docs/desktop/design/UI.md` §1 输入区行（批 B 注项 2） |
-| `thincoder-desktop/renderer/composer-wire.mjs`（输入逻辑收正轮拆分产出） | **262**（实读 2026-10-01——**#764 落盘后**（退流一作业点 `cut` + 摘空并 `build`）；前读 **254**（实读 2026-09-29——桌面收尾批（#656 `queue-full` 可见形消费缝）后；desktop-residuals-round3 波 B（#613）后） | 输入区写面出档（通道往返归一 + 逐类型出站 handler：`msg:send` ∕ `msg:interrupt` ∕ `at:complete` ∕ `session:prefs` ∕ `session:flags` ∕ footer 三出口；本地先行块登记与退流 ∕ 失败态行源） |
-| `thincoder-desktop/renderer/composer-sync.mjs`（#510 留守拆档产出） | **302**（实读 2026-09-29——口子清零二轮（引导形路由 + 注释收正）后；**越 300** ⇒ 越层在册——见 `PROJECT.md` §4.1 越层段） | 输入面板随动派生面（自 `thincoder-desktop/renderer/mount-composer.mjs` 拆出——`state` 读面 + 忙态 ∕ 守卫派生 + 模式位推送 + 候选面 + 两挂件锚窄刷（提示带 ∕ 末条复制控件）+ `syncPanel`）；**本批（复制面对齐）**：`syncLastCopy` 族与 `writeText` / `tailOf` deps 随摘；**模型菜单全渠批**：候选面重写（`land` ∕ `fetchCatalog` ∕ `startRetryChain` ∕ `syncCandidates` ∕ `pushModels` ∕ `refreshCandidates`）+ 旧端差登记注删（该端差本批闭合）；形态单源 = `docs/desktop/design/UI.md` §1 输入区行 |
+| `thincoder-desktop/renderer/composer-wire.mjs`（输入逻辑收正轮拆分产出） | **266**（实读 2026-10-03——首跑渠道提示修复批（#840）实施落盘（262 ⇒ 266——失败载体 `{ reason, kind }`（`providerKind` 透传——`failure()` 单消费点）+ 注））；前读 **262**（实读 2026-10-01——**#764 落盘后**（退流一作业点 `cut` + 摘空并 `build`）；前读 **254**（实读 2026-09-29——桌面收尾批（#656 `queue-full` 可见形消费缝）后；desktop-residuals-round3 波 B（#613）后） | 输入区写面出档（通道往返归一 + 逐类型出站 handler：`msg:send` ∕ `msg:interrupt` ∕ `at:complete` ∕ `session:prefs` ∕ `session:flags` ∕ footer 三出口；本地先行块登记与退流 ∕ 失败态行源） |
+| `thincoder-desktop/renderer/composer-sync.mjs`（#510 留守拆档产出） | **306**（实读 2026-10-03——首跑渠道提示修复批（#840）实施落盘（302 ⇒ 306——`providerKind` 类路由（词面-only）+ 载体 `{ reason, kind }` 消费））；**越 300** ⇒ 越层在册——见 `docs/desktop/design/PROJECT.md` §4.1 越层段（本批 = 续期）；前读 **302**（实读 2026-09-29——口子清零二轮（引导形路由 + 注释收正）后） | 输入面板随动派生面（自 `thincoder-desktop/renderer/mount-composer.mjs` 拆出——`state` 读面 + 忙态 ∕ 守卫派生 + 模式位推送 + 候选面 + 两挂件锚窄刷（提示带 ∕ 末条复制控件）+ `syncPanel`）；**本批（复制面对齐）**：`syncLastCopy` 族与 `writeText` / `tailOf` deps 随摘；**模型菜单全渠批**：候选面重写（`land` ∕ `fetchCatalog` ∕ `startRetryChain` ∕ `syncCandidates` ∕ `pushModels` ∕ `refreshCandidates`）+ 旧端差登记注删（该端差本批闭合）；形态单源 = `docs/desktop/design/UI.md` §1 输入区行 |
 | `thincoder-desktop/renderer/attach.mjs`（批 B） | **54**（实读 2026-09-29——输入面板上提后） | 附件采集与构树纯函数（输入区 `paste` → `FileReader` → `dataURL` 条目集 + 移除控件；**零 fs** ⇒ 平 node 直测）；形态单源 = `docs/desktop/design/UI.md` §1 输入区行（批 B 注项 2） |
 | `thincoder-desktop/renderer/chat-composer.css` | **136**（实读 2026-10-01——扁平化随动收口批（#713）落盘后（138 ⇒ 136）；更前实读 2026-09-30——门回填（排版覆盖段等近批随动）；前读 70（扁平化 v3+v4 覆盖段后）∕ 48；未越 300） | 输入区段样式（自 `thincoder-desktop/renderer/chat.css` 四拆）：变量别名块（C2 唯一桥）+ 提示行锚 + 扁平化覆盖段（v3 圆角 ∥ v4 迁行）；面板族本体单源 = 核件 `composer/composer.css`——**本批（复制面对齐）**：两控件族 + `⧉` 字形 + 尾锚规则随摘 |
 
@@ -251,3 +272,7 @@
 - 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 2c 前置步 · 文件账分片轮（续 · #35）· eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：**§3.1 新立**（本域族行 **11** 行——自 `PROJECT.md` §4.1 逐字迁入；原址各改一行指针）∥ **§3.2 新立**：批块 **4 块**（挂起窗径批 ∥ 窗队列批 ∥ 队列取项边缘收正批 ∥ slash 命令批 + `/help` 增量——迁自 §4.2；块内「本档」类回指按新落点改指；三处块头超宽行当场折行 ≤300）。**零新语义**（迁移 ∥ 指针）。
 - 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 2c 前置步 · 文件账分片轮（切片 4 · 终篇）· eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：**§4/§5/§6 域行全文迁讫**——§4 收 D6 ∥ D13 ∥ D25 三行全文 + 批块三（回合中插入批 ∥ 窗队列 VSC 逐点对齐批 ∥ 斜径命令面批——迁自 `docs/desktop/design/PROJECT.md` §6.1；原址各改一行指针）+ 跨档／存量条目列 ∥ §5 收 T-DSK7 ∥ 22 ∥ 23 ∥ 28 ∥ 48 ∥ 56 六行全文（迁自 §7）∥ §6 收 AZ ∥ BM ∥ BB 三行全文齐平（迁自 §10）。**零新语义**（迁移 ∥ 指针）。
 - 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 波 3 · 终扫轮 · eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：需求侧活面指针收正（需求分卷后形态——「需求档 §4」类表述 ⇒「需求卷」（查卷口 = `docs/desktop/requirements/PROJECT.md` §4 **D 表索引**））；记录面 ∥ as-of 零追改。**零新语义**（指针）。
+- 2026-10-03（**首跑渠道提示修复批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2 · 台账 #840）：§2 增本批注（`provider-invalid` 词面真因化——`providerKind` 分类 → `composer.send.noDefaultModel` + 动作钮 `composer.send.chooseModel` ⇒ `openModelMenu`；槽复验链）；**产品码零触（设计轮）**。明细 = 批档 §2。
+- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 · 台账 #841）：§2 增本批注（fallback 态明示行——`providerState` 载荷 ∥ 复用 #840 键与钮 ∥ 行序与清位）；**产品码零触（设计轮）**。机制单源 = `docs/core/design/PROVIDER.md` §6.22。
+- 2026-10-03（**首跑渠道提示修复批 · 修正轮 #7（用户 13:43 更正——13:09 口径系拼音误打）· eng-designer**——承批档 `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2 更正块 · 台账 #840）：本批注收正为**词面-only** 终形（`composer.send.noDefaultModel`——状态陈述）；动作面（`composer.send.chooseModel` ∥ handler ∥ 样式规则）作废；同笔收净 #841 明示行批注之同源引用（父侧「四档全域」裁）。**产品码零触（修正轮）**。明细 = 批档 §2 更正块。
+- 2026-10-03（**首跑渠道提示修复批 · 实施后文档面回填轮（§3.1 两行走读齐平）· eng-designer**——承批档 `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2 ∥ §5 · 台账 #840）：§3.1 两行实读对盘（`composer-wire.mjs` **262 ⇒ 266**——失败载体 `{ reason, kind }` ∥ `composer-sync.mjs` **302 ⇒ 306**——类路由（词面-only））；越层在册句随正（续期——引 `docs/desktop/design/PROJECT.md` §4.1 越层段）。**零新语义**（读数）。明细 = 批档 §5。

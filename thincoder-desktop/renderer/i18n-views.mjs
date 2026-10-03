@@ -65,6 +65,9 @@ export const VIEWS_DICT = Object.freeze({
     "composer.send.failed": "Send failed (${reason}) — the text was kept",
     // 引导形（#673）：`provider-invalid` 词 —— 值逐字同 VSC `locales/en.json` `error.provider`（基准归一——两端可见面同词）。
     "composer.send.noProvider": "No provider configured — click ⚙ to set API keys",
+    // 真因分类词（#840 · 2026-10-03）：`provider-invalid` ∧ `providerKind === "defaultModel"`（缺 ∥ 无效 defaultModel）
+    // —— 状态陈述（指向真实可修的下一步）；本端拟定（消费面 = `renderer/composer-sync.mjs` `failedNotice`）。
+    "composer.send.noDefaultModel": "Default model missing or invalid",
     "paste.unsupportedFormat": "Only png / jpg / gif / webp images are supported (got ${type})",
     // ── ③ 审批面（相抵① 超阈降级 = 摘要 + 计数，零外部查看器）──
     "approval.diff.large": "Large diff — ${n} lines (preview omitted)",
@@ -227,6 +230,9 @@ export const VIEWS_DICT = Object.freeze({
     "composer.send.failed": "发送失败（${reason}）——文本已保留",
     // 引导形（#673）：`provider-invalid` 词 —— 值逐字同 VSC `locales/zh.json` `error.provider`（基准归一——两端可见面同词）。
     "composer.send.noProvider": "未配置 API 密钥 — 点击 ⚙ 设置",
+    // 真因分类词（#840 · 2026-10-03）：`provider-invalid` ∧ `providerKind === "defaultModel"`（缺 ∥ 无效 defaultModel）
+    // —— 状态陈述（指向真实可修的下一步）；本端拟定（消费面 = `renderer/composer-sync.mjs` `failedNotice`）。
+    "composer.send.noDefaultModel": "默认模型未设置或无效",
     "paste.unsupportedFormat": "仅支持 png / jpg / gif / webp 图片（收到 ${type}）",
     // ── ③ 审批面 ──
     "approval.diff.large": "改动较大——${n} 行（预览省略）",
