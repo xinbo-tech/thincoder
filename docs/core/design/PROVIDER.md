@@ -99,7 +99,8 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 - **去重（单一实现）**：`parseRetryAfter` 唯一实现住 errors.mjs（retry.mjs 导入）；`sleepInterruptible` 唯一实现住 core.mjs；429 配额判定统一为 errors.mjs 双判版（删 retry.mjs 纯正则版——规则漂移消）。依赖单向（errors / retry 均独立、均 import rate；core 依赖 errors）。
 - **401 / 403 诊断**：Kimi 双平台提示（`sk-kimi-` 前缀 key 或 `api.kimi.com` 端点 → 说明 Moonshot 与 Kimi For Coding 两平台 key 不互通）+ 通用诊断回显 `[auth diag: baseURL=… key=… status=…]`（key 前 6 位掩码）。
 - **413 可操作化（D-PR32）**：请求体超限（HTTP 413——长会话图片累积的高频形态）⇒ 错误文本携带处置提示（`/compact` 压缩历史 ∥ 移除历史图片；图片累计预算机制见 §6.7）——从裸 HTTP 码变为可执行指引。
-- **超时语义（废弃绝对墙钟）**：**响应头阶段**用 `fetchTimeoutMs`（默认 600s，`agent.fetchTimeoutMs` 可配，`effectiveFetchTimeoutMs(provider)` 统一消费——四 transport 共用）；**body 阶段**用读侧**空闲**超时 `READ_IDLE_MS = 120s`（有数据流动就永不超时，连续无新 chunk 才判死）；`AbortError` 透传（用户 Ctrl+I 取消，不吞）。
+- **超时语义（废弃绝对墙钟）**：**响应头阶段**用 `fetchTimeoutMs`（默认 600s，`agent.fetchTimeoutMs` 可配，`effectiveFetchTimeoutMs(provider)` 计算；四 transport 经 opts `_headerTimeoutMs` 携带）——**消费面 = 代理分支**（`proxyFetch` 两分支：https 目标 `tunnelHttps` ∥ http 目标 `tcpConnectProxy`+`streamHttpResponse`）；
+  **直连面（无 `proxyUri`）无本仓头阶段超时**（纳入 = 设计轮面——在册）；**body 阶段**用读侧**空闲**超时 `READ_IDLE_MS = 120s`（有数据流动就永不超时，连续无新 chunk 才判死）；`AbortError` 透传（用户 Ctrl+I 取消，不吞）。
 - **abort / 超时来源标注**：超时 / 中止产生点的错误对象自带结构化 `abortInfo`（trigger / layer / detail）——词汇表与判定归 AGENT-LOOP 板（本档只指针）。
 - **body 终止守卫（#16 · 崩溃族）**：读侧空闲断流（`readSSE` ∥ `parseGeminiStream`）经单点 `terminateBody` 以错误终止 body——可 destroy 形态走 `destroyBody`（先挂永久兜底 `'error'` 监听者，防未处理 `'error'` 杀进程）；
   **web `ReadableStream`（直连 fetch）走内部 abort 通道**（`IDLE_ABORT`——建设点 = `proxyFetch` 直连分支单点〔两条流式直连链同经〕；看门狗不再 no-op）。机制单源 = `doc:PROXY.md:§2`。消费面语义零变（含 google 的 partial 保留径）。
@@ -583,3 +584,4 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - 2026-10-04（**issue 修复批·一 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §3 轮次 1 发现 1 ∥ 8）：§6.3 body 终止守卫句收正——abort 通道**建设点下移 `proxyFetch` 直连分支单点**（`core.mjs` 请求调用点收口恒走 `proxyFetch`——覆盖两条流式直连链 `readSSE` ∥ `parseGeminiStream`；proxy 两分支零触）；
   §6.12 `think-off.mjs` 读数收正（**26 ⇒ 49**，`wc -l` 实读 2026-10-04；句子实住 `:220`）；D-PR33 同拍补建设点句。**零新语义**（= 评审发现的直接导出项）。
 - 2026-10-04（**issue 修复批·一 · 复评 #78 发现 1 收正 · 父侧直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §3 轮次 2）：上条（fix 轮）think-off 记录节号收正——「§6.3」⇒「**§6.12**」（句子实住 `:220`）。**零语义改**（节号收正）。
+- 2026-10-04（**issue 修复批·一 · 登记/回填轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §2.10 登记/回填块 · 父侧裁定）：§6.3 超时语义句**射程收窄**——响应头阶段 `fetchTimeoutMs` 消费面 = 代理分支（`proxyFetch` 两分支）；直连面无本仓头阶段超时（纳入 = 设计轮面——在册）。**零新语义**（= 父侧裁定的直接导出项）。

@@ -1088,7 +1088,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 
 | # | 档（`thincoder-core/` 内） | 当前行数 | 来源 / 落点（裁决行） | 拆分计划 |
 |---|---|---|---|---|
-| 1 | `config.mjs` | **436**（`wc -l` 实读 2026-10-04） | CONFIG #80 / #128（装载器 + DEFAULTS；S1 并入 VSC 面后 674 行 → 三档拆分产物） | **>300——须带**：① MCP 热重载族（`reloadMcpFromDisk` 起——约 80 行）按 VSC 切分同形外提姊妹档（`config-mcp.mjs` 式）；② `DEFAULTS` 全量表 + 派生纯函数族（约 190 行）外提姊妹档（`config-defaults.mjs` 式）；余量预计 ≤300。消解条件 = 下次实质改动时（同 `scripts/mirror-divergence.mjs` 例） （迁移期引文——工具已退役）。**本批触评（issue 修复批·一 · 2026-10-04）**：+~30 守卫类最小修（`subagentModel` 加载期清洗——结构不变、与拆分面〔MCP 热重载族 ∕ DEFAULTS 族〕无交集）⇒ **不构成**「下次实质改动」触发——拆分顺延（判定落点 = 本行）。 |
+| 1 | `config.mjs` | **466**（`wc -l` 实读 2026-10-04——批一实施后终态） | CONFIG #80 / #128（装载器 + DEFAULTS；S1 并入 VSC 面后 674 行 → 三档拆分产物） | **>300——须带**：① MCP 热重载族（`reloadMcpFromDisk` 起——约 80 行）按 VSC 切分同形外提姊妹档（`config-mcp.mjs` 式）；② `DEFAULTS` 全量表 + 派生纯函数族（约 190 行）外提姊妹档（`config-defaults.mjs` 式）；余量预计 ≤300。消解条件 = 下次实质改动时（同 `scripts/mirror-divergence.mjs` 例） （迁移期引文——工具已退役）。**本批触评（issue 修复批·一 · 2026-10-04）**：+~30 守卫类最小修（`subagentModel` 加载期清洗——结构不变、与拆分面〔MCP 热重载族 ∕ DEFAULTS 族〕无交集）⇒ **不构成**「下次实质改动」触发——拆分顺延（判定落点 = 本行）。 |
 | 2 | `config-io.mjs` | 277 | CONFIG #129 / #131 / #177（单一读写面 + 自写通知 + provider 纯持久化函数） | —（软线内） |
 | 3 | `config-presets.mjs` | 46 | CONFIG #129（`PROVIDER_PRESETS` 取一侧） | —（软线内） |
 | 4 | `index-bin.mjs` | 48 | MEMORY #137（向量编解码——VSC 拆档逐字随迁） | —（软线内） |
@@ -1145,13 +1145,15 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 21 | `thincoder-core/agent-tools/async-settle.mjs` | **301**（`wc -l` 实读 2026-09-29） | **>300——须带（同批先行登记——本批不拆）**：拆点 = 结算 ∕ 唤醒段（`releaseSettledEntry` ∥ `settleAsyncEntry` ∥ `wakeAsyncWaiters`——≈135 行）外提姊妹档；备选 = 池 ∕ 墓碑段（`:52-141`）；**消解条件 = 越 500 硬限前或该档下次实质改动时** |
 | 22 | `thincoder-core/agent/suspension.mjs` | **300**（`wc -l` 实读 2026-09-29） | **贴线（300）——同批先行登记（本批不拆）**：拆点 = 池状态快照族（`poolLive` ∥ `sweepSettledToPending` ∥ `backgroundCounts`）外提姊妹档；**消解条件 = 越 500 硬限前或该档下次实质改动时** |
 | 23 | `thincoder-core/agent-tools/batch-lifecycle.mjs` | **332**（`wc -l` 实读 2026-09-30——pairfix 批 ①-3 后） | **>300——须带（文档清账批补登——本批不拆；计划原案 = `docs/core/design/TOOLS.md:741-742`）**：拆点 = create 面（`createBatchRecord` + `assertInsideBases` ≈55 行）外提姊妹档 `batch-lifecycle-create.mjs`（余量预计 ≈267）；**消解条件 = 越 500 硬限前或该档下次实质改动时** |
-| 24 | `thincoder-core/memory/core.mjs` | **319 → ≈331**（`wc -l` 实读 2026-10-04；本批 +~12） | **>300——须带（本批补登——原登记缺口）**：本批 = 消费面微改（#859 tolerant 消费——结构不变）；拆点候选 = 嵌入维护族（`ensureEmbeddings` ∥ `_runEnsureEmbeddings` ∥ `invalidateStaleEmbeddings` `:158-215` 邻域，约 60 行）外提姊妹档（`memory-embed-sync.mjs` 式）；**消解条件 = 越 500 硬限前或该档下次实质改动时**（细化预算随该次改动） |
-| 25 | `thincoder-core/mcp.mjs` | **298 → ≈306**（`wc -l` 实读 2026-10-04；本批 +~8） | **>300——须带（本批触碰越线 ⇒ 随批补登）**：本批 = `buildInitParams()` 抽取 + `setInitPayload` 注入（#850——结构不变）；拆点候选 = HTTP 会话自愈族（`postOnce` ∥ 404 自愈包装 ∥ 会话重建单飞，本批新增面）外提姊妹档（`mcp-http-session.mjs` 式）；**消解条件 = 越 500 硬限前或该档下次实质改动时** |
+| 24 | `thincoder-core/memory/core.mjs` | **321**（`wc -l` 实读 2026-10-04——批一实施后终态；本批 +2） | **>300——须带（本批补登——原登记缺口）**：本批 = 消费面微改（#859 tolerant 消费——结构不变）；拆点候选 = 嵌入维护族（`ensureEmbeddings` ∥ `_runEnsureEmbeddings` ∥ `invalidateStaleEmbeddings` `:158-215` 邻域，约 60 行）外提姊妹档（`memory-embed-sync.mjs` 式）；**消解条件 = 越 500 硬限前或该档下次实质改动时**（细化预算随该次改动） |
+| 25 | `thincoder-core/mcp.mjs` | **306**（`wc -l` 实读 2026-10-04——批一实施后终态；本批 +8） | **>300——须带（本批触碰越线 ⇒ 随批补登）**：本批 = `buildInitParams()` 抽取 + `setInitPayload` 注入（#850——结构不变）；拆点候选 = HTTP 会话自愈族（`postOnce` ∥ 404 自愈包装 ∥ 会话重建单飞，本批新增面）外提姊妹档（`mcp-http-session.mjs` 式）；**消解条件 = 越 500 硬限前或该档下次实质改动时** |
 
 **tools-carryover 批免登记余档（同批触及面——读数 = `wc -l` 实读 2026-09-29）**：`thincoder-core/tools/bash.mjs` **289**（贴线——<300）· `thincoder-core/agent-tools/bash-async.mjs` **281**（本批新档）· `thincoder-core/agent-tools/async-discard.mjs` **186** · `thincoder-core/agent/helpers.mjs` **481**（既有在册——300–500 段）。
 
-**次优先（≥437——登记、暂不逐档建计划；读数 = `wc -l` · 实读 2026-09-25——file-tier-sweep 批刷新；`thincoder-core/provider/core.mjs` ∥ `thincoder-core/agent-tools/subagent-async.mjs` 两读按 `wc -l` 实读 2026-10-04 收正）**：`agent-tools/consult.mjs` **471** · `agent-tools/subagent-async.mjs` **461** ·
-`thincoder-core/provider/core.mjs` **454** · `memory/schema.mjs` **453** · `thincoder-core/git/checkpoint.mjs` **444** ·
+**issue 修复批·一 免登记余档（同批触及面——读数 = `wc -l` 实读 2026-10-04）**：`thincoder-core/provider/sse.mjs` **296**（贴线——<300；**本批不拆**（#856 ∥ #878 皆行内改、结构不变）；拆点候选 = 工具调用合并 ∥ 收尾族（`snapshotSuffix` ∥ `mergeToolCalls` ∥ `finalizeToolCalls`）∥ 读侧看门狗 ∥ idle 两径归一段——外提姊妹档（候选，触发时细化）；**触发 = 越 300 即拆；复核点 = 该档下次触碰时**）。
+
+**次优先（≥437——登记、暂不逐档建计划；读数 = `wc -l` · 实读 2026-09-25——file-tier-sweep 批刷新；`thincoder-core/provider/core.mjs` ∥ `thincoder-core/agent-tools/subagent-async.mjs` 两读按 `wc -l` 实读 2026-10-04 收正）**：`agent-tools/consult.mjs` **471** · `agent-tools/subagent-async.mjs` **466**（批一实施后终态） ·
+`thincoder-core/provider/core.mjs` **460**（批一实施后终态） · `memory/schema.mjs` **453** · `thincoder-core/git/checkpoint.mjs` **444** ·
 `session-store.mjs` **441**——**六档**（`thincoder-core/tools/shared.mjs` / `tools/file.mjs` 已补登拆分计划、移出本列表）；补登时点随各档下次实质改动 / S2 接线轮。
 
 ### 2.9 与既有纪律的冲突点核对
@@ -2046,5 +2048,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 - 2026-10-04（**issue 修复批·一 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §3 轮次 1 发现 2 ∥ 5）：§2.8.1 补**子表行 24 / 25**（`thincoder-core/memory/core.mjs` **319 → ≈331**〔补登：拆点候选 = 嵌入维护族 `:158-215` 邻域 + 消解条件〕∥ `thincoder-core/mcp.mjs` **298 → ≈306**〔本批触碰越线——`buildInitParams()` 抽取 + `setInitPayload` 注入，结构不变〕）
   + 主表行 1 读数收正（`config.mjs` **419 ⇒ 436**；同落**本批触评** = 不构成「下次实质改动」触发——判定落点 = 该行）+ 次优先两读数收正（`thincoder-core/provider/core.mjs` **491 ⇒ 454** ∥ `thincoder-core/agent-tools/subagent-async.mjs` **456 ⇒ 461**）
   + 计数句同改（已登 **24 → 26** · 后 **23 → 25** 档 · 登记义务 +2）。**零新语义**（登记落位 ∕ 读数与触发判定）。
+
+- 2026-10-04（**issue 修复批·一 · 登记/回填轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §2.10 登记/回填块 · 父侧裁定）：§2.8.1 实施后终态实读回填——主表行 1 `config.mjs` **436 ⇒ 466**；子表行 24/25 读数收正（`thincoder-core/memory/core.mjs` **321** ∥ `thincoder-core/mcp.mjs` **306**）；次优先两读收正（`thincoder-core/agent-tools/subagent-async.mjs` **466** ∥ `thincoder-core/provider/core.mjs` **460**）；新增 **issue 修复批·一 免登记余档行**（`thincoder-core/provider/sse.mjs` **296** 贴线——本批不拆 + 触发）。**零新语义**（读数与登记面收正）。
 
 
