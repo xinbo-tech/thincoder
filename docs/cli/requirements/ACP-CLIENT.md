@@ -78,7 +78,8 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
   （`loadSession` + `sessionCapabilities{list,resume,delete,close}`；不虚报 image / audio / embeddedContext；未实现的 `mcpCapabilities` / `additionalDirectories` 不声明）。
 - **R-A5.2**：`protocolVersion` 按「支持则回同版本、否则回最新支持」协商（当前支持集 = `{1}`）。
 - **R-A5.3**：`authMethods` = **对象数组**（`id` / `name` 齐备）；含 `terminal` 项 **⟺** `clientCapabilities.auth.terminal === true`（契约 MUST）。
-- **R-A5.4**：会话方法响应形状——`session/new` 含 `sessionId`（**= 持久槽位号字符串**）；`session/list` 条目含 `sessionId` + `cwd`；`configOptions` 条目含 `id` + `name` + **判别键 `type`**（`select` 另含 `currentValue` + `options`；`boolean` 含 `currentValue`）；`set_config_option` 响应含**全量 `configOptions`**；`session/prompt` 入参取自 `params.prompt`。
+- **R-A5.4**：会话方法响应形状——`session/new` 含 `sessionId`（**= 持久槽位号字符串**）；`session/list` 条目含 `sessionId` + `cwd`；`configOptions` 条目含 `id` + `name` + **判别键 `type`**（`select` 另含 `currentValue` + `options`；`boolean` 含 `currentValue`）；
+  `set_config_option` 响应含**全量 `configOptions`**；`session/prompt` 入参取自 `params.prompt`。
 - **R-A5.5**：`fs/*` 反向 RPC 发出前必过客户端能力位（`readTextFile` / `writeTextFile`）；未宣告 ⇒ 回落本地（不得干等超时）。
 - **R-A5.6**：认证语义 = **凭据即时判据**（无跨调用闩锁）：`authenticate` 是**可选确认动作**（成功返回 `{}`；契约**禁止**客户端以 `terminal` 方法调它）；
   凭据不可解析 ⇒ `-32000` 且文案可行动（门失败**单档** = 无 provider/key ⇒ 指向 config 与 `--login`；持 key 而 `defaultModel` 不可解析 ⇒ **放行**，不作门失败——统一解析口径见 `doc:PROVIDER.md:§6.22`）。
