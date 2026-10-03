@@ -50,6 +50,11 @@
 
 **装配面第二源（2026-09-30 · 台账 #701）**：MCP **装配面**（`thincoder-vscode/src/extension/panel-turn-loop.mjs` ro 载荷——实施落点）另并项目根 `.mcp.json`——单层发现（`join(cwd, ".mcp.json")`）· 零交互信任 · config 同名优先 ∕ 异名追加（机制单源 = `doc:MCP.md:§6.4`）；**管理面**（本节列表 ∕ 增删改 ∕ 重连 ∕ 探活）仍 config 单源（`.mcp.json` 源不进管理列表——沿 CLI `/mcp` 口径）。
 
+**MCP 警告消费（2026-10-04 · 台账 #823）**：装配失败（死 server）不再静默——装配面出参 `warnings` 入 `agent._mcpWarnings`，装配尾转提醒入 `agent._pendingReminders`
+（下一条 user 消息注入；首两段逐字同 CLI；末行 = 本端可达出口「设置面 MCP 段 Reconnect」；同指纹不重推；零警告零写）。机制单源 = `doc:MCP.md:§6.4`；
+实现落点 = `thincoder-vscode/src/agent/setup.mjs` ∥ `thincoder-vscode/src/agent/tool-table.mjs` ∥ `thincoder-vscode/src/agent/setup-reminders.mjs`。
+可见面 = 会话内系统提醒（零新 UI ∥ 零新词键——沿 KD-70 ④ 同判；决策全文 = 批档 `docs/batches/2026-10-04-issue-fix-round3.md` §2）。
+
 ### 2.5 语义索引（校验可见面）
 
 embedding key + 构建按钮 + 状态；向量维度 / 模型切换的校验与可见面归 `MEMORY（VSC 侧）` §4（索引有效性面）——
@@ -642,3 +647,4 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - 2026-10-01（**vsc-cleanup 批 · 设计修复轮 1（评审轮 1 发现 7 ∕ 10）· eng-designer**——承 `docs/batches/2026-09-30-vsc-cleanup.md` §3）：§2.15 计数收正（「8 站点」⇒ 19 = 既有 9 ＋本批接入 10）+ 站点表补齐（`:198` ＋本批 10 站）；`:437` 助手坐标收正（`:300-303`⇒`:309-312`）；§2.8 ∕ §3 删除语义坐标重锚（`:276-287` ∕ `:279-280` ⇒ `:231`）。**零新语义**（评审发现 + 坐标收正）。
 - 2026-10-01（**记录清账批 · 文档面收正轮 · eng-designer**——承 `docs/batches/2026-10-01-records-docs-reconcile.md` §2 · 台账 #696）：超宽表行断行收形 1 处（`:389`「读面（预选取值）」——表行续行拆分（空首列续行）——单行 ≤300 ∥ 内容逐字零改 ∥ 条目数不变）。**零新语义**（断行）。明细 = 批档 §2。
 - 2026-10-02（**桌面 UX 收尾批 · 收口补充轮（VSC 侧）· eng-designer**——承批档 `docs/batches/2026-10-02-desktop-ux-closeout.md` §1 ∥ §5 · 台账 #697）：§2.5 P1 条定形值回填（词键 = `settings.indexDbSize` 整行模板 ∥ `settings.indexOriginCounts` 计数片段——两语值在册；形 = `#index-db-size` ∥ `#index-origins` 两读——缺位隐藏）；同笔按语义边界折行（原 442 超宽 ⇒ 四行 ≤300——零语义）。**零新语义**（回填 ∥ 折行）。明细 = 批档 §2。
+- 2026-10-04（**issue 修复批·三 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §2 · 台账 #823）：§2.4 补 **MCP 警告消费**句（装配尾入 `_pendingReminders`——首两段逐字同 CLI ∥ 末行指设置面 Reconnect ∥ 同指纹不重推 ∥ 零警告零写；机制单源 = `doc:MCP.md:§6.4`）。**零新语义**（端差归零落档）。明细 = 批档 §2。
