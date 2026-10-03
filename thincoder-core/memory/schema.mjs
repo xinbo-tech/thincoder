@@ -50,6 +50,8 @@ export const SKIP_DIRS = new Set([
   "AppData", "Application Data", "Desktop", "Documents", "Downloads",
   "Music", "Pictures", "Videos", "OneDrive", "Contacts", "Favorites",
   "Links", "Saved Games", "Searches",
+  // User-home common items (Library = macOS user dir; go = Go workspace) — basename match at any depth (false-prune face accepted)
+  "Library", "go",
   // Other common non-code directories
   "Program Files", "Program Files (x86)", "Windows", "$Recycle.Bin",
 ])

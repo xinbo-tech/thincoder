@@ -11,6 +11,7 @@ import { copyFileSync, mkdirSync, readdirSync, renameSync, statSync, writeFileSy
 import { basename, dirname, join, resolve } from "node:path"
 import { DatabaseSync } from "node:sqlite"
 
+import { resolveDeclaredRef } from "./declaration.mjs"
 import { ledgerDirPath, ledgerKey, openLedger } from "./ledger-db.mjs"
 import { resolveProjectRoot } from "./manifest.mjs"
 
@@ -71,14 +72,14 @@ function readRowsOf(file, missing = []) {
   const db = openRead(file)
   try { return readRows(db, missing) } finally { db.close() }
 }
-/** 写门风险旗（§2.2 表）：迁入行属 `在途 / 待核销` 且 `task_book` 不可解析 / 指向档不存在 ⇒ 该行后续更新将拒于 §6.1 写门；只出旗，不拦截。 */
+/** 写门风险旗（§2.2 表）：迁入行属 `在途 / 待核销` 且 `task_book` 不可解析 / 指向档不存在 ⇒ 该行后续更新将拒于 §6.1 写门；只出旗，不拦截（判面与写门同源·#834——共享解析单点 `resolveDeclaredRef`：① 仓根解析 → ② 声明源前缀解析序）。 */
 function writeGateFlag(values, projectRoot) {
   const tb = values[5]
   if ((values[1] !== "在途" && values[1] !== "待核销") || tb == null || tb === "") return null
   const part = String(tb).split("§")[0].trim()
   if (!part) return `task_book 不可解析（缺文件部分）：${tb}`
-  const abs = resolve(projectRoot, part)
-  return isFile(abs) ? null : `task_book 指向的档不存在：${tb}（解析 = ${abs}）`
+  const { ok, abs } = resolveDeclaredRef(projectRoot, part)
+  return ok ? null : `task_book 指向的档不存在：${tb}（解析 = ${abs}）`
 }
 /** `--from` 指名键 = **补充源**：键形非 16 位小写十六进制 / 无对应库 / 不可开 ⇒ 拒跑（fail-closed，零写——显式指名不静默跳过；键形判防路径形 / 越目录形取值 join 出台账目录外）。 */
 function fromKeyRefusal(fromKeys, dir) {

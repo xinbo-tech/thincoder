@@ -135,6 +135,11 @@ export function resolveAdvisorLaunch(agent, reviewType, { documents = null } = {
       // the same id (no slot residue — T14: the old token is then rejected at
       // the gate); old slots die at TTL only, kept as the fail-safe fallback.
       const prior = [...runs.values()].reverse().find((r) => r.reviewType === "design" && r.docSetKey === key)
+      // #863 实例回收（§6.10）：同 docSetKey 保最新一条 closed（= prior——F2h 只取 newest，语义零变）；
+      // 余者去重回收（实例随删释放——closed 零消费面）。
+      for (const r of [...runs.values()]) {
+        if (r !== prior && r.reviewType === "design" && !r.open && r.docSetKey === key) runs.delete(r.reviewId)
+      }
       run = {
         reviewId, reviewType, designId: prior?.designId ?? reviewId,
         round: 0, priorOutput: null, stale: false, open: true, docSetKey: key,
@@ -144,6 +149,10 @@ export function resolveAdvisorLaunch(agent, reviewType, { documents = null } = {
   } else {
     run = openCodeRun(agent)
     if (!run) {
+      // #863 实例回收（§6.10）：新 code 实例创建 ⇒ closed 实例清除（openCodeRun 仅取 open——零消费）。
+      for (const r of [...runs.values()]) {
+        if (r.reviewType === "code" && !r.open) runs.delete(r.reviewId)
+      }
       const reviewId = randomUUID()
       run = {
         reviewId, reviewType, designId: null,
@@ -474,7 +483,8 @@ export function closeOpenCodeAdvisorRuns(agent) {
   const runs = advisorRunsRead(agent)
   if (runs instanceof Map) {
     for (const r of runs.values()) {
-      if (r.reviewType === "code" && r.open) { r.open = false; closed = true }
+      // #863 关闭点轻量化：闭合同拍释放 priorOutput（closed 实例零消费面——续跑仅取 open）。
+      if (r.reviewType === "code" && r.open) { r.open = false; r.priorOutput = null; closed = true }
     }
   }
   return closed

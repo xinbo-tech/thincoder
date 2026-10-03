@@ -5,8 +5,8 @@
  * name / shape / defaults = schema 面 `docs/core/design/MANIFEST.md` §2.2）。迁出块逐字；
  * 原档 `conventions.mjs` 经 `export { … } from` 转口保名（消费面 / 批内件 import 面零改）。
  */
-import { existsSync } from "node:fs"
-import { dirname, isAbsolute, join, relative, resolve } from "node:path"
+import { existsSync, statSync } from "node:fs"
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path"
 import { DEFAULT_MANIFEST, manifestFilePath, readManifest } from "./manifest.mjs"
 import { logEvent } from "./log.mjs"
 
@@ -139,6 +139,30 @@ export function declaredPublicRoots(cwd) {
   }
   return out
 }
+
+/** 引用解析单点（§6.1 口径 4/5——写门 ∥ 迁移旗同消费，不得二写）：① 仓根解析 `resolve(base, part)`
+ *  为存在的档 ⇒ 命中；② 声明源前缀解析序：首段命中声明公共仓目录名（消费既有 `declaredPublicRoots`
+ *  ——同名多仓 ⇒ 声明序首者）⇒ 于该声明根解析余段；未声明 ∥ 声明根缺位 ∥ 目标档缺 ⇒ `{ ok: false, abs }`。
+ *  @param {string} base 仓根基准（写门口径 2 同一子表达式）
+ *  @param {string} part task_book 文件部分（首个 `§` 前子串，trim——调用面已判缺位）
+ *  @returns {{ok: boolean, abs: string}}
+ */
+export function resolveDeclaredRef(base, part) {
+  const abs = resolve(base, part)
+  if (isFile(abs)) return { ok: true, abs }
+  const segs = String(part).replace(/\\/g, "/").split("/").filter(Boolean)
+  for (const root of declaredPublicRoots(base)) {
+    if (segs[0] !== basename(root)) continue
+    if (segs.length > 1) {
+      const hit = resolve(root, segs.slice(1).join("/"))
+      if (isFile(hit)) return { ok: true, abs: hit }
+    }
+    break
+  }
+  return { ok: false, abs }
+}
+
+const isFile = (p) => { try { return statSync(p).isFile() } catch { return false } }
 
 const _cache = new Map()
 

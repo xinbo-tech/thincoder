@@ -87,6 +87,7 @@ export const verifyTool = {
           status: { type: "string", enum: ["passed", "failed", "skipped"], description: "The verification outcome you declare: 'passed' → allowed; 'failed' → blocked; 'skipped' → allowed but requires a summary reason." },
           command: { type: "string", description: "Optional: the verification command you ran (self-reported)." },
           summary: { type: "string", description: "Optional: the result. Required when status='skipped' — a concrete reason (e.g. \"project has no automated tests — verified by manual review\")." },
+          basis: { type: "string", description: "Optional: what the conclusion stands on — a judgment source, a read file:line coordinate, or an explicit \"unverified\" (declaration-only: no format is enforced or machine-checked). A passed/skipped declaration without it gets one advisory hint line in the report — never blocking, never changing the gate." },
         },
         required: ["status"],
       },
@@ -239,12 +240,16 @@ export const verifyTool = {
         lines.push("Verification declared passed.")
         if (v.command) lines.push(`  command: ${v.command}`)
         if (v.summary) lines.push(`  summary: ${v.summary}`)
+        if (v.basis) lines.push(`  basis: ${v.basis}`)
+        else lines.push("  basis: not declared (advisory — does not affect the gate) — note what the conclusion stands on: a judgment source, a read file:line, or an explicit \"unverified\".")
         ctx.agent._verifyPassed = true
       } else if (status === "skipped") {
         const reason = (v.summary ?? "").trim()
         if (reason) {
           lines.push("")
           lines.push(`Verification skipped with reason: ${reason}`)
+          if (v.basis) lines.push(`  basis: ${v.basis}`)
+          else lines.push("  basis: not declared (advisory — does not affect the gate) — note what the conclusion stands on: a judgment source, a read file:line, or an explicit \"unverified\".")
           ctx.agent._verifyPassed = true
         } else {
           lines.push("")

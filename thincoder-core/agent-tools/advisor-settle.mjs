@@ -216,7 +216,9 @@ export function settleAdvisorRun(agent, entry) {
   // F2e: strip the engine-approved suffix FIRST — the prior must never
   // carry the raw token / designId (exact truncation — zero collateral).
   // 结论块（下方）刻意晚于 prior 归一：prior 只承载评审正文，不携带机制文案。
-  if (report && looksLikeReviewOutput(report)) {
+  // #863 关闭点轻量化（父侧批·五裁定——§2.3 表外追加）：closed 实例零消费面（续跑仅取 open）——
+  // 关闭后不再写回 priorOutput（否则 settleDesignReview 关闭点的释放被覆盖）。
+  if (run.open && report && looksLikeReviewOutput(report)) {
     run.priorOutput = stripApprovedSuffix(report, run.approvedSuffix)
   }
   // F28/F29 失败结论（2026-09-18 顾问面治理批——**两轨共用**，ADVISOR-GUARDS.md §7 契约二）：

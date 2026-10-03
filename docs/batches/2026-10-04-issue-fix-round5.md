@@ -183,4 +183,68 @@ VERDICT: pass
 **批准面**：#834 ∥ #835 ∥ #842 ∥ #848 ∥ #863 ∥ #867——**两路派发**（core 9 档 ⇒ eng-coder 甲 ∥ cli/desktop 7 档 + 批内件 ⇒ eng-coder 乙（**dependsOn 甲**——批内件全量复跑需甲落））；**EN 提示词面**（`thincoder-core/prompts/persona-engineering.md`）＝主 agent 笔。
 
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（轮 2 复核 pass · 终态 clean（审计 0 偏差 ∥ 评审轮 1 pass ∥ fix 2 项 ∥ 轮 2 pass）· 交付报告已出）
+
+
+
+**§5 实施记录（eng-coder · core 甲面 · 2026-10-04 · initial 轮）**
+
+**口径与执行面**：任务书 = 本档 §2 设计终态（含尾修正块 `:110-125`）。执行面 = core 10 档（#834×3 ∥ #848×2 ∥ #863×4 ∥ #867×1）+ 1 档表外（`advisor-settle.mjs`——父侧裁定㈠）。乙方域（`cmd-undo.mjs` ∥ `cmd-reindex.mjs` ∥ `startup.mjs` ∥ `bin/*` ∥ desktop 两档）∥ `docs/**` ∥ 在飞写域 ∥ 已收口批档 = 零触。
+
+**5.1 落笔清单（11 档 · 行数 = wc-l 口径）**
+
+| # | 档 | 改动点（file:line） | 行数 |
+|---|---|---|---|
+| #834 | `thincoder-core/declaration.mjs` | `resolveDeclaredRef` 新导出（`:150-163`——组合包装·消费 `declaredPublicRoots` 不二写；`isFile` 助手 `:165`） | 194 → 218（+24 = 恰达上限） |
+| | `thincoder-core/ledger-cmd.mjs` | 写门消费共享判定（`:59-61`；内联判定段 ∥ 死 `isFile` ∥ 未用 import 退役；错误文案逐字零改） | 142 → 132（净 −10——方向为减；表列 ≤±4 未合，已登记） |
+| | `thincoder-core/ledger-migrate.mjs` | `writeGateFlag` 消费共享判定（`:80-82`；内联退役；+import 行；fix 轮折注回 ≤300） | 299 → 300（净 +1） |
+| #848 | `thincoder-core/agent-tools/verify.mjs` | schema `basis`（`:90`）+ passed 段（`:243-244`）∥ skipped 段（`:251-252`）——advisory 提示/回显；failed 面零段 | 296 → 301（+5 ≤ +14；越 300 为 §2.3 预登记） |
+| | `thincoder-core/tool-docs/verify.md` | 描述句（basis 语义 + 面上行为） | 单行档 |
+| #863 | `thincoder-core/undo-stack.mjs` | 双上界（`:20-22`）+ oversize 占位（`:42`）+ 总量逐最旧驱逐（`:54-58`） | 47 → 61（+14 ≤ +25） |
+| | `thincoder-core/agent/dispatch-run.mjs` | 采集 cap（`:18-19` ∥ `:46-56`）+ 拼接先于 offload（`:138-147`）+ 逐字标记两路径（`:141`/`:180`） | 167 → 184（+17 ≤ +18） |
+| | `thincoder-core/agent-tools/advisor-async.mjs` | 回收窗（`:137-142` design 保最新 closed ∥ `:151-155` code closed 清除）+ 关闭点释放（`:486-487`） | 481 → 491（+10 ≤ +19；≤500 硬限内） |
+| | `thincoder-core/agent-tools/design-token.mjs` | approval 关同拍释放（`:146`） | 156 → 157（+1 ≤ ±4） |
+| | `thincoder-core/agent-tools/advisor-settle.mjs` | **表外·父侧裁定㈠**：结算流 prior 写点守卫（`:221`）——无此则 `design-token.mjs:146` 释放被写回覆盖（必要性经评审核读） | 237 → 239 |
+| #867 | `thincoder-core/memory/schema.mjs` | `SKIP_DIRS` +2（`:53-54`——Library ∥ go；误剪接受面在册） | 468 → 470（+2 ≤ +4） |
+
+**5.2 接口面（乙方 `cmd-undo.mjs` 分支依赖）**：oversize 占位条目形 = `{ tool, path, backup: null, oversize: true, timestamp }`；**分支须先判 `item.oversize === true` 再判 `backup === null`**（否则占位会被「文件创建」态分支误删档）；普通条目与文件创建态（`backup: null` 且无 `oversize` 字段）逐字零变。AC-863-2 后半（不可回退且不误删）= 乙方半幅面。
+
+**5.3 自测读数（先红后绿）**：探针 `.thincoder/tmp/r5-core-probe.mjs`（27 腿）——初跑 24/27（3 红 = 探针夹具缺陷：待讨论→在途 直迁不在迁移表；非实现缺陷）⇒ 修夹具 27/27 ⇒ **fix 轮后复跑 27/27 全绿**。腿组：解析序 6 ∥ 写门 2 ∥ 迁移旗 1（旗文案 = 写门文案去前缀·逐字相等）∥ basis 5 ∥ undo 3 ∥ console 3 ∥ advisor 5 ∥ SKIP_DIRS 1 ∥ 行数面 1。
+
+**5.4 回归复跑（既有批测试直跑）**：`2026-10-02-manifest-resolution-fix` 8/8 ∥ `2026-10-03-design-token-echo` 11/11 ∥ `2026-10-02-public-repo-read` 5/5（含 T46 写门腿）∥ `2026-10-03-ledger-family-aggregate` 8/8 = **32/32 全绿**。`node scripts/doc-check.mjs`（仓根）⇒ **exit 0**（锚 0 悬空 ∥ 行宽 OK ∥ 行数面差异 8 = 既存桌面档报告态）。仓级套件未跑（父侧收口口径）。
+
+**5.5 审计与代码评审轮次与终态**：
+
+- **分歧审计（explore · 只读）**：DEVIATIONS = 3（全文档漂移：§5 空段 ∥ ledger-cmd 行数面 −10 ∥ ledger-migrate +2）；**PARTIAL ∥ 静默简化 ∥ 清单外 = 0**。
+- **代码评审轮 1（advisor · code）**：**VERDICT: pass**（🔴 0 ∥ 🟡 4 ∥ 🔵 2）。
+- **fix 轮（响应表）**：
+
+| 号 | 发现 | 处置 |
+|---|---|---|
+| 1 | 🟡 ledger-migrate 301 越 300 顾问线 | **采纳·已修**：注释折单行 ⇒ 300；探针复跑绿 |
+| 2 | 🟡 verify/schema/advisor-async >300 | **不改**：三档登记债在册（`verify-report.mjs` ∥ `memory/ext-tables.mjs` ∥ `advisor-runs.mjs`），数值均在计划内（≤310 ∥ ≤472 ∥ ≤500）——R3 不升级 |
+| 3 | 🟡 null/空串「同判」残余 | **不改·登记**：二形在「既有拒绝面零改」射程外（AC-834-2 三例逐例成立）；改旗面 = 超设计面 ⇒ 供父侧/设计面裁 |
+| 4 | 🟡 §5 空段·披露未在位 | **采纳·已修**：本段 + 裁定㈠㈡㈢登记（5.6/5.7） |
+| 5 | 🔵 ledger-cmd 标注漂移 | **报告项**：代码零改；§2.3 标注收正 = 设计面笔（本席不改设计档） |
+| 6 | 🔵 skipped 阻断支零提示 | **不改**：与「已阻断面零提示」同理一致；文本边界收正 = 设计面一字之补 |
+
+- **轮 2 复核**：（回执后补）。
+
+**决策透明表（本席裁量处）**：
+
+| # | 裁量点 | 决定 | 依据 |
+|---|---|---|---|
+| 1 | `MAX_UNDO_BYTES` 取值 | 10_000_000（十进制） | 设计「read 守卫同值先例」⇒ 与 `thincoder-core/tools/file.mjs:25` 同值 |
+| 2 | oversize 占位形状 | `backup: null` + `oversize: true` | 「不得与文件创建态混判」——分判字段 = `oversize`（消费面先判） |
+| 3 | console cap 记账 | 每块 +1（接缝符） | join 后 ≤ 65536 严格成立 |
+| 4 | advisor-settle 守卫 | 落（表外） | 父侧裁定㈠；必要性实读（防写回覆盖） |
+| 5 | ledger-migrate 折注 | 301 → 300 | 评审轮 1 发现 1 采纳 |
+| 6 | ledger-cmd 净 −10 | 保留（不补行） | 缩向无越限风险；不填塞代码 |
+
+**5.6 边界遵守**：零触乙方域 ∥ `docs/**` ∥ 在飞写域 ∥ 已收口批档；表外 = `advisor-settle.mjs`（父侧裁定㈠·语义中性·可 revert）+ `.thincoder/tmp/` 探针（临时区·不进仓）。`git diff` 实读 = 本面 11 档 + 探针；`batch.mjs` 改动 = 他批在写（非本面）。
+
+**5.7 未决/上抛（父侧收口看）**：① `record-results.mjs:134` 次级守卫 = 裁定㈡暂缓（待让渡后落）；② 乙方半幅：`cmd-undo.mjs` oversize 分支（先判 `oversize`——见 5.2）+ 批内件 `2026-10-04-issue-fix-round5.test.mjs`（甲面腿建议对照探针移录）；③ 登记面：`API-CONTRACT.md` 生成区 advisor-async 导出坐标随本批 +9 行后移——待 `scripts/api-contract.mjs --write` 重跑（报告态）；④ `AGENT-LOOP.md:111` 载体坐标对现盘不对位（归因未定——本批插入点在其下）；⑤ 设计面二择项 = 响应表 #3 ∥ #6。
+
+**5.8 评审轮 2 回执（fix 复核）**：**VERDICT: pass**——发现 1 = 已修 ✓（`ledger-migrate.mjs` 末内容行 `:300`，折注后写门同源判据/旗文案在位）∥ 发现 4 = 已修 ✓（本段 + 裁定登记）∥ 发现 2/3/5/6 = 分类（登记/报告项）成立 ∥ **新增发现 = 0**。**终态 = clean**（分歧审计 0 偏差 · 评审轮 1 pass · fix 轮 2 项 · 轮 2 pass）。
+
 ## §6 验证与收口（父代理）

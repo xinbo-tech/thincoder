@@ -10,11 +10,10 @@
  * 的 depthOnly 分支）——一律**动态 import** 本模块链（ledger-db.mjs 静态 import node:sqlite ⇒
  * 消费侧静态 import 会破 W8 契约②）。
  */
-import { statSync } from "node:fs"
-import { basename, resolve } from "node:path"
+import { resolve } from "node:path"
 import { ALLOWED_MIGRATIONS, nowIso, openLedger, PENDING_STATUSES } from "./ledger-db.mjs"
 import { resolveProjectRoot } from "./manifest.mjs"
-import { declaredPublicRoots } from "./declaration.mjs"
+import { resolveDeclaredRef } from "./declaration.mjs"
 
 /** 查询（只读，全角色）：SELECT 行集（status/kind/board 过滤，缺省 = 全部行；id 升序）。库不在 = 空账。
  *  只读开库（readOnly 句柄 + 零 DDL/ALTER——read-data-interface 批 FR2③）；库档非台账库 ⇒ 空账。 */
@@ -41,9 +40,6 @@ export function ledgerCount({ cwd } = {}) {
   } finally { db.close() }
 }
 
-/** 路径 = 存在的**档**？（目录 / 缺失 → false——写门存在性判据用）。 */
-const isFile = (p) => { try { return statSync(p).isFile() } catch { return false } }
-
 /** 写门·指针存在性（设计档 §6.1 · 台账 #38 · AC-M2-10）：写命令落盘前判**结果行**——`status ∈
  *  {在途, 待核销}` ⇒ 判 `task_book`：`null`（缺指针）⇒ 拒（「必填」文案）；非 `null` ⇒ 文件部分
  *  （首个 `§` 前子串，trim）须经基准 `resolve(base, …)` 指向存在的档；缺文件部分（`§2` / 空串 /
@@ -52,23 +48,17 @@ const isFile = (p) => { try { return statSync(p).isFile() } catch { return false
  *  基准 `base` = **与台账库关联键同源**（2026-09-18 fix 轮 · O1 收正）：`resolveProjectRoot(cwd) ??
  *  resolve(cwd ?? ".")`——同表达式见 `ledger-db.mjs` `ledgerDbPath`；容器根会话（锚 cwd 下唯一注册
  *  子仓 P）与子仓会话 ⇒ 库键与指针基准同取 P（同库同基准；原实现 `resolve(cwd, …)` = 原始 cwd 会误拒）。
- *  #832：声明源前缀形同判（§6.15——首段 = 声明公共仓目录名 ⇒ 于该声明根解析；可核 ⇒ 通过；缺位拒）。 */
+ *  #832 ∥ #834：声明源前缀形同判——判定单源 = `declaration.mjs` `resolveDeclaredRef`（① 仓根解析 →
+ *  ② 声明源前缀解析序；同名多仓 ⇒ 声明序首者）——**与迁移旗（`ledger-migrate.mjs` `writeGateFlag`）
+ *  同消费**；未声明 ∥ 声明根缺位 ∥ 目标档缺 ⇒ 照旧拒（既有拒绝面零改——判据本体 = §6.1 口径 1–4 逐字）。 */
 function assertTaskBookGate(cwd, fnName, status, taskBook) {
   if (status !== "在途" && status !== "待核销") return
   if (taskBook == null) throw new Error(`${fnName}：task_book 必填（在途 / 待核销 须携任务书指针）`)
   const part = String(taskBook).split("§")[0].trim()
   if (!part) throw new Error(`${fnName}：task_book 不可解析（缺文件部分）：${taskBook}`)
   const base = resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")
-  const abs = resolve(base, part)
-  // §6.15 声明源候选（#832 · LEDGER.md §6.1-4）：首段 = 声明公共仓目录名 ⇒ 该声明根解析余段（同名多仓 ⇒ 声明序首者）；未声明 ∥ 缺位 ⇒ 照旧拒。
-  if (isFile(abs)) return
-  const segs = part.replace(/\\/g, "/").split("/").filter(Boolean)
-  for (const root of declaredPublicRoots(base)) {
-    if (segs[0] !== basename(root)) continue
-    if (segs.length > 1 && isFile(resolve(root, segs.slice(1).join("/")))) return
-    break
-  }
-  throw new Error(`${fnName}：task_book 指向的档不存在：${taskBook}（解析 = ${abs}）`)
+  const { ok, abs } = resolveDeclaredRef(base, part)
+  if (!ok) throw new Error(`${fnName}：task_book 指向的档不存在：${taskBook}（解析 = ${abs}）`)
 }
 
 /** 新增（写命令，仅主 agent）：INSERT——入待讨论（六态状态机入口）。 */

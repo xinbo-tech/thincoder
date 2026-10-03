@@ -143,6 +143,7 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
   // see the sync wrapper's note: unreachable today, kept for parity).
   if (agent._role === "eng-coder") agent._engDesignReviewed = true
   run.open = false // approval closes this doc-set instance — next review is fresh
+  run.priorOutput = null // #863 关闭点轻量化：审批关同拍释放（closed 实例零消费面——续跑仅取 open）
   const clean = stripDesignTokenEcho(rawResult, designToken).trim()
   // F2c: id echo + omission guidance + point-in-time slot snapshot — the
   // same suffix the F2e prior stores strip with (stored for the exact truncation).
