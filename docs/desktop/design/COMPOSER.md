@@ -127,6 +127,13 @@
    （设置面修好 `defaultModel` 后**即时**退场——不再等下次发送 / 开页；零新通道——回执内字段）。
 5. **边界**：#840 的失败词路由零改；`providerKind` 判据换源（「渠表非空」→「有持 key 渠道」——全无 key 态出真·无 key 词）记于批档 §2 受影响表，不另立面。核件 ∥ VSC 零触。
 
+**本批注（会话选定写回 —— 默认模型随动 · 2026-10-03 · 台账 #880）**：本注定形输入区模型菜单「选定 ⇒ 默认模型随动」——用户 2026-10-03 22:49 原话「以用户在会话中选定的模型作为默认模型，下一次新开会话时自动采用」。批档 = `docs/batches/2026-10-03-default-model-carryover.md` §2；契约面 = `docs/desktop/design/IPC.md` §2「会话级偏好注」项 8；机制单源 = `docs/core/design/SESSION.md` §6.21 判据句 6。
+
+1. **写路**：`selectModel` 选定（模型钮 ∥ `/model` 斜径——同一函数）⇒ `session:prefs`（既有——槽写零改）**同拍**写回 config `defaultModel = "<provider>:<model>"`（新会话起点随动）。
+2. **触发判据 = 槽面实变**：会话切换 ∥ `models` 推送回声（闲时照发的同值回写）∥ 只改档位——皆**零写**（防系统自动改写用户配置）；在飞拒 `busy` 照旧零写；系统回退自动采用不写。
+3. **回执面**：选定写回径成功回执携 `providerState` ⇒ 提示带即时重派生（fallback 明示行随选定退场——#841 同纪律）。
+4. **边界**：设置面「采用」语义零改（只写全局默认、不写会话槽——两面不互相顶替）；回退解析链（`thincoder-core/model-ref.mjs`）零触；候选面 ∥ 词表 ∥ 通道集零新。
+
 ## 3. 文件账（本域）
 
 ### 3.1 本端文件清单与行数预算（本域族行 · 迁自 `PROJECT.md` §4.1——逐字）
@@ -281,4 +288,5 @@
 - 2026-10-03（**首跑渠道提示修复批 · 实施后文档面回填轮（§3.1 两行走读齐平）· eng-designer**——承批档 `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2 ∥ §5 · 台账 #840）：§3.1 两行实读对盘（`composer-wire.mjs` **262 ⇒ 266**——失败载体 `{ reason, kind }` ∥ `composer-sync.mjs` **302 ⇒ 306**——类路由（词面-only））；越层在册句随正（续期——引 `docs/desktop/design/PROJECT.md` §4.1 越层段）。**零新语义**（读数）。明细 = 批档 §5。
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 ∥ §5 · 台账 #841）：本批注两项收正——行面补**行锚 `data-notice="provider-fallback"`**（机检面）；第三刷新点收窄为**实落写点三处**（`thincoder-desktop/src/main/settings.mjs:230` ∥ `:330` ∥ `providers.mjs:181`——设计按盘回归；不取 `ask()` 边界形：盘上无该机制）；§3.1 三行走读齐平（`mount-composer` **297 ⇒ 299**（贴 300 层在册）∥ `composer-wire` **266 ⇒ 276** ∥ `composer-sync` **306 ⇒ 322**）。**零新语义**（读数 ∥ 坐标）。明细 = 批档 §2 回填轮块。
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #9（评审轮 1 · 发现 4 ∥ 7）· eng-designer**——承批档 §3 轮次 1 · 台账 #841）：本批注收正——数据面载荷补 `invalidReason`（合成式可算）∥ 行面判据改 **`fallback` ∧ 非 invalid 类**（合成式单源 = `doc:PROVIDER.md:§6.22`）∥ 清位补**第三刷新点**（设置写回执——`settings:agent` ∥ `provider:save` 成功回执携 `providerState` ⇒ 即时退场）。**产品码零触（修正轮）**。
+- 2026-10-03（**会话选定写回批（default-model-carryover）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §2 · 台账 #880）：§2 增本批注（选定写回——写路 ∥ 槽面实变判据 ∥ 回执 `providerState` ∥ 边界）；**产品码零触（设计轮）**。机制单源 = `docs/core/design/SESSION.md` §6.21 判据句 6。
 - 2026-10-03（**轻通道轮八 · fallback 明示行文案澄清 · 收口形式化轮 · eng-designer**——承批档 `docs/batches/2026-10-03-light-round-8.md` §1 · 台账 #879 · 实况 = 提交 `32216ffc`）：#841 批注收正——明示行词面由「逐字复用 #840 键」改为**新键 `composer.send.noDefaultModelFallback`**（澄清半句——**失败词 ∥ 态词分家**）；§3.1 `composer-sync.mjs` 行实读对盘（**322 ⇒ 324**）。**产品码零触**（收口形式化轮）。明细 = 批档 §2。

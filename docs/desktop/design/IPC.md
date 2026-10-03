@@ -115,7 +115,7 @@
 |---|---|
 | `sessions:list` / `session:create` / `session:switch` / `session:rename` / `session:delete` | 会话族（行字段含 `createdBy` 创建端〔核 `listSlots` 条目投影，实读 `thincoder-core/session-slots.mjs:217`；缺键 ⇒ `""` = 未知 ⇒ 渲染面**不标注**、**禁以「占用端」冒充**〕；运行标记 / 待审批位 = **渲染面位标面**（**不经本载荷**——「会话族注」项 4）；**`sessions:list` 读回执增字段 `ledger`**（账本异常注记——异常才携；单源 = 「会话族注」项 6）；切换 = 恢复槽 + 载历史；**写通道回执** = 统一信封 `{ ok, reason: null\|string, cwd, slot }`——reason 分档见「会话族注」项 5；**`session:delete` 末项门（对齐第三批增）** ⇒ 会话数 ≤ 1 拒 `last-session`；**`session:switch` 受占件（端差清算批增）** ⇒ 受占槽切换成立 ∧ 回执增键 `occupied: true`（非受占 ⇒ 键缺席——核 `slotOccupancy` 前置读；可见面 = 渲染面 `session.occupied` toast——CLI 形「警告 + 继续」）） |
 | `session:resume` | 接续既有会话（跨端同一槽——与 CLI / 扩展端接续同一会话） |
-| `session:prefs` | **会话级偏好写面（批 B 落 · 白名单末位）**——载荷 `{ key, patch }`：`patch` 键闭集 = `provider` / `model` / `effort`（会话级三值——需求 §3.1），至少一键；值形 = 串（`null` = 清该键——**仅 `effort` 一键**；表外档位字面串 ⇒ 归一 `null`〔未设——写面不预校验，沿核读侧容忍口径〕）；`provider` 变更须**同送 `model`**（否则拒 `model-required`）；非对象 / 空对象 / 表外键 ⇒ `invalid-patch`。**回执 = 会话族同信封 + `meta`**（`{ ok, reason, cwd, slot, meta }`——`meta` = 会话级三值投影，与 `history:page` 回执 `meta` 同源同形）：**成功携 `meta` · 失败缺 `meta` 键** ⇒ 仅成功径就地刷三值面。reason 五档（含 `model-required`）= 「会话级偏好注」项 7。语义与核面解析链 = 「会话级偏好注」 |
+| `session:prefs` | **会话级偏好写面（批 B 落 · 白名单末位）**——载荷 `{ key, patch }`：`patch` 键闭集 = `provider` / `model` / `effort`（会话级三值——需求 §3.1），至少一键；值形 = 串（`null` = 清该键——**仅 `effort` 一键**；表外档位字面串 ⇒ 归一 `null`〔未设——写面不预校验，沿核读侧容忍口径〕）；`provider` 变更须**同送 `model`**（否则拒 `model-required`）；非对象 / 空对象 / 表外键 ⇒ `invalid-patch`。**回执 = 会话族同信封 + `meta`**（`{ ok, reason, cwd, slot, meta }`——`meta` = 会话级三值投影，与 `history:page` 回执 `meta` 同源同形）：**成功携 `meta` · 失败缺 `meta` 键** ⇒ 仅成功径就地刷三值面。reason 五档（含 `model-required`）= 「会话级偏好注」项 7。**#880 批增**：选定写回径（模型面实变——「会话级偏好注」项 8）成功回执另携 `providerState`（写后核读；键缺席 ⇒ 渲染面零写）。语义与核面解析链 = 「会话级偏好注」 |
 | `record:append` | **消化面留档记录追加（消化面留档批增 · #719——白名单末位 46）**——载荷 `{ key, record }`：`record` = 留档记录——**本通道到达族 = `subagent`**（`{ meta, rows }` 快照）；**`digest` 族经本通道不可达**（其产生面 = 宿主发帧点**同点双动作**——不经通道；防双份判据：渲染面不得经本通道追加 `digest` 记录）；两族形 / 在场 / 判据单源 = `docs/desktop/design/RENDERER.md` §1.1「留档记录」条；**记录产生面直追加**——不入机器线（不喂模型）；落盘节律 = 与消息同节律（人读线段即时 ∥ 槽文件回合尾投影——单写者零破）；回执 = `{ ok, reason }`（reason 闭集 = `bad-key` ∥ `unknown-key`（装配表无该键——事件面只在装代理上流，实际不可达——防御档））；处理体 = `thincoder-desktop/src/main/agent-host.mjs` 转口（`pushReal` 同面——核 `thincoder-core/context.mjs:93`） |
 | `file:open` | **文件链接打开（对齐第三批增 · 相抵②）**——载荷 `{ path, line? }`：`path` = 盘上绝对路径（验存件——宿主 `extractFileLinks` 产物）· `line` = 行号（核产物；**本批不施加**——`shell.openPath` 无行参；端差登记 = `docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」相抵②）；**回执** `{ ok, reason }`（`ok` 假 ∥ 抛 ⇒ `console.error`——渲染面零静默）；**实现面** = `shell.openPath`（`thincoder-desktop/src/main/ipc.mjs` 出口；纯函数面 `thincoder-desktop/src/main/file-links.mjs`） |
 | `history:page` | **载荷（批 A 定形）** = `{ key, before }`（`before = null` ⇒ 尾页；否则 = 页首游标）；**回执** = `{ ok: true, messages, hasOlder, next, meta, flags?, queue }`（`queue` = 本键**队列快照**（**`string[]`**——**两源合并快照**（忙态队 ∪ 挂起窗输入队——并源单点 = `queueView`；A9 同镜面单形）：「回合中插入」批增：冷启 ∕ 重载镜面重建面；键恒在场，空队 ⇒ `[]`）；`next` = 下一页游标——推导 = 「页游标注」；无更早页 ⇒ `null`；`meta` = 会话级三值投影 `{ provider, model, effort }`——开页即供三值面；`flags` = 模式位投影（四布尔——**状态栏对齐批增**；**活值优先**（不在场 ⇒ 槽字段投影）；形态 / 在场 / 落点单源 = 「模式位投影注」）；**桌面残余批增（D17）** = `seed` 打开态播种面——**仅首屏读**（`before == null`）在场，形 / 缺席降级 = 「打开态播种注」）；页量 = 核 `historyWindow` 缺省（200 **条**——**条 ≠ 块**：块数由渲染面归约，窗限增长按实并入块数）；槽缺 / 键不合法 ⇒ `{ ok: false, reason }`（`bad-key` / `slot-missing`）；**零算法副本** = 核 `loadSlotFile` + `historyWindow` 转口；**留档批 · #719**：`historyWindow` 以 `{ records: true }` opt-in 直通留档记录（`digest` ∕ `subagent` 两型——**默认关 ⇒ CLI ∕ VSC 零破**）——形 = `docs/desktop/design/RENDERER.md` §1.1「留档记录」条；视口补偿在渲染面（`docs/desktop/design/RENDERER.md` §3）；**#841 增 `providerState` 键**（provider 态投影——见「provider 态投影注」） |
@@ -194,7 +194,7 @@
 
 **会话级偏好注（`session:prefs` · 单源 · 批 B 落）**：
 
-1. **语义**：provider / 模型 / 推理档位三键 = **会话级**（需求 §3.1:47——随会话槽持久化，与 CLI / 扩展端**同一份槽**）；**config 零写**（`settings:agent` 仍是设置面全局默认面，不再作会话级三值出口——需求 §3.5:94 现状定性）。
+1. **语义**：provider / 模型 / 推理档位三键 = **会话级**（需求 §3.1:47——随会话槽持久化，与 CLI / 扩展端**同一份槽**）；**config 零写**（`settings:agent` 仍是设置面全局默认面，不再作会话级三值出口——需求 §3.5:94 现状定性）——**唯一例外 = 项 8 选定写回**（模型面实变 ⇒ `defaultModel` 同拍写回 · 2026-10-03 · #880）。
 2. **写入面**：核新出口 `setSlotPrefs(cwd, slot, patch)`（`thincoder-core/session-slot-write.mjs`——沿 `setSlotAutoApprove` 同形：一次读-改-写，复用 `writeFlag` / `saveSlotData` 单点）⇒ 槽数据文件即更新（跨端立即可读；不另立存储）。
 3. **槽字段（核面小改三处 · 授权 = 批次档 §1.2）**：`newSlotData` 增 `effort: null`；`applySession` 应用 `data.effort`；`saveSession` 的保存字段表**须携带 `effort`**——否则槽写面被下一次保存整对象抹除（同 `engTokens` 那类缺陷；实读 `thincoder-core/session.mjs:105-166` 现表无 `effort`）。
    - **老槽（无该键）⇒ 零行为变更**。槽值闭集（`null`〔= 老槽即此态〕∥ `"off"` ∥ `reasoningEffortEnum` 成员）与三处改点的判据**单源 = `docs/core/design/SESSION.md` §6.21**（本注不重述值域）。
@@ -202,6 +202,13 @@
 5. **零算法副本**：端侧不重算槽语义、不校验模型值域（候选面来自 `model:list`；写面取字面串——沿 `settings:agent` `defaultModel` 先例）；**档位枚举的校验面 = 端侧控件闭集**（写面不预校验——槽值可被跨端 / 手工改写，表外档位字面串 ⇒ `effort` 归一 `null`〔未设〕，沿核读侧容忍口径）。
 6. **端差登记（有意分歧）**：CLI `applyThink` 面批 B 不动——推理档位面端侧自有（用户 2026-09-15 裁定「核内无需位」；在案 = `thincoder-vscode/src/agent.mjs:260-265`）；桌面与 VSC 同义（各自端侧实现，核内零调用点）。
 7. **回执与失败径**：reason 闭集 = `invalid-patch`（非对象 / 空对象 / 表外键）· `model-required`（`provider` 变更未同送 `model`）· `bad-key`（键不合法）· `slot-missing`（槽不可读）· `busy`（回合在飞 ⇒ **零写**）；**成功携 `meta`（信封三键）· 失败缺 `meta` 键**；失败径一律零写（槽值不变）。
+
+8. **选定写回（`defaultModel` 同拍写回 · 2026-10-03 · 台账 #880）**：**用户显式选定**（模型菜单选模型——模型钮 ∥ `/model` 斜径同一函数；`selectModel` ⇒ `session:prefs` 携 `provider` + `model` ∧ 槽值**实变**）⇒ 宿主同拍写回 config `defaultModel = "<provider>:<model>"`（本会话槽写照旧——既有语义零改；机制单源 = `docs/core/design/SESSION.md` §6.21 判据句 6）。四事：
+   - **触发判据 = 槽面实变**（写盘前读 ∥ 写入值比对）：系统同步写（`models` 推送回声——会话切换 ∥ 闲时照发的同值回写）**不写**；只送 `effort` **不写**；`busy` / `bad-key` / `slot-missing` 拒径零写（判序不变）；系统回退自动采用**不写**。
+   - **写面**：核 `writeConfigAtomic`（端侧零自写盘——沿设置面同款执行体）+ 写后探一次（S3 同律）；**复合等值 ⇒ 零写**；定序 = 槽先配置后——配置面失败（`mtime-conflict` 等）**不反扑**会话写（回执仍 `ok:true`；主侧 `console.error` 记错——零静默）。
+     实现落点 = 写回单点 `thincoder-desktop/src/main/settings.mjs`（`defaultModel` 写 + 探一处）∥ 触发支 `thincoder-desktop/src/main/agent-host.mjs` `setPrefs`（选定支）。
+   - **回执**：选定写回径成功回执另携 `providerState`（写后核读——**第四刷新点**；`docs/desktop/design/COMPOSER.md` §2 本批注；键缺席 ⇒ 渲染面零写）。
+   - **边界**：现四写点语义零改（设置面「采用」仍只写全局默认、不写会话槽——两面不互相顶替，需求 §3.5 项 5/6；渠道保存首跑补全 ∥ 向导 ∥ 迁移照旧）；候选面 ∥ 词表 ∥ 通道集 ∥ 白名单零新。
 
 **打开态播种注（`history:page` 回执 `seed` · 单源 · 桌面残余批落）**：
 
@@ -233,7 +240,7 @@
 2. **载荷**：`providerState = { state, channel, model, reason, invalidReason }`——`state` 三值闭集；`channel` ∥ `model` = 解析出的运行渠道 ∥ 模型（不可解析 ⇒ `null`）；
   `reason` = 核语义源串（state≠ok 在场——**禁串嗅探**，渲染面按 `state` ∥ `invalidReason` 出词）；`invalidReason` = 核 `providerInvalidReason` 快照（provider 不完整 ⇒ 非空——**invalid 类合成式**的一半）。
 3. **在场条件**：`history:page`（每次页读）与 `msg:send`（**成功回执**——发送时点刷新）皆携；**第三刷新点（评审发现 7）**：设置写回执（`settings:agent` ∥ `provider:save` 成功回执）同携——实落写点三处 = `thincoder-desktop/src/main/settings.mjs:230` ∥ `:330` ∥ `thincoder-desktop/src/main/providers.mjs:181`（写后核读；渲染面三出口落切片）
-   ——设置面修好 `defaultModel` 后即时刷新；失败径回执沿 #840 `providerKind` 面（零叠加）。
+   ——设置面修好 `defaultModel` 后即时刷新；**第四刷新点（#880 批增）**：`session:prefs` 成功回执（选定写回径——模型面实变）同携（写后核读）。失败径回执沿 #840 `providerKind` 面（零叠加）。
 4. **消费**：渲染面落 store 切片（与 `meta` 同写点）⇒ `paintNotices` 重派生（行序 ∥ 清位 = 本档 §2 本批注；`state === "ok"` ∧ 非 invalid 类 ⇒ 零节点——负向锁）。
 5. **零新通道**：`providerState` = 既有回执内字段——§1 通道计数 ∥ 白名单面计数零动。
 
@@ -306,9 +313,9 @@
    **口径差有意（勿统一）**：CLI `isConfigured`（`:27`）= key 可解析（更严）——两端判据不同源。
 7. **拒绝直传（批 9）**：主侧处理体**不吞错**——`readManifest` 非 ENOENT 读错（`thincoder-core/manifest.mjs:374`）与 `loadConfig` 畸形档抛错均**原样上抛** ⇒ invoke 拒绝（零静默降级、零假回执）。
 
-8. **端侧出口与判定口径（批 9 补锚）**：① **`defaultModel` = 复合串** `"<provider>:<model>"`——写口两处：视图动作出口 `settings:useModel`（`thincoder-desktop/renderer/views/settings-sections.mjs:81`）经 `settings:agent` 写 `{ patch: { defaultModel } }`（`thincoder-desktop/renderer/mount-settings-exits.mjs:128-139`——写 `:131`）；
+8. **端侧出口与判定口径（批 9 补锚）**：① **`defaultModel` = 复合串** `"<provider>:<model>"`——写口三处（#880 增）：视图出口 `settings:useModel`（`thincoder-desktop/renderer/views/settings-sections.mjs:81`）经 `settings:agent` 写 `{ patch: { defaultModel } }`（`thincoder-desktop/renderer/mount-settings-exits.mjs:128-139`——写 `:131`）；
    `provider:save` 带 `active:true` 同批追加（`thincoder-desktop/src/main/providers.mjs:167-172`——写盘执行体 `:171`）；`active` 读数 = 该串 provider 段（同档 `:90` 单源取值 + `:107` 逐行读数）；
-   **2026-10-03 批增**：未带 `active` 时——条目有效（`name+model+baseURL`）∧ `defaultModel` 缺失 ⇒ 同批补写（零覆盖既有非空；缺失判据 ∥ 触面 ∥ 副作用面 = `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2 KD-4 ∥ KD-5）。
+   **2026-10-03 批增**：未带 `active` 时——条目有效（`name+model+baseURL`）∧ `defaultModel` 缺失 ⇒ 同批补写（零覆盖既有非空；缺失判据 ∥ 触面 ∥ 副作用面 = `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2 KD-4 ∥ KD-5）。**#880 批增**：会话选定写回径（`session:prefs`——模型面实变；等值零写；契约 = 「会话级偏好注」项 8）。
    ② **`FORMATS` 判定** = **端侧枚举**（UI 选项闭集 = `thincoder-desktop/renderer/views/settings.mjs:73`；写面形判经核 `customFieldsError`——值域住核 ∥ 端侧零自持副本（R8 起）：
    `thincoder-desktop/src/main/providers.mjs:41-42`（注）∥ `:162`（消费））——**非核协议表副本**（协议分派 / 排序仍住核 `thincoder-core/provider/list-models.mjs`；KD-10 不变）；增删协议须核 ∥ UI 两处同改（随动面登记）。
    ③ **`provider:verify` 读账优先**：失败分档取核**落账**读数 `admissionOf(name).failure`（核探针内落账——端侧零再分类副本；未落账 ⇒ 回落 `classifyProbeFailure` 现算）——`thincoder-desktop/src/main/providers.mjs:269-278`（处理体——读账现取 `:276`）。
@@ -524,3 +531,4 @@
 - 2026-10-03（**首跑渠道提示修复批 · 实施后文档面回填轮（§3.1 值行齐平 + 设置族注 8 坐标重锚）· eng-designer**——承批档 `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2 ∥ §5 · 台账 #840）：§3.1 `ipc.mjs` 行走读齐平（**276 ⇒ 277**——`msg:send` 注面随动）；**设置族注 8 坐标按现盘重锚五处**（① `thincoder-desktop/renderer/views/settings-sections.mjs` `:141` ⇒ `:81`；`renderer/mount-settings.mjs` `:296` ⇒ `renderer/mount-settings-exits.mjs:128-139`（写 `:131`）② `providers.mjs` `:165-171` ⇒ `:167-172`（写盘执行体 `:169` ⇒ `:171`）③ `providers.mjs` `:24` ⇒ `:41-42` ∥ `:162`（R8 起端侧零值域副本——措辞随实况收正）∥ `thincoder-desktop/renderer/views/settings.mjs` `:55` ⇒ `:73` ④ `providers.mjs` `:113-118` ⇒ `:269-278`（读账现取 `:276`）⑤ `mount-settings.mjs` `:50` ⇒ `mount-onboarding.mjs:22`（`presetValue(slot)`））。**零新语义**（读数 ∥ 坐标）。明细 = 批档 §5。
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 ∥ §5 · 台账 #841）：§3.1 `ipc.mjs` 行走读齐平（**277 ⇒ 283**——两出口注面随动（`providerState` 透传））；「provider 态投影注」项 3 第三刷新点收窄为实落写点三处（`thincoder-desktop/src/main/settings.mjs:230` ∥ `:330` ∥ `providers.mjs:181`）。**零新语义**（读数 ∥ 坐标）。明细 = 批档 §2 回填轮块。
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #9（评审轮 1 · 发现 4 ∥ 7 ∥ 12 + 父侧顺笔）· eng-designer**——承批档 §3 轮次 1 · 台账 #841）：§2「provider 态投影注」收正——载荷补 `invalidReason`（invalid 类合成式可算）∥ 行在场判据改 `fallback` ∧ 非 invalid 类 ∥ 在场条件补**第三刷新点**（`settings:agent` ∥ `provider:save` 写回执携 `providerState`）∥ 消费负向锁随合成式；**设置族注 8④ 机检指针收正**（`thincoder-desktop/test/views-onboarding.test.mjs:71/:153/:158` 盘上无档 ⇒ 批内件族——2026-09-28 测试树重置后实况）。**通道集 ∥ 白名单计数零变**（回执内字段）。
+- 2026-10-03（**会话选定写回批（default-model-carryover）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §2 · 台账 #880）：§2 `session:prefs` 行增选定写回径回执 `providerState`；「会话级偏好注」项 1 开例外 + 增**项 8**（选定写回——触发判据 ∥ 写面 ∥ 回执 ∥ 边界）；「provider 态投影注」项 3 增**第四刷新点**；设置族注 8① 写口两处 ⇒ **三处**。**通道集 ∥ 白名单计数零变**。明细 = 批档 §2。

@@ -1,0 +1,111 @@
+# 2026-10-03 · default-model-carryover
+> 六段 append-only，一段一作者：§1 讨论（主 agent）· §2 批次任务与设计（eng-designer）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。
+> 编制：主 agent · 2026-10-03 · 来源 = 用户 2026-10-03 22:49 原话「所以这就是问题啊！逻辑上应该以用户在会话中选定的模型作为默认模型，下一次新开会话时自动采用用户上次选择的模型。」+ 22:54 落地令「可以，默认模型就照这个也落地」——台账 #880。
+> 台账 = #880（desktop · 归批）。前情 = 无（独立批）。
+## §1 讨论（主 agent）
+**状态行**：🔄 进行中（…）
+<§1 模板占位：本批条目 / 关键判据 / 授权口径>
+
+**来源与点火**：用户 2026-10-03 22:49 原话（见档头）+ **22:54 落地令**「可以，默认模型就照这个也落地」= 本批点火令。
+
+**需求（复述 + 对账）**：需求 = **会话内用户显式选定的模型应写回 `defaultModel`（新会话起点）——下一次新开会话自动采用用户上次选择的模型**。
+对账（实读现状）：
+- 会话内快选（输入区模型菜单 `selectModel`）= `renderer/composer-wire.mjs:232` → `session:prefs` → `sessionMeta[key]`（**仅本会话**；消费面 = 菜单候选回显 `composer-sync.mjs:213-221`）——**不外溢**；
+- `defaultModel` 写点全清 = 保存渠道（active 追加 `src/main/providers.mjs:175` ∥ 仅缺失补全 `:195`）∥ 设置面采用出口（`renderer/mount-settings-exits.mjs:132`）∥ onboarding ∥ 迁移（`config-migrate.mjs`）——**会话快选不在其列**；
+- 故新会话起点永远只看 `defaultModel`——上次快选不被采用（fallback 长挂成因之一，与 #841 族现场同源）。
+
+**读法两条（22:49 已摆、用户未纠——设计轮据此定形；如与用户原意相抵，以用户纠为准）**：
+1. 「选定」= **用户显式挑选**（系统回退自动采用的模型**不写**——防「系统自动改写用户配置」类行为）；
+2. 优先关系 = 「上次选择」为准（会话快选写回与设置面显式默认的先后时序/覆盖语义 = 设计轮定形——候选：快选即写覆盖 ∥ 仅缺失时写 ∥ 其他）。
+
+**边界（明示不做）**：不动 fallback 解析链（#841 纯只读回退）；不动 #843（桌面设置面缺 `defaultModel` 态补设路径——在册另件）；不引入系统自动改写用户配置；**主面 = 桌面**（报告来源）；**CLI ∥ VSC 适用性 = 设计轮核**（本条不预先断言）。
+
+**验收方向**：① 会话内快选后 ⇒ `defaultModel` 实写回（读盘可核）；② 新会话起点 = 上次快选（新会话装配可核）；③ 四端写点清单 ∥ 受影响表随动；④ 零回归（现四写点语义 ∥ fallback 解析链照旧）。
+
+**坐标收正（父侧 · 2026-10-03 23:1x——承 §2 U4）**：① 批单② 记 `src/main/settings.mjs:273/:315-326`（写后探）——实读 = `:259-267`（helpers）+ `:327`（调用点，前读漂移）；② 本 §1 边界行「不动 #843」实为 **#842**（桌面设置面缺 `defaultModel` 补设路径；#843 = ACP 协议面提示通道）——两件皆本批零触边界内，登记口径随正。
+
+## §2 批次任务与设计（eng-designer）
+**状态行**：设计完成（initial 轮——设计档三档已落笔（SESSION.md §6.21 判据句 6 ∥ IPC.md 会话级偏好注项 8 ∥ COMPOSER.md 本批注）；产品码零触；doc-check exit 0（悬空 0 ∥ 行宽零新增 ∥ 行数面差异 1 = 在册项））
+<§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
+
+**§2 批次任务与设计（eng-designer · 2026-10-03 · initial 轮）**
+
+**本批条目（覆盖 · 台账 #880 · 用户 2026-10-03 22:49 原话 + 22:54 落地令）**
+
+- **R1 · 选定写回（桌面）**：用户显式选定模型（输入区模型菜单 `selectModel`；槽面**实变**）⇒ 同拍写回 config `defaultModel = "<provider>:<model>"`（新会话起点随动）。
+- **R2 · 触发判据（负向锁）**：系统同步写（会话切换 ∥ 候选推送回声——同值回写）**不写**；只改档位（`selectReasoning`）**不写**；`busy` / `bad-key` / `slot-missing` 拒径零写（判序不变）；系统回退自动采用**不写**（防系统自动改写用户配置——§1 读法①）。
+- **R3 · 回执面**：选定写回径成功回执携 `providerState`（写后核读——第四刷新点）⇒ 提示带（fallback 明示行）即时重派生；键缺席 ⇒ 渲染面零写（负向锁）。
+- **R4 · 优先关系（§1 读法②）**：「上次选择为准」= 覆盖式（选定 ⇒ 覆盖设置面既有显式默认；设置面其后「采用」照旧覆盖）——不设来源标记 ∥ 不设「只升不降」类第二状态。
+- **R5 · 失败面**：写回失败（`mtime-conflict` 等）**不反扑**会话写（回执仍 `ok:true`——本会话已生效）；主侧 `console.error` 记错（零静默）；定序 = 槽先配置后；复合等值 ⇒ 零写（防盘面抖动 ∥ 探针空转）。
+- **不覆盖（边界）**：CLI ∥ VSC 写回落地（判定 = 同判据适用——见 U1）；fallback 解析链（`thincoder-core/model-ref.mjs` 零改）；#842 ∥ #843 面；现四写点语义（设置面「采用」∥ 渠道保存（含 #840 补写）∥ 向导 ∥ 迁移）；系统自动改写用户配置类行为；新通道 ∥ 新词键 ∥ 白名单项。
+
+**设计档落点**（机制单源 = 判据句；本批已落笔 · 产品码零触）：
+- `docs/core/design/SESSION.md` §6.21 **判据句 6**（会话选定写回）+ 验收回指 ⑤ + 不做句（config 零写例外）+ 变更记录；
+- `docs/desktop/design/IPC.md`：§2 `session:prefs` 行（选定写回径回执 `providerState`）∥「会话级偏好注」项 1 例外 + **项 8**（选定写回——触发判据 ∥ 写面 ∥ 回执 ∥ 边界）∥「provider 态投影注」项 3 第四刷新点 ∥ 设置族注 8① 写口两处 ⇒ 三处 + 变更记录；
+- `docs/desktop/design/COMPOSER.md` §2 本批注（会话选定写回——默认模型随动）+ 变更记录。
+
+**机制设计（判据句 = `SESSION.md` §6.21 判据句 6；端侧契约 = `IPC.md` §2「会话级偏好注」项 8）**
+
+- **数据流**：`selectModel`（模型钮 ∥ `/model` 斜径——同一函数）⇒ `session:prefs { key, patch: { provider, model } }` ⇒ `agent-host.setPrefs`（判序：`bad-key` → `busy` → 载荷形判）⇒ 写槽（**写前读 ⇔ 写入值 = 实变判据 `changed`**）⇒ `changed ∧ provider+model 同在` ⇒ `carryoverDefaultModel(provider, model)`（复合等值 ⇒ 零写；否则 `writeConfigAtomic` + 写后探）⇒ 重施 `loadAgentSlot` ⇒ 回执 `{ ok, meta, providerState? }` ⇒ 渲染面：`sessionMeta` 写（既有）+ `providerState` 切片写（新）⇒ 提示带重派生。
+- **触发判据（核心）**：写面只认「槽面实变」——回声（会话切换 / 闲时照发同值回写）与档位径天然落空。**被否**：任何 provider+model patch 即写（会话切换回声会改写全局默认——系统写违 §1 读法①）。
+- **写什么**：`provider:model` 复合（形单源 = `parseModelRef` 首冒号分割语义；model 含冒号族（`ollama:llama3:70b`）往返解析不破）。
+- **探测 ∥ 状态**：写成功 ⇒ 写后探一次（S3 同律——沿 `settings.mjs` 既有 `probeDefaultModelWrite`）；回执携 `providerState`（`providerStateOf(loadConfig())`——#841 投影单源复用）。
+- **失败面**：写回体 try/catch（畸形档 ∥ 写错误 ⇒ `{ ok:false, reason }`——不抛）；会话写已成立 ⇒ 回执不改（`ok:true`）；主侧记错。
+
+**关键决策（KD-880-1–5）与被否项**
+
+- **KD-880-1 落点 = 宿主 `setPrefs` 单点**（单 IPC ∥ 单判点）。被否：渲染面二跳（`session:prefs` + `settings:agent` 两次往返——失败面分裂 ∥ 复合串渲染面构造）；核 `setSlotPrefs` 内落 config（跨层——槽写面不得碰 config；且 CLI 不经此口语义错位）；新专用通道（白名单增量 · 无必要）。
+- **KD-880-2 判据 = 槽面实变**（写前读 ⇔ 写入值）——系统同步写天然排除（回声恒同值）。被否：来源标记（渲染面 `origin` 字段——协议面增量；实变门已等价达）；「任何写即回写」（会话切换劫持全局默认）。**已知边角（在案）**：跨端并发改槽 + 端内 `sessionMeta` 陈旧 ⇒ 回声可能实变槽面（既有行为——槽写本就照发）⇒ 写回随动（同一次实变的投影，非第二判据）；重选当前已选模型（槽值未变）⇒ 不回写（保守向——防回声误写）。
+- **KD-880-3 优先关系 = 覆盖式（「上次选择为准」）**。被否：仅缺失时写（上次选择 ≠ 现值即永不跟进——违用户语义）；来源优先级表（第二状态面——无必要）。
+- **KD-880-4 回执 `providerState`（第四刷新点）**。被否：只靠下次 `msg:send` 退场（违 #841「即时退场」纪律——选定修好默认模型后 fallback 行须即清）。
+- **KD-880-5 失败不反扑（槽先配置后 ∥ 回执不改 ∥ 记错）**。被否：配置先写（槽失败 ⇒ 全局默认已改、会话未动——更差）；回执转败（槽已写而报败——渲染面 `sessionMeta` 不更新与盘面分叉）。
+
+**受影响文件表（file:line 级 + 行数预算——口径 = 内容行数（文末换行不计）· 实读 as-of 2026-10-03 设计轮；「预期」= 设计预算，实施轮按盘回填）**
+
+| # | 文件 | 现行 ⇒ 预期 | 改动点 |
+|---|---|---|---|
+| 1 | `thincoder-desktop/src/main/agent-host.mjs` | **306 ⇒ ≈318** | `setPrefs`（`:222-235`）选定写回支：`written.changed` 门 + `carryoverDefaultModel` 调用 + 失败记错 + 回执 `providerState`；档头 ⑤ 句一行。**越层在册**——触属性评估 = 增量支（非段级结构变更）⇒ 拟判「非结构性 ⇒ 续期」；注册预案「装配表维护面出档评估」结论 = 本批不并拆（U3） |
+| 2 | `thincoder-desktop/src/main/settings.mjs` | **331 ⇒ ≈356** | 新导出 `carryoverDefaultModel(provider, model)`（等值零写 ∥ `writeConfigAtomic` 写 + catch ∥ 写后探（复用私有 `probeDefaultModelWrite`）∥ 成功回携 `providerState`）；**越层在册**（续期类） |
+| 3 | `thincoder-desktop/src/main/session-slots.mjs` | **259 ⇒ ≈267** | `writeSlotPrefs`（`:224-230`）：写前读（`loadSlotFile`）+ `changed` 判据（provider/model 面实变——`before === null` ⇒ 真）+ 回执键；生产调用面唯一 = `agent-host.setPrefs`（测试面直调在册——`.ok` 判据零破） |
+| 4 | `thincoder-desktop/renderer/composer-wire.mjs` | **276 ⇒ ≈281** | `writePrefs`（`:201-212`）成功径：回执 `providerState` 在场 ⇒ 落切片（键缺席 ⇒ 零写；`setProviderState` 已在档 import） |
+| 5 | `docs/core/design/SESSION.md` | **1284 ⇒ 1291（本批已落实读）** | §6.21 判据句 6 + 验收回指 ⑤ + 不做句 + 变更记录（已落笔） |
+| 6 | `docs/desktop/design/IPC.md` | **526 ⇒ 536（本批已落实读）** | 五行（`session:prefs` 行 ∥ 会话级偏好注项 1/8 ∥ 投影注项 3 ∥ 设置族注 8①）+ 变更记录（已落笔） |
+| 7 | `docs/desktop/design/COMPOSER.md` | **283 ⇒ 293（本批已落实读）** | §2 本批注 + 变更记录（已落笔） |
+| 8 | `docs/batches/2026-10-03-default-model-carryover.test.mjs` | — ⇒ **新档 ≈150**（批内件——随批留存 ∥ 不进仓套件） | T1–T7（下节） |
+
+**零触面**：`thincoder-core/model-ref.mjs`（fallback 解析链）∥ `thincoder-render-core/**`（核件）∥ CLI 全树 ∥ VSC 全树 ∥ `renderer/composer-sync.mjs`（`providerNotice` 既有消费面——零改）∥ i18n ∥ preload ∥ 通道集 ∥ 白名单 ∥ 现四写点语义（设置面「采用」∥ 渠道保存（含 #840 补写）∥ 向导（`useModel` 同一实现）∥ 迁移）。
+
+**批内用例设计（可机判 · 先红后绿可行 · 落点 = 批内件；运行 = 从仓根 `node --test docs/batches/2026-10-03-default-model-carryover.test.mjs`）**
+
+- **T1 选定写回正径**（红 → 绿）：夹具 = `_setConfigPathForTest`（临时 config：`providers:[p1…]` ∥ `defaultModel:null`）+ `_setSessionsDirForTest` + 真 `createAgentHost` + 真槽（`newSession(cwd)`）；`setPrefs("1", { provider:"p1", model:"m2" })` ⇒ ① 回执 `ok:true` ∧ `providerState` 在场；② 读盘 `loadConfig().defaultModel === "p1:m2"`（验收①口径）；③ 槽 `meta.model === "m2"`（槽写照旧）。**改前红**（回写未落 ⇒ ② 失败）。
+- **T2 新会话起点**（红 → 绿）：承 T1 ⇒ `loadConfig()` 运行时 `provider.name === "p1"` ∧ `provider.model === "m2"` ∧ `providerState === "ok"`（新会话无槽 ⇒ defaultModel 入选——核 `resolveProviderPlan` 实跑；验收②口径）。
+- **T3 回声负控**：槽已 `p1:m1`；config `defaultModel` 置 `p1:keep`；重发同值 patch ⇒ `defaultModel` 保持 `p1:keep`（**零写**——系统同步不劫持全局默认）。
+- **T4 档位径负控**：`setPrefs("1", { effort:"off" })` ⇒ 回执无 `providerState` 键 ∧ `defaultModel` 不变。
+- **T5 失败不反扑**：config 路径指向目录（写必失败）⇒ `setPrefs` 回执仍 `ok:true` ∧ 槽已写 ∧ `console.error` 记错（console 捕获断言）∧ 零进程抛。
+- **T6 渲染面消费**（红 → 绿）：`createComposerWire` 桩桥——`session:prefs` 回执携 `providerState` ⇒ store 切片写入；回执无键 ⇒ 零写（负向锁）。
+- **T7 源判据（结构机检）**：`agent-host.mjs` 含 `carryoverDefaultModel` 调用 ∥ `session-slots.mjs` 含 `changed` 判据（防「只活在本用例」——沿 #840 T6 先例）。
+- **回归复跑**：`2026-10-03-desktop-firstrun-provider-notice.test.mjs`（#840——T7 经 `setPrefs` 同径）∥ `2026-10-03-provider-invalid-unify.test.mjs`（#841）——预计绿。
+- **真机面（父侧闭合）**：快选取模型 ⇒ config 实写（读盘）；新开会话 ⇒ 起点 = 上次选择（fallback 明示行不再复现——用户原症状闭合）。
+
+**验收对照（回指 §1 验收方向四条）**
+
+- **① 会话内快选后 ⇒ `defaultModel` 实写回（读盘可核）** → T1（机检）+ 真机走查（父侧）。
+- **② 新会话起点 = 上次快选（新会话装配可核）** → T2（`loadConfig` 运行时解析实跑）+ 真机（新开会话起点）。
+- **③ 四端写点清单 ∥ 受影响表随动** → 本表 1–8 行 + `IPC.md` 设置族注 8①「写口两处 ⇒ 三处」（已落）+ U1（CLI ∥ VSC 写点清单本批零动——判定在案）。
+- **④ 零回归（现四写点语义 ∥ fallback 解析链照旧）** → 零触面 + T3–T5 负向锁 + 回归复跑 + `model-ref.mjs` 零改（`git diff --name-only` 名面判据）。
+
+**需求档合规检查（检查面——笔 = 主 agent）**：本批需求（#880）五要素在 §1 已备（目标 ∥ 边界 ∥ 验收四方向 ∥ 依赖链）；需求卷（`docs/desktop/requirements/`）**零抵触**、**零条目**——正式条目落笔 = 主 agent（U2）。
+
+**上抛项**
+
+- **U1 · CLI ∥ VSC 写回落地去向**：判定 = **同判据适用**（两端均有「会话内显式选定」入口——CLI `thincoder-cli/src/tui/model-picker.mjs:223-256` ∥ VSC `thincoder-vscode/src/extension/panel-messages.mjs:227-253`；且「新会话起点 = `defaultModel`」机制同构）。注：VSC 新会话已在观感上「沿用上次选择」（下拉沿用 + 空槽首回合播种——`thincoder-vscode/src/extension/turn-model.mjs:8-11/19-26`），但其 `defaultModel` 面不写 ⇒ 跨端共享面不成立。两端落地面均载在册反向裁定句（CLI「绝不写 config」`model-picker.mjs:221` ∥ VSC「选择不再串扰 config 全局」`panel-messages.mjs:230`）与用户可见文案（`docs/core/design/SESSION.md` §6.8「/model 仅改本会话」——#841 落笔）须同拍收正 ⇒ 建议**另批**（各自端独立实现）；请父侧 ∥ 用户裁：另批（倾向）∥ 并批 ∥ 明书不适用。
+- **U2 · 需求卷条目**：本批 #880 建议随 D7 同步在需求卷落一行（笔 = 主 agent）。
+- **U3 · agent-host 越层窗口**：本批触属性 = 增量支（非段级结构）⇒ 拟判「非结构性 ⇒ 续期」；注册预案「装配表维护面出档评估」本批结论 = **不并拆**（对象异域 ∥ 热路径扰动 ∥ 306 ⇒ ≈318 ≪ 500 硬限）——窗口拟重立为「装配表维护 ∥ 无效态判定族 下次触碰批」；请评审确认分类与处置。
+- **U4 · 批单坐标对账（发现）**：① 批单 ② 记 `src/main/settings.mjs:273/:315-326`（写后探）——实读为 `:259-267`（helpers）+ `:327`（调用点），系前读漂移；② 批单「#843（设置面补设路径）」在册实为 **#842**（#843 = ACP 协议面提示通道）——两件皆本批零触边界内，登记口径随正（零静默）。
+
+**§2 修正（行数对账 · 2026-10-03 同轮）**：受影响文件表 5–7 行「已落实读」按盘收正——`docs/core/design/SESSION.md` **1289**（1284 ⇒ 1289）∥ `docs/desktop/design/IPC.md` **534**（526 ⇒ 534）∥ `docs/desktop/design/COMPOSER.md` **292**（283 ⇒ 292）。产品码四行（1–4）保持**设计预算**（实施轮按盘回填）。
+
+## §3 设计评审（评审子代理）
+## §4 用户批准（主 agent）
+## §5 实施记录（eng-coder）
+## §6 验证与收口（父代理）
