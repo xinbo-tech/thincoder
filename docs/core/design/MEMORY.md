@@ -579,6 +579,9 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - **L-③-2（P2）**：夹具 origin 既有行数（code + doc 合计）置于 CAP 邻域 ⇒ 回执 `budgetSkipped > 0` ∧ 跳过文件零落行（逐 `rel` 新旧行数差 = 0）∧ 两跑跳过集逐字相等（处理序确定性）∧ WARN 行恰一。
 - **L-③-3（M1）**：两 origin（两仓）各自 sync ⇒ 两枚 `last_indexed_commit:<origin>` 键互不覆盖；legacy 单键在而无 per-origin 键时 `gitSync` = null（全扫一次）。
 - **L-③-4（M2）**：夹具仓 + 子目录 origin；落锚后 touch 子目录内文件 ⇒ gitSync 重索引该文件（非删除支）∧ 落行 path 与 `codeSync` 同形；改仓根他处文件 ⇒ 不索引。
+- **L-④（home 根防护 ∥ SKIP_DIRS 补表——2026-10-04 · #867 本批新增）**：① **home 根检测**——启动索引 ∥ `/reindex` 触发面（`thincoder-cli/src/tui/startup.mjs` `backgroundIndex` ∥ `cmd-reindex.mjs`）于 `cwd === 用户主目录`（`resolve` 后平台归一比较——win32 大小写不敏感）⇒ **跳过索引**（`gitSync` / `codeSync` / `docSync` 零调用）；
+  + 一行可见提示（含出路：项目目录启动 ∥ `index.excludePaths` 声明）——**不阻断启动**（不砖死）；
+  ② **`SKIP_DIRS` 补 macOS 用户目录项**（`Library` ∥ `go`——basename 匹配 · 任意深度，与既有平台项同款）；③ 排除表零声明面（常量——同「行预算常量不可声明」款）。实现 = 本批实施轮。
 
 **边界（本批不做）**：不引入 worker ∕ 线程化（升级触发见上）；不改召回语义（F-M3：仍全表评分、无近似 ∕ 剪枝）；不动 ANN ∕ 向量索引（D-MEM13）；不改工具契约 ∕ limit ∕ RRF；v10 只**增索引**（无表结构 ∕ 行级变更）；不做自动删除 ∕ 自动 VACUUM（破坏性操作 = 用户批准 + 父侧 ops）；`D:/dgx-spark` 系 origin（含变体）处置 = 用户裁定项（非本批默认动作）；不并 #694（渲染侧）。
 
@@ -593,6 +596,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 
 **值形 ∥ 解析唯一定义（#832 父侧钉一——两层输出分列）**：① **值形层（声明投影）**：值 = **从本仓根可解析的路径**（相对 ∥ 绝对同收；同级 `../` 合法）；归一 = trim · `\`→`/` · 首部 `./` 剥离 · 去尾斜杠 · 空 ∥ 非串剔除 · 去重保序 ⇒ **归一后相对串**（本层不解析、不拼根）。
    ② **解析层（消费根集）**：`declaredPublicRoots(cwd)`（`thincoder-core/declaration.mjs` 新导出）= 值形层逐项 `resolve(decl.root, p)` ⇒ **绝对根集**（`normalizeOrigin` 消费面）；**检索同步 ∥ 读面 origin 集 ∥ 引用解析三消费面共用（解析层），不得二写**；缺位存在性判（`existsSync`）归消费面，值形解析不回写。
+**`declared` 连带**（2026-10-04 · #835 补登）：本键非空 ⇒ `declared=true`（值比较——与 `index.excludePaths` 同款；判据正本 = `PORTABILITY.md` §3.1）。
 
 **机制（三项）**：
 
@@ -695,6 +699,8 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - **`D:/dgx-spark` 系 origin（含变体）与未归一变体 `D:\teamcode`**：存量行处置 = sweep 面（信号 A 折叠 + 用户裁定的 origin ∕ 子树删除）；非本批默认动作。
 
 ## 变更记录
+
+- 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #835 ∥ #867）：§6.15 补 **`declared` 连带句**（#835）；§6.14 增 **L-④（home 根防护 ∥ SKIP_DIRS 补表）**（#867——触发面检测 + `Library` ∥ `go` 项入表）。**零机制改**（登记 ∥ 判据新增——实现 = 本批实施轮）。
 - 2026-10-03（**公共仓读取批 · 修正轮 1（评审 #20 发现 2–4 ∥ 8 · 父侧全采纳）· eng-designer**——承批档 `docs/batches/2026-10-02-public-repo-read.md` §3 轮次 1 ∥ §2 修正轮 1 · 台账 #832）：【#2】§6.15 机制 2 多 origin 查询形钉死（**逐 origin 分趟**——单 origin 等值 ⇒ 游标键 `["path","line_start"]`；不取「IN + 全 PK 游标」形；合并与趟序 ∕ 到达序无关）+ L-6.15-3 补**计划腿**。【#3】值形 ∥ 解析**两层输出**分列（值形 = 归一后相对串 ∥ 解析 = 绝对根集——`normalizeOrigin` 消费）+ L-6.15-1 标层。【#4】§6.15 边界补**包面边界句**（读源为默认面 ∥ 发布 / 已装包不入射程）。【#8】L-6.15-4③ 判据面 ⇒「**不可解析 ∧ 未声明**」。**零新语义**（评审发现逐号落位）。
 - 2026-10-02（**公共仓读取批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-public-repo-read.md` §2 · 台账 #832）：新增 **§6.15**（声明公共仓的索引接入与跨仓引用：单源声明 `index.publicRepos` ∥ 同步展开一层 ∥ 读面 origin 集 ∥ 跨仓引用消费面；判据腿 L-6.15-1–4）+ §7 补 **D-MEM29 ∥ D-MEM30** + §8.3 补一行。**实现 = 本批实施轮**。
 

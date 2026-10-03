@@ -118,6 +118,9 @@
 - **`/mcp`**：MCP 服务器管理（add / remove / connect / list / edit / test、token 一等字段、headers / env 键值对合并与 `k=` 删除语义、
   `✓ Save & test` 探活确认环、失败回同一表单）——**字段表单机制权威 = `docs/core/design/MCP.md` §5 / §8**，本档不重述。
 - **`/advisor`**：评审模型 / 思考配置 + guard 开关（交互菜单循环）；Thinking 子菜单以**真实条目列表**打开。
+- **`/undo`**（2026-10-04 · #863 补）：文件写操作快照回退——快照单点 = `thincoder-core/undo-stack.mjs` `snapshotForUndo`（调用点 = `thincoder-core/agent/dispatch-run.mjs`——非只读工具有参即拍）；
+  **双上界**（本批）：单条 = 备份超 `MAX_UNDO_BYTES`（10MB——read 守卫同值先例）⇒ 入栈 **oversize 占位**（列表可见 · 不可回退——不得与「文件创建」态混判）；总量 = `MAX_UNDO_TOTAL_BYTES`（64MB）超限逐最旧驱逐（条数上限 `MAX_UNDO`=50 保留）；
+  命令面 `handleUndoCommand`（`cmd-undo.mjs`）增 oversize 分支（选中 ⇒ 提示 + 不回退）；CLI 侧旧 `snapshotForUndo` 死副本清除（单源 = 核档——CORE-UNIFICATION §2.5 #149 计划态落定）。实现 = 本批实施轮。
 - **其余命令**：见 §5.1 登记面与会话层文档；菜单循环类命令的 picker / 问答细节见各 `cmd-*.mjs` 文件头注释。
 
 ### 5.4 删除类入口显式确认门
@@ -190,6 +193,8 @@
 | VSC 侧对位面 | webview 无 picker / wizard 面 | 登记「无镜像面」；VSC 轮 |
 
 ## 变更记录
+
+- 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #863）：§5.3 增 **`/undo` 条**（快照双上界 + oversize 态 + 死副本清除）。实现 = 本批实施轮。
 
 - 2026-09-28（**文档回填与卫生轮**（台账 #516 · #377 面）· eng-designer）：档头对位行「2026-09-25 本批」改指名（**misc-four 批**）——消同日多批「本批」两义。**零新语义**。
 

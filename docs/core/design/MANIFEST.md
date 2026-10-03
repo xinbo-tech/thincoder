@@ -281,7 +281,7 @@
 | KD-M1-32 | 三族键**形态错 = `errors`（fail-closed）**；消费面（分类 / 索引 / 注入）遇档不可用 ⇒ 三族逐条回默认 + 可见（缺档静默；非法 / 读错加 `console.warn` + 日志事件）（**例外**：`index.excludePaths` 元素层宽容——空 ∕ 非串元素由归一剔除，数组层仍 fail-closed；§2.2 `:118`） | 与 `docRoot` 子键同款（KD-M1-7：静默跳过 = 静默失踪——旧的逐键降级在 VS Code 扩展宿主里近乎不可见）；两层各归其位：档面 fail-closed（工程入口 / 翻转面既有语义零改）、运行面不崩不静默（N2）。**被否候选**：◎逐键降级（两套校验语义 + 弱可见）· ◎非法即静默按默认（静默失效类） |
 | KD-M1-33 | 读向**单向**：`thincoder-core/declaration.mjs`（2026-10-01 core 拆分批自 `conventions.mjs` 迁出——经其转口可达）经 `readManifest` / `manifestFilePath` 投影三族键（`loadProjectDeclaration`）；本模块零出边 | 同一档禁两份读取器 / 第二份根解析（KD-M1-18 同族）；两模块同属**模式无关面**（全模式消费）⇒ 耦合非模式耦合。**被否候选**：◎投影落本模块（分类归一 / 扩展名归一挤入项目模型模块——两个所有者）· ◎裁判档内自读（第二读取器 + 第二根解析） |
 | KD-M1-34 | 退役旧档的在场处置 = **一行可见告警**（`console.warn` + `logEvent('declaration:retired-file')`）+ 存在性检查（**内容零解析**、零回退） | 用户裁定「不要同时保留二者」= 零并存；告警 ≠ 机制（零读零回退），但静默停用 = 哨兵失效不可见（`PORTABILITY.md` 问题本体）——可迁移纪律要求可见。**被否候选**：◎静默不读（旧声明静默失效）· ◎兼容读 + 告警（双机制并存）· ◎自动迁移（一次性动作造第二条写路径——KD-M1-11 同族） |
-| KD-M1-35 | **`index.publicRepos` 并入 index 族**（缺省 `[]`；元素层宽容 ∕ 数组层 fail-closed）——值形 = **从本仓根可解析的路径**；**值形 ∥ 解析两层定义**（值形 = 归一后相对串（声明投影）∥ 解析 = 绝对根集（`normalizeOrigin` 消费）——细则单源 = `MEMORY.md` §6.15）= `declaredPublicRoots(cwd)`（`declaration.mjs` 新导出——检索同步 ∥ 读面 origin 集 ∥ 引用解析三消费面共用，不得二写） | 台账 #832（公共仓读取——声明位）：嵌 index 族 = 检索范围声明（同款先例 = `index.excludePaths`）⇒ 顶层键族与默认档计数零扰动；`fillDefaults` 已知键搬运自动覆盖本键（未知键静默丢弃 = #802 在册面——不因本键消解）。被否候选：◎顶层平级新键（「三族→四族」计数族全档连带）· ◎工作区级声明档（新机制 + 跨仓协调面）· ◎约定位置发现（不可声明 ∥ 不可核） |
+| KD-M1-35 | **`index.publicRepos` 并入 index 族**（缺省 `[]`；元素层宽容 ∕ 数组层 fail-closed）——值形 = **从本仓根可解析的路径**；**值形 ∥ 解析两层定义**（值形 = 归一后相对串（声明投影）∥ 解析 = 绝对根集（`normalizeOrigin` 消费）——细则单源 = `MEMORY.md` §6.15）= `declaredPublicRoots(cwd)`（`declaration.mjs` 新导出——检索同步 ∥ 读面 origin 集 ∥ 引用解析三消费面共用，不得二写） | 台账 #832（公共仓读取——声明位）：嵌 index 族 = 检索范围声明（同款先例 = `index.excludePaths`）⇒ 顶层键族与默认档计数零扰动；`fillDefaults` 已知键搬运自动覆盖本键（未知键静默丢弃 = #802 在册面——不因本键消解）。被否候选：◎顶层平级新键（「三族→四族」计数族全档连带）· ◎工作区级声明档（新机制 + 跨仓协调面）· ◎约定位置发现（不可声明 ∥ 不可核）。**`declared` 连带（2026-10-04 · #835）：本键非空 ⇒ `declared=true`（值比较——判据正本 = `PORTABILITY.md` §3.1）。** |
 
 ### 2.5 与既有纪律冲突核对
 
@@ -682,6 +682,8 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 AC-16 接线锁（`bin` 源码序）零改 · **AC-N5 / T13 收正**（门控第三腿「`agent.manifest` 缺失」⇒「无锚」（KD-M1-27）——无既往好值格归 T46 / T47）· AC-N1–AC-N4 / AC-N6 / T8–T12 / T14 零改。
 
 ## 4. 变更记录
+
+- 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #835）：**KD-M1-35** 行补 **`declared` 连带句**（本键非空 ⇒ `declared=true`——值比较；判据正本 = `PORTABILITY.md` §3.1）。**零新语义**（登记补句）。
 
 - 2026-10-03（**公共仓读取批 · 修正轮 1（评审 #20 发现 3 ∥ 6 · 父侧全采纳）· eng-designer**——承批档 `docs/batches/2026-10-02-public-repo-read.md` §3 轮次 1 ∥ §2 修正轮 1 · 台账 #832）：【#6】§2.2 读向行 ∥ §2.4 KD-M1-33 指路随正为 **`declaration.mjs`**（2026-10-01 core 拆分批自 `conventions.mjs` 迁出——转口可达）。【#3】KD-M1-35「值形 ∥ 解析」句补**两层输出**（值形 = 归一后相对串 ∥ 解析 = 绝对根集——细则单源 = `MEMORY.md` §6.15）+ AC-37 标**值形层**。**零新语义**（评审发现逐号落位）。
 

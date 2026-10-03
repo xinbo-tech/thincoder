@@ -25,10 +25,11 @@ verify 原把**项目特定逻辑硬编码进通用工具**：
 模型调用 verify 时**声明验证状态**（`verification` 参数，`thincoder-core/agent-tools/verify.mjs:82`–`:92`）：
 
 ```text
-verification: { status: "passed" | "failed" | "skipped", command?, summary? }   // status 必填
+verification: { status: "passed" | "failed" | "skipped", command?, summary?, basis? }   // status 必填；basis 可选（「根据」维 · #848）
 ```
 
 - `command` / `summary` 可选；**`summary` 在 `skipped` 时为必填**（须给具体理由）。
+- **`basis`（可选 · 2026-10-04 · #848 · gitee IKJKHH）**：判据源 ∥ 实读坐标（`file:line`）∥ 显式 `unverified`——「根据」维**声明式**（格式零校验 · 零机检）。`passed` / `skipped` 缺 `basis` ⇒ 报告附**提示行**（advisory——不阻断 · 不改判定）；`failed` 面零提示（已阻断）。
 - verify **不执行** `command`——它是模型的自述证据。
 - 参数面保留 `workdir`（定位项目根 / doc-only 判定）。
 - 参数面**已删** `full` / `testNamePattern` / `filter` 及其拒绝分支（无「自动跑测试」后语义消亡）。
@@ -47,6 +48,7 @@ verification: { status: "passed" | "failed" | "skipped", command?, summary? }   
 - **doc-only 快路径**：全部改动为文档 → 早退（无需验证）；**但不得吞显式 `failed`**——模型显式声明 `verification.status = "failed"` 时**恒打回**（双端同）。
 - **可选语法提示**：仅改动为 `.js` / `.mjs` 且 node 存在时给 `node --check` **软提示**（**不进门禁**）。
 - 另报：改动文件清单（git diff）、task 清单、自审 checklist。
+- **`basis` 与判定零耦合（#848）**：三判定行为逐字不变——`basis` 仅为报告附加维（缺失 ⇒ 提示；`skipped` 的 `summary` 必填判据不因 `basis` 替代）。
 
 ## 4. 完成守卫（guard）与 goal 门禁
 
@@ -114,6 +116,7 @@ verify 的强制面住在完成路径，不住 verify 本体：
 | D-V6 | 双端**同输入同判定** | 门禁语义分叉会让同一模型行为在两个壳里结果不同；否决「各端各自裁定」 |
 | D-V7 | 参数清理：删 `full` / `testNamePattern` / `filter`，留 `workdir` | 无自动跑测试后这些参数语义消亡；否决「留着兼容」 |
 | D-V8 | doc-only 快路径**不吞**显式 declared failed | 快路径是省事通道，不是绕过模型明示失败的通道；VSC 行为为对、CLI 已对齐（G10） |
+| D-VR9 | **「根据」维 = 声明式（`basis` 可选字段 + 缺省提示），零机检**（2026-10-04 · #848） | 判定「一句有没有根据」需语义理解 ⇒ 硬机检必假阳（gitee IKJKHH 明确否「机检」候选——采纳）；`basis` 可选 ⇒ 向后兼容（老会话零破）；提示不阻断（`passed` / `skipped` 放行语义零变）。否决：必填（假阳 ∥ 阻断回归）· 机检「结论句带根据标记」（语义判定不可控）· 改「自报」本体（自报形态 = 有意设计——保留） |
 
 ## 8. 不并项与历史沿革
 
@@ -140,6 +143,8 @@ verify 的强制面住在完成路径，不住 verify 本体：
 | 需求侧正文 | CLI 树需求档 | 需求档未迁——后续批并入既有档 |
 
 ## 变更记录
+
+- 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #848 · gitee IKJKHH）：§2 增 **`basis` 可选字段**（「根据」维——声明式；缺省提示行，不阻断）+ §3 补「`basis` 与判定零耦合」句 + §7 增 **D-VR9**。提示词对应面（出口条件第 9 条）= `docs/core/design/prompts/persona-engineering.md`（EN 落地 = 实施轮）。**机制本体零改**（自报形态保留）。明细 = 批档 §2。
 
 - 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R1 改指（`goal.mjs` 补 `thincoder-core/agent-tools/` 前缀）。**零新语义**。
 

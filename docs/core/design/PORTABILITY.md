@@ -59,6 +59,7 @@
 - `docMap` 指向的文件读不到 ⇒ 降级句（§3.4）；未声明 `docMap` 时保留既有探测（`docs/README.md` → `docs/design/README.md`）。
 - 解析 / 归一（段名 trim + 分隔符归一 + 去重；扩展名小写 + 点号前缀 + 去重；指针 trim）落 `loadProjectDeclaration`（§3.2 行 1）；**schema 校验不在此层**（形态错 = manifest 非法——§4 D16）。
 - `declared` 标志 = **任一族偏离缺省**——判据 = **值比较**（与缺省值等值 ⇒ 假；显式写入但值 = 缺省照判假，不按键存在性）；门禁 hint 据它决定是否给声明指路（§3.4）。
+- **`index.publicRepos` 入判补登**（2026-10-04 · #835）：本键非空 ⇒ 亦入 `declared` 判（值比较——与 `index.excludePaths` 同款；实读 `thincoder-core/declaration.mjs:85` `publicRepos.length > 0`）。
 - **声明载体唯一**：`.thincoder/conventions.json` 不在读面（内容零解析）；该档在场 ⇒ 一行可见告警 + 日志事件（`declaration:retired-file`），读数与无档逐条等值——裁决 = §4 D15。
   **告警钉死（设计评审轮 1 收正）**：检查落点 = `loadProjectDeclaration` 内（缓存未命中路径）；**基准目录 = `manifestFilePath(cwd)` 的项目根**（`dirname`——同档路径判据，不用 cwd 原文；cwd 深于项目根时仍命中）；**频次 = 每缓存一次**（同档路径缓存命中不重复告警；`clearDeclarationCache()` 后重读可再现）。
 
@@ -269,6 +270,7 @@
 
 ## 变更记录
 
+- 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #835）：§3.1 补 **`index.publicRepos` 入判补登句**（值比较——与 `excludePaths` 同款）。**零新语义**（登记补句）。
 - 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R4 形退场（死名 `tool-gates.mjs` 去坐标尾——端档已删）。**零新语义**。
 
 - 2026-09-15（**B 式迁移轮 · 第 2 批**）：建档——`thincoder-cli/docs/design/PORTABILITY.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。

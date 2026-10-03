@@ -1,0 +1,101 @@
+# 2026-10-04 · issue 修复批·五（杂项 6 条：ledger-migrate 旗 ∥ declared 补行 ∥ 桌面 defaultModel 补设 ∥ 工程模式出口 basis 维 ∥ TUI-OOM 余项 ∥ Home 索引）
+> 六段 append-only，一段一作者：§1 讨论（主 agent）· §2 批次任务与设计（eng-designer）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。
+> 编制：主 agent · 2026-10-04 · 来源 = 用户 2026-10-04 00:39「五组都开了」（承 00:31「都自动跑」）；条目源 = 2026-10-03 分诊与在册归批（#834 ∥ #835 ∥ #842 ∥ #848 ∥ #863 ∥ #867——杂项面；#876 沿用户「以后再说」不动）。
+> 台账 = #834 ∥ #835 ∥ #842 ∥ #848 ∥ #863 ∥ #867（杂项 · 归批）。前情 = 无（同会话兄弟批——一组~四组 = `2026-10-04-issue-fix-round{1,2,3,4}.md`）。
+## §1 讨论（主 agent）
+**状态行**：🔄 进行中（…）
+<§1 模板占位：本批条目 / 关键判据 / 授权口径>
+
+**本批性质**：归批组第五组（杂项 6 条）——用户 00:39「五组都开了」；全链。
+
+**本批条目（6）**：**#834** ledger-migrate 写旗 ∥ **#835** declared 标志补行 ∥ **#842** 桌面 defaultModel 补设路径 ∥ **#848** 工程模式出口条件 basis 维 ∥ **#863** TUI-OOM 余项 ∥ **#867** Home 索引。**#876 商店护栏 = 用户「以后再说」在册——不收**。**锚 = 台账行在册**（复验先读：`ledger_query` cwd=D:\teamcode\thincoder）。
+
+**复验令**：逐条实读复验；已消/前提变者按实况登记。
+
+**授权口径**：全链；都自动跑（自缚三条在册）。
+
+**边界**：**#834 ∥ #835 涉及 ledger 系件（`thincoder-core/ledger-*.mjs`）= #51 在飞写域** ⇒ 设计轮只写文档；实施须待 #51 收口后派发（设计文件表照列供后续派发）。其余照常——#56 ∥ #59 ∥ #57/#58 ∥ 面板面零触。
+
+## §2 批次任务与设计（eng-designer）
+**状态行**：设计完成（2026-10-04 · 六条复验对现盘 + 设计落笔（11 档）；实施按写域排程（#834 ∥ #835 待 #51））
+<§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
+
+**状态行**：设计完成（2026-10-04）——六条复验对现盘 + 设计落笔（10 档）+ 用例与验收判据齐；实施待各写域排程（#834 ∥ #835 待 #51 收口）。
+
+### 2.0 复验结论（逐条实读——对现盘）
+| # | 复验点（file:line） | 结论 |
+|---|---|---|
+| #834 | `ledger-migrate.mjs:75-82`（writeGateFlag 只做仓根解析）∥ `ledger-cmd.mjs:56-72`（写门含第 4 条声明源候选） | **成立**——两处判面对「声明源前缀形」将不同拍 |
+| #835 | `declaration.mjs:85` `publicRepos.length > 0` ⇒ declared 真（值比较）；三登记面无该连带句 | **成立**（代码已含——文档缺句） |
+| #842 | `mount-settings-reads.mjs:59,74-89`（provider 空 ⇒ 段 none 零请求）∥ `settings-sections.mjs:70-72`（采用钮判据）∥ 渠道段无「设为当前」 | **成立**（config 级补设死端） |
+| #848 | `verify.mjs:82-91`（schema 无 basis）∥ `tool-docs/verify.md`（self-reported）∥ `persona-engineering.md:78`（Close three states——无「根据」条）；gitee IKJKHH 原文全读（八条完成闸 + A/B 采 · C 否） | **成立**（「第 9 条」= 八条清单延伸位） |
+| #863 | `/undo`：`undo-stack.mjs:38-44`（MAX_UNDO=50 · 字节无界）成立；`_advisorRuns`：关闭点（`advisor-async.mjs:464-481` ∥ `design-token.mjs:145`）无 priorOutput 释放 ∥ 无逐实例回收；小容器族逐项实读 | **实况重定**：只读快照链健在（CLI 侧 `cmd-undo.mjs:18-42` = 死副本）；capturedConsole **存活**（`core/agent/dispatch-run.mjs:41,75-76,126-129,162-163`——拼接在 offload 之后 ⇒ 可突破 64K）；`_turnControllers`（`agent-turn.mjs:157-164` 链头清零）/`_frozenSubKeys`（`subagent-blocks.mjs:83-95` 复活删）/`expandedBlocks`（`fold-block.mjs:38-43` toggle 增删）有回收面 |
+| #867 | 已缓解面（`memory/schema.mjs:24-26,46-55`）实读；`cwd===homedir()` 检测零命中；`engines`（`thincoder-cli/package.json:19-21`）仅声明无运行期校验 | **成立**（三项未做面） |
+
+### 2.1 本批条目（覆盖 · 六条）
+| # | 台账 | 修法一句话 | 设计档落点（本设计轮已落笔） |
+|---|---|---|---|
+| 1 | #834 | 迁移旗判面与写门同源——共享解析单点 `resolveDeclaredRef`（`declaration.mjs` 新导出） | `LEDGER.md` §6.1 口径 5 ∥ §8 T47 ∥ 变更记录 |
+| 2 | #835 | 三登记面补 `declared` 连带句（publicRepos 非空 ⇒ declared=true） | `PORTABILITY.md` §3.1 ∥ `MANIFEST.md` KD-M1-35 ∥ `MEMORY.md` §6.15 |
+| 3 | #842 | 缺激活渠道态全渠扇出补设（`model:catalog` + 既有 `useModel`——零新 IPC／写面） | `SETTINGS.md` §2.15 ∥ §2.14 随正 ∥ §5 T-DSK62 |
+| 4 | #848 | verify 可选 `basis`（缺省提示不阻断）+ 提示词「出口条件第 9 条」 | `VERIFY-REDESIGN.md` §2/§3/§7 D-VR9 ∥ `docs/core/design/prompts/persona-engineering.md`（EN 落地 = 实施轮） |
+| 5 | #863 | /undo 双上界 + oversize 态 + 死副本清除；console 回显双上界；`_advisorRuns` 回收 | `TUI-COMMANDS.md` §5.3 ∥ `AGENT-LOOP.md` §6.4 ∥ `AGENT-LOOP-ASYNC-POOL.md` §6.10 |
+| 6 | #867 | home 根防护 + SKIP_DIRS 补表（Library ∥ go）+ Node 版本运行期校验（fail-fast） | `MEMORY.md` §6.14 L-④ ∥ `CLI-ENTRY.md` §1 |
+
+### 2.2 机制设计（逐条：根因 ∥ 修法 ∥ 落点 ∥ 验收判据）
+- **#834**：根因 = 迁移旗（`writeGateFlag`）与写门（`assertTaskBookGate`）判面分裂（写门已含声明源候选 · #832 T46；旗只做仓根解析）。修法 = 判定单源——`declaration.mjs` 新导出 `resolveDeclaredRef(base, part)`（① 仓根解析 → ② 声明源前缀解析序，同名多仓取声明序首者；返回 `{ ok, abs }`），写门与迁移旗同消费。AC-834-1 声明源前缀（目标在）⇒ 写门通过 ∧ 零旗；AC-834-2 未声明 ∥ 声明根缺位 ∥ 目标档缺 ⇒ 两处同判（拒／旗）；AC-834-3 仓根形全谱逐字零变（回归腿）。
+- **#835**：根因 = 三登记面未写 publicRepos 对 declared 的连带读数（代码实读已含）。修法 = 三处各补句（正本 = `PORTABILITY.md` §3.1；另两处短句 + 指针）。AC-835-1 三档各含补句（可机检 grep「publicRepos」∧「declared」同句/邻句）；AC-835-2 句与实读一致（值比较；非空即真）。零代码。
+- **#842**：根因 = 激活渠道 = null 时 `loadModels` 段归 none 零请求（死端）。修法 = 该态改取 `model:catalog`（全渠扇出——既有通道）⇒ 候选行 `{ provider, id }`；「采用」经既有 `onUseModel(provider, id)` 写 `defaultModel`（`settings:agent`）⇒ 回读转常规面。视图形 = `modelChoicesTree`/`modelRowNode` 带渠行（显示 `provider · id`；采用判据 = 行自带渠非空）。AC-842-1 缺态段 ready + 全渠候选；AC-842-2 采用 ⇒ 落盘 + 回读；AC-842-3 无渠 ⇒ 空态词（禁假造）；AC-842-4 catalog 失败 ⇒ 段 none + report（零静默）；AC-842-5 有渠态判据零变。
+- **#848**：根因 = verify「自报即放行」无「根据」维 + 提示词八条出口闸全查形式。修法 = A：`verification` 增可选 `basis`（判据源 ∥ `file:line` ∥ `unverified`；`passed`/`skipped` 缺失 ⇒ 提示行，**不阻断**；`failed` 面零提示）+ 描述（schema ∥ `tool-docs/verify.md`）；B：`persona-engineering.md`「Close three states」邻位增「每句判据带根据」条（中文设计档已落 · EN 落地 = 实施轮；**文案不携编号**——「第 9 条」= 报方八条清单位置，落地面自含）。AC-848-1 带 basis ⇒ 回显；AC-848-2 缺 basis ⇒ 提示 ∧ `_verifyPassed` 不变；AC-848-3 failed/未声明 ⇒ 零 basis 段；AC-848-4 提示词双面各 +1 条（`##` 计数不变）；AC-848-5 老调用零行为破坏。
+- **#863**：① /undo：`undo-stack.mjs` 增 `MAX_UNDO_BYTES`（10MB——read 守卫同值先例；超限 ⇒ oversize 占位条目 · 可见不可回退）+ `MAX_UNDO_TOTAL_BYTES`（64MB——超限逐最旧驱逐）；`cmd-undo.mjs` 增 oversize 分支（选中 ⇒ 提示 + 不回退）+ 死副本清除（CLI 旧 `snapshotForUndo` 删——单源 = 核档）。② console 回显：`dispatch-run.mjs` 采集端 cap + 拼接先于 `offloadToolResult`（错误路径同款）。③ `_advisorRuns`：关闭点 `priorOutput = null` + 新实例创建时去重回收（design 同 docSetKey 保最新 closed；code closed 清除）。AC-863-1 快照双上界（超限行为可断言）；AC-863-2 oversize 不可回退且不误删（与 null 创建态分判）；AC-863-3 console 拼接后 ≤ offload 阈值（超限落盘）；AC-863-4 关闭后 priorOutput=null ∧ F2h designId 复用零变；AC-863-5 Map 不随代数单调增。
+- **#867**：① home 检测：启动索引 ∥ `/reindex` 触发面（`startup.mjs` `backgroundIndex` ∥ `cmd-reindex.mjs`）判 `cwd === homedir`（resolve 后平台归一）⇒ 跳过索引（三 sync 零调用）+ 一行可见提示（含出路）；不阻断启动。② `SKIP_DIRS` + `Library` ∥ `go`。③ `bin/thincoder.mjs` 顶层 Node 主版本 ≥24 校验（fail-fast：一行错误 + exit 1）。AC-867-1 home 夹具 ⇒ 零索引 + 提示行；AC-867-2 非 home 零行为变（回归）；AC-867-3 SKIP_DIRS 两新项生效（walk 剪枝）；AC-867-4 假旧版本 ⇒ 错误 + 非零退出。
+
+### 2.3 受影响文件表（实施轮派发用）
+| # | 文件 | 变更要点 |
+|---|---|---|
+| #834 | `thincoder-core/declaration.mjs` | +`resolveDeclaredRef`（~20 行） |
+| | `thincoder-core/ledger-cmd.mjs` | 写门消费共享判定（净 ~0） |
+| | `thincoder-core/ledger-migrate.mjs` | `writeGateFlag` 消费共享判定 |
+| #835 | （零代码——设计档三处已落） | — |
+| #842 | `thincoder-desktop/renderer/mount-settings-reads.mjs` | `loadModels` 增 catalog 分支 |
+| | `thincoder-desktop/renderer/views/settings-sections.mjs` | `modelChoicesTree`/`modelRowNode` 带渠行 |
+| #848 | `thincoder-core/agent-tools/verify.mjs` | schema + 报告提示/回显段 |
+| | `thincoder-core/tool-docs/verify.md` | 描述句 |
+| | `thincoder-core/prompts/persona-engineering.md` | 「Close three states」邻位 +1 行（EN——内容权威 = 主 agent，本设计已定稿文案） |
+| #863 | `thincoder-core/undo-stack.mjs` | 双上界 + oversize 态 |
+| | `thincoder-cli/src/tui/cmd-undo.mjs` | oversize 分支 + 死副本清除 |
+| | `thincoder-core/agent/dispatch-run.mjs` | 采集 cap + 拼接序修正 |
+| | `thincoder-core/agent-tools/advisor-async.mjs` ∥ `design-token.mjs` | 关闭轻量化 + 回收 |
+| #867 | `thincoder-cli/src/tui/startup.mjs` ∥ `cmd-reindex.mjs` | home 检测 |
+| | `thincoder-core/memory/schema.mjs` | `SKIP_DIRS` +2 项 |
+| | `thincoder-cli/bin/thincoder.mjs` | 版本校验 |
+| 批内件 | `docs/batches/2026-10-04-issue-fix-round5.test.mjs` | 六条用例腿（本批单位测试档——随批留存） |
+
+### 2.4 验收对照（回指条目）
+六条 AC 全文见 §2.2（AC-834-1–3 ∥ AC-835-1–2 ∥ AC-842-1–5 ∥ AC-848-1–5 ∥ AC-863-1–5 ∥ AC-867-1–4）；逐条设计档对位 = §2.1 落点列。doc-check（仓根 `node scripts/doc-check.mjs`）为验收项——设计轮自跑读数见 §2.5。
+
+### 2.5 本设计轮自检
+- 设计档落笔 10 档：`LEDGER.md` ∥ `PORTABILITY.md` ∥ `MANIFEST.md` ∥ `MEMORY.md` ∥ `AGENT-LOOP.md` ∥ `AGENT-LOOP-ASYNC-POOL.md` ∥ `VERIFY-REDESIGN.md` ∥ `docs/core/design/prompts/persona-engineering.md` ∥ `SETTINGS.md` ∥ `CLI-ENTRY.md` ∥ `TUI-COMMANDS.md`（11 档次）。
+- `node scripts/doc-check.mjs` 复跑读数：见本轮 eng-designer 报告（收尾附）。
+- 三方一致：本 §2 条目 = 设计档 AC 回指 = 台账六行（#834 ∥ #835 ∥ #842 ∥ #848 ∥ #863 ∥ #867）——无条目增删。
+
+### 2.6 关键决策与被否
+| # | 决策 | 被否 / 理由 |
+|---|---|---|
+| #834 | 共享解析下沉 `declaration.mjs`（与 `declaredPublicRoots` 同层——「引用解析」家族） | 否决：迁移面内联（两处写——单源违约）· 判定留 `ledger-cmd.mjs` 供迁移面 import（层次倒挂）· 不修（读写判定互相打架） |
+| #848 | 采 A+B（声明式 + 提示词条），C（机检）不做 | 报方 IKJKHH 明确否 C（语义判定假阳不可控）；`basis` 可选（必填 = 假阳 ∥ 阻断回归）；自报形态保留（有意设计） |
+| #842 | 全渠扇出复用 `model:catalog` + 既有 `useModel` 出口 | 否决：渠道行加「设为当前」（写面须先有模型）· 仅靠输入区菜单规避（条目所指 = 设置面自身缺路径） |
+| #863 | 小容器族逐项复核（修 = /undo ∥ console ∥ `_advisorRuns`；`_turnControllers`/`_frozenSubKeys`/`expandedBlocks`/`_asyncTombstones` = 有回收面/有界——不修） | 复核依据见 §2.0（桩：墓碑语义必要 ∥ 会话有界；加清反而破迟到 token/依赖查询语义） |
+| #867 | home ⇒ 跳过 + 明示（不阻断启动）；版本校验 fail-fast | 否决：「启动交互确认」（改造面大——报方另一候选；保守先跳过+明示）· 版本校验只警告（fail-slow 无益） |
+
+### 2.7 上抛 / 注意（派发前看）
+① **#834 ∥ #835** 实施待 **#51 写域收口**后派发（`ledger-*.mjs` 面；#835 本身零代码）。
+② **CLI 面在飞写域**（#56 ∥ #59 ∥ #57/#58 ∥ 面板面）——#863 ∥ #867 的 CLI 档位实施派发前对表（本批设计档已落，见 §2.3 文件表）。
+③ **round4 批**（#833）可能同档触碰 `MANIFEST.md`（:591 面）——本批 #835 落点 = KD-M1-35（:284 面）∶两处不同节，并发写作风险提示（父侧对表）。
+④ 新核实缺陷（范围内）：`core/agent/dispatch-run.mjs` capturedConsole 拼接越 64K（原判「已消解」被实读推翻——按实况修）；CLI 侧 `snapshotForUndo` 死副本（双实现残）。
+⑤ #890（#840 批内件配置缝）未了——本批 T-DSK62 涉桌面设置面复跑需隔离纪律（沿 #890 口径）。
+
+## §3 设计评审（评审子代理）
+## §4 用户批准（主 agent）
+## §5 实施记录（eng-coder）
+## §6 验证与收口（父代理）

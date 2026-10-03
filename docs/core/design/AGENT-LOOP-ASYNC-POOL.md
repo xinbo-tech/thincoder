@@ -105,6 +105,8 @@
 - **UI 通道**：subagent 面板 + `role="advisor"` 伪角色（块 / ⏹ / 冻结全复用）；cancel = 定向 abort → cancelled settle（不入 pending、不入 token 槽、digest 提示「评审已取消——token 未签发」）。
 - **settle 记账**：评审 settle 时（消化链首行注入前）——① **陈旧判定**（launch 后发生 `FILE_MUTATORS` ⇒ 基于旧状态 ⇒ 不置 `_calledAdvisorThisRun`、代码评审不签发 token，guard 仍推回发起新评审）；② 通过 → token 入槽 `_engDesignTokens` + 当场同步落盘权威台账；③ `_advisorRound` 改按 review 实例记（轮次仅作提示词衰减与显示——**无机械上限**）；④ guard 推回判定看后台评审是否已 settle 且非陈旧。
 - **收敛状态 per-review 化**：`_advisorRuns: Map<reviewId, { round, priorOutput, stale }>`——`reviewId` = `designId`（设计评审）/ 随机 id（代码复核）；多评审并行隔离。
+- **实例回收（2026-10-04 · #863 · 设计轮）**：`_advisorRuns` 逐实例轻量化与回收——① **关闭点轻量化**：实例关闭（approval 关 ∥ `closeOpenCodeAdvisorRuns`）同拍 `priorOutput = null`（释放大串；closed 实例的 `priorOutput` 零消费面——续跑仅取 open）；
+  ② **回收窗**：新实例创建时（`resolveAdvisorLaunch`）去重回收——design 面**同 `docSetKey` 保最新一条 closed**（F2h 的 `prior` 查找只取 newest——语义零变）、code 面 closed 实例清除（`openCodeRun` 仅取 open——零消费）；判据 = 会话内 Map 不随评审代数单调增（有界）。实现 = 本批实施轮。
 - **消化处置轮**：报告注入 → 模型消化（呈递发现 + 修复建议——不擅自动手）→ 用户逐项拍板 → 修正轮在 agent 回合内发起 round2（async 再启——round / prior 从 `_advisorRuns` 取）。
 - **凭证机制**（designId / token：设计锚 / 同步 / 回显 / 登记 / 消费 / 校验）→ 属工程模式板，见 `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md`（结算面）· `docs/core/design/ENG-TOKEN-BINDING.md`（生命周期 + 写权门禁）。
 
@@ -807,6 +809,8 @@ trace 实读（`~/.thincoder/traces/2026-10-01/38478126a2c4-6602.jsonl`）= 343 
 **可达性注（「零到期而仍重装」径）**：该径 = 零在途早退判据（零**在途**）之外的合法路径——零到期但非零在途 ⇒ 照重装（`reloadSlot` 恰一次 · 零交付 ⇒ 零开轮）；生产可达性窄；**裁定 = 非缺陷**（设计判定 · 2026-10-01）。
 
 ## 变更记录
+
+- 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #863）：§6.10 增**实例回收句**（`_advisorRuns` 关闭轻量化 + 新实例创建时去重回收——F2h ∥ code 语义零变）。实现 = 本批实施轮。
 
 - 2026-09-29（**tools-carryover 批 · 设计档舱 D · eng-designer**——承批档 `docs/batches/2026-09-29-tools-carryover.md` §2.1.4 · 台账 #9）：§6.10 补 **bg 任务池（第三域）登记行**——`_bgTasks`（照 `_asyncAdvisors` 模式）+ `BG_TASK_MAX = 4` + 取号沿共用命名空间 + settle ∕ 收尾两档沿族口径；
   机制 / 接口契约 / 决策 = `docs/core/design/TOOLS.md` §6.19（D2）。**零新语义**（= §2.1 设计的落位）。

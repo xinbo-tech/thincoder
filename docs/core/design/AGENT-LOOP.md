@@ -283,6 +283,8 @@ PreToolUse hooks → 阻断
 
 **console 回显**：dispatch 拦截工具 `execute` 期间的 `console.log/error`，收集后附结果回显模型（`[console during <tool>]` 段）；异常路径同样回显；嵌套 dispatch（子代理）各自拦截 / 恢复，捕获分离；`bash` 走子进程 `onOutput` 不受影响。
 
+**console 回显预算（2026-10-04 · #863 · 设计轮）**：capturedConsole 采集与拼接**双上界**——① **采集端 cap**（拦截为有界收集：超限截断 + 一次性标记行——防「console 洪水」）；② **拼接端纳入 offload 判定**——`[console during …]` 段与结果本体拼接**先于** `offloadToolResult`（现形在 offload 之后拼接 ⇒ 可突破 64K 上限）；错误路径同款。实现 = 本批实施轮。
+
 **action 级门控**（子代理单工具动作面——`AGENT-LOOP-SUBAGENT.md` §6.7.2）：工具级 `readonly` 标志无法同时表达 spawn（副作用）/ status（只读查询）/ cancel（控制）⇒ 预审按 **action 参数**分类：
 
 - **readonly 面**：`status`、`observe`（只读查询——planMode 放行、免审批、可批并行）。
@@ -515,6 +517,8 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 | VSC 档 §2 / §12 / §17（runAgent 主循环 · async 保真 · 上下文注入对齐） | VSC 侧实现细节叙述 | 与 §2.3 / `AGENT-LOOP-SUBAGENT.md` · `AGENT-LOOP-ASYNC-POOL.md` §6.7–§6.12 已并面同族（端差登记 = §6.18 表）——不重并（D2） |
 
 ## 变更记录
+
+- 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #863）：§6.4 增 **console 回显预算句**（capturedConsole 采集 cap + 拼接纳入 offload 判定）。实现 = 本批实施轮。
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：#127 同形重复族行 ④（`:443`）签名同扫收正（`continueDecision(error, {autoTurn, autoApprove, reason})`——#677 I10 已落）。**零新语义**。
 
 - 2026-09-28（**测试按层收口·设计对齐轮 · eng-designer**——承 `docs/batches/2026-09-28-test-layer-prompts.md` §1.4 派单 + 父侧裁定（声明外追加 · 父侧已裁））：§6.16 指针表行标签「测试分层 L0 / L1 / L2」→「测试收口（舱内单元 ∕ 链终全量）」（指针不变）；口径 = 需求 `requirements/TESTING.md` §2 F1–F4（只引用不重述——D2）。**机制条文零改**。
