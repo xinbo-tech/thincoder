@@ -1,7 +1,7 @@
 # 桌面需求 · 活动池与消化面域（ACTIVITY）
 
 > **卷**：桌面端需求分卷之「活动池与消化面域」——**D4 ∥ D20 ∥ D28 ∥ D30 ∥ D35**（5 条）。
-> **总览 ∥ D 表索引**：`docs/desktop/requirements/PROJECT.md`（D1–D41 全表查卷口；模块目标 / 定位 / 界面形态 / 边界 / 非功能 / 验收 / 依赖）。**同族设计档**：`docs/desktop/design/ACTIVITY.md`。
+> **总览 ∥ D 表索引**：`docs/desktop/requirements/PROJECT.md`（D1–D42 全表查卷口；模块目标 / 定位 / 界面形态 / 边界 / 非功能 / 验收 / 依赖）。**同族设计档**：`docs/desktop/design/ACTIVITY.md`。
 > **来源**：自 `docs/desktop/requirements/PROJECT.md` §4 按域分卷迁入（**行文逐字 · 零新语义**）——2026-10-02 文档体系重组批（DOC-MIGRATION）波 3；批档 `docs/batches/2026-10-02-doc-structure-reorg.md`。坐标 = as-of 2026-10-02。
 > 行内「自本行起 D 表 = D1–D××」类 = 原档历史随行句（as-of——不追改）。
 
