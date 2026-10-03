@@ -116,11 +116,11 @@
 5. **边界**：`composer.send.noProvider` 值 ∥ 行形 ∥ 锚（`data-notice="send-failed"`）∥ 清位纪律（下次成功发送清）零改；核件 ∥ VSC 零触。
 
 **本批注（无效渠道态逻辑归一 —— fallback 明示行 · 2026-10-03 · 台账 #841）**：本注定形 composer 提示带上**态明示行**——「可运行 ∧ 无有效 `defaultModel`」（`fallback`）态的端侧呈现
-（判据单源 = `docs/core/design/PROVIDER.md` §6.22；承 #840 批注的字面——**零新键**）。批档 = `docs/batches/2026-10-03-provider-invalid-unify.md` §2；契约面 = `docs/desktop/design/IPC.md` §2「provider 态投影注」。
+（判据单源 = `docs/core/design/PROVIDER.md` §6.22；词面 = **新键 `composer.send.noDefaultModelFallback`**——澄清半句（**失败词 ∥ 态词分家**，见项 2））。批档 = `docs/batches/2026-10-03-provider-invalid-unify.md` §2；契约面 = `docs/desktop/design/IPC.md` §2「provider 态投影注」。
 
 1. **数据面**：`history:page` 回执（会话打开）∥ `msg:send` 回执（发送刷新）∥ **设置写回执**（`settings:agent` ∥ `provider:save` 成功回执——**第三刷新点**；实落写点三处 = `thincoder-desktop/src/main/settings.mjs:230` ∥ `:330` ∥ `thincoder-desktop/src/main/providers.mjs:181`）
    新增 `providerState` 键（形 = `{ state, channel, model, reason, invalidReason }`）；渲染面落 store 切片（写点与 `meta` 同族）⇒ 提示带重派生（`paintNotices`）。
-2. **行面**：`state === "fallback"` ∧ **非 invalid 类**（合成式 = `state === "invalid"` ∨ `providerInvalidReason` 非空——单源 = `doc:PROVIDER.md:§6.22`）⇒ 本行在场——词 = `composer.send.noDefaultModel`（**逐字复用 #840 键**，词为**态陈述行**，非发送失败行）；
+2. **行面**：`state === "fallback"` ∧ **非 invalid 类**（合成式 = `state === "invalid"` ∨ `providerInvalidReason` 非空——单源 = `doc:PROVIDER.md:§6.22`）⇒ 本行在场——词 = `composer.send.noDefaultModelFallback`（**澄清半句**「— 正在使用可用渠道」——与 VSC `banner.defaultModelFallback` 同构；composer-notice 系无 ⚠ 先例），词为**态陈述行**，非发送失败行；
    行锚 = `data-notice="provider-fallback"`（机检面——与失败行锚 `send-failed` 分判）；`state === "ok"` ⇒ 零行（负向锁——invalid 类除外）；invalid 类 ⇒ 本行零行（归发送失败行——#840 面）。
 3. **行序**：提示带尾（现序 [待发送? ∥ 降级? ∥ 失败?] 零动，本行追加于带尾）。
 4. **清位**：`state` 转 `ok` 的一次 `msg:send` 回执到达 ⇒ 行退场；**第三刷新点（评审发现 7）**：设置写回执（`settings:agent` ∥ `provider:save` 成功回执；实落写点三处 = `thincoder-desktop/src/main/settings.mjs:230` ∥ `:330` ∥ `thincoder-desktop/src/main/providers.mjs:181`）携 `providerState` ⇒ 同点落切片（渲染面三出口）⇒ 行随重派生
@@ -281,3 +281,4 @@
 - 2026-10-03（**首跑渠道提示修复批 · 实施后文档面回填轮（§3.1 两行走读齐平）· eng-designer**——承批档 `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2 ∥ §5 · 台账 #840）：§3.1 两行实读对盘（`composer-wire.mjs` **262 ⇒ 266**——失败载体 `{ reason, kind }` ∥ `composer-sync.mjs` **302 ⇒ 306**——类路由（词面-only））；越层在册句随正（续期——引 `docs/desktop/design/PROJECT.md` §4.1 越层段）。**零新语义**（读数）。明细 = 批档 §5。
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 ∥ §5 · 台账 #841）：本批注两项收正——行面补**行锚 `data-notice="provider-fallback"`**（机检面）；第三刷新点收窄为**实落写点三处**（`thincoder-desktop/src/main/settings.mjs:230` ∥ `:330` ∥ `providers.mjs:181`——设计按盘回归；不取 `ask()` 边界形：盘上无该机制）；§3.1 三行走读齐平（`mount-composer` **297 ⇒ 299**（贴 300 层在册）∥ `composer-wire` **266 ⇒ 276** ∥ `composer-sync` **306 ⇒ 322**）。**零新语义**（读数 ∥ 坐标）。明细 = 批档 §2 回填轮块。
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #9（评审轮 1 · 发现 4 ∥ 7）· eng-designer**——承批档 §3 轮次 1 · 台账 #841）：本批注收正——数据面载荷补 `invalidReason`（合成式可算）∥ 行面判据改 **`fallback` ∧ 非 invalid 类**（合成式单源 = `doc:PROVIDER.md:§6.22`）∥ 清位补**第三刷新点**（设置写回执——`settings:agent` ∥ `provider:save` 成功回执携 `providerState` ⇒ 即时退场）。**产品码零触（修正轮）**。
+- 2026-10-03（**轻通道轮八 · fallback 明示行文案澄清 · 收口形式化轮 · eng-designer**——承批档 `docs/batches/2026-10-03-light-round-8.md` §1 · 台账 #879 · 实况 = 提交 `32216ffc`）：#841 批注收正——明示行词面由「逐字复用 #840 键」改为**新键 `composer.send.noDefaultModelFallback`**（澄清半句——**失败词 ∥ 态词分家**）；§3.1 `composer-sync.mjs` 行实读对盘（**322 ⇒ 324**）。**产品码零触**（收口形式化轮）。明细 = 批档 §2。

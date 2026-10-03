@@ -430,7 +430,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 |---|---|---|---|---|
 | CLI | 启动提示行（TUI）∥ stderr 一行（headless） | 新行：「尚未设置默认模型：本次使用 `<渠道>[:<模型>]`——/config → 默认模型 设置一次；/model 仅改本会话」（`model` 缺省 ⇒ 仅渠道名） | invalid 类（合成式）⇒ D-S2 picker + 提示行（措辞收正 = 渠道/密钥）；headless = D-S4（stderr 一行 + exit 1） | 选择器（invalid 类）· `/model` ∥ `/config` 入口（fallback） |
 | VSC | 横幅 `#provider-banner` | 新键 `banner.defaultModelFallback`（zh ∥ en 字面 = `doc:WEBVIEW.md:§4.8`）+ 动作钮「选择默认模型」→ 设置面 | 现词 `banner.notConfigured`（逐字不变——invalid 类合成式命中） | 钮 → 设置面默认模型段 |
-| 桌面 | composer 提示带行 | 词 `composer.send.noDefaultModel`（**逐字复用 #840 键**——词面-only） | 发送失败行现词（#840 面） | —（零动作面） |
+| 桌面 | composer 提示带行 | 新键 `composer.send.noDefaultModelFallback`（澄清半句「— 正在使用可用渠道」——词面-only；失败词 ∥ 态词分家——与 VSC `banner.defaultModelFallback` 同构） | 发送失败行现词（#840 面） | —（零动作面） |
 
 **VSC 收正（可用性不得降）**：`resolveTurnStage` 的接入面自建链改调核函数（`slot` = 显式 `providerName` ∥ 槽复合——key 门在核内）；`presets.mjs` `resolveDefaultModel` 改核转口。「渠道 + key 已配」在三端仍**直接可发**——事实标准不回退。
 
@@ -571,3 +571,4 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #10（实施轮 A 单漂移回裁）· eng-designer**——承批档 §5 上抛 1 ∥ 2 · 台账 #841）：§6.22 `providerInvalidReason` 面收正为 **name 面**（`config.mjs:337`——「持 key 但结构不全」**不在 invalid 类合成式内**，归发送 ∕ 装配失败面；`:422` 括注 ∥ KD-841-4 同述连改）；
   新增 **第四消费面（ACP）注**——门判据随核切换（拒 ⇒ 放行）= U3 自然导出（行为变更在案，非缺陷）；协议面提示通道未决 ⇒ 如需另立设计。**产品码零触（修正轮）**。
 - 2026-10-03（**crash-guards 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-crash-guards.md` §2 · 台账 #866（GitHub #16））：§6.3 补 **body 终止守卫** 句（读侧空闲断流经单点 `destroyBody`——机制单源 = `doc:PROXY.md:§2`）。**产品码零触（设计轮）**。
+- 2026-10-03（**轻通道轮八连带 · PROVIDER.md 收正 · 父侧直接执行 · 可 revert**——承 `docs/batches/2026-10-03-light-round-8.md` §2 上抛 U-1 · 台账 #879）：§6.22 三端明示表桌面行 `fallback` 格字面收正——词 ⇒ **`composer.send.noDefaultModelFallback`**（澄清半句「— 正在使用可用渠道」；失败词 ∥ 态词分家）；原「逐字复用 #840 键」失效句按 D8 删除。**零语义改**（= 轮八裁定在设计面的对齐）。
