@@ -297,6 +297,41 @@
 **计数**：1🔴 · 4🟡 · 4🔵（复核项：分组零重叠 ✓（组 A/B 文件集实核无交）· 复验表 8 条证据锚逐条实读命中（transport-http.mjs:168-172/:245 · sse.mjs:139/:147-150 · embedding.mjs:88 · auto-think.mjs:66-68/:76/:104-106 · subagent-async.mjs:142/:150/:153 + subagent-spawn.mjs:80-82 · normalize.mjs/token-window.mjs:14,24/tools/file.mjs:26 · transport-stdio.mjs:20-23 · stream-destroy.mjs:29）· `resolveChildProvider` 四处消费链实核 ✓ · `thinkOffPath`/`thinkOffShape` 导出在盘 ✓ · `sanitizeConsultModels` 先例在盘 ✓ · `capHistoryImageBytes` 全仓零命中 ✓）。
 **VERDICT: changes-required**
 
+### 轮次 2（评审子代理）
+
+**评审对象**：issue 修复批·一 设计面 · 评审轮次 2（复评）——逐条验证 §3 轮次 1 的 9 条（1🔴 · 4🟡 · 4🔵）修复状态（fix 轮 = §2.9 收正块）；重点 = 🔴 取案②（建通道下移 `proxyFetch` 直连分支——拓扑核验结论 ∥ 覆盖句同步 ∥ google 腿 T-A22）成立性。
+**限制声明**：本评审实例无 shell ⇒ `node scripts/doc-check.mjs` 不可执行——AC-10 复跑读数 **unverified**（fix 块自报 exit 0 并披露）；`CORE-UNIFICATION.md`（357KB）∥ `AGENT-LOOP-SUBAGENT.md`（135KB）按修复落点节段读（§2.8.1 ∥ 变更记录 ∥ §6.7.1），非全文；行数抽查（read 面）= `mcp.mjs` 298 ∥ `think-off.mjs` 49 ∥ `proxy.mjs` 275 ∥ `config.mjs` 436 ∥ `memory/core.mjs` 319 ∥ `agent-tools/subagent-async.mjs` 461——与表值吻合。
+
+**逐条核验（9/9 已修复）**：
+1. 🔴 号 1（#878 拓扑）= **已修复且成立**：拓扑核验结论独立复核——`thincoder-core/proxy.mjs:266-275`（`proxyFetch`；直连分支 `:267`；`tunnelHttps` 唯一生产调用点 `:269` ∥ `tcpConnectProxy`+`streamHttpResponse` `:271-274`）；直连面两链入口 = `thincoder-core/provider/core.mjs:395-397`（call-site 分支实读）∥ `thincoder-core/provider/google.mjs:119`（恒 `proxyFetch`）；读侧看门狗全仓仅 `thincoder-core/provider/sse.mjs:179` ∥ `thincoder-core/provider/google.mjs:204`（grep 实证）⇒ 收口后单点覆盖 `readSSE` ∥ `parseGeminiStream` 成立。覆盖句已同步（`PROXY.md:28/:35-37/:93/:97/:117` ∥ `PROVIDER.md:104-105/:493`）；T-A22 / AC-8 / AC-2 扩与受影响表修订（`proxy.mjs` 275 · +~10）在 §2.9:244-245 在册。
+2. 🟡 号 2（mcp.mjs 档位）= 已修复：`CORE-UNIFICATION.md:1149` 子表行 25（298 → ≈306；>300 须带；拆点候选；消解条件）+ 计数句（`:1109/:1110/:1112/:1119`）+ 变更记录 `:2046`。
+3. 🟡 号 3（U1）= 已修复：`AGENT-LOOP-SUBAGENT.md:37` 端差句（正案 = VSC 端壳同拍清洗；宿主能力面举证不成立）+ 变更记录 `:1008`；`thincoder-vscode/src/agent/setup.mjs:131-132` raw 读点实读吻合。
+4. 🟡 号 4（U3）= 已修复：`MCP.md:115` 副作用登记半句 ∥ §7 D-MC19 `:196` ∥ 变更记录 `:241`。
+5. 🟡 号 5（U4）= 已修复：`CORE-UNIFICATION.md:1091`（主表行 1：`config.mjs` 436 + 本批触评「不构成触发」）∥ `:1148`（子表行 24）∥ `:1153-1154`（次优先 454/461）∥ `:2046-2048`。
+6. 🔵 号 6 = 已修复：§2.9:263-264（T-A20 ∥ T-A21 + AC-2/AC-8 扩句）。
+7. 🔵 号 7 = 已修复：§2.9:267；`thincoder-cli/src/tui/index.mjs:125` 实读吻合（`createExitCleanup` `:124`）。
+8. 🔵 号 8 = 已修复（记录节号残留，见发现表）：`PROVIDER.md:220` 实读 **49**；`think-off.mjs` 49 行吻合。
+9. 🔵 号 9 = 已修复：`MCP.md:108` 射程括注（Streamable POST 面含 postOnly；legacySSE 分支零触）；`mcp/transport-http.mjs:125-152` legacy 分支实读（会话语义不涉——`sessionId` 仅非 legacy 路径读写 `:165` ∥ close `:223-232`）。
+
+**发现表（复评轮）**：
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | Doc hygiene（记录节号） | 🔵 | 号 8 收正块（§2.9:270）与 `PROVIDER.md` 变更记录（`:584`）均把 think-off 读数收正记在「§6.3 :219」——该句实住 §6.12 `:220`（§6.3 区间 `:95-105` 内无该句） | 两处记录节号/行号收正为 §6.12 `:220`（或标 as-of） |
+| 2 | Acceptance（用例措辞） | 🔵 | T-A22（§2.9:244）记「`parseGeminiStream` 以 `sse-idle` 终结」——google 腿相位串实为 `google-sse-idle`（`thincoder-core/provider/google.mjs:204` 实读）；且「无内容 ⇒ 超时错误 ∥ 有内容 ⇒ partial」两径须经 `idleFired` 归一（google 现形 catch 对 idle 文案即落 partial 径——`google.mjs:242/:256-258` 实读），用例若写死 `sse-idle` 或按现形断言会与实施形错位 | T-A22 断言锚「idle ⇒ 终结（不再永挂）」+ 相位串按实施形落 + 两径断言分列（无内容 ⇒ 超时错误；有内容 ⇒ partial） |
+
+**计数**：0🔴 · 0🟡 · 2🔵（复评：轮次 1 九条全修复；🔴 定向复核 = 取案② 成立）
+**VERDICT: pass**
+
 ## §4 用户批准（主 agent）
+
+**父侧代签（用户 2026-10-04 00:31「都自动跑」——点火 / 代签 / 派发 / 收口全自动授权；自缚三条件齐备）**
+
+- ① **设计评审 pass** ✓：轮次 2 复评 #78（`VERDICT: pass` · 🔴 0 ∥ 🟡 0 ∥ 🔵 2——**9/9 修复核验**；🔴 取案② 定向复核 = **成立**）；
+- ② **修正落地核验** ✓：fix 轮 #67 九条全落（`PROXY.md` §2/§6.1/D-PX8 ∥ `PROVIDER.md` ∥ `MCP.md` ∥ `AGENT-LOOP-SUBAGENT.md` ∥ `CORE-UNIFICATION.md` §2.8.1 ∥ 本档 §2.9）；父侧抽验在盘 + `doc-check` exit 0；**#78 两🔵处置** = ① 节号收正就地落（`PROVIDER.md:584`——父侧直接执行 · 可 revert）∥ ② T-A22 措辞纠正随实施任务书明示（相位串按实施形 ∥ 「无内容 ⇒ 超时错误」两径断言分列——不改档）；
+- ③ **token 已签发** ✓（值不入档，纪律照守）。
+
+**批准面**：#850 ∥ #853 ∥ #856 ∥ #859 ∥ #860 ∥ #861 ∥ #877 ∥ #878——**两组并行派发**（组 A 传输/请求 10 档 ⇒ eng-coder 甲 ∥ 组 B 记忆/配置 9 档 ⇒ eng-coder 乙——文件面含 `thincoder-vscode/src/agent/setup.mjs`，与批三实施 #79 交叠，由调度器自动串行）。
+
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）
