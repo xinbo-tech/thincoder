@@ -126,6 +126,8 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   // window/clamping logic below reads the overridden value where it matters.
   const spec = providerSpec(provider)
   messages = stripImagesForTextModel(messages, spec)
+  // #853 D-PR32：历史图片累计字节预算——发送前对消息副本累计驱逐（最老先弃；history 本体零触）。
+  messages = capHistoryImages(messages)
   // SESSION.md §6.9 T-S3: local-only message fields (ts/transient) never reach the wire.
   // Stripped BEFORE format dispatch — anthropic/responses transports pass whole message
   // objects through verbatim (only the OpenAI path ran escapeMessages). Copy-on-write:
@@ -330,7 +332,7 @@ export function buildContinuationMessages(messages, result, spec) {
 // Pre-send payload normalization lives in normalize.mjs (2026-08-31 extract,
 // TODO #2); re-exported so provider/index.mjs and tool-pairing.test.mjs keep
 // their import paths.
-import { stripImagesForTextModel, normalizeToolPairing } from "./normalize.mjs"
+import { stripImagesForTextModel, normalizeToolPairing, capHistoryImages } from "./normalize.mjs"
 export { stripImagesForTextModel, normalizeToolPairing }
 /** Merge tool calls from a retry/continuation into the accumulated result.
  *  2026-08-31 会诊 #7/#17：readSSE 输出的 tc 已 finalize（无 index 字段），
@@ -392,9 +394,9 @@ async function requestWithRetry(provider, body, signal, onWait) {
         _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
         _bodyIdleMs: FETCH_BODY_IDLE_MS,
       }
-      response = provider.proxyUri
-        ? await proxyFetch(url, opts, provider.proxyUri)
-        : await fetch(url, opts)
+      // #878 D-PX8：请求调用点收口——恒走 `proxyFetch`（无 proxyUri 即直连分支，内部 abort 通道单点建设；
+      // 原 call-site 分叉删除）。
+      response = await proxyFetch(url, opts, provider.proxyUri)
     } catch (error) {
       // AGENT-LOOP-SUBAGENT.md §6.12 站点 #2（第 24 批）：fetch 拒否面补标来源（undici 拒否的 AbortError 现场无 reason）
       if (error.name === "AbortError") throw annotateAbort(error, signal, "provider", "request")
@@ -406,6 +408,10 @@ async function requestWithRetry(provider, body, signal, onWait) {
 
     const text = await response.text().catch(() => "")
     let message = `LLM API error ${response.status}: ${text}`
+    // #853 D-PR32：413 可操作化——长会话图片累积的高频形态，从裸 HTTP 码变为可执行指引。
+    if (response.status === 413) {
+      message += " — request body too large (HTTP 413): run /compact to compress the conversation history, or remove historical images."
+    }
     // 401 双平台提示 + 诊断回显（2026-08-31 会诊 #15）：
     // Kimi 双平台 key 不互通的提示保留；通用加 baseURL host + key 前 6 位掩码，
     // 帮用户快速分辨"配错平台还是配错账号"。

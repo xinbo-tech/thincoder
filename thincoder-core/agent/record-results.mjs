@@ -26,6 +26,7 @@
 import { pushReal } from "../context.mjs"
 import { specForModel } from "../config.mjs"
 import { FILE_MUTATORS, toolTouchPaths } from "./helpers.mjs"
+import { capHistoryImages } from "../provider/normalize.mjs"
 import { resolve } from "node:path"
 import { advisorRuns, stripApprovedSuffix } from "../agent-tools/advisor-async.mjs"
 import { looksLikeReviewOutput, advisorIncompleteMarker } from "../advisor/run.mjs"
@@ -174,4 +175,6 @@ export async function recordToolResults(agent, toolByName, results) {
     if (real) pushReal(agent, msg)
     else agent.history.push(msg)
   }
+  // #853 D-PR32：注入面同函数同预算——history 本体驱逐最老图片（防无界膨胀；发送前另有副本面同函数）。
+  if (deferredUserMsgs.some((d) => d.real)) agent.history = capHistoryImages(agent.history)
 }

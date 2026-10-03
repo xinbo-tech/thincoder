@@ -8,7 +8,7 @@ import { proxyFetch } from "../proxy.mjs"
 import { requestWithRetry } from "./retry.mjs"
 import { effectiveFetchTimeoutMs } from "./core.mjs"
 import { abortError, timeoutError } from "../abort-provenance.mjs"
-import { destroyBody } from "../stream-destroy.mjs"
+import { terminateBody } from "../stream-destroy.mjs"
 
 /** OpenAI 语义 tool_choice → Gemini FunctionCallingConfig（2026-08-31 能力层）。 */
 function mapFunctionCallingConfig(choice) {
@@ -198,10 +198,14 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
   // 2026-09-01 读侧 idle 超时（同 sse.mjs）：body 有数据流动即不超时；连续 120s 无新 chunk 判死
   const READ_IDLE_MS = 120_000
   let idleTimer = null
+  let idleError = null
   const armIdle = () => {
     if (idleTimer) clearTimeout(idleTimer)
     idleTimer = setTimeout(() => {
-      try { destroyBody(response.body, timeoutError(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`, "provider", "google-sse-idle")) } catch { /* already gone */ }
+      // #878：断流单点分流——直连 fetch（web 流）走 `IDLE_ABORT` 内部 abort 通道；
+      // proxy 形回落 destroyBody（原契约）。相位串 = 本腿专属 google-sse-idle。
+      idleError = timeoutError(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`, "provider", "google-sse-idle")
+      try { terminateBody(response, idleError) } catch { /* already gone */ }
     }, READ_IDLE_MS)
     idleTimer.unref?.()
   }
@@ -239,6 +243,16 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
       result.interruptMessage = signal.reason.message
       return result
     }
+    // #878：看门狗终结两径归一（idleFired）——无内容 ⇒ idle 超时错误；有内容 ⇒ partial
+    //（已流出内容保留，不整轮报废）。非 idle 错误照旧走下方 hasPartial 径（原语义零变）。
+    if (idleError) {
+      if (result.content || result.reasoning || result.toolCalls.length) {
+        result.partial = true
+        result.networkError = idleError.message ?? String(idleError)
+        return result
+      }
+      throw idleError
+    }
     if (hasPartial(e)) {
       result.partial = true
       result.networkError = e.message ?? String(e)
@@ -252,7 +266,8 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
   return result
 }
 
-/** google.mjs 无 hasChoices 追踪——只有流中途死且已有内容才标 partial（同 sse.mjs 语义的简化版） */
+/** google.mjs 无 hasChoices 追踪——非 idle 网络错误按文案判 partial（同 sse.mjs 语义的简化版）；
+ *  idle 径两分（有内容 ⇒ partial ∥ 无内容 ⇒ 超时错误）归 catch（#878）。 */
 function hasPartial(e) {
   return /ECONNRESET|terminated|idle timeout|network/i.test(e?.message ?? "")
 }

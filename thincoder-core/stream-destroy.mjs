@@ -13,6 +13,11 @@
  * ③ 再 `destroy(err)`——原错误对象直传；
  * ④ 禁 `listenerCount('error') === 0` 预检（pipe 监听者使计数失真——触发即自摘后重发）。
  *
+ * 内部 abort 通道（2026-10-04 · #878 D-PX8）：直连 fetch 的 body = web `ReadableStream`（无
+ * `destroy`——本档形态①的 no-op 面）。断流改经 `IDLE_ABORT` 符号挂载的 `AbortController`：
+ * `terminateBody(response, err)` 对挂通道者 `controller.abort(err)`（body 随之中止）；无通道回落
+ * `destroyBody`（原契约零变）。建设点 = `proxy.mjs` `proxyFetch` 直连分支单点。
+ *
  * 零 import——proxy ∥ provider 消费点共用（无环）。
  */
 
@@ -32,4 +37,26 @@ export function destroyBody(body, err) {
     body.on("error", () => {})
   }
   body.destroy(err)
+}
+
+/** 内部 abort 通道符号（#878 D-PX8——直连 fetch 响应的断流通道；module-private 语义面）。 */
+export const IDLE_ABORT = Symbol("thincoder.idleAbort")
+
+/**
+ * body 终止分流单点（#878）：
+ * - response 挂有 `IDLE_ABORT`（直连 fetch——web `ReadableStream`）⇒ `controller.abort(err)`
+ *   （读循环随之终结；原错误对象即 abort reason——undici 以该对象拒读）；
+ * - 否则回落 `destroyBody(response.body, err)`（proxy PassThrough ∥ 无通道 web 流——原契约零变）。
+ * response 缺位 / 无 body ⇒ no-op 不抛（幂等——二次调用对 AbortController 原生安全）。
+ * @param {Response|{body?: import("node:stream").Stream}} response
+ * @param {Error} err — 原错误对象（abort reason ∥ destroy 直传）
+ */
+export function terminateBody(response, err) {
+  if (!response) return
+  const controller = response[IDLE_ABORT]
+  if (controller) {
+    controller.abort(err)
+    return
+  }
+  destroyBody(response.body, err)
 }

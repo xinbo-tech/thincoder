@@ -17,6 +17,11 @@ export function httpTransport(baseURL, extraHeaders = {}) {
   let legacySSE = false
   let deadFired = false
   let deadListeners = new Set()
+  // #850 D-MC18：会话过期（HTTP 404）自愈链状态——重建单飞 promise ∥ initialize 参数单源
+  //（建连时 `setInitPayload` 注入）∥ 会话死态标记（未修复 ⇒ isAlive false ⇒ ensureAlive 走重连）。
+  let reinitPromise = null
+  let initPayload = null
+  let sessionDead = false
 
   /** 2026-08-31 MCP 会诊 P5：意外死亡通知（SSE 流断/error，非主动 close）。 */
   const fireDead = (msg) => {
@@ -118,7 +123,7 @@ export function httpTransport(baseURL, extraHeaders = {}) {
     await Promise.race([gotEndpoint, wait])
   }
 
-  async function postRequest(method, params) {
+  async function postOnce(method, params, retried) {
     const id = rpcId()
     const body = JSON.stringify({ jsonrpc: "2.0", id, method, params })
 
@@ -167,7 +172,22 @@ export function httpTransport(baseURL, extraHeaders = {}) {
           if (resp.status === 202) return
           if (!resp.ok) {
             pending.delete(id)
-            resolve({ id, error: { code: -32000, message: `HTTP ${resp.status}` } })
+            const error = { id, error: { code: -32000, message: `HTTP ${resp.status}` } }
+            // #850 D-MC18：404（MCP 会话失效语义）⇒ 自愈三步——清会话 ⇒ 重建（单飞）⇒ 重试原请求一次。
+            if (resp.status === 404 && !retried) {
+              sessionId = null   // ① 清会话（后续请求不再携失效 id）
+              const healed = await reinitialize().then(() => true, () => false)
+              // ③ 只重试一次（close 竞态：关闭后自愈链随连接生命周期终止——不重试）
+              if (healed && !closed) { resolve(postOnce(method, params, true)); return }
+            }
+            if (resp.status === 404) {
+              // 重建失败 / 二次 404：不第三次——原错误透传 + fireDead（既有退避重连链兜底）
+              if (!closed) {
+                sessionDead = true
+                fireDead("session expired")
+              }
+            }
+            resolve(error)
             return
           }
           if (ct.includes("text/event-stream")) {
@@ -203,6 +223,9 @@ export function httpTransport(baseURL, extraHeaders = {}) {
     }).finally(() => pending.delete(id))
   }
 
+  /** 原请求入口（每次调用一个 `retried` 份额——自愈重试恒为 true，二次不再重试）。 */
+  const postRequest = (method, params) => postOnce(method, params, false)
+
   const send = async (method, params) => withTimeout(postRequest(method, params), CALL_TIMEOUT_MS)
 
   const notify = (method, params) => {
@@ -217,8 +240,32 @@ export function httpTransport(baseURL, extraHeaders = {}) {
     })
   }
 
+  /** #850 D-MC18：404 自愈重建（单飞）——重新 `initialize`（+ `notifications/initialized`）。
+   *  并发 404 共享同一重建；失败抛（调用面归入「不重试」+ fireDead + sessionDead）。
+   *  重建请求自身以 retried=true 走 postOnce——重建中再 404 不再触自愈。 */
+  const reinitialize = () => {
+    if (!reinitPromise) {
+      reinitPromise = (async () => {
+        // close 竞态：关闭后自愈不再继续（重建 ∥ 通知 ∥ 会话复活全停）
+        if (closed) throw new Error("connection closed")
+        if (!initPayload) throw new Error("initialize payload not set (setInitPayload)")
+        const resp = await postOnce("initialize", initPayload, true)
+        if (resp?.error) throw new Error(resp.error.message ?? "initialize failed")
+        if (closed) throw new Error("connection closed")
+        notify("notifications/initialized", {})
+        sessionDead = false
+      })().finally(() => { reinitPromise = null })
+    }
+    return reinitPromise
+  }
+
+  /** initialize 参数单源注入（建连方：mcp.mjs——握手与自愈重建共用同一参数）。 */
+  const setInitPayload = (payload) => { initPayload = payload }
+
   const close = () => {
     closed = true
+    // 关闭态由 closed 判死；会话死态标记随连接生命周期结束复位（无残留歧义）。
+    sessionDead = false
     abortController?.abort()
     if (sessionId) {
       fetch(postUrl, {
@@ -242,7 +289,8 @@ export function httpTransport(baseURL, extraHeaders = {}) {
     send, notify, close, openSSE, url, headers: extraHeaders,
     // F1：POST-only 降级（postOnly）与 legacy SSE 流（eventSource）都算活连接——
     // 不得因 eventSource == null 误判死（glm-websearch "reconnect failed" 根因）。
-    isAlive: () => !closed && (eventSource != null || postOnly),
-    onDead, markPostOnly,
+    // D-MC18：会话过期未修复（sessionDead）⇒ 判死——ensureAlive 据此走重连。
+    isAlive: () => !closed && !sessionDead && (eventSource != null || postOnly),
+    onDead, markPostOnly, setInitPayload,
   }
 }

@@ -4,29 +4,52 @@
 import { spawn, spawnSync } from "node:child_process"
 import { rpcId, CALL_TIMEOUT_MS, withTimeout, quoteArg } from "./helpers.mjs"
 
+/** 退出相位标志（D-MC19）：模块加载期注册的 exit 钩子置位——退出相位无事件循环，
+ *  只同步操作可落地（注册序恒早于宿主 cleanup——`thincoder-cli/src/tui/index.mjs:125`）。 */
+let exiting = false
+process.on("exit", () => { exiting = true })
+
+/** 测试缝（先例 `provider/rate.mjs` `_rateHooks`）：组杀 / 单进程杀 / 定时器可注入
+ *  （POSIX 分流在生产 win32 机位的直驱 = 临时覆写 `process.platform`——见批内件 T-A12–A14）。 */
+export const _killHooks = {
+  groupKill: (pid, sig) => process.kill(-pid, sig),
+  childKill: (child, sig) => child.kill(sig),
+  setTimer: (fn, ms) => setTimeout(fn, ms),
+}
+
 /** Kill the child AND its whole process tree.
  *  win32: cmd.exe 包装 spawn 的孙进程（npx/node）必须 taskkill /T /F 才能杀净
  *  （2026-08-31 MCP 会诊 P2：此前只 child.kill() 杀 cmd.exe 壳，真 server 成僵尸
  *  并在 Windows 团队每人每次断开/重连泄漏一批）；taskkill 必须 **spawnSync**（同步）——
  *  调用链挂在 `process.on("exit")`（退出相位仅同步操作可落地：异步 spawn 的 taskkill
  *  随父进程退出被一并带走 ⇒ 子树泄漏——#17 · 2026-10-03）；
- *  POSIX: SIGTERM 后 2s 未退 SIGKILL 兜底。 */
+ *  POSIX（D-MC19）：detached 新进程组（组长 pid = 组 id）⇒ 组杀 `process.kill(-pid, sig)`
+ *  （组杀覆盖孙进程——原单进程 SIGTERM 只达直接子进程）；正常相位 = 组 SIGTERM → 2s 组
+ *  SIGKILL 升级；退出相位（升级 timer 不触发）⇒ 同步组 SIGKILL 直达（不做 SIGTERM 等待）。
+ *  ESRCH（无此进程组）⇒ fallback 单进程 kill；其余错误 best-effort。 */
 function killTree(child) {
   if (!child.pid) return
   if (process.platform === "win32") {
     try { spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true }) } catch { /* best effort */ }
     return
   }
-  try {
-    child.kill("SIGTERM")
-    setTimeout(() => { try { child.kill("SIGKILL") } catch { /* already gone */ } }, 2000).unref?.()
-  } catch { /* best effort */ }
+  const groupKill = (sig) => {
+    try { _killHooks.groupKill(child.pid, sig) } catch (e) {
+      if (e?.code === "ESRCH") { try { _killHooks.childKill(child, sig) } catch { /* already gone */ } }
+    }
+  }
+  if (exiting) { groupKill("SIGKILL"); return }
+  groupKill("SIGTERM")
+  const timer = _killHooks.setTimer(() => groupKill("SIGKILL"), 2000)
+  timer?.unref?.()
 }
 
 /** Create an MCP stdio transport over a spawned child process.
  *  @param {Object} [env] — extra environment variables merged on top of process.env */
 export function stdioTransport(command, args, env) {
   const spawnOptions = { stdio: ["pipe", "pipe", "pipe"], windowsHide: true, env: { ...process.env, ...env } }
+  // D-MC19：POSIX 加 detached——新进程组（组杀覆盖孙进程）；win32 分支零改（taskkill /T /F 已覆盖）。
+  if (process.platform !== "win32") spawnOptions.detached = true
   const child =
     process.platform === "win32" && !/\.exe$/i.test(command)
       ? spawn("cmd.exe", ["/d", "/s", "/c", [command, ...(args ?? [])].map(quoteArg).join(" ")], {

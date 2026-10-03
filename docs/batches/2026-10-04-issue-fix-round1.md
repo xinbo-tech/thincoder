@@ -335,7 +335,7 @@
 
 ## §5 实施记录（eng-coder）
 
-**状态行**：实施完成（9 档 + 批内件 17/17；内审 1 轮收口 1 处；代码评审 1 轮 pass）
+**状态行**：实施完成（两组——甲：组 A 10 档 + a 件 22/23（T-A15 平台门 skip）；乙：组 B 9 档 + b 件 17/17；内审各 1 轮 ∥ 代码评审各 1 轮 pass（甲 🔴 0））
 
 ### 5.1 交付摘要（组 B · #859 ∥ #860 ∥ #861 · 9 档）
 
@@ -375,5 +375,48 @@
 ### 5.4 边界遵守
 
 零组 A 面触（`mcp/*` ∥ `provider/*` ∥ `stream-destroy.mjs` ∥ `proxy.mjs`——他批在飞文件面）∥ 零 `docs/**` 设计档触 ∥ 零在飞写域触（`thincoder-vscode/src/agent/setup.mjs` 与批三实施交叠：落笔前核验该档收笔 = 盘面 mtime 19.5min 未动 + round3 §5.1 终态读数在案）∥ 零改面核验零改：`escape.mjs` ∥ `think-off.mjs` ∥ `model-specs.mjs` ∥ `provider/rate.mjs` ∥ `agent-tools/settings.mjs` ∥ `thincoder-cli/src/**`。
+
+### 5.5 交付摘要（组 A · #850 ∥ #877 ∥ #856 ∥ #878 ∥ #853 · 10 档 + 批内件）
+
+| 文件 | 行数（前→后） | 落点（file:line ∥ 要点） |
+|---|---|---|
+| `thincoder-core/mcp/transport-http.mjs` | 248 → 296 | `:126` `postOnce(method, params, retried)`（原 `postRequest` 拆出）；`:173-192` 404 自愈三步（清会话 `:178` ⇒ 单飞重建 ⇒ 重试恰一次 `:181`）+ 失败兜底（`:183-189` `sessionDead` + `fireDead("session expired")`；close 竞态守卫 `:181` ∕ `:185`）；`:243-260` `reinitialize`（单飞 `:247`；close 双检 `:250` ∕ `:254`）；`:263` `setInitPayload`；`:268` close 复位；`:293` `isAlive` 含 `!sessionDead`；legacy 分支 `:130-157` 零触 |
+| `thincoder-core/mcp.mjs` | 298 → 306 | `:56-62` `buildInitParams()` 参数单源（导出面）；`:76` 建连 `setInitPayload` 注入；`:209` `doInitialize` 同源 |
+| `thincoder-core/mcp/transport-stdio.mjs` | 142 → 165 | `:9-10` 模块加载期退出相位标志；`:14-18` `_killHooks` 测试缝；`:30-45` `killTree` 相位分流（正常 = 组 SIGTERM → 2s 组 SIGKILL ∥ 退出 = 同步组 SIGKILL 直达 ∥ ESRCH ⇒ 单进程回落；win32 分支原样）；`:52` POSIX `detached` |
+| `thincoder-core/provider/sse.mjs` | 265 → 296 | `:156-175` 帧形状分派（快照帧 = `delta == null && message != null`）；`:26-30` 前缀补差；`:36` ∕ `:59-60` `mergeToolCalls` snapshot 覆盖；`:201-209` 看门狗 `terminateBody` + `idleError`；`:248-272` 两径归一 |
+| `thincoder-core/provider/google.mjs` | 258 → 273 | `:199-209` 看门狗同形（相位串 `google-sse-idle`）；`:246-255` idle 两径归一（无内容 ⇒ 超时错误 ∥ 有内容 ⇒ partial） |
+| `thincoder-core/provider/core.mjs` | 454 → 460 | `:399` 请求调用点收口（恒走 `proxyFetch`——call-site 分叉删）；`:129-130` 发送前 `capHistoryImages`（副本）；`:411-414` 413 处置指引 |
+| `thincoder-core/stream-destroy.mjs` | 35 → 62 | `:43` `IDLE_ABORT`；`:54-62` `terminateBody` 分流（通道 ⇒ `controller.abort(err)` ∥ 否则 `destroyBody`；缺位 ∕ 无 body no-op）；`destroyBody` 本体零改 |
+| `thincoder-core/provider/normalize.mjs` | 81 → 138 | `:14` `IMAGE_HISTORY_BYTES_BUDGET`（32MB）；`:17` 占位文本（设计逐字）；`:35-68` `capHistoryImages`（最老先驱逐；预算内返原引用 `:49`） |
+| `thincoder-core/agent/record-results.mjs` | 177 → 180 | `:178-179` 注入面本体驱逐（真图注入后 `agent.history = capHistoryImages(...)`） |
+| `thincoder-core/proxy.mjs` | 275 → 284 | `:269-276` 直连分支建通道（`AbortController` + `AbortSignal.any` + `response[IDLE_ABORT]`——§2.9 号 1 案②单点建设）；proxy 两分支零改 |
+| `docs/batches/2026-10-04-issue-fix-round1.a.test.mjs` | 新建 685 | 23 test 块 = §2.6-A 19 行 + §2.9 三条（T-A20/A21/A22；T-A22 双径分列；google 相位串按实施形） |
+
+**跑法与读数（先红后绿）**：`node --test docs/batches/2026-10-04-issue-fix-round1.a.test.mjs`——**先红 = 20 红 ∕ 2 绿 ∕ 1 skip**（2 绿 = 保旧行为回归腿 T-A7 ∕ T-A8；红含 T-A5 实读 `'HelloHello world!'` vs 期望 `'Hello world!'`〔#856 重复帧复现〕∥ T-A9 看门狗 `settled=false`〔#878 永挂复现〕∥ T-A12 ∕ T-A16 ∕ T-A19 = 面缺红）；**后绿 = 22 过 ∕ 0 败 ∕ 1 skip · exit 0**（T-A15 = win32 平台门 skip——本机 WSL node 坏档〔Exec format error〕，真机复验登记）；fix 后复跑同读数。`node scripts/doc-check.mjs` = **exit 0**（悬空 0 ∥ 行宽 0；行数面 9 条差异全为桌面档报告态——本批零命中）。另：真实装配链探针（`connectMcpServer` + mock server，临时区）实证 404 ⇒ `initialize` 恰 +1 + 重试成功 + 工具返回正常。
+
+### 5.6 决策透明表
+
+| # | 决策 | 理由 |
+|---|---|---|
+| A1 | 自愈链三处 close 守卫（`:181` `healed && !closed` ∥ `:185` 死态标记 `!closed` ∥ `:250` ∕ `:254` 重建双检） | 设计未定 close×自愈竞态；内审 🟡 就地收口——close 落在自愈飞行中：不复活会话 ∥ 不外发 `initialized` ∥ 不重试（探针复证：initialize 1 次、tools/list 无重试、无 notify） |
+| A2 | idle 判定以 `idleError` 非空承载（语义 = 设计「`idleFired` 标志」） | 等价实现形（值非空 ⟺ 已触发）；两径分流经它 |
+| A3 | `buildInitParams()` 导出（mcp.mjs 导出面 +1） | 「参数单源不可分叉」——批内件复用同一函数（不复制字面）；属设计抽取项的直接形态 |
+| A4 | 发送面 cap 落点 = `chatImpl` 内 `stripImagesForTextModel` 紧后（对副本） | §2.3 #853 ②「与 stripImages 同址」；位于格式分派前 ⇒ 四 transport 同享 |
+| A5 | 越表改动 = 零（10 档全在 §2.4 + §2.9 号 1 修订表内；`.thincoder/tmp/` 探针件 = 临时区，非交付面） | — |
+
+### 5.7 审计与代码评审轮次与终态
+
+- **内审（分歧审计 · 1 轮）**：四类偏差 0（终判 clean）；风险面 1 🟡（close×自愈竞态）+ 2 🔵（旧 transport 替换不关闭 = 设计面归口 ∥ `process.emit("exit")` 用例注记）⇒ 🟡 就地收口（A1）+ 探针复证。
+- **代码评审（advisor code · 1 轮）**：🔴 0 · **VERDICT: pass**。🟡 2（① `PROVIDER.md:102` 头阶段超时句与直连现形分歧——非本批引入、报告面 ② 批内件 685 行 vs §2.4 预算 ~350——批内件不计线〔KD-4 先例 `2026-09-29-desktop-compress-row-pin.md:348`→`:371`〕不升级、父侧记账）∥ 🔵 3（`record-results` 换引用观察 ∥ 用例确定性两注 ∥ 组 A §5 记录回填 = 本块）。**零强制修复项**。
+- **fix round**：代码面 1 处（A1）；测试面 0。复跑 22 ∕ 23（同上）。
+- **终态**：**clean**（🔴 0；未决 = 登记项：T-A15 真机复验 ∥ 批内件行数记账 ∥ crash-guards T7 断代红〔见 5.8〕）。
+
+### 5.8 披露（越表 ∕ 断代 ∕ 登记项）
+
+1. **批内件 685 行**（代码 594 ∥ 注释 43 ∥ 空行 48）超 §2.4 预算「~350」：23 腿 = 设计强制面（§2.6-A 19 + §2.9 三），压缩需删腿 ∕ 并腿（与「逐腿」「两径分列」相抵）⇒ 保留原形；批内件不计线（KD-4），父侧如需按缺陷族分件请裁。
+2. **crash-guards T7 断代红**（`docs/batches/2026-10-03-crash-guards.test.mjs`）：该腿钉「google 无内容 idle ⇒ resolve 空结果」旧形；本批 §2.9 号 1 收正为「无内容 ⇒ 超时错误」+ 其 fetch 桩体不认 abort 通道 ⇒ 复跑 9 ∕ 10 绿（T6 ∕ T9 ∕ T10 零回归）。归口 = 断代件重锚（另批 ∕ 父侧裁）；本批零触。
+3. **AC-1「legacySSE 分支零触」半句**：批内件无专用腿（§2.6-A 未列）——以实读合规举证（`transport-http.mjs:130-157` 无 404 ∕ 会话逻辑；`!resp.ok` 仅映射 `POST failed: HTTP ${status}`）。
+4. **`mcp.mjs` 306 > 300**：§2.9 号 2 已预登记；`sse.mjs` 296 距 300 顾问线 4 行（下次触及该档时拆点候选登记）。
+5. **designId 回显**：本舱 spawn 载荷未携 designId 明文——如实缺项（不猜、不以实例 id 充数）；写授权经 token 门在写时核验（10 档 + 批内件全部写入获准 ⇒ token 在位）。
 
 ## §6 验证与收口（父代理）

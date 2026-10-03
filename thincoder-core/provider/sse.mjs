@@ -3,7 +3,7 @@
  * Extracted from core.mjs. Parses Server-Sent Events for LLM chat responses.
  */
 import { abortError, timeoutError } from "../abort-provenance.mjs"
-import { destroyBody } from "../stream-destroy.mjs"
+import { terminateBody } from "../stream-destroy.mjs"
 
 /**
  * Normalize provider cache fields into DeepSeek-style prompt_cache_hit/miss_tokens.
@@ -21,29 +21,43 @@ export function normalizeUsageCache(u) {
   }
   return u
 }
+/** 帧形状分派用前缀补差（D-PR31）：全同 ⇒ ""（零再增）；已收为前缀 ⇒ 只补差量；
+ *  无前缀关系 ⇒ 整段按增量追加（不吞真实内容——无法判定时不丢文本）。 */
+function snapshotSuffix(accumulated, text) {
+  if (text === accumulated) return ""
+  if (text.startsWith(accumulated)) return text.slice(accumulated.length)
+  return text
+}
+
 /** Defensive tool-call merge (PROVIDER.md §10): skip null/malformed elements and count them;
- *  merge slots by index / id / name / tail, accumulate arguments. */
-function mergeToolCalls(result, delta) {
+ *  merge slots by index / id / name / tail, accumulate arguments.
+ *  `snapshot: true`（D-PR31——`choice.message` 完整快照帧）：已有 slot（index / id 命中）的
+ *  arguments **覆盖**（非 +=）——修快照帧二次拼接；新 slot 照常建、其余路径零变。 */
+function mergeToolCalls(result, delta, { snapshot = false } = {}) {
   for (const tc of delta.tool_calls ?? []) {
     if (!tc || typeof tc !== "object") { result.droppedToolCalls++; continue }
     let slot
+    let existed = false
     if (Number.isInteger(tc.index) && tc.index >= 0) {
+      existed = result.toolCalls[tc.index] != null
       slot = (result.toolCalls[tc.index] ??= { id: "", name: "", arguments: "" })
     } else if (tc.id) {
       slot = result.toolCalls.find((s) => s && s.id === tc.id)
+      existed = !!slot
       if (!slot) { slot = { id: tc.id, name: "", arguments: "" }; result.toolCalls.push(slot) }
     } else if (tc.function?.name) {
       slot = { id: "", name: "", arguments: "" }
       result.toolCalls.push(slot)
     } else {
       slot = result.toolCalls[result.toolCalls.length - 1]
+      existed = !!slot
       if (!slot) { result.droppedToolCalls++; continue }
     }
     if (tc.id && !slot.id) slot.id = tc.id
     if (tc.function?.name && !slot.name) slot.name = tc.function.name
     const arg = tc.function?.arguments
-    if (typeof arg === "string") slot.arguments += arg
-    else if (arg != null) slot.arguments += JSON.stringify(arg)
+    if (typeof arg === "string") slot.arguments = snapshot && existed ? arg : slot.arguments + arg
+    else if (arg != null) slot.arguments = snapshot && existed ? JSON.stringify(arg) : slot.arguments + JSON.stringify(arg)
   }
 }
 
@@ -136,19 +150,29 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
     hasChoices = true
     if (choice.finish_reason) result.finishReason = choice.finish_reason
 
-    const delta = choice.delta ?? choice.message ?? {}
+    // 帧形状分派（D-PR31）：`delta == null && message != null` = 完整快照帧（MiniMax v2 类端点）——
+    // content / reasoning 前缀补差、tool_calls 覆盖；`delta` 在场 = 纯增量语义照旧
+    //（真增量文本天然可重复——不做去重）。
+    const snapshot = choice.delta == null && choice.message != null
+    const delta = snapshot ? choice.message : (choice.delta ?? {})
     // reasoning 方言：DeepSeek/Kimi/GLM 用 reasoning_content，OpenAI o 系和部分
     // 路由器用 reasoning —— 两个都认（2026-08-31 会诊 #9）
     const rDelta = delta.reasoning_content ?? delta.reasoning
     if (rDelta) {
-      result.reasoning += rDelta
-      onReasoning?.(rDelta)
+      const add = snapshot ? snapshotSuffix(result.reasoning, rDelta) : rDelta
+      if (add) {
+        result.reasoning += add
+        onReasoning?.(add)
+      }
     }
     if (delta.content) {
-      result.content += delta.content
-      onToken?.(delta.content)
+      const add = snapshot ? snapshotSuffix(result.content, delta.content) : delta.content
+      if (add) {
+        result.content += add
+        onToken?.(add)
+      }
     }
-    mergeToolCalls(result, delta)
+    mergeToolCalls(result, delta, { snapshot })
   }
 
   const processLines = (lines) => {
@@ -173,10 +197,14 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
   // 直连 fetch 与 proxyFetch 统一走这里（proxy 的 _bodyIdleMs 语义与之等价，双保险）。
   const READ_IDLE_MS = 120_000
   let idleTimer = null
+  let idleError = null
   const armIdle = () => {
     if (idleTimer) clearTimeout(idleTimer)
     idleTimer = setTimeout(() => {
-      try { destroyBody(response.body, timeoutError(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`, "provider", "sse-idle")) } catch { /* already gone */ }
+      // #878：断流单点分流——直连 fetch（web 流）走 `IDLE_ABORT` 内部 abort 通道，
+      // proxy 形回落 destroyBody（原契约）。
+      idleError = timeoutError(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`, "provider", "sse-idle")
+      try { terminateBody(response, idleError) } catch { /* already gone */ }
     }, READ_IDLE_MS)
     idleTimer.unref?.()
   }
@@ -225,20 +253,23 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
       if (idleTimer) clearTimeout(idleTimer)
       return result
     }
+    // #878：看门狗终结归类归一（abort 通道下底层错误形不定）——无内容 ⇒ idle 超时错误；
+    // 有部分内容 ⇒ partial + networkError（原径语义保持）。
+    const err = idleError ?? e
     // 2026-08-31 会诊 #2（流中断丢全部已收内容）：网络级失败（ECONNRESET / 半截 EOF /
     // proxy 断连）时若已解析出内容，把 partial 交回上层而不是整轮报废重试。
     // 标记 partial:true + networkError（上层可决定续写/重试/展示部分结果）。
     if (hasChoices && (result.content || result.toolCalls.length)) {
       finalizeToolCalls(result)
       result.partial = true
-      result.networkError = e.message ?? String(e)
+      result.networkError = err.message ?? String(err)
       const existing = result._warnings ??= []
       if (!existing.some((w) => w.name === "network-partial")) {
         existing.push({ name: "network-partial", message: `stream interrupted by network error after partial output: ${result.networkError}` })
       }
       return result
     }
-    throw e
+    throw err
   }
 
   if (idleTimer) clearTimeout(idleTimer)

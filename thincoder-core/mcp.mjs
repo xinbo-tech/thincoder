@@ -51,6 +51,16 @@ export const _mcpHooks = {
   reconnectDelays: [1000, 2000, 4000, 8000],
 }
 
+/** initialize 请求参数单源（D-MC18）：建连握手（doInitialize）与 transport 内 404 自愈重建共用——
+ *  建连时经 `transport.setInitPayload(...)` 注入。导出面供批内件复用（参数单源不可分叉）。 */
+export function buildInitParams() {
+  return {
+    protocolVersion: "2024-11-05",
+    capabilities: {},
+    clientInfo: { name: "thincoder", version: "1.0.0" },
+  }
+}
+
 /** 按 config 创建并完成握手的 transport（findTransportConfig 与 vscode 对齐）。 */
 async function createConnectedTransport(rawConfig, serverName) {
   // #57（provider-config-family 批）：值位 `${env:VAR}` 消费侧解析（CONFIG.md §6.3）——传输建连单点
@@ -62,6 +72,8 @@ async function createConnectedTransport(rawConfig, serverName) {
     await transport.connect()
   } else if (config.url) {
     transport = httpTransport(config.url, config.headers ?? {})
+    // D-MC18：#850——initialize 参数单源注入（404 自愈重建走同一参数）
+    transport.setInitPayload(buildInitParams())
     try {
       await transport.openSSE()
     } catch {
@@ -194,11 +206,7 @@ function truncateMcpOutput(text) {
 
 async function doInitialize(transport, _name) {
   const initResp = await withTimeout(
-    transport.send("initialize", {
-      protocolVersion: "2024-11-05",
-      capabilities: {},
-      clientInfo: { name: "thincoder", version: "1.0.0" },
-    }),
+    transport.send("initialize", buildInitParams()),
     INIT_TIMEOUT_MS,
   )
   if (initResp.error) throw new Error(`initialize error: ${initResp.error.message}`)
