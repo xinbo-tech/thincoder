@@ -1,0 +1,35 @@
+name: linux-build
+# 桌面 Linux 产物云构建（AppImage + deb）——需求 D42 / 批 docs/batches/2026-10-03-desktop-linux.md。
+# 手动触发（workflow_dispatch）：runner = ubuntu-latest；产物经 upload-artifact 拉回（不自动发布）。
+# 依赖解析：@thincoder/core = registry（^0.10.2）；@thincoder/render-core = file:../thincoder-render-core（仓内兄弟目录 ✓）。
+# 物化 = scripts/materialize-deps.mjs（源树实拷，同 Windows 链）；打包 = electron-builder linux targets。
+on:
+  workflow_dispatch:
+
+jobs:
+  desktop-linux:
+    name: desktop linux artifacts (AppImage + deb)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: thincoder-desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - name: install deps
+        run: npm install --no-audit --no-fund
+      - name: materialize core packages (source-tree copy)
+        run: node scripts/materialize-deps.mjs
+      - name: build linux artifacts
+        run: npx electron-builder --linux AppImage deb --publish never
+      - name: list dist
+        run: ls -la dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux-artifacts
+          path: |
+            thincoder-desktop/dist/*.AppImage
+            thincoder-desktop/dist/*.deb
+            thincoder-desktop/dist/latest-linux.yml
+          if-no-files-found: error
