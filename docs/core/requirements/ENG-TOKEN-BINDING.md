@@ -1,7 +1,7 @@
 # Design Token 硬化（ENG-TOKEN-BINDING）· 需求
 
 > 板块 = **design token 硬化**（流程凭证语义 / TTL 生命周期 / slot 持久化载体）。
-> 本档 = 该机制的**需求层权威**（FR1–FR7 / N1–N4——编号承旧档，不改号）。
+> 本档 = 该机制的**需求层权威**（FR1–FR8 / N1–N4——编号承旧档，不改号；FR8 = 2026-10-03 批增）。
 > 设计侧 = `docs/core/design/ENG-TOKEN-BINDING.md`（实现坐标 / 落地状态——本档不重述，D2）。
 > 关联面 = `DESIGN-TOKEN-SETTLEMENT.md`（结算机制——同层）。
 > 建档：2026-09-15（**B 式迁移轮 · VSC 批 5**——`thincoder-vscode/docs/requirements/ENG-TOKEN-BINDING.md` 内容重建入基准层；
@@ -29,6 +29,7 @@
 | **FR5** | slot 持久化不造成双源不一致 | 会话 slot = 权威持久源；内存 = 运行态；重启 / 恢复按 TTL 过滤读回（单一数据源语义） |
 | **FR6** | token 在评审通过后才签发（入槽） | token 于评审前生成并注入评审 prompt（供 advisor 回显）；advisor 仅通过时回显（echo）——回显匹配才入槽签发，以代码判定为准；非 echo → 剥离返回 findings，不占槽 |
 | **FR7** | 评审错误 / 中断不连坐作废 | 作废仅在「完整评审结束且未通过」触发（error 回包 / abort / 轮次耗尽豁免；`result===null` 守卫保留） |
+| **FR8** | 回显异常零静默 × 复制纪律（2026-10-03 批——承 #884） | ① 截断回显（本 token uuid 值在场、全串未见）⇒ 按批准结算（槽存全串）+ 截断标记；② 无回显 ⇒ **恒定**未签发标记（不得只在正文为空时出现）；③ 回显指令须言明**逐字复制**（含冒号与 uuid 后数字位；截断被标记） |
 
 ## 3. 非功能性需求
 

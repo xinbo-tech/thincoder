@@ -51,11 +51,47 @@
 ## 5. 结算语义（echo 即裁决）
 
 - **token echo 即裁决**——advisor **仅在通过时**回显 token。
-  - echo → 入槽（designId 键；**单值镜像已退役**）；非 echo → 剥离 token 文本返回 findings，**槽不动**（失败的重评不作废任何既有槽）。
+  - echo（全串 ∥ 截断形——§5.1）→ 入槽（designId 键；**单值镜像已退役**）；非 echo → 剥离 token 文本 + **恒定未签发标记**（§5.1 ②）返回 findings，**槽不动**（失败的重评不作废任何既有槽）。
   - 实现：`thincoder-core/agent-tools/design-token.mjs:82`（`settleDesignReview`）。
 - **未完成即不签发**：结算方收到「评审未完成」kind（`opts.incomplete`）⇒ 一律不签发（无论文本是否回显 token）——剥除回显 + 追加未签发提示，**不写槽、不关实例**（可重评）。
 - 错误回包 / abort / 轮次耗尽**不作废**既有槽；`result === null` 守卫保留。
 - 签发 / 校验 / 结算三函数的**宿主模块** = `thincoder-core/agent-tools/design-token.mjs`（自 `advisor-async.mjs` 提取，verbatim 零语义变）；`advisor-async.mjs` 仍 re-export（既有 import 面不变）。
+
+### 5.1 回显链判定（2026-10-03 批——截断容忍 / 恒定标记 / 剥离单源）
+
+**批** = `docs/batches/2026-10-03-design-token-echo.md`（台账 #884；缺陷 = 截断回显静默失败 + 残片未剥 + 回显指令未言明逐字面）。三条语义：
+
+**① 截断回显 = 容忍（认 pass）**：回显判定 = 全串匹配（既有 `makeDesignTokenRegex`）**∨ 截断形**（原始评审文本含**本 token 的 uuid 值**——`uuid:expiresAt` 冒号前段；36 位随机值专属本 token 值，任何出现 = 部分回显）。截断形 ⇒ **认 pass**（回显仅通过时发生——批准意图已表达）：**槽存储恒全串**（引擎侧常量，不取回显值）；追加**截断标记**（②）；`[DESIGN-TOKEN:<uuid>]` 形与裸 uuid 残片**一并剥净**（③）。
+
+**② 恒定标记（逐字——机器可 grep；不得只在正文为空时出现）**：
+
+- 非回显（全串与 uuid 均未见）——恒定追加：
+
+```text
+未回显有效 token——未签发 (no valid token echo — no design token was issued)
+```
+
+- 截断容忍（认 pass）——在 Approved 后缀**之前**追加：
+
+```text
+注：回显被截断（uuid 之后缺失或不符）——已按批准结算；全串 token 已签发 (note: truncated echo — the part after the uuid was missing or inexact; settled as approved; the full token was issued)
+```
+
+**标记位置不变式**：标记恒居 `approvedSuffix` **之前**——`stripApprovedSuffix`（`thincoder-core/agent-tools/design-token.mjs:29`）以「文本以 suffix 结尾」为精确截断判据（prior 清洗依赖此形）；任何在结算输出**尾部**追加文本的改动都不得破坏「suffix 恒居文末」。
+
+**③ 剥离单源**：`stripDesignTokenEcho`（本批新增）——全串回显 + 截断形（`makeDesignTokenPrefixRegex` 前缀形）+ 裸 uuid 三剥（uuid = token 专属随机值 ⇒ 零附带）；结算三分支的剥离统一走该单源。
+
+**④ 回显指令加固（Approval Signal 构建面——`thincoder-core/advisor/messages.mjs` 句尾，逐字）**：
+
+```text
+（:51——designId 在场形句尾）Copy BOTH values verbatim — every character, including the colon and the digits after the uuid inside the token brackets; a shortened echo is flagged as truncated.
+（:52——token-only 降级形句尾）Copy it verbatim — every character, including the colon and the digits after the uuid; a shortened echo is flagged as truncated.
+```
+
+条件句面（凭证回显条件）= `docs/core/design/ADVISOR-CONVERGENCE.md` §2.5（本档不重述）；该档面实施序 = 待配套批 `2026-10-03-advisor-convergence`（在飞）落地后。
+
+**依据**：需求 `docs/core/requirements/ENG-TOKEN-BINDING.md:30`（FR6——「回显匹配……以代码判定为准」）+ `docs/core/requirements/ADVISOR-CONVERGENCE.md:86`（N7 零静默）。
+**边界**：不改 token 格式 ∥ TTL ∥ 门禁恒等比对语义 ∥ 「非回显 ≠ 通过」本体。
 
 ## 6. 机制面（B 式迁移并入——现状路径）
 
@@ -68,6 +104,7 @@
 | 格式 + 过期单一权威 | `thincoder-core/token-ttl.mjs:42` · `:55` | 在位 |
 | fail-closed 校验 | `thincoder-core/agent-tools/design-token.mjs:53` | 在位 |
 | 结算（echo 即裁决） | `thincoder-core/agent-tools/design-token.mjs:82` | 在位 |
+| 回显链判定面（截断容忍 ∥ 恒定标记 ∥ 剥离单源——本批新增，§5.1） | `thincoder-core/agent-tools/design-token.mjs`（`stripDesignTokenEcho` · `makeDesignTokenPrefixRegex`——结算三分支消费） | 本批（2026-10-03） |
 | 开模式清过期（工具面） | `thincoder-core/agent-tools/eng.mjs:74` | 在位 |
 | 开模式清过期（TUI 面） | `thincoder-cli/src/tui/cmd-eng.mjs:49` | 在位 |
 | 恢复过滤 | `thincoder-core/session.mjs:304`–`:305` | 在位 |
@@ -110,6 +147,8 @@ R16 语义（跨模式存活 + 三清时机 + 单一权威）**已全部落地**
 | D-E5 | 过期判定**只对格式合法 token**生效；门禁拒时**仅过期拒才删槽** | 畸形串无从判定——删了会误删有效槽；否决「一律删」 |
 | D-E6 | 清过期只在**三个时机**（恢复 / 开模式 / 门禁过期拒） | 长跑不重启也要清；否决「只在恢复时清」 |
 | D-E7 | 结算三函数**拆出独立模块**（design-token.mjs）+ re-export 保 import 面 | 宿主模块超 500 行硬限；否决「挤在原文件」（越线） |
+| D-E8 | **截断回显 = 容忍**（uuid 形 ⇒ 认 pass + 截断标记；槽存全串） | 截断 = 机械噪音（回显仅通过时发生；uuid = token 专属随机值、零附带；凭证 = 流程门非安全边界）；否决：不容忍重审（批准意图明确仍费整轮）；否决：更宽前缀容错（短 uuid 段假阳面） |
+| D-E9 | 非回显结算**恒定标记**（逐字——含正文为空形） | N7 零静默（需求 `docs/core/requirements/ADVISOR-CONVERGENCE.md:86`）；否决：仅空文本 fallback（静默洞本体——批前形） |
 
 ## 8. 不并项与历史沿革
 
@@ -165,6 +204,8 @@ token 门与冻结窗口判据复用 v1 现有导出（`anyLiveDesignSlot` / `in
 **边界（本增量不做）**：不做 token 签发（M6）；不做评审判据（advisor）；不重写 v1 门禁本体（继承 + 声明面微调）；不做语义写权判断（「谁写需求谁写设计」不可机判——落提示词层 + 互锁兜底）。
 
 ## 变更记录
+
+- 2026-10-03（**design-token 回显链缺陷修批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-design-token-echo.md` §1 · 台账 #884）：§5 扩展 + 新增 §5.1「回显链判定」（截断回显容忍——uuid 形认 pass、槽存全串；恒定标记二则逐字〔未签发 ∥ 截断〕；剥离单源 `stripDesignTokenEcho` + `makeDesignTokenPrefixRegex`；标记位置不变式〔suffix 恒居文末〕；回显指令加固句逐字）；§6.1 表增一行；§7 增 D-E8 / D-E9。**边界**：token 格式 ∥ TTL ∥ 门禁恒等比对语义 ∥ 「非回显 ≠ 通过」本体零改。
 
 - 2026-10-02（**会话锚解析修复批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-manifest-resolution-fix.md` §1 · 台账 #828 · 轮七回执③）：§9 F3 文面加同单点新导出 `resolveReviewRootsFor`（按用点解析增量——`write-gate.mjs:59` ∥ 消费腿 `thincoder-core/agent-tools/advisor.mjs:125` → `:129`）。**判据语义零改**（登记面 / 文面对账）。
 
