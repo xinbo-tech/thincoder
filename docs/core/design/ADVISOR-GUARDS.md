@@ -121,7 +121,7 @@ Nothing was sent: no review instance, no round consumed, no design token minted,
 
 **失败原因四类（报告可判）**：无任何候选文件存在 ⇒ `file unreadable`；存在但内容不符 ⇒ `content mismatch @ {解析到的相对路径}`；越围栏 ⇒ `path traversal`（不变）；
 **非连续引文**（引文内容含省略号 `…` / `...`——缩略形，非所引行的连续子串）⇒ `not a contiguous citation (ellipsis) @ {相对路径} — quote one contiguous excerpt`——**形状不符与内容造假分列**
-（承 2026-10-03 用户裁定「省略号禁用于承担判断面」）。
+（承 2026-10-03 用户裁定「省略号禁用于承担判断面」）。**判定优先级：含省略号且不连续 ⇒ 非连续引文类——先于 `content mismatch` 判定**（两表描同时成立时以此为准；判据同 A-AG16 ∥ F34 判定句①）。
 报告头行 `[host-verified] N/M citations match current file state.` 与命中判据（所引行**连续子串** `includes`）零改；判定面 = 仅失败分类，零新增匹配路径、零模糊匹配。
 
 **引证形状写作禁则（评审提示词面——逐字建议，内容权在主 agent）**：四面（round1 / round2 / round3 / design，各 EN ⊗ CN）Host verification / Citation 段追加：
@@ -403,6 +403,8 @@ export function advisorContextBudget(provider) {
 | 对端差异登记（本端零改项） | 三条对位登记（异步结算面 / 冻结窗口盲区 / 池中止） | 登记项；判决（本端语义自洽）已并入 §11 |
 
 ## 变更记录
+
+- 2026-10-03（**复评（轮次 2）发现 4 处置 · 父侧直接执行 · 可 revert**——承 `docs/batches/2026-10-03-advisor-convergence.md` §3 轮次 2）：§3 失败分类处补**判定优先级**句（含省略号且不连续 ⇒ 非连续引文类，先于 `content mismatch`——与 A-AG16 ∥ F34 判定句① 同口径）。**零语义改**（表述补全）。
 
 - 2026-10-03（**轻量收正 · 父侧直接执行 · 可 revert**——承设计修复轮 #19 §3 另记）：§3 归宿面「评审收尾（预算用尽）时」 ⇒ 「评审收尾时」——射程与 `design/ADVISOR-CONVERGENCE.md` 收尾句（不限预算用尽）同口径（同轮发现 #7 同形残面）。**零语义改**（归宿面义务本体零动；只删射程括注）。
 

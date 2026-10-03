@@ -168,6 +168,28 @@
 
 VERDICT: pass
 
+### 轮次 2（评审子代理）
+
+复评（修复轮 #19 工程侧 9 项 + 父侧 2 项后 · 设计终态重评）——范围：`design/ADVISOR-CONVERGENCE.md`（§2.5 窗契约 + 修复轮收正）∥ `design/ADVISOR-GUARDS.md`（§3 四类 + 禁则 + 归宿面 + 修复轮收正）∥ `requirements/ADVISOR-CONVERGENCE.md`（§2.4 F32–F35）。
+
+修复轮收正逐项复核（三档现文在位，未发现回归）：§2.5 判据随动句统一（ADVISOR-CONVERGENCE.md:71）· Approval Signal 尾行 🔴 射程（:141）· `Dispatched` 表内归宿（:70）· 非「不修」形态残余（:73）· A-AC12 打回轮次收实（轮 2）+ `Accepted` 词表（:406）· 收尾句 CN 射程对齐（:131-134）· §2.1「Round 3+」行标（:37）· must-fix 🟡 轨射程注（:127）· §5 失败分类四类（:284）· GUARDS §3 四类 + 沿革移入变更记录（ADVISOR-GUARDS.md:122-124 / :410）· 需求档 §4 边界行 + F34/F35（requirements/ADVISOR-CONVERGENCE.md:97 / :61-62）。
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | Document ownership | 🟡 | requirements §2.4 归属边界句「本节只承载**争议的裁决窗与收口语义**」（requirements/ADVISOR-CONVERGENCE.md:55）窄于本节现含内容：F34 引证形状面（:61）不属「裁决窗 / 收口语义」射程；且同档 §4（:97）已按「§2.4 明定的…引证写作禁则」立规——边界句未随 F34/F35 追加同步。 | 二选一保持单源：扩写归属边界句（覆盖引证形状面 + 归宿面），或将 F34 移入 §2.3（引文解析邻域）并同步 §4 指针。 |
+| 2 | Consistency | 🟡 | 档头句「评审核查维度行为 = 本档 §8」（design/ADVISOR-CONVERGENCE.md:17）与 §9 自述「核查维度行为语义 = 本节」（:363）不一致：§8 = 需求契合度检查（:350），行数标注核查维度 = §9（:361）——疑为 off-by-one 指针。 | 将 :17 指针改指 §9；若「评审核查维度」另有实际所指，按所指澄清。 |
+| 3 | Consistency | 🔵 | 需求档 F35 括注「评审收尾（预算用尽）时」（requirements/ADVISOR-CONVERGENCE.md:62）窄于设计侧射程：收尾句（design/ADVISOR-CONVERGENCE.md:131-133）与 GUARDS §3 归宿面（design/ADVISOR-GUARDS.md:141）均为不限预算用尽（GUARDS 变更记录 :407 明记该括注已收正）。 | 删除括注「（预算用尽）」（或改注为示例）——与设计侧收尾句同射程。 |
+| 4 | Clarity | 🔵 | GUARDS §3 四类失败分类（design/ADVISOR-GUARDS.md:122-124）未明写「含省略号且不连续」引文同时满足 `content mismatch`（存在但内容不符）与 `not a contiguous citation` 两描述时的判定优先级；§3 为自述的逐字分类锚（A-AG5 :368），定论另在 A-AG16（:379「不再报 content mismatch」）与 F34 判定句①（requirements/ADVISOR-CONVERGENCE.md:61）。 | 在 §3 失败分类处补一句优先级（含省略号 ⇒ 专类、先于 mismatch 判定），或标注判据以 A-AG16 为准。 |
+| 5 | Doc hygiene | 🔵 | 需求档 F16 边界「不改 cap 语义」（requirements/ADVISOR-CONVERGENCE.md:50）所指存疑：轮次 cap（F2/F3）已于 2026-09-18 撤项（同档 :239；设计档 design/ADVISOR-CONVERGENCE.md:158-168）——若指已撤轮次上限则为死句；若指 guard 推回上限（design/ADVISOR-CONVERGENCE.md:167 `MAX_ADVISOR_PUSHBACKS`）则缺限定词。 | 核对所指后收正：死句删除，或加限定词（如「不改 guard 推回上限语义」）。 |
+
+out-of-scope note：本批「受影响文件表 / 用例表 / 上抛」按三档自述落批次档（docs/batches/2026-10-03-advisor-convergence.md）——不在本次范围，行数标注抽查未执行（unverified）。
+
+计数：🔴 0 · 🟡 2 · 🔵 3
+VERDICT: pass
+
 ## §4 用户批准（主 agent）
+
+**父侧代签（用户 2026-10-03 23:14「都自动跑完」授权）**——三条件齐备：① **设计评审 pass** ✓（#16 · 🔴 0 ∥ 🟡 3 ∥ 🔵 7——全数采纳）；② **修复轮已落地并逐条核验** ✓（修复轮 #19 九号全落 + 父侧号 2 收正 + 另记 `:141` 就地拉平——实读复核：判据射程注／`Dispatched` 归宿／残余出口／尾行射程／轨射程注／四类计数全在位；doc-check 复跑 exit 0）；③ **token 已签发** ✓（凭据值不落档——沿纪律）。⇒ **实施轮派发**：eng-coder ×2 并飞（A = 代码面 4 档〔`citations.mjs` ∥ `messages.mjs` ∥ `convergence.mjs` + 批内件〕∥ B = 提示词面 12 档〔六档 EN 运行期 × 六档 CN 模板——落点 = §2 表 4–15〕）。
+
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）

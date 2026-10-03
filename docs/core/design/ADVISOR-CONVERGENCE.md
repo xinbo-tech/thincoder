@@ -14,7 +14,7 @@
 > `thincoder-core/advisor/citations.mjs`（host-verified citations）· `thincoder-core/advisor/history.mjs`（响应表 / 对话背景提取）·
 > `thincoder-core/advisor/repos.mjs`（评审范围采集）· `thincoder-core/agent-tools/advisor.mjs` / `advisor-async.mjs`（工具面与异步池）·
 > `thincoder-core/agent-tools/advisor-settle.mjs`（结算 / 陈旧判定）· `thincoder-core/agent/record-results.mjs`（工具结果记账）· `thincoder-core/agent/completion.mjs`（完成 guard 推回）。
-> 档位判据（>300 主动拆 / >500 硬顶）= 纪律层代码结构判据节；行数标注义务（限源 / 测试档）——文档规范节不再承载行数义务；评审核查维度行为 = 本档 §8。
+> 档位判据（>300 主动拆 / >500 硬顶）= 纪律层代码结构判据节；行数标注义务（限源 / 测试档）——文档规范节不再承载行数义务；评审核查维度行为 = 本档 §9。
 
 ## 1. 目标
 
@@ -422,6 +422,8 @@ advisor design review 标准维度补一条：
 | 状态行与落笔流水 | 「实现未启动 / 待 coder / 已落」类状态句 | 运行时状态 |
 
 ## 变更记录
+
+- 2026-10-03（**复评（轮次 2）发现 2 处置 · 父侧直接执行 · 可 revert**——承 `docs/batches/2026-10-03-advisor-convergence.md` §3 轮次 2）：档头句「评审核查维度行为 = 本档 §8」 ⇒ **§9**（行数标注核查维度所在节；原为 off-by-one 指针）。**零语义改**（指针形态）。
 
 - 2026-10-03（**advisor 收敛修批 · 设计评审轮 1 收正 · eng-designer**——承 `docs/batches/2026-10-03-advisor-convergence.md` §3 轮次 1：#3 / #4 / #5 / #6 / #7 / #9 / #10）：
   §2.5 判据随动句统一（「修复未引入新 🔴」两轮裁决句同含——轮 3+ 惰性）· Approval Signal 尾行补 🔴 射程 · §2.5 增「`Dispatched` 表内归宿」与「非「不修」形态残余」· §12 A-AC12 打回轮次收实（轮 2）+ `Accepted` 词表行可核面 · 收尾句 CN 射程对齐 EN · §2.1 轮次表行标收正「Round 3+」· §2.5 裁决块增 must-fix 🟡 轨射程注 · §5 失败分类计数收正（三分 ⇒ 四类）。
