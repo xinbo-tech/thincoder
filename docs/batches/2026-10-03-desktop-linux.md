@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-03 · 来源 = 用户 2026-10-03 17:27「能把linux版桌面端也做了吗？」+ 17:35「WSL2」（构建通道裁定）；承 D32/D40/D41 阶段二片——Linux 产物线开工。
 > 台账 = #847（desktop · 归批）。前情 = docs/batches/2026-10-03-release-0-10-2.md §6（已收口 2026-10-03）。
 ## §1 讨论（主 agent）
-**状态行**：进行中（候评审——§2 已落（2026-10-03）∥ §1 补记一二在册 ∥ 需求卷 D42 两处已收正）
+**状态行**：已收口 2026-10-03
 
 **§1 讨论（主 agent）——Linux 桌面产物线（承 D32 阶段二片 · D42 落档）**
 
@@ -19,7 +19,7 @@
 **§1 补记二（同日 20:1x–20:26 · 构建机首跑 = 出产物）**：B 路线（内网构建机 `10.0.0.5` 代号 ha-proxy）**首跑全链实通**——配方 = gitee 浅克隆 → npmmirror registry + `ELECTRON_MIRROR` + `ELECTRON_BUILDER_BINARIES_MIRROR` → `npm install`（301 包）→ `materialize-deps` → `electron-builder --linux AppImage deb --publish never`。**实产**：`ThinCoder-Setup-0.10.2.AppImage`（127,048,532 B · sha256 2543559b…c616）∥ `ThinCoder-Setup-0.10.2.deb`（100,650,684 B · sha256 77710267…049d）∥ `latest-linux.yml`（350 B）；产物已拉回父侧 `D:\WSL\artifacts\`。**首跑挖出三处仓内缺项（入设计定形）**：① 图标——electron-builder 拒收 `.ico` ⇒ 须入库 `build/icon.png`（256×256，可从 icon.ico 内嵌帧直取）；② deb 元数据——fpm 要 `homepage` + `author.email`（补后即通）；③ feed 语义错位——latest-linux.yml 现指向 deb，与「AppImage 跟自动更新 ∥ deb 手动」相抵。设计轮 = eng-designer（本批 §2 + `docs/desktop/design/PACKAGING.md` Linux 段 + `RELEASE.md` §5 随动），已起跑。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（落点 = docs/desktop/design/PACKAGING.md §1 KD-73 ∥ §2.11 ∥ §3.4 ∥ §4.4 ∥ §5 T-DSK61–63 ∥ §6 D42 行；docs/RELEASE.md §5.6 Linux 臂 L1–L5；2026-10-03；机检红线修复轮（24 悬空 → 0 ∥ 6 超宽 → 0）∥ 评审修复轮（10 号全落——复跑 exit 0））
+**状态行**：设计完成（落点 = docs/desktop/design/PACKAGING.md §1 KD-73 ∥ §2.11 ∥ §3.4 ∥ §4.4 ∥ §5 T-DSK61–63 ∥ §6 D42 行；docs/RELEASE.md §5.6 Linux 臂 L1–L5；2026-10-03；机检红线修复轮（24 悬空 → 0 ∥ 6 超宽 → 0）∥ 评审修复轮（10 号全落——复跑 exit 0）∥ 实施窗回填轮（§3.4 ∥ §3.1 实测回填 ∥ 拟新增⇒已落 ∥ 父侧两笔读数——复跑 exit 0））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 **§2 批次任务与设计（eng-designer）——桌面 Linux 产物（D42 · 台账 #847）· 设计轮（initial）**
@@ -93,6 +93,17 @@
 
 - 附：机检行数面差异 **2 ⇒ 1**——① §3.1 CHANGELOG 声明收正（19 ⇒ 27）顺带解消前批在册的 PACKAGING 侧一条；余 1 = `docs/desktop/design/E2E-TESTING.md:249`（`.gitignore` 表 8 ⇒ 实读 9）——前批在册报告态项，非本面（零触）。
 
+**实施窗回填轮（设计档回填到实施实测——本档 §2 ④⑤ 随正）· 2026-10-03 · eng-designer**
+
+来源 = 实施舱交付（本档 §5 终态读数）+ 父侧两笔（工程工具面——直接执行）。处置 = 纯回填 ∥ 读数（零语义改——契约 ∥ 判断句 ∥ 机制描述零动；需求卷 ∥ 站点仓 ∥ 实现代码零触）：
+
+- **① 设计档 §3.4 翻「实施落盘」形态**（标题 ∥ 说明 ∥ 表头 ∥ 实测值回填）：`electron-builder.yml` **46 ⇒ 63** ∥ `package.json` **26 ⇒ 29** ∥ `build/icon.png` **新档 2872 B**（sha256 `08fe76b9…b57d`——父侧逐字节独立复算在案）∥ `check-dist.mjs` **225 ⇒ 339**（父侧面件（直接执行）——实跑：win32 对真实 dist 全绿 ∥ linux 臂空夹具逐条 fail-closed）∥ `update.mjs` **217 ⇒ 227** ∥ `main.mjs` **263 ⇒ 265** ∥ `AGENTS.md` **25 ⇒ 27** ∥ `CHANGELOG.md` **27 ⇒ 33**（父侧面件（直接执行））∥ 批内件 `docs/batches/2026-10-03-desktop-linux.test.mjs` **新档实读 172 行**（预估 ~380——差额披露 = §5 决策表 #5：五腿全在 ∥ 无 harness 需求）。
+- **② 设计档 §3.1 读齐平 + §2.11.3 行数注收正**：yml **63** ∥ check-dist **339** ∥ package.json **29** ∥ CHANGELOG **33** ∥ update.mjs **227**（§3.1 各留前读链）；§2.11.3「行数：225 ⇒ ~300」⇒「225 ⇒ 339」——机检行数面「回填工单」PACKAGING 侧 5 条 → 0。
+- **③「拟新增」⇒「已落」（设计档）**：`update.mjs` 两处随正（KD-71 ① ∥ §2.8.1 题面）；站点仓两项（`upload-download.mjs` ∥ `desktop.html`）维持「拟新增」（未落——执行 = 父侧轮）。
+- **④ 原 ④ ∥ ⑤ 收正（本块为准——前正文行 append-only 不改）**：(a) **受影响表**（原 ④）= ① 所列各档实测（批内件 = **172** 行）；(b) **验收对照**（原 ⑤）= 机检：check-dist Linux 臂（+9——已落实读 **339** 行）∥ 构建机命令读数（`dpkg-deb -f` 两字段 ∥ AppImage 提取**四读数**——单源 = 设计档 §2.11.3）∥ 批内件（已落 **172** 行 · 5/5 绿）；人工 = **T-DSK62**（用户真机）；发布窗 = **T-DSK63**（AppImage 更新链）。
+- **⑤ 披露 ∥ 上抛（父侧笔面）**：(a) `check-dist.mjs` 读数——机检/KD-4 口径实读 **339**（设计档 §3.1 ∥ §3.4 已按 339 落）；实施舱 §5 决策表 #6 载 **340**（差 1）——§5 侧如需对齐 = 父侧/实施舱笔面。(b) 机检行数面余 2 条：`docs/desktop/design/SHELL.md:177`（main.mjs 表 263 ⇒ 实读 265——本批 +2 随动；**非本轮写域**——报告在案）∥ `docs/desktop/design/E2E-TESTING.md:249`（.gitignore 表 8 ⇒ 实读 9——前批在册报告态项）。
+- **⑥ 复跑读数**（仓根 `node scripts/doc-check.mjs`）：候选 45916 · 悬空 **0** ∥ 注记豁免 319 · 拟新增 46 · 迁移期引文 297 ∥ OK(锚) 0 悬空 ∥ OK(行宽) 0 超宽 ∥ exit **0**；行数面 = 报告态差异 **2** 条（= ⑤(b)；PACKAGING 侧 5 条清零）。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -117,5 +128,97 @@
 **VERDICT: pass**（🔴 0 ∥ 🟡 5 ∥ 🔵 5）
 
 ## §4 用户批准（主 agent）
+
+**2026-10-03 21:22 · 用户「都批」**——桌面 Linux 产物批（D42 · 台账 #847）获准进入实施（与崩溃族守卫批同批批准）。
+
+- **依据（三条件齐备）**：① 设计评审通过（0🔴 ∥ 5🟡 ∥ 5🔵——发现表 = §3 轮次 1）；② 修复轮 10/10 落地并父侧逐条核验（`docs/desktop/design/PACKAGING.md` 十处 + 本档 §2；doc-check 复跑 exit 0）；③ 设计令牌已签发（**值不入档**）。
+- **批准范围** = §2 全量（`build/icon.png` 入库 ∥ `package.json` 三键 ∥ `electron-builder.yml` 三改 ∥ `check-dist` Linux 臂 ∥ `update.mjs` 武装门扩 ∥ 批内件）；**构建机首链复跑 ∥ 取回落位 ∥ 站点三页** = 随发布窗（站点执行 = 父侧轮）。
+- **批准态**：已批准（2026-10-03）
+
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成 2026-10-03
+
+
+**§5 实施记录（eng-coder）——桌面 Linux 产物（D42 · 台账 #847）· 实施轮（initial）**
+
+**交付摘要（改动表——file:line 级）**：
+
+- `thincoder-desktop/build/icon.png`——**新档** 2872 B（`icon.ico` 第 4 帧字节切片：offset 1279 ∥ sha256 `08fe76b9466cf60a440c4215e98bb2f9adf5d6f87e6eaffd9616affe8408b57d`；二进制件经 node 逐字节落盘——write 工具为文本面，UTF-8 编码会破坏字节）。
+- `thincoder-desktop/electron-builder.yml`——46 ⇒ **63** 行：L1 头注收正（Windows ∥ Linux 双面表述）；L45–56 linux 段（`target` = AppImage → deb 各 x64 ∥ `icon` = `build/icon.png` ∥ `category` = `Development` ∥ `syncDesktopName` = `true`）；L58–60 deb 段（`publish: null`——feed 分流键）；win 面 ∥ 总闸 `publish`（generic）∥ `artifactName` ∥ nsis 四参零动。
+- `thincoder-desktop/package.json`——26 ⇒ **29** 行：L6–8 三键（`homepage` = `https://thincoder.com` ∥ `author` = `liwei <liwei@thincoder.com> (上海新舶)` ∥ `desktopName` = `thincoder.desktop`——用户定值逐字）。
+- `thincoder-desktop/src/main/update.mjs`——217 ⇒ **227** 行：L41–43 `updaterMediumOk` 纯谓词导出（`platform !== "linux" || appImageEnv != null`）；头注随正（L10 门句 + L12 Linux 介质合项——§2.11.4）。
+- `thincoder-desktop/src/main/main.mjs`——263 ⇒ **265** 行：L38 导入 +1；L227 装配注入三合项（`app.isPackaged && !SMOKE && updaterMediumOk({ platform: process.platform, appImageEnv: process.env.APPIMAGE })`）；L9 ∥ L223 注释随正。
+- `thincoder-desktop/AGENTS.md`——25 ⇒ **27** 行：Commands 行（package）= per-host 平台构建（Windows NSIS ∥ Linux AppImage + deb · D42 · 构建机 · §2.11）+ 闸「win32 / linux branches」；macOS = later。
+- `docs/batches/2026-10-03-desktop-linux.test.mjs`——**新档** 166 行 · 5 用例——五腿（图标帧 ∥ yml linux/deb 契约 ∥ package.json 三键 ∥ 门真值表 ∥ check-dist 分臂源扫）。
+
+**机检读数**（仓根）：
+
+- `node --test docs/batches/2026-10-03-desktop-linux.test.mjs` = **exit 0 ∥ 5 用例 5 绿**（显式 exit 码复跑 = 0）；
+- 定向回归 = 前一版批内件（`docs/batches/2026-10-02-desktop-release-stage2.test.mjs`，update.mjs 重装配面）**11/11 绿**——本批 update.mjs/main.mjs 改动零损伤；
+- icon.png sha256 = `08fe76b9466cf60a440c4215e98bb2f9adf5d6f87e6eaffd9616affe8408b57d`（与 ICO 帧 4 逐字节相等——复算在案）；
+- check-dist 源扫（腿⑤）读数：`runLinuxChecks` ∥ §2.11.3①–⑨ 九注 ∥ `process.platform` 分臂 ∥ 余平台非零出口「无断言臂」∥ win 臂零动——逐条在册（断言对象 = 父侧已落现档 340 行）；
+- 行数面读数：yml **63**（§3.4 预期 ~62）∥ package.json **29**（~29）∥ update.mjs **227**（~228）∥ main.mjs **265**（~267）∥ AGENTS.md **27**（~27）∥ 批内件 **166**（预估 ~380——见决策表 #5）。
+
+**决策透明表**：
+
+| # | 决策 ∥ 披露 | 依据 ∥ 理由 |
+|---|---|---|
+| 1 | `build/icon.png` 经 node 字节切片落盘（非 write 工具） | 二进制件（PNG 任意字节）——write 工具为文本面会破坏字节；切片 = 零转换（与 `icon.ico` 帧 4 逐字节相等，复算在案） |
+| 2 | yml 头注 L1 收正（「阶段一 = Windows NSIS」⇒ 双面表述） | 文件已含 Linux 段 ⇒ 旧头注成 stale（注释-代码一致性；属该档「+注释」面内，超行表逐字清单半步——披露） |
+| 3 | main.mjs L9 头注门句随正 | 与 L223 ∥ L227 新门自洽（审计点③查询后自修） |
+| 4 | `scripts/check-dist.mjs` ∥ `CHANGELOG.md` 零触 | 父侧工程工具面（已落 340 行）∥ 父侧维护面——非本侧写域 |
+| 5 | 批内件实读 166 行（设计预估 ~380——§3.4 行 9） | 五腿全在 ∥ 断言 ~70 条（含定值断言）∥ 无 harness/替身需求（先例档含重装配面）；差额 = 文件账预估面——读数归 §6 收口/回填轮 |
+| 6 | 行数面：check-dist 340（~300 越顾问线） | 设计已预授权「保留单档」（§2.11.3——距 500 硬限余量充足）；父侧面件（直接执行） |
+
+**审计与代码评审轮次与终态**：
+
+- **差异审计（explore · 只读）轮 1 · 2026-10-03**：四类偏差（缺口 ∥ 静默简化 ∥ 文档漂移 ∥ 表外改动）= **零**；批内件五腿假绿核查 = 无（逐腿核）。分级发现：**F1**（blocking · 记录面——§5 在盘为空）⇒ 本块补写即闭；**F2**（advisory——批内件 166 行 vs 预估 ~380，文件账面）；**F3**（advisory——check-dist 340 vs ~300，父侧面、预授权）；**F4**（advisory——腿② win 零回归覆盖边界提示）⇒ fix 轮 1 补断言即闭；**F5**（审计限制——其装配无执行面，未复跑复算；替代 = 本侧显式复跑读数在案，收口复跑 = 父侧）。
+- **fix 轮 1 · 2026-10-03**：① §5 补写（F1 闭）；② 腿② 增 7 条结构/签名面零回归断言（`asar` ∥ `directories` ∥ `files` ∥ `signtoolOptions.sign` ∥ `signingHashAlgorithms` ∥ `appId` ∥ `productName`——F4 闭）；复跑批内件 = **5/5 绿（exit 0）**。
+- （评审（advisor code）轮 1——结果随附后块。）
+
+**§5 实施记录（eng-coder）——后续块 · 评审轮次 ∥ fix 轮 2 ∥ 终态 · 2026-10-03**
+
+**评审（advisor code）轮 1**（对象 = 7 档改动面 + 验收档）：**VERDICT = pass**（🔴 0 ∥ 🟡 1 ∥ 🔵 5）。响应处置：
+
+- 🟡 #1（构建机复跑随发布窗 ∥ `build/icon.png` 入库态文件面不可核）＝ 接受（父侧轮——批准范围已含；报告上抛）；
+- 🔵 #2（批内件行数 vs 设计预估 ~380——数字漂移）＝ 接受（父侧回填轮收正 §3.4）；
+- 🔵 #3（js-yaml 传递依赖解析脆弱）＝ **fix 轮 2 修**；
+- 🔵 #4（腿⑤源扫无运行时面）＝ 接受（设计定裁 = 源扫；行为面归构建机读数）；
+- 🔵 #5（空串 APPIMAGE 判武装 ∥ 设计逐字钉定）＝ 接受不改（实施面私改违单源；收口 = 下一轮设计面小改可选）；
+- 🔵 #6（未武装日志措辞漏新判由）＝ **fix 轮 2 修**。
+
+**fix 轮 2 · 2026-10-03**：
+
+- `thincoder-desktop/src/main/update.mjs`（:153 ∥ :180 ∥ :209）：未武装三处日志 `(dev / --smoke)` ⇒ `(dev / --smoke / non-AppImage Linux)`（保留 `not armed` 子串——批内件腿④断言不破；纯字符串面，行数仍 227）；
+- `docs/batches/2026-10-03-desktop-linux.test.mjs`（:28-35）：js-yaml 解析加 try/catch——裸 `MODULE_NOT_FOUND` ⇒ 点名可读失败（**166 ⇒ 172 行**）；
+- 复跑读数：本批内件 **5/5 绿（exit 0）** ∥ stage2 批内件 **11/11 绿**（旧措辞零断言冲突——确认在案）。
+
+**评审（advisor code）轮 2（fix-claim 核验——范围收窄）· 2026-10-03**：**VERDICT = pass**——#6 Fixed ∥ #3 Fixed（最低档满足；残余 = 传递依赖解析未换 ①/②，维持 🔵 非阻塞）∥ #1/#2 维持（非阻塞：协调项 ∥ 回填账）∥ #4/#5 维持（设计定裁面，非缺陷）；新引入问题 = 0。范围外备注（无严重度）：`docs/batches/2026-10-02-desktop-release-stage2.md:192` 逐字引旧措辞（记录层 as-of 读数——父侧可裁）。
+
+**终态：clean（收敛）**——差异审计轮 1（四类偏差零）+ 评审轮 1（pass）+ fix 轮 1/2 + 评审轮 2（pass）。终态读数：批内件 **172 行 ∥ 5 用例** ∥ update.mjs **227** ∥ main.mjs **265** ∥ yml **63** ∥ package.json **29** ∥ AGENTS.md **27** ∥ icon.png **2872 B**（sha256 `08fe76b9466cf60a440c4215e98bb2f9adf5d6f87e6eaffd9616affe8408b57d`）。
+
 ## §6 验证与收口（父代理）
+
+**批次**：desktop-linux（D42 · 台账 #847 · 2026-10-03）——§1 起全链（讨论 → 设计 → 评审 → 修复 → 批准 → 实施 → 回填 → 收口）。
+
+**验证读数（父侧亲跑——不采信自报）**
+- 批内件 `node --test docs/batches/2026-10-03-desktop-linux.test.mjs` = **EXIT 0**（5 用例 5 绿）。
+- 定向回归 `docs/batches/2026-10-02-desktop-release-stage2.test.mjs` = **EXIT 0**（11/11）。
+- `thincoder-desktop/build/icon.png` = sha256 `08fe76b9…b57d`；**对 `build/icon.ico` 第 4 帧（offset 1279 · size 2872 · PNG 签名）逐字节独立复算 = BYTE-EQUAL**。
+- 桌面套件 `npm test` = EXIT 0（空清单制度）。
+- `thincoder-desktop/scripts/check-dist.mjs`（父侧直接执行件）：win32 臂**对真实 dist 全绿**（5 断言 + B/F 逐字 + 更新面 4 + 签名读数）∥ linux 臂对空夹具逐条 fail-closed；**339 行**（KD-4 内容行数口径）。
+- 抽查：`electron-builder.yml`（linux ∥ deb 段逐值；win 段零动）∥ `package.json` 三键逐字 ∥ `update.mjs:41-42` 谓词 ∥ `main.mjs:227` 装配注入三合项。
+- doc-check 复跑 = **EXIT 0**（悬空 0 ∥ 行宽 0；行数面差异 **2 ⇒ 1**——`SHELL.md:177` 父侧小笔已修；余 1 = `E2E-TESTING.md:249`〔前批在册 #836〕）。
+
+**验收对照（条目 → 读数）**：R1 ✅（`icon.png` 入库 + `linux.icon` 显式）∥ R2 ✅（三键 = 用户定值逐字）∥ R3 ✅（`deb.publish: null` + linux 段）∥ R4 ✅（`updaterMediumOk` 导出 + 装配注入）∥ R5 ✅（`AGENTS.md` Commands 行）∥ R6 ✅（批内件五腿）∥ AC①–⑤ ✅（批内件 5/5 ∥ sha256 ∥ 契约逐值 ∥ 门真值表 ∥ 行数读数）。
+
+**结算**
+- 台账：**#847** ⇒ 在途 → 待核销 → **已核销**（依据 = 本档 §6 ∥ 提交 `e008844`（check-dist 父侧笔）∥ `28be794d`（CHANGELOG 父侧笔）∥ `ffe107c9`（源面实施））。
+- **发布窗三项（父侧轮 · 登记）**：T-DSK61 构建机修后首链复跑 + 读数 ∥ 产物取回 `D:\WSL\artifacts\<版本>\` ∥ 站点三页 + feed 上传（§2.11.5）。**T-DSK62 = 用户面**（Linux 真机走查）；**T-DSK63 = 发布窗**（AppImage 更新链）。
+- 父侧直接执行披露（可 revert）：`check-dist.mjs`（工程工具面）∥ `CHANGELOG.md`（父侧维护面）∥ `SHELL.md:177` 计数小笔。
+- check-dist 行数口径 = **339**（KD-4 内容行数）——§5 载「340」= 实施舱原文换行计数；以 339 为准。
+- 前批遗留复核：`E2E-TESTING.md:249`（#836 在册——非本批）；暂缓批复核：无。
+
+**对外口径**：仓内件全落（图标 ∥ 元数据 ∥ feed 分流 ∥ 校验臂 ∥ 武装门）；**真产物验证 = 构建机修后首链（发布窗）**——首链绿前，本批不作「Linux 产物可用」的对外宣称。
+
+**提交**：`e008844` ∥ `28be794d` ∥ `ffe107c9` ∥ 本收口轮记录提交（随后）。
