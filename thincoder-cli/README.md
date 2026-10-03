@@ -231,6 +231,13 @@ Code conventions: pure `.mjs`, no semicolons, no third-party npm dependencies al
 
 ## Changelog
 
+### 0.12.68 (2026-10)
+- **Idle wake** — suspended sessions wake to timers: they resume on schedule (visibility surface + abort accommodation).
+- **Ledger health signals** — an unhealthy ledger database now shows a warning line in the TUI (empty values render as `—`).
+- **Interaction batch (parity B1–B10)** — scroll exits, suspend queue, status line, render performance, i18n, settings, copy, stall indicator, send-while-busy queue.
+- **Core `^0.10.1`** — public-repo reading (declared sources), session-anchor resolution for multi-repo workspaces, the multi-repo operation mechanism, and discipline-surface fixes ride in with the core.
+- **Fixes** — tech-debt rounds 6/8 (slash passthrough, modal gate, sticky-bit re-arm, cascade clear, aborted reason, advisor slot guard, ledger writer); batch CRLF tolerance and paste lifecycle; ledger read/write guards.
+
 ### 0.12.67 (2026-09)
 - **Visible busy queue (multi-slot)** — queue up to 8 messages while a turn runs: a "to send" block shows each queued message in the stream, the status bar has four states, and batches are picked up at step boundaries (without interrupting in-flight tools) and merged into one message per turn (`/cmd` entries keep their order). New ledger commands: `thincoder ledger migrate --dry-run|--confirm` and `thincoder ledger audit`.
 - **Effort menus fixed** — the consult effort picker no longer shows a duplicated `none`; advisor effort "off" normalizes to `think_off` with an accurate receipt.
