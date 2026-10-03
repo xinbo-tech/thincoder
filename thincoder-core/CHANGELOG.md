@@ -3,6 +3,42 @@
 All notable changes to the core package are documented here.
 Format: Keep a Changelog · 中文 · 号在发布时定（CalVer——见 `docs/RELEASE.md` §4）。
 
+## [0.10.1] — 2026-10-03
+
+> 0.9.5 → 0.10.1（月切换——十月首发，发布时定号）
+
+### Added
+
+- **公开仓读取（declared sources）**：可把外部公开仓声明为「公开源」——检索 ∕ 引用 ∕ 提示词面一体支持（多仓工作区的只读面）+ 四条提示面词句与机检。
+- **会话锚解析（session-anchor）**：`projectRootView` 三态（ok ∕ ambiguous ∕ none）+ 歧义保护贯通台账 ∕ 批档 ∕ 写门——多清单工作区不再猜锚。
+- **多仓操作机制（六提示面 · 中英）**：仓 = 一个 git 仓；一档一仓；子代理只写本仓；跨仓任务分仓记录；发现物报告路由。
+- **工程纪律面**：轻通道三判据 + 一句边界（四面）∥ 命名纪律（禁生造词）∥ 单测 ∕ 集成锚定与「单测永不升集成」∥ 反膨胀判断 ∥ fix-in-place 与追认核销。
+- **`pushRecord` 缝（#726）**：人工可读行的记录追加面。
+- **settle 事件归一（#746）**：done 仅在消费时落——子代理块不再中途拼接。
+- **heap 快照采集运行期开关**（默认关）；**桌面 digest 持久化（#719）**：traces 与归档子代理块跨重载 ∕ 重挂 ∕ 换会话存活。
+- **桌面聊天面板（A+B）+ e2e 骨架** ∥ **turn-cap 续跑（F8 ∕ F9）+ slot-end 参数 + config 镜像** ∥ **空闲唤醒 p2 核**（opt-in 注入 + 中止适配——timer-wake #443 ∕ #444）∥ **子代理升级 canonical 重写 + subagent-base 单源层**（18 处去重——#442）。
+- **R8 台账刷新（核面）** + config-watch 升级 + 热重载 + L2 明细行；channels 23（13 档）。
+- **parity B1–B10 波 + 走查轮**：滚动退出 ∕ 挂起队列 ∕ 状态栏 ∕ 渲染性能 ∕ execute 修复 ∕ i18n ∕ 设置 ∕ 复制 ∕ 卡顿指示 ∕ 发送忙碌队列。
+- **`PROJECT-MANIFEST.json` 接管声明面**：codePaths ∕ index ∕ advisor 三键入驻（旧 `conventions.json` 退役）；**eng 写门豁免 aux 路径**（test/tests/scripts、.thincoder/tmp）。
+
+### Changed
+
+- **测试面重整**：全仓旧套件退役（五包——runner 骨架保留，空 = 绿）；开发期测试件 36 档退役（-213 例）+ 锁型测试件 10 档退役（-87 例）；单测 = 批内件（随批档，可复跑）。
+- **规则上收（R10）**：薄壳规则纯搬迁入核（字节一致探针）；VSC 壳重指向。
+- **提示词面**：EN 面 parity 收正（#721）∥ `batch_segment` 过渡别名退役 ∥ 模式口径收正（文档系统模式无关）∥ 轻通道收口（#725——提醒点 + 跨会话承接）。
+
+### Fixed
+
+- **批档 CRLF 容忍 + CLI 粘贴生命周期（#732 ∕ #733）**；**VSC 粘贴临时件写时清扫（#735——有界临时目录）**。
+- **会话台账可靠性核**：懒校验 + 写安全 + 空值 ∕ `—` 显示；**会话列表按磁盘槽扫描**（resume 门 + 18 例）。
+- **manifest 写守卫**：不可信 base 拒写（G1–G11）；**台账工具参数守卫** + 写门 null ∕ empty `task_book`（AC-M2-15）。
+- **项目相对守卫面 + 台账读守卫**（ledger-tools 拆分）；**`ledger_close` 追认核销路径**。
+- **桌面残项**：恢复态播种 ∥ user-block md 深度 ∥ 事件拆分。
+
+### Removed
+
+- **`conventions.json` 退役**（`PROJECT-MANIFEST.json` 单源）；旧测试套件族（锁型 ∕ 开发期——见 Changed）。
+
 ## [0.9.5] — 2026-09-25
 
 > 0.9.4 → 0.9.5（月内序号——发布时定号）
