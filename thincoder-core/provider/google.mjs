@@ -8,6 +8,7 @@ import { proxyFetch } from "../proxy.mjs"
 import { requestWithRetry } from "./retry.mjs"
 import { effectiveFetchTimeoutMs } from "./core.mjs"
 import { abortError, timeoutError } from "../abort-provenance.mjs"
+import { destroyBody } from "../stream-destroy.mjs"
 
 /** OpenAI 语义 tool_choice → Gemini FunctionCallingConfig（2026-08-31 能力层）。 */
 function mapFunctionCallingConfig(choice) {
@@ -200,7 +201,7 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
   const armIdle = () => {
     if (idleTimer) clearTimeout(idleTimer)
     idleTimer = setTimeout(() => {
-      try { response.body?.destroy(timeoutError(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`, "provider", "google-sse-idle")) } catch { /* already gone */ }
+      try { destroyBody(response.body, timeoutError(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`, "provider", "google-sse-idle")) } catch { /* already gone */ }
     }, READ_IDLE_MS)
     idleTimer.unref?.()
   }

@@ -1,18 +1,20 @@
 /**
  * mcp/transport-stdio.mjs — MCP stdio transport
  */
-import { spawn } from "node:child_process"
+import { spawn, spawnSync } from "node:child_process"
 import { rpcId, CALL_TIMEOUT_MS, withTimeout, quoteArg } from "./helpers.mjs"
 
 /** Kill the child AND its whole process tree.
  *  win32: cmd.exe 包装 spawn 的孙进程（npx/node）必须 taskkill /T /F 才能杀净
  *  （2026-08-31 MCP 会诊 P2：此前只 child.kill() 杀 cmd.exe 壳，真 server 成僵尸
- *  并在 Windows 团队每人每次断开/重连泄漏一批）；
+ *  并在 Windows 团队每人每次断开/重连泄漏一批）；taskkill 必须 **spawnSync**（同步）——
+ *  调用链挂在 `process.on("exit")`（退出相位仅同步操作可落地：异步 spawn 的 taskkill
+ *  随父进程退出被一并带走 ⇒ 子树泄漏——#17 · 2026-10-03）；
  *  POSIX: SIGTERM 后 2s 未退 SIGKILL 兜底。 */
 function killTree(child) {
   if (!child.pid) return
   if (process.platform === "win32") {
-    try { spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true }) } catch { /* best effort */ }
+    try { spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true }) } catch { /* best effort */ }
     return
   }
   try {

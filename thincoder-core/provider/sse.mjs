@@ -3,6 +3,7 @@
  * Extracted from core.mjs. Parses Server-Sent Events for LLM chat responses.
  */
 import { abortError, timeoutError } from "../abort-provenance.mjs"
+import { destroyBody } from "../stream-destroy.mjs"
 
 /**
  * Normalize provider cache fields into DeepSeek-style prompt_cache_hit/miss_tokens.
@@ -175,7 +176,7 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
   const armIdle = () => {
     if (idleTimer) clearTimeout(idleTimer)
     idleTimer = setTimeout(() => {
-      try { response.body?.destroy(timeoutError(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`, "provider", "sse-idle")) } catch { /* already gone */ }
+      try { destroyBody(response.body, timeoutError(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`, "provider", "sse-idle")) } catch { /* already gone */ }
     }, READ_IDLE_MS)
     idleTimer.unref?.()
   }

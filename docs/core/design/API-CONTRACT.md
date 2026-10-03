@@ -1060,7 +1060,7 @@
 | `withAuthToken` | `thincoder-core/mcp/helpers.mjs:35` | `fn` |
 | `sanitizeToolName` | `thincoder-core/mcp/helpers.mjs:49` | `fn` |
 | `httpTransport` | `thincoder-core/mcp/transport-http.mjs:7` | `fn` |
-| `stdioTransport` | `thincoder-core/mcp/transport-stdio.mjs:26` | `fn` |
+| `stdioTransport` | `thincoder-core/mcp/transport-stdio.mjs:28` | `fn` |
 | `wsTransport` | `thincoder-core/mcp/transport-ws.mjs:7` | `fn` |
 | `memoryStatus` | `thincoder-core/memory-status.mjs:32` | `fn` |
 | `createMemory, migrate, segmentCJK, VALID_TYPES, SCHEMA_VERSION, CODE_EXTS, DOC_EXTS, SKIP_DIRS, BIG_FILE_LINES` | `thincoder-core/memory.mjs:7` | `named` |
@@ -1267,9 +1267,9 @@
 | `compileStreamRules` | `thincoder-core/provider/errors.mjs:66` | `fn` |
 | `ProviderError` | `thincoder-core/provider/errors.mjs:83` | `class` |
 | `assertProviderModel` | `thincoder-core/provider/errors.mjs:97` | `fn` |
-| `normalizeTools` | `thincoder-core/provider/google.mjs:23` | `fn` |
-| `convertMessages` | `thincoder-core/provider/google.mjs:39` | `fn` |
-| `chat` | `thincoder-core/provider/google.mjs:77` | `fn` |
+| `normalizeTools` | `thincoder-core/provider/google.mjs:24` | `fn` |
+| `convertMessages` | `thincoder-core/provider/google.mjs:40` | `fn` |
+| `chat` | `thincoder-core/provider/google.mjs:78` | `fn` |
 | `chat, createProvider, stripImagesForTextModel` | `thincoder-core/provider/index.mjs:5` | `named` |
 | `listModels` | `thincoder-core/provider/index.mjs:6` | `named` |
 | `RETRYABLE_STATUS, _rateHooks, estimateText, estimateRequestTokens, rateGate, recordRate` | `thincoder-core/provider/index.mjs:7` | `named` |
@@ -1302,16 +1302,16 @@
 | `parseStream` | `thincoder-core/provider/responses.mjs:34` | `fn` |
 | `chat` | `thincoder-core/provider/responses.mjs:194` | `fn` |
 | `requestWithRetry` | `thincoder-core/provider/retry.mjs:20` | `fn` |
-| `normalizeUsageCache` | `thincoder-core/provider/sse.mjs:13` | `fn` |
-| `readSSE` | `thincoder-core/provider/sse.mjs:74` | `fn` |
+| `normalizeUsageCache` | `thincoder-core/provider/sse.mjs:14` | `fn` |
+| `readSSE` | `thincoder-core/provider/sse.mjs:75` | `fn` |
 | `waitStatusOf` | `thincoder-core/provider/wait-status.mjs:36` | `fn` |
 | `waitStatusText` | `thincoder-core/provider/wait-status.mjs:53` | `fn` |
-| `resolveProxyConfig` | `thincoder-core/proxy.mjs:21` | `fn` |
-| `resolveWebProxy` | `thincoder-core/proxy.mjs:39` | `fn` |
-| `injectProxy` | `thincoder-core/proxy.mjs:49` | `fn` |
-| `streamHttpResponse` | `thincoder-core/proxy.mjs:67` | `fn` |
-| `tunnelHttps` | `thincoder-core/proxy.mjs:180` | `fn` |
-| `proxyFetch` | `thincoder-core/proxy.mjs:265` | `fn` |
+| `resolveProxyConfig` | `thincoder-core/proxy.mjs:22` | `fn` |
+| `resolveWebProxy` | `thincoder-core/proxy.mjs:40` | `fn` |
+| `injectProxy` | `thincoder-core/proxy.mjs:50` | `fn` |
+| `streamHttpResponse` | `thincoder-core/proxy.mjs:68` | `fn` |
+| `tunnelHttps` | `thincoder-core/proxy.mjs:181` | `fn` |
+| `proxyFetch` | `thincoder-core/proxy.mjs:266` | `fn` |
 | `MAX_MERGE_ITEMS` | `thincoder-core/queued.mjs:21` | `const` |
 | `MAX_MERGE_CHARS` | `thincoder-core/queued.mjs:22` | `const` |
 | `QUEUED_MAX_ITEMS` | `thincoder-core/queued.mjs:26` | `const` |
@@ -1514,6 +1514,7 @@
 | `readSkill` | `thincoder-core/skills.mjs:131` | `fn` |
 | `loadSkillsSync` | `thincoder-core/skills.mjs:214` | `fn` |
 | `readSkillSync` | `thincoder-core/skills.mjs:224` | `fn` |
+| `destroyBody` | `thincoder-core/stream-destroy.mjs:28` | `fn` |
 | `test as slow` | `thincoder-core/test/slow.mjs:6` | `named` |
 | `fillMarker` | `thincoder-core/text-budget.mjs:16` | `fn` |
 | `capText` | `thincoder-core/text-budget.mjs:28` | `fn` |
@@ -2329,10 +2330,11 @@
 | `createTurnFace` | `thincoder-desktop/src/main/turn-face.mjs:60` | `fn` |
 | `providerKindOf` | `thincoder-desktop/src/main/turn-input.mjs:25` | `fn` |
 | `createTurnInput` | `thincoder-desktop/src/main/turn-input.mjs:38` | `fn` |
-| `UPDATE_STATES` | `thincoder-desktop/src/main/update.mjs:22` | `const` |
-| `STARTUP_CHECK_DELAY_MS` | `thincoder-desktop/src/main/update.mjs:25` | `const` |
-| `UPDATE_STATE_WORD_KEYS` | `thincoder-desktop/src/main/update.mjs:28` | `const` |
-| `createUpdateFace` | `thincoder-desktop/src/main/update.mjs:49` | `fn` |
+| `UPDATE_STATES` | `thincoder-desktop/src/main/update.mjs:23` | `const` |
+| `STARTUP_CHECK_DELAY_MS` | `thincoder-desktop/src/main/update.mjs:26` | `const` |
+| `UPDATE_STATE_WORD_KEYS` | `thincoder-desktop/src/main/update.mjs:29` | `const` |
+| `updaterMediumOk` | `thincoder-desktop/src/main/update.mjs:41` | `fn` |
+| `createUpdateFace` | `thincoder-desktop/src/main/update.mjs:59` | `fn` |
 | `createWindowQueue` | `thincoder-desktop/src/main/window-queue.mjs:38` | `fn` |
 | `PRELOAD_PATH` | `thincoder-desktop/src/main/window.mjs:32` | `const` |
 | `NEGATIVE_PROBE_COUNT` | `thincoder-desktop/src/main/window.mjs:68` | `const` |

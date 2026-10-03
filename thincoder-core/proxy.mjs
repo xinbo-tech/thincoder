@@ -7,6 +7,7 @@ import { connect as tlsConnect } from "node:tls";
 import { PassThrough } from "node:stream";
 import { URL } from "node:url";
 import { abortError, timeoutError } from "./abort-provenance.mjs";
+import { destroyBody } from "./stream-destroy.mjs";
 
 const FETCH_TIMEOUT = 15_000
 
@@ -91,12 +92,12 @@ export function streamHttpResponse(sock, urlStr, opts = {}, timeout = FETCH_TIME
     function fail(err) {
       cleanup()
       if (!settled) { settled = true; reject(err) }
-      else body.destroy(err)
+      else destroyBody(body, err)
     }
     /** body 阶段空闲看门狗：每次数据到达重置；无数据超时 → 断流（流式消费方抛错） */
     function armIdle() {
       clearTimeout(idleTimer)
-      if (bodyIdleMs > 0) idleTimer = setTimeout(() => body.destroy(timeoutError("Response body timeout (idle)", "provider", "proxy-body-idle")), bodyIdleMs)
+      if (bodyIdleMs > 0) idleTimer = setTimeout(() => destroyBody(body, timeoutError("Response body timeout (idle)", "provider", "proxy-body-idle")), bodyIdleMs)
     }
 
     sock.on("data", (d) => {
