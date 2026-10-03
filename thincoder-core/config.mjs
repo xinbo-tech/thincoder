@@ -188,6 +188,31 @@ function warnConsultModelsFiltered(dropped, path) {
     `\n  Fix: clean agent.consultModels in ${path} or use /config → consult/escalate pool menu.`)
 }
 
+/** #861（AGENT-LOOP-SUBAGENT.md §6.7.1）：subagent 模型覆盖加载期清洗——单源纯函数（核 loadConfig ∥ VSC 端壳 raw 读点同消费）；非法形态不 throw（`subagentModel` 非法 ⇒ null、`subagentModels` 非对象 ⇒ {}、值非法 ⇒ 剔除该键）。 */
+export function sanitizeSubagentModel(v) {
+  const ok = typeof v === "string" && v.trim()
+  const dropped = ok || v == null ? [] : [`agent.subagentModel must be a non-empty string ("provider:model" | provider | model) — got ${Array.isArray(v) ? "array" : typeof v} — ignored (inherits the parent provider)`]
+  return { value: ok ? v : null, dropped }
+}
+export function sanitizeSubagentModels(v) {
+  if (v == null) return { value: {}, dropped: [] }
+  if (typeof v !== "object" || Array.isArray(v)) return { value: {}, dropped: [`agent.subagentModels must be an object mapping role → model override — got ${Array.isArray(v) ? "array" : typeof v} — ignored`] }
+  const value = {}, dropped = []
+  for (const [role, val] of Object.entries(v)) {
+    if (typeof val === "string" && val.trim()) { value[role] = val; continue }
+    dropped.push(`agent.subagentModels.${role} must be a non-empty string ("provider:model" | provider | model) — got ${Array.isArray(val) ? "array" : typeof val} — dropped`)
+  }
+  return { value, dropped }
+}
+
+let warnedSubagentModels = false // #861：清洗警告——进程级一次性（同 consultModels 先例）
+function warnSubagentModelsFiltered(dropped, path) {
+  if (warnedSubagentModels || dropped.length === 0) return
+  warnedSubagentModels = true
+  console.warn(`[config] agent.subagentModel/subagentModels: ${dropped.length} invalid entr${dropped.length === 1 ? "y ignored" : "ies ignored"} (filtered — startup continues; no crash):\n` +
+    `${dropped.map((d) => `  - ${d}`).join("\n")}\n  Fix: clean it in ${path} — "provider:model" | provider | model.`)
+}
+
 /**
  * Find provider by name in providers[].
  * Throws if name is non-empty but not found — a typo in activeProvider silently falling to the first provider would use the wrong key on the wrong endpoint.
@@ -310,6 +335,11 @@ export function loadConfig() {
   warnConsultModelsFiltered(cmClean.dropped, path)
   merged.agent.consultModels = cmClean.keep
   if (cmClean.dropped.length) merged.agent.consultModelsFiltered = cmClean.dropped
+
+  const smClean = sanitizeSubagentModel(merged.agent.subagentModel), smsClean = sanitizeSubagentModels(merged.agent.subagentModels) // #861（§6.7.1）：加载期清洗——非法形态不采纳 + 一次性警告（不 throw——同 F-4 范式）
+  warnSubagentModelsFiltered([...smClean.dropped, ...smsClean.dropped], path)
+  merged.agent.subagentModel = smClean.value
+  merged.agent.subagentModels = smsClean.value
 
   // Backward compatibility: promote root-level config fields to agent sub-object
   if (config.verifyGuard !== undefined) {

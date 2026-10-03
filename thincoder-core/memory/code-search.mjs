@@ -5,7 +5,7 @@
  * ∥ `codeSearchTool`——迁出块逐字；原档 `memory/code-sync.mjs` 经 `export { … } from` 转口保名
  * （消费面 / 批内件 import 面零改）。
  */
-import { embed, cosine, toBlob, fromBlob } from "../embedding.mjs"
+import { embed, embedTolerant, cosine, toBlob, fromBlob } from "../embedding.mjs"
 import { scanVectors, createTopK } from "./scan.mjs"
 import { normalizeOrigin } from "./origin.mjs"
 import { declaredPublicRoots } from "../conventions.mjs"
@@ -118,10 +118,12 @@ async function _runEnsureCodeEmbeddings(memory) {
   if (pending.length === 0) return
 
   const texts = pending.map((r) => `${r.path}${r.symbol_name ? " :: " + r.symbol_name : ""}\n${safeSliceUTF16(r.content, EMBED_TEXT_MAX_LEN)}`)
-  const vecs = await embed(memory.embedder, texts)
+  // #859（MEMORY.md §6.3 ∥ D-MEM31）：400 类毒行逐条隔离——null 行跳过不写（backlog 不堵）+ 一行可见回执
+  const { vectors: vecs, skipped } = await embedTolerant(memory.embedder, texts)
+  if (skipped.length) console.warn(`[code] embedding skipped ${skipped.length} row(s, first): ${skipped[0]}`)
 
   const update = memory.db.prepare(`UPDATE code_chunks SET embedding = ? WHERE rowid = ?`)
-  pending.forEach((r, i) => update.run(toBlob(vecs[i]), r.rowid))
+  pending.forEach((r, i) => { if (vecs[i]) update.run(toBlob(vecs[i]), r.rowid) })
 }
 
 /** Generate the code_search tool (read-only). */

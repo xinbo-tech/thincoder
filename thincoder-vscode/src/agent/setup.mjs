@@ -18,7 +18,7 @@ import { loadSlot } from "../extension/session-io.mjs"
 import { expandHome } from "@thincoder/core/expand-home.mjs"
 import { resolveEngineeringManifest, projectView } from "@thincoder/core/manifest.mjs"
 import { loadRaw, resolveProviders } from "@thincoder/core/config-io.mjs"
-import { DEFAULTS, normalizeProxy } from "@thincoder/core/config.mjs"
+import { DEFAULTS, normalizeProxy, sanitizeSubagentModel, sanitizeSubagentModels } from "@thincoder/core/config.mjs"
 import { loadConsultPool } from "../extension/presets.mjs"
 import { setSlotEngDesignTokens, setSlotPlanMode } from "../extension/session-slot-write.mjs"
 import { appendImagePointer, detectRestoredSession, applyMcpWarnings } from "./setup-reminders.mjs"
@@ -70,6 +70,13 @@ export function buildTopLevelAgent() {
       proxy: undefined, shell: null, providersList: [], websearch: { apiKey: "" },
     },
   }
+}
+
+let warnedSubagentModelCfg = false // #861：raw 读点清洗警告——进程级一次性（hydrateRun 每轮重读；同 presets.mjs 先例）
+function warnSubagentModelCfgDropped(dropped) {
+  if (warnedSubagentModelCfg || dropped.length === 0) return
+  warnedSubagentModelCfg = true
+  console.warn(`[config] agent.subagentModel/subagentModels: ${dropped.length} invalid entr${dropped.length === 1 ? "y ignored" : "ies ignored"} (filtered — no crash):\n  - ${dropped.join("\n  - ")}`)
 }
 
 /**
@@ -128,8 +135,10 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     cfgCompactThreshold = raw.agent?.compactThreshold ?? null // null = auto from model context
     cfgProxy = normalizeProxy(raw.proxy) // web tools consult agent.config.proxy (resolveWebProxy)
     cfgShell = typeof raw.shell === "string" && raw.shell ? expandHome(raw.shell) : null // bash tool shell override (CLI parity)——群 A 批 A2：`~` 单点归一（只读——不写回）
-    cfgSubagentModel = raw.agent?.subagentModel ?? null // default subagent model override (CLI parity)
-    cfgSubagentModels = raw.agent?.subagentModels ?? {} // per-type subagent model overrides (CLI parity)
+    const smCfg = sanitizeSubagentModel(raw.agent?.subagentModel), smsCfg = sanitizeSubagentModels(raw.agent?.subagentModels) // #861（§6.7.1）：核内单源清洗（与 CLI loadConfig 同判）
+    cfgSubagentModel = smCfg.value
+    cfgSubagentModels = smsCfg.value
+    warnSubagentModelCfgDropped([...smCfg.dropped, ...smsCfg.dropped])
     cfgSubagentTurns = raw.agent?.subagentTurns ?? 100 // subagent turn cap (CLI parity)
     cfgMaxTurns = raw.agent?.maxTurns ?? 200
     cfgConsultModels = loadConsultPool() // consultation model list (CONSULTATION.md——F-4 清洗后合法池)

@@ -139,7 +139,12 @@ export function runningPoolCount(parent, pool) {
  * API keys come from config.json only (env vars are not a key source).
  */
 export function resolveChildProvider(parent, modelArg) {
-  if (!modelArg) return { ...parent.provider }
+  if (modelArg == null || modelArg === "") return { ...parent.provider } // null ∕ undefined ∕ 空串 = 不覆盖（既有等价语义）
+  // #861（AGENT-LOOP-SUBAGENT.md §6.7.1 ②）运行期防御——四消费链汇点（config ∥ tool model 参数 ∥
+  // consult ∥ vision-reader）：其余非字符串（对象 ∕ 数组 ∕ 数字 ∕ 布尔）明确报错（不裸 TypeError——可自纠）。
+  if (typeof modelArg !== "string") {
+    throw new Error(`subagent model override must be a string ("provider:model" | provider | model); got ${Array.isArray(modelArg) ? "array" : typeof modelArg}`)
+  }
   // "default" alias (2026-09-05 user ruling — ARCHITECTURE.md 子 agent 模型指定):
   // the literal "default", matched case-insensitively, declares "no override →
   // inherit the default model" — equivalent to null/omission (parent provider

@@ -6,7 +6,7 @@
  */
 
 import { parseEntry, serializeEntry, entryFilename } from "../markdown.mjs"
-import { embed, cosine, toBlob, fromBlob } from "../embedding.mjs"
+import { embed, embedTolerant, cosine, toBlob, fromBlob } from "../embedding.mjs"
 import { scanVectors, createTopK } from "./scan.mjs"
 import { normalizeOrigin } from "./origin.mjs"
 import { readFile, stat, readdir, writeFile, mkdir } from "node:fs/promises"
@@ -172,11 +172,13 @@ async function _runEnsureEmbeddings(memory) {
     if (pendingEntries.length + pendingFiles.length > 0) {
       const items = [...pendingEntries, ...pendingFiles]
       const texts = items.map((r) => `${r.title}\n${safeSliceUTF16(r.content, EMBED_TEXT_MAX_LEN)}`)
-      const vecs = await embed(memory.embedder, texts)
+      // #859（MEMORY.md §6.3 ∥ D-MEM31）：400 类毒行逐条隔离——null 行跳过不写（backlog 不堵）+ 一行可见回执
+      const { vectors: vecs, skipped } = await embedTolerant(memory.embedder, texts)
+      if (skipped.length) console.warn(`[memory] embedding skipped ${skipped.length} row(s, first): ${skipped[0]}`)
       const updateEntry = memory.db.prepare(`UPDATE entries SET embedding = ? WHERE id = ?`)
-      pendingEntries.forEach((r, i) => updateEntry.run(toBlob(vecs[i]), r.id))
+      pendingEntries.forEach((r, i) => { if (vecs[i]) updateEntry.run(toBlob(vecs[i]), r.id) })
       const updateFile = memory.db.prepare(`UPDATE files SET embedding = ? WHERE rowid = ?`)
-      pendingFiles.forEach((r, i) => updateFile.run(toBlob(vecs[pendingEntries.length + i]), r.rowid))
+      pendingFiles.forEach((r, i) => { if (vecs[pendingEntries.length + i]) updateFile.run(toBlob(vecs[pendingEntries.length + i]), r.rowid) })
     }
   }
   // 逐面判定 + 回填（code ∕ doc 面自持模型键——同判据；失配面同样零写回降级信号）

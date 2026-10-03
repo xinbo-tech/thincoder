@@ -334,4 +334,46 @@
 **批准面**：#850 ∥ #853 ∥ #856 ∥ #859 ∥ #860 ∥ #861 ∥ #877 ∥ #878——**两组并行派发**（组 A 传输/请求 10 档 ⇒ eng-coder 甲 ∥ 组 B 记忆/配置 9 档 ⇒ eng-coder 乙——文件面含 `thincoder-vscode/src/agent/setup.mjs`，与批三实施 #79 交叠，由调度器自动串行）。
 
 ## §5 实施记录（eng-coder）
+
+**状态行**：实施完成（9 档 + 批内件 17/17；内审 1 轮收口 1 处；代码评审 1 轮 pass）
+
+### 5.1 交付摘要（组 B · #859 ∥ #860 ∥ #861 · 9 档）
+
+| 文件 | 行数（前→后） | 落点（file:line ∥ 要点） |
+|---|---|---|
+| `thincoder-core/embedding.mjs` | 122 → 154 | `:118` 发送前逐条 `sanitizeLoneSurrogates`（主修）；`:131-139` 抛错携 `httpStatus`（重试耗尽路同携）；`:53-78` 新增 `embedTolerant`（400 类逐条隔离 → `{vectors, skipped}`；其余整抛） |
+| `thincoder-core/memory/docs.mjs` | 232 → 234 | `:198-204` tolerant 消费 + `null` 行跳写 + `[docs]` 一行回执 |
+| `thincoder-core/memory/code-search.mjs` | 149 → 151 | `:120-126` 同款（`[code]` 回执） |
+| `thincoder-core/memory/core.mjs` | 319 → 321 | `:173-181` 同款（entries+files 双面索引偏移同改；`[memory]` 回执） |
+| `thincoder-core/auto-think.mjs` | 115 → 139 | `:78-84` `thinkOffPath` 守卫（不可关 ⇒ 零调用 + 按 model 一次 warn）；`:94` `classifierProvider`（`maxTokens:32` + `thinkOffShape(spec)` + `reasoningEffort:null`）；`:122-129` 失败一次可见（按错误签名去重）+ `null` 回退 |
+| `thincoder-core/config.mjs` | 436 → 466 | `:191-206` `sanitizeSubagentModel` / `sanitizeSubagentModels` 两导出（非法形态不 throw）；`:208-214` 进程级一次性警告（含修复指引）；`:339-342` loadConfig 接线 |
+| `thincoder-core/agent-tools/subagent-async.mjs` | 461 → 466 | `:142-147` `resolveChildProvider` 入口防御（`null` ∕ 空串回继承；其余非字符串 ⇒ 明确 Error，不裸 TypeError） |
+| `thincoder-vscode/src/agent/setup.mjs` | 300 → 309 | `:21` 核内单源导入；`:75-80` 端侧一次性警告；`:138-141` raw 读点同拍清洗（与 CLI loadConfig 同判） |
+| `docs/batches/2026-10-04-issue-fix-round1.b.test.mjs` | 新建 377 | T-B1–T-B13（17 腿 = §2.6-B 12 行细分 + 表外增益腿 T-B13；平 node · 零网络） |
+
+**行数注记（承评审 🟡①）**：`setup.mjs` 300 → 309（预测 +~6，实测 +12——多出的一端侧一次性警告 helper 为「用户零可见端差」判据的直接导出项；<500 硬限；>300 建议线请父侧/设计席按需补档位注记）。`config.mjs` = 466（恰合预算）。
+
+**跑法与读数（先红后绿）**：`node --test docs/batches/2026-10-04-issue-fix-round1.b.test.mjs`——**先红 = 15 红 ∕ 2 绿**（2 绿为既有回归腿 T-B8/T-B12）；**后绿 = 17/17 全绿 · fail 0**（#859 腿 6 ∥ #860 腿 5 ∥ #861 腿 6）。`node scripts/doc-check.mjs` = **exit 0**（锚闸悬空 0 · 行宽 OK；行数面 9 条差异全为桌面档报告态存量——本批 9 档零命中）。
+
+### 5.2 决策透明表
+
+| # | 决策 | 理由 |
+|---|---|---|
+| D1 | `embedTolerant` 返回 `{vectors, skipped}`（毒位 `null` 占位）而非抛出 | 三消费面须「跳过不写 + 一行回执」；首条原因 = `skipped[0]`（批档 §2.3 #859） |
+| D2 | 清洗复用 `sanitizeLoneSurrogates`（实码语义 = **剥除**孤立码元） | 设计明定「escape.mjs 复用零改」；T-B1 期望值按实码锁定（上游档注称 U+FFFD 与实码不符——另记，见评审 🔵） |
+| D3 | VSC 端壳清洗 + 端侧一次性警告（净 +9 行） | 批档 §2.9 号 3「同拍清洗、用户零可见端差」；诊断面同判（先例 = `presets.mjs` `warnConsultModelsFiltered`） |
+| D4 | `resolveChildProvider` 门形 = `== null ∥ ""` 回继承 ∥ 其余非字符串抛明确 Error | 设计「非 null 且非字符串 ⇒ 明确错误」；空串 = 既有文档化等价（`subagent-spawn.mjs:78` 邻注）；`false` ∕ `0` ∕ `NaN` 的收口随内审 F1 |
+| D5 | 越表改动 = **零**（9 档全在派发文件面内） | — |
+
+### 5.3 审计与代码评审轮次与终态
+
+- **内审（分岔审计 · 1 轮）**：**1 项（低）**——F1：`resolveChildProvider` 的 falsy 门静默吞 `false` ∕ `0` ∕ `NaN`（与设计判据及自身注释不符）⇒ **就地收口**（D4）+ 用例扩（T-B11 扩 falsy 腿 ∥ T-B12 扩 `undefined` ∕ 空串回归腿）。
+- **代码评审（advisor code · 1 轮）**：🔴 0 ∥ 🟡 3 ∥ 🔵 3；**VERDICT: pass**。🟡 = ① `setup.mjs` 309 越 300 建议线 + 批次档未载档位注记（见 5.1 行数注记）② §5/§6 档面未落 + §2.4 预期与实测偏离（本 §5 即回填落盘）③ VSC 改动覆盖 = 结构腿（记账 + 上抛父侧收口跑端侧套件）。🔵 = >300 在册档（R3 不升级）∥ T-B1 锁定实码语义（已就地注记）∥ 清洗强转（当前不可达，注记）。
+- **fix round**：代码面 1 处（F1）+ 测试面 2 处（T-B1 注记 ∥ T-B11/T-B12 扩腿）。**复跑读数**：17/17 绿（如上）。
+- **终态**：**clean**（🔴 0；未决 = 登记项：端侧套件跑迹 = 父侧收口面）。
+
+### 5.4 边界遵守
+
+零组 A 面触（`mcp/*` ∥ `provider/*` ∥ `stream-destroy.mjs` ∥ `proxy.mjs`——他批在飞文件面）∥ 零 `docs/**` 设计档触 ∥ 零在飞写域触（`thincoder-vscode/src/agent/setup.mjs` 与批三实施交叠：落笔前核验该档收笔 = 盘面 mtime 19.5min 未动 + round3 §5.1 终态读数在案）∥ 零改面核验零改：`escape.mjs` ∥ `think-off.mjs` ∥ `model-specs.mjs` ∥ `provider/rate.mjs` ∥ `agent-tools/settings.mjs` ∥ `thincoder-cli/src/**`。
+
 ## §6 验证与收口（父代理）

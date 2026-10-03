@@ -7,6 +7,8 @@
 
 import { RETRYABLE_STATUS } from "./provider/index.mjs"
 import { resolveEnvRefs } from "./env-ref.mjs"
+// #859（MEMORY.md §6.3 ∥ §7 D-MEM31）：嵌入路径发送前净化孤立 UTF-16 代理——sanitize 单源复用
+import { sanitizeLoneSurrogates } from "./escape.mjs"
 const MAX_RETRIES = 3
 const BATCH_SIZE = 32 // max texts per request (within SiliconFlow limits)
 
@@ -48,6 +50,33 @@ export async function embed(embedder, texts, { signal } = {}) {
   return vectors
 }
 
+/**
+ * 毒行隔离消费面（MEMORY.md §6.3 ∥ §7 D-MEM31 · 台账 #859）：补嵌批的容错版 `embed`。
+ * 整批失败且错误携 `httpStatus === 400`（发送前清洗后仍 400 的未知毒形）⇒ 逐条独试：
+ * 成功者照常返回、仍败者置 `null`（调用面跳过不写 + 一行可见回执）；其余错误（网络 ∕ 401 等）
+ * 照旧整抛——隔离只兜 400 类。query 面（搜索侧单条嵌入）不走本函数（语义零变）。
+ * @returns {Promise<{vectors: (Float32Array|null)[], skipped: string[]}>}
+ */
+export async function embedTolerant(embedder, texts, { signal } = {}) {
+  try {
+    return { vectors: await embed(embedder, texts, { signal }), skipped: [] }
+  } catch (err) {
+    if (err?.httpStatus !== 400) throw err
+    const vectors = []
+    const skipped = []
+    for (let i = 0; i < texts.length; i++) {
+      try {
+        const [vec] = await embed(embedder, [texts[i]], { signal })
+        vectors.push(vec)
+      } catch (e) {
+        vectors.push(null)
+        skipped.push(`input #${i}: ${e.message}`)
+      }
+    }
+    return { vectors, skipped }
+  }
+}
+
 /** Cosine similarity (inputs are normalized, dot product equals cosine) */
 export function cosine(a, b) {
   if (a.length !== b.length) return 0
@@ -85,7 +114,8 @@ async function requestWithRetry(embedder, input, signal) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${embedder.apiKey}`,
         },
-        body: JSON.stringify({ model: embedder.model, input }),
+        // #859 主修：发送前逐条净化孤立代理（存量毒行 ⇒ 硅基流动 400/20015；清洗后根因消除）
+        body: JSON.stringify({ model: embedder.model, input: input.map((t) => sanitizeLoneSurrogates(t)) }),
         signal: signal
           ? AbortSignal.any([signal, AbortSignal.timeout(60_000)])
           : AbortSignal.timeout(60_000),
@@ -100,11 +130,13 @@ async function requestWithRetry(embedder, input, signal) {
 
     const text = await response.text().catch(() => "")
     const message = `Embedding API error ${response.status}: ${text}`
+    const err = new Error(message)
+    err.httpStatus = response.status // #859：隔离层判据（400 类 ⇒ embedTolerant 逐条独试）
     if (RETRYABLE_STATUS.has(response.status)) {
-      lastError = new Error(message)
+      lastError = err
       continue
     }
-    throw new Error(message)
+    throw err
   }
   throw lastError
 }
