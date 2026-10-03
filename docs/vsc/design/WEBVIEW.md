@@ -654,8 +654,8 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | 16 | 内容行合并粒度（CLI `pushBlock` 对齐 · 协议字段 `face` · RAW 拼接 + `pre-wrap` · 工具结果行面删净） | F-W1 · N-W5 · 台账 #148 |
 | 17 | 消化面记录恢复（痕元素 ∥ 归档块——记录承接 ∥ `recordAppend` 出站 ∥ 页级重建 ∥ 容差二态） | F-W1 · I-7 · core §4.4 F-S7 |
 
-**用例面**：本板块的测试资产在 `thincoder-vscode/test/`（`activity-flow` · `activity-closure` · `activity-live-ux` ·
-`async-visibility` · `history-window` · `history-restore` · `session-boot`）——用例表归测试层，本档不复制（D2）。
+**用例面**：本板块的测试资产原在 `thincoder-vscode/test/`（`activity-flow` · `activity-closure` · `activity-live-ux` ·
+`async-visibility` · `history-window` · `history-restore` · `session-boot`）——**退场注**：逐档随 2026-09-28 测试树全清重置退场；用例表归测试层，本档不复制（D2）。
 **登记例外 1 条**：F-W4 活卡面（`toolCall`/`toolOutput`/`toolResult` 接收）现无专属用例
 （缺口登记 = `requirements/WEBVIEW.md` N-W5，消解路径 + 到期条件在案）。
 
@@ -663,8 +663,8 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 
 **问题**：VSC 激活 → webview 首屏无端到端读数（CLI 已有逐段榜：9.6–16s → ≤2s）⇒ 需一次实测裁定「VSC 面是否需补批」。已核不重测：GC 热路径 / traces 节流住核 ⇒ 与 CLI 同愈；VSC src 全包零 `execSync` / `spawnSync`（2026-09-21 实核）。
 
-**口径 B（无头分段主读数——本批执行）**：复用既有三件套——真 `activate()` 直调 + 假 view 驱动 `resolveWebviewView` + happy-dom（用例基建 = `thincoder-vscode/test/prompts-async-guidance.test.mjs` · `test/session-boot.test.mjs` ·
-  `webview-env.mjs`）⇒ 分段计时（模块图 / `applyEngineFloorGuard` 探针 / locale / `ChatPanel` 构造 / resolve / 握手 / 揭幕）。
+**口径 B（无头分段主读数——本批执行）**：复用既有三件套——真 `activate()` 直调 + 假 view 驱动 `resolveWebviewView` + happy-dom（用例基建 = `thincoder-vscode/test/` 三件（`prompts-async-guidance` ∥ `session-boot` ∥
+  `webview-env`）——**退场注**：三件均随 2026-09-28 测试树全清重置退场（读数即本批存档））⇒ 分段计时（模块图 / `applyEngineFloorGuard` 探针 / locale / `ChatPanel` 构造 / resolve / 握手 / 揭幕）。
   一次探针形态（测后撤除，零常驻仪表）；采样每态 ≥5 次；**不设绝对阈值**（先例：静默窗结构性噪声底 6.6–8.1s——`docs/batches/2026-09-18-init-block.md`）；判别 = 常态带分离 / 自身对照。**不覆盖**：宿主调度排队 / 真实绘制（happy-dom 不排版）。
 
 **口径 A（真机旁证——非本批）**：`Launch Extension` 启动扩展宿主 + `exthost.log` 激活行（`activationEvent: 'onView:thincoder.chat'`）+ 临时打点（核共享通道 `logEvent`）；**须用户点头**（一次性探针形态）后另轮。
@@ -836,3 +836,4 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-10-04（**issue 修复批·三 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §2 · 台账 #854 ∥ #875）：新增 **§4.9 状态行 thinking 占位改静态**（消抖——动画件删除）∥ **§5.8 阅读位保护与视图偏好**（工具 / 错误调用点改旗标门 ∥ Thinking 默认折叠 ∥ 三偏好键 + `uiPrefs` 推送）。**零新语义**（缺陷修复 + 已裁偏好面落档）。明细 = 批档 §2。
 - 2026-10-04（**issue 修复批·三 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §3 轮次 1 发现 3 ∥ 4）：§5.8 `autoFollow` 门落点钉定（三处——`ui.js` `maybeScrollDown` ∥ `maybeScrollActivity` ∥ `streaming.js` `subScroll` 帧尾；覆盖 = 三径全数 ∥ 显式动作零门 ∥ 负控三径零写）；
   §5.8 跨端默认差（推理块）**凭据判定补记**（宿主能力面 ∥ 行为证据均不成立 ⇒ 消解路径 + 触发 ∥ 到期条件 = 桌面面下次被触碰）。**零新语义**（发现 3 ∥ 4 的直接导出项）。
+- 2026-10-04（**issue 修复批·四 · 设计面实施轮（#825 退场注改述）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round4.md` §2 · 台账 #825）：§10 用例面七名 ∥ §11 用例基建三件 ⇒ **退场注改述**（裸名化 + 「随 2026-09-28 测试树全清重置退场」注——留名存档）。**零新语义**（所指皆已退场——如实收述）。明细 = 批档 §2。

@@ -18,7 +18,7 @@
 **边界**：在飞写域零触——#51 ∥ #56 ∥ #59 ∥ #57/#58 ∥ 面板面；本批多涉工程面文档/脚本（`scripts/**` = 父侧工程工具面，实施形按设计裁定）。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（initial 轮 + fix 轮（承 §3 轮次 1 发现 1–9——逐号收正，收正块见节尾；doc-check 复跑读数与归因见读回核讫））
+**状态行**：设计完成（initial 轮 + fix 轮 + 设计面实施轮四档落笔（读回核讫块见本节尾；doc-check 读数见交付报告））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 **§2 批次任务与设计（eng-designer · 2026-10-04 · initial 轮）**
@@ -238,6 +238,15 @@
 
 **读回核讫（收正块 · 2026-10-04 · eng-designer）**：收正块（`:171-237`）写入后全文读回，与写入对象逐条一致（号 1–9 逐号 ∥ 表 16 行 ∥ 基准句 ∥ 路遇观察 ∥ 边界）。**doc-check 复跑（写入后 · as-of）**：锚闸 **OK 0 悬空**；行宽闸 = **1 行红——`docs/cli/requirements/ACP-CLIENT.md:81`（308 字符）**——**非本批面**（该红随并行提交 `01d42d8f`〔「…requirements pen (R-A5.4 rewrite…)」——他批〕于写入窗口内引入：本席写入前复跑 = exit 0、写入后 = 1 行红）；本档不入行宽扫描域（实证：本档 §2 既有 >300 字符行零 ✗）⇒ **本批零新增红**；行数面 8 条报告态差异（desktop 设计档行数表——非本批面）。⇒ exit 0 待该在写面自净后复跑（同 §2.12 处置形）。写面 = 本档 §2（零其他档触）。
 
+**设计面实施轮读回核讫（四档 · 2026-10-04 · eng-designer）**
+
+- **前置复核（收正块号 1）**：落笔前四档工作树净（零未提交改动）；批三落定在盘（`docs/vsc/design/WEBVIEW.md` §4.9 ∥ §5.8；`WEBVIEW-PROTOCOL.md:74/:118` `uiPrefs` 登记）∥ 批五落定在盘（`docs/core/design/MANIFEST.md:284` KD-M1-35 补句）∥ 同刻在飞写者（批二 ACP 面 ∥ 批三实施面（`thincoder-vscode/**` 源文件）∥ #76 产品面）均不涉本席四档——「同档不并写」成立。
+- **四档落笔（file:line = 落笔后实读）**：① `docs/vsc/design/WEBVIEW.md`——`:657-658`（§10 用例面七名）+ `:666-667`（§11 用例基建三件）⇒ 退场注改述；`:839` 变更记录 +1。② `docs/vsc/design/WEBVIEW-PROTOCOL.md`——`:398`（§11 用例面六名）⇒ 退场注改述；`:737` 变更记录 +1。③ `docs/core/design/MANIFEST.md`——`:594`（AC-24 改指实守卫）+ `:606`（AC-35 去引）；`:686` 变更记录 +1。④ `docs/core/design/BATCH-RECORD.md`——`:63`（§4.1 三形）+ `:131`（BR-4）；`:439` 变更记录 +1。
+- **号 3 死 token 判（判域 = 设计三处改述段）**：六名全形零命中（`WEBVIEW.md` 余一处 `:833` = 变更记录行——记录面，判域外；`WEBVIEW-PROTOCOL.md` 零命中）；裸名 + 退场注 = 合规形在盘。
+- **同拍收正一则（读回核讫发现）**：AC-24 初版沿 §2.3 字面保留「既有 T-F9」——该用例号系退役档死名，原豁免注随改指退场后即入闸（复跑实证 `:594 T-F9（用例号）`）⇒ 按验收（零新增红 ∥ 消死引）同拍消解（复跑零悬空）。
+- **doc-check 读数（复跑 · 仓根）**：exit 1——锚悬空 2（`docs/cli/design/CLI-ENTRY.md:20/:81`——批五 #867 检查点钉字面，拟新增档未落盘）∥ 行宽红 2（`CLI-ENTRY.md:20` 333 字符 ∥ `docs/core/design/SESSION.md:970` 403 字符——均他批在写面）；**本批四档零新增红**；全量 exit 0 待在写面自净后复跑（与 §5.6 同处置形）。
+- **边界遵守**：需求面 2 档零触（主 agent 笔）∥ 产品/测试面零触（#76 域）∥ 在飞写域零触 ∥ 已收口批档零触 ∥ 零评审点火 ∥ 零构建。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -269,4 +278,115 @@
 **批准面**：#824 ∥ #825 ∥ #833 ∥ #889 ∥ #890 ∥ #893——**按设计执行面分派**（设计 §2.4：产品/测试面 ⇒ eng-coder #76（10 档）∥ 设计面 ⇒ eng-designer #77（4 档，**dependsOn [#72,#73]**——U1 前置）∥ 主 agent 笔 ⇒ 需求面 2 档（本席））。
 
 ## §5 实施记录（eng-coder）
+
+**§5 实施记录（eng-coder · 2026-10-04 · initial 轮）**
+
+**口径与执行面**：任务书 = 本档 §2（含追加收正块 `:171-237` 终值语句，以该块为准）。产品/测试面 10 档中 **8 档（7 批内件 + 基线档）经实证跨批写门机械拒写**——判据 = `thincoder-core/agent/write-gate.mjs:160-183`（depth>0 ∧ `_batchDoc` 在场 ⇒ 仅放行自身批次词干族伴随件）；拒因串 = `cross-batch record write`（实证在案）。此与 §2.4「执行 = 父侧直接执行〔跨批面〕」一致、与 spawn 派单相抵 ⇒ 已上抛；父侧裁定 = **父侧落笔这 8 档，本席出「可直接落笔清单」**。本席落笔面 = 2 档。
+
+**5.1 本席落笔（2 档 · 全绿）**
+
+- `thincoder-core/agent-tools/batch.mjs`（`:43-47`）：`CRED_RE` ∥ `CRED_TEST_RE` 补第三形——无标两段 token 值形（判据沿单源 `thincoder-core/agent-tools/design-token.mjs:80-91`；裸 uuid 维持不剥 = KD-7）；`:43` 注释改述（三形枚举 + 复指 `docs/core/design/BATCH-RECORD.md` §4.1，旧「§2.7」死引已除）。**档级 +2 行**（314 ⇒ 316 · 结构不变）；`git diff` 单 hunk（4+/3−）实读。
+- `docs/batches/2026-10-04-issue-fix-round4.test.mjs`（新档 · 103 行）：C1–C5 五腿（三形剥净 ×3 ∥ 裸 uuid 逐字保留 ∥ 纯凭证行整行丢弃）。执行面 = 真工具链（`batchTool.execute` 走真 append 写通道 ⇒ 读回档全文断言——非私有函数直调）；全隔离（每腿自建临时目录 + 临时批次档）。**先红后绿**：修前 3/5（C3 ∥ C5 红 = 第三形存活进档，实证在案）⇒ 修后 **5/5 绿**（exit 0）。
+
+**5.2 零回归复跑（本席面 · 6 件）**
+
+| 件 | 读数 | 归因 |
+|---|---|---|
+| `docs/batches/2026-10-03-design-token-echo.test.mjs` | 12/12 | 剥除单源零回归 |
+| `docs/batches/2026-09-30-core-tools-pairfix.test.mjs` | 12/12 | batch 家族零回归 |
+| `docs/batches/2026-10-02-manifest-resolution-fix.test.mjs` | 7/7 | batch 路径族零回归 |
+| `docs/batches/2026-09-29-batch-mechanics.test.mjs` | 5/5 | 写门判据零回归 |
+| `docs/batches/2026-10-01-zero-semantic-sweep.test.mjs` | 5/9 | 4 红 = L1 ∥ L6 ∥ L7 ∥ L8 **全为存量断代红**（非本席面）；L6 内 batch.mjs 两判据通过、红点 = `BATCH-RECORD.md` 行宽（非本席面） |
+| `docs/batches/2026-09-29-tools-carryover-t3.test.mjs` | 4/5 | T1b 存量红（别名描述随 alias-removal 批撤除——HEAD 实读零命中实证，非本席致红） |
+
+**5.3 8 档「可直接落笔」清单（父侧执行面 · 逐件 scratch 仿真已验证）**
+
+| # | file | 现读 | 改法（摘要） | 复跑判据 |
+|---|---|---|---|---|
+| 1 | `docs/batches/2026-09-30-cross-end-digest-recovery.test.mjs` | 19/20 | 5 处改钉（`:3` ∥ `:18` ∥ `:829` ∥ `:842` ∥ `:851`） | **20/20**（仿真已验 · exit 0） |
+| 2 | `docs/batches/2026-09-30-digest-persistence.test.mjs` | 3/9 | `:3` 断代注读数刷新（红腿 = 2 ∥ 3 ∥ 4 ∥ 5b ∥ 6 ∥ 7） | 注文与复跑读数一致 |
+| 3 | `docs/batches/2026-10-01-desktop-digest-teardown.test.mjs` | 1/7 | `:13` 断代注读数刷新（红腿 = 1 ∥ 2 ∥ 3 ∥ 4 ∥ 6 ∥ 7；腿 2 = 注释残词命中） | 注文与复跑读数一致 |
+| 4 | `docs/batches/2026-10-02-desktop-menu-system.test.mjs` | 2/8 | 六腿重锚（键集 43 ∥ 组名 设置 ∥ 条目序 ∥ 通道 48 ∥ findItem 深查）+ 头注 | **8/8**（仿真已验 · exit 0） |
+| 5 | `docs/batches/2026-10-02-desktop-settings-menu-upgrade.test.mjs` | 5/8 | 波1①②③ 重锚（六项形 ∥ 键集 43 ∥ 白名单 48）+ 头注/题注 | **8/8**（仿真已验 · exit 0） |
+| 6 | `docs/batches/2026-09-29-i18n-split.test.mjs` | 1/5 | A1/A4/A6 按现读重锚 + 头注（A4 阈值 ⇒ 420 = 现读 + 5 余量 · KD-9） | **5/5**（配 #7 重冻后；仿真 4/5 = 仅 A2 待重冻） |
+| 7 | `docs/batches/2026-09-29-i18n-split.baseline.json` | 295×2 条 | **重冻**：跑 `node .thincoder/tmp/r4-probe/refreeze-baseline.mjs docs/batches/2026-09-29-i18n-split.baseline.json`（写 314×2 条；`_note` 已含重锚行） | A2 转绿（两语全量等值等序 + 三档子序列） |
+| 8 | `docs/batches/2026-10-03-desktop-firstrun-provider-notice.test.mjs` | 7/7（真 config 有触） | T7 补缝（`_setConfigPathForTest` + `finally` 复位 + 缝档断言） | **7/7** ∧ 真 config 零触（隔离实测已验 · exit 0） |
+
+**5.4 边界遵守**：不动 `docs/vsc/**` ∥ `docs/core/design/{MANIFEST,BATCH-RECORD,WEBVIEW*}.md`（设计面归 eng-designer）∥ 需求面 2 档（主 agent 笔）∥ 在飞写域 ∥ 已收口批档 `.md`——本席 diff 实证 = 2 档（`git diff --stat` 实读：`thincoder-core/agent-tools/batch.mjs` 8 行改动 + 新件 1 枚）。**绕门已排除**（`file_ops` / bash 写 = 越权，未动）。
+
+**5.5 事故如实报备（副作用面）**：取读数时按设计验收「非隔离直跑」跑 `docs/batches/2026-10-03-desktop-firstrun-provider-notice.test.mjs`，T7 复现 #890 危害路径本身——`carryoverDefaultModel` 把 `defaultModel` 写进真实用户 config（mtime 2026-10-04 01:21:02；范围 = 仅该一键；原值不可考）。父侧已裁：停止非隔离直跑（复跑纪律 = `USERPROFILE` 隔离）、该写由父侧按用户门处置；本席无进一步修复动作（无写外仓权限）。补缝落笔后，非隔离复跑即安全。
+
+**5.6 doc-check 读数（as-of · 实施后复跑）**：`node scripts/doc-check.mjs` = **exit 1**；锚闸 = **2 条悬空**（全数 = `docs/cli/design/CLI-ENTRY.md:20` ∥ `:81`，指向 `node-version-gate.cjs`——CLI/ACP 在写面）；行宽闸 = **2 行红**（`docs/cli/design/CLI-ENTRY.md:20` ∥ `docs/core/design/SESSION.md:970`——他批在写面）；行数面 = 8 条报告态（非本批面）。**本席封笔前基线（01:15）= exit 0** ⇒ 2 悬空 + 2 行宽均于窗口内由并行写引入；**本批零新增红**（本席改面 = 1 `.mjs` + 1 新 `.mjs`，均入行宽扫描域之外），与 §2.12 同处置形（exit 0 待在写面自净后复跑）。
+
+**5.7 designId 回显**：本席 spawn 材料内**无 designId 字面**（§4 明书「值不入档」；token 门由父侧 spawn 时完成）——按实情报 `unverified`（不以猜测充数）；授权面旁证 = 本席产品码/批档写均落地无门阻（写门解锁若未过则首笔即拒）。
+
+**状态行**：实施完成（2026-10-04）
+
+**5.8 逐档改前/改后逐字对（父侧落笔面 · 逐件仿真已验证；长句给逐字片段 + 全行参考件）**
+
+**① `docs/batches/2026-09-30-cross-end-digest-recovery.test.mjs`（5 处 · 仿真 20/20）**
+- `:3` 改前 ` * 状态（2026-10-01 · VSC 舱交付复跑）：K1–K7 ∥ C1a–C5 ∥ V1–V5 = **20/20 绿**（仓根 \`node --test\`）。` → 改后 ` * 状态（**2026-10-04 重锚复跑 · 台账 #824**）：K1–K7 ∥ C1a–C5 ∥ V1–V5 = **20/20 绿**（仓根 \`node --test\`）——V4② 随「未结轮照现」机制重锚（末页 open ⇒ label + count 两元素）。`
+- `:18` 「半轮零元素」 ⇒ 「未结轮照现〔两元素〕」（同行其余逐字不动）。
+- `:829` 用例标题同改：`半轮零元素（容差①）` ⇒ `未结轮照现（容差①）`。
+- `:842` 注释改前 `// ② 半轮零元素：cap 无打开轮 ∥ end 缺 start ∥ start 缺 end ⇒ 零元素` → 改后 `// ② 未结轮照现：cap 无打开轮 ∥ end 缺 start ⇒ 零产；start 缺 end〔末页 open〕⇒ 照现两元素`。
+- `:851` 断言 `length, 0, "半轮零元素（跨页分裂轮页内不产）"` ⇒ `length, 2, "未结轮照现（末页 open——label + count 两元素）"`。
+
+**② `docs/batches/2026-09-30-digest-persistence.test.mjs`（`:3` 单行 · 注文与读数一致）**
+- 改前片段：`⚠ 断代（2026-10-01 · 台账 #765 拆批）：旧形态断言红（实测：腿 2 ∥ 3 ∥ 4 ∥ 6 红——位次 ∥ 终态轮 ∥ 键面面随后续批演进；import 未断）`
+- 改后片段：`⚠ 断代（2026-10-01 · 台账 #765 拆批；**2026-10-04 复验读数刷新——台账 #824**）：旧形态断言红（实测 = 3/9——腿 2 ∥ 3 ∥ 4 ∥ 5b ∥ 6 ∥ 7 红——位次 ∥ 终态轮 ∥ 键面面随后续批演进；import 未断）`
+- 全行逐字参考件 = `.thincoder/tmp/r4-probe/` 同名件（下同）。
+
+**③ `docs/batches/2026-10-01-desktop-digest-teardown.test.mjs`（`:13` 单行 · 注文与读数一致）**
+- 改后片段（相对改前之增量，逐字）：断代标注追加 `；**2026-10-04 复验读数刷新——台账 #824**`；枚举 `腿 1 ∕ 3 ∕ 4 ∕ 6` ⇒ `腿 1 ∕ 2 ∕ 3 ∕ 4 ∕ 6 ∕ 7`；枚举后插入腿 2 归因 `（… ∥ 折出轮 ≤1；腿 2 红因 = 注释残词「座次」命中 \`thincoder-desktop/renderer/store.mjs:145\`——注释层，非状态复辟）`；`**复跑必红为预期` ⇒ `**复跑实测 1/7 红为预期`。
+
+**④ `docs/batches/2026-10-02-desktop-menu-system.test.mjs`（12 处 · 仿真 8/8）**
+- `:3` 头注整句替换：改前 `**注（2026-10-02 · #817 落盘后）**：…复跑红 = 预期（非缺陷）；现行判据 → …` ⇒ 改后 `**重锚（2026-10-04 · 台账 #889）——断言 = 现盘形**：菜单树形 ∕ 动作集 ∕ 键集（43）∥ 通道计数（48）随后续批演进（#817 设置体系 ∥ #888 更名 ∥ 桌面发布批 \`panel:state\` 等）——本档逐腿改钉至现读（复跑 8/8）；平行判据 = …upgrade.test.mjs… ∥ …settings-menu-trim.test.mjs…。`
+- `:43-51` `WORD_KEYS` 全表替换（29 键 ⇒ 43 键）：首行片 `"file", "edit", "view", "settings", "maintenance", "help",`；新增段 `"settingsOpen",` + `"helpCommands", "about", "aboutShortcuts", "checkUpdate", "checkingUpdate", "downloadingUpdate",` + `"restartUpdate", "updateDialogTitle", "updateFailed", "updateNotice", "updateRestartCancel",` + `"updateRestartConfirm", "updateRestartOk", "updateUpToDate",`（全表逐字 = 参考件）。
+- `:65-67` 助手改钉：新增 `const deepItems = (items) => items.flatMap((item) => [item, ...(Array.isArray(item.submenu) ? deepItems(item.submenu) : [])])`；`findItem` 改 `deepItems(flat(template)).find((item) => item.label === label)`（「命令与快捷键…」等两层级条目可达）。
+- `:75` `["文件", "编辑", "视图", "维护", "帮助"]` ⇒ `["文件", "编辑", "视图", "设置", "帮助"]`。
+- `:77` 组[0] 条目 ⇒ `["新建会话", "打开工作目录…", "最近工作目录", "separator", "关闭窗口", "退出 ThinCoder"]`。
+- `:93-94` 组[3]/[4]（映射改 `item.label ?? item.type`）：组[3] ⇒ `["设置…", "separator", "providers…", "agent…", "mcp…", "env…", "tools…", "models…", "separator", "维护", "关于与快捷键"]`；组[4] ⇒ `["检查更新…", "separator", "命令与快捷键…", "关于 ThinCoder…"]`。
+- `:125` 空表标签 `"无最近项目"` ⇒ `"无最近工作目录"`。
+- `:165-166` zh ⇒ `["文件", "编辑", "视图", "设置", "帮助"]` ∥ en ⇒ `["File", "Edit", "View", "Settings", "Help"]`。
+- `:190` 点击标签 `"打开项目…"` ⇒ `"打开工作目录…"`。
+- `:249` `assert.equal(WORD_KEYS.length, 29)` ⇒ `43`。
+- `:283-286` 白名单：注释 `46 ⇒ 47…theme:state` ⇒ `47 ⇒ 48：末位 = panel:state（零改名零位移——theme:state 仍在册）`；三断言 `47 ⇒ 48` ∥ `at(-1) === "theme:state"` ⇒ `"panel:state"`。
+- 腿⑤ 题/描述（`:17-18` ∥ `:278`）：`末位 47 = theme:state` ⇒ `末位 48 = panel:state`。
+
+**⑤ `docs/batches/2026-10-02-desktop-settings-menu-upgrade.test.mjs`（波1面 · 仿真 8/8）**
+- `:6` 头注整句替换（`#820 邻接注…恰 2 红 = 预期`）⇒ `**重锚（2026-10-04 · 台账 #889）——断言 = 现盘形**：波 1 腿①/② 已按 #820 六项形改钉（…六组项…；`SETTINGS_GROUPS` ≡ `SECTIONS` 名序去「模型与档位」，设置页七段零动）＋ 词表键集 43 ∥ 白名单 48 随读改钉（复跑 8/8）。`
+- `:9-13` 腿描述：`七组项` ⇒ `六组项`（×2）；`SETTINGS_GROUPS ≡ SECTIONS 名序 ≡ 读取面键序` ⇒ `…名序去「模型与档位」…`；`键集 29 ⇒ 32` ⇒ `键集 43`；`白名单 47 不动` ⇒ `白名单 48 不动`。
+- `:53` 注释 `29 ⇒ 32` ⇒ `43`；`:166` 段注释 ∥ `:168` 题：`七组项` ⇒ `六组项`。
+- `:173-176` 条目表 ⇒ `["设置…", "separator", "渠道…", "agent 参数…", "MCP…", "运行环境…", "工具与服务…", "会诊与审查…", "separator", "维护", "关于与快捷键"]`，题句尾 `七组项` ⇒ `六组项`；`:178` `group.slice(2, 9)` ⇒ `group.slice(2, 8)`。
+- `:186` `const maintenance = group[10]` ⇒ `group[9]`；`:190` `const aboutShortcuts = group[11]` ⇒ `group[10]`。
+- `:198-202` 帮助组 ⇒ `["检查更新…", "separator", "命令与快捷键…", "关于 ThinCoder…"]`（映射改 `i.label ?? i.type`）；跨面闭集 ⇒ `SETTINGS_GROUPS ≡ SECTIONS 名序去「模型与档位」`、`SETTINGS_GROUPS.length` `7` ⇒ `6`。
+- `:210-211` en 下标 `submenu[10]` ⇒ `[9]` ∥ `submenu[11]` ⇒ `[10]`。
+- `WORD_KEYS`（`:54-62`）⇒ 43 键（同 menu-system 表）；`:225-226` 计数 ⇒ `43` ∥ `43`；`:215-219` 腿②题/文案 `键集 32` ⇒ `43`。
+- `:257-258` 下标/标签：`submenu[3].label` `"模型与档位…"` ⇒ `"agent 参数…"`；`submenu[8]` ⇒ `submenu[7]`（`"会诊与审查…"`）。
+- `:269-276` 通道：注释 `白名单 47 与注册表闭包不动` ⇒ `48`；断言 `47` ⇒ `48`（两处）。
+
+**⑥ `docs/batches/2026-09-29-i18n-split.test.mjs`（A1/A4/A6 重锚 + 头注 · 仿真 4/5＝仅 A2 待重冻；配 ⑦ 后 5/5）**
+- 头注（`:2-15`）：接受收正块 KD-9 口径——`settings 族 55 键` ⇒ 去数字；追加重锚块（`SETTINGS_DICT` 62 ∥ `VIEWS_DICT` 139 ∥ 主档自有块 85×2 ∥ 主档 415（A4 阈值 ≤400 ⇒ ≤420 = 现读 + 5 余量 · KD-9）∥ `i18n-views.mjs` 386；A2 基线 = 2026-10-04 全量重冻 314 条两语）；A1 行 87 ⇒ 85、合计 294 ⇒ 314；A4 行 `≤ 400` ⇒ `≤ 420`、`（328 ∕ 92）` ⇒ `（386 ∕ 92）`；A6 行 `205 ∕ 224 ∕ 25` ⇒ `204 ∥ 227 ∥ 25`。
+- A1（`:55`）：`["SETTINGS_DICT", SETTINGS_DICT, 55], ["VIEWS_DICT", VIEWS_DICT, 125], ["COMPOSER_DICT", COMPOSER_DICT, 28]` ⇒ `55⇒62` ∥ `125⇒139` ∥ `28` 不动；`:59-60` `87` ⇒ `85`（×2）；`:54` 题 `87×2` ⇒ `85×2`。
+- A2（`:78-79`）：文案 `295 条` ⇒ `314 条`（×2）；`:84` `（搬前冻结 2026-09-29）` ⇒ `（2026-10-04 重冻 · 台账 #889）`。
+- A4（`:88-95`）：`main <= 400` ⇒ `main <= 420`（文案补 `现读 + 5 余量…`）；`i18n-views.mjs` `332` ⇒ `386`（×2，断言 + 文案）；题 `≤400` ⇒ `≤420` ∥ `（332 ∕ 92）` ⇒ `（386 ∕ 92）`。
+- A6（`:112-124` FROZEN 表）：`statusline.mjs 205⇒204` ∥ `statusline-segments.mjs 224⇒227` ∥ `settings.mjs 334⇒398` ∥ `settings-agent.mjs 227⇒230` ∥ `settings-controls.mjs 130⇒145` ∥ `settings-sections.mjs 297⇒164` ∥ `settings-sections-env.mjs 134⇒137` ∥ `settings-sections-mcp.mjs 178⇒185` ∥ `settings-sections-tools.mjs 161⇒208`（`banner 25` ∥ `settings-confirm 80` ∥ `settings-sections-models 164` 不变）；注释 `搬前实读` ⇒ `2026-10-04 届盘实读重锚`。
+
+**⑦ `docs/batches/2026-09-29-i18n-split.baseline.json`（重冻）**
+- 落笔 = 跑 `node .thincoder/tmp/r4-probe/refreeze-baseline.mjs docs/batches/2026-09-29-i18n-split.baseline.json`（cwd = `thincoder/`）；产物 = `{_note, en, zh}`，`en`/`zh` = 现盘 `HOST_DICT` 两语全量 `[[key,value],...]`（314 条 × 2；与对拍件 A2 的 `entrySeq` 同式）；`_note` 尾部追加 `【重锚 2026-10-04 · 台账 #889】HOST_DICT 随后续批条目增殖——条目 295 ⇒ 314（现盘全量重冻；对拍语义 = 现盘全量等值等序 + 三档子序列相对序保）。`。重冻后 A2 转绿（三档子序列关系已实证）。
+
+**⑧ `docs/batches/2026-10-03-desktop-firstrun-provider-notice.test.mjs`（T7 补缝 · 隔离实测 7/7）**
+- `:413` 后（`const cwd = …` 行下）新增：`cfgIo._setConfigPathForTest(join(tmpDir("fr840-t7-cfg-"), "config.json")) // 写回去向 = 缝（真 config 零触 — #890）`。
+- `:443` 后新增断言：`assert.equal(JSON.parse(readFileSync(cfgIo._configPath(), "utf8")).defaultModel, "p1:m1", "写回去向 = 缝档（#890：真 config 零触）")`。
+- `finally`（`:451-452`）内新增：`cfgIo._resetConfigPathForTest()`。
+- 复跑判据：隔离（`USERPROFILE`/`HOME` 指临时家）实测 **7/7 · exit 0** ∧ 真 config mtime 零变；落笔后非隔离复跑同安全。
+
+**5.9 参考件（验证用 · 非落笔面）**：`.thincoder/tmp/r4-probe/` 下五枚 `<件名>.final.mjs`（= 改后全文；scratch 径调已还原）；复制到 `.thincoder/tmp/` 两级深度即与 `docs/batches/` 同径、可直接复跑（i18n 件待 ⑦ 重冻后转 5/5）。
+
 ## §6 验证与收口（父代理）
+
+**未决（用户门 · 2026-10-04 01:21 入档）——真实用户 config 被测试写（#890 危害路径实证）**：
+
+- **事实**：实施轮 #77 取「非隔离直跑」读数时，`docs/batches/2026-10-03-desktop-firstrun-provider-notice.test.mjs` T7（`host.setPrefs`）经 `carryoverDefaultModel` 把 `defaultModel:"p1:m1"` 写入真实用户 config（`C:\Users\liwei\.thincoder\config.json`，mtime 2026-10-04 01:21:02；行 178）。范围核实（报告方 grep）：仅该一键——无渠道条目 / 无密钥泄入；**原值不可考**（无今日 `.bak`；仅 2026-09-20 两枚旧备份）。
+- **处置**：① 已令停止一切非隔离直跑（复跑纪律 = `USERPROFILE` 隔离）；② 本批 T7 补缝（#890 修法）落笔后非隔离复跑即安全（写落临时档）；③ **恢复形 = 用户裁定**（待用户）：㈠ 报原模型 ⇒ 父侧恢复 ∥ ㈡ 删键（缺省 = 未设置）∥ ㈢ 授权只读 09-20 备份中的 `defaultModel` 行作候选（备份含密钥——未擅读）。
+- **状态**：挂用户门（用户起床裁定）；复跑纪律升级在案。

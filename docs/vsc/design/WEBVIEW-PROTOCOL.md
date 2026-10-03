@@ -395,7 +395,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 7 | 发面全量对表（§13——机检对账 `thincoder-vscode/test/protocol-coverage-reverse.test.mjs`） | F-W12 · N-W7 |
 | 8 | 权限卡族 id 纪律与释放（合并卡同族 · 单释放通道 · 孤儿响应 · **释放即刷新**） | F-W13 |
 
-**用例面**：协议面测试资产在 `thincoder-vscode/test/`（`webview-turnstate` · `status-line` · `digest-visibility` · `chat-panel` · `chat-panel-messages` · `session-boot`）——用例表归测试层，本档不复制（D2）。
+**用例面**：协议面测试资产原在 `thincoder-vscode/test/`（`webview-turnstate` · `status-line` · `digest-visibility` · `chat-panel` · `chat-panel-messages` · `session-boot`）——**退场注**：逐档随 2026-09-28 测试树全清重置退场；用例表归测试层，本档不复制（D2）。
 
 ## 12. 收发面全量对表（机检对账）
 
@@ -734,3 +734,4 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 2 处 R1 改指（`suspension.mjs` 补 `thincoder-vscode/src/extension/` 前缀——变更记录行 ×2）。**零新语义**。
 - 2026-10-04（**issue 修复批·三 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §2 · 台账 #875）：§3 表 + §3.2 登记补 **`uiPrefs` 新消息**（视图偏好三键——autoFollow ∥ activityMaxHeight ∥ activityTailLines；发射 = `ui-prefs.mjs` ∥ 消费 = `ui-prefs.js`）；标题计数 二十二项 ⇒ 二十三项。**零新语义**（已裁偏好面的协议落档）。明细 = 批档 §2。
 - 2026-10-04（**issue 修复批·三 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §3 轮次 1 发现 5）：**D-P11 计数同改**（二十二项 ⇒ 二十三项——与 §3.2 标题 ∥ 行 23 登记一致）。**零新语义**（计数收正）。
+- 2026-10-04（**issue 修复批·四 · 设计面实施轮（#825 退场注改述）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round4.md` §2 · 台账 #825）：§11 用例面六名 ⇒ **退场注改述**（裸名化 + 「随 2026-09-28 测试树全清重置退场」注——留名存档）。**零新语义**（所指皆已退场——如实收述）。明细 = 批档 §2。
