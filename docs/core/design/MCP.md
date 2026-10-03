@@ -102,6 +102,8 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
 - **HTTP/SSE**（`thincoder-core/mcp/transport-http.mjs`）：GET SSE 不可用（405 / 不支持）时降级为**纯 Streamable POST 模式**；增 `postOnly` 标记 + `markPostOnly()`；**`isAlive` = `!closed && (eventSource != null || postOnly)`**——降级后 `eventSource` 恒 null，但 POST-only server 是活连接，
 **不得因 `eventSource == null` 误判死**（曾致无意义重连循环）；主动 close 与 legacy SSE 流真实断开仍判死 + 走重连。Streamable POST 规范路径：所有通道统一先注册 pending（直接 JSON body / SSE 流 / 202 等待都经 pending resolve）；响应带 `Mcp-Session-Id` 记入后续请求头。
 - **stdio**（`transport-stdio.mjs`）：本地子进程 `stdioTransport(command, args, env)`——env 合并到 `process.env` 之上；JSON-RPC over stdio。
+  **树杀（`killTree`）**：win32 = `taskkill /pid <pid> /T /F` **同步形**（`spawnSync`——退出路径 `process.on("exit")` 仅同步合法，异步 `spawn` 不落地 ⇒ 子进程退出泄漏，GitHub #17 实证）；
+  POSIX = `SIGTERM` + 2s `SIGKILL` 升级兜底（正常路径生效；退出阶段仅 `SIGTERM` 送达——升级 timer 不触发，残面登记见 §7 D-MC17）。
 - **WS**（`transport-ws.mjs`）：`isAlive` = `!closed && ws?.readyState === WebSocket.OPEN`；连接死亡经 `onDead` / `fireDead`；认证经 subprotocol；上层 signal abort 即刻作废 pending + 发 `notifications/cancelled`。
 - **活性判定汇总**：HTTP legacy SSE = `!closed && eventSource != null`（流断 → fireDead）；HTTP postOnly = `!closed && postOnly`（恒真至 close，无流可断）；WS = `!closed && readyState === OPEN`；stdio = 进程退出 → error / close。
 
@@ -180,6 +182,7 @@ MCP 工具、下轮重试）。**子代理不含 MCP**：装配仅 depth-0 展�
 | D-MC14 | agent 代配 = **磁盘重读 + fingerprint 对账**（漂移诚实报告） | disk 变更 / 删除已连 server 时不误断正在用的；`⚠ disk changed` 持续标记到显式解决 |
 | D-MC15 | **单写者假设**（不做双写合并） | 既有 config 写入模型；仅记录不引入新机制 |
 | D-MC16 | VSC 配置 / 连接入口 = **Settings 面板 MCP 页**（无 `/mcp` 命令面） | VSC 无 TUI 命令通道——结构性端差；面板表单 add-or-update 复用、探活确认环（§6.5 语义）对齐 CLI 保存前探活 |
+| D-MC17 | 退出路径树杀**同步合法**：win32 `killTree` 用 `spawnSync("taskkill", …)`（`/T /F` 语义不变） | `process.on("exit")` 阶段仅同步合法——异步 `spawn` 不落地 ⇒ 退出泄漏（#17 受控复现：异步组替身存活 ∥ `spawnSync` 组死）；代价 = 关闭路径同步阻塞 20–50ms（close 非热路径，可接受）。被否：阶段分流（force 标志）——新语义 + 三档穿透，超最小修；POSIX 残面见 §6.6。 |
 
 ## 8. 不并项与历史沿革
 
@@ -221,3 +224,4 @@ MCP 工具、下轮重试）。**子代理不含 MCP**：装配仅 depth-0 展�
 - 2026-10-01（**VSC MCP add 冲突面小修批 · 设计轮 · eng-designer**——承 `docs/batches/2026-10-01-vsc-mcp-add-conflict.md` · 台账 #757）：§6.10 面板分流括注收正——add ∕ update 分流按存在性（已存在 ⇒ 原位 update；add 侧失败原串上抛——并发冲突串不再被 not-found 串顶替）。**描述随动**（与同批实现同步生效）。
 - 2026-10-02（**桌面 UX 收尾批 · 回填/随动轮 · eng-designer**——承批档 `docs/batches/2026-10-02-desktop-ux-closeout.md` §5 · 台账 #702）：§6.4 消费面句时态收正（桌面侧「实施随批」⇒「已落」——装配尾入队已落；VSC 未并句保持）。**零新语义**（时态收正）。明细 = 批档 §2。
 - 2026-10-02（**文档清账轮 · 行宽清账（#806 · 轮 6）· eng-designer**——承批档 `docs/batches/2026-10-02-doc-settlement-round.md` §2.12：§6.4 启动装配行折行（475 ⇒ 三段 ≤300——语义零改）。台账 #806。）
+- 2026-10-03（**crash-guards 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-crash-guards.md` §2 · 台账 #865（GitHub #17））：§6.6 stdio 行补 **树杀语义**（win32 `spawnSync` 同步化——退出路径仅同步合法；POSIX 分支核对注）· §7 补 **D-MC17**。**零新语义**（守卫类最小修）。

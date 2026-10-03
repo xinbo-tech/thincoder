@@ -100,6 +100,7 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 - **401 / 403 诊断**：Kimi 双平台提示（`sk-kimi-` 前缀 key 或 `api.kimi.com` 端点 → 说明 Moonshot 与 Kimi For Coding 两平台 key 不互通）+ 通用诊断回显 `[auth diag: baseURL=… key=… status=…]`（key 前 6 位掩码）。
 - **超时语义（废弃绝对墙钟）**：**响应头阶段**用 `fetchTimeoutMs`（默认 600s，`agent.fetchTimeoutMs` 可配，`effectiveFetchTimeoutMs(provider)` 统一消费——四 transport 共用）；**body 阶段**用读侧**空闲**超时 `READ_IDLE_MS = 120s`（有数据流动就永不超时，连续无新 chunk 才判死）；`AbortError` 透传（用户 Ctrl+I 取消，不吞）。
 - **abort / 超时来源标注**：超时 / 中止产生点的错误对象自带结构化 `abortInfo`（trigger / layer / detail）——词汇表与判定归 AGENT-LOOP 板（本档只指针）。
+- **body 终止守卫（#16 · 崩溃族）**：读侧空闲断流（`readSSE` ∥ `parseGeminiStream`）经单点 `destroyBody` 以错误终止 body（先挂永久兜底 `'error'` 监听者——防未处理 `'error'` 杀进程；机制单源 = `doc:PROXY.md:§2`）。消费面语义零变（含 google 的 partial 保留径）。
 
 ### 6.4 SSE 流式解析（`readSSE`）
 
@@ -569,3 +570,4 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #10（实施轮 A 单漂移回裁）· eng-designer**——承批档 §5 上抛 1 ∥ 2 · 台账 #841）：§6.22 `providerInvalidReason` 面收正为 **name 面**（`config.mjs:337`——「持 key 但结构不全」**不在 invalid 类合成式内**，归发送 ∕ 装配失败面；`:422` 括注 ∥ KD-841-4 同述连改）；
   新增 **第四消费面（ACP）注**——门判据随核切换（拒 ⇒ 放行）= U3 自然导出（行为变更在案，非缺陷）；协议面提示通道未决 ⇒ 如需另立设计。**产品码零触（修正轮）**。
+- 2026-10-03（**crash-guards 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-crash-guards.md` §2 · 台账 #866（GitHub #16））：§6.3 补 **body 终止守卫** 句（读侧空闲断流经单点 `destroyBody`——机制单源 = `doc:PROXY.md:§2`）。**产品码零触（设计轮）**。
