@@ -40,9 +40,11 @@ export { SEGMENT_BY_ROLE, batchDocBases, resolveBatchDocPath }
 export const MAX_TEXT_CHARS = 20000
 /** 工具写入的轮次节标题形态（N 计数口径 = 该形态行；`### 轮次与发现（…）` 骨架行不匹配）。 */
 const ROUND_HEADING_RE = /^### 轮次 \d+（评审子代理）/
-/** 凭证形态（§2.7 冒号态）：`[DESIGN-TOKEN:…]` 与 `designId: …`——本节自有正则。 */
-const CRED_RE = /\[DESIGN-TOKEN:[^\]]*\]|designId\s*:\s*\S+/g
-const CRED_TEST_RE = /\[DESIGN-TOKEN:[^\]]*\]|designId\s*:\s*\S+/
+/** 凭证形态（`BATCH-RECORD.md` §4.1——三形）：`[DESIGN-TOKEN:…]` 闭括号形 ∥ `designId: …` 键形 ∥ 无标两段
+ *  token 值形 `⟨uuid⟩:⟨epoch⟩`（与单源 `design-token.mjs` 判据对表）；裸 uuid 非凭证不剥（KD-7）。两字面勿
+ *  合并：`CRED_RE` 走 `.replace()` 须 `/g` ∥ `CRED_TEST_RE` 逐行 `.test()` 须非 `/g`（lastIndex 有状态会漏剥）。 */
+const CRED_RE = /\[DESIGN-TOKEN:[^\]]*\]|designId\s*:\s*\S+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:\d{10,16}/g
+const CRED_TEST_RE = /\[DESIGN-TOKEN:[^\]]*\]|designId\s*:\s*\S+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:\d{10,16}/
 
 // ─── #84 记账面注入缝（「记账面按端注入」，形态参 §2.13.5 注入缝）───────────────
 /**

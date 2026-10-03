@@ -3,14 +3,14 @@
  * 判据表 = 批档 `docs/batches/2026-10-02-desktop-settings-menu-upgrade.md` §2.4（机检六腿：波 1 三 + 波 2 三）+ §2.1；
  * 决策单源 = `docs/desktop/design/MENU.md` §1 **KD-67** ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-68**；
  * 通道契约 = `docs/desktop/design/IPC.md` §1 `ev:menu` 行。
- * **#820 邻接注（2026-10-02）**：波 1 腿①/② 断言 = 七组项快照——#820 收窄（设置菜单六组项）实施落盘后**恰 2 红 = 预期**（复跑 `tests 8 ∥ pass 6 ∥ fail 2`；红例 = 腿① `:171` ∥ 腿② `:254`）；本档随批留存、不追改；随下次触碰改钉六项形（沿 #811→#817 先例；#820 批档 §6 互指）。
+ * **重锚（2026-10-04 · 台账 #889）——断言 = 现盘形**：波 1 腿①/② 已按 #820 六项形改钉（设置组条目 = 设置… ∥ sep ∥ 六组项 ∥ sep ∥ 维护▸ ∥ 关于与快捷键▸；`SETTINGS_GROUPS` ≡ `SECTIONS` 名序去「模型与档位」，设置页七段零动）＋ 词表键集 43 ∥ 白名单 48 随读改钉（复跑 8/8）。
  *
  * 面（只测本批改动面 —— 平 node；纯函数腿直测，装配面以桩 `document` 直测决策 ∥ 调度面）：
- *   波 1 腿 ① 树形：五组序 ∥ 设置组条目序（设置… ∥ sep ∥ 七组项 ∥ sep ∥ 维护▸ ∥ 关于与快捷键▸）∥ 七组项 emit 闭集
- *          ∥ 跨面闭集一致性（`SETTINGS_GROUPS` ≡ `SECTIONS` 名序 ≡ 读取面键序）∥ `maintenance` 键值保持 ∥ 帮助组零动；
- *   波 1 腿 ② 词面 ∥ 回落：键集 29 ⇒ 32 ∥ `settingsSectionLabels` = HOST_DICT `settings.section.*` 投影 ∥ 未知 ⇒ en 回落
+ *   波 1 腿 ① 树形：五组序 ∥ 设置组条目序（设置… ∥ sep ∥ 六组项 ∥ sep ∥ 维护▸ ∥ 关于与快捷键▸）∥ 六组项 emit 闭集
+ *          ∥ 跨面闭集一致性（`SETTINGS_GROUPS` ≡ `SECTIONS` 名序去「模型与档位」≡ 读取面键序）∥ `maintenance` 键值保持 ∥ 帮助组零动；
+ *   波 1 腿 ② 词面 ∥ 回落：键集 43 ∥ `settingsSectionLabels` = HOST_DICT `settings.section.*` 投影 ∥ 未知 ⇒ en 回落
  *          ∥ 缺键 ⇒ 键名终态 ∥ 与 HOST_DICT 零重叠键；
- *   波 1 腿 ③ 通道双表 + 动作闭集六：双表含 `ev:menu` 且等值（24）∥ 白名单 47 不动 ∥ HANDLERS 闭包 ∥ `menu-actions`
+ *   波 1 腿 ③ 通道双表 + 动作闭集六：双表含 `ev:menu` 且等值（24）∥ 白名单 48 不动 ∥ HANDLERS 闭包 ∥ `menu-actions`
  *          六动作（`openSettings` 两形：缺 `value` ⇒ undefined ∥ 携组名 ⇒ 组名）∥ 表外 ⇒ 记错零动作 ∥ app.mjs 双口转接源扫；
  *   波 2 腿 ④ 弹窗树：`settingsModalTree` 平 node（背板 ∥ 卡 `role`/`aria-modal`/`aria-label` ∥ 头（组名 + ✕ 锚）∥
  *          体恰一组（七组逐组跨面互斥）∥ notice 过滤两向（本组 ∨ panel 显 ∥ 他组隐）∥ 三关 handler 在场 ∥ 表外组 ⇒ null
@@ -50,7 +50,7 @@ const { initialState, createStore, patchSettings } = await import(at("thincoder-
 const { attachSettings } = await import(at("thincoder-desktop/renderer/mount-settings.mjs"))
 const preload = require(join(ROOT, "thincoder-desktop/src/preload/preload.cjs"))
 
-/** 全菜单键集（预期 —— 词表纪律腿判据；29 ⇒ 32）。 */
+/** 全菜单键集（预期 —— 词表纪律腿判据；43）。 */
 const WORD_KEYS = [
   "file", "edit", "view", "settings", "maintenance", "help",
   "newSession", "openProject", "recent", "recentEmpty", "close", "quit",
@@ -58,7 +58,9 @@ const WORD_KEYS = [
   "reload", "forceReload", "toggleDevTools", "resetZoom", "zoomIn", "zoomOut", "toggleFullscreen",
   "theme", "themeSystem", "themeLight", "themeDark",
   "settingsOpen", "cleanUp", "rebuildIndex", "aboutShortcuts",
-  "helpCommands", "about",
+  "helpCommands", "about", "checkUpdate", "checkingUpdate", "downloadingUpdate", "restartUpdate",
+  "updateDialogTitle", "updateFailed", "updateNotice", "updateRestartCancel",
+  "updateRestartConfirm", "updateRestartOk", "updateUpToDate",
 ]
 
 /** 建模板（真词表 + 真段名读数 + 两缝捕获）。 */
@@ -161,67 +163,67 @@ const GROUP_FIXTURES = {
   },
 }
 
-// ─── 波 1 腿 ① · 树形（五组序 ∥ 设置组条目序 ∥ 七组项 emit 闭集 ∥ 跨面闭集一致性）──────────────
+// ─── 波 1 腿 ① · 树形（五组序 ∥ 设置组条目序 ∥ 六组项 emit 闭集 ∥ 跨面闭集一致性）──────────────
 
-test("波1腿① 树形：五组序 ∥ 设置组条目序 ∥ 七组项 emit 闭集 ∥ 跨面闭集一致性", () => {
+test("波1腿① 树形：五组序 ∥ 设置组条目序 ∥ 六组项 emit 闭集 ∥ 跨面闭集一致性", () => {
   const { template, actions, natives } = buildMenu()
   assert.equal(template.length, 5, "恰五组")
   assert.deepEqual(template.map((g) => g.label), ["文件", "编辑", "视图", "设置", "帮助"])
 
   const group = template[3].submenu
   assert.deepEqual(group.map((i) => i.label ?? i.type),
-    ["设置…", "separator", "渠道…", "模型与档位…", "agent 参数…", "MCP…", "运行环境…", "工具与服务…", "会诊与审查…", "separator", "维护", "关于与快捷键"],
-    "条目序 = 设置… ∥ sep ∥ 七组项 ∥ sep ∥ 维护▸ ∥ 关于与快捷键▸")
+    ["设置…", "separator", "渠道…", "agent 参数…", "MCP…", "运行环境…", "工具与服务…", "会诊与审查…", "separator", "维护", "关于与快捷键"],
+    "条目序 = 设置… ∥ sep ∥ 六组项 ∥ sep ∥ 维护▸ ∥ 关于与快捷键▸")
 
-  // 七组项 emit = ("openSettings", undefined, 组名) —— 序 = SETTINGS_GROUPS
-  const items = group.slice(2, 9)
+  // 六组项 emit = ("openSettings", undefined, 组名) —— 序 = SETTINGS_GROUPS
+  const items = group.slice(2, 8)
   for (const item of items) item.click()
-  assert.deepEqual(actions, SETTINGS_GROUPS.map((name) => ["openSettings", undefined, name]), "七组项 emit 闭集 + path 恰位")
+  assert.deepEqual(actions, SETTINGS_GROUPS.map((name) => ["openSettings", undefined, name]), "六组项 emit 闭集 + path 恰位")
   group[0].click()
   assert.deepEqual(actions.at(-1), ["openSettings"], "设置…（缺 value ⇒ 页径）")
 
   // 两子组 = 行为零改（gc ∥ index / help / about）
-  const maintenance = group[10]
+  const maintenance = group[9]
   assert.deepEqual(maintenance.submenu.map((i) => i.label), ["清理会话数据…", "重建会话索引"])
   maintenance.submenu[0].click()
   maintenance.submenu[1].click()
-  const aboutShortcuts = group[11]
+  const aboutShortcuts = group[10]
   assert.deepEqual(aboutShortcuts.submenu.map((i) => i.label), ["命令与快捷键…", "关于 ThinCoder…"])
   aboutShortcuts.submenu[0].click()
   aboutShortcuts.submenu[1].click()
   assert.deepEqual(natives, [["gc"], ["index"], ["about"]], "宿主自办三缝零改")
   assert.deepEqual(actions.at(-1), ["help"], "命令与快捷键 ⇒ emit(help) 零改")
 
-  // 帮助组零动（「关于与快捷键」= 同二项之第二入口）
-  assert.deepEqual(template[4].submenu.map((i) => i.label), ["命令与快捷键…", "关于 ThinCoder…"])
+  // 帮助组零动（「关于与快捷键」= 同二项之第二入口；检查更新… 首项随桌面发布批在册）
+  assert.deepEqual(template[4].submenu.map((i) => i.label ?? i.type), ["检查更新…", "separator", "命令与快捷键…", "关于 ThinCoder…"])
 
-  // 跨面闭集一致性：主侧镜像 ≡ 视图单源 ≡ 读取面键序（源 ∕ 镜像三面同值）
-  assert.deepEqual([...SETTINGS_GROUPS], SECTIONS.map((s) => s.name), "SETTINGS_GROUPS ≡ SECTIONS 名序")
+  // 跨面闭集一致性：主侧镜像 ≡ 视图单源名序去「模型与档位」（设置页面七段零动）∥ 读取面键序（源 ∕ 镜像三面同值）
+  assert.deepEqual([...SETTINGS_GROUPS], SECTIONS.map((s) => s.name).filter((name) => name !== "model"), "SETTINGS_GROUPS ≡ SECTIONS 名序去「模型与档位」")
   assert.deepEqual(Object.keys(settingsSectionLabels("zh")), [...SETTINGS_GROUPS], "读取面键序同值")
-  assert.equal(SETTINGS_GROUPS.length, 7)
+  assert.equal(SETTINGS_GROUPS.length, 6)
 
   // maintenance 键值保持（现役 = 子组标签）∥ 三新键在位（en 轮）
   assert.equal(menuLabels("zh").maintenance, "维护")
   const en = buildMenu({ locale: "en" })
   assert.deepEqual(en.template.map((g) => g.label), ["File", "Edit", "View", "Settings", "Help"])
   assert.equal(en.template[3].submenu[0].label, "Settings…")
-  assert.equal(en.template[3].submenu[10].label, "Maintenance")
-  assert.equal(en.template[3].submenu[11].label, "About & Shortcuts")
+  assert.equal(en.template[3].submenu[9].label, "Maintenance")
+  assert.equal(en.template[3].submenu[10].label, "About & Shortcuts")
 })
 
-// ─── 波 1 腿 ② · 词面 ∥ 回落（键集 32 ∥ 段名投影 ∥ en 回落 ∥ 零重叠键）──────────────────────────
+// ─── 波 1 腿 ② · 词面 ∥ 回落（键集 43 ∥ 段名投影 ∥ en 回落 ∥ 零重叠键）──────────────────────────
 
-test("波1腿② 词面 ∥ 回落：键集 32 ∥ 段名 = HOST_DICT 投影 ∥ 未知 ⇒ en ∥ 零重叠键", () => {
+test("波1腿② 词面 ∥ 回落：键集 43 ∥ 段名 = HOST_DICT 投影 ∥ 未知 ⇒ en ∥ 零重叠键", () => {
   for (const locale of ["zh", "en"]) {
     const words = menuLabels(locale)
-    assert.deepEqual(Object.keys(words).sort(), [...WORD_KEYS].sort(), `${locale} 键集 = 预期 32`)
+    assert.deepEqual(Object.keys(words).sort(), [...WORD_KEYS].sort(), `${locale} 键集 = 预期 43`)
     for (const key of WORD_KEYS) {
       assert.equal(typeof words[key], "string", `${locale}.${key} 在场`)
       assert.notEqual(words[key], "", `${locale}.${key} 值非空`)
     }
   }
-  assert.equal(WORD_KEYS.length, 32)
-  assert.equal(Object.keys(menuLabels("zh")).length, 29 + 3, "键集 29 ⇒ 32")
+  assert.equal(WORD_KEYS.length, 43)
+  assert.equal(Object.keys(menuLabels("zh")).length, 43, "键集面现读")
 
   // 三新键值（双语）
   assert.equal(menuLabels("zh").settings, "设置")
@@ -252,8 +254,8 @@ test("波1腿② 词面 ∥ 回落：键集 32 ∥ 段名 = HOST_DICT 投影 ∥
   // 模板消费真读数：label = 段名 + 「…」后缀（菜单形）
   const { template } = buildMenu()
   assert.equal(template[3].submenu[2].label, "渠道…")
-  assert.equal(template[3].submenu[3].label, "模型与档位…")
-  assert.equal(template[3].submenu[8].label, "会诊与审查…")
+  assert.equal(template[3].submenu[3].label, "agent 参数…")
+  assert.equal(template[3].submenu[7].label, "会诊与审查…")
 
   // 零重叠键（菜单自持键面 ∩ HOST_DICT = ∅ —— 两语同判）
   for (const dict of [HOST_DICT.zh ?? {}, HOST_DICT.en ?? {}]) {
@@ -264,14 +266,14 @@ test("波1腿② 词面 ∥ 回落：键集 32 ∥ 段名 = HOST_DICT 投影 ∥
 // ─── 波 1 腿 ③ · 通道双表 + 动作闭集六 ──────────────────────────────────────────────────────
 
 test("波1腿③ 通道双表 + 动作闭集六（零新通道 ∥ 表外记错 ∥ app.mjs 双口转接）", () => {
-  // 零新通道：事件双表含 ev:menu 且等值（24）；白名单 47 与注册表闭包不动
+  // 零新通道：事件双表含 ev:menu 且等值（24）；白名单 48 与注册表闭包不动
   const subscribe = read("thincoder-desktop/renderer/events-subscribe.mjs")
   const subChannels = ((subscribe.match(/const CHANNELS = \[[\s\S]*?\]/) ?? [""])[0].match(/"[^"]+"/g) ?? []).map((name) => name.slice(1, -1))
   assert.ok(subChannels.includes("ev:menu"), "订阅面表含 ev:menu")
   assert.deepEqual([...preload.EVENT_CHANNELS], subChannels, "双表等值（逐名逐序）")
   assert.equal(preload.EVENT_CHANNELS.length, 24)
-  assert.equal(preload.CHANNELS.length, 47)
-  assert.equal(new Set(preload.CHANNELS).size, 47)
+  assert.equal(preload.CHANNELS.length, 48)
+  assert.equal(new Set(preload.CHANNELS).size, 48)
   const registry = read("thincoder-desktop/src/main/ipc-registry.mjs")
   const table = (registry.match(/const HANDLERS = Object\.freeze\(\{[\s\S]*?\n\}\)/) ?? [""])[0]
   const rows = [...table.matchAll(/"([^"]+)":/g)].map((match) => match[1])

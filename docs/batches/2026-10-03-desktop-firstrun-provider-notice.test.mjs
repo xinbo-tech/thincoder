@@ -411,6 +411,7 @@ test("T6 KD-8：槽复验（槽无效 ⇒ 标记保持；槽有效 ⇒ 清标）
 test("T7 集成腿：send#1 拦（零入表）⇒ setPrefs 写槽 ⇒ send#2 放行（KD-8）＋ 重装配（C）", async () => {
   sessionSlotsMod._setSessionsDirForTest(tmpDir("fr840-t7-sessions-"))
   const cwd = tmpDir("fr840-t7-cwd-")
+  cfgIo._setConfigPathForTest(join(tmpDir("fr840-t7-cfg-"), "config.json")) // 写回去向 = 缝（真 config 零触 — #890）
   try {
     const slot = await sessionSlotsMod.newSession(cwd)
     const key = String(slot)
@@ -440,6 +441,7 @@ test("T7 集成腿：send#1 拦（零入表）⇒ setPrefs 写槽 ⇒ send#2 放
     const prefs = host.setPrefs(key, { provider: "p1", model: "m1" })
     assert.equal(prefs.ok, true, "会话级选模型（真槽写——既有语义零改）")
     assert.equal(host.agents.size, 0, "在表零命中 ⇒ 只写盘（不隐式装配）")
+    assert.equal(JSON.parse(readFileSync(cfgIo._configPath(), "utf8")).defaultModel, "p1:m1", "写回去向 = 缝档（#890：真 config 零触）")
 
     await until(() => host.busyOf(key) === false)
     const r2 = await host.send(key, "乙", null)
@@ -448,5 +450,6 @@ test("T7 集成腿：send#1 拦（零入表）⇒ setPrefs 写槽 ⇒ send#2 放
     await until(() => host.busyOf(key) === false)
   } finally {
     sessionSlotsMod._resetSessionsDirForTest()
+    cfgIo._resetConfigPathForTest()
   }
 })

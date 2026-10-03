@@ -1,6 +1,6 @@
 /**
  * 2026-10-02-desktop-menu-system.test.mjs — 批内件（菜单体系批 · 台账 #811 · 实施轮）。
- * **注（2026-10-02 · #817 落盘后）**：菜单树形 ∕ 动作集 ∕ 键集已随设置体系升级批（#817）变更（设置组 ∥ 六动作 ∥ 键集 32）——本档 = #811 快照，复跑红 = 预期（非缺陷）；现行判据 → `docs/batches/2026-10-02-desktop-settings-menu-upgrade.test.mjs`。
+ * **重锚（2026-10-04 · 台账 #889）——断言 = 现盘形**：菜单树形 ∕ 动作集 ∕ 键集（43）∥ 通道计数（48）随后续批演进（#817 设置体系 ∥ #888 更名 ∥ 桌面发布批 `panel:state` 等）——本档逐腿改钉至现读（复跑 8/8）；平行判据 = `docs/batches/2026-10-02-desktop-settings-menu-upgrade.test.mjs` ∥ `docs/batches/2026-10-02-settings-menu-trim.test.mjs`。
  * 判据表 = 批档 `docs/batches/2026-10-02-desktop-menu-system.md` §2.4（机检五腿）+ §2.1（条目覆盖）；
  * 决策单源 = `docs/desktop/design/PROJECT.md` §2 **KD-65**；通道契约 = `docs/desktop/design/IPC.md` §1 `ev:menu` 行
  * ∥ §2 `theme:state` 行。
@@ -15,7 +15,7 @@
  *   腿 ④ 词表纪律：`menuLabels` 键集 = 预期集（两语同集）∥ Edit 四值 = `contextMenuLabels` 同源（sentinel 证）
  *        ∥ 与 `HOST_DICT` 零重叠键；
  *   腿 ⑤ 通道面 + 回读面：`preload.cjs` `EVENT_CHANNELS` ∥ `events-subscribe.mjs` `CHANNELS` 双表含 `ev:menu`
- *        且等值（24）∥ `CHANNELS` 末位 47 = `theme:state` ∥ `ipc-registry.mjs` `HANDLERS` 含同项且表行 = 白名单闭合。
+ *        且等值（24）∥ `CHANNELS` 末位 48 = `panel:state` ∥ `ipc-registry.mjs` `HANDLERS` 含同项且表行 = 白名单闭合。
  *
  * 本件不进仓套件（批内件 · 随批留存）；跑法（任意 cwd——路径按本档自身位置解析）：
  *   node --test docs/batches/2026-10-02-desktop-menu-system.test.mjs
@@ -41,13 +41,15 @@ const preload = require(rel("thincoder-desktop/src/preload/preload.cjs"))
 
 /** 全菜单键集（预期 —— 词表纪律腿判据；增键须两语同增）。 */
 const WORD_KEYS = [
-  "file", "edit", "view", "maintenance", "help",
+  "file", "edit", "view", "settings", "maintenance", "help",
   "newSession", "openProject", "recent", "recentEmpty", "close", "quit",
   "undo", "redo", "find",
   "reload", "forceReload", "toggleDevTools", "resetZoom", "zoomIn", "zoomOut", "toggleFullscreen",
   "theme", "themeSystem", "themeLight", "themeDark",
   "cleanUp", "rebuildIndex",
-  "helpCommands", "about",
+  "settingsOpen",
+  "helpCommands", "about", "aboutShortcuts", "checkUpdate", "checkingUpdate", "downloadingUpdate",
+  "restartUpdate", "updateDialogTitle", "updateFailed", "updateNotice", "updateRestartCancel", "updateRestartConfirm", "updateRestartOk", "updateUpToDate",
 ]
 
 /** 建模板（真词表 + 真四值注入；两缝捕获）——腿 ①–④ 共用读数面。 */
@@ -63,7 +65,8 @@ function build({ locale = "zh", recent = [], theme = null } = {}) {
 }
 
 const flat = (template) => template.flatMap((group) => group.submenu)
-const findItem = (template, label) => flat(template).find((item) => item.label === label)
+const deepItems = (items) => items.flatMap((item) => [item, ...(Array.isArray(item.submenu) ? deepItems(item.submenu) : [])])
+const findItem = (template, label) => deepItems(flat(template)).find((item) => item.label === label)
 const THEME_SUB = (template) => template[2].submenu.at(-1).submenu
 const RECENT_SUB = (template) => template[0].submenu[2].submenu
 
@@ -72,9 +75,9 @@ const RECENT_SUB = (template) => template[0].submenu[2].submenu
 test("腿 ① 菜单树：五组序 ∥ 逐组条目 ∥ 三加速键 ∥ 窗口组退场", () => {
   const { template } = build()
   assert.equal(template.length, 5, "恰五组")
-  assert.deepEqual(template.map((group) => group.label), ["文件", "编辑", "视图", "维护", "帮助"])
+  assert.deepEqual(template.map((group) => group.label), ["文件", "编辑", "视图", "设置", "帮助"])
 
-  assert.deepEqual(template[0].submenu.map((item) => item.label ?? item.type), ["新建会话", "打开项目…", "最近项目", "separator", "关闭窗口", "退出 ThinCoder"])
+  assert.deepEqual(template[0].submenu.map((item) => item.label ?? item.type), ["新建会话", "打开工作目录…", "最近工作目录", "separator", "关闭窗口", "退出 ThinCoder"])
   assert.equal(template[0].submenu[0].accelerator, "CmdOrCtrl+N")
   assert.equal(template[0].submenu[1].accelerator, "CmdOrCtrl+O")
   assert.deepEqual([template[0].submenu[4].role, template[0].submenu[5].role], ["close", "quit"])
@@ -86,8 +89,8 @@ test("腿 ① 菜单树：五组序 ∥ 逐组条目 ∥ 三加速键 ∥ 窗口
   assert.deepEqual(template[2].submenu.map((item) => item.role ?? item.label ?? item.type),
     ["reload", "forceReload", "toggleDevTools", "separator", "resetZoom", "zoomIn", "zoomOut", "separator", "toggleFullscreen", "separator", "主题"])
 
-  assert.deepEqual(template[3].submenu.map((item) => item.label), ["清理会话数据…", "重建会话索引"])
-  assert.deepEqual(template[4].submenu.map((item) => item.label), ["命令与快捷键…", "关于 ThinCoder…"])
+  assert.deepEqual(template[3].submenu.map((item) => item.label ?? item.type), ["设置…", "separator", "providers…", "agent…", "mcp…", "env…", "tools…", "models…", "separator", "维护", "关于与快捷键"])
+  assert.deepEqual(template[4].submenu.map((item) => item.label ?? item.type), ["检查更新…", "separator", "命令与快捷键…", "关于 ThinCoder…"])
 
   // 三加速键恰三件（新增件 = N/O/F；role 默认加速键不落显式键）
   assert.deepEqual(flat(template).filter((item) => typeof item.accelerator === "string").map((item) => item.accelerator),
@@ -121,7 +124,7 @@ test("腿 ①b 主题▸：三值序 = THEMES 闭集序 ∥ checkbox + 恰一真
 test("腿 ①c 最近▸：空表 ⇒ 单枚禁用占位 ∥ 非空 ⇒ cwd 全路径逐项 ∥ ≤10 链（数据面封顶 + 模板直通）", () => {
   const empty = RECENT_SUB(build({ recent: [] }).template)
   assert.equal(empty.length, 1)
-  assert.equal(empty[0].label, "无最近项目")
+  assert.equal(empty[0].label, "无最近工作目录")
   assert.equal(empty[0].enabled, false)
   assert.equal(empty[0].click, undefined)
 
@@ -161,8 +164,8 @@ test("腿 ② 双语 ∥ 回落：zh/en 双值 ∥ 未知 ∥ 缺 ∥ 归一 ⇒
   // 模板消费真词表：组名 + 全树条目双语（两语逐项 label 非空——缺键回落键名会立刻破形）
   const zhT = build({ locale: "zh" }).template
   const enT = build({ locale: "en" }).template
-  assert.deepEqual(zhT.map((group) => group.label), ["文件", "编辑", "视图", "维护", "帮助"])
-  assert.deepEqual(enT.map((group) => group.label), ["File", "Edit", "View", "Maintenance", "Help"])
+  assert.deepEqual(zhT.map((group) => group.label), ["文件", "编辑", "视图", "设置", "帮助"])
+  assert.deepEqual(enT.map((group) => group.label), ["File", "Edit", "View", "Settings", "Help"])
   for (const template of [zhT, enT]) {
     for (const item of flat(template)) {
       if (item.type === "separator") continue
@@ -186,7 +189,7 @@ test("腿 ② 双语 ∥ 回落：zh/en 双值 ∥ 未知 ∥ 缺 ∥ 归一 ⇒
 
 test("腿 ③ 动作闭集：模板两缝（onAction 五值直通 ∥ onNative 三值直通）", () => {
   const { template, actions, natives } = build({ recent: [{ cwd: "D:/w/r1" }] })
-  for (const label of ["新建会话", "打开项目…", "查找…", "命令与快捷键…"]) findItem(template, label).click()
+  for (const label of ["新建会话", "打开工作目录…", "查找…", "命令与快捷键…"]) findItem(template, label).click()
   assert.deepEqual(actions, [["newSession"], ["openProject"], ["find"], ["help"]])
   THEME_SUB(template)[1].click()
   assert.deepEqual(actions.at(-1), ["theme", undefined, "light"], "value 恰位（theme）")
@@ -245,7 +248,7 @@ test("腿 ④ 词表纪律：键集 = 预期集（两语同集）∥ Edit 四值
       assert.notEqual(words[key], "", `${locale}.${key} 值非空`)
     }
   }
-  assert.equal(WORD_KEYS.length, 29)
+  assert.equal(WORD_KEYS.length, 43)
 
   // Edit 四值读取 = contextMenuLabels 同源（→ HOST_DICT `menu.edit.*`）；模板四值 = 注入读取（非自立）
   for (const locale of ["zh", "en"]) {
@@ -271,7 +274,7 @@ test("腿 ④ 词表纪律：键集 = 预期集（两语同集）∥ Edit 四值
 
 // ─── 腿 ⑤ · 通道面 + 回读面（双表 ∥ 白名单末位 ∥ 注册闭合）──────────────────────────────────
 
-test("腿 ⑤ 通道面 + 回读面：双表含 ev:menu 且等值（24）∥ CHANNELS 末位 47 = theme:state ∥ HANDLERS 闭合", () => {
+test("腿 ⑤ 通道面 + 回读面：双表含 ev:menu 且等值（24）∥ CHANNELS 末位 48 = panel:state ∥ HANDLERS 闭合", () => {
   // 双表等值（preload `EVENT_CHANNELS` ∥ `events-subscribe.mjs` `CHANNELS` —— 后者不导出，取源提取）
   const subscribe = src("thincoder-desktop/renderer/events-subscribe.mjs")
   const subChannels = ((subscribe.match(/const CHANNELS = \[[\s\S]*?\]/) ?? [""])[0].match(/"[^"]+"/g) ?? []).map((name) => name.slice(1, -1))
@@ -279,10 +282,10 @@ test("腿 ⑤ 通道面 + 回读面：双表含 ev:menu 且等值（24）∥ CHA
   assert.deepEqual([...preload.EVENT_CHANNELS], subChannels, "双表等值（逐名逐序）")
   assert.equal(preload.EVENT_CHANNELS.length, 24)
 
-  // 请求白名单 46 ⇒ 47：末位 = theme:state（唯一新项；零改名零位移）
-  assert.equal(preload.CHANNELS.length, 47)
-  assert.equal(preload.CHANNELS.at(-1), "theme:state")
-  assert.equal(new Set(preload.CHANNELS).size, 47)
+  // 请求白名单 47 ⇒ 48：末位 = panel:state（唯一新项；零改名零位移——theme:state 仍在册）
+  assert.equal(preload.CHANNELS.length, 48)
+  assert.equal(preload.CHANNELS.at(-1), "panel:state")
+  assert.equal(new Set(preload.CHANNELS).size, 48)
 
   // 回读面注册闭合：HANDLERS 表行集 = 白名单集（含 theme:state —— 一白名单项 = 一处理体行）
   const registry = src("thincoder-desktop/src/main/ipc-registry.mjs")

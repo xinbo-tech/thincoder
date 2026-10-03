@@ -1,6 +1,6 @@
 /**
  * 2026-09-30-cross-end-digest-recovery.test.mjs — 批内件（跨端消化面恢复批 · 台账 #726）。
- * 状态（2026-10-01 · VSC 舱交付复跑）：K1–K7 ∥ C1a–C5 ∥ V1–V5 = **20/20 绿**（仓根 `node --test`）。
+ * 状态（**2026-10-04 重锚复跑 · 台账 #824**）：K1–K7 ∥ C1a–C5 ∥ V1–V5 = **20/20 绿**（仓根 `node --test`）——V4② 随「未结轮照现」机制重锚（末页 open ⇒ label + count 两元素）。
  * 判据表 = 批档 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2 §五（核腿 ∥ CLI 腿 ∥ VSC 腿）+ §2 三.1（写缝）。
  * 腿族：
  *   核缝面（先行舱 · 已落）：K1 写缝 pushRecord（形 ∥ 序 ∥ ts ∥ 存储同点 ∥ 尾窗驱逐）∥ K2 机器线零触负控 ∥
@@ -15,7 +15,7 @@
  *     活行载体含记录 ∥ 机器线零触 ∥ 记录 `ms` 与帧同值）∥ V2 出站全链（真 webview 归档 ⇒ `recordAppend`
  *     恰一次 ⇒ 真宿主处理体追加；meta 契约子集 + rows 保尾）∥ V3 读面 opt-in 真驱（`loadOlder`）+ 页级重建
  *     （痕元素 tier 两档 ∥ `dataset.n` ∥ done/failed 逐字；归档块活形 + `data-idx`；同位去重）∥ V4 负控
- *     （记录缺逐字等价 ∥ 半轮零元素 ∥ 未归档块不重建 I-7）∥ V5 容差②（save 前/后可见性——下一落盘承接）。
+ *     （记录缺逐字等价 ∥ 未结轮照现〔两元素〕∥ 未归档块不重建 I-7）∥ V5 容差②（save 前/后可见性——下一落盘承接）。
  *     装载面：vscode 解析桩（temp 生成——vscode-mock 包随测试树退役的在册面）+ happy-dom（真 webview 模块）。
  * 机制单源 = `docs/core/design/SESSION.md` §6.26；CLI 承接细则 = `docs/cli/design/TUI-SESSION-VIEW.md` §6；
  * VSC 承接细则 = `docs/vsc/design/WEBVIEW.md` §5.7。
@@ -826,7 +826,7 @@ test("腿 V3·读面 opt-in 真驱 + 页级重建：记录随页携（`loadOlder
   vscIo._resetSessionsDirForTest()
 })
 
-test("腿 V4·负控：默认关逐字等价（消息面）∥ 半轮零元素（容差①）∥ cap 无打开轮零产 ∥ 未归档块不重建（I-7）", () => {
+test("腿 V4·负控：默认关逐字等价（消息面）∥ 未结轮照现（容差①）∥ cap 无打开轮零产 ∥ 未归档块不重建（I-7）", () => {
   // ① 记录缺 ⇒ opt-in 与默认径逐字等价（消息面无破）
   vscIo._setSessionsDirForTest(join(_vsDir, "sessions-b"))
   const HB = [
@@ -839,7 +839,7 @@ test("腿 V4·负控：默认关逐字等价（消息面）∥ 半轮零元素�
   vscSession.loadOlder(panel, HB.length)
   const page = posts.find((m) => m.type === "historyPage")
   assert.equal(JSON.stringify(page.messages), JSON.stringify(historyWindow(HB, HB.length).messages), "记录缺 ⇒ 与默认径逐字等价")
-  // ② 半轮零元素：cap 无打开轮 ∥ end 缺 start ∥ start 缺 end ⇒ 零元素
+  // ② 未结轮照现：cap 无打开轮 ∥ end 缺 start ⇒ 零产；start 缺 end〔末页 open〕⇒ 照现两元素
   const root = wstate.ctx.messagesEl
   root.replaceChildren()
   const half = [
@@ -848,7 +848,7 @@ test("腿 V4·负控：默认关逐字等价（消息面）∥ 半轮零元素�
     { kind: "digest", status: "start", n: 2, tier: "digest", ts: 3, idx: 12 },
   ]
   whistory.applyHistoryPage(wstate.ctx, { messages: half, hasOlder: false, older: false })
-  assert.equal(root.querySelectorAll(".digest-turn, .digest-status, .digest-cap").length, 0, "半轮零元素（跨页分裂轮页内不产）")
+  assert.equal(root.querySelectorAll(".digest-turn, .digest-status, .digest-cap").length, 2, "未结轮照现（末页 open——label + count 两元素）")
   // ③ 未归档块不重建（I-7 收窄）：live 块驻活动区——记录缺 ⇒ 页重建零块
   const liveRoot = wstate.ctx.activityEl
   const before = liveRoot.children.length

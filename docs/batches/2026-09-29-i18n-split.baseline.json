@@ -1,597 +1,2519 @@
 {
-  "_note": "i18n 拆分批（2026-09-29 · 台账 #614）搬前基线：renderer/i18n.mjs HOST_DICT 两语全量条目（保序 [[key,value],...]）——搬前届盘实读冻结；对拍件 = docs/batches/2026-09-29-i18n-split.test.mjs（A2）。【重锚 2026-09-29 18:3x · 父侧收位】#637 增 `session.occupied` 两语（session.deleteConfirm 后位）——条目 294 ⇒ 295。",
+  "_note": "i18n 拆分批（2026-09-29 · 台账 #614）搬前基线：renderer/i18n.mjs HOST_DICT 两语全量条目（保序 [[key,value],...]）——搬前届盘实读冻结；对拍件 = docs/batches/2026-09-29-i18n-split.test.mjs（A2）。【重锚 2026-09-29 18:3x · 父侧收位】#637 增 `session.occupied` 两语（session.deleteConfirm 后位）——条目 294 ⇒ 295。【重锚 2026-10-04 · 台账 #889】HOST_DICT 随后续批条目增殖——条目 295 ⇒ 314（现盘全量重冻；对拍语义 = 现盘全量等值等序 + 三档子序列相对序保）。",
   "en": [
-    ["rail.action.openDir", "Open folder…"],
-    ["rail.action.newSession", "New session"],
-    ["rail.session.untitled", "Untitled session"],
-    ["rail.session.msgs", "${n} msgs"],
-    ["rail.session.updated", "${date}"],
-    ["rail.ledger.notice", "Session ledger anomaly (${reason}) — opening a session self-heals it"],
-    ["rail.ledger.notice.scene", "Corrupted-scene files kept 30 days"],
-    ["tab.badge.approval", "awaiting approval"],
-    ["chat.pill.new", "${n} new"],
-    ["chat.pill.bottom", "Back to latest"],
-    ["chat.summary.older", "${n} earlier messages"],
-    ["chat.tool.changes", "${files} files · +${add} −${del}"],
-    ["chat.tool.duration", "${seconds}s"],
-    ["menu.edit.cut", "Cut"],
-    ["menu.edit.copy", "Copy"],
-    ["menu.edit.paste", "Paste"],
-    ["menu.edit.selectAll", "Select All"],
-    ["msg.copy", "Copy"],
-    ["msg.copied", "Copied!"],
-    ["sub.async", "async"],
-    ["sub.sync", "sync"],
-    ["sub.waiting", "waiting"],
-    ["sub.awaitingApproval", "Awaiting approval: ${tool}"],
-    ["sub.cancelQueueBtn", "cancel queue"],
-    ["sub.stopBtn", "Stop this subagent"],
-    ["sub.newBlocks", "↓ ${n} new block(s)"],
-    ["sub.follow.new", "↓ New output"],
-    ["sub.follow.bottom", "↓ Back to latest"],
-    ["sub.desc", "Subagent activity — the agent spawned a helper for an independent subtask. Expand for details; ⏹ stops a background run."],
-    ["msg.user", "You"],
-    ["msg.assistant", "ThinCoder"],
-    ["queued.pending", "Queued — sent automatically, no interruption"],
-    ["chat.guide.noProject", "No project open — open a folder to start"],
-    ["chat.guide.noSession", "No session yet — create one to start chatting"],
-    ["pool.title", "Activity"],
-    ["pool.family.approvals", "Approvals"],
-    ["pool.family.subagents", "Subagents"],
-    ["pool.family.queue", "Queued"],
-    ["pool.collapse", "Collapse activity"],
-    ["pool.expand", "Expand activity"],
-    ["composer.attach.nonvision", "Images not sent — this model does not accept images"],
-    ["composer.attach.partial", "Some images were dropped (over the limit or failed to save) — the rest were sent"],
-    ["approval.once", "Allow once"],
-    ["approval.always", "Always allow"],
-    ["approval.reject", "Reject"],
-    ["approval.batch.approveAll", "Approve all"],
-    ["approval.batch.deny", "Deny all"],
-    ["approval.batch.oneByOne", "Review one by one"],
-    ["approval.batch.count", "${count} tools awaiting approval"],
-    ["question.input", "Your answer"],
-    ["question.answer", "Send answer"],
-    ["question.cancel", "Cancel"],
-    ["settings.title", "Settings"],
-    ["settings.close", "Close settings"],
-    ["settings.lang.en", "English"],
-    ["settings.lang.zh", "中文"],
-    ["settings.section.providers", "Providers"],
-    ["settings.section.model", "Model & tier"],
-    ["settings.section.agent", "Agent options"],
-    ["settings.section.mcp", "MCP"],
-    ["settings.state.none", "Not configured"],
-    ["settings.state.loading", "Loading…"],
-    ["settings.reason.mtimeConflict", "Config changed elsewhere — reload before saving"],
-    ["settings.reason.invalidShape", "Invalid config shape"],
-    ["settings.reason.invalidKey", "Unknown config key"],
-    ["settings.reason.invalidValue", "Invalid value"],
-    ["settings.reason.invalidPatch", "Invalid patch"],
-    ["settings.reason.noProject", "No project open"],
-    ["settings.reason.missing", "Config file missing"],
-    ["settings.reason.invalidManifest", "Invalid project manifest"],
-    ["settings.reason.unavailable", "Unavailable"],
-    ["settings.reason.timeout", "Timed out"],
-    ["settings.reason.malformed", "Malformed response"],
-    ["settings.reason.probeFailed", "Probe failed"],
-    ["settings.providers.nameLabel", "Name"],
-    ["settings.providers.presetLabel", "Preset"],
-    ["settings.providers.baseURLLabel", "Base URL"],
-    ["settings.providers.modelLabel", "Model"],
-    ["settings.providers.formatLabel", "Format"],
-    ["settings.providers.keyLabel", "API key"],
-    ["settings.providers.activeToggle", "Set as active provider"],
-    ["settings.providers.addCustom", "Add custom provider"],
-    ["settings.providers.addPreset", "Add preset provider"],
-    ["settings.providers.verify", "Verify"],
-    ["settings.providers.verify.ok", "Verified · ${count} models"],
-    ["settings.providers.verify.fail", "Verification failed: ${reason}"],
-    ["settings.providers.noKey", "No API key"],
-    ["settings.providers.remove", "Remove ${name}"],
-    ["settings.providers.active", "Active"],
-    ["settings.proxyRow", "proxy"],
-    ["settings.proxyRowTitle", "Route this provider's model requests through the proxy (needs global proxy.model on)"],
-    ["settings.fetchModels", "Fetch Models"],
-    ["settings.connecting", "Connecting…"],
-    ["settings.connOk", "✓ Connected — ${count} models"],
-    ["settings.providerUrlRequired", "baseURL required"],
-    ["settings.secretDeleteConfirm", "Delete? This cannot be undone — the original credential cannot be recovered; you would have to reconfigure it or get a new one from the provider."],
-    ["settings.agent.readonly", "Read-only"],
-    ["settings.agent.save", "Save"],
-    ["settings.model.current", "Current model"],
-    ["settings.model.empty", "No models yet"],
-    ["settings.model.use", "Use"],
-    ["settings.model.tier", "Tier"],
-    ["settings.mcp.kind.url", "URL"],
-    ["settings.mcp.kind.command", "Command"],
-    ["settings.mcp.remove", "Remove ${name}"],
-    ["settings.mcp.nameLabel", "Name"],
-    ["settings.mcp.add", "Add server"],
-    ["wizard.title", "Initial setup"],
-    ["wizard.dismiss", "Close setup"],
-    ["wizard.step.channel", "Provider"],
-    ["wizard.step.model", "Model"],
-    ["wizard.step.dir", "Folder"],
-    ["wizard.next", "Next"],
-    ["wizard.finish", "Finish"],
-    ["wizard.dir.hint", "Pick a project folder — you can change it later."],
-    ["wizard.dir.pick", "Choose folder…"],
-    ["wizard.save", "Save provider"],
-    ["head.field.provider", "Provider"],
-    ["head.field.model", "Model"],
-    ["head.field.effort", "Tier"],
-    ["effort.auto", "Auto"],
-    ["effort.off", "Off"],
-    ["status.usage", "context ${percent}%${tokens}"],
-    ["status.attention.blocked", "⚠ Awaiting your approval or answer"],
-    ["status.tool", "${name}…"],
-    ["status.elapsedSeconds", "${seconds}s"],
-    ["status.tasks", "✓${done}/${total}"],
-    ["status.tokens", "↑${up} ↓${down}"],
-    ["status.tokens.reasoning", "✦${tokens}"],
-    ["status.tokens.hit", "hit${percent}%"],
-    ["status.timer", "⏰${n}"],
-    ["status.queue.enter", "Enter to queue"],
-    ["status.queue.n", "${n} queued message(s)"],
-    ["status.ready", "Ready"],
-    ["status.enter.send", "Enter: send"],
-    ["status.banner.plan", "PLAN"],
-    ["status.banner.auto", "AUTO"],
-    ["status.banner.advisor", "ADVISOR"],
-    ["status.banner.eng", "ENG"],
-    ["susp.running", "${n} background subagent(s) running"],
-    ["susp.digesting", "${n} awaiting digestion"],
-    ["susp.winding", "background subagents finishing…"],
-    ["input.placeholder", "Ask ThinCoder... (Shift+Enter for new line)"],
-    ["input.busyPlaceholder", "Main session busy — Enter submit is restricted — you can keep typing"],
-    ["input.slotFull", "Task running — the queue is full (8 messages); wait for them to be processed before submitting again."],
-    ["input.interruptPlaceholder", "Interrupt — inject a message… (Enter to send, Esc to cancel)"],
-    ["workspace.required", "Open a folder first — ThinCoder needs a workspace to work in."],
-    ["workspace.requiredPlaceholder", "Open a folder to start…"],
-    ["toolbar.autoApprove", "Auto-approve tools"],
-    ["toolbar.planDisabled", "Disabled in engineering mode — engineering already runs design-before-code"],
-    ["auto.confirmText", "AUTO mode executes ALL tool calls — including file writes and shell commands — without asking for approval."],
-    ["auto.enable", "⚠ Enable AUTO"],
-    ["auto.cancel", "Cancel"],
-    ["model.loading", "Loading models…"],
-    ["model.filterPlaceholder", "Filter models…"],
-    ["model.noMatch", "No models match"],
-    ["model.reasoning", "Reasoning"],
-    ["model.noReasoning", "No reasoning"],
-    ["model.noReasoningDesc", "Off (not supported)"],
-    ["model.addProvider", "+ Add provider…"],
-    ["model.removeProvider", "− Remove provider…"],
-    ["model.setKey", "Key…"],
-    ["reasoning.max", "Maximum"],
-    ["reasoning.xhigh", "Extra High"],
-    ["reasoning.high", "High"],
-    ["reasoning.medium", "Medium"],
-    ["reasoning.low", "Low"],
-    ["reasoning.minimal", "Minimal"],
-    ["reasoning.none", "Off"],
-    ["reasoning.enabled", "Reasoning"],
-    ["tool.interrupted", "interrupted"],
-    ["error.retry", "Retry"],
-    ["welcome.heading", "Welcome to ThinCoder"],
-    ["welcome.text", "Choose a provider and enter its API key to get started."],
-    ["welcome.textConfigured", "Ask about this workspace — the agent can read files, run commands, and edit code."],
-    ["welcome.shortcuts", "Enter to send · Shift+Enter for newline"],
-    ["chat.pending.single", "⏳ Queued · Won't interrupt the current run — sent automatically"],
-    ["chat.pending.multi", "⏳ Queued · ${count} messages (won't interrupt the current run, sent together)"],
-    ["chat.pending.more", "… [${lines} lines — shown in full once sent]"],
-    ["composer.send.failed", "Send failed (${reason}) — the text was kept"],
-    ["paste.unsupportedFormat", "Only png / jpg / gif / webp images are supported (got ${type})"],
-    ["approval.diff.large", "Large diff — ${n} lines (preview omitted)"],
-    ["settings.agent.maxTurns", "Max Turns"],
-    ["settings.agent.subagentTurns", "Subagent Turns"],
-    ["settings.agent.poolLimits.engCoder", "Eng-coder Pool"],
-    ["settings.agent.poolLimits.other", "Other Roles Pool"],
-    ["settings.agent.poolLimits.advisor", "Advisor Review Pool"],
-    ["settings.agent.compactThreshold", "Compact Threshold (empty = auto)"],
-    ["settings.agent.verifyGuard", "Verify Guard (push to verify before finishing)"],
-    ["settings.agent.consultTurns", "Turn limit"],
-    ["settings.agent.consultTimeoutMs", "Timeout (minutes)"],
-    ["settings.agent.advisorEffort", "Review effort"],
-    ["session.title", "Session"],
-    ["session.empty", "No sessions"],
-    ["session.rename", "Rename"],
-    ["session.delete", "Delete"],
-    ["session.deleteConfirm", "Delete session \"${title}\"? This cannot be undone."],
-    ["session.occupied", "This session is in use by another live process — continuing will create a new copy on the next save."],
-    ["session.openFailed", "Could not open the session (${reason})"],
-    ["session.loadFailed", "Could not load the session content"],
-    ["session.renameFailed", "Could not rename the session (${reason})"],
-    ["session.deleteFailed", "Could not delete the session (${reason})"],
-    ["perm.wantsTo", "ThinCoder wants to run"],
-    ["perm.approve", "Approve"],
-    ["perm.approveAll", "Approve All"],
-    ["perm.deny", "Deny"],
-    ["perm.viewInEditor", "View in editor"],
-    ["perm.batch.wantsTo", "ThinCoder wants to run ${count} tools: ${names}"],
-    ["perm.batch.oneByOne", "One by One"],
-    ["question.label", "Question"],
-    ["question.mark", "❯"],
-    ["question.submit", "Send"],
-    ["question.customPlaceholder", "Or type your own answer…"],
-    ["question.placeholder", "Type your answer…"],
-    ["panel.taskDesc", "Agent tracks multi-step work here — created and updated automatically"],
-    ["panel.goalDesc", "Long-running objective — runs until complete or cancelled"],
-    ["goal.objective", "Objective"],
-    ["settings.section.tools", "Tools & Services"],
-    ["settings.indexSection", "Semantic Index"],
-    ["settings.indexBuild", "Build Index"],
-    ["settings.indexRebuild", "Rebuild Index"],
-    ["settings.indexBuilding", "Building…"],
-    ["settings.indexBuilt", "✓ Index built: ${files} files, ${chunks} chunks"],
-    ["settings.indexNotBuilt", "Index not built. Vector search is inactive."],
-    ["settings.indexNoKey", "No embedding API key configured."],
-    ["search.placeholder", "Search messages…"],
-    ["search.prev", "Previous match"],
-    ["search.next", "Next match"],
-    ["search.close", "Close search"],
-    ["search.noMatch", "No matches"],
-    ["status.indexScan", "Indexing: scanning ${n} files…"],
-    ["status.indexProgress", "Indexing: ${done}/${total}…"],
-    ["status.goal", "Goal panel"],
-    ["settings.section.env", "Environment"],
-    ["settings.section.models", "Consultation & Advisor"],
-    ["settings.proxySection", "Proxy"],
-    ["settings.proxyUri", "Proxy URI (http://host:port)"],
-    ["settings.proxyWeb", "Web tools (websearch/fetch)"],
-    ["settings.proxyModel", "Model requests (providers with proxy: true)"],
-    ["settings.proxyTest", "Test Connection"],
-    ["settings.proxyTestRunning", "Testing…"],
-    ["settings.proxyTestOk", "✓ OK (HTTP ${status})"],
-    ["settings.proxyTestFailStatus", "✗ HTTP ${status}"],
-    ["settings.proxyTestFail", "✗ ${reason}"],
-    ["settings.noneMark", "—"],
-    ["settings.shellSection", "Shell (bash tool)"],
-    ["settings.shellSelect", "Shell"],
-    ["settings.shellCustom", "Custom path…"],
-    ["settings.shellPath", "Custom path"],
-    ["settings.embeddingLabel", "SiliconFlow Embedding"],
-    ["settings.websearchLabel", "Tavily API Key"],
-    ["settings.embedKeyPlaceholder", "sk-..."],
-    ["settings.websearchKeyPlaceholder", "tvly-..."],
-    ["settings.addKey", "Add Key"],
-    ["settings.changeKey", "Change"],
-    ["settings.save", "Save"],
-    ["settings.cancel", "Cancel"],
-    ["settings.keySet", "****"],
-    ["settings.keyDelete", "✕"],
-    ["settings.deleteKey", "Delete key"],
-    ["settings.mcp.tools", "Tools"],
-    ["settings.mcp.test", "Test"],
-    ["settings.mcp.loading", "loading…"],
-    ["settings.mcp.testing", "testing…"],
-    ["settings.mcp.testOk", "✓ OK — ${count} tools, ${latency}ms"],
-    ["settings.mcp.noTools", "no tools exposed"],
-    ["settings.mcp.params", "params: ${names}"],
-    ["settings.consultSection", "Consultation models (multi-model consult)"],
-    ["settings.consultAdd", "+ Add consult model"],
-    ["settings.consultRemove", "Remove"],
-    ["settings.consultActive", "Consultation active — ${n} model(s) will analyze in parallel when stuck"],
-    ["settings.consultInactive", "Consultation is OFF — add models below to enable multi-model consults"],
-    ["settings.consultProvider", "Consultation provider"],
-    ["settings.advisorSection", "Advisor"],
-    ["settings.advisorProvider", "Provider (empty = main model)"],
-    ["settings.pickProvider", "Select provider…"],
-    ["settings.pickModel", "pick a model…"],
-    ["settings.inherit", "Inherit"],
-    ["settings.effortLabel", "Effort"],
-    ["settings.agent.autoThink", "Auto-think (classify task difficulty per turn)"],
-    ["settings.mcp.edit", "Edit"],
-    ["settings.mcp.reconnect", "Reconnect"],
-    ["settings.mcp.type", "Type"],
-    ["settings.mcp.command", "Command"],
-    ["settings.mcp.args", "Args (space-separated)"],
-    ["settings.mcp.env", "Env (KEY=value, comma-separated)"],
-    ["settings.mcp.url", "URL"],
-    ["settings.mcp.wsUrl", "WebSocket URL"],
-    ["settings.mcp.token", "Auth token (Bearer)"],
-    ["settings.mcp.headers", "Headers (KEY=value, comma-separated)"],
-    ["settings.mcp.reconnecting", "reconnecting…"],
-    ["settings.mcp.reconnectOk", "✓ Reconnected — ${count} tools"],
-    ["settings.submodelGlobal", "Global default"],
-    ["settings.advisorGuard", "Require advisor review"],
-    ["settings.reason.slotAuthority", "Session-level option — change it from the input panel"]
+    [
+      "rail.action.openDir",
+      "Open folder…"
+    ],
+    [
+      "rail.action.newSession",
+      "New session"
+    ],
+    [
+      "rail.session.untitled",
+      "Untitled session"
+    ],
+    [
+      "rail.session.msgs",
+      "${n} msgs"
+    ],
+    [
+      "rail.session.updated",
+      "${date}"
+    ],
+    [
+      "rail.ledger.notice",
+      "Session ledger anomaly (${reason}) — opening a session self-heals it"
+    ],
+    [
+      "rail.ledger.notice.scene",
+      "Corrupted-scene files kept 30 days"
+    ],
+    [
+      "tab.badge.approval",
+      "awaiting approval"
+    ],
+    [
+      "chat.pill.new",
+      "${n} new"
+    ],
+    [
+      "chat.pill.bottom",
+      "Back to latest"
+    ],
+    [
+      "chat.summary.older",
+      "${n} earlier messages"
+    ],
+    [
+      "chat.tool.changes",
+      "${files} files · +${add} −${del}"
+    ],
+    [
+      "chat.tool.duration",
+      "${seconds}s"
+    ],
+    [
+      "menu.edit.cut",
+      "Cut"
+    ],
+    [
+      "menu.edit.copy",
+      "Copy"
+    ],
+    [
+      "menu.edit.paste",
+      "Paste"
+    ],
+    [
+      "menu.edit.selectAll",
+      "Select All"
+    ],
+    [
+      "msg.copy",
+      "Copy"
+    ],
+    [
+      "msg.copied",
+      "Copied!"
+    ],
+    [
+      "sub.async",
+      "async"
+    ],
+    [
+      "sub.sync",
+      "sync"
+    ],
+    [
+      "sub.waiting",
+      "waiting"
+    ],
+    [
+      "sub.awaitingApproval",
+      "Awaiting approval: ${tool}"
+    ],
+    [
+      "sub.cancelQueueBtn",
+      "cancel queue"
+    ],
+    [
+      "sub.stopBtn",
+      "Stop this subagent"
+    ],
+    [
+      "sub.newBlocks",
+      "↓ ${n} new block(s)"
+    ],
+    [
+      "sub.follow.new",
+      "↓ New output"
+    ],
+    [
+      "sub.follow.bottom",
+      "↓ Back to latest"
+    ],
+    [
+      "sub.desc",
+      "Subagent activity — the agent spawned a helper for an independent subtask. Expand for details; ⏹ stops a background run."
+    ],
+    [
+      "msg.user",
+      "You"
+    ],
+    [
+      "msg.assistant",
+      "ThinCoder"
+    ],
+    [
+      "queued.pending",
+      "Queued — sent automatically, no interruption"
+    ],
+    [
+      "chat.guide.noProject",
+      "No working directory open — open a folder to start"
+    ],
+    [
+      "chat.guide.noSession",
+      "No session yet — create one to start chatting"
+    ],
+    [
+      "pool.title",
+      "Activity"
+    ],
+    [
+      "pool.family.approvals",
+      "Approvals"
+    ],
+    [
+      "pool.family.subagents",
+      "Subagents"
+    ],
+    [
+      "pool.family.queue",
+      "Queued"
+    ],
+    [
+      "pool.collapse",
+      "Collapse activity"
+    ],
+    [
+      "pool.expand",
+      "Expand activity"
+    ],
+    [
+      "pool.resize",
+      "Resize activity panel"
+    ],
+    [
+      "composer.attach.nonvision",
+      "Images not sent — this model does not accept images"
+    ],
+    [
+      "composer.attach.partial",
+      "Some images were dropped (over the limit or failed to save) — the rest were sent"
+    ],
+    [
+      "approval.once",
+      "Allow once"
+    ],
+    [
+      "approval.always",
+      "Always allow"
+    ],
+    [
+      "approval.reject",
+      "Reject"
+    ],
+    [
+      "approval.batch.approveAll",
+      "Approve all"
+    ],
+    [
+      "approval.batch.deny",
+      "Deny all"
+    ],
+    [
+      "approval.batch.oneByOne",
+      "Review one by one"
+    ],
+    [
+      "approval.batch.count",
+      "${count} tools awaiting approval"
+    ],
+    [
+      "question.input",
+      "Your answer"
+    ],
+    [
+      "question.answer",
+      "Send answer"
+    ],
+    [
+      "question.cancel",
+      "Cancel"
+    ],
+    [
+      "settings.title",
+      "Settings"
+    ],
+    [
+      "settings.close",
+      "Close settings"
+    ],
+    [
+      "settings.lang.en",
+      "English"
+    ],
+    [
+      "settings.lang.zh",
+      "中文"
+    ],
+    [
+      "settings.theme",
+      "Theme"
+    ],
+    [
+      "settings.theme.system",
+      "System"
+    ],
+    [
+      "settings.theme.light",
+      "Light"
+    ],
+    [
+      "settings.theme.dark",
+      "Dark"
+    ],
+    [
+      "settings.section.providers",
+      "Providers"
+    ],
+    [
+      "settings.section.model",
+      "Model & tier"
+    ],
+    [
+      "settings.section.agent",
+      "Agent options"
+    ],
+    [
+      "settings.section.mcp",
+      "MCP"
+    ],
+    [
+      "settings.state.none",
+      "Not configured"
+    ],
+    [
+      "settings.state.loading",
+      "Loading…"
+    ],
+    [
+      "settings.reason.mtimeConflict",
+      "Config changed elsewhere — reload before saving"
+    ],
+    [
+      "settings.reason.invalidShape",
+      "Invalid config shape"
+    ],
+    [
+      "settings.reason.invalidKey",
+      "Unknown config key"
+    ],
+    [
+      "settings.reason.invalidValue",
+      "Invalid value"
+    ],
+    [
+      "settings.reason.invalidPatch",
+      "Invalid patch"
+    ],
+    [
+      "settings.reason.noProject",
+      "No working directory open"
+    ],
+    [
+      "settings.reason.missing",
+      "Config file missing"
+    ],
+    [
+      "settings.reason.invalidManifest",
+      "Invalid project manifest"
+    ],
+    [
+      "settings.reason.unavailable",
+      "Unavailable"
+    ],
+    [
+      "settings.reason.hostBusy",
+      "Host busy"
+    ],
+    [
+      "settings.reason.timeout",
+      "Timed out"
+    ],
+    [
+      "settings.reason.malformed",
+      "Malformed response"
+    ],
+    [
+      "settings.reason.probeFailed",
+      "Probe failed"
+    ],
+    [
+      "settings.providers.nameLabel",
+      "Name"
+    ],
+    [
+      "settings.providers.presetLabel",
+      "Preset"
+    ],
+    [
+      "settings.providers.baseURLLabel",
+      "Base URL"
+    ],
+    [
+      "settings.providers.modelLabel",
+      "Model"
+    ],
+    [
+      "settings.providers.formatLabel",
+      "Format"
+    ],
+    [
+      "settings.providers.keyLabel",
+      "API key"
+    ],
+    [
+      "settings.providers.activeToggle",
+      "Set as active provider"
+    ],
+    [
+      "settings.providers.addCustom",
+      "Add custom provider"
+    ],
+    [
+      "settings.providers.addPreset",
+      "Add preset provider"
+    ],
+    [
+      "settings.providers.verify",
+      "Verify"
+    ],
+    [
+      "settings.providers.verify.ok",
+      "Verified · ${count} models"
+    ],
+    [
+      "settings.providers.verify.fail",
+      "Verification failed: ${reason}"
+    ],
+    [
+      "settings.providers.verify.okShort",
+      "Verified"
+    ],
+    [
+      "settings.providers.verify.failShort",
+      "Failed"
+    ],
+    [
+      "settings.providers.noKey",
+      "No API key"
+    ],
+    [
+      "settings.providers.remove",
+      "Remove ${name}"
+    ],
+    [
+      "settings.providers.active",
+      "Active"
+    ],
+    [
+      "settings.proxyRow",
+      "proxy"
+    ],
+    [
+      "settings.proxyRowTitle",
+      "Route this provider's model requests through the proxy (needs global proxy.model on)"
+    ],
+    [
+      "settings.fetchModels",
+      "Fetch Models"
+    ],
+    [
+      "settings.connecting",
+      "Connecting…"
+    ],
+    [
+      "settings.connOk",
+      "✓ Connected — ${count} models"
+    ],
+    [
+      "settings.providerUrlRequired",
+      "baseURL required"
+    ],
+    [
+      "settings.secretDeleteConfirm",
+      "Delete? This cannot be undone — the original credential cannot be recovered; you would have to reconfigure it or get a new one from the provider."
+    ],
+    [
+      "settings.agent.readonly",
+      "Read-only"
+    ],
+    [
+      "settings.agent.save",
+      "Save"
+    ],
+    [
+      "settings.model.current",
+      "Current model"
+    ],
+    [
+      "settings.model.empty",
+      "No models yet"
+    ],
+    [
+      "settings.model.use",
+      "Use"
+    ],
+    [
+      "settings.model.tier",
+      "Tier"
+    ],
+    [
+      "settings.mcp.kind.url",
+      "URL"
+    ],
+    [
+      "settings.mcp.kind.command",
+      "Command"
+    ],
+    [
+      "settings.mcp.remove",
+      "Remove ${name}"
+    ],
+    [
+      "settings.mcp.nameLabel",
+      "Name"
+    ],
+    [
+      "settings.mcp.add",
+      "Add server"
+    ],
+    [
+      "wizard.title",
+      "Initial setup"
+    ],
+    [
+      "wizard.dismiss",
+      "Close setup"
+    ],
+    [
+      "wizard.step.channel",
+      "Provider"
+    ],
+    [
+      "wizard.step.model",
+      "Model"
+    ],
+    [
+      "wizard.step.dir",
+      "Folder"
+    ],
+    [
+      "wizard.next",
+      "Next"
+    ],
+    [
+      "wizard.finish",
+      "Finish"
+    ],
+    [
+      "wizard.dir.hint",
+      "Pick a working directory — you can change it later."
+    ],
+    [
+      "wizard.dir.pick",
+      "Choose folder…"
+    ],
+    [
+      "wizard.save",
+      "Save provider"
+    ],
+    [
+      "effort.auto",
+      "Auto"
+    ],
+    [
+      "effort.off",
+      "Off"
+    ],
+    [
+      "status.usage",
+      "context ${percent}%${tokens}"
+    ],
+    [
+      "status.attention.blocked",
+      "⚠ Awaiting your approval or answer"
+    ],
+    [
+      "status.tool",
+      "${name}…"
+    ],
+    [
+      "status.elapsedSeconds",
+      "${seconds}s"
+    ],
+    [
+      "status.tasks",
+      "✓${done}/${total}"
+    ],
+    [
+      "status.tokens",
+      "↑${up} ↓${down}"
+    ],
+    [
+      "status.tokens.reasoning",
+      "✦${tokens}"
+    ],
+    [
+      "status.tokens.hit",
+      "hit${percent}%"
+    ],
+    [
+      "status.timer",
+      "⏰${n}"
+    ],
+    [
+      "status.queue.enter",
+      "Enter to queue"
+    ],
+    [
+      "status.queue.n",
+      "${n} queued message(s)"
+    ],
+    [
+      "status.ready",
+      "Ready"
+    ],
+    [
+      "status.enter.send",
+      "Enter: send"
+    ],
+    [
+      "status.banner.plan",
+      "PLAN"
+    ],
+    [
+      "status.banner.auto",
+      "AUTO"
+    ],
+    [
+      "status.banner.advisor",
+      "ADVISOR"
+    ],
+    [
+      "status.banner.eng",
+      "ENG"
+    ],
+    [
+      "susp.running",
+      "${n} background subagent(s) running"
+    ],
+    [
+      "susp.digesting",
+      "${n} awaiting digestion"
+    ],
+    [
+      "susp.winding",
+      "background subagents finishing…"
+    ],
+    [
+      "input.placeholder",
+      "Ask ThinCoder... (Shift+Enter for new line)"
+    ],
+    [
+      "input.busyPlaceholder",
+      "Main session busy — Enter submit is restricted — you can keep typing"
+    ],
+    [
+      "input.slotFull",
+      "Task running — the queue is full (8 messages); wait for them to be processed before submitting again."
+    ],
+    [
+      "input.interruptPlaceholder",
+      "Interrupt — inject a message… (Enter to send, Esc to cancel)"
+    ],
+    [
+      "workspace.required",
+      "Open a folder first — ThinCoder needs a workspace to work in."
+    ],
+    [
+      "workspace.requiredPlaceholder",
+      "Open a folder to start…"
+    ],
+    [
+      "toolbar.autoApprove",
+      "Auto-approve tools"
+    ],
+    [
+      "toolbar.planDisabled",
+      "Disabled in engineering mode — engineering already runs design-before-code"
+    ],
+    [
+      "auto.confirmText",
+      "AUTO mode executes ALL tool calls — including file writes and shell commands — without asking for approval."
+    ],
+    [
+      "auto.enable",
+      "⚠ Enable AUTO"
+    ],
+    [
+      "auto.cancel",
+      "Cancel"
+    ],
+    [
+      "model.loading",
+      "Loading models…"
+    ],
+    [
+      "model.filterPlaceholder",
+      "Filter models…"
+    ],
+    [
+      "model.noMatch",
+      "No models match"
+    ],
+    [
+      "model.reasoning",
+      "Reasoning"
+    ],
+    [
+      "model.noReasoning",
+      "No reasoning"
+    ],
+    [
+      "model.noReasoningDesc",
+      "Off (not supported)"
+    ],
+    [
+      "model.addProvider",
+      "+ Add provider…"
+    ],
+    [
+      "model.removeProvider",
+      "− Remove provider…"
+    ],
+    [
+      "model.setKey",
+      "Key…"
+    ],
+    [
+      "reasoning.max",
+      "Maximum"
+    ],
+    [
+      "reasoning.xhigh",
+      "Extra High"
+    ],
+    [
+      "reasoning.high",
+      "High"
+    ],
+    [
+      "reasoning.medium",
+      "Medium"
+    ],
+    [
+      "reasoning.low",
+      "Low"
+    ],
+    [
+      "reasoning.minimal",
+      "Minimal"
+    ],
+    [
+      "reasoning.none",
+      "Off"
+    ],
+    [
+      "reasoning.enabled",
+      "Reasoning"
+    ],
+    [
+      "tool.interrupted",
+      "interrupted"
+    ],
+    [
+      "error.retry",
+      "Retry"
+    ],
+    [
+      "welcome.heading",
+      "Welcome to ThinCoder"
+    ],
+    [
+      "welcome.text",
+      "Choose a provider and enter its API key to get started."
+    ],
+    [
+      "welcome.textConfigured",
+      "Ask about this workspace — the agent can read files, run commands, and edit code."
+    ],
+    [
+      "welcome.shortcuts",
+      "Type @ for file references · Enter to send · Shift+Enter for newline"
+    ],
+    [
+      "chat.pending.single",
+      "⏳ Queued · Won't interrupt the current run — sent automatically"
+    ],
+    [
+      "chat.pending.multi",
+      "⏳ Queued · ${count} messages (won't interrupt the current run, sent together)"
+    ],
+    [
+      "chat.pending.more",
+      "… [${lines} lines — shown in full once sent]"
+    ],
+    [
+      "composer.send.failed",
+      "Send failed (${reason}) — the text was kept"
+    ],
+    [
+      "composer.send.noProvider",
+      "No provider configured — click ⚙ to set API keys"
+    ],
+    [
+      "composer.send.noDefaultModel",
+      "Default model missing or invalid"
+    ],
+    [
+      "composer.send.noDefaultModelFallback",
+      "Default model missing or invalid — using an available channel"
+    ],
+    [
+      "paste.unsupportedFormat",
+      "Only png / jpg / gif / webp images are supported (got ${type})"
+    ],
+    [
+      "approval.diff.large",
+      "Large diff — ${n} lines (preview omitted)"
+    ],
+    [
+      "settings.agent.maxTurns",
+      "Max Turns"
+    ],
+    [
+      "settings.agent.subagentTurns",
+      "Subagent Turns"
+    ],
+    [
+      "settings.agent.poolLimits.engCoder",
+      "Eng-coder Pool"
+    ],
+    [
+      "settings.agent.poolLimits.other",
+      "Other Roles Pool"
+    ],
+    [
+      "settings.agent.poolLimits.advisor",
+      "Advisor Review Pool"
+    ],
+    [
+      "settings.agent.compactThreshold",
+      "Compact Threshold (empty = auto)"
+    ],
+    [
+      "settings.agent.verifyGuard",
+      "Verify Guard (push to verify before finishing)"
+    ],
+    [
+      "settings.agent.consultTurns",
+      "Turn limit"
+    ],
+    [
+      "settings.agent.consultTimeoutMs",
+      "Timeout (minutes)"
+    ],
+    [
+      "settings.agent.advisorEffort",
+      "Review effort"
+    ],
+    [
+      "session.title",
+      "Session"
+    ],
+    [
+      "session.empty",
+      "No sessions"
+    ],
+    [
+      "session.rename",
+      "Rename"
+    ],
+    [
+      "session.delete",
+      "Delete"
+    ],
+    [
+      "session.deleteConfirm",
+      "Delete session \"${title}\"? This cannot be undone."
+    ],
+    [
+      "session.occupied",
+      "This session is in use by another live process — continuing will create a new copy on the next save."
+    ],
+    [
+      "session.openFailed",
+      "Could not open the session (${reason})"
+    ],
+    [
+      "session.loadFailed",
+      "Could not load the session content"
+    ],
+    [
+      "session.renameFailed",
+      "Could not rename the session (${reason})"
+    ],
+    [
+      "session.deleteFailed",
+      "Could not delete the session (${reason})"
+    ],
+    [
+      "perm.wantsTo",
+      "ThinCoder wants to run"
+    ],
+    [
+      "perm.approve",
+      "Approve"
+    ],
+    [
+      "perm.approveAll",
+      "Approve All"
+    ],
+    [
+      "perm.deny",
+      "Deny"
+    ],
+    [
+      "perm.viewInEditor",
+      "View in editor"
+    ],
+    [
+      "perm.batch.wantsTo",
+      "ThinCoder wants to run ${count} tools: ${names}"
+    ],
+    [
+      "perm.batch.oneByOne",
+      "One by One"
+    ],
+    [
+      "question.label",
+      "Question"
+    ],
+    [
+      "question.mark",
+      "❯"
+    ],
+    [
+      "question.submit",
+      "Send"
+    ],
+    [
+      "question.customPlaceholder",
+      "Or type your own answer…"
+    ],
+    [
+      "question.placeholder",
+      "Type your answer…"
+    ],
+    [
+      "panel.taskDesc",
+      "Agent tracks multi-step work here — created and updated automatically"
+    ],
+    [
+      "panel.goalDesc",
+      "Long-running objective — runs until complete or cancelled"
+    ],
+    [
+      "goal.objective",
+      "Objective"
+    ],
+    [
+      "settings.section.tools",
+      "Tools & Services"
+    ],
+    [
+      "settings.indexSection",
+      "Semantic Index"
+    ],
+    [
+      "settings.indexBuild",
+      "Build Index"
+    ],
+    [
+      "settings.indexRebuild",
+      "Rebuild Index"
+    ],
+    [
+      "settings.indexBuilding",
+      "Building…"
+    ],
+    [
+      "settings.indexBuilt",
+      "✓ Index built: ${files} files, ${chunks} chunks"
+    ],
+    [
+      "settings.indexNotBuilt",
+      "Index not built. Vector search is inactive."
+    ],
+    [
+      "settings.indexNoKey",
+      "No embedding API key configured."
+    ],
+    [
+      "settings.indexDbSizeLabel",
+      "Database size"
+    ],
+    [
+      "settings.indexOriginCounts",
+      "code ${code} · doc ${doc}"
+    ],
+    [
+      "search.placeholder",
+      "Search messages…"
+    ],
+    [
+      "search.prev",
+      "Previous match"
+    ],
+    [
+      "search.next",
+      "Next match"
+    ],
+    [
+      "search.close",
+      "Close search"
+    ],
+    [
+      "search.noMatch",
+      "No matches"
+    ],
+    [
+      "status.indexScan",
+      "Indexing: scanning ${n} files…"
+    ],
+    [
+      "status.indexProgress",
+      "Indexing: ${done}/${total}…"
+    ],
+    [
+      "status.goal",
+      "Goal panel"
+    ],
+    [
+      "settings.section.env",
+      "Environment"
+    ],
+    [
+      "settings.section.models",
+      "Consultation & Advisor"
+    ],
+    [
+      "settings.proxySection",
+      "Proxy"
+    ],
+    [
+      "settings.proxyUri",
+      "Proxy URI (http://host:port)"
+    ],
+    [
+      "settings.proxyWeb",
+      "Web tools (websearch/fetch)"
+    ],
+    [
+      "settings.proxyModel",
+      "Model requests (providers with proxy: true)"
+    ],
+    [
+      "settings.proxyTest",
+      "Test Connection"
+    ],
+    [
+      "settings.proxyTestRunning",
+      "Testing…"
+    ],
+    [
+      "settings.proxyTestOk",
+      "✓ OK (HTTP ${status})"
+    ],
+    [
+      "settings.proxyTestFailStatus",
+      "✗ HTTP ${status}"
+    ],
+    [
+      "settings.proxyTestFail",
+      "✗ ${reason}"
+    ],
+    [
+      "settings.noneMark",
+      "—"
+    ],
+    [
+      "settings.shellSection",
+      "Shell (bash tool)"
+    ],
+    [
+      "settings.shellSelect",
+      "Shell"
+    ],
+    [
+      "settings.shellCustom",
+      "Custom path…"
+    ],
+    [
+      "settings.shellPath",
+      "Custom path"
+    ],
+    [
+      "settings.embeddingLabel",
+      "SiliconFlow Embedding"
+    ],
+    [
+      "settings.websearchLabel",
+      "Tavily API Key"
+    ],
+    [
+      "settings.embedKeyPlaceholder",
+      "sk-..."
+    ],
+    [
+      "settings.websearchKeyPlaceholder",
+      "tvly-..."
+    ],
+    [
+      "settings.addKey",
+      "Add Key"
+    ],
+    [
+      "settings.changeKey",
+      "Change"
+    ],
+    [
+      "settings.save",
+      "Save"
+    ],
+    [
+      "settings.cancel",
+      "Cancel"
+    ],
+    [
+      "settings.keySet",
+      "****"
+    ],
+    [
+      "settings.keyDelete",
+      "✕"
+    ],
+    [
+      "settings.deleteKey",
+      "Delete key"
+    ],
+    [
+      "settings.mcp.tools",
+      "Tools"
+    ],
+    [
+      "settings.mcp.test",
+      "Test"
+    ],
+    [
+      "settings.mcp.loading",
+      "loading…"
+    ],
+    [
+      "settings.mcp.testing",
+      "testing…"
+    ],
+    [
+      "settings.mcp.testOk",
+      "✓ OK — ${count} tools, ${latency}ms"
+    ],
+    [
+      "settings.mcp.noTools",
+      "no tools exposed"
+    ],
+    [
+      "settings.mcp.params",
+      "params: ${names}"
+    ],
+    [
+      "settings.consultSection",
+      "Consultation models (multi-model consult)"
+    ],
+    [
+      "settings.consultAdd",
+      "+ Add consult model"
+    ],
+    [
+      "settings.consultRemove",
+      "Remove"
+    ],
+    [
+      "settings.consultActive",
+      "Consultation active — ${n} model(s) will analyze in parallel when stuck"
+    ],
+    [
+      "settings.consultInactive",
+      "Consultation is OFF — add models below to enable multi-model consults"
+    ],
+    [
+      "settings.consultProvider",
+      "Consultation provider"
+    ],
+    [
+      "settings.advisorSection",
+      "Advisor"
+    ],
+    [
+      "settings.advisorProvider",
+      "Provider (empty = main model)"
+    ],
+    [
+      "settings.pickProvider",
+      "Select provider…"
+    ],
+    [
+      "settings.pickModel",
+      "pick a model…"
+    ],
+    [
+      "settings.inherit",
+      "Inherit"
+    ],
+    [
+      "settings.effortLabel",
+      "Effort"
+    ],
+    [
+      "settings.agent.autoThink",
+      "Auto-think (classify task difficulty per turn)"
+    ],
+    [
+      "settings.mcp.edit",
+      "Edit"
+    ],
+    [
+      "settings.mcp.reconnect",
+      "Reconnect"
+    ],
+    [
+      "settings.mcp.type",
+      "Type"
+    ],
+    [
+      "settings.mcp.command",
+      "Command"
+    ],
+    [
+      "settings.mcp.args",
+      "Args (space-separated)"
+    ],
+    [
+      "settings.mcp.env",
+      "Env (KEY=value, comma-separated)"
+    ],
+    [
+      "settings.mcp.url",
+      "URL"
+    ],
+    [
+      "settings.mcp.wsUrl",
+      "WebSocket URL"
+    ],
+    [
+      "settings.mcp.token",
+      "Auth token (Bearer)"
+    ],
+    [
+      "settings.mcp.headers",
+      "Headers (KEY=value, comma-separated)"
+    ],
+    [
+      "settings.mcp.reconnecting",
+      "reconnecting…"
+    ],
+    [
+      "settings.mcp.reconnectOk",
+      "✓ Reconnected — ${count} tools"
+    ],
+    [
+      "settings.submodelGlobal",
+      "Global default"
+    ],
+    [
+      "settings.advisorGuard",
+      "Require advisor review"
+    ],
+    [
+      "settings.reason.slotAuthority",
+      "Session-level option — change it from the input panel"
+    ],
+    [
+      "slash.unknown",
+      "Unknown command: ${name} (/help for available commands)"
+    ],
+    [
+      "slash.busy",
+      "Unavailable while the turn is running — try again when it finishes"
+    ],
+    [
+      "slash.args",
+      "This command does not take arguments here"
+    ],
+    [
+      "slash.help.label",
+      "❯ Help"
+    ],
+    [
+      "slash.desc.model",
+      "select model & manage providers"
+    ],
+    [
+      "slash.desc.auto",
+      "toggle auto-approve"
+    ],
+    [
+      "slash.desc.plan",
+      "toggle plan mode (design first, then implement)"
+    ],
+    [
+      "slash.desc.eng",
+      "toggle engineering mode — strict methodology enforcement"
+    ],
+    [
+      "slash.desc.help",
+      "this list"
+    ]
   ],
   "zh": [
-    ["rail.action.openDir", "打开目录…"],
-    ["rail.action.newSession", "新建会话"],
-    ["rail.session.untitled", "未命名会话"],
-    ["rail.session.msgs", "${n} 条消息"],
-    ["rail.session.updated", "${date}"],
-    ["rail.ledger.notice", "会话账本异常（${reason}）——打开会话即自动补回"],
-    ["rail.ledger.notice.scene", "损坏现场档保留 30 天"],
-    ["tab.badge.approval", "待审批"],
-    ["chat.pill.new", "${n} 条新消息"],
-    ["chat.pill.bottom", "回到最新"],
-    ["chat.summary.older", "更早的 ${n} 条"],
-    ["chat.tool.changes", "${files} 个文件 · +${add} −${del}"],
-    ["chat.tool.duration", "${seconds} 秒"],
-    ["menu.edit.cut", "剪切"],
-    ["menu.edit.copy", "复制"],
-    ["menu.edit.paste", "粘贴"],
-    ["menu.edit.selectAll", "全选"],
-    ["msg.copy", "复制"],
-    ["msg.copied", "已复制！"],
-    ["sub.async", "异步"],
-    ["sub.sync", "同步"],
-    ["sub.waiting", "等待中"],
-    ["sub.awaitingApproval", "等待审批: ${tool}"],
-    ["sub.cancelQueueBtn", "取消排队"],
-    ["sub.stopBtn", "停止该子代理"],
-    ["sub.newBlocks", "↓ ${n} 新块"],
-    ["sub.follow.new", "↓ 新内容"],
-    ["sub.follow.bottom", "↓ 回到最新"],
-    ["sub.desc", "子代理活动——主 agent 为独立子任务派出的助手。展开看详情；⏹ 可停止后台运行。"],
-    ["msg.user", "你"],
-    ["msg.assistant", "ThinCoder"],
-    ["queued.pending", "待发送 · 不打断当前执行，自动发送"],
-    ["chat.guide.noProject", "未打开项目——先打开一个项目目录即可开始"],
-    ["chat.guide.noSession", "尚无会话——新建一个会话即可开始对话"],
-    ["pool.title", "活动"],
-    ["pool.family.approvals", "待审批"],
-    ["pool.family.subagents", "子 agent"],
-    ["pool.family.queue", "队列"],
-    ["pool.collapse", "折叠活动池"],
-    ["pool.expand", "展开活动池"],
-    ["composer.attach.nonvision", "图片未随发——该模型不支持图片"],
-    ["composer.attach.partial", "部分图片已丢弃（超限或保存失败）——其余照发"],
-    ["approval.once", "允许一次"],
-    ["approval.always", "始终允许"],
-    ["approval.reject", "拒绝"],
-    ["approval.batch.approveAll", "全部批准"],
-    ["approval.batch.deny", "全部拒绝"],
-    ["approval.batch.oneByOne", "逐项审查"],
-    ["approval.batch.count", "待审批 ${count} 个工具"],
-    ["question.input", "你的回答"],
-    ["question.answer", "提交作答"],
-    ["question.cancel", "取消"],
-    ["settings.title", "设置"],
-    ["settings.close", "关闭设置"],
-    ["settings.lang.en", "English"],
-    ["settings.lang.zh", "中文"],
-    ["settings.section.providers", "渠道"],
-    ["settings.section.model", "模型与档位"],
-    ["settings.section.agent", "agent 参数"],
-    ["settings.section.mcp", "MCP"],
-    ["settings.state.none", "未配置"],
-    ["settings.state.loading", "载入中…"],
-    ["settings.reason.mtimeConflict", "配置已在别处变更——请重载后再保存"],
-    ["settings.reason.invalidShape", "配置形态非法"],
-    ["settings.reason.invalidKey", "未知配置键"],
-    ["settings.reason.invalidValue", "取值非法"],
-    ["settings.reason.invalidPatch", "补丁非法"],
-    ["settings.reason.noProject", "未打开项目"],
-    ["settings.reason.missing", "配置文件缺失"],
-    ["settings.reason.invalidManifest", "项目清单非法"],
-    ["settings.reason.unavailable", "不可用"],
-    ["settings.reason.timeout", "超时"],
-    ["settings.reason.malformed", "响应格式畸形"],
-    ["settings.reason.probeFailed", "探活失败"],
-    ["settings.providers.nameLabel", "名称"],
-    ["settings.providers.presetLabel", "预设"],
-    ["settings.providers.baseURLLabel", "Base URL"],
-    ["settings.providers.modelLabel", "模型"],
-    ["settings.providers.formatLabel", "协议格式"],
-    ["settings.providers.keyLabel", "API 密钥"],
-    ["settings.providers.activeToggle", "设为当前渠道"],
-    ["settings.providers.addCustom", "添加自定义渠道"],
-    ["settings.providers.addPreset", "添加预设渠道"],
-    ["settings.providers.verify", "校验"],
-    ["settings.providers.verify.ok", "校验通过 · ${count} 个模型"],
-    ["settings.providers.verify.fail", "校验失败：${reason}"],
-    ["settings.providers.noKey", "未配置密钥"],
-    ["settings.providers.remove", "移除 ${name}"],
-    ["settings.providers.active", "当前"],
-    ["settings.proxyRow", "代理"],
-    ["settings.proxyRowTitle", "该 provider 的模型请求走代理（需全局 proxy.model 开启）"],
-    ["settings.fetchModels", "拉取模型"],
-    ["settings.connecting", "连接中…"],
-    ["settings.connOk", "✓ 连接成功 — ${count} 个模型"],
-    ["settings.providerUrlRequired", "需要 baseURL"],
-    ["settings.secretDeleteConfirm", "确定删除？删除后无法恢复——凭证原文不可复得，只能重新配置或回服务商重取。"],
-    ["settings.agent.readonly", "只读"],
-    ["settings.agent.save", "保存"],
-    ["settings.model.current", "当前模型"],
-    ["settings.model.empty", "暂无模型"],
-    ["settings.model.use", "采用"],
-    ["settings.model.tier", "档位"],
-    ["settings.mcp.kind.url", "URL"],
-    ["settings.mcp.kind.command", "命令"],
-    ["settings.mcp.remove", "移除 ${name}"],
-    ["settings.mcp.nameLabel", "名称"],
-    ["settings.mcp.add", "添加服务器"],
-    ["wizard.title", "初始设置"],
-    ["wizard.dismiss", "关闭向导"],
-    ["wizard.step.channel", "渠道"],
-    ["wizard.step.model", "模型"],
-    ["wizard.step.dir", "目录"],
-    ["wizard.next", "下一步"],
-    ["wizard.finish", "完成"],
-    ["wizard.dir.hint", "选择项目目录——之后也可以更改。"],
-    ["wizard.dir.pick", "选择目录…"],
-    ["wizard.save", "保存渠道"],
-    ["head.field.provider", "渠道"],
-    ["head.field.model", "模型"],
-    ["head.field.effort", "档位"],
-    ["effort.auto", "自动"],
-    ["effort.off", "关闭"],
-    ["status.usage", "上下文 ${percent}%${tokens}"],
-    ["status.attention.blocked", "⚠ 等待你的审批或回答"],
-    ["status.tool", "${name}…"],
-    ["status.elapsedSeconds", "${seconds} 秒"],
-    ["status.tasks", "✓${done}/${total}"],
-    ["status.tokens", "↑${up} ↓${down}"],
-    ["status.tokens.reasoning", "✦${tokens}"],
-    ["status.tokens.hit", "命中${percent}%"],
-    ["status.timer", "⏰${n}"],
-    ["status.queue.enter", "Enter 排队"],
-    ["status.queue.n", "已排队 ${n} 条消息"],
-    ["status.ready", "就绪"],
-    ["status.enter.send", "Enter: send"],
-    ["status.banner.plan", "PLAN"],
-    ["status.banner.auto", "AUTO"],
-    ["status.banner.advisor", "ADVISOR"],
-    ["status.banner.eng", "ENG"],
-    ["susp.running", "后台 ${n} 子代理运行中"],
-    ["susp.digesting", "${n} 完成待消化"],
-    ["susp.winding", "后台子代理收尾…"],
-    ["input.placeholder", "向 ThinCoder 提问...（Shift+Enter 换行）"],
-    ["input.busyPlaceholder", "主会话处理中——Enter 提交受限——可继续输入"],
-    ["input.slotFull", "主会话处理中——排队已满 8 条消息，请等其处理完成后再发送"],
-    ["input.interruptPlaceholder", "中断 — 注入消息…（Enter 发送，Esc 取消）"],
-    ["workspace.required", "请先打开文件夹——ThinCoder 需要一个工作区才能开工。"],
-    ["workspace.requiredPlaceholder", "请先打开文件夹…"],
-    ["toolbar.autoApprove", "自动批准工具"],
-    ["toolbar.planDisabled", "工程模式下禁用——工程模式本身即先设计后编码"],
-    ["auto.confirmText", "AUTO 模式将执行所有工具调用——包括文件写入和 Shell 命令——不再逐一确认。"],
-    ["auto.enable", "⚠ 启用 AUTO"],
-    ["auto.cancel", "取消"],
-    ["model.loading", "加载模型…"],
-    ["model.filterPlaceholder", "过滤模型…"],
-    ["model.noMatch", "没有匹配的模型"],
-    ["model.reasoning", "推理深度"],
-    ["model.noReasoning", "不支持推理"],
-    ["model.noReasoningDesc", "关闭（不支持）"],
-    ["model.addProvider", "+ 添加 provider…"],
-    ["model.removeProvider", "− 移除 provider…"],
-    ["model.setKey", "设置密钥…"],
-    ["reasoning.max", "最大"],
-    ["reasoning.xhigh", "很高"],
-    ["reasoning.high", "高"],
-    ["reasoning.medium", "中"],
-    ["reasoning.low", "低"],
-    ["reasoning.minimal", "最小"],
-    ["reasoning.none", "关闭"],
-    ["reasoning.enabled", "推理"],
-    ["tool.interrupted", "已中断"],
-    ["error.retry", "重试"],
-    ["welcome.heading", "欢迎使用 ThinCoder"],
-    ["welcome.text", "选择一个 provider 并填入 API key，即可开始使用。"],
-    ["welcome.textConfigured", "就此工作区提问——agent 可以读取文件、运行命令、修改代码。"],
-    ["welcome.shortcuts", "Enter 发送 · Shift+Enter 换行"],
-    ["chat.pending.single", "⏳ 待发送 · 不打断当前执行，自动发送"],
-    ["chat.pending.multi", "⏳ 待发送 · ${count} 条消息（不打断当前执行，合并发送）"],
-    ["chat.pending.more", "… [该条共 ${lines} 行——发送后完整显示]"],
-    ["composer.send.failed", "发送失败（${reason}）——文本已保留"],
-    ["paste.unsupportedFormat", "仅支持 png / jpg / gif / webp 图片（收到 ${type}）"],
-    ["approval.diff.large", "改动较大——${n} 行（预览省略）"],
-    ["settings.agent.maxTurns", "最大轮次"],
-    ["settings.agent.subagentTurns", "子代理轮次"],
-    ["settings.agent.poolLimits.engCoder", "Eng-coder 并发池"],
-    ["settings.agent.poolLimits.other", "其他角色并发池"],
-    ["settings.agent.poolLimits.advisor", "advisor 评审池"],
-    ["settings.agent.compactThreshold", "压缩阈值（留空 = 自动）"],
-    ["settings.agent.verifyGuard", "Verify 守卫（完成前回推 verify）"],
-    ["settings.agent.consultTurns", "轮数上限"],
-    ["settings.agent.consultTimeoutMs", "超时（分钟）"],
-    ["settings.agent.advisorEffort", "审查强度"],
-    ["session.title", "会话"],
-    ["session.empty", "暂无会话"],
-    ["session.rename", "重命名"],
-    ["session.delete", "删除"],
-    ["session.deleteConfirm", "确定删除会话 \"${title}\"？此操作不可恢复。"],
-    ["session.occupied", "该会话正被另一活进程使用——继续将在下次保存时创建新副本。"],
-    ["session.openFailed", "会话打开失败（${reason}）"],
-    ["session.loadFailed", "会话内容加载失败"],
-    ["session.renameFailed", "会话改名失败（${reason}）"],
-    ["session.deleteFailed", "会话删除失败（${reason}）"],
-    ["perm.wantsTo", "ThinCoder 想要执行"],
-    ["perm.approve", "批准"],
-    ["perm.approveAll", "全部批准"],
-    ["perm.deny", "拒绝"],
-    ["perm.viewInEditor", "在编辑器中查看"],
-    ["perm.batch.wantsTo", "ThinCoder 想要执行 ${count} 个工具：${names}"],
-    ["perm.batch.oneByOne", "逐个确认"],
-    ["question.label", "提问"],
-    ["question.mark", "❯"],
-    ["question.submit", "发送"],
-    ["question.customPlaceholder", "或输入你自己的回答…"],
-    ["question.placeholder", "输入你的回答…"],
-    ["panel.taskDesc", "Agent 在此跟踪多步骤任务 — 自动创建和更新"],
-    ["panel.goalDesc", "长期目标 — 持续运行直到完成或取消"],
-    ["goal.objective", "目标"],
-    ["settings.section.tools", "工具与服务"],
-    ["settings.indexSection", "语义索引"],
-    ["settings.indexBuild", "构建索引"],
-    ["settings.indexRebuild", "重新构建"],
-    ["settings.indexBuilding", "构建中…"],
-    ["settings.indexBuilt", "✓ 索引已构建：${files} 个文件，${chunks} 个块"],
-    ["settings.indexNotBuilt", "索引未构建，向量搜索未启用。"],
-    ["settings.indexNoKey", "未配置 embedding API key。"],
-    ["search.placeholder", "搜索消息…"],
-    ["search.prev", "上一个匹配"],
-    ["search.next", "下一个匹配"],
-    ["search.close", "关闭搜索"],
-    ["search.noMatch", "无匹配"],
-    ["status.indexScan", "索引：扫描 ${n} 文件…"],
-    ["status.indexProgress", "索引：${done}/${total}…"],
-    ["status.goal", "目标面板"],
-    ["settings.section.env", "运行环境"],
-    ["settings.section.models", "会诊与审查"],
-    ["settings.proxySection", "代理"],
-    ["settings.proxyUri", "代理 URI（http://host:port）"],
-    ["settings.proxyWeb", "Web 工具（websearch/fetch）"],
-    ["settings.proxyModel", "模型请求（proxy: true 的 provider）"],
-    ["settings.proxyTest", "测试连接"],
-    ["settings.proxyTestRunning", "测试中…"],
-    ["settings.proxyTestOk", "✓ 连接正常（HTTP ${status}）"],
-    ["settings.proxyTestFailStatus", "✗ HTTP ${status}"],
-    ["settings.proxyTestFail", "✗ ${reason}"],
-    ["settings.noneMark", "—"],
-    ["settings.shellSection", "Shell（bash 工具）"],
-    ["settings.shellSelect", "Shell"],
-    ["settings.shellCustom", "自定义路径…"],
-    ["settings.shellPath", "自定义路径"],
-    ["settings.embeddingLabel", "SiliconFlow Embedding"],
-    ["settings.websearchLabel", "Tavily API Key"],
-    ["settings.embedKeyPlaceholder", "sk-..."],
-    ["settings.websearchKeyPlaceholder", "tvly-..."],
-    ["settings.addKey", "添加 Key"],
-    ["settings.changeKey", "修改"],
-    ["settings.save", "保存"],
-    ["settings.cancel", "取消"],
-    ["settings.keySet", "****"],
-    ["settings.keyDelete", "✕"],
-    ["settings.deleteKey", "删除密钥"],
-    ["settings.mcp.tools", "工具"],
-    ["settings.mcp.test", "测试"],
-    ["settings.mcp.loading", "加载中…"],
-    ["settings.mcp.testing", "测试中…"],
-    ["settings.mcp.testOk", "✓ 正常 — ${count} 个工具，${latency}ms"],
-    ["settings.mcp.noTools", "该服务未提供工具"],
-    ["settings.mcp.params", "参数：${names}"],
-    ["settings.consultSection", "会诊模型（多模型会诊）"],
-    ["settings.consultAdd", "+ 添加会诊模型"],
-    ["settings.consultRemove", "移除"],
-    ["settings.consultActive", "会诊已启用 — 卡住时 ${n} 个模型并行分析"],
-    ["settings.consultInactive", "会诊未启用 — 添加模型后即可在遇到疑难时多模型会诊"],
-    ["settings.consultProvider", "会诊渠道"],
-    ["settings.advisorSection", "Advisor"],
-    ["settings.advisorProvider", "Provider（留空 = 主模型）"],
-    ["settings.pickProvider", "选择渠道…"],
-    ["settings.pickModel", "选择模型…"],
-    ["settings.inherit", "继承"],
-    ["settings.effortLabel", "推理强度"],
-    ["settings.agent.autoThink", "自动思考（按回合分类任务难度）"],
-    ["settings.mcp.edit", "编辑"],
-    ["settings.mcp.reconnect", "重连"],
-    ["settings.mcp.type", "类型"],
-    ["settings.mcp.command", "命令"],
-    ["settings.mcp.args", "参数（空格分隔）"],
-    ["settings.mcp.env", "环境变量（KEY=value，逗号分隔）"],
-    ["settings.mcp.url", "URL"],
-    ["settings.mcp.wsUrl", "WebSocket URL"],
-    ["settings.mcp.token", "认证令牌（Bearer）"],
-    ["settings.mcp.headers", "请求头（KEY=value，逗号分隔）"],
-    ["settings.mcp.reconnecting", "重连中…"],
-    ["settings.mcp.reconnectOk", "✓ 已重连 — ${count} 个工具"],
-    ["settings.submodelGlobal", "全局默认"],
-    ["settings.advisorGuard", "强制 advisor 评审"],
-    ["settings.reason.slotAuthority", "会话级选项——请从输入面板修改"]
+    [
+      "rail.action.openDir",
+      "打开目录…"
+    ],
+    [
+      "rail.action.newSession",
+      "新建会话"
+    ],
+    [
+      "rail.session.untitled",
+      "未命名会话"
+    ],
+    [
+      "rail.session.msgs",
+      "${n} 条消息"
+    ],
+    [
+      "rail.session.updated",
+      "${date}"
+    ],
+    [
+      "rail.ledger.notice",
+      "会话账本异常（${reason}）——打开会话即自动补回"
+    ],
+    [
+      "rail.ledger.notice.scene",
+      "损坏现场档保留 30 天"
+    ],
+    [
+      "tab.badge.approval",
+      "待审批"
+    ],
+    [
+      "chat.pill.new",
+      "${n} 条新消息"
+    ],
+    [
+      "chat.pill.bottom",
+      "回到最新"
+    ],
+    [
+      "chat.summary.older",
+      "更早的 ${n} 条"
+    ],
+    [
+      "chat.tool.changes",
+      "${files} 个文件 · +${add} −${del}"
+    ],
+    [
+      "chat.tool.duration",
+      "${seconds} 秒"
+    ],
+    [
+      "menu.edit.cut",
+      "剪切"
+    ],
+    [
+      "menu.edit.copy",
+      "复制"
+    ],
+    [
+      "menu.edit.paste",
+      "粘贴"
+    ],
+    [
+      "menu.edit.selectAll",
+      "全选"
+    ],
+    [
+      "msg.copy",
+      "复制"
+    ],
+    [
+      "msg.copied",
+      "已复制！"
+    ],
+    [
+      "sub.async",
+      "异步"
+    ],
+    [
+      "sub.sync",
+      "同步"
+    ],
+    [
+      "sub.waiting",
+      "等待中"
+    ],
+    [
+      "sub.awaitingApproval",
+      "等待审批: ${tool}"
+    ],
+    [
+      "sub.cancelQueueBtn",
+      "取消排队"
+    ],
+    [
+      "sub.stopBtn",
+      "停止该子代理"
+    ],
+    [
+      "sub.newBlocks",
+      "↓ ${n} 新块"
+    ],
+    [
+      "sub.follow.new",
+      "↓ 新内容"
+    ],
+    [
+      "sub.follow.bottom",
+      "↓ 回到最新"
+    ],
+    [
+      "sub.desc",
+      "子代理活动——主 agent 为独立子任务派出的助手。展开看详情；⏹ 可停止后台运行。"
+    ],
+    [
+      "msg.user",
+      "你"
+    ],
+    [
+      "msg.assistant",
+      "ThinCoder"
+    ],
+    [
+      "queued.pending",
+      "待发送 · 不打断当前执行，自动发送"
+    ],
+    [
+      "chat.guide.noProject",
+      "未打开工作目录——先打开一个目录即可开始"
+    ],
+    [
+      "chat.guide.noSession",
+      "尚无会话——新建一个会话即可开始对话"
+    ],
+    [
+      "pool.title",
+      "活动"
+    ],
+    [
+      "pool.family.approvals",
+      "待审批"
+    ],
+    [
+      "pool.family.subagents",
+      "子 agent"
+    ],
+    [
+      "pool.family.queue",
+      "队列"
+    ],
+    [
+      "pool.collapse",
+      "折叠活动池"
+    ],
+    [
+      "pool.expand",
+      "展开活动池"
+    ],
+    [
+      "pool.resize",
+      "拖动调整活动栏宽度"
+    ],
+    [
+      "composer.attach.nonvision",
+      "图片未随发——该模型不支持图片"
+    ],
+    [
+      "composer.attach.partial",
+      "部分图片已丢弃（超限或保存失败）——其余照发"
+    ],
+    [
+      "approval.once",
+      "允许一次"
+    ],
+    [
+      "approval.always",
+      "始终允许"
+    ],
+    [
+      "approval.reject",
+      "拒绝"
+    ],
+    [
+      "approval.batch.approveAll",
+      "全部批准"
+    ],
+    [
+      "approval.batch.deny",
+      "全部拒绝"
+    ],
+    [
+      "approval.batch.oneByOne",
+      "逐项审查"
+    ],
+    [
+      "approval.batch.count",
+      "待审批 ${count} 个工具"
+    ],
+    [
+      "question.input",
+      "你的回答"
+    ],
+    [
+      "question.answer",
+      "提交作答"
+    ],
+    [
+      "question.cancel",
+      "取消"
+    ],
+    [
+      "settings.title",
+      "设置"
+    ],
+    [
+      "settings.close",
+      "关闭设置"
+    ],
+    [
+      "settings.lang.en",
+      "English"
+    ],
+    [
+      "settings.lang.zh",
+      "中文"
+    ],
+    [
+      "settings.theme",
+      "主题"
+    ],
+    [
+      "settings.theme.system",
+      "跟随系统"
+    ],
+    [
+      "settings.theme.light",
+      "亮色"
+    ],
+    [
+      "settings.theme.dark",
+      "暗色"
+    ],
+    [
+      "settings.section.providers",
+      "渠道"
+    ],
+    [
+      "settings.section.model",
+      "模型与档位"
+    ],
+    [
+      "settings.section.agent",
+      "agent 参数"
+    ],
+    [
+      "settings.section.mcp",
+      "MCP"
+    ],
+    [
+      "settings.state.none",
+      "未配置"
+    ],
+    [
+      "settings.state.loading",
+      "载入中…"
+    ],
+    [
+      "settings.reason.mtimeConflict",
+      "配置已在别处变更——请重载后再保存"
+    ],
+    [
+      "settings.reason.invalidShape",
+      "配置形态非法"
+    ],
+    [
+      "settings.reason.invalidKey",
+      "未知配置键"
+    ],
+    [
+      "settings.reason.invalidValue",
+      "取值非法"
+    ],
+    [
+      "settings.reason.invalidPatch",
+      "补丁非法"
+    ],
+    [
+      "settings.reason.noProject",
+      "未打开工作目录"
+    ],
+    [
+      "settings.reason.missing",
+      "配置文件缺失"
+    ],
+    [
+      "settings.reason.invalidManifest",
+      "项目清单非法"
+    ],
+    [
+      "settings.reason.unavailable",
+      "不可用"
+    ],
+    [
+      "settings.reason.hostBusy",
+      "宿主繁忙"
+    ],
+    [
+      "settings.reason.timeout",
+      "超时"
+    ],
+    [
+      "settings.reason.malformed",
+      "响应格式畸形"
+    ],
+    [
+      "settings.reason.probeFailed",
+      "探活失败"
+    ],
+    [
+      "settings.providers.nameLabel",
+      "名称"
+    ],
+    [
+      "settings.providers.presetLabel",
+      "预设"
+    ],
+    [
+      "settings.providers.baseURLLabel",
+      "Base URL"
+    ],
+    [
+      "settings.providers.modelLabel",
+      "模型"
+    ],
+    [
+      "settings.providers.formatLabel",
+      "协议格式"
+    ],
+    [
+      "settings.providers.keyLabel",
+      "API 密钥"
+    ],
+    [
+      "settings.providers.activeToggle",
+      "设为当前渠道"
+    ],
+    [
+      "settings.providers.addCustom",
+      "添加自定义渠道"
+    ],
+    [
+      "settings.providers.addPreset",
+      "添加预设渠道"
+    ],
+    [
+      "settings.providers.verify",
+      "校验"
+    ],
+    [
+      "settings.providers.verify.ok",
+      "校验通过 · ${count} 个模型"
+    ],
+    [
+      "settings.providers.verify.fail",
+      "校验失败：${reason}"
+    ],
+    [
+      "settings.providers.verify.okShort",
+      "校验通过"
+    ],
+    [
+      "settings.providers.verify.failShort",
+      "校验失败"
+    ],
+    [
+      "settings.providers.noKey",
+      "未配置密钥"
+    ],
+    [
+      "settings.providers.remove",
+      "移除 ${name}"
+    ],
+    [
+      "settings.providers.active",
+      "当前"
+    ],
+    [
+      "settings.proxyRow",
+      "代理"
+    ],
+    [
+      "settings.proxyRowTitle",
+      "该 provider 的模型请求走代理（需全局 proxy.model 开启）"
+    ],
+    [
+      "settings.fetchModels",
+      "拉取模型"
+    ],
+    [
+      "settings.connecting",
+      "连接中…"
+    ],
+    [
+      "settings.connOk",
+      "✓ 连接成功 — ${count} 个模型"
+    ],
+    [
+      "settings.providerUrlRequired",
+      "需要 baseURL"
+    ],
+    [
+      "settings.secretDeleteConfirm",
+      "确定删除？删除后无法恢复——凭证原文不可复得，只能重新配置或回服务商重取。"
+    ],
+    [
+      "settings.agent.readonly",
+      "只读"
+    ],
+    [
+      "settings.agent.save",
+      "保存"
+    ],
+    [
+      "settings.model.current",
+      "当前模型"
+    ],
+    [
+      "settings.model.empty",
+      "暂无模型"
+    ],
+    [
+      "settings.model.use",
+      "采用"
+    ],
+    [
+      "settings.model.tier",
+      "档位"
+    ],
+    [
+      "settings.mcp.kind.url",
+      "URL"
+    ],
+    [
+      "settings.mcp.kind.command",
+      "命令"
+    ],
+    [
+      "settings.mcp.remove",
+      "移除 ${name}"
+    ],
+    [
+      "settings.mcp.nameLabel",
+      "名称"
+    ],
+    [
+      "settings.mcp.add",
+      "添加服务器"
+    ],
+    [
+      "wizard.title",
+      "初始设置"
+    ],
+    [
+      "wizard.dismiss",
+      "关闭向导"
+    ],
+    [
+      "wizard.step.channel",
+      "渠道"
+    ],
+    [
+      "wizard.step.model",
+      "模型"
+    ],
+    [
+      "wizard.step.dir",
+      "目录"
+    ],
+    [
+      "wizard.next",
+      "下一步"
+    ],
+    [
+      "wizard.finish",
+      "完成"
+    ],
+    [
+      "wizard.dir.hint",
+      "选择工作目录——之后也可以更改。"
+    ],
+    [
+      "wizard.dir.pick",
+      "选择目录…"
+    ],
+    [
+      "wizard.save",
+      "保存渠道"
+    ],
+    [
+      "effort.auto",
+      "自动"
+    ],
+    [
+      "effort.off",
+      "关闭"
+    ],
+    [
+      "status.usage",
+      "上下文 ${percent}%${tokens}"
+    ],
+    [
+      "status.attention.blocked",
+      "⚠ 等待你的审批或回答"
+    ],
+    [
+      "status.tool",
+      "${name}…"
+    ],
+    [
+      "status.elapsedSeconds",
+      "${seconds} 秒"
+    ],
+    [
+      "status.tasks",
+      "✓${done}/${total}"
+    ],
+    [
+      "status.tokens",
+      "↑${up} ↓${down}"
+    ],
+    [
+      "status.tokens.reasoning",
+      "✦${tokens}"
+    ],
+    [
+      "status.tokens.hit",
+      "命中${percent}%"
+    ],
+    [
+      "status.timer",
+      "⏰${n}"
+    ],
+    [
+      "status.queue.enter",
+      "Enter 排队"
+    ],
+    [
+      "status.queue.n",
+      "已排队 ${n} 条消息"
+    ],
+    [
+      "status.ready",
+      "就绪"
+    ],
+    [
+      "status.enter.send",
+      "Enter: send"
+    ],
+    [
+      "status.banner.plan",
+      "PLAN"
+    ],
+    [
+      "status.banner.auto",
+      "AUTO"
+    ],
+    [
+      "status.banner.advisor",
+      "ADVISOR"
+    ],
+    [
+      "status.banner.eng",
+      "ENG"
+    ],
+    [
+      "susp.running",
+      "后台 ${n} 子代理运行中"
+    ],
+    [
+      "susp.digesting",
+      "${n} 完成待消化"
+    ],
+    [
+      "susp.winding",
+      "后台子代理收尾…"
+    ],
+    [
+      "input.placeholder",
+      "向 ThinCoder 提问...（Shift+Enter 换行）"
+    ],
+    [
+      "input.busyPlaceholder",
+      "主会话处理中——Enter 提交受限——可继续输入"
+    ],
+    [
+      "input.slotFull",
+      "主会话处理中——排队已满 8 条消息，请等其处理完成后再发送"
+    ],
+    [
+      "input.interruptPlaceholder",
+      "中断 — 注入消息…（Enter 发送，Esc 取消）"
+    ],
+    [
+      "workspace.required",
+      "请先打开文件夹——ThinCoder 需要一个工作区才能开工。"
+    ],
+    [
+      "workspace.requiredPlaceholder",
+      "请先打开文件夹…"
+    ],
+    [
+      "toolbar.autoApprove",
+      "自动批准工具"
+    ],
+    [
+      "toolbar.planDisabled",
+      "工程模式下禁用——工程模式本身即先设计后编码"
+    ],
+    [
+      "auto.confirmText",
+      "AUTO 模式将执行所有工具调用——包括文件写入和 Shell 命令——不再逐一确认。"
+    ],
+    [
+      "auto.enable",
+      "⚠ 启用 AUTO"
+    ],
+    [
+      "auto.cancel",
+      "取消"
+    ],
+    [
+      "model.loading",
+      "加载模型…"
+    ],
+    [
+      "model.filterPlaceholder",
+      "过滤模型…"
+    ],
+    [
+      "model.noMatch",
+      "没有匹配的模型"
+    ],
+    [
+      "model.reasoning",
+      "推理深度"
+    ],
+    [
+      "model.noReasoning",
+      "不支持推理"
+    ],
+    [
+      "model.noReasoningDesc",
+      "关闭（不支持）"
+    ],
+    [
+      "model.addProvider",
+      "+ 添加 provider…"
+    ],
+    [
+      "model.removeProvider",
+      "− 移除 provider…"
+    ],
+    [
+      "model.setKey",
+      "设置密钥…"
+    ],
+    [
+      "reasoning.max",
+      "最大"
+    ],
+    [
+      "reasoning.xhigh",
+      "很高"
+    ],
+    [
+      "reasoning.high",
+      "高"
+    ],
+    [
+      "reasoning.medium",
+      "中"
+    ],
+    [
+      "reasoning.low",
+      "低"
+    ],
+    [
+      "reasoning.minimal",
+      "最小"
+    ],
+    [
+      "reasoning.none",
+      "关闭"
+    ],
+    [
+      "reasoning.enabled",
+      "推理"
+    ],
+    [
+      "tool.interrupted",
+      "已中断"
+    ],
+    [
+      "error.retry",
+      "重试"
+    ],
+    [
+      "welcome.heading",
+      "欢迎使用 ThinCoder"
+    ],
+    [
+      "welcome.text",
+      "选择一个 provider 并填入 API key，即可开始使用。"
+    ],
+    [
+      "welcome.textConfigured",
+      "就此工作区提问——agent 可以读取文件、运行命令、修改代码。"
+    ],
+    [
+      "welcome.shortcuts",
+      "输入 @ 引用文件 · Enter 发送 · Shift+Enter 换行"
+    ],
+    [
+      "chat.pending.single",
+      "⏳ 待发送 · 不打断当前执行，自动发送"
+    ],
+    [
+      "chat.pending.multi",
+      "⏳ 待发送 · ${count} 条消息（不打断当前执行，合并发送）"
+    ],
+    [
+      "chat.pending.more",
+      "… [该条共 ${lines} 行——发送后完整显示]"
+    ],
+    [
+      "composer.send.failed",
+      "发送失败（${reason}）——文本已保留"
+    ],
+    [
+      "composer.send.noProvider",
+      "未配置 API 密钥 — 点击 ⚙ 设置"
+    ],
+    [
+      "composer.send.noDefaultModel",
+      "默认模型未设置或无效"
+    ],
+    [
+      "composer.send.noDefaultModelFallback",
+      "默认模型未设置或无效 — 正在使用可用渠道"
+    ],
+    [
+      "paste.unsupportedFormat",
+      "仅支持 png / jpg / gif / webp 图片（收到 ${type}）"
+    ],
+    [
+      "approval.diff.large",
+      "改动较大——${n} 行（预览省略）"
+    ],
+    [
+      "settings.agent.maxTurns",
+      "最大轮次"
+    ],
+    [
+      "settings.agent.subagentTurns",
+      "子代理轮次"
+    ],
+    [
+      "settings.agent.poolLimits.engCoder",
+      "Eng-coder 并发池"
+    ],
+    [
+      "settings.agent.poolLimits.other",
+      "其他角色并发池"
+    ],
+    [
+      "settings.agent.poolLimits.advisor",
+      "advisor 评审池"
+    ],
+    [
+      "settings.agent.compactThreshold",
+      "压缩阈值（留空 = 自动）"
+    ],
+    [
+      "settings.agent.verifyGuard",
+      "Verify 守卫（完成前回推 verify）"
+    ],
+    [
+      "settings.agent.consultTurns",
+      "轮数上限"
+    ],
+    [
+      "settings.agent.consultTimeoutMs",
+      "超时（分钟）"
+    ],
+    [
+      "settings.agent.advisorEffort",
+      "审查强度"
+    ],
+    [
+      "session.title",
+      "会话"
+    ],
+    [
+      "session.empty",
+      "暂无会话"
+    ],
+    [
+      "session.rename",
+      "重命名"
+    ],
+    [
+      "session.delete",
+      "删除"
+    ],
+    [
+      "session.deleteConfirm",
+      "确定删除会话 \"${title}\"？此操作不可恢复。"
+    ],
+    [
+      "session.occupied",
+      "该会话正被另一活进程使用——继续将在下次保存时创建新副本。"
+    ],
+    [
+      "session.openFailed",
+      "会话打开失败（${reason}）"
+    ],
+    [
+      "session.loadFailed",
+      "会话内容加载失败"
+    ],
+    [
+      "session.renameFailed",
+      "会话改名失败（${reason}）"
+    ],
+    [
+      "session.deleteFailed",
+      "会话删除失败（${reason}）"
+    ],
+    [
+      "perm.wantsTo",
+      "ThinCoder 想要执行"
+    ],
+    [
+      "perm.approve",
+      "批准"
+    ],
+    [
+      "perm.approveAll",
+      "全部批准"
+    ],
+    [
+      "perm.deny",
+      "拒绝"
+    ],
+    [
+      "perm.viewInEditor",
+      "在编辑器中查看"
+    ],
+    [
+      "perm.batch.wantsTo",
+      "ThinCoder 想要执行 ${count} 个工具：${names}"
+    ],
+    [
+      "perm.batch.oneByOne",
+      "逐个确认"
+    ],
+    [
+      "question.label",
+      "提问"
+    ],
+    [
+      "question.mark",
+      "❯"
+    ],
+    [
+      "question.submit",
+      "发送"
+    ],
+    [
+      "question.customPlaceholder",
+      "或输入你自己的回答…"
+    ],
+    [
+      "question.placeholder",
+      "输入你的回答…"
+    ],
+    [
+      "panel.taskDesc",
+      "Agent 在此跟踪多步骤任务 — 自动创建和更新"
+    ],
+    [
+      "panel.goalDesc",
+      "长期目标 — 持续运行直到完成或取消"
+    ],
+    [
+      "goal.objective",
+      "目标"
+    ],
+    [
+      "settings.section.tools",
+      "工具与服务"
+    ],
+    [
+      "settings.indexSection",
+      "语义索引"
+    ],
+    [
+      "settings.indexBuild",
+      "构建索引"
+    ],
+    [
+      "settings.indexRebuild",
+      "重新构建"
+    ],
+    [
+      "settings.indexBuilding",
+      "构建中…"
+    ],
+    [
+      "settings.indexBuilt",
+      "✓ 索引已构建：${files} 个文件，${chunks} 个块"
+    ],
+    [
+      "settings.indexNotBuilt",
+      "索引未构建，向量搜索未启用。"
+    ],
+    [
+      "settings.indexNoKey",
+      "未配置 embedding API key。"
+    ],
+    [
+      "settings.indexDbSizeLabel",
+      "库大小"
+    ],
+    [
+      "settings.indexOriginCounts",
+      "代码 ${code} · 文档 ${doc}"
+    ],
+    [
+      "search.placeholder",
+      "搜索消息…"
+    ],
+    [
+      "search.prev",
+      "上一个匹配"
+    ],
+    [
+      "search.next",
+      "下一个匹配"
+    ],
+    [
+      "search.close",
+      "关闭搜索"
+    ],
+    [
+      "search.noMatch",
+      "无匹配"
+    ],
+    [
+      "status.indexScan",
+      "索引：扫描 ${n} 文件…"
+    ],
+    [
+      "status.indexProgress",
+      "索引：${done}/${total}…"
+    ],
+    [
+      "status.goal",
+      "目标面板"
+    ],
+    [
+      "settings.section.env",
+      "运行环境"
+    ],
+    [
+      "settings.section.models",
+      "会诊与审查"
+    ],
+    [
+      "settings.proxySection",
+      "代理"
+    ],
+    [
+      "settings.proxyUri",
+      "代理 URI（http://host:port）"
+    ],
+    [
+      "settings.proxyWeb",
+      "Web 工具（websearch/fetch）"
+    ],
+    [
+      "settings.proxyModel",
+      "模型请求（proxy: true 的 provider）"
+    ],
+    [
+      "settings.proxyTest",
+      "测试连接"
+    ],
+    [
+      "settings.proxyTestRunning",
+      "测试中…"
+    ],
+    [
+      "settings.proxyTestOk",
+      "✓ 连接正常（HTTP ${status}）"
+    ],
+    [
+      "settings.proxyTestFailStatus",
+      "✗ HTTP ${status}"
+    ],
+    [
+      "settings.proxyTestFail",
+      "✗ ${reason}"
+    ],
+    [
+      "settings.noneMark",
+      "—"
+    ],
+    [
+      "settings.shellSection",
+      "Shell（bash 工具）"
+    ],
+    [
+      "settings.shellSelect",
+      "Shell"
+    ],
+    [
+      "settings.shellCustom",
+      "自定义路径…"
+    ],
+    [
+      "settings.shellPath",
+      "自定义路径"
+    ],
+    [
+      "settings.embeddingLabel",
+      "SiliconFlow Embedding"
+    ],
+    [
+      "settings.websearchLabel",
+      "Tavily API Key"
+    ],
+    [
+      "settings.embedKeyPlaceholder",
+      "sk-..."
+    ],
+    [
+      "settings.websearchKeyPlaceholder",
+      "tvly-..."
+    ],
+    [
+      "settings.addKey",
+      "添加 Key"
+    ],
+    [
+      "settings.changeKey",
+      "修改"
+    ],
+    [
+      "settings.save",
+      "保存"
+    ],
+    [
+      "settings.cancel",
+      "取消"
+    ],
+    [
+      "settings.keySet",
+      "****"
+    ],
+    [
+      "settings.keyDelete",
+      "✕"
+    ],
+    [
+      "settings.deleteKey",
+      "删除密钥"
+    ],
+    [
+      "settings.mcp.tools",
+      "工具"
+    ],
+    [
+      "settings.mcp.test",
+      "测试"
+    ],
+    [
+      "settings.mcp.loading",
+      "加载中…"
+    ],
+    [
+      "settings.mcp.testing",
+      "测试中…"
+    ],
+    [
+      "settings.mcp.testOk",
+      "✓ 正常 — ${count} 个工具，${latency}ms"
+    ],
+    [
+      "settings.mcp.noTools",
+      "该服务未提供工具"
+    ],
+    [
+      "settings.mcp.params",
+      "参数：${names}"
+    ],
+    [
+      "settings.consultSection",
+      "会诊模型（多模型会诊）"
+    ],
+    [
+      "settings.consultAdd",
+      "+ 添加会诊模型"
+    ],
+    [
+      "settings.consultRemove",
+      "移除"
+    ],
+    [
+      "settings.consultActive",
+      "会诊已启用 — 卡住时 ${n} 个模型并行分析"
+    ],
+    [
+      "settings.consultInactive",
+      "会诊未启用 — 添加模型后即可在遇到疑难时多模型会诊"
+    ],
+    [
+      "settings.consultProvider",
+      "会诊渠道"
+    ],
+    [
+      "settings.advisorSection",
+      "Advisor"
+    ],
+    [
+      "settings.advisorProvider",
+      "Provider（留空 = 主模型）"
+    ],
+    [
+      "settings.pickProvider",
+      "选择渠道…"
+    ],
+    [
+      "settings.pickModel",
+      "选择模型…"
+    ],
+    [
+      "settings.inherit",
+      "继承"
+    ],
+    [
+      "settings.effortLabel",
+      "推理强度"
+    ],
+    [
+      "settings.agent.autoThink",
+      "自动思考（按回合分类任务难度）"
+    ],
+    [
+      "settings.mcp.edit",
+      "编辑"
+    ],
+    [
+      "settings.mcp.reconnect",
+      "重连"
+    ],
+    [
+      "settings.mcp.type",
+      "类型"
+    ],
+    [
+      "settings.mcp.command",
+      "命令"
+    ],
+    [
+      "settings.mcp.args",
+      "参数（空格分隔）"
+    ],
+    [
+      "settings.mcp.env",
+      "环境变量（KEY=value，逗号分隔）"
+    ],
+    [
+      "settings.mcp.url",
+      "URL"
+    ],
+    [
+      "settings.mcp.wsUrl",
+      "WebSocket URL"
+    ],
+    [
+      "settings.mcp.token",
+      "认证令牌（Bearer）"
+    ],
+    [
+      "settings.mcp.headers",
+      "请求头（KEY=value，逗号分隔）"
+    ],
+    [
+      "settings.mcp.reconnecting",
+      "重连中…"
+    ],
+    [
+      "settings.mcp.reconnectOk",
+      "✓ 已重连 — ${count} 个工具"
+    ],
+    [
+      "settings.submodelGlobal",
+      "全局默认"
+    ],
+    [
+      "settings.advisorGuard",
+      "强制 advisor 评审"
+    ],
+    [
+      "settings.reason.slotAuthority",
+      "会话级选项——请从输入面板修改"
+    ],
+    [
+      "slash.unknown",
+      "未知命令：${name}（/help 查看可用命令）"
+    ],
+    [
+      "slash.busy",
+      "回合运行中不可用——请等回合结束后重试"
+    ],
+    [
+      "slash.args",
+      "此命令在此不接受参数"
+    ],
+    [
+      "slash.help.label",
+      "❯ 帮助"
+    ],
+    [
+      "slash.desc.model",
+      "选择模型并管理渠道"
+    ],
+    [
+      "slash.desc.auto",
+      "切换自动批准"
+    ],
+    [
+      "slash.desc.plan",
+      "切换计划模式（先设计，再实现）"
+    ],
+    [
+      "slash.desc.eng",
+      "切换工程模式——严格方法论约束"
+    ],
+    [
+      "slash.desc.help",
+      "本清单"
+    ]
   ]
 }
