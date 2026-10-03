@@ -1,8 +1,9 @@
 /**
  * ledger-surface.mjs — VSC 台账可见面（LEDGER-SURFACE 批——设计档 §2.30.3.5；W4 接入核机制）。
  *
- * 面：① 状态栏 item（text = L1 / tooltip = 明细行集 L2 行 / aged>0 → warningBackground /
- * 无台账 → hide；无点击命令——K4）② chat 流文本行（启动行 | 变化行——**送达门**：webview
+ * 面：① 状态栏 item（text = L1 标记——核 `scopeMarkerOf` 单源（范围合计，§7.2）/ tooltip =
+ * 明细行集 L2 行 / warn → warningBackground / 空标记（空范围）→ hide；无点击命令——K4）
+ * ② chat 流文本行（启动行 | 变化行——**送达门**：webview
  * 未就绪 / post 失败不记账）③ 周期刷新（`REFRESH_MS`）+ 换项目事件（`emit:false`）。
  * 只读台账；唯一写面 = 去重档（跨端共享 `~/.thincoder/ledger-notify.json`）。
  *
@@ -58,17 +59,18 @@ async function scanFamily(ledger) {
   }
   await ledger.resolveExecutorStates(scans)
   const current = family.current ? scans.find((s) => s.root === family.current.root) ?? null : null
-  return { scans, current }
+  return { scans, current, family }
 }
 
-/** item 更新（缝值 `render` 的端侧实现）：无台账 → hide（K6/U4）；aged>0 或属主已死 → 警示底色
- *  （F-LX1——与核机制 warn 同判位：`aged > 0 || deadExecutors > 0`，§7.3.1）。 */
-function updateItem(ledger, scans, current) {
+/** item 更新（缝值 `render` 的端侧实现）：标记 ∥ warn 走核单源 `scopeMarkerOf`（范围归约——§7.2；
+ *  端零自算）；空标记（空范围）→ hide（K6/U4）。 */
+function updateItem(ledger, scans, current, family) {
   if (!_item) return
-  if (!current) { _item.hide(); return }
-  _item.text = ledger.formatMarker(current)
+  const { marker, warn } = ledger.scopeMarkerOf(scans, family)
+  if (!marker) { _item.hide(); return }
+  _item.text = marker
   _item.tooltip = new vscode.MarkdownString(ledger.detailScans(scans, current).map((s) => ledger.formatDetailLine(s)).join("\n"))
-  _item.backgroundColor = current.aged > 0 || current.deadExecutors > 0 ? new vscode.ThemeColor("statusBarItem.warningBackground") : undefined
+  _item.backgroundColor = warn ? new vscode.ThemeColor("statusBarItem.warningBackground") : undefined
   _item.show()
 }
 
@@ -85,7 +87,7 @@ const SEAM_COLORS = { warn: true, dim: false }
  *  本端供三缝值——`pushLine` 逐行投递（未送达 → 抛出 ⇒ 核内不记账）。 */
 async function runScan(panel, { startup = false } = {}) {
   const { ledger, surface } = await loadCore()
-  const { scans, current } = await scanFamily(ledger) // 端侧明细面（tooltip 行集——与核机制扫描同拍同锚）
+  const { scans, current, family } = await scanFamily(ledger) // 端侧明细面（tooltip 行集——与核机制扫描同拍同锚）
   await surface.runLedgerScan({
     state: _state,
     anchor: _anchor ?? _cwd(),
@@ -95,7 +97,7 @@ async function runScan(panel, { startup = false } = {}) {
     pushLine: (text, warn) => {
       if (!post(panel, { type: "ledgerNotice", lines: [{ text, warn }] })) throw new Error("ledger line undelivered")
     },
-    render: () => updateItem(ledger, scans, current),
+    render: () => updateItem(ledger, scans, current, family),
   })
 }
 
@@ -104,8 +106,8 @@ export async function refreshLedger(panel, { emit = true } = {}) {
   try {
     if (!emit) {
       const { ledger } = await loadCore()
-      const { scans, current } = await scanFamily(ledger)
-      updateItem(ledger, scans, current)
+      const { scans, current, family } = await scanFamily(ledger)
+      updateItem(ledger, scans, current, family)
       return
     }
     await runScan(panel, { startup: false })

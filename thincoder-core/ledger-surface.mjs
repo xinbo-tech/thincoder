@@ -9,10 +9,10 @@
  *
  * 三面：① 启动行（首扫、**任一项目可动作**才出——明细行集每项目一行）② 变化行（老化首次
  * 越线 / 池达阈值——一次性去重 + **送达门**：未送达不记账）③ 状态位（`state.ledger`——L1
- * 常驻标记，渲染端消费；**不受启动行门约束**——F2 按标记态照显）。
+ * 常驻标记（范围归约 `scopeMarkerOf` 单源——§7.2），渲染端消费；**不受启动行门约束**——F2 按标记态照显）。
  * 只读台账；唯一写面 = 去重档（`~/.thincoder/ledger-notify.json`）。
  */
-import { buildScan, detailScans, discoverFamily, formatDetailLine, formatMarker, loadNotifyState, NOTIFY_FILE, notifyKey, planChangeLines, REFRESH_MS, resolveExecutorStates, saveNotifyState } from "./ledger.mjs"
+import { buildScan, detailScans, discoverFamily, formatDetailLine, loadNotifyState, NOTIFY_FILE, notifyKey, planChangeLines, REFRESH_MS, resolveExecutorStates, saveNotifyState, scopeMarkerOf } from "./ledger.mjs"
 
 /** 单次扫描（直驱面——timer 包装见 `startLedgerSurface`）。**async**（F-LX1：await 判活解析——
  *  LEDGER.md §7.3.1 ④ 读面不阻塞事件循环）。
@@ -48,8 +48,10 @@ export async function runLedgerScan({ state, agent = null, anchor = null, notify
     for (const { s, plan } of plans) ledgers[notifyKey(s.ledger)] = { ...plan.next, updatedAt: Date.now() }
     saveNotifyState(notifyFile, { version: 1, ledgers })
   }
-  // warn 判位钉在判活解析之后（裁定 #7）：属主已死也是可动作态
-  state.ledger = { marker: current ? formatMarker(current) : null, warn: Boolean(current && (current.aged > 0 || current.deadExecutors > 0)), scannedAt: Date.now() }
+  // 范围归约 = `scopeMarkerOf` 单源（§7.2——容器根锚求和 ∥ 具体项目锚只显自身）；warn 判位钉在
+  // 判活解析之后（裁定 #7）：属主已死也是可动作态
+  const { marker, warn } = scopeMarkerOf(scans, family)
+  state.ledger = { marker, warn, scannedAt: Date.now() }
   render()
 }
 

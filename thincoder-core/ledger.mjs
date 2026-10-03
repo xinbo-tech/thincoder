@@ -9,7 +9,7 @@
  * 两源，接线见 tools/index.mjs 与 agent/family-tools.mjs）
  * ② 族发现（findProject / discoverFamily——标记 = ledger.db）③ scan 组装（buildScan——行集 + ledgerCount
  * → scan 对象，形状契约 = pool/tech/aged/thresholdReached/actionable/root/name/ledger）
- * ④ 通知去重（送达门 + 一次性去重——去重档跨会话、跨端共享）⑤ 格式 helper（行文本逐字契约）。
+ * ④ 通知去重（送达门 + 一次性去重——去重档跨会话、跨端共享）⑤ 格式 helper（行文本逐字契约——含标记范围归约 `scopeMarkerOf`，§7.2）。
  * 判活展示 = 拆分件 `ledger-executors.mjs`（在途 executor 解析 + 三态尾段——本档 re-export，
  * 消费面仍只认本档）。
  *
@@ -146,6 +146,28 @@ export function buildScan({ cwd, days = AGING_DAYS, now = Date.now() } = {}) {
 /** L1 状态标记（逐字——§2.30.3.3）。 */
 export function formatMarker(scan) {
   return scan ? `台账 ${scan.pool}·${scan.tech}` : null
+}
+
+/** 标记范围归约（L1 取值单源——LEDGER.md §7.2「标记范围」）：`current` 在场 ⇒ 范围 = `scans` 中
+ *  `root` = `family.current.root` 的 scan（命中但不在 `scans`——不可读 ⇒ 空范围，不掺兄弟）；
+ *  `current` 缺席（容器根锚）⇒ 范围 = `scans` 全体（族内已读项目——构建期不可读已跳过）。
+ *  空范围 ⇒ `{ marker: null, warn: false }`（不落 `0·0`）；范围非空 ⇒ `marker` = `formatMarker`
+ *  逐字（两池分列求和——F1）；`warn` = 范围内任一项 `aged>0 ∨ deadExecutors>0`（端零重算）。
+ *  消费面 = 核拍面（`ledger-surface.mjs`）∥ VSC item——端零自算单源。 */
+export function scopeMarkerOf(scans, family) {
+  const list = Array.isArray(scans) ? scans : []
+  const currentRoot = family?.current?.root ?? null
+  const range = currentRoot === null ? list : list.filter((s) => s?.root === currentRoot)
+  if (range.length === 0) return { marker: null, warn: false }
+  let pool = 0
+  let tech = 0
+  let warn = false
+  for (const s of range) {
+    pool += s.pool
+    tech += s.tech
+    if (s.aged > 0 || s.deadExecutors > 0) warn = true
+  }
+  return { marker: formatMarker({ pool, tech }), warn }
 }
 
 /** L2 明细行（逐字——`（老化 <n>）` 恒显；阈值达成加 ` — 可开批`；判活尾段 = executorTail 三态——

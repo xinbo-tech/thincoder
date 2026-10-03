@@ -174,4 +174,54 @@ VERDICT: pass
 
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（审计 1 轮 clean ∥ 代码评审 1 轮 pass（🔵 6 条报告态）——T47–T54 先红后绿 · 既有件复跑三项 · doc-check exit 0）
+
+
+
+### §5.1 交付面（file:line · as-of 实施后现盘）
+
+| # | 文件 | 改动 | 实读行数 |
+|---|---|---|---|
+| 1 | `thincoder-core/ledger.mjs` | 新导出 `scopeMarkerOf(scans, family)`（`:157-171`，`formatMarker` 邻位——范围归约单源：`current` 在场按 `root` 滤取、缺席取全族；空范围 `{ marker: null, warn: false }`；两池分列求和 + 委托 `formatMarker` 逐字；`warn` = 范围内 `aged>0 ∨ deadExecutors>0`）+ 头注 ⑤ 句随动（`:12`） | 241（+21） |
+| 2 | `thincoder-core/ledger-surface.mjs` | `state.ledger` 行改走本函数（`:51-54`——形状 `{ marker, warn, scannedAt }` 零变）+ import 面（`:15`）+ 头注 ③ 句随动（`:12`） | 85 |
+| 3 | `thincoder-vscode/src/extension/ledger-surface.mjs` | `scanFamily` 回携 `family`（`:62`）；`updateItem` 收核单源（`:67-75`——`ledger.scopeMarkerOf(scans, family)`，在场判据 = `marker` 非空；端侧 `formatMarker(current)` ∥ `aged/deadExecutors` 自算零残余）；两调用点传 `family`（`:100` ∥ `:110`）；头注 ① 句随动（`:4-5`） | 142 |
+| 4 | `docs/batches/2026-10-03-ledger-family-aggregate.test.mjs` | 批内件新建（T47–T54 全表；夹具 = `_setLedgerDirForTest` + 项目临时树（各带 manifest）） | 239（拟新增） |
+| 5 | CLI（`render-frame.mjs`）∥ 桌面三档（`project-info.mjs` ∥ `statusline-segments.mjs`） | **零改**（实读复核 = 纯透传） | 0 |
+
+`formatMarker` 本体 ∥ `discoverFamily` ∥ 台账库 ∥ 写面零改；批档 §1/§3–§6、设计档零触（本段笔权 = §5）。
+
+### §5.2 测试读数（先红后绿）
+
+红基线（实施前 · 现盘 `state.ledger` 只取 `current`）：**T47 ✖ / T50 ✖ / T53 ✖ / T54 ✖**；T48 ✔ / T49 ✔（**同径**——容器下唯一项目经发现解析已命中 `current`，改动前即绿）/ T51 ✔ / T52 ✔。
+绿复跑（实施后同件）：**8/8 ✔**——逐腿读数：T47 `marker="台账 3·4"` warn=false（A 1·1 + B 2·3）；T48 `"台账 1·1"`（B 2·3 零掺）；T49 `"台账 2·1"`（同径零特判）；T50 求和腿 `"台账 1·2"`（B 不可读跳过）∥ 全不可读腿 `null` + warn=false；T51 `null`（A 命中但不可读——B 2·3 在场不顶替）；T52 `null` + warn=false；T53 老化腿 `"台账 0·3"` warn=true ∥ 负向锁 `"台账 0·2"` warn=false ∥ 死执行者腿 `"台账 0·1"` warn=true（判活桩 pid 424242）；T54 桌面 `ledgerMarkerOf` 两形 ✓ ∥ VSC 源面锁（消费 true ∥ 残余 false）。
+
+既有件复跑（直接相关三件）：`2026-09-29-residuals-round2.test.mjs` **12/12 ✔**；`2026-09-29-residuals-round2-vsc.test.mjs` **7/7 ✔**；`2026-09-29-desktop-statusline-cli-gap.test.mjs` **16/17**——`T17` 与改动前基线同红（对象 = 桌面 `agent-host.mjs` 的 `ev:usage` 载荷源，属并行在途桌面改动，与本批无关）。仓套件 = 父侧收口跑（本链未跑）。
+
+doc-check（仓根 `node scripts/doc-check.mjs`）：**exit 0**——悬空 0 ∥ 行宽 0 ∥ 行数面差异 5 条（全部 desktop 侧源文件，与设计轮 as-of 一致；本批零关）。
+
+### §5.3 决策透明表（KD1–KD5 实施）
+
+| 决策 | 落法 | 偏离 |
+|---|---|---|
+| KD1 归约收核为新导出 `scopeMarkerOf` | 照落（核拍面 ∥ VSC item 双消费） | 零 |
+| KD2 `current` 在场性判锚（命中不可读 ⇒ 空范围） | 照落（`root` 滤取空集早退——不掺兄弟） | 零 |
+| KD3 `warn` 同范围聚合（端零重算） | 照落（核内单点；VSC ∥ 桌面零自判） | 零 |
+| KD4 VSC item 含入本批（第三面收一） | 照落（`family` 回携 + `updateItem` 收核——不留端差） | 零 |
+| KD5 空范围 ⇒ `null`（不落 `0·0`） | 照落 | 零 |
+
+行数实读 vs §2.4 预算：`ledger.mjs` 241（预算 220 +14±4——超上限 3 行）· 单测件 239（预算 ≈150±40）；两者 ≤300 顾问线 ⇒ **零拆分义务**。§2.4 坐标（`:52` ∥ `:53-62` ∥ `:66-73`）已随盘移位（核 `:51-54`；VSC `:54-63` / `:67-75`）——随父侧收口按盘重锚（§2.4 尾句自定口径）。
+
+### §5.4 自检链（轮次与终态）
+
+- **分歧审计（explore · 只读）1 轮**：四类（分歧 ∥ 静默降级 ∥ 漏项 ∥ 超范围）**零命中 ⇒ clean**；结构面 + 语法面复核通过（`node --check` 四档全 OK）。旁支观察 1 条：`thincoder-cli/src/tui/render-frame.mjs:443` 注句「warn = 当前项目老化 > 0」为 #882 前措辞（零改透传面、非本批引入）——转父侧处置。
+- **代码评审（advisor）1 轮**：**VERDICT pass**（无 🔴 / 无必改 🟡；🔵 6 条报告态）——① 行数/读数未随盘收正（本段 §5.3 已按盘写实读）；② 设计档 §2.1「比较点登记两处」计数未随动（新比较点 = `ledger.mjs:160`；同谱系 ⇒ 守卫本体零破；设计档非本段笔权 ⇒ 转父侧）；③ T54 源面锁为文本级（设计既定的锁形；建议端测树回迁时补行为腿）；④ 先红基线记录互斥——**实证裁 = 测试件头注原「T49 红」为误**（红基线实跑 T49 ✔、读数 `marker="台账 2·1"`）；已按实跑收正头注（注释级；复跑仍 8/8 ✔）；⑤ VSC 容器根锚 + 全族无可动作项 ⇒ tooltip 落空串（`new MarkdownString("")`）——真机渲染表现未验证（观感级；转父侧真机裁）；⑥ 新导出对 `family` 缺席与容器根锚同判（两现消费点均传实体——当下零风险；JSDoc 脚坑级）。
+- **终态**：**clean**（审计 1 轮 clean + 评审 1 轮 pass；零残留修轮）。
+
+### §5.5 上抛（父侧面）
+
+1. 设计档两处读数随动：`LEDGER.md:303`「最高 ≈234——`ledger.mjs`」（实读 241）∥ §2.1 比较点登记计数——设计档笔权。
+2. 桌面侧坐标重锚：`project-info.mjs:62` ∥ `docs/desktop/design/UI.md:116` / `:381` ∥ `IPC.md:30` 的「`ledger-surface.mjs:52`」⇒ 现盘 `:54`。
+3. `render-frame.mjs:443` 注句陈旧（零改透传面——选项：随下一微批收口）。
+4. 真机复核项（本件只承机检腿）：容器根锚下 VSC item 显示 ∥ 空 tooltip 观感。
+
 ## §6 验证与收口（父代理）
