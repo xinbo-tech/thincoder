@@ -108,8 +108,8 @@
     兑现 = **核单点 `wakeAsyncWaiters(parent)`**（`thincoder-core/agent-tools/async-settle.mjs`——`splice(0)` 全量唤醒并清空；**两处调用** = settle 公共尾 `:281` +
       上行 ask 入队尾〔`agent-tools/parent-channel.mjs`——2026-09-19 F-UC7 批，见 `AGENT-LOOP-UPSTREAM.md` §6.27.12〕）——`carrier._asyncWaiters`（挂起侧）与 `parent._asyncWaiters`（结算侧）两径经绑定不变式命中同一容器。
       （**实现已落地**：`agent-tools/async-settle.mjs:296-299` 定义（settle 公共尾 `:281` 改调同函数）+ `agent-tools/parent-channel.mjs:115` ask 入队尾唤醒；父侧直接执行 · 可 revert）
-  - **评审实例注册表**（`_advisorRuns`——`Map`）：读取（不建）= `thincoder-core/agent-tools/advisor-async.mjs:68-71`（经 `carrierField`）；首用单点（建）= 同档 `:73-83`（无既有容器时创建，落 `agent.history ?? agent`——有载体直接落载体、无则落父对象字段；与首次使用同步）。
-    重置写点 = `thincoder-core/agent-tools/eng.mjs:57` / `:75`（模式切换重建空 Map 落父对象字段——**勘定（VSC 形）**：替换写不触载体，重置的跨 run 保持 = S2 装配对位登记项）。
+  - **评审实例注册表**（`_advisorRuns`——`Map`）：读取（不建）= `thincoder-core/agent-tools/advisor-async.mjs:75-78`（经 `carrierField`）；首用单点（建）= 同档 `:80-90`（无既有容器时创建，落 `agent.history ?? agent`——有载体直接落载体、无则落父对象字段；与首次使用同步；坐标实读 2026-10-04）。
+    重置写点 = `thincoder-core/agent-tools/eng.mjs:62` / `:93`（模式切换重建空 Map 落父对象字段——**勘定（VSC 形）**：替换写不触载体，重置的跨 run 保持 = S2 装配对位登记项；坐标实读 2026-10-04）。
     形态钉于核测 = `thincoder-core/test/advisor-consult-merge.test.mjs:29-56`（有载体 ⇒ 建在载体上、不在父对象旁建第二份；父对象自有 ⇒ 父对象优先）；VSC 侧该端档已退役（W12 删除集）——现体 = 核 `thincoder-core/agent-tools/advisor-async.mjs`（同经 `carrierField`）。 （迁移期引文）
   - **变更日志**（`_mutLog`——数组 · ≤200 环；**VSC 对位名 `_fileMutEvents`——名差登记**）：书写点 = `thincoder-core/agent-tools/advisor-settle.mjs:42-49`（`noteMutations`——`agent._mutLog ??= []` 同步落父对象字段）；读点 = 同档 `:58`（陈旧判定）· `thincoder-core/agent-tools/escalate-async.mjs:47`（飞行重叠判定）。
     调用面 = `thincoder-core/agent/dispatch.mjs:129`（回合写执行成功即记账）· `thincoder-core/agent-tools/subagent-async.mjs:424`（子代理合入）；VSC 侧该端档已退役（W12 删除集）——现体 = 核 `thincoder-core/agent-tools/advisor-settle.mjs:42-49`（写）· `:58`（读）。 （迁移期引文）
@@ -522,6 +522,7 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 
 - 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #863）：§6.4 增 **console 回显预算句**（capturedConsole 采集 cap + 拼接纳入 offload 判定）。实现 = 本批实施轮。
 - 2026-10-04（**issue 修复批·五 · fix 轮（评审 #70 发现 6 · 父侧全采纳）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §3 轮次 1）：§6.4 钉 **`CONSOLE_CAPTURE_LIMIT`**（= 65536 字符——与 `TOOL_RESULT_OFFLOAD_LIMIT` 同值）+ 截断标记行逐字（`[console truncated at 65536 chars]`）+ 拼接后总长入 offload 判定句。**机制语义零改**（常量 ∥ 逐字面钉值）。
+- 2026-10-04（**issue 修复批·五 · 登记/回填轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §2.8（父侧裁定）：§2「载体字段集与回写义务」评审实例注册表坐标实读收正（读取 `advisor-async.mjs:75-78` ∥ 建点 `:80-90`——原载 `:68-71` / `:73-83`；重置写点 `eng.mjs:62` / `:93`——原载 `:57` / `:75`）。**机制条文零改**（坐标实读收正——归因未定 · 前批插入所致）。
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：#127 同形重复族行 ④（`:443`）签名同扫收正（`continueDecision(error, {autoTurn, autoApprove, reason})`——#677 I10 已落）。**零新语义**。
 
 - 2026-09-28（**测试按层收口·设计对齐轮 · eng-designer**——承 `docs/batches/2026-09-28-test-layer-prompts.md` §1.4 派单 + 父侧裁定（声明外追加 · 父侧已裁））：§6.16 指针表行标签「测试分层 L0 / L1 / L2」→「测试收口（舱内单元 ∕ 链终全量）」（指针不变）；口径 = 需求 `requirements/TESTING.md` §2 F1–F4（只引用不重述——D2）。**机制条文零改**。

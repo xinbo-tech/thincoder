@@ -29,7 +29,7 @@ verification: { status: "passed" | "failed" | "skipped", command?, summary?, bas
 ```
 
 - `command` / `summary` 可选；**`summary` 在 `skipped` 时为必填**（须给具体理由）。
-- **`basis`（可选 · 2026-10-04 · #848 · gitee IKJKHH）**：判据源 ∥ 实读坐标（`file:line`）∥ 显式 `unverified`——「根据」维**声明式**（格式零校验 · 零机检）。`passed` / `skipped` 缺 `basis` ⇒ 报告附**提示行**（advisory——不阻断 · 不改判定）；`failed` 面零提示（已阻断）。
+- **`basis`（可选 · 2026-10-04 · #848 · gitee IKJKHH）**：判据源 ∥ 实读坐标（`file:line`）∥ 显式 `unverified`——「根据」维**声明式**（格式零校验 · 零机检）。`passed` / `skipped` 缺 `basis` ⇒ 报告附**提示行**（advisory——不阻断 · 不改判定）；`failed` 面零提示（已阻断）；`skipped` 无 `summary` 的打回支同零提示（阻断面不叠加——提示仅随放行面出现）。
 - verify **不执行** `command`——它是模型的自述证据。
 - 参数面保留 `workdir`（定位项目根 / doc-only 判定）。
 - 参数面**已删** `full` / `testNamePattern` / `filter` 及其拒绝分支（无「自动跑测试」后语义消亡）。
@@ -144,6 +144,7 @@ verify 的强制面住在完成路径，不住 verify 本体：
 
 ## 变更记录
 
+- 2026-10-04（**issue 修复批·五 · 登记/回填轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §2.8（父侧裁定）：§2 `basis` 条补 **`skipped` 无 `summary` 打回支零提示**句（阻断面不叠加——按现实现形明书）。**机制语义零改**（文本边界收正）。
 - 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #848 · gitee IKJKHH）：§2 增 **`basis` 可选字段**（「根据」维——声明式；缺省提示行，不阻断）+ §3 补「`basis` 与判定零耦合」句 + §7 增 **D-VR9**。提示词对应面（出口条件第 9 条）= `docs/core/design/prompts/persona-engineering.md`（EN 落地 = 实施轮）。**机制本体零改**（自报形态保留）。明细 = 批档 §2。
 
 - 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R1 改指（`goal.mjs` 补 `thincoder-core/agent-tools/` 前缀）。**零新语义**。

@@ -17,7 +17,7 @@
 **边界**：**#834 ∥ #835 涉及 ledger 系件（`thincoder-core/ledger-*.mjs`）= #51 在飞写域** ⇒ 设计轮只写文档；实施须待 #51 收口后派发（设计文件表照列供后续派发）。其余照常——#56 ∥ #59 ∥ #57/#58 ∥ 面板面零触。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（2026-10-04 · 设计落笔（11 档）+ fix 轮收正（评审 #70 发现 1–11 · 全采纳）落毕；实施按写域排程（#834 ∥ #835 待 #51 收口））
+**状态行**：设计完成（2026-10-04 登记/回填轮——父侧裁定 号 1–8 落毕（§2.8）；§2.3 面终态读数回填 + 设计档收正（AGENT-LOOP ∥ VERIFY-REDESIGN ∥ SETTINGS ∥ CLI-ENTRY）；doc-check 复跑 exit 0）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 ### 2.0 复验结论（逐条实读——对现盘）
@@ -123,6 +123,63 @@
 - **doc-check 复跑（收正轮 · 2026-10-04）**：`node scripts/doc-check.mjs`（仓根）⇒ **exit 0**——悬空 0 ∥ 行宽 OK（源域全部 .md 无 >300 字符单行）∥ 行数面差异 8 条（报告态——入闸项零红）。
 - **§2 内收正清单（承发现 2 ∥ 11 及本块各号）**：状态行去重（陈旧条删——删前 `:23-24`）∥ §2.1 T55（`:36`）∥ §2.2 #842/#863/#867 三条（`:46`/`:48`/`:49`）∥ §2.3 表重建（`:51` 起）∥ §2.4 指针（`:87`）∥ §2.5 读数（`:90-91`）——本块 = 修正轮记录（上列逐号对应）。
 - **交叠 ∥ 挂起（报父侧）**：① `CLI-ENTRY.md` §1 收正挂起（#51 写域——待让渡后同拍落；目标文本已具）；② 登记面两处触评移交（`CORE-UNIFICATION.md` = 批·一修轮在飞面〔#67〕；`SESSION.md` 登记行 = 批·四 U2 未裁面）；③ 批·四所列我面 4 处行宽红点（`AGENT-LOOP-ASYNC-POOL.md:108` 等）= 收正轮对盘**未复现**（现读 ≤272 字符、均 <300）——本批自跑读数 = exit 0。
+
+### 2.8 登记/回填块（fix 轮 · 2026-10-04 · eng-designer）
+
+**口径**：承父侧 2026-10-04 裁定（源 = 批档 §5 两舱台账 ∥ #84 报告未决 ④⑤ ∥ #89 注记② ∥ #85 交付报告未决逐条 + 追加号 6–8；dependsOn #85 已落）。**本块为准**——§2.3 表「当前行数／本轮增量」两列与 §5 两舱表读数如与本块相左，一律以本块为准（append-only——原表不重写）；设计面措辞以设计档现文为准。**产品码零触**（登记/回填轮——零实现码 ∥ 零需求档 ∥ 零在飞写域）；本块读数 = 实读 2026-10-04（`\n` 计法）。
+
+**号 1 · `ledger-cmd.mjs` 标注收正**：142 ⇒ **132**（净 **−10**）——§2.3 表列「≤ ±4（净 ≈0）」**未合**（方向为减：内联判定退役 ∥ 死码清除所致——缩向无越限风险）——如实登记（源 = 分歧审计 #89 注记②）；终态 = 号 5 表。
+
+**号 2 · `VERIFY-REDESIGN.md` skipped 阻断支补句（已落）**：§2 `basis` 条补「`skipped` 无 `summary` 的打回支同零提示（阻断面不叠加——提示仅随放行面出现）」——按现实现形明书（`thincoder-core/agent-tools/verify.mjs:254-260`——打回支零 basis 段）；变更记录同拍。**机制语义零改**。
+
+**号 3 · `AGENT-LOOP.md` 载体坐标对盘（已落）**：§2「载体字段集与回写义务」——读取（不建）`advisor-async.mjs:68-71` ⇒ **`:75-78`** ∥ 首用单点（建）`:73-83` ⇒ **`:80-90`**；同 bullet 续行「重置写点」`eng.mjs:57` / `:75` ⇒ **`:62` / `:93`**（实读收正；原载不对位——归因未定（前批插入所致——本批插入点在其下））；变更记录同拍。**机制条文零改**。
+
+**号 4 · `record-results.mjs` 补入受影响面（表外·父裁追加件）**：裁定㈡守卫落盘（`run.open &&` 前置——priorOutput 写点；`thincoder-core/agent/record-results.mjs:136`；净 +2）——§2.3 表外，父侧追加件登记（同族先例 = `advisor-settle.mjs` 裁定㈠ 表外件）。
+
+**号 5 · 全档终态读数回填**（实读 2026-10-04——`\n` 计法；源 = #84 §5.1 表 ∥ #89 读数 ∥ #85 §5.9 表 ∥ 批内件）：
+
+| 档 | §2.3 表列（预算 ∥ 前值） | 终态（前 ⇒ 后） | 注 |
+|---|---|---|---|
+| `thincoder-core/declaration.mjs` | ≤ +24 ∥ 194 | 194 ⇒ **218**（+24） | 恰达上限 |
+| `thincoder-core/ledger-cmd.mjs` | ≤ ±4（净 ≈0）∥ 142 | 142 ⇒ **132**（**净 −10**） | 预算未合·方向为减（号 1） |
+| `thincoder-core/ledger-migrate.mjs` | 净 ≤0（≤ ±4）∥ 299 | 299 ⇒ **300**（净 +1） | fix 轮折注后 |
+| `thincoder-core/agent-tools/verify.mjs` | ≤ +14 ∥ 296 | 296 ⇒ **301**（+5） | 越 300 预登记（拆分预案在册） |
+| `thincoder-core/tool-docs/verify.md` | —（纯 .md 免） | 单行档（描述句改） | |
+| `thincoder-core/prompts/persona-engineering.md` | —（纯 .md 免） | EN 镜像尾半句（`:79-80`） | 内容权威 = 主 agent（已落） |
+| `thincoder-core/undo-stack.mjs` | ≤ +25 ∥ 47 | 47 ⇒ **61**（+14） | |
+| `thincoder-core/agent/dispatch-run.mjs` | ≤ +18 ∥ 167 | 167 ⇒ **184**（+17） | |
+| `thincoder-core/agent-tools/advisor-async.mjs` | ≤ +19 ∥ 481 | 481 ⇒ **491**（+10） | ≤500 硬限内 |
+| `thincoder-core/agent-tools/design-token.mjs` | ≤ ±4 ∥ 156 | 156 ⇒ **157**（+1） | |
+| `thincoder-core/agent/record-results.mjs` | （表外·裁定㈡·父裁追加件） | 180 ⇒ **182**（净 +2） | 父侧口径 181 ⇒ 183（含尾空计法——差恒 +1）（号 4） |
+| `thincoder-core/agent-tools/advisor-settle.mjs` | （表外·裁定㈠） | 236 ⇒ **238**（净 +2） | §5.1 载 237 → 239——两端差 −1（归因未定；以实读为准） |
+| `thincoder-core/memory/schema.mjs` | +2（≤ +4）∥ 468 | 468 ⇒ **470**（+2） | |
+| `thincoder-desktop/renderer/mount-settings-reads.mjs` | ≤ +30 ∥ 192 | 192 ⇒ **204**（+12） | 号 6 |
+| `thincoder-desktop/renderer/views/settings-sections.mjs` | ≤ +15 ∥ 164 | 164 ⇒ **169**（+5） | 号 6 |
+| `thincoder-desktop/renderer/views/settings.mjs` | （表外件①） | 398 ⇒ **399**（+1） | 投影带渠穿透（号 6） |
+| `thincoder-cli/src/tui/startup.mjs` | ≤ +10 ∥ 322 | 322 ⇒ **332**（+10） | 恰达上限 |
+| `thincoder-cli/src/tui/cmd-reindex.mjs` | ≤ +10 ∥ 51 | 51 ⇒ **61**（+10） | 恰达上限 |
+| `thincoder-cli/src/tui/cmd-undo.mjs` | ≤ +12（净小增）∥ 88 | 88 ⇒ **66**（**净 −22**） | 预算未合·方向为减（号 8） |
+| `thincoder-cli/src/tui/index.mjs` | （表外——净 0 行） | 263 ⇒ **263**（±0） | |
+| `thincoder-cli/bin/thincoder.cjs` | +2 ∥ 4 | 4 ⇒ **6**（+2） | |
+| `thincoder-cli/bin/node-version-gate.cjs` | ≈20（新档） | 新 **28** | 号 7 |
+| `thincoder-cli/bin/thincoder.mjs` | 0（零改）∥ 180 | 180 ⇒ **180**（±0） | 零改钉值兑现 |
+| `docs/batches/2026-10-04-issue-fix-round5.test.mjs` | ≈200（本批自持） | 新 **434** | 偏差登记（号 8） |
+
+**对盘备注**：① `advisor-settle.mjs` = 实读 **238**（§5.1 载 239——差 −1）；② `record-results.mjs` = 实读 **182**（父侧派单口径 181 ⇒ 183 = 含尾空元素计法）；③ 余档与 §5 两舱表逐值吻合（0 漂移）。
+
+**API-CONTRACT.md 重生成事项登记（父侧收口面——本席不跑）**：生成区随本批漂移（两舱审计读数——乙：`snapshotForUndo` 面 ∥ 两处行号；甲：`advisor-async.mjs` 导出坐标位移）——重跑 = `node scripts/api-contract.mjs --write`（整区替换——生成器唯一笔；逐行修无义）。待父侧收口执行后实现面复位（两舱同类已登记）。
+
+**号 6 · `SETTINGS.md` 回填（已落）**：§3.1 三行终态读数（`views/settings.mjs` **398 ⇒ 399** ∥ `views/settings-sections.mjs` **164 ⇒ 169** ∥ `mount-settings-reads.mjs` **192 ⇒ 204**——机检差异三行消解）；§2.15 补**投影档穿透**条（表外件①——`views/settings.mjs:162-163` 带渠投影）；变更记录同拍。
+
+**号 7 · `CLI-ENTRY.md:21`「（拟新增）」标记退场（已落）**：`bin/node-version-gate.cjs` 已落盘 ⇒ 按「实施批翻已落」形收正（+ 接线句 = shim 首行）；变更记录同拍。**零新语义**。
+
+**号 8 · 两处读数偏差登记**：`cmd-undo.mjs` 88 ⇒ **66**（净 **−22**——§2.3 表列「≤ +12（净小增）」**未合**；方向为减：死副本 26 行清除）∥ 批内件 `2026-10-04-issue-fix-round5.test.mjs` 新 **434**（§2.3 表列「≈200（本批自持）」偏差登记）——两处如实登记（见号 5 表）。
+
+**列报（父侧收口面——未入本轮写域 / 待裁）**：① #85 报告未决 ④——`MEMORY.md:583` 提示措辞（「含出路：项目目录启动 ∥ `index.excludePaths` 声明」——第二出路不经：跳过判据 = `cwd === homedir` 先行、零声明消费，见 `thincoder-cli/src/tui/startup.mjs:277-279`）⇒ 设计面一字之补（建议措辞：删「∥ `index.excludePaths` 声明」半句——声明不解除跳过）；本轮写域未含 `MEMORY.md` ⇒ 待父侧路由；② #84 报告未决 ⑤ 前半——`ledger-migrate.mjs:78` 旗形空串早退（`tb === ""` ⇒ 零旗）∥ 写门空串必拒（`ledger-cmd.mjs:58`）——「同判」残余；改旗面 = 超本批设计面 ⇒ 待父侧/设计面裁；③ #85 报告未决 ⑤——探针 advisor 第 5 腿未随批移录（非 AC 缺口；可选收——本席不动批内件）；④ #85 报告未决 ⑦——观察：无渠态下 `effortOptions` 可自 catalog 行取 advisor 目标模型枚举（轻度放宽、设计未覆盖）——登记；⑤ 同块复核：`AGENT-LOOP.md:103` 核实证据行同族坐标对现盘不对位（写点现读 `:454-455`；读面现读 `:297-304` ∥ `:309-320` ∥ `:328` 起）——未动（非本号 bullet 射程）；`:113` 引 retired 测试档（`（迁移期引文）` 标记在位——列报 · 不入闸，合规）——不移。
+
+**机检（设计档笔落毕后复跑 · 仓根 `node scripts/doc-check.mjs`）**：**exit 0**——悬空 0 ∥ 行宽 OK ∥ 行数面差异 **9** 条（报告态——本面三行消解：12 ⇒ 9；余 9 条 = 桌面域存量（他批面——如 `SETTINGS.md:193` = `settings.mjs` 主侧档 Δ+29 随 `83dd1752`））。**披露：首复跑曾红一次（悬空 2——本席新增 changelog 行两处短形路径 `views/settings.mjs`）；当场收正（补全前缀）后复跑即 exit 0。**
+
+**边界（本块）**：产品码零触 ∥ 需求档零触 ∥ 在飞写域零触（批一登记轮 #90 面 ∥ 批三已收口档）∥ 已收口批档零触；不点火评审 ∥ 不跑构建 ∥ 零实现码 ∥ 不跑 API-CONTRACT 重生成（父侧收口面——仅登记）。
 
 ## §3 设计评审（评审子代理）
 
