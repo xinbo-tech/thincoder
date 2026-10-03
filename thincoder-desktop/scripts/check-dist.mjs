@@ -1,7 +1,10 @@
 /**
  * check-dist.mjs — 打包产物校验（`docs/desktop/design/PROJECT.md` §5.5；批档 §2.3 R-4）。
- * 断言面（阶段一 = Windows NSIS x64）：① 核包随产物 ×2 + 版本逐字比对（R1 起保留）② 安装包名形 × 源版本
- * ③ 预载随包 ④ 渲染面随包；另出**签名态信息行**（产物 PE 证书表读数——**不闸**）。
+ * 断言面（**平台分臂**——`docs/desktop/design/PACKAGING.md` §2.11.3）：
+ *   `win32`（阶段一 = Windows NSIS x64）：① 核包随产物 ×2 + 版本逐字比对（R1 起保留）② 安装包名形 × 源版本
+ *     ③ 预载随包 ④ 渲染面随包；另出**签名态信息行**（产物 PE 证书表读数——**不闸**）。
+ *   `linux`（D42 批 · 2026-10-03）：**Linux 臂 +9**（①–⑨——见 `runLinuxChecks` 头注；两产物 = AppImage ∥ deb，无签名面）。
+ *   余平台 ⇒ 显式「无断言臂」**非零退出**（零静默）。
  * 纪律：**只读**（不写 / 不改产物）· **fail-closed**（缺产物 / 缺条目 ⇒ exit 1 + 显式提示，不静默通过）。
  * 依赖镜像纪律（打包带镜像）：`ELECTRON_MIRROR` ∥ `ELECTRON_BUILDER_BINARIES_MIRROR`——单源 = `docs/desktop/design/PROJECT.md` §5.7。
  * 用法：`node scripts/check-dist.mjs [dist 目录]`（缺省 = 包根 `dist/`；`postpackage` 自动跑 = 打包闸）。
@@ -25,6 +28,9 @@ const sourceVersion = JSON.parse(readFileSync(join(pkgRoot, "package.json"), "ut
 
 /** 安装包名形（`artifactName` = `ThinCoder-Setup-${version}.${ext}`——逐字对账）。 */
 const INSTALLER_NAME = `ThinCoder-Setup-${sourceVersion}.exe`
+
+/** 更新 feed 契约 URL（publish generic——win ∥ linux 两臂共用；`docs/desktop/design/PACKAGING.md` §2.8.2 ∥ §2.11.3⑦）。 */
+const UPDATE_URL = "https://thincoder.com/downloads/"
 
 /** 产物面断言项（阶段一：核包 ∥ 安装包 ∥ 预载 ∥ 渲染面）。 */
 const CHECKS = [
@@ -59,6 +65,18 @@ const distDir = resolve(process.argv[2] ?? join(pkgRoot, "dist"))
 if (!existsSync(distDir)) {
   console.error(`✖ dist not found: ${distDir}`)
   console.error("  run the packaging step first (`npm run package`——prepackage 物化 → electron-builder → postpackage = 本闸)；断言表见本档 `CHECKS`")
+  process.exit(1)
+}
+
+/**
+ * 平台分臂（`docs/desktop/design/PACKAGING.md` §2.11.3）：`win32` 走本档既有断言链（下文原样——零动）；
+ * `linux` 走 `runLinuxChecks`（Linux 臂 +9）后即出；余平台显式「无断言臂」非零退出（零静默——fail-closed）。
+ */
+if (process.platform === "linux") {
+  process.exit(runLinuxChecks() ? 0 : 1)
+}
+if (process.platform !== "win32") {
+  console.error(`✖ 无断言臂：platform = ${process.platform}（本闸断言臂 = win32 ∥ linux；fail-closed——零静默）`)
   process.exit(1)
 }
 
@@ -178,7 +196,7 @@ try {
 
 // ── 更新面断言（+4——`docs/desktop/design/PACKAGING.md` §2.8.2；闸内 · fail-closed）──
 // 契约：publish = generic ⇒ 构建生成 latest.yml（dist 根）∥ app-update.yml（随包）；上传恒走站点小件（无上传面）。
-const UPDATE_URL = "https://thincoder.com/downloads/"
+// UPDATE_URL 已上提至顶部常量区（平台分臂——win ∥ linux 两臂共用）
 const latestPath = join(distDir, "latest.yml")
 if (!existsSync(latestPath)) {
   failures.push("missing artifact: latest.yml（dist 根——更新 feed 三件之一；§2.8.2①）")
@@ -223,3 +241,99 @@ for (const failure of failures) console.error(`✖ ${failure}`)
 if (failures.length > 0) process.exit(1)
 
 console.log(`✔ dist check passed: ${distDir}（断言 ${CHECKS.length} 条 + 版本逐字 B ∕ F + 更新面 4 条）`)
+
+/**
+ * Linux 臂断言（+9——`docs/desktop/design/PACKAGING.md` §2.11.3；闸 · fail-closed）：
+ * ① linux-unpacked/resources/app.asar 在（读面同 win 臂）② 核包 ×2 在 ∧ 版本逐字 = 源（对位 B ∕ F——读函数沿用，路径换 linux-unpacked）
+ * ③ 预载（src/preload/preload.cjs）在 ④ 渲染面（renderer/index.html）在 ⑤ AppImage 名形 × 版本逐字 ⑥ deb 名形 × 版本逐字
+ * ⑦ app-update.yml（linux-unpacked/resources——provider generic ∥ url = 契约值）
+ * ⑧ latest-linux.yml（version = 源 ∧ files 恰一条 = AppImage（url ∥ path 逐字）∧ sha512 = AppImage 实算（基 64 填充不敏感）∧ 全条目不携 .deb——feed 分流判据）
+ * ⑨ dist 残留扫（.AppImage ∥ .deb 名携非源版本 ⇒ 红——扩现行 guard）。
+ */
+function runLinuxChecks() {
+  const failures = []
+  const APPIMAGE_NAME = `ThinCoder-Setup-${sourceVersion}.AppImage`
+  const DEB_NAME = `ThinCoder-Setup-${sourceVersion}.deb`
+  const LINUX_ASAR = join(distDir, "linux-unpacked/resources/app.asar")
+
+  // ① asar 在（②③④ 从其头解析）
+  if (!existsSync(LINUX_ASAR)) {
+    failures.push("missing artifact: linux-unpacked/resources/app.asar（§2.11.3①）")
+  } else {
+    let record = null
+    try { record = readAsarHeader(LINUX_ASAR) } catch (error) { failures.push(`unreadable asar: linux-unpacked/resources/app.asar（${error.message}；§2.11.3①）`) }
+    if (record) {
+      // ② 核包 ×2 在 ∧ 版本逐字 = 源（对位 B ∕ F）
+      const fd = openSync(LINUX_ASAR, "r")
+      try {
+        for (const [pkg, srcDir] of [["@thincoder/core", "thincoder-core"], ["@thincoder/render-core", "thincoder-render-core"]]) {
+          const entry = `node_modules/${pkg}/package.json`
+          if (!asarHasEntry(record.header, entry)) { failures.push(`missing asar entry: linux-unpacked/resources/app.asar!${entry}（§2.11.3②）`); continue }
+          const want = JSON.parse(readFileSync(join(pkgRoot, "..", srcDir, "package.json"), "utf8")).version
+          try {
+            const got = JSON.parse(readAsarEntry(record, fd, entry).toString("utf8")).version
+            if (got !== want) failures.push(`version mismatch: ${entry}（产物 ${got} ≠ 源 ${want}——旧构建打包？）（§2.11.3②）`)
+          } catch (error) { failures.push(`unreadable asar entry: ${entry}（${error.message}；§2.11.3②）`) }
+        }
+      } finally { closeSync(fd) }
+      // ③④ 预载 ∥ 渲染面
+      if (!asarHasEntry(record.header, "src/preload/preload.cjs")) failures.push("missing asar entry: linux-unpacked/resources/app.asar!src/preload/preload.cjs（§2.11.3③）")
+      if (!asarHasEntry(record.header, "renderer/index.html")) failures.push("missing asar entry: linux-unpacked/resources/app.asar!renderer/index.html（§2.11.3④）")
+    }
+  }
+
+  // ⑤⑥ 两产物名形 × 源版本逐字
+  if (!existsSync(join(distDir, APPIMAGE_NAME))) failures.push(`missing artifact: ${APPIMAGE_NAME}（名形 × 版本逐字；§2.11.3⑤）`)
+  if (!existsSync(join(distDir, DEB_NAME))) failures.push(`missing artifact: ${DEB_NAME}（名形 × 版本逐字；§2.11.3⑥）`)
+
+  // ⑦ app-update.yml（linux-unpacked/resources——provider generic ∥ url = 契约值）
+  const linuxAppUpdate = join(distDir, "linux-unpacked/resources/app-update.yml")
+  if (!existsSync(linuxAppUpdate)) {
+    failures.push("missing artifact: linux-unpacked/resources/app-update.yml（随包；§2.11.3⑦）")
+  } else {
+    const yml = readFileSync(linuxAppUpdate, "utf8")
+    if (!/^provider:\s*generic\s*$/m.test(yml)) failures.push("app-update.yml provider 不符（须 generic；§2.11.3⑦）")
+    const url = /^url:\s*(.+?)\s*$/m.exec(yml)?.[1]
+    if (url !== UPDATE_URL) failures.push(`app-update.yml url 不符：${url} ≠ ${UPDATE_URL}（§2.11.3⑦）`)
+  }
+
+  // ⑧ latest-linux.yml（feed 分流判据——files 恰一条 = AppImage；全条目不携 .deb）
+  const latestLinuxPath = join(distDir, "latest-linux.yml")
+  if (!existsSync(latestLinuxPath)) {
+    failures.push("missing artifact: latest-linux.yml（dist 根；§2.11.3⑧）")
+  } else {
+    const yml = readFileSync(latestLinuxPath, "utf8")
+    const version = /^version:\s*(.+?)\s*$/m.exec(yml)?.[1]
+    if (version !== sourceVersion) failures.push(`latest-linux.yml version 不符：${version} ≠ 源 ${sourceVersion}（§2.11.3⑧）`)
+    const filesBlock = yml.split(/\r?\n(?=\S)/).find((block) => block.startsWith("files:")) ?? ""
+    const entries = filesBlock.split(/\r?\n/).filter((line) => /^\s*-\s+\S/.test(line))
+    if (entries.length !== 1) failures.push(`latest-linux.yml files 条目数 ≠ 1（实 ${entries.length}——feed 分流判据；§2.11.3⑧）`)
+    const fileUrl = /-\s*url:\s*(.+?)\s*$/m.exec(filesBlock)?.[1]
+    if (fileUrl !== APPIMAGE_NAME) failures.push(`latest-linux.yml files[0].url 不符：${fileUrl} ≠ ${APPIMAGE_NAME}（§2.11.3⑧——逐字）`)
+    const filePath = /^\s*path:\s*(.+?)\s*$/m.exec(filesBlock)?.[1]
+    if (filePath !== APPIMAGE_NAME) failures.push(`latest-linux.yml files[0].path 不符：${filePath} ≠ ${APPIMAGE_NAME}（§2.11.3⑧）`)
+    if (/\.deb\b/.test(yml)) failures.push("latest-linux.yml 携带 .deb 条目（feed 分流判据——deb 不入 feed；§2.11.3⑧）")
+    const fileSha = /^\s*sha512:\s*(.+?)\s*$/m.exec(filesBlock)?.[1]
+    const appImagePath = join(distDir, APPIMAGE_NAME)
+    if (existsSync(appImagePath)) {
+      if (fileSha === undefined) failures.push("latest-linux.yml files[0].sha512 缺位（§2.11.3⑧）")
+      else {
+        const actual = createHash("sha512").update(readFileSync(appImagePath)).digest("base64").replace(/=+$/, "")
+        if (fileSha.replace(/=+$/, "") !== actual) failures.push(`latest-linux.yml files[0].sha512 不符：AppImage 实算值 ≠ ${fileSha}（§2.11.3⑧——基 64（填充不敏感））`)
+      }
+    }
+  }
+
+  // ⑨ dist 残留扫（.AppImage ∥ .deb 名携非源版本 ⇒ 红——扩现行 guard）
+  try {
+    for (const name of readdirSync(distDir)) {
+      const match = /^ThinCoder-Setup-(.+)\.(AppImage|deb)$/i.exec(name)
+      if (match && match[1] !== sourceVersion) failures.push(`版本不匹配：dist 含 ${name}（源版本 ${sourceVersion}）——旧构建残留，清 dist 重跑 package（§2.11.3⑨）`)
+    }
+  } catch { /* dist 不可列——上方断言已逐条报 */ }
+
+  for (const failure of failures) console.error(`✖ ${failure}`)
+  if (failures.length > 0) return false
+  console.log(`✔ dist check passed: ${distDir}（Linux 臂断言 9 条）`)
+  return true
+}
