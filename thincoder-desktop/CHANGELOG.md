@@ -2,6 +2,12 @@
 
 All notable changes to ThinCoder Desktop are documented here.
 
+## [Unreleased]
+
+### Added
+
+- **Linux 产物支持（AppImage ∥ deb）**：`electron-builder.yml` linux ∥ deb 段落定——AppImage = 免安装单文件 · 自动更新单元（官网 feed `latest-linux.yml`）；deb = 系统包管理器手动升级（无自动更新）；产物校验扩 Linux 臂（`check-dist` 平台分臂 +9）；官网下载面随发布窗。详见 `../docs/desktop/design/PACKAGING.md` §2.11。
+
 ## [0.10.2] — 2026-10-03
 
 > 0.10.1 → 0.10.2（月内 +1——发布时定号）
