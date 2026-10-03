@@ -167,7 +167,7 @@
 - **向导模型步「采用」接线**：`createWizard` 增注入 `useModel`（单一实现 = 出口族 `onUseModel`；注入点 = `thincoder-desktop/renderer/mount-settings.mjs`）——步 2 候选行「采用」由禁用转可操作（原接线缺口 = 既有；U-2 裁定纳入——步 2 可操作面闭合）。
 - **本域相关边界 ∥ 上抛**：设置面「模型与档位」段 ∥ **向导模型步**候选**同源**——皆按**激活渠道**取数（`renderer/mount-settings-reads.mjs:33-39` / `:74-78`；
   向导步入径 = `renderer/mount-onboarding.mjs:55-58`）——`defaultModel` 缺失态两处**同零候选**（向导步「采用」钮判据三件含 `model.provider !== null`——`renderer/views/settings-sections.mjs:70-72`）
-  ∥ 渠道行族无「设为当前」动作（`renderer/views/settings-sections-providers.mjs:133-165`）⇒ 该态 config 级补设路径缺失（**候选消解 = 本批 #842 落——见 §2.15**；批档 §2 U-9 登记收口）。
+  ∥ 渠道行族无「设为当前」动作（`renderer/views/settings-sections-providers.mjs:133-165`）⇒ 该态 config 级补设路径缺失（**候选消解 = 本批 #842 落——设置面 ∥ 向导步两处同链同效，见 §2.15**；批档 §2 U-9 登记收口）。
 - **判据 ∥ 边界**：D11 不抵触（向导完成径零改）；`provider:setKey` ∥ `delKey` ∥ `setProxy` ∥ `settings:agent` 写语义零改；配置档 ∥ 设置页 ∥ 弹窗面零结构改；机检 = 批内件 T3 / T4 ∥ 源码判据。
 
 ### 2.15 缺激活渠道态补设路径（2026-10-04 · 台账 #842 · 设计轮）
@@ -179,7 +179,8 @@
   ⇒ 写后 `loadProviders` 回读 ⇒ 激活渠道出现、段转常规面。**写面 / 载荷 / 白名单零新**（两条既有通道）。
 - **视图形**：`modelChoicesTree` / `modelRowNode`（`renderer/views/settings-sections.mjs`）候选行扩**带渠形**——行显示 `provider · id`（对齐 consult 行族先例 `views/settings-sections-models.mjs:54`）；
   「采用」判据由「激活渠非空」改「**行自带渠非空**」（全渠态下每行自携 provider）；当前项判定 = `current === "<provider>:<id>"`；空态 / 失败面沿既有（零候选 ⇒ 空态词；catalog 失败 ⇒ 段 `none` + `report`——零静默）。
-- **向导模型步同源**：向导步 2 复用 `modelChoicesTree`（单一 owner）；**结构零改**——若读取链随 `loadModels` 收敛，向导态自然同效（实施轮实读确认——不扩结构）。
+- **向导模型步同源（实读钉死——结局 = 同效）**：向导步 2 复用 `modelChoicesTree`（单一 owner），且候选复读 = **同一注入引用** `loadModels`（注入点 = `mount-settings.mjs:214`；调用点 = `mount-onboarding.mjs:59-62` 步入步 2）；
+  「采用」同经同一 `onUseModel` 出口（`:216`）——**同链 ⇒ #842 修法在向导态自然同效、向导死端同消解**（零向导档改动）。**断言** = T-DSK62 ⑤（向导腿——同链推证）。
 - **边界**：渠道行不加「设为当前」动作（被否——写面须先有模型，两步合成「采用」单步已足）；输入区指路句（`docs/desktop/design/COMPOSER.md` §2 本批注「本态零候选 ⇒ 不作指路」）**前提随本批改变**——指路随正候选（登记；随该域下次触碰）。
 
 ## 3. 文件账（本域）
@@ -335,7 +336,7 @@
 | T-DSK10 | 正常 · MCP | 添加一个 stdio MCP 服务器 | 服务器列表出现该条；其工具入口随动可见 | — |
 | T-DSK13 | 边界 · 首启分叉 | ① 无共享 config ② 已有共享 config | ① 进向导并在完成后可用 ② 跳过向导直接进主界面 | — |
 | T-DSK31 | 正常 / 边界 · 设置面档位控件（批 B · ⑥） | ① 「模型与档位」段选档位 = Auto / off / 枚举档各一例 ② 现值 = 表外字面串 ③ 陈旧面提交表外档位 / 表外 `provider` ④ `defaultModel` 缺 / 模型段空 ⑤ 不可 `off` 模型 ⑥ 写盘失败（mtime 冲突） | ① 载荷 `{ tier: { provider, model, level } }` ⇒ `ok` 真 ⇒ 重取 `provider:list` 后该行 `effort` = 所选档（**写后投影恒等**）；键面形 = Auto 删两键 / off 落 `thinkOffShape(spec)` + 删 `reasoningEffort` / member 清关思考记号（值 deep-equal `thinkOffShape(spec)` 时删 `thinking`）后置 `reasoningEffort` ② 现值**自成一选项**（不吞 · 零改写）③ 拒 `bad-level` ∥ `unknown-provider`——两径零写 + 控件回退回执前值 ④ 档位控件**零节点**（禁假造）⑤ off 选项缺席（该模型 `thinkOff` 假）⑥ 核 reason 直传（`mtime-conflict`）+ 零写 + 回退 | 机检面 = 单元测试档惯例（原三档随 2026-09-28 全清重置退场——现值投影 ∕ 选项集 ∕ 表外自成一选项 ∕ tier 三径两 reason ∕ 行 `effort` 投影两向） |
-| T-DSK62 | 正常 / 边界 · 缺激活渠道态补设（#842） | ① `defaultModel` 缺 ∧ 双已配渠 ⇒ 开设置面模型段 ② 行「采用」点击 ③ catalog 失败（探针不可达） ④ 无已配渠 | ① 段 `ready` + 全渠候选行（`provider · id`） ② `settings:agent` 写 `defaultModel=<provider>:<id>` ⇒ 回读后段转常规（激活渠出现） ③ 段 `none` + 失败面（零静默）+ 零假造候选 ④ 候选空 + 空态词（禁假造——既有） | 批内件（#842 腿三：全渠候选 ∥ 采用写盘 ∥ 空 / 失败态） |
+| T-DSK62 | 正常 / 边界 · 缺激活渠道态补设（#842） | ① `defaultModel` 缺 ∧ 双已配渠 ⇒ 开设置面模型段 ② 行「采用」点击 ③ catalog 失败（探针不可达） ④ 无已配渠 ⑤ 缺激活渠道态入向导步 2（同链推证） | ① 段 `ready` + 全渠候选行（`provider · id`） ② `settings:agent` 写 `defaultModel=<provider>:<id>` ⇒ 回读后段转常规（激活渠出现） ③ 段 `none` + 失败面（零静默）+ 零假造候选 ④ 候选空 + 空态词（禁假造——既有） ⑤ 向导候选面 = 全渠（同一 `loadModels` 注入引用）∧「采用」⇒ 落 `defaultModel` | 批内件（#842 腿四：全渠候选 ∥ 采用写盘 ∥ 空 / 失败态 ∥ 向导同链） |
 | T-DSK32 | 正常 · 首启空态引导（真 Electron） | 空 fixture 家（无 config ⇒ 无项目 / 无会话；另**预置**会话槽族档一枚〔`cwd` = 项目根——resume 开页落点〕）——新装首启 | ① 向导退场后：`[data-guide="no-project"]` 在场（含 `button[data-action="project:open"]`）∧ 输入框 `disabled` ② **真点**会话控制面项目钮（`button.session-project`——对话框夹具 `PROJ`，照 `docs/desktop/design/E2E-TESTING.md` §3.5 第 6 步）⇒ `[data-guide="no-message"]` ∧ 输入框非 `disabled` ③ 键入 + Enter ⇒ 输入值保留 ∧ `data-blocks="0"` ∧ console 出 `[composer] msg:send failed: `（不静默丢文本） | 机检面 = 单元测试档惯例（原集成档 `first-run-smoke.test.mjs` 随 2026-09-28 全清重置退场——重建时按 §4.1 登记）；十序断言单源 = `docs/desktop/design/E2E-TESTING.md` §3.5 |
 | T-DSK43 ④⑤ | 正常 · 小修族（设置面面 · 对齐第三批） | 设置面 agent 段具名控件 + `change` 即改即存；设置面开 ⇒ `Escape` ⇒ 关闭 | ④ 设置面 agent 段 = 具名控件 ∧ `change` ⇒ 即改即存（回执后回读同值）——离线可产；⑤ 设置面开 ⇒ `Escape` ⇒ 关闭（`[data-slot="settings"]` 清空）——离线可产（**F-Esc 判据**） | 判据载体 = 本档 §2.4；单源行（T-DSK43 全行）= `docs/desktop/design/PROJECT.md` §7（混装行——留原址） |
 | T-DSK58 | 正常 / 边界 · 设置面样式收正（D37 · 真 Electron） | 真 Electron（fixture 家 `{"locale":"en"}`——`isConfigured` = 档存在）⇒ 启动 ⇒ 开设置面（`[data-slot="settings"]`） | ① 渠道段每行 = 两行卡（主行：名 + 钥面 + 动作簇（修改 ∥ ✕ ∥ 校验 ∥ 移除名）∥ 副行：`模型 · URL` + 代理开关）（**轮六**：校验钮触发 ⇒ 该行按钮 = 态短形（校验通过 ∥ 校验失败——锚 `data-verify-state`）+ 该行明细行；无行渲出结果（名不在列表 ∥ kind 表外）⇒ 段末回退）；② 长名 ∥ 长 URL ⇒ 省略不折、动作簇恒右对齐（窄窗拖至 ~800px 结构不变）；③ 钥编辑态 = 输入 + 存/消（代理 ∥ 移除 ∥ 校验暂撤——取消即回）；④ 复选控件 = 拨杆形（选中 `--accent`——亮 ∥ 暗两模式）；⑤ 全七段行族零参差折行；⑥ 全程零 `pageerror` | 机检面 = 批内件 `docs/batches/2026-10-02-desktop-settings-layout.test.mjs`（已建成 · 219 行 · 五腿 · 9 用例；随批留存 · 不进仓套件）；用例号自铸披露 = 本档 §6 **DH**（在册） |
@@ -386,3 +387,4 @@
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 ∥ §5 · 台账 #841）：§3.1 三行走读齐平（`settings.mjs` **325 ⇒ 331** ∥ `providers.mjs` **335 ⇒ 339** ∥ `mount-settings-exits.mjs` **264 ⇒ 270**——第三刷新点主 ∕ 渲染两侧半）。**零新语义**（读数）。明细 = 批档 §2 回填轮块。
 - 2026-10-03（**首跑渠道提示修复批 · 实施后文档面回填轮（§3.1 三行走读齐平）· eng-designer**——承批档 `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2 ∥ §5 · 台账 #840）：§3.1 三行实读对盘（`providers.mjs` **315 ⇒ 335**——B① 补写支（越 300 ⇒ 续期）∥ `mount-settings.mjs` **249 ⇒ 251**——B③ `useModel` 注入 ∥ `mount-onboarding.mjs` **89 ⇒ 95**——B③ 接线）。**零新语义**（读数）。明细 = 批档 §5。
 - 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #842）：§2 增 **§2.15**（缺激活渠道态补设路径——全渠扇出 `model:catalog` + 既有 `useModel` 出口）；§2.14「边界 ∥ 上抛」bullet 随正（候选消解 = 本批落）；§5 增 **T-DSK62**。**产品码零触（设计轮）**。明细 = 批档 §2。
+- 2026-10-04（**issue 修复批·五 · fix 轮（评审 #70 发现 5 · 父侧全采纳）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §3 轮次 1）：§2.15 条件句收正为**同链钉死**（同一 `loadModels` 注入引用——`mount-settings.mjs:214` ∥ `mount-onboarding.mjs:59-62`；向导步同效、死端同消解）；§2.14 随正（两处同链）；§5 **T-DSK62** +⑤ 向导腿。**产品码零触 · 原判据零改**（结局钉死 ∥ 断言补）。明细 = 批档 §2。

@@ -248,8 +248,9 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
    **#828 批补注**（2026-10-02）：歧义锚 ⇒ 上游 `openLedger` 先拒（本门该态不可达）；其余态两式同值——「同源」关系不变。
 3. **缺指针 / 缺文件部分**：`task_book == null`（缺指针）⇒ 拒（「必填」文案）；`§2` / 空串 / 全空白（缺文件部分）⇒ 不可解析 ⇒ **拒**（fail-closed，同状态行解析先例）。
 4. **声明源候选**（2026-10-02 · #832）：文件部分**首段 = 项目声明的公共仓目录名**（`index.publicRepos`）⇒ 于该声明根解析余段（值形 ∥ 解析单一定义 = `declaredPublicRoots`）——可核 ⇒ 通过；**未声明**的仓外形态照旧拒（fail-closed 零松）；声明根缺位 ⇒ 照旧拒（存在性要求——严）。判据 / 机制 = `DOC-DISCIPLINE.md` §4.2.2 ⑥ ∥ `LEDGER-SELF-CONTAINED.md` §4 L4③（声明源前缀形 = 记录面有界例外的机械面）。
-5. **迁移旗同源**（2026-10-04 · #834 · 设计轮）：`ledger migrate` 的**写门风险旗**（`thincoder-core/ledger-migrate.mjs` `writeGateFlag`）与本节判据**同源**——共享解析单点 = `resolveDeclaredRef(base, 文件部分)`（`thincoder-core/declaration.mjs` 新导出：① 仓根解析 → ② 声明源前缀解析序，同名多仓取声明序首者）；
-  同一 `task_book` 在写门与迁移旗**同判**——声明源前缀形（可核）⇒ 写门放行 ∧ 迁移旗零旗；未声明 ∥ 声明根缺位 ∥ 目标档缺 ⇒ 两处同拒 / 同旗。**既有拒绝面零改**（判据本体 = 口径 1–4 逐字）；实现 = 本批实施轮（待 #51 写域收口后派发）。
+5. **迁移旗同源**（2026-10-04 · #834 · 设计轮）：`ledger migrate` 的**写门风险旗**（`thincoder-core/ledger-migrate.mjs` `writeGateFlag`）与本节判据**同源**——共享解析单点 = `resolveDeclaredRef(base, 文件部分)`（`thincoder-core/declaration.mjs` 新导出：① 仓根解析 → ② 声明源前缀解析序）；
+   **消费关系**：声明源段 **≤ 消费既有解析单一定义 `declaredPublicRoots`（口径 4）**——**不二写**（同源句 = `MEMORY.md` §6.15「三消费面共用（解析层），不得二写」）；**解析序**（同名多仓取声明序首者）单源 = `DOC-DISCIPLINE.md` §4.2.2（`MANIFEST.md` §2.2 同指）。
+   同一 `task_book` 在写门与迁移旗**同判**——声明源前缀形（可核）⇒ 写门放行 ∧ 迁移旗零旗；未声明 ∥ 声明根缺位 ∥ 目标档缺 ⇒ 两处同拒 / 同旗。**既有拒绝面零改**（判据本体 = 口径 1–4 逐字）；实现 = 本批实施轮（待 #51 写域收口后派发）。
 
 **射程** = **结果行状态**属 `{在途, 待核销}` 的写入；`待讨论 / 待设计` 行带任意 `task_book` 不判（判据句只管在途 / 待核销——逐字）。
 
@@ -434,7 +435,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 **用例表（续——根解析面（歧义拒），2026-10-02 批（#828）；实现面 = `thincoder-core/ledger-db.mjs` `openLedger`）**：
 - T45 错误：歧义锚（tmp 夹具——双带档子目录）⇒ 缺省径拒（读 / 写五工具同门）——**零写**（台账目录 / 库档不建 / 不落行）+ 文案含候选全列（绝对路径——按名排序）；none 态夹具 ⇒ 兜底键零改（既有空读行为回归）。
 - T46 边界：声明源前缀 `task_book`（#832——实现 = 本批实施轮）：项目声明 `docs-repo` ⇒ 其内 `x.md`（存在）⇒ 通过；未声明前缀 ⇒ 照旧拒；声明根缺位 ⇒ 拒。
-- T47 迁移旗同源（#834——实现 = 本批实施轮）：声明源前缀 `task_book`（目标档在）⇒ 写门通过 ∧ `writeGateFlag` 零旗；未声明前缀 ∥ 声明根缺位 ∥ 目标档缺 ⇒ 两处同判（拒 ∥ 旗）；仓根形全谱 = 既有断言逐字零变（回归腿）。
+- T55 迁移旗同源（#834——实现 = 本批实施轮）：声明源前缀 `task_book`（目标档在）⇒ 写门通过 ∧ `writeGateFlag` 零旗；未声明前缀 ∥ 声明根缺位 ∥ 目标档缺 ⇒ 两处同判（拒 ∥ 旗）；仓根形全谱 = 既有断言逐字零变（回归腿）。
 
 **用例表（续——标记范围合计，2026-10-03 批（#882）；批内单测件 = `docs/batches/2026-10-03-ledger-family-aggregate.test.mjs`（拟新增——实施轮随批留存）；夹具 = 临时台账目录注入（`_setLedgerDirForTest`）+ 双项目临时树）**：
 
@@ -510,4 +511,5 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 - 2026-10-02（**公共仓读取批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-public-repo-read.md` §2 · 台账 #832）：§6.1 口径增**第 4 条 声明源候选**（文件部分首段 = 声明公共仓目录名 ⇒ 于该声明根解析——可核通过；未声明 ∥ 缺位照旧拒）+ §8 **AC-M2-10** 补声明源同判句 + 用例表增 **T46**。**既有拒绝面零改**；实现 = 本批实施轮。
 - 2026-10-03（**ledger-family-aggregate 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-10-03-ledger-family-aggregate.md` §1 · 台账 #882）：§7.1 增导出 `scopeMarkerOf(scans, family)`；§7.2 增「标记范围」条（L1 = 当前打开范围合计——具体项目 ∕ 容器根族合计）；§7.3 L1 行 ∥ §7.3.1 状态位句随动；§8 增 AC-M2-18 + 用例表 T47–T54；§9 增边界行。**实现 = 本批实施轮**（VSC item 面随动一处；CLI ∕ 桌面零改——纯透传）。
 - 2026-10-03（**ledger-family-aggregate 批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承批档 `docs/batches/2026-10-03-ledger-family-aggregate.md` §3 轮次 1 发现 1–3 ∥ 5–7（发现 4 ∥ 8 = 需求档笔——父侧已办））：§7.2 标记范围条补**范围推导 ∥ 两参对账 ∥ 容器根自身带台账归属**明文 + `marker` 文本**委托 `formatMarker` 逐字模板**句 + 受影响面指针（表住批档 §2.4；零贴线 ⇒ 零拆分）；§7.1 `formatMarker` 行补**范围限定括注**；§8 AC-M2-18 回指改可解析形态（需求 §13.3 第 1 条「状态行极简标记」）· T53 补死执行者腿 · T54「三态」改「两形」。**语义零改**（归约语义 ∥ 判据本体 ∥ 用例断言对象零动）。
-- 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #834）：§6.1 增**口径 5（迁移旗同源）**——共享解析单点 `resolveDeclaredRef`（`thincoder-core/declaration.mjs` 新导出）；§8 增用例 **T47**。**既有拒绝面零改**；实现 = 本批实施轮（待 #51 写域收口后派发）。
+- 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #834）：§6.1 增**口径 5（迁移旗同源）**——共享解析单点 `resolveDeclaredRef`（`thincoder-core/declaration.mjs` 新导出）；§8 增用例 **T55**。**既有拒绝面零改**；实现 = 本批实施轮（待 #51 写域收口后派发）。
+- 2026-10-04（**issue 修复批·五 · fix 轮（评审 #70 发现 3 ∥ 8 · 父侧全采纳）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §3 轮次 1）：§6.1 口径 5 补**消费关系**（声明源段 ≤ 消费 `declaredPublicRoots`——不二写）+ **解析序回指单源**（`DOC-DISCIPLINE.md` §4.2.2）；§8 用例改号 **T47 ⇒ T55**（消 #882 批 T47–T54 撞号）。**原判据零改**（单源关系明写 ∥ 编号收正）。

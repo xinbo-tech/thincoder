@@ -283,7 +283,9 @@ PreToolUse hooks → 阻断
 
 **console 回显**：dispatch 拦截工具 `execute` 期间的 `console.log/error`，收集后附结果回显模型（`[console during <tool>]` 段）；异常路径同样回显；嵌套 dispatch（子代理）各自拦截 / 恢复，捕获分离；`bash` 走子进程 `onOutput` 不受影响。
 
-**console 回显预算（2026-10-04 · #863 · 设计轮）**：capturedConsole 采集与拼接**双上界**——① **采集端 cap**（拦截为有界收集：超限截断 + 一次性标记行——防「console 洪水」）；② **拼接端纳入 offload 判定**——`[console during …]` 段与结果本体拼接**先于** `offloadToolResult`（现形在 offload 之后拼接 ⇒ 可突破 64K 上限）；错误路径同款。实现 = 本批实施轮。
+**console 回显预算（2026-10-04 · #863 · 设计轮；fix 轮补钉）**：capturedConsole 采集与拼接**双上界**——① **采集端 cap** = `CONSOLE_CAPTURE_LIMIT = 64 * 1024`（65536 字符——与 `helpers.mjs` `TOOL_RESULT_OFFLOAD_LIMIT` 同值；落点 = `dispatch-run.mjs` 采集点同档）：拦截为有界收集——累计达限 ⇒ 停止收集（超出丢弃——防「console 洪水」）；
+发生丢弃 ⇒ 回显段尾**恰一行**标记（逐字 = `[console truncated at 65536 chars]`）；② **拼接端纳入 offload 判定**——`[console during …]` 段与结果本体拼接**先于** `offloadToolResult`（现形在 offload 之后拼接 ⇒ 可突破 64K 上限）；拼接后总长 > 65536 ⇒ 落盘 + 预览；
+错误路径同款（同 cap ∥ 同标记——采集端单点）。实现 = 本批实施轮。
 
 **action 级门控**（子代理单工具动作面——`AGENT-LOOP-SUBAGENT.md` §6.7.2）：工具级 `readonly` 标志无法同时表达 spawn（副作用）/ status（只读查询）/ cancel（控制）⇒ 预审按 **action 参数**分类：
 
@@ -519,6 +521,7 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 ## 变更记录
 
 - 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #863）：§6.4 增 **console 回显预算句**（capturedConsole 采集 cap + 拼接纳入 offload 判定）。实现 = 本批实施轮。
+- 2026-10-04（**issue 修复批·五 · fix 轮（评审 #70 发现 6 · 父侧全采纳）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §3 轮次 1）：§6.4 钉 **`CONSOLE_CAPTURE_LIMIT`**（= 65536 字符——与 `TOOL_RESULT_OFFLOAD_LIMIT` 同值）+ 截断标记行逐字（`[console truncated at 65536 chars]`）+ 拼接后总长入 offload 判定句。**机制语义零改**（常量 ∥ 逐字面钉值）。
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：#127 同形重复族行 ④（`:443`）签名同扫收正（`continueDecision(error, {autoTurn, autoApprove, reason})`——#677 I10 已落）。**零新语义**。
 
 - 2026-09-28（**测试按层收口·设计对齐轮 · eng-designer**——承 `docs/batches/2026-09-28-test-layer-prompts.md` §1.4 派单 + 父侧裁定（声明外追加 · 父侧已裁））：§6.16 指针表行标签「测试分层 L0 / L1 / L2」→「测试收口（舱内单元 ∕ 链终全量）」（指针不变）；口径 = 需求 `requirements/TESTING.md` §2 F1–F4（只引用不重述——D2）。**机制条文零改**。

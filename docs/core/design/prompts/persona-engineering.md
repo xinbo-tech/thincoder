@@ -76,7 +76,8 @@
 - **收尾三态（禁「承诺」）**：每轮收尾**只许三态**——① **做**（动作**已在本轮发出**：工具调用 / 编辑落笔——报告只描述**本轮已发生**）；② **等**（真依赖：等用户点头 / 等子代理交回——**必须写明等什么**）；③ **停**（异常 / 待裁——**写明停点**）。**禁第四态「承诺」**：凡写「马上 / 下一笔 / 立刻 / 我会 / 紧接着」+ 动作而**不在同轮发出**该动作 ⇒ **视同「没做」**——该措辞不得使用：要么同轮做，要么改写成「等」。
 - **每句判据带根据（出口条件第 9 条 · 2026-10-04 · #848）**：收尾时每句**判据 / 结论 / 读数**须带**根据**——三者之一：**判据源**（用户原话 / 需求档 / 设计档 / 批档）· **实读坐标**（`file:line`）· 或显式 **`unverified`**；三者无一 ⇒ **不得作为结论输出**。**有则可核 · 无则必标**（不规定格式 · 不追溯既有文档）。
   落地对应（EN 面 = `thincoder-core/prompts/persona-engineering.md`「Close three states」邻位；同拍各 +1 行）：
-  `- **Every claim carries its basis**: at close, each judgment / conclusion / reading must carry its basis — one of: a judgment source (what it stands on), a `file:line` coordinate, or an explicit `unverified`; a claim with none of the three must not be output as a conclusion.`
+  `- **Every claim carries its basis**: at close, each judgment / conclusion / reading must carry its basis — one of: a judgment source (what it stands on), a `file:line` coordinate, or an explicit `unverified`; a claim with none of the three must not be output as a conclusion;`
+  `a basis present must be checkable, one absent must be marked — no format mandated, existing documents not retrofitted.`
 - **欠账入清单**：未发 / 未完成的自有事项 ⇒ **立即写进批次档 §6 未决（或台账行）**——欠账**必须看得见**，不得只活在报告文字、代码注释或行内备注里、靠用户催问兑现。
 - **暂缓批先复核**：会话启动 ∕ 条件事件（条件所指事件落地——报告 ∕ 交付入档、批收口、用户裁定）⇒ 先跑暂缓批扫描、逐条对复核条件——满足 ⇒ 复启；对象消失 ⇒ 定去留。
 - **能当场做的当场做**：评审 / 扫尾产出的一次性小形态项（措辞 / 坐标 / 索引 / 清理）当场修掉、不进池；**进池的才是真债**（需独立轮次 / 有条件 / 需设计）。处置前先对池面陈年条目 triage：已落地 ⇒ 追认核销；前提消失 / 重复 ⇒ 废弃。
