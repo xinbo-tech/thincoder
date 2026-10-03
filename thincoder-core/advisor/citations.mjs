@@ -7,8 +7,8 @@
  *
  * 第 11 批（C / F14 / `ADVISOR-GUARDS.md §3`）：解析候选 = cwd + **评审对象声明范围派生根**（声明仓根 /
  * 声明文件目录 / 声明目录——纯路径派生，零扫描、零 git）；命中判据三条件全中（围栏内 ∧
- * 可读 ∧ 目标行含引文内容）⇒ 零新增假命中。失败原因三分（file unreadable /
- * content mismatch @ path / path traversal）——父侧不再人肉复核。
+ * 可读 ∧ 目标行含引文内容）⇒ 零新增假命中。失败原因四类（file unreadable / content mismatch @ path /
+ * path traversal / 非连续引文（省略号形——形状 vs 内容造假分列））——父侧不再人肉复核。
  */
 import { readFileSync, realpathSync } from "node:fs"
 import { resolve, relative, dirname, extname, sep, isAbsolute, join } from "node:path"
@@ -20,6 +20,10 @@ import { resolve, relative, dirname, extname, sep, isAbsolute, join } from "node
 // are rare and only add a failed-citation line to the report; the report is
 // advisory for the parent agent, never a crash path.
 const CITATION_RE = /([\w./\\-]+\.(?:mjs|cjs|js|ts|jsx|tsx|mts|cts|py|rs|go|c|h|cpp|hpp|java|rb|php|sh|bash|json|md|markdown|mdx|yaml|yml|toml|css|html)):(\d+):\s*([^`\n]{4,})/g
+
+// 非连续引文判据（`ADVISOR-GUARDS.md §3` · 2026-10-03）：引文内容含省略号（`…` / `...`）⇒ 缩略形，
+// 非所引行的连续子串——失败分类专类（形状不符与内容造假分列；先于 `content mismatch` 判定）。
+const ELLIPSIS_RE = /…|\.\.\./
 
 /** Extract `file:line: content` citations from a review text. */
 export function extractCitations(text) {
@@ -80,7 +84,13 @@ function resolveCitation(citation, roots, base) {
     }
     mismatch ??= real
   }
-  if (mismatch) return { matched: false, reason: `content mismatch @ ${relative(base, mismatch).split(sep).join("/")}` }
+  if (mismatch) {
+    const rel = relative(base, mismatch).split(sep).join("/")
+    // 判定优先级（`ADVISOR-GUARDS.md §3`）：含省略号且不连续 ⇒ 非连续引文类——先于 mismatch。
+    return ELLIPSIS_RE.test(citation.content)
+      ? { matched: false, reason: `not a contiguous citation (ellipsis) @ ${rel} — quote one contiguous excerpt` }
+      : { matched: false, reason: `content mismatch @ ${rel}` }
+  }
   if (traversal) return { matched: false, reason: "path traversal" }
   return { matched: false, reason: "file unreadable" }
 }

@@ -105,13 +105,14 @@ Batch record, dispatch task books, verification conclusions, review firing, requ
   No "pre-existing" cop-out: "it was already broken" is never a reason to skip a fix — you own the whole design/code, and when a defect appeared does not decide whether it should be fixed.
   Findings beyond the approved design's scope: surface them or propose a design update — never silently ignore.
   A 🔴 you neither fix nor surface blocks convergence.
-  `Deferred` fits 🟡/🔵 improvements or a 🔴 needing the user's decision first — never a way to silently drop a real defect; unresolved 🔴 must be surfaced to the user.
+  `Deferred` fits 🟡/🔵 improvements, a 🔴 needing the user's decision first, or a reasoned acknowledged-not-fixed 🔴 (the dispute window closes it from round 3 on; a zero-reason refusal is never accepted) — never a way to silently drop a real defect; unresolved 🔴 must be surfaced to the user.
 - **Fix round ⇄ user approval timing** (post-review): after review passes you adjudicate one by one (adjudication table) — fixes your adjudication demands (design-doc revisions / implementation repairs)
   **land via a fix round and pass your verification BEFORE you may request user approval**; while a fix round is in flight you must NOT request approval — in-flight status is reported only, and the report carries no approval request.
   **Fix-round boundary**: only fixes directly derived from review findings and your adjudication — **no smuggled new semantics/scope**; smuggling = new content,
   to be explicitly laid before the user for a separate decision, never default-approved along with the approval request.
   In the approval request, the adjudication table's `Dispatched` rows must have converged to `Fixed` one by one (with landing evidence: file:line or design-doc section).
 - Round decay: round 2 verifies the prior table + flags obvious new issues; round 3+ strictly verifies only the prior table (no new-issue hunting). No round cap — repeated mechanical failure (same criterion) ⇒ stop and report.
+Every non-fix must carry a reason (a technical rebuttal with evidence, or an explicit acknowledged-not-fixed record); the reviewer may push back on insufficient reasons through round 2, and from round 3 accepts reasoned non-fixes — a zero-reason refusal is never accepted and stays unresolved.
   When the advisor reports all clear (no 🔴 remaining), run `verify`.
 - Async: **advisor calls are async by default at the top level.** On approval the design token is issued to the session automatically and the digest echoes the designId for the eng-coder spawn.
 

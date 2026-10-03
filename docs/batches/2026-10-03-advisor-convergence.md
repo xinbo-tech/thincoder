@@ -208,4 +208,85 @@ VERDICT: pass
 **父侧代签（用户 2026-10-03 23:14「都自动跑完」授权）**——三条件齐备：① **设计评审 pass** ✓（#16 · 🔴 0 ∥ 🟡 3 ∥ 🔵 7——全数采纳）；② **修复轮已落地并逐条核验** ✓（修复轮 #19 九号全落 + 父侧号 2 收正 + 另记 `:141` 就地拉平——实读复核：判据射程注／`Dispatched` 归宿／残余出口／尾行射程／轨射程注／四类计数全在位；doc-check 复跑 exit 0）；③ **token 已签发** ✓（凭据值不落档——沿纪律）。⇒ **实施轮派发**：eng-coder ×2 并飞（A = 代码面 4 档〔`citations.mjs` ∥ `messages.mjs` ∥ `convergence.mjs` + 批内件〕∥ B = 提示词面 12 档〔六档 EN 运行期 × 六档 CN 模板——落点 = §2 表 4–15〕）。
 
 ## §5 实施记录（eng-coder）
+
+**§5 实施记录（eng-coder · B 席 提示词面 · 2026-10-03）**
+
+**状态行**：实施完成（A 席（代码面 3 档 + 批内件 · 终态 clean）+ B 席（提示词面 12 档）双席落齐）
+
+**交付摘要（§2 表 4–15 行逐处落位 · 终态 file:line）**
+
+| 表# | 档 | 落位点（终态） | 内容 |
+|---|---|---|---|
+| 4 | `thincoder-core/prompts/advisor-round1.md` | `:27`（+1） | 禁则句（EN）落宿主核验条后 |
+| 5 | `thincoder-core/prompts/advisor-round2.md` | `:12` 收尾句 ∥ `:16-19` 评估块（4 bullet）∥ `:20` 示例替形 ∥ `:22` 禁则句 ∥ `:51` 裁决句（+5） | 轮 2 窗句 + 词表 + 不悬置 + 禁则 + 裁决随动 |
+| 6 | `thincoder-core/prompts/advisor-round3.md` | `:11` 收尾句 ∥ `:14-16` 接受块（3 bullet）∥ `:17` 示例替形 ∥ `:19` 禁则句 ∥ `:47` 裁决句（+5） | 轮 3 接受句 + 词表 + 不悬置 + 禁则 + 裁决随动 |
+| 7 | `thincoder-core/prompts/advisor-design.md` | `:19`（+1） | 禁则句落引证段末（「## Approval Signal」前断行） |
+| 8 | `thincoder-core/prompts/discipline-normal.md` | `:128` Deferred 行扩展 ∥ `:130` 义务句（+1） | 臂律面 |
+| 9 | `thincoder-core/prompts/persona-engineering.md` | `:108` Deferred 行扩展 ∥ `:115` 义务句（+1） | 臂律面 |
+| 10 | `docs/core/design/prompts/advisor-round1.md` | `:51`（+1） | 禁则句（CN） |
+| 11 | `docs/core/design/prompts/advisor-round2.md` | `:21` 收尾句 ∥ `:27-30` 评估块 ∥ `:31` 示例替形 ∥ `:33` 禁则句 ∥ `:66` 裁决句（+5） | 轮 2 四件 |
+| 12 | `docs/core/design/prompts/advisor-round3.md` | `:21` 收尾句 ∥ `:26-28` 接受块 ∥ `:29` 示例替形 ∥ `:31` 禁则句 ∥ `:63` 裁决句（+5） | 轮 3 四件 |
+| 13 | `docs/core/design/prompts/advisor-design.md` | `:44`（+1） | 禁则句（CN） |
+| 14 | `docs/core/design/prompts/discipline-normal.md` | `:127` Deferred 行 ∥ `:129` 义务句（+1） | 臂律面（CN） |
+| 15 | `docs/core/design/prompts/persona-engineering.md` | `:106` Deferred 行 ∥ `:113` 义务句（+1） | 臂律面（CN） |
+
+**机制判读与执行向**：`scripts/mirror-divergence.mjs` **不在本仓**（仅 `.thincoder/tmp/head` / `.wt-head-probe` 存探针副本——经实读 = 旧双产品镜像**度量**工具（Jaccard/sha256），非生成器；且不适用于本仓现状布局）。PROMPT-SYSTEM §6.1/§10：双面流程 = 改中文正本 → 翻译写入英文运行面，**无同步脚本、无硬一致门**（生成 = 翻译不是 cp）⇒ 执行向 = **双改**（双面逐字落笔），无可跑生成器；跑 `prompt-refs-check` 替代（见下）。
+
+**自检读数**
+- `node --test docs/batches/2026-10-03-advisor-convergence.test.mjs`（仓根）⇒ **13/13 pass**（T7–T10/T12 = 本席面；T1–T6/T11/T13 = A 席面同轮绿）。
+- `node scripts/doc-check.mjs` ⇒ **exit 0**：OK(锚) 0 条悬空 ∥ OK(行宽) 无 >300 字符单行；行数面 5 条差异全为 `thincoder-desktop/*`（报告态、非本批面）。
+- `node scripts/prompt-refs-check.mjs` ⇒ 提示词面 84 档 ∥ 代码面 410 档，**命中 0**（J1/J2/J3 零命中）。
+- 全量扫 `setTimeout(...)`：**本席 12 档零命中**；`convergence.mjs` 已替形（A 席）；余量 = 批档/设计档（教学映射）/`_archive` 冻结副本——均非本席。
+- **落位比对（落地档 ↔ 设计围栏块——批次收尾核对步）**：46/46 在位；仅 2 处 = 裁决句分句末标点（设计块独立条目句号 vs 落地续接原文「（a must-fix row…／（必修行…」括注）——设计注明「关键改动 = resolved 定义 + 零理由项」限定所致，**预期**。
+- 净行数：EN +1/+5/+5/+1/+1/+1 · CN +1/+5/+5/+1/+1/+1——全落 §2 表预算区间。
+
+**审计与代码评审轮次与终态**：**explore 分歧审计 1 轮 ⇒ clean**（10/10 核对项 ✓，四类偏差零；格式级观察 3 条均判合规）；**advisor 代码评审 0 轮**（按本轮任务书「不点火评审」——未点火）。**fix round = 0**（审计 clean，无自修轮）。
+
+**决策透明表（落笔中自行裁量 3 处——均披露）**
+
+| # | 事项 | 处置 | 依据 |
+|---|---|---|---|
+| 1 | Deferred 行扩展文本（设计无独立围栏块） | CN 直取 §7 措辞「或**携理由的认账不修 🔴**（争议窗自第 3 轮起收口；零理由即不接受）」（去 `§2.5` 指针——提示词面禁引用）；EN = M9 译形（复用 §2.5 EN 词形 reasoned acknowledged-not-fixed / zero-reason refusal） | 设计 §7 第 2 条 + 批档 KD-6；M9 = 翻译非 cp |
+| 2 | `advisor-design.md`（EN）原引证段 ∥ 批准信号段同处一条融合长行 | 在「## Approval Signal」前断行（+1）——禁则句落引证段末 | 设计「引证段追加禁则句」语义；净 +1 贴预算 |
+| 3 | CN `advisor-round3.md` 接受句落点 | 落「规则：」区（「只检查前轮输出条目的修复状态」条后）——非批档 `:12` 字面 | 设计「**规则区**追加」+ EN 面同语义位（批档 `:12` 系 EN 编号串行） |
+
+（笔误更正：上表「臂律面」应为「**纪律面**」——第 8 / 9 / 14 / 15 行；§5 为追加制不改行，以此更正为准。）
+
+**§5 实施记录（eng-coder · A 席 代码面 · 2026-10-03 · round initial）**
+
+**交付摘要（§2 表 1–3 ∥ 18 行落位 · 终态 file:line）**
+
+| 表# | 档 | 终态落位（file:line） | 内容 |
+|---|---|---|---|
+| 1 | `thincoder-core/advisor/citations.mjs` | `:10-11` 头注定性同步（三分 ⇒ 四类）∥ `:24-26` 省略号判据常量 `ELLIPSIS_RE = /…\|\.\.\./` ∥ `:87-93` 失败分类分支（139 ⇒ **149** 行） | 省略号非连续引文专类（`not a contiguous citation (ellipsis) @ {rel} — quote one contiguous excerpt`，含改法串）；`includes` 命中判据（`:82`）与报告头行（`:133`）零改；`path traversal` / `file unreadable`（`:94-95`）零改 |
+| 2 | `thincoder-core/advisor/messages.mjs` | `:51-52` 回显条件句（两分支）∥ `:56` 尾行定义句 + 中段负向句随动（299 ⇒ **299** 内容行 · 净零） | `finds NO 🔴 (Critical) issues` ⇒ `no unresolved 🔴 (Critical) issue remains`；定义句逐字 = 设计 §2.5（accepted 不阻断 ∥ 🔴 only） |
+| 3 | `thincoder-core/advisor/convergence.mjs` | `:27` 示例替形（80 ⇒ **80**） | `setTimeout(...)` ⇒ `setTimeout(() => {`（禁省略号自洽） |
+| 18 | `docs/batches/2026-10-03-advisor-convergence.test.mjs`（新建） | **179** 行 · T1–T13 全表 | 代码腿 T1–T6/T11/T13 ∥ 提示词腿 T7–T10/T12（候 B 席） |
+
+**测试读数（红基线 + 复跑逐腿）**
+- 红基线（A 席落笔前）：5 绿（T2/T4/T5/T6/T13）· 8 红（T1/T3/T11 + T7–T10/T12＝候 B）。
+- A 席落笔后：8 绿（**T1–T6 ∥ T11 ∥ T13**）· 5 红（提示词腿候 B）。
+- B 席落笔后复跑：**13/13 全绿**（本席收口前终读；多次复跑一致）。
+- `node scripts/doc-check.mjs`（仓根）⇒ **exit 0**：OK(锚) 0 条悬空 ∥ OK(行宽) 无 >300 字符单行；行数面 5 条报告态差异**全为 `thincoder-desktop/*`**（并行批改动面，非本批）。
+
+**审计与代码评审轮次与终态**
+- **explore 分歧审计 ×1 ⇒ 四类偏差零发现**（唯一披露项 = `messages.mjs:56` 中段负向句随动——与本档决策表 #1 同条）。
+- **advisor 代码评审 ×1（轮 1 全量）⇒ VERDICT: pass**（🔴 0 · 🟡 0 · 🔵 4；父侧口径更正「不点火评审 = 不点火设计评审」——本席审批次照跑）。四项 🔵 处置（零语义改）：
+  ① `messages.mjs:56` 中段随动未在批档改动面显名 ⇒ 本档载明（决策表 #1）；
+  ② 省略号专类边界（仅 mismatch 分支内触发；缺档/越围栏仍两旧类）⇒ 本档登记（决策表 #3）；
+  ③ `messages.mjs` 行数口径（内容行 299 ∥ read 行号 300）⇒ 本档核明（决策表 #4）；
+  ④ 批内件夹具临时目录不清理 ⇒ 本档登记意图（决策表 #5）。
+- **终态 = clean**（评审 pass；四项 🔵 全数处置，均为登记/记录面）；**fix round = 0**（无评审后代码语义改动）。
+- 范围外注记（供父侧）：workspace 级 `.thincoder/advisor.md` §结论回显（`:32`「若存在任何 🔴 问题：不得输出 token」）未随 F33 收正——与 Approval 块仅在 legacy/直调轮 2+ 路径同消息共存（详见本席交付报告）；另：B 席 §5 载「advisor 代码评审 0 轮（按旧口径不点火）」——如需 B 席补跑，请父侧转达（非本席面）。
+
+**决策透明表（A 席落笔中自行裁量——均披露）**
+
+| # | 事项 | 处置 | 依据 |
+|---|---|---|---|
+| 1 | `messages.mjs:56` 中段负向句随动（`If there are any 🔴 issues, do NOT include the token.` ⇒ `If any 🔴 (Critical) issue remains unresolved, …`）——批档表 2 行仅列「`:51-52` 回显条件句」+「`:56` 补定义句」 | **一并随动**（不改则与 `:51` 新条件 ∥ F33「accepted 不阻断」自相矛盾——定义句「anything else stays unresolved」即此语义） | F33 / 设计 §2.5 定义句；advisor 🔵#1 同判 |
+| 2 | 批内件提示词腿断言措辞 | 取设计 §2.5 逐字段的可核子串 + 空白折行归一（`flat()`——防 md 折行误红） | 批档用例表 T7–T12；设计 §2.5 逐字块 |
+| 3 | 省略号专类判定面（仅失败分支内、先于 mismatch） | 按 §3 优先句读（只裁 mismatch 碰撞）；缺档/越围栏仍归两旧类——边界登记 | `ADVISOR-GUARDS.md` §3 `:122-124`；advisor 🔵#2 |
+| 4 | `messages.mjs` 行数口径（内容行 299 ∥ read 行号 300） | 净零成立（before 同形）；≤300 无超线；头寸建议（下次动本档前拆 Approval 块 ∥ 清尾空行）登记 | 实读两口径对照；advisor 🔵#3 |
+| 5 | 批内件夹具临时目录（`os.tmpdir()/advisor-convergence-*`）不清理 | 意图登记：批内件随批留存、OS 临时目录自清 | advisor 🔵#4 |
+
 ## §6 验证与收口（父代理）

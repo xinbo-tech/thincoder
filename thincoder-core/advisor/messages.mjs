@@ -48,12 +48,12 @@ export function buildObjectDeclarationBlock(object = null) {
  */
 export function buildDesignApprovalBlock(designToken, designId) {
   const echo = designId
-    ? `If — and ONLY if — your review finds NO 🔴 (Critical) issues, end your reply with this exact token: [DESIGN-TOKEN:${designToken}] and this exact designId: ${designId}. Copy BOTH values verbatim.`
-    : `If — and ONLY if — your review finds NO 🔴 (Critical) issues, end your reply with this exact token: [DESIGN-TOKEN:${designToken}]`
+    ? `If — and ONLY if — no unresolved 🔴 (Critical) issue remains, end your reply with this exact token: [DESIGN-TOKEN:${designToken}] and this exact designId: ${designId}. Copy BOTH values verbatim.`
+    : `If — and ONLY if — no unresolved 🔴 (Critical) issue remains, end your reply with this exact token: [DESIGN-TOKEN:${designToken}]`
   return [
     "## Approval Signal",
     echo,
-    "🟡 (Advisory) and 🔵 (Note) findings do NOT block approval — list them if present, but still include the token. If there are any 🔴 issues, do NOT include the token.",
+    "🟡 (Advisory) and 🔵 (Note) findings do NOT block approval — list them if present, but still include the token. If any 🔴 (Critical) issue remains unresolved, do NOT include the token. A reasoned non-fix accepted by the reviewer does not block (🔴 only — 🟡/🔵 never block approval); anything else stays unresolved.",
   ].join("\n")
 }
 

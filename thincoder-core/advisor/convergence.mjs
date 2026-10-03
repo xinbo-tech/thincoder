@@ -24,7 +24,7 @@ export function buildConvergenceInstructions(round, scopeFiles = null) {
     "2. STALE-CONTEXT WARNING: any diff or file content from earlier messages is a historical snapshot — treat it as expired. Only fresh `read` results describe the current state.",
     "3. You have no git tool; git output in earlier messages is historical and untrustworthy (committed fixes never show in a diff).",
     "4. `read` the files named in the prior review output (or the review surface above) in full — ALWAYS. Batch reads/greps in a single reply.",
-    "5. Evidence rule: every 'Unfixed'/'New' finding MUST quote the exact line content from THIS round's `read` output (e.g. `run.mjs:180: timeoutId = setTimeout(...)`). Line numbers alone are NOT evidence — they may be stale or fabricated. Findings without a fresh quoted line are treated as unverified and will not be accepted.",
+    "5. Evidence rule: every 'Unfixed'/'New' finding MUST quote the exact line content from THIS round's `read` output (e.g. `run.mjs:180: timeoutId = setTimeout(() => {`). Line numbers alone are NOT evidence — they may be stale or fabricated. Findings without a fresh quoted line are treated as unverified and will not be accepted.",
     "6. Produce your verification table. Do not re-read content you already have.",
     round === 2
       ? "7. You may flag obvious NEW issues introduced by the fixes (crashes, data loss, logic errors — not style)."

@@ -125,8 +125,9 @@ The report must contain: what changed / why, the paths of files touched, how you
   `Action` is one of exactly four values: `Fixed` (you edited the code — landed), `Dispatched` (fix round in flight — not yet landed), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason).
 - `Detail` = what changed and where (file:line), or your evidence/reason.
 - **No "pre-existing" cop-out.** You own the whole code. "It was already broken" / "I didn't introduce it" is never a reason to skip a fix — when a defect appeared does not decide whether it should be fixed, and earlier agent turns created it. Rebut only on technical grounds, otherwise fix it.
-- **Do not bury 🔴.** A 🔴 you neither fix nor rebut blocks convergence. `Deferred` fits 🟡/🔵 improvements or a 🔴 needing a user decision first — never a way to silently drop a real defect; surface any unresolved 🔴 to the user.
+- **Do not bury 🔴.** A 🔴 you neither fix nor rebut blocks convergence. `Deferred` fits 🟡/🔵 improvements, a 🔴 needing a user decision first, or a reasoned acknowledged-not-fixed 🔴 (the dispute window closes it from round 3 on; a zero-reason refusal is never accepted) — never a way to silently drop a real defect; surface any unresolved 🔴 to the user.
 - Round 2 verifies the prior table + flags obvious new issues; round 3+ strictly verifies only the prior table (no new-issue hunting). No round cap — repeated mechanical failure (same criterion) ⇒ stop and report.
+Every non-fix must carry a reason (a technical rebuttal with evidence, or an explicit acknowledged-not-fixed record); the reviewer may push back on insufficient reasons through round 2, and from round 3 accepts reasoned non-fixes — a zero-reason refusal is never accepted and stays unresolved.
 - When the advisor reports all clear (no 🔴 remaining), run `verify`.
 
 ## Common disciplines
