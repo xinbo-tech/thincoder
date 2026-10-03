@@ -116,9 +116,8 @@ export async function prepareRun(agent, input, callbacks, {
         const origins = searchOrigins(agent.memory)
         const bound = INDEX_ORIGIN_ROW_WARN + 1
         const countFilter = origins.length === 1 ? " WHERE origin = ?" : origins.length > 1 ? ` WHERE origin IN (${origins.map(() => "?").join(", ")})` : ""
-        const countRow = agent.memory.db.prepare(
-          `SELECT COUNT(*) AS n FROM (SELECT 1 FROM doc_chunks${countFilter} LIMIT ${bound})`,
-        ).get(...origins)
+        const countQuery = "SELECT COUNT(*) AS n FROM (SELECT 1 FROM doc_chunks" + countFilter + " LIMIT ?)"
+        const countRow = agent.memory.db.prepare(countQuery).get(...origins, bound)
         const count = Number(countRow?.n ?? 0)
         const countLabel = count >= bound ? `${INDEX_ORIGIN_ROW_WARN}+` : String(count)
         const more = count > docs.length ? ` (${countLabel} chunks indexed total — call doc_search if you need more)` : ""
