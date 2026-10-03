@@ -131,7 +131,9 @@ export async function recordToolResults(agent, toolByName, results) {
               // F2e: the sync settle's engine-approved suffix (stored on the
               // run by settleDesignReview) is stripped with exact truncation — the
               // prior never carries the raw token / designId.
-              if (looksLikeReviewOutput(result)) {
+              // #863 关闭点轻量化（父侧批·五裁定㈡——与 settle 面同族守卫）：closed 实例零消费面
+              // （续跑仅取 open）——关闭后不写回 priorOutput（否则关闭点释放被覆盖）。
+              if (run.open && looksLikeReviewOutput(result)) {
                 run.priorOutput = stripApprovedSuffix(result, run.approvedSuffix)
               }
             } else {

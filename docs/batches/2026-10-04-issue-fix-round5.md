@@ -183,7 +183,7 @@ VERDICT: pass
 **批准面**：#834 ∥ #835 ∥ #842 ∥ #848 ∥ #863 ∥ #867——**两路派发**（core 9 档 ⇒ eng-coder 甲 ∥ cli/desktop 7 档 + 批内件 ⇒ eng-coder 乙（**dependsOn 甲**——批内件全量复跑需甲落））；**EN 提示词面**（`thincoder-core/prompts/persona-engineering.md`）＝主 agent 笔。
 
 ## §5 实施记录（eng-coder）
-**状态行**：实施完成（轮 2 复核 pass · 终态 clean（审计 0 偏差 ∥ 评审轮 1 pass ∥ fix 2 项 ∥ 轮 2 pass）· 交付报告已出）
+**状态行**：实施完成（轮 2 复核 pass · 终态 clean（审计 0 偏差 ∥ 评审轮 1 pass ∥ fix 2 项 ∥ 轮 2 pass）· 交付报告已出 · 裁定㈡补落（record-results 次级守卫 · 探针 14/14 · doc-check exit 0））
 
 
 
@@ -246,5 +246,27 @@ VERDICT: pass
 **5.7 未决/上抛（父侧收口看）**：① `record-results.mjs:134` 次级守卫 = 裁定㈡暂缓（待让渡后落）；② 乙方半幅：`cmd-undo.mjs` oversize 分支（先判 `oversize`——见 5.2）+ 批内件 `2026-10-04-issue-fix-round5.test.mjs`（甲面腿建议对照探针移录）；③ 登记面：`API-CONTRACT.md` 生成区 advisor-async 导出坐标随本批 +9 行后移——待 `scripts/api-contract.mjs --write` 重跑（报告态）；④ `AGENT-LOOP.md:111` 载体坐标对现盘不对位（归因未定——本批插入点在其下）；⑤ 设计面二择项 = 响应表 #3 ∥ #6。
 
 **5.8 评审轮 2 回执（fix 复核）**：**VERDICT: pass**——发现 1 = 已修 ✓（`ledger-migrate.mjs` 末内容行 `:300`，折注后写门同源判据/旗文案在位）∥ 发现 4 = 已修 ✓（本段 + 裁定登记）∥ 发现 2/3/5/6 = 分类（登记/报告项）成立 ∥ **新增发现 = 0**。**终态 = clean**（分歧审计 0 偏差 · 评审轮 1 pass · fix 轮 2 项 · 轮 2 pass）。
+
+**§5 追加 · 裁定㈡补落（eng-coder · 2026-10-04 · fix 轮——单点）**
+
+**口径**：派单 = 父侧裁定㈡（「暂缓 → 放行」）；先读同族先例 `thincoder-core/agent-tools/advisor-settle.mjs:221`（已落形）。**禁止面遵守**：他档零触 ∥ 设计档零触 ∥ 在飞写域零触 ∥ 已收口批档零触；`advisor-settle.mjs` 批一 #853 新笔（发送前副本面）零触。
+
+**改动 file:line**：`thincoder-core/agent/record-results.mjs:136` —— priorOutput 写点条件 `looksLikeReviewOutput(result)` ⇒ **`run.open && looksLikeReviewOutput(result)`**（+ `:134-135` 说明注 2 行；同步面唯一 priorOutput 写点）。语义 = closed 实例零消费面（续跑仅取 open）——关闭后不写回 priorOutput（否则 `design-token.mjs:146` / `advisor-async.mjs:487` 关闭点释放被覆盖；与 `advisor-settle.mjs:221` 同族闭合）。`git diff` 实读 = 仅此一处（+2 注释行）。
+
+**自证读数（探针 `.thincoder/tmp/r5-record-results-guard-probe.mjs`——直调生产模块，非副本）**：**14/14 全绿**。腿组：A（closed code-run + 评审输出 ⇒ 写点零写 ∥ round/called-mark/marker 记账零变）6/6 ∥ B（open 同串对照 ⇒ 逐字写回——判式有鉴别力）2/2 ∥ C（真链：真实 `settleDesignReview` 关闭设计实例 ⇒ 提交零写回；`looksLikeReviewOutput(settled.output)` 成立 ∧ 旧码写回体量 ≥200 字符 = race 真实）6/6。
+
+**其他读数**：`node --check`（lint）= **Syntax OK** ∥ `node scripts/doc-check.mjs`（仓根）⇒ **exit 0**（锚 0 悬空 ∥ 行宽 OK ∥ 行数面差异 12 条 = 报告态，全为 `docs/desktop/*` 既存条目，非本笔）。
+
+**审计与代码评审轮次与终态**：分歧审计（explore · 只读）= **1 轮 · 0 偏差**（四类全 0：部分实现 ∥ 静默简化 ∥ 清单外未声明 ∥ 文档漂移；写点唯一性全仓核 ∥ 探针 import 真实性核 ∥ 邻位 mtime 扫描）；代码评审（advisor · code）= **0 轮——父侧本轮径免（任务书「不点火评审」）**。**终态 = clean**（验收 4/4 ∥ 审计 0 偏差 ∥ 探针 14/14）。
+
+**决策透明表（本席裁量）**：
+
+| # | 裁量点 | 决定 | 依据 |
+|---|---|---|---|
+| 1 | 守卫形状 | `run.open &&` 前置（不另加 `result &&`） | 与 settle 面 `:221` 同形；本档 result 恒为串、`looksLikeReviewOutput` 内部 `String(text ?? "")` 兜底——行为等价 |
+| 2 | 邻位注释 | +2 行（紧邻守卫） | 同族先例 `:219-220` 带说明注；防后续「冗余检查」误清 |
+| 3 | designId 回显 | spawn 载荷未携字面值——如实缺项（不猜、不以实例 id 充数） | 凭据值不落档（沿纪律）；写授权 = token 门在写时核验（本笔全部写获准 ⇒ token 在位） |
+
+**表外面**：探针档 + doc-check 日志留存（`.thincoder/tmp/r5-2-doc-check.log`，UTF-16 重定向形）+ 本段；产品码仅 `record-results.mjs` 一档。
 
 ## §6 验证与收口（父代理）
