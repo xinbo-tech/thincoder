@@ -47,24 +47,40 @@ import { createTimerWatch, fireTimerWake } from "./timer-watch.mjs"
 export { upgradeFailureText, pendingNoticeReady } from "./update-notice.mjs"
 
 /**
- * SESSION.md §6.8 D-S2 — TUI 启动首帧前的 provider 重选流程：
- * provider 无效（`_providerInvalid` 标记或 provider 为 null）→ 先弹模型选择 picker
- * （复用 openModelPicker，展示当前可用 providers）；用户选定后继续正常启动。
- * 选择取消（Esc）→ 仍进入 TUI，推送提示行（"未配置有效 provider，可用 /model 配置
- * 渠道与模型"）——绝不因无 provider 拒绝进入。返回 true 表示弹过选择流程。
+ * SESSION.md §6.8 D-S2 — TUI 启动首帧前的 provider 分流（判据单源 = PROVIDER.md §6.22）：
+ * · **invalid 类**（`state === "invalid"` ∨ `providerInvalidReason` 非空——核「provider 不完整面」
+ *   快照的合成式）→ 先弹模型选择 picker（复用 openModelPicker，展示当前可用 providers）；
+ *   用户选定后继续正常启动。选择取消（Esc）→ 仍进入 TUI，推送提示行（措辞指渠道 ∕ 密钥——
+ *   绝不因无 provider 拒绝进入）。
+ * · **`fallback`**（无有效 defaultModel 但可运行）→ **不弹 picker**（不打断）+ 提示行明示
+ *   （「尚未设置默认模型：本次使用 `<渠道>[:<模型>]`——…」；`model` 缺省 ⇒ 仅渠道名）。
+ * 返回 true 表示弹过选择流程。
  */
 export async function promptProviderIfInvalid(agent, openModelPicker, pushLine) {
-  if (!(agent._providerInvalid || !agent.provider)) return false
-  await openModelPicker()
-  if (!agent.provider) {
-    // MODEL-MERGE-SESSION 引导 A（F-6）：空槽 + defaultModel 未设 → 提示 /config 默认模型入口
-    // （index.mjs 本行为 D-S2 取消提示扩展——设计文件清单外——随批上报）
-    const hasProviders = (agent.providers?.length ?? 0) > 0
-    pushLine(hasProviders && !agent.config?.defaultModel
-      ? "尚未设置默认模型（config.defaultModel——新会话起点）：/config → 默认模型 设置一次；/model 仅改本会话"
-      : "未配置有效 provider，可用 /model 配置渠道与模型", C.warn)
+  const cfg = agent.config ?? {}
+  // invalid 类（合成式——单源 = PROVIDER.md §6.22）：`state === "invalid"` ∨ `providerInvalidReason`
+  // 非空（核 provider 不完整面快照）；`!agent.provider`（`{}` 已被上游清成 null）同判。
+  // 结构不全（缺 baseURL 等）不在本门——归发送失败面（#840 `provider` 类词）；负向锁 = PROVIDER.md:437。
+  const invalidClass = cfg.providerState === "invalid"
+    || (typeof cfg.providerInvalidReason === "string" && cfg.providerInvalidReason !== "")
+    || !agent.provider
+  if (invalidClass) {
+    await openModelPicker()
+    if (!agent.provider) {
+      // D-S2 取消提示（#841 措辞收正 = 渠道 ∕ 密钥——配置入口 /config）
+      pushLine("未配置有效渠道（渠道 ∥ 密钥缺位）：/config 设置渠道与密钥；/model 仅改本会话", C.warn)
+    }
+    return true
   }
-  return true
+  if (cfg.providerState === "fallback") {
+    const name = agent.provider?.name
+    if (name) {
+      const model = typeof agent.provider.model === "string" && agent.provider.model ? agent.provider.model : null
+      pushLine(`尚未设置默认模型：本次使用 \`${name}${model ? `:${model}` : ""}\`——/config → 默认模型 设置一次；/model 仅改本会话`, C.warn)
+    }
+    return false
+  }
+  return false
 }
 
 /**
@@ -220,8 +236,9 @@ export async function startTUI(agent, opts = {}) {
 
   // ---------------------------------------------------------- Startup screen + background indexing
 
-  // SESSION.md §6.8 D-S2：startTUI 首帧前 —— provider 无效（_providerInvalid / provider 为 null）
-  // → 先弹模型选择 picker（keyStream 已挂 keypress，Esc/Enter 可用）；Esc → 提示行，仍进 TUI
+  // SESSION.md §6.8 D-S2：startTUI 首帧前——按核统一态分流（单源 = PROVIDER.md §6.22）：
+  // invalid 类 → 先弹模型选择 picker（keyStream 已挂 keypress，Esc/Enter 可用）；Esc → 提示行，仍进 TUI；
+  // fallback → 不弹 picker + 提示行明示（本次使用 `<渠道>[:<模型>]`）
   await promptProviderIfInvalid(agent, () => openModelPicker(), pushLine)
 
   showStartup({ agent, state, opts, pushLine, pushLabel, render, startWizard })

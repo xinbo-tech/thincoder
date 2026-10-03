@@ -30,13 +30,22 @@ export async function chatCommand(args, ctx) {
   if (crashNotice) console.error(crashNotice)
 
   const agent = await assembleAgent()
-  // SESSION.md §6.8 D-S4（F4）+ MODEL-MERGE-SESSION：headless 无 TUI —— 可读错误 + 退出码 1，
-  // 不弹 UI、不崩溃；文案改引 defaultModel（F-6 引导 A headless 面——/config → 默认模型）
-  if (agent._providerInvalid) {
-    const dm = agent.config?.defaultModel
-    console.error(`[error] 未配置有效模型（defaultModel "${dm ?? "(not set)"}"：${agent._providerInvalidReason}）。请运行 thincoder 进入 TUI 设置（/config → 默认模型；或 /model 选择后以会话槽生效），或编辑 ${configPath}`)
+  // SESSION.md §6.8 D-S4（#841 收正）：headless 无 TUI——按**核统一态分流**（判据单源 = PROVIDER.md §6.22，
+  // 与 TUI 面同式）：**invalid 类**（`state === "invalid"` ∨ `providerInvalidReason` 非空——无渠/key
+  // ⇒ 不可运行）⇒ 可读错误 + 退出码 1（不弹 UI、不崩溃）；**fallback**（无有效 defaultModel 但可运行）
+  // ⇒ stderr 一行明示 + 继续运行（不退出——D-S2 同态同解）。条目结构不全不在本门（负向锁 =
+  // PROVIDER.md:437）——归运行期失败径（stderr + 非 0 退出）。
+  const headlessCfg = agent.config ?? {}
+  const invalidClass = headlessCfg.providerState === "invalid"
+    || (typeof headlessCfg.providerInvalidReason === "string" && headlessCfg.providerInvalidReason !== "")
+  if (invalidClass) {
+    console.error(`[error] 未配置有效渠道（${agent._providerInvalidReason ?? headlessCfg.providerStateReason ?? "provider unavailable"}）。请运行 thincoder 进入 TUI 设置（/config 设置渠道与密钥；或 /model 选择后以会话槽生效），或编辑 ${configPath}`)
     exitSoon(1)
     return
+  }
+  if (headlessCfg.providerState === "fallback" && agent.provider?.name) {
+    const m = typeof agent.provider.model === "string" && agent.provider.model ? `:${agent.provider.model}` : ""
+    console.error(`尚未设置默认模型：本次使用 \`${agent.provider.name}${m}\`——/config → 默认模型 设置一次；/model 仅改本会话`)
   }
   if (!agent.provider.apiKey) {
     if (!process.stdin.isTTY) {
@@ -121,9 +130,10 @@ export async function tuiCommand(ctx) {
   // F-MI7：resumeSlot = async（探测束不阻塞事件循环）——此处必须 await
   const { slot, data } = await resumeSlot(process.cwd())
   const agent = await assembleAgent({ slotData: data })
-  // SESSION.md §6.8 D-S1：TUI 路径在 startTUI 前清空无效 provider——空 provider 不流入 runAgent
-  // （崩溃源：chat() 缺 model → 网关 400 或 fetch("undefined/...") TypeError）
-  if (agent._providerInvalid) agent.provider = null
+  // SESSION.md §6.8 D-S1（#841 收正）：TUI 路径**仅在 `state === "invalid"`**（无渠/key）于 startTUI
+  // 前置 `agent.provider = null`——空 provider 不流入 runAgent（崩溃源：chat() 缺 model → 网关 400
+  // 或 fetch("undefined/...") TypeError）；`fallback` 态 provider 有效——不清（可运行 + 明示）。
+  if (agent.config?.providerState === "invalid") agent.provider = null
   const config = loadConfig()
   if (data) {
     // applySession 内部已按槽复合重算 compactThreshold（auto 时）——不再需要 switched 分支

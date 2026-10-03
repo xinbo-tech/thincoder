@@ -84,6 +84,19 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
     return { tag: "div", props: { class: "composer-notice", "data-notice": "send-failed" }, children: [word] }
   }
 
+  /** provider 态明示行（#841 —— 提示带尾：`state === "fallback"` ∧ **非 invalid 类** ⇒ 行在场）：
+   *  词 = `composer.send.noDefaultModel`（**逐字复用 #840 键**——态陈述行，非发送失败行）；
+   *  `state === "ok"` ⇒ 零行（负向锁）；invalid 类（合成式 = `state === "invalid"` ∨ `invalidReason` 非空）
+   *  ⇒ 本行零行（归发送失败行 —— #840 面）。判据 ∥ 行序单源 = `docs/desktop/design/IPC.md` §2「provider
+   *  态投影注」∥ `docs/desktop/design/COMPOSER.md` §2 本批注。 */
+  function providerNotice(state1) {
+    const face = state1?.providerState
+    if (face === null || typeof face !== "object" || Array.isArray(face)) return null
+    if (face.state !== "fallback") return null // ok ∥ invalid ⇒ 零行（负向锁）
+    if (typeof face.invalidReason === "string" && face.invalidReason !== "") return null // invalid 类合成式（第二腿）
+    return { tag: "div", props: { class: "composer-notice", "data-notice": "provider-fallback" }, children: [t("composer.send.noDefaultModel")] }
+  }
+
   /** 候选行投影（全渠扇出行 `{ provider, id, effortEnum, thinkOff }` ⇒ 核件面形 —— VSC `provider-probe-window.mjs:64-67`
    *  同形）：`reasoning` 值域 = 端两判据（§2.2 A9）—— `thinkOff` 真 ⇒ 首项 `none`（核件「关闭」档），余项 =
    *  `effortEnum` 去空去重；`effortDefault` 端无读数 ⇒ 键缺席（核件中性档显示「—」，禁假造）；`id` 缺 ⇒ `null`（弃项）。 */
@@ -131,9 +144,10 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
     subscribe: (fn) => { if (typeof fn === "function") pushSubs.push(fn) },
   }
 
-  /** 提示行带重挂（序 = [待发送块?, 降级?, 失败?]；空 ⇒ 零节点）。失败行源 = 写面档 `wire.failure()`（B21）。
+  /** 提示行带重挂（序 = [待发送块?, 降级?, 失败?, provider 态?]；空 ⇒ 零节点）。失败行源 = 写面档 `wire.failure()`（B21）。
    *  **待发送块**（收正轮 B12 新口径 · 参照 CLI）：派生于队镜面（判据 = 非空）—— 本锚贴输入框上沿 ⇒ 与输入面板
    *  **恒定邻接**（任意内容高度 ∕ 任意滚动位置 —— 硬验收：不得浮在会话区上方远处）；非真块（无 `[data-block-kind]`）。
+   *  **provider 态行**（#841）：带尾追加（现序三行零动）—— 判据住 `providerNotice`（切片 = `store.providerState`）。
    *  **#606⑤ 行集等价零写门**：行签名同 ∧ 现件仍在锚 ⇒ 零 DOM 写（重挂保态）；变 ⇒ 最小重建（同签名位序复用现件）。 */
   function paintNotices(state1 = store.get()) {
     const noticesAnchor = noticesOf()
@@ -146,6 +160,8 @@ export function createComposerSync({ store, activeKey, call, push, pushSubs, wir
     if (degraded !== null) rows.push(degraded)
     const failedRow = failedNotice(wire.failure())
     if (failedRow !== null) rows.push(failedRow)
+    const providerRow = providerNotice(state1)
+    if (providerRow !== null) rows.push(providerRow)
     const sigs = rows.map(noticeSig)
     const live = lastNotices !== null && lastNotices.sigs.length === sigs.length
       && sigs.every((sig, index) => sig === lastNotices.sigs[index])

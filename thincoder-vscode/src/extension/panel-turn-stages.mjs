@@ -19,8 +19,9 @@
  * 环安全：`panel-chat → panel-turn-stages` 单向（本档零 import 主档）；`_cwd` 取自主档同源的
  * `panel-messages.mjs`（延迟解引用）。
  */
-import { resolveProviders } from "@thincoder/core/config-io.mjs"
-import { providerNames, getKey, buildProvider } from "./presets.mjs"
+import { loadRaw, resolveProviders } from "@thincoder/core/config-io.mjs"
+import { resolveProviderPlan } from "@thincoder/core/model-ref.mjs"
+import { getKey, buildProvider } from "./presets.mjs"
 import { specForModel } from "../specs.mjs"
 import { t } from "../i18n.mjs"
 import { _cwd, pushBusyQueued } from "./panel-messages.mjs"
@@ -37,13 +38,17 @@ import { resolveReasoningMode } from "./reasoning-mode.mjs"
 
 /** 迁出自 `panel-chat.mjs`（本批逐字搬迁——`a.mjs` 段 A）：provider / 模型解析阶段。
  *  契约 A-1：三处早退（无 provider / buildProvider 抛错 / `!p`）回传 `{ done: true }`——
- *  调用侧翻译位必须留在 impl 的 try 内（否则收尾 finally 不执行）。 */
+ *  调用侧翻译位必须留在 impl 的 try 内（否则收尾 finally 不执行）。
+ *  #841（无效渠道态逻辑归一 · VSC 面）：渠道选择改**核统一解析**（回退序 + 三态——单源 =
+ *  `docs/core/design/PROVIDER.md` §6.22）；接入面自建链退场——显式 `providerName` 并入候选，
+ *  key 门在核内（KD-841-5）；模型/stamp 决策（MODEL-MERGE-SESSION）零改。 */
 export async function resolveTurnStage({ panel, turnSlot, providerName, modelOverride, reasoning }) {
   // ── MODEL-MERGE-SESSION：会话槽复合恒读（F-4 恢复读槽——非仅 providerName 缺席路径）。
   // webview userMessage 恒带 dropdown 复合（send.js echo——dropdown = 会话级选择——selectModel
   // 消息已写槽）——echo == 槽复合 ≠ per-message override（裁定④只约束真·与槽不符的单回合试运行）。
   let slotRef = null // { provider, model|null } | null —— 仅当槽渠道当前可运行（有 key）——
   // keyless 槽不参与复合（运行/播种都自愈到实际渠道——不把无 key 复合钉进会话记录）
+  // ——#841：本门 = 复合/stamp 面；渠道选择的 key 门在核内统一解析（下一段）。
   let slotData = null
   try {
     slotData = panel._activeData?.(turnSlot)
@@ -54,41 +59,32 @@ export async function resolveTurnStage({ panel, turnSlot, providerName, modelOve
       }
     }
   } catch {}
-  if (!providerName) {
-    // provider 未显式给（digest/挂起/首回合竞态）→ 槽渠道优先（有 key），其次 config defaultModel
-    if (slotRef?.provider) {
-      try { if (await getKey(slotRef.provider)) providerName = slotRef.provider } catch {}
-    }
-    if (!providerName) {
-      // 回退：config defaultModel 渠道（resolveProviders activeProvider = default 渠道/首渠道）
-      try {
-        const { activeProvider } = resolveProviders()
-        if (activeProvider && await getKey(activeProvider)) providerName = activeProvider
-      } catch {}
-      if (!providerName) {
-        for (const n of providerNames()) {
-          try { if (await getKey(n)) { providerName = n; break } } catch {}
-        }
-      }
-    }
-  }
+  // ── #841：渠道选择 = 核统一解析（回退序 + 三态——单源 = `docs/core/design/PROVIDER.md` §6.22；
+  // 接入面自建链退场）。`slot` = 显式 providerName（dropdown echo——并入候选——KD-841-5）∥ 槽复合；
+  // 「持 key」门在核内：槽无 key / 不在册 ⇒ 核内跳过落下一档（不把不可运行渠道钉进运行态）。
+  let resolvedName = null
+  try {
+    const { providers } = resolveProviders()
+    const slot = providerName ? { provider: providerName, model: null } : { provider: slotData?.activeProvider ?? null, model: slotData?.activeModel ?? null }
+    resolvedName = resolveProviderPlan({ providers, defaultModel: loadRaw()?.defaultModel ?? null, slot }).channel
+  } catch { /* config unreadable ⇒ 落下方 needsSetup 径 */ }
   // needsSetup tells the webview to re-open the welcome panel (even if the user
   // previously skipped it) — a send with no configured provider should land the
   // user on the configuration form, not just an error banner.
-  if (!providerName) { panel._panel?.webview.postMessage({ type: "error", text: t("error.provider"), needsSetup: true }); return { done: true } }
+  if (!resolvedName) { panel._panel?.webview.postMessage({ type: "error", text: t("error.provider"), needsSetup: true }); return { done: true } }
   let p
   try {
-    p = await buildProvider(providerName)
+    p = await buildProvider(resolvedName)
   } catch (e) {
     console.error("[chat-panel] buildProvider failed:", e.message)
-    panel._panel?.webview.postMessage({ type: "error", text: t("error.failedProvider", { name: providerName }), needsSetup: true })
+    panel._panel?.webview.postMessage({ type: "error", text: t("error.failedProvider", { name: resolvedName }), needsSetup: true })
     return { done: true }
   }
-  if (!p) { panel._panel?.webview.postMessage({ type: "error", text: t("error.failedProvider", { name: providerName }), needsSetup: true }); return { done: true } }
+  if (!p) { panel._panel?.webview.postMessage({ type: "error", text: t("error.failedProvider", { name: resolvedName }), needsSetup: true }); return { done: true } }
   // MODEL-MERGE-SESSION：模型/stamp 决策收敛纯函数（resolveTurnModelAndStamp——导出供单测
   // 锚——语义见函数头注释：真 override 单回合不落槽——无 override 落实际运行模型）
   const baseModel = p.model ?? null // 渠道默认解析值（defaultModel 属该渠道 → 用之；否则渠道默认单值）
-  const { runModel, stampProvider, sessionStampModel } = resolveTurnModelAndStamp({ providerName, modelOverride, slotRef, baseModel })
+  const { runModel, stampProvider, sessionStampModel } = resolveTurnModelAndStamp({ providerName: resolvedName, modelOverride, slotRef, baseModel })
   if (runModel && runModel !== p.model) p = { ...p, model: runModel }
   const slotStamp = { activeProvider: stampProvider, activeModel: sessionStampModel }
   // Reasoning selector → provider fields. "off" AND "none" (the effort enum's lowest
@@ -97,8 +93,8 @@ export async function resolveTurnStage({ panel, turnSlot, providerName, modelOve
   // never actually disabled thinking. (Endpoints that force thinking server-side —
   // e.g. the Zhipu coding plan — will still emit reasoning regardless.)
   if (reasoning) p = { ...p, ...resolveReasoningMode(reasoning, p.model, specForModel) }
-  // 回传面（契约 A-2）：providerName（可能被上方槽/config 回退改写）/ p / slotStamp / slotData。
-  return { done: false, providerName, p, slotStamp, slotData }
+  // 回传面（契约 A-2）：resolvedName（核解析入选渠道）/ p / slotStamp / slotData。
+  return { done: false, providerName: resolvedName, p, slotStamp, slotData }
 }
 
 /** 迁出自 `panel-chat.mjs`（本批逐字搬迁——`b.mjs` 收尾段）：回合收尾——标题 + 落盘 +

@@ -81,7 +81,7 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
 - **R-A5.4**：会话方法响应形状——`session/new` 含 `sessionId`；`session/list` 条目含 `sessionId` + `cwd`；`configOptions` 条目含 `id` + `name`；`session/prompt` 入参取自 `params.prompt`。
 - **R-A5.5**：`fs/*` 反向 RPC 发出前必过客户端能力位（`readTextFile` / `writeTextFile`）；未宣告 ⇒ 回落本地（不得干等超时）。
 - **R-A5.6**：认证语义 = **凭据即时判据**（无跨调用闩锁）：`authenticate` 是**可选确认动作**（成功返回 `{}`；契约**禁止**客户端以 `terminal` 方法调它）；
-  凭据不可解析 ⇒ `-32000` 且文案可行动（无 key ⇒ 指向 config 与 `--login`；key 在位而 `defaultModel` 不可解析 ⇒ **点名 `defaultModel`**）。
+  凭据不可解析 ⇒ `-32000` 且文案可行动（门失败**单档** = 无 provider/key ⇒ 指向 config 与 `--login`；持 key 而 `defaultModel` 不可解析 ⇒ **放行**，不作门失败——统一解析口径见 `doc:PROVIDER.md:§6.22`）。
 - **R-A5.7**（可验判据）：无 TTY 的脚本化 stdio 客户端**全程不发 `authenticate`** 可完成 `initialize → session/new → session/prompt`（`stopReason:"end_turn"`）；
   非 TTY 下 `thincoder acp --login` **不挂死**（快速退出码非 0）。
 
@@ -141,6 +141,7 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
 
 ## 变更记录
 
+- 2026-10-03（**R-A5.6 收正 · 主 agent 直接执行 · 可 revert**——承 `docs/cli/design/ACP-CLIENT.md` §11.5 #841 口径；批档 = `docs/batches/2026-10-03-provider-invalid-unify.md`）：门失败收为**单档**（无 provider/key）；持 key 而 `defaultModel` 不可解析 ⇒ **放行**（不作门失败）。2026-09-18 批 AC12「② 必点名 `defaultModel`」随之失效——旧表述删净。
 - 2026-09-18（**ACP 外部编排器兼容批 · 父侧直接执行 · 可 revert**——承设计审计 id=70 发现 12 的建议文本；批档 = `docs/batches/2026-09-18-acp-external-drivers.md`）：**F4 补登录入口**（改述 + R-A4.1–A4.3）· **新增 F8**（ACP v1 契约形状合规 · R-A5.1–A5.7）· **新增 N8**（无 TTY 可驱动）· §5 范围边界补半句（形状合规 ≠ 协议面变更）· 变更记录两处「§7 体量」自指收正（本档止于 §6）。
 - 2026-09-16（**批 1 CORE-DEFECT-FIXES** · eng-designer）：新增 **F7** 核事件 token 零进 ACP 客户端可见面（判定句 R-A3.1–A3.4——**形态判据取代事件名枚举**）；
   §1 批 1 实测：`queued` / `cancelled` 已在发射面（`subagent-scheduler.mjs:337` / `subagent-async.mjs:262`）而旧六名白名单未跟 ⇒ 经 `agent_message_chunk` 泄漏（体量读数随 §7 未落一并撤除——本档现止于 §6）。

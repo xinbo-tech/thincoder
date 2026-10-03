@@ -170,7 +170,7 @@ test("T11 desk continueTurn：async · 空队 false 直返 · 队非空降级毕
     bridge: () => ({}), postUsage: () => {}, projects: { currentCwd: () => cwd },
     ensure: async () => agent, forgetKey: () => {}, dropScope: () => {}, denyGates: () => {},
   })
-  assert.deepEqual(await driver.send("1", "one", null), { ok: true })
+  assert.equal((await driver.send("1", "one", null)).ok, true, "#841：成功回执另携 providerState")
   assert.deepEqual(await driver.send("1", "two", [img()]), { ok: true, queued: true }, "在飞 ⇒ 入队")
   runs[0].res("done") // 结算 #1 ⇒ takeOver ⇒ continueTurn（async）⇒ 降级窗
   assert.ok(await until(() => hits.n > 0), "桩收到读图请求（事件序：降级窗开）")
@@ -210,7 +210,7 @@ test("T12 desk 窗后查位：续发链降级窗内 dispose ⇒ 零续发 ∕ �
     bridge: () => ({}), postUsage: () => {}, projects: { currentCwd: () => cwd },
     ensure: async () => agent, forgetKey: () => {}, dropScope: () => {}, denyGates: () => {},
   })
-  assert.deepEqual(await driver.send("1", "one", null), { ok: true })
+  assert.equal((await driver.send("1", "one", null)).ok, true, "#841：成功回执另携 providerState")
   assert.deepEqual(await driver.send("1", "two", [img()]), { ok: true, queued: true }, "在飞 ⇒ 入队")
   runs[0].res("done") // ⇒ takeOver ⇒ continueTurn（降级窗；prepare 已先落盘）
   const tmp = join(cwd, ".thincoder", "tmp")

@@ -96,6 +96,7 @@ export function initialState() {
     pending: {},
     attachDegraded: {},
     modelCandidates: { models: [], unavailable: [] },
+    providerState: null, // #841：provider 态投影切片（三回执族写者 —— `history:page` ∥ `msg:send` 成功 ∥ 设置写成功；读面 = 输入区提示带明示行；`null` = 未达 ⇒ 零节点，禁假造）
     blocks: [],
     flowOps: [], // 流面作业单（结构变更由发生点带上 —— 写口单点 = `withFlowOp`；段 = 帧出口结算后清账）
     history: { hasOlder: false, inFlight: false, page: null },
@@ -251,6 +252,15 @@ export function setModelCandidates(state, models, unavailable) {
   const held = state?.modelCandidates ?? {}
   if (held.models === list && held.unavailable === missing) return state
   return { ...state, modelCandidates: { models: list, unavailable: missing } }
+}
+
+/** provider 态投影切片写（纯动作 —— #841「provider 态投影注」）：核三态投影 `{ state, channel, model,
+ *  reason, invalidReason }` 落切片；写者 = 三回执族三处（`renderer/page-read.mjs` 页读 ∥ `renderer/composer-wire.mjs`
+ *  `msg:send` 成功 ∥ `renderer/mount-settings-exits.mjs` 设置写成功）；载荷非对象（键缺席 ∥ 形不合）⇒
+ *  **原引用**（零写 —— 禁假造）；同引用 ⇒ 原引用。 */
+export function setProviderState(state, payload) {
+  if (payload === null || typeof payload !== "object" || Array.isArray(payload)) return state
+  return Object.is(state.providerState, payload) ? state : { ...state, providerState: payload }
 }
 
 /** 配置档读数**三态归一**（`docs/desktop/design/UI.md` §1 首启向导行）：真 = 已配 · 假 = 未配 ·

@@ -658,7 +658,7 @@ test("⑰ #543 待答期携文入队臂：撞帽询问悬挂 + interrupt(key,\"m
     const isStopped = (e) => e.ch === "ev:activity" && e.payload?.key === KEY && e.payload?.event === "stopped"
     // ── 主臂：待答期携文 ⇒ 入队（快照含该条）+ 回合判 stopped + 消费径（下一回合边界取走，原文逐字）
     const a = mk()
-    assert.deepEqual(await a.driver.send(KEY, "甲", null), { ok: true }, "起跑受理")
+    assert.equal((await a.driver.send(KEY, "甲", null)).ok, true, "起跑受理（#841：回执另携 providerState）")
     await until(() => a.gates.hang !== null)
     assert.equal(a.gates.hang !== null, true, "前置：撞帽询问已悬挂（待答期）")
     // 入队瞬间观测（微任务级轮询 —— 与 `ev:queue` 快照帧互证）
@@ -690,7 +690,7 @@ test("⑰ #543 待答期携文入队臂：撞帽询问悬挂 + interrupt(key,\"m
     a.driver.dispose(KEY)
     // ── 反例臂：裸停（无消息）⇒ 零入队 ∕ 零消费（裸停语义保持）
     const b = mk()
-    assert.deepEqual(await b.driver.send(KEY, "乙", null), { ok: true }, "起跑受理（反例）")
+    assert.equal((await b.driver.send(KEY, "乙", null)).ok, true, "起跑受理（反例；#841：回执另携 providerState）")
     await until(() => b.gates.hang !== null)
     assert.deepEqual(b.driver.interrupt(KEY), { ok: true }, "裸停受理（无消息）")
     await until(() => b.events.some(isStopped))

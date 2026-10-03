@@ -21,7 +21,7 @@
  * 单源：`docs/desktop/design/IPC.md` §2 `history:page` 定形 / 「打开态播种注」项 4。
  */
 import { applyFlags } from "./events.mjs"
-import { endBackfill, withFlowOp } from "./store.mjs"
+import { endBackfill, setProviderState, withFlowOp } from "./store.mjs"
 // 排队镜面（「回合中插入」批 —— `history:page` 回执 `queue` 键 = 冷启 ∕ 重载重建面；写者两处同源）。
 import { applyQueue } from "./queue.mjs"
 // 消化轮集清点（运行期痕**五清**之四 —— 判据单源 = 消化行族档 `renderer/views/chat-digest-rows.mjs`）。
@@ -229,6 +229,7 @@ function clearHelpLines(table, key) {
 /** 页回执应用（`docs/desktop/design/IPC.md` §2 `history:page` 定形）：`{ ok, messages, hasOlder, next, meta, flags, queue, seed? }`。
  *  `ok !== true` ⇒ **清在途**（成败皆清 —— finally 语义）且不写其余切片；
  *  `flags` 与 `meta` **同一写点**（`applyFlags` —— 状态栏对齐批；每次页读皆携 ⇒ 回填径同写）；
+ *  **provider 态**（#841）⇒ 顶层 `providerState` 切片写（每次页读皆携；键缺席 ⇒ 零写 —— 「provider 态投影注」）；
  *  `key !== activeSession` ⇒ 跳块 / 历史写（`sessionMeta[key]` / `sessionFlags[key]` 仍写）；
  *  首屏（`before == null`）⇒ 块整置 + 回底（`following = true` / `pendingNew = 0`；空页同径）+ **运行期痕五清**
  *  （停止痕 `stopMark` ∕ 到期触发痕 `timerNotice` ∕ 压缩行 `compress`（R4）∕ 消化轮集 `digest`（终态轮整清——未结末轮保；
@@ -244,7 +245,8 @@ function clearHelpLines(table, key) {
  *  **折叠并入**（回填页记录 ⇒ 折叠**复列全量**（未结轮照现 + 未结轮归属过滤）——并序 = 折叠轮居前 ∥ 现轮集随后；双份消解 = 结构性；留档批 · #719 ∥ 2026-10-01 收正 ∥ 消化重放口径批 · 2026-10-01）。 */
 export function applyPage(state, receipt, { key, before } = {}) {
   if (receipt?.ok !== true) return endBackfill(state)
-  const flagged = applyFlags(state, key, receipt.flags)
+  // provider 态投影落切片（#841 —— 「provider 态投影注」：与 `meta` ∥ `flags` 同写点家族；键缺席 ∥ 形不合 ⇒ 零写）
+  const flagged = setProviderState(applyFlags(state, key, receipt.flags), receipt.providerState)
   const meta = metaOf(receipt.meta)
   const sessionMeta = { ...(flagged.sessionMeta ?? {}), [key]: meta }
   if (key !== flagged.activeSession) return { ...flagged, sessionMeta }

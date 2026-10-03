@@ -142,6 +142,8 @@
   "settings.mcp.token": "认证令牌（Bearer）",
   "banner.configured": "ThinCoder",
   "banner.notConfigured": "⚠ 未配置 — 点击 ⚙ 设置 API 密钥",
+  "banner.defaultModelFallback": "⚠ 默认模型未设置或无效 — 正在使用可用渠道",
+  "banner.chooseDefaultModel": "选择默认模型",
   "reasoning.max": "最大",
   "reasoning.xhigh": "很高",
   "reasoning.high": "高",

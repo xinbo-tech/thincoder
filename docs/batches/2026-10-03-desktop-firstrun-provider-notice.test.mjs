@@ -83,43 +83,55 @@ const invalidAgent = (cwd, slot) => {
 test("T1 A 真因分类：闭集二值 · 结构判定（真核数据层夹具）+ 回执携 providerKind", async () => {
   const { providerKindOf } = turnInputMod
   try {
-    // ① 仅渠+key（无 defaultModel）—— 首跑缺环实况 ⇒ `defaultModel` 类（§1 ① 同夹具）
+    // ① 仅渠+key（无 defaultModel）—— #841：回退链入选 ⇒ fallback（可运行；非无效态）
     withConfig({ providers: [{ name: "p1", baseURL: "https://api.invalid/v1", model: "m1", apiKey: "k1" }] })
     const bare = coreCfg.loadConfig()
-    assert.equal(bare.provider?.name, undefined, "核读：`defaultModel` 缺 ⇒ provider = {}（修复前读数）")
-    assert.equal(typeof bare.providerInvalidReason === "string" && bare.providerInvalidReason !== "", true, "真因串在场（不出档 ∥ 分类不嗅探）")
-    assert.equal(providerKindOf({ provider: bare.provider, config: bare }), "defaultModel", "渠表非空 ∧ defaultModel 缺 ⇒ defaultModel 类")
+    assert.equal(bare.provider?.name, "p1", "#841 核读：渠持 key ⇒ 回退链入选（fallback —— 可运行）")
+    assert.equal(bare.providerState, "fallback", "核读：三态 = fallback")
+    assert.equal(bare.providerInvalidReason, null, "真因串零（provider 完整 —— 无效面不在场）")
+    assert.equal(providerKindOf({ provider: bare.provider, config: bare }), "provider", "name 在场 ⇒ provider 类（① 分支 —— 结构面）")
+    assert.equal(providerKindOf({ config: { providers: [{ name: "p1", apiKey: "k1" }] } }), "defaultModel", "有持 key 渠道 ∧ defaultModel 缺 ⇒ defaultModel 类")
+    assert.equal(providerKindOf({ config: { providers: [{ name: "p1" }] } }), "provider", "全无 key 渠道 ∧ defaultModel 缺 ⇒ 真·无 key 词（#841 换源）")
 
     // ② 渠条目结构不全（缺 baseURL）⇒ `provider` 类（修正轮发现 6 夹具）
-    withConfig({ providers: [{ name: "p1", model: "m1" }], defaultModel: "p1:m1" })
+    withConfig({ providers: [{ name: "p1", model: "m1", apiKey: "k1" }], defaultModel: "p1:m1" })
     const incomplete = coreCfg.loadConfig()
-    assert.equal(incomplete.provider?.name, "p1", "核读：name 非空（名段解析通过）")
+    assert.equal(incomplete.provider?.name, "p1", "核读：name 非空（名段解析通过 ∧ 持 key）")
     const agentA = { provider: incomplete.provider, config: incomplete }
     coreAssemble.validateProvider(agentA, incomplete)
     assert.equal(agentA._providerInvalid, true, "真核落标（缺 baseURL ⇒ 条目结构不全）")
     assert.equal(providerKindOf(agentA), "provider", "name 非空 ∧ 无效 ⇒ provider 类（修点在渠道面）")
 
-    // ③ `defaultModel` 非空而解析未过（模型段空）⇒ `defaultModel` 类
+    // ③ `defaultModel` 非空而解析未过（模型段空）—— #841：回退链入选 ⇒ fallback（非无效态）
     withConfig({ providers: [{ name: "p1", baseURL: "https://api.invalid/v1", model: "m1", apiKey: "k1" }], defaultModel: "deepseek:" })
     const emptySeg = coreCfg.loadConfig()
-    assert.equal(emptySeg.provider?.name, undefined, "核读：空模型段 ⇒ {}")
-    assert.equal(providerKindOf({ provider: emptySeg.provider, config: emptySeg }), "defaultModel", "非空而解析未过 ⇒ defaultModel 类")
+    assert.equal(emptySeg.provider?.name, "p1", "#841 核读：不可解析 ⇒ 回退链入选（fallback）")
+    assert.equal(emptySeg.providerState, "fallback", "核读：三态 = fallback")
+    assert.equal(providerKindOf({ provider: emptySeg.provider, config: emptySeg }), "provider", "name 在场 ⇒ provider 类（① 分支）")
 
     // ④ 保守三面：config 缺 ∥ 无人证面 ∥ 渠表空 ⇒ `provider`（落回现词）
     assert.equal(providerKindOf({ _providerInvalid: true }), "provider", "config 缺（测试桩）⇒ provider")
     assert.equal(providerKindOf({ config: { locale: "zh" } }), "provider", "config 无人证面 ⇒ provider")
     assert.equal(providerKindOf({ config: { locale: "zh", providers: [] } }), "provider", "渠表空 ⇒ provider（真无渠道）")
 
-    // ⑤ 回执面（A 真因透传——13:09 前口径 §1 ② 的修复：真因出档）
-    const agentB = { provider: bare.provider, config: bare, _slot: 1, history: [] }
-    coreAssemble.validateProvider(agentB, bare)
+    // ⑤ 回执面（A 真因透传——13:09 前口径 §1 ② 的修复：真因出档；#841：可达场景 = 不可运行档）
+    //   provider 类：渠全无 key ∧ defaultModel 缺（③ 换源后 ⇒ provider 词）
+    withConfig({ providers: [{ name: "p1", baseURL: "https://api.invalid/v1", model: "m1" }] })
+    const keyless = coreCfg.loadConfig()
+    assert.equal(keyless.providerState, "invalid", "前提：全无 key ⇒ invalid")
+    const agentB = { provider: keyless.provider, config: keyless, _slot: 1, history: [] }
+    coreAssemble.validateProvider(agentB, keyless)
     const one = driverOf({ ensure: async () => agentB })
-    assert.deepEqual(await one.driver.send(KEY, "甲", null), { ok: false, reason: "provider-invalid", providerKind: "defaultModel", started: false }, "回执携 providerKind（defaultModel 类）")
+    assert.deepEqual(await one.driver.send(KEY, "甲", null), { ok: false, reason: "provider-invalid", providerKind: "provider", started: false }, "回执携 providerKind（provider 类 —— 全无 key 词）")
     assert.equal(one.runs.length, 0, "零起跑")
-    const agentC = { provider: incomplete.provider, config: incomplete, _slot: 1, history: [] }
-    coreAssemble.validateProvider(agentC, incomplete)
+    //   defaultModel 类：渠全无 key ∧ defaultModel 非空（② 分支 —— 全无 key 态；持 key 时该档 = fallback）
+    withConfig({ providers: [{ name: "p1", baseURL: "https://api.invalid/v1", model: "m1" }], defaultModel: "p1:m1" })
+    const keylessDm = coreCfg.loadConfig()
+    assert.equal(keylessDm.providerState, "invalid", "前提：全无 key ⇒ invalid（defaultModel 非空）")
+    const agentC = { provider: keylessDm.provider, config: keylessDm, _slot: 1, history: [] }
+    coreAssemble.validateProvider(agentC, keylessDm)
     const two = driverOf({ ensure: async () => agentC })
-    assert.deepEqual(await two.driver.send(KEY, "乙", null), { ok: false, reason: "provider-invalid", providerKind: "provider", started: false }, "回执携 providerKind（provider 类）")
+    assert.deepEqual(await two.driver.send(KEY, "乙", null), { ok: false, reason: "provider-invalid", providerKind: "defaultModel", started: false }, "回执携 providerKind（defaultModel 类）")
     assert.equal(two.runs.length, 0, "零起跑")
   } finally {
     cfgIo._resetConfigPathForTest()
@@ -197,7 +209,9 @@ test("T3 B① 保存补写：缺失 ⇒ 补 name:model；既有非空零覆盖�
   try {
     // ① 仅渠+key ⇒ 保存新渠 ⇒ 补写 `defaultModel = 新条目 name:model`（补后运行时 provider 有效 = 复现对 B 半）
     withConfig({ providers: [{ name: "p1", baseURL: "https://api.invalid/v1", model: "m1", apiKey: "k1" }] })
-    assert.deepEqual(providerSave({ name: "p2", shape: "custom", baseURL: "https://api.invalid/v1", model: "m2", format: "openai", key: "k2" }), { ok: true, reason: null }, "保存成功径回执照旧")
+    const saved = providerSave({ name: "p2", shape: "custom", baseURL: "https://api.invalid/v1", model: "m2", format: "openai", key: "k2" })
+    assert.deepEqual({ ok: saved.ok, reason: saved.reason }, { ok: true, reason: null }, "保存成功径回执两键照旧（#841：另携 providerState —— 设置写第三刷新点）")
+    assert.equal(saved.providerState?.state, "ok", "#841：设置写回执 providerState = 写后核读")
     assert.equal(coreCfg.loadConfig().defaultModel, "p2:m2", "缺失 ⇒ 补写 name:model")
     assert.equal(coreCfg.loadConfig().provider?.name, "p2", "补后 loadConfig().provider 有效（可发送）")
     assert.equal(coreCfg.loadConfig().provider?.model, "m2", "模型段 = 条目模型")
@@ -205,17 +219,20 @@ test("T3 B① 保存补写：缺失 ⇒ 补 name:model；既有非空零覆盖�
 
     // ② 既有非空零覆盖
     withConfig({ providers: [{ name: "p1", baseURL: "https://api.invalid/v1", model: "m1", apiKey: "k1" }], defaultModel: "p1:m1" })
-    assert.deepEqual(providerSave({ name: "p3", shape: "custom", baseURL: "https://api.invalid/v1", model: "m3", format: "openai" }), { ok: true, reason: null })
+    const saved3 = providerSave({ name: "p3", shape: "custom", baseURL: "https://api.invalid/v1", model: "m3", format: "openai" })
+    assert.deepEqual({ ok: saved3.ok, reason: saved3.reason }, { ok: true, reason: null }, "#841：回执两键照旧")
     assert.equal(coreCfg.loadConfig().defaultModel, "p1:m1", "既有非空零覆盖")
 
     // ③ 无效-非空零触碰（KD-5「仅缺失」——无效态归 A 词面引导）
     withConfig({ providers: [{ name: "p1", baseURL: "https://api.invalid/v1", model: "m1", apiKey: "k1" }], defaultModel: "ghost:x" })
-    assert.deepEqual(providerSave({ name: "p4", shape: "custom", baseURL: "https://api.invalid/v1", model: "m4", format: "openai" }), { ok: true, reason: null })
+    const saved4 = providerSave({ name: "p4", shape: "custom", baseURL: "https://api.invalid/v1", model: "m4", format: "openai" })
+    assert.deepEqual({ ok: saved4.ok, reason: saved4.reason }, { ok: true, reason: null }, "#841：回执两键照旧")
     assert.equal(coreCfg.loadConfig().defaultModel, "ghost:x", "无效-非空不静默覆盖")
 
     // ④ `active:true` 支照旧（显式意图——覆盖写在册；两支排他 = 不走补写支）
     withConfig({ providers: [{ name: "p1", baseURL: "https://api.invalid/v1", model: "m1", apiKey: "k1" }], defaultModel: "p1:m1" })
-    assert.deepEqual(providerSave({ name: "p5", shape: "custom", baseURL: "https://api.invalid/v1", model: "m5", format: "openai", active: true }), { ok: true, reason: null })
+    const saved5 = providerSave({ name: "p5", shape: "custom", baseURL: "https://api.invalid/v1", model: "m5", format: "openai", active: true })
+    assert.deepEqual({ ok: saved5.ok, reason: saved5.reason }, { ok: true, reason: null }, "#841：回执两键照旧")
     assert.equal(coreCfg.loadConfig().defaultModel, "p5:m5", "active:true 支照旧（覆盖写）")
 
     // ⑤ 坏条目零写（校验失败零写盘 ∥ 补写零触发）
@@ -329,9 +346,11 @@ test("T5 C：无效装配不入表（逐发重装配）∥ 有效 ⇒ 恰一次�
       },
       run: async (agent, text) => { agent.history.push({ role: "user", content: text }) },
     })
-    assert.deepEqual(await hostValid.send(key, "丙", null), { ok: true }, "有效径放行")
+    const firstValid = await hostValid.send(key, "丙", null)
+    assert.equal(firstValid.ok, true, "有效径放行")
+    assert.equal(typeof firstValid.providerState, "object", "#841：成功回执携 providerState（发送时点刷新）")
     await until(() => hostValid.busyOf(key) === false)
-    assert.deepEqual(await hostValid.send(key, "丁", null), { ok: true }, "同键再发 ⇒ 表内复用")
+    assert.equal((await hostValid.send(key, "丁", null)).ok, true, "同键再发 ⇒ 表内复用")
     assert.equal(validCount, 1, "有效 ⇒ 装配恰一次")
     await until(() => hostValid.busyOf(key) === false)
   } finally {
@@ -424,7 +443,7 @@ test("T7 集成腿：send#1 拦（零入表）⇒ setPrefs 写槽 ⇒ send#2 放
 
     await until(() => host.busyOf(key) === false)
     const r2 = await host.send(key, "乙", null)
-    assert.deepEqual(r2, { ok: true }, "send#2：KD-8 清标 ⇒ 本次发送放行（13:17 活体路径）")
+    assert.equal(r2.ok, true, "send#2：KD-8 清标 ⇒ 本次发送放行（13:17 活体路径；#841：回执另携 providerState）")
     assert.equal(assembled.length, 2, "C 迫使修正后首发重装配")
     await until(() => host.busyOf(key) === false)
   } finally {

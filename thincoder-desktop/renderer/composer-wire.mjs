@@ -25,9 +25,11 @@
  * **#656（cap 待答径队满可见形 · KD-52 ③）**：`abortTurn` 收 `{ ok:false, reason:"queue-full" }` ⇒ 单点消费注入缝
  * `slotFullNotice(message)`（词键复用 `input.slotFull` —— i18n 零增；文本回注输入框 —— 零丢失）；其余失败因（`idle` ∕
  * `bad-key`）照旧仅诊断一行（既有形零变）。
+ * **#841（provider 态回执落写）**：`msg:send` 成功回执 `providerState` ⇒ 切片写（三路同规则：`sendDirect` ∥
+ * `sendQueued` ∥ `healLate`——键缺席 ⇒ 零写）；单源 = `docs/desktop/design/IPC.md` §2「provider 态投影注」。
  */
 import { clearRunning } from "./badges.mjs"
-import { withFlowOp } from "./store.mjs"
+import { setProviderState, withFlowOp } from "./store.mjs"
 
 /** 回执 `reason` 归一（缺 ∕ 非串 ∕ 空串 ⇒ `fallback`）—— 诊断串单源（mount 侧候选面同引）。 */
 export function reasonOf(receipt, fallback = "unknown") {
@@ -109,6 +111,8 @@ export function createComposerWire(deps = {}) {
         onLoadingReset?.() // 忙态派生读数复位（收正轮 · 行 8）：本径直写 loading 面 ⇒ 缓存须跟（否则同态 sync 被吞）
         return
       }
+      // #841：成功回执 `providerState` 落切片（键缺席/形不合 ⇒ 零写）—— 提示带明示行重派生。失败径零叠加。
+      store.set(setProviderState(store.get(), receipt.providerState))
       if (receipt.queued === true) { // 忙位读数滞后正径（端判闲 ∕ 宿主已忙 ∕ 已入挂起窗）
         retractEcho(key, attempt) // 本地块退流（待发送件归输入区带）
         if (suspIdleOf?.(store.get(), key) === true) { // 挂起空闲复位（窗内回合在飞 ⇒ 零复位——真回合门不误关）
@@ -134,6 +138,11 @@ export function createComposerWire(deps = {}) {
   function healLate(key, attempt, receipt, text) {
     if (receipt?.ok !== true) return
     let touched = false
+    // #841：迟到成功回执同携 `providerState` ⇒ 切片写（重派生受 touched 门 —— provider 态 = config 级）
+    if (receipt.providerState !== undefined) {
+      if (!Object.is(store.get().providerState, receipt.providerState)) touched = true
+      store.set(setProviderState(store.get(), receipt.providerState))
+    }
     if (inFlight.get(key) === attempt && failed !== null) { failed = null; touched = true }
     if (receipt.queued !== true) {
       store.set(withUserBlock(store.get(), key, { kind: "user", text, ts: Date.now() }))
@@ -153,6 +162,7 @@ export function createComposerWire(deps = {}) {
     const receipt = await call("msg:send", { key, text, images: toImages(payload?.images) })
     if (receipt.ok !== true) return recordFailure("queuedUserMessage", receipt)
     failed = null // B21 清（受理径 —— 收正轮 · 行 1）
+    store.set(setProviderState(store.get(), receipt.providerState)) // #841：成功回执 providerState 落切片（键缺席 ⇒ 零写）
     if (receipt.queued !== true) {
       const block = { kind: "user", text, ts: Date.now() }
       store.set(withUserBlock(store.get(), key, block))

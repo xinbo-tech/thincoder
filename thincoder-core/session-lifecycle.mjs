@@ -19,6 +19,8 @@
 
 import { existsSync } from "node:fs"
 import { resolveCompactThreshold } from "./config.mjs"
+// 槽面判据单源（#841 KD-841-2：槽渠道 key 门 + 模型面序——PROVIDER.md §6.22）。
+import { resolveProviderPlan } from "./model-ref.mjs"
 import {
   slotPath, loadManifest, saveManifest, slotDigest, writeSessionFile, getSessionId,
   writeEndMarker, sessionEnd, ownerPid, ownerPids,
@@ -158,18 +160,25 @@ export function applySession(agent, data, opts = {}) {
   } else {
     unbindRecordStore(agent)
   }
-  // ── MODEL-MERGE-SESSION 恢复（F-4——两支）──
-  const slotProvider = data.activeProvider ? agent.providers?.find((pr) => pr.name === data.activeProvider) : null
-  if (slotProvider) {
-    // ① 槽 provider 存在 → 按槽值设（不看 config）：双字段恒非空——legacy 槽 activeModel
-    //    null/空串 = 无 override——回该渠道默认模型（`providers[].model` 单值——M3）。
-    //    F-2d（MODEL-400-FIX）：`||` 非 `??`——空串也兜（activeModel="" 的槽会让 `??` 不落链 →
-    //    空槽 model 恒有值，provider.model 键不缺失）
+  // ── MODEL-MERGE-SESSION 恢复（F-4——两支；#841：槽面判据单源 = 统一解析第 1 步）──
+  // 槽渠道（`activeProvider` 在册 ∧ 持 key）⇒ 槽值设；槽无 key ∥ 不在册 ⇒ 跳过（落 config 链——
+  // 不把不可运行渠道钉进运行态；**跳过不写槽**——原槽值保留（D-S3 / KD-841-2））。判定 + 模型面
+  // 同源 = `resolveProviderPlan`（PROVIDER.md §6.22——零第二判据）。
+  const slotPlan = resolveProviderPlan({
+    providers: agent.providers,
+    defaultModel: agent.config?.defaultModel,
+    slot: { provider: data.activeProvider ?? null, model: data.activeModel ?? null },
+  })
+  if (slotPlan.source === "slot") {
+    const slotProvider = agent.providers?.find((pr) => pr.name === slotPlan.channel)
+    // ① 槽 provider 存在 → 按槽值设（不看 config）：双字段恒非空。
+    //    模型面序（#841）：槽模型 → `defaultModel` 属本渠道 ⇒ 其模型段 → 渠道默认单值
+    //    （`providers[].model`）；三档皆无 ⇒ `null`（不落 model 键——下游沿既有「model 缺失」处置）。
+    //    F-2d（MODEL-400-FIX）径保留：空串 / 非串槽模型同样兜（#638 非串 = 未登记）——slotPlan.model
+    //    已按同归一出值（单源，无第二判据）。
     const prevName = agent.activeProvider
     const prevModel = agent.activeModel ?? null
-    // #638（adoption 边界归一）：非串 `data.activeModel`（外端脏载 / 手工档）= 未登记 ⇒ 回退渠道
-    // 模型——类型脏值不入两状态字段（镜下方阈值重算门 ∕ 档位块 ∕ VSC `panel-turn-stages.mjs:53` 同形门）。
-    const slotModel = (typeof data.activeModel === "string" && data.activeModel) ? data.activeModel : slotProvider.model
+    const slotModel = slotPlan.model
     const switched = prevName !== slotProvider.name || prevModel !== slotModel
     agent.activeProvider = slotProvider.name
     agent.activeModel = slotModel
@@ -200,8 +209,8 @@ export function applySession(agent, data, opts = {}) {
     }
     return switched
   }
-  // ② 槽 provider 没了 → D-S3 保留——静默保持现状（不报错不纠正——config 有效则静默用
-  //    config/defaultModel 运行时；两方都无效由调用侧复验 validateProvider 弹重选）
+  // ② 槽无 key ∥ 不在册 → D-S3 保留——静默保持现状（落 config 链：config 统一解析产物已是
+  //    `agent.provider`；不报错不纠正——两方都无效由调用侧复验 validateProvider 弹重选）
   return false
 }
 

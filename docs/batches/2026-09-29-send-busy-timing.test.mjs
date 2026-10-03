@@ -99,7 +99,7 @@ test("T1 受理即置：恰一发 ev:activity{turn}（无帧值）；忙态 ∕ 
   assert.deepEqual(await driver.send("nope", "丙", null), { ok: false, reason: "bad-key" }, "坏键回执")
   assert.equal(turnFrames(events).length, 1, "坏键径零发射")
   gate.resolve(agent)
-  assert.deepEqual(await p1, { ok: true }, "受理起跑（成功径回执照旧）")
+  assert.equal((await p1).ok, true, "受理起跑（#841：成功回执另携 providerState）")
   await until(() => runs.length === 1)
   runs[0].res("done") // 续发链消费队内「乙」
   await until(() => runs.length === 2)

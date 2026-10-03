@@ -20,6 +20,7 @@
 
 export { PROVIDER_PRESETS as PRESETS } from "@thincoder/core/config.mjs"
 import { PROVIDER_PRESETS, findProvider, normalizeProxy } from "@thincoder/core/config.mjs"
+import { resolveChannelModel } from "@thincoder/core/model-ref.mjs"
 import { loadRaw, resolveProviders, _configPath, setProviderKey, removeProviderKeyFromConfig } from "@thincoder/core/config-io.mjs"
 
 /** Names of providers configured in config.json (custom providers are regular entries — no synthetic slots). */
@@ -100,20 +101,13 @@ export function resolveKey(entry) {
 }
 
 /**
- * Runtime model for an entry——MODEL-SELECTION 回退链（R6）：
- * ① raw.defaultModel 复合属本渠道 → 用之；② 渠道默认单值 `entry.model`；③ null。
+ * Runtime model for an entry——#841 核转口（单源 = `@thincoder/core/model-ref.mjs`
+ * `resolveChannelModel`——接入面自持解析退场）：① `defaultModel` 复合属本渠道 → 其模型段；
+ * ② 渠道默认单值 `entry.model`；③ null。
  *（不再静默回退 models[0]——候选清单字段已退场；空值合法——准入/候选经 /models 拉取）。
  */
 export function resolveDefaultModel(entry, raw) {
-  const dm = typeof raw?.defaultModel === "string" ? raw.defaultModel : ""
-  if (dm && entry) {
-    const sep = dm.indexOf(":")
-    if (sep > 0 && dm.slice(0, sep) === entry.name) {
-      const m = dm.slice(sep + 1)
-      if (m) return m
-    }
-  }
-  return typeof entry?.model === "string" && entry.model ? entry.model : null
+  return resolveChannelModel(entry, raw?.defaultModel ?? null)
 }
 
 /**

@@ -77,7 +77,7 @@ test("③ 桥出站键面 = A2 ∕ A3 ∕ A6 新名（turn ∕ maxTurns · tool-
     },
   })
   try {
-    assert.deepEqual(await host.send("1", "hello"), { ok: true })
+    assert.equal((await host.send("1", "hello")).ok, true, "#841：成功回执另携 providerState")
     for (let i = 0; i < 100 && !posts.some((p) => p.channel === "ev:usage"); i += 1) await new Promise((resolve) => setImmediate(resolve))
     const pick = (channel) => posts.filter((p) => p.channel === channel)
     // A2：turn 形 = `{ turn, maxTurns }`（旧 `n` ∕ `max` 零残留；值缺省受理帧〔#597 · `turn-driver.mjs:186` 无帧值先发〕不携两键——除外）
@@ -161,7 +161,7 @@ test("⑤ A9：两出站面（`ev:queue.items` ∕ `queueSnapshot`）串数组�
   })
   try {
     assert.deepEqual(driver.queueSnapshot("1"), [], "空队 ⇒ 空数组（键恒在场形）")
-    assert.deepEqual(await driver.send("1", "甲"), { ok: true }, "起跑（run 悬挂 ⇒ 在飞）")
+    assert.equal((await driver.send("1", "甲")).ok, true, "起跑（run 悬挂 ⇒ 在飞；#841：成功回执另携 providerState）")
     await tick(() => runs.length === 1)
     assert.deepEqual(await driver.send("1", "乙"), { ok: true, queued: true }, "在飞 ⇒ 入队（受理即推）")
     const states = events.filter((e) => e.channel === "ev:queue" && e.payload.delivered === undefined)

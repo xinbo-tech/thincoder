@@ -164,8 +164,11 @@ async function sessionResume() {
   return receipt
 }
 
-/** `history:page(payload)` ⇒ `{ ok, messages, hasOlder, next, meta, flags, queue, seed? }` ∥ `{ ok:false, reason }`：读面
+/** `history:page(payload)` ⇒ `{ ok, messages, hasOlder, next, meta, flags, queue, providerState?, seed? }` ∥ `{ ok:false, reason }`：读面
  *  转口 `session-slots.mjs`（零算法副本；cwd 取主进程当前项目内存态 —— 同会话族）。载荷 `{ key, before }`。
+ *  **provider 态投影（#841 · `docs/desktop/design/IPC.md` §2「provider 态投影注」）**：`providerState` =
+ *  核三态投影（供面 ∥ 载荷单源 = `session-slots.mjs` `providerStateOf` —— 三回执族之一）；本出口**随动透传**
+ *  （零叠加；失败径无该键。三回执族 = `history:page` ∥ `msg:send` 成功 ∥ 设置写回执 `settings:agent` ∥ `provider:save`）。
  *  **排队快照叠加（「回合中插入」批 · KD-40 ④）**：`queue` = 本键队列快照（`string[]` —— A9 串数组恰形；冷启 ∕ 重载镜面
  *  重建面；队列单源 = 宿主 —— 供面 `agentHost.queueSnapshot`）；**键恒在场**（空队 ⇒ `[]`；宿主未装配径同出空键 ——
  *  无宿主 ⇒ 队必空，形不缺 ∕ 零假造）。
@@ -189,7 +192,10 @@ function sessionPrefs(payload) { return requireAgentHost().setPrefs(payload?.key
  *  `busy`〔挂起窗附件面〕/ `queue-full`；**受理后失败径同形外加 `started:false`**〔宿主未受理 ⇒ 渲染面回收受理即置忙位〕：
  *  `provider-invalid`（**另携真因分类 `providerKind`** —— 闭集 `defaultModel` ∥ `provider`，结构判定；`reason`
  *  裸码零改 —— 首跑渠道提示修复批 · #840）/ `aborted`〔跨中止径 ∕ 降级窗后查位 ∕ 装配窗中止〕/ 装配抛〔err 文案原样〕· #597）：
- *  载荷 `{ key, text, images }`（`images` = dataURL 串列 —— A1），转口宿主回合驱动。 */
+ *  载荷 `{ key, text, images }`（`images` = dataURL 串列 —— A1），转口宿主回合驱动。
+ *  **#841（「provider 态投影注」）**：成功回执另携 `providerState`（发送时点刷新 —— 第二刷新点；供面 =
+ *  `turn-input.mjs`）；失败径零叠加；第三刷新点 = 设置写回执（`settings:agent` ∥ `provider:save` ——
+ *  处理体住 `settings.mjs` ∥ `providers.mjs`，同携 `providerState`）。 */
 function msgSend(payload) { return requireAgentHost().send(payload?.key, payload?.text, payload?.images) }
 
 /** `msg:interrupt(payload)` ⇒ `{ ok:true }` ∥ `{ ok:false, reason }`（`idle` / `bad-key` / `queue-full`〔#656 · KD-52 ②：

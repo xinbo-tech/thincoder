@@ -159,7 +159,7 @@ ACP 官方 SDK 是 npm 依赖——违反零依赖哲学，故自写精简层。
   （契约：schema `session/new` 方法描述逐字「**May** return an `auth_required` error … **if** the agent requires authentication」）。
 - `authenticate` = **确认动作**（可选）：校验 `methodId` 属于已宣告方法、校验凭据可解析，通过返回空结果 `{}`；失败返回 `-32000`。
 - `initialize.authMethods` = **对象数组**，且仅当 `clientCapabilities.auth.terminal === true` 时含 `terminal` 项（契约 MUST）；否则 `[]`。
-- **会话起不来的两种情形文案必须可行动**：① 无可用 key ⇒ 指向 `~/.thincoder/config.json` 与登录流程；② key 在位但 `defaultModel` 不可解析 ⇒ **点名 `defaultModel`**（不得含糊报「未配置」——§11.5）。
+- **凭据面文案必须可行动**：无可用 key（「无 provider/key」类）⇒ 指向 `~/.thincoder/config.json` 与登录流程；「持 key ∧ 无有效 `defaultModel`」⇒ 放行（协议面零提示行——提示通道未决；§11.5）。
 - 非 ACP 通道（TUI / `chat`）的鉴权面**零改**。
 
 ## 5. 事件桥（`thincoder-cli/src/acp/bridge.mjs`）
@@ -365,7 +365,7 @@ ACP 不转发工具输出流式增量——**父工具与子代理工具同口�
 | D14 | onWait 三消费点（TUI / headless / ACP 日志）= **调用核单源映射** | 相位值域（五相：`gate` / `retry` / `overloaded` 带秒 · `warn` / `quota` 带 message）无单源 ⇒ 三处各自 `else` 兜底，`warn` / `quota` 渲染 `undefined`。否决「三处各自补两支」（漂移根因不除）、否决「CLI 侧建 i18n 层」（新范围）。映射表与判据见 `docs/core/design/PROVIDER.md` §6.20 |
 | D15 | **认证门 = 凭据即时判据**（撤 `authenticated` 闩锁） | 契约上 `authenticate` 是**可选**流程（`NewSessionRequest` 逐字：「**May** return an `auth_required` error … **if** the agent requires authentication」）⇒ 闩锁使「不调 `authenticate` 的客户端」会话一律起不来（编排器常见姿势——本批核心缺陷）。否决「保留闩锁 + 在 `initialize` 里置真」（= 永不返回 `-32000`，把契约门变成装饰） |
 | D16 | `authMethods` = **对象数组 + `clientCapabilities.auth.terminal` 门控** | schema `AuthMethodTerminal` 逐字：「Agents **MUST** advertise this method **only when the client enabled its terminal authentication capability**」+ 必填 `id`/`name`；裸字符串 `"terminal"` 既不匹配 `anyOf` 任一分支也无 `id`。否决 `_meta['terminal-auth']` legacy 兜底（v1 已把 `terminal` 升为一等 `type`；legacy 面需 agent 侧给 `command` 绝对路径，我们拿不到可靠值——kimi `auth-methods.ts:48-63` 属旧 SDK 过渡面） |
-| D17 | 凭据面**收回文档声称**：本批**不实现** env fallback | 项目现行裁定 = 「env vars are not a key source」（`DOC-CODE-RECONCILE` A6 · 2026-09-15「实装为准改文档」），四处逐字在位（`model-picker.mjs:37` · `presets.mjs:30/64/94` · `embed-config.mjs:5` · `subagent-async.mjs:137`）；（as-of 2026-09-29）仅在 ACP 面实现 = 同一产品两套凭据语义（把一处漂移换成更深的语义分裂）。且无 TTY 的真实阻塞是 D15 与 `defaultModel` 弱文案，不是 key 来源少一条。env 通道属 CONFIG / PROVIDER 板块（§11.9 登记） |
+| D17 | 凭据面**收回文档声称**：本批**不实现** env fallback | 项目现行裁定 = 「env vars are not a key source」（`DOC-CODE-RECONCILE` A6 · 2026-09-15「实装为准改文档」），四处逐字在位（`model-picker.mjs:37` · `presets.mjs:30/64/94` · `embed-config.mjs:5` · `subagent-async.mjs:137`）；（as-of 2026-09-29）仅在 ACP 面实现 = 同一产品两套凭据语义（把一处漂移换成更深的语义分裂）。且无 TTY 的真实阻塞是 D15（认证闩锁），不是 key 来源少一条。env 通道属 CONFIG / PROVIDER 板块（§11.9 登记） |
 | D18 | **契约形状以 schema 逐字段为准**，不以「某客户端能跑就行」为准 | 本批实核出四处响应形状不合契约（§11.3 G2 族）：`agentCapabilities` 键名 · `session/new` 必填 `sessionId` · `session/prompt` 必填 `params.prompt` · `session/list` 条目 `sessionId`（另 `configOptions[]` 的 `id`/`name`）。否决「只修原 G2 的 `initialize`」——另三处使「可挂可用」不可达 |
 | D19 | fs 反向 RPC **按客户端能力位门控**，未宣告 ⇒ 回落本地 | schema `FileSystemCapabilities` 默认 `false` + 文档「MUST treat all capabilities omitted … as UNSUPPORTED」；现状无条件发 `fs/*` ⇒ 不支持者干等 30s（`bridge.mjs:106/114/291`）（as-of 2026-09-29）。判据同构 = kimi `server.ts:626-636`（皆否 ⇒ 回落 `LocalKaos`）；能力位来源 = §3.4 快照（“initialize 单次交换”语义） |
 
@@ -539,31 +539,32 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 ### 11.5 G8 · 凭据面（裁定）
 
 **现状（实核）**：`acp.mjs:39-45` `defaultIsConfigured()` = `loadConfig().provider?.apiKey`；
-而 `config.provider`（`thincoder-core/config.mjs:319-322`）= `resolveRuntimeProvider(providers, defaultModel)` ⇒ **强绑 `defaultModel`**：
-`providers[].apiKey` 齐全但 `defaultModel` 空/无效 ⇒ `provider = {}` ⇒ 判为「未配置」→ `-32000`（且**无任何文案**指向 `defaultModel`）。
+而 `config.provider`（`thincoder-core/config.mjs:332-339`）= 统一解析 `resolveProviderPlan` 产物（核单源——回退序 + 三态，机制见 `doc:PROVIDER.md:§6.22`）：
+任一渠道持 key ⇒ 核必选中 ⇒ `provider` 非空 ⇒ 门**放行**（「持 key ∧ 无有效 `defaultModel`」= `fallback` 类——协议面零提示行）；
+仅「无 provider/key」（`invalid` 类）⇒ `provider = {}` ⇒ `-32000`。
 
-**漂移面（三处，实核 `API_KEY` 全仓命中 = 0）**：本档 **§2.1 `authenticate` 行 · §4 凭据来源段**（两处声称本批已撤——旧写的行号不再适用·评审 #11）· `thincoder-cli/src/acp.mjs:69`（代码注释）· `thincoder-core/config.mjs:11`（代码注释）。
+**漂移面（三处，实核 `API_KEY` 全仓命中 = 0）**：本档 **§2.1 `authenticate` 行 · §4 凭据来源段**（两处声称本批已撤·评审 #11）· `thincoder-cli/src/acp.mjs:69`（代码注释）· `thincoder-core/config.mjs:11`（代码注释）。
 
 **裁定：收回文档声称——本批不实现 env fallback。** 理由三条：
 
 1. **与既有裁定冲突**：项目**现行**姿势 = 「**env vars are not a key source**」，且它是 2026-09-15 批 `DOC-CODE-RECONCILE`（A6）的**裁定结果**（「实装为准」→ 改文档）。实核四处逐字：
    `thincoder-cli/src/tui/model-picker.mjs:37` · `thincoder-vscode/src/extension/presets.mjs:30,64,94` · `thincoder-vscode/src/embed-config.mjs:5` · `thincoder-core/agent-tools/subagent-async.mjs:137`。
    仅在 ACP 面实现 ⇒ **同一产品两套凭据语义**（TUI 不认、ACP 认）——把一处漂移换成一处更深的语义分裂。
-2. **不是本批的瓶颈**：无 TTY 编排器的真实阻塞是 **D15（认证闩锁）** 与**下方 `defaultModel` 弱文案**，不是「key 来源少一条」。二者修完，预置 `~/.thincoder/config.json`（挂卷 / `docker cp`）即可无人值守启动——批档 §1.2 已实核该姿势可行。
+2. **不是本批的瓶颈**：无 TTY 编排器的真实阻塞是 **D15（认证闩锁）**，不是「key 来源少一条」。D15 修完，预置 `~/.thincoder/config.json`（挂卷 / `docker cp`）即可无人值守启动——批档 §1.2 已实核该姿势可行。
 3. **射程外**：env fallback 是**跨产品凭据源**变更（`loadConfig()` 被 CLI / VSC / core 三面共用），属 **CONFIG / PROVIDER 板块**，须各自的需求 + 设计轮；不等价于 ACP 面的一条修补。
 
 **同时修（G8 的真实可行动缺陷）**：
 
-- **判据拆分与 ② 的判据·落点（评审 #1 收正 · AC12 的载体）**：`isConfigured()`（布尔注入口，决定放行 / `-32000`）**不动**；**同注入位增设姐妹探针** `providerStatus()`（默认 `defaultProviderStatus`，可注入）→ `{ ok, keyPresent, reason }`：
+- **判据拆分与门失败文案**：`isConfigured()`（布尔注入口，决定放行 / `-32000`）**不动**；**同注入位姐妹探针** `providerStatus()`（默认 `defaultProviderStatus`，可注入）→ `{ ok, keyPresent, reason }`：
   - `ok` = `loadConfig().provider?.apiKey?.trim()`（与 `isConfigured()` 同源同式）；
-  - `keyPresent` = `loadConfig().providers` 中任一 `apiKey` 在位（**不经** `resolveRuntimeProvider` ⇒ `defaultModel` 不可解析时仍为真——这就是 ① / ② 的分界）；
-  - `reason` = `loadConfig().providerInvalidReason`（`config.mjs:319-322` = `defaultModelReason(...)`，`model-ref.mjs:58-66`；`defaultModel` 未设 / 无效时该串**逐字含 `defaultModel`**）——**复用既有单源文案，不新增一条**。
+  - `keyPresent` = `loadConfig().providers` 中任一 `apiKey` 在位；
+  - `reason` = `loadConfig().providerInvalidReason`（**name 面**——`config.mjs:337` 产出：入选渠道具名 ⇒ null ∕ 无入选渠道 ⇒ 非空；`doc:PROVIDER.md:§6.22`）。
   **落点 = 各受门 handler 共用的门助手**（`requireConfigured()`，住 `handlers-session.mjs` 的 `ctx`；**`session/new` 是门链首个触点**）：
   - `ok === true` ⇒ 放行；
-  - `keyPresent === false` ⇒ `-32000`，文案指向 `~/.thincoder/config.json` 的 `providers[].apiKey` **与** `thincoder acp --login`（§11.2-4 的恢复路径）——**不拼 reason**；
-  - `keyPresent === true ∧ ok === false` ⇒ `-32000`，文案 = 「凭据在位但会话无法装配：<reason>」+ 改法（`/config → 默认模型` 或 `thincoder acp --login`）——**即 AC12 要的 `defaultModel` 点名**。
+  - `keyPresent === false`（=「无 provider/key」类）⇒ `-32000`，文案指向 `~/.thincoder/config.json` 的 `providers[].apiKey` **与** `thincoder acp --login`（§11.2-4 的恢复路径）——**不拼 reason**。
+  **#841 口径（核统一解析——`doc:PROVIDER.md:§6.22`）**：任一渠道持 key ⇒ 核必选中 ⇒ `ok` 恒真——故「持 key ∧ 无有效 `defaultModel`」（`fallback` 类）**放行**（协议面**零提示行**——提示通道未决，如需另立设计），② 分支（`keyPresent === true ∧ ok === false`）**默认接线不可达**。
   （`authenticate` 失败复用同一文案；错误码恒 `-32000` ⇒ AC6 不变。）
-- **`session/new` 的装配后检查（兜底，与门互补）**：门拦的是「key 缺失 / `defaultModel` 不可解析」；装配后检查拦的是**门放行但 provider 仍不可用**的残余（如 `defaultModel` 可解析而 provider 缺 `baseURL`）。
+- **`session/new` 的装配后检查（兜底，与门互补）**：门拦的是「无 provider/key」（`invalid` 类）；装配后检查拦的是**门放行但 provider 仍不可用**的残余——结构不全（缺 `baseURL` 等——「持 key 但结构不全」归发送 ∕ 装配失败面，`doc:PROVIDER.md:§6.22`）。
   现状 `defaultCreateSession` → `assembleAgent` 带 `_providerInvalid` **照样建会话**，问题延后到首个 prompt 才以含糊错误爆出。
   改法：装配后**显式检查** `agent._providerInvalid`，真 ⇒ 返回错误（文案 = `agent._providerInvalidReason`——核 `thincoder-core/agent/assemble.mjs` `validateProvider(agent, config)` 取 `config?.providerInvalidReason`（兜底三档文案「provider 不存在 / model 缺失 / 缺少 baseURL」））而**不建半死会话**。
 - **代码注释面收正（逐字目标 · 评审 #2 站点级断言的依据）**：
@@ -589,7 +590,7 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 1. `initialize` 响应**只**含契约字段（`protocolVersion` / `agentCapabilities` / `authMethods` / `agentInfo` / `_meta`），且 `initialize` 是**唯一**能力交换点（§3.4）。
 2. **任何** `fs/*` 反向 RPC 发出前必过客户端能力位；未宣告 ⇒ 回落本地（§11.4）。
 3. `authMethods` 含 `terminal` 项 **⟺** 客户端 `clientCapabilities.auth.terminal === true`（§11.2）。
-4. 凭据门 = **即时判据**（无跨调用闩锁）；`authenticate` 是确认动作，不是前置条件；门失败文案按 `providerStatus()` 的 ① / ② 分流（§11.5——② 必点名 `defaultModel`）。
+4. 凭据门 = **即时判据**（无跨调用闩锁）；`authenticate` 是确认动作，不是前置条件；门失败 = 「无 provider/key」一档（§11.5——文案指向 `providers[].apiKey` 与 `thincoder acp --login`）；「持 key ∧ 无有效 `defaultModel`」⇒ 放行（协议面零提示行——提示通道未决，§11.5）。
 5. 会话建立响应必含 `sessionId`；prompt 入参取自 `params.prompt`。
 6. **无 TTY 可驱动（可机判）**：① 凭据在位时，**从不调 `authenticate`** 的脚本化 stdio 客户端可完成 `initialize → session/new → session/prompt`；
    ② 非 TTY 下 `thincoder acp --login` **不挂死**（快速退出码非 0 + 可读文案）；③ 支持 `auth.terminal` 的客户端可从 `authMethods` 取到 `args:["--login"]` 的完整启动信息。
@@ -598,7 +599,7 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
 
 - **顺序**：① `initialize`（能力快照 + `agentCapabilities` + `authMethods`）→ ② 会话方法响应形状（G2-5/6/7/8）→ ③ 认证门改造 + `acp --login` → ④ fs 门控 → ⑤ 文档面（§11.6）。
   ①② 必须同批落地：任一单独落地都留下**不可用**中间态（G2-5 无 id / G2-6 无 prompt）。
-- **回归面（两档 · 零修改通过）**：
+- **回归面（两档 · 零修改通过；**两档随 2026-09-28 测试树全清重置不在盘**——引文 = 迁移期引文类）**：
   ① `thincoder-cli/test/acp-channel.test.mjs`（303 行——bridge / 通道用例）：**零修改通过**（本批不动 §7.2 剥离语义与 §5 事件桥）。
   ② `thincoder-cli/test/manifest-flip-refusal.test.mjs`（`:136-184` **直驱** `buildAcpHandlers` 的 `session/load` / `session/resume`——本批改其响应形状者）：**判据 = 形状收敛不破**——该档只断言 `!r.error` / reason 句 / `createSession` 计数，**不作响应键断言**；harness 注入 `isConfigured: () => true` ⇒ 认证门改造后仍放行（评审 #8 收正）。
   ③ **拆分（§3.5）不破两档**：接缝 = `buildAcpHandlers(deps)` 签名与返回形状**不变**（handler 由新模块装配）。
@@ -645,3 +646,5 @@ id=63 盘点期「三份参考实现一致」的推断证据，本批**已升级
   ④ §11.3 补 **id 命名空间边界**行（list/load/resume/delete 认槽位号；prompt/cancel/close 认会话 id·评审 #7）；⑤ §11.8 回归面补 `manifest-flip-refusal.test.mjs`（形状收敛不破·评审 #8）；
   ⑥ §11.1 补一手 schema **实物留档指针**（SHA256 + `$def` 摘录 = 批次档 §2.8·评审 #4）；⑦ §11 补现状坐标 as-of 注 + §2.1 / §3.3 键名同步（`sessionId` / `{id,name}`）；⑧ §11.7 判据 4 补门文案分流。**逐条落位表 = 批次档 §2.8。**
 - 2026-09-29（**residuals-round2 批 · 文档面实施轮 · eng-designer**——承批档 `docs/batches/2026-09-29-residuals-round2.md` §2.3 #589）：§7.1 过滤实现两处引注收正——导出点 = `thincoder-cli/src/cli/make-agent.mjs:21`；施用点 = 核 `toolsFinalize` 缝（挂点 `:39` ∕ 施用 `:101`）。**零新语义**。
+- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 · 台账 #841）：§11.8 回归面两档标注**不在盘**（2026-09-28 测试树全清重置后——引文 = 迁移期引文类；判据原文保留为历史记录）。**零新语义**（时态 ∥ 引文类）。明细 = 批档 §2 回填轮块。
+- 2026-10-03（**#841 设计修正轮（续 #10 上抛一）· eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2）：ACP 面随核统一解析收正——§11.5（现状段 · 门失败文案段 · 裁定理由 2）· §11.7-4 · §4 凭据文案行 · D17 行；「持 key ∧ 无有效 `defaultModel`」= 放行（协议面零提示行——提示通道未决）。2026-09-18 批 AC12 随之失效（② 分支默认接线不可达）。**产品码零触**。

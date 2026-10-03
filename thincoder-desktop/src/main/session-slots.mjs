@@ -16,7 +16,8 @@
  *      与核沙箱缝自动随动，本档零副本）；
  *   ④ 历史页读面（本批增）：`pageHistory` —— 槽读转口核 `loadSlotFile`、窗口切分转口核 `historyWindow`
  *      （页尺 = 核常量 `HISTORY_PAGE_SIZE`；端层只做页游标注与元信息面 ⇒ 零算法副本；**留档批 · #719**：
- *      `{ records: true }` 开直通 —— 留档记录随页入回执）；
+ *      `{ records: true }` 开直通 —— 留档记录随页入回执）；**#841 增**：回执携 `providerState`（核三态投影 ——
+ *      三回执族同形载荷单源 = 本档 `providerStateOf`；单源 = `docs/desktop/design/IPC.md` §2「provider 态投影注」）；
  *   ⑤ 会话级偏好写面（本批增）：`writeSlotPrefs` —— 核 `setSlotPrefs` 转口（键闭集 / 值归一 / 原子写皆
  *      在核）+ 回读 `loadSlotFile` 经 `slotMeta` 出串（回执 `meta` 与 `history:page` **同源同形**）；
  *   ⑥ 打开态播种面（桌面残余批 · D17）：`pageHistory` 首屏回执携 `seed` —— `tasks` = 槽数据直取、
@@ -147,6 +148,22 @@ function slotFlags(data) {
   }
 }
 
+/** provider 态**投影**（#841 —— 三回执族同形载荷单源：`history:page` ∥ `msg:send` 成功 ∥ 设置写成功）：
+ *  核 `loadConfig` 三键 + 解析产物 ⇒ `{ state, channel, model, reason, invalidReason }`（形 ∥ 在场单源 =
+ *  `docs/desktop/design/IPC.md` §2「provider 态投影注」项 2）：`channel` ∥ `model` = **config 级**解析
+ *  产物（不可解析 ⇒ `null`）；`reason` = 核语义源串（禁串嗅探 —— 渲染面按 `state` 出词）；`invalidReason`
+ *  = 核 `providerInvalidReason` 快照（provider 不完整 ⇒ 非空 —— invalid 类合成式的一半）。纯函数。 */
+export function providerStateOf(config) {
+  const str = (value) => (typeof value === "string" && value !== "" ? value : null)
+  return {
+    state: str(config?.providerState),
+    channel: str(config?.provider?.name),
+    model: str(config?.provider?.model),
+    reason: str(config?.providerStateReason),
+    invalidReason: str(config?.providerInvalidReason),
+  }
+}
+
 /** 打开态播种面（`history:page` 回执 `seed` —— 形态 / 在场 / 缺席降级单源 = `docs/desktop/design/IPC.md`
  *  §2「打开态播种注」）：`tasks` = 槽数据直取（非数组 ⇒ `[]`——沿核水合口径 `data.tasks ?? []`）；
  *  `usage` = 核 `sessionReading` 打开态读数（有效门 = 数字 ∧ `> 0`——否则键缺席，沿 `ev:usage` 同门）；
@@ -163,7 +180,7 @@ function openingSeed(data) {
   return seed
 }
 
-/** `history:page(payload)` 读面：载荷 `{ key, before }` ⇒ `{ ok:true, messages, hasOlder, next, meta, seed? }`；
+/** `history:page(payload)` 读面：载荷 `{ key, before }` ⇒ `{ ok:true, messages, hasOlder, next, meta, flags, providerState, seed? }`；
  *  坏键 / 槽缺（含坏档、异项目档 —— 核 `loadSlotFile` 三因同出口回 null）⇒ `{ ok:false, reason }`
  *  （码 = `bad-key` / `slot-missing`，单源 `docs/desktop/design/IPC.md`:52；**不抛** —— 读面 fail-soft）。
  *  窗口切分 = 核 `historyWindow`（页尺缺省 = 核常量）—— **留档批 · #719**：以 `{ records: true }` 开直通
@@ -186,6 +203,13 @@ export function pageHistory(cwd, payload) {
   const end = before == null ? total : Math.max(0, Math.min(before, total))
   const next = hasOlder ? Math.max(0, end - HISTORY_PAGE_SIZE) : null
   const receipt = { ok: true, messages, hasOlder, next, meta: slotMeta(data), flags: slotFlags(data) }
+  // provider 态投影（#841 —— 「provider 态投影注」：每次页读皆携；配置不可读 ⇒ 键缺席 + 记错
+  // （零静默 —— 读面 fail-soft）。
+  try {
+    receipt.providerState = providerStateOf(loadConfig())
+  } catch (error) {
+    console.error("[session-slots] provider state unavailable:", error)
+  }
   if (before == null) receipt.seed = openingSeed(data)
   return receipt
 }

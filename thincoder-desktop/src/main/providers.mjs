@@ -35,6 +35,8 @@ import { proxyFetch } from "@thincoder/core/proxy.mjs"
 import { specForModel } from "@thincoder/core/model-specs.mjs"
 import { thinkOffShape } from "@thincoder/core/think-off.mjs"
 import { deepEqual, maskKey } from "./settings.mjs"
+// provider 态投影（#841 —— `provider:save` 设置写回执携 `providerState`：三回执族载荷单源，零第二实现）。
+import { providerStateOf } from "./session-slots.mjs"
 // S3 宿主忙证据面（#673）：主进程事件循环采样器（port 源 = VSC `src/extension/loop-sampler.mjs`）。
 import { overrideAdmissionIfHostBusy } from "./loop-sampler.mjs"
 
@@ -145,6 +147,8 @@ export function probeAfterWrite(name) {
  * **B① 首跑补全**（批 §2 ∥ KD-4 ∥ KD-5；`active` 非真径）：条目有效 ∧ `defaultModel` **仅缺失** ⇒
  * 同写盘执行体补写（既有非空——含无效-非空——**零覆盖**；两支排他——`active:true` 不重入补写支）。
  * 校验失败**零写盘**（核变更子内部生效前不落盘）。
+ * **#841**：成功回执另携 `providerState`（设置写回执 —— 第三刷新点：设置面修好 `defaultModel` 后
+ * 提示行即时退场；投影单源 = `session-slots.mjs` `providerStateOf`，写后核读）。
  */
 export function providerSave(payload) {
   const name = String(payload?.name ?? "").trim()
@@ -174,7 +178,7 @@ export function providerSave(payload) {
     const backfill = backfillDefaultModel(name)
     if (backfill !== null) return backfill
   }
-  return { ok: true, reason: null }
+  return { ok: true, reason: null, providerState: providerStateOf(loadConfig()) }
 }
 
 /** B① 首跑补全（`defaultModel` **仅缺失** ⇒ 补写条目 `name:model` —— 批 §2）：保存成功径消费——

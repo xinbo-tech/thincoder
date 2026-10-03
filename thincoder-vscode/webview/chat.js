@@ -124,12 +124,13 @@ document.addEventListener("click", (e) => {
 // ─── Message handling ──────────────────────────
 
 // 分发循环注册点保持原址（D-C1：非副作用 import——显式调用保 window.addEventListener("message")
-// 的注册时刻）。deps = 闭包实需面：settings 解构 13 键 + dismissLoadingScreenOnce + _loadingTimeout；
+// 的注册时刻）。deps = 闭包实需面：settings 解构 14 键（含 #841 动作钮出口 openSettings）+
+// dismissLoadingScreenOnce + _loadingTimeout；
 // 状态面四函数由 chat-messages.js 直接 import chat-status.js（`atResults` 面同改静态 import）。
 initMessageLoop({
   renderMcpList, updateMcpTools, updateMcpTestResult, updateIndexStatus, updateProviderStatus,
   updateAgentSettings, notifyAgentSettingsRefreshed, updateWebsearchSettings, updateTestProviderResult,
-  updateShellCandidates, updateProxySettings, updateProxyTestResult, showSettingsError,
+  updateShellCandidates, updateProxySettings, updateProxyTestResult, showSettingsError, openSettings,
   dismissLoadingScreenOnce, _loadingTimeout,
 })
 

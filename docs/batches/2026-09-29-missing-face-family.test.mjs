@@ -263,7 +263,7 @@ test("⑤⑥⑥驱动面：无根零动作 ∕ 有根注入 ∕ 负向锁（队�
     ensure: async () => agent, forgetKey: () => {}, dropScope: () => {}, denyGates: () => {},
     projects: { currentCwd: () => sb.cwd },
   })
-  assert.deepEqual(await driver.send(KEY, "@a.txt 第一"), { ok: true }, "首条受理即起跑")
+  assert.equal((await driver.send(KEY, "@a.txt 第一")).ok, true, "首条受理即起跑（#841：回执另携 providerState）")
   assert.ok(await waitUntil(() => runs.length === 1), "run 已入场")
   assert.ok(runs[0].includes("[File: a.txt]"), "注入恰发生在 run 入参")
   assert.deepEqual(await driver.send(KEY, "@a.txt 第二"), { ok: true, queued: true }, "忙态入队（原文入队）")
@@ -285,7 +285,7 @@ test("⑤⑥⑥驱动面：无根零动作 ∕ 有根注入 ∕ 负向锁（队�
     ensure: async () => makeAgent(sb.cwd), forgetKey: () => {}, dropScope: () => {}, denyGates: () => {},
     projects: { currentCwd: () => "" },
   })
-  assert.deepEqual(await driver2.send(KEY, "@a.txt 无根"), { ok: true }, "无根受理照常")
+  assert.equal((await driver2.send(KEY, "@a.txt 无根")).ok, true, "无根受理照常（#841：回执另携 providerState）")
   assert.ok(await waitUntil(() => runs2.length === 1), "run 已入场")
   assert.equal(runs2[0], "@a.txt 无根", "无根 ⇒ 原样（零动作）")
   assert.ok(await waitUntil(() => driver2.busyOf(KEY) === false), "无根回合收束")

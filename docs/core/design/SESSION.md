@@ -194,18 +194,17 @@
 触发场景：会话保存时用的 provider（或模型）已不存在，重进时 config 里已无 ⇒ 引导 UI 重选（TUI 不退出见 D-S2；headless 明确退出码见 D-S4）。
 
 - **模型 = 显式复合 `provider:model`**：config 顶层 `defaultModel` 是**新会话起点**；会话槽 `activeProvider` + `activeModel` 双字段恒非空——恢复 = 槽值（不看 config）。
-- **D-S1 启动前校验**：`loadConfig` 对 defaultModel 缺失 / 无效**不再抛错**——runtimeProvider 置空对象 `{}` + `providerInvalidReason`（「无效」判据收窄为三类：空值 / 缺冒号或段残缺 / 未知 provider——**不含「候选外」**）；`validateProvider` 幂等（判据 = model / baseURL / name 缺失；**MODEL_SPECS 成员资格不是 allowlist**）。不抛错、不退出；
-  （**2026-10-03 #841 收正**：defaultModel 缺失 ∥ 无效**不再等同不可运行**——`loadConfig` 运行时 provider 改取核统一解析 `resolveProviderPlan`（单源 = `doc:PROVIDER.md:§6.22`）；
-  回退序 = 槽渠道（有 key）→ defaultModel 渠道（有 key）→ 首个持 key 渠道；`providerState` 三值（`ok` ∥ `fallback` ∥ `invalid`）+ `providerStateReason`；`providerInvalidReason` 语义不变。）
-TUI 路径仅在 `invalid` 态（无 provider/key）于 `startTUI` 前置 `agent.provider = null`（`fallback` 态 provider 有效——不清）。
+- **D-S1 启动前校验**：`loadConfig` 对 defaultModel 缺失 / 无效**不再抛错**——运行时 provider = 统一解析（`resolveProviderPlan`）入选渠道；**不可运行 ⇒ 置空 `{}`** + `providerInvalidReason`（「无效」判据收窄为三类：空值 / 缺冒号或段残缺 / 未知 provider——**不含「候选外」**）；
+  `validateProvider` 幂等（判据 = model / baseURL / name 缺失；**MODEL_SPECS 成员资格不是 allowlist**）。不抛错、不退出（统一解析 ∥ `providerState` 三值 `ok` ∥ `fallback` ∥ `invalid`——单源 = `doc:PROVIDER.md:§6.22`）。
+- **TUI 路径**：仅在 `state === "invalid"`（无 provider/key）于 `startTUI` 前置 `agent.provider = null`（`fallback` 态 provider 有效——不清）。
 - **D-S2 TUI 重选流程**：`startTUI` 首帧前按核统一态分流（单源 = `doc:PROVIDER.md:§6.22`）：
-  **`invalid`**（无 provider/key——`_providerInvalid` ∥ `!agent.provider`）⇒ 弹模型选择 picker → 选定后继续正常启动；取消（Esc）⇒ **仍进入 TUI** + 提示行（措辞指渠道 ∕ 密钥——绝不因无 provider 拒绝进入）；
-  **`fallback`**（无有效 defaultModel 但可运行）⇒ **不弹 picker**（不打断）+ 提示行明示（「尚未设置默认模型：本次使用 `<渠道>:<模型>`——/config → 默认模型 设置一次；/model 仅改本会话」）；headless（D-S4）同态出 stderr 一行明示。
+  **invalid 类**（`state === "invalid"` ∨ `providerInvalidReason` 非空——合成式单源 = `doc:PROVIDER.md:§6.22`）⇒ 弹模型选择 picker → 选定后继续正常启动；取消（Esc）⇒ **仍进入 TUI** + 提示行（措辞指渠道 ∕ 密钥——绝不因无 provider 拒绝进入）；
+  **`fallback`**（无有效 defaultModel 但可运行）⇒ **不弹 picker**（不打断）+ 提示行明示（「尚未设置默认模型：本次使用 `<渠道>[:<模型>]`——/config → 默认模型 设置一次；/model 仅改本会话」；`model` 缺省 ⇒ 仅渠道名）；headless（D-S4）同态出 stderr 一行明示。
 - **D-S3 恢复优先级**（`applySession`）：① 槽 `activeProvider` 在册**且持 key** → provider/model 按槽值设（槽 `activeModel` 缺省 = `defaultModel` 属本渠道 ⇒ 其模型段，
-  否则回渠道默认单值——模型面单源 = `doc:PROVIDER.md:§6.22`）+ 重算 compactThreshold（auto 时）+ 返回 switched；**槽无 key ⇒ 跳过（落 config 链——不把不可运行渠道钉进运行态）**；
+  否则回渠道默认单值——模型面单源 = `doc:PROVIDER.md:§6.22`）+ 重算 compactThreshold（auto 时）+ 返回 switched；**槽无 key ⇒ 跳过（落 config 链——不把不可运行渠道钉进运行态；跳过不写槽——原槽值保留）**；
   ② 槽 provider 没了 → **静默保持现状**（仅当两方都无效才弹）。
-- **D-S4 headless**（`thincoder chat`）：遇无效 defaultModel → `console.error` 可读消息 + `exitSoon(1)`（不弹 UI、明确退出码）。
-- **关键决策**：检测后置 provider = null（空对象流入下游是崩溃源）；校验点收敛到 assembleAgent 之后一处；**否决**启动即退出打印「请编辑 config」· **静默**回退首个持 key 渠道（**2026-10-03 #841 收正：回退可行——必带明示**；静默形仍否）· 自动用 defaultModel 覆盖会话槽模型（用户上次明确选的模型不能静默丢）。
+- **D-S4 headless**（`thincoder chat`）：遇 **invalid 类**（无 provider/key——不可运行）⇒ `console.error` 可读消息 + `exitSoon(1)`（不弹 UI、明确退出码）；**`fallback`（无有效 defaultModel 但可运行）⇒ stderr 一行明示 + 继续运行**（不退出——D-S2 同态同解）。
+- **关键决策**：检测后置 provider = null（空对象流入下游是崩溃源）；校验点收敛到 assembleAgent 之后一处；**否决**启动即退出打印「请编辑 config」（TUI——绝不因无效态拒绝进入；headless 退出码归 D-S4）· **静默**回退首个持 key 渠道（回退可行——必带明示；静默形仍否）· 自动用 defaultModel 覆盖会话槽模型（用户上次明确选的模型不能静默丢）。
 - 模型面机制权威（清单 provider 化 / 放行语义 / 渠道准入）+ **统一解析判据（回退序 / 两态分界 / 三端明示面）→ `PROVIDER.md` §6.22**（本节只承载会话恢复侧）。
 
 ### 6.9 消息时间戳与 read_history 工具
@@ -859,7 +858,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 
 - **线选**：`contextHistory` 非空 ⇒ 取之；否则 `history` 经 `stripTruncatedToolArgs` 回退（v1 老档同径——与 `applySession` 机读线选择同判）。
 - **回声归并**：`mergeAdjacentAssistantEchoes`（`thincoder-core/context-echo.mjs`——经 `context.mjs` 转口可达；`applySession` 装线前同一步；干净输入同引用返回）。
-- **渠道合并**：槽 `activeProvider` 命中渠道表 ⇒ `{ ...entry, model: data.activeModel || entry.model }`（模型合并支 ① 同判）；未命中 ⇒ `fallback`（支 ②「静默保持现状」的装配口径 = `loadConfig().provider`）。
+- **渠道合并**：槽 `activeProvider` 在册**且持 key** ⇒ `{ ...entry, model }`——`model` 按统一模型面序取（槽 `data.activeModel` ∥ `defaultModel` 属本渠道 ⇒ 其模型段 ∥ `entry.model`；单源 = `doc:PROVIDER.md:§6.22`）；未命中（不在册 ∥ 无 key）⇒ `fallback`（支 ②「静默保持现状」的装配口径 = `loadConfig().provider`）。
 - **公式**：`historyPercent`（`thincoder-core/token-window.mjs`——与 CLI 状态行 / VSC `ctxPercentForHistory` 同式；不新增第三口径）。
 
 **判据句 3（端壳转口 · 零算法副本）**：桌面端壳 `thincoder-desktop/src/main/session-slots.mjs` 只做出参装配（`loadConfig()` → `providersList` / `provider` 传入）与有效门（数字 ∧ `> 0` ⇒ 携读数；否则键缺席）；配置不可读 / 读数计算抛 ⇒ `usage` 键缺席 + `console.error`（零静默；`history:page` 读面保持 fail-soft）。
@@ -867,7 +866,8 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 **判据句 4（消费面 = 桌面打开态播种 —— 本批范围）**：桌面「打开 / 切换既有会话」以本读数播种状态行读数切片（载波 = `history:page` 回执 `seed`；形态 / 在场条件 / 缺席降级单源 = `docs/desktop/design/IPC.md` §2「打开态播种注」）。
 本出口 = **只读**面——CLI / VSC 状态行既有读数路径（活 agent 逐帧）零改；核内 `applySession` / `saveSession` / 槽字段零动。
 
-**边界情形**：① 老槽（无 `contextHistory` / 无 `activeProvider` / 无 `activeModel`）⇒ 回退径逐条成立（线回退 / 渠道回退）——与 `applySession` 同容忍；② 渠道已删（槽 provider 不在配置）⇒ `fallback`（与「静默保持现状」同向）；③ 空历史 / 短历史 ⇒ 读数 `0`（端侧显示门不落节点）；④ 表外档位 / 类型脏载与本读数无关（只读 `provider.model` / `provider.context` 两键——不入类型判定链）。
+**边界情形**：① 老槽（无 `contextHistory` / 无 `activeProvider` / 无 `activeModel`）⇒ 回退径逐条成立（线回退 / 渠道回退）——与 `applySession` 同容忍；② 渠道已删（槽 provider 不在配置）∥ **槽渠道无 key** ⇒ `fallback`
+（与「静默保持现状」同向——key 门单源 = `doc:PROVIDER.md:§6.22`）；③ 空历史 / 短历史 ⇒ 读数 `0`（端侧显示门不落节点）；④ 表外档位 / 类型脏载与本读数无关（只读 `provider.model` / `provider.context` 两键——不入类型判定链）。
 
 **落点与测试面（本批承载）**：file 级落点表与用例表 = **批档 §2**（一次性批次材料——本档不复制）。
 尺度结论：`thincoder-core/session-lifecycle.mjs` 现读 **352 行**（as-of 2026-09-28）· 本批净增量 **≈ +34** ⇒ 落 ≈386 行——**500 硬线内 · 无档位拆分需要**；**拆档审视：承既有形态（既有裁定）**。
@@ -1279,3 +1279,6 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 - 2026-09-30（**跨线清零轮 · 设计档收正 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2 · 台账 #677）：§6.22 判据句 2 脚注收正——核侧地板已落（`session-slot-verify.mjs:99`）；「同族残余（在册另轮）」句改指端侧 `slotDigest`（`thincoder-vscode/src/extension/session-io.mjs:150`）= 消（补做地板——#677 实施清单）。**零机制改**。
 
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 · 台账 #841）：§6.8 收正——D-S1 追加统一解析（`resolveProviderPlan` ∥ `providerState` 三值）；D-S2 重写（`invalid` ⇒ picker ∥ `fallback` ⇒ 提示行不打断 + headless 明示）；D-S3 槽面（持 key 门 + 模型面序）；关键决策行「静默回退」收口（回退可行——必带明示）；机制指针 → `doc:PROVIDER.md:§6.22`。**产品码零触（设计轮）**。
+- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #9（评审轮 1 · 发现 1 ∥ 4 ∥ 5 ∥ 6 ∥ 9 ∥ 10）· eng-designer**——承批档 §3 轮次 1 · 台账 #841）：§6.8 就地收正——D-S1 正文改写（运行时 provider = 统一解析入选渠道；不可运行 ⇒ 置空 `{}`；修订式括注去净——收正史归本记录）；
+  D-S2 invalid 档改 **invalid 类合成式**（`state === "invalid"` ∨ `providerInvalidReason` 非空）∥ fallback 档补 `model` 缺省词形（仅渠道名）；D-S4 触发收正为 invalid 类（无 provider/key）并明写 fallback ⇒ stderr 一行 + 继续运行（不退出）；D-S3 补「跳过不写槽——原槽值保留」；关键决策行去修订标记。
+  §6.24 判据句 2 渠道合并式补 key 门 + 模型面序 ∥ 边界情形 ② 补「槽渠道无 key」径。**零新语义**（均为评审发现直接导出项——机制单源 = `doc:PROVIDER.md:§6.22`）。

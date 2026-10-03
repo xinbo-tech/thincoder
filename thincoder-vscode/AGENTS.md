@@ -89,7 +89,7 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 | extension → webview | `turnBreak` | — (machine-only sub-turn boundary: advisor/verify/pending-task guard pushback → the webview resets its block pointers so the next reasoning/content starts a fresh block; covers non-thinking models) |
 | extension → webview | `toolCall` / `toolResult` | `{ name, args? / text }` |
 | extension → webview | `complete` / `loading` / `aborted` / `error` | `{ text? }` |
-| extension → webview | `providerStatus` | `{ keyOk, status }` — provider 配置态与状态快照（开面板拍回批序末段：`indexStatus → providerStatus → proxySettings → websearchSettings → shellCandidates → agentSettings`；`settings.mjs:317` 发射） |
+| extension → webview | `providerStatus` | `{ keyOk, status }` — provider 配置态与状态快照（`status.providerState` = 核统一解析三态投影，`keyOk := 非 invalid 类`——#841；开面板拍回批序末段：`indexStatus → providerStatus → proxySettings → websearchSettings → shellCandidates → agentSettings`；`settings.mjs:340` 发射） |
 | extension → webview | `autoApprove` | `{ value }` (session-level AUTO state, pushed on session load and on approve-all) |
 | extension → webview | `models` | `[{ id, label, provider, group, reasoning[] }]` |
 | extension → webview | `sessions` | `{ sessions: [{ name, title, count, active, updated }], active, ledger? }` — `ledger` = session-ledger anomaly notice (`{ refused, reason, scene }`, carried only when anomalous — `../docs/vsc/design/WEBVIEW-PROTOCOL.md` §2) |

@@ -414,13 +414,13 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `complete` | src/extension/panel-callbacks.mjs:228 | webview/chat-messages.js:103 | `活` | — |
 | `compress` | src/extension/panel-callbacks.mjs:175/:176/:183 | webview/chat-messages.js:181 | `活` | — |
 | `digest` | src/extension/panel-callbacks.mjs:83/thincoder-vscode/src/extension/suspension.mjs:190/:214 | webview/chat-messages.js:189 | `活` | `status` 两型 = 一条消息（over-count #3 已证伪）；载荷增 `tier`（两档——§5 / §3.2 行 11）+ `from` / `msg`（ask 档携参——§3.2 行 14） |
-| `error` | src/extension/chat-panel.mjs:406/src/extension/panel-turn-loop.mjs:178/src/extension/panel-turn-stages.mjs:77（共 5 处） | webview/chat-messages.js:105 | `活` | — |
+| `error` | src/extension/chat-panel.mjs:406/src/extension/panel-turn-loop.mjs:178/src/extension/panel-turn-stages.mjs:74（共 5 处） | webview/chat-messages.js:105 | `活` | — |
 | `goal` | src/extension/panel-callbacks.mjs:184 | webview/chat-messages.js:225 | `活` | — |
 | `historyPage` | src/extension/panel-session.mjs:195 | webview/chat-messages.js:129 | `活` | — |
 | `i18n` | src/extension/chat-panel.mjs:192/src/extension/panel-messages.mjs:307 | webview/chat-messages.js:57 | `活` | — |
 | `indexStatus` | src/extension/panel-index.mjs:55 | webview/chat-messages.js:223 | `活` | 打开拍回批（`_pushIndexStatus`——F-W8） |
 | `ledgerNotice` | thincoder-vscode/src/extension/ledger-surface.mjs:77 | webview/chat-messages.js:130 | `活` | — |
-| `loading` | src/extension/chat-panel.mjs:413/src/extension/panel-chat.mjs:216/src/extension/panel-turn-stages.mjs:160 | webview/chat-messages.js:97 | `活` | — |
+| `loading` | src/extension/chat-panel.mjs:413/src/extension/panel-chat.mjs:216/src/extension/panel-turn-stages.mjs:156 | webview/chat-messages.js:97 | `活` | — |
 | `mcpStatus` | src/extension/panel-mcp.mjs:121 | webview/chat-messages.js:209 | `活` | — |
 | `mcpTestResult` | src/extension/panel-mcp.mjs:157 | webview/chat-messages.js:214 | `活` | — |
 | `mcpTools` | src/extension/panel-messages-settings.mjs:135/:137 | webview/chat-messages.js:213 | `活` | — |
@@ -431,7 +431,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `project` | src/extension/panel-project.mjs:27 | webview/chat-messages.js:136 | `活` | — |
 | `providerError` | thincoder-vscode/src/extension/settings.mjs:311（助手 `postProviderError`——**19 站点**汇聚——#695） | webview/chat-messages.js:154 | `活` | 载荷 v2 = `{ scope, reason }`（#640——§3.2 行 20）；段标 + 词化码 ∕ 单槽驻留（机制单源 = `SETTINGS.md` §2.15）； |
 | | | | | ②③ 列 = 2026-09-29 vsc-carryover 实施后实读 ∥ #695 批（2026-10-01）计数终值复核 |
-| `providerStatus` | thincoder-vscode/src/extension/settings.mjs:358 | webview/chat-messages.js:138 | `活` | — |
+| `providerStatus` | thincoder-vscode/src/extension/settings.mjs:340 | webview/chat-messages.js:144 | `活` | 载荷增 `status.providerState`（核统一解析三态 = `{ state, channel, model, reason, invalidReason }`——#841；`keyOk := 非 invalid 类`） |
 | `proxySettings` | src/extension/panel-settings-push.mjs:104/:93 | webview/chat-messages.js:161 | `活` | 打开拍回批（F-W8） |
 | `proxyTestResult` | src/extension/panel-messages-settings.mjs:204 | webview/chat-messages.js:164 | `活` | — |
 | `question` | src/extension/panel-callbacks.mjs:55 | webview/chat-messages.js:167 | `活` | — |
@@ -728,4 +728,5 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 - 2026-10-01（**记录清账批 · 文档面收正轮 · eng-designer**——承 `docs/batches/2026-10-01-records-docs-reconcile.md` §2 · 台账 #696）：超宽表行断行收形 14 处（按批档 §2 清单逐处落形——表行续行拆分（空首列续行）——单行 ≤300 ∥ 内容逐字零改 ∥ 条目数不变）。**零新语义**（断行）。明细 = 批档 §2。
 - 2026-10-01（**零语义清账批 #2 · 文档面轮 · eng-designer**——承批档 `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §2 · 台账 #791）：§12 表载值收正——`subagent` ∥ `subagentApproval` 两行 ② 列 `panel-subagent-relay.mjs:217/:253` ⇒ `:215/:221`（两转口发射现位）；`suspension` 行 ② 列 `panel-messages.mjs:314` ⇒ `:331`（发射现位）。**零新语义**（坐标收正）。明细 = 批档 §2。
 - 2026-10-01（**零语义清账批 #2 · 修复轮（评审轮 1 · 发现 2）· eng-designer**——承批档 `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §3 轮次 1 · 台账 #791）：§12 表两行 ② 列载值收正——`sub:*` 行 `:187/:235/:98` ⇒ `:139/:141`（键构造 ∥ 内容面发射调用现位）∥ `toolPanel` 行 `:217/:253` ⇒ `:124-126`（`emitToolPanel` 单点）。**零新语义**（坐标收正）。明细 = 批档 §2 修复轮块。
+- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 ∥ §5 · 台账 #841）：§12 表三行坐标按盘重锚（`error` 行 ② 列 `panel-turn-stages.mjs:77` ⇒ `:74` ∥ `loading` 行 ② 列 `:160` ⇒ `:156`（#841 落盘后行移）∥ `providerStatus` 行 ② 列 `thincoder-vscode/src/extension/settings.mjs:358` ⇒ `:340`、③ 列 `chat-messages.js:138` ⇒ `:144` + ⑤ 列补 `status.providerState` 载荷注）。**零新语义**（坐标 ∥ 注）。明细 = 批档 §2 回填轮块。
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 2 处 R1 改指（`suspension.mjs` 补 `thincoder-vscode/src/extension/` 前缀——变更记录行 ×2）。**零新语义**。

@@ -66,11 +66,13 @@ import { createSlashCommands } from "./slash-commands.mjs"
 export const COMPOSER_SLOT = '[data-slot="composer"]'
 
 /** 重绘触发切片：活动会话（守卫 ∕ 读面换键）· 会话级供给（模型 ∕ 档位 ∕ 模式位）· **位标（忙态派生）** ·
- *  排队（队计数）· 附件降级码（B22 行源）· 语言（词面）· 挂起窗（`susp` —— 收正轮 ③）。
+ *  排队（队计数）· 附件降级码（B22 行源）· 语言（词面）· 挂起窗（`susp` —— 收正轮 ③）· **provider 态**（#841 ——
+ *  三回执族落切片 ⇒ 提示带明示行即时重派生）。
  *  （复制面对齐批：`blocks` 随末条复制控件退场除名 —— 其唯一消费者已摘。） */
 export const COMPOSER_KEYS = Object.freeze([
   "activeSession", "sessionMeta", "sessionFlags", "tabBadges", "pending", "attachDegraded", "locale",
   "susp", // 挂起窗切片（收正轮 · ③）—— `ev:susp` 置位标 ⇒ 忙态门（`susp` 域）随动重派生
+  "providerState", // provider 态投影切片（#841）—— 页读 ∥ 发送 ∥ 设置写三径落切片 ⇒ 明示行即时重派生
 ])
 
 /** 挂起空闲判据（= 窗活跃 ∧ ¬忙 —— 挂起窗径批 ∥ 窗队列批）：窗内直发径（未起跑）⇒ 回执面据本判据复位 loading

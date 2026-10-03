@@ -10,15 +10,16 @@
  * （装配 ∕ 降级 ∕ 清理）∥ 槽键（`slotOfKey`）。**零环**：宿主 → 本档单向。
  */
 import { cleanupTurn, degradeTurnAttachments, prepareTurnAttachments } from "./attachments.mjs"
-import { slotOfKey } from "./session-slots.mjs"
+import { providerStateOf, slotOfKey } from "./session-slots.mjs"
 
 /** provider 无效**真因分类**（闭集 `defaultModel` ∥ `provider` —— `provider-invalid` 回执 `providerKind` 键单源；
  *  批档 §2 补录 ∥ 修正轮发现 6）：**结构判定**（零字符串嗅探 ∥ 零解析副本）——取装配产物**已算值**：
  *   ① `config.provider?.name` 非空 ⇒ `provider`（`defaultModel` 解析已通过 ⇒ 无效因在**条目结构**
  *      〔缺 `baseURL` 等〕——修点在渠道面）；
  *   ② `defaultModel` 非空而解析未过（未知渠 ∕ 模型段空 ∕ 形态非法）⇒ `defaultModel`；
- *   ③ `defaultModel` 缺 ∥ 空 ⇒ 渠表空 ? `provider` : `defaultModel`（渠表非空而缺 `defaultModel` = 首跑
- *      缺环实况 ⇒ 「选择模型」可修）；
+ *   ③ `defaultModel` 缺 ∥ 空 ⇒ **有持 key 渠道** ? `defaultModel` : `provider`（#841 判据换源：
+ *      「渠表非空」⇒「有持 key 渠道」——全无 key 态出真·无 key 词；持 key 判据 = `apiKey` trim 非空，
+ *      与核 `hasKey` 同判（`thincoder-core/model-ref.mjs:78-81`）、env 变量不是密钥源）；
  *   ④ `config` 不可用（测试桩 ∥ 缺）⇒ `provider`（保守——落回现词）。
  *  纯函数、零副作用（`renderer/composer-sync.mjs` 词路由按类出词）。 */
 export function providerKindOf(agent) {
@@ -30,7 +31,7 @@ export function providerKindOf(agent) {
   if (typeof defaultModel === "string" && defaultModel.trim() !== "") return "defaultModel"
   const table = Array.isArray(config.providers) ? config.providers
     : Array.isArray(config.providersList) ? config.providersList : []
-  return table.length === 0 ? "provider" : "defaultModel"
+  return table.some((p) => typeof p?.apiKey === "string" && p.apiKey.trim() !== "") ? "defaultModel" : "provider"
 }
 
 /** 回合输入面工厂（msg 双通道族 —— 见档头）：返回 `{ send, interrupt }`（逐字迁出自 `turn-driver.mjs`）。 */
@@ -41,6 +42,7 @@ export function createTurnInput({ post, ensure, flights, queued, chain, suspensi
    *  provider 无效 ⇒ provider-invalid（**另携真因分类 `providerKind`** —— 闭集 `defaultModel` ∥ `provider`，
    *  `providerKindOf` 结构判定；`reason` 裸码零改）· **装配 `await` 期跨中止 ∕ 装配窗中止（窗内 Stop）⇒ `aborted`**（#515② ∕ #597 零起跑）；
    *  否则建在飞（**受理即置忙位** —— `ev:activity{turn}` 无帧值先发，#597）、起跑、**立即回 `{ok:true}`**；失败径回执携 `started:false`。
+   *  **#841**：成功回执另携 `providerState`（发送时点刷新 —— `docs/desktop/design/IPC.md` §2「provider 态投影注」）。
    *  结算三映射（done / stopped / error）收尾清在飞 —— 三径各出一次回合尾 `ev:usage`（读数同点、终局事件之前）。
    *  三路结算**先落盘再出终局事件**（§1.14 ② —— 渲染侧收尾重读即可见本回合增量；CLI 先例 = 回合
    *  finally 尾部保存 ⇒ 中断 / 错误同样留现场）。
@@ -113,7 +115,10 @@ export function createTurnInput({ post, ensure, flights, queued, chain, suspensi
     }
     release() // 占位交接给 `executeTurn`（同刻重占 —— 零 microtask 空窗）
     drive(key, agent, attached.text, attached) // 回合驱动尾（续发径同源）
-    return attached.degraded ? { ok: true, degraded: attached.degraded } : { ok: true }
+    // #841（「provider 态投影注」）：成功回执携 `providerState` —— 发送时点刷新（渲染面落切片 ⇒
+    // 提示带明示行重派生）；失败径零叠加（沿 #840 `providerKind` 面）。
+    const providerState = providerStateOf(agent.config)
+    return attached.degraded ? { ok: true, degraded: attached.degraded, providerState } : { ok: true, providerState }
   }
 
   /** `msg:interrupt`：无在飞 ⇒ `idle`；在飞 ⇒ abort（**携核 abort 面**：`message` 非空串 ⇒ `{ interrupt: true, message }`

@@ -23,10 +23,13 @@
  * 注入 —— 作用域取值面 = 视图档 `[data-draft-scope]` 自携；失败径零声明 —— 草稿保真）。**2026-10-01 复核扫面收正批（M2）**：
  * 渠道提交成功径同清**草稿专件** `providers.draft`（复位点表第五点 —— 现役注面 = `mount-settings-segments-providers.mjs` 档头）。**P14 出值规范化**（数值 ⇒ `Number(v)`〔空 / 非数 ⇒ 零发送〕· 布尔 ⇒ `.checked` · 串 ⇒ 原串；无效值 ⇒ 控件回退现值）· **P15 具名控件即改即存**（单键 patch 直发 —— 写路随 W3 迁 `mount-settings-segments-agent.mjs`）· **F-Esc 关面板**（Esc ⇒ 既有 `closeSettings` 出口，单一实现 —— 绑定宿主 = `document`）。
  * **D39（设置菜单升级批 · #817 ∥ KD-68）**：`resetFacets(state, group)` = 本组面态复位原语（modal 开 ∥ 关**限本组** —— 开 ∥ 关面整复位同源取用）；`closeSettings` 同拍清 `modal`；F-Esc 闸增 `modal != null` 守卫（弹窗体自持卡内 Esc —— 不连带关页）。
+ * **#841（provider 态第三刷新点）**：设置写成功回执（`settings:agent` ∥ `provider:save`）携 `providerState` ⇒
+ * 同写点落切片（`useModel` ∥ `setTier` ∥ `submitChannel` 三处；键缺席 ⇒ 零写）——设置面修好 `defaultModel`
+ * 后输入区提示行即时退场；单源 = `docs/desktop/design/IPC.md` §2「provider 态投影注」项 3。
  * 纪律：零 `node:` / 零裸包 · 逐通道回执形单源 = IPC.md §2。
  */
 import { initDict } from "./i18n.mjs"
-import { configuredFlag, patchSettings } from "./store.mjs"
+import { configuredFlag, patchSettings, setProviderState } from "./store.mjs"
 import { setTheme } from "./theme.mjs"
 import { presetValue } from "./mount-onboarding.mjs"
 import { createSegmentExits } from "./mount-settings-segments.mjs"
@@ -76,6 +79,7 @@ export function createExits(deps = {}) {
       report("providers", receipt, "provider:save")
       return
     }
+    store.set(setProviderState(store.get(), receipt.providerState)) // #841：设置写回执 providerState 落切片（第三刷新点；键缺席 ⇒ 零写）
     // #652 写成功径：该表单草稿一次性作废（作用域 = 表单自携 `data-draft-scope` —— 单源在视图档；失败径零声明）。
     invalidateDrafts?.(typeof form.getAttribute === "function" ? form.getAttribute("data-draft-scope") : null)
     clearReport()
@@ -133,6 +137,7 @@ export function createExits(deps = {}) {
       report("model", receipt, "settings:agent")
       return
     }
+    store.set(setProviderState(store.get(), receipt.providerState)) // #841：设置写回执 providerState 落切片（第三刷新点；键缺席 ⇒ 零写）
     clearReport()
     setSettings({ defaultModel: composite, agent: { state: "ready", fields: listOf(receipt.fields) } })
     await loadProviders()
@@ -147,6 +152,7 @@ export function createExits(deps = {}) {
       report("model", receipt, "settings:agent")
       return
     }
+    store.set(setProviderState(store.get(), receipt.providerState)) // #841：设置写回执 providerState 落切片（第三刷新点；键缺席 ⇒ 零写）
     clearReport()
     setSettings({ agent: { state: "ready", fields: listOf(receipt.fields) } })
     await loadProviders({ models: false })

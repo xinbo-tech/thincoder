@@ -142,6 +142,8 @@
   "settings.mcp.token": "Auth token (Bearer)",
   "banner.configured": "ThinCoder",
   "banner.notConfigured": "⚠ Not configured — click ⚙ to set API keys",
+  "banner.defaultModelFallback": "⚠ Default model missing or invalid — using an available channel",
+  "banner.chooseDefaultModel": "Choose default model",
   "reasoning.max": "Maximum",
   "reasoning.xhigh": "Extra High",
   "reasoning.high": "High",

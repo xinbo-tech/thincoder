@@ -10,7 +10,7 @@ import {
   providerLabel, readProviders, sanitizeConsultModels, warnConsultModelsFiltered,
 } from "./presets.mjs"
 import { loadRaw, resolveProviders, addProviderEntry, removeProviderEntry, conflictError, CONFIG_CONFLICT_HINT } from "@thincoder/core/config-io.mjs"
-import { DEFAULTS, normalizeProxy } from "@thincoder/core/config.mjs"
+import { DEFAULTS, loadConfig, normalizeProxy } from "@thincoder/core/config.mjs"
 import { loadMcpServers, addMcpServer, updateMcpServer, removeMcpServer } from "../config-mcp.mjs"
 import { vscPersistRaw, saveAgentSettingsFromPanel, saveShellSettingsFromPanel } from "./settings-panel-write.mjs"
 import { probeProviderAdmission } from "./provider-flows.mjs"
@@ -59,11 +59,15 @@ export { shellCandidates, _setShellDetectForTest } from "@thincoder/core/shell-c
  * Status snapshot for the settings panel. Shape consumed by webview/settings.js:
  * { providers: { name: { configured, masked, baseURL, model, isActive, proxy,
  *                       available?, unavailableReason? } }, custom, labels,
- *   presets: [{ name, desc, model }] (not yet added), activeProvider }.
+ *   presets: [{ name, desc, model }] (not yet added), activeProvider, providerState }.
  * MODEL-SELECTION：每渠道行显**单值默认模型** `model`（候选清单字段已退场——候选面 =
  * 运行期 `/models` 拉取，见 fullStatus）；activeProvider = resolveProviders 的 defaultModel
  * 渠道/首渠道回退。`available:false` = M9 配置阶段探针判定该渠道不可用（unavailableReason
  * = 失败消息本体逐字长句；UI 行内标 `不可用`）。
+ * `providerState`（#841——无效渠道态逻辑归一）：核统一解析三态（`ok` ∥ `fallback` ∥ `invalid`
+ * + invalid 类合成式——单源 = `docs/core/design/PROVIDER.md` §6.22）——`loadConfig()` 三键直读
+ * 成载荷 `{ state, channel, model, reason, invalidReason }`（形 = `docs/vsc/design/WEBVIEW.md`
+ * §4.8）；配置不可读 ⇒ null（消费面按 invalid 类兜底）。
  * Providers are dynamic (config.json providers[]), so labels travel with the payload.
  */
 export function providerStatus() {
@@ -98,7 +102,21 @@ export function providerStatus() {
   const custom = providers.custom && typeof providers.custom === "object" && !Array.isArray(providers.custom)
     ? { baseURL: providers.custom.baseURL || "", model: typeof providers.custom.model === "string" ? providers.custom.model : "", hasKey: isProviderConfigured("custom") }
     : null
-  return { providers: status, custom, labels, presets, activeProvider }
+  // #841：provider 态载荷（三态 + invalid 类合成式——单源 = `docs/core/design/PROVIDER.md` §6.22）：
+  // 核 `loadConfig()` 三键直读（providerState ∥ providerStateReason ∥ providerInvalidReason）
+  // + 入选渠道面（name/model）；配置不可读 ⇒ null。
+  let providerState = null
+  try {
+    const cfg = loadConfig()
+    providerState = {
+      state: cfg.providerState,
+      channel: cfg.provider?.name ?? null,
+      model: cfg.provider?.model ?? null,
+      reason: cfg.providerStateReason ?? null,
+      invalidReason: cfg.providerInvalidReason ?? null,
+    }
+  } catch { /* config unreadable —— providerState null（消费面按 invalid 类兜底） */ }
+  return { providers: status, custom, labels, presets, activeProvider, providerState }
 }
 
 // ─── Panel message handlers (pure persistence, error string or null) ───
@@ -315,8 +333,11 @@ export function postProviderError(panel, scope, err) {
 
 export function pushStatus(panel) {
   const s = providerStatus()
-  const anyKey = Object.values(s.providers).some((p) => p.configured)
-  panel?.webview.postMessage({ type: "providerStatus", keyOk: anyKey, status: s })
+  // #841：keyOk := 非 invalid 类（= `state !== "invalid"` ∧ `invalidReason` 空——核态派生单判据，
+  // 去「有 configured 渠道」第二判据；单源 = `docs/vsc/design/WEBVIEW.md` §4.8）。
+  const ps = s.providerState
+  const keyOk = !!ps && ps.state !== "invalid" && !ps.invalidReason
+  panel?.webview.postMessage({ type: "providerStatus", keyOk, status: s })
 }
 
 // MODEL-MERGE-SESSION：最近一次 models 载荷缓存（loadSession 复用既有 "models" 消息把
@@ -341,8 +362,8 @@ export { endProbeWindow, _resetProbeWindowsForTest, _setProbeRetryDelayForTest }
 export async function fullStatus(panel, workspaceState, pushSessionsFn, prefsOverride = null) {
   pushStatus(panel)
   const s = providerStatus()
-  const anyKey = Object.values(s.providers).some((p) => p.configured)
-  if (!anyKey) return
+  // #841：无可运行渠道（核态 invalid）⇒ 零探针（去「有 configured 渠道」第二判据——核态派生单判据）
+  if (!s.providerState || s.providerState.state === "invalid") return
 
   const w = _probeWindow(panel)
   const names = providerNames().filter((n) => s.providers[n]?.configured)

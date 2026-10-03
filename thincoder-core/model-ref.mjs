@@ -11,15 +11,23 @@
  * are gone with activeProvider/activeModel (F-1), so a bare provider or bare model is
  * invalid everywhere (裁定③——裸 provider 拒——显式 p:m)。
  *
- * Runtime model resolution:
+ * Runtime model resolution (#841 单源 = resolveProviderPlan——机制全文 PROVIDER.md §6.22):
  *   parseModelRef(ref, providers)      → { ok, provider, model } | { ok:false, reason }
+ *   resolveChannelModel(entry, defaultModel)
+ *                                      → 渠道模型面单值：defaultModel 属本渠道 ⇒ 其模型段 ∥
+ *                                        渠道单值 `entry.model` ∥ null（VSC 转口面）
+ *   resolveProviderPlan({ providers, defaultModel, slot })
+ *                                      → { state, source, channel, model, provider, reason }
+ *                                        统一回退解析（纯函数 · 零 I/O——三端消费同一函数）：
+ *                                        渠道面回退序三步 + 模型面四步 + 三态 ok ∥ fallback ∥ invalid
  *   resolveRuntimeProvider(providers, defaultModel)
  *                                      → provider object with `.model` set, or {} when
  *                                        defaultModel is null/invalid (D-S1: callers mark
  *                                        _providerInvalid — never throws)
  *   defaultModelReason(providers, defaultModel) → human reason for the D-S1 marker
  *
- * Consumers: config.mjs loadConfig (re-exported as the config hub), make-agent.mjs.
+ * Consumers: config.mjs loadConfig (re-exported as the config hub), make-agent.mjs,
+ * session-lifecycle.mjs applySession（槽面）, VSC panel-turn-stages ∥ presets（核转口）。
  */
 export function parseModelRef(ref, providers) {
   if (typeof ref !== "string" || !ref.trim()) {
@@ -47,7 +55,9 @@ export function parseModelRef(ref, providers) {
 /** Resolve the runtime provider object for config.defaultModel: provider clone carrying
  *  `.model` = the parsed concrete model (API/spec consumers read provider.model unchanged).
  *  Invalid/missing defaultModel → {} (D-S1 shape — name/model/baseURL absent so
- *  validateProvider flags it; TUI/headless surface the reason from defaultModelReason). */
+ *  validateProvider flags it; TUI/headless surface the reason from defaultModelReason).
+ *  #841 后：运行时取值 = `resolveProviderPlan`（回退序 + 三态）；本函数保留为**严格单发**解析面
+ *  （零回退——解析未过即 `{}`），新码勿调。 */
 export function resolveRuntimeProvider(providers, defaultModel) {
   const r = parseModelRef(defaultModel, providers)
   if (!r.ok) return {}
@@ -63,4 +73,87 @@ export function defaultModelReason(providers, defaultModel) {
       : "未配置任何 provider"
   }
   return parseModelRef(defaultModel, list).reason ?? `defaultModel "${defaultModel}" 无效`
+}
+
+/** 「持 key」判据（#841——`providers[].apiKey` trim 后非空；env 变量不是密钥源，config.mjs 档头同判）。 */
+function hasKey(entry) {
+  return typeof entry?.apiKey === "string" && entry.apiKey.trim() !== ""
+}
+
+/** 渠道模型面单值（#841 模型面 ②③——VSC `resolveDefaultModel` 转口面 · 纯函数）：
+ *  ① `defaultModel` 解析通过 ∧ 其渠道 == `entry` ⇒ 其模型段（首冒号分割 · 双段非空 · name 相等）；
+ *  ② 渠道单值 `entry.model`（非空串）；③ `null`（合法——模型由运行期 `/models` 候选 ∥ 用户选择决定）。
+ *  @param {object|null} entry — providers[] 条目（或同形对象）
+ *  @param {string|null} defaultModel — 顶层复合串
+ *  @returns {string|null} */
+export function resolveChannelModel(entry, defaultModel) {
+  if (entry?.name) {
+    const ref = parseModelRef(defaultModel, [entry])
+    if (ref.ok) return ref.model
+  }
+  return typeof entry?.model === "string" && entry.model ? entry.model : null
+}
+
+/** 运行时渠道/模型统一解析（#841 核单源——机制全文 PROVIDER.md §6.22；纯函数 · 零 I/O）。
+ *  三端（CLI ∥ VSC ∥ 桌面）消费同一函数：`loadConfig` 运行时 provider 取值 = 本函数产物（CLI ∥ 桌面
+ *  经装配自动同源）；VSC 回合面直调（接入面自建链收正）。
+ *
+ *  **渠道面回退序**：① 会话槽渠道（`slot.provider` 在场 ∧ 在册 ∧ 持 key ⇒ `source="slot"`）；
+ *  ② defaultModel 渠道（解析通过 ∧ 该渠道持 key ⇒ `source="defaultModel"`）；③ 首个持 key 渠道
+ *  （按表序 ⇒ `source="registry"`）；④ 无 ⇒ `state="invalid"`（渠表空 ∥ 全表无 key）。
+ *  槽无 key ⇒ **跳过**（不把不可运行渠道钉进运行态）。
+ *  **模型面**：① 入选来源 = 槽 ∧ 槽带模型 ⇒ 槽模型；② defaultModel 属入选渠道 ⇒ 其模型段；
+ *  ③ 入选渠道单值；④ 无 ⇒ `null`（消费者沿既有「model 缺失」处置；明示词形随缺 = 仅渠道名）。
+ *  **三态（config 级——KD-841-3：槽改写「谁在跑」，不改「默认模型是否有效」）**：`ok` =
+ *  defaultModel 独立成立（解析通过 ∧ 该渠道持 key）⇒ 零明示；`fallback` =「无有效 defaultModel」类
+ *   ∧ 全局有可运行渠道 ⇒ 可运行 + 明示必达；`invalid` =「无 provider/key」类 ⇒ 真无效 + 引导配置。
+ *  `reason` = state≠ok 的语义源（消费者按 `state` 出词——**禁串嗅探**，非契约）。
+ *  @param {{providers?: object[], defaultModel?: string|null, slot?: {provider?: string|null, model?: string|null}|null}} [input]
+ *  @returns {{state: "ok"|"fallback"|"invalid", source: "slot"|"defaultModel"|"registry"|null, channel: string|null, model: string|null, provider: object, reason: string|null}} */
+export function resolveProviderPlan({ providers, defaultModel, slot } = {}) {
+  const list = Array.isArray(providers) ? providers : []
+  const slotName = typeof slot?.provider === "string" && slot.provider ? slot.provider : null
+  const slotModel = typeof slot?.model === "string" && slot.model ? slot.model : null
+
+  // ── 渠道面回退序（三步）──
+  let entry = null
+  let source = null
+  if (slotName) {
+    const hit = list.find((p) => p?.name === slotName)
+    if (hit && hasKey(hit)) { entry = hit; source = "slot" } // 槽无 key ⇒ 跳过（落下一档）
+  }
+  const ref = parseModelRef(defaultModel, list)
+  if (!entry && ref.ok && hasKey(ref.provider)) { entry = ref.provider; source = "defaultModel" }
+  if (!entry) {
+    const first = list.find((p) => hasKey(p))
+    if (first) { entry = first; source = "registry" }
+  }
+
+  // ── 模型面（四步；无入选渠道 ⇒ null）──
+  const model = entry ? (source === "slot" && slotModel ? slotModel : resolveChannelModel(entry, defaultModel)) : null
+
+  // ── 三态（config 级）──
+  const dmOk = ref.ok && hasKey(ref.provider)
+  const state = !entry ? "invalid" : dmOk ? "ok" : "fallback"
+
+  // ── reason（语义源 · 逐档）──
+  let reason = null
+  if (state === "invalid") {
+    reason = list.length === 0
+      ? "未配置任何 provider"
+      : "未配置 API 密钥（providers[].apiKey）——请先配置渠道密钥"
+  } else if (state === "fallback") {
+    reason = ref.ok
+      ? `defaultModel 渠道 "${ref.provider.name}" 无 API 密钥——已回退到可用渠道`
+      : defaultModelReason(list, defaultModel)
+  }
+
+  return {
+    state,
+    source,
+    channel: entry?.name ?? null,
+    model,
+    provider: entry ? { ...entry, model } : {},
+    reason,
+  }
 }

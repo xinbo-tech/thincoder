@@ -294,7 +294,7 @@ Ctrl+I（interrupt）面与视觉模型 / 无图路径零动；`maxTurns` 不改
 ② 代理 = provider 级 `proxy: true` **且** 全局 `proxy.model === true`（`injectProxy` 语义）→ 请求经代理（单键不生效）
 ③ **并发写防冲突（F5b）**：`loadRaw` 记 mtimeMs + size 基线、`saveRaw` 写前重 stat 不符 → 放弃 `{reason: "mtime-conflict"}` + `.bak-{ts}` 轮转（副本不自动合并）+ `CONFIG_CONFLICT_HINT` 提示重试 ④ 旧版迁移：
 VS Code settings 的 `thincoder.providers` + SecretStorage 一次性迁入 config.json（`thincoder-vscode/src/config-migrate.mjs` `migrateCore`——不覆盖已有 apiKey、preset 名自动重建）后清 legacy 存储；嵌入 key 一并迁移 ⑤ `resolveDefaultModel`（`thincoder-vscode/src/extension/presets.mjs:106`）回退链 =
-① defaultModel 复合属本渠道 ② 渠道单值 `entry.model` ③ `null`——**不再静默回退 `models[0]`**（§6.16 M7 同源 · VSC 独立实现）；v2 迁移 `delete p.models` / `p.model` 单值恢复。
+① defaultModel 复合属本渠道 ② 渠道单值 `entry.model` ③ `null`——**不再静默回退 `models[0]`**（§6.16 M7 同源 · **核转口（#841）**）；v2 迁移 `delete p.models` / `p.model` 单值恢复。
 
 **Preset 预设表（核单源 · 2026-09-20 实读取一侧）**：`PROVIDER_PRESETS` 表 = **核单源**（`thincoder-core/config-presets.mjs`），
 VSC 侧取一侧复用（`thincoder-vscode/src/extension/presets.mjs:9` 注 + `:21` re-export；端壳无镜像文件）——**22 preset**（deepseek / kimi / kimi-code /
@@ -408,7 +408,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 
 「**持 key**」判据 = `providers[].apiKey` trim 后非空（`config.mjs:11`——env 变量不是密钥源）；槽渠道无 key ⇒ **跳过**（不把不可运行渠道钉进运行态——与 VSC 现行链同判）。
 
-**模型面（逐步）**：① 入选来源 = 槽 ∧ 槽带模型 ⇒ 槽模型；② `defaultModel` 解析通过 ∧ 其渠道 == 入选渠道 ⇒ defaultModel 模型段；③ 入选渠道单值 `providers[].model`；④ 无 ⇒ `null`（合法——模型由运行期 `/models` 候选 ∥ 用户选择决定；消费者沿既有「model 缺失」处置）。
+**模型面（逐步）**：① 入选来源 = 槽 ∧ 槽带模型 ⇒ 槽模型；② `defaultModel` 解析通过 ∧ 其渠道 == 入选渠道 ⇒ defaultModel 模型段；③ 入选渠道单值 `providers[].model`；④ 无 ⇒ `null`（合法——模型由运行期 `/models` 候选 ∥ 用户选择决定；消费者沿既有「model 缺失」处置；**明示词形随缺**——仅渠道名，见下表）。
 
 **两类状态分界（明示口径 · 本节的判据核心）**：
 
@@ -416,7 +416,10 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - `fallback` —「**无有效 defaultModel**」类：`defaultModel` 缺 ∥ 不可解析 ∥ 所指渠道不在册 ∥ 所指渠道无 key；**且**全局存在可运行渠道 ⇒ **可运行 + 明示必达**；
 - `invalid` —「**无 provider/key**」类：渠表空 ∥ 全表无 key ⇒ **真无效 + 引导配置**。
 
-`loadConfig` 落三键：`provider` = `plan.provider`；`providerState`（三值：`ok` ∥ `fallback` ∥ `invalid`）+ `providerStateReason`（state≠ok 时非空）；`providerInvalidReason` 语义不变（provider 不完整时非空——装配校验 `validateProvider` 消费面照旧）。
+**端面「invalid 类」合成式（U-4 裁：两字段并存，不合并）**：`providerState`（key 面）∥ `providerInvalidReason`（**name 面**——`config.mjs:337` 产出：入选渠道具名 ⇒ null ∕ 无入选渠道 ⇒ 非空；语义不变）为**两字段并存**；端面「invalid 类」（= 出导引节点的类）判据 = **`state === "invalid"` ∨ `providerInvalidReason` 非空**（三端同一合成式 · 单判据）。
+「持 key 但结构不全」（缺 `baseURL` 等）**不在合成式内**——该角归**发送 ∕ 装配失败面**（装配标记 `_providerInvalid` 载体：桌面发送门〔#840 `provider` 类词〕∥ ACP `session/new` 装配后检查；CLI ∥ VSC 落发送期失败面），非导引节点——与断言③负向锁互洽。
+
+`loadConfig` 落三键：`provider` = `plan.provider`；`providerState`（三值：`ok` ∥ `fallback` ∥ `invalid`）+ `providerStateReason`（state≠ok 时非空）；`providerInvalidReason` 语义不变（无入选渠道时非空——`config.mjs:337` 产出，装配校验 `validateProvider` 消费面照旧〔reason 优先源〕）。
 
 **reason 文本（语义源 · 逐档）**：`fallback` = 沿用 `defaultModelReason` 现两档（缺 ∥ 无效）+ 新档「`defaultModel` 渠道 "<name>" 无 API 密钥——已回退到可用渠道」；`invalid` = 渠表空 ⇒ 现串「未配置任何 provider」∥ 有渠无 key ⇒ 新档「未配置 API 密钥（providers[].apiKey）——请先配置渠道密钥」。
 
@@ -424,22 +427,25 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 
 | 端 | 明示面 | `fallback` | `invalid` | 动作 |
 |---|---|---|---|---|
-| CLI | 启动提示行（TUI）∥ stderr 一行（headless） | 新行：「尚未设置默认模型：本次使用 `<渠道>:<模型>`——/config → 默认模型 设置一次；/model 仅改本会话」 | D-S2 picker + 提示行（措辞收正 = 渠道/密钥） | 选择器（invalid）· `/model` ∥ `/config` 入口（fallback） |
-| VSC | 横幅 `#provider-banner` | 新键 `banner.defaultModelFallback` + 动作钮「选择默认模型」→ 设置面 | 现词 `banner.notConfigured`（不变） | 钮 → 设置面默认模型段 |
+| CLI | 启动提示行（TUI）∥ stderr 一行（headless） | 新行：「尚未设置默认模型：本次使用 `<渠道>[:<模型>]`——/config → 默认模型 设置一次；/model 仅改本会话」（`model` 缺省 ⇒ 仅渠道名） | invalid 类（合成式）⇒ D-S2 picker + 提示行（措辞收正 = 渠道/密钥）；headless = D-S4（stderr 一行 + exit 1） | 选择器（invalid 类）· `/model` ∥ `/config` 入口（fallback） |
+| VSC | 横幅 `#provider-banner` | 新键 `banner.defaultModelFallback`（zh ∥ en 字面 = `doc:WEBVIEW.md:§4.8`）+ 动作钮「选择默认模型」→ 设置面 | 现词 `banner.notConfigured`（逐字不变——invalid 类合成式命中） | 钮 → 设置面默认模型段 |
 | 桌面 | composer 提示带行 | 词 `composer.send.noDefaultModel`（**逐字复用 #840 键**——词面-only） | 发送失败行现词（#840 面） | —（零动作面） |
 
 **VSC 收正（可用性不得降）**：`resolveTurnStage` 的接入面自建链改调核函数（`slot` = 显式 `providerName` ∥ 槽复合——key 门在核内）；`presets.mjs` `resolveDefaultModel` 改核转口。「渠道 + key 已配」在三端仍**直接可发**——事实标准不回退。
 
-**可机检断言形**：① 解析一致——夹具矩阵每行 P（临时配置路径缝 `_setConfigPathForTest`）：`loadConfig()` 的 `{state, provider.name, provider.model}`
-≡ VSC `resolveTurnStage` 核函数读 ≡ 桌面同径读（逐字段相等）；② 单源——VSC 树零自建扫描链（源码判据）+ CLI ∥ 桌面取值点唯一 = `loadConfig().provider`；
-③ 明示必达——`state==="fallback"` ⇒ 各端明示节点在场；`state==="ok"` ⇒ 零节点（负向锁）。机检件 = 批档 `docs/batches/2026-10-03-provider-invalid-unify.test.mjs`（随批留存）。
+**第四消费面（ACP）注（本批明写边界）**：`thincoder-cli/src/acp.mjs` 门判据（`defaultIsConfigured` = `loadConfig().provider?.apiKey?.trim()`）随核取值切换而变——「持 key ∧ 无有效 `defaultModel`」（`fallback` 类）由「拒（携 reason）」变「**放行**」，协议面**零提示行**（本批明示射程 = 三端 UI 面；ACP = 外部编排器协议面，无既有提示通道）。
+此变 = U3 判据的**自然导出**（可运行 ⇒ 放行——**已认账行为变更，非缺陷**）；结构不全角仍由装配后检查兜底（`handlers-session.mjs` `session/new`：`_providerInvalid` ⇒ `-32000` + 真因）。协议面是否补提示通道 = **未决——如需，另立设计**（不在本批）。
+
+**可机检断言形**：① 解析一致（**运行面 + config 级两腿**）——夹具矩阵每行（临时配置路径缝 `_setConfigPathForTest`）：**运行面** = 三端同喂**同一假槽**（VSC `resolveTurnStage` 核读 ∥ 桌面核装配读 ∥ 核 `resolveProviderPlan` 直读）按 `{state, source, channel, model, provider.name, provider.model}` **逐字段相等**；
+**config 级**（`loadConfig()` 无槽入参——KD-841-3 状态 = config 级）= **只比 `state`**；含槽行（S9）单列口径 = config 级 `state` 断言（`ok`）∥ 运行渠道断言归假槽腿（三端同喂）；② 单源——VSC 树零自建扫描链（源码判据）+ CLI ∥ 桌面取值点唯一 = `loadConfig().provider`；
+③ 明示必达——`state === "fallback"` ⇒ 各端明示节点在场（`model === null` 档 = 词形仅渠道名——CLI 剔 `:<模型>` 段 ∥ VSC ∥ 桌面键面不含模型名）；`state === "ok"` ∧ `providerInvalidReason` 空 ⇒ 零节点（负向锁）；invalid 类（合成式）⇒ 端面导引节点（CLI picker ∥ VSC 现词 ∥ 桌面发送失败面）。机检件 = 批档 `docs/batches/2026-10-03-provider-invalid-unify.test.mjs`（随批留存）。
 
 **关键决策（含被否）**：
 
 - **KD-841-1 落点 = 核导出统一解析 + `loadConfig` 取值切换**（非「核内实现 + 端面缝」）：VSC 回合面要槽复合（config 级函数吃不下）——若只在核内实现，VSC 需端面复刻链（正是被归一对象）。被否：新核档（`model-ref.mjs` 已是解析面，禁第二面）；纯 loadConfig 内联（VSC 不可达）。
 - **KD-841-2 槽渠道 key 门入核**（统一序第 1 步「槽渠道（有 key）」）⇒ `applySession` 槽应用面同收（CLI ∥ 桌面共享）；被否：槽面保持无 key 门（同一态三端再分叉——VSC 事实标准为有 key）。
 - **KD-841-3 状态 = config 级**（slot 不参与三态判定——会话槽是会话选择，不是「默认模型缺失」的证据）：槽改写「谁在跑」，不改「默认模型是否有效」。被否：按最终运行渠道是否 == defaultModel 渠道判（用户每换一次会话模型就误报）。
-- **KD-841-4 结构要件（`baseURL` 等）不并入回退序**：仍归 `validateProvider` 单判据（防第二判据）；入选渠道结构不全 ⇒ 落既有标记 ⇒ 归「真无效 + 引导配置」类（#840 `provider` 类词面照旧）。被否：链内预检结构（判据增殖 + 与校验点语义重叠）。
+- **KD-841-4 结构要件（`baseURL` 等）不并入回退序**：仍归 `validateProvider` 单判据（防第二判据）；入选渠道结构不全 ⇒ 落既有标记（`_providerInvalid`）⇒ 归**发送 ∕ 装配失败面**（#840 `provider` 类词面照旧——非启动导引面）。被否：链内预检结构（判据增殖 + 与校验点语义重叠）。
 
 **边界（不做）**：改用户既有非空 `defaultModel` 的语义；静默兜底（U3 必带明示）；`env` 变量作密钥源；运行期 `/models` 探测；渠条目结构校验改判；发布链。
 
@@ -557,3 +563,9 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 · 台账 #841）：新增 **§6.22 运行时渠道/模型统一解析（三端同源 · U3 宽松+明示）**——核导出 `resolveProviderPlan`（回退序三步 + 模型面四步 + 两态分界 + reason 逐档 + 三端明示面对照表 + KD-841-1–4 + 边界）。**产品码零触（设计轮）**。
 
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #8（用户 13:43 更正——13:09 口径系拼音误打）· eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 更正块 · 台账 #841）：§6.22 三端明示面对照表**桌面行收正为词面-only 终形**——`fallback` 格去「+ 钮 `composer.send.chooseModel`」（该句柄实不可达——与 #840 同病）∥ 动作格「钮 → 模型菜单（同钮同门）」⇒ **—（零动作面）**；表头「（按钮倾向）」⇒「动作」（误读源词去）。CLI ∥ VSC 动作格零改（不在本更正射程——误读波及面只及桌面明示行）。**产品码零触（修正轮）**。
+
+- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #9（评审轮 1 · 发现 1–5 ∥ 9 ∥ 12）· eng-designer**——承批档 §3 轮次 1 · 台账 #841）：§6.22 补**端面「invalid 类」合成式**（`state === "invalid"` ∨ `providerInvalidReason` 非空——U-4 裁：两字段并存，不合并）；
+  模型面 ④ 补 `model=null` 词形（仅渠道名）· 三端表 CLI 格补 `[:<模型>]` 缺省形与 headless/invalid 格（D-S4）；可机检断言①按**运行面（三端同喂假槽）∥ config 级（只比 `state`）**两腿钉定 + 断言③补 `model=null` 档与 invalid 类导引；§6.19 ⑤ 括注「VSC 独立实现」⇒「核转口（#841）」。**产品码零触（修正轮）**。
+
+- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #10（实施轮 A 单漂移回裁）· eng-designer**——承批档 §5 上抛 1 ∥ 2 · 台账 #841）：§6.22 `providerInvalidReason` 面收正为 **name 面**（`config.mjs:337`——「持 key 但结构不全」**不在 invalid 类合成式内**，归发送 ∕ 装配失败面；`:422` 括注 ∥ KD-841-4 同述连改）；
+  新增 **第四消费面（ACP）注**——门判据随核切换（拒 ⇒ 放行）= U3 自然导出（行为变更在案，非缺陷）；协议面提示通道未决 ⇒ 如需另立设计。**产品码零触（修正轮）**。

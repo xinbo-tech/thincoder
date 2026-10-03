@@ -3,7 +3,7 @@
  * 自 chat.js 迁出 `window.addEventListener("message", …)` 整块（switch 分发单表）——块体逐字
  * 搬移（仅缩进）；**注册仍在 chat.js 现址**（D-C1：本档零副作用注册——只导出 initMessageLoop，
  * 由 chat.js 在原址显式调用以保注册时刻与顺序）。
- * deps = 闭包实需面（settings 解构 13 键 + showAtDropdown + dismissLoadingScreenOnce +
+ * deps = 闭包实需面（settings 解构 14 键 + showAtDropdown + dismissLoadingScreenOnce +
  * _loadingTimeout）；其余协作面（ui / streaming / panels / … 与 chat-status 四函数）本档直接 import。
  */
 import { ctx, S } from "./state.js"
@@ -43,13 +43,13 @@ const markOutput = () => { S._lastOutputAt = Date.now() }
  *            notifyAgentSettingsRefreshed: Function, updateWebsearchSettings: Function,
  *            updateTestProviderResult: Function, updateShellCandidates: Function,
  *            updateProxySettings: Function, updateProxyTestResult: Function, showSettingsError: Function,
- *            dismissLoadingScreenOnce: Function, _loadingTimeout: any }} deps */
+ *            openSettings: Function, dismissLoadingScreenOnce: Function, _loadingTimeout: any }} deps */
 export function initMessageLoop(deps) {
   const {
     renderMcpList, updateMcpTools, updateMcpTestResult, updateIndexStatus, updateProviderStatus,
     updateAgentSettings, notifyAgentSettingsRefreshed, updateWebsearchSettings, updateTestProviderResult,
     updateShellCandidates, updateProxySettings, updateProxyTestResult, showSettingsError,
-    dismissLoadingScreenOnce, _loadingTimeout,
+    openSettings, dismissLoadingScreenOnce, _loadingTimeout,
   } = deps
   window.addEventListener("message", (e) => {
     const m = e.data
@@ -144,8 +144,9 @@ export function initMessageLoop(deps) {
       case "providerStatus":
         S._lastProviderStatus = m.status || {}
         updateProviderStatus(S._lastProviderStatus)
-        ctx._keyOk = m.keyOk === true
-        showBanner(ctx, ctx._keyOk ? t("banner.configured") : t("banner.notConfigured"), ctx._keyOk)
+        ctx._keyOk = m.keyOk === true // keyOk := 非 invalid 类（宿主核态派生——#841；WEBVIEW.md §4.8）
+        // #841 三态横幅（state 单判据直映射）+ 动作钮出口 = openSettings（设置面默认模型段）
+        showBanner(ctx, S._lastProviderStatus.providerState ?? null, openSettings)
         clearTimeout(_loadingTimeout); dismissLoadingScreenOnce() // 启动加载画面移除（握手四件最后一环到达——2026-09-21）
         maybeShowWelcome(S._lastProviderStatus, m.keyOk)
         updateWelcomeStatus(ctx) // keyOk 到达可能晚于 showWelcome（初始渲染）——刷新欢迎条文案态

@@ -196,11 +196,12 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 
 ### 4.8 provider 态横幅三态 + 动作（无有效 defaultModel · 2026-10-03 · 台账 #841）
 
-- **判据单源 = `docs/core/design/PROVIDER.md` §6.22**（U3 宽松+明示：`ok` ∥ `fallback` ∥ `invalid` 三态；本段只落本端呈现面与数据面）。
-- **数据面**：`providerStatus` 消息载荷增 `providerState` 键（`{ state, channel, model, reason }`——主侧 = `thincoder-vscode/src/extension/settings.mjs` `providerStatus()` ∥ `pushStatus`，经核统一解析出值）；刷新点 = `pushStatus` 现推点（面板就绪 / provider 写后 / 准入落账后）——**零新通道**。
-- **横幅三态**（`#provider-banner` · `webview/ui.js` `showBanner`）：`keyOk` 假 ⇒ 现键 `banner.notConfigured` 逐字不变；
-  `keyOk` 真 ∧ `state === "fallback"` ⇒ **新键 `banner.defaultModelFallback`**（zh `⚠ 默认模型未设置或无效 — 正在使用渠道默认模型` ∥ en 成对）+ **动作钮**「选择默认模型」（新键 `banner.chooseDefaultModel`）→ `openSettings()`（设置面默认模型段）；
-  `keyOk` 真 ∧ `state === "ok"` ⇒ 现键 `banner.configured`（不变）。
+- **判据单源 = `docs/core/design/PROVIDER.md` §6.22**（U3 宽松+明示：`ok` ∥ `fallback` ∥ `invalid` 三态 + **invalid 类合成式**；本段只落本端呈现面与数据面）。
+- **数据面**：`providerStatus` 消息载荷增 `providerState` 键（`{ state, channel, model, reason, invalidReason }`——主侧 = `thincoder-vscode/src/extension/settings.mjs` `providerStatus()` ∥ `pushStatus`，经核统一解析出值 + `providerInvalidReason` 快照）；刷新点 = `pushStatus` 现推点（面板就绪 / provider 写后 / 准入落账后）——**零新通道**。
+- **横幅三态**（`#provider-banner` · `webview/ui.js` `showBanner`——**state 单判据直映射**）：**invalid 类**（`state === "invalid"` ∨ `invalidReason` 非空）⇒ 现键 `banner.notConfigured` 逐字不变；
+  `state === "fallback"` ⇒ **新键 `banner.defaultModelFallback`**（zh `⚠ 默认模型未设置或无效 — 正在使用可用渠道` ∥ en `⚠ Default model missing or invalid — using an available channel`）+ **动作钮**「选择默认模型」（新键 `banner.chooseDefaultModel`——zh `选择默认模型` ∥ en `Choose default model`）→ `openSettings()`（设置面默认模型段）；
+  `state === "ok"` ⇒ 现键 `banner.configured`（不变）。
+- **`keyOk` 收正（判据钉定）**：`keyOk := 非 invalid 类`（= `state !== "invalid"` ∧ `invalidReason` 空）——端侧布尔收正为**核态派生（单判据）**，去第二判据；欢迎面 ∥ 向导面既有消费随此派生（`notConfigured` ⟺ invalid 类）。
 - **动作落点避死端**：钮不开会话级模型菜单（写会话槽不修 `defaultModel`）；真修口 = 设置面默认模型段（与 `#840` 桌面 KD-3 同判）。
 - **链收正（机制面，本段不重述）**：`panel-turn-stages.mjs` 接入面自建回退链改核函数 ∥ `presets.mjs` `resolveDefaultModel` 改核转口（单源 = `doc:PROVIDER.md:§6.22`）；**可用性不得降**（渠道+key 已配 ⇒ 直接可发——事实标准不回退）。
 - **边界**：发送失败面（`error.provider` 词 ∥ `needsSetup` 径）零改；welcome 面板两键零改；`i18n-dom` 横幅键刷新面随三态键扩（`data-banner-key` 取值闭集）。
@@ -810,3 +811,4 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-10-01（**消化重放口径批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-01-digest-replay-choices.md` §1 ∥ §2 · 台账 #771 ∥ #773）：§5.1 ∥ §5.7 复列句收正——**复列 = 全量（未结轮照现——可证面 = 轮间 ∥ 末页）**（轮锚 = 起跑记录；终态元素需 `n`）；容差① 收正（不可证面零产）。**零机制改**（口径收正）。明细 = 批档 §2。
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 7 锚销项（R1 改指 4——`suspension.mjs` 补 `thincoder-vscode/src/extension/` 前缀〔§5.7 写点行 ∥ 变更记录 3 行〕；R3 裸名化 1——死名 `webview-env.mjs`（§11 用例基建列）；R5 行注记 1（「机检豁免——用例退场登记」入 §5.6 判据行））；宽面 9 行折行（132 ∥ 190 ∥ 219 ∥ 225 ∥ 226 ∥ 418 ∥ 424 ∥ 468 ∥ 471——语义零改）。**零新语义**。
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 · 台账 #841）：新增 **§4.8 provider 态横幅三态 + 动作**（`providerState` 载荷 ∥ 三态横幅 ∥ 动作钮 → 设置面 ∥ 链收正指针）。**产品码零触（设计轮）**。机制单源 = `docs/core/design/PROVIDER.md` §6.22。
+- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #9（评审轮 1 · 发现 3 ∥ 4 ∥ 5 ∥ 11）· eng-designer**——承批档 §3 轮次 1 · 台账 #841）：§4.8 收正——数据面载荷补 `invalidReason`（合成式可算）；横幅三态改 **state 单判据直映射**（首支 = invalid 类合成式）· 两新键 **zh ∥ en 字面钉定**（`banner.defaultModelFallback` zh 改「正在使用可用渠道」——`model=null` 档同词）；新增 **`keyOk` 判据钉定**（`keyOk := 非 invalid 类`——核态派生，去第二判据）。**产品码零触（修正轮）**。

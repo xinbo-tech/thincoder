@@ -38,6 +38,8 @@ import { _checkKnownKeyValue } from "@thincoder/core/agent-tools/settings.mjs"
 import { readIndexCounts } from "./index-status.mjs"
 // 值面 ∕ 遮罩族（R7 先拆后改拆出 —— 导出面零改：本档同名 re-export）。
 import { SLOT_AUTHORITY_PATHS, agentFields, deepEqual, deleteKeyPath, isConfigured, setKeyPath } from "./settings-values.mjs"
+// provider 态投影（#841 —— 设置写回执携 `providerState`：三回执族载荷单源，零第二实现）。
+import { providerStateOf } from "./session-slots.mjs"
 export { MASK, deepEqual, isConfigured, maskKey } from "./settings-values.mjs"
 
 /**
@@ -186,6 +188,8 @@ function advisorSpecModel(disk) {
  *   ⇒ `bad-level`。
  * spec 单源 = 核 `specForModel(model)`；off 形单源 = 核 `thinkOffShape(spec)`（端侧零族别副本——KD-18）。
  * 写面 = 该渠道条目级默认两键（`thinking` / `reasoningEffort`：先清不相容记号，再按档落形）。
+ * **#841**：成功回执另携 `providerState`（设置写回执 —— 第三刷新点；投影单源 = `session-slots.mjs`
+ * `providerStateOf`，写后核读）。
  */
 function tierAgent(config, tier) {
   const bad = (reason) => ({ ok: false, reason, fields: agentFields(config), models: modelsFace(config) })
@@ -223,7 +227,7 @@ function tierAgent(config, tier) {
     throw error
   }
   if (!w.ok) return { ok: false, reason: w.reason, fields: agentFields(loadConfig()), models: modelsFace(loadConfig()) }
-  return { ok: true, reason: null, fields: agentFields(loadConfig()), models: modelsFace(loadConfig()) }
+  return { ok: true, reason: null, fields: agentFields(loadConfig()), models: modelsFace(loadConfig()), providerState: providerStateOf(loadConfig()) }
 }
 
 /**
@@ -278,6 +282,8 @@ function probeDefaultModelWrite(value) {
  * 三档失败（§2.2 状态面②）：① 值校验拒绝 ⇒ 核 `_checkKnownKeyValue` 抛错 **零写盘**
  * （reason = 核错误串直传）；② mtime 冲突 ⇒ 核回执 `mtime-conflict`（`.bak-{ts}` 已留）；
  * ③ 路径形态非法 ⇒ `invalid-patch`。未知键**放行**（全量域 = 核语义——端侧不另立白名单）。
+ * **#841**：写成功回执另携 `providerState`（设置写回执 —— 第三刷新点：设置面修好 `defaultModel` 后
+ * 提示行即时退场；投影单源 = `session-slots.mjs` `providerStateOf`）。
  * 二择一判定：有效键 = 非 `undefined`/`null`（故 `{}` / `{ patch:null }` 仍为读面）；两有效键同在 ⇒
  * `invalid-patch` ∥ 两皆无 ⇒ 读面；`{ tier }` 径另二拒见 `tierAgent`。
  */
@@ -321,5 +327,5 @@ export function settingsAgent(payload) {
     if (dm) probeDefaultModelWrite(dm[1])
   }
   if (!w.ok) return { ok: false, reason: w.reason, fields: agentFields(loadConfig()), models: modelsFace(loadConfig()) }
-  return { ok: true, reason: null, fields: agentFields(loadConfig()), models: modelsFace(loadConfig()) }
+  return { ok: true, reason: null, fields: agentFields(loadConfig()), models: modelsFace(loadConfig()), providerState: providerStateOf(loadConfig()) }
 }

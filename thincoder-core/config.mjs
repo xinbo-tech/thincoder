@@ -13,7 +13,7 @@
 
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
-import { parseModelRef, resolveRuntimeProvider, defaultModelReason } from "./model-ref.mjs"
+import { parseModelRef, resolveChannelModel, resolveProviderPlan, resolveRuntimeProvider, defaultModelReason } from "./model-ref.mjs"
 // 老形态迁移核（M7 v2——纯函数零依赖——本文件超 500 行硬限拆分，VSC 同构文件）
 import { migrateLegacyModelFields } from "./config-migrate.mjs"
 import { expandHome } from "./expand-home.mjs"
@@ -23,7 +23,7 @@ import {
   _configPath, writeConfigAtomic,
 } from "./config-io.mjs"
 
-export { parseModelRef, resolveRuntimeProvider, defaultModelReason, migrateLegacyModelFields }
+export { parseModelRef, resolveChannelModel, resolveProviderPlan, resolveRuntimeProvider, defaultModelReason, migrateLegacyModelFields }
 export { PROVIDER_PRESETS, presetToEntry, configDir, configPath, _setConfigPathForTest, _resetConfigPathForTest }
 // 核内单一写盘执行体（已迁 `config-io.mjs`）——本档 re-export 保持既有导入面（§2.5 #131）。
 export { writeConfigAtomic }
@@ -325,14 +325,18 @@ export function loadConfig() {
   // 保证 agent.config.proxy 永远是规范形态或 undefined
   merged.proxy = normalizeProxy(merged.proxy)
 
-  // Runtime provider = config.defaultModel 复合解析（F-2——resolveRuntimeProvider）。
-  // 无效/未设 → {} + providerInvalidReason（D-S1 处置不 throw——make-agent 打 _providerInvalid
-  // 标记 → TUI 首帧弹选择 / headless 报可读错误；同 2026-09-02 Q1 语义——不复用 findProvider
-  // throw 契约——findProvider 保留给 advisor/run.mjs 等直接调用方）。
-  merged.provider = resolveRuntimeProvider(merged.providers, merged.defaultModel)
+  // Runtime provider = 统一解析（#841——resolveProviderPlan 单源：回退序 + 三态；PROVIDER.md §6.22）。
+  // 不可运行（渠表空 ∥ 全表无 key）⇒ {} + providerInvalidReason（D-S1 处置不 throw——make-agent 打
+  // _providerInvalid 标记 → TUI 首帧弹选择 / headless 报可读错误；同 2026-09-02 Q1 语义——不复用
+  // findProvider throw 契约——findProvider 保留给 advisor/run.mjs 等直接调用方）。
+  const plan = resolveProviderPlan({ providers: merged.providers, defaultModel: merged.defaultModel })
+  merged.provider = plan.provider
+  merged.providerState = plan.state // ok ∥ fallback ∥ invalid（三值闭集——KD-841-3 config 级）
+  merged.providerStateReason = plan.reason // state≠ok 时非空（语义源；消费者按 state 出词——禁串嗅探）
+  // providerInvalidReason 语义不变（provider 不完整时非空——装配校验 validateProvider 消费面照旧）
   merged.providerInvalidReason = merged.provider.name
     ? null
-    : defaultModelReason(merged.providers, merged.defaultModel)
+    : plan.reason ?? defaultModelReason(merged.providers, merged.defaultModel)
 
   // Compaction threshold follows the model (provider-level context override honored — providerSpec)
   const explicitThreshold = config.agent?.compactThreshold

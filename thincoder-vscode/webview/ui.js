@@ -50,7 +50,13 @@ export function updateWelcomeStatus(ctx) {
   p.textContent = t(p.dataset.i18n)
 }
 
-export function showBanner(ctx, text, keyOk) {
+/** provider 态横幅（#841 三态——单源 = `docs/vsc/design/WEBVIEW.md` §4.8）：`ps` = providerState 载荷
+ *  `{ state, channel, model, reason, invalidReason }`（null = 载荷缺/配置不可读）；三态 = state 单判据
+ *  直映射（首支 = invalid 类合成式——fallback 不被它吃掉）：invalid 类 ⇒ 现键 `banner.notConfigured`；
+ *  `fallback` ⇒ 新键 `banner.defaultModelFallback` + 动作钮「选择默认模型」（`banner.chooseDefaultModel`）；
+ *  `ok` ⇒ 现键 `banner.configured`。`onChoose` = 动作钮出口（chat-messages 注入 `openSettings`）——
+ *  钮不开会话级模型菜单（真修口 = 设置面默认模型段；避死端同 #840 KD-3）。 */
+export function showBanner(ctx, ps, onChoose) {
   let banner = document.getElementById("provider-banner")
   if (!banner) {
     banner = document.createElement("div")
@@ -59,13 +65,26 @@ export function showBanner(ctx, text, keyOk) {
     ctx.messagesEl.insertBefore(banner, ctx.messagesEl.firstChild)
   }
   banner.innerHTML = ""
-  banner.className = keyOk ? "provider-banner ok" : "provider-banner warn"
+  // invalid 类合成式（= `state === "invalid"` ∨ `invalidReason` 非空——单源 = `PROVIDER.md` §6.22）
+  const invalidClass = !ps || ps.state === "invalid" || !!ps.invalidReason
+  const fallback = !invalidClass && ps.state === "fallback"
+  const key = invalidClass ? "banner.notConfigured" : fallback ? "banner.defaultModelFallback" : "banner.configured"
+  banner.className = invalidClass || fallback ? "provider-banner warn" : "provider-banner ok"
   const label = document.createElement("span")
   // data-banner-key：横幅可能创建于 i18n 消息到达前（t() 返回键名——2026-09-05
-  // 真机走查：banner.configured 键名残留同族）——i18n-dom 按此属性兜底刷新。
-  label.dataset.bannerKey = keyOk ? "banner.configured" : "banner.notConfigured"
-  label.textContent = text
+  // 真机走查：banner.configured 键名残留同族）——i18n-dom 按此属性兜底刷新（取值闭集随三态键扩）。
+  label.dataset.bannerKey = key
+  label.textContent = t(key)
   banner.appendChild(label)
+  if (fallback) {
+    const btn = document.createElement("button")
+    btn.type = "button"
+    btn.className = "key-btn"
+    btn.dataset.bannerKey = "banner.chooseDefaultModel"
+    btn.textContent = t("banner.chooseDefaultModel")
+    btn.addEventListener("click", () => onChoose?.())
+    banner.appendChild(btn)
+  }
 }
 
 // ─── Messages ──────────────────────────────────

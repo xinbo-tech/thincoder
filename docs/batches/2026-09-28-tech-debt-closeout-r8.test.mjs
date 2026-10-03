@@ -308,7 +308,7 @@ test("#515②: 装配 await 期跨中止 ⇒ send 回 `aborted` 且零起跑（a
     assemble: async () => fakeAgent(),
     run: async (agent, text) => { runs3.push(text) },
   })
-  assert.deepEqual(await host3.send("1", "z"), { ok: true })
+  assert.equal((await host3.send("1", "z")).ok, true, "#841：成功回执另携 providerState")
   await tick()
   assert.deepEqual(runs3, ["z"])
 })
