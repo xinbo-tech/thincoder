@@ -6,7 +6,9 @@
  * `settings-values.mjs`，本档同名 re-export**）；另出 `deepEqual` 供档位投影复用（同判据单点）；
  * **R2 增 `indexStatus()`**（`index:status` 回执 —— 索引状态读数装配：计数转口 `index-status.mjs`
  * 〔核只读出口〕+ `hasEmbedder` 配置面判据）；**R7 增 `modelsFace()`**（consult ∕ advisor 行面读数
- * —— 随 `settings:agent` 回执出）。
+ * —— 随 `settings:agent` 回执出）；**#880 增 `carryoverDefaultModel()`**（会话选定写回单点 —— 用户显式
+ * 选定 ⇒ `defaultModel` 同拍写回；判据单源 = `docs/core/design/SESSION.md` §6.21 判据句 6，触发支 =
+ * `agent-host.mjs` `setPrefs`）。
  * **R7 拆出两族处理体**（先拆后改 —— 300 行层拆分）：env 族（proxy ∕ shell 读写 + TestProxy 转口）
  * = `settings-env.mjs`；tools 族（embedding ∕ websearch key 读写）= `settings-tools.mjs`。
  *
@@ -264,6 +266,33 @@ function probeDefaultModelWrite(value) {
   void import("./providers.mjs")
     .then(({ probeAfterWrite }) => probeAfterWrite(name))
     .catch(() => { /* 探针绝不阻断写面 */ })
+}
+
+/**
+ * 会话选定写回单点（**#880** · 台账 #880 —— 判据句 6 单源 = `docs/core/design/SESSION.md` §6.21；
+ * 端侧契约 = `docs/desktop/design/IPC.md` §2「会话级偏好注」项 8）：用户显式选定（会话级模型面**实变** ——
+ * 门住触发支 `agent-host.mjs` `setPrefs`）⇒ 写 `config.defaultModel = "<provider>:<model>"`（复合形单源
+ * = 核 `parseModelRef` 首冒号分割语义 —— model 含冒号族（`ollama:llama3:70b`）往返不破）。四事：
+ * ① **复合等值 ⇒ 零写**（选定串与 `defaultModel` 现值同串——防盘面抖动 ∥ 探针空转；现值取 `loadConfig()`
+ * 归一读——与 `settings:agent` 同径）；② 写面 = 核 `writeConfigAtomic`（端侧零自写盘——沿设置面同款
+ * 执行体）+ **写后探一次**（S3 同律——复用 `probeDefaultModelWrite`，fire-and-forget 零阻断）；
+ * ③ 写成功 ⇒ 回携 `providerState`（写后核读——**第四刷新点**；键缺席 ⇒ 渲染面零写）；
+ * ④ 失败（畸形档 ∥ 写错误 ⇒ `mtime-conflict` 等）**不抛**：回 `{ ok:false, reason }` —— 调用方（触发支）
+ * 记错不反扑（回执仍 `ok:true`——本会话已生效）。
+ * 返回形：`{ ok:true, providerState }`（写入发生）∥ `{ ok:true }`（复合等值零写——无 `providerState` 键）
+ * ∥ `{ ok:false, reason }`。
+ */
+export function carryoverDefaultModel(provider, model) {
+  const composite = `${provider}:${model}`
+  try {
+    if (loadConfig().defaultModel === composite) return { ok: true } // 复合等值 ⇒ 零写（探针随零）
+    const w = writeConfigAtomic(_configPath(), (disk) => { disk.defaultModel = composite })
+    if (!w.ok) return { ok: false, reason: w.reason }
+    probeDefaultModelWrite(composite)
+    return { ok: true, providerState: providerStateOf(loadConfig()) }
+  } catch (error) {
+    return { ok: false, reason: error?.message ?? String(error) }
+  }
 }
 
 /**

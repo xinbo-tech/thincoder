@@ -27,6 +27,8 @@
  * `bad-key`）照旧仅诊断一行（既有形零变）。
  * **#841（provider 态回执落写）**：`msg:send` 成功回执 `providerState` ⇒ 切片写（三路同规则：`sendDirect` ∥
  * `sendQueued` ∥ `healLate`——键缺席 ⇒ 零写）；单源 = `docs/desktop/design/IPC.md` §2「provider 态投影注」。
+ * **#880（选定写回径回执）**：`session:prefs` 成功回执另携条件性 `providerState`（第四刷新点）⇒ `writePrefs`
+ * 同规则切片写（键缺席 ⇒ 零写——`setProviderState` 负向锁；提示带 `paintNotices` 重派生）。
  */
 import { clearRunning } from "./badges.mjs"
 import { setProviderState, withFlowOp } from "./store.mjs"
@@ -197,7 +199,9 @@ export function createComposerWire(deps = {}) {
   }
 
   /** 会话级偏好写（D3 —— 输入区控件行 = 三值唯一居所）：回执 `ok` 真 ∧ `meta` 面 ⇒
-   *  `sessionMeta[key]` 写（本档候选面读面随动）；失败 ⇒ 记错零写（零乐观写）。 */
+   *  `sessionMeta[key]` 写（本档候选面读面随动）；失败 ⇒ 记错零写（零乐观写）。
+   *  **#880**：选定写回径成功回执另携条件性 `providerState`（第四刷新点）⇒ 同规则切片写
+   *  （键缺席 ⇒ 零写——`setProviderState` 负向锁）⇒ 提示带明示行重派生。 */
   async function writePrefs(key, patch) {
     if (key === null) return void console.error("[composer] session:prefs skipped: no active session")
     const receipt = await call("session:prefs", { key, patch })
@@ -209,6 +213,7 @@ export function createComposerWire(deps = {}) {
     }
     const table = store.get().sessionMeta
     store.set({ sessionMeta: { ...(table !== null && typeof table === "object" ? table : {}), [key]: meta } })
+    store.set(setProviderState(store.get(), receipt.providerState)) // #880：键缺席 ⇒ 原引用（零写）
   }
 
   /** 模式位写（D4）：回执成功径携 `flags` 活值 ⇒ 切片写（`applyFlags` —— 与页读 ∕ 出站两径同点）。 */

@@ -20,6 +20,8 @@
  *      三回执族同形载荷单源 = 本档 `providerStateOf`；单源 = `docs/desktop/design/IPC.md` §2「provider 态投影注」）；
  *   ⑤ 会话级偏好写面（本批增）：`writeSlotPrefs` —— 核 `setSlotPrefs` 转口（键闭集 / 值归一 / 原子写皆
  *      在核）+ 回读 `loadSlotFile` 经 `slotMeta` 出串（回执 `meta` 与 `history:page` **同源同形**）；
+ *      **#880 增**：写前读 ⇔ 写入值比对出**实变判据** `changed`（provider/model 面——选定写回门；
+ *      单源 = `docs/core/design/SESSION.md` §6.21 判据句 6）；
  *   ⑥ 打开态播种面（桌面残余批 · D17）：`pageHistory` 首屏回执携 `seed` —— `tasks` = 槽数据直取、
  *      `usage` = 核 `sessionReading` 投影（读数算法全在核）；端层只做出参装配（`loadConfig()` →
  *      `providersList` / `provider`）与有效门（数字 ∧ `> 0`）⇒ 零算法副本（形态 / 在场 / 缺席降级单源 =
@@ -216,17 +218,26 @@ export function pageHistory(cwd, payload) {
 
 // ─── 会话级偏好写面（本批增 —— T-DSK28 · `docs/desktop/design/IPC.md` §2「会话级偏好注」项 2/4/7）──────────
 
-/** `writeSlotPrefs(cwd, slot, patch)` ⇒ `{ ok:true, meta }` ∥ `{ ok:false }`（**写入未发生** —— 理由分档在
+/** `writeSlotPrefs(cwd, slot, patch)` ⇒ `{ ok:true, meta, changed }` ∥ `{ ok:false }`（**写入未发生** —— 理由分档在
  *  动作层 `agent-host.mjs` `setPrefs`）：写盘单源 = 核 `setSlotPrefs`（键闭集 / 值归一 / 原子写皆在核）；
  *  回读 = 同档 `loadSlotFile` ⇒ `meta` 与 `history:page` **同源同形**（同一 `slotMeta` 投影 —— 两通道口径
  *  不分叉）。失败径**无 `meta` 键**（IPC.md §2「会话级偏好注」项 7）；回读失败（写已发生而档不可读）⇒ 直抛
- *  （矛盾态 fail-loud，不吞）。 */
+ *  （矛盾态 fail-loud，不吞）。
+ *  **#880 增 `changed`（槽面实变判据）**：写前读 ⇔ 写入值比对 —— 比对单元 = 复合串 `provider:model`
+ *  （provider 同值而 model 变——同渠道换模型——亦判实变）；`before === null`（槽尚无档）⇒ 真。
+ *  唯一生产消费面 = `agent-host.setPrefs` 选定写回门（回声 ∕ 档位径判非实变——零写）；
+ *  单源 = `docs/core/design/SESSION.md` §6.21 判据句 6。 */
 export function writeSlotPrefs(cwd, slot, patch) {
+  // 写前读 = 实变判据基线（#880）。`before === null` = 槽尚无档（首写物化 ∥ 认领先行兜底 `newSlotData`）
+  // ⇒ 判实变真（本次写即首置）。
+  const before = loadSlotFile(cwd, slot)
   if (!coreSetSlotPrefs(cwd, slot, patch)) return { ok: false }
   const data = loadSlotFile(cwd, slot)
   // 写已发生而档不可读 = 矛盾态 ⇒ fail-loud（**显式判** —— 不倚仗 `slotMeta(null)` 的解引用抛）
   if (!data) throw new Error(`[session-slots] slot unreadable after prefs write: ${slot}`)
-  return { ok: true, meta: slotMeta(data) }
+  const composite = (d) => `${d.activeProvider ?? ""}:${d.activeModel ?? ""}`
+  const changed = before === null || composite(before) !== composite(data)
+  return { ok: true, meta: slotMeta(data), changed }
 }
 
 // ─── 会话维护族转口（R1 · 桌面功能对位批 —— 判据与算法全在核：本档零算法副本）──────────────

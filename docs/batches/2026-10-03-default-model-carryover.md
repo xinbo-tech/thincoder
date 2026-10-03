@@ -169,4 +169,67 @@ VERDICT: pass · 计数：🔴 0 · 🟡 2 · 🔵 2
 **父侧代签（用户 2026-10-03 23:14「都自动跑完」授权）**——三条件齐备：① **设计评审 pass** ✓（#23 · 🔴 0 ∥ 🟡 3 ∥ 🔵 6——号 1–7 ∥ 9 收正；号 8 = 台账 #883 处置）；② **收正轮已落地并逐条核验** ✓（#25 八号全落 + 父侧抽样核验：判据句 6 比对单元钉定 ∥ 验收回指 ⑤ 端到端取数链 ∥ 边界表三行 ∥ 写口两轴；doc-check exit 0——提交 `9d9bcd4a`）；③ **凭据已签发** ✓（值不落档——沿纪律；实施派发即用）。另：复评 #31（同 doc-set · 收正后终态）在飞 = 双保险。⇒ **实施轮已派发**（eng-coder · initial · 四档实现 + 批内件 T1–T7）。
 
 ## §5 实施记录（eng-coder）
+
+**§5 实施记录（eng-coder · 2026-10-03 · initial 轮 ＋ 修正轮 1）**
+
+**状态行**：实施完成（initial 轮 ＋ 修正轮 1（评审发现 5 序对齐）· 内部差异审计 1 轮 clean ∥ 内部代码评审 2 轮 pass · 终态 clean）
+
+**交付摘要（号 → 改动 file:line）**
+
+| # | 件 | 落点（file:line） | 读数 |
+|---|---|---|---|
+| 1 | `setPrefs` 选定写回支（`written.changed` 门 ∥ `carryoverDefaultModel` 调用 ∥ 失败记错不反扑 ∥ 回执 `providerState`） | `thincoder-desktop/src/main/agent-host.mjs:229-251`（档头 ⑤ `:8-9` ∥ import `:42-43`） | T1 ∥ T5 ∥ T7 |
+| 2 | 写回单点 `carryoverDefaultModel(provider, model)`（复合等值零写 ∥ `writeConfigAtomic` ＋ catch 不抛 ∥ 写后探复用 `probeDefaultModelWrite` ∥ 成功回携 `providerState`） | `thincoder-desktop/src/main/settings.mjs:271-296`（档头 `:9-11`） | T1 ∥ T2 ∥ T3 ∥ T5 ∥ T7 |
+| 3 | `writeSlotPrefs` 写前读 ＋ `changed` 判据（复合串 `provider:model`；`before === null` ⇒ 真）＋ 回执键 | `thincoder-desktop/src/main/session-slots.mjs:221-241` | T3 ∥ T7 |
+| 4 | `writePrefs` 成功径 `providerState` 切片写（键缺席 ⇒ 零写） | `thincoder-desktop/renderer/composer-wire.mjs:201-217`（落切片 `:216`） | T6 |
+| 5 | 批内件 T1–T7（新档） | `docs/batches/2026-10-03-default-model-carryover.test.mjs`（244 内容行） | 见下 |
+
+**测试读数（从仓根 `thincoder/` 运行；仓级套件不跑——父侧收口跑）**
+
+- 红基线（实现前 · 先红后绿之红）：`node --test docs/batches/2026-10-03-default-model-carryover.test.mjs` ⇒ tests 7 · **pass 2 · fail 5**（exit 1）——
+  T1（回执无 `providerState`）∥ T2（`defaultModel` 未写回）∥ T5（零记错）∥ T6（切片未写）∥ T7（源判据未在档）红；
+  T3 ∥ T4 绿 = 负控真值（未实现 ⇒ 无写自然零写），非实现达标。
+- 复跑（实现后 · 逐腿）：T1 ✔ ∥ T2 ✔ ∥ T3 ✔ ∥ T4 ✔ ∥ T5 ✔ ∥ T6 ✔ ∥ T7 ✔ ⇒ tests 7 · **pass 7 · fail 0**；修正轮 1（序对齐）后复跑同读数。
+- 回归复跑：`#841`（`2026-10-03-provider-invalid-unify.test.mjs`）⇒ tests 5 · pass 5 · **EXIT 0**（直跑）；
+  `#840`（`2026-10-03-desktop-firstrun-provider-notice.test.mjs`）⇒ tests 7 · pass 7 · **EXIT 0**（**以隔离 `USERPROFILE` 复跑**——见「复跑须知」）。
+- `node scripts/doc-check.mjs` ⇒ **EXIT 0**（悬空 0 ∥ 行宽 OK ∥ 行数面差异 5 条 = 本批 4 产品行 ＋ `E2E-TESTING.md:249` `.gitignore` 行（非本批面））。
+
+**复跑须知（#840 T7 环境面 · 实施期发现）**
+
+- 本批落形后 `#840` T7 的 `setPrefs` 会触发选定写回，而该件未设配置路径缝 ⇒ **不隔离复跑将写真实用户 config**
+  （实证：隔离跑于临时 profile 生成 `{"defaultModel": "p1:m1"}`）。
+- 复跑命令 = 先置 `$env:USERPROFILE="<临时目录>"` 再 `node --test docs/batches/2026-10-03-desktop-firstrun-provider-notice.test.mjs`
+  （本次以 `%TEMP%\tc-dmc-iso840b` 隔离）。「预计绿」成立（隔离下 7/7）；**未隔离直跑有真实副作用**——父侧再复跑须带隔离。
+
+**决策透明表（自决项）**
+
+| 决策 | 取值 | 判由 |
+|---|---|---|
+| 回执 `providerState` 在场条件 | 仅**实写发生**在场；复合等值零写径键缺席 | 判据句 6「写成功 ⇒ 写后探」＋ 项 8「写后核读」——等值径无「写后」；「键缺席 ⇒ 渲染面零写」负向锁 |
+| `#840` 回归复跑环境 | 隔离 `USERPROFILE`（临时目录） | 不隔离将写真实 config（上「复跑须知」）；同件同代码、仅 homedir 重定向 ⇒ 读数效力不变 |
+| T3 含两负控（回声 ＋ 复合等值） | 并入 T3（设计表仅列回声一径） | 复合等值零写 = §6.21 边界表在册行；补覆盖（防盘面抖动），非偏离 |
+| 修正轮 1 处置 | 代码侧对齐（重施移至写回之后） | 设计档为权威（§2 数据流逐位）；设计档不由本席改 |
+| 测试夹具（T6）取真件 | `createStore()` 真 store（初版桩漏补丁合并语义 ⇒ 假红，自修） | 真件零桩漂移 |
+
+**审计与代码评审轮次与终态**
+
+- 内部差异审计（explore · 只读 1 轮）：**VERDICT clean**——四类偏差（PARTIAL ∥ SILENT-SIMPLIFICATION ∥ DOC-DRIFT ∥ OUT-OF-LIST）零命中；
+  判据句 6 五事 ∥ 四负向锁 ∥ 受影响表 1–4/8 ∥ T1–T7 覆盖逐条「满足」。
+- 内部代码评审（advisor · type=code · 2 轮）：轮 1 = **pass**（🔴 0 ∥ 🟡 2（文件越 300 顾问线——在册 ∥ 记录面回填未落）∥ 🔵 3（IPC 坐标漂移 ∥ 测试脆弱腿 ∥ 实现序与文档异序））；
+  修正轮 1 = 序对齐；轮 2（fix 核验）= **pass**。**终态 = clean**。
+
+**评审响应表**
+
+| # | 评审项 | 处置 | 证据/判由 |
+|---|---|---|---|
+| 1 | 🟡 文件顾问线（`agent-host` 322 ∥ `settings` 360 >300） | 保留（在册·不升级） | 设计 U3 拟判「非结构性 ⇒ 续期」；均 <500 硬限 |
+| 2 | 🟡 记录面回填（§5 ∥ §2 行数） | 本片落 §5 ＋ 行数实读；§2 表回填归父侧 | 本节「行数实读」 |
+| 3 | 🔵 `IPC.md:242/:244` 坐标漂移 | 报父侧（设计档侧收正） | 不动设计档（本轮边界） |
+| 4 | 🔵 测试脆弱腿（T3 mtime ∥ T7 源式） | 保留（内容逐字为主证；结构检沿 #840 先例） | T3 内容 ∥ mtime 双证；T7 设计指定 |
+| 5 | 🔵 实现序 vs §2 数据流 | **已修**：重施移至写回之后 | `agent-host.mjs:238 → :244-248 → :249 → :250` |
+
+**行数实读（届盘 · 内容行口径）**：`agent-host.mjs` **322**（设计预算 ≈318）∥ `settings.mjs` **360**（≈356）∥ `session-slots.mjs` **270**（≈267）∥ `composer-wire.mjs` **281**（＝281）∥ 批内件 **244**（预算 ≈150）。
+
+**改动集自核**：本批触动 = 交付表 1–5 五档（4 产品 ＋ 批内件）；`thincoder-core/**` ∥ CLI ∥ VSC ∥ `thincoder-render-core/**` ∥ preload ∥ i18n ∥ 通道集 ∥ 白名单零触（`model-ref.mjs` 零改——fallback 解析链照旧）。
+
 ## §6 验证与收口（父代理）

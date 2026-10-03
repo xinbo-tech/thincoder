@@ -5,7 +5,8 @@
  * R3 增 `onDistilled` 蒸馏落位〔非通道〕）③ 待决表（三门形：审批逐项 / 审批批次 / 提问 —— 兼撞帽续跑询问载体）
  * ④ **回合驱动族装配**（出档 `turn-driver.mjs`：单回合执行面 · 在飞表 · 中止墓碑 · `send` ∕ `interrupt` ∕ `dispose`
  *    ∕ `abortSuspensions` —— 本档只供注入面并暴露其返回面）
- * ⑤ 会话级偏好写面（`setPrefs`：写盘 → 重施；在飞拒 —— 批次档 KD-19 单点）
+ * ⑤ 会话级偏好写面（`setPrefs`：写盘 → 重施；在飞拒 —— 批次档 KD-19 单点）。**#880 增 选定写回**：
+ *    槽面实变 ∧ `provider`+`model` 同在 ⇒ `defaultModel` 同拍写回（槽先配置后；失败不反扑 · 主侧记错）；
  * ⑥ 模式位投影（`flagsOf` **活值**四布尔 —— 状态栏对齐批：`approval:respond` 成功径回执叠加 `{ key, flags }`；
  * 页读供面同函数 —— 槽投影兜底面住 `session-slots.mjs` `slotFlags`）。
  * ＋R1 会话维护面一枚 `syncTitle`（改名内存标题同步，#525）。
@@ -38,6 +39,8 @@ import { runAgent } from "@thincoder/core/agent.mjs"
 import { estimateTokens, historyPercent } from "@thincoder/core/token-window.mjs"
 // 会话键语义（`String(slot)` 单源）与端壳同档 —— 键面归一不造第二口径；偏好写面（`writeSlotPrefs`）同档。
 import { slotOfKey, writeSlotPrefs } from "./session-slots.mjs"
+// 选定写回单点（#880 —— `defaultModel` 同拍写回；判据句 6 ∕ `IPC.md` §2 项 8；零环：settings.mjs 不依本档）。
+import { carryoverDefaultModel } from "./settings.mjs"
 // 五族出档（见档头）：回调桥 / 待决门 / 槽 I/O / 子 agent 面 / 装配面 —— 本档只装配与注入，算法面各归其档。
 import { createBridge } from "./agent-bridge.mjs" // 含「对齐第三批」两采样面注入（见下）
 import { extractFileLinks } from "./file-links.mjs" // 验存文件链接（相抵② · KD-39 —— 盘上存在闸）
@@ -218,7 +221,11 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
    *  → `busy`（在飞**零写**）→ 载荷两档（`invalid-patch` / `model-required`）→ 写盘 → 施加。
    *  写盘 = 端壳 `writeSlotPrefs`（核写口 + 回读投影）；写未发生（槽不可读 / `cwd` 无源）⇒ `slot-missing`。
    *  **施加** = 本键已装配者重施 `loadAgentSlot`（活动会话内存即生效）；未装配者只写盘（不隐式装配）。
-   *  成功 ⇒ 族信封 + `meta`（与 `history:page` 同源投影）；失败 ⇒ 信封**无 `meta` 键** + 零写。 */
+   *  成功 ⇒ 族信封 + `meta`（与 `history:page` 同源投影）；失败 ⇒ 信封**无 `meta` 键** + 零写。
+   *  **选定写回（#880 · 判据句 6 ∥ 项 8）**：**槽面实变**（`written.changed`）∧ `provider` + `model` 同在
+   *  ⇒ `defaultModel` 同拍写回（定序 = 槽先配置后；等值零写住写回单点）；配置面失败**不反扑**（回执仍
+   *  `ok:true`——本会话已生效）+ `console.error` 记错（零静默）⇒ 回执零叠加（`providerState` 键缺席）；
+   *  写回成功 ⇒ 回执另携 `providerState`（写后核读——第四刷新点；键缺席 ⇒ 渲染面零写）。 */
   function setPrefs(key, patch) {
     const cwd = projects?.currentCwd()
     const slot = slotOfKey(key)
@@ -230,8 +237,17 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     if (typeof cwd !== "string" || !cwd) return fail("slot-missing")
     const written = writeSlotPrefs(cwd, slot, patch)
     if (!written.ok) return fail("slot-missing")
+    const receipt = { ok: true, reason: null, cwd, slot, meta: written.meta }
+    // 选定写回（#880）：只认「槽面实变」——回声（会话切换 ∥ 同值回写）与档位径天然落空；`provider`+`model`
+    // 同在（值串判据已由 `prefsPatchFailure` 把守）⇒ 写回单点（定序 = 槽先配置后；与下行重施互不依赖）。
+    // 失败不反扑：回执不改、记错零静默。
+    if (written.changed === true && typeof patch.provider === "string" && typeof patch.model === "string") {
+      const carried = carryoverDefaultModel(patch.provider, patch.model)
+      if (carried.ok !== true) console.error(`[agent-host] default model carryover failed: ${carried.reason}`)
+      else if (carried.providerState !== undefined) receipt.providerState = carried.providerState
+    }
     if (agents.has(key)) loadAgentSlot(agents.get(key), cwd, slot)
-    return { ok: true, reason: null, cwd, slot, meta: written.meta }
+    return receipt
   }
 
   /** 模式位**活值**投影（`docs/desktop/design/IPC.md` §2「模式位投影注」项 2 · 状态栏对齐批）：四布尔逐项 ——
