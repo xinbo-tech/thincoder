@@ -25,7 +25,7 @@
 **验收方向**：① 截断回显不再静默（按裁定形态机检可核）；② 失败路径恒定标记（模拟非回显 ⇒ 输出含标记）；③ 提示词加固句在位；④ 零回归（全串回显 ∥ 无回显 ∥ TTL ∥ 门禁恒等比对）。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（R1–R4 定形（M1/M2 逐字 ∥ 截断容忍① ∥ 加固句逐字）· 受影响 6 档 · 批内件 T1–T9 · 同族核查 6 项 · 实施序 = 待 #28（advisor-convergence，在飞）落地后 ∥ doc-check exit 0）
+**状态行**：设计完成（R1–R4 定形 · fix 轮：U1 折入（未完成径 ∥ stale 径 → 单源 stripDesignTokenEcho；受影响 6⇒7 档 · 批内件 T1⇒T10）· FR8 对盘无缺（已落）· 实施序 = 待 #28 落地后 ∥ doc-check exit 0）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 **§2 批次任务与设计（eng-designer · 2026-10-03 · initial 轮）**
@@ -137,6 +137,42 @@ return { passed: true, output: [clean, truncatedEcho ? M2 : null, run.approvedSu
 - **U3**（需求档缺行 · 非阻断）：R3 加固句无需求档逐条对位（F12 覆盖面）——建议主 agent 视需要补一行或明书归 §1。
 
 **自检读数（设计轮 · 复跑）**：仓根 `node scripts/doc-check.mjs` ⇒ **exit 0**——`OK(锚): 0 条悬空` ∥ `OK(行宽): 无 >300 字符单行`；行数面差异 5 条 = 先行存在（报告态，非本批面）。
+
+**§2 追加 · fix 轮（eng-designer · 2026-10-03 · U1 折入 + FR8 对盘）**
+
+**机制设计 · U1 折入（父侧裁「修」——两处坐标复核后按实况落笔）**
+
+- ① 未完成径（`thincoder-core/agent-tools/design-token.mjs:86-94`——`opts.incomplete` 分支；父单作「非回显径」，实况名以此为准；非回显主径 `:95-98` 由 initial 轮已落单源面覆盖）：`:89` 剥离行 → 单源调用 `stripDesignTokenEcho(rawResult, designToken)`。
+- ② stale 径（`thincoder-core/agent-tools/advisor-settle.mjs:214-216`）：剥离链 → `stripDesignTokenEcho(String(result), entry.designToken)`；`:24` import 同线加一符号。
+- 两处现态 = 只剥全串形（`makeDesignTokenRegex` 单形）；折入后 = 全串 ∥ 前缀形 ∥ 裸 uuid 三形全剥（单源单判）。零语义外扩（除剥净面——判断 / 标记 / 槽存储 / 既有分支零改）；实施序 = 待 #28 落地后（同整批）。
+
+**受影响表更新（现表 6 档 ⇒ 7 档——复核后按实况：U1 两处落 2 文件，`design-token.mjs` 已在第 1 档 ⇒ 更新其改动面；净增 1 档 = `advisor-settle.mjs`）**
+
+| # | 操作 | 内容（行数预算） |
+|---|---|---|
+| 1 | 更新 | `thincoder-core/agent-tools/design-token.mjs`——改动面追加 `:86-94` 未完成径 → 单源剥离；预算 ≈145–155 不变（调用点替换） |
+| 7 | 新增 | `thincoder-core/agent-tools/advisor-settle.mjs`——现读 **240** ⇒ ≈238–241（`:24` import 同线加符号；`:214-216` 三行 → 单源调用）；实施序 = 即行（零交叠） |
+
+**用例补一条（T10 折入——随批内件 T1–T9 同档）**
+
+| 用例 | 面 | 输入 / 操作 | 预期（机检断言） | 初态 |
+|---|---|---|---|---|
+| T10（折入） | 未完成径 ∥ stale 径剥离 | ① 未完成径：`settleDesignReview(…, { incomplete:"timeout" })`、正文含截断回显残片；② stale 径：`settleAdvisorRun` 陈旧分支同形 | 两径输出均零 uuid 残留 ∥ 零 `[DESIGN-TOKEN:` 残留（单源三形全剥）；未完成 ∥ 陈旧标记照旧在位 | **红**（现只剥全串形） |
+
+**验收对照（补行）**
+
+| # | 验收（可机判） | 回指 | 载体 |
+|---|---|---|---|
+| AC-6 | U1 折入：未完成径 ∥ stale 径残片剥净（单源三形）；标记零回归 | U1（父裁「修」）∥ 契约「剥除全部凭证回显」（`docs/core/design/ADVISOR-GUARDS.md` §1） | T10（+T5） |
+| AC-7 | FR8 对位（截断容忍 ∥ 恒定标记 ∥ 逐字复制纪律三句） | FR8（`docs/core/requirements/ENG-TOKEN-BINDING.md:32`） | 设计档 §5.1 ①②④ ∥ 下游 T1 / T3 / T8 |
+
+**FR8 对盘（父侧已落——三句复查）**：① 截断容忍 = §5.1①（R2）∥ ② 恒定标记 = §5.1②（R1）∥ ③ 逐字复制纪律 = §5.1④（R3）——**对位无缺**。
+
+**U3 现态更新**：**已落（FR8）**——`docs/core/requirements/ENG-TOKEN-BINDING.md:32`（FR8 = 2026-10-03 批增；头注 FR1–FR8 随动）。原「需求档合规检查」区报备行随本行关闭（记录面 append-only——旧行不改，本行即现态）。
+
+**复核所得 · 报备（未落笔——待裁）**：同族第三处——`thincoder-core/agent-tools/advisor-settle.mjs:179-181`（D1 落盘失败径）同款只剥全串形；在本设计截断容忍语义下该径可达截断形（pass + 落盘失败 ⇒ 报告按原文重建）⇒ 残片同可存活。本单未列（非 U1 两处）——建议随 U1 同折入 ∥ 登记台账，待父侧裁。
+
+**自检读数（fix 轮 · 设计档落笔后复跑）**：仓根 `node scripts/doc-check.mjs` ⇒ **exit 0**——`OK(锚): 0 条悬空` ∥ `OK(行宽): 无 >300 字符单行`（行数面差异 5 条 = thincoder-desktop 先行存量 · 报告态）。
 
 ## §3 设计评审（评审子代理）
 ## §4 用户批准（主 agent）
