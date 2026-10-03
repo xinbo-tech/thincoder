@@ -19,7 +19,7 @@
 **§1 补记二（同日 20:1x–20:26 · 构建机首跑 = 出产物）**：B 路线（内网构建机 `10.0.0.5` 代号 ha-proxy）**首跑全链实通**——配方 = gitee 浅克隆 → npmmirror registry + `ELECTRON_MIRROR` + `ELECTRON_BUILDER_BINARIES_MIRROR` → `npm install`（301 包）→ `materialize-deps` → `electron-builder --linux AppImage deb --publish never`。**实产**：`ThinCoder-Setup-0.10.2.AppImage`（127,048,532 B · sha256 2543559b…c616）∥ `ThinCoder-Setup-0.10.2.deb`（100,650,684 B · sha256 77710267…049d）∥ `latest-linux.yml`（350 B）；产物已拉回父侧 `D:\WSL\artifacts\`。**首跑挖出三处仓内缺项（入设计定形）**：① 图标——electron-builder 拒收 `.ico` ⇒ 须入库 `build/icon.png`（256×256，可从 icon.ico 内嵌帧直取）；② deb 元数据——fpm 要 `homepage` + `author.email`（补后即通）；③ feed 语义错位——latest-linux.yml 现指向 deb，与「AppImage 跟自动更新 ∥ deb 手动」相抵。设计轮 = eng-designer（本批 §2 + `docs/desktop/design/PACKAGING.md` Linux 段 + `RELEASE.md` §5 随动），已起跑。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（落点 = docs/desktop/design/PACKAGING.md §1 KD-73 ∥ §2.11 ∥ §3.4 ∥ §4.4 ∥ §5 T-DSK61–63 ∥ §6 D42 行；docs/RELEASE.md §5.6 Linux 臂 L1–L5；2026-10-03）
+**状态行**：设计完成（落点 = docs/desktop/design/PACKAGING.md §1 KD-73 ∥ §2.11 ∥ §3.4 ∥ §4.4 ∥ §5 T-DSK61–63 ∥ §6 D42 行；docs/RELEASE.md §5.6 Linux 臂 L1–L5；2026-10-03；机检红线修复轮（24 悬空 → 0 ∥ 6 超宽 → 0 · 复跑 exit 0））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 **§2 批次任务与设计（eng-designer）——桌面 Linux 产物（D42 · 台账 #847）· 设计轮（initial）**
@@ -62,6 +62,17 @@
 - ② 站点执行 = 父侧轮（规格 = 设计档 §2.11.5）。
 - ③ 首跑后全链复跑（含 check-dist 闸）+ 读数（sha256 ∥ `dpkg-deb` ∥ 提取）入本档 §5——构建动作 = 实施/发布窗。
 - ④ 披露：T-DSK61–63 号自铸；`build/icon.png` = 二进制入库（生成物形）；构建机凭据零入库。
+
+**修复轮（机检红线清零——候评审前置）· 2026-10-03 · eng-designer**
+
+来源 = 父侧 2026-10-03 20:4x 库读（`node scripts/doc-check.mjs` 仓根 = FAIL：锚 24 悬空 ∥ 行宽 6 超宽——全落本批新增面）。处置 = 纯形态收正（语义零改 ∥ 判定阈值 ∥ 配置零触 ∥ 他批 ∥ 他档零触）：
+
+- **① 锚面 24 悬空 → 0**（全在 `docs/desktop/design/PACKAGING.md`）：域外第三方档坐标 **20 处裸名化**（R3 同形——`app-builder-lib` ∥ `electron-updater` 内部档；坐标原值以（`:N-M`）后置形**逐条保留**——信息零丢）∥ `renderer/index.html` 补 `thincoder-desktop/` 前缀（R1 同形）∥ `app-update.yml` 三处落（`resources/` 下）定位形。
+- **② 超宽 6 行 → 0**（≤300）：`PACKAGING.md` 279 ∥ 282 ∥ 288 ∥ 393 + `docs/RELEASE.md` 280 ∥ 287（as-of 修复前编号）——子句界折行（续行缩进 2 空格）。
+- **③ 复跑读数**（仓根）：`OK(锚): 0 条悬空（闸态——阈值 0）` ∥ `OK(行宽): 源域全部 .md 无 >300 字符单行（区带豁免在效——变更记录 ∥ 历史沿革；区带内超宽行不计）` ∥ `exit 0`；汇总 = 候选 45889 · 悬空 0 · 注记豁免 319 · 拟新增 49 · 迁移期引文 297 · 声明源缺位 0（注记豁免计数零膨胀——319 = 修复前同值）。
+- 同拍：两档变更记录各 +1 行（PACKAGING ∥ RELEASE）。
+- 行数面 2 条（报告态——PACKAGING L329 ∥ E2E-TESTING L249）= 修复前基线同值——非本轮面，零触。
+- **状态 = 候评审就绪**（红线清零）。
 
 ## §3 设计评审（评审子代理）
 ## §4 用户批准（主 agent）
