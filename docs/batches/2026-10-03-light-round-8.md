@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-03 · 来源 = 用户 2026-10-03 22:43 转达反馈（附截图）：「之前修过的那个默认模型没设置的问题，用户反馈：还是显示未配置模型，不过不影响使用」——根因 = 桌面 fallback 明示行逐字复用失败词（缺「— 正在使用可用渠道」澄清半句，视觉同错误的）。
 > 台账 = #879（desktop · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-03
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 **本轮 = 轻通道轮八（单笔）**。**披露**：轻通道笔——命中 **①细节/文案 + ②缺陷**（用户当场的话：显示「未配置模型」但可用）∥ **change** = fallback 明示行澄清半句（新键 `composer.send.noDefaultModelFallback`——与 VSC `banner.defaultModelFallback` 同构；**失败词 ∥ 态词分家**）∥ **reach** = `renderer/i18n-views.mjs`（两语 +2 键）· `renderer/composer-sync.mjs`（`providerNotice` 词路由 + 注释）· `renderer/i18n.mjs`（键链 VIEWS 138 ⇒ 139 ∥ HOST 313 ⇒ 314）· 批内件 `docs/batches/2026-10-03-light-round-8.test.mjs`（新档）∥ **rollback = revertable**（单提交）。
@@ -97,3 +97,5 @@ VERDICT: pass
 - **前批遗留交叉核**：无未闭合前批锚于本笔；#840 ∥ #841 记录已冻结、经评审复核零冲突。
 - **收尾测试线**：① 本批单元件 = `docs/batches/2026-10-03-light-round-8.test.mjs`（随批留存——无处置）；② 集成场景 = **无新增 ∥ 修改**（文案笔——业务面零变）；③ 仓套件 = 未跑全量（轻通道笔——变更面 = 三档 renderer 文案 + 文档面；批内件 + 两回归件已各自绿——fail 成本低，披露备案）。
 - **推送**：收口提交 = 见本段随附（双远端齐平）。
+
+**结算提交 = `e8d67b17`**（`docs/batches/2026-10-03-light-round-8.md` + `docs/desktop/design/PROJECT.md`；双远端待推——随本段即时执行）。

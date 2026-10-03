@@ -142,6 +142,24 @@
 - 其余无上抛：需求键面 ∥ 台账库 ∥ 写面 ∥ 提示词面 ∥ 其他端零触。
 
 ## §3 设计评审（评审子代理）
+
+### 轮次 1（评审子代理）
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | Requirements/Clarity | 🟡 | 范围判据的枢不同：`LEDGER.md:299`（§7.2「标记范围」）以「`current` 在场」立式，而 `LEDGER.md:380`（AC-M2-18）∥ `LEDGER.md:434-439`（T47–T52）∥ `ENGINEERING-MODE-V2.md:615`（需求 §13.3 第 1 条）以「容器根 ∥ 具体项目锚」立式——两式映射无明文；`current` 缺席时「族」如何枚举无定义（§7.1 `discoverFamily` 定义 =「projects = current + 其同级含台账目录」`LEDGER.md:288`，对 null 无义），而本批核心场景恰是容器根锚（T47 双项目夹具）；`scopeMarkerOf(scans, family)` 两参谁驱动范围 ∥「已读」如何判亦未述。 | §7.2 补一句范围推导句（`current` 缺席 ⇒ 族 = 点名既有枚举面；`scans`∕`family` 对账口径；容器根自身带台账时归属 = 具体项目锚 ∥ 容器根锚）。 |
+| 2 | Document ownership/Consistency | 🟡 | L1 文本产出者三档命名不一：`LEDGER.md:290` 定 `scopeMarkerOf` =「L1 取值单源」，而 `UI.md:116` ∥ `UI.md:382` ∥ `IPC.md:30` 三处均写「核 `formatMarker` 逐字 `台账 N·M`（= 当前打开范围合计）」；`LEDGER.md:289` 又保留 `formatMarker(scan)`「签名与键语义不变」（单 scan 语义不能承载范围求和）——`formatMarker` 是否仍在调用链无明文。 | 择一收口：明写 `scopeMarkerOf` 委托 `formatMarker` 逐字模板，或把端侧两档产出者名改为 `scopeMarkerOf`；§7.1 `formatMarker` 行括注补范围限定。 |
+| 3 | Acceptance criteria/引用纪律 | 🟡 | AC-M2-18 回指「需求 §13.3 F2·2026-10-03」（`LEDGER.md:380`）不可解析：§13.3 五条功能点无 F 编号（`ENGINEERING-MODE-V2.md:615-619`），F 编号住 §13.4 FR25（`:627` 起；F2 = 批次档同规）；`LEDGER.md` 自身把「两池不合并为一数」记作 F1（`:299` ∥ `:455`）⇒ 同序下 F2 = 第 2 条（三处文本行），与 AC 对象（第 1 条状态行极简标记）不符。 | 改可解析形态（例「需求 §13.3 第 1 条『状态行极简标记』· 2026-10-03」），或先定义 F 编号再引用。 |
+| 4 | Requirements | 🟡 | 警示色判据两档分叉：需求 §13.3 第 1 条只写「老化 >0 转警示色」（`ENGINEERING-MODE-V2.md:615`）；设计面（`LEDGER.md:309` ∥ `:345` ∥ `:380` ∥ `UI.md:116` ∥ `UI.md:382` ∥ `IPC.md:30`）为「范围内 `aged>0 ∨ deadExecutors>0`」——死执行者腿在需求档零表述（F-LX1 随动未回收）。 | 该条补「∨ 范围内有死执行者」半句，或明写「警示色判据单源 = 设计档」。 |
+| 5 | Affected-file annotations（判据 8） | 🟡 | 本批设计面无受影响文件清单（现行行数 + 预期增量）：项目自制模块设计内容③ =「受影响文件全清单（源/测试标当前行数 + 预计增量）」（`ENGINEERING-MODE-V2.md:273`），`LEDGER.md` 有先例形（§3.2 受影响面 `:203-209`）；本批至少触及核台账模块（`:290` 新增归约导出）· 核 `ledger-surface.mjs`（`state.ledger` 产出面——`UI.md:116` 坐标）· VSC 端 `ledger-surface.mjs`（item 面——`LEDGER.md:352` 坐标）+ 批内单测件（`:432` 仅给路径，无行数/增量）。贴线判定（300/500）在评审射程内无从核对。 | 补受影响面表（源/测试 × 现行行数 × `≤±N` ∥「结构不变」），贴线者随附拆分方案；若该表按批住批次档，设计面留一行指针。 |
+| 6 | Acceptance criteria | 🔵 | 范围 `warn` 只测老化腿：T53（`LEDGER.md:440`）以 `aged>0` 立根锚 true、以无老化具体项目锚立 false；AC-M2-18 ∥ §7.3.1 状态位句同含的 `deadExecutors>0` 腿无范围级用例（T19 `:392` 仅单项目 L2 尾段）。 | T53 补一拍（族内项目 `deadExecutors>0` ⇒ 根锚 `warn=true`），或注「死执行者腿由 T19 覆盖」。 |
+| 7 | Clarity | 🔵 | T54（`LEDGER.md:441`）「桌面 `ledgerMarkerOf` 透传三态（新文字 `{ text, warn }` ∕ `null`）」——称三态而列两形。 | 改「两形」或写全三形。 |
+| 8 | Doc hygiene | 🔵 | 需求 §13.3 第 1 条的 2026-10-03 修订（承批档 §1 用户 23:01 ∥ 23:11 裁定）在需求档内无日期/来源痕——该档同类父侧改判的既成记法 = 就地日期注（例 `ENGINEERING-MODE-V2.md:15`「2026-09-18：本段新增 + 同日两次改判（父侧直接执行 · 可 revert）」）；范本面已按 D8 清得干净（无划改残留）。 | 落一行日期注（记法与 `:15` 同式），或于批档记明修订来源。 |
+
+计数：🔴 0 · 🟡 5 · 🔵 3（共 8）
+
+VERDICT: pass
+
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）

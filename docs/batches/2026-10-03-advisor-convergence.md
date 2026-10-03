@@ -187,6 +187,22 @@ out-of-scope note：本批「受影响文件表 / 用例表 / 上抛」按三档
 计数：🔴 0 · 🟡 2 · 🔵 3
 VERDICT: pass
 
+### 轮次 3（评审子代理）
+
+复评（轮次 2 发现 1–5 处置后 · 提交 6b4e1ca7）——三档现文全文重读核讫：5/5 Fixed，无新增。
+
+| # | Orig# | File | Severity | Status | Notes |
+|---|---|---|---|---|---|
+| 1 | 1 | requirements/ADVISOR-CONVERGENCE.md | 🟡 | Fixed | §2.4 归属边界句已覆盖 F32–F35（`:55`）；§4 边界行射程补「归宿面收尾句」（`:97`） |
+| 2 | 2 | design/ADVISOR-CONVERGENCE.md | 🟡 | Fixed | 档头 `:17` 指针改「本档 §9」——与 `:363`「核查维度行为语义 = 本节」一致（原 off-by-one） |
+| 3 | 3 | requirements/ADVISOR-CONVERGENCE.md | 🔵 | Fixed | F35 `:62` 括注「（预算用尽）」已删——与设计侧收尾句 `:132-134` ∥ GUARDS `:141` 同射程 |
+| 4 | 4 | design/ADVISOR-GUARDS.md | 🔵 | Fixed | §3 `:124` 补判定优先级句（含省略号且不连续 ⇒ 非连续引文类，先于 `content mismatch`） |
+| 5 | 5 | requirements/ADVISOR-CONVERGENCE.md | 🔵 | Fixed | F16 `:50` 边界改「不改 guard 推回上限语义（`MAX_ADVISOR_PUSHBACKS`）」 |
+
+计数：🔴 0 · 🟡 0 · 🔵 0（前表 5/5 处置核讫；无新增）
+
+VERDICT: pass
+
 ## §4 用户批准（主 agent）
 
 **父侧代签（用户 2026-10-03 23:14「都自动跑完」授权）**——三条件齐备：① **设计评审 pass** ✓（#16 · 🔴 0 ∥ 🟡 3 ∥ 🔵 7——全数采纳）；② **修复轮已落地并逐条核验** ✓（修复轮 #19 九号全落 + 父侧号 2 收正 + 另记 `:141` 就地拉平——实读复核：判据射程注／`Dispatched` 归宿／残余出口／尾行射程／轨射程注／四类计数全在位；doc-check 复跑 exit 0）；③ **token 已签发** ✓（凭据值不落档——沿纪律）。⇒ **实施轮派发**：eng-coder ×2 并飞（A = 代码面 4 档〔`citations.mjs` ∥ `messages.mjs` ∥ `convergence.mjs` + 批内件〕∥ B = 提示词面 12 档〔六档 EN 运行期 × 六档 CN 模板——落点 = §2 表 4–15〕）。
