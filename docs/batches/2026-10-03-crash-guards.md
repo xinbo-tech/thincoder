@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-03 · 来源 = 用户 2026-10-03 20:34「C 按批起跑」· 分诊批 docs/batches/2026-10-03-issue-triage.md §1（C 线批①）· 台账 #865 ∥ #866（事件 #846）。
 > 台账 = #866 ∥ #865（core · 归批——分诊批 C 线批①）。前情 = docs/batches/2026-10-03-issue-triage.md §1（进行中——C 线来源）。
 ## §1 讨论（主 agent）
-**状态行**：进行中（批①点火：设计轮已派发（崩溃族守卫 #16 ∥ #17））
+**状态行**：已收口 2026-10-03
 - **来源/授权**：用户 2026-10-03 20:34「C 按批起跑」= 分诊批（`docs/batches/2026-10-03-issue-triage.md`）C 线**批①**点火；条目 = 台账 #866（GitHub #16）∥ #865（GitHub #17）。
 - **本批条目（两条，绑定）**：
   1. **#16 · 进程杀守卫**——idle-watchdog 掐流时 `body.destroy(…)` 无兜底 `'error'` listener ⇒ 未处理 error 事件 = **进程被杀**。坐标（分诊实读）：`thincoder-core/proxy.mjs:94,99` ∥ `thincoder-core/provider/sse.mjs:175-181` ∥ `thincoder-core/provider/google.mjs:200-206`（同形）。**与事件 #846 强关联**：2026-10-03 两次桌面静默退出（均处「大下载网络窗 + LLM 流式在飞」）与该签名一致。
@@ -13,7 +13,7 @@
 - **授权口径**：设计轮 → **评审点火 = 用户权**（父侧提醒）→ 实施 = eng-coder（token 门）。
 - **承前**：事件 #846（两次静默退出）证据链在分诊批 §1 补记与台账 #846；本批为其实修面。
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（修正轮（评审轮次 1 · 发现 1–4）全落 = §2 修正块；doc-check 复跑 exit 0（悬空 0 · 零净增））
+**状态行**：设计完成（修正轮（评审轮次 1 · 发现 1–4）全落 = §2 修正块；实施窗回填轮落 = §2 回填块（坐标 ∥ 态 ∥ 行数按盘收正——§5 未闭合项 1–2 消解）；doc-check 复跑 exit 0（悬空 0 · 行宽 0））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 **§2 批次任务与设计（eng-designer · 2026-10-03 · initial 轮）**
@@ -122,6 +122,37 @@ crash-report 三份（2026-09-22/23）签名 `Response body timeout (idle)` ← 
 - **发现 4（残面去向）· 上抛 U-CG-2 跟踪补挂**：残面 = 退出相位仅 `SIGTERM` 送达、升级 timer 不触发（忽略 SIGTERM 的 MCP stdio 子进程仍泄漏）；跟踪去向 = 台账 **#877**（父侧已挂 · 2026-10-03 · trigger = 归批）；对外宣称口径按平台分档 = **win32 已修（`spawnSync` 同步化）∥ POSIX 保持 SIGTERM-only**。
 - **发现 1–3 落点**：`docs/core/design/PROXY.md` 三处收正（§6.2 测试面收正 ∥ §2 body 管线两端写实 ∥ §6.1 补 provider 消费点坐标）+ 变更记录随动。**零新语义**（形态 ∥ 口径收正）。
 
+**§2 回填块（实施窗回填 · fix 轮 · eng-designer · 2026-10-03——承 §5 未闭合项 1–2）**
+
+**来源** = 实施舱上报（代码评审发现 2「拟新增」态滞后 ∥ 发现 3 消费点坐标 +1 漂移——Suggestion 列 = 实施舱上报）+ 父侧 fix 轮派单（号 1–2，执行者 = 本席）。**产品码零触**；落点 = 设计档三档（PROXY.md ∥ PROVIDER.md ∥ MCP.md）+ 本档 §2。**零语义改**（契约 ∥ 判断句 ∥ 机制描述零动）。
+
+**号 1 —— 「拟新增」态 ⇒ 按盘翻「已落」**：
+- `docs/core/design/PROXY.md:32` ∥ `:95` ∥ `:101`：「拟新增」⇒「已落」（实据 = `thincoder-core/stream-destroy.mjs` 在盘 35 行、导出 `destroyBody` = `:28`；批内件 `docs/batches/2026-10-03-crash-guards.test.mjs` 在盘 257 行）。
+- `docs/core/design/PROVIDER.md` ∥ `docs/core/design/MCP.md` **同族核对 = 零改**：本批面无「拟新增」态（§6.3 守卫指针句 ∥ §6.6 树杀语 + D-MC17 与实装逐字对上）；本批面零行号级坐标（无漂移面）。
+- 变更记录 = `PROXY.md` +1 行（本轮回填入档）；`PROVIDER.md` ∥ `MCP.md` 零改（无变更零留痕）。
+
+**号 2 —— 消费点坐标 +1 漂移 ⇒ 按盘收正**：
+- `docs/core/design/PROXY.md:95` 四坐标：`thincoder-core/proxy.mjs` `:94 ⇒ :95` ∥ `:99 ⇒ :100` · `thincoder-core/provider/sse.mjs` `:178 ⇒ :179` · `thincoder-core/provider/google.mjs` `:203 ⇒ :204`（各档 import +1 所致）。
+- 同族补收（本回填轮实扫新发现——派单清单外，按盘收正）：`docs/core/design/PROXY.md:31` 管线两端坐标同受 +1 漂移——`:76 ⇒ :77`（`const body = new PassThrough()` 现址）∥ `:124 ⇒ :125`（`sock.pipe(body)` 现址）。
+- 实读对位（逐处）：`thincoder-core/proxy.mjs:95` `else destroyBody(body, err)` ∥ `:100` 看门狗 `destroyBody(...)` ∥ `thincoder-core/provider/sse.mjs:179` ∥ `thincoder-core/provider/google.mjs:204`（`try { destroyBody(…) } catch` 保留）∥ `thincoder-core/mcp/transport-stdio.mjs:17` `spawnSync("taskkill", …)`。
+
+**受影响文件表「预期」列齐平（按盘实测 · 内容行数 KD-4 口径 · as-of 2026-10-03 本回填轮；表列「预期」以本块为准）**
+
+| # | 文件 | 实测（现行 ⇒ 实测） | 对预算 |
+|---|---|---|---|
+| 1 | `thincoder-core/stream-destroy.mjs` | 0 ⇒ **35**（已落） | ≈30 |
+| 2 | `thincoder-core/proxy.mjs` | 274 ⇒ **275** | ≈277 |
+| 3 | `thincoder-core/provider/sse.mjs` | 264 ⇒ **265** | ≈267 |
+| 4 | `thincoder-core/provider/google.mjs` | 257 ⇒ **258** | ≈260 |
+| 5 | `thincoder-core/mcp/transport-stdio.mjs` | 140 ⇒ **142** | ≈143 |
+| 6 | `docs/core/design/PROXY.md` | 134 ⇒ **146**（原表 142 滞后——修正轮后未随盘；含本回填轮变更记录 +1） | — |
+| 7 | `docs/core/design/PROVIDER.md` | 571 ⇒ **573** ✓ | — |
+| 8 | `docs/core/design/MCP.md` | 223 ⇒ **227** ✓ | — |
+| 9 | `docs/batches/2026-10-03-crash-guards.test.mjs` | 0 ⇒ **257**（已落） | ≈200 |
+| 10 | `docs/core/design/API-CONTRACT.md` | 生成区重跑（2839 条）：`:1517` 入 `destroyBody`（坐标 `thincoder-core/stream-destroy.mjs:28`）∥ 四档行号随动 ∥ desktop `update.mjs` 他批机械漂移 | **2949** |
+
+**机检读数**：仓根 `node scripts/doc-check.mjs` = **exit 0**（OK(锚)：0 条悬空 ∥ OK(行宽)：零超宽）；行数面差异 7 条（全 `docs/desktop/design` 面他批项——非本批面）。批内产品档 ∥ 单测件全 ≤300 建议线（最高 = `thincoder-core/proxy.mjs` **275**）。
+
 ## §3 设计评审（评审子代理）
 **状态行**：评审完成（无🔴；1🟡∥3🔵）
 
@@ -143,5 +174,90 @@ crash-report 三份（2026-09-22/23）签名 `Response body timeout (idle)` ← 
 VERDICT: pass
 
 ## §4 用户批准（主 agent）
+
+**2026-10-03 21:22 · 用户一句「都批」**——崩溃族守卫批获准进入实施（与桌面 Linux 批同批批准）。
+
+- **依据（三条件齐备）**：① 设计评审通过（0🔴 ∥ 1🟡 ∥ 3🔵——发现表 = §3 轮次 1）；② 修复轮 4/4 落地并父侧逐条核验（`docs/core/design/PROXY.md:31` ∥ `:95` ∥ `:99-102` ∥ 本档 §2 修正块；doc-check 复跑 exit 0）；③ 设计令牌已签发（**值不入档**）。
+- **批准范围** = §2 全量（新档 `stream-destroy.mjs` ∥ 四消费点接线 ∥ #17 `transport-stdio.mjs` `spawnSync` 化 ∥ 批内单测 T1–T11 ∥ API-CONTRACT 重跑）；无新增范围。
+- **批准态**：已批准（2026-10-03）
+
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（2026-10-03 · 批内件 EXIT=0（10 pass ∥ 1 skip ∥ 0 fail）· 审计 1 轮 CLEAN · 代码评审 1 轮 pass（0🔴）；终态 clean）
+
+
+
+**§5 批次实施记录（eng-coder · 2026-10-03 · initial 轮）**
+
+**交付摘要（按 §2 全量实现 · 五产品档 + 批内件 + 生成区）**
+
+| # | 文件 | 改动（file:line 级） | 行数（KD-4 内容行） |
+|---|---|---|---|
+| 1 | `thincoder-core/stream-destroy.mjs` | 拟新增 → **已落**：`destroyBody(body, err)` 单点（契约四则：`:29` 形态门/已 destroyed ⇒ no-op ∥ `:30-33` Symbol 一次性标记 + 永久 no-op `'error'` 监听者 ∥ `:34` `destroy(err)` 原错误直传 ∥ 全文无 `listenerCount` 预检）；零 import | **35**（预算 ≈30） |
+| 2 | `thincoder-core/proxy.mjs` | `:10` import +1 ∥ `:95` 头后失败换 `destroyBody` ∥ `:100` body 看门狗换 `destroyBody` | **275**（274 ⇒ 预算 ≈277） |
+| 3 | `thincoder-core/provider/sse.mjs` | `:6` import +1 ∥ `:179` 看门狗换 `destroyBody`（try/catch 保留） | **265**（264 ⇒ 预算 ≈267） |
+| 4 | `thincoder-core/provider/google.mjs` | `:11` import +1 ∥ `:204` 看门狗换 `destroyBody`（try/catch 保留） | **258**（257 ⇒ 预算 ≈260） |
+| 5 | `thincoder-core/mcp/transport-stdio.mjs` | `:4` import 补 `spawnSync` ∥ `:7-13` 注释随动（同步化理由）∥ `:17` `spawn("taskkill"…)` → **`spawnSync`**（参数逐字同 + `{ stdio: "ignore", windowsHide: true }` + try/catch 保留）；POSIX 分支零改 | **142**（140 ⇒ 预算 ≈143） |
+| 6 | `docs/batches/2026-10-03-crash-guards.test.mjs` | 拟新增 → **已落**：T1–T11（纯 Node 内建；两条对照红腿 T1 ∥ T8 + 两处用例技术隔离，见决策表） | **257**（预算 ≈200） |
+| 7 | `docs/core/design/API-CONTRACT.md` | 生成区重跑（`node scripts/api-contract.mjs --write` · 2839 条）：`:1517` 入 `destroyBody`（坐标 `thincoder-core/stream-destroy.mjs:28`）+ 四档行号随动 + 他批机械漂移（desktop `update.mjs`——本批未触该档，生成区按源全量重算的必然包含） | **2949**（机制面） |
+
+**验收读数（四条 · 机检）**
+
+① **批内件全绿**：仓根 `node --test docs/batches/2026-10-03-crash-guards.test.mjs` ⇒ **EXIT=0**；`tests 11 = pass 10 ∥ fail 0 ∥ skipped 1`（T11 平台门 = 本机 win32 按设计 skip 并记录）。逐腿：T1 ✔（对照红：裸 `destroy(err)` 子进程退出码 ≠ 0、stderr 含 `Unhandled 'error' event`）∥ T2–T4 ✔（守卫四态：无消费者存活 ∥ errored 保留原错误 ∥ 形态门 no-op ∥ 在场/迟到消费者仍拒原错误）∥ T5 ✔（net 回环端到端：存活 + `Response body timeout (idle)` + `proxy-body-idle`）∥ T6/T7 ✔（sse ∥ google 点位，mock timers 前推 120s）∥ T8 ✔（对照红：#17 异步形不送达 ⇒ 替身存活）∥ T9/T10 ✔（生产形：子+孙+曾孙皆死 ∥ 正常相位无回归）。
+
+② **对照腿先红后绿（实跑读数）**：
+- **#16 红** = 接线前实跑裸 `destroy(err)`（net 回环 + `bodyIdleMs=60` 弃流）⇒ **进程被杀**（`Unhandled 'error' event`，栈 `proxy.mjs:99`，与三份 crash-report 签名逐字一致）；**绿** = 接线后同场景 **存活** + `body.errored` = 原错误（`Response body timeout (idle)` · `abortInfo.detail = proxy-body-idle`）。
+- **#17 红** = 接线前实跑生产形（`stdioTransport("node", …)` ⇒ cmd.exe 包装链 + exit 相位 `close()`）⇒ **server + 孙存活、心跳持续推进**（泄漏复现）；**绿** = `spawnSync` 化后同场景 **全死、心跳冻结**。
+- **控制腿机制隔离（实跑实证 + libuv `src/win/process.c` 实读）**：Windows/Node 把非 detached 子进程挂进 libuv 全局 job（`KILL_ON_JOB_CLOSE`）⇒ 父退出即清杀直接子进程，**掩盖**「退出相位异步 taskkill 不送达」；现场泄漏形态 = cmd.exe 包装链孙进程静默逃逸 job。故 T8 用 **detached 替身**（逃逸隔离 ⇒ 异步形不动，缺陷可判别）；T9/T10 用 **生产形**（命令非 .exe ⇒ cmd.exe 包装链）。已在批内件档头 `:12-19` + 本节披露；#16 覆盖口径（T6/T7 = 接线零回归腿）在档头 `:8-9`。
+
+③ **API-CONTRACT 生成区重跑**：`--write` 落盘（2839 条）· diff 实核 = `destroyBody` 入区 + 四档行号随动（+1~+2，import/注释所致）+ desktop `update.mjs` 他批机械漂移。
+
+④ **行数读数**：见上表（全部 ≤300 建议线）。
+
+**决策透明表（实施轮）**
+
+| # | 决策 | 理由 / 披露 |
+|---|---|---|
+| I-1 | T8 用 detached 替身（非朴素直接子进程） | 实跑实证：非 detached 子进程被 libuv job 父死清杀，朴素替身在**任何**实现下都死 ⇒ 控制腿失去检出力；detached 是唯一能隔离「异步不送达」机制的形。属**用例技术隔离**（§2 用例语义「异步形 ⇒ 替身存活」原样成立），档头实文披露 |
+| I-2 | T9/T10 夹具命令 = `"node"`（走 cmd.exe 包装链）而非 `process.execPath` | 直连 node 子进程被 job 清杀（无论修没修）⇒ 腿失判别力；cmd.exe 包装链 = 现场泄漏形态（孙进程逃逸 job），修复与否判别明确。依赖 = PATH 可解析 `node`（本机实核 `C:\Program Files\nodejs\node.exe`） |
+| I-3 | T7 断言由「`result.partial === true`」收窄为「resolve（partial 保留径）+ 零内容返回形」 | 实读 `google.mjs:134-148`：`chat()` 返回面 = `{content, reasoning, usage?, toolCalls}`——内部 `partial` 标志不过 chat 边界；原断言在**任何**实现下取不到值（非本批缺陷）。收窄后仍判别：throw 径（无 partial 保留）会在此处红 |
+| I-4 | §2 受影响表「预期」列回填 = 入 §5（本段），不改 §2 正文 | §2 = eng-designer 段（一段一作者）；实施轮读数落 §5，差异以盘读为准 |
+| I-5 | 三设计档**零触碰**（含评审发现 2/3 的态滞后与坐标漂移） | 任务书明禁（设计档 = eng-designer 域）；漂移面已披露，去向 = 设计侧随动轮 |
+
+**审计与代码评审（轮次与终态）**
+
+- **独立偏离审计（explore · 只读 · 1 轮）**：四类偏差（部分实现 ∥ 静默简化 ∥ 设计漂移 ∥ 表外改动）**全未发现** ⇒ **CLEAN**；补充记录 F1（§5 空档——本段即其闭合）、F2（三设计档坐标/「拟新增」态滞后——上报）、F3（审计装配无执行工具，批内件复跑与红/绿为实施方读数）——均已处置/披露。
+- **独立代码评审（advisor · code · 轮 1）**：**pass**（🔴 0 ∥ 🟡 2 ∥ 🔵 3）。处置：🟡#1 §5 空档 ⇒ **本段闭合**；🟡#2 PROXY.md「拟新增」态滞后 ∥ 🔵#3 同档坐标 +1 ⇒ **立据不改**（超实施者写权）——上报设计侧随动；🔵#4（T6/T7 覆盖口径注记）⇒ **已修**（档头 `:8-9`）；🔵#5（判活助手 EPERM 面）⇒ **部分修**（`isDead` 收紧为 `e.code === "ESRCH"` 判死；T8 固定窗不改——机制上异步形永不送达、detached 无清杀，窗内读数即终态）。**修后复跑：EXIT=0 · 10 pass ∥ 1 skip ∥ 0 fail（终态）**。
+- **终态 = clean**（实施 → 审计 1 轮 CLEAN → 评审 1 轮 pass → 微修 2 项 → 复跑绿）。
+
+**未闭合项（上报 · 非本席可动）**
+
+1. 三设计档随动：`PROXY.md:95`（消费点坐标载 94/99/178/203 ⇒ 实装 95/100/179/204）∥ `:32`/`:95`/`:101`「拟新增」态 ⇒ 已建；`MCP.md` ∥ `PROVIDER.md` 行号同族核对建议。去向 = eng-designer 随动/父侧。
+2. §2 受影响表「预期」↔ 盘读差异（proxy 275 vs ≈277 ∥ sse 265 vs ≈267 ∥ google 258 vs ≈260）——§2 域，零触；读数已落本段。
+3. 设计已裁残面（不改）：U-CG-1 直连 fetch web `ReadableStream` ⇒ 守卫显式 no-op、读侧看门狗静默失效；U-CG-2 POSIX 退出相位仅 SIGTERM。
+4. 发行链（批边界外）：VSC/桌面经 `@thincoder/core` 包消费 ⇒ 两端面待核下次发布/打包才带守卫（供 §6 对外宣称口径分档）。
+
 ## §6 验证与收口（父代理）
+
+**批次**：crash-guards（C 线批① · #16 ∥ #17 · 2026-10-03）——§1 起全链（讨论 → 设计 → 评审 → 修复 → 批准 → 实施 → 回填 → 收口）。
+
+**验证读数（父侧亲跑——不采信自报）**
+- 批内件 `node --test docs/batches/2026-10-03-crash-guards.test.mjs` = **EXIT 0**（11 用例 = 10 pass ∥ 1 skip〔T11 POSIX 平台门〕∥ 0 fail）。
+- 五产品档 `node --check` 全过；新档 `thincoder-core/stream-destroy.mjs` 通读 = 契约四则逐条对上（含禁项「无 `listenerCount` 预检」落空）。
+- 全位点 grep：`thincoder-core/proxy.mjs:95` ∥ `:100` ∥ `provider/sse.mjs:179` ∥ `provider/google.mjs:204` ∥ `mcp/transport-stdio.mjs:17`（taskkill 参数逐字）。
+- `docs/core/design/API-CONTRACT.md:1517` = `destroyBody` → `thincoder-core/stream-destroy.mjs:28`（与导出位逐字）。
+- 仓套件（收口闸）：核包 `npm test` = **EXIT 0**（本仓 2026-09-28 全清后为批内件制度——manifest 空 ⇒ 绿；验证载体 = 批内件）。
+- doc-check 复跑 = **EXIT 0**（悬空 0 ∥ 行宽 0）。
+- 对照腿证据（舱内实跑 + 父侧核）：#16 先红（进程被杀 · 栈 `proxy.mjs:99` · 与 2026-09-22/23 三份 crash-report 签名逐字）→ 后绿（存活 · `errored` = 原错误对象）；#17 先红（生产形孙进程泄漏 · 心跳持续推进）→ 后绿（全死 · 心跳冻结）。
+
+**验收对照（条目 → 读数）**：R1 ✅（单点守卫 + 四消费点全位点接线）∥ R2 ✅（win32 `killTree` `spawnSync` 同步化）∥ AC① ✅（批内件 11 用例）∥ AC② ✅（两缺陷先红后绿对）∥ AC③ ✅（`destroyBody` 入生成区）∥ AC④ ✅（行数全 ≤300——最高 `proxy.mjs` 275）。
+
+**结算**
+- 台账：**#865**（GitHub #17）∥ **#866**（GitHub #16）⇒ 在途 → 待核销 → **已核销**（依据 = 本档 §6 ∥ 提交 `0e121714`）。
+- 上抛归位：**U-CG-1**（直连 fetch 看门狗失效）⇒ 台账 **#878**（归批）∥ **U-CG-2**（POSIX 残面）⇒ 台账 **#877**（归批——对外文案分档在册）。
+- **U-CG-4 裁** = 不留痕（缺陷修复类——无新语义需求；如后需可随时立）。
+- **U-CG-5**（上游 PR #16 回帖）= **用户权**——登记待用户。
+- 前批遗留复核：无（本批独立立链）；暂缓批复核：无。
+
+**对外口径（分档）**：win32 已修（`spawnSync`）∥ POSIX 保持 SIGTERM-only（#877）；守卫随核包消费 ⇒ 桌面 ∥ VSC 随下次发布/打包带出（本批不触两端面）。
+
+**提交**：`0e121714`（实施）∥ 本收口轮记录提交（随后）。

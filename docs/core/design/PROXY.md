@@ -28,8 +28,8 @@
 - 统一出口 `proxyFetch(url, opts, proxyUri)`（`:265`）：无 `proxyUri` → `globalThis.fetch`；`https:` → 隧道；`http:` → 转发。
 - 错误形态：坏代理串**友好报错**（`Invalid proxy URI: "…" — expected http://host:port`，`:189` / `:237`——融合自 VSC 侧）。
 - 超时语义：CONNECT/TLS 阶段用 `FETCH_TIMEOUT`（15s）；**响应头**用 `opts._headerTimeoutMs`（默认 60s，与直连 600s 语义区分）；**body 空闲**看门狗 `opts._bodyIdleMs`（默认 120s）。
-- **body 终止守卫（#16 · 崩溃族）**：body = 响应体 `PassThrough`（管线两端 = 源 `sock`（net socket）→ 目标 body；body 建于 `thincoder-core/proxy.mjs:76`、头到齐后 `:124` 处 `sock.pipe(body)` 写入）——头后失败 ∥ body 空闲看门狗以 `destroy(err)` 终止 body **前**，先挂**永久** no-op `'error'` 监听者
-  （单点 `destroyBody(body, err)`——`thincoder-core/stream-destroy.mjs`（拟新增；proxy ∥ provider 三文件共用）；契约与理由 = §7 D-PX7）。
+- **body 终止守卫（#16 · 崩溃族）**：body = 响应体 `PassThrough`（管线两端 = 源 `sock`（net socket）→ 目标 body；body 建于 `thincoder-core/proxy.mjs:77`、头到齐后 `:125` 处 `sock.pipe(body)` 写入）——头后失败 ∥ body 空闲看门狗以 `destroy(err)` 终止 body **前**，先挂**永久** no-op `'error'` 监听者
+  （单点 `destroyBody(body, err)`——`thincoder-core/stream-destroy.mjs`（已落；proxy ∥ provider 三文件共用）；契约与理由 = §7 D-PX7）。
   无监听者瞬间的 `destroy(err)`（含 pipe 内部监听者触发即自摘后的重发）产生未处理 `'error'` ⇒ `uncaughtException` ⇒ **整个进程被杀**（2026-09-22/23 三份 crash-report 签名 `Response body timeout (idle)` = 此路径——GitHub #16）。
   **消费面语义零变**：在场 ∥ 迟到 `for-await` 消费者仍收原错误；`stream.errored` 保留原错误对象。
   **边界**：直连 fetch 路径 body = web `ReadableStream`（无 `destroy`）——守卫对其为显式 no-op；该路径看门狗有效性 = 本批外发现，去向见批档 §2 上抛。
@@ -92,13 +92,13 @@ Clear proxy
 | web 工具代理参数 | `thincoder-core/tools/web.mjs:96` · `:188` | 逐次调用参数 |
 | TUI 子菜单 | `thincoder-cli/src/tui/cmd-config.mjs:104`–`:114` | 在位 |
 | VSC 对位实现 | 经 `@thincoder/core/proxy.mjs` 引用（W10 已迁核——镜像已删） · 配置面 `thincoder-vscode/src/config-io.mjs:146` | 同实现 |
-| body 终止守卫（#16） | `thincoder-core/stream-destroy.mjs`（拟新增——单点 `destroyBody`）· 消费点 `thincoder-core/proxy.mjs:94` ∥ `:99` ∥ `thincoder-core/provider/sse.mjs:178` ∥ `thincoder-core/provider/google.mjs:203` | 本批落位 |
+| body 终止守卫（#16） | `thincoder-core/stream-destroy.mjs`（已落——单点 `destroyBody`）· 消费点 `thincoder-core/proxy.mjs:95` ∥ `:100` ∥ `thincoder-core/provider/sse.mjs:179` ∥ `thincoder-core/provider/google.mjs:204` | 本批落位 |
 
 ### 6.2 测试面
 
 - 代理族单测（CONNECT 隧道 / 配置解析 / `normalizeProxy` / 坏代理串报错 / provider 头注入——原 `provider-headers.test.mjs` 经 `_deps.proxyFetchImpl` 注入替身）原在 CLI 测试树（`thincoder-cli/test/`）——**随 2026-09-28 测试树全清重置退场**；实读 2026-10-03：现盘 = `run.mjs` ∕ `slow.mjs` + smoke 三枚，零 `.test.mjs`。
 - 现形 = 单元测试档（批内件惯例——名随批档 · 住 `docs/batches/` · 随批留存 · 不随仓套件收集；单测树重建时回迁）。
-- 本批新增守卫用例（#16 面）落 `docs/batches/2026-10-03-crash-guards.test.mjs`（拟新增——批内件惯例）。
+- 本批新增守卫用例（#16 面）落 `docs/batches/2026-10-03-crash-guards.test.mjs`（已落——批内件惯例）。
 - 无代理路径 = 原生 `fetch`——单测的唯一网络面（无真网络依赖）。
 
 ## 7. 并入的关键决策记录（含否决备选）
@@ -143,3 +143,4 @@ Clear proxy
   **§4 消费面按实装收正**（`web` 字段对 web 工具的门控已由 2026-08-31 裁定取消，现行只活于 Test connection 探针）；坐标改写为现状路径并实核；批次材料 / 状态行 / 变更流水不并（§8）。
 - 2026-10-03（**crash-guards 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-crash-guards.md` §2 · 台账 #866（GitHub #16））：§2 补 **body 终止守卫**（`destroy(err)` 前挂永久兜底 `'error'` 监听者——单点 `destroyBody`（拟新增 `thincoder-core/stream-destroy.mjs`））· §6.1 补坐标行 · §7 补 **D-PX7**。**零新语义**（守卫类最小修——流式语义零变）。
 - 2026-10-03（**crash-guards 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-03-crash-guards.md` §3 轮次 1 发现 1–3）：§6.2 测试面收正（代理族单测原载体随 2026-09-28 测试树全清退场——现形 = 单元测试档（批内件）；本批新增守卫用例落 `docs/batches/2026-10-03-crash-guards.test.mjs`（拟新增））· §2 body 管线两端写实（源 `sock` → 目标 body）· §6.1 消费点补 provider 两坐标（`thincoder-core/provider/sse.mjs:178` ∥ `thincoder-core/provider/google.mjs:203`）。**零新语义**（形态 ∥ 口径收正）。
+- 2026-10-03（**crash-guards 批 · 实施窗回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-crash-guards.md` §5 未闭合项 1 ∥ fix 轮派单（号 1–2））：§2 ∥ §6.1 ∥ §6.2「拟新增」⇒「已落」（单点档 `thincoder-core/stream-destroy.mjs` 35 行 · 批内件 257 行——均已在盘）∥ §6.1 消费点坐标按盘收正（`thincoder-core/proxy.mjs` `:94 ⇒ :95` ∥ `:99 ⇒ :100` · `thincoder-core/provider/sse.mjs` `:178 ⇒ :179` ∥ `thincoder-core/provider/google.mjs` `:203 ⇒ :204`）∥ §2 管线两端坐标同族收正（`:76 ⇒ :77` ∥ `:124 ⇒ :125`——各档 import +1 所致）。**零新语义**（坐标 ∥ 态收正）。
