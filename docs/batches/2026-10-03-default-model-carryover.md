@@ -25,7 +25,7 @@
 **坐标收正（父侧 · 2026-10-03 23:1x——承 §2 U4）**：① 批单② 记 `src/main/settings.mjs:273/:315-326`（写后探）——实读 = `:259-267`（helpers）+ `:327`（调用点，前读漂移）；② 本 §1 边界行「不动 #843」实为 **#842**（桌面设置面缺 `defaultModel` 补设路径；#843 = ACP 协议面提示通道）——两件皆本批零触边界内，登记口径随正。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（initial 轮——设计档三档已落笔（SESSION.md §6.21 判据句 6 ∥ IPC.md 会话级偏好注项 8 ∥ COMPOSER.md 本批注）；产品码零触；doc-check exit 0（悬空 0 ∥ 行宽零新增 ∥ 行数面差异 1 = 在册项））
+**状态行**：设计完成（initial 轮 + 修复轮（承 §3 轮次 1 发现 1–7 ∥ 9——已逐号收正，修复轮块见节尾；doc-check 复跑 exit 0））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 **§2 批次任务与设计（eng-designer · 2026-10-03 · initial 轮）**
@@ -105,7 +105,44 @@
 
 **§2 修正（行数对账 · 2026-10-03 同轮）**：受影响文件表 5–7 行「已落实读」按盘收正——`docs/core/design/SESSION.md` **1289**（1284 ⇒ 1289）∥ `docs/desktop/design/IPC.md` **534**（526 ⇒ 534）∥ `docs/desktop/design/COMPOSER.md` **292**（283 ⇒ 292）。产品码四行（1–4）保持**设计预算**（实施轮按盘回填）。
 
+**§2 修复轮块（eng-designer · 2026-10-03 · 修复轮——承 §3 轮次 1 发现 1–7 ∥ 9 逐号；父侧裁定 = 全采纳；号 8 = 父侧账目处置（台账 #883）——本侧零触）**
+
+- **号 1（验收面 · 端到端）**：`docs/core/design/SESSION.md:753-754`——§6.21 验收回指 ⑤ 扩端到端判据（选定 ⇒ 新建会话 ⇒ 运行模型 = 最近一次显式选定）+ 取数链点名（新槽创建 = 核 `newSession`（`thincoder-core/session-lifecycle.mjs:226`）∥ 装配取数 = 核 `loadConfig` 归一链 `resolveProviderPlan`（`thincoder-core/config.mjs:332` ∥ `thincoder-core/model-ref.mjs:113`/:126——槽面无源 ⇒ `defaultModel` 档入选））。
+- **号 2（写口计数统一）**：`docs/desktop/design/IPC.md:316-320`——设置族注 8① 收为**两轴明书**：「IPC 写口」三处（视图出口 ∥ `provider:save`（两支）∥ 选定写回；#880 后）∥「全链写点」= IPC 写口 + 向导 ∥ 迁移（向导 = `useModel` 同一实现；迁移 = 核 `config-migrate.mjs`）；`:211`（全链轴标注）∥ `:536`（记录行轴标注）同拍。
+- **号 3（实变比对单元）**：`docs/core/design/SESSION.md:735`——判据句 6 钉定：比对单元 = 复合串 `provider:model` 是否变化（`provider` 同值而 `model` 变——同渠道换模型——亦触发；写盘前读 ⇔ 写入值比对）。
+- **号 4（边界表）**：`docs/core/design/SESSION.md:749-751`——§6.21 边界情形表补选定写回三行（复合等值零写 ∥ 配置面写失败不反扑 ∥ 回声零写）。
+- **号 5（回执面）**：`docs/desktop/design/IPC.md:118` ∥ `:204`——`session:prefs` 信封括注 ∥ 项 7 各补半句：选定写回径成功另携**条件性 `providerState`**（项 8）。
+- **号 6（第四刷新点落点）**：`docs/desktop/design/IPC.md:244`——补落点行（主侧写点 = `thincoder-desktop/src/main/settings.mjs` `carryoverDefaultModel` ∥ 触发支 = `agent-host.mjs` `setPrefs`；渲染面消费档 = `composer-wire.mjs` `writePrefs`）；`docs/desktop/design/COMPOSER.md:134`——本批注项 3 点名消费档。
+- **号 7（自写抑制交互登记）**：`docs/desktop/design/IPC.md:38`——`ev:config` 行补覆盖判据：选定写回宿主自写同经核 `writeConfigAtomic`（写成功同步回调 `onConfigSelfWrite` 刷新监视基线）⇒ 零推送；候选面复读六径②不触；不另立写点登记（覆盖在写面单点）。
+- **号 9（受影响文件标注 + §5 指针）**：`docs/core/design/SESSION.md:74`——§5 补本批落点指针行；行数 ∥ 增量 = 本档 §2 受影响文件表 1–8 行（**在册**）。
+- **复核**：`node scripts/doc-check.mjs` 复跑 **exit 0**（悬空 0 ∥ 行宽零新增 ∥ 行数面差异 1 = 原在册项）；报告面新增 1 行（符号·宽 `carryoverDefaultModel`——设计在册未实现符号，不入闸）；三档变更记录各 +1 行（`SESSION.md:1295` ∥ `IPC.md:537` ∥ `COMPOSER.md:293`）；产品码 ∥ 需求卷零触。
+- **在册观察**：修复期间 `IPC.md` 遇他批并行写者（ledger-family-aggregate · 台账 #882 设计轮——§1 `ev:ledger` 行 ∥ 其记录行）——区域不重叠，双方内容读回无损。
+
 ## §3 设计评审（评审子代理）
+
+### 轮次 1（评审子代理）
+
+**发现表（设计评审 · 会话选定写回批 default-model-carryover · 台账 #880）**
+
+| # | Category | Severity | Issue | Suggestion |
+|---|---|---|---|---|
+| 1 | 验收 / 需求覆盖 | 🟡 | 目标句含用户可见结果「下一次新开会话时自动采用」（`thincoder/docs/desktop/requirements/COMPOSER.md:12` ∥ `thincoder/docs/core/design/SESSION.md:735`），验收面只列写回半——`thincoder/docs/core/design/SESSION.md:749` ⑤ = 「实写回 ∥ 等值 ∥ 回声 ∥ 回退径零写」；「新会话起点」取数链未点名（`thincoder/docs/core/design/SESSION.md:196` 仅结论句）⇒ 结果半无端到端判据 | 补端到端判据（选定 ⇒ 新建会话 ⇒ 运行模型 = 最近一次显式选定）＋点名该链落点（或加指针至既有单源） |
+| 2 | 一致性 / 清晰 | 🟡 | 同一写入口集合三种计数并见：`thincoder/docs/desktop/design/IPC.md:316`「写口三处（#880 增）」∥ `thincoder/docs/desktop/design/IPC.md:211`「现四写点语义零改」∥ `thincoder/docs/desktop/design/IPC.md:534`「写口两处 ⇒ 三处」；`thincoder/docs/desktop/design/IPC.md:316-318` 同段实列四条入径（视图出口 ∥ `provider:save` `active:true` ∥ 首跑补写 ∥ 选定写回） | 统一「写口 ∕ 写点」计数口径（是否分计 `provider:save` 两支）并回填两处计数 |
+| 3 | 清晰 | 🔵 | 「槽面实变」比对单元未钉定：`thincoder/docs/core/design/SESSION.md:735`「`provider` + `model` 两键写入 ∧ 槽值实际改变」可读作「两键都变」——照此实现则同渠道换模型（`provider` 同值）不触发写回 = 主径失守 | 明写判据 = 复合串 `provider:model` 是否变化（与 `thincoder/docs/desktop/design/IPC.md:207`「写盘前读 ∥ 写入值比对」同拍） |
+| 4 | 清晰 / 边界 | 🔵 | §6.21 边界情形表（`thincoder/docs/core/design/SESSION.md:742-747`）未增选定写回行（复合等值 ∥ 配置面失败 ∥ 回声）；该批边界仅住 `thincoder/docs/desktop/design/IPC.md:211` 括注 | 表内补行，或明写「写回径边界单源 = `IPC.md` §2 项 8」 |
+| 5 | 一致性 / 清晰 | 🔵 | `session:prefs` 成功回执面三处未同拍：`thincoder/docs/desktop/design/IPC.md:118` 信封括注 `{ ok, reason, cwd, slot, meta }` 与 `thincoder/docs/desktop/design/IPC.md:204` 项 7「成功携 `meta` · 失败缺 `meta` 键」未提条件性 `providerState`（该键只见于 `IPC.md:118` 后段 ∥ 项 8） | 两处补半句或改指针至项 8——免「信封键集 = 五键」被读成闭合 |
+| 6 | 清晰 | 🔵 | 「第四刷新点」（`thincoder/docs/desktop/design/IPC.md:243`）未给落点（主侧写点 ∥ 渲染面消费档），与第三刷新点（`thincoder/docs/desktop/design/IPC.md:242` 已给实落三处坐标）不成对；`thincoder/docs/desktop/design/COMPOSER.md:134` 亦未点名消费档 | 点名两处落点（或落批档落点表） |
+| 7 | 集成边界 | 🔵 | 新增宿主自写盘（`defaultModel`）与 `ev:config` 自写抑制 ∥ 候选面复读六径②（`thincoder/docs/desktop/design/IPC.md:38` ∥ `thincoder/docs/desktop/design/IPC.md:348`）的交互未在档；同批判据句 6 已立意「防探针空转」（`thincoder/docs/core/design/SESSION.md:735`）⇒ 该门是否自动覆盖未见判据 | 一句登记（自写抑制覆盖判据；若须登记写点则点名） |
+| 8 | 范围 | 🟡 | `thincoder/docs/core/design/SESSION.md:736` 声明「CLI ∥ VSC 判定 = 同判据适用、落地另批」⇒ 同一 config 下三端行为分叉期（用户原话未限端，`thincoder/docs/desktop/requirements/COMPOSER.md:20`）——协调项（非缺陷） | 排批续落 ∥ 分叉期入台账登记 |
+| 9 | 受影响文件标注 | 🔵 | 四档均未见本批受影响文件行数 ∥ 预期增量；落点 = `thincoder/docs/desktop/design/IPC.md:209` 两档（`settings.mjs` ∥ `agent-host.mjs`——在档坐标 `IPC.md:242` `settings.mjs:330` ∥ `COMPOSER.md:18` `agent-host.mjs:335-336` 旁证两档越 300 顾问线）；`thincoder/docs/core/design/SESSION.md:63-73` §5 未增本批落点指针（2026-10-0x 系列同况）；落点表住批档 §2（**范围外 ⇒ 未验证**） | 落点表附行数 ∥ 增量 + 越层审视结论；§5 补指针行 |
+
+**范围限制（判定降级声明）**：项目未声明文档地图与项目标准档 ⇒ 文档归属按 `AGENTS.md` 与本四档内互指判定；方法论合规按四档既有体例（判据句 ∥ 边界情形 ∥ 验收回指 ∥ 落点表指针）判定。
+
+**范围外注记（不评严重度）**：`thincoder/docs/desktop/design/IPC.md:197` ∥ `:211` 引「需求 §3.5:94 ∥ 项 5・6」（住 `docs/desktop/requirements/PROJECT.md`——评审范围外，未读）——该卷是否需同拍收正「config 零写」原文 = 待核项（**unverified**）。
+
+**计数**：🔴 0 ∥ 🟡 3 ∥ 🔵 6。
+VERDICT: pass
+
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）

@@ -131,7 +131,7 @@
 
 1. **写路**：`selectModel` 选定（模型钮 ∥ `/model` 斜径——同一函数）⇒ `session:prefs`（既有——槽写零改）**同拍**写回 config `defaultModel = "<provider>:<model>"`（新会话起点随动）。
 2. **触发判据 = 槽面实变**：会话切换 ∥ `models` 推送回声（闲时照发的同值回写）∥ 只改档位——皆**零写**（防系统自动改写用户配置）；在飞拒 `busy` 照旧零写；系统回退自动采用不写。
-3. **回执面**：选定写回径成功回执携 `providerState` ⇒ 提示带即时重派生（fallback 明示行随选定退场——#841 同纪律）。
+3. **回执面**：选定写回径成功回执携 `providerState`（消费档 = `thincoder-desktop/renderer/composer-wire.mjs` `writePrefs`——回执落切片，键缺席 ⇒ 零写）⇒ 提示带即时重派生（`thincoder-desktop/renderer/composer-sync.mjs` `paintNotices`；fallback 明示行随选定退场——#841 同纪律）。
 4. **边界**：设置面「采用」语义零改（只写全局默认、不写会话槽——两面不互相顶替）；回退解析链（`thincoder-core/model-ref.mjs`）零触；候选面 ∥ 词表 ∥ 通道集零新。
 
 ## 3. 文件账（本域）
@@ -290,3 +290,4 @@
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #9（评审轮 1 · 发现 4 ∥ 7）· eng-designer**——承批档 §3 轮次 1 · 台账 #841）：本批注收正——数据面载荷补 `invalidReason`（合成式可算）∥ 行面判据改 **`fallback` ∧ 非 invalid 类**（合成式单源 = `doc:PROVIDER.md:§6.22`）∥ 清位补**第三刷新点**（设置写回执——`settings:agent` ∥ `provider:save` 成功回执携 `providerState` ⇒ 即时退场）。**产品码零触（修正轮）**。
 - 2026-10-03（**会话选定写回批（default-model-carryover）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §2 · 台账 #880）：§2 增本批注（选定写回——写路 ∥ 槽面实变判据 ∥ 回执 `providerState` ∥ 边界）；**产品码零触（设计轮）**。机制单源 = `docs/core/design/SESSION.md` §6.21 判据句 6。
 - 2026-10-03（**轻通道轮八 · fallback 明示行文案澄清 · 收口形式化轮 · eng-designer**——承批档 `docs/batches/2026-10-03-light-round-8.md` §1 · 台账 #879 · 实况 = 提交 `32216ffc`）：#841 批注收正——明示行词面由「逐字复用 #840 键」改为**新键 `composer.send.noDefaultModelFallback`**（澄清半句——**失败词 ∥ 态词分家**）；§3.1 `composer-sync.mjs` 行实读对盘（**322 ⇒ 324**）。**产品码零触**（收口形式化轮）。明细 = 批档 §2。
+- 2026-10-03（**会话选定写回批（default-model-carryover）· 修正轮（评审轮次 1 · 发现 6 逐号 · 父侧裁定 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §3 轮次 1 · 台账 #880）：本批注项 3 点名消费档（`thincoder-desktop/renderer/composer-wire.mjs` `writePrefs` ⇒ `thincoder-desktop/renderer/composer-sync.mjs` `paintNotices`）。**产品码零触**。明细 = 批档 §2 修复轮块。
