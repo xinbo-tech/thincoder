@@ -7,7 +7,7 @@ import { connect as tlsConnect } from "node:tls";
 import { PassThrough } from "node:stream";
 import { URL } from "node:url";
 import { abortError, timeoutError } from "./abort-provenance.mjs";
-import { destroyBody } from "./stream-destroy.mjs";
+import { IDLE_ABORT, destroyBody } from "./stream-destroy.mjs";
 
 const FETCH_TIMEOUT = 15_000
 
@@ -262,9 +262,18 @@ function tcpConnectProxy(proxyUri, signal, timeout) {
 /**
  * Generic fetch with proxy support.
  * No proxy → native fetch. Proxy + HTTPS → CONNECT tunnel. Proxy + HTTP → 经典代理转发（绝对 URI 请求行）。
+ * 直连分支 = 内部 abort 通道建设点（#878 D-PX8）：建 `AbortController` + signal 合成（`AbortSignal.any`，
+ * 无 user signal 时单独用）后经 `IDLE_ABORT` 挂 response——web `ReadableStream` 的读侧看门狗
+ * （`readSSE` ∥ `parseGeminiStream`）经 `terminateBody` 恢复有效；proxy 两分支不挂（自有 `_bodyIdleMs`）。
  */
 export async function proxyFetch(urlStr, opts, proxyUri) {
-  if (!proxyUri) return globalThis.fetch(urlStr, opts)
+  if (!proxyUri) {
+    const idleAbort = new AbortController()
+    const signal = opts?.signal ? AbortSignal.any([opts.signal, idleAbort.signal]) : idleAbort.signal
+    const response = await globalThis.fetch(urlStr, { ...opts, signal })
+    response[IDLE_ABORT] = idleAbort
+    return response
+  }
   const target = new URL(urlStr)
   if (target.protocol === "https:") return tunnelHttps(urlStr, opts, proxyUri)
   // http:// 目标：TCP 直连代理，请求行发绝对 URI（GET http://host/path HTTP/1.1）
