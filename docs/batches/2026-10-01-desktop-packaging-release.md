@@ -20,6 +20,8 @@
 
 **重打（2026-10-03 11:2x · 父侧——用户 11:22「软件是不是要重新打包一下？」）**：纳入上午第二实例笔（`main.mjs` 263 行——明示框 + 唤醒；原 09:50 版不含）。`npm run package`（同双镜像 .cmd 脚本）**180s 收官**：四件 EV 实签 ✓ ∥ blockmap ✓ ∥ postpackage **闸绿（断言 5 + 更新面 4）** ∥ dev 链已恢复 5/5。新产物（`dist/`）：`ThinCoder-Setup-0.10.1.exe`（107.6 MB ∥ **sha256 `023d07ca…bb78d`** ∥ sha512 见 `latest.yml`——新版）∥ `latest.yml`（releaseDate 2026-10-03T03:26Z）∥ `.blockmap`。旧 09:50 版已移 `.thincoder/tmp/desktop-dist-0950-20261003`（可还原）。**发布三动作仍 = 用户门**（站点部署 ∥ feed 上传 ∥ 真机走查）。
 
+**发布执行（2026-10-03 11:2x—11:3x · 用户 11:27「安装包没问题了。发布吧」= 用户门放行）**：① **feed 上传**（`upload-download.mjs`——exe → blockmap → latest.yml 末传）：三件 PUT ✓（6.0s；尾部有 Windows 退出期 libuv 断言噪音——上传器已随修 `process.exitCode` 化）；**URL 实测**：`downloads/latest.yml` 200（version 0.10.1）∥ `downloads/ThinCoder-Setup-0.10.1.exe` 200（content-length **112,829,224** = 产物实值）∥ `.blockmap` 200（118,843）。② **站点部署**（`deploy-oss.mjs`）：15 档 0 失败（0.8s）；**页面实测**：`desktop.html` 200（含「桌面版指南」∥「自动更新」）∥ `download.html` 200（含「下载 Windows 安装包」+ exe 直链）∥ `/` 200（三条入口）∥ `changelog.html` 200（桌面端 v0.10.1）∥ `sitemap.xml` 200（desktop 行）∥ `about.html` 200（桌面版 0.10.1）。**判据注**：命令退出码受 Windows 退出期断言影响（以 URL/页面实测为准——全绿）。**余项**：T-DSK55 ③ 真机走查（用户择时/或已自测——待言）∥ `dist-r3` 锁残留（重启后清）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（构建窗实跑后值列回填 + 镜像行实测选定轮落——§4.1 ∥ §4.2 值 39 ⇒ 42 ∥ 373 ⇒ 376；§5.7 镜像行「实测选定」；门实跑零增；明细 = §2.13；2026-10-02）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
