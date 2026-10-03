@@ -16,6 +16,8 @@
 
 **评审 → 代签 → 实施（2026-10-01 22:55）**：评审轮 1 = **pass**（0🔴/3🟡/4🔵——§3 在档）→ 修复轮 1（§2.9 八条逐号落——父侧逐处核读通过；机检净增零）→ **§4 代签**（三条件齐备：评审 pass ∥ 修复核讫 ∥ token 在手）→ **eng-coder 实施轮点火**（九档产品面 + 批内件；构建 ∥ 真机 ∥ 站点 = 后续轮次——发布动作 = 用户门）。
 
+**原装位重跑完成（构建窗 · 父侧 · 2026-10-03 09:4x——用户 09:25「UKey 插上了」）**：`npm run package`（镜像双设 = `ELECTRON_MIRROR` ∥ `ELECTRON_BUILDER_BINARIES_MIRROR` npmmirror）——**全链走通**：物化 → electron-builder 26.15.3 → **四件 EV 实签**（`ThinCoder.exe` ∥ `elevate.exe` ∥ `Setup.__uninstaller.exe` ∥ `ThinCoder-Setup-0.10.1.exe`——载体 powershell ∥ RFC3161 取时 ✓）→ NSIS → blockmap → postpackage **闸绿**（断言 5 条 + 更新面 4 条——`#832` 式 +4 断言首跑即绿）。**产物**（`dist/`）：`ThinCoder-Setup-0.10.1.exe`（107.6 MB ∥ sha256 `29fe80e3…d58680`）∥ `latest.yml`（version 0.10.1 ∥ sha512 实读）∥ `.blockmap`（0.1 MB）∥ `win-unpacked/`（含 `resources/app-update.yml`：provider generic ∥ url 契约 ✓）。**dev 链已恢复**（5/5 规范）。PIN = 全程未弹（SAC 已解锁态，四签直过）。**过程三挫如实**（①镜像值尾空格 ⇒ GitHub 挂 600s；②父侧引号事故 ⇒ 环境变量进日志（已删日志，建议轮换 token）；③被击杀进程留 toolset 锁（`%TEMP%\.electron-builder-toolset.lock`）⇒ 安安静静重试数分钟——已清、换 .cmd 脚本注入参数 + 智能盯梢后一跑到底）。**U4 实读**：publisherName = `Shanghai Xinbo Technology Co., Ltd.`（证书 CN）∥ `latest.yml` 字段齐（version/files[0].url/sha512/size/path/releaseDate）∥ **sha512 形 = 基 64 带填充（`==` 尾）**——设计档「无填充——实施窗钉定」句须随正（一行，见台账）。**余项**：T-DSK55 ③ 真机（用户择时，会断本窗）∥ 发布三动作 = 用户门（站点部署 ∥ feed 上传）∥ `dist-r3` 锁残留（重启后清）∥ `dist-r4` 保留（旧参考）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（构建窗实跑后值列回填 + 镜像行实测选定轮落——§4.1 ∥ §4.2 值 39 ⇒ 42 ∥ 373 ⇒ 376；§5.7 镜像行「实测选定」；门实跑零增；明细 = §2.13；2026-10-02）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
