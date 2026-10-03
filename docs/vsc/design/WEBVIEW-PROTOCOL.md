@@ -71,7 +71,7 @@ reasoning, provider, images? } → extension _chat()
 | `turnFrame` | ext → wv | `{ turn, maxTurns }`——顶层逐轮进展段 |
 | `questionCancelled` | ext → wv | `{ promptId }`——abort 释放未答 question 卡（§4.2） |
 | `onAgentTurn` | 内部 | 每轮迭代 turn 计数钩子——顶层经 `panel-callbacks` 转 `turnFrame` 上屏；池条目同步转 `subagent` `status:"turn"` |
-| `uiPrefs` | ext → wv | `{ autoFollow, activityMaxHeight, activityTailLines }`——视图偏好三键（缺省 true / 32 / 3；发射 = `thincoder-vscode/src/extension/ui-prefs.mjs`（拟新增）（握手 + `onDidChangeConfiguration`）；消费 = `chat-messages.js` `case`（§3.2 行 23）） |
+| `uiPrefs` | ext → wv | `{ autoFollow, activityMaxHeight, activityTailLines }`——视图偏好三键（缺省 true / 32 / 3；发射 = `thincoder-vscode/src/extension/ui-prefs.mjs`（握手 + `onDidChangeConfiguration`）；消费 = `chat-messages.js` `case "uiPrefs"` → `ui-prefs.js` `applyUiPrefs`（§3.2 行 23）；机检②/③ 列坐标 = §12 行） |
 
 ### 3.1 演进纪律（三落点）
 
@@ -115,7 +115,7 @@ reasoning, provider, images? } → extension _chat()
 | | | |  | `webview/chat-messages.js:154` `case` → `webview/settings.js` `showSettingsError(scope, reason)`（段标 + 词化码 ∕ 单槽驻留——机制单源 = `SETTINGS.md` §2.15） |
 | 21 | `usage`（增字段） | `ctxTokens`（上下文占用量绝对数——状态行 `Yk` 尾串源；缺 ⇒ 尾串缺席） | `panel-callbacks.mjs` `usage` 发射点（累计 ∕ transports 映射——同 `reasoning_tokens` 行） | `status-bar.js` ctx 段（`context X% Yk` 拼接——#677 I16a） |
 | 22 | `recordAppend`（**新消息**——webview → host 留档记录出站） | `{ record: { kind:"subagent", meta, rows } }`——归档时点快照（形 ∥ 判据单源 = `docs/core/design/SESSION.md` §6.26；每块恰一次——归档幂等守卫内） | `webview/activity.js:124`（`archiveBlock` 同点——归档派生点调用，幂等守卫内恰一次；载荷字面量构造 `:190`） | `panel-messages.mjs:287` `case` → `handleRecordAppend`（`:123-134`——处理体取活行载体 + 核 `pushRecord`；fail-soft） |
-| 23 | `uiPrefs`（**新消息**——host → webview） | `{ autoFollow, activityMaxHeight, activityTailLines }`——视图偏好三键（缺省 true / 32 / 3；#875） | `thincoder-vscode/src/extension/ui-prefs.mjs`（拟新增） `pushUiPrefs`（webviewReady 握手 + `onDidChangeConfiguration`） | `webview/chat-messages.js` `case "uiPrefs"` → `thincoder-vscode/webview/ui-prefs.js`（拟新增） apply（§12 对表行随实施轮落） |
+| 23 | `uiPrefs`（**新消息**——host → webview） | `{ autoFollow, activityMaxHeight, activityTailLines }`——视图偏好三键（缺省 true / 32 / 3；#875） | `thincoder-vscode/src/extension/ui-prefs.mjs:13` `pushUiPrefs`（webviewReady 握手 + `onDidChangeConfiguration`） | `webview/chat-messages.js:164` `case "uiPrefs"` → `thincoder-vscode/webview/ui-prefs.js` `applyUiPrefs`（§12 对表行在册） |
 
 纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–23 即全部在案增量；表外增量不入）。发射 / 接收落点：
 `thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:29` ·
@@ -458,6 +458,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `turnBreak` | src/extension/panel-callbacks.mjs:151 | webview/chat-messages.js:55 | `活` | — |
 | `turnFrame` | src/extension/panel-callbacks.mjs:170 | webview/chat-messages.js:188 | `活` | — |
 | `turnState` | src/extension/chat-panel.mjs:255/src/extension/panel-messages.mjs:306 | webview/chat-messages.js:99 | `活` | — |
+| `uiPrefs` | thincoder-vscode/src/extension/ui-prefs.mjs:13 | webview/chat-messages.js:164 | `活` | 视图偏好三键（缺省 true ∥ 32 ∥ 3；#875——§3.2 行 23）；发射两面 = webviewReady 握手 + 设置变更（`onDidChangeConfiguration`——变更重推）；消费 → `webview/ui-prefs.js` `applyUiPrefs`（三面应用 ∥ 缺键 / 坏值 ⇒ 缺省） |
 | `usage` | src/extension/panel-callbacks.mjs:193 | webview/chat-messages.js:218 | `活` | — |
 | `userMessage` | src/extension/chat-panel.mjs:280 | webview/chat-messages.js:58 | `活` | — |
 | `websearchSettings` | src/extension/panel-settings-push.mjs:105/:94 | webview/chat-messages.js:152 | `活` | 打开拍回批（F-W8） |
@@ -735,3 +736,4 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 - 2026-10-04（**issue 修复批·三 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §2 · 台账 #875）：§3 表 + §3.2 登记补 **`uiPrefs` 新消息**（视图偏好三键——autoFollow ∥ activityMaxHeight ∥ activityTailLines；发射 = `ui-prefs.mjs` ∥ 消费 = `ui-prefs.js`）；标题计数 二十二项 ⇒ 二十三项。**零新语义**（已裁偏好面的协议落档）。明细 = 批档 §2。
 - 2026-10-04（**issue 修复批·三 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §3 轮次 1 发现 5）：**D-P11 计数同改**（二十二项 ⇒ 二十三项——与 §3.2 标题 ∥ 行 23 登记一致）。**零新语义**（计数收正）。
 - 2026-10-04（**issue 修复批·四 · 设计面实施轮（#825 退场注改述）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round4.md` §2 · 台账 #825）：§11 用例面六名 ⇒ **退场注改述**（裸名化 + 「随 2026-09-28 测试树全清重置退场」注——留名存档）。**零新语义**（所指皆已退场——如实收述）。明细 = 批档 §2。
+- 2026-10-04（**issue 修复批·三 · 实施后登记 / 回填轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §5（#79 甲舱 ∥ #80 乙舱交付）· 父侧裁定）：§12 补 **`uiPrefs` 行**（② `thincoder-vscode/src/extension/ui-prefs.mjs:13` ∥ ③ `webview/chat-messages.js:164` · ④ `活`——实施落地登记）；§3 表 ∥ §3.2 行 23「（拟新增）」标去（两档在盘——`ui-prefs.mjs` 26 行 ∥ `ui-prefs.js` 22 行）+ 落位坐标实读 + 「§12 对表行」注收正。**零新语义**（实现落地登记 ∥ 标去 ∥ 坐标实读）。明细 = 批档 §2 登记轮块。

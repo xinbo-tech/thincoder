@@ -17,7 +17,7 @@
 **边界**：在飞写域零触——#51（`thincoder-cli/**` + `thincoder-core/ledger-*.mjs`）∥ #56 ∥ #59（issue 批一二）∥ #57/#58（菜单轮/面板修轮）∥ 面板面。本批写域 = `thincoder-vscode/**`（无在飞冲突）。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（2026-10-04 · 修复轮 1 收正毕——§3 六条逐处（号 → 落点 = §2.11）；待父侧复审）
+**状态行**：设计完成（2026-10-04 · 登记 / 回填轮（#79 ∥ #80 未决项逐号 1–6——落点 = §2.12；`WEBVIEW.md` ∥ `WEBVIEW-PROTOCOL.md` 随动）；doc-check 读数见交付报告）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 ### 2.1 复验结论（复验令逐条 · 台账全文 + 现盘实核 · as-of 2026-10-04）
@@ -141,6 +141,63 @@
 **边界（本轮）**：产品码零触（仅实读）∥ 在飞写域零触 ∥ §1 / §3–§6 零动 ∥ 无新语义（= §3 六发现 + 父侧裁定「六条全采纳」的直接导出项）。
 
 **doc-check 读数（修复轮末复跑 · 仓根 `node scripts/doc-check.mjs` · 2026-10-04）**：**exit 0** ∥ 锚闸 OK（悬空 **0**——阈值 0）∥ 行宽 OK（源域全 .md 无 >300 单行）∥ 汇总 = 候选 47081 · 悬空 0 · 注记豁免 319 · 拟新增 53 · 迁移期引文 297 · 声明源缺位 0 ∥ 全数 ✗ = 非闸面列报（拟新增 ∕ 迁移期引文——沿既有形态；本批新增引用零悬空）。
+
+### 2.12 登记 / 回填轮（#79 ∥ #80 未决项逐号 1–6 · 2026-10-04 · fix）
+
+（fix 轮 · eng-designer · 2026-10-04——来源 = #79 甲舱交付报告未决项（八.3 ∥ 八.4）+ 父侧裁定补项（号 3 ∥ 4）+ #80 乙舱圈外注记（父侧裁定并入——号 5 ∥ 6）；写面 = `docs/vsc/design/WEBVIEW.md` ∥ `WEBVIEW-PROTOCOL.md` + 本块；产品码零触（仅实读）；需求档零触。）
+
+**前置复核（dependsOn #80——乙舱落定）**：缝在盘（`thincoder-render-core/subblocks/activity-view.mjs` `configureActivityView` 在位）；批内件 `docs/batches/2026-10-04-issue-fix-round3.test.mjs` 433 行在盘；乙舱 3 档现盘读数与 §5.6 一致（见号 3 表）；本批相关档工作树净（git status 实核）。
+
+**号 1——`panel-messages.mjs` 拆分复核登记**（374 · 越表 +3 = §5.3 D1；沿 `chat-panel.mjs` 先例形）：
+
+- 复核结论 = **不拆**（本批 +3 = 接线（import ∥ `webviewReady` 握手重推一枝）——结构未变；存量为既有拆分后余体——会话 / 回合交互 / 设置三族已迁出）；
+- 拆分计划 = 触发阈值 **450 行** ∥ 该档下次结构改动（先到即拆）；
+- 组边界 = ① 心跳族（`liveHeartbeatBeat` ∥ `startLiveHeartbeat` ∥ `stopLiveHeartbeat` + 两 WeakMap——≈30 行）② busy 队列族（`pushBusyQueued` ∥ `busyQueueItems`——≈27 行）③ 回合入口族（`routeUserTurn`——≈76 行）④ 分发表族（`handlePanelMessage`——≈160 行；case 标签集 = reverse 机检扫描面——迁出仍按同名 case 转发，先例 = 三族已迁出）；
+- ① 拆出 = `thincoder-vscode/src/extension/panel-messages-heartbeat.mjs`（拟新增）；② / ③ 次选；到期条件 = 触发阈值到达时。
+
+**号 2——`WEBVIEW-PROTOCOL.md` 协议面登记行落齐（`uiPrefs`）**：§12 补 `uiPrefs` 行（② `thincoder-vscode/src/extension/ui-prefs.mjs:13` ∥ ③ `webview/chat-messages.js:164` · ④ `活`——实施落地登记）；§3 表 ∥ §3.2 行 23「（拟新增）」标去（两档在盘）+ 落位坐标实读 + 「§12 对表行」注收正；变更记录一行。`WEBVIEW.md` §5.8 两处「（拟新增）」同拍标去（随号 4 块）。
+
+**号 3——§2.3 终态读数回填**（`wc -l` 实读口径 · as-of 本块 · 2026-10-04；对照基准 = §5.1（#79）∥ §5.6（#80））：
+
+甲舱 13+1 档：
+
+| 文件 | §2.3 设计（现 → 预算） | 报告 | 现盘实读 | 对照 |
+|---|---|---|---|---|
+| `thincoder-vscode/src/agent/tool-table.mjs` | 187 → +4 | 190 | 190 | ✓ |
+| `thincoder-vscode/src/agent/setup-reminders.mjs` | 41 → +~35 | 65 | 65 | ✓ |
+| `thincoder-vscode/src/agent/setup.mjs` | 297 → +2~3 | 300 | **309** | 盘漂移 +9——源 = 后续批（issue 修复批·一 · batch-1 group B · commit `c870433b`——`git log` 实核 #79 后唯一触碰；非 #79 读数误） |
+| `thincoder-vscode/src/extension/panel-mcp.mjs` | 167 → ±1 | 167 | 167 | ✓ |
+| `thincoder-vscode/src/extension/ui-prefs.mjs` | 新 → ~40 | 26 | 26 | ✓（新增档） |
+| `thincoder-vscode/src/extension/chat-panel.mjs` | 441 → +~6 | 443 | 443 | ✓ |
+| `thincoder-vscode/src/extension/panel-messages.mjs` | （越表——§2.3 未列） | 374 | 374 | ✓（号 1 登记同块） |
+| `thincoder-vscode/package.json` | 142 → +~24 | 157 | 157 | ✓ |
+| `thincoder-vscode/webview/ui.js` | 241 → +~6 | 249 | 249 | ✓ |
+| `thincoder-vscode/webview/ui-prefs.js` | 新 → ~30 | 22 | 22 | ✓（新增档） |
+| `thincoder-vscode/webview/chat-messages.js` | 265 → +~4 | 270 | 270 | ✓ |
+| `thincoder-vscode/webview/streaming.js` | 184 → +~2 | 184 | 184 | ✓ |
+| `thincoder-vscode/webview/status-bar.js` | 134 → ±1 | 135 | 135 | ✓ |
+| `thincoder-vscode/webview/controls.css` | 149 → −11 | 137 | **136** | 盘报差 1——盘 136 = 149−13（与报告 D2「−13」自洽）；`git log` 实核 #79 commit 后零触碰 ⇒ 盘面为准（报告行差 1——报告态） |
+
+乙舱 3 档 + 批内件：
+
+| 文件 | §2.3 设计（现 → 预算） | 报告 | 现盘实读 | 对照 |
+|---|---|---|---|---|
+| `thincoder-render-core/flow/reasoning.mjs` | 24 → ±1 | 25 | 25 | ✓ |
+| `thincoder-render-core/flow/block.mjs` | 153 → ±1 | 154 | 154 | ✓ |
+| `thincoder-render-core/subblocks/activity-view.mjs` | 205 → +~12 | 214 | 214 | ✓ |
+| `docs/batches/2026-10-04-issue-fix-round3.test.mjs` | 新 | 433 | 433 | ✓（批内件——随批档留存） |
+
+口径注：`wc -l`（换行计数——与设计表同口径；18 档两口径同值）；盘报差仅 2 项（`setup.mjs` +9——后续批落盘；`controls.css` −1——报告态差 1），逐项注明于对照列。
+
+**号 4——覆盖边界例外登记（`WEBVIEW.md` §5.8 邻位 + 变更记录）**：提示件 `scrollIntoView` 三处（`thincoder-vscode/webview/permission.js:25` ∥ `:37` ∥ `thincoder-vscode/webview/question.js:22`）不入 `autoFollow` 门——登记为例外（射程说明 = `autoFollow` 语义面 = 工具 / 流式自动滚动（#875 原文面）；提示件需用户在场注意力（不滚 ⇒ 静默挂起风险）⇒ 保持在场语义）。
+
+**号 5——`activityTailLines` 缺省 `3` 双写处置（单源面）**：设计档钉 **单源 = 核**（`DEFAULT_TAIL_LINES`——缝归一为终裁）；端侧消费形 = 交缝归一；端侧现存镜像（`ui-prefs.js:21`）登记为冗余防御层（幂等——去留零行为差）+ 消解路径 / 到期条件（该档下次实质改动）——落 `WEBVIEW.md` §5.8（+ 变更记录）。
+
+**号 6——`flow/stream.mjs:30` 推理内容区内部跟滚写例外登记（`WEBVIEW.md` §5.8 邻位 + 变更记录）**：该写不在 #875a 三径门集内（本批设计射程外）；**父侧裁定 = A（按实况登记）**——措辞按实况：`thincoder-vscode/webview/chat.css:399-400` 内滚面在盘 ⇒ 该写于展开 + 内容溢出时生效（帧逐拍钉底）、折叠缺省下零面（#80 注记②「no-op」判定修正——`chat.css:393-398` 读面失准，以 `:399-400` 行锚为准）；桌面面（同写经 `thincoder-desktop/renderer/views/chat-text.mjs:85`）归其自身批次。
+
+**读回（D6）**：上列落点逐处读回在位（`WEBVIEW-PROTOCOL.md` §3 / §3.2 / §12 / 变更记录 ∥ `WEBVIEW.md` §5.8 / 变更记录）；`node scripts/doc-check.mjs`（仓根）复跑读数见交付报告。
+
+**边界（本轮）**：产品码零触（仅实读）∥ 需求档零触 ∥ 在飞写域零触（`docs/core/design/*` 各批面 ∥ `docs/cli/**`）∥ 已收口批档与 §1 / §3–§6 零动 ∥ 无新语义（= #79/#80 未决项 + 父侧裁定的直接导出项；号 5 镜像消解窗口 = 登记面，非本批执行）。
 
 ## §3 设计评审（评审子代理）
 

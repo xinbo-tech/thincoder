@@ -515,11 +515,16 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - **Thinking 默认折叠**：推理块两径默认合——核 `thincoder-render-core/flow/reasoning.mjs`（live 流式块）∥ 核 `thincoder-render-core/flow/block.mjs`（恢复帧）；手动展开仍可看全。机面详句 = `docs/render-core/design/RENDER-CORE.md` §5；桌面面零触（其实读不消费该两件）。
   **跨端默认差（VSC 折叠 ∥ 桌面 `thincoder-desktop/renderer/views/chat-text.mjs:55` 自持 open:true）= 待消解**——凭据判定 = 宿主能力面证据 ∥ 行为证据均不成立（默认开合态 = 用户可见态差，非载体差；判据 = `WEBVIEW-PROTOCOL.md` §6.1 首句）⇒ **消解路径 = 桌面面另批**（桌面默认态改折叠——一行）；**触发 ∥ 到期条件 = 桌面面下次被触碰**。
 - **视图偏好三项（VS Code 设置面）**：`thincoder.ui.autoFollow`（boolean，默认 true）∥ `thincoder.ui.activityMaxHeight`（number，默认 32，单位 vh——活动区封顶）∥ `thincoder.ui.activityTailLines`（number，默认 3，允许 0——折叠预览行数）。
-  推送 = 新消息 `uiPrefs`（ext → wv；协议登记 = `WEBVIEW-PROTOCOL.md` §3 ∥ §3.2 行 23）；发射 = `thincoder-vscode/src/extension/ui-prefs.mjs`（拟新增）（webviewReady 握手 + `onDidChangeConfiguration`——先例 `stop-trace.mjs`）；
-  应用 = `thincoder-vscode/webview/ui-prefs.js`（拟新增）（偏好态落 `ctx._autoFollow`；缺键 / 坏值 ⇒ 缺省 true）。`autoFollow = false` ⇒ **自动滚动全禁**——门落点三处（覆盖 = 三径全数）：
+  推送 = 新消息 `uiPrefs`（ext → wv；协议登记 = `WEBVIEW-PROTOCOL.md` §3 ∥ §3.2 行 23）；发射 = `thincoder-vscode/src/extension/ui-prefs.mjs`（webviewReady 握手 + `onDidChangeConfiguration`——先例 `stop-trace.mjs`）；
+  应用 = `thincoder-vscode/webview/ui-prefs.js`（偏好态落 `ctx._autoFollow`；缺键 / 坏值 ⇒ 缺省 true）。`autoFollow = false` ⇒ **自动滚动全禁**——门落点三处（覆盖 = 三径全数）：
   ① 消息区 `maybeScrollDown`（`ui.js`——函数体内门，全调用面随门）② 活动区 `maybeScrollActivity`（`ui.js`——同式）③ 块内容跟滚（帧尾消费点 `thincoder-vscode/webview/streaming.js` `subScroll` 循环前门——`maybeScrollBlock` 全数随门）；
-  **显式动作不受影响**（回底钮 ∥ 发消息 ∥ 首窗历史——`scrollDown` 直写零门）；负控 = 旗标假 ⇒ 三径 `scrollTop` 零改。tail 行数消费缝 = 核 `configureActivityView({ tailLines })`。
+  **显式动作不受影响**（回底钮 ∥ 发消息 ∥ 首窗历史——`scrollDown` 直写零门）；负控 = 旗标假 ⇒ 三径 `scrollTop` 零改。tail 行数消费缝 = 核 `configureActivityView({ tailLines })`——**缺省单源 = 核**（`activityTailLines` 缺省值 `3` 的判据单源 = `DEFAULT_TAIL_LINES`，`thincoder-render-core/subblocks/activity-view.mjs:19`；缝归一（坏值 / 缺键 ⇒ 3）为终裁）；
+  端侧消费形 = 交缝归一（`thincoder-vscode/webview/ui-prefs.js` 把载荷值交缝——端侧不持缺省判据）；端侧现存镜像归一（`ui-prefs.js:21` 的 `: 3`）为冗余防御层（与缝归一幂等——去留零行为差）：消解路径 = 该档下次实质改动去镜像（透传化）；到期条件 = 该档下次实质改动。
   **被否**：面板内控件（UI 偏好不属 config.json 共享契约面）∥ webview localStorage（跨窗持久无保证）∥ 每键独立消息（一消息三键更简）。
+  **射程说明（滚写入两处不入 `autoFollow` 门——登记为例外）**：
+  ① **提示件**——`webview/permission.js:25` ∥ `:37`（逐项卡 ∥ 合并卡）与 `webview/question.js:22`（提问卡）的 `scrollIntoView` 不入 `autoFollow` 门：语义面 = 提示件需用户在场注意力（不滚入视口 ⇒ 静默挂起风险）⇒ **保持在场语义**（有意设计；`autoFollow` 语义面 = 工具 / 流式自动滚动——#875 原文面）。
+  ② **推理内容区内部跟滚**——核 `thincoder-render-core/flow/stream.mjs:30`（`paintReasoningTarget` 尾 `el.scrollTop = el.scrollHeight`）不在 #875a 三径门集内（本批设计射程外——按实况登记为例外面）：
+  本端 `.reasoning-content` 内滚面（`thincoder-vscode/webview/chat.css:399-400`——`max-height: 200px` ∥ `overflow-y: auto`）⇒ 该写**于展开 + 内容溢出时生效**（帧逐拍钉底）；折叠缺省（#875b）下零面；复评条件 = 用户另裁 ∥ 推理区内滚面并入 `autoFollow` 射程时（另轮可入门）；桌面面（同写经 `thincoder-desktop/renderer/views/chat-text.mjs:85`）归其自身批次。
 
 ## 6. 关键决策记录（含否决备选）
 
@@ -837,3 +842,4 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-10-04（**issue 修复批·三 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §3 轮次 1 发现 3 ∥ 4）：§5.8 `autoFollow` 门落点钉定（三处——`ui.js` `maybeScrollDown` ∥ `maybeScrollActivity` ∥ `streaming.js` `subScroll` 帧尾；覆盖 = 三径全数 ∥ 显式动作零门 ∥ 负控三径零写）；
   §5.8 跨端默认差（推理块）**凭据判定补记**（宿主能力面 ∥ 行为证据均不成立 ⇒ 消解路径 + 触发 ∥ 到期条件 = 桌面面下次被触碰）。**零新语义**（发现 3 ∥ 4 的直接导出项）。
 - 2026-10-04（**issue 修复批·四 · 设计面实施轮（#825 退场注改述）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round4.md` §2 · 台账 #825）：§10 用例面七名 ∥ §11 用例基建三件 ⇒ **退场注改述**（裸名化 + 「随 2026-09-28 测试树全清重置退场」注——留名存档）。**零新语义**（所指皆已退场——如实收述）。明细 = 批档 §2。
+- 2026-10-04（**issue 修复批·三 · 实施后登记 / 回填轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §5（#79 甲舱 ∥ #80 乙舱交付）· 父侧裁定）：§5.8 随落笔收正——「（拟新增）」两处标去（`ui-prefs.mjs` ∥ `ui-prefs.js` 在盘）；**`activityTailLines` 缺省单源 = 核**（`DEFAULT_TAIL_LINES`——端侧镜像 = 冗余防御层（消解路径 + 到期条件在册））；新增**射程说明（滚写入两处例外登记）**：提示件 `scrollIntoView`（`webview/permission.js:25/:37` ∥ `webview/question.js:22`——保持在场语义）∥ 推理区内滚写（核 `thincoder-render-core/flow/stream.mjs:30`——本端展开 + 溢出时生效（按实况登记）；桌面归别批）。**零新语义**（登记 ∥ 标去 ∥ 例外声明）。明细 = 批档 §2 登记轮块。
