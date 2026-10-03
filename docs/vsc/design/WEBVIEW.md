@@ -206,6 +206,13 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 - **链收正（机制面，本段不重述）**：`panel-turn-stages.mjs` 接入面自建回退链改核函数 ∥ `presets.mjs` `resolveDefaultModel` 改核转口（单源 = `doc:PROVIDER.md:§6.22`）；**可用性不得降**（渠道+key 已配 ⇒ 直接可发——事实标准不回退）。
 - **边界**：发送失败面（`error.provider` 词 ∥ `needsSetup` 径）零改；welcome 面板两键零改；`i18n-dom` 横幅键刷新面随三态键扩（`data-banner-key` 取值闭集）。
 
+### 4.9 状态行 thinking 占位改静态（2026-10-04 · 台账 #854）
+
+- **修前**：thinking 段 = `t("status.thinking")` + `<span class="loading-dots">`；点动画 = `controls.css` `@keyframes dots`（`steps(4)` 四拍——内容宽度 ''/'.'/'..'/'...' 逐拍变）⇒ 段宽逐拍抖、状态行抖动。
+- **修法**：改**静态省略号**——`t("status.thinking") + "…"`（同两处既有静态形：活动块状态词 `W.thinking` ∥ 推理块 summary）；`.loading-dots` 件与 `@keyframes dots` 块**删除**（全树唯一消费者即本段）。词键零改。
+- **判据**：单测（渲染面）——`_phase === "thinking"` ⇒ 段在场且零 `.loading-dots` 节点；`_phase = null` ⇒ 段缺席；全树 `loading-dots` / `@keyframes dots` 零命中（grep 面）。
+- **边界**：同台账「最小窗口尺寸缩放异常」= 静态读不出 ⇒ 待报方复现材料——**不在本批**（在册）。
+
 ## 5. 子代理活动块与活动区
 
 子 agent / consult / escalate / advisor-async 的活动块**出生即 append 到固定活动区 `#subagent-activity` 区尾**（`thincoder-vscode/webview/activity.js:108`），在消息区与输入区之间——**live 固定可见，不随会话流滚动丢失**。
@@ -499,6 +506,20 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
   - 负控 = 记录缺 ⇒ 恢复面逐字等价；未归档块（live / 在飞）**不重建**（I-7 收窄——池内块非记录对象）。
 - **容差（本端状态）**：① 跨页分裂 = **不可证面零产**（起跑未载的 `cap` ∥ `end` 记录不入 ∥ 非末页尾残起跑不入——与桌面同构；页 200 条低频 ∥ 数据零损；重开条件 = 实测走查命中 ⇒ 另批）；② 归档快照落盘晚一拍（**沿用**——出站异步 ⇒ 记录随**下一次** `saveLines` 落槽；「重载可见性 = 至最后一次落盘」）。
 - **验收回指**：F-W1 判定句 + I-7 收窄负控 + 批内件腿（批档 §2 §五）；真机 = 面板重开 ∥ reload（父侧走查）。
+
+### 5.8 阅读位保护与视图偏好（2026-10-04 · 台账 #875）
+
+- **缺陷 a（阅读位被夺）修法 = 调用点纪律回正**：工具卡建 / 完成（`ui.js` `addTool` ∥ `finishTool` 两径）与错误横幅（`showError`）改走 `maybeScrollDown`（旗标门——`_pinBottom === false`（用户上滚）⇒ 零写不夺；钉底照旧跟底）；
+  `scrollDown`（强制重 pin）只留显式动作（回底钮 ∥ 发消息 ∥ 首窗历史）。判据 = 单测（旗标假 ⇒ `scrollTop` 零改 ∥ 旗标真 ⇒ 写 MAX——修前红对照）。
+  **已修面（保持）**：滚动条拖动 / 键盘滚动同解 pin（`scroll` 事件按近底直写——核 `scroll.mjs` 现行集）。
+- **Thinking 默认折叠**：推理块两径默认合——核 `thincoder-render-core/flow/reasoning.mjs`（live 流式块）∥ 核 `thincoder-render-core/flow/block.mjs`（恢复帧）；手动展开仍可看全。机面详句 = `docs/render-core/design/RENDER-CORE.md` §5；桌面面零触（其实读不消费该两件）。
+  **跨端默认差（VSC 折叠 ∥ 桌面 `thincoder-desktop/renderer/views/chat-text.mjs:55` 自持 open:true）= 待消解**——凭据判定 = 宿主能力面证据 ∥ 行为证据均不成立（默认开合态 = 用户可见态差，非载体差；判据 = `WEBVIEW-PROTOCOL.md` §6.1 首句）⇒ **消解路径 = 桌面面另批**（桌面默认态改折叠——一行）；**触发 ∥ 到期条件 = 桌面面下次被触碰**。
+- **视图偏好三项（VS Code 设置面）**：`thincoder.ui.autoFollow`（boolean，默认 true）∥ `thincoder.ui.activityMaxHeight`（number，默认 32，单位 vh——活动区封顶）∥ `thincoder.ui.activityTailLines`（number，默认 3，允许 0——折叠预览行数）。
+  推送 = 新消息 `uiPrefs`（ext → wv；协议登记 = `WEBVIEW-PROTOCOL.md` §3 ∥ §3.2 行 23）；发射 = `thincoder-vscode/src/extension/ui-prefs.mjs`（拟新增）（webviewReady 握手 + `onDidChangeConfiguration`——先例 `stop-trace.mjs`）；
+  应用 = `thincoder-vscode/webview/ui-prefs.js`（拟新增）（偏好态落 `ctx._autoFollow`；缺键 / 坏值 ⇒ 缺省 true）。`autoFollow = false` ⇒ **自动滚动全禁**——门落点三处（覆盖 = 三径全数）：
+  ① 消息区 `maybeScrollDown`（`ui.js`——函数体内门，全调用面随门）② 活动区 `maybeScrollActivity`（`ui.js`——同式）③ 块内容跟滚（帧尾消费点 `thincoder-vscode/webview/streaming.js` `subScroll` 循环前门——`maybeScrollBlock` 全数随门）；
+  **显式动作不受影响**（回底钮 ∥ 发消息 ∥ 首窗历史——`scrollDown` 直写零门）；负控 = 旗标假 ⇒ 三径 `scrollTop` 零改。tail 行数消费缝 = 核 `configureActivityView({ tailLines })`。
+  **被否**：面板内控件（UI 偏好不属 config.json 共享契约面）∥ webview localStorage（跨窗持久无保证）∥ 每键独立消息（一消息三键更简）。
 
 ## 6. 关键决策记录（含否决备选）
 
@@ -812,3 +833,6 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 7 锚销项（R1 改指 4——`suspension.mjs` 补 `thincoder-vscode/src/extension/` 前缀〔§5.7 写点行 ∥ 变更记录 3 行〕；R3 裸名化 1——死名 `webview-env.mjs`（§11 用例基建列）；R5 行注记 1（「机检豁免——用例退场登记」入 §5.6 判据行））；宽面 9 行折行（132 ∥ 190 ∥ 219 ∥ 225 ∥ 226 ∥ 418 ∥ 424 ∥ 468 ∥ 471——语义零改）。**零新语义**。
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 · 台账 #841）：新增 **§4.8 provider 态横幅三态 + 动作**（`providerState` 载荷 ∥ 三态横幅 ∥ 动作钮 → 设置面 ∥ 链收正指针）。**产品码零触（设计轮）**。机制单源 = `docs/core/design/PROVIDER.md` §6.22。
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #9（评审轮 1 · 发现 3 ∥ 4 ∥ 5 ∥ 11）· eng-designer**——承批档 §3 轮次 1 · 台账 #841）：§4.8 收正——数据面载荷补 `invalidReason`（合成式可算）；横幅三态改 **state 单判据直映射**（首支 = invalid 类合成式）· 两新键 **zh ∥ en 字面钉定**（`banner.defaultModelFallback` zh 改「正在使用可用渠道」——`model=null` 档同词）；新增 **`keyOk` 判据钉定**（`keyOk := 非 invalid 类`——核态派生，去第二判据）。**产品码零触（修正轮）**。
+- 2026-10-04（**issue 修复批·三 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §2 · 台账 #854 ∥ #875）：新增 **§4.9 状态行 thinking 占位改静态**（消抖——动画件删除）∥ **§5.8 阅读位保护与视图偏好**（工具 / 错误调用点改旗标门 ∥ Thinking 默认折叠 ∥ 三偏好键 + `uiPrefs` 推送）。**零新语义**（缺陷修复 + 已裁偏好面落档）。明细 = 批档 §2。
+- 2026-10-04（**issue 修复批·三 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §3 轮次 1 发现 3 ∥ 4）：§5.8 `autoFollow` 门落点钉定（三处——`ui.js` `maybeScrollDown` ∥ `maybeScrollActivity` ∥ `streaming.js` `subScroll` 帧尾；覆盖 = 三径全数 ∥ 显式动作零门 ∥ 负控三径零写）；
+  §5.8 跨端默认差（推理块）**凭据判定补记**（宿主能力面 ∥ 行为证据均不成立 ⇒ 消解路径 + 触发 ∥ 到期条件 = 桌面面下次被触碰）。**零新语义**（发现 3 ∥ 4 的直接导出项）。

@@ -71,6 +71,7 @@ reasoning, provider, images? } → extension _chat()
 | `turnFrame` | ext → wv | `{ turn, maxTurns }`——顶层逐轮进展段 |
 | `questionCancelled` | ext → wv | `{ promptId }`——abort 释放未答 question 卡（§4.2） |
 | `onAgentTurn` | 内部 | 每轮迭代 turn 计数钩子——顶层经 `panel-callbacks` 转 `turnFrame` 上屏；池条目同步转 `subagent` `status:"turn"` |
+| `uiPrefs` | ext → wv | `{ autoFollow, activityMaxHeight, activityTailLines }`——视图偏好三键（缺省 true / 32 / 3；发射 = `thincoder-vscode/src/extension/ui-prefs.mjs`（拟新增）（握手 + `onDidChangeConfiguration`）；消费 = `chat-messages.js` `case`（§3.2 行 23）） |
 
 ### 3.1 演进纪律（三落点）
 
@@ -82,7 +83,7 @@ reasoning, provider, images? } → extension _chat()
 
 历史断链事故：只改发射端与渲染端、漏桥 ⇒ `model` 字段自发布首日被丢弃（2026-08-26 修复 + 锁桥测试）。string / 对象双分支在 payload 构造处统一推导（对象载荷字段透传、string 分支字段 `undefined` 安全降级）。
 
-### 3.2 协议增量登记（二十二项——只增不改）
+### 3.2 协议增量登记（二十三项——只增不改）
 
 | # | 消息面 | 增量 | 发射点 | 接收点 |
 |---|---|---|---|---|
@@ -114,8 +115,9 @@ reasoning, provider, images? } → extension _chat()
 | | | |  | `webview/chat-messages.js:154` `case` → `webview/settings.js` `showSettingsError(scope, reason)`（段标 + 词化码 ∕ 单槽驻留——机制单源 = `SETTINGS.md` §2.15） |
 | 21 | `usage`（增字段） | `ctxTokens`（上下文占用量绝对数——状态行 `Yk` 尾串源；缺 ⇒ 尾串缺席） | `panel-callbacks.mjs` `usage` 发射点（累计 ∕ transports 映射——同 `reasoning_tokens` 行） | `status-bar.js` ctx 段（`context X% Yk` 拼接——#677 I16a） |
 | 22 | `recordAppend`（**新消息**——webview → host 留档记录出站） | `{ record: { kind:"subagent", meta, rows } }`——归档时点快照（形 ∥ 判据单源 = `docs/core/design/SESSION.md` §6.26；每块恰一次——归档幂等守卫内） | `webview/activity.js:124`（`archiveBlock` 同点——归档派生点调用，幂等守卫内恰一次；载荷字面量构造 `:190`） | `panel-messages.mjs:287` `case` → `handleRecordAppend`（`:123-134`——处理体取活行载体 + 核 `pushRecord`；fail-soft） |
+| 23 | `uiPrefs`（**新消息**——host → webview） | `{ autoFollow, activityMaxHeight, activityTailLines }`——视图偏好三键（缺省 true / 32 / 3；#875） | `thincoder-vscode/src/extension/ui-prefs.mjs`（拟新增） `pushUiPrefs`（webviewReady 握手 + `onDidChangeConfiguration`） | `webview/chat-messages.js` `case "uiPrefs"` → `thincoder-vscode/webview/ui-prefs.js`（拟新增） apply（§12 对表行随实施轮落） |
 
-纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–22 即全部在案增量；表外增量不入）。发射 / 接收落点：
+纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–23 即全部在案增量；表外增量不入）。发射 / 接收落点：
 `thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:29` ·
 `thincoder-vscode/webview/chat.js:260` · `thincoder-vscode/webview/status-bar.js:27-30/46`。
 
@@ -340,7 +342,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | D-P8 | 状态文本载体 = **结构化 `statusText` 消息**（kind 判别 → webview 按 locale 渲染） | 否决 host 直发成品文本（host 不知 locale——复制 i18n = 双源）· 否决不做（判定句要求用例锁新增状态文本） |
 | D-P9 | Send 可见性 = running 期**隐藏** | 否决禁用态（双范式 + 仍占位） |
 | D-P10 | `scrolled N` 段不设——滚动状态 = 悬浮回底钮（§6.1 滚动行：实证例外——行为证据） | 否决补文本段（N 需新造单位 + 与钮重复） |
-| D-P11 | 协议增量 = **只增不改**、**二十二项**登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
+| D-P11 | 协议增量 = **只增不改**、**二十三项**登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
 | D-P12 | 合并权限卡**并入 `promptId` 族**（单一释放通道 `releasePermission` + id 精确匹配 + 孤儿回写） | 否决单开释放语义（同语义两通道 · 消费者按类分支）；`shift()` 队列头匹配已驳（D-P4 同据——陈旧卡不误 resolve） |
 | D-P13 | `waiting` 判据含**批权限队列** + **释放即刷**（刷新点 = 释放通道单点 `releasePermission`） | 否决逐路径各补 `_refreshStatus()`（散点——漏一处即残留）· 否决判据只列权限 / question（批卡停驻期读作 idle——状态栏失去「需你输入」语义） |
 | D-P14 | 诊断上行 `panelDiag` = **新消息（行 8 登记）**——出生 / 终态事件面痕迹入主侧日志 | 否决只留 webview 环形日志（DevTools 不可回读——本次事故正因不可回读而盲；理由详见 `WEBVIEW.md` D-W22）· 否决并入既有上行消息字段（无同缝——`webviewReady` 是一次性启动拍） |
@@ -730,3 +732,5 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 - 2026-10-01（**零语义清账批 #2 · 修复轮（评审轮 1 · 发现 2）· eng-designer**——承批档 `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §3 轮次 1 · 台账 #791）：§12 表两行 ② 列载值收正——`sub:*` 行 `:187/:235/:98` ⇒ `:139/:141`（键构造 ∥ 内容面发射调用现位）∥ `toolPanel` 行 `:217/:253` ⇒ `:124-126`（`emitToolPanel` 单点）。**零新语义**（坐标收正）。明细 = 批档 §2 修复轮块。
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 ∥ §5 · 台账 #841）：§12 表三行坐标按盘重锚（`error` 行 ② 列 `panel-turn-stages.mjs:77` ⇒ `:74` ∥ `loading` 行 ② 列 `:160` ⇒ `:156`（#841 落盘后行移）∥ `providerStatus` 行 ② 列 `thincoder-vscode/src/extension/settings.mjs:358` ⇒ `:340`、③ 列 `chat-messages.js:138` ⇒ `:144` + ⑤ 列补 `status.providerState` 载荷注）。**零新语义**（坐标 ∥ 注）。明细 = 批档 §2 回填轮块。
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 2 处 R1 改指（`suspension.mjs` 补 `thincoder-vscode/src/extension/` 前缀——变更记录行 ×2）。**零新语义**。
+- 2026-10-04（**issue 修复批·三 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §2 · 台账 #875）：§3 表 + §3.2 登记补 **`uiPrefs` 新消息**（视图偏好三键——autoFollow ∥ activityMaxHeight ∥ activityTailLines；发射 = `ui-prefs.mjs` ∥ 消费 = `ui-prefs.js`）；标题计数 二十二项 ⇒ 二十三项。**零新语义**（已裁偏好面的协议落档）。明细 = 批档 §2。
+- 2026-10-04（**issue 修复批·三 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §3 轮次 1 发现 5）：**D-P11 计数同改**（二十二项 ⇒ 二十三项——与 §3.2 标题 ∥ 行 23 登记一致）。**零新语义**（计数收正）。

@@ -87,7 +87,7 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
    （CLI `thincoder-cli/src/command-interactive.mjs:161-168` ∥ 桌面 `thincoder-desktop/src/main/agent-host.mjs:185-189` 装配尾——2026-10-02 桌面 UX 收尾批 · 台账 #702 定形；
    VSC `thincoder-vscode/src/agent/setup.mjs` 装配尾——2026-10-04 issue 修复批·三 · 台账 #823 定形），下一条 user 消息注入提醒（消费 = `thincoder-core/agent/setup.mjs:172-176`）；
    末行指路 = 端可达出口（CLI `/mcp connect <name>`；桌面 ∥ VSC = 设置面 MCP 段 Reconnect）；成功展开的工具并入 `agent.tools`。
-- **项目文件源补裁定（2026-09-30 · 台账 #691——CLI ∕ 桌面同判）**：**发现面** = 项目根单层（`join(cwd, ".mcp.json")`，无向上多级搜索；文件缺 ⇒ 零读零效果）；**信任面** = 装配期零交互确认（项目文件与 `config.mcp.servers` 同信任域，不设首次信任 ∕ 端别门）；读 ∕ 解析失败非致命——记录不阻断装配。（VSC 端第三面未并 `.mcp.json`——端差在册：台账 #701，归 VSC 对齐轮。）
+- **项目文件源补裁定（2026-09-30 · 台账 #691——CLI ∕ 桌面同判）**：**发现面** = 项目根单层（`join(cwd, ".mcp.json")`，无向上多级搜索；文件缺 ⇒ 零读零效果）；**信任面** = 装配期零交互确认（项目文件与 `config.mcp.servers` 同信任域，不设首次信任 ∕ 端别门）；读 ∕ 解析失败非致命——记录不阻断装配。（VSC 端第三面已并——2026-10-01 vsc-cleanup 批 · 台账 #701 已核销；三端同判。）
 - **幂等连接（registry 键控）**：registry（`_sessions`，serverName → session，模块级存活）已存在**同 name 活连接且 fingerprint 一致** → 直接复用已展开工具、不重建；fingerprint = config 关键字段（command / args / url / wsUrl / env / headers / token）的 JSON 归一；**config 变更**（fingerprint 不一致）→ 主动关旧连接（不触发 onDead 重连）+ 丢弃 session + 重建。
 - **每轮重建与热插拔**：每轮 runAgent 重新装配 tools 数组——registry 状态变化天然在下一轮生效；已连 server 的展开工具**不因重建而丢失**（幂等复用）。
 - **生命周期收口**：`closeAllMcp(agent)` 退出时关闭全部 session；`removeMcpTools(agent, serverName)` 把工具移出并关该 session。
@@ -237,5 +237,7 @@ MCP 工具、下轮重试）。**子代理不含 MCP**：装配仅 depth-0 展�
 - 2026-10-02（**文档清账轮 · 行宽清账（#806 · 轮 6）· eng-designer**——承批档 `docs/batches/2026-10-02-doc-settlement-round.md` §2.12：§6.4 启动装配行折行（475 ⇒ 三段 ≤300——语义零改）。台账 #806。）
 - 2026-10-03（**crash-guards 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-crash-guards.md` §2 · 台账 #865（GitHub #17））：§6.6 stdio 行补 **树杀语义**（win32 `spawnSync` 同步化——退出路径仅同步合法；POSIX 分支核对注）· §7 补 **D-MC17**。**零新语义**（守卫类最小修）。
 - 2026-10-04（**issue 修复批·一 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §2 · 台账 #850 ∥ #877）：§6.6 HTTP 行补**会话过期自愈**（404 ⇒ 清会话 + 重新 initialize + 重试一次——自愈链细节入句）∥ stdio 行 POSIX 残面句**改写为修后现状**（detached 组 + 相位分流；原「残面登记」句删除）· §6.9 postOnly 失效语义同拍收正 · §7 补 **D-MC18 / D-MC19**。**零新语义**——两条均为台账缺陷的修复设计导出项。
-- 2026-10-04（**issue 修复批·三 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §2 · 台账 #823）：§6.4 启动装配句收正——`_mcpWarnings` **消费面 = CLI ∥ 桌面 ∥ VSC**（三端同形——VSC 装配尾入 `_pendingReminders`；本批定形）；「VSC 面未并——端差在册」句**删除**（前提消失——端差归零）。**零新语义**（消费面事实收正）。
+- 2026-10-04（**issue 修复批·三 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §2 · 台账 #823）：§6.4 启动装配句收正——`_mcpWarnings` **消费面 = CLI ∥ 桌面 ∥ VSC**（三端同形——VSC 装配尾入 `_pendingReminders`；本批定形）；「VSC 面未并——端差在册」句**删除**（前提消失——消费面端差归零）。**零新语义**（消费面事实收正）。
 - 2026-10-04（**issue 修复批·一 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §3 轮次 1 发现 4 ∥ 9）：§6.6 stdio 行补 **`detached` 副作用登记半句**（终端信号不直传 ∥ 孤儿化概率升——接受登记，对冲如需另批）· HTTP 行补 **射程括注**（Streamable POST 面含 postOnly；legacySSE 分支零触——无会话语义）· §7 D-MC19 理由列同拍补副作用句。**零新语义**（= 已认账副作用与射程的长期载体落位）。
+- 2026-10-04（**issue 修复批·三 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §3 轮次 1 发现 1）：§6.4 项目文件源括注按 **#701 实况收正**（「VSC 端第三面未并」⇒「已并——2026-10-01 vsc-cleanup 批 · 台账 #701 已核销；三端同判」）；
+  同批设计轮条「端差归零」辖域限定 = **消费面**。**零新语义**（时态 ∥ 辖域收正；#701 实况 = 台账已核销 + `thincoder-vscode/src/config-mcp.mjs:85-104` ∥ `thincoder-vscode/src/extension/panel-turn-loop.mjs:165` 在盘实读）。

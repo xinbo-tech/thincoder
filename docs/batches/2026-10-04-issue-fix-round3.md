@@ -17,7 +17,7 @@
 **边界**：在飞写域零触——#51（`thincoder-cli/**` + `thincoder-core/ledger-*.mjs`）∥ #56 ∥ #59（issue 批一二）∥ #57/#58（菜单轮/面板修轮）∥ 面板面。本批写域 = `thincoder-vscode/**`（无在飞冲突）。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（2026-10-04 · 台账 #823 ∥ #854 ∥ #875；设计档五处已落，机检读数入交付报告）
+**状态行**：设计完成（2026-10-04 · 修复轮 1 收正毕——§3 六条逐处（号 → 落点 = §2.11）；待父侧复审）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 ### 2.1 复验结论（复验令逐条 · 台账全文 + 现盘实核 · as-of 2026-10-04）
@@ -45,9 +45,11 @@
 
 **条目 3 = #875（requirement）阅读位 ∥ Thinking 默认折叠 ∥ 三偏好开关**
 - **模块目标**：自动事件不夺用户阅读位；思考块默认折叠；三常量（活动区封顶/折叠预览行数/自动跟随）开关化（VS Code 设置面）。
-- **功能点**：a) `ui.js` `addTool`/`finishTool`（两径）/`showError` 改 `maybeScrollDown`；`scrollDown` 只留显式动作（回底钮 ∥ 发消息 ∥ 首窗历史 `thincoder-vscode/webview/history.js:80` 实读）；b) `flow/reasoning.mjs:15` open=false ∥ `flow/block.mjs:107` `open` 删（手动展开可看全；桌面零触——实读不消费该两件）；c) 三键 `thincoder.ui.autoFollow`（bool，默认 true）∥ `thincoder.ui.activityMaxHeight`（number，默认 32，单位 vh——活动区封顶）∥ `thincoder.ui.activityTailLines`（number，默认 3，允许 0——折叠预览行数）；推送 = 新消息 `uiPrefs`（`thincoder-vscode/src/extension/ui-prefs.mjs`（拟新增）：webviewReady 握手 + `onDidChangeConfiguration`）→ `thincoder-vscode/webview/ui-prefs.js`（拟新增）apply；tail 缝 = 核 `configureActivityView({ tailLines })`（模块级 setter——沿 configure* 先例）。
-- **边界**：桌面面零触（推理块默认差 = 界面层登记）∥ 面板内不加控件 ∥ 既有协议字段语义零改 ∥ `scroll.mjs` 判据零触。
-- **验收**：单测四组（scroll 门控两向：旗标假零写／真写 MAX；两径默认折叠；prefs 应用：autoFollow 门 ∥ maxHeight 内联样式 ∥ tailLines 0/N；缺键坏值 ⇒ 缺省）；真机腿（父侧走查）= 上滚后工具卡/错误不夺位、回底复跟、Thinking 折叠、三开关生效。
+- **功能点**：a) `ui.js` `addTool`/`finishTool`（两径）/`showError` 改 `maybeScrollDown`；`scrollDown` 只留显式动作（回底钮 ∥ 发消息 ∥ 首窗历史 `thincoder-vscode/webview/history.js:80` 实读）；b) `flow/reasoning.mjs:15` open=false ∥ `flow/block.mjs:107` `open` 删（手动展开可看全；桌面零触——实读不消费该两件）；c) 三键 `thincoder.ui.autoFollow`（bool，默认 true）∥ `thincoder.ui.activityMaxHeight`（number，默认 32，单位 vh——活动区封顶）∥ `thincoder.ui.activityTailLines`（number，默认 3，允许 0——折叠预览行数）；推送 = 新消息 `uiPrefs`（`thincoder-vscode/src/extension/ui-prefs.mjs`（拟新增）：webviewReady 握手 + `onDidChangeConfiguration`）→ `thincoder-vscode/webview/ui-prefs.js`（拟新增）apply；`autoFollow = false` ⇒ **自动滚动全禁**——门落点三处（覆盖清单 = 三径全数）：
+  ① 消息区 `maybeScrollDown`（`ui.js` 函数体内门——全调用面随门）② 活动区 `maybeScrollActivity`（同式）③ 块内容跟滚（帧尾消费点 `thincoder-vscode/webview/streaming.js` `subScroll` 循环前门——`maybeScrollBlock` 全数随门）；
+  显式动作（回底钮 ∥ 发消息 ∥ 首窗历史）走 `scrollDown` 直写——零门（不受影响）；门读 `ctx._autoFollow`（apply 落值；缺键 / 坏值 ⇒ 缺省 true）；tail 缝 = 核 `configureActivityView({ tailLines })`（模块级 setter——沿 configure* 先例）。
+- **边界**：桌面面零触（推理块默认差 = **待消解**——凭据判定 ∥ 消解路径 ∥ 到期条件 = §2.9 U3）∥ 面板内不加控件 ∥ 既有协议字段语义零改 ∥ `scroll.mjs` 判据零触。
+- **验收**：单测四组（scroll 门控两向：旗标假三径零写／真写 MAX；两径默认折叠；prefs 应用：autoFollow 门 ∥ maxHeight 内联样式 ∥ tailLines 0/N；缺键坏值 ⇒ 缺省）；真机腿（父侧走查）= 上滚后工具卡/错误不夺位（含活动区 ∥ 块跟滚）、回底复跟、Thinking 折叠、三开关生效。
 - **依赖**：VS Code `onDidChangeConfiguration`（先例 `thincoder-vscode/src/extension/stop-trace.mjs:22-25`）；核 render-core 缝（本批加）。
 
 ### 2.3 受影响文件（现读 → 预期；口径 = `wc -l` 等价 · 2026-10-04 实读）
@@ -58,17 +60,18 @@
 | `thincoder-vscode/src/agent/setup-reminders.mjs` | 41 | +~35（提醒函数） |
 | `thincoder-vscode/src/extension/panel-mcp.mjs` | 167 | ±1（注释收正） |
 | `thincoder-vscode/src/extension/ui-prefs.mjs` | 新 | ~40 |
-| `thincoder-vscode/src/extension/chat-panel.mjs` | 441 | +~6（接线） |
+| `thincoder-vscode/src/extension/chat-panel.mjs` | 441 | +~6（接线；**已越 300 建议线（存量 441）**——复核结论 = 不拆（仅接线，不改结构）；拆分计划 = 触发阈值 **450 行** ∥ 该档下次结构改动（先到即拆）；组边界 = ① 视图装配族（`resolveWebviewView` ∥ `_html` ∥ 状态栏两件——≈85 行）② 构造器监听族（两 vscode 监听块——≈60 行）③ 回合入口族（`_chat` ∥ 忙态三件 ∥ `sendMessage`——≈95 行）——① 拆出 = `thincoder-vscode/src/extension/panel-view.mjs`（拟新增）；到期条件 = 触发阈值到达时） |
 | `thincoder-vscode/package.json` | 142 | +~24（三键） |
-| `thincoder-vscode/webview/ui.js` | 241 | +~6（四调用点 + autoFollow 门） |
+| `thincoder-vscode/webview/ui.js` | 241 | +~6（四调用点 + autoFollow 两原语门） |
 | `thincoder-vscode/webview/ui-prefs.js` | 新 | ~30 |
 | `thincoder-vscode/webview/chat-messages.js` | 265 | +~4（`uiPrefs` case） |
+| `thincoder-vscode/webview/streaming.js` | 184 | +~2（块跟滚帧尾门） |
 | `thincoder-vscode/webview/status-bar.js` | 134 | ±1 |
 | `thincoder-vscode/webview/controls.css` | 149 | −11（动画块删） |
 | `thincoder-render-core/flow/reasoning.mjs` | 24 | ±1 |
 | `thincoder-render-core/flow/block.mjs` | 153 | ±1 |
 | `thincoder-render-core/subblocks/activity-view.mjs` | 205 | +~12（缝） |
-（实施轮落盘后回填终态读数；**写域按实况扩一档** = `thincoder-render-core/**` 两档——§1 写域句 `thincoder-vscode/**` 按实况扩；无在飞冲突，桌面零消费实读证。）
+（实施轮落盘后回填终态读数；**写域按实况扩一域** = `thincoder-render-core/**` 三档（`flow/reasoning.mjs` ∥ `flow/block.mjs` ∥ `subblocks/activity-view.mjs`）——§1 写域句 `thincoder-vscode/**` 按实况扩；无在飞冲突，桌面零消费实读证。）
 
 ### 2.4 测试面（normal ∥ boundary ∥ error）
 批内件 = `docs/batches/2026-10-04-issue-fix-round3.test.mjs`（单元——随批档留存；集成零新增 · 50–100 预算纪律）。
@@ -76,10 +79,10 @@
 |---|---|---|---|
 | #823 | 携 1 失败 ⇒ 提醒入队（首两段 CLI 逐字） | 同指纹二轮 ⇒ 零重推；恢复后复失败 ⇒ 再推 | 装配抛 ⇒ 非致命零提醒；缺键 ⇒ 零写 |
 | #854 | thinking ⇒ 静态段在场 | `_phase=null` ⇒ 段缺席 | — |
-| #875a | 旗标真 ⇒ 写 MAX | 旗标假 ⇒ `scrollTop` 零改（工具/错误两径） | — |
+| #875a | 旗标真 ⇒ 三径照写（跟底） | 旗标假 ⇒ 三径零写（消息区工具/错误 ∥ 活动区 ∥ 块跟滚——各 `scrollTop` 零改；显式动作照写） | — |
 | #875b | live 径 `open=false` | 恢复径无 `open`；展开后内容在场 | — |
 | #875c | 三键应用（门控/样式/tail） | tailLines=0 ⇒ 零预览；坏值 ⇒ 缺省 | 载荷缺键 ⇒ 缺省零写 |
-真机腿 = 父侧走查（上滚阅读 → 工具卡/错误/流式不夺位 → 回底复跟 → Thinking 折叠 → 三开关各翻一次）。
+真机腿 = 父侧走查（上滚阅读 → 工具卡/错误/流式不夺位（含活动区 ∥ 块跟滚）→ 回底复跟 → Thinking 折叠 → 三开关各翻一次）。
 
 ### 2.5 验收对照（回指台账——三链同源：§2 条目 = 设计档 = 台账行）
 | 台账 | §2 条目 | 设计档句 | 验收（机检） |
@@ -99,7 +102,7 @@
 
 ### 2.7 边界（不做）
 - #854 条①（最小窗口缩放异常）= 待报方复现材料（不做——保持台账在册）。
-- 桌面面零触（推理块默认态 ∥ MCP 提醒——桌面已落；跨端默认差（推理块）= 界面层登记）。
+- 桌面面零触（推理块默认态 ∥ MCP 提醒——桌面已落；跨端默认差（推理块）= **待消解**——凭据判定 ∥ 消解路径 ∥ 到期条件 = §2.9 U3）。
 - `.mcp.json` VSC 对齐（#701）∥ MCP 管理面 UI ∥ CLI/核生产面 ∥ `scroll.mjs` 判据 ∥ 面板内新控件——均不做。
 - 协议面：仅 `uiPrefs` 一条新消息；既有字段语义零改。
 - 不点火评审 ∥ 不跑构建 ∥ 不写实现码（设计轮）。
@@ -111,13 +114,33 @@
 ### 2.9 上抛项
 - **U1**：GitHub #7 诉求 3 列 4 项开关（含「Thinking 默认折叠」），台账行写「三项界面开关」——本批按 3 开关 + Thinking 默认折叠（行为）处置；第 4 项开关化未并（如需 = 加 `thincoder.ui.collapseThinking` 键，径同上）。
 - **U2**：#854 条①（最小窗口缩放异常）——待报方复现材料，本批不做（边界在册）。
-- **U3**：桌面推理块默认态（自持 `thincoder-desktop/renderer/views/chat-text.mjs:55` open:true）不与 VSC 同并——有意端差（界面层）登记；如需并 = 一行另批。
+- **U3**：桌面推理块默认态（自持 `thincoder-desktop/renderer/views/chat-text.mjs:55` open:true）不与 VSC 同并——**跨端默认差（VSC 折叠 ∥ 桌面展开）· 待消解**。**凭据判定**（判据 = `docs/vsc/design/WEBVIEW.md:3` 端差句 ∥ `WEBVIEW-PROTOCOL.md` §6.1 首句）：宿主能力面证据 = 不成立（非宿主设施差）∥ 行为证据 = 不成立（默认开合态 = 用户可见态差，非载体差）。
+  **消解路径 = 桌面面另批**（桌面默认态改折叠——一行；对齐方向 = VSC 现默认（#875 用户诉求面））；**触发 ∥ 到期条件 = 桌面面下次被触碰**。本批不做（桌面面写域外——越批边界）。
 - **U4**：`panel-mcp.mjs:63-64` 注释残句（发现项）——已入修法④随批收正（低风险）。
-- **U5**：写域扩一档（`thincoder-render-core/**` 两档——§1 写域句按实况扩；无在飞冲突）。
+- **U5**：写域扩一域（`thincoder-render-core/**` 三档——`flow/reasoning.mjs` ∥ `flow/block.mjs` ∥ `subblocks/activity-view.mjs`；§1 写域句按实况扩；无在飞冲突）。
 
 ### 2.10 机检读数（doc-check · 仓根）
 - 域内复跑 = `docs/vsc` ∥ `docs/core` ∥ `docs/render-core`（本批五档域）：读数见交付报告（全绿目标）。
 - 全量复跑（`node scripts/doc-check.mjs --root d:\teamcode\thincoder`）：当前红点全数落于**批·二在飞新档** `docs/cli/design/ACP-PROTOCOL-COMPLIANCE.md`（3 处——非本批面；该档头注实读证：建档 = issue 修复批·二 · 设计轮；本批零触）；本批五档域零悬空零超宽（首轮所拦 9 处坐标已逐处收正——拟新增标记 + 仓根相对路径）。
+
+### 2.11 修复轮 1（§3 轮次 1 · 六条逐处收正）
+
+（修复轮 · eng-designer · 2026-10-04 · fix——定点收正：批档 §2 内 12 处 + 设计档三档 8 处（含变更记录 3 条）；产品码零触（仅实读）；`MCP.md` 只动 §6.4 区与变更记录本批相关行。）
+
+| 号 | 处置 | 落点（file:line · 收正后实读） |
+|---|---|---|
+| 1 | #701 实况 = **已落 + 已核销**（`thincoder-vscode/src/config-mcp.mjs:85-104` ∥ `thincoder-vscode/src/extension/panel-turn-loop.mjs:165` 在盘；台账 2026-10-01 核销）⇒ 按裁「已落」支收正——`MCP.md` 括注「未并」⇒「已并（2026-10-01 vsc-cleanup 批 · 台账 #701 已核销；三端同判）」；设计轮条「端差归零」辖域限定 = **消费面**；SETTINGS.md 零改（其句 = 已落实况——无相抵） | `docs/core/design/MCP.md:90` ∥ `:240` ∥ `:242-243` |
+| 2 | §2.3 补拆分复核登记（复核结论 = 不拆 ∥ 触发阈值 450 ∥ 组边界三族 · ① 拆出候选 `thincoder-vscode/src/extension/panel-view.mjs`（拟新增）∥ 到期条件）+ 受影响表 +`streaming.js` 行 | 批档 `:63` ∥ `:67-68` ∥ `:74` |
+| 3 | autoFollow 门落点三处钉定（消息区 `maybeScrollDown` ∥ 活动区 `maybeScrollActivity` ∥ 块跟滚 `streaming.js` `subScroll` 帧尾）+ 覆盖清单 + 负控三径化；`WEBVIEW.md` §5.8 同拍 | 批档 `:48-50` ∥ `:52` ∥ `:65` ∥ `:82` ∥ `:85`；`docs/vsc/design/WEBVIEW.md:519-521` ∥ `:837-838` |
+| 4 | U3 补凭据判定（宿主能力面 ∥ 行为证据均不成立）+ 消解路径 + 触发 ∥ 到期条件；§2.2-3 边界 ∥ §2.7 同拍 | 批档 `:117-118` ∥ `:51` ∥ `:105`；`docs/vsc/design/WEBVIEW.md:516` |
+| 5 | D-P11 计数同步（二十二项 ⇒ 二十三项——与 §3.2 标题 ∥ 行 23 登记一致） | `docs/vsc/design/WEBVIEW-PROTOCOL.md:345` ∥ `:736` |
+| 6 | 写域句计数按表收正（「两档」⇒ 三档——三件枚举；「扩一档」⇒「扩一域」） | 批档 `:74` ∥ `:120` |
+
+**读回（D6 · 修复轮末）**：上列落点逐处读回在位；`node scripts/doc-check.mjs`（仓根）复跑读数见交付报告。
+
+**边界（本轮）**：产品码零触（仅实读）∥ 在飞写域零触 ∥ §1 / §3–§6 零动 ∥ 无新语义（= §3 六发现 + 父侧裁定「六条全采纳」的直接导出项）。
+
+**doc-check 读数（修复轮末复跑 · 仓根 `node scripts/doc-check.mjs` · 2026-10-04）**：**exit 0** ∥ 锚闸 OK（悬空 **0**——阈值 0）∥ 行宽 OK（源域全 .md 无 >300 单行）∥ 汇总 = 候选 47081 · 悬空 0 · 注记豁免 319 · 拟新增 53 · 迁移期引文 297 · 声明源缺位 0 ∥ 全数 ✗ = 非闸面列报（拟新增 ∕ 迁移期引文——沿既有形态；本批新增引用零悬空）。
 
 ## §3 设计评审（评审子代理）
 
@@ -141,5 +164,14 @@
 VERDICT: pass
 
 ## §4 用户批准（主 agent）
+
+**父侧代签（用户 2026-10-04 00:31「都自动跑」——点火 / 代签 / 派发 / 收口全自动授权；自缚三条件齐备）**
+
+- ① **设计评审 pass** ✓：评审 #68（`VERDICT: pass` · 🔴 0 ∥ 🟡 4 ∥ 🔵 2）；
+- ② **修正落地核验** ✓：收正轮 #73 六条全落（**#701 实况核 = 已落 + 已核销** ⇒ `MCP.md:90` 括注收正「已并·三端同判」∥ 拆分复核登记（阈值 450 · 组边界三族）∥ autoFollow 门三径钉定 + 负控 ∥ U3 凭据判定 + 消解路径 + 到期条件 ∥ D-P11 计数 ∥ 写域句收正）；父侧抽验在盘（`MCP.md:90` ∥ `WEBVIEW.md:516` ∥ `:519-521`）；`doc-check` exit 0；
+- ③ **token 已签发** ✓（值不入档，纪律照守）。
+
+**批准面**：#823 ∥ #854 ∥ #875——**按面两路派发**（VSC 面 13 档 ⇒ eng-coder 甲 ∥ render-core 面 3 档 + 批内件 ⇒ eng-coder 乙（**dependsOn 甲**——批内件全量复跑需甲落））。
+
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）
