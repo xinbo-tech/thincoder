@@ -54,13 +54,13 @@
 | `docImpact` | `thincoder-cli/scripts/doc-impact.mjs:75` | `fn` |
 | `gitChangedSurface` | `thincoder-cli/scripts/doc-impact.mjs:106` | `fn` |
 | `main` | `thincoder-cli/scripts/doc-impact.mjs:119` | `fn` |
-| `defaultIsConfigured` | `thincoder-cli/src/acp.mjs:39` | `fn` |
-| `defaultProviderStatus` | `thincoder-cli/src/acp.mjs:51` | `fn` |
-| `ACP_EXCLUDED_TOOLS` | `thincoder-cli/src/acp.mjs:67` | `const` |
-| `defaultCreateSession` | `thincoder-cli/src/acp.mjs:74` | `fn` |
-| `buildAcpHandlers` | `thincoder-cli/src/acp.mjs:87` | `fn` |
-| `runAcpLogin` | `thincoder-cli/src/acp.mjs:130` | `named` |
-| `runAcpServer` | `thincoder-cli/src/acp.mjs:133` | `fn` |
+| `defaultIsConfigured` | `thincoder-cli/src/acp.mjs:41` | `fn` |
+| `defaultProviderStatus` | `thincoder-cli/src/acp.mjs:53` | `fn` |
+| `ACP_EXCLUDED_TOOLS` | `thincoder-cli/src/acp.mjs:69` | `const` |
+| `defaultCreateSession` | `thincoder-cli/src/acp.mjs:76` | `fn` |
+| `buildAcpHandlers` | `thincoder-cli/src/acp.mjs:89` | `fn` |
+| `runAcpLogin` | `thincoder-cli/src/acp.mjs:137` | `named` |
+| `runAcpServer` | `thincoder-cli/src/acp.mjs:140` | `fn` |
 | `buildAcpCallbacks` | `thincoder-cli/src/acp/bridge.mjs:62` | `fn` |
 | `replayHistory` | `thincoder-cli/src/acp/bridge.mjs:338` | `fn` |
 | `SUPPORTED_PROTOCOL_VERSIONS` | `thincoder-cli/src/acp/client-caps.mjs:15` | `const` |
@@ -74,6 +74,8 @@
 | `createSessionHandlers` | `thincoder-cli/src/acp/handlers-session.mjs:118` | `fn` |
 | `createSlotsHandlers` | `thincoder-cli/src/acp/handlers-slots.mjs:19` | `fn` |
 | `runAcpLogin` | `thincoder-cli/src/acp/login.mjs:14` | `fn` |
+| `WATCH_INTERVAL_MS` | `thincoder-cli/src/acp/read-data.mjs:17` | `const` |
+| `createReadDataHandlers` | `thincoder-cli/src/acp/read-data.mjs:52` | `fn` |
 | `createAcpSession` | `thincoder-cli/src/acp/session.mjs:20` | `fn` |
 | `ACP_ERRORS` | `thincoder-cli/src/acp/transport.mjs:14` | `const` |
 | `createAcpServer` | `thincoder-cli/src/acp/transport.mjs:29` | `fn` |
@@ -405,9 +407,9 @@
 | `buildAdvisorFollowUp` | `thincoder-core/advisor.mjs:138` | `fn` |
 | `escapeLiteralEscapes` | `thincoder-core/advisor.mjs:173` | `named` |
 | `prepareAdvisorMessages` | `thincoder-core/advisor.mjs:192` | `fn` |
-| `extractCitations` | `thincoder-core/advisor/citations.mjs:25` | `fn` |
-| `verifyCitations` | `thincoder-core/advisor/citations.mjs:98` | `fn` |
-| `appendCitationReport` | `thincoder-core/advisor/citations.mjs:117` | `fn` |
+| `extractCitations` | `thincoder-core/advisor/citations.mjs:29` | `fn` |
+| `verifyCitations` | `thincoder-core/advisor/citations.mjs:108` | `fn` |
+| `appendCitationReport` | `thincoder-core/advisor/citations.mjs:127` | `fn` |
 | `MAX_ADVISOR_TURNS` | `thincoder-core/advisor/compaction.mjs:16` | `const` |
 | `CONTEXT_LIMIT_RATIO` | `thincoder-core/advisor/compaction.mjs:26` | `const` |
 | `advisorContextBudget` | `thincoder-core/advisor/compaction.mjs:30` | `fn` |
@@ -533,15 +535,17 @@
 | `injectBgResult` | `thincoder-core/agent-tools/bash-async.mjs:231` | `fn` |
 | `killBgTask` | `thincoder-core/agent-tools/bash-async.mjs:253` | `fn` |
 | `killBgPid` | `thincoder-core/agent-tools/bash-async.mjs:276` | `fn` |
-| `findInFlightBatch` | `thincoder-core/agent-tools/batch-lifecycle.mjs:82` | `fn` |
-| `createBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:112` | `fn` |
-| `statusBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:270` | `fn` |
-| `closeBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:318` | `fn` |
+| `collectMarkdownFiles` | `thincoder-core/agent-tools/batch-lifecycle.mjs:63` | `fn` |
+| `findInFlightBatch` | `thincoder-core/agent-tools/batch-lifecycle.mjs:83` | `fn` |
+| `createBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:113` | `fn` |
+| `statusBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:271` | `fn` |
+| `closeBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:319` | `fn` |
 | `batchProjectRoot` | `thincoder-core/agent-tools/batch-paths.mjs:39` | `fn` |
 | `batchDocBases` | `thincoder-core/agent-tools/batch-paths.mjs:56` | `fn` |
 | `resolveBatchReadPath` | `thincoder-core/agent-tools/batch-paths.mjs:122` | `fn` |
 | `resolveBatchDocPath` | `thincoder-core/agent-tools/batch-paths.mjs:140` | `fn` |
 | `resolveBatchCreatePath` | `thincoder-core/agent-tools/batch-paths.mjs:161` | `fn` |
+| `listBatchRecords` | `thincoder-core/agent-tools/batch-read.mjs:22` | `fn` |
 | `sectionHeaderRe` | `thincoder-core/agent-tools/batch-skeleton.mjs:22` | `const` |
 | `STATUS_WORDS` | `thincoder-core/agent-tools/batch-skeleton.mjs:34` | `const` |
 | `SEGMENT_BY_ROLE` | `thincoder-core/agent-tools/batch-skeleton.mjs:45` | `const` |
@@ -550,8 +554,9 @@
 | `findPlaceholderResidue` | `thincoder-core/agent-tools/batch-skeleton.mjs:71` | `fn` |
 | `placeholderResidueError` | `thincoder-core/agent-tools/batch-skeleton.mjs:96` | `fn` |
 | `readBatchStatusLine` | `thincoder-core/agent-tools/batch-skeleton.mjs:113` | `fn` |
-| `sectionHasStatusLine` | `thincoder-core/agent-tools/batch-skeleton.mjs:136` | `fn` |
-| `batchSkeleton` | `thincoder-core/agent-tools/batch-skeleton.mjs:156` | `fn` |
+| `readSectionStatusWord` | `thincoder-core/agent-tools/batch-skeleton.mjs:138` | `fn` |
+| `sectionHasStatusLine` | `thincoder-core/agent-tools/batch-skeleton.mjs:164` | `fn` |
+| `batchSkeleton` | `thincoder-core/agent-tools/batch-skeleton.mjs:184` | `fn` |
 | `SEGMENT_BY_ROLE, batchDocBases, resolveBatchDocPath` | `thincoder-core/agent-tools/batch.mjs:36` | `named` |
 | `MAX_TEXT_CHARS` | `thincoder-core/agent-tools/batch.mjs:40` | `const` |
 | `configureBatchSegment` | `thincoder-core/agent-tools/batch.mjs:55` | `fn` |
@@ -578,13 +583,15 @@
 | `compactFailureNote` | `thincoder-core/agent-tools/context.mjs:26` | `fn` |
 | `pushContextNudge` | `thincoder-core/agent-tools/context.mjs:48` | `fn` |
 | `contextTool` | `thincoder-core/agent-tools/context.mjs:128` | `const` |
-| `buildApprovedSuffix` | `thincoder-core/agent-tools/design-token.mjs:22` | `fn` |
-| `stripApprovedSuffix` | `thincoder-core/agent-tools/design-token.mjs:29` | `fn` |
-| `effectiveTokenTtlMs` | `thincoder-core/agent-tools/design-token.mjs:37` | `fn` |
-| `generateDesignToken` | `thincoder-core/agent-tools/design-token.mjs:44` | `fn` |
-| `validateDesignToken` | `thincoder-core/agent-tools/design-token.mjs:53` | `fn` |
-| `makeDesignTokenRegex` | `thincoder-core/agent-tools/design-token.mjs:59` | `fn` |
-| `settleDesignReview` | `thincoder-core/agent-tools/design-token.mjs:82` | `fn` |
+| `buildApprovedSuffix` | `thincoder-core/agent-tools/design-token.mjs:24` | `fn` |
+| `stripApprovedSuffix` | `thincoder-core/agent-tools/design-token.mjs:31` | `fn` |
+| `effectiveTokenTtlMs` | `thincoder-core/agent-tools/design-token.mjs:39` | `fn` |
+| `generateDesignToken` | `thincoder-core/agent-tools/design-token.mjs:46` | `fn` |
+| `validateDesignToken` | `thincoder-core/agent-tools/design-token.mjs:55` | `fn` |
+| `makeDesignTokenRegex` | `thincoder-core/agent-tools/design-token.mjs:61` | `fn` |
+| `makeDesignTokenPrefixRegex` | `thincoder-core/agent-tools/design-token.mjs:71` | `fn` |
+| `stripDesignTokenEcho` | `thincoder-core/agent-tools/design-token.mjs:84` | `fn` |
+| `settleDesignReview` | `thincoder-core/agent-tools/design-token.mjs:115` | `fn` |
 | `DIGEST_INJECT_BUDGET` | `thincoder-core/agent-tools/digest-budget.mjs:34` | `const` |
 | `digestBudgetOver` | `thincoder-core/agent-tools/digest-budget.mjs:51` | `fn` |
 | `_setDigestOffloadDirForTest` | `thincoder-core/agent-tools/digest-budget.mjs:60` | `fn` |
@@ -942,21 +949,22 @@
 | `shouldIndexFile` | `thincoder-core/index-discover.mjs:151` | `fn` |
 | `kindFor` | `thincoder-core/index-discover.mjs:160` | `fn` |
 | `listMemoryFiles` | `thincoder-core/index-discover.mjs:174` | `fn` |
-| `ledgerQuery` | `thincoder-core/ledger-cmd.mjs:20` | `fn` |
-| `ledgerCount` | `thincoder-core/ledger-cmd.mjs:33` | `fn` |
-| `ledgerAdd` | `thincoder-core/ledger-cmd.mjs:73` | `fn` |
-| `ledgerUpdate` | `thincoder-core/ledger-cmd.mjs:100` | `fn` |
-| `ledgerClose` | `thincoder-core/ledger-cmd.mjs:122` | `fn` |
+| `ledgerQuery` | `thincoder-core/ledger-cmd.mjs:21` | `fn` |
+| `ledgerCount` | `thincoder-core/ledger-cmd.mjs:35` | `fn` |
+| `ledgerAdd` | `thincoder-core/ledger-cmd.mjs:75` | `fn` |
+| `ledgerUpdate` | `thincoder-core/ledger-cmd.mjs:102` | `fn` |
+| `ledgerClose` | `thincoder-core/ledger-cmd.mjs:124` | `fn` |
 | `_setLedgerDirForTest` | `thincoder-core/ledger-db.mjs:29` | `fn` |
 | `_resetLedgerDirForTest` | `thincoder-core/ledger-db.mjs:30` | `fn` |
 | `ledgerDirPath` | `thincoder-core/ledger-db.mjs:34` | `fn` |
 | `ledgerKey` | `thincoder-core/ledger-db.mjs:41` | `fn` |
 | `ledgerDbPath` | `thincoder-core/ledger-db.mjs:50` | `fn` |
 | `PENDING_STATUSES` | `thincoder-core/ledger-db.mjs:56` | `const` |
-| `ALLOWED_MIGRATIONS` | `thincoder-core/ledger-db.mjs:59` | `const` |
-| `ensureExecutorColumn` | `thincoder-core/ledger-db.mjs:90` | `fn` |
-| `openLedger` | `thincoder-core/ledger-db.mjs:108` | `fn` |
-| `nowIso` | `thincoder-core/ledger-db.mjs:134` | `const` |
+| `LEDGER_SCHEMA_VERSION` | `thincoder-core/ledger-db.mjs:60` | `const` |
+| `ALLOWED_MIGRATIONS` | `thincoder-core/ledger-db.mjs:63` | `const` |
+| `ensureExecutorColumn` | `thincoder-core/ledger-db.mjs:94` | `fn` |
+| `openLedger` | `thincoder-core/ledger-db.mjs:139` | `fn` |
+| `nowIso` | `thincoder-core/ledger-db.mjs:167` | `const` |
 | `_setExecutorProbeTtlForTest` | `thincoder-core/ledger-executors.mjs:17` | `fn` |
 | `resolveExecutorStates` | `thincoder-core/ledger-executors.mjs:46` | `fn` |
 | `executorTail` | `thincoder-core/ledger-executors.mjs:95` | `fn` |
@@ -969,8 +977,10 @@
 | `runLedgerMigrate` | `thincoder-core/ledger-migrate.mjs:165` | `fn` |
 | `auditLedgerDir` | `thincoder-core/ledger-migrate.mjs:251` | `fn` |
 | `runLedgerAudit` | `thincoder-core/ledger-migrate.mjs:285` | `fn` |
+| `ledgerExport` | `thincoder-core/ledger-read.mjs:50` | `fn` |
+| `runLedgerList` | `thincoder-core/ledger-read.mjs:70` | `fn` |
 | `runLedgerScan` | `thincoder-core/ledger-surface.mjs:21` | `fn` |
-| `startLedgerSurface` | `thincoder-core/ledger-surface.mjs:60` | `fn` |
+| `startLedgerSurface` | `thincoder-core/ledger-surface.mjs:62` | `fn` |
 | `ledgerQueryTool` | `thincoder-core/ledger-tools.mjs:73` | `const` |
 | `ledgerCountTool` | `thincoder-core/ledger-tools.mjs:93` | `const` |
 | `ledgerAddTool` | `thincoder-core/ledger-tools.mjs:108` | `const` |
@@ -989,19 +999,20 @@
 | `discoverFamily` | `thincoder-core/ledger.mjs:95` | `fn` |
 | `buildScan` | `thincoder-core/ledger.mjs:117` | `fn` |
 | `formatMarker` | `thincoder-core/ledger.mjs:147` | `fn` |
-| `formatDetailLine` | `thincoder-core/ledger.mjs:153` | `fn` |
-| `formatAgingLine` | `thincoder-core/ledger.mjs:158` | `fn` |
-| `formatThresholdLine` | `thincoder-core/ledger.mjs:163` | `fn` |
-| `detailScans` | `thincoder-core/ledger.mjs:168` | `fn` |
-| `planChangeLines` | `thincoder-core/ledger.mjs:176` | `fn` |
-| `notifyKey` | `thincoder-core/ledger.mjs:190` | `fn` |
-| `loadNotifyState` | `thincoder-core/ledger.mjs:195` | `fn` |
-| `saveNotifyState` | `thincoder-core/ledger.mjs:204` | `fn` |
-| `ALLOWED_MIGRATIONS, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn` | `thincoder-core/ledger.mjs:215` | `named` |
-| `ledgerAdd, ledgerClose, ledgerCount, ledgerQuery, ledgerUpdate` | `thincoder-core/ledger.mjs:216` | `named` |
-| `ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool` | `thincoder-core/ledger.mjs:217` | `named` |
-| `runLedgerAudit, runLedgerMigrate` | `thincoder-core/ledger.mjs:218` | `named` |
-| `resolveExecutorStates, executorTail, _setExecutorProbeTtlForTest` | `thincoder-core/ledger.mjs:219` | `named` |
+| `scopeMarkerOf` | `thincoder-core/ledger.mjs:157` | `fn` |
+| `formatDetailLine` | `thincoder-core/ledger.mjs:175` | `fn` |
+| `formatAgingLine` | `thincoder-core/ledger.mjs:180` | `fn` |
+| `formatThresholdLine` | `thincoder-core/ledger.mjs:185` | `fn` |
+| `detailScans` | `thincoder-core/ledger.mjs:190` | `fn` |
+| `planChangeLines` | `thincoder-core/ledger.mjs:198` | `fn` |
+| `notifyKey` | `thincoder-core/ledger.mjs:212` | `fn` |
+| `loadNotifyState` | `thincoder-core/ledger.mjs:217` | `fn` |
+| `saveNotifyState` | `thincoder-core/ledger.mjs:226` | `fn` |
+| `ALLOWED_MIGRATIONS, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn` | `thincoder-core/ledger.mjs:237` | `named` |
+| `ledgerAdd, ledgerClose, ledgerCount, ledgerQuery, ledgerUpdate` | `thincoder-core/ledger.mjs:238` | `named` |
+| `ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool` | `thincoder-core/ledger.mjs:239` | `named` |
+| `runLedgerAudit, runLedgerMigrate` | `thincoder-core/ledger.mjs:240` | `named` |
+| `resolveExecutorStates, executorTail, _setExecutorProbeTtlForTest` | `thincoder-core/ledger.mjs:241` | `named` |
 | `MAX_LINE` | `thincoder-core/log.mjs:37` | `const` |
 | `_setLogsDirForTest` | `thincoder-core/log.mjs:51` | `fn` |
 | `_resetLogsDirForTest` | `thincoder-core/log.mjs:52` | `fn` |
@@ -1725,8 +1736,8 @@
 | `hasPendingFor` | `thincoder-desktop/renderer/badges.mjs:37` | `fn` |
 | `effortOf` | `thincoder-desktop/renderer/composer-sync.mjs:40` | `fn` |
 | `createComposerSync` | `thincoder-desktop/renderer/composer-sync.mjs:55` | `fn` |
-| `reasonOf` | `thincoder-desktop/renderer/composer-wire.mjs:35` | `fn` |
-| `createComposerWire` | `thincoder-desktop/renderer/composer-wire.mjs:50` | `fn` |
+| `reasonOf` | `thincoder-desktop/renderer/composer-wire.mjs:37` | `fn` |
+| `createComposerWire` | `thincoder-desktop/renderer/composer-wire.mjs:52` | `fn` |
 | `el` | `thincoder-desktop/renderer/dom.mjs:9` | `fn` |
 | `build` | `thincoder-desktop/renderer/dom.mjs:26` | `fn` |
 | `text` | `thincoder-desktop/renderer/dom.mjs:32` | `fn` |
@@ -1774,14 +1785,14 @@
 | `COMPOSER_DICT` | `thincoder-desktop/renderer/i18n-composer.mjs:23` | `const` |
 | `SETTINGS_DICT` | `thincoder-desktop/renderer/i18n-settings.mjs:25` | `const` |
 | `VIEWS_DICT` | `thincoder-desktop/renderer/i18n-views.mjs:50` | `const` |
-| `HOST_DICT` | `thincoder-desktop/renderer/i18n.mjs:131` | `const` |
-| `SUPPORTED_LOCALES` | `thincoder-desktop/renderer/i18n.mjs:353` | `const` |
-| `FALLBACK_LOCALE` | `thincoder-desktop/renderer/i18n.mjs:356` | `const` |
-| `setStringsSink` | `thincoder-desktop/renderer/i18n.mjs:367` | `fn` |
-| `normalizeLocale` | `thincoder-desktop/renderer/i18n.mjs:373` | `fn` |
-| `initDict` | `thincoder-desktop/renderer/i18n.mjs:387` | `fn` |
-| `locale` | `thincoder-desktop/renderer/i18n.mjs:396` | `fn` |
-| `t` | `thincoder-desktop/renderer/i18n.mjs:408` | `fn` |
+| `HOST_DICT` | `thincoder-desktop/renderer/i18n.mjs:134` | `const` |
+| `SUPPORTED_LOCALES` | `thincoder-desktop/renderer/i18n.mjs:356` | `const` |
+| `FALLBACK_LOCALE` | `thincoder-desktop/renderer/i18n.mjs:359` | `const` |
+| `setStringsSink` | `thincoder-desktop/renderer/i18n.mjs:370` | `fn` |
+| `normalizeLocale` | `thincoder-desktop/renderer/i18n.mjs:376` | `fn` |
+| `initDict` | `thincoder-desktop/renderer/i18n.mjs:390` | `fn` |
+| `locale` | `thincoder-desktop/renderer/i18n.mjs:399` | `fn` |
+| `t` | `thincoder-desktop/renderer/i18n.mjs:411` | `fn` |
 | `createMenuActions` | `thincoder-desktop/renderer/menu-actions.mjs:18` | `fn` |
 | `CARDS_SLOT` | `thincoder-desktop/renderer/mount-cards.mjs:29` | `const` |
 | `CARDS_KEYS` | `thincoder-desktop/renderer/mount-cards.mjs:32` | `const` |
@@ -2121,12 +2132,12 @@
 | `summarizeArgs` | `thincoder-desktop/src/main/agent-bridge.mjs:72` | `named` |
 | `createBridge` | `thincoder-desktop/src/main/agent-bridge.mjs:135` | `fn` |
 | `accumulateTokens` | `thincoder-desktop/src/main/agent-bridge.mjs:316` | `fn` |
-| `ACTIVITY_EVENTS, parseEvToken, summarizeArgs` | `thincoder-desktop/src/main/agent-host.mjs:55` | `named` |
-| `ITEM_VERDICTS, BATCH_VERDICTS` | `thincoder-desktop/src/main/agent-host.mjs:56` | `named` |
-| `DEFAULT_DEPS, assembleFor, gitAuthor, teamConfig, validateProvider` | `thincoder-desktop/src/main/agent-host.mjs:57` | `named` |
-| `advisorMeta` | `thincoder-desktop/src/main/agent-host.mjs:82` | `fn` |
-| `usageFrameWanted` | `thincoder-desktop/src/main/agent-host.mjs:91` | `fn` |
-| `createAgentHost` | `thincoder-desktop/src/main/agent-host.mjs:103` | `fn` |
+| `ACTIVITY_EVENTS, parseEvToken, summarizeArgs` | `thincoder-desktop/src/main/agent-host.mjs:58` | `named` |
+| `ITEM_VERDICTS, BATCH_VERDICTS` | `thincoder-desktop/src/main/agent-host.mjs:59` | `named` |
+| `DEFAULT_DEPS, assembleFor, gitAuthor, teamConfig, validateProvider` | `thincoder-desktop/src/main/agent-host.mjs:60` | `named` |
+| `advisorMeta` | `thincoder-desktop/src/main/agent-host.mjs:85` | `fn` |
+| `usageFrameWanted` | `thincoder-desktop/src/main/agent-host.mjs:94` | `fn` |
+| `createAgentHost` | `thincoder-desktop/src/main/agent-host.mjs:106` | `fn` |
 | `THEME_VALUES` | `thincoder-desktop/src/main/app-menu.mjs:32` | `const` |
 | `SETTINGS_GROUPS` | `thincoder-desktop/src/main/app-menu.mjs:36` | `const` |
 | `menuTemplate` | `thincoder-desktop/src/main/app-menu.mjs:51` | `fn` |
@@ -2271,27 +2282,27 @@
 | `runSessionIndexMaintenance` | `thincoder-desktop/src/main/session-maintenance.mjs:77` | `fn` |
 | `indexSummaryText` | `thincoder-desktop/src/main/session-maintenance.mjs:94` | `fn` |
 | `scheduleSessionMaintenancePasses` | `thincoder-desktop/src/main/session-maintenance.mjs:104` | `fn` |
-| `sessionPath, slotPath, manifestPath, loadManifest, saveManifest, writeSessionFile, slotDigest, activeSlot, claimSlot, allocateFresh, _setSessionsDirForTest, _resetSessionsDirForTest,` | `thincoder-desktop/src/main/session-slots.mjs:63` | `named` |
-| `listSlots, slotOccupancy, renameSlot` | `thincoder-desktop/src/main/session-slots.mjs:68` | `named` |
-| `ledgerHealth` | `thincoder-desktop/src/main/session-slots.mjs:69` | `named` |
-| `newSlotData` | `thincoder-desktop/src/main/session-slots.mjs:70` | `named` |
-| `END` | `thincoder-desktop/src/main/session-slots.mjs:73` | `const` |
-| `sessionsDir` | `thincoder-desktop/src/main/session-slots.mjs:80` | `fn` |
-| `endMarkerPath` | `thincoder-desktop/src/main/session-slots.mjs:87` | `const` |
-| `readEndMarker` | `thincoder-desktop/src/main/session-slots.mjs:91` | `const` |
-| `writeEndMarker` | `thincoder-desktop/src/main/session-slots.mjs:95` | `const` |
-| `resumeSlot` | `thincoder-desktop/src/main/session-slots.mjs:99` | `const` |
-| `newSession` | `thincoder-desktop/src/main/session-slots.mjs:103` | `const` |
-| `switchToSlot` | `thincoder-desktop/src/main/session-slots.mjs:107` | `const` |
-| `deleteSlot` | `thincoder-desktop/src/main/session-slots.mjs:111` | `const` |
-| `slotOfKey` | `thincoder-desktop/src/main/session-slots.mjs:117` | `fn` |
-| `providerStateOf` | `thincoder-desktop/src/main/session-slots.mjs:156` | `fn` |
-| `pageHistory` | `thincoder-desktop/src/main/session-slots.mjs:189` | `fn` |
-| `writeSlotPrefs` | `thincoder-desktop/src/main/session-slots.mjs:224` | `fn` |
-| `listColdCwds, deleteColdCwd` | `thincoder-desktop/src/main/session-slots.mjs:238` | `named` |
-| `listStaleCwds` | `thincoder-desktop/src/main/session-slots.mjs:241` | `named` |
-| `scheduleSessionGC` | `thincoder-desktop/src/main/session-slots.mjs:246` | `named` |
-| `scheduleSessionIndexPass` | `thincoder-desktop/src/main/session-slots.mjs:251` | `fn` |
+| `sessionPath, slotPath, manifestPath, loadManifest, saveManifest, writeSessionFile, slotDigest, activeSlot, claimSlot, allocateFresh, _setSessionsDirForTest, _resetSessionsDirForTest,` | `thincoder-desktop/src/main/session-slots.mjs:65` | `named` |
+| `listSlots, slotOccupancy, renameSlot` | `thincoder-desktop/src/main/session-slots.mjs:70` | `named` |
+| `ledgerHealth` | `thincoder-desktop/src/main/session-slots.mjs:71` | `named` |
+| `newSlotData` | `thincoder-desktop/src/main/session-slots.mjs:72` | `named` |
+| `END` | `thincoder-desktop/src/main/session-slots.mjs:75` | `const` |
+| `sessionsDir` | `thincoder-desktop/src/main/session-slots.mjs:82` | `fn` |
+| `endMarkerPath` | `thincoder-desktop/src/main/session-slots.mjs:89` | `const` |
+| `readEndMarker` | `thincoder-desktop/src/main/session-slots.mjs:93` | `const` |
+| `writeEndMarker` | `thincoder-desktop/src/main/session-slots.mjs:97` | `const` |
+| `resumeSlot` | `thincoder-desktop/src/main/session-slots.mjs:101` | `const` |
+| `newSession` | `thincoder-desktop/src/main/session-slots.mjs:105` | `const` |
+| `switchToSlot` | `thincoder-desktop/src/main/session-slots.mjs:109` | `const` |
+| `deleteSlot` | `thincoder-desktop/src/main/session-slots.mjs:113` | `const` |
+| `slotOfKey` | `thincoder-desktop/src/main/session-slots.mjs:119` | `fn` |
+| `providerStateOf` | `thincoder-desktop/src/main/session-slots.mjs:158` | `fn` |
+| `pageHistory` | `thincoder-desktop/src/main/session-slots.mjs:191` | `fn` |
+| `writeSlotPrefs` | `thincoder-desktop/src/main/session-slots.mjs:230` | `fn` |
+| `listColdCwds, deleteColdCwd` | `thincoder-desktop/src/main/session-slots.mjs:249` | `named` |
+| `listStaleCwds` | `thincoder-desktop/src/main/session-slots.mjs:252` | `named` |
+| `scheduleSessionGC` | `thincoder-desktop/src/main/session-slots.mjs:257` | `named` |
+| `scheduleSessionIndexPass` | `thincoder-desktop/src/main/session-slots.mjs:262` | `fn` |
 | `ROW_FIELDS` | `thincoder-desktop/src/main/sessions.mjs:15` | `const` |
 | `listSessions` | `thincoder-desktop/src/main/sessions.mjs:37` | `fn` |
 | `shellCandidates` | `thincoder-desktop/src/main/settings-env.mjs:19` | `named` |
@@ -2305,13 +2316,14 @@
 | `setKeyPath` | `thincoder-desktop/src/main/settings-values.mjs:85` | `fn` |
 | `deleteKeyPath` | `thincoder-desktop/src/main/settings-values.mjs:98` | `fn` |
 | `deepEqual` | `thincoder-desktop/src/main/settings-values.mjs:111` | `fn` |
-| `MASK, deepEqual, isConfigured, maskKey` | `thincoder-desktop/src/main/settings.mjs:43` | `named` |
-| `configWrite` | `thincoder-desktop/src/main/settings.mjs:53` | `fn` |
-| `modelsFace` | `thincoder-desktop/src/main/settings.mjs:72` | `fn` |
-| `modelCatalog` | `thincoder-desktop/src/main/settings.mjs:118` | `fn` |
-| `modelList` | `thincoder-desktop/src/main/settings.mjs:146` | `fn` |
-| `indexStatus` | `thincoder-desktop/src/main/settings.mjs:240` | `fn` |
-| `settingsAgent` | `thincoder-desktop/src/main/settings.mjs:290` | `fn` |
+| `MASK, deepEqual, isConfigured, maskKey` | `thincoder-desktop/src/main/settings.mjs:45` | `named` |
+| `configWrite` | `thincoder-desktop/src/main/settings.mjs:55` | `fn` |
+| `modelsFace` | `thincoder-desktop/src/main/settings.mjs:74` | `fn` |
+| `modelCatalog` | `thincoder-desktop/src/main/settings.mjs:120` | `fn` |
+| `modelList` | `thincoder-desktop/src/main/settings.mjs:148` | `fn` |
+| `indexStatus` | `thincoder-desktop/src/main/settings.mjs:242` | `fn` |
+| `carryoverDefaultModel` | `thincoder-desktop/src/main/settings.mjs:285` | `fn` |
+| `settingsAgent` | `thincoder-desktop/src/main/settings.mjs:319` | `fn` |
 | `LIVE_HEARTBEAT_MS` | `thincoder-desktop/src/main/subagent-face.mjs:27` | `named` |
 | `createSubagentFace` | `thincoder-desktop/src/main/subagent-face.mjs:31` | `fn` |
 | `createSuspensionDrive` | `thincoder-desktop/src/main/suspension-drive.mjs:36` | `fn` |
@@ -2528,11 +2540,11 @@
 | `historyWindow, HISTORY_PAGE_SIZE, isRealUserMsg` | `thincoder-vscode/src/extension/history-window.mjs:12` | `named` |
 | `savePastedImages` | `thincoder-vscode/src/extension/image-handler.mjs:24` | `fn` |
 | `downgradeNonVisionImages` | `thincoder-vscode/src/extension/image-handler.mjs:42` | `fn` |
-| `_setLedgerSurfaceForTest` | `thincoder-vscode/src/extension/ledger-surface.mjs:44` | `fn` |
-| `refreshLedger` | `thincoder-vscode/src/extension/ledger-surface.mjs:103` | `fn` |
-| `pushLedgerStartup` | `thincoder-vscode/src/extension/ledger-surface.mjs:116` | `fn` |
-| `initLedgerSurface` | `thincoder-vscode/src/extension/ledger-surface.mjs:121` | `fn` |
-| `dispose` | `thincoder-vscode/src/extension/ledger-surface.mjs:135` | `fn` |
+| `_setLedgerSurfaceForTest` | `thincoder-vscode/src/extension/ledger-surface.mjs:45` | `fn` |
+| `refreshLedger` | `thincoder-vscode/src/extension/ledger-surface.mjs:105` | `fn` |
+| `pushLedgerStartup` | `thincoder-vscode/src/extension/ledger-surface.mjs:118` | `fn` |
+| `initLedgerSurface` | `thincoder-vscode/src/extension/ledger-surface.mjs:123` | `fn` |
+| `dispose` | `thincoder-vscode/src/extension/ledger-surface.mjs:137` | `fn` |
 | `SAMPLE_INTERVAL_MS` | `thincoder-vscode/src/extension/loop-sampler.mjs:21` | `const` |
 | `WINDOW_MS` | `thincoder-vscode/src/extension/loop-sampler.mjs:23` | `const` |
 | `BUSY_LAG_MS` | `thincoder-vscode/src/extension/loop-sampler.mjs:25` | `const` |

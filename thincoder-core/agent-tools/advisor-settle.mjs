@@ -21,7 +21,7 @@
  * ADVISOR-GUARDS.md §7）。记账本体 / 陈旧判定 / 轮次 / token 落盘零改。
  */
 import { persistEngTokens } from "../token-ttl.mjs"
-import { settleDesignReview, makeDesignTokenRegex, stripApprovedSuffix } from "./design-token.mjs"
+import { settleDesignReview, stripDesignTokenEcho, stripApprovedSuffix } from "./design-token.mjs"
 import { looksLikeReviewOutput, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
 import { isCodePath, loadProjectDeclaration } from "../conventions.mjs"
 import { logEvent } from "../log.mjs"
@@ -176,9 +176,7 @@ export function settleAdvisorRun(agent, entry) {
           run.approvedSuffix = null
           persistFailed = true
           logEvent("advisor:error", { id: `advisor#${entry.id}`, err: "engDesignTokens slot persist failed — settle failed (re-review)" })
-          const stripped = String(result)
-            .replace(makeDesignTokenRegex(entry.designToken, "g"), "")
-            .trim()
+          const stripped = stripDesignTokenEcho(String(result), entry.designToken).trim()
           report = `${stripped}\n\nD1: the design review passed but the token could NOT be durably written to the session ledger (slot persist failed) — re-run advisor(type='design') to re-issue; no eng-coder spawn is authorized for this review (评审通过但 token 未能持久化——需重评).`.trim()
         }
       } else {
@@ -210,10 +208,8 @@ export function settleAdvisorRun(agent, entry) {
     }
   } else if (run.reviewType === "design" && entry.designToken && result != null) {
     // fix B（stale 分支）：陈旧评审不签发——digest 不得展示未注册 token——先剥
-    // 方括号回显 + 前置 "评审目标已变更——token 未签发"（不变式——两分支都清洗）。
-    const stripped = String(result)
-      .replace(makeDesignTokenRegex(entry.designToken, "g"), "")
-      .trim()
+    // token 回显（单源三形）+ 前置 "评审目标已变更——token 未签发"（不变式——两分支都清洗）。
+    const stripped = stripDesignTokenEcho(String(result), entry.designToken).trim()
     report = `评审目标已变更——token 未签发 (review target changed after launch — this review judged a stale state; no design token was issued — re-run the review on the current state)\n\n${stripped}`.trim()
   }
   // Prior of round 2+ = the last REVIEW-LOOKING output (mirror of run.mjs's guard).

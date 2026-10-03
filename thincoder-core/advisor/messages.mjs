@@ -48,8 +48,8 @@ export function buildObjectDeclarationBlock(object = null) {
  */
 export function buildDesignApprovalBlock(designToken, designId) {
   const echo = designId
-    ? `If — and ONLY if — no unresolved 🔴 (Critical) issue remains, end your reply with this exact token: [DESIGN-TOKEN:${designToken}] and this exact designId: ${designId}. Copy BOTH values verbatim.`
-    : `If — and ONLY if — no unresolved 🔴 (Critical) issue remains, end your reply with this exact token: [DESIGN-TOKEN:${designToken}]`
+    ? `If — and ONLY if — no unresolved 🔴 (Critical) issue remains, end your reply with this exact token: [DESIGN-TOKEN:${designToken}] and this exact designId: ${designId}. Copy BOTH values verbatim — every character, including the colon and the digits after the uuid inside the token brackets; a shortened echo is flagged as truncated.`
+    : `If — and ONLY if — no unresolved 🔴 (Critical) issue remains, end your reply with this exact token: [DESIGN-TOKEN:${designToken}]. Copy it verbatim — every character, including the colon and the digits after the uuid; a shortened echo is flagged as truncated.`
   return [
     "## Approval Signal",
     echo,

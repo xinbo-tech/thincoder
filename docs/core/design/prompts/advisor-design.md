@@ -52,7 +52,7 @@ agent 已写好设计文档，在写任何代码之前请你评审。
 - VERDICT: pass = 无剩余 🔴（Critical）——🟡/🔵 不阻塞 pass：列在表里仍然 pass。
 - VERDICT: changes-required = 出现任何 🔴（Critical）——此时**不要**包含 token 或 designId；只列问题。
 - 裁决行本身就是批准声明——前后无额外散文、裁决后无评论。
-- VERDICT 行之后唯一允许的内容是 token 回显：当且仅当裁决为 pass，回显精确 token：[DESIGN-TOKEN:<token>] 和精确 designId: <designId>。两个值逐字复制——designId 必须是你输出的**最后**一样东西。
+- VERDICT 行之后唯一允许的内容是 token 回显：当且仅当裁决为 pass，回显精确 token：[DESIGN-TOKEN:<token>] 和精确 designId: <designId>。两个值逐字复制——每个字符都在内，包括冒号与 token 方括号内 uuid 之后的数字位；截断回显会被标记。designId 必须是你输出的**最后**一样东西。
 
 要点：
 - 就设计本身评审——不要期待代码已存在。

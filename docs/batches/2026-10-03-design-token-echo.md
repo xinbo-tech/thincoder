@@ -275,4 +275,51 @@ return { passed: true, output: [clean, truncatedEcho ? M2 : null, run.approvedSu
 
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（T1–T10 十二腿先红后绿 12/12 · doc-check exit 0 · 内部审计 clean · fix 轮 0 · 未点火评审（父侧收口承接））
+
+
+
+**§5 实施记录（eng-coder · 2026-10-04 · initial 轮 · #884）**
+
+**口径**：实施面 = 批档 §2 终态（initial + U1 折入 + D1 折入 + 评审 #47 收正块 `:207-248`）全量落地；机制权威 = `docs/core/design/ENG-TOKEN-BINDING.md` §5/§5.1/§6.1。本轮不点火评审 ∥ 不跑仓级套件（任务书「本轮不做」）；内部 explore divergence 审计 **1 轮 = clean**（见下）。
+
+**改动表（号 → file:line · 现体坐标）**
+
+| # | file | 改动 |
+|---|---|---|
+| 1 | `thincoder-core/agent-tools/design-token.mjs`（117 → **156** 内容行） | 新增 `makeDesignTokenPrefixRegex` `:69-79`（截断形前缀 regex——同边界纪律）∥ `stripDesignTokenEcho` `:80-91`（全串 → 前缀形 → 裸 uuid 三剥；空 uuid 跳过裸剥）∥ M1/M2 常量 `:93-96`（逐字 = §5.1②）∥ `settleDesignReview` `:115`：判定 `:130-134`（全串 ∨ uuid 形）∥ 非回显 `:135-138`（M1 恒定 + 单源剥离——旧「did not pass」兜底串退役）∥ pass `:139-157`（M2 恒居 suffix 前、suffix 恒居文末）∥ 未完成径 `:123-129` 剥离改单源 ∥ 守卫 `:116-118` 零改 ∥ token 格式/TTL/`buildApprovedSuffix`/`stripApprovedSuffix`/`makeDesignTokenRegex` 零改 |
+| 7 | `thincoder-core/agent-tools/advisor-settle.mjs`（240 → **236**） | `:24` import 随动（`makeDesignTokenRegex` 除名 → `stripDesignTokenEcho`）∥ D1 落盘失败径 `:179` ∥ stale 径 `:212`（注释「单源三形」收正 `:211`）——各三行 → 单源调用 |
+| 2 | `thincoder-core/advisor/messages.mjs`（**299** 内容行 · ±0） | `:51`/`:52` 句尾加固逐字（= §5.1④ a；token-only 形 = 追加句） |
+| 8 | `thincoder-core/prompts/advisor-design.md`（44 行 · ±0） | `:24` 句内加固逐字（= §5.1④ b EN） |
+| 9 | `docs/core/design/prompts/advisor-design.md`（74 行 · ±0） | `:55` 句内加固逐字（= §5.1④ b CN——EN↔CN 同文） |
+| 5 | `docs/batches/2026-10-03-design-token-echo.test.mjs`（新增 **207** 行） | T1–T10 十二腿（T10 三子径）——批内件，随批归档 |
+
+**测试读数（先红后绿逐腿）** — 复跑 = 仓根 `node --test docs/batches/2026-10-03-design-token-echo.test.mjs`（零网络 ∥ 零真实 LLM）
+
+- **红（实施前 · HEAD 净检出复跑——夹具定稿版）**：**3 绿 / 9 红**——绿 = T2 · T7 · T9；红 = T1（截断不认 pass）· T3/T4（零 M1）· T5（函数不存在）· T6（M1）· T8（加固句缺失）· T10-①②（残片未剥）· T10-③（D1 径不可达——截断不认 pass）。与批档用例表「初态」列逐腿一致。
+- **绿（实施后）**：**12/12 pass**。
+- T10-③ 注入链核验（履行评审 #47 号 6）：`_slotMtime` 缓存命中 ⇒ 守卫 `session-guard.mjs:46-47` 跳过解析 ⇒ `token-ttl.mjs:240-241` 复读抛（独立探针原文 `Expected property name or '}' in JSON at position 2`）⇒ `durable=false` 成立——注入链有效，**未改产品 seam**（`_setSessionsDirForTest` 仅测试侧隔离，finally 复位）。
+
+**doc-check 读数**：仓根 `node scripts/doc-check.mjs` ⇒ **exit 0**——`OK(锚): 0 条悬空（闸态——阈值 0）` ∥ `OK(行宽): 源域全部 .md 无 >300 字符单行`；行数面差异 5 条 = 先行存量（报告态）。
+
+**边界遵守（在飞写域零触）**：最终 `git status` 实读——本批改动集（上表 5 修改 + 1 新增）与 #51 写域（`ledger-*.mjs` ∥ `thincoder-cli/src/**` ∥ `docs/cli/design/{CLI-ENTRY,ACP-CLIENT}.md` ∥ `read-data-interface*`）∥ #52 写域（`subagent-panel-live-face.md` 及面板面）**互斥零交叠**；门禁恒等比对（`subagent-spawn.mjs` 不在改动集）∥ guard `:116-118` ∥ token 格式/TTL 零改；API-CONTRACT 生成区（表 4）= 收口轮父侧照跑。
+
+**决策透明表（自决/收正项——全量披露）**
+
+| # | 项 | 处置 |
+|---|---|---|
+| a | 截断判定加 `uuid.length > 0`（实施草图无） | 防御性：`includes("")` 恒真 ⇒ 空 uuid 畸形串会误认 pass（违 fail-closed）。§5.1①「uuid 值」+ §5.1③「空 uuid 防御跳过」同义；T6 落断言；审计判「防御性实现、非外扩」 |
+| b | `:52` 拼接 = `]。Copy it verbatim …`（新句前补句号） | 逐字句本体零改；句间标点补齐（与 `:51` 前句「。Copy BOTH…」形态一致） |
+| c | 注释收正 2 处 | header「全部 7 个导出」→「原 7 个导出」（两新助手不经 re-export 面——事实保真）；stale 径注释「方括号回显」→「token 回显（单源三形）」 |
+| d | `design-token.mjs` 终值 156 内容行 | 预算 ≈145–155 上沿 +1（「≈」面；硬限 ≤300 远内） |
+| e | 设计档坐标漂移（审计观察 1） | 实施后现体：`design-token.mjs:115`（§5 引 `:82`）∥ 未完成径 `:123-129`（引 `:86-94`）∥ `advisor-settle.mjs:212`（引 `:214-216`）——机制描述零误；**收口轮「行随动」收正**（设计档 = eng-designer 笔——本档不触） |
+
+**审计轮次与终态**：内部 explore divergence 审计 **1 轮 = clean**（设计要点零缺 ∥ 9 档受影响表零越出 ∥ 标记逐字/位置不变式一致 ∥ 两档加固句逐字一致 ∥ 旧残留零命中 ∥ 零改声明面未触）；**fix 轮 0**（无自修）。advisor 代码评审 = **本轮未点火**（任务书「本轮不做①」）——父侧收口链承接。
+
+**范围外注记（报父裁 · 零动作）**：`thincoder-core/agent-tools/batch.mjs:44` 批次档写通道自有凭证正则（`` 闭括号形 + ` uuid 不在内）——同族潜在面，设计未枚举；本批范围外。
+
+**designId 回显**：spawn 材料（任务书/批档）未含 designId 字面值——**如实缺项**（不猜、不以实例 id 充数）；本批判据坐标 = §3 轮次 1（评审 #47 · VERDICT pass）。
+
+**§5 追加 · 写通道剥离收正（事实保真）**：上「范围外注记」段中两处字面被批次档写通道的凭证防泄漏机制（`batch.mjs:44` 自有正则）机械剥离，致该句括号内残形——原字面 = **回显方括号形（DESIGN-TOKEN 冒号态）** 与 **designId 键形（键名 + 冒号 + 值）**；语义以原句为准，非笔误（本条刻意避开触发形态）。
+
 ## §6 验证与收口（父代理）

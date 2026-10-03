@@ -5,8 +5,10 @@
  *
  * 沿革：初由 agent-tools/advisor.mjs 迁至 advisor-async.mjs（sync wrapper 与 async
  * settle 共享一套实现——无 wrapper↔runner 环），再由 advisor-async.mjs 迁入本文件。
- * 既有 import 面不变：advisor-async.mjs re-export 全部 7 个导出（advisor.mjs 与测试
- * 的 import 路径原样保留——advisor.mjs 再转发 validateDesignToken 给 spawn 门禁）。
+ * 既有 import 面不变：advisor-async.mjs re-export 原 7 个导出（advisor.mjs 与测试
+ * 的 import 路径原样保留——advisor.mjs 再转发 validateDesignToken 给 spawn 门禁）；
+ * 本批 §5.1 新助手（stripDesignTokenEcho / makeDesignTokenPrefixRegex）为新增直连面
+ * （设计档 ENG-TOKEN-BINDING.md §5.1——不经 advisor-async re-export）。
  */
 
 import { randomUUID } from "node:crypto"
@@ -64,15 +66,46 @@ export function makeDesignTokenRegex(token, flags = "") {
   )
 }
 
+/** Build a [DESIGN-TOKEN:...] regex matching the token's uuid PREFIX form — the
+ *  truncated echo (tail missing/inexact, §5.1③; same boundary discipline as the full regex). */
+export function makeDesignTokenPrefixRegex(token, flags = "") {
+  const uuid = String(token).split(":")[0]
+  const escaped = uuid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  return new RegExp(
+    `(?:^|\\s|\`|\\*)\\[DESIGN-TOKEN:\\s*${escaped}[^\\]\\s]*\\s*\\](?:\\s|$|\`|\\*)`,
+    flags + "ms"
+  )
+}
+
+/** §5.1③ stripping single source: strip every echo form of THIS token — the full
+ *  [DESIGN-TOKEN:uuid:expiresAt] form, the truncated prefix form, and the bare
+ *  uuid value (token-unique random ⇒ zero collateral; empty uuid → bare pass
+ *  skipped — defensive). Other tokens / other uuids pass through untouched. */
+export function stripDesignTokenEcho(text, designToken) {
+  if (typeof text !== "string" || !designToken) return text
+  const uuid = String(designToken).split(":")[0]
+  let out = text.replace(makeDesignTokenRegex(designToken, "g"), "")
+  out = out.replace(makeDesignTokenPrefixRegex(designToken, "g"), "")
+  if (uuid) out = out.split(uuid).join("")
+  return out
+}
+
+/** §5.1② constant settlement markers (verbatim — machine-greppable; M1 is
+ *  emitted even when the review body is empty). */
+const NO_VALID_ECHO_MARK = "未回显有效 token——未签发 (no valid token echo — no design token was issued)"
+const TRUNCATED_ECHO_MARK = "注：回显被截断（uuid 之后缺失或不符）——已按批准结算；全串 token 已签发 (note: truncated echo — the part after the uuid was missing or inexact; settled as approved; the full token was issued)"
+
 /**
  * Shared design-review settlement (sync wrapper + async settle): the token echo
- * IS the verdict — the advisor echoes it only on approval. On echo: slot the
- * token under designId (+ eng-coder gate flag; single-value mirror retired per
- * DESIGN-TOKEN-SETTLEMENT D3) and return
- * the clean output with the Approved suffix; the review instance CLOSES (a
- * later review of the same doc-set starts a fresh full review). On non-echo:
- * strip every dead token occurrence and return the findings text — slots stay
- * untouched (方案 ②: a failed re-review revokes nothing).
+ * IS the verdict — the advisor echoes it only on approval. On echo (full string
+ * OR truncated — uuid present; §5.1①): slot the token under designId (always the
+ * FULL token; + eng-coder gate flag; single-value mirror retired per
+ * DESIGN-TOKEN-SETTLEMENT D3) and return the clean output with the Approved
+ * suffix (truncated echo: the M2 marker sits before the suffix); the review
+ * instance CLOSES (a later review of the same doc-set starts a fresh full
+ * review). On non-echo: strip every echo form (single source §5.1③) and return
+ * the findings text + the constant M1 marker — slots stay untouched
+ * (方案 ②: a failed re-review revokes nothing).
  * @param {Object} [opts] — 第 11 批（A/F11）：`opts.incomplete` = 宿主尾族判定 kind
  *   （单谓词 `advisorIncompleteMarker`——结算方透传）。非空 ⇒ **一律不签发**（无论评审文本
  *   是否回显 token）：剥除全部 token 回显 + 追加未签发提示（原因 + 恢复指引），不写槽、
@@ -86,16 +119,20 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
   // A（F11/ADVISOR-GUARDS.md §1 消费点 1）：未完成即不签发——判据与 code 完成守卫同源（单谓词）。
   const incomplete = opts?.incomplete ?? null
   if (incomplete) {
-    const stripped = rawResult.replace(makeDesignTokenRegex(designToken, "g"), "").trim()
+    const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
     return {
       passed: false,
       output: `${stripped}\n\n评审未完成——token 未签发 (review incomplete — no design token issued; reason: ${incomplete})\n以更小范围重跑设计评审（逐档 / 逐节拆分，或拆到两次评审），或调大 agent.advisor.timeoutMs 后重试；补充检查未完成的部分不得按已核处理。`.trim(),
     }
   }
-  const tokenPattern = makeDesignTokenRegex(designToken)
-  if (!tokenPattern.test(rawResult)) {
-    const stripped = rawResult.replace(makeDesignTokenRegex(designToken, "g"), "").trim()
-    return { passed: false, output: stripped || "Advisor: design review did not pass." }
+  // §5.1① 截断容忍：全串匹配 ∨ 截断形（本 token 的 uuid 值出现——空 uuid 不构成「值」）
+  // ⇒ 认 pass；两者皆无 ⇒ fail + 恒定 M1（含正文为空——N7 零静默）。
+  const uuid = String(designToken).split(":")[0]
+  const fullEcho = makeDesignTokenRegex(designToken).test(rawResult)
+  const truncatedEcho = !fullEcho && uuid.length > 0 && rawResult.includes(uuid)
+  if (!fullEcho && !truncatedEcho) {
+    const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
+    return { passed: false, output: [stripped, NO_VALID_ECHO_MARK].filter(Boolean).join("\n\n") }
   }
   // Echoed the token → review passed. Issue it to the parent for eng-coder.
   agent._engDesignTokens ??= new Map()
@@ -106,12 +143,14 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
   // see the sync wrapper's note: unreachable today, kept for parity).
   if (agent._role === "eng-coder") agent._engDesignReviewed = true
   run.open = false // approval closes this doc-set instance — next review is fresh
-  const clean = rawResult.replace(makeDesignTokenRegex(designToken, "g"), "").trim()
+  const clean = stripDesignTokenEcho(rawResult, designToken).trim()
   // F2c: id echo + omission guidance + point-in-time slot snapshot — the
   // same suffix the F2e prior stores strip with (stored for the exact truncation).
   run.approvedSuffix = buildApprovedSuffix(designToken, run.designId, agent._engDesignTokens.size)
   return {
     passed: true,
-    output: `${clean}\n\n${run.approvedSuffix}`,
+    // §5.1② 标记位置不变式：M2 恒居 approvedSuffix 之前、suffix 恒居文末
+    // （stripApprovedSuffix 的精确截断依赖此形——尾部追加改动不得破坏）。
+    output: [clean, truncatedEcho ? TRUNCATED_ECHO_MARK : null, run.approvedSuffix].filter(Boolean).join("\n\n"),
   }
 }
