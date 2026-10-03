@@ -175,7 +175,7 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder）
 
-**状态行**：实施完成（甲舱 13+1 档落盘（三链读数见 5.2）；乙舱 render-core 3 档 + 批内件待落——缝装载核验 = §6））
+**状态行**：实施完成（甲舱 13+1 档 ∥ 乙舱 render-core 3 档 + 批内件 16/16 全绿 —— 缝装载烟测绿（5.6）· 审计零偏差 · 代码评审 pass）
 
 ### 5.1 交付摘要（甲舱 = VSC 面 13 档 + 越表 1 档 · 逐档终态读数 as-of 2026-10-04）
 
@@ -226,5 +226,42 @@ VERDICT: pass
 ### 5.5 边界遵守
 
 写域 = `thincoder-vscode/**`（13 档 + 越表 1 档）；零 `thincoder-render-core/**` 触 ∥ 零 `docs/**` 触 ∥ 零桌面触 ∥ 零在飞写域触；档位：各 ≤500 硬线；`setup.mjs` = 300 整（贴顾问线）· `chat-panel.mjs` = 443 < 450 拆分阈值。
+
+### 5.6 乙舱交付（render-core 面 3 档 + 批内件 · eng-coder · 2026-10-04 · initial 轮）
+
+**件与落点（逐档终态读数 · 按盘回填——含 §2.3「实施轮落盘后回填终态读数」面）**
+
+| 文件 | 终态 | 落点（file:line） |
+|---|---|---|
+| `thincoder-render-core/flow/reasoning.mjs` | 25（+1 净；对 §2.3 预估 ±1 ✓） | `:16` `details.open = false`（#875b live 径默认折叠）；`:8-10` 头注同拍 |
+| `thincoder-render-core/flow/block.mjs` | 154（+1 净；预估 ±1 ✓） | `:108` 恢复径 `<details class="reasoning-block">`（`open` 属性删——与 live 径同拍）；`:100-101` 头注同拍 |
+| `thincoder-render-core/subblocks/activity-view.mjs` | 214（+9 净；预估 ~+12） | `:19-27` 缝（`DEFAULT_TAIL_LINES = 3` ∥ `configureActivityView({ tailLines })`——非负整数落值 ∥ 坏值/缺键回缺省）；`:150` 消费（`tailLines(block, _tailLines)`）；`:8 ∥ :116 ∥ :129 ∥ :146-148` 注文同拍 |
+| `docs/batches/2026-10-04-issue-fix-round3.test.mjs`（新） | 433 行 | 16 腿五组：T-823-1..4 ∥ T-854-1..2 ∥ T-875a-1..3 ∥ T-875b-1..2 ∥ T-875c-1..5 |
+
+**批内件读数（逐腿 · 平 node ∥ 零网络 · 两 cwd 形复跑稳定）**：**16/16 pass**。关键读数：T-823-1 `pending=1` + 首两段 CLI 逐字正则 + VSC 出口句 ∥ T-823-2 `n1=1 n2=2 final=3` ∥ T-823-3 负控 5 值零写 ∥ T-823-4 抛径非致命 `[]` ∥ T-854-1 段=`"THINK…"` 且 `.loading-dots`=0 ∥ T-854-2 扫描 774 档 · 命中 0 ∥ T-875a-1 三径零写（msgs 7→7 ∥ act 9→9 ∥ 块内容 0；显式动作→MAX）∥ T-875a-2 三径写值均 = 9007199254740991 ∥ T-875a-3 四调用点=门 + `scrollDown` 零门 ∥ T-875b-1/2 两径默认折叠 + 内容在场 ∥ T-875c-1..5 三键应用/缺省/坏值/0 零预览/缝直测/装载烟测（shim ≡ core ≡ junction 同函数对象）。
+
+**先红后绿（如实登记）**：开工时甲舱已落（commit `8acd5330`）⇒ 直绿；构建过程三名红腿逐条归因——2× 腿夹具形（工具卡 `args` 实收字符串：`ui.js:139` → `tool-card.mjs:71` `args.slice`——夹具改传串）∥ 1× 盘符大小写 ESM 双实例（junction 规范形 `D:` vs 直路径 `d:` ⇒ 身份断言假红——`realpathSync` + 大写归一收正；先例 = 跨端消化批夹具收正）。均腿面修正，非产品码缺陷。
+
+**机检读数**：`node scripts/doc-check.mjs --root d:\teamcode\thincoder` = **exit 0**（锚闸 0 悬空 ∥ 行宽全绿；行数面 9 条差异 = 报告态——含 `RENDERER.md:333` `flow/block.mjs` 表 153 ⇒ 实读 154（Δ+1 随本舱））∥ 核包 `node test/run.mjs` = **exit 0**（C1：零依赖 ∥ import 面 ∥ 全档 `node --check`）∥ 三档 `node --check` OK ∥ 档位 25 ∥ 154 ∥ 214 ≤500。
+
+**决策透明表**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| D1 | 缝内归一（非负整数落值 ∥ 坏值/缺键回缺省 3）与甲舱端归一（`ui-prefs.js:21`）双层嵌套 | 缝 = 公开导出面（VSC ∥ 桌面共用核件）——幂等；逐字守设计句「缺省 3 ∥ 允许 0」 |
+| D2 | 批内件盘符大小写单键化 | junction 规范形与直路径大小写不一 ⇒ ESM 双实例（身份断言假红）——先例 = 跨端消化批夹具收正 |
+| D3 | T-823 装配腿 = `panel-mcp` 桩短接（registerHooks；行为面经 `__panelMcpStub` 逐腿切换） | `tool-table.mjs` 静态链达 `vscode`（`src/tools/index.mjs`）⇒ 需宿主桩；沿 `2026-09-30-vsc-residuals` 先例；甲档只读零改写 |
+| D4 | 审计 O1/O2 就地收口；O3（批档回填）落本块 | O1 = 注文 tail-3 残句同拍 ∥ O2 = 扫描面下限断言（防空集假绿） |
+| D5 | 代码评审 🟡1 + 🔵5 零擅改——登记父侧裁决 | 均非 must-fix；沿 round2 先例「本轮零擅改 = 零语义外扩纪律」 |
+
+**审计与评审轮次（终态 = clean）**
+
+- **内审（分岔审计 · explore · 只读 · 1 轮）**：四类偏差（未落 ∥ 静默简化 ∥ 越清单 ∥ 文档漂移）**零发现**；执行腿（批内件自跑 ∥ doc-check）审计侧无执行面 ⇒ unverified（本舱自跑读数 = 上）；O1/O2 就地收口，O3 = 本块回填。
+- **代码评审（advisor code · 1 轮）**：**VERDICT: pass**（🔴 0 ∥ 🟡 1 ∥ 🔵 5）。🟡 = 批内件 433 行越 300 顾问线（同系列批件 22–34KB 同超；非 must-fix）；🔵 = 反证腿墙钟断言 ∥ 跨腿共享态无复位 ∥ 缝 `null` 入参抛（现调用面可达性零）∥ `status.thinking` 省略号字形两形（存量）∥ §2.4 error 格「缺省零写」措辞 vs §5.3 D4 读法。六条 = 父侧裁决面。
+- **fix round**：审计轮 O1/O2 两处（评审前已落并复跑 16/16）；评审 pass 后零产品码改动——收敛。
+
+**边界遵守**：写域 = 恰四档（render-core 3 + 批内件 1）；`thincoder-vscode/**` 只读驱动（甲档零改写）∥ `docs/**` 设计档零触 ∥ 在飞写域零触（#72 ∥ #75 ∥ #76/#77 ∥ 面板面）∥ 已收口批档零触；越清单 = 0。**缝装载烟测 = 绿**（甲舱 `ui-prefs.js:12` 具名导入可解析——缝未落期「整链不可装载」警告随本块收束；§5.2 ⚠ 协调项关闭）。
+
+**designId 回显**：spawn 材料未携 designId 字面值（凭据值不落档——沿先例 `2026-09-29-stall-indicator.md:217`）；授权面 = token 门（本舱全部写获准落地）。如实缺项，不猜测充数。
 
 ## §6 验证与收口（父代理）

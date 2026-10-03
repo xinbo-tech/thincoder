@@ -97,14 +97,15 @@ export function buildUserMessage(text, timestamp, idx) {
 }
 
 /** 恢复助手帧容器（承 `ui.js:160-174`——live-DOM parity：label（turnStart 才画）→ thinking 块
- *  → content bubble → 嵌套工具卡 ×n；data-idx = 帧原始全局 idx——分页锚只外层消息）。 */
+ *  → content bubble → 嵌套工具卡 ×n；data-idx = 帧原始全局 idx——分页锚只外层消息）。
+ *  #875（2026-10-04）：推理块恢复径默认折叠（`open` 属性删——与 live 径 `flow/reasoning.mjs` 同拍）。 */
 export function buildAssistantRestore(msg) {
   const el = document.createElement("div")
   el.className = "message assistant"
   if (msg.idx !== undefined) el.dataset.idx = String(msg.idx)
   let html = ""
   if (msg.turnStart) html += `<div class="msg-label">❯ ${coreT("msg.assistant")}:</div>`
-  if (msg.reasoning) html += `<details class="reasoning-block" open><summary>${escHtml(coreT("status.thinking"))}...</summary><div class="reasoning-content">${md(msg.reasoning)}</div></details>`
+  if (msg.reasoning) html += `<details class="reasoning-block"><summary>${escHtml(coreT("status.thinking"))}...</summary><div class="reasoning-content">${md(msg.reasoning)}</div></details>`
   if (typeof msg.text === "string" && msg.text.trim() !== "") html += `<div class="bubble content">${md(msg.text)}</div>`
   el.innerHTML = html
   for (const tc of msg.tools || []) {

@@ -5,6 +5,7 @@
  * 单标志 = 待消化驻留态词）；头词事件驱动（无 1s ticker——elapsed 由 panels `_panelTimer`
  * 2s 同点 refreshLiveHeaders 刷新）；区显隐 = CSS `:empty`、区 pin = ui.js 滚动族
  * （maybeScrollActivity/initScrollFollow）——本叶零参与显隐/pin。
+ * **#875（2026-10-04）**：折叠预览行数经 `configureActivityView({ tailLines })` 缝（缺省 3 ∥ 允许 0）。
  * 依赖：state.js + i18n.js——leaf——不依赖编排层 activity.js。
  */
 import { t } from "../i18n.mjs"
@@ -15,7 +16,15 @@ export const FAMILY_ROLES = ["explore", "plan", "coder", "eng-coder", "eng-desig
 // Cancelable role set = FAMILY_ROLES ∪ consult/escalate (#673 · 2026-09-29): the ⏹ gate.
 // FAMILY_ROLES itself stays untouched — the header-word face keeps its six-role semantics.
 export const CANCELABLE_ROLES = Object.freeze([...FAMILY_ROLES, "consult", "escalate"])
-const TAIL_LINES = 3
+const DEFAULT_TAIL_LINES = 3
+let _tailLines = DEFAULT_TAIL_LINES
+
+/** 折叠预览行数缝（#875 · 2026-10-04——模块级 setter；沿核 `configure*` 先例）。`tailLines` = 非负整数
+ *  （**允许 0** ⇒ 零预览）⇒ 落值；坏值 ∥ 缺键 ⇒ 回缺省 3。消费 = `refreshBlock` 折叠 tail
+ *  （端经 VSC `uiPrefs` 应用——`thincoder-vscode/webview/ui-prefs.js`）。 */
+export function configureActivityView({ tailLines } = {}) {
+  _tailLines = Number.isInteger(tailLines) && tailLines >= 0 ? tailLines : DEFAULT_TAIL_LINES
+}
 
 /** Meta word helpers — visible wording rides locale keys (fallback raw). */
 const W = {
@@ -104,7 +113,7 @@ function stateWord(meta) {
   return meta.stateWord || W.thinking()
 }
 
-/** Last N non-empty content rows (dim folded-context lines). */
+/** Last N non-empty content rows (dim folded-context lines). N = 缝值 `_tailLines`（缺省 3；0 ⇒ 零预览）。 */
 function tailLines(block, n) {
   const content = block.querySelector(".advisor-content")
   if (!content) return []
@@ -117,7 +126,7 @@ function tailLines(block, n) {
   return out.reverse()
 }
 
-/** Rebuild the summary: identity header + (folded) tail-3 dim lines.
+/** Rebuild the summary: identity header + (folded) tail-N dim lines（N = 缝值 `_tailLines`——缺省 3）。
  *  Safe to call on every chunk/status — ⏹ is a sibling overlay on the details
  *  element, not a summary child. */
 export function refreshBlock(block) {
@@ -134,11 +143,11 @@ export function refreshBlock(block) {
   hdr.textContent = headerText(meta, Date.now())
     + (!meta.frozen || meta.awaitingDigest ? " " + stateWord(meta) : "")
   summary.appendChild(hdr)
-  // Folded context: tail-3 dim lines under the header（live 折叠态或冻结态——终态折叠后
-  // 块 = header + tail-3——内容保留可展开——无报告 preview 元素）；行文 = `│ ` 前缀独立行
-  // （CLI `render-segments.mjs:103-109` 同形——D4 消：tail-3 行文归一）。
+  // Folded context: tail-N dim lines under the header（N = 缝值 `_tailLines`——缺省 3 ∥ 允许 0；
+  // live 折叠态或冻结态——终态折叠后块 = header + tail-N——内容保留可展开——无报告 preview 元素）；
+  // 行文 = `│ ` 前缀独立行（CLI `render-segments.mjs:103-109` 同形——D4 消：tail-3 行文归一）。
   if (meta.frozen || !block.open) {
-    const lines = tailLines(block, TAIL_LINES)
+    const lines = tailLines(block, _tailLines)
     if (lines.length) {
       const tail = document.createElement("span")
       tail.className = "sub-tail"
