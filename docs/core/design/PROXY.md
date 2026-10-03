@@ -25,16 +25,16 @@
 - **`https://` 目标**：HTTP CONNECT 隧道（`tunnelHttps`，`thincoder-core/proxy.mjs:180`）——连代理发 `CONNECT host:port`，隧道上建 TLS，再发请求。响应头到齐即返回，body 为**流式**（SSE 边收边吐；abort 全阶段可中断）。
 - **`http://` 目标**：经典代理转发（`tcpConnectProxy` `:230` + `streamHttpResponse(..., absoluteForm=true)`）——TCP 直连代理，请求行发**绝对 URI**。非标准绝对 URI 实现的代理（极少见）不支持。
 - **无代理 / 未命中**：原生 `fetch` 直连（`proxyFetch` `:265`–`:266`）。
-- 统一出口 `proxyFetch(url, opts, proxyUri)`（`:265`）：无 `proxyUri` → `globalThis.fetch`；`https:` → 隧道；`http:` → 转发。
+- 统一出口 `proxyFetch(url, opts, proxyUri)`（`:266-275`）：无 `proxyUri` → `globalThis.fetch`（**直连分支 = 断流通道建设点**——见下）；`https:` → 隧道；`http:` → 转发。
 - 错误形态：坏代理串**友好报错**（`Invalid proxy URI: "…" — expected http://host:port`，`:189` / `:237`——融合自 VSC 侧）。
 - 超时语义：CONNECT/TLS 阶段用 `FETCH_TIMEOUT`（15s）；**响应头**用 `opts._headerTimeoutMs`（默认 60s，与直连 600s 语义区分）；**body 空闲**看门狗 `opts._bodyIdleMs`（默认 120s）。
 - **body 终止守卫（#16 · 崩溃族）**：body = 响应体 `PassThrough`（管线两端 = 源 `sock`（net socket）→ 目标 body；body 建于 `thincoder-core/proxy.mjs:77`、头到齐后 `:125` 处 `sock.pipe(body)` 写入）——头后失败 ∥ body 空闲看门狗以 `destroy(err)` 终止 body **前**，先挂**永久** no-op `'error'` 监听者
   （单点 `destroyBody(body, err)`——`thincoder-core/stream-destroy.mjs`（已落；proxy ∥ provider 三文件共用）；契约与理由 = §7 D-PX7）。
   无监听者瞬间的 `destroy(err)`（含 pipe 内部监听者触发即自摘后的重发）产生未处理 `'error'` ⇒ `uncaughtException` ⇒ **整个进程被杀**（2026-09-22/23 三份 crash-report 签名 `Response body timeout (idle)` = 此路径——GitHub #16）。
   **消费面语义零变**：在场 ∥ 迟到 `for-await` 消费者仍收原错误；`stream.errored` 保留原错误对象。
-  **web `ReadableStream` 断流通道（2026-10-04 补）**：直连 fetch 路径 body = web `ReadableStream`（无 `destroy`）⇒ 断流经**内部 abort 通道**：
-  `requestWithRetry` 为每次直连请求建 `AbortController`（经 `IDLE_ABORT` symbol 挂 response），单点 `terminateBody(response, err)` 对挂有该通道者走 `controller.abort(err)`
-  （fetch body 随之中止——读侧看门狗对直连路径有效）；无通道且非 destroy 形态才 no-op（`destroyBody` 原契约不变）。proxy 路径不变（自有 `_bodyIdleMs` + 可 destroy body）。
+  **web `ReadableStream` 断流通道（2026-10-04 补 · 评审轮 1 收正）**：直连 fetch 路径 body = web `ReadableStream`（无 `destroy`）⇒ 断流经**内部 abort 通道**：
+  **建设点 = `proxyFetch` 直连分支单点**（无 `proxyUri` 分支：建 `AbortController`、signal 合成 `AbortSignal.any([opts.signal, ctrl.signal])`、经 `IDLE_ABORT` symbol 挂 response；provider 请求出口拓扑 = proxy 两分支唯经 `proxyFetch`、直连面调用点收口恒走 `proxyFetch` ⇒ 单点覆盖两条流式直连链）；
+  单点 `terminateBody(response, err)` 对挂有该通道者走 `controller.abort(err)`（fetch body 随之中止——读侧看门狗对直连路径有效）；无通道且非 destroy 形态才 no-op（`destroyBody` 原契约不变）。proxy 路径不变（自有 `_bodyIdleMs` + 可 destroy body）。
 
 ## 3. TLS 证书校验（**按实装收正**）
 
@@ -90,11 +90,11 @@ Clear proxy
 | TLS 校验判定 | `thincoder-core/proxy.mjs:214` | 默认全量校验 |
 | CONNECT 隧道 | `thincoder-core/proxy.mjs:180`（`tunnelHttps`） | 在位 |
 | 经典转发 / 流式响应 | `thincoder-core/proxy.mjs:230`（`tcpConnectProxy`）· `:67`（`streamHttpResponse`） | 在位 |
-| 统一出口 | `thincoder-core/proxy.mjs:265`（`proxyFetch`） | 在位 |
+| 统一出口 | `thincoder-core/proxy.mjs:266`（`proxyFetch`——直连分支 = 断流通道建设点） | 在位 |
 | web 工具代理参数 | `thincoder-core/tools/web.mjs:96` · `:188` | 逐次调用参数 |
 | TUI 子菜单 | `thincoder-cli/src/tui/cmd-config.mjs:104`–`:114` | 在位 |
 | VSC 对位实现 | 经 `@thincoder/core/proxy.mjs` 引用（W10 已迁核——镜像已删） · 配置面 `thincoder-vscode/src/config-io.mjs:146` | 同实现 |
-| body 终止守卫（#16） | `thincoder-core/stream-destroy.mjs`（已落——单点 `destroyBody` ∥ `terminateBody`（web 流 abort 通道）+ `IDLE_ABORT`）· 消费点 `thincoder-core/proxy.mjs:95` ∥ `:100` ∥ `thincoder-core/provider/sse.mjs:179` ∥ `thincoder-core/provider/google.mjs:204` | 本批落位；2026-10-04 扩 abort 通道 |
+| body 终止守卫（#16） | `thincoder-core/stream-destroy.mjs`（已落——单点 `destroyBody` ∥ `terminateBody`（web 流 abort 通道）+ `IDLE_ABORT`）· **abort 通道建设点 = `thincoder-core/proxy.mjs` 直连分支（`proxyFetch`——评审轮 1 收正）** · 消费点 `thincoder-core/proxy.mjs:95` ∥ `:100` ∥ `thincoder-core/provider/sse.mjs:179` ∥ `thincoder-core/provider/google.mjs:204` | 本批落位；2026-10-04 扩 abort 通道 |
 
 ### 6.2 测试面
 
@@ -114,7 +114,7 @@ Clear proxy
 | D-PX5 | 坏代理串**友好报错**（融合自 VSC） | 原生 `Invalid URL` 不解释期望形态——调用方可观测文案退化 |
 | D-PX6 | CONNECT/TLS 与响应头**分开超时**（15s / 60s） | 共用 15s 会让排队 TTFB > 15s 的 provider 误报超时；否决「一个超时管全程」 |
 | D-PX7 | `destroy(err)` 前挂**永久兜底 `'error'` 监听者**——单点 `destroyBody`（proxy ∥ provider 三文件复用） | 无监听者瞬间 `destroy(err)` ⇒ 未处理 `'error'` ⇒ 进程被杀（#16）；被否：位点内联（复写三份）∥ `listenerCount('error')===0` 预检（pipe 监听者计数失真）∥ 只 try/catch（捕不到异步 emit）。 |
-| D-PX8 | web `ReadableStream` 断流 = **内部 abort 通道**（`IDLE_ABORT` 挂 response；`terminateBody` 分流） | 守卫对 web 流 no-op ⇒ 直连 fetch 看门狗静默失效（crash-guards U-CG-1 · 台账 #878）；被否：`ReadableStream.cancel` 面（`for-await` 锁定流上 cancel 拒 TypeError——解锁重构读循环 = 大改）∥ 给直连 fetch 加绝对墙钟（2026-09-01 已裁废——腰斩长任务；idle 语义保留）。 |
+| D-PX8 | web `ReadableStream` 断流 = **内部 abort 通道**（`IDLE_ABORT` 挂 response；`terminateBody` 分流） | 守卫对 web 流 no-op ⇒ 直连 fetch 看门狗静默失效（crash-guards U-CG-1 · 台账 #878）；**建设点 = `proxyFetch` 直连分支单点**（覆盖两条流式直连链 `readSSE` ∥ `parseGeminiStream`；proxy 两分支不挂——自有 `_bodyIdleMs`；直连面调用点收口恒走 `proxyFetch`）；被否：`ReadableStream.cancel` 面（`for-await` 锁定流上 cancel 拒 TypeError——解锁重构读循环 = 大改）∥ 给直连 fetch 加绝对墙钟（2026-09-01 已裁废——腰斩长任务；idle 语义保留）。 |
 
 ## 8. 不并项与历史沿革
 
@@ -148,3 +148,4 @@ Clear proxy
 - 2026-10-03（**crash-guards 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-03-crash-guards.md` §3 轮次 1 发现 1–3）：§6.2 测试面收正（代理族单测原载体随 2026-09-28 测试树全清退场——现形 = 单元测试档（批内件）；本批新增守卫用例落 `docs/batches/2026-10-03-crash-guards.test.mjs`（拟新增））· §2 body 管线两端写实（源 `sock` → 目标 body）· §6.1 消费点补 provider 两坐标（`thincoder-core/provider/sse.mjs:178` ∥ `thincoder-core/provider/google.mjs:203`）。**零新语义**（形态 ∥ 口径收正）。
 - 2026-10-03（**crash-guards 批 · 实施窗回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-crash-guards.md` §5 未闭合项 1 ∥ fix 轮派单（号 1–2））：§2 ∥ §6.1 ∥ §6.2「拟新增」⇒「已落」（单点档 `thincoder-core/stream-destroy.mjs` 35 行 · 批内件 257 行——均已在盘）∥ §6.1 消费点坐标按盘收正（`thincoder-core/proxy.mjs` `:94 ⇒ :95` ∥ `:99 ⇒ :100` · `thincoder-core/provider/sse.mjs` `:178 ⇒ :179` ∥ `thincoder-core/provider/google.mjs` `:203 ⇒ :204`）∥ §2 管线两端坐标同族收正（`:76 ⇒ :77` ∥ `:124 ⇒ :125`——各档 import +1 所致）。**零新语义**（坐标 ∥ 态收正）。
 - 2026-10-04（**issue 修复批·一 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §2 · 台账 #878）：§2 新增 **web `ReadableStream` 断流通道**（`IDLE_ABORT` + `terminateBody`——直连 fetch 看门狗恢复有效）· §6.1 坐标行扩容（`terminateBody` 入单点）· §7 补 **D-PX8**。**零新语义**（= U-CG-1 残面的修复设计导出项）。
+- 2026-10-04（**issue 修复批·一 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §3 轮次 1 发现 1）：§2 断流通道段收正——**建设点下移 `proxyFetch` 直连分支单点**（`core.mjs` 请求调用点收口恒走 `proxyFetch`——覆盖两条流式直连链；proxy 两分支零触）· 统一出口行补直连分支注（`:265 ⇒ :266-275`）· §6.1 补建设点 · §7 D-PX8 理由同拍补句。**零新语义**（= 评审发现的直接导出项）。

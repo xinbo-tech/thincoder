@@ -101,7 +101,8 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 - **413 可操作化（D-PR32）**：请求体超限（HTTP 413——长会话图片累积的高频形态）⇒ 错误文本携带处置提示（`/compact` 压缩历史 ∥ 移除历史图片；图片累计预算机制见 §6.7）——从裸 HTTP 码变为可执行指引。
 - **超时语义（废弃绝对墙钟）**：**响应头阶段**用 `fetchTimeoutMs`（默认 600s，`agent.fetchTimeoutMs` 可配，`effectiveFetchTimeoutMs(provider)` 统一消费——四 transport 共用）；**body 阶段**用读侧**空闲**超时 `READ_IDLE_MS = 120s`（有数据流动就永不超时，连续无新 chunk 才判死）；`AbortError` 透传（用户 Ctrl+I 取消，不吞）。
 - **abort / 超时来源标注**：超时 / 中止产生点的错误对象自带结构化 `abortInfo`（trigger / layer / detail）——词汇表与判定归 AGENT-LOOP 板（本档只指针）。
-- **body 终止守卫（#16 · 崩溃族）**：读侧空闲断流（`readSSE` ∥ `parseGeminiStream`）经单点 `terminateBody` 以错误终止 body——可 destroy 形态走 `destroyBody`（先挂永久兜底 `'error'` 监听者，防未处理 `'error'` 杀进程）；**web `ReadableStream`（直连 fetch）走内部 abort 通道**（`IDLE_ABORT`——看门狗不再 no-op）。机制单源 = `doc:PROXY.md:§2`。消费面语义零变（含 google 的 partial 保留径）。
+- **body 终止守卫（#16 · 崩溃族）**：读侧空闲断流（`readSSE` ∥ `parseGeminiStream`）经单点 `terminateBody` 以错误终止 body——可 destroy 形态走 `destroyBody`（先挂永久兜底 `'error'` 监听者，防未处理 `'error'` 杀进程）；
+  **web `ReadableStream`（直连 fetch）走内部 abort 通道**（`IDLE_ABORT`——建设点 = `proxyFetch` 直连分支单点〔两条流式直连链同经〕；看门狗不再 no-op）。机制单源 = `doc:PROXY.md:§2`。消费面语义零变（含 google 的 partial 保留径）。
 
 ### 6.4 SSE 流式解析（`readSSE`）
 
@@ -216,7 +217,7 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
 `cfg.thinking === false`（非法原值）仍归一为 `undefined`（零变）。载荷层谓词本体**零改**（本批只补解析链前置）；用例 = `doc:MODEL-SPECS.md:§15.7` AD-1..AD-4。
 无 off 路径的族（effort 型枚举不含 `none` / 服务端强制思考族）不受本条影响——谓词 guard ④ 照旧不命中（无该字段、不抛错）。
 **生产者面**（off 形的族别取形——effort 族须落 `thinking: null`；CLI `/advisor` 与 VSC 面板写面两处同式）单源 = `doc:MODEL-SPECS.md:§15.4-2`。
-**「有效 off 路径」判据与回执可宣称性**（生产者全表 · 单源实现 `thincoder-core/think-off.mjs`（已落 · 实读 **26**））= `doc:MODEL-SPECS.md:§16`——谓词本体（本节）零改。
+**「有效 off 路径」判据与回执可宣称性**（生产者全表 · 单源实现 `thincoder-core/think-off.mjs`（已落 · 实读 **49** · as-of 2026-10-04））= `doc:MODEL-SPECS.md:§16`——谓词本体（本节）零改。
 
 ### 6.13 Responses API transport
 
@@ -489,7 +490,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 | D-PR30 | 重试驱动力 = **采样器闸**（窗口内单批 ≤ 2 次 + 在飞去重；loop 忙时不重试），非 UI 事件 | 探针不得由前台动作隐式触发（运行期零探测纪律）；获焦重探无消息面（`webview` 无 focus 上报）⇒ 引入 = 新事件依赖。否决「获焦重探」/「无界重试」 |
 | D-PR31 | SSE **帧形状守卫** = message 快照帧前缀补差 ∥ tool_calls 覆盖（只对 `delta == null` 帧生效） | MiniMax v2 端点二次追加（`choice.delta ?? choice.message` 把完整快照当增量 `+=`）——纯增量帧去重会误吞真实重复文本（连续标点）；被否：统一 endsWith 去重（误吞）· 忽略 message 帧（丢内容）。 |
 | D-PR32 | 历史图片 = **累计字节预算 + 最老先驱逐**（发送前副本面 + 注入时 history 本体面同函数）；413 错误文本带处置指引 | 固定 2000 token/图计账不约束字节；15MB 单图上限不约束累积 ⇒ 长会话 413 且卡死。被否：注入拒绝（体验差 + 413 风险藏于静默丢新图）· 只发送前单点（history 本体无界——session 落盘/内存涨）。 |
-| D-PR33 | 直连 fetch 断流 = **内部 abort 通道**（`IDLE_ABORT`；`terminateBody` 分流） | 读侧 120s 看门狗对 web `ReadableStream` 静默失效（U-CG-1）；机制单源 = `doc:PROXY.md:§2` / D-PX8（本档只指针）。被否形见 D-PX8。 |
+| D-PR33 | 直连 fetch 断流 = **内部 abort 通道**（`IDLE_ABORT`；`terminateBody` 分流） | 读侧 120s 看门狗对 web `ReadableStream` 静默失效（U-CG-1）；**建设点 = `proxyFetch` 直连分支单点**（provider 请求出口拓扑实核——覆盖 `readSSE` ∥ `parseGeminiStream` 两条流式直连链）；机制单源 = `doc:PROXY.md:§2` / D-PX8（本档只指针）。被否形见 D-PX8。 |
 
 ## 8. 不并项与历史沿革
 
@@ -579,3 +580,5 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - 2026-10-03（**crash-guards 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-crash-guards.md` §2 · 台账 #866（GitHub #16））：§6.3 补 **body 终止守卫** 句（读侧空闲断流经单点 `destroyBody`——机制单源 = `doc:PROXY.md:§2`）。**产品码零触（设计轮）**。
 - 2026-10-03（**轻通道轮八连带 · PROVIDER.md 收正 · 父侧直接执行 · 可 revert**——承 `docs/batches/2026-10-03-light-round-8.md` §2 上抛 U-1 · 台账 #879）：§6.22 三端明示表桌面行 `fallback` 格字面收正——词 ⇒ **`composer.send.noDefaultModelFallback`**（澄清半句「— 正在使用可用渠道」；失败词 ∥ 态词分家）；原「逐字复用 #840 键」失效句按 D8 删除。**零语义改**（= 轮八裁定在设计面的对齐）。
 - 2026-10-04（**issue 修复批·一 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §2 · 台账 #856 ∥ #853 ∥ #878）：§6.4 补 **帧形状守卫**（message 快照帧前缀补差 / tool_calls 覆盖）∥ §6.3 body 终止守卫句**扩展 abort 通道**（直连 fetch web 流——`terminateBody` / `IDLE_ABORT`）∥ §6.3 补 **413 可操作化** ∥ §6.7 补 **历史图片字节预算**（累计驱逐最老 + 注入面同函数）· §7 补 **D-PR31 / D-PR32 / D-PR33**。**产品码零触（设计轮）**。
+- 2026-10-04（**issue 修复批·一 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §3 轮次 1 发现 1 ∥ 8）：§6.3 body 终止守卫句收正——abort 通道**建设点下移 `proxyFetch` 直连分支单点**（`core.mjs` 请求调用点收口恒走 `proxyFetch`——覆盖两条流式直连链 `readSSE` ∥ `parseGeminiStream`；proxy 两分支零触）；
+  §6.3 `think-off.mjs` 读数收正（**26 ⇒ 49**，`wc -l` 实读 2026-10-04）；D-PR33 同拍补建设点句。**零新语义**（= 评审发现的直接导出项）。

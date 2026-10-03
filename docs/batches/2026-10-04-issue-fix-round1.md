@@ -27,7 +27,7 @@
 **边界**：在飞写域零触——#51（`thincoder-core/ledger-*.mjs` ∥ `thincoder-cli/src/**` ∥ `docs/cli/design/{CLI-ENTRY,ACP-CLIENT}.md` ∥ `docs/batches/2026-10-03-read-data-interface*`）∥ #54（`docs/desktop/design/PANEL-READBACK.md` ∥ `docs/desktop/design/IPC.md` ∥ `docs/batches/2026-10-04-subagent-panel-live-face.md`——评审冻结窗在效）∥ #55（`docs/batches/2026-10-03-menu-working-directory.md`）。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（8 条复验逐条在档；机制笔 + 受影响文件表 + 用例两组齐；doc-check EXIT 0（2026-10-04））
+**状态行**：设计完成（2026-10-04 · 评审轮 1 收正块（号 1–9 全采纳）在册；8 条复验 + 机制笔 + 用例腿齐；doc-check 复跑 exit 0）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 ### 2.0 复验结论（承用户 09-25 先例「开工先逐条实读复验」· as-of 2026-10-04 实读）
@@ -233,7 +233,70 @@
 
 **结论**：8 条全部复验「仍存在」并给出设计（修法 / 落点 / 验收判据齐）；6 个设计档已落笔（§2.4）；批内件两组用例清单齐（§2.6）；doc-check 自跑读数 = 见收尾行。
 
+### 2.9 设计评审轮 1 收正块（fix 轮 · 按号 1–9 全采纳 · 2026-10-04 · eng-designer）
+
+**口径**：承 §3 轮次 1 发现表（1🔴 · 4🟡 · 4🔵）· 父侧裁定 = 九条全采纳；**本块为准**——§2 前文相关行（§2.3 / §2.4 / §2.6 / §2.8）如与本块相左，一律以本块为准（append-only）；设计面措辞全量以六设计档现文为准。
+
+**号 1（🔴 · #878 gemini 直连通道缺口）——取评审案 ②（单点收口）**
+- 拓扑核验结论（实读 2026-10-04）：`thincoder-core/proxy.mjs` 的 `proxyFetch`（`:266-275`）为 provider 请求共用出口——proxy 两分支（`tunnelHttps` `:269` ∥ `tcpConnectProxy`+`streamHttpResponse` `:271-274`）唯经它；直连面调用点 = `thincoder-core/provider/core.mjs:395-397`（call-site 分支——无 proxyUri 时裸 `fetch`）∥ `thincoder-core/provider/google.mjs:119`（恒经 `proxyFetch`）⇒ **拓扑容 ②：单点收口成立**。
+- 修法修订（取代 §2.3 #878 之 ②）：**建通道下移 `proxyFetch` 直连分支单点**（建 `AbortController` + signal 合成 `AbortSignal.any` + 挂 `response[IDLE_ABORT]`）+ **`core.mjs` 请求调用点收口**（恒走 `proxyFetch(url, opts, provider.proxyUri)`——原 call-site 分支删）⇒ 两条流式直连链（`readSSE` ∥ `parseGeminiStream`）同经单点；proxy 两分支零触（自有 `_bodyIdleMs`）。`stream-destroy.mjs`（`IDLE_ABORT` + `terminateBody`）∥ `sse.mjs` ∥ `google.mjs` 看门狗三件照旧。
+- 设计面落点（已落）：`PROXY.md` §2（`:28` / `:35-37`）· §6.1（`:93` / `:97`）· §7 D-PX8（`:117`）· 变更记录（`:151`）∥ `PROVIDER.md` §6.3（`:104-105`）· §7 D-PR33（`:492`）· 变更记录（`:582-583`）。
+- 用例/验收腿补：§2.6 组 A 补 **T-A22**（google 腿：真 fetch + 本地挂起 server + mock timers 前推 120s ⇒ `parseGeminiStream` 以 `sse-idle` 终结）；AC-8 判据扩「readSSE ∥ google 两腿」；AC-2 扩幂等半句（与号 6 同拍）。
+- 受影响表修订：`provider/core.mjs` 行——#878 面改「请求调用点收口（净 ~±0）」（原「idleAbort 建设 + 挂符号 + signal 合成」句随撤；#853 面照旧）；**新入一行**：`thincoder-core/proxy.mjs`（275 · +~10 · #878 直连分支建设——proxy 两分支零改）。
+
+**号 2（🟡 · mcp.mjs 档位注记）**
+- §2.4 组 A `thincoder-core/mcp.mjs` 行补档位注记：现 298 → 改后 **≈306 越过 300**；拆分复核结论 = **结构不变**（仅 `buildInitParams()` 抽取 + `setInitPayload` 注入——无新职责 / 无状态面变化），本批不拆；行数面落点 = `CORE-UNIFICATION.md` §2.8.1 子表**行 25**（登记义务随测试体系重建落册）。
+
+**号 3（🟡 · U1 处置）**
+- **收为正案 = VSC 端壳同拍清洗**（宿主能力面举证不成立——清洗为纯函数、无宿主约束；「接受端差登记」依据不足，撤）。判定已写进 `AGENT-LOOP-SUBAGENT.md` §6.7.1 端差句（`:37`——清洗逻辑核内单源、端壳 raw 读点同拍消费；用户零可见端差）；变更记录（`:1008`）。
+- 受影响面 +1 行：`thincoder-vscode/src/agent/setup.mjs`（297 · +~6 · #861：raw 读点应用核内清洗函数）；§2.4「零改面」句按此收正（`thincoder-vscode/**` 除该一行外零触）。**实施序注**：VSC 树 = 批三（#60）在飞写域 ⇒ 实施派发由父侧统一分流（沿 round4 U1 先例）。
+
+**号 4（🟡 · U3 副作用登记位）**
+- 登记位已落设计面：`MCP.md` §6.6 stdio 行补半句（`:115`——终端 SIGINT / SIGHUP 不直传 ∥ 父被 SIGKILL 时孤儿化概率升）+ §7 D-MC19 理由列同拍补句（`:196`）；处置去向 = **接受登记**（对冲如需另批）。变更记录（`:241`）。
+
+**号 5（🟡 · U4 两问落点）**
+- ① `memory/core.mjs` 拆分复核行落 `CORE-UNIFICATION.md` §2.8.1 子表**行 24**（现读 319 → 本批 ≈331；拆点候选 = 嵌入维护族 `:158-215` 邻域；消解条件 = 越 500 硬限前或该档下次实质改动时）。
+- ② `config.mjs`「不触发」判定落点 = 同档主表**行 1「本批触评」句**（+~30 守卫类最小修、结构不变、与拆分面〔MCP 热重载族 ∕ DEFAULTS 族〕无交集 ⇒ 不构成「下次实质改动」触发；拆分顺延）。
+- ③ §2.8.1 相关读数同拍刷新：主表行 1 `config.mjs` **419 ⇒ 436**；次优先 `provider/core.mjs` **491 ⇒ 454** ∥ `agent-tools/subagent-async.mjs` **456 ⇒ 461**（全 = `wc -l` 实读 2026-10-04；同档变更记录 `:2046-2048`）。
+
+**号 6（🔵 · 错误/幂等腿）**
+- §2.6 组 A 补两行：**T-A20**（#856 幂等：同一全量 message 帧连收两次 ⇒ content / reasoning 零再增、tool_calls 无重复）∥ **T-A21**（#878 错误/幂等：`terminateBody` 二次调用 ⇒ 幂等不抛；无通道 ∥ 无 body ⇒ no-op 不抛）。
+- AC-2 判据扩「幂等：同帧重复零再增」；AC-8 判据扩「`terminateBody` 幂等 / 无 body no-op」（与号 1 的 google 腿同拍）。
+
+**号 7（🔵 · 注册序坐标）**
+- 举证点收正：`tui-lifecycle.mjs:125` ⇒ **`thincoder-cli/src/tui/index.mjs:125`**（`process.on("exit", cleanup)` 注册点；`createExitCleanup` 工厂住 `tui-lifecycle.mjs`）。结论（注册晚于 transport-stdio 加载）不变。
+
+**号 8（🔵 · think-off 读数）**
+- `PROVIDER.md` §6.3 相关句读数收正（已落 `:219`）：`thincoder-core/think-off.mjs` **26 ⇒ 49**（`wc -l` 实读 2026-10-04；含后批上提 `applyAdvisorEffort`）。
+
+**号 9（🔵 · #850 射程）**
+- 修法句 / AC-1 补半句：**「legacySSE 分支零触（无会话语义）」**（射程 = Streamable POST 面含 postOnly；legacy 分支不读写 `sessionId`、非 2xx 直映射照旧——`thincoder-core/mcp/transport-http.mjs:125-152` 实读）；同拍落 `MCP.md` §6.6 HTTP 行射程括注（`:108`）。
+- AC-1 判据修订（全句）：404 ⇒ 自愈三步（重建 + 重试一次）；二次 404 不重试；非 404 零变；**legacySSE 分支零触**。
+
+**机检（本块落地后复跑 · 仓根 `node scripts/doc-check.mjs`）**：**exit 0**（悬空 0 · 行宽 0；行数面差异 8 条 = 报告态存量）。披露：首落笔曾红一次（7 悬空 + 2 行宽——均为本块新增行）：裸引路径 5 处（`memory/core.mjs` ×3 ∥ `provider/core.mjs` ×2）补 `thincoder-core/` 前缀；`AGENT-LOOP-SUBAGENT.md` §6.7.1 删窄符号谓词「导出」（消 2 条符号悬空）；§2.8.1 题行（337 字符）与 `PROVIDER.md` §6.3 句（335 字符）折行（仅换行、零语义）。当场收正后复跑即 exit 0。
+**边界（本块）**：零实现码（设计 / 记录面收正）；不触批三（#60）/ ACP（#59）/ 面板（#65）写域；不触已收口批档；`MCP.md` 仅动批一相关段（§6.6 / §7 D-MC19 / 变更记录——批三面 §6.4 零触）。
+
 ## §3 设计评审（评审子代理）
+
+### 轮次 1（评审子代理）
+
+**评审对象**：批 2026-10-04-issue-fix-round1 设计（批档 §2 + 六档设计笔：`MCP.md` §6.6/§6.9/D-MC18/D-MC19 ∥ `PROVIDER.md` §6.3/§6.4/§6.7/D-PR31–33 ∥ `MEMORY.md` §6.3/D-MEM31 ∥ `AGENT-LOOP.md` §6.1/D-AL26 ∥ `AGENT-LOOP-SUBAGENT.md` §6.7.1 ∥ `PROXY.md` §2/§6.1/D-PX8）；状态 = 待评审。限制声明：无项目标准档 / 无文档地图 ⇒ Document ownership 按 Project Guide 降级判；`node scripts/doc-check.mjs` 本评审实例不可执行（无 shell）⇒ AC-10 读数 = **unverified**（旁证：六档设计笔新增行无 >300 宽面非表格行，`PROJECT-MANIFEST.json:24-36` 的 exclude 含 `batches`、`widthExemptZones` 含 变更记录/历史沿革）。行数抽查（read 面）：transport-http 248 ∥ mcp.mjs 298 ∥ transport-stdio 142 ∥ sse 265–266 ∥ google 258–259 ∥ core.mjs 454 ∥ stream-destroy 35 ∥ normalize 81 ∥ embedding 122 ∥ memory/core 319 ∥ auto-think 115 ∥ config 436 ∥ subagent-async 461–462 ∥ token-window 188 ∥ tools/file 463——与表值 ±1 内相符。
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | Feasibility（机制覆盖） | 🔴 | #878 的内部 abort 通道只挂 `provider/core.mjs` 的 `requestWithRetry`，而 gemini 直连请求**不经该函数**：`thincoder-core/provider/google.mjs:8` 引的是 `./retry.mjs` 的 `requestWithRetry`（`retry.mjs:20-41` 仅 `await request()`，不建 controller、不挂符号），fetch 本体在 `google.mjs:118-127`：`proxyFetch(url, {…signal…}, provider.proxyUri)`；无 proxyUri ⇒ `proxy.mjs:267` 原生 `globalThis.fetch` ⇒ body = web `ReadableStream`。改后 `google.mjs:204` 看门狗调 `terminateBody(response, err)` 时该 response 无 `IDLE_ABORT` ⇒ 落回 `destroyBody` ⇒ `stream-destroy.mjs:29` 对 web 流 no-op ⇒ **gemini 直连路径的 120s 读侧看门狗仍是 no-op（#878 未修）**。而设计面已宣告双读者覆盖：`PROVIDER.md:104`「读侧空闲断流（`readSSE` ∥ `parseGeminiStream`）经单点 `terminateBody`……web `ReadableStream`（直连 fetch）走内部 abort 通道」∥ `PROXY.md:36-37`；验收亦无 google 腿（批档:121/168 = T-A9/AC-8 只跑 `readSSE`）。 | 三选一并同拍落设计面与用例：① 在 `google.mjs` 自己的请求站点同式建 controller（`AbortSignal.any` + 挂 `IDLE_ABORT`）；② 把建通道下移到 `proxyFetch` 直连分支（一处覆盖两条直连链，与「proxy 路径不挂」判据自洽）；③ 明文把 gemini 直连排除在 #878 射程外并收窄 `PROVIDER.md` §6.3 ∥ `PROXY.md` §2 的覆盖句。任一方向都需补一条 google 腿（真 fetch + 本地挂起 server + mock timers）到 AC-8/T-A9 侧。 |
+| 2 | Affected-file size annotations | 🟡 | `thincoder-core/mcp.mjs`（批档:130 行）现读 298–299 行、预期 +~8 ⇒ 改后 ~306–307 **越过 300 档**，该行无档位注记 / 拆分复核；同表对其它 >300 档（`provider/core.mjs` ∥ `config.mjs` ∥ `subagent-async.mjs` ∥ `memory/core.mjs`）都给了在册行 + 拆分立场。 | 该行补档位注记（>300 新触或在册 + 拆分复核结论，例：「结构不变——仅 `buildInitParams()` 抽取 + `setInitPayload` 注入」），越线则同拍登记行数面落点。 |
+| 3 | 上抛处置（U1 · #861） | 🟡 | U1（批档:228）把「接受端差登记」列为候选处置——与在册用户裁定「用户可见端差 = 缺陷；唯一例外 = 宿主能力面（须实证）；登记后保留通道已废」相抵（裁定原文 = `AGENT-LOOP-SUBAGENT.md:1002-1003`）；且该端差可被用户看见：同一份对象形态 `subagentModel`，CLI 经加载期清洗 ⇒ spawn 正常；VSC 不经清洗（按批档声明，**unverified**）⇒ 同一动作抛运行期错误，两端一成一败。 | 收为正案 = VSC 端壳同拍清洗，或举证属宿主能力面；「接受端差登记」单列需注明依据不足。判定结果同拍写进 `AGENT-LOOP-SUBAGENT.md` §6.7.1 的端差句。 |
+| 4 | 上抛处置（U3 · #877 副作用） | 🟡 | `detached: true` 的 POSIX 副作用（终端 SIGINT / SIGHUP 不再直传 MCP 子进程；父被 SIGKILL 时子进程孤儿化概率升）只住批档 §2.8 U3 一行（批档:230）；设计面 `MCP.md` §6.6 stdio 行（`:108-112`）与 §7 D-MC19（`:193`）只写组杀 / 相位分流，无该副作用或其处置的登记位——批档收口后长期面无载体。 | 在设计面给一个登记位（D-MC19 理由列或 §6.6 同句补半句）+ 处置去向（接受 / 对冲归属），使「已认账」在长期档可引。 |
+| 5 | 上抛处置（U4 · 行数登记与触发判定） | 🟡 | U4（批档:231）两问均影响后续轮：① `memory/core.mjs` 现读 **319 > 300**（本席实读）、本批再改（+~12）仍无拆分复核，设计只在表内记「登记缺口 → 上抛 U4」；② `config.mjs`（现读 **436**）消解条件 = 「该档下次实质改动时」，本批 +~30 是否构成触发——设计席判「不构成」但无落点，且本批不改 `CORE-UNIFICATION.md` §2.8.1 ⇒ 改后读数将陈。 | ① 给 `memory/core.mjs` 补一行拆分复核（或写明补登义务的落点与轮次）；② 「不触发」判定写明落点（设计面决策行 ∥ 收口轮）+ 同拍刷新 §2.8.1 相关读数，使下一轮不必重开该问。 |
+| 6 | Acceptance | 🔵 | 用例类覆盖：#856 ∥ #878 两组无「错误」类行（T-A5–A8 ∥ T-A9–A11；#877 的 ESRCH 腿可按错误面计）；#878 缺幂等/错误腿（二次 `terminateBody`、无 body、body 已消费）。 | 两组各补一条错误/幂等腿，或写明该面不适用的理由。 |
+| 7 | Clarity（坐标） | 🔵 | 批档:113 的注册序举证错档：「CLI `tui-lifecycle.mjs:125` 注册晚于本模块加载」——实读 `thincoder-cli/src/tui/tui-lifecycle.mjs` 全档 113 行、无 `process.on("exit")` 注册；`process.on("exit", cleanup)` 实住 `thincoder-cli/src/tui/index.mjs:125`（`createExitCleanup` 工厂在 tui-lifecycle，注册在 index.mjs）。结论（注册序晚于 transport-stdio 加载）仍成立。 | 坐标收正为 `thincoder-cli/src/tui/index.mjs:125`（或写明工厂 / 注册两点分列）。 |
+| 8 | Doc hygiene（读数） | 🔵 | `PROVIDER.md:219` 记「单源实现 `thincoder-core/think-off.mjs`（已落 · 实读 **26**）」，实读该档 **49** 行（read 面；含后批上提的 `applyAdvisorEffort`）——本批 #860 正消费该档（`thinkOffPath`/`thinkOffShape` 已核实导出）。 | 该读数随本批同拍收正或标 as-of，避免「单源」引证落在陈旧读数上。 |
+| 9 | Clarity（射程边界） | 🔵 | #850 修法句（批档:77）与 AC-1 只按 Streamable POST 面描述，未声明 `transport-http.mjs:133-136` 的 legacySSE 分支零触（该分支同有非 2xx 直映射、且不读写 `sessionId`）。 | 修法句或 AC-1 补半句「legacySSE 分支零触（无会话语义）」，把射程写死。 |
+
+**计数**：1🔴 · 4🟡 · 4🔵（复核项：分组零重叠 ✓（组 A/B 文件集实核无交）· 复验表 8 条证据锚逐条实读命中（transport-http.mjs:168-172/:245 · sse.mjs:139/:147-150 · embedding.mjs:88 · auto-think.mjs:66-68/:76/:104-106 · subagent-async.mjs:142/:150/:153 + subagent-spawn.mjs:80-82 · normalize.mjs/token-window.mjs:14,24/tools/file.mjs:26 · transport-stdio.mjs:20-23 · stream-destroy.mjs:29）· `resolveChildProvider` 四处消费链实核 ✓ · `thinkOffPath`/`thinkOffShape` 导出在盘 ✓ · `sanitizeConsultModels` 先例在盘 ✓ · `capHistoryImageBytes` 全仓零命中 ✓）。
+**VERDICT: changes-required**
+
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）

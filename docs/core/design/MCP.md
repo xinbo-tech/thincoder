@@ -83,8 +83,10 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
 ### 6.4 连接装配与热插拔
 
 - **启动装配**：顶层 agent 装配时批量连接 `config.mcp.servers`——读取项目级 `.mcp.json`（`mcpServers` 为**对象**形态时并入——`config.json` 同名 server 优先；数组形态非规范 → 跳过并记录）；并发连接（`Promise.allSettled`）；
-  **失败不阻塞**（死 server 只记 warning，`agent._mcpWarnings` 携带；**消费面 = CLI ∥ 桌面**——装配后入 `agent._pendingReminders`（CLI `thincoder-cli/src/command-interactive.mjs:151-155` ∥ 桌面 `thincoder-desktop/src/main/agent-host.mjs` 装配尾——2026-10-02 桌面 UX 收尾批 · 台账 #702 定形（已落）），下一条 user 消息注入提醒；
-  VSC 面未并——端差在册）；成功展开的工具并入 `agent.tools`。
+   **失败不阻塞**（死 server 只记 warning，`agent._mcpWarnings` 携带；**消费面 = CLI ∥ 桌面 ∥ VSC**（三端同形）——装配后入 `agent._pendingReminders`
+   （CLI `thincoder-cli/src/command-interactive.mjs:161-168` ∥ 桌面 `thincoder-desktop/src/main/agent-host.mjs:185-189` 装配尾——2026-10-02 桌面 UX 收尾批 · 台账 #702 定形；
+   VSC `thincoder-vscode/src/agent/setup.mjs` 装配尾——2026-10-04 issue 修复批·三 · 台账 #823 定形），下一条 user 消息注入提醒（消费 = `thincoder-core/agent/setup.mjs:172-176`）；
+   末行指路 = 端可达出口（CLI `/mcp connect <name>`；桌面 ∥ VSC = 设置面 MCP 段 Reconnect）；成功展开的工具并入 `agent.tools`。
 - **项目文件源补裁定（2026-09-30 · 台账 #691——CLI ∕ 桌面同判）**：**发现面** = 项目根单层（`join(cwd, ".mcp.json")`，无向上多级搜索；文件缺 ⇒ 零读零效果）；**信任面** = 装配期零交互确认（项目文件与 `config.mcp.servers` 同信任域，不设首次信任 ∕ 端别门）；读 ∕ 解析失败非致命——记录不阻断装配。（VSC 端第三面未并 `.mcp.json`——端差在册：台账 #701，归 VSC 对齐轮。）
 - **幂等连接（registry 键控）**：registry（`_sessions`，serverName → session，模块级存活）已存在**同 name 活连接且 fingerprint 一致** → 直接复用已展开工具、不重建；fingerprint = config 关键字段（command / args / url / wsUrl / env / headers / token）的 JSON 归一；**config 变更**（fingerprint 不一致）→ 主动关旧连接（不触发 onDead 重连）+ 丢弃 session + 重建。
 - **每轮重建与热插拔**：每轮 runAgent 重新装配 tools 数组——registry 状态变化天然在下一轮生效；已连 server 的展开工具**不因重建而丢失**（幂等复用）。
@@ -103,13 +105,14 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
 **不得因 `eventSource == null` 误判死**（曾致无意义重连循环）；主动 close 与 legacy SSE 流真实断开仍判死 + 走重连。Streamable POST 规范路径：所有通道统一先注册 pending（直接 JSON body / SSE 流 / 202 等待都经 pending resolve）；响应带 `Mcp-Session-Id` 记入后续请求头。
 - **会话过期自愈（D-MC18 · 2026-10-04）**：POST 收 **404**（MCP 会话失效语义）⇒ transport 内三步——清 `sessionId` ⇒ 重新 `initialize`
   （+ `notifications/initialized`；参数单源 = 建连时 `setInitPayload` 注入）⇒ 重试原请求**一次**（每原请求至多一次；重建进行中并发 404 共享同一重建——单飞）。
-  重建失败 / 二次 404 ⇒ 照旧报错 + `fireDead`（既有退避重连链兜底）；`isAlive` 对未修复的会话死态返 false（`sessionDead` 标记）⇒ 下次 `ensureAlive` 走重连。非 404 错误行为零变。
+  重建失败 / 二次 404 ⇒ 照旧报错 + `fireDead`（既有退避重连链兜底）；`isAlive` 对未修复的会话死态返 false（`sessionDead` 标记）⇒ 下次 `ensureAlive` 走重连。非 404 错误行为零变。**射程 = Streamable POST 面（含 postOnly）；legacySSE 分支零触**——无会话语义（不读写 `sessionId`；非 2xx 直映射照旧）。
 - **stdio**（`transport-stdio.mjs`）：本地子进程 `stdioTransport(command, args, env)`——env 合并到 `process.env` 之上；JSON-RPC over stdio。
   **树杀（`killTree`）**：win32 = `taskkill /pid <pid> /T /F` **同步形**（`spawnSync`——退出路径 `process.on("exit")` 仅同步合法，异步 `spawn` 不落地 ⇒ 子进程退出泄漏，GitHub #17 实证）；
   POSIX = **detached 新进程组 + 组杀**：正常相位 = 组 `SIGTERM` → 2s 组 `SIGKILL` 升级（组杀覆盖孙进程——原单进程 SIGTERM 只达直接子进程）；
   **退出相位**（升级 timer 不触发——`process.on("exit")` 无事件循环）⇒ 同步组 `SIGKILL` 直达——忽略 SIGTERM 的子进程亦必死。
   相位判定 = `transport-stdio.mjs` 加载期注册的 exit 钩子置的模块级标志（注册序恒早于宿主 cleanup）；
-  组杀 = `process.kill(-child.pid, sig)`（detached 组长 = 组 id，非组长负 pid 内核返 ESRCH——不误杀；内核级实证 + Node 文档负 pid 组杀语义见批档 §2）。§7 D-MC19。
+  组杀 = `process.kill(-child.pid, sig)`（detached 组长 = 组 id，非组长负 pid 内核返 ESRCH——不误杀；内核级实证 + Node 文档负 pid 组杀语义见批档 §2）。
+  **`detached` 副作用（已认账）**：终端 `SIGINT` / `SIGHUP` 不再直传 MCP 子进程（生命周期由 close 链负责）；父进程被 `SIGKILL` 等非正常终止时子进程孤儿化存留概率上升——处置 = 接受登记（对冲如需另批）。§7 D-MC19。
 - **WS**（`transport-ws.mjs`）：`isAlive` = `!closed && ws?.readyState === WebSocket.OPEN`；连接死亡经 `onDead` / `fireDead`；认证经 subprotocol；上层 signal abort 即刻作废 pending + 发 `notifications/cancelled`。
 - **活性判定汇总**：HTTP legacy SSE = `!closed && eventSource != null`（流断 → fireDead）；HTTP postOnly = `!closed && postOnly`（恒真至 close，无流可断）；WS = `!closed && readyState === OPEN`；stdio = 进程退出 → error / close。
 
@@ -190,7 +193,7 @@ MCP 工具、下轮重试）。**子代理不含 MCP**：装配仅 depth-0 展�
 | D-MC16 | VSC 配置 / 连接入口 = **Settings 面板 MCP 页**（无 `/mcp` 命令面） | VSC 无 TUI 命令通道——结构性端差；面板表单 add-or-update 复用、探活确认环（§6.5 语义）对齐 CLI 保存前探活 |
 | D-MC17 | 退出路径树杀**同步合法**：win32 `killTree` 用 `spawnSync("taskkill", …)`（`/T /F` 语义不变） | `process.on("exit")` 阶段仅同步合法——异步 `spawn` 不落地 ⇒ 退出泄漏（#17 受控复现：异步组替身存活 ∥ `spawnSync` 组死）；代价 = 关闭路径同步阻塞 20–50ms（close 非热路径，可接受）。被否：阶段分流（force 标志）——新语义 + 三档穿透，超最小修。 |
 | D-MC18 | HTTP 会话过期（404）= **transport 内自愈**（清会话 + 重新 initialize + 重试一次；单飞重建；失败 ⇒ fireDead 退避链兜底） | 「404 直接映射错误、不重置会话」= 会话过期后每次调用重复失败（无自愈——用户只能手动 `/mcp reconnect`）；直接走 `scheduleReconnect` 过重（1s+ 退避起步 + 全量重建含 SSE 重开——「会话刚过期」是高频临时态）。被否：不重试（手动恢复负担）· 无单飞（并发 404 触发风暴重建）。 |
-| D-MC19 | POSIX 树杀 = **detached 新进程组 + 组杀 + 退出相位分流**（正常：组 SIGTERM → 2s 组 SIGKILL；退出相位：同步组 SIGKILL 直达） | 退出相位升级 timer 不触发 ⇒ 忽略 SIGTERM 的子进程泄漏（crash-guards U-CG-2 残面）；组杀覆盖孙进程。相位标志 = 模块加载期 exit 钩子（零「force 标志三档穿透」新语义——KD-CG-3 否决形未采纳）。被否：force 标志穿透 ∥ 退出相位仅 SIGTERM（不修）∥ 无条件同步 SIGKILL（正常路径失优雅）。证据 = 内核级 setsid/killpg 实证 + Node 负 pid 组杀语义（批档 §2）。 |
+| D-MC19 | POSIX 树杀 = **detached 新进程组 + 组杀 + 退出相位分流**（正常：组 SIGTERM → 2s 组 SIGKILL；退出相位：同步组 SIGKILL 直达） | 退出相位升级 timer 不触发 ⇒ 忽略 SIGTERM 的子进程泄漏（crash-guards U-CG-2 残面）；组杀覆盖孙进程。相位标志 = 模块加载期 exit 钩子（零「force 标志三档穿透」新语义——KD-CG-3 否决形未采纳）。被否：force 标志穿透 ∥ 退出相位仅 SIGTERM（不修）∥ 无条件同步 SIGKILL（正常路径失优雅）。证据 = 内核级 setsid/killpg 实证 + Node 负 pid 组杀语义（批档 §2）。**副作用（已认账）**：`detached` 下终端 SIGINT / SIGHUP 不直传（生命周期归 close 链）∥ 父被 SIGKILL 时孤儿化概率升——接受登记；对冲如需另批。 |
 
 ## 8. 不并项与历史沿革
 
@@ -234,3 +237,5 @@ MCP 工具、下轮重试）。**子代理不含 MCP**：装配仅 depth-0 展�
 - 2026-10-02（**文档清账轮 · 行宽清账（#806 · 轮 6）· eng-designer**——承批档 `docs/batches/2026-10-02-doc-settlement-round.md` §2.12：§6.4 启动装配行折行（475 ⇒ 三段 ≤300——语义零改）。台账 #806。）
 - 2026-10-03（**crash-guards 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-crash-guards.md` §2 · 台账 #865（GitHub #17））：§6.6 stdio 行补 **树杀语义**（win32 `spawnSync` 同步化——退出路径仅同步合法；POSIX 分支核对注）· §7 补 **D-MC17**。**零新语义**（守卫类最小修）。
 - 2026-10-04（**issue 修复批·一 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §2 · 台账 #850 ∥ #877）：§6.6 HTTP 行补**会话过期自愈**（404 ⇒ 清会话 + 重新 initialize + 重试一次——自愈链细节入句）∥ stdio 行 POSIX 残面句**改写为修后现状**（detached 组 + 相位分流；原「残面登记」句删除）· §6.9 postOnly 失效语义同拍收正 · §7 补 **D-MC18 / D-MC19**。**零新语义**——两条均为台账缺陷的修复设计导出项。
+- 2026-10-04（**issue 修复批·三 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §2 · 台账 #823）：§6.4 启动装配句收正——`_mcpWarnings` **消费面 = CLI ∥ 桌面 ∥ VSC**（三端同形——VSC 装配尾入 `_pendingReminders`；本批定形）；「VSC 面未并——端差在册」句**删除**（前提消失——端差归零）。**零新语义**（消费面事实收正）。
+- 2026-10-04（**issue 修复批·一 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §3 轮次 1 发现 4 ∥ 9）：§6.6 stdio 行补 **`detached` 副作用登记半句**（终端信号不直传 ∥ 孤儿化概率升——接受登记，对冲如需另批）· HTTP 行补 **射程括注**（Streamable POST 面含 postOnly；legacySSE 分支零触——无会话语义）· §7 D-MC19 理由列同拍补副作用句。**零新语义**（= 已认账副作用与射程的长期载体落位）。
