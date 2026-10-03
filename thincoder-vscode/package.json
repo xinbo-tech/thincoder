@@ -118,6 +118,21 @@
           "type": "boolean",
           "default": false,
           "markdownDescription": "In multi-root workspaces, automatically switch the **current project** to the folder of the active editor. Sessions, search index, and agent working directory follow the switch. (Never switches while a task is running.)"
+        },
+        "thincoder.ui.autoFollow": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically follow new output in the chat panel (keep scrolling to the bottom). Turn off to keep your reading position while the agent works — explicit actions (scroll-to-bottom button, sending a message, loading the session) still scroll."
+        },
+        "thincoder.ui.activityMaxHeight": {
+          "type": "number",
+          "default": 32,
+          "description": "Maximum height of the sub-agent activity area, in vh (percent of the panel height). Default 32."
+        },
+        "thincoder.ui.activityTailLines": {
+          "type": "number",
+          "default": 3,
+          "description": "Number of preview lines shown in a collapsed sub-agent block (the dim tail under the header). 0 disables the preview; default 3."
         }
       }
     }

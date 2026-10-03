@@ -28,7 +28,8 @@ export { attachCopyButtons }
 const renderer = createStreamRenderer({
   reasoning: () => (ctx.currentReasoning ? { el: ctx.currentReasoning, raw: ctx.currentReasoningRaw } : null),
   token: () => (ctx.currentBubble ? { el: ctx.currentBubble, raw: ctx.currentRaw } : null),
-  subScroll: (blocks) => { for (const block of blocks) maybeScrollBlock(block) },
+  // #875：块级跟滚随自动跟随门（循环前门——`maybeScrollBlock` 全数随门；false ⇒ 零写）。
+  subScroll: (blocks) => { if (ctx._autoFollow === false) return; for (const block of blocks) maybeScrollBlock(block) },
   frameEnd: () => { maybeScrollDown(ctx); maybeScrollActivity(ctx) },
 })
 

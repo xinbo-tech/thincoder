@@ -174,4 +174,57 @@ VERDICT: pass
 **批准面**：#823 ∥ #854 ∥ #875——**按面两路派发**（VSC 面 13 档 ⇒ eng-coder 甲 ∥ render-core 面 3 档 + 批内件 ⇒ eng-coder 乙（**dependsOn 甲**——批内件全量复跑需甲落））。
 
 ## §5 实施记录（eng-coder）
+
+**状态行**：实施完成（甲舱 13+1 档落盘（三链读数见 5.2）；乙舱 render-core 3 档 + 批内件待落——缝装载核验 = §6））
+
+### 5.1 交付摘要（甲舱 = VSC 面 13 档 + 越表 1 档 · 逐档终态读数 as-of 2026-10-04）
+
+| 文件 | 终态 | 落点（file:line） |
+|---|---|---|
+| `thincoder-vscode/src/agent/tool-table.mjs` | 190（+8/−5） | `:157` 捕获 `r.warnings ?? []`；`:189` 出参 `{ baseSet, mcpWarnings }`；`:158` 展开抛 ⇒ 零警告非致命 |
+| `thincoder-vscode/src/agent/setup-reminders.mjs` | 65（+24） | `applyMcpWarnings`（`:52-65`——载体 ∥ 指纹去重 ∥ 提醒全文；零警告零写 + 指纹清） |
+| `thincoder-vscode/src/agent/setup.mjs` | 300（+6/−3） | `:24` import；`:194` 解构；`:291` 装配尾调用（晚于复位 ∥ 槽回填） |
+| `thincoder-vscode/src/extension/panel-mcp.mjs` | 167（+2/−2） | `:63-64` 注释残句收正 |
+| `thincoder-vscode/src/extension/ui-prefs.mjs` | 26（新增） | `pushUiPrefs` ∥ `initUiPrefs` |
+| `thincoder-vscode/src/extension/chat-panel.mjs` | 443（+2） | `:25` import；`:204` 变更订阅接线 |
+| `thincoder-vscode/src/extension/panel-messages.mjs` | 374（+3 · 越表——见 5.3 D1） | `:41` import；`:328` webviewReady 握手重推 |
+| `thincoder-vscode/package.json` | 157（+15） | `:122-136` 三键（true ∥ 32 ∥ 3） |
+| `thincoder-vscode/webview/ui.js` | 249（+14/−6） | 四调用点改门（`:144/:154/:164/:195`）+ 两原语门（`:215/:223`） |
+| `thincoder-vscode/webview/ui-prefs.js` | 22（新增） | `applyUiPrefs`（三面 + 缺省/坏值） |
+| `thincoder-vscode/webview/chat-messages.js` | 270（+5） | `:33` import；`:164` case |
+| `thincoder-vscode/webview/streaming.js` | 184（+2/−1） | `:32` subScroll 循环前门 |
+| `thincoder-vscode/webview/status-bar.js` | 135（+2/−1） | `:49` 静态省略号 |
+| `thincoder-vscode/webview/controls.css` | 137（−13——见 5.3 D2） | 动画件 + `@keyframes dots` + 孤儿段注删 |
+
+### 5.2 测试读数（甲舱自跑 · 行内 node 等价腿——批内件 = 乙舱笔面，本刻未落）
+
+- #823：15/15（三腿 + 负控 + 载体 + 指纹变更腿 + 真连接面出参 + `buildToolTable` 两向）；另 7/7 = 载体腿（见 5.4）。
+- #854：5/5（渲染两态 + 控件档全树代码面 grep 零残留）。
+- #875a：12/12（消息区 ∥ 活动区 ∥ 块跟滚三径两向 + 显式动作照写对照 + 调用点纪律 + `scrollDown` 本体零门）；径 3 = 真 `streaming.js` `subagentChunk` 驱动（rAF 帧）。
+- #875c：26/26（三键应用 + 缺省/坏值 + `tailLines=0` + 分发 case + 宿主推送两面 + 载荷形）。
+- 项目自证：`node scripts/check-syntax.mjs`（thincoder-vscode）= 136 档 OK。
+- ⚠ 缝未落期读数：`thincoder-vscode/webview/ui-prefs.js:12` 的具名导入 `configureActivityView` 现不可解析（乙舱未落）⇒ 本刻 webview 模块图不可装载；#875c 的 tail 面 = 接口在位、缝待乙（代码评审 1 号协调项——§6 必须「缝在盘 + 装载烟测」）。
+
+### 5.3 决策透明表
+
+| # | 决策 | 理由 |
+|---|---|---|
+| D1 | `panel-messages.mjs` 越表改（+3） | webviewReady 握手重推的 case 住该档（设计 §5.8 明定「握手 + onDidChangeConfiguration」两面）；§2.3 表未列——越表披露 |
+| D2 | `controls.css` −13（设计 −11） | +2 = 孤儿段标题注释 + 空行随动画件同删（D8 残句不留） |
+| D3 | `applyMcpWarnings` 非空径写 `agent._mcpWarnings` 载体 | 设计档 `SETTINGS.md:53`「出参 warnings 入 agent._mcpWarnings」；零警告径不写（守「零写」）——内审 F1 收口 |
+| D4 | `activityMaxHeight` 缺省仍写 `32vh` 内联 | 「缺省 ⇒ 32」落实为写规范化缺省（与 `base.css` CSS 缺省同值；幂等） |
+| D5 | 行内 node 等价腿替代批内件 | 批内件 = 乙舱笔面（避双写）；甲舱自跑读数见 5.2 |
+| D6 | 缝导入保持静态具名（fail-loud） | 不落防御式可选调用（避静默降级）；缝落盘后方可装载 |
+
+### 5.4 审计与代码评审（轮次与终态）
+
+- **内审（分岔审计 · 1 轮）**：3 🔵——F1（设计档载体句 vs 码）、F2（§2.3 回填 + §5 空）、F3（越表披露）；F1 就地收口（D3），F2/F3 = 登记面。
+- **代码评审（advisor code · 1 轮）**：🔴 0 ∥ 🟡 4 ∥ 🔵 3；**VERDICT: pass**。🟡 = ① 缝协调项（乙）② `panel-messages.mjs` 374 行未带拆分登记 ③ `WEBVIEW-PROTOCOL.md` §12 行未落 ④ `chat-panel.mjs` 443 行（既有裁定 · 阈值 450）。
+- **fix round（1 处代码面）**：`chat-panel.mjs:204` 注文「订阅一次性」⇒「随 resolve 注册」（评审 🔵——注文与行为一致化）。
+- **终态**：**clean**（甲舱域内 🔴 0；未决 = 乙舱缝 ∥ 批内件 ∥ 登记类 🟡 三项——均非码面缺陷）。
+
+### 5.5 边界遵守
+
+写域 = `thincoder-vscode/**`（13 档 + 越表 1 档）；零 `thincoder-render-core/**` 触 ∥ 零 `docs/**` 触 ∥ 零桌面触 ∥ 零在飞写域触；档位：各 ≤500 硬线；`setup.mjs` = 300 整（贴顾问线）· `chat-panel.mjs` = 443 < 450 拆分阈值。
+
 ## §6 验证与收口（父代理）

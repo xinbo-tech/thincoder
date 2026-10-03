@@ -39,3 +39,27 @@ export function detectRestoredSession({ depth, resume, autoTurn, fullHistory }) 
   restartDetectionDone = true
   return (fullHistory?.length ?? 0) > 0
 }
+
+// ─── MCP 失败提醒（#823 · 2026-10-04 issue 修复批·三——三端同形消费；机制单源 = `MCP.md` §6.4）───
+// 装配尾调用（晚于每轮 `resetRunState` 清队 ∥ 槽回填）：失败集非空 ⇒ 提醒入 `_pendingReminders`
+// （下一条 user 消息注入——核 `agent/setup.mjs:172-176`）；首两段逐字同 CLI
+// （`thincoder-cli/src/command-interactive.mjs:163-166`——同桌面 `agent-assemble.mjs` `mcpWarningReminder`），
+// 末行 = 本端可达出口（设置面 MCP 段 Reconnect——CLI `/mcp connect <name>` 本端不存在）。
+// 指纹去重（`warnings.join("\n")`——同失败集不重推）；零警告 ⇒ 零写（队不写）+ 指纹清（复失败可再推）。
+
+/** MCP 连接失败 ⇒ 携带三端同形载体 `agent._mcpWarnings`（CLI ∥ 桌面同名面）+ 提醒
+ *  入队（装配尾每轮调——指纹去重）。`warnings` 缺 / 非数组 ⇒ 零写。 */
+export function applyMcpWarnings(agent, warnings) {
+  const list = Array.isArray(warnings) ? warnings : []
+  if (list.length === 0) { agent._mcpWarnedKey = null; return } // 零警告：零写 + 指纹清（恢复后复失败可再推）
+  agent._mcpWarnings = list // 三端同形载体（CLI/桌面同名——`SETTINGS.md` §2.4）
+  const key = list.join("\n")
+  if (agent._mcpWarnedKey === key) return // 同失败集（同指纹）⇒ 不重推
+  agent._mcpWarnedKey = key
+  agent._pendingReminders = agent._pendingReminders ?? []
+  agent._pendingReminders.push(
+    `[System reminder: ${list.length} MCP server(s) failed to connect at startup:\n` +
+    list.map((w) => `  - ${w}`).join("\n") +
+    "\nYou can try reconnecting from the Settings panel (MCP section → Reconnect).]"
+  )
+}

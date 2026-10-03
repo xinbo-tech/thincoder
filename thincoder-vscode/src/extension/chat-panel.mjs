@@ -22,6 +22,7 @@ import { subagentChannelSummary } from "./panel-subagent-relay.mjs"
 import { runPanelChat } from "./panel-chat.mjs"
 import { logEvent } from "@thincoder/core/log.mjs"
 import { initStopTrace } from "./stop-trace.mjs"
+import { initUiPrefs } from "./ui-prefs.mjs" // #875 视图偏好推送：变更订阅接线（webviewReady 握手在 panel-messages）
 import { ensureSlot, activeData, activeHistory, activeLines, saveLines, loadModelPrefs, loadSession, loadOlder, newSession, deleteSession, pushSessions, generateTitle, status as bootstrapStatus, openSessionContent } from "./panel-session.mjs"
 import { projectInfo, pushProject, applyProjectSwitch, onProjectChanged, pickProject, releaseOldCwdClaims } from "./panel-project.mjs"
 import { pushIndexStatus, atComplete, saveEmbeddingConfig, maybePromptIndex, buildIndex, maybePromptLegacyIndexRemoval } from "./panel-index.mjs"
@@ -200,6 +201,7 @@ export class ChatPanel {
     webviewView.webview.html = this._html()
     webviewView.webview.postMessage({ type: "i18n", strings: loadLocaleStrings(vscode.env.language) })
     initStopTrace(this._context, vscode)
+    initUiPrefs(this, this._context, vscode) // #875：`thincoder.ui.*` 变更 ⇒ 重推（随 resolve 注册——同 stop-trace 先例；重推幂等）
 
     webviewView.webview.onDidReceiveMessage((msg) => {
       handlePanelMessage(this, msg).catch((e) => reportHandlerError(this, e))

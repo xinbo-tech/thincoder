@@ -45,7 +45,8 @@ export function renderStatusBar(m) {
   }
   // C2 (F-C2c——修 H-E): thinking 态 = S._phase 标记——由本函数（#status-line 唯一
   // writer）绘制——loading 消息不再 innerHTML 覆写状态行（徽标/挂起计数同线保留）。
-  if (S._phase === "thinking") parts.push(`${t("status.thinking")}<span class="loading-dots"></span>`)
+  // #854：静态省略号（消段宽逐拍抖——动画件已删；同活动块状态词/推理块 summary 静态形）。
+  if (S._phase === "thinking") parts.push(t("status.thinking") + "…")
   // CLI status parity: current tool, turn count (LLM calls), elapsed seconds
   if (S._currentTool) parts.push(`<span class="status-tool">${t("status.currentTool")}: ${escHtml(S._currentTool)}</span>`)
   if (S._turnFrame) parts.push(t("status.turn", { n: S._turnFrame.turn, m: S._turnFrame.maxTurns })) // C-15：turn N/M 段（旧 status.turns 段退役）

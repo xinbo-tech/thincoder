@@ -60,8 +60,8 @@ export async function connectMcpServersExpanded(configs) {
     const label = cfg.name || cfg.command || cfg.url || cfg.wsUrl || "(unnamed)"
     const msg = `MCP server "${label}" failed to connect: ${r.reason?.message ?? String(r.reason)}`
     warnings.push(msg)
-    // D-CI7（F-Q11——cli make-agent.mjs:105-107 同前缀）：失败可见面 = console
-    // （采集点）；mcpWarnings 字段保留（消费面 = console——不发明 history 注入，CLI 无此行为）。
+    // D-CI7（F-Q11——cli make-agent.mjs:105-107 同前缀）：失败可见面 = console（采集点）；
+    // warnings 出参消费 = 装配尾提醒注入（三端同形——`MCP.md` §6.4；#823）。
     console.error("[mcp] " + msg)
   })
   return { tools, warnings }

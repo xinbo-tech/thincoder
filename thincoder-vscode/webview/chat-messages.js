@@ -29,6 +29,8 @@ import { addLedgerNotice } from "./ledger-line.js"
 import { applyHistoryPage } from "./history.js"
 import { clearStatusText, handleStatusText, showCompressStatus, showDigestStatus } from "./chat-status.js"
 import { showAtDropdown } from "./autocomplete.js"
+// #875（协议 §3.2 行 23）：视图偏好三键应用面（`uiPrefs` 消息——autoFollow ∥ activityMaxHeight ∥ activityTailLines）
+import { applyUiPrefs } from "./ui-prefs.js"
 // C-B2-6 细则⑦（queue-visible 批 2026-09-24）：排队「待发送」标记面（逐条标记 / 消费即清 / 多批合泡）
 import { applyBusyQueued } from "./queued-mark.js"
 
@@ -157,6 +159,9 @@ export function initMessageLoop(deps) {
         break
       case "autoApprove":      handleAutoApprove(m); break
       case "agentSettings":    handleAgentSettings(m, updateAgentSettings); notifyAgentSettingsRefreshed(); break
+      // #875（协议 §3.2 行 23 · `WEBVIEW.md` §5.8）：视图偏好三键——应用 = `ui-prefs.js`
+      // （缺键 / 坏值 ⇒ 缺省：true ∥ 32 ∥ 3；webviewReady 握手 + 设置变更重推）。
+      case "uiPrefs":          applyUiPrefs(m); break
       case "websearchSettings":
         updateWebsearchSettings(m.settings || {})
         break

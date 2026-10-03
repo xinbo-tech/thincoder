@@ -11,6 +11,9 @@
  * 滚动族（2026-09-29 留端清算 ∕ 批 `docs/batches/2026-09-29-desktop-rebuild-fidelity.md` §2.5）：判据 ∕
  * 写门 ∕ 旗标维护 = **核抽核件 `scroll.mjs` 工厂消费**（旗标宿主 = `ctx`——`_pinBottom` / `_pinActivity`
  * 键面与跨档共读面保持；事件集 `wheel` / `touchmove` / `scroll` 保持）；本档留帧调用点（四函数）。
+ * #875（2026-10-04 · 阅读位保护）：自动跟随门 = `ctx._autoFollow`（false ⇒ 自动滚动全禁——落
+ * `maybeScrollDown` / `maybeScrollActivity` 两原语体内；块跟滚帧尾门在 `streaming.js`）；
+ * 显式动作（回底钮 ∥ 发消息 ∥ 首窗历史）走 `scrollDown` 直写——零门。
  */
 import { esc as escHtml } from "../node_modules/@thincoder/render-core/md.mjs"
 import { applyPin, createPinWatch } from "../node_modules/@thincoder/render-core/scroll.mjs"
@@ -130,7 +133,7 @@ export function advisorRoundTag(round, model) {
   return `(round ${round}${model ? " · " + model : ""})`
 }
 
-/** 建工具卡 + `ctx` 簿记（`_toolRefs` 平表 / `currentTools` 表 / append / scrollDown 留端）。 */
+/** 建工具卡 + `ctx` 簿记（`_toolRefs` 平表 / `currentTools` 表 / append / maybeScrollDown 留端）。 */
 export function addTool(ctx, name, args, id, roundTag) {
   if (!ctx.currentBlock) newBlock(ctx)
   const { el, ref } = renderToolCard({ name, args, id, roundTag })
@@ -138,7 +141,7 @@ export function addTool(ctx, name, args, id, roundTag) {
   // `done` = 「已结算」唯一写点（`finishToolCard` 置真；回合尾清扫 `streaming.js` 只碰 `!done` 卡）
   ctx.currentTools.push(ref)
   ctx._toolRefs[id || name] = ref  // flat lookup — primary path
-  scrollDown(ctx)
+  maybeScrollDown(ctx) // #875：工具卡新建改走旗标门（阅读位不夺——显式动作零门）
 }
 
 export function finishTool(ctx, name, id, text, links, truncated) {
@@ -148,7 +151,7 @@ export function finishTool(ctx, name, id, text, links, truncated) {
   if (ref) {
     finishToolCard(ref, name, text, links, truncated)
     ctx.hadToolResult = true
-    scrollDown(ctx) // the auto-expanded output must scroll into view, not sit below the fold
+    maybeScrollDown(ctx) // the auto-expanded output must scroll into view, not sit below the fold（#875：旗标门）
     return
   }
   // Fallback: DOM traversal for any reason the map missed
@@ -158,7 +161,7 @@ export function finishTool(ctx, name, id, text, links, truncated) {
     const body = card?.querySelector(".tool-call-body")
     finishToolCard({ h: card, b: body, startTime: card?.dataset.startTime ? Number(card.dataset.startTime) : Date.now() }, name, text, undefined, truncated)
     ctx.hadToolResult = true
-    scrollDown(ctx)
+    maybeScrollDown(ctx) // #875：回退径同门
   }
 }
 
@@ -189,7 +192,7 @@ export function showError(ctx, text, techInfo) {
   if (!ctx.currentBlock) newBlock(ctx)
   const err = renderErrorBanner(text, techInfo, { emit: () => ctx.vscode.postMessage({ type: "retry" }) })
   ctx.currentBlock.appendChild(err)
-  scrollDown(ctx)
+  maybeScrollDown(ctx) // #875：错误横幅改走旗标门
 }
 
 // ─── Loading / Error ───────────────────────────
@@ -202,18 +205,23 @@ export function showError(ctx, text, techInfo) {
 
 export function scrollDown(ctx) {
   // 用超大值替代读 scrollHeight，避免强制同步布局（代价随 DOM 变大而涨）—— 写口 = 核工厂 `applyPin`
+  // #875：显式动作专用（回底钮 ∥ 发消息 ∥ 首窗历史——自动跟滚改走 `maybeScrollDown`；本函数零门）。
   applyPin(ctx.messagesEl, true)
   ctx._pinBottom = true // 重 pin（显式动作——旗标键面 = 跨档共读面，保持）
 }
 
+/** 自动跟滚（消息区）——#875 门：`ctx._autoFollow === false` ⇒ 零写（缺键 / 坏值 ⇒ 缺省 true）。 */
 export function maybeScrollDown(ctx) {
+  if (ctx._autoFollow === false) return
   applyPin(ctx.messagesEl, ctx._pinBottom)
 }
 
 /** 活动区 pin（§12.3 第 7 条——同 `#messages` 口径）：默认钉底；buildBlock 与流式帧
- *  （streaming.js rAF 尾）驱动——上滚解 pin、回底重 pin（initScrollFollow 区监听）。 */
+ *  （streaming.js rAF 尾）驱动——上滚解 pin、回底重 pin（initScrollFollow 区监听）。
+ *  #875 门同式（`ctx._autoFollow === false` ⇒ 区零写）。 */
 export function maybeScrollActivity(ctx) {
   if (!ctx.activityEl) return
+  if (ctx._autoFollow === false) return
   applyPin(ctx.activityEl, ctx._pinActivity)
 }
 

@@ -127,7 +127,8 @@ async function vscStatusTerminalEcho(args, ctx, out) {
  * @param {{depth:number, role:string|null, engineering:boolean, provider:object,
  *   mcpServers:object[]|undefined, builtinTools:object[], opts:object, batchDoc:string|null,
  *   settingsTool:object}} p 段内消费的既有局部
- * @returns {{baseSet:object[]}} 基础集（`agent.tools` 绑定值）
+ * @returns {{baseSet:object[], mcpWarnings:string[]}} 基础集（`agent.tools` 绑定值）+ MCP 失败警告
+ *   （#823——装配尾 `applyMcpWarnings` 消费；零服务器 / 展开抛 ⇒ `[]`）
  */
 export async function buildToolTable({ depth, role, engineering, provider, mcpServers, builtinTools, opts, batchDoc, settingsTool }) {
   // ── ① 端装饰体（裁定①）：`opts.toolDecorate` 写回（先例 = opts.agent ∕ opts.history 写回）——
@@ -144,15 +145,17 @@ export async function buildToolTable({ depth, role, engineering, provider, mcpSe
   }
 
   // ── ② MCP tools: idempotent connect + expand into NATIVE tools (CLI parity, MCP.md D1/D2).
-  // Top level only; failures never block — D-CI7（F-Q11）：警告可见面 = console
-  // （端壳 MCP 面 `panel-mcp.mjs` / cli make-agent.mjs 同前缀）。
+  // Top level only; failures never block — D-CI7（F-Q11）：警告可见面 = console（采集点）
+  // ＋出参 `mcpWarnings` 交装配尾（提醒注入——三端同形；#823）。
   let mcpTools = []
+  let mcpWarnings = []
   if (depth === 0 && Array.isArray(mcpServers) && mcpServers.length > 0) {
     try {
       const { connectMcpServersExpanded } = await import("../extension/panel-mcp.mjs")
       const r = await connectMcpServersExpanded(mcpServers)
       mcpTools = r.tools
-    } catch { /* expansion failure is non-fatal — the model just lacks MCP tools this turn */ }
+      mcpWarnings = r.warnings ?? []
+    } catch { /* expansion failure is non-fatal — the model just lacks MCP tools this turn（零警告——非致命） */ }
   }
 
   // M2 台账查询两工具（核 `tools/index.mjs:61` 同法——全角色面）：动态 import——ledger 链静态
@@ -183,5 +186,5 @@ export async function buildToolTable({ depth, role, engineering, provider, mcpSe
     ...(opts.extraTools ?? []),
   ]
 
-  return { baseSet }
+  return { baseSet, mcpWarnings }
 }

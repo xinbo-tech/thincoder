@@ -21,7 +21,7 @@ import { loadRaw, resolveProviders } from "@thincoder/core/config-io.mjs"
 import { DEFAULTS, normalizeProxy } from "@thincoder/core/config.mjs"
 import { loadConsultPool } from "../extension/presets.mjs"
 import { setSlotEngDesignTokens, setSlotPlanMode } from "../extension/session-slot-write.mjs"
-import { appendImagePointer, detectRestoredSession } from "./setup-reminders.mjs"
+import { appendImagePointer, detectRestoredSession, applyMcpWarnings } from "./setup-reminders.mjs"
 import { memoryFor } from "../embed-config.mjs" // §2.6 表注处置（裁定①）：记忆 ∕ 索引句柄（W8 经动态 import——静态闭包零 sqlite）
 import { mergeFileRules } from "@thincoder/core/rules.mjs" // B7 3a：规则面全档核单源（端壳判据档退役）
 import { composeTurnDomain } from "./turn-domains.mjs" // §2.5-A3：回合域文本组合单点（端 overlay）
@@ -75,7 +75,7 @@ export function buildTopLevelAgent() {
 /**
  * hydrateRun —— host 装配（顶层复用与新建（`setupAgentRun`）同路径）：复位（A）→ W14 三缝接线 →
  * config 读（AC7）→ 槽水合（槽↔hydrate 映射表）→ 工具表基础集 → run 绑定 + 前向镜像 →
- * 双线历史重指 → manifest 附着 ∕ 会话身份 → 端 adapter 键写回（A2 ∕ A3 ∕ R5 闸）。
+ * 双线历史重指 → manifest 附着 ∕ 会话身份 → 端 adapter 键写回（A2 ∕ A3 ∕ R5 闸）→ MCP 失败提醒（#823）。
  * 回合级装配（注入组 ∕ 提示词 ∕ 输入推入 ∕ env ∕ peer ∕ time）归核 `prepareRun`（§2.3 件 1）。
  * @returns {{ agent, history, fullHistory, input }}（`agent.tools` = baseSet；核 `runAgent` 追加
  *  家族段；`input` = 贴图指引施用后的最终用户输入串——调用方传核 `runAgent`）
@@ -190,7 +190,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
 
   // ── 工具表基础集（§2.3 件 1「工具表」行）：`agent.tools` = baseSet——家族段由核 `prepareRun`
   // 追加（`assembleFamilyTools` 单源）；端装饰体经 `opts.toolDecorate` 写回（裁定①）。
-  const { baseSet } = await buildToolTable({
+  const { baseSet, mcpWarnings } = await buildToolTable({
     depth, role, engineering, provider, mcpServers, builtinTools, opts, batchDoc, settingsTool,
   })
 
@@ -286,6 +286,9 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     appendImagePointer(userMsg, opts.images, provider.model, { depth })
     input = userMsg.content
   }
+
+  // #823 装配尾（晚于 resetRunState 清队 ∥ 槽回填）：MCP 失败提醒入队——指纹去重、零警告零写。
+  applyMcpWarnings(agent, mcpWarnings)
 
   return { agent, history, fullHistory, input }
 }

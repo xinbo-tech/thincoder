@@ -37,6 +37,8 @@ import { blockOnNoWorkspace } from "./workspace-guard.mjs"
 import { flushSubagentOutbox } from "./panel-callbacks.mjs"
 // LEDGER-SURFACE（§2.30.3.5）：台账启动行投递（webviewReady 时机）
 import { pushLedgerStartup } from "./ledger-surface.mjs"
+// #875（2026-10-04 issue 修复批·三 · 协议 §3.2 行 23）：视图偏好三键——webviewReady 握手重推
+import { pushUiPrefs } from "./ui-prefs.mjs"
 
 /** Current workspace folder (or process cwd) — shared with chat-panel. */
 let _cwdOverride = null
@@ -323,6 +325,7 @@ export async function handlePanelMessage(panel, msg) {
       panel._panel?.webview.postMessage({ type: "turnState", state: panel._turnState ?? "idle", ...(panel._susp ? { counts: backgroundStatus(panel._susp.lines.history) } : {}) })
       panel._panel?.webview.postMessage({ type: "i18n", strings: loadLocaleStrings(vscode.env.language) })
       panel._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(panel._agentSettingsSession?.() ?? null) })
+      pushUiPrefs(panel, vscode) // #875：视图偏好三键（Reload 冷启重同步——幂等；变更重推 = chat-panel 订阅）
       panel._pushStatus()
       pushBusyQueued(panel) // C-B2-6 细则①：Reload 冷启握手重同步（单槽未消费态镜像——对位 workspaceGuard 先例；排四件握手之后——交握序列零改）
       // #219（hygiene-sweep 批）：冷启镜像补推——挂起会话在场 ⇒ `suspension{active:true}` 重推
