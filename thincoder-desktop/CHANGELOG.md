@@ -2,11 +2,22 @@
 
 All notable changes to ThinCoder Desktop are documented here.
 
-## [Unreleased]
+## [0.10.2] — 2026-10-03
+
+> 0.10.1 → 0.10.2（月内 +1——发布时定号）
 
 ### Added
 
 - **自动更新（Windows）**：启动后自动检查更新——新版本后台静默下载（不打断会话），下载完成在菜单「帮助 → 检查更新」重启安装，或下次退出应用时自动完成安装；手动下载覆盖安装兜底（配置与会话不丢）。更新源 = 官网 `downloads/`（generic feed）；不自动发布——上传恒走发布窗小件。详见 `../docs/desktop/design/PACKAGING.md` §2.8（号 = 发布窗定号）。
+
+### Changed
+
+- **provider 态归一（#841）**：核统一解析单源——composer 明示行（`fallback` ⇒ 一行明示、`ok` ⇒ 零节点）；发送 ∕ 页读 ∕ 设置写回执携 `providerState`（三刷新点）；`providerKind` 判据换源（「有持 key 渠道」）。
+- **核依赖升级**：`@thincoder/core` `^0.9.5` → `^0.10.2`（声明面与实发对齐）。
+
+### Fixed
+
+- **首跑渠道提示修复（#840）**：已配渠道与 key 却误报「未配置 API 密钥」——真因分类出档（准确词面）；保存渠道时缺失的默认模型自动补写（仅缺失时）；修完配置免重启即生效（装配后槽复验）。
 
 ## [0.10.1] — 2026-10-01
 

@@ -2,6 +2,16 @@
 
 All notable changes to ThinCoder VS Code are documented here.
 
+## [0.10.2] — 2026-10-03
+
+> 0.10.1 → 0.10.2（月内 +1——发布时定号）
+
+### Changed
+
+- **核依赖升级**：`@thincoder/core` `^0.10.1` → `^0.10.2`（vsix 内嵌核 = 本次号）。
+- **provider 态三态横幅（#841）**：`fallback`（可运行但未设默认模型）⇒ 新横幅「⚠ 默认模型未设置或无效 — 正在使用可用渠道」+「选择默认模型」动作钮；`invalid`（真无效）⇒ 未配置横幅照旧；判据 = 核态单源（`keyOk := 非 invalid 类`）。
+- **解析链核转口**：`resolveTurnStage` ∕ `resolveDefaultModel` 由自建链改为核转口（自建扫描链退场）。
+
 ## [0.10.1] — 2026-10-03
 
 > 0.9.7 → 0.10.1（月切换——十月首发，发布时定号）

@@ -231,6 +231,10 @@ Code conventions: pure `.mjs`, no semicolons, no third-party npm dependencies al
 
 ## Changelog
 
+### 0.12.69 (2026-10)
+- **Provider-state unify (#841)** — one core resolution for the three ends (slot → `defaultModel` → first keyed channel) with three states: `ok`; `fallback` (runnable but no default model — one clear notice line, never blocked); `invalid` (no provider/key — guided picker; headless exits with a readable message and a clear code, while `fallback` prints one stderr line and keeps running). No more false "API key not configured" on a working channel.
+- **Core `^0.10.2`** — unified provider resolution (`resolveProviderPlan` / `resolveChannelModel`), `providerState` / `providerStateReason` keys, slot key gate.
+
 ### 0.12.68 (2026-10)
 - **Idle wake** — suspended sessions wake to timers: they resume on schedule (visibility surface + abort accommodation).
 - **Ledger health signals** — an unhealthy ledger database now shows a warning line in the TUI (empty values render as `—`).

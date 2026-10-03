@@ -3,6 +3,19 @@
 All notable changes to the core package are documented here.
 Format: Keep a Changelog · 中文 · 号在发布时定（CalVer——见 `docs/RELEASE.md` §4）。
 
+## [0.10.2] — 2026-10-03
+
+> 0.10.1 → 0.10.2（月内 +1——发布时定号）
+
+### Added
+
+- **统一 provider 解析（#841 · 三端归一）**：核导出 `resolveProviderPlan`（回退链 = 槽渠道（持 key）→ `defaultModel` 渠道 → 首个持 key 渠道；模型面 = 槽模型 → `defaultModel`（同渠道）→ 渠道单值 → `null`；三态 = `ok` ∕ `fallback` ∕ `invalid` + `reason`）与 `resolveChannelModel`（单值转口面）。
+- **`providerState` ∕ `providerStateReason` 两键**：`loadConfig()` 落（`provider` = 解析入选渠道）+ 槽面 key 门（`applySession`——槽无 key ⇒ 跳过且不写槽）。
+
+### Changed
+
+- **「无效」语义收窄**：仅「无 provider ∥ 无 key」为 `invalid`（不可运行 ⇒ 引导配置）；「可运行而无有效 `defaultModel`」为 `fallback`（**可运行 + 必明示**——不再当无效拦下）。
+
 ## [0.10.1] — 2026-10-03
 
 > 0.9.5 → 0.10.1（月切换——十月首发，发布时定号）
