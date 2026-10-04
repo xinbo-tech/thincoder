@@ -205,7 +205,7 @@ test("⑤ #617-CH 主进程臂：agentFields 五键出（slotAuthority 真 ∕ �
   assert.deepEqual([...settingsValues.SLOT_AUTHORITY_PATHS], ["agent.advisor.guard", "agent.engineering"])
   const mainSrc = read("src/main/settings.mjs")
   assert.equal(/const SLOT_AUTHORITY_PATHS/.test(mainSrc), false, "主档零自持副本（单源随迁）")
-  assert.match(mainSrc, /import \{ SLOT_AUTHORITY_PATHS, agentFields, deepEqual, deleteKeyPath, isConfigured, setKeyPath \} from "\.\/settings-values\.mjs"/)
+  assert.match(mainSrc, /import \{ SLOT_AUTHORITY_PATHS, agentFields, deleteKeyPath, isConfigured, setKeyPath \} from "\.\/settings-values\.mjs"/) // 断代重锚 2026-10-04：`deepEqual` 随退役面净删（17 批）——导入名单去之
   const dir = mkdtempSync(join(tmpdir(), "r3c-"))
   try {
     const cfg = join(dir, "config.json")
