@@ -1,9 +1,9 @@
 /**
  * settings.mjs — 主侧设置族处理体：`config:write`（仅语言面）/ `model:list`（逐模型档位投影）/
  * **`model:catalog`（全渠扇出候选面 —— 模型菜单全渠扇出批 · 2026-09-29）** /
- * `settings:agent`（agent 参数族读 + 写 + 档位意图级写 + **consult ∕ advisor 行面读数**〔R7〕）——
+ * `settings:agent`（agent 参数族读 + 写 + **consult ∕ advisor 行面读数**〔R7〕）——
  * 外加两道端侧单点：配置档存在性读数 `isConfigured()` 与密钥遮罩 `maskKey()`（**R7 起住
- * `settings-values.mjs`，本档同名 re-export**）；另出 `deepEqual` 供档位投影复用（同判据单点）；
+ * `settings-values.mjs`，本档同名 re-export**）；
  * **R2 增 `indexStatus()`**（`index:status` 回执 —— 索引状态读数装配：计数转口 `index-status.mjs`
  * 〔核只读出口〕+ `hasEmbedder` 配置面判据）；**R7 增 `modelsFace()`**（consult ∕ advisor 行面读数
  * —— 随 `settings:agent` 回执出）；**#880 增 `carryoverDefaultModel()`**（会话选定写回单点 —— 用户显式
@@ -23,11 +23,6 @@
  * - **端侧零族别自判**（`docs/desktop/design/PROJECT.md` §2 KD-18）：`model:list` 逐项
  *   `{ id, effortEnum, thinkOff }` 两判据直取核**导出面**（`specForModel` / `thinkOffPath`）——
  *   端侧零解析模型名、零族别表副本。
- * - **档位写径（批 B · ⑥）**：意图级载荷 `{ tier: { provider, model, level } }` ⇒ 先清不相容记号、
- *   再按档落形（`auto` 删两键 / `off` 落 `thinkOffShape(spec)` + 删 `reasoningEffort` / member 仅当
- *   `thinking` deep-equal `thinkOffShape(spec)` 时删 + 置 level）；写面 = 渠道条目级默认两键；
- *   两拒码（`bad-level` / `unknown-provider`）皆**零写**——判据与拒码序单源 =
- *   `docs/desktop/design/IPC.md` §2「档位控件注」。
  */
 import { loadConfig } from "@thincoder/core/config.mjs"
 import { _configPath, resolveProviders, writeConfigAtomic } from "@thincoder/core/config-io.mjs"
@@ -35,14 +30,14 @@ import { SUPPORTED_LOCALES, normalizeLocale, projectDictionary } from "@thincode
 import { channelUnavailableMessage, probeChannelModels } from "@thincoder/core/provider/list-models.mjs"
 import { probeTargetOf } from "@thincoder/core/provider-flows.mjs"
 import { specForModel } from "@thincoder/core/model-specs.mjs"
-import { thinkOffPath, thinkOffShape, applyAdvisorEffort } from "@thincoder/core/think-off.mjs"
+import { thinkOffPath, applyAdvisorEffort } from "@thincoder/core/think-off.mjs"
 import { _checkKnownKeyValue } from "@thincoder/core/agent-tools/settings.mjs"
 import { readIndexCounts } from "./index-status.mjs"
 // 值面 ∕ 遮罩族（R7 先拆后改拆出 —— 导出面零改：本档同名 re-export）。
-import { SLOT_AUTHORITY_PATHS, agentFields, deepEqual, deleteKeyPath, isConfigured, setKeyPath } from "./settings-values.mjs"
+import { SLOT_AUTHORITY_PATHS, agentFields, deleteKeyPath, isConfigured, setKeyPath } from "./settings-values.mjs"
 // provider 态投影（#841 —— 设置写回执携 `providerState`：三回执族载荷单源，零第二实现）。
 import { providerStateOf } from "./session-slots.mjs"
-export { MASK, deepEqual, isConfigured, maskKey } from "./settings-values.mjs"
+export { MASK, isConfigured, maskKey } from "./settings-values.mjs"
 
 /**
  * `config:write(payload)` ⇒ `{ ok, reason:null, locale, dict, configured }` ∥ `{ ok:false, reason }`。
@@ -155,9 +150,6 @@ export async function modelList(payload) {
   if (probe.ok !== true) return { ok: false, models: [], reason: probe.error }
   return { ok: true, models: (Array.isArray(probe.models) ? probe.models : []).map((id) => modelEntry(id)) }
 }
-/** 写内新鲜读发现渠道条目已消失（跨进程改档微窗口）的**本档私记号**——外层捕 ⇒ `unknown-provider`
- *  回执（零写）；拒码闭集不因该窗口泄入核 / 端错误串。 */
-const VANISHED = Symbol("vanished-provider")
 
 /** **S11**：advisor 推理档写键（三态写语义经核 `applyAdvisorEffort`——本档只做 spec 解引用）。 */
 const ADVISOR_EFFORT_PATH = "agent.advisor.reasoningEffort"
@@ -177,59 +169,6 @@ function advisorSpecModel(disk) {
   const composite = typeof disk.defaultModel === "string" ? disk.defaultModel : ""
   const at = composite.indexOf(":")
   return at > 0 ? composite.slice(at + 1) : ""
-}
-
-
-/**
- * 档位写径（批 B · ⑥——`docs/desktop/design/IPC.md` §2「档位控件注」逐步落地）。
- * 拒码序 = **形态 → provider 存在 → level 合法**（三拒皆**零写**）：
- * - 形态：`tier` 非对象 / `model` 非非空串 / `level` 缺 ⇒ `invalid-patch`（载荷非三成员形）；
- * - provider 存在：名不在配置（含缺 / 空名——皆无对应条目）⇒ `unknown-provider`；
- * - level：`"auto"` 恒可；`"off"` 与 `"none"` 同径（`"none"` 不作独立档——语义由 `"off"` 承载）
- *   须 `thinkOffPath(spec)` 真；其余须 ∈ `specForModel(model).reasoningEffortEnum` ⇒ 表外（含非串 / 空串）
- *   ⇒ `bad-level`。
- * spec 单源 = 核 `specForModel(model)`；off 形单源 = 核 `thinkOffShape(spec)`（端侧零族别副本——KD-18）。
- * 写面 = 该渠道条目级默认两键（`thinking` / `reasoningEffort`：先清不相容记号，再按档落形）。
- * **#841**：成功回执另携 `providerState`（设置写回执 —— 第三刷新点；投影单源 = `session-slots.mjs`
- * `providerStateOf`，写后核读）。
- */
-function tierAgent(config, tier) {
-  const bad = (reason) => ({ ok: false, reason, fields: agentFields(config), models: modelsFace(config) })
-  if (tier === null || typeof tier !== "object" || Array.isArray(tier)) return bad("invalid-patch")
-  const model = typeof tier.model === "string" ? tier.model.trim() : ""
-  if (!model || tier.level === undefined || tier.level === null) return bad("invalid-patch")
-  const provider = typeof tier.provider === "string" ? tier.provider.trim() : ""
-  if (!resolveProviders().providers.some((p) => p.name === provider)) return bad("unknown-provider")
-  const spec = specForModel(model)
-  const level = tier.level
-  const offish = level === "off" || level === "none"
-  const member = typeof level === "string" && !offish && (spec.reasoningEffortEnum ?? []).includes(level)
-  if (level !== "auto" && !offish && !member) return bad("bad-level")
-  if (offish && !thinkOffPath(spec)) return bad("bad-level")
-  const mutate = (disk) => {
-    const entry = (Array.isArray(disk.providers) ? disk.providers : []).find((p) => p && p.name === provider)
-    if (!entry) throw VANISHED
-    if (offish) {
-      entry.thinking = thinkOffShape(spec)
-      delete entry.reasoningEffort
-    } else if (level === "auto") {
-      delete entry.thinking
-      delete entry.reasoningEffort
-    } else {
-      if (deepEqual(entry.thinking, thinkOffShape(spec))) delete entry.thinking
-      entry.reasoningEffort = level
-    }
-  }
-  let w
-  try {
-    w = writeConfigAtomic(_configPath(), mutate)
-  } catch (error) {
-    // 写前检查与写内新鲜读之间的微窗口（跨进程改档）：条目消失 ⇒ 同上拒码，**零写**；其余错一律重抛不吞。
-    if (error === VANISHED) return bad("unknown-provider")
-    throw error
-  }
-  if (!w.ok) return { ok: false, reason: w.reason, fields: agentFields(loadConfig()), models: modelsFace(loadConfig()) }
-  return { ok: true, reason: null, fields: agentFields(loadConfig()), models: modelsFace(loadConfig()), providerState: providerStateOf(loadConfig()) }
 }
 
 /**
@@ -296,8 +235,8 @@ export function carryoverDefaultModel(provider, model) {
 }
 
 /**
- * `settings:agent(payload)`：读 `{}` ⇒ `{ ok, fields, models }`；写 `{ patch:{ "<点分路径>": value } }` ∥
- * `{ tier:{ provider, model, level } }`（**二择一**——档位为意图级载荷）⇒ `{ ok, reason, fields, models }`
+ * `settings:agent(payload)`：读 `{}` ⇒ `{ ok, fields, models }`；写 `{ patch:{ "<点分路径>": value } }` ⇒
+ * `{ ok, reason, fields, models }`
  * （**写后回读**；`models` = consult ∕ advisor 行面 —— R7 增：段读面随写同拍刷）。
  * **B10 W2 · S3 增**：`patch` 含 `defaultModel` 且写成功 ⇒ **写后探一次**（fire-and-forget ——
  * 不阻断回执；渠道码入核落账供 `provider:list` 行面读数）。
@@ -313,17 +252,18 @@ export function carryoverDefaultModel(provider, model) {
  * ③ 路径形态非法 ⇒ `invalid-patch`。未知键**放行**（全量域 = 核语义——端侧不另立白名单）。
  * **#841**：写成功回执另携 `providerState`（设置写回执 —— 第三刷新点：设置面修好 `defaultModel` 后
  * 提示行即时退场；投影单源 = `session-slots.mjs` `providerStateOf`）。
- * 二择一判定：有效键 = 非 `undefined`/`null`（故 `{}` / `{ patch:null }` 仍为读面）；两有效键同在 ⇒
- * `invalid-patch` ∥ 两皆无 ⇒ 读面；`{ tier }` 径另二拒见 `tierAgent`。
+ * 顶层有效键闭集 = `{ patch }`（KD-902-2）：有效键 = 非 `undefined`/`null`（故 `{}` / `{ patch:null }` 仍为读面）；
+ * 表外有效键（含退役档位意图载荷 `{ tier }`）⇒ `invalid-patch` **零写**——不静默落读面。
  */
 export function settingsAgent(payload) {
   const config = loadConfig()
   const patch = payload?.patch
-  const tier = payload?.tier
   const hasPatch = patch !== undefined && patch !== null
-  const hasTier = tier !== undefined && tier !== null
-  if (hasPatch && hasTier) return { ok: false, reason: "invalid-patch", fields: agentFields(config), models: modelsFace(config) }
-  if (hasTier) return tierAgent(config, tier)
+  // KD-902-2：顶层有效键闭集 = `{ patch }`——表外有效键（含退役档位意图载荷）⇒ `invalid-patch` **零写**。
+  const shaped = payload !== null && typeof payload === "object" && !Array.isArray(payload) ? payload : {}
+  if (Object.entries(shaped).some(([key, value]) => key !== "patch" && value !== undefined && value !== null)) {
+    return { ok: false, reason: "invalid-patch", fields: agentFields(config), models: modelsFace(config) }
+  }
   if (!hasPatch) return { ok: true, fields: agentFields(config), models: modelsFace(config) }
   const entries = typeof patch === "object" && !Array.isArray(patch) ? Object.entries(patch) : []
   if (!entries.length) return { ok: false, reason: "invalid-patch", fields: agentFields(config), models: modelsFace(config) }

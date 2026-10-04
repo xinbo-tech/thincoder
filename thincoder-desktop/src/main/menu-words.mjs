@@ -121,7 +121,7 @@ const WORDS = Object.freeze({
   }),
 })
 
-/** 设置六组名（序 = 渲染面 `views/settings.mjs` `SECTIONS` 名序**去「模型与档位」**——收窄批 #820；投影面；跨面漂移检测 = 批内件源扫）。 */
+/** 设置六组名（序 = 渲染面 `views/settings.mjs` `SECTIONS` 名序**去「模型」**——收窄批 #820；投影面；跨面漂移检测 = 批内件源扫）。 */
 const SETTINGS_SECTION_KEYS = Object.freeze(["providers", "agent", "mcp", "env", "tools", "models"])
 
 /** 全菜单词读数（消费面 = `src/main/window.mjs` `buildMenu` ∥ 模板 `app-menu.mjs`）：解析序 = 当前语言 → en 回落

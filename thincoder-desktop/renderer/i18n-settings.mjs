@@ -2,7 +2,7 @@
  * i18n-settings.mjs — 设置面词族第四档（i18n 拆分批 `docs/batches/2026-09-29-i18n-split.md` §2 · 台账 #614
  * 顶格消解：主档 `renderer/i18n.mjs` 内容行 500 顶格 ⇒ 自有 `settings.*` 族 55 键整族出档，本档承接）。
  *
- * 键面（**60 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
+ * 键面（**59 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
  * 四段名 / 两段态 / 十三失败码 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
  * 当前标 · 两增键 / 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
  * 移除 · 增键 —— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）。
@@ -34,7 +34,7 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.theme.light": "Light",
     "settings.theme.dark": "Dark",
     "settings.section.providers": "Providers",
-    "settings.section.model": "Model & tier",
+    "settings.section.model": "Model",
     "settings.section.agent": "Agent options",
     "settings.section.mcp": "MCP",
     "settings.state.none": "Not configured",
@@ -79,7 +79,6 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.model.current": "Current model",
     "settings.model.empty": "No models yet",
     "settings.model.use": "Use",
-    "settings.model.tier": "Tier",
     "settings.mcp.kind.url": "URL",
     "settings.mcp.kind.command": "Command",
     "settings.mcp.remove": "Remove ${name}",
@@ -97,7 +96,7 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.theme.light": "亮色",
     "settings.theme.dark": "暗色",
     "settings.section.providers": "渠道",
-    "settings.section.model": "模型与档位",
+    "settings.section.model": "模型",
     "settings.section.agent": "agent 参数",
     "settings.section.mcp": "MCP",
     "settings.state.none": "未配置",
@@ -142,7 +141,6 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.model.current": "当前模型",
     "settings.model.empty": "暂无模型",
     "settings.model.use": "采用",
-    "settings.model.tier": "档位",
     "settings.mcp.kind.url": "URL",
     "settings.mcp.kind.command": "命令",
     "settings.mcp.remove": "移除 ${name}",

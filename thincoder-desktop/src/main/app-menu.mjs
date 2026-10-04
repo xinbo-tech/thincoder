@@ -10,12 +10,12 @@
  * 动作面两缝（皆注入 —— 本档零宿主依赖）：
  *   ① `onAction(action, path?, value?)` = **六动作通道闭集**（`newSession` ∥ `openProject` ∥ `find` ∥ `theme`
  *      ∥ `help` ∥ **`openSettings`**）—— `ev:menu` 载荷恰形（`path` 仅 `openProject` 携；`value` 携主二：
- *      `theme` 三值 ∥ `openSettings` 组名六值（= `SECTIONS` 名序去「模型与档位」——收窄批 #820）—— 缺 ⇒ 开设置面；不携 `key`）；
+ *      `theme` 三值 ∥ `openSettings` 组名六值（= `SECTIONS` 名序去「模型」——收窄批 #820）—— 缺 ⇒ 开设置面；不携 `key`）；
  *   ② `onNative(action)` = **宿主自办四项**（`gc` ∥ `index` ∥ `about` ∥ **`update`**〔桌面发布·阶段二批——主进程更新面
  *      `update.mjs`，不经通道〕—— 维护两项落原生对话框、关于落原生面板）。
  * `THEME_VALUES` 三值闭集同导出（序 = `renderer/theme.mjs` `THEMES`；主题▸勾选态 + 主进程 `theme:state` 报告
  * 校验面共用 —— 零第二份）；**`SETTINGS_GROUPS` 六组名闭集同导出**（镜像 = 渲染面 `views/settings.mjs` `SECTIONS`
- * 名序**去「模型与档位」**（收窄批 #820）—— 主 ∕ 渲染分层无直 import，先例 = `THEME_VALUES`；漂移检测 = 批内件跨面源扫）。
+ * 名序**去「模型」**（收窄批 #820）—— 主 ∕ 渲染分层无直 import，先例 = `THEME_VALUES`；漂移检测 = 批内件跨面源扫）。
  * 设置组（#817；#820 收窄）：`设置…`（`settingsOpen` → `openSettings` 缺 `value`）∥ 六组项（段名 + 「…」后缀（菜单形）⇒
  * `openSettings` + `value` 组名 ⇒ 组弹窗）∥ 两子组（维护▸：`gc` ∥ `index`——行为零改；关于与快捷键▸：`help` ∥
  * `about`——帮助组同二项之**第二入口**，行为零改）。
@@ -31,7 +31,7 @@ import { UPDATE_STATE_WORD_KEYS } from "./update.mjs" // 更新面状态 → 词
 /** 主题三值闭集（序 = 跟随系统 ∥ 亮色 ∥ 暗色 —— 与 `renderer/theme.mjs` `THEMES` 同序同值）。 */
 export const THEME_VALUES = Object.freeze(["system", "light", "dark"])
 
-/** 设置六组名闭集（序 = 渲染面 `views/settings.mjs` `SECTIONS` 名序**去「模型与档位」**——收窄批 #820；菜单侧镜像单份；
+/** 设置六组名闭集（序 = 渲染面 `views/settings.mjs` `SECTIONS` 名序**去「模型」**——收窄批 #820；菜单侧镜像单份；
  *  与 `SCOPES`（装配面派生 · 七名——设置页对齐）关系 = 菜单发出六名 ∥ 校验七名宽容（零改；漂移 = 批内件跨面源扫）。 */
 export const SETTINGS_GROUPS = Object.freeze(["providers", "agent", "mcp", "env", "tools", "models"])
 

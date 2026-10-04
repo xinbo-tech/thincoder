@@ -91,6 +91,9 @@
  *      **轻通道轮八增一键**（2026-10-03：`composer.send.noDefaultModelFallback` 两语同增 —— fallback 明示行澄清半句；
  *      键面单源 = `renderer/i18n-views.mjs` ② 组）⇒ `VIEWS_DICT`（第二档）**138 ⇒ 139** ∕ `HOST_DICT`
  *      （**合并表**，经合并点随动）**313 ⇒ 314**（两语同拍、键集相等；届盘实读续链）。
+ *      **渠道档位退役批退三键**（2026-10-04：`effort.auto` ∥ `effort.off` 两语同退——消费面随档位控件退役 ⇒ 键面随退，零残键；
+ *      另 `settings.model.tier`（第四档）随退经合并点随动）⇒ 实读 `HOST_DICT`（**合并表**）**312 ⇒ 309**（两语同拍、键集相等；
+ *      届盘实读续链——链文前值 314 系滞后值：泛化编辑器退役（−2 键）未逐笔续计，本行按盘收正）。
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；
@@ -118,14 +121,13 @@ import { VIEWS_DICT } from "./i18n-views.mjs"
  *  消费面 = `src/main/context-menu.mjs` `contextMenuLabels`，主进程直取本表）· `pool.*` = 活动池（标题 / 三族标 / 折叠控件两态 `aria-label` / 空态提示 ——
  *  折叠字形住 `renderer/pool.css`）· `approval.*` = 审批卡两形三出口词面 + 批形计数（`${count}` 占位；
  *  键位闭集住 `renderer/views/approval.mjs`）· `question.*` = 提问卡（文本控件 `aria-label` / 提交键 / 取消键 ——
- *  键位闭集住 `renderer/views/question.mjs`）· `settings.*` = 设置面（**60 键** —— 单源 = `renderer/i18n-settings.mjs`）·
+ *  键位闭集住 `renderer/views/question.mjs`）· `settings.*` = 设置面（**59 键** —— 单源 = `renderer/i18n-settings.mjs`）·
  *  `wizard.*` = 首启向导（标题 / 退场 / 三步名 / 两推进键 / 渠道提交键 / 目录步两词）·
  *  `composer.*` = 输入区（**换装后残余两族**：B21 发送失败行 `composer.send.failed`〔住 `renderer/i18n-views.mjs`〕+
  *  B22 降级提示行两键 `composer.attach.nonvision` ∕ `composer.attach.partial`——三键皆端侧自有词，非 VSC 源；
  *  旧三词（输入框 `aria-label` ∕ 中断控件词 ∕ 满队提示行）+ 附件条移除控件名随自建树退场——核件控件词归
  *  `renderer/i18n-composer.mjs`）·
- *  `effort.*` = 档位两特值词（`auto` = 未设（`null`）·
- *  `off` = 关思考 —— 逐模型枚举成员**零词键**、原字面投影）· `status.*` = 状态行（上下文读数串 `context ${percent}%${tokens}` —— 令牌尾串 `␣<fmtK>`、0 ∕ 缺 ⇒ 缺席 = 半态〔状态行 ⇒ CLI 补漏批改形〕——
+ *  `status.*` = 状态行（上下文读数串 `context ${percent}%${tokens}` —— 令牌尾串 `␣<fmtK>`、0 ∕ 缺 ⇒ 缺席 = 半态〔状态行 ⇒ CLI 补漏批改形〕——
  *  未至 / 非正数 ⇒ 零节点，键面不落空串；段词十六键 = 注意力 / 当前工具 / 耗时 / 任务计数 / 令牌三件 / 计时 /
  *  排队两句 + 静息词 / 输入提示静息态 / banner 四态（代号字面 —— 两语同形）＋ **R4 增状态文本 index 两形二键**
  *  （`status.indexScan` ∕ `status.indexProgress` —— 值逐字同 VSC locales；表外四 kind 与压缩四态 = 核投影取、零新键）
@@ -212,9 +214,7 @@ export const HOST_DICT = Object.freeze({
     "wizard.dir.hint": "Pick a working directory — you can change it later.",
     "wizard.dir.pick": "Choose folder…",
     "wizard.save": "Save provider",
-    // ── 批 B 面（档位两特值词 / 状态栏读数串 —— 键名本档拟定，登记面即此处）──
-    "effort.auto": "Auto",
-    "effort.off": "Off",
+    // ── 批 B 面（状态栏读数串 —— 键名本档拟定，登记面即此处）──
     "status.usage": "context ${percent}%${tokens}",
     // ── 状态行（R3a；D22 扩至承载 16 段 —— 增六键：静息词 / 输入提示静息态 / banner 四态〔代号字面 · 两语同形〕）：`views/statusline.mjs` —— 键名本档拟定，登记面即此处）──
     "status.attention.blocked": "⚠ Awaiting your approval or answer",
@@ -318,9 +318,7 @@ export const HOST_DICT = Object.freeze({
     "wizard.dir.hint": "选择工作目录——之后也可以更改。",
     "wizard.dir.pick": "选择目录…",
     "wizard.save": "保存渠道",
-    // ── 批 B 面（档位两特值词 / 状态栏读数串 —— 键名本档拟定，登记面即此处）──
-    "effort.auto": "自动",
-    "effort.off": "关闭",
+    // ── 批 B 面（状态栏读数串 —— 键名本档拟定，登记面即此处）──
     "status.usage": "上下文 ${percent}%${tokens}",
     // ── 状态行（R3a；D22 扩至承载 16 段 —— 增六键：静息词〔词形来源 = CLI 静息值 `Ready`〕/ 输入提示静息态 / banner 四态〔代号字面 · 两语同形〕）：`views/statusline.mjs` —— 键名本档拟定，登记面即此处）──
     "status.attention.blocked": "⚠ 等待你的审批或回答",

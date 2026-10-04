@@ -7,8 +7,6 @@
  * 端侧**零自写盘**。预设展开（`presetToEntry`）住核——端侧只传预设**名**。
  * 密钥纪律（§2.3）：`provider:list` **只回遮罩后值**（端侧遮罩单点 = `settings.mjs` `maskKey`；
  * 判据 = 核导出 `isSensitiveKey`），明文 key 零下发。
- * 批 B 增：逐行 `effort` = 渠道条目**档位现值投影**（离线——零探针；判据单源 = 核 `thinkOffShape`，
- * 沿 `docs/desktop/design/IPC.md` §2「档位控件注」现值条）。
  * R8 增（「桌面处理流 · VSC 对齐」批 —— provider 流程族上提）：**判据面**单源 = 核
  * `thincoder-core/provider-flows.mjs`（上提源 = VSC `provider-flows.mjs`，纯搬 + 转口）——本档消费
  * `customFieldsError`（自定形必填步序 + 协议域三值）与 `probeAdmission`（探针 + 失败分档「读账优先」），
@@ -24,7 +22,7 @@
  * 渲染面 `hostBusy` ⇒ 「宿主繁忙」+ 抑制失败句）；两探径失败支经 `loop-sampler.mjs` `overrideAdmissionIfHostBusy`
  * 以宿主证据覆盖落账分类（`reason` 逐字不动——核 `deps.hostBusyOverride` 缝同判）。
  */
-import { PROVIDER_PRESETS, loadConfig, normalizeProxy, parseModelRef } from "@thincoder/core/config.mjs"
+import { PROVIDER_PRESETS, loadConfig, normalizeProxy } from "@thincoder/core/config.mjs"
 import {
   _configPath, addProviderEntry, loadRaw, removeProviderEntry, removeProviderKeyFromConfig,
   resolveProviders, setProviderKey, writeConfigAtomic,
@@ -32,9 +30,7 @@ import {
 import { customFieldsError, probeAdmission } from "@thincoder/core/provider-flows.mjs"
 import { admissionOf, probeChannelModels } from "@thincoder/core/provider/list-models.mjs"
 import { proxyFetch } from "@thincoder/core/proxy.mjs"
-import { specForModel } from "@thincoder/core/model-specs.mjs"
-import { thinkOffShape } from "@thincoder/core/think-off.mjs"
-import { deepEqual, maskKey } from "./settings.mjs"
+import { maskKey } from "./settings.mjs"
 // provider 态投影（#841 —— `provider:save` 设置写回执携 `providerState`：三回执族载荷单源，零第二实现）。
 import { providerStateOf } from "./session-slots.mjs"
 // S3 宿主忙证据面（#673）：主进程事件循环采样器（port 源 = VSC `src/extension/loop-sampler.mjs`）。
@@ -64,22 +60,7 @@ function presetChoices() {
 }
 
 /**
- * 渠道条目**档位现值投影**（离线——零探针；`docs/desktop/design/IPC.md` §2「档位控件注」现值条）：
- * `reasoningEffort` 为串 ⇒ 该串（`"none"` ⇒ `"off"`——其语义由 `"off"` 承载）；否则 `thinking`
- * 键在场且值 deep-equal `thinkOffShape(spec)` ⇒ `"off"`；否则 ⇒ `"auto"`。
- * 表外现值（含空串）**照字面出**（不吞 · 零改写——自成一选项归视图面）；判据与写面同源 = 核
- * `thinkOffShape` 与端侧 `deepEqual`（零族别副本）。`model` = spec 绑定模型（活动行 = `defaultModel`
- * 模型段——写面同源，保「写后投影恒等」；余行 = 条目自身 `model`；缺 ⇒ 核默认规格）。
- */
-export function effortOf(entry, model) {
-  const re = entry?.reasoningEffort
-  if (typeof re === "string") return re === "none" ? "off" : re
-  if (entry && "thinking" in entry && deepEqual(entry.thinking, thinkOffShape(specForModel(model)))) return "off"
-  return "auto"
-}
-
-/**
- * `provider:list` ⇒ `{ ok, presets:[{ name, desc, baseURL, model }], providers:[{ name, shape, baseURL, model?, hasKey, maskedKey, active, proxy, effort, available?, unavailableReason? }], active }`。
+ * `provider:list` ⇒ `{ ok, presets:[{ name, desc, baseURL, model }], providers:[{ name, shape, baseURL, model?, hasKey, maskedKey, active, proxy, available?, unavailableReason? }], active }`。
  * `presets` = 核预设表投影（24 条 · 序 = 核表声明序——供设置面渠道段与首启向导第一步选预设，
  * 消费面无第二份表）；`shape` = 名在核预设表 ⇒ `preset`，否则 `custom`；
  * `active` 单源 = 核 `resolveProviders().activeProvider`
@@ -90,8 +71,6 @@ export function effortOf(entry, model) {
  */
 export function providerList() {
   const { providers, activeProvider } = resolveProviders()
-  // spec 绑定模型：`defaultModel` 复合串（核 `parseModelRef` 单源解析）——活动行取模型段，余行取自身 `model`。
-  const ref = parseModelRef(loadConfig()?.defaultModel ?? null, providers)
   return {
     ok: true,
     presets: presetChoices(),
@@ -108,7 +87,6 @@ export function providerList() {
         maskedKey: hasKey ? maskKey(`providers.${p.name}.apiKey`, p.apiKey) : null,
         active: p.name === activeProvider,
         proxy: p.proxy === true, // S5：渠级代理位投影
-        effort: effortOf(p, ref.ok && ref.provider.name === p.name ? ref.model : p.model),
         ...(admission ? { available: admission.ok === true } : {}),
         ...(admission && admission.ok === false && typeof admission.reason === "string" && admission.reason !== ""
           ? { unavailableReason: admission.reason } : {}),
@@ -217,7 +195,7 @@ export function providerSetKey(payload) {
   if (!resolveProviders().providers.some((p) => p.name === name)) return { ok: false, reason: "unavailable" }
   const err = setProviderKey(name, key)
   if (err) return { ok: false, reason: err }
-  // 写内新鲜读微窗口：条目两查间消失 ⇒ 核子静默空操作 ⇒ **回读核验**（零假成功 —— 沿 `tierAgent` 判例）
+  // 写内新鲜读微窗口：条目两查间消失 ⇒ 核子静默空操作 ⇒ **回读核验**（零假成功）
   if (!resolveProviders().providers.some((p) => p.name === name && p.apiKey === key)) return { ok: false, reason: "unavailable" }
   probeAfterWrite(name)
   return { ok: true, reason: null }

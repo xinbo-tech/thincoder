@@ -1,15 +1,15 @@
 /**
  * settings-values.mjs — 设置族**值面 ∕ 遮罩族**（R7 · 桌面功能对位批 · 批档 §2 R7 #4；先拆后改：
- * 自 `src/main/settings.mjs` 拆出 `MASK` … `deepEqual` —— 300 行层拆分，**零语义变化**）。
+ * 自 `src/main/settings.mjs` 拆出 `MASK` … `setKeyPath` —— 300 行层拆分，**零语义变化**）。
  *
  * 面：遮罩单点（`MASK` = 核 `MASKED` ∕ `maskKey` —— 判据 = 核**导出** `isSensitiveKey`，明文零下发）· 配置档存在性
  * （`isConfigured` = `existsSync(_configPath())`）· 叶展平 / 深遮罩 / 字段表（`kindOf` ∕ `flatten` ∕
  * `maskDeep` ∕ `agentFields`）· **slot 权威键单源**（`SLOT_AUTHORITY_PATHS` —— S14a 随迁：读面经 `agentFields` 第五键
- * `slotAuthority` 标注 ∕ 写面拒码取用）· 点分路径写（`setKeyPath`）· 深比较（`deepEqual` —— 档位判据用）。
+ * `slotAuthority` 标注 ∕ 写面拒码取用）· 点分路径写（`setKeyPath`）。
  * 单一 owner = 本档；`settings.mjs` ∕ `providers.mjs` 经原 import 面取（settings.mjs 同名 re-export，
  * 导出面零改）。
  * 纪律：零自写盘（写面唯一执行体 = 核 `writeConfigAtomic`）；核未导出的 helper 才端侧自持
- * （`setKeyPath` ∕ `deepEqual`——遮罩字面已收编核 `MASKED`），判据面一律取核导出。
+ * （`setKeyPath`——遮罩字面已收编核 `MASKED`），判据面一律取核导出。
  */
 import { existsSync } from "node:fs"
 import { _configPath } from "@thincoder/core/config-io.mjs"
@@ -103,16 +103,4 @@ export function deleteKeyPath(obj, path) {
     cur = cur[segs[i]]
   }
   if (cur !== null && typeof cur === "object") delete cur[segs[segs.length - 1]]
-}
-
-/** 深比较（档位判据用）：`thinkOffShape` 产出的小值域字面量（`null` / `{ type:"disabled" }`）
- *  与渠道条目现存记号逐值比——键序无关、容器逐层下钻。核未导出同名 helper ⇒ 端侧小工具
- *  （判据本体仍单源 = 核 `thinkOffShape`；不另立 off 形副本）。 */
-export function deepEqual(a, b) {
-  if (a === b) return true
-  if (a === null || b === null || typeof a !== "object" || typeof b !== "object") return false
-  if (Array.isArray(a) !== Array.isArray(b)) return false
-  const ka = Object.keys(a)
-  if (ka.length !== Object.keys(b).length) return false
-  return ka.every((k) => Object.prototype.hasOwnProperty.call(b, k) && deepEqual(a[k], b[k]))
 }

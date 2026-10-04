@@ -24,12 +24,12 @@ import { t } from "../i18n.mjs"
 import { THEMES } from "../theme.mjs"
 import { wire } from "./chat-tool.mjs"
 import { channelFormTree, verifyControl } from "./settings-controls.mjs"
-import { agentBody, envBody, mcpBody, modelBody, modelIdOf, modelsBody, providersBody, tierFace, toolsBody } from "./settings-sections.mjs"
+import { agentBody, envBody, mcpBody, modelBody, modelIdOf, modelsBody, providersBody, toolsBody } from "./settings-sections.mjs"
 
 // 两导出面随 R7 出档 `settings-controls.mjs`；本档 re-export ⇒ 导出面零改（消费面 = 首启向导）。
 export { channelFormTree, verifyControl } from "./settings-controls.mjs"
 
-/** 段闭集（序固定 = 渠道 → 模型与档位 → agent 参数 → MCP → 环境〔R7 增〕→ 工具与服务〔R2 增〕→
+/** 段闭集（序固定 = 渠道 → 模型 → agent 参数 → MCP → 环境〔R7 增〕→ 工具与服务〔R2 增〕→
  *  咨询与顾问〔R7 增〕；R7 终态枚举行「providers ∕ model ∕ agent ∕ mcp ＋ env ＋ tools ＋ models」同序）：
  *  名（`data-section`）+ 词键单源。 */
 export const SECTIONS = Object.freeze([
@@ -161,7 +161,6 @@ export function settingsModel(state) {
       current: typeof settings.model?.current === "string" ? settings.model.current : null,
       // #842：行保持带渠形（全渠扇出面 `{ provider, id }` 行穿透至视图——行自带渠；串行 / 无渠行 ⇒ `provider: null`）。
       models: listOf(settings.model?.models).map((row) => ({ id: modelIdOf(row), provider: str(row?.provider) })).filter((row) => row.id !== null),
-      tier: tierFace(settings),
     },
     agent: {
       state: stateOf(settings.agent),

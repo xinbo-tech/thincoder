@@ -10,7 +10,7 @@
  * （窄桥 ∕ 值面写入 ∕ 失败面归装配面，单一 owner —— 本档零副本、零 `store.mjs` 反向）。
  * 语义锚（`docs/desktop/design/IPC.md` §2 设置族注）：值面全经 store 纯动作落值（`patchSettings` → `store.set`）；
  * 写后回读；失败面零静默（核错误串直传，表内码出词归视图 `reasonWord`）；`options.models` 假 ⇒ **保留同渠道候选面**
- * （只刷行面 `effort` 现值 —— 档位写后刷新用，零候选清空）；无激活渠道 ⇒ **全渠扇出**（`model:catalog` ——
+ * （只复读渠行面 —— 零候选清空）；无激活渠道 ⇒ **全渠扇出**（`model:catalog` ——
  * 缺 `defaultModel` 态补设路径 · #842 ∥ `SETTINGS.md` §2.15：候选行 `{ provider, id }`，渠失败零行沿 catalog 口径）。
  * R7 两读数要点：`loadTools` 段态判据仍以**索引面**为准（R2 口径不动——`indexOk` 假 ⇒ 段归 `none`），
  * 两 key 面色随行渲染（各自失败另落 `report`）；`loadEnv` 的 `test` 结果 = 瞬时读数（复读保留原值）。
@@ -48,7 +48,7 @@ export function createReads(deps = {}) {
   const { ask, store, setSettings, report } = deps
 
   /** 渠道段读数（`provider:list`：预置表 + 已配行 + 激活渠道三项直取）⇒ 模型段随动（激活渠道候选面）。
-   *  `options.models` 假 ⇒ **保留同渠道候选面**（只刷行面 `effort` 现值 —— 档位写后刷新用，零候选清空）。 */
+    *  `options.models` 假 ⇒ **保留同渠道候选面**（只复读渠行面 —— 零候选清空）。 */
   async function loadProviders(options = {}) {
     setSettings({ providers: { ...store.get().settings?.providers, state: "loading" } })
     const receipt = await ask("provider:list")

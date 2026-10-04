@@ -1,7 +1,7 @@
 /**
  * mount-settings-exits.mjs — 设置面出口族 + 写路辅助（「桌面处理流 · VSC 对齐」批 R8 · 自
  * `renderer/mount-settings.mjs` 拆出 —— 300 行层拆分，零语义变化）：**本档直辖出口**（提交 ∕ 校验 ∕ 移除 ∕
- * 采用模型 ∕ 档位 ∕ 语言 ∕ 开合 ＋ Esc 关闭绑定）+ **四族出口工厂装配**（段 ∕ models ∕ 渠道 ∕ agent ——
+ * 采用模型 ∕ 语言 ∕ 开合 ＋ Esc 关闭绑定）+ **四族出口工厂装配**（段 ∕ models ∕ 渠道 ∕ agent ——
  * 本档装配合并，单一 `handlers` 表对外零改）。
  * **R7（桌面功能对位批）先拆后改**：MCP 增删 ∕ 索引构建三出口 + 新增段出口（env ∕ 两 key ∕ models ∕ MCP
  * 展开面）共**二十一**出口随族迁出（env ∕ 工具 ∕ MCP **十三** = `renderer/mount-settings-segments.mjs`；models 八 =
@@ -24,7 +24,7 @@
  * 渠道提交成功径同清**草稿专件** `providers.draft`（复位点表第五点 —— 现役注面 = `mount-settings-segments-providers.mjs` 档头）。**P14 出值规范化**（数值 ⇒ `Number(v)`〔空 / 非数 ⇒ 零发送〕· 布尔 ⇒ `.checked` · 串 ⇒ 原串；无效值 ⇒ 控件回退现值）· **P15 具名控件即改即存**（单键 patch 直发 —— 写路随 W3 迁 `mount-settings-segments-agent.mjs`）· **F-Esc 关面板**（Esc ⇒ 既有 `closeSettings` 出口，单一实现 —— 绑定宿主 = `document`）。
  * **D39（设置菜单升级批 · #817 ∥ KD-68）**：`resetFacets(state, group)` = 本组面态复位原语（modal 开 ∥ 关**限本组** —— 开 ∥ 关面整复位同源取用）；`closeSettings` 同拍清 `modal`；F-Esc 闸增 `modal != null` 守卫（弹窗体自持卡内 Esc —— 不连带关页）。
  * **#841（provider 态第三刷新点）**：设置写成功回执（`settings:agent` ∥ `provider:save`）携 `providerState` ⇒
- * 同写点落切片（`useModel` ∥ `setTier` ∥ `submitChannel` 三处；键缺席 ⇒ 零写）——设置面修好 `defaultModel`
+ * 同写点落切片（`useModel` ∥ `submitChannel` 两处；键缺席 ⇒ 零写）——设置面修好 `defaultModel`
  * 后输入区提示行即时退场；单源 = `docs/desktop/design/IPC.md` §2「provider 态投影注」项 3。
  * 纪律：零 `node:` / 零裸包 · 逐通道回执形单源 = IPC.md §2。
  */
@@ -143,21 +143,6 @@ export function createExits(deps = {}) {
     await loadProviders()
   }
 
-  /** 档位出口（`settings:agent` 写 · 意图级 `{ tier }`；`level` 非串 ⇒ **零发送**）：失败 ⇒ 段级失败面（**零乐观写** ——
-   *  控件值随读档面重绘回退回执前值）；成功 ⇒ 重取行面现值（候选面保留）。 */
-  async function setTier(provider, model, level) {
-    if (typeof level !== "string") return
-    const receipt = await ask("settings:agent", { tier: { provider, model, level } })
-    if (receipt.ok !== true) {
-      report("model", receipt, "settings:agent")
-      return
-    }
-    store.set(setProviderState(store.get(), receipt.providerState)) // #841：设置写回执 providerState 落切片（第三刷新点；键缺席 ⇒ 零写）
-    clearReport()
-    setSettings({ agent: { state: "ready", fields: listOf(receipt.fields) } })
-    await loadProviders({ models: false })
-  }
-
   /** 段出口族（env ∕ 工具与服务 ∕ MCP **十八**项 + models 八项 —— 合 **26**）随 R7 ∕ W3 迁 `mount-settings-segments.mjs` ∕
    *  `mount-settings-segments-models.mjs`（段出口族工厂 —— 共享项注入，本档零副本）；`formOf` 回注
    *  （单一 owner 在本档）；**#679**：`invalidateDrafts` 随注入（段族三径声明 —— MCP 增 ∕ 改 · tools 钥存 ∕ 删钥 · env shell）。 */
@@ -250,7 +235,6 @@ export function createExits(deps = {}) {
     onVerify: (name) => void verifyChannel(name),
     onRemoveProvider: (name) => void removeProvider(name),
     onUseModel: (provider, name) => void useModel(provider, name),
-    onTier: (provider, model, level) => void setTier(provider, model, level),
   }
 
   /** Esc 关闭（F-Esc —— 一律经既有 `closeSettings` 出口，单一实现；向导态不在本项）：**绑定宿主 = `document`**（面板为窗口级覆盖层
