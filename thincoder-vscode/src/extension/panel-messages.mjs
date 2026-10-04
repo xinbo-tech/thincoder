@@ -147,8 +147,8 @@ export async function routeUserTurn(panel, { text, modelOverride, reasoning, pro
   // #221（hygiene-sweep 批 · C-B2-6 细则①「归位受理路径同推队列实况」**前移**至此）：
   // 入口即推一次（含无工作区早退口与下方降级 await **之前**）——`pushBusyQueued` 恒读 host
   // 实况、幂等 ⇒ 前移零语义风险；原后置位（降级 await 之后）在挂起期镜像停在旧态（窗口内提交
-  // 被守卫误拒——窄竞态）。补因仍成立：webview 镜像在提交受理时本地先行自增，推文须含归位
-  // 路径（正常队空 ⇒ `count:0`；有残项 ⇒ 实况）。同点推的前移使原 :170 推冗余 ⇒ 删。
+  // 被守卫误拒——窄竞态）。补因改挂：镜像 = host 快照如实镜像（端侧零本地增量——提交受理时不改写）——
+  // 快照幂等 ⇒ 入口即推零副作用；镜像滞后窗 ⇒ 早推免挂起期守卫误拒；推文须含归位路径（正常队空 ⇒ `count:0`；有残项 ⇒ 实况）。同点推的前移使原 :170 推冗余 ⇒ 删。
   pushBusyQueued(panel)
   // ② 无工作区守卫（**先于** busy 与 `savePastedImages`——图片不落 `<cwd>/.thincoder/tmp/`）：
   // webview 发消息 / retry 共用本入口 ⇒ 无文件夹窗口里一律拒（提示明示——不静默丢）。

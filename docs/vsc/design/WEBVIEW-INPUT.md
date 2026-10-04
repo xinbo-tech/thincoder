@@ -28,7 +28,8 @@
   - ① 满队再提交（容量 8）= 拒绝 + 提示 + 文本保留——host 侧：`routeUserTurn` busy 分支队满（`count >= QUEUED_MAX_ITEMS`）⇒ 拒收 + 提示（`showWarningMessage`——外部入口兜底）；队内既有消息不被覆盖。
     **webview 守卫**（判据 / 状态清除时机 / 提示形三面）：
     · 判据 = `S._turnState === "running" && S._busyQueuedCount >= QUEUED_MAX_ITEMS`（8——核单源常量）⇒ 提交**不出泡 / 不清框** + toast（对位 CLI 满队面 = `thincoder-cli/src/tui/key-handler-busy.mjs`）；
-    · 判据源 = host 推送 `busyQueued { count }`（权威 = **队列实况**——两载体合计条数：`_busyQueued` ∪ `susp.pendingInput`；外部入口 Ask ThinCoder / retry 同面入队，webview 不自持真值）；镜像 `S._busyQueuedCount` 于提交受理时本地先行自增（`S._busyQueuedPending` = `count > 0` 保留），host 推送权威收敛；
+    · 判据源 = host 推送 `busyQueued { count }`（权威 = **队列实况**——两载体合计条数：`_busyQueued` ∪ `susp.pendingInput`；外部入口 Ask ThinCoder / retry 同面入队，webview 不自持真值）；镜像 `S._busyQueuedCount` = host 推送快照如实镜像（**端侧零本地增量**——提交受理时不改写；`S._busyQueuedPending` = `count > 0` 保留）；
+    满队门 = 该镜像计数如实直读（同 tick 空窗以宿主权威兜底——host 满队拒收 + `showWarningMessage` 提示）；
     · 状态清除时机 = **消费即清**——五个消费点（**步边界 pickup** / driver 步骤 1 / 装载① 预填 splice / 装载② 归位 shift / **会话退出残余直发循环**）后 host 推实况（`count` / `items` / `merged`）；忙分支每次判决后 host 推实际占用；`webviewReady` 握手重推（Reload 冷启重同步——对位 C-B2-5 握手先例）；
     · 提示形 = toast（既有机制）+ 键 `input.slotFull`（zh/en 逐字 = `WEBVIEW-PROTOCOL.md` §6.3——值改条数阈）；占位符零改。
   - ② **送达 = 四支（均既有通道）**——⓪ **步边界（主——用户回合在飞）**：核循环头投递回调（核 opts `consumeQueuedInput`）按计划取批
@@ -50,7 +51,7 @@
     A12/Stop 语义随迁（`panel._visionAbort` 定向中止；`_abortRequested` 置位序 = 呼叫 `runChat` 之后）；装载① 窗内 `_turnState` = susp（无 Stop 面——受读图 60s 超时约束）。
   - ⑦ **排队气泡「待发送」态 + 合并成形**（queue-visible 批 2026-09-24——会话流可见；多槽 / 合并 = 用户 03:01 裁定）：排队项**逐条**在其 user 气泡上带 `pending` 标记——标签行换 `⏳ ${t("queued.pending")}`（原文照常显示；类 `pending` 落 DOM = 机检把手；时间缺失不显示——同既有无 ts 纪律）。
     判据源 = host **队列快照** `busyQueued { pending, count, items, merged? }`（`items` = 队列**剩余**项原文——按队列序；`count` = 剩余条数；`merged` = 本批消费的合并文本——仅消费推送携；协议登记 = `WEBVIEW-PROTOCOL.md` §3 / §3.2 行 17）：
-    · **标记（三支判据序——收口轮补述）**：`items` 每条——① 已标记（`data-raw` 相等）⇒ 保持；② 未标记但存同文气泡（`data-raw` 相等，取末条）⇒ **就地标记**（不新建——冷启重放 / 回显入口免重复建泡；`thincoder-render-core/flow/queued-mark.mjs:97-98`）；③ 无同文气泡 ⇒ 新建 + 标记（原文 = 该项；`data-raw` 建面处随写）；本地提交路径出泡即标记（受理即反馈——本地先行置位、host 推送权威收敛）。
+    · **标记（三支判据序——收口轮补述）**：`items` 每条——① 已标记（`data-raw` 相等）⇒ 保持；② 未标记但存同文气泡（`data-raw` 相等，取末条）⇒ **就地标记**（不新建——冷启重放 / 回显入口免重复建泡；`thincoder-render-core/flow/queued-mark.mjs:97-98`）；③ 无同文气泡 ⇒ 新建 + 标记（原文 = 该项；`data-raw` 建面处随写）；本地提交路径出泡即标记（提交即反馈；host 推送快照对账收敛）。
     · **清标与合并**：`merged` 在场 ⇒ 若其文本恰等于某条已标记气泡的原文（**单条批**）⇒ 该气泡清标保留（气泡 = 回声面）；否则（**多条批**）⇒ 移除全部已标记气泡 + 追加一条**合并气泡**（文本 = `merged`——合并形态声明于核单源 `thincoder-core/queued.mjs`（VSC ∕ CLI 转口同一绑定）；转口档 = `thincoder-vscode/src/extension/queued-merge.mjs`（已落 · 实读 **11** · 内容行计——队列取项边缘收正批））。
     · **防悬空**：已标记气泡的原文 ∉ `items` 且非本批 `merged` ⇒ 移除（已被消费且无回声面）。
     · **推送点**：受理 / **五个消费点**（**步边界 pickup** · driver 步骤 1 · 装载① splice · 装载② shift · **会话退出残余直发循环**）/ 忙分支判决（`count` 实况）/ `webviewReady` 握手重推（Reload 冷启按 `items` 重建 N 气泡——幂等快照）。
@@ -254,3 +255,4 @@
 - 2026-10-01（**记录清账批 · 文档面收正轮 · eng-designer**——承 `docs/batches/2026-10-01-records-docs-reconcile.md` §2 · 台账 #696）：超宽表行断行收形 5 处（`:15` ∥ `:16` ∥ `:18` ∥ `:19` ∥ `:171`——表行续行拆分（空首列续行）——单行 ≤300 ∥ 内容逐字零改 ∥ 条目数不变）。**零新语义**（断行）。明细 = 批档 §2。
 - 2026-10-01（**记录清账批 · 修复轮（评审轮 1 · 发现 3——父侧采纳）· eng-designer**——承 `docs/batches/2026-10-01-records-docs-reconcile.md` §3 轮次 1）：C-B2-6 段续行重切 1 处（切点移至强调跨度闭合之后——原切点落跨度内部 ⇒ 两行未配对标记）；守恒 ∥ 单行 ≤300 ∥ 条目数不变 ∥ 重切 ±0 行。**零新语义**（断行）。明细 = 批档 §2。
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R3 裸名化（记录行两处短形引用去目录段——`panel.mjs` ∕ `atmenu.mjs`）。**零新语义**。
+- 2026-10-04（**排队守卫假满队修复批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-composer-queue-gate-stick.md` §1 ∥ §2 · 用户 13:09 直裁 · 台账 #911）：C-B2-6 细则① 判据源句收正（`S._busyQueuedCount` = host 快照如实镜像——**端侧零本地增量**；满队门 = 如实直读；同 tick 空窗以宿主权威兜底）；细则⑦ 标记句「本地先行置位」收正（提交即反馈；host 快照对账收敛）。**契约点 ∥ 判别式 ∥ 容量零变**。明细 = 批档 §2。

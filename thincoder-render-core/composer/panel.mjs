@@ -35,8 +35,8 @@
  * `setLoading()`（缺省 = 现刻 `isRunning`——VSC `panels.js:95,114` `setLoading(ctx, ctx.isRunning)` 同式）；
  * `workspaceGuard` 推送 ⇒ `applyBusyLock()`（VSC `chat-messages.js:99` 同式）。
  *
- * **拆分债注记**：本档 **489 行**（口径 = 内容行数（文末换行不计），同设计 §2.6 表头注）——越 300 顾问线（设计本批
- * 预估 ≈474；实读偏离 = 斜径面（⑥）新增注释面实量），距 500 硬限余 **11**；触发 = 越 500 前 ∕ 下次实质触碰；
+ * **拆分债注记**：本档 **486 行**（口径 = 总行数（末换行计一行，`read` 工具同源），同设计 §2.6 表头注）——越 300 顾问线（设计本批
+ * 预估 ≈474；实读偏离 = 斜径面（⑥）新增注释面实量），距 500 硬限余 **14**；触发 = 越 500 前 ∕ 下次实质触碰；
  * 候选拆分面 = 忙态派生段（`applyModelSwitchGate` ∕ `applyBusyLock` ∕ `setLoading`——`loading.js` 面）出档。
  *
  * 回合起点钩的相对序（对 VSC 逐行的唯一近似，见 `send.js:62-72`）：`onTurnStart` 置于 `setLoading` **之前**——
@@ -285,16 +285,13 @@ export function createComposerPanel(deps = {}) {
 
   // ── 提交面（`send.js` 逐字；DOM 查询 → 元素引用；跨面副作用 → ⑤ hooks）──
 
-  // 队列镜像（读面 = ③ `state.queue()`——"共享镜面"；本地先行增量 = 同 tick 二连 Enter 守卫，
-  // host 推送到达（权威值变化）即收敛——VSC `send.js:40` "本地先行自增 …… host 推送权威收敛" 同义）。
+  // 队列计数（读面 = ③ `state.queue()`——宿主镜像**如实单读**：端侧零影子态、零本地增量——提交受理时
+  // 不改写）。满队门 = 该计数直读（同 tick 空窗〔镜像未及更新〕以宿主权威兜底——宿主满队拒收回执
+  // `queue-full` ⇒ 端侧可见形在场：桌面失败行 ∥ VSC `showWarningMessage` + 重推实况）。
   // `_busyQueuedPending` 镜像位（VSC `send.js:41`）= 保留派生位（`state.js:130` 自注「保留字段」——
   // VSC 全树零读者）：端侧 queued-mark 面（`S` 镜像写者）照旧维护；核侧无消费点 ⇒ 不自持（禁假造）。
-  let _qHostSeen = null
-  let _qLocal = 0
   function queueCount() {
-    const n = state.queue?.()?.count ?? 0
-    if (n !== _qHostSeen) { _qHostSeen = n; _qLocal = 0 }
-    return n + _qLocal
+    return state.queue?.()?.count ?? 0
   }
 
   function send() {
@@ -320,14 +317,13 @@ export function createComposerPanel(deps = {}) {
     // （「待发送」态）+ `queuedUserMessage` 上行（host 队列两载体，容量 8；不 setLoading 不清面板
     // ——回合仍跑在既有流上）；回合态簿记（`_turnStart`）归下一回合起点——零触碰。
     if (busyState() === "running") {
-      // C-B2-6 细则① 二次提交守卫（fix 轮 2026-09-22 · queue-visible 批阈值收正 = 容量 8）：队列满
-      // （第 9 条——host 权威镜像）⇒ 提交不出泡 / 不清框 + toast
-      // （对位 CLI 满队面 = `thincoder-cli/src/tui/key-handler-busy.mjs`）。
+      // C-B2-6 细则① 二次提交守卫（fix 轮 2026-09-22 · queue-visible 批阈值收正 = 容量 8）：满队门
+      // = 镜像计数如实单读（同 tick 空窗以宿主权威兜底——宿主满队拒收回执 ⇒ 端侧可见形在场）
+      // ⇒ 提交不出泡 / 不清框 + toast（对位 CLI 满队面 = `thincoder-cli/src/tui/key-handler-busy.mjs`）。
       if (queueCount() >= QUEUED_MAX_ITEMS) {
         showToast(t("input.slotFull"))
         return
       }
-      _qLocal += 1 // 本地先行自增（受理即置——防同 tick 二连 Enter 竞态；host 推送权威收敛）
       const h = ctx._inputHistory
       if (h[h.length - 1] !== text) h.push(text) // dedupe consecutive repeats
       ctx._historyIdx = -1
