@@ -2,8 +2,9 @@
  * model-picker.mjs — /model two-level picker + provider management + session-slot model
  * selection（MODEL-MERGE-SESSION 拆分产物——/model 两级面自 pickers.mjs 迁出）。
  *
- * 语义（2026-09-10 MODEL-SELECTION v2）：selectModel 写**会话槽**（agent 内存态 + saveSession）——
- * 不写 config（/model 不再串扰全局默认——根治）。候选 = **运行期拉取**（`GET /models`——M2；
+ * 语义（2026-09-10 MODEL-SELECTION v2）：selectModel 写**会话槽**（agent 内存态 + saveSession）；
+ * 会话级模型面**实变** ⇒ 同拍写回 config.defaultModel（判据句 6——写面单点 = `config-helpers.mjs`
+ * `carryoverDefaultModel`；等值 ∕ 回声零写）。候选 = **运行期拉取**（`GET /models`——M2；
  * 拉到的行直接可选）；显式 `provider:model` 一律放行（M4——仅[空值/裸值/未知 provider]无效）。
  * 切换成功回显规格来源（M6）；渠道默认模型 = `providers[].model` 单值（M3——显示回退读取）。
  * 配置写入面（加渠道 / 设 key）探一次 `/models`（M9——探不通标「不可用」+ 明示原因，不阻断保存）。
@@ -15,7 +16,8 @@
  */
 import { sliceByWidth } from "./render.mjs"
 import { providerSpec, specMatch } from "@thincoder/core/config.mjs"
-import { saveSession } from "@thincoder/core/session.mjs"
+import { saveSession, loadSlotFile } from "@thincoder/core/session.mjs"
+import { carryoverDefaultModel } from "./config-helpers.mjs"
 import { getProviderModels, modelListFailureText, dedupeModels } from "./model-catalog.mjs"
 import { createProviderAdmin } from "./provider-admin.mjs"
 
@@ -218,7 +220,8 @@ export function createModelPicker(ctx) {
     return entries
   }
 
-  /** F-3 /model 纯会话级：写槽（agent 内存态 + saveSession）——绝不写 config。
+  /** F-3 /model 会话级：写槽（agent 内存态 + saveSession）；选定实变 ⇒ 同拍写回
+   *  config.defaultModel（判据句 6——新会话起点随动；等值 ∕ 回声零写；写回失败不反扑会话写、记错零静默）。
    *  放行语义（M4）：仅未知 provider 拒——显式 p:m 一律放行（候选外/多冒号不再拒）。 */
   async function selectModel(item) {
     closePicker()
@@ -229,7 +232,9 @@ export function createModelPicker(ctx) {
     if (!item.model) {
       throw new Error(`Missing model name for provider: ${item.provider}`)
     }
-    // 内存态（agent 会话运行时）——不触碰 config
+    // 写前读：槽复合基线（判据句 6 实变单元——档缺 ⇒ null；`_slot` 未钉 ⇒ 无槽面）
+    const slotBefore = agent._slot == null ? null : loadSlotFile(agent.cwd, agent._slot)
+    // 内存态（agent 会话运行时）——config 写仅经写回单点（下方实变节）
     agent.activeProvider = target.name
     agent.activeModel = item.model
     agent.provider = { ...target }
@@ -238,8 +243,12 @@ export function createModelPicker(ctx) {
       const { resolveCompactThreshold } = await import("@thincoder/core/config.mjs")
       agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
     }
-    // 写会话槽（saveSession——槽双字段恒非空）——config 文件零写
+    // 写会话槽（saveSession——槽双字段恒非空）——写回单点在其后（槽先配置后）
     saveSession(agent)
+    // 选定写回（判据句 6——定序槽先配置后；失败不反扑会话写、记错零静默）
+    const carried = await carryoverDefaultModel({ provider: target.name, model: item.model, slotBefore })
+    if (carried.ok !== true) console.error(`[model] default model carryover failed: ${carried.reason}`)
+    else if (carried.written === true && agent.config) agent.config.defaultModel = `${target.name}:${item.model}` // 内存镜像（/config 显示面新鲜——wizard.mjs:210-211 先例）
     // M6 切换回显：规格来源一行（DEFAULT 兜底 → 警示色 + /config 提示）
     const { matched } = specMatch(agent.provider.model)
     const spec = providerSpec(agent.provider)

@@ -1,6 +1,7 @@
 /** persistRaw / syncProviderField / maskKey: config read/write helpers.
  *  Extracted from index.mjs for shared use by slash-commands, wizard, and pickers.
- *  createConfigHelpers(agent) returns { persistRaw, syncProviderField, maskKey }
+ *  createConfigHelpers(agent) returns { persistRaw, syncProviderField, maskKey }；模块级另导出
+ *  carryoverDefaultModel（会话选定写回单点——SESSION.md §6.21 判据句 6；见下方定义）。
  *  R10 F5（D-F5b）：persistRaw 全链（磁盘新鲜读→mutate→写）收口进 config.mjs
  *  writeConfigAtomic——mtime 门控 + .bak + 冲突放弃（见 MULTI-INSTANCE-COLLAB.md §2a.2）。
  *  createConfigHelpers(agent, opts)：opts.configPath 为测试注入缝（默认 configPath——
@@ -43,4 +44,36 @@ export function createConfigHelpers(agent, opts = {}) {
   }
 
   return { persistRaw, syncProviderField, maskKey }
+}
+
+/** 会话选定写回单点（SESSION.md §6.21 判据句 6——用户显式选定 ⇒ 同拍写回 config.defaultModel
+ *  = "<provider>:<model>"；新会话起点随用户最后一次显式选择）。门内聚于本单点（KD-883-1——
+ *  call-site 零判据、零复合串）：
+ *  ① 槽面实变门：slotBefore 复合串 = 选定复合 ⇒ 零写（回声 ∕ 重选——系统同步不劫持全局默认）；
+ *  ② 等值门：现值 `loadConfig().defaultModel` 同串 ⇒ 零写（防盘面抖动 ∥ 探针空转）。
+ *  写经核 `writeConfigAtomic` + `_configPath()`（mtime 门控 + `.bak` 现场）；失败不反扑会话写、
+ *  绝不抛出——畸形档 ∥ 写错误 ⇒ `{ ok:false, reason }`。返回 `{ ok:true, written:boolean }`。 */
+export async function carryoverDefaultModel({ provider, model, slotBefore = null } = {}) {
+  const composite = compositeOf(provider, model)
+  if (composite === null) return { ok: false, reason: "invalid model reference — expected provider:model" }
+  try {
+    const { loadConfig } = await import("@thincoder/core/config.mjs")
+    const { writeConfigAtomic, _configPath } = await import("@thincoder/core/config-io.mjs")
+    const before = compositeOf(slotBefore?.activeProvider, slotBefore?.activeModel)
+    if (before === composite) return { ok: true, written: false } // ① 槽面实变门（档缺 ⇒ null ⇒ 判真）
+    if (loadConfig().defaultModel === composite) return { ok: true, written: false } // ② 等值门
+    const r = writeConfigAtomic(_configPath(), (raw) => { raw.defaultModel = composite })
+    if (!r.ok) return { ok: false, reason: r.reason }
+    return { ok: true, written: true }
+  } catch (error) {
+    return { ok: false, reason: error?.message ?? String(error) }
+  }
+}
+
+/** 复合串（比较单元构造单源——首冒号分割语义 = parseModelRef 同族）：双段非空 ⇒
+ *  "provider:model"；档缺 ∕ 半缺 ⇒ null（无基线——不参与相等判定）。 */
+function compositeOf(provider, model) {
+  const p = typeof provider === "string" && provider ? provider : null
+  const m = typeof model === "string" && model ? model : null
+  return p && m ? `${p}:${m}` : null
 }

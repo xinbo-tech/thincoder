@@ -345,6 +345,13 @@ export function pushStatus(panel) {
 let _lastModelsPayload = []
 export function lastModelsPayload() { return _lastModelsPayload }
 
+// #883（SESSION.md §6.21 判据句 6 · WEBVIEW.md §4.10）：最近下发 prefs 复合簿记——boot 播种
+// 回声门的判零源（无槽复合 ⇒ workspaceState prefs 兜底随 `models` 下发 ⇒ webview 侧
+// `applyModels` 命中即自动回写 `selectModel`；写回单点以本簿记判零——系统播种不劫持全局
+// 默认）。沿 `_lastModelsPayload` 先例——extension 进程内；无复合（半缺）⇒ null。
+let _lastPushedPrefs = null
+export function lastPushedPrefs() { return _lastPushedPrefs }
+
 // 渠道准入探针窗口族（F-W19 · §2.12）已外提 `provider-probe-window.mjs`（N-P3 体量拆分）——
 // `fullStatus` 经 `_probeWindow` / `_probeBatch` / `_retryFailed` 驱动之；对外缝由本档 re-export。
 export { endProbeWindow, _resetProbeWindowsForTest, _setProbeRetryDelayForTest } from "./provider-probe-window.mjs"
@@ -376,6 +383,10 @@ export async function fullStatus(panel, workspaceState, pushSessionsFn, prefsOve
     // prefsOverride 传入——打开/切换后下拉跟随本会话）；无槽复合（新会话）→ 文件夹级
     // workspaceState prefs 兜底（最近使用——/new 沿用当前语义）
     const prefs = prefsOverride ?? loadModelPrefs(workspaceState)
+    // #883：簿记本次下发 prefs 复合（boot 播种回声门的判零源——写回单点第三门读值）
+    _lastPushedPrefs = typeof prefs?.provider === "string" && prefs.provider && typeof prefs?.model === "string" && prefs.model
+      ? `${prefs.provider}:${prefs.model}`
+      : null
     pushStatus(panel) // 准入展示态已更新（M9）——状态行重推（webview 按变更重渲染）
     // `unavailable` = 拉取失败渠道的诊断载荷（{ provider, reason }[]）——UI 面失败原因经
     // providerStatus 行（`不可用` / `宿主繁忙` + .prov-hint 渲染失败消息本体）；本字段供测试与排障

@@ -45,7 +45,7 @@ export async function chatCommand(args, ctx) {
   }
   if (headlessCfg.providerState === "fallback" && agent.provider?.name) {
     const m = typeof agent.provider.model === "string" && agent.provider.model ? `:${agent.provider.model}` : ""
-    console.error(`尚未设置默认模型：本次使用 \`${agent.provider.name}${m}\`——/config → 默认模型 设置一次；/model 仅改本会话`)
+    console.error(`尚未设置默认模型：本次使用 \`${agent.provider.name}${m}\`——/config → 默认模型 设置一次（或 /model 选定即成为默认模型）`)
   }
   if (!agent.provider.apiKey) {
     if (!process.stdin.isTTY) {

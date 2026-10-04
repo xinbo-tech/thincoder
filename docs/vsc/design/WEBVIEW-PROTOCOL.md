@@ -517,7 +517,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `saveProxySettings` | webview/settings-env.js:113 | src/extension/panel-messages.mjs:351 | `活` | 载荷 = 逐字段（`SETTINGS.md` §2.8） |
 | `saveShellSettings` | webview/settings-env.js:129/:144 | src/extension/panel-messages.mjs:350 | `活` | F-W11 接线落地（`SETTINGS.md` §2.9）；空值 ⇒ 删键 = 路径册 #2（`System default` 显式项） |
 | `saveWebsearchKey` | webview/settings-tools.js:36 | src/extension/panel-messages.mjs:288 | `活` | — |
-| `selectModel` | webview/input.js:31 | src/extension/panel-messages.mjs:212 | `活` | 忙态门（F-W14）同点 |
+| `selectModel` | webview/input.js:31 | src/extension/panel-messages.mjs:229 | `活` | 忙态门（F-W14）同点（会话选定写回 —— `WEBVIEW.md` §4.10） |
 | `selectReasoning` | webview/input.js:32 | src/extension/panel-messages.mjs:239 | `活` | 忙态门（F-W14）同点 |
 | `setAdvisorGuard` | webview/input.js:37/webview/settings-agent.js:167 | src/extension/panel-messages.mjs:346 | `活` | — |
 | `setAutoApprove` | webview/input.js:36 | src/extension/panel-messages.mjs:267 | `活` | — |

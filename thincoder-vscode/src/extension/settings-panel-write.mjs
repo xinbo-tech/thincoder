@@ -4,6 +4,8 @@
  * 纯 Node——无 vscode import——单测可在 extension host 外运行。
  * 面板写面 = saveAgentSettingsFromPanel（agent.* + defaultModel 顶层单写通道）+
  * saveShellSettingsFromPanel；
+ * 会话选定写回单点 = carryoverDefaultModel（SESSION.md §6.21 判据句 6——选定实变 ⇒ defaultModel
+ * 同拍写回；端侧契约 = WEBVIEW.md §4.10）；
  * 写盘通道 = `vscPersistRaw`（核 persistRaw + 本端 `$schema` 指针注入——CORE-UNIFICATION
  * §2.13.3 `opts.schema` 缝；本端直写面统一经此）。
  */
@@ -181,4 +183,37 @@ export function saveShellSettingsFromPanel(value) {
     else raw.shell = v
   })
   return conflictError(r)
+}
+
+/** 会话选定写回单点（VSC 端；判据单源 = SESSION.md §6.21 判据句 6；端侧契约 = WEBVIEW.md §4.10）。
+ *  门内聚于本单点（KD-883-1——call-site 零判据、零复合串）：
+ *  ① 槽面实变门：slotBefore 复合串 = 选定复合 ⇒ 零写（回声 ∕ 重选——系统同步不劫持全局默认）；
+ *  ② 播种回声门：槽基线档缺 ∧ 选定复合命中宿主簿记（`lastPushedPrefs` = 最近下发 prefs 复合——
+ *     推送点 `settings.mjs` 记录）⇒ 零写回（boot 播种自动回写不劫持全局默认）；
+ *  ③ 等值门：现值 `loadRaw().defaultModel` 同串 ⇒ 零写（防盘面抖动 ∥ 探针空转）。
+ *  写经 `vscPersistRaw`（`$schema` 注入保持）；写后探复用 `probeDefaultModelChannel`（M9 同律）；
+ *  失败不反扑槽写、绝不抛出——畸形档 ∥ 写错误 ⇒ `{ ok:false, reason }`。返回 `{ ok:true, written:boolean }`。 */
+export function carryoverDefaultModel({ provider, model, slotBefore = null, lastPushedPrefs = null } = {}) {
+  const composite = compositeOf(provider, model)
+  if (composite === null) return { ok: false, reason: "invalid model reference — expected provider:model" }
+  try {
+    const before = compositeOf(slotBefore?.activeProvider, slotBefore?.activeModel)
+    if (before === composite) return { ok: true, written: false } // ① 槽面实变门（档缺 ⇒ null ⇒ 判真）
+    if (before === null && lastPushedPrefs === composite) return { ok: true, written: false } // ② 播种回声门
+    if (loadRaw().defaultModel === composite) return { ok: true, written: false } // ③ 等值门
+    const r = vscPersistRaw((raw) => { raw.defaultModel = composite })
+    if (!r.ok) return { ok: false, reason: r.reason }
+    probeDefaultModelChannel(composite)
+    return { ok: true, written: true }
+  } catch (error) {
+    return { ok: false, reason: error?.message ?? String(error) }
+  }
+}
+
+/** 复合串（比较单元构造单源——首冒号分割语义 = parseModelRef 同族）：双段非空 ⇒
+ *  "provider:model"；档缺 ∕ 半缺 ⇒ null（无基线——不参与相等判定）。 */
+function compositeOf(provider, model) {
+  const p = typeof provider === "string" && provider ? provider : null
+  const m = typeof model === "string" && model ? model : null
+  return p && m ? `${p}:${m}` : null
 }

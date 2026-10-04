@@ -68,7 +68,7 @@ export async function promptProviderIfInvalid(agent, openModelPicker, pushLine) 
     await openModelPicker()
     if (!agent.provider) {
       // D-S2 取消提示（#841 措辞收正 = 渠道 ∕ 密钥——配置入口 /config）
-      pushLine("未配置有效渠道（渠道 ∥ 密钥缺位）：/config 设置渠道与密钥；/model 仅改本会话", C.warn)
+      pushLine("未配置有效渠道（渠道 ∥ 密钥缺位）：/config 设置渠道与密钥；/model 选定后本会话生效并成为默认模型", C.warn)
     }
     return true
   }
@@ -76,7 +76,7 @@ export async function promptProviderIfInvalid(agent, openModelPicker, pushLine) 
     const name = agent.provider?.name
     if (name) {
       const model = typeof agent.provider.model === "string" && agent.provider.model ? agent.provider.model : null
-      pushLine(`尚未设置默认模型：本次使用 \`${name}${model ? `:${model}` : ""}\`——/config → 默认模型 设置一次；/model 仅改本会话`, C.warn)
+      pushLine(`尚未设置默认模型：本次使用 \`${name}${model ? `:${model}` : ""}\`——/config → 默认模型 设置一次（或 /model 选定即成为默认模型）`, C.warn)
     }
     return false
   }

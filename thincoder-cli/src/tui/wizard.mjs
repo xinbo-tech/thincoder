@@ -162,7 +162,7 @@ export function createWizard(ctx) {
     state.wizard = null
     // MODEL-MERGE-SESSION 引导 A（F-6）：有 provider 但 defaultModel 未设时指引 /config 入口
     const hint = (agent.providers?.length ?? 0) > 0 && !agent.config?.defaultModel
-      ? "Skipped initial setup. 已配置渠道但 config.defaultModel 未设——新会话无起点：/config → 默认模型 设置一次（或 /model 仅改本会话）。"
+      ? "Skipped initial setup. 已配置渠道但 config.defaultModel 未设——新会话无起点：/config → 默认模型 设置一次（或 /model 选定即成为默认模型）。"
       : "Skipped initial setup. Use /model to add providers and configure API keys anytime."
     pushLine(hint, C.dim)
     render()

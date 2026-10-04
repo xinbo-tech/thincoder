@@ -5,7 +5,8 @@ import { parseModelRef } from "@thincoder/core/config.mjs"
  *  `/model <provider>:<model>`（MODEL-MERGE-SESSION——裁定③：裸 provider 拒——显式 p:m；
  *  MODEL-SELECTION v2：显式复合一律放行——仅[空值/裸值/未知 provider]无效（M4），候选清单
  *  由运行期拉取决定——不再有成员校验）。
- *  /model 是会话级操作（写槽——不写 config）——config 默认模型走 /config → 默认模型。
+ *  /model 是会话级操作（写槽）——选定实变即同拍写回 config.defaultModel（判据句 6——新会话
+ *  起点随动）。config 默认模型显式设置走 /config → 默认模型。
  *  ctx: { agent, openModelPicker, selectModel, pushLine } */
 export async function handleModelCommand(ctx, args = []) {
   const raw = args[0]?.trim()
@@ -18,7 +19,7 @@ export async function handleModelCommand(ctx, args = []) {
   const parsed = parseModelRef(raw, ctx.agent.providers)
   if (!parsed.ok) {
     ctx.pushLine(`[error] ${parsed.reason}`, C.error)
-    ctx.pushLine(`/model 用法: /model provider:model（会话级——config 默认走 /config → 默认模型）`, C.dim)
+    ctx.pushLine(`/model 用法: /model provider:model（会话级——选定即成为默认模型）`, C.dim)
     return
   }
   await ctx.selectModel({ provider: parsed.provider.name, model: parsed.model }).catch((e) => ctx.pushLine(`[error] ${e.message}`, C.error))

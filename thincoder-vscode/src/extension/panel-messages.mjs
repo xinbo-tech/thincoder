@@ -5,7 +5,8 @@
 import * as vscode from "vscode"
 import { loadLocaleStrings } from "../i18n.mjs"
 import { saveModelPrefs, loadSlot } from "./session-io.mjs"
-import { agentSettings } from "./settings.mjs"
+import { agentSettings, lastPushedPrefs } from "./settings.mjs"
+import { carryoverDefaultModel } from "./settings-panel-write.mjs"
 import { openSessionContent } from "./panel-session.mjs"
 // B2（SESSION-FLOW-B——2026-09-09）：panel-messages ↔ panel-session 环 import（panel-session
 // 头部 import 本文件 _cwd）——openSessionContent 只在 webviewReady case 函数体内使用（延迟
@@ -228,10 +229,11 @@ export async function handlePanelMessage(panel, msg) {
       break
     case "selectModel": {
       // MODEL-SELECTION：模型选择 = 会话级——workspaceState prefs 保留 UI 态 + 写当前
-      // 会话槽（saveLines 通道带 activeModel——槽播种——CLI resume/下回合恢复读槽——F-4）；
-      // selectProviderModel（config 写路径）已退役——选择不再串扰 config 全局。会话槽模型
-      // 双端自由（applySession 槽值权威）；候选行 = 运行期 `/models` 拉取（settings.mjs
-      // fullStatus——无静态候选；显式 p:m 一律放行——R4）。
+      // 会话槽（saveLines 通道带 activeModel——槽播种——CLI resume/下回合恢复读槽——F-4）。
+      // 选定实变（槽面复合变化）⇒ 同拍写回 config.defaultModel（判据句 6——写面单点 =
+      // `settings-panel-write.mjs` `carryoverDefaultModel`；等值 ∥ 回声零写；失败不反扑）。
+      // 旧 selectProviderModel 路径不复活。会话槽模型双端自由（applySession 槽值权威）；
+      // 候选行 = 运行期 `/models` 拉取（settings.mjs fullStatus——无静态候选；显式 p:m 一律放行——R4）。
       const prefs = panel._loadModelPrefs()
       prefs.model = msg.model
       prefs.provider = msg.provider || ""
@@ -240,12 +242,18 @@ export async function handlePanelMessage(panel, msg) {
         try {
           const slot = panel._ensureSlot()
           // F-MI7 空槽短路（§6.15 零探测冷路径）：未解析窗口 ⇒ 跳过槽写——prefs 已写 ✓，
-          // 会话槽的 activeProvider/activeModel 播种随下次 ensureSlot 收敛后经 saveLines 落盘。
+          // 会话槽的 activeProvider/activeModel 播种随下次 ensureSlot 收敛后经 saveLines 落盘
+          // （无槽面 ⇒ 选定写回同判零——边界表「槽写未发生」行）。
           if (slot == null) break
           const cwd = _cwd()
-          const data = loadSlot(cwd, slot) ?? { history: [], contextHistory: [] }
+          const slotBefore = loadSlot(cwd, slot) // 写前读：槽复合基线（判据句 6 实变单元；档缺 ⇒ null）
+          const data = slotBefore ?? { history: [], contextHistory: [] }
           // 全量保存通道（saveLines——existing 往返字段保全）——只翻 activeProvider/activeModel
           panel._saveLines(data.history ?? [], data.contextHistory ?? [], { activeProvider: msg.provider, activeModel: msg.model }, slot)
+          // 选定写回（定序 = 槽先配置后；宿主簿记入播种回声门；失败不反扑槽写、记错零静默）
+          const carried = carryoverDefaultModel({ provider: msg.provider, model: msg.model, slotBefore, lastPushedPrefs: lastPushedPrefs() })
+          if (carried.ok !== true) console.error(`[chat-panel] default model carryover failed: ${carried.reason}`)
+          else if (carried.written === true) panel._pushStatus() // 第四刷新点：providerStatus 重推（fallback 横幅即时退场——#841 同判）
           panel._pushSessions() // 会话列表摘要（p:m）随选随新
         } catch (e) {
           console.error("[chat-panel] selectModel slot write failed:", e.message)
