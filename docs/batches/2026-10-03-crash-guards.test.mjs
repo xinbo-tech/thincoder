@@ -140,25 +140,28 @@ test("T6（#16 sse 点位）readSSE 假响应 + mock timers 前推 120s ⇒ 进�
   await assert.rejects(p, (e) => e?.abortInfo?.detail === "sse-idle" && /SSE idle timeout/.test(e.message))
 })
 
-test("T7（#16 google 点位）chat() 桩 fetch + mock timers 前推 120s ⇒ 进程存活 ∥ partial 保留径零变", async (t) => {
+test("T7（#16 google 点位 · 断代重锚 2026-10-04）chat() 桩 fetch（signal 合成 → body 终止）+ mock timers 前推 120s ⇒ 无内容 idle ⇒ 超时错误（google-sse-idle）", async (t) => {
+  // 断代注（父侧 2026-10-04 · 台账 #897）：本腿原钉「idle ⇒ resolve 空结果」旧形——经 #878 收正
+  // （无内容 ⇒ 超时错误）+ 直连 fetch 断流改经 IDLE_ABORT 通道（`proxy.mjs:271-274`）；原桩不认
+  // signal ⇒ 读循环悬挂（settle 不到）——本重锚补：桩按 native 语义接线（abort ⇒ body 以 reason 终止）。
   t.mock.timers.enable({ apis: ["setTimeout"] })
   const { chat } = await import(MOD.google)
   const body = new PassThrough()
+  body.on("error", () => {}) // native 等价：读循环持有者收 reason；未消费窗口不逃逸
   const origFetch = globalThis.fetch
-  globalThis.fetch = async () => ({ ok: true, status: 200, headers: new Headers({ "content-type": "text/event-stream" }), body, text: async () => "" })
+  globalThis.fetch = async (_url, init = {}) => {
+    if (init?.signal) init.signal.addEventListener("abort", () => { try { body.destroy(init.signal.reason) } catch { /* gone */ } })
+    return { ok: true, status: 200, headers: new Headers({ "content-type": "text/event-stream" }), body, text: async () => "" }
+  }
   try {
     const provider = { baseURL: "https://generativelanguage.googleapis.com/v1beta", model: "gemini-2.0-flash", apiKey: "test-key" }
     const p = chat(provider, { messages: [{ role: "user", content: "hi" }] })
     let settled = false
     const outcome = p.then((v) => { settled = true; return v }, (e) => { settled = true; throw e })
+    outcome.catch(() => {}) // 防未处理拒绝窗口（assert.rejects 在 tick 循环后才挂载——node:test 会把窗口内拒绝直报）
     for (let i = 0; i < 40 && !settled; i++) { t.mock.timers.tick(120_000); await delay(25) }
     assert.ok(settled, "idle 定时器未触达（120s 前推未生效）")
-    const result = await outcome // settle = resolve（partial 保留径；若走 throw 径则此处即 reject 红）
-    // 注：chat() 返回形 = {content, reasoning, toolCalls}（内部 partial 标志不过 chat 边界——实读 google.mjs:147）
-    assert.deepEqual(
-      { content: result.content, reasoning: result.reasoning, toolCalls: result.toolCalls },
-      { content: "", reasoning: "", toolCalls: [] },
-    )
+    await assert.rejects(outcome, (e) => e?.abortInfo?.detail === "google-sse-idle" && /SSE idle timeout/.test(e.message), "新形：无内容 idle ⇒ 超时错误（google-sse-idle）——旧「resolve 空结果」形随 #878 退场")
   } finally {
     globalThis.fetch = origFetch
   }

@@ -530,8 +530,8 @@ test("⑬ #541 end 帧尾臂：携 cap ⇒ 组驻留 ∧ 计数行 = digest.done
 // ─── ⑭ #541 样式臂 ──────────────────────────────────────────────────────────
 test("⑭ #541 样式臂：chat.css 两规则在盘（值面对位）", () => {
   const css = read("renderer/chat.css")
-  assert.match(css, /\.chat-digest \.digest-cap \{[^}]*color: var\(--fg-muted\);[^}]*\}/, "基规则：`.chat-digest .digest-cap`（--fg-muted）")
-  assert.match(css, /\.digest-cap\.digest-cap-stop \{[^}]*color: var\(--warn\);[^}]*\}/, "stop 档规则：`.digest-cap.digest-cap-stop`（--warn）")
+  assert.match(css, /\.chat-digest\.digest-cap \{[^}]*color: var\(--fg-muted\);[^}]*\}/, "基规则：`.chat-digest.digest-cap`（--fg-muted；选择器拼写随收正——父侧重锚 2026-10-04）")
+  assert.match(css, /\.chat-digest\.digest-cap-stop \{[^}]*color: var\(--warn\);[^}]*\}/, "stop 档规则：`.chat-digest.digest-cap-stop`（--warn；同上随正）")
   const theme = read("renderer/theme.css")
   assert.ok(theme.includes("--fg-muted:") && theme.includes("--warn:"), "角色对位两值在册（theme.css）")
   out("⑭ #541 样式", "两规则在盘（--fg-muted ∕ --warn）✓")

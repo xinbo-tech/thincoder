@@ -114,8 +114,8 @@ test("①B 通道四件套一致（结构机检：白名单 ↔ 注册表 ↔ �
   const require = createRequire(import.meta.url)
   const preload = require(resolve(ROOT, "thincoder-desktop/src/preload/preload.cjs"))
   const channels = [...preload.CHANNELS]
-  assert.equal(channels.length, 45, "白名单 38 ⇒ 39 ⇒ 43 ⇒ 45（B10 W2/W3 随动——父侧）")
-  assert.equal(channels[channels.length - 1], "mcp:reconnect", "定序末位")
+  assert.equal(channels.length, 48, "白名单 38 ⇒ 39 ⇒ 43 ⇒ 45 ⇒ 48（B10 W2/W3 随动 ∥ 后增三 = record:append ∥ theme:state ∥ panel:state——父侧重锚 2026-10-04）")
+  assert.equal(channels[channels.length - 1], "panel:state", "定序末位（后增三之末——子代理面板批）")
   const registry = readFileSync(resolve(ROOT, "thincoder-desktop/src/main/ipc-registry.mjs"), "utf8")
   const head = registry.indexOf("const HANDLERS = Object.freeze({")
   const rows = [...registry.slice(head, registry.indexOf("\n})", head)).matchAll(/^\s{2}"([^"]+)":\s*([A-Za-z_$][\w$]*),/gm)].map((match) => ({ channel: match[1], handler: match[2] }))

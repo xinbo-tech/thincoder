@@ -1,6 +1,6 @@
 /**
  * 2026-09-29-parity-b8-ipc.test.mjs — 批次本地单测件（parity-b8-ipc · A 舱 W1：宿主事件键面 A2–A6 · eng-coder）。
- * 运行（仓根）：node --import ./thincoder-desktop/test/rc-resolve.mjs --test docs/batches/2026-09-29-parity-b8-ipc.test.mjs
+ * 运行（仓根）：node --test docs/batches/2026-09-29-parity-b8-ipc.test.mjs（`/rc/` 解析钩子 = 件内 import rc-resolve——父侧重锚 2026-10-04；原 `--import` 命令行形随批内件模型换代）
  * （本刻暂存 `.thincoder/tmp/2026-09-29-parity-b8-ipc.test.mjs` 同名件——两层深 ⇒ 相对 import 与终位一致；
  *  子代理写 `docs/batches/*.test.mjs` 被写门拒〔台账 #545〕——父侧 copy 至终位即运行命令同一）
  * 覆盖（设计 = `docs/batches/2026-09-29-parity-b8-ipc.md` §2.5 测试面 ①②③④⑤）：
@@ -18,6 +18,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
+import "../../thincoder-desktop/test/rc-resolve.mjs" // `/rc/` 解析钩子（须先于任何 /rc/ 取件注册）
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = join(here, "..", "..") // 仓根（docs/batches 两层深；`.thincoder/tmp` 暂存期同深 ⇒ 相对面一致）
@@ -37,20 +38,20 @@ test("① CHANNELS ⇔ HANDLERS 两向相等（白名单单源零副本）", () 
   const rows = [...registry.slice(head, registry.indexOf("\n})", head)).matchAll(/^\s{2}"([^"]+)":\s*([A-Za-z_$][\w$]*),/gm)]
   assert.deepEqual(rows.map((row) => row[1]).sort(), [...channels].sort(), "白名单 ↔ 注册表逐项一致（两向）")
   assert.equal(rows.length, channels.length, "两向计数相等")
-  // 实读定格 = 45（39 + B10 W2 设置面四增 `provider:setKey` ∕ `delKey` ∕ `models` ∕ `setProxy` + W3 两增 `mcp:update` ∕ `mcp:reconnect` —— 定序末位；随动 = 父侧 2026-09-29）
-  assert.equal(channels.length, 45, "白名单实读计数")
-  assert.equal(channels[channels.length - 1], "mcp:reconnect", "定序末位")
+  // 实读定格 = 48（45 + 后增三 = `record:append` ∥ `theme:state` ∥ `panel:state` —— 定序末位；前链 45 = 39 + B10 W2 设置面四增 ∕ W3 两增；随动 = 父侧重锚 2026-10-04）
+  assert.equal(channels.length, 48, "白名单实读计数")
+  assert.equal(channels[channels.length - 1], "panel:state", "定序末位（后增三之末）")
   assert.equal(new Set(channels).size, channels.length, "白名单零重复项")
 })
 
-// ─── ② 事件面逐名：EVENT_CHANNELS 二十三通道 ────────────────────────────────
+// ─── ② 事件面逐名：EVENT_CHANNELS 二十四通道 ────────────────────────────────
 
-test("② EVENT_CHANNELS 二十三通道逐名（定序）", () => {
+test("② EVENT_CHANNELS 二十四通道逐名（定序）", () => {
   const preload = require(join(root, "thincoder-desktop/src/preload/preload.cjs"))
   assert.deepEqual([...preload.EVENT_CHANNELS], [
     "ev:token", "ev:reasoning", "ev:activity", "ev:subagent", "ev:subchunk", "ev:tool-call", "ev:tool-output", "ev:tool-result",
     "ev:approval", "ev:question", "ev:task", "ev:susp", "ev:digest", "ev:usage", "ev:error", "ev:ledger", "ev:timer",
-    "ev:queue", "ev:flags", "ev:statusText", "ev:compress", "ev:goal", "ev:config",
+    "ev:queue", "ev:flags", "ev:statusText", "ev:compress", "ev:goal", "ev:config", "ev:menu",
   ])
 })
 

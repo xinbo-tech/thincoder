@@ -272,7 +272,7 @@ test("L640-X 扩展侧源锁（文本锁）：发射全 8 处经助手 ∕ 零 t
   const settingsMjs = src("thincoder-vscode/src/extension/settings.mjs")
   const chatMessages = src("thincoder-vscode/webview/chat-messages.js")
   assert.equal((mcp.match(/postProviderError\(panel,/g) ?? []).length, 4, "panel-mcp 四站点经助手")
-  assert.equal((msgs.match(/postProviderError\(panel,/g) ?? []).length, 4, "panel-messages-settings 四站点经助手")
+  assert.equal((msgs.match(/postProviderError\(panel,/g) ?? []).length, 15, "panel-messages-settings 十五站点经助手（原四——后增随动；父侧重锚 2026-10-04）")
   assert.equal((mcp.match(/"providerError"/g) ?? []).length, 0, "panel-mcp 零载荷字面残留")
   assert.equal((msgs.match(/"providerError"/g) ?? []).length, 0, "panel-messages-settings 零载荷字面残留")
   assert.ok(!/type:\s*"providerError",\s*text:/.test(mcp + msgs), "零 `text:` 字面残留")

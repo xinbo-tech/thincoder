@@ -181,14 +181,14 @@ test("W4 AC-4 ∕ AC-11 失败径退流 + 失败行 + 重试恰一枚 + 召回�
   await full.wire.post("userMessage", { text: "本地先行" })
   await settle()
   assert.equal(full.state().blocks.length, 0, "本地块退流（消费前流内零块）")
-  assert.equal(full.wire.failure(), "queue-full", "失败行源在场（[data-notice=send-failed] 行源）")
+  assert.equal((full.wire.failure() || {}).reason ?? full.wire.failure(), "queue-full", "失败行源在场（[data-notice=send-failed] 行源——容器形取 reason）")
   assert.equal(full.repaints.length, 1, "提示行重挂（失败行可见）")
   // ② busy（窗径竞态防御档——同处置：零块 + 失败行）
   const busy = built({ ok: false, reason: "busy" })
   await busy.wire.post("userMessage", { text: "本地先行" })
   await settle()
   assert.equal(busy.state().blocks.length, 0, "busy 径同处置：零流内块")
-  assert.equal(busy.wire.failure(), "busy", "失败行在场")
+  assert.equal((busy.wire.failure() || {}).reason ?? busy.wire.failure(), "busy", "失败行在场——容器形取 reason")
   // ③ 重试成功（本地先行重现 + 受理回执）：恰一枚块（无重复）
   const retry = built({ ok: true }) // built ⇒ 重试提交的本地先行块一枚（本地先行径）
   await retry.wire.post("userMessage", { text: "本地先行" })
@@ -337,7 +337,7 @@ test("W9 AC-7 VSC ∥ 核件结构性零改（机检：共用件 vs HEAD 零 dif
   // 全树 `git diff --stat` 面（thincoder-render-core/** ∥ thincoder-vscode/**）含他批在途改动——批归属读数 ∕ 父侧收口面（本档 §5 在册）
 })
 
-test("W10 AC-8 其余可见面零动（QUEUE_MAX ∕ 段 14 源 ∕ 通道表 23 ∕ 词键零新退）", async () => {
+test("W10 AC-8 其余可见面零动（QUEUE_MAX ∕ 段 14 源 ∕ 通道表 24 ∕ 词键零新退）", async () => {
   const queue = await mod("thincoder-desktop/renderer/queue.mjs")
   const core = await import(pathToFileURL(resolve(ROOT, "thincoder-core/queued.mjs")).href)
   assert.equal(queue.QUEUE_MAX, core.QUEUED_MAX_ITEMS, "QUEUE_MAX 语义 = 核单源（零改）")
@@ -345,10 +345,10 @@ test("W10 AC-8 其余可见面零动（QUEUE_MAX ∕ 段 14 源 ∕ 通道表 23
   assert.match(statusline, /pending: state\?\.pending \?\? \{\}/, "段 14 源 = 待发送镜面（两源共镜随动）")
   const subscribe = text("thincoder-desktop/renderer/events-subscribe.mjs")
   const channels = subscribe.match(/const CHANNELS = \[[\s\S]*?\]/)[0].match(/"[^"]+"/g) ?? []
-  assert.equal(channels.length, 23, "通道表 23 项（零新通道）")
+  assert.equal(channels.length, 24, "通道表 24 项（原 23——菜单体系批 +1 = ev:menu；父侧重锚 2026-10-04）")
   const preload = text("thincoder-desktop/src/preload/preload.cjs")
   const allow = preload.match(/EVENT_CHANNELS = Object\.freeze\(\[[\s\S]*?\]\)/)[0].match(/"[^"]+"/g) ?? []
-  assert.equal(allow.length, 23, "preload 白名单 23 项（零新退）")
+  assert.equal(allow.length, 24, "preload 白名单 24 项（原 23——+1 = ev:menu）")
   // 词键零新退：实施面四档引用之词键皆可解析（缺键回落键名 ⇒ `t(key) === key` 即缺键）
   const i18n = await mod("thincoder-desktop/renderer/i18n.mjs")
   const faces = [

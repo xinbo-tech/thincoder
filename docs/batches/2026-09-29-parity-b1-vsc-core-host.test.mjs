@@ -51,31 +51,33 @@ const readSrc = (rel) => readFileSync(resolve(ROOT, rel), "utf8")
 // ═════════════════════ G7 · 结构面（跨组收口） ═════════════════════
 
 test("G7 结构机检：批内受影响档行数读数（§2.0 口径）+ 删档缺席 + 悬空 import 零", () => {
+  // 断代重锚 2026-10-04（父侧 · 台账 #798）：全表行数读数随各档后续批落盘齐平（原 09-29 读数——断代红）；
+  // `rules-face.mjs` 已随后续批退场（原行数行撤——下行缺席断言接）。
   const readings = {
     "thincoder-vscode/src/agent.mjs": 10,
-    "thincoder-vscode/src/agent/setup.mjs": 299,
+    "thincoder-vscode/src/agent/setup.mjs": 310,
     "thincoder-vscode/src/agent/run-helpers.mjs": 89,
-    "thincoder-vscode/src/agent/setup-reminders.mjs": 42,
-    "thincoder-vscode/src/agent/tool-table.mjs": 182,
-    "thincoder-vscode/src/agent/setup-tooltable.mjs": 103,
+    "thincoder-vscode/src/agent/setup-reminders.mjs": 66,
+    "thincoder-vscode/src/agent/tool-table.mjs": 191,
+    "thincoder-vscode/src/agent/setup-tooltable.mjs": 104,
     "thincoder-vscode/src/agent/turn-domains.mjs": 38,
     "thincoder-vscode/src/agent/agent-state.mjs": 159,
-    "thincoder-vscode/src/agent/rules-face.mjs": 120,
     "thincoder-vscode/src/extension/skills.mjs": 6,
     "thincoder-vscode/src/extension/peer-claims.mjs": 35,
     "thincoder-vscode/src/extension/peer-domains.mjs": 33,
     "thincoder-vscode/src/extension/peer-instances.mjs": 21,
-    "thincoder-vscode/src/extension/suspension.mjs": 291,
-    "thincoder-vscode/src/extension/panel-turn-loop.mjs": 312,
-    "thincoder-vscode/src/extension/panel-turn-stages.mjs": 251,
+    "thincoder-vscode/src/extension/suspension.mjs": 329,
+    "thincoder-vscode/src/extension/panel-turn-loop.mjs": 304,
+    "thincoder-vscode/src/extension/panel-turn-stages.mjs": 247,
     "thincoder-vscode/src/extension/panel-chat.mjs": 261,
-    "thincoder-vscode/src/extension/image-handler.mjs": 52,
-    "thincoder-cli/src/tui/suspension-drive.mjs": 211,
-    "thincoder-core/agent/suspension.mjs": 297,
+    "thincoder-vscode/src/extension/image-handler.mjs": 59,
+    "thincoder-cli/src/tui/suspension-drive.mjs": 255,
+    "thincoder-core/agent/suspension.mjs": 327,
   }
   for (const [rel, expect] of Object.entries(readings)) {
     assert.equal(readSrc(rel).split("\n").length, expect, `${rel} 行数读数 = ${expect}`)
   }
+  assert.ok(!existsSync(resolve(ROOT, "thincoder-vscode/src/agent/rules-face.mjs")), "rules-face.mjs 已不在盘（后续批退场——原行数行撤；父侧重锚 2026-10-04）")
   for (const gone of [
     "thincoder-vscode/src/agent/context-injections.mjs",
     "thincoder-vscode/src/agent/execute-tools.mjs",

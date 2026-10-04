@@ -83,7 +83,7 @@ test("L3 键盘可达臂：VSC 两钮 `:focus-visible` 在场 ∥ 桌面臂保�
 test("L4 D21 内容面：面 20 覆盖段在场 ∥ 容器臂收窄", () => {
   const css = stripCss(read("thincoder-desktop/renderer/core.css"))
   assert.match(css, /\.reasoning-content \.code-block \{[^}]*background: rgba\(127,127,127,\.12\)/, "pre 灰底逐值（VSC :408）")
-  assert.match(css, /\.reasoning-content \.code-block \{[^}]*border-radius: 6px/, "圆角 6 逐值")
+  assert.match(css, /\.reasoning-content \.code-block \{[^}]*border-radius: 0/, "圆角 0 逐值（方盒化后收正——父侧重锚 2026-10-04）")
   assert.match(css, /\.reasoning-content \.code-block \{[^}]*padding: 8px 10px/, "padding 逐值")
   assert.match(css, /\.reasoning-content \.code-block code \{[^}]*padding: 0/, "pre code 归零（VSC :409）")
   assert.match(css, /\.reasoning-content \.code-lang \{[^}]*display: inline/, ".code-lang 零样式（复位面 8）")
@@ -121,8 +121,16 @@ test("L7 S3：分档映射 ∥ 抑制形 ∥ 宿主忙落账覆盖", async () =>
   const { providersBody } = await import(at("thincoder-desktop/renderer/views/settings-sections.mjs"))
   const deps = { channelForm: () => null, verifyControl: () => null, formats: [], reasonWord: (r) => r ?? "", edit: null }
   const rowOf = (row) => providersBody({ state: "ready", rows: [row], presets: [], verify: null, probe: null, draft: null }, {}, deps)[0]
-  const markOf = (node) => node.children.find((c) => c?.props?.class === "settings-mark")
-  const reasonOf = (node) => node.children.find((c) => c !== null && c?.props?.["data-unavailable-reason"] !== undefined)
+  // 断代重锚 2026-10-04（父侧 · 台账 #844）：两行卡（D37）后标/原因居**副行**（`subRowNode` ∥ `reasonNode`
+  // ——`views/settings-sections-providers.mjs:76/:90`）⇒ 两助手改**深查**（原直查主行 children —— 断代红）。
+  const deepFind = (node, pred) => {
+    if (!node || typeof node !== "object") return undefined
+    if (pred(node)) return node
+    for (const child of node.children ?? []) { const hit = deepFind(child, pred); if (hit) return hit }
+    return undefined
+  }
+  const markOf = (node) => deepFind(node, (c) => c?.props?.class === "settings-mark")
+  const reasonOf = (node) => deepFind(node, (c) => c?.props?.["data-unavailable-reason"] !== undefined)
 
   const busy = rowOf({ name: "p1", available: false, failure: "hostBusy", unavailableReason: "渠道故障句" })
   assert.equal(markOf(busy).children[0], "宿主繁忙", "hostBusy ⇒ 分档词「宿主繁忙」（VSC 同词）")
