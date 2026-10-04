@@ -26,52 +26,41 @@ const read = (p) => readFileSync(join(REPO, p), "utf8")
 const mod = (p) => import(pathToFileURL(join(REPO, p)).href)
 const lc = (src) => (src.match(/\n/g) ?? []).length // wc -l 口径（末行终止行数）
 
-// ── L1 · #585 notifyKey 产出回归（win32 平台守卫样本） ────────────────────────────
+// ── L1 · #585 notifyKey（断代重锚 2026-10-04——已随流尾台账行组退役批整删） ─────
 const LEDGER = "thincoder-core/ledger.mjs"
 
-/** 落定前形（旧内联式——逐字复制落定前实现，作回归基准；输出恒等 ⇒ 键面 / 值面零变）。 */
-const legacyNotifyKey = (ledger) => resolve(ledger).replace(/\\/g, "/").replace(/^([a-z]):/, (_, d) => `${d.toUpperCase()}:`)
-
-test("L1a · #585 notifyKey 产出回归（win32 平台守卫样本）", async () => {
-  const { notifyKey } = await mod(LEDGER)
-  const samples = [
-    "d:\\x\\y", "D:\\x\\y", "d:/x\\y", "D:/x/Y", "d:\\x/y", // 盘符族（小写 / 大写 / 反斜杠 / 混写）
-    "rel\\dir", "rel/dir", "sub\\dir\\file.json",            // 相对路径（resolve 绝对化）
-    "\\\\srv\\share\\p",                                     // UNC
-  ]
-  for (const s of samples) {
-    assert.equal(notifyKey(s), legacyNotifyKey(s), `产出回归失败（应恒等于落定前形）: ${JSON.stringify(s)}`)
-  }
-  if (process.platform === "win32") {
-    // win32 守卫样本：盘符族绝对期望（resolve 绝对化 + 分隔符折叠 + 盘符大写，复合形逐字）
-    assert.equal(notifyKey("d:\\x\\y"), "D:/x/y")
-    assert.equal(notifyKey("D:\\x\\y"), "D:/x/y")
-    assert.equal(notifyKey("d:/x\\y"), "D:/x/y")
-    assert.equal(notifyKey("D:/x/Y"), "D:/x/Y")
-  }
+test("L1a · #585 notifyKey 已退场（原「产出回归」样本随七符号整删——退场锁）", async () => {
+  // 断代注（父侧 · 2026-10-04 · 批 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2.10 #5）：
+  // 七符号实读无消费 ⇒ 删（含 notifyKey ∥ loadNotifyState ∥ saveNotifyState ∥ NOTIFY_FILE）；
+  // 原「产出回归 vs 落定前形」恒等断言随之退场——本腿改退场锁；`legacyNotifyKey` 基准助手同删。
+  const m = await mod(LEDGER)
+  assert.equal("notifyKey" in m, false, "notifyKey 已退场（零导出）")
+  assert.equal("loadNotifyState" in m, false, "loadNotifyState 已退场（零导出）")
+  assert.equal("saveNotifyState" in m, false, "saveNotifyState 已退场（零导出）")
 })
 
-test("L1b · #585 单源切片（ledger.mjs 内联盘符归一零命中 + normalizeCwd 直调）", () => {
+test("L1b · #585 单源切片（ledger.mjs 内联盘符归一零命中——notify 面已退场）", () => {
   const src = read(LEDGER)
   assert.equal(src.includes("^([a-z]):"), false, "内联盘符正则有残留")
-  assert.match(src, /normalizeCwd\(resolve\(ledger\)/, "notifyKey 未直调 normalizeCwd")
-  assert.match(src, /import \{ normalizeCwd \} from "\.\/session-slots\.mjs"/, "归一步 import 缺席")
+  assert.equal(src.includes("normalizeCwd"), false, "normalizeCwd 引用已随 notify 面退场（断代重锚 2026-10-04）")
 })
 
-test("L1c · #585 消费面零改（ledger.mjs 导出面逐名在——落定前 45 名基线）", async () => {
+test("L1c · #585 消费面零改（ledger.mjs 导出面逐名在——断代重锚 2026-10-04：七符号出基线）", async () => {
   const m = await mod(LEDGER)
   const base = [
-    "AGING_DAYS", "ALLOWED_MIGRATIONS", "EMPTY_FAMILY_LINE", "MAX_SIBLING_SCAN", "NOTIFY_FILE", "PENDING_STATUSES",
+    "AGING_DAYS", "ALLOWED_MIGRATIONS", "EMPTY_FAMILY_LINE", "MAX_SIBLING_SCAN", "PENDING_STATUSES",
     "REFRESH_MS", "THRESHOLD_BOARD", "THRESHOLD_POOL", "_resetLedgerDirForTest", "_setExecutorProbeTtlForTest",
     "_setLedgerDirForTest", "buildScan", "detailScans", "discoverFamily", "ensureExecutorColumn", "entryTitle",
-    "executorTail", "findProject", "formatAgingLine", "formatDetailLine", "formatMarker", "formatThresholdLine",
+    "executorTail", "findProject", "formatDetailLine", "formatMarker",
     "ledgerAdd", "ledgerAddTool", "ledgerClose", "ledgerCloseTool", "ledgerCount", "ledgerCountTool", "ledgerDbPath",
     "ledgerDirPath", "ledgerKey", "ledgerQuery", "ledgerQueryTool", "ledgerUpdate", "ledgerUpdateTool",
-    "loadNotifyState", "normalizeEntry", "notifyKey", "openLedger", "planChangeLines", "resolveExecutorStates",
-    "runLedgerAudit", "runLedgerMigrate", "saveNotifyState",
+    "normalizeEntry", "openLedger", "resolveExecutorStates",
+    "runLedgerAudit", "runLedgerMigrate",
   ]
   const missing = base.filter((n) => !(n in m))
   assert.deepEqual(missing, [], `导出面缺名: ${missing.join(", ")}`)
+  const gone = ["NOTIFY_FILE", "formatAgingLine", "formatThresholdLine", "loadNotifyState", "notifyKey", "planChangeLines", "saveNotifyState"]
+  assert.deepEqual(gone.filter((n) => n in m), [], "七符号退场锁（深清后零导出——断代重锚 2026-10-04）")
 })
 
 // ── L2-A · #586 判官重立（W8 契约② 端壳静态闭包扫描） ────────────────────────────
