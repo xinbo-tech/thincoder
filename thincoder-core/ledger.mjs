@@ -18,6 +18,7 @@
 import { mkdirSync, opendirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs"
 import { basename, dirname, join, resolve } from "node:path"
 import { configDir } from "./config.mjs"
+import { projectRootView } from "./manifest.mjs"
 import { ledgerDbPath, PENDING_STATUSES } from "./ledger-db.mjs"
 import { ledgerQuery } from "./ledger-cmd.mjs"
 import { executorTail } from "./ledger-executors.mjs"
@@ -91,9 +92,14 @@ function ledgerChildren(dir) {
 }
 
 /** 项目族发现：{current, projects}——projects = current + 其同级含台账库目录（**发现序：current 在前**，
- *  其余按目录名升序）；current 缺（容器目录，K6）→ 上下文目录向上最近「含台账子目录」者取其子目录。 */
+ *  其余按目录名升序）；current 缺（容器目录，K6）→ 上下文目录向上最近「含台账子目录」者取其子目录。
+ *  **歧义根不充当项目**（轻通道轮 · 2026-10-04）：命中锚若项目解析 `ambiguous`（≥2 候选——`projectRootView`）
+ *  ⇒ 该锚不可扫描（`openLedger` 歧义拒）——其键控库（先于 #828 写门的存量空壳 / 幽灵）不得遮蔽族发现；
+ *  按容器形落子目录族（需求：打开容器根 ⇒ 族内合计——标记范围批 §1 原话）。 */
 export function discoverFamily(anchor) {
-  const current = findProject(anchor)
+  const hit = findProject(anchor)
+  // 歧义根跳过（键控库存在 ≠ 可作项目——扫描面 `buildScan` 对歧义锚必拒；遮蔽则标记静默缺席）。
+  const current = hit && projectRootView(hit.root).state === "ambiguous" ? null : hit
   if (current) {
     const siblings = ledgerChildren(dirname(current.root)).filter((p) => p.root !== current.root)
     return { current, projects: [current, ...siblings] }
