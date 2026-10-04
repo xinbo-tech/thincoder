@@ -23,7 +23,7 @@ import { store as defaultStore } from "./store.mjs"
 /** 二十四通道（订阅面闭集 —— 单源 = `docs/desktop/design/IPC.md` §1「白名单 = 本表」；除 `ev:config` ∥ `ev:menu`（纯信号·归约面零写者）外皆有归约面写者）。
  *  R3b 增 `ev:subagent`（子 agent 块面）；R3c 增 `ev:reasoning`（推理块增量 —— D19）；「对齐第二批」增 `ev:subchunk`
  *  （子 agent 内容增量 —— 项 3）；**桌面空闲唤醒批增 `ev:susp` ∕ `ev:digest`**（挂起计数面 ∕ 消化轮边界面 —— 宿主自产）；
- *  **「对齐第三批」增 `ev:ledger`**（台账行集 —— 归约面写者 `renderer/events.mjs` `onLedger`）；
+ *  **「对齐第三批」增 `ev:ledger`**（台账明细 ∕ 状态位 —— 归约面写者 `renderer/events.mjs` `onLedger`）；
  *  **timer-wake 阶段 2 增 `ev:timer`**（到期触发面 —— 归约面写者 `renderer/events.mjs` `onTimer`）；
  *  **「回合中插入」批增 `ev:queue`**（排队面两形 —— 归约面写者 `renderer/events.mjs` `onQueue`）；
  *  **输入面板上提批增 `ev:flags`**（模式位推送 —— 归约面写者 `renderer/events-flags.mjs` `onFlags`；

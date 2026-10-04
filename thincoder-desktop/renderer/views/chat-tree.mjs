@@ -23,7 +23,7 @@ import { blockKey } from "./chat-stream.mjs"
 import { subagentNode } from "./chat-subagent.mjs"
 import { digestRows, roundAt } from "./chat-digest-rows.mjs"
 import { guideNode } from "./chat-guide.mjs"
-import { chromeProps, helpGroupNode, ledgerGroupNode, pillNode, stoppedNode, summaryNode, timerGroupNode } from "./chat-chrome.mjs"
+import { chromeProps, helpGroupNode, pillNode, stoppedNode, summaryNode, timerGroupNode } from "./chat-chrome.mjs"
 
 /** 助手族块型（回合首块判据射程 —— 归档 `subagent` 块在内）。 */
 const TURN_KINDS = Object.freeze(["assistant", "reasoning", "tool", "error", "subagent"])
@@ -122,7 +122,7 @@ function pushFlow(children, model, handlers) {
 
 /** 构树（卡族 = 核卡工厂元素直取 —— R1；审批族入树项由 `approvalCardNode` 产出**真元素**，余仍为描述符 ——
  *  `dom.mjs` `fill` 对真节点直挂 ⇒ 两形同树同序）：根 = 挂载根（props 四锚；宿主 `class` / `data-slot` 归 `renderer/index.html` 骨架）；子序 = [引导节点?] → [摘要块?] →
- *  [流序（块序列 × 消化轮按记录位次复列 —— 恢复序 ≡ 记录序 · 零配对〔本批 #765〕）?] → [压缩行?]〔R4 —— 流元素冻结点、非尾组成员，另列〕→ [尾组?] → [审批卡?] → [药丸?] —— 尾组（皆非块节点）居流序之后、卡序列之前（族内序 = 消化行族 → 到期触发行组 → 停止痕 → 台账行 → 帮助行族）；`none` 帧 = 引导节点唯一子（零**块**节点 · 引导 = 非块节点 ⇒ 不入块序：`docs/desktop/design/UI.md` §1 批 B 追加注项 1）。 */
+ *  [流序（块序列 × 消化轮按记录位次复列 —— 恢复序 ≡ 记录序 · 零配对〔本批 #765〕）?] → [压缩行?]〔R4 —— 流元素冻结点、非尾组成员，另列〕→ [尾组?] → [审批卡?] → [药丸?] —— 尾组（皆非块节点）居流序之后、卡序列之前（族内序 = 消化行族 → 到期触发行组 → 停止痕 → 帮助行族）；`none` 帧 = 引导节点唯一子（零**块**节点 · 引导 = 非块节点 ⇒ 不入块序：`docs/desktop/design/UI.md` §1 批 B 追加注项 1）。 */
 export function chatTree(model, handlers = {}) {
   const children = []
   const guide = guideNode(model, handlers)
@@ -134,11 +134,9 @@ export function chatTree(model, handlers = {}) {
     if (model.compress !== null) children.push(compressNode(model.compress))
     // 流内到期触发行组（非块节点 —— 流序之后；在场 ⟺ 本键切片在场；族内序 = 消化行族 → 本组 → 停止痕）
     if (model.timer !== null) children.push(timerGroupNode(model.timer))
-    // 停止痕（项 6 —— 流尾非块节点；族内序 = 消化行族 → 停止痕 → 台账行）
+    // 停止痕（项 6 —— 流尾非块节点；族内序 = 消化行族 → 停止痕）
     if (model.stopped === true) children.push(stoppedNode())
-    // 台账行组（项 12 —— 流尾非块节点组；行集源 = 本键切片）
-    if (Array.isArray(model.ledger) && model.ledger.length > 0) children.push(ledgerGroupNode(model.ledger))
-    // 帮助行族（`/help` 增量 · 2026-10-01② —— 流内非块行族；族内序 = 台账行组 → 本族 → 卡序列）
+    // 帮助行族（`/help` 增量 · 2026-10-01② —— 流内非块行族；族内序 = 停止痕 → 本族 → 卡序列）
     if (Array.isArray(model.help) && model.help.length > 0) children.push(helpGroupNode(model.help))
     children.push(...model.approval.map((item) => approvalCardNode(item, handlers)))
     if (!model.following) children.push(pillNode(model, handlers))

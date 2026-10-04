@@ -25,7 +25,6 @@ import { handleAutoApprove, handleAgentSettings, handlePlanMode } from "./mode-b
 import { handleModelsMessage } from "./model-picker.js"
 import { showQuestion } from "./question.js"
 import { showPermissionRequest, showBatchPermissionRequest } from "./permission.js"
-import { addLedgerNotice } from "./ledger-line.js"
 import { applyHistoryPage } from "./history.js"
 import { clearStatusText, handleStatusText, showCompressStatus, showDigestStatus } from "./chat-status.js"
 import { showAtDropdown } from "./autocomplete.js"
@@ -132,8 +131,6 @@ export function initMessageLoop(deps) {
       case "historyPage":
         applyHistoryPage(ctx, m)
         break
-      // LEDGER-SURFACE（§2.30.3.5）：台账明细 / 变化行（宿主 ledgerNotice——启动行 | 变化行）
-      case "ledgerNotice":      addLedgerNotice(ctx, m.lines); break
       case "sessions":
         ctx._sessions = m.sessions || []
         ctx.activeSession = m.active || 0

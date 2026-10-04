@@ -201,7 +201,7 @@ export function patchToolCard(node, block, key, handlers = {}) {
   const toggled = typeof head.getAttribute === "function" && head.getAttribute("data-action") === "chat:tool-toggle"
   if (hasText(block?.result) !== toggled) head.replaceWith(build(toolHead(block, key, handlers)))
   else paintHeadRow(head, block)
-  // 改动摘要行（收束时出现；内容换代 ⇒ 原位换 —— 无滚动 ∕ 选区面；同 `changes` 引用 ⇒ 零写，沿 `_ledgerLines` 判例）
+  // 改动摘要行（收束时出现；内容换代 ⇒ 原位换 —— 无滚动 ∕ 选区面；同 `changes` 引用 ⇒ 零写，沿节点自携判据引用先例）
   const changes = toolChanges(block)
   const changesRow = node.querySelector("[data-tool-changes]")
   if (changes === null) {

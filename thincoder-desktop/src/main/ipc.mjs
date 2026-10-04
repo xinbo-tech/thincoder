@@ -11,7 +11,7 @@
  * model 两 / agent 参数 / MCP 六 / env / tools）+ 台账相位两 / 配置写——逐项一参数纯转口（本档零算法副本）。
  * 跨档接线：两档同取 `currentCwd`；本档**新导出** `liveAgents`（mcp 四转口随动面取用 —— 单向
  * `ipc-relays.mjs → ipc.mjs`，零环）；注册面（`HANDLERS` 表 ∕ 注册序 ∕ 白名单 ∕ `main.mjs`）零改。
- * 台账行出站接线（「对齐第三批」KD-38）：`pushLedgerLines` 挂 `session:resume` 成功径（出站面经
+ * 台账读数出站接线（「对齐第三批」KD-38；R8 增 L2 明细 ∕ 状态位）：`pushLedgerLines` 挂 `session:resume` 成功径（出站面经
  * `setLedgerEmit` 注入；扫描 / 出站逻辑住 `project-info.mjs`）——**#686 拒绝面**：调用点挂拒绝处理器
  * （后台面 `void` 语义锁保持 —— 回执不候后台面；出站级失败 ⇒ `console.error`，零未处理拒绝逃逸）。
  * （定序 = 预载白名单同序）。
@@ -60,7 +60,7 @@ export function setAgentHost(host) {
   agentHost = host
 }
 
-/** 台账行出站面（「对齐第三批」KD-38）：`main.mjs` 启动序注入（与 `setAgentHost` 同点）——`ev:ledger` 是
+/** 台账读数出站面（「对齐第三批」KD-38）：`main.mjs` 启动序注入（与 `setAgentHost` 同点）——`ev:ledger` 是
  *  项目级自产事件（非会话回调）⇒ 不经宿主桥；非函数注入 ⇒ 清零（零出站，不假造）。 */
 let ledgerEmit = null
 export function setLedgerEmit(post) {
@@ -157,7 +157,7 @@ async function sessionResume() {
   const receipt = await resumeSession(currentCwd())
   // 残留 GC 显式点火（R1 · #406 · KD-T4② —— 桌面恢复径走核裸版，无包装调度；核内每进程每前缀去重）：
   if (receipt?.ok === true && typeof receipt.cwd === "string" && receipt.cwd !== "") scheduleSessionGC(receipt.cwd)
-  // 台账行出站点（「对齐第三批」KD-38 —— 落点 = 成功径：会话键天然在手）：后台面（`void`）—— 不经回执等待。
+  // 台账读数出站点（「对齐第三批」KD-38 —— 落点 = 成功径：会话键天然在手）：后台面（`void`）—— 不经回执等待。
   // #686 拒绝面：调用点挂拒绝处理器（`void` 语义锁保持 —— 回执不候后台面；出站级失败 ⇒ `console.error`，零未处理拒绝逃逸）。
   if (ledgerEmit && receipt?.ok === true && receipt.slot != null) {
     void pushLedgerLines({ cwd: receipt.cwd, key: String(receipt.slot), post: ledgerEmit })

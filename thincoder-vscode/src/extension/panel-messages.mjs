@@ -36,8 +36,6 @@ import { blockOnNoWorkspace } from "./workspace-guard.mjs"
 // 2026-09-11 第 10 批（§5.1.4 第 1/2 条）：任务可见性族投递通道（队列 flush 拍——webviewReady case）
 // （W15 事件中继面 + AGENT-LOOP-SUBAGENT.md §6.7.6 C-5/C-6 permissionResponse 释放面随回合交互族迁出——见 panel-messages-turn.mjs）
 import { flushSubagentOutbox } from "./panel-callbacks.mjs"
-// LEDGER-SURFACE（§2.30.3.5）：台账启动行投递（webviewReady 时机）
-import { pushLedgerStartup } from "./ledger-surface.mjs"
 // #875（2026-10-04 issue 修复批·三 · 协议 §3.2 行 23）：视图偏好三键——webviewReady 握手重推
 import { pushUiPrefs } from "./ui-prefs.mjs"
 
@@ -356,7 +354,6 @@ export async function handlePanelMessage(panel, msg) {
       flushSubagentOutbox(panel)
       reassertLiveChildren(panel)
       startLiveHeartbeat(panel) // 出生自愈心跳起拍（D-W20——止于 panel dispose）
-      pushLedgerStartup(panel) // LEDGER-SURFACE：启动行（会话内容落定后——不被 clearMessages 抹掉；不可动作零 post）
       break
     }
     case "panelDiag": {

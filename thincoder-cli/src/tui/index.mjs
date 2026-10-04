@@ -242,8 +242,8 @@ export async function startTUI(agent, opts = {}) {
   await promptProviderIfInvalid(agent, () => openModelPicker(), pushLine)
 
   showStartup({ agent, state, opts, pushLine, pushLabel, render, startWizard })
-  // LEDGER-SURFACE（§2.30.3.4）：台账可见面——首扫（setImmediate）+ 周期；dispose 挂进程退出（:278 cleanup 先例）
-  const ledgerSurface = startLedgerSurface({ state, agent, pushLine, render })
+  // LEDGER-SURFACE：台账可见面——首扫（setImmediate）+ 周期；dispose 挂进程退出（同 cleanup 先例）
+  const ledgerSurface = startLedgerSurface({ state, agent, render })
   // 端壳契约 = **恒同步返回 `{ dispose }`**（K-LX3 归核后与核形一致——核句柄异步就绪后桥接；
   // 载入失败 ⇒ 空句柄）⇒ 退钩同步 `.dispose()`（零 TypeError）。
   process.on("exit", () => ledgerSurface.dispose())

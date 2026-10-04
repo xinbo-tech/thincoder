@@ -1,7 +1,7 @@
 /* core.css — 核类名 → 桌面变量映射（KD-RC-7 · R3c · `docs/render-core/design/RENDER-CORE.md` §5 样式契约）：
    覆盖面 = **核产出 DOM 面**（核类名 + 核 md 产出的原生件）；作用域容器 = 桌面两个文本面类（`.block-text` /
-   `.reasoning-content`——容器本身即核内容的落点，非桌面卡/块外壳）；**组外核类名**（「对齐第三批」项 12 / 相抵②：
-   `.ledger-line` / `.warn` / `.file-link` —— 宿主 = 流内非块节点组 / 工具结果区，非两容器 ⇒ 按核类名直落、零容器作用域，
+   `.reasoning-content`——容器本身即核内容的落点，非桌面卡/块外壳）；**组外核类名**（「对齐第三批」相抵②：
+   `.warn` / `.file-link` —— 宿主 = 工具结果区（非两容器）⇒ 按核类名直落、零容器作用域，
    见档尾「核类名映射 · 组外面」段）；值面变量 = `renderer/theme.css` 主题表（亮暗两套）。
    五族：
     ① 核 Markdown 产出（核 `md.mjs`）——**出档 `renderer/core-markdown.css`**（#510 留守拆档 · 2026-09-29：面 1–17 纯搬移；
@@ -322,13 +322,9 @@
 .goal-status-badge.done { background: var(--diff-add-bg); color: var(--green); }
 .goal-status-badge.cancelled { background: var(--hover-bg-strong); color: var(--fg); opacity: 0.5; }
 
-/* ── 核类名映射 · 组外面（「对齐第三批」项 12 / 相抵②）─────────────
-   两族宿主 = 流内非块节点组（`.chat-ledger` / 工具结果区）—— **非两文本面容器** ⇒ 按核类名直落、零容器作用域
-   （类名面 = 核行产 `ledger-surface.mjs` / 核链接着装 `flow/tool-card.mjs` `linkifyPaths` 产出 —— 值为桌面变量面）。 */
-/* 行级值 = VSC `webview/chat.css:477-488` 逐值（`line-height: 1.5` ∕ `opacity: .85` ∕ warn `opacity: 1`；字号与色面落组容器
-   `.chat-ledger` —— `chat-fixes.css` 侧字号 ∥ `--fg-muted` 继承（字号 D29 归基线 `var(--fs)`））。 */
-.ledger-line { padding: 1px 0; line-height: var(--lh); opacity: 0.85; white-space: pre-wrap; overflow-wrap: anywhere; }
-.ledger-line.warn { color: var(--warn); opacity: 1; }
+/* ── 核类名映射 · 组外面（「对齐第三批」相抵②）──────────────────
+   宿主 = 工具结果区（**非文本面容器**）⇒ 按核类名直落、零容器作用域
+   （类名面 = 核链接着装 `flow/tool-card.mjs` `linkifyPaths` 产出 —— 值为桌面变量面）。 */
 /* 文件链接值 = VSC 逐值（R12 收口修复轮 —— 三值差消除）：基态补 `text-underline-offset: 2px`（`webview/chat.css:251`）·
    补 hover 实线（`:254`）· `:focus-visible` 取 VSC 类规则值 `1px solid` + 圆角 0（扁平化 2026-09-30）**并携 `outline-offset: 2px`**
    （VSC 有效 offset 来自全局 `:focus-visible { outline-offset: 2px }`（`webview/base.css:445`）——`outline` 简写不含 offset；

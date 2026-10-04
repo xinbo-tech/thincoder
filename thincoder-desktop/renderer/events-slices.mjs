@@ -120,30 +120,17 @@ function markerReading(value) {
   return { text: value.text, warn: value.warn === true }
 }
 
-/** `ev:ledger`——台账三切片（「对齐第三批」项 12 · KD-38；**R8 增 `detailLines`**；**状态行 ⇒ CLI 补漏批增 `marker`**）：载荷 `{ key, lines?, detailLines?, marker? }`——
- *  `lines` = 核行产逐字 `{ text, warn }`（端侧零行构造）；行集过滤后非空才写（行文本非串 / 空 ⇒ 该行弃；空集 ⇒ 零写——禁假造）；
- *  同值（文本逐字 + `warn` 真值同）⇒ 原引用（零重绘）。`detailLines`（R8 · L2 明细行——状态行台账段 `title` 载波）= 核
- *  `detailScans` ∕ `formatDetailLine` 行集逐字（端零行构造）；**顶层切片 `ledgerDetail`**（项目级——与状态行台账段同锚，
- *  不按会话键）；空集照写（清 tooltip——禁假造）；同值 ⇒ 原引用。`marker`（本批增 · 状态位转发）= 核
- *  `formatMarker` 逐字 ∕ `warn` 核判位；**顶层切片 `ledgerMarker`**（项目级）；载荷键在场 ⇒ 写 ∕ 清（`null` = 清残影——
- *  与「键缺席 = 零动作」两事）；形不合 ⇒ 零写；同值 ⇒ 原引用。三键皆无 ⇒ 原引用。
- *  消费 = 流尾非块节点组 `[data-ledger-line]`（`renderer/views/chat.mjs`）+ 状态行台账段 ∕ tooltip（`views/statusline-segments.mjs`）；
- *  周期刷新（VSC `REFRESH_MS`）= R8 落（核拍面 —— `src/main/project-info.mjs`）。 */
+/** `ev:ledger`——台账两切片（「对齐第三批」项 12 · KD-38；**R8 增 `detailLines`**；**状态行 ⇒ CLI 补漏批增 `marker`**）：载荷 `{ key, detailLines?, marker? }`——
+ *  `detailLines`（R8 · L2 明细行——状态行台账段 `title` 载波）= 核 `detailScans` ∕ `formatDetailLine` 行集逐字（端零行构造）；
+ *  **顶层切片 `ledgerDetail`**（项目级——与状态行台账段同锚，不按会话键）；空集照写（清 tooltip——禁假造）；同值 ⇒ 原引用。
+ *  `marker`（状态行 ⇒ CLI 补漏批增 · 状态位转发）= 核 `formatMarker` 逐字 ∕ `warn` 核判位；**顶层切片 `ledgerMarker`**（项目级）；
+ *  载荷键在场 ⇒ 写 ∕ 清（`null` = 清残影——与「键缺席 = 零动作」两事）；形不合 ⇒ 零写；同值 ⇒ 原引用。两键皆无 ⇒ 原引用。
+ *  消费 = 状态行台账段 ∕ tooltip（`views/statusline-segments.mjs`）；周期刷新（VSC `REFRESH_MS`）= R8 落（核拍面 —— `src/main/project-info.mjs`）。 */
 export function onLedger(state, ev) {
-  const lines = (Array.isArray(ev.lines) ? ev.lines : [])
-    .filter((line) => typeof line?.text === "string" && line.text !== "")
-    .map((line) => ({ text: line.text, warn: line.warn === true }))
   const detailLines = Array.isArray(ev.detailLines)
     ? ev.detailLines.filter((text) => typeof text === "string" && text !== "")
     : null
   let next = state
-  if (lines.length > 0) {
-    const table = next.ledgerLines ?? {}
-    const prev = table[ev.key]
-    const same = Array.isArray(prev) && prev.length === lines.length
-      && prev.every((line, index) => line.text === lines[index].text && line.warn === lines[index].warn)
-    if (!same) next = { ...next, ledgerLines: { ...table, [ev.key]: lines } }
-  }
   if (detailLines !== null) {
     const prev = Array.isArray(next.ledgerDetail) ? next.ledgerDetail : null
     const same = prev !== null && prev.length === detailLines.length

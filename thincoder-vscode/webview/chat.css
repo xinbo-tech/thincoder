@@ -473,20 +473,6 @@
   contain-intrinsic-size: auto 80px;
 }
 
-/* ─── Ledger surface（LEDGER-SURFACE §2.30.3.5）─── */
-.ledger-line {
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--vscode-descriptionForeground, var(--fg));
-  opacity: 0.85;
-  padding: 1px 0;
-}
-
-.ledger-line.warn {
-  color: var(--vscode-editorWarning-foreground, var(--yellow));
-  opacity: 1;
-}
-
 /* ─── Loading screen (2026-09-21) ─────────────── */
 /* 静态首屏：webview 打开即见（HTML 默认渲染）；chat.js 握手落定后 dismissLoadingScreen 移除。
    覆盖整个视口 ✗ 遮住骨架 ✗ 淡出 150ms。 */

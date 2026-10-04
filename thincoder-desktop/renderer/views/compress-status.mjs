@@ -8,7 +8,7 @@
  * 在场 ⟺ 本键 `compress` 切片在场（四态皆在场 —— 元素常驻至首屏页读整置，沿 VSC「session view clears recreate it」）；
  * 文本 ∕ class 等价 ⇒ 零写；换代 ⇒ 原位换（零序跳）；缺席 ⇒ 摘。
  * **定位语义 = 流元素冻结点**（VSC D-C3 append-once）：创建点定位后新内容一律居其下 —— 块插入点不收本行；
- * 族内序 = **压缩行族首**（→ 消化行族 → 到期触发行组 → 停止痕 → 台账行 → 帮助行族；行 = 流元素冻结点 ⇒ 活流按创建时点、族序为重建序）；插点锚单源 = 本档 `compressAnchorOf`（链不收消化行族）；
+ * 族内序 = **压缩行族首**（→ 消化行族 → 到期触发行组 → 停止痕 → 帮助行族；行 = 流元素冻结点 ⇒ 活流按创建时点、族序为重建序）；插点锚单源 = 本档 `compressAnchorOf`（链不收消化行族）；
  * 块节点插点锚 = `renderer/views/chat-chrome.mjs` `blockAnchor`（尾组链 —— 本行不在其上）。
  * 零 DOM 直取（描述符经 `renderer/dom.mjs` `build`）；零 `node:` / 零裸包（渲染面静态闭包判据）。
  */
@@ -66,10 +66,10 @@ export function syncCompress(root, slice, anchor = null) {
   else root.append(fresh)
 }
 
-/** 插点锚（**族首** —— 压缩行恒居到期触发行组 / 停止痕 / 台账行 / 帮助行族 / 卡节点 / 药丸之前；消化行族不锚 —— 流内落位批收正：
+/** 插点锚（**族首** —— 压缩行恒居到期触发行组 / 停止痕 / 帮助行族 / 卡节点 / 药丸之前；消化行族不锚 —— 流内落位批收正：
  *  族元素逐轮就地、行创建点 = 流末）。单源 = 本档；**块不在本锚面**（新块随流居本行下 —— 见档头；`blockAnchor` 链不收本行）。 */
 export function compressAnchorOf(root) {
   if (typeof root?.querySelector !== "function") return null
-  return root.querySelector("[data-timer]") ?? root.querySelector("[data-stopped]") ?? root.querySelector("[data-ledger]")
+  return root.querySelector("[data-timer]") ?? root.querySelector("[data-stopped]")
     ?? root.querySelector("[data-help]") ?? root.querySelector("[data-card]") ?? root.querySelector("[data-pill]")
 }

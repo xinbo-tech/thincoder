@@ -12,7 +12,7 @@ import { _cwd, setProjectFolder } from "./panel-messages.mjs"
 import { loadSession } from "./panel-session.mjs"
 import { ensureMemoryHandle } from "../embed-config.mjs"
 import { pushIndexStatus, maybePromptIndex } from "./panel-index.mjs"
-import { refreshLedger } from "./ledger-surface.mjs" // LEDGER-SURFACE（§2.30.3.5）
+import { refreshLedger } from "./ledger-surface.mjs" // LEDGER-SURFACE：台账 item 刷新
 
   /** Snapshot for the webview's project button: { folders, current, multi, followActive }. */
 export function projectInfo(_panel) {
@@ -79,7 +79,7 @@ export async function onProjectChanged(panel) {
     await ensureMemoryHandle()
     pushIndexStatus(panel)
     maybePromptIndex(panel)
-    refreshLedger(panel, { emit: false }) // LEDGER-SURFACE：换项目即时刷新 item（不投递不记账）
+    refreshLedger(panel) // LEDGER-SURFACE：换项目即时刷新 item
   }
 
   /** Native picker over the workspace roots (fixed options) + the follow-active toggle. */

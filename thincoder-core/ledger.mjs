@@ -9,21 +9,18 @@
  * 两源，接线见 tools/index.mjs 与 agent/family-tools.mjs）
  * ② 族发现（findProject / discoverFamily——标记 = ledger.db）③ scan 组装（buildScan——行集 + ledgerCount
  * → scan 对象，形状契约 = pool/tech/aged/thresholdReached/actionable/root/name/ledger）
- * ④ 通知去重（送达门 + 一次性去重——去重档跨会话、跨端共享）⑤ 格式 helper（行文本逐字契约——含标记范围归约 `scopeMarkerOf`，§7.2）。
+ * ④ 格式 helper（L1 标记 ∥ L2 明细行逐字契约——含标记范围归约 `scopeMarkerOf`，§7.2）。
  * 判活展示 = 拆分件 `ledger-executors.mjs`（在途 executor 解析 + 三态尾段——本档 re-export，
  * 消费面仍只认本档）。
  *
  * W8 契约②：ledger-db.mjs 静态 import node:sqlite ⇒ 消费侧一律**动态 import** 本档（禁止静态 import）。
  */
-import { mkdirSync, opendirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs"
+import { opendirSync, statSync } from "node:fs"
 import { basename, dirname, join, resolve } from "node:path"
-import { configDir } from "./config.mjs"
 import { projectRootView } from "./manifest.mjs"
 import { ledgerDbPath, PENDING_STATUSES } from "./ledger-db.mjs"
 import { ledgerQuery } from "./ledger-cmd.mjs"
 import { executorTail } from "./ledger-executors.mjs"
-// 归一步单源（#585——盘符大写契约直引 `session-slots.mjs`；先例 = `ledger-db.mjs:23`）。
-import { normalizeCwd } from "./session-slots.mjs"
 
 /** 老化阈值（天——口径 = 需求档；`days` 参数可覆盖）。 */
 export const AGING_DAYS = 30
@@ -33,18 +30,16 @@ export const THRESHOLD_BOARD = 2
 export const THRESHOLD_POOL = 3
 /** 刷新周期（N2 实现常量；VSC 端另有换项目事件触发）。 */
 export const REFRESH_MS = 120000
-/** 变化行去重档（跨会话、跨端共享——需求档 §1.18 F5；configDir 先例 = crash-reports 同区）。 */
-export const NOTIFY_FILE = join(configDir, "ledger-notify.json")
-/** 空族提示（仅命令面——运行时面静默，N1 / 设计档 §2.30.3.3）。 */
+/** 空族提示（仅命令面——运行时面静默，N1 / 归档档 ENGINEERING-MODE.md §2.30.3.3——现行承接 = `docs/core/design/LEDGER.md`）。 */
 export const EMPTY_FAMILY_LINE = "台账：未发现台账。"
 
 /** 条目归一化文本 = 条目键（去 `- [ ] ` 前缀 + 去首尾空白 + 连续空白折叠单空格）。
- *  位置无关（位移 / 他条编辑稳定）；自身文本变更 = 键变（最坏一次重报）。§2.30.3.2。 */
+ *  位置无关（位移 / 他条编辑稳定）；自身文本变更 = 键变（最坏一次重报）。归档档 ENGINEERING-MODE.md §2.30.3.2。 */
 export function normalizeEntry(text) {
   return text.replace(/^- \[[ x]\]\s+/, "").trim().replace(/\s+/g, " ")
 }
 
-/** 条目标题：首个 `**…**` 段；无粗体段 → 归一化文本前 20 字（超出加 `…`）。§2.30.3.3 L3。 */
+/** 条目标题：首个 `**…**` 段；无粗体段 → 归一化文本前 20 字（超出加 `…`）。归档档 ENGINEERING-MODE.md §2.30.3.3 L3。 */
 export function entryTitle(text) {
   const m = /\*\*(.+?)\*\*/.exec(text)
   if (m) return m[1]
@@ -149,7 +144,7 @@ export function buildScan({ cwd, days = AGING_DAYS, now = Date.now() } = {}) {
   }
 }
 
-/** L1 状态标记（逐字——§2.30.3.3）。 */
+/** L1 状态标记（逐字——归档档 ENGINEERING-MODE.md §2.30.3.3）。 */
 export function formatMarker(scan) {
   return scan ? `台账 ${scan.pool}·${scan.tech}` : null
 }
@@ -182,61 +177,12 @@ export function formatDetailLine(scan) {
   return `台账 ${scan.name}：需求池 ${scan.pool} · 技术待办 ${scan.tech}（老化 ${scan.aged}）${scan.thresholdReached ? " — 可开批" : ""}${executorTail(scan)}`
 }
 
-/** L3 变化行·老化（titles = 新增老化条目标题；> 3 条时第三项后接 `；…`）。 */
-export function formatAgingLine(scan, titles) {
-  return `台账变化：${scan.name} 老化首次越线 ${titles.length} 条（超 30 天未处置）：${titles.slice(0, 3).join("；")}${titles.length > 3 ? "；…" : ""}`
-}
-
-/** L4 变化行·阈值。 */
-export function formatThresholdLine(scan) {
-  return `台账变化：${scan.name} 需求池达阈值（${scan.pool} 条）— 可开批`
-}
-
 /** 明细行集 = {current} ∪ {可动作项目}（发现序——current 在前，其余按目录名升序；同项去重）。 */
 export function detailScans(scans, current) {
   const out = []
   if (current) out.push(current)
   for (const s of scans) if (s !== current && s.actionable) out.push(s)
   return out
-}
-
-/** 变化行规划（纯函数）：{lines:[{text,warn}], next:{aged,threshold}}（去重口径 §2.30.3.2）。 */
-export function planChangeLines(prev, scan) {
-  const p = prev && typeof prev === "object" ? prev : {}
-  const before = new Set(Array.isArray(p.aged) ? p.aged : [])
-  const freshTitles = scan.agedKeys.map((k, i) => (before.has(k) ? null : scan.agedTitles[i])).filter((t) => t != null)
-  const lines = []
-  if (freshTitles.length) lines.push({ text: formatAgingLine(scan, freshTitles), warn: true })
-  if (scan.thresholdReached && !p.threshold) lines.push({ text: formatThresholdLine(scan), warn: true })
-  return { lines, next: { aged: scan.agedKeys, threshold: scan.thresholdReached } }
-}
-
-/** 去重档键 = 台账库绝对路径·正斜杠 + **盘符大写**（跨端同规则——CLI 的 `process.cwd()` 盘符大写、
- *  VSC 的 `uri.fsPath` 小写（`session-slots.mjs` `normalizeCwd` 同一契约——session / checkpoint /
- *  trace 跨端共享即赖此）；盘符步 = `normalizeCwd` 直调（单源——#585；先例 = `ledger-db.mjs:23`）、
- *  分隔符折叠自持；CLI 写的键 VSC 须逐字认得）。 */
-export function notifyKey(ledger) {
-  return normalizeCwd(resolve(ledger).replace(/\\/g, "/"))
-}
-
-/** 去重档读（缺失 / 坏 JSON → 空态——N1 降级不崩）。 */
-export function loadNotifyState(file = NOTIFY_FILE) {
-  try {
-    const j = JSON.parse(readFileSync(file, "utf8"))
-    if (j && typeof j === "object" && j.ledgers && typeof j.ledgers === "object") return { version: 1, ledgers: j.ledgers }
-  } catch { /* 缺失 / 坏档 → 空态 */ }
-  return { version: 1, ledgers: {} }
-}
-
-/** 去重档写（temp + rename 防撕裂；写失败静默返回 false——唯一写面，仅送达后调）。 */
-export function saveNotifyState(file, state) {
-  try {
-    mkdirSync(dirname(file), { recursive: true })
-    const tmp = `${file}.tmp-${process.pid}`
-    writeFileSync(tmp, JSON.stringify(state), "utf8")
-    renameSync(tmp, file)
-    return true
-  } catch { return false }
 }
 
 // ── re-export（拆分件接口——命令面接线 = 动态 import 本档，KD-M2-3） ──

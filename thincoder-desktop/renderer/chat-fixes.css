@@ -1,7 +1,7 @@
 /* chat-fixes.css — 对话流**「对齐第三批」小修族尾段**（自 `renderer/chat.css` 四拆 —— 「桌面处理流 · VSC 对齐」批
    §2.1 拆档定稿；链序 = theme → chrome → session-list → skin → chat → chat-cards → chat-composer → **chat-fixes** → core-markdown → core → /rc/search.css → pool → settings）。
    单源 = `docs/desktop/design/UI.md` §1「本批注（对齐第三批 · 小修族）」：工具头两态色 / 错误横幅 / 停止痕 /
-   台账行组 / diff 预览 / 文件链接 / 欢迎条（值源逐面标注 —— VSC 实读）＋ **流内压缩状态行（R4 · 桌面功能对位批 ——
+   diff 预览 / 文件链接 / 欢迎条（值源逐面标注 —— VSC 实读）＋ **流内压缩状态行（R4 · 桌面功能对位批 ——
    值源 = VSC `webview/base.css:203-226` 同名类族）**。 */
 
 /* 工具头两态色（项 2 —— 值源 = VSC 工具状态内联色：失败 `#f14c4c` ∥ 成功 `#4ec9b0` —— VSC 换接后单源 = 核
@@ -40,11 +40,7 @@
 /* 停止痕（项 6 —— 值源 = VSC `webview/streaming.js:141`：提示色 + 斜体 —— 流尾非块节点）。 */
 .chat-stopped { margin-top: 0; color: var(--warn); font-style: italic; }
 
-/* 台账行组（项 12 —— 流尾非块节点组；类名面 = 核行产口径 `ledger-line` / `.warn`，样式单源 = `core.css` 核类名映射面；行文 = 核行产逐字）。
-   字号取基线单源 = `renderer/theme.css`（原 VSC `.ledger-line` 11px 逐值 ⇒ D29 归 `var(--fs)`）；颜色 = `--fg-muted` 对位 `descriptionForeground` 角色。 */
-.chat-ledger { margin-top: 0; font-size: var(--fs); color: var(--fg-muted); }
-
-/* 帮助行族（slash 面增量（`/help`）· 2026-10-01② —— 流内非块行族 `[data-help]`（尾组槽位：台账行组后 ∥ 卡前）；
+/* 帮助行族（slash 面增量（`/help`）· 2026-10-01② —— 流内非块行族 `[data-help]`（尾组槽位：卡前）；
    三行类 = 标签加重 ∥ 组行 dim ∥ 命令行常规；`pre-wrap` = 双空格列间隔保形（零 padEnd——比例字体；值源 = CLI `cmd-help.mjs` 三段形）。 */
 .chat-help { margin-top: 0; font-size: var(--fs); color: var(--fg); white-space: pre-wrap; }
 .chat-help .help-label { font-weight: 600; }

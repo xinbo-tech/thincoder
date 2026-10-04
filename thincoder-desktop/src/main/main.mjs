@@ -127,7 +127,7 @@ async function main() {
   // S3 宿主忙证据面（#673 · `src/main/loop-sampler.mjs`）：随主进程活——探针失败分档的端侧证据源
   // （`providers.mjs` 失败支经 `overrideAdmissionIfHostBusy` 覆盖落账；`hostBusy()` 纯内存零 I/O）。
   startSampler()
-  // 出站面（webContents 发送单点）：宿主 emit 与台账行出站共用（建窗晚于注入 ⇒ 闭包读 `win`；建窗前零事件 ⇒ 丢弃）。
+  // 出站面（webContents 发送单点）：宿主 emit 与台账读数出站共用（建窗晚于注入 ⇒ 闭包读 `win`；建窗前零事件 ⇒ 丢弃；#913 收口措辞随正——流尾行组已退役、保留面 = 读数）。
   const emit = (channel, payload) => {
     if (win && !win.isDestroyed()) win.webContents.send(channel, payload)
   }
@@ -146,7 +146,7 @@ async function main() {
     focused: () => !win || win.isDestroyed() || win.isFocused(),
     reveal: () => { if (win && !win.isDestroyed()) { win.show(); win.focus() } },
   }))
-  // 台账行出站面（「对齐第三批」KD-38）：`session:resume` 成功径挂调用（`ipc.mjs`）——项目级自产事件，非会话回调。
+  // 台账读数出站面（「对齐第三批」KD-38；#913 收口措辞随正——流尾行组已退役、保留面 = 读数）：`session:resume` 成功径挂调用（`ipc.mjs`）——项目级自产事件，非会话回调。
   setLedgerEmit(emit)
   registerIpcHandlers()
   // 重启自动重开（KD-56 · 台账 #734）：窗口创建前一次恢复 —— 本端记录面回读「上次打开」的项目

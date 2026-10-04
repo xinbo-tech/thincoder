@@ -29,7 +29,7 @@ import { pushIndexStatus, atComplete, saveEmbeddingConfig, maybePromptIndex, bui
 import { closeAllMcp, pushMcpStatus, reconnectMcp, editMcp, testMcp } from "./panel-mcp.mjs"
 // Settings 段整段外提（2026-09-25 file-tier-sweep 批 S1——同名薄委托传 `this`，外部调用点零改）。
 import { providerStatus, saveProviderKey, deleteProviderKey, saveMcpServer, deleteMcpServer, setAutoApprove, setPlanMode, engineeringOn, pushStatus, pushSettingsLight, pushSettings, agentSettingsSession } from "./panel-settings-push.mjs"
-import { initLedgerSurface, dispose as disposeLedgerSurface } from "./ledger-surface.mjs" // LEDGER-SURFACE（§2.30.3.5）
+import { initLedgerSurface, dispose as disposeLedgerSurface } from "./ledger-surface.mjs" // LEDGER-SURFACE（归档档 ENGINEERING-MODE.md §2.30.3.5）
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
