@@ -22,7 +22,7 @@
 | `thincoder-cli/src/tui/model-picker.mjs` | 模型两级选择器（provider → model，可 fetch `/models`；拉取失败 ⇒ 该渠道不可用——无预设回退）+ `pickModelForSlot`（子模型槽位）；渠道管理流族 = 调用点（流体住 `provider-admin.mjs`） |
 | `thincoder-cli/src/tui/provider-admin.mjs` | 渠道管理流族（`/model` Add / Remove / key 流程——2026-09-29 结构拆分自 `model-picker.mjs` 迁出）+ `cascadeRemoveProvider` |
 | `thincoder-cli/src/tui/model-catalog.mjs` | 模型清单目录面（供选择器构造条目） |
-| `thincoder-cli/src/tui/ledger-surface.mjs` | 台账可见面渲染（配置菜单的台账摘要行） |
+| `thincoder-cli/src/tui/ledger-surface.mjs` | 台账状态位胶水（动态 import 核 `@thincoder/core/ledger-surface.mjs` 转口——`state.ledger` = 状态行 L1 标记源；W8 契约②） |
 
 ### 选择面与交互桥
 
@@ -214,6 +214,7 @@
   独立「删 key」入口实核 = 不存在 · 判据域边界三条 · 机检面。§1 模块地图 `pickers.mjs` 行同批登记确认件。其余各节零改。
 
 - 2026-09-17（**zero-block 批 · 微 fix 轮 · eng-designer**）：变更记录 2026-09-15 条①内**悬空节号收正**——原引节号在 canonical 界面核心档无此节，收正为「§8 不并项与历史沿革」（拆分沿革登记现住 §8）；批档 `docs/batches/2026-09-17-subagent-zero-block.md` §2 出批发现 ⑥ 收口。
+- 2026-10-04（**流尾台账行组退役批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2 · 台账 #913）：§1 命令层表 `ledger-surface.mjs` 行职责按实收正（台账状态位胶水——行推线面退役随动）。**零新语义**。明细 = 批档 §2。
 
 - 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/design/TUI.md` 的 §9（交互层与命令层）/ §12（选择面收口）/
   §13（输入面小修 B1）三面内容重建入本档（旧档一字未改、原地作参照历史）。

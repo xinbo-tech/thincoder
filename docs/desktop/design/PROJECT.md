@@ -81,7 +81,7 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | KD-36 | → `docs/desktop/design/ACTIVITY.md` §1（as-of 2026-10-02） | — | — |
 
 | KD-37 | → `docs/desktop/design/CHAT.md` §1（as-of 2026-10-02） | — | — |
-| KD-38 | **台账行 = 启动拍 + 周期拍（`ev:ledger`；`REFRESH_MS` = 120s——R8 落，收正）** | VSC 两拍（`thincoder-vscode/src/extension/ledger-surface.mjs:115`）对位 = 桌面**启动拍 + 周期拍**（120s；直消费核 `startLedgerSurface`——单源 = `docs/desktop/design/IPC.md` §1 `ev:ledger` 行；项目级读数复读同点 = 开项目成功链）；被否候选 = 挂 2s 拍（频率与核扫描语义不合——登记） |
+| KD-38 | **台账读数出站 = 启动拍 + 周期拍（`ev:ledger`；`REFRESH_MS` = 120s）** | VSC 两拍（端自持周期注册——间隔常数 = 核 `REFRESH_MS`）对位 = 桌面**启动拍 + 周期拍**（120s；直消费核 `startLedgerSurface`——单源 = `docs/desktop/design/IPC.md` §1 `ev:ledger` 行；项目级读数复读同点 = 开项目成功链）；被否候选 = 挂 2s 拍（频率与核扫描语义不合——登记） |
 | KD-39 | → `docs/desktop/design/CHAT.md` §1（as-of 2026-10-02） | — | — |
 | KD-40 | → `docs/desktop/design/COMPOSER.md` §1（as-of 2026-10-02） | — | — |
 | KD-41 | → `docs/desktop/design/SESSIONS.md` §1（as-of 2026-10-02） | — | — |
@@ -965,7 +965,7 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
 | D7 | → `docs/desktop/design/SETTINGS.md` §4（as-of 2026-10-02） | — |
 | D8 | → `docs/desktop/design/SETTINGS.md` §4（as-of 2026-10-02） | — |
 | D9 | → `docs/desktop/design/SETTINGS.md` §4（as-of 2026-10-02） | — |
-| D10 | 台账行与批次相位读数出现（项目级信息，不随会话走——批 9 落：`ledger:read` / `batch:status` 载荷不携会话 `key`；用例面 = 随批单元证据）；**对齐第三批**：流内台账行 = 开项目成功链一次（`ev:ledger`——单源 = 同档 §1「本批注（对齐第三批 · 小修族）」项 12 / 本档 **KD-38**） | T-DSK11 |
+| D10 | **台账读数与批次相位读数出现**（项目级信息，不随会话走——批 9 落：`ledger:read` / `batch:status` 载荷不携会话 `key`；用例面 = 随批单元证据；**流尾行组退役批（2026-10-04）口径随正——台账可见载体 = 状态行段 11 常驻标记 ∥ tooltip（行面去）**） | T-DSK11 |
 | D11 | → `docs/desktop/design/SETTINGS.md` §4（as-of 2026-10-02） | — |
 | D12 | → `docs/desktop/design/PACKAGING.md` §4（as-of 2026-10-02） | — |
 | D13 | → `docs/desktop/design/COMPOSER.md` §4（as-of 2026-10-02） | — |
@@ -1075,7 +1075,7 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
 | T-DSK8 | → `docs/desktop/design/SETTINGS.md` §5（as-of 2026-10-02） | — | — | — |
 | T-DSK9 | → `docs/desktop/design/SETTINGS.md` §5（as-of 2026-10-02） | — | — | — |
 | T-DSK10 | → `docs/desktop/design/SETTINGS.md` §5（as-of 2026-10-02） | — | — | — |
-| T-DSK11 | 正常 · 项目级信息 | 打开有台账 / 批次的目录 | 流内台账行（开项目成功链）出现；切会话时**不随会话变** |
+| T-DSK11 | 正常 · 项目级信息 | 打开有台账 / 批次的目录 | 段 11 台账标记（开项目成功链——核 `marker`）出现；切会话时**不随会话变** |
 | T-DSK12 | → `docs/desktop/design/SESSIONS.md` §5（as-of 2026-10-02） | — | — | — |
 | T-DSK13 | → `docs/desktop/design/SETTINGS.md` §5（as-of 2026-10-02） | — | — | — |
 | T-DSK14 | → `docs/desktop/design/PACKAGING.md` §5（as-of 2026-10-02） | — | — | — |
@@ -1173,7 +1173,7 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
   ⑤ **时序例**（首屏种 × 在飞键）：本键在飞（回合未尾）⇒ 首屏种零写（活切片为准）——`thincoder-desktop/test/events-page.test.mjs`（随 2026-09-28 测试树全清重置不在盘）原址补例；测试档随修随加——不占设计条目（沿本档 §7 D21 注既裁）。
 
 **批 9 注**：T-DSK7 / T-DSK8 / T-DSK10 的机检面 = 单元测试档惯例（原主侧三档 `settings.test.mjs` / `providers.test.mjs` / `mcp-servers.test.mjs` + 视图面 `views-settings.test.mjs`（表单构树与通道接线）——随 2026-09-28 测试树全清重置不在盘）；
-T-DSK11 = 单元测试档惯例（原 `project-info.test.mjs`（台账行与相位两向）同因不在盘）；T-DSK13 = 单元测试档惯例（原 `views-onboarding.test.mjs`（闸两向 + 三步可走完）同因不在盘）；T-DSK9 读数面 = **已落**（R2——`index:status` ∕ `index:build`；单源 = §10 **N** 行）；T-DSK8 的「切换语言」机检 = 单元测试档惯例（原 `settings` 档（键往返）∥ `views-settings` 档（词表重刷）——同因不在盘）。
+T-DSK11 = 单元测试档惯例（原 `project-info.test.mjs`（台账读数与相位两向）同因不在盘）；T-DSK13 = 单元测试档惯例（原 `views-onboarding.test.mjs`（闸两向 + 三步可走完）同因不在盘）；T-DSK9 读数面 = **已落**（R2——`index:status` ∕ `index:build`；单源 = §10 **N** 行）；T-DSK8 的「切换语言」机检 = 单元测试档惯例（原 `settings` 档（键往返）∥ `views-settings` 档（词表重刷）——同因不在盘）。
 
 **批 9 用例号归属（修正轮 #9）**：设置族 `thincoder-desktop/test/settings.test.mjs` = **U98–U102**；渠道族 `thincoder-desktop/test/providers.test.mjs` = **U103–U107**（含 **U107b**）；
   MCP 族 `thincoder-desktop/test/mcp-servers.test.mjs` = **U108–U110**；项目级信息族 `thincoder-desktop/test/project-info.test.mjs` = **U111–U113**（U98–U113 全数在册）；
@@ -1822,3 +1822,4 @@ T-DSK30 的机检面 = `thincoder-desktop/test/views-attach.test.mjs`（附件�
 - 2026-10-04（**渠道档位退役批（desktop-channel-tier-retire）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-desktop-channel-tier-retire.md` §2 · 台账 #902）：KD-18 设置面半全消（主条 = `docs/desktop/design/COMPOSER.md` §1——会话级半保留）+ §4.2 增本批「现行 ⇒ 预期」块（产品码九行 + 测试面（批内件拟新增）+ 设计档行）+ §7 T-DSK31 行删（行内注记随正；机检豁免——用例退场登记）+ §9 批 B 落形句收正 + 变更记录（本行）；`docs/desktop/design/COMPOSER.md` ∥ `docs/desktop/design/IPC.md` ∥ `docs/desktop/design/SETTINGS.md` ∥ `docs/desktop/design/UI.md` 四档同拍（明细另见各档变更行）。**产品码零触（设计轮）**。明细 = 批档 §2。
 - 2026-10-04（**渠道档位退役批 · 实施后回填轮 · 父侧直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-desktop-channel-tier-retire.md` §5 · 台账 #902）：§4.2 本批块翻「实读」（产品码九行实值：**300 ∥ 317 ∥ 106 ∥ 93 ∥ 398 ∥ 254 ∥ 204（±0）∥ 150（键 59）∥ 413（链尾 309）**）+ 测试面行转正（**已落 · ~189 行**——六腿先红 2/6 ⇒ 后绿 8/8）；§4.1 越层段 `settings.mjs` 回线除名（300 ≤300——十五 ⇒ 十四）；`thincoder-desktop/src/main/providers.mjs` 读数随正（339 ⇒ 317——仍越续期）；`thincoder-desktop/renderer/views/settings.mjs` 读数随正（399 ⇒ 398）。**零新语义**（读数）。
 - 2026-10-04（**消化行回填落位批 · 设计修正轮随动 · 父侧直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-digest-reentry-order.md` §2 修正块 十·③④）：§4.1 越层段 `app.mjs` 册值随正（**321 ⇒ 328**——子代理面板批未回填项，同 `docs/desktop/design/RENDERER.md:321` 修正轮笔）+ 贴层段同值随正。**零新语义**（读数）。
+- 2026-10-04（**流尾台账行组退役批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2 · 台账 #913）：§2 **KD-38 收正**（台账读数出站两拍——行面去）∥ §6.1 **D10 行**去「对齐第三批」退役从句 ∥ §7 **T-DSK11** 期望改指段 11 常驻标记（原流内台账行腿随退役）∥ §7 机检面注「台账行与相位两向」⇒「台账读数与相位两向」。**零新语义**。明细 = 批档 §2。

@@ -67,7 +67,7 @@ webview 只做 UI 渲染与用户交互；agent 循环与工具执行在 extensi
 - **P2-3** idle 状态行残留 `turn N/M`（`streaming.js:173` `finish()` 只清 `_turnStart`；`_turnFrame` 仅 `clearMessages` 清）⇒ 消解 = `finish()` 同清；到期 = 状态行面下次触碰。
 - **P2-4** `@` 下拉 Escape 后迟到结果重开（`autocomplete.js:37` 自行 `display:block` + `_atActive=true`）⇒ 消解 = 请求失效标记；到期 = autocomplete 面下次触碰。
 - **P2-5** 恢复路径嵌套工具卡缺 `→ 摘要` 表头段（`thincoder-render-core/flow/tool-card-restore.mjs:39-43` vs 活卡 `thincoder-render-core/flow/tool-card.mjs:95`（`finishToolCard`））⇒ 登记（F-W4 只约束折叠语义）。
-- **P2-6** 裁剪窗不含 `.ledger-line` / `.digest-*` / `.error-banner` / `#compress-status`（`ui.js:446-454` 只统计 4 类）⇒ 消解 = 扩裁剪族；到期 = N-W2 面下次触碰。
+- **P2-6** 裁剪窗不含 `.digest-*` / `.error-banner` / `#compress-status`（`ui.js:446-454`；原含 `.ledger-line`——随流尾台账行组退役（2026-10-04）退场 ⇒ 四类减一）⇒ 消解 = 扩裁剪族；到期 = N-W2 面下次触碰。
 - **P2-7** 索引进度 statusText 无失败清除路径（`panel-index.mjs:196` 弹窗不补发 `done`）⇒ 消解 = 失败补发清除；到期 = 索引面下次触碰。
 - **P2-8** webview 重载撞在飞回合（`panel-session.mjs:154-159` 置 `_agent=null` + abort 蒸馏）⇒ 登记（跨 reload 恢复 = 既定不做 I-7）。
 
@@ -193,3 +193,4 @@ webview 只做 UI 渲染与用户交互；agent 循环与工具执行在 extensi
 - 2026-10-04（**issue 修复批·四 · #825 需求侧 · 主 agent 直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-issue-fix-round4.md` §2.3 ④）：F-W3 用例行三件改**裸名 + 退场注**（`history-window` ∥ `session-boot` ∥ `history-restore`——2026-09-28 测试树全清重置后留名存档；死 token 全形零命中）。**零新语义**（引用形收正）。
 - 2026-10-04（**#895 死 token 收正（三处）· 主 agent 直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-issue-fix-round4.md` §2 路遇观察（`:235`）+ 台账 #895）：F-W4 ∥ N-W2 ∥ N-W4 三处用例引用改**裸名 + 退场注**（`history-restore` ×2 ∥ `history-window`——2026-09-28 测试树全清重置后留名存档；死 token 全形零命中）。**零新语义**（引用形收正）。
 - 2026-10-04（**F-W5 忙态排队 ∥ 满 8 拒收句补 · 主 agent——需求档笔权**〔父侧直接执行 · 可 revert〕——承批 `docs/batches/2026-10-04-composer-queue-gate-stick.md` 设计评审 #34 发现 3 · 台账 #911）：F-W5 需求行补「忙态排队与满 8 拒收」子句（忙态提交 ⇒ 按会话键入队（容量 8——核单源常量）；满 8 ⇒ 拒发 + 提示（词键 `input.slotFull`）+ 文本保留；端门判据 = 宿主镜像计数如实直读）；落批 = 同上。**零新行**。
+- 2026-10-04（**流尾台账行组退役批 · 需求侧口径笔 · 父侧直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2.12 另勘（:266）· 台账 #913）：P2-6 裁剪族**四减一**（`.ledger-line` 随行面退役——余 `.digest-*` ∥ `.error-banner` ∥ `#compress-status` 三族；`ui.js:446-454` 读数面零触）。**零新语义**。

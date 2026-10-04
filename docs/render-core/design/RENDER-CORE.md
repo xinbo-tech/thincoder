@@ -26,7 +26,7 @@
 ### 1.3 落点与加载形（零构建下两端如何取核）
 
 **落点 = 新顶层目录 `thincoder-render-core/`**（真包：`name: "@thincoder/render-core"`，零运行期依赖、零 devDep）；**文件形 = `.mjs`**。
-判据：桌面 `app://` 供给面 MIME 白名单含 `.mjs` 不含 `.js`（`thincoder-desktop/src/main/protocol.mjs:22-29`）；VSC webview 已有 `.mjs` 模块实跑先例（`thincoder-vscode/webview/tool-card-restore.mjs`；R2 换接后八拆档同径直接 import 核包 `.mjs`）。
+判据：桌面 `app://` 供给面 MIME 白名单含 `.mjs` 不含 `.js`（`thincoder-desktop/src/main/protocol.mjs:22-29`）；VSC webview 已有 `.mjs` 模块实跑先例（`thincoder-vscode/webview/tool-card-restore.mjs`；R2 换接后七拆档同径直接 import 核包 `.mjs`）。
 
 **扩展端加载形**：webview 模块以**静态相对路径**取核（`../node_modules/@thincoder/render-core/xxx.mjs`）。
 
@@ -77,7 +77,7 @@
 | KD-RC-11 | **续写支文本节点合并（`appendAdvisorChunk` 两处）**（2026-09-30 · 批 `docs/batches/2026-09-30-desktop-heap-freeze.md` §2.13 · 台账 #694）：文本 ∕ 推理续写支（`:63-66`）与 toolOutput 续行支（`:47-49`）由逐 chunk `createTextNode` + `appendChild`（永不合并）改**并入末文本节点**——末子为文本节点 ⇒ `appendData(str)`（原地并写）；末子非文本节点 ⇒ 维持新建（兜底）；首行 `textContent = str` 不动。**语义等价**：RAW 拼接逐字同（`textContent` 读出恒等）· **零视觉差**（节点边界不参与布局 ∕ 样式；`tailLines` ∕ 行合并判据 ∕ 复制等消费面全按读出串工作）· 消费面（`renderSubagentChunk` 调用侧）零改 | 实测命中：冻结窗 DOM 文本节点 **102,179** ∕ 元素 3,014——`DIV.advisor-text.advisor-think` 族 ≥12 个、单 div 直属文本子节点至 **16,272**（逐 chunk 建节点 ⇒ 节点洪峰 ≈95K+）；文本节点 ∕ 行 O(chunks) ⇒ **O(1)**；承载面遍历成本随节点数增长的冻结签名（四案在册）——E2「钉点命中才动」分支兑现（批档 §1.3c） | **维持逐 chunk 建节点**（实测命中在册——节点洪峰 ≈95K+）；**`textContent += str` 全量重写**（O(n) 串重写 + 整节点替换——非 O(1) 并写） |
 | KD-RC-12 | **斜径机制入核 · 命令表归端**（2026-10-01 · 批 `docs/batches/2026-10-01-desktop-slash-commands.md` · 台账 #761）：核增纯函数档 `thincoder-render-core/composer/slash.mjs`（拟新增）——`parseSlash(text)` ∥ `routeSlash(text, commands)`（判据 = trim 后首字符 `/`、首 token 小写、别名解析；条目形 = `{ name, aliases?, rejectKey?, run(ctx) → boolean }`）；输入面板缝 = `deps.slash = { commands, actions }`（**可选——不传 ⇒ 现行为零变**）；命中 ⇒ 本地执行、**不进消息径**（**零消息径上行**——零 `msg:send` ∥ `queuedUserMessage`、零用户块、零 loading；**模式三钮动作照走 `session:flags`——同钮径不变**）；`run` 返真 = **已受理**（已执行 ∨ 二段交互在场——`/auto` 确认 popover 径同判）⇒ 清框 + 入历史 ∥ 返假 = 未受理（门拒）⇒ 文本保留（+ 条目 `rejectKey` 反馈）；未知 ⇒ toast `slash.unknown <name>`（键 ↔ 发射点单表 = §5 条 6）。**动作句柄面** `actions = { openModelMenu, toggleAuto, togglePlan, toggleEng }` = 钮 handler 提取的同一函数（**同钮同门**——单一实现；键形 ∥ 落点 = §5 条 6）；反馈三键（`slash.unknown` ∥ `slash.busy` ∥ `slash.args`）经端注册面供给（先例 = `input.slotFull`）。**（`/help` 增量 · 同批 2026-10-01②）**`/help` = **流内打印形**（对位 CLI `cmd-help` 实盘：标签 ∥ 组序 ∥ `名字 (别名)` ∥ 描述逐行）；核增 `formatHelp(commands, t)`（表→行集 · 纯函数）∥ `/help` 打印口 = **端侧表构造期闭包注入**（`createSlashCommands(printHelp)`——`deps.slash` 与 `ctx` 零改，见 §5 条 6）；`/h` 别名在册；未知反馈携 `/help` 指引。**被否**：浮层 ∥ toast 主体 ∥ 交互式列表。**边界**：键位补全 = 不做；其余 22 条 CLI 命令 = 另批 ∥ 不做（逐条处置 = 批档 §2.4）；VSC 零接缝（不传 `deps.slash`）。 | 用户 2026-10-01 走查（桌面敲 `/model` 无反应；「要啊」+「开批」）；复用优先核查 = 全树无既有斜杠机制（CLI 表 = CLI 自持 ∥ 核 `queued.mjs` 只做队列分类 ∥ VSC 无面）⇒ 新建机制落共享层 · 命令表归端 | **桌面自持**（面板提交面不可缝 ⇒ 唯有 post 层拦截——与面板状态机打架）；**CLI 表直引**（Node 侧 ∥ 渲染面静态闭包禁令）；**核持命令表**（端动作面不可入核——§1.2 四条）；**「未实装」二级反馈全表**（状态面随分期漂移 ∥ 维护面 > 收益） |
 
-## 3. 核边界 · 逐模块判定表（VSC webview 51 档 · 单源）
+## 3. 核边界 · 逐模块判定表（VSC webview 50 档 · 单源）
 
 三值判定：**核**（整体入核：零宿主特权仍可运行）· **拆**（纯迁移 / 呈构件入核 + 出站 / 句柄 / 分发留端注入）· **端**（留适配层：端协议 / 端结构 / 端能力）。
 依据 = 勘察实读行号（宿主三张：A = `state.js` import · B = 直用 `postMessage` · C = `--vscode-*` 直用）。
@@ -102,7 +102,6 @@
 | 16 | `i18n.js` | **核** | `t()` / 插值 / 缺键回落（`:18` / `:26`）；字符串表来源端各给 |
 | 17 | `index.html` | 端 | 每端骨架（VSC 占位符制 `:6` / `:93`；桌面相对直引） |
 | 18 | `input.js` | 端 | 输入框键位 / 中断模态（`:21` / `:46` / `:58`） |
-| 19 | `ledger-line.js` | **拆** | 行构造与类名入核（`thincoder-render-core/flow/ledger-line.mjs:8`）；跟滚耦合（`maybeScrollDown` 依赖）留端注入（`thincoder-vscode/webview/ledger-line.js:11-12`） |
 | 20 | `lib.js` | **核** | 纯工具集（`:15` `tailTruncate` · `:27` `MAX_TOOL_OUTPUT` · `:73` `toolFailureStatus` · `:94`）——零 DOM 零宿主 |
 | 21 | `loading.js` | 端 | 忙态门 / 按钮换位（`:67` / `:86`） |
 | 22 | `md.js` | **核** | Markdown 渲染 + **全量转义闸**（`:67` / `:106` / `:146` / `:151`） |
@@ -136,7 +135,7 @@
 | 50 | `tool-summary.js` | **核** | 工具摘要单源（`:35`）——活卡与恢复卡共用 |
 | 51 | `ui.js` | **拆** | 块容器（`thincoder-render-core/flow/block.mjs:111`）/ 工具卡（`thincoder-render-core/flow/tool-card.mjs:56` / `:95` / `:147`）/ 恢复面（`thincoder-render-core/flow/block.mjs:93` / `:121`）/ 错误横幅（`thincoder-render-core/flow/block.mjs:133`）入核；唯一出站（`retry`）留端注入（`thincoder-vscode/webview/ui.js:164-166`） |
 
-**计数（D3）**：51 档 = **核 9**（`activity-view` · `diff` · `highlight` · `i18n` · `lib` · `md` · `toast` · `tool-card-restore.mjs` · `tool-summary`）· **拆 9**（`activity` · `ledger-line` · `panels` · `permission` · `question` · `queued-mark` · `search` · `streaming` · `ui`）· **端 33**。
+**计数（D3）**：50 档 = **核 9**（`activity-view` · `diff` · `highlight` · `i18n` · `lib` · `md` · `toast` · `tool-card-restore.mjs` · `tool-summary`）· **拆 8**（`activity` · `panels` · `permission` · `question` · `queued-mark` · `search` · `streaming` · `ui`）· **端 33**。
 **静置面（本轮不改动）**：`activity-new.js` / `activity-diag.js` / `autocomplete.js` 三档在本轮核化射程外（端差或后议）。
 
 ## 4. 逐机制对位表（22 机制 × 桌面 · 单源）
@@ -338,7 +337,7 @@
   `flow/*.mjs`（块 / 工具卡 / 推理 / 缝合）· `cards/*.mjs`（审批 / 提问 / 计划）· `subblocks/*.mjs`（态机 / 块面）（R2） · `test/*.test.mjs`（平 node 直测——**纯函数层 + 态机层**）。
   **DOM 构件层用例宿主 = 消费端套件**（非核包）：VSC = `thincoder-vscode/test/**`（happy-dom devDep 既有）· 桌面 = `fake-dom.mjs` 假 root 宿主档（已随 2026-09-28 测试树全清重置退场）——核包自身零 devDep（C1 机检恒可过），不引 happy-dom ∥ 不另立第二假 root。
 
-**扩展端（判定表 18 档 + 发行三件）**——逐档「现行 ⇒ 预期」（核 9 = 迁核；拆 9 = 纯面迁核 · 端留守）：
+**扩展端（判定表 17 档 + 发行三件）**——逐档「现行 ⇒ 预期」（核 9 = 迁核；拆 8 = 纯面迁核 · 端留守）：
 
 | 档（`thincoder-vscode/webview/`） | 现行 | 预期 | 判定 | 迁出面 / 注（越层档带拆分预案） |
 |---|---|---|---|---|
@@ -358,7 +357,6 @@
 | `permission.js` | 122 | ≈ 80–95 · R2 实读 **39** | 拆 | 构树 ⇒ 核 `thincoder-render-core/cards/permission.mjs`；低于带（实迁出量大于估值）；三出口留守（端注入） |
 | `question.js` | 89 | ≈ 60–70 · R2 实读 **25** | 拆 | 构树 ⇒ 核 `thincoder-render-core/cards/question.mjs`；低于带；出站留守 |
 | `queued-mark.js` | 88 | ≈ 55–65 · R2 实读 **40** | 拆 | 纯逻辑 ⇒ 核 `flow/queued-mark.mjs`；低于带；DOM / 快照来源留守 |
-| `ledger-line.js` | 18 | ≈ 10–12 · R2 实读 **13** | 拆 | 行构造 ⇒ 核 `flow/ledger-line.mjs`；带内（+1）；跟滚耦合留守 |
 | `search.js` | 165 | 改指核件 ⇒ **18**（R6 落 · 实读 2026-09-29——内容行数口径） | **拆** | 端壳（`root` 绑定 + 侧效应注册）——实现整件入核 `thincoder-render-core/search.mjs`（R6 上提 · `docs/batches/2026-09-28-desktop-feature-parity.md`） |
 
 **发行三件 + 测试面**：`thincoder-vscode/package.json`（依赖 +1）· `.vscodeignore`（反排除 +1 行）· `scripts/check-vsix.mjs`（断言 +1）· `thincoder-vscode/test/**`（happy-dom 直驱路径随动 + 核包 DOM 构件层用例宿主）。
@@ -434,7 +432,7 @@ VSC `thincoder-vscode/webview/session.css` **215 ⇒ ≈219**（两钮（Rename 
 | 批 | 内容 | 文件面 | 判据 | 串行序 |
 |---|---|---|---|---|
 | **R1** | 核抽取（纯函数层）+ 双端加载管道 | 核包 `md/highlight/diff/lib/tool-summary/i18n`；VSC 依赖 / 反排除 / 断言 / 六档换 import；桌面依赖 / `protocol.mjs` 双根 / guard / `check-dist` | C1–C6 + VSC 全绿 | 先行（其余批全部依赖） |
-| **R2** | 核抽取（会话流构件层）+ VSC 换接 | 核包 `flow/cards/subblocks`；VSC `ui.js` / `streaming.js` / `permission.js` / `question.js` / `panels.js` / `activity*.js` / `ledger-line.js` / `queued-mark.js` 换接 | C2（零回归——含映射差分锁）+ 核档用例 | R1 后；**与 R3a 可并行**（文件面不交叠：核包 / VSC ∥ 桌面）；先行于 R3b / R3c（核件依赖） |
+| **R2** | 核抽取（会话流构件层）+ VSC 换接 | 核包 `flow/cards/subblocks`；VSC `ui.js` / `streaming.js` / `permission.js` / `question.js` / `panels.js` / `activity*.js` / `queued-mark.js` 换接 | C2（零回归——含映射差分锁）+ 核档用例 | R1 后；**与 R3a 可并行**（文件面不交叠：核包 / VSC ∥ 桌面）；先行于 R3b / R3c（核件依赖） |
 | **R3a** | 桌面状态行（D17） | 桌面 `agent-bridge.mjs`（`onUsage` 回调——九键 ⇒ 十键）· `agent-host.mjs`（回合尾结算携 `tokens?` / `timers?`）· `IPC.md` `ev:usage` 载荷扩 · `events.mjs` 归约（turn 槽 / 回合起刻 / timers；`currentTool` 由视图段自 `blocks` 派生——零新槽 · 免双源）· `renderer/views/chrome.mjs` + 状态行族档（`views/statusline.mjs` + `mount-status.mjs`——R3a 已落）· `i18n.mjs` · 测试面 | D17 十五段逐行判据 | R1 后（与 R2 可并行）；**R3b / R3c 随后串行**（共享三档——见上条） |
 | **R3b** | 桌面右列 = 子 agent 面（D20） | 桌面 `agent-bridge.mjs`（relay 分流 → `ev:subagent`；前缀剥除；**存活投影挂点**）· 宿主存活投影 + 2s 拍体（`src/main/subagent-face.mjs` ∥ 附 `agent-host.mjs`——起 / 停 / 清点）· `IPC.md` 新通道 + `subagent:stop` · `ipc.mjs` / `preload.cjs`（白名单 +1）· `events.mjs`（新切片 + 摘工具行）· `renderer/views/activity.mjs` 重写 · `mount-*` · 测试面 | D20 四判据（五类射程 / 零工具行 / 块态机 / 停止往返）+ **出生自愈**（丢首发出生 ⇒ 一拍内复现 · 终态零再断言） | R2 后（需核态机）+ **R3a 后**（共享三档串行） |
 | **R3c** | 桌面会话流经核 + 会话面板（D19 / D18） | 桌面 `renderer/views/chat*.mjs` 核件分件消费（渲染逻辑单源 · 桌面外壳留存）· `agent-bridge.mjs`（`onReasoning` 回调——十键 ⇒ 十一键）· `events.mjs`（`ev:reasoning` 归约）· `IPC.md`（`ev:reasoning`）· `sessions.mjs`（行投影 + `activeProvider`）· `thincoder-desktop/renderer/views/sessions.mjs`（元数据族）· `styles`（核类名映射）· 测试面 | C7 + D18 / D19 | R2 后（需核构件）+ **R3b 后**（共享三档串行） |
@@ -556,3 +554,5 @@ VSC `thincoder-vscode/webview/session.css` **215 ⇒ ≈219**（两钮（Rename 
 - 2026-10-01（**轻通道轮五收尾 · 设计形式化 · eng-designer**——承 `docs/batches/2026-10-01-light-round-5.md` §1 · 台账 #808）：§5 排版统一覆盖块基线行字号收正（`var(--fs)` **14px**——轻通道轮五 2026-10-01 定版〔12 ⇒ 14〕；行高 1.3 保持）；余值零动。**零机制语义**（值面收正）。明细 = 批档 §2。
 - 2026-10-02（**文档清账轮 · 执行轮 4 · eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 6 处 R1 改指（承接全路径，盘上实存——`thincoder-cli/src/tui/slash-commands.mjs:130` ∥ `thincoder-render-core/flow/block.mjs` ×2 ∥ `thincoder-desktop/renderer/slash-commands.mjs` ∥ `thincoder-vscode/webview/chat.css:404-413` ∥ `thincoder-render-core/composer/panel.mjs`）；宽面 15 行折行（§5 ∥ §6 ∥ §9 处——语义零改）。**零新语义**。
 - 2026-10-04（**issue 修复批·三 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §2 · 台账 #875）：§5 构件族补**推理块默认态**（`renderReasoning` 默认折叠——恢复径 `thincoder-render-core/flow/block.mjs` 同拍 ∥ 桌面零触）∥ **`configureActivityView({ tailLines })`** 缝（折叠预览行数——缺省 3 ∥ 允许 0）。**零机制语义**（默认态 ∥ 缝）。明细 = 批档 §2。
+- 2026-10-04（**流尾台账行组退役批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2 · 台账 #913）：§3 行 19（`ledger-line.js`）删 —— 行号作稳定引用面（历次记录按行号复指）⇒ 表序**留缺位不重排**；计数同拍（**51 档 ⇒ 50 · 拆 9 ⇒ 8**——档头同值）∥ §6 表该行删 ∥ §8 R2 行枚举随正（去投递壳）。核构件 `ledger-line.mjs` 随之退场（孤儿——消费面仅 VSC 投递壳一档）。**零新语义**。明细 = 批档 §2。
+- 2026-10-04（**流尾台账行组退役批 · 修正轮（评审 #40 · 父裁 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §3 轮次 1 · 台账 #913）：§1.3「八拆档」⇒ **七拆档** ∥ §6 表头「判定表 18 档 … 拆 9」⇒ **17 档 ∕ 拆 8**（随 §3 行 19 删行同拍——表余 17 行）。**零新语义**（计数随动）。明细 = 批档 §2 修正块。
