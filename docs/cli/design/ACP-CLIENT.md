@@ -51,7 +51,7 @@
 
 | Method | 做 | 说明 |
 |---|---|---|
-| `session/update` | ✅ | 事件块见 §5（`agent_message_chunk` / `agent_thought_chunk` / `tool_call` / `tool_call_update` / `usage_update` / `config_option_update` / `current_mode_update` 等） |
+| `session/update` | ✅ | 事件块见 §5（`agent_message_chunk` / `agent_thought_chunk` / `tool_call` / `tool_call_update` / `usage_update` / `config_option_update` / `current_mode_update` / `session_info_update`（子代理事件承载体——§12）等） |
 | `ledger/changed` · `batch/changed` | ✅ | 数据变更通知（观察周期内指纹变——5s 轮询；**信号面**：params 只 `{ cwd }`，数据经拉取方法取）；契约 = `docs/cli/design/READ-DATA-INTERFACE.md` §3.4 |
 | `session/request_permission` | ✅ | 工具审批 + 提问（审批通道的 ACP 实现；危险命令标注见 §5.4） |
 | `fs/read_text_file` | ✅ | **仅内部用于 edit 桥的读回**（读 IDE buffer 当前内容再算 diff）——独立 `read` 工具保持本地（两者不冲突）。**仅当客户端宣告 `fs.readTextFile` 时才发**（§11.4） |
@@ -164,7 +164,7 @@ ACP 官方 SDK 是 npm 依赖——违反零依赖哲学，故自写精简层。
   （契约：schema `session/new` 方法描述逐字「**May** return an `auth_required` error … **if** the agent requires authentication」）。
 - `authenticate` = **确认动作**（可选）：校验 `methodId` 属于已宣告方法、校验凭据可解析，通过返回空结果 `{}`；失败返回 `-32000`。
 - `initialize.authMethods` = **对象数组**，且仅当 `clientCapabilities.auth.terminal === true` 时含 `terminal` 项（契约 MUST）；否则 `[]`。
-- **凭据面文案必须可行动**：无可用 key（「无 provider/key」类）⇒ 指向 `~/.thincoder/config.json` 与登录流程；「持 key ∧ 无有效 `defaultModel`」⇒ 放行（协议面零提示行——提示通道未决；§11.5）。
+- **凭据面文案必须可行动**：无可用 key（「无 provider/key」类）⇒ 指向 `~/.thincoder/config.json` 与登录流程；「持 key ∧ 无有效 `defaultModel`」⇒ 放行（协议面零提示行——**提示通道定形 = 不立**（2026-10-04 批；判由与备选支见 §13））。
 - 非 ACP 通道（TUI / `chat`）的鉴权面**零改**。
 
 ## 5. 事件桥（`thincoder-cli/src/acp/bridge.mjs`）
@@ -181,6 +181,7 @@ runAgent 的 callbacks 直接映射为 ACP 通知（`session/update` 事件块�
 | `callbacks.onUsage` | `usage_update` `{ used, size }`（used = prompt + completion 之和；size = 上下文窗口——`providerSpec(agent.provider).context`，未知模型 128_000 兜底） |
 | 回合结束 | **非通知**——`session/prompt` resolve `{ stopReason: "end_turn" }` |
 | `callbacks.onWait` / `onCompress` | 仅 stderr 日志（rate-limit / auto-compacted）——onWait 日志文案取**核内单源映射**（`docs/core/design/PROVIDER.md` §6.20）；`warn` / 未知相位 ⇒ 不打印 |
+| 子代理事件 token（relay 前缀 + `⟦ev⟧<名>` 形态——§12） | **剥离照旧 + 结构化增量**：`session_info_update` + `update._meta["thincoder.dev/subagent"]`（`role` / `id` / `state` / `progress?` / `detail?`） |
 
 > relay 前缀剥离的逐点落法与配对键语义见 §7.2；本表只列映射骨架。
 
@@ -319,11 +320,11 @@ export function relayPrefixOf(label, id) // → `${label}#${id}/`
 
 **⟦ev⟧ 事件 token 剥离 = 形态判据（本批收正 · 需求档 F7 / R-A3）**
 
-- **现状缺陷**：`thincoder-cli/src/acp/bridge.mjs:184` 用**枚举白名单** `(?:turn|approval|done|settled|stopped|async)`；发射面已有枚举外事件——
+- **旧状缺陷（历史陈述——2026-09-16 批 CORE-DEFECT-FIXES 已修；修法与依据见下）**：`thincoder-cli/src/acp/bridge.mjs:184`（as-of 2026-09-16）用**枚举白名单** `(?:turn|approval|done|settled|stopped|async)`；发射面已有枚举外事件——
   `queued`（`thincoder-core/agent-tools/subagent-scheduler.mjs:337`——排队态刷新，ACP 回合内并发 spawn 即达）与
   `cancelled`（`thincoder-core/agent-tools/subagent-async.mjs:262`——取消路径，ACP 面无取消入口时不可达，登记为同族风险）
-  ⇒ 二者随 `agent_message_chunk` 进 ACP 客户端**可见面**（token 字面量泄漏：`⟦ev⟧queued\x1eslot\x1e…`）。
-- **修法（形态取代枚举）**：`if (/^⟦ev⟧[a-z]+\x1e/.test(payload)) return`——事件名域 = ASCII 小写 + 终止符 `\x1e`；**枚举退役**（新增事件名零维护）。
+  ⇒ 二者曾随 `agent_message_chunk` 进 ACP 客户端**可见面**（token 字面量泄漏：`⟦ev⟧queued\x1eslot\x1e…`）。
+- **修法（形态取代枚举）**：命中式 = `^⟦ev⟧[a-z]+\x1e`——事件名域 = ASCII 小写 + 终止符 `\x1e`；**枚举退役**（新增事件名零维护）。判别式**单源** = 核模块 `subagent-event.mjs`（`parseSubagentEvent` 非空 ⇒ 剥——2026-10-04 批统一，桥内联式退役；§12.4）。
 - **形态依据（既有先例，非新造 · 评审 #8 收正）**：VSC 宿主面消费单点 `thincoder-vscode/src/extension/panel-callbacks.mjs:44`（`includes("⟦ev⟧")` 识别）（as-of 2026-09-29）+
   `:85`（`startsWith("⟦ev⟧")` **兜底消费**——注释原文「其余核事件：消费不泄漏」）即形态判据；核生成侧（`thincoder-core/agent/spawn-child.mjs:114-115` `EVENT_PHASE` / `EVENT_TYPE`）系**枚举**放行判据——**不引为形态先例**（枚举面 = D13 所否同形；**不在本批修法范围**）。
   ⇒ 本修法 = ACP 面与 VSC 面既有**形态判据**对齐，不是新语义。
@@ -334,7 +335,7 @@ export function relayPrefixOf(label, id) // → `${label}#${id}/`
 - **另一消费点已自洽（非缺陷——登记为观察项）**：`thincoder-cli/src/tui/subagent-blocks.mjs:46` 的 `SUB_EVENT_RE` 枚举（含 `queued`、**不含** `cancelled`）之外另有 `:172` 显式 `cancelled` 分支 + `:187` `startsWith("⟦ev⟧")` 兜底 ⇒ 无泄漏面，本批**不改**。
 - **嵌套形态顺序不变**：relay 前缀由桥先剥（本节表①「信号检查改在 payload 上」）；前缀后 token 落 payload 首 ⇒ 同一判据命中。
 - **负向边界（防过剥）**：正文含 `⟦ev⟧` 而无 `\x1e` 终止符 ⇒ **仍转发**（判据要求终止符同现）；`[a-z]+` 不吃其它 `⟦…⟧` token 形态。
-- **测试面**：宿主 `thincoder-cli/test/acp-channel.test.mjs`（T9 信号 token 带前缀 → 零通知）——增 `queued` / `cancelled` 两相 + 无终止符负例（正文含哨兵仍须转发）。
+- **测试面**：宿主 `thincoder-cli/test/acp-channel.test.mjs`（T9 信号 token 带前缀 → **零可见面文本**（零 `agent_message_chunk`）；结构化增量见 §12）——增 `queued` / `cancelled` 两相 + 无终止符负例（正文含哨兵仍须转发）。
 - **受影响文件与验收（回指）**：本批受影响文件（当前行数 / 增量）= 批次档 `docs/batches/2026-09-15-core-defect-fixes.md` §四；验收 = 同档 §五 V4（可机器验证）。
 
 ### 7.3 能力缺口：`onToolOutput` 明示缺
@@ -373,6 +374,10 @@ ACP 不转发工具输出流式增量——**父工具与子代理工具同口�
 | D17 | 凭据面**收回文档声称**：本批**不实现** env fallback | 项目现行裁定 = 「env vars are not a key source」（`DOC-CODE-RECONCILE` A6 · 2026-09-15「实装为准改文档」），四处逐字在位（`model-picker.mjs:37` · `presets.mjs:30/64/94` · `embed-config.mjs:5` · `subagent-async.mjs:137`）；（as-of 2026-09-29）仅在 ACP 面实现 = 同一产品两套凭据语义（把一处漂移换成更深的语义分裂）。且无 TTY 的真实阻塞是 D15（认证闩锁），不是 key 来源少一条。env 通道属 CONFIG / PROVIDER 板块（§11.9 登记） |
 | D18 | **契约形状以 schema 逐字段为准**，不以「某客户端能跑就行」为准 | 本批实核出四处响应形状不合契约（§11.3 G2 族）：`agentCapabilities` 键名 · `session/new` 必填 `sessionId` · `session/prompt` 必填 `params.prompt` · `session/list` 条目 `sessionId`（另 `configOptions[]` 的 `id`/`name`）。否决「只修原 G2 的 `initialize`」——另三处使「可挂可用」不可达 |
 | D19 | fs 反向 RPC **按客户端能力位门控**，未宣告 ⇒ 回落本地 | schema `FileSystemCapabilities` 默认 `false` + 文档「MUST treat all capabilities omitted … as UNSUPPORTED」；现状无条件发 `fs/*` ⇒ 不支持者干等 30s（`bridge.mjs:106/114/291`）（as-of 2026-09-29）。判据同构 = kimi `server.ts:626-636`（皆否 ⇒ 回落 `LocalKaos`）；能力位来源 = §3.4 快照（“initialize 单次交换”语义） |
+| D20 | 结构化子代理事件 = `session/update` → `session_info_update`（全字段可省载体）+ `update._meta["thincoder.dev/subagent"]` | 零契约字段虚构（唯一零必填变体）；`_meta` = schema 预留扩展位（MUST NOT assume——通用客户端忽略即合规）。否决：非标枚举（严格客户端反序列化失败）/ `agent_message_chunk` 空文本（假造会话消息）/ `tool_call_update` 挂卡（跨轮注册表 + 卡生命周期相抵）/ 自定义 `_` 通知（方法面边界）。详见 §12 |
+| D21 | 键名 = `thincoder.dev/subagent`（命名空间形） | 承上游 Extensibility 示例 `zed.dev/debugMode`；对外契约防保留键碰撞。修订自拆批草案裸名 `_meta.subagent`（逐点给由）。§12.1 |
+| D22 | `state` = 事件名原文（形态域开集；现发射集 8 名） | 单一来源（token 自身命名）——零第二语义层；枚举化 = 漏项发生器（D13 同源否）。否决：归一化状态词表（与显示面三处映射重复维护）。§12.3 |
+| D23 | 协议面提示通道 = **不立**（#843 定形） | 判由四条（可见通道唯对话文本且语义相抵 ∥ 信息已在 `configOptions` 面 ∥ #841 已认账非缺陷 ∥ 边际可逆——`_meta` 载体随 D20 在位）。备选支（立）形态与量级在档。§13 |
 
 **登记项（后续批 / 父侧裁）**
 
@@ -382,6 +387,9 @@ ACP 不转发工具输出流式增量——**父工具与子代理工具同口�
    （也不宜有——子代理无对话面，澄清走报告回父）→ question 在 children 工具集内每调必错；建议 spawn 侧做工具剔除。
 3. **子代理事件整体过滤**（§7.2 备选）——显示语义候选，需用户裁定。
 4. **`onToolOutput` 流式补齐**（§7.3）——独立设计候选。
+5. **子代理事件显示面收敛**（TUI / VSC / 桌面三消费点 → 核文法单源）——§12.6 登记；本批零触。
+6. **事件 token 生成侧构造器化**（约 10 处发射点改用文法单源）——§12.6 登记；本批零触。
+7. **协议面提示通道已定形不立**（#843）——重启条件 = 出现协议感知客户端消费者（备选支形态 = §13）。
 
 ## 10. 不并项与历史沿革
 
@@ -569,7 +577,7 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
   **落点 = 各受门 handler 共用的门助手**（`requireConfigured()`，住 `handlers-session.mjs` 的 `ctx`；**`session/new` 是门链首个触点**）：
   - `ok === true` ⇒ 放行；
   - `keyPresent === false`（=「无 provider/key」类）⇒ `-32000`，文案指向 `~/.thincoder/config.json` 的 `providers[].apiKey` **与** `thincoder acp --login`（§11.2-4 的恢复路径）——**不拼 reason**。
-  **#841 口径（核统一解析——`doc:PROVIDER.md:§6.22`）**：任一渠道持 key ⇒ 核必选中 ⇒ `ok` 恒真——故「持 key ∧ 无有效 `defaultModel`」（`fallback` 类）**放行**（协议面**零提示行**——提示通道未决，如需另立设计），② 分支（`keyPresent === true ∧ ok === false`）**默认接线不可达**。
+  **#841 口径（核统一解析——`doc:PROVIDER.md:§6.22`）**：任一渠道持 key ⇒ 核必选中 ⇒ `ok` 恒真——故「持 key ∧ 无有效 `defaultModel`」（`fallback` 类）**放行**（协议面**零提示行**——提示通道定形 = **不立**（2026-10-04 批；判由与备选支见 §13）），② 分支（`keyPresent === true ∧ ok === false`）**默认接线不可达**。
   （`authenticate` 失败复用同一文案；错误码恒 `-32000` ⇒ AC6 不变。）
 - **`session/new` 的装配后检查（兜底，与门互补）**：门拦的是「无 provider/key」（`invalid` 类）；装配后检查拦的是**门放行但 provider 仍不可用**的残余——结构不全（缺 `baseURL` 等——「持 key 但结构不全」归发送 ∕ 装配失败面，`doc:PROVIDER.md:§6.22`）。
   现状 `defaultCreateSession` → `assembleAgent` 带 `_providerInvalid` **照样建会话**，问题延后到首个 prompt 才以含糊错误爆出。
@@ -597,7 +605,7 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 1. `initialize` 响应**只**含契约字段（`protocolVersion` / `agentCapabilities` / `authMethods` / `agentInfo` / `_meta`），且 `initialize` 是**唯一**能力交换点（§3.4）。
 2. **任何** `fs/*` 反向 RPC 发出前必过客户端能力位；未宣告 ⇒ 回落本地（§11.4）。
 3. `authMethods` 含 `terminal` 项 **⟺** 客户端 `clientCapabilities.auth.terminal === true`（§11.2）。
-4. 凭据门 = **即时判据**（无跨调用闩锁）；`authenticate` 是确认动作，不是前置条件；门失败 = 「无 provider/key」一档（§11.5——文案指向 `providers[].apiKey` 与 `thincoder acp --login`）；「持 key ∧ 无有效 `defaultModel`」⇒ 放行（协议面零提示行——提示通道未决，§11.5）。
+4. 凭据门 = **即时判据**（无跨调用闩锁）；`authenticate` 是确认动作，不是前置条件；门失败 = 「无 provider/key」一档（§11.5——文案指向 `providers[].apiKey` 与 `thincoder acp --login`）；「持 key ∧ 无有效 `defaultModel`」⇒ 放行（协议面零提示行——提示通道定形 = 不立（2026-10-04 批；§13））。
 5. 会话建立响应必含 `sessionId`；prompt 入参取自 `params.prompt`。
 6. **无 TTY 可驱动（可机判）**：① 凭据在位时，**从不调 `authenticate`** 的脚本化 stdio 客户端可完成 `initialize → session/new → session/prompt`；
    ② 非 TTY 下 `thincoder acp --login` **不挂死**（快速退出码非 0 + 可读文案）；③ 支持 `auth.terminal` 的客户端可从 `authMethods` 取到 `args:["--login"]` 的完整启动信息。
@@ -631,6 +639,104 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 2. **`_meta['terminal-auth']`**——若实测到仍不认一等 `type:"terminal"` 的在用客户端，再评估。
 3. **`session/prompt` 多块内容面**（原 G6 残项）——`resource_link` 已接；余**多块 text 合流**（首块策略残项）待立批。
 
+## 12. 结构化子代理事件（`_meta` 扩展契约 · 2026-10-04 批）
+
+> **定位**：ACP 契约之外的**扩展契约**——面向 ACP 客户端实现方（客户端活动面板前置件；本批交付 = 服务端契约 + 本说明）。
+> **议定源** = 批次档 `docs/batches/2026-10-04-acp-face-completion.md` §2；scope 起点 = `docs/cli/design/ACP-PROTOCOL-COMPLIANCE.md` §6（**起点非承诺**——本节定形按点修订并给由）。
+> **一句话边界**：协议版本 / `initialize` 形状 / 方法面**零动**（不进能力字段）；对不认本扩展的标准客户端无可动作面（`_meta` 契约逐字「Implementations MUST NOT make assumptions about values at these keys」——忽略即合规）。
+
+### 12.1 通道与承载体（定形）
+
+- **通道** = `session/update` 通知；**承载体** = `session_info_update` 变体（schema 逐字「All fields are optional to support partial updates」——全字段可省 ⇒ **唯一可作纯扩展载波的标准变体**；不虚构任何契约字段）。
+- **扩展位** = `update._meta["thincoder.dev/subagent"]`（载体级 `_meta`；schema 逐字「reserved by ACP to allow clients and agents to attach additional metadata」+ `x-deserialize-default-on-error`——严格客户端反序列化安全面）。
+- **键名命名空间** = `thincoder.dev/subagent`（承上游 Extensibility 文档示例形 `zed.dev/debugMode`；防与保留键面碰撞）。修订自拆批草案裸名 `_meta.subagent`（给由 = 本键面是对外契约，命名空间防撞、自我标识）。
+- **发射规则**（`bridge.mjs` `onToken`）：载荷 = relay 前缀（`parseRelayPath`）之后；命中**事件 token 形态**（`⟦ev⟧<小写名>` + RS 终止符——剥判据单源 = 核模块 `subagent-event.mjs`（§12.4））**且** relay 前缀在场 ⇒ ① 文本面剥离**照旧**（零 `agent_message_chunk`——剥离语义零改）；② **增量**发射一条 `session_info_update`。无前缀形态 ⇒ 仅剥离零发射（防御面；全部发射点实核皆带 relay 前缀）。
+- **被否承载体（各一句）**：非标 `sessionUpdate` 枚举值（严格客户端 oneOf 反序列化失败——拆批草案已否）；`agent_message_chunk` 空文本（假造会话消息 + 空消息块污染）；`tool_call_update` 挂父工具卡（需跨轮 `role#id → toolCallId` 注册表；工具卡完成态与子代理存活期相抵；consult 族一卡多子）；自定义 `_` 前缀通知（规范许可，但属**方法面**新增——越本批边界；对编辑器面板消费者无额外优势）。
+
+### 12.2 通告形状（冻结）
+
+```json
+{ "sessionId": "<会话 id>",
+  "update": { "sessionUpdate": "session_info_update",
+    "_meta": { "thincoder.dev/subagent": {
+      "role": "eng-coder", "id": 2, "state": "turn",
+      "progress": { "turn": 3, "maxTurns": 100 } } } } }
+```
+
+| 字段 | 域 | 来源 |
+|---|---|---|
+| `role` | string（relay 文法 `[\w-]+`） | relay 前缀**主体段** = 最内段（`explore#1/eng-coder#2/…` ⇒ `eng-coder`） |
+| `id` | integer ≥ 0 | 同上（`#` 后数字段） |
+| `state` | string（形态域 `[a-z]+`；现发射集 = 8 名，§12.3） | 事件名原文 |
+| `progress` | `{turn,maxTurns}` ∥ `{position}` | `turn` / `approval` ⇒ 轮号对；`queued` ⇒ 队列位次 |
+| `detail` | string（可截断文本） | `queued` ⇒ 排队原因文（非空时）；`approval` ⇒ 工具名（发射侧已切 40 字符） |
+
+- 字段**无值 ⇒ 键缺席**（非 null 填充）；客户端 **SHOULD 容忍未知 `state`**（形态域开集——新增事件名不破坏本契约）。
+- 数值字段解析 = `Number` 转换；非有限值 ⇒ 该键省略（防御；发射侧恒为整数）。
+
+### 12.3 状态族（现发射集 = 8 名）
+
+| state | 语义 | 附带字段 |
+|---|---|---|
+| `queued` | 排队 spawn 等待中（容量 `slot` ∥ 依赖 `wait` ∥ 依赖取消 `depc`） | `progress.position`；`detail`（原因文） |
+| `async` | 异步 spawn 实际启动（池标记） | — |
+| `turn` | 子代理回合进展（每回合一条） | `progress.{turn,maxTurns}` |
+| `approval` | 子代理等待工具审批 | `progress.{turn,maxTurns}`；`detail`（工具名） |
+| `cancelled` | 排队取消（从未启动——出队即终态） | — |
+| `stopped` | 运行中取消（冻结语义） | — |
+| `settled` | 结算完成（待消化） | — |
+| `done` | 完成（归档） | — |
+
+- 生命周期：`queued?` → `async`（异步族）∥ 首个 `turn`（同步族出生可辨）→ `turn`* →（`approval`*）→ `cancelled` ∥ `stopped` ∥ `settled` → `done`。
+- **load 重放不产**本通知（历史面无事件 token——本面 = live-only 信号；与显示面三处同判）。
+- **逐态字段序 = 发射侧单源；投影以样本锁定**：字段序以各发射点既有构造为准（本契约零改发射侧）；批内件 T-862-1…6 逐字钉住「token 字段序 → 输出键」映射（如 `⟦ev⟧turn\x1e3\x1e100\x1ellm\x1e` ⇒ `progress.{turn:3,maxTurns:100}`）。发射侧改字段序 = 契约面变更（回归本节与样本）。
+
+### 12.4 前置件：事件文法机读单源（核侧 · 本批定形）
+
+- 落点 = `thincoder-core/agent/subagent-event.mjs`（拟新增——零依赖叶；承 `relay-prefix` / `child-marks` 同族先例）。
+- 导出（定形）：`EVENT_SENTINEL` · `parseSubagentEvent(text)` → `{ name, progress?, detail? } | null`（形态判据 = **单源**——唯一表达式住本模块（`^⟦ev⟧[a-z]+\x1e`）；桥剥离式即本判据（`parseSubagentEvent` 非空 ⇒ 剥），防第二套平行文法（§7.2 纪律）；终止符约束 load-bearing——沿 D13 负向边界：正文含 `⟦ev⟧` 无终止符 ⇒ null ⇒ 仍转发）。
+- 哨兵单源：`spawn-child.mjs` 的 `EVENT_SENTINEL` 定义位迁入本模块（该档 import + 再导出——既有 import 面零改；先例 = 同档 `child-marks` 再导出手法）。
+- 消费方（本批）= `acp/bridge` 一处；显示面三消费点（TUI `routeSubToken` ∥ VSC / 桌面 `relayEventToSubPatch`）**不动**（收敛 = 登记，§12.6）。
+- 核面量级：新档 ~85 行；`spawn-child.mjs` +2/−1；其余核档**零触**。`bridge.mjs` 408 → ~436（>300 咨询档——沿既有登记口径：随 callback 族扩展一并评估）。
+
+### 12.5 用例与验收（回指批条目）
+
+- **AC-862-1**：每个带前缀的形态事件 token（8 名语料）⇒ 恰一条 `session_info_update`，且 `_meta["thincoder.dev/subagent"]` = 期望对象；**零** `agent_message_chunk`。
+- **AC-862-2**：字段投影逐态正确（turn / approval 轮号对；queued 位次 + 原因文；零字段态 ⇒ 仅 role/id/state；无值键缺席）。
+- **AC-862-3**：负向三条——无终止符 `⟦ev⟧` 文本**仍转发**（零结构化）；文本中段 `⟦ev⟧` 仍转发；无前缀形态事件仅剥离零发射。
+- **AC-862-4**：既有面零回归——`[model]` 剥离、relay 前缀剥离、内容转发语义零改（回归两例 = 批内件 T-862-11/12；§7.2 既有宿主档随 2026-09-28 测试树重置不在盘——§11.8 回归面注）。
+- **AC-862-5**：批内件全绿（先红后绿）+ `node scripts/doc-check.mjs` 复跑 + 语法检查。
+- 用例表 = 批次档 `docs/batches/2026-10-04-acp-face-completion.md` §2（T-862-1…12）。
+
+### 12.6 边界与登记（本批不做）
+
+- 子代理**内容面归属**（内容 chunk 的子代理归属标）不在本批——沿 §7.2 D9 剥离转发（正文原样进主流、不带归属标）；活动面板如需内容归属 ⇒ 另议。
+- `[model]` 子代理元数据 token（模型名）**不**结构化（非事件族）——如需（面板显模型）另议。
+- 嵌套父链（`inner` 链）不承载——`role` / `id` = 事件主体（最内段）；父链如需另议。
+- `queued.kind`（`slot` / `wait` / `depc`）不承载（`detail` 已携原因文）——如需机判档另议。
+- 能力通告（`agentCapabilities._meta`）零动（`initialize` 形状边界）；客户端以键在场探测本扩展。
+- 显示面三消费点收敛至文法单源（TUI / VSC / 桌面）——**登记**（本批零触；收敛批另立）。
+- 事件 token 生成侧（十余处发射点）改用文法单源构造器——**登记**（本批零触）。
+- **发射判据 = 形态 + relay 前缀**——不区分子代理 LLM 伪造的良构 token（显示面同款暴露既有且已接受；节点级防护不在本批——评审 #8 🔵 登记 · 父侧小笔）。
+
+## 13. 协议面提示通道（定形：不立 · 2026-10-04 批）
+
+**定形 = 不立**——#843 结案：「`fallback` 类放行」之后的协议面零提示行为 = **设计行为**（非缺口）。
+
+**判由（四条）**：
+
+1. **消费者可见性（渠道实勘）**：唯一的「全客户端可见」通道 = 对话文本（`agent_message_chunk`）——语义相抵（假造模型发言；且与 `session/load` 重放不对称——重放不产）⇒ 被否；`_meta` / 自定义通知类信号对**不实现扩展的客户端契约性不可见**（忽略即合规）⇒「立」只能交付一个**今天无人显示**的信号。
+2. **信息实质已可达**：实际运行渠道 / 模型已在配置面（`configOptions.model.currentValue`——§2.3 收正批已落）；残余缺项 = 一句「这是回落态」判语，其行动路径（改本机 config）在本地。
+3. **已认账非缺陷**：#841 批已明认协议面零提示为 U3 自然导出（`doc:PROVIDER.md:§6.22`）；本项无用户 / issue 需求提出。
+4. **边际可逆**：§12 落定后 `_meta` 扩展载体 + 契约面已在位——他日出现协议感知消费者时，本项以 ~10 行 + 一节契约补齐（备选支在档，见下）。
+
+**备选支（可落档——若他日重启）**：
+
+- 形态 = `session/new` 响应 `_meta["thincoder.dev/notice"] = { kind: "default-model-fallback", channel, model, text }`（协议面通知类；一次性、会话级）；量级 ≈ `handlers-session` +8 行 + 本节 + 用例 2 条。
+- 备选形（否）：对话文本注入（判由 1）；stderr 行（IDE 通常不展示——非用户可视面）；错误通道（`fallback` 非错误——不可用）。
+
+**登记去向**：本节（定形与备选支在档）；`doc:PROVIDER.md:§6.22`「未决」句随拍收正（定形句替代——落点时机 = 实施轮，见批次档 §2 落点表）；`docs/cli/requirements/ACP-CLIENT.md` F8 判定句 **R-A5.12**（#843）**已落**（2026-10-04，`:91-92`；同批 **R-A5.11** = §12 对位）。
+
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/design/ACP-CLIENT.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
@@ -659,3 +765,5 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
   ② §3.3 list / load / resume 行收正（`updatedAt` ISO 8601 ∥ id 沿用客户端值 + 同 id 替换）；③ §3.5 ctx 键收正（`allocSessionId` 撤 → `releaseClosedSlot`）；
   ④ §5 映射表 `usage_update` 形状收正（`{ used, size }`）；⑤ §6.1 / §11.3 id 语义改述为统一现态（G5 收正：load/new 同命名空间）；
   ⑥ §11.9 G5 / G6 行删、登记项 3 改述（resource_link 已接；余多块 text 合流待立批）。**零新语义**（收正 + 登记）。
+- 2026-10-04（**ACP 协议面补全批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-acp-face-completion.md` §1 · 台账 #862 ∥ #843）：① 新增 **§12 结构化子代理事件**（`_meta` 扩展契约——通道 / 形状 / 状态族 / 核文法单源前置件 / 验收 / 边界全定形）；② 新增 **§13 协议面提示通道定形（不立）** + 备选支在档；③ §4 / §11.5 / §11.7-4 三处「提示通道未决」表述收正；④ §2.2 / §5 表随动（`session_info_update` 承载体行）；⑤ §9 增 D20–D23 + 登记项 5–7。
+- 2026-10-04（**ACP 协议面补全批 · 评审修正轮**（评审 #17——pass · 🔴0/🟡4/🔵4）· eng-designer）：① §7.2 测试面注 T9「零通知」⇒ 零可见面文本口径（评审 #1）；② §7.2「现状缺陷」⇒ 旧状缺陷历史陈述（评审 #3）；③ 事件 token 剥判据**单源落定**——§7.2 ∥ §12.1 ∥ §12.4 同式：桥剥离式 = 核模块 `subagent-event.mjs`（`parseSubagentEvent` 非空 ⇒ 剥——2026-10-04 批统一，语义零改；评审 #4）；④ §12.3 补逐态字段序单源注（评审 #6）；⑤ AC-862-4 括注改指批内件 T-862-11/12（评审 #7）；⑥ §13 末句收正（R-A5.12 已落——评审 #2）。逐条落位表 = 批次档 `docs/batches/2026-10-04-acp-face-completion.md` §2 修正块。

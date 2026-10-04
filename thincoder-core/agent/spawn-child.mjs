@@ -25,7 +25,8 @@ import { appendCappedText } from "../text-budget.mjs"
 export { RELAY_PREFIX_RE, parseRelayPath, relayPrefixOf } from "./relay-prefix.mjs"
 
 /** 事件 token 哨兵串（D1）——LLM 正常内容混淆概率极低；字段分隔用 RS (\x1e)。 */
-export const EVENT_SENTINEL = "⟦ev⟧"
+import { EVENT_SENTINEL } from "./subagent-event.mjs" // 2026-10-04 批（ACP-CLIENT.md §12.4）：定义位迁入零依赖叶 `subagent-event.mjs`；再导出 ⇒ 既有 import 面零改（先例 = 同档 `child-marks.mjs`）
+export { EVENT_SENTINEL }
 const RS = "\x1e"
 
 // 报告文本锚点（turn-cap / stopped-by-user）2026-09-20 下沉零依赖叶 `child-marks.mjs`（端壳

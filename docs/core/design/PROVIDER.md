@@ -448,7 +448,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 **VSC 收正（可用性不得降）**：`resolveTurnStage` 的接入面自建链改调核函数（`slot` = 显式 `providerName` ∥ 槽复合——key 门在核内）；`presets.mjs` `resolveDefaultModel` 改核转口。「渠道 + key 已配」在三端仍**直接可发**——事实标准不回退。
 
 **第四消费面（ACP）注（本批明写边界）**：`thincoder-cli/src/acp.mjs` 门判据（`defaultIsConfigured` = `loadConfig().provider?.apiKey?.trim()`）随核取值切换而变——「持 key ∧ 无有效 `defaultModel`」（`fallback` 类）由「拒（携 reason）」变「**放行**」，协议面**零提示行**（本批明示射程 = 三端 UI 面；ACP = 外部编排器协议面，无既有提示通道）。
-此变 = U3 判据的**自然导出**（可运行 ⇒ 放行——**已认账行为变更，非缺陷**）；结构不全角仍由装配后检查兜底（`handlers-session.mjs` `session/new`：`_providerInvalid` ⇒ `-32000` + 真因）。协议面是否补提示通道 = **未决——如需，另立设计**（不在本批）。
+此变 = U3 判据的**自然导出**（可运行 ⇒ 放行——**已认账行为变更，非缺陷**）；结构不全角仍由装配后检查兜底（`handlers-session.mjs` `session/new`：`_providerInvalid` ⇒ `-32000` + 真因）。协议面是否补提示通道 = **已定形：不立**（2026-10-04 ACP 协议面补全批收口——判由四条与备选支 = `doc:ACP-CLIENT.md:§13`；协议面零提示行 = 设计行为，非缺口）。
 
 **可机检断言形**：① 解析一致（**运行面 + config 级两腿**）——夹具矩阵每行（临时配置路径缝 `_setConfigPathForTest`）：**运行面** = 三端同喂**同一假槽**（VSC `resolveTurnStage` 核读 ∥ 桌面核装配读 ∥ 核 `resolveProviderPlan` 直读）按 `{state, source, channel, model, provider.name, provider.model}` **逐字段相等**；
 **config 级**（`loadConfig()` 无槽入参——KD-841-3 状态 = config 级）= **只比 `state`**；含槽行（S9）单列口径 = config 级 `state` 断言（`ok`）∥ 运行渠道断言归假槽腿（三端同喂）；② 单源——VSC 树零自建扫描链（源码判据）+ CLI ∥ 桌面取值点唯一 = `loadConfig().provider`；
@@ -595,3 +595,4 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - 2026-10-04（**issue 修复批·一 · 登记/回填轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §2.10 登记/回填块 · 父侧裁定）：§6.3 超时语义句**射程收窄**——响应头阶段 `fetchTimeoutMs` 消费面 = 代理分支（`proxyFetch` 两分支）；直连面无本仓头阶段超时（纳入 = 设计轮面——在册）。**零新语义**（= 父侧裁定的直接导出项）。
 - 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §2 · 台账 #883）：§6.22 三端明示面对照表 CLI 行 `fallback` 格字面收正——「/model 仅改本会话」⇒「/model 选定即成为默认模型」（会话选定写回落地后同拍——判据单源 = `doc:SESSION.md:§6.21` 判据句 6）。**产品码零触（设计轮）**。
 - 2026-10-04（**opencode-go-preset 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-opencode-go-preset.md` §2 · 台账 #906）：§6.11 预设计数 22 ⇒ **24**（D3 计数与清单同变）+ 新登 OpenCode Go 双预设（协议混装拆分 ∕ 最小字段集 ∕ 「待验」注 ∕ 会话头不发）；§6.19 预设名单同变 + `presetToEntry` 坐标收正（`:44` ⇒ `:49`——表体增长后函数行漂移，一致性面自修）。**产品码零触（设计轮）**。
+- 2026-10-04（**opencode-go-preset 批收口笔 ∥ ACP 协议面补全批收口笔 · 父侧直接执行 · 可 revert**）：§6.11 `presetToEntry` 坐标 as-built 重校（`:49` ⇒ **`:57`**——实施 +8 行后漂移；§6.19 护栏指针改指现形 G-3 = `docs/batches/2026-10-04-opencode-go-preset.test.mjs`）；§6.22 提示通道句收正为定形「**不立**」（「未决——如需，另立设计」⇒ 定形句；判由 = `doc:ACP-CLIENT.md:§13`）。**零语义改**（收口重校 ∥ #843 结案在设计面的对齐）。

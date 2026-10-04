@@ -74,6 +74,7 @@
 - **catch 三分支**（纯函数 `classifySyncAbort(ctxSignal, baseSignal, ctrlSignal, err)`）：① base / ctx aborted → 整回合停，rethrow；
   ② `AbortError` ∧ ctrl aborted ∧ 非整回合停 → **折叠**（`mergeChildMutations` + stopped partial 报告 + `⟦ev⟧stopped` 直发 + 正常 return）；③ 其他错误原样。
   `STOPPED_MARK`（定义 = `thincoder-core/agent/child-marks.mjs`——`spawn-child.mjs` 再导出；与 `TURN_CAP_MARK` 同族）= 折叠报告公共锚。
+`⟦ev⟧` 事件 token **文法机读单源** = `thincoder-core/agent/subagent-event.mjs`（零依赖叶——哨兵 ∥ 形态判据 ∥ 逐事件投影；`spawn-child.mjs` 再导出哨兵 ⇒ 既有 import 面零改；消费方 = ACP 桥，见 `docs/cli/design/ACP-CLIENT.md` §12；显示面三消费点收敛 = 登记）。
 - **TUI 面板门控**：按 `_syncChildAborts` 存在性 + queued 臂判 ⏹ 可见；⏹ 顺带 deny 该 child 的 pending 权限 / continue 模态。
 - **日志面**（2026-09-17 af 批二轮 fix · F-12）：⏹ 定向中止在 `cancelSyncChild` **提交点**（`entry.stopped = true` + `ctrl.abort({ abortTrigger:"cancel", abortDetail:"sync-child-cancel" })` 之后、`return { status:"cancelled" }` 之前）**直记一条**
   `logEvent("ev:cancelled", { id: k })`（`k` = registry 键 `role#N`——与异步取消族**同事件名 / 同字段形**；口径 = `docs/core/design/LOGGING.md` §6.2）；error 两分支（`stopped` 后再调 / registry miss）**零记录**（无取消发生）。
@@ -1006,3 +1007,4 @@ spawn 门区（`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `batchDoc` �
 - 2026-10-02（**文档清账轮 · 执行轮 1（core/design 前段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 2 处 R5 注记（过渡别名 `batchSegmentTool` 退场登记——§6.28 两行）。**零新语义**。
 - 2026-10-04（**issue 修复批·一 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §2 · 台账 #861）：§6.7.1 补 **模型 override 解析段**（解析链 + 非法形态三层防线——加载期清洗 ∕ 运行期明确错误 ∕ 写面形状表）。**零新语义**（= 台账缺陷的修复设计导出项）。
 - 2026-10-04（**issue 修复批·一 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §3 轮次 1 发现 3）：§6.7.1 端差句收正——VSC 端壳自读 raw 的处置改**正案 = VSC 端壳同拍清洗**（清洗逻辑核内单源导出、端壳 raw 读点同拍消费；用户零可见端差；宿主能力面举证不成立）。**零新语义**（= 评审发现的直接导出项）。
+- 2026-10-04（**ACP 协议面补全批 · 收口笔 · 父侧直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-acp-face-completion.md` §2 落点表 · 台账 #862）：§6.7.2 邻域补 **事件 token 文法机读单源指针**（`thincoder-core/agent/subagent-event.mjs`——零依赖叶：哨兵 ∥ 形态判据 ∥ 逐事件投影；消费方 = ACP 桥 `doc:ACP-CLIENT.md:§12`）。**零语义改**（= 文法单源的指针落位）。

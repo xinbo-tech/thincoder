@@ -62,7 +62,7 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
 - **R-A3.2**：剥离**不得**误伤正文——载荷含 `⟦ev⟧` 而**无** `\x1e` 终止符 ⇒ 仍转发（判据要求终止符同现）。
 - **R-A3.3**：判据与**既有形态判据对齐**（VSC 宿主消费面 `panel-callbacks.mjs:44,85` 的形态兜底）——核生成侧
   `thincoder-core/agent/spawn-child.mjs:99-101` 系**枚举**放行判据、**不在本批修法范围**；不自造第三套文法（relay 前缀文法单源见 R-A2.3）。
-- **R-A3.4**（可验判据）：带 `queued` / `cancelled` 事件名（含 relay 前缀形态）驱动的通道用例**零通知**；
+- **R-A3.4**（可验判据）：带 `queued` / `cancelled` 事件名（含 relay 前缀形态）驱动的通道用例**零可见面文本**（零 `agent_message_chunk`；2026-10-04 收窄——结构化子代理事件增量见 R-A5.11）；
   载荷含 `⟦ev⟧` 无终止符的用例**照常转发**；既有 T9 信号 token 用例不退红。
 
 **F4 判定句（登录入口 · R-A4）**
@@ -88,6 +88,9 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
 - **R-A5.8**（#871）：`usage_update` 含 `used` + `size` 齐备（契约 required——`size` = 模型上下文窗）；`session/list` 条目 `updatedAt` = **ISO 8601 字符串**（非 epoch 数）。
 - **R-A5.9**（#872）：会话身份 = **持久槽位号字符串**（单一命名空间）——`session/new` 返回的 `sessionId` **必现**于随后 `session/list`；`session/load` / `resume` 以客户端原 id 保续（后续 `prompt` / `cancel` / `close` / `set_*` 命中该会话）；两处状态通知字段名按契约（`currentModeId` ∥ 全量 `configOptions`）。
 - **R-A5.10**（#870）：`session/prompt` 基线内容块面含 **`resource_link`**（`file://` 文件引用降级为文本内容块——含行选区间；上限 ∥ 二进制 ∥ 不存在三类降级标记可见、不静默）。
+- **R-A5.11**（#862）：**结构化子代理事件 = `_meta` 扩展契约**——带 relay 前缀的事件 token（`⟦ev⟧<名>\x1e` 形态）经 `session/update` 的 `session_info_update` 变体**增量发射**（`update._meta["thincoder.dev/subagent"]` = `{role,id,state,progress?,detail?}`；现发射集 8 态、开集容忍）；
+  **文本面剥离语义零改**（零 `agent_message_chunk`）；对不认本扩展的客户端**忽略即合规**；协议版本 ∥ `initialize` 形状 ∥ 方法面零动。契约全文 = `docs/cli/design/ACP-CLIENT.md` §12；落批 = `docs/batches/2026-10-04-acp-face-completion.md`。
+- **R-A5.12**（#843）：**协议面零提示 = 设计行为**——「fallback 放行」（R-A5.6）态在协议面**不产生任何提示信号**（唯一全客户端可见通道 = 对话文本，因假造模型发言 ∥ load 重放不对称被否）；重启条件 = 出现**协议感知客户端消费者**（备选支承载体在档：`docs/cli/design/ACP-CLIENT.md` §13）。
 
 ## 3. 非功能性需求
 
@@ -117,7 +120,7 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
 
 ## 5. 范围边界（不做）
 
-- **不改 ACP 协议面**——不接通 elicitation / 不新增提问通道 / 不改事件通知面。（**形状合规 ≠ 协议面变更**：响应字段按 schema v1 收敛，落在 F8 / R-A5。）
+- **不改 ACP 协议面**——不接通 elicitation / 不新增提问通道 / **不新增方法或变体**。（**形状合规 ≠ 协议面变更**：响应字段按 schema v1 收敛，落在 F8 / R-A5；**`_meta` 扩展契约面 = 例外通道**——R-A5.11 结构化子代理事件〔标准变体承载体 ∥ 扩展元数据——忽略即合规，2026-10-04 #862 批立〕。）
 - 不改 TUI 消费面语义（`routeSub*` / 渲染 / 事件文法零改——文法搬迁 = 纯迁移）。
 - 不改 VSC 仓（无 ACP 镜像面）。
 - 不做「子代理事件整体过滤」与「onToolOutput 流式补齐」（两者为登记候选——需用户裁定 / 独立设计面）。
@@ -145,6 +148,8 @@ ACP 一次实现即可接通多家编辑器（桌面 + Web + 移动自托管编�
 
 ## 变更记录
 
+- 2026-10-04（**R-A3.4 收窄 + R-A5.11 折行 · 主 agent 直接执行 · 可 revert**——承 ACP 评审 #17（发现 1 · 需求侧）∥ 行宽闸）：R-A3.4「零通知」⇒「**零可见面文本**（零 `agent_message_chunk`）」（与 R-A5.11 增量发射对齐）；R-A5.11 行折为两行（421 字符 ⇒ 行宽闸收正）。**零新语义**（口径收窄 + 形式折行）。
+- 2026-10-04（**R-A5.11–A5.12 新增 + §5 例外通道句 · 主 agent 直接执行 · 可 revert**——承设计档 `docs/cli/design/ACP-CLIENT.md` §12 ∥ §13（设计轮交付 2026-10-04）；批档 = `docs/batches/2026-10-04-acp-face-completion.md`）：**R-A5.11** = 结构化子代理事件（`_meta` 扩展契约 · `thincoder.dev/subagent`）；**R-A5.12** = 协议面零提示 = 设计行为（#843 定形不立——重启条件在档）；§5「不改事件通知面」收为「不新增方法或变体」+ `_meta` 例外通道句（消与 R-A5.11 的读面相抵）。
 - 2026-10-04（**issue 修复批·二 · 主 agent 直接执行 · 可 revert**——承设计档 `docs/cli/design/ACP-PROTOCOL-COMPLIANCE.md` §1.3 缺口登记 · 批档 = `docs/batches/2026-10-04-issue-fix-round2.md`）：R-A5.4 改述（补判别键 `type` ∥ `set_config_option` 全量 `configOptions` ∥ id 形态）；新增 **R-A5.8–A5.10**（#871a 用量形状 + `updatedAt` ISO ∥ #872 持久身份 ∥ #870 `resource_link` 基线）。
 - 2026-10-03（**R-A5.6 收正 · 主 agent 直接执行 · 可 revert**——承 `docs/cli/design/ACP-CLIENT.md` §11.5 #841 口径；批档 = `docs/batches/2026-10-03-provider-invalid-unify.md`）：门失败收为**单档**（无 provider/key）；持 key 而 `defaultModel` 不可解析 ⇒ **放行**（不作门失败）。2026-09-18 批 AC12「② 必点名 `defaultModel`」随之失效——旧表述删净。
 - 2026-09-18（**ACP 外部编排器兼容批 · 父侧直接执行 · 可 revert**——承设计审计 id=70 发现 12 的建议文本；批档 = `docs/batches/2026-09-18-acp-external-drivers.md`）：**F4 补登录入口**（改述 + R-A4.1–A4.3）· **新增 F8**（ACP v1 契约形状合规 · R-A5.1–A5.7）· **新增 N8**（无 TTY 可驱动）· §5 范围边界补半句（形状合规 ≠ 协议面变更）· 变更记录两处「§7 体量」自指收正（本档止于 §6）。

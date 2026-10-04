@@ -5,6 +5,9 @@
  * Wire shapes verified against the ACP schema v1 + kimi acp-adapter:
  * - agent text   → `agent_message_chunk`  { content: { type: "text", text } }
  * - thinking     → `agent_thought_chunk`  (same content shape)
+ * - subagent ev  → `session_info_update` { _meta: { "thincoder.dev/subagent":
+ *                  { role, id, state, progress?, detail? } } } (event token behind the relay
+ *                  prefix — the text face stays stripped; §12 extension contract)
  * - tool start   → `tool_call`  { toolCallId, title, kind, status: "in_progress", rawInput, content }
  * - tool result  → `tool_call_update`  { toolCallId, status: "completed"|"failed", content } (REPLACE semantics)
  * - usage        → `usage_update` { used, size } (used = prompt + completion tokens;
@@ -28,6 +31,9 @@ import { parseRelayPath } from "@thincoder/core/agent/relay-prefix.mjs"
 import { waitStatusText } from "@thincoder/core/provider/wait-status.mjs"
 // §2.1（ACP-PROTOCOL-COMPLIANCE）：usage_update.size = 模型上下文窗口单源（含 providers[].context 覆写）。
 import { providerSpec } from "@thincoder/core/config.mjs"
+// 2026-10-04 批（ACP 协议面补全）：事件 token 文法单源（形态判据 ∥ 逐事件投影——
+// ACP-CLIENT.md §12.4）——剥离判据经本调用唯一决定，本档不再自持 ⟦ev⟧ 判据副本。
+import { parseSubagentEvent } from "@thincoder/core/agent/subagent-event.mjs"
 
 /** ACP ToolKind inference (schema v1 enum) — best-effort, clients render by kind. */
 function inferToolKind(name) {
@@ -53,6 +59,22 @@ function permissionToBoolean(response) {
   if (!outcome || outcome.outcome === "cancelled") return false
   if (outcome.optionId === "approve_once" || outcome.optionId === "approve" || outcome.optionId === "approve_always" || outcome.optionId === "approve_for_session") return true
   return false
+}
+
+/** §12.2（ACP-CLIENT.md）：`_meta` 扩展键——命名空间防保留键碰撞（对外契约逐字）。 */
+const SUBAGENT_META_KEY = "thincoder.dev/subagent"
+
+/** 事件 token → `_meta["thincoder.dev/subagent"]` 载荷（§12.2 形状冻结——无值键缺席：
+ *  progress/detail 键只在有值时在场；`state` = 事件名原文，形态域开集）。
+ *  role/id = relay 前缀**最内段**（嵌套 `explore#1/eng-coder#2/…` ⇒ `eng-coder`/2——
+ *  段形 `role#id` 由 parseRelayPath 保证）。 */
+function subagentMetaPayload(path, ev) {
+  const inner = path.inner.length > 0 ? path.inner[path.inner.length - 1] : path.head
+  const [role, id] = inner.split("#")
+  const meta = { role, id: Number(id), state: ev.name }
+  if (ev.progress) meta.progress = ev.progress
+  if (ev.detail) meta.detail = ev.detail
+  return meta
 }
 
 /**
@@ -192,13 +214,18 @@ export function buildAcpCallbacks({ sessionId, agent, notify, request, log = () 
       // TUI/webview display signal, not conversation content, and must not reach ACP clients.
       if (/^\[model\]/.test(payload)) return
       // D7 + 批 1 B2/D13（ACP-CLIENT.md §7.2）：剥离判据 = **形态**（`⟦ev⟧<小写名>` + RS
-      // 终止符同现），不再枚举事件名——枚举是漏项发生器（`queued` / `cancelled` 发射点在位
-      // 而白名单未跟 ⇒ 随 agent_message_chunk 泄漏给客户端）。终止符约束 load-bearing：
-      // 放宽为无终止符形态会吞真实正文（先例教训见 src/tui/render.mjs:250-252）。
-      // 事件 token 是 TUI 显示信号；结构化 ACP 映射（tool_call_update）另行跟踪
-      // （docs/TODO.md）。
-      // 有意为之：控制字符协议/转义序列剥离正则（ANSI/⟦ev⟧/SGR/history 双线分隔）
-      if (/^⟦ev⟧[a-z]+\x1e/.test(payload)) return
+      // 终止符同现）——枚举是漏项发生器（`queued` / `cancelled` 发射点在位而白名单未跟 ⇒
+      // 随 agent_message_chunk 泄漏给客户端）。终止符约束 load-bearing：放宽为无终止符形态
+      // 会吞真实正文（先例教训见 src/tui/render.mjs:250-252）。
+      // 判据单源 = 核模块 `subagent-event.mjs`（2026-10-04 批统一——桥内联式退役，剥离语义
+      // 零改）：`parseSubagentEvent` 非空 ⇒ 剥；§12 结构化发射 = 同一调用取投影载荷。
+      const ev = parseSubagentEvent(payload)
+      if (ev) {
+        // §12.1 发射规则：relay 前缀在场 ⇒ **增量**一条 `session_info_update`（文本面剥离
+        // 照旧——零 `agent_message_chunk`）；无前缀 ⇒ 仅剥离零发射（防御面）。
+        if (path) update("session_info_update", { _meta: { [SUBAGENT_META_KEY]: subagentMetaPayload(path, ev) } })
+        return
+      }
       if (!payload) return // D6：剥后空载荷不发通知（防噪声空 chunk）
       update("agent_message_chunk", { content: { type: "text", text: payload } })
     },
