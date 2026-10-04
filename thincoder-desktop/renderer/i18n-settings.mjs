@@ -2,9 +2,9 @@
  * i18n-settings.mjs — 设置面词族第四档（i18n 拆分批 `docs/batches/2026-09-29-i18n-split.md` §2 · 台账 #614
  * 顶格消解：主档 `renderer/i18n.mjs` 内容行 500 顶格 ⇒ 自有 `settings.*` 族 55 键整族出档，本档承接）。
  *
- * 键面（**62 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
+ * 键面（**60 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
  * 四段名 / 两段态 / 十三失败码 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
- * 当前标 · 两增键 / agent 段：只读标 · 保存 / 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
+ * 当前标 · 两增键 / 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
  * 移除 · 增键 —— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）。
  * S3 分档增（#673 · 2026-09-29）：失败码族补 `settings.reason.hostBusy`（渠行行标分档词 —— 消费面 =
  * `renderer/views/settings-sections.mjs`；值源 = VSC 硬编码词「宿主繁忙」同形，两语同增）。
@@ -14,8 +14,8 @@
  *
  * 值源：搬前主档原链注全述（键名 ∕ 两语值**逐字保原** —— 出档 = 纯搬零改；合并表两语键序同理零变，
  * 原位展开于 `question.cancel` 与向导注释之间）。
- * 消费面（设置面 **10** 档 · 皆 `t()` 取词、导入面零改动）：`renderer/settings-confirm.mjs`（密钥删除确认）·
- * `renderer/views/settings.mjs`（标题 ∕ 关闭 ∕ 语言 ∕ 段名 ∕ 态词 ∕ 失败码三表出词）· `views/settings-agent.mjs` ·
+ * 消费面（设置面 **9** 档 · 皆 `t()` 取词、导入面零改动）：`renderer/settings-confirm.mjs`（密钥删除确认）·
+ * `renderer/views/settings.mjs`（标题 ∕ 关闭 ∕ 语言 ∕ 段名 ∕ 态词 ∕ 失败码三表出词）·
  * `views/settings-controls.mjs` · `views/settings-sections.mjs` · `views/settings-sections-providers.mjs` · `views/settings-sections-env.mjs` ·
  * `views/settings-sections-mcp.mjs` · `views/settings-sections-models.mjs` · `views/settings-sections-tools.mjs`。
  * 合并点 = `renderer/i18n.mjs` `HOST_DICT` 两语展开 —— 单一装配点仍 = `initDict`（本档零装配逻辑，纯词表）。
@@ -76,8 +76,6 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.connOk": "✓ Connected — ${count} models",
     "settings.providerUrlRequired": "baseURL required",
     "settings.secretDeleteConfirm": "Delete? This cannot be undone — the original credential cannot be recovered; you would have to reconfigure it or get a new one from the provider.",
-    "settings.agent.readonly": "Read-only",
-    "settings.agent.save": "Save",
     "settings.model.current": "Current model",
     "settings.model.empty": "No models yet",
     "settings.model.use": "Use",
@@ -141,8 +139,6 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.connOk": "✓ 连接成功 — ${count} 个模型",
     "settings.providerUrlRequired": "需要 baseURL",
     "settings.secretDeleteConfirm": "确定删除？删除后无法恢复——凭证原文不可复得，只能重新配置或回服务商重取。",
-    "settings.agent.readonly": "只读",
-    "settings.agent.save": "保存",
     "settings.model.current": "当前模型",
     "settings.model.empty": "暂无模型",
     "settings.model.use": "采用",

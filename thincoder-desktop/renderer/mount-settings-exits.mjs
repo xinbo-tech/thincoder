@@ -12,7 +12,7 @@
  * **B10 W2**：渠道面六出口（S1 钥编辑两件 + 设 ∕ 改钥 + 删钥 · S5 代理开关 · S2 拉取模型）随族拆出
  * `renderer/mount-settings-segments-providers.mjs`（按族续拆；本档装配合并，单一 `handlers` 表对外零改）；
  * 本档增：渠移除 ∕ 删钥删除门（S6 —— `settings-confirm.mjs`）+ 开 ∕ 关面面态复位（`edit` ∕ `probe` ∕ `draft`）。
- * **B10 W3**：agent 段五出口（`agentPatch` ∕ `saveAgent` ∕ `namedOut` ∕ `applyNamedField` ∕ `toggleGuard`
+ * **B10 W3**：agent 段三出口（`namedOut` ∥ `applyNamedField` ∥ `toggleGuard`
  * —— S10 ∕ S11 ∕ S14b）随族拆出 `renderer/mount-settings-segments-agent.mjs`（拆分债注③预案落形：本批
  * agent 面三触点原拆点；本档装配合并，单一 `handlers` 表对外零改）；开 ∕ 关面面态复位同拍扩 MCP 表单态
  * （`form` —— S8 编辑态不跨面驻留）。
@@ -52,7 +52,7 @@ const reasonOf = (receipt) => (typeof receipt?.reason === "string" && receipt.re
 
 /**
  * 出口族工厂。`deps.reads = { loadProviders, loadAgent, loadMcp }`（读数供给族注入）；`deps.paintSettings`
- * = 装配面重绘口（无效数值回退现值用）；`deps.slot` = 设置槽锚（表单现选自读 ∕ 泛化兜底行作用域）。
+ * = 装配面重绘口（无效数值回退现值用）；`deps.slot` = 设置槽锚（表单现选自读）。
  */
 export function createExits(deps = {}) {
   const { ask, store, setSettings, report, clearReport, occupies, slot, paintSettings, onProvidersChanged, invalidateDrafts } = deps
@@ -174,7 +174,7 @@ export function createExits(deps = {}) {
   })
   /** agent 段出口族（S10 ∕ S11 ∕ S14b —— 随本批按族拆出 `mount-settings-segments-agent.mjs`：本档装配
    *  即合并，单一 `handlers` 表对外零改）。 */
-  const agentSegments = createAgentExits({ ask, store, setSettings, report, clearReport, slot, paintSettings })
+  const agentSegments = createAgentExits({ ask, store, setSettings, report, clearReport, paintSettings })
 
   /** 语言出口（`config:write` 键白名单仅 `locale`）：成功回带 `{ locale, dict, configured }` ⇒ 词表重刷 + 向导闸随新档态（**一次写**）。 */
   async function toggleLang(target) {
