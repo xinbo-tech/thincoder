@@ -47,13 +47,13 @@ export {
 // 第 11 批拆分（2026-09-11）：settle 记账 + 变更日志（noteMutations）+ 陈旧判定
 // （reviewIsStale）+ 冻结冲突（inflightDesignReviewConflict）迁 advisor-settle.mjs——
 // 既有 import 面（dispatch / subagent-async / escalate-async / 测试）经此 re-export 不变。
-import { normAbs, mutationSeqOf, settleAdvisorRun } from "./advisor-settle.mjs"
+import { mutationSeqOf, settleAdvisorRun } from "./advisor-settle.mjs"
 export {
   mutationSeqOf, noteMutations, reviewIsStale, settleAdvisorRun, inflightDesignReviewConflict,
 } from "./advisor-settle.mjs"
 // 第 33 批（评审失败护栏）：doc-set 键迁事实面档（实例续跑与陈旧判定同锚单源；原为私有——零 import 面）。
 // 本文件继续在实例解析 / 池 entries 上消费它。
-import { docSetKey } from "./review-facts.mjs"
+import { docSetKey, resolveReviewDocPaths } from "./review-facts.mjs"
 // F31（2026-09-18 顾问面治理批）：拒回文案对象标识行单源。
 import { withIdentityLine, scopeSummary } from "../advisor/notice.mjs"
 import { runAdvisorReview, resolveAdvisorProvider, ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
@@ -390,8 +390,11 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
     id, role: "advisor", reviewType, run,
     reviewId: run.reviewId, designId, designToken, documents, paths, object,
     launchSeq: mutationSeqOf(parent),
+    // docAbs 产出面同源归一（2026-10-04 · #921 · A 随件）：四腿单源 resolved（裸形/前缀形
+    // 命中候选项目根即归一为绝对路径）——冻结窗/陈旧判定对**裸形受理档**照护成立（否则 A
+    // 开冻结窗保护洞）；绝对形与旧 normAbs 面逐字等价。
     docAbs: reviewType === "design" && Array.isArray(documents)
-      ? documents.filter((d) => typeof d === "string").map((d) => normAbs(d, parent.cwd))
+      ? [...resolveReviewDocPaths(documents, parent.cwd).resolved.values()]
       : [],
     relayPrefix: `advisor#${id}/`,
     status: queued ? "queued" : "running", position: undefined,

@@ -9,12 +9,11 @@
  */
 import { runAdvisorReview, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
 import { resolveBatchDocPath } from "./batch.mjs"
-// M6（模块设计 §2.1 F3）：评审对象来源读 manifest docRoot（声明面）——复用 M4 的
-// write-gate.mjs 单一权威源（KD-M6-1），替代 v1 的逐档分类面（isDocPath）；
-// normAbs 同源 re-export（指针非副本）。不 import dispatch.mjs（簇间回边，环风险）。
-import { resolveReviewTargetPaths, resolveReviewRootsFor, normAbs } from "../agent/write-gate.mjs"
-import { owningProject } from "../manifest-discovery.mjs"
-import { sep } from "node:path"
+// M6（模块设计 §2.1 F3）：评审对象来源读 manifest docRoot（声明面）——单一权威源 =
+// review-facts.mjs 的 resolveReviewDocPaths（2026-10-04 · #921 · KD-2——分类四腿 + B 文案
+// 诊断数据单源；write-gate 同名再出口保 normAbs 面）。不 import dispatch.mjs（簇间回边，环风险）。
+import { normAbs } from "../agent/write-gate.mjs"
+import { resolveReviewDocPaths } from "./review-facts.mjs"
 import {
   generateDesignToken,
   settleDesignReview,
@@ -63,11 +62,11 @@ export const advisorTool = {
       documents: {
         type: "array",
         items: { type: "string" },
-        description: "Doc paths to review (design / requirements / referenced docs). The advisor reviews ONLY these — no git diff scan. Use for both review types to pass the task's docs list.",
+        description: "Doc paths to review (design / requirements / referenced docs). Relative paths resolve against the session cwd first, then candidate project roots (project-root-relative e.g. <repo>/docs/…, or absolute). The advisor reviews ONLY these — no git diff scan. Use for both review types to pass the task's docs list.",
       },
       batchDoc: {
         type: "string",
-        description: "Design review only: the in-flight batch record path — validated whenever passed (unreadable ⇒ refused, not ignored); the reviewer then also gets the `batch` write channel to record its findings + verdict. Omit when no batch record is in flight (no write channel — zero regression).",
+        description: "Design review only: the in-flight batch record path — validated whenever passed (unreadable ⇒ refused, not ignored); the reviewer then also gets the `batch` write channel to record its findings + verdict. Relative paths resolve against the session cwd first, then candidate project roots (project-root-relative e.g. <repo>/docs/batches/…, or absolute). Omit when no batch record is in flight (no write channel — zero regression).",
       },
     },
     required: ["type"],
@@ -112,34 +111,36 @@ export const advisorTool = {
       )
     }
 
-    // Design review: the review scope must be documentation files. Classification
-    // comes from the manifest-declared review-target roots (M4 write-gate.mjs single
-    // authority — FR12: no directory-name hardcoding; a project whose docs live
-    // elsewhere declares them in PROJECT-MANIFEST.json docRoot).
+    // Design review: the review scope must be documentation files. Classification =
+    // resolveReviewDocPaths (2026-10-04 · #921 · the four-leg single authority in
+    // review-facts.mjs): legs ① session-root set / ② owning-project root set keep the
+    // legacy behavior verbatim; leg ③ probes candidate project roots for bare
+    // project-root-relative forms; leg ④ disambiguates by readable-file uniqueness
+    // (fail-closed — criterion=scope-doc-ambiguous when ≥2 candidates are readable).
     if (reviewType === "design" && documents) {
-      const roots = resolveReviewTargetPaths(agent).map((r) => r.replace(/[\\/]/g, sep))
-      // 按用点解析（2026-09-21 之裁收口 · 台账 #828）：逐文档按**其所属项目**（最近带档祖先）
-      // 的 docRoot 判定；无主档文档回退会话根集判定（原行为零变）。
-      const ownerRootsCache = new Map()
-      const ownRoots = (abs) => {
-        const owner = owningProject(abs)
-        if (!owner) return []
-        let r = ownerRootsCache.get(owner)
-        if (!r) {
-          r = resolveReviewRootsFor(owner).map((x) => x.replace(/[\\/]/g, sep))
-          ownerRootsCache.set(owner, r)
-        }
-        return r
-      }
-      const invalidDocs = documents.filter((doc) => {
-        const n = normAbs(doc, agent.cwd).replace(/[\\/]/g, sep)
-        const under = (r) => n === r || n.startsWith(r + sep)
-        return !roots.some(under) && !ownRoots(n).some(under)
-      })
-      if (invalidDocs.length > 0) {
+      const { resolved, invalid, ambiguous, candidates } = resolveReviewDocPaths(documents, agent.cwd)
+      if (invalid.length > 0 || ambiguous) {
         if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
+        if (ambiguous) {
+          // 歧义拒（KD-4 独立判据——不混入 not-doc；列全部可读命中——fail-closed 不静默挑一）。
+          return withIdentityLine(
+            `Advisor: design review document is ambiguous — "${ambiguous.doc}" matches several candidate projects: ${ambiguous.hits.join(", ")}. Pass a project-root-relative or absolute path.`,
+            { type: reviewType, scope: scopeSummary(documents), round: "—", criterion: "scope-doc-ambiguous" },
+          )
+        }
+        // not-doc 拒：既有稳定前缀逐字（行首）+ 解析诊断尾（B 面根治——逐文档「解析后绝对
+        // 路径 ← 基面 = 会话 cwd」+ 候选项目根提示 cap 5 + 重试指引——纠正「误报因」缺陷）。
+        const invalidList = invalid.map((v) => v.doc).join(", ")
+        const attemptedList = invalid
+          .map((v) => `${v.doc} → ${v.attempted.length > 0 ? v.attempted.join(" | ") : normAbs(v.doc, agent.cwd)}`)
+          .join("; ")
+        const shown = candidates.slice(0, 5)
+        const more = candidates.length - shown.length
+        const candidateNote = shown.length > 0
+          ? `(candidates: ${shown.join(", ")}${more > 0 ? ` +${more} more` : ""}) — pass project-root-relative (e.g. ${shown[0]}/docs/…) or absolute paths`
+          : "— pass project-root-relative or absolute paths"
         return withIdentityLine(
-          `Advisor: design review documents must be documentation files (per the project's conventions). Invalid: ${invalidDocs.join(", ")}`,
+          `Advisor: design review documents must be documentation files (per the project's conventions). Invalid: ${invalidList}\nDiagnosis: resolved against session cwd ${agent.cwd} → ${attemptedList}; no candidate project docRoot contains it ${candidateNote}.`,
           { type: reviewType, scope: scopeSummary(documents), round: "—", criterion: "scope-not-doc" },
         )
       }

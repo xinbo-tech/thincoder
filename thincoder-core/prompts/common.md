@@ -161,7 +161,7 @@ Batch independent read-only tool calls into a single reply (they run concurrentl
 **Anchors & detail**: entries hang on **pointers** (requirement-doc section / batch-record section / evidence line).
 
 ## 批次档常识（Batch record — the carrier of task flow）
-**What it is**: the **batch record** = the **carrier** of task flow (the single file threading one implementation round from start to closeout); the path takes the form `docs/batches/<batch>-<topic>.md` — the actual location is the `batchDoc` passed at spawn, never hard-coded.
+**What it is**: the **batch record** = the **carrier** of task flow (the single file threading one implementation round from start to closeout); the path takes the form `<repo>/docs/batches/<batch>-<topic>.md` (relative paths resolve against the session cwd first, then candidate project roots — or absolute) — the actual location is the `batchDoc` passed at spawn, never hard-coded.
 **Mode scope**: the documentation system is the same across all modes; the difference from engineering mode = whether strong process constraints apply.
 **Six-segment map (one segment, one author)**: §1 discussion = the main agent · §2 batch task & design = eng-designer · §3 design review findings = the review subagent (advisor) · §4 user approval = the main agent · §5 implementation record = eng-coder · §6 verification & closeout = the main agent (the parent, as seen by subagents).
 **Writing means**: the `batch` tool — **no path parameter** (the target record is bound to you at spawn); **the segment number follows from your identity**; if the write does not land ⇒ say "§× 未写入" plainly in your report.

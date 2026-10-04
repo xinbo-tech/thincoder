@@ -243,7 +243,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   if (role === "eng-coder" || role === "eng-designer") {
     const given = typeof args.batchDoc === "string" ? args.batchDoc.trim() : ""
     const refusal = (suffix = "") => new Error(
-      `batchDoc is required for role='${role}' — pass the batch record path (docs/batches/<batch>-<topic>.md); spawn refused without it.` + suffix)
+      `batchDoc is required for role='${role}' — pass the batch record path (e.g. <repo>/docs/batches/<batch>-<topic>.md; relative paths resolve against the session cwd first, then candidate project roots — or absolute); spawn refused without it.` + suffix)
     if (!given) throw refusal()
     batchDocAbs = resolveBatchReadPath(parent.cwd ?? process.cwd(), given)
     if (!batchDocAbs) throw refusal(" (given path is not a readable file)")

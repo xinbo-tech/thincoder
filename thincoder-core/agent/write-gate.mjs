@@ -6,8 +6,10 @@
  * （KD-M4-3）——本档承载三个单点：
  *
  * 1. `resolveReviewTargetPaths(agent)` —— 评审目标解析单点：读 manifest `docRoot`
- *    产出评审对象 / 被审文件的绝对路径集合（目录级；子键值形态 = 串 | 多根数组，
- *    展开走 `docRootPaths`）。缺 `docRoot` 键 → `readManifest`
+ *    产出评审对象 / 被审文件的绝对路径集合（目录级；子键值形态 = 串 | 多根数组）。
+ *    判定本体（`REVIEW_ROOT_KEYS` 键集 + `resolveReviewRootsFor(dir)`——2026-10-02 收口 ·
+ *    台账 #828 按用点形）自本档迁 `review-facts.mjs`（2026-10-04 · #921 · KD-2——本档同名
+ *    再出口保既有 import 面）；缺 `docRoot` 键 → `readManifest`
  *    的 fillDefaults 已补默认（架构 §2.3 E2 便利 fallback 落点）；整档缺失 / 非法 JSON →
  *    `{ok:false}` → 回退 DEFAULT_MANIFEST.docRoot（本函数是壳门之下的便利层——E2 的
  *    「整档缺失」由壳面 requireManifest 按用点处置（判 + 报明 / 建档，**不抛**——
@@ -15,8 +17,6 @@
  *    KD-M1-12）：CLI make-agent.mjs / VSC setup.mjs 同判）；读错（权限等）→ 上抛不伪装成缺失（manifest.mjs 契约）。
  *    M6 的 `advisor.mjs` design-review 分类分支消费本导出
  *    （KD-M6-1——同源不重复实现；落 dispatch.mjs 会让 advisor 反向 import 门禁簇成环）。
- *    **按用点形（2026-10-02 收口 · 台账 #828）**：`resolveReviewRootsFor(dir)`——同单点
- *    非第二实现（按目标目录 ∥ 所属项目根解析；多档锚下各文档按各自项目判定）。
  * 2. `freezeWindowConflict(agent, absPaths)` —— D5 冻结窗口判据组装：被审文件集 =
  *    声明文档集（`inflightDesignReviewConflict` 同源 docAbs 腿）+ 批次档（`run.batchDoc`
  *    腿——评审绑定批档在途时，写批档同样致 stale）。dispatch.mjs
@@ -30,7 +30,6 @@
  * 代码路径判定（conventions.mjs 单一权威分类——KD-M4-1 保留为代码路径判定用）。
  */
 import { basename, dirname, resolve } from "node:path"
-import { DEFAULT_MANIFEST, docRootPaths, readManifest } from "../manifest.mjs"
 // advisor-settle 无上游依赖本簇（dispatch → write-gate → advisor-settle 单向）。normAbs
 // 权威本体 = review-facts.mjs（第 33 批迁入），advisor-settle re-export；本档再 re-export
 // （指针链非副本），M6 经本档一行 import 取齐。
@@ -38,13 +37,17 @@ import { inflightDesignReviewConflict, normAbs } from "../agent-tools/advisor-se
 // 批次档路径单源（叶档——`BATCH-RECORD.md` §4.15）：批次档写门基底集取 `batchDocBases`。
 import { batchDocBases } from "../agent-tools/batch-paths.mjs"
 export { normAbs }
-
-/** 评审目标解析读的 docRoot 键集（评审对象/被审文件可住的所有文档层——M6 分类据此判定）。 */
-const REVIEW_ROOT_KEYS = ["requirements", "specs", "design", "modules", "batches"]
+// 2026-10-04（工具路径基面根治批 · #921 · KD-2 同名再出口）：REVIEW_ROOT_KEYS +
+// resolveReviewRootsFor 判定本体迁 `review-facts.mjs`（评审事实面——advisor-async 既有
+// import 面零新模块边）；本档同名再出口（指针非副本——normAbs 同款先例）——既有 import 面
+// （advisor.mjs / 测试）零改；本档消费点 `resolveReviewTargetPaths` 薄委托同名函数。
+export { REVIEW_ROOT_KEYS, resolveReviewRootsFor } from "../agent-tools/review-facts.mjs"
+import { resolveReviewRootsFor } from "../agent-tools/review-facts.mjs"
 
 /**
- * 评审目标解析单点（M4 §2.1#1）：读 manifest `docRoot` → 评审对象 / 被审文件的绝对路径
- * 集合（目录级，反斜杠归一；子键值形态 = 串 | 多根数组，逐键经 `docRootPaths` 展开）。
+ * 评审目标解析单点（M4 §2.1#1）：评审对象 / 被审文件的绝对路径集合（目录级）——
+ * 判定本体（manifest `docRoot` 读面 / 缺档回退 / 读错上抛语义）2026-10-04 迁
+ * `review-facts.mjs` 单源（KD-2——本档薄委托；详述见该档 resolveReviewRootsFor JSDoc）。
  * 缺 `docRoot` 键 → readManifest 已补默认；整档缺失 / 非法 →
  * `{ok:false}` → 回退 DEFAULT_MANIFEST.docRoot（便利层——E2 的「整档缺失」由壳面
  * requireManifest 按用点处置（判 + 报明 / 建档，**不抛**——启动侧恒不拒，KD-M1-25；**工程模式会话**口径——KD-M1-12），本函数不重复拦）；
@@ -54,21 +57,6 @@ const REVIEW_ROOT_KEYS = ["requirements", "specs", "design", "modules", "batches
  */
 export function resolveReviewTargetPaths(agent) {
   return resolveReviewRootsFor(agent?.cwd ?? process.cwd())
-}
-
-/** 同单点之**按用点解析**增量（2026-09-21「参数按用点解析」之裁收口 · 台账 #828）：按**目标目录**
- *  （其所属项目根——最近带档祖先）解析评审目标根集——多档锚下各文档按各自项目判定。
- *  @param {string} dir 目标目录（项目根——最近带档祖先）
- *  @returns {string[]} 评审目标目录绝对路径（去重）
- */
-export function resolveReviewRootsFor(dir) {
-  const man = readManifest(dir)
-  const root = man.ok && man.manifest?.docRoot && typeof man.manifest.docRoot === "object"
-    ? man.manifest.docRoot
-    : DEFAULT_MANIFEST.docRoot
-  const out = []
-  for (const key of REVIEW_ROOT_KEYS) out.push(...docRootPaths(root?.[key], dir))
-  return [...new Set(out)]
 }
 
 /**

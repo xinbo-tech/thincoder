@@ -627,7 +627,10 @@
 | `readHistoryTool` | `thincoder-core/agent-tools/read-history.mjs:311` | `const` |
 | `recentChangesTool` | `thincoder-core/agent-tools/recent-changes.mjs:9` | `const` |
 | `normAbs` | `thincoder-core/agent-tools/review-facts.mjs:17` | `fn` |
-| `docSetKey` | `thincoder-core/agent-tools/review-facts.mjs:26` | `fn` |
+| `docSetKey` | `thincoder-core/agent-tools/review-facts.mjs:23` | `fn` |
+| `REVIEW_ROOT_KEYS` | `thincoder-core/agent-tools/review-facts.mjs:32` | `const` |
+| `resolveReviewRootsFor` | `thincoder-core/agent-tools/review-facts.mjs:38` | `fn` |
+| `resolveReviewDocPaths` | `thincoder-core/agent-tools/review-facts.mjs:71` | `fn` |
 | `MASKED` | `thincoder-core/agent-tools/settings.mjs:26` | `const` |
 | `isSensitiveKey` | `thincoder-core/agent-tools/settings.mjs:29` | `fn` |
 | `settingsTool` | `thincoder-core/agent-tools/settings.mjs:230` | `fn` |
@@ -819,11 +822,11 @@
 | `createTimerWatch` | `thincoder-core/agent/timers.mjs:79` | `fn` |
 | `fireTimerWake` | `thincoder-core/agent/timers.mjs:105` | `fn` |
 | `runTurnLoop` | `thincoder-core/agent/turn-loop.mjs:23` | `fn` |
-| `normAbs` | `thincoder-core/agent/write-gate.mjs:40` | `named` |
-| `resolveReviewTargetPaths` | `thincoder-core/agent/write-gate.mjs:55` | `fn` |
-| `resolveReviewRootsFor` | `thincoder-core/agent/write-gate.mjs:64` | `fn` |
-| `freezeWindowConflict` | `thincoder-core/agent/write-gate.mjs:84` | `fn` |
-| `batchRecordWriteConflict` | `thincoder-core/agent/write-gate.mjs:160` | `fn` |
+| `normAbs` | `thincoder-core/agent/write-gate.mjs:39` | `named` |
+| `REVIEW_ROOT_KEYS, resolveReviewRootsFor` | `thincoder-core/agent/write-gate.mjs:44` | `named` |
+| `resolveReviewTargetPaths` | `thincoder-core/agent/write-gate.mjs:58` | `fn` |
+| `freezeWindowConflict` | `thincoder-core/agent/write-gate.mjs:72` | `fn` |
+| `batchRecordWriteConflict` | `thincoder-core/agent/write-gate.mjs:148` | `fn` |
 | `IMAGE_MAX_BYTES` | `thincoder-core/attachments.mjs:33` | `const` |
 | `TURN_MAX_BYTES` | `thincoder-core/attachments.mjs:36` | `const` |
 | `parseDataUrl` | `thincoder-core/attachments.mjs:43` | `fn` |
