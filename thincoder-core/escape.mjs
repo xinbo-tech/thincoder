@@ -52,7 +52,7 @@ export function escapeLiteralEscapes(text) {
   return out
 }
 
-/** 净化孤立 UTF-16 代理对（毒源②）：高代理无低代理跟随 / 低代理无高代理前置 → 替换为 。 */
+/** 净化孤立 UTF-16 代理对（毒源②）：高代理无低代理跟随 / 低代理无高代理前置 → 剥除（出串零该码元——码 :66/:68 实读为准）。 */
 export function sanitizeLoneSurrogates(text) {
   text = String(text ?? "")
   let out = ""

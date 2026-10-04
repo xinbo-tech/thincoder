@@ -100,7 +100,7 @@
   **`_childUpstream`**（子→父在飞消息队列——§6.27 上行通道）· **`_childUpstreamSeq`**（其单调计数）——2026-09-19 本批补入（§6.27.2 早已按「载体字段集」引用两款，本表当时未同步，本批对齐）。
   容器类型：三池 / 墓碑 / 评审实例注册表 = `Map`，队列 / pending / 唤醒栓注册表 / 变更日志 = 数组，`_suspended` = 布尔。
   **全集结论（2026-09-19 上行通道批复核）**：**13 款**即全集——本轮补两款 = `_childUpstream` / `_childUpstreamSeq`（§6.27 上行通道；2026-09-19 本批同步，前批只在 `AGENT-LOOP-UPSTREAM.md` §6.27.2 以「同列」引用）；2026-09-14 的「10 款」结论**已被 ED-4（评审池排队）推翻**——新增款 = `_asyncAdvisorQueue`（评审排队容器——与 `_asyncQueue` 同列，两端写侧同形）。
-  核实证据 = `thincoder-core/agent-tools/advisor-async.mjs:414`（写）/ `:264-271`·`:295`（读）+ 2026-09-17 af 批探针（部分 parent 下 `dequeue` no-op ⇒ 已取消评审被补位重启）。
+  核实证据 = `thincoder-core/agent-tools/advisor-async.mjs:454-455`（写 enqueue + position）/ `:298`·`:311`·`:331`（读——三处 `carrierField` 出队 ∕ 剔除 ∕ 补位径）+ 2026-09-17 af 批探针（部分 parent 下 `dequeue` no-op ⇒ 已取消评审被补位重启）。
 - **回写义务（谁写 · 何时写）**：容器类字段（三池 / 队列 / pending / 墓碑 / 唤醒栓注册表 / 评审实例注册表 / 变更日志）的新建 / 借用**只在首次使用的核内单点发生**，并与首次使用**同步**（先落容器后使用——无「已使用未回写」窗口）；写入落**父对象字段**，且须使容器经 `carrierField(parent, 字段)` 与 `parent[字段]` 两条读取路径命中**同一容器**（不另起分叉）。
   - **借用规则**：父对象缺而载体（`history`）有 ⇒ **借用同一容器**（不另建）；两处皆无 ⇒ 就地新建。已按「借用 / 新建」落核的单点：
     pending = `parkAsyncPending`（`thincoder-core/agent-tools/async-settle.mjs:127-133`）· 墓碑 = `writeTombstone`（同档 `:61-72`）· 上行队列 = `upstreamHolder`（`thincoder-core/agent-tools/parent-channel.mjs:67-80`——父字段优先 / 载体命中即借用 / 皆无则建在父字段 + 载体别名）。
