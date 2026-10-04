@@ -91,7 +91,7 @@ test("G4a 空响应重试：首轮空 content ⇒ 注入重试提醒 ⇒ 次轮�
   }
 })
 
-test("G4b 中断：AbortError 抛出自核 —— 无 `.reason`（回落 signal.reason 判据）+ 中断消息入历史", async () => {
+test("G4b 中断：AbortError 抛出自核 —— 挂点泛型直传（生成中停 = 站点#2/流读侧先命中）+ 中断消息入历史（判据 2026-10-04 重锚）", async () => {
   const realFetch = globalThis.fetch
   globalThis.fetch = async () => sseOpen([`data: ${JSON.stringify({ choices: [{ delta: { content: "partial" } }] })}\n\n`])
   try {
@@ -102,11 +102,13 @@ test("G4b 中断：AbortError 抛出自核 —— 无 `.reason`（回落 signal.
     try { await coreAgentMod.runAgent(agent, "hi", {}, { signal: ctl.signal }) } catch (e) { thrown = e }
     assert.ok(thrown, "中断 ⇒ 抛出")
     assert.equal(thrown.name, "AbortError", "name = AbortError")
-    assert.equal(thrown.reason, undefined, "核抛出物不设 .reason（消费面回落 signal.reason 的判据）")
-    assert.deepEqual(thrown.abortInfo, { trigger: "user", layer: "agent", detail: "interrupted-response" }, "abortInfo 标注（interrupted-response 站点）")
-    assert.equal(thrown.message, "User interrupted", "message 逐字")
-    assert.equal(ctl.signal.reason.message, "INT-MSG", "signal.reason = 中断载荷（回落源）")
-    assert.ok(agent.history.some((m) => m.content === "[User interrupt: INT-MSG]"), "中断消息入历史")
+    assert.ok(thrown.message && typeof thrown.message === "string", "泛型文案（DOMException AbortError——挂点泛型；消费面不读抛出物 message）")
+    assert.equal(thrown.reason?.message, "INT-MSG", "中断载荷在抛出物 .reason（abortError 透传）")
+    assert.ok(thrown.abortInfo, "来源标注在（产生点直标）")
+    assert.equal(ctl.signal.reason.message, "INT-MSG", "signal.reason = 中断载荷（消费面单源——continueDecision 读此）")
+    // 消费面单源验证：turn-head 抛出物 ⇒ 外围判定 resume（Ctrl+I 续跑语义不受批内断代影响）
+    const { continueDecision } = await mod("thincoder-core/agent/continue-decision.mjs")
+    assert.equal(continueDecision(thrown, { reason: ctl.signal.reason }), "resume", "外围判定 ⇒ resume（继续语义零回归）")
   } finally {
     globalThis.fetch = realFetch
   }
@@ -177,13 +179,25 @@ test("G4d 核增补 B：蒸馏专用 signal（显式 = distillSignal ∕ 缺省 
     const distillCtl = new AbortController()
     const withSignal = await stubRun({ distillSignal: distillCtl.signal })
     assert.equal(withSignal.calls.length, 5, "3 工具轮 + 1 收尾 + 1 蒸馏轮")
-    assert.equal(withSignal.calls[4].signal, distillCtl.signal, "蒸馏轮 fetch signal === distillSignal（运行 signal 分离）")
+    // 判据 2026-10-04 重锚：#878 D-PX8 后直连 fetch 走 proxyFetch 内部 AbortSignal.any([opts.signal, idleAbort.signal])
+    // 合成 —— calls[4].signal = 合成信号（kComposite）而非 distillCtl 本体；语义等价 = 中止传导（abort distillCtl ⇒ 合成信号中止）
+    const compSym = Object.getOwnPropertySymbols(withSignal.calls[4].signal).find((s) => String(s).includes("kComposite"))
+    assert.ok(compSym && withSignal.calls[4].signal[compSym] === true, "蒸馏轮 fetch signal = AbortSignal.any 合成（kComposite 内部符号面 = true——源集 = distillSignal + 看门狗；非 distillCtl 本体）")
+    // 传导性等价（核心语义）：abort distillCtl ⇒ 合成信号随即中止（AbortSignal.any 传导）
+    distillCtl.abort(new Error("distill-cancel"))
+    assert.equal(withSignal.calls[4].signal.aborted, true, "abort(distillCtl) ⇒ 合成信号中止（传导等价——真语义）")
     assert.equal(withSignal.content, "SUMMARY-HARNESS")
     assert.ok(withSignal.agent.history.some((m) => typeof m.content === "string" && m.content.startsWith("[Exploration summary]")), "蒸馏摘要入历史（发射面）")
 
     const noSignal = await stubRun({})
     assert.equal(noSignal.calls.length, 5)
-    assert.equal(noSignal.calls[4].signal, noSignal.runSignal, "缺省 ⇒ 回落运行 signal（零默认变更）")
+    // 重锚（2026-10-04）：同上——缺省面 fetch signal = 运行 signal 经 any 合成（+看门狗）；分离性判 = 合成特征而非本体恒等
+    {
+      const cs = Object.getOwnPropertySymbols(noSignal.calls[4].signal).find((s) => String(s).includes("kComposite"))
+      assert.ok(cs && noSignal.calls[4].signal[cs] === true, "缺省面同样走 any 合成（kComposite）")
+      assert.notEqual(noSignal.calls[4].signal, noSignal.runSignal, "合成体 ≠ 运行 signal 本体（any 包装）")
+      assert.equal(noSignal.calls[4].signal.aborted, false, "缺省面未中止（正常完成路径）")
+    }
   } finally {
     globalThis.fetch = realFetch
   }
