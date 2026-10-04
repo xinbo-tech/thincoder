@@ -63,7 +63,7 @@
 
 ## 4. 机检形（#350 契约）
 
-**宿主（as-of 2026-09-30 收正）**：原宿主 `thincoder-cli/test/memory-sweep-cli.test.mjs` 随**测试树全清重置（2026-09-28）**退场——现载体 = 缺陷修复批 #704 批内件 `docs/batches/2026-09-30-defect-fixes-cli.test.mjs`（MS-2 锁定形含 §3 发射字节形 + zsh 分派行）；**回迁 = 测试体系重建轮**（口径先例 = 台账 #698）。三例：
+**宿主（as-of 2026-09-30 收正）**：原宿主 `thincoder-cli/test/memory-sweep-cli.test.mjs` 随**测试树全清重置（2026-09-28）**退场——现载体 = 缺陷修复批 #704 批内件 `docs/batches/2026-09-30-defect-fixes-cli.test.mjs`（MS-2 锁定形含 §3 发射字节形 + zsh 分派行）；**回迁 = 测试体系重建轮**（口径先例 = 台账 #698）。三例：（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 - **MS-1 · 源码 token 机检**：读 `bin/thincoder.mjs` + `src/command-table.mjs` + `src/cli/memory-command.mjs` 源文本，断言 `case "memory"` 分发面 · `case "sweep"` 分支 · `SWEEP_USAGE` 行 · 三旗标 token。
   **耦合义务**：命令分发表外提（触发在册 = `docs/cli/design/CLI-DEBT.md` §2.1 A4）**已履行（拆档批 R4——2026-09-28）**：读取面锁点随分发落点改指 `src/command-table.mjs`。
@@ -79,6 +79,10 @@
 - 判据源 = 实装面 + 各批裁定（补全面 / 机检形逐条注实装源——§2 / §4）。
 
 ## 变更记录
+
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（read-data-interface · 2026-10-03）落点表** = `docs/batches/2026-10-03-read-data-interface.md` §2（唯一承载面——一次性批次材料）。
+**本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
 
 - 2026-10-04（**issue 修复批·五 · 登记/回填轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §2.8（父侧裁定）：§1 启动前置校验条「（拟新增）」标记退场 + 实现态翻落（`thincoder-cli/bin/node-version-gate.cjs` 已落；接线 = `thincoder-cli/bin/thincoder.cjs` shim 首行）。**零新语义**（实施批翻已落形）。
 - 2026-10-04（**issue 修复批·五 · 修轮收正 · 父侧直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §2.3 注（eng-designer 预置文本 · 评审轮 1 号 7））：§1 启动前置校验条收正——校验点位钉 = **shim 首行**（先于 ESM 静态 import）∥ 校验体 = 纯函数 `nodeVersionError(version = process.versions.node)`（新档 `bin/node-version-gate.cjs`（拟新增））。**零新语义**（预置文本落盘）。

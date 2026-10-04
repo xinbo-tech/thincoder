@@ -62,7 +62,7 @@
 > **#106 S2 接线前口径确认项（只记——S2 动作；设计面收正轮 3 补 · 2026-09-14）**：
 > 归一形态 = **取一侧 = CLI**（核内已承载：`thincoder-core/advisor/repos.mjs:128` `isDocOnlyChange` = **非代码即「只文档」**——`docs/` / `*.md` 与临时件（`tmp-*` / `.tmp` / `.temp`）**同落「只文档」流**；逐行实核）；
 > 对端严格形态 = **非代码 ∧ 是文档**（`thincoder-vscode/src/advisor/repos.mjs:111`——临时件既非代码也非文档 ⇒ **中断「只文档」流**）——随 S2 接线被取代。
-> 两端当前**均无生产消费方**（对端仅测试面引用：`thincoder-vscode/test/portability-vsc-classification.test.mjs:16`）⇒ 属**潜伏差异**；
+> 两端当前**均无生产消费方**（对端仅测试面引用：`thincoder-vscode/test/portability-vsc-classification.test.mjs:16`）⇒ 属**潜伏差异**；（迁移期引文）
 > **S2 接线前须确认**：接线后差异面 = **仅「临时件场景」**（`isDocOnlyChange` 对「临时件（+ 文档）」变更集的判定由 false 变为 true）——接受统一，或以端差注入承载严格形态（二选一——属 S2 接线轮动作，本项只记）。
 
 ### 2.4 语义对位遍行（原 §2.5（四）行集——同职责但相对路径不同）

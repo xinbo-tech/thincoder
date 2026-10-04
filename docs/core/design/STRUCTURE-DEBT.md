@@ -69,6 +69,9 @@
 
 ## 变更记录
 
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（core 越线档拆分批（#755 ∥ #786） · 2026-10-01）落点表** = `docs/batches/2026-10-01-core-split-line.md` §2（唯一承载面——一次性批次材料）。
+
 - 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R1 改指（核面 `core.mjs` 补 `thincoder-core/memory/` 前缀）。**零新语义**。
 
 - 2026-09-15（**B 式迁移轮 · 第 2 批**）：建档——`thincoder-cli/docs/design/STRUCTURE-DEBT.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。

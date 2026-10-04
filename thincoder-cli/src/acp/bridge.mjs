@@ -167,6 +167,10 @@ export function buildAcpCallbacks({ sessionId, agent, notify, request, log = () 
    *  读全部涉及文件缓冲（同文件去重——一次读）→ 逐条 computeEditEntry（EDIT_ABORT_PREFIX——批量
    *  原子前缀；同文件条目按数组序串行累积——第二条基于第一条结果）→ 全部通过 → 逐文件写回
    *  一次（判失败 → 零写；写失败 → 同本地 edit-batch 既有原子语义）。 */
+  /** ACP batch-edit 通道——与 EDIT.md:#796 汇总行体系**无关**。
+   * 桥面 `outcomes.map(...).join("\\n")` 自持逐条文字行，不经 `applyEditBatch`/`diffLines`/offload；
+   * 距 64K offload 阈值远 + 不含 diff 结构 ⇒ 不在 offload 盲区范围。**判定：非 #796 射程（#908）**。
+   */
   const editBatch = async (args) => {
     const edits = args.edits
     assertEditsContainer(edits)

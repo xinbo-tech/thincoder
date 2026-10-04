@@ -353,7 +353,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 **问题陈述（实测，as-of 2026-09-18）**：
 
-- `thincoder-vscode/test/files.mjs` 清单 **64 条中 4 条为死项**：`test/doc-consistency.test.mjs` · `test/ledger-check.test.mjs` · `test/doc-anchors.test.mjs` · `test/reconcile-lookup.test.mjs`——
+- `thincoder-vscode/test/files.mjs` 清单 **64 条中 4 条为死项**：`test/doc-consistency.test.mjs` · `test/ledger-check.test.mjs` · `test/doc-anchors.test.mjs` · `test/reconcile-lookup.test.mjs`——（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
   四档已随 M8 机检重写批（`b9f439c9`「engineering-mode v2 M2-M10 implementation」）删除，清单条目未同步。
 - **两分支实测（死项是否致红——本条目须先答的问题）**：**不致红**。`node --test` 的判据是「实参集合是否**全部**不存在」——
   **全部缺失** ⇒ 报 `Could not find '<缺失实参拼接串>'` 并 exit 1；**混有在盘实参** ⇒ 缺失项**静默跳过**、exit 0
@@ -376,12 +376,12 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 | 文件 | 现（`wc -l`） | Δ | 判据 |
 |---|---|---|---|
-| `thincoder-vscode/test/files.mjs` | 83 | −4 条目 + 一条退役注（占 2 行）⇒ 净 −2（实施轮实测 **82 行 / 61 条**——2026-09-18；差额 +1 = 并行线已提交档 `test/tool-display-sync.test.mjs` 条目） | A-MS7：清单每条逐条 `existsSync` 全真（61 条全在盘、零死项） |
+| `thincoder-vscode/test/files.mjs` | 83 | −4 条目 + 一条退役注（占 2 行）⇒ 净 −2（实施轮实测 **82 行 / 61 条**——2026-09-18；差额 +1 = 并行线已提交档 `test/tool-display-sync.test.mjs` 条目） | A-MS7：清单每条逐条 `existsSync` 全真（61 条全在盘、零死项） （迁移期引文） |
 | `thincoder-vscode/test/run.mjs` | 52 | +2 → **实测 54**（自检① 多行嵌套：改前 `:28`–`:30` 三行 → 改后五行；另失败前缀改覆盖两清单——§1.6 裁定 1） | A-MS8：注入一条不存在的档 ⇒ `node test/run.mjs` **exit 1** 且文案 `listed unit file does not exist: <注入值>`（先于 `node --test` 启动——fail-closed）；注入后还原，`git status` 该档零差异 |
 
 **不做（明确出界）**：
 
-- **单元面反向自检**（盘上 `*.test.mjs` 未登记 → 拒）。现状盘上已有 1 档未登记的在途档（`thincoder-vscode/test/tool-display-sync.test.mjs`，并行线 untracked）——
+- **单元面反向自检**（盘上 `*.test.mjs` 未登记 → 拒）。现状盘上已有 1 档未登记的在途档（`thincoder-vscode/test/tool-display-sync.test.mjs`，并行线 untracked）——（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
   该方向另立条目（登记主张 + 在途批协同），本批不夹带。**→ 已由 §10.2 承接（2026-09-18 · 批 判据/纪律三连 · 台账 #51）**；本行保留为「当日为何出界」的历史记录。
 - 死项之外的 VSC 测试面（用例内容 / 其他清单 / 其他包——core 与 CLI 无清单文件，走 glob，无此面）。
 
@@ -389,8 +389,8 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 - **对象与根因**：`§2.20.x` / `§2.22.x` 两族节号**只存于已归档 v1 档**（`docs/core/design/_archive/ENGINEERING-MODE.md` 与两产品树参照历史）——活体面**不可解析**（承 ③-1「注文自足、不给节号」同判据；且这些注文均在**代码档**、处 `doc-check`（域 = `docs`）覆盖面外，无机检可拦）。
 - **修法**：去裸节号，改**自足表述**（面名 + 批号）；能指到**可解析**的现行权威（活档 + 已核节号）者优先——逐行取舍登记入批次档 §5。
-- **范围（本批 · 12 行 / 6 档）**：`thincoder-vscode/test/files.mjs`（`:47` `:48` `:52`）· `thincoder-vscode/test/eng-designer-role.test.mjs`（`:3` `:96`）·
-  `thincoder-vscode/test/batch-segment.test.mjs`（`:2`）· `thincoder-vscode/test/prompts-mirror-anchors.test.mjs`（`:4` `:18` `:44` `:81`）·
+- **范围（本批 · 12 行 / 6 档）**：`thincoder-vscode/test/files.mjs`（`:47` `:48` `:52`）· `thincoder-vscode/test/eng-designer-role.test.mjs`（`:3` `:96`）·（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+  `thincoder-vscode/test/batch-segment.test.mjs`（`:2`）· `thincoder-vscode/test/prompts-mirror-anchors.test.mjs`（`:4` `:18` `:44` `:81`）·（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
   `thincoder-vscode/src/agent/setup.mjs`（`:309`）· 孤儿夹具档（本包测试夹具目录下的机检基线 JSON，`:2` note 串——**整档删除**；档名见批次档 §2.2 表第 12 行）。
 - **夹具档纳入理由（设计评审轮 1 发现 1）**：该档 = **孤儿夹具**（其消费档已随 M8 机检重写批删除——`files.mjs` 清单条目同批勾销；全包 `.mjs` / `.json` 内容检索零引用），
   而 ④ 的判据检索域（`thincoder-vscode/src` + `thincoder-vscode/test`）含该档 ⇒ 不纳入则判据**不可达**；纳入后处置 = **整档删除**（孤儿档无消费面——两选一的另一支「改写为自足注文」否决）。
@@ -404,8 +404,9 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 - **活样本（已消解）**：`thincoder-vscode/test/tool-display-sync.test.mjs`（#41 实施在写）——落盘未登记期间 `npm test` 零输出、零红灯；该档后已登记（`test/files.mjs`），但**该路径当日确无拦截**。
 - **三包结构不同（本条目须先答的事实）**：VSC = **显式清单制**（`thincoder-vscode/test/files.mjs` 61 条 · `thincoder-vscode/test/integration/files.mjs` 12 条；`thincoder-vscode/test/run.mjs` 自检 ①②③——其中 ② 只走集成目录）；
   **CLI 无清单文件**（`thincoder-cli/test/run.mjs` 走两层 glob：`test/*.test.mjs` + `test/integration/*.test.mjs`）；**核亦无清单文件**（`thincoder-core/test/run.mjs` 走**单层** glob：`test/*.test.mjs`）。
-  ⇒ CLI / 核面「未登记」形态不存在，**同族缺口 = 未被 glob 命中的档**（CLI = 嵌套——如 `test/x/y.test.mjs`；核 = 嵌套或任何非顶层档）——同为静默漏跑。**核面并入本实施轮 = 批档 §1 批件 2026-09-18 另裁**（同机制、实现可复用）。
-- **三包收集面实测（零缺口，as-of 2026-09-18）**：VSC 单元域盘上 **61** 档 ↔ 清单 61 条（单元面计数 = 并行线 `thincoder-vscode/test/tool-display-sync.test.mjs` 登记入册后之值——§10.1 表同行）⟂ 集成域盘上 **12** 档 ↔ 清单 12 条；CLI `test/` 递归 **77** 档（顶层 69 + 集成 8），两层 glob 覆盖 77/77、嵌套他处 **0**；核 `test/` 递归 **42** 档 = 全部顶层，单层 glob 覆盖 **42/42**、嵌套 **0**。
+  ⇒ CLI / 核面「未登记」形态不存在，**同族缺口 = 未被 glob 命中的档**（CLI = 嵌套——如 `test/x/y.test.mjs`；核 = 嵌套或任何非顶层档）——同为静默漏跑。**核面并入本实施轮 = 批档 §1 批件 2026-09-18 另裁**（同机制、实现可复用）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+- **三包收集面实测（零缺口，as-of 2026-09-18）**：VSC 单元域盘上 **61** 档 ↔ 清单 61 条（单元面计数 = 并行线 `thincoder-vscode/test/tool-display-sync.test.mjs` 登记入册后之值——§10.1 表同行）⟂ 集成域盘上 **12** 档 ↔ 清单 12 条；CLI `test/` 递归 **77** 档（顶层 69 + 集成 8），两层 glob 覆盖 77/77、嵌套他处 **0**；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+  核 `test/` 递归 **42** 档 = 全部顶层，单层 glob 覆盖 **42/42**、嵌套 **0**。
 
 **方案（本条目）**：
 
@@ -420,7 +421,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 2. **判据** = 域内每一档都在**对应执行集**内；否则 fail。
 3. **时序** = **先于 `node --test` 启动**（fail-closed——失败档不被执行、错误不被套件输出淹没）。
 4. **白名单 = 无按档豁免名单**；豁免判据 = **命名约定**（域只含 `*.test.mjs`——helper / fixture / smoke 档（`smoke-settings.mjs` 等）命名不含该后缀、天然不入域；VSC 清单里的非域条目两向皆不受影响）。将来真出现「须在盘但不可执行」的档 ⇒ **改名**（`*.fixture.mjs`），不得加名单——名单即又一个静默漏跑的藏身处。
-5. **文案（AC 断言对象）**——**三包同前缀** `✖ test manifest check failed: `；`<rel>` = **相对包根**的路径、正斜杠分隔（例 `test/foo.test.mjs`；基准 = `run.mjs` 自身的 `root`，同集成面 ②）。下列三行 = **完整样例（逐字：前缀 + 故障类型 + 括注 + `<rel>`）**：
+5. **文案（AC 断言对象）**——**三包同前缀** `✖ test manifest check failed: `；`<rel>` = **相对包根**的路径、正斜杠分隔（例 `test/foo.test.mjs`；基准 = `run.mjs` 自身的 `root`，同集成面 ②）。下列三行 = **完整样例（逐字：前缀 + 故障类型 + 括注 + `<rel>`）**：（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 ```text
 ✖ test manifest check failed: unregistered unit file (register it in test/files.mjs — an unregistered file is never executed): <rel>
@@ -447,6 +448,11 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 - 不在 M8 机检加测试面判据（测试档不入 `docs/**` 机检域）；不做用例级漏跑判据（用例被 `node:test` 收集失败的面归各档自持）。
 
 ## 变更记录
+
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（批内件挂载面归一（#788） · 2026-10-01）落点表** = `docs/batches/2026-10-01-batch-file-mount-normalize.md` §2（唯一承载面——一次性批次材料）。
+**本批（测试清单重建二择取证轮（#792） · 2026-10-01）落点表** = `docs/batches/2026-10-01-test-manifest-evidence.md` §2（唯一承载面——一次性批次材料）。
+**本批（测试清单收口（#792） · 2026-10-01）落点表** = `docs/batches/2026-10-01-test-manifest-settlement.md` §2（唯一承载面——一次性批次材料）。
 
 - 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R3 裸名化（已删档 `E2E-HARNESS.md` 去目录段）。**零新语义**。
 

@@ -710,7 +710,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/test/graders.test.mjs`（已实现） | 0 | ~150 | 判分器正常 + 反例（含「硬编码公开例」反例） |
 | `bench/test/metrics.test.mjs`（已实现） | 0 | ~90 | 计时/中位/成本式（逐档单价 × token） |
 | `bench/test/suite.test.mjs`（已实现） | 0 | ~90 | 注册表自检（id 唯一 / 类齐 / 隐藏用例 3–5 / 清单与价格 schema） |
-| `bench/test/report-recompute.test.mjs`（已拆删——拆分见 2026-09-24 判分升级批表） | 0 | ~240 | §5.10 六条用例全承载 + dry-run 产物断言（AC-2）+ 报告骨架 + 脱敏断言 + **离线重算零网络**（毒化 fetch）；夹具内联于此档 |
+| `bench/test/report-recompute.test.mjs`（已拆删——拆分见 2026-09-24 判分升级批表） | 0 | ~240 | §5.10 六条用例全承载 + dry-run 产物断言（AC-2）+ 报告骨架 + 脱敏断言 + **离线重算零网络**（毒化 fetch）；夹具内联于此档 （迁移期引文） |
 
 测试面说明：`bench/test/` **不进任何 `npm test` / CI**（AC-8）——手动跑 `node --test bench/test/*.test.mjs`；本批实施轮验证 = 该命令 + 一次真实冒烟跑（1 模型 × 1 维，验证 AC-1/2/3/9 端到端）。`bench/results/` 目录随首次运行创建，产物（md + json 对）**入库留档**。
 **夹具落点**：`--dry-run` 的固定响应表住 `bench/run.mjs`（已实现）；§5.10 的夹具结果 JSON 族（基准 / `tokens: null` / 损坏 / 毒化四变体）与「改价后的 `prices.json`」现住 `bench/test/fixtures.mjs`（2026-09-24 判分升级批拆分提取——旧 `report-recompute.test.mjs` 已拆删）；需要文件输入形态时由测试落临时档（不入仓）。
@@ -734,7 +734,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/test/judge.test.mjs`（已实现） | 300 | ~265 | 桩传输测试（**不触网**）：解析 / 单发（不重发同模型）/ **双判一致 / 分歧仲裁 / 单判官失败 / 无多数** / A≠B 与仲裁员身份 / 与被测重合明示（自判放行 + 标注）/ 冻结 / 逐位成本记账 / 复核触发与改判 / 渲染面断言 |
 | `bench/test/graders.test.mjs` | 146 | ~120 | 删被删函数用例；增判官结果合成件用例 |
 | `bench/test/suite.test.mjs` | 161 | ~200 | 判官面 / 机械面集合 = 冻结清单；`judge.turn` / `rubric` 齐；多轮 `question` 含 `followUps`；`judge.json` schema = 三槽 + A≠B + 仲裁员第三方；价格孤儿判据扩「或任一位判官键」 |
-| `bench/test/report-recompute.test.mjs`（已拆删——拆分方案见本行「说明」列） | 300 | ~330 | 判官逐位成本随新价重算 + 题面行渲染 / 截断 + 分歧面渲染（`render.1–3`）；**拆分触发条件**：超 300 行 ⇒ 拆两档（`recompute.test.mjs` ~135 = 重算面；`report-render.test.mjs` ~140 = 渲染 + dry-run 产物断言），夹具提取至 `bench/test/fixtures.mjs`（已实现 ~50 行） |
+| `bench/test/report-recompute.test.mjs`（已拆删——拆分方案见本行「说明」列） | 300 | ~330 | 判官逐位成本随新价重算 + 题面行渲染 / 截断 + 分歧面渲染（`render.1–3`）；**拆分触发条件**：超 300 行 ⇒ 拆两档（`recompute.test.mjs` ~135 = 重算面；`report-render.test.mjs` ~140 = 渲染 + dry-run 产物断言），夹具提取至 `bench/test/fixtures.mjs`（已实现 ~50 行） （迁移期引文） |
 | `bench/results/` | 1 对（v3 · 当批唯一在档） | +1 对 | v3 重跑报告对（当批唯一在档 · 实施轮 · AC-7；该对已按 KD-25 出档——在档 = v5 对 · v4 对出档（用户 2026-09-24 16:01 裁定——时点 = v5 落档验收后）） |
 | `docs/core/design/MODEL-BENCH.md` | 505 | 就地更新 | 本档（§1.3 口径 2 / §2.2–2.3 / §2.10–2.12 / §5.11–5.13 / §6 / §7 / §9 为本轮面） |
 
@@ -875,9 +875,9 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/test/fixtures.mjs` | 180 | +6 ±3（#269）+ ±0（承接修复——核对零改） | 夹具 `models[]` 补 `reasoningEffort` / `reasoningEffortFrom`（缺省 + 覆写两态）+ `note` 键已在（`bench/test/fixtures.mjs:99` 实读——`render.6` ⑤ 生效性腿沿用，实施轮复读为准）；承接修复：题面冻结清单（`FROZEN_PROMPTS`）核对零改——本批零改题（28 条逐字未动） |
 | `bench/README.md` | 178 | +10 ±4 + **增补③：+2 ±2** | `reasoningEffort` 字段说明 + 逐档参数表一句 + 预检命令（`node bench/preflight.mjs [--live]`）+ 版本句改 6 + 判官 B 槽 + **速度表双表 / 矩阵两列一句**（结果解读节——增补轮）；**增补③（#276）**：`:107` / `:137` 两处「五列」→「八列」+ 用时表 / 成本表段交叉列句 |
 | `thincoder-core/model-specs.mjs` | 292 | +~45（10 行 + 行注）⇒ ~337 | 建行 10 档 + 4 档视觉声明分态 + `mimo×3` / `MiniMax-M3` 行注补实弹事实——**取值与证据等级逐条 = `docs/core/design/MODEL-SPECS.md` §13**（行注草案住彼）；**>300 ⇒ 登记 + 拆分计划**（行数上限复读 / 拆点 / 落点 / 消解窗口 = §13.6「行数处置」段——单一落点） |
-| `thincoder-core/test/model-specs.test.mjs` | 477 | **±0**（G-1..G-7 迁新载体档——500 硬限余量 23 行） | 仅 `[qwen] T-4/A-14` 退化锚**就地同名替换**（`qwen3.7-plus` 建行后不再是退化样本——改用仍在兜底的名字）；新增锚（建行逐名命中 / 「未探」词在场 / `multimodal` 分态）随 G-1..G-7 落新载体档（下行） |
-| `thincoder-core/test/model-specs-bench.test.mjs`（已实现——`thincoder-core/test/model-specs-bench.test.mjs`） | 0 | ~90–140 | G-1..G-7 承载档（`MODEL-SPECS.md` §13.8）；循 `model-specs-mimo.test.mjs` / `model-specs-qwen36.test.mjs` 先例（helpers 就地重定义 · 零 import 主档）；≤300 免登记 |
-| `thincoder-core/test/core-hygiene.test.mjs` | 183 | +4 ±1 | `SOFT_LINE_REGISTRY` 增 `model-specs.mjs`（建行后 >300 登记——`MODEL-SPECS.md` §13.6「行数处置」段） |
+| `thincoder-core/test/model-specs.test.mjs` | 477 | **±0**（G-1..G-7 迁新载体档——500 硬限余量 23 行） | 仅 `[qwen] T-4/A-14` 退化锚**就地同名替换**（`qwen3.7-plus` 建行后不再是退化样本——改用仍在兜底的名字）；新增锚（建行逐名命中 / 「未探」词在场 / `multimodal` 分态）随 G-1..G-7 落新载体档（下行） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-core/test/model-specs-bench.test.mjs`（已实现——`thincoder-core/test/model-specs-bench.test.mjs`） | 0 | ~90–140 | G-1..G-7 承载档（`MODEL-SPECS.md` §13.8）；循 `model-specs-mimo.test.mjs` / `model-specs-qwen36.test.mjs` 先例（helpers 就地重定义 · 零 import 主档）；≤300 免登记 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-core/test/core-hygiene.test.mjs` | 183 | +4 ±1 | `SOFT_LINE_REGISTRY` 增 `model-specs.mjs`（建行后 >300 登记——`MODEL-SPECS.md` §13.6「行数处置」段） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `bench/results/` | 1 对（v5 · 已落档） | **重出 1 对**（`--recompute` 新形态——用户点名） | 不重跑；**数值不追补 · 形态随重出**（§2.3-10③）——重出 = 速度表 A/B + 矩阵两列 + 逐档参数表（v5 未采集 `reasoningEffort` ⇒ 该格 `—`）；存量重判不可行照旧（KD-33）；v5 记录面注 = 父侧落；**增补③（#276）**：交叉列形态——在档对（已重出一次）如需再出 = 用户点名 `--recompute`（数值不追补 · 形态随重出——同 ③）；不自动执行 |
 | `docs/core/design/MODEL-BENCH.md` · `docs/core/design/MODEL-SPECS.md` | 1218 · 1315（本批前读数——增补②后就地更新后 1359 行；**审计后收正微轮后就地更新后 1361 行**；**B 终值修订轮后就地更新后 1364 行**；**增补③（#276）后就地更新后 1375 行**；**设计收正轮（轮 4）后就地更新后 1378 行**（末行空尾不计）） | 就地更新 | 本档：§1.3 / §2.1-4 / §2.1-5 / §2.2 / §2.3（含规则 10）/ §2.4 / §2.6 / §2.9 / §2.10.1 / §2.10.2 / §2.10.3 / §2.11 / §2.13（新增）/ §3 / §4（KD-32…37）/ §5.6 / §5.10 / §5.11 / §5.13 / §6（#271–#274 + #276）/ §8 / §9 / 变更记录；`MODEL-SPECS.md`：§13（新增）+ 变更记录（承接修复零改） |
 **2026-09-25 判官替代判批（`2026-09-25-judge-fallback`）受影响文件**（现状 = 本批设计轮实读行数 · 2026-09-25 · 计数尺 = 末行含换行者不计空尾行；三端产品树零改动；
@@ -1400,7 +1400,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | 268 | 测试口径：思考强度统一中档（逐档可译 / 无生效面档如山标 / 代际标注） | §1.3（中档口径条）· §2.1-4 · §2.4 · KD-32 | `roster.2`（schema 腿）+ `roster.4`（29 档逐档对读映射值）+ 全档实弹预演读数在册（批次档 §1.5 · 29/29） |
 | 265 | 判官 B 换代（≠ A / C · 更常见主流）+ 存量重判可行性 | §2.10.3（新槽值 + 冻结绑定）· §9（槽位实测 / 候选处置）· §7-5（响应原文不落档）· KD-33 | 现盘 `judge.json` 对读（B = `glm:glm-5.3-flashx`）+ 版本断言改 6 + 服从性单发探针读数（批次档 §1.17） |
 | 266 | 跑批前「配置 × spec 参数兼容预检」机制 | §2.13（枚举面 + 实弹面 · 脚本化 · 零落库）· §3 本批表（`bench/lib/params.mjs` / `bench/preflight.mjs`（已实现））· KD-34 | `preflight.1` 六项对齐腿 + `run.mjs` 启动门拒跑腿（exit 1）+ 实弹面逐档打印读数（不落库） |
-| 267 | spec 行补齐：10 档无专行 + 4 档视觉声明 + 尺寸失实面 | `docs/core/design/MODEL-SPECS.md` §13 · §3 本批表（`model-specs.mjs` 行）· KD-36 | 新增锚（建行逐名命中 / 未探词在场 / `multimodal` 分态）承载 = 新载体测试档（已实现——`thincoder-core/test/model-specs-bench.test.mjs`）+ 主测试档 T-4/A-14 就地改指 |
+| 267 | spec 行补齐：10 档无专行 + 4 档视觉声明 + 尺寸失实面 | `docs/core/design/MODEL-SPECS.md` §13 · §3 本批表（`model-specs.mjs` 行）· KD-36 | 新增锚（建行逐名命中 / 未探词在场 / `multimodal` 分态）承载 = 新载体测试档（已实现——`thincoder-core/test/model-specs-bench.test.mjs`）+ 主测试档 T-4/A-14 就地改指 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | 269 | 报告 + 结果 JSON 逐档披露实发参数 | §2.2-13（入档字段）· §2.3（概览逐档参数表 + 规则 9）· KD-35 | `render.6`（在位 / 例外注 / 缺键 / 零金额反控）+ dry-run 产物对读 |
 | 263 | 缺价腿两条可选加固（恒真断言弱守卫 · 覆写未随改） | §5.13 `render.1`（四断言形态） | `render.1` 四断言（含表头正控——增补③ 后 = 八列串）+ 全档 `node --test` 全绿 |
 | 271 | 速度表双排序（表 A = TTFT 中位升序 / 表 B = tok/s 中位降序（快者在前）· 缺数据居末 · 列集相同 · 标题与注文区分） | §2.3 骨架（速度表 A / B 双行 + 规则 10①）· §5.13 `render.7` | `render.7`（两表 / 行序 / 缺数据居末 / 列集正控 / 注文区分 / 脚注 / 轴门控）+ `report.1` 段清单断言同步（`report-render.test.mjs:106` 增 A / B 双断言） |
@@ -2198,6 +2198,6 @@ stdout：逐 run 一行（`[i/总数] <模型> <变体> <用例> → <首调用|
   · §10.8（`:1761` / `:1773` 后 3 行）· §11.9（`:1986` / `:1999` 后 2 行——无判官面）。**零语义**：三档用法行既有参数 / 缺省 / 判分合同零改。
 
 - 2026-09-28（**文档回填与卫生轮**（台账 #516）· eng-designer）：§2.13 / §3 本批表 / KD-34 / §5 用例族参数预检面「（拟新增）」→「（已实现）」×11（`bench/lib/params.mjs` ∕ `bench/preflight.mjs` ∕ `bench/test/preflight.test.mjs`——实读 2026-09-28 守盘均存在）+ 行内两处同收（`:858` ∕ `:1470`——修正轮补）
-  + 新载体测试档收正×3（`thincoder-core/test/model-specs-bench.test.mjs`）。
+  + 新载体测试档收正×3（`核内 model-specs-bench 用例档`）。
   条件拆分项标记处置（父侧裁 ① · 批档 §3 轮次 1 发现 4）：`report-params` ∕ `report-speed` 转「（已实现）」（在盘为实）；`driver-spawn` ∕ `variants-v2` 保留（盘上确未落）。**零新语义**。
 - 2026-09-29（**doc-sync-residuals 批 · 设计面残留收正轮 · eng-designer**——承 `docs/batches/2026-09-28-tech-debt-closeout.md` §5 三登记句 · 台账 #255）：§2.11 补**已知盲区（登记）**——deepseek-flash 两例复核截断 ⇒ 判据演进信号缺失（设计允许的降级；收窄建议未采纳）。**零新语义**（登记）。

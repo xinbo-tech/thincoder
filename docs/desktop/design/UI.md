@@ -608,7 +608,7 @@
 - 2026-09-26（**批 A 二轮点修**——设计评审 §3 轮次 2 发现 2 / 3 / 6）：对话流行错误卡去「双支」（`ev:error` 单义 = 宿主回合结算〔错误径〕）· 输入区行 flush 补**取文本面**（条目 `title` 逐字原样——载荷 `text` = `title`）+ 失败码三值 + 可见失败面 / 重触发（同键序 `busy` 不可达佐证附源坐标）· 提问呈现行补**码位两面点名**（置位面 = 归约面 `onQuestion`〔与 `onApproval` 同形〕· 清位面 = 出口面 ∥ 事件面）。
 - 2026-09-27（**批 A 收口轮**——实施后随动收正）：§1 交互行补 **IME 组字规则**（`isComposing` 真 ⇒ Enter 不发送——先例 = `docs/vsc/design/WEBVIEW-INPUT.md:72`）· 三处「本批」⇒「批 A」·
   提问呈现行码位两面收正（`onQuestion` = `thincoder-desktop/renderer/events.mjs:161` · `clearQuestion` = `:329` ∥ `clearApproval` = `:316`；门名单单源 = `thincoder-desktop/src/main/suspensions.mjs:67`——原「同面缺口」收正）·
-  左列会话行行形态收正（删除形**保留行控件** / 改名形**撤行控件**；确认键词 = **动作词**——测试固化 = `thincoder-desktop/test/views.test.mjs:269-274`）。明细 = `docs/batches/2026-09-26-desktop-chat-panel-a.md` §2.13。
+  左列会话行行形态收正（删除形**保留行控件** / 改名形**撤行控件**；确认键词 = **动作词**——测试固化 = `桌面 views 用例档:269-274`）。明细 = `docs/batches/2026-09-26-desktop-chat-panel-a.md` §2.13。
 - 2026-09-27（**批 A 收口尾轮**——只报不写清单落地）：交互行补 **229 兜底臂**点名（`isComposing` 真 ∥ `keyCode === 229`——老 WebView 兜底臂；判据单源 = `thincoder-desktop/renderer/mount-composer.mjs:41-43`）·
   交互行删「**实施未落**——登记 open 行」陈旧标记 · open 行摘 **IME 组字保护**条（实施已落）。明细 = `docs/batches/2026-09-26-desktop-chat-panel-a.md` §2.14。
 - 2026-09-27（**批 B · 会话面板对齐四件**——⑤⑥⑦⑧ 落形轮）：§1 增「**批 B 注**」四项（会话头三值控件 · 输入区附件条 · 状态栏读数 · 复制面——各给形 / 锚 / 候选面 / 清条与降级判据；语义单源 = `docs/desktop/design/IPC.md` §2）；

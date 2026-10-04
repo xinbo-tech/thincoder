@@ -84,7 +84,7 @@
   ② `dayStart(D) + retention > now` ⇒ **整目录跳过**（正常写入下目录内无可过期文件）；
   ③ 其余（含含非 `.jsonl` 条目的目录）⇒ **逐文件 `stat` 判定 + unlink**（现行语义；非 `.jsonl` 一律不碰）。空日目录在任何分支后按现法移除。
 - **语义 delta 登记（D-TR11）**：纯 `.jsonl` 日目录整删时不逐文件核 mtime（人为回拨 mtime 的文件随目录清理；正常写入 mtime ∈ 目录日 ⇒ 无差异）；②支跳过时人为前拨（超期）文件暂留（宽容向）——保留期主粒度改为**目录日**（与 §6.1 的 24h 保留期并读）。
-- **整删支计数口径（D-TR11）**：整删支的 `removed` 计数 = 该批内 `.jsonl` 条目数（与 ③ 支逐文件计入同口径；非 `.jsonl` 不计数）——既有断言面保持（`thincoder-vscode/test/trace-store.test.mjs:248-249` `removed === 2`：含非 `.jsonl` 的目录落 ③、纯 `.jsonl` 过期目录落 ①，两路合计数不变）。
+- **整删支计数口径（D-TR11）**：整删支的 `removed` 计数 = 该批内 `.jsonl` 条目数（与 ③ 支逐文件计入同口径；非 `.jsonl` 不计数）——既有断言面保持（`thincoder-vscode/test/trace-store.test.mjs:248-249` `removed === 2`：含非 `.jsonl` 的目录落 ③、纯 `.jsonl` 过期目录落 ①，两路合计数不变）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 - **非日期名 / 非法日目录归类（D-TR11）**：目录名不以 `YYYY-MM-DD` 解析（日期解析 NaN），**或为非法日（解析归一后 ≠ 原日**——如 `2026-02-31`）⇒ ①② 两条件恒假 ⇒ **回落 ③ 逐文件支**（现行语义；非 `.jsonl` 一律不碰）。
 - **D-TR12 每写 prune 节流**：`maybePruneTraces`（`recordChatTrace` 写盘成功后调用）——模块级窗口 `PRUNE_THROTTLE_MS`（10 分钟）+ 在飞合并；`cleanupTraces` 本体保持无状态（启动面 / 手动面直调）。判据 = 同窗 3 连写 ⇒ 扫描 ≤1 次。
   **测试缝（D-TR12）**：节流为模块级状态（**跨用例残留**）——缝 = 既有先例 `_resetTraceStateForTest`（`thincoder-core/traces/trace-store.mjs:106`）扩展为**一并复位节流窗**（或给节流面注入 now 缝），用例须显式复位。

@@ -149,6 +149,13 @@
 `advisor.mjs` / `advisor/main.mjs` / CLI `tools/shared.mjs` / `agent/setup.mjs` 四行（2026-09-15 修正轮-4）〕· **1 行「S2 改」**〔VSC `thincoder-vscode/src/tools/shared.mjs`——拆壳薄壳保留〕）· （迁移期引文——档已删）
 **提示词副本删除（S2 / S3）** · **中文设计档（文档面 · 基准层正本）** · **中文设计档（删除 · 作废）** · **产品文档（S2 改）** · **产品测试（S2 改）**。
 
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（轻通道扩容批 · 2026-10-02）落点表** = `docs/batches/2026-10-02-light-channel-expansion.md` §2（唯一承载面——一次性批次材料）。
+**本批（轻通道判据收口（降门槛 · 核销紧固） · 2026-10-02）落点表** = `docs/batches/2026-10-02-light-channel-simplification.md` §2（唯一承载面——一次性批次材料）。
+**本批（多仓操作机制·提示词面 · 2026-10-02）落点表** = `docs/batches/2026-10-02-multi-repo-mechanism.md` §2（唯一承载面——一次性批次材料）。
+**本批（提示词面收正批 · 2026-10-02）落点表** = `docs/batches/2026-10-02-prompt-face-rectification.md` §2（唯一承载面——一次性批次材料）。
+**本批（公共仓读取批 · 2026-10-02）落点表** = `docs/batches/2026-10-02-public-repo-read.md` §2（唯一承载面——一次性批次材料）。
+
 ## 6. 机制面（自 CLI 产品档并入 · 2026-09-15 · 批 5）
 
 ### 6.1 双面落地流程（现行）
@@ -179,7 +186,9 @@
   `thincoder-core/prompts/persona-engineering.md`「Parallel dispatch & multi-task」（`:160` 起——多任务派发 + `agent.poolLimits` 池规则同节 `:164`；CN 正本「并行委派与多任务」`docs/core/design/prompts/persona-engineering.md:156` 起）·
   `thincoder-core/prompts/persona-eng-coder.md` 实现纪律（`:17` 不得静默降级 / `:23` 收尾自审；CN 正本 `:18` / `:30`）。
 - **遗留注入锚（工具面 2 锚）**：`bash-terminal-face` · `question-ui-face`（锚位 = `thincoder-core/tool-docs/bash.md:15` ∥ `thincoder-core/tool-docs/question.md:11`；
-  取值表 = `thincoder-cli/src/prompt-injections.mjs` ∥ `thincoder-vscode/src/prompt-injections.mjs`）——真实工具差异，处置 = 待工具面 review。
+  取值表 = `thincoder-cli/src/prompt-injections.mjs` ∥ `thincoder-vscode/src/prompt-injections.mjs` ∥ `thincoder-desktop/src/main/prompt-injections.mjs`——三端面枚举齐：CLI ∥ VSC ∥ 桌面）。
+  `bash-terminal-face` 处置 = **已激活**（2026-10-04 bash-executor-face 批——运行时执行器身份声明，机制单源 = 本层 `BASH-EXECUTOR-FACE.md`）；
+  `question-ui-face` 处置 = 待工具面 review。
 
 ### 6.4 byte-identical 取消（2026-09-04——设计锚为准）（并入 · 2026-09-15）
 
@@ -499,7 +508,7 @@
 
 - **四行并入 CN**（判据 = **D-PS1**「中文审核面 = 内容权威」——权威面缺行即补权威面，不把 EN 表降为内容源）：`verify` · `process` · `get_current_time` · `wait_for` ⇒ CN 正本 `docs/core/design/prompts/common.md` 工具路由块增补（逐字 = 批档 §2 · 落笔走双面流程）；EN 运行面该四行现体已在（`:108` `:109`）——零改。
 - **余三项判非缺**：`fetch` · `websearch` · MCP 搜索——CN 工具观节「搜索」条（`:64`）已载同义路由（MCP 首选 / Bing 后备 / 抓页前先扫工具表），与 EN 表行语义重叠 ⇒ 不重复落 CN 工具路由块。
-- **机检面收正**：`thincoder-cli/test/prompts-dual-source.test.mjs` 中文侧读点改指**真实 CN 权威面**（`docs/core/design/prompts/`）——原读 CLI 仓归档副本（`thincoder-cli/docs/_archive/design/prompts/**`）⇒ CN 权威面不在机检射程；断言面不变（存在性 + 头注格式），零新增断言。
+- **机检面收正**：`thincoder-cli/test/prompts-dual-source.test.mjs` 中文侧读点改指**真实 CN 权威面**（`docs/core/design/prompts/`）——原读 CLI 仓归档副本（`thincoder-cli/docs/_archive/design/prompts/**`）⇒ CN 权威面不在机检射程；断言面不变（存在性 + 头注格式），零新增断言。（迁移期引文）
 
 ### 10.5 验收（回指 AC-M9）
 
@@ -598,7 +607,7 @@
 - 2026-09-20（**提示词引用清零批 · 判据面补注轮 · eng-designer** · 实施轮上抛 eng-coder #24 · 父裁候选 A）：§6.6 J3 补 **CANON 操作数串豁免**（逐行先删六名 CANON 子串再扫 · 与 J1 白名单同构——判保留面操作数族显式化，非新语义）+ J1 条补 J3 同构豁免旁句；AC1 口径注 = J3 后绿读数按**豁免后**值核（后绿 0）。机检读数 = 批档 §2.13。
 
 - 2026-09-20（**提示词引用清零批 · 设计轮 · eng-designer** · 台账 #147——用户 2026-09-20 19:31 裁定「提示词中根本不应该出现对文档的引用，这个类东西是要清干净的」）：新增 **§6.6 提示词面禁带文档引用**（判据线三条件 / 四类保留面 / 机判锁 J1–J3 与域 / 机器不可分边界）+ §7 补 **D-PS6**（删引用非改址 · 白名单 · 否决备选）；
-  本批**内容面**（两面 24 档逐处删引证 + 生产码 18 档字符串清零 + 两面 `common.md` 各 +1 纪律行 + 新机检档 `thincoder-cli/test/prompt-refs-zero.test.mjs`）= 批档 `docs/batches/2026-09-20-prompt-refs-zero-batch.md` §2，落笔归实现轮。
+  本批**内容面**（两面 24 档逐处删引证 + 生产码 18 档字符串清零 + 两面 `common.md` 各 +1 纪律行 + 新机检档 `CLI prompt-refs-zero 用例档`）= 批档 `docs/batches/2026-09-20-prompt-refs-zero-batch.md` §2，落笔归实现轮。
 
 - 2026-09-20（**提示词引用清零批 · 设计修正轮 · eng-designer** · 评审 id=17 changes-required）：§6.6 口径收正——判保留面 = 操作数族规范豁免串（六名 · 三面逐字一致）· 协议自名判据改**指称**（写入两段形归属）·
   J2 转义点形改**守卫注**（88→87 实证 = 未含守卫探针）· 新增**人读面外沿**（CLI usage/help = 界外）· 边界条改**覆盖缺口登记**（J3 缺口 / 面级指路句）；

@@ -239,9 +239,10 @@
 （§6.1 本域行全三条已迁讫；跨档／存量条目列上。）
 
 **回合中插入批（验收面 · 2026-09-28 · 全文迁入）**：需求回指 = **D25**「回合中插入（步边界 pickup）」（已落——`docs/desktop/requirements/PROJECT.md:162` / `:237`）；设计单源 = 本档 §1 **KD-40** ∕ 本档 §2（回合中插入批注）；**自铸披露 = 批档 §5**；
-机检面 = **midturn 用例族 U217–U226**（U216 空位不回收）——拆分档 **`thincoder-desktop/test/agent-host-queued.test.mjs`**（U217–U219 · U221–U223 · U226——在飞入队 ∕ 步边界取批 ∕ 续发链 ∕ 中止清队 ∕ 缝缺席负向锁 ∕ 中止墓碑三查位；原址 `thincoder-desktop/test/agent-host.test.mjs` 触 500 硬限 ⇒ 在册预案「门面用例拆出 + 装配假面 harness 共享」本批落形；
-  假面共享档 = `agent-host-harness.mjs`）+ `thincoder-desktop/test/agent-host.test.mjs`（U224 / U225——中止墓碑消费面两例）+ **新档 `thincoder-desktop/test/queued-input.test.mjs`**（U214–U215——计划面平 node 直测 + 与 CLI 副本值对拍）+
-  `thincoder-desktop/test/events-reduce.test.mjs`（**U220**——`ev:queue` 归约两形）+ `thincoder-desktop/test/store.test.mjs`（队列切片锁随动）；
+机检面 = **midturn 用例族 U217–U226**（U216 空位不回收）——拆分档 **`thincoder-desktop/test/agent-host-queued.test.mjs`**（U217–U219 · U221–U223 · U226——在飞入队 ∕ 步边界取批 ∕ 续发链 ∕ 中止清队 ∕ 缝缺席负向锁 ∕ 中止墓碑三查位；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+  原址 `thincoder-desktop/test/agent-host.test.mjs` 触 500 硬限 ⇒ 在册预案「门面用例拆出 + 装配假面 harness 共享」本批落形；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+  假面共享档 = `agent-host-harness.mjs`）+ `thincoder-desktop/test/agent-host.test.mjs`（U224 / U225——中止墓碑消费面两例）+ **新档 `thincoder-desktop/test/queued-input.test.mjs`**（U214–U215——计划面平 node 直测 + 与 CLI 副本值对拍）+（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+  `thincoder-desktop/test/events-reduce.test.mjs`（**U220**——`ev:queue` 归约两形）+ `thincoder-desktop/test/store.test.mjs`（队列切片锁随动）；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 真机面 = **T-DSK45**（集成域新档——真 Electron：忙态发两条 ⇒ 首条步边界注入可见 + 气泡交接 + 段 14 读数；D16 义务）；测试档随修随加——不占设计条目（2026-09-27 裁定）。
 
 **窗队列 VSC 逐点对齐批（验收面 · 2026-09-29 · 全文迁入）**：需求回指 = **D25**（本批 = 挂起窗径携图 ∕ 受理同形 ∕ 消费恰一枚三面同判——需求卷 `docs/desktop/requirements/COMPOSER.md`）；设计单源 = `docs/desktop/design/ACTIVITY.md` §1 **KD-34**（载具层携图）∥ 本档 §2（窗队列 VSC 逐点对齐批注）（含判据项 5）；
@@ -276,6 +277,18 @@
 （上列三行全文已齐平；余（BX ∥ DF 等自铸披露）留 `docs/desktop/design/PROJECT.md` §10 原址。）
 
 ## 变更记录
+
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（文档体系重组批（DOC-MIGRATION） · 2026-10-02）落点表** = `docs/batches/2026-10-02-doc-structure-reorg.md` §2（唯一承载面——一次性批次材料）。
+**本批（会话选定写回 · default-model-carryover · 2026-10-03）落点表** = `docs/batches/2026-10-03-default-model-carryover.md` §2（唯一承载面——一次性批次材料）。
+**本批（首跑渠道提示修复 · 2026-10-03）落点表** = `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2（唯一承载面——一次性批次材料）。
+**本批（轻通道轮八 · 2026-10-03）落点表** = `docs/batches/2026-10-03-light-round-8.md` §2（唯一承载面——一次性批次材料）。
+**本批（无效渠道态逻辑归一 · 2026-10-03）落点表** = `docs/batches/2026-10-03-provider-invalid-unify.md` §2（唯一承载面——一次性批次材料）。
+**本批（排队守卫假满队修复 · 2026-10-04）落点表** = `docs/batches/2026-10-04-composer-queue-gate-stick.md` §2（唯一承载面——一次性批次材料）。
+**本批（渠道档位退役（桌面） · 2026-10-04）落点表** = `docs/batches/2026-10-04-desktop-channel-tier-retire.md` §2（唯一承载面——一次性批次材料）。
+**本批（模型切换解锁 · 2026-10-04）落点表** = `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §2（唯一承载面——一次性批次材料）。
+**本批（行痕族消失时机 · 2026-10-04）落点表** = `docs/batches/2026-10-04-row-traces-clear-at-turn.md` §2（唯一承载面——一次性批次材料）。
+**本批（流尾台账行组退役 · 2026-10-04）落点表** = `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2（唯一承载面——一次性批次材料）。
 
 - 2026-10-02：**建档（波 2a · 渲染族迁移）**——自 `docs/desktop/design/PROJECT.md` §2 迁入 **KD-17 ∥ KD-18 ∥ KD-19 ∥ KD-21 ∥ KD-31 ∥ KD-40 ∥ KD-51 ∥ KD-52**（八行逐字；原址各留一行指针）+ 自 `docs/desktop/design/UI.md` §1 迁入本域批注块（回合中插入注 ∥ 挂起窗径注 ∥ 窗队列 VSC 逐点对齐注 ∥ @ 文件引用注 ∥ 斜径命令面注 ∥ 对齐第三批 B22/B26/B28——逐字；原址各留一行指针）+ §6 上抛三行（AZ ∥ BM ∥ BB）。**余量未迁**（KD-25 ∥ KD-30 涉句 ∥ §3 族行 ∥ §4.2 批块 ∥ §4/§5/§6 余行）——随「2c 前置步 · 文件账分片轮」承接（本批 §2 记录在册）。零新语义（搬迁 ∥ 值收正）。
 - 2026-10-02（**波 2a 补轮 · eng-designer**）：**行宽回线**——本档 8 条超 300 字符行按语义边界折行（∥ 分隔处 ∥ 句读处）；零语义改。

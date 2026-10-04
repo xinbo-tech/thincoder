@@ -164,7 +164,7 @@
 | 3 | verify 代码文件集 `thincoder-core/agent-tools/verify.mjs:191` + 验证声明门 `:222-226` | 辅助面文件计入 ⇒ 索验证声明 + 语法提示 | 不计入 ⇒ 辅助面独立变更落「No code files changed」 | 接受·登记（消解：见上） |
 | 4 | 验证 / 评审推送守卫 `thincoder-core/agent/completion.mjs:77` / `:132`（经 `thincoder-core/advisor/repos.mjs:118-123` `hasCodeMutations`；该两守卫本限非工程模式 · `thincoder-core/agent/completion.mjs:75` / `:123`；VSC 同族守卡 = `thincoder-vscode/src/agent/run-stages.mjs:105` / `:156`） | 辅助面独立变更计入代码 ⇒ 推送 verify / 评审 | 不计入 ⇒ 不推送 | 接受·登记（同 3） |
 | 5 | 评审陈旧判定 `thincoder-core/agent-tools/advisor-settle.mjs:74`（code 评审） | 辅助面写致 stale | 不致 stale | 接受（code 评审判 code 面——辅助面不在其射程） |
-| 6 | 评审范围发现 `thincoder-core/advisor/repos.mjs:128-150` `isDocOnlyChange` | 辅助面独立变更 ⇒ false | ⇒ true（返回值命名与语义落差——现无生产消费方，用例面 = `thincoder-vscode/test/portability-vsc-classification.test.mjs:18`） | 接受·登记（消解窗口：该谓词首个生产消费方出现前收正命名 / 文档句） |
+| 6 | 评审范围发现 `thincoder-core/advisor/repos.mjs:128-150` `isDocOnlyChange` | 辅助面独立变更 ⇒ false | ⇒ true（返回值命名与语义落差——现无生产消费方，用例面 = `thincoder-vscode/test/portability-vsc-classification.test.mjs:18`） | 接受·登记（消解窗口：该谓词首个生产消费方出现前收正命名 / 文档句） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | 7 | spawn `files` 域 `thincoder-core/agent-tools/spawn-gates.mjs:95-109` `rejectEngineeringFilePaths` | 自带谓词（零分类器消费）——`scripts/**` 拒入域 | 零变（入域面 ≠ 写门面，两判据目的不同） | 零扰 |
 
 ## 4. 关键决策记录（含否决备选）
@@ -194,13 +194,13 @@
 
 | 档 | 覆盖 |
 |---|---|
-| `thincoder-cli/test/portability-classification.test.mjs` | 分类裁判（正常 / 嵌套布局反证 / 声明替换 / 分隔符与祖先段 / 声明档损坏 / 门禁三态）+ **F9 辅助面缺省（T-26 四例读数含 `src/test/**` 反例 · T-27 门放行与仍拒 · T-28 eng-coder 门零变）** |
-| `thincoder-cli/test/portability-index.test.mjs` | walk 回退 / 跳过规则 / 截断 / 扩展名声明与未列入可见化 |
-| `thincoder-cli/test/portability-advisor-context.test.mjs` | 项目上下文注入与降级句 |
-| `thincoder-cli/test/cmd-eng.test.mjs` | `/eng` 无前提开启 / OFF 语义零回归 |
-| `thincoder-vscode/test/portability-vsc-classification.test.mjs` | VSC 分类裁判（正常 / 嵌套反证 / 声明替换 / 损坏回退 / 门禁三态）+ **F9 同判读数（T-V22 四例 · T-V23 门放行与仍拒 · T-V24 子门零变）** |
-| `thincoder-vscode/test/portability-vsc-advisor-context.test.mjs` | VSC 项目上下文注入与降级句 |
-| `thincoder-vscode/test/portability-vsc-index.test.mjs` | VSC 扩展名声明与未列入可见化（W8 已退役——用例核面承接入 `thincoder-vscode/test/memory-index-face.test.mjs`；机制见 `docs/core/design/MEMORY.md` §6.9） |
+| `thincoder-cli/test/portability-classification.test.mjs` | 分类裁判（正常 / 嵌套布局反证 / 声明替换 / 分隔符与祖先段 / 声明档损坏 / 门禁三态）+ **F9 辅助面缺省（T-26 四例读数含 `src/test/**` 反例 · T-27 门放行与仍拒 · T-28 eng-coder 门零变）** （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-cli/test/portability-index.test.mjs` | walk 回退 / 跳过规则 / 截断 / 扩展名声明与未列入可见化 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-cli/test/portability-advisor-context.test.mjs` | 项目上下文注入与降级句 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-cli/test/cmd-eng.test.mjs` | `/eng` 无前提开启 / OFF 语义零回归 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-vscode/test/portability-vsc-classification.test.mjs` | VSC 分类裁判（正常 / 嵌套反证 / 声明替换 / 损坏回退 / 门禁三态）+ **F9 同判读数（T-V22 四例 · T-V23 门放行与仍拒 · T-V24 子门零变）** （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-vscode/test/portability-vsc-advisor-context.test.mjs` | VSC 项目上下文注入与降级句 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-vscode/test/portability-vsc-index.test.mjs` | VSC 扩展名声明与未列入可见化（W8 已退役——用例核面承接入 `thincoder-vscode/test/memory-index-face.test.mjs`；机制见 `docs/core/design/MEMORY.md` §6.9） （迁移期引文） |
 
 > **声明载体换源批（2026-09-27 · 本批）用例面**：既有面**同号收正**（同题断言对象换 = `PROJECT-MANIFEST.json` 三族键；CLI T-01 / T-03 / T-04 / T-05 / T-09 · VSC T-V01 / T-V03 / T-V04 / T-V05）。 （机检豁免——用例退场登记）
 > 新增用例（编号本席定——避撞实核 2026-09-27；核心面 T56–T58 落点 = `MANIFEST.md` §3.2）：
@@ -269,6 +269,9 @@
 | 实施台账指针（P1–P28 缺陷登记） | 缺陷编号登记面 | 项目台账（`docs/TODO.md`）面——本档只留机制 |
 
 ## 变更记录
+
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
 
 - 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #835）：§3.1 补 **`index.publicRepos` 入判补登句**（值比较——与 `excludePaths` 同款）。**零新语义**（登记补句）。
 - 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R4 形退场（死名 `tool-gates.mjs` 去坐标尾——端档已删）。**零新语义**。

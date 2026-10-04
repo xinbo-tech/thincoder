@@ -391,8 +391,8 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 3 | 状态行段位与块头字段对位（含端差登记） | F-W7 · N-W6 |
 | 4 | 会话标题与消息秩序（promptId / seq / 单向 boot） | F-W2 · F-W3 |
 | 5 | 机检面（新增档 ≤500 行 · 无 >300 字符单行 · 文档锚零悬空） | N-M3 · N-M2 |
-| 6 | 收发面全量对表（§12——机检对账 `thincoder-vscode/test/protocol-coverage.test.mjs`） | N-W7 |
-| 7 | 发面全量对表（§13——机检对账 `thincoder-vscode/test/protocol-coverage-reverse.test.mjs`） | F-W12 · N-W7 |
+| 6 | 收发面全量对表（§12——机检对账 `thincoder-vscode/test/protocol-coverage.test.mjs`） | N-W7 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| 7 | 发面全量对表（§13——机检对账 `thincoder-vscode/test/protocol-coverage-reverse.test.mjs`） | F-W12 · N-W7 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | 8 | 权限卡族 id 纪律与释放（合并卡同族 · 单释放通道 · 孤儿响应 · **释放即刷新**） | F-W13 |
 
 **用例面**：协议面测试资产原在 `thincoder-vscode/test/`（`webview-turnstate` · `status-line` · `digest-visibility` · `chat-panel` · `chat-panel-messages` · `session-boot`）——**退场注**：逐档随 2026-09-28 测试树全清重置退场；用例表归测试层，本档不复制（D2）。
@@ -474,7 +474,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 > 判据权威 = `VSC-DEBT.md` §2.3（机检形态）/ §3.2（枚举口径 + 处置判定）；枚举口径 = **只取顶级判别式**——webview 侧 = `postMessage` 载荷顶级 `type` 字面量；host 侧 = 分发档（`panel-messages*.mjs`）顶级 `case` 标签。
 > 方向 = **webview → host**（§12 = 收面；两表合称「收发面对表」）；子判别式不单列。
 > **坐标 as-of = 2026-09-25 hygiene-items 批（坐标 sweep 轮）**：② ③ 列逐行按 `node test/protocol-coverage-reverse.test.mjs --emit` 读数重出（提取器为唯一权威）。本表坐标 = **唯一读值**；历轮坐标收正的时点值住各批档（记录面），本档不复载。
-> 机检 = `thincoder-vscode/test/protocol-coverage-reverse.test.mjs`（首列 ↔ 提取集双向对账 + ④ 处置闭区间 + 错误路径点名）。
+> 机检 = `thincoder-vscode/test/protocol-coverage-reverse.test.mjs`（首列 ↔ 提取集双向对账 + ④ 处置闭区间 + 错误路径点名）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 > 形态登记（fail-closed——不静默漏计数）：载荷字面量四形态 = 对象字面量（多数）· 三元双分支（`editMcp` / `saveMcpServer`）· 局部对象绑定（`question.js` 的 `payload`）· 局部箭头函数返回字面量（`permission.js` 的 `reply`）；未登记形态 ⇒ 提取器点名失败。
 
 | ① 判别式 | ② webview 发射点 | ③ host 消费位 | ④ 处置 | ⑤ 备注 |
@@ -660,10 +660,10 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 - 2026-09-15：**按现状收正 1 处**——旧档 §14 C-13 表「审批态 = 无此状态（子代理不经权限门）· 端差登记（不做）」与现行实现冲突（审批态族已实装：`subagentApproval` 消息 + 块头 `⏸`）——本档 §6.2 按现状落笔并与 §3 消息表口径一致；冲突已上报批次（主 agent 裁定）。
 - 2026-09-16（**子代理面板通道恢复批 · 协议面收正**）：§3 `toolPanel` 行补**生产者双源**与 `cmd` ≤60 截断落层（webview 块头渲染——桥/生产者透传原串）；§3.1 三落点发射端例补现体（`relaySubagentContentChunk`）；§3.2 #3 发射点随收——payload 字段零变（只增不改纪律保持）。
 - 2026-09-16（**子代理面板残环修复 · 协议面收正**——承 `docs/batches/2026-09-16-subagent-panel-residual-rings.md` §2）：§3 `permissionRequest` 行 owner 形态收正（`escalate <model> #<id>`——前 `<tag>` 为前引擎形态 + `continue` 键形归属）；§3 `permissionWithdrawn` 行释放来源补条目取消（⏹/cancel signal 链）。
-- 2026-09-16（**VSC 产品树残留债清零批 · 协议面收正**——承 `docs/batches/2026-09-16-vsc-debt.md` §2）：新增 §12 收发面全量对表（机检对账 = `thincoder-vscode/test/protocol-coverage.test.mjs`——首列 ↔ 源码提取集双向对账 + ④ 处置闭区间）；§2 `userMessage` 行去 `assistantMessage`（回显面死码已删——零悬空）；§10 行数收正 + 拆分规划行；§11 回指行 +1（N-W7）。
+- 2026-09-16（**VSC 产品树残留债清零批 · 协议面收正**——承 `docs/batches/2026-09-16-vsc-debt.md` §2）：新增 §12 收发面全量对表（机检对账 = `VSC protocol-coverage 用例档`——首列 ↔ 源码提取集双向对账 + ④ 处置闭区间）；§2 `userMessage` 行去 `assistantMessage`（回显面死码已删——零悬空）；§10 行数收正 + 拆分规划行；§11 回指行 +1（N-W7）。
 - 2026-09-17（**af 批 · 二轮 fix 轮 · eng-designer**——承 `docs/batches/2026-09-17-async-face-fixes.md` §2.13）：§3 `cancelSubagent` 行补**advisor 同路由收口**（F-11——⏹ advisor 目标与子代理族同经 `executeCancelAction`；queued / running 两种命中的中继形态逐字）；**消息名 / 载荷字段零变**（只增不改纪律保持）。
 - 2026-09-18（**模式联动批 · #45 VSC 半** · eng-designer——承 `docs/batches/2026-09-18-mode-propagation.md` §1.1）：新增 **§3.3「工具驱动的模式 / 参数变更 → 端显示同步」**（核实表逐源逐端判定 + 单一路径机制图 + 判据两条 + CLI half 结构性属性）；
-   **消息名 / 载荷字段 / 发射点 / 消费位全部零变**（§3.2 只增不改纪律保持；§12 对表零改——机检 `thincoder-vscode/test/protocol-coverage.test.mjs` 双向对账不动）。
+   **消息名 / 载荷字段 / 发射点 / 消费位全部零变**（§3.2 只增不改纪律保持；§12 对表零改——机检 `VSC protocol-coverage 用例档` 双向对账不动）。
 - 2026-09-18（**模式联动批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承 `docs/batches/2026-09-18-mode-propagation.md` §3 发现 9）：§3.3 判据① 补 **`_engShown` 基线上值**（`← 当前 engineering` 布尔——非 `undefined` / `null`；含「后者 = 每 run 无条件重推」后果句）；同步面另有 §3.3 参数面判定与核实表行 4（发现 8——CLI 参数段活对象直读）。**零新语义**：本档只成文既有设计值（消息面零变，§12 零改）。
 - 2026-09-18（**VSC 配置页接线修复批 · eng-designer**——承 `docs/batches/2026-09-18-vsc-settings-wiring.md` §1）：新增 **§13 发面全量对表（webview → host）**（52 行 as-of 实测 + 四形态登记 + 机检 `protocol-coverage-reverse.test.mjs`（拟新增））；
   §12 头注补收 / 发两向机检指针与「打开拍回批」发射点（三行 ② 列）· 方向口径段补打开拍序契约；§11 回指 +1 行（F-W12 · N-W7）。

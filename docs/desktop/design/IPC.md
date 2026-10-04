@@ -358,6 +358,22 @@
 
 ## 变更记录
 
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（消化行只留当轮收正 · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-row-current-only.md` §2（唯一承载面——一次性批次材料）。
+**本批（消化行自然形（终态追加 ∥ 零清理） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-rows-natural-form.md` §2（唯一承载面——一次性批次材料）。
+**本批（桌面菜单体系批 · 2026-10-02）落点表** = `docs/batches/2026-10-02-desktop-menu-system.md` §2（唯一承载面——一次性批次材料）。
+**本批（设置菜单升级批 · 2026-10-02）落点表** = `docs/batches/2026-10-02-desktop-settings-menu-upgrade.md` §2（唯一承载面——一次性批次材料）。
+**本批（桌面 UX 收尾批 · 2026-10-02）落点表** = `docs/batches/2026-10-02-desktop-ux-closeout.md` §2（唯一承载面——一次性批次材料）。
+**本批（文档体系重组批（DOC-MIGRATION） · 2026-10-02）落点表** = `docs/batches/2026-10-02-doc-structure-reorg.md` §2（唯一承载面——一次性批次材料）。
+**本批（会话选定写回 · default-model-carryover · 2026-10-03）落点表** = `docs/batches/2026-10-03-default-model-carryover.md` §2（唯一承载面——一次性批次材料）。
+**本批（首跑渠道提示修复 · 2026-10-03）落点表** = `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2（唯一承载面——一次性批次材料）。
+**本批（桌面第二实例提示 · 2026-10-03）落点表** = `docs/batches/2026-10-03-desktop-second-instance-notice.md` §2（唯一承载面——一次性批次材料）。
+**本批（ledger-family-aggregate · 2026-10-03）落点表** = `docs/batches/2026-10-03-ledger-family-aggregate.md` §2（唯一承载面——一次性批次材料）。
+**本批（无效渠道态逻辑归一 · 2026-10-03）落点表** = `docs/batches/2026-10-03-provider-invalid-unify.md` §2（唯一承载面——一次性批次材料）。
+**本批（渠道档位退役（桌面） · 2026-10-04）落点表** = `docs/batches/2026-10-04-desktop-channel-tier-retire.md` §2（唯一承载面——一次性批次材料）。
+**本批（模型切换解锁 · 2026-10-04）落点表** = `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §2（唯一承载面——一次性批次材料）。
+**本批（流尾台账行组退役 · 2026-10-04）落点表** = `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2（唯一承载面——一次性批次材料）。
+
 - 2026-09-25：建档（桌面端设计批 1 · 分档轮）——由 `docs/desktop/design/PROJECT.md` §3.2 分出：§1 = 主 → 渲染事件表逐字；§2 = 渲染 → 主请求表逐字（`history:page` 行的 `§9` 回指随动改为带路径指针）；「事件映射」= 该档 §3.4 项 2 的命名单源说明。
 - 2026-09-25（**修正轮**——设计评审 §3 轮次 1 发现 1 / 2 / 11）：§2 增**项目面**通道 `project:open`（缺省 = 主进程原生目录选择）· `project:recent` + 项目面注（选中后语义三步 · 读面 = 核槽面回读零新存储——`docs/desktop/design/PROJECT.md` §2 KD-9）；原 `dialog:openFolder` 行折入 `project:open`；`config:read` 行补**语言面下发** `{ locale, dict }`；§1 增**菜单面**首版口径注。
 - 2026-09-25（**修正轮 2**——设计评审 §3 轮次 2 发现 15）：§2 项 1 改为「槽命中 / 生成（**打开即物化**）」——无数据文件的族由打开动作落空槽数据文件（核 `newSlotData` / `writeSessionFile` 链），T-DSK2「打开即入最近列表」遂成立。
@@ -522,7 +538,7 @@
 - 2026-10-03（**首跑渠道提示修复批 · 修正轮 #7（用户 13:43 更正——13:09 口径系拼音误打）· eng-designer**——承批档 `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2 更正块 · 台账 #840）：§2 `msg:send` 行 `providerKind` 分支收正为**词面-only**（`defaultModel` 类 ⇒ 渲染面出词；动作面 `composer.send.chooseModel` ∥ handler 面作废；同笔收净「provider 态投影注」内 #841 同源引用——父侧「四档全域」裁）。**通道集 ∥ 载荷 ∥ 白名单零变**。明细 = 批档 §2 更正块。
 - 2026-10-03（**首跑渠道提示修复批 · 实施后文档面回填轮（§3.1 值行齐平 + 设置族注 8 坐标重锚）· eng-designer**——承批档 `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2 ∥ §5 · 台账 #840）：§3.1 `ipc.mjs` 行走读齐平（**276 ⇒ 277**——`msg:send` 注面随动）；**设置族注 8 坐标按现盘重锚五处**（① `thincoder-desktop/renderer/views/settings-sections.mjs` `:141` ⇒ `:81`；`renderer/mount-settings.mjs` `:296` ⇒ `renderer/mount-settings-exits.mjs:128-139`（写 `:131`）② `providers.mjs` `:165-171` ⇒ `:167-172`（写盘执行体 `:169` ⇒ `:171`）③ `providers.mjs` `:24` ⇒ `:41-42` ∥ `:162`（R8 起端侧零值域副本——措辞随实况收正）∥ `thincoder-desktop/renderer/views/settings.mjs` `:55` ⇒ `:73` ④ `providers.mjs` `:113-118` ⇒ `:269-278`（读账现取 `:276`）⑤ `mount-settings.mjs` `:50` ⇒ `mount-onboarding.mjs:22`（`presetValue(slot)`））。**零新语义**（读数 ∥ 坐标）。明细 = 批档 §5。
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 ∥ §5 · 台账 #841）：§3.1 `ipc.mjs` 行走读齐平（**277 ⇒ 283**——两出口注面随动（`providerState` 透传））；「provider 态投影注」项 3 第三刷新点收窄为实落写点三处（`thincoder-desktop/src/main/settings.mjs:230` ∥ `:330` ∥ `providers.mjs:181`）。**零新语义**（读数 ∥ 坐标）。明细 = 批档 §2 回填轮块。
-- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #9（评审轮 1 · 发现 4 ∥ 7 ∥ 12 + 父侧顺笔）· eng-designer**——承批档 §3 轮次 1 · 台账 #841）：§2「provider 态投影注」收正——载荷补 `invalidReason`（invalid 类合成式可算）∥ 行在场判据改 `fallback` ∧ 非 invalid 类 ∥ 在场条件补**第三刷新点**（`settings:agent` ∥ `provider:save` 写回执携 `providerState`）∥ 消费负向锁随合成式；**设置族注 8④ 机检指针收正**（`thincoder-desktop/test/views-onboarding.test.mjs:71/:153/:158` 盘上无档 ⇒ 批内件族——2026-09-28 测试树重置后实况）。**通道集 ∥ 白名单计数零变**（回执内字段）。
+- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #9（评审轮 1 · 发现 4 ∥ 7 ∥ 12 + 父侧顺笔）· eng-designer**——承批档 §3 轮次 1 · 台账 #841）：§2「provider 态投影注」收正——载荷补 `invalidReason`（invalid 类合成式可算）∥ 行在场判据改 `fallback` ∧ 非 invalid 类 ∥ 在场条件补**第三刷新点**（`settings:agent` ∥ `provider:save` 写回执携 `providerState`）∥ 消费负向锁随合成式；**设置族注 8④ 机检指针收正**（桌面 onboarding 用例档坐标 `:71/:153/:158` 盘上无档 ⇒ 批内件族——2026-09-28 测试树重置后实况）。**通道集 ∥ 白名单计数零变**（回执内字段）。
 - 2026-10-03（**会话选定写回批（default-model-carryover）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §2 · 台账 #880）：§2 `session:prefs` 行增选定写回径回执 `providerState`；「会话级偏好注」项 1 开例外 + 增**项 8**（选定写回——触发判据 ∥ 写面 ∥ 回执 ∥ 边界）；「provider 态投影注」项 3 增**第四刷新点**；设置族注 8① 写口两处 ⇒ **三处**（**轴 = IPC 写口**；**全链写点 = IPC 写口 + 向导 ∥ 迁移**——两轴明书同点）。**通道集 ∥ 白名单计数零变**。明细 = 批档 §2。
 - 2026-10-03（**会话选定写回批（default-model-carryover）· 修正轮（评审轮次 1 · 发现 1–7 ∥ 9 逐号 · 父侧裁定 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §3 轮次 1 · 台账 #880）：设置族注 8① 写口两轴明书（IPC 写口三处 ∥ 全链写点 = IPC 写口 + 向导 ∥ 迁移）+ `:211` ∥ `:534` 计数轴标注同拍；`session:prefs` 行 ∥ 项 7 补条件性 `providerState` 半句；第四刷新点落点点名（主侧写点 ∥ 渲染面消费档）；`ev:config` 行补自写抑制覆盖判据（选定写回同受抑制）。**零新语义 ∥ 通道集零变**。明细 = 批档 §2 修复轮块。
 - 2026-10-03（**ledger-family-aggregate 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-ledger-family-aggregate.md` §1 · 台账 #882）：§1 `ev:ledger` 行随动——`marker` `text` = **当前打开范围合计** ∥ `warn` = 范围内判位（范围判据单源 = `docs/core/design/LEDGER.md` §7.2）。**通道 ∥ 载荷键集零变**。明细 = 批档 §2。

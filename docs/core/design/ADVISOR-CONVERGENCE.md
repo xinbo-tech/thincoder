@@ -407,8 +407,8 @@ advisor design review 标准维度补一条：
 | A-AC13 | pass 判据随动（F33）：轮 3+ prior 🔴 全部 ∈ {fixed, accepted} 才可 pass；零理由未解项 ⇒ 不可 pass（轮 2 / 3 裁决句逐字 + 设计回显条件句在位） | §2.4 / §2.5 |
 
 **工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：`thincoder-core/advisor/loop.mjs:205-215` 推入 `messages` 的 assistant 消息由核单点 `assistantToolCallMessage(response, providerSpec(provider))`（`thincoder-core/model-specs.mjs`）构造——`reasoningEcho:"required"`
- 族（继承主 provider 或显式 `advisor.provider`，均按 `providerSpec` 判定）**恒带** `reasoning_content`（本轮无推理 ⇒ 空串）；`optional` / 未声明族恒不带。回归锚 = 核 `test/model-specs.test.mjs`（规则面）+
- 核 `test/core-hygiene.test.mjs`（结构面 · 单点双面形态）+ 核 `test/reasoning-echo-live.test.mjs`（缝式行为面 · 拟新增）——判据形态单源 = 批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.4 A-C6 / A-C12。
+ 族（继承主 provider 或显式 `advisor.provider`，均按 `providerSpec` 判定）**恒带** `reasoning_content`（本轮无推理 ⇒ 空串）；`optional` / 未声明族恒不带。回归锚 = 核 `test/model-specs.test.mjs`（规则面）+（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+ 核 `test/core-hygiene.test.mjs`（结构面 · 单点双面形态）+ 核 `test/reasoning-echo-live.test.mjs`（缝式行为面 · 拟新增）——判据形态单源 = 批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.4 A-C6 / A-C12。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 ## 13. 不并项与历史沿革
 

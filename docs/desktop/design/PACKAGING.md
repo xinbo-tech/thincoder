@@ -208,10 +208,10 @@
 
 **2.9.7 站点仓脚本（三件）**
 
-- `thincoder.com/scripts/gen-changelog.mjs`（站点仓 · 档已在）：增 `--side desktop` 臂——输入 = `thincoder-desktop/CHANGELOG.md`（工作区兄弟路径——`--desktop` 可覆盖）；`--since` 缺省 = `0.10.1`；`GAPS.desktop` = 无（零缺段）；用法注释同拍。
+- `gen-changelog.mjs`（站点仓脚本 · 档已在）：增 `--side desktop` 臂——输入 = `thincoder-desktop/CHANGELOG.md`（工作区兄弟路径——`--desktop` 可覆盖）；`--since` 缺省 = `0.10.1`；`GAPS.desktop` = 无（零缺段）；用法注释同拍。
   判据 = 跑 `--side desktop` 输出含 `v0.10.1` + 日期（骨架形 = 既有 `--side` 两值同式）。
 - `thincoder.com/scripts/deploy-oss.mjs`（站点仓 · 档已在）：prune 过滤行（`:234`）追加 `&& !k.startsWith("downloads/")`（**downloads 前缀豁免**——下载件 ∥ feed 不在 `www/` 本地集，无豁免即被 `OSS_DELETE=1` 误删）。
-- `thincoder.com/scripts/upload-download.mjs`（**拟新增**——feed 上传小件；不并 `deploy-oss.mjs`——全量遍历 ∥ 大件重传两由）：
+- `upload-download.mjs`（站点仓脚本 · **拟新增**——feed 上传小件；不并 `deploy-oss.mjs`——全量遍历 ∥ 大件重传两由）：
   用法 = `node thincoder.com/scripts/upload-download.mjs <文件…>`（键 = `downloads/` 前缀 + 文件名）；OSS HMAC 签名式照 `thincoder.com/scripts/deploy-oss.mjs:84-101`；`DRY_RUN=1` 预览（零凭证可跑）；
   凭证 = `OSS_KEY`/`OSS_SECRET`（`ALIYUN_KEY`/`ALIYUN_SECRET` 兜底）；cache-control = `.yml`（含 `.yaml`）⇒ `no-cache`；**余档全集**（`.exe` ∥ `.blockmap` ∥ `.AppImage` ∥ `.deb`）⇒ `max-age=86400`；出口 = 非零即失败可读。
 - **部署分工**：页面集走 `deploy-oss.mjs`（`www/` 全量）；feed 三件走 `upload-download.mjs`（§2.8.3 上传序）。
@@ -456,7 +456,7 @@
 
 | 行 | 内容 | 状态 | 单源 |
 |---|---|---|---|
-| DE | **桌面打包发布批（阶段一）上抛四件**：① **图标资产复用建议**——`build/icon.ico` 的源生成器可顺产 PNG（站点 OG ∕ 下载页卡面用）——站点轮可选采（跨仓 = 主 agent 轮）② **`deploy-oss.mjs` prune 加固**（站点仓）：`OSS_DELETE=1` 时 prune 面 = 全桶键 − 本地 `www/` 键（`thincoder.com/scripts/deploy-oss.mjs:230-238`）⇒ 桶内 `downloads/**` 会被判陈旧一并删除——建议 prune 面加 `downloads/` 前缀豁免（或维持 `OSS_DELETE` 恒关——现缺省）③ **签名时间戳 URL 实测选定**（GlobalSign RFC3161——实施期实测；落档 = 本档 §2.3）④ **站点仓 changelog 生成器（`thincoder.com/scripts/gen-changelog.mjs`）desktop 臂**：现只含 cli ∥ vsc（实读 2026-10-01——`--side` 两值）；`docs/RELEASE.md` §6.4 档面已含桌面 `CHANGELOG.md` 输入（本批随动已落）⇒ 余动作 = 该脚本增 desktop 臂（站点轮随动） | 上抛（①③④随站点 ∥ 实施轮；②站点仓加固） | 单源 = 本档 §1 **KD-64** ∥ §2；站点面 = 批档 §2「站点侧规格」 |
+| DE | **桌面打包发布批（阶段一）上抛四件**：① **图标资产复用建议**——`build/icon.ico` 的源生成器可顺产 PNG（站点 OG ∕ 下载页卡面用）——站点轮可选采（跨仓 = 主 agent 轮）② **`deploy-oss.mjs` prune 加固**（站点仓）：`OSS_DELETE=1` 时 prune 面 = 全桶键 − 本地 `www/` 键（该脚本 prune 段——跨仓行号不引）⇒ 桶内 `downloads/**` 会被判陈旧一并删除——建议 prune 面加 `downloads/` 前缀豁免（或维持 `OSS_DELETE` 恒关——现缺省）③ **签名时间戳 URL 实测选定**（GlobalSign RFC3161——实施期实测；落档 = 本档 §2.3）④ **站点仓 changelog 生成器（`gen-changelog.mjs`）desktop 臂**：现只含 cli ∥ vsc（实读 2026-10-01——`--side` 两值）；`docs/RELEASE.md` §6.4 档面已含桌面 `CHANGELOG.md` 输入（本批随动已落）⇒ 余动作 = 该脚本增 desktop 臂（站点轮随动） | 上抛（①③④随站点 ∥ 实施轮；②站点仓加固） | 单源 = 本档 §1 **KD-64** ∥ §2；站点面 = 批档 §2「站点侧规格」 |
 
 | DK | **`T-DSK60` 用例号自铸披露 + 桌面发布·阶段二批（#810 ∥ #826）披露五件**（沿 T-DSK37–T-DSK59 先例——本批自铸；若实施批 ∥ 并行批占用同号 ⇒ 请父侧并号裁定）：① 用例行随测试档修加——不进设计面条目（2026-09-27 裁定）；② **`electron-updater` = 首个第三方运行依赖**（声明面三处收正：`package.json` description ∥ `AGENTS.md` ∥ 本档——「零第三方」旧句作废；由 = 差分更新 ∥ 安装器生命周期 ∥ 验签链均为库面能力，手搓 = 重造块图算法）；③ **桌面下载卡图标收正**（阶段一前案 `</>` ⇒ 🖥️——emoji 先例；`</>` 系品牌位形）；④ **RELEASE.md 指针代际**（`docs/desktop/design/PROJECT.md` §5 已迁 `docs/desktop/design/PACKAGING.md` §2——重组后死指针，本批收正；同族：CHANGELOG「拟新增」四标）；⑤ **需求卷侧已收正**（主 agent 笔面——已落）：**D40**（自动更新）∥ **D41**（官网桌面面）已入需求卷——引 `docs/desktop/requirements/PACKAGING.md:3` ∥ `:14-15` ∥ `:20` | 登记（自铸披露 + 四处披露；⑤ 已收正） | 单源 = 本档 §1 **KD-71** ∥ **KD-72** ∥ 批档 `docs/batches/2026-10-02-desktop-release-stage2.md` §2 |
 

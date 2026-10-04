@@ -45,7 +45,7 @@
 - **修法**：consume-design 删内存槽后**当场同步落盘删除**（写空槽）——`thincoder-core/agent-tools/subagent-spawn.mjs:165`（`removeDesignTokenSlot`）→ `:167`（`persistEngTokens`）。落盘失败 ⇒ 回滚内存槽 + 抛错可重试（不留半消费态）。
 - **消耗语义**：消费后同 designId 再 spawn = `resolveDesignSlot` not found 机械拒（`subagent-spawn.mjs:140`–`:145` 注释即此契约）。
 
-**用例面**（`thincoder-cli/test/design-token-settlement.test.mjs` · 9 例）：
+**用例面**（`thincoder-cli/test/design-token-settlement.test.mjs` · 9 例）：（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 | 类 | 场景 | 期望 |
 |---|---|---|
@@ -74,7 +74,7 @@
 | 镜像零写 | `thincoder-core/agent.mjs:69`–`:71` · `thincoder-core/session.mjs:437`–`:438` | 无字段初始化 |
 | 轮转守卫（拆分产物） | `thincoder-core/session-guard.mjs:35` | 与 `saveSession` 共用 |
 | 凭证工具组（拆分产物） | `thincoder-core/agent-tools/design-token.mjs` | 签发 / 校验 / 结算纯函数 |
-| 测试 | `thincoder-cli/test/design-token-settlement.test.mjs` | 9 例在位 |
+| 测试 | `thincoder-cli/test/design-token-settlement.test.mjs` | 9 例在位 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 
 ### 6.2 双端与依赖方向
 
@@ -98,7 +98,7 @@
 | 会话内回合从槽新读（D3——快照已删） | 端壳 hydrate 面：`thincoder-vscode/src/agent/setup.mjs`（`hydrateRun` 每轮 `loadSlot` → `applySlotSessionState`）+ `thincoder-vscode/src/agent/agent-state.mjs:56`（`reconcileEngDesignTokens` 槽源合入——同 id 冲突**内存优先**〔状态词 = §6.2 ①〕；内存项永不清空——「槽 = 权威」仅指门禁读源 = D-S3）；原 `suspension.mjs` 快照 / `panel-chat.mjs` 回合读行随 W13 重排（旧坐标已退场） |
 | 单值镜像退役（D5） | `_engDesignToken` 单值镜像**零运行时读写**（dispatch 写门资格问「任一活槽存在」——核 `resolveDesignSlot`（`thincoder-core/agent-tools/subagent-spawn.mjs:115`））；仅 `thincoder-vscode/src/agent/agent-state.mjs:70-71` 一次性迁移读（legacy 残留——`ENG-TOKEN-BINDING.md` §6.3 已列） |
 | 消费落盘对称（consume 后不复活） | **W12/W13 已迁核**——现体 = 核 `thincoder-core/agent-tools/subagent-spawn.mjs:140`（`executeConsumeDesignAction`——删内存槽 + `persistEngTokens` 当场同步落盘 + 失败回滚 `:160-173`）；原 `subagent-spawn-gate.mjs:145` 已删 （迁移期引文） |
-| 测试面 | `thincoder-vscode/test/eng-settlement.test.mjs`（14 用例——settle 落盘 / union 忙时 / restore / consume 不复活） |
+| 测试面 | `thincoder-vscode/test/eng-settlement.test.mjs`（14 用例——settle 落盘 / union 忙时 / restore / consume 不复活） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 
 **VSC 侧差异（二态化 · 2026-09-25）**：① `engTokensMergeForSave` 同 key 冲突「**expiresAt 大者胜**（新 mint）」——**已消解**（W11 转口后同一实现：端壳 = 核 `mergeEngTokensForSave` re-export；
   「新铸者胜」与「expiresAt 大者胜」= 同一规则——核档 `thincoder-core/session-slot-write.mjs:172-173`）；② `reconcileEngTokensFromSlot` 同 id 冲突以槽为准（VSC 版内存优先）——**消解路径 + 到期条件在册**（A9 核查与处置 = §6.2 ①）。
@@ -147,7 +147,7 @@
 |---|---|---|
 | F1 | 评审通过 → 签发 designToken | **继承 v1**（`generateDesignToken` + `settleDesignReview` → designId+token） |
 | F2 | 链终消费制 | **继承 v1**（`consume-design` → `resolveDesignSlot` + `removeDesignTokenSlot`——消费后同 designId 再 spawn = `designId not found` 机械拒；重复消费幂等 no-op） |
-| F3 | 评审对象来源读 `docRoot` | `advisor.mjs` design-review 分支（文档分类）改读 `resolveReviewTargetPaths`（`agent/write-gate.mjs`，M4 产物——**同源单一权威，不重复实现**；不 import `dispatch.mjs`——簇间回边环风险）；**按用点解析增量**（2026-10-02 · #828）：同单点新导出 `resolveReviewRootsFor(dir)`（`write-gate.mjs:59`）——逐文档所属项目根集（`thincoder-core/agent-tools/advisor.mjs:125` → `:129` 第二腿；无主档回退会话根集判定） |
+| F3 | 评审对象来源读 `docRoot` | `advisor.mjs` design-review 分支（文档分类）改读 `resolveReviewTargetPaths`（`agent/write-gate.mjs`，M4 产物——**同源单一权威，不重复实现**；不 import `dispatch.mjs`——簇间回边环风险）；**按用点解析增量**（2026-10-02 · #828）：同单点新导出 `resolveReviewRootsFor(dir)`（`write-gate.mjs:59`）——逐文档所属项目根集（`thincoder-core/agent-tools/advisor.mjs:125` → `:129` 第二腿；无主档回退会话根集判定）；**路径归一增量**（2026-10-04 · #921 设计轮）：documents 解析单源新导出 `resolveReviewDocPaths`（宿主 = `review-facts.mjs`——write-gate 同名再出口保指针面），逐文档四腿试探（会话根集 → 所属项目根集 → 候选项目根 → 歧义可读唯一化）——裸仓相对形按候选项目归一受理，多候选可读命中 ≥2 ⇒ fail-closed 拒（`scope-doc-ambiguous`）；冻结窗 `docAbs`（advisor-async）同源取 resolved（保护洞堵合）。实施 = eng-coder 轮 |
 | F4 | 凭证值不落文档 | token / designId **值**永不落档（只记 `review passed`）——`sanitizeText`/`CRED_RE` 机械剥除已实证（继承） |
 | F5 | 六 kind 不签发 | 非全绿（含 🔴）→ 不签发 token（fail-closed，继承） |
 
@@ -164,6 +164,11 @@
 **边界（本增量不做）**：不做评审判据本身（advisor 内部——继承）；不做凭证格式改造（`uuid:expiresAt` 继承 v1，不重设 HMAC/签名层——已随 2026-09-06 裁定退役）。
 
 ## 变更记录
+
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（会话锚解析修复（多档并存支持） · 2026-10-02）落点表** = `docs/batches/2026-10-02-manifest-resolution-fix.md` §2（唯一承载面——一次性批次材料）。
+
+- 2026-10-04（**工具路径基面根治批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-tool-path-baseline.md` §2 · 台账 #921）：§9 F3 加「路径归一增量」——documents 解析单源 `resolveReviewDocPaths`（宿主 `review-facts.mjs`，write-gate 同名再出口）+ 冻结窗 docAbs 同源。实施 = eng-coder 轮。
 
 - 2026-10-02（**会话锚解析修复批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-manifest-resolution-fix.md` §1 · 台账 #828 · 轮七回执③）：§9 F3 行文面加同单点新导出 `resolveReviewRootsFor`（`write-gate.mjs:59`——按用点解析增量；消费腿 `thincoder-core/agent-tools/advisor.mjs:125` → `:129`）。**判据语义零改**。
 

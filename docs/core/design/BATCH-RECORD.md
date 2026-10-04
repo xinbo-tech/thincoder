@@ -439,6 +439,11 @@ node -e "const fs=require('fs');const r=[];for(const f of fs.readdirSync('docs/b
 
 ## 变更记录
 
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（会话锚解析修复（多档并存支持） · 2026-10-02）落点表** = `docs/batches/2026-10-02-manifest-resolution-fix.md` §2（唯一承载面——一次性批次材料）。
+**本批（ACP 用户文档扩充 · 2026-10-04）落点表** = `docs/batches/2026-10-04-acp-user-docs.md` §2（唯一承载面——一次性批次材料）。
+**本批（issue 修复批·四 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round4.md` §2（唯一承载面——一次性批次材料）。
+
 - 2026-10-04（**issue 修复批·四 · 设计面实施轮（#893 契约面同拍收正）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round4.md` §2 · 台账 #893）：§4.1 凭证剥除行 ∥ §4.8 **BR-4**——形态枚举收为**三形**（补无标两段值形）+ 明书**裸 uuid 不剥**之由（id 非凭证 ∥ 无上下文精确性）；实现随动 = `thincoder-core/agent-tools/batch.mjs`（同批实施轮）。**零新语义**（契约收正——补缺口形）。
 
 - 2026-10-02（**会话锚解析修复批 · fix 轮（评审轮次 1 发现 1–8 · 父侧 8/8 采纳）· eng-designer**——承批档 `docs/batches/2026-10-02-manifest-resolution-fix.md` §3）：§4.15 条 5 补**读面次序单源**（候选按名排序——并集保序）∥ **歧义锚拒面逐字文案**（机检锚 `ambiguous session anchor`）∥ 条 5 尾 / BR-42 状态名统一（`ok` / `none`）；§4.8 BR-40 / BR-41 随拍。**行为面收口——实现 = 本批实施轮**。

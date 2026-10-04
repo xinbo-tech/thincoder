@@ -71,8 +71,13 @@
 **本批（桌面残余批 · D17 恢复态播种 / D19 用户块 md 深度 · 2026-09-28）落点表** = `docs/batches/2026-09-28-desktop-residuals.md` §2（唯一承载面——一次性批次材料）；本档 §6.24 承载打开态读数出口 / 同源同式三事 / 端壳转口 / 边界情形 / 验收回指。
 **本批（LEDGER-RELIABILITY · 2026-09-28）落点表** = `docs/batches/2026-09-28-ledger-reliability.md` §2（唯一承载面——一次性批次材料）；本档 §6.25 承载零权威 / 可重建全自动 / 丢失自愈两落点与预算 / 失效可见 / 写安全判据句 + 边界情形 + 验收回指。
 **本批（跨端消化面恢复 · 2026-09-30）落点表** = `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2（唯一承载面——一次性批次材料）；本档 §6.26 承载机制单源（记录形 ∥ 写缝 ∥ 读缝契约 ∥ 端侧重建义务 ∥ 容差登记 ∥ 读面 delta）+ 验收回指。
+**本批（消化重放口径批（#771 ∥ #773） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-replay-choices.md` §2（唯一承载面——一次性批次材料）。
+**本批（零语义清账批 #2 · 2026-10-01）落点表** = `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §2（唯一承载面——一次性批次材料）。
+**本批（记录形残项批（#794 ∥ #795） · 2026-10-02）落点表** = `docs/batches/2026-10-02-record-shape-residuals.md` §2（唯一承载面——一次性批次材料）。
+**本批（无效渠道态逻辑归一 · 2026-10-03）落点表** = `docs/batches/2026-10-03-provider-invalid-unify.md` §2（唯一承载面——一次性批次材料）。
 **本批（会话选定写回 · default-model-carryover · 2026-10-03）落点表** = `docs/batches/2026-10-03-default-model-carryover.md` §2（唯一承载面——一次性批次材料；含受影响文件行数 ∥ 增量）；本档 §6.21 承载判据句 6 / 边界情形表选定写回三行 / 验收回指 ⑤。
 **本批（CLI ∥ VSC 会话选定写回 · 2026-10-04）落点表** = `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §2（唯一承载面——一次性批次材料；含受影响文件行数 ∥ 增量）；本档 §6.21 承载判据句 6 三端落地收正 / §6.8 提示行文案收正。
+**本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
 
 ## 6. 机制面（自 CLI 产品档并入 · 2026-09-14 · B 轮）
 
@@ -435,7 +440,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | 混合版本 | 旧版端只增不减（单向纪律）；新版释放后旧版端认领 ⇒ 本端再切入判占 + fork（同「目标被占」行） |
 
 **落点与测试面（清单承载）**：file 级落点表（行数 / 预期增量 / >300 档审视）与测试覆盖档位 = **`docs/batches/2026-09-21-session-claim-release.md` §2**（一次性批次材料——§8.1 分层纪律；本档不复制，判据 / 边界 / 决策留本节）。
-尺度结论：本批为既有档内增量（>300 档 = `thincoder-core/session-lifecycle.mjs` / `thincoder-vscode/test/session-boot.test.mjs`——逐档读数与增量见批档 §2）——**无档位拆分需要**。
+尺度结论：本批为既有档内增量（>300 档 = `thincoder-core/session-lifecycle.mjs` / `thincoder-vscode/test/session-boot.test.mjs`——逐档读数与增量见批档 §2）——**无档位拆分需要**。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 **验收回指（需求档 §2.3 四条）**：① 切换释放 + 重认领 = 核 / CLI 两档；② 拒绝路径四不动 = 组⑮（四不动断言）+ 端壳零写；③ 他端认领后本端再切入 = 判占 + `allocateFresh` fork（integration 档）；④ 双端对称 = 核三原语 × 端壳三件同判据（保留集口径 / `deletions` 落盘 / 占用判据单源 `slotOccupancy`）。
 
@@ -560,11 +565,11 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 
 **验收回指（需求 §2.5 T1–T6 · 判据级；用例细表 = 批档 §2）**
 
-- T1 = 造认领 → `releaseClaimsAll` → 盘面三断言（manifest 无本进程 `slotSessions` 条目 ∧ marker 仍指原槽 ∧ 槽文件完好）——核 `thincoder-core/test/session-slot-write.test.mjs` 新组。
+- T1 = 造认领 → `releaseClaimsAll` → 盘面三断言（manifest 无本进程 `slotSessions` 条目 ∧ marker 仍指原槽 ∧ 槽文件完好）——核 `thincoder-core/test/session-slot-write.test.mjs` 新组。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 - T2 = T1 后 `resumeSlot` 返回 `{slot: 原槽, data 非空}` + 探测束零 exec（沙箱单进程盘面 ownerPids 空 ⇒ 早退——替身注入断言）。
 - T3 = 崩溃路径负向回归（认领在 + 探测 unknown ⇒ 全新分配——现状锁）。
-- T4 = CLI 退出分支 e2e（`exitDelay` 注入 + `ctx.exitTimer` 捕获——先释放后定时器注册 / 桩收 `exit(0)` / 失败容忍 = 核 D-SE41 面：`releaseClaimsAll` 失败返回 false 不抛 ⇒ 退出零阻、定时器恒注册；接线层零防护，如驱动接线层抛错形态须模块 mock 显式命名缝）——`thincoder-cli/test/tui-exit-cleanup.test.mjs` 新组。
-- T5 = VSC 端壳机判（`releaseClaimsOnExit` 沙箱 + deactivate 结构机检）——`thincoder-vscode/test/session-exit-release.test.mjs` 新档。
+- T4 = CLI 退出分支 e2e（`exitDelay` 注入 + `ctx.exitTimer` 捕获——先释放后定时器注册 / 桩收 `exit(0)` / 失败容忍 = 核 D-SE41 面：`releaseClaimsAll` 失败返回 false 不抛 ⇒ 退出零阻、定时器恒注册；接线层零防护，如驱动接线层抛错形态须模块 mock 显式命名缝）——`thincoder-cli/test/tui-exit-cleanup.test.mjs` 新组。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+- T5 = VSC 端壳机判（`releaseClaimsOnExit` 沙箱 + deactivate 结构机检）——`thincoder-vscode/test/session-exit-release.test.mjs` 新档。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 - T6 = 三端测试全绿。
 
 **不做（边界）**：探测三态判据（D-MI10）一字不动 · 不做时间窗猜死活启发式 · 崩溃路径不接线（F-XR3）· `deleteSlot` 既有语义（含 marker 置空）不动 · 槽文件格式 / `version` / marker 形态与维护点集不动 · NF1 零跨端共享可变字段 · 本释放面域 = **退出 cwd 单 manifest**（会话级 close 与跨 cwd 释放住 §6.15 / §6.16）· Ctrl+C 单按两按（非退出）不释放。
@@ -968,7 +973,7 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 
 **落点与测试面（本批承载）**：file 级落点表（行数 / 预期增量）与用例表（L1–L5 组）= **批档 §2**（一次性批次材料——本档不复制；判据 / 边界 / 决策留本节）。
 
-尺度结论（行数口径 = `wc -l`〔`thincoder-core/test/core-hygiene.test.mjs:187` 同式〕；核侧落值 = 核座实读 · as-of 2026-09-28，端侧 = 待落预期）：
+尺度结论（行数口径 = `wc -l`〔`thincoder-core/test/core-hygiene.test.mjs:187` 同式〕；核侧落值 = 核座实读 · as-of 2026-09-28，端侧 = 待落预期）：（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 `thincoder-core/session-slots-manifest.mjs` 现读 **366 行** · 净增 **+55**（`healDigest` 谓词 + 写回 / 独占临时名选项 / 写后读回 / `ledgerHealth`）⇒ 落 **421 行**——**500 硬线内**；**拆档审视：承既有裁定**（§6.23 + 台账 #484 专门批）——本批不拆。
 `thincoder-core/session-slot-scan.mjs` 现读 **299 行** · 净增 **0**（计数缺省值替换 + 注释改写）⇒ 落 299 行（≤300 维持——不新增登记）。
 `thincoder-core/session-slots.mjs` 现读 **309 行** · 净增 **+17**（投影 `?? null` 两处 + `resumeSlot` 读序前移 + `healDigest` 调用 + `ledgerHealth` re-export）⇒ 落 **326 行**（>300 承既有形态——登记在册）。
@@ -976,7 +981,7 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 新档 `thincoder-core/session-slot-verify.mjs` 落 **299 行**（读面懒核实面：不可信清单调度 / 单飞 / 负缓存 / 预算 / 分块流式扫描；本批唯一新档，≤300 达成）。
 端侧随动档：`thincoder-cli/src/tui/cmd-session.mjs`（129 → ≈136）· `thincoder-cli/src/tui/startup.mjs`（297 → ≈300：**≈300 线位**〔未越 300 顾问线〕——该树无机械登记面〔core-hygiene 仅扫 core 树〕，**登记一行**：拆点候选 = 启动屏族 / 后台索引族外提（`backgroundIndex` 已函数化）；触发条件 = 越 500 硬限 ∥ 该档下次实质改动）。
   【**批·五触评 2026-10-04**：现读 **322**（承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §2.3 实读）；本批 #867 增量 ≤ +10（行级非结构性——home 判据 + 提示行）⇒ ≤332 ⇒ 拆分窗口顺延；触发条件不变。】·
-`thincoder-vscode/webview/session-bar.js`（138 → ≈139）· `thincoder-core/agent-tools/read-history.mjs`（落 **408 行**——核座实读；已在 `SOFT_LINE_REGISTRY`〔`thincoder-core/test/core-hygiene.test.mjs:112`〕——无新拆档案）。
+`thincoder-vscode/webview/session-bar.js`（138 → ≈139）· `thincoder-core/agent-tools/read-history.mjs`（落 **408 行**——核座实读；已在 `SOFT_LINE_REGISTRY`〔`thincoder-core/test/core-hygiene.test.mjs:112`〕——无新拆档案）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 **验收回指（需求档 §4.6 F-L1–F-L5）**：F-L1 → 判据句 1（用例组 L1）· F-L2 → 判据句 2（L2）· F-L3 → 判据句 3（L3）· F-L4 → 判据句 4（L4）· F-L5 → 判据句 5（L5）；用例面（L1–L5 组编号与夹具）= 批档 §2.4。
 

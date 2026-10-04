@@ -102,8 +102,11 @@ Nothing was sent: no review instance, no round consumed, no design token minted,
   - `type` = 实际评审轨（`code` / `design`）；拒回面**未定轨**记 `absent`（缺失 / `null` / 空串）或 `invalid`（非法值）；**冲突拒回**记**顶层实收值**（`code` / `design`——与 `criterion=type-object-conflict` 配对读，未定轨）；**失败结论族**记**实际评审轨**（两轨共用——§7 契约二）。
   - `scope` = 范围摘要（首路径 + `+N more`；无范围记 `none`）。
   - `round` = 拒回族记**本次发起将使用的轮次号**（**撤 cap 后恒记 `{N}/uncapped`**——机制真相；判定先于实例解析时记 `—`）；**失败结论族记本次已结算尝试号**（与尝试表 `#` 同值——§7 契约二）。
-  - `criterion` = 触发判据名（拒回族：`type-missing` / `type-invalid` / `type-object-conflict` / `scope-missing` / `scope-not-doc` / `scope-in-flight`；失败族：§7 判据名表）。
-- **载面（枚举闭合——四项）**：① 范围缺失（`thincoder-core/agent-tools/advisor.mjs`）② 范围非法（同档——design documents 非文档）③ 同 scope 在跑（`thincoder-core/agent-tools/advisor-async.mjs`）④ **类型门拒回**（§2.4——缺 `type` / 非法值 / 与 `object` 声明冲突）。
+  - `criterion` = 触发判据名（拒回族：`type-missing` / `type-invalid` / `type-object-conflict` / `scope-missing` / `scope-not-doc` / `scope-doc-ambiguous` / `scope-in-flight`；失败族：§7 判据名表）。
+- **载面（枚举闭合——五项）**：① 范围缺失（`thincoder-core/agent-tools/advisor.mjs`）
+  ② 范围非法（同档——design documents 非文档；`criterion=scope-not-doc` 判据本体零改——拒文案追加解析诊断尾：逐文档载「解析后绝对路径 ← 基面 = 会话 cwd」+ 候选项目根提示 + 重试指引）
+  ③ **范围歧义**（同档——documents 相对形命中多个候选项目且可读命中 ≥2 ⇒ fail-closed 拒，列全部可读命中路径——`criterion=scope-doc-ambiguous`；**不静默挑一**，#828 歧义锚同哲学）
+  ④ 同 scope 在跑（`thincoder-core/agent-tools/advisor-async.mjs`）⑤ **类型门拒回**（§2.4——缺 `type` / 非法值 / 与 `object` 声明冲突）。
 - **cap 文案**：随 cap 撤除**整体退场**（机制不再产生该文案）。
 - **不载面（登记——本批不改，避免扩面）**：async 误用拒回（depth>0 + `async:true`）· 启动断言拒回（无 token / 无 Approval Signal——其前缀已是稳定契约面）· 池队列 ack（非拒回）。
 - **边界**：不改判定语义；不把文案扩为长报告（标识行恰一行）。
@@ -404,6 +407,7 @@ export function advisorContextBudget(provider) {
 
 ## 变更记录
 
+- 2026-10-04（**工具路径基面根治批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-tool-path-baseline.md` §2 · 台账 #921）：§2.5 判据名表 + `scope-doc-ambiguous`（范围歧义 fail-closed 拒——documents 相对形多候选可读命中 ≥2）；载面枚举四 ⇒ 五项（③ 范围歧义新载 + ② 范围非法载面加解析诊断尾——报「解析后绝对路径 + 基面 + 候选项目根提示」，纠「误报因」缺陷）；既有判据（`scope-not-doc` 本体 ∥ 稳定前缀 ∥ 标识行形态）零改。实施 = eng-coder 轮。
 - 2026-10-03（**复评（轮次 2）发现 4 处置 · 父侧直接执行 · 可 revert**——承 `docs/batches/2026-10-03-advisor-convergence.md` §3 轮次 2）：§3 失败分类处补**判定优先级**句（含省略号且不连续 ⇒ 非连续引文类，先于 `content mismatch`——与 A-AG16 ∥ F34 判定句① 同口径）。**零语义改**（表述补全）。
 
 - 2026-10-03（**轻量收正 · 父侧直接执行 · 可 revert**——承设计修复轮 #19 §3 另记）：§3 归宿面「评审收尾（预算用尽）时」 ⇒ 「评审收尾时」——射程与 `design/ADVISOR-CONVERGENCE.md` 收尾句（不限预算用尽）同口径（同轮发现 #7 同形残面）。**零语义改**（归宿面义务本体零动；只删射程括注）。

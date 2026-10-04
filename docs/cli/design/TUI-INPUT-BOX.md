@@ -218,7 +218,7 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 | `thincoder-cli/src/tui/tui-state.mjs` | state 初始化单源（`createTuiState`——含 `_draft` / `interruptPrompt` 空态） |
 | `thincoder-cli/src/tui/input-face.mjs` | stdin 层 `translateShiftEnter` 接线（`:151`）+ 键盘 / 鼠标后置挂载入口（`mountKeys` / `mountMouse`） |
 | `thincoder-cli/src/tui/index.mjs` | `startTUI` 装配序列（命令层 / 启动屏 / resize / render loop）；启动 `keyboardPush` / 退出 `keyboardPop`（序列体 = `tui-lifecycle.mjs`——启动调用点 = `input-face.mjs:39`） |
-| `thincoder-cli/test/input-lock.test.mjs` · `thincoder-cli/test/arrow-editing.test.mjs` | 按键分发锁（含 busy 门禁）+ 方向键编辑用例 |
+| `thincoder-cli/test/input-lock.test.mjs` · `thincoder-cli/test/arrow-editing.test.mjs` | 按键分发锁（含 busy 门禁）+ 方向键编辑用例（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `thincoder-cli/test/busy-injection.test.mjs`（留守）· `busy-injection-render.test.mjs` · `busy-injection-consume.test.mjs`（2026-09-25 file-tier-sweep 批按族拆分产物） | F16 用例宿主——按族三档：留守 T-F16-1 / 3 / 4 / 8 / 13 · 渲染族 6 / 10 / 11 / 12 / 14 / 17 · 消费族 2 / 5 / 9 / 15 / 16 / 18 / 19；T-F16-7 = `input-lock.test.mjs` 侧；逐例映射见批档 §2「四·S4」 （机检豁免——用例退场登记） |
 
 ## 7. question 自由文本输入态：光标与编辑键
@@ -303,14 +303,14 @@ F13 attention 判据不破（queued 反馈零注意力色对——`docs/cli/desi
 
 > 来源档 `thincoder-cli/docs/design/TUI-INPUT-BOX.md`——**原地保留作参照历史**（保留 ≠ 维护）。
 > **二态混装收口**：旧档为「当前态 + §9 第 31 批目标态」两态并置；第 31 批（方向键编辑）**已实现**
-> （`state.interruptPrompt = { chars, cursor }` 与 `test/arrow-editing.test.mjs` 均在位——as-of 2026-09-15 实核）。
+> （`state.interruptPrompt = { chars, cursor }` 与 `arrow-editing 用例档` 均在位——as-of 2026-09-15 实核）。
 > ⇒ 本档按**单态现行契约**重建：目标态已并入 §3 / §8 正文。下列内容不并入本档：
 
 | 旧档位置 | 内容 | 何故不并 |
 |---|---|---|
 | 旧档 §9 第 31 批设计节 | 问题陈述 / 方案选型对比（A / B / C / D 四族候选）/ 契约变更清单 / 决策记录 D-31.1–D-31.8 | 一次性批次设计材料——机制结论已入本档 §3 / §8 正文 |
 | 旧档 §9.5 受影响文件表 | as-of 2026-09-11 行数与增量快照 | 时点快照（实装后已漂移）——现行档位以实测为准 |
-| 旧档 §9.6 用例表（T-A1–T-A11）· §9.7 验收标准（AC-E1-1–AC-E1-10） | 批次验收材料 | 验收已完成——不变量已入正文；用例宿主 = `thincoder-cli/test/arrow-editing.test.mjs` |
+| 旧档 §9.6 用例表（T-A1–T-A11）· §9.7 验收标准（AC-E1-1–AC-E1-10） | 批次验收材料 | 验收已完成——不变量已入正文；用例宿主 = `CLI arrow-editing 用例档` |
 | 旧档 §9.8 边界 + 档头「设计已落档、实现待批准」状态行 | 批次边界与在途状态 | 批次语境——实现已落地，边界语义已入 §1–§8 |
 | 旧档 §变更记录 | 逐批流水（2026-08-03/04 多行键 / 09-02 挂起态归属 / 09-03·04 question 光标 / 09-07 格式债 / 09-11 第 31 批及修正·刷新轮） | 历史叙述——本档自有变更记录 |
 

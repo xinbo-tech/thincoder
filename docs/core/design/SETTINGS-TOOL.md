@@ -79,7 +79,7 @@ parse 失败 → 字符串字面（`:198` `return s`——裸 `abc`）。两端�
 
 W16（2026-09-15）：VSC 端 = **同一核工具实例化**（`thincoder-vscode/src/agent/setup.mjs` 取 `settingsTool(opts)` 工厂；写盘 = 核 `writeConfigAtomic`）；热应用 = `ctx.agent.config` 内存对象；注册于 depth-0 agentTools（动作级只读分类同款机制，`isReadonlyAction` 端面）。
 键空间 = 核 `DEFAULTS` 全量（A5 已裁「以 CLI 为准（全量类型校验）」——原端侧窄表 `thincoder-vscode/src/agent-tools/settings.mjs:39-40` 已删（迁移期引文——`AGENT_DEFAULTS`/`TRACES_DEFAULTS` 键空间退场）；
-VSC 端测试坐标 = `thincoder-vscode/test/settings-tool.test.mjs`（9 例——双缝并用：写侧 `settingsTool({ configPath })` + 读侧 `_setConfigPathForTest`）——**该档已随测试树全清退役（2026-09-28）；单测树重建时回迁**。
+VSC 端测试坐标 = `thincoder-vscode/test/settings-tool.test.mjs`（9 例——双缝并用：写侧 `settingsTool({ configPath })` + 读侧 `_setConfigPathForTest`）——**该档已随测试树全清退役（2026-09-28）；单测树重建时回迁**。（迁移期引文）
 **端差（W16 登记——热应用载体键面）**：热应用落点 = 端 `ctx.agent.config` 载体，而 VSC 载体键面 = `{advisor, agent, proxy, shell, providersList, websearch, traces}`
 （`thincoder-vscode/src/agent/agent-state.mjs` `:96-107`）——无 `providers` / `memory` / `embedding` / `mcp` 段 ⇒ 这些键在 VSC 端的「运行中已生效」回显不落端侧运行读取源
 （端侧运行读盘面 `loadRaw()`，如 `resolveProviders`）；该面以「写盘为准」（持久化生效，进程内热应用仅限上列键面）。
@@ -108,7 +108,7 @@ VSC 端测试坐标 = `thincoder-vscode/test/settings-tool.test.mjs`（9 例—�
 | D-ST12 | **双端同批**（用户拍板） | VSC config 存储差异以偏差注处理；键空间归一（§2.8） |
 | D-ST13 | **敏感谓词扩面 = 词表扩面 + 开口键族整族遮罩**（两句取或——§2.4） | 实证 `mcp.servers.0.headers.Authorization` 明文回显（台账 #53）。否决「只加 `Authorization` 单键」（同族下一条漏项留给下次）/「只扩词表不遮族」（头名不可枚举——`X-Custom-Auth` 类永远漏）。段内复合段名（refreshToken 类）残余登记 = D-ST17 |
 | D-ST14 | **`env` 并入开口键族**（与 `headers` 同句） | 同族同因：`mcp.servers.*.env.*` 子键名由用户 / 对端任意取（实证：`env` 段任意变量名的值明文回显）；代价 = 少数无害 env 值被遮——方向安全且**键名仍可见**（只丢值） |
-| D-ST15 | **遮蔽面用例落新档**（`settings-mask.test.mjs`——**已落批内件（#677）**：`docs/batches/2026-09-30-crossline-clearance.test.mjs` 遮蔽面格；**单测树重建时回迁该档形**） | 既有 `thincoder-cli/test/settings.test.mjs`（**已退役**——测试树全清 2026-09-28）**480 行** + 遮蔽面用例 **≈ 95 行** ⇒ **≈ 575** 超 500 行硬限（估算值单源 = 批次档 §2.2⑤；登记面 = 批次档 §2.2⑥）；分档 = 工具面 / 遮蔽面，runner 通配 `test/*.test.mjs` 自动收 |
+| D-ST15 | **遮蔽面用例落新档**（`settings-mask.test.mjs`——**已落批内件（#677）**：`docs/batches/2026-09-30-crossline-clearance.test.mjs` 遮蔽面格；**单测树重建时回迁该档形**） | 既有 `thincoder-cli/test/settings.test.mjs`（**已退役**——测试树全清 2026-09-28）**480 行** + 遮蔽面用例 **≈ 95 行** ⇒ **≈ 575** 超 500 行硬限（估算值单源 = 批次档 §2.2⑤；登记面 = 批次档 §2.2⑥）；分档 = 工具面 / 遮蔽面，runner 通配 `test/*.test.mjs` 自动收 （迁移期引文） |
 | D-ST16 | **`${env:VAR}` 引用形态 = 已受理做**（2026-09-29 provider-config-family 批 · 台账 #57） | 属新增能力（配置内放引用 + 消费侧展开）；机制（解析点 ∕ 生效面 ∕ 语义 ∕ 与遮蔽关系）单源 = `doc:CONFIG.md:§6.3`——本档遮蔽谓词零改（引用串同住敏感值位 ⇒ 族遮罩内）；解析产物永不回显 |
 | D-ST17 | **段内复合段名入遮 = 采纳**（camelCase / 前缀复合敏感名——C2 裁定 · #677） | 谓词扩段内边界（形如 `refreshToken` / `clientSecret` / `privateKey`）；假阳取舍 = 方向安全（只丢值、键名仍可见）；**先红夹具格** + 候选 C2 结清（§2.4 / §4 同拍——实施清单 I13） |
 
@@ -146,7 +146,7 @@ VSC 端测试坐标 = `thincoder-vscode/test/settings-tool.test.mjs`（9 例—�
 | 旧档位置 | 内容 | 何故不并 |
 |---|---|---|
 | 旧档头部状态行（第 8 批 / 第 13 批在途与评审轮次） | 时点状态行 + 批序 | 批次语境——现行态已入 §2–§4 |
-| 旧档 §5 T-S1 用例表 + **更正注**（「`test/settings.test.mjs` 从未落地——声称不实」） | 历史声称表 + 勘察实证更正 | 一次性材料——**更正结论保留于此**：T-S1 表为历史声称，实际覆盖 = T-S2 回归网（§5 坐标行）；诚实记录不抹 |
+| 旧档 §5 T-S1 用例表 + **更正注**（「`settings 用例档` 从未落地——声称不实」） | 历史声称表 + 勘察实证更正 | 一次性材料——**更正结论保留于此**：T-S1 表为历史声称，实际覆盖 = T-S2 回归网（§5 坐标行）；诚实记录不抹 |
 | 旧档 §5.1 T-S2 用例表（T-S2.1–T-S2.35 + 覆盖映射） | 用例编号集 | 批次材料——行为面由现行测试族覆盖；测试缝双缝纪律（写侧假体 + 读侧 `_setConfigPathForTest` **必须同指临时文件**，防读写真实用户配置）入 §2.6 （机检豁免——用例退场登记） |
 | 旧档 §6 AC-S1 / AC-S2、§9.6 AC-S3 | 单批验收清单 | 批次材料——机制级判据已提炼入 §2.9 / §4 |
 | 旧档 §8.3 逐字锁断言 / §8.6 工具描述逐字新句 | 实现照抄稿 / 模型可见文案逐字稿 | 逐字文案 = 产品代码面（驻 `tool-docs/settings.md`）——本档只留语义判据（§2.6 / §4 边界行） |

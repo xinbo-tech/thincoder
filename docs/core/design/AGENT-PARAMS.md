@@ -78,7 +78,7 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 ### 6.2 测试面
 
 - 评审超时：配置覆盖 / 回退 / 非法值回退三态（`thincoder-cli/test/` 的 advisor 族用例）。
-- `maxTurns`：`thincoder-core/test/config.test.mjs:37` 断言 DEFAULTS 合并后 `maxTurns === 200`。
+- `maxTurns`：`thincoder-core/test/config.test.mjs:37` 断言 DEFAULTS 合并后 `maxTurns === 200`。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 ### 6.3 VSC 端接线（B 式并入 · 实核 as-of 2026-09-15）
 
@@ -127,7 +127,7 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 | 旧档面 | 内容 | 何故不并（去向 / 触发） |
 |---|---|---|
 | 旧档 §3 表内「相关设计文档 MODIFY」 | 泛指多档的同步改动 | 无具体落点——现状散档已各自收正 |
-| 旧档引用的 `test/advisor.test.mjs` / `test/agent.test.mjs` | 已删测试（存量测试清零批） | 陈旧坐标——不并；现行测试面见 §6.2 |
+| 旧档引用的 `test/advisor.test.mjs` / `test/agent.test.mjs` | 已删测试（存量测试清零批） | 陈旧坐标——不并；现行测试面见 §6.2 （迁移期引文） |
 | VSC 端「30 硬帽」 | 端特有问题 | **已并入（批 6）**——§4 注 + §6.3 行 5（VSC 侧现状 = 无 `Math.min` 截断） |
 | VSC 旧档 `AGENT-PARAMS-TUNING.md` §3 受影响文件表 · §4 AC1–AC9 · 变更记录流水 | 批次材料（单次改动清单 / 一次性验收 / 历史流水） | **不并**——现行坐标入 §6.3；机制约束已入 §2–§4（(d) 类） |
 

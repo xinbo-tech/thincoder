@@ -242,7 +242,7 @@
 - **退化形态处置（设计裁定，§4 D-9）**：枚举在场但**全部成员为 `"none"`** ⇒ 同落 `"high"`（与无枚举同型），
   不抛错、不留空。本批四新档均有非 `none` 成员，该形态仅防御面。
 - **测试落点**：`applyThink` 改具名导出（行为零变化，供注入合成 spec）；新增
-  `thincoder-cli/test/cmd-think.test.mjs`（批内新增，已落；ctx 直驱形态同 `thincoder-cli/test/cmd-eng.test.mjs`；
+  `thincoder-cli/test/cmd-think.test.mjs`（批内新增，已落；ctx 直驱形态同 `thincoder-cli/test/cmd-eng.test.mjs`；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
   runner 自动收集 `test/*.test.mjs`，`thincoder-cli/test/run.mjs:3`）。判据 = §5 A-16 · 用例 T-14；`"none"` 面的判据 / 用例 = §5 A-18 / T-16。
 - **枚举形状锚（保留）**：T-12 继续钉「登记顺序 = 服务端原文、首项 `"none"`」（D-5 证据登记忠实性）。
 - **补枚举的另一面效果**：`/think effort high` 从「必然枚举校验抛错」转为正常工作（修复）；
@@ -258,13 +258,13 @@
   判据补发 `reasoning_effort:"none"`）⇒ 判据不区分两形态（§5 A-18 · 用例 T-16 + T-9 第四态）。
 - **回执面第三处落位（同裁定② · 实施侧第三处改动）**：循环回执公式 `thincoder-cli/src/tui/cmd-think.mjs:86-87` 补 `cur.thinking !== null` 守卫
   ——缺守卫时 effort 型 off 后回执误报 `Thinking: ON`（与菜单头 `:48-49` 同式单一口径）；出处 = 批次档 §5.4 裁定② 行（`docs/batches/2026-09-20-qwen-flash-specs.md:435` · `:445`）。
-  测试射程 = 本批**零**（`thincoder-cli/test/cmd-think.test.mjs` 仅直驱 `applyThink`，无 `handleThinkCommand` 驱动用例）⇒ 补驱动用例 = 父侧裁定**出批登台账**，不并入本批交付面。
+  测试射程 = 本批**零**（`thincoder-cli/test/cmd-think.test.mjs` 仅直驱 `applyThink`，无 `handleThinkCommand` 驱动用例）⇒ 补驱动用例 = 父侧裁定**出批登台账**，不并入本批交付面。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 - **面 3（修正轮新增 · 裁定①）：VSC picker 归一 = `effortDefault` 优先**。`thincoder-vscode/webview/model-picker.js`
   两处归一（`:85` `selectModel` · `:123` `handleModelsMessage`）取值式现 = §15.4 单源规则（`effortSelection` 三支优先序：已存值 ∈ 枚举 > 注册默认 ∈ 枚举 > **中性档 `null`**）——
   **不读 `effortDefault` 时**，四新档枚举首项 `"none"` 会把「当前档 ∉ 新枚举」的归一落到关思考（静默 off）；
   同根面 = `thincoder-vscode/webview/settings-state.js` 兜底链（AC-13 逐档登记链所依赖；该链已随 §14 由 `effortSelectView` 占位规则取代——§14.5 / §14.10），`effortDefault` 来源 =
   `thincoder-vscode/src/extension/provider-probe-window.mjs:67`。已随实施轮落盘（§3 披露面行）；用例面 T-17
-  = `thincoder-vscode/test/model-picker-fallback.test.mjs`（② 负控随 §15.4 改判：无注册默认 ⇒ 中性档，**不得**落 `levels[0]`）。
+  = `thincoder-vscode/test/model-picker-fallback.test.mjs`（② 负控随 §15.4 改判：无注册默认 ⇒ 中性档，**不得**落 `levels[0]`）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 - **`settings-state.js` 兜底链面（AC-13 登记链所依赖）**：`effortDefault || levels[0] || null` 形式与面 3 取值式原同源（**两取值式随 §15.4 收正**——`effortDefault || levels[0]` 形为被否形）
   ⇒ 触发路径由 AC-13 逐档登记消除；A-13 不是体验项，而是防默认值退化的护栏（VSC 端壳 extension 面零改）。**该链本体已随 §14 批收正**：`defaultEffortFor` 并入 `effortSelectView` 删除、占位「—」取代首项回落（§14.5 / §14.10）。
 
@@ -274,34 +274,34 @@
 |---|---|---|---|
 | `thincoder-core/model-specs.mjs` | 253 | 已落（计划 +18 / −4） | 4 新行（每行配 2–3 行证据行注）+ 4 行删除（preview / qwen-max / qwen-plus / 泛前缀 `qwen`）——无新字段、无新导出 |
 | `thincoder-vscode/src/specs.mjs` | 84 | 已落（计划 +5） | `EFFORT_DEFAULT_PREFIXES`（表体 `:22-36`，匹配器 `:38-52`）**补 5 档**（各自独立键、不用族前缀，§1 第 4 项 / A-13）——AC-13。【现行数 84 = 2026-09-20 修正轮实读（split 口径，见本节末口径注）；本批补 5 档落位前该档为 78（本批前 61，经并行「显示面消差批」）】 |
-| `thincoder-vscode/test/image-downgrade.test.mjs` | 253 | 已落（计划 +12） | VSC 端差表（`thincoder-vscode/src/specs.mjs`）的用例档就在此文件（T36 / W16 / T38 三段），但原仅测 deepseek / glm / kimi 族，qwen 档的 `EFFORT_DEFAULT_PREFIXES` 展开不在射程（补行盲区）⇒ A-13 的测试落点 = 本文件新增用例（T-15），现已落 |
-| `thincoder-core/test/model-specs.test.mjs` | 395 | 已落（计划 +80 / −2） | 新用例族：四档逐字段、两 flash 档枚举不等、托底删除后果（T-3/T-4）、退役名遮蔽与退化（T-5/T-6）、既有族零回归；**`:29` 一行删除**（`cacheMode` 断言移出用例面，§4 D-10 / T-13）|
-| `thincoder-core/test/provider-merge.test.mjs` | 307 | 已落（计划 +~4 / −0；渠道接入批微收尾轮 #12 补落） | `enable_thinking` 三态对两新档（已落，A-7）；T-9 第四态已落（`:216-218`，同携态 ⇒ `false`，裁定② · A-18）；现行数含并行渠道批 B-1…B-6 增量 |
+| `thincoder-vscode/test/image-downgrade.test.mjs` | 253 | 已落（计划 +12） | VSC 端差表（`thincoder-vscode/src/specs.mjs`）的用例档就在此文件（T36 / W16 / T38 三段），但原仅测 deepseek / glm / kimi 族，qwen 档的 `EFFORT_DEFAULT_PREFIXES` 展开不在射程（补行盲区）⇒ A-13 的测试落点 = 本文件新增用例（T-15），现已落 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-core/test/model-specs.test.mjs` | 395 | 已落（计划 +80 / −2） | 新用例族：四档逐字段、两 flash 档枚举不等、托底删除后果（T-3/T-4）、退役名遮蔽与退化（T-5/T-6）、既有族零回归；**`:29` 一行删除**（`cacheMode` 断言移出用例面，§4 D-10 / T-13） （迁移期引文） |
+| `thincoder-core/test/provider-merge.test.mjs` | 307 | 已落（计划 +~4 / −0；渠道接入批微收尾轮 #12 补落） | `enable_thinking` 三态对两新档（已落，A-7）；T-9 第四态已落（`:216-218`，同携态 ⇒ `false`，裁定② · A-18）；现行数含并行渠道批 B-1…B-6 增量 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `thincoder-cli/src/tui/cmd-think.mjs` | 152 | 已落（修复轮实读 152） | `:131` on 默认档 = 首个非 `"none"` 档（§2.8-1 · 批次档 §1.8-②，已落）；`:104` effort 分支 `"none"` ⇒ 显式 off 标记（§2.8-2 · A-18，已落）；`applyThink` 具名导出（已落）；`:86-87` 循环回执守卫（裁定② 第三处 · §2.8 面 2 末条，已落）|
-| `thincoder-cli/test/cmd-think.test.mjs` | 154（批内新增） | 已落（修复轮实读 154） | T-14 已落（四新档 `"minimal"` / 退化形 `["none"]` ⇒ `"high"` / 无枚举 ⇒ `"high"`；形态同 `thincoder-cli/test/cmd-eng.test.mjs`）；**T-16 已落**（实现侧标签 =「修复轮 #11」×3 段，映射注见 §6）|
+| `thincoder-cli/test/cmd-think.test.mjs` | 154（批内新增） | 已落（修复轮实读 154） | T-14 已落（四新档 `"minimal"` / 退化形 `["none"]` ⇒ `"high"` / 无枚举 ⇒ `"high"`；形态同 `thincoder-cli/test/cmd-eng.test.mjs`）；**T-16 已落**（实现侧标签 =「修复轮 #11」×3 段，映射注见 §6） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `docs/core/design/PROVIDER.md` | 445 | 已由设计轮落笔（+15 / −2） | 登记三件事：`enable_thinking` 与 effort 两机制并存 · 泛前缀托底行取消后的退化后果 · qwen 族模态与音频未接入（§7「不扩 `modalities` 结构化字段」条）——**该档属设计轮笔（D1），不在 eng-coder 实施面** |
 | `thincoder-vscode/webview/model-picker.js` | 149 | 已落（+4 / −1） | **本批回归修复 · 披露面**（§2.8-3 · A-17 · 裁定①）：两处归一改 `effortDefault` 优先（`:85` / `:123`；对端同根面 = `thincoder-vscode/webview/settings-state.js` 兜底链——已随 §14 改形）——补枚举使 `levels[0]` 对四新档落 `"none"`；**该取值式随 §15.4 收正**（`effortDefault` 优先为被否形） |
-| `thincoder-vscode/test/model-picker-fallback.test.mjs` | 221 | 已落（修复轮实读 221） | **本批回归修复 · 测试面**：T-17 已落（实现侧标签 =「③」×2 用例，映射注见 §6）；既有 ② 用例标题/注释按新语义收正（fixture 无该档 ⇒ 断言值不变）|
+| `thincoder-vscode/test/model-picker-fallback.test.mjs` | 221 | 已落（修复轮实读 221） | **本批回归修复 · 测试面**：T-17 已落（实现侧标签 =「③」×2 用例，映射注见 §6）；既有 ② 用例标题/注释按新语义收正（fixture 无该档 ⇒ 断言值不变） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 
 **行数上限（2026-09-20 修复轮后复读 · split 口径）**：本表产品码/测试档读数 = 253 / 84 / 253 / 395 / 304 / 152 / 154 / 149 / 221（行序同上；两项 VSC 行 = 修正轮新增行）⇒ 本表 = 档内**2026-09-20 修复轮复读时点**的行数权威面（§2.1「现 210 行」等 = 落位前 as-of 读数，按变更记录 2026-09-20 修复轮条⑤不追改）；**2026-09-25 最新读数面 = §14.6**。
-本批**自身**增删零越线；**两档现越 300 软线**（`thincoder-core/test/model-specs.test.mjs` 395 · `thincoder-core/test/provider-merge.test.mjs` 304）——增量均来自并行「渠道接入批」在途落盘（`[onboard]` / `B-1…B-6` 段），**拆分义务归该批**；硬限 500 未越。
-两档的软线登记已由该批落笔：`SOFT_LINE_REGISTRY` 表体见 `thincoder-core/test/core-hygiene.test.mjs:55`（注释 `:38-44`）⇒ 2026-09-20 修复轮实跑该用例**绿**（`pass 5 · fail 0`，工作区在途读数）；`docs/core/design/PROVIDER.md` 445 是文档，不受此类线限。
-越线两档的**拆分计划**收口落点 = 渠道接入批设计面（`CORE-UNIFICATION.md` §2.8.1 子表行 12 / 13——不拆档——单档内聚 + 消解窗口；其节 §9.7 同指）；本修正轮对两档自身零加行；`thincoder-vscode/test/model-picker-fallback.test.mjs`（复读 221）仍 < 300。
+本批**自身**增删零越线；**两档现越 300 软线**（`thincoder-core/test/model-specs.test.mjs` 395 · `thincoder-core/test/provider-merge.test.mjs` 304）——增量均来自并行「渠道接入批」在途落盘（`[onboard]` / `B-1…B-6` 段），**拆分义务归该批**；硬限 500 未越。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+两档的软线登记已由该批落笔：`SOFT_LINE_REGISTRY` 表体见 `thincoder-core/test/core-hygiene.test.mjs:55`（注释 `:38-44`）⇒ 2026-09-20 修复轮实跑该用例**绿**（`pass 5 · fail 0`，工作区在途读数）；`docs/core/design/PROVIDER.md` 445 是文档，不受此类线限。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+越线两档的**拆分计划**收口落点 = 渠道接入批设计面（`CORE-UNIFICATION.md` §2.8.1 子表行 12 / 13——不拆档——单档内聚 + 消解窗口；其节 §9.7 同指）；本修正轮对两档自身零加行；`thincoder-vscode/test/model-picker-fallback.test.mjs`（复读 221）仍 < 300。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
-**收口注（2026-09-20 · 渠道接入批收口轮）**：两越线测试档收口复读 = `test/model-specs.test.mjs` **415** · `test/provider-merge.test.mjs` **307**（`split` 口径）；本档「行数上限」段读数（395 / 304）= 修复轮 as-of（不追改）；两档拆分义务收口 = `CORE-UNIFICATION.md` §2.8.1 子表行 12 / 13。
+**收口注（2026-09-20 · 渠道接入批收口轮）**：两越线测试档收口复读 = `test/model-specs.test.mjs` **415** · `test/provider-merge.test.mjs` **307**（`split` 口径）；本档「行数上限」段读数（395 / 304）= 修复轮 as-of（不追改）；两档拆分义务收口 = `CORE-UNIFICATION.md` §2.8.1 子表行 12 / 13。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 `thincoder-core/auto-think.mjs` / `thincoder-core/agent/spawn-child.mjs` / `thincoder-core/config.mjs` /
 `thincoder-core/tools/index.mjs` /
 `thincoder-core/provider/normalize.mjs` / `thincoder-vscode/src/extension/provider-probe-window.mjs` **零改动**（消费方，§2.5 / §2.7）。
 
 **交付面已对齐（评审发现 #1 · 修正轮更新）**：本表 **10 行** = 九条产品码/测试文件 + `docs/core/design/PROVIDER.md`（设计轮笔，D1）；
-修正轮 +2 行 = `thincoder-vscode/webview/model-picker.js` + `thincoder-vscode/test/model-picker-fallback.test.mjs`
+修正轮 +2 行 = `thincoder-vscode/webview/model-picker.js` + `thincoder-vscode/test/model-picker-fallback.test.mjs`（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 （**本批回归修复 · 披露面**，§2.8-3 / A-17 / 裁定①，两档均已落盘）。
-**九条产品码/测试文件的落位实况（收口复读 2026-09-20）**：九条**全部落盘**（逐行状态见本表「预期增删」列）；原「唯一未落项 = `provider-merge.test.mjs` 的 T-9 第四态」已由 qwen 批 §5.6 微收尾轮 #12 补落（`thincoder-core/test/provider-merge.test.mjs:216-218`）；该档收口实读 **307**（`split` 口径 · `wc -l` 306）。
+**九条产品码/测试文件的落位实况（收口复读 2026-09-20）**：九条**全部落盘**（逐行状态见本表「预期增删」列）；原「唯一未落项 = `provider-merge.test.mjs` 的 T-9 第四态」已由 qwen 批 §5.6 微收尾轮 #12 补落（`thincoder-core/test/provider-merge.test.mjs:216-218`）；该档收口实读 **307**（`split` 口径 · `wc -l` 306）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 批次档 §1.5 交付面**列八项**（第八项 = `docs/core/design/PROVIDER.md` 登记面）；§4 批准范围行明记**实施面 = 七条**（不含 `PROVIDER.md`）
 ⇒ 修正轮两行是否计入交付面，请父侧裁定后同步 §1.5 / §2.2 / §4 三处计数（已入上报；本档不越权改批档面）。
 **A-17 / A-18 出处注**：两判据的裁定出处 = 批次档 **§5.4 顾问代码评审 🟡①②**（原记「§3 轮次 1」系误指——§3 轮次 1 = 设计评审 #1…#10），**§1 未登记** ⇒ 三方链的需求环暂由 §5.4 承担；建议父侧补登 §1（已入上报）。
 批次档 §2.2 = **设计轮八条表体**（前七条 = eng-coder 实施面 + `PROVIDER.md` = 设计轮笔档）；修正轮两行
-（`thincoder-vscode/webview/model-picker.js` · `thincoder-vscode/test/model-picker-fallback.test.mjs`）入本表后
+（`thincoder-vscode/webview/model-picker.js` · `thincoder-vscode/test/model-picker-fallback.test.mjs`）入本表后（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 交付面 = **十行**——该两行在批次档侧见 §2 本轮回执与变更记录 2026-09-20 修正轮条②（§2.2 = 出批档笔、append-only，不回改）；
 批次档 §1.5 括注仍列 `docs/core/design/PROVIDER.md` 登记面属**需求原文保持**（不改 §1）。
 上报项编号口径（防与批次档 §2.4 同号异事）：本档不新设 R 号——A-16「属新增断言非回归」已写于本档 §5 A-16 行内；
@@ -338,10 +338,10 @@
 | A-10 | 三端测试全绿 = 门禁读数：核 `node test/run.mjs` · CLI `npm test` · VSC `node test/run.mjs` 均 `fail 0`；用例面含「两 flash 档枚举不等」差异断言（A-3） | §1.2 AC-10（项目纪律「每次改动必须跑起来验证」；读数落批次档 §5） |
 | A-11 | `node scripts/doc-check.mjs` ⇒ 悬空 0（实跑，闸 OK）· 行宽：本批射程零新增；全仓残余 2 行 = `docs/core/requirements/AGENT-LOOP.md:163/168`（需求档非本批笔 ⇒ 上抛） | §1.2 AC-11 |
 | A-12 | 两新档各得独立行：枚举 7 档含 `"max"`、`maxOutput 131_072`、`multimodal true`、context 按 §2.2、`thinking === true`（实测级，批次档 §1.8-①） | §1.7(B) AC-12 + §1.8-① |
-| A-13 | `EFFORT_DEFAULT_PREFIXES` 收录**全部在册 qwen 档**（六档 = 四新档 + `qwen3.7-max` + `qwen3.8-max`；表体 `thincoder-vscode/src/specs.mjs:22-36`，批后实读六档在册）⇒ 本批**补 5 档**：两 max 档→`xhigh`、四新档→`high`；且无族前缀条目。**测试落点** = `thincoder-vscode/test/image-downgrade.test.mjs` 新增用例（T-15）——该档现有用例不覆盖 qwen ⇒ **不得以「已有用例」为凭据声称已测**（§3）| §1.7 AC-13（取值裁定见 §2.2 / D-5；评审发现 #3；测试落点件来源 = 批次档 §1.10 P-1/P-2/P-3 父侧补裁）|
+| A-13 | `EFFORT_DEFAULT_PREFIXES` 收录**全部在册 qwen 档**（六档 = 四新档 + `qwen3.7-max` + `qwen3.8-max`；表体 `thincoder-vscode/src/specs.mjs:22-36`，批后实读六档在册）⇒ 本批**补 5 档**：两 max 档→`xhigh`、四新档→`high`；且无族前缀条目。**测试落点** = `thincoder-vscode/test/image-downgrade.test.mjs` 新增用例（T-15）——该档现有用例不覆盖 qwen ⇒ **不得以「已有用例」为凭据声称已测**（§3）| §1.7 AC-13（取值裁定见 §2.2 / D-5；评审发现 #3；测试落点件来源 = 批次档 §1.10 P-1/P-2/P-3 父侧补裁） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | A-14 | 逐名处置表 **15 行 = 18 具名 + 1 类未知名**穷举 + 测试断言退化形状已知（`specForModel("qwen3.7-plus").context === 128_000`）；未知 qwen 名经 `warnUnknownModel` 告警一次 | §1.7(A) AC-14 |
 | A-15 | 退役名查表结果：`specForModel("qwen3.8-max-preview")` **同一对象** 于 `specForModel("qwen3.8-max")`（遮蔽不退化）；`specForModel("qwen-max")` `context === 128_000`（退化认账） | §1.6 处置裁定 ①② |
-| A-16 | CLI `/think on` 后 `cur.reasoningEffort`：四新档 ⇒ `"minimal"`（首个非 `"none"` 档）；无枚举 ⇒ `"high"`（既有回退零变化）；合成退化枚举 `["none"]` ⇒ `"high"`；三态均**不得**写入 `"none"`，且 `thinking` 显式 off 标记被清除。【前提】本判据属**新增断言**而非回归断言（落地载体 = 批内新增档 `thincoder-cli/test/cmd-think.test.mjs`，已落）（批次档 §2 R-12）| §1.8-②（升格必修）+ §2.8-1 / D-9 |
+| A-16 | CLI `/think on` 后 `cur.reasoningEffort`：四新档 ⇒ `"minimal"`（首个非 `"none"` 档）；无枚举 ⇒ `"high"`（既有回退零变化）；合成退化枚举 `["none"]` ⇒ `"high"`；三态均**不得**写入 `"none"`，且 `thinking` 显式 off 标记被清除。【前提】本判据属**新增断言**而非回归断言（落地载体 = 批内新增档 `thincoder-cli/test/cmd-think.test.mjs`，已落）（批次档 §2 R-12）| §1.8-②（升格必修）+ §2.8-1 / D-9  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | A-17 | picker 归一：条目载 `effortDefault` 时「当前档 ∉ 枚举」取 `effortDefault` 而非 `levels[0]`（`thincoder-vscode/webview/model-picker.js:85` · `:123`；无注册默认 ⇒ 中性档——**不得**回落 `levels[0]`，判据单源 = §15.4）⇒ qwen 四新档不得被归一成关思考 | 裁定①（批次档 §5.4 顾问代码评审 🟡①）+ §2.8-3；用例 T-17（② 负控随 §15.4 改判） |
 | A-18 | CLI `/think effort none` ⇒ 关思考：终态 `thinking === null` ∧ `reasoningEffort ∈ {"none", undefined}` ⇒ 载荷不得同携 `enable_thinking:true` + `reasoning_effort:"none"`，面板不得显 `Thinking: ON`（`thincoder-cli/src/tui/cmd-think.mjs:48-49` 菜单头 · `:86-87` 循环回执公式 = 同式 `!== null` 守卫；后者本批零测试射程 ⇒ 补用例归台账）| 裁定②（批次档 §5.4 顾问代码评审 🟡②）+ §2.6-2 / §2.8-2；用例 T-16 + T-9 第四态 |
 
@@ -367,25 +367,25 @@
 | T-6 | 正常：两新档独立行（AC-12） | `specForModel("qwen3.8-omni-flash")` / `("qwen3.8-27b")` | 枚举 7 档含 `max`、`maxOutput 131_072`、`multimodal true`、`thinking true`（§1.8-① 实测）、context 分别 1M / 262 144 |
 | T-7 | 边界：模态位语义单一（§2.7） | 全表扫描 | 任何行**不得出现 `modalities` 键**（本表模态面只有 `multimodal` 布尔一字段）；`multimodal` 仅 true/undefined 两态 |
 | T-8 | 错误：effort 越界抛错门 | `qwen3.7-flash` + `reasoningEffort:"max"` 组请求体 | 抛 `not supported by model`（3.7-flash 枚举无 `max`，A-3 反向门）；落点在 `thincoder-core/provider/core.mjs:198-203`，按既有装配导出面调用，不新增导出 |
-| T-9 | 正常：`enable_thinking` 白名单零回归 + 同携态（A-7） | `resolveEnableThinking` **四态**：`{thinking:null}` / `{reasoningEffort:"high"}` / `{}` / **同携态 `{thinking:null, reasoningEffort:"none"}`** × 两新档 | `false` / `true` / `undefined` / **`false`**（判据顺序见 §2.6-2；风格同 `thincoder-core/test/provider-merge.test.mjs`）|
+| T-9 | 正常：`enable_thinking` 白名单零回归 + 同携态（A-7） | `resolveEnableThinking` **四态**：`{thinking:null}` / `{reasoningEffort:"high"}` / `{}` / **同携态 `{thinking:null, reasoningEffort:"none"}`** × 两新档 | `false` / `true` / `undefined` / **`false`**（判据顺序见 §2.6-2；风格同 `thincoder-core/test/provider-merge.test.mjs`） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | T-10 | 正常：VSC 默认档（AC-13） | VSC `specForModel(四档 + qwen3.7-max / qwen3.8-max).reasoningEffortDefault` | 四新档 `high`；两 max 档 `xhigh`（`EFFORT_DEFAULT_PREFIXES` 命中端差行返拷贝，`thincoder-vscode/src/specs.mjs:55-59`） |
 | T-11 | 边界：既有族零回归（§1.3） | deepseek/kimi/glm/gpt/MiniMax/mimo 各一代表名 | 字段逐字不变（防误删误改行） |
 | T-12 | 边界：枚举登记形状锚（§4 D-5） | 四新档 `reasoningEffortEnum[0]` 与末位成员 | 首项均为 `"none"`；3.7-flash 末位 `xhigh`、3.8-flash 与两新档末位 `max` ⇒ 钉住「登记顺序 = 服务端原文顺序」的证据忠实性——有人按强度序重排即红，必须回 §4 决策面重裁 |
 | T-13 | 边界：`cacheMode` 系信息性字段（§4 D-10）| ① 全仓搜 `cacheMode`：除 `thincoder-core/model-specs.mjs` 与 `thincoder-vscode/src/specs.mjs`（表自身 + 端差拷贝）外，出现于**任何判据位置** ⇒ 红；② 本批用例档新增 `cacheMode` 取值断言 ⇒ 红 | 零判据消费点 ⇒ 四新行取 `"none"` 不影响任何行为；无消费者即不断言（防把死字段当能力位钉住）|
-| T-14 | 正常＋边界：CLI `/think on` 首个非 `none` 档（§2.8 / A-16）| 注入合成 spec 直驱 `applyThink`：四新档枚举 / 退化枚举 `["none"]` / 无枚举 | 四新档 ⇒ `reasoningEffort === "minimal"`；退化形与无枚举 ⇒ `"high"`；三态均不写入 `"none"`、`thinking` 标记已清除（批内新增文件 `thincoder-cli/test/cmd-think.test.mjs`——收口实读 154 行）|
-| T-15 | 正常：VSC 端差默认档覆盖 **qwen 全档**（A-13）| VSC `specForModel` 逐档：四新档 + `qwen3.7-max` + `qwen3.8-max`；另加「无族前缀条目」结构断言 | 四新档 → `high`、两 max 档 → `xhigh`；`EFFORT_DEFAULT_PREFIXES` 任一键均没有同为键前缀的兄弟（防族遮蔽）。落点 = `thincoder-vscode/test/image-downgrade.test.mjs` 新增段 |
-| T-16 | 正常＋边界：CLI `/think effort none` 关思考（§2.8-2 / A-18）| 注入合成 spec 直驱 `applyThink`：`{action:"effort", level:"none"}` 于「有档无标记」态 | 终态 `thinking === null`；`reasoningEffort ∈ {"none", undefined}`（两写法均须 `resolveEnableThinking(...) !== true`）；载荷无矛盾对；落点 = `thincoder-cli/test/cmd-think.test.mjs` |
-| T-17 | 正常＋边界：VSC picker 归一 `effortDefault` 优先（§2.8-3 / A-17）| `model-picker.js` 归一函数直驱：① 条目载 `effortDefault:"high"` + 枚举含 `"none"`，当前档 ∉ 枚举；② 负控 = 条目**无** `effortDefault` | ① 归一取 `"high"`（不得落 `"none"`）；② **中性档**（不落 `levels[0]`——与 §15.7 E-8 同判据，§15.4 改判）；落点 = `thincoder-vscode/test/model-picker-fallback.test.mjs` |
+| T-14 | 正常＋边界：CLI `/think on` 首个非 `none` 档（§2.8 / A-16）| 注入合成 spec 直驱 `applyThink`：四新档枚举 / 退化枚举 `["none"]` / 无枚举 | 四新档 ⇒ `reasoningEffort === "minimal"`；退化形与无枚举 ⇒ `"high"`；三态均不写入 `"none"`、`thinking` 标记已清除（批内新增文件 `thincoder-cli/test/cmd-think.test.mjs`——收口实读 154 行） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| T-15 | 正常：VSC 端差默认档覆盖 **qwen 全档**（A-13）| VSC `specForModel` 逐档：四新档 + `qwen3.7-max` + `qwen3.8-max`；另加「无族前缀条目」结构断言 | 四新档 → `high`、两 max 档 → `xhigh`；`EFFORT_DEFAULT_PREFIXES` 任一键均没有同为键前缀的兄弟（防族遮蔽）。落点 = `thincoder-vscode/test/image-downgrade.test.mjs` 新增段  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| T-16 | 正常＋边界：CLI `/think effort none` 关思考（§2.8-2 / A-18）| 注入合成 spec 直驱 `applyThink`：`{action:"effort", level:"none"}` 于「有档无标记」态 | 终态 `thinking === null`；`reasoningEffort ∈ {"none", undefined}`（两写法均须 `resolveEnableThinking(...) !== true`）；载荷无矛盾对；落点 = `thincoder-cli/test/cmd-think.test.mjs`  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| T-17 | 正常＋边界：VSC picker 归一 `effortDefault` 优先（§2.8-3 / A-17）| `model-picker.js` 归一函数直驱：① 条目载 `effortDefault:"high"` + 枚举含 `"none"`，当前档 ∉ 枚举；② 负控 = 条目**无** `effortDefault` | ① 归一取 `"high"`（不得落 `"none"`）；② **中性档**（不落 `levels[0]`——与 §15.7 E-8 同判据，§15.4 改判）；落点 = `thincoder-vscode/test/model-picker-fallback.test.mjs`  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 
-**实施标签映射注（修复轮实读）**：A-18 / A-17 的用例在实施侧未挂 T- 号——`thincoder-cli/test/cmd-think.test.mjs` 以「修复轮 #11」×3 段承载 T-16 语义；`thincoder-vscode/test/model-picker-fallback.test.mjs` 以「③」×2 用例承载 T-17 语义。用例号 = 本档判据面口径（§5 A-17 / A-18）；实施侧标签仅作对照，判定以语义覆盖为准。
+**实施标签映射注（修复轮实读）**：A-18 / A-17 的用例在实施侧未挂 T- 号——`thincoder-cli/test/cmd-think.test.mjs` 以「修复轮 #11」×3 段承载 T-16 语义；`thincoder-vscode/test/model-picker-fallback.test.mjs` 以「③」×2 用例承载 T-17 语义。用例号 = 本档判据面口径（§5 A-17 / A-18）；实施侧标签仅作对照，判定以语义覆盖为准。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
-**测试面既有依赖核查**（已逐条读到码面，结论 = 除下行外无需改动；**另**：`thincoder-vscode/test/model-picker-fallback.test.mjs` 为修正轮新增用例落点，其既有 ② 用例标题/注释按新归一语义收正——见 §3 披露面行 / T-17）：
-`thincoder-core/test/model-specs.test.mjs:22-31` 的 `deepEqual(spec, specForModel(FLASH))` 是 **deepseek 族内两行互比**，
-不受 qwen 面影响；`thincoder-core/test/tool-registry.test.mjs:37-38` 的 fixture 实测为
+**测试面既有依赖核查**（已逐条读到码面，结论 = 除下行外无需改动；**另**：`thincoder-vscode/test/model-picker-fallback.test.mjs` 为修正轮新增用例落点，其既有 ② 用例标题/注释按新归一语义收正——见 §3 披露面行 / T-17）：（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+`thincoder-core/test/model-specs.test.mjs:22-31` 的 `deepEqual(spec, specForModel(FLASH))` 是 **deepseek 族内两行互比**，（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+不受 qwen 面影响；`thincoder-core/test/tool-registry.test.mjs:37-38` 的 fixture 实测为（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 `TEXT_ONLY_MODEL = "qwen3.7-max"` / `VISION_MODEL = "qwen3.8-max"`——**两者均有独立行**（`:64`/`:74`），
 不借 `qwen` 托底 ⇒ 删托底行**不破该测试**（批次档 §2 R-5 已消解）。
 
-**删除行账（评审 F-3）**：本批唯一的既有用例删除 = `thincoder-core/test/model-specs.test.mjs:29` 的
+**删除行账（评审 F-3）**：本批唯一的既有用例删除 = `thincoder-core/test/model-specs.test.mjs:29` 的（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 `assert.equal(spec.cacheMode, "auto", …)`（deepseek 族现有取值零变 ⇒ 删它不掩盖回归；保留 = 按 T-13 / D-10 与死字段共谋），
 计 §3 的 `−2`（该行 + 其相邻空行）；除此之外本批对既有用例**零删**。
 
@@ -540,7 +540,7 @@ VSC 探测下拉该两名的档位枚举空（`thincoder-vscode/src/extension/pr
 （旧值从未在规格表 = 预置/表漂移；新值实测在册，旧值与动因 = 批次档 §1.2–§1.3）。**收口追注（2026-09-20 · 批次档 §5.4 DR-5；顾问 🔵⑤ 同指）**：该行
 `maxTokens` 32768 → **131072**（已落盘——随模型改指同变；新模型实测上限 131072，取值参表内 `kimi` / `qwen` / `mimo` 行）；③ 既有 `hunyuan` 预置（另一主机 `api.hunyuan.cloud.tencent.com`）
 **不动**——本轮未实测该端点。护栏（批次档交付目标「渠道预置/选择面一致」）：新建结构用例
-`thincoder-core/test/config-presets.test.mjs`（批内已建 · 收口实读 52 行）：逐预置 `specMatch(model).matched === true`，
+`thincoder-core/test/config-presets.test.mjs`（批内已建 · 收口实读 52 行）：逐预置 `specMatch(model).matched === true`，（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 已知漂移白名单 = {`hunyuan`, `siliconflow`, `groq`}（设计轮实跑 20 预置命中 4 漂移，`volcengine` 本批出名单；
 白名单只减不增，新增须挂台账待办号）。
 
@@ -591,25 +591,25 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
 
 | 文件 | 现行数 | 预期增删 | 覆盖 |
 |---|---|---|---|
-| `thincoder-core/test/model-specs.test.mjs` | 415 | 已落（计划 +~50；越 300——登记不拆档，见下行数上限段） | A-1..A-12（五名逐字段 · 证据等级行注 · 转售命中面 · 既有族零回归）|
-| `thincoder-core/test/provider-merge.test.mjs` | 307 | 已落（计划 +~50；越 300——登记不拆档；读数含微收尾轮 #12 +3 = T-9 第四态落盘） | B-1..B-6（chat 载荷面 `reasoning_effort`；含 D-14 off 补发与五 guard 零变面、后台路径副作用认账；stubFetch 形态参照 `compress-form.test.mjs:254`）|
-| `thincoder-core/test/config-presets.test.mjs` | 52（批内新增） | 已落（计划 ~+24） | P-2 `tokenhub` 预置逐字段等值 · P-3 预置↔规格漂移白名单护栏（§9.6 D-13 裁定的新建位）· P-4 `volcengine.maxTokens` 随改指模型同变（`131072` = seed-code 实测上限）|
-| `thincoder-cli/test/config-merge.test.mjs` | 217 | 已落（+3 / −3） | P-1 预设数 20→21（`:5` 覆盖注 + `:26` 标题 + `:28` 断言——D3 计数与清单同变）|
-| `thincoder-vscode/test/config-merge.test.mjs` | 182 | 已落（+3 / −3） | 同上（`:4` / `:130` / `:132`）|
+| `thincoder-core/test/model-specs.test.mjs` | 415 | 已落（计划 +~50；越 300——登记不拆档，见下行数上限段） | A-1..A-12（五名逐字段 · 证据等级行注 · 转售命中面 · 既有族零回归） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-core/test/provider-merge.test.mjs` | 307 | 已落（计划 +~50；越 300——登记不拆档；读数含微收尾轮 #12 +3 = T-9 第四态落盘） | B-1..B-6（chat 载荷面 `reasoning_effort`；含 D-14 off 补发与五 guard 零变面、后台路径副作用认账；stubFetch 形态参照 `compress-form.test.mjs:254`） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-core/test/config-presets.test.mjs` | 52（批内新增） | 已落（计划 ~+24） | P-2 `tokenhub` 预置逐字段等值 · P-3 预置↔规格漂移白名单护栏（§9.6 D-13 裁定的新建位）· P-4 `volcengine.maxTokens` 随改指模型同变（`131072` = seed-code 实测上限） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-cli/test/config-merge.test.mjs` | 217 | 已落（+3 / −3） | P-1 预设数 20→21（`:5` 覆盖注 + `:26` 标题 + `:28` 断言——D3 计数与清单同变） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-vscode/test/config-merge.test.mjs` | 182 | 已落（+3 / −3） | 同上（`:4` / `:130` / `:132`） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 - 行数上限（读数 = `split('\n').length`，口径注见上；**2026-09-20 收口复读 · 实施后终态**）：`model-specs.mjs` **253** ·
-  `config-presets.mjs` **50** ⇒ 均低于 300 行软线；**两测试档越线** = `thincoder-core/test/model-specs.test.mjs` **415** ·
-  `thincoder-core/test/provider-merge.test.mjs` **307** ⇒ 处置 = 批次档 §1.10-④ 预裁「**不拆档——单档内聚**」——登记已落
-  （`thincoder-core/test/core-hygiene.test.mjs:55` 两条）；拆分计划落点 = `CORE-UNIFICATION.md` §2.8.1 子表行 12 / 13（含消解窗口）。
+  `config-presets.mjs` **50** ⇒ 均低于 300 行软线；**两测试档越线** = `thincoder-core/test/model-specs.test.mjs` **415** ·（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+  `thincoder-core/test/provider-merge.test.mjs` **307** ⇒ 处置 = 批次档 §1.10-④ 预裁「**不拆档——单档内聚**」——登记已落（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+  （`thincoder-core/test/core-hygiene.test.mjs:55` 两条）；拆分计划落点 = `CORE-UNIFICATION.md` §2.8.1 子表行 12 / 13（含消解窗口）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
   `thincoder-core/provider/core.mjs`（D-14 已落）实 **491**（`wc -l` 口径 = 核内机检口径；`split` 口径 492）越 300 系既有态
   （注册表 `:54` 已登记）⇒ **距 500 硬限余量 9 行** ⇒ 该档后续实质改动时按 `CORE-UNIFICATION.md` §2.8.1 次优先面口径补登拆分计划。
-- **`thincoder-core/test/model-specs.test.mjs` 越 300 软线（已裁已落 · 评审轮 1 #10 连带 · 收口复读）**：设计预估 ~305 ⇒
-  收口实读 **415**（`split` 口径；`wc -l` 414）⇒ 越线成立。机检面 = `thincoder-core/test/core-hygiene.test.mjs:117-131`：
+- **`thincoder-core/test/model-specs.test.mjs` 越 300 软线（已裁已落 · 评审轮 1 #10 连带 · 收口复读）**：设计预估 ~305 ⇒（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+  收口实读 **415**（`split` 口径；`wc -l` 414）⇒ 越线成立。机检面 = `thincoder-core/test/core-hygiene.test.mjs:117-131`：（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
   `walk(ROOT)`（`ROOT` = `thincoder-core/`）递归全树、**无 test 目录排除**，注册键 = 核内相对路径 ⇒ 测试档同受「>300 未登记即红」约束。
   处置 = 批次档 §1.10-④ 预裁「**不拆档——单档内聚**」——登记已落（`SOFT_LINE_REGISTRY:55` 两条）；拆分计划落点 =
   `CORE-UNIFICATION.md` §2.8.1 子表行 12（同 13 = `provider-merge.test.mjs`）；消解窗口 = 越 500 硬限前或该档下次实质改动时。
   本条 = §9.9 清单 8 的收口闭合。
-- **计数同变面（D3 · 「预设 20」在盘 **12** 处——2026-09-20 收口复读逐行实证）**：测试面 **7 处**（CLI `thincoder-cli/test/config-merge.test.mjs:5`/`:26`/`:28`
-  + VSC `thincoder-vscode/test/config-merge.test.mjs:4`/`:130`/`:132` + `thincoder-vscode/test/files.mjs:21`〔本清单补入的第 12 处——批次档 §5.4 DR-3／§5.1 越清单披露〕）· 设计面 **2 处**（`docs/core/design/PROVIDER.md:168` §6.11 +
+- **计数同变面（D3 · 「预设 20」在盘 **12** 处——2026-09-20 收口复读逐行实证）**：测试面 **7 处**（CLI `thincoder-cli/test/config-merge.test.mjs:5`/`:26`/`:28`（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+  + VSC `thincoder-vscode/test/config-merge.test.mjs:4`/`:130`/`:132` + `thincoder-vscode/test/files.mjs:21`〔本清单补入的第 12 处——批次档 §5.4 DR-3／§5.1 越清单披露〕）· 设计面 **2 处**（`docs/core/design/PROVIDER.md:168` §6.11 +（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
   `:274` §6.19——均**设计轮笔已落**〔`:171-175` / `:284-289`〕；§6.19 的计数与来源坐标收正详该节）· 需求档 1 处 `docs/core/requirements/PROJECT.md:30`（**父侧笔已落**——现记 **22**〔provider-config-family 批同步：计数 21→22，2026-09-29〕）· 产品文案 2 处 `thincoder-cli/README.md:18` +
   `thincoder-vscode/README.md:22`（**随实施轮已落**——twenty-one / 21 provider presets；后 provider-config-family 批 21→22 同变，2026-09-29）；归档面（`_archive/**`）不改。另 `thincoder-vscode/README.md:92` 的
   `doubao-pro-32k` 行属 D-13 **改值**同变面（非计数）⇒ 计入 §9.9 上报清单 5（已随实施轮改指新值）。清单已列全（**12** 处），逐处落位见各 file:line。
@@ -633,7 +633,7 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
 
 ### 9.9 用例表（正常 / 边界 / 错误）
 
-规格表面（`thincoder-core/test/model-specs.test.mjs`）：
+规格表面（`thincoder-core/test/model-specs.test.mjs`）：（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 | 号 | 类 | 输入 | 期望 |
 |---|---|---|---|
@@ -650,7 +650,7 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
 | A-11 | 正常 | qwen / deepseek / glm / kimi 既有名回归 | 与 §2.1 表值零变化（防五新行前缀遮蔽波及；`SORTED_SPECS` 降序面）|
 | A-12 | 正常 | hy3 枚举 vs seed 枚举 | 两数组各自 `deepEqual` 七值（同值集）且**行独立**（改一行不动另一行——AC-1/AC-6 判据：受理级 ≠ 校验级，互不污染）|
 
-载荷与渠道面（`thincoder-core/test/provider-merge.test.mjs` 收口实读 **307** 行（`split` 口径；+~50 已落）；`thincoder-core/test/config-presets.test.mjs` 批内已建 · **52** 行）：
+载荷与渠道面（`thincoder-core/test/provider-merge.test.mjs` 收口实读 **307** 行（`split` 口径；+~50 已落）；`thincoder-core/test/config-presets.test.mjs` 批内已建 · **52** 行）：（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 | 号 | 类 | 输入 | 期望 |
 |---|---|---|---|
@@ -660,10 +660,10 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
 | B-4 | 正常 | seed-code + `"max"` | 携 `reasoning_effort:"max"`（七档全通过）|
 | B-5 | 正常 | `hy3` + `thinking:null` 且无 `reasoningEffort`（**D-14 · AC-9**）| 请求体携 `reasoning_effort:"none"`；同一用例内五个 guard 零变面同断：`hy4-preview` + `thinking:null` ⇒ 无该字段（无枚举）/ `hy3` + `reasoningEffort:"low"` ⇒ 只携 `"low"`（显式档优先）/ `qwen3.6-flash` + `thinking:null` ⇒ `enable_thinking:false` 照发且多携 `reasoning_effort:"none"`（同义）/ `kimi-k3`（枚举无 `none`）+ `thinking:null` ⇒ 无该字段 / **`x/hy3`（路由形态名——命名空间剥离后命中 `hy3` 行）+ `thinking:null` ⇒ 无该字段（子句复用 `thincoder-core/provider/core.mjs:196-197` 的 `!isRouter` 门）** |
 | B-6 | 边界 | 后台路径形态：`hy3` + `thinking:null`、无 effort（模拟 `thincoder-core/context.mjs:401` / `thincoder-core/explore-distill.mjs:98` 的 `{...provider, thinking:null}`）| 同样携 `reasoning_effort:"none"` = **认账交付**（§9.6 副作用面：后台调用不再想，与 qwen 侧同方向）——断言防「误当缺陷改掉」|
-| P-1 | 正常 | `Object.keys(PROVIDER_PRESETS).length` | `21`（CLI `thincoder-cli/test/config-merge.test.mjs:28` + VSC `:132` 同批改值，标题「20 条」→「21 条」，文件头覆盖注 `:5` / `:4` 随变）|
+| P-1 | 正常 | `Object.keys(PROVIDER_PRESETS).length` | `21`（CLI `thincoder-cli/test/config-merge.test.mjs:28` + VSC `:132` 同批改值，标题「20 条」→「21 条」，文件头覆盖注 `:5` / `:4` 随变） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | P-2 | 正常 | `PROVIDER_PRESETS.tokenhub` | `baseURL === "https://tokenhub.tencentmaas.com/v1"` + `model === "hy3"`（命中规格行）+ 无 `thinking` / `reasoningEffort` / `maxTokens` 键（D-13「不设 = 不发」）|
 | P-3 | 边界 | 逐预置 `specMatch(p.model).matched` | 除白名单 {`hunyuan`, `siliconflow`, `groq`} 外全部 `true`；`volcengine` 本批出名单（改值后命中）；白名单**只减不增** |
-| P-4 | 正常 | `PROVIDER_PRESETS.volcengine.maxTokens` | `131072`（= seed-code 实测输出上限；随 `model` 改指同变——§9.6 D-13 ② 追注的代码面落点 · 用例 `thincoder-core/test/config-presets.test.mjs:49-51`，批 DR-5 已落）|
+| P-4 | 正常 | `PROVIDER_PRESETS.volcengine.maxTokens` | `131072`（= seed-code 实测输出上限；随 `model` 改指同变——§9.6 D-13 ② 追注的代码面落点 · 用例 `thincoder-core/test/config-presets.test.mjs:49-51`，批 DR-5 已落） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 
 **上报清单（本设计不自修，逐条交父侧）**：
 1. AC-1 在册名已由批次档 §1.8-② 补登为**五名**（`hy3` / `hy3-preview` / `hy4-preview` / seed 两档）——字面缺口闭合
@@ -693,8 +693,8 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
 
    **收口注（2026-09-25 · 承批次档 §3 轮次 2 🟡1）**：端差表现盘 **18 条**（`thincoder-vscode/src/specs.mjs:22-41`——本条「`:22-36` / 13 条」= 当时读数）；本批 §14.2 #12 登记 **+1**（`["k3-256k","high"]`）⇒ 实施后 **19 条**；本条处置（父侧）= **不注册**（§14.4-3 hy3/doubao；五名默认档登记面 = §14.4-4——读数含默认档则同批登记，否则不声明；D-d 占位「—」已消解误标面）。
    旧兑底链「`(entry && entry.effortDefault) || levels[0] || null`」（`thincoder-vscode/webview/settings-state.js:44-49`，取值点 `:48`）已随本批收正——`defaultEffortFor` 并入删除、改由 `effortSelectView` / `effortPayloadValue` 承载（§14.5）。
-8. **`thincoder-core/test/model-specs.test.mjs` 越 300 软线——已裁已落（收口闭合）**：设计预估 ~305、收口实读 **415**（`split` 口径；`wc -l` 414）⇒ 越线成立
-   （机检面 = `thincoder-core/test/core-hygiene.test.mjs:117-131`：`walk(ROOT)` 无 test 目录排除、注册键 = 核内相对路径）。处置 = 批次档 §1.10-④ 预裁
+8. **`thincoder-core/test/model-specs.test.mjs` 越 300 软线——已裁已落（收口闭合）**：设计预估 ~305、收口实读 **415**（`split` 口径；`wc -l` 414）⇒ 越线成立（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+   （机检面 = `thincoder-core/test/core-hygiene.test.mjs:117-131`：`walk(ROOT)` 无 test 目录排除、注册键 = 核内相对路径）。处置 = 批次档 §1.10-④ 预裁（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
    「**不拆档——单档内聚**」——登记已落（`SOFT_LINE_REGISTRY:55`）；拆分计划落点 = `CORE-UNIFICATION.md` §2.8.1 子表行 12 / 13；消解窗口 = 越 500 硬限前
    或该档下次实质改动时。与 §9.7 行数上限段同源。
 
@@ -775,7 +775,7 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
 ### 10.4 消费面契约（本批动谁、谁零改）
 
 - **动**：`thincoder-core/model-specs.mjs`（+1 行 + 行注）·
-  `thincoder-core/test/model-specs.test.mjs`（F-1..F-5）· 本设计档（本节 + 变更记录）。
+  `thincoder-core/test/model-specs.test.mjs`（F-1..F-5）· 本设计档（本节 + 变更记录）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 - **零改**：CLI（`cmd-think.mjs` 档位行枚举驱动，flashx 自动显示三档）· VSC（
   `specs.mjs` 端差表零改——`EFFORT_DEFAULT_PREFIXES` 既有 `glm-5` 族前缀条目即命中 flashx，
   其默认档 `max` 在新枚举内合法）· `thincoder-core/provider/core.mjs`（`resolveEnableThinking`
@@ -787,7 +787,7 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
 | 文件 | 现行数 | 预期 | 拆分计划 |
 |---|---|---|---|
 | `thincoder-core/model-specs.mjs` | 253 → **261**（收口实读） | ~259（<300 软限） | 无需 |
-| `thincoder-core/test/model-specs.test.mjs` | 415 → **468**（收口实读） | ~460（<500 硬限） | 无需（不拆档豁免已登记：`thincoder-core/test/core-hygiene.test.mjs:55`；拆分计划落点 = `CORE-UNIFICATION.md` §2.8.1） |
+| `thincoder-core/test/model-specs.test.mjs` | 415 → **468**（收口实读） | ~460（<500 硬限） | 无需（不拆档豁免已登记：`thincoder-core/test/core-hygiene.test.mjs:55`；拆分计划落点 = `CORE-UNIFICATION.md` §2.8.1）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `docs/core/design/MODEL-SPECS.md` | 837 | ~940 | 本节 + 变更记录一条 |
 
 ### 10.6 验收标准回指（逐条指回批档 §1.3）
@@ -875,7 +875,7 @@ max-preview 单行注另如实记录视觉证据波动（纯红图答「黑色�
 「族沿用」字段的 Q-2 期望值**推导规则**：五名同形实证 ⇒ 期望对象 = 运行时推导
 `{ ...specForModel("qwen3.7-flash"), maxOutput: 65_536 }`——全字段 deepEqual 语义下未声明键
 （reasoningEcho）自然不进期望；**禁字面清单**（T-13 信息性字段闸 =
-`thincoder-core/test/model-specs.test.mjs:260` 全仓测试面计数冻结，新档含该字面即时红）。
+`thincoder-core/test/model-specs.test.mjs:260` 全仓测试面计数冻结，新档含该字面即时红）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 3.7-flash 行若未来漂移，Q-2 期望自动跟随（推导式红利，循 §10.3 推导规则先例）。
 
 VSC 端差字段不在核表：核规格行无 `reasoningEffortDefault`（端侧扩展面——
@@ -901,10 +901,10 @@ VSC 端差字段不在核表：核规格行无 `reasoningEffortDefault`（端侧
 | 文件 | 现行数 | 预期 | 变更 |
 |---|---|---|---|
 | `thincoder-core/model-specs.mjs` | 261 | ~273 | +5 表行 + 行注块（§11.2 落位）；300 软限内 |
-| `thincoder-core/test/model-specs-qwen36.test.mjs` | **批内新建** | ~150 | `[qwen36]` 段 Q-1..Q-6 · Q-8——**500 硬限拆分载体**（`thincoder-core/test/core-hygiene.test.mjs:123` 硬红判据，登记表只适用 300–500 段 ⇒ 主档 append-only 不可行）；新文件 ≤300 软限、零登记 |
-| `thincoder-core/test/model-specs.test.mjs` | 468 | 468 | **零触碰**（三段/四段已收口面不动、老段不迁移——拆分 = 新文件承载） |
+| `thincoder-core/test/model-specs-qwen36.test.mjs` | **批内新建** | ~150 | `[qwen36]` 段 Q-1..Q-6 · Q-8——**500 硬限拆分载体**（`thincoder-core/test/core-hygiene.test.mjs:123` 硬红判据，登记表只适用 300–500 段 ⇒ 主档 append-only 不可行）；新文件 ≤300 软限、零登记  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-core/test/model-specs.test.mjs` | 468 | 468 | **零触碰**（三段/四段已收口面不动、老段不迁移——拆分 = 新文件承载）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `thincoder-vscode/src/specs.mjs` | 84 | ~89 | `EFFORT_DEFAULT_PREFIXES` +5 条目 |
-| `thincoder-vscode/test/image-downgrade.test.mjs` | 253 | ~271 | +`[qwen36]` 段 Q-7（append-only，不扩改既有 T-10/T-15）；≤300 ✓ |
+| `thincoder-vscode/test/image-downgrade.test.mjs` | 253 | ~271 | +`[qwen36]` 段 Q-7（append-only，不扩改既有 T-10/T-15）；≤300 ✓  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `docs/core/design/MODEL-SPECS.md` | 950 | ~1070 | §11（本节，设计轮自笔）+ 变更记录一条 |
 
 ### 11.6 验收标准回指（逐条指回批档 §1.3）
@@ -918,7 +918,7 @@ VSC 端差字段不在核表：核规格行无 `reasoningEffortDefault`（端侧
 
 ### 11.7 用例表（`[qwen36]` 段 · Q-1..Q-8 · 循 `[flashx]` 段先例）
 
-Q-1..Q-6 · Q-8 落新建核测试档（`thincoder-core/test/model-specs-qwen36.test.mjs`——批内新建，
+Q-1..Q-6 · Q-8 落新建核测试档（`thincoder-core/test/model-specs-qwen36.test.mjs`——批内新建，（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 不带行号坐标防悬空锚）；Q-7 落 VSC 既有档新段。四类齐全：正常 = Q-1 / Q-2 / Q-7；
 边界 = Q-3（max 缺失 + 快照继承）/ Q-5；回归护栏 = Q-4 / Q-6；错误 = Q-8。
 
@@ -930,11 +930,11 @@ Q-1..Q-6 · Q-8 落新建核测试档（`thincoder-core/test/model-specs-qwen36.
 | Q-4 | 既有 qwen 族 6 行（3.7-max / 3.7-flash / 3.8-flash / 3.8-max / 3.8-omni-flash / 3.8-27b）逐字段零变化 + 五新名 × 既有行名非前缀循环（A-11 形状）；期望对象/字段清单**不含 `cacheMode` 键**（D-10 信息性字段、零行为面——硬约束① T-13 字面闸安全），其余字段逐字面 |
 | Q-5 | `TABLE_ROW_NAMES` 含五名（防空扫——`>= 40` 正控先例） |
 | Q-6 | `rowNote` 五名各含「校验级」「官方口径」「族沿用」；`qwen3.6-35b-a3b` 行注另含「MoE」 |
-| Q-7（VSC `thincoder-vscode/test/image-downgrade.test.mjs` 新 `[qwen36]` 段） | 五名 `reasoningEffortDefault === "high"` 且 ∈ 枚举（**不落首项 "none"**——qwen 批 §2.8 首项陷阱负证）；快照名前缀命中母名条目亦得 "high" |
+| Q-7（VSC `thincoder-vscode/test/image-downgrade.test.mjs` 新 `[qwen36]` 段） | 五名 `reasoningEffortDefault === "high"` 且 ∈ 枚举（**不落首项 "none"**——qwen 批 §2.8 首项陷阱负证）；快照名前缀命中母名条目亦得 "high"  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | Q-8 | 错误面：`qwen3.6-flash` + `reasoningEffort:"max"` ⇒ 本地抛错含 `not supported by model` 且合法档位清单 = 六档（`thincoder-core/provider/core.mjs:198-203` 门——T-8 / B-2 先例形态；枚举入册后 `max` 由「透传吃服务端 400」变「本地抛错」） |
 
 新档实施约束（设计钉死）：① 全文禁含 `cacheMode` 字面（T-13 全仓测试面计数闸——
-`thincoder-core/test/model-specs.test.mjs:259-260` 基线逐档冻结）；② helpers
+`thincoder-core/test/model-specs.test.mjs:259-260` 基线逐档冻结）；② helpers（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 （`SPEC_SOURCE` / `TABLE_ROW_NAMES` / `rowNote` / `assertFields` / `EFFORT_6`）就地重定义、
 零 import 主测试档（主档无导出面，动了即破零触碰）。
 
@@ -1059,7 +1059,7 @@ v2.5 两行（本批改值面；其余字段零改）：
 ```
 
 **行数预算（软线）**：本段落盘净增 **+15 行**（旧 5 行 → 20 行；另 `assistantToolCallMessage` 文档串换写净增 0——文件级预算见 §12.5）⇒ `thincoder-core/model-specs.mjs` 预测 **293**
-（`split` 口径；`wc -l` 292）——该档**未登记** `SOFT_LINE_REGISTRY`（`thincoder-core/test/core-hygiene.test.mjs:77-90`）
+（`split` 口径；`wc -l` 292）——该档**未登记** `SOFT_LINE_REGISTRY`（`thincoder-core/test/core-hygiene.test.mjs:77-90`）（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 ⇒ 越 300 即红；余量 8 行，**行注草案即行数上限**（写长前须先上报）。
 
 ### 12.4 消费面契约（本批动谁、谁零改）
@@ -1087,13 +1087,13 @@ VSC 产品码全零改（`EFFORT_DEFAULT_PREFIXES`（`thincoder-vscode/src/specs
 |---|---|---|---|
 | `thincoder-core/model-specs.mjs` | 278（`wc -l` 277） | +15（文档串换写净增 0）⇒ ~293 | §12.2 / §12.3（三新行 + 行注块 + v2.5 对齐）+ `assistantToolCallMessage` 文档串原地换写；≤300 软线内、免登记 |
 | `thincoder-core/config-presets.mjs` | 50（`wc -l` 49） | ±0（2 行改值） | `mimo` / `mimoplan` 的 `model` → `mimo-v2.6-pro`；**mimoplan 端点未实测**（无 tp- 凭证）= 同平台推断（**unverified**） |
-| `thincoder-core/test/model-specs-mimo.test.mjs`（已落 · 实读 **147**——本批实施轮创建） | **批内新建** | ~95 | `[mimo]` 段 M-1..M-4 · M-6..M-9（§12.7）；新档 ≤300 免登记；单层 glob 自动收集（`thincoder-core/test/run.mjs:42`）零清单改动 |
-| `thincoder-core/test/model-specs.test.mjs` | 468（`wc -l` 467） | +7 ⇒ ~475 | 仅两处：`FAMILY_BASELINE` mimo 行值改（`:201`，128_000 → 131_072）+ M-5。**500 硬限余量 25 行** ⇒ `[mimo]` 段不 append 至此档（硬限口径 = `thincoder-core/test/core-hygiene.test.mjs:149-163`：`>500` 硬红、`300–500` 须登记；D-4） |
+| `thincoder-core/test/model-specs-mimo.test.mjs`（已落 · 实读 **147**——本批实施轮创建） | **批内新建** | ~95 | `[mimo]` 段 M-1..M-4 · M-6..M-9（§12.7）；新档 ≤300 免登记；单层 glob 自动收集（`thincoder-core/test/run.mjs:42`）零清单改动  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-core/test/model-specs.test.mjs` | 468（`wc -l` 467） | +7 ⇒ ~475 | 仅两处：`FAMILY_BASELINE` mimo 行值改（`:201`，128_000 → 131_072）+ M-5。**500 硬限余量 25 行** ⇒ `[mimo]` 段不 append 至此档（硬限口径 = `thincoder-core/test/core-hygiene.test.mjs:149-163`：`>500` 硬红、`300–500` 须登记；D-4）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `thincoder-vscode/README.md` | 205（`wc -l` 204） | ±0（2 行改值） | `:84-85` provider 表模型列 → `mimo-v2.6-pro` |
 | `docs/core/design/MODEL-SPECS.md` | 1096（`wc -l` 1095） | 设计轮笔 | §12（本节）+ 变更记录 + §7 内缺键面坐标/计数收正（`:403-406`） |
 
 **行数上限段**：`thincoder-core/model-specs.mjs` 实施后 ~293（`wc -l` 292 = 277 + 15 行注块净增 + 0 文档串换写）⇒ 低于 300 软线（未登记档），余量 8 行（`wc -l` 口径）；新测试档 ~95（免登记）；
-`thincoder-core/test/model-specs.test.mjs` ~475 ⇒ 越 300 系既有态（登记已落 `thincoder-core/test/core-hygiene.test.mjs:86`；
+`thincoder-core/test/model-specs.test.mjs` ~475 ⇒ 越 300 系既有态（登记已落 `thincoder-core/test/core-hygiene.test.mjs:86`；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 拆分计划落点 = `CORE-UNIFICATION.md` §2.8.1 子表行 12，消解窗口 = 越 500 硬限前或该档下次实质改动）。
 
 ### 12.6 验收标准回指（逐条指回批次档 §1.5）
@@ -1116,8 +1116,8 @@ cli = **805 / 0**；vsc = **942 / 0**；`node scripts/doc-check.mjs` = 悬空 **
 
 ### 12.7 用例表（`[mimo]` 段 · 正常 / 边界 / 回归 / 错误）
 
-承载 = **新建核测试档** `thincoder-core/test/model-specs-mimo.test.mjs`（已落 · 实读 **147**——本批实施轮创建；D-4）
-＋ 主档 `thincoder-core/test/model-specs.test.mjs` 仅承载 M-5（基线常量所在档，一文件一行内聚）。
+承载 = **新建核测试档** `thincoder-core/test/model-specs-mimo.test.mjs`（已落 · 实读 **147**——本批实施轮创建；D-4）（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+＋ 主档 `thincoder-core/test/model-specs.test.mjs` 仅承载 M-5（基线常量所在档，一文件一行内聚）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 | 号 | 类 | 承载 | 输入 / 动作 | 期望 |
 |---|---|---|---|---|
@@ -1266,11 +1266,11 @@ cli = **805 / 0**；vsc = **942 / 0**；`node scripts/doc-check.mjs` = 悬空 **
 | 文件 | 现状 | 预期增量 | 说明 |
 |---|---|---|---|
 | `thincoder-core/model-specs.mjs` | 292 | +~45（10 行 + 行注块 + 4 处行注升级）⇒ ~337 | 见 §13.2 / §13.3；行序取「同族相邻」（查表按前缀长度排序，行序不影响命中——防遮蔽由 G-1 / T-11 覆盖）；**>300 ⇒ 登记 + 拆分计划**——见本节末「行数处置」段 |
-| `thincoder-core/test/model-specs.test.mjs` | 477 | **±0**（G-1..G-7 迁新载体档——500 硬限余量 23 行） | 仅 `[qwen] T-4/A-14` 退化锚**就地同名替换**（`qwen3.7-plus` 建行后不再是退化样本——改用仍在兜底的名字）；新增锚（建行逐名命中 / 「未探」词在场 / `multimodal` 分态）随 G-1..G-7 落新载体档（下行） |
-| `thincoder-core/test/model-specs-bench.test.mjs`（已落 · 实读 **165**——名实施轮定） | 0 | ~90–140 | G-1..G-7 承载档（§13.8）；循 `model-specs-mimo.test.mjs` / `model-specs-qwen36.test.mjs` 先例（helpers 就地重定义 · 零 import 主档）；≤300 免登记；实施读数入批次档 §5 |
-| `thincoder-core/test/core-hygiene.test.mjs` | 183 | +4 ±1 | `SOFT_LINE_REGISTRY` 增 `model-specs.mjs`（建行后 >300 登记——规则源 = `thincoder-core/test/core-hygiene.test.mjs:149-162`）；注释块登记句 + Set 行 |
+| `thincoder-core/test/model-specs.test.mjs` | 477 | **±0**（G-1..G-7 迁新载体档——500 硬限余量 23 行） | 仅 `[qwen] T-4/A-14` 退化锚**就地同名替换**（`qwen3.7-plus` 建行后不再是退化样本——改用仍在兜底的名字）；新增锚（建行逐名命中 / 「未探」词在场 / `multimodal` 分态）随 G-1..G-7 落新载体档（下行）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-core/test/model-specs-bench.test.mjs`（已落 · 实读 **165**——名实施轮定） | 0 | ~90–140 | G-1..G-7 承载档（§13.8）；循 `model-specs-mimo.test.mjs` / `model-specs-qwen36.test.mjs` 先例（helpers 就地重定义 · 零 import 主档）；≤300 免登记；实施读数入批次档 §5  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-core/test/core-hygiene.test.mjs` | 183 | +4 ±1 | `SOFT_LINE_REGISTRY` 增 `model-specs.mjs`（建行后 >300 登记——规则源 = `thincoder-core/test/core-hygiene.test.mjs:149-162`）；注释块登记句 + Set 行  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 
-**行数处置（登记 + 拆分计划 · 评审轮 1 #2）**：行数上限复读 = 软线 **300** / 硬限 **500**（`thincoder-core/test/core-hygiene.test.mjs:149-162` 实读规则：>500 硬红 · >300 未登记即红）——`model-specs.mjs` 292 + ~45 ⇒ ~337 ⇒ **登记**（上行 `core-hygiene.test.mjs` 同批落）；
+**行数处置（登记 + 拆分计划 · 评审轮 1 #2）**：行数上限复读 = 软线 **300** / 硬限 **500**（`thincoder-core/test/core-hygiene.test.mjs:149-162` 实读规则：>500 硬红 · >300 未登记即红）——`model-specs.mjs` 292 + ~45 ⇒ ~337 ⇒ **登记**（上行 `core-hygiene.test.mjs` 同批落）；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 **拆分计划** = 拆点 `MODEL_SPECS` 表块（行 + 行注）外提；落点 `thincoder-core/model-specs-table.mjs`（拟新增——主档 re-export 保 import 面零改）；连带面 = 测试档文本扫描 helpers（`SPEC_SOURCE` 族）随拆分批改读两档；**消解窗口 = 越 500 硬限前或该档下次实质改动时**（循 `CORE-UNIFICATION.md` §2.8.1 子表行 12 / 13 体例）。
 
 ### 13.7 验收标准回指（条目 #267 · 批次档 §1.1 / §1.3-⑤）
@@ -1301,7 +1301,7 @@ cli = **805 / 0**；vsc = **942 / 0**；`node scripts/doc-check.mjs` = 悬空 **
 
 - 不做未探字段的推测填充（「未探不声明」——用户「查表补齐」的证据面到此为止，余下入 §13.4 登记）。
 - 不声明 `multimodal: false`（T-7 语义单一——无视觉 = 不声明）。
-- 不落主测试档（`thincoder-core/test/model-specs.test.mjs` 477——500 硬限余量 23 行）：G-1..G-7 新增锚一律落新载体档；`model-specs.mjs` 越 300 的处置 = 登记 + 拆分计划（§13.6「行数处置」段），**本批不拆**。
+- 不落主测试档（`thincoder-core/test/model-specs.test.mjs` 477——500 硬限余量 23 行）：G-1..G-7 新增锚一律落新载体档；`model-specs.mjs` 越 300 的处置 = 登记 + 拆分计划（§13.6「行数处置」段），**本批不拆**。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 - 不改核侧行为（守卫 / 裁剪 / 豁免零改）；不改 `bench/models.json` 的 `skipDims` 与中档覆写值。
 - 不做实弹探针（需密钥 = 父侧 / 用户执行面）；探针结论落地时另批改行。
 
@@ -1354,7 +1354,7 @@ effort 同根三面（#15 VSC 未注册默认落 `levels[0]` = “none” = off�
 | deepseek 预置 | — | 规格行 384_000（`model-specs.mjs:33` 不动） | 预置 `maxTokens` ≤ 384_000 | `presetToEntry` 输出面值变（:17） |
 
 **端差继承注（评审 #2 · 裁定「接受继承」）**：`kimi-for-coding-highspeed` 行面无 effort 块，但端差表 `["kimi","max"]`（`thincoder-vscode/src/specs.mjs:27`）按既有前缀语义（`specs.mjs:19-21`）命中 ⇒ 端侧 `reasoningEffortDefault = "max"`。
-  接受理由：前缀语义有意为之（先例 = 快照名继承母行同判，`thincoder-vscode/test/image-downgrade.test.mjs:270`）；其后果被两层承接——枚举空 ⇒ `effortSelectView` 返 `null`（零下拉 / 零预选 / 零落盘）+ 「注册默认须 ∈ 枚举」前置（注册默认 ∉ 枚举时不生效，回落占位「—」）。AC-3 两径同判据。
+  接受理由：前缀语义有意为之（先例 = 快照名继承母行同判，`thincoder-vscode/test/image-downgrade.test.mjs:270`）；其后果被两层承接——枚举空 ⇒ `effortSelectView` 返 `null`（零下拉 / 零预选 / 零落盘）+ 「注册默认须 ∈ 枚举」前置（注册默认 ∉ 枚举时不生效，回落占位「—」）。AC-3 两径同判据。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 ### 14.4 未探登记（收口路径——非 open）
 
@@ -1384,39 +1384,39 @@ effort 同根三面（#15 VSC 未注册默认落 `levels[0]` = “none” = off�
 
 ### 14.6 影响文件清单（as-of 2026-09-25 设计轮 / 修正轮实测行数 · 实施读数入批次档 §5）
 
-**行数口径注**：本表读数 = `wc -l` 口径（换行符计数；read / 编辑器行号面显示 = 该值 +1——评审轮抽查 9 档逐档 +1 全吻合、零漂移）。实施轮复读勿把 +1 当漂移：两口径并记先例 = `thincoder-core/test/core-hygiene.test.mjs:44`。
+**行数口径注**：本表读数 = `wc -l` 口径（换行符计数；read / 编辑器行号面显示 = 该值 +1——评审轮抽查 9 档逐档 +1 全吻合、零漂移）。实施轮复读勿把 +1 当漂移：两口径并记先例 = `thincoder-core/test/core-hygiene.test.mjs:44`。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 | 文件 | 现状 | 预期增量 | 说明 |
 |---|---|---|---|
 | `thincoder-core/model-specs.mjs` | **326** | +~10 −1 ⇒ ~335 | >300 已登记（`SOFT_LINE_REGISTRY` presence 式——行数涨落零改登记）；拆分计划 CORE-UNIFICATION §2.8.1 沿用，**本批不拆** |
-| `thincoder-core/test/model-specs.test.mjs` | **477** | **±0**（T-13:250-262 改零字面门同尺寸、F-3:451 改值） | 改写面含 `INFO_FIELD:221`（`["cache","Mode"].join("")` 藏字面——针保留）与 `SCAN_EXT:224`/`SKIP_DIRS:225` 已排除 `docs/` 与 `.md` ⇒ 零字面门在码+测清理后可绿；`scanFieldHits:229` 零改。新增锚一律落新载体档；500 硬限余量 23 行保留；**F-1:426/:429 去「≠128_000」差异表述**（取值断言与 `:431` `notEqual` 保留——flash 收正后差异判据 = 排序面，§14.2 #1） |
-| `thincoder-core/test/model-specs-cleanup.test.mjs`（已落 · 实读 **134**——名实施轮定） | 0 | ~80–120 | AC-1 锚承载（C-1..C-4；AC-2 门归 T-13、AC-8 锚归 F-3（`model-specs.test.mjs`）——均不在本档，§14.7；循 mimo/qwen36/bench 载体先例，≤300 免登记） |
+| `thincoder-core/test/model-specs.test.mjs` | **477** | **±0**（T-13:250-262 改零字面门同尺寸、F-3:451 改值） | 改写面含 `INFO_FIELD:221`（`["cache","Mode"].join("")` 藏字面——针保留）与 `SCAN_EXT:224`/`SKIP_DIRS:225` 已排除 `docs/` 与 `.md` ⇒ 零字面门在码+测清理后可绿；`scanFieldHits:229` 零改。新增锚一律落新载体档；500 硬限余量 23 行保留；**F-1:426/:429 去「≠128_000」差异表述**（取值断言与 `:431` `notEqual` 保留——flash 收正后差异判据 = 排序面，§14.2 #1）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-core/test/model-specs-cleanup.test.mjs`（已落 · 实读 **134**——名实施轮定） | 0 | ~80–120 | AC-1 锚承载（C-1..C-4；AC-2 门归 T-13、AC-8 锚归 F-3（`model-specs.test.mjs`）——均不在本档，§14.7；循 mimo/qwen36/bench 载体先例，≤300 免登记）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `thincoder-core/config-presets.mjs` | **49** | **±0**（:17 值改） | AC-7 数据面 |
-| `thincoder-core/test/config-presets.test.mjs` | **51** | +~25 | 不变式 + 白名单六家双向断言（C-7/C-8） |
+| `thincoder-core/test/config-presets.test.mjs` | **51** | +~25 | 不变式 + 白名单六家双向断言（C-7/C-8）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `thincoder-vscode/src/specs.mjs` | **88** | +1 ⇒ **89** | k3-256k 登记（§14.2 #12） |
-| `thincoder-vscode/test/image-downgrade.test.mjs` | **273** | +~22 ⇒ ~295 | AC-3/AC-6 VSC 侧锚（E-5 **两径**：初渲染 + 换模型重建）；≤300 免登记（**余量 5 行**——超即拆新档，勿挤写） |
+| `thincoder-vscode/test/image-downgrade.test.mjs` | **273** | +~22 ⇒ ~295 | AC-3/AC-6 VSC 侧锚（E-5 **两径**：初渲染 + 换模型重建）；≤300 免登记（**余量 5 行**——超即拆新档，勿挤写）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `thincoder-vscode/webview/settings-agent.js` | **174** | +~2 ⇒ ~176 | 初渲染两 select（`:50/:63` 内联 HTML 串）改走 `effortSelectView`；payload（`:125`）过 `effortPayloadValue`——select 类名 / id 不变（绑定链零改） |
 | `thincoder-vscode/webview/settings-widgets.js` | **109** | +~2 ⇒ ~111 | `buildEffortSelect`（`:44-53` = **换模型重建径**）同源化；空枚举返 null 语义不变（`view === null`） |
 | `thincoder-vscode/webview/settings-models.js` | **214** | +~4 ⇒ ~218 | `collectConsultRows`（`:26-30`）落盘前 `effortPayloadValue` 归一（「—」/`none`/空 → null ⇒ 删键）+import；`:18` 读取面保持原始值 |
 | `thincoder-vscode/webview/settings-state.js` | **53** | +~18 −6 ⇒ ~65 | 新 `effortSelectView`（levels = 「—」+ 枚举；selected = 已存值 > 注册默认∈枚举 > 「—」；枚举空 ⇒ null）与 `effortPayloadValue`（「—」/`none`/空 → null ⇒ 删键）；`defaultEffortFor`（`:44-49`）并入删除（零调用者） |
-| `thincoder-cli/src/tui/cmd-config.mjs` | **463** | +~8 ⇒ ~471 | 抽 `effortMenuLevels` 导出；**>300 无登记机制在场**（`SOFT_LINE_REGISTRY` 扫描域 = `thincoder-core/`——`core-hygiene.test.mjs:19` ROOT）⇒ 核面 = 500 硬限，**余量 29 行** |
-| `thincoder-cli/test/cmd-config-effort.test.mjs`（已落 · 实读 **49**） | 0 | ~50 | AC-4（E-1/E-2） |
+| `thincoder-cli/src/tui/cmd-config.mjs` | **463** | +~8 ⇒ ~471 | 抽 `effortMenuLevels` 导出；**>300 无登记机制在场**（`SOFT_LINE_REGISTRY` 扫描域 = `thincoder-core/`——`core-hygiene.test.mjs:19` ROOT）⇒ 核面 = 500 硬限，**余量 29 行**  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-cli/test/cmd-config-effort.test.mjs`（已落 · 实读 **49**） | 0 | ~50 | AC-4（E-1/E-2）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `thincoder-cli/src/tui/cmd-advisor.mjs` | **255** | +~8 ⇒ ~263 | 归一 + 删档 + 回执（:116-117） |
-| `thincoder-cli/test/cmd-advisor.test.mjs`（已落 · 实读 **171**） | 0 | ~65 | AC-6（E-3）；全仓现无此档 = **新建**（批档未引用，无悬空指针） |
+| `thincoder-cli/test/cmd-advisor.test.mjs`（已落 · 实读 **171**） | 0 | ~65 | AC-6（E-3）；全仓现无此档 = **新建**（批档未引用，无悬空指针）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `thincoder-cli/src/tui/cmd-think.mjs` | **151** | **±0** | 码面零改 |
-| `thincoder-cli/test/cmd-think.test.mjs` | **153** | +~25 ⇒ ~178 | AC-5（E-4）注入驱动 |
-| `thincoder-cli/test/model-ref.test.mjs` | **432** | **±0**（:85 deepEqual 去 cacheMode 键） | AC-2 联动 |
+| `thincoder-cli/test/cmd-think.test.mjs` | **153** | +~25 ⇒ ~178 | AC-5（E-4）注入驱动  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-cli/test/model-ref.test.mjs` | **432** | **±0**（:85 deepEqual 去 cacheMode 键） | AC-2 联动  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | DOC 侧（实施轮，4 处就地改——本档内 5 组已随修正轮落笔） | — | ~0（就地改写） | §14.5「DOC 收正」清单：`PROVIDER.md:149` · `CONTEXT-COMPACTION.md:336/:692/:764` |
 
 **实施轮实际（as-of 2026-09-25 · `wc -l` 口径 · 批档 §5.2 同源）**：本批实施轮改动 = 23 档（19 改 + 4 新；批档 §5.1）——表外面与补记：
 
-- **四支新档**（表内三「拟新增」行 + 表外一支）：`thincoder-core/test/model-specs-cleanup.test.mjs` **112** · `thincoder-cli/test/cmd-config-effort.test.mjs` **49** · `thincoder-cli/test/cmd-advisor.test.mjs` **81**；
-  `thincoder-vscode/test/effort-select-views.test.mjs` **106** = E-5 径② 拆档产物（`image-downgrade.test.mjs` 只收端差面（291））——**表内无行，本注补登记**（§5.6-②）。
-- **表外带改三档**（必然连锁、零新语义）：`thincoder-core/test/model-specs-bench.test.mjs` **165** · `thincoder-core/test/model-specs-mimo.test.mjs` **147**（AC-2 `cacheMode` 字面/键删除连锁——不随改则 core 测试红；§5.6-③）；
-  `thincoder-cli/test/config-merge.test.mjs` **216**（`:37` deepseek `maxTokens` 393216 → 384_000 = AC-7 值同步；§5.6-④）。
+- **四支新档**（表内三「拟新增」行 + 表外一支）：`thincoder-core/test/model-specs-cleanup.test.mjs` **112** · `thincoder-cli/test/cmd-config-effort.test.mjs` **49** · `thincoder-cli/test/cmd-advisor.test.mjs` **81**；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+  `thincoder-vscode/test/effort-select-views.test.mjs` **106** = E-5 径② 拆档产物（`image-downgrade.test.mjs` 只收端差面（291））——**表内无行，本注补登记**（§5.6-②）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+- **表外带改三档**（必然连锁、零新语义）：`thincoder-core/test/model-specs-bench.test.mjs` **165** · `thincoder-core/test/model-specs-mimo.test.mjs` **147**（AC-2 `cacheMode` 字面/键删除连锁——不随改则 core 测试红；§5.6-③）；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+  `thincoder-cli/test/config-merge.test.mjs` **216**（`:37` deepseek `maxTokens` 393216 → 384_000 = AC-7 值同步；§5.6-④）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 - **表外改动（入册面 / 注释面）**：`thincoder-vscode/test/files.mjs` **138**（新档入册 fail-closed；§5.6-②）· `thincoder-vscode/webview/model-picker.js` **148**（注释面收正 `:82-84`——旧 `settings-state.js:48` 引证随本批收正）。
-- **表内行补记**：`thincoder-core/test/model-specs.test.mjs:152` —— `[qwen] T-3/A-9` 托底样本 `qwen-flash` → `qwen` + 标题改写（专行建立后不再托底；§5.6-⑤）。
-- **断言口径登记**：`thincoder-vscode/test/image-downgrade.test.mjs` 结构断言（原「无前缀兄弟」口径）与现表不符 ⇒ 用例已按 **qwen 域负探针**实施（`:244-252`）+ 档内自记（`:246-248`）——判据本体见该档自记、本档不复制（§5.6-①）。
+- **表内行补记**：`thincoder-core/test/model-specs.test.mjs:152` —— `[qwen] T-3/A-9` 托底样本 `qwen-flash` → `qwen` + 标题改写（专行建立后不再托底；§5.6-⑤）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+- **断言口径登记**：`thincoder-vscode/test/image-downgrade.test.mjs` 结构断言（原「无前缀兄弟」口径）与现表不符 ⇒ 用例已按 **qwen 域负探针**实施（`:244-252`）+ 档内自记（`:246-248`）——判据本体见该档自记、本档不复制（§5.6-①）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 - **DOC 侧行注**：本行「（实施轮，4 处就地改）」的 4 处**实由设计者「DOC 面残留收正轮」落笔（2026-09-25）**、非实施轮——实施轮 DOC 面零改（批档 §5.1）；行体不回改，以本注为准。
 
 **实施前置核对（结论回填批次档 §5）**：
@@ -1431,7 +1431,7 @@ effort 同根三面（#15 VSC 未注册默认落 `levels[0]` = “none” = off�
 | 判据 | 条目 | 设计落点 | 判定方式（机器核） |
 |---|---|---|---|
 | AC-1 | #11 | §14.2 / §14.3 | C-1（五名命中专行、逐值 = 交付读数）+ C-2（kimi 三行字段）+ C-3（防合并三值分行） |
-| AC-2 | #14 | §14.2 / §14.5 | T-13 零字面门（**唯一权威** = `model-specs.test.mjs:250-262` 就地改形；§14.8 表下注）+ `model-ref.test.mjs:85` / `image-downgrade.test.mjs:120` 去键绿 |
+| AC-2 | #14 | §14.2 / §14.5 | T-13 零字面门（**唯一权威** = `model-specs.test.mjs:250-262` 就地改形；§14.8 表下注）+ `model-ref.test.mjs:85` / `image-downgrade.test.mjs:120` 去键绿  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | AC-3 | #15 | §14.10 | E-5（**两径**：初渲染 + 换模型重建——同源 helper）：未注册 → 「—」selected ∧ payload 无 effort 键；已存 > 注册默认（∈ 枚举）> 「—」优先序；选 `none` → 删键；空枚举 ⇒ `view = null` |
 | AC-4 | #16 | §14.10 | E-1/E-2：含 none 枚举单 none 首位、无 none 前置、enum 序保持；:205/:232 源零改断言 |
 | AC-5 | #17 | §14.8 | E-4：注入驱动 off 后回执 `Thinking: OFF`（缺守卫回归 = ON 即红） |
@@ -1456,7 +1456,7 @@ effort 同根三面（#15 VSC 未注册默认落 `levels[0]` = “none” = off�
 | E-4 | 回归 | `/think` effort none 路径 | 回执 `Thinking: OFF`（守卫缺失时误报 ON = 红） |
 | E-5 | 正常/边界 | VSC consult/advisor 两 select | **两径**：① 初渲染；② 先渲染再换模型（`settings-widgets.js` 重建）——同源 helper 同判据：未注册 → 「—」selected ∧ 落盘无 effort；已存值优先注册默认（∈ 枚举）；选 none → 删键不写字面；空枚举 ⇒ 零渲染 |
 
-**零字面门注（AC-2）**：本表不另立用例——唯一权威 = `thincoder-core/test/model-specs.test.mjs:250-262`（T-13 就地改形为单门，±0 行；评审轮 #7）。
+**零字面门注（AC-2）**：本表不另立用例——唯一权威 = `thincoder-core/test/model-specs.test.mjs:250-262`（T-13 就地改形为单门，±0 行；评审轮 #7）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 ### 14.9 边界（本节不做）
 
@@ -1513,7 +1513,7 @@ minimax 族 4（`MiniMax-M3` / `minimax-m3` / `minimax-m1` / `MiniMax-M2.7`）·
 
 ### 15.3 #326 预置 `maxTokens` ⇄ 规格行逐对对齐
 
-**不变式（沿用 · 单源 = `thincoder-core/test/config-presets.test.mjs` C-8）**：逐预置（设了 `maxTokens` 者）`maxTokens ≤ specForModel(preset.model).maxOutput`——**基准 = 生效规格值**（含 `DEFAULT_SPEC` 兜底 32_000；未建行名即以此为准）。
+**不变式（沿用 · 单源 = `thincoder-core/test/config-presets.test.mjs` C-8）**：逐预置（设了 `maxTokens` 者）`maxTokens ≤ specForModel(preset.model).maxOutput`——**基准 = 生效规格值**（含 `DEFAULT_SPEC` 兜底 32_000；未建行名即以此为准）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 **六对处置（逐对方向 + 基准等级）**：
 
@@ -1594,25 +1594,25 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 
 **§15.4-6 · #331 · VSC `advisor.effort` 键（死键 → 接线）**：面板写入键改 `advisor.reasoningEffort`（单源 = 核读取键 `thincoder-core/advisor/run.mjs:48/:64`，与 CLI `/advisor` 菜单同键）；off 形同 CLI（`thinking` 落 off 形 + 删 effort 键）；面板面细则 = `doc:SETTINGS.md:§2.13`。
 
-### 15.5 影响文件清单（as-of 2026-09-25 设计轮 + **修正轮复读** · `wc -l` 口径 = `split("\n").length - 1`（权威锚 = `thincoder-core/test/core-hygiene.test.mjs:165`）；read / 编辑器行号面 = 本表值 **+1**，勿当漂移；实施读数回填批次档 §5）
+### 15.5 影响文件清单（as-of 2026-09-25 设计轮 + **修正轮复读** · `wc -l` 口径 = `split("\n").length - 1`（权威锚 = `thincoder-core/test/core-hygiene.test.mjs:165`）；read / 编辑器行号面 = 本表值 **+1**，勿当漂移；实施读数回填批次档 §5）（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 | 文件 | 现状 | 预期增删 | 说明 |
 |---|---|---|---|
 | `thincoder-core/config-presets.mjs` | **49** | ±0（六处值改） | §15.3 六对（:30 `grok` / :31 `mistral` / :38 `openrouter` / :33 `hunyuan` / :37 `siliconflow` / :39 `groq`） |
-| `thincoder-core/test/config-presets.test.mjs` | **77** | +~20 −3 | C-8 白名单 → 空名单（`assert.equal(over.length, 6)` 退场）+ 六对逐对 `≤ 生效基准` 断言（真行三对另断 = 行值） |
+| `thincoder-core/test/config-presets.test.mjs` | **77** | +~20 −3 | C-8 白名单 → 空名单（`assert.equal(over.length, 6)` 退场）+ 六对逐对 `≤ 生效基准` 断言（真行三对另断 = 行值）  （迁移期引文） |
 | `thincoder-core/advisor/run.mjs` | **190** | +~8 −4 | #329：两分支 off 保形 + 显式 off 清档（`:39` / `:52` 两处 + 注释） |
 | `thincoder-cli/src/tui/cmd-advisor.mjs` | **270** | +~3 −1 | #329 生产者面：`applyThinkOff`（`:59-64`）补 effort 族支（`spec.thinkApi === "effort"` ⇒ `null`——与 `cmd-think.mjs:124-134` isEffortOnly 支同式）+ 注释 |
-| `thincoder-cli/test/cmd-advisor.test.mjs` | **81** | +~10 | off 形族规则断言（effort 族 ⇒ `thinking === null`；type 族 ⇒ `{type:"disabled"}`；`effort_none` 归一 + 删键零回归） |
-| `thincoder-core/provider/core.mjs` | **491** | ±0（注释面） | :182 行注改述（保守抑制语义，§15.2）；谓词本体零改。**>300 拆分复核：已登记在位**（`SOFT_LINE_REGISTRY` · `thincoder-core/test/core-hygiene.test.mjs:96`）+ 计划落点 = `CORE-UNIFICATION.md` §2.8.1「次优先（≥437——登记、暂不逐档建计划）」列表（as-of 2026-09-25 file-tier-sweep 实读 491）；距 500 硬限余量 9 行（本批 ±0 不动结构） |
+| `thincoder-cli/test/cmd-advisor.test.mjs` | **81** | +~10 | off 形族规则断言（effort 族 ⇒ `thinking === null`；type 族 ⇒ `{type:"disabled"}`；`effort_none` 归一 + 删键零回归）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-core/provider/core.mjs` | **491** | ±0（注释面） | :182 行注改述（保守抑制语义，§15.2）；谓词本体零改。**>300 拆分复核：已登记在位**（`SOFT_LINE_REGISTRY` · `thincoder-core/test/core-hygiene.test.mjs:96`）+ 计划落点 = `CORE-UNIFICATION.md` §2.8.1「次优先（≥437——登记、暂不逐档建计划）」列表（as-of 2026-09-25 file-tier-sweep 实读 491）；距 500 硬限余量 9 行（本批 ±0 不动结构）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `thincoder-vscode/webview/settings-state.js` | **65** | +~18 −2 | 新增 `effortSelection`（规则单源）+ `advisorEffortCurrent`（读面兜底——§15.4-4）+ `advisorEffortPayloadValue`（「—」/空 ⇒ `null`；`none` 原样）；`effortSelectView` 改由 `effortSelection` 取 selected（成员判定显式化） |
 | `thincoder-vscode/webview/model-picker.js` | **148** | +~8 −4 | `:85` / `:123` 两处归一改走 `effortSelection`；中性档渲染「—」+ 无 active（**两渲染点 `:86-88` / `:124-125` 同判据**——§15.4 三面映射） |
 | `thincoder-vscode/webview/settings-agent.js` | **175** | +~6 −2 | advisor 初渲染 `effortSelectView(adv.model, advisorEffortCurrent(adv))`；载荷键改 `reasoningEffort`（`advisorEffortPayloadValue`；select 未渲染 ⇒ 不发字段——P2-4 的 advisor-effort 半） |
 | `thincoder-vscode/src/extension/settings-panel-write.mjs` | **169** | +~20 −6 | #331：`effort` → `reasoningEffort`（含 off 归一：`none` ⇒ 族别 off 形（§15.4-2）+ 删 effort 键）+ 旧键清理（`delete merged.effort`）+ 种子循环 null carve-out（`advisor.thinking` 穿透——§15.4-5） |
 | `thincoder-vscode/src/extension/settings.mjs` | **409** | **±0** | 快照面 `:204`（spread 透传）已载新旧两键与 `thinking`——读面归 webview（§15.4-4），本档零改。**>300 拆分复核 = 本批不拆**（见下注） |
-| `thincoder-vscode/test/model-picker-fallback.test.mjs` | **220** | +~10 −6 | T-17 负控改判（§15.4）+ 中性档两径断言（含 `:86-88` / `:124-125` 渲染与 active 判据） |
-| `thincoder-vscode/test/effort-select-views.test.mjs` | **106** | +~20 | 「已存值 ∉ 枚举」显式分支 + 面板「—」判据 + **读面**（新旧键优先级 / off 形 ⇒ 预选 `none`——V-5） |
-| `thincoder-vscode/test/config-io-panel.test.mjs`（#331 写面载体） | **116** | +~20 | `saveAgentSettingsFromPanel` 面：键位（`reasoningEffort` 在盘 ∧ 旧 `effort` 不在）+ off 形族映射（`hy3` 形 ⇒ `advisor.thinking === null`；`deepseek-v4-flash` 形 ⇒ `{type:"disabled"}`）+ **跨保存存活**（连续两次保存——V-4） |
-| `thincoder-core/test/advisor-provider-resolve.test.mjs`（已落 · 实读 **85**——名本轮钉） | 0 | ~60 | #329：`resolveAdvisorProvider` 两分支（AD-1 / AD-2）+ 载荷面 stubFetch（AD-3 / AD-4；形态循 `provider-merge.test.mjs`） |
+| `thincoder-vscode/test/model-picker-fallback.test.mjs` | **220** | +~10 −6 | T-17 负控改判（§15.4）+ 中性档两径断言（含 `:86-88` / `:124-125` 渲染与 active 判据）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-vscode/test/effort-select-views.test.mjs` | **106** | +~20 | 「已存值 ∉ 枚举」显式分支 + 面板「—」判据 + **读面**（新旧键优先级 / off 形 ⇒ 预选 `none`——V-5）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-vscode/test/config-io-panel.test.mjs`（#331 写面载体） | **116** | +~20 | `saveAgentSettingsFromPanel` 面：键位（`reasoningEffort` 在盘 ∧ 旧 `effort` 不在）+ off 形族映射（`hy3` 形 ⇒ `advisor.thinking === null`；`deepseek-v4-flash` 形 ⇒ `{type:"disabled"}`）+ **跨保存存活**（连续两次保存——V-4）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-core/test/advisor-provider-resolve.test.mjs`（已落 · 实读 **85**——名本轮钉） | 0 | ~60 | #329：`resolveAdvisorProvider` 两分支（AD-1 / AD-2）+ 载荷面 stubFetch（AD-3 / AD-4；形态循 `provider-merge.test.mjs`）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | 设计档 | — | 设计轮 + 修正轮笔 | 本档 §15 · `PROVIDER.md` §6.9/§6.11/§6.12 · `docs/vsc/design/SETTINGS.md` §2.13 + §3 + U-S12 · `docs/vsc/design/WEBVIEW.md` §6 D-W41 / §8 U-W20（WEBVIEW 两行为设计轮已落、修正轮零改） |
 
 **`settings.mjs` 拆分复核注（>300 · 修正轮）**：组边界 = ① 快照族（`agentSettings` / `proxySettings` / `websearchSettings` / `fullStatus`）② 渠道路由族（provider 增删 / 代理旗标 / 连接测试）③ 密钥与 MCP 族（`saveProviderKey` / `deleteProviderKey` / MCP 三件）——① 拆出 = `src/extension/settings-snapshots.mjs`（拟新增）；
@@ -1729,7 +1729,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 | `glm-5.3-flash` | `true` | **族沿用**（族据 = `glm-5.3` 行） |
 | `glm-5.3-flashx` | `true` | **实测**（`thinking:{type:"disabled"}` → 400；裸请求默认开） |
 
-行注保留现有句（`thincoder-core/test/model-specs.test.mjs` 的 `[flashx] F-5` 词锚不变），各补一句「该事实 = 机制位 `thinkAlwaysOn`（单源 = `doc:MODEL-SPECS.md:§16.3`）」**并携逐行证据等级词**——
+行注保留现有句（`thincoder-core/test/model-specs.test.mjs` 的 `[flashx] F-5` 词锚不变），各补一句「该事实 = 机制位 `thinkAlwaysOn`（单源 = `doc:MODEL-SPECS.md:§16.3`）」**并携逐行证据等级词**——（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 `glm-5.3` = **官方口径** · `glm-5.3-flash` = **族沿用**（族据 = `glm-5.3` 行）· `glm-5.3-flashx` = **实测**（与本档证据纪律齐：非实测类须逐条写进行注）。**未取证行一律不声明**（D-11）。
 **`glm-5.2` / `glm-5` 取证已落（2026-09-29 · 渠道校验级读数）**：`{type:"disabled"}` 受理且生效（载荷 200 · `reasoning_content` 缺席 ⇒ off 路径存在——族形态与 `glm-5.3` 族相反）⇒ `thinkAlwaysOn` **维持不标**、判据默认侧（可宣称 OFF）成立。
 
@@ -1795,19 +1795,19 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 | 文件 | 现状 | 预期增删 | 说明 |
 |---|---|---|---|
 | `thincoder-core/think-off.mjs`（已落 · 实读 **26**） | 0 | ~40 | §16.2 单源两函数（叶档 · 零 import；≤300 免登记） |
-| `thincoder-core/model-specs.mjs` | 348 | +~6 | §16.3 三行 `thinkAlwaysOn` + 表头字段注 + 行注句；**>300 已登记**（`thincoder-core/test/core-hygiene.test.mjs:96`）+ 拆分计划（§13.6）——本次 = 字段面补充（拆点未触发——判定见下注） |
+| `thincoder-core/model-specs.mjs` | 348 | +~6 | §16.3 三行 `thinkAlwaysOn` + 表头字段注 + 行注句；**>300 已登记**（`thincoder-core/test/core-hygiene.test.mjs:96`）+ 拆分计划（§13.6）——本次 = 字段面补充（拆点未触发——判定见下注）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `thincoder-core/advisor/run.mjs` | 200 | ±0（−1 标识符） | §16.6-⑷ |
 | `thincoder-cli/src/tui/cmd-think.mjs` | 151 | +~14 −3 | §16.2-2 + §16.4（拒绝 / 开关项门 / 头与回执条件化） |
 | `thincoder-cli/src/tui/cmd-advisor.mjs` | 278 | +~16 −6 | §16.2-1 + §16.4（状态行条件化 / Disabled 门）+ §16.6-⑵⑶ |
-| `thincoder-cli/test/cmd-think.test.mjs` | 200 | +~35 | W-1..W-4 |
-| `thincoder-cli/test/cmd-advisor.test.mjs` | 110 | +~30 | W-6..W-8 |
-| `thincoder-core/test/think-off.test.mjs`（已落 · 实读 **51**） | 0 | ~55 | T-1..T-4 |
+| `thincoder-cli/test/cmd-think.test.mjs` | 200 | +~35 | W-1..W-4  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-cli/test/cmd-advisor.test.mjs` | 110 | +~30 | W-6..W-8  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-core/test/think-off.test.mjs`（已落 · 实读 **51**） | 0 | ~55 | T-1..T-4  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `thincoder-vscode/src/extension/reasoning-mode.mjs` | 34 | +~4 −2 | §16.2-3（#335 本体） |
 | `thincoder-vscode/src/extension/settings-panel-write.mjs` | 200 | +~2 −6 | §16.2-4（本地形体删） |
 | `thincoder-vscode/webview/settings-state.js` | 95 | +~5 −1 | §16.5（off 哨兵 ⓪ 支并入共享规则——§15.4-1） |
-| `thincoder-vscode/test/reasoning-mode.test.mjs`（已落 · 实读 **50**） | 0 | ~45 | R-1..R-3（该面首测——无既有测试档） |
-| `thincoder-vscode/test/model-picker-fallback.test.mjs` | 279 | +~20 | W-5 / W-10（off 哨兵 × picker 两径） |
-| `thincoder-vscode/test/effort-select-views.test.mjs` | 172 | +~12 | W-9 |
+| `thincoder-vscode/test/reasoning-mode.test.mjs`（已落 · 实读 **50**） | 0 | ~45 | R-1..R-3（该面首测——无既有测试档）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-vscode/test/model-picker-fallback.test.mjs` | 279 | +~20 | W-5 / W-10（off 哨兵 × picker 两径）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| `thincoder-vscode/test/effort-select-views.test.mjs` | 172 | +~12 | W-9  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | 设计档 | — | 本节 + §10.1 订正 + §15.4-1 / §15.4-2 / §15.4-4 / §15.8 档面（指针 / 收正）+ `doc:PROVIDER.md:§6.9` / `§6.12` / `§6.19` + `doc:SETTINGS.md:§2.13` 指针 + 变更记录 | — |
 
 **`model-specs.mjs` 消解窗口判定（§13.6 口径——本次改动 ∉「实质改动」）**：本批改动 = 字段面补充（三行机制位 + 表头字段注 + 行注句；零结构 / 零表块位移 / 零导出面变更）⇒ **∉ §13.6「实质改动」**——拆点（`MODEL_SPECS` 表块外提）未触发；改后 ~354 距 500 硬限余量 ~146 行。
@@ -1904,7 +1904,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 - 2026-09-25 · **设计评审轮 2（pass）修正（批次 `2026-09-25-spec-effort` · §15 面 · 新行 8/9/11）**——三条落笔：
   ① §15.4-2「选档 / 「—」两态」句收正——档位态 = **写 `reasoningEffort`**（清 `null` 标记），**删键只适用 off 与「—」两态**（原「两态均删键」字面违同档契约——档位值 = 写字面档值，`doc:SETTINGS.md:§2.13`）；
   ② §15.7 新增 **V-6**（盘上 `thinking:null` + 选 `low` ⇒ 标记清除 ∧ `reasoningEffort = "low"`；两族别 = effort 族 / type 族默认）——用例计数 18 → **19 条**（V-1..V-6）；
-  ③ 旧形派生句两处补指针（§2.8 兜底链面 + §3 表 `model-picker.js` 行：「取值式随 §15.4 收正」）+ §15.5 表头行数口径权威锚 `core-hygiene.test.mjs:98` → `:165`（口径实现行）。
+  ③ 旧形派生句两处补指针（§2.8 兜底链面 + §3 表 `model-picker.js` 行：「取值式随 §15.4 收正」）+ §15.5 表头行数口径权威锚 `core-hygiene 用例档:98` → `:165`（口径实现行）。
   零新语义——全部为轮次 2 发现表的直接导出项。
 
 - 2026-09-25 · **设计评审轮 1（changes-required）修正（批次 `2026-09-25-spec-effort` · §15 面）**——七条落笔：
@@ -1932,7 +1932,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 - 2026-09-25 · **DOC 面残留收正轮（批次 `2026-09-25-model-specs-cleanup` · §2/§4）**——§3 行数上限段权威面定界（`:286`）· §14.6 载体行 AC 锚收正（C-1..C-4；AC-2 门归 T-13、AC-8 锚归 F-3——`:1386`）· §9.12 项 7 收口注（端差表 18 → 19 条 · 兜底链随 `effortSelectView` / `effortPayloadValue` 收正 · hy3/doubao 维持不注册——`:692` 后）。**零代码改动**。
 
 - 2026-09-25 · **收口前对齐轮（批次 `2026-09-25-model-specs-cleanup` · §14 面）**——§14.6 补「实施轮实际」注层：四支新档 `wc -l` 112/106/81/49 · 表外带改三档 165/147/216（AC-2/AC-7 连锁）· 表外 files.mjs 138 / model-picker.js 148；
-  `model-specs.test.mjs:152` 改指补记 · `image-downgrade.test.mjs:246-248` 口径交叉引用 · DOC 面归属句收正（§14.5 两处（`:1376` / `:1379`）+ §14.9 一处——两外档实由设计者「DOC 面残留收正轮」落笔）+ §14.6 DOC 行同因行注。**零代码 / 测试档触碰**。
+  `model-specs 用例档:152` 改指补记 · `image-downgrade 用例档:246-248` 口径交叉引用 · DOC 面归属句收正（§14.5 两处（`:1376` / `:1379`）+ §14.9 一处——两外档实由设计者「DOC 面残留收正轮」落笔）+ §14.6 DOC 行同因行注。**零代码 / 测试档触碰**。
 
 - 2026-09-25：**D-11 登记句收窄（批 `2026-09-25-bench-fixnotes` · 台账 #277）**——§9.1 能力位登记策略由「未实测名一律不声明」收窄为「**无族据一律不声明；有族据（同表已声明族行——点名来源行，取值适用）⇒ 可族沿用照写 + 行注标级**」（族沿用准入 = `MODEL-BENCH.md` §4 KD-36 三态②）；
   §9.1 段首句 / 判据出处 / §9.2 计数句 / §9.3 两处引文话术同步——**零行为变更**：已交付行值（`thincoder-core/model-specs.mjs`）/ G-2 断言 / §13.3 逐行表述未动。
@@ -1979,12 +1979,12 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 
 - 2026-09-20（**渠道接入批 · 设计侧收口轮（fix 轮）** · eng-designer——承 `docs/batches/2026-09-20-channel-onboarding.md` §5.4 漂移表 DR-3 / DR-4 / DR-5 + §1.10-④ 预裁）：
   ① **读数刷新（收口复读 · 实施后终态）**：§9.7 表改收口值——`model-specs.mjs` **253** · `config-presets.mjs` **50** · `thincoder-core/provider/core.mjs` **492** · 两测试档 **415** / **307** · 新档 `config-presets.test.mjs` **52**（`split` 口径；口径注更「收口复读」as-of，各预读 as-of 不追改）。
-  ② **结论反转收正**：§9.7 原「改后 ~272 ⇒ 均低于 300 ⇒ 无拆分方案」→「**两测试档越线**（415 / 307）⇒ 批次档 §1.10-④ 预裁『不拆档——单档内聚』⇒ 登记已落（`core-hygiene.test.mjs:55`）+ 拆分计划落点 = `CORE-UNIFICATION.md` §2.8.1 子表行 12 / 13」（§9.9 清单 8 同变闭合）。
+  ② **结论反转收正**：§9.7 原「改后 ~272 ⇒ 均低于 300 ⇒ 无拆分方案」→「**两测试档越线**（415 / 307）⇒ 批次档 §1.10-④ 预裁『不拆档——单档内聚』⇒ 登记已落（`core-hygiene 用例档:55`）+ 拆分计划落点 = `CORE-UNIFICATION.md` §2.8.1 子表行 12 / 13」（§9.9 清单 8 同变闭合）。
   ③ **首次披露**：`thincoder-core/provider/core.mjs` **距 500 硬限余量 9 行**（`wc -l` 口径 = 核内机检口径）——后续实质改动按 §2.8.1 次优先面口径补登拆分计划。
   ④ **DR-3 计数面**：「预设 20」在盘处数 11 → **12**（测试面 6 → **7**——补 `thincoder-vscode/test/files.mjs:21`）；`PROVIDER.md` §6.19 指针 `:273` → `:274`（死坐标收正）；其余各笔逐处复核已落。
   ⑤ **DR-5**：§9.6 D-13 ② 补 `volcengine.maxTokens` 追注（32768 → **131072**，已落盘——随模型改指同变）。
   ⑥ **旧字面收正**：§9.6 护栏档「拟新增」→「批内已建 · 52 行」· §9.7 新档行「拟新增」→ 实读形 · §9.9 载荷面承载段（222 → 307）/ 清单 5 / 清单 8 旧读数与旧状态 · `:373` T-14 行「拟新增文件」→「批内新增文件」· `:279` / `:288` / `:297` 旧状态与旧坐标（`:54` → `:55`、注释 `:38-40` → `:38-44`）——随收口修正。
-  ⑦ **DR-5 追加同步（针㈤ · 父侧实测回填）**：代码面 P-4 已落（`config-presets.mjs:32` = `maxTokens: 131072` · 用例 `test/config-presets.test.mjs:49-51`）
+  ⑦ **DR-5 追加同步（针㈤ · 父侧实测回填）**：代码面 P-4 已落（`config-presets.mjs:32` = `maxTokens: 131072` · 用例 `config-presets 用例档:49-51`）
   ⇒ 设计侧同变：§9.9 补 **P-4** 行（正常类）· §9.8 AC-5 行 / §9.7 覆盖列补 P-4（D3）；**用例计数 21 → 22**（A-1..A-12 · B-1..B-6 · P-1..P-4）；另本批 DR-5 / D-13 面数字形态归一无分隔符形（`32_768` → `32768` · `131_072` → `131072`，与代码字面同形）。
   ⑧ **AC-7 机检读数刷新**：`doc-check` 闸态实跑双清（悬空 0 · 行宽 0）；旧附注「残余 2 行」随现读删除（`AGENT-LOOP.md:163/168` 现读 188 / 124，已非超线行）。
   **零新语义**：全部条目 = 批次档 §5.4 DR-3 / DR-4 / DR-5 与 §1.10-④ 预裁的直接导出项（含 ①/⑧ 读数刷新类；DR-1 项落 `CORE-UNIFICATION.md` 变更记录 2026-09-20 条）。
@@ -1994,7 +1994,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
   ② **坐标收正（修复轮实读）**：`thincoder-cli/src/tui/cmd-think.mjs` `:121`→`:131`（on 默认档）· `:106-111`→`:104`（off 归一入点）· `:47-48`→`:48-49`（面板行）· `:54`→`:55`；
   `thincoder-core/model-specs.mjs` `DEFAULT_SPEC` `:99`→`:118` · `warnUnknownModel` `:135-141`→`:154-160` · `providerSpec` 展开 `:107`→`:198` · `specMatch` `:153-158`→`:172` · `SORTED_SPECS` `:111`→`:130` · `qwen3.8-max` 行 `:66`→`:74`；
   `thincoder-core/agent/spawn-child.mjs` `:193-202`→`:188-195` · `thincoder-vscode/src/agent/setup.mjs` `:168`→`:173` · `thincoder-vscode/src/agent/execute-tools.mjs` `:259`→`:271` · `thincoder-vscode/src/specs.mjs` 端差表 `:22-31`→`:22-36`。 （迁移期引文——档已迁核）
-  ③ **§3 行数刷新（实读）**：`thincoder-cli/src/tui/cmd-think.mjs` 142→**152** · `thincoder-cli/test/cmd-think.test.mjs` 85→**154** · `thincoder-vscode/test/model-picker-fallback.test.mjs` 157→**221**；行数上限段同变；`thincoder-core/test/provider-merge.test.mjs` 标「T-9 第四态 = 修复轮唯一未落项」；§3 尾注「未落项」句改落位实况（九条中八条完整落盘）。
+  ③ **§3 行数刷新（实读）**：`thincoder-cli/src/tui/cmd-think.mjs` 142→**152** · `CLI cmd-think 用例档` 85→**154** · `VSC model-picker-fallback 用例档` 157→**221**；行数上限段同变；`核内 provider-merge 用例档` 标「T-9 第四态 = 修复轮唯一未落项」；§3 尾注「未落项」句改落位实况（九条中八条完整落盘）。
   ④ **§6 增实施标签映射注**：T-16 ↦ 实施档「修复轮 #11」×3 段 · T-17 ↦ 「③」×2 用例（实施侧未挂 T- 号，判定以语义覆盖为准）。
   ⑤ **【勘误】**：§2.1「现状坐标」列 · §2.1「现 210 行」 · §2.3 `:69` · §2.2 探针 `:24-30` · §7 `:75-87` 等 = **落位前 as-of 读数**（落位后净增 20 行），按 D4「行号仅作 as-of 参考」不逐条追改——本记录即漂移登记面；本记录内新坐标 = 2026-09-20 修复轮实读值。
   ⑥ **本轮续修**：§2.8 面 2 补回执守卫末条（`thincoder-cli/src/tui/cmd-think.mjs:86-87` 守卫，裁定② 第三处；零测试射程 ⇒ 台账）+ §7 边界「只改两处取值面」改正为**三处**并含交互循环例外注 + §3 该行与 §5 A-18 行补记 + §3 表**二次复读**（`thincoder-core/model-specs.mjs` 253 · 测试面 395 / 304——含并行渠道批增量，越 300 软线披露见该节末）。
@@ -2005,7 +2005,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
   §2.8 由「on 默认档」单面改写为**三面**（面 1 `:121` on 默认档 · 面 2 `:106-111` `"none"` ⇒ 显式 off 标记 · 面 3 VSC picker 归一）；
   新增判据 **A-17 / A-18**、用例 **T-16 / T-17**、T-9 扩第四态 ⇒ **判据 16→18 · 用例 15→17**（D3 同变）；§7 边界三条、§8 三行同变。
   ② **裁定①落位**——VSC picker 回归修复（`thincoder-vscode/webview/model-picker.js` 149 行，已落盘）：入 §3 =「本批回归修复 · 披露面」，
-  其测试档 `thincoder-vscode/test/model-picker-fallback.test.mjs`（157）另列一行（一文件一行，遵本表原形制）。
+  其测试档 `VSC model-picker-fallback 用例档`（157）另列一行（一文件一行，遵本表原形制）。
   ③ **死指针收正**——T-10 坐标 `:50-54`→`:55-59` · A-13 坐标 `:22-31`→`:22-36` 并改「现仅一档在册」为**批后真值**（六档在册）·
   `thincoder-cli/src/tui/cmd-think.mjs:118`→`:121`（§2.5 / §2.8 / §3 / §7）；A-16 前提句按「批内新增档已落地」收正。
   ④ **§3 全表 as-of 读数刷新**（split 口径 · 口径注置该节末）+ 行数上限段按实读改写（无档越 300）+ 交付面段更新（10 行 = 九条产品码/测试 + 设计轮笔档）。
@@ -2014,7 +2014,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 
 - 2026-09-20（**渠道接入批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承 `docs/batches/2026-09-20-channel-onboarding.md` §3 轮次 1，#1…#12）：
   ① hy3 枚举三档 → **七值受理集**（批档 §1.10-①；与 seed 同值集、行独立），连锁面（§9.3 / §9.7 / §9.9 / §9.11）同变；
-  ② 交付面行数改实读（§9.7 全表：`model-specs.mjs` 230 / 测试面 256・222），测试面越线档（`test/model-specs.test.mjs` 改后 ~305）
+  ② 交付面行数改实读（§9.7 全表：`model-specs.mjs` 230 / 测试面 256・222），测试面越线档（`model-specs 用例档` 改后 ~305）
   登记 + 上抛 = §9.9 清单 8；③ D-14 谓词**单源**改挂 `doc:PROVIDER.md:§6.12` + 补第五子句 `!provider.model.includes("/")`（guard ⑤ = `x/hy3`）；
   ④ §9.5 正文登记位失实修正（本档无 AC-4 节，改为本节自身）；⑤ §9.2 补**前缀继承面现状核对**（现盘 `hy3` 面 = `hy3-preview` 一枚）、§9.4 补**覆盖面口径**
   （命中/未命中名全集，批档 §1.10-③）；⑥ §9.9 清单 2/4/6 收正（枚举源坐标 = `provider-probe-window.mjs:66`）+ 新增 7（VSC 端差默认档
@@ -2024,8 +2024,8 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
   【勘误】F-1…F-10 与 🔴2/🟡4/🟢4 计数系本轮施工自指编号，不对应评审实录；实录 = 批档 §3 轮次 1（#1…#10 + 追加 🟡），自查三件归位 = 批档 §1.10（P-1…P-3）。
   ① F-1 交付面文件归属改写（`PROVIDER.md` 标为设计轮笔已落，eng-coder 实施面 = 七条）；② F-2/F-3（🔴）**新登 D-10**
   ——`cacheMode` 定性为**信息性字段（零判据消费）**，T-13 由「取值断言」改为「消费点结构断言 + 禁止新增取值断言」，
-  `model-specs.test.mjs:29` 列入删除行账（§3 −2）；③ F-4（🔴）A-13/T-15 —— VSC 端差用例**实际落点** =
-  `thincoder-vscode/test/image-downgrade.test.mjs`（现仅测 deepseek/glm/kimi 族，qwen 不在射程），用例 14→**15 条**；
+  `model-specs 用例档:29` 列入删除行账（§3 −2）；③ F-4（🔴）A-13/T-15 —— VSC 端差用例**实际落点** =
+  `VSC image-downgrade 用例档`（现仅测 deepseek/glm/kimi 族，qwen 不在射程），用例 14→**15 条**；
   ④ F-5 本档 §2.4 表头与表行数口径对齐（三档处置 → 两档 + 并入既有行）；⑤ F-6～F-8（🟡/🟢）`EFFORT_DEFAULT_PREFIXES`
   坐标、探针预算句、§2.3 判据表述去对不存在的函数引用；⑥ F-9～F-10（🟢）裸段坐标全部补仓根完整路径（核 / VSC 侧各消费点：`thincoder-core/config.mjs` /
   `thincoder-core/provider/normalize.mjs` / `thincoder-vscode/src/extension/vision-channel.mjs` /
@@ -2057,12 +2057,12 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 - 2026-09-20 06:2x（**同步收尾 · 机械三件** · eng-designer）：§7 探针脚本条括号内旧描述改真实形态（provider 名参数 → `providers[].model` 选路；该档 `:90` 同形旧述未在本轮四针射程内，已上报）· §4 D-10 与 §5 A-13 行末各补来源回指（批次档 §1.10 P-1/P-2/P-3 父侧补裁）+ §5 回指段补出处句 · 变更记录：重复 ⑥ 块删重（保留一份）+ 修正轮条目头部加勘误行。判据出处 = 批次档 §1.9-③ / §1.10 / §1.11。
 - 2026-09-20（批 `2026-09-20-channel-onboarding` 设计轮 · eng-designer）：新增 **§9 渠道接入批行集**——`hy3` / `hy3-preview` / `hy4-preview` / 豆包 Seed 两档共五行 + 登记规则（D-11 能力位不跨名沿用）+ TokenHub 转售名逐名认账（D-12 不增渠道限定行）。纯增量，未触碰 §1–§8 既有内容。
 - 2026-09-20（同批 · **设计自查修正轮** · eng-designer）：§9 面一致性四修：
-  ① §9.7 测试表**补两行**（`thincoder-core/test/provider-merge.test.mjs` 162 行承载 B-1..B-4 · `thincoder-core/test/config-presets.test.mjs` 拟新增承载 P-2/P-3；
+  ① §9.7 测试表**补两行**（`核内 provider-merge 用例档` 162 行承载 B-1..B-4 · `核内 config-presets 用例档` 拟新增承载 P-2/P-3；
   原表只列 `model-specs.test.mjs` ⇒ 用例落点无归属）；② P-2/P-3 归属由 `config.test.mjs` 改指新建档（§9.6 D-13 早已裁定新建，两处此前互相矛盾）；
   ③ `thincoder-core/provider/core.mjs:198-203` 抛错门的「已有断言先例」口径收正为「代码在场、断言面 = 同表 §6 T-8（qwen 批在途未落）」，
   并补 `DEFAULT_SPEC` 无枚举 ⇒ 门短路的机理（原「先例」说法经 grep 实测 = 测试面无该断言）；④ 计数与坐标面修正：涉改档现行数刷新
   （MODEL-SPECS 613→639 / PROVIDER 418→423）、行数上限句补 `provider-merge.test.mjs`、**D3 计数与清单同变**（「预设 20」在盘 9→**10 处**：
-  测试面实为 6 处而非 4 处，CLI 测试文件头覆盖注 `:5` 与 VSC `:4` 此前漏计）、`test/config-merge.test.mjs` 预期增删 +2→+3；
+  测试面实为 6 处而非 4 处，CLI 测试文件头覆盖注 `:5` 与 VSC `:4` 此前漏计）、`config-merge 用例档` 预期增删 +2→+3；
   另 §9.6 D-13 旧值叙述改指批次档（不在规范面留已改值的尸体）。机检：`doc-check` 悬空 0 / 行宽 0（含四条新悬空的现场修：
   `tokenhub`/`volcengine` 符号误抽、文档地图死指针（本仓无 `docs` 级 AGENTS 档 ⇒ 改指 `docs/README.md`）、
   核内载荷档坐标缺仓根前缀 ⇒ 改全路径）。**零新语义、零范围变更**——均为坐标与归属面的直接导出项。
@@ -2072,7 +2072,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
   预期增量 +~26 → +~50（新用例 B-6 = 后台路径副作用认账断言）；② §9.11 **删重复表块**（同内容两份，两份间状态口径互相矛盾 = 一致性面自修）+ 思考开关行改「已批准」；
   ③ §9.9 上报清单新增第 6 条：CLI 思考下拉对未在册名**回退全档**，与 VSC 侧「档位空」两端不一致（AC-6 字面只覆盖 VSC ⇒
   本批 CLI 零改，差异交父侧）；④ §9.7 新立**行计数口径注**（本表 = `split('\n').length` 含末行；qwen 面 §3 的 210 = `wc -l`
-  同文件读数，差 1 属口径非事实，§3 面不追改）；`SOFT_LINE_REGISTRY` 登记态经实读 `thincoder-core/test/core-hygiene.test.mjs:47`
+  同文件读数，差 1 属口径非事实，§3 面不追改）；`SOFT_LINE_REGISTRY` 登记态经实读 `核内 core-hygiene 用例档:47`
   核实后写入。**零新语义**：除 §1.7-① 批准带来的交付面解锁外，全部为坐标 / 归属 / 重复块清理。
 - 2026-09-20 07:2x（同批 · **消费点与副作用面核对轮** · eng-designer）：① **更正自己上一轮的失实断言**——原写
   「`thinkApi` 全仓零读取点」，实 grep（仓根入码面）= 三处端侧消费点（`thincoder-cli/src/tui/cmd-think.mjs:13` /

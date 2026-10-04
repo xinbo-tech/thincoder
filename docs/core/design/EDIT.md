@@ -67,6 +67,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 - **not-found 引导**：错误含 `searched:` + grep 建议 + `similar lines (top 3, score)` 段（LCS 连续子串 / 阈值 0.5 / top3，单行亦覆盖；零候选省略——算法权威见 `docs/core/design/EDIT-HELPERS.md` §2 `findCandidates`）。
 - **数据新鲜度**：`old_string` / 行号只来自最新 `read`——改前 re-read。
 - **批量回执汇总行（#796）**：`edits` 批量回执**末行恒为一行汇总**——逐字 `edit batch: N/N entries — <路径清单>`（**N = 条目数 ∥ 清单 = 去重路径**；路径 = 条目**原样形**、去重保序首现序、分隔符 = `, `；全判后原子写 ⇒ 成功恒 N/N）。位置 = **末行**——大回执（>64K）落盘后双端 preview 保尾（`docs/core/design/TOOL-OUTPUT-LIMITS.md` §2）⇒ 汇总结论恒可见；恒定追加（不设「仅大回执」分支——判据单点、不引阈值耦合）。
+  （射程 = 核面 `editBatch` 汇总组装；**ACP 桥批量回执不适用本条**——桥面自持逐条行，`thincoder-cli/src/acp/bridge.mjs` editBatch 逐条 join 收尾、无汇总行组装。）
 
 ## 6. 实现单一权威（现状路径 · as-of 2026-09-15 实核）
 
@@ -78,25 +79,25 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 | 入参守卫（#325） | 单源 `thincoder-core/tools/edit-diff.mjs`（`assertEditsContainer` / `assertEditEntries` + 五文案——两通道共用）· 调用点 `thincoder-core/tools/edit-batch.mjs` / `thincoder-cli/src/acp/bridge.mjs` · `thincoder-core/tools/file.mjs:257`（`touchedPaths`——零抛、尽力提取） | 本批落（#325） |
 | D1/D2 纯函数 | `thincoder-core/tools/edit-batch.mjs:128`（`normalizeEditLine`）· `:149`（`findFuzzyWindow`）· `:183`（`applyLineEdit`）· `:140`（`FUZZY_MATCH_NOTE`） | 导出在位（edit-diff 调用期导入——ESM 循环安全） |
 | 三通道共用 | 本地单形态 / `edits` 批量 / ACP 桥 | 同内核 |
-| 批量回执汇总行（#796） | `thincoder-core/tools/edit-batch.mjs:112-113`（`summary` 组装 `:112` ∥ `return [...results, summary].join("\n")` `:113`——as-built 2026-10-04） | 本批落（#796） |
+| 批量回执汇总行（#796） | `thincoder-core/tools/edit-batch.mjs:112-113`（`summary` 组装 `:112` ∥ `return [...results, summary].join("\n")` `:113`——as-built 2026-10-04） | 本批落（#796）；**ACP 桥批量回执不适用**（桥面自持逐条行——`bridge.mjs` editBatch 逐条 join 收尾） |
 | 注册面 | `thincoder-core/tools/index.mjs:4` · `:21` | file 组 |
 | 描述面（模型可见） | `thincoder-core/tool-docs/edit.md` | 在位（`DESC()` 加载） |
 | VSC 对位实现 | `thincoder-vscode/src/tools/file-edit.mjs:78`（`edit`）· `edit-diff.mjs` · `edit-batch` 等价档（`edit-line-params.mjs` / `edit-fuzzy-match.mjs`）（W14 已迁核——上述自持档已删，现体 = 核 `thincoder-core/tools/{file.mjs, edit-diff.mjs, edit-batch.mjs}`） | 同机制 · 独立实现 （迁移期引文） |
 
 **VSC 端差异（并入 · 批 8）**：① 描述机制——VSC 无 `DESC()` md 描述（`file-edit.mjs` editTool 对象内嵌 description——与 CLI `tool-docs/edit.md` 语义一致）；
 ② 编辑器路径——doc 已打开 → WorkspaceEdit range 替换（定位偏移与 `doc.positionAt` 同坐标系——`lfOffsetToRaw` 把 LF 域偏移映射回 CRLF 原文，见 `docs/core/design/EDIT-HELPERS.md` §6）；③ 测试面——VSC 侧 30 用例
-（`thincoder-vscode/test/edit-tool-improvement.test.mjs`：删行形态 / 空串拒 / normalize 逐字同算法 / 批量混用行号+内容条目）。
+（`thincoder-vscode/test/edit-tool-improvement.test.mjs`：删行形态 / 空串拒 / normalize 逐字同算法 / 批量混用行号+内容条目）。（已随 2026-09-28 测试树全清退场）（迁移期引文）
 
 **同类扫描（#325 · as-of 2026-09-25）**：「真值判断后点链」缺陷类——`thincoder-core/tools/**` 全扫仅 `file.mjs` 的 `touchedPaths` 一处（本批已卫）；其余工具触摸面（`read` / `insert_after` / `hashline_edit` 单参形态；`apply_patch` 有 try/catch 包裹）无一命中。**桥面**（`thincoder-cli/src/acp/bridge.mjs`）：`[null]` / 非对象条目同守卫同文案、跨档文案零副本（同批收——§5 / §8 D-7）。
 **消费面续扫（#327 · as-of 2026-09-25）**：钩子消费点十处（核 6 · VSC 4——逐点坐标见 `docs/core/design/TOOLS.md` §6.17 表）已归单源谓词 `toolTouchPaths`；本档 `touchedPaths` 本体零改。
 
 ## 7. 测试
 
-`thincoder-cli/test/edit-tool-improvement.test.mjs`（**已随 2026-09-28 测试树全清退场——档不在盘**；原 **45 用例——41 快 + 4 slow**：删行形态全路径 / 显式空串拒含 `replace_all` / normalize 弯引号命中 + 单遍映射单元 / 防误匹配 / 批量删行 + 模糊端到端 / **#325 入参守卫 9 例** / **#327 三例**）。
+`thincoder-cli/test/edit-tool-improvement.test.mjs`（**已随 2026-09-28 测试树全清退场——档不在盘**；原 **45 用例——41 快 + 4 slow**：删行形态全路径 / 显式空串拒含 `replace_all` / normalize 弯引号命中 + 单遍映射单元 / 防误匹配 / 批量删行 + 模糊端到端 / **#325 入参守卫 9 例** / **#327 三例**）。（迁移期引文）
 **#325 守卫 9 例** = 核 5（真值非数组三态 `"[]"` / `{…}` / `42` + `[null]` / 非对象条目 ⇒ 成形错误、零裸抛）+ 桥 4（空数组 / `[null]` / 非对象条目经 `toolRouter` ⇒ `Error: <msg>`、零反向 RPC + 合法批量正向对照）。
 **#327 三例**（`docs/core/design/TOOLS.md` §6.17 裁定 3 / 4）= 窄形态两通道同拒（`edits` 真值非数组 + 合法单形态参数：桥路由与核 `execute` 同错误面、零写入）+ `args = null` 下 `write` / `edit` **必败**（形态据实施轮先跑读数定——`Error:` 串 ∥ 抛错）、目标零变更（「该调用必败」前提机检）。
 **#796 汇总行 4 例**（批内件 `docs/batches/2026-10-04-core-patch-batch.test.mjs`——随批档留存 · 不进仓套件）：逐字汇总行 ∥ 路径去重序 ∥ 恒定（N=1 与 N=n 同附）∥ >64K 经 `offloadToolResult`（临时目录）preview 仍含末行。
-VSC 侧同名档 `thincoder-vscode/test/edit-tool-improvement.test.mjs`（**已随 2026-09-28 测试树全清退场——档不在盘**；同引核面——守卫随核生效、端档零改）。
+VSC 侧同名档 `thincoder-vscode/test/edit-tool-improvement.test.mjs`（**已随 2026-09-28 测试树全清退场——档不在盘**；同引核面——守卫随核生效、端档零改）。（迁移期引文）
 
 ## 8. 并入的关键决策记录（含否决备选）
 
@@ -135,6 +136,9 @@ VSC 侧同名档 `thincoder-vscode/test/edit-tool-improvement.test.mjs`（**已�
 
 ## 变更记录
 
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（核面小修批 · 2026-10-04）落点表** = `docs/batches/2026-10-04-core-patch-batch.md` §2（唯一承载面——一次性批次材料）。
+
 - 2026-09-15（**B 式迁移轮 · 第 1 批**）：建档——`thincoder-cli/docs/design/EDIT.md` 内容重建入基准层（旧档一字未改、原地作参照历史）；旧结构编号统一为本文档节号；坐标改写为现状路径（`thincoder-core/tools/{edit-diff,edit-batch,file}.mjs` · VSC `file-edit.mjs`）；批次材料 / 状态行 / 变更流水不并（§9）。
 - 2026-09-15（**B 式迁移轮 · VSC 第 8 批 · 并入 · eng-designer**）：§6 增 **VSC 端差异块**（内嵌描述机制 / WorkspaceEdit 编辑器路径 / 30 用例）；§8.2 登记 VSC 源档批次材料；坐标实核。
 - 2026-09-15（**S2 W14 落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W14）：双端行 + §6「VSC 对位实现」行补迁核注（VSC 自持档已删——现体 = 核 `thincoder-core/tools/{file.mjs, edit-diff.mjs, edit-batch.mjs}`）；§6 末行补 `lfOffsetToRaw` 退场注（现体 = 核全文写路径）；机制条文零改。
@@ -148,3 +152,4 @@ VSC 侧同名档 `thincoder-vscode/test/edit-tool-improvement.test.mjs`（**已�
   **对位口径**：`thincoder-core/tools/file.mjs` 容器守卫与 `touchedPaths` 零抛本体**零改**（#327 在消费面与桥路由面落位）。
 - 2026-10-04（**核面小修批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-core-patch-batch.md` §2 · 台账 #796）：§5 增**批量回执汇总行**条（末行恒为 `edit batch: N/N entries — <路径>`——tail 恒保留故大回执可见）；§6 增汇总行追加点行；§7 增批内件 4 例；§8 增 D-9（恒定末行 ∥ 否决「仅大回执」分支）。实现 = 本批实施轮。
 - 2026-10-04（**核面小修批 · fix 轮 · eng-designer**——承批档 `docs/batches/2026-10-04-core-patch-batch.md` §2 修正块 · 评审发现 1）：§5 汇总行条钉死清单渲染（**N = 条目数 ∥ 清单 = 去重路径**；路径 = 条目原样形、去重保序首现序、分隔符 = `, `）。机制语义零改。
+- 2026-10-04（**文档清账轮 · #908 桥面明书 · eng-coder**——承 `docs/batches/2026-10-04-doc-cleanup-round.md` §2 修正块 发现 2 · 台账 #908）：§5「批量回执汇总行」条尾 + §6 表同条实核列各加「**ACP 桥批量回执不适用**」注（射程 = 核面 `editBatch` 汇总组装；桥面自持逐条行——`bridge.mjs` editBatch 逐条 join 收尾、无汇总行）。机制语义零改（「三通道共用」行内核共用语义保留不动——修正块裁定）。

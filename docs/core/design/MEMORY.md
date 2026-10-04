@@ -74,6 +74,11 @@
 指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**记忆面（S2 改）** · **记忆面导入器（S2 新建）** · **版本下限面（S2 改——须过目）**。
 **核内落点行数（R24a · S1 落地收正）** → §2.8.1「核内逐档行数与拆分计划」（本子系统面：`thincoder-core/index-bin.mjs` · `thincoder-core/index-discover.mjs`——#137）。
 
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（公共仓读取批 · 2026-10-02）落点表** = `docs/batches/2026-10-02-public-repo-read.md` §2（唯一承载面——一次性批次材料）。
+**本批（issue 修复批·一 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round1.md` §2（唯一承载面——一次性批次材料）。
+**本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
+
 ## 6. 机制面（自 CLI 产品档并入 · 2026-09-14 · B 轮）
 
 > **来源** = `thincoder-cli/docs/design/MEMORY.md`（554 行 · CLI 产品档）——根层裁定后该档 = **迁移期参照历史**（只读 · 不维护）。
@@ -476,7 +481,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 
 **写入面归一化强制**：`normalizeOrigin`（`thincoder-core/memory/origin.mjs:18-24`——分隔符归一 `/` · 盘符大写 · 去尾斜杠 · 幂等）为唯一归一函数；所有 origin 写入点须经它
 （写面入口 = `thincoder-core/memory/code-sync.mjs:193` / `thincoder-core/memory/docs.mjs:26` / `thincoder-core/memory/core.mjs:213` 与 `:264` 族）；
-判据 = 变体折叠断言（`thincoder-cli/test/memory-origin-normalize.test.mjs` 族）+ 写面结构检查。
+判据 = 变体折叠断言（`thincoder-cli/test/memory-origin-normalize.test.mjs` 族）+ 写面结构检查。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 **死 origin sweep（二信号判据）**：**信号 A** = `normalizeOrigin(o) !== o`（非归一变体）⇒ **折叠，不删**（§6.11 迁移形态）；**信号 B** = 原样 / 归一形两路径皆 ENOENT ⇒ **可删**（树亡；探针仅 ENOENT 判亡——其他错误 fail-safe 保留，先例 `thincoder-core/session-stale.mjs:124-127`）。
 
@@ -493,7 +498,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
   **组合档**：`--path <sub>` 收窄档（本批新增）须与 `--origin` 同用——删除范围收窄至 `<sub>` 前缀行（语义见 §6.14 面 ①-3）。
 - **安全设计（三件）**：① **备份前置** = `VACUUM INTO <path>`（判据同 §6.11 步 1：文件存在 ∧ 大小 > 0 ∧ 打开后 `PRAGMA integrity_check` = `ok`；失败 ⇒ 中止零写）；
   **取备份档位** = `--confirm` 档**且命中行 > 0**（写前置）；dry-run 档与零命中档不取（零写 ⇒ 无回退对象）；**路径与命名** = `<dbPath>.sweep-backup-<UTC yyyymmddHHMMSS>`（同目录；`dbPath` = `config.memory.dbPath` 展开值——缺省 `~/.thincoder/memory.db`，`thincoder-core/config.mjs:66`）；
-  **同域命名先例** = 会话索引隔离名 `session-index.db.corrupt-`（`thincoder-core/test/session-index.test.mjs:215`）；**目标已存在 ⇒ 中止零写**（fail-closed，不覆盖）。
+  **同域命名先例** = 会话索引隔离名 `session-index.db.corrupt-`（`thincoder-core/test/session-index.test.mjs:215`）；**目标已存在 ⇒ 中止零写**（fail-closed，不覆盖）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
   ② **干跑默认**（`--confirm` 才写；零写判据 = 库字节 / 行数不变）；**输出形态（含 `--origin` 档）** = 逐 origin 一行 `origin=<归一形> · 树存活=<是|否> · code=<n> / doc=<n> / files=<n> / 合计=<n>`（树存活 = 原样 / 归一形两路径探针读数——活树附警示行）+ 末行合计；`--confirm` 档同形 + 备份路径。
   ③ **审计** = 输出逐 origin 折叠映射 / 删除行数 / 备份路径；**写后回读判据按档分列**：折叠（全扫）档 = 归一键集合大小 = 1 ∧ 任一 `(归一键, path[, line_start])` 恰一行 ∧ `COUNT(*)` ≤ 前（同 §6.11 步 3）∥ **`--origin` 档 = 目标归一键三表零命中 ∧ 非目标 origin 零变**（非目标归一键集合与各键计数逐键等前值；FTS 随触发器同步）。
 - **折叠规则单源 = §6.11 步 2**（同归一键内 `(path, line_start)`（`files` = `(layer, path)`）恰一行——保留 `mtime_ms` 最大者，并列取 `rowid` 最小者；FTS 由触发器随行同步）：sweep 不另立规则。
@@ -735,7 +740,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - 2026-09-15（**W8 归一落地 · eng-coder**——承 `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W8）：§6.9 现状登记收正为**W8 后实现面**
   （核 sqlite 句柄 / 护栏接线 / 检索面 / 重建面 / 工具契约端差 + 文件制面退场登记）。
   VSC 侧删除集（`src/memory.mjs` · `embedding.mjs` · `index-bin.mjs` · `index-discover.mjs` · `indexer.mjs`）与核面接线均已落地 （迁移期引文——档已迁核）
-  （机判 = `thincoder-vscode/test/memory-index-face.test.mjs` · W8 契约②判据——现载体 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`，单测树重建时回迁端侧单测档）。
+  （机判 = `VSC memory-index-face 用例档` · W8 契约②判据——现载体 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`，单测树重建时回迁端侧单测档）。
 - 2026-09-18（**TUI 假死修复批 · eng-designer**——承 `docs/batches/2026-09-18-tui-freeze.md` 的 §1）：新增 §6.10（扫描让出 + 子代检索门）· §6.11（索引 origin 归一 + 数据面迁移判据）· §6.12（WAL 卫生）；§7 补 D-MEM17–D-MEM21；§8.3 补已知限制三行（别名路径 / 嵌套 origin 重叠 / 扫描事件循环上界）。
 - 2026-09-15（**embedding UTF-16 截断缺陷批 · eng-designer**——承 `docs/batches/2026-09-15-embedding-utf16-truncation.md` 的 §2）：§6.3 补「嵌入输入文本（三路）」段（三处截断统一走 `text-budget.mjs` 的 `safeSliceUTF16`）；§7 补 D-MEM16。
 - 2026-09-18（**TUI 假死批 · 修正轮-2（设计评审轮 1 的 12 条）· eng-designer**——承 `docs/batches/2026-09-18-tui-freeze.md` §3 轮次 1）：

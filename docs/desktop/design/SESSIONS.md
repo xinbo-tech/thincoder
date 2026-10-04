@@ -139,7 +139,7 @@
 |---|---|---|
 | `thincoder-desktop/src/main/turn-face.mjs` | **129 ⇒ ≈139**（Δ ≈ +10 = `settleTurn` ≈8 行 + 核件导入 1 行 − 2 + 档头注 ≈3；组成 = 回合尾结算单实现（标题 → 落盘；中止墓碑两查位——U-7 原样）+ 两 `saveAgentSlot` 结算行改两调用——取位按符号） | 本批 |
 | `thincoder-desktop/test/files.mjs` | **3 ⇒ 3**（本批零新登记——空清单 `export default []` 原样；单元件 = 单元测试档不登记；集成件登记 = 基建重建落盘时 +1 行） | 本批 |
-| 测试面 | **单元测试档** `docs/batches/2026-09-28-desktop-session-title.test.mjs`（已建成 · 284 行——链路 ∕ 时序 ∕ 短路 ∕ 失败 + 窗内受理 E5 ∕ 窗内中止 E6 六例；零真实网络 = `globalThis.fetch` 换桩；随批留存 · 不入仓套件）+ 集成域 `thincoder-desktop/test/integration/session-title-face.test.mjs`（**T-DSK46**——本轮不重建 E2E 基建：转父侧真机冒烟闭合，集成登记待基建重建）；测试档随修随加——不占设计条目（2026-09-27 裁定） | 本批 |
+| 测试面 | **单元测试档** `docs/batches/2026-09-28-desktop-session-title.test.mjs`（已建成 · 284 行——链路 ∕ 时序 ∕ 短路 ∕ 失败 + 窗内受理 E5 ∕ 窗内中止 E6 六例；零真实网络 = `globalThis.fetch` 换桩；随批留存 · 不入仓套件）+ 集成域 `thincoder-desktop/test/integration/session-title-face.test.mjs`（**T-DSK46**——本轮不重建 E2E 基建：转父侧真机冒烟闭合，集成登记待基建重建）；测试档随修随加——不占设计条目（2026-09-27 裁定） | 本批 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `docs/desktop/design/PROJECT.md` · `docs/core/design/SESSION.md` | 本批设计落定（本档 §1 **KD-41** ∥ `PROJECT.md` §6.1 ∕ §7 ∕ §10 ∕ 变更记录 · 核档 §6.7 第三端；§4.2 本块已迁本档 §3.2）；联动面三档（`IPC.md` ∕ `UI.md` ∕ `RENDERER.md`）零触碰 | 本批（已落） |
 
 **本批（structure-split-round · 越线档结构轮〔台账 #536〕· 实施轮 · 实读落值）拆分落形**（切点 ∕ 缝 / 行数 = 批档 `docs/batches/2026-09-29-structure-split-round.md` §2；值 = 实施轮实读 2026-09-29——设计预估值 288 ∕ 170 ∕ 245 ∕ 185 已按盘收正）：
@@ -177,7 +177,8 @@
 
 **会话标题接线批（验收面 · 2026-09-28）**：需求回指 = **D26**「会话标题链接线」（已落——`docs/desktop/requirements/PROJECT.md:171`；同族 = **D17** 状态行 `title` 段 ∕ **D18** 会话面板）；设计单源 = 本档 §1 **KD-41** ∕ 核档 `docs/core/design/SESSION.md` §6.7（链单源——第三端）；
 机检面 = **单元测试档** `docs/batches/2026-09-28-desktop-session-title.test.mjs`（已建成 · 284 行——链路 ∕ 时序 ∕ 短路 ∕ 失败 + **E5** 窗内受理零丢失 ∕ **E6** 窗内中止零标题零写——六例；零真实网络 = `globalThis.fetch` 换桩；随批留存 · 不入仓套件）；
-真机面 = **T-DSK46**——**本轮不重建 E2E 基建**（测试面全清重置后集成域空）：转**父侧真机冒烟**闭合，集成用例（`thincoder-desktop/test/integration/session-title-face.test.mjs`）登记待基建重建；**离线不可产面**（真 provider 回合 ⇒ 标题生成 ⇒ 落盘 ⇒ 左列 ∕ 标签条 ∥ 状态行三面随动 + 失焦通知携标题）= 人工走查 + 父侧真跑闭合（D16 义务）；测试档随修随加——不占设计条目（2026-09-27 裁定）。
+真机面 = **T-DSK46**——**本轮不重建 E2E 基建**（测试面全清重置后集成域空）：转**父侧真机冒烟**闭合，集成用例（`thincoder-desktop/test/integration/session-title-face.test.mjs`）登记待基建重建；**离线不可产面**（真 provider 回合 ⇒ 标题生成 ⇒ 落盘 ⇒ 左列 ∕ 标签条 ∥ 状态行三面随动 + 失焦通知携标题）= 人工走查 + 父侧真跑闭合（D16 义务）；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+  测试档随修随加——不占设计条目（2026-09-27 裁定）。
 
 （§6.1 本域行全五条已迁讫；批块一条已迁讫（上）——本域无余量。）
 

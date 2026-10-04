@@ -90,7 +90,7 @@ verify 的强制面住在完成路径，不住 verify 本体：
 | 未知 status 拒 | `thincoder-core/agent-tools/verify.mjs:258` | 在位 |
 | guard 强制端 | `thincoder-core/agent/completion.mjs:73`–`:74`（opt-in）· `:81` · `:94` · `:109` | 在位 |
 | goal 完成门 | `thincoder-core/agent-tools/goal.mjs:52` | 在位 |
-| 测试 | `thincoder-cli/test/verify-redesign.test.mjs`（T-V1–V8） | 在位 |
+| 测试 | `thincoder-cli/test/verify-redesign.test.mjs`（T-V1–V8） | 在位 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 
 ### 6.2 用例面（现行）
 
@@ -143,6 +143,9 @@ verify 的强制面住在完成路径，不住 verify 本体：
 | 需求侧正文 | CLI 树需求档 | 需求档未迁——后续批并入既有档 |
 
 ## 变更记录
+
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
 
 - 2026-10-04（**issue 修复批·五 · 登记/回填轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §2.8（父侧裁定）：§2 `basis` 条补 **`skipped` 无 `summary` 打回支零提示**句（阻断面不叠加——按现实现形明书）。**机制语义零改**（文本边界收正）。
 - 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #848 · gitee IKJKHH）：§2 增 **`basis` 可选字段**（「根据」维——声明式；缺省提示行，不阻断）+ §3 补「`basis` 与判定零耦合」句 + §7 增 **D-VR9**。提示词对应面（出口条件第 9 条）= `docs/core/design/prompts/persona-engineering.md`（EN 落地 = 实施轮）。**机制本体零改**（自报形态保留）。明细 = 批档 §2。

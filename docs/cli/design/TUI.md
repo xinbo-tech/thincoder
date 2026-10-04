@@ -478,7 +478,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | 1 | CLI·源 | `thincoder-cli/src/tui/subagent-blocks.mjs` | 437 | `:31` import 面加 `livePoolHas` / `removeFrozenSubTaskLine` · `:80-99` `ensureSubTaskKey` 墓碑分支加存活复活 + 旧载体行摘除 + 留痕 | ~460 |
 | 2 | CLI·源 | `thincoder-cli/src/tui/subagent-freeze.mjs` | 176 | `:142-154` `freezeAllSubTasks` 加存活跳过 + 新增导出 `livePoolHas(state, key)` / `removeFrozenSubTaskLine(state, key)`（与墓碑写点同址） | ~205 |
 | 3 | 核·源 | `thincoder-core/agent-tools/subagent-scheduler.mjs` | 429 | `:340-342` catch 补 `logEvent`（+ 顶注 import 面 `:12-22` 补 `logEvent`——现未 import） | ~437 |
-| 4 | CLI·测（**拟新增**） | `thincoder-cli/test/subagent-zero-block.test.mjs` | 新 | T-ZB1–T-ZB6（§6.8.3.6）；直驱 `routeSubToken` / `freezeAllSubTasks` / `refreshQueuedTokens`——零网络、零定时器 | ~120 |
+| 4 | CLI·测（**拟新增**） | `thincoder-cli/test/subagent-zero-block.test.mjs` | 新 | T-ZB1–T-ZB6（§6.8.3.6）；直驱 `routeSubToken` / `freezeAllSubTasks` / `refreshQueuedTokens`——零网络、零定时器 | ~120（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | 5 | 设计档 | `docs/cli/design/TUI.md` | 555 | 本节（§6.8.3）+ §6.8.1 指针行 + 变更记录一行 | 本档已落（→ 576 行——本 fix 轮后） |
 
 **跨文件限**：三份源档预计后均 < 500 硬限（460 / 205 / 437）——**无拆分需要**。
@@ -515,7 +515,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | AC-ZB1 | 墓碑命中且条目**存活** ⇒ 复活建块 | T-ZB1 / T-ZB2 | 台账 #19 症状 |
 | AC-ZB2 | 墓碑命中且条目**不存活**（池外 / `entry.done === true`〔含 done-in-pool〕/ `entry.cancelled === true`）⇒ 维持丢弃（迟到 chunk 丢弃语义不回归） | T-ZB3 | 批次档 §1.1 by-design 面 |
 | AC-ZB3 | `freezeAllSubTasks` 不冻存活条目；已终态（含 done-in-pool）照旧冻结 | T-ZB4 | 批次档 §1.2 ②（清扫面） |
-| AC-ZB4 | 发射面零改：域释放补位仍发 `⟦ev⟧async` + `[model]`；queued 仍不发 `[model]` | 既有断言（`advisor-pool-queue.test.mjs:86/211`——**仅 async 面**）+ T-ZB1（**`[model]` 面**落位断言） | 批次档 §1.3 判据 2 |
+| AC-ZB4 | 发射面零改：域释放补位仍发 `⟦ev⟧async` + `[model]`；queued 仍不发 `[model]` | 既有断言（`advisor-pool-queue.test.mjs:86/211`——**仅 async 面**）+ T-ZB1（**`[model]` 面**落位断言）（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） | 批次档 §1.3 判据 2 |
 | AC-ZB5 | 降级面（无 `state._agent`）行为与批前逐字一致 | T-ZB5 | §6.8.1 降级路径条 |
 | AC-ZB6 | 留痕：复活分支与 relay 异常各留一条可观测痕（禁静默） | T-ZB6 | 批次档 §1.3 判据 3 |
 | AC-ZB7 | 两端全量 `npm test` 绿 | `npm test`（cli + core） | 常规门 |
@@ -773,6 +773,11 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | VSC webview 对位 | webview 渲染 / 消息协议 | `docs/vsc/design/WEBVIEW*.md`——**非同机制**（端差异如实登记——登记 ≠ 默认保留；**登记面 = 记录已裁的保留项**，✗ 非未决差项兜底；端差默认 = 消，保留须结构性不对称 + 证据 + 显式裁定（A9）；各端独立实现只述实现形态，✗ 不构成差异保留依据；**已裁保留 · A9 三件齐**：① 结构性不对称 = 渲染宿主不同（VSC webview DOM + 宿主↔面板消息协议 ∥ CLI 裸 ANSI 终端行内渲染；消息协议仅单侧存在）；② 证据 = 两实现树（`thincoder-vscode/webview/**` + `WEBVIEW-PROTOCOL.md` ∥ `thincoder-cli/src/tui/**`）；③ 显式裁定 = 2026-09-14「逻辑 / 渲染分家」（同判据 · `CORE-UNIFICATION.md` §2.5 端特有桶）+ 2026-09-25 misc-four 批确认（台账 #185）） |
 
 ## 变更记录
+
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（消化重放口径批（#771 ∥ #773） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-replay-choices.md` §2（唯一承载面——一次性批次材料）。
+**本批（消化行只留当轮收正 · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-row-current-only.md` §2（唯一承载面——一次性批次材料）。
+**本批（消化行自然形·两端跟正（CLI ∥ VSC） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §2（唯一承载面——一次性批次材料）。
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§7.4 标题段收正（空值回退链已落——#677 I2；可机判行同变）；§7.5 宽度口径收正（编号前缀预扣除已落——#677 I6；指位 `:375` → `:387`）。**零新语义**。
 
 - 2026-09-30（**跨线清零轮 · 设计档收正（修正轮 1 补落变更记录）· eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2 · 台账 #677）：§7.4 空窗差行 = 消（本段补同款回退链，对位 `thincoder-vscode/src/extension/panel-session.mjs:235-243`——实施清单 I2）；§7.5 宽度口径行 = 消（编号前缀预扣除——实施清单 I6）。**零机制改**。

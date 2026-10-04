@@ -61,7 +61,7 @@
 | **V3** 批次档 §3 轮次行 | 已批准批次 §3 非空且含**工具写入的轮次行**（排骨架行）——判据与射程见 `design/BATCH-RECORD.md` §4.6 | 文本纪律面（无对应机检器——v2 收敛撤除；§4.2.6） |
 | **V4** 跨仓形态合规 | 正文引用他仓文档的形态须在**封闭枚举 E1–E5** 内——枚举外即红（**声明源前缀形除外**——合法可核坐标（§4.2.2 ⑥）；射程 = 声明公共仓——「两形态射程」见 §2 V1 跨仓边界） | 文本纪律面（无对应机检器——v2 收敛撤除；§4.2.6；判据全文 = `design/LEDGER-SELF-CONTAINED.md`） |
 | **V5** 文档锚一致性 | 现行档内的事实锚（用例号 / 文件路径 / 符号）存在性——判据规格 = 本档 §4 | 独立档 `scripts/doc-check-anchors.mjs` |
-| **V6** 编号引用可解析 | 档内家族编号（`F` / `N` / `D` / `AC` / `T`）**跨节 / 跨档引用**的被引处定义存在性——判据规格见本节 V6 块 | 常驻测试 `thincoder-cli/test/doc-fnum-refs.test.mjs`（已在位） |
+| **V6** 编号引用可解析 | 档内家族编号（`F` / `N` / `D` / `AC` / `T`）**跨节 / 跨档引用**的被引处定义存在性——判据规格见本节 V6 块 | 常驻测试 `thincoder-cli/test/doc-fnum-refs.test.mjs`（已在位） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 
 **V1 跨仓边界（形态规范 B——检查器零改动）**：
 
@@ -81,7 +81,7 @@
 
 - **纪律句（编号自持）**：档内编号家族（`F` / `N` / `D` / `AC` / `T` 类）**节内定义、节内引用**；跨节 / 跨档引用他处编号 ⇒ **去编号化**——改「指针（文档:节）+ 语义名」形态（D4 指针纪律 + D2 单一权威源）。
 - **判据**：抽取形态 = 「`§<节号>` + 家族编号」与「`§<节号>` + 家族编号区间（`Fm–Fn`）」；定义面 = **被引节内**的编号定义位（粗体行首 `**Fm**` / 列表项首 `- **Fm` / 表格行首）；区间**逐号展开**判；集合差非空 ⇒ 报（档:行 + token）。
-- **落点**：判据函数 + 常驻测试 `thincoder-cli/test/doc-fnum-refs.test.mjs`（**已在位**；夹具 = 正常 / 区间边界 / 悬空错误三例）；**首落报告态**（承 F4 先例——报告态先落、清账后收紧）。
+- **落点**：判据函数 + 常驻测试 `thincoder-cli/test/doc-fnum-refs.test.mjs`（**已在位**；夹具 = 正常 / 区间边界 / 悬空错误三例）；**首落报告态**（承 F4 先例——报告态先落、清账后收紧）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 - **本批判定面**：`requirements/ENGINEERING-MODE-V2.md` §13.4 面（集合差为空）；**全档 / 全仓扫描 = 后续批**（读数登记、不阻断本批）；无档名的跨档 `§N` 引用形态归后续批读数面。
 - **与既有判据不重叠**：V1 只管「`X.md §N` 的档 / 节号存在性」（不判家族编号定义）；V5 不判编号引用（面不交——见 §4.2.6）。
 - **判据句**：跨节引用他节编号而无定义 ⇒ 判**违规**；区间引用未逐号展开判 ⇒ 判**违规**（漏判面）。
@@ -435,7 +435,7 @@ OBL-5  文档面标注义务 = 带当前行数\s*\+?\s*预计增量|行数标注
   另：`thincoder-core/agent.mjs` 坐标漂移 **`:203` → `:208`**（行数不变，同下表行）。**档数 45 不变**（+5 行全落已在册三档内）。
 - **口径边界（评审 #11 收正 · 2026-09-25 收正轮）**：上列读数口径 = **带前缀**形态（档名 `AGENT-LOOP\.md` + 死节号）。**裸形**（不带档名的 `§N` 指称——多头：同一 `§N` 在本仓另指需求档 / 他档节号）已随文档面收尾批（2026-09-25 · 台账 #347）**全处置**：复扫 299 行 / 90 档（初筛）⇒ 扣 ② 族与假阳后 **231 行 / 68 档**（A 类全数改指 / 改述；复扫 A 类零死编号）；
   余 **52 处判 B 类在册**（日期 44 · 夹具引例 4 · 批次档段号形态示例 2 · 同块带日期 2——非销项对象）。
-  带前缀面复扫（本席 · 域 = 三树全 · 2026-09-25）：旧号残留 **1 处**（夹具引例——`thincoder-cli/test/prompt-refs-zero.test.mjs:117`，B 类）；余 42 行逐处判非族（新号 `§6.x` / 活节 `§2.x` 活引）。
+  带前缀面复扫（本席 · 域 = 三树全 · 2026-09-25）：旧号残留 **1 处**（夹具引例——`thincoder-cli/test/prompt-refs-zero.test.mjs:117`，B 类）；余 42 行逐处判非族（新号 `§6.x` / 活节 `§2.x` 活引）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
   读数与判类清单单源 = 批档 `docs/batches/2026-09-25-doc-face-closeout.md` §5 二态处置表；族别口径 / 销项收口 = 本档 §3.12 条目 K。
 - **域边界（2026-09-18 死名批二轮收正 · 与上列口径同源）**：域 = 三树**源码面**（`thincoder-core/**` **除 `test/**`** · `thincoder-cli/src/**` · `thincoder-vscode/src/**`——与两条 `src/**` 同口径）；**三树 `test/**` 不入域**。
   域外同口径读数（**登记**——本批不扩射程）= **18 行 / 16 档**（`thincoder-core/test/**` 1 行 / 1 档 · `thincoder-cli/test/**` 11 行 / 11 档 · `thincoder-vscode/test/**` 6 行 / 4 档）；若父侧裁定并入 ⇒ 读数 **126 行 / 61 档**。
@@ -518,9 +518,9 @@ node -e "const fs=require('fs');let n=0;fs.readdirSync('.',{recursive:true}).for
 
 | # | 处 | 行施为与判类 | 处置 |
 |---|---|---|---|
-| 1 | `thincoder-cli/test/batch-segment.test.mjs:3` | 断言现态（V3 三态住哪）· 行内无时点锚 ⇒ **A** | **改述**（**本行所指判据面无承接**：V1–V4 机检实装随 v2 单引擎收敛撤除——本档 §4.2.6 逐字）⇒ 去死名坐标形态，改「（一致性族 V1–V3——该族机检实装已撤除，§4.2.6）」。<br>**承接限定（评审 #10 收正）**：死名 `doc-consistency.test.mjs` 的承接**仅及夹具纪律面**（§3.8 映射行 = **单元测试档**（自测护栏惯例）「CLI 侧功能面承接」）；**V3 判据实装面**（本行所指）**已撤除 ⇒ 改述、不「改指」** |
-| 2 | `thincoder-cli/test/eng-designer-role.test.mjs:124` | 同型（收归方向）· 无时点锚 ⇒ **A** | **改述**（同句去死名；**防回潮族 = 判据实装面**，随载体消亡、无承接——承接限定同 #1：夹具纪律面归**单元测试档**（自测护栏惯例——常驻重建挂台账 #590 面），本行**不属**该面 ⇒ **改述、不「改指」**） |
-| 3 | `thincoder-cli/test/prompts-async-guidance.test.mjs:9` · `:36` | 行内含时点锚 `2026-09-11` + 史实谓词「已收归」 ⇒ **B** | **零触碰**——在册残差（§3.8 残差登记口径 + 到期条件同族） |
+| 1 | `thincoder-cli/test/batch-segment.test.mjs:3` | 断言现态（V3 三态住哪）· 行内无时点锚 ⇒ **A** | **改述**（**本行所指判据面无承接**：V1–V4 机检实装随 v2 单引擎收敛撤除——本档 §4.2.6 逐字）⇒ 去死名坐标形态，改「（一致性族 V1–V3——该族机检实装已撤除，§4.2.6）」。<br>**承接限定（评审 #10 收正）**：死名 `doc-consistency.test.mjs` 的承接**仅及夹具纪律面**（§3.8 映射行 = **单元测试档**（自测护栏惯例）「CLI 侧功能面承接」）；**V3 判据实装面**（本行所指）**已撤除 ⇒ 改述、不「改指」** （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| 2 | `thincoder-cli/test/eng-designer-role.test.mjs:124` | 同型（收归方向）· 无时点锚 ⇒ **A** | **改述**（同句去死名；**防回潮族 = 判据实装面**，随载体消亡、无承接——承接限定同 #1：夹具纪律面归**单元测试档**（自测护栏惯例——常驻重建挂台账 #590 面），本行**不属**该面 ⇒ **改述、不「改指」**） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| 3 | `thincoder-cli/test/prompts-async-guidance.test.mjs:9` · `:36` | 行内含时点锚 `2026-09-11` + 史实谓词「已收归」 ⇒ **B** | **零触碰**——在册残差（§3.8 残差登记口径 + 到期条件同族） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | 4 | `docs/core/design/DOC-DISCIPLINE.md` **§4.2.8「历史沿革（原判据面——不再生效）」→「原判据面登记三项」块**（自指行号不写——随本档修订漂移；评审实核 as-of 2026-09-18 = `:726`。评审 #8 收正：旧记 `:692` 实为 §4.2.7 标题行） | 行属**存史块** + 行内带史实谓词与裁定时点（「已裁 2026-09-16 · 裁定 4」） ⇒ **B** | **零触碰**——台账 #68 立案时（2026-09-18 05:1x）的旧坐标形态（旧脚本名 + 行区间坐标）**已随判据面收正批重写为裸名 + 裁定时点**（实测 2026-09-18）⇒ 本项**已消解**；本批仅登记消解事实（**不需要改指**——不得“按旧抽样回改重写后的存史行”） |
 
 #### J-3（#69）tool-docs 计数收正（25 → 24——D3 计数与列表同改）
@@ -595,9 +595,9 @@ node -e "const fs=require('fs');let n=0;fs.readdirSync('.',{recursive:true}).for
 | 3 | `thincoder-core/agent-tools/subagent-panel.mjs` | 160 | 0（1 行） | ≤300 软线内 | 代码·模型可见串 | eng-coder |
 | 4 | `thincoder-core/agent-tools/advisor.mjs` | 280 | 0（1 行） | ≤300 软线内 | 代码·模型可见串 | eng-coder |
 | 5 | `thincoder-core/agent-tools/subagent.mjs` | 409 | 0（3 行） | ≤500 | 代码·模型可见串 | eng-coder |
-| 6 | `thincoder-cli/test/batch-segment.test.mjs` | 298 | 0（1 行改述） | 贴 300 软线（Δ0 不越） | 代码·测试头注 | eng-coder |
-| 7 | `thincoder-cli/test/eng-designer-role.test.mjs` | 269 | 0（1 行改述） | ≤300 | 代码·测试头注 | eng-coder |
-| 8 | `thincoder-cli/test/prompts-async-guidance.test.mjs` | 173 | **0（零触碰——B 类）** | ≤300 | 代码·测试头注（在册残差） | —（零改） |
+| 6 | `thincoder-cli/test/batch-segment.test.mjs` | 298 | 0（1 行改述） | 贴 300 软线（Δ0 不越） | 代码·测试头注 | eng-coder （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| 7 | `thincoder-cli/test/eng-designer-role.test.mjs` | 269 | 0（1 行改述） | ≤300 | 代码·测试头注 | eng-coder （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| 8 | `thincoder-cli/test/prompts-async-guidance.test.mjs` | 173 | **0（零触碰——B 类）** | ≤300 | 代码·测试头注（在册残差） | —（零改） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | 9 | `docs/core/design/DOC-DISCIPLINE.md` | — | — | 文档 | 设计档 | **eng-designer**（设计轮已落） |
 | 10 | `docs/core/design/DOC-MIGRATION.md` | — | — | 文档 | 设计档 | **eng-designer** |
 | 11 | `docs/core/design/SEND-STALL-DISTILL.md` | — | — | 文档 | 设计档 | **eng-designer** |
@@ -656,7 +656,7 @@ node -e "const fs=require('fs');let n=0;fs.readdirSync('.',{recursive:true}).for
 
 - `scripts/doc-check-anchors.mjs`（**322** 行 · 本批 +2——前身登记 = `docs/batches/2026-09-18-machine-check-face.md` §2）：**不拆**——理由 = 本批零结构改（左界守卫补 `@` 单点）+ ≤500 硬限内；**触发 = 再度增厚**（结构改或越硬限时另批执行）。
   抽取候选线 = 抽「抽取面族」（判据常量块 `NOTE_MARKERS`–`HISTORY_PREDICATES` + `extractAnchors` + 行内判据助手 `addTokens` / `codeSpanIdentifiers` / `pointerRanges`，`:28`–`:154` 区 ≈ 107 行）→ 新档 `doc-check-extract.mjs`（同目录 · **裸名形态**——§3.8 书写纪律）；原档 re-export 保持（消费面零改）。
-- `thincoder-cli/test/memory-scan-bounds.test.mjs`（前身登记 = `docs/batches/2026-09-18-tui-freeze.md:431` 残留①）：**不拆**——理由 = 小债批零结构改（阈值常量 + 断言字面）+ ≤500 硬限内；**触发 = 再度增厚**——档位登记（读数 / 触发）= `docs/cli/design/CLI-DEBT.md` §2.2 B4 行（数据单一活面；本档不复读读数）。
+- `thincoder-cli/test/memory-scan-bounds.test.mjs`（前身登记 = `docs/batches/2026-09-18-tui-freeze.md:431` 残留①）：**不拆**——理由 = 小债批零结构改（阈值常量 + 断言字面）+ ≤500 硬限内；**触发 = 再度增厚**——档位登记（读数 / 触发）= `docs/cli/design/CLI-DEBT.md` §2.2 B4 行（数据单一活面；本档不复读读数）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
   抽取候选线 = 抽「真库探针族」（T-Y6 计划面 + T-Y4 真时探针：夹具 `planFixture` / `ty4Fixture` + 探针 `maxGapMs` / `median` + 两用例块，`:229`–`:369` 区 ≈ 141 行）→ 新档 `memory-scan-probes.test.mjs`（同目录 · 裸名形态）；假源族（T-MS / T-Y1–Y3 / T-Y5 / T-Y5b）留原档。 （机检豁免——用例退场登记）
 
 **读数口径**：行数 = as-of 2026-09-20（设计轮 + 修正轮实测）；软线 = 300（咨询层）· 硬限 = 500（仓 `AGENTS.md` 口径）。
@@ -680,12 +680,13 @@ node -e "const fs=require('fs');let n=0;fs.readdirSync('.',{recursive:true}).for
 ② **`TUI.md §15.x` 族死引**（旧 TUI 档节号；现行 `docs/cli/design/TUI.md` = §1–§8 ⇒ 诸靶不可解析）——当轮实读 **14 行 / 10 档**：
   `thincoder-core/text-budget.mjs` `:2` / `:9` · `thincoder-cli/src/tui/display-budget.mjs` `:2` / `:12` · `thincoder-cli/src/tui/conversation-writer.mjs:14` ·
   `thincoder-cli/src/tui/key-handler-search.mjs:2` · `thincoder-cli/src/tui/subagent-blocks.mjs:103` · `thincoder-cli/src/tui/subagent-children.mjs` `:19` / `:126` ·
-  `thincoder-cli/src/tui/subagent-freeze.mjs` `:15` / `:94` · `thincoder-cli/src/tui/tool-display.mjs:10` · `thincoder-cli/src/tui/tool-events.mjs:43` · `thincoder-cli/test/tui-memory-budget.test.mjs:2`。
+  `thincoder-cli/src/tui/subagent-freeze.mjs` `:15` / `:94` · `thincoder-cli/src/tui/tool-display.mjs:10` · `thincoder-cli/src/tui/tool-events.mjs:43` · `thincoder-cli/test/tui-memory-budget.test.mjs:2`。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 ③ **退役台账两行**：`docs/TODO-archive.md:263`（档名错位——该行载 `AGENT-LOOP-SUBAGENT.md` 的 `§6.20`，而该档无此节；`§6.20` 实住 `AGENT-LOOP-ASYNC-POOL.md:198`）× `docs/TODO.md:50`（行坐标漂移——载 `AGENT-LOOP.md §6.3:215/226`，靶档同节今读 `:233` 起）。
 
 **处置判据（承 §3.8 两分——判据句不在本条重述；本条只落三处族别口径）**：
 
-- **族别口径 ①（族域）**：域 = 三树**全**（`thincoder-core/**` · `thincoder-cli/{src,test}/**` · `thincoder-vscode/{src,test}/**`）+ `docs/**` 非归档面——**含 `test/**`**（② 族实存位点含测试头注；① 族抽样亦含 `thincoder-cli/test/hooks-stop.test.mjs`）。与 §3.9 J-1「三树源码面（`test/**` 域外）」**不同域**——下轮 sweep 不得按 J-1 域判「覆盖已完」。
+- **族别口径 ①（族域）**：域 = 三树**全**（`thincoder-core/**` · `thincoder-cli/{src,test}/**` · `thincoder-vscode/{src,test}/**`）+ `docs/**` 非归档面——**含 `test/**`**（② 族实存位点含测试头注；① 族抽样亦含 `thincoder-cli/test/hooks-stop.test.mjs`）。（迁移期引文）
+  与 §3.9 J-1「三树源码面（`test/**` 域外）」**不同域**——下轮 sweep 不得按 J-1 域判「覆盖已完」。
   **域内 `docs/**` 非归档面命中位点**：判类同前（实读靶档）；处置归属 = 该档面主笔（D1 写权矩阵）——批级落笔路由与受影响行 = 批档 §2 受影响文件表。
 - **族别口径 ②（裸形面判类）**：① 族 token = 裸形 `§N`（前置文内无 `\S+\.md` 档名）；判类前须**实读靶档**：靶档无该节 ⇒ 死编号（A / B 按 §3.8）；靶档有该节 ∧ 指称唯一 ⇒ **活形**（零触碰，不入族）；两候选不可唯一 ⇒ **判保留 + 登记**（错指 > 死指——不猜改指）。
 - **族别口径 ③（② 族改指形态 + 批名不豁免）**：`TUI.md §15.x` 逐 token 实读现档承接节（`docs/cli/design/TUI-SESSION-VIEW.md` §5.x——先例 = hygiene-sweep-3 批 `§15.3.3` → `§5.3/§5.4`）⇒ **改指**；无可唯一承接 ⇒ **改述**（去死节号坐标形态——不得换号了事）。行内**批名（`TUI-OOM-ROOTCAUSE`）非法定豁免**：判类同 §3.9 J-1 口径——**无时点锚 / 无史实谓词 ⇒ A 类**（批名 ≠ 时点锚）；带日期 ⇒ B 类。
@@ -993,7 +994,7 @@ V5-B: /(?<![A-Za-z0-9-])((?:T-[A-Z]{1,5}\d{1,3}(?:-\d{1,3})?|T-\d{1,3}|T[A-Z]?\d
 
 #### 4.2.6 与 V1–V4 / V6 的射程边界（不重复报同一行）
 
-**实装现状（2026-09-18 判据面批收正）**：V1–V4 的机检实装随 v2 单引擎收敛**撤除**（`scripts/` 现存四档 = 锚 + 行宽，无一致性族）⇒ 下表 V1–V4 行 = **V5 侧避让规则 + 文本纪律面**（仍然有效），**不再有对应的机检器**；V6 = 常驻测试 `thincoder-cli/test/doc-fnum-refs.test.mjs`（§2）；V5 = 本档 §4。
+**实装现状（2026-09-18 判据面批收正）**：V1–V4 的机检实装随 v2 单引擎收敛**撤除**（`scripts/` 现存四档 = 锚 + 行宽，无一致性族）⇒ 下表 V1–V4 行 = **V5 侧避让规则 + 文本纪律面**（仍然有效），**不再有对应的机检器**；V6 = 常驻测试 `thincoder-cli/test/doc-fnum-refs.test.mjs`（§2）；V5 = 本档 §4。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 | 判据 | 判什么 | V5 的避让 |
 |---|---|---|
@@ -1279,7 +1280,7 @@ node thincoder/scripts/doc-check.mjs
    - 逐坐标等价判（并行 · 非替代）：§3.9 J-3 表 7 处（`ARCHITECTURE.md:58` · `DOC-SYSTEM.md:142` · `PROMPT-SYSTEM.md:21` / `:23` / `:157` / `:182` · `TOOLS.md:272`——行号 as-of 2026-09-18 fix 轮实核）逐处改后含 `24`。
    - 核内断言 `thincoder-cli` 三包 `npm test` 全绿（`prompt-files.test.mjs:73` / `core-prompt-face.test.mjs:20-22` 恒等 24）。
 5. **坐标改指可解析（14 处——2026-09-18 评审修正轮收正 · 评审 #1）**：`SEND-STALL-DISTILL.md` 的 **14 处**新坐标逐处在目标档实存（行号 as-of 2026-09-18；明细 = §3.9 J-5 表）；**旧坐标 `tool-events.mjs:395` 在机制面（`:53` §2.3 · `:91` §3）零命中**——变更记录存史行 `:144`（时点锚 `2026-09-15`）按 **B 类**保留原坐标（判据域外，见 §3.9「已核零漂移」列）；`:36` / `:90` 改述后不再出现「直引 VSC 蒸馏本体」句。
-6. **B 类零 diff（行级判读口径——2026-09-18 fix 轮补注 · 评审 id=55 发现 1；二轮修正轮坐标收正 · 评审 #5）**：坐标 = `prompts-async-guidance.test.mjs:9` / `:36` · `DOC-DISCIPLINE.md` §4.2.8 时点锚行 · `CORE-UNIFICATION.md` 全族 · `PROMPT-SYSTEM.md:17` / `TOOLS.md:17`
+6. **B 类零 diff（行级判读口径——2026-09-18 fix 轮补注 · 评审 id=55 发现 1；二轮修正轮坐标收正 · 评审 #5）**：坐标 = `prompts-async-guidance.test.mjs:9` / `:36` · `DOC-DISCIPLINE.md` §4.2.8 时点锚行 · `CORE-UNIFICATION.md` 全族 · `PROMPT-SYSTEM.md:17` / `TOOLS.md:17`（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
    · `DOC-MIGRATION.md` §9.4 尾块「现态非本批因」（标题行 + 4 bullet——as-of 2026-09-18 = `:264-268`）
    ⇒ **上列坐标行零 `git diff` hunk**（`+` / `-` 侧皆无；**档级** `git diff` 非空不影响本判据——同档他行的正当改述不属其列）。
 7. **数据档零改**：`PROJECT-MANIFEST.json` 零 diff（J-6 裁定）。
@@ -1445,10 +1446,17 @@ node -e "const s=require('fs').readFileSync('docs/core/design/DOC-MIGRATION.md',
 
 ## 变更记录
 
-- 2026-09-29（**doc-sync-carryover 批 · 文档随动族收正轮 · eng-designer**——承 `docs/batches/2026-09-29-doc-sync-carryover.md` §1 · 台账 #647）：自测护栏载体收正随落——§3.4 ∕ §3.8 ∕ §4.2.7 ∕ §5 内 `thincoder-cli/test/doc-check.test.mjs` 引用族 12 处按「现役载体 = 单元测试档（名随批次档）+ 常驻重建挂台账 #590 面」形收正（测试树全清令后同 §7 口径）。**判据语义零改**。
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（文档体系重组批（#813） · 2026-10-02）落点表** = `docs/batches/2026-10-02-doc-structure-reorg.md` §2（唯一承载面——一次性批次材料）。
+**本批（多仓操作机制·提示词面 · 2026-10-02）落点表** = `docs/batches/2026-10-02-multi-repo-mechanism.md` §2（唯一承载面——一次性批次材料）。
+**本批（提示词面收正批 · 2026-10-02）落点表** = `docs/batches/2026-10-02-prompt-face-rectification.md` §2（唯一承载面——一次性批次材料）。
+**本批（公共仓读取批 · 2026-10-02）落点表** = `docs/batches/2026-10-02-public-repo-read.md` §2（唯一承载面——一次性批次材料）。
+**本批（ACP 用户文档扩充 · 2026-10-04）落点表** = `docs/batches/2026-10-04-acp-user-docs.md` §2（唯一承载面——一次性批次材料）。
+
+- 2026-09-29（**doc-sync-carryover 批 · 文档随动族收正轮 · eng-designer**——承 `docs/batches/2026-09-29-doc-sync-carryover.md` §1 · 台账 #647）：自测护栏载体收正随落——§3.4 ∕ §3.8 ∕ §4.2.7 ∕ §5 内 `CLI doc-check 用例档` 引用族 12 处按「现役载体 = 单元测试档（名随批次档）+ 常驻重建挂台账 #590 面」形收正（测试树全清令后同 §7 口径）。**判据语义零改**。
 
 - 2026-09-29（**doc-check-face 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-29-doc-check-face.md` §2 落点 7 · 台账 #546）：§7 随行数面落定收正——① **四档接口 ⇒ 五档接口**（+ `scripts/doc-check-linecounts.mjs` ∕ 行数面第五判据）；
-② F2 判据键句补 `lineCounts`；③ 自测护栏载体收正——`thincoder-cli/test/doc-check.test.mjs`（原记「已落 · 实读 340」）随 2026-09-28 测试树全清令退场 ⇒ 现役载体 = 单元测试档（本批 = `docs/batches/2026-09-29-doc-check-face.test.mjs`），常驻重建挂台账 #590 面。**判据语义零改**。
+② F2 判据键句补 `lineCounts`；③ 自测护栏载体收正——`CLI doc-check 用例档`（原记「已落 · 实读 340」）随 2026-09-28 测试树全清令退场 ⇒ 现役载体 = 单元测试档（本批 = `docs/batches/2026-09-29-doc-check-face.test.mjs`），常驻重建挂台账 #590 面。**判据语义零改**。
 
 - 2026-09-25（**文档拆档判据登记批 · fix 轮（评审轮 1 · 7 条逐号）** · eng-designer——承 `docs/batches/2026-09-25-doc-split-discipline.md` §3 轮 1 · 父侧全数裁定采纳 · **条款语义零改**）：
   ① §3.4 契约①射程 **V1–V5 → V1–V6**（V6 常驻测试夹具 = 全内存 / 零落盘 · 实档只读）；② §3.14 不溯及既往句明示射程面别（文档档不回溯 ∥ 代码面登记照旧）；③ §3.14 受影响文件表文档档两列改 **`—`**（§3.7 现行口径 · 行保留）；
@@ -1476,7 +1484,7 @@ node -e "const s=require('fs').readFileSync('docs/core/design/DOC-MIGRATION.md',
   连带同步：`docs/core/design/DOC-MIGRATION.md` §10.4 禁出路行（字面重述 → 节号指针）· `docs/core/design/ANCHOR-DEBT-REPAIR.md` §3-Q5 / §3-Q6（到期条件单源 + 收正登记）。
 
 - 2026-09-18（**死指针 sweep · 设计评审修正轮 1 · eng-designer**）：八条发现逐条落地（发现原文 = `docs/batches/2026-09-18-dead-pointer-sweep.md` §3 轮次 1；父侧逐条裁定接受）——
-  ① §3.8 映射表增 `doc-consistency.test.mjs` 行（承接单源）+ §3.4 两行改述（缺陷载体随 M8 机检重写批删除、承接 = `thincoder-cli/test/doc-check.test.mjs`；VSC 侧无承接）·
+  ① §3.8 映射表增 `doc-consistency.test.mjs` 行（承接单源）+ §3.4 两行改述（缺陷载体随 M8 机检重写批删除、承接 = `CLI doc-check 用例档`；VSC 侧无承接）·
   ② §3.8 映射表 `reconcile-lookup.mjs` 行 VSC `scripts/` 枚举收正 **三支**（盘面实核）· ③ 计数收正三处（A′ **29 坐标 / 27 行** · #42 **19 档** · 改指 / 改述目标 **15 项**——批档 §2）·
   ④ §3.8 判据句增 **A-① / B-① 优先序**（行施为何优先于表类）+ 「**整表已无对象** ⇒ 归承接档实质修订」显式分支 · ⑤ §5 A-DD18 补 **A′ 面**并与批档 AC-1 同口径（绝对读数改相对判据）·
   ⑥ §3.7 增「**批次档同口径**」射程句 · ⑦ §3.8 映射表「M1–M10」注为**模块号区间**（盘上 `_archive/modules/` 实存 9 档）。**同轮补入**：§3.4 判定面两行（A-DD8 判据 ① 与证据行）的旧用例档坐标改述为现行承接档——评审未列、按 §2.2 A′ 定义同源补入。
@@ -1512,14 +1520,14 @@ node -e "const s=require('fs').readFileSync('docs/core/design/DOC-MIGRATION.md',
   ② **残差读数收正**：**103 → 108 行 / 45 档**——+5 行 = `thincoder-core/agent-tools/advisor-async.mjs` `:23` / `:281` / `:367` ·
   `thincoder-core/agent-tools/advisor.mjs` `:215` · `thincoder-core/agent-tools/subagent.mjs` `:120`（三档表行同步）；
   另 `thincoder-core/agent.mjs` 坐标漂移 `:203` → `:208` + **域边界**（三树 `test/**` 域外 = 18 行 / 16 档 · 登记）+ **可重跑命令**（实测 116 = 108 + 在册活节引用 8 行）+ 模型可见位点点名 **9 → 10 处**；
-  ③ 死名 `check-doc-width` **分类裁定 = A 类**（`thincoder-cli/test/prompts-dual-source.test.mjs:118`——断言现态 ∧ 无时点锚）⇒ 入 §3.8 残差登记（**登记 · 不落位**：写域 = 代码 · 测试面）。
+  ③ 死名 `check-doc-width` **分类裁定 = A 类**（`CLI prompts-dual-source 用例档:118`——断言现态 ∧ 无时点锚）⇒ 入 §3.8 残差登记（**登记 · 不落位**：写域 = 代码 · 测试面）。
 
 - 2026-09-18（**判据面批（#40 + #37）· 实施后修正轮** · eng-designer）：实施实测与设计读数三面偏离 + 坐标漂移 + 两条文口径，逐条收正（依据 = 批次档 §2 本轮记录 · 父侧逐条裁定接受）——
   ① §4.2.1 读数与坐标（右界守卫实装坐标 `:37` → `:44` · 谓词面「6 词面 7/0」→ 实测 **42/1** · 收窄后悬空余 **0** → **1** = 规格一致行为）· ② §4.2.2 用例号悬空 6 → **7**（余项清单补第 7 条——见批次档 §2.2 ③）· ③ §4.2.3 并档叙述实装坐标 `:28` → **`:32`** + **指针形态实装现态登记**（`pointerRanges` 射程退化——护栏零生效、今日零实害）
   ④ §4.2.1 增**报告面锚串形态**（并列组只取首组——判定面仍整段消费）· ⑤ §4.2.5 两态口径收正（两态 = 库面能力 · CLI 恒闸态）· ⑥ §4.2.9「今日零影响」→ **实测含 1 行转照红** · ⑦ §5 A-DD17 三面读数收正（0 / 6 / 实测 → **1 / 7 / 216**）· ⑧ §7 四档接口补 `collectTestTrees` · ⑨ 报告面汇总行坐标 `doc-check.mjs:27` → **`:32`**（两处）。
 
 - 2026-09-18（**判据面批（#40 + #37）· 评审修正轮（轮 1）** · eng-designer）：八项逐号落地（发现原文 = 批档 §3「设计评审」表）——
-  ① §2 落点列 V1–V4 改「文本纪律面（无对应机检器——v2 收敛撤除；§4.2.6）」+ §1 D3/D4 机判句同步（D3 机判 = 无 · D4 机判 = V5）；V5 落点改现名 `scripts/doc-check-anchors.mjs`、V6 去「拟新增」（`thincoder-cli/test/doc-fnum-refs.test.mjs` 已在位，两处）·
+  ① §2 落点列 V1–V4 改「文本纪律面（无对应机检器——v2 收敛撤除；§4.2.6）」+ §1 D3/D4 机判句同步（D3 机判 = 无 · D4 机判 = V5）；V5 落点改现名 `scripts/doc-check-anchors.mjs`、V6 去「拟新增」（`CLI doc-fnum-refs 用例档` 已在位，两处）·
   ② A-DD17 用例号悬空 8 → **6**（基线 18）· §4.2.2 影响面同步 · ③ A-DD17 路径/坐标预估 215 → **214**（248 − 转绿 34）·
   ④ §4.2.10 报告面单源定稿（逐条行 + 汇总行字段 + 「标记冗余」报告行；失据 = ①+无②+③悬空）· §4.2.9 报告面按同法对齐 ·
   ⑤ 防滥用② 类集收正 **P1 / S1 / B1**（归类指针 = `design/ANCHOR-DEBT-REPAIR.md` §1 ① 行）+ 「只引用不重述」改述「待改引用」· ⑥ §7 家族段报告面收正。
@@ -1608,9 +1616,9 @@ node -e "const s=require('fs').readFileSync('docs/core/design/DOC-MIGRATION.md',
   用例表增 **DD-51–DD-56**（单源 = §3.12 / §3.13 两处）；§3.9 J-1 残差块 +1 行登记。**零新机制 / 零代码面落盘**（sweep 实施 = 实施轮；设计档文本笔 = 本席）。
 
 - 2026-09-25（**checker-tooling 批 · eng-designer**——承 `docs/batches/2026-09-25-checker-tooling.md` §2 · 台账 #299）：§4.2.1 左界守卫 `@` 排除条补 **形式裁定**（形态 = 识别排除照准；备选「与 `thincoder-core/package.json` exports 对核」否决——运行时解析面 + 声明面原则 + 假阳面）·
-  **判据 / 护栏映射**（`thincoder-cli/test/doc-check.test.mjs` T-DC-18 / T-DC-19，实施轮落码）。规则本体与实装**零改**（零语义变）。
+  **判据 / 护栏映射**（`CLI doc-check 用例档` T-DC-18 / T-DC-19，实施轮落码）。规则本体与实装**零改**（零语义变）。
 
-- 2026-09-25（**cli-small-items 批 · 设计修正轮 · eng-designer**——承 `docs/batches/2026-09-25-cli-small-items.md` §3 发现 5）：§3.10 第二档（`thincoder-cli/test/memory-scan-bounds.test.mjs`）的档位登记**指针化**——读数 / 触发改指 `docs/cli/design/CLI-DEBT.md` §2.2 B4 行（数据单一活面；本档不复读读数）。**零新语义**。
+- 2026-09-25（**cli-small-items 批 · 设计修正轮 · eng-designer**——承 `docs/batches/2026-09-25-cli-small-items.md` §3 发现 5）：§3.10 第二档（`CLI memory-scan-bounds 用例档`）的档位登记**指针化**——读数 / 触发改指 `docs/cli/design/CLI-DEBT.md` §2.2 B4 行（数据单一活面；本档不复读读数）。**零新语义**。
 
 - 2026-09-25（**doc-face-closeout 批 · 设计评审修正轮 1（评审 8 条）· eng-designer**——承 `docs/batches/2026-09-25-doc-face-closeout.md` §3 轮次 1）：§5 **A-DD20 增 ⑦**（J-1 残差块销项 / 收口判据——按当轮读数收正 ∧ 携消解路径 + 到期条件 ∧ 无常驻态）；
   **A-DD20 ①** 补判类清单同源（= 批档 §5 二态处置表）；**A-DD21 ②** 限定为**本轮实际触碰的 A 态位点**（未被触碰的候选 = 随档触碰处置，在本轮射程外）；§3.12 **二态处置表落点改批档 §5**（定稿 = 当轮复扫基线）+ 族别口径 ① 补**域内 docs 面命中位点**的处置归属（面主笔 · D1——批级路由 = 批档 §2）；「裸形面 = 另轮读数域」口径两处笔误经收正。

@@ -57,6 +57,14 @@
 
 指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**产品运行期（S2 改）** · **产品测试（S1 / S2 改）**。
 
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（crash-guards（崩溃族守卫） · 2026-10-03）落点表** = `docs/batches/2026-10-03-crash-guards.md` §2（唯一承载面——一次性批次材料）。
+**本批（轻通道轮八 · 2026-10-03）落点表** = `docs/batches/2026-10-03-light-round-8.md` §2（唯一承载面——一次性批次材料）。
+**本批（无效渠道态逻辑归一 · 2026-10-03）落点表** = `docs/batches/2026-10-03-provider-invalid-unify.md` §2（唯一承载面——一次性批次材料）。
+**本批（issue 修复批·一 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round1.md` §2（唯一承载面——一次性批次材料）。
+**本批（OpenCode Go 预设接入 · 2026-10-04）落点表** = `docs/batches/2026-10-04-opencode-go-preset.md` §2（唯一承载面——一次性批次材料）。
+**本批（CLI ∥ VSC 会话选定写回 · 2026-10-04）落点表** = `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §2（唯一承载面——一次性批次材料）。
+
 ## 6. 机制面（自 CLI 产品档并入 · 2026-09-14 · B 轮）
 
 > **来源** = `thincoder-cli/docs/design/PROVIDER.md`（1369 行 · CLI 产品档）——根层裁定后该档 = **迁移期参照历史**（只读 · 不维护 · 不参与内容同步）。
@@ -389,7 +397,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - **`kind` 词表与 i18n 键**：`kind` = `rateWait` / `rateLimited` / `overloaded` / `quota`——**与 VSC 面 `statusTextPayload` 的 kind 同名**（两端同一词表）；渲染 = `t("status." + kind, { s, msg }, locale)`（`t` = `thincoder-core/i18n.mjs:89`——同表同占位符，**核内零第二套字面**）。
 - **API**：`waitStatusOf(ev) → { kind, seconds?, message? } | null`（纯映射）· `waitStatusText(ev, locale?) → string | null`（`null` = 不显示）；`quota` 相剥发射前缀（`retry.mjs:60` `quota exhausted: `——首现即剥，一次）后插值。
 - **消费点收敛**：三处相位枚举 / 兜底分支退役 → `const s = waitStatusText(ev); if (s) …`（TUI 状态行 / headless stderr `[rate-limit]` 前缀 / ACP stderr 日志）。
-- **VSC 面（多实现面）**：`thincoder-vscode/src/extension/panel-callbacks.mjs:72` `statusTextPayload()` 五相已完备（`warn` / 未知 → `null` = 不发射；用例 `thincoder-vscode/test/status-line.test.mjs:62-70`）——**语义同源、各面独立实现**（不以任一面产物回改另一面）。
+- **VSC 面（多实现面）**：`thincoder-vscode/src/extension/panel-callbacks.mjs:72` `statusTextPayload()` 五相已完备（`warn` / 未知 → `null` = 不发射；用例 `thincoder-vscode/test/status-line.test.mjs:62-70`）——**语义同源、各面独立实现**（不以任一面产物回改另一面）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 - **复现与判据（本批测试层 · 需求档 F-PV1）**：
   ① 单测直驱三消费点回调：`{ phase: "warn", message: "estimated 5000 tokens > tpm 1000 — request proceeds and may hit a server 429" }` ⇒ TUI 状态行 / headless stderr **不出现** `undefined`（现态必现）；
   ② `{ phase: "quota", message: "quota exhausted: x" }` ⇒ 显示 `quota exhausted: x`（**不双前缀**——剥前缀后插值）；`{ phase: "quota", message: "x" }` ⇒ 显示 `quota exhausted: x`；
@@ -552,7 +560,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 | §16.7 / §19.7 / §23.7 UI 决策表 | 逐批 UI / 交互决策与 open 项 | 结论已提炼入 §6.16 / §6.17（逐批表为批次语境；open 项均为「无」） |
 | §10 / §16.3 / §6.16 的 VSC 对位实现细节（webview / settings 面板逐档） | VSC 侧独立实现 | 属 VSC 产品树（`thincoder-vscode/src/**`）；单仓单档纪律 = 各产品级实现留各产品树 |
 | §21.2 通路表的 as-of 行号坐标 | 逐通路调用点行号 | 契约（装配顺序 / 通路集合）已入 §6.17；行号为时点坐标 |
-| `IMAGE-DOWNGRADE-VISION.md` + `PROVIDER.md`（VSC 档）的受影响文件表 / 用例表 / AC 表 / 状态行 / 变更记录 | 一次性批次材料 | 机制与契约已入 §6.18 / §6.19；测试资产归测试层（`thincoder-vscode/test/image-downgrade.test.mjs` 现体）；验收勾销归批次档；旧档 = 参照历史 |
+| `IMAGE-DOWNGRADE-VISION.md` + `PROVIDER.md`（VSC 档）的受影响文件表 / 用例表 / AC 表 / 状态行 / 变更记录 | 一次性批次材料 | 机制与契约已入 §6.18 / §6.19；测试资产归测试层（`thincoder-vscode/test/image-downgrade.test.mjs` 现体）；验收勾销归批次档；旧档 = 参照历史 （迁移期引文） |
 | `IMAGE-DOWNGRADE-VISION.md` 的群 A 批（A12）契约 / 用例施工形态字面编号块 | 批次施工骨架 | 契约语义已提炼入 §6.18（降级窗 Stop 契约）；字面编号块属一次性施工形态 |
 
 ## 变更记录

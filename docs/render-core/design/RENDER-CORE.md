@@ -40,7 +40,7 @@
 `/` → `renderer/`（现状 · `protocol.mjs:17` `RENDERER_ROOT`）· `/rc/` → 核包目录；渲染面以**同源绝对路径** import（`/rc/xxx.mjs`）。
 
 - 判据：`protocol.mjs` 逃逸门（`relative()` 判据——`:53-54`）对各根同式施加 ⇒ 双根 = 显式登记第二条根 + 各根各留逃逸门（供给语义不变）。
-- 渲染面静态闭包守卫随动：`thincoder-desktop/test/guard-closure.test.mjs:70`「渲染面零裸包 / 零 `@thincoder/core`」⇒ 新增 `/rc/` 前缀白名单；**裸包禁令不变**（核经 URL 前缀取，不经 `node_modules` 裸名）。
+- 渲染面静态闭包守卫随动：`thincoder-desktop/test/guard-closure.test.mjs:70`「渲染面零裸包 / 零 `@thincoder/core`」⇒ 新增 `/rc/` 前缀白名单；**裸包禁令不变**（核经 URL 前缀取，不经 `node_modules` 裸名）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 - **装载面分层（「对齐第二批」修复轮）**：桌面渲染档分两档（node-safe ∥ 浏览器专属）——档记 / 判据单源 = `docs/desktop/design/SHELL.md` §1「node-safe 子集」条；本加载形面（`/rc/` 供给）受该条约束；违例 = 主进程装载崩 · 窗口永不出。
 - 发行面：`thincoder-desktop/package.json` `dependencies` 增该包（electron-builder 打包生产依赖）；`scripts/check-dist.mjs` 增产物断言（R1 已落 1 条——`CHECKS` 表 `:18-24`：asar 包内 `node_modules/@thincoder/render-core/package.json` 在册）。
 
@@ -206,7 +206,7 @@
 
 **relay 文法零依赖副本登记**：relay 前缀文法（`role#id/`）权威 = `thincoder-core/agent/relay-prefix.mjs`（`:10` / `:16-32`）；核包零依赖约束下不可 import ⇒ 副本逐字移植于 `thincoder-render-core/subblocks/relay.mjs`（`:20` / `:25`，漂移登记在件头）；
 **跨包对拍锁** = `docs/batches/2026-09-29-parity-b7-minor.test.mjs`（F2——文法副本漂移锁 ∕ RM-4 复建：`relayPathOf` ∕ `RELAY_PREFIX_RE` ∥ 权威 `thincoder-core/agent/relay-prefix.mjs` 逐字对；F4——CLI `routeSubToken` ∥ rc `relayEventToSubPatch` 语义同判）；
-  旧件 `thincoder-vscode/test/render-core-relay-map.test.mjs`（RM-3 ∕ RM-4）已随 B7 退场。
+  旧件 `thincoder-vscode/test/render-core-relay-map.test.mjs`（RM-3 ∕ RM-4）已随 B7 退场。（迁移期引文）
 
 **落位不变式（两条 · 2026-09-29 留端清算）**：① **出生位 = 活动区区尾 append**（端实现锚 = VSC `thincoder-vscode/webview/activity.js:60`；桌面 `thincoder-desktop/renderer/views/pool-subagents.mjs:85-95`）；
   ② **归档入流 = 消费轮边界前插入、边界失效 ⇒ 常规块插入点退化**（VSC `thincoder-vscode/webview/activity.js:104-110`；桌面 = 同形——`insertBefore(块, 边界)`：边界 = `ev:digest start` 标签行、收帧清边界；座次入模；三端消化面统一批 · #747——单源 = `docs/desktop/design/RENDERER.md` §1.1 插入点纪律条）——与核效果表 `archive`（`atBoundary`）同口径。
@@ -363,7 +363,7 @@
 
 **发行三件 + 测试面**：`thincoder-vscode/package.json`（依赖 +1）· `.vscodeignore`（反排除 +1 行）· `scripts/check-vsix.mjs`（断言 +1）· `thincoder-vscode/test/**`（happy-dom 直驱路径随动 + 核包 DOM 构件层用例宿主）。
 
-**桌面端**：`thincoder-desktop/package.json`（依赖 +1）· `src/main/protocol.mjs`（双根 + `/rc/`）· `test/guard-closure.test.mjs`（前缀白名单）· `scripts/check-dist.mjs`（产物断言）· `renderer/*` 三面重定位（R3a–R3c）——逐档「现行 ⇒ 预期」= `docs/desktop/design/PROJECT.md` §4.2 本批行（**就地给数** · 指针不悬空）。
+**桌面端**：`thincoder-desktop/package.json`（依赖 +1）· `src/main/protocol.mjs`（双根 + `/rc/`）· `test/guard-closure.test.mjs`（前缀白名单）· `scripts/check-dist.mjs`（产物断言）· `renderer/*` 三面重定位（R3a–R3c）——逐档「现行 ⇒ 预期」= `docs/desktop/design/PROJECT.md` §4.2 本批行（**就地给数** · 指针不悬空）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 **块级跟滚提核随动（2026-09-29 · `docs/batches/2026-09-28-desktop-subblock-follow.md`）**：核 `thincoder-render-core/subblocks/block.mjs` **45 ⇒ ≈66**（+2 导出——纯搬移 · 档头留端清单同拍；**实读 2026-09-29 = 71**——#518 预测未回填；现行值见本节「块跟滚让位修复随动」段）；
 VSC `thincoder-vscode/webview/activity.js` **190 ⇒ ≈176**（删两本地函数 ⇒ 改指核件；`thincoder-vscode/webview/streaming.js` **182** 零改——转口保留）；
@@ -422,7 +422,7 @@ VSC `thincoder-vscode/webview/session.css` **215 ⇒ ≈219**（两钮（Rename 
 | C2 | VSC 接核零回归：其套件全绿（逐字文案锁不动）+ **映射差分锁**（`⟦ev⟧stopped` ⇒ `{ status: "cancelled" }` 逐字 · 闭集零 `stopped` / `error` 产值——§5 全表负向） | `thincoder-vscode/test/run.mjs` |
 | C3 | vsix 断言：核包在 vsix 内且版本逐字相等（照核先例断言形） | `thincoder-vscode/scripts/check-vsix.mjs` |
 | C4 | 桌面加载形：`app://desktop/rc/**` 命中（`protocolStats.served` 计数）+ 逃逸门两向（负探针仍拒） | `thincoder-desktop/test`（协议面）+ 启动冒烟 |
-| C5 | 桌面渲染面静态闭包：零裸包 + `/rc/` 前缀白名单成立 | `thincoder-desktop/test/guard-closure.test.mjs` |
+| C5 | 桌面渲染面静态闭包：零裸包 + `/rc/` 前缀白名单成立 | `thincoder-desktop/test/guard-closure.test.mjs` （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | C6 | 产物断言：桌面 dist 含核包 | `thincoder-desktop/scripts/check-dist.mjs` |
 | C7 | 桌面 Markdown 面：含围栏代码块的文本 ⇒ 渲染含 `pre.code-block`；转义闸（注入样本 ⇒ 字面文本） | 桌面视图用例 |
 | C8 | 桌面对位表 22 行在册且计数自洽（D3） | 本档 §4 |
@@ -504,7 +504,7 @@ VSC `thincoder-vscode/webview/session.css` **215 ⇒ ≈219**（两钮（Rename 
 - 2026-09-27（**设计评审轮 1 点修**——逐号）：§5 增 token → patch 全表 + `stopped` / `error` 两值裁定（先例兼容 · 有意收窄——错误径归宿实读在案）；§4 行 21 与 §8 R3b 补**出生自愈**（宿主存活投影 2s 再断言——文件面 + 判据）；
   §6 重写为逐档「现行 ⇒ 预期」（VSC 17 档 + 核包 + 桌面指针 §4.2——解指针悬空）；§8 串行序重排（R3a ⇒ R3b ⇒ R3c + 共享三档串行条）；§3 行 34 指针改指 `docs/desktop/design/UI.md` §1 项 4；§6 DOM 构件层用例宿主定形（消费端套件——保 C1 恒可过）；§7 C2 补映射差分锁。
 - 2026-09-27（**R1 结算微轮**——设计面收正 · 逐条）：§1.3 发行面/先例坑句按实测收正（物化路线对 render-core 不可执行 ⇒ link 形 + `--follow-symlinks`）+ 内嵌面收窄规则（vsix 只携运行必需件；`.vscodeignore` 补排除行）；
-  §1.3/§2 行锚按终态实读收正（`protocol.mjs` `:17` / `:22-29` / `:53-54` · `guard-closure.test.mjs:70` · `check-dist.mjs:18-24` · `check-vsix.mjs:56-63`）；
+  §1.3/§2 行锚按终态实读收正（`protocol.mjs` `:17` / `:22-29` / `:53-54` · `guard-closure 用例档:70` · `check-dist.mjs:18-24` · `check-vsix.mjs:56-63`）；
   §6 六档行补 R1 实施注（含 `diff.mjs:6` 逐字性唯一例外）· §5 `formatToolSummary` 签名收正（`text`）· KD-RC-1 收正「链接 / 物化 / 断言三纪律 + 永不发布」（§10 B 同裁改「不入发布序列」）。
 - 2026-09-28（**R3 结算随动 · 设计面收正微轮**——承 `docs/batches/2026-09-27-render-core-r3.md` §1.2–§1.4）：§2 KD-RC-6 与 §4 行 3 / 5 / 6 措辞收正（「换接核件」= 渲染逻辑单源——核件分件消费 · 桌面外壳留存；`formatToolSummary` / `isToolFailure` 不消费 = 非缺口登记）；
   §4 行 7 / 9 齐不消费口径 + 计数行随动（需补面 9 / 显式裁 8）；§5 样式契约落 `renderer/core.css`（实读 140）；§8 R3a `currentTool` 词项回填（由视图段自 `blocks` 派生——零新槽）· R3c 措辞同笔；§9 增 R3 端差三项。零新语义。

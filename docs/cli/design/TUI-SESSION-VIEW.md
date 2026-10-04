@@ -213,7 +213,7 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 | 旧档 §15.2 选型对比（计量口径 / 执行点 / 超限处置三表） | 一次性选型材料 | 选定结论入 §5.4（口径 = UTF-16 码元 / 单点包装 + 载体自记账 / 截断 + 标记） |
 | 旧档 §15.4 决策 D-TB1–D-TB6 | 批次编号决策表 | 结论已并入 §5.1–§5.4 |
 | 旧档 §15.5 受影响文件表（含「实现后同步」补行） | as-of 行数与增量快照 | 时点快照（实装后已漂移） |
-| 旧档 §15.6 用例表 · §15.7 验收标准 · §15.8 边界 | 批次验收材料 | 一次性——用例宿主 = `thincoder-cli/test/tui-memory-budget.test.mjs`；边界已入 §5.4 末条 |
+| 旧档 §15.6 用例表 · §15.7 验收标准 · §15.8 边界 | 批次验收材料 | 一次性——用例宿主 = `CLI tui-memory-budget 用例档`；边界已入 §5.4 末条 |
 | 旧档 §8 各步叙述中的批次注入括注（如「R15 攒批删」「D-C2」） | 批次编号 | 机制语义已入 §4；批次编号不入活档 |
 | 旧档变更记录中本面相关行 | 逐批流水 | 历史叙述——本档自有变更记录 |
 
@@ -229,6 +229,12 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 | 显示层额度的常量数值来源 | 常量本体 | `thincoder-cli/src/tui/display-budget.mjs`（单源——本档引用不复制数值之外的口径） |
 
 ## 变更记录
+
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（消化重放口径批（#771 ∥ #773） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-replay-choices.md` §2（唯一承载面——一次性批次材料）。
+**本批（消化行自然形·两端跟正（CLI ∥ VSC） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §2（唯一承载面——一次性批次材料）。
+**本批（零语义清账批 #2 · 2026-10-01）落点表** = `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §2（唯一承载面——一次性批次材料）。
+**本批（记录形残项批（#795） · 2026-10-02）落点表** = `docs/batches/2026-10-02-record-shape-residuals.md` §2（唯一承载面——一次性批次材料）。
 
 - 2026-10-02（**记录形残项批（#795）· 设计档随动轮 · eng-designer**——承批档 `docs/batches/2026-10-02-record-shape-residuals.md` §2 随动表）：§6 合成件补**停面词判据句**（`stopped` = 记录 `status` 停止面词集——词面判据单源 = `docs/core/design/SESSION.md` §6.26）。**零新语义**（判据单源落位）。
 

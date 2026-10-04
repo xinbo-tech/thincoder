@@ -321,6 +321,10 @@
 
 ## 变更记录
 
+**2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
+**本批（多仓操作机制·提示词面 · 2026-10-02）落点表** = `docs/batches/2026-10-02-multi-repo-mechanism.md` §2（唯一承载面——一次性批次材料）。
+**本批（公共仓读取批 · 2026-10-02）落点表** = `docs/batches/2026-10-02-public-repo-read.md` §2（唯一承载面——一次性批次材料）。
+
 - 2026-09-15（**迁移批 · 第 4 批 · 大档拆分实迁** · eng-designer）：自 `thincoder-cli/docs/design/LEDGER-SELF-CONTAINED.md`（1033 行）按 B 式重建入 `docs/core/design/LEDGER-SELF-CONTAINED.md`——落点判据 = `design/DOC-SYSTEM.md` §5.1 P1；
   射程判据 / L4 / 例外判据（E1–E5）/ 提示词面 / 决策表全量保留；坐标全量改现状路径；存量处置清单与逐档对位表入「不并项与历史沿革」（一次性执行材料）；受影响文件 / 用例表 / AC 等批次面同入。
 

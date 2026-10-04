@@ -143,8 +143,8 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
   而宿主 `!uri` 即 `delete raw.proxy; return`（`thincoder-vscode/src/extension/settings.mjs:231`）⇒ **零落盘**；
   发射路径仍 `flashSaved(...)`（`thincoder-vscode/webview/settings-env.js:115`）⇒ 可见态（「已保存」）与磁盘不一致——`!uri` 早退是显式删键语义的副作用，不是静默清除。消解路径 + 到期条件见 §3 残留登记。
 
-**机检面**：本节的用例资产 = `thincoder-vscode/test/settings-open-snapshots.test.mjs` · `thincoder-vscode/test/settings-empty-no-write.test.mjs` · `thincoder-vscode/test/settings-refill.test.mjs`——三条先红后绿在册（`requirements/WEBVIEW.md` N-W8）；
-机检对账 = `thincoder-vscode/test/protocol-coverage-reverse.test.mjs`（发面表 = `WEBVIEW-PROTOCOL.md` §13）。
+**机检面**：本节的用例资产 = `thincoder-vscode/test/settings-open-snapshots.test.mjs` · `thincoder-vscode/test/settings-empty-no-write.test.mjs` · `thincoder-vscode/test/settings-refill.test.mjs`——三条先红后绿在册（`requirements/WEBVIEW.md` N-W8）；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+机检对账 = `thincoder-vscode/test/protocol-coverage-reverse.test.mjs`（发面表 = `WEBVIEW-PROTOCOL.md` §13）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 ### 2.9 Shell 写面（F-W11——接线圈）
 
@@ -306,11 +306,13 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 **设计轮实读（happy-dom 真模块 · 零仓内写入——读数时点 = 落门前）**：footer 点击 ⇒ 直发消息 `[{"type":"removeProvider"}]` ∧ 弹框 / 遮罩 / 菜单 overlay = `0/0/0`（**无框可依**）；该消息喂回真宿主分发（`showQuickPick` 桩返回 `{label:"kimi"}`）⇒ `_pushSettings` 恰 1 次 ∧ 盘面 `providers` = `["deepseek"]` ∧ `kimi` 的 `apiKey` 原文消失（**「选定即删」实锤**）。
 门侧：`_confirmSecretDelete(null, …)` 四条取消路径全零发值 · 确认 ⇒ 恰 1 条 `{type:"removeProvider"}` ∧ 框 / 幕移除 · 单例（连开两框仍 1 框）。
 
-**机检面**：`thincoder-vscode/test/settings-secret-delete-confirm.test.mjs`（W17-1…W17-15 · W17-17 / W17-18 / W17-26…W17-30——正常 / 取消 / 边界（连点 · 跨入口 · 弹框在位重绘 · **多行取目标**）/ 键盘 / i18n 双源 / 结构对账 fail-closed；**MCP 组（W17-16 / W17-19…W17-25）已析出** `settings-mcp-delete-confirm.test.mjs`——2026-09-19 拆分实测收正）；
+**机检面**：`thincoder-vscode/test/settings-secret-delete-confirm.test.mjs`（W17-1…W17-15 · W17-17 / W17-18 / W17-26…W17-30——正常 / 取消 / 边界（连点 · 跨入口 · 弹框在位重绘 · **多行取目标**）/ 键盘 / i18n 双源 / 结构对账 fail-closed；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+**MCP 组（W17-16 / W17-19…W17-25）已析出** `settings-mcp-delete-confirm.test.mjs`——2026-09-19 拆分实测收正）；
 **组拆分登记**（评审 id=116 发现 4）：触发 = 实现轮末实读 **≥ 500 行** ⇒ MCP 组（W17-16 / W17-19…W17-25）析出为 `thincoder-vscode/test/settings-mcp-delete-confirm.test.mjs`（已落 · 实读 **177**——夹具经 `test/helpers/webview-env.mjs` 共享；`thincoder-vscode/test/files.mjs` 同步登记）——组边界 / 阈值 / 到期条件 = §3。 （迁移期引文——档已删）
 用例与先红读数单源 = 批档 §2.4（密钥类批 = `docs/batches/2026-09-18-vsc-key-delete-confirm.md` §2.4；MCP 行批 = `docs/batches/2026-09-18-vsc-mcp-delete-confirm.md` §2.4；provider 行批 = `docs/batches/2026-09-19-vsc-provider-delete-confirm.md` §2.4；模型菜单批 = `docs/batches/2026-09-19-vsc-model-menu-delete-confirm.md` §2.4）。
-**入口 6 组（本批）**：`thincoder-vscode/test/model-menu-delete-confirm.test.mjs`（已落 · 实读 **162**——W17-31…W17-34；登记落 `thincoder-vscode/test/files.mjs`）；跨面夹具 = happy-dom 真 webview 点击 → 逐条喂回真宿主分发（先例 `test/settings-empty-no-write.test.mjs:86-90`）+ 临时 config（`_setConfigPathForTest`——**绝不触碰真实 `~/.thincoder/`**）。
-结构对账 W17-17（域扩至 **9 档**）仍驻主档 `test/settings-secret-delete-confirm.test.mjs`（结构面单源）。
+**入口 6 组（本批）**：`thincoder-vscode/test/model-menu-delete-confirm.test.mjs`（已落 · 实读 **162**——W17-31…W17-34；登记落 `thincoder-vscode/test/files.mjs`）；（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+跨面夹具 = happy-dom 真 webview 点击 → 逐条喂回真宿主分发（先例 `test/settings-empty-no-write.test.mjs:86-90`）+ 临时 config（`_setConfigPathForTest`——**绝不触碰真实 `~/.thincoder/`**）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+结构对账 W17-17（域扩至 **9 档**）仍驻主档 `test/settings-secret-delete-confirm.test.mjs`（结构面单源）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 **判据域边界（结构对账 W17-17 的扫描域）**：域 = **设置面档**（`thincoder-vscode/webview/settings*.js`——实读 **8 档**）∪ **`thincoder-vscode/webview/input.js`**（入口 6 桥——门调用 ∕ OUT 桥双落位）= **9 档**（扫描式 = 正则 `/^settings.*\.js$/` ∪ 显式名单 `input.js`；域外档一律不入集）。
 **计数映射（D3 · 6 行 ↔ 5 名）**：入口册 **6 行** ⇒ 判别名 **5 个**（入口 4 = settings 面板 provider 行 − 与入口 6 = 模型菜单 footer **同名 `removeProvider`**）——`removeProvider` 域内发射 **2 处**（`webview/settings-providers.js:68` · 桥 `webview/input.js:33`——OUT 表逐字面；入口 6 闭包创造位 = 核 `model-menu.mjs:304`——域外面）。
@@ -332,7 +334,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - **被拒备选**：① 静态「已知路径表」（平台 / 自定义安装漏项——探测语义降级）；② 跨重载持久缓存（陈旧路径 + 首装未探面）。
 - **推送序契约零改**：打开拍固定序（`indexStatus → providerStatus · proxySettings · websearchSettings · shellCandidates → agentSettings` 末位）在变更后必须原序保持——
   两个推送函数（`_pushSettingsLight` · `_pushIndexStatus`，`thincoder-vscode/src/extension/chat-panel.mjs:331` / `:370`（定义）· `:353`（调用））改 async 后走 await 链；
-  逐序断言即验收面（`thincoder-vscode/test/settings-open-snapshots.test.mjs:73-83`）。
+  逐序断言即验收面（`thincoder-vscode/test/settings-open-snapshots.test.mjs:73-83`）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 **F-W18 静默判据的取值方式（三路——「无可观测 ≥ 2 s 静默」如何机判）**：
 
@@ -378,7 +380,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 **双向机检判据**：词 ⇒ 落账（渲 `宿主繁忙` ⇔ 载荷 `failure === "hostBusy"`；渲 `不可用` ⇔ 载荷 `failure ∈ {timeout, malformed}`）· 落账 ⇒ 词（反方向逐条）——两向均断言。
 **被拒备选（验收③ 收窄裁定）**：不采纳「可辨 = 落账字段层」的收窄——与 `docs/vsc/requirements/WEBVIEW.md` F-W19 验收③ 的**展示面**字面不符；状态词分档不改版式、零渠道文案改动 ⇒ 成本为零。
 
-**机检面（本批）**：`thincoder-vscode/test/loop-sampler.test.mjs`（新建——窗口起止 / lag 判定 / 注入缝 / 零 exec）·
+**机检面（本批）**：`thincoder-vscode/test/loop-sampler.test.mjs`（新建——窗口起止 / lag 判定 / 注入缝 / 零 exec）·（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 `provider-admission.test.mjs` 扩（重试计数 ≤ 2 + 在飞去重 + 三清除语义 + 双向词档判据）·
 `settings-open-snapshots.test.mjs` 扩（§2.11 时序断言）。核侧锚（探测束 / 同步有界例外 / 零 execSync 扫描）= `MULTI-INSTANCE-COLLAB.md` §3.1 判据条（不在本档重复）。
 
@@ -424,8 +426,8 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 **读面零改**：guard 取值链每次快照构建按槽优先（`thincoder-vscode/src/extension/settings.mjs:145`——`slotData?.advisor?.guard ?? (config === true)`）；
 复选框随建面 / 重开按快照渲染（推送不重建面板——`thincoder-vscode/webview/settings-agent.js:146-147`/`:181-183`（`updateAgentSettings`））。
 
-**机检面（本批）**：`thincoder-vscode/test/config-io-panel-guard.test.mjs`（用例 T-1–T-8：两键翻转 config 逐字不变 · 伪造旁路直测 · 缺席 / `true` / `false` 三格 · `null` ⇒ 保存后键缺席）+
-`thincoder-vscode/test/effort-select-views.test.mjs`（载荷无 `guard` 键 · guard 变更 ⇒ post `setAdvisorGuard` 且零 `saveAgentSettings`）——用例表 = 批档 §2。
+**机检面（本批）**：`thincoder-vscode/test/config-io-panel-guard.test.mjs`（用例 T-1–T-8：两键翻转 config 逐字不变 · 伪造旁路直测 · 缺席 / `true` / `false` 三格 · `null` ⇒ 保存后键缺席）+（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+`thincoder-vscode/test/effort-select-views.test.mjs`（载荷无 `guard` 键 · guard 变更 ⇒ post `setAdvisorGuard` 且零 `saveAgentSettings`）——用例表 = 批档 §2。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 **边界登记**：磁盘 `advisor.guard: null` 形态被种子循环丢弃（`v: null` 除 `thinking` 外 continue——既有通例，本批零改）⇒
 判据「翻转 / 任意保存前后对应键逐字不变」的用例域 = {键缺席 / `true` / `false`}；`null` 形态见 §3 登记行。

@@ -97,7 +97,7 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 ### 6.2 双端与测试面
 
 - **双端**：CLI 与 VSC 各自实现、语义同源（锁步镜像）。镜像面 = `read` 双端返回与 advisor 截断两族；VSC 端坐标已并入（批 6——§6.3），测试随 CLI 同批落。
-- **测试面**：`thincoder-cli/test/read-dual-end.test.mjs` · `thincoder-cli/test/advisor-truncation.test.mjs` · `thincoder-core/test/advisor-truncate.test.mjs` + VSC 侧同名对位 `thincoder-vscode/test/{read-dual-end,advisor-truncation}.test.mjs`。
+- **测试面**：`thincoder-cli/test/read-dual-end.test.mjs` · `thincoder-cli/test/advisor-truncation.test.mjs` · `thincoder-core/test/advisor-truncate.test.mjs` + VSC 侧同名对位 `thincoder-vscode/test/{read-dual-end,advisor-truncation}.test.mjs`。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
 ### 6.3 VSC 端实现坐标（B 式并入 · 实核 as-of 2026-09-15）
 
