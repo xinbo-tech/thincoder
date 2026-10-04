@@ -16,6 +16,7 @@ import { proxyFetch } from "../proxy.mjs"
 import { requestWithRetry } from "./retry.mjs"
 import { rateGate, recordRate, estimateRequestTokens } from "./rate.mjs"
 import { buildBody, normalizeUsage } from "./responses-request.mjs"
+import { classifyResponsesErrorCode } from "./errors.mjs"
 // 同名 re-export（2026-09-29 structure-split-2 · 台账 #620——缝 = 同名再出口）：请求构造面出档 `provider/responses-request.mjs`；
 // `buildBody` / `isStoreRequiredHost` / `builtinToolsFor` 三名既有导出经本档转口——消费者 import 面零改。
 export { buildBody, isStoreRequiredHost, builtinToolsFor } from "./responses-request.mjs"
@@ -25,6 +26,19 @@ export { buildBody, isStoreRequiredHost, builtinToolsFor } from "./responses-req
 /** 链失效回退：404/无效 id → 返回 null 表示"应全量重发"；其他失败抛错。 */
 export function isChainInvalidError(status) {
   return status === 404 || status === 400
+}
+
+/** #907-D9/D8：error 帧处置回调（handleEvent 消费）——按 D8 码级标注定形后抛「标记错误」，catch 双支零丢失转发。 */
+function errFrameError(ev) {
+  const err = ev?.error
+  const msg = err?.message ?? JSON.stringify(err ?? ev ?? {}).slice(0, 300)
+  const cls = classifyResponsesErrorCode(err?.code)
+  const e = new Error(cls?.hint ? `${msg}（${cls.hint}）` : msg)
+  if (cls?.kind) e.errorKind = cls.kind
+  e.retryable = cls?.retryable ?? false
+  if (typeof err?.code === "number") e.status = err.code
+  e.responsesErrFrame = true // #907-D9 哨兵标记（不用 message 锚定——消息必须原样保留）
+  return e
 }
 
 /**
@@ -74,10 +88,14 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
       result.finishReason = resp?.incomplete_details?.reason === "content_filter" ? "content_filter" : "length"
     },
     onFailed: (resp) => {
+      // #907-D8：码级标注——errorKind/retryable 信息位 ∥ hint 拼入消息 ∥ status 仅数值（字符串码塞 status 是缺陷）
       const err = resp?.error
       const msg = err?.message ?? JSON.stringify(err ?? {}).slice(0, 500)
-      const e = new Error(`responses API failed: ${msg}`)
-      e.status = resp?.error?.code
+      const cls = classifyResponsesErrorCode(err?.code)
+      const e = new Error(cls?.hint ? `responses API failed: ${msg}（${cls.hint}）` : `responses API failed: ${msg}`)
+      if (cls?.kind) e.errorKind = cls.kind
+      e.retryable = cls?.retryable ?? false
+      if (typeof err?.code === "number") e.status = err.code
       throw e
     },
   })
@@ -87,6 +105,18 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
     if (e?.name === "AbortError" && signal?.aborted && signal?.reason?.interrupt) {
       seal(null)
       return { ...result, interrupted: true, interruptMessage: signal.reason.message }
+    }
+    // #907-D9：error 帧双支——有流出（content ∥ toolCalls）⇒ partial 抢救返回；无流出 ⇒ 转抛（上抛为主）。
+    if (e?.responsesErrFrame) {
+      if (result.content.length > 0 || result.toolCalls.length > 0) {
+        const existing = result._warnings ??= []
+        if (!existing.some((w) => w.name === "responses-error-frame")) existing.push({ name: "responses-error-frame", message: e.message })
+        result.partial = true
+        result.errorDetail = e.message.slice(0, 300)
+        seal(null) // 无 responseId ⇒ finish() 链重置自动生效（错误后下轮全量重发）
+        return result
+      }
+      throw e
     }
     throw e
   }
@@ -185,6 +215,8 @@ function handleEvent(ev, h) {
     case "response.failed":
       h.onFailed?.(ev.response)
       break
+    case "error": // #907-D9：标准 error 帧（原 default 静默跳过 = 空内容当回复——本件修复）
+      throw errFrameError(ev)
     default:
       break
   }
@@ -268,6 +300,8 @@ async function finish(provider, response, { onToken, onReasoning, signal, newCha
   } else {
     provider._responsesChain = null
   }
-  result._warnings = warnings
+  // #907-D9：合并而非覆盖——parseStream partial 抢救支已注入 responses-error-frame 警告
+  if (result._warnings?.length) result._warnings = [...warnings, ...result._warnings]
+  else result._warnings = warnings
   return result
 }

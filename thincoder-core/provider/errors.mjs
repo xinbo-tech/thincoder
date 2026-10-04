@@ -99,3 +99,26 @@ export function assertProviderModel(provider) {
     throw new ProviderError(provider, "model is undefined — provider cloned without model re-derivation (set providers[].model — the channel default model)")
   }
 }
+
+/**
+ * #907-D8：Responses 流内错误码 → 分类（最小集五码）。宿主 = 本文件（分类族单源——与
+ * parseRetryAfter / isNonRetryableError 同族）；消费面 = responses.mjs 流内错误出口
+ * （response.failed onFailed ∥ type:"error" 帧处置）。HTTP 级分类（isNonRetryableError）
+ * 零改——本函数只服务流内错误面。未列码 → null（不发明分类，服务端消息原样透传）。
+ * retryable 是信息位：本批不接自动重试（无流内重试消费面），仅供上层展示/上报。
+ */
+export function classifyResponsesErrorCode(code) {
+  switch (code) {
+    case "context_length_exceeded":
+      return { kind: "context_overflow", retryable: false, hint: "上下文超限——/compact 压缩历史后重试" }
+    case "insufficient_quota":
+      return { kind: "quota", retryable: false, hint: "配额/计费不足——检查 provider 余额或套餐额度" }
+    case "invalid_prompt":
+      return { kind: "invalid_request", retryable: false, hint: null }
+    case "server_is_overloaded":
+    case "server_error":
+      return { kind: "server", retryable: true, hint: null }
+    default:
+      return null
+  }
+}

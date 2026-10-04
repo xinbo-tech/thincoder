@@ -196,7 +196,9 @@ export function buildBody(provider, messages, tools, opts = {}) {
     store: wantStateful && hostStateful && isStoreRequiredHost(provider.baseURL),
     ...(extracted ? { instructions: extracted } : {}),
     ...(toolsFlat ? { tools: toolsFlat } : {}),
-    ...(spec.maxOutput || provider.maxTokens ? { max_output_tokens: provider.maxTokens ?? spec.maxOutput } : {}),
+    // 显式才发（#907-D5）：仅 provider.maxTokens 显式设定时发送——spec.maxOutput 是规格侧
+    // 保守猜测非渠道合同值，恒发 = 渠道口径漂移 400 风险；无显式值 ⇒ 服务端默认（模型上限兜底）。
+    ...(provider.maxTokens != null ? { max_output_tokens: provider.maxTokens } : {}),
   }
   // 内置工具声明追加（2026-08-31 用户拍板）：web_search 与本地 function 工具共存
   const builtin = builtinToolsFor(provider.baseURL, provider.builtinTools)

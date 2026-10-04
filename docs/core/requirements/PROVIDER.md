@@ -27,6 +27,11 @@
   `retry in undefineds` 且被误标 429）。
 - **【2026-09-29 · 新条目 · 渠道收录判据成文】** 渠道收录**判据成文**（三判据 + 字段面纪律 + 运营商三家结论 + 自助路径）——判据单源 = 设计档 `PROVIDER.md` §6.21；长尾兜底 = `providers[]` 自由字段 + 交互添加（CLI ∕ VSC ∕ 桌面核表投影；区域端点变体走自助）。
   源 = 台账 #177（批 = `docs/batches/2026-09-29-provider-config-family.md`）；本批同时新增 `huawei` 预设（22 家——`PROJECT.md` C3 计数已随动）。
+- **【2026-10-04 · 新条目 · responses 适配面健壮性三判据（台账 #907）】**
+  ① **判据-D9**：构造 `type:"error"` 帧流 ⇒ parseStream **抛错或 partial 抢救**（分界 = 是否已有流出；禁止静默跳过）——T1–T4；
+  ② **判据-D8**：`errors.mjs` 导出码级映射（最小集五码逐码断言 ∥ 未列码 null 透传）——T5–T6；
+  ③ **判据-D5**：`buildBody` 仅显式 `maxTokens` 时发 `max_output_tokens`——T7–T8。
+  源 = 批档 `docs/batches/2026-10-04-responses-robustness.md` §2 AC-1..4；设计 = `PROVIDER.md` §6.13 错误出口块 + D-PR34/35/36。〔评审 #5 发现 6：本条目落档时变更记录漏行——本行即补（父侧 2026-10-04 21:5x）〕
 
 ### 2.2 适用工作流条目（回指 · 不复制）
 
@@ -155,3 +160,4 @@ N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自
 - 2026-09-30（**#735 · N-IDG-3 新增 · 主 agent 落笔**〔父侧直接执行 · 可 revert〕——承批 `docs/batches/2026-09-30-vsc-paste-cleanup.md` §2.7（设计轮草案）· 用户 18:24 ∥ 18:28 令）：§4.5 非功能段新增 **N-IDG-3**（VSC 贴图临时件有界——写时 mtime 3 天窗扫除 ∥ 核 `cleanupOldToolResults` 单源）；源 = 台账 #735（pairfix §2 F-1 上抛：VSC 贴图件无自动清理实锤）。
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 1 行折行（132——语义零改）。**零新语义**。
 - 2026-10-03（**死指针收正 · 主 agent 直接执行 · 可 revert**——承 crash-guards 批修复轮报备）：§4 R19 载体注收正——`test/provider-headers.test.mjs` 已随 2026-09-28 测试树全清退场（本行判据 as-of 批次窗），消除死指针。**零新语义**。
+- 2026-10-04（**#907 判据条目落档 · 主 agent**）：§2.1 新增 responses 适配面健壮性三判据条目（判据-D9/D8/D5——批 `docs/batches/2026-10-04-responses-robustness.md` §2；设计 = `PROVIDER.md` §6.13 + D-PR34/35/36）。〔评审 #5 发现 6：落档时漏行，本行随补〕
