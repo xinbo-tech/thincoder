@@ -4,10 +4,12 @@
  * （机制代码在核，操作对象 = 被开发项目 cwd 根的 PROJECT-MANIFEST.json 数据档）。
  *
  * 契约速览（全量见模块设计 §2.2）：
- *  - readManifest(cwd) → { ok, manifest, missingKeys, errors, reason }：
+ *  - readManifest(cwd) → { ok, manifest, missingKeys, unknownKeys, errors, reason }：
  *    读 + validateManifest(obj)；缺键 → 产 missingKeys（非拒）→ 补默认值 →
  *    再校验通过；整档缺失 → { ok:false, reason:'missing' }（不静默 fallback）。
- *  - validateManifest(obj) → { ok, errors, missingKeys }：枚举 / version 数值 /
+ *    未知键（#802 / KD-M1-36）→ 产 unknownKeys + 一行可见告警（console.warn + logEvent；
+ *    同档同键集去重、读到零未知键清该档 memo）——非拒定性零变。
+ *  - validateManifest(obj) → { ok, errors, missingKeys, unknownKeys }：枚举 / version 数值 /
  *    docRoot 子键值形态（串 | 数组，F7）+ checkConfig.lineCounts 元素层形态——**纯函数、零 fs**；不落盘。
  *  - 三族声明键（`codePaths` / `index.{codeExtensions,docExtensions,publicRepos}` / `advisor.{docMap,standardsDoc}`——
  *    KD-M1-31 / M1-32）：缺键补默认；形态错 = 档非法（fail-closed，与 docRoot 子键同款）；
@@ -39,6 +41,8 @@ import { readFileSync, writeFileSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { DEFAULT_MANIFEST, isValidDocRootValue, validateManifest, fillDefaults } from "./manifest-schema.mjs"
 import { MANIFEST_REL, discoverProjects, owningProject, resolveProjectRoot } from "./manifest-discovery.mjs"
+// #802（KD-M1-36）：未知键读面告警的事件面——诊断日志（fire-and-forget，失败静默降级）。
+import { logEvent } from "./log.mjs"
 // 同名 re-export（2026-09-29 structure-split-2 · 台账 #620——缝 = 同名再出口）：发现 ∕ 归属族与校验 ∕ 默认值族出档
 // `manifest-discovery.mjs` ∕ `manifest-schema.mjs`；全迁移导出经本档转口——消费者 import 面零改。
 export { MANIFEST_REL, discoverProjects, discoverRepos, owningProject, projectRootView, resolveProjectRoot, _setProjectRootForTest, _resetProjectRootForTest } from "./manifest-discovery.mjs"
@@ -126,19 +130,33 @@ export function manifestFilePath(cwd) {
   return join(writeRoot(cwd), MANIFEST_REL)
 }
 
+/** #802（KD-M1-36）未知键告警去重 memo：档路径 → 上次观测键集（进程内）；读到零未知键即清该条。 */
+const unknownKeysSeen = new Map()
+
+/** 读面一行可见告警（#802）：含键名；同档同键集恰一次——console.warn + logEvent('manifest:unknown-keys')。 */
+function warnUnknownKeys(file, unknownKeys) {
+  if (unknownKeys.length === 0) { unknownKeysSeen.delete(file); return }
+  const sig = JSON.stringify([...unknownKeys].sort())
+  if (unknownKeysSeen.get(file) === sig) return
+  unknownKeysSeen.set(file, sig)
+  console.warn(`[manifest] ${MANIFEST_REL} unknown key(s) ignored: ${unknownKeys.join(", ")} — not an error; check spelling / version mismatch (KD-M1-36)`)
+  logEvent("manifest:unknown-keys", { path: file, keys: unknownKeys.join(",") })
+}
+
 /**
  * 读 cwd 根数据档（模块设计 §2.2）：读 + validateManifest(obj) → 缺键产
  * missingKeys（非拒）→ 补默认值 → 再校验通过。整档缺失 → { ok:false, reason:'missing' }
  * （绝不静默 fallback——KD-M1-2）；JSON 非法 / 顶层非对象 → reason:'invalid'。
- * @returns {{ok:boolean, manifest:object|null, missingKeys:string[], errors:string[], reason?:string}}
+ * @returns {{ok:boolean, manifest:object|null, missingKeys:string[], unknownKeys:string[], errors:string[], reason?:string}}
  */
 export function readManifest(cwd) {
   let raw
+  const file = manifestFilePath(cwd) // #802：档路径单点（读 / 告警 memo 同源）
   try {
-    raw = readFileSync(manifestFilePath(cwd), "utf8")
+    raw = readFileSync(file, "utf8")
   } catch (e) {
     if (e.code === "ENOENT") {
-      return { ok: false, reason: "missing", errors: [], missingKeys: [], manifest: null }
+      return { ok: false, reason: "missing", errors: [], missingKeys: [], unknownKeys: [], manifest: null }
     }
     throw e // 权限/目录等其他读错——fail-closed 上抛，不伪装成缺失
   }
@@ -146,15 +164,16 @@ export function readManifest(cwd) {
   try {
     obj = JSON.parse(raw)
   } catch {
-    return { ok: false, reason: "invalid", errors: [`${MANIFEST_REL} 不是合法 JSON`], missingKeys: [], manifest: null }
+    return { ok: false, reason: "invalid", errors: [`${MANIFEST_REL} 不是合法 JSON`], missingKeys: [], unknownKeys: [], manifest: null }
   }
   if (obj === null || typeof obj !== "object" || Array.isArray(obj)) {
-    return { ok: false, reason: "invalid", errors: ["manifest 顶层必须是 JSON 对象"], missingKeys: [], manifest: null }
+    return { ok: false, reason: "invalid", errors: ["manifest 顶层必须是 JSON 对象"], missingKeys: [], unknownKeys: [], manifest: null }
   }
   const first = validateManifest(obj)
+  warnUnknownKeys(file, first.unknownKeys) // #802：读面单点告警（非拒——ok 定性零变）
   const manifest = fillDefaults(obj)
   const final = validateManifest(manifest)
-  return { ok: final.ok, manifest, missingKeys: first.missingKeys, errors: final.errors, reason: final.ok ? undefined : "invalid" }
+  return { ok: final.ok, manifest, missingKeys: first.missingKeys, unknownKeys: first.unknownKeys, errors: final.errors, reason: final.ok ? undefined : "invalid" }
 }
 
 /**

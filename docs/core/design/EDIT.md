@@ -66,6 +66,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 - **行数上限**：old/new 各 ≤1000（超限报 edit region too large）。
 - **not-found 引导**：错误含 `searched:` + grep 建议 + `similar lines (top 3, score)` 段（LCS 连续子串 / 阈值 0.5 / top3，单行亦覆盖；零候选省略——算法权威见 `docs/core/design/EDIT-HELPERS.md` §2 `findCandidates`）。
 - **数据新鲜度**：`old_string` / 行号只来自最新 `read`——改前 re-read。
+- **批量回执汇总行（#796）**：`edits` 批量回执**末行恒为一行汇总**——逐字 `edit batch: N/N entries — <路径清单>`（**N = 条目数 ∥ 清单 = 去重路径**；路径 = 条目**原样形**、去重保序首现序、分隔符 = `, `；全判后原子写 ⇒ 成功恒 N/N）。位置 = **末行**——大回执（>64K）落盘后双端 preview 保尾（`docs/core/design/TOOL-OUTPUT-LIMITS.md` §2）⇒ 汇总结论恒可见；恒定追加（不设「仅大回执」分支——判据单点、不引阈值耦合）。
 
 ## 6. 实现单一权威（现状路径 · as-of 2026-09-15 实核）
 
@@ -77,6 +78,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 | 入参守卫（#325） | 单源 `thincoder-core/tools/edit-diff.mjs`（`assertEditsContainer` / `assertEditEntries` + 五文案——两通道共用）· 调用点 `thincoder-core/tools/edit-batch.mjs` / `thincoder-cli/src/acp/bridge.mjs` · `thincoder-core/tools/file.mjs:257`（`touchedPaths`——零抛、尽力提取） | 本批落（#325） |
 | D1/D2 纯函数 | `thincoder-core/tools/edit-batch.mjs:128`（`normalizeEditLine`）· `:149`（`findFuzzyWindow`）· `:183`（`applyLineEdit`）· `:140`（`FUZZY_MATCH_NOTE`） | 导出在位（edit-diff 调用期导入——ESM 循环安全） |
 | 三通道共用 | 本地单形态 / `edits` 批量 / ACP 桥 | 同内核 |
+| 批量回执汇总行（#796） | `thincoder-core/tools/edit-batch.mjs:112-113`（`summary` 组装 `:112` ∥ `return [...results, summary].join("\n")` `:113`——as-built 2026-10-04） | 本批落（#796） |
 | 注册面 | `thincoder-core/tools/index.mjs:4` · `:21` | file 组 |
 | 描述面（模型可见） | `thincoder-core/tool-docs/edit.md` | 在位（`DESC()` 加载） |
 | VSC 对位实现 | `thincoder-vscode/src/tools/file-edit.mjs:78`（`edit`）· `edit-diff.mjs` · `edit-batch` 等价档（`edit-line-params.mjs` / `edit-fuzzy-match.mjs`）（W14 已迁核——上述自持档已删，现体 = 核 `thincoder-core/tools/{file.mjs, edit-diff.mjs, edit-batch.mjs}`） | 同机制 · 独立实现 （迁移期引文） |
@@ -93,6 +95,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 `thincoder-cli/test/edit-tool-improvement.test.mjs`（**45 用例——41 快 + 4 slow**：删行形态全路径 / 显式空串拒含 `replace_all` / normalize 弯引号命中 + 单遍映射单元 / 防误匹配 / 批量删行 + 模糊端到端 / **#325 入参守卫 9 例** / **#327 三例**）。
 **#325 守卫 9 例** = 核 5（真值非数组三态 `"[]"` / `{…}` / `42` + `[null]` / 非对象条目 ⇒ 成形错误、零裸抛）+ 桥 4（空数组 / `[null]` / 非对象条目经 `toolRouter` ⇒ `Error: <msg>`、零反向 RPC + 合法批量正向对照）。
 **#327 三例**（`docs/core/design/TOOLS.md` §6.17 裁定 3 / 4）= 窄形态两通道同拒（`edits` 真值非数组 + 合法单形态参数：桥路由与核 `execute` 同错误面、零写入）+ `args = null` 下 `write` / `edit` **必败**（形态据实施轮先跑读数定——`Error:` 串 ∥ 抛错）、目标零变更（「该调用必败」前提机检）。
+**#796 汇总行 4 例**（批内件 `docs/batches/2026-10-04-core-patch-batch.test.mjs`——随批档留存 · 不进仓套件）：逐字汇总行 ∥ 路径去重序 ∥ 恒定（N=1 与 N=n 同附）∥ >64K 经 `offloadToolResult`（临时目录）preview 仍含末行。
 VSC 侧同名档 `thincoder-vscode/test/edit-tool-improvement.test.mjs`（同引核面——守卫随核生效、端档零改）。
 
 ## 8. 并入的关键决策记录（含否决备选）
@@ -107,6 +110,7 @@ VSC 侧同名档 `thincoder-vscode/test/edit-tool-improvement.test.mjs`（同引
 | D-6 | 入参守卫落 **`touchedPaths` 零抛 + 执行阶段单源成形错误**（#325） | 钩子内抛错（即便成形文案）会从首个未守卫点逸出（实测 = VSC L3 前置查询 `thincoder-vscode/src/agent/execute-tools.mjs:188`→`Promise.all` 批级拒绝、裸 TypeError 直达用户）；零抛 ⇒ 拒绝统一落 `applyEditBatch`（与空数组同点同文）。**消费侧兜底（#327）**：十处消费点归单源谓词 `toolTouchPaths`（`docs/core/design/TOOLS.md` §6.17）——零抛契约两侧同护。否决：钩子内抛同文案（第二抛点、逸出不可控） （迁移期引文——档已迁核） |
 | D-7 | 跨档单源 = **`thincoder-core/tools/edit-diff.mjs`**（#325 · 桥面同批收）：两守卫 + 五文案，核 `edit-batch.mjs` 与 ACP 桥 `bridge.mjs` 同调用、桥零副本 | 两侧已共同导入 `edit-diff` 校验词汇（`assertEditArgsExclusive` / `validateEditEntry` 等先例）——单源住共用导入面，条件与文案同时锁死；否决：常量导自 `edit-batch.mjs`（桥依赖本地实现模块、条件可分叉）；否决：桥自持副本（D2 双源） |
 | D-8 | 非数组容器的通道归宿 = **归一（#327）**：桥 `edit` 路由判据改与核同（`Boolean(args?.edits)` 真值判）——`edits` 真值 ⇒ 两通道同入批量分支、同容器错误面；假值 ⇒ 单形态面。窄形态（真值非数组 + 合法单形态参数）不再有「桥径单形态应用」分支 | 分歧的代价 = 窄形态下写落地而门禁 / 变更记账 / L3 看到零路径（fail-open 面——`touchedPaths` 真值非数组返 `[]` 的前提「该调用必败」被打破）；归一恢复该前提 ⇒ `[]` 语义重新为真，#325 判据零改（否决：维持登记〔承载 fail-open 面〕；否决：核侧改 `Array.isArray`〔弱化容器守卫、违 E1/E2〕；否决：改 `[]` 为保守形〔掩盖真因〕） |
+| D-9 | 汇总行 = **恒定末行**（不设「仅大回执」分支） | tail 恒保留 ⇒ 末行恒可见；恒定 = 判据单点（无阈值分支、无临界尺寸二义）；小回执多一行 = 零害。否决：「仅 >64K 追加」（工具须知 offload 阈值 = 跨面耦合 + 第二判据） |
 
 ## 9. 不并项与历史沿革
 
@@ -142,3 +146,5 @@ VSC 侧同名档 `thincoder-vscode/test/edit-tool-improvement.test.mjs`（同引
   §5「零裸抛」条补 `args` 自身限定（非 null 对象 ⇒ 按 `{}` 处理；单源谓词 `toolTouchPaths`，见 `docs/core/design/TOOLS.md` §6.17）；
   §5「非数组容器回落」条改为归一后口径（两通道同判）；§6 同类扫描行补消费面续扫；§7 用例 42 → **45**（#327 三例）；§8 D-8 改写为归一裁定（含否决备选）。
   **对位口径**：`thincoder-core/tools/file.mjs` 容器守卫与 `touchedPaths` 零抛本体**零改**（#327 在消费面与桥路由面落位）。
+- 2026-10-04（**核面小修批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-core-patch-batch.md` §2 · 台账 #796）：§5 增**批量回执汇总行**条（末行恒为 `edit batch: N/N entries — <路径>`——tail 恒保留故大回执可见）；§6 增汇总行追加点行；§7 增批内件 4 例；§8 增 D-9（恒定末行 ∥ 否决「仅大回执」分支）。实现 = 本批实施轮。
+- 2026-10-04（**核面小修批 · fix 轮 · eng-designer**——承批档 `docs/batches/2026-10-04-core-patch-batch.md` §2 修正块 · 评审发现 1）：§5 汇总行条钉死清单渲染（**N = 条目数 ∥ 清单 = 去重路径**；路径 = 条目原样形、去重保序首现序、分隔符 = `, `）。机制语义零改。

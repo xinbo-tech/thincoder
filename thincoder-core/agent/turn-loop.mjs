@@ -57,6 +57,9 @@ export async function runTurnLoop(agent, {
   agent._turnFilesMark = agent._touchedFiles.length
 
   for (let turn = 0; turn < maxTurns; turn++) {
+    // #793（核面小修批——AGENT-LOOP.md §6.2 环边界中止前置 ∥ 需求 F5）：环头检查点——中止恒以
+    // AbortError 收束、不开启新轮（环头注入族 / 压缩 / 模型调用零触）。
+    if (signal?.aborted) throw abortError(signal, "agent", "turn-head")
     // 第 19 批（TURN-ACROSS-SEGMENTS——设计 TURN-CAP-CONTINUE.md §4）：编号帧——
     // `_turnSeq` 每轮 +1（跨段累计，仅 `!resume` 链起点复位）；面向消费面的两字段
     // （状态行 + ⟦ev⟧turn / ⟦ev⟧approval 事件共用）在此同点赋值（编号唯一权威；帧
@@ -240,5 +243,8 @@ export async function runTurnLoop(agent, {
   // #417（撞帽载荷「本段零落盘轮数」）：收尾轮（撞帽轮）若零落盘同样计入——轮顶计数只
   // 覆盖到倒数第二轮（maxTurns ≤ 0 时环未跑，不虚计）。
   if (maxTurns > 0 && agent._touchedFiles.length === agent._turnFilesMark) agent._zeroWriteTurns += 1
+  // #793（核面小修批——AGENT-LOOP.md §6.2 环边界中止前置 ∥ 需求 F5）：环尾检查点——中止恒以
+  // AbortError 收束（不落 ContinueError——用户 Stop 优先于继续提示；消费契约 = 外层按 reason 判定）。
+  if (signal?.aborted) throw abortError(signal, "agent", "turn-tail")
   throw new ContinueError(maxTurns)
 }

@@ -23,7 +23,8 @@ import { assertEditArgsExclusive, assertEditsContainer, assertEditEntries, valid
 
 /**
  * Apply the `edits` array form: multi-file atomic replacement. Throws on any
- * failure (atomic — nothing written). Returns the per-entry result text (joined).
+ * failure (atomic — nothing written). Returns the per-entry result text (joined)
+ * + the constant batch summary line at the end (#796 — EDIT.md §5).
  */
 export async function applyEditBatch(args, ctx) {
   assertEditsContainer(args.edits)
@@ -105,7 +106,11 @@ export async function applyEditBatch(args, ctx) {
       note: p.note,
     }))
   }
-  return results.join("\n")
+  // #796（核面小修批——EDIT.md §5 批量回执汇总行 ∥ §8 D-9）：末行**恒为**汇总行——大回执
+  // （>64K）落盘后双端 preview 保尾（TOOL-OUTPUT-LIMITS.md §2）⇒ 汇总结论恒可见；N = 条目数
+  // （全判后原子写 ⇒ 成功恒 N/N）；路径 = 条目原样形、去重保序首现序（groups 插入序即首现序）。
+  const summary = `edit batch: ${args.edits.length}/${args.edits.length} entries — ${[...groups.values()].map((g) => g.path).join(", ")}`
+  return [...results, summary].join("\n")
 }
 
 // ---------------------------------------------------------------------------
