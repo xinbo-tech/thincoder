@@ -6,7 +6,7 @@
  * 锁死、COUNT 单源计数、事务保证收口原子、归档 = 软删除。行龄源 = SQLite 时间戳（无 git blame）。
  *
  * 面：① 命令族（查询 = 只读全角色 / 写 = 仅主 agent——核函数 `ledger-cmd.mjs` + 工具定义 `ledger-tools.mjs`
- * 两源，接线见 tools/index.mjs 与 agent/family-tools.mjs）
+ * 两源，接线见 `agent/family-tools.mjs`——统一入口 `ledger` 两变体，2026-10-05 统一入口批）
  * ② 族发现（findProject / discoverFamily——标记 = ledger.db）③ scan 组装（buildScan——行集 + ledgerCount
  * → scan 对象，形状契约 = pool/tech/aged/thresholdReached/actionable/root/name/ledger）
  * ④ 格式 helper（L1 标记 ∥ L2 明细行逐字契约——含标记范围归约 `scopeMarkerOf`，§7.2）。
@@ -188,6 +188,6 @@ export function detailScans(scans, current) {
 // ── re-export（拆分件接口——命令面接线 = 动态 import 本档，KD-M2-3） ──
 export { ALLOWED_MIGRATIONS, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn } from "./ledger-db.mjs"
 export { ledgerAdd, ledgerClose, ledgerCount, ledgerQuery, ledgerUpdate } from "./ledger-cmd.mjs"
-export { ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool } from "./ledger-tools.mjs"
+export { ledgerTool, ledgerReadTool, ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool } from "./ledger-tools.mjs"
 export { runLedgerAudit, runLedgerMigrate } from "./ledger-migrate.mjs"
 export { resolveExecutorStates, executorTail, _setExecutorProbeTtlForTest } from "./ledger-executors.mjs"

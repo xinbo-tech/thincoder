@@ -54,9 +54,8 @@ const { settingsTool } = await import(at("agent-tools/settings.mjs"))
 push(typeof settingsTool === "function" ? tryCall(settingsTool, [{}], "inst:settings") : settingsTool, "instance")
 const { peerInstancesTool } = await import(at("peer-instances.mjs"))
 push(typeof peerInstancesTool === "function" ? tryCall(peerInstancesTool, [{}], "inst:peer") : peerInstancesTool, "instance")
-const { ledgerQueryTool, ledgerCountTool } = await import(at("ledger.mjs"))
-push(typeof ledgerQueryTool === "function" ? tryCall(ledgerQueryTool, [{}], "inst:ledgerQuery") : ledgerQueryTool, "instance")
-push(typeof ledgerCountTool === "function" ? tryCall(ledgerCountTool, [{}], "inst:ledgerCount") : ledgerCountTool, "instance")
+const { ledgerTool } = await import(at("ledger.mjs"))
+push(typeof ledgerTool === "function" ? tryCall(ledgerTool, [{}], "inst:ledger") : ledgerTool, "instance")
 
 // ── 描述面：tool-docs 外置档枚举（AC15-1 覆盖率面） ─────────────────────────────
 const docsDir = join(CORE, "tool-docs")

@@ -121,8 +121,9 @@ async function vscStatusTerminalEcho(args, ctx, out) {
 /**
  * 工具表**基础集**装配（§2.3 件 1「工具表」行：装配取核——家族段 ∕ `toolSchemas` ∕ `toolByName`
  * 归核 `prepareRun`）。段序沿用原文：① 装饰体 → `opts.toolDecorate` 写回（裁定①）· ② MCP 连接
- * 展开 · ③ 基础集（内置 ± 只读过滤 ∖ 子代排除 + 台账查询两工具 + 多模态 + extraTools）。
- * W8 契约②保持：段内动态 import（核 `agent-tools.mjs` / 核 `ledger.mjs` / 端 `panel-mcp.mjs`）
+ * 展开 · ③ 基础集（内置 ± 只读过滤 ∖ 子代排除 + 多模态 + extraTools）——台账统一入口随核家族段
+ * （2026-10-05 统一入口批：端侧自持两工具清零）。
+ * W8 契约②保持：段内动态 import（核 `agent-tools.mjs` / 端 `panel-mcp.mjs`）
  * 原样动态——静态引入会经核 agent 栈触达 `node:sqlite`。
  * @param {{depth:number, role:string|null, engineering:boolean, provider:object,
  *   mcpServers:object[]|undefined, builtinTools:object[], opts:object, batchDoc:string|null,
@@ -158,10 +159,6 @@ export async function buildToolTable({ depth, role, engineering, provider, mcpSe
     } catch { /* expansion failure is non-fatal — the model just lacks MCP tools this turn（零警告——非致命） */ }
   }
 
-  // M2 台账查询两工具（核 `tools/index.mjs:61` 同法——全角色面）：动态 import——ledger 链静态
-  // 达 `node:sqlite`（W8 契约②）；写命令族已随核 `assembleFamilyTools` 在端可达（核装配块）。
-  const { ledgerQueryTool, ledgerCountTool } = await import("@thincoder/core/ledger.mjs")
-
   // I9（#677——memory 描述面收口）：描述 ∕ 参数面核单源注入（端零自持描述字面；端面只留
   // layer 值域守卫）。动态 import：`memory.mjs` 链静态达 `node:sqlite`——W8 契约②，同档纪律。
   const { memoryTools } = await import("@thincoder/core/memory.mjs")
@@ -172,7 +169,7 @@ export async function buildToolTable({ depth, role, engineering, provider, mcpSe
   const isReadOnlyRole = depth > 0 && (role === "explore" || role === "plan" || role === "consult")
   const baseTools = [
     ...(isReadOnlyRole ? builtinTools.filter((t) => t.readonly) : builtinTools),
-    ledgerQueryTool, ledgerCountTool, // M2 查询两工具（只读——只读角色同放行；恒入基础集）
+    // 台账统一入口（读变体）随核家族段 `assembleFamilyTools`（2026-10-05 统一入口批：端侧自持清零）
   ].filter((t) => depth === 0 || !SUBAGENT_TOOL_EXCLUSIONS.has(t.name))
   // L1 契约（VSC-TOOL-TABLE-DUP §2.1A）：`agent.tools` 绑定值 = **基础集**（不含家族段——
   // 核 `assembleFamilyTools` 追加族与端侧 meta 族实测重叠 11 名 ⇒ 入绑定值必致子代装配重名）。

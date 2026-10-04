@@ -60,7 +60,6 @@ export async function assembleBuiltinTools({ memory, cwd, projectDir = null, aut
   const { repoOutlineTool } = await import("./repomap.mjs");
   const { settingsTool } = await import("../agent-tools/settings.mjs");
   const { peerInstancesTool } = await import("../peer-instances.mjs");
-  const { ledgerQueryTool, ledgerCountTool } = await import("../ledger.mjs"); // 动态 import（ledger 链静态达 node:sqlite——W8 契约②）
   const imageOk = Boolean(specForModel(model)?.multimodal);
   return [
     ...builtinTools,
@@ -72,8 +71,6 @@ export async function assembleBuiltinTools({ memory, cwd, projectDir = null, aut
     repoOutlineTool(memory?.db, cwd),
     settingsTool(),
     peerInstancesTool,
-    // 台账查询命令族（M2 设计 §2.2 命令面接线——查询命令全角色面；写命令住 family-tools depthOnly 分支）
-    ledgerQueryTool,
-    ledgerCountTool,
+    // 台账工具面（统一入口 `ledger`——含读二）随家族段 `agent/family-tools.mjs`（2026-10-05 统一入口批：本基集清零）
   ];
 }

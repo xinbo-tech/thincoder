@@ -1,14 +1,16 @@
 /**
- * ledger-tools.mjs — 台账五工具定义（查询二 = 只读全角色 / 写三 = 仅主 agent 装配）+ 工具层参数守卫。
- * 自 `ledger-cmd.mjs` 拆出（2026-09-28 守卫族微修批 · 台账 #473——纯搬移、语义零变；核函数留原档）。
- * 守卫 = **声明派生**（设计档 §3.2：枚举 / 必填 / 类型取自工具自身 `parameters`，不在守卫内复写——
- * D2「声明即校验」）；判于核函数之前 ⇒ 非法入参零写、零库动作、零 SQLite 原文外泄。读面二具同拍
- * （#473：非法过滤参数 ⇒ 拒——不再「静默空集 / 绑原文」）。
- * 接线：族出口 = `ledger.mjs`（re-export——消费面 tools/index.mjs · agent/family-tools.mjs 零改）；
- * 消费侧一律动态 import `ledger.mjs`（ledger-db.mjs 静态 import node:sqlite ⇒ W8 契约②）。
+ * ledger-tools.mjs — 台账**统一入口** `ledger`（action 分派）+ 五旧名弃用壳 + 工具层参数守卫。
+ * 自 `ledger-cmd.mjs` 拆出（2026-09-28 守卫族微修批 · 台账 #473）；2026-10-05 统一入口批
+ * （台账 #923）合五工具为一：模型面恰一名 `ledger`（两变体同名单对象、schema 窄化——
+ * 全量 = depth-0 五 action ∥ 只读 = depth>0 二 action）；旧五名 = code 面弃用壳（不入任何装配面）。
+ * 守卫 = **声明派生**（设计档 §3.2 / §11.3：判序① 入参归一 → ② 入口级 action 判（消费 action）→
+ * ③ 余键喂该 action 伪工具对象走 P2–P6——声明源 = 前身旧工具 `parameters` 逐字；helper `assertToolArgs`
+ * 零改）；判于核函数之前 ⇒ 非法入参零写、零库动作、零 SQLite 原文外泄。
+ * 接线：族出口 = `ledger.mjs`（re-export——消费面 agent/family-tools.mjs；旧读二装配面已清零）；
+ * 消费侧一律动态 import（`ledger-db.mjs` 静态 import node:sqlite ⇒ W8 契约②）。
  */
 import { ledgerAdd, ledgerClose, ledgerCount, ledgerQuery, ledgerUpdate } from "./ledger-cmd.mjs"
-import { DESC } from "./tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/ledger_*.md（DESC 单解析面）
+import { DESC } from "./tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/ledger.md（DESC 单解析面）
 
 /** 工具 cwd 供值面（缺省 → 当前项目根）。 */
 const cwdOf = (ctx) => ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
@@ -68,51 +70,22 @@ function assertToolArgs(tool, args) {
   return args
 }
 
-// ── 工具定义（接线：查询 → tools/index.mjs 全角色面；写 → family-tools.mjs depthOnly 分支） ──
+// ── 统一入口（设计档 §11.2 / §11.3） ─────────────────────────────────────────
 
-export const ledgerQueryTool = {
-  name: "ledger_query",
-  description: DESC("ledger_query"), // #15 外置：文本单点 = tool-docs/ledger_query.md（两池词表逐字保留）
-  parameters: {
-    type: "object",
-    properties: {
-      cwd: { type: "string", description: "项目根目录——台账按项目根关联存储于用户数据目录（工作树外、不进 git）。相对路径按当前工作目录解析；查/写别的项目请给绝对路径。缺省 = 当前会话项目根" },
-      status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "按状态过滤（六态之一，缺省 = 不过滤）" },
-      kind: { type: "string", enum: ["requirement", "tech_todo"], description: "按类别过滤" },
-      board: { type: "string", description: "按归属板块过滤（需求档文档名）" },
-    },
-    additionalProperties: false,
-  },
-  readonly: true,
-  async execute(args, ctx) {
-    args = assertToolArgs(ledgerQueryTool, args)
-    return JSON.stringify(ledgerQuery({ cwd: args.cwd ?? cwdOf(ctx), status: args.status, kind: args.kind, board: args.board }), null, 2)
-  },
-}
+/** action 枚举（全量 / 只读两变体；顺序 = 文档与按钮序）。 */
+const FULL_ACTIONS = ["add", "update", "close", "query", "count"]
+const READ_ACTIONS = ["query", "count"]
 
-export const ledgerCountTool = {
-  name: "ledger_count",
-  description: DESC("ledger_count"), // #15 外置：文本单点 = tool-docs/ledger_count.md
-  parameters: {
-    type: "object",
-    properties: { cwd: { type: "string", description: "项目根目录——台账按项目根关联存储于用户数据目录（工作树外、不进 git）。相对路径按当前工作目录解析；查/写别的项目请给绝对路径。缺省 = 当前会话项目根" } },
-    additionalProperties: false,
-  },
-  readonly: true,
-  async execute(args, ctx) {
-    args = assertToolArgs(ledgerCountTool, args)
-    return JSON.stringify({ count: ledgerCount({ cwd: args.cwd ?? cwdOf(ctx) }) })
-  },
-}
+/** cwd 参数描述（五前身声明同文——文本单点）。 */
+const CWD_DESC = "项目根目录——台账按项目根关联存储于用户数据目录（工作树外、不进 git）。相对路径按当前工作目录解析；查/写别的项目请给绝对路径。缺省 = 当前会话项目根"
 
-export const ledgerAddTool = {
-  name: "ledger_add",
-  description: DESC("ledger_add"), // #15 外置：文本单点 = tool-docs/ledger_add.md（两池词表逐字保留）
-  parameters: {
+/** 各 action 声明条目（= 前身旧工具 `parameters` 逐字；伪工具对象守卫 + 弃用壳共用单源）。 */
+const ACTION_SPECS = {
+  add: {
     type: "object",
     required: ["kind", "title"],
     properties: {
-      cwd: { type: "string", description: "项目根目录——台账按项目根关联存储于用户数据目录（工作树外、不进 git）。相对路径按当前工作目录解析；查/写别的项目请给绝对路径。缺省 = 当前会话项目根" },
+      cwd: { type: "string", description: CWD_DESC },
       kind: { type: "string", enum: ["requirement", "tech_todo"], description: "类别" },
       title: { type: "string", description: "条目标题" },
       board: { type: "string", description: "归属板块（需求档文档名，可空）" },
@@ -123,23 +96,11 @@ export const ledgerAddTool = {
     },
     additionalProperties: false,
   },
-  readonly: false,
-  async execute(args, ctx) {
-    args = assertToolArgs(ledgerAddTool, args)
-    const { cwd, ...row } = args
-    const id = ledgerAdd({ cwd: cwd ?? cwdOf(ctx), row })
-    return JSON.stringify({ id, status: "待讨论" })
-  },
-}
-
-export const ledgerUpdateTool = {
-  name: "ledger_update",
-  description: DESC("ledger_update"), // #15 外置：文本单点 = tool-docs/ledger_update.md
-  parameters: {
+  update: {
     type: "object",
     required: ["id"],
     properties: {
-      cwd: { type: "string", description: "项目根目录——台账按项目根关联存储于用户数据目录（工作树外、不进 git）。相对路径按当前工作目录解析；查/写别的项目请给绝对路径。缺省 = 当前会话项目根" },
+      cwd: { type: "string", description: CWD_DESC },
       id: { type: "number", description: "条目 id" },
       status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "目标状态（六态之一，缺省 = 不变）" },
       title: { type: "string", description: "标题（缺省 = 不变）" },
@@ -152,37 +113,139 @@ export const ledgerUpdateTool = {
     },
     additionalProperties: false,
   },
-  readonly: false,
-  async execute(args, ctx) {
-    args = assertToolArgs(ledgerUpdateTool, args)
-    const { cwd, id, ...patch } = args
-    let executorSessionId
-    if (patch.executor == null) {
-      // 显式 `null` ≡ 略去（§3.1 `null` 口径 · #474——与缺省同分支）；动态 import——零新静态边（K-LX1）；
-      // 工具层供值，核心函数保持参数注入纯函数
-      const { getSessionId } = await import("./session-slots.mjs")
-      executorSessionId = getSessionId()
-    }
-    return JSON.stringify(ledgerUpdate({ cwd: cwd ?? cwdOf(ctx), id, patch, executorSessionId }))
-  },
-}
-
-export const ledgerCloseTool = {
-  name: "ledger_close",
-  description: DESC("ledger_close"), // #15 外置：文本单点 = tool-docs/ledger_close.md
-  parameters: {
+  close: {
     type: "object",
     required: ["id", "status"],
     properties: {
-      cwd: { type: "string", description: "项目根目录——台账按项目根关联存储于用户数据目录（工作树外、不进 git）。相对路径按当前工作目录解析；查/写别的项目请给绝对路径。缺省 = 当前会话项目根" },
+      cwd: { type: "string", description: CWD_DESC },
       id: { type: "number", description: "条目 id" },
       status: { type: "string", enum: ["已核销", "已废弃"], description: "目标态（勾销 / 追认核销 / 撤回）" },
     },
     additionalProperties: false,
   },
-  readonly: false,
-  async execute(args, ctx) {
-    args = assertToolArgs(ledgerCloseTool, args)
-    return JSON.stringify(ledgerClose({ cwd: args.cwd ?? cwdOf(ctx), id: args.id, status: args.status }))
+  query: {
+    type: "object",
+    properties: {
+      cwd: { type: "string", description: CWD_DESC },
+      status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "按状态过滤（六态之一，缺省 = 不过滤）" },
+      kind: { type: "string", enum: ["requirement", "tech_todo"], description: "按类别过滤" },
+      board: { type: "string", description: "按归属板块过滤（需求档文档名）" },
+    },
+    additionalProperties: false,
+  },
+  count: {
+    type: "object",
+    properties: { cwd: { type: "string", description: CWD_DESC } },
+    additionalProperties: false,
   },
 }
+
+/** 并集 schema（§11.2——`action` 枚举 + 五 action 参数并集；per-action 必填由运行时守卫裁）。 */
+const UNION_PARAMETERS = {
+  type: "object",
+  required: ["action"],
+  properties: {
+    action: { type: "string", enum: FULL_ACTIONS, description: "" }, // 变体构造时填描述
+    cwd: { type: "string", description: CWD_DESC },
+    kind: { type: "string", enum: ["requirement", "tech_todo"], description: "类别（add 必填 / query 过滤；缺省 = 不过滤）" },
+    title: { type: "string", description: "条目标题（add 必填；update 可改——空串 / 全空白 ⇒ 拒）" },
+    board: { type: "string", description: "归属板块（需求档文档名；add 可空 / update 缺省 = 不变 / query 过滤）" },
+    req_doc: { type: "string", description: "需求档指针（add 可空 / update 缺省 = 不变）" },
+    task_book: { type: "string", description: "任务书指针（add 可空 / update 缺省 = 不变；在途 / 待核销必填——咬合 CHECK）" },
+    evidence: { type: "string", description: "最小证据行（add 可空 / update 缺省 = 不变；追认核销须非空）" },
+    trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "技术待办触发（add / update 可空）" },
+    id: { type: "number", description: "条目 id（update / close 必填）" },
+    status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "状态（close 必填 ∈ {已核销, 已废弃}；update 迁移 / query 过滤——六态之一）" },
+    executor: { type: "string", description: "执行者 sessionId（update 可选——接手改写归属；缺省 = 按状态迁移语义）" },
+  },
+  additionalProperties: false,
+}
+
+/** 变体构造（同名单对象、schema 窄化、两形永不同装配——先例 = `subagent` 工具 depth 面变体）：
+ *  全量（depth-0 五 action；`writeFace:true` —— `readonly:false` + 动作级分类钩子，写面保持侧效门，
+ *  query / count 归只读类 = 旧读二 `readonly:true` 同行为：planMode 放行 / 免审批）∥ 只读（depth>0
+ *  二 action；`readonly:true`，写三 schema 级不可达）。形态显式声明（不按 actions 长度推导——增量
+ *  变体不改错标文案）。 */
+function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
+  const entryTool = { name: "ledger", parameters: { type: "object", required: ["action"], properties: { action: { type: "string", enum: actions } } } }
+  return {
+    name: "ledger",
+    description: DESC("ledger"), // 文本单点 = tool-docs/ledger.md（五档要点合一）
+    parameters: {
+      ...UNION_PARAMETERS,
+      properties: {
+        ...UNION_PARAMETERS.properties,
+        action: {
+          ...UNION_PARAMETERS.properties.action,
+          enum: actions,
+          description: writeFace
+            ? "操作（五值）：add 新增 / update 更新 / close 收口 / query 查询 / count 计数——写三仅主 agent 装配面"
+            : "操作（只读二值）：query 查询 / count 计数",
+        },
+      },
+    },
+    readonly,
+    isReadonlyAction(args) { return READ_ACTIONS.includes(args?.action) },
+    async execute(args, ctx) {
+      // ① 入参归一（判序①——P1 同式；缺省 / null ⇒ {}）
+      if (args == null) args = {}
+      else if (typeof args !== "object" || Array.isArray(args)) throw new Error(`ledger：参数须为对象（收到 ${argPreview(args)}）`)
+      // ② 入口级 action 判（P3 缺失 / P5 非法——消费 action；取值域 = 本装配面枚举）
+      const { action, ...rest0 } = args
+      assertToolArgs(entryTool, { action })
+      // ③ 余键喂该 action 伪工具对象（声明源 = 前身工具 parameters 逐字——`action` 键不入 P2 域）
+      const rest = assertToolArgs({ name: `ledger(${action})`, parameters: ACTION_SPECS[action] }, rest0)
+      // ④ 路由既有核函数（包装细节携自原工具 execute 逐字保留：cwd 缺省 / JSON 缩进 / getSessionId 动态 import）
+      switch (action) {
+        case "add": {
+          const { cwd, ...row } = rest
+          const id = ledgerAdd({ cwd: cwd ?? cwdOf(ctx), row })
+          return JSON.stringify({ id, status: "待讨论" })
+        }
+        case "update": {
+          const { cwd, id, ...patch } = rest
+          let executorSessionId
+          if (patch.executor == null) {
+            // 显式 `null` ≡ 略去（§3.1 `null` 口径 · #474——与缺省同分支）；动态 import——零新静态边（K-LX1）
+            const { getSessionId } = await import("./session-slots.mjs")
+            executorSessionId = getSessionId()
+          }
+          return JSON.stringify(ledgerUpdate({ cwd: cwd ?? cwdOf(ctx), id, patch, executorSessionId }))
+        }
+        case "close":
+          return JSON.stringify(ledgerClose({ cwd: rest.cwd ?? cwdOf(ctx), id: rest.id, status: rest.status }))
+        case "query":
+          return JSON.stringify(ledgerQuery({ cwd: rest.cwd ?? cwdOf(ctx), status: rest.status, kind: rest.kind, board: rest.board }), null, 2)
+        case "count":
+          return JSON.stringify({ count: ledgerCount({ cwd: rest.cwd ?? cwdOf(ctx) }) })
+        default:
+          // 不可达（② 枚举守门已先拒）——fail-loud 兜底（防未来变体增量 drift）
+          throw new Error(`ledger：action 非法：${argPreview(action)}（取值 ∈ ${enumText(actions)}）`)
+      }
+    },
+  }
+}
+
+/** 统一入口两变体（同名 `ledger`——depth-0 装配全量 ∥ depth>0 各角色段装配只读）。 */
+export const ledgerTool = makeLedgerTool(FULL_ACTIONS, { writeFace: true })
+export const ledgerReadTool = makeLedgerTool(READ_ACTIONS, { readonly: true })
+
+// ── 旧五名弃用壳（设计档 §11.4——code 面保留、不入任何装配面） ────────────────
+
+/** 弃用文案（含旧名 + 统一入口 + 对应 action 指引；execute 抛它 ⇒ 零库动作）。
+ *  description 同文静态化——不经 `DESC`（旧五档退场后 DESC 加载必炸；壳面规避）。 */
+const deprecatedLine = (old, action) => `${old} 已退役（本名不再装配）——请改用统一入口 ledger：action="${action}"（参数面与原工具相同）。`
+
+const deprecatedShell = (old, action, readonly) => ({
+  name: old,
+  description: deprecatedLine(old, action),
+  parameters: ACTION_SPECS[action],
+  readonly,
+  async execute() { throw new Error(deprecatedLine(old, action)) },
+})
+
+export const ledgerQueryTool = deprecatedShell("ledger_query", "query", true)
+export const ledgerCountTool = deprecatedShell("ledger_count", "count", true)
+export const ledgerAddTool = deprecatedShell("ledger_add", "add", false)
+export const ledgerUpdateTool = deprecatedShell("ledger_update", "update", false)
+export const ledgerCloseTool = deprecatedShell("ledger_close", "close", false)

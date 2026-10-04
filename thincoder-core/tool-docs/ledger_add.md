@@ -1,1 +1,0 @@
-台账新增条目（写命令，仅主 agent）——入待讨论（六态状态机入口）。kind = requirement（需求池）/ tech_todo（技术待办）；trigger = 归批 / 条件 / 认账不排期（可空）。
