@@ -2,7 +2,7 @@
    拆档沿「桌面处理流 · VSC 对齐」批 §2.1 拆档定稿（**先拆后改** · 原档 480+ 行 ⇒ 四档，本档为主档）：
      · `chat-cards.css` —— 卡族段（审批池面操作区 / 提问 / 计划 —— 桌面壳件）
      · `chat-composer.css` —— 输入区段（变量别名块 + 提示行锚 + 交互态组）
-     · `chat-fixes.css` —— 「对齐第三批」小修族尾段（错误横幅 / 停止痕 / 台账行 / diff 预览 / 文件链接 / 欢迎条）
+     · `chat-fixes.css` —— 「对齐第三批」小修族尾段（错误横幅 / 停止痕 / diff 预览 / 文件链接 / 欢迎条）
    链序（`renderer/index.html`）= theme → chrome → session-list → skin → **chat → chat-cards → chat-composer → chat-fixes** → core-markdown → core → /rc/search.css → pool → settings
    （四档相对序保持 = 原单档内段序）；本档只留对话流面（块 / 工具卡 / 摘要 / 药丸 / 空态 / 说话人标签 / 待发送带 / 消化行族 / 归档块）。
    滚动容器 = `.flow` 宿主自身（骨架 `chrome.css` 已给 flex / 溢出 / 内边距——本档只补 `overflow-anchor: none`：

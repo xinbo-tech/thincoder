@@ -218,7 +218,7 @@ runAgent(agent, input, callbacks, { depth, signal, maxTurns, resume, autoTurn, s
    → `chat()`（流式；`onToken` / `onReasoning` / `onWait` 透传；`streamRules` 共享 `firedPatterns`）
    → 响应后处理（流规则 abort / warn · 用户中断 · usage 基线 · 异常 `finishReason` 提醒）
    → 有 toolCalls ⇒ `executeToolCalls`（§6.4）回喂重入；无 ⇒ `handleCompletion`（§6.5）→ done / continue。
-4. **超 turn 上限 → 抛 `ContinueError`**。续跑规则：`engineering && autoApprove → 自动 resume`，否则询问是否续跑。规则适用所有回合（depth-0 用户回合 / auto-turn / depth>0 子代理）。
+4. **超 turn 上限 → 抛 `ContinueError`**（中止态除外——`signal.aborted` ⇒ 抛 `abortError`，不落 ContinueError）。续跑规则：`engineering && autoApprove → 自动 resume`，否则询问是否续跑。规则适用所有回合（depth-0 用户回合 / auto-turn / depth>0 子代理）。
 
 **循环头（回合边界）注入族（三成员——同址、各自方向，互不干扰）**：每轮迭代开头（`chat()` 之前——核侧落点 = `thincoder-core/agent/turn-loop.mjs:87-93`）依次 —
 ① `consumeInjected?.(agent)`（父→子投递——spawn 方装的入向通道；depth>0）；② `drainChildUpstream(agent)`（子→父在飞消息——`AGENT-LOOP-UPSTREAM.md` §6.27.4）；③ **`consumeQueuedInput`（用户→主会话投递——仅用户回合传参；机制 = `AGENT-LOOP-ASYNC-POOL.md` §6.8「步边界 pickup」）**。
@@ -239,6 +239,8 @@ VSC 端壳自有 depth-0 循环同址（`thincoder-vscode/src/agent.mjs:197`（a
 - **工具执行期间中断**：先为已提交的 `tool_calls` 合成占位 tool 结果（`[Tool execution interrupted — results discarded]`——tool 消息必须紧跟 assistant `tool_calls`，否则 strict provider 重试轮 400），再注入中断消息后 continue。
 - **中断清扫（回合收尾 finally）**：`freezeAllSubTasks` + `sweepToolBlocks`（未 done 工具载体标 done + interrupted、清 `_toolTicks`）——无 running 残留、无陈旧计时泄漏。
 - **reason 词汇表扩展**：程序性取消 / 停止 / 定时器中止站点新增 `abortTrigger` 载荷形态（各既有判据点语义零改）——枚举与站点规则见 `AGENT-LOOP-SUBAGENT.md` §6.12。
+- **环边界中止前置（#793）**：环头 ∥ 环尾两检查点查 `signal.aborted` ⇒ 抛 `abortError(signal, "agent", "turn-head" | "turn-tail")`——中止恒以 AbortError 收束：不开启新轮（环头注入族 / 压缩 / 模型调用零触）∥ 不落 ContinueError（撞帽腿不可达——用户 Stop 优先于继续提示：`docs/core/requirements/TURN-CAP-CONTINUE.md` F5）；
+  Ctrl+I 续跑契约零变（外层按 `signal.reason` 换代续跑——`thincoder-core/agent/continue-decision.mjs`）。
 
 ### 6.3 装配与上下文注入（`prepareRun`）
 
@@ -519,6 +521,8 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 | VSC 档 §2 / §12 / §17（runAgent 主循环 · async 保真 · 上下文注入对齐） | VSC 侧实现细节叙述 | 与 §2.3 / `AGENT-LOOP-SUBAGENT.md` · `AGENT-LOOP-ASYNC-POOL.md` §6.7–§6.12 已并面同族（端差登记 = §6.18 表）——不重并（D2） |
 
 ## 变更记录
+
+- 2026-10-04（**核面小修批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-core-patch-batch.md` §2 · 台账 #793）：§6.2 步 4 补中止态例外句 + 中断语义列表补**环边界中止前置**条（环头/环尾两检查点——`abortError`：不开启新轮 ∥ 不落 `ContinueError`）。实现 = 本批实施轮。
 
 - 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #863）：§6.4 增 **console 回显预算句**（capturedConsole 采集 cap + 拼接纳入 offload 判定）。实现 = 本批实施轮。
 - 2026-10-04（**issue 修复批·五 · fix 轮（评审 #70 发现 6 · 父侧全采纳）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §3 轮次 1）：§6.4 钉 **`CONSOLE_CAPTURE_LIMIT`**（= 65536 字符——与 `TOOL_RESULT_OFFLOAD_LIMIT` 同值）+ 截断标记行逐字（`[console truncated at 65536 chars]`）+ 拼接后总长入 offload 判定句。**机制语义零改**（常量 ∥ 逐字面钉值）。
