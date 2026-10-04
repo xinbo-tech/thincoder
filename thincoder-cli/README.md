@@ -57,7 +57,7 @@ Three layers, all "query if present, skip if absent", unified hybrid retrieval:
   - IDE-native diffs — `write`/`edit` route through the editor buffer
   - Persisted sessions: list / load (history replay) / resume / delete
   - Per-session config: model / thinking / mode
-  - Setup: [ACP 接入设计](../docs/cli/design/ACP-CLIENT.md)
+  - Setup: [ACP 接入指南](https://thincoder.com/acp.html)
   - Login: `thincoder acp --login` — one interactive terminal login; ACP clients and orchestrators then drive sessions headlessly
 
 

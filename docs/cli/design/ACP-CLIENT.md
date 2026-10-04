@@ -589,15 +589,15 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 
 ### 11.6 G10 · 文档面
 
-- **悬空链接（实核）**：`thincoder-cli/README.md:52` 的链接目标已不存在。现状与目标（逐字）：
+- **链接现状（实核 as-of 2026-10-04）**：`thincoder-cli/README.md:60` 现指设计档（`../docs/cli/design/ACP-CLIENT.md`——G10 批产物）；登录入口句已在同段（`:61`）。现状与目标（逐字）：**【实施已落 2026-10-04】**：`README.md:60` 已按目标改指（读回逐字 = 目标行；`:61` 登录句零改）——本「现状」句自此转为历史实核读数。
 
 ```text
-现状： Setup: [docs/guides/ides.md](docs/guides/ides.md)   ← 目标档 ABSENT（退役副本在 CLI 文档树归档层的 guides 目录下）
-目标： Setup: [ACP 接入设计](../docs/cli/design/ACP-CLIENT.md)
+现状（实核）： Setup: [ACP 接入设计](../docs/cli/design/ACP-CLIENT.md)
+目标： Setup: [ACP 接入指南](https://thincoder.com/acp.html)
 ```
 
-  **裁定：改指根层活档**（`docs/cli/design/ACP-CLIENT.md`），并在同段补一句登录入口（`thincoder acp --login`）。
-  理由：CLI 树归档层是「**保留 ≠ 维护**」的退役层（`docs/README.md` §2）；产品 README（**对外发布面**）不得把用户引进退役层——悬空与指向退役层都不合格，**活档才是唯一正确目标**。
+  **裁定：改指用户面活档**——指南已落站 ⇒ 目标 = 站内指南 `https://thincoder.com/acp.html`（悬空 ∥ 指向退役层 ∥ 指向设计档均不合格——用户面链接以用户面活档为准）；登录入口句已在同段（`thincoder acp --login`——本批零改）。
+  理由：CLI 树归档层是「**保留 ≠ 维护**」的退役层（`docs/README.md` §2）；产品 README（**对外发布面**）不得把用户引进退役层——悬空与指向退役层都不合格，**用户面活档才是唯一正确目标**。
 - **根层设计档补「外部编排器接入（含登录）」节** = **本节（§11）**，已落。
 
 ### 11.7 不变量（实施后须长期成立）
@@ -737,6 +737,29 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 
 **登记去向**：本节（定形与备选支在档）；`doc:PROVIDER.md:§6.22`「未决」句随拍收正（定形句替代——落点时机 = 实施轮，见批次档 §2 落点表）；`docs/cli/requirements/ACP-CLIENT.md` F8 判定句 **R-A5.12**（#843）**已落**（2026-10-04，`:91-92`；同批 **R-A5.11** = §12 对位）。
 
+## 14. 用户文档面（对外文档 · 清单与同拍义务 · 2026-10-04 批）
+
+> **定位**：本板块能力面变更 → **用户文档**联动的单源——面清单与同拍义务句住本节；收口执行位 = `docs/core/design/BATCH-RECORD.md` §5.3（槽位「用户文档面同拍」；槽位枚举权威 = `docs/core/design/DOC-DISCIPLINE.md` D7 行）。
+> **正文单源判定**：用户指南**正文** = 站仓页 `thincoder.com/www/acp.html`（站内自持——不依赖仓内档路径）；仓内**事实源** = 本档（指南陈述逐句可回指）；
+> resource_link 细节（判定树 ∥ 上限 ∥ 降级词表）= `docs/cli/design/ACP-PROTOCOL-COMPLIANCE.md` §2.5（冻结基准）；其余用户面 = 摘要 ∥ 指针 ∥ 提及——只引用不重述（D2）。
+
+**面清单（站仓 = `thincoder.com`；坐标 as-of 2026-10-04）**
+
+| # | 面 | 角色 | 用户可感能力变更时 |
+|---|---|---|---|
+| 1 | `thincoder.com/www/acp.html`（接入指南——前置 ∥ 能力 ∥ 三宿主 ∥ 会话 ∥ 配置 ∥ 引用 ∥ 排障 ∥ 限制） | **正文单源** | **必更** |
+| 2 | `thincoder.com/www/docs.html` §在 IDE 中使用（ACP） | 摘要 + 指针 | 随核对 |
+| 3 | `thincoder.com/www/features.html` §Agent Client Protocol（ACP） | 能力摘要 + M1/M2 展望行 | 随核对 |
+| 4 | `thincoder.com/www/install.html`（命令行列 ∥ 故障排查指针） | 命令 + 指针 | 随核对 |
+| 5 | `thincoder.com/www/about.html`（路线图：ACP M1 ✅ ∥ M2 展望） | 路线图 | 随核对 |
+| 6 | `thincoder.com/www/cli.html`（命令表行）· `thincoder.com/www/index.html`（产品位提及） | 命令表 / 提及 | 仅顶层陈述变化时 |
+| 7 | `thincoder-cli/README.md` ACP 段（**产品文本面**） | 摘要 + 指南链接 | 随核对 |
+| — | `thincoder.com/www/changelog.html` | 发布条目 | **不在本机制**（单源 = `docs/RELEASE.md` §6） |
+
+**同拍义务句**：本板块出现**用户可感**能力变更（新增 ∥ 改变用户可见行为）⇒ 该变更批**收口前**逐面对照上表：
+面 1 **必更**、其余面**随核对**；落入 = ① 同批更新（跨仓**站仓轮**——页更新 + 部署；执行与判据 = `docs/RELEASE.md` §5.8）∥ ② **挂账有据**（台账行 + 触发批坐标）；**不得静默跳过**。
+无涉面批 ⇒ 收口记一行「用户文档面同拍：无」（执行位 = `docs/core/design/BATCH-RECORD.md` §5.3）。
+
 ## 变更记录
 
 - 2026-09-15（**B 式迁移轮 · 第 6 批**）：建档——`thincoder-cli/docs/design/ACP-CLIENT.md` 内容重建入基准层（旧档一字未改、原地作参照历史）。
@@ -767,3 +790,6 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
   ⑥ §11.9 G5 / G6 行删、登记项 3 改述（resource_link 已接；余多块 text 合流待立批）。**零新语义**（收正 + 登记）。
 - 2026-10-04（**ACP 协议面补全批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-acp-face-completion.md` §1 · 台账 #862 ∥ #843）：① 新增 **§12 结构化子代理事件**（`_meta` 扩展契约——通道 / 形状 / 状态族 / 核文法单源前置件 / 验收 / 边界全定形）；② 新增 **§13 协议面提示通道定形（不立）** + 备选支在档；③ §4 / §11.5 / §11.7-4 三处「提示通道未决」表述收正；④ §2.2 / §5 表随动（`session_info_update` 承载体行）；⑤ §9 增 D20–D23 + 登记项 5–7。
 - 2026-10-04（**ACP 协议面补全批 · 评审修正轮**（评审 #17——pass · 🔴0/🟡4/🔵4）· eng-designer）：① §7.2 测试面注 T9「零通知」⇒ 零可见面文本口径（评审 #1）；② §7.2「现状缺陷」⇒ 旧状缺陷历史陈述（评审 #3）；③ 事件 token 剥判据**单源落定**——§7.2 ∥ §12.1 ∥ §12.4 同式：桥剥离式 = 核模块 `subagent-event.mjs`（`parseSubagentEvent` 非空 ⇒ 剥——2026-10-04 批统一，语义零改；评审 #4）；④ §12.3 补逐态字段序单源注（评审 #6）；⑤ AC-862-4 括注改指批内件 T-862-11/12（评审 #7）；⑥ §13 末句收正（R-A5.12 已落——评审 #2）。逐条落位表 = 批次档 `docs/batches/2026-10-04-acp-face-completion.md` §2 修正块。
+- 2026-10-04（**ACP 用户文档批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-acp-user-docs.md` §1 · 台账 #916）：① 新增 **§14 用户文档面**（面清单 + 同拍义务——能力面变更 ↔ 用户文档联动单源；正文单源 = 站仓 `thincoder.com/www/acp.html`）；② §11.6 链接目标随指南落站收正（目标 = 站内指南；README 改指 = 本批实现轮）；机制落面同批 = `docs/core/design/BATCH-RECORD.md` §5.3（槽位「用户文档面同拍」）∥ `docs/core/design/DOC-DISCIPLINE.md` D7 行。**零协议语义**（文档面机制）。
+- 2026-10-04（**ACP 用户文档批 · 评审修正轮**（评审 #46——pass · 🔴0/🟡5/🔵1）· eng-designer——fix 轮；承批档 `docs/batches/2026-10-04-acp-user-docs.md` §3 发现 #5）：§11.6 链接现状描述收正——README 现指设计档（`:60`——G10 批产物）；登录入口句已在（`:61`）；改指目标裁定不变（站内指南）。**零协议语义**。
+- 2026-10-04（**ACP 用户文档批 · 收口轮 · 父侧直接执行〔可 revert〕**——台账 #916）：§11.6 链接现状句加「实施已落」注（`README.md:60` 已按目标改指——读回逐字；`:61` 登录句零改）；批内件补 `stderr` ∥ 日志捕获命令两锚（评审 🔵 #3 采纳）。**零协议语义**。
