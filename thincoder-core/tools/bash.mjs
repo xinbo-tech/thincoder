@@ -9,6 +9,7 @@ import { spawn } from "node:child_process";
 // 树杀单源（台账 #208② · TOOLS.md §6.14 落位表行 2）：本地副本删除——改用 `./process-tree.mjs`
 // （行为逐字同：win32 `taskkill /T /F` · POSIX 组杀 + 直杀兜底）。
 import { killProcessTree } from "./process-tree.mjs";
+import { resolveShellIdentity } from "../shell-identity.mjs";
 
 /** Maximum buffer size per stream (stdout / stderr) before truncation */
 const MAX_STREAM_BUF = 2_000_000
@@ -24,8 +25,10 @@ function applyLineFilter(output, filter) {
 
 /** POSIX-only constructs that cmd.exe reads literally (and thus breaks). Detected
  *  so the agent is told IMMEDIATELY instead of chasing a confusing failure — warning
- *  only, never a block (the approval layer is the real gate, same as destructive-command policy). */
-function posixSyntaxHint(command) {
+ *  only, never a block (the approval layer is the real gate, same as destructive-command policy).
+ *  身份门（bash-executor-face 批）：kind === cmd 才产出——PS/POSIX 执行器不再喊 cmd.exe
+ *  （态 4 实锤：hint 无身份门 = 同族缺陷）；提示语引用探测名（非死写）。 */
+function posixSyntaxHint(command, shellName) {
   const hits = []
   if (/\$\([^)]*\)/.test(command)) hits.push("$(...)")
   if (command.includes("`")) hits.push("backtick")
@@ -34,7 +37,7 @@ function posixSyntaxHint(command) {
   if (/'.*'/.test(command)) hits.push("single quotes (cmd.exe doesn't group)")
   if (/\$\{[A-Za-z_]/.test(command)) hits.push("${VAR} (use %VAR%)")
   if (!hits.length) return ""
-  return "[hint: POSIX-only construct(s) detected — " + hits.join(", ") + ". Current shell is cmd.exe; these will NOT work. Use && / NUL / %VAR%, or use the execute tool (node) for complex logic]"
+  return "[hint: POSIX-only construct(s) detected — " + hits.join(", ") + ". Current shell is " + shellName + "; these will NOT work. Use && / NUL / %VAR%, or use the execute tool (node) for complex logic]"
 }
 
 
@@ -256,7 +259,9 @@ export const bashTool = {
     // the wide matcher also covers variants like `git checkout HEAD -- .`).
     // 前置两件（guard ∥ hint）同步 ∥ 后台两径同保留（#9）。
     const guard = await gitGuardSnapshot(args.command, ctx.cwd)
-    const hint = posixSyntaxHint(args.command)
+    // hint 身份门：只有 cmd 执行器产出 POSIX-only 提示（PS/POSIX 下该提示误导——态 4）。
+    const identity = resolveShellIdentity(ctx.agent?.config?.shell ?? null)
+    const hint = identity.kind === "cmd" ? posixSyntaxHint(args.command, identity.name) : ""
     if (args.async === true) {
       // depth 第二道（schema 主门 = agent/helpers.mjs excludeSubagentTools 删参——异步面只到
       // 子代理实装亦拒：留一条显式文案，不静默转同步）。
