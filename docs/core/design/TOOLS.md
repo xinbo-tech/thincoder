@@ -277,9 +277,9 @@ VS Code 端在 extension host 内运行的**端独有增强**（CLI 无对应面
 - **权限审批面**：webview 逐工具弹窗 + 批合并询问（`permission-gate.mjs` / `batchPermissionGate`）+ 逐项 diff 预览；子代理（depth>0）审批卡（归属 `<child key> · <tool>`——`makeChildPermission`）+ Stop 释放挂起门
   （abort → resolve(false)/deny，循环不悬挂——接线 = `docs/core/design/AGENT-LOOP.md` §6.18）。**W14 端增量（2026-09-15）**：git 工具动作级只读分类（`isReadonlyAction`）迁入 VSC 装配面 `thincoder-vscode/src/tools/index.mjs`（核 git 工具无此概念）；
   审批层还消费 `configureGitApproval` / `configureEditReceipt` 缝（本批按缺省不覆盖——端审批在工具执行前）。
-- **描述装载面**：两端同源 = 核包 `tool-docs/*.md`（`DESC()` = 核 `loadToolDoc` 单一解析面；CLI 随 U2 / VSC 随 W2 落——VSC 原 `.mjs` 内嵌面已退场；锚替换调用期应用）；52 档随包发布（`.vscodeignore` 不排除 `node_modules/@thincoder/core/**`——打包面 N6 需求侧承载）。
+- **描述装载面**：两端同源 = 核包 `tool-docs/*.md`（`DESC()` = 核 `loadToolDoc` 单一解析面；CLI 随 U2 / VSC 随 W2 落——VSC 原 `.mjs` 内嵌面已退场；锚替换调用期应用）；48 档随包发布（`.vscodeignore` 不排除 `node_modules/@thincoder/core/**`——打包面 N6 需求侧承载）。
 - **工具面接线（2026-09-20 · 机制层端差批）**：① **派发面 hooks 三调用点**（核 `thincoder-core/agent/dispatch.mjs` PreToolUse〔可阻断——阻断结果逐字同核 `:337-338`〕· `thincoder-core/agent/dispatch-run.mjs` PostToolUse ∕ PostToolUseFailure；机制 = `AGENT-LOOP.md` §6.13 / §6.18——端已取核）；
-  ② **台账查询两工具入基础集**（`ledger_query` / `ledger_count`——`thincoder-vscode/src/agent/setup.mjs:142-144` 经动态 import 核 `ledger.mjs` 追加、`:165-168` 入 `baseTools` ⇒ 模型面 + 子代装配面同核口径；写命令族本已随核 `assembleFamilyTools` 在端可达）。
+  ② **台账工具面随核家族段装配**（统一入口 `ledger`——读二 `action=query` / `action=count` 随核 `assembleFamilyTools` 到达；VSC 端侧自持读二追加入口退场〔`thincoder-vscode/src/agent/tool-table.mjs`——2026-10-05 台账工具统一批，端侧自持项清零〕⇒ 模型面 + 子代装配面同核口径；写三 `action=add` / `action=update` / `action=close` 随核家族段在端可达）。
 
 ### 6.12 git 工具读面 fail-closed（2026-09-18 · 批 TOOLFACE-FIXES · 条目 ③ · 台账 #55）
 
@@ -1085,7 +1085,7 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 |---|---|
 | 工具本体 | `thincoder-core/tools/checklist.mjs` + `tool-docs/checklist.md` + CLI `tools/checklist-sync.mjs` 删除；`thincoder-core/tools/index.mjs` 注册面去掉 checklist 族 （迁移期引文——机制已废） |
 | 提示词面 | 提示词中「checklist 工具」指令（discipline 层「双跟踪工具并用 checklist + task」）改指「task 单工具」（经 M9 单向生成承载） |
-| 语义承接 | 持久跨会话待办 → **台账**（`ledger_*` 命令族，M2 六态状态机）；会话级任务清单 → **task 工具**（保留） |
+| 语义承接 | 持久跨会话待办 → **台账**（统一入口 `ledger`，M2 六态状态机）；会话级任务清单 → **task 工具**（保留） |
 | 本档 §2 裁决行 / §6 机制面 checklist 条目 | 标注「已废除（v2 M7）」——历史裁决行保留为参照 |
 
 **验收（回指 AC-M7）**：AC-M7-1 checklist 工具删除（文件不存在 + 注册面零命中）· AC-M7-2 提示词无 checklist 指令（经 M9 生成同步）· AC-M7-3 语义承接无缺口（task 保留 + 台账承接持久面）。
@@ -1229,3 +1229,6 @@ plan 工具退出文本收正为**批准语义**（**五处**：`thincoder-core/
 - 2026-09-29（**doc-backfill 批 · 波 1 · eng-designer**——承 `docs/batches/2026-09-29-doc-backfill.md` §2 · 台账 #378）：§2.2 #91 行与 §3.1 A6 行按镜像撤写口径收正——镜像写标**已退役**（2026-09-25 config 镜像写收口批）+ 现体坐标（`thincoder-vscode/src/agent/setup-tooltable.mjs:85-94`）；跨端副作用句收正为已消除。**零新语义**。
 
 - 2026-09-30（**doc-sweep 批 · 时态收正 · eng-designer**——承 `docs/batches/2026-09-30-doc-sweep.md` §2 · 台账 #665）：登记句（「行数与拆分评估」）补**登记面现态**注（`SOFT_LINE_REGISTRY` 运行面随 2026-09-28 测试树全清退场；登记面现态 = `CORE-UNIFICATION.md` §2.8.1 子表；机检门义务随测试体系重建恢复）。**零新语义**。
+
+- 2026-10-05（**台账工具统一批（ledger-tool-unification）· eng-coder**——承 `docs/batches/2026-10-05-ledger-unification.md` §2 · 台账 #923）：§6.11 描述装载面计数收正（52 ⇒ **48**——现盘 `tool-docs/` 实测）+「工具面接线」② 行改统一入口终值（`ledger` 随核家族段；
+  VSC 端侧自持读二追加入口退场——`thincoder-vscode/src/agent/tool-table.mjs`）+ §9 语义承接行名称面收正（`ledger_*` 命令族 ⇒ 统一入口 `ledger`）。**零新语义**。

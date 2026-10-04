@@ -20,7 +20,7 @@
 | **F2** | 号在发布时定 | 开发批变更记录挂 `[Unreleased]` 段（**不编号**）；发布 = 唯一定号动作（bump → Unreleased 段头改新号） |
 | **F3** | 待发号推导 | 待发号推导规则 = §4.2（当月最高 + 1 / 月切换 = `0.<当月>.1`） |
 | **F4** | 发布完成判定 | 发布命令正确返回（exit 0）= 完成——不轮询、不检查上线版本（npm publish 即见 / vsce 审核队列 = 平台侧事务）；**发布轮**收口 = 三端 ∧ 官网同步（一体发布——§5.8，2026-10-03 用户裁定） |
-| **F5** | 核 = 独立可发布单元 | `@thincoder/core` · 非 private · 独立版本（壳核解耦——D-C10）；核发布 = **S2 收口动作**（核先发 → 产品后发）；`files` 白名单含 `prompts/` 16 + `tool-docs/` 52（断言 D 对象） |
+| **F5** | 核 = 独立可发布单元 | `@thincoder/core` · 非 private · 独立版本（壳核解耦——D-C10）；核发布 = **S2 收口动作**（核先发 → 产品后发）；`files` 白名单含 `prompts/` 16 + `tool-docs/` 48（断言 D 对象） |
 
 ## 3. 非功能性需求（统一）
 
@@ -30,7 +30,7 @@
 | **N2** | **禁止一次跳多号** | 发布前核对当月最高号（§4.2） |
 | **N3** | 门禁不可绕过 | 门禁不过 = 发布中止（**有意设计**） |
 | **N4** | 缺口不补 | 历史缺口（0.12.54→0.12.58，55/56/57 永缺——registry 不可回溯重写）**不补发**；越月预占号**作废**（0.8.11 先例）；规则从下一发起保证零新缺口 |
-| **N5** | **版本一致性三断言 + 提示词面完备性**（D-C11） | **断言 A（仓内）** 产品声明范围与核版本相容（caret 语义）；**断言 B（VSC 产物）** vsix 内核 `version` 逐字等于仓内核版本；**断言 C（CLI 发布预检）** 装入版本逐字等于仓内核版本 ∧ registry 上该版本存在；**断言 D（提示词面完备性）** 核包 tarball / CLI 装机目录 / vsix 解包三处 `prompts/` 16 档 + `tool-docs/` 52 档名集合逐字相等，同档 sha256 等于仓内核档。**发版同步**：三产品（CLI ∕ VSC ∕ 桌面）`dependencies` 现声明 `^0.9.5`（= 核当前版本）——随核发布同步收正（声明面与实发对齐） |
+| **N5** | **版本一致性三断言 + 提示词面完备性**（D-C11） | **断言 A（仓内）** 产品声明范围与核版本相容（caret 语义）；**断言 B（VSC 产物）** vsix 内核 `version` 逐字等于仓内核版本；**断言 C（CLI 发布预检）** 装入版本逐字等于仓内核版本 ∧ registry 上该版本存在；**断言 D（提示词面完备性）** 核包 tarball / CLI 装机目录 / vsix 解包三处 `prompts/` 16 档 + `tool-docs/` 48 档名集合逐字相等，同档 sha256 等于仓内核档。**发版同步**：三产品（CLI ∕ VSC ∕ 桌面）`dependencies` 现声明 `^0.9.5`（= 核当前版本）——随核发布同步收正（声明面与实发对齐） |
 | **N6** | **凭据不入库** | PAT 只走环境变量 / 显式传参；仓库内零凭据（源码与发布产物同查） |
 
 ## 4. 版本号规则（CalVer · **各端同制**——用户 2026-08-27 拍板）
@@ -92,7 +92,7 @@
 | 端 | 干跑命令 | 通过判据（读数形） |
 |---|---|---|
 | 核 | `cd thincoder-core && npm publish --access public --dry-run` | 窗口内（bump 后）exit 0——输出含 `prepublishOnly → npm test` 段 + `Tarball Details`（`total files` ∕ `package size`）。bump 前 ⇒ 止于 `You cannot publish over the previously published versions: <现号>` exit 1 = **版本占用守卫在位**（非缺陷） |
-| 核（tarball 内容） | `cd thincoder-core && npm pack --dry-run --json` | `files[]` 根 `.mjs` 集合 = 源树根 `.mjs` 集合（实读 87 档；含 `think-off.mjs`——#470 判据）+ `prompts/` 16 档 + `tool-docs/` 52 档；排除面 = 根非 `.mjs` 档（`CHANGELOG.md` ∥ `LICENSE` ∥ `package.json` ∥ `README.md`）；发布后复验形 = `npm pack @thincoder/core@<号> --dry-run --json`（同口径） |
+| 核（tarball 内容） | `cd thincoder-core && npm pack --dry-run --json` | `files[]` 根 `.mjs` 集合 = 源树根 `.mjs` 集合（实读 87 档；含 `think-off.mjs`——#470 判据）+ `prompts/` 16 档 + `tool-docs/` 48 档；排除面 = 根非 `.mjs` 档（`CHANGELOG.md` ∥ `LICENSE` ∥ `package.json` ∥ `README.md`）；发布后复验形 = `npm pack @thincoder/core@<号> --dry-run --json`（同口径） |
 | CLI | `cd thincoder-cli && node scripts/release-check.mjs` | exit 0 + 尾行 `✅ release-check 全绿——可发版`；读面 = `⓪ ✔ registry 上存在 @thincoder/core@<号>` + `✔ lint OK` + test 摘要行。⓪ 不过 = 核先发守卫（设计如此） |
 | VSC | `cd thincoder-vscode && node scripts/publish-all.mjs --dry-run` | 段 0（核版本预检）+ 段 1 `vsce package`（`vscode:prepublish` = lint + test）+ 段 1.5 vsix 含核断言（B ∕ D ∕ E ∕ F 全过——E = 撞帽检查点接线 ∥ F = 渲染核版本逐字；定义 = `thincoder-vscode/scripts/check-vsix.mjs` 断言 E ∕ F 段）+ 段 2 🧪 跳过；exit 0 |
 
@@ -222,7 +222,7 @@ npm install --install-links             # link → registry 真实拷贝
 **render-core（`@thincoder/render-core`）不入发布序列**：永不发布（`private: true`）；**两打包窗内嵌形随打包器**：
 - **VSC vsix** = **link 形 + `--follow-symlinks`**——`npm install --install-links` 物化对其不可执行（vsce 依赖检测 `ELSPROBLEMS/invalid` ⇒ 打包硬失败；R1 打包窗实测 475 件）；
 - **桌面产物** = **物化（源树实拷）**——electron-builder 无 follow 面（junction 入 asar 仅为 link 节点 ⇒ 装后断链），物化由打包窗脚本执行、一律源自源树（单源 = `docs/desktop/design/PACKAGING.md` §2.2 ∕ §1 KD-64）。
-内嵌面收窄 = 仅运行必需（`.mjs` + `package.json`；core 另携 `prompts/` 16 + `tool-docs/` 52）。
+内嵌面收窄 = 仅运行必需（`.mjs` + `package.json`；core 另携 `prompts/` 16 + `tool-docs/` 48）。
 本步 `@thincoder/core` 物化纪律不动（桌面窗同理：物化源树）。单源 = `docs/render-core/design/RENDER-CORE.md` §1.3 ∕ §10 B。
 
 **第 2 步 · 凭据预验**（防无 TTY 静默假成功——npm 的 exit-0 判定**不可**推广到 vsce/ovsx）：
@@ -418,3 +418,5 @@ OSS_KEY=… OSS_SECRET=… node scripts/deploy-oss.mjs    # 实传（脚本亦�
 - 2026-10-03（**发布口径 · 一体发布（用户裁定 · 主 agent 直接执行 · 可 revert）**——用户「以后发布的时候拜托三端和网站要一起发布」）：§5.8 注补**一体发布**段（官网同步 = 本次发布的组成部分——同轮必做；**发布轮收口 = 三端 ∧ 官网同步**；未完成 ⇒ 不得收口 · 停下上报 → 修复 → 重跑）；F4 行补**发布轮**收口句。**零新机制**（口径强化——§5.8 ∥ §6 机制全文不动）。
 - 2026-10-03（**桌面 Linux 产物批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-desktop-linux.md` §1 ∥ §1 补记二 · 台账 #847 · 需求 D42）：§5.6 增 **Linux 臂**（构建 ∥ 校验 ∥ 取回 ∥ 上传 ∥ 挂载——L1–L5）+ 标题 ∥ 定位 ∥ 构建机要求行随动；§5.6 步骤 4 翻两平台键形（+ Linux 三件 ∥ 上传序）+ 判据补 Linux 行（`latest-linux.yml` 对盘 ∥ 不含 deb）；完成判定补 Linux 臂；§5.1 图行随动；§6.5 判据 4 补 **Linux feed** 行。**零新机制**（沿 §2.11 单源）。明细 = 批档 §2。
 - 2026-10-03（**桌面 Linux 产物批 · 修复轮（机检红线清零）· eng-designer**——承 `docs/batches/2026-10-03-desktop-linux.md` §1 · 台账 #847）：宽面 2 行折行（步骤 4 行 ∥ 判据行——280 ∥ 287；语义零改）。**零新语义**。
+
+- 2026-10-05（**台账工具统一批（ledger-tool-unification）· eng-coder**——承 `docs/batches/2026-10-05-ledger-unification.md` §2 · 台账 #923）：`tool-docs/` 计数 52 ⇒ **48** 四处随动（F5 ∥ N5 ∥ §5.2 干跑表 ∥ §5.5 内嵌面句——现盘 `thincoder-core/tool-docs/` 实测）。**零新语义**（计数收正）。
