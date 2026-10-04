@@ -1,6 +1,7 @@
 /**
  * 2026-09-29-provider-config-family.test.mjs — 批内件（provider-config-family 批 · #176 ∥ #177 ∥ #57）。
  * 名随批次档 · 不进仓套件 · 随批留存。**终位 = `docs/batches/2026-09-29-provider-config-family.test.mjs`**
+* **as-of 注（父侧小笔 · 2026-10-04 · 可 revert）**：「预设总数 = 22」等计数值冻结于 2026-09-29 口径——2026-10-04 opencode-go-preset 批后 = **24**（+ `opencode-go` ∥ `opencode-go-anthropic`）；护栏现形 = `docs/batches/2026-10-04-opencode-go-preset.test.mjs`（G-3）。复跑本件计数腿**预期红**（存量口径——非缺陷；沿「预期红 + 收口互指」先例）。
  * （本副本 = 落位期暂存 `.thincoder/tmp/`，父侧转正；导入按 `process.cwd()`（仓库根）解析 ⇒ tmp ∕ 终位两处可跑）。
  * 复跑（仓库根 `thincoder/`）：
  *   node --test .thincoder/tmp/2026-09-29-provider-config-family.test.mjs

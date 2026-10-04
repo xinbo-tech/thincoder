@@ -42,6 +42,14 @@ export const PROVIDER_PRESETS = {
   siliconflow: { baseURL: "https://api.siliconflow.cn/v1", model: "deepseek-ai/DeepSeek-V3", maxTokens: 32_000, desc: "SiliconFlow (硅基流动)" },
   openrouter: { baseURL: "https://openrouter.ai/api/v1", model: "anthropic/claude-sonnet-4", maxTokens: 32_000, desc: "OpenRouter" },
   groq:     { baseURL: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile", maxTokens: 32_000, desc: "Groq" },
+  // OpenCode Go 订阅网关（opencode.ai/zen 取 sk- key ∥ 无 OAuth）——官方档（go.mdx）双协议混装 ⇒ 拆双预设
+  // （PROVIDER.md §6.11）：本键 = OpenAI 兼容 `/chat/completions` 侧；`opencode-go-anthropic` = Anthropic
+  // `/messages` 侧（同 key——模型按侧选）。字段集 = 最小面：`thinking` / `reasoningEffort` 不设 = 不发
+  // （D-13 同口径）；`maxTokens` 仅 anthropic 侧设 `65536`（该 transport `max_tokens` 必发——不设即落规格
+  // 行值 131072，超渠道口径）。**待验（无 key——未实拉 `/models` ∕ 载荷未实测；接入后按实拉复核）**；
+  // `x-opencode-session` 头 = 可选遥测——**不发**（亦不动 `providers[].headers` 面）。
+  "opencode-go": { baseURL: "https://opencode.ai/zen/go/v1", model: "glm-5.2", desc: "OpenCode Go subscription (sk- key from opencode.ai/zen; OpenAI-compatible models — MiniMax/Qwen via opencode-go-anthropic)" },
+  "opencode-go-anthropic": { baseURL: "https://opencode.ai/zen/go/v1", model: "qwen3.7-max", format: "anthropic", maxTokens: 65536, desc: "OpenCode Go — Anthropic Messages side (same sk- key as opencode-go; MiniMax/Qwen models)" },
 }
 
 /** Build the stored provider entry from a preset — strip the display field, keep the rest

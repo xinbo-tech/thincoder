@@ -80,7 +80,7 @@ export function effortOf(entry, model) {
 
 /**
  * `provider:list` ⇒ `{ ok, presets:[{ name, desc, baseURL, model }], providers:[{ name, shape, baseURL, model?, hasKey, maskedKey, active, proxy, effort, available?, unavailableReason? }], active }`。
- * `presets` = 核预设表投影（22 条 · 序 = 核表声明序——供设置面渠道段与首启向导第一步选预设，
+ * `presets` = 核预设表投影（24 条 · 序 = 核表声明序——供设置面渠道段与首启向导第一步选预设，
  * 消费面无第二份表）；`shape` = 名在核预设表 ⇒ `preset`，否则 `custom`；
  * `active` 单源 = 核 `resolveProviders().activeProvider`
  * （= `defaultModel` 的 provider 段 ⇒ 命中行同时 `provider.active` 与顶层 `active` 双读一致）。

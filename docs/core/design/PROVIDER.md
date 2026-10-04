@@ -174,16 +174,23 @@ name 空槽丢弃并计数、缺 id 合成 `call_N`。告警（`droppedToolCalls
 
 ### 6.11 模型支持与预设（PROVIDER_PRESETS）
 
-- **预设** `PROVIDER_PRESETS`（住 `thincoder-core/config-presets.mjs`，22 家）：按需从预设创建 provider，各预设声明 `baseURL` / **`model`（单值默认模型）** / thinking / reasoningEffort / maxTokens / desc。**预设不再携带候选清单**（原 `models` 种子已废）。
+- **预设** `PROVIDER_PRESETS`（住 `thincoder-core/config-presets.mjs`，24 家）：按需从预设创建 provider，各预设声明 `baseURL` / **`model`（单值默认模型）** / thinking / reasoningEffort / maxTokens / desc。**预设不再携带候选清单**（原 `models` 种子已废）。
 - **渠道接入批新增**（2026-09-20 · `tokenhub` 入表 + `volcengine` 默认模型改值）：`tokenhub` = 腾讯 TokenHub 聚合网关
   （baseURL `https://tokenhub.tencentmaas.com/v1`，默认模型 `hy3`，**不带** thinking / reasoningEffort / maxTokens 字段 =
   该载荷面未实测，不设即不发）；`volcengine` = 火山方舟，默认模型 = `doubao-seed-2-0-code-preview-260215`（实测在册；
   改值动因与旧值 = 批次档 `2026-09-20-channel-onboarding.md` §1.2–§1.3）。既有 `hunyuan` 预设 = 另一主机，本轮未实测 ⇒ **不动**。
-  行集与逐字段取值 = `doc:MODEL-SPECS.md:§9`；护栏用例 = 预置↔规格漂移白名单（只减不增）——现形 = 单元测试档（2026-09-28 测试树全清后，护栏随批重立于 `docs/batches/2026-09-29-provider-config-family.test.mjs`）。
+  行集与逐字段取值 = `doc:MODEL-SPECS.md:§9`；护栏用例 = 预置↔规格漂移白名单（只减不增）——**现形 = `docs/batches/2026-10-04-opencode-go-preset.test.mjs`（G-3 重立——2026-10-04 opencode-go-preset 批）**；前身 = `docs/batches/2026-09-29-provider-config-family.test.mjs`（2026-09-28 测试树全清后重立者——其「预设总数 = 22」冻结随 2026-10-04 批过时，as-of 注已随该件头）。
 - **华为云 MaaS 入表（2026-09-29 provider-config-family 批 · 台账 #176）**：`huawei` = 华为云 ModelArts Studio（MaaS）——baseURL
   `https://api.modelarts-maas.com/openai/v1`（OpenAI 兼容；区域端点变体走自定义渠道自助路径——§6.21）；默认模型 = **实施轮实拉 `/models` 取值**
   （取数规则与证据等级 = `docs/batches/2026-09-29-provider-config-family.md` §2；无 key 时按官方口径记名并标「待验」）；`thinking` / `reasoningEffort` / `maxTokens`
   **不带**（载荷面未测——「不设 = 不发」）。
+- **OpenCode Go 入表（2026-10-04 opencode-go-preset 批 · 台账 #906）**：`opencode-go` = OpenCode Go 订阅网关（baseURL `https://opencode.ai/zen/go/v1`；
+  key 制——`opencode.ai/zen` 取 `sk-` key，**无 OAuth 模式**；收录 = §6.21 三判据齐）。**协议混装 ⇒ 拆双预设**（单体
+  `format` 架构内零机制改解）：`opencode-go`（OpenAI 兼容 `/chat/completions` 侧，默认模型 `glm-5.2`）+ `opencode-go-anthropic`
+  （Anthropic `/messages` 侧，`format: "anthropic"`，默认模型 `qwen3.7-max`；同 key）。字段集 = 最小面：`thinking` ∕ `reasoningEffort`
+  **不设 = 不发**（D-13 同口径）；`maxTokens` 仅 anthropic 侧设 `65536`（该 transport 必发 `max_tokens`——不设即落规格行值 `131072`，
+  超渠道口径）；**待验（无 key——未实拉 `/models` ∕ 载荷未实测；接入后复核）**；`x-opencode-session` 头 = 可选遥测——**不发**（§6.17 域外与端面）。
+  逐模型协议分侧表（官方档快照）与被否案（per-model format 机制 ∕ 仅 OpenAI 侧） = 批档 `docs/batches/2026-10-04-opencode-go-preset.md` §2。
 - **预置 `maxTokens` ⇄ 规格行对齐（2026-09-25 批）**：不变式 `maxTokens ≤ specForModel(preset.model).maxOutput`（**基准 = 生效规格值**，含 `DEFAULT_SPEC` 兜底）；六对超限已逐对对齐（真行三对降行值 / 无行三对降生效基准），`OVER_LIMIT` 白名单 → **空名单**。逐对表与覆盖缺口（挂 `#11`） = `doc:MODEL-SPECS.md:§15.3`。
 - 能力差异全走规格表；`kimi/kimi-k3`（router 前缀）与 `k3` 保留显式 alias 行；未知模型保守 `DEFAULT_SPEC`。
 - **DeepSeek V4.1-Flash 行集**：新行 `deepseek-flash`（1M 上下文 / 384K 输出 / thinking 默认开 / 前缀补全 Beta / 磁盘缓存默认开 / `multimodal: true`）；
@@ -303,10 +310,11 @@ VS Code settings 的 `thincoder.providers` + SecretStorage 一次性迁入 confi
 ① defaultModel 复合属本渠道 ② 渠道单值 `entry.model` ③ `null`——**不再静默回退 `models[0]`**（§6.16 M7 同源 · **核转口（#841）**）；v2 迁移 `delete p.models` / `p.model` 单值恢复。
 
 **Preset 预设表（核单源 · 2026-09-20 实读取一侧）**：`PROVIDER_PRESETS` 表 = **核单源**（`thincoder-core/config-presets.mjs`），
-VSC 侧取一侧复用（`thincoder-vscode/src/extension/presets.mjs:9` 注 + `:21` re-export；端壳无镜像文件）——**22 preset**（deepseek / kimi / kimi-code /
+VSC 侧取一侧复用（`thincoder-vscode/src/extension/presets.mjs:9` 注 + `:21` re-export；端壳无镜像文件）——**24 preset**（deepseek / kimi / kimi-code /
 glm / glm-code / qwen / qwenplan / mimo / mimoplan / minimax / openai / claude / gemini / grok / mistral / volcengine / hunyuan / siliconflow /
-openrouter / groq / **tokenhub** / **huawei**）；
-claude / gemini 携 `format: "anthropic" / "google"`；minimax 携 `chatPath: "/text/chatcompletion_v2"`；`presetToEntry`（核单源 = `thincoder-core/config-presets.mjs:44`）剥离 `desc` 余下发成 provider 条目
+openrouter / groq / **tokenhub** / **huawei** / **opencode-go** / **opencode-go-anthropic**）；
+claude / gemini 携 `format: "anthropic" / "google"`；`opencode-go-anthropic` 携 `format: "anthropic"`（2026-10-04 增——§6.11 同源）；
+minimax 携 `chatPath: "/text/chatcompletion_v2"`；`presetToEntry`（核单源 = `thincoder-core/config-presets.mjs:57`——as-built 2026-10-04 收口重校）剥离 `desc` 余下发成 provider 条目
 （单值默认模型——§6.11 同源）；2026-09-11 `deepseek` 预设默认模型 → `deepseek-flash`（§6.11 同源）。
 
 **模型选择 UI（面板接线）**：主下拉列 provider 行（名 + 当前模型 + `›`）+ hover flyout 子菜单（webview 无键盘导航）；选中 = 写当前会话槽；设置面板「默认模型」项 = provider →
@@ -433,7 +441,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 
 | 端 | 明示面 | `fallback` | `invalid` | 动作 |
 |---|---|---|---|---|
-| CLI | 启动提示行（TUI）∥ stderr 一行（headless） | 新行：「尚未设置默认模型：本次使用 `<渠道>[:<模型>]`——/config → 默认模型 设置一次；/model 仅改本会话」（`model` 缺省 ⇒ 仅渠道名） | invalid 类（合成式）⇒ D-S2 picker + 提示行（措辞收正 = 渠道/密钥）；headless = D-S4（stderr 一行 + exit 1） | 选择器（invalid 类）· `/model` ∥ `/config` 入口（fallback） |
+| CLI | 启动提示行（TUI）∥ stderr 一行（headless） | 新行：「尚未设置默认模型：本次使用 `<渠道>[:<模型>]`——/config → 默认模型 设置一次（或 /model 选定即成为默认模型）」（`model` 缺省 ⇒ 仅渠道名） | invalid 类（合成式）⇒ D-S2 picker + 提示行（措辞收正 = 渠道/密钥）；headless = D-S4（stderr 一行 + exit 1） | 选择器（invalid 类）· `/model` ∥ `/config` 入口（fallback） |
 | VSC | 横幅 `#provider-banner` | 新键 `banner.defaultModelFallback`（zh ∥ en 字面 = `doc:WEBVIEW.md:§4.8`）+ 动作钮「选择默认模型」→ 设置面 | 现词 `banner.notConfigured`（逐字不变——invalid 类合成式命中） | 钮 → 设置面默认模型段 |
 | 桌面 | composer 提示带行 | 新键 `composer.send.noDefaultModelFallback`（澄清半句「— 正在使用可用渠道」——词面-only；失败词 ∥ 态词分家——与 VSC `banner.defaultModelFallback` 同构） | 发送失败行现词（#840 面） | —（零动作面） |
 
@@ -585,3 +593,5 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
   §6.12 `think-off.mjs` 读数收正（**26 ⇒ 49**，`wc -l` 实读 2026-10-04；句子实住 `:220`）；D-PR33 同拍补建设点句。**零新语义**（= 评审发现的直接导出项）。
 - 2026-10-04（**issue 修复批·一 · 复评 #78 发现 1 收正 · 父侧直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §3 轮次 2）：上条（fix 轮）think-off 记录节号收正——「§6.3」⇒「**§6.12**」（句子实住 `:220`）。**零语义改**（节号收正）。
 - 2026-10-04（**issue 修复批·一 · 登记/回填轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §2.10 登记/回填块 · 父侧裁定）：§6.3 超时语义句**射程收窄**——响应头阶段 `fetchTimeoutMs` 消费面 = 代理分支（`proxyFetch` 两分支）；直连面无本仓头阶段超时（纳入 = 设计轮面——在册）。**零新语义**（= 父侧裁定的直接导出项）。
+- 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §2 · 台账 #883）：§6.22 三端明示面对照表 CLI 行 `fallback` 格字面收正——「/model 仅改本会话」⇒「/model 选定即成为默认模型」（会话选定写回落地后同拍——判据单源 = `doc:SESSION.md:§6.21` 判据句 6）。**产品码零触（设计轮）**。
+- 2026-10-04（**opencode-go-preset 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-opencode-go-preset.md` §2 · 台账 #906）：§6.11 预设计数 22 ⇒ **24**（D3 计数与清单同变）+ 新登 OpenCode Go 双预设（协议混装拆分 ∕ 最小字段集 ∕ 「待验」注 ∕ 会话头不发）；§6.19 预设名单同变 + `presetToEntry` 坐标收正（`:44` ⇒ `:49`——表体增长后函数行漂移，一致性面自修）。**产品码零触（设计轮）**。

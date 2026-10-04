@@ -19,7 +19,7 @@ Like the CLI, it's pure `.mjs`, zero third-party runtime dependencies, and conne
 - **Multi-session** — save and switch between conversation sessions with session bar; LLM auto-generates titles
 - **Image input** — paste or drag images into chat, or use `read_image` tool; supported on vision models (Kimi K3, Qwen3.7, MiniMax M3)
 - **Reasoning display** — collapsible "Thinking..." block shows the model's reasoning process in real-time
-- **22 provider presets** — DeepSeek, Kimi, Kimi For Coding, GLM, GLM Coding Plan, Qwen, Qwen Token Plan, MiMo, MiMo Token Plan, MiniMax, OpenAI, Claude, Gemini, Grok, Mistral, Volcengine, Hunyuan, Tencent TokenHub, Huawei Cloud MaaS, SiliconFlow, OpenRouter, Groq + custom OpenAI-compatible endpoint
+- **24 provider presets** — DeepSeek, Kimi, Kimi For Coding, GLM, GLM Coding Plan, Qwen, Qwen Token Plan, MiMo, MiMo Token Plan, MiniMax, OpenAI, Claude, Gemini, Grok, Mistral, Volcengine, Hunyuan, Tencent TokenHub, Huawei Cloud MaaS, SiliconFlow, OpenRouter, Groq, OpenCode Go (same key, two protocol sides: OpenAI-compatible + Anthropic Messages) + custom OpenAI-compatible endpoint
 - **Vector search** — semantic code search with BAAI/bge-m3 embeddings via SiliconFlow (configurable in Settings)
 - **Model selection** — choose from all available models per provider, with reasoning effort control
 - **Permission control** — session-level AUTO mode (off by default): every file-modifying tool prompts for approval until you click the AUTO toolbar button or "Approve All"; the flip takes effect immediately, even mid-turn
@@ -96,6 +96,8 @@ No key (or a bad key) → the tool silently falls back to Bing, so agents never 
 | SiliconFlow (硅基流动) | `deepseek-ai/DeepSeek-V3` | `https://api.siliconflow.cn/v1` |
 | OpenRouter | `anthropic/claude-sonnet-4` | `https://openrouter.ai/api/v1` |
 | Groq | `llama-3.3-70b-versatile` | `https://api.groq.com/openai/v1` |
+| OpenCode Go | `glm-5.2` | `https://opencode.ai/zen/go/v1` — OpenAI-compatible side (sk- key from opencode.ai/zen) |
+| OpenCode Go (Anthropic Messages) | `qwen3.7-max` | `https://opencode.ai/zen/go/v1` — Anthropic Messages side; same key as OpenCode Go |
 | Custom | (user-specified) | User-configured |
 
 ## Chat panel shortcuts
