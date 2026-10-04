@@ -8,7 +8,7 @@ All notable changes to ThinCoder Desktop are documented here.
 
 ### Added
 
-- **Linux 产物支持（AppImage ∥ deb）**：`electron-builder.yml` linux ∥ deb 段落定——AppImage = 免安装单文件 · 自动更新单元（官网 feed `latest-linux.yml`）；deb = 系统包管理器手动升级（无自动更新）；产物校验扩 Linux 臂（`check-dist` 平台分臂 +9）；官网下载面随发布窗。详见 `../docs/desktop/design/PACKAGING.md` §2.11。
+- **Linux 产物支持（AppImage ∥ deb）**：`electron-builder.yml` linux ∥ deb 段落定——AppImage = 免安装单文件 · 自动更新单元（官网 feed `latest-linux.yml`）；deb = 系统包管理器手动升级（无自动更新）；产物校验扩 Linux 臂（`check-dist` 平台分臂 +9）；官网下载面 = 随构建机窗（L1–L5）。详见 `../docs/desktop/design/PACKAGING.md` §2.11。
 - **子代理面板实况回读（#891/#892）**：完成块恒归位（不再停「等待消化」）+ 返回路径补口 + 桌面冻结阀。
 - **菜单文案：「项目」⇒「工作目录」（#888）**：双语言面。
 
