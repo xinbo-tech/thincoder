@@ -10,6 +10,7 @@
  * 用法：node scripts/doc-check.mjs [--root <仓根>] [--domain <产品域>]
  * 导出：main / formatReport。
  */
+import { existsSync, readdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { readManifest } from "../thincoder-core/manifest.mjs";
@@ -17,6 +18,29 @@ import { declaredPublicRoots } from "../thincoder-core/declaration.mjs";
 import { checkAnchors } from "./doc-check-anchors.mjs";
 import { checkDocWidths, discoverDomains } from "./doc-check-width.mjs";
 import { checkLineCounts } from "./doc-check-linecounts.mjs";
+
+/** 仓根探测（#822 · 父侧直接执行）：--root 缺省时自 cwd 探根——
+ *  ① **祖先最近者胜**（向上取最近携带 PROJECT-MANIFEST.json 的祖先——与 manifest 归属同律）⇒ 子目录内直跑不再落「0 档假绿」（原缺省 = cwd ⇒ scanDirs 相对 cwd 解析 ⇒ 扫空还 EXIT 0）；
+ *  ② 无祖先 ⇒ 查直接子目录携带者：恰一 ⇒ 用之；多 ⇒ 显式拒（列候选——机制不猜）；零 ⇒ 回退 cwd（fail-closed 语义零变）。 */
+export function detectRoot(cwd) {
+  let dir = resolve(cwd);
+  for (;;) {
+    if (existsSync(resolve(dir, "PROJECT-MANIFEST.json"))) return { root: dir };
+    const up = resolve(dir, "..");
+    if (up === dir) break;
+    dir = up;
+  }
+  const base = resolve(cwd);
+  const kids = [];
+  try {
+    for (const e of readdirSync(base, { withFileTypes: true })) {
+      if (e.isDirectory() && existsSync(resolve(base, e.name, "PROJECT-MANIFEST.json"))) kids.push(resolve(base, e.name));
+    }
+  } catch { /* 不可读 ⇒ 视为零候选 */ }
+  if (kids.length === 1) return { root: kids[0] };
+  if (kids.length > 1) return { root: base, ambiguous: kids.sort() };
+  return { root: base };
+}
 
 /** 锚报告（报告段逐条 + 汇总 + 两态固定句）。
  * 逐条行族标（§4.2.9 / §4.2.10）：拟新增 / 迁移期引文 = 列报 · 不入闸；标记失据 = 违规行行尾标；
@@ -46,7 +70,14 @@ export function formatReport(r) {
 /** CLI 主行程（单引擎 + 声明面）：--root 默认 cwd；--domain 显式产品域；退出码 0/1。 */
 export function main(argv = process.argv.slice(2), { cwd = process.cwd(), log = console.log } = {}) {
   const argOf = (f) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 1] ? argv[i + 1] : null; };
-  const root = resolve(argOf("--root") ?? cwd);
+  const explicitRoot = argOf("--root");
+  let root; let ambiguous = null;
+  if (explicitRoot) { root = resolve(explicitRoot); }
+  else { const d = detectRoot(cwd); root = d.root; ambiguous = d.ambiguous ?? null; }
+  if (ambiguous !== null) {
+    log(`FAIL(manifest): 缺省 cwd 下候选项目不唯一（${ambiguous.length} 个）——显式给 --root <仓根>（机制不猜）：\n${ambiguous.map((c) => `- ${c}`).join("\n")}`);
+    return 1;
+  }
   const domainArg = argOf("--domain");
   const read = readManifest(root);
   if (!read.ok) {
