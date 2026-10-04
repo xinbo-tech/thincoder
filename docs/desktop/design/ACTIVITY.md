@@ -112,7 +112,9 @@
 | 退出（应用 ∕ 窗口关闭） | VSC = 宿主进程亡 ∥ CLI = 进程退出 | **零额外机制**（进程终止 ⇒ 窗随进程亡；窗态零持久化——`ev:susp` 为运行期切片） |
 
 **非同键输入 ∕ 事件处置**：窗属 A、用户在 B 发送 ⇒ B 走既有 `send` 单驱动径（`flights` 按键隔离）；A 的事件（`ev:susp` ∕ `ev:digest` ∕ `ev:subagent`）按 `key` 落各自切片——非同键帧对当前视图零可见面（**活态切回即见**（窗 ∕ 计数切片）；
-   **行痕族**——显示 = 自然形（行出即留——全轮在流；2026-10-01 收正；**五清家族** = `stopMark` ∕ `timerNotice` ∕ `compress` ∕ `digest` ∕ `helpLines`——首屏门单源 = `thincoder-desktop/renderer/page-read.mjs` `applyPage`）
+   **行痕族**——显示 = 自然形（**digest 员行出即留——全轮在流**；**五清家族** = `stopMark` ∕ `timerNotice` ∕ `compress` ∕ `digest` ∕ `helpLines`——**首屏门单源** = `thincoder-desktop/renderer/page-read.mjs` `applyPage`；清点面分员见下句——两门 ∥ 单门）
+   **清点两门（行痕族消失时机批 · 2026-10-04 · 台账 #919）**：`helpLines` ∕ `stopMark` 两员 = 首屏门 ∥ **回合起跑门**（`msg:send` 出站即清 + 晚到 `stopped` 丢弃闩——两门幂等并集；单源 = `docs/desktop/design/RENDERER.md` §1.6 **KD-74**）；
+   `timerNotice` ∕ `compress` ∕ `digest` 三员 = 首屏门单门（未裁零动——`digest` 行出即留全轮在流，2026-10-01 口径维持）。
    **+ 复列 = 全量（未结轮照现；记录位次原位——零配对）**（留档批 · #719——单源 = `docs/desktop/design/RENDERER.md` §1.1「留档记录」条）；跨会话可见面维持标签位标既有口径）。
 
 **唤醒 ∕ 消化轮的会话钉定（`_slot` 重钉）**：窗项持**入口键 + 入口 cwd**；每轮起跑（消化轮 ∥ 唤醒轮 ∥ 窗内用户回合）前按本窗键重装槽（`loadAgentSlot`——含 `_slot` 重钉 + 跨端槽改动随新读；先例 = 扩展端「每轮从槽新读」`thincoder-vscode/src/extension/suspension.mjs:242-243`）⇒ 回合落槽面 = 本窗键槽（非现刻 `activeSession`——切标签零影响）。
@@ -458,3 +460,4 @@
 - 2026-10-02（**文档清账轮 · 同族残项收正 · 主 agent**〔父侧直接执行 · 可 revert〕——承评审 #19 发现 5）：§4.2 测试面行 `timer-wake.test.mjs`（阶段 2 批）「**已落** ·」陈标同法去（实读 **286** 保留；**档已失**——2026-10-02 实核，同 #785 族）。**族定义** = 「陈标『已落』而档实失」行（`:177` ∥ `:221` 两行已收正；族判据 = 档在盘实核）。台账 #797 族 ∥ #806。
 - 2026-10-02（**桌面 UX 收尾批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-desktop-ux-closeout.md` §2 · 台账 #801 · 需求卷 D35）：§2 增「本批注（右栏池极多实例可滚动 · D35）」——实读结论（探针 3–5：容器链完好 ∥ 帧密同绿 ∥ 内容区首拍截留 = 既定语义 ∥ 覆盖层全吞）+ 复现判据两腿 + 候选映射 + 收口规则。**零新语义 · 产品码零触（设计轮）**。
 - 2026-10-02（**文档清账轮 · 执行轮 4（render-core + 桌面轻段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：§4 行数账 8 处 R3 裸名化（`chat-digest.mjs` ×5 ∥ `chat-digest-seat.mjs` ×3——两档已删 ∕ 改名 `chat-digest-rows.mjs`，去目录段）。**零新语义**。
+- 2026-10-04（**行痕族消失时机批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-row-traces-clear-at-turn.md` §2 · 台账 #919）：§3 行痕族句清点面收正——两员（`helpLines` ∥ `stopMark`）增回合起跑门、三员维持首屏门（单源 = `RENDERER.md` §1.6 KD-74）。**产品码零触（设计轮）**。明细 = 批档 §2。

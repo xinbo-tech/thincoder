@@ -218,7 +218,8 @@ function clearCompress(table, key) {
 }
 
 /** `/help` 行族清点（`/help` 增量 · 2026-10-01② —— 单源 = 本档）：首屏页读（`before == null`）⇒ 摘本键行族
- *  （运行期痕 —— **非落盘件**：重开 / 切回页读即失，同 `[data-timer]` 族）；无行 ⇒ 原引用（零写）。 */
+ *  （运行期痕 —— **非落盘件**：重开 / 切回页读即失，同 `[data-timer]` 族；**本族清点 = 两门**——首屏门 + 回合起跑门
+ *  （`msg:send` 出站即清——`clearTurnTraces`，单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74）；无行 ⇒ 原引用（零写）。 */
 function clearHelpLines(table, key) {
   if (table === null || typeof table !== "object" || table[key] === undefined) return table
   const next = { ...table }

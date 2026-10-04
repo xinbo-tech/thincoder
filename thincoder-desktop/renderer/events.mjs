@@ -125,8 +125,12 @@ export function isTurnTail(ev) {
 }
 
 /** 停止痕切片写（「对齐第三批」项 6）：`stopped` 终局 ⇒ `stopMark[key] = true`（运行期痕 —— **非落盘件**，
- *  页读整置即失：清点住 `renderer/page-read.mjs` `applyPage` 首屏径）；已在场 ⇒ 原引用（零重绘）。 */
+ *  页读整置即失：清点住 `renderer/page-read.mjs` `applyPage` 首屏径 + **回合起跑门** = `msg:send` 出站即清
+ *  （`clearTurnTraces` —— `renderer/store.mjs`；单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74））；
+ *  已在场 ⇒ 原引用（零重绘）；**晚到丢弃闩门**：`stopHold[key]` 闩开（本键回合首帧前——出站置闩窗内）⇒
+ *  **只弃痕写**（闩不触其余结算——旧回合尾照常收束；开门摘闩住 `onActivity` turn 支，与 `turnStarts` 起刻同判）。 */
 function withStopMark(state, key) {
+  if (state.stopHold?.[key] === true) return state // 闩开窗内晚到 stopped ⇒ 痕零写（丢弃——KD-74 ④）
   const table = state.stopMark ?? {}
   if (table[key] === true) return state
   return { ...state, stopMark: { ...table, [key]: true } }
@@ -158,13 +162,17 @@ function onActivity(state, ev, now) {
     const starts = wasRunning ? state.turnStarts : { ...(state.turnStarts ?? {}), [ev.key]: now }
     // 停滞轻显形（UI.md §1 本批注项 2）：回合起刻 = 静默初始锚（`turnStarts` 邻位同置 —— 仅回合首帧）
     const outputStarts = wasRunning ? state.lastOutputAt : { ...(state.lastOutputAt ?? {}), [ev.key]: now }
+    // 丢弃闩开门（行痕族消失时机批 · KD-74）：本键**回合首帧**（= `turnStarts` 起刻同判——此前非 running）⇒ 摘闩——
+    // 闩开窗收束于新回合起跑；其后本键 `stopped` 属新回合 ⇒ 痕照写（晚到自愈面）。
+    const holds = wasRunning ? state.stopHold : (() => { const next = { ...(state.stopHold ?? {}) }; delete next[ev.key]; return next })()
     const stamps = badgeStamps(badges, ev.key, "running", true)
-    if (stamps.changed === false && turnSlot === state.turns && starts === state.turnStarts && outputStarts === state.lastOutputAt) return state
+    if (stamps.changed === false && turnSlot === state.turns && starts === state.turnStarts && outputStarts === state.lastOutputAt && holds === state.stopHold) return state
     return {
       ...state,
       ...(turnSlot === state.turns ? {} : { turns: turnSlot }),
       ...(starts === state.turnStarts ? {} : { turnStarts: starts }),
       ...(outputStarts === state.lastOutputAt ? {} : { lastOutputAt: outputStarts }),
+      ...(holds === state.stopHold ? {} : { stopHold: holds }),
       ...(stamps.changed ? { tabBadges: stamps.badges } : {}),
     }
   }

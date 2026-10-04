@@ -39,7 +39,8 @@
    状态词 = **已中断**（闭枚举 **8 词**——词键 `tool.interrupted`，值逐字同 VSC locales）。落点 = `thincoder-desktop/renderer/events.mjs`（`onActivity` 尾支）
    + `thincoder-desktop/renderer/views/chat-tool.mjs`（`STATUS_WORD`）+ `thincoder-desktop/renderer/i18n.mjs`。**摘要段（端差清算批收正）**：`status === "interrupted"` ⇒ 摘要槽值 = 逐字 `(interrupted)`（值源 = VSC `thincoder-vscode/webview/streaming.js:111`；`→ ` 前缀由既有摘要段格式自带；覆盖 `formatToolSummary` 派生）。
 6. **中止·流内 `[stopped]` 痕**——现状：零消费。对齐形：`stopped` 终局（本键）⇒ 流内**非块节点**停止痕 `div.chat-stopped[data-stopped]`（落点 = 块序列之后、卡序列之前——尾段族同侧；沿 `[data-digest]` 先例），词 = `status.stopped`（**核键直取**——两语逐字）；
-   样式 = 提示色 + 斜体（值源 = `thincoder-vscode/webview/streaming.js:141`）；清点 = 页读整置（运行期痕——非落盘件）。落点 = `thincoder-desktop/renderer/events.mjs`（切片 `stopMark`）+ `thincoder-desktop/renderer/views/chat.mjs`（非块节点组构树）+ `thincoder-desktop/renderer/chat.css`（组样式——提示色 / 斜体）。
+   样式 = 提示色 + 斜体（值源 = `thincoder-vscode/webview/streaming.js:141`）；清点 = **两门**（页读首屏整置 ∥ 回合起跑门 = `msg:send` 出站即清 + 晚到 `stopped` 丢弃闩——运行期痕非落盘件；
+   单源 = `docs/desktop/design/RENDERER.md` §1.6 **KD-74**。落点 = `thincoder-desktop/renderer/events.mjs`（切片 `stopMark`）+ `thincoder-desktop/renderer/views/chat-chrome.mjs`（非块节点组构树——`stoppedNode` ∥ `syncTailNode`）+ `thincoder-desktop/renderer/chat.css`（组样式——提示色 / 斜体）。
 7. **流式·子回合边界 turnBreak**——现状：桥零该面、续写并块（推回段界丢失）。对齐形：宿主接**核 `onSubTurnBreak`**（端差清算批收正——窄义钩子）⇒ 出站 `ev:activity { event: "turnBreak" }`（无 `fields`）⇒ 归约 = **清游标**（尾块追加态收束 ⇒ 下片文本起新块——VSC `streaming.js:71-88` 复位语义）。
    落点 = `thincoder-desktop/src/main/agent-bridge.mjs` + `thincoder-desktop/renderer/events.mjs`。**消解（端差清算批 · 2026-09-29）**：核补窄义钩子 `callbacks.onSubTurnBreak`（`thincoder-core/agent/completion.mjs` 六推回点——工具批尾 ∕ 中断注入两支零触）⇒ 桌面桥改挂 ⇒ 中断注入不再产 `turnBreak`（与 VSC 同「不断块」）。
 8. **恢复帧·推理 / 正文次序**——现状：`blockOfMessage` 序 = `[text, reasoning, tools]`。对齐形 = `[reasoning, assistant, ...tools]`（核 `thincoder-render-core/flow/block.mjs:97-105` 序）。
@@ -247,3 +248,4 @@
 - 2026-10-04（**流尾台账行组退役批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2 · 台账 #913）：§3.1 `chat-fixes.css` 行描述去「台账行」片段（行推线面退役——行数账待实施落盘回填）。**零新语义**。明细 = 批档 §2。
 - 2026-10-04（**流尾台账行组退役批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2 · 台账 #913）：§2「本批注（对齐第三批 · 小修族）」——项 12（台账行）整项删除 + 计数随正（小修族 **24 ⇒ 23** ∥ A 对话流面 **12 ⇒ 11**；核面新消费件枚举去「核台账行产」）。**零新语义**（退役随正）。明细 = 批档 §2。
 - 2026-10-04（**流尾台账行组退役批 · 修正轮（评审 #40 · 父裁 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §3 轮次 1 · 台账 #913）：§4 **D19 行**「逐模块判定表 51 档」⇒ **50 档**（随核档行 19 删行同拍）。**零新语义**（计数随动）。明细 = 批档 §2 修正块。
+- 2026-10-04（**行痕族消失时机批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-row-traces-clear-at-turn.md` §2 · 台账 #919）：§2 A 项 6 清点句 ⇒ 两门（单源 = `RENDERER.md` §1.6 KD-74）+ 落点坐标收正（`views/chat.mjs` ⇒ `views/chat-chrome.mjs`——组树现盘）。**产品码零触（设计轮）**。明细 = 批档 §2。

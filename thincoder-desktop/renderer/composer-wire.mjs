@@ -31,7 +31,7 @@
  * 同规则切片写（键缺席 ⇒ 零写——`setProviderState` 负向锁；提示带 `paintNotices` 重派生）。
  */
 import { clearRunning } from "./badges.mjs"
-import { setProviderState, withFlowOp } from "./store.mjs"
+import { clearTurnTraces, setProviderState, withFlowOp } from "./store.mjs"
 
 /** 回执 `reason` 归一（缺 ∕ 非串 ∕ 空串 ⇒ `fallback`）—— 诊断串单源（mount 侧候选面同引）。 */
 export function reasonOf(receipt, fallback = "unknown") {
@@ -87,6 +87,7 @@ export function createComposerWire(deps = {}) {
     // 上一提交令牌 ⇒ 令牌不得在回声侧读；未认领槽在本提交令牌诞生点认领（回声与上行同同步链相接 ⇒ 认领恒命中
     // 本提交）；`sendQueued` 不认领（该径零本地块 ∕ 零退流调用 —— 现式 `inFlight.set(key, {})` 保留）。
     if (lastEcho !== null && lastEcho.key === key && lastEcho.attempt === null) lastEcho = { key, attempt, block: lastEcho.block }
+    store.set(clearTurnTraces(store.get(), key)) // 回合起跑门清点（行痕族消失时机批 · KD-74——发出即清，出站前沿同笔）
     const orig = call("msg:send", { key, text, images: toImages(payload?.images) })
     let settled = false // 单次结算标志（§2.12 条 7）：正常径先到 ⇒ 迟到续延零动作（两径正交）
     let timer = null
@@ -161,6 +162,7 @@ export function createComposerWire(deps = {}) {
     if (key === null) return void console.error("[composer] queuedUserMessage skipped: no active session")
     const text = String(payload?.text ?? "")
     inFlight.set(key, {}) // 重发登记（陈旧守卫：重发一经发起 ⇒ 前次即非最新 · #597）
+    store.set(clearTurnTraces(store.get(), key)) // 回合起跑门清点（行痕族消失时机批 · KD-74——发出即清，出站前沿同笔）
     const receipt = await call("msg:send", { key, text, images: toImages(payload?.images) })
     if (receipt.ok !== true) return recordFailure("queuedUserMessage", receipt)
     failed = null // B21 清（受理径 —— 收正轮 · 行 1）

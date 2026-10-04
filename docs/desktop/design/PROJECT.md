@@ -124,6 +124,8 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 
 | KD-71 | → `docs/desktop/design/PACKAGING.md` §1（as-of 2026-10-02） | — | — |
 | KD-72 | → `docs/desktop/design/PACKAGING.md` §1（as-of 2026-10-02） | — | — |
+| KD-73 | → `docs/desktop/design/PACKAGING.md` §1（as-of 2026-10-03） | — | — |
+| KD-74 | → `docs/desktop/design/RENDERER.md` §1.6（行痕族清点两门 · as-of 2026-10-04） | — | — |
 
 ### 2.1 实测读数（实施批回填）
 
@@ -1826,3 +1828,4 @@ T-DSK30 的机检面 = `thincoder-desktop/test/views-attach.test.mjs`（附件�
 - 2026-10-04（**模型切换解锁批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §2 · 台账 #918）：§7 **T-DSK43 ③** 句收正（「两钮 `disabled`」⇒ **可点**——落盘保护 ∥ 回写门 = 解锁批批内件）。**零新语义**。明细 = 批档 §2。
 - 2026-10-04（**模型切换解锁批 · 修正轮（评审 #53 · 发现 1 ∥ 6 ∥ 7 逐号 · 父侧裁 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §3 轮次 1 · 台账 #918）：§7 **T-DSK43 ③** 判据行去沿革从句（新态直陈——沿革载本档变更记录）+ 输入列面名收正（忙态写门 ⇒ 忙态两钮可点）∥ 对齐第三批小修族注（「离线不可产面」串）同笔 ∥ **批 B 注**（T-DSK28 机检面）「在飞拒 `busy` 零写」⇒「在飞受理（写盘 + 回执携 `meta`）」∥ §4.1 越层段 `agent-host.mjs` 册值按盘收正（**306 ⇒ 327**）。**零新语义**。明细 = 批档 §2 修正块。
 - 2026-10-04（**模型切换解锁批 · 实施后实读回填（父侧直接执行〔机械值面〕 · 可 revert）**——承批档 §5 A3：§4.1 `agent-host.mjs` 册值按盘收正（327 ⇒ **333**）。**零新语义**（读数）。
+- 2026-10-04（**行痕族消失时机批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-row-traces-clear-at-turn.md` §1 ∥ §2 · 台账 #919）：§2 KD 索引**补 KD-73 行**（PACKAGING 批未随索引——一致性面同笔）+ 增 **KD-74** 指针行（⇒ `RENDERER.md` §1.6——行痕族清点两门）；机制面同拍 = `RENDERER.md` ∥ `CHAT.md` ∥ `ACTIVITY.md` ∥ `COMPOSER.md` 四档。**产品码零触（设计轮）**。明细 = 批档 §2。

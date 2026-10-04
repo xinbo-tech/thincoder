@@ -76,7 +76,8 @@ function digestOf(state) {
 }
 
 /** 本键压缩状态行切片（源 = `state.compress[活动会话键]` —— `ev:compress` 归约面写，四态就地推进；缺 / 非载体 ⇒ `null`：
- *  零行 —— 禁假造；生命期 = 首屏页读整置即失（`renderer/page-read.mjs` —— 沿 `stopMark` 先例）。 */
+ *  零行 —— 禁假造；生命期 = 首屏页读整置即失（`renderer/page-read.mjs` 首屏门单门——`compress` 未并入回合起跑门，
+ *  行痕族两门 = `helpLines` ∥ `stopMark` 两员在册——单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74）。 */
 function compressOf(state) {
   const key = state?.activeSession ?? null
   const table = state?.compress
@@ -86,7 +87,8 @@ function compressOf(state) {
 }
 
 /** 本键到期触发切片（源 = `state.timerNotice[活动会话键]` —— `ev:timer` 归约面写；缺 / 非载体 / 文本非串 ⇒ `null`：
- *  零组 —— 禁假造；生命期 = 运行期痕（首屏页读整置即失 —— 同 `[data-stopped]` 族））。 */
+ *  零组 —— 禁假造；生命期 = 运行期痕（首屏页读整置即失 —— `[data-stopped]` 族同在册，但其员清点已扩两门：
+ *  首屏门 + 回合起跑门 = `msg:send` 出站即清——`timerNotice` 本身维持首屏单门；单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74））。 */
 function timerNoticeOf(state) {
   const key = state?.activeSession ?? null
   const table = state?.timerNotice
