@@ -129,9 +129,9 @@ export async function finalizeTurn(panel, { history, fullHistory, slotStamp, tur
   }
   // 落盘（ContinueError→Stop 路径——runTurnLoop break 跳过 catch 落盘——的唯一落盘点）；
   // CLI agent-turn.mjs finally parity「Save session after every turn (survives crashes)」；
-  // 标题值随本整档 save 单写落盘（`extra.title` 支——无第二写）。
+  // 标题值随本整档 save 单写落盘（`extra.title` 支——无第二写）；`seed` 印章（2026-10-04 解锁批 · R4）——槽三键在场 ⇒ 零改写 ∥ 缺 ⇒ 播种。
   try {
-    if (fullHistory?.length) panel._saveLines(fullHistory, history, title ? { ...slotStamp, title } : slotStamp, turnSlot)
+    if (fullHistory?.length) panel._saveLines(fullHistory, history, title ? { seed: slotStamp, title } : { seed: slotStamp }, turnSlot)
   } catch (saveErr) {
     console.error("[chat-panel] save in finally failed:", saveErr.message)
   }

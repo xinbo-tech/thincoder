@@ -62,6 +62,12 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
   // and reads keep falling back to config.json.
   const existingAdvisor = typeof existing.advisor === "object" && existing.advisor !== null ? existing.advisor : {}
   const advisorOut = extra.advisorGuard !== undefined ? { ...existingAdvisor, guard: extra.advisorGuard } : (existing.advisor ?? null)
+  // 三键取值链（2026-10-04 解锁批 · R4）：显式写位（`extra.activeProvider/activeModel`——选定回写径）> 槽在场值
+  // （`existing`——防回合起跑印章覆写忙期新选定）> `extra.seed`（回合起跑印章——仅槽缺播种）> 现行兜底；
+  // `effort` 经 `...existing` spread 天然保留（零改）。
+  const slotProvider = typeof existing.activeProvider === "string" && existing.activeProvider !== "" ? existing.activeProvider : null
+  const slotModel = existing.activeModel || null
+  const seed = extra.seed ?? null
   saveSessionToSlot(cwd, slot, {
     ...existing,
     version: 2, cwd, updatedAt: Date.now(),
@@ -69,7 +75,7 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
     // `finalizeTurn` 把新标题并入 extra——`extra.title` 支；无第二写）；键缺席 ⇒ 槽既有值
     // 保留（abort/finally 等不携标题的保存不得抹掉已生成标题）。
     title: extra.title ?? existing.title ?? "",
-    activeProvider: extra.activeProvider ?? existing.activeProvider ?? "",
+    activeProvider: extra.activeProvider ?? slotProvider ?? seed?.activeProvider ?? "",
     // Human line is slimmed for storage (CLI parity — session-io.slimForDisplay):
     // the never-compacted human line carried the bulk of session-file size
     // (tool args JSON / full tool results / base64 images); the machine line
@@ -112,7 +118,7 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
     // model 键 → 无 model 请求 → serde 400。`||` 视空串为缺失——回退 existing（槽 model
     // 恒有值/恒缺失——与 CLI F-2d 同防御方向；null/undefined 保留槽值语义不变）；legacy
     // "" 残留槽值在下次保存时归一 null（读侧 slotRef 组装本就 truthy-guard 空串）。
-    activeModel: extra.activeModel || existing.activeModel || null,
+    activeModel: extra.activeModel || slotModel || seed?.activeModel || null,
   })
 }
 

@@ -10,7 +10,7 @@
  *   ④ 回合尾接管 `takeOver`（墓碑查位 ⇒ 队列先于接管 ⇒ 挂起窗；**W2：转 async** —— 续发径降级 await 窗，调用面 fire-and-forget）
  *   ⑤ 输入路由三径 + 会话中止：`send` ∕ `interrupt`（出档 `turn-input.mjs`）∕ `dispose` ∕ `abortSuspensions`
  *   ⑥ 只读面两枚：`queueSnapshot`（`history:page` 回执 `queue` 键供面）· `busyOf`（在飞判据 ——
- *      `setPrefs` 忙态门消费）
+ *      `setPrefs` 施加顺延消费）
  *   ⑦ **并源队列视图 `queueView`（挂起窗径批 ∥ 窗队列批 · KD-40 ⑥）**：`snapshot` = 忙态队 ∪ 窗输入队合并快照
  *      （链 `postQueue` 全帧 ∥ `queueSnapshot` 同源单点）；取批三件（`plan` ∕ `peek` ∕ `take`）恒指忙态队单源——两载体不合并
  * **R3（#505）**：单回合执行面增**撞帽续跑询问缝**（`askQuestion` 注入 ⇒ `askContinue` —— 薄形复用既有待决门，
@@ -230,7 +230,7 @@ export function createTurnDriver({
 
   return {
     send, interrupt, dispose, abortSuspensions, takeOver,
-    busyOf: (key) => flights.has(key), // 在飞只读面（`setPrefs` 忙态门 —— `flights.has` 单点）
+    busyOf: (key) => flights.has(key), // 在飞只读面（`setPrefs` 施加顺延 —— `flights.has` 单点）
     queueSnapshot: (key) => queueView.snapshot(key), // `history:page` 回执 `queue` 键供面（两源合并快照 —— `ipc.mjs`）
   }
 }

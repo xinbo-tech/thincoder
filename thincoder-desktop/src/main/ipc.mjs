@@ -185,7 +185,7 @@ function historyPage(payload) {
 }
 
 /** `session:prefs(payload)` ⇒ 族信封 + `meta`（成功携 · 失败缺键）：载荷 `{ key, patch }`（键闭集
- *  `provider` / `model` / `effort`）—— 转口宿主写面（KD-19 单点：写盘 → 重施；`reason` 五档在动作侧）。 */
+ *  `provider` / `model` / `effort`）—— 转口宿主写面（KD-19 单点：写盘 → 重施；`reason` 四档在动作侧（`busy` 随 2026-10-04 解锁批退役））。 */
 function sessionPrefs(payload) { return requireAgentHost().setPrefs(payload?.key, payload?.patch) }
 
 /** `msg:send(payload)` ⇒ `{ ok:true }`（**立即回** —— 过程走 `ev:*` 出站；**例外 = 非视觉带图径**：降级窗内读图毕

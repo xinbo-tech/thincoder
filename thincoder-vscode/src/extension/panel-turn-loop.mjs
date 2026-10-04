@@ -267,9 +267,9 @@ export async function runTurnLoop(panel, deps) {
         tLog.result = "stopped"
         break
       }
-      // "stop" ∕ "error" 两格：先持久化本回合（interrupted/errored turn —— finally 亦恒落盘，此存幂等）。
+      // "stop" ∕ "error" 两格：先持久化本回合（interrupted/errored turn —— finally 亦恒落盘，此存幂等）；`seed` 印章（2026-10-04 解锁批 · R4——槽三键在场零改写 ∥ 缺播种）。
       try {
-        panel._saveLines(fullHistory, history, slotStamp, turnSlot)
+        panel._saveLines(fullHistory, history, { seed: slotStamp }, turnSlot)
       } catch (saveErr) {
         console.error("[chat-panel] save after abort/error failed:", saveErr.message)
       }

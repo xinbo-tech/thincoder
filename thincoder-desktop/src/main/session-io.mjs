@@ -32,10 +32,12 @@ export function loadAgentSlot(agent, cwd, slot) {
 }
 
 /** 回合尾落盘（三路 done / stopped / error 同序调用 —— 先落盘再出终局事件）。`label` = 日志标签（默认 `session`；
- *  R3 蒸馏落位同经本函数 —— 单一「落盘不抛」实现，零第二副本）。 */
+ *  R3 蒸馏落位同经本函数 —— 单一「落盘不抛」实现，零第二副本）。
+ *  **`prefsSeedOnly`（2026-10-04 解锁批 · R2）**：回合关联落盘**不携会话级三键**（槽在场值赢 ∥ 缺 ⇒ 记忆值
+ *  播种——防回合起跑快照覆写忙期新选定；语义单源 = 核 `session.mjs` `saveSession` 注）。 */
 export function saveAgentSlot(agent, label = "session") {
   try {
-    saveSession(agent)
+    saveSession(agent, { prefsSeedOnly: true })
   } catch (err) {
     console.error(`[agent-host] ${label} save failed: ${err?.message ?? err}`)
   }
@@ -44,9 +46,19 @@ export function saveAgentSlot(agent, label = "session") {
 /** 蒸馏落位（R3 · #520 —— `callbacks.onDistilled` 时点：机器行已被压缩版替换，回合尾 `saveSession` 持的是
  *  压缩前快照 ⇒ **立即重落盘**，盘面不留未压缩版；CLI 先例 `thincoder-cli/src/tui/tool-events.mjs:397-399` ∕
  *  VSC 先例 `thincoder-vscode/src/extension/panel-callbacks.mjs:242-246`）。静默纪律同 `saveAgentSlot`
- *  （N3 —— 回合已返回，写盘失败不得浮面；实现 = 同函数 + `distilled` 标签，零副本）。 */
+ *  （N3 —— 回合已返回，写盘失败不得浮面；实现 = 同函数 + `distilled` 标签，零副本）∥ 落盘语义同携
+ *  `prefsSeedOnly`（2026-10-04 解锁批——蒸馏落盘同不携三键 · R2）。 */
 export function saveDistilledSlot(agent) {
   saveAgentSlot(agent, "distilled session")
+}
+
+/** 在飞选定**施加顺延**（2026-10-04 解锁批 · R3）：`setPrefs` 在飞支记位 ⇒ 本函数封位 + `loadAgentSlot`
+ *  重载（回合尾落盘后调用——槽三键已由 `prefsSeedOnly` 保全 ⇒ 内存=盘，取忙期选定新值）；无位 ⇒ 零动作；
+ *  位住 agent 对象 ⇒ 中止径随弃（零独立清理面）。 */
+export function applyPendingPrefs(agent) {
+  if (agent?._pendingPrefsApply !== true) return false
+  agent._pendingPrefsApply = false // 封位（先封——重载失败不得留位复发）
+  return loadAgentSlot(agent, agent.cwd, agent._slot)
 }
 
 /** 留档记录追加（消化面留档批 · #719 —— 形 ∕ 在场 ∕ 判据单源 = `docs/desktop/design/RENDERER.md`

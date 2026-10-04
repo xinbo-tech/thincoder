@@ -5,7 +5,7 @@
  * R3 增 `onDistilled` 蒸馏落位〔非通道〕）③ 待决表（三门形：审批逐项 / 审批批次 / 提问 —— 兼撞帽续跑询问载体）
  * ④ **回合驱动族装配**（出档 `turn-driver.mjs`：单回合执行面 · 在飞表 · 中止墓碑 · `send` ∕ `interrupt` ∕ `dispose`
  *    ∕ `abortSuspensions` —— 本档只供注入面并暴露其返回面）
- * ⑤ 会话级偏好写面（`setPrefs`：写盘 → 重施；在飞拒 —— 批次档 KD-19 单点）。**#880 增 选定写回**：
+ * ⑤ 会话级偏好写面（`setPrefs`：写盘 → 重施；在飞受理 ∥ 施加顺延 —— 批次档 KD-19 单点）。**#880 增 选定写回**：
  *    槽面实变 ∧ `provider`+`model` 同在 ⇒ `defaultModel` 同拍写回（槽先配置后；失败不反扑 · 主侧记错）；
  * ⑥ 模式位投影（`flagsOf` **活值**四布尔 —— 状态栏对齐批：`approval:respond` 成功径回执叠加 `{ key, flags }`；
  * 页读供面同函数 —— 槽投影兜底面住 `session-slots.mjs` `slotFlags`）。
@@ -223,10 +223,11 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   })
 
   /** `session:prefs` 写面（`docs/desktop/design/IPC.md` §2「会话级偏好注」项 2/4/7 · KD-19 单点）：判序 = `bad-key`
-   *  → `busy`（在飞**零写**）→ 载荷两档（`invalid-patch` / `model-required`）→ 写盘 → 施加。
-   *  写盘 = 端壳 `writeSlotPrefs`（核写口 + 回读投影）；写未发生（槽不可读 / `cwd` 无源）⇒ `slot-missing`。
-   *  **施加** = 本键已装配者重施 `loadAgentSlot`（活动会话内存即生效）；未装配者只写盘（不隐式装配）。
-   *  成功 ⇒ 族信封 + `meta`（与 `history:page` 同源投影）；失败 ⇒ 信封**无 `meta` 键** + 零写。
+   *  → 载荷两档（`invalid-patch` / `model-required`）→ 写盘 → 施加（**在飞受理 ∥ 施加顺延**——2026-10-04 解锁批：
+   *  忙态拒档退役）。写盘 = 端壳 `writeSlotPrefs`（核写口 + 回读投影）；写未发生（槽不可读 / `cwd` 无源）⇒ `slot-missing`。
+   *  **施加** = 本键已装配者重施 `loadAgentSlot`（活动会话内存即生效）；**在飞（`busyOf`）⇒ 只记 `_pendingPrefsApply` 位不重施**
+   *  （回合一致性：在飞不换模型——回合尾 `settleTurn` 落盘后 `applyPendingPrefs` 施加 ⇒ 下一回合起跑取新值）；
+   *  未装配者只写盘（不隐式装配）。成功 ⇒ 族信封 + `meta`（与 `history:page` 同源投影）；失败 ⇒ 信封**无 `meta` 键** + 零写。
    *  **选定写回（#880 · 判据句 6 ∥ 项 8）**：**槽面实变**（`written.changed`）∧ `provider` + `model` 同在
    *  ⇒ `defaultModel` 同拍写回（定序 = 槽先配置后；等值零写住写回单点）；配置面失败**不反扑**（回执仍
    *  `ok:true`——本会话已生效）+ `console.error` 记错（零静默）⇒ 回执零叠加（`providerState` 键缺席）；
@@ -236,7 +237,6 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     const slot = slotOfKey(key)
     const fail = (reason) => ({ ok: false, reason, cwd: typeof cwd === "string" ? cwd : null, slot: null })
     if (slot === null) return fail("bad-key")
-    if (turnDriver.busyOf(key)) return fail("busy")
     const bad = prefsPatchFailure(patch)
     if (bad) return fail(bad)
     if (typeof cwd !== "string" || !cwd) return fail("slot-missing")
@@ -251,7 +251,13 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
       if (carried.ok !== true) console.error(`[agent-host] default model carryover failed: ${carried.reason}`)
       else if (carried.providerState !== undefined) receipt.providerState = carried.providerState
     }
-    if (agents.has(key)) loadAgentSlot(agents.get(key), cwd, slot)
+    if (agents.has(key)) {
+      const agent = agents.get(key)
+      // 在飞（`running` ∕ 窗内回合 ∕ 蒸馏在飞）⇒ **写盘受理 ∥ 施加顺延**（2026-10-04 解锁批 · R3）——记位
+      // `_pendingPrefsApply`（住 agent 对象：中止径随弃，零清理面）；回合尾 `settleTurn` 落盘后施加。
+      if (turnDriver.busyOf(key)) agent._pendingPrefsApply = true
+      else loadAgentSlot(agent, cwd, slot)
+    }
     return receipt
   }
 

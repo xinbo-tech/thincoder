@@ -40,9 +40,9 @@
  * MCP 表单结构化九键 + 两钮（值逐字同 VSC `settings.mcp.*` 同名键）· 重连两词（本端拟定）·
  * `settings.submodelGlobal`（VSC 逐字）· `settings.advisorGuard`（VSC 逐字）· `settings.reason.slotAuthority`（本端拟定）。
  * 两语键集须相等（增键两语同增、禁单语落键）。
- * ⑬ **斜径命令面（斜径命令面批 · 2026-10-01 · 台账 #761）**：核件 `composer/panel.mjs` 斜径拦截段取词（三键）——
- * 值面单源 = `docs/desktop/design/UI.md` §1「本批注（slash 命令面 · 2026-10-01）」项 5（en `slash.unknown` = CLI
- * 前段逐字 + 携 `/help` 指引 ∥ 二键本端拟定）；`/plan` ENG 态拒复用在册键 `toolbar.planDisabled`（零新键）。
+ * ⑬ **斜径命令面（斜径命令面批 · 2026-10-01 · 台账 #761；2026-10-04 解锁批随正）**：核件 `composer/panel.mjs` 斜径拦截段取词
+ * （两键——`/model` 恒受理随钮面门退场，反馈键集 −1）——值面单源 = `docs/desktop/design/UI.md` §1「本批注（slash 命令面 · 2026-10-01）」项 5
+ * （en `slash.unknown` = CLI 前段逐字 + 携 `/help` 指引 ∥ 一键本端拟定）；`/plan` ENG 态拒复用在册键 `toolbar.planDisabled`（零新键）。
  * **`/help` 增量（同批 2026-10-01②）六键**（`slash.help.label` ∥ `slash.desc.{model,auto,plan,eng,help}`）——
  * 消费面 = 端装配面 `printHelp` 口经核 `formatHelp` 取词（非面板拦截段）；en 值 = CLI 同名命令 `desc` 逐字（机检面）。
  * 零落盘 · 零 `node:` / 零裸包（渲染面静态闭包判据）。
@@ -208,7 +208,6 @@ export const VIEWS_DICT = Object.freeze({
      // ── ⑬ 斜径命令面（斜径命令面批 · 2026-10-01 · 台账 #761 —— 消费面 = 核件 `composer/panel.mjs` 斜径拦截段
      //    ∥ `/help` 六键 = 端装配面 `printHelp` 口经核 `formatHelp` 取词；值面单源 = `docs/desktop/design/UI.md` §1 本批注项 5）──
      "slash.unknown": "Unknown command: ${name} (/help for available commands)",
-     "slash.busy": "Unavailable while the turn is running — try again when it finishes",
      "slash.args": "This command does not take arguments here",
      "slash.help.label": "❯ Help",
      "slash.desc.model": "select model & manage providers",
@@ -372,9 +371,8 @@ export const VIEWS_DICT = Object.freeze({
     "settings.submodelGlobal": "全局默认",
     "settings.advisorGuard": "强制 advisor 评审",
     "settings.reason.slotAuthority": "会话级选项——请从输入面板修改",
-     // ── ⑬ 斜径命令面（同上一一对应 —— 三键消费面 = 核件面板；`/help` 六键 = `printHelp` 口；zh 值面单源 = UI.md §1 本批注项 5）──
+     // ── ⑬ 斜径命令面（同上一一对应 —— 两键消费面 = 核件面板；`/help` 六键 = `printHelp` 口；zh 值面单源 = UI.md §1 本批注项 5）──
      "slash.unknown": "未知命令：${name}（/help 查看可用命令）",
-     "slash.busy": "回合运行中不可用——请等回合结束后重试",
      "slash.args": "此命令在此不接受参数",
      "slash.help.label": "❯ 帮助",
      "slash.desc.model": "选择模型并管理渠道",

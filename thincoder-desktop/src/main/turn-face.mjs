@@ -5,7 +5,7 @@
  * = 已 settle **留池等消化** —— 撤回合尾直注入兜底，消化由回合尾挂起接管承担）③ 三径结算（落盘 → 读数 →
  * 终局事件：done / stopped / error）④ 释放在飞 + 附件清理；**步边界取批缝**（「回合中插入」批 —— 用户回合传
  * `consumeQueuedInput` ∕ 消化轮不传 —— 取批策略住 `turn-chain.mjs`）。
- * **会话标题接线（#517 · KD-41）**：回合尾结算收**单实现** `settleTurn`（标题生成 → 落盘；成功 ∕ 失败两径同源，
+ * **会话标题接线（#517 · KD-41）**：回合尾结算收**单实现** `settleTurn`（标题生成 → 落盘 → **施加顺延**；成功 ∕ 失败两径同源，
  * 落盘前两查位同源）——**标题先于落盘**（渲染面回合尾刷新读到即新值）；核件 `generate-title.mjs` 只接不改。
  * **点修轮（U-6 ∕ U-7）**：回合起跑落**回合代次**（`turnGate.stamp`）· 回合尾落盘前查位（`turnGate.revoked` ——
  * 会话中止径 ⇒ 零写：已删会话不得被回合尾落盘复活）；两查位同源 = 回合驱动族 `turn-driver.mjs` 中止墓碑单点。
@@ -38,7 +38,7 @@
 import { ContinueError } from "@thincoder/core/agent.mjs"
 import { ensureSessionTitle } from "@thincoder/core/generate-title.mjs"
 import { cleanupTurn } from "./attachments.mjs"
-import { appendRecord, saveAgentSlot } from "./session-io.mjs"
+import { appendRecord, applyPendingPrefs, saveAgentSlot } from "./session-io.mjs"
 
 /** 错误详情载波（「对齐第三批」项 9 · KD-37）：`techInfo` = 宿主 `err.stack` —— 缺 ∥ 非串 ∥ 空串 ⇒ **键缺席**
  *  （错误横幅 `details` 面据此在场；载荷形单源 = `docs/desktop/design/IPC.md` §1 `ev:error` 行）。纯函数、零抛。 */
@@ -64,13 +64,17 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
   /** 撞帽询问（R3 · #505 —— `askContinue` 注入面转口）：缺注入 ⇒ 视为拒绝（收口不静默续）；
    *  返回是否同意续跑（**严格布尔** —— 作答串比对住注入面 `turn-driver.mjs`）。 */
   const consentOf = async (key, turn) => (typeof askContinue === "function" ? (await askContinue(key, turn)) === true : false)
-  /** 回合尾结算（#517 · KD-41）：标题生成 → 落盘**单实现**（成功 ∕ 失败两径同源；两查位同源 = 回合代次面）。
-   *  标题先于落盘 ⇒ 渲染面回合尾刷新读到即新值；等界 = 核件自持 10s（非致命，自吞错不在本档承担）。 */
+  /** 回合尾结算（#517 · KD-41）：标题生成 → 落盘 → **施加顺延**（`applyPendingPrefs`——2026-10-04 解锁批 · R3）；
+   *  单实现（成功 ∕ 失败两径同源；两查位同源 = 回合代次面）。标题先于落盘 ⇒ 渲染面回合尾刷新读到即新值；
+   *  等界 = 核件自持 10s（非致命，自吞错不在本档承担）。 */
   async function settleTurn(key, agent) {
     if (revokedTurn(key, agent)) return // ① 已故会话（dispose ∕ 切项目）⇒ 零标题 ∕ 零写（省一次网络）
     await ensureSessionTitle(agent) // ② 核件自守卫（title 在场 ⇒ 短路零网）+ 非致命（自吞错 —— 回合链零承担）
     if (revokedTurn(key, agent)) return // ③ 标题等待窗内中止 ⇒ 零写（U-7 零复活不因新增 await 破口）
     saveAgentSlot(agent) // ④ 落盘（原判据位不变）
+    // ⑤ 在飞选定施加顺延（2026-10-04 解锁批 · R3）：落盘之后（槽三键已由 `prefsSeedOnly` 保全）⇒ 重载槽
+    //（内存=盘，取忙期选定新值）⇒ 下一回合起跑即新复合；无位 ⇒ 零动作（位住 agent 对象——中止径随弃）。
+    applyPendingPrefs(agent)
   }
   /** 单回合执行（调用面不 await 亦可 —— 结算自吞；拒绝向调用面抛回，见档头）。
    *  `sessionSignal` 在场（窗内回合）⇒ 会话中止逐链中止本回合（`dispose` / 切项目级联 —— 已中止则即时中止）。 */

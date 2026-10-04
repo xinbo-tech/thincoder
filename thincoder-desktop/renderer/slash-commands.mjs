@@ -10,8 +10,8 @@
  *  · `run(ctx)` = **只调 `ctx.actions`**（零第二实现——动作 = 钮 handler 提取出的同一函数，门随函数）；
  *    返 `true` = **已受理**（已执行 ∨ 二段交互在场 ⇒ 面板清框 + 入输入历史）· 返 `false` = 未受理（门拒 ⇒
  *    面板出 `rejectKey` toast + 文本保留）；`ctx = { args, raw, post, actions }`（面板提交面拦截段给）；
- *  · `rejectKey` = 门拒反馈键（复用端词表键：`slash.busy` = 模型钮忙态门同判据 ∥ `toolbar.planDisabled` =
- *    ENG×PLAN 互斥——`/plan` 在 ENG 态拒；`/auto` ∥ `/eng` ∥ 非 ENG 态 `/plan` 无门 ⇒ 无 `rejectKey`）。
+ *  · `rejectKey` = 门拒反馈键（复用端词表键：`toolbar.planDisabled` = ENG×PLAN 互斥——`/plan` 在 ENG 态拒；
+ *    `/model`（2026-10-04 解锁批：钮面忙态门退场 ⇒ 恒受理）∥ `/auto` ∥ `/eng` ∥ 非 ENG 态 `/plan` 无门 ⇒ 无 `rejectKey`）。
  *
  * 零上行：命中 ⇒ 本地面执行、不进消息径（零 `msg:send` ∥ `queuedUserMessage` 上行、零用户块、零 loading）。
  * 边界（不做）：键位补全（Tab）∥ 其余 22 条 CLI 命令 ∥ 携参直切（逐条处置 = 批档 §2.4）。
@@ -29,8 +29,7 @@ export function createSlashCommands(printHelp) {
       aliases: ["/m"],
       group: "Agent",
       descKey: "slash.desc.model",
-      rejectKey: "slash.busy", // 忙态门（`running` / `susp`）= 模型钮 `disabled` 同判据——同钮同门
-      run: (ctx) => ctx.actions.openModelMenu(), // 同一菜单、同一函数（`model-menu.mjs` `open`）
+      run: (ctx) => ctx.actions.openModelMenu(), // 同一菜单、同一函数（`model-menu.mjs` `open`；忙态恒受理）
     },
     {
       name: "/auto",

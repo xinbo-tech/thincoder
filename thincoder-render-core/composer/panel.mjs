@@ -7,9 +7,9 @@
  * `#abort-btn`）∕ `#paste-bar>#paste-badge` ∕ `#controls-row`——ids ∕ 类名照 VSC `index.html:42-63` 输入段，
  * 结构单源 = 该骨架；`#status-line` 属状态行面（A12 本批外）不建）② 键位 B1–B7（Enter ∕ IME 门 ∕ Ctrl+C ∕
  * Ctrl+I 中断模态 ∕ Ctrl+U ∕ ↑↓ 历史 ∕ 自增高）③ 提交面（直发 ∕ 忙态排队出泡（B12 本地先行）∕ 满队 toast）④ 忙态派生
- * （占位符三态 守卫>busy>常态 ∕ 两钮显隐 ∕ 模型推理忙态门）⑤ 推送接线（五类经 ③ `state.subscribe`）
+ * （占位符三态 守卫>busy>常态 ∕ 两钮显隐）⑤ 推送接线（五类经 ③ `state.subscribe`）
  * ⑥ **斜径面**（2026-10-01 批 · §2 KD-RC-12 ∥ §5 条 6）：提交面拦截段（段序 =「空文本 → 无会话守卫」之后、「忙态入队」
- * 之前）——命中 ∥ 未知回落一律**不进消息径**（零 `msg:send` ∥ `queuedUserMessage` ∥ 用户块 ∥ loading）；反馈键三键发射点 = §5 条 6。
+ * 之前）——命中 ∥ 未知回落一律**不进消息径**（零 `msg:send` ∥ `queuedUserMessage` ∥ 用户块 ∥ loading）；反馈键两键（`slash.unknown` ∥ `slash.args`）发射点 = §5 条 6。
  *
  * 注入面（六项）：
  *  ① `root`——挂载根 DOM 锚（本档按 VSC 序 append 四个子树，不造 `#toolbar` 容器）；
@@ -35,9 +35,9 @@
  * `setLoading()`（缺省 = 现刻 `isRunning`——VSC `panels.js:95,114` `setLoading(ctx, ctx.isRunning)` 同式）；
  * `workspaceGuard` 推送 ⇒ `applyBusyLock()`（VSC `chat-messages.js:99` 同式）。
  *
- * **拆分债注记**：本档 **486 行**（口径 = 总行数（末换行计一行，`read` 工具同源），同设计 §2.6 表头注）——越 300 顾问线（设计本批
- * 预估 ≈474；实读偏离 = 斜径面（⑥）新增注释面实量），距 500 硬限余 **14**；触发 = 越 500 前 ∕ 下次实质触碰；
- * 候选拆分面 = 忙态派生段（`applyModelSwitchGate` ∕ `applyBusyLock` ∕ `setLoading`——`loading.js` 面）出档。
+ * **拆分债注记**：本档 **466 行**（口径 = 内容行数；2026-10-04 解锁批按盘复核——忙态门整件退场，净 −19）——越 300 顾问线；
+ * 处置 = **续期**（在册 = `docs/render-core/design/RENDER-CORE.md` §6 本批随动段），距 500 硬限余 **34**；**拆分预案** = 提交 ∕ 斜径拦截段出档
+ * （拟新增 `thincoder-render-core/composer/panel-submit.mjs`）；**消解窗口** = 下次结构性触碰的批。
  *
  * 回合起点钩的相对序（对 VSC 逐行的唯一近似，见 `send.js:62-72`）：`onTurnStart` 置于 `setLoading` **之前**——
  * 取「`_turnStart` 先于状态行刷新落位」（VSC `:62` 早于 `:68` 的同点，elapsed 段首帧即新回合）；其 `clearPanels`
@@ -260,13 +260,13 @@ export function createComposerPanel(deps = {}) {
   ctx.modelBtn = controls.modelBtn
   ctx.reasoningBtn = controls.reasoningBtn
 
-  // ── ⑤ 模型 ∕ 推理面（两级菜单 + 推理下拉；忙态门判据从本档注入）──
+  // ── ⑤ 模型 ∕ 推理面（两级菜单 + 推理下拉；回写门判据从本档注入——钮面零门）──
   const modelMenu = createModelMenu({
     post, state, hooks,
     modelBtn: controls.modelBtn,
     reasoningBtn: controls.reasoningBtn,
     controlsRow: controls.el,
-    blocked: () => modelSwitchBlocked(),
+    blocked: () => writebackBlocked(),
   })
   ctx.reasoningDropdown = modelMenu.reasoningDropdown
 
@@ -392,30 +392,12 @@ export function createComposerPanel(deps = {}) {
   // ── 忙态面（`loading.js` 逐字；DOM 查询 → 元素引用；renderStatusBar → ⑤ `onStatusRefresh`）──
 
   /**
-   * 模型 / 推理按钮忙态门判据（F-W14 · D-W16）：非 `idle`（`running` / `susp`）⇒ 挡。
-   * **同经 `turnState` 派生的独立谓词**——与 Send / Stop 的 `=== "running"` 非同一条
-   * （本门多含 `susp`：在飞蒸馏落盘窗携旧回合快照——忙态写槽会被旧快照覆写）。
-   * 两处写槽入口同读本谓词（model-menu：按钮点击 / `models` 推送自动回写）。
+   * 回写门判据（F-W14 判据收窄 · 2026-10-04 解锁批）：只作 `models` 推送**自动回写门**——非 `idle`
+   * （`running` / `susp`）⇒ 零回写（防陈旧推送回声覆写忙期新选定）；idle ⇒ 照发。**钮面零门**
+   * （用户径任意忙态可点可开——选择语义 = 下一回合生效）；判据注入 `model-menu`（唯一消费面 = `applyModels`）。
    */
-  function modelSwitchBlocked() {
+  function writebackBlocked() {
     return busyState() !== "idle"
-  }
-
-  /**
-   * 忙态门应用（派生单点）：两信息钮**显式禁用**（`disabled` + `aria-disabled`）——不隐藏
-   * （屏上须可读当前会话模型 / 推理级；隐藏即失去信息——与 Send 隐藏的分工见 §4.2）；
-   * 进忙态时关已弹出的两个浮层（不留「点了没用」的假 affordance）。
-   */
-  function applyModelSwitchGate() {
-    const blocked = modelSwitchBlocked()
-    for (const btn of [ctx.modelBtn, ctx.reasoningBtn]) {
-      btn.disabled = blocked
-      btn.setAttribute("aria-disabled", String(blocked))
-    }
-    if (blocked) {
-      modelMenu.close()
-      modelMenu.closeReasoning()
-    }
   }
 
   /** 界面相位（`S._phase` 对应位——`setLoading` 写，`onStatusRefresh` 快照随行）。 */
@@ -430,7 +412,6 @@ export function createComposerPanel(deps = {}) {
   function applyBusyLock() {
     const busy = busyState() === "running" && !ctx._interruptMode
     ctx.inputEl.readOnly = false // 锁移除——始终可编辑（INPUT-LOCK-BEHAVIOR-REVISED）
-    applyModelSwitchGate() // F-W14：忙态门（与中断模态无关——同点派生，两入口同谓词）
     if (ctx._interruptMode) return
     // 无工作区守卫第三态（2026-09-21 批 · `PROJECT-SWITCHER.md` §4.1）：优先级 **守卫 > busy > 常态**
     ctx.inputEl.placeholder = workspaceRequired()

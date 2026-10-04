@@ -11,7 +11,7 @@
  *
  * 面：
  *  - 两钮接线（`model-picker.js:13-36`）：模型钮 ⇒ `openModelMenu`（`up: true`）；推理钮 ⇒ 推理下拉开关（`:38-69` 档位列表 + ✓ 选中态 + 空档位两行说明）。
- *  - 候选推送面（`:111-151` handleModelsMessage 逐字）：`models` 推送 ⇒ 缓存 + 现值标记（忙态零回写）·
+ *  - 候选推送面（`:111-151` handleModelsMessage 逐字）：`models` 推送 ⇒ 缓存 + 现值标记（忙态零回写——回写门 · 2026-10-04 收窄）·
  *    表外 prefs 复合 ⇒ 只显不写槽（M10 v2）。
  *  - `mm-*` 样式 = **静态承载** `./model-menu.css`（2026-09-28 输入逻辑收正轮：原 JS 注入形在桌面侧依 CSP
  *    （`style-src 'self'`）被拒 ⇒ 注入路径撤，样式落静态资产；两端各以自身静态装载形引入 —— VSC = `webview/controls.css`
@@ -19,7 +19,8 @@
  *
  * 注入面（五项之局部）：② `post`（`selectModel` ∕ `selectReasoning` ∕ `addProvider` ∕ `removeProvider` ∕ `setKey` 出站）；
  * ③ `state`（`models` 读面初值 + 推送入口）；⑤ `hooks`（`confirmRemoveProvider` 确认门 ∕ `closeSiblingDropdowns` 邻面让位）；
- * ④ 取词 = 核 `../i18n.mjs`。忙态门判据（`loading.js` `modelSwitchBlocked`）由调用方以 `blocked()` 注入——判据单点在 `panel.mjs`。
+ * ④ 取词 = 核 `../i18n.mjs`。回写门判据（`panel.mjs` `writebackBlocked`——只治 `models` 推送自动回写）由调用方以
+ * `blocked()` 注入——判据单点在 `panel.mjs`；钮面零门（2026-10-04 解锁批——任意忙态可点可开）。
  *
  * 推理下拉解散面（点外关 ∕ Esc 关）＝ VSC `chat.js:97-110,121-127` 本件部分（设置面 ∕ 会话下拉两段留端）；工厂化后本件自持（两端同形）。
  */
@@ -255,10 +256,10 @@ function providerRow(provider, group, models, value, onPick, overlay) {
 /**
  * 菜单面工厂。`deps`：
  *  - `post(type, payload)`（② 出站）· `state`（③ `models()` 初值读面）· `hooks.confirmRemoveProvider(onConfirm)` ∕
- *    `hooks.closeSiblingDropdowns()`（⑤ 跨面）· `blocked()`（忙态门判据——单点在 `panel.mjs`）；
+ *    `hooks.closeSiblingDropdowns()`（⑤ 跨面）· `blocked()`（回写门判据——单点在 `panel.mjs`；钮面零门）；
  *  - `modelBtn` ∕ `reasoningBtn` ∕ `controlsRow` = 控件行调用方已建的元素与容器（两浮层由本档建 + 挂入）。
  * 返回：`{ open, close, closeReasoning, applyModels, models, selection, reasoningDropdown, modelDropdown }`——
- * `open` = 模型钮 handler 提取件（斜径 `/model` 同钮同门消费；见其函数注）。
+ * `open` = 模型钮 handler 提取件（斜径 `/model` 同钮同函数消费；见其函数注）。
  */
 export function createModelMenu(deps) {
   const { post, state = {}, hooks = {}, modelBtn, reasoningBtn, controlsRow, blocked = () => false } = deps
@@ -291,11 +292,10 @@ export function createModelMenu(deps) {
 
   /**
    * 模型钮 handler **提取件**（`docs/render-core/design/RENDER-CORE.md` §5 条 6 动作句柄面）：斜径 `/model`
-   * 与钮点击走**同一函数**（同钮同门——忙态门 `blocked()` 随函数）。返值 = 斜径契约：`true` = **已受理**
-   * （浮层在场）· `false` = 未受理（忙态门拒 ⇒ 面板层出条目 `rejectKey` toast）；钮径忽略返值 ⇒ **零行为改**。
+   * 与钮点击走**同一函数**（同钮同函数——2026-10-04 解锁批：钮面零门，任意忙态恒受理）。返值 = 斜径契约：
+   * 恒 `true` = **已受理**（浮层在场）；钮径忽略返值 ⇒ **零行为改**。
    */
   function open() {
-    if (blocked()) return false // F-W14：忙态门（零浮层、零写槽；读面仍由按钮显示承载）
     openModelMenu({
       anchorEl: modelBtn,
       models: _models,
@@ -317,7 +317,6 @@ export function createModelMenu(deps) {
   }
   modelBtn.addEventListener("click", (e) => { e.stopPropagation(); open() })
   reasoningBtn.addEventListener("click", () => {
-    if (blocked()) return // F-W14：同谓词（两写槽入口同读）
     toggleDropdown(reasoningDropdown, () => buildReasoningDropdown())
   })
 
@@ -411,7 +410,7 @@ export function createModelMenu(deps) {
         const visible = levels.length > 0 ? selectedReasoning : "off"
         reasoningBtn.textContent = visible === "" ? "—" : visible === "none" ? "off" : (reasoningLabel(visible))
         reasoningBtn.classList.toggle("active", levels.length > 0 && visible !== "off" && visible !== "")
-        // F-W14：忙态零回写（显示仍更新——上列已刷）——不携快照覆写槽；idle 零回归（照发）
+        // 回写门（F-W14 判据收窄 · 2026-10-04 解锁批——只治系统回声径）：忙态零回写（显示仍更新——上列已刷）——不携快照覆写槽；idle 零回归（照发）
         if (!blocked()) {
           post("selectModel", { model: match.id, provider: match.provider })
           post("selectReasoning", { reasoning: selectedReasoning })

@@ -185,7 +185,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 - **`S._suspended` 语义不变**：仍由 `suspension` 消息（active / freeze）驱动（会话级语义——digest 执行中 state 为 running 时不得翻 false）；`S._turnState` 是独立的忙态阶段镜像。
 - **`#status-line` 单 writer = `renderStatusBar`**（`thincoder-vscode/webview/status-bar.js:17`）：thinking 态 = `S._phase === "thinking"` 标记（`loading` 消息经 `setLoading` 置位 / 清除）——`loading` 消息不再 innerHTML 覆写状态行（修「徽标被每 digest 的 thinking 重画清掉」）。
 - **Stop 可见性 = `S._turnState === "running"` 派生**（`thincoder-vscode/webview/loading.js:57`）：running（回合 / 标题窗口 / 会话内 digest 起跑 / Reload 冷启重推）常显；**susp（纯后台池跑——主空闲）不显**（无全停按钮——池空自然消化完）；`loading:true/false` 不再隐 / 显 abort。Stop 作用 = 只停主会话当前 controller（不再全链中止挂起会话）——子代理停止靠区内逐块 ⏹（`cancelSubagent` 定向 abort）。
-- **忙态派生消费者（2026-09-18 批扩面）**：模型 / 推理按钮的忙态门（禁用派生 · 两处入口守卫 · 与 D-P9 的分工）单源 = `WEBVIEW.md` §4.2——本档不复述（D2）。
+- **忙态派生消费者（2026-09-18 批扩面）**：**Send ∥ Stop 两组**（`running` 期——Send 隐藏 ∥ Stop 常显；判据 = `S._turnState`）；模型 / 推理按钮**零忙态门**（随处可切——单源 = `WEBVIEW.md` §4.2；本档不复述（D2））。
 
 ### 4.5 会话打开单向 boot（权威锚）
 
@@ -516,8 +516,8 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `saveProxySettings` | webview/settings-env.js:113 | src/extension/panel-messages.mjs:351 | `活` | 载荷 = 逐字段（`SETTINGS.md` §2.8） |
 | `saveShellSettings` | webview/settings-env.js:129/:144 | src/extension/panel-messages.mjs:350 | `活` | F-W11 接线落地（`SETTINGS.md` §2.9）；空值 ⇒ 删键 = 路径册 #2（`System default` 显式项） |
 | `saveWebsearchKey` | webview/settings-tools.js:36 | src/extension/panel-messages.mjs:288 | `活` | — |
-| `selectModel` | webview/input.js:31 | src/extension/panel-messages.mjs:229 | `活` | 忙态门（F-W14）同点（会话选定写回 —— `WEBVIEW.md` §4.10） |
-| `selectReasoning` | webview/input.js:32 | src/extension/panel-messages.mjs:239 | `活` | 忙态门（F-W14）同点 |
+| `selectModel` | webview/input.js:31 | src/extension/panel-messages.mjs:229 | `活` | 忙期照写（2026-10-04 解锁批——钮面零门；落盘保护 = 偏好键单写者——`WEBVIEW.md` §4.2）· 会话选定写回 —— `WEBVIEW.md` §4.10 |
+| `selectReasoning` | webview/input.js:32 | src/extension/panel-messages.mjs:239 | `活` | 忙期照写（同上——`WEBVIEW.md` §4.2） |
 | `setAdvisorGuard` | webview/input.js:37/webview/settings-agent.js:167 | src/extension/panel-messages.mjs:346 | `活` | — |
 | `setAutoApprove` | webview/input.js:36 | src/extension/panel-messages.mjs:267 | `活` | — |
 | `setEngineeringEnabled` | webview/input.js:38 | src/extension/panel-messages.mjs:347 | `活` | — |
@@ -535,6 +535,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 **方向口径**：本表只收 webview → host。**「删」= host 消费位在位而 webview 发射恒无（死 handler）**——处置逐条入批档（`docs/batches/2026-09-18-vsc-settings-wiring.md` §2）并已随实现落地（三删 + 一接线转活——**本表现零 `删` 行**）；**删除落地 ⇒ 源零位 ⇒ 表行同步退场**（不留悬空行——同 §12 口径）。**「补」= 发射在位而 host 缺消费位**（本表现零行）。
 
 ## 变更记录
+- 2026-10-04（**模型切换解锁批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §2 · 台账 #918）：§13 `selectModel` / `selectReasoning` 两行注列收正（忙态门 ⇒ 忙期照写——落盘保护指针）。**消息名 ∥ 载荷字段 ∥ 判值列零变**。明细 = 批档 §2。
 - 2026-10-04（**③ 列机械对账重锚 · 父侧直接执行**——承台账 #845 · 文献清账轮）：§12 表 ③ 列（webview 消费位）**51 格逐行重锚**——`case` 首现锚法（`webview/chat-messages.js` 唯一 `case "名"` 行号实读；提取器已随测试树退场年代的手维对账）；as-of 头注刷新（③ 列 = 2026-10-04 ∥ ② 列 = 2026-09-25〔在册〕）。**协议语义 / 消息名 / 载荷字段 / ④ 处置列零变**；② 列未随扫（在册）。
 - 2026-10-01（**跨端消化面恢复批 · 收尾轮（#27 报备之未及项）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2 随落笔轮随见 ∥ §3 轮次 4 发现 3 同族）：§12 `subagent` 行 ② 列 `thincoder-vscode/src/extension/suspension.mjs:89/:96` ⇒ **`:91/:97`**；§12 `suspension` 行 ② 列 `thincoder-vscode/src/extension/suspension.mjs:125/:134` ⇒ **`:137/:146`**（两行 = 两发射行实读 · as-of 2026-10-01）。**零新语义**（坐标收正——④ 处置列 ∥ 载荷字段 ∥ 首列判别式集零变）。
 - 2026-10-01（**跨端消化面恢复批 · VSC 舱交付随落笔轮 · eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §5 VSC 舱 ∥ §2 随落笔轮）：§13 补 `recordAppend` 行（实施落地实测在位——② `webview/activity.js:124` ∥ ③ `panel-messages.mjs:287`；先例 = 两表只收实测在位行）；§3.2 行 22「（拟增）」标去（落位坐标实读）；§5 host 发射点 `:177/:198` ⇒ **`:190/:214`**（发射行口径 · 现盘实读）；§12 `digest` 行 ② 列同拍。**消息名 ∥ 载荷字段 ∥ 判值列零变**（坐标收正 + 落地登记）。
@@ -740,3 +741,4 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 - 2026-10-04（**流尾台账行组退役批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2 · 台账 #913）：§12 表删 `ledgerNotice` 行（流尾台账行组退役——发射 ∥ 消费两面同退；余行列值零改——仅 ③ 列坐标随实施删行漂移〔`chat-messages.js` 三行删：:28 ∥ :135-136〕⇒ 收口轮按 §12 头注程序重出 ∥ 重锚；跨档 `WEBVIEW.md:354` 收口同拍）。**零新语义**。明细 = 批档 §2。
 - 2026-10-04（**流尾台账行组退役批 · 修正轮（评审 #40 · 父裁 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §3 轮次 1 · 台账 #913）：设计轮条「余行列值零改」句收正（③ 列坐标漂移——收口重出 ∥ 重锚；跨档 `WEBVIEW.md:354` 同拍）。**零新语义**。明细 = 批档 §2 修正块。
 - 2026-10-04（**流尾台账行组退役批 · 收口轮 · 父侧直接执行〔可 revert〕**——台账 #913）：§12 表 ③ 列 **54 格现盘重出**（`case` 首现锚法逐格实读——实施删行位移；`i18n` 格按实读收正 `:57 ⇒ :58`；`sub:*` 格随位移 `:240 ⇒ :237`）；前句「收口轮按 §12 头注程序重出 ∥ 重锚」兑现；跨档 `WEBVIEW.md:354` 同拍（其档变更记录在册）。**协议语义 ∥ 消息名 ∥ 载荷字段 ∥ ④ 处置列零变**（坐标收正）。明细 = 批档 §6。
+- 2026-10-04（**模型切换解锁批 · 修正轮（评审 #53 · 发现 3）· eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §3 轮次 1 · 台账 #918 · 父侧裁 = 全采纳）：§4.4 忙态派生消费者行收正——**Send ∥ Stop 两组**在记 ∥ 模型 / 推理按钮零忙态门（单源指针保持 = `WEBVIEW.md` §4.2；D2 不复述）。**零新语义**。明细 = 批档 §2 修正块。

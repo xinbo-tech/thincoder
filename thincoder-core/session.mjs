@@ -106,8 +106,11 @@ function digestFromStore(fields, counters, mtimeMs) {
  *  Restore now always rebuilds from history (lazy, see startup.mjs).
  *  2026-08-31 会诊 F1：slot 粘性——首次认领后缓存 agent._slot，永不重跑 ensureActive
  *  （原实现每次保存重推，manifest active 被并发方翻动时会话静默迁移）。
- *  返回轮转的 .bak 路径或 null。 */
-export function saveSession(agent) {
+ *  返回轮转的 .bak 路径或 null。
+ *  **`opts.prefsSeedOnly`（加性 · 2026-10-04 解锁批 · R2——唯一传者 = 桌面两落盘点）**：回合关联落盘
+ *  **不携会话级三键**（`provider` / `model` / `effort`）——写前读槽：复合在场（`activeProvider` 非空串 ∧
+ *  `activeModel` 真值）⇒ 槽值赢 ∥ 缺 ⇒ 记忆值播种；`effort` 单键在场（值可 `null`）⇒ 槽值保留。 */
+export function saveSession(agent, opts = {}) {
   // _fullHistory is written at the source via pushReal — no flush needed here.
   // history        = FULL, never-compacted (human-readable; VS Code panel & CLI resume read this)
   // contextHistory = machine context (possibly compacted) so CLI resume keeps the token savings
@@ -168,6 +171,14 @@ export function saveSession(agent) {
   // 原值——`"off"` 记号原样写盘，不回填为具体档）；缺之 ⇒ 下一次回合保存把槽写面结果整对象抹除。
   // `undefined` = 本会话未携带（老槽无该键 / 未经 `applySession`）⇒ 键不落盘（禁回填）。
   if (agent._slotEffort !== undefined) fields.effort = agent._slotEffort
+  // R2（2026-10-04 解锁批 · 加性 `prefsSeedOnly`）：回合关联落盘**不携三键**——写前读槽（守卫后：轮转现场不参与判据），
+  // 复合在场（`activeProvider` 非空串 ∧ `activeModel` 真值）⇒ 槽值赢（防起跑快照覆写忙期新选定）∥ 缺 ⇒ 记忆值播种。
+  if (opts.prefsSeedOnly === true) {
+    const onDisk = loadSlotFile(agent.cwd, slot) ?? {}
+    const compositeOn = typeof onDisk.activeProvider === "string" && onDisk.activeProvider !== "" && Boolean(onDisk.activeModel)
+    if (compositeOn) Object.assign(fields, { activeProvider: onDisk.activeProvider, activeModel: onDisk.activeModel })
+    if (Object.hasOwn(onDisk, "effort")) fields.effort = onDisk.effort ?? null
+  }
   // 绑定态 → 流式投影（段原文拼接——VSC 兼容面逐字同形）；未绑定 → 既有全量物化写
   if (agent._recordStore) saveProjectedSlot(agent, p, fields, contextHistory)
   else writeSessionFile(p, { ...fields, history: legacyHistory(agent), contextHistory })
