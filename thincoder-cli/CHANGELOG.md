@@ -1,3 +1,26 @@
+## [0.12.70] — 2026-10-04
+
+> 0.12.69 → 0.12.70（连续号——发布时定号）
+
+### Added
+
+- **ACP 面第二批（#870–#873）**：`resource_link`（Zed @ 文件引用——含三降级态）∥ `usage_update` {used,size} + `session/list` updatedAt ISO（超域钳位）∥ 会话身份归一（槽号串 ∥ delete→new 同键处置）∥ `set_config_option` 全量 `configOptions` 回执 + `SessionConfigOption.type` 判别键。
+- **`thincoder ledger list --json`（#886）**：台账只读接口（多项目 ∥ 空集 ∥ 全程只读）；schemaVersion + evidence 默认省。
+- **OpenCode Go 预设（#906）**：`/model` 与配置面开箱可选（双协议侧）。
+
+### Changed
+
+- **核依赖升级**：`@thincoder/core` `^0.10.2` → `^0.10.3`（MCP 自愈 ∥ 环边界中止前置 ∥ 回执汇总行等随核生效）。
+- **会话选定写回默认模型（#883）**：会话内 `/model` 选定 ⇒ `defaultModel` 同拍写回（新会话自动采用；失败不反扑 ∥ 零静默）。
+- **设置面扇出修复（#842）**：设置改动即时生效面收正（免重启）。
+
+### Fixed
+
+- **ACP batch-2 跟进**：delete→new 处置 ∥ `updatedAt` 钳位（T1–T20 + 2 腿全绿）。
+- **Home 启动整盘索引守卫（#867）**：home 检测双触发面 + 假旧引擎版本门（逐字错误 + exit 1）。
+- **TUI-OOM 余项（#863）**：/undo 双上界 ∥ console 采集 cap ∥ advisor 轻量化。
+- **台账幽灵根（#899）**：歧义根发现修复（空壳库不再遮蔽）。
+
 ## [0.12.69] — 2026-10-03
 
 > 0.12.68 → 0.12.69（连续号——发布时定号）

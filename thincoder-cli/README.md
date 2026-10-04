@@ -231,6 +231,14 @@ Code conventions: pure `.mjs`, no semicolons, no third-party npm dependencies al
 
 ## Changelog
 
+### 0.12.70 (2026-10)
+- **ACP face round 2 (#870–#873)** — `resource_link` (@ file references from Zed, with three graceful degradations); `usage_update` `{used,size}` + ISO `updatedAt`; stable session identity (slot-key ids, delete→new); `set_config_option` returns full `configOptions` + a `type` discriminator.
+- **`thincoder ledger list --json` (#886)** — read-only ledger interface (multi-project / empty set / fully read-only).
+- **OpenCode Go presets (#906)** — `opencode-go` / `opencode-go-anthropic` available in `/model` and config (dual-protocol sides).
+- **Session-default model carryover (#883)** — picking a model inside a session writes it back as `defaultModel` for new sessions (no silent failures).
+- **Core `^0.10.3`** — MCP 404 self-heal, turn-loop abort front-guards (Stop wins over the continue prompt), big edit-receipt summary line, manifest unknown-keys warning.
+- Fixed: ACP batch-2 follow-ups (delete→new disposal, `updatedAt` clamp); Home full-index version gate (#867); `/undo` bounds, console cap, advisor lightweighting (#863); ledger ghost-root discovery (#899).
+
 ### 0.12.69 (2026-10)
 - **Provider-state unify (#841)** — one core resolution for the three ends (slot → `defaultModel` → first keyed channel) with three states: `ok`; `fallback` (runnable but no default model — one clear notice line, never blocked); `invalid` (no provider/key — guided picker; headless exits with a readable message and a clear code, while `fallback` prints one stderr line and keeps running). No more false "API key not configured" on a working channel.
 - **Core `^0.10.2`** — unified provider resolution (`resolveProviderPlan` / `resolveChannelModel`), `providerState` / `providerStateReason` keys, slot key gate.

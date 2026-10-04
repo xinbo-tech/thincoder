@@ -3,6 +3,39 @@
 All notable changes to the core package are documented here.
 Format: Keep a Changelog · 中文 · 号在发布时定（CalVer——见 `docs/RELEASE.md` §4）。
 
+## [0.10.3] — 2026-10-04
+
+> 0.10.2 → 0.10.3（月内 +1——发布时定号）
+
+### Added
+
+- **OpenCode Go 内置预设（#906）**：`opencode-go`（OpenAI 协议侧）∥ `opencode-go-anthropic`（Anthropic 协议侧）——开箱可选渠道（双协议混装建模）。
+- **ACP 结构化子代理事件（#862/#843）**：`session_info_update` 携 `_meta["thincoder.dev/subagent"]`（role ∕ id ∕ 状态 ∕ 进度）——ACP 客户端可呈现子代理活动；判据单源叶 `subagent-event.mjs`。
+- **manifest 未知键告警（#802）**：读档返回 `unknownKeys` + 恰一行可见告警（含键名；非拒——拼错 / 版本错位的声明键不再静默失效）。
+- **台账只读路径**：只读数据库打开面（CLI `ledger list` ∥ ACP `ledger/*` 接口共用）。
+- **崩溃防护两面（#865/#866）**：流响应体错误护（`stream-destroy.mjs` 四消费点）∥ win32 杀树同步化（退出阶段不漏杀）。
+
+### Changed
+
+- **模型切换解锁 · 核侧（#918）**：会话槽三键（provider ∕ model ∕ effort）**单写者**——回合关联落盘（`prefsSeedOnly`）不携三键（槽在场值赢 ∥ 缺播种）——忙期选定不再可能被旧快照覆写。
+- **环边界中止前置（#793）**：回合环头 ∥ 环尾两检查点——中止态（用户 Stop）恒以 AbortError 收束，不再产出撞帽续跑询问（需求 F5「Stop 优先」兑现）。
+- **多项目台账合计（#882）**：歧义根（容器根）下状态行台账段按族合计——多项目求和不显单一。
+
+### Fixed
+
+- **MCP 会话过期自愈（#850）**：HTTP 404 ⇒ 清会话 + 重新 initialize + 重试一次（单飞重建）；二次失败透传 + `sessionDead` 入存活判据。
+- **杀树相位（#877）**：退出阶段 POSIX 组杀 + SIGKILL 兜底（忽略 SIGTERM 的子进程不再泄漏）。
+- **SSE 重复帧守卫（#856）**：message 形状重复帧前缀补差 + tool_calls 覆盖（MiniMax v2 类端点二次追加不再叠加）。
+- **直连断流 abort 通道（#878）**：fetch 直连路径 120s 看门狗恢复生效（含遗漏路径收口）。
+- **图片字节预算（#853）**：历史图片累计驱逐（最老先出）+ 注入时同判 + 413 可操作化。
+- **embedding 毒行隔离（#859）**：孤立代理项清洗 + 单毒行不阻后续批。
+- **auto-think 守卫（#860）**：思考型模型分类调用——恒发守卫 + 失败一次可见（不再 100% 静默回退）。
+- **子代理模型形态防线（#861）**：非法 `agent.subagentModel`——加载期清洗 + 运行期明确错误（不再裸崩）。
+- **大工具回执汇总行（#796）**：批量编辑回执末行恒置 `edit batch: N/N entries — <路径清单>`——大回执（offload 截中段）也可读到结论。
+- **TUI-OOM 余项（#863）**：/undo 快照双上界 ∥ console 采集 cap ∥ advisor 关闭轻量化。
+- **台账幽灵根发现（#899）**：歧义根不再被空壳库遮蔽（族发现跳过 + 容器根合计恢复）。
+- **设计令牌回显链（#884）**：截断回显容错 + 常量标记剥离 + 正则单源（工程模式签发可靠性）。
+
 ## [0.10.2] — 2026-10-03
 
 > 0.10.1 → 0.10.2（月内 +1——发布时定号）
