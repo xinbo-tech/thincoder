@@ -65,7 +65,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 
 **不做（边界）**：`realpath` / 符号链接解析；**非盘符段大小写折叠**（POSIX 大小写敏感 + origin 语义——同 `MEMORY.md` §6.11「不做」）；别名路径（subst / junction / 8.3 短名 = 已知限制）。
 
-**路径串等值比较边界（登记 · VSC 侧 `===`）**：台账链路现存字符串等值比较**三处**——（#882 批增）`ledger.mjs` `scopeMarkerOf` 范围滤取 `scan.root === family.current.root`（现盘 `:160` 邻位）；`ledger.mjs` `discoverFamily` 的 `p.root !== current.root`，
+**路径串等值比较边界（登记 · VSC 侧 `===`）**：台账链路现存字符串等值比较**三处**——（#882 批增）`ledger.mjs` `scopeMarkerOf` 范围滤取 `scan.root === family.current.root`（现盘 `:166`——实现式 = 解构后 `s?.root === currentRoot`，本写法为近似形）；`ledger.mjs` `discoverFamily` 的 `p.root !== current.root`，
 `ledger-surface.mjs`（核与 VSC 两份）的 `s.root === family.current.root`。
 三处均出自**同一 anchor 的单进程同源谱系**，不跨端比较裸路径串；跨端一致性只经**库键与 `notifyKey`** 承载。
 判定 = 零缺陷、零代码改；守卫 = 新增比较点不得跨端直比裸路径串（须经 `normalizeCwd` / `notifyKey`）。**验证面**：零代码改 ⇒ **无独立守卫用例**——验证 = 静态审计在册（本段）；T22 = **间接守卫**（级联面同契约下游回归：`findProject` / `notifyKey` 同键——非各 `===` 点的直测）。
@@ -386,7 +386,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 | AC-M2-16 | 读命令守卫 + `executor` 空值口径（2026-09-28 · 台账 #473 / #474）：`ledger_query` / `ledger_count` 非法过滤参数（非对象 / 未知键 / 枚举外值（含数组 / 错型值）/ 错型）⇒ 拒（throw，零库动作）+ 文案逐字（§3.2 P1–P6）；合法形（缺省 / 可空 `null` / 过滤命中）零回归；`ledger_update` 显式 `executor: null` 与略去同判（进「在途」自动写会话 sessionId——§3.1 优先级链） | §3.1 / §3.2（需求侧补行**已落**——AC-M2-15 射程注 + AC-M2-16 新增，2026-09-28（父侧）） |
 | AC-M2-17 | **根解析面歧义拒**（2026-10-02 · #828）：歧义锚（≥2 候选——`projectRootView` `ambiguous` 态）⇒ `openLedger` 显式拒——**零写**（库档不建 / 不落行）+ 列候选（全列按名排序）+ 显式项目根指引；`ok` / `none` 两态零回归（none ⇒ `resolve(cwd ?? ".")` 兜底照旧）。断言 = 按族锚（「项目不可解析」——不逐字形） | §2.1（根解析面 · fix 轮） |
 | AC-M2-18 | **标记 = 当前打开范围合计**（2026-10-03 · 需求 §13.3 第 1 条修订）：容器根锚（族 ≥1 已读项目）⇒ 标记 = 族内已读项目两池分列求和（`台账 <Σpool>·<Σtech>`）；具体项目锚 ⇒ 仅该项目自己（兄弟零掺——负向锁）；命中但不可读 ∥ 空范围 ⇒ `marker = null`（命中 = **可解析项目**）；`warn` 同范围聚合（范围内 `aged>0 ∨ deadExecutors>0`） | FR24（需求 §13.3 第 1 条「状态行极简标记」· 2026-10-03） |
-| AC-M2-19 | **歧义锚不充当项目**（2026-10-04 轻通道轮——AC-M2-18 范围面子例）：命中锚 `projectRootView` `ambiguous`（如锚位存量键控库先于 #828 写门）⇒ 按容器根形落子目录族求和——键控库存在 ≠ 可作项目（消静默缺席）；T51 面（**可解析**项目命中但不可读 ⇒ `null`）不受触 | FR24（需求 §13.3 第 1 条「状态行极简标记」· 歧义根子例） |
+| AC-M2-19 | **歧义锚不充当项目**（2026-10-04 轻通道轮——AC-M2-18 范围面子例）：命中锚 `projectRootView` `ambiguous`（如锚位存量键控库先于 #828 写门）⇒ 按容器根形落子目录族求和——键控库存在 ≠ 可作项目（消静默缺席）；T51 面（**可解析**项目命中但不可读 ⇒ `null`）不受触 | FR24（需求 §13.3 第 1 条「状态行极简标记」· 歧义根子例）——用例 = 登记态（K12 红绿对为载体；拟 T56 随 `docs/batches/2026-10-03-ledger-family-aggregate.test.mjs` 下次触碰补） |
 
 **用例表（摘）**：T1 入条目 → 新行 id 自增 · T2 状态迁移 → status 更新 + `updated_at` 刷新 · T3 勾销 → status 已核销 + `closed_at` 写入、行保留（软删除）· T4 未决四态计数（混入归档行）· T5 `trigger=NULL` 通过 · T6 非法 status 拒 · T7 在途缺 task_book 拒 · T8 非主 agent 写 → 命令不存在 · T9 status NULL 拒 · T10 迁移表外迁移拒（行不变）。
 
