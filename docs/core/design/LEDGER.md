@@ -288,7 +288,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 | `ledgerUpdate({ cwd, id, patch })` | UPDATE（写命令，主 agent——迁移表校验） |
 | `ledgerClose({ cwd, id, status })` | UPDATE status + `closed_at`，事务包裹（写命令，主 agent）——核销两源 = 待核销（勾销）· 待讨论 / 待设计（追认核销 · `evidence` 必填 · 缺则拒）；在途不可跳 |
 | `findProject(anchor)` | 向上（含自身）最近的**已注册台账**目录（用户目录键控库存在）→ `{root, ledger}` / `null` |
-| `discoverFamily(anchor)` | `{current, projects}`——current = `findProject`；projects = current + 其同级含台账目录 |
+| `discoverFamily(anchor)` | `{current, projects}`——current = `findProject`（**歧义命中 ⇒ `null`**——按容器形落子目录族；§7.2 歧义根子例）；projects = current + 其同级含台账目录 |
 | `formatMarker(scan)` | §7.3 逐字（**签名与键语义不变**——L1 标记本批零扩，§7.3.1；**范围限定**：单 scan 逐字模板——范围求和不在本函数，经 `scopeMarkerOf` 委托出文（§7.2）） |
 | `scopeMarkerOf(scans, family)`（**新增**） | 标记范围归约（§7.2「标记范围」——L1 取值单源）：`{ marker, warn }` ∕ 空范围 `{ marker: null, warn: false }` |
 | `formatDetailLine(scan)` | §7.3 逐字 + **判活尾段**（§7.3.1 三态文案；签名不变——`scan` 携新键） |
@@ -300,7 +300,8 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 - **计数 / 老化 / 阈值 / 可动作**：见 `requirements/ENGINEERING-MODE-V2.md` §9（继承：原 MECHANISM §1.18——D2 本节不重述）。
 - **明细行集** = `{current} ∪ {可动作项目}`（发现序：current 在前，其余按目录名升序）；同项去重。
 - **标记范围（L1 · 2026-10-03 定形）**：`current` 在场 ⇒ 仅当前项目（命中但不可读 ⇒ 空范围——不掺兄弟）；否则 ⇒ 族内**已读**项目（不可读跳过——既有语义）；空范围 ⇒ `marker` = `null`（不落 `0·0`）；范围非空 ⇒ 两池**分列求和**（F1——不合并为一数）。三端消费：核拍面写 `state.ledger` · VSC item 直调 `scopeMarkerOf`（端零自算；在场判据 = `marker` 非空）· 桌面 `ev:ledger` `marker` 转发（端零重算）。
-   - **范围推导**：`current` 在场 ⇒ 范围 = `scans` 中 `root` = `family.current.root` 的 scan（**容器根自身带台账** ⇒ `findProject` 含自身命中 ⇒ 归属 = 具体项目锚——只显其自身数，不合计其下项目）；`current` 缺席（容器根锚）⇒ 族 = `discoverFamily` 既有枚举面 `projects`（向上（含锚）最近「含台账子目录」层取其子目录——族发现本体零改）。
+   - **范围推导**：`current` 在场 ⇒ 范围 = `scans` 中 `root` = `family.current.root` 的 scan（**容器根自身带台账** ⇒ `findProject` 含自身命中 ⇒ 归属 = 具体项目锚——只显其自身数，不合计其下项目）；`current` 缺席（容器根锚）⇒ 族 = `discoverFamily` 既有枚举面 `projects`（向上（含锚）最近「含台账子目录」层取其子目录——枚举算法零改）。
+   - **歧义根子例（轻通道轮 · 2026-10-04）**：命中锚若 `projectRootView` `ambiguous`（如锚位存量键控库先于 #828 写门）⇒ **不充当台账项目**（键控库存在 ≠ 可作项目）——按容器根形落子目录族（消静默缺席）；T51 面（**可解析**项目命中但不可读 ⇒ `null`）不受触。
    - **两参对账**：`family` 判归属 ∥ `scans` 载体——范围 = 归属 ∩ 已读（「已读」= 在 `scans` 中：构建期不可读项目已跳过）；`current` 缺席 ⇒ 范围 = `scans` 全体。
    - **文本产出**：`marker` 文本 = 委托 `formatMarker` 逐字模板（求和值入参；`formatMarker` 仍居调用链——§7.1）。
 - **标记范围批（#882）受影响面**：源/测试全清单（现行行数 × 增量——含批内单测件）= 批档 `docs/batches/2026-10-03-ledger-family-aggregate.md` §2.4；贴线判 = 本批有增量档全列 ≤300 顾问线（最高 241——`ledger.mjs`·实读）⇒ 零拆分义务。
@@ -384,7 +385,8 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 | AC-M2-15 | 工具层参数守卫：写命令三工具非法入参（非对象 / 未知键 / 缺必填（含显式 `null`）/ 错型 / 非枚举 / `title` 空串 / 全空白）⇒ 拒（throw，零写、零库动作）+ 文案逐字（§3.2 P1–P6）；合法形（含复杂文本 / 可空 `null` 字段 / `cwd` 缺省）零回归 | §3.2（2026-09-27 快车道修复 · Gitee #IKIQGK / 台账 #472；需求档补行已落——AC-M2-15 + 变更记录 2026-09-27（父侧）） |
 | AC-M2-16 | 读命令守卫 + `executor` 空值口径（2026-09-28 · 台账 #473 / #474）：`ledger_query` / `ledger_count` 非法过滤参数（非对象 / 未知键 / 枚举外值（含数组 / 错型值）/ 错型）⇒ 拒（throw，零库动作）+ 文案逐字（§3.2 P1–P6）；合法形（缺省 / 可空 `null` / 过滤命中）零回归；`ledger_update` 显式 `executor: null` 与略去同判（进「在途」自动写会话 sessionId——§3.1 优先级链） | §3.1 / §3.2（需求侧补行**已落**——AC-M2-15 射程注 + AC-M2-16 新增，2026-09-28（父侧）） |
 | AC-M2-17 | **根解析面歧义拒**（2026-10-02 · #828）：歧义锚（≥2 候选——`projectRootView` `ambiguous` 态）⇒ `openLedger` 显式拒——**零写**（库档不建 / 不落行）+ 列候选（全列按名排序）+ 显式项目根指引；`ok` / `none` 两态零回归（none ⇒ `resolve(cwd ?? ".")` 兜底照旧）。断言 = 按族锚（「项目不可解析」——不逐字形） | §2.1（根解析面 · fix 轮） |
-| AC-M2-18 | **标记 = 当前打开范围合计**（2026-10-03 · 需求 §13.3 第 1 条修订）：容器根锚（族 ≥1 已读项目）⇒ 标记 = 族内已读项目两池分列求和（`台账 <Σpool>·<Σtech>`）；具体项目锚 ⇒ 仅该项目自己（兄弟零掺——负向锁）；命中但不可读 ∥ 空范围 ⇒ `marker = null`；`warn` 同范围聚合（范围内 `aged>0 ∨ deadExecutors>0`） | FR24（需求 §13.3 第 1 条「状态行极简标记」· 2026-10-03） |
+| AC-M2-18 | **标记 = 当前打开范围合计**（2026-10-03 · 需求 §13.3 第 1 条修订）：容器根锚（族 ≥1 已读项目）⇒ 标记 = 族内已读项目两池分列求和（`台账 <Σpool>·<Σtech>`）；具体项目锚 ⇒ 仅该项目自己（兄弟零掺——负向锁）；命中但不可读 ∥ 空范围 ⇒ `marker = null`（命中 = **可解析项目**）；`warn` 同范围聚合（范围内 `aged>0 ∨ deadExecutors>0`） | FR24（需求 §13.3 第 1 条「状态行极简标记」· 2026-10-03） |
+| AC-M2-19 | **歧义锚不充当项目**（2026-10-04 轻通道轮——AC-M2-18 范围面子例）：命中锚 `projectRootView` `ambiguous`（如锚位存量键控库先于 #828 写门）⇒ 按容器根形落子目录族求和——键控库存在 ≠ 可作项目（消静默缺席）；T51 面（**可解析**项目命中但不可读 ⇒ `null`）不受触 | FR24（需求 §13.3 第 1 条「状态行极简标记」· 歧义根子例） |
 
 **用例表（摘）**：T1 入条目 → 新行 id 自增 · T2 状态迁移 → status 更新 + `updated_at` 刷新 · T3 勾销 → status 已核销 + `closed_at` 写入、行保留（软删除）· T4 未决四态计数（混入归档行）· T5 `trigger=NULL` 通过 · T6 非法 status 拒 · T7 在途缺 task_book 拒 · T8 非主 agent 写 → 命令不存在 · T9 status NULL 拒 · T10 迁移表外迁移拒（行不变）。
 
@@ -437,7 +439,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 - T46 边界：声明源前缀 `task_book`（#832——实现 = 本批实施轮）：项目声明 `docs-repo` ⇒ 其内 `x.md`（存在）⇒ 通过；未声明前缀 ⇒ 照旧拒；声明根缺位 ⇒ 拒。
 - T55 迁移旗同源（#834——实现 = 本批实施轮）：声明源前缀 `task_book`（目标档在）⇒ 写门通过 ∧ `writeGateFlag` 零旗；未声明前缀 ∥ 声明根缺位 ∥ 目标档缺 ⇒ 两处同判（拒 ∥ 旗）；仓根形全谱 = 既有断言逐字零变（回归腿）。
 
-**用例表（续——标记范围合计，2026-10-03 批（#882）；批内单测件 = `docs/batches/2026-10-03-ledger-family-aggregate.test.mjs`（拟新增——实施轮随批留存）；夹具 = 临时台账目录注入（`_setLedgerDirForTest`）+ 双项目临时树）**：
+**用例表（续——标记范围合计，2026-10-03 批（#882）；批内单测件 = `docs/batches/2026-10-03-ledger-family-aggregate.test.mjs`（在位 · 239 行 · as-of 2026-10-04）；夹具 = 临时台账目录注入（`_setLedgerDirForTest`）+ 双项目临时树）**：
 
 - T47 正常：容器根锚（双项目夹具）⇒ `marker` = 两池分列求和（例 `台账 3·4`——两目数值可区分 ⇒ 求和可判）。
 - T48 负向锁：具体项目锚（A 目录内）⇒ `marker` = A 自身数（B 的数零掺入）。
@@ -460,7 +462,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 - **判活四不做**（F-LX1 · 2026-09-21 本批）：不做写径探测（`ledgerUpdate` / `ledgerClose` 零判活——判活只落显示面）；不做逐行 exec（一次批量 + 5s TTL 缓存——§7.3.1 性能红线）；不做心跳写共享 SQLite / 自动接手 / 自动清 executor（多进程写竞争 + 绕用户 gate——父侧必答②裁定）；L1 标记文本零扩。
 - **库键与迁移**（§2.1 / §2.2 · 2026-09-25 批）：不做 `realpath` / 符号链接解析；不做**非盘符段大小写折叠**（POSIX 大小写敏感——同 `MEMORY.md` §6.11 口径）；不做别名路径（subst / junction / 8.3）；不做跨项目全量迁移（逐项目锚定）；迁移不自动执行（需 `--confirm`）；存量残档不删除（只报告 + 回收建议）；不动其他用户态面（sessions / checkpoints / memory / `ledger-notify.json` 存量）。
 - **工具层参数守卫**（2026-09-27 快车道修复 · 2026-09-28 扩读面 · §3.2）：参数校验射程 = 工具层五入口（写命令三 + 读命令二）；守卫判于核函数之前 ⇒ 核函数体零新增校验（核面改动 = §6.1 写门缺指针 / 空串形——落 `assertTaskBookGate` helper）。
-- **标记范围批（2026-10-03 · #882）不做**：不改明细行集口径（`当前 ∪ 可动作`——§7.2）；不改族发现 ∕ 同级枚举上限（`discoverFamily` 零改）；不合并两池为单数（F1）；不改空值语义（`null` = 无标记——不落 `0·0`）；不改变化行 ∕ 送达门 ∕ 去重档（L3 ∕ L4 零改）。
+- **标记范围批（2026-10-03 · #882）不做**：不改明细行集口径（`当前 ∪ 可动作`——§7.2）；不改族发现 ∕ 同级枚举上限（枚举算法 ∥ 同级上限零改；**歧义命中排除** = 2026-10-04 轻通道轮加——§7.2）；不合并两池为单数（F1）；不改空值语义（`null` = 无标记——不落 `0·0`）；不改变化行 ∕ 送达门 ∕ 去重档（L3 ∕ L4 零改）。
 
 ## 10. 不并项与历史沿革
 
@@ -513,3 +515,4 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 - 2026-10-03（**ledger-family-aggregate 批 · 设计评审轮 1 修正** · eng-designer——fix 轮；承批档 `docs/batches/2026-10-03-ledger-family-aggregate.md` §3 轮次 1 发现 1–3 ∥ 5–7（发现 4 ∥ 8 = 需求档笔——父侧已办））：§7.2 标记范围条补**范围推导 ∥ 两参对账 ∥ 容器根自身带台账归属**明文 + `marker` 文本**委托 `formatMarker` 逐字模板**句 + 受影响面指针（表住批档 §2.4；零贴线 ⇒ 零拆分）；§7.1 `formatMarker` 行补**范围限定括注**；§8 AC-M2-18 回指改可解析形态（需求 §13.3 第 1 条「状态行极简标记」）· T53 补死执行者腿 · T54「三态」改「两形」。**语义零改**（归约语义 ∥ 判据本体 ∥ 用例断言对象零动）。
 - 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #834）：§6.1 增**口径 5（迁移旗同源）**——共享解析单点 `resolveDeclaredRef`（`thincoder-core/declaration.mjs` 新导出）；§8 增用例 **T55**。**既有拒绝面零改**；实现 = 本批实施轮（待 #51 写域收口后派发）。
 - 2026-10-04（**issue 修复批·五 · fix 轮（评审 #70 发现 3 ∥ 8 · 父侧全采纳）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §3 轮次 1）：§6.1 口径 5 补**消费关系**（声明源段 ≤ 消费 `declaredPublicRoots`——不二写）+ **解析序回指单源**（`DOC-DISCIPLINE.md` §4.2.2）；§8 用例改号 **T47 ⇒ T55**（消 #882 批 T47–T54 撞号）。**原判据零改**（单源关系明写 ∥ 编号收正）。
+- 2026-10-04（**轻通道轮 · 收尾形式化 · eng-designer**——承批档 `docs/batches/2026-10-04-light-ledger-ghost-root.md` §1 · 台账 #899）：§7.2「标记范围」条补**歧义根子例**（歧义命中不充当台账项目——键控库存在 ≠ 可作项目；按容器根形落子目录族；T51 面不受触）+ §8 增 **AC-M2-19** · AC-M2-18 补「命中 = 可解析项目」限定；§7.1 `discoverFamily` 行 ∥ §9 边界句 ∥ §8 用例表件标记（拟新增 ⇒ 在位 · 239 行）随动。**语义 = 已落修复的形式化**（实现 = `thincoder-core/ledger.mjs:21` ∥ `:96-102`；红绿对 ∥ 走查读数 = 批档 §1）；需求档零改。

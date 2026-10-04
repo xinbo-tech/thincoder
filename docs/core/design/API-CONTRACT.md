@@ -44,8 +44,9 @@
 | `isExecutableLine` | `scripts/doc-check-width.mjs:51` | `fn` |
 | `inCodeSpan` | `scripts/doc-check-width.mjs:59` | `fn` |
 | `checkDocWidths` | `scripts/doc-check-width.mjs:66` | `fn` |
-| `formatReport` | `scripts/doc-check.mjs:24` | `fn` |
-| `main` | `scripts/doc-check.mjs:47` | `fn` |
+| `detectRoot` | `scripts/doc-check.mjs:25` | `fn` |
+| `formatReport` | `scripts/doc-check.mjs:48` | `fn` |
+| `main` | `scripts/doc-check.mjs:71` | `fn` |
 | `stripCanonOperands` | `scripts/prompt-refs-check.mjs:43` | `fn` |
 | `stripCodeLine` | `scripts/prompt-refs-check.mjs:71` | `fn` |
 | `lineHits` | `scripts/prompt-refs-check.mjs:91` | `fn` |
@@ -995,33 +996,33 @@
 | `ledgerAddTool` | `thincoder-core/ledger-tools.mjs:108` | `const` |
 | `ledgerUpdateTool` | `thincoder-core/ledger-tools.mjs:135` | `const` |
 | `ledgerCloseTool` | `thincoder-core/ledger-tools.mjs:170` | `const` |
-| `AGING_DAYS` | `thincoder-core/ledger.mjs:28` | `const` |
-| `THRESHOLD_BOARD` | `thincoder-core/ledger.mjs:30` | `const` |
-| `THRESHOLD_POOL` | `thincoder-core/ledger.mjs:32` | `const` |
-| `REFRESH_MS` | `thincoder-core/ledger.mjs:34` | `const` |
-| `NOTIFY_FILE` | `thincoder-core/ledger.mjs:36` | `const` |
-| `EMPTY_FAMILY_LINE` | `thincoder-core/ledger.mjs:38` | `const` |
-| `normalizeEntry` | `thincoder-core/ledger.mjs:42` | `fn` |
-| `entryTitle` | `thincoder-core/ledger.mjs:47` | `fn` |
-| `findProject` | `thincoder-core/ledger.mjs:58` | `fn` |
-| `MAX_SIBLING_SCAN` | `thincoder-core/ledger.mjs:70` | `const` |
-| `discoverFamily` | `thincoder-core/ledger.mjs:95` | `fn` |
-| `buildScan` | `thincoder-core/ledger.mjs:117` | `fn` |
-| `formatMarker` | `thincoder-core/ledger.mjs:147` | `fn` |
-| `scopeMarkerOf` | `thincoder-core/ledger.mjs:157` | `fn` |
-| `formatDetailLine` | `thincoder-core/ledger.mjs:175` | `fn` |
-| `formatAgingLine` | `thincoder-core/ledger.mjs:180` | `fn` |
-| `formatThresholdLine` | `thincoder-core/ledger.mjs:185` | `fn` |
-| `detailScans` | `thincoder-core/ledger.mjs:190` | `fn` |
-| `planChangeLines` | `thincoder-core/ledger.mjs:198` | `fn` |
-| `notifyKey` | `thincoder-core/ledger.mjs:212` | `fn` |
-| `loadNotifyState` | `thincoder-core/ledger.mjs:217` | `fn` |
-| `saveNotifyState` | `thincoder-core/ledger.mjs:226` | `fn` |
-| `ALLOWED_MIGRATIONS, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn` | `thincoder-core/ledger.mjs:237` | `named` |
-| `ledgerAdd, ledgerClose, ledgerCount, ledgerQuery, ledgerUpdate` | `thincoder-core/ledger.mjs:238` | `named` |
-| `ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool` | `thincoder-core/ledger.mjs:239` | `named` |
-| `runLedgerAudit, runLedgerMigrate` | `thincoder-core/ledger.mjs:240` | `named` |
-| `resolveExecutorStates, executorTail, _setExecutorProbeTtlForTest` | `thincoder-core/ledger.mjs:241` | `named` |
+| `AGING_DAYS` | `thincoder-core/ledger.mjs:29` | `const` |
+| `THRESHOLD_BOARD` | `thincoder-core/ledger.mjs:31` | `const` |
+| `THRESHOLD_POOL` | `thincoder-core/ledger.mjs:33` | `const` |
+| `REFRESH_MS` | `thincoder-core/ledger.mjs:35` | `const` |
+| `NOTIFY_FILE` | `thincoder-core/ledger.mjs:37` | `const` |
+| `EMPTY_FAMILY_LINE` | `thincoder-core/ledger.mjs:39` | `const` |
+| `normalizeEntry` | `thincoder-core/ledger.mjs:43` | `fn` |
+| `entryTitle` | `thincoder-core/ledger.mjs:48` | `fn` |
+| `findProject` | `thincoder-core/ledger.mjs:59` | `fn` |
+| `MAX_SIBLING_SCAN` | `thincoder-core/ledger.mjs:71` | `const` |
+| `discoverFamily` | `thincoder-core/ledger.mjs:99` | `fn` |
+| `buildScan` | `thincoder-core/ledger.mjs:123` | `fn` |
+| `formatMarker` | `thincoder-core/ledger.mjs:153` | `fn` |
+| `scopeMarkerOf` | `thincoder-core/ledger.mjs:163` | `fn` |
+| `formatDetailLine` | `thincoder-core/ledger.mjs:181` | `fn` |
+| `formatAgingLine` | `thincoder-core/ledger.mjs:186` | `fn` |
+| `formatThresholdLine` | `thincoder-core/ledger.mjs:191` | `fn` |
+| `detailScans` | `thincoder-core/ledger.mjs:196` | `fn` |
+| `planChangeLines` | `thincoder-core/ledger.mjs:204` | `fn` |
+| `notifyKey` | `thincoder-core/ledger.mjs:218` | `fn` |
+| `loadNotifyState` | `thincoder-core/ledger.mjs:223` | `fn` |
+| `saveNotifyState` | `thincoder-core/ledger.mjs:232` | `fn` |
+| `ALLOWED_MIGRATIONS, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn` | `thincoder-core/ledger.mjs:243` | `named` |
+| `ledgerAdd, ledgerClose, ledgerCount, ledgerQuery, ledgerUpdate` | `thincoder-core/ledger.mjs:244` | `named` |
+| `ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool` | `thincoder-core/ledger.mjs:245` | `named` |
+| `runLedgerAudit, runLedgerMigrate` | `thincoder-core/ledger.mjs:246` | `named` |
+| `resolveExecutorStates, executorTail, _setExecutorProbeTtlForTest` | `thincoder-core/ledger.mjs:247` | `named` |
 | `MAX_LINE` | `thincoder-core/log.mjs:37` | `const` |
 | `_setLogsDirForTest` | `thincoder-core/log.mjs:51` | `fn` |
 | `_resetLogsDirForTest` | `thincoder-core/log.mjs:52` | `fn` |
