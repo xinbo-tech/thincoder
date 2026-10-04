@@ -92,11 +92,11 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 
 ## 7. 测试
 
-`thincoder-cli/test/edit-tool-improvement.test.mjs`（**45 用例——41 快 + 4 slow**：删行形态全路径 / 显式空串拒含 `replace_all` / normalize 弯引号命中 + 单遍映射单元 / 防误匹配 / 批量删行 + 模糊端到端 / **#325 入参守卫 9 例** / **#327 三例**）。
+`thincoder-cli/test/edit-tool-improvement.test.mjs`（**已随 2026-09-28 测试树全清退场——档不在盘**；原 **45 用例——41 快 + 4 slow**：删行形态全路径 / 显式空串拒含 `replace_all` / normalize 弯引号命中 + 单遍映射单元 / 防误匹配 / 批量删行 + 模糊端到端 / **#325 入参守卫 9 例** / **#327 三例**）。
 **#325 守卫 9 例** = 核 5（真值非数组三态 `"[]"` / `{…}` / `42` + `[null]` / 非对象条目 ⇒ 成形错误、零裸抛）+ 桥 4（空数组 / `[null]` / 非对象条目经 `toolRouter` ⇒ `Error: <msg>`、零反向 RPC + 合法批量正向对照）。
 **#327 三例**（`docs/core/design/TOOLS.md` §6.17 裁定 3 / 4）= 窄形态两通道同拒（`edits` 真值非数组 + 合法单形态参数：桥路由与核 `execute` 同错误面、零写入）+ `args = null` 下 `write` / `edit` **必败**（形态据实施轮先跑读数定——`Error:` 串 ∥ 抛错）、目标零变更（「该调用必败」前提机检）。
 **#796 汇总行 4 例**（批内件 `docs/batches/2026-10-04-core-patch-batch.test.mjs`——随批档留存 · 不进仓套件）：逐字汇总行 ∥ 路径去重序 ∥ 恒定（N=1 与 N=n 同附）∥ >64K 经 `offloadToolResult`（临时目录）preview 仍含末行。
-VSC 侧同名档 `thincoder-vscode/test/edit-tool-improvement.test.mjs`（同引核面——守卫随核生效、端档零改）。
+VSC 侧同名档 `thincoder-vscode/test/edit-tool-improvement.test.mjs`（**已随 2026-09-28 测试树全清退场——档不在盘**；同引核面——守卫随核生效、端档零改）。
 
 ## 8. 并入的关键决策记录（含否决备选）
 

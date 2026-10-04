@@ -11,7 +11,7 @@ const isHomeDir = (dir) => typeof dir === "string" && dir !== "" &&
 export async function handleReindexCommand(ctx) {
   const { agent, distillOpts, pushLine } = ctx
   if (isHomeDir(agent.cwd)) { // #867：home 根 ⇒ 跳过（零表删 ∥ 三 sync 零调用；含出路提示）
-    pushLine("[reindex] Skipped: working directory is the home directory — start in a project dir (or declare index.excludePaths to narrow scope)", C.warn)
+    pushLine("[reindex] Skipped: working directory is the home directory — start in a project dir", C.warn)
     return
   }
   const { syncDir, codeSync, docSync } = await import("@thincoder/core/memory.mjs")

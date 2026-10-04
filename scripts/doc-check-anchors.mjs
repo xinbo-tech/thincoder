@@ -146,7 +146,7 @@ export function extractAnchors(line, opts = {}) {
     if (/[<>{}*?…]/.test(token)) continue; // 元字符 = 模式串，不判
     if (PLACEHOLDERS.has(basename(token).replace(/\.[A-Za-z0-9]+$/, "").toLowerCase())) continue;
     if (DOT_DIR_RE.test(token)) continue; // 隐含目录
-    if ((token.match(EXT_SEG_RE) ?? []).length >= 2 && !(opts.declaredNames?.has(token.split("/")[0]))) continue; // 多扩展段（模式串）；声明源前缀 token 免（#832）
+    if ((token.match(EXT_SEG_RE) ?? []).length >= 2 && !(opts.declaredNames?.has(token.split("/")[0]))) continue; // 多扩展段（模式串）；声明源前缀 token 免（#832）。※#904 测过扩面（2026-10-04）：仓根前缀白名单判锚 ⇒ 悬空 607 条（09-28 测试树全清 + 各代档残引大存量）——现存量不可闸，改「报告态先行」入 #904 在册
     if (isExecutableLine(line)) continue; // 命令 / 搜索模式串码段保字面
     const after = line.slice(m.index + m[0].length);
     if (token.endsWith(".md") && SECTION_AFTER_RE.test(after)) continue; // 小节引用（页面锚，非路径锚）

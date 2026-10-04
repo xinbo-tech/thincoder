@@ -275,7 +275,7 @@ export async function backgroundIndex(ctx) {
   const { agent, state, render, pushLine } = ctx
   const cwd = agent.cwd
   if (isHomeDir(cwd)) { // #867：home 根 ⇒ 跳过索引（三 sync 零调用；不阻断启动）
-    pushLine("[index] Skipped: working directory is the home directory — start in a project dir (or declare index.excludePaths to narrow scope)", C.warn)
+    pushLine("[index] Skipped: working directory is the home directory — start in a project dir", C.warn)
     return
   }
   const { codeSync, docSync, gitSync } = await import("@thincoder/core/memory.mjs")
