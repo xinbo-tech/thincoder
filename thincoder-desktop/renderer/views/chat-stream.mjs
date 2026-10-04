@@ -14,19 +14,17 @@ export function blockKey(block, index) {
   return block?.id ?? String(index)
 }
 
-/** 流面结算步（纯件）：**项位次 = 账位 + 作业回放**（`prepend{count}` ⇒ 全体 +count ∥ `insert{index}` ⇒ 位次
- *  ≥ index 者 +1 ∥ `cut{index}` ⇒ 命中项摘除 ∥ 其后 −1 —— 纯加减）；**留判 = 落于目标窗**
+/** 流面结算步（纯件）：**项位次 = 账位 + 作业回放**（`insert{index}` ⇒ 位次 ≥ index 者 +1 ∥ `cut{index}` ⇒ 命中项摘除 ∥ 其后 −1 —— 纯加减）；**留判 = 落于目标窗**
  *  `[model.hidden, model.hidden + model.blocks.length)`。**摘 = 按数**（头段越位项）∥ **造 = 给没有节点的内容造
  *  节点**（窗位缺账项者 —— 头段**前插** ∥ 尾段**追加** ∥ 中洞**就位**）∥ **刷 = 就地**（留位且块对象变者）。
- *  `build`（整置 —— 页回执首屏 ∥ 换会话 ∥ 关页）⇒ 账整清 + 窗位全造（无保持段 ⇒ 全走头段口径；帧出口实以
- *  构造径 `mountChat` 承接 —— 此形只作纯件契约）。 */
+ *  `build`（整置 —— 页回执首屏 ∥ **回填页并入** ∥ 换会话 ∥ 关页）⇒ 账整清 + 窗位全造（无保持段 ⇒ 全走头段口径；帧出口实以构造径 `mountChat` 承接 —— 此形只作纯件契约）。 */
 export function flowStep({ account = null, model = null, ops = [] } = {}) {
   const list = Array.isArray(account?.mounted) ? account.mounted : []
   const blocks = Array.isArray(model?.blocks) ? model.blocks : []
   const start = Number.isFinite(model?.hidden) ? model.hidden : 0
   const end = start + blocks.length
   const plan = { drop: [], build: [], refresh: [], head: { drop: [], build: [] } }
-  // 账位 + 作业回放（序即到达序；位次随位置序同升 —— 回放只作整体平移 ∥ 单位摘除）
+  // 账位 + 作业回放（序即到达序；位次随位置序同升 —— 回放只作局部平移 ∥ 命中摘除）
   const base = Number.isFinite(account?.hidden) ? account.hidden : 0
   const entries = list.map((entry, index) => ({ entry, at: base + index, held: true }))
   for (const op of Array.isArray(ops) ? ops : []) {
@@ -36,10 +34,7 @@ export function flowStep({ account = null, model = null, ops = [] } = {}) {
       for (let pos = start; pos < end; pos += 1) plan.head.build.push({ index: pos - start, block: blocks[pos - start], before: null })
       return plan
     }
-    if (kind === "prepend") {
-      const count = Number.isFinite(op.count) ? Math.max(0, Math.floor(op.count)) : 0
-      for (const item of entries) item.at += count
-    } else if (kind === "insert" && Number.isFinite(op.index)) {
+    if (kind === "insert" && Number.isFinite(op.index)) {
       for (const item of entries) if (item.at >= op.index) item.at += 1
     } else if (kind === "cut" && Number.isFinite(op.index)) {
       for (const item of entries) {

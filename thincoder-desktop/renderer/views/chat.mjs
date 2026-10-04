@@ -176,7 +176,7 @@ function refreshNode(node, block, index, model, handlers) {
 export function settleFrame(root, model, scroll, handlers = {}, account = null) {
   if (!root || typeof root.querySelector !== "function") return []
   const plan = flowStep({ account, model, ops: account?.ops ?? [] })
-  syncDigest(root, model, blockAnchor(root)) // 步①首：行族出生 ∥ 缺行补建（**唯追加**——到达序；先于造项）
+  syncDigest(root, model, blockAnchor(root)) // 步①首：行族出生（**唯追加**——到达序；先于造项）
   for (const item of plan.refresh) {
     const fresh = refreshNode(item.entry.node, item.block, item.index, model, handlers)
     if (fresh !== item.entry.node) item.entry.node = fresh // 型变换节点：账项引用随换（后续插点直取同项）

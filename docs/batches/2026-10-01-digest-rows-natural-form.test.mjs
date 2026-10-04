@@ -4,6 +4,7 @@
  * §7「消化行自然形收正批注」八腿）。
  * 八腿（**断代 · 消化重放口径批 · 2026-10-01 · 台账 #771 ∥ #773 收正——腿 ②（`n = 0` 守句）/ 腿 ④（未结轮照现）随新口径翻**；
  *  新口径机检腿 = `docs/batches/2026-10-01-digest-replay-choices.test.mjs`）：
+ * **as-of 注（父侧 · 2026-10-04——回填落位批 #910 收口）**：腿 ④ 4e ∥ 腿 ⑤ 5d 已改指**记录序形**（回填 = 整置；`prepend` 退场）；原「复入窗补建 = 流末（到达序）」断言随批撤销。判据单源 = `docs/batches/2026-10-04-digest-reentry-order.md` §2。
  *      ① **行出即留**（多轮串行：各行元素恒转续 ∥ 文 ∥ class 逐值不变；换代零摘除）
  *      ② **终态追加**（`end` ⇒ 终态行（锚 `data-digest-end`——词 = `digest.done` ∕ `digest.aborted`）追加；
  *         原 digesting 行在场且文不变（`digest.start` 逐字）；`n = 0` 轮零计数行 ∥ **零终态行**——守句）
@@ -207,7 +208,11 @@ const blocksOf = (root) => [...root.querySelectorAll("[data-block-kind]")]
 const at = (root, node) => root.childNodes.indexOf(node)
 const typeOfRow = (row) => ["label", "count", "cap", "end"].find((name) => row.getAttribute(`data-digest-${name}`) !== null) ?? null
 /** 真帧路（镜像 `renderer/app.mjs` `paintChat` 结算径）：模型 ⇒ 结算步（入流步 + 帧尾态刷）。 */
-const frame = (root, state, mounted) => chat.settleFrame(root, chatModel.chatModel(state), SCROLL, {}, { mounted, hidden: 0, ops: state.flowOps ?? [] })
+const frame = (root, state, mounted) => {
+  const ops = state.flowOps ?? []
+  if (ops.some((op) => op.kind === "build")) return mount(root, state)
+  return chat.settleFrame(root, chatModel.chatModel(state), SCROLL, {}, { mounted, hidden: 0, ops })
+}
 /** 构造径（镜像 `renderer/app.mjs` `paintChat`：`mountChat` + 同帧帧尾态刷配对 —— 配对 = 不变量）。 */
 const mount = (root, state) => {
   const model = chatModel.chatModel(state)
@@ -469,7 +474,7 @@ test("腿 ④·复列全量：foldDigest 多轮产出 + 截断闸 + 未结轮照
   assert.equal(back.digest[KEY].length, 3, "回填径：折叠轮并入（现轮集在场不挡）")
   assert.deepEqual(back.digest[KEY].map((round) => round.at ?? null), [20, 30, null], "并序 = 折叠轮居前 ∥ 现轮集随后")
   assert.equal(back.digest[KEY][2], live2, "活段原引用（零改写）")
-  assert.deepEqual(back.flowOps, [{ kind: "prepend", count: 1 }], "回填径结构作业 = prepend（并入页块数）")
+  assert.deepEqual(back.flowOps, [{ kind: "build" }], "回填径结构作业 = build（整置——记录序重放；回填落位批 2026-10-04）")
   assert.deepEqual(back.blocks.map((block) => block.text), ["旧", "今"], "块序 = 记录序（页块前插）")
 })
 
@@ -526,7 +531,7 @@ test("腿 ⑤·重载复列：全轮行组于其记录位次复列（恢复序 �
     assert.equal(rowsOf(root3).length, 0, "窗下界之外零复列（位次 < 首枚已标块位次）")
     assert.equal(blocksOf(root3).length, 1, "块面零扰")
 
-    // 5d 懒加载径（增量 prepend）：折叠轮并入（位次轮在区缺行）⇒ 复入窗补建于当刻流末（到达序——既有行零动）∥ 前插只动块
+    // 5d 懒加载径（回填 = 整置——回填落位批 2026-10-04）：折叠轮并入 ⇒ 构造径重放（记录序）——位次轮行组落其记录位次（旧(10) 之后）∥ 节点换代（删档 + 新写）
     const root4 = freshRoot()
     let state4 = baseState({ blocks: [{ kind: "assistant", text: "今", at: 90, id: "n0" }] })
     let mounted4 = mount(root4, state4)
@@ -542,14 +547,14 @@ test("腿 ⑤·重载复列：全轮行组于其记录位次复列（恢复序 �
     assert.equal(merged.digest[KEY].length, 2, "并入：折叠轮居前 ∥ 活轮随后")
     mounted4 = frame(root4, merged, mounted4)
     const filled4 = rowsOf(root4)
-    assert.equal(filled4.length, 5, "复入窗补建：位次轮三行于当刻流末补建（既有两行 + 三行）")
-    assert.deepEqual(filled4.slice(0, 2), born, "既有行零动（同节点 ∥ 零搬移 ∥ 零改）")
-    assert.deepEqual(filled4.slice(2).map(typeOfRow), ["label", "count", "end"], "补建组行序 = 标签 → 计数 → 终态")
-    assert.ok(filled4.slice(2).every((row) => row._digestRound?.at === 20), "补建行标 = 位次轮（记录位次 20）")
+    assert.equal(filled4.length, 5, "整置重放：位次轮三行 + 活轮两行（合计 5）")
+    assert.ok(!filled4.some((row) => born.includes(row)), "节点换代（整置 = 删档 + 新写——非「零动」）")
+    assert.deepEqual(filled4.map((row) => row._digestRound?.at ?? null), [20, 20, 20, null, null], "序 = 位次轮组（记录位次 20）→ 活轮组（流末）")
+    assert.deepEqual(filled4.slice(0, 3).map(typeOfRow), ["label", "count", "end"], "位次轮组行序 = 标签 → 计数 → 终态")
     assert.deepEqual(blocksOf(root4).map((block) => block.textContent.includes("旧")), [true, false], "前插只动块（页块首前插）")
     const root5 = freshRoot()
     mount(root5, merged)
-    assert.equal(rowsOf(root5).length, 5, "重建径承接：折叠轮组（3）+ 活轮组（2）全量复列")
+    assert.equal(rowsOf(root5).length, 5, "重建径承接：同一整置输出（幂等——5 行）")
 
     // 5e 重建后新轮起跑（混排态 —— 复列行组在场 ∥ 活流段尾部再添轮）：新轮行族出生（既有组零动）
     const root6 = freshRoot()
@@ -557,14 +562,14 @@ test("腿 ⑤·重载复列：全轮行组于其记录位次复列（恢复序 �
     let mounted6 = mount(root6, state6) // 构造径（重建复列）
     const repl = rowsOf(root6)
     assert.equal(repl.length, 6, "复列两轮行组（各三轮）")
-    state6 = wake.onDigest(state6, { key: KEY, status: "start", n: 2 })
+    state6 = wake.onDigest({ ...state6, flowOps: [] }, { key: KEY, status: "start", n: 2 })
     mounted6 = frame(root6, state6, mounted6)
     const after6 = rowsOf(root6)
     assert.equal(after6.length, 8, "新轮起跑：行族于当刻流末出生（两行）")
     assert.deepEqual(after6.slice(0, 6), repl, "既有复列组零动（同节点 ∥ 零增）")
     assert.deepEqual(after6.slice(6).map(typeOfRow), ["label", "count"], "新轮行组 = 标签 + 计数")
     assert.ok(at(root6, after6[7]) > at(root6, after6[5]), "新轮行组居流末（既有组之后）")
-    state6 = wake.onDigest(state6, { key: KEY, status: "end", ok: true, ms: 300 })
+    state6 = wake.onDigest({ ...state6, flowOps: [] }, { key: KEY, status: "end", ok: true, ms: 300 })
     mounted6 = frame(root6, state6, mounted6)
     assert.deepEqual(rowsOf(root6).slice(6).map(typeOfRow), ["label", "count", "end"], "终态行追加于新轮组（受词 ∥ 零换文）")
     assert.deepEqual(rowsOf(root6).slice(0, 6), repl, "既有复列组仍零动")

@@ -140,9 +140,9 @@ export function appendBlock(state, block) {
 }
 
 /** 流面作业单写口（**唯一写口** —— 与 `blocks` 写同笔；单源 = `docs/desktop/design/RENDERER.md` §1.1「流面作业单」条）：
- *  结构变更由**发生点**带上作业（有序单；帧出口结算后清账）——`{ kind: "build" }`（整置 —— 页回执首屏 ∥ 换会话 ∥
- *  关页 ∥ 摘至零块）· `{ kind: "prepend", count }`（回填并入 —— 首前插）· `{ kind: "insert", index }`（按位插入 ——
- *  座次位）· `{ kind: "cut", index }`（退流 —— 本地先行回声按引用摘）；**新块到达零作业**（追加由账自明）。
+ *  结构变更由**发生点**带上作业（有序单；帧出口结算后清账）——`{ kind: "build" }`（整置 —— 页回执首屏 ∥ **回填页并入**
+ *  （回填落位批 · 2026-10-04） ∥ 换会话 ∥ 关页 ∥ 摘至零块）· `{ kind: "insert", index }`（按位插入 —— 座次位，#765 在册面）·
+ *  `{ kind: "cut", index }`（退流 —— 本地先行回声按引用摘）；**新块到达零作业**（追加由账自明）。
  *  入单校验面 = 帧侧 `flowStep`（畸形项静默跳过，帧尾随清账）。 */
 export function withFlowOp(state, op) {
   return { ...state, flowOps: [...(state.flowOps ?? []), op] }

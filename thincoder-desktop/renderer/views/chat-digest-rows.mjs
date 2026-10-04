@@ -1,6 +1,7 @@
 /**
  * chat-digest-rows.mjs — 对话流消化行族**单档**（桌面消化痕拆批 · 2026-10-01 · 台账 #765 拆后最小形；
- * **自然形收正批 · 2026-10-01 · 台账 #768 收正**：行 = 流内事件 · **出即留**）。
+ * **自然形收正批 · 2026-10-01 · 台账 #768 收正**：行 = 流内事件 · **出即留**；**回填落位批 · 2026-10-04**（台账 #910）：
+ * 复入窗 ⇒ **整置径**（删档 + 新写——记录序重放；位次轮缺行随整置落其记录位次——零位置机具：零寻位 ∥ 零搬移 ∥ 零算术））。
  * 形态（对位两端实形；单源 = `docs/desktop/design/RENDERER.md` §1.1「流内消化行族」条）：消化行 = **流内普通项** ——
  * 行元素 = 流内并列兄弟（无轮容器 ∥ 不占块序 ∥ 不计 `data-blocks`）；每轮 1–4 枚（起跑标签行 ∥ `n > 0` 计数行 ∥ cap 行 ∥ 终态行）。
  * 生命周期（自然形 —— **零清理机器**）：
@@ -10,7 +11,7 @@
  *      `digest.aborted` 直取）；**不动**原 digesting 行——计数行恒起跑文 `digest.start` ∥ 标签行恒在）；
  *   ③ **零摘除**——旧轮行留置原位（不改 ∥ 不删 ∥ 不退场）；行随流自然上浮（离开视野 = 滚动，非删除）。
  * 复列 = **记录序重放**（恢复序 ≡ 记录序）：轮于其记录位次复列（**全量——未结轮照现**）∥ 运行期轮 = 流末 —— 归构树面
- * `renderer/views/chat-tree.mjs`（重挂 = 树面重建；重建后行族逐位采纳 —— 零重建）。
+ * `renderer/views/chat-tree.mjs`（重挂 ∥ 首屏 ∥ **回填整置**（回填落位批 · 2026-10-04——删档 + 新写） = 树面重建；行族随树逐位采纳 —— 零采纳步）。
  * 导出面：构树 `digestRows` · 帧刷 `syncDigest` · 位次读面 `roundAt`（记录面字段）·
  * 首屏清点 `clearDigest`（运行期痕五清之四 —— 引调面 `renderer/page-read.mjs`）。
  * 依赖单向：`renderer/views/chat.mjs` ∥ `renderer/views/chat-chrome.mjs` ∥ `renderer/views/chat-tree.mjs` ∥
@@ -174,7 +175,7 @@ function remember(root, live, rows) {
 }
 
 /** 窗下界（**首枚已标块位次** —— 沿构树面 `renderer/views/chat-tree.mjs` 同判据；块序列零位次 ⇒ `null` —— 下界
- *  未知 ⇒ 全数在区）。窗判据两处同判（构树面 ∥ 复入窗补建步）——判据形 = `at ≥` 下界。 */
+ *  未知 ⇒ 全数在区）。窗判据两处同判（构树面 ∥ 本档 `syncRoundRows` 区滤）——判据形 = `at ≥` 下界。 */
 function floorOf(blocks) {
   const found = (Array.isArray(blocks) ? blocks : []).find((block) => typeof block?.at === "number" && Number.isFinite(block.at))
   return found?.at ?? null
@@ -189,23 +190,6 @@ function inZone(round, floor) {
 /** 行携位次（行标 `_digestRound` 之位次 —— **记录位次读面**；缺标 ∥ 运行期轮 ⇒ `null`）。 */
 function rowAtOf(node) {
   return roundAt(node?._digestRound)
-}
-
-/** 复入窗补建（**独立尾步 · 幂等** —— 复入窗 = 位次轮**在区** × **缺行**）：无行携该轮记录位次（`at`）者 ⇒ 于
- *  当刻流末补建（`birthRound` —— **到达序**：行落流末 ∥ 行标随写）；有行 ∥ 出区者零建。判据以记录位次为断
- *  （**不以对象引用** —— 轮对象随 `cap` ∕ `end` 更新：同轮换代 ⇒ 零重复建）。零位置存储 ∥ 零新通道。 */
-function reentryBackfill(root, rounds, floor, anchor) {
-  const carried = new Set()
-  for (const node of listRows(root)) {
-    const at = rowAtOf(node)
-    if (at !== null) carried.add(at)
-  }
-  for (const round of rounds) {
-    const at = roundAt(round)
-    if (at === null || !inZone(round, floor) || carried.has(at)) continue
-    birthRound(root, round, anchor)
-    carried.add(at)
-  }
 }
 
 /** 末轮行账三支（帧层 —— **既有三支判据 ∥ 建行面零改**）：同轮续记（就地补齐）∥ 活流新轮（边界轮收梢 + 活流段尾
@@ -234,20 +218,20 @@ function syncRoundRows(root, rounds, floor, anchor) {
       return
     }
   }
-  // 结构采纳（首见 ∥ 重建后 ∥ 轮集收缩）：末组 = 末轮行（自然组域——树面同源 —— 零重建；复入窗补建组不入本判据；
-  // 无组 ⇒ 零复列——窗口即窗口 ∥ 位次轮**出窗**不建行（复入窗缺行 ⇒ 复入窗补建步——行落流末））
+  // 结构采纳（首见 ∥ 重建后 ∥ 轮集收缩）：末组 = 末轮行（自然组域——树面同源 —— 零重建；他轮组不入本判据；
+  // 无组 ⇒ 零复列——窗口即窗口 ∥ 位次轮**出窗**不建行（缺行随整置落其记录位次——回填落位批 · 2026-10-04））
   const groups = groupsOf(listRows(root))
   const lastAt = roundAt(last)
-  // 自然组域 = 非「全组行标位次皆 ≠ 末轮位次」者（复入窗补建组 ∥ 已采纳他轮组出域 —— 补建组不冒「末轮行」位 ∥ 零重标）
+  // 自然组域 = 非「全组行标位次皆 ≠ 末轮位次」者（已采纳他轮组出域 —— 不冒「末轮行」位 ∥ 零重标）
   const natural = groups.filter((list) => !list.every((node) => rowAtOf(node) !== null && rowAtOf(node) !== lastAt))
   const group = natural[natural.length - 1] ?? null
   if (group === null) {
-    // 无组：运行期轮 ⇒ **全数出生**（树上无本键行——DOM 无轮可复列）；零运行期轮（位次轮）⇒ 零复列——窗口即窗口（复入窗缺行 ⇒ 复入窗补建步——行落流末）
+    // 无组：运行期轮 ⇒ **全数出生**（树上无本键行——DOM 无轮可复列）；零运行期轮（位次轮）⇒ 零复列——窗口即窗口（缺行随整置落其记录位次——回填落位批）
     const rows = lives.flatMap((round) => birthRound(root, round, anchor))
     remember(root, lives.length, rows)
     return
   }
-  // 全组标务补全（树面同源档：组序 = 在区轮序 —— 零标组逐组就轮标；判据面 = `at`——复入窗补建步赖以寻行）
+  // 全组标务补全（树面同源档：组序 = 在区轮序 —— 零标组逐组就轮标；判据面 = `at`——行标随建随记 ∥ 零重标）
   const zone = rounds.filter((round) => inZone(round, floor))
   if (account === null && groups.length === zone.length) {
     groups.forEach((list, index) => {
@@ -260,19 +244,16 @@ function syncRoundRows(root, rounds, floor, anchor) {
 
 /** 帧刷（幂等 · **唯追加** —— 行出即留：零就地换文 ∥ 零摘除 ∥ 零搬移）：
  *  模型轮集非数组 ∥ 零轮（非 live 面）⇒ **零动作**（禁对 `none` 帧摘除）；
- *  **末轮行账三支**（同轮续记 ∥ 活流新轮 ∥ 结构采纳 —— 判据 ∥ 建行面见 `syncRoundRows`）∥ **复入窗补建步**
- *  （独立尾步 · 幂等 —— **三支路径同达**）：位次轮**在区**（`at ≥` 窗下界——沿构树面同判据）× **缺行**（无行携
- *  该轮记录位次（`at`）者）⇒ 于当刻流末补建（到达序——见 `reentryBackfill`）；有行 ∥ 出区者零建。
+ *  **末轮行账三支**（同轮续记 ∥ 活流新轮 ∥ 结构采纳 —— 判据 ∥ 建行面见 `syncRoundRows`）。
  *  两处同引 —— 入流步（`renderer/views/chat.mjs` `settleFrame` 步①，先于尾段挂载：同帧批内到达序）∥
  *  帧尾态刷（`renderer/views/chat-chrome.mjs` `syncChrome`；出生已在步①落定 ⇒ 此拍就地零写）。
- *  重挂径 = `mountChat` + 同帧帧尾态刷**配对**（`renderer/app.mjs` `paintChat`；配对 = 不变量——结构采纳的成立前提）。 */
+ *  重挂 ∥ 首屏 ∥ **回填整置径**（回填落位批 · 2026-10-04） = `mountChat` + 同帧帧尾态刷**配对**（`renderer/app.mjs` `paintChat`；配对 = 不变量——结构采纳的成立前提）。 */
 export function syncDigest(root, model, anchor = null) {
   if (!root || typeof root.querySelector !== "function") return
   const rounds = Array.isArray(model?.digest) ? model.digest : null
   if (rounds === null || rounds.length === 0) return // 非 live 面 ∥ 零轮 ⇒ 零动作（零摘除）
   const floor = floorOf(model?.blocks)
   syncRoundRows(root, rounds, floor, anchor) // 末轮行账三支（判据 ∥ 建行面零改）
-  reentryBackfill(root, rounds, floor, anchor) // 复入窗补建步（独立尾步）
 }
 
 /** 首屏页读清点（**运行期痕五清之四** —— 引调面 `renderer/page-read.mjs` 首屏门）：末轮未结（`status !== "end"`）

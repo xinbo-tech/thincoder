@@ -3,7 +3,8 @@
  * 任务书 = `docs/batches/2026-10-01-digest-residue-pair.md` §2（设计块 ∥ 修正块 1–6）。
  * 腿：
  *   ① **销件后现役面零悬空**（去名全链：机检扫描域零命中 ∥ 模块图装载 ∥ 两档导出面零残留）
- *   ② **复入窗补建**（位次轮出窗（零行）→ 前插一页（入区）⇒ 于当刻流末补建（既有行零动）→ 复跑零增零写 → 重建 ⇒ 归记录位次）
+ *   ② **复入窗 = 整置**（位次轮出窗（零行）→ 前插一页（入区）⇒ 整置重放——行归记录位次（回填落位批 2026-10-04 收正）→ 复跑序稳定 → 重建幂等）
+ * **as-of 注（父侧 · 2026-10-04——回填落位批 #910 收口）**：腿 ②③ 已改指**整置形**（`prepend` 退场 ∥ `reentryBackfill` 已删）；原「流末补建」断言随批撤销。判据单源 = `docs/batches/2026-10-04-digest-reentry-order.md` §2。
  *   ③ **换代负控**（「换代后零重复建」——`cap` ∕ `end` 换代（新对象同位次）⇒ 同区间复跑行数零增）
  *   ④ **有行零写负控**（在区有行 ⇒ 零建 ∥ 零写——重建复列行族零复制 ∥ 位次轮行组零重标）
  * 随批留存 · 不进仓套件（全清令：仓套件不写 ∕ 不改 ∕ 不跑）。
@@ -192,8 +193,12 @@ const rowsOf = (root) => [...root.querySelectorAll("[data-digest]")]
 const at = (root, node) => root.childNodes.indexOf(node)
 const typeOfRow = (row) => ["label", "count", "cap", "end"].find((name) => row.getAttribute(`data-digest-${name}`) !== null) ?? null
 const atOfRow = (row) => (typeof row?._digestRound?.at === "number" && Number.isFinite(row._digestRound.at) ? row._digestRound.at : null)
-/** 真帧路（镜像 `renderer/app.mjs` `paintChat` 结算径）：模型 ⇒ 结算步（入流步 + 帧尾态刷）。 */
-const frame = (root, state, mounted) => chat.settleFrame(root, chatModel.chatModel(state), SCROLL, {}, { mounted, hidden: 0, ops: state.flowOps ?? [] })
+/** 真帧路（镜像 `renderer/app.mjs` `paintChat`：含 `build` 作业 ⇒ 构造径（整置）；否则结算径）。 */
+const frame = (root, state, mounted) => {
+  const ops = state.flowOps ?? []
+  if (ops.some((op) => op.kind === "build")) return mount(root, state)
+  return chat.settleFrame(root, chatModel.chatModel(state), SCROLL, {}, { mounted, hidden: 0, ops })
+}
 /** 构造径（镜像 `renderer/app.mjs` `paintChat`：`mountChat` + 同帧帧尾态刷配对 —— 配对 = 不变量）。 */
 const mount = (root, state) => {
   const model = chatModel.chatModel(state)
@@ -243,7 +248,7 @@ test("腿 ①·销件后现役面零悬空：去名全链（机检扫描域零�
 
 // ─── 腿 ②：复入窗补建 ──────────────────────────────────────
 
-test("腿 ②·复入窗补建：位次轮出窗（零行）→ 前插一页（入区）⇒ 当刻流末补建（既有行零动 ∥ 复跑零增零写）→ 重建归记录位次", async () => {
+test("腿 ②·复入窗（回填落位批收正——整置形）：位次轮出窗（零行）→ 前插一页（入区）⇒ 整置重放——行归记录位次（零原地补建）→ 复跑序稳定", async () => {
   await withFakeDom(async () => {
     zh()
     const { root, early, live, state, getMounted, setMounted } = reentryScene()
@@ -258,16 +263,18 @@ test("腿 ②·复入窗补建：位次轮出窗（零行）→ 前插一页（�
     assert.equal(merged.digest[KEY].length, 2, "轮集零动（并入面：页面无消化记录）")
     setMounted(frame(root, merged, getMounted()))
     const after = rowsOf(root)
-    assert.equal(after.length, 5, "复入窗补建：位次轮三行于当刻流末补建（2 + 3）")
-    assert.ok(sameRefs(after.slice(0, 2), before), "既有行零动（同节点 ∥ 零搬移 ∥ 零改——身份面）")
-    assert.deepEqual(after.slice(2).map(typeOfRow), ["label", "count", "end"], "补建组行序 = 标签 → 计数 → 终态")
-    assert.ok(after.slice(2).every((row) => atOfRow(row) === 20), "补建行标 = 该位次轮（记录位次 20 —— 帧层记账）")
-    assert.ok(after.slice(2).every((row) => at(root, row) > at(root, before[1])), "补建组落当刻流末（既有行之后）")
+    assert.equal(after.length, 5, "整置重放：位次轮三行 + 活轮两行（合计 5）")
+    assert.ok(!after.some((row) => before.includes(row)), "节点换代（整置 = 删档 + 新写——非「零动」）")
+    assert.deepEqual(after.map((row) => atOfRow(row)), [20, 20, 20, null, null], "序 = 位次轮组（记录位次 20）→ 活轮组（流末）")
+    assert.deepEqual(after.slice(0, 3).map(typeOfRow), ["label", "count", "end"], "位次轮组行序 = 标签 → 计数 → 终态")
+    const seqA = [...root.querySelectorAll("[data-block-kind],[data-digest]")].map((node) => (node.getAttribute("data-digest") !== null ? "D" : "b"))
+    assert.deepEqual(seqA, ["b", "D", "D", "D", "b", "D", "D"], "归记录位次：位次轮组居旧(10) 与晚(90) 之间（活轮落流末）")
 
-    // 2c 复跑（帧 ∥ 帧尾态刷显式重跑）：零增零写（幂等）
+    // 2c 复跑（整置重放——幂等）：行数 ∥ 序稳定（节点换代 = 重建体例）
     setMounted(frame(root, merged, getMounted()))
-    chrome.syncChrome(root, chatModel.chatModel(merged), {})
-    assert.ok(sameRefs(rowsOf(root), after), "复跑：零增零写（同节点零动——身份面）")
+    const afterC = rowsOf(root)
+    assert.equal(afterC.length, 5, "复跑：行数稳定（5）")
+    assert.deepEqual(afterC.map((row) => atOfRow(row)), [20, 20, 20, null, null], "复跑：序稳定（位次轮组 → 活轮组）")
 
     // 2d 重建 ⇒ 归记录位次（构树面按记录位次复列；补建组随重建退场）
     setMounted(mount(root, merged))
@@ -289,20 +296,20 @@ test("腿 ③·换代负控（「换代后零重复建」）：`cap` ∕ `end` �
     const merged = prependPage(state)
     setMounted(frame(root, merged, getMounted()))
     const filled = rowsOf(root)
-    assert.equal(filled.length, 5, "前置：复入窗补建在册（5 行）")
+    assert.equal(filled.length, 5, "前置：整置重放在场（5 行）")
 
     // 3a 位次轮换代：同 `at` 新对象（模拟 `cap` ∕ `end` 更新 ⇒ 轮引用变）⇒ 判据以位次为断 ⇒ 零重复建
     const rotated = { ...early, ms: 500 }
     assert.notEqual(rotated, early, "换代 = 新对象（引用断）")
     assert.equal(rotated.at, early.at, "同轮位次不变")
-    const rotatedState = { ...merged, digest: { [KEY]: [rotated, live] } }
+    const rotatedState = { ...merged, flowOps: [], digest: { [KEY]: [rotated, live] } }
     setMounted(frame(root, rotatedState, getMounted()))
     assert.equal(rowsOf(root).length, 5, "换代后复跑：行数零增（零重复建）")
-    assert.ok(sameRefs(rowsOf(root), filled), "换代后复跑：同节点零动（零写——身份面）")
+    assert.deepEqual(rowsOf(root).map((row) => atOfRow(row)), filled.map((row) => atOfRow(row)), "换代后复跑：序稳定（整置重放——节点换代）")
 
     // 3b 运行期轮换代（`cap` 帧 ⇒ 新对象）⇒ 既有三支面照旧（末轮行账续记——零重建）
     const rotatedLive = { ...live, n: 3 }
-    const capState = { ...rotatedState, digest: { [KEY]: [rotated, rotatedLive] } }
+    const capState = { ...rotatedState, flowOps: [], digest: { [KEY]: [rotated, rotatedLive] } }
     setMounted(frame(root, capState, getMounted()))
     assert.equal(rowsOf(root).length, 5, "运行期轮换代：行数零增（同轮续记）")
     assert.ok(sameRefs(rowsOf(root).slice(0, 2), filled.slice(0, 2)), "运行期轮行节点零动（身份面）")
@@ -337,9 +344,9 @@ test("腿 ④·有行零写负控：在区有行 ⇒ 零建 ∥ 零写（重建�
       configurable: true,
     })
     try {
-      let next = frame(root, merged, mounted)
+      let next = frame(root, { ...merged, flowOps: [] }, mounted)
       chrome.syncChrome(root, chatModel.chatModel(merged), {})
-      next = frame(root, merged, next)
+      next = frame(root, { ...merged, flowOps: [] }, next)
       assert.ok(sameRefs(rowsOf(root), repl), "帧刷复跑：零建（同节点 ∥ 零增——身份面）")
       assert.ok(rowsOf(root).filter((row) => atOfRow(row) === 20).every((row, index) => row._digestRound === labels[index]), "位次轮行组零重标（补建步只读不写）")
       assert.deepEqual(removals, [], "零行摘除")

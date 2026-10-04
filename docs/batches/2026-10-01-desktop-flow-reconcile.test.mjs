@@ -2,7 +2,8 @@
  * 2026-10-01-desktop-flow-reconcile.test.mjs — 批次本地单元件（台账 #764 · 桌面流面对账面重写（幻影机拔除）· 实施轮）·
  * 任务书 = `docs/batches/2026-10-01-desktop-flow-reconcile.md` §2 分块一–七 + 两修正块（**以修正块为准**）。
  * 六腿（腿集单源 = 批档 §2 分块六 + 修正块 1「腿 1 例表（修正后）」+ 修正块 2「号 8 · 缺口」+ 父侧「缺口-1」裁（本舱补记））：
- *   1 **结算纯件八例**——append ∥ 回填（prepend）∥ insert 中洞 ∥ cut 中段 ∥ build ∥ 刷判定 ∥ 混帧（prepend+cut 同帧）∥
+ *   1 **结算纯件八例**（回填 ∥ 混帧两例已改指「`prepend` 已退场」——回填落位批 2026-10-04 收正）——append ∥ 回填（退场锁）∥ insert 中洞 ∥ cut 中段 ∥ build ∥ 刷判定 ∥ 混帧（随退场——本档删例）∥
+ * **as-of 注（父侧 · 2026-10-04——回填落位批 #910 收口）**：腿 1b/1g/帧 4 已随 `prepend` 退场改指（回填径改用 build 整置）；面锚 ∥ 源断言 ∥ WRITES ∥ 作业点计数同拍收正。判据单源 = `docs/batches/2026-10-04-digest-reentry-order.md` §2。
  *     关页例（build 承 `none` 态：引导节点唯一子 —— 含 `session-wire` 真路）
  *   2 **同尺复测（全量换新 = 0）**——活动期观测窗：根 clear 零次 ∥ 同对象恒同节点（跨帧引用不变）∥ 块节点数 = 窗长
  *   3 **滚动补偿零回归**——贴底（跟滚写超值 ∥ 零读）∥ 补偿算式写值同式 ∥ 零动 ⇒ 零写
@@ -318,17 +319,14 @@ test("腿 1·结算纯件八例：append ∥ 回填 ∥ insert 中洞 ∥ cut �
     assert.deepEqual([plan.build[0].index, plan.build[0].block, plan.build[0].before], [2, C, null], "append：窗位 2 ∥ 取值 model.blocks[pos] ∥ 尾插点")
   }
 
-  // 1b 回填（prepend ⇒ 头段前插）
+  // 1b 回填（`prepend` 已退场——回填落位批 2026-10-04：回填径改用 `build` 整置；回放支已删）
   {
     const P0 = { kind: "assistant", text: "P0" }
     const P1 = { kind: "assistant", text: "P1" }
     const account = { mounted: [ent(A), ent(B)], hidden: 0 }
     const plan = stream.flowStep({ account, model: { blocks: [P0, P1, A, B], hidden: 0 }, ops: [{ kind: "prepend", count: 2 }] })
-    assert.deepEqual(plan.head.drop, [], "回填：零越位摘")
-    assert.deepEqual(plan.head.build.map((item) => item.index), [0, 1], "回填：两枚走头段前插（窗位 0 ∥ 1）")
-    assert.deepEqual(plan.head.build.map((item) => item.block), [P0, P1], "回填：取值 = 并入页块")
-    assert.equal(plan.head.build[0].before, account.mounted[0], "回填：插点 = 其后首账项")
-    assert.equal(plan.build.length + plan.drop.length + plan.refresh.length, 0, "回填：余段零动")
+    assert.deepEqual(plan.head.drop, [], "退场 op：零越位摘")
+    assert.deepEqual(plan.head.build, [], "退场 op：零头段前插（`prepend` 回放支已删——零生产消费）")
   }
 
   // 1c insert 中洞（座次位 —— 类型在册；#765 后无生产写点，见腿 5 白名单）
@@ -375,21 +373,7 @@ test("腿 1·结算纯件八例：append ∥ 回填 ∥ insert 中洞 ∥ cut �
     assert.equal(same.refresh.length, 0, "刷判定：同位同对象 ⇒ 零刷")
   }
 
-  // 1g 混帧（prepend + cut 同帧 —— 证索引累计口径：两笔相叠按序回放 ≠ 各笔独立计位）
-  {
-    const N0 = { kind: "assistant", text: "N0" }
-    const N1 = { kind: "assistant", text: "N1" }
-    const account = { mounted: [ent(A), ent(B), ent(C), ent(D), ent(E)], hidden: 0 }
-    const plan = stream.flowStep({
-      account, model: { blocks: [N0, N1, A, C, D, E], hidden: 0 },
-      ops: [{ kind: "prepend", count: 2 }, { kind: "cut", index: 3 }],
-    })
-    // 期望位次：A→2 ∥ B→摘（回放后位次 3 命中）∥ C→3 ∥ D→4 ∥ E→5；新到前段两项 → 0 ∥ 1
-    assert.deepEqual(plan.drop, [account.mounted[1]], "混帧：B 摘（累计回放后位次 3 命中）")
-    assert.deepEqual(plan.head.build.map((item) => [item.index, item.block]), [[0, N0], [1, N1]], "混帧：新到前段两项 ⇒ 0 ∥ 1（头段前插）")
-    assert.equal(plan.refresh.length, 0, "混帧：其余四项位次命中（A→2 ∥ C→3 ∥ D→4 ∥ E→5 —— 各按其位取值）")
-    assert.equal(plan.build.length + plan.head.drop.length, 0, "混帧：余段零动")
-  }
+  // 1g 混帧（`prepend` + `cut` 同帧样本）——随 `prepend` 退场整删（回填落位批 2026-10-04：回填径改用 `build` 整置；累计回放样本不再可表）
 
   // 1h 关页例（build 承 none 态：引导节点唯一子 —— 纯件 ∩ 真路 ∩ 构树三面）
   {
@@ -462,32 +446,34 @@ test("腿 2·同尺复测（全量换新 = 0）：活动期观测窗 —— 根 
     assert.deepEqual(idsOf(), ["b0", "b1", "b2", "b3"], "三追加：块序")
     const nodeB2 = nodeOf("b2")
 
-    // 帧 4：回填（prepend{2} —— 头段前插；既有项零动）
+    // 帧 4：回填（整置——删档 + 新写；回填落位批 2026-10-04：`prepend` 已退场，回填径改用 build）
     frame = drive(root, seed({ blocks: [b0, b1, b2, b3] }),
-      seed({ blocks: [p0, p1, b0, b1, b2, b3], flowOps: [{ kind: "prepend", count: 2 }] }), frame.account)
-    assert.deepEqual(idsOf(), ["p0", "p1", "b0", "b1", "b2", "b3"], "回填：首前插就位")
-    assert.equal(nodeOf("b0"), nodeB0, "回填：旧块节点同对象（既有项零动）")
-    assert.equal(nodeOf("b3"), nodeOf("b3"), "回填：旧块节点存续")
+      seed({ blocks: [p0, p1, b0, b1, b2, b3], flowOps: [{ kind: "build" }] }), frame.account)
+    assert.deepEqual(idsOf(), ["p0", "p1", "b0", "b1", "b2", "b3"], "回填（整置）：块序 = 记录序")
+    const nodeB0R = nodeOf("b0")
+    assert.notEqual(nodeB0R, nodeB0, "整置：节点换代（删档 + 新写——非「既有项零动」）")
+    assert.ok(nodeOf("b3"), "整置：新档全量（b3 在位）")
+    const nodeB2R = nodeOf("b2")
     const nodeP0 = nodeOf("p0")
 
     // 帧 5：退流摘（cut{4} —— 命中项真摘除）
     frame = drive(root, seed({ blocks: [p0, p1, b0, b1, b2, b3] }),
       seed({ blocks: [p0, p1, b0, b1, b3], flowOps: [{ kind: "cut", index: 4 }] }), frame.account)
     assert.deepEqual(idsOf(), ["p0", "p1", "b0", "b1", "b3"], "退流摘：块序")
-    assert.equal(nodeB2.parentNode, null, "退流摘：b2 节点真摘除（parentNode === null）")
-    assert.equal(nodeOf("b0"), nodeB0, "退流摘：邻项节点同对象")
+    assert.equal(nodeB2R.parentNode, null, "退流摘：b2 节点真摘除（parentNode === null）")
+    assert.equal(nodeOf("b0"), nodeB0R, "退流摘：邻项节点同对象")
 
     // 帧 6：饱和窗（限 4 —— 头段越位摘按数）
     frame = drive(root, seed({ blocks: [p0, p1, b0, b1, b3] }), seed({ blocks: [p0, p1, b0, b1, b3] }), frame.account, 4)
     assert.deepEqual(idsOf(), ["p1", "b0", "b1", "b3"], "饱和窗：按数摘最旧")
     assert.equal(nodeP0.parentNode, null, "饱和窗：越位项节点摘离")
-    assert.equal(nodeOf("b0"), nodeB0, "饱和窗：保留项同对象")
+    assert.equal(nodeOf("b0"), nodeB0R, "饱和窗：保留项同对象")
 
     // 帧 7：饱和追加（摘 1 造 1 —— 同帧两动作；账数组不动 —— 窗只隐不删）
     frame = drive(root, seed({ blocks: [p0, p1, b0, b1, b3] }), seed({ blocks: [p0, p1, b0, b1, b3, b4] }), frame.account, 4)
     assert.deepEqual(idsOf(), ["b0", "b1", "b3", "b4"], "饱和追加：块序")
-    assert.equal(nodeOf("b0"), nodeB0, "跨帧引用不变（同对象恒同节点）")
-    assert.equal(root.clears, 1, "活动期观测窗：根 clear 仍恰一次（全量换新 = 0）")
+    assert.equal(nodeOf("b0"), nodeB0R, "跨帧引用不变（同对象恒同节点）")
+    assert.equal(root.clears, 2, "活动期观测窗：根 clear = 2（初始 + 回填整置各一次；其余帧零全量换新）")
     assert.equal(blocksOf(root).length, 4, "块节点数 = 窗长")
 
     // 终态：DOM 块节点序 ≡ 模型窗逐位同对象（账为准）
@@ -639,7 +625,6 @@ test("腿 5·禁词零命中（八词 ∥ 词界 ∥ 历史批名不计面）+ �
     { file: "page-read.mjs", anchors: [
       [/两径各带\*\*结构作业\*\*/, /写不可拆（写口 = `withFlowOp`）/],
       [/结构作业（流面作业单）：`build`/, /withFlowOp\(first, \{ kind: "build" \}\)/],
-      [/结构作业（流面作业单）：`prepend`/, /kind: "prepend", count: page\.length/],
     ] },
     { file: "composer-wire.mjs", anchors: [[/结构作业（流面作业单）/, /withFlowOp\(\{ blocks:/]] },
     { file: "session-wire.mjs", anchors: [[/删活动会话后的接管/, /store\.set\(withFlowOp\(openSession/]] },
@@ -676,7 +661,7 @@ test("腿 5·禁词零命中（八词 ∥ 词界 ∥ 历史批名不计面）+ �
     { file: "store.mjs", pattern: /blocks: \[\]/, why: "初态（空单）" },
     { file: "store.mjs", pattern: /blocks: \[\.\.\.state\.blocks, block\]/, why: "appendBlock（追加 —— 零作业）" },
     { file: "page-read.mjs", pattern: /blocks: page,/, why: "整置作业点（build）" },
-    { file: "page-read.mjs", pattern: /blocks: \[\.\.\.page, \.\.\.\(flagged\.blocks \?\? \[\]\)\]/, why: "前插作业点（prepend）" },
+    { file: "page-read.mjs", pattern: /blocks: \[\.\.\.page, \.\.\.\(flagged\.blocks \?\? \[\]\)\]/, why: "回填整置作业点（build —— 页并入；回填落位批 2026-10-04：`prepend` 退场、作业型改 build、写入行保留）" },
     { file: "composer-wire.mjs", pattern: /blocks: next \}, \{ kind: "cut", index \}/, why: "退流摘作业点（cut —— 摘至零块时同笔并 build）" },
     { file: "events-blocks.mjs", pattern: /blocks: next \}|blocks: \[\.\.\.blocks\.slice\(0, -1\)|blocks: \[\.\.\.blocks\.slice\(0, index\), (next|settled),/, why: "原地换（非结构 —— 长度不变）" },
     { file: "app.mjs", pattern: /blocks: toggleExpanded\(/, why: "原地换（非结构 —— 折叠旗）" },
@@ -712,12 +697,12 @@ test("腿 5·禁词零命中（八词 ∥ 词界 ∥ 历史批名不计面）+ �
   assert.deepEqual(
     callSites.map((site) => site.split(":")[0]).sort(),
     ["composer-wire.mjs", "composer-wire.mjs", "page-read.mjs", "page-read.mjs", "session-wire.mjs"],
-    "作业点四文件 · 五笔调用（page-read ×2 ∥ composer-wire ×2（退流 + 摘空并 build）∥ session-wire ×1）",
+    "作业点四文件 · 五笔调用（page-read ×2（首屏整置 + 回填整置）∥ composer-wire ×2（退流 + 摘空并 build）∥ session-wire ×1）",
   )
-  assert.equal(callSites.length, 5, "作业点共五笔调用（设计五处 − insert 随径 + 摘空支第二笔）")
+  assert.equal(callSites.length, 5, "作业点共五笔调用（回填作业型改 build——调用位不动）")
   const source = (file) => readFileSync(join(dir, file), "utf8")
   assert.ok(source("page-read.mjs").includes('withFlowOp(first, { kind: "build" })'), "作业点：首屏整置（build）")
-  assert.ok(source("page-read.mjs").includes('{ kind: "prepend", count: page.length }'), "作业点：回填前插（prepend）")
+  assert.equal(source("page-read.mjs").includes('{ kind: "prepend", count: page.length }'), false, "作业点：回填前插（prepend）已退场（回填落位批 2026-10-04——回填径改用 build 整置）")
   assert.ok(source("composer-wire.mjs").includes('{ kind: "cut", index }'), "作业点：退流摘（cut）")
   assert.ok(source("composer-wire.mjs").includes('withFlowOp(cut, { kind: "build" })'), "缺口-1：摘至零块 ⇒ 同笔并 build")
   assert.ok(source("session-wire.mjs").includes('withFlowOp(openSession(store.get(), null), { kind: "build" })'), "作业点：关页整置（build）")

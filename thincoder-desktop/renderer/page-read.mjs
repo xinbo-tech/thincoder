@@ -239,9 +239,9 @@ function clearHelpLines(table, key) {
  *  （活流侧优先）；留档批 · #719 ∥ 2026-10-01 收正 ∥ 消化重放口径批 · 2026-10-01） + **打开态播种**
  *  （`seed` ⇒ `tasks[key]` / `usage[key]` 同笔 —— 判据住 `seedPatch`）+ **排队镜面重建**
  *  （`queue` 键 ⇒ `applyQueue` —— 「回合中插入」批 · KD-40 ④；仅首屏读）；
- *  两径各带**结构作业**（流面作业单 —— 单源 = `docs/desktop/design/RENDERER.md` §1.1）：首屏 ⇒ `build`（整置 ——
- *  账作废，帧出口走构造径）∥ 回填 ⇒ `prepend{count}`（并入页块数 —— 首前插）；同笔：作业与 `blocks` 写不可拆（写口 = `withFlowOp`）。
- *  回填 ⇒ 前插 + `history` 落态（`hasOlder === false ⇒ next = null`；高度补偿归 `settleFrame` 六步既有）+
+ *  两径各带**结构作业**（流面作业单 —— 单源 = `docs/desktop/design/RENDERER.md` §1.1）：首屏 ∥ **回填**（回填落位批 ·
+ *  2026-10-04）⇒ `build`（整置 —— 删档 + 新写：记录序重放；账作废，帧出口走构造径）；同笔：作业与 `blocks` 写不可拆（写口 = `withFlowOp`）。
+ *  回填 ⇒ 并入 + `history` 落态（`hasOlder === false ⇒ next = null`；视口锚定 = 帧出口补偿——非跟滚 ∧ 高度净增 ΔH ≠ 0 才读 ∥ 才写）+
  *  **折叠并入**（回填页记录 ⇒ 折叠**复列全量**（未结轮照现 + 未结轮归属过滤）——并序 = 折叠轮居前 ∥ 现轮集随后；双份消解 = 结构性；留档批 · #719 ∥ 2026-10-01 收正 ∥ 消化重放口径批 · 2026-10-01）。 */
 export function applyPage(state, receipt, { key, before } = {}) {
   if (receipt?.ok !== true) return endBackfill(state)
@@ -271,10 +271,10 @@ export function applyPage(state, receipt, { key, before } = {}) {
     // 结构作业（流面作业单）：`build` —— 整置（首屏；随构造径承接）。
     return applyQueue(withFlowOp(first, { kind: "build" }), key, receipt.queue)
   }
-  const digest = withFoldedDigest(flagged.digest, key, folded) // 前插零算术（行族零动——本批 #765；未结轮归属过滤住本件）
-  // 结构作业（流面作业单）：`prepend` —— 回填并入（首前插；全体后移 count）。
+  const digest = withFoldedDigest(flagged.digest, key, folded) // 并入零算术（未结轮归属过滤住本件；行族随整置按记录序复列——回填落位批）
+  // 结构作业（流面作业单）：`build` —— 回填并入（整置：删档 + 新写——记录序重放；帧出口走构造径）。
   return withFlowOp(
     { ...flagged, blocks: [...page, ...(flagged.blocks ?? [])], sessionMeta, history, ...(digest === flagged.digest ? {} : { digest }) },
-    { kind: "prepend", count: page.length },
+    { kind: "build" },
   )
 }
