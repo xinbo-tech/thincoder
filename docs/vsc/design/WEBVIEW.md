@@ -202,7 +202,7 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
   `state === "fallback"` ⇒ **新键 `banner.defaultModelFallback`**（zh `⚠ 默认模型未设置或无效 — 正在使用可用渠道` ∥ en `⚠ Default model missing or invalid — using an available channel`）+ **动作钮**「选择默认模型」（新键 `banner.chooseDefaultModel`——zh `选择默认模型` ∥ en `Choose default model`）→ `openSettings()`（设置面默认模型段）；
   `state === "ok"` ⇒ 现键 `banner.configured`（不变）。
 - **`keyOk` 收正（判据钉定）**：`keyOk := 非 invalid 类`（= `state !== "invalid"` ∧ `invalidReason` 空）——端侧布尔收正为**核态派生（单判据）**，去第二判据；欢迎面 ∥ 向导面既有消费随此派生（`notConfigured` ⟺ invalid 类）。
-- **动作落点避死端**：钮不开会话级模型菜单（写会话槽不修 `defaultModel`）；真修口 = 设置面默认模型段（与 `#840` 桌面 KD-3 同判）。
+- **动作落点**：钮不开会话级模型菜单——真修口 = 设置面默认模型段（与 `#840` 桌面 KD-3 同判；会话级选定亦同拍写回 `defaultModel`（判据句 6）——本钮仍指设置面：显式默认口 ∥ 不依赖会话在场）。
 - **链收正（机制面，本段不重述）**：`panel-turn-stages.mjs` 接入面自建回退链改核函数 ∥ `presets.mjs` `resolveDefaultModel` 改核转口（单源 = `doc:PROVIDER.md:§6.22`）；**可用性不得降**（渠道+key 已配 ⇒ 直接可发——事实标准不回退）。
 - **边界**：发送失败面（`error.provider` 词 ∥ `needsSetup` 径）零改；welcome 面板两键零改；`i18n-dom` 横幅键刷新面随三态键扩（`data-banner-key` 取值闭集）。
 
@@ -212,6 +212,17 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 - **修法**：改**静态省略号**——`t("status.thinking") + "…"`（同两处既有静态形：活动块状态词 `W.thinking` ∥ 推理块 summary）；`.loading-dots` 件与 `@keyframes dots` 块**删除**（全树唯一消费者即本段）。词键零改。
 - **判据**：单测（渲染面）——`_phase === "thinking"` ⇒ 段在场且零 `.loading-dots` 节点；`_phase = null` ⇒ 段缺席；全树 `loading-dots` / `@keyframes dots` 零命中（grep 面）。
 - **边界**：同台账「最小窗口尺寸缩放异常」= 静态读不出 ⇒ 待报方复现材料——**不在本批**（在册）。
+
+### 4.10 会话模型选定写回（2026-10-04 · 台账 #883）
+
+- **判据单源 = `docs/core/design/SESSION.md` §6.21 判据句 6**（用户显式选定 ⇒ `defaultModel` 同拍写回）——本段只落本端触发支 ∥ 写面 ∥ 刷新点。
+- **触发支** = `panel-messages.mjs` case `selectModel`（webview 下拉选中——显式入口单点）；**写前读** = 既有 `loadSlot` 读面（写前槽复合基线）；**实变判据** = 槽复合串 `provider:model` 变化（档缺 ⇒ 判真）；定序 = 槽先配置后（`_saveLines` 成后写回）。
+- **写面单点** = `settings-panel-write.mjs` `carryoverDefaultModel({ provider, model, slotBefore, lastPushedPrefs })`——复合等值（现值 `loadRaw().defaultModel`）⇒ 零写；**播种回声门**（槽基线档缺 ∧ 选定复合命中 `lastPushedPrefs`）⇒ 零写回；写经 `vscPersistRaw`（`$schema` 注入保持）；写后探复用 `probeDefaultModelChannel`（M9 同律——准入落账）。
+- **刷新点（第四刷新点同判）**：实写发生 ⇒ `panel._pushStatus()`（providerStatus 重推——`fallback` 横幅即时退场；#841 同判）。
+- **失败面**：`{ ok:false, reason }` + `console.error`（零静默）——不反扑槽写（会话侧照旧）。
+- **回声 ∥ 系统写零写**：`models` 推送 → `handleModelsMessage` 自动同值回写（§4.2 ②）⇒ 槽面未变 ⇒ 零写；
+  **boot 播种径**（无槽复合 ⇒ workspaceState prefs 随 `models` 下发 ⇒ 回写携该值）⇒ 选定复合命中**宿主簿记**（最近下发 prefs 复合——推送点 `settings.mjs`，沿 `_lastModelsPayload` 先例）∧ 槽基线档缺 ⇒ **播种回声门判零**（写面单点第三门）；首回合空槽播种（`resolveTurnModelAndStamp` → `saveLines`）不经 `selectModel` 消息 ⇒ 零触。
+- **边界**：空槽短路（`_ensureSlot` 未解析窗口）⇒ 零写回（无槽面）；标语面文案零改（横幅键 ∥ 词表不动）。
 
 ## 5. 子代理活动块与活动区
 
@@ -843,3 +854,5 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
   §5.8 跨端默认差（推理块）**凭据判定补记**（宿主能力面 ∥ 行为证据均不成立 ⇒ 消解路径 + 触发 ∥ 到期条件 = 桌面面下次被触碰）。**零新语义**（发现 3 ∥ 4 的直接导出项）。
 - 2026-10-04（**issue 修复批·四 · 设计面实施轮（#825 退场注改述）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round4.md` §2 · 台账 #825）：§10 用例面七名 ∥ §11 用例基建三件 ⇒ **退场注改述**（裸名化 + 「随 2026-09-28 测试树全清重置退场」注——留名存档）。**零新语义**（所指皆已退场——如实收述）。明细 = 批档 §2。
 - 2026-10-04（**issue 修复批·三 · 实施后登记 / 回填轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §5（#79 甲舱 ∥ #80 乙舱交付）· 父侧裁定）：§5.8 随落笔收正——「（拟新增）」两处标去（`ui-prefs.mjs` ∥ `ui-prefs.js` 在盘）；**`activityTailLines` 缺省单源 = 核**（`DEFAULT_TAIL_LINES`——端侧镜像 = 冗余防御层（消解路径 + 到期条件在册））；新增**射程说明（滚写入两处例外登记）**：提示件 `scrollIntoView`（`webview/permission.js:25/:37` ∥ `webview/question.js:22`——保持在场语义）∥ 推理区内滚写（核 `thincoder-render-core/flow/stream.mjs:30`——本端展开 + 溢出时生效（按实况登记）；桌面归别批）。**零新语义**（登记 ∥ 标去 ∥ 例外声明）。明细 = 批档 §2 登记轮块。
+- 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §2 · 台账 #883）：新增 **§4.10 会话模型选定写回**（触发支 ∥ 写面单点 ∥ 刷新点 ∥ 回声零写 ∥ 边界）；§4.8 动作落点行收正（会话选定已同拍写回 `defaultModel`——按钮仍指设置面）。**产品码零触（设计轮）**。
+- 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 修正轮（评审轮次 1 · 发现 1 ∥ 3）· eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §3 轮次 1 · 台账 #883）：§4.10 收正——**boot 播种径零写机制**（宿主簿记判回声——写面单点增参 `lastPushedPrefs` + 播种回声门）∥ 回声句内引收正（§4.2 ① ⇒ ②）。**产品码零触（修正轮）**。明细 = 批档 §2 修正轮块。

@@ -19,7 +19,8 @@
 |---|---|
 | `thincoder-cli/src/tui/slash-commands.mjs` | `SLASH_COMMANDS` 表 + `SLASH_ALIASES` + `HANDLERS` 分派（handler 异常统一拦截成 `[error]` 行——不击穿 TUI 主循环）+ `completions` / Tab 循环 |
 | `thincoder-cli/src/tui/cmd-*.mjs`（单命令档族） | 每个命令实现独立成档：`cmd-auto` / `cmd-clear` / `cmd-config` / `cmd-copy` / `cmd-eng` / `cmd-exit` / `cmd-extract`+`distill-cmd` / `cmd-fold` / `cmd-goal` / `cmd-help` / `cmd-init` / `cmd-mcp` / `cmd-mcp-form` / `cmd-model` / `cmd-new` / `cmd-plan` / `cmd-reindex` / `cmd-restore` / `cmd-session` / `cmd-shell` / `cmd-skills` / `cmd-submodel` / `cmd-think` / `cmd-undo` / `cmd-upgrade` / `cmd-advisor` |
-| `thincoder-cli/src/tui/model-picker.mjs` | 模型两级选择器（provider → model，可 fetch `/models`、失败回退预设）+ `/model` Add / Remove / key 流程 + `pickModelForSlot`（子模型槽位） |
+| `thincoder-cli/src/tui/model-picker.mjs` | 模型两级选择器（provider → model，可 fetch `/models`；拉取失败 ⇒ 该渠道不可用——无预设回退）+ `pickModelForSlot`（子模型槽位）；渠道管理流族 = 调用点（流体住 `provider-admin.mjs`） |
+| `thincoder-cli/src/tui/provider-admin.mjs` | 渠道管理流族（`/model` Add / Remove / key 流程——2026-09-29 结构拆分自 `model-picker.mjs` 迁出）+ `cascadeRemoveProvider` |
 | `thincoder-cli/src/tui/model-catalog.mjs` | 模型清单目录面（供选择器构造条目） |
 | `thincoder-cli/src/tui/ledger-surface.mjs` | 台账可见面渲染（配置菜单的台账摘要行） |
 
@@ -101,6 +102,9 @@
 
 ### 5.3 关键命令要点
 
+- **`/model`**（2026-10-04 · 台账 #883 · 实现 = 本批实施轮）：会话模型切换（两级 picker ∥ `/model provider:model` 直参——写会话槽）。
+  **会话级模型面实变 ⇒ 同拍写回 `config.defaultModel`**（会话选定写回——判据单源 = `docs/core/design/SESSION.md` §6.21 判据句 6；写面单点 = `thincoder-cli/src/tui/config-helpers.mjs` `carryoverDefaultModel`；等值 ∥ 回声零写；写回失败不反扑会话写、记错零静默；端差 = 不设写后探——无准入展示面）。
+  候选 = 运行期 `/models` 拉取（拉不通 = 该渠道不可选）；config 默认模型显式设置走 `/config → 默认模型`。
 - **`/submodel`**：子 agent 模型设置入口——与 `/model`（主会话模型）对称。5 种子 agent 类型（explore / plan / coder / eng-coder / eng-designer）
   各有独立配置项。无参时 picker 菜单列出全局 + 5 类型共 6 个槽位（各显示当前生效值与继承来源）→ 二级选择（provider → model）。
   参数直设路径保留（`/submodel <type> <value>` / `<value>` / `<type>` / `reset [type]`）。
@@ -146,12 +150,12 @@
 
 | 入口 | 门位（载体） | 状态 |
 |---|---|---|
-| 渠道删除（`/model` → Remove provider…） | `thincoder-cli/src/tui/model-picker.mjs:374` `removeProviderFlow`（`persistRaw` 之前） | ✅ 本批过门（单一调用点 `:73`） |
+| 渠道删除（`/model` → Remove provider…） | `thincoder-cli/src/tui/provider-admin.mjs:88` `removeProviderFlow`（`persistRaw` 之前） | ✅ 本批过门（单一调用点 `model-picker.mjs:77`） |
 | MCP server 删除（`/mcp` 菜单 → Remove） | `thincoder-cli/src/tui/cmd-mcp.mjs:84` `removeServer`（`persistRaw` 之前） | ✅ 本批过门（调用点 `:389`） |
 | MCP server 删除（`/mcp remove <name>` 直参） | 同上——`removeServer` 是两条路径的单一收口 | ✅ 本批过门（调用点 `:331`） |
 | 会话冷 GC（`thincoder session gc --confirm`） | 非 TUI 面（`thincoder-cli/bin/thincoder.mjs` → 核 `thincoder-core/session-gc.mjs`） | 已覆盖（`--confirm` 显式旗标——端面不同，不入 TUI 域） |
 
-- **独立「删 key」入口 = 不存在**（实核）：`setKeyFlow`（`thincoder-cli/src/tui/model-picker.mjs:398`）是**设** key；
+- **独立「删 key」入口 = 不存在**（实核）：`setKeyFlow`（`thincoder-cli/src/tui/provider-admin.mjs:113`）是**设** key；
   `/config` 的 embedding key 同为设 key（`thincoder-cli/src/tui/cmd-config.mjs:38-41`——空输入直接返回、不写盘）。
   key 原文消失的路径**只有**上表两条已入册入口（渠道删除 / MCP server 删除）——无第三入口待门。
 
@@ -194,7 +198,12 @@
 
 ## 变更记录
 
+- 2026-10-04（**#905 §1 表归属收正 · 主 agent 直接执行 · 可 revert**——承 #883 修复轮 #10 号外观察 ∥ 台账 #905）：§1 命令层表——`model-picker.mjs` 行「+ `/model` Add / Remove / key 流程」归属收正（该流族自 2026-09-29 结构拆分迁出）+ 增 `provider-admin.mjs` 行（渠道管理流族 + `cascadeRemoveProvider`）。**零新语义**（结构快照对盘）。
+- 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 修正轮（评审轮次 1 · 发现 2）· eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §3 轮次 1 · 台账 #883）：§5.4 入口册两坐标对盘收正（`provider-admin.mjs:88` ∥ `:113`；调用点 `model-picker.mjs:77`）+ §1 `model-picker.mjs` 行括注收正（拉取失败 ⇒ 该渠道不可用——无预设回退）。**零新语义**（坐标与描述对盘）。
+
 - 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #863）：§5.3 增 **`/undo` 条**（快照双上界 + oversize 态 + 死副本清除）。实现 = 本批实施轮。
+
+- 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §2 · 台账 #883）：§5.3 增 **`/model` 条**（会话选定写回——判据句 6；写面单点 ∥ 等值/回声零写 ∥ 失败不反扑；端差 = 不设写后探）。实现 = 本批实施轮。
 
 - 2026-09-28（**文档回填与卫生轮**（台账 #516 · #377 面）· eng-designer）：档头对位行「2026-09-25 本批」改指名（**misc-four 批**）——消同日多批「本批」两义。**零新语义**。
 

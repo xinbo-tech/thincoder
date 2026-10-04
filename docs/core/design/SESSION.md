@@ -72,6 +72,7 @@
 **本批（LEDGER-RELIABILITY · 2026-09-28）落点表** = `docs/batches/2026-09-28-ledger-reliability.md` §2（唯一承载面——一次性批次材料）；本档 §6.25 承载零权威 / 可重建全自动 / 丢失自愈两落点与预算 / 失效可见 / 写安全判据句 + 边界情形 + 验收回指。
 **本批（跨端消化面恢复 · 2026-09-30）落点表** = `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2（唯一承载面——一次性批次材料）；本档 §6.26 承载机制单源（记录形 ∥ 写缝 ∥ 读缝契约 ∥ 端侧重建义务 ∥ 容差登记 ∥ 读面 delta）+ 验收回指。
 **本批（会话选定写回 · default-model-carryover · 2026-10-03）落点表** = `docs/batches/2026-10-03-default-model-carryover.md` §2（唯一承载面——一次性批次材料；含受影响文件行数 ∥ 增量）；本档 §6.21 承载判据句 6 / 边界情形表选定写回三行 / 验收回指 ⑤。
+**本批（CLI ∥ VSC 会话选定写回 · 2026-10-04）落点表** = `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §2（唯一承载面——一次性批次材料；含受影响文件行数 ∥ 增量）；本档 §6.21 承载判据句 6 三端落地收正 / §6.8 提示行文案收正。
 
 ## 6. 机制面（自 CLI 产品档并入 · 2026-09-14 · B 轮）
 
@@ -201,7 +202,7 @@
 - **TUI 路径**：仅在 `state === "invalid"`（无 provider/key）于 `startTUI` 前置 `agent.provider = null`（`fallback` 态 provider 有效——不清）。
 - **D-S2 TUI 重选流程**：`startTUI` 首帧前按核统一态分流（单源 = `doc:PROVIDER.md:§6.22`）：
   **invalid 类**（`state === "invalid"` ∨ `providerInvalidReason` 非空——合成式单源 = `doc:PROVIDER.md:§6.22`）⇒ 弹模型选择 picker → 选定后继续正常启动；取消（Esc）⇒ **仍进入 TUI** + 提示行（措辞指渠道 ∕ 密钥——绝不因无 provider 拒绝进入）；
-  **`fallback`**（无有效 defaultModel 但可运行）⇒ **不弹 picker**（不打断）+ 提示行明示（「尚未设置默认模型：本次使用 `<渠道>[:<模型>]`——/config → 默认模型 设置一次；/model 仅改本会话」；`model` 缺省 ⇒ 仅渠道名）；headless（D-S4）同态出 stderr 一行明示。
+  **`fallback`**（无有效 defaultModel 但可运行）⇒ **不弹 picker**（不打断）+ 提示行明示（「尚未设置默认模型：本次使用 `<渠道>[:<模型>]`——/config → 默认模型 设置一次（或 /model 选定即成为默认模型）」；`model` 缺省 ⇒ 仅渠道名）；headless（D-S4）同态出 stderr 一行明示。
 - **D-S3 恢复优先级**（`applySession`）：① 槽 `activeProvider` 在册**且持 key** → provider/model 按槽值设（槽 `activeModel` 缺省 = `defaultModel` 属本渠道 ⇒ 其模型段，
   否则回渠道默认单值——模型面单源 = `doc:PROVIDER.md:§6.22`）+ 重算 compactThreshold（auto 时）+ 返回 switched；**槽无 key ⇒ 跳过（落 config 链——不把不可运行渠道钉进运行态；跳过不写槽——原槽值保留）**；
   ② 槽 provider 没了 → **静默保持现状**（仅当两方都无效才弹）。
@@ -735,7 +736,10 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 - **判据句 5（保存携带 · 防整对象抹除）**：`saveSession` 字段表须带 `effort`（值取当前生效档位；**缺之 ⇒ 下一次回合保存把槽写面结果整对象抹除**——同族缺陷在案）；`newSlotData` 产 `effort: null`（全新槽规范结构同源）。**老槽无该键 ⇒ 读侧按 `null` 容忍——零行为变更**。
 - **判据句 6（会话选定写回 · 2026-10-03 · 台账 #880）**：**用户显式选定**（会话级模型面**实变**——`provider` + `model` 两键写入 ∧ **比对单元 = 复合串 `provider:model` 是否变化**（`provider` 同值而 `model` 变——同渠道换模型——亦触发；写盘前读 ⇔ 写入值比对））⇒ 同拍写回 config `defaultModel = "<provider>:<model>"`（复合形单源 = `parseModelRef` 首冒号分割语义）；
   新会话起点随用户最后一次显式选择；**复合等值 ⇒ 零写**（防盘面抖动 ∥ 探针空转）；写成功 ⇒ 写后探一次（S3 同律）。
-  **「选定」= 用户显式动作**：系统回退自动采用（`resolveProviderPlan` 回退入选——`doc:PROVIDER.md:§6.22`）**不写**；系统同步写（会话切换 ∥ 候选推送回声等**槽值未变**之写）**不写**（判据 = 槽面实变）。端侧各自实现（判据本句单源）——桌面落地面 = 2026-10-03 会话选定写回批（端侧契约 = `docs/desktop/design/IPC.md` §2「会话级偏好注」项 8）；CLI ∥ VSC 判定 = 同判据适用、落地另批（2026-10-03 设计轮起）。
+  **「选定」= 用户显式动作**：系统回退自动采用（`resolveProviderPlan` 回退入选——`doc:PROVIDER.md:§6.22`）**不写**；系统同步写（会话切换 ∥ 候选推送回声等**槽值未变**之写）**不写**（判据 = 槽面实变）；**boot 播种径**（无槽复合 ⇒ 下发 prefs 自动回写——槽面档缺判真）**不写**（回声判零 = 端侧机制；VSC 端 = 宿主簿记，端侧契约 = `docs/vsc/design/WEBVIEW.md` §4.10）。
+端侧各自实现（判据本句单源）——落地三端齐：桌面 = 2026-10-03 批（端侧契约 = `docs/desktop/design/IPC.md` §2「会话级偏好注」项 8）；
+CLI = 2026-10-04 批（触发支 `thincoder-cli/src/tui/model-picker.mjs` `selectModel`，写面单点 `thincoder-cli/src/tui/config-helpers.mjs`）；
+VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选定 case，写面单点 `thincoder-vscode/src/extension/settings-panel-write.mjs`）——CLI ∥ VSC 端差（写后探 ∥ 刷新点）明书于批档 §2。
 
 **边界情形表**：
 
@@ -748,11 +752,14 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 | 写非活动槽 | 只写盘 | 不碰当前内存态（`applySession` 是唯一施加面） |
 | 槽不可读（`loadSlotForWrite` 返回 `null`） | 写返回 `false` | 沿四出口既有契约 |
 | 选定写回：复合等值（选定串与 `defaultModel` 现值同串） | 零写（`defaultModel` 不变） | 判据句 6——防盘面抖动 ∥ 探针空转 |
-| 选定写回：配置面写失败（`mtime-conflict` 等） | 不反扑会话写（回执仍 `ok:true`）；主侧 `console.error` 记错 | 判据句 6——定序槽先配置后；端侧契约 = `docs/desktop/design/IPC.md` §2「会话级偏好注」项 8 |
+| 选定写回：配置面写失败（`mtime-conflict` 等） | 不反扑会话写（桌面回执仍 `ok:true`）；主侧 `console.error` 记错 | 判据句 6——定序槽先配置后；端侧契约（桌面）= `docs/desktop/design/IPC.md` §2「会话级偏好注」项 8；CLI ∥ VSC 无回执面——形 = 会话写照旧 + 记错（批档 §2） |
 | 选定写回：回声（槽值未变之写——会话切换 ∥ 候选推送同值回写） | 零写（判据 = 槽面实变落空） | 判据句 6——系统同步不劫持全局默认 |
+| 选定写回：boot 播种回声（无槽复合 ⇒ 下发 prefs 自动回写） | 零写回（回声判零——宿主簿记命中；槽面档缺判真亦不写） | 判据句 6——系统播种不劫持全局默认；VSC 端机制 = `docs/vsc/design/WEBVIEW.md` §4.10 |
+| 选定写回：槽写未发生（槽未解析窗口 ∥ 槽不可读） | 零写回（会话侧照旧：内存态 ∥ prefs 已更新） | 判据句 6——写回门住槽面实变；无槽面 ⇒ 无判据 |
 
-**验收回指**：① 桌面会话头三值切标签随动 + 非活动槽只写盘 → 判据句 1 / 4 / 5；② 老槽零行为变更 → 判据句 5 + 边界表首行；③ 档位候选面与写面同判据（不可 off 的模型两面一致）→ 判据句 3 + 边界表第 3 行；④ 三包测试全绿 + `doc-check` 零新增闸态失败 → 落点表（批档 §2）；⑤ 会话选定（模型面实变）⇒ `defaultModel` 实写回 ∥ 等值 ∥ 回声 ∥ 回退径零写 + **端到端 = 选定 ⇒ 新建会话 ⇒ 运行模型 = 最近一次显式选定**
-（取数链 = 新槽创建（核 `newSession`，`thincoder-core/session-lifecycle.mjs:226`——空槽规范结构无会话级 provider/model）∥ 装配取数（核 `loadConfig` 归一链 `resolveProviderPlan`——`thincoder-core/config.mjs:332` ∥ `thincoder-core/model-ref.mjs:113`/:126：槽面无源 ⇒ `defaultModel` 档入选））→ 判据句 6（2026-10-03 批；用例 = 批档 §2 新会话起点条）。
+**验收回指**：① 桌面会话头三值切标签随动 + 非活动槽只写盘 → 判据句 1 / 4 / 5；② 老槽零行为变更 → 判据句 5 + 边界表首行；③ 档位候选面与写面同判据（不可 off 的模型两面一致）→ 判据句 3 + 边界表第 3 行；④ 三包测试全绿 + `doc-check` 零新增闸态失败 → 落点表（批档 §2）；⑤ 会话选定（模型面实变）⇒ `defaultModel` 实写回 ∥ 等值 ∥ 回声 ∥ boot 播种 ∥ 回退径零写 + **端到端 = 选定 ⇒ 新建会话 ⇒ 运行模型 = 最近一次显式选定**
+（取数链 = 新槽创建（核 `newSession`，`thincoder-core/session-lifecycle.mjs:226`——空槽规范结构无会话级 provider/model）∥ 装配取数（核 `loadConfig` 归一链 `resolveProviderPlan`——`thincoder-core/config.mjs:332` ∥ `thincoder-core/model-ref.mjs:113`/:126：槽面无源 ⇒ `defaultModel` 档入选））
+→ 判据句 6（2026-10-03 桌面批 ∥ 2026-10-04 CLI ∥ VSC 批；用例 = 各批档 §2 新会话起点条）。
 
 **不做（边界）**：不改 CLI / VSC 端侧档位面（`/think` / `reasoning-mode.mjs` / `settings-panel-write.mjs` 各自实现沿用——「推理档位面端侧自有」既有裁定；本批只补**槽字段 + 写出口 + 保存携带 + 恢复施加**四事）· 会话级偏好自身不落 config（`settings:agent` 仍是设置面全局默认）——**例外 = 判据句 6 选定写回**（2026-10-03 起）· 不校验端侧控件域 / 不做档位闭集机检 · 不回填老槽 · 不动 marker 与槽认领语义。
 
@@ -1297,3 +1304,5 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 - 2026-10-03（**会话选定写回批（default-model-carryover）· 修正轮（评审轮次 1 · 发现 1–7 ∥ 9 逐号 · 父侧裁定 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §3 轮次 1 · 台账 #880）：判据句 6 实变比对单元钉定（复合串 `provider:model` 是否变化——同渠道换模型亦触发）∥ 边界表补选定写回三行 ∥ 验收回指 ⑤ 扩端到端 + 取数链点名（新槽创建 = 核 `newSession` ∥ 装配取数 = `loadConfig` 归一链 `resolveProviderPlan`）∥ §5 补本批落点指针行。**产品码 ∥ 需求卷零触**。明细 = 批档 §2 修复轮块。
 - 2026-10-03（**会话选定写回批（default-model-carryover）· 复评残余修复轮（评审轮次 2 · 发现 2 · 父侧裁定 = 归 eng-designer）· eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §3 轮次 2 · 台账 #880）：§6.3 字段集行 ∥ §6.8 模型行两处「恒非空」补范围限定（**限定 = 保存面成对写入**〔有 provider 即携带具体复合值〕；**全新空槽规范结构无此两键**——与 §6.21 验收回指 ⑤ 取数链前提消歧）；§6.3 字段集行按行宽 300 折行。**零新语义**（限定词）。明细 = 批档 §2 复评残余修复块。
 - 2026-10-04（**issue 修复批·五 · 登记面触评落位 · 父侧直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §2.3（eng-designer 预置内容））：§6.19 邻位 startup.mjs 登记行补**批·五触评**——现读 322 ∥ 本批 #867 增量 ≤ +10（行级非结构性——home 判据 + 提示行）⇒ ≤332 ⇒ 拆分窗口顺延；触发条件不变。**零新语义**（登记落位）。
+- 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §2 · 台账 #883）：§6.21 判据句 6 尾句三端落地收正（CLI ∥ VSC 触发支与写面单点点名）+ 边界表补「槽写未发生 ⇒ 零写回」行 ∥ 失败行端差明书 + 验收回指 ⑤ 三端批号随动；§6.8 D-S2 提示行文案收正（「/model 仅改本会话」⇒「/model 选定即成为默认模型」）；§5 补本批落点指针。**产品码零触（设计轮）**。明细 = 批档 §2。
+- 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 修正轮（评审轮次 1 · 发现 1）· eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §3 轮次 1 · 台账 #883）：§6.21 判据句 6 ——系统发起之写类目补 **boot 播种径**（零写——回声判零 = 端侧机制）+ 边界表补行 + 验收回指 ⑤ 随动。**产品码零触（修正轮）**。明细 = 批档 §2 修正轮块。
