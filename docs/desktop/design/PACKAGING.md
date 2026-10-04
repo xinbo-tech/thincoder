@@ -144,10 +144,10 @@
   **generic 无上传面**（源读：`scheduleUpload` 对 generic 直接返回）∥ `npm run package` 不触发发布（isPublish 判 = release 脚本 ∥ git tag ∥ CI 三否——源读在册）——**上传恒走站点小件**（§2.8.3）。
 - **生成物（构建窗）**：`dist/ThinCoder-Setup-<号>.exe` + `.exe.blockmap`（差分块图——已在产）+ **`latest.yml`（落 dist 根）**（update-info——`computeChannelNames` 缺省单通道 ⇒ 恰一档；
   字段 = `version` ∥ `files[0].url` ∥ `files[0].sha512` ∥ `path` ∥ `sha512` ∥ `releaseDate`——v26 源读）+ `app-update.yml`（随 `win-unpacked/resources/` 入包——`provider` ∥ `url` ∥ `updaterCacheDirName`）。
-- **check-dist 续填（断言 +4——闸内 · fail-closed）**：① `latest.yml`（dist 根）存在 ∥ `version` = 源版本；② `files[0].url` = `ThinCoder-Setup-<源版本>.exe`（逐字）；③ `files[0].sha512` = 安装包实算（形 = 基 64 无填充——实施窗钉定）；④ `app-update.yml`（`win-unpacked/resources/` 下）存在 ∥ `provider: generic` ∥ `url` = 契约值。
+- **check-dist 续填（断言 +4——闸内 · fail-closed）**：① `latest.yml`（dist 根）存在 ∥ `version` = 源版本；② `files[0].url` = `ThinCoder-Setup-<源版本>.exe`（逐字）；③ `files[0].sha512` = 安装包实算（形 = 基 64 **带填充**——实施窗钉定「无填充」经构建窗实读收正：`latest.yml` 实读 `…DxfQ==`；check-dist 按填充不敏感实现——真兼容）；④ `app-update.yml`（`win-unpacked/resources/` 下）存在 ∥ `provider: generic` ∥ `url` = 契约值。
 - **依赖面**：`electron-updater`（^6.8.9——registry 实读 2026-10-02）入 `dependencies`——**首个第三方运行依赖**；声明面三处收正：`package.json` description ∥ `AGENTS.md`（「Zero third-party runtime dependencies…」句）∥ 本档。
   传递依赖族（fs-extra ∥ js-yaml ∥ lazy-val ∥ lodash.escaperegexp ∥ lodash.isequal ∥ semver ∥ tiny-typed-emitter ∥ builder-util-runtime——registry 元数据实读）由生产依赖收集器随装（`files` 白名单零动）。
-- **签名校验链（实读在册）**：builder 缺省 `win.verifyUpdateCodeSignature !== false` ⇒ `app-update.yml` 携 `publisherName`（签名面可算时）⇒ 更新器对下载件验 Authenticode（`NsisUpdater.verifySignature`）；实得读数 = 构建窗实读回填（本档不预写）。
+  - **签名校验链（实读在册）**：builder 缺省 `win.verifyUpdateCodeSignature !== false` ⇒ `app-update.yml` 携 `publisherName`（签名面可算时）⇒ 更新器对下载件验 Authenticode（`NsisUpdater.verifySignature`）；实得读数 = **`Shanghai Xinbo Technology Co., Ltd.`**（证书 CN——构建窗实读回填）。
 - **CHANGELOG**：实施轮落 `[Unreleased]` 段（Added——自动更新句；F2 口径——发布窗定号）。
 
 #### 2.8.3 站点侧（feed 托管——路径 ∥ 上传 ∥ 判据）

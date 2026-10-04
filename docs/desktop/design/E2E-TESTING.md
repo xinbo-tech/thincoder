@@ -246,7 +246,7 @@ _electron.launch({
 |---|---|---|
 | `thincoder-desktop/test/run.mjs` · `thincoder-desktop/test/files.mjs` | **49 / 3**（实读 2026-09-29） | 单入口 + 显式清单（清单↔盘上两向自检——照 `docs/core/design/TESTING.md` §10 形态；`files.mjs` 值口径 = 内容行数）；`thincoder-desktop/test/` 现盘 = `files.mjs` ∕ `rc-resolve.mjs` ∕ `run.mjs` 三档（测试面全清重置后——单元 = 单元测试档不登记 ∕ 集成件 = 落盘时登记 +1；单源 = `docs/batches/2026-09-28-test-layer-prompts.md` §1.15–§1.23） |
 | 用例模块（原 48 档） | — | **2026-09-28 测试树全清重置**：存量测试全退（清单 = `thincoder-desktop/test/files.mjs` 空清单）；单元 = 单元测试档（名随批次档 · 住 `docs/batches/` · 不登记 · 随批留存）；集成件 = 落盘时登记 +1（单源 = `docs/batches/2026-09-28-test-layer-prompts.md` §1.15–§1.23；同上行） |
-| `thincoder-desktop/.gitignore` | **8**（实读 2026-10-01〔实施落盘〕；前读 5（实读 2026-09-29）；修复轮 +3——注释 ∥ `dist/` 条目） | 忽略 `thincoder-desktop/test/artifacts/`（运行期产物不进 git——KD 单源 = 本档 KD-10）∥ `dist/`（打包产物不进 git） |
+| `thincoder-desktop/.gitignore` | **9**（实读 2026-10-04；前读 8（实读 2026-10-01〔实施落盘〕）；构建窗余项 +1——`dist-*/` 条目） | 忽略 `thincoder-desktop/test/artifacts/`（运行期产物不进 git——KD 单源 = 本档 KD-10）∥ `.thincoder/`（代理运行期状态）∥ `dist/` ∥ `dist-*/`（打包产物不进 git） |
 
 **行数面机检**：本表迁出后，`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`）读取面 = `docs/desktop/design/PROJECT.md` §4.1（运行根单读）——本表行按同值同步；后续本域新档由落盘批在本表补行（沿 §4.1 纪律）。
 **原址指针**：本族各行在 `docs/desktop/design/PROJECT.md` §4.1 已改一行指针（as-of 2026-10-02）。
