@@ -51,6 +51,9 @@ export async function runTurnLoop(agent, {
   // 回合边界注入单点取用一次（模块缓存 ⇒ 每 run 一次代价）；动态 import = 零新增静态边
   // （先例 = 上方 injectAsyncResult :113-117）。
   const { drainChildUpstream } = await import("../agent-tools/parent-channel.mjs")
+  // #934（零落笔看门狗——AGENT-LOOP-UPSTREAM.md §6.32）：连续零写越阈 ⇒ 自动上行提醒（只推——
+  // 不杀 / 不转向）；单源叶 = zero-write-watch.mjs，动态 import 沿上条同款（零新增静态边）。
+  const { maybeZeroWriteAlert } = await import("../agent-tools/zero-write-watch.mjs")
 
   // #417（撞帽载荷「本段零落盘轮数」——只报数：零阈值 / 零自动动作）：计数基线——回合环逐轮
   // 比对 `_touchedFiles` 增量（轮顶对上一轮结账；撞帽收尾轮在环外单结）。
@@ -70,7 +73,18 @@ export async function runTurnLoop(agent, {
     agent._maxTurns = frame.maxTurns
     // #417（撞帽载荷「本段零落盘轮数」——采集点与 `_turnSeq` 同源面）：上一轮至今 `_touchedFiles`
     // 零增 ⇒ 上一轮零落盘，计数 +1；mark 前移（收尾轮在环外结账——见下方 ContinueError 前）。
-    if (turn > 0 && agent._touchedFiles.length === agent._turnFilesMark) agent._zeroWriteTurns += 1
+    // #934（零落笔看门狗——§6.32.2 ① 单点采集）：streak 与越阈判定同点——上轮零写 ⇒ +1 并判越阈；
+    // 有写 ⇒ streak 归零 + 清闩（写后重臂——每连续零写段恰一条）。#417 计数语义逐字保持。
+    if (turn > 0) {
+      if (agent._touchedFiles.length === agent._turnFilesMark) {
+        agent._zeroWriteTurns += 1
+        agent._zeroWriteStreak += 1
+        maybeZeroWriteAlert(agent) // #934：连续零写越阈 ⇒ 自动上行提醒（只推——§6.32）
+      } else {
+        agent._zeroWriteStreak = 0
+        agent._zeroWriteAlerted = false // 写后重臂
+      }
+    }
     agent._turnFilesMark = agent._touchedFiles.length
     // D2 (AGENT-LOOP-SUBAGENT.md §6.7.2): depth>0 children emit a ⟦ev⟧turn progress token each turn —
     // single emit point covering all three spawn tools; phase=llm (tool/done progress rides
@@ -181,6 +195,9 @@ export async function runTurnLoop(agent, {
           { systemPrompt, tools: toolSchemas }).catch(() => {}) // 与回合请求同源（无第二构造点）
         agent._pendingDistill = distill
       }
+      // §6.31.5 落痕（消化账务批 · 2026-10-05 · 台账 #930）：回合收口内容落 run 内单痕——
+      // 见账读位取件（起跑清位 / 收尾取件）；缺痕（抛错 / 撞帽 / 未收口）⇒ 全条未覆盖（安全方向）。
+      agent.history._lastRunOutput = cr.content
       return cr.content
     }
 

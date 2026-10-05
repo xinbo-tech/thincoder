@@ -90,10 +90,20 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
   let toolCallCount = 0
   let reviewTextProduced = false
   let budgetNudged = false
+  // #934（零落笔看门狗——§6.32.2 ②）：连续无文本产出轮计数（循环局部——单次评审运行内计数，
+  // 修复轮 = 新运行 ⇒ 重新计数）+ 单次运行通报闩（文本产出后不再触发——「连续无产出」条件不回头）
+  // + 本轮有无文本标记（轮顶结上一轮用）。
+  let silentRounds = 0
+  let stallAlerted = false
+  let roundHadText = false
   const startTime = now()
   // 第 25 批（`ADVISOR-GUARDS.md §8`）：上下文预算跟随评审模型窗口——`providerSpec`（模型规格表 × provider 级
   // context 覆盖）派生；函数体内、while 轮次外一次性（provider 全场不变），两档消费见下守卫。
   const budget = advisorContextBudget(provider)
+  // #934（零落笔看门狗——AGENT-LOOP-UPSTREAM.md §6.32.2 ②）：阈值单源（叶档 agent-tools/zero-write-watch.mjs）——
+  // 函数域动态 import：模块域会与既有环（叶 → parent-channel → async-settle ↔ advisor-async → 本档）
+  // 互锁（加载期 TLA 死锁）；函数运行时图已就绪，模块缓存 ⇒ 每次评审一次代价。
+  const { ZERO_WRITE_ALERT_ROUNDS } = await import("../agent-tools/zero-write-watch.mjs")
 
   while (true) {
     // Interrupted (Ctrl+I) — stop immediately instead of spinning a fresh uncancellable signal
@@ -119,6 +129,18 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
     
     if (++turns > MAX_ADVISOR_TURNS) {
       return renderTimeline(timeline, "Advisor: stopped after " + MAX_ADVISOR_TURNS + " tool rounds — the review appears to be looping. You may retry with a narrower scope.")
+    }
+
+    // #934（零落笔看门狗——§6.32.2 ② / §6.32.6 触发接线②）：轮顶结上一轮（首轮无上一轮可结）——
+    // 上一轮无文本 ⇒ silentRounds += 1；越阈且未通报 ⇒ 恰一次通报（可选钩子——缺省零行为；
+    // 钩子恒零抛：抛错不得上抛为评审 failed 面——实现面兜底捕获兑现）。
+    if (turns > 1) {
+      if (!roundHadText) silentRounds += 1
+      roundHadText = false
+      if (!stallAlerted && silentRounds >= ZERO_WRITE_ALERT_ROUNDS) {
+        stallAlerted = true
+        try { seams.onStallRound?.(silentRounds) } catch { /* #934：恒零抛（§6.32.6） */ }
+      }
     }
     
     // Check context window and compact if needed
@@ -155,7 +177,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
         messages,
         tools: toolSchemas,
         signal: callSignal,
-        onToken: (t) => { if (String(t ?? "").trim()) reviewTextProduced = true; onText(t) },
+        onToken: (t) => { if (String(t ?? "").trim()) { reviewTextProduced = true; silentRounds = 0; roundHadText = true } onText(t) },
         onReasoning: onThink,
         // LOGGING（vscode advisor/run.mjs parity——按 stage 可 grep）
         // TRACES.md §6.1 D-TR4：轨迹元数据增补——kind=advisor（评审独立于子代理——T-TR2）；role

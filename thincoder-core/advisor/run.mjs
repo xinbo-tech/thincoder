@@ -140,7 +140,11 @@ export async function runAdvisorReview(agent, reviewType, callbacks, designToken
   const pinned = buildPinnedBrief(reviewType, documents, object, designToken, designId)
 
   try {
-    const result = await runAdvisorToolLoop(provider, messages, onOutput, signal, agent, advisorCwd, null, reviewType, boundBatchDoc, pinned)
+    // #934（零落笔看门狗——§6.32.6 触发接线②）：评审族闸位钩子转发（callbacks 不供 `onStall` ⇒
+    // `onStallRound: undefined` ⇒ 环路零行为——同步径（advisor 工具）不供钩子）。
+    const result = await runAdvisorToolLoop(provider, messages, onOutput, signal, agent, advisorCwd, null, reviewType, boundBatchDoc, pinned, {
+      onStallRound: callbacks?.onStall,
+    })
 
     // Host-verified citations (decision d698434): mechanically check every
     // `file:line: content` reference in the review against the CURRENT file

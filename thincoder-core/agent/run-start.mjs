@@ -30,14 +30,55 @@ export async function beginRun(agent, input, callbacks, {
   // +role——四族（subagent/advisor/escalate/consult）统一停靠；注入器按 role 分发
   // （consult → injectConsultResult；其余 → injectAsyncResult——族分支同 CONSULTATION.md §6.2 D-R17a/b）
   // ——单容器一处清，不再逐族三段。
+  // §6.31 消化账务（批 digest-accounting · 2026-10-05 · 台账 #930）：**投递 ≠ 销账**——
+  // 会话态（`_daSession`）投递留容器（覆盖才离容器 / 未见账经消化轮回路重投）；fallback
+  // （headless / 直连 runAgent）缺省条逐字沿用取尽语义（先离容后注入 ∥ `releaseSettledEntry` 面；
+  // 零账目动作——不销账 / 不重投），已投递未销账条同判据跳过且留容器（§6.31 出口缝② · 父侧裁定 2026-10-05）。
   const pendingAsync = agent._pendingAsyncResults
-  if (pendingAsync?.length) {
+  const { carrierField, releaseChildHold, releaseSettledEntry } = await import("../agent-tools/async-settle.mjs")
+  if (carrierField(agent, "_daSession") === true) {
+    const { armAccountRound, isDigestRound, shouldDeliverEntry, digestAccountRequirement } = await import("./digest-account.mjs")
+    armAccountRound(agent) // §6.31.5 落痕清位：会话态起跑即清（缺痕 ⇒ 全条未覆盖——安全方向）
+    if (pendingAsync?.length) {
+      const { injectAsyncResult } = await import("../agent-tools/subagent.mjs")
+      const { injectConsultResult } = await import("../agent-tools/consult.mjs")
+      const digestRound = isDigestRound({ autoTurn, upstreamTurn, timerTurn })
+      // 投递门控两态（§6.31.4）：首投任意回合 ∥ 重投仅消化轮；注入后**留容器**（不 splice）。
+      // 注入抛错 ⇒ 未投条目（`_daDelivered` 未置）留容器待下轮——收窄既有「splice 先取尽」的丢失窗。
+      for (const e of [...pendingAsync]) {
+        if (!shouldDeliverEntry(e, digestRound)) continue
+        if (e.role === "consult") await injectConsultResult(agent, e)
+        else await injectAsyncResult(agent, e)
+        e._daDelivered = true
+        e._daRetry = false
+        releaseChildHold(e) // 仅释放 `childAgent`——`report` 保留至销账 / 升级（重投需原文）
+      }
+      // 账目要求行（§6.31.3）：仅会话态消化轮且未销账清单非空时注入（先投递后拼清单——
+      // 含本回合首投 / 重投）；两档同发（手动 / AUTO）；transient（机器线独有）。
+      if (digestRound) {
+        const ids = pendingAsync.filter((e) => e._daDelivered === true).map((e) => e.id)
+        if (ids.length > 0) {
+          agent.history.push({ role: "user", content: digestAccountRequirement(ids), transient: true })
+        }
+      }
+    }
+  } else if (pendingAsync?.length) {
     const { injectAsyncResult } = await import("../agent-tools/subagent.mjs")
     const { injectConsultResult } = await import("../agent-tools/consult.mjs")
     // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §6.15 消费点②——run 起始 pending 注入）：
     // 注入完成后释放条目对子代理对象的持有（childAgent/report 置空——幂等 helper）。
-    const { releaseSettledEntry } = await import("../agent-tools/async-settle.mjs")
-    for (const e of pendingAsync.splice(0)) {
+    // §6.31 出口缝②（#44 披露①扩散面 · 父侧裁定 2026-10-05）：fallback 支同判据延伸——
+    // 注入前按投递账分区：已投递未销账条（`_daDelivered === true`——内容已在历史）不注入且
+    // 留容器（与 idle 清场同义——防重复 / 条目不离账务面）；`_daDelivered` 缺省条逐字沿用
+    // （先离容后注入的取尽窗 ∥ 注入顺序 ∥ `releaseSettledEntry` 面）。
+    const taken = []
+    let kept = 0
+    for (const e of pendingAsync) {
+      if (e?._daDelivered === true) pendingAsync[kept++] = e
+      else taken.push(e)
+    }
+    pendingAsync.length = kept
+    for (const e of taken) {
       if (e.role === "consult") await injectConsultResult(agent, e)
       else await injectAsyncResult(agent, e)
       releaseSettledEntry(e)
@@ -80,6 +121,11 @@ export async function beginRun(agent, input, callbacks, {
       agent._verifyPassed = undefined
       agent._calledAdvisorThisRun = false
       agent._touchedFiles = []
+      // #934（零落笔看门狗——AGENT-LOOP-UPSTREAM.md §6.32.6 载体重置）：streak / 闩与
+      // `_touchedFiles = []`（本块）同点复位——链起点；续跑（resume）不执行 ⇒ 「连续」
+      // 跨段存活（锚与分支差别注见 §6.32.2 ①）。
+      agent._zeroWriteStreak = 0
+      agent._zeroWriteAlerted = false
       agent._verifyRetries = 0
       agent._advisorRound = 0
       agent._advisorSession = null // advisor session is per-run: discard when the task ends, next task starts fresh

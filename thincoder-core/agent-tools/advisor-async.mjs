@@ -65,6 +65,8 @@ import { deathLine } from "../abort-provenance.mjs"
 // ASYNC-RESULT-CONTAINER.md D3/D6：settle 公共收尾单点 + child signal 构建单点
 import { bindChildController, buildChildSignal, carrierField, getAsyncPool, settleAsyncEntry, tombstoneOf, writeTombstone } from "./async-settle.mjs"
 import { nextSubagentId, consumeSubagentToken, assertPoolKeyFree, entryTerminal } from "./subagent-scheduler.mjs"
+// #934（零落笔看门狗——AGENT-LOOP-UPSTREAM.md §6.32.6 触发接线②）：评审族推送单源（叶档——恒零抛）。
+import { pushAdvisorAlert } from "./zero-write-watch.mjs"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Review-instance registry (_advisorRuns — per-review rounds/prior/cap)
@@ -426,6 +428,7 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
     runAdvisorReview(parent, reviewType, {
       onOutput: (chunk) => relayAdvisorOutput(ctx?.callbacks, entry.relayPrefix, chunk),
       signal: entry.controller.signal,
+      onStall: (rounds) => pushAdvisorAlert(parent, `advisor#${id}`, rounds), // #934：连续无产出越阈 ⇒ 自动上行提醒（只推——§6.32）
     }, designToken, documents, paths, object, designId)
       .then((report) => { entry.report = report })
       // §6.12 第 3 条合成器（第 24 批）：原 message 前缀逐字保留 + 来源后缀
