@@ -104,7 +104,11 @@
 - **工具语义**：advisor 加 `async: true`；**缺省 async**——仅 depth-0（depth>0 显式 async 拒 / 缺省恒同步）。发起返回 ack → 回合自然收尾 → 挂起态 → settle → digest。
 - **UI 通道**：subagent 面板 + `role="advisor"` 伪角色（块 / ⏹ / 冻结全复用）；cancel = 定向 abort → cancelled settle（不入 pending、不入 token 槽、digest 提示「评审已取消——token 未签发」）。
 - **settle 记账**：评审 settle 时（消化链首行注入前）——① **陈旧判定**（launch 后发生 `FILE_MUTATORS` ⇒ 基于旧状态 ⇒ 不置 `_calledAdvisorThisRun`、代码评审不签发 token，guard 仍推回发起新评审）；② 通过 → token 入槽 `_engDesignTokens` + 当场同步落盘权威台账；③ `_advisorRound` 改按 review 实例记（轮次仅作提示词衰减与显示——**无机械上限**）；④ guard 推回判定看后台评审是否已 settle 且非陈旧。
-- **收敛状态 per-review 化**：`_advisorRuns: Map<reviewId, { round, priorOutput, stale }>`——`reviewId` = `designId`（设计评审）/ 随机 id（代码复核）；多评审并行隔离。
+- **收敛状态 per-review 化**：`_advisorRuns: Map<reviewId, { round, priorOutput, stale, historyAnchorIdx }>`——`reviewId` = `designId`（设计评审）/ 随机 id（代码复核）；多评审并行隔离。
+- **构建期定域（2026-10-05 · review-cross-talk 批 · 台账 #949）**：会话级镜像（`_advisorRound` ∥ `_lastAdvisorOutput` ∥ `_advisorResponseAnchor`）在**消费点**（消息构建前）按本评审实例定域——
+  launch 与消息构建之间存在窗口（**排队评审的实际启动时点** ∥ 他场结算重写镜像 ∥ run 起点复位）——构建读他场镜像 = 串台（本批活体复现：排队设计评审构建出他场轮次与 prior）。
+  定域单点 = `scopeAdvisorMirror`（叶档 `thincoder-core/agent-tools/review-facts.mjs`）——`resolveAdvisorLaunch`（launch 与构建同栈）∥ `entry.start`（排队经补位启动）双点同调。
+  **投递水印**：`run.historyAnchorIdx` = 本评审结果对父可见（async = 投递单点 `injectAsyncResult`；sync = 工具结果提交点）时的 `history` 长度——轮 2+ 响应表取件下界（取件纪律单源 = `docs/core/design/ADVISOR-CONVERGENCE.md` §4.3）。
 - **实例回收（2026-10-04 · #863 · 设计轮）**：`_advisorRuns` 逐实例轻量化与回收——① **关闭点轻量化**：实例关闭（approval 关 ∥ `closeOpenCodeAdvisorRuns`）同拍 `priorOutput = null`（释放大串；closed 实例的 `priorOutput` 零消费面——续跑仅取 open）；
   ② **回收窗**：新实例创建时（`resolveAdvisorLaunch`）去重回收——design 面**同 `docSetKey` 保最新一条 closed**（F2h 的 `prior` 查找只取 newest——语义零变）、code 面 closed 实例清除（`openCodeRun` 仅取 open——零消费）；判据 = 会话内 Map 不随评审代数单调增（有界）。实现 = 本批实施轮。
 - **消化处置轮**：报告注入 → 模型消化（呈递发现 + 修复建议——不擅自动手）→ 用户逐项拍板 → 修正轮在 agent 回合内发起 round2（async 再启——round / prior 从 `_advisorRuns` 取）。
@@ -1020,6 +1024,9 @@ trace 实读（`~/.thincoder/traces/2026-10-01/38478126a2c4-6602.jsonl`）= 343 
 **本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
 **本批（消化账务 · 2026-10-05）落点表** = `docs/batches/2026-10-05-digest-accounting.md` §2（唯一承载面——一次性批次材料）。
 **本批（消化账务取件窗收正 · 2026-10-05）落点表** = `docs/batches/2026-10-05-digest-account-window-fix.md` §2（唯一承载面——一次性批次材料）。
+**本批（评审 history 串台面 · 2026-10-05）落点表** = `docs/batches/2026-10-05-review-cross-talk.md` §2（唯一承载面——一次性批次材料）。
+
+- 2026-10-05（**评审 history 串台面批（review-cross-talk）· 设计轮 · eng-designer**——承 `docs/batches/2026-10-05-review-cross-talk.md` §2 · 台账 #949）：§6.10 收敛状态行载入 `historyAnchorIdx`；增**构建期定域**条（消费点按实例定域——排队启动窗复核 ∥ `scopeAdvisorMirror` 双点 ∥ 投递水印双点；残差按「≥ 投递点」口径声明）。**机制语义 = 隔离补全**（结算 / 签发 / 闸位零触）。明细 = 批档 §2。
 
 - 2026-10-05（**批 digest-accounting · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §1 · 需求 §4.15（F-DA1–F-DA6 / N1–N4）· 台账 #930；同族 = #929 ∥ 空停；事故档 = #926）：新增 **§6.31 消化账务——投递 ≠ 销账**
   （投递账 / 见账 / 销账三角色 ∥ 账目合同（`[digest-ack #<id>]` 机检）∥ 投递面两态门控 ∥ 见账面（finalize 单点 · 落痕取件）∥ 重投上限 N = 2 与升级 ∥ 三端可见面（status 段 + 残余行 + 升级提醒）∥ F-DA5 transport 归一 + 缺席同面 ∥ F-DA6 空白判加宽 ∥ 受影响文件 / 用例 T-DA1–T-DA14 / 验收 A-DA1–A-DA8 / 边界 / KD-DA1–KD-DA10）；

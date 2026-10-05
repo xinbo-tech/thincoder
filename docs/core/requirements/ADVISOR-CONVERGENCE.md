@@ -185,7 +185,7 @@
 |---|---|---|---|
 | F-A1 | **工具面**：`advisor` 工具——`type`（code / design）· `paths[]` / `documents[]` / `batchDoc` / `object` / `async` 参数；工具声明 readonly + 副作用豁免。证据 = `thincoder-core/agent-tools/advisor.mjs` | 参数形态可机判（enum / 数组）；空范围（code 无 paths / documents）→ 拒；design documents 须为文档 | 不做范围自动推断（paths 缺省回落 `_touchedFiles`） |
 | F-A2 | **轮次衰减**：评审系统提示按轮次确定性替换——round 1 全量；round 2 验 prior 为主 + 允许新问题；round 3+ 严格只验 prior。证据 = `thincoder-core/advisor.mjs`（`main.mjs` 同源重组）· `thincoder-core/advisor/convergence.mjs` | 第 N 轮系统提示 = 对应轮次档（硬加载、缺失即抛错）；轮次判定由状态位决定，**零输出解析** | 不做 LLM 输出解析判状态；不做每轮全量重扫 |
-| F-A4 | **会话隔离**：每轮 fresh session（旧轮 read 数据物理不在上下文）；prior 仅以注入文本存在 | 单轮会话不携带上轮工具尾 | 不复用上轮会话上下文 |
+| F-A4 | **会话隔离**：每轮 fresh session（旧轮 read 数据物理不在上下文）；prior 仅以注入文本存在；**跨评审实例隔离**（2026-10-05 · 台账 #949）：构建取值（轮次 ∥ prior ∥ 取件水印）按本评审实例定域——并发 / 排队下不读他场镜像；响应表取件下界 = 本评审投递点（残余 = 交错写窗 + 索引稳定性前提；判据单源 = `docs/core/design/ADVISOR-CONVERGENCE.md` §4.3） | 单轮会话不携带上轮工具尾；本评审构建不载他场镜像 ∥ 不取舍他场响应表（活体复现链 = `docs/batches/2026-10-05-review-cross-talk.md` §2.1） | 不复用上轮会话上下文；不做响应协议强绑定（上抛在册） |
 | F-A5 | **证据机械校验（citations）**：模型引用 `file:line` 逐条比对磁盘——白名单扩展名 + 内容匹配 + 路径围栏；报告 `[host-verified] N/M citations match` | 失真引用 → 失败清单可见；越界路径 → path traversal 判败 | 不做语义级正确性判定 |
 | F-A6 | **失败护栏（六 kind）**：context_limit / turn_cap / timeout / empty / interrupted / review_failed——命中标记块首行前缀族；design 命中**一律不签发 token** | 触发六类之一 → 报告携标记（固定字面）；design 请求不产出可用凭证 | 不把失败静默为通过 |
 | F-A7 | **异步通道**：顶层缺省异步（ack 即回，settle → digest 自动送达）；池 4；同 type+scope 在跑 → 拒 | ack 可解析（含 id）；settle 后 digest 注入；同域重复发起 → 明确拒绝串 | 不做轮询式 check |
@@ -247,3 +247,5 @@
 - 2026-10-03（**收敛修批 · 评审轮 1 发现 2 处置 · 父侧直接执行 · 可 revert**）：§4 边界行删沿革括注（边界面只留现行命令句——沿革已在 :247 有账）。**零语义改**。
 - 2026-10-03（**收敛修批 · 需求侧收正 · 父侧直接执行 · 可 revert**——承设计轮上抛 U1/U2）：① §4 边界行收正——删「不改评审侧提示词」原句（与 F32 落地相抵），改「仅按 §2.4 明定的裁决窗与写作禁则修订；`consult-base.md` 不改」；② 新增 **F34**（引证形状面——连续子串 ∥ 失败四分分类 ∥ 四面写作禁则）+ **F35**（归宿面——不可验证 ∥ 不完整 ⇒ 结论化；F28/F29 落地面明书）；档头索引随动（F27–F35）。**零新语义**（F34/F35 = 2026-10-03 21:1x 已裁两面的条目化）。
 - 2026-10-03（**收敛修批 · 复评（轮次 2）发现 1/3/5 处置 · 父侧直接执行 · 可 revert**——承 `docs/batches/2026-10-03-advisor-convergence.md` §3 轮次 2）：① §2.4 归属边界句收正（覆盖 F32–F35 四节内容）；② §4 边界行射程补「归宿面收尾句」；③ F35 括注「（预算用尽）」删（与设计侧收尾句不限射程对齐）；④ F16 边界「不改 cap 语义」⇒「不改 guard 推回上限语义（`MAX_ADVISOR_PUSHBACKS`）」（轮次上限 F2/F3 已于 2026-09-18 撤项——所指为 guard 推回上限）。**零语义改**。
+
+- 2026-10-05（**评审 history 串台面批（#949）· 需求侧对位 · 主 agent——需求档笔权**〔父侧直接执行 · 可 revert〕——承设计评审 id=44 发现 3 ∥ 批档 §2.9 上抛①）：§8.1 **F-A4 判据列增句**——跨评审实例隔离（构建取值按本评审实例定域 ∥ 响应表取件下界 = 本评审投递点；残余 = 交错写窗 + 索引稳定性前提；判据单源 = `docs/core/design/ADVISOR-CONVERGENCE.md` §4.3）；判定句 / 范围边界同拍。落批 = `docs/batches/2026-10-05-review-cross-talk.md`。**零新 F 行**（F-A1–F-A12 仍）。
