@@ -845,7 +845,7 @@ trace 实读（`~/.thincoder/traces/2026-10-01/38478126a2c4-6602.jsonl`）= 343 
   - `[digest-ack #<id>] deferred — <原因>`（未处理）
 - **机检判据**：输出文本内**存在一行**同时含标记 `[digest-ack` 与 `#<id>`（词界）⇒ 该条覆盖；disposition / 要点 / 原因**不参与机检**（处理质量不可判——需求边界「只保不许无声」）。
 - **账目要求行**：核常量 `DIGEST_ACCOUNT_DOMAIN`（`thincoder-core/agent/helpers.mjs`——拟新增；内容权威 = 父侧，本设计给合同与草稿位）+ **未销账 id 清单**（`pending ∩ 已投递`，动态拼）——**两档同发**（手动 / AUTO；manual 域文本注入只覆盖手动档 ⇒ 账目要求独立常量行承载，避免 AUTO 轮无要求）；`transient`（机器线独有）。
-- **注入回合条件**：仅**会话态消化轮**（`_daSession` ∧ `isDigestRound`）且未销账清单非空时注入（先投递后拼清单——含本回合首投 / 重投）；非消化轮（含用户回合）不发——账目判读恒落消化轮输出（逐轮取件），用户回合的自行答复不判销账、条目留容器待下一消化轮补账。
+- **注入回合条件**：仅**会话态消化轮**（`_daSession` ∧ `isDigestRound`）且未销账清单非空时注入（先投递后拼清单——含本回合首投 / 重投）；非消化轮（含用户回合）不发——账目判读恒落消化轮输出（每消化轮取件一次——run 级累积痕），用户回合的自行答复不判销账、条目留容器待下一消化轮补账。
 - **被否**：工具调用代理（本批禁令）；自然语言语义判（不可机检）；`tools:0` / 输出长度代理（禁令）。
 
 #### 6.31.4 投递面（`beginRun` 改造）
@@ -860,10 +860,10 @@ trace 实读（`~/.thincoder/traces/2026-10-01/38478126a2c4-6602.jsonl`）= 343 
 #### 6.31.5 见账面（消化轮收尾——`finalizeAgentTurn` 单点）
 
 - **触发**：`isDigestRound ∧ _daSession ∧ !(signal?.aborted && !signal?.reason?.interrupt)`（会话停止径不判——清场语义归 `finishSuspension`）；**恒达窗** = finalize 在 `runAgent` finally（正常 ∥ Abort-continue ∥ 异常抛三径同达——与既有收尾同窗）。
-- **输出取件（落痕单点）**：`turn-loop` 返回点写 `agent.history._lastRunOutput = <final content>`（`thincoder-core/agent/turn-loop.mjs:184` 前）——**run 内落痕**（生命周期 = 单 run：起跑清位 / 收尾取件），不属跨 run 载体字段集（`AGENT-LOOP.md` §2.3 同注）。
-  **清位** = `thincoder-core/agent/run-start.mjs`（beginRun——会话态起跑即清；调核助手 `armAccountRound(carrier)`；fallback 零动作）；**读位** = 本 pass（`finalizeAgentTurn`——调 `harvestAccountOutput(carrier)`，**载体吸收**读：父字段优先 / 回退 `history`——VSC 形同一数组）。
-  缺痕（抛错 / 撞帽 / 未收口）⇒ 全条未覆盖（**安全方向**——假阴可重投；假阳是事故本相）。
-  - **被否**：`runTurn` 返回契约扩展（三端接线面 + 契约破坏）；历史尾扫（跨轮污染 ⇒ 假覆盖——危险方向）。
+- **输出取件（落痕累积）**：`turn-loop` **每模型轮返回即追加**（写父字段 `agent._lastRunOutput += <该轮 content>`——`thincoder-core/agent/turn-loop.mjs:124` 后 ∥ 会话态门：非会话零动作——零取件方 ∥ 防跨 run 无界增殖）——判定输入 = **本 run 内多轮累积文本**（**首轮签收不为收口轮覆盖**——#939 收正）；**run 内落痕**（生命周期 = 单 run：起跑清位 / 收尾取件），不属跨 run 载体字段集（`AGENT-LOOP.md` §2.3 同注）。
+  **清位** = `thincoder-core/agent/run-start.mjs`（beginRun——会话态起跑即清；调核助手 `armAccountRound(carrier)`；fallback 零动作）；**读位** = 本 pass（`finalizeAgentTurn`——调 `harvestAccountOutput(carrier)`，**载体吸收**读：父字段优先——本批写点落父字段（抗 `history` 整体替换） / 回退 `history`（兼容形））。
+  缺痕（本 run 零输出落痕——零模型轮 / 起跑即断）⇒ 全条未覆盖（**安全方向**——假阴可重投；假阳是事故本相）；已有轮次输出（哪怕未收口）⇒ 按累积痕判定。
+  - **被否**：`runTurn` 返回契约扩展（三端接线面 + 契约破坏）；历史尾扫（跨 run 污染 ⇒ 假覆盖——危险方向）；单痕单轮（仅收口轮单写——多轮 run 早轮签收被收口轮覆盖 ⇒ 假阴重投 / 连续两判假升级——#939 本相）；逐轮见账（见账落点分裂——绕 KD-DA2 单点 ∥ 失败计数按轮漂移 ∥ 升级提醒中途入流；无缺陷覆盖增益）。
 - **判定（逐条——投递账 = `pending ∩ _daDelivered`）**：
   - 覆盖 ⇒ 离容器（splice）+ `releaseSettledEntry`（含 report 释放）。
   - 未覆盖 ⇒ `_daFailures += 1`；`≤ DA_RETRY_LIMIT` ⇒ `_daRetry = true`（下轮重投）；`> DA_RETRY_LIMIT` ⇒ **升级**。
@@ -909,7 +909,7 @@ trace 实读（`~/.thincoder/traces/2026-10-01/38478126a2c4-6602.jsonl`）= 343 
 | `thincoder-core/agent/suspension.mjs` | 326 → **348（as-built）** | +30 / −8（as-built——#41 ∥ #44 ∥ #45 合计；净 +22） | `_daSession` 置位 / 复位 + 中止清账本 + 出口缝（idle 清场投递账过滤 ∥ 单遍分区——#44 ∥ #45） |
 | `thincoder-core/agent/run-start.mjs` | 111 → **152（as-built）** | +44 / −3（as-built——#41 ∥ #45 合计；净 +41） | 投递门控两态 + 账目要求行 + 会话态起跑清位（`armAccountRound`）+ fallback 支投递账分区（#45） |
 | `thincoder-core/agent/run-stages.mjs` | 270 | +25 / −2 | finalize 见账 pass（读位 `harvestAccountOutput`）+ 缺席支 + 中止清账本 |
-| `thincoder-core/agent/turn-loop.mjs` | 250 | +2 | 收口落痕单点 |
+| `thincoder-core/agent/turn-loop.mjs` | 250 | +2 | 收口落痕单点（#939 后 = 本 run 内逐轮累积——见 §6.31.5） |
 | `thincoder-core/agent/completion.mjs` | 154 | +2 / −1 | 空白判（F-DA6） |
 | `thincoder-core/agent/helpers.mjs` | 481 | +6 | `DIGEST_ACCOUNT_DOMAIN` 常量位 |
 | `thincoder-core/agent-tools/async-settle.mjs` | 302 → **326（as-built）** | +29 / −5（as-built——本批合计：#41 ∥ #44/#45 ∥ #47；净 +24） | `releaseChildHold` + 账本写助手 + 出口缝注（`releaseSettledEntry` 条件句）+ 归档注收正 |
@@ -959,7 +959,7 @@ trace 实读（`~/.thincoder/traces/2026-10-01/38478126a2c4-6602.jsonl`）= 343 
 | T-DA5 | 错误·超限升级 | 三轮均未覆盖 | 第 3 次后：离容器入 `_unsettledDigests`；恰一条提醒 + 恰一条 `ev:unsettled`；`failures=3` |
 | T-DA6 | 边界·升级即终结 | 升级后再开消化轮 | 不重投（账目终态）；`poolLive` 不含（会话可退） |
 | T-DA7 | 边界·fallback 零回归（缺省条） | 无 `_daSession`（headless 形）pending 注入——缺省条 | 逐字旧行为：取尽（先离容后注入）+ 注入 + 双释放；零账目动作（`_daDelivered` 条跳过且留容器 = T-DA16 面） |
-| T-DA8 | 边界·输出缺痕 | 消化轮抛错 / 撞帽（未收口） | 全条 `_daFailures + 1`（重投窗口保留）；零假销账 |
+| T-DA8 | 边界·输出缺痕 | 消化轮抛错 / 撞帽（未收口）∧ 零输出落痕（#939 缺痕定义——见 §6.31.5；有早轮输出 ⇒ 按累积痕判定——T-DA20 臂 2） | 全条 `_daFailures + 1`（重投窗口保留）；零假销账 |
 | T-DA9 | 边界·机检反例 | 输出仅提 `#12` 无标记 / 仅标记无 id | 两条皆不计覆盖（皆不销） |
 | T-DA10 | 正常·status 可见 | overview 直驱（在途未销 / 升级各一） | `unsettled` 段两态行在场；单查 id 同解析 |
 | T-DA11 | 正常·端面残余行 | 消化轮收尾 unsettled = 2（CLI 记录 / 桌面帧 / VSC 消息） | CLI 记录携 `unsettled` + 痕行 `digest.residue` 在场；桌面 / VSC 行同键文；= 0 ⇒ 零行 |
@@ -968,8 +968,13 @@ trace 实读（`~/.thincoder/traces/2026-10-01/38478126a2c4-6602.jsonl`）= 343 
 | T-DA14 | 错误·F-DA6 空停 | content 纯空白 ⇒ 重试臂；重试用尽臂 | 空白进空响应支（≤2）后抛；非空半句零触 |
 | T-DA15 | 出口缝①·idle 清场投递账过滤 | 直驱 `finishSuspension`（idle——已投递 ∥ 未投递条交错）∥ 回退形（无投递账条）∥ 全径（会话内消化轮抛非 abort 错） | 已投递条不注入且留容器（不入 `left` / 不入 `reclaim`；`report` 零释放）；未投递条照注入 + 离容；回退形全量注入零变 |
 | T-DA16 | 出口缝②·fallback 支投递账分区 | fallback 直驱（无 `_daSession`——已投递 ∥ 缺省条交错）+ 单遍分区顺序面 | 已投递条零注入且留容器（原序、零释放）∥ 缺省条照注入（恰一次）+ 照释放（双释放）；零账目动作；离容 / 留容器顺序不缩水 |
+| T-DA17 | 缺陷复现（红→绿）·首轮签收跨轮存活 | 多轮 run（首轮输出含 `[digest-ack #3]` + 工具调用 ∥ 收口轮无签收——真 `runAgent` + fetch 桩） | 覆盖 ⇒ 销账（离容器 + 释放）；零失败 / 零重投（注入计数 = 1）；修前红读：`_daFailures=1` + `_daRetry=true` |
+| T-DA18 | 回归·跨 run 清位 | run A 输出含 `#44` 签收（该条不属 A）⇒ run B 投递 #44、输出无签收 | B 判未覆盖（`_daFailures=1`）——上一 run 文本不替本 run 作证（窗未清 ⇒ 假覆盖） |
+| T-DA19 | 回归·未签收照重投 | 单轮无签收 ⇒ 下轮重投补账（两 runAgent） | 轮 1：失败 +1 + `_daRetry`（条留容器 / report 留 / childAgent 释）；轮 2 补账 ⇒ 销（注入计数 = 2） |
+| T-DA20 | 边界·缺痕两臂 | 臂 1：零模型轮（`maxTurns: 0`）⇒ 全条未覆盖 ∥ 臂 2：早轮签收 + 撞帽未收口（`maxTurns: 1`） | 臂 1：失败 +1 + 零假销账；臂 2：按累积痕覆盖（销账——判据窗既定） |
 
 **用例宿主**：核侧（T-DA1–T-DA10 · T-DA12–T-DA14）→ 批内件 `docs/batches/2026-10-05-digest-accounting.test.mjs`（as-built 408 行）；出口缝（T-DA15 / T-DA16）→ 批内件 `docs/batches/2026-10-05-digest-accounting-exit-seam.test.mjs`（as-built 165 行——纯搬移）；端侧（T-DA11）→ 各端批内腿（CLI 记录痕行 ∥ 桌面帧 + 行元素 ∥ VSC 消息 + 行元素——沿各端批内件惯例）。
+窗收正四例（T-DA17–T-DA20——含 ★ 红绿对）→ 批内件 `docs/batches/2026-10-05-digest-account-window-fix.test.mjs`（拟新增——本批自持）。
 
 #### 6.31.11 验收标准（逐条回指）
 
@@ -999,7 +1004,7 @@ trace 实读（`~/.thincoder/traces/2026-10-01/38478126a2c4-6602.jsonl`）= 343 
 |---|---|---|
 | KD-DA1 | 账目 = 模型文本标记 + 机检覆盖 | 被否：工具调用代理（禁令）· 自然语言语义判（不可机检）· `tools:0` 等行为代理（禁令） |
 | KD-DA2 | 见账落点 = `finalizeAgentTurn`（消化轮收尾） | 被否：核循环 after-run（端面 end 帧 / 痕行读到的是**上一轮**结果——时序倒置）· 三端各自自检（判据漂移） |
-| KD-DA3 | 输出取件 = 回合收口落痕（载体吸收读） | 被否：`runTurn` 返回契约扩展（三端接线 + 契约破坏面）· 历史尾扫（跨轮污染 ⇒ 假覆盖） |
+| KD-DA3 | 输出取件 = 本 run 内逐轮累积落痕（父字段 ∥ 载体吸收读；会话态门） | 被否：`runTurn` 返回契约扩展（三端接线 + 契约破坏面）· 历史尾扫（跨 run 污染 ⇒ 假覆盖）· 单痕单轮（仅收口轮单写——多轮 run 早轮签收被覆盖 ⇒ 假阴重投 / 假升级——#939 本相）· 逐轮见账（落点分裂 ∥ 失败计数按轮漂移 ∥ 升级提醒中途入流——无覆盖增益） |
 | KD-DA4 | 重投上限 N = 2（总投递 ≤3） | 被否：N = 1（单次坏窗无第二兜底）· N ≥ 3（成本无对应收益——覆盖失败多系统性） |
 | KD-DA5 | 升级 = 离容器入 `_unsettledDigests` + 提醒 + 事件 | 被否：留容器标升级位（循环判据 / `poolLive` / 计数全污染）· 静默丢弃（违本旨） |
 | KD-DA6 | 账目要求 = 独立核常量行（两档同发 + id 清单） | 被否：并入 digest 域文本（仅手动档 + 两变体 + 端 overlay 复制；AUTO 无要求 ⇒ 系统性失败）· 仅 AUTO 泛句（F-UC8 已退场项复活） |
@@ -1014,6 +1019,7 @@ trace 实读（`~/.thincoder/traces/2026-10-01/38478126a2c4-6602.jsonl`）= 343 
 **本批（timer 唤醒投递修复 · 2026-10-01）落点表** = `docs/batches/2026-10-01-timer-wake-delivery.md` §2（唯一承载面——一次性批次材料）。
 **本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
 **本批（消化账务 · 2026-10-05）落点表** = `docs/batches/2026-10-05-digest-accounting.md` §2（唯一承载面——一次性批次材料）。
+**本批（消化账务取件窗收正 · 2026-10-05）落点表** = `docs/batches/2026-10-05-digest-account-window-fix.md` §2（唯一承载面——一次性批次材料）。
 
 - 2026-10-05（**批 digest-accounting · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §1 · 需求 §4.15（F-DA1–F-DA6 / N1–N4）· 台账 #930；同族 = #929 ∥ 空停；事故档 = #926）：新增 **§6.31 消化账务——投递 ≠ 销账**
   （投递账 / 见账 / 销账三角色 ∥ 账目合同（`[digest-ack #<id>]` 机检）∥ 投递面两态门控 ∥ 见账面（finalize 单点 · 落痕取件）∥ 重投上限 N = 2 与升级 ∥ 三端可见面（status 段 + 残余行 + 升级提醒）∥ F-DA5 transport 归一 + 缺席同面 ∥ F-DA6 空白判加宽 ∥ 受影响文件 / 用例 T-DA1–T-DA14 / 验收 A-DA1–A-DA8 / 边界 / KD-DA1–KD-DA10）；
@@ -1031,6 +1037,15 @@ trace 实读（`~/.thincoder/traces/2026-10-01/38478126a2c4-6602.jsonl`）= 343 
 
 - 2026-10-05（**批 digest-accounting · §6.31.9 >300 审视块全扫补列（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §2 越线补列块 ∥ 父侧裁定（越线缺行补列——不豁免）+ 全扫扩令）：§6.31.9 >300 块补两行（越线为存量——注释面 only 条件句收正；非结构性触碰）——
   `escalate-async.mjs` 307 → **309（as-built）** ∥ `subagent-async.mjs` 466 → **469（as-built）**——各一行处置句 + 拆分预案去向（**本批不拆**；拆分计划随该档下次结构性触碰登记——先例 = §6.20.4）。**零新语义**（登记面——本批触档 27 产品档全扫：越线 8 = 已覆盖 6 + 新补 2）。明细 = 批档 §2 越线补列块。
+
+- 2026-10-05（**批 digest-account-window-fix · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-digest-account-window-fix.md` §1 · 台账 #939（#930 判据级收正——需求本意「报告不许无声消失」不变））：§6.31.5 输出取件由收口轮单写改**本 run 内逐轮累积**（写点 = `callModelTurn` 返回点后 ∥ 父字段 ∥ 会话态门 ∥ 抗 `history` 整体替换）；缺痕重定义（零输出落痕）；被否清单补「单痕单轮」∥「逐轮见账」（「历史尾扫」仍否）；
+  KD-DA3 同拍；§6.31.10 补 T-DA17–T-DA20（★ 红绿对——首轮签收跨轮存活）+ 宿主行；落点表指针补行。**机制语义 = 判据窗收正**（见账落点 / 重投上限 / 升级语义 / 投递门控逐条零变）。明细 = 批档 §2。
+
+- 2026-10-05（**批 digest-account-window-fix · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-05-digest-account-window-fix.md` §3 轮次 1（评审 #10 · pass）· 父侧裁定 = 五项全采纳）：§6.31.3 括注术语收正（「（逐轮取件）」⇒「（每消化轮取件一次——run 级累积痕）」——与 §6.31.5「输出取件（落痕累积）」术语单源）；
+  §6.31.9 `turn-loop.mjs` 行说明格补 as-of 注（「#939 后 = 本 run 内逐轮累积——见 §6.31.5」——行数格仍 #930 as-of 不随动）。**零机制语义**（术语 ∥ 注记面）。明细 = 批档 §2 修正块。
+
+- 2026-10-05（**批 digest-account-window-fix · 设计评审轮 2 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-05-digest-account-window-fix.md` §3 轮次 2（评审 #13 · pass）· 父侧裁定 = ①③ 落修 ∥ ②④ 归实施轮）：§6.31.10 T-DA8 输入格补 #939 限定——「消化轮抛错 / 撞帽（未收口）∧ 零输出落痕（#939 缺痕定义——见 §6.31.5；有早轮输出 ⇒ 按累积痕判定——T-DA20 臂 2）」（与 T-DA20 臂 2 对「撞帽未收口」判定单源；预期格 ∥ 判据本体零改）。
+  **零机制语义**（限定注面）。明细 = 批档 §2 修正块。
 
 - 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #863）：§6.10 增**实例回收句**（`_advisorRuns` 关闭轻量化 + 新实例创建时去重回收——F2h ∥ code 语义零变）。实现 = 本批实施轮。
 
