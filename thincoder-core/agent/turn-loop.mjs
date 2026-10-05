@@ -49,11 +49,13 @@ export async function runTurnLoop(agent, {
 
   // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-UPSTREAM.md §6.27.4 消费点）：子 → 父在飞消息的
   // 回合边界注入单点取用一次（模块缓存 ⇒ 每 run 一次代价）；动态 import = 零新增静态边
-  // （先例 = 上方 injectAsyncResult :113-117）。
+  // （同款先例 = run-start.mjs:43 ∥ :66——injectAsyncResult 动态 import）。
   const { drainChildUpstream } = await import("../agent-tools/parent-channel.mjs")
   // #934（零落笔看门狗——AGENT-LOOP-UPSTREAM.md §6.32）：连续零写越阈 ⇒ 自动上行提醒（只推——
   // 不杀 / 不转向）；单源叶 = zero-write-watch.mjs，动态 import 沿上条同款（零新增静态边）。
   const { maybeZeroWriteAlert } = await import("../agent-tools/zero-write-watch.mjs")
+  // §6.31.5 落痕写点门（#939）：载体吸收经 `carrierField` 单点（§6.31.4 同式）；动态 import = 零新增静态边（沿上方两条同款）。
+  const { carrierField } = await import("../agent-tools/async-settle.mjs")
 
   // #417（撞帽载荷「本段零落盘轮数」——只报数：零阈值 / 零自动动作）：计数基线——回合环逐轮
   // 比对 `_touchedFiles` 增量（轮顶对上一轮结账；撞帽收尾轮在环外单结）。
@@ -122,6 +124,13 @@ export async function runTurnLoop(agent, {
     const response = await callModelTurn(agent, {
       systemPrompt, toolSchemas, streamOutput, callbacks, signal, streamRuleFired, autoTurn, depth, turn,
     })
+
+    // §6.31.5 落痕（消化账务批 · 2026-10-05 · 台账 #930 ∥ #939 收正）：本 run 内**逐轮追加**——
+    // 每模型轮返回即写（会话态）；首轮签收不为收口轮覆盖（见账取件读累积痕）。
+    // 落父字段（抗 `history` 整体替换——`context.mjs` `applyCompression`）；非会话零动作。
+    if (carrierField(agent, "_daSession") === true && response.content) {
+      agent._lastRunOutput = `${agent._lastRunOutput ?? ""}${response.content}\n`
+    }
 
     // 内置工具（Responses web_search）结果本地化：服务端已执行——入历史为 tool 消息；
     // 服务端 item id 是 msg_xxx 非 web_search_call_ 前缀——必须合成前缀（toItems 识别锚点），
@@ -195,9 +204,6 @@ export async function runTurnLoop(agent, {
           { systemPrompt, tools: toolSchemas }).catch(() => {}) // 与回合请求同源（无第二构造点）
         agent._pendingDistill = distill
       }
-      // §6.31.5 落痕（消化账务批 · 2026-10-05 · 台账 #930）：回合收口内容落 run 内单痕——
-      // 见账读位取件（起跑清位 / 收尾取件）；缺痕（抛错 / 撞帽 / 未收口）⇒ 全条未覆盖（安全方向）。
-      agent.history._lastRunOutput = cr.content
       return cr.content
     }
 

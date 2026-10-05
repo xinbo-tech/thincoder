@@ -170,15 +170,17 @@ export function unsettledCount(carrier) {
 }
 
 /** 落痕清位（§6.31.5——`run-start.mjs` 会话态起跑即清；fallback 零动作）：父字段 ∥ history 双清。
- *  注：核内写点只落 `history`（`turn-loop.mjs` 的 `agent.history._lastRunOutput`——该痕不属跨 run
- *  字段集，§6.31.5 边界句）；父字段分支为 `harvestAccountOutput` 载体吸收读齐备（VSC 形）。 */
+ *  注：核内写点落**父字段**（`turn-loop.mjs` 的 `agent._lastRunOutput`——逐轮追加，本批 #939
+ *  收正；抗 `history` 整体替换——`context.mjs` `applyCompression`）；`history` 级为兼容读形
+ *  （`harvestAccountOutput` 回退分支）——该痕不属跨 run 字段集，§6.31.5 边界句。 */
 export function armAccountRound(carrier) {
   if (!carrier || typeof carrier !== "object") return
   carrier._lastRunOutput = null
   if (carrier.history && typeof carrier.history === "object") carrier.history._lastRunOutput = null
 }
 
-/** 落痕取件（§6.31.5——载体吸收读：父字段优先 / 回退 `history`）；缺痕（抛错 / 撞帽 / 未收口）⇒ null。 */
+/** 落痕取件（§6.31.5——载体吸收读：父字段优先 / 回退 `history`）；读值 = 本 run 多轮累积文本（#939）；
+ *  缺痕（本 run 零输出落痕——零模型轮 / 起跑即断）⇒ null。 */
 export function harvestAccountOutput(carrier) {
   const own = carrier?._lastRunOutput
   if (own !== undefined && own !== null) return own
