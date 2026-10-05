@@ -134,6 +134,14 @@
 3. **回执面**：选定写回径成功回执携 `providerState`（消费档 = `thincoder-desktop/renderer/composer-wire.mjs` `writePrefs`——回执落切片，键缺席 ⇒ 零写）⇒ 提示带即时重派生（`thincoder-desktop/renderer/composer-sync.mjs` `paintNotices`；fallback 明示行随选定退场——#841 同纪律）。
 4. **边界**：设置面「采用」语义零改（只写全局默认、不写会话槽——两面不互相顶替）；回退解析链（`thincoder-core/model-ref.mjs`）零触；候选面 ∥ 词表 ∥ 通道集零新。
 
+**本批注（attach 文件支持 · 文本/源码档内联 · 2026-10-05 · 台账 #948）**：本注定形输入区附件面扩文本/源码族（用户 2026-10-05 走查「attach 其实只能传图片……我自己贴了文件路径你才读到的」）；
+机制 ∥ 判据单源 = `docs/render-core/design/RENDER-CORE.md` §2 **KD-RC-13** ∥ §5 条 6（核件 `thincoder-render-core/composer/attach.mjs` 一处改动、桌面 + VSC 同收）；批档 = `docs/batches/2026-10-05-attach-file-support.md` §2。
+
+1. **端面**：桌面零产品码改动（发送链零新通道——内联在核 `panel.mjs` 内，`msg:send.text` 承载；`images` 列 ∥ `toImages` ∥ 附件残余档 `thincoder-desktop/renderer/attach.mjs` 零触）；
+   词面 = 六拒键（`composer.attach.{tooLarge,tooMany,totalLimit,binary,unsupported,readFailed}`）入第二档 + 键数链续链（§3.2 本批行）；按钮词收正（`toolbar.attach` ⇒ "Attach file" / "添加文件"——按钮语义扩面）。
+2. **判据**：**机检** = 批内件 T1–T15（受纳（选择器派生 ∥ 扩展名支 ∥ `text/*` 支）∥ 内联逐字 ∥ 六拒 toast（含读取失败）∥ 围栏 ∥ 队径 ∥ 图片道零改锁 ∥ 空文本边界锁）；**真机** = 桌面选 `.md` 档 ⇒ 芯片在场 ⇒ 发送 ⇒ 回显块 = `[Attached file: …]` + fenced 段（模型面收件）。
+3. **边界**：PDF/Office ∥ 二进制 ∥ 剪贴板文件粘贴 ∥ 全路径头 ∥ 空文本 + 附件可发——逐条 = `docs/render-core/design/RENDER-CORE.md` §9 附件条（本档不重述）。
+
 ## 3. 文件账（本域）
 
 ### 3.1 本端文件清单与行数预算（本域族行 · 迁自 `PROJECT.md` §4.1——逐字）
@@ -224,6 +232,19 @@
 
 零触面：`renderer/composer-wire.mjs` ∥ `renderer/composer-sync.mjs` ∥ `renderer/app.mjs` ∥ `index.html` ∥ `docs/desktop/design/IPC.md`（**零新通道**）∥ CLI 全树 ∥ VSC 全树 ∥ `thincoder-core`。
 
+**本批（attach 文件支持 · 设计轮 · 2026-10-05 · 台账 #948 · 批 `docs/batches/2026-10-05-attach-file-support.md`）行「现行 ⇒ 预期」**（实读 2026-10-05——内容行数口径（文末换行不计）；
+  机制 ∕ 判据单源 = `docs/render-core/design/RENDER-CORE.md` §2 **KD-RC-13** ∥ §5 条 6；**设计轮——产品码零触**）：
+
+| # | 档 | 现行 ⇒ 预期 | 面 |
+|---|---|---|---|
+| 1 | `thincoder-desktop/renderer/i18n-views.mjs` | **384 ⇒ ≈399**（+6 键 × 2 语 + ② 组注；**越 300 在册**——键行 = 非结构性触碰 ⇒ 续期） | 词面 |
+| 2 | `thincoder-desktop/renderer/i18n.mjs` | **413 ⇒ ≈419**（键数链续链：`VIEWS_DICT` 实读 **138 ⇒ 144** ∥ `HOST_DICT` 实读 **308 ⇒ 314**） | 词面 |
+| 3 | 桌面端面（`thincoder-desktop/renderer/attach.mjs` ∥ `thincoder-desktop/renderer/composer-wire.mjs` ∥ `thincoder-desktop/renderer/composer-sync.mjs` ∥ `thincoder-desktop/renderer/mount-composer.mjs` ∥ `thincoder-desktop/renderer/chat-composer.css`） | **零触**（内联在核——文本档不经 `images` 列 ∥ 不经端写面） | 端面 |
+| 4 | 批内件 | `docs/batches/2026-10-05-attach-file-support.test.mjs`（拟新增——平 node + happy-dom；随批留存 · 不进仓套件） | 全批 |
+| 5 | 设计档 | 本档 §2（本注）· §3.2（本块）· `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-13 + §5 + §6 + §9 + 变更记录 | 全批 |
+
+零触面：`thincoder-desktop/src/main/*`（宿主附件面零改——文本档不经落盘）∥ `thincoder-desktop/renderer/index.html` ∥ `docs/desktop/design/IPC.md`（**零新通道**）∥ CLI 全树 ∥ `thincoder-core`。
+
 **余量**：零（§6.1 域行 ∥ §7 用例行 ∥ §10 上抛行 已随切片 4（终篇）迁入——见 §4/§5/§6）；`i18n-composer.mjs`（跨域词面——留 `PROJECT.md` §4.1）。
 
 ## 4. 验收回指（需求卷条目 → 本域面 · 判据全文——迁自 `PROJECT.md` §6.1 本域行 · as-of 2026-10-02）
@@ -289,6 +310,7 @@
 **本批（模型切换解锁 · 2026-10-04）落点表** = `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §2（唯一承载面——一次性批次材料）。
 **本批（行痕族消失时机 · 2026-10-04）落点表** = `docs/batches/2026-10-04-row-traces-clear-at-turn.md` §2（唯一承载面——一次性批次材料）。
 **本批（流尾台账行组退役 · 2026-10-04）落点表** = `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2（唯一承载面——一次性批次材料）。
+**本批（attach 文件支持 · 2026-10-05）落点表** = `docs/batches/2026-10-05-attach-file-support.md` §2（唯一承载面——一次性批次材料）。
 
 - 2026-10-02：**建档（波 2a · 渲染族迁移）**——自 `docs/desktop/design/PROJECT.md` §2 迁入 **KD-17 ∥ KD-18 ∥ KD-19 ∥ KD-21 ∥ KD-31 ∥ KD-40 ∥ KD-51 ∥ KD-52**（八行逐字；原址各留一行指针）+ 自 `docs/desktop/design/UI.md` §1 迁入本域批注块（回合中插入注 ∥ 挂起窗径注 ∥ 窗队列 VSC 逐点对齐注 ∥ @ 文件引用注 ∥ 斜径命令面注 ∥ 对齐第三批 B22/B26/B28——逐字；原址各留一行指针）+ §6 上抛三行（AZ ∥ BM ∥ BB）。**余量未迁**（KD-25 ∥ KD-30 涉句 ∥ §3 族行 ∥ §4.2 批块 ∥ §4/§5/§6 余行）——随「2c 前置步 · 文件账分片轮」承接（本批 §2 记录在册）。零新语义（搬迁 ∥ 值收正）。
 - 2026-10-02（**波 2a 补轮 · eng-designer**）：**行宽回线**——本档 8 条超 300 字符行按语义边界折行（∥ 分隔处 ∥ 句读处）；零语义改。
@@ -311,3 +333,5 @@
 - 2026-10-04（**模型切换解锁批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §2 · 台账 #918）：**KD-19** 收正（在飞受理 ∥ 施加顺延 ∥ 落盘偏好键单写者）· §2 斜径注项 4 收正（`/model` 恒受理）· D6 行同拍；`docs/desktop/design/IPC.md` ∥ `docs/desktop/design/UI.md` 两档同笔（明细另见各档变更行）。**产品码零触（设计轮）**。明细 = 批档 §2。
 - 2026-10-04（**模型切换解锁批 · 修正轮（评审 #53 · 发现 1 ∥ 2 逐号 + 同机制残句扫 · 父侧裁 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §3 轮次 1 · 台账 #918）：T-DSK28 ④ 收正（在飞 ⇒ 受理）；T-DSK56 ⑤ ∥ 真机腿（§2 项 6）两处收正（忙态 `/model` ⇒ 菜单开出 ∧ 零 toast ∧ 文本清空）；词键表 `slash.busy` 去（三键 ⇒ 两键——项 5 计数同拍）；#880 批注项 2「在飞拒 `busy` 照旧零写」删。**产品码零触**。明细 = 批档 §2 修正块。
 - 2026-10-04（**行痕族消失时机批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-row-traces-clear-at-turn.md` §2 · 台账 #919）：§2 批注项 8 帮助行族生命周期句 ⇒ 两门（首屏 ∥ 回合起跑——去「同 `[data-timer]` 族」）∥ T-DSK56 ② 补出站负判腿。**产品码零触（设计轮）**。明细 = 批档 §2。
+- 2026-10-05（**attach 文件支持批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-attach-file-support.md` §1 · 台账 #948）：§2 增本批注（文本/源码档内联——机制单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-13）；§3.2 增本批行「现行 ⇒ 预期」（词面两档 + 端面零触）；变更记录落点指针 +1 行。**产品码零触（设计轮）**。明细 = 批档 §2。
+- 2026-10-05（**attach 文件支持批 · 修正轮（评审轮 1 · 九项逐号 · 父侧裁 = 全采纳）· eng-designer**——承 `docs/batches/2026-10-05-attach-file-support.md` §3 轮次 1 · 台账 #948）：本批注项 1 词面六拒键（+`composer.attach.readFailed`）∥ 项 2 机检面 T1–T15（受纳两半支 ∥ 读取失败腿）；§3.2 本批行读数收正（i18n-views ≈399 ∥ 键数链 `VIEWS_DICT` 138 ⇒ 144 ∥ `HOST_DICT` 308 ⇒ 314）。**零新语义**（键面 ∥ 腿面 ∥ 读数）。明细 = 批档 §2 修正块。

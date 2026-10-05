@@ -6,7 +6,7 @@
  * 面：① 结构（`#at-dropdown` ∕ `#input-row`（`#file-input` ∕ `#input` ∕ `#attach-btn` ∕ `#send-btn` ∕
  * `#abort-btn`）∕ `#paste-bar>#paste-badge` ∕ `#controls-row`——ids ∕ 类名照 VSC `index.html:42-63` 输入段，
  * 结构单源 = 该骨架；`#status-line` 属状态行面（A12 本批外）不建）② 键位 B1–B7（Enter ∕ IME 门 ∕ Ctrl+C ∕
- * Ctrl+I 中断模态 ∕ Ctrl+U ∕ ↑↓ 历史 ∕ 自增高）③ 提交面（直发 ∕ 忙态排队出泡（B12 本地先行）∕ 满队 toast）④ 忙态派生
+ * Ctrl+I 中断模态 ∕ Ctrl+U ∕ ↑↓ 历史 ∕ 自增高）③ 提交面（直发 ∕ 忙态排队出泡（B12 本地先行）∕ 满队 toast ∕ 附件内联（KD-RC-13——`withAttachedFiles` 两径同式））④ 忙态派生
  * （占位符三态 守卫>busy>常态 ∕ 两钮显隐）⑤ 推送接线（五类经 ③ `state.subscribe`）
  * ⑥ **斜径面**（2026-10-01 批 · §2 KD-RC-12 ∥ §5 条 6）：提交面拦截段（段序 =「空文本 → 无会话守卫」之后、「忙态入队」
  * 之前）——命中 ∥ 未知回落一律**不进消息径**（零 `msg:send` ∥ `queuedUserMessage` ∥ 用户块 ∥ loading）；反馈键两键（`slash.unknown` ∥ `slash.args`）发射点 = §5 条 6。
@@ -35,8 +35,8 @@
  * `setLoading()`（缺省 = 现刻 `isRunning`——VSC `panels.js:95,114` `setLoading(ctx, ctx.isRunning)` 同式）；
  * `workspaceGuard` 推送 ⇒ `applyBusyLock()`（VSC `chat-messages.js:99` 同式）。
  *
- * **拆分债注记**：本档 **466 行**（口径 = 内容行数；2026-10-04 解锁批按盘复核——忙态门整件退场，净 −19）——越 300 顾问线；
- * 处置 = **续期**（在册 = `docs/render-core/design/RENDER-CORE.md` §6 本批随动段），距 500 硬限余 **34**；**拆分预案** = 提交 ∕ 斜径拦截段出档
+ * **拆分债注记**：本档 **472 行**（口径 = 内容行数；2026-10-05 attach 文件支持批按盘复核——`send()` 两径内联 +7）——越 300 顾问线；
+ * 处置 = **续期**（在册 = `docs/render-core/design/RENDER-CORE.md` §6 本批随动段），距 500 硬限余 **28**；**拆分预案** = 提交 ∕ 斜径拦截段出档
  * （拟新增 `thincoder-render-core/composer/panel-submit.mjs`）；**消解窗口** = 下次结构性触碰的批。
  *
  * 回合起点钩的相对序（对 VSC 逐行的唯一近似，见 `send.js:62-72`）：`onTurnStart` 置于 `setLoading` **之前**——
@@ -47,7 +47,7 @@ import { t } from "../i18n.mjs"
 import { showToast } from "../toast.mjs"
 import { markPending, QUEUED_MAX_ITEMS } from "../flow/queued-mark.mjs"
 import { createAtMenu } from "./atmenu.mjs"
-import { createAttachBar } from "./attach.mjs"
+import { createAttachBar, withAttachedFiles } from "./attach.mjs"
 import { createControlsRow } from "./controls.mjs"
 import { createModelMenu } from "./model-menu.mjs"
 import { routeSlash } from "./slash.mjs"
@@ -331,12 +331,15 @@ export function createComposerPanel(deps = {}) {
       hooks.onWelcomeDismiss?.()
       ctx.inputEl.value = ""
       ctx.inputEl.style.height = "auto"
+      const files = [...attach.files] // 附件内联快照（满队拒收判之后——拒径零清列）
+      attach.files.length = 0 // 保身份清点（照 images 式）
+      const message = withAttachedFiles(text, files) // 内联后整串（回显 ∥ 上行同串——K3 单值单源）
       const images = [...attach.images]
       attach.images.length = 0
       attach.clear()
-      markPending(hooks.onUserEcho?.(text, Date.now())) // 出泡即标记（受理即反馈——细则⑦ 本地提交路径）
+      markPending(hooks.onUserEcho?.(message, Date.now())) // 出泡即标记（受理即反馈——细则⑦ 本地提交路径）
       const sel = modelMenu.selection()
-      post("queuedUserMessage", { text, model: sel.model, reasoning: sel.reasoning, provider: sel.provider, images })
+      post("queuedUserMessage", { text: message, model: sel.model, reasoning: sel.reasoning, provider: sel.provider, images })
       return
     }
     const h = ctx._inputHistory
@@ -348,7 +351,10 @@ export function createComposerPanel(deps = {}) {
     ctx.inputEl.value = ""
     ctx.inputEl.style.height = "auto"
     setLoading(true)
-    hooks.onUserEcho?.(text, Date.now()) // F（SESSION-RESTORE-PARITY）：本地气泡补真实时间戳——无 ts 不显示的配套
+    const files = [...attach.files] // 附件内联快照（满队拒收判之后——拒径零清列）
+    attach.files.length = 0 // 保身份清点（照 images 式）
+    const message = withAttachedFiles(text, files) // 内联后整串（回显 ∥ 上行同串——K3 单值单源）
+    hooks.onUserEcho?.(message, Date.now()) // F（SESSION-RESTORE-PARITY）：本地气泡补真实时间戳——无 ts 不显示的配套
     // Snapshot + clear IN PLACE (GitHub thincoder#3): the shared array is held BY REFERENCE
     // (autocomplete.js holds this array) — reassigning orphanized the shared array. length=0
     // preserves the identity; chips and ✕-delete keep working.
@@ -356,7 +362,7 @@ export function createComposerPanel(deps = {}) {
     attach.images.length = 0
     attach.clear()
     const sel = modelMenu.selection()
-    post("userMessage", { text, model: sel.model, reasoning: sel.reasoning, provider: sel.provider, images })
+    post("userMessage", { text: message, model: sel.model, reasoning: sel.reasoning, provider: sel.provider, images })
     // If session title is auto-generated (Session N), show a hint that a better title is coming
     hooks.onTitleHint?.()
   }

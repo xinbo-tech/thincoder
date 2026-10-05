@@ -72,6 +72,13 @@ export const VIEWS_DICT = Object.freeze({
     // 原「逐字复用 #840 键」收正（失败词 ∥ 态词分家）。消费面 = `renderer/composer-sync.mjs` `providerNotice`。
     "composer.send.noDefaultModelFallback": "Default model missing or invalid — using an available channel",
     "paste.unsupportedFormat": "Only png / jpg / gif / webp images are supported (got ${type})",
+    // attach 文件支持批（2026-10-05 · 台账 #948）：六拒面 toast 词——值逐字同 VSC `locales/en.json` 同名键。
+    "composer.attach.tooLarge": "File too large (max 256 KB): ${name}",
+    "composer.attach.tooMany": "Too many text attachments (max 4): ${name}",
+    "composer.attach.totalLimit": "Attachment total exceeds 512 KB for this turn: ${name}",
+    "composer.attach.binary": "Not a text file (binary content): ${name}",
+    "composer.attach.unsupported": "Unsupported file type: ${name}",
+    "composer.attach.readFailed": "Could not read file: ${name}",
     // ── ③ 审批面（相抵① 超阈降级 = 摘要 + 计数，零外部查看器）──
     "approval.diff.large": "Large diff — ${n} lines (preview omitted)",
     // ── ④ 设置面 · agent 具名控件十键（P15——标签值同 VSC `settings.*` 同名键）──
@@ -239,6 +246,13 @@ export const VIEWS_DICT = Object.freeze({
     // 原「逐字复用 #840 键」收正（失败词 ∥ 态词分家）。消费面 = `renderer/composer-sync.mjs` `providerNotice`。
     "composer.send.noDefaultModelFallback": "默认模型未设置或无效 — 正在使用可用渠道",
     "paste.unsupportedFormat": "仅支持 png / jpg / gif / webp 图片（收到 ${type}）",
+    // attach 文件支持批（2026-10-05 · 台账 #948）：六拒面 toast 词——值逐字同 VSC `locales/zh.json` 同名键。
+    "composer.attach.tooLarge": "文件过大（上限 256 KB）：${name}",
+    "composer.attach.tooMany": "文本附件过多（每回合最多 4 个）：${name}",
+    "composer.attach.totalLimit": "本回合附件合计超过 512 KB：${name}",
+    "composer.attach.binary": "非文本文件（二进制内容）：${name}",
+    "composer.attach.unsupported": "不支持的文件类型：${name}",
+    "composer.attach.readFailed": "无法读取文件：${name}",
     // ── ③ 审批面 ──
     "approval.diff.large": "改动较大——${n} 行（预览省略）",
     // ── ④ 设置面 · agent 具名控件十键 ──

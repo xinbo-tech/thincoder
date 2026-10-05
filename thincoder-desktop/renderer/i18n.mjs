@@ -94,6 +94,9 @@
  *      **渠道档位退役批退三键**（2026-10-04：`effort.auto` ∥ `effort.off` 两语同退——消费面随档位控件退役 ⇒ 键面随退，零残键；
  *      另 `settings.model.tier`（第四档）随退经合并点随动）⇒ 实读 `HOST_DICT`（**合并表**）**312 ⇒ 309**（两语同拍、键集相等；
  *      届盘实读续链——链文前值 314 系滞后值：泛化编辑器退役（−2 键）未逐笔续计，本行按盘收正）。
+ *      **attach 文件支持批增六键**（#948 · 2026-10-05：`composer.attach.{tooLarge,tooMany,totalLimit,binary,unsupported,readFailed}` 两语同增 ——
+ *      六拒面 toast 词（三限 ∥ 二进制 ∥ 类型不支持 ∥ 读取失败），消费面 = 核件 `composer/attach.mjs`；键面单源 = `renderer/i18n-views.mjs` ② 组）⇒
+ *      `VIEWS_DICT`（第二档）**138 ⇒ 144** ∕ `HOST_DICT`（**合并表**，经合并点随动）**308 ⇒ 314**（两语同拍、键集相等；届盘实读续链——链文前值 309∕312 系滞后值：并行批增键未逐笔续计，本行按盘收正）。
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；
