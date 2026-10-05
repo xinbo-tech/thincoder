@@ -1,7 +1,7 @@
 # 可移植性（PORTABILITY）· 需求
 
 > 板块 = **可移植性**——工程模式机制在**任意用户项目**上的可用性（不假定项目形如本产品自研仓）。
-> 本档 = 该机制的**需求层权威**（F1–F9 / N1–N4——编号承旧档，不改号）。
+> 本档 = 该机制的**需求层权威**（F1–F10 / N1–N4——编号承旧档，不改号）。
 > 设计侧 = `docs/core/design/PORTABILITY.md`（分类权威 / 评审注入 / 端差——VSC 镜像面待并，见 `VSC-MIGRATION-INVENTORY.md §8B`）。
 > 建档：2026-09-15（**B 式迁移轮 · VSC 批 5**——`thincoder-vscode/docs/requirements/PORTABILITY.md` 内容重建入基准层；
 > 旧档原地一字不改、留作参照历史）。CLI 侧同名需求档（`thincoder-cli/docs/requirements/PORTABILITY.md`——需求组 FR10–FR15）**已并入（2026-09-15 · CLI 尾部真批）**——
@@ -32,6 +32,8 @@
 | **F7** | 门禁面同源 | 工程写门禁按声明分类判定（`thincoder-vscode/src/agent/tool-gates.mjs:89-91`）——不以 `src/` 硬编码 / `docs/` 前缀放行（迁移期引文——档已迁核） |
 | **F8** | 提示词面不假定本仓形态 | 提示词内指令性引用零本仓指涉（「本产品自研仓 =」标注形态除外——判据式见 `PORTABILITY（VSC 侧）`） |
 | **F9** | 父侧写域缺省（2026-09-27 用户裁定） | 工程模式**父侧门**分类缺省：路径段 `test` / `tests` / `scripts`（**项目根相对面** · 根内任意深度——根外 / 根未知 ⇒ 面不可判 ⇒ 缺省不命中；2026-09-28 #465 收口）与 `.thincoder/tmp/**` **判非代码面** ⇒ 父侧无令牌可写；**代码段优先级在前**（`src/test/**` 仍判 code）；范围 = **父侧门**（`thincoder-core/agent/dispatch.mjs:195-217` ∥ VSC `thincoder-vscode/src/agent/tool-gates.mjs`——VSC 随核单源）；**eng-coder 门不动**；项目可用 `codePaths` 声明（F2）收回该缺省。判据 = `classifyPath` 四例（`test/<x>.mjs` ≠ code · `scripts/<x>.mjs` ≠ code · `.thincoder/tmp/<a>.mjs` ≠ code · `src/test/<x>.mjs` = code）（迁移期引文——档已迁核） |
+
+| **F10** | 项目状态档父侧可写（2026-10-05 · 台账 #941） | 分类器新增第五值 `state`。判定：文件名是 `project-manifest.json`（不分大小写），或路径含 `.thincoder/conventions.json` 这一段，就算状态档，不算代码。效果：主 agent 在工程模式下可以直接写这两个文件，父侧门放行，不需要令牌；唯一作者不变。优先级在 aux 之后、兜底之前，所以 `src/state/<x>.json` 这类仍然算代码。只动父侧门：eng-coder 门不动，VSC 跟着核走。判定函数 `isStatePath`，在 `thincoder-core/conventions.mjs`。 |
 
 ## 3. 非功能性需求
 
@@ -126,3 +128,4 @@
 - 2026-09-27（**声明面载体换源 · 需求侧同步** · 主 agent——需求档笔权）：F2 声明文件句 ⇒ **`PROJECT-MANIFEST.json` 三族键**（自 `.thincoder/conventions.json` 退役并入）；§4 本仓自用句同判收正。来源 = 批 `docs/batches/2026-09-27-conventions-retire.md`；台账 #464。（同日 · **父侧直接执行** · 零语义：档头计数 F1–F8 ⇒ **F1–F9**——评审 #103 发现 9）
 - 2026-09-27（**conventions.json 退役批 · 评审轮 2 收正 · 主 agent——需求档笔权**）：N4 清单收正为现行两档 + 承接入核面档（`portability-vsc-index.test.mjs` 已随 W8 退役——同设计侧注；零语义）。
 - 2026-09-28（**守卫族微修批 · 需求侧同步** · 主 agent——需求档笔权）：F9 判据句补「**项目根相对面**」限定（根外 / 根未知 ⇒ 面不可判 ⇒ 缺省不命中）——对齐设计档 `docs/core/design/PORTABILITY.md` §3.2 段匹配面（#465 收口）；零行为加码。
+- 2026-10-05（引擎面缺口批 · 需求侧同步）：新增 F10「项目状态档父侧可写」（分类器第五值 `state`）；档头计数改为 F1–F10。来源 = 批 `docs/batches/2026-10-05-engine-face-gaps.md`；台账 #941。
