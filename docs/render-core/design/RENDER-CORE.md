@@ -293,7 +293,7 @@
 | 1 | 正文（字族 / 字号 / 行高） | 字族 = `thincoder-vscode/webview/base.css:74`（`--vscode-editor-font-family`）；字号 = `thincoder-vscode/webview/base.css:75`（`--vscode-editor-font-size`，缺省 `14px`）；`.bubble` 行高 `1.55` = `thincoder-vscode/webview/chat.css:50-55` | `font-family: var(--mono)`（**新增变量** ★上抛①）· `font-size: 14px`（与现值同）· `line-height: 1.55`；断词沿壳层 `.block` 的 `overflow-wrap: anywhere`（零重复落） |
 | 2 | 段落 + 首尾留白 | `thincoder-vscode/webview/chat.css:68-69`（`p { margin: 0 0 6px }` · `p:last-child { margin-bottom: 0 }`） | `p { margin: 0 0 6px }` + `p:last-child { margin-bottom: 0 }`；**删首子归零规则**（现 `core.css:12-15` 的 `> :first-child`）——VSC 首件保留自身上边距（**直接值**）；**容器臂收窄（2026-09-29 · 批 `docs/batches/2026-09-29-hatch-clearance-2.md` · #673）**：`> :last-child { margin-bottom: 0 }` ⇒ **`p:last-child` 单条**（逐字对齐 VSC——非 p 尾件〔代码块 ∕ 表格〕底距两端同；落点 = `renderer/core-markdown.css:25-30`） |
 | 3 | 标题 h1–h6 | `thincoder-vscode/webview/chat.css:63-66` · `:126`（h5）· `:127`（h6） | 逐级字号 / 边距 / 字重：h1 `1.3em` `12px 0 6px` `700` · h2 `1.15em` `10px 0 4px` `700` · h3 `1.05em` `8px 0 4px` `600` · h4 `1em` `6px 0 2px` `600` · h5 `0.95em` `5px 0 2px` `600` · h6 `0.9em` `4px 0 2px` `600` **+ `opacity: 0.8`**（VSC `--textSecondary` 未定义 ⇒ 回退 `--fg`）；现制「一律 `1em` / `600` / `10px 0 4px`」⇒ 本值（**直接值**） |
-| 4 | 列表 ul / ol / li + 嵌套 | `thincoder-vscode/webview/chat.css:111-112` · `:129` · `:130-132` | `ul, ol { margin: 4px 0 6px; padding-left: 20px }` · `ol { list-style: decimal }` · `li { margin: 2px 0; line-height: 1.5 }` · 嵌套三条同值（**直接值**）；现值 `8px 0` / `22px` ⇒ 本值 |
+| 4 | 列表 ul / ol / li + 嵌套 | `thincoder-vscode/webview/chat.css:111-112` · `:129` · `:130-132` | `ul { margin: 4px 0 6px; padding-left: 20px }`（圆点标记 ≈8px——零动）· `ol { margin: 4px 0 6px; padding-left: calc(5ch + 2px) }` · `ol { list-style: decimal }` · `li { margin: 2px 0; line-height: 1.5 }` · 嵌套三条同值（**直接值**）；现值 `8px 0` / `22px` ⇒ 本值；**编号列表缩进（#932 · 2026-10-05）**：标记盒 =「`<n>. `」**含尾空格**、右缘贴内容线 ⇒ 所需缩进 =（位数 + 2）ch——值 = `calc(5ch + 2px)`（≈43.0px@`--fs` 14，随字号自适应；1–3 位全容；**来源 = 本批**）；**4 位不设防**（用户 2026-10-05 裁）；VSC 侧同值（`:129`——纯对齐 + 富余预置，无紧贴裁切缘；技术待办 `#933` 随本批核销（核销依据 = 源级读链——VSC 实机复现未做））；**实机取证法 = 逐行字形簇计数**（标记区簇数 = 位数 + 1——被裁则减一；来源 = 本批 `docs/batches/2026-10-05-markdown-list-marker-clip.md` §1） |
 | 5 | 引用 blockquote | `thincoder-vscode/webview/chat.css:134-141` | `margin: 6px 0` · `padding: 6px 12px` · `border-left: 3px solid var(--line)`（**复用**）· `background: var(--hover-bg-strong)`（**新增变量**）· `border-radius: 0 4px 4px 0`（**直接值**）· **`color` 撤 `--fg-muted`**（VSC `--textSecondary` 未定义 ⇒ `--fg`） |
 | 6 | 行内码 code | `thincoder-vscode/webview/chat.css:71-78` | `font-family: var(--mono)` · `font-size: 0.9em` · `background: var(--hover-bg-strong)`（**新增变量**）· `padding: 1px 5px` · `border-radius: 3px` · `word-break: break-word`（**直接值**） |
 | 7 | 代码块壳 `pre.code-block` | `thincoder-vscode/webview/chat.css:80-88` | `margin: 8px 0` · `padding: 0` · `border: 1px solid var(--line)`（**复用**）· `border-radius: 6px ⇒ 0`（**扁平化（2026-09-30）收正**——代码块族归零；单源 = `docs/desktop/design/UI.md` §1「本批注（扁平化 ∥ 按钮族圆角恢复 ∥ 按钮迁行 · 2026-09-30）」项 2；推理内残留 6px ∥ 3px 观察在册 = 批档 `docs/batches/2026-09-30-light-round-1.md` §2） · `overflow: hidden` · `background: var(--overlay)`（**新增变量**）· `position: relative`（既有）；现值 `padding: 8px 10px` / `overflow: auto` / `var(--bg)` ⇒ 本值 |
@@ -309,7 +309,7 @@
 | 17 | 任务清单勾选 `.task-check` | `thincoder-vscode/webview/chat.css:145-151` | `margin-right: 6px` · `vertical-align: middle`（既有）· `pointer-events: none` · `[disabled] { opacity: 0.85 }`（**直接值**） |
 | 18 | 推理摘要 `.reasoning-summary` | `thincoder-vscode/webview/chat.css:286-294` | `font-size: 12px` · `color: var(--fg)`（**复用**）· `opacity: 0.5` · `font-style: italic` · `cursor: pointer` · `user-select: none`；**`padding: 4px 10px`（VSC 逐值——2026-09-29 落；端差① 已消）**；尾缀 `content: "…"`（字形面）保留 |
 | 19 | 推理内容区 `.reasoning-content` | `thincoder-vscode/webview/chat.css:393-401` | `padding: 6px 10px`（VSC 逐值——2026-09-29 落）· `border-top: 1px solid var(--line)`（**复用**）· `font-size: 12px` · `opacity: 0.65` · `line-height: 1.45` · `max-height: 200px` · `overflow-y: auto` · `word-break: break-word` · `color: var(--fg)`（有效前景——VSC 不单设、继承 `body`）｜`margin-top: 6px` / `--fg-muted` 承接**均收**（2026-09-28 实施落） |
-| 20 | 推理块内 Markdown（标题 / 段 / 行内码 / 列表） | `thincoder-vscode/webview/chat.css:404-413` | `h1, h2, h3 { font-weight: 700; margin: 8px 0 4px }` · `p { margin: 0 0 5px }` + `p:last-child { margin-bottom: 0 }` · `code { font-family: var(--mono); background: rgba(127,127,127,.15); border-radius: 3px; padding: 1px 4px; font-size: 0.92em }`（**直接值**＝ VSC `--bg2` 缺省回退值）· `ul, ol { margin: 4px 0 6px; padding-left: 18px }` · `li { margin: 2px 0 }` · `strong` / `em` 同 14 行；**代码块来推（2026-09-29 消——批 #673：VSC `:408-409` 覆盖段照落 + `.code-lang` 零样式）** |
+| 20 | 推理块内 Markdown（标题 / 段 / 行内码 / 列表） | `thincoder-vscode/webview/chat.css:404-414` | `h1, h2, h3 { font-weight: 700; margin: 8px 0 4px }` · `p { margin: 0 0 5px }` + `p:last-child { margin-bottom: 0 }` · `code { font-family: var(--mono); background: rgba(127,127,127,.15); border-radius: 3px; padding: 1px 4px; font-size: 0.92em }`（**直接值**＝ VSC `--bg2` 缺省回退值）· `ul { margin: 4px 0 6px; padding-left: 18px }` · `ol { margin: 4px 0 6px; padding-left: calc(5ch + 2px) }`（编号标记富余——判据 ∕ 取证法同面 4；值住 `renderer/core.css`——晚载后落者胜）· `li { margin: 2px 0 }` · `strong` / `em` 同 14 行；**代码块来推（2026-09-29 消——批 #673：VSC `:408-409` 覆盖段照落 + `.code-lang` 零样式）** |
 | 21 | 代码块复制钮 `.code-copy-btn` | `thincoder-vscode/webview/base.css:386-401` | `position: absolute; top: 6px; right: 6px`（既有）· `padding: 3px 8px` · `font-size: 11px` · `border: 1px solid var(--line)`（**复用**）· `border-radius: 4px` · `background: var(--overlay)`（**新增变量**）· `color: var(--fg)`（**复用**）· `opacity: 0.4` · `transition: opacity 0.15s, background 0.15s` · `:hover { opacity: 1; background: var(--hover-bg-strong) }` · `.copied { opacity: 1; color: var(--green); border-color: var(--green) }`（**新增变量**）；现值 `--fg-muted` / `--bg-raised` / `.copied` 用 `--accent` ⇒ 本值 |
 
 **计数（D3 · 内容面口径）**：**21 面**（1–21 = 正文 ∥ 段落 ∥ 标题 ∥ 列表 ∥ 引用 ∥ 行内码 ∥ 代码块壳 ∥ 语言条 ∥ 代码体 ∥ 高亮 ∥ 表格 ∥ 表头单元格 ∥ 链接 ∥ 强调 ∥ 图片 ∥ 分隔线 ∥ 勾选框 ∥ 推理摘要 ∥ 推理内容 ∥ 推理内 md ∥ 复制钮）；新增变量 **12**（`--mono` / `--hover-bg` / `--hover-bg-strong` / `--overlay` / `--green` / `--syn-*` 七）；端差 **0**（内容面——
@@ -328,7 +328,8 @@
 - ★上抛①（字族）= **全端排版基线**（`--font: var(--mono)`——观感变化最大一项）；否决 ⇒ 回退配方 = `docs/desktop/design/PROJECT.md` §2 **KD-57** ⑥。
 - **`select` 本体行高豁免（真机判据 · 平台面）**：Blink 把 `select` 本体 computed `line-height` 固定 `normal`（内联 ∥ 表则 ∥ `!important` 均不可达——页面 CSS 不可承载）⇒ 白名单外平台豁免（同壳 `option` ∥ `input` ∥ `button` 可控已归基线）；证据 = 批内件读数 `selectExemption` 段。
 **会话面板面（桌面会话控制面）映射表 = `docs/desktop/design/UI.md` §1 本批注项 2**（端壳面，非核产出件——本档不重述）。
-**落点与预算（内容面口径）**：`thincoder-desktop/renderer/core.css` **140 ⇒ 299（现读 2026-09-29）⇒ 本批 +面 20 段覆盖 ≈ +10（越 300 ⇒ 拆分预案 = 推理盒族出档 `thincoder-desktop/renderer/core-reasoning.css`（拟新增）· 消解窗口 = 下个结构性触碰的批——批 `docs/batches/2026-09-29-hatch-clearance-2.md` §2.8）**；
+**落点与预算（内容面口径）**：`thincoder-desktop/renderer/core.css` **140 ⇒ 335（实读 2026-10-05——单一现行读数，内容行数口径；越 300 ⇒ 拆分预案 = 推理盒族出档 `thincoder-desktop/renderer/core-reasoning.css`（拟新增）· 消解窗口 = 下个结构性触碰的批——批 `docs/batches/2026-09-29-hatch-clearance-2.md` §2.8）**；
+  **本批触碰处置（2026-10-05 · 批 `docs/batches/2026-10-05-markdown-list-marker-clip.md` · 台账 #932）= 续期**：本批 = 行级小修（`:81-82` 推理面 ul/ol 拆行，+1 行）⇒ 按窗口口径（注释 ∕ 坐标 ∕ 词值 ∕ 行级小修不计）**非结构性触碰、不构成拆分窗口**；预案 = 推理盒族出档 `thincoder-desktop/renderer/core-reasoning.css`（拟新增）续存；消解窗口 = 该档下个结构性触碰的批；距 500 硬限余 **165**。
   `thincoder-desktop/renderer/theme.css` **R13 四拆后 = 89（现读 2026-09-29；主题表 12 变量在册）**；含会话面板面之全批预算 = `docs/desktop/design/PROJECT.md` §4.2；逐面真机比对 = 需求 §4 D21 验收面。
 
 ## 6. 受影响文件与测试面（三端 · 实施分批随动）
@@ -367,7 +368,7 @@
 
 **块级跟滚提核随动（2026-09-29 · `docs/batches/2026-09-28-desktop-subblock-follow.md`）**：核 `thincoder-render-core/subblocks/block.mjs` **45 ⇒ ≈66**（+2 导出——纯搬移 · 档头留端清单同拍；**实读 2026-09-29 = 71**——#518 预测未回填；现行值见本节「块跟滚让位修复随动」段）；
 VSC `thincoder-vscode/webview/activity.js` **190 ⇒ ≈176**（删两本地函数 ⇒ 改指核件；`thincoder-vscode/webview/streaming.js` **182** 零改——转口保留）；
-桌面 `views/pool-subagents.mjs` **108 ⇒ ≈118**（**实读 2026-09-29 = 115**）· `views/activity-new.mjs` **100 ⇒ ≈109** · `views/activity.mjs` **259 ⇒ ≈262** · `renderer/core.css` **281 ⇒ ≈287**（+两值规则——值源 = `thincoder-vscode/webview/chat.css:466-467`）；
+桌面 `views/pool-subagents.mjs` **108 ⇒ ≈118**（**实读 2026-09-29 = 115**）· `views/activity-new.mjs` **100 ⇒ ≈109** · `views/activity.mjs` **259 ⇒ ≈262** · `renderer/core.css` **281 ⇒ 335**（实读 2026-10-05——单一现行读数；+两值规则——值源 = `thincoder-vscode/webview/chat.css:467-468`）；
 测试面 = 单元测试档 `docs/batches/2026-09-28-desktop-subblock-follow.test.mjs`（拟新增 · 随批留存）。
 
 **块跟滚让位修复随动（2026-09-29 · `docs/batches/2026-09-29-subblock-follow-resume.md`）**：核 `thincoder-render-core/subblocks/block.mjs` **71 ⇒ ≈120**（+≤50：旗标手势门（600ms · `wheel` / `touchmove` / `pointerdown`）+ 出口钮三件（`sub-follow-btn` 建 / 更 / 删 + 两态词键 + 点击回底）+ 档注随改）——语义单源 = 本档 §2 **KD-RC-8**；
@@ -413,6 +414,10 @@ VSC `thincoder-vscode/webview/session.css` **215 ⇒ ≈219**（两钮（Rename 
 **模型切换解锁批 · 实施后实读（2026-10-04 · 批内件 6/6 绿）**：`agent-host` 327 ⇒ **333** ∥ `session-io` 65 ⇒ **77** ∥ `turn-face` 196 ⇒ **200** ∥ 核 `session.mjs` 264 ⇒ **275** ∥ `panel-session-write` 144 ⇒ **150** ∥ `i18n-views` 386 ⇒ **384** ∥ `panel-callbacks` ∥ `panel-turn-loop` ±0（325 ∥ 303）；批档 §6 同步。
 
 **文档面**：本档（新）· `docs/desktop/design/{UI,IPC,PROJECT,RENDERER}.md` · `docs/vsc/design/WEBVIEW.md`（接入形）· `docs/core/design/ARCHITECTURE.md` + `docs/README.md`（模块地图补行——父侧面，§10 上抛）。
+
+**编号列表标记修复随动（2026-10-05 · 批 `docs/batches/2026-10-05-markdown-list-marker-clip.md` · 台账 #932 · 实读 2026-10-05〔内容行数口径〕）**：本批触档四处（桌面 2 ∥ VSC 1）——① `thincoder-desktop/renderer/core-markdown.css`（`:50` 值行）**191**（本批 ±0）
+  ② `thincoder-desktop/renderer/core.css`（`:81-82` 推理面 ul/ol 拆行）**334 ⇒ 335**（本批 +1）· ③④ `thincoder-vscode/webview/chat.css`（`:129` ∥ `:411`）**497 ⇒ 498**（本批 +1——`:410-411` 拆行；`:129` 值改 ±0）；
+  **`core.css` 越层处置 = 续期**（本批 = 行级小修——按窗口口径（注释 ∕ 坐标 ∕ 词值 ∕ 行级小修不计）非结构性触碰、不构成拆分窗口；拆分预案 = 推理盒族出档 `thincoder-desktop/renderer/core-reasoning.css`（拟新增）续存；消解窗口 = 该档下个结构性触碰的批）。
 
 ## 7. 验收判据（机器可检 · 回指 D19）
 
@@ -462,7 +467,7 @@ VSC `thincoder-vscode/webview/session.css` **215 ⇒ ≈219**（两钮（Rename 
   ② 「会话关闭 ⇒ 该键投影清」无端面 ⇒ **撤项**（原「标签关闭」前提随 R13 消解——标签面退役；现会话关闭径 = 删除（`dispose`——`ipc.mjs:164-170`）∥ 宿主退出，两径均覆盖——零缺口）；③ consult ∕ escalate 族无停止径 ⇒ **修**（核 `subblocks/activity-view.mjs` 停钮族集补 `consult` ∕ `escalate`（新常量 `CANCELABLE_ROLES`——`FAMILY_ROLES` 本体零改以保头词面语义）；判据 = ⏹ 在场 ∧ 点击生效）。
 - **D21 内容面视觉端差——两项全处置（2026-09-29 · 批 #673）**：
   ① **盒层单层（推理块）= 已落**（现盘 = VSC 逐值：`renderer/core.css:33-59`——summary `4px 10px` ∕ 内容区 `6px 10px`；§5 行 18-19 同拍）；
-  ② **推理块内代码块同形 ⇒ 消**：移植 VSC `thincoder-vscode/webview/chat.css:404-413` 覆盖（`:408` pre 灰底 ∕ 圆角 6 ∕ `padding: 8px 10px`；`:409` `pre code` 归零；`.code-lang` 在 `.reasoning-content` 内零样式）——落点 = `renderer/core.css` 面 20 段；判据 = 逐值对拍 + 真机观感。
+  ② **推理块内代码块同形 ⇒ 消**：移植 VSC `thincoder-vscode/webview/chat.css:404-414` 覆盖（`:408` pre 灰底 ∕ 圆角 6 ∕ `padding: 8px 10px`；`:409` `pre code` 归零；`.code-lang` 在 `.reasoning-content` 内零样式）——落点 = `renderer/core.css` 面 20 段；判据 = 逐值对拍 + 真机观感。
 - **D21 会话面板视觉端差——处置定形（2026-09-29 · 批 #673；全清单七条 = `docs/desktop/design/UI.md` §1 本批注项 2，本条列核心项——本档不重述端壳面）**：
   ① **行内动作钮键盘可达臂 ⇒ 消（增强向 · 用户 2026-09-29 裁定）**：VSC `session.css` 两钮（Rename ∕ Delete）补 `:focus-visible { opacity: 1 }` 臂（对齐桌面手势；桌面臂保留 `session-list.css:130-133`——a11y 不回退）；
   ② **「不追面」重审（2026-09-29 · 核心项列举——全清单七条 = `docs/desktop/design/UI.md` §1 本批注项 2）**——「不追面」分类词退场：面板容器皮肤 ∕ 会话选择器交互两条 = **已消**（R13 换装 + D21 后两端构同形——实读 `session.css:13-59` ⟷ `session-list.css:8-46`）；会话条对位句 = **已消**（对位物退役——标签条 R13 裁撤 ∕ 会话头退场；对位 = VSC `#session-bar` 三件，R13-A 形换装已落）；
@@ -490,6 +495,10 @@ VSC `thincoder-vscode/webview/session.css` **215 ⇒ ≈219**（两钮（Rename 
 | L | **批内件两档收位 + VSC 复证坐标登记**：`docs/batches/2026-09-29-perf-residuals.{test,probe}.mjs`（实施轮建；`docs/batches/` 写面被拒 ⇒ 沿先例退 `.thincoder/tmp/`、父侧 copy）；修前副本出处 = git `cf48ba12~1:thincoder-vscode/webview/chat-messages.js`（复证引用——记录面随父侧） | 归父侧 | 先例 = `docs/batches/2026-09-29-render-perf.md` §5.3-5 |
 
 ## 变更记录
+
+- 2026-10-05（**轻通道轮收尾 · 修正轮（评审轮 1 三条档面微修）· eng-designer**——承 `docs/batches/2026-10-05-markdown-list-marker-clip.md` §3 轮次 1 · 台账 #932）：① 读数面——四处落点现行读数 + 本批 delta 入 §6 随动块（`core-markdown.css` **191**〔±0〕∥ `core.css` **334 ⇒ 335**〔+1〕∥ `chat.css` **497 ⇒ 498**〔+1〕）；`core.css` 越层处置 = **续期**（行级小修——非结构性触碰、不构成拆分窗口；预案 = 推理盒族出档 `core-reasoning.css`（拟新增）续存；消解窗口 = 下个结构性触碰的批）∥ ② `core.css` 读数收一 = **335**（实读 2026-10-05——`:331` ∥ `:370` 同值）∥ ③ §5 行 4 `#933` 证据等级注（核销依据 = 源级读链——VSC 实机复现未做）；行锚随收 3 处（`thincoder-vscode/webview/chat.css:404-413 ⇒ 404-414`——§5 行 20 ∥ §9；`thincoder-vscode/webview/chat.css:466-467 ⇒ 467-468`——§6 行 370）。**零新语义（读数 ∕ 注记面）· 产品码零触**。明细 = 批档 §2。
+
+- 2026-10-05（**轻通道轮收尾 · 设计形式化 · eng-designer**——承 `docs/batches/2026-10-05-markdown-list-marker-clip.md` §1 · 台账 #932）：§5 行 4 ∥ 行 20 收正——编号列表 `ol` 缩进值定 **`calc(5ch + 2px)`** + 判据句（标记盒含尾空格 ⇒（位数 + 2）ch；1–3 位全容 ∥ 4 位不设防〔用户裁〕；VSC 同值对齐——技术待办 `#933` 随本批核销；实机取证法 = 逐行字形簇计数）。**零机制语义**（值面收正）。明细 = 批档 §2。
 
 - 2026-10-04（**模型切换解锁批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §2 · 台账 #918）：§5 条 6 增解锁批注（钮面门退场 ∥ 回写门更名保留 ∥ 偏好键单写者）· 斜径 `slash.busy` 句收正（退役）。**产品码零触（设计轮）**。明细 = 批档 §2。
 

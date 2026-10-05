@@ -31,7 +31,7 @@
 1. **块内容区跟滚（行为对齐 VSC §5.5）**——机制 = 核件原语直消费（`initBlockFollow` ∕ `maybeScrollBlock`——`thincoder-render-core/subblocks/block.mjs`）；桌面四点接线 = ① 出生 ∕ 接管（`subElementOf`）· ② 内容增量（`replayRows` 追加后）· ③ 挂载补钉（`createSubBlock` `family.append` 后）· ④ 接管径补钉（`replaceWith` 后）——落点 = `views/pool-subagents.mjs`。
    **不夺阅读位**（用户上滚 ⇒ `_pinFollow=false` ⇒ 零写）；折叠 ∕ 已移除 ⇒ no-op；VSC 先例 = `webview/activity.js:160-176` + 帧尾 `streaming.js:31-32`；桌面帧 = **store 变更排帧**（核帧合并件——触发源 = store 变更；单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-9 ∕ `docs/desktop/design/RENDERER.md` §1.2）。
 2. **池区帧尾钉底**——`mountPool` 尾 `maybePinPool(root)`（`views/activity-new.mjs`；`_poolPin !== false` ⇒ 写 `scrollTop`）——R10 E6 出生径的帧尾补齐（VSC `streaming.js:32` `frameEnd` 对位）；旗标 ∕ 计数贴 ∕ 点击回底三路零改。
-3. **值面两行（映射源范围外漏项——本批补）**——`.advisor-block.sub-block .advisor-content { max-height: 60px }` · `.advisor-block.sub-block > summary { opacity: 0.75 }`（值源 = `thincoder-vscode/webview/chat.css:466-467` 逐字；落点 = `renderer/core.css` ④ 段）。
+3. **值面两行（映射源范围外漏项——本批补）**——`.advisor-block.sub-block .advisor-content { max-height: 60px }` · `.advisor-block.sub-block > summary { opacity: 0.75 }`（值源 = `thincoder-vscode/webview/chat.css:467-468` 逐字；落点 = `renderer/core.css` ④ 段）。
 4. **判据**——机检 = 单元测试档（核心原语四例 + 桌面接线例 + 区钉底例 + 值落点锁；复跑 = `node --test docs/batches/2026-09-28-desktop-subblock-follow.test.mjs`）；真机 = 五行为（流式内容跟滚 ∕ 近底复跟 ∕ 上滚不抢 ∕ 换块默认跟底 ∕ 区近底保持）。
 5. **边界**——会话流主跟滚面零触（R12 既落在册）；核件其余留端项（出生位 ∕ 说明行判重 ∕ 痕迹 ∕ 帧调度）不属本批（逐项对账表 = 批档 §2）。
 
@@ -187,7 +187,7 @@
 | `thincoder-desktop/renderer/views/pool-subagents.mjs` | **108 ⇒ ≈118**（+import + 四点接线——核原语 `initBlockFollow` ∕ `maybeScrollBlock`） | 本批 |
 | `thincoder-desktop/renderer/views/activity-new.mjs` | **100 ⇒ ≈109**（+`maybePinPool` + `notePoolBirth` 复用） | 本批 |
 | `thincoder-desktop/renderer/views/activity.mjs` | **259 ⇒ ≈262**（`mountPool` 尾一调 + import） | 本批 |
-| `thincoder-desktop/renderer/core.css` | **281 ⇒ ≈287**（+两值规则 + 值源行——值源 = `thincoder-vscode/webview/chat.css:466-467`） | 本批 |
+| `thincoder-desktop/renderer/core.css` | **281 ⇒ ≈287**（+两值规则 + 值源行——值源 = `thincoder-vscode/webview/chat.css:467-468`） | 本批 |
 | 测试面 | 单元测试档 `docs/batches/2026-09-28-desktop-subblock-follow.test.mjs`（已建成 · 367 行 · 随批留存 · 不入仓套件；复跑 = `node --test`） | 本批 |
 | `docs/desktop/design/{UI,PROJECT,RENDERER}.md` + `docs/render-core/design/RENDER-CORE.md` + `docs/vsc/design/WEBVIEW.md` | 本批设计落定（五档——机制面 = 核档 KD-RC-8 ∕ UI 本批注；明细 = 批档 §2） | 本批（已落） |
 
