@@ -83,7 +83,7 @@ reasoning, provider, images? } → extension _chat()
 
 历史断链事故：只改发射端与渲染端、漏桥 ⇒ `model` 字段自发布首日被丢弃（2026-08-26 修复 + 锁桥测试）。string / 对象双分支在 payload 构造处统一推导（对象载荷字段透传、string 分支字段 `undefined` 安全降级）。
 
-### 3.2 协议增量登记（二十三项——只增不改）
+### 3.2 协议增量登记（二十四项——只增不改）
 
 | # | 消息面 | 增量 | 发射点 | 接收点 |
 |---|---|---|---|---|
@@ -116,8 +116,9 @@ reasoning, provider, images? } → extension _chat()
 | 21 | `usage`（增字段） | `ctxTokens`（上下文占用量绝对数——状态行 `Yk` 尾串源；缺 ⇒ 尾串缺席） | `panel-callbacks.mjs` `usage` 发射点（累计 ∕ transports 映射——同 `reasoning_tokens` 行） | `status-bar.js` ctx 段（`context X% Yk` 拼接——#677 I16a） |
 | 22 | `recordAppend`（**新消息**——webview → host 留档记录出站） | `{ record: { kind:"subagent", meta, rows } }`——归档时点快照（形 ∥ 判据单源 = `docs/core/design/SESSION.md` §6.26；每块恰一次——归档幂等守卫内） | `webview/activity.js:124`（`archiveBlock` 同点——归档派生点调用，幂等守卫内恰一次；载荷字面量构造 `:190`） | `panel-messages.mjs:287` `case` → `handleRecordAppend`（`:123-134`——处理体取活行载体 + 核 `pushRecord`；fail-soft） |
 | 23 | `uiPrefs`（**新消息**——host → webview） | `{ autoFollow, activityMaxHeight, activityTailLines }`——视图偏好三键（缺省 true / 32 / 3；#875） | `thincoder-vscode/src/extension/ui-prefs.mjs:13` `pushUiPrefs`（webviewReady 握手 + `onDidChangeConfiguration`） | `webview/chat-messages.js:164` `case "uiPrefs"` → `thincoder-vscode/webview/ui-prefs.js` `applyUiPrefs`（§12 对表行在册） |
+| 24 | `digest`（增字段） | `unsettled`（本轮未销账条数——**非上行轮且 > 0 才携**；残余元素判据——§5；消化账务批 · 2026-10-05） | `thincoder-vscode/src/extension/suspension.mjs` 收尾点（`driveTurn` finally——帧 ∥ 记录同点双动作） | `webview/chat-messages.js:194` `case "digest"` → `webview/chat-status.js` `showDigestStatus`（`unsettled > 0` ⇒ 残余行元素——§5） |
 
-纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–23 即全部在案增量；表外增量不入）。发射 / 接收落点：
+纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–24 即全部在案增量；表外增量不入）。发射 / 接收落点：
 `thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:29` ·
 `thincoder-vscode/webview/chat.js:260` · `thincoder-vscode/webview/status-bar.js:27-30/46`。
 
@@ -211,11 +212,12 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 
 **契约**（元素级落点 = `thincoder-vscode/webview/chat-status.js:71`（`showDigestStatus`））：
 
-- **载荷** = `{ status:"start"/"end"/"cap", n, ok?, ms?, mode?, turns?, tier?, from?, msg? }`；`tier` ∈ `ask` / `digest`（按因两档）；`from` / `msg` 仅 ask 档携带（档位判据 / 零影响证据 / 边界 = `WEBVIEW.md` §5.1「消化轮起跑档位」——本档只记元素级契约）。
+- **载荷** = `{ status:"start"/"end"/"cap", n, ok?, ms?, mode?, turns?, tier?, from?, msg?, unsettled? }`；`tier` ∈ `ask` / `digest`（按因两档）；`from` / `msg` 仅 ask 档携带（档位判据 / 零影响证据 / 边界 = `WEBVIEW.md` §5.1「消化轮起跑档位」——本档只记元素级契约）；`unsettled?` = end 形新增（本轮未销账条数——非上行轮且 > 0 才携；消化账务批 · 2026-10-05）。
 - `digest start` → ① 追加 `.digest-turn` 标签行——按 `tier` 取键：`ask` ⇒ `digest.turnLabelAsk`（携参 `{ from, msg }`）/ **其余（含 `tier` 缺省——旧载荷）** ⇒ `digest.turnLabel`；
   ② **`n > 0`** ⇒ 追加**本轮独立** `.digest-status` 计数元素（`id="digest-status"` 退役；`dataset.n` = 起跑数）——**两档同规**；`n = 0`（ask-only 轮）⇒ 零计数元素（`_digestRoundEl` 置空）；③ 记本轮边界 `S._digestBoundary`（归档落点——计数元素 ∥ 无 ⇒ 标签元素）；
   ④ `ctx.assistantLabeled = false`（本轮 assistant 输出带一次回合标签）。
 - `digest end` → **追加终态元素**（`.digest-status` + `digest-done`；`ok:false` ⇒ `digest.aborted` + `digest-failed`——异常不留「仍在消化」假象；计数 = 本轮起跑数（自本轮计数元素 `dataset.n` 取——同源）；**不动原计数元素**（零就地换文——恒起跑文 `digest.start`））；
+  **残余元素（消化账务批 · 2026-10-05）**：`unsettled > 0` ⇒ 追加残余行（`.digest-status` 族——词键 `digest.residue`）；`= 0` ⇒ 零行；
   **本轮无计数元素（ask-only 轮 · `n = 0`）⇒ 零动作**（禁兜底建元素——`dataset.n = "?"` 幻影行禁出）。
 - `digest cap` → `.digest-cap` 行（`mode:"auto"` dim / `mode:"stop"` warn）。
 
@@ -268,7 +270,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 冻结头 + tail-3 | `[✓ key · … · done Ns · turn]` + tail-3（`│ ` 前缀独立行——`render-segments.mjs:101-105`）+ 注记 ` — <note>`（停因 / interrupted——`:88-93`） | `[✓ key · … · done Ns · turn]` + tail-3（`│ ` 前缀——`activity-view.js` `refreshBlock`；容器 = `<details>/<summary>` 原生） | |
 | | | + 注记 ` — <note>`（载体 `meta.note`——契约 = `WEBVIEW.md` §5.2；`tailLines` = `thincoder-render-core/subblocks/activity-view.mjs:103`） | 对齐（D4 消：tail-3 行文归一 = `│ ` 前缀独立行） |
 
-### 6.3 i18n 键表（27 键 · zh/en 逐字）
+### 6.3 i18n 键表（28 键 · zh/en 逐字）
 
 > 键面 = **webview 可渲染键**（消费位见各注）；文案实体 = **核容器** `thincoder-core/i18n.mjs`（投影面）+ **本地档** `thincoder-vscode/locales/{zh,en}.json`（端特有键）——本地档核域键同值副本的处置（摘除消解路径在册）见设计档 `I18N.md` §3.1 D1（本表只作对照，不复制为第二单源）。
 > **端特有键定性（2026-09-30 重审 · 台账 #677）**：端特有键 = **显示宿主单侧存在的消费面**（webview 面元素——CLI 无对位）⇒ **非端差**（无对位物——不构成待消端差）：① 消费面仅端侧存在；② 证据 = 各键注内消费点坐标；③ 单源纪律 = W15 D1「容器归一、投影端差」（2026-09-13 已裁）+ 本表收录口径（D3）。核容器键 = 投影单源（本地零重复定义）。
@@ -276,6 +278,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 键 | zh | en |
 |---|---|---|
 | `digest.turnLabel` | 自动回合：消化已完成的子代理报告… | [auto-turn: digesting finished subagent reports…] |
+| `digest.residue` | 有 ${n} 份后台报告未销账——将自动重投 | ${n} background report(s) not accounted — they will be re-delivered |
 | `digest.turnLabelAsk` | 自动回合：答复 ${from}：${msg} | [auto-turn: answering ${from}: ${msg}] |
 | `digest.capAuto` | 自动回合：越过轮次上限，继续推进… | [auto-turn: continuing past turn cap…] |
 | `digest.capStop` | 自动回合在 ${turns} 轮处停止——部分消化；已完成的报告保留在历史中 | [auto-turn stopped at ${turns} turns — partial digest; finished reports stay in history] |
@@ -313,7 +316,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 - `sub.waiting`（2026-09-20 追加——#118 queued 状态词对位，机制单源 = `WEBVIEW.md` §5.2）：zh `等待中` / en `waiting`——与既有键 `sub.queued`（zh `排队中` / en `queued`）成对，两键**无占位符**。
   **消费点 = 状态词**（块头方括号内——`thincoder-render-core/subblocks/activity-view.mjs:46-47`）：选用判据 = 载荷 `kind`——`kind === "slot"` → `sub.queued`；否则（**含 `kind` 缺省**）→ `sub.waiting`（CLI `thincoder-cli/src/tui/subagent-panel.mjs:73` 同判据）。
 - **状态区（方括号后）键面**（`activity-view.js:89-99`；标尺 = CLI `thincoder-cli/src/tui/subagent-panel.mjs:100-102`）：slot（`kind === "slot"`）→ `sub.queueSlot`；wait / depc → 载荷 `reason` 原文（零改写，无键）；**降级**（`kind` 缺省）→ 有 `reason` 走原文、无 `reason` 中性回落 `sub.queued`（= CLI `queued.detail || "queued"` 同形）。（#118 落）
-- `digest.turnLabel`（digest 档 / 缺省档）/ `digest.turnLabelAsk`（ask 档——**携参**） = **核容器键**（本地档不重复定义）；字面单源 = 核容器（CLI 同读容器——零自持字面）；`msg` 截断口径 = 核 `upstreamAskLabelVars`（单行 + ≤120 字符）；`digest.start/done/aborted` 与其余既有键不动；消费面 = 本档 §5 / `WEBVIEW.md` §5.1。
+- `digest.turnLabel`（digest 档 / 缺省档）/ `digest.turnLabelAsk`（ask 档——**携参**） = **核容器键**（本地档不重复定义）；字面单源 = 核容器（CLI 同读容器——零自持字面）；`msg` 截断口径 = 核 `upstreamAskLabelVars`（单行 + ≤120 字符）；`digest.start/done/aborted` 与其余既有键不动；**`digest.residue`**（消化账务批 · 2026-10-05——残余行词键，核容器键）同列；消费面 = 本档 §5 / `WEBVIEW.md` §5.1。
 - `tool.interrupted` / `tool.truncated`（同批批 1 落）= **端特有键**（住 `thincoder-vscode/locales/{zh,en}.json`——不进核容器）；消费面 = `WEBVIEW.md` §4.5（M1 清扫状态词 / X5 截断标记）。
 - `workspace.required` / `workspace.requiredPlaceholder`（2026-09-21 无工作区守卫批）= **端特有键**（住 `thincoder-vscode/locales/{zh,en}.json`——不进核容器；无工作区守卫为端面机制，CLI 无对位面）。
   消费面 = `webview/send.js` 出口守卫（拒发 toast）/ `webview/loading.js` `applyBusyLock` 第三态占位符（守卫 > busy > 常态）；机制单源 = `PROJECT-SWITCHER.md` §4.1；登记依据 = 加键批同轮登记（D3）。
@@ -342,7 +345,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | D-P8 | 状态文本载体 = **结构化 `statusText` 消息**（kind 判别 → webview 按 locale 渲染） | 否决 host 直发成品文本（host 不知 locale——复制 i18n = 双源）· 否决不做（判定句要求用例锁新增状态文本） |
 | D-P9 | Send 可见性 = running 期**隐藏** | 否决禁用态（双范式 + 仍占位） |
 | D-P10 | `scrolled N` 段不设——滚动状态 = 悬浮回底钮（§6.1 滚动行：实证例外——行为证据） | 否决补文本段（N 需新造单位 + 与钮重复） |
-| D-P11 | 协议增量 = **只增不改**、**二十三项**登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
+| D-P11 | 协议增量 = **只增不改**、**二十四项**登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
 | D-P12 | 合并权限卡**并入 `promptId` 族**（单一释放通道 `releasePermission` + id 精确匹配 + 孤儿回写） | 否决单开释放语义（同语义两通道 · 消费者按类分支）；`shift()` 队列头匹配已驳（D-P4 同据——陈旧卡不误 resolve） |
 | D-P13 | `waiting` 判据含**批权限队列** + **释放即刷**（刷新点 = 释放通道单点 `releasePermission`） | 否决逐路径各补 `_refreshStatus()`（散点——漏一处即残留）· 否决判据只列权限 / question（批卡停驻期读作 idle——状态栏失去「需你输入」语义） |
 | D-P14 | 诊断上行 `panelDiag` = **新消息（行 8 登记）**——出生 / 终态事件面痕迹入主侧日志 | 否决只留 webview 环形日志（DevTools 不可回读——本次事故正因不可回读而盲；理由详见 `WEBVIEW.md` D-W22）· 否决并入既有上行消息字段（无同缝——`webviewReady` 是一次性启动拍） |
@@ -742,3 +745,5 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 - 2026-10-04（**流尾台账行组退役批 · 修正轮（评审 #40 · 父裁 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §3 轮次 1 · 台账 #913）：设计轮条「余行列值零改」句收正（③ 列坐标漂移——收口重出 ∥ 重锚；跨档 `WEBVIEW.md:354` 同拍）。**零新语义**。明细 = 批档 §2 修正块。
 - 2026-10-04（**流尾台账行组退役批 · 收口轮 · 父侧直接执行〔可 revert〕**——台账 #913）：§12 表 ③ 列 **54 格现盘重出**（`case` 首现锚法逐格实读——实施删行位移；`i18n` 格按实读收正 `:57 ⇒ :58`；`sub:*` 格随位移 `:240 ⇒ :237`）；前句「收口轮按 §12 头注程序重出 ∥ 重锚」兑现；跨档 `WEBVIEW.md:354` 同拍（其档变更记录在册）。**协议语义 ∥ 消息名 ∥ 载荷字段 ∥ ④ 处置列零变**（坐标收正）。明细 = 批档 §6。
 - 2026-10-04（**模型切换解锁批 · 修正轮（评审 #53 · 发现 3）· eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §3 轮次 1 · 台账 #918 · 父侧裁 = 全采纳）：§4.4 忙态派生消费者行收正——**Send ∥ Stop 两组**在记 ∥ 模型 / 推理按钮零忙态门（单源指针保持 = `WEBVIEW.md` §4.2；D2 不复述）。**零新语义**。明细 = 批档 §2 修正块。
+- 2026-10-05（**批 digest-accounting · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §1 · 需求 §4.15 · 台账 #930）：§5 载荷增 `unsettled?`（end 形）+ `digest end` 增**残余元素**句 + §6.3 键表 **27 ⇒ 28 键**（+`digest.residue`——核容器键 + 登记注；D3：计数与列表同改）。**消息名 ∥ 既有载荷字段 ∥ 首列判别式集零变**（增字段；§3.2 增字段登记行 + **标题计数同改（二十三项 ⇒ 二十四项）** = 实施批随落——D3 同拍）。明细 = 批档 §2。
+- 2026-10-05（**批 digest-accounting · 实施轮 · 端面舱 #42 · eng-coder**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §2/§4 随落项）：§3.2 增**行 24**（`digest` 增字段 `unsettled`——非上行轮且 > 0 才携；发射 = `suspension.mjs` `driveTurn` 收尾（帧 ∥ 记录同点）∥ 接收 = `webview/chat-status.js` `showDigestStatus`（分发 `webview/chat-messages.js`）残余行元素）+ **标题计数 ∥ 行 1–24 ∥ D-P11 同改（二十三项 ⇒ 二十四项）**（D3：计数与列表同改）；上条设计轮句「= 实施批随落」兑现。**协议语义 ∥ 消息名 ∥ 既有载荷字段 ∥ 首列判别式集零变**（增字段登记）。明细 = 批档 §5。

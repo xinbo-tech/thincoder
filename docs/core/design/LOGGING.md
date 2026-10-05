@@ -79,6 +79,8 @@
   ② **queued 取消出队点直记**（`advisor-async.mjs` / `subagent-async.mjs` 的 queued 分支——出队即终态、不经 settle ⇒ 不走 ①）；
   ③ **sync 定向取消提交点直记**（`subagent-async.mjs` `cancelSyncChild`——sync 块 ⏹ 唯一入口；机制条 = `AGENT-LOOP-SUBAGENT.md` 的 §6.7.2「日志面」）。
   三写点字段同形：`id` = `<role>#<id>`（评审族 = `advisor#<id>`）；**同一次取消恰一条**（写点互斥：queued 走 ②、running 走 ①、sync 走 ③——三种 child 形态各恰一条）。
+- **`ev:unsettled`** —— 消化账务升级留痕（`thincoder-core/agent/digest-account.mjs`（拟新增）——消化轮见账三次未覆盖 ⇒ 升级单点；恰一条/批）；字段 n / ids（消化账务批 · 2026-10-05 · 台账 #930；机制 = `AGENT-LOOP-ASYNC-POOL.md` §6.31）。
+- **`ev:finish-missing`** —— 结束信号缺席留痕（`thincoder-core/agent/run-stages.mjs`——`finishReason` 缺席（clean ∧ 非 partial）与同面提醒同点；F-DA5 / #929）；字段 turn / auto / child（机制 = 同档 §6.31.7）。
 - **`ev:subagent-block-revived`** —— 墓碑存活闸**复活分支**留痕（`thincoder-cli/src/tui/subagent-blocks.mjs` `ensureSubTaskKey`——墓碑命中但条目**池内存活（在池 ∧ 非 done / 非 cancelled）** ⇒ 摘墓碑 + 重建块；**每次复活记一条（无去重状态）**）。
 - **`ev:queued-paint-failed`** —— 排队块刷新 relay 异常留痕（`thincoder-core/agent-tools/subagent-scheduler.mjs` `refreshQueuedTokens` catch——池状态不被破坏）。
 - **`err:internal`** —— 未分类异常（回合包装器 catch——带消息 200 截断 + 栈位置）；字段 msg / where。
@@ -159,3 +161,4 @@
 - 2026-09-17（**af 批 · 二轮 fix 轮 · eng-designer**——承 `docs/batches/2026-09-17-async-face-fixes.md` §2.13）：§6.2 `ev:cancelled` 条写点由两个 → **三个**（加 ③ sync 定向取消提交点 `cancelSyncChild`——F-12）；事件名 / 字段形与既有取消族一致；机制语义零改。
 - 2026-09-20（**VSC 行为/能力两则批 · #132② · eng-designer**）：§6.2 事件面补 **`err:provider`** 条（provider 失败面原文余行——`err` = 脱敏首行 · `head` = 余行合单行、同过脱敏管道、自限 ≤200；余行缺 ⇒ 字段缺省；表面零膨胀）；悬空节引清理（首部机制面节区改 `§6–§8` + 两条历史节号指称）。设计源 = `docs/batches/2026-09-20-vsc-rules-retry-batch.md` §2。
 - 2026-09-27（**env-config-purge 批 · eng-designer**——承 `docs/batches/2026-09-27-env-config-purge.md` §1.5）：§6.2 存储行去 `THINCODER_LOG_DIR` override 子句 · §6.4 测试隔离 / 开发提示两句改**进程内落点缝**（`_setLogsDirForTest`）+ `NODE_TEST_CONTEXT` 写门 · §7 **D-LG8** 同改。缝形态单源 = `CONFIG.md` §6.2。
+- 2026-10-05（**批 digest-accounting · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §1 · 需求 §4.15 · 台账 #930）：§6.2 事件面补登两事件——`ev:unsettled`（消化账务升级留痕——恰一条/批；字段 n / ids）/ `ev:finish-missing`（结束信号缺席留痕——F-DA5 / #929；字段 turn / auto / child）；机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31。**机制语义零改**（登记）。

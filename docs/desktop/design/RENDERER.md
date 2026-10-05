@@ -55,7 +55,8 @@
   **行集 = 全轮**（每轮 = [起跑标签行（ask 档行文 = `digest.turnLabelAsk` 携 `from` ∕ `msg`；余 = `digest.turnLabel`；恒在）] +
   [`n > 0` 计数行（**起跑文 = `digest.start`**（携 `n`——「正在消化 N 份后台报告…」；对位 VSC `chat-status.js:82-88`）——**终态不换文**）] +
   [**cap 行（锚 `data-digest-cap`；`mode === "stop"` ⇒ 并 `.digest-cap-stop`；行文 = `digest.capStop` ∕ `digest.capAuto`）**] +
-  [**终态行（锚 `data-digest-end`）**——`end` ⇒ **追加一条新行**（词键 `digest.done` ∕ `digest.aborted` 直取——零新键；**不动原 digesting 行**）]；`n = 0` 轮零计数行 ∥ **零终态行**（守句——禁幻影行；三端同守））；
+  [**终态行（锚 `data-digest-end`）**——`end` ⇒ **追加一条新行**（词键 `digest.done` ∕ `digest.aborted` 直取——零新键；**不动原 digesting 行**）] +
+  [**残余行（锚 `data-digest-residue`）**——`end` 且携 `unsettled > 0` ⇒ 追加（词键 `digest.residue`——核字典直取）；`= 0` ⇒ 零行（消化账务批 · 2026-10-05——机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31）]；`n = 0` 轮零计数行 ∥ **零终态行**（守句——禁幻影行；三端同守））；
   行形单源 = `thincoder-vscode/webview/chat-status.js:69-122`；**行族形态（本批收正——对位 VSC 实形）：无轮容器**——行元素 = 流内并列兄弟（逐行直挂、不做每轮包裹元素；对位 VSC `chat-status.js:72-89` 逐行 `appendChild`）；
   **cap 行 ∥ 终态行 = 到达序追加——两径并存为设计**：**活流径** = 帧到达于**流末**追加（随流尾追——其位可与其族本体不相邻；对位 VSC `chat-status.js:97-105` 到达即 `appendChild`）∥
   **重建径** = **族内紧邻**（`digestRows` 出 [标签行, 计数行?, cap 行?, 终态行?]——重建按记录（族内压缩 = 在册白名单——本档「消化行入流与重放规则」条）；对位 VSC #726 复列——`docs/vsc/design/WEBVIEW.md` §5.7）；**记录面 = 行族入人读线 `digest` 记录（全量在档）**）；
@@ -546,3 +547,4 @@
 - 2026-10-04（**消化行回填落位批 · 修正轮随动 · 父侧直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-digest-reentry-order.md` §2 修正块 十·②③）：§5.1 `app.mjs` 行数账随正（**321 ⇒ 328**——实读 2026-10-04）；§3 回填条写门句随正（「并入 > 0」块数近似旧句 ⇒ **高度净增 ΔH ≠ 0**——帧身份 = 上帧在飞 ∧ 本帧坍落 ∥ 非跟滚；详式 = 修正块 十·②）。**零新语义**（读数 ∥ 谓词）。
 - 2026-10-04（**流尾台账行组退役批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2 · 台账 #913）：§1.1 三处收正——尾组族内序（去台账行）∥ 根子序（去 `[台账行组?]`）∥ 帮助行族条槽位句（「台账行组之后 ∥ 卡序列之前」⇒「卡序列之前」）。**产品码零触（设计轮）**。明细 = 批档 §2。
 - 2026-10-04（**行痕族消失时机批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-row-traces-clear-at-turn.md` §1 ∥ §2 · 台账 #919）：§1.1 帮助行族条清点句 ⇒ 两门（首屏 ∥ 回合起跑——去「同 `[data-timer]` 族」）∥ §1.6 增 **KD-74**（信号点 = `msg:send` 出站 ∥ 晚到丢弃闩 ∥ 端差 VSC 零触；被否七候选）∥ §1.6 注行随正。**产品码零触（设计轮）**。明细 = 批档 §2。
+- 2026-10-05（**批 digest-accounting · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §1 · 需求 §4.15 · 台账 #930）：§1.1「流内消化行族」条行集增**残余行**（锚 `data-digest-residue`——`end` 且 `unsettled > 0` ⇒ 追加；词键 `digest.residue` 核字典直取；`= 0` ⇒ 零行）。**零新语义**（判据 / 机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31）。明细 = 批档 §2。

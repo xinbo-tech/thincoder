@@ -626,7 +626,7 @@ test("腿 ⑦·记录面零动：三型轮记录逐条全量出帧不变 ∥ `cl
   assert.equal(st.digest[KEY].length, 1, "三型帧就末轮更新（同轮切片不变）")
   const ended = st.digest[KEY][0]
   assert.deepEqual(ended.cap, { mode: "stop", turns: 2 }, "cap 事实跨 `end` 存续")
-  assert.deepEqual(Object.keys(ended).sort(), ["cap", "from", "ms", "msg", "n", "ok", "status", "tier"], "终态轮键面（零位置面）")
+  assert.deepEqual(Object.keys(ended).sort(), ["cap", "from", "ms", "msg", "n", "ok", "status", "tier", "unsettled"], "终态轮键面（零位置面——2026-10-05 消化账务批 #930：终态记录携 `unsettled`，缺省 0 归一）")
   assert.equal(first.n, 2, "起跑记录原引用零动（逐条出帧不变）")
   st = wake.onDigest(st, { key: KEY, status: "start", n: 1 })
   st = wake.onDigest(st, { key: KEY, status: "end", ok: false, ms: 100 })
@@ -647,7 +647,7 @@ test("腿 ⑦·记录面零动：三型轮记录逐条全量出帧不变 ∥ `cl
   // 7c 宿主记录写点（负向锁：三型写点在盘 —— 本批零触）
   const main = (name) => readFileSync(join(ROOT, "thincoder-desktop/src/main", name), "utf8")
   assert.ok(main("suspension-drive.mjs").includes('appendRecord(agent, { kind: "digest", ...start })'), "宿主起跑记录写点在场")
-  assert.ok(main("turn-face.mjs").includes('appendRecord(agent, { kind: "digest", status: "end", ok, ms })'), "宿主终态记录写点在场")
+  assert.ok(main("turn-face.mjs").includes('appendRecord(agent, { kind: "digest", status: "end", ok, ms, ...extra })'), "宿主终态记录写点在场（2026-10-05 消化账务批 #930：终态记录携 `unsettled`——字面随动）")
   assert.ok(main("turn-face.mjs").includes('appendRecord(agent, { kind: "digest", status: "cap"'), "宿主撞帽记录写点在场")
   const read = (name) => readFileSync(join(ROOT, "thincoder-desktop/renderer", name), "utf8")
   assert.ok(read("page-read.mjs").includes("onDigest"), "折叠直复用归约体（单一实现零副本）")

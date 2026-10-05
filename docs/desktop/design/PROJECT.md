@@ -944,6 +944,20 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
 
 零触面：核包（`thincoder-core/**`）∥ CLI ∥ VSC ∥ `thincoder-render-core/**` ∥ 会话级档位族（输入区控件行 ∥ `session:prefs` ∥ 槽 `effort` ∥ `model:list` 逐模型投影）∥ advisor effort 族 ∥ 通道集 ∥ 白名单计数；测试面随修随加——不占设计条目（2026-09-27 裁定）。
 
+**本批（消化账务 · 台账 #930 · 2026-10-05 · 批 `docs/batches/2026-10-05-digest-accounting.md`）行「现行 ⇒ 实读（实施落盘）」**
+（as-of 2026-10-05——内容行数口径（文末换行不计）；机制 ∕ 判据单源 = 批档 §2 ∥ 核档 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31；批内件不计线 = KD-4）：
+
+| # | 档 | 现行 ⇒ 实读（实施落盘） | 面 |
+|---|---|---|---|
+| 1 | `thincoder-desktop/src/main/turn-face.mjs` | **200 ⇒ 206**（+6；`emitDigestEnd` 携 `unsettled`——非上行轮且 > 0 才携（帧 ∥ 记录同源同点）；判据单源 = 核 `unsettledCount`） | 边界帧 ∥ 记录载荷 |
+| 2 | `thincoder-desktop/renderer/events-wake.mjs` | **102 ⇒ 104**（+2；`onDigest` end 归一 `unsettled` 入轮记录——复列直复用同源） | 归约面 |
+| 3 | `thincoder-desktop/renderer/views/chat-digest-rows.mjs` | **273 ⇒ 288**（+15；残余行（锚 `data-digest-residue`——`digest.residue` 核字典直取；`= 0` ⇒ 零行）+ 行型闭集 +1） | 行族构树 |
+| 4 | `thincoder-desktop/renderer/page-read.mjs` | **281 ⇒ 285**（+4；折叠轮投影携 `unsettled`——复列承接（设计表外随落补入）；`= 0` / 缺 ⇒ 零行） | 页读折叠 |
+| 5 | 测试面（本批） | 批内件 `docs/batches/2026-10-05-digest-accounting-desktop.test.mjs`（**已建成 · 134 行 · DSK-1–DSK-6 · 6/6 绿**）；同批端腿三件（CLI **169 行** · VSC **178 行**）——随批留存 · 不进仓套件 · 批内件不计线 = KD-4 | 全批 |
+| 6 | 设计档 | `docs/desktop/design/RENDERER.md` §1.1 ∥ `docs/desktop/design/IPC.md` §1（设计轮已落——本批随落 = 本档 §4.2 行数账） | 全批 |
+
+零触面：核包（`thincoder-core/**`）∥ CLI ∥ VSC ∥ `thincoder-render-core/**` 零触；通道集 ∥ 既有载荷字段 ∥ 白名单计数零变（`ev:digest` 增字段）；测试面随修随加——不占设计条目（2026-09-27 裁定）。
+
 **（timer 唤醒投递批块——迁出）** → 见 `docs/desktop/design/ACTIVITY.md` §4.2（批块「现行 ⇒ 预期」行 + 零触面句；as-of 2026-10-02）。
 
 **（桌面打包发布批块——迁出）** → 见 `docs/desktop/design/PACKAGING.md` §3.2（批块「现行 ⇒ 实读（实施落盘）」行 + 零触面句；as-of 2026-10-02）。
