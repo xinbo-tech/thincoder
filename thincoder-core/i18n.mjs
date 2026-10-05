@@ -72,6 +72,8 @@ export const CORE_MESSAGES = Object.freeze({
   "status.turn": { en: "turn ${n}/${m}", zh: "轮次 ${n}/${m}" },
   "tool.running": { en: "running…", zh: "执行中…" },
   "tool.done": { en: "done", zh: "完成" },
+  // ── 台账（ledger）· F-LX3 变体键库首跑提示（批 2026-10-05-ledger-variant-db-notice · 台账 #935 · LEDGER.md §12.2 逐字；消费面 = CLI TUI 启动行）
+  "ledger.variantDbNotice": { en: "Legacy variant-key ledger DB found for this project (pre-upgrade; rows may be outside the current ledger): thincoder ledger audit to inspect; thincoder ledger migrate to reconcile", zh: "检测到本项目的存量变体键台账库（升级遗留，数据可能未并入当前库）：thincoder ledger audit 查看；thincoder ledger migrate 收正" },
 })
 // 深度冻结（机器消费面冻结——嵌套 { en, zh } 也冻结；浅冻结下值可被静默改写）。
 for (const entry of Object.values(CORE_MESSAGES)) Object.freeze(entry)

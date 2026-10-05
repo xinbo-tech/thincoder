@@ -167,6 +167,13 @@ export async function tuiCommand(ctx) {
     )
   }
   const { startTUI } = await import("./tui.mjs")
+  // F-LX3（批 2026-10-05-ledger-variant-db-notice · 台账 #935 · LEDGER.md §12.2）：变体键库首跑检测提示——
+  // 动态 import（新档静态链入 node:sqlite——W8 契约②）+ import ∥ 调用整段 try（静默降级：失败 ⇒ 不传 opts）
+  let ledgerVariantNotice
+  try {
+    const { ledgerVariantNotice: detect } = await import("@thincoder/core/ledger-variant-notice.mjs")
+    ledgerVariantNotice = detect({ cwd: agent.cwd, locale: agent.config?.locale }) ?? undefined
+  } catch { /* 静默降级——绝不阻塞启动 */ }
   try {
     await startTUI(agent, {
       projectDir: config.memory.projectDir ? (isAbsolute(config.memory.projectDir) ? config.memory.projectDir : join(process.cwd(), config.memory.projectDir)) : null,
@@ -175,6 +182,8 @@ export async function tuiCommand(ctx) {
       restored: data ? sessionDescriptor(agent, data) : data,
       // R25（F-R25c）：TUI 启动显示一行"上次运行异常终止"提示（showStartup 渲染——无匹配不传）
       crashNotice: recentCrashHint() ?? undefined,
+      // F-LX3（同上）：变体键库首跑提示行（showStartup 渲染——无命中不传）
+      ledgerVariantNotice,
     })
   } catch (error) {
     console.error(`[error] ${error.message}`)
