@@ -411,9 +411,9 @@
 | `buildAdvisorUserMessage` | `thincoder-core/advisor.mjs:54` | `named` |
 | `buildObjectDeclarationBlock, buildDesignApprovalBlock` | `thincoder-core/advisor.mjs:55` | `named` |
 | `buildAdvisorSystemPrompt` | `thincoder-core/advisor.mjs:91` | `fn` |
-| `buildAdvisorFollowUp` | `thincoder-core/advisor.mjs:138` | `fn` |
-| `escapeLiteralEscapes` | `thincoder-core/advisor.mjs:173` | `named` |
-| `prepareAdvisorMessages` | `thincoder-core/advisor.mjs:192` | `fn` |
+| `buildAdvisorFollowUp` | `thincoder-core/advisor.mjs:140` | `fn` |
+| `escapeLiteralEscapes` | `thincoder-core/advisor.mjs:175` | `named` |
+| `prepareAdvisorMessages` | `thincoder-core/advisor.mjs:194` | `fn` |
 | `extractCitations` | `thincoder-core/advisor/citations.mjs:29` | `fn` |
 | `verifyCitations` | `thincoder-core/advisor/citations.mjs:108` | `fn` |
 | `appendCitationReport` | `thincoder-core/advisor/citations.mjs:127` | `fn` |
@@ -434,9 +434,9 @@
 | `buildConvergenceInstructions` | `thincoder-core/advisor/convergence.mjs:18` | `fn` |
 | `buildConvergenceBody` | `thincoder-core/advisor/convergence.mjs:48` | `fn` |
 | `ADVISOR_MD_PATH` | `thincoder-core/advisor/history.mjs:7` | `const` |
-| `extractAgentResponseTable` | `thincoder-core/advisor/history.mjs:29` | `fn` |
-| `loadAdvisorMd` | `thincoder-core/advisor/history.mjs:51` | `fn` |
-| `extractConversationBackground` | `thincoder-core/advisor/history.mjs:60` | `fn` |
+| `extractAgentResponseTable` | `thincoder-core/advisor/history.mjs:31` | `fn` |
+| `loadAdvisorMd` | `thincoder-core/advisor/history.mjs:53` | `fn` |
+| `extractConversationBackground` | `thincoder-core/advisor/history.mjs:62` | `fn` |
 | `advisorToolsFor, advisorToolsFor as _advisorToolsFor` | `thincoder-core/advisor/loop.mjs:49` | `named` |
 | `runAdvisorToolLoop, runAdvisorToolLoop as _runAdvisorToolLoop` | `thincoder-core/advisor/loop.mjs:310` | `named` |
 | `findProjectRoot, injectProjectGuide` | `thincoder-core/advisor/messages.mjs:15` | `named` |
@@ -507,7 +507,7 @@
 | `refreshAdvisorQueuedTokens` | `thincoder-core/agent-tools/advisor-async.mjs:311` | `fn` |
 | `refillAdvisorQueue` | `thincoder-core/agent-tools/advisor-async.mjs:330` | `fn` |
 | `launchAsyncAdvisor` | `thincoder-core/agent-tools/advisor-async.mjs:369` | `fn` |
-| `closeOpenCodeAdvisorRuns` | `thincoder-core/agent-tools/advisor-async.mjs:479` | `fn` |
+| `closeOpenCodeAdvisorRuns` | `thincoder-core/agent-tools/advisor-async.mjs:481` | `fn` |
 | `mutationSeqOf` | `thincoder-core/agent-tools/advisor-settle.mjs:38` | `fn` |
 | `noteMutations` | `thincoder-core/agent-tools/advisor-settle.mjs:45` | `fn` |
 | `normAbs` | `thincoder-core/agent-tools/advisor-settle.mjs:56` | `named` |
@@ -634,6 +634,8 @@
 | `REVIEW_ROOT_KEYS` | `thincoder-core/agent-tools/review-facts.mjs:32` | `const` |
 | `resolveReviewRootsFor` | `thincoder-core/agent-tools/review-facts.mjs:38` | `fn` |
 | `resolveReviewDocPaths` | `thincoder-core/agent-tools/review-facts.mjs:72` | `fn` |
+| `scopeAdvisorMirror` | `thincoder-core/agent-tools/review-facts.mjs:130` | `fn` |
+| `noteReviewDelivered` | `thincoder-core/agent-tools/review-facts.mjs:139` | `fn` |
 | `MASKED` | `thincoder-core/agent-tools/settings.mjs:26` | `const` |
 | `isSensitiveKey` | `thincoder-core/agent-tools/settings.mjs:29` | `fn` |
 | `settingsTool` | `thincoder-core/agent-tools/settings.mjs:230` | `fn` |
@@ -652,21 +654,21 @@
 | `executePanelAction` | `thincoder-core/agent-tools/subagent-actions.mjs:92` | `named` |
 | `executeEscalateAction` | `thincoder-core/agent-tools/subagent-actions.mjs:101` | `fn` |
 | `DIGEST_INJECT_BUDGET, _setDigestOffloadDirForTest` | `thincoder-core/agent-tools/subagent-async.mjs:27` | `named` |
-| `enqueueAsk` | `thincoder-core/agent-tools/subagent-async.mjs:42` | `fn` |
-| `ASYNC_POOL_LIMITS` | `thincoder-core/agent-tools/subagent-async.mjs:58` | `const` |
-| `poolDomainOf` | `thincoder-core/agent-tools/subagent-async.mjs:67` | `fn` |
-| `resolvePoolLimits` | `thincoder-core/agent-tools/subagent-async.mjs:78` | `fn` |
-| `poolLimitsFor` | `thincoder-core/agent-tools/subagent-async.mjs:97` | `fn` |
-| `runningPoolCount` | `thincoder-core/agent-tools/subagent-async.mjs:124` | `fn` |
-| `resolveChildProvider` | `thincoder-core/agent-tools/subagent-async.mjs:141` | `fn` |
-| `cancelAsyncSubagent` | `thincoder-core/agent-tools/subagent-async.mjs:181` | `fn` |
-| `cancelSyncChild` | `thincoder-core/agent-tools/subagent-async.mjs:233` | `fn` |
-| `executeCancelAction` | `thincoder-core/agent-tools/subagent-async.mjs:252` | `fn` |
-| `runChildPipeline` | `thincoder-core/agent-tools/subagent-async.mjs:312` | `fn` |
-| `injectAsyncResult` | `thincoder-core/agent-tools/subagent-async.mjs:365` | `fn` |
-| `buildChildRunOpts` | `thincoder-core/agent-tools/subagent-async.mjs:416` | `fn` |
-| `mergeChildMutations` | `thincoder-core/agent-tools/subagent-async.mjs:443` | `fn` |
-| `queueRunnable, describeBlockers` | `thincoder-core/agent-tools/subagent-async.mjs:469` | `named` |
+| `enqueueAsk` | `thincoder-core/agent-tools/subagent-async.mjs:44` | `fn` |
+| `ASYNC_POOL_LIMITS` | `thincoder-core/agent-tools/subagent-async.mjs:60` | `const` |
+| `poolDomainOf` | `thincoder-core/agent-tools/subagent-async.mjs:69` | `fn` |
+| `resolvePoolLimits` | `thincoder-core/agent-tools/subagent-async.mjs:80` | `fn` |
+| `poolLimitsFor` | `thincoder-core/agent-tools/subagent-async.mjs:99` | `fn` |
+| `runningPoolCount` | `thincoder-core/agent-tools/subagent-async.mjs:126` | `fn` |
+| `resolveChildProvider` | `thincoder-core/agent-tools/subagent-async.mjs:143` | `fn` |
+| `cancelAsyncSubagent` | `thincoder-core/agent-tools/subagent-async.mjs:183` | `fn` |
+| `cancelSyncChild` | `thincoder-core/agent-tools/subagent-async.mjs:235` | `fn` |
+| `executeCancelAction` | `thincoder-core/agent-tools/subagent-async.mjs:254` | `fn` |
+| `runChildPipeline` | `thincoder-core/agent-tools/subagent-async.mjs:314` | `fn` |
+| `injectAsyncResult` | `thincoder-core/agent-tools/subagent-async.mjs:367` | `fn` |
+| `buildChildRunOpts` | `thincoder-core/agent-tools/subagent-async.mjs:420` | `fn` |
+| `mergeChildMutations` | `thincoder-core/agent-tools/subagent-async.mjs:447` | `fn` |
+| `queueRunnable, describeBlockers` | `thincoder-core/agent-tools/subagent-async.mjs:473` | `named` |
 | `executePanelAction` | `thincoder-core/agent-tools/subagent-panel.mjs:173` | `fn` |
 | `drainInjectedQueue` | `thincoder-core/agent-tools/subagent-run.mjs:34` | `fn` |
 | `executeAsyncSpawn` | `thincoder-core/agent-tools/subagent-run.mjs:55` | `fn` |
@@ -793,7 +795,7 @@
 | `STALL_THRESHOLD` | `thincoder-core/agent/post-turn.mjs:10` | `const` |
 | `GOAL_BUDGET_WARN_RATIO` | `thincoder-core/agent/post-turn.mjs:11` | `const` |
 | `injectPostTurn` | `thincoder-core/agent/post-turn.mjs:17` | `fn` |
-| `recordToolResults` | `thincoder-core/agent/record-results.mjs:36` | `fn` |
+| `recordToolResults` | `thincoder-core/agent/record-results.mjs:38` | `fn` |
 | `RELAY_PREFIX_RE` | `thincoder-core/agent/relay-prefix.mjs:10` | `const` |
 | `parseRelayPath` | `thincoder-core/agent/relay-prefix.mjs:16` | `fn` |
 | `relayPrefixOf` | `thincoder-core/agent/relay-prefix.mjs:37` | `fn` |

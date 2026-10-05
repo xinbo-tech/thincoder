@@ -196,7 +196,7 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
   // conversation can quote literal "\x"/"\u" sequences (server 400 risk).
   if (p && (agent._advisorRound || 0) > 0) {
     const scopeFiles = resolveScopeFiles(agent, paths)
-    const response = extractAgentResponseTable(agent.history)
+    const response = extractAgentResponseTable(agent.history, agent._advisorResponseAnchor ?? undefined)
       || (scopeFiles?.length
         ? "(Agent did not provide a response table — perform a fresh review of: " + scopeFiles.slice(0, 10).join(", ") + ")"
         : "(Agent did not provide a response table — perform a fresh review of the files named in the system prompt context)")

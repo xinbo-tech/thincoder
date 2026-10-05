@@ -17,13 +17,15 @@ const DEFAULT_CRITERIA = `Review the code changes, focusing on:
 /**
  * Extract the agent's response table (| # | Action | Detail |) — the fix-claims
  * reference for convergence rounds.
- * Semantics (decision 2026-08-08): without sinceIdx, scan BACKWARD for the
- * MOST RECENT response table (no prior-table index is carried anymore — the
- * agent response is a focus aid only; format drift falls back to the
- * no-response text and never drives control flow). With sinceIdx, scan
- * FORWARD from it (legacy callers/tests).
+ * Semantics: with sinceIdx, scan FORWARD from it — the review instance passes
+ * its delivery watermark (`agent._advisorResponseAnchor`), so the table taken
+ * is the one written after THIS review's delivery. Without sinceIdx (legacy
+ * direct callers — no watermark), fall back to scanning BACKWARD for the most
+ * recent table. The agent response is a focus aid only — format drift falls
+ * back to the no-response text and never drives control flow (decision
+ * 2026-08-08).
  * @param {Array} history — message history
- * @param {number} [sinceIdx] — legacy: start scanning forward from this index
+ * @param {number} [sinceIdx] — delivery watermark: start scanning forward from this index
  * @returns {string|null} the response table content, or null
  */
 export function extractAgentResponseTable(history, sinceIdx) {

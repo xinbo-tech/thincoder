@@ -53,7 +53,7 @@ export {
 } from "./advisor-settle.mjs"
 // 第 33 批（评审失败护栏）：doc-set 键迁事实面档（实例续跑与陈旧判定同锚单源；原为私有——零 import 面）。
 // 本文件继续在实例解析 / 池 entries 上消费它。
-import { docSetKey, resolveReviewDocPaths } from "./review-facts.mjs"
+import { docSetKey, resolveReviewDocPaths, scopeAdvisorMirror } from "./review-facts.mjs"
 // F31（2026-09-18 顾问面治理批）：拒回文案对象标识行单源。
 import { withIdentityLine, scopeSummary } from "../advisor/notice.mjs"
 import { runAdvisorReview, resolveAdvisorProvider, ADVISOR_THINKING_PLACEHOLDER } from "../advisor/run.mjs"
@@ -163,9 +163,9 @@ export function resolveAdvisorLaunch(agent, reviewType, { documents = null } = {
       runs.set(reviewId, run)
     }
   }
-  // Scope the legacy mirror fields (message builder + run.mjs cap + displays).
-  agent._advisorRound = run.priorOutput ? run.round : 0
-  agent._lastAdvisorOutput = run.priorOutput
+  // Scope the mirror fields to THIS instance (message builder + run.mjs cap +
+  // displays; #949 ① — the queued-launch window is re-secured at entry.start).
+  scopeAdvisorMirror(agent, run)
   return { run, isNew: run.round === 0 && !run.priorOutput, reviewId: run.reviewId, designId: run.designId }
 }
 
@@ -425,6 +425,8 @@ export function launchAsyncAdvisor(parent, ctx, launch) {
     // Async mark + [model] — the TUI block opens at ACTUAL start (⏹ gating reads it).
     ctx?.callbacks?.onToken?.(entry.relayPrefix + "⟦ev⟧async\x1e")
     ctx?.callbacks?.onToken?.(entry.relayPrefix + "[model]" + (entry.model ?? ""))
+    // #949 ①：排队 / 延迟窗口封死——构建前按本评审实例复核镜像（消费点定域；幂等）。
+    scopeAdvisorMirror(parent, run)
     runAdvisorReview(parent, reviewType, {
       onOutput: (chunk) => relayAdvisorOutput(ctx?.callbacks, entry.relayPrefix, chunk),
       signal: entry.controller.signal,

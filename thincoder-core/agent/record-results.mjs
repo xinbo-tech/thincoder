@@ -30,6 +30,8 @@ import { capHistoryImages } from "../provider/normalize.mjs"
 import { resolve } from "node:path"
 import { advisorRuns, stripApprovedSuffix } from "../agent-tools/advisor-async.mjs"
 import { looksLikeReviewOutput, advisorIncompleteMarker } from "../advisor/run.mjs"
+// #949（评审 history 串台面）：同步面投递水印单点（叶档——零环）。
+import { noteReviewDelivered } from "../agent-tools/review-facts.mjs"
 
 let _reindexFile = null
 
@@ -118,6 +120,8 @@ export async function recordToolResults(agent, toolByName, results) {
         } else {
           const reviewId = agent._advisorSyncCalls?.get(toolCall.id)
           const run = reviewId !== undefined ? advisorRuns(agent).get(reviewId) : undefined
+          // #949：工具结果已入史（上方 pushReal）⇒ 本评审响应表取件下界落定（run 缺省零写）。
+          if (run) noteReviewDelivered(agent, run)
           // F16 同步面（第 13 批——ADVISOR-GUARDS.md §6）：未完成尾 + 非设计面
           // （含类型不可判——run 缺失的 legacy 直调）⇒ 不置「已覆盖」（与 settle 面
           // 逐条 parity；设计评审保持计入——无代码面）。

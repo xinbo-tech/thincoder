@@ -123,3 +123,20 @@ export function resolveReviewDocPaths(documents, cwd) {
   }
   return { resolved, invalid, ambiguous, candidates }
 }
+
+/** #949（评审 history 串台面 ① 镜像键控）：评审实例镜像三值单点定域（round ∥ prior ∥
+ *  响应表取件下界 `_advisorResponseAnchor`）——`resolveAdvisorLaunch` 发起定域 +
+ *  `entry.start` 排队 / 延迟窗口消费点复核（构建前幂等重落）；非排队 / 同步语义零变。 */
+export function scopeAdvisorMirror(agent, run) {
+  agent._advisorRound = run.priorOutput ? run.round : 0
+  agent._lastAdvisorOutput = run.priorOutput
+  agent._advisorResponseAnchor = run.historyAnchorIdx ?? null
+}
+
+/** #949（② 投递水印）：响应表取件下界 = 投递刻 history 下标（消费面前向取首表）。
+ *  调用点：async `injectAsyncResult`（pushReal 后）∥ sync record-results 记账块；
+ *  run 缺省 / 非对象（legacy 直调）⇒ 零写（回落全文倒扫）。 */
+export function noteReviewDelivered(agent, run) {
+  if (!run || typeof run !== "object") return
+  run.historyAnchorIdx = Array.isArray(agent?.history) ? agent.history.length : 0
+}

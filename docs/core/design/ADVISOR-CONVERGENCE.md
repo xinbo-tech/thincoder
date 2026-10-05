@@ -271,6 +271,10 @@ history 中旧消息嵌有历史 diff / 旧文件内容，模型可能把“已�
   - `## Agent Response (fix claims — reference only)`——agent 响应表（**聚焦参考**——**不再是验证清单**；格式漂移或缺失时 fallback 文本兜底，不驱动控制流）；
   - `## Instructions`——编号指令：逐项 read 验证 prior 每项 / STALE-CONTEXT WARNING / 无 git / 必须 read 当前文件再判定 / **证据规则**（引本轮 read 确切行内容——无 fresh 引证 = unverified 不受理）/ round 2 可标修复引入的明显新问题（crashes, data loss, logic errors——非 style）/ round 3+ **“Do NOT look for new issues”**。
 - **只存“评审形态输出”作 prior**：评审完成时宿主只在该输出像评审时（markdown 表格行或足够长正文）存为 prior——空回复 / 纯工具进度不得成为 round2+ 的验证清单。同步路径存于 agent 状态；实例路径存于 run 实例；子代理内的 advisor 调用**不写父 agent 状态**。
+- **取件下界（per-review 窗口 · 2026-10-05 · review-cross-talk 批 · 台账 #949）**：agent 响应表取件按**本评审实例**收敛——下界 = 本评审**投递水印**（`run.historyAnchorIdx`：本评审结果进入父 history 的落点；async = 投递单点 `injectAsyncResult` ∥ sync = 工具结果提交点落——机制见 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.10）。
+  取件 = 自水印**前向**扫描取**首张**响应表；无水印（legacy 直调 / 无实例）回落既有全文倒扫。依据 = 并发评审下全文倒扫取「最新」表 ⇒ 取到他场（本批活体复现：他场响应表被注入本评审构建）。
+  **残余声明**：① **索引稳定性前提**：水印 = 投递刻 history 下标；跨存档重装（整换径 `thincoder-core/session-lifecycle.mjs:115` `agent.history = [...machineMerged]`）∥ 头裁切后可失配；失配两向（同因）——前向窗**越过**本表 ⇒ 回落「no response table」兜底文本 ∥ 前向窗起点**左移** ⇒ 覆盖更早区段（可含投递前）⇒ 可取他场**更早**表；两向均 = 聚焦参考降级、不驱动控制流。
+  ② 水印下界只保证「≥ 本评审投递点」——他场响应表若在本评审投递之后、本次构建之前交错写入，取件仍可先命中他场；「聚焦参考」语义不变（不驱动控制流——与 F9 / F-A12 不相触）。
 - **已知边界（legacy 路径）**：legacy 收敛路径不应用转义——**直接外部调用方须自行转义**（parent 对话引用字面转义序列时有服务端 400 风险）；正常流已转义，无风险。
 
 ## 5. host-verified citations——机械证据校验
@@ -405,6 +409,7 @@ advisor design review 标准维度补一条：
 | A-AC11 | 行数标注核查维度在位；函数档为第一判据 | 行数核查 |
 | A-AC12 | 争议窗与接受收口（F32）：轮 2 可对不修理由出打回（轮 1 无 prior——窗语义不入，§2.5）、轮 3+ 对携理由不修项接受收口；零理由项任一轮保持未解（提示词逐字在位 + 表列 `Accepted` 词表行逐字可核） | §2.5 |
 | A-AC13 | pass 判据随动（F33）：轮 3+ prior 🔴 全部 ∈ {fixed, accepted} 才可 pass；零理由未解项 ⇒ 不可 pass（轮 2 / 3 裁决句逐字 + 设计回显条件句在位） | §2.4 / §2.5 |
+| A-AC14 | 跨评审隔离：并发 / 延迟下消息构建取本评审实例值（排队启动复核）；轮 2+ 响应表取件不小于本评审投递水印（前向取首表；无水印回落全文倒扫） | §4.3 / `AGENT-LOOP-ASYNC-POOL.md` §6.10 |
 
 **工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：`thincoder-core/advisor/loop.mjs:205-215` 推入 `messages` 的 assistant 消息由核单点 `assistantToolCallMessage(response, providerSpec(provider))`（`thincoder-core/model-specs.mjs`）构造——`reasoningEcho:"required"`
  族（继承主 provider 或显式 `advisor.provider`，均按 `providerSpec` 判定）**恒带** `reasoning_content`（本轮无推理 ⇒ 空串）；`optional` / 未声明族恒不带。回归锚 = 核 `test/model-specs.test.mjs`（规则面）+（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
@@ -422,6 +427,12 @@ advisor design review 标准维度补一条：
 | 状态行与落笔流水 | 「实现未启动 / 待 coder / 已落」类状态句 | 运行时状态 |
 
 ## 变更记录
+
+- 2026-10-05（**评审 history 串台面批（review-cross-talk）· 代码评审 🟡② 处置（fix 轮）· eng-designer**——承 `docs/batches/2026-10-05-review-cross-talk.md` §5 ④ 代码评审轮次 1 🟡②）：§4.3 残余声明① 补**左移支**（水印下标失配第二向——前向窗起点**左移** ⇒ 覆盖更早区段 ⇒ 可取他场**更早**表；与已登记「越过本表 ⇒ 回落兜底」同因反向；两向均 = 聚焦参考降级、不驱动控制流）。**零机制语义**（注记面）。明细 = 批档 §2 fix 追记。
+
+- 2026-10-05（**评审 history 串台面批（review-cross-talk）· 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-10-05-review-cross-talk.md` §3 轮次 1 发现 2）：§4.3 残余声明补**索引稳定性前提**（水印 = 投递刻下标；跨存档重装 / 头裁切可失配 ⇒ 前向窗越过本表 ⇒ 回落「no response table」兜底文本 = 聚焦参考降级、不驱动控制流）。**零机制语义**（注记面）。明细 = 批档 §2 修正块。
+
+- 2026-10-05（**评审 history 串台面批（review-cross-talk）· 设计轮 · eng-designer**——承 `docs/batches/2026-10-05-review-cross-talk.md` §2 · 台账 #949）：§4.3 增响应表**取件下界**条（per-review 投递水印 + 前向取首表 + 无水印回落 + 残余声明）；§12 增 A-AC14（跨评审隔离）。明细 = 批档 §2。
 
 - 2026-10-03（**复评（轮次 2）发现 2 处置 · 父侧直接执行 · 可 revert**——承 `docs/batches/2026-10-03-advisor-convergence.md` §3 轮次 2）：档头句「评审核查维度行为 = 本档 §8」 ⇒ **§9**（行数标注核查维度所在节；原为 off-by-one 指针）。**零语义改**（指针形态）。
 

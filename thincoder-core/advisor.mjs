@@ -124,7 +124,9 @@ export function buildAdvisorSystemPrompt(agent, prior, reviewType) {
  * NOTE: the caller (prepareAdvisorMessages) applies escapeLiteralEscapes to
  * the return value — direct callers must do the same (the prior table and
  * agent response can quote literal "\x"/"\u" sequences).
- * @param {Object} agent — the parent agent (history used for the response table)
+ * @param {Object} agent — the parent agent (history used for the response table:
+ *   scanned forward from `agent._advisorResponseAnchor` — this instance's delivery
+ *   watermark; absent → legacy backward scan)
  * @param {Object|null} prior — prior issue table (extracted from history when null)
  * @param {string[]|null} [scopeFiles] — review surface for the no-response fallback (cwd-relative)
  * @param {Object|null} [object] — review-object declaration (AGENT-LOOP-ASYNC-POOL.md §6.18): mechanically
@@ -156,7 +158,7 @@ export function buildAdvisorFollowUp(agent, prior, scopeFiles = null, object = n
   const noResponseFallback = scopeFiles?.length
     ? "(Agent did not provide a response table — perform a fresh review of: " + scopeFiles.slice(0, 10).join(", ") + ")"
     : "(Agent did not provide a response table — perform a fresh full review; the review surface is unknown, ask the user for the file list)"
-  const response = extractAgentResponseTable(agent.history) || noResponseFallback
+  const response = extractAgentResponseTable(agent.history, agent._advisorResponseAnchor ?? undefined) || noResponseFallback
   const round = (agent._advisorRound || 0) + 1
   // Review-object declaration FIRST (T-OA2 — round 2+ stays anchored, no re-archaeology).
   const declaration = buildObjectDeclarationBlock(object)
