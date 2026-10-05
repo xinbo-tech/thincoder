@@ -211,9 +211,9 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   if (!body.trim()) {
     throw new Error("batch_segment: nothing to append — the text is empty after credential stripping (credential values never reach the record).")
   }
-  // F11-C（挂点：gate / text 校验后 · insertIntoSection 前）：档头 + 目标段死占位残留 ⇒ 拒
-  // （他段占位不拦——一段一作者；骨架枚举单源 = skeleton 档 TEMPLATE_PLACEHOLDERS）。
-  const residues = findPlaceholderResidue(src, n)
+  // F11-C（挂点：gate / text 校验后 · insertIntoSection 前）：档头结构行死占位残留 ⇒ 拒
+  // （段体引用豁免——判据可辨性收正，`TOOLS.md` §6.20；骨架枚举单源 = skeleton 档 TEMPLATE_PLACEHOLDERS）。
+  const residues = findPlaceholderResidue(src)
   if (residues.length) throw new Error(placeholderResidueError(residues))
   const { written, roundN } = insertIntoSection(src, n, body)
   writeFileSync(abs, written)
@@ -267,6 +267,14 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
         source: {
           type: "string",
           description: "create only — REQUIRED: the record's origin line (来源 = …; single line). It fills the header's 编制 line; without it the skeleton's placeholder would block the record's first append/status (topic-style fail-closed). Nothing is written when it is missing.",
+        },
+        ledger: {
+          type: "string",
+          description: "create only — optional: the ledger entry number for the header's 台账 line (e.g. \"#938\"; a leading # is added if missing). Passed together with board, it fills the header at creation; when omitted, the placeholder stays and must be filled by file edit before the record's first append/status.",
+        },
+        board: {
+          type: "string",
+          description: "create only — optional: the owning board for the header's 台账 line (e.g. \"core\"). See ledger — both fill the header at creation.",
         },
         date: {
           type: "string",

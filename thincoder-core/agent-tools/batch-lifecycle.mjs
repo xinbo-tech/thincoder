@@ -49,6 +49,18 @@ function segmentNumber(raw) {
   return m ? Number(m[1]) : null
 }
 
+/** 档头两可选参归一（`BATCH-RECORD.md` §4.11 契约——逐字文本面 = `TOOLS.md` §6.20）：trim ∥
+ *  单行（拒句逐字）∥ 空串 ≡ 未给（null）；`ledger` 前导 `#` 补齐（board 无补齐）。给参 ⇒ 建即填
+ *  台账行（batchSkeleton 实参面）；未给（任一）⇒ 占位留存 + 回执填法句。 */
+function normalizeHeaderParam(name, raw) {
+  const v = typeof raw === "string" ? raw.trim() : ""
+  if (!v) return null
+  if (/\r?\n/.test(v)) {
+    throw new Error("batch: create ledger / board must be single lines — a multi-line value would break the header's 台账 line. Nothing was written.")
+  }
+  return name === "ledger" && !v.startsWith("#") ? `#${v}` : v
+}
+
 /** main-agent-only 门（BR-19/BR-24）：create/close 仅 depth-0 放行（eng 子代理 / 评审皆拒）。 */
 function assertMainAgentOnly(ctx, action, review) {
   if (review || !isDepthZero(ctx)) {
@@ -108,6 +120,8 @@ export function findInFlightBatch(cwd, bases) {
  * 路径解析 = `resolveBatchCreatePath`（§4.15 单源：候选序首个落基底内者 / 锚定串只解析项目根形）。
  * F11-B：`source` **必填**（topic 同款空拒——骨架编制行实参化；不传 = 死占位残留必被 F11-C 拒
  * ⇒ create 即拒，不留死锁）；`prev` 传入值**幂等剥**「前情 = 」前缀（值规范化；默认值零变）。
+ * 2026-10-05（A-2）：`ledger` / `board` 可选参**建即填**台账行（归一契约 = §4.11；回执两态 =
+ * 两参皆给 ⇒ 标注已填 ∥ 未给（任一）⇒ 填法句）。
  * @returns {string} 成功消息（含落盘绝对路径）
  */
 export function createBatchRecord({ args, ctx, review, cwd, bases, onWritten }) {
@@ -138,15 +152,22 @@ export function createBatchRecord({ args, ctx, review, cwd, bases, onWritten }) 
   if (/\r?\n/.test(source)) {
     throw new Error("batch: create source must be a single line — a multi-line source would break the header's 编制 line. Nothing was written.")
   }
+  // 档头两可选参（§4.11 契约——给则建即填台账行；未给任一 ⇒ 占位留存 + 回执填法句）
+  const ledger = normalizeHeaderParam("ledger", args?.ledger)
+  const board = normalizeHeaderParam("board", args?.board)
   const date = typeof args?.date === "string" && args.date.trim() ? args.date.trim() : todayLocal()
   // F11-B：prev 幂等 strip——调用方自带「前情 = 」前缀（单或重复）一并剥净（`+` 量词；归一化目的
   // = 值规范化，无前缀值原样通过）。默认值形态「无（独立批）」零变。
   const prevRaw = typeof args?.prev === "string" ? args.prev.trim() : ""
   const prev = prevRaw ? (prevRaw.replace(/^(?:前情\s*[=：:]\s*)+/g, "").trim() || "无（独立批）") : "无（独立批）"
   mkdirSync(dirname(abs), { recursive: true })
-  writeFileSync(abs, batchSkeleton({ date, topic, source, prev }))
+  writeFileSync(abs, batchSkeleton({ date, topic, source, prev, ledger, board }))
   onWritten?.(ctx?.agent ?? {}, abs)
-  return `batch: created ${abs} — six-section skeleton written (§1 status line carries the gate-legal 「进行中」 placeholder; register the ledger entry yourself — create does not).`
+  // 回执两态（`TOOLS.md` §6.20 逐字）：两参皆给 ⇒ 标注已填；未给（任一）⇒ 填法句（填法 = 文件编辑）
+  const headerNote = ledger !== null && board !== null
+    ? `header 台账 line filled (${ledger} · ${board})`
+    : "header 台账 placeholder(s) remain — fill them by file edit before the record's first append/status opens"
+  return `batch: created ${abs} — six-section skeleton written (§1 status line carries the gate-legal 「进行中」 placeholder; register the ledger entry yourself — create does not). ${headerNote}`
 }
 
 /**
@@ -265,7 +286,7 @@ function assertStatusNote(note) {
  * 恰一词（**余核 = 关键词**——F11-A 谓词收紧），散文说明走独立 `note` 字段（落状态行括注）；
  * 冻结真值不变（gate 只读 §1）。path 参数 = 仅 depth-0（D-BR21）——子代理/评审传 path
  * ⇒ 拒（目标 = spawn/实例注入，语法上写不到别处）。F11-C 挂点 = 写盘前（assertStatusValue 后）：
- * 档头 / 目标段含骨架死占位 ⇒ 拒（close 不拦——收口是主 agent 终态动作）。
+ * 档头结构行含骨架死占位 ⇒ 拒（段体引用豁免；close 不拦——收口是主 agent 终态动作）。
  * @returns {string} 成功消息
  */
 export function statusBatchRecord({ args, ctx, review, pickTarget, onWritten }) {
@@ -298,8 +319,8 @@ export function statusBatchRecord({ args, ctx, review, pickTarget, onWritten }) 
   const abs = pickTarget(args?.path)
   const src = readFileSync(abs, "utf8")
   assertGateOpen(src)
-  // F11-C（写盘前）：档头 + 本段死占位残留 ⇒ 拒（他段占位不归本段作者管）
-  const residues = findPlaceholderResidue(src, seg)
+  // F11-C（写盘前）：档头结构行死占位残留 ⇒ 拒（段体引用豁免——判据可辨性收正，`TOOLS.md` §6.20）
+  const residues = findPlaceholderResidue(src)
   if (residues.length) throw new Error(placeholderResidueError(residues))
   const written = updateSectionStatusLine(src, seg, lineValue)
   writeFileSync(abs, written)
