@@ -20,7 +20,7 @@
 | 3 | **拒绝 / headless** | 无 `onQuestion` 或无权限 handler → 返回部分成果 + turn-cap 标记——`TURN_CAP_MARK = "stopped: turn cap reached"`（常量单源 = `thincoder-core/agent/child-marks.mjs`——2026-09-20 下沉零依赖叶，`agent/spawn-child.mjs:35` 原样再导出；尾部附 "work may be partial"）——报告据此判定「撞墙中断、工作可能不完整」。**触发面（2026-09-26）**：无 handler / headless ∨ 检查点未获续期（父答停 ∨ 父不可达 ∨ 会话中止——#7） |
 | 4 | **用户 Stop 优先** | 中止路径（`AbortError` / `signal.aborted`）恒优先于继续提示——不弹卡、不自动续跑 |
 | 5 | **继续提示串行** | 会话级队列消费者 = **会诊（唯一）**（`continueQueue`——`agent-tools/consult.mjs:331`；检查点报请仍串行其上）；**同步子代理**走 `_permQueue`（核 `subagent.mjs:313`）；**同步飞刀 = 直问用户**（无队列）；异步飞刀权限同经 `_permQueue`（核 `escalate-async.mjs:242`）；**depth-0 直弹卡、无会话队列**（CLI `agent-turn.mjs:203-224`（as-of 2026-09-29） / VSC `panel-turn-loop.mjs:142-152`（as-of 2026-09-29））；**异步族**经上行通道报请（无队列——#7；**会诊除外**——见本行首句）。并行执行体同时撞墙不弹多个卡 |
-| 6 | **次数不限** | 无次数帽（`MAX_RESUMES` 形态已从代码面移除——VSC 侧 `src/` 零命中实核）；防卡死靠用户 Stop（**不设零产出阈值**——2026-09-26 裁定） |
+| 6 | **次数不限** | 无次数帽（`MAX_RESUMES` 形态已从代码面移除——VSC 侧 `src/` 零命中实核）；防卡死靠用户 Stop（**不设零产出阈值**——2026-09-26 裁定；该裁定对象 = **续跑决策的自动动作面**——只读角色零产出告警机制另见 `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.32） |
 | 7 | **撞帽检查点（F8 · 2026-09-26）** | 撞帽 ⇒ **不再静默自动续期**：**异步族**（后台子代理 / 异步飞刀 / 会诊）⇒ **报请父代理**（上行 ask：载荷 = 段数 / 跨段累计轮次 + 去向一句话）；父答**续期** ⇒ 同执行体 `resume:true` 重入（#2 不变量）+ 新段预算（会诊同挂 watchdog 重置）；父答**停** ⇒ #3 partial。**同步族**（阻塞子代理 / 同步飞刀）⇒ **用户卡路径保留**（父代理被本次调用阻塞 · 应答不可达；挂起亦不可续——累计 history 随调用返回丢弃）。depth-0 ⇒ 用户卡（digest 无人值守档 ⇒ 收口，原 AUTO 自续退役）。**AUTO 一律不再自动批准续期**——**AUTO × 同步族**（2026-09-26 明）：AUTO 档对 `continue` 名不再短路（CLI `interaction.mjs:68` / VSC `panel-callbacks.mjs:279`）⇒ 卡**在场待答**；无人应答（headless / 无人值守）⇒ 落 #3 partial（非静默放行）。**可答判据（机械）** = `child._upstream?.parent` 在场且 `sync !== true` ⇒ **段边界挂起**（不 settle / 不重派——§5 D-TC12）；不可达 ⇒ #3 partial。留痕 = 跨段累计轮次 + 段数（§4）+ 摘要文本面（§3.1） |
 | 8 | **载入面自证（2026-09-26 新增）** | 运行面与仓内面的一致性**可核**——「以为在跑新码」必须可自证：① **启动期诊断**——VSC 激活时记一行 `[thincoder] core face = <core 实体路径> (v<版本>)`（路径经 `import.meta.resolve("@thincoder/core/agent.mjs")` 取实体目录；版本读同目录 `package.json`）——**不比对、不拒载**（只留证据；读取失败 ⇒ 记 `core face = unresolved`，不抛 / 不阻断激活——§3.2 注）；② **打包面机检**——`thincoder-vscode/scripts/check-vsix.mjs` 增断言：vsix 内 `@thincoder/core/agent-tools/checkpoint.mjs` 存在 ∧ `agent-tools/subagent-run.mjs` 含 `registerTurnCapCheckpoint`（接线未进包 ⇒ 机检即红，不靠人眼）。**不动机制语义**；实况触发 = 运行面为安装包冻结旧构建（`docs/batches/2026-09-26-turn-cap-live-gap.md` §2.2） |
 
@@ -181,6 +181,8 @@
 | CLI 侧同名档未迁面（CLI 台账列为后续批） | CLI 产品档正文 | **已并入（2026-09-15 CLI 尾部真批）**——CLI 独有面入 §1–§5，(d) 类入 §6.1 |
 
 ## 变更记录
+
+- 2026-10-05（**批 subagent-zero-write-watchdog · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-05-subagent-zero-write-watchdog.md` §3 轮次 1 发现 4）：§1 行 6「不设零产出阈值」（2026-09-26 裁定）补**对象限定**（该裁定对象 = 续跑决策的自动动作面）+ 交叉指针（只读角色零产出告警机制 = `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.32）。**零新语义**（裁定本体不动）。
 
 - 2026-09-29（**core-hygiene 批 · P3 文档收正 · eng-designer**——承批档 `docs/batches/2026-09-29-core-hygiene.md` §2.8 行 5）：核侧坐标（§1 #1 ∕ #2 · §3.1 三行 · §4 两处 ∕ §3.2 消费路径）按 **P2 三拆**收正——撞帽抛点 ∕ 帧调用点 = `agent/turn-loop.mjs`；复位块 = `agent/run-start.mjs`（随行注「三拆前」= 旧坐标）；档头补三拆收正注。机制条文零改。
 
