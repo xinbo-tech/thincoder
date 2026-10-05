@@ -1411,6 +1411,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
   `file-edit.mjs:396` · `hashline-edit.mjs:91` · `more-file.mjs:55` 5 处；VSC 侧带 `Error: ` 前缀）。（W14 已迁核——上述 VSC 自持档已删；现体 = 核 `write-path.mjs` 的拒写文案单点） （迁移期引文）
   VSC 另有 2 处尾句为 `Save or discard first.`（`thincoder-vscode/src/tools/more-file.mjs:266,380`）⇒ **S2 接线后该两处用户可见文案随核内句统一**（本项只登记口径——端侧改动属 S2）。（W14 已迁核——该档已删，文案统一已在 W14 随核单源落地） （迁移期引文）
 - **补正③（登记——S2 接线前须定，2026-09-14）**：① `#96` 信息段缝位与入参口径（阻塞三态含段 vs VSC 现形不含；`codeFiles` vs `files`）；② `copy` 面门禁口径（src / dest 两面照过门禁——「所有 op 统一先问 src」；dest 面覆盖 move / rename / copy）。既定口径见批次档 §5「S1 续轮第三批」决策表 7 / 未决 2。
+- **补正④（2026-10-05 · 批 engine-tools-gaps · 台账 #943）**：缝内 op 集扩 **`rmdir`**（空目录移除——非空 `ENOTEMPTY` 上抛由调用面译拒；**不记 dirty**；注入面「门禁后回默认径」照旧）；消费 = `delete` 工具空目录臂（`thincoder-core/tools/patch.mjs`）；机制单源 = `docs/core/design/TOOLS.md` §6.21。
 - **范围注（结构机检域）**：验收② 机检域 = `tools/**`（工具写面）。核内域外档（存储 / 日志 / 快照 / trace / 配置等面 + 测试夹具）另含 fs 写、**不在本机检域**；
   其中**模型面直写 `thincoder-core/agent-tools/batch.mjs`（#84）**已单列 **S2 前置门**（见 §2.13.4 #84 行 / §2.13.6 第 5 条）。原「核内单点」字样按落地口径收正为「**工具写面单点**（8 写点全经缝）+ `tools/**` 白名单机检」。
 
@@ -1827,6 +1828,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 **本批（core 越线档拆分批（#755 ∥ #786） · 2026-10-01）落点表** = `docs/batches/2026-10-01-core-split-line.md` §2（唯一承载面——一次性批次材料）。
 **本批（issue 修复批·一 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round1.md` §2（唯一承载面——一次性批次材料）。
 **本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
+**本批（引擎工具面缺口两条 · 2026-10-05）落点表** = `docs/batches/2026-10-05-engine-tools-gaps.md` §2（唯一承载面——一次性批次材料）。
 
 - 2026-09-25（**hygiene-ab 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-ab.md` §2 · 台账 #270）：
   §2.8.1 **补子表行 14** = `model-specs.mjs`（**326**——拆点 / 落点 / 消解窗口按 `MODEL-SPECS.md` §13.6 逐字）+ 计数句同改（**在册 34 → 46 · 已登 14 → 15 · 后 13 → 14 档 · 其余 20 → 31**）+ 子表头补「bench 参数批补 1 档」。**零新语义**（= 登记落位）。
@@ -2065,5 +2067,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 - 2026-10-05（**台账工具统一批（ledger-tool-unification）· eng-coder**——承 `docs/batches/2026-10-05-ledger-unification.md` §2 · 台账 #923）：「52 档」断言簇余留**十六处**收正为 **48 档**——现盘 `thincoder-core/tool-docs/` 实测：
   `:65` ∥ `:80` ∥ `:86` ∥ `:96` ∥ `:164` ∥ `:166` ∥ `:410` ∥ `:645` ∥ `:1011` ∥ `:1016` ∥ `:1018` ∥ `:1039` ∥ `:1061` ∥ `:1197` ∥ `:1556` ∥ `:1557`；
   §2.13.4 #174 行端差接线收正（名称面 ⇒ 统一入口 `ledger`（action=query/count）；坐标收正：旧档 `setup.mjs` ⇒ 现档 `thincoder-vscode/src/agent/tool-table.mjs`——端侧自持读二追加入口退场）。**零新语义**（计数 ∕ 名称 ∕ 坐标收正）。
+
+- 2026-10-05（**引擎工具面缺口批（engine-tools-gaps）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-engine-tools-gaps.md` §1 · 台账 #943）：§2.13.5 增**补正④**（缝内 op 集扩 `rmdir`——`delete` 空目录臂消费；机制单源 = `TOOLS.md` §6.21）。**零新语义**（登记落位）。
 
 

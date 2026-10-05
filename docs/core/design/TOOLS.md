@@ -1074,6 +1074,50 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 
 **边界（本节不做）**：门禁判据集零改（六字段标记 ∥ `TEMPLATE_PLACEHOLDERS` 枚举字面 ∥ `assertStatusNote` 面）· 不新增工具 / action · 其他 description 零清扫 · 端面零改（核单源消费）；用例表 ∕ 受影响文件 ∕ 验收回指 = 批档 `docs/batches/2026-10-05-toolface-first-use-fixes.md` §2（一次性批次材料——本档不重述）。
 
+### 6.21 `delete` 空目录臂（2026-10-05 · 批 engine-tools-gaps · 台账 #943）
+
+**来源**：对侧报告 N-5 亲历（暂存空目录最终由用户裸 `rmdir` 清掉）+ 我方复核——`thincoder-core/tool-docs/delete.md:12` 原句「Directories must be removed with bash (rm -rf)」把模型指回**被禁面**
+（删除类动词红线 = `docs/core/requirements/PROMPT-SYSTEM.md:96` 五条之一——「删除只走既有工具面 `delete` / `git rm` 或极窄白名单」），而 `delete` 拒目录 ⇒ 目录面**零合规通路**（矛盾 = 要求层点名 delete 工具面，工具面拒目录）。
+
+**机制（选定 = `delete` 支持空目录——非空拒；形择依据 = D-TO16）**：`thincoder-core/tools/patch.mjs` `deleteTool.execute` 目录臂——
+
+| 面 | 改前 | 改后 |
+|---|---|---|
+| 目录判据 | `s.isDirectory()` ⇒ throw（逐字：「"<path>" is a directory — use bash to remove directories」） | **空目录** ⇒ `writeThroughPath(abs, null, { op: "rmdir" })` 移除；**非空**（`ENOTEMPTY` / `EEXIST`）⇒ 拒（拒句逐字见下）；**不经跟踪检查**（空目录不可能被 git 跟踪——`force` 语义只对文件）；判型照 `lstat`（符号链接 = 删链接本体——不跟随，既有语义零变） |
+| 成功回执 | — | `Deleted <path>`（与文件臂同形——零新回执形态） |
+| `path` 参数描述 | `File path (relative to cwd or absolute)` | `File or empty-directory path (relative to cwd or absolute)` |
+
+**拒句（模型可见文本——逐字）**：`"<path>" is a directory and is not empty — only empty directories can be deleted (nothing recursive is ever removed). Remove the contents first (delete bottom-up for nested empty directories).`
+
+**写路径（`thincoder-core/tools/write-path.mjs`）**：缝内 op 集扩 **`rmdir`**——`rmdir` 系统调用（空目录移除）；非空 `ENOTEMPTY` 上抛（调用面译拒）；**不记 dirty**（目录无行号语义）；注入面照旧（非内容写点 ⇒ 门禁后回默认径——`tryInjectedPath` 零改）。
+登记 = `docs/core/design/CORE-UNIFICATION.md` §2.13.5 补正④；机制实现面 = `thincoder-core/tools/patch.mjs`（delete 臂）∥ `thincoder-core/tools/write-path.mjs`（rmdir 臂）。
+
+**描述档（`thincoder-core/tool-docs/delete.md`——全文改后逐字）**：
+
+```text
+Delete a file, or an empty directory. Use when the agent created a temporary or junk file or empty directory that should be cleaned up, or when the user explicitly asks to delete something.
+Refuses to delete git-tracked files as a safety measure — tracked files should be edited or removed via bash with explicit user confirmation.
+
+**Route to delete instead of bash:** `del file` / `rm file` → delete (single files); an empty directory → delete (empty directories only). Non-empty directories have no delete path — stop and report to the user instead of hand-rolling a recursive shell delete.
+
+Parameters:
+- path (required): File or empty-directory path, relative to cwd or absolute
+- force: Allow deleting git-tracked files (default false)
+
+Notes:
+- Untracked or non-git files are deleted immediately
+- Tracked files require force=true (user must confirm separately)
+- Directories: empty ones only — a non-empty directory is refused (a natural fuse; nothing recursive is ever removed); delete nested empty trees bottom-up
+- Symbolic links are removed as links — the link itself is deleted, never followed (its target is untouched)
+- Returns `Deleted <path>` (or `Error: ...` on failure / tracked / non-empty refusal).
+```
+
+**边界（本节不做）**：**非空目录零通路**（有意——保险丝；不实装「极窄白名单」——D-TO16 否决②；如需 ⇒ 另批）· 不递归 ∕ 无 `recursive` 选项 · `file_ops` 枚举零改（目录操作面维持 move / copy / rename）· 审批门零改（delete 既有 `onPermissionRequest` 门继承）· `touchedPaths` ∥ 重叠谓词零改（`thincoder-core/peer-claims.mjs:72` 已按目录级语义在册）。
+**快照面注（undo）**：空目录移除**不产生 undo 条目**——零内容语义：`snapshotForUndo`（`thincoder-core/undo-stack.mjs:31`）对目录目标读文本失败（`EISDIR`）即捕后跳过——**不推条**（与「文件创建态」的 `backup = null` 条目分判）；`/undo` 列表无该条目。
+**范围注（不经跟踪检查——放宽面）**：前提「空目录不可能被 git 跟踪」按**常规面**声明（git 索引不记空目录）；例外面候选 = **索引条目（gitlink——如未初始化 ∕ 未检出子模块路径）对应的空目录路径**（**unverified**——未实核）：该类路径索引留条目而工作树形可为空目录 ⇒ 本臂对该面同不经跟踪检查（放宽面据此声明）；如日后实核出反例 ⇒ 另议（父侧裁）。
+**口径注（逐字文本面归属）**：本节内联 = 本批 `thincoder-core/tool-docs/delete.md` **改前→改后逐字留痕**（承 §6.20 先例——工具面批描述文本变更以本档 §6.x 持逐字文本面）；**实读 `PROMPT-SYSTEM.md` 现持面** = 描述面**机制与预算**（§6.11——外置单源 ∥ 预算表唯一权威处 ∥ 写作契约 → §6.9），该描述档文本**不在该档**（零命中）；描述文本**运行期单源** = `thincoder-core/tool-docs/delete.md`（核内唯一副本）——非二次归属（变更留痕）。
+用例表 ∕ 受影响文件 ∕ 验收回指 = 批档 `docs/batches/2026-10-05-engine-tools-gaps.md` §2（一次性批次材料——本档不重述）。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -1093,6 +1137,7 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 | D-TO13 | `file_ops` 动作感知 = **入单源谓词**（`copy` ⇒ 只 `dest`；`move` / `rename` 等 ⇒ `source` + `dest`）+ **端特例分支清零** | 详见 §6.17 裁定 5（台账 #333）。否决备选：① 核向端对齐（端窄形态转正）——单源化只消灭两处漂移、不判规则对错，先让核吃正确规则（用户 2026-09-25 15:16「先修正核、再单源化」）；② 只改设计档字面而谓词不动（核仍登记 `copy` 源 ⇒ 对端假提示不消）；③ 逐消费点各自按动作判别（多份形态 = 下轮漂移源——D-TO12 同旨） |
 | D-TO14 | **node 语义子进程启动面 = 核内单点 `nodeChildEnv`**（`thincoder-core/tools/node-child.mjs`（**已落** · 2026-09-29）——判据 `process.versions.electron`；Electron 宿主补 `ELECTRON_RUN_AS_NODE:"1"`，否则原样 `base`）；消费 = `execute.runNode` ∕ `lint` 快路径（经 `exec-run` `opts.env` 透传） | 详见 §6.18（台账 #602）。否决备选：① 两消费点各自内联判据（重复检测——第二点漏修即复发）· ② 端注入缝 `configureNodeChildEnv`（判据 = 运行时能力、无端差值可注入——新增缝 + 三端接线代价 > 收益）· ③ 直改父进程 `process.env`（污染父进程并殃及后续全部子进程）· ④ 依赖 PATH `node` ∕ 随产物分发 node（不可靠 ∕ 破零依赖）· ⑤ `exec-run` 内按 `cmd === process.execPath` 隐式补 env（对普通命令不可见的分叉） |
 | D-TO15 | **工具面首用可发现性 = 描述面载明 + 建即填 + 判据可辨性**（spawn 六字段入 `tool-docs/subagent.md`——门零改 ∥ `batch` create 增 `ledger` / `board` 可选参建即填档头台账行 ∥ 死占位判据收为「档头结构行值形」——正文引用豁免） | 详见 §6.20（① 的落面 = `AGENT-LOOP-SUBAGENT.md` §6.30——D2）。否决备选：撞门学习（描述面缺口——用户 16:53 点火）· create 参数面零扩展（时序耦合顾虑——可选参化解：给则填 / 不给走手工法）· 全文子串 ∕ 泛形判据（引用误杀）· 引用需转义形（判据转写作规约——误伤依旧） |
+| D-TO16 | `delete` 增**空目录臂**（非空拒——保险丝）+ `write-path` 增 `rmdir` op；`tool-docs/delete.md` ∥ param desc 同拍去被禁面指引 | 机制与依据 = §6.21（台账 #943）：要求层删除红线（`PROMPT-SYSTEM.md:96`「删除只走既有工具面」）——工具面补全即矛盾消；保险丝 = `rmdir` 自身语义（ENOTEMPTY），零新拒逻辑。否决：① **纯文本收正**（只删「rm -rf」句——能力缺口原样，机检判据「清空目录不再需要 shell 删除动词」不达）；② **实装极窄白名单**（提示词面 + 新门机制——体积远大于 delete 一臂）；③ **`file_ops` 增 delete**（双工具面同能力——单主原则）；④ **递归删除选项**（违 fail-closed——非空目录数据不可回） |
 
 ## 8. 不并项与历史沿革
 
@@ -1286,3 +1331,9 @@ plan 工具退出文本收正为**批准语义**（**五处**：`thincoder-core/
 - 2026-10-05（**工具面首用可发现性批（toolface-first-use-fixes）· 设计轮 · eng-designer**——承 `docs/batches/2026-10-05-toolface-first-use-fixes.md` §1 · 台账 #938）：新增 **§6.20**（batch 档头可填性 ∥ 死占位判据可辨性）+ §6.15.2 裁定点④ 三处收正（判定域 ∥ 填充路径 ∥ 否决备选）+ §7 补 **D-TO15**；
   ①（spawn 六字段入描述面）= `AGENT-LOOP-SUBAGENT.md` §6.30（D2）。**零新语义**（= 批档 §2 设计的落位——门禁判据集零改）。
 - 2026-10-05（**工具面首用可发现性批（toolface-first-use-fixes）· 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-05-toolface-first-use-fixes.md` §3 轮次 1 发现 4 / 5）：§6.20 ② **契约单源钉死**——归一 ∥ 单行 ∥ 空串 ≡ 未给 ⇒ 契约行住 `BATCH-RECORD.md` §4.11（本节改持指针——逐字文本面不重述）；③ 补**区域判据**（档头 = 首个 `## §` 标题之前）+ **骨架↔三结构行不变量**注。**零新语义**（= 评审发现的直接导出项）。
+
+- 2026-10-05（**引擎工具面缺口批（engine-tools-gaps）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-engine-tools-gaps.md` §1 · 台账 #943）：新增 **§6.21**（`delete` 空目录臂——判据 ∕ 接口改前→改后逐字 ∥ 拒句逐字 ∥ 描述档全文逐字 ∥ 写路径 `rmdir` op）+ §7 补 **D-TO16**。**行为面收口——实现 = 本批实施轮**。
+
+- 2026-10-05（**引擎工具面缺口批（engine-tools-gaps）· 设计评审修正轮（评审 #22 发现 4）· eng-designer**——承批档 `docs/batches/2026-10-05-engine-tools-gaps.md` §3）：**§6.21 补快照面注（undo）**——空目录移除**不产生 undo 条目**（零内容语义；`snapshotForUndo` 对目录目标读文本失败即跳）。**注记面——机制零改**。
+
+- 2026-10-05（**引擎工具面缺口批（engine-tools-gaps）· 设计评审修正轮（评审 #28 轮 2 发现 3 / 4）· eng-designer**——承批档 `docs/batches/2026-10-05-engine-tools-gaps.md` §3 轮次 2）：§6.21 补**范围注**（「不经跟踪检查」放宽面——索引条目（gitlink）对应空目录路径一类 unverified）∥ 补**口径注**（逐字文本面归属——本节内联 = 本批改前→改后留痕；实读 `PROMPT-SYSTEM.md` 现持面 = §6.11 机制与预算）。**注记面——机制零改**。

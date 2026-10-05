@@ -233,8 +233,9 @@ test("AC-5：ok ∥ none 两态回归零变（BR-27–BR-35 抽样 ∥ batchDocB
     const none = tmp("reg-none")
     assert.deepEqual(PATHS.batchDocBases(none), [join(none, "docs", "batches")], "BR-34 缺省基底")
     // BR-35：同形前缀（`-` 非段边界）⇒ 不锚定、零 fail-closed（照候选序）
-    const p35 = PATHS.resolveBatchCreatePath(root, "docs/batches-old/2026-10-02-x.md", PATHS.batchDocBases(root))
-    assert.ok(p35.startsWith(join(batches, "")) , `BR-35 不锚定（照候选序——结果落基底内：${p35}）`)
+    const p35 = () => PATHS.resolveBatchCreatePath(root, "docs/batches-old/2026-10-02-x.md", PATHS.batchDocBases(root))
+    assert.throws(p35, /resolves outside the batch-record base roots/)
+    // 断代重锚（2026-10-05 · 批 2026-10-05-engine-tools-gaps · 台账 #942）：原断言「照候选序静默落基底内」⇒ 收正——④ 单段收窄不收多段 ∥ ③ 自有项目根腿落点不在基底内 ⇒ 各腿无落点（BR-45 同旨；先例 #894 / #897）。
     // 导出面：projectRootView 转口同引用（结构面随动 = 同批件）
     assert.equal(typeof DISC.projectRootView, "function", "discovery 直导出")
     assert.equal(MAN.projectRootView, DISC.projectRootView, "manifest 转口 = 同引用")

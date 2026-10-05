@@ -442,8 +442,8 @@
 | `findProjectRoot, injectProjectGuide` | `thincoder-core/advisor/messages.mjs:15` | `named` |
 | `buildObjectDeclarationBlock` | `thincoder-core/advisor/messages.mjs:29` | `fn` |
 | `buildDesignApprovalBlock` | `thincoder-core/advisor/messages.mjs:49` | `fn` |
-| `buildAdvisorUserMessage` | `thincoder-core/advisor/messages.mjs:78` | `fn` |
-| `resolveScopeFiles` | `thincoder-core/advisor/messages.mjs:287` | `fn` |
+| `buildAdvisorUserMessage` | `thincoder-core/advisor/messages.mjs:79` | `fn` |
+| `resolveScopeFiles` | `thincoder-core/advisor/messages.mjs:288` | `fn` |
 | `identityLine` | `thincoder-core/advisor/notice.mjs:13` | `fn` |
 | `scopeSummary` | `thincoder-core/advisor/notice.mjs:18` | `fn` |
 | `withIdentityLine` | `thincoder-core/advisor/notice.mjs:25` | `fn` |
@@ -549,11 +549,11 @@
 | `createBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:127` | `fn` |
 | `statusBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:292` | `fn` |
 | `closeBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:340` | `fn` |
-| `batchProjectRoot` | `thincoder-core/agent-tools/batch-paths.mjs:39` | `fn` |
-| `batchDocBases` | `thincoder-core/agent-tools/batch-paths.mjs:56` | `fn` |
-| `resolveBatchReadPath` | `thincoder-core/agent-tools/batch-paths.mjs:122` | `fn` |
-| `resolveBatchDocPath` | `thincoder-core/agent-tools/batch-paths.mjs:140` | `fn` |
-| `resolveBatchCreatePath` | `thincoder-core/agent-tools/batch-paths.mjs:161` | `fn` |
+| `batchProjectRoot` | `thincoder-core/agent-tools/batch-paths.mjs:40` | `fn` |
+| `batchDocBases` | `thincoder-core/agent-tools/batch-paths.mjs:57` | `fn` |
+| `resolveBatchReadPath` | `thincoder-core/agent-tools/batch-paths.mjs:124` | `fn` |
+| `resolveBatchDocPath` | `thincoder-core/agent-tools/batch-paths.mjs:142` | `fn` |
+| `resolveBatchCreatePath` | `thincoder-core/agent-tools/batch-paths.mjs:163` | `fn` |
 | `listBatchRecords` | `thincoder-core/agent-tools/batch-read.mjs:22` | `fn` |
 | `sectionHeaderRe` | `thincoder-core/agent-tools/batch-skeleton.mjs:22` | `const` |
 | `STATUS_WORDS` | `thincoder-core/agent-tools/batch-skeleton.mjs:34` | `const` |
@@ -600,7 +600,8 @@
 | `makeDesignTokenRegex` | `thincoder-core/agent-tools/design-token.mjs:61` | `fn` |
 | `makeDesignTokenPrefixRegex` | `thincoder-core/agent-tools/design-token.mjs:71` | `fn` |
 | `stripDesignTokenEcho` | `thincoder-core/agent-tools/design-token.mjs:84` | `fn` |
-| `settleDesignReview` | `thincoder-core/agent-tools/design-token.mjs:115` | `fn` |
+| `verdictGateFailure` | `thincoder-core/agent-tools/design-token.mjs:102` | `fn` |
+| `settleDesignReview` | `thincoder-core/agent-tools/design-token.mjs:128` | `fn` |
 | `DIGEST_INJECT_BUDGET` | `thincoder-core/agent-tools/digest-budget.mjs:34` | `const` |
 | `digestBudgetOver` | `thincoder-core/agent-tools/digest-budget.mjs:51` | `fn` |
 | `_setDigestOffloadDirForTest` | `thincoder-core/agent-tools/digest-budget.mjs:60` | `fn` |
@@ -735,8 +736,8 @@
 | `unsettledRows` | `thincoder-core/agent/digest-account.mjs:133` | `fn` |
 | `unsettledRow` | `thincoder-core/agent/digest-account.mjs:159` | `fn` |
 | `unsettledCount` | `thincoder-core/agent/digest-account.mjs:165` | `fn` |
-| `armAccountRound` | `thincoder-core/agent/digest-account.mjs:175` | `fn` |
-| `harvestAccountOutput` | `thincoder-core/agent/digest-account.mjs:182` | `fn` |
+| `armAccountRound` | `thincoder-core/agent/digest-account.mjs:176` | `fn` |
+| `harvestAccountOutput` | `thincoder-core/agent/digest-account.mjs:184` | `fn` |
 | `logToolError` | `thincoder-core/agent/dispatch-gates.mjs:27` | `fn` |
 | `isSubagentReadonlyAction` | `thincoder-core/agent/dispatch-gates.mjs:64` | `fn` |
 | `isSubagentControlAction` | `thincoder-core/agent/dispatch-gates.mjs:92` | `fn` |
@@ -911,13 +912,14 @@
 | `isAssistantEchoPair, mergeAdjacentAssistantEchoes` | `thincoder-core/context.mjs:255` | `named` |
 | `pruneStaleToolOutputs` | `thincoder-core/context.mjs:256` | `named` |
 | `summarizeRunExplorations, EXPLORE_TOOLS, EXPLORE_SUMMARY_PROMPT` | `thincoder-core/context.mjs:261` | `named` |
-| `DEFAULT_AUX_PATHS` | `thincoder-core/conventions.mjs:45` | `const` |
-| `isTempPath` | `thincoder-core/conventions.mjs:54` | `fn` |
-| `classifyPath` | `thincoder-core/conventions.mjs:137` | `fn` |
-| `isCodePath` | `thincoder-core/conventions.mjs:147` | `fn` |
-| `isDocPath` | `thincoder-core/conventions.mjs:153` | `fn` |
-| `isAuxPath` | `thincoder-core/conventions.mjs:164` | `fn` |
-| `loadProjectDeclaration, DEFAULT_DECLARATION, isExcludedRelPath, declaredPublicRoots, clearDeclarationCache` | `thincoder-core/conventions.mjs:172` | `named` |
+| `DEFAULT_AUX_PATHS` | `thincoder-core/conventions.mjs:46` | `const` |
+| `isTempPath` | `thincoder-core/conventions.mjs:55` | `fn` |
+| `classifyPath` | `thincoder-core/conventions.mjs:151` | `fn` |
+| `isCodePath` | `thincoder-core/conventions.mjs:162` | `fn` |
+| `isDocPath` | `thincoder-core/conventions.mjs:168` | `fn` |
+| `isAuxPath` | `thincoder-core/conventions.mjs:179` | `fn` |
+| `isStatePath` | `thincoder-core/conventions.mjs:184` | `fn` |
+| `loadProjectDeclaration, DEFAULT_DECLARATION, isExcludedRelPath, declaredPublicRoots, clearDeclarationCache` | `thincoder-core/conventions.mjs:192` | `named` |
 | `DEFAULT_DECLARATION` | `thincoder-core/declaration.mjs:102` | `const` |
 | `isExcludedRelPath` | `thincoder-core/declaration.mjs:110` | `fn` |
 | `declaredPublicRoots` | `thincoder-core/declaration.mjs:130` | `fn` |
@@ -1067,22 +1069,22 @@
 | `owningProject` | `thincoder-core/manifest-discovery.mjs:99` | `fn` |
 | `projectRootView` | `thincoder-core/manifest-discovery.mjs:115` | `fn` |
 | `resolveProjectRoot` | `thincoder-core/manifest-discovery.mjs:129` | `fn` |
-| `isValidDocRootValue` | `thincoder-core/manifest-schema.mjs:20` | `fn` |
-| `DEFAULT_MANIFEST` | `thincoder-core/manifest-schema.mjs:27` | `const` |
-| `MANIFEST_SCHEMA` | `thincoder-core/manifest-schema.mjs:53` | `const` |
-| `validateManifest` | `thincoder-core/manifest-schema.mjs:88` | `fn` |
-| `fillDefaults` | `thincoder-core/manifest-schema.mjs:157` | `fn` |
+| `isValidDocRootValue` | `thincoder-core/manifest-schema.mjs:21` | `fn` |
+| `DEFAULT_MANIFEST` | `thincoder-core/manifest-schema.mjs:29` | `const` |
+| `MANIFEST_SCHEMA` | `thincoder-core/manifest-schema.mjs:55` | `const` |
+| `validateManifest` | `thincoder-core/manifest-schema.mjs:90` | `fn` |
+| `fillDefaults` | `thincoder-core/manifest-schema.mjs:159` | `fn` |
 | `MANIFEST_REL, discoverProjects, discoverRepos, owningProject, projectRootView, resolveProjectRoot, _setProjectRootForTest, _resetProjectRootForTest` | `thincoder-core/manifest.mjs:48` | `named` |
 | `DEFAULT_MANIFEST, MANIFEST_SCHEMA, isValidDocRootValue, validateManifest` | `thincoder-core/manifest.mjs:49` | `named` |
 | `projectView` | `thincoder-core/manifest.mjs:66` | `fn` |
 | `docRootBase` | `thincoder-core/manifest.mjs:96` | `fn` |
-| `docRootPaths` | `thincoder-core/manifest.mjs:109` | `fn` |
-| `manifestFilePath` | `thincoder-core/manifest.mjs:129` | `fn` |
-| `readManifest` | `thincoder-core/manifest.mjs:152` | `fn` |
-| `requireManifest` | `thincoder-core/manifest.mjs:184` | `fn` |
-| `resolveEngineeringManifest` | `thincoder-core/manifest.mjs:215` | `fn` |
-| `writeManifest` | `thincoder-core/manifest.mjs:250` | `fn` |
-| `initManifest` | `thincoder-core/manifest.mjs:268` | `fn` |
+| `docRootPaths` | `thincoder-core/manifest.mjs:110` | `fn` |
+| `manifestFilePath` | `thincoder-core/manifest.mjs:131` | `fn` |
+| `readManifest` | `thincoder-core/manifest.mjs:154` | `fn` |
+| `requireManifest` | `thincoder-core/manifest.mjs:186` | `fn` |
+| `resolveEngineeringManifest` | `thincoder-core/manifest.mjs:217` | `fn` |
+| `writeManifest` | `thincoder-core/manifest.mjs:252` | `fn` |
+| `initManifest` | `thincoder-core/manifest.mjs:270` | `fn` |
 | `parseEntry` | `thincoder-core/markdown.mjs:13` | `fn` |
 | `serializeEntry` | `thincoder-core/markdown.mjs:41` | `fn` |
 | `slugify` | `thincoder-core/markdown.mjs:61` | `fn` |
@@ -1744,7 +1746,7 @@
 | `configureWritePath` | `thincoder-core/tools/write-path.mjs:66` | `fn` |
 | `resetWritePath` | `thincoder-core/tools/write-path.mjs:71` | `fn` |
 | `dirtyRefusalMessage` | `thincoder-core/tools/write-path.mjs:74` | `const` |
-| `writeThroughPath` | `thincoder-core/tools/write-path.mjs:183` | `fn` |
+| `writeThroughPath` | `thincoder-core/tools/write-path.mjs:185` | `fn` |
 | `_cleanupHooks` | `thincoder-core/traces/trace-cleanup.mjs:28` | `const` |
 | `dayBounds` | `thincoder-core/traces/trace-cleanup.mjs:40` | `fn` |
 | `cleanupTraces` | `thincoder-core/traces/trace-cleanup.mjs:56` | `fn` |

@@ -24,7 +24,7 @@
 | `insert_after` | 按行号或正则定位后插入一行——见 `docs/core/design/INSERT-AFTER.md` |
 | `hashline_edit` | 基于内容哈希的行编辑，免疫空格与编码差异——见 `docs/core/design/HASHLINE-EDIT.md` |
 | `apply_patch` | 统一 diff 多文件原子应用，任一 hunk 失败全回滚——见 `docs/core/design/APPLY-PATCH.md` |
-| `delete` | 删除文件；版本控制跟踪的文件需显式 `force` |
+| `delete` | 删除文件或空目录（非空拒绝，不递归）；版本控制跟踪的文件需显式 `force` |
 | `file_ops` | 移动 / 复制 / 重命名文件或目录 |
 | `read_image` | 读图片交给视觉模型（**模型门控**：仅多模态模型装配） |
 
@@ -212,3 +212,5 @@
   ③ 新增 §3 非功能性需求（安全与护栏——旧档「安全与护栏」节升为 NFR 面）、§4 不并项与历史沿革、§5 体量。
 - 2026-09-16（**批 5 · DOC-CONTRACT-RECONCILE** · eng-designer）：新增 **§2.13 对外文档契约面（README ↔ 实装）**（用户故事 US-DOC1–4 + 范围边界 + 三条单向判定规则 + 落点坐标）；§3 增 **N9** 行（口径 = 对外文本面无机检门、守护 = 同批改动 + 人巡）；§5 体量收正。
   对账执行明细 = `docs/core/design/DOC-CODE-RECONCILE.md` §5.1；层 0 判据句 = `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.20。
+
+- 2026-10-05（**引擎工具面缺口批 · 需求侧同步 · 主 agent**）：§2.1 `delete` 行补「或空目录（非空拒绝，不递归）」。来源 = 批 `docs/batches/2026-10-05-engine-tools-gaps.md` §2（delete 空目录臂设计）；台账 #943。
