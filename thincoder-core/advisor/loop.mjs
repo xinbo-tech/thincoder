@@ -139,7 +139,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
       roundHadText = false
       if (!stallAlerted && silentRounds >= ZERO_WRITE_ALERT_ROUNDS) {
         stallAlerted = true
-        try { seams.onStallRound?.(silentRounds) } catch { /* #934：恒零抛（§6.32.6） */ }
+        try { seams.onStallRound?.(silentRounds) } catch { /* #934：恒零抛 */ }
       }
     }
     
