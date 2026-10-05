@@ -30,7 +30,7 @@
 | **N2** | **禁止一次跳多号** | 发布前核对当月最高号（§4.2） |
 | **N3** | 门禁不可绕过 | 门禁不过 = 发布中止（**有意设计**） |
 | **N4** | 缺口不补 | 历史缺口（0.12.54→0.12.58，55/56/57 永缺——registry 不可回溯重写）**不补发**；越月预占号**作废**（0.8.11 先例）；规则从下一发起保证零新缺口 |
-| **N5** | **版本一致性三断言 + 提示词面完备性**（D-C11） | **断言 A（仓内）** 产品声明范围与核版本相容（caret 语义）；**断言 B（VSC 产物）** vsix 内核 `version` 逐字等于仓内核版本；**断言 C（CLI 发布预检）** 装入版本逐字等于仓内核版本 ∧ registry 上该版本存在；**断言 D（提示词面完备性）** 核包 tarball / CLI 装机目录 / vsix 解包三处 `prompts/` 16 档 + `tool-docs/` 48 档名集合逐字相等，同档 sha256 等于仓内核档。**发版同步**：三产品（CLI ∕ VSC ∕ 桌面）`dependencies` 现声明 `^0.9.5`（= 核当前版本）——随核发布同步收正（声明面与实发对齐） |
+| **N5** | **版本一致性三断言 + 提示词面完备性**（D-C11） | **断言 A（仓内）** 产品声明范围与核版本相容（caret 语义）；**断言 B（VSC 产物）** vsix 内核 `version` 逐字等于仓内核版本；**断言 C（CLI 发布预检）** 装入版本逐字等于仓内核版本 ∧ registry 上该版本存在；**断言 D（提示词面完备性）** 核包 tarball / CLI 装机目录 / vsix 解包三处 `prompts/` 16 档 + `tool-docs/` 48 档名集合逐字相等，同档 sha256 等于仓内核档。**发版同步**：三产品（CLI ∕ VSC ∕ 桌面）`dependencies` 现声明 `^0.10.4`（= 核当前版本）——随核发布同步收正（声明面与实发对齐） |
 | **N6** | **凭据不入库** | PAT 只走环境变量 / 显式传参；仓库内零凭据（源码与发布产物同查） |
 
 ## 4. 版本号规则（CalVer · **各端同制**——用户 2026-08-27 拍板）
@@ -67,7 +67,7 @@
 
 ### 4.4 版本一致性断言（发版同步面）
 
-三产品（CLI ∕ VSC ∕ 桌面）`dependencies` 现声明 `"@thincoder/core": "^0.9.5"`（= 核当前版本；caret 兼容，声明面与实发对齐——核发新号后同步收正）；断言 A/B/C/D 全文 = `CORE-UNIFICATION.md` D-C11（此处不重述）。
+三产品（CLI ∕ VSC ∕ 桌面）`dependencies` 现声明 `"@thincoder/core": "^0.10.4"`（= 核当前版本；caret 兼容，声明面与实发对齐——核发新号后同步收正）；断言 A/B/C/D 全文 = `CORE-UNIFICATION.md` D-C11（此处不重述）。
 
 ## 5. 发布流程（**唯一主线** · 一步步走）
 
@@ -92,7 +92,7 @@
 | 端 | 干跑命令 | 通过判据（读数形） |
 |---|---|---|
 | 核 | `cd thincoder-core && npm publish --access public --dry-run` | 窗口内（bump 后）exit 0——输出含 `prepublishOnly → npm test` 段 + `Tarball Details`（`total files` ∕ `package size`）。bump 前 ⇒ 止于 `You cannot publish over the previously published versions: <现号>` exit 1 = **版本占用守卫在位**（非缺陷） |
-| 核（tarball 内容） | `cd thincoder-core && npm pack --dry-run --json` | `files[]` 根 `.mjs` 集合 = 源树根 `.mjs` 集合（实读 87 档；含 `think-off.mjs`——#470 判据）+ `prompts/` 16 档 + `tool-docs/` 48 档；排除面 = 根非 `.mjs` 档（`CHANGELOG.md` ∥ `LICENSE` ∥ `package.json` ∥ `README.md`）；发布后复验形 = `npm pack @thincoder/core@<号> --dry-run --json`（同口径） |
+| 核（tarball 内容） | `cd thincoder-core && npm pack --dry-run --json` | `files[]` 根 `.mjs` 集合 = 源树根 `.mjs` 集合（实读 95 档——2026-10-05 复读；含 `think-off.mjs`——#470 判据）+ `prompts/` 16 档 + `tool-docs/` 48 档；排除面 = 根非 `.mjs` 档（`CHANGELOG.md` ∥ `LICENSE` ∥ `package.json` ∥ `README.md`）；发布后复验形 = `npm pack @thincoder/core@<号> --dry-run --json`（同口径） |
 | CLI | `cd thincoder-cli && node scripts/release-check.mjs` | exit 0 + 尾行 `✅ release-check 全绿——可发版`；读面 = `⓪ ✔ registry 上存在 @thincoder/core@<号>` + `✔ lint OK` + test 摘要行。⓪ 不过 = 核先发守卫（设计如此） |
 | VSC | `cd thincoder-vscode && node scripts/publish-all.mjs --dry-run` | 段 0（核版本预检）+ 段 1 `vsce package`（`vscode:prepublish` = lint + test）+ 段 1.5 vsix 含核断言（B ∕ D ∕ E ∕ F 全过——E = 撞帽检查点接线 ∥ F = 渲染核版本逐字；定义 = `thincoder-vscode/scripts/check-vsix.mjs` 断言 E ∕ F 段）+ 段 2 🧪 跳过；exit 0 |
 
@@ -165,7 +165,7 @@
    ——开发批记录挂 `[Unreleased]` 段，发布时段头改新号（Keep a Changelog 格式，中文，Added / Changed / Fixed / Removed 分节；VSC 侧 = 市场页 Changelog 标签内容来源）；**无档先建**（首发端 = 建 + 写首发段）。
    **附带**：CLI README 的 Changelog 摘要节（面向 npm 用户的英文精要 ✗ 非 CHANGELOG 全量镜像）同步补新版本段——首发漏更过一次（0.12.12→0.12.63 空窗 ✗ 2026-09-21 补 0.12.63/0.12.62 两段 ✗ 此后每发布必更 ✓）。
 3. **version bump**：`package.json` 改到期望号（**JSON.parse → 改字段 → JSON.stringify**——禁 PowerShell `Set-Content -Encoding UTF8`：会写 BOM `EF BB BF`，JSON 解析失败、发布门崩）。
-4. **依赖核对**：三产品（CLI ∕ VSC ∕ 桌面）`@thincoder/core` 声明与本次核版本对齐（§4.4——现 `^0.9.5`；核发新号后同步收正）。
+4. **依赖核对**：三产品（CLI ∕ VSC ∕ 桌面）`@thincoder/core` 声明与本次核版本对齐（§4.4——现 `^0.10.4`；核发新号后同步收正）。
 
 ### 5.3 阶段 1 · 发核（`@thincoder/core`）
 

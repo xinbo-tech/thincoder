@@ -2,7 +2,7 @@
 
 All notable changes to ThinCoder VS Code are documented here.
 
-## [Unreleased]
+## [0.10.4] — 2026-10-05
 
 > 0.10.3 → 0.10.4（月内 +1——发布时定号）
 

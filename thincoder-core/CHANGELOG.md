@@ -3,7 +3,7 @@
 All notable changes to the core package are documented here.
 Format: Keep a Changelog · 中文 · 号在发布时定（CalVer——见 `docs/RELEASE.md` §4）。
 
-## [Unreleased]
+## [0.10.4] — 2026-10-05
 
 > 0.10.3 → 0.10.4（月内 +1——发布时定号）
 

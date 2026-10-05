@@ -231,6 +231,12 @@ Code conventions: pure `.mjs`, no semicolons, no third-party npm dependencies al
 
 ## Changelog
 
+### 0.12.71 (2026-10)
+- **Ledger variant detection (#935)** — first-run detection of stale drive-case ledger DB variants with a `migrate` pointer (no more silent splits).
+- **Digest accounting fixes (#930)** — delivery-vs-settlement split, retry cap with escalation, unsettled entries visible.
+- **bash executor identity (#922)** — the injected executor line now matches the real runtime shell.
+- **Core `^0.10.4`** — the review verdict gate, engineering-mode state-file write path, batch-path landing fixes, citation-check decoration fix, and more ride in with the core.
+
 ### 0.12.70 (2026-10)
 - **ACP face round 2 (#870–#873)** — `resource_link` (@ file references from Zed, with three graceful degradations); `usage_update` `{used,size}` + ISO `updatedAt`; stable session identity (slot-key ids, delete→new); `set_config_option` returns full `configOptions` + a `type` discriminator.
 - **`thincoder ledger list --json` (#886)** — read-only ledger interface (multi-project / empty set / fully read-only).
