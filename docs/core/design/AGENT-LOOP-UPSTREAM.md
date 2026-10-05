@@ -1026,7 +1026,7 @@ export function upstreamAskLabelVars(carrier) {
 | S1 | 零落盘计数（子代理族） | `thincoder-core/agent/turn-loop.mjs:73`（轮顶结上一轮）+ `:248`（撞帽收尾轮）· `thincoder-core/agent/run-start.mjs:106`（段起点复位） | 有计数、有显示（`subagent status` 第三元——`thincoder-core/agent-tools/checkpoint.mjs:30`）——**只报数：零阈值 ∕ 零自动动作**（#417） |
 | S2 | 推送面 | `thincoder-core/agent-tools/parent-channel.mjs`（`pushChildUpstream` / `drainChildUpstream` / `UPSTREAM_*`）· 装配 = `thincoder-core/agent/family-tools.mjs:165-175`（depth>0 段 4 处携带） | 通道齐备；**现唯一自动源 = 撞帽检查点**（`thincoder-core/agent-tools/checkpoint.mjs:81-87`——ask 类；时点 = 撞帽，晚于 50 轮） |
 | S3 | 上游接线（`_upstream` 赋值点） | `thincoder-core/agent-tools/subagent-spawn.mjs:431`（子代理族——label = `role#id`）· `thincoder-core/agent-tools/escalate-async.mjs:208`（飞刀）· `thincoder-core/agent-tools/consult.mjs:297`（会诊） | 子代理族恒在；**评审族不在其中**（评审走独立环路——无 `_upstream`） |
-| S4 | 评审环路 | `thincoder-core/advisor/loop.mjs`（`turns` `:120` · `reviewTextProduced` `:91` / `:158`）· 硬帽 `MAX_ADVISOR_TURNS = 100`（`thincoder-core/advisor/compaction.mjs:16`）· 墙钟 10 分钟（同档 `:36`） | 只读（零文件写——`:26`）；**无零产出阈值**——只有 100 轮硬帽尾（`:121`）与超时尾 |
+| S4 | 评审环路 | `thincoder-core/advisor/loop.mjs`（`turns` `:77` · `reviewTextProduced` `:79` / `:160`）· 硬帽 `MAX_ADVISOR_TURNS = 100`（`thincoder-core/advisor/compaction.mjs:17`）· 墙钟 10 分钟（同档 `:37`） | 只读（零文件写——`:28`）；**无零产出阈值**——只有 100 轮硬帽尾（`:119`）与超时尾 |
 | S5 | 评审池装配 | `thincoder-core/agent-tools/advisor-async.mjs:417-450`（`entry.start`——`advisor#<id>` 标签 + 运行面 = 父 agent 对象）· `thincoder-core/advisor/run.mjs:143`（环路调用点） | 异步评审条目携 id——提醒三要素（角色 / id / 轮数）全具 |
 
 **面清单**：触面 = **eng-coder ∥ eng-designer**（子代理族——有文件写面）**∥ advisor**（评审族——只读，判据改锚、见 §6.32.2 ②）。
@@ -1047,7 +1047,7 @@ export function upstreamAskLabelVars(carrier) {
 
 **② 评审族（advisor——异步评审）——「连续无产出轮」**
 
-- **判据改锚句（父侧 2026-10-05 12:2x 裁定 A——承用户原话三面全点名）**：advisor 恒只读（`thincoder-core/advisor/loop.mjs:26`——「read-only ONLY … never writes」；工具集无 `FILE_MUTATORS`）⇒ 字面「零落笔」在只读角色上**恒真、无判定力**——「落笔」的对应物 = **评审文本产出**；「没有落笔」之于只读角色 = **「没有产出」**。
+- **判据改锚句（父侧 2026-10-05 12:2x 裁定 A——承用户原话三面全点名）**：advisor 恒只读（`thincoder-core/advisor/loop.mjs:28`——「read-only ONLY … never writes」；工具集无 `FILE_MUTATORS`）⇒ 字面「零落笔」在只读角色上**恒真、无判定力**——「落笔」的对应物 = **评审文本产出**；「没有落笔」之于只读角色 = **「没有产出」**。
 - **判据** = **连续 50 轮无评审文本产出**：新增循环局部 `silentRounds`——上一轮有文本 token（`reviewTextProduced` 置位同源信号）⇒ 归零；否则轮顶 +1；`silentRounds ≥ 50` ∧ 未通报 ⇒ 恰一次通报。
 - **父侧裁定注 + 用户可一句话改判留痕**：口径（判定物 / 阈值 / 是否含推理 token）属可调参数——用户一句话改判 ⇒ 本段收正即可，机制结构不变。
 - **面 = 异步评审**（池条目——父不阻塞、有处置窗；S5）：`entry.start` 闭包携 `advisor#<id>` 与父对象。

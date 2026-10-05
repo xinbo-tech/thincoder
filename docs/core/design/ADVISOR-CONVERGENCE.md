@@ -411,7 +411,7 @@ advisor design review 标准维度补一条：
 | A-AC13 | pass 判据随动（F33）：轮 3+ prior 🔴 全部 ∈ {fixed, accepted} 才可 pass；零理由未解项 ⇒ 不可 pass（轮 2 / 3 裁决句逐字 + 设计回显条件句在位） | §2.4 / §2.5 |
 | A-AC14 | 跨评审隔离：并发 / 延迟下消息构建取本评审实例值（排队启动复核）；轮 2+ 响应表取件不小于本评审投递水印（前向取首表；无水印回落全文倒扫） | §4.3 / `AGENT-LOOP-ASYNC-POOL.md` §6.10 |
 
-**工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：`thincoder-core/advisor/loop.mjs:205-215` 推入 `messages` 的 assistant 消息由核单点 `assistantToolCallMessage(response, providerSpec(provider))`（`thincoder-core/model-specs.mjs`）构造——`reasoningEcho:"required"`
+**工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：`thincoder-core/advisor/loop.mjs:207-217` 推入 `messages` 的 assistant 消息由核单点 `assistantToolCallMessage(response, providerSpec(provider))`（`thincoder-core/model-specs.mjs`）构造——`reasoningEcho:"required"`
  族（继承主 provider 或显式 `advisor.provider`，均按 `providerSpec` 判定）**恒带** `reasoning_content`（本轮无推理 ⇒ 空串）；`optional` / 未声明族恒不带。回归锚 = 核 `test/model-specs.test.mjs`（规则面）+（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
  核 `test/core-hygiene.test.mjs`（结构面 · 单点双面形态）+ 核 `test/reasoning-echo-live.test.mjs`（缝式行为面 · 拟新增）——判据形态单源 = 批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §2.4 A-C6 / A-C12。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
@@ -444,7 +444,7 @@ advisor design review 标准维度补一条：
 - 2026-09-25（**hygiene-items 批 · 档面 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-items.md` §2 · 台账 #285）：头部兄弟档名录 + 权威边界两行 + §2.2 / §2.4 各一行共**五处**死指针改指——`design/AGENT-LOOP.md` §11.2 → `design/AGENT-LOOP-ASYNC-POOL.md` §6.10（异步评审池接入面）· §12.2 → 同档 §6.19（判定铁律 R1–R7）。**零新语义**（指向对象 = 已迁节现住档）。
 
 - 2026-09-20（**thinking 回传缺口批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-20-reasoning-echo-gap.md` §1 · 台账 #109）：§12 新增「工具轮 assistant 消息构造（回声恒带）」契约行——本档持有
- `thincoder-core/advisor/loop.mjs`（实现载体表 `:12`，非 `AGENT-LOOP-SUBAGENT.md`）⇒ advisor 镜像推入面（`:205-215`）的规范条文落此；判据与机制单源 = `CONTEXT-COMPACTION.md` §6.10 #9 / §7 D-CC22。机制条文其余零改。
+ `thincoder-core/advisor/loop.mjs`（实现载体表 `:12`，非 `AGENT-LOOP-SUBAGENT.md`）⇒ advisor 镜像推入面（`:207-217`）的规范条文落此；判据与机制单源 = `CONTEXT-COMPACTION.md` §6.10 #9 / §7 D-CC22。机制条文其余零改。
 
 - 2026-09-20（**thinking 回传缺口批 · 设计评审轮 1 收正 · eng-designer**——承批次档 `docs/batches/2026-09-20-reasoning-echo-gap.md` §3 轮次 1：🟡#1 派生一致性收正）：§12 契约行回归锚改双面结构形态 + 缝式行为档（拟新增）——判据形态单源 = 该批 §2.4 A-C6 / A-C12。机制条文其余零改。
 

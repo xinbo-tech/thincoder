@@ -11,13 +11,13 @@
 
 **谓词（单源）**：`advisorIncompleteMarker(text) → kind | null`——**块首行**逐字前缀（六 kind）：
 
-| kind | 行前缀（逐字） | 生成点（交付态 · 实测 as-of 2026-09-18） |
+| kind | 行前缀（逐字） | 生成点（交付态 · 实测 as-of 2026-09-18；`:16` / `:17` / `:19` / `:20` 四行随 advisor-loop-split 批按 2026-10-05 重锚） |
 |---|---|---|
-| `context_limit` | `Advisor: context window limit reached (N tokens).` | `thincoder-core/advisor/loop.mjs:132` |
-| `turn_cap` | `Advisor: stopped after 100 tool rounds` | `thincoder-core/advisor/loop.mjs:121` |
+| `context_limit` | `Advisor: context window limit reached (N tokens).` | `thincoder-core/advisor/compaction.mjs:98` |
+| `turn_cap` | `Advisor: stopped after 100 tool rounds` | `thincoder-core/advisor/loop.mjs:119` |
 | `timeout` | `Advisor: review timeout after {S}s.` | `thincoder-core/advisor/loop.mjs`（另两处同判）；尾文案居 `thincoder-core/advisor/compaction.mjs` |
-| `empty` | `Advisor: empty response — review was inconclusive` | `thincoder-core/advisor/loop.mjs:195` |
-| `interrupted` | `Advisor: interrupted.` | `thincoder-core/advisor/loop.mjs:100`（另 :184 同判） |
+| `empty` | `Advisor: empty response — review was inconclusive` | `thincoder-core/advisor/loop.mjs:197` |
+| `interrupted` | `Advisor: interrupted.` | `thincoder-core/advisor/loop.mjs:98`（另 :186 同判） |
 | `review_failed` | `Advisor: review failed` | `thincoder-core/advisor/run.mjs:195`（catch 内字符串 resolve——不 throw） |
 
 **匹配规则**：**块首行扫描**（按空行分块，逐块取首行 trim 后测前缀）——时间线渲染以空行连接时间线与尾 ⇒ 六条尾均以块首行形态落地（`review_failed` 为独立返回串 = 文本首行）；

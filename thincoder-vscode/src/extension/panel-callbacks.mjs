@@ -226,7 +226,7 @@ export function buildPanelCallbacks(panel, deps) {
     // Live output streaming (bash etc.) — chunks append to the running tool card.
     onToolOutput: (n, chunk, id) => {
       if (relaySubagentContentChunk(panel, "toolOutput", n, chunk)) return
-      // M3（§2.2）：`[object Object]` —— 核 sync 评审 chunk = `{ kind, text }` 对象（`advisor/loop.mjs:82`
+      // M3（§2.2）：`[object Object]` —— 核 sync 评审 chunk = `{ kind, text }` 对象（`advisor/timeline.mjs:21`
       // emit），无 relay 前缀 ⇒ 直通至此 ⇒ 对象入载荷。端边界归一（CLI 逐字先例 `tool-events.mjs:322-324`）：
       // 非串取 `.text`；`kind` 随行保留为可选字段（webview 现只消费 `text`——不新增消费面）。
       const text = typeof chunk === "string" ? chunk : String(chunk?.text ?? "")

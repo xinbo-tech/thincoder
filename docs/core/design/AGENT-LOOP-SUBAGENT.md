@@ -559,7 +559,7 @@ export function writeTombstone(parent, id, status, role) {
 | 8 | 当前时间 | 同档 `:146-150`（尾位） | user 提醒 | 逐 run 变化 | 保持（尾部即缓存契约既有设计） |
 | 9 | env-state / peer / manifest 情境行 | `thincoder-core/agent/setup-reminders.mjs:50-56` · `:115-138` · `:160-166` | user 提醒 | 逐回合变化 | 保持——判据 ② |
 | 10 | 活体守卫行（ENG 状态 / AUTO / verify 推回） | `thincoder-core/agent/completion.mjs:81` · `thincoder-core/agent/helpers.mjs:372` | user 提醒 | 逐回合变化 | 保持（`docs/core/design/ENGINEERING-MODE-V2.md:321` 已裁定「不落 system 槽」——其判据即本表判据 ②，本批不改该裁定） |
-| 11 | advisor 评审简报（对象声明 + Approval Signal/token + 文档清单） | `thincoder-core/advisor/messages.mjs:29-39` · `:49-58` · `thincoder-core/advisor/run.mjs:233` | 评审 user 首条 | **评审级固定（同类根因）** | **不动——已由另一机制覆盖**：F13 pinned 重挂（`thincoder-core/advisor/compaction.mjs:55-83` 压缩时作为一条 user 消息重挂 · 调用点 `thincoder-core/advisor/loop.mjs:128`）⇒ 压缩不丢。登记为「同类已解」 |
+| 11 | advisor 评审简报（对象声明 + Approval Signal/token + 文档清单） | `thincoder-core/advisor/messages.mjs:29-39` · `:49-58` · `thincoder-core/advisor/run.mjs:233` | 评审 user 首条 | **评审级固定（同类根因）** | **不动——已由另一机制覆盖**：F13 pinned 重挂（`thincoder-core/advisor/compaction.mjs:56-84` 压缩时作为一条 user 消息重挂 · 调用点 `thincoder-core/advisor/compaction.mjs:94`）⇒ 压缩不丢。登记为「同类已解」 |
 | 12 | consult / escalate / 读图降级子代理的任务文本 | `thincoder-core/agent-tools/consult.mjs:308` · `thincoder-core/agent-tools/subagent-actions.mjs:415` · `thincoder-vscode/src/extension/image-handler.mjs:84` | user 首条 | 任务内容（非机制性指令） | 保持——判据 ② 后半 |
 | 13 | `REPORT_CONTINUATION`（报告过短追问） | `thincoder-core/agent-tools/subagent-async.mjs:327-329` | user 追问 | 按需重发（机制不同：重发即在场） | 保持 |
 | 14 | async 结果注入 / digest 提醒 | `thincoder-core/agent-tools/subagent.mjs:412`（`injectAsyncResult`） | user 提醒 | 事件驱动 | 保持 |
@@ -704,7 +704,7 @@ if (agent._spawnSystemBlock) systemPrompt += `\n\n${agent._spawnSystemBlock}`
 `thincoder-core/agent-tools/batch.mjs:270`；过渡别名 `batchSegmentTool` 降 shim 导出面（机检豁免——过渡别名退场登记），`:366`）落地后，VSC 全量
 876 测试中 **5 红**——红源全部为 **VSC 测试断言面钉改前形状**（生产码零红）。核挂载面（VSC 装配同源，四处全主名）：
 depth-0 段 `agent/family-tools.mjs:141`（`batchTool(null)`）· eng-coder `:170` / eng-designer `:171`
-（`batchTool(batchDoc)`）· 设计评审 `advisor/loop.mjs:45`（`batchTool(batchDoc, { review: true })`）。
+（`batchTool(batchDoc)`）· 设计评审 `advisor/loop.mjs:47`（`batchTool(batchDoc, { review: true })`）。
 
 **改前 → 改后（逐处；坐标 as-of 2026-09-21 实读）**：
 

@@ -7,9 +7,10 @@
  * re-attach — F13/`ADVISOR-GUARDS.md §2` #3); renderTimeline moved verbatim too, so the tail
  * GENERATOR and the tail CLASSIFIER stay in one file with the assembler they
  * feed (`ADVISOR-GUARDS.md §1` 谓词 ↔ §4 结构化尾——同族单源)。拆分线 = 行数硬帽实测（见批次档 §5）。
+ * advisor-loop-split 批：loop 的压缩检查点归位本档（`compactContextIfNeeded`——`context_limit` 尾串生成点同迁；时间线面 ⇒ `advisor/timeline.mjs`）。
  */
 
-import { providerSpec } from "../config.mjs" // 第 25 批：预算派生（与 loop.mjs:11 同源导入）
+import { providerSpec } from "../config.mjs" // 第 25 批：预算派生（与 loop.mjs:12 同源导入）
 // B4（群 B 批，ADVISOR-GUARDS.md §9——F32）：CJK 加权单源（provider/rate.mjs 叶子向无环）
 import { estimateText } from "../provider/rate.mjs"
 
@@ -82,13 +83,31 @@ export function compactMessages(messages, pinned = null) {
     ...recent)
 }
 
+/** 压缩检查点（自 advisor/loop.mjs 迁出——advisor-loop-split 批）：超 `budget.compactAt` ⇒ `onText` 通知 +
+ *  `compactMessages` 原地重写（F13 pinned 重挂随它）；重写后仍超 `budget.limit` ⇒ 返回上下文超限尾串
+ *  （调用点收尾——`context_limit` 生成点），否则 `null`。 */
+export function compactContextIfNeeded(messages, budget, pinned, onText) {
+  // Check context window and compact if needed
+  const currentTokens = estimateTokens(messages)
+  if (currentTokens > budget.compactAt) {
+    onText(`\n[Context compacted: ${currentTokens} tokens → reducing to fit window]\n`)
+    compactMessages(messages, pinned)
+    if (estimateTokens(messages) > budget.limit) {
+      // Report the POST-compaction count — the pre-compaction currentTokens
+      // is stale by the time compaction has run.
+      return `Advisor: context window limit reached (${estimateTokens(messages)} tokens). Review incomplete — too many tool calls. Try a narrower scope.`
+    }
+  }
+  return null
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 不完整判定族（A / F16 共用单谓词——`ADVISOR-GUARDS.md §1`；六 kind = 宿主尾族）
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** 宿主尾族六 kind 的块首行逐字前缀（`ADVISOR-GUARDS.md §1` 表）。变量段（token 数 / 秒数 / 工具轮数）
  *  不入前缀——取各尾的固定字面部分；`review_failed` = run.mjs catch 的字符串 resolve
- *  形态（不 throw），其余五条 = renderTimeline 尾（loop.mjs）。 */
+ *  形态（不 throw）；`context_limit` 生成点 = 本档 `compactContextIfNeeded`，其余四条 = renderTimeline 尾（loop.mjs）。 */
 const ADVISOR_INCOMPLETE_PREFIXES = [
   ["context_limit", "Advisor: context window limit"],
   ["turn_cap", "Advisor: stopped after"],

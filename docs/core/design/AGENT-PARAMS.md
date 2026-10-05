@@ -19,8 +19,8 @@
 
 ## 2. 评审墙钟超时（配置化 + 默认 600s）
 
-- 默认常量：`REVIEW_TIMEOUT_MS = 600_000`（10 分钟）——`thincoder-core/advisor/compaction.mjs:36`（由 `thincoder-core/advisor/run.mjs:20` re-export）。
-- 循环内检查点读**配置**，缺省回退常量（`thincoder-core/advisor/loop.mjs:106`）：
+- 默认常量：`REVIEW_TIMEOUT_MS = 600_000`（10 分钟）——`thincoder-core/advisor/compaction.mjs:37`（由 `thincoder-core/advisor/run.mjs:20` re-export）。
+- 循环内检查点读**配置**，缺省回退常量（`thincoder-core/advisor/loop.mjs:103`）：
 
 ```js
 const timeoutMs = (Number.isFinite(cfg) && cfg > 0) ? cfg : REVIEW_TIMEOUT_MS
@@ -28,7 +28,7 @@ const timeoutMs = (Number.isFinite(cfg) && cfg > 0) ? cfg : REVIEW_TIMEOUT_MS
 
 - **运行期校验**：手写 `config.json` 的非法值（0 / 负数 / 字符串）不得静默禁用或立即触发超时——**非法一律回退默认**。
 - 读取链：`thincoder-core/config.mjs:335` 把 `merged.agent.advisor` promote 为 `merged.advisor`（decoupled copy）⇒ `agent.config.advisor.timeoutMs` 天然可见；`runAdvisorToolLoop` 已接收 `agent` 参数，**无需改签名**。
-- **默认值单一来源**：**不**在 `DEFAULTS.agent.advisor` 写死 `timeoutMs`——默认值只住 `REVIEW_TIMEOUT_MS` 常量（`thincoder-core/advisor/compaction.mjs:36`），避免两处漂移（`thincoder-core/config.mjs:49` 的 advisor 默认块注释即登记 `timeoutMs` 为可覆盖项）。
+- **默认值单一来源**：**不**在 `DEFAULTS.agent.advisor` 写死 `timeoutMs`——默认值只住 `REVIEW_TIMEOUT_MS` 常量（`thincoder-core/advisor/compaction.mjs:37`），避免两处漂移（`thincoder-core/config.mjs:49` 的 advisor 默认块注释即登记 `timeoutMs` 为可覆盖项）。
 - **TUI 不新增编辑项**：`/config` 不提供 `timeoutMs` 菜单——手写 `config.json` 即可。
 
 ## 3. 主 agent 轮次上限（默认 200）
@@ -54,7 +54,7 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 
 | 参数 | 键 / 常量 | 默认 | 落点 |
 |---|---|---|---|
-| 评审墙钟 | `agent.config.advisor.timeoutMs` → `REVIEW_TIMEOUT_MS` | 600 000 ms | `thincoder-core/advisor/compaction.mjs:36` · 读取 `thincoder-core/advisor/loop.mjs:106` |
+| 评审墙钟 | `agent.config.advisor.timeoutMs` → `REVIEW_TIMEOUT_MS` | 600 000 ms | `thincoder-core/advisor/compaction.mjs:37` · 读取 `thincoder-core/advisor/loop.mjs:103` |
 | 主 agent 轮次 | `agent.maxTurns` → `DEFAULT_MAX_TURNS` | 200 | `thincoder-core/config.mjs:36` · `thincoder-core/agent/helpers.mjs:24` |
 | goal 模式轮次 | `agent.goalTurns` → `DEFAULT_GOAL_TURNS` | 200 | `thincoder-core/config.mjs:40` · `thincoder-core/agent/helpers.mjs:26` |
 | 子代理轮次 | `agent.subagentTurns` → `DEFAULT_SUBAGENT_TURNS` | 100 | `thincoder-core/agent/helpers.mjs:25` |
@@ -66,8 +66,8 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 
 | 面 | 落点 | 实核 |
 |---|---|---|
-| 评审默认常量 | `thincoder-core/advisor/compaction.mjs:36`（`REVIEW_TIMEOUT_MS` = 600 000） | 在位 |
-| 评审读取 + 运行期校验 | `thincoder-core/advisor/loop.mjs:106` | `Number.isFinite(cfg) && cfg > 0` 回退 |
+| 评审默认常量 | `thincoder-core/advisor/compaction.mjs:37`（`REVIEW_TIMEOUT_MS` = 600 000） | 在位 |
+| 评审读取 + 运行期校验 | `thincoder-core/advisor/loop.mjs:103` | `Number.isFinite(cfg) && cfg > 0` 回退 |
 | advisor 配置 promote | `thincoder-core/config.mjs:335` | `merged.advisor = { ...merged.agent.advisor }` |
 | advisor 默认块（含 timeoutMs 说明） | `thincoder-core/config.mjs:49` | 注释在位 |
 | `maxTurns` 默认 | `thincoder-core/config.mjs:36` · `thincoder-core/agent/helpers.mjs:24` | 均 200 |
@@ -86,7 +86,7 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 
 | 面 | VSC 落点（实核） |
 |---|---|
-| 评审超时默认 + re-export | `thincoder-core/advisor/compaction.mjs:36`（`REVIEW_TIMEOUT_MS` = 600 000）· `thincoder-core/advisor/run.mjs:19` re-export |
+| 评审超时默认 + re-export | `thincoder-core/advisor/compaction.mjs:37`（`REVIEW_TIMEOUT_MS` = 600 000）· `thincoder-core/advisor/run.mjs:19` re-export |
 | 评审检查点（配置覆盖 + 非法回退） | `thincoder-vscode/src/advisor/loop.mjs:98`（`Number.isFinite(cfg) && cfg > 0` → 缺省回退常量） |
 | advisor 配置读取链 | `thincoder-vscode/src/agent/setup.mjs:210`（初始 `{ guard: false }`）· `:232`（`raw.agent?.advisor ?? { guard: false }`） |
 | 面板保存透传 timeoutMs（P4——不静默丢） | `thincoder-vscode/src/extension/settings-panel-write.mjs:64`（`saveAgentSettingsFromPanel`）· `:112`–`:116`（合法 payload 胜，否则保留 current——不合并会丢字段；`thincoder-vscode/src/config-io.mjs:26` re-export） |

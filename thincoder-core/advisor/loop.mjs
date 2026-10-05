@@ -2,6 +2,7 @@
  * advisor/loop.mjs — advisor tool loop: chat → execute tools → repeat, plus the
  * review timeline (split out of advisor/run.mjs, 第 11 批 — run.mjs was 498/500
  * 硬帽；拆分保持既有 import 面：run.mjs 继续 re-export 本文件导出）。
+ * 自本档再拆（advisor-loop-split 批）：时间线记录面 ⇒ `advisor/timeline.mjs`；压缩协作面 ⇒ `advisor/compaction.mjs`（`compactContextIfNeeded`）。
  *
  * 第 11 批（F15/`ADVISOR-GUARDS.md §4`）：每次 chat 调用携带硬墙信号（`AbortSignal.any([signal,
  * AbortSignal.timeout(remaining)])`；墙判定绑信号状态——抛错 / partial 两形态同判），
@@ -13,10 +14,11 @@ import { toOpenAISchema } from "../tools/index.mjs"
 import { truncateAdvisorResult } from "./truncate.mjs"
 import { batchTool } from "../agent-tools/batch.mjs"
 import {
-  estimateTokens, compactMessages, shouldBudgetNudge, budgetNudgeText, timeoutTail, renderTimeline,
+  shouldBudgetNudge, budgetNudgeText, timeoutTail, renderTimeline, compactContextIfNeeded,
   MAX_ADVISOR_TURNS, advisorContextBudget, TOOL_TIMEOUT_MS, REVIEW_TIMEOUT_MS, MAX_RESULT_CHARS,
   ADVISOR_THINKING_PLACEHOLDER,
 } from "./compaction.mjs"
+import { createTimelineRecorder } from "./timeline.mjs"
 
 const { readTool, globTool, grepTool, lsTool } = await import("../tools/index.mjs")
 const { lspTool } = await import("../tools/lsp.mjs")
@@ -68,21 +70,7 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
   // 未注入 ⇒ 不发进度行（核内零端名分支——契约 5 / 10）。端在装配层传入自己的格式化器。
   const describeArgs = seams.describeArgs ?? (() => "")
   // 第 11 批硬墙 / 预算 / 尾：实现注解见下方各点；守卫函数与 renderTimeline 在 compaction.mjs。
-  // Kind-tagged wrappers: the TUI panel colors reasoning / answer / tool progress differently.
-  // Every chunk is ALSO recorded into an ordered timeline — the persisted record
-  // must show the review process (thinking ↔ tool progress ↔ final text) at its
-  // real positions, not a summary appended at the end. Same-kind consecutive
-  // chunks merge (token streams); kind flips start a new entry.
-  const timeline = []
-  const record = (kind, text) => {
-    const last = timeline.at(-1)
-    if (last && last.kind === kind) last.text += text
-    else timeline.push({ kind, text })
-  }
-  const emit = (kind) => (text) => { record(kind, text); onOutput?.({ kind, text }) }
-  const onThink = emit("think")
-  const onText = emit("text")
-  const onTool = emit("tool")
+  const { timeline, onThink, onText, onTool } = createTimelineRecorder(onOutput)
   // toolsOverride = test seam (T-TS8/9): the real advisor tool set, or a mock
   // set with controllable timing/errors.
   const { schemas: toolSchemas, byName: toolByName } = toolsOverride ?? advisorToolsFor(agent, reviewType, batchDoc)
@@ -143,17 +131,9 @@ async function runAdvisorToolLoop(provider, messages, onOutput, signal, agent, c
       }
     }
     
-    // Check context window and compact if needed
-    const currentTokens = estimateTokens(messages)
-    if (currentTokens > budget.compactAt) {
-      onText(`\n[Context compacted: ${currentTokens} tokens → reducing to fit window]\n`)
-      compactMessages(messages, pinned)
-      if (estimateTokens(messages) > budget.limit) {
-        // Report the POST-compaction count — the pre-compaction currentTokens
-        // is stale by the time compaction has run.
-        return renderTimeline(timeline, `Advisor: context window limit reached (${estimateTokens(messages)} tokens). Review incomplete — too many tool calls. Try a narrower scope.`)
-      }
-    }
+    // 压缩协作（迁出 compaction.mjs `compactContextIfNeeded`）：超限尾 ⇒ 收尾
+    const contextTail = compactContextIfNeeded(messages, budget, pinned, onText)
+    if (contextTail) return renderTimeline(timeline, contextTail)
     
     // LLM generation silence: the reasoning phase produces no SSE bytes for
     // seconds to tens of seconds (server-side prefill on large contexts, per

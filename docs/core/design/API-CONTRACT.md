@@ -417,28 +417,29 @@
 | `extractCitations` | `thincoder-core/advisor/citations.mjs:29` | `fn` |
 | `verifyCitations` | `thincoder-core/advisor/citations.mjs:108` | `fn` |
 | `appendCitationReport` | `thincoder-core/advisor/citations.mjs:127` | `fn` |
-| `MAX_ADVISOR_TURNS` | `thincoder-core/advisor/compaction.mjs:16` | `const` |
-| `CONTEXT_LIMIT_RATIO` | `thincoder-core/advisor/compaction.mjs:26` | `const` |
-| `advisorContextBudget` | `thincoder-core/advisor/compaction.mjs:30` | `fn` |
-| `TOOL_TIMEOUT_MS` | `thincoder-core/advisor/compaction.mjs:35` | `const` |
-| `REVIEW_TIMEOUT_MS` | `thincoder-core/advisor/compaction.mjs:36` | `const` |
-| `MAX_RESULT_CHARS` | `thincoder-core/advisor/compaction.mjs:37` | `const` |
-| `estimateTokens` | `thincoder-core/advisor/compaction.mjs:43` | `fn` |
-| `compactMessages` | `thincoder-core/advisor/compaction.mjs:55` | `fn` |
-| `advisorIncompleteMarker` | `thincoder-core/advisor/compaction.mjs:106` | `fn` |
-| `shouldBudgetNudge` | `thincoder-core/advisor/compaction.mjs:123` | `fn` |
-| `budgetNudgeText` | `thincoder-core/advisor/compaction.mjs:128` | `fn` |
-| `timeoutTail` | `thincoder-core/advisor/compaction.mjs:137` | `fn` |
-| `ADVISOR_THINKING_PLACEHOLDER` | `thincoder-core/advisor/compaction.mjs:153` | `const` |
-| `renderTimeline` | `thincoder-core/advisor/compaction.mjs:169` | `fn` |
+| `MAX_ADVISOR_TURNS` | `thincoder-core/advisor/compaction.mjs:17` | `const` |
+| `CONTEXT_LIMIT_RATIO` | `thincoder-core/advisor/compaction.mjs:27` | `const` |
+| `advisorContextBudget` | `thincoder-core/advisor/compaction.mjs:31` | `fn` |
+| `TOOL_TIMEOUT_MS` | `thincoder-core/advisor/compaction.mjs:36` | `const` |
+| `REVIEW_TIMEOUT_MS` | `thincoder-core/advisor/compaction.mjs:37` | `const` |
+| `MAX_RESULT_CHARS` | `thincoder-core/advisor/compaction.mjs:38` | `const` |
+| `estimateTokens` | `thincoder-core/advisor/compaction.mjs:44` | `fn` |
+| `compactMessages` | `thincoder-core/advisor/compaction.mjs:56` | `fn` |
+| `compactContextIfNeeded` | `thincoder-core/advisor/compaction.mjs:89` | `fn` |
+| `advisorIncompleteMarker` | `thincoder-core/advisor/compaction.mjs:125` | `fn` |
+| `shouldBudgetNudge` | `thincoder-core/advisor/compaction.mjs:142` | `fn` |
+| `budgetNudgeText` | `thincoder-core/advisor/compaction.mjs:147` | `fn` |
+| `timeoutTail` | `thincoder-core/advisor/compaction.mjs:156` | `fn` |
+| `ADVISOR_THINKING_PLACEHOLDER` | `thincoder-core/advisor/compaction.mjs:172` | `const` |
+| `renderTimeline` | `thincoder-core/advisor/compaction.mjs:188` | `fn` |
 | `buildConvergenceInstructions` | `thincoder-core/advisor/convergence.mjs:18` | `fn` |
 | `buildConvergenceBody` | `thincoder-core/advisor/convergence.mjs:48` | `fn` |
 | `ADVISOR_MD_PATH` | `thincoder-core/advisor/history.mjs:7` | `const` |
 | `extractAgentResponseTable` | `thincoder-core/advisor/history.mjs:31` | `fn` |
 | `loadAdvisorMd` | `thincoder-core/advisor/history.mjs:53` | `fn` |
 | `extractConversationBackground` | `thincoder-core/advisor/history.mjs:62` | `fn` |
-| `advisorToolsFor, advisorToolsFor as _advisorToolsFor` | `thincoder-core/advisor/loop.mjs:49` | `named` |
-| `runAdvisorToolLoop, runAdvisorToolLoop as _runAdvisorToolLoop` | `thincoder-core/advisor/loop.mjs:310` | `named` |
+| `advisorToolsFor, advisorToolsFor as _advisorToolsFor` | `thincoder-core/advisor/loop.mjs:51` | `named` |
+| `runAdvisorToolLoop, runAdvisorToolLoop as _runAdvisorToolLoop` | `thincoder-core/advisor/loop.mjs:290` | `named` |
 | `findProjectRoot, injectProjectGuide` | `thincoder-core/advisor/messages.mjs:15` | `named` |
 | `buildObjectDeclarationBlock` | `thincoder-core/advisor/messages.mjs:29` | `fn` |
 | `buildDesignApprovalBlock` | `thincoder-core/advisor/messages.mjs:49` | `fn` |
@@ -474,6 +475,7 @@
 | `looksLikeReviewOutput` | `thincoder-core/advisor/run.mjs:69` | `fn` |
 | `runAdvisorReview` | `thincoder-core/advisor/run.mjs:101` | `fn` |
 | `extractCitations, verifyCitations, appendCitationReport` | `thincoder-core/advisor/run.mjs:204` | `named` |
+| `createTimelineRecorder` | `thincoder-core/advisor/timeline.mjs:9` | `fn` |
 | `ADVISOR_HEAD_RATIO` | `thincoder-core/advisor/truncate.mjs:14` | `const` |
 | `truncateAdvisorResult` | `thincoder-core/advisor/truncate.mjs:27` | `fn` |
 | `planTool` | `thincoder-core/agent-tools.mjs:6` | `named` |
@@ -1814,7 +1816,7 @@
 | `attachEvents` | `thincoder-desktop/renderer/events-subscribe.mjs:60` | `fn` |
 | `onSusp` | `thincoder-desktop/renderer/events-wake.mjs:34` | `fn` |
 | `onDigest` | `thincoder-desktop/renderer/events-wake.mjs:61` | `fn` |
-| `onTimer` | `thincoder-desktop/renderer/events-wake.mjs:98` | `fn` |
+| `onTimer` | `thincoder-desktop/renderer/events-wake.mjs:99` | `fn` |
 | `clearQuestion` | `thincoder-desktop/renderer/events.mjs:49` | `named` |
 | `applyFlags, sameRecord` | `thincoder-desktop/renderer/events.mjs:59` | `named` |
 | `isTurnTail` | `thincoder-desktop/renderer/events.mjs:120` | `fn` |
@@ -1875,7 +1877,7 @@
 | `STATUS_KEYS` | `thincoder-desktop/renderer/mount-status.mjs:20` | `const` |
 | `attachStatus` | `thincoder-desktop/renderer/mount-status.mjs:34` | `fn` |
 | `blockOfMessage` | `thincoder-desktop/renderer/page-read.mjs:105` | `fn` |
-| `applyPage` | `thincoder-desktop/renderer/page-read.mjs:251` | `fn` |
+| `applyPage` | `thincoder-desktop/renderer/page-read.mjs:252` | `fn` |
 | `snapshotPanelBlocks` | `thincoder-desktop/renderer/panel-readout.mjs:26` | `fn` |
 | `panelSignature` | `thincoder-desktop/renderer/panel-readout.mjs:42` | `fn` |
 | `createPanelReadout` | `thincoder-desktop/renderer/panel-readout.mjs:47` | `fn` |
@@ -1916,13 +1918,13 @@
 | `setAttachDegraded` | `thincoder-desktop/renderer/store.mjs:228` | `fn` |
 | `setHelpLines` | `thincoder-desktop/renderer/store.mjs:240` | `fn` |
 | `clearTurnTraces` | `thincoder-desktop/renderer/store.mjs:256` | `fn` |
-| `setModelCandidates` | `thincoder-desktop/renderer/store.mjs:273` | `fn` |
-| `setProviderState` | `thincoder-desktop/renderer/store.mjs:285` | `fn` |
-| `configuredFlag` | `thincoder-desktop/renderer/store.mjs:293` | `fn` |
-| `setWizardStep` | `thincoder-desktop/renderer/store.mjs:300` | `fn` |
-| `dismissWizard` | `thincoder-desktop/renderer/store.mjs:307` | `fn` |
-| `createStore` | `thincoder-desktop/renderer/store.mjs:314` | `fn` |
-| `store` | `thincoder-desktop/renderer/store.mjs:365` | `const` |
+| `setModelCandidates` | `thincoder-desktop/renderer/store.mjs:276` | `fn` |
+| `setProviderState` | `thincoder-desktop/renderer/store.mjs:288` | `fn` |
+| `configuredFlag` | `thincoder-desktop/renderer/store.mjs:296` | `fn` |
+| `setWizardStep` | `thincoder-desktop/renderer/store.mjs:303` | `fn` |
+| `dismissWizard` | `thincoder-desktop/renderer/store.mjs:310` | `fn` |
+| `createStore` | `thincoder-desktop/renderer/store.mjs:317` | `fn` |
+| `store` | `thincoder-desktop/renderer/store.mjs:368` | `const` |
 | `poolOf` | `thincoder-desktop/renderer/subagent-reduce.mjs:49` | `fn` |
 | `liveCount` | `thincoder-desktop/renderer/subagent-reduce.mjs:55` | `fn` |
 | `RECORD_ROWS_MAX_LINES` | `thincoder-desktop/renderer/subagent-reduce.mjs:90` | `const` |
