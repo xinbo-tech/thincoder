@@ -169,7 +169,8 @@ async function takeQueuedInput(panel, queue) {
 
 /** 回合执行器（核 `ctx.runTurn`）：用户回合（富条目）/ 消化轮 / 上行唤醒轮 / timer 轮。消化 ∕ 上行
  *  两族（`autoTurn ∧ ¬timerTurn`）带可见边界：起止两帧 + `digest:*` 日志 + **留档记录同点追加**（#726——
- *  档头已述：不注册核钩）。 */
+ *  档头已述：不注册核钩）。**消化账务批（2026-10-05 · 台账 #930 · §6.31.6）**：收尾帧 ∥ 记录携
+ *  `unsettled`（非上行轮且 > 0 才携——残余行载荷；判据单源 = 核 `unsettledCount`，复列承接）。 */
 async function driveTurn(panel, entry, item, opts = {}) {
   const history = entry.lines.history
   const payload = typeof item === "string" ? { ...opts, text: item } : { ...item, ...opts }
@@ -180,6 +181,10 @@ async function driveTurn(panel, entry, item, opts = {}) {
   const upstreamAskFn = opts.upstreamTurn === true
     ? (await import("@thincoder/core/agent-tools/parent-channel.mjs")).upstreamAskLabelVars
     : null
+  // 消化账务批（§6.31.6 · 2026-10-05 · 台账 #930）：残余行判据件动态装载（W8 契约②——`digest-account`
+  // 静态链经 `async-settle` 达 `node:sqlite`，不入端壳静态闭包）；**先于 `try`**（同上游标签件——首载失败
+  // 不得顶替本回合错误面），读数点仍住收尾（`ms` 同窗口外）。
+  const { unsettledCount } = await import("@thincoder/core/agent/digest-account.mjs")
   const d0 = Date.now()
   const pendingN = history._pendingAsyncResults?.length ?? 0
   const upstream = opts.upstreamTurn === true
@@ -211,9 +216,13 @@ async function driveTurn(panel, entry, item, opts = {}) {
     throw e
   } finally {
     const ms = Date.now() - d0
-    panel._panel?.webview.postMessage({ type: "digest", status: "end", ok, ms })
-    // #726 同点双动作：终态记录（`ms` 与上帧同值单算式——`ok` 同源）。
-    pushLiveRecord(panel, { kind: "digest", status: "end", ok, ms })
+    // 消化账务批（§6.31.6 · 2026-10-05 · 台账 #930）：非上行轮且 > 0 才携 `unsettled`（残余行载荷——
+    // 帧 ∥ 记录同源同点；判据单源 = 核 `unsettledCount`；件已于 `try` 前装载——见上）。
+    const unsettled = upstream ? 0 : unsettledCount(history)
+    const endMsg = { type: "digest", status: "end", ok, ms, ...(unsettled > 0 ? { unsettled } : {}) }
+    panel._panel?.webview.postMessage(endMsg)
+    // #726 同点双动作：终态记录（`ms` 与上帧同值单算式——`ok` 同源；`unsettled` 随载荷同携——复列承接）。
+    pushLiveRecord(panel, { kind: "digest", status: "end", ok, ms, ...(unsettled > 0 ? { unsettled } : {}) })
   }
   const left = history._pendingAsyncResults?.length ?? 0 // D2 单容器
   logEvent("digest:end", { pendingN: left, ms: Date.now() - d0, ...(upstream ? { upstream: true } : {}) })

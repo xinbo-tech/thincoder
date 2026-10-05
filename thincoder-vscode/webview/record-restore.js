@@ -17,7 +17,7 @@
 import { parseChannel } from "../node_modules/@thincoder/render-core/subblocks/channel.mjs"
 import { renderSubBlock, renderSubagentChunk, initBlockFollow } from "../node_modules/@thincoder/render-core/subblocks/block.mjs"
 import { refreshBlock } from "./activity-view.js"
-import { digestTurnEl, digestCountEl, digestCapEl, digestTerminalEl } from "./chat-status.js"
+import { digestTurnEl, digestCountEl, digestCapEl, digestTerminalEl, digestResidueEl } from "./chat-status.js"
 
 /** 页级轮预扫（**复列全量（未结轮照现）**）：返回 `Map<页内记录下标, { n }>`（置集 = 该轮产出物的记录下标）。
  *  轮锚 = 起跑记录（`start`）；未结判定面 = **可证**两条——① **轮间**（后轮起跑已现 ⇒ 前轮未结——轮序单链）；
@@ -50,7 +50,8 @@ export function scanPageRounds(messages, tail = false) {
 
 /** 单记录元素面（零元素 = 置集外（不可证 ∥ 未知型）——「未归档块不重建」I-7）：`ctx.messagesEl` 同位 `[data-idx]`
  *  命中 ⇒ 跳过（重建插入前去重——幂等）。起跑 ∥ cap 元素随轮出（扫轮置集——未结轮照现）；终态元素需 `n`
- *  （同页起跑）；`n` 非正 ⇒ 零元素（守句——幻影元素禁出）。 */
+ *  （同页起跑）；`n` 非正 ⇒ 零元素（守句——幻影元素禁出）；`unsettled > 0` ⇒ 终态后附残余元素（消化账务批 ·
+ *  2026-10-05 · 台账 #930——`end` 记录携载荷同出，live 同构形件）。 */
 export function restoreRecordEls(ctx, msg, info) {
   if (!msg || !Number.isFinite(msg.idx)) return []
   if (ctx?.messagesEl?.querySelector(`[data-idx="${msg.idx}"]`) != null) return []
@@ -65,7 +66,10 @@ export function restoreRecordEls(ctx, msg, info) {
     if (msg.status === "end") {
       // 活流同门：`n = 0` 轮无计数元素 ⇒ 终态零动作（禁幻影行）
       if (!(Number.isFinite(info.n) && info.n > 0)) return []
-      return [withIdx(digestTerminalEl(msg.ok !== false, info.n, msg.ms), msg.idx)]
+      const els = [withIdx(digestTerminalEl(msg.ok !== false, info.n, msg.ms), msg.idx)]
+      // 消化账务批（§6.31.6）：`unsettled > 0` ⇒ 残余元素随出（复列承接——记录随载荷携 `unsettled`）
+      if ((msg.unsettled ?? 0) > 0) els.push(withIdx(digestResidueEl(msg.unsettled), msg.idx))
+      return els
     }
     return []
   }

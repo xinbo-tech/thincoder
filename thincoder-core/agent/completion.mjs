@@ -28,10 +28,12 @@ const MAX_EMPTY_RETRIES = 2
  * @param {object} callbacks - { onTurnEnd, onSubTurnBreak }
  */
 export function handleCompletion(agent, response, depth, turn, guardPushbacks, honestReminderInjected, advisorPushbacks, callbacks) {
-  if (!response.content) {
+  if (String(response.content ?? "").trim() === "") {
     // Transient empty response (reasoning exhausted / output truncated): instead of
     // aborting the whole turn, inject a reminder and let the model respond again.
     // Bounded — after MAX_EMPTY_RETRIES consecutive empties, surface the original error.
+    // §6.31.8 F-DA6（#929 同族 · 批 digest-accounting）：空判加宽为**空白判**（纯空白内容
+    // 原过判 truthy ⇒ 静默当正常收尾）；既有重试（≤2）/ 抛错骨架零改。
     const retries = agent._emptyRetries ?? 0
     if (retries < MAX_EMPTY_RETRIES) {
       agent._emptyRetries = retries + 1

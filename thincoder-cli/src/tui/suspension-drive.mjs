@@ -28,6 +28,8 @@ import { upstreamAskLabelVars } from "@thincoder/core/agent-tools/parent-channel
 import { poolLive, startSuspension } from "@thincoder/core/agent/suspension.mjs"
 // #726 写点①：痕行 ∥ 起跑·收尾记录同点双动作（记录形/文案 = lifecycle-records 单一实现）
 import { pushRecord } from "@thincoder/core/context.mjs"
+// 消化账务批 · 2026-10-05 · 台账 #930（§6.31.6）：残余行判据单源（核件 `unsettledCount`）
+import { unsettledCount } from "@thincoder/core/agent/digest-account.mjs"
 import { digestEndRecord, digestStartRecord, digestTraceLines, recordCarrier } from "./lifecycle-records.mjs"
 
 export { poolLive }
@@ -90,7 +92,9 @@ function backgroundStatusText(agent) {
  *  起跑行 ∥ 计数行 ∥ cap 行 ∥ 终态行：不改 ∥ 不删 ∥ 不退场（零清理机器；退场机随拆）；② 起跑窗
  *  （沿 #754 裁 A）——起跑行族落盘后 ⇒ 起跑快照（起跑刻 pending 单容器）逐条冻结入流，落位 = 本族之后；
  *  ③ 终态行 = **到达序追加于当刻流末**（`pushLine`——零就地换文 ∥ 不动原起跑行）。
- *  导出面 = 批内件直驱（生产唯一调用 = 本档 `driveTurn`）。 */
+ *  导出面 = 批内件直驱（生产唯一调用 = 本档 `driveTurn`）。
+ *  **消化账务批（2026-10-05 · 台账 #930 · §6.31.6）**：收尾 `unsettled` 随记录（非上行轮——与桌面 ∥
+ *  VSC 同判据；判据单源 = 核 `unsettledCount`）⇒ 终态行之后再落残余行（`digest.residue`——lifecycle-records 单实现）。 */
 export async function digestTurn(ctx, upstream = false) {
   const { agent, state, pushLine } = ctx
   const manual = !agent.autoApprove
@@ -111,7 +115,10 @@ export async function digestTurn(ctx, upstream = false) {
   const outcome = await runAgentTurn(digestCtx, "", { autoTurn: true, upstreamTurn: upstream, skipSession: true })
   const ms = Date.now() - d0
   logEvent("digest:end", { pendingN: pendingFamilyCount(agent), ms, ...(upstream ? { upstream: true } : {}) })
-  const endRec = digestEndRecord({ ok: outcome === "ok", ms })
+  // 消化账务批（§6.31.6）：非上行轮且 > 0 才携 `unsettled`（残余行载荷——与桌面 ∥ VSC 同判据；
+  // 消化轮 = `autoTurn ∧ ¬upstreamTurn`，§6.31.2）
+  const unsettled = upstream ? 0 : unsettledCount(agent)
+  const endRec = digestEndRecord({ ok: outcome === "ok", ms, unsettled })
   // ③ 终态行 = 到达序追加于当刻流末（自然形——零就地换文 ∥ 不动原起跑行）
   for (const l of digestTraceLines(endRec, pend0)) pushLine(l.text, l.color)
   pushRecord(carrier, endRec) // 收尾记录（与终态行同点）

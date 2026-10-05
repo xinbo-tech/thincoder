@@ -143,14 +143,18 @@ function foldDigest(messages, key, tail) {
   let at = null // 本轮起跑记录位次（`start` 记录点——非有限数 ⇒ 本轮零产）
   let open = false // 本页「本轮 start 已见 ∧ 未终态」——截断记录（起跑居前页）不入折
   const rounds = []
-  /** 折出轮投影（去运行期标 —— 单一实现零副本的出口面；位次门 = `at` 不可得 ⇒ 零产）。 */
+  /** 折出轮投影（去运行期标 —— 单一实现零副本的出口面；位次门 = `at` 不可得 ⇒ 零产）。
+   *  消化账务批 · 2026-10-05 · 台账 #930：`unsettled > 0` 随投影出（残余行载荷——复列承接；
+   *  `digestRows` 同源消费；`= 0` / 缺 ⇒ 零行）。 */
   const flush = () => {
     const slice = scratch.digest[key]
     const round = Array.isArray(slice) ? slice[slice.length - 1] : undefined
     if (round === undefined || at === null) return
     rounds.push({
       status: round.status, n: round.n, tier: round.tier, from: round.from, msg: round.msg,
-      ok: round.ok, ms: round.ms, ...(round.cap == null ? {} : { cap: round.cap }), at,
+      ok: round.ok, ms: round.ms, ...(round.cap == null ? {} : { cap: round.cap }),
+      ...(typeof round.unsettled === "number" && round.unsettled > 0 ? { unsettled: round.unsettled } : {}),
+      at,
     })
   }
   for (const msg of messages) {

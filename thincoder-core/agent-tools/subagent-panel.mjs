@@ -257,7 +257,8 @@ export function executePanelAction(args, ctx) {
     if (b.status === "running") {
       out.elapsedSec = b.startedAt ? Math.max(0, Math.floor((Date.now() - b.startedAt) / 1000)) : 0
     } else if (b.status === "awaitingDigest") {
-      // 读时交叉（round1 #3）：pending/池均无对应 = 报告已消化（注入即从两者移除）——
+      // 读时交叉（round1 #3）：pending/池均无对应 = 报告已消化（fallback 面注入即从两者移除；
+      // 会话面注入后不随即移除——留容器至销账 / 升级，移除 = `accountDigestRound` 的 splice；§6.31）——
       // 块驻留 = 状态滞后——digested:true（freeze 候选——模型可定位异常块）。
       // ASYNC-RESULT-CONTAINER.md D2：pending 单容器参与比对（四族统一）。
       // #748：consult 子块按消费判据（会话在跑 ∥ 会话条目在 pending ⇒ 未消化）——与门控同源。

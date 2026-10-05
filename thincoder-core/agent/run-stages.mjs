@@ -13,7 +13,9 @@ import { pushManifestStateReminder } from "./setup-reminders.mjs"
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
 import { logEvent, errText } from "../log.mjs"
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor（absorb 双池——advisor 独立池无队列）
-import { getAsyncPool, releaseSettledEntry } from "../agent-tools/async-settle.mjs"
+import { carrierField, getAsyncPool, releaseSettledEntry } from "../agent-tools/async-settle.mjs"
+// §6.31 消化账务（批 digest-accounting · 2026-10-05 · 台账 #930）：见账 pass ∥ 回合分类单点
+import { accountDigestRound, isDigestRound } from "./digest-account.mjs"
 // 批 4 CLI-ASYNC-DISCARD（AGENT-LOOP-ASYNC-POOL.md §6.20）：中止分支「只清已死」收尾单点
 // （#9：+ 后台 bash 任务族——逐条杀树 + 出池 + 墓碑）
 import { discardAbortedPool, discardAbortedAdvisors, discardAbortedBgTasks } from "../agent-tools/async-discard.mjs"
@@ -23,10 +25,15 @@ import { flushPeerDomains } from "../peer-domains.mjs"
 // 第 30 批 D1（Stop 钩子——AGENT-LOOP.md §6.13）：主会话 run 终止事件（触发块见 finalizeAgentTurn）
 import { runHooks } from "../hooks.mjs"
 
+/** 结束信号缺席提醒（§6.31.7 F-DA5——逐字 = 父侧定稿；与「非 stop 异常」同面）。 */
+const FINISH_MISSING_REMINDER =
+  "[System reminder: the previous turn ended without a finish signal — the provider did not report how generation ended. If the response appears incomplete, continue from where it left off.]"
+
 /**
  * 响应后置提醒注入（2026-09-05 实践轮——自 runAgent 响应处理链提取，verbatim）：
  * 流规则 warning（warn 动作——流已完成——去重注入，模型下轮可见）+ 异常 finish
- * reason 警告（响应可能不完整/截断——reasonMap 人类化描述注入）。
+ * reason 警告（响应可能不完整/截断——reasonMap 人类化描述注入）+ 结束信号缺席提醒
+ * （§6.31.7 F-DA5——clean end 无 finishReason ⇒ 同面提醒 + 留痕）。
  */
 export function injectResponseReminders(agent, response) {
   // Stream rule warnings (action: "warn"): stream completed; inject de-duplicated
@@ -37,6 +44,14 @@ export function injectResponseReminders(agent, response) {
       role: "user",
       content: `[System reminder — stream rule warnings from your last response:\n${deDuplicated.map(w => `- ${w.name || w.pattern}: ${w.message}`).join("\n")}]`,
     })
+  }
+
+  // §6.31.7 F-DA5（#929——批 digest-accounting）：结束信号缺席（clean end 且无 finishReason）
+  // ⇒ 不得静默当正常——同面异常提醒注入 + `ev:finish-missing` 留痕；partial / interrupted /
+  // ruleTriggered 径零触（网络断流既有 `_warnings` 已覆盖；ruleTriggered 在调用点之前分流）。
+  if (response.finishReason == null && !response.partial && !response.interrupted) {
+    agent.history.push({ role: "user", content: FINISH_MISSING_REMINDER })
+    logEvent("ev:finish-missing", { turn: agent._currentTurn ?? 0, auto: agent._inAutoTurn === true, child: agent._logId })
   }
 
   // Warn on abnormal finish reasons — the response may be incomplete/truncated.
@@ -145,11 +160,12 @@ export async function injectTurnReminders(agent, ctx) {
  * 回合收尾（2026-09-05 实践轮——自 runAgent finally 提取，verbatim + 签名化）：写足迹
  * flush → Stop 钩子（第 30 批 D1——ctx.depth === 0 的主会话 run 终止事件，
  * fire-and-forget）→ consult 清理（无孤儿烧 token 的 consult children）→ async 池回合尾
- * 分流（Ctrl+C 清池不注入 / ContinueError 留池续跑 / 其余 collectSettledAsync）→ auto-turn
+ * 分流（Ctrl+C 清池不注入 / ContinueError 留池续跑 / 其余 collectSettledAsync）→
+ * **见账 pass（§6.31.5——消化轮收尾逐条机检账目覆盖；消化账务批）** → auto-turn
  * guard 标记继承（对象字段清单——正常结束才继承；中止丢弃；ContinueError 由续跑快照）。
  */
 export async function finalizeAgentTurn(agent, ctx) {
-  const { signal, autoTurn, suspDriven, thrownError, depth } = ctx
+  const { signal, autoTurn, upstreamTurn, timerTurn, suspDriven, thrownError, depth } = ctx
   // R10 L3（MULTI-INSTANCE-COLLAB §2a.5 D-L3a）：回合末登记 flush——本回合写足迹整写
   // 一次（首行执行：收尾链后续任何异常都不吞登记）；无写入 → 跳过（hot 窗口自然衰减）。
   flushPeerDomains(agent)
@@ -204,6 +220,7 @@ export async function finalizeAgentTurn(agent, ctx) {
     // （原 _pendingConsultResults/_pendingEscalateResults 同口径——VSC 同语义 filter）；
     // subagent/advisor 停靠保留（挂起期 settle 的已完成结果不随中止丢）。
     agent._pendingAsyncResults = (agent._pendingAsyncResults ?? []).filter((e) => e.role !== "consult" && e.role !== "escalate")
+    agent._unsettledDigests = [] // §6.31.5 清账面：会话中止 ⇒ 升级账本随 pending 一并清（用户全停 = 旧账不续）
   } else if (thrownError instanceof ContinueError) {
     // keep _asyncSubagents/_asyncAdvisors/_consultSessions — the resumed run continues them
   } else {
@@ -219,6 +236,12 @@ export async function finalizeAgentTurn(agent, ctx) {
       const { closeOpenCodeAdvisorRuns } = await import("../agent-tools/advisor-async.mjs")
       closeOpenCodeAdvisorRuns(agent)
     }
+  }
+  // §6.31.5 见账面（消化轮收尾——finalize 单点；消化账务批 · 2026-10-05 · 台账 #930）：
+  // 恒达窗 = 正常 ∥ Abort-continue ∥ 异常抛三径同达；会话停止径不判（清场语义归 finishSuspension）。
+  if (isDigestRound({ autoTurn, upstreamTurn, timerTurn }) && carrierField(agent, "_daSession") === true
+      && !(signal?.aborted && !signal?.reason?.interrupt)) {
+    accountDigestRound(agent)
   }
   agent._inAutoTurn = false
   // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6: auto-turn guard marks survive into the next USER run (restored at its

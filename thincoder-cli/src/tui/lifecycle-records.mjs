@@ -33,9 +33,11 @@ export function digestCapRecord(turns) {
   return { kind: "digest", status: "cap", mode: "stop", turns }
 }
 
-/** digest 收尾记录（终态行同点）：`ok` ∥ `ms`（行文案 `seconds` 由同一 `ms` 派生——同值单算式）。 */
-export function digestEndRecord({ ok, ms }) {
-  return { kind: "digest", status: "end", ok, ms }
+/** digest 收尾记录（终态行同点）：`ok` ∥ `ms`（行文案 `seconds` 由同一 `ms` 派生——同值单算式）；
+ *  `unsettled` = 本轮未销账条数（消化账务批 · 2026-10-05 · 台账 #930 —— 残余行判据 ∥ 重建同调；
+ *  零未销账 ⇒ 键缺席——零噪音，与帧面「> 0 才携」同判）。 */
+export function digestEndRecord({ ok, ms, unsettled = 0 }) {
+  return { kind: "digest", status: "end", ok, ms, ...(Number.isFinite(unsettled) && unsettled > 0 ? { unsettled } : {}) }
 }
 
 /** subagent 归档快照记录（冻结载体行插入同点）：meta = 冻结时点块头事实（含 `pool`/`queued?`——§6.26）
@@ -114,7 +116,13 @@ export function digestTraceLines(rec, startN = null) {
   if (rec.status === "end") {
     if (!Number.isFinite(startN) || startN <= 0 || !Number.isFinite(rec.ms)) return []
     const seconds = (rec.ms / 1000).toFixed(1) // 与记录 `ms` 同值单算式
-    return [{ text: t(rec.ok === false ? "digest.aborted" : "digest.done", { n: startN, seconds }), color: C.dim }]
+    const lines = [{ text: t(rec.ok === false ? "digest.aborted" : "digest.done", { n: startN, seconds }), color: C.dim }]
+    // 未销账残余行（消化账务批 · 2026-10-05 · 台账 #930 · §6.31.6）：终态行之后再落一行 dim
+    // （核字典 `digest.residue` 单源——端侧零自持字面）；零未销账 ⇒ 零行（零噪音）。
+    // 随终态行同门（重建面 `startN` 不可得 ⇒ 零行——fail-closed）。
+    const unsettled = Number.isFinite(rec.unsettled) && rec.unsettled > 0 ? rec.unsettled : 0
+    if (unsettled > 0) lines.push({ text: t("digest.residue", { n: unsettled }), color: C.dim })
+    return lines
   }
   return []
 }

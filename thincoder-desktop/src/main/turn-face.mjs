@@ -36,6 +36,8 @@
  * 之前）：`end` 随槽落盘 ⇒ 收束后即时重载末轮痕可重建；挂起驱动 `driveTurn` 收尾半随移出（净简化）。
  */
 import { ContinueError } from "@thincoder/core/agent.mjs"
+// 消化账务批 · 2026-10-05 · 台账 #930（§6.31.6）：残余行判据单源（核件 `unsettledCount`）
+import { unsettledCount } from "@thincoder/core/agent/digest-account.mjs"
 import { ensureSessionTitle } from "@thincoder/core/generate-title.mjs"
 import { cleanupTurn } from "./attachments.mjs"
 import { appendRecord, applyPendingPrefs, saveAgentSlot } from "./session-io.mjs"
@@ -167,15 +169,19 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
     /** 边界轮 `end` 出站（#719 · 修复轮 3 · 写点前移；**恰一次** —— 成功径先发 ⇒ 失败径零重发，防双份）：
      *  `ms` 单算式 ⇒ 记录 ∥ 发帧同值；非边界轮零动作（`boundary` 假 —— timer 轮 ∥ 非 autoTurn 两径；**上行轮属边界**）。
      *  **查**回合墓碑（`revokedTurn`）：记录腿不经 `settleTurn` 门（`end` 先于结算落盘）⇒ 自带门 —— 已撤销 ∥
-     *  已删会话 ⇒ 零帧 ∥ 零记录（`endEmitted` 不置 —— U-7 不破）。 */
+     *  已删会话 ⇒ 零帧 ∥ 零记录（`endEmitted` 不置 —— U-7 不破）。
+     *  **消化账务批（2026-10-05 · 台账 #930 · §6.31.6）**：非上行轮且 > 0 才携 `unsettled`（残余行载荷——
+     *  帧 ∥ 记录同源同点；判据单源 = 核 `unsettledCount`）。 */
     let endEmitted = false
     const emitDigestEnd = (ok) => {
       if (!boundary || endEmitted) return
       if (revokedTurn(key, agent)) return // 墓碑查位（记录腿自带门 —— 已撤销 ∥ 已删会话零帧零记录）
       endEmitted = true
       const ms = Date.now() - started
-      post("ev:digest", { key, status: "end", ok, ms }) // 边界帧（同点双动作 —— 发帧 ∥ 记录）
-      appendRecord(agent, { kind: "digest", status: "end", ok, ms }) // 留档记录（#719 —— 人读线半，机器线零触）
+      const unsettled = opts.upstreamTurn === true ? 0 : unsettledCount(agent)
+      const extra = unsettled > 0 ? { unsettled } : {}
+      post("ev:digest", { key, status: "end", ok, ms, ...extra }) // 边界帧（同点双动作 —— 发帧 ∥ 记录）
+      appendRecord(agent, { kind: "digest", status: "end", ok, ms, ...extra }) // 留档记录（#719 —— 人读线半，机器线零触；复列承接）
     }
     try {
       const outcome = await runWithResume()

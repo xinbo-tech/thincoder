@@ -134,6 +134,17 @@ export function parkAsyncPending(parent, entry) {
   pend.push(entry)
 }
 
+/**
+ * §6.31.5 升级账本写助手（消化账务批）：`_unsettledDigests` 追加一行
+ * （`{ id, role, failures, report, at }`）。载体吸收（父字段优先 / history 借用——形态同
+ * `parkAsyncPending`）；行序 = 升级序（读面 = `digest-account.mjs` `unsettledRows`）。
+ */
+export function appendUnsettledDigest(parent, row) {
+  const existing = carrierField(parent, "_unsettledDigests")
+  const list = (parent._unsettledDigests ??= Array.isArray(existing) ? existing : [])
+  list.push(row)
+}
+
 // ─── D4 守卫统一（严格版）+ D6 信号兜底单点 ──────────────────────────────────
 
 /** D4 settle 守卫统一（escalate 严格版）：父侧中止 = 回合 signal aborted（#98 VSC 侧
@@ -161,12 +172,24 @@ export function buildChildSignal(parent, ctx) {
  * 对子代理对象的引用（`childAgent`/`report`——条目前此从不显式释放，挂起期 = 分钟级驻留）。
  * 幂等（重入不抛）；池内/挂起未消化窗口语义零变（settle 时刻不释放——表 2 候选 2 否决：
  * status/observe 在窗口内仍读 child 摘要）。三消费点（回合尾收集 / run 起始 pending 注入 /
- * 挂起残差注入）在注入完成后调本 helper。
+ * 挂起残差注入）——fallback 面（无 `_daSession`）注入完成后调本 helper（逐字沿用）；会话态
+ * （`_daSession`）注入后改调 `releaseChildHold`（仅释放 `childAgent`——`report` 保留至销账 /
+ * 升级；§6.31.4 ∥ KD-DA7）。
  */
 export function releaseSettledEntry(entry) {
   if (!entry || typeof entry !== "object") return
   entry.childAgent = null
   entry.report = null
+}
+
+/**
+ * §6.31.4 投递面（消化账务批 · 2026-10-05 · 台账 #930）：会话态注入后**仅**释放 `childAgent`——
+ * `report` 保留至销账 / 升级（重投需原文；驻留增量以报告量级 ∥ 重投上限封顶）。fallback 面零调用
+ * （既有 `releaseSettledEntry` 逐字沿用——注入即释放）。
+ */
+export function releaseChildHold(entry) {
+  if (!entry || typeof entry !== "object") return
+  entry.childAgent = null
 }
 
 /**
@@ -273,10 +296,11 @@ export function settleAsyncEntry(parent, entry, opts = {}) {
       parkAsyncPending(parent, entry)
       pool?.delete(String(entry.id))
     }
-    // 发射单点（块到达时点归位批 · #746｜§6.8「settle 延迟冻结（两态统一）」）：settle 一律 ⟦ev⟧settled
-    // （区块头恒中间态「done · awaiting digestion」驻留面板）；⟦ev⟧done = 消费面补发（消费窗清单单源
-    // = §6.8）⇒ 冻结 ∥ 归档恒落消费时点——回合运行中零归档触发器（「S 不夹运行中回合」结构不变式）。
-    ctx?.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e`)
+  // 发射单点（块到达时点归位批 · #746｜§6.8「settle 延迟冻结（两态统一）」）：settle 一律 ⟦ev⟧settled
+  // （区块头恒中间态「done · awaiting digestion」驻留面板）；⟦ev⟧done = 消费面补发（消费窗清单单源
+  // = §6.8）⇒ 冻结 ∥ 归档恒落投递时点（消化账务批 · 2026-10-05——归档 ≠ 销账；销账后移见账 = §6.31）；
+  // 回合运行中零归档触发器（「S 不夹运行中回合」结构不变式）。
+  ctx?.callbacks?.onToken?.(`${entry.relayPrefix}⟦ev⟧settled\x1e0\x1e0\x1esettled\x1e`)
   }
   // ④ 公共尾部：settleSeq 递增 + _settle 唤醒（never rejects）+ 唤醒挂起驱动 waiter
   entry._settleSeq = (parent._asyncSettleSeq = (parent._asyncSettleSeq ?? 0) + 1)

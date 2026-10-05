@@ -100,6 +100,6 @@ export async function runAgent(agent, input, callbacks = {}, { depth = 0, signal
     // 2026-09-05 实践轮：回合收尾（consult 清理/async 池分流/guard 继承——原 425-462
     // 段 + collectSettledAsync 466-494 整体迁 agent/run-stages.mjs finalizeAgentTurn——
     // CLI 对位 VS run-stages——finally 只剩一行调用 + 骨架注释）。
-    await finalizeAgentTurn(agent, { signal, autoTurn, suspDriven, thrownError, depth })
+    await finalizeAgentTurn(agent, { signal, autoTurn, upstreamTurn, timerTurn, suspDriven, thrownError, depth })
   }
 }

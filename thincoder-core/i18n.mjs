@@ -41,6 +41,9 @@ export const CORE_MESSAGES = Object.freeze({
   "digest.turnLabelAsk": { en: "[auto-turn: answering ${from}: ${msg}]", zh: "自动回合：答复 ${from}：${msg}" },
   "digest.capAuto": { en: "[auto-turn: continuing past turn cap…]", zh: "自动回合：越过轮次上限，继续推进…" },
   "digest.capStop": { en: "[auto-turn stopped at ${turns} turns — partial digest; finished reports stay in history]", zh: "自动回合在 ${turns} 轮处停止——部分消化；已完成的报告保留在历史中" },
+  // 消化账务批 · 2026-10-05 · 台账 #930（§6.31.6 端面残余行——判据 = `unsettledCount(carrier)`；
+  // 消费面 = CLI 痕行 ∥ 桌面 / VSC 行元素；三端共读本键）
+  "digest.residue": { en: "${n} background report(s) not accounted — they will be re-delivered", zh: "有 ${n} 份后台报告未销账——将自动重投" },
   // ── 限流 / 供应商状态行 ──
   "status.rateWait": { en: "TPM throttle wait ~${s}s", zh: "TPM 限流等待 ~${s}s" },
   "status.rateLimited": { en: "Rate-limited 429, retry in ${s}s", zh: "限流 429，${s}s 后重试" },

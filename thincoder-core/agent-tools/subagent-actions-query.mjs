@@ -13,6 +13,8 @@ import { describeBlockers, detectStall, STALL_NOTE } from "./subagent-scheduler.
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor（absorb 双池——advisor 独立池无队列）
 import { getAsyncPool } from "./async-settle.mjs"
 import { turnCapTrace } from "./checkpoint.mjs"
+// §6.31.6 未清算可见面（批 digest-accounting · 2026-10-05 · 台账 #930）：unsettled 段 + 单查续查
+import { unsettledRow, unsettledRows } from "../agent/digest-account.mjs"
 
 /**
  * subagent action:"status" (AGENT-LOOP-SUBAGENT.md §6.7 D-M2, new): NON-BLOCKING async-pool query —
@@ -22,11 +24,13 @@ import { turnCapTrace } from "./checkpoint.mjs"
  * (AGENT-LOOP-ASYNC-POOL.md §6.8 D-S3 ② — injected at the next run start) are no longer in the pool and
  * are NOT counted as done-waiting.
  * - id given → { id, role, status, model?, elapsedSec?, turn?, maxTurns?,
- *   touchedFiles?/touchedMore?/touched? ... } for that entry; unknown id → error
- *   (T12 semantics — unknown async-subagent id error, same wording as the pool).
- * - id omitted → { overview: { running: [{id, role, model, elapsedSec, turn,
- *   maxTurns, touchedFiles?/touched?}], queued: [{id, role, position, touched?}],
- *   done: [{id, role}] } } — live queue positions (index in _asyncQueue + 1).
+ *   touchedFiles?/touchedMore?/touched? ... } for that entry; when the id matches neither pool it
+ *   falls through to `_pendingAsyncResults` / `_unsettledDigests` (§6.31.6 — same row shape);
+ *   unknown everywhere → error (T12 semantics — unknown async-subagent id error, same wording as the pool).
+ * - id omitted → { overview: { running: [...], queued: [...], done: [...],
+ *   unsettled: [{id, role, state, attempts, preview?}] } } — live queue positions (index in
+ *   _asyncQueue + 1); the unsettled section lists every entry still awaiting settlement
+ *   (awaiting-digest / retrying) plus the upgraded ledger (§6.31.6).
  * AGENT-LOOP-SUBAGENT.md §6.7.2: running 条目带 touched files 摘要（touchedFiles 前 5 + touchedMore 超出
  * 计数——相对查询方 cwd；0 改动 → touched 占位）；queued 条目带 touched 占位
  * "—（未启动）"；done/error/取消条目无 touched 字段（round3 #9）。
@@ -113,6 +117,9 @@ export function executeStatusAction(args, ctx) {
     // ids are unique across both pools; role identifies the kind).
     const entry = map.get(key) ?? advisors.get(key)
     if (!entry) {
+      // §6.31.6（消化账务批）：续查 pending / 升级账本同解析——三处皆无 ⇒ 原错误文案不变。
+      const row = unsettledRow(agent, key)
+      if (row) return JSON.stringify(row)
       // Wording kept exact — locked by subagent-async/tool tests (unknown-id error
       // semantics); an unknown id simply names neither pool (the pools share the
       // id counter, so the message stays unambiguous).
@@ -146,7 +153,7 @@ export function executeStatusAction(args, ctx) {
     target.note = "settled, not yet consumed — delivered by the auto channel (turn-end collection or the suspension digest injects it)"
     return JSON.stringify(target)
   }
-  const overview = { running: [], queued: [], done: [] }
+  const overview = { running: [], queued: [], done: [], unsettled: unsettledRows(agent) }
   const mapEntries = [...map.values(), ...advisors.values()]
   for (const entry of mapEntries) {
     if (entry.status === "running") overview.running.push(statusFields(entry, agent.cwd))

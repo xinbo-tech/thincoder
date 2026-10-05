@@ -81,7 +81,7 @@ export async function parseStream(response, { onToken, onReasoning, signal }) {
       if (!slot) return
       if (fullArgs && fullArgs !== slot.arguments) slot.arguments = fullArgs
     },
-    onCompleted: seal,
+    onCompleted: (resp) => { result.finishReason = "stop"; seal(resp) }, // §6.31.7 F-DA5：completed ⇒ stop（原恒 null ⇒ agent 面缺席）
     onIncomplete: (resp) => {
       seal(resp)
       // 非长度原因（content_filter 等）不能报成 "length"——agent 层按原因给用户提示（`agent/run-stages.mjs:43`）

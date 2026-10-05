@@ -71,17 +71,20 @@ export function bindPanelAgent(panel, holder) {
   })
 }
 
-/** 载体字段表（14 款——`docs/core/design/AGENT-LOOP.md` §2.3 绑定不变式：核写侧以父对象字段为入口，只绑
- *  两池会让 settle 的 pending ∕ 墓碑 ∕ 队列 ∕ 唤醒数组落在 per-run agent 上；表源 = 旧端 `agent.mjs:39-43`）。 */
+/** 载体字段表（16 款——`docs/core/design/AGENT-LOOP.md` §2.3 绑定不变式：核写侧以父对象字段为入口，只绑
+ *  两池会让 settle 的 pending ∕ 墓碑 ∕ 队列 ∕ 唤醒数组落在 per-run agent 上；表源 = 旧端 `agent.mjs:39-43`。
+ *  消化账务批 · 2026-10-05 · 台账 #930：+2 款——`_unsettledDigests`（升级账本）∥ `_daSession`（会话标记）
+ *  ——两者皆为跨 run 存活面（agent per-run 重建，写面经本表别名落 `history`）。 */
 const CARRIER_FIELDS = [
   "_asyncSubagents", "_asyncAdvisors", "_asyncTombstones", "_pendingAsyncResults",
   "_consultSessions", "_engDesignTokens", "_suspended", "_asyncQueue", "_asyncAdvisorQueue",
   "_asyncWaiters", "_advisorRuns", "_mutLog", "_childUpstream", "_childUpstreamSeq",
+  "_unsettledDigests", "_daSession",
 ]
 
 /** 载体面装配（每 run 一次——`hydrateRun` 之后；旧端 `src/agent.mjs:142-159` 逐字同法）：① 六容器先在共享
- *  `history` 侧建齐（核写的是父对象字段，访问器别名下与 `history` 同一容器——端壳读面同源）；② 14 字段
- *  访问器别名（非快照——容器替换两向同步）；③ `agent.history` 访问器锚（KD-3）：核替换点（`context.mjs`
+ *  `history` 侧建齐（核写的是父对象字段，访问器别名下与 `history` 同一容器——端壳读面同源）；② 16 字段
+ *  访问器别名（非快照——容器替换两向同步；消化账务批 · 2026-10-05 前为 14 款，见表上注）；③ `agent.history` 访问器锚（KD-3）：核替换点（`context.mjs`
  *  `:219/:227/:242/:426` ∕ `explore-distill.mjs:143` ∕ `agent/setup.mjs:53`）以 `agent.history = <新数组>`
  *  表达 ⇒ setter 原位回收，面板 ∕ 挂起会话持有的数组引用跨替换稳定。 */
 function bindCarrierFace(agent, history) {

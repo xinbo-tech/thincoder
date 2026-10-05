@@ -5,11 +5,14 @@
  * 回合尾后台池仍 live → 挂起会话——池项 settle → 入 pending；pending 非空 **或存在未 drain 的
  * 上行 ask**（`upstreamWaiting`——F-UC7 / §6.27.12.4 ①）→ 合并消化轮 / 唤醒轮（auto-turn；旗标
  * `upstreamTurn` 仅供域文本选择）；挂起空闲用户输入优先于消化轮。池空 + pending 空 + 无待处理
- * 输入 → 自然退出（idle）。退出清场：abort = 清池不注入（陈旧结果不注入）；idle = 残余直注入（结果零丢失）。
+ * 输入 → 自然退出（idle）。退出清场：abort = 清池不注入（陈旧结果不注入）；idle = 残余直注入
+ * （结果零丢失；已投递未销账条按投递账过滤——留容器不注入，§6.31 出口缝）。
  *
  * 载体注入（端差面 = 池 / pending / 标志挂谁）：`ctx.carrier` = 字段集按核内异步面
  * 现行口径的对象（`_asyncSubagents` · `_asyncAdvisors` · `_consultSessions` ·
- * `_pendingAsyncResults` · `_suspended`；#9 后台 bash 任务池 `_bgTasks` 同列）
+ * `_pendingAsyncResults` · `_suspended`；#9 后台 bash 任务池 `_bgTasks` 同列；
+ * 消化账务批 · 2026-10-05 同列 `_daSession`（挂起会话标记——置位 / 复位单点）与
+ * `_unsettledDigests`（升级账本——中止清场））
  * ——CLI 形 = `agent` 对象；VSC 形 = depth-0
  * `history` 数组（附加属性不污染会话文件）。机制对载体零预设（空字段一律 `?.` 读）。
  *
@@ -112,12 +115,15 @@ function consultLiveCount(carrier) {
  *  - abort：**只清已死**（§6.20 口径——增补 D：`discardAbortedPool` ∕ `discardAbortedAdvisors`
  *    单点，与核 run-stages 回合尾中止同式；存活 ∕ 已 settle 条目留池——settled 报告沿后续
  *    回合边界注入到达，不静默丢）+ pending 单容器清 + 会诊会话清理标记；
- *  - idle：残余直注入（极端竞态残项——结果零丢失；注入器由宿主注入，缺省 no-op 保残项）。
+ *  - idle：残余直注入（极端竞态残项——结果零丢失；注入器由宿主注入，缺省 no-op 保残项）；
+ *    **已投递未销账条（`_daDelivered === true`）按投递账过滤**——内容已在历史（投递起跑窗）：
+ *    不注入且留容器（消化账务批出口缝 · #41 披露① · 父侧裁定 2026-10-05——状态面可见 / 可续账）。
  *
- * 返回 `{ injected, left, error }`（子代理面板批 · 2026-10-04 —— `hooks.reclaim` 恒达窗的退出半）：
- *  `left` = **离容全量**（splice 全取——注入失败条不缩水），供调用点 `reclaim(left)` 补发
- *  （「消费 ⇒ 必发 done」不变量——C2 零发射口）；注入循环 try/catch 收口 ⇒ `injected` = 成功
- *  前缀、`error` = 首错（调用点补发毕后重抛——fail-loud 保持）；abort ∥ 无注入器 ∥ 无残差 ⇒ 三键空值。
+ * 返回 `{ injected, left, error }`（子代理面板批 · 2026-10-04 —— `hooks.reclaim` 恒达窗的退出半；
+ *  消化账务批出口缝——`left` = **注入集离容全量**（离容全取——注入失败条不缩水；已投递未销账
+ *  跳过条不取、留容器），供调用点 `reclaim(left)` 补发（「消费 ⇒ 必发 done」不变量——C2 零发射口；
+ *  跳过条未消费、其 done 已在投递起跑窗落——不入补发面）；注入循环 try/catch 收口 ⇒ `injected` =
+ *  成功前缀、`error` = 首错（调用点补发毕后重抛——fail-loud 保持）；abort ∥ 无注入器 ∥ 无残差 ⇒ 三键空值。
  *  既有 C3/C4 快照径（中止冻结快照）零改。
  */
 export async function finishSuspension(carrier, { aborted = false, injectResidual = null } = {}) {
@@ -127,6 +133,7 @@ export async function finishSuspension(carrier, { aborted = false, injectResidua
     discardAbortedAdvisors(carrier)
     discardAbortedBgTasks(carrier) // #9 收尾档②：后台 bash 任务逐条杀树 + 出池 + 墓碑（杀 ⟺ 控制器已中止）
     carrier._pendingAsyncResults = []
+    carrier._unsettledDigests = [] // §6.31.5 清账面（消化账务批）：会话中止 ⇒ 升级账本随 pending 一并清（旧账不续）
     if (carrier._consultSessions instanceof Map) {
       const { cleanupConsultSessions } = await import("../agent-tools/consult.mjs")
       cleanupConsultSessions(carrier)
@@ -135,7 +142,18 @@ export async function finishSuspension(carrier, { aborted = false, injectResidua
   }
   const residual = carrier._pendingAsyncResults
   if (!residual?.length || typeof injectResidual !== "function") return { injected: [], left: [], error: null }
-  const left = residual.splice(0)
+  // §6.31 出口缝（#41 披露① · 父侧裁定 2026-10-05）：清场按投递账过滤——已投递未销账条
+  // （`_daDelivered === true`——内容已在历史）**不注入且不动容器**（状态面可见 / 可续账——防重复）；
+  // 判据 = 条目既有字段（调用窗 `_daSession` 已复位——不以其为门）；其余条逐字沿用。
+  // 单遍分区写法（#44 披露④ · 父侧裁定 2026-10-05）：一次遍历同出 `left`（离容集）与留容器集——
+  // 消除 `indexOf` 未命中 ⇒ `splice(-1,1)` 静默删尾的失败类；离容顺序 ∥ `left` 语义不缩水。
+  const left = []
+  let kept = 0
+  for (const e of residual) {
+    if (e?._daDelivered === true) residual[kept++] = e
+    else left.push(e)
+  }
+  residual.length = kept
   const injected = []
   for (const e of left) {
     try { await injectResidual(e) } catch (error) { return { injected, left, error } } // 首错收口（前缀 = injected）
@@ -217,6 +235,9 @@ export function startSuspension(ctx) {
 
   const done = (async () => {
     carrier._suspended = true
+    // §6.31.2 会话标记（消化账务批 · 2026-10-05 · 台账 #930）：挂起会话期 true——投递留容器 /
+    // 见账 / 重投回路的唯一判据；退出（finally）置 false ⇒ 会话外回 fallback 语义。
+    carrier._daSession = true
     hooks.onCounts?.(backgroundCounts(carrier))
     let aborted = false
     try {
@@ -298,6 +319,7 @@ export function startSuspension(ctx) {
       if (!finished) {
         finished = true
         carrier._suspended = false
+        carrier._daSession = false // §6.31.2 会话标记复位（退出即回 fallback 语义）
         latch.wake = null
         // §2.3 退出清场：abort 判定与实时信号合并（两端同式——Stop 落在 runTurn 内时
         // abort 以 AbortError 抛出、循环顶检查不会再执行——不合并会把清场误走 idle 注入）。

@@ -110,6 +110,15 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   return finishAnthropic(result)
 }
 
+/** Anthropic `stop_reason` ⇒ 核统一 `finishReason`（§6.31.7 F-DA5——归一只喂既有分类；
+ *  余者原样透传）。缺席 ⇒ null（缺席支 = agent/run-stages.mjs 同面提醒 + 留痕）。 */
+function mapAnthropicStopReason(reason) {
+  if (reason === "end_turn" || reason === "stop_sequence") return "stop"
+  if (reason === "tool_use") return "tool_calls"
+  if (reason === "max_tokens") return "length"
+  return reason
+}
+
 /** Convert the parsed stream to the core.mjs result shape (usage → OpenAI-compatible). */
 function finishAnthropic(result) {
   const usage = result.usage
@@ -117,6 +126,7 @@ function finishAnthropic(result) {
     return {
       content: result.content,
       reasoning: result.reasoning,
+      finishReason: result.finishReason ?? null, // §6.31.7 F-DA5（原三 transport 恒 null——字段值收正）
       usage: {
         prompt_tokens: usage.input_tokens ?? 0,
         completion_tokens: usage.output_tokens ?? 0,
@@ -127,7 +137,7 @@ function finishAnthropic(result) {
       toolCalls: result.toolCalls,
     }
   }
-  return { content: result.content, reasoning: result.reasoning, toolCalls: result.toolCalls }
+  return { content: result.content, reasoning: result.reasoning, finishReason: result.finishReason ?? null, toolCalls: result.toolCalls }
 }
 
 /**
@@ -135,7 +145,7 @@ function finishAnthropic(result) {
  * Events: message_start, content_block_start, content_block_delta, content_block_stop, message_delta, message_stop
  */
 async function parseAnthropicStream(response, { onToken, onReasoning, signal }) {
-  const result = { content: "", reasoning: "", toolCalls: [], usage: null }
+  const result = { content: "", reasoning: "", toolCalls: [], usage: null, finishReason: null }
   const decoder = new TextDecoder()
   let buffer = ""
   const toolBlocks = new Map()
@@ -172,6 +182,8 @@ async function parseAnthropicStream(response, { onToken, onReasoning, signal }) 
       }
       case "message_delta":
         if (json.usage) result.usage = json.usage
+        // §6.31.7 F-DA5（#929 · 批 digest-accounting）：`stop_reason` 捕获——缺席 ⇒ 留 null（窄口）
+        if (json.delta?.stop_reason) result.finishReason = mapAnthropicStopReason(json.delta.stop_reason)
         break
       case "message_stop":
         for (const [, block] of toolBlocks) {

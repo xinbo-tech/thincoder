@@ -136,6 +136,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     return {
       content: result.content,
       reasoning: result.reasoning,
+      finishReason: result.finishReason ?? null, // §6.31.7 F-DA5（原三 transport 恒 null——字段值收正）
       usage: {
         prompt_tokens: usage.prompt_tokens ?? 0,
         completion_tokens: usage.completion_tokens ?? 0,
@@ -145,7 +146,15 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     }
   }
 
-  return { content: result.content, reasoning: result.reasoning, toolCalls: result.toolCalls }
+  return { content: result.content, reasoning: result.reasoning, finishReason: result.finishReason ?? null, toolCalls: result.toolCalls }
+}
+
+/** Gemini `finishReason` ⇒ 核统一 `finishReason`（§6.31.7 F-DA5——归一只喂既有分类；
+ *  余者原样透传）。缺席 ⇒ null（缺席支 = agent/run-stages.mjs 同面提醒 + 留痕）。 */
+function mapGeminiFinishReason(reason) {
+  if (reason === "STOP") return "stop"
+  if (reason === "MAX_TOKENS") return "length"
+  return reason
 }
 
 /**
@@ -153,7 +162,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
  * Format: data: {...}\n\n (each line is a complete JSON object)
  */
 async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
-  const result = { content: "", reasoning: "", toolCalls: [], usage: null }
+  const result = { content: "", reasoning: "", toolCalls: [], usage: null, finishReason: null }
   const decoder = new TextDecoder()
   let buffer = ""
 
@@ -172,6 +181,8 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
 
     const candidate = json.candidates?.[0]
     if (!candidate) return
+    // §6.31.7 F-DA5（#929 · 批 digest-accounting）：`candidate.finishReason` 捕获——缺席 ⇒ 留 null（窄口）
+    if (candidate.finishReason) result.finishReason = mapGeminiFinishReason(candidate.finishReason)
 
     const parts = candidate.content?.parts || []
     for (const part of parts) {

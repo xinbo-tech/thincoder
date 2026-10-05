@@ -3,7 +3,7 @@
  * **自然形收正批 · 2026-10-01 · 台账 #768 收正**：行 = 流内事件 · **出即留**；**回填落位批 · 2026-10-04**（台账 #910）：
  * 复入窗 ⇒ **整置径**（删档 + 新写——记录序重放；位次轮缺行随整置落其记录位次——零位置机具：零寻位 ∥ 零搬移 ∥ 零算术））。
  * 形态（对位两端实形；单源 = `docs/desktop/design/RENDERER.md` §1.1「流内消化行族」条）：消化行 = **流内普通项** ——
- * 行元素 = 流内并列兄弟（无轮容器 ∥ 不占块序 ∥ 不计 `data-blocks`）；每轮 1–4 枚（起跑标签行 ∥ `n > 0` 计数行 ∥ cap 行 ∥ 终态行）。
+ * 行元素 = 流内并列兄弟（无轮容器 ∥ 不占块序 ∥ 不计 `data-blocks`）；每轮 1–5 枚（起跑标签行 ∥ `n > 0` 计数行 ∥ cap 行 ∥ 终态行 ∥ 残余行）。
  * 生命周期（自然形 —— **零清理机器**）：
  *   ① **到达序出生**——行族生于**当刻流末**（帧尾入流步 `renderer/views/chat.mjs` `settleFrame` 步①：先于同帧尾段挂载
  *      ——同帧批内新到流项按到达序：行族先 ∥ 补发块后）；
@@ -81,16 +81,31 @@ function digestEndRow(round) {
   return { tag: "div", props: { class: `chat-digest ${endRowClass(round)}`, "data-digest": "", "data-digest-end": "" }, children: [endRowText(round)] }
 }
 
-/** 单轮行集（行序 = 起跑标签行 → `n > 0` 计数行 → cap 行 → `n > 0` 终态行）——**行元素 = 流内并列兄弟**（无轮容器：
+/** 残余行文（**消化账务批 · 2026-10-05 · 台账 #930**——单源 = 核字典 `digest.residue` 直取；
+ *  `n` = 本轮未销账条数）。 */
+function residueText(round) {
+  return t("digest.residue", { n: countOf(round.unsettled) })
+}
+
+/** 残余行（**终态行之后再落一行** —— `end` 且携 `unsettled > 0` ⇒ 追加；锚 `data-digest-residue`；
+ *  `= 0` ⇒ 零行（零噪音）；机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31）。 */
+function digestResidueRow(round) {
+  return { tag: "div", props: { class: "chat-digest digest-status", "data-digest": "", "data-digest-residue": "" }, children: [residueText(round)] }
+}
+
+/** 单轮行集（行序 = 起跑标签行 → `n > 0` 计数行 → cap 行 → `n > 0` 终态行 → `unsettled > 0` 残余行）——**行元素 = 流内并列兄弟**（无轮容器：
  *  逐行直挂、不做每轮包裹元素；对位 VSC `chat-status.js:72-89` 逐行 `appendChild`）。行集随轮态**只增不减**：
  *  起跑帧出 [标签行]（`n > 0` 携计数行）∥ cap 帧增 cap 行 ∥ `end` 帧**增终态行**（**`n = 0` 守句**：零计数行 ∥ 零终态行——
- *  禁幻影行；三端同守）；未结轮照出已有行（零终态行）——行不改 ∥ 不删。末轮归属过滤（活流侧优先）住并入点
+ *  禁幻影行；三端同守）＋ 携 `unsettled > 0` 时增残余行（消化账务批 · 2026-10-05）；未结轮照出已有行（零终态行）——行不改 ∥ 不删。末轮归属过滤（活流侧优先）住并入点
  *  `renderer/page-read.mjs` `withFoldedDigest`；清点 `clearDigest` 维持现行「未结末轮保」。 */
 export function digestRows(round) {
   const rows = [digestLabelRow(round)]
   if (countOf(round.n) > 0) rows.push(digestCountRow(round))
   if (round.cap != null) rows.push(digestCapRow(round.cap))
-  if (round.status === "end" && countOf(round.n) > 0) rows.push(digestEndRow(round))
+  if (round.status === "end" && countOf(round.n) > 0) {
+    rows.push(digestEndRow(round))
+    if (countOf(round.unsettled) > 0) rows.push(digestResidueRow(round)) // 残余行：终态行之后再落一行（= 0 ⇒ 零行）
+  }
   return rows
 }
 
@@ -99,8 +114,8 @@ export function roundAt(round) {
   return typeof round?.at === "number" && Number.isFinite(round.at) ? round.at : null
 }
 
-/** 行型名（行家族四型 —— 锚名闭集；描述符 ∥ 已建节点两形同判）。 */
-const ROW_MARKS = ["label", "count", "cap", "end"]
+/** 行型名（行家族五型 —— 锚名闭集；描述符 ∥ 已建节点两形同判）。 */
+const ROW_MARKS = ["label", "count", "cap", "end", "residue"]
 function rowTypeOf(face) {
   if (face === null || face === undefined) return null
   const read = (name) => (typeof face.getAttribute === "function" ? face.getAttribute(name) : face.props?.[name])

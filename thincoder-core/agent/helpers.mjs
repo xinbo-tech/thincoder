@@ -468,6 +468,14 @@ export const UPSTREAM_TURN_DOMAIN =
 export const TIMER_TURN_DOMAIN =
   "[System reminder: auto-turn — a timer you set earlier has expired (reminder above). No user message is waiting. Act on what the timer was for now: pull the data or run the check rather than continuing to reason in the abstract. Stay within the work that was in flight when the timer was set; do not open unrelated new work. Wrap up as soon as the action is done or blocked.]"
 
+/** Digest-accounting requirement line (AGENT-LOOP-ASYNC-POOL.md §6.31.3 · batch digest-accounting ·
+ *  2026-10-05)：消化轮账目要求——两档同发（手动 / AUTO）；manual 域文本只覆盖手动档 ⇒ 要求行
+ *  独立常量承载，避免 AUTO 轮无要求。`<ids>` = 未销账 id 清单占位（动态拼 = digest-account.mjs
+ *  `digestAccountRequirement`）；注入面 = transient（机器线独有）。Verbatim from the parent-side
+ *  final text (single line — no newlines); content authority = parent side. */
+export const DIGEST_ACCOUNT_DOMAIN =
+  "[System reminder: digest accounting — for every report listed below as not yet accounted, emit exactly one line: \"[digest-ack #<id>] digested — <key points>\" (handled) or \"[digest-ack #<id>] deferred — <reason>\" (not handled). Not yet accounted: <ids>. Do not omit any.]"
+
 /** Engineering-mode status injection — one reminder on EVERY transition (2026-08-25:
  *  OFF is announced too — the model must know the gates lifted; silence after /eng-off
  *  left it guessing. Covers TUI /eng, resume, and any path bypassing the eng tool.) */

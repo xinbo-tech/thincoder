@@ -107,8 +107,10 @@ function touchedFilesNote(child, cwd) {
 export function classifyEscalateSettle(parent, entry) {
   if (entry.cancelled) return { cancelled: true }
   // AGENT-LOOP.md §6.15（TUI-OOM-ROOTCAUSE）——childAgent 语义面：settle 分类（touched 摘要/partial
-  // merge）与 status/observe 摘要的读取源；**消化注入完成后由 `releaseSettledEntry`
-  // （async-settle.mjs）置 null**（池内未消化窗口不释放——表 2 候选 2 否决）。
+  // merge）与 status/observe 摘要的读取源；**消化注入完成后释放**（池内未消化窗口不释放——表 2 候选 2 否决）；
+  // fallback 面（无 `_daSession`）由 `releaseSettledEntry`（async-settle.mjs）置 null（逐字沿用）；会话态
+  // （`_daSession`）注入后改调 `releaseChildHold`（仅释放 `childAgent`——`report` 保留至销账 / 升级；
+  // §6.31.4 ∥ KD-DA7）。
   const child = entry.childAgent
   const touched = child?._touchedFiles ?? []
   const overlap = overlapPaths(parent, entry.launchSeq, touched)

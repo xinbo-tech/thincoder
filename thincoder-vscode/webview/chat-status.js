@@ -64,11 +64,12 @@ function handleStatusText(m) {
 // 行/元素出即留**）：`digest start` → 追加 `.digest-turn` 标签行（CLI 起跑 dim 行对位）+ 本轮独立
 // `.digest-status` 元素（`n > 0`）+ 记本轮边界 `S._digestBoundary`（**取面：计数元素 ∥ 无 ⇒ 标签元素**
 // ——归档落点；C-4）+ `assistantLabeled` 复位（本轮 assistant 输出带一次回合标签）；`digest end` →
-// **追加终态元素**（`.digest-status` + `digest-done` ∕ `digest-failed`——不动原计数元素 ∥ 零就地换文）；
+// **追加终态元素**（`.digest-status` + `digest-done` ∕ `digest-failed`——不动原计数元素 ∥ 零就地换文；
+// **+ 消化账务批（2026-10-05 · 台账 #930）：`unsettled > 0` ⇒ 终态后再落残余元素**）；
 // `digest cap` → `.digest-cap` 行（auto dim / stop warn——CLI agent-turn.mjs:188/:192 对位）。旧轮元素
 // 留置原位（不改 ∥ 不删 ∥ 不退场——零清理机器）；复列 = 全量（未结轮照现——重放逐轮 ⇒ 逐轮追加；消化重放口径批 · 2026-10-01 收正）。
-// **#726 构形件化（2026-10-01 · 跨端消化面恢复批）**：四类元素构形提为导出构形件（下方四函数）——
-// live（`showDigestStatus`）∥ 重建（`record-restore.js`）**单一实现零副本**；`data-idx` 归重建径独占。
+// **#726 构形件化（2026-10-01 · 跨端消化面恢复批）**：四类元素构形提为导出构形件（下方四函数；消化账务批 ·
+// 2026-10-05 ＋残余元素一件 ⇒ 五函数）—— live（`showDigestStatus`）∥ 重建（`record-restore.js`）**单一实现零副本**；`data-idx` 归重建径独占。
 let _digestRoundEl = null // 本轮计数元素引用（`end` 取 `dataset.n` 用——本批保留）
 
 /** 起跑标签元素构形（`.digest-turn`）：M4（显示面消差批 §2.1）+ F-UC8（2026-09-21 信号提示行批 ·
@@ -113,6 +114,15 @@ export function digestTerminalEl(ok, n, ms) {
   return el
 }
 
+/** 残余元素构形（消化账务批 · 2026-10-05 · 台账 #930 · §6.31.6——追加形：终态元素之后落一枚；
+ *  `n` = 本轮未销账条数；词键 `digest.residue`——核字典直取、端侧零自持字面）。live ∥ 重建同均件。 */
+export function digestResidueEl(n) {
+  const el = document.createElement("div")
+  el.className = "digest-status"
+  el.textContent = t("digest.residue", { n: n ?? "?" })
+  return el
+}
+
 function showDigestStatus(m) {
   const messagesEl = ctx.messagesEl
   if (m.status === "start") {
@@ -142,9 +152,11 @@ function showDigestStatus(m) {
   // end：**追加终态元素**（自然形——不动原计数元素 ∥ 零就地换文）；`n` 自本轮计数元素
   // `dataset.n` 取（起跑数口径）；本轮无计数元素（`n = 0` 轮——`_digestRoundEl` 置空）⇒ **零动作**
   // （M4：禁兜底建元素——旧兜底行会造 `dataset.n = "?"` 幻影计数行）。
+  // 消化账务批（§6.31.6）：`unsettled > 0` ⇒ 终态元素之后再落残余元素（`= 0` ⇒ 零元素——零噪音）。
   const el = _digestRoundEl?.isConnected ? _digestRoundEl : null
   if (!el) return
   messagesEl.appendChild(digestTerminalEl(m.ok !== false, el.dataset.n, m.ms))
+  if ((m.unsettled ?? 0) > 0) messagesEl.appendChild(digestResidueEl(m.unsettled))
   maybeScrollDown(ctx)
 }
 
