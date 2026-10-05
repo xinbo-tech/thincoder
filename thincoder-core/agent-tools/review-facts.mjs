@@ -9,7 +9,7 @@
  *    既有 import 面），新增 `resolveReviewDocPaths` 文档解析四腿单源。
  */
 import { existsSync, statSync } from "node:fs"
-import { join, resolve } from "node:path"
+import { dirname, join, resolve } from "node:path"
 import { DEFAULT_MANIFEST, docRootPaths, readManifest } from "../manifest.mjs"
 import { owningProject, projectRootView } from "../manifest-discovery.mjs"
 
@@ -58,9 +58,9 @@ function sessionReviewRoots(cwd) {
 /**
  * **文档解析四腿单源**（2026-10-04 · 批档 §2.2 A 本体）：逐文档
  *   腿① 零变：normAbs(doc, cwd) 落会话根集 ⇒ 受理；腿② 零变：所属项目根集命中 ⇒ 受理；
- *   腿③ 根治面：相对形 ∧ 前两腿未中 ⇒ 候选项目根逐个试探（候选 = projectRootView(cwd)：
- *        ok → [root]；ambiguous → candidates 按名序；none → 空集）——resolve(c, doc) 所属
- *        项目根集命中 = 结构命中；绝对形不进本腿（未中 = 真越界，无候选可试）；
+ *   腿③ 根治面：相对形 ∧ 前两腿未中 ⇒ 候选底座逐个试探（底座 = projectRootView(cwd) 现行集 ＋
+ *        cwd 祖先链全量目录——自父目录起至盘根、最近→远、去重、现行集在前）——resolve(c, doc)
+ *        所属项目根集命中 = 结构命中；绝对形不进本腿（未中 = 真越界，无候选可试）；
  *   腿④ 歧义归一（KD-3）：结构命中 ≥2 ⇒ 可读文件存在性唯一化（batch-paths 读面「首个可读」
  *        同款判据）：恰一可读 ⇒ 胜；≥2 可读 ⇒ fail-closed 拒（scope-doc-ambiguous 列全部
  *        可读命中）；0 可读 ⇒ not-doc 拒（诊断列全部结构命中）。
@@ -73,7 +73,7 @@ export function resolveReviewDocPaths(documents, cwd) {
   const fwd = (p) => p.replace(/[\\/]/g, "/")
   const sessionRoots = sessionReviewRoots(cwd).map(fwd)
   const view = projectRootView(cwd ?? process.cwd())
-  const candidates = view.state === "ok" ? [view.root] : view.state === "ambiguous" ? view.candidates : []
+  const candidates = candidateRoots(view, cwd ?? process.cwd())
   const ownRootsCache = new Map()
   const ownRoots = (owner) => {
     let r = ownRootsCache.get(owner)
@@ -139,4 +139,20 @@ export function scopeAdvisorMirror(agent, run) {
 export function noteReviewDelivered(agent, run) {
   if (!run || typeof run !== "object") return
   run.historyAnchorIdx = Array.isArray(agent?.history) ? agent.history.length : 0
+}
+
+/** 腿③候选底座（`MANIFEST.md` §2.5「路径归一增量」族第四笔 · 2026-10-05 · #945）：现行
+ *  `projectRootView(cwd)` 集（ok → [root]；ambiguous → candidates 按名序；none → 空集）＋
+ *  cwd 祖先链全量目录（自父目录起至盘根、最近→远、去重、现行集在前）——容器相对形在子仓锚下
+ *  可解析；受理判据（目标解析位最近 manifest 声明面）∥ 围栏 ∥ 可读唯一化 ∥ fail-closed 歧义零改。 */
+function candidateRoots(view, cwd) {
+  const current = view.state === "ok" ? [view.root] : view.state === "ambiguous" ? view.candidates : []
+  const ancestors = []
+  for (let d = dirname(resolve(cwd)); ; ) {
+    ancestors.push(d)
+    const p = dirname(d)
+    if (p === d) break
+    d = p
+  }
+  return [...new Set([...current, ...ancestors])]
 }

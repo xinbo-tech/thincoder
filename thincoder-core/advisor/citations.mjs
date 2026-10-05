@@ -7,8 +7,8 @@
  *
  * 第 11 批（C / F14 / `ADVISOR-GUARDS.md §3`）：解析候选 = cwd + **评审对象声明范围派生根**（声明仓根 /
  * 声明文件目录 / 声明目录——纯路径派生，零扫描、零 git）；命中判据三条件全中（围栏内 ∧
- * 可读 ∧ 目标行含引文内容）⇒ 零新增假命中。失败原因四类（file unreadable / content mismatch @ path /
- * path traversal / 非连续引文（省略号形——形状 vs 内容造假分列））——父侧不再人肉复核。
+ * 可读 ∧ 目标行含**任一内容候选**——c1 原捕获 / c2 剥外层装饰 / c3 首引号后段 / c4 首成对引号内层；
+ * 零模糊、零内容级归一（装饰剥离候选集 = `ADVISOR-GUARDS.md` §3）。失败原因四类（file unreadable / content mismatch @ path / path traversal / 非连续引文（省略号形——形状 vs 内容造假分列））——父侧不再人肉复核。
  */
 import { readFileSync, realpathSync } from "node:fs"
 import { resolve, relative, dirname, extname, sep, isAbsolute, join } from "node:path"
@@ -79,7 +79,7 @@ function resolveCitation(citation, roots, base) {
     } catch {
       continue // 存在但读不了（目录等）——按未命中处理，试下一候选
     }
-    if (line.includes(citation.content)) {
+    if (citationCandidates(citation.content).some((c) => line.includes(c))) {
       return { matched: true, root, resolved: relative(base, real).split(sep).join("/") }
     }
     mismatch ??= real
@@ -146,4 +146,30 @@ export function appendCitationReport(text, cwd, opts = {}) {
     }
   }
   return text + lines.join("\n")
+}
+
+/** 装饰剥离候选集（`ADVISOR-GUARDS.md` §3 · 2026-10-05 批 · 台账 #928）：评审引风常含包裹引号 ∥ 行内
+ *  注记（`file:line: "…引文…" — 注记`）——捕获串带装饰时字节包含判失败 ⇒ 误报 content mismatch。
+ *  候选（任一为所引行**连续子串**即命中——零模糊、零内容级归一）：
+ *  c1 原捕获（现行行为——零回归，不设下限）∥ c2 反复剥「引号族 + 空白」的先导/尾随 ∥ c3 首个引号
+ *  字符后段（剥前注记）∥ c4 首个成对引号段内层文本；派生候选下限 2 字符（空引号 ∥ 单字符垃圾形
+ *  不成候选）。 */
+function citationCandidates(raw) {
+  const out = [raw] // c1——原捕获（零回归）
+  const add = (s) => { if (s.length >= 2 && !out.includes(s)) out.push(s) }
+  const DECOR = /^[\s"'“”「」『』]+|[\s"'“”「」『』]+$/g
+  let s = raw
+  for (;;) { const t = s.replace(DECOR, ""); if (t === s) break; s = t }
+  add(s) // c2——剥离外层装饰（反复至不动点）
+  const qi = raw.search(/["'“”「」『』]/)
+  if (qi >= 0) add(raw.slice(qi + 1).trim()) // c3——首个引号字符后段（剥前注记）
+  const spans = []
+  for (const [open, close] of [['"', '"'], ["“", "”"], ["「", "」"]]) {
+    const a = raw.indexOf(open)
+    if (a < 0) continue
+    const b = raw.indexOf(close, a + 1)
+    if (b > a + 1) spans.push({ a, inner: raw.slice(a + 1, b) })
+  }
+  if (spans.length) add(spans.sort((x, y) => x.a - y.a)[0].inner) // c4——首个成对引号段内层文本
+  return out
 }

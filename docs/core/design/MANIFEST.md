@@ -306,6 +306,7 @@
 - **消费面登记的空缺（本批不改）**：`write-gate.resolveReviewTargetPaths` 整档缺失仍回退 `DEFAULT_MANIFEST.docRoot`（**静默**——现状）；「该动作报明」在本批的模型侧承载 = 情境行（§2.6），动作侧仅机检 fail-closed 一族已报明。写门 / 台账是否加报明 = 后续批。**后续批登记（本批 fix 轮 · 发现 8）**：「非锚项目缺档 ⇒ 动作侧报明 / 建档」——需求 ②.3 的全消费面承接（本批只落锚项目情境行 + 会话起点建档；非锚项目动作面的报明 / 建档留后续批）。
 - **advisor 评审门文档合法根集（按用点收口 · 2026-10-02）**：设计评审文档合法性判定 = **会话根集**（`resolveReviewTargetPaths(agent)`——原函数行为零变）∪ **逐文档所属项目根集**（文档路径 `owningProject` ⇒ `resolveReviewRootsFor(owner)`——`thincoder-core/agent/write-gate.mjs` 同单点新导出，非第二实现）；**无主档文档**（祖先链无档）回退会话根集判定（原行为零变）。
   **路径归一增量（2026-10-04 · #921 设计轮——本族第三笔）**：documents 相对形 cwd 基面落空时按候选项目根试探归一（单源 = `resolveReviewDocPaths`，宿主 `review-facts.mjs` + write-gate 同名再出口——零新模块边；四腿试探序 ∥ 多候选可读命中 ≥2 ⇒ fail-closed 拒 `scope-doc-ambiguous`——详述单源 = 批档 §2.2）；冻结窗 `docAbs` 产出面同源。实施 = eng-coder 轮。
+  **锚祖先链增量（2026-10-05 · #945——本族第四笔）**：腿③候选底座 = 现行 `projectRootView(cwd)` 集 ＋ **cwd 祖先链全量目录**（自父目录起至盘根、最近→远、去重、现行集在前）——容器相对形在子仓锚下受理；受理判据（目标解析位最近 manifest 声明面）∥ 围栏 ∥ 可读唯一化 ∥ fail-closed 歧义（`scope-doc-ambiguous`）零改——详述单源 = 批档 `docs/batches/2026-10-05-review-face-gaps.md` §2.3。实施 = eng-coder 轮。
   **依据 / 落地** = §2.9 A 解析轴——2026-09-21 裁「参数按用点解析，会话不绑定项目」之评审门消费面收口（台账 #828——本族首笔；落地 = `thincoder-core/agent/write-gate.mjs` ∥ `thincoder-core/agent-tools/advisor.mjs` 两档单链 · 可 revert）。
   **验收** = 功能级红绿（旧码 10/10 拒 ⇒ 新码 7/7 可；另 3 档 = `thincoder-core/prompts` 运行时提示词档——非文档层，不入评审文档清单）+ 行为级（会话重启后 `#827` 设计评审受理启动）+ 回归锚 `docs/batches/2026-10-02-light-round-7.test.mjs`（4 例）。
   **边界 = 校验强度不变**（`criterion=scope-not-doc` 判据本体 ∥ 拒文案 ∥ `REVIEW_ROOT_KEYS` 键集零改——无主档回退会话根集判定 ∥ 声明外照拒，fail-closed 不减）；M4 单点 / M6 消费语义指针 = `docs/core/design/ENGINEERING-MODE-V2.md` §2.3 E6 ∥ §2.4 M6→M4 行 ∥ `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` F3（D2——本档不复述）。
@@ -714,6 +715,8 @@ AC-16 接线锁（`bin` 源码序）零改 · **AC-N5 / T13 收正**（门控第
 **本批（issue 修复批·四 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round4.md` §2（唯一承载面——一次性批次材料）。
 **本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
 **本批（引擎面缺口 · 2026-10-05）落点表** = `docs/batches/2026-10-05-engine-face-gaps.md` §2（唯一承载面——一次性批次材料；#941 ∥ #944 面）。
+
+- 2026-10-05（**批 review-face-gaps · 实施轮 · eng-coder**——承批档 `docs/batches/2026-10-05-review-face-gaps.md` §2 · 台账 #928 ∥ #945）：§2.5「advisor 评审门文档合法根集」条加**锚祖先链增量（本族第四笔）**——腿③候选底座并入 cwd 祖先链全量目录（现行集在前 ∥ 祖先链随尾、去重保序）；容器相对形在子仓锚下受理（受理判据 ∥ 围栏 ∥ 可读唯一化 ∥ fail-closed 歧义零改——详述单源 = 批档 §2.3）。
 
 - 2026-10-05（**批 engine-face-gaps · 设计评审轮 1 修正 · eng-designer——fix 轮；承批档 `docs/batches/2026-10-05-engine-face-gaps.md` §3 发现 2 / 4**）：§2.7 消费面读数补「两情形分清」句（键 `null` ⇒ 回退默认基底 ∥ 显式基底全不可读 ⇒ `throw`——AC-12 / T21 零改）+ M3 第二基底行同源随动；§3.2 补 **T62b**（基底回退读数）；§3.1 AC-12 互指句；§2.3 行 48∥49 行数按 `\n` 计数复核（176 ∥ 270）+ 口径注。零新语义。
 - 2026-10-05（**批 engine-face-gaps · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-engine-face-gaps.md` §1 · 台账 #941 ∥ #944；经父裁 L7 两度拆分后本批 = {#941, #944}——#942 ∥ #943 转 `docs/batches/2026-10-05-engine-tools-gaps.md`；#940 转 `docs/batches/2026-10-05-review-gate-gaps.md`）：#941 ⇒ §2.5 增「项目状态档（state）豁免工程写闸」条（分类器五值——判据单源 = `PORTABILITY.md` §3.2/§3.8）；#944 ⇒ §2.7 值域增「本面无 = 显式 `null`」（值表 ∥ 语义 5 ∥ 消费面读数段）+ §2.4 补 **KD-M1-37** + §3.1 补 **AC-39** + §3.2 补 **T61–T62** / T20 去 `null` / AC-11 随动；§2.2 两契约行随动。实施 = 本批实施轮。
