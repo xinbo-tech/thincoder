@@ -15,6 +15,7 @@
  *   T8  提示词加固句（两形输出 ⊗ 两源 EN/CN 逐字）               初红
  *   T9  TTL / 全串匹配零回归                                   初绿
  *   T10 未完成 ∥ stale ∥ D1 落盘失败 三径残片剥净                初红（现只剥全串形）
+ * 断代重锚（2026-10-05 · 批 2026-10-05-review-gate-gaps · 台账 #940）：T1 / T2 / T10-③ 输入补 `VERDICT: pass` 行——裁定闸（VERDICT 机械闸 §5.2）落地后回显不再单凭 echo 签发；语义零改。
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -49,7 +50,7 @@ const tmpCwd = (tag) => mkdtempSync(join(tmpdir(), `dte-${tag}-`))
 test("T1 截断回显（裸 uuid）⇒ 认 pass + M2 + 槽存全串 + 标记位置不变式", () => {
   const agent = mkAgent()
   const run = mkRun()
-  const raw = `# Review\n\nLooks good — no 🔴.\n\n${UUID}`
+  const raw = `# Review\n\nLooks good — no 🔴.\n\nVERDICT: pass\n\n${UUID}`
   const settled = dt.settleDesignReview(agent, run, TOKEN, raw)
   assert.equal(settled.passed, true)
   assert.equal(agent._engDesignTokens.get("design-1"), TOKEN, "槽存储恒全串")
@@ -66,7 +67,7 @@ test("T1 截断回显（裸 uuid）⇒ 认 pass + M2 + 槽存全串 + 标记位�
 test("T2 全串回显零回归（零 M2；suffix 在位；槽全串）", () => {
   const agent = mkAgent()
   const run = mkRun()
-  const raw = `# Review\n\nLooks good.\n\n[DESIGN-TOKEN:${TOKEN}]`
+  const raw = `# Review\n\nLooks good.\n\nVERDICT: pass\n\n[DESIGN-TOKEN:${TOKEN}]`
   const settled = dt.settleDesignReview(agent, run, TOKEN, raw)
   assert.equal(settled.passed, true)
   assert.equal(agent._engDesignTokens.get("design-1"), TOKEN)
@@ -193,7 +194,7 @@ test("T10-③ D1 落盘失败径：截断残片剥净；D1 标记在位（槽回
     const entry = {
       id: 2, role: "advisor", reviewType: "design", cancelled: false,
       run: mkRun(), designToken: TOKEN, launchSeq: 0,
-      report: `# Review\n\nok\n\n[DESIGN-TOKEN:${UUID}]`,
+      report: `# Review\n\nok\n\nVERDICT: pass\n\n[DESIGN-TOKEN:${UUID}]`,
     }
     const settled = ads.settleAdvisorRun(agent, entry)
     assert.equal(settled.passed, false, "落盘失败 ⇒ 结算未成立")

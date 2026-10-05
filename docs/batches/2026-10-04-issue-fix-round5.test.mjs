@@ -16,6 +16,7 @@
  *   L7b #867 SKIP_DIRS 两新项（`Library` ∥ `go`——甲面移录）
  *   L8 #867 home 检测：零索引 + 提示行（startup ∥ `/reindex`）+ 非 home 守卫不误触发
  *   L9 负向锁：CLI 死副本零残留 ∥ `thincoder.mjs` 零触（校验点 = `.cjs` shim 首行）
+ * 断代重锚（2026-10-05 · 批 2026-10-05-review-gate-gaps · 台账 #940）：L6b ① 输入补 `VERDICT: pass` 行——裁定闸（VERDICT 机械闸 §5.2）落地后回显不再单凭 echo 签发；语义零改。
  */
 import { after, test } from "node:test"
 import assert from "node:assert/strict"
@@ -315,7 +316,7 @@ test("L6b #863 advisor 回收：关闭轻量化 ∥ F2h 复用 ∥ Map 不随代
   const agent0 = { cwd: base, _engDesignTokens: new Map(), _role: "main" }
   const run = { reviewId: "r", reviewType: "design", designId: "d1", round: 1, priorOutput: "BIG", stale: false, open: true, docSetKey: "k" }
   const TOKEN = "11111111-1111-4111-8111-111111111111:4102444800000"
-  const settled = dt.settleDesignReview(agent0, run, TOKEN, `# Review\n\nAll good.\n\n${TOKEN}`)
+  const settled = dt.settleDesignReview(agent0, run, TOKEN, `# Review\n\nAll good.\n\nVERDICT: pass\n\n${TOKEN}`)
   assert.equal(settled.passed, true)
   assert.equal(run.open, false)
   assert.equal(run.priorOutput, null, "关闭点轻量化")
