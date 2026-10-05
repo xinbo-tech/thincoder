@@ -220,7 +220,7 @@ npm install --install-links             # link → registry 真实拷贝
 发完可恢复开发链接（`npm link @thincoder/core`——dev / prod 双态见 §2.6.1）。
 
 **render-core（`@thincoder/render-core`）不入发布序列**：永不发布（`private: true`）；**两打包窗内嵌形随打包器**：
-- **VSC vsix** = **link 形 + `--follow-symlinks`**——`npm install --install-links` 物化对其不可执行（vsce 依赖检测 `ELSPROBLEMS/invalid` ⇒ 打包硬失败；R1 打包窗实测 475 件）；
+- **VSC vsix** = **link 形 + `--follow-symlinks`**——`npm install --install-links` 物化对其不可执行（vsce 依赖检测 `ELSPROBLEMS/invalid` ⇒ 打包硬失败；R1 打包窗实测 475 件）；**回链自愈**：`publish-all.mjs` 段 0.5 于打包前自动把物化态拉回 link 形（零手工——`--install-links` 后无需再手敲 `npm link`）；
 - **桌面产物** = **物化（源树实拷）**——electron-builder 无 follow 面（junction 入 asar 仅为 link 节点 ⇒ 装后断链），物化由打包窗脚本执行、一律源自源树（单源 = `docs/desktop/design/PACKAGING.md` §2.2 ∕ §1 KD-64）。
 内嵌面收窄 = 仅运行必需（`.mjs` + `package.json`；core 另携 `prompts/` 16 + `tool-docs/` 48）。
 本步 `@thincoder/core` 物化纪律不动（桌面窗同理：物化源树）。单源 = `docs/render-core/design/RENDER-CORE.md` §1.3 ∕ §10 B。
@@ -418,5 +418,5 @@ OSS_KEY=… OSS_SECRET=… node scripts/deploy-oss.mjs    # 实传（脚本亦�
 - 2026-10-03（**发布口径 · 一体发布（用户裁定 · 主 agent 直接执行 · 可 revert）**——用户「以后发布的时候拜托三端和网站要一起发布」）：§5.8 注补**一体发布**段（官网同步 = 本次发布的组成部分——同轮必做；**发布轮收口 = 三端 ∧ 官网同步**；未完成 ⇒ 不得收口 · 停下上报 → 修复 → 重跑）；F4 行补**发布轮**收口句。**零新机制**（口径强化——§5.8 ∥ §6 机制全文不动）。
 - 2026-10-03（**桌面 Linux 产物批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-desktop-linux.md` §1 ∥ §1 补记二 · 台账 #847 · 需求 D42）：§5.6 增 **Linux 臂**（构建 ∥ 校验 ∥ 取回 ∥ 上传 ∥ 挂载——L1–L5）+ 标题 ∥ 定位 ∥ 构建机要求行随动；§5.6 步骤 4 翻两平台键形（+ Linux 三件 ∥ 上传序）+ 判据补 Linux 行（`latest-linux.yml` 对盘 ∥ 不含 deb）；完成判定补 Linux 臂；§5.1 图行随动；§6.5 判据 4 补 **Linux feed** 行。**零新机制**（沿 §2.11 单源）。明细 = 批档 §2。
 - 2026-10-03（**桌面 Linux 产物批 · 修复轮（机检红线清零）· eng-designer**——承 `docs/batches/2026-10-03-desktop-linux.md` §1 · 台账 #847）：宽面 2 行折行（步骤 4 行 ∥ 判据行——280 ∥ 287；语义零改）。**零新语义**。
-
 - 2026-10-05（**台账工具统一批（ledger-tool-unification）· eng-coder**——承 `docs/batches/2026-10-05-ledger-unification.md` §2 · 台账 #923）：`tool-docs/` 计数 52 ⇒ **48** 四处随动（F5 ∥ N5 ∥ §5.2 干跑表 ∥ §5.5 内嵌面句——现盘 `thincoder-core/tool-docs/` 实测）。**零新语义**（计数收正）。
+- 2026-10-05（**render-core 回链自愈 · 主 agent 直接执行 · 可 revert**——用户 23:10「render-core 的那个坑每次发布都会踩一遍，能避免吗？」）：`publish-all.mjs` 增**段 0.5**（打包前 render-core link 形态自愈——物化 ⇒ 回链 junction〔target = `realpathSync.native` 规范形〕）；§5.5 VSC vsix 行补「回链自愈」注（手工 `npm link` 不再需要）。**零新机制**（既有 R1 坑的自动化收口）。

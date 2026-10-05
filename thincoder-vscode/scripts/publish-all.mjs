@@ -7,6 +7,7 @@
  *
  * 流程（两段——每段各自可见于下方输出，任何一步失败即中止发布）：
  *   段 0  核版本存在性预检：registry 上须已有 vsix 将内嵌的核版本（核先发——A6 / §2.6.1）。
+ *   段 0.5 render-core 回链自愈：物化态 ⇒ 回 link 形（junction）——`--install-links` 全量物化坑。
  *   段 1  打包一次：`vsce package` 自动跑 `vscode:prepublish` = lint + `npm test`（单入口）全量
  *         （~72s）——全量门禁仅此 1 跑。无 <vsix> 参数时本脚本自跑该段；
  *         给了 <vsix>（已 `npm run package` 过）则整段跳过。
@@ -37,8 +38,8 @@
  * warning; skipping BOTH aborts).
  */
 import { execSync } from "node:child_process"
-import { existsSync, readFileSync } from "node:fs"
-import { join, resolve } from "node:path"
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync } from "node:fs"
+import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url))
@@ -83,6 +84,32 @@ try {
   console.error(`  ✘ registry 上找不到 @thincoder/core@${CORE_VERSION} —— 核须先发布（A6 / §2.6.1）`)
   if (!dryRun) process.exit(1)
   console.warn("  ⚠️ --dry-run：预检失败不中止（本次不发布；真实发布会在此 exit 1）")
+}
+
+// ── 段 0.5：render-core 回链自愈（发布窗已知坑的自动化收口——R1 起每轮实踩）──
+// `npm install --install-links` 是**全量开关**：core（须物化——vsce 不打包 symlink）与
+// render-core（须 link 形——vsce `--follow-symlinks` 靠它内嵌渲染核）一起被物化 ⇒ 打包前
+// vsce 依赖检测报 ELSPROBLEMS/invalid ⇒ 硬拦。此段在打包前把物化态的 render-core 拉回
+// link 形（junction，target = realpathSync.native 规范形——与 dev-link.mjs 同制）。
+const RENDER_CORE_LINK = join(ROOT, "node_modules", "@thincoder", "render-core")
+console.log("\n▶ ⓪.5 render-core 回链自愈")
+try {
+  const st = lstatSync(RENDER_CORE_LINK)
+  if (st.isSymbolicLink()) {
+    console.log("  ✔ 已是 link 形——零动作")
+  } else {
+    const target = realpathSync.native(resolve(ROOT, "..", "thincoder-render-core"))
+    rmSync(RENDER_CORE_LINK, { recursive: true, force: true })
+    mkdirSync(dirname(RENDER_CORE_LINK), { recursive: true })
+    symlinkSync(target, RENDER_CORE_LINK, "junction")
+    console.log(`  ✔ 物化态 ⇒ 已回 link（${target}）——'npm install --install-links' 后无需再手敲 npm link`)
+  }
+} catch (e) {
+  if (e?.code === "ENOENT") {
+    console.log("  ⚠️ node_modules/@thincoder/render-core 不在位——跳过（npm install 后重跑）")
+  } else {
+    throw e
+  }
 }
 
 // ── 段 1：打包（仅未提供 vsix 时）——vscode:prepublish 全量门禁仅此 1 跑 ──
