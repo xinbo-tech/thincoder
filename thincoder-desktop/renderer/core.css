@@ -62,7 +62,7 @@
 
 /* 面 20 推理块内 Markdown（VSC `.reasoning-content` 段实值 —— 覆盖 ① 共享项；`li` / `strong` / `em` 与 ① 同值）；
    **代码块来推（端差② 消 · 2026-09-29 · 批 `docs/batches/2026-09-29-hatch-clearance-2.md` · #673）**：
-   VSC `chat.css:404-413` 覆盖段照落 —— ① pre 面值 = VSC `:408` 逐值（灰底 = `--bg2` 缺省回退值
+   VSC `chat.css:404-414` 覆盖段照落 —— ① pre 面值 = VSC `:408` 逐值（灰底 = `--bg2` 缺省回退值
    `rgba(127,127,127,.12)` ∕ 圆角 0〔扁平化 2026-09-30〕 ∕ `padding: 8px 10px` ∕ `overflow-x: auto` ∕ `margin: 6px 0`；
    并复位面 7 壳的正文同形值（边框——VSC 该段不落壳规则 ⇒ 推理内 pre 无边框）；`position: relative`
    保留（复制钮锚点，零视觉面）；② `code` 归零 = VSC `:409`（`background: none` ∕ `padding: 0`）——
@@ -78,7 +78,8 @@
   padding: 1px 4px;
   border-radius: 0;
 }
-.reasoning-content ul, .reasoning-content ol { margin: 4px 0 6px; padding-left: 18px; }
+.reasoning-content ul { margin: 4px 0 6px; padding-left: 18px; }
+.reasoning-content ol { margin: 4px 0 6px; padding-left: calc(5ch + 2px); } /* #932：推理面编号标记同判（值须住本档——core.css 晚于 core-markdown.css 载入，后落者胜） */
 /* 展开体左流线（轻通道轮四 笔 6 · 2026-10-01——用户「向 CLI 看齐：展开区块左边有条竖线」；CLI `│ ` 行内线对位）。 */
 .reasoning-content { border-left: 2px solid var(--fg-muted); margin-left: 13px; padding-left: 10px; } /* 笔 7：3px ∥ 笔 8：3 ⇒ 2px（线心仍 ≈14px——margin 12.5 ⇒ 13）+ 左留白 6 ⇒ 10（用户「都挨着线了」）。 */
 /* 推理内代码块（VSC `:408-409` 照落 —— 选择器带容器前缀压面 7 ∕ 9 全局件值；见上注）。 */
@@ -130,7 +131,7 @@
 .code-copy-btn.copied { opacity: 1; color: var(--green); border-color: var(--green); }
 
 /* ── ④ 核件子 agent 块面（`subblocks/*` 四构件 —— 「对齐第二批」项 3；右列与流内归档块共用）。 ── */
-/* 值源 = VSC webview `chat.css:298-374` / `:328-371` / `:466-467`；口径三律同 D21：宿主主题色角色对位 / 语义常量值照搬 /
+/* 值源 = VSC webview `chat.css:298-374` / `:328-371` / `:467-468`；口径三律同 D21：宿主主题色角色对位 / 语义常量值照搬 /
    盒层单层律；`⏹` 字形住核件 JS。块壳背景 = `--overlay`（`--tool-bg` = textBlockQuote-background 角色对位 ——
    沿面 7 代码块壳同变量）。 */
 .advisor-block {
@@ -207,7 +208,7 @@
 .advisor-block.sub-block.sub-frozen { opacity: 1; }
 
 /* #518（映射源范围外漏项——本批补）：子 agent 块内容区 60px ∕ 表头 0.75 透明度 —— 值源 = VSC
-   `chat.css:466-467` 逐字（口径三律同 D21「语义常量值照搬」；选择器仅收窄 `.sub-block` —— 余
+   `chat.css:467-468` 逐字（口径三律同 D21「语义常量值照搬」；选择器仅收窄 `.sub-block` —— 余
    `.advisor-block` 维持基础 100px）。 */
 .advisor-block.sub-block .advisor-content { max-height: 60px; }
 .advisor-block.sub-block > summary { opacity: 0.75; }

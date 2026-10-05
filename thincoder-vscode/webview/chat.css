@@ -126,7 +126,7 @@
 .content h5 { font-size: 0.95em; margin: 5px 0 2px; font-weight: 600; }
 .content h6 { font-size: 0.9em; margin: 4px 0 2px; font-weight: 600; color: var(--textSecondary, var(--fg)); opacity: 0.8; }
 
-.content ol { margin: 4px 0 6px; padding-left: 20px; list-style: decimal; }
+.content ol { margin: 4px 0 6px; padding-left: calc(5ch + 2px); list-style: decimal; } /* #932 对齐：桌面同值（VSC 实测无紧贴裁切缘——纯对齐 + 1–3 位富余预置；标盒含尾空格 =（位数+2）ch） */
 .content ul ul, .content ol ul { margin: 0 0 2px; }
 .content ul ol, .content ol ol { margin: 0 0 2px; }
 .content li > ul, .content li > ol { margin: 2px 0 0; }
@@ -407,7 +407,8 @@
 .reasoning-content code { font-family: var(--mono, monospace); background: var(--bg2, rgba(127,127,127,.15)); border-radius: 3px; padding: 1px 4px; font-size: 0.92em; }
 .reasoning-content pre { background: var(--bg2, rgba(127,127,127,.12)); border-radius: 6px; padding: 8px 10px; overflow-x: auto; margin: 6px 0; }
 .reasoning-content pre code { background: none; padding: 0; }
-.reasoning-content ul, .reasoning-content ol { margin: 4px 0 6px; padding-left: 18px; }
+.reasoning-content ul { margin: 4px 0 6px; padding-left: 18px; }
+.reasoning-content ol { margin: 4px 0 6px; padding-left: calc(5ch + 2px); } /* #932 对齐：同 .content ol */
 .reasoning-content li { margin: 2px 0; }
 .reasoning-content strong { font-weight: 700; }
 .reasoning-content em { font-style: italic; }

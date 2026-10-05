@@ -47,7 +47,7 @@
   margin: 4px 0 6px;
   padding-left: 20px;
 }
-.block-text ol, .reasoning-content ol { list-style: decimal; }
+.block-text ol, .reasoning-content ol { list-style: decimal; padding-left: calc(5ch + 2px); /* #932：标记盒 =「<n>. 」含尾空格、右缘贴内容线 ⇒ 所需缩进 =（位数+2）ch——1–3 位（「999. 」= 5ch）；4 位不设防（用户 2026-10-05 裁）；calc 随 --fs 自适应 */ }
 .block-text li, .reasoning-content li { margin: 2px 0; line-height: var(--lh); }
 .block-text ul ul, .block-text ol ul, .reasoning-content ul ul, .reasoning-content ol ul { margin: 0 0 2px; }
 .block-text ul ol, .block-text ol ol, .reasoning-content ul ol, .reasoning-content ol ol { margin: 0 0 2px; }
