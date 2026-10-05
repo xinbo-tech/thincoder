@@ -166,6 +166,7 @@
    **附带**：CLI README 的 Changelog 摘要节（面向 npm 用户的英文精要 ✗ 非 CHANGELOG 全量镜像）同步补新版本段——首发漏更过一次（0.12.12→0.12.63 空窗 ✗ 2026-09-21 补 0.12.63/0.12.62 两段 ✗ 此后每发布必更 ✓）。
 3. **version bump**：`package.json` 改到期望号（**JSON.parse → 改字段 → JSON.stringify**——禁 PowerShell `Set-Content -Encoding UTF8`：会写 BOM `EF BB BF`，JSON 解析失败、发布门崩）。
 4. **依赖核对**：三产品（CLI ∕ VSC ∕ 桌面）`@thincoder/core` 声明与本次核版本对齐（§4.4——现 `^0.10.4`；核发新号后同步收正）。
+5. **发布轮批档**（`docs/batches/<日期>-release.md`——每轮发布建一档）：**§2 = 薄节**——一句话方案（**方案单源 = 本档 §5**：候选号 ∥ 逐端条目集 ∥ 命令 ∥ 判据 ∥ 回退全引；**零新设计**）+（可选）就位实读小表；**不做**逐端方案展开（展开 = §5 的活，重复 = 缺陷）——设计师分钟级即结（用户裁定 A · 2026-10-05）。
 
 ### 5.3 阶段 1 · 发核（`@thincoder/core`）
 
@@ -420,3 +421,4 @@ OSS_KEY=… OSS_SECRET=… node scripts/deploy-oss.mjs    # 实传（脚本亦�
 - 2026-10-03（**桌面 Linux 产物批 · 修复轮（机检红线清零）· eng-designer**——承 `docs/batches/2026-10-03-desktop-linux.md` §1 · 台账 #847）：宽面 2 行折行（步骤 4 行 ∥ 判据行——280 ∥ 287；语义零改）。**零新语义**。
 - 2026-10-05（**台账工具统一批（ledger-tool-unification）· eng-coder**——承 `docs/batches/2026-10-05-ledger-unification.md` §2 · 台账 #923）：`tool-docs/` 计数 52 ⇒ **48** 四处随动（F5 ∥ N5 ∥ §5.2 干跑表 ∥ §5.5 内嵌面句——现盘 `thincoder-core/tool-docs/` 实测）。**零新语义**（计数收正）。
 - 2026-10-05（**render-core 回链自愈 · 主 agent 直接执行 · 可 revert**——用户 23:10「render-core 的那个坑每次发布都会踩一遍，能避免吗？」）：`publish-all.mjs` 增**段 0.5**（打包前 render-core link 形态自愈——物化 ⇒ 回链 junction〔target = `realpathSync.native` 规范形〕）；§5.5 VSC vsix 行补「回链自愈」注（手工 `npm link` 不再需要）。**零新机制**（既有 R1 坑的自动化收口）。
+- 2026-10-06（**发布轮 §2 薄节口径（用户裁定 A · 主 agent 直接执行 · 可 revert）**——用户 2026-10-05 23:17「这次发布过程走了一次 eng-designer 是在干嘛？为什么？有意义吗？」→ 择 A）：§5.2 增**步骤 5 · 发布轮批档**——§2 = 薄节（一句话方案，单源 = §5；零新设计、不逐端展开）+（可选）就位实读小表；设计师分钟级即结。**零新机制**（记录形式口径）。
