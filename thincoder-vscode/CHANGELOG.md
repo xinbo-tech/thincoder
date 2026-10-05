@@ -2,6 +2,25 @@
 
 All notable changes to ThinCoder VS Code are documented here.
 
+## [Unreleased]
+
+> 0.10.3 → 0.10.4（月内 +1——发布时定号）
+
+### Added
+
+- **附件面词表（#948）**：`composer.attach.*` 五键 + `toolbar.attach` 值收正（两语——文本/源码档采集链词面）。
+
+### Changed
+
+- **核依赖升级**：`@thincoder/core` `^0.10.3` → `^0.10.4`（vsix 内嵌核 = 本次号）。
+- **消化账务（#930）**：投递-结算 ∥ 未结可见（webview 面随核同源）。
+- **`ledger` 统一入口（#923）**：工具表收正（五合 1 随核）。
+- **bash 执行器身份（#922）**：注入执行器行（webview 提示随实跑 shell）。
+
+### Fixed
+
+- **有序列表标记裁切（#932）**：`.content ol` 缩进 20 → `calc(5ch + 2px)`（「12.」类双位标记不再被削）。
+
 ## [0.10.3] — 2026-10-04
 
 > 0.10.2 → 0.10.3（月内 +1——发布时定号）
