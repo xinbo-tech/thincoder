@@ -26,9 +26,10 @@
  *   code — inside a declared code segment (default: the path segment `src`), or the
  *          fallback;  doc — documentation extension outside any code segment and not
  *          scratch;  temp — tmp-* name or .tmp/.temp extension;  aux — a default
- *          auxiliary-path segment sequence (test / tests / scripts / .thincoder/tmp —
- *          F9) that matched no code segment and neither doc nor temp.
- * Precedence: code segment → temp → doc → aux → fallback code.
+ *          auxiliary-path segment sequence (test / tests / scripts / .thincoder/tmp — F9)
+ *          that matched no code segment and neither doc nor temp;  state — a project state
+ *          file (`PROJECT-MANIFEST.json` basename ∥ `.thincoder/conventions.json` pair — #941).
+ * Precedence: code segment → temp → doc → aux → state → fallback code.
  *
  * Segment matching runs on the PROJECT-ROOT-RELATIVE FACE of a path (D17 · 2026-09-28): the
  * machine layout ABOVE the project root never participates. An absolute path outside the
@@ -128,18 +129,32 @@ function hasAuxSegment(p, conv) {
   return hasSegmentSequence(p, DEFAULT_AUX_PATHS, conv?.root, false)
 }
 
-/** "code" | "doc" | "temp" | "aux" — the single classification decision.
+/** Project state-file markers (data — #941 · PORTABILITY D19): manifest basename (any layer) ∥
+ *  retired-carrier pair; single sources: `MANIFEST_REL` ∥ `RETIRED_REL_PATH`. */
+const STATE_BASENAME = "project-manifest.json"
+const STATE_PAIR = ".thincoder/conventions.json"
+
+/** True when `s` names a project state file (basename any layer ∥ segment pair; case-insensitive — no face, D17). */
+function isStateFile(s) {
+  const segs = segmentsOf(s)
+  if (segs.length > 0 && lowerSeg(segs[segs.length - 1]) === STATE_BASENAME) return true
+  return hasSequenceIn(segs, [STATE_PAIR])
+}
+
+/** "code" | "doc" | "temp" | "aux" | "state" — the single classification decision.
  *  Precedence: code segment first (src/** stays product code even when the name
  *  looks scratch — the pre-existing unconditional-src rule), then temp, then a
  *  documentation extension, then an auxiliary-path segment sequence (test / tests
- *  / scripts / .thincoder/tmp — F9), else code (anything not doc/temp/aux is product
- *  code). Both segment checks run on the project-root-relative face (D17 — `faceOf`). */
+ *  / scripts / .thincoder/tmp — F9), then a project state file (#941), else code
+ *  (anything not doc/temp/aux/state is product code). Segment checks face-bound (D17);
+ *  state matches by name marker. */
 export function classifyPath(p, conv) {
   const s = String(p ?? "")
   if (hasCodeSegment(s, conv)) return "code"
   if (TEMP_FILE.test(s)) return "temp"
   if (DOC_FILE.test(s)) return "doc"
   if (hasAuxSegment(s, conv)) return "aux"
+  if (isStateFile(s)) return "state"
   return "code"
 }
 
@@ -163,6 +178,11 @@ export function isDocPath(p, conv) {
  *  predicate is the readable form for the test face. */
 export function isAuxPath(p, conv) {
   return classifyPath(p, conv) === "aux"
+}
+
+/** True when the path is a project state file (`classifyPath === "state"` — #941; derived form). */
+export function isStatePath(p, conv) {
+  return classifyPath(p, conv) === "state"
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

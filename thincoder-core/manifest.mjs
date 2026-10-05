@@ -10,7 +10,7 @@
  *    未知键（#802 / KD-M1-36）→ 产 unknownKeys + 一行可见告警（console.warn + logEvent；
  *    同档同键集去重、读到零未知键清该档 memo）——非拒定性零变。
  *  - validateManifest(obj) → { ok, errors, missingKeys, unknownKeys }：枚举 / version 数值 /
- *    docRoot 子键值形态（串 | 数组，F7）+ checkConfig.lineCounts 元素层形态——**纯函数、零 fs**；不落盘。
+ *    docRoot 子键值形态（串 | 数组 | null（本面无——KD-M1-37），F7）+ checkConfig.lineCounts 元素层形态——**纯函数、零 fs**；不落盘。
  *  - 三族声明键（`codePaths` / `index.{codeExtensions,docExtensions,publicRepos}` / `advisor.{docMap,standardsDoc}`——
  *    KD-M1-31 / M1-32）：缺键补默认；形态错 = 档非法（fail-closed，与 docRoot 子键同款）；
  *    读向 = `declaration.mjs`（2026-10-01 自 `conventions.mjs` 迁出——经其转口可达）经 `readManifest` /
@@ -101,13 +101,15 @@ export function docRootBase(cwd) {
  * `docRoot` 子键值 → **绝对路径数组**（F7 / §2.7 解析管线——全在本模块一处）：展开（串 /
  * 数组统一成列表）→ 逐元素 `trim` + `\` 归一 → `resolve(docRootBase(cwd), p)`（基数 =
  * 项目根，不回退原始 cwd）→ 去重（保序）。非法形态 → `[]`（零根——拒面在 `validateManifest`，
- * 本函数不判错；两处共用 `isValidDocRootValue`，判据单源）。
- * @param {unknown} value docRoot 某子键的值（串 | 数组）
+ * 本函数不判错；两处共用 `isValidDocRootValue`，判据单源）。`null`（本面无）⇒ `[]`（**合法
+ * 零根——非错**；#944 / KD-M1-37）。
+ * @param {unknown} value docRoot 某子键的值（串 | 数组 | `null`）
  * @param {string} [cwd] 会话锚（基数由 docRootBase 解析为项目根）
  * @returns {string[]} 绝对路径（去重保序）
  */
 export function docRootPaths(value, cwd) {
   if (!isValidDocRootValue(value)) return []
+  if (value === null) return [] // 「本面无」（#944）：合法零根——非错（不展开、不报错）
   const base = docRootBase(cwd)
   const list = (Array.isArray(value) ? value : [value]).map((p) => resolve(base, p.trim().replace(/\\/g, "/")))
   return [...new Set(list)]

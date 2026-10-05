@@ -12,12 +12,14 @@
 
 /**
  * `docRoot` 子键**值形态判据**（F7 / KD-M1-6 / KD-M1-8——判据单源）：非空字符串（`trim` 后
- * 非空），或非空数组且元素皆非空字符串（**同款口径**：元素 `trim` 后非空）；其余（空串 /
- * 空白串 / 空数组 / 数组含非串 / 空串 / 空白串元素 / 非串非数组）为非法。
+ * 非空），或非空数组且元素皆非空字符串（**同款口径**：元素 `trim` 后非空），或 `null`
+ * （**「本面无」合法哨兵**——KD-M1-37）；其余（空串 / 空白串 / 空数组 / 数组含非串 / 空串 /
+ * 空白串元素 / 非串非数组）为非法。
  * @param {unknown} value docRoot 某子键的值
  * @returns {boolean}
  */
 export function isValidDocRootValue(value) {
+  if (value === null) return true
   if (typeof value === "string") return value.trim() !== ""
   if (!Array.isArray(value) || value.length === 0) return false
   return value.every((p) => typeof p === "string" && p.trim() !== "")
@@ -110,9 +112,9 @@ export function validateManifest(obj) {
     }
     for (const sub of subkeys) {
       if (!(sub in value)) { missingKeys.push(`${nested}.${sub}`); continue } // 子键路径（AC-3 / T3b）
-      // docRoot 子键值形态（F7 / KD-M1-7）：串 | 非空串数组；非法 → 拒（不静默跳过）。
+      // docRoot 子键值形态（F7 / KD-M1-7 / KD-M1-37）：串 | 非空串数组 | null（本面无）；非法 → 拒（不静默跳过）。
       if (nested === "docRoot" && !isValidDocRootValue(value[sub])) {
-        errors.push(`docRoot.${sub} 值形态非法：${JSON.stringify(value[sub])}（须为非空字符串或非空字符串数组——KD-M1-6 / KD-M1-7）`)
+        errors.push(`docRoot.${sub} 值形态非法：${JSON.stringify(value[sub])}（须为非空字符串 / 非空字符串数组 / null（本面无）——KD-M1-6 / KD-M1-7 / KD-M1-37）`)
       }
       // checkConfig.lineCounts 元素层形态（#546）：数组，元素 = { doc, section } 非空串；非法 → 拒（不静默跳过）。
       if (nested === "checkConfig" && sub === "lineCounts" && !isLineCountsValue(value[sub])) {
