@@ -113,8 +113,8 @@
 
 **非同键输入 ∕ 事件处置**：窗属 A、用户在 B 发送 ⇒ B 走既有 `send` 单驱动径（`flights` 按键隔离）；A 的事件（`ev:susp` ∕ `ev:digest` ∕ `ev:subagent`）按 `key` 落各自切片——非同键帧对当前视图零可见面（**活态切回即见**（窗 ∕ 计数切片）；
    **行痕族**——显示 = 自然形（**digest 员行出即留——全轮在流**；**五清家族** = `stopMark` ∕ `timerNotice` ∕ `compress` ∕ `digest` ∕ `helpLines`——**首屏门单源** = `thincoder-desktop/renderer/page-read.mjs` `applyPage`；清点面分员见下句——两门 ∥ 单门）
-   **清点两门（行痕族消失时机批 · 2026-10-04 · 台账 #919）**：`helpLines` ∕ `stopMark` 两员 = 首屏门 ∥ **回合起跑门**（`msg:send` 出站即清 + 晚到 `stopped` 丢弃闩——两门幂等并集；单源 = `docs/desktop/design/RENDERER.md` §1.6 **KD-74**）；
-   `timerNotice` ∕ `compress` ∕ `digest` 三员 = 首屏门单门（未裁零动——`digest` 行出即留全轮在流，2026-10-01 口径维持）。
+   **清点两门（行痕族消失时机批 · 2026-10-04 · 台账 #919；timer 员并入 · 2026-10-05 · 台账 #952）**：`helpLines` ∕ `stopMark` ∕ `timerNotice` 三员 = 首屏门 ∥ **回合起跑门**（`msg:send` 出站即清 + 晚到 `stopped` 丢弃闩；timer 员晚到（出站后到期）照写照显 · 留至下一回合门——两门幂等并集；单源 = `docs/desktop/design/RENDERER.md` §1.6 **KD-74**）；
+   `compress` ∕ `digest` 两员 = 首屏门单门（未裁零动——`compress` 观察项；`digest` 行出即留全轮在流，2026-10-01 口径维持）。
    **+ 复列 = 全量（未结轮照现；记录位次原位——零配对）**（留档批 · #719——单源 = `docs/desktop/design/RENDERER.md` §1.1「留档记录」条）；跨会话可见面维持标签位标既有口径）。
 
 **唤醒 ∕ 消化轮的会话钉定（`_slot` 重钉）**：窗项持**入口键 + 入口 cwd**；每轮起跑（消化轮 ∥ 唤醒轮 ∥ 窗内用户回合）前按本窗键重装槽（`loadAgentSlot`——含 `_slot` 重钉 + 跨端槽改动随新读；先例 = 扩展端「每轮从槽新读」`thincoder-vscode/src/extension/suspension.mjs:242-243`）⇒ 回合落槽面 = 本窗键槽（非现刻 `activeSession`——切标签零影响）。
@@ -138,7 +138,7 @@
 |---|---|---|
 | `thincoder-desktop/src/main/suspension-drive.mjs` | **308**（届盘实读收正——表载 305 ⇒ 308；波 2a 迁移销项） | 挂起驱动胶水（起跑 ∕ 注册 ∕ 关清 ∕ 输入路由 ∕ 窗内队——行全文随分片轮齐平） |
 | `thincoder-desktop/src/main/suspension-timers.mjs` | **75**（届盘实读收正——表载 68 ⇒ 75；波 2a 迁移销项） | 窗内定时器面（自 `suspension-drive.mjs` 出档——行全文随分片轮齐平） |
-| `thincoder-desktop/renderer/events-wake.mjs`（R5 拆档产出） | **102**（届盘实读收正——表载 101 ⇒ 102；波 2a 迁移销项） | 宿主唤醒面三切片归约（`ev:susp` ∕ `ev:digest` ∕ `ev:timer`——行全文随分片轮齐平） |
+| `thincoder-desktop/renderer/events-wake.mjs`（R5 拆档产出） | **105**（实读 2026-10-05——timer 提醒行回合起跑门批（#952）实施落盘（104 ⇒ 105——`onTimer` 注随动）；前读 **104**（实读 2026-10-05——设计轮实读收正——表载 102 ⇒ 104）；前读 **102**（届盘实读收正——表载 101 ⇒ 102；波 2a 迁移销项） | 宿主唤醒面三切片归约（`ev:susp` ∕ `ev:digest` ∕ `ev:timer`——行全文随分片轮齐平） |
 | `thincoder-desktop/renderer/views/chat-digest-rows.mjs` | **292**（届盘实读收正——表载 239 ⇒ 292；波 2a 迁移销项） | 消化行族构树（自然形——起跑行 ∥ 计数行 ∥ cap 行 ∥ 终态行；单源 = 本档 §1 **KD-62**——行全文随分片轮齐平） |
 | `thincoder-desktop/src/main/suspension-guard.mjs`（队列取项边缘收正批新档） | **27**（实读 2026-09-29） | 降级窗占位守卫序列出档（自 `thincoder-desktop/src/main/suspension-drive.mjs` 拆出——越 300 预案落形：`guardedDeliver(key, hold, deliver)` = 起窗 ⇒ 送达面（信号直通）⇒ 窗后查位 ⇒ `release`（纯结构搬 ∕ 零行为变）；差异面（裁决回传后的 `return` ∕ `break` 与 `consumed` 用法）留调用点（`driveTurn` ∕ `resumeResidual`）；零宿主依赖 ⇒ 平 node 直测；单源 = 批档 `docs/batches/2026-09-29-queue-pickup-edge.md` §2.10 出档预案） |
 | `thincoder-desktop/src/main/timer-watch.mjs`（timer-wake 阶段 2 新档） | **76**（实读 2026-09-29） | 空闲 deadline 闩（键面 · 注入缝 · `unref`；单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.13） |
@@ -472,3 +472,4 @@
 - 2026-10-02（**桌面 UX 收尾批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-desktop-ux-closeout.md` §2 · 台账 #801 · 需求卷 D35）：§2 增「本批注（右栏池极多实例可滚动 · D35）」——实读结论（探针 3–5：容器链完好 ∥ 帧密同绿 ∥ 内容区首拍截留 = 既定语义 ∥ 覆盖层全吞）+ 复现判据两腿 + 候选映射 + 收口规则。**零新语义 · 产品码零触（设计轮）**。
 - 2026-10-02（**文档清账轮 · 执行轮 4（render-core + 桌面轻段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：§4 行数账 8 处 R3 裸名化（`chat-digest.mjs` ×5 ∥ `chat-digest-seat.mjs` ×3——两档已删 ∕ 改名 `chat-digest-rows.mjs`，去目录段）。**零新语义**。
 - 2026-10-04（**行痕族消失时机批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-row-traces-clear-at-turn.md` §2 · 台账 #919）：§3 行痕族句清点面收正——两员（`helpLines` ∥ `stopMark`）增回合起跑门、三员维持首屏门（单源 = `RENDERER.md` §1.6 KD-74）。**产品码零触（设计轮）**。明细 = 批档 §2。
+- 2026-10-05（**timer 提醒行回合起跑门批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-timer-notice-turn-gate.md` §1 ∥ §2 · 台账 #952）：§3 行痕族句清点面收正——`timerNotice` 员并入回合起跑门（两门三员）、余两员（`compress` ∕ `digest`）维持首屏单门（单源 = `RENDERER.md` §1.6 KD-74）。**产品码零触（设计轮）**。明细 = 批档 §2。

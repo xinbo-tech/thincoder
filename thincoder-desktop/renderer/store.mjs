@@ -71,7 +71,7 @@
  *  诊断面（现时视图零消费 —— 诊断主载 = 核落账，禁假造）；未取 / 取失败 ⇒ 空表（禁假造）；写者单点 = 纯动作 `setModelCandidates`。
  *  `helpLines` = **`/help` 行集切片**（`/help` 增量 · 2026-10-01② · 台账 #761）：按会话键存 `{ kind, text }` 行集（核 `formatHelp` 产出）；写者单点 = 纯动作 `setHelpLines`
  *  （端装配面 `printHelp` 口）；读面 = 流内帮助行族（非块节点 · 尾组槽位 —— `renderer/views/chat-chrome.mjs`）；非落盘件 ⇒ 首屏页读整置即失（同 `timerNotice` 族）；
- *  **行痕族两员清点时机 = 两门**（行痕族消失时机批 · 2026-10-04 · 台账 #919）：`helpLines` ∥ `stopMark` 首屏门保留 + 新增回合起跑门（`msg:send` 出站即清 —— 单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74）。
+ *  **行痕族三员清点时机 = 两门**（行痕族消失时机批 · 2026-10-04 · 台账 #919；timer 员并入 · 2026-10-05 · 台账 #952）：`helpLines` ∥ `stopMark` ∥ `timerNotice` 首屏门保留 + 回合起跑门（`msg:send` 出站即清 —— 单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74）。
  *  `stopHold` = **晚到 `stopped` 丢弃闩切片**（同批）：按会话键置真（回合起跑门簿记）——闩开窗内（出站起、本键回合首帧前）到达的 `stopped` **只弃痕写**（`renderer/events.mjs` `withStopMark` 单点门；回合尾其余结算零触）；
  *  开门 = 本键回合首帧（`turn` 事件 ∧ 此前非 running —— 与 `turnStarts` 起刻同判，摘闩住 `renderer/events.mjs`）；**门簿记非痕**：闩不入首屏五清（首屏页读不摘 —— 防清后失守）、不入 `CHAT_KEYS`（零渲染依赖 —— 闩单独写 ⇒ 零重绘）。
  */
@@ -248,23 +248,26 @@ export function setHelpLines(state, key, rows) {
   return { ...state, helpLines: out }
 }
 
-/** 回合起跑门清点（纯动作 —— 行痕族消失时机批 · 2026-10-04 · 台账 #919；单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74）：
+/** 回合起跑门清点（纯动作 —— 行痕族消失时机批 · 2026-10-04 · 台账 #919；timer 员并入 · 2026-10-05 · 台账 #952；单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74）：
  *  `msg:send` 出站时刻同笔调用（写者两处 = `renderer/composer-wire.mjs` `sendDirect` ∥ `sendQueued` 的 `call("msg:send")` 前沿）——
- *  ① 摘本键 `helpLines`；② 摘本键 `stopMark`；③ 置闩 `stopHold[key] = true`（晚到 `stopped` 丢弃闩——门簿记非痕，
- *  开门 = 本键回合首帧住 `renderer/events.mjs`）。两门 = 幂等并集：键无效 ⇒ 原引用；两痕已空 ∧ 闩已在 ⇒ 原引用（等值零通知）。
- *  三族（`timerNotice` ∥ `compress` ∥ `digest`）零触（未裁零动 —— 批档 §2.9 边界②）。 */
+ *  ① 摘本键 `helpLines`；② 摘本键 `stopMark`；③ 摘本键 `timerNotice`（晚到到达照写照显——留至下一回合门）；④ 置闩 `stopHold[key] = true`（晚到 `stopped` 丢弃闩——门簿记非痕，
+ *  开门 = 本键回合首帧住 `renderer/events.mjs`）。两门 = 幂等并集：键无效 ⇒ 原引用；三痕已空 ∧ 闩已在 ⇒ 原引用（等值零通知）。
+ *  `compress` ∥ `digest` 两族零触（未裁零动——`compress` 观察项）。 */
 export function clearTurnTraces(state, key) {
   if (typeof key !== "string" || key === "") return state
   const help = state?.helpLines ?? {}
   const marks = state?.stopMark ?? {}
+  const notices = state?.timerNotice ?? {}
   const holds = state?.stopHold ?? {}
   let nextHelp = help
   if (help[key] !== undefined) { nextHelp = { ...help }; delete nextHelp[key] }
   let nextMarks = marks
   if (marks[key] !== undefined) { nextMarks = { ...marks }; delete nextMarks[key] }
+  let nextNotices = notices
+  if (notices[key] !== undefined) { nextNotices = { ...notices }; delete nextNotices[key] }
   const nextHolds = holds[key] === true ? holds : { ...holds, [key]: true }
-  if (nextHelp === help && nextMarks === marks && nextHolds === holds) return state
-  return { ...state, helpLines: nextHelp, stopMark: nextMarks, stopHold: nextHolds }
+  if (nextHelp === help && nextMarks === marks && nextNotices === notices && nextHolds === holds) return state
+  return { ...state, helpLines: nextHelp, stopMark: nextMarks, timerNotice: nextNotices, stopHold: nextHolds }
 }
 
 /** 模型候选切片写（纯动作 —— 输入面板上提批 ∕ 全渠扇出批收正：核件面板读面③ `state.models()` 唯一写点）：

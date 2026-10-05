@@ -93,7 +93,8 @@ export function onDigest(state, ev) {
 
 /** `ev:timer`——到期触发切片（按会话 `key` 分槽 · 同键就地替换——**最近一次交付**；行文 = 交付原文）：
  *  消费 = 流内触发行组 `[data-timer]`（构树 ∕ 帧尾同刷住 `renderer/views/chat-chrome.mjs`）；生命期 = **运行期痕**
- *  （非落盘件 —— 首屏页读整置即失；同 `[data-stopped]` 族）；`text` 非非空串 ⇒ **零写**（禁假造空行）。
+ *  （非落盘件 —— 清点两门：首屏页读整置即失 + **回合起跑门** = `msg:send` 出站即清——timer 员 2026-10-05 · 台账 #952 并入；
+ *  晚到到达照写照显 · 留至下一回合门；单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74）；`text` 非非空串 ⇒ **零写**（禁假造空行）。
  *  显示裁（≤3 行 + `…`）= 渲染面单点（`timerGroupNode`）；单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.11。 */
 export function onTimer(state, ev) {
   if (typeof ev.text !== "string" || ev.text === "") return state

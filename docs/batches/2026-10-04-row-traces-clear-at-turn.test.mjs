@@ -1,4 +1,5 @@
 /**
+ * 断代重锚（2026-10-05 · 批 2026-10-05-timer-notice-turn-gate · 台账 #952）：T6 timerNotice 臂随裁翻转（并入回合起跑门——clearTurnTraces 扩员）；余腿零改。
  * 2026-10-04-row-traces-clear-at-turn.test.mjs — 批内件（行痕族消失时机批 · 台账 #919 · 实施轮）。
  * 判据表 = 批档 `docs/batches/2026-10-04-row-traces-clear-at-turn.md` §2.6 / §2.7（评审 #4 pass · 修正项随臂）；
  * 机制单源 = `docs/desktop/design/RENDERER.md` §1.6 **KD-74**（两门 + 晚到 `stopped` 丢弃闩）。
@@ -15,7 +16,7 @@
  *       出站回执非 `ok` ⇒ 闩留场 ⇒ 其后回合首帧摘闩 ⇒ 新 `stopped` 照写（自愈——无永久压制）。
  *   T5（恒绿 · 首屏门不回归）：`applyPage` `before == null` ⇒ 两痕仍清 ∥ `before` 非空 ⇒ 不清（五清零动）；
  *       闩 `stopHold` 不入首屏清键集（首屏读不摘闩——门簿记非痕）。
- *   T6（恒绿 · 三族零触）：出站清点后 `timerNotice` ∥ `compress` ∥ `digest` 三切片引用不变（零写）。
+ *   T6（断代重锚 2026-10-05 · 批 #952）：出站清点后 `timerNotice` 本键摘（原「引用不变」随裁翻转——并入回合起跑门）∥ `compress` ∥ `digest` 两族引用不变。
  *   T7（红→绿 · 幂等）：两连发 ⇒ 第二次原引用（闩已置 ∧ 两痕已空 ⇒ 等值零通知）。
  *
  * 车具：**零 DOM**（机制面全平 node 直测——纯动作 ∥ 纯归约 ∥ wire 注入桩；`sendDirect` 内 `panelOf` ∥ `repaint` ∥
@@ -50,7 +51,7 @@ const { reduce } = await mod("thincoder-desktop/renderer/events.mjs")
 const { applyPage } = await mod("thincoder-desktop/renderer/page-read.mjs")
 
 const KEY = "p1:m1"
-/** 两痕在场态（AC-1 / AC-2 起场）：`helpLines` ∥ `stopMark` 各一键 + 对照三族（T6 断言零触）。 */
+/** 两痕在场态（AC-1 / AC-2 起场）：`helpLines` ∥ `stopMark` 各一键 + 对照族（T6：timerNotice 入闸本键摘 ∥ compress ∥ digest 零触）。 */
 function stateWithTraces(over = {}) {
   return {
     ...initialState(),
@@ -185,14 +186,14 @@ test("T5（恒绿 · 首屏门不回归）：applyPage before==null ⇒ 两痕�
   assert.equal(/clearTurnTraces\(state/.test(prSrc) || /clearTurnTraces\(table/.test(prSrc), false, "page-read 零调起跑动作（两门各自独立——首屏门本体零触；头注指针句非调用）")
 })
 
-// ─── T6（恒绿 · 三族零触）───────────────────────────────────────────────────────
-test("T6（恒绿 · 三族零触）：出站清点后 timerNotice ∥ compress ∥ digest 引用不变（零写）", () => {
+// ─── T6（断代重锚 · timer 并入起跑门 ∥ compress ∥ digest 零触）───────────────────────────────────────────────────────
+test("T6（断代重锚）：出站清点后 timerNotice 本键摘（2026-10-05 并入回合起跑门）∥ compress ∥ digest 引用不变", () => {
   const s = stateWithTraces()
   const out = clearTurnTraces(s, KEY)
-  assert.equal(out.timerNotice, s.timerNotice, "timerNotice 引用不变")
+  assert.equal(out.timerNotice[KEY], undefined, "timerNotice 本键摘（断代重锚——原「引用不变」随裁翻转）")
   assert.equal(out.compress, s.compress, "compress 引用不变")
   assert.equal(out.digest, s.digest, "digest 引用不变")
-  assert.equal(out.timerNotice[KEY].text, "到期行", "timerNotice 本键行照留")
+  assert.equal(s.timerNotice[KEY].text, "到期行", "起场对照：本键行原在场")
 })
 
 // ─── T7（红→绿 · 幂等：两连发 ⇒ 第二次原引用）────────────────────────────────────

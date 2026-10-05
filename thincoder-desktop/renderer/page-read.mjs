@@ -204,7 +204,8 @@ function clearStopMark(table, key) {
 }
 
 /** 到期触发痕清点（timer-wake 阶段 2 · 单源 = 本档）：首屏页读（`before == null`）⇒ 摘本键触发行（运行期痕 ——
- *  **非落盘件**：重开 / 切回页读即失）；无痕 ⇒ 原引用（零写）。 */
+ *  **非落盘件**：重开 / 切回页读即失；**本族清点 = 两门**——首屏门 + 回合起跑门（`msg:send` 出站即清——`clearTurnTraces`；
+ *  timer 员 2026-10-05 · 台账 #952 并入；单源 = `docs/desktop/design/RENDERER.md` §1.6 KD-74）；无痕 ⇒ 原引用（零写）。 */
 function clearTimerNotice(table, key) {
   if (table === null || typeof table !== "object" || table[key] === undefined) return table
   const next = { ...table }
