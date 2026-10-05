@@ -254,7 +254,7 @@ export const deleteTool = {
   parameters: {
     type: "object",
     properties: {
-      path: { type: "string", description: "File path (relative to cwd or absolute)" },
+      path: { type: "string", description: "File or empty-directory path (relative to cwd or absolute)" },
       force: { type: "boolean", description: "Allow deleting git-tracked files (default false)" },
     },
     required: ["path"],
@@ -269,7 +269,13 @@ export const deleteTool = {
     } catch {
       throw new Error(`File not found: ${args.path}`)
     }
-    if (s.isDirectory()) throw new Error(`"${args.path}" is a directory — use bash to remove directories`)
+    if (s.isDirectory()) {
+      try { await writeThroughPath(abs, null, { op: "rmdir" }) } catch (e) {
+        if (e?.code !== "ENOTEMPTY" && e?.code !== "EEXIST") throw e
+        throw new Error(`"${args.path}" is a directory and is not empty — only empty directories can be deleted (nothing recursive is ever removed). Remove the contents first (delete bottom-up for nested empty directories).`)
+      }
+      return `Deleted ${args.path}`
+    }
     // git-tracked files: refuse direct deletion (safety net); untracked: allow
     // Use resolved relative path (normalized forward slashes) to prevent backslash/unusual paths from bypassing ls-files matching
     const rel = relative(ctx.cwd, abs).replace(/\\/g, "/")

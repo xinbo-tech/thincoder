@@ -10,6 +10,7 @@
  * **歧义锚**（条 5 · 2026-10-02 · #828）= create 按目标所属项目落基底 ∥ 无所属显式拒；读面候选腿追加；
  * 在飞 ∥ 写门基底集 = 候选并集（`batchDocBases`）；**零变面** = 绝对路径照旧、三个错误文案逐字、
  * 「参数在 + 路径可读」判据句、`ok` / `none` 两态。
+ * **基底自有项目根腿 + 基底相对单段收窄**（条 6 · 2026-10-05 · #942）= 逐基底 `owningProject` 恰一落点收 ∥ 多落点显式拒（`ambiguousLandingError`）；基底相对腿限单段（多段串不二次拼接）。
  *
  * 依赖（KD-4 单向）：本档为**叶档**——只 import `node:*` 与 `../manifest.mjs`；主档 re-export 保既有面。
  */
@@ -98,6 +99,7 @@ const outsideBasesError = (raw) => new Error(`batch: create path resolves outsid
 const anchoredEscapeError = (raw) => new Error(`batch: create path is anchored at a batch base root but does not resolve under the declared docRoot.batches root(s) — refusing to nest it (fail-closed). Path: ${raw}`)
 /** 歧义锚 create 拒面（**文案逐字** = `BATCH-RECORD.md` §4.15 条 5——机检锚 `ambiguous session anchor`）。 */
 const ambiguousCreateError = (raw, candidates) => new Error(`batch: ambiguous session anchor — create target "${raw}" belongs to no candidate project; pass an explicit project path (e.g. "${candidates[0]}/docs/batches/<file>.md"). Candidates: ${candidates.join(", ")}`)
+const ambiguousLandingError = (raw, landings) => new Error(`batch: create path resolves under more than one declared batch-record base — refusing to pick one (fail-closed); pass an explicit path (absolute preferred). Path: ${raw}. Candidates: ${landings.join(", ")}`)
 
 /** 歧义锚读面候选腿（条 5）：逐候选项目——项目根形（`resolve(candidate, p)`）∥ 声明基底形
  *  （候选按名排序、并集保序——「首个可读」在此即为确定判读）。 */
@@ -149,7 +151,7 @@ export function resolveBatchDocPath(cwd, given) {
 }
 
 /**
- * **create 面**解析（§4.15 条 2/3）：绝对路径照旧取用（仍过越基底判据）；相对路径 = 候选序中首个**落基底
+ * **create 面**解析（§4.15 条 2/3/6）：绝对路径照旧取用（仍过越基底判据）；相对路径 = 候选序中首个**落基底
  * 根内**者（新档不存在——可读性无判别力）；锚定串只解析项目根形，不落基底内 ⇒ fail-closed 新文案。
  *  **歧义锚**（条 5）：目标所属项目（`owningProject`）∈ 锚候选集 ⇒ 基底 = 该项目声明面（落其基底内；
  *  越出 ⇒ 既有 fail-closed）；无所属 ⇒ **显式拒**（列候选 + 显式路径指引——不静默落锚）。
@@ -179,8 +181,26 @@ export function resolveBatchCreatePath(cwd, given, bases) {
     if (!insideBases(abs, roots)) throw anchoredEscapeError(raw)
     return abs
   }
-  for (const abs of [resolve(base, p), resolve(batchProjectRoot(base), p), ...roots.map((b) => resolve(b, p))]) {
+  for (const abs of [resolve(base, p), resolve(batchProjectRoot(base), p)]) {
     if (insideBases(abs, roots)) return abs
+  }
+  // ③ 基底自有项目根形（#942 条 6）：owningProject 可判者逐基底取值；distinct 落点 ≥2 ⇒ 拒
+  const owned = []
+  for (const b of roots) {
+    const ownRoot = owningProject(b)
+    if (!ownRoot) continue
+    const abs = resolve(ownRoot, p)
+    if (insideBases(abs, roots) && !owned.some((x) => samePath(x, abs))) owned.push(abs)
+  }
+  if (owned.length > 1) throw ambiguousLandingError(raw, owned)
+  if (owned.length === 1) return owned[0]
+  // ④ 基底相对形收窄单段（归一后无 `/` 才走原基底腿——多段串不二次拼接）
+  const leafRel = roots.length ? relative(roots[0], resolve(roots[0], p)) : ""
+  if (leafRel && !leafRel.startsWith("..") && !leafRel.includes(sep)) {
+    for (const b of roots) {
+      const abs = resolve(b, p)
+      if (insideBases(abs, roots)) return abs
+    }
   }
   throw outsideBasesError(raw)
 }

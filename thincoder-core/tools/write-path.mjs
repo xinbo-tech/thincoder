@@ -19,7 +19,7 @@
  * 记账**（两段式全部成功后由调用方一次 `markDirty`——批级语义，与改前逐字同）。`file.mjs` 只做
  * 再导出，保既有 import 面稳定（模块拆分写优先纪律）。
  */
-import { writeFile, unlink, rename, cp, rm } from "node:fs/promises"
+import { writeFile, unlink, rename, cp, rm, rmdir } from "node:fs/promises"
 
 /** apply_patch 两段式的暂存后缀（单点定义——阶段一落暂存档、阶段二提交、失败清理均用它）。 */
 export const TMP_SUFFIX = ".thincoder-tmp"
@@ -106,7 +106,7 @@ async function tryInjectedPath(abs, content, meta) {
   if ((op === "move" || op === "rename" || op === "copy") && typeof meta.dest === "string" && meta.dest.length > 0) {
     gateOpenDoc(impl, meta.dest) // dest 面过门禁（覆盖目标档——与 src 同源拒写判据）
   }
-  // 编辑器径只承载**内容写点**（op="write"）；delete / 路径操作（copy/move/rename）与
+  // 编辑器径只承载**内容写点**（op="write"）；delete / rmdir / 路径操作（copy/move/rename）与
   // commit（默认径两段式的收尾）无端侧载体 ⇒ 门禁过后回默认径。
   if (!doc || op !== "write") return null
   if (typeof impl.applyEdit !== "function") return null
@@ -120,7 +120,7 @@ async function tryInjectedPath(abs, content, meta) {
  * 默认径（无注入面 / 注入面未处理）——**CLI 语义，零行为变**。
  *
  * meta:
- *   · `op`     "write"（默认）| "delete" | "copy" | "move" | "rename" | "commit"
+ *   · `op`     "write"（默认）| "delete" | "rmdir" | "copy" | "move" | "rename" | "commit"
  *   · `record` op="write"：写后记账快照（recordWrite 第二参——受影响区）
  *   · `dest`   op ∈ {copy, move, rename}：目标绝对路径
  *   · `stage`  op="write"：落到 `<abs>.thincoder-tmp`（**不提交、不记账**）——apply_patch
@@ -149,6 +149,8 @@ async function defaultPath(abs, content, meta) {
       markDirty(abs)
       return { written: true, via: "fs" }
     }
+    // #943：空目录移除（非空 ENOTEMPTY 上抛——调用面译拒）；不记 dirty（目录无行号语义）。
+    case "rmdir": { await rmdir(abs); return { written: true, via: "fs" } }
     case "copy": {
       await cp(abs, meta.dest, { recursive: true, force: true })
       return { written: true, via: "fs" }
@@ -174,7 +176,7 @@ async function defaultPath(abs, content, meta) {
  * 核内**单一写路径点**——全部工具写点经此落盘。
  *
  * @param {string} abs 目标绝对路径
- * @param {string|null} content 写入内容（op="write" 必填；delete / copy / move / rename 传 null）
+ * @param {string|null} content 写入内容（op="write" 必填；delete / rmdir / copy / move / rename 传 null）
  * @param {object} [meta] 见 defaultPath 的字段表
  * @returns {Promise<{written: boolean, via: "editor"|"fs"|"staged"|"committed"}>}
  *   `via` = 实际落盘径（"editor" = 注入面已提交；"staged" = 已落暂存待 `op="commit"`）；
