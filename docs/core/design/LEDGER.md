@@ -106,7 +106,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 
 **边界**：不做跨项目全量一条命令迁移（逐项目锚定）；不自动执行（需 `--confirm`）；不删除存量残档（只报告 + 建议）；不动其他用户态面（sessions / checkpoints / memory / `ledger-notify.json` 历史存量档——去重机制退役随深清，零读写）；不做自动回滚（回退 = 从备份拷回 + 重开校验，手工步）。
 
-**指针**：验收 = §8 AC-M2-12 / AC-M2-13 · 用例 T24–T32；CLI 接线 = `thincoder-cli/bin/thincoder.mjs` `case "ledger"`。
+**指针**：验收 = §8 AC-M2-12 / AC-M2-13 · 用例 T24–T32；CLI 接线 = `thincoder-cli/bin/thincoder.mjs` `case "ledger"`；首跑检测提示（F-LX3）= §12。
 
 ## 3. 状态机（六态 + 迁移表）
 
@@ -284,6 +284,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 | `ledgerKey(root)` | 项目根 → 库键（`sha1(normalizeCwd(root))[:16]`——键式单源，§2.1） |
 | `ledgerDirPath()` | 台账库目录（`_setLedgerDirForTest` 覆盖的同一变量——迁移 / 审计面默认根） |
 | `runLedgerMigrate(args, …)` / `runLedgerAudit(args, …)` | 存量迁移 / 目录审计命令面（§2.2；CLI 子命令入口） |
+| `ledgerVariantNotice({ cwd, dir, locale, exists })`（**新增**） | 变体键库首跑检测提示（§12——命中 ⇒ 单行文案；无 ⇒ `null`；**进程内一次为限**）；导出档 = `thincoder-core/ledger-variant-notice.mjs`（拟新增——本批实施轮落盘） |
 | `openLedger(cwd)` | → `DatabaseSync` 句柄 + `ensureSchema`（幂等建表） |
 | `ledgerQuery({ cwd, status, kind, board })` | SELECT 行集（只读，全角色） |
 | `ledgerCount({ cwd })` | `COUNT(*)` WHERE 未决四态（单源计数） |
@@ -524,7 +525,8 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 - 2026-10-05（**批 ledger-tool-unification · 修正轮（评审轮次 1 发现 1–10 · 父裁 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-05-ledger-unification.md` §3 轮次 1）：§11.3 钉守卫入参形态（已消费 `action` 的余键——§3.2 / §11.11 三处同文）+ §11.10 KD-unif-8；§11.8 增量收敛（`ledger-tools.mjs` +≈75 ⇒ 估 ≈265）+ 读数收正（common.md 170 ∥ persona-engineering.md 195）+ 计数簇（需求侧 PROMPT-SYSTEM 补入 ∥ design 侧 `:23` 补列）+ API-CONTRACT 行入表；§11.11 用例改号 T1–T12 ⇒ T77–T88 + 增 T89–T91（P2 / P4 / P6——首用未占用连续段）+ §8 登记映射；§8 两处在树引用补退役标记。**判据本体零改**；明细 = 批档 §2 修正块。
 - 2026-10-05（**批 ledger-tool-unification · 实施中裁定（评审轮次 2 后）· eng-designer**——承批档 `docs/batches/2026-10-05-ledger-unification.md` §2 修正块（实施舱 #29 上报 → 父侧 01:2x 裁定）：§11.2 补**只读分类**句（全量变体 `readonly: false` + `isReadonlyAction`（`action ∈ {query, count}` ⇒ true）∥ 只读变体 `readonly: true`）+ **残留两条**登记（钩子覆盖不到的工具级 `readonly` 消费点——不改他档无法消）；§11.10 增 KD-unif-9。**零其他语义**；明细 = 批档 §2 修正块。
 - 2026-10-05（**批 ledger-tool-unification · 实施后同步（微轮）· eng-designer**——承批档 `docs/batches/2026-10-05-ledger-unification.md` §5（#29 产品面 · #30 随动面）+ 父侧核验读数（api-contract 2878 条 · doc-check 悬空 0 · 批内件 18/18）：§11.2 两处收正——re-export 面补 `ledgerReadTool` 第二名（实读 `thincoder-core/ledger.mjs:191`）∥ 残留条口径改「行为影响面两条 + 同判据两处零影响」（四行号俱列；末句改「实施轮登记 = 批档 §5（#29）」）；§11.8 自指行读数收正（702 ⇒ 710——末行号法）。**零其他语义**；明细 = 批档 §2 微块。
-
+- 2026-10-05（**批 ledger-variant-db-notice · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-ledger-variant-db-notice.md` §1 · 需求 §②.10 F-LX3 / 台账 #935）：新增 **§12 变体键库首跑检测提示**（检测判据 = 文件存在 · 提示面 = TUI 启动 opts 承载一行 · 核内一次为限 · 全径静默；用例 U-VN1–U-VN6 / 验收 A-VN1–A-VN6——批内编号，§8 不增行）+ §7.1 导出行 + §2.2 指针行。**实现 = 本批实施轮**；编号撞车上抛 = 批档 §2。明细 = 批档 §2。
+- 2026-10-05（**批 ledger-variant-db-notice · 设计评审轮 1 修正（评审 #3 发现 1–4 · 父裁逐号落修）· eng-designer**——承批档 `docs/batches/2026-10-05-ledger-variant-db-notice.md` §3 轮次 1）：§12 全节 AC 引用改终值 **AC-M2-20**（17/18/19 已占用——需求侧连避；§12.6 编号注记终局句）∥ §12.7 headless 面收口为单源结论（TUI 为限——机器消费面纪律 + §7.8 不变量「headless 零新增输出」同向）∥ §12.1 KD-VN1 理由① 括注收窄为与 §2.2 同读的分述（空库 ⇒ 迁移照回收；坏档 / `-wal` ⇒ confirm 面拒跑、audit 定性）∥ API-CONTRACT 判定 = 新档导出入生成区（实施轮重跑——批档 §2 修正块）。**判据本体 / 用例 / 验收内容零改**。明细 = 批档 §2 修正块。
 
 ## 11. Ledger-tool unification（2026-10-05 · 批档 `docs/batches/2026-10-05-ledger-unification.md`）
 
@@ -706,4 +708,103 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 - **不做运行期 depth 门**：写面不可达保持 **schema 级**（不降为 execute 门）。
 - **不并行留旧装配**：旧五名不入任何装配面（与「合并成一个」字面一致——终值面唯一名 `ledger`）。
 - **不改 API-CONTRACT 语义区**（生成区随实施轮重跑——§11.9）；**不动桌面端**（零自持工具装配面——随核装配）。
+
+## 12. 变体键库首跑检测提示（F-LX3 · 2026-10-05 · 批档 `docs/batches/2026-10-05-ledger-variant-db-notice.md`）
+
+**动因**：GitHub #19 请求②——旧产物持续写入小写盘符变体键（实读 21 库中 10 为变体键、约 130 条搁浅）；键归一（§2.1）修复已入版但用户无发现途径。
+**需求** = `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-LEDGER.md` §②.10（F-LX3）+ §④ AC-M2-20；台账 #935。
+**目标**：升级到含键归一的版本后，**当前项目根**的存量变体键库不再无声搁浅——CLI 主入口启动时自动发现并单行引导（`thincoder ledger audit` 查看 ∥ `thincoder ledger migrate` 收正）；**只提示，零自动动作**。
+
+### 12.1 检测语义（判据句）
+
+- **输入** = 当前项目根：`resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")`——与 `planLedgerMigration` 的根式**同一子表达式**（检测出的源集 ≡ `migrate` 的变体源集：同根式 / 同枚举 / 同过滤；`--from` 补充源不属检测面）。
+- **变体键枚举** = `legacyKeyVariants(root)`（`thincoder-core/ledger-migrate.mjs:42-45`——**检测面零新建哈希式**，键式单源）；再过滤 `k !== ledgerKey(root)`（小写盘符入参时翻转拼写 ≡ 归一后主键——主库不自报「变体」）。
+- **「变体键库在盘」判据 = 文件存在**（`statSync(p).isFile()`——与 `migrate` 源枚举的过滤同判据）。理由：① 提示与 `migrate` 源集同判据——提示 ⇒ 该源皆有既定处置（分述：空库 ⇒ `migrate` 照回收；坏档 / `-wal` ⇒ confirm 面拒跑（fail-closed——§2.2）、走 `thincoder ledger audit` 定性）；② **零开库**（不读行数——启动期不触 SQLite、不建 WAL）；③ 坏档 / 空库恰是最需人工处置的形态（判据若读行数，不可读档将落入静默分支 = 漏报）。
+- **主库在否均提示**：判定不依赖主键档是否存在（数据只在变体库时更属搁浅）。命中（非空）⇒ 成立；无 ⇒ 零动作零输出。
+
+### 12.2 提示面（落点链 / 时机 / 一次为限 / 文案）
+
+**落点链**（先例 = R25 `crashNotice`——bin 侧计算 → `startTUI` opts 承载 → `showStartup` 渲染）：
+
+| 步 | 落点 | 动作 |
+|---|---|---|
+| ① 计算 | `thincoder-cli/src/command-interactive.mjs` `tuiCommand`（`startTUI` 调用前——邻 `crashNotice` 计算处） | 动态 import `@thincoder/core/ledger-variant-notice.mjs` → `ledgerVariantNotice({ cwd: agent.cwd, locale: agent.config?.locale })`；import ∥ 调用整段 try 包住（静默降级） |
+| ② 承载 | `tuiCommand` → `startTUI(agent, { …, ledgerVariantNotice })` | opts 新键（`string ∥ undefined`——与 `crashNotice` 同形） |
+| ③ 渲染 | `thincoder-cli/src/tui/startup.mjs` `showStartup`（邻 `opts.crashNotice` 行之后） | `if (opts.ledgerVariantNotice) pushLine(opts.ledgerVariantNotice, C.warn)`——恰一行 |
+
+**时机** = TUI 启动屏（首帧前完成；不阻塞启动）；**每进程至多一次** = **核内闩**（一次为限）：新档模块级 `noticeChecked`——**首唤检测、后唤零动作返回 `null`**（「每进程」= ESM 模块实例的天然粒度）；重置缝 `_resetLedgerVariantNoticeForTest()`（先例 = `_resetLedgerDirForTest`）。理由：调用面（TUI 启动恰一次）是结构事实——结构事实随未来调用面漂移；闩在核 = 单一权威面 + 可直测。
+
+**文案（逐字——i18n 键 `ledger.variantDbNotice`，zh ∥ en 两语；单源 = `thincoder-core/i18n.mjs` `CORE_MESSAGES` 新键）**：
+
+| 语言 | 逐字 |
+|---|---|
+| zh | `检测到本项目的存量变体键台账库（升级遗留，数据可能未并入当前库）：thincoder ledger audit 查看；thincoder ledger migrate 收正` |
+| en | `Legacy variant-key ledger DB found for this project (pre-upgrade; rows may be outside the current ledger): thincoder ledger audit to inspect; thincoder ledger migrate to reconcile` |
+
+- 内文含收正路径 `thincoder ledger audit` ∥ `thincoder ledger migrate`（AC-M2-20 判据逐字面）；单行（无换行）。
+- 新键沿 `digest.residue` 先例（注释携批 / 台账号；CLI 直取 `t(key, {}, locale)`）；**locale** = `agent.config?.locale`（透传 `t()`——`zh-CN` 归一 `zh`；缺省 = 容器缺省 `en`）——语言取值缝先例 = `notify-policy.mjs` `langOf`。
+
+### 12.3 静默降级（全径）
+
+- **核内**：`ledgerVariantNotice` 函数体全径 try/catch——任何异常（根解析 / 探针 / 文案解析）⇒ 返回 `null`，零抛。
+- **调用面**：`tuiCommand` 的 import + 调用段独立 try——import 失败（模块缺席等）⇒ 不传 opts。
+- **绝不阻塞 / 绝不中断启动**：检测 = 一次动态 import + 至多一次 `statSync`（有界；不遍历目录、不开库、零写）。
+
+### 12.4 接口面（改前 → 改后）
+
+| 面 | 改前 | 改后 |
+|---|---|---|
+| `thincoder-core/ledger-variant-notice.mjs`（拟新增——本批实施轮落盘） | —（无档） | 导出 `ledgerVariantNotice({ cwd = process.cwd(), dir = ledgerDirPath(), locale = "en", exists = 默认探针 })` → `string ∥ null`；`_resetLedgerVariantNoticeForTest()`；`exists` = 测试注入缝（先例 = `ensureExecutorColumn` 的 `exists` 参数；默认探针 = `statSync(p).isFile()` 吞错形） |
+| `thincoder-core/i18n.mjs` | 无 `ledger.*` 键 | `CORE_MESSAGES` 增 `ledger.variantDbNotice`（zh ∥ en 逐字 = §12.2） |
+| `thincoder-cli/src/command-interactive.mjs` | `startTUI(agent, { …, crashNotice })` | 增 `ledgerVariantNotice`（计算段 = §12.2 ①） |
+| `thincoder-cli/src/tui/startup.mjs` | `showStartup` 渲染 `opts.crashNotice` | 增渲染 `opts.ledgerVariantNotice`（恰一行） |
+| `thincoder ledger migrate ∥ audit`（命令分发 + 核 `ledger-migrate.mjs`） | — | **零改**（语义 / 输出零变——提示只指路） |
+
+- W8 契约②：新档静态链入 `ledger-migrate.mjs`（node:sqlite）⇒ 消费侧**动态 import**（CLI 调用面按此落型；端壳静态闭包零新入边）。
+- 检测面零新建哈希式：键式直引 `ledgerKey`（`thincoder-core/ledger-db.mjs:41-43`）∥ 变体枚举直引 `legacyKeyVariants`（`thincoder-core/ledger-migrate.mjs:42-45`）——不二写。
+
+### 12.5 用例表（U-VN*——批内件 `docs/batches/2026-10-05-ledger-variant-db-notice.test.mjs`（拟新增——本批实施轮落盘））
+
+| # | 类型 | 输入 | 期望输出 | 回指 |
+|---|---|---|---|---|
+| U-VN1 | 正常·变体对夹具（两拍） | 夹具 = 临时台账目录 + 项目根（测试注入缝）；变体键档在盘（键 = 翻转拼写原样 `sha1[:16]`——**非库文件亦计**）：① 主键档不在 ② 主键档在场 | ①② 均 ⇒ 单行文案（逐字 = §12.2——zh ∥ en 两语各断言；含 `thincoder ledger audit` ∧ `thincoder ledger migrate`） | §②.10 检测 / AC-M2-20 句 1 |
+| U-VN2 | 边界·零输出（两拍） | ① 仅主键档在场 ② 台账目录空 / 无目录 | 均 ⇒ `null`（零动作零输出） | AC-M2-20 句 2 |
+| U-VN3 | 错误·抛错注入 | `exists` 注入抛错函数 | ⇒ `null` ∧ 零抛（静默降级） | §②.10 降级 / AC-M2-20 句 3 |
+| U-VN4 | 边界·每进程至多一次 | 同进程：变体对夹具连唤两次 → 重置缝 → 再唤 | 第 1 次文案 ∥ 第 2 次 `null` ∥ 重置后再出 | AC-M2-20 句 4 |
+| U-VN5 | 边界·负向锁（翻转拼写 ≡ 主键） | 小写盘符拼写项目根 ∧ 该键档在场 | ⇒ `null`（`k !== ledgerKey(root)` 过滤——主库不自报「变体」） | §12.1 过滤口径 |
+| U-VN6 | 集成·启动面渲染腿 | `showStartup` 最小 ctx 直驱：① `opts.ledgerVariantNotice` 在场 ② 缺省 | ① 恰一行（= 该文案）② 零行；附接线静态锁（计算段 ∥ 渲染句在盘） | AC-M2-20「启动提示恰一行」 |
+
+### 12.6 验收对照（A-VN*——逐条回指需求 §②.10 / §④）
+
+| # | 判据（可机判） | 回指 |
+|---|---|---|
+| A-VN1 | 检测判据：当前项目根存在变体键库（沿 `legacyKeyVariants` ∧ `k !== 主键` ∧ 文件在盘）⇒ 成立；主库在 / 不在两分支同判——U-VN1 绿 | §②.10 检测 / AC-M2-20 句 1 |
+| A-VN2 | 提示面：恰一行 ∧ 逐字含 `thincoder ledger audit` ∥ `thincoder ledger migrate` ∧ 文案 = i18n 键 `ledger.variantDbNotice`（zh ∥ en 逐字 = §12.2——核容器单源，零第二副本）——U-VN1 / U-VN6 绿 | §②.10 提示 / AC-M2-20 句 1 |
+| A-VN3 | 零输出：单库 / 无库 ⇒ 零动作零输出——U-VN2 绿 | AC-M2-20 句 2 |
+| A-VN4 | 静默降级：检测报错 ⇒ 启动照常零报错（`null` 零抛 ∥ import 失败不传 opts）——U-VN3 绿 | §②.10 降级 / AC-M2-20 句 3 |
+| A-VN5 | 每进程至多一次（核内闩 + 重置缝）——U-VN4 绿 | AC-M2-20 句 4 |
+| A-VN6 | 零回归与机检：`ledger-migrate.mjs` / `runLedgerMigrate` / `runLedgerAudit` 零改（静态判）；批内件全绿；`node scripts/doc-check.mjs` exit 0（本批触碰档零新增悬空） | 边界（§12.7）/ 批档自身约束 |
+
+**编号注记**：本批验收以批内编号 **A-VN1–A-VN6**（用例 U-VN1–U-VN6）承载——设计档 §8 模块级编号面本批不增行；回指 = 需求 §②.10 F-LX3 / §④ AC-M2-20。
+需求侧 F-LX3 验收 = **AC-M2-20**（17/18/19 均已占用，连避至 20——2026-10-05 逐号对读终裁；需求档变更记录在案）。
+
+### 12.7 边界（本批不做）
+
+- **只提示零动作**：不自动迁移 / 不删档 / 不建库 / 零写（收正 = 用户显式跑 `thincoder ledger migrate`）。
+- **提示面 = CLI 交互主入口（TUI 启动）为限**：桌面 / VSC 启动面不做（#19 可见面裁决）；headless `chat` / `acp` 面不做（2026-10-05 裁定——机器消费面纪律：机器面零新增输出；与 §7.8 不变量句「headless 零新增输出」（`:364`）同向：本面不做 ⇒ headless 零新增输出保持）。
+- **不改 `ledger migrate` / `ledger audit` 既有语义**（命令面、输出、迁移六步、审计定性零改）。
+- **不新增哈希式**；**不做变体键反推根**（哈希不可逆——只对当前项目根正向计算）；**检出面不含 `--from` 补充源 / `--root` 候选根**。
+- **不阻塞启动**：检测有界（一次动态 import + 至多一次 `statSync`）；失败全径静默。
+- **不做全局 / 多项目扫描**（逐项目锚定——同 §2.2 迁移面口径）；不做交互 / 弹窗。
+
+### 12.8 关键决策
+
+| KD | 决策 | 否决方案 |
+|---|---|---|
+| KD-VN1 | 「在盘」判据 = 文件存在（零开库） | 读行数（开库读——坏档 / 空库漏报 + 启动期触 SQLite） |
+| KD-VN2 | 检测 / 文案落新档 `thincoder-core/ledger-variant-notice.mjs`（拟新增——本批实施轮落盘） | 并入 `ledger-migrate.mjs`（+≈30 ⇒ 约 330 越 300 顾问线）∥ 并入 `ledger-db.mjs`（与 migrate 成环） |
+| KD-VN3 | 一次为限 = 核内闩（+ 重置缝） | 调用面结构事实（随未来调用面漂移、无直测面） |
+| KD-VN4 | 承载 = opts 拷贝 + `showStartup` 渲染（`crashNotice` 同款） | `showStartup` 内计算（sync 面不可动态 import）∥ 独立启动器（超面） |
+| KD-VN5 | 文案单源 = i18n 键（zh ∥ en；locale = `agent.config?.locale`） | CLI 内联字面（第二副本）∥ 固定中文（违 i18n 单源） |
+| KD-VN6 | 提示面 = CLI TUI 启动为限 | headless / ACP / VSC / 桌面同步提示（噪声 + 面差） |
 
