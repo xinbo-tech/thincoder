@@ -544,11 +544,11 @@
 | `injectBgResult` | `thincoder-core/agent-tools/bash-async.mjs:231` | `fn` |
 | `killBgTask` | `thincoder-core/agent-tools/bash-async.mjs:253` | `fn` |
 | `killBgPid` | `thincoder-core/agent-tools/bash-async.mjs:276` | `fn` |
-| `collectMarkdownFiles` | `thincoder-core/agent-tools/batch-lifecycle.mjs:63` | `fn` |
-| `findInFlightBatch` | `thincoder-core/agent-tools/batch-lifecycle.mjs:83` | `fn` |
-| `createBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:113` | `fn` |
-| `statusBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:271` | `fn` |
-| `closeBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:319` | `fn` |
+| `collectMarkdownFiles` | `thincoder-core/agent-tools/batch-lifecycle.mjs:75` | `fn` |
+| `findInFlightBatch` | `thincoder-core/agent-tools/batch-lifecycle.mjs:95` | `fn` |
+| `createBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:127` | `fn` |
+| `statusBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:292` | `fn` |
+| `closeBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:340` | `fn` |
 | `batchProjectRoot` | `thincoder-core/agent-tools/batch-paths.mjs:39` | `fn` |
 | `batchDocBases` | `thincoder-core/agent-tools/batch-paths.mjs:56` | `fn` |
 | `resolveBatchReadPath` | `thincoder-core/agent-tools/batch-paths.mjs:122` | `fn` |
@@ -560,12 +560,12 @@
 | `SEGMENT_BY_ROLE` | `thincoder-core/agent-tools/batch-skeleton.mjs:45` | `const` |
 | `STATUS_LINE_RE` | `thincoder-core/agent-tools/batch-skeleton.mjs:48` | `const` |
 | `TEMPLATE_PLACEHOLDERS` | `thincoder-core/agent-tools/batch-skeleton.mjs:59` | `const` |
-| `findPlaceholderResidue` | `thincoder-core/agent-tools/batch-skeleton.mjs:71` | `fn` |
-| `placeholderResidueError` | `thincoder-core/agent-tools/batch-skeleton.mjs:96` | `fn` |
-| `readBatchStatusLine` | `thincoder-core/agent-tools/batch-skeleton.mjs:113` | `fn` |
-| `readSectionStatusWord` | `thincoder-core/agent-tools/batch-skeleton.mjs:138` | `fn` |
-| `sectionHasStatusLine` | `thincoder-core/agent-tools/batch-skeleton.mjs:164` | `fn` |
-| `batchSkeleton` | `thincoder-core/agent-tools/batch-skeleton.mjs:184` | `fn` |
+| `findPlaceholderResidue` | `thincoder-core/agent-tools/batch-skeleton.mjs:76` | `fn` |
+| `placeholderResidueError` | `thincoder-core/agent-tools/batch-skeleton.mjs:93` | `fn` |
+| `readBatchStatusLine` | `thincoder-core/agent-tools/batch-skeleton.mjs:109` | `fn` |
+| `readSectionStatusWord` | `thincoder-core/agent-tools/batch-skeleton.mjs:134` | `fn` |
+| `sectionHasStatusLine` | `thincoder-core/agent-tools/batch-skeleton.mjs:160` | `fn` |
+| `batchSkeleton` | `thincoder-core/agent-tools/batch-skeleton.mjs:182` | `fn` |
 | `SEGMENT_BY_ROLE, batchDocBases, resolveBatchDocPath` | `thincoder-core/agent-tools/batch.mjs:36` | `named` |
 | `MAX_TEXT_CHARS` | `thincoder-core/agent-tools/batch.mjs:40` | `const` |
 | `configureBatchSegment` | `thincoder-core/agent-tools/batch.mjs:57` | `fn` |

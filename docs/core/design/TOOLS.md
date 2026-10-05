@@ -713,10 +713,12 @@ Error: engineering mode is ON — task is unavailable (the batch record + the le
 - **判据 = 骨架死占位枚举单源**（新常量 `TEMPLATE_PLACEHOLDERS`，住 `batch-skeleton.mjs` 与骨架模板同档单源）：`["<BATCH-ID>", "<讨论来源>", "#<编号>", "<板块>"]`（骨架产出全部死占位字面）。
   **否决泛正则 `<[^>\n]{1,40}>`**：① 正文合法尖括号场景误杀（`Error: <message>` / JSX 标签 / 泛型 `Array<T>` / `<BATCH-ID>` 被合法正文引用讨论——§2 本节正文即含此字面）；
   ② `<§1 模板占位：…>` 等模板占位行**合法暂存**——append 不删行（append-only），模板占位行在段内留存是常态，泛正则一开段即永久拒绝 = 把合法暂存判成违规。
-- **判定域 = 档头 + 目标段**：档头（`#` 行起至 §1 段头前——占位行族）+ 本次目标段段内——他段模板占位**不归本段作者管**（一段一作者——§2 作者扫 §5 的占位 = 越权）。纯函数 `findPlaceholderResidue(src, seg)` 住 skeleton 档（零 fs，消费 STATUS 单源同址）；返回 `[{line, text}]`，非空 ⇒ 拒，错误句逐行列残留（行号 = 段内 1-based 便于定位）。
-- **档头两占位 `#<编号>` / `<板块>` 的填充路径与次序（消除新门与既有义务间的次序死锁）**：两占位无 create 期填充机制（create 不代建台账 = 红线；F11-B 参数面零扩展）⇒ 填充人 = **主 agent** · 时点 = **建档后、本档首个 append/status 之前** · 方式 = **普通文档写**（档头 boilerplate 不在 append-only 段域内——改写 `> 台账 = …` 行；既有实态 = 本批档档头 `> 台账 = #214/#215（TOOLS.md · 归批）`）。
-  **次序句**：create ⇒ 主 agent 填档头（`#<编号>` → 台账编号 · `<板块>` → 板块名）⇒ 本档首次 append/status 开放；未填 ⇒ 首写被 F11-C 拒（错误句逐行列残留行号 = 提示填充位置）——机检 = 次序约束的兜底，**非死锁**（填后立即放行）。
-  否决备选：**create 增参**（F11-B 参数面语义零重开——create 期台账编号尚不存在，增参 = 先登记后建档的时序耦合）；**台账行移出判定域**（残留永久合法驻留 = 门目的落空——档头正是死占位唯一驻留面）。
+- **判定域 = 档头结构行（值形）**（2026-10-05 收正——§6.20）：仅骨架生成的三类档头结构行参与判定（标题行 `# …` / 编制行 `> 编制` / 台账行 `> 台账`）——行内出现死占位字面 ⇒ 残留；正文（段体）对占位字面的引用 / 讨论**豁免**（引用非未填）。纯函数 `findPlaceholderResidue(src)` 住 skeleton 档（零 fs，消费 STATUS 单源同址）；返回 `[{line, text}]`，非空 ⇒ 拒，错误句逐行列残留（行号 = 档头域内 1-based 便于定位）。
+- **档头两占位 `#<编号>` / `<板块>` 的填充路径与次序（消除新门与既有义务间的次序死锁）**（2026-10-05 收正——§6.20）：create 可选参 `ledger` / `board` **建即填**台账行
+  （create 仍不代建台账条目 = 红线零变）；未给 ⇒ 占位留存——填充人 = **主 agent** · 时点 = **建档后、本档首个 append/status 之前** · 方式 = **普通文档写**
+  （档头 boilerplate 不在 append-only 段域内——改写 `> 台账 = …` 行；实态先例 = 本批档档头 `> 台账 = #214/#215（TOOLS.md · 归批）`）。
+  **次序句**：create（给参即填 ∥ 未给留占位 + 回执提示填法）⇒ 主 agent 填档头（`#<编号>` → 台账编号 · `<板块>` → 板块名）⇒ 本档首次 append/status 开放；未填 ⇒ 首写被 F11-C 拒（错误句逐行列残留行号 = 提示填充位置）——机检 = 次序约束的兜底，**非死锁**（填后立即放行）。
+  否决备选：**台账行移出判定域**（残留永久合法驻留 = 门目的落空——档头正是死占位唯一驻留面）；**全文子串 ∕ 泛形正则**（正文引用误杀——2026-10-05 收正依据，见 §6.20）。
 - **close 不拦**（收口是主 agent 终态动作，残留面由既有通道自查）+ **create 不拦**（骨架本身合法含占位）；gate 在写入面（append/status），挂点：append 于 gate/text 校验后 `insertIntoSection` 前（主档）；status 于 `assertStatusValue` 后写盘前（lifecycle）。
 
 **受影响文件**（现行 = `wc -l` 实读 2026-09-21 · Δ 预估 · 口径 = `split("\n").length - 1`——机检同源 `thincoder-core/test/core-hygiene.test.mjs:147`；读数工具显示值 = +1〔末行空行〕）：（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
@@ -1025,6 +1027,53 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 
 > 用例表 ∕ 受影响文件与行数预算 ∕ 验收回指 = 批档 `docs/batches/2026-09-29-tools-carryover.md` §2（一次性批次材料——本档不重述）。
 
+### 6.20 工具面首用可发现性：batch 档头可填性 + 死占位判据可辨性（2026-10-05 · 批 toolface-first-use-fixes · 台账 #938）
+
+**来源**：用户 2026-10-05 16:53（「几乎每次派单都会出现，感觉提示词面或者工具描述面存在缺口」——援当日两处拒回实证：档头占位未填 ⇒ 首次 append 被拒 ∥ 派单缺字段标记 ⇒ spawn 被拒）；需求 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §8.2「工具面自解释」。本档面 = ②③ 两件；①（spawn 六字段入描述面）= `AGENT-LOOP-SUBAGENT.md` §6.30（D2——本档不重述）。
+
+**② 批档档头可填性（create 增 `ledger` / `board` 可选参——建即填）**：
+
+- 参数面（`thincoder-core/agent-tools/batch.mjs` schema；插位 = `source` 属性后）：`ledger`（台账编号——如 `#938`）· `board`（板块——如 `core`）；两参皆可选。**契约行单源（归一 ∥ 单行 ∥ 空串 ≡ 未给）= `BATCH-RECORD.md` §4.11**；本节 = 逐字文本面（schema description ∥ 回执 ∥ 拒句 ∥ 骨架行实参），不重述契约。
+- 骨架面（`batch-skeleton.mjs` `batchSkeleton({ date, topic, source, prev, ledger = null, board = null })`）：给参 ⇒ 台账行占位实参化——**无死占位产出**；未给 ⇒ 保持占位字面（4 参旧调用形输出零变 = 回归面）。
+- 回执面（`batch-lifecycle.mjs` create 回执）：两参皆给 ⇒ 回执标注已填（`header 台账 line filled (${ledger} · ${board})`）、不提示；未给（任一）⇒ 补句（逐字）：
+  `header 台账 placeholder(s) remain — fill them by file edit before the record's first append/status opens`；create 仍不代建台账条目（红线零变）。
+- 骨架行逐字（`batchSkeleton` 台账行实参面）：`> 台账 = ${ledger ?? "#<编号>"}（${board ?? "<板块>"} · 归批）。前情 = ${prev}。`
+- schema 两键 description 逐字（模型可见文本——实施者照抄）：
+
+| 键 | 逐字 |
+|---|---|
+| `ledger` | `create only — optional: the ledger entry number for the header's 台账 line (e.g. "#938"; a leading # is added if missing). Passed together with board, it fills the header at creation; when omitted, the placeholder stays and must be filled by file edit before the record's first append/status.` |
+| `board` | `create only — optional: the owning board for the header's 台账 line (e.g. "core"). See ledger — both fill the header at creation.` |
+
+- 两条新拒句逐字（模型可见文本——实施者照抄）：
+
+| 拒句 | 逐字 |
+|---|---|
+| 创建期单行拒 | `batch: create ledger / board must be single lines — a multi-line value would break the header's 台账 line. Nothing was written.` |
+| 残留拒句（`placeholderResidueError`——「or your target section」半句退场） | `batch: 骨架死占位残留 — the batch record's header still carries skeleton placeholders. Fill them before writing: create with ledger / board fills the 台账 line at creation; otherwise the main agent fills the header by file edit ⇒ the record's first append/status opens. Nothing was written. Residue:`（+ 逐行 `档头 line N: <text>` 清单） |
+
+- 描述面（`tool-docs/batch.md`——单行文本两处替换，逐字）：
+
+| `tool-docs/batch.md` 替换点 | 改前（现行子串） | 改后（逐字） |
+|---|---|---|
+| create 行 | `actions: create (depth-0 only — write a new six-section skeleton record; pass path + topic + source)` | `actions: create (depth-0 only — write a new six-section skeleton record; pass path + topic + source, plus optional ledger / board that fill the record's 台账 header line at creation)` |
+| 占位句 | `Skeleton placeholders (dead literals — `#<编号>` / `<板块>` and the older `<BATCH-ID>` / `<讨论来源>`) in the record header or in your target section block append/status: fill them first (the main agent fills the header right after create);` | `Skeleton placeholders (dead literals — `#<编号>` / `<板块>` and the older `<BATCH-ID>` / `<讨论来源>`) in the record header's structural lines block append/status until filled: create with ledger / board fills them at creation; if omitted, the main agent fills the header by file edit right after create (citing these literals in a section's prose is fine — only the header is checked);` |
+
+**③ 死占位判据可辨性（`findPlaceholderResidue` 判据收正——正文引用豁免）**：
+
+- **实害（2026-10-05 本批 §1 首投）**：正文（段体）对两枚档头占位字面的**引用**被全文子串判死、append 被拒——扫描无法区分「未填」与「引用」。
+- **收正判据**：死占位 = **档头结构行**（标题行 `# …` ∥ 编制行 `> 编制` ∥ 台账行 `> 台账`）内出现 `TEMPLATE_PLACEHOLDERS` 字面；其余一切位置（段体任意行）出现字面 = **引用 ⇒ 豁免**——**区域判据：档头 = 首个 `## §` 标题之前**（档首至首段头前；段体 = 首段头起）。域收（档头 + 目标段 ⇒ **档头结构行**）+ 形收（任意含字面行 ⇒ **结构行值形**）——既非放松（非删检查、非泛形）亦非扩展；枚举字面**零改**（门禁判据集零改口径）。
+- 签名 / 返回面：`findPlaceholderResidue(src)`（`seg` 参数退场）· 返回 `[{line, text}]`（`where` 字段随域收退场）；调用点两处随动（`batch.mjs` append 挂点 ∥ `batch-lifecycle.mjs` status 挂点）；拒句正文随动（「or your target section」半句退场）。
+- 判定依据：未填槽位 = **档头结构现象**（骨架只在档头产占位；段内 `<§N 模板占位：…>` 行 = 合法暂存、本不在枚举）。
+- **骨架↔三结构行不变量**：`batchSkeleton` 产出中 `TEMPLATE_PLACEHOLDERS` 字面 ⊆ 三类结构行（现行 = 台账行单行承载两枚占位——标题 / 编制行已实参化零占位）；骨架改形若在结构行外产新占位字面 ⇒ 静默漏检——改形与判据同拍（同址 `batch-skeleton.mjs` 即守护面）。
+- 不受影响面：`status` `note` 死占位判据（`assertStatusNote`）= 独立停车面守卫（全禁，非「未填 vs 引用」判定）——零触（边界登记）。
+
+**决策（D-TO15——见 §7）**：① 可见性 = 描述面载明（门零改）· ② 可填性 = create 可选参建即填（未给走原手工法 + 回执提示）· ③ 可辨性 = 档头结构行值形 ∥ 正文引用豁免。
+- 否决备选（②）：**参数面零扩展**（F11-B 时序耦合顾虑——可选参化解：给则填 / 不给走手工法；2026-10-05 需求 §8.2 已裁）· **台账行移出判定域**（见 §6.15.2 裁定点④）。
+- 否决备选（③）：**全文子串**（引用误杀——本批实害）· **泛形正则**（2026-09-21 已否：误杀合法尖括号 ∥ 模板暂存）· **引用需转义形**（反引号 / 引号谓词——把机检变成写作规约，误伤依旧）· **保留段域同形判定**（段内无槽位 = 死检查，整行引用仍误杀）。
+
+**边界（本节不做）**：门禁判据集零改（六字段标记 ∥ `TEMPLATE_PLACEHOLDERS` 枚举字面 ∥ `assertStatusNote` 面）· 不新增工具 / action · 其他 description 零清扫 · 端面零改（核单源消费）；用例表 ∕ 受影响文件 ∕ 验收回指 = 批档 `docs/batches/2026-10-05-toolface-first-use-fixes.md` §2（一次性批次材料——本档不重述）。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -1043,6 +1092,7 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 | D-TO12 | 工具钩子消费 = **单源谓词 + 判据归一**（#327）：`toolTouchPaths` 住 `thincoder-core/agent/helpers.mjs`，两树十处消费点一律调用；ACP 桥 `edit` 路由判据改与核同（真值判）⇒ 同参两通道同归宿 | 详见 §6.17。五份守卫形态 = 下轮漂移源（否决逐点 try/catch）；钩子内抛成形文案会逸出（否决，#325 D-6）；核侧迁就桥 = 弱化容器守卫（否决）；`[]` 零触达语义以「该调用必败」为支撑——归一恢复该前提，而非改判据（否决 #327④ 保守形 `args.path ? [args.path] : []`） |
 | D-TO13 | `file_ops` 动作感知 = **入单源谓词**（`copy` ⇒ 只 `dest`；`move` / `rename` 等 ⇒ `source` + `dest`）+ **端特例分支清零** | 详见 §6.17 裁定 5（台账 #333）。否决备选：① 核向端对齐（端窄形态转正）——单源化只消灭两处漂移、不判规则对错，先让核吃正确规则（用户 2026-09-25 15:16「先修正核、再单源化」）；② 只改设计档字面而谓词不动（核仍登记 `copy` 源 ⇒ 对端假提示不消）；③ 逐消费点各自按动作判别（多份形态 = 下轮漂移源——D-TO12 同旨） |
 | D-TO14 | **node 语义子进程启动面 = 核内单点 `nodeChildEnv`**（`thincoder-core/tools/node-child.mjs`（**已落** · 2026-09-29）——判据 `process.versions.electron`；Electron 宿主补 `ELECTRON_RUN_AS_NODE:"1"`，否则原样 `base`）；消费 = `execute.runNode` ∕ `lint` 快路径（经 `exec-run` `opts.env` 透传） | 详见 §6.18（台账 #602）。否决备选：① 两消费点各自内联判据（重复检测——第二点漏修即复发）· ② 端注入缝 `configureNodeChildEnv`（判据 = 运行时能力、无端差值可注入——新增缝 + 三端接线代价 > 收益）· ③ 直改父进程 `process.env`（污染父进程并殃及后续全部子进程）· ④ 依赖 PATH `node` ∕ 随产物分发 node（不可靠 ∕ 破零依赖）· ⑤ `exec-run` 内按 `cmd === process.execPath` 隐式补 env（对普通命令不可见的分叉） |
+| D-TO15 | **工具面首用可发现性 = 描述面载明 + 建即填 + 判据可辨性**（spawn 六字段入 `tool-docs/subagent.md`——门零改 ∥ `batch` create 增 `ledger` / `board` 可选参建即填档头台账行 ∥ 死占位判据收为「档头结构行值形」——正文引用豁免） | 详见 §6.20（① 的落面 = `AGENT-LOOP-SUBAGENT.md` §6.30——D2）。否决备选：撞门学习（描述面缺口——用户 16:53 点火）· create 参数面零扩展（时序耦合顾虑——可选参化解：给则填 / 不给走手工法）· 全文子串 ∕ 泛形判据（引用误杀）· 引用需转义形（判据转写作规约——误伤依旧） |
 
 ## 8. 不并项与历史沿革
 
@@ -1232,3 +1282,7 @@ plan 工具退出文本收正为**批准语义**（**五处**：`thincoder-core/
 
 - 2026-10-05（**台账工具统一批（ledger-tool-unification）· eng-coder**——承 `docs/batches/2026-10-05-ledger-unification.md` §2 · 台账 #923）：§6.11 描述装载面计数收正（52 ⇒ **48**——现盘 `tool-docs/` 实测）+「工具面接线」② 行改统一入口终值（`ledger` 随核家族段；
   VSC 端侧自持读二追加入口退场——`thincoder-vscode/src/agent/tool-table.mjs`）+ §9 语义承接行名称面收正（`ledger_*` 命令族 ⇒ 统一入口 `ledger`）。**零新语义**。
+
+- 2026-10-05（**工具面首用可发现性批（toolface-first-use-fixes）· 设计轮 · eng-designer**——承 `docs/batches/2026-10-05-toolface-first-use-fixes.md` §1 · 台账 #938）：新增 **§6.20**（batch 档头可填性 ∥ 死占位判据可辨性）+ §6.15.2 裁定点④ 三处收正（判定域 ∥ 填充路径 ∥ 否决备选）+ §7 补 **D-TO15**；
+  ①（spawn 六字段入描述面）= `AGENT-LOOP-SUBAGENT.md` §6.30（D2）。**零新语义**（= 批档 §2 设计的落位——门禁判据集零改）。
+- 2026-10-05（**工具面首用可发现性批（toolface-first-use-fixes）· 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-05-toolface-first-use-fixes.md` §3 轮次 1 发现 4 / 5）：§6.20 ② **契约单源钉死**——归一 ∥ 单行 ∥ 空串 ≡ 未给 ⇒ 契约行住 `BATCH-RECORD.md` §4.11（本节改持指针——逐字文本面不重述）；③ 补**区域判据**（档头 = 首个 `## §` 标题之前）+ **骨架↔三结构行不变量**注。**零新语义**（= 评审发现的直接导出项）。

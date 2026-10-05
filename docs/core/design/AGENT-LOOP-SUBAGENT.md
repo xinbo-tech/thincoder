@@ -519,7 +519,7 @@ export function writeTombstone(parent, id, status, role) {
 | A6 | CLI 形（U6）：`carrierField(parent, "_asyncTombstones") === parent._asyncTombstones` | `AGENT-LOOP.md` §2.3 写回义务 |
 | A6b | 首写腿（U6b）：无自有 Map + `history` 在场 ⇒ 主容器 = 父字段、`history` 侧同一容器 | 评审轮 1 发现 4 |
 
-**边界（本节不做）**：不动 `spawn` 的 depth 语义；不动工具描述 / 提示词面（`subagent` 工具描述 = `thincoder-core/agent-tools/subagent.mjs` 内联 `description`——无独立 `tool-docs/*.md`；内容权归主 agent）；不做 observe/send/cancel/panel 既有门文案的旧编号收正（`AGENT-LOOP.md §7.2` · `§19.5 D-M6` · `§19.6 D-P2` 在现行两档均不可解析——域外登记）；
+**边界（本节不做）**：不动 `spawn` 的 depth 语义；不动工具描述 / 提示词面（`subagent` 工具描述 = `thincoder-core/tool-docs/subagent.md`——描述外置面（`DESC("subagent")` 单点加载）；内容权归主 agent）；不做 observe/send/cancel/panel 既有门文案的旧编号收正（`AGENT-LOOP.md §7.2` · `§19.5 D-M6` · `§19.6 D-P2` 在现行两档均不可解析——域外登记）；
 不收敛 VSC 侧同机制重复实现（`thincoder-vscode/src/agent-tools/async-discard.mjs`——D-AD7 已登记，另案）；**不执行** `subagent-actions.mjs` 拆分——拆分计划 = 本节受影响文件表（候选面已具名），本批只登记不执行（§6.20.8-3 = §6.20 批的边界声明，非拆分计划本体——措辞收正）。
 
 ## 6.26 机制性指令注入位置：spawn 固块改走 system 面（2026-09-18 · 批 PROMPT-FACE · 台账 #23）
@@ -840,6 +840,27 @@ spawn 门区（`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `batchDoc` �
 
 > 用例表 / 受影响文件与行数预算 / 验收回指 = 批档 `docs/batches/2026-09-25-guard-scheduler.md` §2（一次性批次材料——本档不重述）。
 
+## 6.30 工具面首用可发现性：spawn 六字段入描述面（2026-10-05 · 批 toolface-first-use-fixes · 台账 #938）
+
+**来源**：用户 2026-10-05 16:53「几乎每次派单都会出现，感觉提示词面或者工具描述面存在缺口」（援当日拒回实证：派单缺「验收标准」字段标记 ⇒ spawn 被拒）；需求 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §8.2「工具面自解释」①。
+
+**问题（F2 门首用不可见）**：§6.22 F2 的六字段标记清单此前只在**拒绝句**（`thincoder-core/agent-tools/spawn-gates.mjs:63-67`）可见——描述面（`thincoder-core/tool-docs/subagent.md`）零清单 ⇒ 首用只能「撞门 → 读拒绝 → 重试」。
+
+**改法（描述面载明——门零改）**：`thincoder-core/tool-docs/subagent.md` 角色列与 `Mode filtering:` 段之间（`- eng-designer …` 行后）增一段（逐字——按行宽折行展示，实现时 = 单行）：
+
+```text
+Task book (eng-coder / eng-designer spawns — six mandatory fields): 目标与理由 (goal & why), round (initial|fix — the structured parameter),
+已知事实 (known facts), 设计要点与禁止范围 (design points & forbidden scope), 验收标准 (acceptance criteria),
+交付报告格式 (delivery-report format). Keep the labels (Chinese or the English equivalents) — the gate matches these markers;
+a missing field is a dispatch defect and the spawn is refused.
+```
+
+**决策**：
+- **KD-TF1（描述句 = 门的取舍——KD-M5-7 同族）**：清单 = 门标记集逐字回显（`spawn-gates.mjs:18-24` 五文本标记 + `round` 结构化参数）——描述随门走；门侧零改（五标记 ∥ `ROUND_VALUES` ∥ 拒句逐字不动）。
+- **KD-TF2（共享块——否决两段各补）**：eng-coder / eng-designer 共享一段——两段重复 = 描述面双份字面（D2；改一处漏一处）。
+
+**边界（本节不做）**：`spawn-gates.mjs` 零改 · 提示词面（persona ∥ 中文正本）零触 · 其他工具描述零清扫 · 不新增工具；用例表 ∕ 受影响文件 ∕ 验收回指 = 批档 `docs/batches/2026-10-05-toolface-first-use-fixes.md` §2（一次性批次材料——本档不重述）。本批同族两件（batch 档头可填性 ∥ 死占位判据可辨性）= `TOOLS.md` §6.20。
+
 ## 变更记录
 
 **2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
@@ -1012,3 +1033,5 @@ spawn 门区（`thincoder-core/agent-tools/subagent-spawn.mjs` 的 `batchDoc` �
 - 2026-10-04（**issue 修复批·一 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §2 · 台账 #861）：§6.7.1 补 **模型 override 解析段**（解析链 + 非法形态三层防线——加载期清洗 ∕ 运行期明确错误 ∕ 写面形状表）。**零新语义**（= 台账缺陷的修复设计导出项）。
 - 2026-10-04（**issue 修复批·一 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §3 轮次 1 发现 3）：§6.7.1 端差句收正——VSC 端壳自读 raw 的处置改**正案 = VSC 端壳同拍清洗**（清洗逻辑核内单源导出、端壳 raw 读点同拍消费；用户零可见端差；宿主能力面举证不成立）。**零新语义**（= 评审发现的直接导出项）。
 - 2026-10-04（**ACP 协议面补全批 · 收口笔 · 父侧直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-acp-face-completion.md` §2 落点表 · 台账 #862）：§6.7.2 邻域补 **事件 token 文法机读单源指针**（`thincoder-core/agent/subagent-event.mjs`——零依赖叶：哨兵 ∥ 形态判据 ∥ 逐事件投影；消费方 = ACP 桥 `doc:ACP-CLIENT.md:§12`）。**零语义改**（= 文法单源的指针落位）。
+- 2026-10-05（**工具面首用可发现性批（toolface-first-use-fixes）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-toolface-first-use-fixes.md` §1 · 台账 #938）：新增 **§6.30**（F2 六字段入描述面——`tool-docs/subagent.md` 增一段清单；门零改）；同族 batch 面两件 = `TOOLS.md` §6.20。**零新语义**（可见性缺口修复——门禁判据集零改）。
+- 2026-10-05（**工具面首用可发现性批（toolface-first-use-fixes）· 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-05-toolface-first-use-fixes.md` §3 轮次 1 发现 1 / 2）：§6.25 边界括注收正——`subagent` 工具描述面 = `thincoder-core/tool-docs/subagent.md`（原「内联 `description`——无独立 `tool-docs/*.md`」为描述外置后失实句；全仓同式扫描仅此一处）；§6.30 描述半句**核真零改**（「English equivalents」= 门侧双语 marker 同收——`spawn-gates.mjs:18-24` 实读）。**零新语义**。
