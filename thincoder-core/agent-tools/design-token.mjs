@@ -95,6 +95,19 @@ export function stripDesignTokenEcho(text, designToken) {
 const NO_VALID_ECHO_MARK = "未回显有效 token——未签发 (no valid token echo — no design token was issued)"
 const TRUNCATED_ECHO_MARK = "注：回显被截断（uuid 之后缺失或不符）——已按批准结算；全串 token 已签发 (note: truncated echo — the part after the uuid was missing or inexact; settled as approved; the full token was issued)"
 
+/** §5.2 verdict gate (#940): the echo alone is NOT the verdict — the receipt must
+ *  carry a `VERDICT: pass` line and no `VERDICT: changes-required` line (fail-closed). */
+const VERDICT_PASS_LINE    = /^[ \t]*[*_`]*[ \t]*VERDICT:[ \t]*pass[ \t]*[*_`]*[ \t]*$/m
+const VERDICT_CHANGES_LINE = /^[ \t]*[*_`]*[ \t]*VERDICT:[ \t]*changes-required[ \t]*[*_`]*[ \t]*$/m
+export function verdictGateFailure(rawResult) {
+  if (typeof rawResult !== "string") return "no-pass-line"
+  if (VERDICT_CHANGES_LINE.test(rawResult)) return "changes-required"
+  return VERDICT_PASS_LINE.test(rawResult) ? null : "no-pass-line"
+}
+
+/** §5.2 rejection mark (verbatim — machine-greppable; reason = no-pass-line | changes-required). */
+const VERDICT_GATE_MARK = (reason) => `裁定非通过——token 未签发 (review verdict is not pass — no design token was issued; reason: ${reason}; the echoed token was stripped)`
+
 /**
  * Shared design-review settlement (sync wrapper + async settle): the token echo
  * IS the verdict — the advisor echoes it only on approval. On echo (full string
@@ -133,6 +146,13 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
   if (!fullEcho && !truncatedEcho) {
     const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
     return { passed: false, output: [stripped, NO_VALID_ECHO_MARK].filter(Boolean).join("\n\n") }
+  }
+  // §5.2 裁定闸（#940）：签发 = 回显 ∧ 裁定行——缺 `VERDICT: pass` 行或含 `VERDICT: changes-required` 行
+  // ⇒ 拒签（与 M1 径同形：剥净回显 + 恒定标记；槽零写 ∥ 实例保持——修后重评）。
+  const gateFailure = verdictGateFailure(rawResult)
+  if (gateFailure !== null) {
+    const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
+    return { passed: false, output: [stripped, VERDICT_GATE_MARK(gateFailure)].filter(Boolean).join("\n\n") }
   }
   // Echoed the token → review passed. Issue it to the parent for eng-coder.
   agent._engDesignTokens ??= new Map()

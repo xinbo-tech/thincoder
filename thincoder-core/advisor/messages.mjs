@@ -53,6 +53,7 @@ export function buildDesignApprovalBlock(designToken, designId) {
   return [
     "## Approval Signal",
     echo,
+    "The verdict line is checked mechanically: without a `VERDICT: pass` line, or with a `VERDICT: changes-required` line, no token is issued even when the token is echoed.",
     "🟡 (Advisory) and 🔵 (Note) findings do NOT block approval — list them if present, but still include the token. If any 🔴 (Critical) issue remains unresolved, do NOT include the token. A reasoned non-fix accepted by the reviewer does not block (🔴 only — 🟡/🔵 never block approval); anything else stays unresolved.",
   ].join("\n")
 }
