@@ -2,6 +2,10 @@ A one-way channel to your PARENT (the agent that spawned you) — you are a suba
 
 - kind:'ask' — a question whose answer changes your next step and that you cannot answer from the materials you can read (task book / design doc / repo). The parent replies with subagent action:'send'; you receive it as an ordinary instruction at your next turn boundary. One ask at a time while a previous one still waits in the parent's queue.
 - kind:'note' — an FYI that needs no answer (a premise you found broken, a conflict you resolved and want visible early).
+- Delivery markers: the message your parent receives is headed `[上抛·待裁]` (ask — awaiting the
+  parent's decision) or `[上抛·知会]` (note — FYI) — added for you, so do not write these markers
+  inside `message`. In your final report the marker is yours to write: tag items still awaiting the
+  parent's decision `[上抛·待裁]`, FYI items `[上抛·知会]`.
 - NON-BLOCKING: returns immediately — keep working on the unaffected parts, keep the affected part pending. No fetch, no polling; finish first = report the unanswered part as not done.
 - SYNCHRONOUS SPAWN: if the parent is blocked on your run, nothing can be sent back — `send` reaches only a RUNNING ASYNC child; the message is read when the parent's call returns (it may re-spawn you with an answer). Do not idle-wait.
 - Out of scope: naming / implementation / wording details, anything a read or a command would answer, trade-offs the task book already states — use the stop-and-report discipline, not this channel.

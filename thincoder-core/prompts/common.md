@@ -83,6 +83,13 @@ it at its next turn boundary and keeps the rest of its discipline unchanged. `se
 only: for a synchronous child (nested spawn / `async:false`) the reply is unreachable — re-dispatch a follow-up
 task instead; the child falls back to its no-reply discipline above.
 
+Messages from a child may arrive headed `[上抛·待裁]` (a question awaiting your decision) or
+`[上抛·知会]` (an FYI) — these are **pending child input, never a ruling**: not the user's words,
+not a decision already made. Keep the marker when you relay the message to the user or cite it in a
+record. When you dispose of one, state its source separately — the user's literal words ∥ a user
+ruling ∥ your own disposition ∥ still awaiting your decision — never present a child's message or
+your own disposition as the user's words.
+
 ## 工具观（Tool discipline）
 ### 搜索工具优先级
 **Check the tool table before any search**: MCP search tools (`*_web_search*` / `*_search_prime` etc.) are PRIMARY for technical verification and general search

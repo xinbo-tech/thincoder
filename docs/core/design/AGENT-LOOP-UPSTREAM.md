@@ -1,7 +1,7 @@
 # 子代理上行通道与唤醒面（AGENT-LOOP-UPSTREAM）· 核心统一子系统档（拆分面）
 
 > 归属 = `docs/core/design/AGENT-LOOP.md` 的**机制族拆分面**——「子 → 父上行与唤醒面」族（2026-09-22 structure-debt 批 · 档面车道 · 自 `docs/core/design/AGENT-LOOP-SUBAGENT.md` 三分迁出）。
-> 承载节 = §6.27 全族（§6.27.1–§6.27.12.13 · 含 §6.27.8 内两段无编号提示词面文本块——队列 / 谓词 / 域文本 / 信号提示行 / VSC 对位）· **§6.32 零落笔看门狗（阈值自动上行提醒——2026-10-05 增）**。
+> 承载节 = §6.27 全族（§6.27.1–§6.27.12.13 · 含 §6.27.8 内两段无编号提示词面文本块——队列 / 谓词 / 域文本 / 信号提示行 / VSC 对位）· **§6.32 零落笔看门狗（阈值自动上行提醒——2026-10-05 增）** · **§6.33 上抛标识制（投递渲染标识 + 提示词三处——2026-10-06 增）**。
 > **节号沿用母档全局编号**——全仓既有指针**只改档名、不改节号**。
 > 同三分面 = `docs/core/design/AGENT-LOOP-SUBAGENT.md`（子代理工具契约与装配面——§6.7 · §6.9 · §6.12 · §6.21–§6.26 · §6.28）；
 > `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`（后台异步池 / 挂起回合与 digest / 评审实例面——§6.8 · §6.10 · §6.11 · §6.18 · §6.19 · §6.20）。
@@ -25,7 +25,7 @@
 
 | # | 面 | 坐标 | 实况 |
 |---|---|---|---|
-| S1 | 下行在飞（父→子） | `thincoder-core/agent-tools/subagent-actions.mjs:74-75`（push `entry._injected`）→ `thincoder-core/agent/turn-loop.mjs:87`（回合边界 `consumeInjected?.(agent)`——三拆前 `thincoder-core/agent.mjs:214-218`）→ `thincoder-core/agent-tools/subagent-run.mjs:34`（`drainInjectedQueue` → `pushReal`） | ✅ 既有 |
+| S1 | 下行在飞（父→子） | `thincoder-core/agent-tools/subagent-actions.mjs:74-75`（push `entry._injected`）→ `thincoder-core/agent/turn-loop.mjs:106`（回合边界 `consumeInjected?.(agent)`——三拆前 `thincoder-core/agent.mjs:214-218`）→ `thincoder-core/agent-tools/subagent-run.mjs:34`（`drainInjectedQueue` → `pushReal`） | ✅ 既有 |
 | S2 | 上行终态（子→父） | `thincoder-core/agent-tools/async-settle.mjs:200-293`（settle）→ `thincoder-core/agent-tools/subagent-async.mjs:358-392`（`injectAsyncResult` → `pushReal`） | ✅ 既有 |
 | S3 | 上行在飞（子→父） | —— | **缺**（本条目补位） |
 | S4 | 子代理侧工具面 | `thincoder-core/agent/family-tools.mjs:141-175` | eng-coder `[advisor, verify, batch, subagent(勘察)]` · eng-designer `[batch, subagent(勘察)]` · coder `[verify, advisor]` · consult `[recent_changes]` · explore / plan `[]` |
@@ -59,7 +59,7 @@
 2. 工具**立即返回**（`{status:"queued", kind, position, note}`）——同步 push 进父队列，**零 await、零等待态**；
    ▸ **本通道不提供任何「取回复」动作**——判据同 §6.7.5 `check` 删除（不造「异步拉起再等它」的路径）；
 3. 子代理继续：**不受影响的部分照常做**；受影响部分**标 pending**（提示词纪律——§6.27.8）；
-4. 父的**下一回合边界**消费（`thincoder-core/agent/turn-loop.mjs:89` 邻位单点 `drainChildUpstream(agent)`——三拆前 `thincoder-core/agent.mjs:214-218`）：
+4. 父的**下一回合边界**消费（`thincoder-core/agent/turn-loop.mjs:108` 邻位单点 `drainChildUpstream(agent)`——三拆前 `thincoder-core/agent.mjs:214-218`）：
    全部 pending 消息**合并为一条** user 消息注入（`pushReal`——不带 `transient`，事件落盘）；
 5. 父判断 → 需要答复则 `subagent action:'send'`（id + message）→ 子下回合边界按普通指令消费（既有路径）；不需要答复则继续 / 终止子代理。
 
@@ -154,7 +154,7 @@
 ▸ **嵌套天然成立**：子代内 spawn 时 `parent` = 子代自身（`buildSpawnChild(parent, …)`）⇒ 通道逐层指向上游、零特判。
 ▸ **consult 不接线**（`thincoder-core/agent-tools/consult.mjs:275`）——装配面已排除，工具不在场 ⇒ 零「在场不可用」诱错面。
 
-**父侧消费点（改后）**：`thincoder-core/agent/turn-loop.mjs:89` 邻位新增一行 `drainChildUpstream(agent)`（空队列 no-op——零开销）。
+**父侧消费点（改后）**：`thincoder-core/agent/turn-loop.mjs:108` 邻位新增一行 `drainChildUpstream(agent)`（空队列 no-op——零开销）。
 
 ▸ **import 形态 = 动态**：`const { drainChildUpstream } = await import("./agent-tools/parent-channel.mjs")` —— 实到档 = `thincoder-core/agent-tools/parent-channel.mjs`（已落 · 实读 **248**）；先例 = `injectAsyncResult`（`thincoder-core/agent.mjs:113-117`；as-of 2026-09-29）：
 **不新增静态边**（登记册静态图契约 = `family-tools.mjs:12-16` / 端壳 W8 契约②）；取用一次 / 循环头就地取皆可（实现轮择一，判据 = 零新增静态 import + A2 的循环头调用点）。
@@ -168,16 +168,18 @@
 
 ```
 [System reminder: in-flight message from your subagent eng-coder#57 — it keeps working on the unaffected parts. Answer with subagent action:'send' (id + message) if the decision is yours; an unanswered ask means the child skips that part and reports it as not done.]
-ask · eng-coder#57: <message>
+[上抛·待裁] · eng-coder#57: <message>
 ```
 
 多条（同一回合边界合并）：
 
 ```
 [System reminder: N in-flight message(s) from your subagents — they keep working on the unaffected parts. Answer with subagent action:'send' (id + message) if the decision is yours; an unanswered ask means that child skips the part and reports it as not done.]
-- ask · eng-coder#57: <message>
-- note · explore#61: <message>
+- [上抛·待裁] · eng-coder#57: <message>
+- [上抛·知会] · explore#61: <message>
 ```
+
+▸ 行内行渲染 = **标识形**（映射单点 = §6.33.3）；两示例已随 2026-10-06 批 upward-flag-marker 同步。
 
 结束注脚（drain 时读池状态——`getAsyncPool(parent, "subagent")` + `tombstoneOf`，accessor 源 `thincoder-core/agent-tools/async-settle.mjs`）——**两形态 + 一显式不附注脚**（finding 5 落位）：
 
@@ -350,9 +352,9 @@ Queue a message on the parent's side; your turn is not interrupted and nothing i
 | # | 用例 | 输入 | 期望输出 | 回指 |
 |---|---|---|---|---|
 | T1 | 正常·`ask` 入队 + 立即返回 | 子代理（带 `_upstream`）调 `notify_parent({kind:"ask", message:"…"})` | 返回 `status:"queued"` + `position:1`；父 `_childUpstream` 长度 1（`from` / `kind` / `seq` 正确）；调用**即刻返回**（零 await） | A1 / A4 |
-| T2 | 正常·父消费注入 | T1 后 `drainChildUpstream(parent)` | 父 history 尾新增**恰 1** 条 user 消息（含 `eng-coder#57` + `ask` + 指引句）；队列清空 | A2 |
+| T2 | 正常·父消费注入 | T1 后 `drainChildUpstream(parent)` | 父 history 尾新增**恰 1** 条 user 消息（含 `eng-coder#57` + `ask` + 指引句；行内渲染现为 §6.33 标识形：`ask` ⇒ `[上抛·待裁]`；本串为 §6.27 轮记录）；队列清空 | A2 |
 | T3 | 正常·往返闭环 | T2 后父 `send` → 子下回合边界 | 子历史新增该回复（user 回合）——既有 `drainInjectedQueue` 路径零改 | A2 / A6 |
-| T4 | 正常·`note` 类 | `{kind:"note"}` | 注入文案含 `note`；无待答复语义 | A1 |
+| T4 | 正常·`note` 类 | `{kind:"note"}` | 注入文案含 `note`（行内渲染现为 §6.33 标识形：`note` ⇒ `[上抛·知会]`；本串为 §6.27 轮记录）；无待答复语义 | A1 |
 | T5 | 边界·多来源合并 | 两子代理各 1 条（同边界前） | 注入**恰 1** 条 user 消息，含两条列表行（按入队序）；队列清空 | A2 |
 | T6 | 边界·父未运行（挂起） | 父 `runAgent` 已返回后子代理入队 | 队列留存；父下次 `runAgent` 首轮边界注入 | F1 |
 | T7 | 边界·子代理已 settle | 子代理 settle 后父 drain | 注入含 `has since settled` 注脚；消息**不丢** | F3 |
@@ -398,7 +400,7 @@ Queue a message on the parent's side; your turn is not interrupted and nothing i
 
 #### 6.27.12.1 病与实证（默认流窗口）
 
-**病**：通道的父侧消费点 = 回合循环头单点 `drainChildUpstream(agent)`（`thincoder-core/agent/turn-loop.mjs:89`——三拆前 `thincoder-core/agent.mjs:225`）——**只在回合内**；
+**病**：通道的父侧消费点 = 回合循环头单点 `drainChildUpstream(agent)`（`thincoder-core/agent/turn-loop.mjs:108`——三拆前 `thincoder-core/agent.mjs:225`）——**只在回合内**；
 而挂起期（父侧无回合）的唤醒源只有三路（§6.27.12.2），**「未 drain 的 ask」不在列** ⇒ 默认流（单子代理 · 父侧挂起）里 ask 恒等到「子代理自身 settle」那次 digest 轮才被读到 ⇒ 子代理已终态，答复无处可去——§4.12 总体需求 `:210` 的「在飞纠偏」在默认流**不成立**。
 
 **实证（本机 `~/.thincoder/logs/agent-2026-09-19.log` 逐条实读）**：挂起窗口 = 分钟级，且首个唤醒恒 = 子代理自身 settle（五次挂起皆 `poolN 1 / runningN 1` = 单子代理默认流）：
@@ -445,7 +447,7 @@ while (…) { sweepSettledToPending(agent)
 ```
 
 ⇒ **只补唤醒零效果**：唤醒后 ① 输入槽空 ② pending 空 ③ 池仍 live（子代理还在跑）⇒ 回第 4 步继续等。
-**未 drain 的 ask 必须进第 2 步的开轮判据**——只有轮跑起来，`thincoder-core/agent/turn-loop.mjs:89`（三拆前 `thincoder-core/agent.mjs:225`）的 drain 才会把消息注入父上下文（消费单点唯一性的结构断言 = `thincoder-core/test/parent-channel.test.mjs:130-133`）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
+**未 drain 的 ask 必须进第 2 步的开轮判据**——只有轮跑起来，`thincoder-core/agent/turn-loop.mjs:108`（三拆前 `thincoder-core/agent.mjs:225`）的 drain 才会把消息注入父上下文（消费单点唯一性的结构断言 = `thincoder-core/test/parent-channel.test.mjs:130-133`）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 ⇒ **本批修法 = 唤醒面（复用 W1 通道）+ 开轮谓词（第 2 步新增判据源）两件一组，缺一无效。**
 
 #### 6.27.12.4 四面裁定
@@ -459,8 +461,8 @@ while (…) { sweepSettledToPending(agent)
   **零新字段 / 零新容器 / 零新注册点**：等待栓数组在挂起期已由三驱动注册；非挂起期数组空 ⇒ `splice(0)` 空循环 = no-op（父侧忙 / 会话已退出 / 挂起未进入三情形皆 no-op）。
 - **轮谓词** = 三驱动第 2 步判据追加 `|| upstreamWaiting(carrier)`（`parent-channel.mjs` 新导出；读 `carrierField(carrier, "_childUpstream")`，且**队列中存在 `kind === "ask"` 条目**为真）。
   该轮 = **auto 轮**（`autoTurn: true` 不变 ⇒ `_inAutoTurn` spawn 门 / `INHERITED_GUARD_KEYS` 继承 / `resume: resume || autoTurn` 语义**全部沿既有 auto 轮**）+ 新旗标 `upstreamTurn: true`（**仅供域文本选择**，不进任何门）。
-- **注入点** = **零改**：仍是 `drainChildUpstream` 回合头单点（`thincoder-core/agent/turn-loop.mjs:89`——三拆前 `thincoder-core/agent.mjs:225`），全部 pending 合并一条 user 消息（`parent-channel.mjs:120-133`）。
-- **回复路径** = **零改**：`subagent action:'send'`（§6.27.1 S1 表 = `subagent-actions.mjs:74-75` 入 `entry._injected` → 子代理回合头 `thincoder-core/agent/turn-loop.mjs:87` `consumeInjected` 消费——三拆前 `thincoder-core/agent.mjs:223`）。
+- **注入点** = **零改**：仍是 `drainChildUpstream` 回合头单点（`thincoder-core/agent/turn-loop.mjs:108`——三拆前 `thincoder-core/agent.mjs:225`），全部 pending 合并一条 user 消息（`parent-channel.mjs:120-133`）。
+- **回复路径** = **零改**：`subagent action:'send'`（§6.27.1 S1 表 = `subagent-actions.mjs:74-75` 入 `entry._injected` → 子代理回合头 `thincoder-core/agent/turn-loop.mjs:106` `consumeInjected` 消费——三拆前 `thincoder-core/agent.mjs:223`）。
   **回复可达性实核（本批关键前提）**：`send` 属 dispatch **控制类豁免**——`thincoder-core/agent/dispatch-gates.mjs:89-98`（`isSubagentControlAction` 含 `send` ⇒ `:257` 免权限门）⇒ 免审批 / planMode 放行 / **digest 内放行**；
   `thincoder-core/agent-tools/subagent.mjs:186` 的 auto 轮门**只覆盖 `escalate`**，`:263` 只覆盖 spawn ⇒ **manual 档 auto 轮内 `send` 可调**（逐条实读，非推断）。
 - **非阻塞地基**：`notify_parent` 侧零改（仍同步返回、无等待 / 拉取导出）——N1 / D-UC3 结构保证原样。
@@ -730,7 +732,7 @@ spawning subagents, asking questions — those need a real user message. End the
 | T-CL-U1 | 正常·CLI 驱动开轮 + **旗标贯通（修正轮 1 补——发现 1）**（`driveRig`） | `agent._childUpstream = [{kind:"ask",…}]` + 池内 1 running；桩 `ctx.runAgent`（记录第 4 参 opts） | 桩被调 1 次（`text === ""`——auto 轮）；**桩第 4 参 `opts.upstreamTurn === true`**（旗标未被 CLI 跳丢弃——可机检）；提示行为 ask 档携参形态（字面随 F-UC8 批收正——§6.27.12.13 ⑦） | 条目 4 |
 | T-CL-U2 | 边界·CLI 驱动提示行矩阵 + 不误开轮 | ① 仅 note ⇒ 桩 0 次 ② manual 档 ask ③ manual 档 digest ④ AUTO 档两因 | 字面断言（四格矩阵——F-UC8 批四处字面收正，见 §6.27.12.13 ⑦ T-SL-C1） | 条目 4 / 条目 3 |
 | T-VS-U1 | 正常·端壳驱动开轮（`thincoder-vscode/test/upstream-parity.test.mjs`） | 桩面板 + `history` 内 `_childUpstream = [{ kind:"ask", … }]` + 池内 1 running；桩 `runTurn` 记录 `(opts)` | 恰 1 次调用且 `opts = { autoTurn: true, text: "", upstreamTurn: true }` | 条目 9 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
-| T-VS-U2 | 正常·注入内容非空（补 F8 病征） | 同 T-VS-U1；桩 `runTurn` 内调核 `drainChildUpstream(history)` | `history` 尾条 user 消息含 `ask · <role>#<id>: <message>`（**非空**）；队列消费即清（`_childUpstream.length === 0`） | 条目 7 |
+| T-VS-U2 | 正常·注入内容非空（补 F8 病征） | 同 T-VS-U1；桩 `runTurn` 内调核 `drainChildUpstream(history)` | `history` 尾条 user 消息含 `ask · <role>#<id>: <message>`（**非空**；行内渲染现为 §6.33 标识形：`ask` ⇒ `[上抛·待裁]`；本串为 §6.27.12 轮记录）；队列消费即清（`_childUpstream.length === 0`） | 条目 7 |
 | T-VS-U3 | 正常·ask 唤醒驱动开轮（端到端·含载体别名路） | 不 await 地起 `suspensionSession`（会话进第 4 步等待）→ 一拍后 `pushChildUpstream({ parent: { history }, kind: "ask" })`（合成 parent 形——写侧别名） | 等待栓被兑现 ⇒ 驱动重入 ⇒ 第 2 步真 ⇒ 桩 `runTurn` 恰 1 次；日志含 `upstream: true`；会话自然退出 | 条目 9 |
 | T-VS-U4 | 边界·note 不唤醒不开轮 | 同上但 `{ kind:"note" }` + 池空 | 桩 `runTurn` 0 次；会话退出（`history._suspended === false`）；队列长度 1（留队等下拐点） | 边界 7 |
 | T-VS-U5 | 结构机检（端侧名集 + 消费点 + 谓词 + 组合单点） | 源文本 | 生产 `CARRIER_FIELDS` 含两款（夹具副本 == 生产表——既有 T-AF16 锁，本批同步）；`thincoder-vscode/src/agent.mjs` 含 `drainChildUpstream(agent)` 恰 1 处 + `composeTurnDomain(` 调用恰 1 处 + 动态 import 形态（静态引即红——W8 契约②）；`thincoder-vscode/src/extension/suspension.mjs` 含 `upstreamWaiting(`；`thincoder-vscode/src/agent/turn-domains.mjs`（已落 · 实读 **37**）含 `composeTurnDomain(` 定义恰 1 处 + `VSC_TURN_OVERLAY` ∧ **零核基座文本字面**（核单源守护） | 条目 7 / 8 / 9 （机检豁免——用例退场登记） |
@@ -779,7 +781,7 @@ T-VS-U1–U7 = `thincoder-vscode/test/upstream-parity.test.mjs`（已落 · 实�
 
 **① drain 面（端侧消费点）**
 
-- **落点** = 端壳自有 depth-0 循环的**循环头**：`thincoder-vscode/src/agent.mjs:179`（as-of 2026-09-29） 循环体首段，紧随 `opts.turnInput?.()` 消费段（`:193-198`）——与核 `thincoder-core/agent/turn-loop.mjs:87-89`（`consumeInjected` → `drainChildUpstream`）**同址反向**（同址 = 回合边界单点；反向 = 核该处兼收父→子注入，端壳该处只收子→父在飞消息）。
+- **落点** = 端壳自有 depth-0 循环的**循环头**：`thincoder-vscode/src/agent.mjs:179`（as-of 2026-09-29） 循环体首段，紧随 `opts.turnInput?.()` 消费段（`:193-198`）——与核 `thincoder-core/agent/turn-loop.mjs:106-108`（`consumeInjected` → `drainChildUpstream`）**同址反向**（同址 = 回合边界单点；反向 = 核该处兼收父→子注入，端壳该处只收子→父在飞消息）。
 - **形态 = 复用核单源**（动态 import `@thincoder/core/agent-tools/parent-channel.mjs` 取 `drainChildUpstream`；run 起取一次、循环头调用一次）——**禁另造第二实现**。
 - **为什么不是另一边（端侧自持一份）**：① **写侧已在核**——入队单点 `pushChildUpstream`（`thincoder-core/agent-tools/parent-channel.mjs:124-134`）是唯一生产者，VSC 子代理经核 `runChildPipeline` → 核 `runAgent` 运行 ⇒ 端侧副本 = 第二份实现 + 第二份抬头 / 注脚文案（`endNote` 读池 + 墓碑）⇒ 漂移源（D2 单一权威源）。
   ② **同面既有先例（W13 · 2026-09-15）**：`thincoder-vscode/src/extension/suspension.mjs:68-73` / `:344-356`（as-of 2026-09-29） 已把 pending 停靠（`parkAsyncPending`）· 残余注入（`injectAsyncResult` / `injectConsultResult`）· 会诊清理
@@ -1209,7 +1211,180 @@ if (!stallAlerted && silentRounds >= ZERO_WRITE_ALERT_ROUNDS) {
 | D-ZW8 | 与「不设零产出阈值」裁定（`docs/core/design/TURN-CAP-CONTINUE.md` §1 行 6——2026-09-26）的关系 = **相容**：该裁定对象 = 续跑决策的自动动作；本机制不触续跑决策（只推一条提醒，处置归父 / 用户）。**字面收窄已落 = 对象限定＋交叉指针（同档 §1 行 6——本修正轮裁定①）** | 用户 2026-10-05 原话（后令）立提醒阈值；机制面零自动动作与裁定精神一致 |
 | D-ZW9 | 送达时效 = **维持 note 不唤醒（有意选择——父侧 2026-10-05 定稿）** | 代价 = 越阈提醒常在子代理结束后才达父侧（默认流首个唤醒恒 = 子代理自身 settle——§6.27.12.1 实证）；替代路径登记 = §6.27.12.11-7 单行改法（`upstreamWaiting` 谓词一行——代价 = 每条 note 一次父侧轮）；用户 / 父侧一句话可改判 |
 
+## 6.33 上抛标识制（投递渲染标识 + 提示词三处）（2026-10-06 · 批 upward-flag-marker · 台账 #970）
+
+### 6.33.1 问题陈述与现状坐标（as-of 2026-10-06 实读）
+
+**问题**（用户 2026-10-06 18:25 报告）：主 agent **多次**把子代理上抛误当用户裁决——两式：① **纯转发**（子代理消息被原样搬进陈述面，来源丢失）② **直当已判**（子代理消息被当作已做出的决定消费）。根因 = 投递面只渲染英文裸词 `ask` / `note`——「待裁 / 知会」在渲染上不可辨；转述 / 入档后来源进一步丢失。
+
+**上游裁定（用户 2026-10-06 · 逐字）**：18:30 提案（上抛消息首部加信息标识）+ 18:32「可以，照这个落地吧」+ 18:33「引擎面也包含了吗」⇒ 引擎面纳入（完整流）。裁定要点 = 标识二枚：`[上抛·待裁]`（对应 `kind=ask`）∥ `[上抛·知会]`（对应 `kind=note`）；**用法 = 消息首部**；标识逐字固定（两面同形——不受双面语言约定影响）。
+
+**现状坐标（实读）**：
+
+| # | 面 | 坐标 | 现状 |
+|---|---|---|---|
+| 1 | 引擎渲染单点 | `thincoder-core/agent-tools/parent-channel.mjs:174`（映射常量 `KIND_MARK` = 同档 `:154-155`） | `drainChildUpstream` 逐条行模板 = `${many ? "- " : ""}${KIND_MARK[e.kind] ?? e.kind} · ${e.from}: ${escapeXml(e.message)}${endNote(agent, e)}`——kind 经标识映射渲染（映射单点 = §6.33.3） |
+| 2 | 入队单点 / 写手 | 同档 `:126`（`pushChildUpstream`）∥ 工具入口 `:216-218`（kind 枚举闸）∥ `thincoder-core/agent-tools/checkpoint.mjs:84`（ask）∥ `thincoder-core/agent-tools/zero-write-watch.mjs:49`（note） | kind 值域由闸面封闭（`ask` ∥ `note` 二值）；渲染点唯一 |
+| 3 | 机读面 | 同档 `:131` | `child:upstream` 日志记原 kind（`{ id, kind, seq }`）——本批零改 |
+| 4 | header / 注脚 / 闸 | 同档 `:169-173` ∥ `:146-152` ∥ `:227-237` | 合并注入 header 文案、结束注脚（settle / cancel 两形态）、三闸——本批零改 |
+| 5 | 显示面（另一族） | 同档 `:111-117`（`upstreamAskLabelVars`）∥ `thincoder-cli/src/tui/suspension-drive.mjs:102` ∥ `thincoder-vscode/src/extension/suspension.mjs:182` ∥ `thincoder-desktop/src/main/suspension-drive.mjs:151` | 挂起信号行 / 起跑标签携参 = `{ from, msg }`（无 kind 字样）——本批零改（边界 4） |
+| 6 | 提示词面 · 工具档 | `thincoder-core/tool-docs/notify_parent.md` | 子代理侧契约档（装载单点 = 同档 `:185` `DESC("notify_parent")`）——无标识约定 |
+| 7 | 提示词面 · 接收侧 | `thincoder-core/prompts/common.md:80-84` ∥ `docs/core/design/prompts/common.md:66-68` | 「接收侧（父）」段——无标识辨识句 |
+| 8 | 提示词面 · 报告惯例 | `thincoder-core/prompts/subagent-base.md` ∥ `docs/core/design/prompts/subagent-base.md` | 全子代理角色槽「你与父代理」节——无报告面标识约定（落点判由 = §6.33.9 D-UM4） |
+| 9 | 测试面 | `thincoder-core/test`（仅 `run.mjs` ∥ `slow.mjs`——清单空置）∥ 三产品测试树 `*.test.mjs` 扫描 ∥ 批件档面 `docs/batches/*.test.mjs` | 三产品测试树无 drain 渲染断言；**批件档存 1 条活断言**（`docs/batches/2026-10-05-subagent-zero-write-watchdog.test.mjs:311`——`note · eng-coder#7: …`）——随正项与通道 = §6.33.5 表行 9 |
+
+### 6.33.2 设计要点
+
+1. **引擎面（单点渲染 · 零新状态 · 零新导出 · 零新依赖）**：`drainChildUpstream` 行内 kind → 标识映射（`ask` ⇒ `[上抛·待裁]`；`note` ⇒ `[上抛·知会]`）；投递形如 `[上抛·待裁] · eng-designer#53: <消息>`（多条目行保留 `- ` 前缀）。未知 kind 回退原样渲染（显示路径 fail-open——不抛；值域已由闸面封闭）。
+2. **提示词面三处**（内容权 = 父侧；逐字建议 = §6.33.4）：
+   - ① **工具档**：标识由引擎机械加（孩子**不要手写重复**）+ 二枚含义 + 报告面手写的区分句；
+   - ② **接收侧（双面）**：带标识消息 = **待处理输入、不是裁决** ∥ 转述 / 入档**标识不摘** ∥ 父侧处置另行标注（用户原话 ∥ 用户裁定 ∥ 父侧处置 ∥ 仍待你裁决）；
+   - ③ **报告惯例（双面）**：上抛 / 披露条目首部手写标识（投递面 = 引擎加；报告面 = 自写——写清区分）。
+3. **边界外零触**：task / spawn / 池 / wake 机制、header / 注脚 / 闸 / 日志、信号提示行族、需求档（父侧笔）——见 §6.33.8。
+
+### 6.33.3 接口契约（改前 → 改后逐字）
+
+**改前**（`thincoder-core/agent-tools/parent-channel.mjs:171`）：
+
+```js
+const rows = entries.map((e) => `${many ? "- " : ""}${e.kind} · ${e.from}: ${escapeXml(e.message)}${endNote(agent, e)}`)
+```
+
+**改后**（同址；映射常量新增于 `drainChildUpstream` 上方）：
+
+```js
+/** kind → 投递标识（单点渲染——机读面 / 日志留原 kind；用户 2026-10-06 裁定逐字）。 */
+const KIND_MARK = { ask: "[上抛·待裁]", note: "[上抛·知会]" }
+const rows = entries.map((e) => `${many ? "- " : ""}${KIND_MARK[e.kind] ?? e.kind} · ${e.from}: ${escapeXml(e.message)}${endNote(agent, e)}`)
+```
+
+**同档 JSDoc 随正**（`:160` 列示句）：「来源 `role#id` + `kind` + message（`escapeXml`）+ 结束注脚」⇒「来源 `role#id` + **kind 标识**（`ask` ⇒ `[上抛·待裁]` ∥ `note` ⇒ `[上抛·知会]`）+ message（`escapeXml`）+ 结束注脚」。
+
+**回退语义（未知 kind）**：`KIND_MARK[e.kind] ?? e.kind`——值域外渲染原样 kind，不抛、不丢消息（显示路径 fail-open；值域封闭 = §6.33.1 行 2）。
+
+### 6.33.4 提示词面逐字建议（内容权 = 父侧；本档只出文本。双面 = CN 权威面 ∥ EN 运行面——语义 1:1、语言各随其面；标识逐字两面同形）
+
+**① 工具档（单面——`tool-docs` 无中文镜像）**——`thincoder-core/tool-docs/notify_parent.md`（插于 `kind:'note'` 条之后）：
+
+```
+- Delivery markers: the message your parent receives is headed `[上抛·待裁]` (ask — awaiting the
+  parent's decision) or `[上抛·知会]` (note — FYI) — added for you, so do not write these markers
+  inside `message`. In your final report the marker is yours to write: tag items still awaiting the
+  parent's decision `[上抛·待裁]`, FYI items `[上抛·知会]`.
+```
+
+**② 接收侧 · EN 运行面**——`thincoder-core/prompts/common.md`（插于「Receiving side (the parent) …」段之后）：
+
+```
+Messages from a child may arrive headed `[上抛·待裁]` (a question awaiting your decision) or
+`[上抛·知会]` (an FYI) — these are **pending child input, never a ruling**: not the user's words,
+not a decision already made. Keep the marker when you relay the message to the user or cite it in a
+record. When you dispose of one, state its source separately — the user's literal words ∥ a user
+ruling ∥ your own disposition ∥ still awaiting your decision — never present a child's message or
+your own disposition as the user's words.
+```
+
+**③ 接收侧 · CN 权威面**——`docs/core/design/prompts/common.md`（插于「接收侧（父）」段之后）：
+
+```
+子代理的消息可能以 `[上抛·待裁]`（等你裁决的问题）或 `[上抛·知会]`（知会）开头——它们是**待处理的子代理输入，
+不是裁决**：不是用户的话，也不是已做出的决定。转述给用户、或入档引用时，标识不摘。处置时来源另行标注——
+用户原话 ∥ 用户裁定 ∥ 父侧处置 ∥ 仍待你裁决——不得把子代理消息或你自己的处置当作用户的话。
+```
+
+**④ 报告惯例 · EN 运行面**——`thincoder-core/prompts/subagent-base.md`（插于「冲突类必发」条之后）：
+
+```
+- **Markers in your report**: items awaiting the parent's decision (including an ask left unanswered
+  when you finish) head with `[上抛·待裁]`; FYI items (including a note you sent up) — `[上抛·知会]`.
+  The engine marks the delivered message mechanically; in your report, the marker is yours to write.
+```
+
+**⑤ 报告惯例 · CN 权威面**——`docs/core/design/prompts/subagent-base.md`（同位置）：
+
+```
+- **报告里的上抛标识**：等父侧裁决的条目（含你结束时仍未获答复的 ask）首部带 `[上抛·待裁]`；知会类条目
+  （含你已上抛的 note）带 `[上抛·知会]`。投递面由引擎机械加标识；报告面由你自己写。
+```
+
+**双面 1:1 对照**：②↔③ 语义点三条同（待处理输入非裁决 ∥ 转述 / 入档不摘 ∥ 处置来源四标注）；④↔⑤ 同（两枚标识 + 机械 / 自写区分）。① = 工具档单面（无 CN 对位）。
+
+### 6.33.5 受影响文件清单（行数口径 = 行号读数（含末行空行；≙ 换行符计数 + 1）；现量 = 设计轮实读 · 评审修正轮按盘收正——as-of 2026-10-06）
+
+| # | 文件 | 现量 | Δ（预计） | 面 |
+|---|---|---|---|---|
+| 1 | `thincoder-core/agent-tools/parent-channel.mjs` | 239 → **242**（已落 · 实施后复读——+3；Δ 区间 +2..4 内） | +2..4（映射常量 2 行 + 渲染行 / JSDoc 行内改）+ 注释收正 2 处（`:23` ∥ `:155`——行内改 · 零新增；表下注）——300 软线内 | 产品码（引擎渲染 · 已落） |
+| 2 | `thincoder-core/tool-docs/notify_parent.md` | 9 → **13**（已落 · 实施后复读——+4） | +4..5（条目 4 行 · ≲ 0.4k 字符——单档帽 8k 未及） | 提示词面 · 工具档 |
+| 3 | `thincoder-core/prompts/common.md` | 189 → **196**（已落 · 实施后复读——+7） | +7（空行 + 段落 6 行） | 提示词面 · 接收侧（EN 运行面） |
+| 4 | `docs/core/design/prompts/common.md` | 146 → **150**（已落 · 实施后复读——+4） | +4（空行 + 段落 3 行） | 提示词面 · 接收侧（CN 权威面） |
+| 5 | `thincoder-core/prompts/subagent-base.md` | 15 → **18**（已落 · 实施后复读——+3） | +3（条目 3 行） | 提示词面 · 报告惯例（EN 运行面） |
+| 6 | `docs/core/design/prompts/subagent-base.md` | 14 → **16**（已落 · 实施后复读——+2） | +2（条目 2 行） | 提示词面 · 报告惯例（CN 权威面） |
+| 7 | `docs/core/design/AGENT-LOOP-UPSTREAM.md`（本档） | 1227 → **1402**（实施后复读——行号读数口径〔含末行空行〕） | +164（设计轮：§6.33 + 变更记录一行）+ 9（评审修正轮：同档收正 ∥ 随正登记 ∥ 读数收正 ∥ 变更记录）+ 2（实施后收正轮：坐标 / 读数收正 ∥ 登记收正 ∥ 变更记录） | 设计档（本批笔） |
+| 8 | `docs/batches/2026-10-06-upward-flag-marker.test.mjs`（已落） | **183**（已落 · 实施后复读——拟 ≈150..250 内） | 新增 ≈150..250（引擎用例 U-UM1–U-UM6 ∥ U-UM8 直驱；U-UM7 = 文本对读 / 脚本——§6.33.6 档位注） | 批件单测档（实施轮） |
+| 9 | `docs/batches/2026-10-05-subagent-zero-write-watchdog.test.mjs` | 320（行号读数；§6.32.7 行 7 旧录值 319） | ±1..2（`:311` 断言随形收正——`note · eng-coder#7: …` ⇒ 标识形） | 批件单测档（**父侧随正**——随实施轮同拍；跨批写门禁 ⇒ eng 角色零触） |
+
+**测试面判定**：① 三产品测试树（`thincoder-core/test` ∥ `thincoder-cli/test` ∥ `thincoder-vscode/test`）现无 `.test.mjs` 单测档（跑器 / 清单空置）；**批件档面存 1 条活断言**（`docs/batches/2026-10-05-subagent-zero-write-watchdog.test.mjs:311`）⇒ **随正项**（引擎改形落盘后随形收正——**父侧直接执行**、随实施轮同拍；表行 9）；
+② 引擎渲染回归锚 = 实施轮新批件单测档（行 8：`pushChildUpstream` → `drainChildUpstream` 直驱——U-UM1–U-UM6 ∥ U-UM8；U-UM7 = 文本对读 / 脚本——§6.33.6 档位注）；③ `api-contract` 零涉（导出面无增改；`tool-docs` 不在扫描域）；④ 集成场景无涉（无业务入口面变化——纯提示词 + 投递渲染文本）。
+
+**读数随动（已落）**：实施后复跑 `node scripts/tool-schema-size.mjs`——`notify_parent.md` 增量计入总量（§6.11 表）；读数变化已随收口刷新 = **100,349 / 0.969**（as-of 2026-10-06；先例 = #950 同面收口笔）。
+
+**▸ 同档死指针（U-UM-b——已落 · 随实施轮收正）**：同档 `:23` ∥ `:158` 注释已收正为「`agent/turn-loop.mjs` 循环头」（三拆后实际循环头 = `thincoder-core/agent/turn-loop.mjs:106-108`；`thincoder-core/agent.mjs:12` = import `runTurnLoop`）；收正 = 行内改 · 零新增行（表行 1 Δ 计入）。
+
+### 6.33.6 用例表（正常 / 边界 / 错误）
+
+| # | 类型 | 输入 | 期望输出 | 回指 |
+|---|---|---|---|---|
+| U-UM1 | 正常·ask 单条 | 队列 1 条 `{kind:"ask", from:"eng-designer#53"}` | 注入行 = `[上抛·待裁] · eng-designer#53: <消息>`；恰 1 条合并 user 消息；队列清空 | §2 条目 1 |
+| U-UM2 | 正常·note 单条 | 同上 `kind:"note"` | 注入行 = `[上抛·知会] · eng-designer#53: <消息>` | §2 条目 1 |
+| U-UM3 | 边界·多条目 | 两子代理各 1 条（ask + note） | 恰 1 条 user 消息；两行按入队序、各带 `- ` 前缀与对应标识；header 计数句不变 | §2 条目 1 |
+| U-UM4 | 边界·注脚共存 | settle / cancel 子代理的条目 | 行 = `标识 · from: msg` + 既有结束注脚（两形态逐字不变） | §2 条目 2 |
+| U-UM5 | 边界·未知 kind（防御） | 手工条目 `kind:"other"` | 渲染原样 `other`；不抛、消息不丢 | §2 条目 1 |
+| U-UM6 | 边界·机读面零改 | 任意入队 | `child:upstream` 日志 `kind` 原值；`upstreamAskLabelVars` 输出逐字同改前 | §2 条目 2 |
+| U-UM7 | 提示词面 | 三处落笔 + 双面 | 五块文本逐字 = §6.33.4；`node scripts/prompt-refs-check.mjs` 零命中；`notify_parent.md` 单档 ≪ 8k | §2 条目 3 |
+| U-UM8 | 边界·空队列 | 空队列调用 | 零历史变更（no-op——零回归） | §2 条目 2 |
+
+**用例档位（评审 #60 · 发现 5 收正）**：引擎面 U-UM1–U-UM6 ∥ U-UM8 = 批件单测档直驱（`docs/batches/2026-10-06-upward-flag-marker.test.mjs`——`pushChildUpstream` → `drainChildUpstream` 直驱）；U-UM7 = 文本对读（五块逐字 ↔ §6.33.4）+ `node scripts/prompt-refs-check.mjs` 脚本核（含单档体量核）。
+
+### 6.33.7 验收标准（逐条回指——可机检；cwd = `D:\teamcode\thincoder`）
+
+| # | 判据 | 回指 |
+|---|---|---|
+| A-UM1 | 渲染映射单点：`drainChildUpstream` 行——`ask` ⇒ `[上抛·待裁]` ∥ `note` ⇒ `[上抛·知会]`；形如 `标识 · from: msg`（多条目 `- ` 前缀）——U-UM1/2/3 绿 | §2 条目 1 |
+| A-UM2 | 零改面实证：header ∥ 结束注脚 ∥ 三闸 ∥ `child:upstream` 日志 ∥ `upstreamAskLabelVars` 逐字零改——U-UM4/5/6/8 绿 | §2 条目 2 |
+| A-UM3 | 提示词面三处（含双面对位）落盘 + 语义 1:1（§6.33.4 对照句）；`node scripts/prompt-refs-check.mjs` ⇒ 零命中；`notify_parent.md` 单档 ≤ 8k | §2 条目 3 |
+| A-UM4 | 文档一致：本档 §6.33 ↔ 批档 §2 ↔ 台账 #970 三方一致；`node scripts/doc-check.mjs` 本批触碰档零新增闸态悬空 / 零行宽违规 | 批档自身约束 |
+| A-UM5 | 零回归：空队列 no-op 逐字同；挂起信号行 / 唤醒域文本 / 池 / wake 面零触（静态核） | §2 条目 2 / 边界 4 |
+
+### 6.33.8 边界（本批不做）
+
+1. **task / spawn / 池 / wake 机制零触**；不加新状态字段、不加新导出、不加新依赖。
+2. header / 结束注脚 / 三闸 / `child:upstream` 日志零改（机读面 = 原 kind）。
+3. 提示词面只改 §6.33.4 所列五块；其它档零触（需求档 = 父侧笔，本批零笔）。
+4. 信号提示行族零改（`upstreamAskLabelVars` 与三端消费面——标识只进「消息首部」，不进横幅；如需扩面 = 另案）。
+5. 标识不做本地化 / 配置化——两枚逐字固定（用户裁定）。
+6. 不做 `message` 内容改写：孩子写什么投什么（标识由引擎前缀；不摘、不改、不裁）。
+7. 不触 `docs/batches/2026-10-05-subagent-zero-write-watchdog.test.mjs`（跨批写门禁）——其 `:311` 渲染断言随正 = **父侧直接执行**、随实施轮同拍（§6.33.5 表行 9）。
+
+### 6.33.9 关键决策记录（含否决备选）
+
+| # | 决策 | 理由 / 否决 |
+|---|---|---|
+| D-UM1 | 标识 = **渲染映射**（kind → 标识——不改入队条目 / 不改 kind 值） | 单点渲染、零新状态；机读面（日志 / 闸 / 谓词）继续吃原 kind。否决 = 入队时改写 kind（污染机读面 + 三闸判据）/ 存储态加字段（新状态） |
+| D-UM2 | 未知 kind 回退原样渲染 | 显示路径 fail-open——投递面不抛（抛 = 打断回合环）；值域已由闸面封闭，回退只为防御。否决 = 抛错 / 丢行 |
+| D-UM3 | 接收侧落点 = `common.md`（双面） | 公共层恒装配、「接收侧（父）」段 = 语义自然位；`notify_parent` 两模式皆在。否决 = 模式纪律档（工程面独占）/ 人格档（角色分裂 → 多笔重复） |
+| D-UM4 | 报告惯例落点 = `subagent-base.md`（双面） | 全子代理角色槽「你与父代理」节 = 子↔父关系语义位（报告 = 子 → 父的终态消息，标识纪律同族）。否决 = 交付报告面（工程模式独占，普通面须对位 ⇒ 两边重复）/ 交付表邻位（同因） |
+| D-UM5 | 工具档写「机械加 / 报告自写」区分句 | 防双写（`message` 内手写 ⇒ 重复标识）；报告面无引擎渲染 ⇒ 明示自写归属（用户口径的「写清区分」）。 |
+| D-UM6 | 标识逐字 `[上抛·待裁]` ∥ `[上抛·知会]`、两面同形 | 用户裁定逐字；标识 = 固定 token（非文案）——不受「双面语言各随其面」约定影响。 |
+
+**▸ 披露（上抛 · 非阻断）**：① 同档死指针两处（§6.33.5 表下注——已落 · 随实施轮收正）；② 接收侧新句与既有「不许假冒用户名义」条（`common.md` 诚实原则节）语义接力——本批句 = 接收侧具体化，无冲突（对照实读）；③ 信号提示行 / 唤醒横幅不带标识（有意 = 标识只进消息首部；横幅另有 in-flight 措辞承载）——如需扩面 = 另案。
+
 ## 变更记录
+
+- 2026-10-06（**批 upward-flag-marker · 实施后收正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-06-upward-flag-marker.md` §5 实施终态 + 父侧本笔四件）：① 坐标按盘收正——§6.33.1 行 1（`:171` ⇒ `:174`；映射常量 `KIND_MARK` = `:154-155`）∥ 行 2（`:213-215` ⇒ `:216-218`）∥ 行 4（`:166-170` ⇒ `:169-173` · `:224-234` ⇒ `:227-237`）∥ §6.27.4（`turn-loop.mjs:89` ⇒ `:108`）∥ §6.33.3（`:157` ⇒ `:160`）；② §6.33.5 行 1–6 ∥ 行 8 现量按盘收正 + 已落形（242 ∥ 13 ∥ 196 ∥ 150 ∥ 18 ∥ 16 ∥ 183）+ 行 7 自指随拍（1400 ⇒ **1402**）；③ 同族登记收为已落形——表下注（`:155` ⇒ `:158`）∥ 读数随动（§6.11 已随收口刷新）∥ §6.33.9 披露①。**零新语义**（坐标 / 读数 / 登记面——产品码 / 提示词六档零触）。
+
+- 2026-10-06（**批 upward-flag-marker · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-06-upward-flag-marker.md` §3 轮次 1（评审 #60：🔴×1 ∥ 🟡×2 ∥ 🔵×3）六项逐条定点落位）：① §6.27.4 两块行内行同步为标识形（现态面；映射单点 = §6.33.3）+ §6.27.9 T2/T4 ∥ §6.27.12.9 T-VS-U2 三处预期串补取代指针（记录面——载体档已退场）；② §6.33.1 行 9 ∥ §6.33.5 测试面判定收正 + 批件档随正项登记（表行 9——父侧随正 · 随实施轮同拍；§6.33.8 边界 7）；③ U-UM-b 定案落（表下注 ∥ 披露① 收正「父侧已裁——随实施轮机械收正」）；④ 读数按盘收正 + 口径统一（行 7 = 1227 → **1400**；行 1/3/5/6 = 239 ∥ 189 ∥ 15 ∥ 14——行号读数含末行空行）；⑤ §6.33.6 用例档位注（U-UM1–U-UM6 ∥ U-UM8 直驱 · U-UM7 文本对读 / 脚本）+ 行 8 同拍；⑥ 同拍批档 §2.6 追加（记录陈化勘误等）。**零新语义**（收正 / 登记 / 指针 / 口径面——产品码 / 提示词五块 / 2026-10-05 批件档零触）。
+
+- 2026-10-06（**批 upward-flag-marker · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-06-upward-flag-marker.md` §1 · 台账 #970 · 用户 2026-10-06 18:32 裁定 + 18:33 引擎面纳入）：新增 **§6.33 上抛标识制**——`drainChildUpstream` 行 kind → 标识映射（`ask` ⇒ `[上抛·待裁]` ∥ `note` ⇒ `[上抛·知会]`；单点渲染 · 机读面留原 kind）+ 提示词面三处（工具档「机械加 / 报告自写」区分句 ∥ 接收侧双面「待处理输入非裁决 · 转述入档不摘 · 处置来源四标注」∥ 报告惯例双面上抛条目手写标识）；用例 U-UM1–U-UM8 · 验收 A-UM1–A-UM5 · 边界六条 · 决策 D-UM1–D-UM6。**机制语义 = 投递渲染面新增标识**（header ∥ 注脚 ∥ 闸 ∥ 日志 ∥ 信号行零改）。
 
 - 2026-10-05（**批 subagent-zero-write-watchdog · 实施后终收笔（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-05-subagent-zero-write-watchdog.md` §5 实施终态 + 父侧裁定〔随条注〕）：① §6.32.6 简记收正——两族文案函数签名 `(rounds)` ⇒ **`(from, rounds)`**（与 §6.32.4 定稿模板自洽；实现以定稿为准，§5 已证字节相等）+ `maybeZeroWriteAlert` 内呼对齐（`zeroWriteAlertText(child._upstream.label, child._zeroWriteStreak)`）；② §6.32.7 行 1–7 as-built 回填（253→**267** ∥ 152→**157** ∥ 新 **77** ∥ 288→**310** ∥ 200→**204** ∥ 494→**497** ∥ 新 **319**）+ 表头读法注 + 行 8 自指读数随拍（1224 ⇒ **1227**）；③ >300 越线补行——`thincoder-core/advisor/loop.mjs`（310——增量以注释为主 ⇒ 非结构性触碰；本批不拆；拆分预案随下次结构性触碰登记）+ 批件测档 319（批内件口径——先例 342 行同判：记录接受）；④ 钩子链残余登记（`thincoder-core/agent-tools/advisor-async.mjs:431` ∥ `thincoder-core/advisor/run.mjs:146` 两行转发无已执行证据——静态核对 + 单元面覆盖；真入口腿留作可选加固）；⑤ NaN 卫生接受注（`_zeroWriteStreak` 未初始化面——门「整数判」拦下、无显示面）；⑥ 「拟新增」标记批收口核销（↔ 受影响文件表——叶档 / 批件测档已落）+ 表下注「在飞」字样与坐标收正（`:198-200`）。**零新语义**（收正 / 回填 / 登记面——产品码零触）。
 

@@ -12,3 +12,6 @@ It is **not a confirmation gate** (it cannot approve anything, and it may be bus
 - **Decision-grade = four classes**: ① a stated premise the facts contradict; ② two requirements that conflict and you cannot arbitrate
   (two documents describing the same mechanism differently ⇒ **judged the same as a conflict**); ③ whether the action is inside your task domain; ④ a choice that would waste work already done.
 - **The conflict class must be sent, never deferred to the final report**: two requirements in conflict ⇒ send an `ask` at once — never settle it by picking a side, never keep weighing, never park it for the final report.
+- **Markers in your report**: items awaiting the parent's decision (including an ask left unanswered
+  when you finish) head with `[上抛·待裁]`; FYI items (including a note you sent up) — `[上抛·知会]`.
+  The engine marks the delivered message mechanically; in your report, the marker is yours to write.

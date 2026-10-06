@@ -308,7 +308,7 @@ test("A-ZW4 送达面：watch 推送走既有队列 / drain 合并注入；静�
   assert.equal(PARENT.drainChildUpstream(parent), 1, "既有消费单点取走（恰一条）")
   assert.equal(parent._childUpstream.length, 0, "drain 即清")
   const injected = String(parent.history.at(-1)?.content ?? "")
-  assert.ok(injected.includes("note · eng-coder#7: [zero-write watchdog] eng-coder#7: 50 consecutive rounds"), "合并注入形态 = 既有 drain 列示形")
+  assert.ok(injected.includes("[上抛·知会] · eng-coder#7: [zero-write watchdog] eng-coder#7: 50 consecutive rounds"), "合并注入形态 = 标识形 drain 列示")
   // ② 静态：watch 档零引唤醒面 / 工具面（A-ZW4：闸 / 谓词 / 工具面零改）
   const src = readFileSync(join(ROOT, WATCH_REL), "utf8")
   for (const banned of ["wakeAsyncWaiters", "upstreamWaiting", "UPSTREAM_MSG_MAX", "UPSTREAM_QUEUE_MAX", "UPSTREAM_ASK_MAX_INFLIGHT", "parentChannelTool"]) {

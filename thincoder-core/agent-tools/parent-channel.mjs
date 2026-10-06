@@ -20,7 +20,7 @@
  *   生命周期与子代理生命周期**解耦**（settle / cancel 不迁移、不清队列——F3）。
  * - 父侧唤醒 = ask 入队尾调 `wakeAsyncWaiters(parent)`（**同步**，零 await；`note` 不唤醒）——
  *   零新字段 / 零新容器 / 零新注册：等待栓数组由挂起驱动注册，非挂起期数组空 ⇒ no-op。
- * - 父侧消费 = `drainChildUpstream(agent)`（`thincoder-core/agent.mjs` 循环头单点，紧邻
+ * - 父侧消费 = `drainChildUpstream(agent)`（`thincoder-core/agent/turn-loop.mjs` 循环头单点，紧邻
  *   `consumeInjected?.(agent)`——同址反向）：全部 pending **合并一条** user 消息（`pushReal`
  *   非 transient——事务性事件落盘，D-UC5），每条附结束注脚（已 settle / 已 cancel 两形态；
  *   其余态不附——不臆断）。
@@ -151,10 +151,13 @@ function endNote(agent, entry) {
   return ""
 }
 
+/** kind → 投递标识（单点渲染——机读面 / 日志留原 kind；用户 2026-10-06 裁定逐字）。 */
+const KIND_MARK = { ask: "[上抛·待裁]", note: "[上抛·知会]" }
+
 /**
- * 父侧消费点（回合边界单点——`agent.mjs` 循环头；空队列 no-op = 零历史变更、零开销）：
+ * 父侧消费点（回合边界单点——`agent/turn-loop.mjs` 循环头；空队列 no-op = 零历史变更、零开销）：
  * 全部 pending 消息**合并为一条** user 消息注入（`pushReal`——不带 `transient`，事件落盘），
- * 按入队序逐条列示（来源 `role#id` + `kind` + message（`escapeXml`）+ 结束注脚）。
+ * 按入队序逐条列示（来源 `role#id` + **kind 标识**（`ask` ⇒ `[上抛·待裁]` ∥ `note` ⇒ `[上抛·知会]`）+ message（`escapeXml`）+ 结束注脚）。
  * @param {object} agent 父（消费方）agent 形态。
  * @returns {number} 本次消费条目数（0 = 空队列 no-op）。
  */
@@ -168,7 +171,7 @@ export function drainChildUpstream(agent) {
       + "Answer with subagent action:'send' (id + message) if the decision is yours; an unanswered ask means that child skips the part and reports it as not done.]"
     : `[System reminder: in-flight message from your subagent ${entries[0].from} — it keeps working on the unaffected parts. `
       + "Answer with subagent action:'send' (id + message) if the decision is yours; an unanswered ask means the child skips that part and reports it as not done.]"
-  const rows = entries.map((e) => `${many ? "- " : ""}${e.kind} · ${e.from}: ${escapeXml(e.message)}${endNote(agent, e)}`)
+  const rows = entries.map((e) => `${many ? "- " : ""}${KIND_MARK[e.kind] ?? e.kind} · ${e.from}: ${escapeXml(e.message)}${endNote(agent, e)}`)
   pushReal(agent, { role: "user", content: [header, ...rows].join("\n") })
   return entries.length
 }
