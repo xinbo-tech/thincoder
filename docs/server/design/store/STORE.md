@@ -8,9 +8,11 @@
 
 - 单库单连接（`DatabaseSync`）；PRAGMA：WAL ∥ `synchronous=NORMAL` ∥ `busy_timeout=5000` ∥ `foreign_keys=ON`。
 - 库文件默认 = `thincoder-server/data/gateway.db`（运行期生成，不入 git）。
-- 结构版本 = `PRAGMA user_version`（当前 = 1——未发布，无历史库迁移面；迁移链机制自 v1 起备）。
+- 结构版本 = `PRAGMA user_version`（当前 = 2——v2 增 `providers`；未发布期连续演进，无历史库迁移包袱——旧库启动自动升；迁移链机制自 v1 起备）。
 
-## 2. DDL（v1 全量——四表）
+## 2. DDL（v1 基线四表 + v2 增段）
+
+### v1 基线（四表——逐字）
 
 ```sql
 PRAGMA journal_mode = WAL;      -- 读并发 + 单写者
@@ -62,19 +64,34 @@ CREATE INDEX IF NOT EXISTS idx_usage_member_ts ON usage(member_id, ts);
 CREATE INDEX IF NOT EXISTS idx_sessions_member ON sessions(member_id);
 ```
 
-- 表归属：`members` ∥ `api_keys` ∥ `sessions` = accounts 域（`accounts/ACCOUNTS.md`）；`usage` = metering 域（`metering/METERING.md`）；结构单源 = 本档。
+### v2 增段（`providers`——gateway 域）
+
+```sql
+CREATE TABLE IF NOT EXISTS providers (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT NOT NULL UNIQUE,             -- 对外标识前缀（无 `/`；重名拒）
+  base_url    TEXT NOT NULL,                    -- OpenAI 兼容根
+  api_key     TEXT NOT NULL DEFAULT '',         -- 明文 ∥ `env:NAME` 引用（空 = 不发 Authorization；解析 = 注册表构建期）
+  models_json TEXT NOT NULL DEFAULT '[]',       -- 开放清单（JSON 数组——上游模型名；对外 = provider/model）
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL
+);
+```
+
+- 表归属：`members` ∥ `api_keys` ∥ `sessions` = accounts 域（`accounts/ACCOUNTS.md`）；`usage` = metering 域（`metering/METERING.md`）；`providers` = gateway 域（provider 管理面——`gateway/API.md` §2.2）；结构单源 = 本档。
 
 ## 3. 迁移链（`user_version` 逐版升）
 
 - `thincoder-server/src/store/db.mjs`（已落盘）持 `MIGRATIONS` 数组——每段 = `{ v, up(db) }`（v = 目标 `user_version`，自 1 起递增；v1 = 基线段 = §2 全量 DDL）。
 - 开库序：读 `user_version` ⇒ 顺序执行 `v > 当前` 的段（每段单事务；成功 ⇒ `PRAGMA user_version = v`；抛错 ⇒ 进程非零退出——fail-closed）。
 - 结构每变一次 = 追一段（+1）——空库 ∥ 旧库启动自动升，零手工脚本（断点列 = `EVOLUTION.md` §1-G2）。
+- v2 = provider 增段（`providers` 表——控制台 provider 管理；旧库（v1）启动自动升 ∥ 空库直落 v2）。
 
 ## 4. 本域文件与行数预算（本域族行）
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/store/db.mjs`（已落盘） | **110**（实读 2026-10-06——设计估 ≈175） | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
+| `thincoder-server/src/store/db.mjs`（已落盘） | **110**（实读 2026-10-06——设计估 ≈175；本批预期 ≈135 = +25：v2 段（`providers` DDL + 迁移段）） | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
 
 ## 5. 关键决策（本域）
 
@@ -90,3 +107,4 @@ CREATE INDEX IF NOT EXISTS idx_sessions_member ON sessions(member_id);
 
 - 2026-10-06：建档（批 `docs/batches/2026-10-06-server-gateway.md` 设计轮；同日补轮按三层结构 + B 案织入）——store 域：库 ∥ DDL（四表——members 扩列 + sessions） ∥ 迁移链；KD-SV-3。
 - 2026-10-06：实施后回填轮（fix）——§4 行数按实读回填（≈175 ⇒ 110）。
+- 2026-10-06：控制台 provider/模型管理设计轮（批 `docs/batches/2026-10-06-console-providers.md`——需求 §2:11 ∥ 台账 #962）——§1 结构版本 1 ⇒ 2 ∥ §2 增 v2 增段（`providers` 表——字段面/注释）+ 表归属补 gateway 行 ∥ §3 迁移链补 v2 段 ∥ §4 预算（db 110 ⇒ ≈135）。

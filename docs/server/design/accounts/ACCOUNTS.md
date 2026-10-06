@@ -37,6 +37,7 @@
 | `POST /api/members/:id/password-reset` | admin | 重置密码（KD-SV-14——在）：一次性临时密码回显 + 吊销该成员全部会话；旧密即失效（首登后应自助改密——页面提示，不强制门） |
 
 - 用量与配额端点（`/api/me/usage` ∥ `/api/usage` ∥ `/api/members/:id/quota`）= `metering/METERING.md` §3。
+- provider 管理端点（`/api/admin/providers/*`）= `gateway/API.md` §2.2——判权同本表口径（`requireAdmin`：`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401；写端点 JSON 型门同前言）。
 - **双角色规则**：角色判定与写权限强制在服务端（页面显隐非判据）；`user` 触管理端点 ⇒ 403 `forbidden`；admin 兼有自助面；无 ∥ 过期会话 ⇒ 401 `unauthorized`。
 - **跨站防护**：`SameSite=Strict`（跨站不携 cookie）+ 写端点仅 JSON + 无 CORS 放行头。
 
@@ -97,3 +98,4 @@
 - 2026-10-06：建档（批 `docs/batches/2026-10-06-server-gateway.md` 设计轮；同日补轮按三层结构 + B 案织入）——accounts 域：团队 key 面 ∥ 账号/会话/角色 ∥ 自助/管理端点表 ∥ 改密/重置；KD-SV-7/11/12/13/14；用例 N5–N10 ∥ B8 ∥ E8–E10。
 - 2026-10-06：fix 轮（评审轮次 1 #1——管理面 key 枚举补记）：`GET /api/members` 成员行附 key 清单（提示形 + id）；KD-SV-16 增；用例 N11 增（admin 吊销正路——该 key 下一请求 401）。
 - 2026-10-06：实施后回填轮（fix）——§2 密码规则补「长度不设上界」（已审定：无 DoS 面）；§4 行数按实读回填（小计 ≈570 ⇒ 493）。
+- 2026-10-06：控制台 provider/模型管理设计轮（批 `docs/batches/2026-10-06-console-providers.md`）——§3 增 provider 管理端点指针行（端点表归 `gateway/API.md` §2.2——本域零语义改）。

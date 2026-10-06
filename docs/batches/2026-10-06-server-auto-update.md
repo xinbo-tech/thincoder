@@ -165,3 +165,23 @@ VERDICT: pass
 - 未办（披露）：`docker build`/compose 起停（环境无 docker——收口轮真机面）；设计档「拟新增」标记 + §6 预算实读回填（R11 轮）。
 
 ## §6 验证与收口（父代理）
+
+**§6 验证与收口（主 agent）**
+
+**来路**：用户 15:33「server我也希望实现自动更新，那docker里的也能吗？」→ 15:37「用不用容器都走npm路径升级，容器只做个壳就行」→ 15:38 点火 → 设计轮 `#27`（两路统一 + 壳化 + 收敛表 + KD-SV-18）→ 评审 `#28`（**pass**——🔴0 ∥ 🟡4 ∥ 🔵4）→ 八条收正（父侧直接执行 · 机械 · 可 revert）→ §4 代签 → 实施轮 `#30`（新增 4 档 ∥ 改动 9 档）→ 本段。
+
+**验证读数（父侧亲跑）**：
+- 八件 **70/70 pass**（EXIT=0——含本批新档 14/14）。
+- `npm run prepublishOnly`（八件 + 三档 `node --check`）实跑绿（`#30` 终读数，父侧复核一致）。
+- converge 矩阵七行逐行断言在案（空 ⇒ 零网络 ∥ 空无 ⇒ 拒启 ∥ 钉=即用 ∥ 钉≠ 装/拒启+三选修复 ∥ latest 装失败/不可达 ⇒ 回退+警告或拒启 ∥ POSIX 探测 ∥ 退出码 0/1）。
+- 零依赖扫描绿（无新依赖 ∥ `import` 全 `node:`/相对）。
+- `docker build`/compose 起停 = **本机无 docker ⇒ 未跑**（如实披露——归 `#959` 真机条件行同窗）。
+
+**跨批机械件（父侧直接执行 · 可 revert）**：`docs/batches/2026-10-06-server-gateway-webui-deploy.test.mjs` 四处断言按壳形收正（`#30` 撞跨批写门禁——**正确上抛不绕**）；复跑 6/6 绿。已并入本批提交（§1 在案）。
+
+**实施提交**：`43288a4c`（`feat: thincoder-server auto-update — npm identity, shell image, converge (13 files, #961)`——15 档 · +1210/−60）；双推 = 末段随收口（R11 落定后）。
+
+**遗留 / 移交（在册）**：
+- **R11 回填 = 冻结解除即落**（`ops/OPS.md` ∥ `design/PROJECT.md` 被 #34 评审冻中——补丁已备；实读：update **228** ∥ converge **197** ∥ entrypoint **7** ∥ bin **122** ∥ config **164** ∥ Dockerfile **28** ∥ compose **19** ∥ dockerignore **8** ∥ service **34** ∥ example **33** ∥ README **142**；小计 **1246**；批内件 **498**）。
+- 批内件 **498 行**（500 硬线内零余量——后续追加须先拆）。
+- `docker build` 真机 = `#959` 条件行同窗；R10（发布面接线）= 发布面轮。

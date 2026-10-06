@@ -9,8 +9,9 @@
 | 族 | 方法 + 路径 | 鉴权 | 详表 |
 |---|---|---|---|
 | OpenAI 面 | `POST /v1/chat/completions` ∥ `GET /v1/models` ∥ `POST /v1/embeddings` | 团队 key（`Authorization: Bearer`——唯一接受形） | 本档 §2 |
-| 账号/自助/管理面 | `/api/*` | 会话 cookie + 角色判定 | `accounts/ACCOUNTS.md` §3 ∥ `metering/METERING.md` §3（用量/配额端点） |
-| 前端静态面 | `GET /` ∥ `/app.mjs` ∥ `/views.mjs` ∥ `/style.css` | 公开（页面壳零数据） | `webui/WEBUI.md` §1 |
+| provider 管理面 | `GET/POST/PATCH/DELETE /api/admin/providers*` | admin 会话（服务端判定——`user` ⇒ 403） | 本档 §2.2 |
+| 账号/自助/管理面 | `/api/*`（成员/用量族——provider 管理面另列） | 会话 cookie + 角色判定 | `accounts/ACCOUNTS.md` §3 ∥ `metering/METERING.md` §3（用量/配额端点） |
+| 前端静态面 | `GET /` ∥ `public/**`（`app.mjs` ∥ `nav.mjs` ∥ `views-*` 五档 ∥ `style.css`） | 公开（页面壳零数据） | `webui/WEBUI.md` §1 |
 | 其余 | —— | —— | 404（JSON 错误形 = §3） |
 
 - 分派 = `thincoder-server/src/gateway/server.mjs`（已落盘）注册行制——新端点 = 注册一行（断点列 = `EVOLUTION.md` §1-G1）。
@@ -21,17 +22,37 @@
 | 方法 + 路径 | 鉴权 | 语义 |
 |---|---|---|
 | `POST /v1/chat/completions` | 团队 key | 上游聊天转发（流式 SSE ∥ 非流式 JSON 均透传）；记账 |
-| `GET /v1/models` | 团队 key | 模型清单（chat = `provider/model` 前缀名清单 ∪ 嵌入引擎模型——配置派生） |
+| `GET /v1/models` | 团队 key | 模型清单（chat = `provider/model` 前缀名清单 ∪ 嵌入引擎模型——**运行时注册表派生**：开放清单 = 库内 `providers.models`，保存即换表——§2.2） |
 | `POST /v1/embeddings` | 团队 key | 内网引擎转发（响应透传）；记账 |
 
 ### 2.1 转发与计量行为（三面共用）
 
-- **派发 = `provider/model` 复合键精确匹配**（配置查表——**首斜杠切分**：首段 = provider ∥ 余段 = 上游模型名（可含斜杠）；两段非空；裸名不解析；未命中 ∥ 裸名 ⇒ 404 `model_not_found`——提示带前缀形；**同 provider 内重名 ⇒ 拒启**）——KD-SV-4（§6）；**解析 = server 面自持**（不沿用核 `parseModelRef` 冒号家族——两套面：仓内他面锚 `provider:model` ∥ 本面锚 `provider/model`）。
+- **派发 = `provider/model` 复合键精确匹配**（注册表查表——装配期构建 ∥ 保存即换表（§2.2）；**首斜杠切分**：首段 = provider ∥ 余段 = 上游模型名（可含斜杠）；两段非空；裸名不解析；未命中 ∥ 裸名 ⇒ 404 `model_not_found`——提示带前缀形；**同 provider 内重名 ⇒ 拒启**）——KD-SV-4（§6）；**解析 = server 面自持**（不沿用核 `parseModelRef` 冒号家族——两套面：仓内他面锚 `provider:model` ∥ 本面锚 `provider/model`）。
 - **SSE 逐块透传**：中继字节面原样 `pipe`（零改）；客户端断连 ⇒ 中止上游（记 `status='aborted'`）。
 - **流式计量注入**：`stream === true` 且未带 `stream_options.include_usage: true` ⇒ 置 true（显式 false 亦覆盖——计量完整性优先）——KD-SV-5（§6）。
 - **usage 提取**：旁路 tap 只读扫描 `data:` 行 JSON（行缓冲 ∥ 单行上限 1 MiB ∥ BOM 剥除 ∥ CRLF 容错）——KD-SV-10（§6）；记录面（落库形 ∥ 写入时点）= `metering/METERING.md` §1。
 - 含 usage 的帧对消费方无扰（四端核 `readSSE` 对 usage 帧直取后跳）。
-- 上游配置（providers ∥ embedding 段）= `ops/OPS.md` §1。
+- 上游配置（provider 库单源 ∥ `embedding` 段）= `ops/OPS.md` §1 ∥ §2.2。
+
+### 2.2 provider 管理面（控制台——仅 admin）
+
+（端点族 = `/api/admin/providers/*`；判权 = `accounts/ACCOUNTS.md` §3 `requireAdmin` 口径——`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401；错误形 = §3 全码沿用——无新码；写端点 JSON 型门同 §1 前言）
+
+| 方法 + 路径 | 语义 |
+|---|---|
+| `GET /api/admin/providers` | 列表 `{ providers: [{ id, name, baseURL, apiKey, models, createdAt, updatedAt }] }`；`apiKey` = 回显形（掩码——见下） |
+| `POST /api/admin/providers` | 新增 `{ name, baseURL, apiKey?, models? }` ⇒ `{ ok, id }`；校验不过 ∥ 重名 ⇒ 400（库与运行时零变） |
+| `PATCH /api/admin/providers/:id` | 修改（字段缺省 = 不动；`apiKey: ""` = 清除；可含 `env:` 引用）；不存在 ⇒ 404 |
+| `DELETE /api/admin/providers/:id` | 删除（硬删——用量行零触）；不存在 ⇒ 404 |
+| `POST /api/admin/providers/discover` | 模型发现（草稿可用）`{ baseURL, apiKey?, providerId? }` ⇒ `{ models: [...] }`；失败 ⇒ 502 `upstream_error` |
+
+- **存储 = 库单源**：`providers` 表（`store/STORE.md` §2 v2 段）；`config.json` 的 `providers[]` 降为一次性种子（矩阵 = `ops/OPS.md` §1）。
+- **保存即热生效**（推翻「配置不热载」——用户 2026-10-06 16:01 令）：装配期建 provider 运行时（箱内持注册表）；保存路径 = ① 校验（单源 = `thincoder-server/src/ops/config.mjs` 导出——与配置种子同规）→ ② 建候选注册表（`env:` 解析——缺位 ⇒ 400 不落库）→ ③ 落库 → ④ `runtime.set(候选)`（原子换表）；HTTP 面（`/v1/models` ∥ 派发）读 `runtime.get()`——**零重启**。
+- **在途请求口径**：派发时快照（转发闭包持当时 provider 对象）——换表只影响**后续**请求；删除/改名不断在途流。
+- **密钥回显形**（永不回明文）：空 ⇒ `""`；`env:` 引用 ⇒ 原文（引用非秘密）；明文 ⇒ `…` + 末 4 字符。密钥值**永不入日志**（日志只带 provider 名/id 与动作）。
+- **模型发现**：`GET {baseURL}/models`（Authorization 条件同转发——key 空不发）；超时 10s（常量可覆盖——实现注入口径）；解析 = `data[].id` 字符串集（去重）；不可达 ∥ 超时 ∥ 非 JSON ∥ 无 `data` ⇒ 502 `upstream_error`（可读消息——UI 手填降级照常）；草稿键经 body 传入**不落库**。
+- **开放清单 = `models` 字段**（勾选区）：`/v1/models` 逐项 = `provider/model`；派发只命中开放清单（未开放 ⇒ 404——选择性中继口径保持）。
+- 装配接线：gateway 注册行装配期引导运行时（种子导入 → 构建）并返回；provider 管理面注册行接收**同一实例**（换表两族同见）。
 
 ## 3. 错误形（全码单源）
 
@@ -46,12 +67,13 @@
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
 | `thincoder-server/src/gateway/server.mjs`（已落盘） | **192**（实读 2026-10-06——设计估 ≈140） | http 服务 ∥ 注册行分派 ∥ body 读限（32 MiB） ∥ 请求日志 |
-| `thincoder-server/src/gateway/routes.mjs`（已落盘） | **81**（实读 2026-10-06——设计估 ≈240） | chat ∥ models ∥ embeddings 三处理 |
+| `thincoder-server/src/gateway/routes.mjs`（已落盘） | **81**（实读 2026-10-06——设计估 ≈240；本批预期 ≈95 = +14：读运行时（`runtime.get()`）） | chat ∥ models ∥ embeddings 三处理 |
 | `thincoder-server/src/gateway/forward.mjs`（已落盘） | **185**（实读 2026-10-06——设计估 ≈190） | 上游 fetch ∥ 流式/非流式透传 ∥ tap 接线 ∥ 断连中止 ∥ 记账号 |
 | `thincoder-server/src/gateway/sse-tap.mjs`（已落盘） | **90**（实读 2026-10-06——设计估 ≈80） | `data:` 行增量扫描 ∥ usage 提取 ∥ 有界缓冲 |
-| `thincoder-server/src/gateway/providers.mjs`（已落盘） | **55**（实读 2026-10-06——设计估 ≈70） | provider 注册 ∥ 模型派发 ∥ 派发失败形 |
+| `thincoder-server/src/gateway/providers.mjs`（已落盘） | **55**（实读 2026-10-06——设计估 ≈70；本批预期 ≈150 = +95：行→条目 ∥ 注册表构建（`env:` 解析） ∥ 运行时箱 ∥ 装配引导） | provider 注册 ∥ 模型派发 ∥ 派发失败形 ∥ 运行时（§2.2） |
+| `thincoder-server/src/gateway/provider-admin.mjs`（拟新增） | **无 ⇒ ≈220**（设计估——行 CRUD ∥ 掩码回显 ∥ 模型发现 ∥ 管理端点注册——§2.2） | provider 管理面（控制台——仅 admin） |
 | `thincoder-server/src/gateway/errors.mjs`（已落盘） | **55**（实读 2026-10-06——设计估 ≈50） | 错误形构造 ∥ 发送助手（含账号面码） |
-| **小计** | **≈770 ⇒ 658** | —— |
+| **小计** | **≈770 ⇒ 658 ⇒ 本批预期 ≈987**（+329：providers +95 ∥ routes +14 ∥ provider-admin 新 ≈220） | —— |
 
 ## 5. 验收判据（机检面）
 
@@ -59,6 +81,7 @@
 |---|---|---|
 | AC-2（功能点 2） | SSE **逐块**：mock 上游两帧间隔——客户端先收帧 1 再等帧 2（证明非整段缓冲）∥ 帧字节逐值一致 ∥ `[DONE]` 透传；**收口轮四端任一实跑一轮**（真机） | 批内件 + 收口轮 |
 | AC-6（功能点 6） | mock 引擎（断言流量命中引擎 `baseURL` 的 `/embeddings`）⇒ 响应体透传（维度/条数逐值不变）+ 记账 `endpoint='embeddings'` | 批内件 |
+| AC-11（功能点 11——控制台 provider/模型管理；候补行——需求档回笔 = 主 agent 笔） | admin 三态（`user` ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200）∥ **保存即热生效**（POST 后 `/v1/models` 立含 + mock 上游完成一次请求；PATCH 改 `baseURL` ⇒ 下一请求命中新地址；DELETE ⇒ 下一请求 404——零重启；在途流照常收尾）∥ 密钥面（列表掩码不含明文 ∥ 日志零明文 ∥ `env:` 引用原样回显）∥ 发现（mock `/models` ⇒ 清单去重；不可达 ∥ 超时 ∥ 非 JSON ⇒ 502 + 手填降级）∥ 校验单源（非法条目 ∥ 重名 ∥ `env:` 缺位 ⇒ 400 且库与运行时零变） | 批内件 |
 
 ## 6. 关键决策（本域）
 
@@ -85,11 +108,19 @@
 | E5 | 错误 | 上游 4xx/5xx | 状态与 body**原样透传**；记 error 行 |
 | E6 | 错误 | 上游不可达（连不上/超时） | 502 `upstream_error`；记 error 行 |
 | E7 | 错误 | 请求体 > 32 MiB | 413 `payload_too_large`（不转发） |
+| N16 | 正常 | admin 会话：`POST /api/admin/providers`（mock 上游）⇒ 立即 `GET /v1/models` 立含新模型 ∥ 经新 provider 完成一次请求 | 零重启生效；记账 ok |
+| N17 | 正常 | admin 会话：`POST /api/admin/providers/discover`（mock 上游 `/models` 回 3 个 id） | `{models:[…]}`（去重）；勾选集保存后清单/派发按开放清单 |
+| N18 | 正常 | admin 会话：`PATCH` 改 `baseURL` 指第二 mock ∥ `DELETE` 一 provider | 下一请求命中新上游 ∥ 被删者下一请求 404（用量行零触） |
+| B14 | 边界 | 在途流式请求进行中删除其 provider | 流照常收尾（`ok` 记账）；后续请求 404 |
+| B15 | 边界 | 种子四格：空库+段 ⇒ 导入（`env:` 保形）∥ 非空库+段 ⇒ 忽略 + 警告 ∥ 两空 ⇒ 允许起 + 警告 | `/v1/models` 随格：含种子 ∥ 不变 ∥ 空清单（chat 404） |
+| E14 | 错误 | `user` ∥ 无会话 ∥ 非法条目 ∥ 重名 ∥ `env:` 缺位 ∥ 不存在 id | 403 ∥ 401 ∥ 400（库与运行时零变）∥ 404 |
+| E15 | 错误 | 发现：不可达 ∥ 超时 ∥ 非 JSON | 502 `upstream_error`（可读消息——手填降级可用） |
 
 ## 8. 本域边界（不做的面）
 
 - 非 OpenAI 协议翻译 ∥ 模型别名/策略路由 ∥ 上游重试（失败原样返回——重试语义留给客户端）∥ RPM/并发限流（配额 = 额度式，非限速）∥ token 预估 ∥ 请求体/响应的内容加工（压缩、改写、脱敏——纯透传）∥ CORS（消费方均为服务端工具）。
 - 嵌入引擎管理面（引擎起停手动——需求 §4）；多实例/横向扩展 = 触发项（`EVOLUTION.md` §2）。
+- provider 管理面不做：本机 CLI 面（控制台 = 单一面——需求点名）∥ URL 白名单/出口限制（admin 权限自担——内网工具面）∥ 变更历史/回滚（行即现值——无版本化）∥ 渠道/灰度/多版本并存（沿更新面不做项——`ops/OPS.md` §10）。
 
 ## 变更记录
 
@@ -97,3 +128,4 @@
 - 2026-10-06：实施后回填轮（fix）——§3 补 `internal_error`（500 兜底——处理函数自身异常入表）；§4 行数按实读回填（小计 ≈770 ⇒ 635）。
 - 2026-10-06：模型标识口径变更（用户 10:27–10:28）——KD-SV-4 修订（`provider/model` 复合键派发 ∥ 同名跨 provider 并存 ∥ 同 provider 内重名 ⇒ 拒启 ∥ 无隐式解析）；§2 表 `/v1/models` 行与 §2.1 派发行随正。
 - 2026-10-06：小收尾轮（fix）——§4 行数实读再收正（providers 40 ⇒ 55 ∥ routes 75 ⇒ 81 ∥ forward 183 ⇒ 185——模型标识 fix 轮随动；小计 ≈770 ⇒ 658）。
+- 2026-10-06：控制台 provider/模型管理设计轮（批 `docs/batches/2026-10-06-console-providers.md`——需求 §2:11 ∥ 台账 #962）——§1 路由族表增 provider 管理面行 + 静态面五档 ∥ §2 `/v1/models` 行随正（运行时注册表派生）∥ §2.1 派发行随正 ∥ §2.2 增「provider 管理面」（端点表 ∥ 保存即热生效 ∥ 在途口径 ∥ 密钥回显形 ∥ 模型发现）∥ §4 预算（providers 55 ⇒ ≈150 ∥ routes 81 ⇒ ≈95 ∥ provider-admin 拟新增 ≈220）∥ §5 补 AC-11 候补判据行 ∥ §7 增 N16–N18 ∥ B14/B15 ∥ E14/E15 ∥ §8 增 provider 管理面不做项；决策 = KD-SV-19（`ops/OPS.md` §8）。
