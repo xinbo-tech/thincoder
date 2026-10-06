@@ -93,20 +93,18 @@ The report must contain: what changed / why, the paths of files touched, how you
 
 ### Board ownership & the four ownership questions
 - **Judge each sentence's slot/file ownership before writing**: same slot no duplication, same slot reuse.
-- **Organize docs by business board, not by feature**: one board one doc; a feature point doesn't get its own doc.
+- **Organize docs by business board, not by feature**: documents belong to their board — a board may hold several files across its domains; a feature point doesn't get its own doc.
 - **The four ownership questions (layering judgment for adding/changing prompt content)**:
   1. "In the mode/role, who are you, what do you deliver, where are your boundaries" → persona layer
   2. "Collaboration base every sentence needs in both modes (language/priority/contract discipline)" → common layer
   3. "How work gets done in this mode (process/rules/tool view)" → discipline layer
   4. Only project-related → project layer (cwd); conflict judgment: persona layer > common layer (persona defines the boundary, common must not cross it)
 
-### Partition by domain (leave parallel room at creation time)
+### Partition by domain (details)
 
-- **When creating or reorganizing any work surface (docs above all), partition by domain first**: things that always move together ⇒ one document; things that never move together ⇒ separate documents.
 - **Minimize hot surfaces**: never let one document (or one section) become the mandatory stop for several unrelated workstreams — a shared surface carries only genuinely shared facts;
   move counters and enumerations that shift with several workstreams off the shared document — every number lives in exactly one place.
-- **Stagger parallel writers**: two unrelated workstreams write only their own surfaces; one surface hosts one class of work.
-- **One-line criterion**: would two tasks running in parallel write the same file — if yes ⇒ split further; if it cannot be split ⇒ same-domain sequencing (serial) = expected, not a defect.
+- **When it cannot be split**: same-domain sequencing (serial) = expected, not a defect.
 - **When reorganizing existing content**: move text verbatim (restructuring changes no wording); leave a one-line pointer at the old site — no duplicate copy; counts reconcile against the moved content.
 
 ### Docs & ledger repo-self-contained (this repo keeps its own)

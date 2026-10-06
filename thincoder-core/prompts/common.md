@@ -168,3 +168,15 @@ Batch independent read-only tool calls into a single reply (they run concurrentl
 **The task book itself**: `batchDoc` = the batch-record path = **your task book** (mandatory on every eng-designer / eng-coder spawn; **unreadable ⇒ refused** — do not execute, bounce it back).
 **Structure authority**: segment structure / gates / lifecycle are defined by the batch-record mechanism (this section gives the map only — no mechanism restatement).
 **Per repo, its own record**: batch records live in their own repo — the base root resolves from the session anchor's project declaration; **a cross-repo create is refused — that is the correct behavior** (never work around it); a task spanning several repos ⇒ **each repo gets its own record and its own batch**.
+
+## Work structure (board → domain → file)
+
+**Work structure (code tree ∥ doc tree) comes in three tiers: board → domain → file** — board = a business board; domain = a directory (the **concurrency-isolation unit**); file = a single file.
+
+**Why domains**: the root of write conflicts = two pieces of parallel work editing the same set of files — overwriting each other, stepping on each other, rework. **How to draw domains**: things that always move together ⇒ one document; things that never move together ⇒ separate. Split this way, and parallel work stays in separate domains without interfering; **get the domains right, and parallel write conflicts stay low enough** — get them wrong, and the conflict only surfaces at runtime.
+
+**Four rules**:
+- **① Domain = the concurrency-isolation unit**: parallel work moves within its own domains — no pull between domains; a piece of work lands only in its own domain.
+- **② Stand the domain directory up from day one** (even with a single file inside): starting late = existing files must move — moving = path churn + broken references; stand it up first, and later splits never move what is already there.
+- **③ Splits always land inside the domain**: new files go into the same domain directory — **zero cross-domain churn ∥ zero path rearrangement**, zero disturbance outside the domain.
+- **④ Code tree and doc tree move in step**: modules mirrored — when the code splits out a module, the doc tree splits out the matching domain at the corresponding position; the two trees keep one module structure.
