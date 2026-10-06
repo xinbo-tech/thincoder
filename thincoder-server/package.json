@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node bin/thincoder-server.mjs --config config.json",
     "admin": "node src/ops/cli.mjs --config config.json",
-    "prepublishOnly": "node --check bin/thincoder-server.mjs && cd .. && node --test docs/batches/2026-10-06-server-gateway.test.mjs docs/batches/2026-10-06-server-gateway-accounts.test.mjs docs/batches/2026-10-06-server-gateway-metering.test.mjs docs/batches/2026-10-06-server-gateway-chat.test.mjs docs/batches/2026-10-06-server-gateway-webui-deploy.test.mjs docs/batches/2026-10-06-server-gateway-model-ref.test.mjs"
+    "prepublishOnly": "node --check bin/thincoder-server.mjs && cd .. && node --test docs/batches/2026-10-06-server-gateway.test.mjs docs/batches/2026-10-06-server-gateway-accounts.test.mjs docs/batches/2026-10-06-server-gateway-metering.test.mjs docs/batches/2026-10-06-server-gateway-chat.test.mjs docs/batches/2026-10-06-server-gateway-webui-deploy.test.mjs docs/batches/2026-10-06-server-gateway-model-ref.test.mjs docs/batches/2026-10-06-server-presets.test.mjs"
   },
   "engines": {
     "node": ">=24"

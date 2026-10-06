@@ -41,9 +41,14 @@
 | `embedding` | 是 | `baseURL` ∥ `model` ∥ `apiKey`（选填——本地引擎常无鉴权） |
 
 - 字符串值支持 `env:变量名` 前缀（加载期解析；变量缺位 ⇒ 启动失败）——真实 key 可只住环境变量。
+- **预设形条目**（内建 provider 预设——`preset` = 预设名）：清单 = `src/ops/presets.mjs`（起步 20 家 OpenAI 兼容上游——
+  快照口径 = CLI 预设表的只读子集，核表更新后由后续版本手工同步）。
+- `{ "preset": "deepseek", "apiKey": "env:DEEPSEEK_API_KEY" }` ⇒ `name` 缺省 = 预设名、`baseURL`/`models` 缺省取预设值
+  （`models` = `[预设默认模型]`）；条目自带 `name`/`baseURL`/`models` 覆盖预设值（显式在场者胜）。
+- 未知预设名 ⇒ 拒启（报错列可用名——fail-closed）。
 - 对外模型标识 = `provider/model`（首斜杠切分：首段 = provider `name` ∥ 余段 = 上游模型名（可含斜杠）；
   两段非空；裸名不解析；同名模型跨 provider 并存且各自可达）；`/v1/models` = 带前缀名清单。
-- 启动校验（fail-closed）：缺 `host` ∥ `providers` 空 ∥ 同 provider 内模型重名 ∥ `baseURL` 非 http(s) ⇒
+- 启动校验（fail-closed）：缺 `host` ∥ `providers` 空 ∥ provider `name` 缺/空 ∥ `name` 含 `/` ∥ `name` 重名（providers 间） ∥ 同 provider 内模型重名 ∥ `baseURL` 非 http(s) ∥ 未知预设名 ⇒
   拒启（非零退出 + 明确报错）。
 - key 轮换 = 改配置 + 重启（分钟级；配置不热载）。
 

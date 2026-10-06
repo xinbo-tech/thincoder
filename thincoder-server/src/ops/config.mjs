@@ -1,11 +1,13 @@
 /**
- * config.mjs — 配置加载与校验（ops/OPS.md §1）：读档 ∥ `env:` 前缀解析 ∥ 缺省值 ∥ 启动校验（fail-closed）。
+ * config.mjs — 配置加载与校验（ops/OPS.md §1）：读档 ∥ `env:` 前缀解析 ∥ 预设形展开（presets.mjs） ∥ 缺省值 ∥
+ * 启动校验（fail-closed）。
  *
  * 校验不过 ⇒ 抛（入口转非零退出 + 明确报错）；告警（如 host = 0.0.0.0）逐条返回，入口打印。
  * 归一出参：`{ config, warnings, baseDir, configPath }`——`config.db` 已按配置档所在目录解析为绝对路径。
  */
 import { readFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
+import { expandProviderEntry } from "./presets.mjs"
 
 export const DEFAULT_PORT = 8787
 export const DEFAULT_DB = "data/gateway.db"
@@ -58,7 +60,8 @@ export function resolveEnvRefs(value, env = process.env, path = "") {
 
 /** 启动校验（fail-closed——ops/OPS.md §1）：host 必填 ∥ providers ≥1 ∥ provider 名缺/空 ∥ 含 `/` ∥
  *  providers 间重名 拒（对外标识 `provider/model` 前缀形——§1 补条）∥ 同 provider 内模型重名拒 ∥
- *  baseURL 非 http(s) 拒 ∥ bootstrap 在场时 password ≥8 字符（跨 provider 模型同名 = 合法——各自可达）。 */
+ *  baseURL 非 http(s) 拒 ∥ 未知预设名 拒（预设形条目展开期——报错列可用名）∥ bootstrap 在场时 password ≥8 字符
+ *  （跨 provider 模型同名 = 合法——各自可达）。 */
 export function validateConfig(raw) {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) throw new Error("配置根须为 JSON 对象")
   const host = raw.host
@@ -73,19 +76,20 @@ export function validateConfig(raw) {
   const providers = raw.providers.map((provider, i) => {
     const where = `providers[${i}]`
     if (provider === null || typeof provider !== "object" || Array.isArray(provider)) throw new Error(`${where} 须为对象`)
-    const name = requireProviderName(provider.name, where)
+    const entry = expandProviderEntry(provider, where) // 预设形 ⇒ 先展开（未知名 ⇒ 抛——列可用名）；手写形原样
+    const name = requireProviderName(entry.name, where)
     if (seenProviderNames.has(name)) throw new Error(`provider 名重名：${name}（${where}.name 与先前 provider 同名——派发歧义；拒启）`)
     seenProviderNames.add(name)
-    const baseURL = requireHttpURL(provider.baseURL, `${where}.baseURL`)
-    if (!Array.isArray(provider.models)) throw new Error(`${where}.models 须为字符串数组（本 provider 上游模型名清单——对外标识 = provider/model）`)
+    const baseURL = requireHttpURL(entry.baseURL, `${where}.baseURL`)
+    if (!Array.isArray(entry.models)) throw new Error(`${where}.models 须为字符串数组（本 provider 上游模型名清单——对外标识 = provider/model）`)
     const seenInProvider = new Set() // 同 provider 内重名 ⇒ 拒（跨 provider 同名 = 合法——并存且各自可达）
-    const models = provider.models.map((model, j) => {
+    const models = entry.models.map((model, j) => {
       const value = requireString(model, `${where}.models[${j}]`)
       if (seenInProvider.has(value)) throw new Error(`模型重名：${value}（${where}.models 内重复——拒启防笔误）`)
       seenInProvider.add(value)
       return value
     })
-    return { name, baseURL, apiKey: optionalString(provider.apiKey, `${where}.apiKey`), models }
+    return { name, baseURL, apiKey: optionalString(entry.apiKey, `${where}.apiKey`), models }
   })
 
   const embedding = raw.embedding

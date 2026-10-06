@@ -8,6 +8,10 @@
   },
   "providers": [
     {
+      "preset": "deepseek",
+      "apiKey": "env:DEEPSEEK_API_KEY"
+    },
+    {
       "name": "bailian",
       "baseURL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
       "apiKey": "env:DASHSCOPE_API_KEY",
