@@ -17,6 +17,7 @@ export const ERROR_CODES = {
   invalid_request_error: { status: 400, type: "invalid_request_error" }, // body 非 JSON ∥ 缺 model
   payload_too_large: { status: 413, type: "invalid_request_error" }, // 请求体超上限（32 MiB）
   quota_exceeded: { status: 429, type: "insufficient_quota" },       // 超额（message 含已用/额度）
+  too_many_attempts: { status: 429, type: "rate_limit_error" },      // 登录锁定期（`Retry-After` 秒；两维同文案——ACCOUNTS §2）
   upstream_error: { status: 502, type: "upstream_error" },           // 上游不可达
   internal_error: { status: 500, type: "server_error" },             // 500 兜底（处理函数自身异常——API.md §3 表行）
 }

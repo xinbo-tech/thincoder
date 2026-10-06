@@ -8,14 +8,13 @@
   <link rel="icon" type="image/png" href="/favicon.png">
 </head>
 <body>
-  <header class="topbar">
-    <span class="brand">Thincoder Server</span>
-    <nav id="nav"></nav>
-  </header>
-  <p id="flash" class="flash" hidden></p>
-  <main id="app">
-    <p class="hint">加载中……</p>
-  </main>
+  <aside id="nav" class="sidebar" hidden></aside>
+  <div class="content">
+    <p id="flash" class="flash" hidden></p>
+    <main id="app">
+      <p class="hint">加载中……</p>
+    </main>
+  </div>
   <script type="module" src="/app.mjs"></script>
 </body>
 </html>

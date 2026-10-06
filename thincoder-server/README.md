@@ -25,6 +25,8 @@
   "port": 8787,
   "db": "data/gateway.db",
   "autoUpdate": "notify",
+  "trustProxy": false,
+  "usageRetentionDays": 90,
   "bootstrap": { "username": "admin", "password": "env:TC_SERVER_ADMIN_PASSWORD" },
   "providers": [
     { "name": "bailian", "baseURL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
@@ -40,22 +42,25 @@
 | `port` | 否 | 缺省 `8787` |
 | `db` | 否 | SQLite 库路径（相对 = 配置档所在目录）；缺省 `data/gateway.db` |
 | `autoUpdate` | 否 | 更新档位：`false`（关——零检查） ∥ `"notify"`（检查 + 日志） ∥ `"auto"`（检查 + 自装）；缺省 `"notify"`；非法值 ⇒ 拒启（见 §8） |
+| `trustProxy` | 否 | 反代场景客户端 IP 口径：`false`（缺省——IP = 连接对端地址） ∥ `true`（读 `X-Real-IP` 头）；前提 = 服务端口仅反代可达（反代须 `set` 形覆盖客户端伪造——见 §11）；登录防爆破 IP 维消费 |
+| `usageRetentionDays` | 否 | 用量保留窗（天）：正整数 ∥ `null`（不限——保留全量）；缺省 `90`；非正整数/非法值 ⇒ 拒启（清理时机 = 启动一次 + 每 24h） |
 | `bootstrap` | 否 | 首启引导凭据（仅零 admin 时消费——见 §5）；口令 ≥8 字符 |
-| `providers[]` | 是（≥1） | `name` ∥ `baseURL`（OpenAI 兼容根） ∥ `apiKey`（可空——空则不发 Authorization 头） ∥ `models`（本 provider 上游模型名清单——对外标识 = `provider/model`） |
+| `providers[]` | 否 | **首启种子**（一次性导入——此后控制台管理：`#/admin/providers`）。`name` ∥ `baseURL`（OpenAI 兼容根） ∥ `apiKey`（可空——空则不发 Authorization 头；支持 `env:` 引用） ∥ `models`（开放清单——对外标识 = `provider/model`）；预设形（`preset`）可省字段。零 provider = 允许态（服务照常起 + 警告） |
 | `embedding` | 是 | `baseURL` ∥ `model` ∥ `apiKey`（选填——本地引擎常无鉴权） |
 
-- 字符串值支持 `env:变量名` 前缀（加载期解析；变量缺位 ⇒ 启动失败）——真实 key 可只住环境变量。
+- 字符串值支持 `env:变量名` 前缀（加载期解析；变量缺位 ⇒ 启动失败）——真实 key 可只住环境变量。例外 = `providers[].apiKey`：载入不解析（引用保形），注册表构建期解析（缺位 ⇒ 启动拒启 ∥ 保存 400）。
 - 更新源 = 环境变量 `NPM_CONFIG_REGISTRY`（可指内网镜像——npm 同名配置；自检与自装同源）；缺省 = npmjs（机制见 §8）。
 - **预设形条目**（内建 provider 预设——`preset` = 预设名）：清单 = `src/ops/presets.mjs`（起步 20 家 OpenAI 兼容上游——
   快照口径 = CLI 预设表的只读子集，核表更新后由后续版本手工同步）。
 - `{ "preset": "deepseek", "apiKey": "env:DEEPSEEK_API_KEY" }` ⇒ `name` 缺省 = 预设名、`baseURL`/`models` 缺省取预设值
   （`models` = `[预设默认模型]`）；条目自带 `name`/`baseURL`/`models` 覆盖预设值（显式在场者胜）。
 - 未知预设名 ⇒ 拒启（报错列可用名——fail-closed）。
+- 预设双消费面：① 配置种子（预设形条目——上条）；② 控制台「从预设快速添加」（`#/admin/providers`——拉预设表 ⇒ 预填 ⇒ 补 `apiKey` ⇒ 保存；写入仍走全字段校验）。
 - 对外模型标识 = `provider/model`（首斜杠切分：首段 = provider `name` ∥ 余段 = 上游模型名（可含斜杠）；
   两段非空；裸名不解析；同名模型跨 provider 并存且各自可达）；`/v1/models` = 带前缀名清单。
-- 启动校验（fail-closed）：缺 `host` ∥ `providers` 空 ∥ provider `name` 缺/空 ∥ `name` 含 `/` ∥ `name` 重名（providers 间） ∥ 同 provider 内模型重名 ∥ `baseURL` 非 http(s) ∥ 未知预设名 ⇒
-  拒启（非零退出 + 明确报错）。
-- key 轮换 = 改配置 + 重启（分钟级；配置不热载）。
+- 启动校验（fail-closed）：缺 `host` ∥ provider `name` 缺/空 ∥ `name` 含 `/` ∥ `name` 重名（provider 间） ∥ 同 provider 内模型重名 ∥ `baseURL` 非 http(s) ∥ 未知预设名 ⇒
+  拒启（非零退出 + 明确报错）。**零 provider = 允许态**（服务照常起 + 警告——控制台为配置路径）。
+- provider 变更（增/删/改 ∥ 含密钥）= 控制台 `#/admin/providers` 保存即热生效（零重启；在途请求照常收尾）；`config.json` 文件本身不热载（改动仍须重启）。
 
 ## 3. 首部署清单（两版）
 
@@ -76,7 +81,7 @@
 2. `docker build -t <registry>/thincoder-server:<tag> .`（构建上下文 = `thincoder-server/`；壳 + 构建期预装——离线可构建）
 3. 备 `config.json` + `data/`（`chown 1000:1000`——容器内 node 账号）+ `.env`（`TC_SERVER_VERSION` 可选——见 §8）
 4. `docker compose up -d`
-5. 首启日志确认（`converge:` 收敛行 + env 建首个 admin）
+5. 首启日志确认（`converge:` 收敛行 + env 建首个 admin；`docker compose ps` 可见 `(healthy)`——见 §12）
 6. 验收同 npm 路（端口 `8787`）
 7. 升级/回滚 = 改 `TC_SERVER_VERSION` + `docker compose up -d`（见 §8）
 
@@ -84,7 +89,7 @@
 
 - 启动：`thincoder-server --config <配置档>`（npm 路）∥ compose（容器路——先跑壳收敛，日志出 `converge:` 行）；
   就绪后 stdout 一行 JSON（`ready` 行含 `version` = 实际安装版本——升级核对 = 重起读该行）。
-- 停机：SIGINT/SIGTERM ⇒ 优雅收尾（停收新连 ∥ 关库）。
+- 停机：SIGINT/SIGTERM ⇒ 优雅收尾（停收新连 ∥ 清周期定时器（更新循环 ∥ 保留清理同法）∥ 关库）。
 - 日志：单行 JSON 到 stdout（逐请求一行 + 启动/引导/错误事件）；
   裸机 = journald（`journalctl -u thincoder-server -f`）∥ 容器 = `docker logs`。
 
@@ -96,9 +101,14 @@
 
 ## 6. 控制台
 
-- 浏览器打开 `http://<host>:<port>/`；三视图（哈希路由）：`#/login` 登录 ∥ `#/me` 我的
-  （key 清单 ∥ 签发/轮换明文一次性区 ∥ 本人用量 ∥ 改密）∥ `#/admin` 管理（成员表含各成员 key 清单与吊销 ∥
-  建成员初始密码一次性回显 ∥ 设额度 ∥ 重置密码 ∥ 全队用量过滤）。
+- 浏览器打开 `http://<host>:<port>/`；侧栏分组导航（哈希路由）：我的 = `#/me/keys`（key 清单 ∥ 签发/轮换明文一次性区）∥
+  `#/me/usage`（本月额度/已用 + 用量明细）∥ `#/me/account`（基本信息 ∥ 改密）；管理（admin）= `#/admin/members`（成员表含
+  各成员 key 清单与吊销 ∥ 建成员初始密码一次性回显 ∥ 设额度 ∥ 重置密码）∥ `#/admin/providers`（provider 增删改 ∥
+  模型发现/勾选开放 ∥ 测试 ∥ 预设快速添加）∥ `#/admin/usage`（全队用量过滤）∥ `#/admin/system`（版本与更新 ∥ 成员接入卡——数据 = `/api/system`）。
+- 侧栏底部 meta 槽显示服务器版本（全角色）；更新提示在 `#/admin/system`（可动作方 = admin）。
+- 旧链重定向：`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/members`；`#/` 与未知 hash ⇒ 角色默认页。
+- provider 保存即热生效（零重启）；密钥列表回显掩码（明文永不回显）。
+- 界面多语言：中文 ∥ English——自动检测浏览器语言（缺省中文）；侧栏底部与登录卡可随时切换（记忆存浏览器本地）；错误提示按错误码本地化。
 - 判权全在后端（会话 cookie + 角色）：`user` 直打管理端点 ⇒ 403——页面显隐不是判据。
 
 ## 7. 运维 CLI（服务器本机；直开库——不经 HTTP）
@@ -129,14 +139,103 @@ node src/ops/cli.mjs --config <配置档> <命令>
   回滚 = 钉回旧版号 + `up -d`（离线可指镜像预装版 = 构建时树版本）。钉死版本号时自装自动抑制（生效 = notify——升级 = 改钉值）。
 - 共同注意：升级不动数据（库文件零触）；库迁移只进不退（回滚前建议先备份——§9）；半装窗内遇停机 ⇒ 恢复 = 重装（命令见上）。
 
-## 9. 备份
+## 9. 备份与恢复
 
-- SQLite 单文件（`data/gateway.db`——WAL）：停写窗 `cp` ∥ SQLite `.backup` 口径——手工执行（最小面）。
-- 容器路 = 备份卷内文件（`./data`）。
+- 工具 = `deploy/backup.mjs`（**在线一致快照**——`node:sqlite` 备份 API：WAL 安全 ∥ 免停写窗 ∥ 与运行实例并存；
+  源库只读开（零触）；node 自带 ⇒ 零外部工具依赖）。`deploy/` 档组不入 npm 包 ⇒ **自仓库取脚本**。
+  - 裸机路：`node deploy/backup.mjs --config <配置档>` ⇒ 产物 `<配置档目录>/backups/gateway-<时间戳>.db`
+    （`--out <目录>` 指定落点；同一秒重跑拒写退出 1——不覆盖既有快照）。
+  - 容器路：`docker compose exec server node /app/deploy/backup.mjs --config /app/config.json --out /app/data/backups`
+    （镜像含 `deploy/`；产物落卷）。
+  - 回退句：若本机 `backup()` 不可用/核验不过 ⇒ 回退 = **停写窗快照**（停服 ⇒ 复制库文件 + 清伴档 ⇒ 起服）。
+  - 权限：快照 = 库全量（含 provider 密钥与口令散列）——备份目录限服务账号可读（如 `chmod 700 backups`）。
+- 定时器样例（systemd——裸机路；`OnCalendar=daily` ∥ `Persistent=true`）：
 
-## 10. 边界（不含）
+  `/etc/systemd/system/thincoder-server-backup.service`：
 
-- TLS 终结（内网 HTTP；HTTPS 如需 = 前置反代）∥ 日志落盘/轮转（归 journald ∥ docker logs）∥
-  配置热载 ∥ 自动备份/巡检 ∥ Windows 守护面（部署时定写法）。
+  ```ini
+  [Unit]
+  Description=Thincoder Server 备份（在线快照）
+  [Service]
+  Type=oneshot
+  ExecStart=/usr/bin/node /opt/thincoder-server/deploy/backup.mjs --config /opt/thincoder-server/config.json
+  ```
+
+  `/etc/systemd/system/thincoder-server-backup.timer`：
+
+  ```ini
+  [Unit]
+  Description=每日备份 Thincoder Server
+  [Timer]
+  OnCalendar=daily
+  Persistent=true
+  [Install]
+  WantedBy=timers.target
+  ```
+
+  启用：`systemctl daemon-reload && systemctl enable --now thincoder-server-backup.timer`。
+- **恢复步**（停服 → 替换 → 起服）：
+  1. 停服：`systemctl stop thincoder-server`（容器路 = `docker compose down`）。
+  2. 以快照替换库：`cp backups/gateway-<时间戳>.db data/gateway.db`。
+  3. 清伴档：`rm -f data/gateway.db-wal data/gateway.db-shm`。
+  4. 起服：`systemctl start thincoder-server`（容器路 = `docker compose up -d`）——`curl /healthz` 验活（见 §12）。
+- 边界：轮转/保留策略自管（脚本不做）；进程内自动备份不做（备份 = 部署侧面）。
+
+## 10. 成员接入
+
+- **获得 key**：登录控制台 → `#/me/keys` → 签发 / 轮换（`sk-tc-…` 形；**明文仅显示一次**——请立即交付成员本人）。
+- **通用参数**（四端一致）：
+  - `name` = 渠道名（自取，如 `team`）∥ `baseURL` = `http://<主机>:<端口>/v1`（网关地址 + `/v1`）
+  - `model` = `<provider>/<model>`（对外模型标识——首斜杠切分，如 `deepseek/deepseek-flash`；`GET /v1/models` 列全量）
+  - `apiKey` = 团队 key（`sk-tc-…`）
+- **四端操作路径**（均落共享 `~/.thincoder/config.json` 的 `providers[]`）：
+  - CLI：TUI 内 `/model` ⇒ `Add provider…`（增/改渠道与密钥；首启向导同）
+  - VS Code：聊天面板设置（⚙）⇒ 渠道（providers）卡
+  - 桌面：设置 ⇒ 渠道 ⇒ 添加自定义渠道
+  - 其他 OpenAI 兼容端：直接填 `baseURL` + API key（SDK/客户端皆可）
+- **冒烟**：`curl -H "Authorization: Bearer sk-tc-…" http://<主机>:<端口>/v1/models`（200 = 清单）。
+
+## 11. 反代与 TLS（nginx 样例）
+
+内网 HTTP 可直接用；HTTPS/统一入口 = **前置反代**（服务不内置 TLS）。完整段（要素三件必须带对）：
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name thincoder.internal;
+    ssl_certificate     /etc/nginx/certs/server.crt;   # 证书位（内网自签即可）
+    ssl_certificate_key /etc/nginx/certs/server.key;
+
+    client_max_body_size 32m;        # ① ≥ 服务端请求体上限（32 MiB）——nginx 默认 1m 会先挡
+
+    location / {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;       # ② SSE 前提
+        proxy_set_header Connection "";
+        proxy_buffering off;          #    SSE 免缓冲（流式逐块透传——缓冲/短超时会断流）
+        proxy_read_timeout 3600s;     #    长流拉长读超时
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;   # ③ set 形覆盖客户端伪造
+    }
+}
+```
+
+- 置 `trustProxy: true` 后服务端按 `X-Real-IP` 计登录防爆破 IP 维。
+- **前提**：`trustProxy: true` 只在**服务端口仅反代可达**时使用（同机仅听回环 ∥ 防火墙白名单）——否则直连可伪造 `X-Real-IP`。
+
+## 12. 排障（健康检查）
+
+- 探活：`curl -i http://127.0.0.1:8787/healthz` ⇒ 200 `{ status:"ok", version, uptime, db:"ok" }`
+  （无鉴权只读——零凭据可直调；`Cache-Control: no-store`）。
+- **503** `{ status:"degraded", db:"error" }` = 库探活（`SELECT 1`）失败——查库文件权限/磁盘空间/进程持有。
+- 容器路：`docker compose ps` 看 `(healthy)`（镜像自带 HEALTHCHECK：interval 30s ∥ timeout 5s ∥ start-period 120s ∥ retries 3）。
+- `unhealthy` = **标注态**：restart 策略只按进程退出动作——healthcheck 不触发重起（「不健康即重起」须外部工具）。
+- 端口改非缺省（`port ≠ 8787`）⇒ 同步改 Dockerfile `HEALTHCHECK` 行与上面的 curl 端口。
+
+## 13. 边界（不含）
+
+- TLS 终结（内网 HTTP；HTTPS 如需 = 前置反代——§11）∥ 日志落盘/轮转（归 journald ∥ docker logs）∥
+  `config.json` 文件热载（文件改动仍须重启；provider 数据面 = 控制台保存即热生效） ∥ 自动备份/巡检 ∥
+  备份轮转/保留策略（部署方自管——§9）∥ Windows 守护面（部署时定写法）。
 - 更新面不做：渠道（beta/canary）∥ 灰度分批 ∥ 多版本并存（A/B 双装/秒切）∥ 进程内热载 ∥
   认证型 registry 的自检凭据（自检不带 npm 凭据——内网镜像要求认证时自检静默不更新）。

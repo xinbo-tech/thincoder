@@ -3,16 +3,18 @@
  *
  * 角色判定在服务端（requireAdmin——页面显隐非判据）；`user` ⇒ 403；无 ∥ 过期会话 ⇒ 401。
  * 成员不存在 ∥ key 不属该成员 ⇒ 404 `not_found`；吊销已有 key 幂等（行保留——软删纪律）。
+ * 密码重置 ⇒ 清目标用户名维登录锁（`accounts/ACCOUNTS.md` §2 清计路径）。
  */
 import { HttpError, sendJson } from "../gateway/errors.mjs"
 import { readJsonBody } from "../gateway/server.mjs"
 import { monthlyTokensByMember } from "../metering/usage.mjs"
 import { getKeyById, revokeKey } from "./keys.mjs"
+import { defaultLoginGuard } from "./login-guard.mjs"
 import { createMember, findMemberById, generateTempPassword, listMembers, setMemberPassword } from "./members.mjs"
 import { memberView } from "./routes.mjs"
 import { requireAdmin, revokeMemberSessions } from "./session.mjs"
 
-export function registerAdminRoutes(routes, { db } = {}) {
+export function registerAdminRoutes(routes, { db, guard = defaultLoginGuard } = {}) {
   if (!db) throw new Error("registerAdminRoutes：缺少 db（openDatabase 产物）")
 
   routes.add("GET", "/api/members", (req, res) => {
@@ -52,6 +54,7 @@ export function registerAdminRoutes(routes, { db } = {}) {
     if (!member) throw new HttpError("not_found", `成员不存在：${ctx.params.id}`)
     const tempPassword = generateTempPassword() // 一次性回显——同签发语义（KD-SV-14）
     await setMemberPassword(db, member.id, tempPassword)
+    guard.clearUsername(member.username) // 清计：目标用户名维（HTTP 面；本机 CLI 重置跨进程不达——在案）
     revokeMemberSessions(db, member.id) // 该成员全部会话吊销
     sendJson(res, 200, { id: member.id, tempPassword })
   })

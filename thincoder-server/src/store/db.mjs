@@ -55,9 +55,23 @@ CREATE INDEX IF NOT EXISTS idx_usage_member_ts ON usage(member_id, ts);
 CREATE INDEX IF NOT EXISTS idx_sessions_member ON sessions(member_id);
 `
 
+/** v2 增段（`providers` 表——store/STORE.md §2 v2 段逐字；控制台 provider 管理——gateway/API.md §2.2）。 */
+const DDL_V2 = `
+CREATE TABLE IF NOT EXISTS providers (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT NOT NULL UNIQUE,             -- 对外标识前缀（无 \`/\`；重名拒）
+  base_url    TEXT NOT NULL,                    -- OpenAI 兼容根
+  api_key     TEXT NOT NULL DEFAULT '',         -- 明文 ∥ \`env:NAME\` 引用（空 = 不发 Authorization；解析 = 注册表构建期）
+  models_json TEXT NOT NULL DEFAULT '[]',       -- 开放清单（JSON 数组——上游模型名；对外 = provider/model）
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL
+);
+`
+
 /** 迁移链：每段 = `{ v, up(db) }`（v = 目标结构版本，自 1 起递增）；结构每变一次追一段（+1）。 */
 export const MIGRATIONS = [
   { v: 1, up: (db) => db.exec(DDL_V1) },
+  { v: 2, up: (db) => db.exec(DDL_V2) },
 ]
 
 /** 当前结构版本（= 链尾段号——store/STORE.md §1）。 */

@@ -1,9 +1,11 @@
 /**
  * config.mjs — 配置加载与校验（ops/OPS.md §1）：读档 ∥ `env:` 前缀解析 ∥ 预设形展开（presets.mjs） ∥ 缺省值
- * （含 `autoUpdate` 档位——§5.4(b)） ∥ 启动校验（fail-closed）。
+ * （`autoUpdate` 档位 §5.4(b) ∥ `trustProxy` ∥ `usageRetentionDays`） ∥ 启动校验（fail-closed）。
  *
  * 校验不过 ⇒ 抛（入口转非零退出 + 明确报错）；告警（如 host = 0.0.0.0）逐条返回，入口打印。
  * 归一出参：`{ config, warnings, baseDir, configPath }`——`config.db` 已按配置档所在目录解析为绝对路径。
+ * provider 条目校验单源 = `validateProviderEntry`/`validateProviderEntries`（三径：配置载入 ∥ 启动构建/种子 ∥
+ * 控制台保存——gateway/API.md §2.2）；例外：`providers[].apiKey` 载入不解析（引用保形——注册表构建期解析）。
  */
 import { readFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
@@ -14,6 +16,7 @@ export const DEFAULT_DB = "data/gateway.db"
 export const MIN_PASSWORD_LENGTH = 8
 export const DEFAULT_AUTO_UPDATE = "notify" // 更新档位缺省（可见不越权——§5.4(b)）
 export const UPDATE_MODES = Object.freeze([false, "notify", "auto"])
+export const DEFAULT_USAGE_RETENTION_DAYS = 90 // 用量保留窗缺省（天——KD-SV-22：`null` = 不限）
 
 /** 读配置档 → env 解析 → 校验 → 返回归一出参（任何一步不过 ⇒ 抛）。 */
 export function loadConfig(configPath, { env = process.env } = {}) {
@@ -42,10 +45,12 @@ export function loadConfig(configPath, { env = process.env } = {}) {
   return { config, warnings, baseDir, configPath: configPathAbs }
 }
 
-/** 字符串值支持 `env:变量名` 前缀（递归全树解析；变量缺位 ⇒ 抛——真实 key 可只住环境变量）。 */
+/** 字符串值支持 `env:变量名` 前缀（递归全树解析；变量缺位 ⇒ 抛——真实 key 可只住环境变量）。
+ *  例外 = `providers[].apiKey`：载入不解析（引用保形——解析 = 注册表构建期；缺位 ⇒ 启动拒启 ∥ 保存 400——ops/OPS.md §1）。 */
 export function resolveEnvRefs(value, env = process.env, path = "") {
   if (typeof value === "string") {
     if (!value.startsWith("env:")) return value
+    if (/^providers\[\d+\]\.apiKey$/.test(path)) return value // 种子密钥引用保形（构建期解析）
     const name = value.slice(4)
     const resolved = env[name]
     if (resolved === undefined) throw new Error(`环境变量缺位：${name}（配置项 ${path || "（根）"}）`)
@@ -60,10 +65,9 @@ export function resolveEnvRefs(value, env = process.env, path = "") {
   return value
 }
 
-/** 启动校验（fail-closed——ops/OPS.md §1）：host 必填 ∥ providers ≥1 ∥ provider 名缺/空 ∥ 含 `/` ∥
- *  providers 间重名 拒（对外标识 `provider/model` 前缀形——§1 补条）∥ 同 provider 内模型重名拒 ∥
- *  baseURL 非 http(s) 拒 ∥ 未知预设名 拒（预设形条目展开期——报错列可用名）∥ bootstrap 在场时 password ≥8 字符
- *  （跨 provider 模型同名 = 合法——各自可达）。 */
+/** 启动校验（fail-closed——ops/OPS.md §1）：host 必填 ∥ 条目判据归 `validateProviderEntries`（单源）∥
+ *  bootstrap 在场时 password ≥8 字符（跨 provider 模型同名 = 合法——各自可达）。
+ *  `providers[]` 可缺/可空——**零 provider = 允许态**（服务照常起 + 警告——控制台/种子为两条配置路径）。 */
 export function validateConfig(raw) {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) throw new Error("配置根须为 JSON 对象")
   const host = raw.host
@@ -76,27 +80,16 @@ export function validateConfig(raw) {
   if (!UPDATE_MODES.includes(autoUpdate)) {
     throw new Error(`autoUpdate 非法：${JSON.stringify(raw.autoUpdate)}（合法值：false ∥ "notify" ∥ "auto"——拒启）`)
   }
-  if (!Array.isArray(raw.providers) || raw.providers.length === 0) throw new Error("providers 须为非空数组（至少一个 provider）")
-
-  const seenProviderNames = new Set() // provider 名重名（providers 间）⇒ 拒（派发歧义——ops/OPS.md §1 补条）
-  const providers = raw.providers.map((provider, i) => {
-    const where = `providers[${i}]`
-    if (provider === null || typeof provider !== "object" || Array.isArray(provider)) throw new Error(`${where} 须为对象`)
-    const entry = expandProviderEntry(provider, where) // 预设形 ⇒ 先展开（未知名 ⇒ 抛——列可用名）；手写形原样
-    const name = requireProviderName(entry.name, where)
-    if (seenProviderNames.has(name)) throw new Error(`provider 名重名：${name}（${where}.name 与先前 provider 同名——派发歧义；拒启）`)
-    seenProviderNames.add(name)
-    const baseURL = requireHttpURL(entry.baseURL, `${where}.baseURL`)
-    if (!Array.isArray(entry.models)) throw new Error(`${where}.models 须为字符串数组（本 provider 上游模型名清单——对外标识 = provider/model）`)
-    const seenInProvider = new Set() // 同 provider 内重名 ⇒ 拒（跨 provider 同名 = 合法——并存且各自可达）
-    const models = entry.models.map((model, j) => {
-      const value = requireString(model, `${where}.models[${j}]`)
-      if (seenInProvider.has(value)) throw new Error(`模型重名：${value}（${where}.models 内重复——拒启防笔误）`)
-      seenInProvider.add(value)
-      return value
-    })
-    return { name, baseURL, apiKey: optionalString(entry.apiKey, `${where}.apiKey`), models }
-  })
+  const trustProxy = raw.trustProxy === undefined ? false : raw.trustProxy // 反代客户端 IP 口径（缺省 false——登录防爆破 IP 维消费：ACCOUNTS §2；非布尔一律拒启）
+  if (typeof trustProxy !== "boolean") {
+    throw new Error(`trustProxy 非法：${JSON.stringify(raw.trustProxy)}（布尔值 false ∥ true——拒启）`)
+  }
+  const usageRetentionDays = raw.usageRetentionDays === undefined ? DEFAULT_USAGE_RETENTION_DAYS : raw.usageRetentionDays // `null` = 不限（显式值——不被缺省吞）
+  if (usageRetentionDays !== null && (!Number.isInteger(usageRetentionDays) || usageRetentionDays < 1)) {
+    throw new Error(`usageRetentionDays 非法：${JSON.stringify(raw.usageRetentionDays)}（正整数 ∥ null（不限）——拒启）`)
+  }
+  // providers[] = 首启种子（可缺/可空——零 provider 允许态；控制台 = 常态管理面——ops/OPS.md §1）
+  const providers = raw.providers === undefined ? [] : validateProviderEntries(raw.providers)
 
   const embedding = raw.embedding
   if (embedding === null || typeof embedding !== "object" || Array.isArray(embedding)) {
@@ -118,7 +111,39 @@ export function validateConfig(raw) {
     bootstrap = { username, password }
   }
 
-  return { host: host.trim(), port, db, autoUpdate, bootstrap, providers, embedding: normalizedEmbedding }
+  return { host: host.trim(), port, db, autoUpdate, trustProxy, usageRetentionDays, bootstrap, providers, embedding: normalizedEmbedding }
+}
+
+/** provider 条目校验（**校验单源**——三径：配置载入 ∥ 启动构建/种子 ∥ 控制台保存——ops/OPS.md §1）：
+ *  入 = 条目（可含 `preset`——预设形先展开；手写形原样）；出 = 归一条目 `{ name, baseURL, apiKey, models }`
+ *  （`apiKey` 可空——`env:` 引用原样保留，解析 = 注册表构建期）。判据（fail-closed——抛）：name 缺/空 ∥ 含 `/`；
+ *  baseURL 非 http(s)；models 非字符串数组 ∥ 同 provider 内重名；preset 未知（展开期——报错列可用名）。
+ *  `seenNames` 在场时兼判 providers 间重名（批量径）。 */
+export function validateProviderEntry(entry, { where = "providers[i]", seenNames = null } = {}) {
+  if (entry === null || typeof entry !== "object" || Array.isArray(entry)) throw new Error(`${where} 须为对象`)
+  const expanded = expandProviderEntry(entry, where) // 预设形 ⇒ 展开（未知名 ⇒ 抛——列可用名）；手写形原样
+  const name = requireProviderName(expanded.name, where)
+  if (seenNames) {
+    if (seenNames.has(name)) throw new Error(`provider 名重名：${name}（${where}.name 与先前 provider 同名——派发歧义；拒启）`)
+    seenNames.add(name)
+  }
+  const baseURL = requireHttpURL(expanded.baseURL, `${where}.baseURL`)
+  if (!Array.isArray(expanded.models)) throw new Error(`${where}.models 须为字符串数组（本 provider 上游模型名清单——对外标识 = provider/model）`)
+  const seenInProvider = new Set() // 同 provider 内重名 ⇒ 拒（跨 provider 同名 = 合法——并存且各自可达）
+  const models = expanded.models.map((model, j) => {
+    const value = requireString(model, `${where}.models[${j}]`)
+    if (seenInProvider.has(value)) throw new Error(`模型重名：${value}（${where}.models 内重复——拒启防笔误）`)
+    seenInProvider.add(value)
+    return value
+  })
+  return { name, baseURL, apiKey: optionalString(expanded.apiKey, `${where}.apiKey`), models }
+}
+
+/** provider 条目批量校验（providers 间重名判据 = 批内单源——逐条归 `validateProviderEntry`）：出 = 归一条目数组。 */
+export function validateProviderEntries(entries, { where = "providers" } = {}) {
+  if (!Array.isArray(entries)) throw new Error("providers 须为数组（首启种子——缺省/空 = 零 provider 允许态）")
+  const seenProviderNames = new Set() // provider 名重名（providers 间）⇒ 拒（派发歧义——ops/OPS.md §1 补条）
+  return entries.map((entry, i) => validateProviderEntry(entry, { where: `${where}[${i}]`, seenNames: seenProviderNames }))
 }
 
 /** 库路径归一：`:memory:` 原样（测试面）；其余相对 = 配置档所在目录 ⇒ 绝对。 */

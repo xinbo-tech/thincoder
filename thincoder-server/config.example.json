@@ -3,6 +3,8 @@
   "port": 8787,
   "db": "data/gateway.db",
   "autoUpdate": "notify",
+  "trustProxy": false,
+  "usageRetentionDays": 90,
   "bootstrap": {
     "username": "admin",
     "password": "env:TC_SERVER_ADMIN_PASSWORD"

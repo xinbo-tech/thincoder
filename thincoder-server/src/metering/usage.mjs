@@ -1,14 +1,18 @@
 /**
  * usage.mjs — 记账（metering/METERING.md §1）：行落库（KD-SV-8——请求终结后单条 INSERT） ∥
- * 明细查询 ∥ 成员月累计。
+ * 明细查询 ∥ 成员月累计 ∥ 保留窗清理（`pruneUsage`——删除式；启动一次 + 24h 周期，入口接线）。
  *
  * 行形 = 一行/请求：成员 × 模型 × 时段（`ts`）× token；token 三列 = 上游 usage 原值（逐值不加工），
  * 上游未回 ⇒ 三列 NULL（status 照记实况）。
  */
 import { HttpError } from "../gateway/errors.mjs"
+import { DEFAULT_USAGE_RETENTION_DAYS } from "../ops/config.mjs"
 
 export const USAGE_LIMIT_DEFAULT = 100
 export const USAGE_LIMIT_MAX = 500
+export const USAGE_PRUNE_INTERVAL_MS = 24 * 60 * 60 * 1000 // 保留清理周期（24h——实现常量；入口接线）
+
+const DAY_MS = 24 * 60 * 60 * 1000
 
 const ENDPOINTS = ["chat", "embeddings"]
 const STATUSES = ["ok", "error", "aborted"]
@@ -64,6 +68,17 @@ export function monthlyTokensByMember(db, { now = Date.now() } = {}) {
     .prepare("SELECT member_id, COALESCE(SUM(total_tokens), 0) AS used FROM usage WHERE ts >= ? GROUP BY member_id")
     .all(monthStart(now))
   return new Map(rows.map((row) => [row.member_id, Number(row.used)]))
+}
+
+/**
+ * 保留窗清理（METERING §1 ∥ KD-SV-22——删除式）：删 `ts < now - retentionDays 天` 的行（走 `idx_usage_ts`）；
+ * `retentionDays = null` ⇒ 不限（零删——显式开）；返回删除行数。
+ * 时机 = 启动一次 + 每 24h（`USAGE_PRUNE_INTERVAL_MS`——入口接线）；查询面零改（窗外行自然不在结果）。
+ */
+export function pruneUsage(db, { now = Date.now(), retentionDays = DEFAULT_USAGE_RETENTION_DAYS } = {}) {
+  if (retentionDays === null) return 0
+  const cutoff = now - retentionDays * DAY_MS
+  return Number(db.prepare("DELETE FROM usage WHERE ts < ?").run(cutoff).changes)
 }
 
 /**

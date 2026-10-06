@@ -56,6 +56,18 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "22.13" }
       - run: npm test
+  server:
+    name: thincoder-server (gateway)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: thincoder-server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      # 包装发布门禁（node --check ×3 + 十件批内件单测）——零依赖，免 install
+      - run: npm run prepublishOnly
   docs:
     name: repo-wide doc machine checks
     runs-on: ubuntu-latest

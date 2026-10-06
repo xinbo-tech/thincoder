@@ -25,4 +25,10 @@ RUN chmod +x /app/deploy/docker-entrypoint.sh
 EXPOSE 8787
 VOLUME /app/data
 
+# 健康检查（探活面——ops/OPS.md §5.9 ∥ KD-SV-23）：`GET /healthz`（无鉴权只读）；间隔 30s ∥ 超时 5s ∥
+# 启动宽限 120s（覆盖壳收敛/装版窗）∥ 重试 3；compose 不重复声明（镜像 healthcheck 自动继承——docker ps 可见
+# `(healthy)`）。注：探针固定缺省端口 8787（`port` 改非缺省 ⇒ 同步改本行）；容器路 `host` 取 0.0.0.0（容器单接口
+# ——警告可接受），探针固定 127.0.0.1 依赖之。`unhealthy` = 标注态（restart 策略只按进程退出动作——不触发重起）。
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 CMD node -e "fetch('http://127.0.0.1:8787/healthz').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
 ENTRYPOINT ["/app/deploy/docker-entrypoint.sh"]

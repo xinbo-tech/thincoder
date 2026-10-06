@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /**
  * thincoder-server.mjs — 服务入口（ops/OPS.md §4）：argv（`--config`）→ 配置加载/校验 → 开库/迁移 →
- * 路由注册 → `node:http` 监听 → 就绪日志（含 `version`——§5.4(g)）；SIGINT/SIGTERM ⇒ 优雅停机（清更新循环 ∥
- * 停收新连 ∥ 关库）；更新循环接线（自检/自升——§5.4(a)(c)：自升成功亦走停机路径——`signal: "self-update"`）。
+ * 首启引导（种子导入 ∥ 注册表构建——§1）→ **用量保留清理（启动一次 + 24h 周期——`metering/METERING.md` §1）** →
+ * 路由注册（含系统面——`gateway/API.md` §2.3）→ `node:http` 监听 → 就绪日志（含 `version`——§5.4(g)）；SIGINT/SIGTERM ⇒
+ * 优雅停机（清周期定时器（更新循环 ∥ 保留清理同法——§4） ∥ 停收新连 ∥ 关库）；更新循环接线（自检/自升——§5.4(a)(c)：
+ * 自升成功亦走停机路径——`signal: "self-update"`）。
  *
- * 本档 = 装配面（配置 ∥ 库 ∥ 首启引导 ∥ 各域注册行）——D1 骨架 + D2 账号/计量面 + D3 聊天链
+ * 本档 = 装配面（配置 ∥ 库 ∥ 首启引导 ∥ 各域注册行 + 系统面）——D1 骨架 + D2 账号/计量面 + D3 聊天链
  * （bootstrap + gateway ∥ accounts ∥ metering 注册行）+ D4 webui 静态面（`public/` 直发——路由优先）+ D5 更新面。
  */
 import { pathToFileURL } from "node:url"
@@ -15,10 +17,14 @@ import { createUpdater, readPackageVersion } from "../src/ops/update.mjs"
 import { openDatabase } from "../src/store/db.mjs"
 import { createGatewayServer, createRouteTable } from "../src/gateway/server.mjs"
 import { registerGatewayRoutes } from "../src/gateway/routes.mjs"
+import { registerProviderAdminRoutes } from "../src/gateway/provider-admin.mjs"
+import { registerSystemRoutes } from "../src/gateway/system.mjs"
 import { ensureBootstrap } from "../src/accounts/members.mjs"
+import { createLoginGuard } from "../src/accounts/login-guard.mjs"
 import { registerAccountRoutes } from "../src/accounts/routes.mjs"
 import { registerAdminRoutes } from "../src/accounts/routes-admin.mjs"
 import { registerMeteringRoutes } from "../src/metering/routes.mjs"
+import { USAGE_PRUNE_INTERVAL_MS, pruneUsage } from "../src/metering/usage.mjs"
 import { createStaticSite } from "../src/webui/static.mjs"
 
 export const USAGE = "用法：thincoder-server --config <配置档>"
@@ -64,12 +70,17 @@ export async function run(argv = process.argv.slice(2), log = createLogger(), { 
   let db = null
   let app = null
   let updater = null
+  let pruneTimer = null
   let stopping = false
-  /** 优雅停机：清更新循环（§5.4(c)——自升成功亦走本路径）⇒ 停收新连 ⇒ 关库。 */
+  /** 优雅停机：清周期定时器（更新循环 ∥ 保留清理同法——§4；自升成功亦走本路径）⇒ 停收新连 ⇒ 关库。 */
   const stop = (signal) => {
     if (stopping) return
     stopping = true
     updater?.stop()
+    if (pruneTimer) {
+      clearInterval(pruneTimer)
+      pruneTimer = null
+    }
     log.info("shutdown", { signal })
     closeApp({ ...app, log }).then(() => {
       log.info("stopped")
@@ -89,11 +100,27 @@ export async function run(argv = process.argv.slice(2), log = createLogger(), { 
         message: bootstrap.message ?? "零 admin 且未配置 bootstrap——可用 CLI「member add <name> --role admin」补建",
       })
     }
+    // 用量保留清理（METERING §1——启动一次 + 24h 周期；定时器 unref——不阻停机）
+    pruneUsage(db, { retentionDays: config.usageRetentionDays })
+    pruneTimer = setInterval(() => {
+      try {
+        pruneUsage(db, { retentionDays: config.usageRetentionDays })
+      } catch (e) {
+        log.warn("usage_prune_failed", { message: e.message }) // 周期清理失败不反噬服务（启动一次 = fail-closed）
+      }
+    }, USAGE_PRUNE_INTERVAL_MS)
+    pruneTimer.unref?.()
+    const version = readPackageVersion() // 前缀内实际安装版本（升级核对 = 重起读 ready 行——§5.4(g)；系统面同源）
+    const loginGuard = createLoginGuard({ log }) // 登录防爆破（ACCOUNTS §2——自助/管理两注册面共用同一实例）
     const routes = createRouteTable()
-    registerGatewayRoutes(routes, { db, config }) // D3 面：/v1/chat/completions ∥ /v1/models（团队 key 鉴权）
-    registerAccountRoutes(routes, { db }) // D2 面：login ∥ logout ∥ me ∥ me/password ∥ me/keys/rotate
-    registerAdminRoutes(routes, { db })   // D2 面：members 列表/建 ∥ 吊销 ∥ 重置
+    // D3 面：/v1/chat/completions ∥ /v1/models（团队 key 鉴权）；provider 运行时引导（种子导入 → 构建——OPS §1）
+    const providerRuntime = registerGatewayRoutes(routes, { db, config, log })
+    registerProviderAdminRoutes(routes, { db, config, runtime: providerRuntime, log }) // provider 管理面（同实例——换表两族同见）
+    registerAccountRoutes(routes, { db, guard: loginGuard }) // D2 面：login ∥ logout ∥ me ∥ me/password ∥ me/keys/rotate
+    registerAdminRoutes(routes, { db, guard: loginGuard })   // D2 面：members 列表/建 ∥ 吊销 ∥ 重置
     registerMeteringRoutes(routes, { db }) // D2 面：用量查询 ∥ 设额度
+    // 系统面（gateway/API.md §2.3——首版完备化①③）：/healthz 探活 ∥ /api/system（惰性状态访问器——更新器在其后创建）
+    registerSystemRoutes(routes, { db, version, getUpdateStatus: () => updater?.getStatus() ?? null })
     // D4 面：webui 静态面（`public/` 直发——注册路由优先；`/v1/*` ∥ `/api/*` 不走静态面）
     const server = createGatewayServer({ config, routes, log, staticSite: createStaticSite() })
     app = { server, db }
@@ -101,11 +128,15 @@ export async function run(argv = process.argv.slice(2), log = createLogger(), { 
       server.once("error", reject)
       server.listen(config.port, config.host, resolve)
     })
-    const version = readPackageVersion() // 前缀内实际安装版本（升级核对 = 重起读 ready 行——§5.4(g)）
     log.info("ready", { host: config.host, port: config.port, db: config.db, routes: routes.size, version })
     updater = createUpdater({ config, log, version, onSelfUpdate: () => stop("self-update"), ...update })
     updater.start() // 启动即检一次 + 周期（档位 = config.autoUpdate——false ⇒ 零检查）
   } catch (e) {
+    try {
+      app?.server?.close() // 监听已起（后置装配失败）⇒ 一并回收——防「能收连接但库已关」半挂态
+    } catch {
+      /* 启动失败路径的清理——原始错误优先 */
+    }
     try {
       db?.close()
     } catch {

@@ -5,7 +5,8 @@
  * 零第三方依赖：自检 = node 内建 `fetch`（scheme 随 `NPM_CONFIG_REGISTRY`——http(s) 皆可）；自升 = npm CLI 子进程
  * （自检与自装同源——§5.3）。检查失败/404 静默（与「无新版」同面）；自装失败/超时恒保留旧版运行（绝不 brick——§5.4(f)）。
  * 注入口径（批内件替身——§5.4(c)）：npm 命令 ∥ 读装版本 ∥ 周期/超时常量走可覆盖参数 + `??` 缺省
- * （缺省 = 生产行为不变；测试内 finally 复原）。
+ * （缺省 = 生产行为不变；测试内 finally 复原）。进程内状态（`getStatus()`——控制台可见面：KD-SV-24 ∥ `gateway/API.md` §2.3）
+ * = 生效档位（钉版抑制后） ∥ 最近自检时刻 ∥ 已见新版号；未检/失败 ⇒ 静默同面（`null`）。
  */
 import { spawn } from "node:child_process"
 import { readFileSync } from "node:fs"
@@ -149,7 +150,7 @@ export async function installPackage(target, {
  * 建更新器（入口接线——§5.4(a)(b)(c)）：`start()` = 启动即检一次 + 每 `intervalMs` 一轮（定时器 unref——不阻停机）；
  * `stop()` = 清循环（停机 ∥ 自升后停机）。档位 = `config.autoUpdate`（`false` ⇒ 零检查）；
  * 容器钉版（`env.TC_SERVER_VERSION` 非空且非 `latest`）⇒ 自装抑制（生效 = notify + 启动一条说明——升级 = 改钉值；§5.4(b)）。
- * `onSelfUpdate` = 自升成功回调（入口接优雅停机——`signal: "self-update"`）。
+ * `onSelfUpdate` = 自升成功回调（入口接优雅停机——`signal: "self-update"`）；`getStatus()` = 状态导出（§2.3）。
  */
 export function createUpdater({
   config = {},
@@ -172,14 +173,19 @@ export function createUpdater({
   const mode = configured === "auto" && pinned ? "notify" : configured // 钉版 ⇒ 自装抑制（生效 = notify）
   let timer = null
   let checking = false
+  let lastCheckAt = null // 最近自检时刻（unix ms；未检 ⇒ null）
+  let latest = null // 已见新版号（无新版 ∥ 未检 ∥ 自检失败未覆盖前值 ⇒ null）
 
   /** 一轮自检（+ 自装）：失败/404/无新 ⇒ 静默；有新版 ⇒ `update_available`；自装成功 ⇒ `update_installed` + 回调停机。 */
   async function checkNow() {
     if (mode === false || checking) return null
     checking = true
     try {
-      const latest = await checkLatest({ registry, timeoutMs: checkTimeoutMs, fetchImpl })
-      if (latest === null || compareVersions(version, latest) >= 0) return null // 静默（失败/404/无新——同面）
+      const found = await checkLatest({ registry, timeoutMs: checkTimeoutMs, fetchImpl })
+      if (found === null) return null // 失败/404 ⇒ 保前值（静默——与「无新版」同面）
+      lastCheckAt = Date.now() // 自检成功 ⇒ 更新状态（有新 ⇒ 置版号 ∥ 无新 ⇒ 清 null）
+      latest = compareVersions(version, found) < 0 ? found : null
+      if (latest === null) return null // 无新版——静默（同面）
       log?.warn("update_available", { current: version, latest, mode })
       if (mode !== "auto") return { latest, installed: false }
       const result = await installPackage(latest, { npmCommand, timeoutMs: installTimeoutMs, spawnImpl, env, readInstalled })
@@ -224,5 +230,10 @@ export function createUpdater({
     }
   }
 
-  return { start, stop, checkNow, version, configured, pinned, pin, mode }
+  /** 进程内状态导出（控制台数据面——`gateway/API.md` §2.3）：`{ mode, lastCheckAt, latest }`（`mode` = 生效档位）。 */
+  function getStatus() {
+    return { mode, lastCheckAt, latest }
+  }
+
+  return { start, stop, checkNow, getStatus, version, configured, pinned, pin, mode }
 }

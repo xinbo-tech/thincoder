@@ -8,6 +8,7 @@ services:
   server:
     image: <registry>/thincoder-server:<tag>   # 待定占位（壳 tag——不含版本语义）
     restart: unless-stopped                     # 容器路守护（无 systemd 依赖）；崩溃自愈 ∥ 开机自起
+    # healthcheck：继承自镜像（Dockerfile HEALTHCHECK——§5.9；docker compose ps 可见 (healthy)）
     environment:
       - TC_SERVER_VERSION=${TC_SERVER_VERSION:-}   # 钉死 = 写 x.y.z；留空（缺省空串）= 按镜像预装运行（离线）
       # - NPM_CONFIG_REGISTRY=http://<内网镜像>/          # 更新源（选填——§5.4）

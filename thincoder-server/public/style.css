@@ -1,5 +1,5 @@
-/* style.css — 控制台样式（webui/WEBUI.md §4）：系统字体 ∥ 表格 + 表单 ∥ 桌面优先（宽表横滚）。
-   零外部资源：无外链样式导入 ∥ 无外链字体 ∥ 无 CDN。 */
+/* style.css — 控制台样式（webui/WEBUI.md §4）：系统字体 ∥ 表格 + 表单 ∥ 侧栏分组导航（§2）∥ 窄屏降级顶条。
+   桌面优先（宽表横滚）；零外部资源：无外链样式导入 ∥ 无外链字体 ∥ 无 CDN。 */
 :root {
   --bg: #f5f6f8;
   --panel: #ffffff;
@@ -16,10 +16,19 @@ body {
   background: var(--bg);
   color: var(--text);
 }
-.topbar { display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--border); }
-.brand { font-weight: 600; }
-nav { display: flex; gap: 12px; align-items: center; }
-nav a { color: var(--accent); text-decoration: none; }
+
+/* 侧栏（分组导航——WEBUI §2；登录页无侧栏 = hidden） */
+.sidebar { position: fixed; inset: 0 auto 0 0; width: 200px; padding: 14px 12px; display: flex; flex-direction: column; gap: 14px; background: var(--panel); border-right: 1px solid var(--border); }
+.sidebar[hidden] { display: none; }
+.sidebar .brand { font-weight: 600; padding: 0 6px; }
+.nav-group { display: flex; flex-direction: column; gap: 2px; }
+.nav-group-title { font-size: 12px; color: var(--muted); padding: 0 6px; }
+.nav-item { color: var(--text); text-decoration: none; padding: 5px 8px; border-radius: 6px; font-size: 13px; }
+.nav-item:hover { background: #eef1f5; }
+.nav-item.active { background: #e6efff; color: var(--accent); font-weight: 600; }
+.nav-bottom { margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding: 0 6px; }
+.nav-bottom .meta { font-size: 12px; color: var(--muted); min-height: 14px; }
+.content { margin-left: 200px; }
 main { max-width: 1100px; margin: 0 auto; padding: 20px; }
 h2 { margin: 4px 0 16px; }
 h3 { margin: 0 0 12px; font-size: 15px; }
@@ -47,3 +56,34 @@ input.quota { width: 90px; }
 .secret-value { display: block; word-break: break-all; user-select: all; }
 .key-list { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .key-line { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+
+/* Provider 页（views-providers.mjs）：表单纵标签 ∥ 勾选清单 */
+.provider-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 10px; }
+.provider-form > label { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.provider-form input { min-width: 210px; }
+.provider-form .key-clear { flex-direction: row; align-items: center; }
+.stack-models { margin: 4px 0 10px; }
+.model-picks { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+
+/* 系统页（views-system.mjs）：四端示例代码块 ∥ 端清单 ∥ 更新提示 */
+.snippet { margin: 6px 0 10px; padding: 8px 10px; background: #f0f2f5; border: 1px solid var(--border); border-radius: 6px; overflow-x: auto; }
+.snippet code { background: none; padding: 0; }
+.card h4 { margin: 12px 0 6px; font-size: 13px; color: var(--muted); }
+.update-tip { margin: 10px 0 0; font-weight: 600; }
+.end-list { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.7; }
+.end-name { font-weight: 600; }
+
+/* 语言切换器（i18n.mjs——侧栏 meta 槽 ∥ 登录卡）：两枚自称名小钮 ∥ 当前态高亮（§2.2） */
+.lang-switch { display: flex; gap: 6px; }
+.lang-switch button { padding: 2px 8px; font-size: 12px; border-color: var(--border); background: #fff; color: var(--text); }
+.lang-switch button.active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.lang-switch-row { margin-top: 2px; font-size: 13px; }
+
+/* 窄屏（≤760px）：侧栏降级为顶条（单条媒体查询——非移动端适配承诺——WEBUI §2） */
+@media (max-width: 760px) {
+  .sidebar { position: static; width: auto; flex-direction: row; flex-wrap: wrap; align-items: center; border-right: none; border-bottom: 1px solid var(--border); }
+  .nav-group { flex-direction: row; align-items: center; }
+  .nav-group-title { padding: 0 2px; }
+  .nav-bottom { margin: 0 0 0 auto; flex-direction: row; align-items: center; }
+  .content { margin-left: 0; }
+}

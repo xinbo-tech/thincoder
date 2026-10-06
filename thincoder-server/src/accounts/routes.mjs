@@ -3,11 +3,14 @@
  *
  * 判权全在后端（会话 + 角色）；写端点仅收 application/json（分派层统一 400——gateway/server.mjs）。
  * 无 ∥ 过期会话 ⇒ 401 `unauthorized`；`user` 触管理端点 ⇒ 403 `forbidden`（routes-admin.mjs）。
+ * login 接线登录守卫（§2 ∥ KD-SV-21）：锁定期 ⇒ 429 `too_many_attempts` + `Retry-After`（不跑散列——
+ * 快速拒绝；两维同文案——防枚举面保持）；成功 ⇒ 清计（该用户名 + 该 IP）。
  */
 import { HttpError, sendJson } from "../gateway/errors.mjs"
 import { readJsonBody } from "../gateway/server.mjs"
 import { monthlyTokensForMember } from "../metering/usage.mjs"
 import { activeKeysOf, rotateKey } from "./keys.mjs"
+import { clientIp, defaultLoginGuard } from "./login-guard.mjs"
 import { findMemberByUsername, setMemberPassword, validatePassword, verifyPassword } from "./members.mjs"
 import {
   clearSessionCookie,
@@ -33,16 +36,29 @@ export function memberView(db, member, { now = Date.now(), usedTokens = null } =
   }
 }
 
-export function registerAccountRoutes(routes, { db } = {}) {
+/** 锁定期文案（两维同文案、与用户名存在性无关——防枚举面保持——ACCOUNTS §2）。 */
+export const THROTTLED_MESSAGE = "登录尝试过于频繁（请稍后再试）"
+
+export function registerAccountRoutes(routes, { db, guard = defaultLoginGuard } = {}) {
   if (!db) throw new Error("registerAccountRoutes：缺少 db（openDatabase 产物）")
 
-  routes.add("POST", "/api/login", async (req, res) => {
+  routes.add("POST", "/api/login", async (req, res, ctx) => {
     const body = await readJsonBody(req)
     const username = typeof body?.username === "string" ? body.username : ""
     const password = typeof body?.password === "string" ? body.password : ""
+    const ip = clientIp(req, { trustProxy: ctx?.config?.trustProxy === true }) // IP 口径（trustProxy——§2）
+    const verdict = guard.check({ username, ip })
+    if (verdict.locked) {
+      res.setHeader("Retry-After", String(verdict.retryAfterS)) // 剩余秒（固定窗——锁期内不延长）
+      throw new HttpError("too_many_attempts", THROTTLED_MESSAGE)
+    }
     const member = findMemberByUsername(db, username)
     const ok = await verifyPassword(password, member?.password_hash) // 不存在用户照跑哑散列（同措辞同耗时）
-    if (!member || !ok) throw new HttpError("invalid_credentials", "用户名或密码错误")
+    if (!member || !ok) {
+      guard.recordFailure({ username, ip }) // 双维计数（锁触发 ⇒ login_throttled 一行——§2）
+      throw new HttpError("invalid_credentials", "用户名或密码错误")
+    }
+    guard.recordSuccess({ username, ip }) // 清计：该用户名 + 该 IP（§2）
     deleteExpiredSessions(db) // 过期行顺手清（ACCOUNTS §2）
     const { token } = createSession(db, member.id)
     res.setHeader("Set-Cookie", serializeSessionCookie(token))
@@ -69,6 +85,7 @@ export function registerAccountRoutes(routes, { db } = {}) {
     if (!ok) throw new HttpError("invalid_credentials", "原密码错误")
     validatePassword(body?.newPassword) // < 8 ⇒ 400；通过前不落任何变更
     await setMemberPassword(db, session.member.id, body.newPassword)
+    guard.clearUsername(session.member.username) // 清计：自助改密 ⇒ 本人用户名维（§2）
     revokeMemberSessions(db, session.member.id, { exceptTokenHash: session.tokenHash }) // 本人其他会话吊销——当前保留
     sendJson(res, 200, { ok: true })
   })
