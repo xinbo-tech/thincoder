@@ -186,7 +186,13 @@ export function onSubagent(state, ev, now) {
   const before = Array.isArray(table[key]) ? table[key] : []
   const list = [...before]
   // 核态机 deps：`now` 为**读钟函数**（`state.mjs` 每迁现刻取值 —— 出生起刻 / 冻结 `doneAt`）。
-  const { effects } = subBlocksReduce(list, patch, { now: () => now })
+  const { effects } = subBlocksReduce(list, patch, {
+    now: () => now,
+    // 桌面诊断面接线（`state.mjs:39`「给由」的到期兑现 · 2026-10-06——#76 digested-stuck 事故）：
+    // 丢弃径（drop-frozen ∥ drop-tombstone ∥ late-terminal-stub ∥ reassert-hit 等）零静默 ⇒ 有痕；
+    // 本端无上行面 ⇒ 落 devtools 控制台（最小可见面；上行面出现后改路由）。
+    trace: (name, bkey) => console.error(`[subagent-trace] ${name} ${bkey}`),
+  })
   const archived = archiveIntoFlow(before, list, new Set(effects.map((effect) => effect?.key)))
   emitRecords(key, archived.blocks) // 归档记录出站（含非活动键 —— 先于流内键门；留档批 · #719）
   const next = withSubBlocks(state, { ...table, [key]: archived.list }, key)

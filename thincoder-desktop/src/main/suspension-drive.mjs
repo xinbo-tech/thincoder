@@ -24,6 +24,7 @@ import { upstreamAskLabelVars } from "@thincoder/core/agent-tools/parent-channel
 import { pushReal } from "@thincoder/core/context.mjs"
 import { QUEUED_MAX_ITEMS, takeQueuedBatchItem } from "@thincoder/core/queued.mjs"
 import { cleanupTurn } from "./attachments.mjs"
+import { panelLive } from "./panel-live.mjs" // 自愈扫读面（2026-10-06——#76 残块事故；同单例，禁第二副本）
 import { appendRecord } from "./session-io.mjs"
 import { guardedDeliver } from "./suspension-guard.mjs"
 import { createSuspensionTimers } from "./suspension-timers.mjs"
@@ -69,6 +70,30 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
     return out
   }
 
+  /** 已消化驻留块自动回收（2026-10-06——#76 digested-stuck 事故；形状 = 手动 freeze 谓词（`subagent-panel.mjs:117-155`）
+   *  的 beat 级自动化）：渲染面报块中 `awaitingDigest ∧ frozen ∧ 非 consult` ∧ 核侧不在驻留（两池 + pending 皆无）
+   *  ⇒ 判定「已消化驻留」（done 帧曾丢——帧面零持久痕为该事故的读面缺口）⇒ 补发 done（幂等：重复发射由渲染面归档闸消化）。
+   *  谓词逐 beat 现算 = 零新存储（符「位置零存储」裁）；效果 = 分钟级自愈，不再等池空 freezeAll ∥ 手动 freeze。 */
+  function sweepDigestedStuck(key, agent) {
+    const blocks = panelLive.get(key)?.blocks
+    if (!Array.isArray(blocks)) return
+    const live = resident(agent)
+    const hits = []
+    for (const b of blocks) {
+      if (!b || b.awaitingDigest !== true || b.frozen !== true || b.role === "consult") continue
+      const m = /^sub:([A-Za-z][\w-]*)#(\d+)$/.exec(String(b.key ?? ""))
+      if (!m) continue
+      const role = m[1]
+      const id = Number(m[2])
+      if (live.some((e) => e && e.role === role && e.id === id)) continue // 仍在池 ∥ 报告未达 ⇒ 不动（手动 freeze 同判）
+      hits.push({ role, id })
+    }
+    if (hits.length > 0) {
+      console.error(`[suspension-drive] sweep-digested-stuck ${key} → ${hits.map((h) => `${h.role}#${h.id}`).join(",")}`)
+      reemitDone(key, hits)
+    }
+  }
+
   /** 逐条补发 `done`（`settled` 等待消化块 ⇒ 归档入流；块回收与池空解耦——不等池空）。载荷形 = VSC 收回面同款。
    *  **会话本体零渲染行（consult）——不跳过**：按会话条目 `childIds` 逐子块补发（块键形 `consult#<N>`，
    *  consult 同族收齐批 · 台账 #748——三路径同件：起跑支 ∥ `reclaim` ∥ `freezeAll`；VSC 对位物 `remitConsultChildBlocks`（两径共用）同判）。
@@ -76,6 +101,7 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
   function reemitDone(key, entries) {
     for (const e of entries) {
       if (!e || e.id === undefined || e.id === null) continue
+      console.error(`[suspension-drive] reemit-done ${key} ${e.role ?? "subagent"}#${e.id}`) // 诊断痕（2026-10-06——#76 digested-stuck 事故；起跑补发∥reclaim∥freezeAll 三径共用本点）
       if (e.role === "consult") {
         // #748：会话本体无行——逐子块展开（无块子块不入表 ⇒ 表空 = 零发）；本体 id 零补发
         for (const cid of e.childIds ?? []) post("ev:subagent", { key, role: "consult", id: cid, status: "done" })
@@ -155,6 +181,7 @@ function pendingSnapshot(agent) {
       // 起跑窗复位（本批 2026-10-01 裁 A —— **主面**）：起跑刻 pending 快照逐条补发 `done` ⇒ `settled`
       // 待消化块随起跑归档入流（居消费轮行族之后）；`hooks.reclaim` = 兜底幂等。
       reemitDone(key, pendingSnapshot(agent))
+      sweepDigestedStuck(key, agent) // 已消化驻留块自愈（2026-10-06——#76 残块事故；三拍之一）
     }
     if (!timerTurn) reloadSlot?.(key, agent, cwd) // 会话钉定：回合落槽面 = 本窗键槽（非现刻 activeSession —— 切会话零影响）；
     // timer 轮零重装（#799）：该轮重装已前移入 `suspension-timers.mjs` `deliver`（先于投递）——二次重装会再吞一行。
@@ -225,8 +252,8 @@ function pendingSnapshot(agent) {
       injectResidual: (item) => injectResidual(agent, item),
       timerFace: timers.faceOf(key, agent, cwd), // opt-in timer 面（§6.30.10）：窗内到期 ⇒ 兑现开 timer 轮（不等池空；#799：`deliver` 内先重装后投递）
       hooks: {
-        onCounts: (counts) => postSusp(key, agent, true, counts), // 计数 ⇒ `ev:susp`（核单点直传）
-        reclaim: (consumed) => reemitDone(key, consumed), // 回收 ⇒ 兜底幂等（起跑窗漏口 ∥ 迟结算面——本批 2026-10-01）
+        onCounts: (counts) => { postSusp(key, agent, true, counts); sweepDigestedStuck(key, agent) }, // 计数 ⇒ `ev:susp`（核单点直传）+ 自愈扫拍
+        reclaim: (consumed) => { reemitDone(key, consumed); sweepDigestedStuck(key, agent) }, // 回收 ⇒ 兜底幂等（起跑窗漏口 ∥ 迟结算面——本批 2026-10-01）+ 自愈扫拍
         freezeAll: () => { // 冻结 ⇒ 退出兜底同型（残项逐条补发；abort 径用中止前快照）
           const frozen = entry.frozen ?? resident(agent)
           entry.frozen = null
