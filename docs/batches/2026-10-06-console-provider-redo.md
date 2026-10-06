@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-06 · 来源 = 用户 2026-10-06 21:35「Provider与模型我希望改成 Provider，页面上就显示 Provider 列表，现在添加 Provider 的方式很奇怪，我希望改成点击添加按钮弹窗添加，Provider 列表点击弹出详情页，上面是 Provider 的基本信息，下面是提供的模型的列表，用户可以勾选，选中的加入服务的模型。」——功能点 18（需求档 §2:18 + AC-18）；同域串行：随控制台面（六面/弹窗两批已收口）落地后开。。
 > 台账 = #980（server · 归批）。前情 = 无（独立批——承功能点 18；前情批 = docs/batches/2026-10-06-console-modals.md（已收口 2026-10-06））。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-07
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 **§1 讨论（主 agent · 2026-10-06 21:3x-21:4x）**
@@ -11,6 +11,8 @@
 - **来源**：用户 21:35 功能点 18 原话 ∥ 21:36「上游发现，不用手动补充」∥ 21:4x「参考一下 vsc 端添加的方式」∥（跨引）21:39「ACDE」+ 21:40「A 需要保留，不能被 Provider 页吸收……退役……只能在服务模型页面操作」——逐条已入需求档（§2:18/§2:17 + 变更记录）。
 - **授权**：父侧按「直到完工为止，不需要再问我」直落（登记 → 设计轮点火）。
 - **设计轮 `#87`** 已交卷（§2 在盘）；**评审判待 `#88`**（R24 轮——同档共写 WEBUI.md/PROJECT.md/API.md）落定后两轮并行点火（避免评审读移动目标）。
+
+**§1 补记（主 agent · 2026-10-06 23:2x——光通道笔）**：`thincoder-server/src/gateway/provider-admin.mjs` 残留收正——4 条 502 尾句「——可手填模型清单降级」（:187 ∥ :194 ∥ :201 ∥ :205）⇒「——请检查上游可达性后重试」∥ 档头 :12「手填降级照常」⇒「（控制面提示 + 重试——**无手填兜底**）」。缘由 = R24 实施棒上抛 U2（实现与 21:36 裁定 / R28 收正相抵）；**光通道类别②（缺陷修复）——父侧直接执行 · 可 revert**；全仓扫描：`src/` 余量零（`config.mjs:22` = D 组「说明」输入，正道）；旧测试 ⑤ 腿（`-console-providers.test.mjs`）= API 级手填路径——行为零改、无需随正。
 
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（fix 轮 #94 九条受理落地（行号锚 = §2 修正块；三裁定与 R28–R30 在案））
@@ -116,4 +118,52 @@ VERDICT: pass
 **三条件核验**：① 评审 pass（0🔴）✓（reviewId 不落档——沿纪律）；② 修复轮已落地并经核验 ✓（修正块九条 + 核验轮逐处复核）；③ designToken 已签发 ✓（凭据值不落档）。
 
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（审计 clean ∥ 代码评审 pass ∥ fix 0 轮——终态 clean；随正五件（父侧）当刻为红（实证在 D6））
+
+
+**§5 实施记录（eng-coder · 2026-10-06 · console-provider-redo initial）**
+
+**交付摘要（逐档 file:line）**：
+- `public/views-providers.mjs`（重写 · 214 ⇒ **57**）：页首工具条（标题「Provider」+「添加」钮，:19–21）∥ 列表（名称 ∥ baseURL ∥ 密钥（掩码 ∥ 未配置）∥ 服务模型数，:39–56）∥ 行点击（Enter/Space 同开，:49–51）⇒ 详情弹窗；**零内联添加/编辑面**（旧表单撤除——批内件以 DOM 桩断言零表单控件）。
+- `public/views-providers-modals.mjs`（新 · **273**）：候选勾选助手 `renderPicks`（双弹窗复用——空态/错误态 ⇒ 段内提示，:17–30）∥ `sameSet`（PATCH 变更判定，:33–35）∥ 添加弹窗（类型一选 + 预设首开惰性拉取 + 已配名剔除 + 失败 ⇒ 提示 + 自定义径照常，:104–117；预设信息行（地址 ∥ 模型清单——只读）:90–95；自定义径「获取模型」探针 ⇒ 候选勾选 :119–134；写入 = POST 全字段（无 `preset` 字段）:136–149）∥ 详情弹窗（信息段 :254–262——掩码占位「留空 = 不修改」:178–181 ∥ 清除密钥 ⇒ `apiKey:""` :241 ∥ 测试连接 = discover 复用 + `providerId` 取库内 key :204–212 ∥ 删除（confirm）:214–222；勾选段 :263–265——候选 = 上游发现（首开自动拉取 :270 ∥「刷新候选」重试 :201）∥ 勾选态 = 现配置 :174 ∥ 退役项只读注 + 恒保留 :231–233/:243–244；脚区保存 = PATCH 变更字段（`models` 全量数组；零变更 ⇒ 直接关窗）:237–252）。
+- `public/style.css`（139 ⇒ **146**）：追加块 :60–:72——工具条 `.toolbar` ∥ 段头 `.pick-head` ∥ 危险钮行 `.info-actions` ∥ 模型清单码面（`.detail-grid dd code + code`）；`.provider-form`/`.key-clear`/`.stack-models`/`.model-picks` 沿用（双弹窗复用——零死类）。
+- `public/i18n-zh.mjs`（312 ⇒ **302** 行 · 键 268 ⇒ 258）∥ `public/i18n-en.mjs`（308 ⇒ **298** 行 · 键 266 ⇒ 256）：改值 = `nav.page.admin.providers` ∥ `admin.providers.title` =「Provider」（两表，zh :56/:140 ∥ en :56/:136）∥ 新增 **8** 键（add ∥ addTitle ∥ customChoice ∥ colModelCount ∥ fetchModels ∥ refreshCandidates ∥ candidatesEmpty ∥ retiredNote）∥ 退役 **18** 键（内联面旧键——`modelPh` ∥ `addModel` ∥ `formNew` ∥ `formEdit` ∥ `save` ∥ `saveEdit` ∥ `cancel` ∥ `discover` ∥ `presetLoad` ∥ `presetLoaded` ∥ `presetHint` ∥ `presetTitle` ∥ `listTitle` ∥ `colModels` ∥ `modelsEmpty` ∥ `edit` ∥ `checklistEmpty` ∥ `modelLabel`；「手填」值级 **0 残留**）。
+- `docs/batches/2026-10-06-console-provider-redo.test.mjs`（新 · **561**）：七腿——① nav/标题值「Provider」（两表）+ `labelKey` 面不破 ∥ ② 页面（列表/掩码/计数 + 添加钮 + 行点击 ⇒ 详情 + 零内联面 + 空/失败态）∥ ③ 添加弹窗两径（预设剔除/信息行/POST 全字段 ∥ 自定义探针 ⇒ 勾选 ⇒ POST ∥ 预设失败照常 ∥ 未选 ⇒ 提示不提交）∥ ④ 详情弹窗 + 错误径（失败 ⇒ 段内提示 +「刷新候选」重试可达 ∥ 失败态保存零 `models` 提交 = 无损 ∥ 退役注行 + 恒保留）∥ ⑤ 写路径（PATCH `models` 全量数组 ∥ 零变更关窗 ∥ 清除密钥 `apiKey:""` ∥ 测试连接 `providerId` ∥ 删除 confirm ∥ confirm 拒零请求）∥ ⑥ 热生效链（内存库 + 真网关：POST ⇒ PATCH `models` ⇒ `/v1/models` 随动）∥ ⑦ 静态面（档目 **19 ∥ 18** ∥ 零外链 ∥ 两表键集/占位符/en 零 CJK ∥ 键引用闭合 ∥ 退役键删净 ∥ 两档直发）。
+
+**自跑读数**：`node --check` 五档全绿（两视图档 ∥ 两 i18n 表 ∥ 批内件；style.css 非 JS）∥ `node --test docs/batches/2026-10-06-console-provider-redo.test.mjs`（自 `thincoder/` 仓根）= **tests 8 ∥ pass 8 ∥ fail 0** ∥ 静态自检 = 档目 **19 ∥ 18**（全目录 ∥ UI 代码档）∥ `http(s)://`+`@import` **0 命中** ∥ 两表键集双向相等（除自称名族）∥ en 零 CJK ∥ 旧内联键 **0 残留**。**全门禁（仓套件）= 父侧唯一执行（本侧未跑）**。
+
+**决策透明表（披露）**：
+
+| # | 决策/披露 | 理由 |
+|---|---|---|
+| D1 | 详情弹窗**首开自动拉取候选** | correction 块「发现失败 ⇒ 段内提示 + 重试 ∥ 失败态保存无损」以「开窗即可处失败态」为前提；「候选 = 上游发现集 ∥ 勾选态 = 现配置」需发现集在窗内成立；重试面 =「刷新候选」（同名钮）。 |
+| D2 | i18n 净增为 **−10/表**（键 268 ⇒ 258；行 312 ⇒ 302），非设计估 ≈−1/表 | 新增 8 键 < 估 ≈13；退役 18 键 > 估 ≈14——逐键清单在 D2 上文（交付摘要）；实读读数入档，回填轮（R29）收正。 |
+| D3 | 改值面 = 设计点名 2 键 + 复用键值随新面收正 5 处（`openList` ∥ `presetFailed` ∥ `presetNeeded` ∥ `listEmpty` ∥ `maskEmpty` ∥ `test`） | 新 UI 文案 = §2.4④ 引文（如「服务的模型（勾选 = 对团队开放）」）；「手填」收正为值级删净。 |
+| D4 | 添加弹窗 apiKey 行为两径共用（自定义径置于探针之上） | 取形 VSC 面板（key 行径外共用——`settings-providers.js:221`）；探针需读已填 key（明传口径）。 |
+| D5 | 错误态取纯 `.hint`（未加 `.error` 修饰）∥ 候选段无加载态 | 样式族批（§2.5 S16/⑨）尚未落地（`style.css` 当前零 `.error`/`.hint error` 规则——全档 grep）——本批不代改其面；接缝已上抛（评审 #1；§2.5:312 已含「以当刻盘面为准并入」条款）。 |
+| D6 | 随正五件 + `package.json`（十三 ⇒ 十四件）**当刻未落**（父侧登记） | 四批内件档目/JS 档单仍旧盘面（实证：`-console-modals.test.mjs:331` [18,17] ∥ `-console-providers.test.mjs:426` 名单 ∥ `-server-i18n.test.mjs:120` JS_FILES ∥ `thincoder-server/package.json:13` 链尾）——随正 = 父侧收口轮（批档 §2 已登记）。 |
+| D7 | 服务端 502 消息文本「可手填模型清单降级」保留 | 设计裁定「服务端 502 语义零改」；控制台不可见（`upstream_error` 走固定映射，不附服务端原文）——审计报备项，非本批面。 |
+
+**审计与代码评审轮次与终态**：
+- 内部发散审计（explore · 轮次 1）：**clean**——PARTIAL ∥ SILENT-SIMPLIFICATION ∥ DOC-DRIFT ∥ OUT-OF-LIST 四类均「无发现」；观察 3 项（§5 时点 ∥ 预算估漂移 ∥ 服务端 502 消息文本报备）。
+- 独立代码评审（advisor · 轮次 1）：**pass（无 must-fix）**——🟡 3（跨批样式接缝 = D5 ∥ 随正五件在册 = D6 ∥ i18n 表 302 > 300 软线 = 在册债 R25）+ 🔵 4（估数漂移 ∥ 防御性 `preset.name` 解引用（`:142`）∥ 添加弹窗探针失败径测试缺口 ∥ 批内件 561 行惯例记录）。
+- fix round：**0 轮**（无 must-fix；🟡/🔵 按「登记/上抛」处置，未改码）。
+- **终态 = clean**（批内件 8/8 绿 ∥ 审计 clean ∥ 评审 pass ∥ 两次全读回核）。
+
 ## §6 验证与收口（父代理）
+
+**§6 核验与收口（主 agent · 2026-10-07 00:5x）**
+
+**实施（四棒浪第 1 棒）**：eng-coder #103（initial）——子内发散审计 1 轮 clean ∥ 代码评审 1 轮 pass（0 must-fix）∥ fix 0 轮。落点：`views-providers.mjs` 重写 214 ⇒ 57 ∥ 新档 `views-providers-modals.mjs` 273 ∥ `style.css` +7 ∥ i18n 两表（新 8 键 ∥ 退 18 键——净 −10/表）。
+
+**批内件**：`-console-provider-redo.test.mjs`（561 行）——实施棒自跑 8/8；**父侧门禁链内并入复跑通过**。
+
+**父侧动作**：① 随正全扫（八文件——本批相关：档目链 19 ∥ 20 三处、`-console-completeness-2` 档目、`-server-gateway` v3⇒v4、presets `settings: {}`、`-server-auto-update` 件数、`-server-i18n` JS 档单）；② **补漏**：本批批内件未入 `prepublishOnly` ⇒ 父侧补列（`package.json:13`——十六 ⇒ 十七件，`-server-auto-update` 断言同拍）；③ **光通道笔**（父侧直接执行 · 可 revert）：`src/gateway/provider-admin.mjs` 五处「可手填模型清单降级 / 手填降级照常」残句收正（详见 §1 补记）；④ 设计小修：`webui/WEBUI.md` §2.5 实施面补列 `views-providers-modals.mjs`（可 revert）。
+
+**披露处置**：D1 采纳（详情弹窗首开自动拉取候选——「开窗即可处失败态」前提成立）∥ D2/D3 记账（i18n 净增实读 −10/表 ≠ 估 ≈−1——回填轮 #983）∥ D4 样式批接缝已随 #107 落盘并入 ∥ D5 已核销（随正落地）∥ D6 由光笔覆盖（502 文本已改——「保留」句不再成立）。
+
+**核验读数**：`cd thincoder-server && npm run prepublishOnly` = **140/140 ∥ 0 fail ∥ exit 0**（2026-10-07 00:4x；十七件链——本批件在列）。
+
+**台账号**：#980 在途 ⇒ 待核销 ⇒ 已核销（evidence = 本 §6 + 门禁读数）。
+
+**欠账（已入账）**：#983（回填轮——R29/R34/R36 面）∥ #984（候选段加载态——D4 折出）。

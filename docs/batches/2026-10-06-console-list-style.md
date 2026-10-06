@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-06 · 来源 = 用户 2026-10-06 22:00「我发现不同的列表样式会有区别，比如hover行的背景色会不一样，有的还没有，我希望你统一规划一下列表样式，做到风格统一。」——功能点 19（需求档 §2:19 + AC-19）；同域串行：两在跑设计轮（Provider 重做 / R24 配置）后的第三棒。。
 > 台账 = #982（server · 归批）。前情 = 无（独立批——承功能点 19；同域串行：排 `console-provider-redo` / `models-config` 后）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-07
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 **§1 讨论（主 agent · 2026-10-06 22:00-22:01）**
@@ -120,4 +120,63 @@ VERDICT: pass
 **三条件核验**：① 评审 pass（0🔴）✓（reviewId 不落档——沿纪律）；② 修复轮已落地并经核验 ✓（核验轮逐处复核 + 盘面复读全中）；③ designToken 已签发 ✓（凭据值不落档）。
 
 ## §5 实施记录（eng-coder）
+
+**状态行**：实施完成（impl 轮——批内件 7/7 绿 ∥ 内部分歧审计 1 轮 + 代码评审 2 轮：终态 clean）
+
+### §5 实施记录（eng-coder · 功能点 19 ∥ 台账 #982——样式族总体统一 · 2026-10-06）
+
+**交付摘要（落盘面——逐档 file:line，当刻盘面）**：
+
+- `thincoder-server/public/style.css` 全量重排：实读 **198 行**（157 ⇒ +41）——`:root` 变量族 38（色 19 + 遮罩 1 ∥ 间距 7 ∥ 圆角 3 ∥ 字排 4 ∥ 线宽 2 ∥ 布局 2；`:6–40`）∥ `:root` 块外零颜色字面量 ∥ `font-size` 全 `var(--fs)`（29 处）∥ `font-weight` 全 400 ∥ `line-height` 全 `var(--lh)` ∥ padding/margin/gap ∈ `--sp-*` ∪ {0,auto} ∪ 布局组（唯一例外 `.content{margin-left:var(--nav-w)}` `:56`——父侧已裁）∥ 行悬停三声明同取 `--hover`（`:52` `.nav-item:hover` ∥ `:70` `tbody tr:hover` ∥ `:106` `li.key-item:hover`；清单外零行悬停声明）∥ 聚焦环单形两处（`:72` 行内缩 −2px ∥ `:77` 控件外偏 +2px）∥ 钮族五型态面（`:85/:87/:89/:91` 悬停 ∥ `:92` 禁用）∥ `.error` 独立生效（`:96`）∥ 死规则 `.key-line` 删净。
+- 错态 canon 逐面（`.hint error`）：七处「加载失败」= `views-admin.mjs:37` ∥ `views-me.mjs:72` ∥ `views-models.mjs:77` ∥ `views-usage.mjs:57/:58` ∥ `views-audit.mjs:46` ∥ `views-providers.mjs:33`；系统页诊断失败 2 处 = `views-system.mjs:65`（状态行 ⇒ `.error`）∥ `:88`（试跑行 ⇒ `.hint error`）；#103 段内错误面 = `views-providers-modals.mjs:19`（§2.5 接续条款——以当刻盘面并入）。
+- 死类串删：`views-usage.mjs:106` ∥ `views-overview.mjs:50`（`stat`）∥ `app.mjs:248/:259`（`view`）。
+- 门禁：`thincoder-server/package.json:13`——prepublishOnly 十五 ⇒ 十六（添本批件）。
+- 批内件（新增）：`docs/batches/2026-10-06-console-list-style.test.mjs`（实读 **234 行**；七腿：① 底座单源 ∥ ② 一套刻度（含 UA 带字号元素覆盖面）∥ ③ 态面 ∥ ④ 错态 10 处逐面 ∥ ⑤ 类名双向闭合 + 死类零 ∥ ⑥ 档目 19∥20 + 零外链 + 直发 ∥ ⑦ 门禁十六件）。
+
+**自跑读数**：批内件 `node --test`（自 `thincoder/` 仓根）= 7/7 绿；`node --check` 全 11 改动 JS 档绿；档目 19 ∥ 20 逐名同拍 ∥ `public/**` 零外链 ∥ style.css 直发 200 + text/css + 字节等于磁盘（腿⑥在盘）；变异验证（摘 h2 `font-size` ⇒ 腿②判红）= 覆盖面腿有牙。全门禁（仓库套件）= 父侧唯一执行（本侧不跑）。
+
+**决策透明表**：
+
+| # | 决定 | 依据 |
+|---|---|---|
+| 1 | `.content{margin-left:var(--nav-w)}` 落盘（AC-19 续字面白名单之外一处） | 上抛父侧已裁：底座布局行（`--nav-w` = 侧栏宽+内容缩进）/S15 具体条款为准；白名单由父侧补明「∪ 布局组变量」 |
+| 2 | `input:not([type="checkbox"])`——勾选框走原生 + `accent-color` | §2.5 ③ 表「勾选框 = 原生 + accent-color（零自绘）」 |
+| 3 | h4 = 单条通用规则（`--muted` ∥ `--sp-5 0 --sp-3` ∥ `--fs`）——卡内 ∥ 弹窗体单源 | §2.5 ⑤ 层级行「h4 = `--muted`」+ 代码评审轮 1 修复（原 `.card h4` 形态 + `.modal-body h4` 两规并源） |
+| 4 | `pre.snippet`（原 `.snippet`）+ `font-size: var(--fs)` | ⑩「同号同重」+ UA 带字号元素覆盖面（代码评审轮 1 修复） |
+| 5 | `button:disabled` = 字 `--muted` ∥ 底 `--fill` ∥ `cursor: default` 三件 | §2.5 ② 禁用口径（字面执行） |
+
+**审计与代码评审轮次与终态**：内部分歧审计 1 轮（结论：1 🟡——设计档「实施面/受影响清单」未列 `views-providers-modals.mjs`；授权链在案（§2.5 接续条款 + 父侧指令）⇒ 归父侧回填轮补列；其余三类零发现）→ 自修 2 轮（R1 ∥ R2）→ 代码评审 2 轮（轮 1 = 1🔴 + 3🟡 + 1🔵；轮 2 复核修复声明 = **pass**）。**终态 = clean。**
+
+**fix round 明细**：
+
+- R1（审计后）：批内件「色 20」标注 ⇒ 「色 19 + 遮罩 1」（对齐批档 §2 口径）；腿②标题/头注同拍。
+- R2（代码评审轮 1 后）：`style.css:60` h2 补 `font-size: var(--fs)`（页题一字号——UA 1.5em 撤）∥ `style.css:62` 补 h4 通用规则（单源）∥ `style.css:111` `pre.snippet` + `font-size: var(--fs)` ∥ 批内件 `:92–102` 补 UA 带字号元素覆盖面腿（变异验证有牙）。
+
+**实读行数（本件口径 = 内容行数 ∥ 文末换行不计）**：style.css **198**（157 ⇒ +41）∥ views-system.mjs **172**（168 ⇒ +4——错态切换语句）∥ 余档 ±0：app.mjs 300 ∥ views-admin 169 ∥ views-me 117 ∥ views-models 194 ∥ views-usage 139 ∥ views-audit 88 ∥ views-providers 56 ∥ views-providers-modals 272 ∥ views-overview 74 ∥ 批内件 234。（估算差（§5 ≈216 ∥ 批内件 ≈400 ∥ providers-modals ≈260）= R36 回填轮收正项。）
+
+**披露 / 上抛（4 条）**：
+
+1. `views-system.mjs` +4 行（168 ⇒ 172）——错误面态切换所需语句；批档「类串微改/行数零变」在 views-system 一档有差（余档 ±0）。
+2. 设计档「实施面/受影响清单」未列 `views-providers-modals.mjs`（段内错误面）——授权 = §2.5 接续条款 + 父侧指令；归父侧回填补列。
+3. 既有他批批内件的 public 档目断言为旧名册（`console-modals.test.mjs:331` ∥ `console-providers.test.mjs:426` ∥ `console-completeness-2.test.mjs:431` ∥ `console-provider-redo.test.mjs:506` ∥ `server-gateway-webui-deploy.test.mjs:274`——缺 `model-specs-snapshot.mjs`/`views-providers-modals.mjs` 两档，与当刻盘面 20 档不符）——本批零触；父侧随正（否则全门禁红）。
+4. 工作树含前两批（#103/#106）未提交改动（`git HEAD` 旧于盘面）——比对基准说明（本侧逐档以当刻盘面实读为据）。
+
+**零触确认**：`nav.mjs` ∥ `modal.mjs` ∥ i18n 两表 ∥ 服务端档 ∥ 需求/设计档 = 零笔（实读 + 审计在案）；`public/` 零新档（19 ∥ 20 不变）。
+
 ## §6 验证与收口（父代理）
+
+**§6 核验与收口（主 agent · 2026-10-07 00:5x）**
+
+**实施（四棒浪第 4 棒）**：eng-coder #107（initial）——子内审计 1 轮（1🟡 = 设计档缺列）∥ 代码评审两轮（1🔴+3🟡+1🔵 → pass）∥ 自修两轮。落点：`style.css` 全量重排 157 ⇒ 198（`:root` 38 变量族 ∥ 块外零色字面量 ∥ 悬停三声明清单 ∥ 聚焦环单形 ∥ 死类 `.key-line` 删净）∥ 错态九面（含 #103/#106 新面——段内错误面 `.hint error`）∥ `views-system.mjs` +4（态切换语句）∥ `stat`/`view` 死类四删。
+
+**批内件**：`-console-list-style.test.mjs`（234 行）——**7/7** 含变异验证（摘 h2 字号 ⇒ 判红——腿有牙）；**父侧门禁链内并入复跑通过**。
+
+**父侧动作**：① 接缝裁定：#107 上抛「AC-19 续白名单 vs `.content{margin-left:var(--nav-w)}`」设计内部张力——裁定按具体条款（白名单 ∪ 布局组变量），设计档已小修落明（父侧直接执行 · 可 revert）；② 设计档实施面补列 `views-providers-modals.mjs`（见 `docs/batches/2026-10-06-console-provider-redo.md` §6 ④）；③ 随正（本批相关：门禁件数断言 16 ⇒ 17 ∥ 全档目链 ∥ `-console-providers` ⑧ 档目）。
+
+**披露处置**：1 `views-system` +4 行 = 记账（批档「行数零变」在该档有差）∥ 2 设计档缺列 = 已补列 ∥ 3 他批红风险清单 = 父侧随正全扫已清 ∥ 4 工作树基线说明 = 记账 ∥ 5 咨询项（app.mjs 软线既有——登记；行数估算差 ⇒ #983 回填轮）。
+
+**核验读数**：`npm run prepublishOnly` = **140/140 ∥ 0 fail ∥ exit 0**（2026-10-07 00:4x）。
+
+**台账号**：#982 在途 ⇒ 待核销 ⇒ 已核销（evidence = 本 §6 + 门禁读数）。
+
+**欠账（已入账）**：#983（回填轮——R36 实读：style.css 198 ∥ 批内件 234）。

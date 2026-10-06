@@ -311,7 +311,7 @@
 
 **#87/#88 接续标注**：本节 = 全域样式单源——**后续新增面按本节族表套用**；#87（Provider 重做——工具条 ∥ 添加/详情双弹窗 ∥ 候选勾选列表） ∥ #88（服务模型配置——配置四组 ∥ 停用流 ∥ 元数据行）之新面已列各族套用面并标「随其落地」——本批实施轮以当刻盘面为准并入；两批产品面落地晚于本批 ⇒ 由其落地轮按本节套用（本批不代改其面）；#87 旧内联面撤除 ⇒ 其表单族类（`.provider-form`/`.key-clear`/`.stack-models`/`.model-picks`）随双弹窗复用——零死类（S14 零登记）。
 
-**实施面（本批）**：`style.css` 重排（值源化 + 态面 + 死规则删） ∥ `views-admin.mjs` ∥ `views-me.mjs` ∥ `views-models.mjs` ∥ `views-usage.mjs` ∥ `views-audit.mjs` ∥ `views-providers.mjs`（`.hint error` 共 7 处） ∥ `views-system.mjs`（诊断失败面 2 处——`.error` 修饰） ∥
+**实施面（本批）**：`style.css` 重排（值源化 + 态面 + 死规则删） ∥ `views-admin.mjs` ∥ `views-me.mjs` ∥ `views-models.mjs` ∥ `views-usage.mjs` ∥ `views-audit.mjs` ∥ `views-providers.mjs`（`.hint error` 共 7 处） ∥ `views-providers-modals.mjs`（#87 段内错误面 ⇒ `.hint error`——随其落地并入） ∥ `views-system.mjs`（诊断失败面 2 处——`.error` 修饰） ∥
   `views-overview.mjs` ∥ `app.mjs`（死类串删——`stat` 2 处 ∥ `view` 2 处）；`nav.mjs` ∥ `modal.mjs` ∥ i18n 两表 = 零触（零新文案）。
 
 ## 3. 判权与安全
@@ -366,7 +366,7 @@
 | AC-17（续） | C 机检：超限 ⇒ 429 `rate_limited` + `Retry-After`（保存即热生效；窗滚恢复；非法 ⇒ 400 库与运行时零变）∥ `settings` 线形机检（值 = 全字段对象——部分字段保存 ⇒ 其余字段保留；单字段清空 = 显式 `null` 不误伤）∥ D 未知零兜底 ∥ E「内部估算参考——非计费」注在册 ∥ 与 Provider 页协同（单源 `models`——停后其只读注不含）∥ i18n 两表新键同步（en 零 CJK ∥ 占位符一致 ∥ `err.rate_limited` 入映射集）∥ 档目随正（+ `model-specs-snapshot.mjs`——19 ∥ 20）∥ `nav.mjs` 直测（管理 7 ∥ 路径在册） | 批内件 + 收口轮 |
 | AC-18（功能点 18——Provider 管理面重做；已落需求档） | nav 值 =「Provider」（两表）∥ 页面直测：列表 + 添加钮 + 行点击 ⇒ 详情弹窗 + 零内联添加面 ∥ 添加弹窗两径 ∥ 详情弹窗 = 信息段 + 勾选列表（候选 = 上游发现；零手填；退役项只读注）∥ 错误径（发现失败 ⇒ 段内提示 +「刷新候选」重试可达候选 ∥ 失败态保存不丢现配置——草稿无损；预设拉取失败 ⇒ 提示 + 自定义径照常）∥ 勾选保存 ⇒ PATCH `models` = 勾选集 ∥ 测试同窗 ∥ 热生效（PATCH ⇒ `/v1/models`——API 级复跑；真机 = 收口轮）∥ 档目 18 ∥ 19 ⇒ 配置面批后 **19 ∥ 20** | 批内件 + 收口轮 |
 | AC-19（功能点 19——样式族总体统一；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | §2.5 在册：口径五条 ∥ 散置/不一致清单（改前实读——S1–S17） ∥ 变量族底座（`:root` 单源——色/间距/圆角/字排/线宽/布局） ∥ 族值表 + 逐族套用表（①列表 ②按钮 ③表单 ④间距 ⑤字排 ⑥色板 ⑦卡片 ⑧弹窗内构 ⑨空错态 ⑩码面——含 #87/#88 新面「随其落地套用」） ∥ 可点行/不可点行判据 ∥ 空/错/加载态 | 批内件 + 收口轮 |
-| AC-19（续·机检口径） | `thincoder-server/public/style.css`：`:root` 块外零颜色字面量（hex/rgba） ∥ 行悬停声明清单（`.nav-item:hover` ∥ `tbody tr:hover` ∥ `li.key-item:hover`——同取 `var(--hover)`；清单外零行悬停声明） ∥ padding/margin/gap 取值 ∈ `--sp-*` ∪ {0, auto} ∥ `font-weight` 全 ≤400 ∥ `font-size` 全 = `var(--fs)`（缺省撤销） ∥ 聚焦环单形（`--bw-strong solid var(--accent)`） ∥ 类名双向闭合（档面字面类 ⊆ `style.css` 类选择器 ∥ `style.css` 类选择器 ⊆ 档面字面类 ∪ 态类）；视觉收口轮浏览器实走（悬停/聚焦/空·错·加载态/弹窗/两语言） | 批内件 + 收口轮 |
+| AC-19（续·机检口径） | `thincoder-server/public/style.css`：`:root` 块外零颜色字面量（hex/rgba） ∥ 行悬停声明清单（`.nav-item:hover` ∥ `tbody tr:hover` ∥ `li.key-item:hover`——同取 `var(--hover)`；清单外零行悬停声明） ∥ padding/margin/gap 取值 ∈ `--sp-*` ∪ {0, auto} ∪ 布局组变量（`--nav-w`——S15 ∥ 底座布局行；尺寸类白名单除外） ∥ `font-weight` 全 ≤400 ∥ `font-size` 全 = `var(--fs)`（缺省撤销） ∥ 聚焦环单形（`--bw-strong solid var(--accent)`） ∥ 类名双向闭合（档面字面类 ⊆ `style.css` 类选择器 ∥ `style.css` 类选择器 ⊆ 档面字面类 ∪ 态类）；视觉收口轮浏览器实走（悬停/聚焦/空·错·加载态/弹窗/两语言） | 批内件 + 收口轮 |
 
 ## 7. 关键决策（本域）
 

@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-06 · 来源 = 用户 2026-10-06 21:39「ACDE」+ 21:40「A需要保留，不能被Provider页吸收……只能在服务模型页面操作」——R24 配置面裁定（需求档 §2:17 在盘）→ 设计轮（排 #87 后）。。
 > 台账 = #981（server · 归批）。前情 = 无（独立批——承功能点 17 配置面（R24）；前情批 = docs/batches/2026-10-06-console-modals.md（已收口 2026-10-06））。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-07
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（fix 轮 #95 受理落地（发现 1–7、9——8 = Not an issue 零改；行号锚 = §2 修正块；机检新增悬空 0∕超宽 0））
@@ -110,4 +110,100 @@ VERDICT: pass
 **三条件核验**：① 评审 pass（0🔴）✓（reviewId 不落档——沿纪律）；② 修复轮已落地并经核验 ✓（核验轮逐处复核 + 盘面抽读全中）；③ designToken 已签发 ✓（凭据值不落档；换发版在握）。
 
 ## §5 实施记录（eng-coder）
+
+**状态行**：实施完成（两棒落地（服务端九档 ∥ 前端+门禁面）；背离审计 1 轮 ∥ 代码评审 1 轮 changes-required → 修复轮（拆档+补腿）→ 第 2 轮 pass；终态 clean；上抛 U1–U8 见段内）
+
+**交付摘要**（本棒 = 服务端九档；前端面 `public/**` = 另一棒，本棒零触）：
+
+- `store/db.mjs`：v4 迁移段——`ALTER TABLE providers ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}'`（列级 ALTER、表不重建；MIGRATIONS 追段 ⇒ `SCHEMA_VERSION=4`）。
+- `gateway/ratelimit.mjs`（新）：进程内 60s 定窗 `check`∥`record`；时钟可注入（`createRateLimiter({ windowMs, now })`）；`Retry-After` 秒（≥1——距窗尾）；空限值 = 不限（零状态）。
+- `gateway/providers.mjs`：`rowToEntry` 解 `settings_json`（坏行拒启）∥ 注册表携 settings ∥ `settingsFor`；种子径注释登记「settings 不入列」。
+- `gateway/provider-admin.mjs`：GET 行载 `settings` 全图 ∥ PATCH 键级合并（`mergeProviderSettings`——出现键整对象替换／值 `null` ⇒ 删键／未出现键不动）→ 单源校验 → 写 `settings_json` + 换表。
+- `gateway/routes.mjs`：chat 链 [4.5] 准入（派发命中后／转发前；通过 ⇒ 计次 +1）——超限 429 `rate_limited` + `Retry-After` 头；`onUsage` 串联（用量到达计入）。
+- `gateway/errors.mjs`：`rate_limited`（429／`rate_limit_error`）+ `HttpError`/`sendJson`/`sendError` 可选 headers。
+- `gateway/forward.mjs`：`onUsage` 钩子（用量到达即回调；异常不反噬；失败/断开 tokens=null ⇒ 不调）。
+- `gateway/server.mjs`：`failRequest` 透传 `err.headers`（`Retry-After` 落头）。
+- `ops/config.mjs`：`validateProviderSettings`（校验单源——未知子字段∥非法值 ⇒ 拒／400）；`validateProviderEntry` 出参携归一 settings（逐键全子字段在册）。
+
+**自跑读数**（临时件 `.thincoder/tmp/models-config-smoke.mjs`——不入仓；跑法 `node .thincoder/tmp/models-config-smoke.mjs`，cwd = `thincoder/`）：**SMOKE PASS**（两跑均绿）：
+
+① 空库：`SCHEMA_VERSION=4` ∥ `settings_json` 列 NOT NULL DEFAULT `'{}'`；② v3 库 ⇒ 迁 v4（存量行 `'{}'`）∥ 再开幂等（列不重、行不丢、版本 4）；③ rpm=1 ⇒ 第 1 请求 200 ∥ 第 2 请求 **429 `rate_limited` + `Retry-After: 40`**（message 含模型/限值）∥ 429 不转发不落用量；④ 注时钟 +61s 滚窗 ⇒ 恢复放行；⑤ tpm=2 ⇒ 第 1 请求 200（用量 2 到达计入）∥ 第 2 请求 429（token 计数口径）；⑥ 键级合并（部分字段保存 ⇒ 其余保留 ∥ 单键 `null` ⇒ 删键 ∥ 未出现键不动）；⑦ 非法值（rpm=0／tpm=−1／costIn=−1／note 超 200／未知子字段／settings 非对象）⇒ 400 `invalid_request_error` ∥ 库与读面零变 ∥ 后续请求照常 200。九档 `node --check` 全绿；全档 < 300 行。
+
+**决策透明表**（实现自定——设计未明处；审计与评审均裁定「无设计冲突」）：
+
+| # | 自定 | 依据 |
+|---|---|---|
+| D1 | settings 值对象缺子字段 ⇒ 服务端归一到显式 `null`（不拒） | 提交线形（全对象）= 对控制台的线形约束；非法判据清单（未知子字段∥非法值）不含缺省 ⇒ 缺省 = 未设（`store/STORE.md` §2 v4：「`null`/缺省 = 未设」） |
+| D2 | `note` 长度按 UTF-16 code units（`String.length`——与 HTML `maxlength` 同口径） | 「≤200 字」未钉口径；前后端边界一致（前端建议沿用 maxlength） |
+| D3 | `config.json` 种子若手写 `settings` ⇒ 校验接收但导入忽略（不落库、不报错） | 种子零 settings 字段（控制台单一面——KD-SV-34）；手工种子面不做；已注释登记（`providers.mjs` 种子导入注） |
+| D4 | 限流器 = 工厂（`createRateLimiter`），非常驻模块级单例 | 时钟可注入（「注时钟滚窗 ⇒ 放行」腿）+ 进程内存定窗；`routes.mjs` 注册期建单实例（批内件可注时钟） |
+
+**审计与代码评审轮次与终态**：
+
+- 背离审计（explore·只读）：1 轮——PARTIAL 0 ∥ SILENT-SIMPLIFICATION 0 ∥ OUT-OF-LIST 0；本棒内零背离（发现 2 条均他批面／回填轮面——见上抛 U2/U3），零代码修复。
+- 代码评审（advisor）：第 1 轮 changes-required（1🔴/2🟡/2🔵）→ 响应轮（fix 2 处 + 裁定引用 3 条）→ 第 2 轮 **pass**：🔴#1 = Accepted（批内件归前端棒——评审对象声明排除）∥ 🟡#2 = Accepted（随正六件·父侧在案）∥ 🟡#3 = Accepted（设计口径 + 注释登记）∥ 🔵#4 = Accepted（R34 回填轮）∥ 🔵#5 = Fixed（注释登记核到）；新增问题 0。
+- 终态：**clean**（无未决本棒项）。
+
+**fix round**（评审响应）：`gateway/providers.mjs` 种子导入注释登记「settings 不入列」（:130）∥ `gateway/ratelimit.mjs` 桶有界口径登记（:26）——两处零语义；fix 后 smoke 复跑 SMOKE PASS。
+
+**上抛 / 披露（父侧）**：
+
+- U1（批级跟进）：批内件 `docs/batches/2026-10-06-models-config.test.mjs` 未落盘——任务书裁定归前端棒（本棒不写测试件）；须在批收口前由前端棒建、父侧接线（`package.json` `prepublishOnly` 添件），否则 AC-17 机检载体缺失。
+- U2（他批面残留——未触，请父侧裁定）：`gateway/provider-admin.mjs` 发现失败消息 4 处尾句「——可手填模型清单降级」（`:187` ∥ `:194` ∥ `:201` ∥ `:205`）+ 档头 `:12`「手填降级照常」——与现行「无手填兜底」裁定（`gateway/API.md` §2.2 发现行 ∥ 用户 21:36）相抵；零语义文本改动（删尾句），归 provider 重做批面。
+- U3（回填轮）：设计档预算「拟新增」标记与行数未回填（R34 在案）——九档实读：db **150** ∥ ratelimit **64** ∥ providers **167** ∥ provider-admin **220** ∥ routes **101** ∥ errors **63** ∥ forward **196** ∥ server **192** ∥ config **252**。
+- U4（随正件）：既有两件断言 v:3 ⇒ v:4（`-server-gateway` ∥ `-console-completeness-2`）——R33 在案（父侧随正六件），未落地前 `prepublishOnly` 门不成立。
+- U5（并行写面观察）：工作树另有 `public/**` 修改与 `-console-provider-redo.test.mjs` 未跟踪件（他棒在途）——本棒零触，仅供父侧对账。
+
+### §5 追加（前端 + 门禁面棒——2026-10-06；同批第二棒）
+
+**交付摘要**（本棒 = `public/**` 前端 + 批内件；服务端零触）：
+
+- `public/views-models.mjs`（77 ⇒ 194 行）：配置四组 A（停用流——confirm ⇒ PATCH `models` 减项 ⇒ 关窗 + 行离列 + flash）∥ C（RPM/TPM——正整数/空 = 不限）∥ D（快照查表 + 手填说明 ≤200）∥ E（成本权重 +「内部估算参考——非计费口径」注）；保存 = PATCH `settings` 单键全对象（其余字段不丢）；导出 `openModelModal` + 纯函数 `modelsWithout`/`draftFromSettings`/`settingsValueFromDraft`。
+- `public/model-specs-snapshot.mjs`（新 103 行）：核 `model-specs.mjs` 快照（74 行 ∥ context/maxOutput/multimodal 子集）∥ `specForDisplay` 前缀查表（大小写不敏感 ∥ 厂商命名空间剥离 ∥ 未知 ⇒ `null` 零兜底）；漂移件断在批内件。
+- `public/i18n-zh.mjs` 302 ⇒ 328 ∥ `i18n-en.mjs` 298 ⇒ 324（+27 −1 = 净 +26；`admin.models.configSkeleton` 退役 ∥ `err.rate_limited` 在册）。
+- `public/i18n.mjs`：`ERROR_CODES` 加 `rate_limited`（113 ⇒ 113——AC-17（续）「入映射集」必需面）。
+- `public/style.css` 146 ⇒ 157（配置面样式块 + `.hint.error`）。
+- `thincoder-server/package.json`：`prepublishOnly` 加本批两件（13 ⇒ 15 件）。
+- `docs/batches/2026-10-06-models-config.test.mjs`（**267 行**——纯函数/静态面腿 ①③⑤⑥⑧⑨⑩）∥ `docs/batches/2026-10-06-models-config-ui.test.mjs`（**462 行**——运行面腿 ②④⑦a–e）：**拆档**（设计予案 = `PROJECT.md` 注⑧「越 500 硬线 ⇒ 沿注③拆档预案」——首版单件 657 行越硬限，评审 🔴 ⇒ 拆档修复；两件同入门禁）。
+
+**自跑读数**：两件 `node --test` 全绿（主件 7/7 ∥ 运行面件 7/7——含真网关两腿：PATCH `models` 减项 ⇒ `/v1/models` 随动 + 派发 404；PATCH `settings` ⇒ 超限 429 `rate_limited` + `Retry-After` + 桩时钟窗滚 ⇒ 恢复放行）∥ 改动档 `node --check` 全绿 ∥ 静态自检（⑨ 腿）：档目 20 ∥ 19 逐名同拍 ∥ 全 `public/**` 零外链 ∥ 键引用闭合 ∥ 两新档静态直发 200。
+
+**决策透明表**（实现自定——设计未明处）：
+
+| # | 自定 | 依据 |
+|---|---|---|
+| D1 | 批内件拆两档（`-ui` 后缀件）——首版单件 657 行越 500 硬限 | 项目 `F3-1`/`F-R24a`「>500 不允许诞生」+ 设计注⑧拆档予案；两件同入 `prepublishOnly`（⑩ 腿双件断言） |
+| D2 | 数值输入 = `type="text"` + `inputmode="numeric"`（非 number） | number 型对非法文本吞成空串 ⇒「非法」会静默降级为「未设」；自走校验（前端先行 + 服务端复核） |
+| D3 | 说明长度 = HTML `maxlength=200`（不在 JS 复制长度判据） | 第一棒 D2 已钉「UTF-16 code units（与 `maxlength` 同口径）」；服务端复核为准 |
+| D4 | 保存成功后本地 `entry.settings` 就地更新（不重取列表） | 弹窗留驻口径（§2.4③）+「部分字段编辑不丢其余字段」——重开草稿同源、零多余往返 |
+| D5 | 多模态未声明 ⇒ 显示「—」（复用 `fmtValue`）而非「否」 | 核表语义 =「仅 true / undefined」——「否」系过度断言；「—」为既有语言中性缺省 |
+
+**审计与代码评审轮次与终态**：
+
+- 背离审计（explore·只读）：1 轮——PARTIAL 0 ∥ SILENT-SIMPLIFICATION 0 ∥ OUT-OF-LIST 0（快照 74 行与核表逐行全等；写面仅 GET/PATCH 两族；嵌入行四组零落）。
+- 代码评审（advisor）：第 1 轮 changes-required（1🔴/3🟡/2🔵——🔴 = 批内件 657 行越限；🟡 = 载体缺「空态 ∥ Provider 协同」两腿 + 随正协调项；🔵 = i18n >300 已裁 ∥ 设计回填在案）→ 修复轮（拆档 + 补两腿：⑦d 空态 ∥ ⑦e Provider 协同驱真件 `openProviderDetailModal`）→ 第 2 轮 **pass**（5 项逐条核到：#1/#2 = Fixed；#3/#4/#5 = Accepted；新增 1🔵 = 拆档后文档登记滞后（R34 面内，不阻收口））。
+- 终态：**clean**（本棒无未决项；R34 文档回填 = 父侧登记轮）。
+
+**上抛 / 披露（父侧）**：
+
+- U6（随正面扩）：`prepublishOnly` 现 15 件——设计登记六件之外，`-server-auto-update.test.mjs`（13 件等值断言）与在途 `-console-provider-redo.test.mjs`（19/18 档目）同受牵动，须并入父侧随正/核销面（以当刻盘面为准）。
+- U7（拆档登记）：`-ui` 件名与双行数（267 ∥ 462）未入设计/批档——R34 回填轮一并收正；`package.json` 添件已由本棒落盘（勿重复添件）。
+- U8（批量观察）：工作树另有他批在途件（`views-providers-modals.mjs` ∥ `-console-provider-redo.test.mjs` 未跟踪）——本棒零触；⑦e 腿只读引用（`openProviderDetailModal`），其面变动会联动本件报红（单源协同护栏）。
+
 ## §6 验证与收口（父代理）
+
+**§6 核验与收口（主 agent · 2026-10-07 00:5x）**
+
+**实施（四棒浪第 2/3 棒）**：eng-coder #104（服务端九档）+ #106（前端+门禁七档）——均 initial。#104：子内审计 clean ∥ 代码评审两轮（changes-required → pass，全 Accepted/Fixed）∥ 零语义 fix 两处。#106：审计 clean ∥ 评审两轮（1🔴 = 拆档 + 补 ⑦d/⑦e 腿 → pass）。落点：v4 迁移（`store/db.mjs`）∥ `ratelimit.mjs` 64 ∥ settings 全链（providers/provider-admin/routes/errors/forward/server/ops-config）∥ `views-models.mjs` 77 ⇒ 194 ∥ 新档 `model-specs-snapshot.mjs` 103 ∥ i18n 328/324 ∥ `style.css` 157 ∥ `package.json`。
+
+**批内件**：`-models-config.test.mjs`（267 行）+ `-models-config-ui.test.mjs`（462 行——单件越 500 硬限按设计注⑧预案拆档）——双件 **7/7 ∥ 7/7**；**父侧门禁链内并入复跑通过**。
+
+**父侧动作**：① 随正全扫（八文件——本批相关：`-server-gateway` v3⇒v4 + 失败探针 v4⇒v5 ∥ `-console-completeness-2` ①/⑥（v4 + 档目 19∥20）∥ `-server-presets` 三处 `settings: {}`（validate 出参形）∥ 档目链全量 ∥ `-server-i18n` JS 档单 15 ∥ 门禁 17 件）；② **设计小修**（父侧直接执行 · 可 revert）：`webui/WEBUI.md` AC-19 续白名单补「∪ 布局组变量（`--nav-w`）」——#107 上抛的设计内部张力裁定（具体条款 S15/底座为准）；③ `package.json` 两件在列（#106 已落——父侧核销未重复）。
+
+**披露处置**：U1 已落（批内件双件入闸）∥ U2 光笔（provider-admin 五处——见 `docs/batches/2026-10-06-console-provider-redo.md` §1 补记）∥ U3 回填轮 #983 ∥ U4 已核销（v3⇒v4 两件随正落地）∥ U5 观察项（并行写面对账核讫）∥ D1 拆档采纳 ∥ D2 `i18n.mjs` ERROR_CODES 采纳（映射集必需面）∥ D3 package.json 已落。
+
+**核验读数**：`npm run prepublishOnly` = **140/140 ∥ 0 fail ∥ exit 0**（2026-10-07 00:4x）。
+
+**台账号**：#981 在途 ⇒ 待核销 ⇒ 已核销（evidence = 本 §6 + 门禁读数）。
+
+**欠账（已入账）**：#983（回填轮——R34/R36 实读收正）。
