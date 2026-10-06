@@ -310,32 +310,52 @@ Options: 1. proceed as-is (no usable conclusion — design: no token, implementa
 
 ## 8. 预算跟随模型窗口（120K 硬编码退场）
 
-**契约（预算派生——纯函数语义）**：上下文预算常量族内：旧的固定上限**退场**，新增常量与纯函数（模型规格与 provider 级上下文覆盖同源）：
+**契约（预算派生——纯函数语义）**：上下文预算常量族内：旧的固定上限**退场**，新增常量与纯函数（模型规格与 provider 级上下文覆盖同源）**扣完成预留**（2026-10-06 用户裁定——完成预留在窗口里占位 ⇒ **折入预算：压缩先行、不判死**；基数 = **可用窗口 = 窗口 − 完成预留**）：
 
 ```js
-// 上下文预算：预算跟随评审模型窗口（模型规格表 × provider 级 context 覆盖）。
+// 上下文预算：基数 = 可用窗口 = 窗口（模型规格表 × provider 级 context 覆盖）− 完成预留。
 // 头寸用途 = chars/4 估算误差 + 响应/协议开销（内存不构成约束）；判死线仍是宿主机自限线，服务端窗口约束不变。
-export const CONTEXT_LIMIT_RATIO = 0.8   // 判死线 = 窗口 × 0.8
+export const CONTEXT_LIMIT_RATIO = 0.8   // 判死线 = 可用窗口 × 0.8
 const COMPACT_TRIGGER_RATIO = 0.8        // 压缩触发 = 判死线 × 0.8（既有关系零改）
 
 export function advisorContextBudget(provider) {
-  const limit = Math.floor(providerSpec(provider).context * CONTEXT_LIMIT_RATIO)
+  const spec = providerSpec(provider)
+  const usable = Math.max(0, spec.context - outputReserve(provider, spec))
+  const limit = Math.floor(usable * CONTEXT_LIMIT_RATIO)
   return { limit, compactAt: Math.floor(limit * COMPACT_TRIGGER_RATIO) }
+}
+
+// 完成预留（单源——评审两档与代理阈值两处消费面共用）：显式 `provider.maxTokens`（实发值）∥ 规格 `maxOutput` ∥ 0。
+export function outputReserve(provider, spec) {
+  const explicit = provider?.maxTokens
+  if (Number.isFinite(explicit) && explicit > 0) return explicit
+  return spec?.maxOutput ?? 0
 }
 ```
 
-| 输入（provider） | 窗口 | 判死线 `limit` | 压缩触发 `compactAt` |
+| 输入（窗口 ∥ 完成预留） | 可用窗口 | 判死线 `limit` | 压缩触发 `compactAt` |
 |---|---|---|---|
-| 大窗口模型（1M） | 1_000_000 | **800_000** | **640_000** |
-| 常规模型（128K） | 128_000 | **102_400** | **81_920** |
-| 未知模型名（回退默认规格 128K） | 128_000 | **102_400** | **81_920** |
-| provider 级 K 覆盖（64K） | 65_536 | **52_428** | **41_942** |
-| `null` / 缺 model（总函数） | 128_000 | **102_400** | **81_920** |
+| 1_000_000 ∥ 128_000（大窗口 1M ∥ 规格 `maxOutput`） | 872_000 | **697_600** | **558_080** |
+| 128_000 ∥ 32_000（常规 128K ∥ 规格 `maxOutput`） | 96_000 | **76_800** | **61_440** |
+| 128_000 ∥ 32_000（未知模型名——回退默认规格） | 96_000 | **76_800** | **61_440** |
+| 65_536 ∥ 32_000（provider 级 K 覆盖 64K） | 33_536 | **26_828** | **21_462** |
+| 128_000 ∥ 32_000（`null` / 缺 model——总函数） | 96_000 | **76_800** | **61_440** |
 
 - **回退链**：未知模型 → 一次性告警 + 默认规格；`provider` 为 `null` 时退化默认——派生不抛错。
 - **量纲**：窗口为 tokens；provider 级 context 的 K 单位换算只发生在规格解析内（零重复转换）。
-- **两档语义**：`compactAt` = 触发本地裁剪；`limit` = 压缩后仍超即判死（`context_limit`）。两者关系（×0.8）与现状**逐字同源**——只换「上限从哪来」，不换「如何比较」；守卫分支结构零改。
+- **两档语义**：`compactAt` = 触发本地裁剪；`limit` = 压缩后仍超即判死（`context_limit`）。两者关系（×0.8）与现状**逐字同源**——只换「上限从哪来」（窗 ⇒ **可用窗口 = 窗 − 预留**），不换「如何比较」；守卫分支结构零改。
 - **循环侧消费（两处）**：循环体外一次性取预算（provider 全场不变）；两处比较点改读 `compactAt` / `limit`，其余逐字不动。
+- **完成预留（基数扣减项——单源 `outputReserve`）**：显式 `provider.maxTokens`（有限且 > 0——请求实发值 `thincoder-core/provider/core.mjs:187`）∥ 规格 `maxOutput` ∥ 0。
+- **预留消费面（两处 · 同源）**：评审预算（`thincoder-core/advisor/compaction.mjs:34-39`）∥ 代理侧压缩阈值 `resolveCompactThreshold`（×0.6——`thincoder-core/config.mjs:122-129`；每回合压缩检查 / 展示面回退 `thincoder-core/token-window.mjs:151`）。
+- **裁定（2026-10-06 用户原话 · #975）**：用户 2026-10-06 20:32「坐着完成预留的处理也应该压缩而不是判死啊！你这什么逻辑？！」——预留在窗口里占位（provider 口径 = 输入 + `max_tokens` ≤ 窗）⇒ 折入预算，基数 = **可用窗口**（评审两档与代理阈值同基数口径；零回归面 = 预留 0 ⇒ 与旧式逐值相等——比例关系整式未动）。
+
+**收口读数（as-of 2026-10-06 · 逐行可复算——本笔前 ⇒ 后）**：
+
+- deepseek（1024K 覆盖 ∥ 预留 393,216）：评审 `compactAt` 671,088 ⇒ **419,430** ∥ 判死 838,860 ⇒ **524,288** ∥ 代理阈值 629,145 ⇒ **393,216**；
+- `#71` 顶窗实证（输入 670,532 · 旧阈差 556 未触发——死在 provider）：新 `compactAt` **419,430** ⇒「早已触发」✓（压缩先行）；
+- 跨模型（窗口 1_000_000 ∥ 规格 `maxOutput` 预留）：kimi-k3（预留 131,072）评审 `compactAt` ⇒ **556,113** ∥ glm-5.3（预留 128,000）⇒ **558,080**（预留占比小——小幅前移，无不合理跳变）。
+
+- **与头寸用途句的关系**：本节「OOM 论证」第 4 点头寸用途**零改**——头寸 = 可用窗口与判死线之间的 20% 安全带（代理侧 40% 同），仍为估算误差 + 协议开销而留；本次只换**基数**（窗 ⇒ 窗 − 预留），头寸比例与用途不动——**预留 ≠ 头寸**（预留 = 窗口里给输出留的实占位；头寸 = 基数与上限之间的余量）。
 
 **OOM 论证（正面回应原注释「Reserve headroom to avoid OOM」）**：
 
@@ -373,7 +393,7 @@ export function advisorContextBudget(provider) {
 | A-AG7 | 冻结窗口：拦截判据与陈旧判定同源；被拒写入零落地；逃生门指引含 cancel；回执冻结句逐字 | 冻结窗口 |
 | A-AG8 | 同步面记账 parity 四行；拒绝 / 异步 ack 两分支零改 | 同步面 |
 | A-AG9 | 失败结算结论：判据名优先级七行（纯函数）；判据名非空 ⇒ 结论块在位（标识行 + 含义 + 选项）；零凭证值 | 失败结论 |
-| A-AG10 | 预算派生两档：五组输入 → 五组输出与表逐值相等；回退链不抛错 | 预算跟随 |
+| A-AG10 | 预算派生两档（基数 = 可用窗口 = 窗 − 完成预留）：五组输入 → 五组输出与表逐值相等；预留解析单源（显式 `maxTokens` ∥ 规格 `maxOutput` ∥ 0）；回退链不抛错 | 预算跟随 |
 | A-AG11 | 估算加权：纯 ASCII 逐值相等（零回归）；CJK 与混合用例逐值相等 | 加权 |
 | A-AG12 | 零计数载体 + 零封禁：无计数 Map 载体 / 无停止谓词 / 无两级检查点；同 doc-set 第 4 次及以后发起照常受理 | 失败结论 |
 | A-AG13 | 类型门（F30）：`args.type ∉ {code,design}`（缺失 / `null` / 空串 / 非法值 / 非字符串）⇒ 拒发串（前缀 + 两合法值各一行用途 + 标识行）+ `_advisorRefusals` 登记，零实例 / 零 token；显式 `code` / `design` ∧ `object.type` 未声明 / 一致 / 非枚举值 ⇒ 照常；**冲突对**（顶层显式合法值 ≠ `object.type` 的另一合法值）⇒ 同拒（`criterion=type-object-conflict` + 两路指引） | 类型门 |
@@ -407,6 +427,8 @@ export function advisorContextBudget(provider) {
 | 对端差异登记（本端零改项） | 三条对位登记（异步结算面 / 冻结窗口盲区 / 池中止） | 登记项；判决（本端语义自洽）已并入 §11 |
 
 ## 变更记录
+
+- 2026-10-06（**批 advisor-budget-reserve · 设计形式化轮 · eng-designer**——承 `docs/batches/2026-10-06-advisor-budget-reserve.md` §2 · 台账 #975）：§8 收正——预算基数 = **可用窗口 = 窗 − 完成预留**（用户 2026-10-06 20:32 裁定——预留折入预算：压缩先行、不判死）；契约块 / 五组表随新派生式改写（表输入 = 窗口 ∥ 预留）+ 预留解析（`outputReserve` 单源 · 两处消费面）+ 收口读数；§10 A-AG10 同步。**零新语义**（实施先落 = 父侧直接执行 · 可 revert）。
 
 - 2026-10-05（**批 review-face-gaps · 实施轮 · eng-coder**——承批档 `docs/batches/2026-10-05-review-face-gaps.md` §2 · 台账 #928）：§3 判据句收正——命中判据 = **装饰剥离候选集**（c1–c4；零模糊、零内容级归一；候选命中先于省略号分类——引号外语义省略形转 matched）；§10 A-AG16 尾句收正 + 新增 **A-AG18**。
 

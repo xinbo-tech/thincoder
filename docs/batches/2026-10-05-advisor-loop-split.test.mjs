@@ -114,11 +114,11 @@ test("B4 墙钟：seams.now 推过 deadline ⇒ 结构化超时尾（Phase A 基
   assert.equal(ret, "Advisor: review timeout after 1s. Review incomplete — the wall-clock budget was exhausted; partial findings (if any) are above.\n- rounds: 0 · tool calls: 0 · review text produced: no\n- budget: 1s (agent.advisor.timeoutMs) — re-run with a narrower scope (split the review across fewer documents) or raise the budget.")
 })
 
-/* ── B5 压缩两分支（小窗 provider：context 1K ⇒ limit 819 · compactAt 655） ──────────── */
+/* ── B5 压缩两分支（小窗 provider：context 1K ∥ 预留 80 ⇒ 可用 944 ⇒ limit 755 · compactAt 604——#975 口径） ── */
 
 test("B5a 压缩通知行：超 compactAt 未超 limit ⇒ 通知 + 正常收尾（无超限尾）", async () => {
   const messages = [{ role: "user", content: "x".repeat(3000) }] // 750 tokens
-  const r = mkRun({ provider: { model: "harness-model", context: 1 }, messages,
+  const r = mkRun({ provider: { model: "harness-model", context: 1, maxTokens: 80 }, messages,
     script: [{ content: "B5A done.", toolCalls: [], stream: true }] })
   const ret = await r.run()
   out("B5a.return", JSON.stringify(ret))
@@ -131,7 +131,7 @@ test("B5b 超限尾：重写后仍超 limit ⇒ context_limit 尾（pinned 随�
     { role: "system", content: "S" },
     ...Array.from({ length: 24 }, (_, i) => ({ role: i % 2 ? "assistant" : "user", content: `m${i}:` + "x".repeat(260) })),
   ]
-  const r = mkRun({ provider: { model: "harness-model", context: 1 }, messages, pinned: "PINNED BRIEF", script: [] })
+  const r = mkRun({ provider: { model: "harness-model", context: 1, maxTokens: 80 }, messages, pinned: "PINNED BRIEF", script: [] })
   const ret = await r.run()
   out("B5b.return", JSON.stringify(ret))
   assert.equal(ret, "[Context compacted: 1585 tokens → reducing to fit window]\n\nAdvisor: context window limit reached (1340 tokens). Review incomplete — too many tool calls. Try a narrower scope.")

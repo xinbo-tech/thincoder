@@ -10,7 +10,7 @@
  * advisor-loop-split 批：loop 的压缩检查点归位本档（`compactContextIfNeeded`——`context_limit` 尾串生成点同迁；时间线面 ⇒ `advisor/timeline.mjs`）。
  */
 
-import { providerSpec } from "../config.mjs" // 第 25 批：预算派生（与 loop.mjs:12 同源导入）
+import { providerSpec, outputReserve, usableWindow } from "../config.mjs" // 第 25 批：预算派生（与 loop.mjs:12 同源导入）；`outputReserve`/`usableWindow` = 2026-10-06 预留裁定（#975）
 // B4（群 B 批，ADVISOR-GUARDS.md §9——F32）：CJK 加权单源（provider/rate.mjs 叶子向无环）
 import { estimateText } from "../provider/rate.mjs"
 
@@ -22,14 +22,19 @@ export const MAX_ADVISOR_TURNS = 100
 
 // Context window limits
 // 上下文预算（第 25 批——120K 硬编码退场）：预算跟随评审模型窗口（providerSpec：
-// 模型规格表 × provider 级 context 覆盖）。头寸用途 = chars/4 估算误差 + 响应/协议开销
-// （内存不构成约束——`ADVISOR-GUARDS.md §8`）；判死线仍是宿主机自限线，服务端窗口约束不变。
-export const CONTEXT_LIMIT_RATIO = 0.8  // 判死线 = 窗口 × 0.8
+// 模型规格表 × provider 级 context 覆盖）**扣完成预留**（2026-10-06 裁定——预留坐在窗口里 ⇒
+// 压缩先行、不判死；基数 = 可用窗口，见 advisorContextBudget）。头寸用途 = chars/4 估算误差 +
+// 响应/协议开销（内存不构成约束——`ADVISOR-GUARDS.md §8`）；判死线仍是宿主机自限线，服务端窗口约束不变。
+export const CONTEXT_LIMIT_RATIO = 0.8  // 判死线 = 可用窗口 × 0.8
 const COMPACT_TRIGGER_RATIO = 0.8       // 压缩触发 = 判死线 × 0.8（既有关系零改）
 
-/** 评审上下文预算（纯函数——两档阈值可机测；provider 为 null 时退化默认规格）。 */
+/** 评审上下文预算（纯函数——两档阈值可机测；provider 为 null 时退化默认规格）。
+ *  基数 = **可用窗口 = 窗口 − 完成预留**（#975／用户 2026-10-06 裁定——预留坐在窗口里 ⇒
+ *  先压缩、不许 provider 先拒：provider 口径 = 输入 + max_tokens ≤ 窗口；预留 = `outputReserve`）。 */
 export function advisorContextBudget(provider) {
-  const limit = Math.floor(providerSpec(provider).context * CONTEXT_LIMIT_RATIO)
+  const spec = providerSpec(provider)
+  const usable = usableWindow(spec.context, outputReserve(provider, spec))
+  const limit = Math.floor(usable * CONTEXT_LIMIT_RATIO)
   return { limit, compactAt: Math.floor(limit * COMPACT_TRIGGER_RATIO) }
 }
 

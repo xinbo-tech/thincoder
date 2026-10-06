@@ -99,10 +99,33 @@ import { specForModel, providerSpec, specMatch, assistantToolCallMessage } from 
 export { specForModel, providerSpec, specMatch, assistantToolCallMessage }
 
 
-// Window utilization threshold: compacts at 60% context, reserving 40% headroom
-// for injected context (directory tree, git context, outline, project instructions,
-// memory/doc search results) which can consume 30-50K tokens each turn.
+// Window utilization threshold: compacts at 60% of the USABLE window (window − output
+// reservation — providers require input + max_tokens ≤ window; 2026-10-06 user ruling:
+// the reservation folds into the budget so compaction fires first, never a provider
+// rejection), the remaining 40% stays as headroom for injected context (directory tree,
+// git context, outline, project instructions, memory/doc search results — 30-50K tokens
+// per turn).
 const COMPACT_RATIO = 0.6
+
+/** Output reservation the request counts against the window: explicit `provider.maxTokens`
+ *  (the value actually sent — `provider/core.mjs`) when set, else the spec `maxOutput`, else 0. */
+export function outputReserve(provider, spec) {
+  const explicit = provider?.maxTokens
+  if (Number.isFinite(explicit) && explicit > 0) return explicit
+  return spec?.maxOutput ?? 0
+}
+
+/** Usable input window = window − output reservation. Degenerate guard: a reservation
+ *  ≥ the window is non-physical (no input could ever fit — e.g. the doubao spec
+ *  `maxOutput` 524_288 > `context` 256_000 ∥ the test harness&apos;s 1K window vs the default
+ *  spec); collapsing the budget to 0 would be instant `context_limit` death — the very
+ *  failure the reservation fold exists to prevent. Fall back to half the window.
+ *  (2026-10-06——收口核验捕获：advisor-loop-split B5a 红。） */
+export function usableWindow(context, reserve) {
+  const ctx = context ?? 0
+  const usable = ctx - reserve
+  return usable > 0 ? usable : Math.floor(ctx / 2)
+}
 
 /** Derive compaction threshold; explicit is the value explicitly set in config file (takes priority), otherwise auto-computed from model.
  *  Second param accepts EITHER a model name string (pure spec lookup — legacy caller:
@@ -112,7 +135,8 @@ export function resolveCompactThreshold(explicit, modelOrProvider) {
   if (explicit != null) return { value: explicit, auto: false }
   const provider = typeof modelOrProvider === "string" ? { model: modelOrProvider } : (modelOrProvider ?? {})
   const spec = providerSpec(provider)
-  const value = Math.floor(spec.context * COMPACT_RATIO)
+  const usable = usableWindow(spec.context, outputReserve(provider, spec))
+  const value = Math.floor(usable * COMPACT_RATIO)
   return { value, auto: true }
 }
 
