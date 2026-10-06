@@ -18,6 +18,13 @@
 - **会话形**（KD-SV-12）：登录签发令牌（32 字节随机 base64url）；库存 `sha256(令牌)`（`sessions` 表——无明文）；cookie `tc_session=<令牌>`（`HttpOnly; SameSite=Strict; Path=/; Max-Age=604800`——7 天绝对过期 ∥ 不滑动）；同人可多会话（每登录一行）。
 - **会话校验**：逐请求查库（无缓存——同团队 key 纪律）；登出 = 删行 + 清 cookie；过期行在登录时顺手清；HTTP 内网无 `Secure` 标记（边界 = 本档 §8 ∥ `ops/OPS.md` §5）。
 - **密码规则**：最小长度 8（建成员 ∥ 改密 ∥ 重置统一校验）；长度不设上界（已审定：无 DoS 面）；改密 = 哈希替换（旧密即失效——无宽限）；登录失败不区分「用户不存在 ∥ 密码错」（措辞与耗时同——不存在用户照跑哑散列，防枚举）。
+- **登录防护（防爆破——首版完备化②）**：双维失败计数（**进程内存**——`thincoder-server/src/accounts/login-guard.mjs`（拟新增））——**用户名维**（提交值——无论是否存在）：连续失败 ≥5 次（窗 15 分钟）⇒ 锁 15 分钟；**IP 维**：失败 ≥20 次（同窗）⇒ 锁同。
+- 锁定期内登录 ⇒ **429 `too_many_attempts`** + `Retry-After`（剩余秒）+ 固定文案（**两维同文案、与用户名存在性无关**——防枚举面保持；不跑散列——快速拒绝）；固定窗（锁期内重试不延长）。
+- 口面 = `check` ∥ `recordFailure` ∥ `recordSuccess` ∥ `clearUsername`（时钟可注入——批内件）。
+- **清计路径**：登录成功（清该用户名 + 该 IP） ∥ 自助改密（清本人用户名维） ∥ admin 重置（清目标用户名维——HTTP 面；本机 CLI 重置跨进程不达——残余 ≤ 锁窗，在案）。
+- **重启 ⇒ 计数清零**（在案口径：在线爆破窗 = 分钟级；重启罕发——接受；离线撞库不在防线内）。
+- **客户端 IP 口径**：缺省 = 连接对端地址；`trustProxy: true`（`ops/OPS.md` §1）⇒ 读 `X-Real-IP`（前提 = 端口仅反代可达——`ops/OPS.md` §5.6）。
+- **事件日志**：锁触发 ⇒ `login_throttled` 一行（`username` ∥ `ip` ∥ `dimension`（`username` ∥ `ip`） ∥ `retryAfterS`——密钥面零涉）。
 - **首个 admin**：首启引导建（`ops/OPS.md` §2——幂等）；本档只管账号数据形。
 
 ## 3. 端点表（`/api/*`——登录 ∥ 自助 ∥ 管理）
@@ -26,7 +33,7 @@
 
 | 方法 + 路径 | 鉴权/角色 | 语义 |
 |---|---|---|
-| `POST /api/login` | 公开 | 登入：`{username, password}` ⇒ 200 + `Set-Cookie`（会话）；失败 ⇒ 401 `invalid_credentials` |
+| `POST /api/login` | 公开 | 登入：`{username, password}` ⇒ 200 + `Set-Cookie`（会话）；失败 ⇒ 401 `invalid_credentials`；锁定期 ⇒ **429 `too_many_attempts`** + `Retry-After`（两维同文案——防枚举面保持，§2） |
 | `POST /api/logout` | 会话 | 销当前会话（删行 + 清 cookie） |
 | `GET /api/me` | 会话 | 本人信息（`id ∥ name ∥ username ∥ role ∥ quotaTokens ∥ usedTokens`）+ 本人 key 清单（提示形） |
 | `POST /api/me/password` | 会话 | 自助改密：`{oldPassword, newPassword}`；旧密错 ⇒ 401 `invalid_credentials`；成功 ⇒ 吊销本人其他会话（当前保留） |
@@ -48,9 +55,10 @@
 | `thincoder-server/src/accounts/keys.mjs`（已落盘） | **98**（实读 2026-10-06——设计估 ≈120） | key 校验 ∥ key 签发/吊销/轮转（页面与 CLI 共用） |
 | `thincoder-server/src/accounts/members.mjs`（已落盘） | **161**（实读 2026-10-06——设计估 ≈90） | 成员 CRUD ∥ scrypt 散列/校验 ∥ 角色 ∥ 临时密码 ∥ 首启引导 |
 | `thincoder-server/src/accounts/session.mjs`（已落盘） | **95**（实读 2026-10-06——设计估 ≈90） | 会话签发/校验/吊销 ∥ cookie 序列化/解析 ∥ 过期清理 |
-| `thincoder-server/src/accounts/routes.mjs`（已落盘） | **81**（实读 2026-10-06——设计估 ≈150） | 自助端点：login ∥ logout ∥ me ∥ me/password ∥ me/keys/rotate |
-| `thincoder-server/src/accounts/routes-admin.mjs`（已落盘） | **58**（实读 2026-10-06——设计估 ≈120） | 管理端点：members 列表/建 ∥ 吊销 ∥ 重置 |
-| **小计** | **≈570 ⇒ 493** | —— |
+| `thincoder-server/src/accounts/routes.mjs`（已落盘） | **81**（实读 2026-10-06——设计估 ≈150；本批预期 ≈101 = +20：登录 guard 接线（429 + `Retry-After` + 日志）） | 自助端点：login ∥ logout ∥ me ∥ me/password ∥ me/keys/rotate |
+| `thincoder-server/src/accounts/routes-admin.mjs`（已落盘） | **58**（实读 2026-10-06——设计估 ≈120；本批预期 ≈61 = +3：重置 ⇒ 清目标用户名锁） | 管理端点：members 列表/建 ∥ 吊销 ∥ 重置 |
+| `thincoder-server/src/accounts/login-guard.mjs`（拟新增） | **无 ⇒ ≈90**（设计估——双维计数（用户名 ∥ IP） ∥ 锁定/解锁 ∥ 清计四口 ∥ IP 口径（`trustProxy`）——§2） | 登录防爆破 |
+| **小计** | **≈570 ⇒ 493 ⇒ 本批预期 ≈606**（+113 = guard 新 ≈90 ∥ routes +20 ∥ routes-admin +3） | —— |
 
 ## 5. 验收判据（机检面）
 
@@ -59,6 +67,7 @@
 | AC-1（功能点 1） | 无 Authorization ∥ 未知 key ∥ 吊销 key ⇒ **401 + `invalid_api_key`**；持有效团队 key 经 mock 上游完成一次请求 ⇒ 200 | 批内件 |
 | AC-5（功能点 5） | 吊销后**下一次请求** ⇒ 401（无缓存路径——查库即判） | 批内件 |
 | AC-7（功能点 7——B 案） | ① 正确凭据登录 ⇒ 200 + 会话 cookie；错凭据（含不存在用户）⇒ 401 `invalid_credentials`（同措辞）② 无/过期会话访问 `/api/me` ∥ `/api/usage` ⇒ 401 `unauthorized` ③ `user` 会话调管理写（建成员 ∥ 配额 ∥ 吊销 ∥ 重置）⇒ 403 `forbidden`（服务端判）④ 自助改密 ⇒ 旧密登录失败 + 新密登录成功 + 本人其他会话失效（当前保留）⑤ admin 重置 ⇒ 旧密失效 + 临时密码可登（一次性回显——同签发语义）⑥ 自助轮换 ⇒ 新 key 通行 + 旧 key 下一请求 401 ⑦ 首启引导幂等（零 admin + 配置 ⇒ 建；再启动 ⇒ 不重建不改密——机制 = `ops/OPS.md` §2） | 批内件 |
+| AC-13②（功能点 12——登录防爆破；候补——需求档回笔 = 主 agent 笔） | 5 连败（同用户名）⇒ 第 6 次（含正确密码）⇒ 429 `too_many_attempts` + `Retry-After`（秒）；锁窗过后 ⇒ 正确密码 200；成功 ⇒ 清计；IP 维 20 阈值（`trustProxy` 下取 `X-Real-IP`）；不存在用户名同锁（枚举零差——措辞/计时面）；admin 重置 ⇒ 该用户名锁清（旧密 401、临时密码 200）；锁触发日志 `login_throttled` 在册 | 批内件 |
 
 ## 6. 关键决策（本域）
 
@@ -70,6 +79,7 @@
 | KD-SV-13 | **密码散列 = scrypt**（`node:crypto`；N=16384 ∥ r=8 ∥ p=1 ∥ keyLen=32 ∥ salt 16B 随机；异步变体）；编码串 `scrypt$N$r$p$salt$hash`（自描述——参数可升）；校验 `timingSafeEqual`；密码最小长度 8 | 零依赖（node 内建）∥ 慢因子抗离线爆破 ∥ 异步变体不阻塞事件循环（同进程中继不抖动）∥ 自描述编码串免参数考古 | 裸 sha256（无慢因子）· bcrypt/argon2（第三方——违零依赖）· 同步 scrypt（阻塞 50–100ms——中继受扰） |
 | KD-SV-14 | **admin 重置成员密码 = 在**（用户 2026-10-06 08:06 定）；语义 = 服务器生成**一次性临时密码**（回显一次——同签发语义）+ 吊销该成员全部会话；首登后应自助改密（页面提示——不设强制门） | 忘密唯一兜底（找回 = 不做项——无外部通道）∥ 一次性临时密码 = 管理侧零知情（admin 不见成员自设密码）∥ 与 key 签发同语义——两族凭证一致 | admin 直接设新密（admin 知晓成员密码——凭据卫生否）· 自助找回（邮件/短信——不做项）· 不落（兜底缺——忘密只剩本机 shell） |
 | KD-SV-16 | **管理面 key 枚举 = `GET /api/members` 成员行内附清单**（提示形 + id；仅列未吊销）——不设 `/api/members/:id/keys` 子资源 | 管理页一次装配（成员表 + 吊销控件同响应——vanilla 前端一跳）；与 `GET /api/me`「本人信息 + key 清单」同形；端点面零增 | 独立子资源（`GET /api/members/:id/keys`——页面 N+1 请求 ∥ 无其它消费方，吊销流多一跳） |
+| KD-SV-21 | **登录防爆破 = 双维内存锁**（用户名维 5 次 ∥ IP 维 20 次——窗/锁各 15 分钟；任一中锁 ⇒ 429 `too_many_attempts` + `Retry-After`；两维同文案——防枚举面保持；成功/改密/重置清计；重启清零（在案））；IP 口径 = 对端地址 ∥ `trustProxy: true` 读 `X-Real-IP` | 内网面在线爆破防护（分钟级窗）；内存 = 零表零写（登录热路径不落库）∥ 双维 = 兼顾定向与喷洒；快速拒绝（429）优于服务端 sleep（挂连接/事件循环面）；固定窗不升级（升档留后续） | DB 持久化（每条失败一写 + 新表——重启清零可接受，收益低）· 逐次延迟响应（挂连接）· 仅用户名维（喷洒无阻）· 仅 IP 维（定向爆破不阻 ∥ 反代聚合面误伤）· 验证码/外部组件（内网工具面——不做） |
 
 ## 7. 用例（本域）
 
@@ -86,11 +96,17 @@
 | E8 | 错误 | 无/过期会话访问 `/api/me` ∥ `/api/usage` | 401 `unauthorized` |
 | E9 | 错误 | `user` 会话调管理写（`POST /api/members` ∥ 配额 ∥ 吊销 ∥ 重置） | 403 `forbidden`（服务端拒——页面隐藏非判据） |
 | E10 | 错误 | 错误密码 ∥ 不存在用户登录 | 401 `invalid_credentials`（两况同措辞——防枚举） |
+| N22 | 正常 | 同用户名 5 连败 ⇒ 第 6 次（正确密码） | 429 `too_many_attempts` + `Retry-After`；日志 `login_throttled` |
+| N23 | 正常 | 锁窗过后（时钟注入）正确密码登录 | 200 + 会话；计数清零 |
+| N24 | 正常 | admin 重置（HTTP）后该成员登录 | 锁清——临时密码 200（旧密 401） |
+| B18 | 边界 | 锁定期内重复尝试 | 429 同文案；`Retry-After` 递减；锁不延长（固定窗） |
+| B19 | 边界 | 不存在用户名 5 连败 | 同锁同 429（与存在者零差——枚举面） |
+| E20 | 错误 | 锁定期请求（任一门径） | 429 `too_many_attempts`；`Retry-After` 头在场 |
 
 ## 8. 本域边界（不做的面）
 
 - 组织架构同步 ∥ SSO ∥ 双因素 ∥ **密码找回**（需外部通道（邮件/短信）——「团队协同」步再议；**改密 = 在**——自助 ∥ admin 重置）。
-- 登录失败限速/账户锁定 ∥ 密码复杂度策略（仅最小长度 8） ∥ 会话管理面（会话列表 ∥ 多端踢出——改密/重置吊销属被动机制）。
+- 密码复杂度策略（仅最小长度 8） ∥ 会话管理面（会话列表 ∥ 多端踢出——改密/重置吊销属被动机制） ∥ 登录防护不做：跨重启持久锁 ∥ IP 黑白名单/验证码 ∥ 改密/重置端点的失败限速（需已持会话——在案） ∥ 离线撞库（防线外）。
 - 角色只两级（admin ∥ user——不做细粒度权限/自定义角色）。
 
 ## 变更记录
@@ -99,3 +115,4 @@
 - 2026-10-06：fix 轮（评审轮次 1 #1——管理面 key 枚举补记）：`GET /api/members` 成员行附 key 清单（提示形 + id）；KD-SV-16 增；用例 N11 增（admin 吊销正路——该 key 下一请求 401）。
 - 2026-10-06：实施后回填轮（fix）——§2 密码规则补「长度不设上界」（已审定：无 DoS 面）；§4 行数按实读回填（小计 ≈570 ⇒ 493）。
 - 2026-10-06：控制台 provider/模型管理设计轮（批 `docs/batches/2026-10-06-console-providers.md`）——§3 增 provider 管理端点指针行（端点表归 `gateway/API.md` §2.2——本域零语义改）。
+- 2026-10-06：首版完备化设计轮（批 `docs/batches/2026-10-06-first-release-completeness.md`——需求 §2:12② ∥ 台账 #963）——§2 增登录防护（双维内存锁 ∥ 阈值/窗 ∥ 清计路径 ∥ 重启口径 ∥ IP 口径 ∥ 事件日志）∥ §3 login 行补 429 ∥ §4 预算（login-guard 拟新增 ≈90 ∥ routes +20 ∥ routes-admin +3；小计 ≈606）∥ §5 补 AC-13② 候补行 ∥ §6 增 KD-SV-21 ∥ §7 增 N22–N24 ∥ B18/B19 ∥ E20 ∥ §8 边界随正（限速/锁定由不做项转在册）。
