@@ -1,21 +1,24 @@
 /**
- * app.mjs — 控制台前端入口（webui/WEBUI.md §1–§3）：哈希路由（`#/<组>/<页>`——IA 单源 = nav.mjs）∥ fetch 封装 ∥
- * 会话态 ∥ 渲染助手（h/table/一次性秘密/用量表）∥ 视图装配（一页一职责）∥ 系统信息（`/api/system`
- * ——装配取一次：meta 槽版本行 ∥ 系统页两节；失败静默留空——§2.1）∥ 多语言接线（`initLang` ∥ 错误映射 ∥
+ * app.mjs — 控制台前端入口（webui/WEBUI.md §1–§3）：哈希路由（`#/<组>/<页>`）∥ fetch 封装 ∥ 会话态 ∥ 渲染助手 ∥
+ * 视图装配（一页一职责）∥ 系统信息（`/api/system`——装配取一次；失败静默留空——§2.1）∥ 健康轮询（§2.3⑤：
+ * 登录后启动——立即一次 + 30s；登出停止；灯/系统页块/总览卡三落点共用）∥ 多语言接线（`initLang` ∥ 错误映射 ∥
  * 格式化本地化 ∥ `Retry-After` 捕捉 ∥ `rerender` 口 ∥ title——§2.2）。
  *
- * 判权全在后端：本档只做显隐与表单——`user` 直打管理端点由服务端 403（页面不是判据）；401 ⇒ 回 #/login。
- * 路由解析（别名重定向 ∥ 角色默认 ∥ admin 面 denied）= nav.mjs 纯函数；旧链 `#/me` ⇒ `#/me/keys` ∥
- * `#/admin` ⇒ `#/admin/members`。渲染一律 textContent（不拼 HTML 串）；写请求（含无体写）一律带 JSON 头 +
- * JSON 体（服务端型门——非 JSON ⇒ 400）。零外部资源（内网自洽）：无 CDN ∥ 无外链字体；文案一律经 `t()` 取值。
+ * 判权全在后端：只做显隐与表单——`user` 直打管理端点由服务端 403（页面不是判据）；401 ⇒ 回 #/login；路由解析
+ * （别名重定向 ∥ 角色默认 ∥ admin 面 denied）= nav.mjs 纯函数；旧链 `#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒
+ * `#/admin/overview`。渲染一律 textContent；写请求一律 JSON 头 + JSON 体（型门）；零外部资源（内网自洽）；
+ * 文案一律经 `t()` 取值。
  */
 import { t, mapError, initLang, setLang, langTag, applyDocument } from "./i18n.mjs"
 import { defaultPath, renderSidebar, resolveRoute } from "./nav.mjs"
 import { renderLogin } from "./views-auth.mjs"
 import { renderMeAccount, renderMeKeys, renderMeUsage } from "./views-me.mjs"
-import { renderAdminUsage, renderMembers } from "./views-admin.mjs"
+import { renderMembers } from "./views-admin.mjs"
 import { renderProviders } from "./views-providers.mjs"
 import { renderSystem } from "./views-system.mjs"
+import { renderAdminUsage } from "./views-usage.mjs"
+import { renderOverview } from "./views-overview.mjs"
+import { renderAudit } from "./views-audit.mjs"
 
 const appEl = document.getElementById("app")
 const navEl = document.getElementById("nav")
@@ -26,9 +29,7 @@ export const state = { member: null, system: null }
 
 /** 系统信息（版本/更新）——会话就绪后取一次（§2.1）；失败静默留空（meta 槽/系统页同面）。 */
 let systemLoaded = false
-async function loadSystem() {
-  try { state.system = await api("/api/system") } catch { state.system = null }
-}
+async function loadSystem() { try { state.system = await api("/api/system") } catch { state.system = null } }
 
 // ── 渲染助手 ────────────────────────────────────────────────────────────────
 
@@ -88,6 +89,56 @@ export function usageTable(rows, { withMember = false } = {}) {
   return table(headers, body)
 }
 
+// ── 健康轮询（§2.3⑤——灯 ∥ 系统页块 ∥ 总览卡三落点共用）──────────────────────
+
+/** 轮询周期（30s——§2.3⑤；登录后启动，登出停止）。 */
+export const HEALTH_POLL_MS = 30000
+/** 状态 ⇒ 文案键（三态——绿/黄/红）。 */
+const HEALTH_LABEL_KEYS = { ok: "health.ok", degraded: "health.degraded", down: "health.down" }
+
+let healthTimer = null, healthListeners = []
+let healthState = { status: null, body: null, checkedAt: null }
+
+/** 健康快照（视图渲染取用——文案按当前语言即时计算；未知态 = 「—」中性保留）。 */
+export function healthSnapshot() {
+  const { status, body, checkedAt } = healthState
+  return { status, body, checkedAt, label: status === null ? "—" : t(HEALTH_LABEL_KEYS[status]) }
+}
+
+/** 视图订阅（路由切换清空——route() 重渲前重置）：每次轮询回调一次（视图用 `ctx.health()` 取快照重渲）。 */
+function onHealth(listener) { healthListeners.push(listener) }
+
+/** 侧栏灯直更（元素 id = `nav-health`——无整页重渲；侧栏重渲后由 route() 回填最近状态）。 */
+function renderHealthLight() {
+  const el = document.getElementById("nav-health")
+  if (!el) return
+  el.className = healthState.status === null ? "health" : `health ${healthState.status}`
+  el.textContent = healthState.status === null ? "" : healthSnapshot().label
+}
+
+/** 轮询一次：`/healthz` 直读（公开端点——503 也携状态体；不经 `api()` 封装）；失败 ⇒ 红（服务不可达）。 */
+async function pollHealth() {
+  let body = null
+  try {
+    const response = await fetch("/healthz")
+    try { body = await response.json() } catch { body = null }
+  } catch { /* 请求失败 ⇒ down（灯变红——失败静默不 flash 刷屏） */ }
+  const status = body?.status === "ok" ? "ok" : body?.status === "degraded" ? "degraded" : "down"
+  healthState = { status, body, checkedAt: Date.now() }
+  renderHealthLight()
+  for (const listener of healthListeners) listener()
+}
+
+function startHealthPolling() {
+  if (healthTimer !== null) return
+  pollHealth() // 立即一次
+  healthTimer = setInterval(() => pollHealth(), HEALTH_POLL_MS)
+}
+
+function stopHealthPolling() {
+  if (healthTimer !== null) { clearInterval(healthTimer); healthTimer = null }
+}
+
 // ── fetch 封装 ∥ 会话态 ────────────────────────────────────────────────────
 
 /** 请求封装：写请求（含无体写）一律 JSON 头 + JSON 体；非 2xx ⇒ 抛（带 status/code/retryAfter——fail 收口）。 */
@@ -141,6 +192,7 @@ export function flash(message) {
 export function fail(error) {
   if (error?.status === 401 && error?.code !== "invalid_credentials") {
     state.member = null
+    stopHealthPolling() // 会话失效 ⇒ 轮询同停
     flash(mapError(error))
     navigate("/login")
     return
@@ -155,9 +207,11 @@ const PAGES = {
   "/me/keys": renderMeKeys,
   "/me/usage": renderMeUsage,
   "/me/account": renderMeAccount,
+  "/admin/overview": renderOverview,
   "/admin/members": renderMembers,
   "/admin/providers": renderProviders,
   "/admin/usage": renderAdminUsage,
+  "/admin/audit": renderAudit,
   "/admin/system": renderSystem,
 }
 
@@ -169,7 +223,7 @@ function currentPath() {
 
 /** 视图上下文（各页共用面——showSecret/usageTable = 跨页共用助手，单源住本档；onChange = 语言切换回调）。 */
 function viewCtx() {
-  return { h, table, api, state, fail, flash, refresh, navigate, fmtTs, fmtValue, fmtQuota, showSecret, usageTable, onChange: switchLang }
+  return { h, table, api, state, fail, flash, refresh, navigate, fmtTs, fmtValue, fmtQuota, showSecret, usageTable, onChange: switchLang, onHealth, health: healthSnapshot }
 }
 
 /** 重渲口（语言切换——侧栏 ∥ 视图同拍；§2.2）。 */
@@ -206,6 +260,9 @@ async function route() {
   if (!systemLoaded) { systemLoaded = true; await loadSystem() } // 装配取一次（登录晚于启动时兜底）
   renderSidebar({ h, member: state.member, path: resolved.path, onLogout: logout, version: state.system?.version, onChange: switchLang }, navEl)
   navEl.hidden = false
+  renderHealthLight() // 侧栏重渲 ⇒ 灯回填最近状态（无整页重渲语义不变）
+  startHealthPolling() // 登录后启动（幂等——立即一次 + 30s；登出/会话失效停）
+  healthListeners = [] // 视图注册面：路由切换清空（旧页面订阅退场）
 
   if (resolved.denied) { // admin 面非 admin——页面级块（判权仍在服务端——WEBUI §3）
     mount.append(h("h2", { text: t("denied.title") }), h("p", { class: "hint", text: t("denied.hint") }))
@@ -215,6 +272,7 @@ async function route() {
 }
 
 async function logout() {
+  stopHealthPolling() // 登出停止轮询（§2.3⑤）
   try {
     await api("/api/logout", { method: "POST" }) // 无体写：空 JSON 体 + JSON 头（型门）
   } catch (error) {
@@ -223,6 +281,7 @@ async function logout() {
   state.member = null
   state.system = null // 会话级缓存随会话清（下一个会话重新取一次）
   systemLoaded = false
+  healthListeners = []
   flash(t("app.loggedOut"))
   navigate("/login")
 }

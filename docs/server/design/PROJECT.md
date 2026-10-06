@@ -8,7 +8,7 @@
 
 ## 1. 定位与落点
 
-- **一句话**：一台内网常驻的 Node 单进程——OpenAI 兼容入口（chat ∥ embeddings ∥ models），网关代持全部真实 provider key，逐请求记账、按成员限额度；另配登录制控制台（vanilla 静态前端——侧栏分组导航七页——IA/多语言 = `webui/WEBUI.md` §2/§2.2）与本机运维 CLI（兜底）；首版完备化面 = `/healthz` ∥ 登录防爆破 ∥ 用量保留窗 ∥ 控制台系统页（版本/更新/接入——§7 AC-13）。
+- **一句话**：一台内网常驻的 Node 单进程——OpenAI 兼容入口（chat ∥ embeddings ∥ models），网关代持全部真实 provider key，逐请求记账、按成员限额度；另配登录制控制台（vanilla 静态前端——侧栏分组导航十页——IA/多语言 = `webui/WEBUI.md` §2/§2.2）与本机运维 CLI（兜底）；首版完备化面 = `/healthz` ∥ 登录防爆破 ∥ 用量保留窗 ∥ 控制台系统页（版本/更新/接入——§7 AC-13）∥ 可见面二轮六面（向量/看板/总览/审计/健康/key 细节——§7 AC-15）。
 - **落点**：代码 = `thincoder-server/`（新顶层目录——与 `thincoder-core/` ∥ `thincoder-cli/` ∥ `thincoder-vscode/` ∥ `thincoder-desktop/` ∥ `thincoder-render-core/` 同级）；设计档 = `docs/server/design/`（板 2 档 + 域 6 档——见 §2.1 ∥ §3）。
 - **形态**：单进程单库（`node:http` + `node:sqlite`）；无构建步骤；纯 ESM（`.mjs`）。
 - **零第三方运行期依赖**（沿仓纪律）：全树 import 仅 `node:*` 标准库 + 相对路径；不 import `thincoder-core/*`（论证 = §5 KD-SV-2）。
@@ -22,11 +22,11 @@
 | 域 | 代码（本域档） | 职责 | 域档（文档） |
 |---|---|---|---|
 | 入口（板级） | `thincoder-server/bin/thincoder-server.mjs`（已落盘） | argv ∥ 配置加载 ∥ 首启引导 ∥ 装配/启动 ∥ 停机 | `ops/OPS.md` |
-| gateway | `thincoder-server/src/gateway/` 八档（server ∥ routes ∥ forward ∥ sse-tap ∥ providers ∥ provider-admin ∥ system ∥ errors） | http 服务 ∥ 注册行分派 ∥ OpenAI 三面 ∥ 转发 ∥ usage 旁路扫描 ∥ 模型派发 ∥ provider 管理面（§2.2） ∥ 系统面（探活/版本——§2.3） ∥ 错误形 | `gateway/API.md` |
-| accounts | `thincoder-server/src/accounts/` 六档（keys ∥ members ∥ session ∥ routes ∥ routes-admin ∥ login-guard）（已落盘） | 团队 key ∥ 账号/成员 ∥ 会话/登录 ∥ 密码 ∥ 登录防爆破 ∥ 自助/管理端点 | `accounts/ACCOUNTS.md` |
-| metering | `thincoder-server/src/metering/` 三档（usage ∥ quota ∥ routes）（已落盘） | 记账 ∥ 配额 ∥ 用量/配额端点 ∥ 保留窗清理 | `metering/METERING.md` |
-| store | `thincoder-server/src/store/` 一档（db）（已落盘） | 库 ∥ DDL ∥ 迁移链（accounts 与 metering 共用） | `store/STORE.md` |
-| webui | `thincoder-server/src/webui/` 一档（static）+ `thincoder-server/public/` 十二档（静态——`index.html` ∥ `app.mjs` ∥ `nav.mjs` ∥ `views-*` 五档 ∥ `i18n.mjs` ∥ `i18n-zh.mjs` ∥ `i18n-en.mjs` ∥ `style.css`；`views.mjs` 退役；i18n 三档 = 多语言面已落盘） | 页面路由 ∥ HTML/JS/CSS ∥ 静态直发 ∥ IA/导航 ∥ 多语言（§2.2） | `webui/WEBUI.md` |
+| gateway | `thincoder-server/src/gateway/` 十档（server ∥ routes ∥ forward ∥ sse-tap ∥ providers ∥ provider-admin ∥ system ∥ errors + embedding-admin ∥ overview） | http 服务 ∥ 注册行分派 ∥ OpenAI 三面 ∥ 转发 ∥ usage 旁路扫描 ∥ 模型派发 ∥ provider 管理面（§2.2） ∥ 系统面（探活/版本——§2.3） ∥ 控制台数据面（总览/向量服务——§2.4） ∥ 错误形 | `gateway/API.md` |
+| accounts | `thincoder-server/src/accounts/` 七档（keys ∥ members ∥ session ∥ routes ∥ routes-admin ∥ login-guard + audit） | 团队 key ∥ 账号/成员 ∥ 会话/登录 ∥ 密码 ∥ 登录防爆破 ∥ 审计事件（§2.1） ∥ 自助/管理端点 | `accounts/ACCOUNTS.md` |
+| metering | `thincoder-server/src/metering/` 三档（usage ∥ quota ∥ routes）（已落盘） | 记账 ∥ 配额 ∥ 用量/配额端点（含报表/导出——§3） ∥ 保留窗清理 | `metering/METERING.md` |
+| store | `thincoder-server/src/store/` 一档（db）（已落盘） | 库 ∥ DDL ∥ 迁移链（各域共用；v3 = 审计事件表） | `store/STORE.md` |
+| webui | `thincoder-server/src/webui/` 一档（static）+ `thincoder-server/public/` 十七档（静态——`index.html` ∥ `app.mjs` ∥ `nav.mjs` ∥ `views-*` 九档 ∥ `modal.mjs` ∥ `i18n.mjs` ∥ `i18n-zh.mjs` ∥ `i18n-en.mjs` ∥ `style.css`；`views.mjs` 退役） | 页面路由 ∥ HTML/JS/CSS ∥ 静态直发 ∥ IA/导航 ∥ 多语言（§2.2） ∥ 可见面二轮（§2.3） ∥ 弹窗（§2.4） | `webui/WEBUI.md` |
 | ops | `thincoder-server/src/ops/` 五档（config ∥ log ∥ cli ∥ presets ∥ update）+ 部署档组（`thincoder-server/deploy/thincoder-server.service` ∥ `thincoder-server/deploy/docker-entrypoint.sh` ∥ `thincoder-server/deploy/converge.mjs` ∥ `thincoder-server/deploy/backup.mjs` ∥ `thincoder-server/Dockerfile` ∥ `thincoder-server/.dockerignore` ∥ `thincoder-server/docker-compose.yml`）+ 模板/说明档（`thincoder-server/config.example.json` ∥ `thincoder-server/README.md`）（已落盘） | 配置（含 provider 预设） ∥ 日志 ∥ 运维 CLI ∥ 更新机制（自检/自升/收敛） ∥ 部署面（npm ∥ Docker ∥ systemd ∥ 备份） | `ops/OPS.md` |
 
 （各域「不做」面 = 各域档「本域边界」段；全局范围 = 头注「范围注」；逐档行数 = 各域档「本域文件与行数预算」。）
@@ -59,7 +59,7 @@
   │                        ├─ user 触管理端点 ⇒ 403
   │                        └─ 放行 ⇒ 自助面 /api/me* ∥ 管理面 /api/members* 等
   ▼
-七页两区（`#/login` ∥ 我的三页 ∥ 管理四页——IA = `webui/WEBUI.md` §2）——数据全经 /api/*，判权全在后端；系统页数据 = `/api/system`（版本/更新——KD-SV-24）
+十页两区（`#/login` ∥ 我的三页 ∥ 管理七页——IA = `webui/WEBUI.md` §2）——数据全经 /api/*，判权全在后端；系统页数据 = `/api/system`（版本/更新/引擎模型——KD-SV-24/30）
 ```
 
 ### 2.3 与 core 的关系（依赖决策摘要）
@@ -78,10 +78,10 @@
 | `accounts/ACCOUNTS.md` | 域 | accounts | 团队 key 面 ∥ 账号/会话/角色 ∥ 自助/管理端点表 ∥ 改密/重置 ∥ 本域文件与预算 ∥ 验收判据 ∥ 用例 |
 | `metering/METERING.md` | 域 | metering | 记账 ∥ 配额 ∥ 查询与额度端点 ∥ 本域文件与预算 ∥ 验收判据 ∥ 用例 |
 | `store/STORE.md` | 域 | store | 库 ∥ DDL ∥ 迁移链 ∥ 本域文件与预算 ∥ 决策 |
-| `webui/WEBUI.md` | 域 | webui | 静态面 ∥ 控制台 IA 与视图 ∥ 多语言（i18n） ∥ 判权/自托管约束 ∥ 本域文件与预算 ∥ 验收判据 |
+| `webui/WEBUI.md` | 域 | webui | 静态面 ∥ 控制台 IA 与视图 ∥ 多语言（i18n） ∥ 弹窗机制（§2.4） ∥ 判权/自托管约束 ∥ 本域文件与预算 ∥ 验收判据 |
 | `ops/OPS.md` | 域 | ops | 配置面 ∥ 首启引导 ∥ 运维 CLI ∥ 启动/停机/部署面 ∥ 日志 ∥ 本域文件与预算 ∥ 验收判据 ∥ 用例 |
 
-## 4. 决策索引（KD-SV-1–26）
+## 4. 决策索引（KD-SV-1–32）
 
 | # | 决策一句话 | 所在档 |
 |---|---|---|
@@ -104,13 +104,19 @@
 | KD-SV-17 | provider 预设 = server 自持表（快照——起步 20 家 OpenAI 兼容子集） | `ops/OPS.md` |
 | KD-SV-18 | 更新机制 = 两路统一 npm 版本身份（自检 + 档位 + 自升；容器 = 壳——`TC_SERVER_VERSION` 收敛） | `ops/OPS.md` |
 | KD-SV-19 | provider 配置面 = 库单源 + 保存即热生效（config `providers[]` 降为一次性种子；密钥明文 ∥ `env:` 引用并存） | `ops/OPS.md` §8 |
-| KD-SV-20 | 控制台 IA = 侧栏分组导航 + 一页一职责（七页；hash 路由扩展；旧链重定向） | `webui/WEBUI.md` §7 |
+| KD-SV-20 | 控制台 IA = 侧栏分组导航 + 一页一职责（十页；hash 路由扩展；旧链重定向） | `webui/WEBUI.md` §7 |
 | KD-SV-21 | 登录防爆破 = 双维内存锁（用户名 5 ∥ IP 20；窗/锁 15 分钟；429 + `Retry-After`；成/败同措辞保持） | `accounts/ACCOUNTS.md` §6 |
 | KD-SV-22 | 用量保留 = 配置化保留窗（缺省 90 天；启动 + 24h 删除式清理；`null` = 不限） | `metering/METERING.md` §6 |
 | KD-SV-23 | 健康检查 = `/healthz` 无鉴权只读探活（status/version/uptime/db；503 degraded；HEALTHCHECK 单源） | `ops/OPS.md` §8 |
 | KD-SV-24 | 更新可见面 = `GET /api/system`（会话）+ 控制台（meta 槽 ∥ 系统页——更新器状态导出） | `ops/OPS.md` §8 |
 | KD-SV-25 | 部署文档完备 = README 定稿（nginx 完整段；备份 = `backup.mjs` 在线快照 + 定时器样例） | `ops/OPS.md` §8 |
 | KD-SV-26 | 控制台多语言 = 前端静态双表 + 浏览器语言自动 + 显式切换（记忆）+ 错误码前端映射（缺省 zh——服务端零改） | `webui/WEBUI.md` §7 |
+| KD-SV-27 | 用量报表 = 服务端聚合与导出（summary 单端点 ∥ 导出 = 服务端 CSV；与明细同源） | `metering/METERING.md` §6 |
+| KD-SV-28 | 审计事件 = 库表（v3）+ 名快照 + 与用量同保留窗（写入口 = 调用侧显式传型） | `accounts/ACCOUNTS.md` §6 |
+| KD-SV-29 | 可见面二轮 = 服务端聚合/代发 + 零依赖前端（总览落地页 ∥ CSS 柱 ∥ 健康三态轮询） | `webui/WEBUI.md` §7 |
+| KD-SV-30 | 向量服务面 = 配置真值经 admin 端点 + 服务端代探/代试（地址 admin 面 ∥ 模型名下发用户面） | `gateway/API.md` §6 |
+| KD-SV-31 | 控制台弹窗 = 自持公共组件（`modal.mjs`——原生 `<dialog>` 基座；单例；遮罩点击不关） | `webui/WEBUI.md` §7 |
+| KD-SV-32 | 服务模型页 = 派生视图（零新端点——`providers` 展平 + `embedding.model`）+ 配置骨架先行 | `webui/WEBUI.md` §7 |
 
 ## 5. 关键决策（本档）
 
@@ -121,13 +127,18 @@
 
 ## 6. 受影响文件与行数预算（总账）
 
-口径：全为新建树——预算 = 实施前估值；已实施落盘：行数 = 实读（口径 = 内容行数 ∥ 文末换行不计），行式 = 实读值（实读日期——设计估），小计 = 预算 ⇒ 实读。全部单档 **≤300 行软线内**（最宽 = `README.md` 实读 241）；500 硬限未触及；全树实读 **5074 行（47 档）**（含 README 复测校正 +1 ∥ 预设面 +63 ∥ 自动更新面 +484 ∥ 控制台面 +716 ∥ 完备化面 +509 ∥ 多语言面 +540 ∥ package.json +1——2026-10-06 回填后）。
+口径：全为新建树——预算 = 实施前估值；已实施落盘：行数 = 实读（口径 = 内容行数 ∥ 文末换行不计），行式 = 实读值（实读日期——设计估），小计 = 预算 ⇒ 实读。全部单档 **≤300 行软线内**（最宽 = `README.md` 实读 241——本批后 ≈255）；500 硬限未触及；全树实读 **5074 行（47 档）**（含 README 复测校正 +1 ∥ 预设面 +63 ∥ 自动更新面 +484 ∥ 控制台面 +716 ∥ 完备化面 +509 ∥ 多语言面 +540 ∥ package.json +1——2026-10-06 回填后）。
+  控制台二轮面预算（2026-10-06 设计轮——本批）：产品面 ≈+1270（gateway ≈+185 ∥ accounts ≈+153 ∥ metering ≈+144 ∥ store ≈+36 ∥ webui ≈+702 ∥ ops ≈+49 ∥ package.json +1——落点 = `prepublishOnly` 清单添本批件）⇒ 全树 **≈6344 行（53 档**——+6 新档）；实施后回填轮校正。
+  控制台弹窗批预算（2026-10-06 设计轮——弹窗批）：产品面 ≈+400（webui ≈+399——modal 新 ≈110 ∥ views-models 新 ≈110 ∥ views-admin +≈110 ∥ style +≈30 ∥ i18n 两表 +≈34 ∥ nav +≈3 ∥ app +≈2；package.json +1——落点 = `prepublishOnly` 清单添本批件：十二件 ⇒ 十三件——以 #972 随正落地后实读为准）⇒ 全树 **≈6744 行（55 档**——+2 新档）；实施后回填轮校正。
   对照设计总账 ≈5237（= 闭式 ≈3247 + 控制台面预期 ≈840 + 完备化面预期 ≈518 + 多语言面预期 ≈632；实读差 −163 = 前账超出 +61 ∥ 控制台面回落 −124 ∥ 完备化面回落 −9 ∥ 多语言面回落 −92 ∥ package.json +1）。
 自动更新批回填（2026-10-06）：**3308 行（35 档）**（+484 = ops 族 +484 ∥ package.json +0——详见 `ops/OPS.md` §6）。
 
-- **板级**：`thincoder-server/package.json`（可发布形：`@thincoder/server`（拟） ∥ `files` 白名单 ∥ `bin` = `thincoder-server` ∥ engines `node>=24` ∥ `prepublishOnly` 门禁；`private` 撤；dependencies 空；实读 26 行（估 ≈30；含 `dev` 脚本行）；`prepublishOnly` 清单现十一件（八 + #962 件 + #963 件 + i18n 件））。
+- **板级**：`thincoder-server/package.json`（可发布形：`@thincoder/server`（拟） ∥ `files` 白名单 ∥ `bin` = `thincoder-server` ∥ engines `node>=24` ∥ `prepublishOnly` 门禁；`private` 撤；dependencies 空；实读 26 行（估 ≈30；含 `dev` 脚本行）；`prepublishOnly` 清单十二件 ⇒ 十三件
+  （八 + #962 件 + #963 件 + i18n 件 + #972 件 + 弹窗批件——以 #972 随正落地后实读为准））。
 - **各域预算表**（「本域文件与行数预算」节）：gateway **≈770 ⇒ 658 ⇒ 951 ⇒ 1007** ∥ accounts **≈570 ⇒ 493 ⇒ 632** ∥ metering **≈260 ⇒ 218 ⇒ 233** ∥ store **≈175 ⇒ 110 ⇒ 124** ∥ webui **≈680 ⇒ 558 ⇒ 943 ⇒ 1006 ⇒ 1545** ∥ ops **≈762 ⇒ 1246 ⇒ 1270 ⇒ 1506 ⇒ 1507** —— 合计 **≈3217 ⇒ 3283 ⇒ 3999 ⇒ 4508 ⇒ 5048**
-  （+ package.json **≈30 ⇒ 25 ⇒ 26** ⇒ 总账 **≈3247 ⇒ 3308 ⇒ 4024 ⇒ 4534 ⇒ 5074**；全树 **47 档**）。
+  （二轮面——2026-10-06 设计轮：gateway **≈1192** ∥ accounts **≈785** ∥ metering **≈377** ∥ store **≈160** ∥ webui **≈2247** ∥ ops **≈1556** —— 合计 **≈6317**）
+  （弹窗批——2026-10-06 设计轮：webui **≈2646**（+≈399）；余域不动 —— 合计 **≈6716**）
+  （+ package.json **≈30 ⇒ 25 ⇒ 26 ⇒ 27 ⇒ 28** ⇒ 总账 **≈3247 ⇒ 3308 ⇒ 4024 ⇒ 4534 ⇒ 5074 ⇒ ≈6344 ⇒ ≈6743 ⇒ ≈6744**；全树 **47 ⇒ 53 ⇒ 55 档**）。
   provider/IA 面回填（2026-10-06——批 `docs/batches/2026-10-06-console-providers.md`）：产品面 **+716 行**（gateway +293 ∥ webui +385 ∥ store +14 ∥ ops +24）∥ 批内件实读 **479** ∥ 全树 **35 ⇒ 41 档**（+7 新档 ∥ −1 退役：`views.mjs`）。
   first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10-06-first-release-completeness.md`）：产品面 **+509 行**（gateway +56 ∥ accounts +139 ∥ metering +15 ∥ webui +63 ∥ ops +236——
   含 README +94 ∥ `thincoder-server/deploy/backup.mjs` 新 **86**）∥ `package.json` **+1**（`dev` 脚本行）∥ 批内件实读 **497** ∥ 全树 **41 ⇒ 44 档**（+3 新档：system ∥ login-guard ∥ backup）。
@@ -140,12 +151,26 @@
 | `.gitignore`（仓根） | 追加两行：`thincoder-server/data/` ∥ `thincoder-server/config.json`（运行期与本地配置不入库）（机检豁免——部署机本地档） | 现行 35 行 ⇒ 预期 37 行（+2） |
 | `docs/server/design/`（本设计集——板 2 档 + 域 6 档） | 建档（本补轮按三层结构 + B 案织入） | 八档 |
 | `docs/batches/2026-10-06-server-gateway.md` | §2 批次任务与设计（批档唯一写入面） | append |
-| `docs/batches/2026-10-06-server-gateway.test.mjs`（已落盘） | 批内件（单位测试——随批留存；见 §8） | 新建——实读 486 行；另按域拆档五件（`-accounts` 493 ∥ `-metering` 188 ∥ `-chat` 498 ∥ `-webui-deploy` 322 ∥ `-model-ref` 194）——合计六件 |
+| `docs/batches/2026-10-06-server-gateway.test.mjs`（已落盘） | 批内件（单位测试——随批留存；见 §8） | 新建——实读 **496** 行；另按域拆档五件（`-accounts` 493 ∥ `-metering` 188 ∥ `-chat` 498 ∥ `-webui-deploy` 322 ∥ `-model-ref` 194）——合计六件 |
 | `docs/batches/2026-10-06-server-presets.md` ∥ `docs/batches/2026-10-06-server-presets.test.mjs`（已落盘） | 本批（provider 预设）批档 §2 ∥ 批内件（单位测试——随批留存；见 §8） | append ∥ 新建——实读 347 行 |
 | `docs/batches/2026-10-06-server-auto-update.md` ∥ `docs/batches/2026-10-06-server-auto-update.test.mjs`（已落盘） | 本批（自动更新）批档 §2 ∥ 批内件（单位测试——随批留存；见 §8） | append ∥ 新建——实读 498 行 |
 | `docs/batches/2026-10-06-console-providers.md` ∥ `docs/batches/2026-10-06-console-providers.test.mjs`（已落盘） | 本批（控制台 provider 管理 + IA/导航）批档 §2 ∥ 批内件（单位测试——随批留存；见 §8） | append ∥ 新建——实读 **479** 行 |
 | `docs/batches/2026-10-06-first-release-completeness.md` ∥ `docs/batches/2026-10-06-first-release-completeness.test.mjs`（已落盘） | 本批（首版完备化六项）批档 §2 ∥ 批内件（单位测试——随批留存；见 §8） | append ∥ 新建——实读 **497** 行 |
 | `docs/batches/2026-10-06-server-i18n.md` ∥ `docs/batches/2026-10-06-server-i18n.test.mjs`（已落盘） | 本批（控制台多语言）批档 §2 ∥ 批内件（单位测试——随批留存；见 §8） | append ∥ 新建——实读 **298** 行；随正三件（已核销——父侧落地）= `-webui-deploy` **322** ∥ `-auto-update` **498** ∥ `-console-providers` **479**（行数 ±0——断言文本就地收正：十二/十三档 ∥ 十一件 ∥ `labelKey`；门禁复跑 99/99） |
+| `docs/batches/2026-10-06-console-completeness-2.md` ∥ `docs/batches/2026-10-06-console-completeness-2.test.mjs`（拟新增） | 本批（控制台可见面二轮——六面）批档 §2 ∥ 批内件（单位测试——随批留存；见 §8） | append ∥ 新建（写面受阻 ⇒ `.thincoder/tmp/` 父侧 copy——沿先例） |
+| 随正七件（父侧落地——跨批写门禁） | `-console-providers`（nav 断言 ∥ 档目 15/16） ∥ `-server-gateway-webui-deploy`（档目 12/13 ⇒ 15/16） ∥ `-server-i18n`（键集 ∥ labelKeys 9 ⇒ 11 ∥ JS 档单 ∥ 新档直发） ∥ `-server-gateway-accounts`（key 行形断点五处） ∥ `-first-release-completeness`（`/api/system` 深比 + `embedding.model`） | 行数（实读）⇒ ≤±N 与断言改点 = 下注①–⑤；实施后回填核销 |
+| 随正七件（续——本 fix 轮补入两件） | `-server-gateway`（基准件——v3 断言改点） ∥ `-server-auto-update`（门禁件数 11 ⇒ 12 ∥ 注释同拍） | 同上（行数/改点 = 下注①–⑤） |
+| `docs/batches/2026-10-06-console-modals.md` ∥ `docs/batches/2026-10-06-console-modals.test.mjs`（拟新增） | 本批（控制台弹窗——成员弹窗 + 公共组件 + 服务模型页）批档 §2 ∥ 批内件（单位测试——随批留存；见 §8） | append ∥ 新建 |
+| 随正五件（父侧——跨批写门禁；弹窗批） | `-console-completeness-2`（nav 组项 6 ⇒ 7 ∥ 档目 15/16 ⇒ 17/18 ∥ labelKeys 11 ⇒ 12） ∥ `-console-providers`（nav 断言） ∥ `-webui-deploy`（档目） ∥ `-server-i18n`（键集/JS 档单） ∥ `-server-auto-update`（门禁件数 12 ⇒ 13 ∥ `:9`/`:439`/`:480` 注释与断言同拍——以 #972 随正落地后实读为准） | 断点以当刻盘面为准——登记 = §9 R26；行数增量 = 注⑥ |
+| `thincoder-server/package.json`（板级件——`prepublishOnly` 清单） | 本批（弹窗批）：清单添本批件——十二件 ⇒ **十三件**（以 #972 随正落地后实读为准） | 全树总账 +1（≈6743 ⇒ ≈6744） |
+
+- 注① 随正七件行数（实读——内容行 ∥ 文末换行不计）⇒ 预期增量（五件）：`-console-providers` 479 ⇒ ≤±4 ∥ `-server-gateway-webui-deploy` 322 ⇒ ≤±6 ∥ `-server-i18n` 298 ⇒ ≤±10 ∥ `-server-gateway-accounts` 493 ⇒ ≤±5 ∥ `-first-release-completeness` 497 ⇒ ≤±3。
+- 注② 同上（本 fix 轮补入两件 + 新批内件）：`-server-gateway`（基准件）496 ⇒ ≤±2 ∥ `-server-auto-update` 498 ⇒ ≤±1 ∥ 新批内件（拟新增）估算 ≈450 行；越 500 硬线预案 = 注③；实施后回填核销。
+- 注③ 拆档预案（增后越 500 时启用——沿按域拆档先例）：`-server-gateway` 抽 `③ db 迁移链` 段独立成件 ∥ `-server-gateway-accounts` 抽 CLI/入口段独立成件。
+- 注④ 断言改点（基准件——v3 迁移致 v2 断言整体失效）：`:9`/`:164` 标题文本随正（五表 + 三索引 + user_version=2 ⇒ 六表 + 六索引 + user_version=3）∥
+  `:167`/`:168` SCHEMA_VERSION/readVersion ⇒ 3 ∥ `:170` 表清单补 `audit_events` ∥ `:172` 索引数 3 ⇒ 6 ∥ `:186` migrate 返回 ⇒ 3 ∥ `:201`/`:208` readVersion ⇒ 3。
+- 注⑤ 断言改点（基准件续 ∥ 自动更新件）：`:205` 失败探针 `v: 3` ⇒ `v: 4` ∥ `:207` 错误消息同步（`（v3）` ⇒ `（v4）`）；`-server-auto-update` = `:480` 件数 11 ⇒ 12 ∥ 断言消息「应列十一件」⇒ 十二件 ∥ `:9`/`:439` 段头注释同拍。
+- 注⑥（弹窗批随正五件 + 新批内件）：行数（实读）⇒ 预期增量：`-console-completeness-2`（拟新增 ≈450——实施后实读收正）∥ `-console-providers` ≤±6 ∥ `-webui-deploy` ≤±8 ∥ `-server-i18n` ≤±12 ∥ `-server-auto-update` ≤±2（门禁件数 12 ⇒ 13——以 #972 随正落地后实读为准）∥ 新批内件（拟新增）估算 ≈450 行；越 500 硬线 ⇒ 沿注③拆档预案（沿注②先例）；实施后回填核销。
 
 ## 7. 验收对照（需求 §2 验收表 → 判据域档）
 
@@ -162,9 +187,12 @@
 | AC-9（功能点 9——provider 预设；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `ops/OPS.md` §7 判据（预设展开 ∥ 未知预设拒启 ∥ `name` 缺省 ∥ 覆盖语义 ∥ 漂移件） | 批内件 |
 | AC-10（功能点 10——自动更新；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `ops/OPS.md` §7 判据（自检 ∥ 档位 ∥ 自升 ∥ 版本可见性 ∥ 容器收敛——机制全文 = `ops/OPS.md` §5.4） | 批内件 + 收口轮 |
 | AC-11（功能点 11——控制台 provider/模型管理；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `gateway/API.md` §5 判据（CRUD 三态 ∥ 保存即热生效 ∥ 密钥掩码/日志零明文 ∥ 发现与降级）+ `ops/OPS.md` §7 种子行 + `webui/WEBUI.md` §6 控制台行 | 批内件 |
-| AC-12（功能点 14——控制台 IA；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `webui/WEBUI.md` §6 判据（`nav.mjs` 直测：组/项 ∥ 重定向 ∥ 角色默认 ∥ denied；静态九档 ∥ 拆分） | 批内件 |
+| AC-12（功能点 14——控制台 IA；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `webui/WEBUI.md` §6 判据（`nav.mjs` 直测：组/项 ∥ 重定向 ∥ 角色默认 ∥ denied；静态档目随正（二轮后 15/16 ⇒ 弹窗批后 17/18） ∥ 拆分） | 批内件 |
 | AC-13（功能点 12——首版完备化六项；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 分六面判据：① `gateway/API.md` §5 ∥ ② `accounts/ACCOUNTS.md` §5 ∥ ③④ `webui/WEBUI.md` §6 ∥ ⑤ `ops/OPS.md` §7 ∥ ⑥ `metering/METERING.md` §4 | 批内件 + 收口轮 |
 | AC-14（功能点 13——控制台多语言；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `webui/WEBUI.md` §6 判据（检测矩阵 ∥ 两表键集对齐 ∥ 键引用闭合 ∥ 错误码映射 ∥ 档目/静态直发随正） | 批内件 + 收口轮 |
+| AC-15（功能点 15——控制台可见面六面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 分六面判据：① `gateway/API.md` §5 + `webui/WEBUI.md` §6 ∥ ② `metering/METERING.md` §4 + `webui/WEBUI.md` §6 ∥ ③ `gateway/API.md` §5 + `webui/WEBUI.md` §6 ∥ ④ `accounts/ACCOUNTS.md` §5 + `store/STORE.md` §3 ∥ ⑤ `webui/WEBUI.md` §6 ∥ ⑥ `metering/METERING.md` §4 + `webui/WEBUI.md` §6 | 批内件 + 收口轮 |
+| AC-16（功能点 16——控制台弹窗交互；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `webui/WEBUI.md` §6 判据（`modal.mjs` 在册 ∥ 成员三态弹窗 ∥ 一次性秘密不破 ∥ 静态档目 17/18） | 批内件 + 收口轮 |
+| AC-17（功能点 17——服务模型页；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `webui/WEBUI.md` §6 判据（列表 = `/v1/models` 同源 ∥ 详情弹窗 ∥ 配置骨架不落字段 ∥ admin 面） | 批内件 + 收口轮 |
 | 非功能 · 零依赖 | 本档 §1 ∥ §5 KD-SV-2（口径）；全树 import 扫描断言 = 批内件 | 批内件 |
 | 非功能 · 仅内网 | `ops/OPS.md` 验收判据（`host` 必填 fail-closed + `0.0.0.0` 警告） | 批内件 |
 | 非功能 · 前端自洽 | `webui/WEBUI.md` 验收判据（零外部引用扫描） | 批内件 |
@@ -201,6 +229,15 @@
 | R16 | **实施后回填轮（已办）**：预算实读（六面增量 ∥ 新三档——§6 全树 **4534 行（44 档）**）∥ 批内件实读 **497** ∥ 旧件随正核销（`-auto-update` 件 prepublishOnly 件数断言 9 ⇒ 10——父侧落地在册） | 实施后设计回填轮（沿先例） | 已办（2026-10-06） |
 | R17 | **需求档回笔（已办）**：§2:13 措辞收正已落（需求档变更记录在册）+ AC-14 行已落需求档验收表（`docs/server/requirements/PROJECT.md`——2026-10-06；判据 = `webui/WEBUI.md` §6 AC-14 行） | 需求档回笔 | 已办（2026-10-06） |
 | R18 | **实施后回填轮（已办）**：预算实读（i18n 三档 ∥ 接线增量——§6 全树 **5074 行（47 档）**）∥ 批内件实读 **298** ∥ 旧件随正核销（`-webui-deploy` ∥ `-auto-update` ∥ `-console-providers` 三件——父侧落地在册；门禁复跑 99/99） | 实施后设计回填轮（沿先例） | 已办（2026-10-06） |
+| R19 | **需求档回笔（本批交付）**：AC-12 行随正（管理 4 ⇒ 6 ∥ `#/admin` 重定向 ⇒ `/admin/overview` ∥ 静态九档 ⇒ 15/16——与 §2:15③④ 冲突面收口）；另 AC-12「静态九档」= i18n 后已陈（现有 12/13） | 需求档回笔（主 agent 笔） | 随本批评审/收口；设计侧行已随正（`webui/WEBUI.md` §6 AC-12 行） |
+| R20 | **披露——「成员增删」之「删」零既有路径**：功能点 15④ 审计事件目录含「成员增删」，而全库零成员删除路径（实核——控制台/CLI 皆无）；设计只覆盖「增」（member_create）；「成员删除」功能不在任何功能点内 | 需求措辞面裁定（回笔 or 立后续项） | 待主 agent/用户裁；审计面零阻塞 |
+| R21 | **实施后回填轮**：预算实读（六面增量 ∥ 新六档——§6 全树 ≈6344 推算值收正）∥ 批内件行数 ∥ 随正七件核销 | 实施后设计回填轮（沿先例） | 实施后轮 |
+| R22 | **随正七件登记（父侧——跨批写门禁）**：`-console-providers` ∥ `-webui-deploy` ∥ `-server-i18n` ∥ `-server-gateway-accounts` ∥ `-first-release-completeness` ∥ `-server-gateway`（基准件——v3 断言改点） ∥ `-server-auto-update`（门禁件数 11 ⇒ 12）（逐件断点与行数 = §6 随动表行 + 注①–⑤） | 父侧直接执行（实施轮同拍） | 实施轮落地 |
+| R23 | **需求档回笔（已办）**：AC-12 行随正（管理 6 ⇒ **7** ∥ 静态档目 15/16 ⇒ **17/18**——弹窗批后）+ §2:14 侧栏页数注（九页 ⇒ 十页）——设计侧行已随正（`webui/WEBUI.md` §6） | 需求档回笔（主 agent 笔） | 已办（2026-10-06——需求档 `requirements/PROJECT.md:166` 回笔在盘） |
+| R24 | **配置候选表（用户裁定——功能点 17②「可配置项 = 用户未定」）**：≤5 候选——开放/停用（模型级——复用 `providers.models`）∥ 默认请求参数（触纯透传边界）∥ 限流（现不做项）∥ 展示元数据（零转发影响）∥ 成本权重（触「不做对外计费」边界）——逐项说明/代价 = 批档 §2 上抛表；**未裁前只落详情 + 配置骨架**；裁定后另轮落字段 | 用户裁定 | 待用户 |
+| R25 | **i18n 表拆域（断点触发登记）**：弹窗批后 zh ≈309 ∥ en ≈305（估——双表均越 300 软线）⇒ 按域拆表；处置 = 独立结构轮（本批面已定 ∥ 撞在途批断言面）；实施实读为准 | 处置已定（独立结构轮） | 独立结构轮（实施后另轮） |
+| R26 | **随正五件登记（父侧——跨批写门禁）**：`-console-completeness-2`（nav 6 ⇒ 7 ∥ 档目 15/16 ⇒ 17/18 ∥ labelKeys 11 ⇒ 12） ∥ `-console-providers` ∥ `-webui-deploy` ∥ `-server-i18n` ∥ `-server-auto-update`（门禁件数 12 ⇒ 13 ∥ `:9`/`:439`/`:480` 注释与断言同拍——以 #972 随正落地后实读为准）；断点以当刻盘面为准；行数 = §6 注⑥ | 父侧直接执行（实施轮同拍） | 实施轮落地 |
+| R27 | **实施后回填轮**：预算实读（弹窗批增量 ∥ 新两档——§6 全树 ≈6744 推算值收正）∥ 批内件行数 ∥ 随正五件核销 | 实施后设计回填轮（沿先例） | 实施后轮 |
 
 ## 变更记录
 
@@ -226,3 +263,7 @@
 - 2026-10-06：实施后回填轮（R14——批 `docs/batches/2026-10-06-console-providers.md`）：§6 全树 **4024 行（41 档）**（域级 gateway ⇒ 951 ∥ store ⇒ 124 ∥ webui ⇒ 943 ∥ ops ⇒ 1270；控制台面 +716）∥ 随动表本批行收正（批内件实读 **479**）∥ §9 R14 销项（旧件随正五件核销）；域档同拍（`webui/WEBUI.md` §5 ∥ `gateway/API.md` §4 ∥ `store/STORE.md` §4 ∥ `ops/OPS.md` §6——含 `views.mjs` 退役行迁移期引文标记）。
 - 2026-10-06：实施后回填轮（R16——批 `docs/batches/2026-10-06-first-release-completeness.md`）：§2.1 三域行「拟新增」标记随正 ∥ §6 全树 **4534 行（44 档）**（域级 gateway ⇒ 1007 ∥ accounts ⇒ 632 ∥ metering ⇒ 233 ∥ webui ⇒ 1006 ∥ ops ⇒ 1506；完备化面 +509 ∥ package.json +1）∥ 随动表本批行收正（批内件实读 **497**）∥ §9 R16 销项。
 - 2026-10-06：实施后回填轮（R18——批 `docs/batches/2026-10-06-server-i18n.md`）：§6 全树 **5074 行（47 档）**（域级 webui ⇒ **1545** ∥ ops ⇒ **1507**；对照总账 ⇒ ≈5237；多语言面 +540）∥ 随动表本批行收正（批内件实读 **298** ∥ 随正三件核销——322 ∥ 498 ∥ 479）∥ §2.1「拟新增」标记随正 ∥ §9 R18 销项。
+- 2026-10-06：控制台可见面二轮设计轮（批 `docs/batches/2026-10-06-console-completeness-2.md`——需求 §2:15 ∥ 台账 #972）——§1 定位句（九页 + 二轮面）∥ §2.1 模块表随正（gateway 十档 ∥ accounts 七档 ∥ webui 十五档；职责补审计/报表/控制台数据面）∥ §2.2 控制台链（九页）∥ §4 索引增 KD-SV-27–30（标题 1–26 ⇒ 1–30）∥ §6 预算随动（产品面 ≈+1237 ∥ 全树 ⇒ ≈6344（53 档））+ 随动表补本批行（含随正五件）∥ §7 补 AC-15 行 ∥ §9 增 R19–R22（含需求档回笔与「成员删」披露）。
+- 2026-10-06：fix 轮（评审 #69——批 `docs/batches/2026-10-06-console-completeness-2.md` §3 十项，本档面）：随正清单五件 ⇒ 七件（+ 网关基准件 ∥ 自动更新件——断言改点 = §6 注④⑤）∥ `prepublishOnly` 件数十二件（+ #972 件——落点 = 清单单行添项）∥ KD-SV-20 七页 ⇒ 九页 ∥ 合数 ≈+1237 ⇒ ≈+1270（分项和收正）∥ 基准件实读 486 ⇒ 496 + 七件行数注/拆档预案（§6 注①②③）∥ §9 R21/R22 随正七件。
+- 2026-10-06：控制台弹窗批设计轮（批 `docs/batches/2026-10-06-console-modals.md`——需求 §2:16 ∥ §2:17 ∥ 台账 #973/#974）——§1 定位句（十页）∥ §2.1 webui 行（十七档 + 弹窗职责）∥ §2.2 控制台链（十页）∥ §3 文档地图 webui 行（+ 弹窗机制）∥ §4 索引增 KD-SV-31/32（标题 1–30 ⇒ 1–32）∥ KD-SV-20 九页 ⇒ 十页 ∥ §6 预算随动（产品面 ≈+399 ∥ 全树 ⇒ ≈6743（55 档））+ 随动表补本批行（含随正四件 + 注⑥）∥ §7 补 AC-16/AC-17 行 + AC-12 行档目随正 ∥ §9 增 R23–R27（含配置候选表与 i18n 拆表登记）。
+- 2026-10-06：fix 轮（评审轮次 1 第 1–4 项——批 `docs/batches/2026-10-06-console-modals.md` §3）：§6 随正四件 ⇒ 五件（+ `-server-auto-update`——门禁件数 12 ⇒ 13）+ `thincoder-server/package.json` 登记（`prepublishOnly` 清单十二件 ⇒ 十三件；全树总账 +1 ⇒ ≈6744）∥ §9 R23 销项（已办——需求档回笔在盘）∥ §9 R25 双表收正（≈309 ∥ ≈305）+ 处置落定（独立结构轮）∥ §6 注⑥ 随正（五件 + 新批内件估算 ≈450）。

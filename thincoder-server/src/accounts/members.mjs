@@ -96,6 +96,11 @@ export function countAdmins(db) {
   return Number(db.prepare("SELECT COUNT(*) AS n FROM members WHERE role = 'admin'").get().n)
 }
 
+/** 成员总数（管理总览读数——gateway/API.md §2.4 `GET /api/overview`）。 */
+export function countMembers(db) {
+  return Number(db.prepare("SELECT COUNT(*) AS n FROM members").get().n)
+}
+
 /** 建成员（页面与 CLI 共用）：password 未给 ⇒ 生成一次性临时密码（`generated` 标记）。 */
 export async function createMember(db, { username, name = null, role = "user", password = null, now = Date.now() } = {}) {
   if (typeof username !== "string" || username.trim() === "") {

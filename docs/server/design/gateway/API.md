@@ -12,7 +12,8 @@
 | provider 管理面 | `GET/POST/PATCH/DELETE /api/admin/providers*` | admin 会话（服务端判定——`user` ⇒ 403） | 本档 §2.2 |
 | 账号/自助/管理面 | `/api/*`（成员/用量族——provider 管理面另列） | 会话 cookie + 角色判定 | `accounts/ACCOUNTS.md` §3 ∥ `metering/METERING.md` §3（用量/配额端点） |
 | 系统面 | `GET /healthz`（公开——零鉴权只读探活） ∥ `GET /api/system`（会话——版本/更新状态） | 无 ∥ 会话 | 本档 §2.3 |
-| 前端静态面 | `GET /` ∥ `public/**`（`app.mjs` ∥ `nav.mjs` ∥ `views-*` 五档 ∥ `style.css`） | 公开（页面壳零数据） | `webui/WEBUI.md` §1 |
+| 控制台数据面 | `GET /api/overview`（管理总览读数） ∥ `GET /api/admin/embedding` ∥ `POST /api/admin/embedding/test`（向量服务面——探活/试跑） | admin 会话（服务端判定——`user` ⇒ 403） | 本档 §2.4 |
+| 前端静态面 | `GET /` ∥ `public/**`（`app.mjs` ∥ `nav.mjs` ∥ `views-*` 八档 ∥ `style.css`） | 公开（页面壳零数据） | `webui/WEBUI.md` §1 |
 | 其余 | —— | —— | 404（JSON 错误形 = §3） |
 
 - 分派 = `thincoder-server/src/gateway/server.mjs`（已落盘）注册行制——新端点 = 注册一行（断点列 = `EVOLUTION.md` §1-G1）。
@@ -62,10 +63,23 @@
 | 方法 + 路径 | 鉴权 | 语义 |
 |---|---|---|
 | `GET /healthz` | 无（公开——探针入口；零鉴权只读） | 探活：`{ status, version, uptime, db }`——`status` = `"ok"` ∥ `"degraded"`；`version` = 运行树版本（同 `ready` 行——`ops/OPS.md` §5.4(g)）；`uptime` = 进程运行秒数；`db` = `"ok"` ∥ `"error"`（`SELECT 1` 一探）。正常 ⇒ 200；db 探活失败 ⇒ **503**（同形——`status:"degraded"` ∥ `db:"error"`）。`Cache-Control: no-store`；**不走统一错误信封**（探活响应自含状态）；仅注册 GET（HEAD ∥ POST ⇒ 404）。 |
-| `GET /api/system` | 会话（两角色） | 版本与更新状态（控制台数据源——`webui/WEBUI.md` §2.1）：`{ version, update: { mode, lastCheckAt, latest } }`——`mode` = 生效档位（`false` ∥ `"notify"` ∥ `"auto"`——钉版抑制后；未就位 ⇒ `null`）；`lastCheckAt` = 最近自检时刻（unix ms ∥ `null` = 未检）；`latest` = 已见新版号 ∥ `null`（无新版 ∥ 未检——自检失败静默同面，`ops/OPS.md` §5.4(a)）。无 ∥ 过期会话 ⇒ 401 `unauthorized`（同族口径）。 |
+| `GET /api/system` | 会话（两角色） | 版本与更新状态（控制台数据源——`webui/WEBUI.md` §2.1）：`{ version, update: { mode, lastCheckAt, latest }, embedding: { model } }`——`mode` = 生效档位（`false` ∥ `"notify"` ∥ `"auto"`——钉版抑制后；未就位 ⇒ `null`）；`lastCheckAt` = 最近自检时刻（unix ms ∥ `null` = 未检）；`latest` = 已见新版号 ∥ `null`（无新版 ∥ 未检——自检失败静默同面，`ops/OPS.md` §5.4(a)）；`embedding.model` = 嵌入引擎模型名（调用所需非机密——**地址不在本端点**，admin 面 = §2.4）。无 ∥ 过期会话 ⇒ 401 `unauthorized`（同族口径）。 |
 
 - 优先级：两路径均注册路由（分派先于静态兜底——§1）；与 `/v1` ∥ `/api` 族互不重叠。
 - 更新状态 = 更新器进程内状态（`thincoder-server/src/ops/update.mjs`——`getStatus()` 导出；入口惰性注入——路由注册先于更新器创建）；自检成功 ⇒ 更新状态（有新 ⇒ 置版号 ∥ 无新 ⇒ 清 `null`）；失败 ⇒ 保前值（静默口径同面）。
+- `embedding` 字段 = 配置真值直读（`config.embedding.model`——装配注入）；**地址不下发**（`baseURL` 归 admin 面——§2.4；用户面只需模型名）。
+
+### 2.4 控制台数据面（管理总览 ∥ 向量服务——功能点 15①③）
+
+（端点族 = `/api/overview` ∥ `/api/admin/embedding*`；判权 = `requireAdmin` 口径——`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401；错误形 = §3 全码沿用——无新码；写端点 JSON 型门同 §1 前言）
+
+| 方法 + 路径 | 语义 |
+|---|---|
+| `GET /api/overview` | 管理总览读数（`webui/WEBUI.md` §2.3③）：`{ today: { requests, totalTokens }, members: { count } }`——`today` = 服务器本地自然日窗（界 = 当日 00:00；与用量报表**同源**——同一聚合函数）；`requests` = 行数（含 error/aborted）∥ `totalTokens` = `SUM(total_tokens)`（NULL 不计）。健康/更新两卡不走本端点（前端共享态——`webui/WEBUI.md` §2.3⑤） |
+| `GET /api/admin/embedding` | 引擎配置真值：`{ baseURL, model }`（= `config.embedding`——逐值同源）；**`apiKey` 不出响应**（密钥面零下发） |
+| `POST /api/admin/embedding/test` | 探活/试跑（单端点——**服务端代发**；引擎 key 代持——浏览器零涉）：body `{ text? }`（缺省 = 内置短探针文本）；成功 ⇒ 200 `{ ok: true, dimensions, ms }`（`dimensions` = `data[0].embedding.length` ∥ `ms` = 用时）；失败 ⇒ 200 `{ ok: false, error: { kind, message }, ms? }`——`kind` ∈ `timeout` ∥ `unreachable` ∥ `http_error` ∥ `bad_response`；**不走统一错误信封**（诊断自含状态——沿 `/healthz` 先例）；超时 10s（沿发现家族）；**不落库不计量**（不经 usage 记账路径 ∥ 不查配额） |
+
+- **装配接线**：gateway 注册行一条（同 provider 管理面——`bin/thincoder-server.mjs` 一行注册）。
 
 ## 3. 错误形（全码单源）
 
@@ -86,9 +100,11 @@
 | `thincoder-server/src/gateway/sse-tap.mjs`（已落盘） | **90**（实读 2026-10-06——设计估 ≈80） | `data:` 行增量扫描 ∥ usage 提取 ∥ 有界缓冲 |
 | `thincoder-server/src/gateway/providers.mjs`（已落盘） | **146**（实读 2026-10-06——设计估 ≈70；#962 +91 = 行→条目 ∥ 注册表构建（`env:` 解析） ∥ 运行时箱 ∥ 装配引导） | provider 注册 ∥ 模型派发 ∥ 派发失败形 ∥ 运行时（§2.2） |
 | `thincoder-server/src/gateway/provider-admin.mjs`（已落盘） | **无 ⇒ 197**（实读 2026-10-06——#962 设计估 ≈220；行 CRUD ∥ 掩码回显 ∥ 模型发现 ∥ 管理端点注册——§2.2） | provider 管理面（控制台——仅 admin） |
-| `thincoder-server/src/gateway/system.mjs`（已落盘） | **无 ⇒ 55**（实读 2026-10-06——设计估 ≈70；探活 handler ∥ `/api/system`（版本/更新状态） ∥ 注册——§2.3） | 系统面（healthz ∥ system） |
+| `thincoder-server/src/gateway/system.mjs`（已落盘） | **无 ⇒ 55 ⇒ ≈60**（实读 2026-10-06——设计估 ≈70；探活 handler ∥ `/api/system`（版本/更新状态；本批 +≈5 = `embedding` 字段） ∥ 注册——§2.3） | 系统面（healthz ∥ system） |
+| `thincoder-server/src/gateway/embedding-admin.mjs`（拟新增） | **≈110**（设计估——引擎配置读（真值 ∥ 零密钥） ∥ 探活/试跑单端点（代发 ∥ kind 四归类 ∥ 超时） ∥ 注册——§2.4） | 向量服务面（控制台——仅 admin） |
+| `thincoder-server/src/gateway/overview.mjs`（拟新增） | **≈70**（设计估——今日合计（同源聚合） ∥ 成员数 ∥ 注册——§2.4） | 管理总览读数（控制台——仅 admin） |
 | `thincoder-server/src/gateway/errors.mjs`（已落盘） | **56**（实读 2026-10-06——设计估 ≈50；本批 +1 = `too_many_attempts` 码） | 错误形构造 ∥ 发送助手（含账号面码） |
-| **小计** | **≈770 ⇒ 658 ⇒ 951**（#962 实读：+293）**⇒ 1007**（#963 实读：+56 = system 新 55 ∥ errors +1——口径 = #962 后） | —— |
+| **小计** | **≈770 ⇒ 658 ⇒ 951**（#962 实读：+293）**⇒ 1007**（#963 实读：+56 = system 新 55 ∥ errors +1——口径 = #962 后）**⇒ ≈1192**（本批 +≈185 = embedding-admin 新 ≈110 ∥ overview 新 ≈70 ∥ system +≈5） | —— |
 
 ## 5. 验收判据（机检面）
 
@@ -97,7 +113,8 @@
 | AC-2（功能点 2） | SSE **逐块**：mock 上游两帧间隔——客户端先收帧 1 再等帧 2（证明非整段缓冲）∥ 帧字节逐值一致 ∥ `[DONE]` 透传；**收口轮四端任一实跑一轮**（真机） | 批内件 + 收口轮 |
 | AC-6（功能点 6） | mock 引擎（断言流量命中引擎 `baseURL` 的 `/embeddings`）⇒ 响应体透传（维度/条数逐值不变）+ 记账 `endpoint='embeddings'` | 批内件 |
 | AC-11（功能点 11——控制台 provider/模型管理；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | admin 三态（`user` ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200）∥ **保存即热生效**（POST 后 `/v1/models` 立含 + mock 上游完成一次请求；PATCH 改 `baseURL` ⇒ 下一请求命中新地址；DELETE ⇒ 下一请求 404——零重启；在途流照常收尾）∥ 密钥面（列表掩码不含明文 ∥ 日志零明文 ∥ `env:` 引用原样回显）∥ 发现（mock `/models` ⇒ 清单去重；不可达 ∥ 超时 ∥ 非 JSON ⇒ 502 + 手填降级）∥ 校验单源（非法条目 ∥ 重名 ∥ `env:` 缺位 ⇒ 400 且库与运行时零变）∥ 预设列表（`GET /api/admin/providers/presets` ⇒ 20 家 ∥ 响应零 `apiKey` 字段；预填 = 表单起手，写入仍走 POST 全字段 + 单源校验） | 批内件 |
-| AC-13（功能点 12——首版完备化①③；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① `/healthz`：无鉴权 GET ⇒ 200 `{ status:"ok", version, uptime（数）, db:"ok" }`（`no-store`）∥ db 故障（注入口径）⇒ 503 `degraded` ∥ HEAD/POST ⇒ 404 ∥ 探针不触会话/团队 key 面；③ `/api/system`：无会话 ⇒ 401 ∥ 会话 ⇒ 200 `{ version, update:{ mode, lastCheckAt, latest } }`（假 registry 自检后 `latest`/`mode` 随实况——`"notify"` 可见不自装） | 批内件 |
+| AC-13（功能点 12——首版完备化①③；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① `/healthz`：无鉴权 GET ⇒ 200 `{ status:"ok", version, uptime（数）, db:"ok" }`（`no-store`）∥ db 故障（注入口径）⇒ 503 `degraded` ∥ HEAD/POST ⇒ 404 ∥ 探针不触会话/团队 key 面；③ `/api/system`：无会话 ⇒ 401 ∥ 会话 ⇒ 200 `{ version, update:{ mode, lastCheckAt, latest }, embedding:{ model } }`（假 registry 自检后 `latest`/`mode` 随实况——`"notify"` 可见不自装） | 批内件 |
+| AC-15①③（功能点 15——向量服务面 ∥ 管理总览；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① mock 引擎：探活/试跑 ⇒ `ok:true` + `dimensions` 逐值（两维向量 ⇒ 2） ∥ **不落库不计量**（usage 行数零增 ∥ 配额零涉） ∥ 不可达 ∥ 超时 ∥ HTTP 非 2xx ∥ 响应形不符 ⇒ `ok:false` + `kind` 四值分类 ∥ `GET /api/admin/embedding` = 配置真值且零 `apiKey` 字段 ∥ `/api/system` 含 `embedding.model`（两角色）且零地址字段；③ `/api/overview`：注入行集 ⇒ `today` 数值逐值 = 用量报表同日窗（同源断言）∥ 空集 ⇒ 0（零错）∥ admin 三态（user ⇒ 403 ∥ 无会话 ⇒ 401） | 批内件 |
 
 ## 6. 关键决策（本域）
 
@@ -106,6 +123,7 @@
 | KD-SV-4 | **模型派发 = `provider/model` 复合键精确匹配（按 provider 各持 `models` 列表）**——非别名 ∥ 非策略路由 | 多 provider 支持的正确性最小面：配置查表 ≠「模型别名/路由」（不做项所指）；**同名模型跨 provider 并存且各自可达**；未命中（含裸名——不解析）⇒ 404 `model_not_found`（提示带前缀形）；**同 provider 内重名 ⇒ 拒启**（防笔误）；`/v1/models` = 带前缀名清单 | 前缀通配路由（引入规则语言——越「不做」线）· 单上游写死（不满足「各 provider 的端点」）· 按请求头/参数选 provider（新增客户端契约——四端须改，违「baseURL 指入即用」）· **裸名兜底解析 ⇒ 否（无隐式解析）** |
 | KD-SV-5 | **流式计量 = 请求注入 `stream_options.include_usage: true`** + 旁路 tap | OpenAI 兼容端点的流式 usage 只有被请求时才回传；不注入 ⇒ 流式请求全部无 token（AC-3 失效）。规则：`stream === true` 且 `stream_options.include_usage !== true` ⇒ 置 true（显式 false 亦覆盖——计量完整性优先；该字段只附加用量帧）；非流式不动。消费方容忍实证 = 四端核 `readSSE` 对 usage 帧（`choices: []`）直取后跳（`thincoder-core/provider/sse.mjs`） | 不注入 + 流式无计量（AC-3 不达）· 整段缓冲后再解析（违逐块透传）· 请求侧加 `stream:false` 改写（改变客户端语义） |
 | KD-SV-10 | **SSE tap = 有界只读扫描**（行缓冲 ∥ 单行上限 1 MiB ∥ BOM 剥除 ∥ CRLF 容错） | 中继字节面原样 `pipe`（零改）；tap 只旁路解析 `data:` 行 JSON 取 `usage`；单行上限防病态膨胀（超限弃该行扫描——中继不受影响） | 全量缓冲解析（违逐块）· 正则抠 `usage`（脆弱——JSON 解析稳）· 无上限缓冲（恶意流可撑内存） |
+| KD-SV-30 | **向量服务面 = 配置真值经 admin 端点 + 服务端代探/代试**：`GET /api/admin/embedding`（地址/模型——零密钥）∥ `POST /api/admin/embedding/test`（服务端 `/embeddings` 最小调用——探活与试跑单端点；成败自含形（沿 `/healthz` 先例）；不落库不计量）；`/api/system` 仅下发 `embedding.model`（两角色）——地址不下发用户面 | 引擎地址 = infra 面（admin 全量 ∥ 用户面 = 模型名 + snippet）；浏览器不持引擎 key（代发必需——密钥面零涉）；诊断自含形 = UI 直接渲染失败分类（四 kind——不吞细节）；探活 = 真实调用（`/models` 不保证存在——Ollama/TEI 各异） | 浏览器直连引擎（key 落浏览器——否）· `GET /models` 探活（引擎面不保证——形不符）· 探活并入 `/healthz`（热路径重探 ∥ 语义膨胀）· 探活走 `/v1/embeddings` 记账路径（诊断耗度——不落库不计量在案） |
 
 ## 7. 用例（本域）
 
@@ -136,6 +154,10 @@
 | B16 | 边界 | `GET /healthz`（db 探活失败——注入口径） | 503；`status:"degraded"` ∥ `db:"error"` |
 | E16 | 错误 | `POST /healthz` ∥ `HEAD /healthz` | 404（未注册形——探针面单一） |
 | E17 | 错误 | 无会话 `GET /api/system` | 401 `unauthorized` |
+| N21 | 正常 | admin + `POST /api/admin/embedding/test`（mock 引擎回两维向量） | 200 `{ ok:true, dimensions:2, ms≥0 }`；usage 行零增；`GET /api/admin/embedding` 回配置真值（零 `apiKey`） |
+| N22 | 正常 | admin + `GET /api/overview`（注入今日两行） | `{ today:{ requests:2, totalTokens:和 }, members:{ count } }`——与 `/api/usage/summary` 同日窗同源 |
+| B17 | 边界 | 引擎不可达 ∥ 超时 ∥ 非 2xx ∥ 响应无 `data[0].embedding` | `ok:false` + `kind` 四值（`unreachable`/`timeout`/`http_error`/`bad_response`）；服务照常 |
+| E18 | 错误 | user ∥ 无会话 ⇒ 三端点（overview ∥ embedding 两） | 403 `forbidden` ∥ 401 `unauthorized` |
 
 ## 8. 本域边界（不做的面）
 
@@ -143,6 +165,7 @@
 - 嵌入引擎管理面（引擎起停手动——需求 §4）；多实例/横向扩展 = 触发项（`EVOLUTION.md` §2）。
 - provider 管理面不做：本机 CLI 面（控制台 = 单一面——需求点名）∥ URL 白名单/出口限制（admin 权限自担——内网工具面）∥ 变更历史/回滚（行即现值——无版本化）∥ 渠道/灰度/多版本并存（沿更新面不做项——`ops/OPS.md` §10）。
 - 健康/系统面不做：metrics/Prometheus ∥ 深度依赖探活（仅 db 一探） ∥ `unhealthy` 自动处置（外部工具面） ∥ `/api/system` 写面（只读）。
+- 控制台数据面不做：引擎试跑历史/存档（一次性读数） ∥ 总览图表（总览 = 数值卡——趋势归用量页） ∥ 引擎地址下发非 admin 面（用户面 = 模型名 + snippet——`webui/WEBUI.md` §2.3①）。
 
 ## 变更记录
 
@@ -158,3 +181,5 @@
 - 2026-10-06：AC-13 行候补标记收正（父侧直接执行 · 机械 · 可 revert——已落需求档验收表）。
 - 2026-10-06：实施后回填轮（R14——批 `docs/batches/2026-10-06-console-providers.md`）：§4 行数按实读收正（routes **86** ∥ providers **146** ∥ provider-admin **197**（新档）；小计 658 ⇒ **951**）；叠加链同拍（#963 结果值随 re-base）。
 - 2026-10-06：实施后回填轮（R16——批 `docs/batches/2026-10-06-first-release-completeness.md`）：§2.3 `mode` 枚举补「未就位 ⇒ `null`」形 ∥ §4 行数按实读收正（system **55**（标记翻正） ∥ errors **56**；小计 ⇒ **1007**）。
+- 2026-10-06：控制台可见面二轮设计轮（批 `docs/batches/2026-10-06-console-completeness-2.md`——需求 §2:15 ∥ 台账 #972）——§1 路由族表增控制台数据面行 ∥ §2.3 `/api/system` 行补 `embedding.model`（两角色——地址不下发）+ 随注 ∥ 增 §2.4（管理总览 ∥ 向量服务：三端点语义 ∥ 探活/试跑单端点 kind 四归类 ∥ 不落库不计量）∥ §4 预算（system ⇒ ≈60 ∥ embedding-admin/overview 新档；小计 ⇒ ≈1192）∥ §5 补 AC-15①③ 候补行 ∥ §7 增 N21/N22 ∥ B17 ∥ E18 ∥ §8 边界随正。
+- 2026-10-06：fix 轮（评审 #69——批 `docs/batches/2026-10-06-console-completeness-2.md` §3 十项，本档面）：§5 AC-13③ 行响应形补 `embedding`（`{ model }`——两角色下发 ∥ 零地址字段——与 §2.3 同源）。

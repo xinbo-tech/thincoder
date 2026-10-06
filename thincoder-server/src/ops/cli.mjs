@@ -2,14 +2,17 @@
 /**
  * cli.mjs — 运维 CLI（ops/OPS.md §3——七命令）：member add/list/quota/passwd ∥ key issue/revoke/list。
  * 直开库（不经 HTTP）——服务器本机兜底；与页面同库同语义（KD-SV-7 ∥ accounts/ACCOUNTS.md §3）。
+ * 审计：改动类四命令（member add ∥ member passwd ∥ key issue ∥ key revoke）各记一条审计事件
+ * （`actor = "cli"`——ACCOUNTS.md §2.1；直开库同一连接内写入）。
  *
  * 运行：node src/ops/cli.mjs --config <配置档> <命令>
  * （配置用于定位库——db 相对 = 配置档所在目录；配置校验照常 fail-closed；输出走 stdout，错误走 stderr + 非零退出。）
  */
 import { pathToFileURL } from "node:url"
 
+import { recordAudit } from "../accounts/audit.mjs"
 import { findKeysByHint, getKeyById, issueKey, listKeys, revokeKey } from "../accounts/keys.mjs"
-import { createMember, findMemberByName, generateTempPassword, listMembers, setMemberPassword, setMemberQuota } from "../accounts/members.mjs"
+import { createMember, findMemberById, findMemberByName, generateTempPassword, listMembers, setMemberPassword, setMemberQuota } from "../accounts/members.mjs"
 import { revokeMemberSessions } from "../accounts/session.mjs"
 import { monthlyTokensByMember } from "../metering/usage.mjs"
 import { openDatabase } from "../store/db.mjs"
@@ -71,6 +74,8 @@ async function dispatchMember(db, action, positional, options, stdout) {
       role: options.role ?? "user",
       password: options.password ?? null,
     })
+    // 审计（ACCOUNTS §2.1——CLI 口径：actor = "cli" ∥ actor_id NULL）：建成员记录
+    recordAudit(db, { type: "member_create", actor: "cli", actorId: null, target: member.name, targetId: member.id, detail: { role: member.role } })
     stdout.write(`成员已建：id=${member.id} name=${member.name} username=${member.username} role=${member.role}\n`)
     if (generated) stdout.write(`初始密码（一次性——请立即转达本人）：${password}\n`)
     return 0
@@ -98,6 +103,7 @@ async function dispatchMember(db, action, positional, options, stdout) {
     const password = generated ? generateTempPassword() : options.password
     await setMemberPassword(db, member.id, password)
     revokeMemberSessions(db, member.id) // 重置语义（KD-SV-14 同口径：旧密失效 + 全会话吊销）
+    recordAudit(db, { type: "password_reset", actor: "cli", actorId: null, target: member.name, targetId: member.id, detail: {} })
     stdout.write(`密码已重置：${member.name}（原会话已全部吊销）\n`)
     if (generated) stdout.write(`临时密码（一次性——请立即转达本人）：${password}\n`)
     return 0
@@ -121,6 +127,7 @@ function dispatchKey(db, action, positional, options, stdout) {
   if (action === "issue") {
     const member = requireMemberByName(db, positional[0])
     const issued = issueKey(db, member.id)
+    recordAudit(db, { type: "key_issue", actor: "cli", actorId: null, target: "", targetId: null, detail: { keyHint: issued.hint } })
     stdout.write(`key 已签发：id=${issued.id} member=${member.name}\n${issued.plain}\n（全文仅此一次——此后只显示提示形 ${issued.hint}）\n`)
     return 0
   }
@@ -129,6 +136,9 @@ function dispatchKey(db, action, positional, options, stdout) {
     if (!ref) throw new Error("用法：key revoke <id|hint>")
     const key = resolveKeyRef(db, ref)
     const changed = revokeKey(db, key.id)
+    // 审计（§2.1 表——对象 = key 失主）：吊销记录
+    const owner = findMemberById(db, key.member_id)
+    recordAudit(db, { type: "key_revoke", actor: "cli", actorId: null, target: owner?.name ?? "", targetId: key.member_id, detail: { keyHint: key.key_hint } })
     stdout.write(
       changed
         ? `key 已吊销：id=${key.id} ${key.key_hint}（立即生效）\n`

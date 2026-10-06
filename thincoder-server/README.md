@@ -101,12 +101,13 @@
 
 ## 6. 控制台
 
-- 浏览器打开 `http://<host>:<port>/`；侧栏分组导航（哈希路由）：我的 = `#/me/keys`（key 清单 ∥ 签发/轮换明文一次性区）∥
-  `#/me/usage`（本月额度/已用 + 用量明细）∥ `#/me/account`（基本信息 ∥ 改密）；管理（admin）= `#/admin/members`（成员表含
-  各成员 key 清单与吊销 ∥ 建成员初始密码一次性回显 ∥ 设额度 ∥ 重置密码）∥ `#/admin/providers`（provider 增删改 ∥
-  模型发现/勾选开放 ∥ 测试 ∥ 预设快速添加）∥ `#/admin/usage`（全队用量过滤）∥ `#/admin/system`（版本与更新 ∥ 成员接入卡——数据 = `/api/system`）。
-- 侧栏底部 meta 槽显示服务器版本（全角色）；更新提示在 `#/admin/system`（可动作方 = admin）。
-- 旧链重定向：`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/members`；`#/` 与未知 hash ⇒ 角色默认页。
+- 浏览器打开 `http://<host>:<port>/`；侧栏分组导航（哈希路由）：我的 = `#/me/keys`（key 清单——含最后使用/近 30 天用量；签发/轮换明文一次性区）∥
+  `#/me/usage`（本月额度/已用 + 用量明细 + 端点过滤 + 向量服务提示条）∥ `#/me/account`（基本信息 ∥ 改密）；管理（admin）= `#/admin/overview`（落地页：
+  今日请求/token ∥ 成员数 ∥ 健康 ∥ 更新提示 ∥ 快捷入口）∥ `#/admin/members`（成员表含各成员 key 清单与吊销 ∥ 建成员初始密码一次性回显 ∥ 设额度 ∥
+  重置密码）∥ `#/admin/providers`（provider 增删改 ∥ 模型发现/勾选开放 ∥ 测试 ∥ 预设快速添加）∥ `#/admin/usage`（用量看板：过滤 + 趋势/聚合/排行 + CSV 导出）∥
+  `#/admin/audit`（审计事件：类型/成员/时段过滤）∥ `#/admin/system`（版本与更新 ∥ 成员接入卡 ∥ 向量服务卡（地址/模型/探活/试跑）∥ 服务健康——数据 = `/api/system`）。
+- 侧栏底部 meta 槽：服务器版本 + 健康状态灯（30s 轮询 `GET /healthz`——绿 ∥ 黄（DB 异常）∥ 红（不可达）；全角色）；更新提示在 `#/admin/system`（可动作方 = admin）。
+- 旧链重定向：`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/overview`；`#/` 与未知 hash ⇒ 角色默认页（admin ⇒ 总览 ∥ user ⇒ 我的 key）。
 - provider 保存即热生效（零重启）；密钥列表回显掩码（明文永不回显）。
 - 界面多语言：中文 ∥ English——自动检测浏览器语言（缺省中文）；侧栏底部与登录卡可随时切换（记忆存浏览器本地）；错误提示按错误码本地化。
 - 判权全在后端（会话 cookie + 角色）：`user` 直打管理端点 ⇒ 403——页面显隐不是判据。
@@ -193,6 +194,8 @@ node src/ops/cli.mjs --config <配置档> <命令>
   - VS Code：聊天面板设置（⚙）⇒ 渠道（providers）卡
   - 桌面：设置 ⇒ 渠道 ⇒ 添加自定义渠道
   - 其他 OpenAI 兼容端：直接填 `baseURL` + API key（SDK/客户端皆可）
+- **向量（embeddings）**：`POST /v1/embeddings`——`model` = 引擎模型名（即配置 `embedding.model`，如 `bge-m3`；用户面提示条 = 我的用量页 `#/me/usage` ∥
+  管理面详情（地址/探活/试跑）= `#/admin/system` 向量卡）∥ `input` = 待嵌入文本；与 chat 同 key、同记账（用量「端点」列/过滤 = `embeddings`）。
 - **冒烟**：`curl -H "Authorization: Bearer sk-tc-…" http://<主机>:<端口>/v1/models`（200 = 清单）。
 
 ## 11. 反代与 TLS（nginx 样例）

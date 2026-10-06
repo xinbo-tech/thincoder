@@ -3,7 +3,8 @@
  * 锁定/解锁 ∥ 清计四口 ∥ IP 口径（`trustProxy`）。
  *
  * 进程内存（零表零写——重启清零，在案口径）；窗 = 锁 = 15 分钟（固定窗——锁期内重试不延长）；
- * 阈值 = 用户名 5 ∥ IP 20（常量导出——批内件用）；锁触发 ⇒ `login_throttled` 一行（密钥面零涉）。
+ * 阈值 = 用户名 5 ∥ IP 20（常量导出——批内件用）；锁触发 ⇒ `login_throttled` 一行（密钥面零涉）
+ * + `onLock` 回调（审计 `login_locked` 写入——装配接线 = 入口建守卫处，ACCOUNTS §2.1）。
  * 桶过期惰性清理（读写路径顺扫——无独立清扫面）；时钟可注入（批内件替身——缺省 `Date.now`）。
  */
 export const USERNAME_THRESHOLD = 5 // 用户名维阈值（连续失败 ≥5 ⇒ 锁）
@@ -25,11 +26,14 @@ export function clientIp(req, { trustProxy = false } = {}) {
 /**
  * 建登录守卫（口面 = `check` ∥ `recordFailure` ∥ `recordSuccess` ∥ `clearUsername`——ACCOUNTS §2）。
  * 桶形 = `{ count, windowStart, lockedUntil }`（每维一映射：用户名 ∥ IP）；`log` 缺省 null（批内件直测不落日志）。
+ * `onLock(info)` 缺省 null：置锁处调用一次（同 `login_throttled` 日志点），`info = { username, ip, dimension, retryAfterS }`
+ *  ——审计行写入经此回调（`login_locked`；装配接线 = 入口建守卫处——§2.1）。
  * 注：覆盖 `windowMs`/`lockMs` 请成对同取（窗 = 锁——单独缩小 `lockMs` 会使锁尽后计数仍留、单次新失败即再锁）。
  */
 export function createLoginGuard({
   now = Date.now,
   log = null,
+  onLock = null,
   usernameThreshold = USERNAME_THRESHOLD,
   ipThreshold = IP_THRESHOLD,
   windowMs = WINDOW_MS,
@@ -73,7 +77,9 @@ export function createLoginGuard({
     bucket.count += 1
     if (bucket.count < threshold) return
     bucket.lockedUntil = at + lockMs
-    log?.warn("login_throttled", { username, ip, dimension, retryAfterS: Math.ceil(lockMs / 1000) })
+    const retryAfterS = Math.ceil(lockMs / 1000)
+    log?.warn("login_throttled", { username, ip, dimension, retryAfterS })
+    onLock?.({ username, ip, dimension, retryAfterS }) // 审计 `login_locked`（置锁处一次——§2.1；固定窗不重复触发）
   }
 
   /** 锁检查（两维同文案面——只回判据，文案归路由）：任一维中锁 ⇒ `{ locked, retryAfterS, dimension }`。 */

@@ -7,12 +7,13 @@
 ## 1. 静态面
 
 - 落点 = `thincoder-server/public/`（已落盘；本批 IA 重排——§2）：`index.html`（壳——侧栏容器 + 挂载点 + 模块入口）∥ `app.mjs`（路由分派 ∥ fetch 封装 ∥ 会话态 ∥ 渲染助手）∥ `nav.mjs`（IA 单源——组/项数据 + 路由解析纯函数）∥ `style.css`。
-- 视图档（按页分档——§2）：`views-auth.mjs`（登录）∥ `views-me.mjs`（我的三页）∥ `views-admin.mjs`（成员 ∥ 用量统计）∥ `views-providers.mjs`（Provider 与模型）∥ `views-system.mjs`（系统——版本/更新 ∥ 接入卡；§2.1）。
+- 视图档（按页分档——§2）：`views-auth.mjs`（登录）∥ `views-me.mjs`（我的三页）∥ `views-admin.mjs`（成员管理）∥ `views-usage.mjs`（拟新增——全队用量 + 看板——§2.3②）∥ `views-overview.mjs`（拟新增——管理总览——§2.3③）∥
+  `views-audit.mjs`（拟新增——审计——§2.3④）∥ `views-providers.mjs`（Provider 与模型）∥ `views-system.mjs`（系统——版本/更新 ∥ 接入卡 ∥ 向量服务 ∥ 服务健康；§2.1）∥ `views-models.mjs`（拟新增——服务模型——§2.4③）；公共组件 = `modal.mjs`（拟新增——弹窗——§2.4①）。
 - 原 `views.mjs`（三视图单档）**退役拆档**——缘由 = 新页（provider ∥ IA 重排）叠加后单档将破 300 软线；拆分 = 按页归档（每档 ≤300）。
 - 直发 = `thincoder-server/src/webui/static.mjs`（已落盘）：`node:http` 读发 `public/`——mime 表（`.mjs` ⇒ text/javascript） ∥ 防路径穿越 ∥ `Cache-Control: no-cache`（内部工具——改版即见）。
 - 路由：`GET /` ⇒ `index.html`；其余静态档按名直发（同源）；`/v1/*` 与 `/api/*` 优先于静态面（分派 = `gateway/API.md` §1）。
 - 形态钉死（用户 2026-10-06 08:09）：**零框架 ∥ 零构建 ∥ 零外部资源**（无 CDN ∥ 无外链字体——内网自洽）；先例 = 本仓 webview（`thincoder-vscode/webview/`）的 vanilla 口径。
-- JS = 十档（`app.mjs` ≈230 ∥ `nav.mjs` ≈85 ∥ `views-*` 五档 ≈685 ∥ `i18n.mjs` ≈110 ∥ `i18n-zh.mjs` ≈220 ∥ `i18n-en.mjs` ≈220——各档 ≤300 软线内；逐档预算与叠加链 = §5）。
+- JS = 十五档（`app.mjs` ∥ `nav.mjs` ∥ `views-*` 九档 ∥ `modal.mjs` ∥ `i18n.mjs` ∥ `i18n-zh.mjs` ∥ `i18n-en.mjs`——各档 ≤300 软线内）+ `style.css`；逐档实读与叠加链 = §5。
 
 ## 2. 控制台 IA 与视图（哈希路由——KD-SV-20）
 
@@ -20,30 +21,35 @@
 
 | 组 | 页（hash） | 职责 | 角色 |
 |---|---|---|---|
-| 我的 | `#/me/keys` | key 清单（提示形） ∥ 签发/轮换（新明文一次性区） | 全体 |
-| 我的 | `#/me/usage` | 本月额度/已用摘要 + 本人用量明细 | 全体 |
+| 我的 | `#/me/keys` | key 清单（提示形——含最后使用/近 30 天用量；§2.3⑥） ∥ 签发/轮换（新明文一次性区） | 全体 |
+| 我的 | `#/me/usage` | 本月额度/已用摘要 + 本人用量明细（端点过滤）+ 向量服务提示条（模型名 ∥ snippet——§2.3①） | 全体 |
 | 我的 | `#/me/account` | 基本信息（展示名/用户名/角色）+ 自助改密 | 全体 |
-| 管理 | `#/admin/members` | 建成员（初始密码一次性回显） ∥ 成员表（key 清单/吊销/设额度/重置） | admin |
+| 管理 | `#/admin/overview` | 总览（落地页）：今日请求/token ∥ 成员数 ∥ 健康 ∥ 更新提示 ∥ 快捷入口（§2.3③） | admin |
+| 管理 | `#/admin/members` | 成员表（行点击 ⇒ 详情弹窗——设额度 ∥ 重置密码 ∥ 逐 key 吊销；新建成员弹窗——§2.4②） | admin |
 | 管理 | `#/admin/providers` | provider 增删改 ∥ 模型发现/开放勾选 ∥ 测试/预设快速添加（数据源 = 预设列表端点——契约 = `gateway/API.md` §2.2） | admin |
-| 管理 | `#/admin/usage` | 全队用量表（过滤查询） | admin |
-| 管理 | `#/admin/system` | 版本与更新 ∥ 成员接入（填充 = §2.1——数据 = `/api/system`） | admin |
+| 管理 | `#/admin/models` | 服务模型：开放清单（`/v1/models` 同源——provider 派生）∥ 详情/配置弹窗（§2.4③） | admin |
+| 管理 | `#/admin/usage` | 全队用量：过滤 + 趋势/聚合/排行 + 导出（§2.3②） | admin |
+| 管理 | `#/admin/audit` | 审计事件列表（过滤：类型/成员/时段——§2.3④） | admin |
+| 管理 | `#/admin/system` | 版本与更新 ∥ 成员接入 ∥ 向量服务 ∥ 服务健康（数据 = `/api/system` ∥ §2.1） | admin |
 
-- 登录 = `#/login`（无侧栏——登录卡）；`#/` ∥ 未知 ⇒ 角色默认页（admin ⇒ `#/admin/members` ∥ user ⇒ `#/me/keys`）。
-- **旧链迁移**：`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/members`（重定向——旧书签可达）。
+- 登录 = `#/login`（无侧栏——登录卡）；`#/` ∥ 未知 ⇒ 角色默认页（admin ⇒ `#/admin/overview` ∥ user ⇒ `#/me/keys`）。
+- **旧链迁移**：`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/overview`（重定向——旧书签可达；`#/admin/members` 等页路径仍直达）。
 - **路由解析 = `nav.mjs` 纯函数**（`resolveRoute(path, role)`——无 DOM、批内件直测）：别名重定向 ∥ 角色默认 ∥ admin 面 `denied`（页面级「无权限」块——判据仍在服务端，§3）。
-- **导航渲染**：侧栏 = 品牌 ∥ 组标题 + 项（活动态高亮）∥ 底部（meta 槽（版本——`/api/system`，全角色）+ 退出登录）；admin 组仅 admin 渲染。
+- **导航渲染**：侧栏 = 品牌 ∥ 组标题 + 项（活动态高亮）∥ 底部（meta 槽（健康状态灯（§2.3⑤） ∥ 版本——`/api/system`，全角色） + 语言切换器 + 退出登录）；admin 组仅 admin 渲染。
 - **窄屏**：`≤760px` 侧栏降级为顶条（单条媒体查询——非移动端适配承诺）。
 - **文案面（多语言——`requirements/PROJECT.md` §2:13）**：全量文案单源 = 文案表（`i18n-zh.mjs` ∥ `i18n-en.mjs`）；`nav.mjs` 数据持 `labelKey`（键——非字面量）；页档/助手经 `t()` 取值——机制全文 = §2.2。
 - 数据全经 `/api/*`（契约 = `accounts/ACCOUNTS.md` §3 ∥ `metering/METERING.md` §3 ∥ `gateway/API.md` §2.2）；`GET /` 公开（页面壳零数据）。
 
-### 2.1 系统页与 meta 槽（版本/更新 ∥ 成员接入——本批填充）
+### 2.1 系统页与 meta 槽（版本/更新 ∥ 成员接入 ∥ 向量服务 ∥ 服务健康）
 
-- **meta 槽**（侧栏底部——全角色）：版本一行（`GET /api/system`——启动装配时取一次；失败 ⇒ 留空静默）。
-- **`#/admin/system` 两节**：
+- **meta 槽**（侧栏底部——全角色）：健康状态灯（§2.3⑤——`/healthz` 轮询；点 + 文案）∥ 版本一行（`GET /api/system`——启动装配时取一次；失败 ⇒ 留空静默）∥ 语言切换器 ∥ 退出登录。
+- **`#/admin/system` 四节**：
   - **版本与更新**：当前版本 ∥ 更新档位（`mode`：`false`/`notify`/`auto`）∥ 最近自检（`lastCheckAt`——本地化时间；`null` = 未检）∥ 更新提示（`latest` 在场 ⇒ 「有新版本可用：vX.Y.Z（升级见部署文档）」；不在场 ⇒ 「未发现新版本」——自检失败同面，静默口径 = `gateway/API.md` §2.3）。
   - **成员接入卡**：baseURL（`location.origin` + `/v1`——运行时装配）∥ 团队 key 提示（`sk-tc-…` 形——签发 = `#/me/keys`）∥ 四端示例（CLI ∥ VSC ∥ 桌面 ∥ 其他 OpenAI 兼容——字段 = name/baseURL/model/apiKey；model = `provider/model` 形）∥ curl 冒烟一行（`GET /v1/models`）。
-- **角色面**：更新提示 = admin 面（`#/admin/system`——可动作方）；版本行（meta 槽）= 全角色；`requirements/PROJECT.md` §2:12③「更新可用提示」按可动作方收窄——在案。
-- 落点：本卡 = admin 面（供分发给成员）；成员面成文 = README「成员接入」节；文案 = 多语言表键引用（§2.2——本卡各件同表收编）；渲染沿 `h`/`textContent`（零拼串）。
+  - **向量服务**（admin——§2.3①）：引擎地址 ∥ 模型（`GET /api/admin/embedding`——配置真值）∥ 可达性状态（渲染自动探活 + 「重新检测」——`POST /api/admin/embedding/test`）∥ `/v1/embeddings` 调用 snippet ∥ 用法一句 ∥ 试跑（短文本 ⇒ 维度 ∥ 耗时——不落库不计量）。
+  - **服务健康**：状态（`ok`/`degraded`）∥ DB ∥ 运行时长 ∥ 最近检查（本地化时间）——数据 = 前端健康共享态（§2.3⑤；30s 自动刷新）。
+- **角色面**：更新提示 ∥ 向量服务 ∥ 服务健康 = admin 面（`#/admin/system`）；meta 槽（状态灯 ∥ 版本行）= 全角色；`requirements/PROJECT.md` §2:12③「更新可用提示」按可动作方收窄——在案。
+- 落点：接入卡 = admin 面（供分发给成员）；成员面成文 = README「成员接入」节；文案 = 多语言表键引用（§2.2——各卡各件同表收编）；渲染沿 `h`/`textContent`（零拼串）。
 
 ### 2.2 多语言（中文 ∥ English——需求 §2:13）
 
@@ -54,14 +60,63 @@
 - **文案表形**：键 = `页面.区块.词`（点分平键——`login.submit` ∥ `nav.page.me.keys` ∥ `admin.members.secretLabel` ∥ `err.unauthorized`）；参数 = `{name}` 占位 + `t(key, params)` 替换；缺键回退链 = 当前表 → 中文表 → 键原文（+ `console.warn`——安全网）；键集口径 = 两表键集相等（双向——**除自称名族 `lang.zh` ∥ `lang.en`：仅 zh 表载体**——批内件同口径断言）。
 - **错误消息策略（服务端零改）**：服务端消息维持中文（机器面——口径 = `gateway/API.md` §3）；控制台按 `code` 前端映射（`err.<code>` 键）——映射集 = 控制台可达码全集：`unauthorized` ∥ `invalid_credentials` ∥ `forbidden` ∥ `not_found` ∥ `invalid_request_error` ∥ `upstream_error` ∥ `internal_error` ∥ `too_many_attempts`。
 - **映射细则**：`429` 随 `Retry-After` 头捕获（秒数注入文案）；参数码（`invalid_request_error` ∥ `not_found`）句末附服务端原文（细节不丢——en 下附注为中文，在案）；码未在表 ⇒ 服务端原文兜底（未来新码/上游透传零遗漏）。
-- **覆盖范围**：七页 + 登录 + 侧栏（组/页/品牌/退出/meta 槽）+ 表单（label/placeholder/按钮）+ 表头 + 空态 + 一次性秘密区 + confirm + flash + 错误映射 + 格式化助手（`fmtQuota`「不限」键化 ∥ `fmtTs` 随语言设 locale ∥ `fmtValue`「—」语言中性保留）+ 标签页 title（运行期 `document.title`——`index.html` 两处静态 CJK = 装配前缺省——豁免在案）。
+- **覆盖范围**：十页 + 登录 + 侧栏（组/页/品牌/退出/meta 槽（状态灯/版本/切换器））+ 表单（label/placeholder/按钮）+ 表头 + 空态 + 一次性秘密区 + confirm + flash + 错误映射 + 格式化助手（`fmtQuota`「不限」键化 ∥ `fmtTs` 随语言设 locale ∥ `fmtValue`「—」语言中性保留）+ 标签页 title（运行期 `document.title`——`index.html` 两处静态 CJK = 装配前缺省——豁免在案）。
+- **二轮新增键族**（六面——两表逐键同步 ∥ en 零 CJK ∥ 占位符一致）：`health.*` ∥ `overview.*` ∥ `usageReport.*` ∥ `vector.*` ∥ `audit.*` ∥ `nav.page.admin.overview|audit` ∥ `me.keys.*`（维护增量 ≈87 键）。
+- **本批新增键族**（弹窗批——两表逐键同步）：`common.save|cancel|close` ∥ `admin.members.*`（newBtn ∥ colKeyCount ∥ empty）∥ `admin.models.*`（列表/详情/配置骨架）∥ `nav.page.admin.models`（≈17 键）；表体量（本批后估——基线实读 292 ∥ 288 + 本批 ≈17 键）：zh ≈309 ∥ en ≈305——双表均越 300 软线 ⇒ 按域拆表；处置 = 独立结构轮（批档上抛 ∥ `design/PROJECT.md` §9 R25；实施实读为准）。
 - **可测性**：`i18n.mjs` 模块顶层零浏览器全局访问——`document`/`localStorage`/`navigator` 仅在 init/绑定函数内触碰；检测输入经参数注入（`pickLang(stored, languages)`）——保批内件 node 直测（§6）。
 - **零 CJK 机检口径（§6 AC-14 同拍）**：扫描面 = **前端 JS 代码档**（**排除 `i18n-zh.mjs` ∥ `i18n-en.mjs` ∥ `index.html`**）；三档口径 = zh 表 = 唯一 CJK 档 ∥ `i18n.mjs` 与 en 表零 CJK；`index.html` 两处静态 CJK（`<title>` ∥ 加载提示）= 装配前缺省——**显式豁免**（豁免/披露在案）。
 - **不做**：文档面多语言（README 等——另议）∥ 服务端消息/日志语言 ∥ 用户数据值 ∥ 第三语言（加语言 = 表档 + 检测行增量——断点）。
 
+### 2.3 可见面二轮（六面机制——功能点 15）
+
+**① 向量服务可见面**：系统页向量卡（§2.1——admin：地址 ∥ 模型 ∥ 可达性 ∥ snippet ∥ 用法 ∥ 试跑）∥ 用户面 = 我的用量页顶部提示条（模型名 + snippet + 用法一句——**地址/探活/试跑 = admin 面**；模型名经 `/api/system` 的 `embedding.model` 下发）∥ 用量面 endpoint 区分：明细列（存量——`usageTable` 已有「端点」列）+ 端点过滤（两用量页同参数——下拉：全部/chat/embeddings）。
+
+**② 用量看板升级**（`#/admin/usage`——明细表之上）：
+
+- 过滤表单增「端点」下拉；查询 = 明细 + 报表同拍刷新（同过滤面）。
+- **概览卡**：请求数 ∥ tokens 合计（`summary.totals`）。
+- **时间趋势（按日）**：纯 CSS 柱状图（flex 柱列 + 高度百分比——零依赖；柱 `title` = 日期/请求数/tokens；轴标 = 首末日）；数据 = `summary.trend`（服务端零填充——前端只画）；空态 ⇒ 文案（零错）。
+- **聚合与排行**：按模型 ∥ 按成员两表（序号 ∥ 名称 ∥ 请求数 ∥ tokens——降序即排行；聚合与排行同数据面，不设独立组件）。
+- **导出**：`GET /api/usage/export`（同过滤面）——fetch ⇒ blob ⇒ 临时链接下载（400 经错误映射展示；不用裸链接导航——错误页不劫持 SPA）。
+
+**③ 管理总览**（`#/admin/overview`——admin 落地页）：卡集六枚——今日请求 ∥ 今日 token ∥ 成员数（`GET /api/overview`）∥ 健康（共享态——⑤）∥ 更新提示（`state.system.update.latest`：在场 ⇒ 高亮提示 + 导流系统页；缺 ⇒ 「未发现新版本」）∥ 快捷入口（成员/provider/用量/审计/系统五链）。落地页变更：admin 登录 ⇒ `#/admin/overview`；`#/admin` 重定向同指；旧页书签直达。user 面不可达（`nav` `denied` + 服务端 403 双层）。
+
+**④ 审计/安全面**（`#/admin/audit`）：过滤表单（类型下拉（全部 + 九型） ∥ 成员输入 ∥ 起止时间）+ 表（时间 ∥ 类型 ∥ 操作者 ∥ 对象（与操作者同名 ⇒ 「—」） ∥ 详情——按型模板渲染（IP ∥ 维度 ∥ key 提示形 ∥ 角色））；空态文案；`GET /api/audit` 取数（倒序）。
+
+**⑤ 健康可见**：前端健康轮询（`app.mjs`——登录后启动：立即一次 + `HEALTH_POLL_MS = 30000`；登出停止）；数据 = `GET /healthz` 直读（公开端点——不经 `api()` 封装：503 也携状态体）；三态：绿（200 `ok`）∥ 黄（503 `degraded`——DB 异常）∥ 红（请求失败——服务不可达）。
+落点三处：侧栏 meta 槽状态灯（点 + 文案；元素 id = `nav-health`——轮询回调直更，无整页重渲）∥ 系统页健康块（§2.1）∥ 总览健康卡；后两者经 `ctx.onHealth` 订阅（视图注册——路由切换清空）。失败静默（灯变红——不 flash 刷屏）。
+
+**⑥ key 细节面**：`#/me/keys` 行 = 提示形 + 「最后使用：本地化时间 ∥ 从未使用」+「近 30 天：N tokens」；数据 = `/api/me` key 行 `lastUsedAt`/`windowTokens`（单源 = `memberView`——管理列表同形；管理表列面随本批重排——§2.4②）。
+
+### 2.4 弹窗机制与成员/服务模型面（功能点 16 ∥ 17）
+
+**① 公共弹窗组件**（`modal.mjs`——新档；功能点 16②）：
+
+- **基座 = 原生 `<dialog>` + `showModal()`**：零依赖（平台承担模态语义——顶层渲染 ∥ 背景 inert ∥ ESC 缺省关闭（`cancel` 事件）∥ `::backdrop` 遮罩）；本档只补壳与策略（KD-SV-31）。
+- **复用 API**：`openModal({ title, body, footer, onClose })` ⇒ 句柄 `{ close(), root }`；`title` = 字符串（textContent）；`body`/`footer` = 调用方以 `h` 构建的节点（footer 缺省 ⇒ 无脚区）；`onClose` = 关闭回调（任意路径——一次）。**单例**：同时最多一窗——开新先关旧（不叠加；需要再扩）。
+- **关闭语义**：× 钮 ∥ `Esc` ∥ `handle.close()`；**遮罩点击不关**（平台缺省——防误触丢表单）；任意关闭 = 丢弃未保存草稿（在案——沿语言切换草稿口径）。
+- **键盘/焦点**：打开 ⇒ 焦点入窗（平台缺省 = 首个可聚焦元素；调用方以 `autofocus` 定首选）；背景 inert（平台——Tab 不逸出）；关闭 ⇒ 焦点还原（平台语义——收口轮实走核验；不符 ⇒ 组件补显式还原）；开窗期锁背景滚动（`body.modal-open` 类——`close` 事件收口）。
+- **可测性**：模块顶层零浏览器全局（node 可 import——API 形断言）；DOM 交互仅在 `openModal` 内（沿 §2.2 口径）；× 钮文案 = `common.close`（`aria-label`——两表同步）。
+
+**② 成员弹窗（三态：查看 ∥ 编辑 ∥ 新建——功能点 16①）**：
+
+- **入口**：成员表行点击（`tr.row-clickable tabindex="0"`——Enter/Space 同开——键盘可达）⇒ 查看态；页首「新建成员」钮 ⇒ 新建态。表列 = 展示名 ∥ 用户名 ∥ 角色 ∥ 额度 ∥ 已用 ∥ key 数（原「key 清单/操作」两列收编入弹窗——表 = 概览 + 入口）。
+- **查看态**：详情（展示名 ∥ 用户名 ∥ 角色 ∥ 额度 ∥ 本月已用）+ key 清单（提示形 + 最后使用 ∥ 近 30 天——行形 = `memberView`，与 `#/me/keys` 同源）+ 逐 key「吊销」；操作 = 「设额度」（切编辑态）∥「重置密码」（confirm ⇒ POST ⇒ 关窗 + 页级一次性秘密区——仍仅一次）∥「关闭」。
+- **编辑态**：额度输入（空 = 不限）+「保存」+「取消」；保存 ⇒ POST `/api/members/:id/quota` ⇒ 回查看态 + 弹窗与表同刷新；取消 ⇒ 回查看态（丢弃输入）。
+- **新建态**：用户名 ∥ 展示名 ∥ 角色 +「创建」+「取消」；创建 ⇒ POST `/api/members` ⇒ 关窗 + 页级一次性秘密区回显初始密码（`ctx.showSecret`——语义不变）+ 表刷新；失败 ⇒ flash（弹窗留驻）。
+- **刷新口径**：幂等操作（额度 ∥ 吊销）成功 ⇒ 弹窗留驻 + 就地重渲（连续操作不丢上下文）；秘密面动作（新建 ∥ 重置）成功 ⇒ 关窗（秘密区在页上可见——仅一次）。
+- **不做**：成员改名 ∥ 改角色 ∥ 删除（现行操作集外——删除全库零路径在案）。
+
+**③ 服务模型页**（`#/admin/models`——管理组（provider 与模型之后——管理 7）∥ admin 面；功能点 17）：
+
+- **列表**（`/v1/models` 同源）：数据 = `GET /api/admin/providers` 的 `models` 展平（`provider/model` 前缀形）+ 嵌入引擎模型（`state.system.embedding.model`——在场则列，面 = embeddings）；列 = 模型 ∥ Provider ∥ 面；空态文案；行点击 ⇒ 详情弹窗。同源口径 = 与 `/v1/models` 同集——后者需团队 key（控制台无凭据），经既有 admin 数据面派生（目录来源不变——需求边界）。
+- **详情弹窗**（复用 ①）：详情 = 模型标识 ∥ Provider ∥ 上游模型名（首斜杠余段）∥ 面；嵌入模型行注「配置 = 系统页·向量服务卡」；**配置区 = 骨架**（占位文案——候选已上抛；未裁前零可编辑字段——需求 §2:17 明文）。
+- **配置候选**（≤5 项——交用户裁；裁定后另轮落字段；明细 = `design/PROJECT.md` §9 R24）：开放/停用（模型级）∥ 默认请求参数 ∥ 限流 ∥ 展示元数据 ∥ 成本权重。
+- **不做**：模型增删（归 provider 面——目录来源不改）∥ 直连 `/v1/models`（无团队 key）∥ 用户角色可见面（需两角色端点——未裁）。
+
 ## 3. 判权与安全
 
-- **判权全在后端**（会话 + 角色——`accounts/ACCOUNTS.md` §3）：前端仅显隐与表单；`user` 直打管理端点 ⇒ 403——页面不是判据；管理组导航仅 admin 渲染 ∥ admin hash 由 `nav.mjs` 判 `denied` 落「无权限」块（含 provider 管理面——服务端为准）。
+- **判权全在后端**（会话 + 角色——`accounts/ACCOUNTS.md` §3）：前端仅显隐与表单；`user` 直打管理端点 ⇒ 403——页面不是判据；管理组导航仅 admin 渲染 ∥ admin hash 由 `nav.mjs` 判 `denied` 落「无权限」块（含 provider 管理面——服务端为准）。本批新增 admin 端点（总览 ∥ 向量服务 ∥ 审计 ∥ 用量报表）同门；`/healthz` = 公开（轮询零凭据——在案）。
 - 会话在 HttpOnly cookie（前端零令牌存储）；`401` ⇒ 回 `#/login`（会话过期即回登录）；`403` ⇒ 提示无权限。
 - 渲染转义（`textContent` 系——不拼 HTML 串）。
 
@@ -75,41 +130,54 @@
 |---|---|---|
 | `thincoder-server/src/webui/static.mjs`（已落盘） | **78**（实读 2026-10-06——设计估 ≈70） | `public/` 直发 ∥ mime ∥ 防穿越 ∥ no-cache |
 | `thincoder-server/public/index.html`（已落盘） | **20**（实读 2026-10-06——设计估 ≈26；#962 壳重排实读零增） | 前端壳（挂载点 + 模块入口） |
-| `thincoder-server/public/app.mjs`（已落盘） | **219**（实读 2026-10-06——设计估 ≈190；#962 IA 路由表接线 ∥ 视图装配；#963 +10 = `/api/system` 取用 ∥ meta 填充）**⇒ 240**（i18n 叠加 +21 = `initLang` 接线 ∥ 错误映射 ∥ 格式化本地化 ∥ `Retry-After` 捕捉 ∥ `rerender` 口 ∥ title 随动） | 路由分派 ∥ fetch 封装 ∥ 会话态 ∥ 渲染助手 |
-| `thincoder-server/public/nav.mjs`（已落盘） | **无 ⇒ 82**（实读 2026-10-06——#962 设计估 ≈70；组/项数据 ∥ `resolveRoute` 纯函数 ∥ 侧栏渲染；#963 +1 = meta 槽版本行；i18n 叠加 ±0 = `label` ⇒ `labelKey` 收编 ∥ 切换器挂 meta 槽） | IA 单源（§2 ∥ §2.1） |
+| `thincoder-server/public/app.mjs`（已落盘） | **219**（实读 2026-10-06——设计估 ≈190；#962 IA 路由表接线 ∥ 视图装配；#963 +10 = `/api/system` 取用 ∥ meta 填充）**⇒ 240 ⇒ 299**（i18n 叠加 +21 = `initLang` 接线 ∥ 错误映射 ∥ 格式化本地化 ∥ `Retry-After` 捕捉 ∥ `rerender` 口 ∥ title 随动；二轮 +59 = 健康轮询（30s ∥ 三态 ∥ 视图监听） ∥ 两新页接线）**⇒ ≈301**（弹窗批 +≈2 = `views-models` 接线；**越 300 软线**——拆分预案（越线 ⇒ 启用）：健康轮询块迁独立小档 `health.mjs`（拟新增）——沿 `views-admin` 拆分先例） | 路由分派 ∥ fetch 封装 ∥ 会话态 ∥ 渲染助手 |
+| `thincoder-server/public/nav.mjs`（已落盘） | **无 ⇒ 82 ⇒ 87**（实读 2026-10-06——#962 设计估 ≈70；组/项数据 ∥ `resolveRoute` 纯函数 ∥ 侧栏渲染；#963 +1 = meta 槽版本行；i18n 叠加 ±0 = `label` ⇒ `labelKey` 收编 ∥ 切换器挂 meta 槽；二轮 +5 = 总览/审计两项 ∥ `/admin` 重定向收正 ∥ 默认页收正 ∥ 灯位）**⇒ ≈90**（弹窗批 +≈3 = 服务模型项；§2.4③） | IA 单源（§2 ∥ §2.1） |
 | `thincoder-server/public/views-auth.mjs`（已落盘） | **无 ⇒ 29**（实读 2026-10-06——#962 设计估 ≈30；登录；自 `views.mjs` 拆）**⇒ 31**（i18n 叠加 +2 = 文案键化 ∥ 登录卡切换行） | 登录视图 |
-| `thincoder-server/public/views-me.mjs`（已落盘） | **无 ⇒ 86**（实读 2026-10-06——#962 设计估 ≈150；key ∥ 用量 ∥ 账户设置三页；自 `views.mjs` 拆）**⇒ 87**（i18n 叠加 +1 = 文案键化） | 我的三页 |
-| `thincoder-server/public/views-admin.mjs`（已落盘） | **无 ⇒ 137**（实读 2026-10-06——#962 设计估 ≈130；成员 ∥ 用量统计两页；自 `views.mjs` 拆）**⇒ 139**（i18n 叠加 +2 = 文案键化） | 管理（成员族） |
+| `thincoder-server/public/views-me.mjs`（已落盘） | **无 ⇒ 86 ⇒ 87 ⇒ ≈122**（实读 2026-10-06——#962 设计估 ≈150；key ∥ 用量 ∥ 账户设置三页；自 `views.mjs` 拆；i18n 叠加 +1 = 文案键化；本批 +≈35 = key 行细节（最后使用/窗口用量） ∥ 端点过滤 ∥ 向量提示条） | 我的三页 |
+| `thincoder-server/public/views-admin.mjs`（已落盘） | **无 ⇒ 137 ⇒ 139 ⇒ ≈100**（实读 2026-10-06——#962 设计估 ≈130；成员 ∥ 用量统计两页；自 `views.mjs` 拆；i18n 叠加 +2 = 文案键化；二轮 −≈39 = 用量页迁 `views-usage.mjs`——拆分缘由 = 叠加后破 300 软线）**⇒ ≈210**（弹窗批 +≈110 = 成员弹窗三态 ∥ 行点击 ∥ 建表单迁弹窗；§2.4②） | 管理·成员页 |
 | `thincoder-server/public/views-providers.mjs`（已落盘） | **无 ⇒ 213**（实读 2026-10-06——#962 设计估 ≈210；列表 ∥ 表单（增/改） ∥ 发现/勾选 ∥ 测试/删除）**⇒ 214**（i18n 叠加 +1 = 文案键化） | Provider 与模型页 |
-| `thincoder-server/public/views-system.mjs`（已落盘） | **无 ⇒ 15 ⇒ 59**（实读 2026-10-06——#962 骨架（设计估 ≈30）；#963 +44 = 两节填充——版本/更新 ∥ 接入卡（§2.1））**⇒ 60**（i18n 叠加 +1 = 文案键化） | 系统页 |
+| `thincoder-server/public/views-system.mjs`（已落盘） | **无 ⇒ 15 ⇒ 59 ⇒ 60 ⇒ ≈150**（实读 2026-10-06——#962 骨架（设计估 ≈30）；#963 +44 = 两节填充——版本/更新 ∥ 接入卡（§2.1）；i18n 叠加 +1 = 文案键化；本批 +≈90 = 向量卡 ∥ 健康块） | 系统页 |
+| `thincoder-server/public/views-usage.mjs`（拟新增） | **≈170**（设计估——全队用量：过滤（+端点） ∥ 报表（概览卡 ∥ CSS 柱趋势 ∥ 聚合/排行两表） ∥ 导出（blob 下载） ∥ 明细表——§2.3②） | 管理·用量看板 |
+| `thincoder-server/public/views-overview.mjs`（拟新增） | **≈100**（设计估——总览卡集六枚（今日/成员/健康/更新/快捷入口）——§2.3③） | 管理·总览 |
+| `thincoder-server/public/views-audit.mjs`（拟新增） | **≈100**（设计估——审计列表：过滤三轴 ∥ 按型模板渲染 ∥ 空态——§2.3④） | 管理·审计 |
+| `thincoder-server/public/views-models.mjs`（拟新增） | **≈110**（设计估——服务模型：列表（providers 展平 + 引擎模型） ∥ 详情弹窗（配置骨架——复用 `modal.mjs`）；§2.4③） | 服务模型页 |
+| `thincoder-server/public/modal.mjs`（拟新增） | **≈110**（设计估——公共弹窗组件：`openModal`（`<dialog>` 基座 ∥ 单例 ∥ 遮罩/关闭/焦点） ∥ 复用 API；§2.4①） | 公共弹窗组件 |
 | `thincoder-server/public/views.mjs`（迁移期引文——已退役拆档（2026-10-06）——档不在盘（原读数 244 · as-of）） | —— | —— |
-| `thincoder-server/public/style.css`（已落盘） | **83**（实读 2026-10-06——设计估 ≈95；#962 侧栏/分组/活动态/窄屏；#963 +8 = 系统页样式（`.snippet` ∥ `.card h4` ∥ `.update-tip` ∥ `.end-list`/`.end-name`））**⇒ 89**（i18n 叠加 +6 = 切换器钮样式） | 系统字体 ∥ 表格/表单 ∥ 桌面优先（宽表横滚） |
+| `thincoder-server/public/style.css`（已落盘） | **83**（实读 2026-10-06——设计估 ≈95；#962 侧栏/分组/活动态/窄屏；#963 +8 = 系统页样式（`.snippet` ∥ `.card h4` ∥ `.update-tip` ∥ `.end-list`/`.end-name`））**⇒ 89 ⇒ ≈122**（i18n 叠加 +6 = 切换器钮样式；二轮 +≈33 = 灯（三色点） ∥ 图（柱列/轴标） ∥ 卡集网格 ∥ 提示条）**⇒ ≈152**（弹窗批 +≈30 = 弹窗（遮罩 ∥ 头/体/脚 ∥ 滚动锁） ∥ 行点击 ∥ 详情栅格） | 系统字体 ∥ 表格/表单 ∥ 桌面优先（宽表横滚） |
 | `thincoder-server/public/i18n.mjs`（已落盘） | **无 ⇒ 113**（实读 2026-10-06——设计估 ≈110；语言态 ∥ 检测/记忆 ∥ `t()` ∥ 切换器组件 ∥ `document` 接线；§2.2） | 多语言运行时 |
-| `thincoder-server/public/i18n-zh.mjs`（已落盘） | **无 ⇒ 198**（实读 2026-10-06——设计估 ≈220；中文全量文案表（平铺点分键）） | 文案表·中文 |
-| `thincoder-server/public/i18n-en.mjs`（已落盘） | **无 ⇒ 194**（实读 2026-10-06——设计估 ≈220；English 全量文案表；零 CJK 断言——§6） | 文案表·English |
-| **小计** | **≈680 ⇒ 558 ⇒ 943**（#962 实读）**⇒ 1006**（#963 实读：+63 = views-system +44 ∥ app +10 ∥ nav +1 ∥ style +8）**⇒ 1545**（i18n 实读：+539 = i18n 三档 +505 = 113 + 198 + 194 ∥ app +21 ∥ views-auth +2 ∥ views-me +1 ∥ views-admin +2 ∥ views-providers +1 ∥ views-system +1 ∥ style +6；nav ±0） | —— |
+| `thincoder-server/public/i18n-zh.mjs`（已落盘） | **无 ⇒ 198 ⇒ 292 ⇒ ≈309**（实读 2026-10-06——设计估 ≈220；中文全量文案表（平铺点分键）；二轮 +94 键 ∥ 弹窗批 +≈17 键（§2.2）） | 文案表·中文 |
+| `thincoder-server/public/i18n-en.mjs`（已落盘） | **无 ⇒ 194 ⇒ 288 ⇒ ≈305**（实读 2026-10-06——设计估 ≈220；English 全量文案表；零 CJK 断言——§6；二轮 +94 键 ∥ 弹窗批 +≈17 键） | 文案表·English |
+| **小计** | **≈680 ⇒ 558 ⇒ 943**（#962 实读）**⇒ 1006**（#963 实读：+63 = views-system +44 ∥ app +10 ∥ nav +1 ∥ style +8）**⇒ 1545**（i18n 实读：+539 = i18n 三档 +505 = 113 + 198 + 194 ∥ app +21 ∥ views-auth +2 ∥ views-me +1 ∥ views-admin +2 ∥ views-providers +1 ∥ views-system +1 ∥ style +6；nav ±0）**⇒ ≈2247**（二轮估：+≈702 = 新三档 ≈370 ∥ app +35 ∥ nav +12 ∥ views-me +35 ∥ views-admin −49 ∥ views-system +90 ∥ style +35 ∥ i18n 两表 +174）**⇒ ≈2646**（弹窗批估：+≈399 = modal 新 ≈110 ∥ views-models 新 ≈110 ∥ views-admin +≈110 ∥ style +≈30 ∥ i18n 两表 +≈34 ∥ nav +≈3 ∥ app +≈2） | —— |
 
 ## 6. 验收判据（机检面）
 
 | 需求 | 设计级判据 | 载体 |
 |---|---|---|
-| 非功能 · 前端自洽 | `public/**` 零外部引用（无 `http(s)://` 外链 ∥ 无 CDN ∥ 无外链字体——扫描断言，扫描面 = 全量新档）；静态直发 mime 正确 ∥ 路径穿越拒；档目断言随正（口径 = UI 代码档 12 ∥ 含 favicon 全目录 13——`-webui-deploy` 件；= i18n 三档叠加后） | 批内件 |
+| 非功能 · 前端自洽 | `public/**` 零外部引用（无 `http(s)://` 外链 ∥ 无 CDN ∥ 无外链字体——扫描断言，扫描面 = 全量新档）；静态直发 mime 正确 ∥ 路径穿越拒；档目断言随正（口径 = UI 代码档 12 ∥ 含 favicon 全目录 13——`-webui-deploy` 件；i18n 批后基线 ⇒ 15 ∥ 16（二轮批后）⇒ **17 ∥ 18**（弹窗批后）） | 批内件 |
 | AC-11（控制台 provider 面——判据全文 = `gateway/API.md` §5 AC-11 行） | `#/admin/providers` 页在册（列表 ∥ 增/改/删 ∥ 发现/勾选 ∥ 测试 ∥ 预设快速添加——预设列表端点 ⇒ 预填）；端点契约 = `gateway/API.md` §2.2；密钥掩码回显（不回明文） | 批内件 |
-| AC-12（功能点 14——控制台 IA；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `nav.mjs` 直测：组/项结构（我的 3 ∥ 管理 4 ∥ admin 组仅 admin） ∥ 重定向（`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/members`） ∥ 角色默认 ∥ admin 面 `denied`；静态九档在册 ∥ 管理页拆分（成员/用量各一页——单页堆叠消失） | 批内件 |
-| AC-13③④（功能点 12——版本/更新可见 ∥ 成员接入卡；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `#/admin/system` 两节在册（版本/更新 ∥ 接入卡）；meta 槽版本（`/api/system`）；更新提示接 `latest`（更新提示 = admin 面 ∥ 版本行 = 全角色——角色面收窄在案）；接入卡含 baseURL（运行时 origin） ∥ 四端示例 ∥ curl；零外部引用断言随正（不增档）；`nav.mjs` 结构直测不破 | 批内件 |
-| AC-14（功能点 13——控制台多语言；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 检测（记忆优先 ∥ `zh*`/`en*` 首命中 ∥ 无匹配 ⇒ zh——`pickLang` 直测）∥ 两表键集相等（双向——除自称名族 `lang.zh` ∥ `lang.en`：固定取 zh 表）∥ i18n 三档 CJK 口径（zh 表 = 唯一 CJK 档 ∥ `i18n.mjs` 与 en 表零 CJK）∥ 各表全键非空 ∥ 前端 JS 代码档「注释外零 CJK 字面量」（排除 `i18n-zh.mjs` ∥ `i18n-en.mjs` ∥ `index.html`；`index.html` 两处静态 CJK = 装配前缺省——豁免在案）∥ 键引用闭合（`t` 字面量 ⊆ 表键——含 `nav.mjs` `labelKey` 面）∥ 错误映射（可达码全键 ∥ `Retry-After` 注入 ∥ 未知码原文兜底）∥ 三新档静态直发 200（`text/javascript`）∥ 档目随正（12 ∥ 13） | 批内件 + 收口轮（浏览器两语言实走） |
+| AC-12（功能点 14——控制台 IA；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `nav.mjs` 直测：组/项结构（我的 3 ∥ 管理 6（二轮批后）⇒ **7**（弹窗批后——§2） ∥ admin 组仅 admin） ∥ 重定向（`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/overview`） ∥ 角色默认 ∥ admin 面 `denied`；静态档目随正（二轮批后 15 ∥ 16 ⇒ 弹窗批后 **17 ∥ 18**）∥ 管理页拆分（成员/用量/总览/审计/服务模型各一页——单页堆叠消失） | 批内件 |
+| AC-13③④（功能点 12——版本/更新可见 ∥ 成员接入卡；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `#/admin/system` 四节在册（版本/更新 ∥ 接入卡 + 二轮 向量服务 ∥ 服务健康——§2.1）；meta 槽版本（`/api/system`）；更新提示接 `latest`（更新提示 = admin 面 ∥ 版本行 = 全角色——角色面收窄在案）；接入卡含 baseURL（运行时 origin） ∥ 四端示例 ∥ curl；零外部引用断言随正（不增档）；`nav.mjs` 结构直测不破 | 批内件 |
+| AC-14（功能点 13——控制台多语言；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 检测（记忆优先 ∥ `zh*`/`en*` 首命中 ∥ 无匹配 ⇒ zh——`pickLang` 直测）∥ 两表键集相等（双向——除自称名族 `lang.zh` ∥ `lang.en`：固定取 zh 表）∥ i18n 三档 CJK 口径（zh 表 = 唯一 CJK 档 ∥ `i18n.mjs` 与 en 表零 CJK）∥ 各表全键非空 ∥ 前端 JS 代码档「注释外零 CJK 字面量」（排除 `i18n-zh.mjs` ∥ `i18n-en.mjs` ∥ `index.html`；`index.html` 两处静态 CJK = 装配前缺省——豁免在案）∥ 键引用闭合（`t` 字面量 ⊆ 表键——含 `nav.mjs` `labelKey` 面）∥ 错误映射（可达码全键 ∥ `Retry-After` 注入 ∥ 未知码原文兜底）∥ 三新档静态直发 200（`text/javascript`）∥ 档目随正（i18n 批后 12 ∥ 13 ⇒ 二轮批后 15 ∥ 16 ⇒ 弹窗批后 **17 ∥ 18**） | 批内件 + 收口轮（浏览器两语言实走） |
+| AC-15（功能点 15——控制台可见面六面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① 向量卡（配置真值行 ∥ 试跑回维度+耗时 ∥ 失败分类文案 ∥ 用户面提示条（模型名——零地址））+ endpoint 列/过滤（两用量页控件）；② 看板（概览卡 ∥ CSS 柱趋势 ∥ 聚合/排行两表 ∥ 导出 blob 下载——与 `/api/usage` 同源 ∥ 空态无错）；③ 总览（admin 落 `#/admin/overview` ∥ `#/admin` 重定向同指 ∥ 卡集六枚 ∥ user 不可达）；④ 审计页（过滤三轴 ∥ 列 ∥ 类型文案 ∥ 空态）；⑤ 灯（`nav-health` 三态 ∥ 30s 轮询 ∥ 停服红/恢复绿——收口轮浏览器实走）；⑥ key 行（最后使用 ∥ 近 30 天用量 ∥ 从未使用文案）；i18n 两表键集相等（新增 ≈87 键——en 零 CJK ∥ 占位符一致）∥ 静态档目随正（二轮批后 15 ∥ 16 ⇒ 弹窗批后 **17 ∥ 18**）∥ `nav.mjs` 直测（管理 7（弹窗批后） ∥ 重定向收正 ∥ 默认页收正） | 批内件 + 收口轮 |
+| AC-16（功能点 16——控制台弹窗交互；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `modal.mjs` 在册（零依赖 ∥ `<dialog>` 基座——遮罩/ESC/焦点/单例 ∥ 复用 API ∥ 模块顶层零浏览器全局）；成员页行点击 ⇒ 三态弹窗（查看/编辑/新建——设额度 ∥ 重置密码 ∥ 逐 key 吊销全在窗内 ∥ 保存/取消 = 编辑态）；一次性秘密不破（新建 ∥ 重置 ⇒ 关窗 + 页级回显——仅一次）；静态档目随正（弹窗批后 17 ∥ 18）∥ i18n 两表新键同步（en 零 CJK） | 批内件 + 收口轮（浏览器实走） |
+| AC-17（功能点 17——服务模型页；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `#/admin/models` 在册（列表 = `/v1/models` 同源——`providers` 展平 + `embedding.model` ∥ 全量 ∥ 空态 ∥ admin 面）；详情弹窗复用 `modal.mjs`——配置区 = 骨架（候选上抛；未裁前零可编辑字段）；`nav.mjs` 直测（管理 7 ∥ 新路径在册） | 批内件 + 收口轮（浏览器实走） |
 
 ## 7. 关键决策（本域）
 
 | # | 决策 | 理由 | 被否候选与何故否 |
 |---|---|---|---|
 | KD-SV-9 | **控制台前端 = vanilla 静态面**（`public/` 静态档组——`node:http` 直发）；零框架 ∥ 零构建 ∥ 零外部资源；哈希路由（IA = §2 ∥ KD-SV-20）；判权全在后端 | 用户 08:09 钉死（先例 = 本仓 webview vanilla 口径）；静态档零依赖贴合内网自洽；视图交互维护性 | 单文件内嵌 HTML（视图/表单增长后难维护）· 前端框架（违零依赖/零构建）· CDN ∥ 外链字体（内网不达）· 构建步骤（bundler——违零构建） |
-| KD-SV-20 | **控制台 IA = 侧栏分组导航 + 一页一职责**：组 = 我的（key/用量/账户设置）∥ 管理（成员/provider 与模型/用量统计/系统）；hash 路由 `#/<组>/<页>`；旧链重定向；解析 = `nav.mjs` 纯函数；窄屏降级顶条 | 用户 16:13 令（单页堆叠被判不专业）；侧栏 = 分组扩展面（系统/文案/后续协同面挂点）；纯函数解析 = 机检可达；零框架零构建不变（KD-SV-9） | 顶栏分区（横向空间有限——中英文案翻倍更挤 ∥ 分组层级浅）· 不重排（被用户否）· 框架路由（违 KD-SV-9）· 服务端路径路由（静态直发面破——hash 保刷新/书签） |
+| KD-SV-20 | **控制台 IA = 侧栏分组导航 + 一页一职责**：组 = 我的（key/用量/账户设置）∥ 管理（总览/成员/provider 与模型/服务模型/用量统计/审计/系统）；hash 路由 `#/<组>/<页>`；旧链重定向；解析 = `nav.mjs` 纯函数；窄屏降级顶条 | 用户 16:13 令（单页堆叠被判不专业）；侧栏 = 分组扩展面（系统/文案/后续协同面挂点）；纯函数解析 = 机检可达；零框架零构建不变（KD-SV-9） | 顶栏分区（横向空间有限——中英文案翻倍更挤 ∥ 分组层级浅）· 不重排（被用户否）· 框架路由（违 KD-SV-9）· 服务端路径路由（静态直发面破——hash 保刷新/书签） |
 | KD-SV-26 | **控制台多语言 = 前端静态双表 + 浏览器语言自动检测 + 显式切换（`localStorage` 记忆）+ 错误码前端映射**（服务端零改；缺省 zh；两语 = 中文 ∥ English） | 零依赖零构建下最简可达（静态 ESM 原生取载——无打包器 ∥ 无 fetch 一跳）∥ 页面壳零数据口径保持（无 SSR 面）∥ `code` 面既有——映射零新契约 ∥ 文案表 node 直测可达；自动 + 显式两全（英文浏览器首屏即英文 ∥ 中文用户想切即切） | 后端下发文案（新端点 + 协商面——零收益）· 第三方 i18n 库（违零依赖）· cookie 记忆（无 SSR 面——零收益）· 双语字段（30+ 抛出点双语维护 ∥ 上游透传面无处双语）· 仅自动检测（无显式切换）· 仅切换器（首屏语言不明） |
+| KD-SV-29 | **可见面二轮 = 服务端聚合/代发 + 零依赖前端**：总览落 `#/admin/overview`（admin 默认页；`#/admin` 重定向同指）；图表 = 纯 CSS 柱（零依赖零构建——KD-SV-9 不变）；健康 = 前端三态轮询（30s——共享态 + `ctx.onHealth` 订阅）；导出 = 服务端 CSV（前端 blob 下载）；key 细节 = `memberView` 单源扩展 | 图表库/框架组件被否（违 KD-SV-9 零框架零构建）；健康并入 `/api/system` 轮询被否（探活语义单源 = `/healthz`——KD-SV-23）；服务端出图被否（新增图片/HTML 面——无谓）；独立排行组件被否（聚合降序即排行——两套视图徒增重复） | 图表库 ∥ 构建步骤（零依赖纪律）· 整页轮询（重渲闪烁）· 我的用量页趋势/聚合（个人面保持明细——管理面专属）· 移动端适配（不做承诺不变） |
+| KD-SV-31 | **控制台弹窗 = 自持公共组件**（`modal.mjs`——原生 `<dialog>` + `showModal()` 基座；单例不叠加；关闭 = × ∥ ESC ∥ 句柄；遮罩点击不关（防误触）；焦点/背景 inert = 平台语义（收口轮核验）；零依赖零构建不变——KD-SV-9） | 用户 20:12 点名公共组件（后续铺开——组件化省重复）；原生 dialog 承担模态/焦点/ESC——自绘需重造同套语义 | 自绘遮罩组件（重造 ESC/焦点陷阱/inert——码量与缺陷面）· 各页自绘（用户点名否）· 非模态 `show()`（背景可交互——语义不符）· 第三方弹窗库（违零依赖） |
+| KD-SV-32 | **服务模型页 = 派生视图（零新端点）+ 配置骨架先行**（列表 = `providers` 展平 + `embedding.model`——与 `/v1/models` 同源；配置候选上抛，未裁前不落字段；页 = admin 面） | 需求 §2:17——目录来源不改（provider 配置派生）；控制台无团队 key（不直连 `/v1/models`）；未裁字段不擅自定死 | 新端点 `GET /api/models`（复述性——现有数据面已足）· 用户角色可见（需两角色读端点——新服务端面，未裁）· 模型增删入口（目录归 provider 面） |
 
 ## 8. 本域边界（不做的面）
 
 - 独立客户端管理台（不做——需求 §4；管理面 = 内嵌网页）∥ 前端框架 ∥ 构建步骤 ∥ CDN/外部资源 ∥ 移动端适配（桌面优先——窄屏不做承诺）∥ 成员面接入卡（接入成文 = README；系统页卡 = admin 面——§2.1）∥ 文档面多语言（README 等——另议）∥ 服务端消息/日志语言（机器面——错误映射 = §2.2）∥ 第三语言（加语言 = 表档 + 检测行增量）。
+- 二轮不做面：图表库（趋势 = 纯 CSS 柱——KD-SV-29）∥ 告警推送（健康 = 可见灯 + 页内块——推送归外部）∥ 我的用量页趋势/聚合（管理面专属）∥ 引擎起停（手动——需求 §4）∥ 总览图表（总览 = 数值卡）∥ key 管理表增列（二轮不加——`memberView` 数据已在）。
+- 弹窗批不做面：其他页弹窗迁移（按需后随——需求 §2:16）∥ 弹窗叠加/嵌套/拖拽/动画 ∥ 遮罩点击关闭 ∥ 成员改名/改角色/删除 ∥ 模型增删（归 provider 面）∥ 服务模型页用户角色可见面（需两角色端点——未裁）∥ 配置字段落定（未裁——候选表 = `design/PROJECT.md` §9 R24）。
 
 ## 变更记录
 
@@ -126,3 +194,7 @@
 - 2026-10-06：实施后回填轮（R14——批 `docs/batches/2026-10-06-console-providers.md`）：§5 九档实读收正（小计 558 ⇒ **943**）∥ `views.mjs` 行改退役形（迁移期引文——原读数 244 · as-of）∥ 叠加链同拍（#963/i18n 结果值随 re-base——增量 +135/+630 不动）。
 - 2026-10-06：实施后回填轮（R16——批 `docs/batches/2026-10-06-first-release-completeness.md`）：§5 四档实读收正（views-system **59** ∥ app **219** ∥ nav **82** ∥ style **83**；小计 ⇒ **1006**；i18n 叠加链随正）∥ §2.1 接入卡字段收正（`apiKey`）。
 - 2026-10-06：实施后回填轮（R18——批 `docs/batches/2026-10-06-server-i18n.md`）：§5 i18n 三档实读翻正（**113** ∥ **198** ∥ **194**）∥ 接线增量实读（app +21 ∥ nav ±0 ∥ views-auth +2 ∥ views-me +1 ∥ views-admin +2 ∥ views-providers +1 ∥ views-system +1 ∥ style +6）∥ 小计 ⇒ **1545**（叠加链随正）∥ §2.2「拟新增」标记随正。
+- 2026-10-06：控制台可见面二轮设计轮（批 `docs/batches/2026-10-06-console-completeness-2.md`——需求 §2:15 ∥ 台账 #972）——§1 视图档句重写（+3 档）/ JS 档数（十三档）∥ §2 表增总览/审计两页 + 默认页收正（admin ⇒ `#/admin/overview`）+ 旧链重定向同指 + key/用量/系统行随正 ∥ §2.1 重写（四节：+ 向量服务卡 ∥ 服务健康块；meta 槽 + 状态灯）∥ §2.2 覆盖范围随正 + 新增键族句（≈87 键——拆表断点）∥ 增 §2.3（六面机制：向量/看板/总览/审计/健康/key 细节）∥ §3 判权句随正 ∥ §5 预算（新三档 ∥ 逐档增量；小计 ⇒ ≈2247）∥ §6 补 AC-15 行 + AC-12/AC-13 行随正 ∥ §7 增 KD-SV-29 ∥ §8 边界随正。
+- 2026-10-06：fix 轮（评审 #69——批 `docs/batches/2026-10-06-console-completeness-2.md` §3 十项，本档面）：KD-SV-20 管理列举补「总览/审计」∥ AC-12 行删残留（原「管理 4」语句随正）∥ 档目行补「本批后 ⇒ 15 ∥ 16」注（§6 三处口径对齐——12/13 = i18n 后基线）。
+- 2026-10-06：控制台弹窗批设计轮（批 `docs/batches/2026-10-06-console-modals.md`——需求 §2:16 ∥ §2:17 ∥ 台账 #973/#974）——§1 视图档句/JS 档数（十五档）随正 ∥ §2 表增服务模型页 + 成员行随正 ∥ §2.2 覆盖（十页）+ 本批键族（≈17 键）+ 表体量句（拆表登记）∥ §2.3⑥ 管理表列面注随正 ∥ 增 §2.4（弹窗机制 ∥ 成员弹窗三态 ∥ 服务模型页）∥ §5 预算（新两档 ∥ 逐档增量；小计 ⇒ ≈2646）∥ §6 补 AC-16/AC-17 行 + AC-12/AC-14/AC-15 行随正（17 ∥ 18 ∥ 管理 7）∥ §7 增 KD-SV-31/32 ∥ §8 边界随正；KD-SV-20 十页。
+- 2026-10-06：fix 轮（评审轮次 1 第 2/6 项——批 `docs/batches/2026-10-06-console-modals.md` §3）：§5 六处实读收正（`app.mjs` **299** ⇒ ≈301 ∥ `i18n-zh.mjs` **292** ⇒ ≈309 ∥ `i18n-en.mjs` **288** ⇒ ≈305 ∥ `nav.mjs` **87** ⇒ ≈90 ∥ `style.css` **≈122** ⇒ ≈152 ∥ `views-admin.mjs` **≈100** ⇒ ≈210）+ `app.mjs` 越 300 软线拆分预案 ∥ §2.2 表体量句（双表——≈309 ∥ ≈305）∥ §2.4① 机制名删（策略句保留）。

@@ -79,6 +79,39 @@ input.quota { width: 90px; }
 .lang-switch button.active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
 .lang-switch-row { margin-top: 2px; font-size: 13px; }
 
+/* 健康状态灯（app.mjs 轮询 ∥ nav.mjs meta 槽 `#nav-health`——§2.3⑤）：三色点（伪元素）+ 文案 */
+.health { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); min-height: 16px; }
+.health::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #9aa3b0; flex: none; }
+.health.ok::before { background: #2e9e5b; }
+.health.degraded::before { background: #d8a013; }
+.health.down::before { background: var(--danger); }
+
+/* 卡集与看板（views-overview.mjs ∥ views-usage.mjs——§2.3②③）：网格 ∥ 统计卡 ∥ 快捷入口 */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.stat-grid .card { margin-bottom: 0; }
+.stat-label { font-size: 12px; color: var(--muted); }
+.stat-value { font-size: 20px; font-weight: 600; margin-top: 4px; overflow-wrap: anywhere; }
+.stat-value.ok { color: #2e9e5b; }
+.stat-value.degraded { color: #d8a013; }
+.stat-value.down { color: var(--danger); }
+.stat-links { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; font-size: 13px; }
+.stat-link { display: inline-block; margin-top: 6px; font-size: 13px; }
+
+/* 时间趋势（纯 CSS 柱——零依赖；柱 title = 日期/请求数/tokens；轴标 = 首末日） */
+.chart { margin-top: 6px; }
+.chart-bars { display: flex; align-items: flex-end; gap: 3px; height: 120px; border-bottom: 1px solid var(--border); }
+.bar-col { flex: 1; display: flex; align-items: flex-end; height: 100%; min-width: 4px; }
+.bar { width: 100%; background: var(--accent); border-radius: 2px 2px 0 0; min-height: 2px; }
+.chart-axis { display: flex; justify-content: space-between; margin-top: 4px; font-size: 12px; color: var(--muted); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* key 细节行（views-me.mjs——§2.3⑥：最后使用 / 近 30 天用量） */
+.key-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.key-list .key-item { margin-bottom: 6px; }
+
+/* 向量服务提示条（views-me.mjs——§2.3①；模型名 + snippet + 用法） */
+.tip-bar { border-left: 3px solid var(--accent); }
+
 /* 窄屏（≤760px）：侧栏降级为顶条（单条媒体查询——非移动端适配承诺——WEBUI §2） */
 @media (max-width: 760px) {
   .sidebar { position: static; width: auto; flex-direction: row; flex-wrap: wrap; align-items: center; border-right: none; border-bottom: 1px solid var(--border); }

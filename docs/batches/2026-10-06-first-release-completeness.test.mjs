@@ -260,7 +260,7 @@ test("③ /api/system：无会话 ⇒ 401 unauthorized ∥ 会话（两角色）
   const registry = await startRegistry("9.9.9")
   const lines = []
   const updater = UPDATE.createUpdater({ config: { autoUpdate: "notify" }, version: "0.1.0", registry: registry.base, intervalMs: 3_600_000, log: captureLog(lines) })
-  const app = await startApp({ db, config: baseConfig(), system: { version: "0.1.0", getUpdateStatus: () => updater.getStatus() }, lines })
+   const app = await startApp({ db, config: baseConfig(), system: { version: "0.1.0", getUpdateStatus: () => updater.getStatus(), embedding: { model: "bge-m3" } }, lines })
   try {
     const anon = await get(app.base, "/api/system")
     assert.equal(anon.status, 401)
@@ -268,7 +268,7 @@ test("③ /api/system：无会话 ⇒ 401 unauthorized ∥ 会话（两角色）
     const admin = await login(app.base, "admin")
     const before = await get(app.base, "/api/system", { cookie: admin.cookie }) // 未检形（访问器实况）
     assert.equal(before.status, 200)
-    assert.deepEqual(before.json, { version: "0.1.0", update: { mode: "notify", lastCheckAt: null, latest: null } })
+    assert.deepEqual(before.json, { version: "0.1.0", update: { mode: "notify", lastCheckAt: null, latest: null }, embedding: { model: "bge-m3" } })
     assert.deepEqual(await updater.checkNow(), { latest: "9.9.9", installed: false }) // notify ⇒ 可见不自装
     const after = await get(app.base, "/api/system", { cookie: admin.cookie })
     assert.equal(after.json.update.mode, "notify")
@@ -280,11 +280,11 @@ test("③ /api/system：无会话 ⇒ 401 unauthorized ∥ 会话（两角色）
   } finally { updater.stop(); await registry.close(); await app.close(); db.close() }
 })
 
-test("③ 系统页两节（描述符树直测）：版本/更新四项 ∥ 接入卡（运行时 origin ∥ key 提示 ∥ 四端 ∥ curl）", () => {
+test("③ 系统页四节（描述符树直测）：版本/更新四项 ∥ 接入卡（运行时 origin ∥ key 提示 ∥ 四端 ∥ curl）∥ 向量服务卡 ∥ 服务健康块", async () => {
   const origin = "http://10.1.2.3:8787"
   const prevLocation = globalThis.location
   globalThis.location = { origin }
-  const el = (tag, props = {}, ...children) => ({ tag, props, children: children.flat(Infinity).filter((c) => c !== null && c !== undefined && c !== false) })
+  const el = (tag, props = {}, ...children) => ({ tag, props, children: children.flat(Infinity).filter((c) => c !== null && c !== undefined && c !== false), addEventListener: () => {} })
   const text = (node, out = []) => {
     if (node === null || node === undefined || node === false) return out
     if (typeof node === "string") { out.push(node); return out }
@@ -299,6 +299,10 @@ test("③ 系统页两节（描述符树直测）：版本/更新四项 ∥ 接�
       table: (headers, rows) => el("table", {}, ...headers, ...rows.flat()),
       fmtTs: (ts) => `TIME(${ts})`,
       fmtValue: (value) => (value === null || value === undefined ? "—" : String(value)),
+      api: async () => ({ ok: true, dimensions: 3, ms: 1 }),
+      fail: () => {},
+      health: () => ({ label: "ok", body: { db: "ok", uptime: 5 }, checkedAt: null }),
+      onHealth: () => {},
       state: { system },
     }
     SYSTEM_VIEW.renderSystem(ctx, { append: (...nodes) => nodes.forEach((n) => text(n, out)) })
@@ -313,6 +317,8 @@ test("③ 系统页两节（描述符树直测）：版本/更新四项 ∥ 接�
     for (const end of ["CLI", "VS Code", "桌面", "其他 OpenAI 兼容端"]) assert.ok(withUpdate.includes(end), `四端缺：${end}`)
     assert.ok(withUpdate.includes("name") && withUpdate.includes("baseURL") && withUpdate.includes("<provider>/<model>") && withUpdate.includes("apiKey"))
     assert.ok(withUpdate.includes(`curl -H "Authorization: Bearer sk-tc-…" ${origin}/v1/models`))
+    assert.ok(withUpdate.includes("向量服务") && withUpdate.includes("调用 snippet") && withUpdate.includes(`${origin}/v1/embeddings`), "向量服务卡缺")
+    assert.ok(withUpdate.includes("服务健康") && withUpdate.includes("30 秒自动刷新"), "服务健康块缺")
     const noUpdate = render({ version: "1.2.3", update: { mode: "auto", lastCheckAt: null, latest: null } })
     assert.ok(noUpdate.includes("未发现新版本") && noUpdate.includes("未检")) // lastCheckAt null = 未检
     const empty = render(null) // 取数失败（静默留空）⇒ 「—」形 + 未发现新版本（同面）
@@ -325,7 +331,7 @@ test("③ 系统页两节（描述符树直测）：版本/更新四项 ∥ 接�
     }
     assert.ok(navText({ version: "1.2.3" }).includes("v1.2.3"))
     assert.ok(!navText({}).includes("v1.2.3"))
-  } finally { globalThis.location = prevLocation }
+  } finally { await new Promise((resolve) => setTimeout(resolve, 0)); globalThis.location = prevLocation }
 })
 
 // ── ④ README 结构与部署件 ────────────────────────────────────────────────────

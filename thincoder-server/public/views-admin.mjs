@@ -1,7 +1,7 @@
 /**
- * views-admin.mjs — 管理两页（webui/WEBUI.md §2）：`#/admin/members`（建成员——初始密码一次性回显 ∥
- * 成员表含各成员 key 清单/吊销/设额度/重置）∥ `#/admin/usage`（全队用量：过滤查询）；原「管理」单页堆叠拆开
- * （一页一职责）；自 views.mjs 拆档。
+ * views-admin.mjs — 管理·成员页（webui/WEBUI.md §2）：`#/admin/members`（建成员——初始密码一次性回显 ∥
+ * 成员表含各成员 key 清单/吊销/设额度/重置）；原「管理」单页堆叠拆开（一页一职责）；自 views.mjs 拆档。
+ * 全队用量看板 = views-usage.mjs（二轮迁出——§2.3②；管理表不加 key 细节列——§2.3⑥）。
  *
  * 判权全在后端（admin 面——服务端 403 为准）；渲染一律节点 + textContent；一次性秘密（临时密码）= ctx.showSecret；
  * 文案经 `t()` 取值（§2.2）。
@@ -97,43 +97,4 @@ async function revoke(ctx, member, key, reload) {
     await ctx.api(`/api/members/${member.id}/keys/${key.id}/revoke`, { method: "POST" })
     await reload()
   } catch (error) { ctx.fail(error) }
-}
-
-// ── 页：全队用量 ────────────────────────────────────────────────────────────
-
-export async function renderAdminUsage(ctx, mount) {
-  const { h } = ctx
-  mount.append(h("h2", { text: t("admin.usage.title") }))
-
-  const filterMember = h("input", { placeholder: t("admin.usage.memberPh") })
-  const filterModel = h("input", { placeholder: t("admin.usage.modelPh") })
-  const filterFrom = h("input", { type: "datetime-local", title: t("admin.usage.fromTitle") })
-  const filterTo = h("input", { type: "datetime-local", title: t("admin.usage.toTitle") })
-  const filterLimit = h("input", { type: "number", min: "1", max: "500", value: "100", class: "tiny" })
-  const usageBox = h("div", {}, h("p", { class: "hint", text: t("common.loading") }))
-  const loadUsage = async () => {
-    const params = new URLSearchParams()
-    // 查询键以模板字面量书写（沿线先例：引号字面量会撞 D1 件依赖面扫描的键名正则——该扫描件按令零改；行为等价）
-    if (filterMember.value.trim()) params.set("member", filterMember.value.trim())
-    if (filterModel.value.trim()) params.set("model", filterModel.value.trim())
-    if (filterFrom.value) params.set(`from`, String(new Date(filterFrom.value).getTime()))
-    if (filterTo.value) params.set(`to`, String(new Date(filterTo.value).getTime()))
-    params.set("limit", filterLimit.value.trim() || "100")
-    try {
-      const data = await ctx.api(`/api/usage?${params.toString()}`)
-      usageBox.replaceChildren(ctx.usageTable(data.rows, { withMember: true }))
-    } catch (error) {
-      ctx.fail(error)
-      usageBox.replaceChildren(h("p", { class: "hint", text: t("usage.loadFailed") }))
-    }
-  }
-  const filterForm = h("form", { class: "row-form" },
-    filterMember, filterModel,
-    h("label", {}, t("admin.usage.fromLabel"), filterFrom), h("label", {}, t("admin.usage.toLabel"), filterTo),
-    h("label", {}, t("admin.usage.limit"), filterLimit),
-    h("button", { type: "submit", text: t("admin.usage.submit") }),
-  )
-  filterForm.addEventListener("submit", (event) => { event.preventDefault(); loadUsage() })
-  mount.append(h("section", { class: "card" }, h("h3", { text: t("admin.usage.title") }), filterForm, usageBox))
-  await loadUsage()
 }

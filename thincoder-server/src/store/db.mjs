@@ -68,10 +68,29 @@ CREATE TABLE IF NOT EXISTS providers (
 );
 `
 
+/** v3 增段（`audit_events` 事件表 + 三索引——store/STORE.md §2 v3 段逐字；accounts ∥ metering 域）。 */
+const DDL_V3 = `
+CREATE TABLE IF NOT EXISTS audit_events (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts          INTEGER NOT NULL,              -- unix ms（事件时刻）
+  type        TEXT NOT NULL CHECK (type IN ('login_success','login_failure','login_locked',
+    'key_rotate','key_issue','key_revoke','password_change','password_reset','member_create')),
+  actor_id    INTEGER,                       -- 行为人成员 id（无会话 ∥ 未知用户名 ⇒ NULL；无 FK——历史记录自足）
+  actor_name  TEXT NOT NULL,                 -- 行为人名快照（用户名 ∥ 展示名 ∥ 'cli'）
+  target_id   INTEGER,                       -- 对象成员 id（无对象 ⇒ NULL）
+  target_name TEXT NOT NULL DEFAULT '',      -- 对象名快照（无对象 ⇒ 空串）
+  detail      TEXT NOT NULL DEFAULT '{}'     -- 附加形（JSON：ip ∥ dimension ∥ keyHint ∥ role 等）
+);
+CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_events(ts);
+CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
+CREATE INDEX IF NOT EXISTS idx_usage_key_ts ON usage(key_id, ts);
+`
+
 /** 迁移链：每段 = `{ v, up(db) }`（v = 目标结构版本，自 1 起递增）；结构每变一次追一段（+1）。 */
 export const MIGRATIONS = [
   { v: 1, up: (db) => db.exec(DDL_V1) },
   { v: 2, up: (db) => db.exec(DDL_V2) },
+  { v: 3, up: (db) => db.exec(DDL_V3) },
 ]
 
 /** 当前结构版本（= 链尾段号——store/STORE.md §1）。 */

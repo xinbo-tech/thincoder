@@ -398,19 +398,19 @@ test("⑦ 校验单源：非法 ∥ 重名 ∥ env: 缺位 ⇒ 400 且库与运�
 })
 
 // ── ⑧ 导航直测 + 静态十二档 ───────────────────────────────────────────────────
-test("⑧ nav.mjs 直测（组/项结构 ∥ 重定向 ∥ 角色默认 ∥ denied）+ 静态十二档（含 favicon 共十三档 ∥ 零外链 ∥ 接线 ∥ 直发）", async () => {
-  // 组/项结构：我的 3 ∥ 管理 4 ∥ admin 组仅 admin；label 单源（文案挂点）
+test("⑧ nav.mjs 直测（组/项结构 ∥ 重定向 ∥ 角色默认 ∥ denied）+ 静态十五档（含 favicon 共十六档 ∥ 零外链 ∥ 接线 ∥ 直发）", async () => {
+  // 组/项结构：我的 3 ∥ 管理 6（二轮后） ∥ admin 组仅 admin；label 单源（文案挂点）
   const [me, adminGroup] = NAV.NAV_GROUPS
   assert.deepEqual(me.items.map((i) => i.path), ["/me/keys", "/me/usage", "/me/account"])
-  assert.deepEqual(adminGroup.items.map((i) => i.path), ["/admin/members", "/admin/providers", "/admin/usage", "/admin/system"])
+  assert.deepEqual(adminGroup.items.map((i) => i.path), ["/admin/overview", "/admin/members", "/admin/providers", "/admin/usage", "/admin/audit", "/admin/system"])
   assert.equal(adminGroup.adminOnly, true)
   assert.equal(me.adminOnly, undefined)
   for (const group of NAV.NAV_GROUPS) for (const item of group.items) assert.ok(item.labelKey, `缺 labelKey：${item.path}`)
-  // 重定向（旧链）：`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/members`
+  // 重定向（旧链）：`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/overview`
   assert.deepEqual(NAV.resolveRoute("/me", "user"), { path: "/me/keys", redirect: true })
-  assert.deepEqual(NAV.resolveRoute("/admin", "admin"), { path: "/admin/members", redirect: true })
-  // 角色默认（根 ∥ 未知）：admin ⇒ /admin/members ∥ user ⇒ /me/keys
-  assert.deepEqual(NAV.resolveRoute("/", "admin"), { path: "/admin/members", redirect: true })
+  assert.deepEqual(NAV.resolveRoute("/admin", "admin"), { path: "/admin/overview", redirect: true })
+  // 角色默认（根 ∥ 未知）：admin ⇒ /admin/overview ∥ user ⇒ /me/keys
+  assert.deepEqual(NAV.resolveRoute("/", "admin"), { path: "/admin/overview", redirect: true })
   assert.deepEqual(NAV.resolveRoute("/", "user"), { path: "/me/keys", redirect: true })
   assert.deepEqual(NAV.resolveRoute("/nope", "user"), { path: "/me/keys", redirect: true })
   // 正常解析（含尾斜杠归一 ∥ 登录面透传）
@@ -421,16 +421,16 @@ test("⑧ nav.mjs 直测（组/项结构 ∥ 重定向 ∥ 角色默认 ∥ deni
   assert.deepEqual(NAV.resolveRoute("/admin/providers", "user"), { path: "/admin/providers", denied: true })
   assert.deepEqual(NAV.resolveRoute("/admin/members", "admin"), { path: "/admin/members" })
 
-  // 静态十二档（含 favicon 共十三档）+ 零外链 + 模块接线（views.mjs 退役）
+  // 静态十五档（含 favicon 共十六档）+ 零外链 + 模块接线（views.mjs 退役）
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual(names, ["app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "nav.mjs", "style.css", "views-admin.mjs", "views-auth.mjs", "views-me.mjs", "views-providers.mjs", "views-system.mjs"])
+  assert.deepEqual(names, ["app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "nav.mjs", "style.css", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-overview.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs"])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
     assert.ok(!/https?:\/\//.test(text), `${name} 含外部链接（内网不达——KD-SV-9）`)
     assert.ok(!/@import/.test(text), `${name} 含 @import（禁外链样式）`)
   }
   const appSource = readFileSync(join(PUBLIC_DIR, "app.mjs"), "utf8")
-  for (const dep of ["nav.mjs", "views-auth.mjs", "views-me.mjs", "views-admin.mjs", "views-providers.mjs", "views-system.mjs"]) {
+  for (const dep of ["nav.mjs", "views-auth.mjs", "views-me.mjs", "views-admin.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs", "views-overview.mjs", "views-audit.mjs"]) {
     assert.ok(appSource.includes(`./${dep}`), `app.mjs 未接线：${dep}`)
   }
   assert.ok(!appSource.includes("./views.mjs"), "app.mjs 仍引用已退役档 views.mjs")

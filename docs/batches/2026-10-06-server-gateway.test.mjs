@@ -6,7 +6,7 @@
  * 射程（D1 骨架段——设计 §8 D1：store/db → ops/config → gateway/server ∥ `/v1/models`）：
  *   ① 配置校验（fail-closed：host 必填 ∥ 零 provider = 允许（条目级 fail-closed） ∥ 同 provider 内模型重名拒（跨 provider 同名放行） ∥ baseURL 非 http(s) 拒 ∥
  *      bootstrap 口令 < 8 拒 ∥ port 非法拒）② 缺省值 ∥ `env:` 保形（载入不解析——构建期解析） ∥ 库路径归一（相对 = 配置档目录）
- *   ③ db 迁移链（五表 + 三索引 + `user_version` ∥ 文件库重开幂等 ∥ 迁移段单事务回滚 ∥ FK/CHECK 生效）
+ *   ③ db 迁移链（六表 + 六索引 + `user_version=3`——v3 追加 `audit_events` + 三索引（2026-10-06 console-completeness-2 批） ∥ 文件库重开幂等 ∥ 迁移段单事务回滚 ∥ FK/CHECK 生效）
  *   ④ providers 派发（`provider/model` 复合键——首斜杠切分 ∥ 裸名/未命中 404 形 ∥ 同名跨 provider 并存 ∥ `/v1/models` 前缀名清单）
  *   ⑤ 路由注册表（注册行 ∥ `:参数` ∥ 重复注册拒）⑥ 服务冒烟（200/404/400/413 ∥ 逐请求日志 ∥ 停机）
  *   ⑦ 日志形（单行 JSON）⑧ 零第三方依赖扫描（import 面仅 `node:`/相对 ∥ dependencies 空）
@@ -161,15 +161,15 @@ test("config：缺省值 ∥ env: 解析 ∥ 库路径归一 ∥ 0.0.0.0 告警"
 
 // ── ③ db 迁移链 ──────────────────────────────────────────────────────────────
 
-test("db：迁移链 ⇒ 五表 + 三索引 + user_version=2 ∥ 约束生效", () => {
+test("db：迁移链 ⇒ 六表 + 六索引 + user_version=3 ∥ 约束生效", () => {
   const db = DB.openDatabase(":memory:")
   try {
-    assert.equal(DB.SCHEMA_VERSION, 2)
-    assert.equal(DB.readVersion(db), 2)
+    assert.equal(DB.SCHEMA_VERSION, 3)
+    assert.equal(DB.readVersion(db), 3)
     const names = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name)
-    for (const table of ["members", "api_keys", "sessions", "usage", "providers"]) assert.ok(names.includes(table), `缺表：${table}`)
+    for (const table of ["members", "api_keys", "sessions", "usage", "providers", "audit_events"]) assert.ok(names.includes(table), `缺表：${table}`)
     const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").all()
-    assert.equal(indexes.length, 3)
+    assert.equal(indexes.length, 6)
     assert.equal(db.prepare("PRAGMA foreign_keys").get().foreign_keys, 1)
 
     // FK：usage.member_id 引用不存在的成员 ⇒ 拒
@@ -183,7 +183,7 @@ test("db：迁移链 ⇒ 五表 + 三索引 + user_version=2 ∥ 约束生效", 
       /CHECK/i,
     )
     // 幂等：同库再跑迁移 ⇒ 版本不变、不报错
-    assert.equal(DB.migrate(db), 2)
+    assert.equal(DB.migrate(db), 3)
   } finally {
     db.close()
   }
@@ -198,15 +198,15 @@ test("db：文件库重开幂等（旧库自动升 ∥ 数据保留）∥ 迁移
     first.close()
 
     const second = DB.openDatabase(file)
-    assert.equal(DB.readVersion(second), 2)
+    assert.equal(DB.readVersion(second), 3)
     assert.equal(second.prepare("SELECT count(*) AS n FROM members").get().n, 1)
 
     // 失败迁移：段内先建表再抛 ⇒ 整段回滚（表不落 ∥ 版本不动）
-    const failing = [...DB.MIGRATIONS, { v: 3, up: (handle) => { handle.exec("CREATE TABLE v3_probe (x INTEGER)"); throw new Error("boom") } }]
+    const failing = [...DB.MIGRATIONS, { v: 4, up: (handle) => { handle.exec("CREATE TABLE v4_probe (x INTEGER)"); throw new Error("boom") } }]
     try {
-      assert.throws(() => DB.migrate(second, { migrations: failing }), /迁移失败（v3）/)
-      assert.equal(DB.readVersion(second), 2)
-      assert.equal(second.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name = 'v3_probe'").get().n, 0)
+      assert.throws(() => DB.migrate(second, { migrations: failing }), /迁移失败（v4）/)
+      assert.equal(DB.readVersion(second), 3)
+      assert.equal(second.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name = 'v4_probe'").get().n, 0)
     } finally {
       second.close()
     }
