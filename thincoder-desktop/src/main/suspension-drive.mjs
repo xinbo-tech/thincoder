@@ -101,7 +101,7 @@ export function createSuspensionDrive({ post, runTurn, reloadSlot = null, notify
   function reemitDone(key, entries) {
     for (const e of entries) {
       if (!e || e.id === undefined || e.id === null) continue
-      console.error(`[suspension-drive] reemit-done ${key} ${e.role ?? "subagent"}#${e.id}`) // 诊断痕（2026-10-06——#76 digested-stuck 事故；起跑补发∥reclaim∥freezeAll 三径共用本点）
+      console.error(`[suspension-drive] reemit-done ${key} ${e.role ?? "subagent"}#${e.id}`) // 诊断痕（2026-10-06——#76 digested-stuck 事故；起跑补发∥reclaim∥freezeAll∥自愈扫 四径共用本点）
       if (e.role === "consult") {
         // #748：会话本体无行——逐子块展开（无块子块不入表 ⇒ 表空 = 零发）；本体 id 零补发
         for (const cid of e.childIds ?? []) post("ev:subagent", { key, role: "consult", id: cid, status: "done" })
