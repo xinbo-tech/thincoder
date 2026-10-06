@@ -18,11 +18,12 @@
 - **会话形**（KD-SV-12）：登录签发令牌（32 字节随机 base64url）；库存 `sha256(令牌)`（`sessions` 表——无明文）；cookie `tc_session=<令牌>`（`HttpOnly; SameSite=Strict; Path=/; Max-Age=604800`——7 天绝对过期 ∥ 不滑动）；同人可多会话（每登录一行）。
 - **会话校验**：逐请求查库（无缓存——同团队 key 纪律）；登出 = 删行 + 清 cookie；过期行在登录时顺手清；HTTP 内网无 `Secure` 标记（边界 = 本档 §8 ∥ `ops/OPS.md` §5）。
 - **密码规则**：最小长度 8（建成员 ∥ 改密 ∥ 重置统一校验）；长度不设上界（已审定：无 DoS 面）；改密 = 哈希替换（旧密即失效——无宽限）；登录失败不区分「用户不存在 ∥ 密码错」（措辞与耗时同——不存在用户照跑哑散列，防枚举）。
-- **登录防护（防爆破——首版完备化②）**：双维失败计数（**进程内存**——`thincoder-server/src/accounts/login-guard.mjs`（拟新增））——**用户名维**（提交值——无论是否存在）：连续失败 ≥5 次（窗 15 分钟）⇒ 锁 15 分钟；**IP 维**：失败 ≥20 次（同窗）⇒ 锁同。
+- **登录防护（防爆破——首版完备化②）**：双维失败计数（**进程内存**——`thincoder-server/src/accounts/login-guard.mjs`（已落盘））——**用户名维**（提交值——无论是否存在）：连续失败 ≥5 次（窗 15 分钟）⇒ 锁 15 分钟；**IP 维**：失败 ≥20 次（同窗）⇒ 锁同。
 - 锁定期内登录 ⇒ **429 `too_many_attempts`** + `Retry-After`（剩余秒）+ 固定文案（**两维同文案、与用户名存在性无关**——防枚举面保持；不跑散列——快速拒绝）；固定窗（锁期内重试不延长）。
 - 口面 = `check` ∥ `recordFailure` ∥ `recordSuccess` ∥ `clearUsername`（时钟可注入——批内件）。
 - **清计路径**：登录成功（清该用户名 + 该 IP） ∥ 自助改密（清本人用户名维） ∥ admin 重置（清目标用户名维——HTTP 面；本机 CLI 重置跨进程不达——残余 ≤ 锁窗，在案）。
 - **重启 ⇒ 计数清零**（在案口径：在线爆破窗 = 分钟级；重启罕发——接受；离线撞库不在防线内）。
+- **桶过期惰性清理**：读写路径顺扫过期条目（过期桶即删——无独立清扫面；重启清零同拍）。
 - **客户端 IP 口径**：缺省 = 连接对端地址；`trustProxy: true`（`ops/OPS.md` §1）⇒ 读 `X-Real-IP`（前提 = 端口仅反代可达——`ops/OPS.md` §5.6）。
 - **事件日志**：锁触发 ⇒ `login_throttled` 一行（`username` ∥ `ip` ∥ `dimension`（`username` ∥ `ip`） ∥ `retryAfterS`——密钥面零涉）。
 - **首个 admin**：首启引导建（`ops/OPS.md` §2——幂等）；本档只管账号数据形。
@@ -55,10 +56,10 @@
 | `thincoder-server/src/accounts/keys.mjs`（已落盘） | **98**（实读 2026-10-06——设计估 ≈120） | key 校验 ∥ key 签发/吊销/轮转（页面与 CLI 共用） |
 | `thincoder-server/src/accounts/members.mjs`（已落盘） | **161**（实读 2026-10-06——设计估 ≈90） | 成员 CRUD ∥ scrypt 散列/校验 ∥ 角色 ∥ 临时密码 ∥ 首启引导 |
 | `thincoder-server/src/accounts/session.mjs`（已落盘） | **95**（实读 2026-10-06——设计估 ≈90） | 会话签发/校验/吊销 ∥ cookie 序列化/解析 ∥ 过期清理 |
-| `thincoder-server/src/accounts/routes.mjs`（已落盘） | **81**（实读 2026-10-06——设计估 ≈150；本批预期 ≈101 = +20：登录 guard 接线（429 + `Retry-After` + 日志）） | 自助端点：login ∥ logout ∥ me ∥ me/password ∥ me/keys/rotate |
-| `thincoder-server/src/accounts/routes-admin.mjs`（已落盘） | **58**（实读 2026-10-06——设计估 ≈120；本批预期 ≈61 = +3：重置 ⇒ 清目标用户名锁） | 管理端点：members 列表/建 ∥ 吊销 ∥ 重置 |
-| `thincoder-server/src/accounts/login-guard.mjs`（拟新增） | **无 ⇒ ≈90**（设计估——双维计数（用户名 ∥ IP） ∥ 锁定/解锁 ∥ 清计四口 ∥ IP 口径（`trustProxy`）——§2） | 登录防爆破 |
-| **小计** | **≈570 ⇒ 493 ⇒ 本批预期 ≈606**（+113 = guard 新 ≈90 ∥ routes +20 ∥ routes-admin +3） | —— |
+| `thincoder-server/src/accounts/routes.mjs`（已落盘） | **98**（实读 2026-10-06——设计估 ≈150；本批 +17 = 登录 guard 接线（429 + `Retry-After` + 日志）） | 自助端点：login ∥ logout ∥ me ∥ me/password ∥ me/keys/rotate |
+| `thincoder-server/src/accounts/routes-admin.mjs`（已落盘） | **61**（实读 2026-10-06——设计估 ≈120；本批 +3 = 重置 ⇒ 清目标用户名锁） | 管理端点：members 列表/建 ∥ 吊销 ∥ 重置 |
+| `thincoder-server/src/accounts/login-guard.mjs`（已落盘） | **无 ⇒ 119**（实读 2026-10-06——设计估 ≈90；双维计数（用户名 ∥ IP） ∥ 锁定/解锁 ∥ 清计四口 ∥ IP 口径（`trustProxy`）——§2） | 登录防爆破 |
+| **小计** | **≈570 ⇒ 493 ⇒ 632**（#963 实读：+139 = guard 新 119 ∥ routes +17 ∥ routes-admin +3） | —— |
 
 ## 5. 验收判据（机检面）
 
@@ -67,7 +68,7 @@
 | AC-1（功能点 1） | 无 Authorization ∥ 未知 key ∥ 吊销 key ⇒ **401 + `invalid_api_key`**；持有效团队 key 经 mock 上游完成一次请求 ⇒ 200 | 批内件 |
 | AC-5（功能点 5） | 吊销后**下一次请求** ⇒ 401（无缓存路径——查库即判） | 批内件 |
 | AC-7（功能点 7——B 案） | ① 正确凭据登录 ⇒ 200 + 会话 cookie；错凭据（含不存在用户）⇒ 401 `invalid_credentials`（同措辞）② 无/过期会话访问 `/api/me` ∥ `/api/usage` ⇒ 401 `unauthorized` ③ `user` 会话调管理写（建成员 ∥ 配额 ∥ 吊销 ∥ 重置）⇒ 403 `forbidden`（服务端判）④ 自助改密 ⇒ 旧密登录失败 + 新密登录成功 + 本人其他会话失效（当前保留）⑤ admin 重置 ⇒ 旧密失效 + 临时密码可登（一次性回显——同签发语义）⑥ 自助轮换 ⇒ 新 key 通行 + 旧 key 下一请求 401 ⑦ 首启引导幂等（零 admin + 配置 ⇒ 建；再启动 ⇒ 不重建不改密——机制 = `ops/OPS.md` §2） | 批内件 |
-| AC-13②（功能点 12——登录防爆破；候补——需求档回笔 = 主 agent 笔） | 5 连败（同用户名）⇒ 第 6 次（含正确密码）⇒ 429 `too_many_attempts` + `Retry-After`（秒）；锁窗过后 ⇒ 正确密码 200；成功 ⇒ 清计；IP 维 20 阈值（`trustProxy` 下取 `X-Real-IP`）；不存在用户名同锁（枚举零差——措辞/计时面）；admin 重置 ⇒ 该用户名锁清（旧密 401、临时密码 200）；锁触发日志 `login_throttled` 在册 | 批内件 |
+| AC-13②（功能点 12——登录防爆破；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 5 连败（同用户名）⇒ 第 6 次（含正确密码）⇒ 429 `too_many_attempts` + `Retry-After`（秒）；锁窗过后 ⇒ 正确密码 200；成功 ⇒ 清计；IP 维 20 阈值（`trustProxy` 下取 `X-Real-IP`）；不存在用户名同锁（枚举零差——措辞/计时面）；admin 重置 ⇒ 该用户名锁清（旧密 401、临时密码 200）；锁触发日志 `login_throttled` 在册 | 批内件 |
 
 ## 6. 关键决策（本域）
 
@@ -116,3 +117,6 @@
 - 2026-10-06：实施后回填轮（fix）——§2 密码规则补「长度不设上界」（已审定：无 DoS 面）；§4 行数按实读回填（小计 ≈570 ⇒ 493）。
 - 2026-10-06：控制台 provider/模型管理设计轮（批 `docs/batches/2026-10-06-console-providers.md`）——§3 增 provider 管理端点指针行（端点表归 `gateway/API.md` §2.2——本域零语义改）。
 - 2026-10-06：首版完备化设计轮（批 `docs/batches/2026-10-06-first-release-completeness.md`——需求 §2:12② ∥ 台账 #963）——§2 增登录防护（双维内存锁 ∥ 阈值/窗 ∥ 清计路径 ∥ 重启口径 ∥ IP 口径 ∥ 事件日志）∥ §3 login 行补 429 ∥ §4 预算（login-guard 拟新增 ≈90 ∥ routes +20 ∥ routes-admin +3；小计 ≈606）∥ §5 补 AC-13② 候补行 ∥ §6 增 KD-SV-21 ∥ §7 增 N22–N24 ∥ B18/B19 ∥ E20 ∥ §8 边界随正（限速/锁定由不做项转在册）。
+- 2026-10-06：fix 轮（评审轮次 1 #10——批 `docs/batches/2026-10-06-first-release-completeness.md` §3）：§2 补「桶过期惰性清理」句（读写路径顺扫——重启清零同拍）。
+- 2026-10-06：AC-13 行候补标记收正（父侧直接执行 · 机械 · 可 revert——已落需求档验收表）。
+- 2026-10-06：实施后回填轮（R16——批 `docs/batches/2026-10-06-first-release-completeness.md`）：§2/§4 login-guard 标记翻正 + 行数按实读收正（**119** ∥ routes **98** ∥ routes-admin **61**；小计 ⇒ **632**）。

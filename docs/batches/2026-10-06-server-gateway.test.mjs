@@ -4,9 +4,9 @@
  * 运行（自 `thincoder/` 仓根）：`node --test docs/batches/2026-10-06-server-gateway.test.mjs`
  *
  * 射程（D1 骨架段——设计 §8 D1：store/db → ops/config → gateway/server ∥ `/v1/models`）：
- *   ① 配置校验（fail-closed：host 必填 ∥ providers ≥1 ∥ 同 provider 内模型重名拒（跨 provider 同名放行） ∥ baseURL 非 http(s) 拒 ∥
- *      bootstrap 口令 < 8 拒 ∥ port 非法拒）② 缺省值 ∥ `env:` 解析 ∥ 库路径归一（相对 = 配置档目录）
- *   ③ db 迁移链（四表 + 三索引 + `user_version` ∥ 文件库重开幂等 ∥ 迁移段单事务回滚 ∥ FK/CHECK 生效）
+ *   ① 配置校验（fail-closed：host 必填 ∥ 零 provider = 允许（条目级 fail-closed） ∥ 同 provider 内模型重名拒（跨 provider 同名放行） ∥ baseURL 非 http(s) 拒 ∥
+ *      bootstrap 口令 < 8 拒 ∥ port 非法拒）② 缺省值 ∥ `env:` 保形（载入不解析——构建期解析） ∥ 库路径归一（相对 = 配置档目录）
+ *   ③ db 迁移链（五表 + 三索引 + `user_version` ∥ 文件库重开幂等 ∥ 迁移段单事务回滚 ∥ FK/CHECK 生效）
  *   ④ providers 派发（`provider/model` 复合键——首斜杠切分 ∥ 裸名/未命中 404 形 ∥ 同名跨 provider 并存 ∥ `/v1/models` 前缀名清单）
  *   ⑤ 路由注册表（注册行 ∥ `:参数` ∥ 重复注册拒）⑥ 服务冒烟（200/404/400/413 ∥ 逐请求日志 ∥ 停机）
  *   ⑦ 日志形（单行 JSON）⑧ 零第三方依赖扫描（import 面仅 `node:`/相对 ∥ dependencies 空）
@@ -102,13 +102,11 @@ async function freePort() {
 
 // ── ① 配置校验（fail-closed 六判据）────────────────────────────────────────────
 
-test("config：fail-closed 校验六判据 ⇒ 拒启", () => {
+test("config：fail-closed 校验 ⇒ 拒启 ∥ 零 provider = 允许态", () => {
   const dir = tmpDir("cfg-invalid")
   try {
     const cases = [
       ["缺 host", baseConfig({ host: undefined }), /host/],
-      ["缺 providers", baseConfig({ providers: undefined }), /providers/],
-      ["providers 空数组", baseConfig({ providers: [] }), /providers/],
       ["同 provider 内模型重名", baseConfig({
         providers: [
           { name: "a", baseURL: "https://a.example/v1", apiKey: "", models: ["m1", "m1"] },
@@ -124,6 +122,12 @@ test("config：fail-closed 校验六判据 ⇒ 拒启", () => {
       const file = writeConfig(dir, config)
       assert.throws(() => CONFIG.loadConfig(file, { env: ENV }), pattern, label)
     }
+
+    // 零 provider = 允许态（fail-closed 移驻条目级——ops/OPS.md §1）
+    for (const zero of [baseConfig({ providers: undefined }), baseConfig({ providers: [] })]) {
+      const file = writeConfig(dir, zero)
+      assert.deepEqual(CONFIG.loadConfig(file, { env: ENV }).config.providers, [], "零 provider ⇒ 允许（空清单）")
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
@@ -137,7 +141,7 @@ test("config：缺省值 ∥ env: 解析 ∥ 库路径归一 ∥ 0.0.0.0 告警"
     assert.equal(config.port, CONFIG.DEFAULT_PORT)
     assert.equal(config.port, 8787)
     assert.equal(config.db, join(dir, "data", "gateway.db"))
-    assert.equal(config.providers[0].apiKey, "sk-test-value")
+    assert.equal(config.providers[0].apiKey, "env:TC_TEST_KEY") // 载入不解析（引用保形——注册表构建期解析）
     assert.equal(config.bootstrap, null)
     assert.deepEqual(warnings, [])
 
@@ -147,7 +151,9 @@ test("config：缺省值 ∥ env: 解析 ∥ 库路径归一 ∥ 0.0.0.0 告警"
     assert.equal(second.warnings.length, 1)
     assert.match(second.warnings[0], /0\.0\.0\.0/)
 
-    assert.throws(() => CONFIG.loadConfig(file, { env: {} }), /环境变量缺位：TC_TEST_KEY/)
+    const kept = CONFIG.loadConfig(file, { env: {} })
+    assert.equal(kept.config.providers[0].apiKey, "env:TC_TEST_KEY")
+    assert.throws(() => PROVIDERS.createProviderRegistry(kept.config.providers, { env: {} }), /环境变量缺位：TC_TEST_KEY/)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
@@ -155,13 +161,13 @@ test("config：缺省值 ∥ env: 解析 ∥ 库路径归一 ∥ 0.0.0.0 告警"
 
 // ── ③ db 迁移链 ──────────────────────────────────────────────────────────────
 
-test("db：迁移链 ⇒ 四表 + 三索引 + user_version=1 ∥ 约束生效", () => {
+test("db：迁移链 ⇒ 五表 + 三索引 + user_version=2 ∥ 约束生效", () => {
   const db = DB.openDatabase(":memory:")
   try {
-    assert.equal(DB.SCHEMA_VERSION, 1)
-    assert.equal(DB.readVersion(db), 1)
+    assert.equal(DB.SCHEMA_VERSION, 2)
+    assert.equal(DB.readVersion(db), 2)
     const names = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name)
-    for (const table of ["members", "api_keys", "sessions", "usage"]) assert.ok(names.includes(table), `缺表：${table}`)
+    for (const table of ["members", "api_keys", "sessions", "usage", "providers"]) assert.ok(names.includes(table), `缺表：${table}`)
     const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").all()
     assert.equal(indexes.length, 3)
     assert.equal(db.prepare("PRAGMA foreign_keys").get().foreign_keys, 1)
@@ -177,7 +183,7 @@ test("db：迁移链 ⇒ 四表 + 三索引 + user_version=1 ∥ 约束生效", 
       /CHECK/i,
     )
     // 幂等：同库再跑迁移 ⇒ 版本不变、不报错
-    assert.equal(DB.migrate(db), 1)
+    assert.equal(DB.migrate(db), 2)
   } finally {
     db.close()
   }
@@ -192,15 +198,18 @@ test("db：文件库重开幂等（旧库自动升 ∥ 数据保留）∥ 迁移
     first.close()
 
     const second = DB.openDatabase(file)
-    assert.equal(DB.readVersion(second), 1)
+    assert.equal(DB.readVersion(second), 2)
     assert.equal(second.prepare("SELECT count(*) AS n FROM members").get().n, 1)
 
     // 失败迁移：段内先建表再抛 ⇒ 整段回滚（表不落 ∥ 版本不动）
-    const failing = [...DB.MIGRATIONS, { v: 2, up: (handle) => { handle.exec("CREATE TABLE v2_probe (x INTEGER)"); throw new Error("boom") } }]
-    assert.throws(() => DB.migrate(second, { migrations: failing }), /迁移失败（v2）/)
-    assert.equal(DB.readVersion(second), 1)
-    assert.equal(second.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name = 'v2_probe'").get().n, 0)
-    second.close()
+    const failing = [...DB.MIGRATIONS, { v: 3, up: (handle) => { handle.exec("CREATE TABLE v3_probe (x INTEGER)"); throw new Error("boom") } }]
+    try {
+      assert.throws(() => DB.migrate(second, { migrations: failing }), /迁移失败（v3）/)
+      assert.equal(DB.readVersion(second), 2)
+      assert.equal(second.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name = 'v3_probe'").get().n, 0)
+    } finally {
+      second.close()
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
@@ -210,7 +219,7 @@ test("db：文件库重开幂等（旧库自动升 ∥ 数据保留）∥ 迁移
 
 test("providers：`provider/model` 复合键派发（首斜杠切分）∥ 裸名/未命中 404 形 ∥ 同名跨 provider 并存 ∥ /v1/models 前缀名清单", () => {
   const config = CONFIG.validateConfig(baseConfig()) // 跨 provider 同名（deepseek-v3）⇒ 校验放行（正路）
-  const registry = PROVIDERS.createProviderRegistry(config)
+  const registry = PROVIDERS.createProviderRegistry(config.providers, { env: ENV, engineModel: config.embedding.model })
 
   // 首斜杠切分单件：余段可含斜杠；无斜杠 ∥ 空段 ⇒ 不合形
   assert.deepEqual(PROVIDERS.splitModelRef("a/b/c"), { provider: "a", model: "b/c" })
@@ -230,7 +239,7 @@ test("providers：`provider/model` 复合键派发（首斜杠切分）∥ 裸�
   const slashed = CONFIG.validateConfig(baseConfig({
     providers: [{ name: "a", baseURL: "https://a.example/v1", apiKey: "", models: ["org/model-x"] }],
   }))
-  const slashedHit = PROVIDERS.createProviderRegistry(slashed).dispatch("a/org/model-x")
+  const slashedHit = PROVIDERS.createProviderRegistry(slashed.providers, { env: ENV }).dispatch("a/org/model-x")
   assert.equal(slashedHit.provider.name, "a")
   assert.equal(slashedHit.model, "org/model-x")
 
@@ -244,7 +253,7 @@ test("providers：`provider/model` 复合键派发（首斜杠切分）∥ 裸�
   assert.match(registry.dispatch("nope-model").miss.body.error.message, /nope-model/) // 回显原值
   assert.match(registry.dispatch("bailian/nope-model").miss.body.error.message, /bailian\/nope-model/)
 
-  const list = PROVIDERS.modelList(config)
+  const list = PROVIDERS.modelList(registry)
   assert.equal(list.object, "list")
   assert.deepEqual(list.data.map((m) => m.id), [
     "bailian/qwen3.5-plus", "bailian/qwen3.7-max", "bailian/deepseek-v3", "internal/deepseek-v3", "bge-m3",
@@ -283,7 +292,7 @@ test("server：服务冒烟（200/404/400/413 ∥ 逐请求日志 ∥ 停机）"
   const db = DB.openDatabase(":memory:")
   const apiKey = seedApiKey(db)
   const routes = SERVER.createRouteTable()
-  GATEWAY_ROUTES.registerGatewayRoutes(routes, { db, config })
+  GATEWAY_ROUTES.registerGatewayRoutes(routes, { db, config, env: ENV })
   routes.add("POST", "/echo", async (req, res, ctx) => {
     const body = await SERVER.readJsonBody(req, { limit: 64 })
     ERRORS.sendJson(res, 200, { echo: body, params: ctx.params })

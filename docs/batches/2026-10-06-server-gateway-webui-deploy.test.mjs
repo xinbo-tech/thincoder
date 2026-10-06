@@ -10,7 +10,7 @@
  *   ③ 静态面单件：mime 表 ∥ `/` ⇒ index.html ∥ 防路径穿越（编码形 ∥ 反斜杠 ∥ 非法百分号）
  *   ④ 静态面集成：`/` ∥ `/app.mjs` ∥ `/style.css` 直发（mime ∥ no-cache ∥ 字节等于磁盘）∥ 未知 ⇒ 404 JSON ∥ 注册路由优先
  *   ⑤ 部署资产：五件在册 ∥ Dockerfile/unit/compose 结构要点 ∥ package.json `files` 白名单（AC-8 静态面）
- *   ⑥ 前端自洽：`public/**` 零外部引用（无 http(s):// ∥ 无 @import）∥ 四档在册（零框架 ∥ 零构建）
+ *   ⑥ 前端自洽：`public/**` 零外部引用（无 http(s):// ∥ 无 @import）∥ 十二档在册（含 favicon 共十三档——零框架 ∥ 零构建）
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -228,7 +228,7 @@ test("static 单件：mime 表 ∥ `/` ⇒ index.html ∥ 防穿越（`..` ∥ �
 })
 
 // ── 静态面集成：直发 ∥ no-cache ∥ 未知 404 ∥ 注册路由优先 ────────────────────
-test("静态面：`/` ∥ `/app.mjs` ∥ `/style.css` 直发（mime ∥ no-cache ∥ 字节等于磁盘）∥ 未知 ⇒ 404 JSON ∥ 穿越拒 ∥ 注册路由优先", async () => {
+test("静态面：`/` ∥ `/app.mjs` ∥ `/nav.mjs` ∥ `/style.css` 直发（mime ∥ no-cache ∥ 字节等于磁盘）∥ 未知 ⇒ 404 JSON ∥ 穿越拒 ∥ 注册路由优先", async () => {
   const db = DB.openDatabase(":memory:")
   const app = await startApp({ db, config: configWith("http://127.0.0.1:9/v1") })
   try {
@@ -236,7 +236,7 @@ test("静态面：`/` ∥ `/app.mjs` ∥ `/style.css` 直发（mime ∥ no-cache
     const cases = [
       ["/", "index.html", "text/html"],
       ["/app.mjs", "app.mjs", "text/javascript"],
-      ["/views.mjs", "views.mjs", "text/javascript"],
+      ["/nav.mjs", "nav.mjs", "text/javascript"],
       ["/style.css", "style.css", "text/css"],
     ]
     for (const [path, diskName, mime] of cases) {
@@ -268,10 +268,10 @@ test("静态面：`/` ∥ `/app.mjs` ∥ `/style.css` 直发（mime ∥ no-cache
   }
 })
 
-// ── 前端自洽：零外部资源 ∥ 五档在册 ──────────────────────────────────────────
-test("前端自洽：`public/**` 五档在册 ∥ 零外部引用（无 http(s):// ∥ 无 @import——内网自洽，KD-SV-9）", () => {
+// ── 前端自洽：零外部资源 ∥ 十二档在册（含 favicon 共十三档）───────────────────
+test("前端自洽：`public/**` 十二档在册（含 favicon 共十三档） ∥ 零外部引用（无 http(s):// ∥ 无 @import——内网自洽，KD-SV-9）", () => {
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual(names, ["app.mjs", "favicon.png", "index.html", "style.css", "views.mjs"])
+  assert.deepEqual(names, ["app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "nav.mjs", "style.css", "views-admin.mjs", "views-auth.mjs", "views-me.mjs", "views-providers.mjs", "views-system.mjs"])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
     assert.ok(!/https?:\/\//.test(text), `${name} 含外部链接（CDN/外链字体等——内网不达）`)

@@ -79,10 +79,10 @@ async function startMockUpstream() {
 }
 
 /** 进程内网关（OpenAI 面注册行）。 */
-async function startGateway({ db, config }) {
+async function startGateway({ db, config, env = process.env }) {
   const log = { info() {}, warn() {}, error() {} }
   const routes = SERVER.createRouteTable()
-  GATEWAY_ROUTES.registerGatewayRoutes(routes, { db, config })
+  GATEWAY_ROUTES.registerGatewayRoutes(routes, { db, config, env })
   const server = SERVER.createGatewayServer({ config, routes, log })
   await new Promise((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve) })
   return {
@@ -141,7 +141,7 @@ test("expandProviderEntry：缺省 ∥ 覆盖 ∥ 未知拒启（列可用名）
   assert.equal(bare.name, "deepseek") // name 缺省 = 预设名
   assert.equal(bare.baseURL, core.baseURL)
   assert.deepEqual(bare.models, [core.model]) // models 缺省 = [预设默认模型]
-  assert.equal(bare.apiKey, "env:X") // apiKey 只住条目（原样携带——解析归 loadConfig）
+  assert.equal(bare.apiKey, "env:X") // apiKey 只住条目（原样携带——解析归注册表构建期）
 
   const over = PRESETS.expandProviderEntry({ preset: "qwen", name: "bailian", baseURL: "http://10.0.0.9:8000/v1", models: ["m1", "m2"], apiKey: "k" })
   assert.deepEqual(over, { name: "bailian", baseURL: "http://10.0.0.9:8000/v1", apiKey: "k", models: ["m1", "m2"] })
@@ -173,14 +173,14 @@ test("N12：{preset:'deepseek',apiKey:'env:X'} 载入 ⇒ 展开（核表实读�
     // 最小形（零覆盖）：展开值与核表实读一致
     const bareFile = writeConfig(dir, { host: "127.0.0.1", providers: [{ preset: "deepseek", apiKey: "env:TC_TEST_KEY" }], embedding: EMBEDDING })
     const loaded = CONFIG.loadConfig(bareFile, { env: ENV }).config.providers[0]
-    assert.deepEqual(loaded, { name: "deepseek", baseURL: deepseek.baseURL, apiKey: "sk-test-value", models: [deepseek.model] })
+    assert.deepEqual(loaded, { name: "deepseek", baseURL: deepseek.baseURL, apiKey: "env:TC_TEST_KEY", models: [deepseek.model] })
 
     // 实请求段：同预设条目 + baseURL 覆盖指 mock（唯一可达 mock 路）——name/models 仍取预设缺省
     const liveFile = writeConfig(dir, { host: "127.0.0.1", providers: [{ preset: "deepseek", baseURL: `${mock.base}/v1`, apiKey: "env:TC_TEST_KEY" }], embedding: EMBEDDING })
     const live = CONFIG.loadConfig(liveFile, { env: ENV }).config
     assert.equal(live.providers[0].name, "deepseek")
     assert.deepEqual(live.providers[0].models, [deepseek.model])
-    const app = await startGateway({ db, config: live })
+    const app = await startGateway({ db, config: live, env: ENV })
     try {
       const key = KEYS.issueKey(db, seedMember(db)).plain
       const list = await fetch(`${app.base}/v1/models`, { headers: { authorization: `Bearer ${key}` } })
@@ -191,7 +191,7 @@ test("N12：{preset:'deepseek',apiKey:'env:X'} 载入 ⇒ 展开（核表实读�
       assert.equal(mock.requests.length, 1)
       assert.equal(mock.requests[0].url, "/v1/chat/completions")
       assert.equal(mock.requests[0].body.model, deepseek.model) // 上游 model = 首斜杠余段
-      assert.equal(mock.requests[0].headers.authorization, "Bearer sk-test-value") // 真 key 代持（env: 已在载入期解析）
+      assert.equal(mock.requests[0].headers.authorization, "Bearer sk-test-value") // 真 key 代持（env: 构建期解析）
     } finally {
       await app.close()
     }
@@ -215,8 +215,8 @@ test("N13：预设形 + 条目覆盖（name ∥ baseURL ∥ models 自备）⇒ 
       embedding: EMBEDDING,
     })
     const loaded = CONFIG.loadConfig(file, { env: ENV }).config.providers[0]
-    assert.deepEqual(loaded, { name: "bailian", baseURL: `${mock.base}/v1`, apiKey: "sk-test-value", models: ["qwen3.5-plus", "qwen3.7-max"] })
-    const app = await startGateway({ db, config: CONFIG.loadConfig(file, { env: ENV }).config })
+    assert.deepEqual(loaded, { name: "bailian", baseURL: `${mock.base}/v1`, apiKey: "env:TC_TEST_KEY", models: ["qwen3.5-plus", "qwen3.7-max"] })
+    const app = await startGateway({ db, config: CONFIG.loadConfig(file, { env: ENV }).config, env: ENV })
     try {
       const key = KEYS.issueKey(db, seedMember(db)).plain
       const ids = (await (await fetch(`${app.base}/v1/models`, { headers: { authorization: `Bearer ${key}` } })).json()).data.map((m) => m.id)

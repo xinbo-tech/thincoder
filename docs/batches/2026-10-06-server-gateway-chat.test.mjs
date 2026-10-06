@@ -403,6 +403,7 @@ test("E3 ∥ E5 ∥ E6：未命中 404 ∥ 缺 model 400（不转发 ∥ 不落�
     assert.equal(lastUsage(db).status, "error")
     assert.deepEqual([lastUsage(db).prompt_tokens, lastUsage(db).completion_tokens, lastUsage(db).total_tokens], [null, null, null])
     const dead = await freePort() // 已释放 ⇒ 连接拒绝（不可达形）
+    db.prepare("UPDATE providers SET base_url = ? WHERE name = 'mock'").run(`http://127.0.0.1:${dead}/v1`) // 库单源（§2.2）——同库二次装配不再吃 config 段
     const deadApp = await startGateway({ db, config: configWith(`http://127.0.0.1:${dead}/v1`) })
     try {
       const unreachable = await chatJson(deadApp.base, { key: key.plain, body: { model: "mock/mock-chat", messages: [] } })

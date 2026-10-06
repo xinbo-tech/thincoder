@@ -12,6 +12,7 @@
 - 提取来源 = gateway 侧 tap 扫描（`gateway/API.md` §2.1）。
 - 保留 = **保留窗（配置化——`usageRetentionDays`，`ops/OPS.md` §1）**：缺省 90 天（论证 = 配额周期 = 月 ⇒ 跨月可见必需；统计回看惯例 = 一季 ⇒ 90 天覆盖；表只增不减 = 无界增长面 ⇒ 缺省窗收口）；`null` = 不限（保留全量——显式开）；非正整数 ⇒ 拒启。
 - 清理 = **删除式**（`pruneUsage`——`thincoder-server/src/metering/usage.mjs`）：`DELETE FROM usage WHERE ts < now - 窗`（走 `idx_usage_ts`——`store/STORE.md` §2）；时机 = **启动一次 + 每 24h**（实现常量；入口接线 = `thincoder-server/bin/thincoder-server.mjs`）；无归档/导出面（§8）。
+- **清理失败口径 = 启动 fail-closed ∥ 周期 fail-open**：启动一次（抛 ⇒ `startup_failed` + 退出码 1） ∥ 周期（`usage_prune_failed` warn 续跑）。
 - **查询面零改**：三端点契约不变；窗外的行自然不在结果（`from` 早于窗界亦同）——非错。
 
 ## 2. 配额（成员月度 token 累计·准入）
@@ -36,16 +37,16 @@
 |---|---|---|
 | AC-3（功能点 3） | mock usage 回传 `{prompt_tokens, completion_tokens}` ⇒ `/api/usage` 返回该笔记录（成员 × 模型 × 时段 × token 四列齐 ∥ token 与上游回传**逐值相等**） | 批内件 |
 | AC-4（功能点 4） | 额度 = N ∥ 已用 ≥ N ⇒ 下一请求 **429 + `quota_exceeded` + 可读提示**；未超额 ⇒ 放行（200） | 批内件 |
-| AC-13⑥（功能点 12——用量保留；候补——需求档回笔 = 主 agent 笔） | 窗内旧行删除（注入时钟：刚出窗的行删、窗内行留）∥ `null` ⇒ 零删 ∥ 启动清理 + 24h 周期接线（批内件直调 `pruneUsage` + 断言入口接线）∥ 查询面三端点回归零变 | 批内件 |
+| AC-13⑥（功能点 12——用量保留；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 窗内旧行删除（注入时钟：刚出窗的行删、窗内行留）∥ `null` ⇒ 零删 ∥ 启动清理 + 24h 周期接线（批内件直调 `pruneUsage` + 断言入口接线）∥ 查询面三端点回归零变 | 批内件 |
 
 ## 5. 本域文件与行数预算（本域族行）
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/metering/usage.mjs`（已落盘） | **132**（实读 2026-10-06——设计估 ≈130；本批预期 ≈150 = +18：`pruneUsage`（保留窗删除）） | 行落库 ∥ 明细查询 ∥ 成员月累计 ∥ 保留窗清理 |
+| `thincoder-server/src/metering/usage.mjs`（已落盘） | **147**（实读 2026-10-06——设计估 ≈130；#963 +15 = `pruneUsage`（保留窗删除）） | 行落库 ∥ 明细查询 ∥ 成员月累计 ∥ 保留窗清理 |
 | `thincoder-server/src/metering/quota.mjs`（已落盘） | **27**（实读 2026-10-06——设计估 ≈50） | 月度累计查询 ∥ 准入判定 ∥ 429 形 |
 | `thincoder-server/src/metering/routes.mjs`（已落盘） | **59**（实读 2026-10-06——设计估 ≈80） | 用量查询 ∥ 配额设置端点（三端点） |
-| **小计** | **≈260 ⇒ 218 ⇒ 本批预期 ≈236**（+18） | —— |
+| **小计** | **≈260 ⇒ 218 ⇒ 233**（#963 实读：+15） | —— |
 
 ## 6. 关键决策（本域）
 
@@ -76,3 +77,5 @@
 - 2026-10-06：实施后回填轮（fix）——§5 行数按实读回填（小计 ≈260 ⇒ 218）。
 - 2026-10-06：小收尾轮（fix）——§1 补 `model` 列语义注（对外标识 `provider/model`——记账以对外标识记；上游余段不单独入账）。
 - 2026-10-06：首版完备化设计轮（批 `docs/batches/2026-10-06-first-release-completeness.md`——需求 §2:12⑥ ∥ 台账 #963）——§1 保留条重写（保留窗/删除式清理/查询零改）∥ §4 补 AC-13⑥ 候补行 ∥ §5 预算（usage 132 ⇒ ≈150；小计 ≈236）∥ §6 增 KD-SV-22 ∥ §7 增 N25 ∥ B20/B21 ∥ §8 边界随正。
+- 2026-10-06：AC-13 行候补标记收正（父侧直接执行 · 机械 · 可 revert——已落需求档验收表）。
+- 2026-10-06：实施后回填轮（R16——批 `docs/batches/2026-10-06-first-release-completeness.md`）：§1 补清理失败口径句（启动 fail-closed ∥ 周期 fail-open）∥ §5 usage 实读 **147**（小计 ⇒ **233**）。

@@ -54,7 +54,7 @@
 - provider `name` 校验缘由（对外标识 = `provider/model` 首斜杠切分）：`name` 缺/空 ∥ 含 `/` ⇒ 前缀形不可解析（清单列示而派发 404）；`name` 重名 ⇒ 派发歧义。
 - 对外模型标识 = `provider/model`（**首斜杠切分**——首段 = provider `name` ∥ 余段 = 上游模型名（可含斜杠）；两段非空；裸名不解析；**同名模型跨 provider 并存且各自可达**）；`/v1/models` = 带前缀名清单。
 - 模板 = `thincoder-server/config.example.json`（已落盘——预设形 ∥ 手写形并存）；真档 = `thincoder-server/config.json`（部署机本地——不入 git）（机检豁免——部署机本地档）。
-- provider key 轮换 = 控制台改 provider 并保存（**保存即热生效**——机制 = `gateway/API.md` §2.2；推翻原「改配置 + 重启 ∥ 配置不热载」口径——用户 2026-10-06 16:01 令）。
+- provider key 轮换 = 控制台改 provider 并保存（**保存即热生效**——机制 = `gateway/API.md` §2.2；用户 2026-10-06 16:01 令）。
 
 ## 2. 首启引导（幂等）
 
@@ -81,7 +81,7 @@ node src/ops/cli.mjs --config <配置档> <命令>
 ## 4. 启动/停机与日志
 
 - 启动 = `thincoder-server/bin/thincoder-server.mjs`（已落盘）：argv（`--config`）→ 配置加载/校验 → 首启引导 → 开库/迁移（`store/STORE.md` §3）→ **用量保留清理（启动一次 + 24h 周期——`metering/METERING.md` §1）** → **provider 运行时引导（种子导入 ∥ 注册表构建——§1）** → `node:http` 监听 → 就绪日志（`ready` 行含 `version` 字段——§5.4(g)）。
-- 停机 = SIGINT/SIGTERM ⇒ 优雅收尾（停收新连 ∥ 关闭库）。
+- 停机 = SIGINT/SIGTERM ⇒ 优雅收尾（停收新连 ∥ 清周期定时器（更新循环 ∥ 保留清理同法） ∥ 关闭库）。
 - 日志 = `thincoder-server/src/ops/log.mjs`（已落盘）：单行 JSON 到 stdout（逐请求一行 + 启动/引导/错误事件）；采集/落盘 = 部署面（§5——裸机 journald ∥ 容器 docker logs）。
 
 ## 5. 部署面（两路统一：版本身份 = npm 包；容器 = 壳；守护两路：systemd ∥ 容器 restart）
@@ -89,7 +89,7 @@ node src/ops/cli.mjs --config <配置档> <命令>
 ### 5.1 分发（两路——版本身份 = npm 包 `@thincoder/server`，唯一真相）
 
 - **版本身份 = npm 包**（两路同源）：升级 = 装 npm 新版 + 重启（§5.4）；**镜像 tag 不承担版本语义**（tag 只标壳——除 Node 基座换代外无需重建镜像）。
-- **npm 路（包体就绪——发布动作 = 发布面轮）**：`thincoder-server/package.json` 转可发布形——撤 `private` ∥ 包名 = `@thincoder/server`（拟——发布轮验 registry 占用/scope 权限；更优命名可上抛） ∥ `bin` = `thincoder-server` ∥ `engines` node>=24 ∥ `prepublishOnly` 门禁（全树 `node --check` + 批内件八件——本批 +1）。
+- **npm 路（包体就绪——发布动作 = 发布面轮）**：`thincoder-server/package.json` 转可发布形——撤 `private` ∥ 包名 = `@thincoder/server`（拟——发布轮验 registry 占用/scope 权限；更优命名可上抛） ∥ `bin` = `thincoder-server` ∥ `engines` node>=24 ∥ `prepublishOnly` 门禁（全树 `node --check` + 批内件十一件（八 + #962 件 + #963 件 + i18n 件））。
   - `files` 白名单 = bin ∥ src ∥ public ∥ config.example.json ∥ README.md（`deploy/` 档组 = 仓内部署面——不入包）。
 - **npm 路装机 = 前缀式**（自升前提）：`NPM_CONFIG_PREFIX` 指**服务账号可写目录**（建议 `/opt/thincoder-server/.npm-global`——与配置/数据同根）⇒ 装机（`npm i -g @thincoder/server`）与自升（服务进程内——§5.4）同前缀、免 sudo 重写；安放后该根目录整归服务账号（`chown -R`）。
 - **Docker 路 = 壳镜像**（`thincoder-server/Dockerfile`——重设计）：基座 `node:24-slim` + 引导层（`thincoder-server/deploy/docker-entrypoint.sh`（已落盘 7 行） ∥ `thincoder-server/deploy/converge.mjs`（已落盘 197 行））；**App 代码由 npm 取装**——镜像本体只含壳（不带版本身份）。
@@ -157,12 +157,14 @@ services:
   **形态选型**：ready 行字段（**选定**——零新面：无新端点 ∥ 无响应头改动）；轻端点（否——新面 ∥ 健康语义膨胀）∥ 响应头（否——热路径每响应加字段）；**控制台可见面 = `GET /api/system`**（KD-SV-24——同一进程内状态；两消费方：部署面 = ready 行 ∥ 控制台 = 端点）。
 - **（h）前置声明（发布面接线点）**：`@thincoder/server` 发布前 ⇒ registry 查询 404 ⇒ **自检恒「无新版」（静默）**——机制就绪、接线在发布面轮（发布后自生效，无需改动）。
 
-### 5.5 备份（命令化——`thincoder-server/deploy/backup.mjs`（拟新增））
+### 5.5 备份（命令化——`thincoder-server/deploy/backup.mjs`（已落盘 86 行））
 
-- 工具 = `thincoder-server/deploy/backup.mjs`（拟新增 ≈45 行）：`node deploy/backup.mjs --config <配置档> [--out <目录>]` ⇒ `<out>/gateway-<时间戳>.db`（`--out` 缺省 = 配置档旁 `backups/`）。
+- 工具 = `thincoder-server/deploy/backup.mjs`（已落盘 86 行）：`node deploy/backup.mjs --config <配置档> [--out <目录>]` ⇒ `<out>/gateway-<时间戳>.db`（`--out` 缺省 = 配置档旁 `backups/`）。
 - 机制 = node:sqlite `backup()`（**在线一致快照**——WAL 安全、无需停写窗；与运行实例并存执行；源库零触）——node 自带（零外部工具依赖）。
+- **环境回退**：若 `backup()` 环境核验不过 ⇒ 回退 = 停写窗快照方案（README 明示）。
 - 定时器样例（systemd——README §9 全文）：`thincoder-server-backup.service`（`Type=oneshot`；`ExecStart=node <deploy>/backup.mjs --config <配置档>`）+ `thincoder-server-backup.timer`（`OnCalendar=daily` ∥ `Persistent=true`）。
 - 容器路 = 宿主对卷内库执行同命令：`docker compose exec server node /app/deploy/backup.mjs --config /app/config.json --out /app/data/backups`（镜像含 `deploy/`；产物落卷）。
+- **恢复步**（README §9 备份节成文）：停服 → 以快照替换库（`gateway-<时间戳>.db` ⇒ `data/gateway.db`）+ 清 `-wal`/`-shm` 伴档 → 起服。
 - 边界：进程内自动备份面不做（备份 = 部署侧面）；轮转/保留 = 部署方自管（不做）。
 
 ### 5.6 反代与 TLS（样例——nginx；登录防护 IP 维接线）
@@ -186,7 +188,7 @@ services:
 - 探针 = `GET /healthz`（无鉴权只读）：200 = `{ status:"ok", …, db:"ok" }`；db 探活失败 ⇒ 503 `degraded`。
 - 容器路 = **Dockerfile `HEALTHCHECK` 单源**（interval 30s ∥ timeout 5s ∥ start-period 120s ∥ retries 3——start-period 覆盖壳收敛/装版窗）：
   `CMD node -e "fetch('http://127.0.0.1:8787/healthz').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"`；compose 不重复声明（镜像 healthcheck 自动继承——`docker ps` STATUS 可见 `(healthy)`）。
-- 端口：探针固定缺省 `8787`；`port` 改非缺省 ⇒ 同步改 HEALTHCHECK 行（在案）。
+- 端口与 `host`：探针固定缺省 `8787`；`port` 改非缺省 ⇒ 同步改 HEALTHCHECK 行（在案）；容器路 `host` 取 `0.0.0.0`（容器单接口——警告可接受）——探针固定 `127.0.0.1` 依赖之。
 - `unhealthy` = **标注态**（restart 策略只按进程退出动作——healthcheck 不触发重起；「不健康即重起」= 外部工具，不做项）。
 - 裸机路 = 手跑探活（`curl`——README §12 排障节）；systemd 不设独立探活（`Restart=always` 按退出主）。
 
@@ -194,28 +196,27 @@ services:
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/bin/thincoder-server.mjs`（已落盘） | **122**（实读 2026-10-06——设计估 ≈50；本批 +9 = 版本读取 ∥ 更新循环接线 ∥ 停机清循环） | argv ∥ 配置加载 ∥ 首启引导 ∥ 启动 ∥ 停机 |
-| `thincoder-server/src/ops/config.mjs`（已落盘） | **164**（实读 2026-10-06——设计估 ≈150；本批 +6 = `autoUpdate` 校验 ∥ 常量导出） | 读档 ∥ 校验（fail-closed） ∥ `env:` 解析 ∥ 缺省值 ∥ 预设展开接线 |
-| `thincoder-server/src/ops/update.mjs`（已落盘） | **228**（实读 2026-10-06——设计估 ≈160；§5.4 a–c） | 更新机制 |
+| `thincoder-server/bin/thincoder-server.mjs`（已落盘） | **153**（实读 2026-10-06——设计估 ≈50；#961 +9 = 版本读取 ∥ 更新循环接线 ∥ 停机清循环；#962 +4 = 运行时引导接线；#963 +27 = 系统面注册 ∥ 保留清理接线 ∥ 停机清周期 ∥ 惰性访问器 ∥ 登录守卫注入） | argv ∥ 配置加载 ∥ 首启引导 ∥ 启动 ∥ 停机 |
+| `thincoder-server/src/ops/config.mjs`（已落盘） | **189**（实读 2026-10-06——设计估 ≈150；#961 +6 = `autoUpdate` 校验 ∥ 常量导出；#962 +16 = 种子语义 ∥ 校验单源导出 ∥ 载入期 `env:` 跳过；#963 +9 = `trustProxy` ∥ `usageRetentionDays` 校验） | 读档 ∥ 校验（fail-closed） ∥ `env:` 解析 ∥ 缺省值 ∥ 预设展开接线 |
+| `thincoder-server/src/ops/update.mjs`（已落盘） | **239**（实读 2026-10-06——设计估 ≈160；§5.4 a–c；#963 +11 = 状态导出 `getStatus`） | 更新机制 |
 | `thincoder-server/src/ops/presets.mjs`（已落盘） | **50**（实读 2026-10-06——设计估 ≈45） | 预设表（`SERVER_PRESETS`——起步 20 家 `{ baseURL, model }`） ∥ 展开（`expandProviderEntry`：`name` 缺省 ∥ 覆盖 ∥ 未知预设拒启） |
 | `thincoder-server/src/ops/log.mjs`（已落盘） | **35**（实读 2026-10-06——设计估 ≈35） | 单行 JSON 日志（stdout） |
 | `thincoder-server/src/ops/cli.mjs`（已落盘） | **179**（实读 2026-10-06——设计估 ≈240） | 运维 CLI 七命令（含密码面） |
-| `thincoder-server/config.example.json`（已落盘） | **33**（实读 2026-10-06——设计估 ≈40；本批 +1 = `autoUpdate`） | 配置模板（无真 key——预设形 ∥ 手写形并存） |
+| `thincoder-server/config.example.json`（已落盘） | **35**（实读 2026-10-06——设计估 ≈40；#961 +1 = `autoUpdate`；#963 +2 = `trustProxy` ∥ `usageRetentionDays`） | 配置模板（无真 key——预设形 ∥ 手写形并存） |
 | `thincoder-server/deploy/thincoder-server.service`（已落盘） | **34**（实读 2026-10-06——设计估 ≈40；本批 +2 = 前缀 env ∥ ExecStart） | systemd unit 模板（裸机路——Restart=always ∥ 开机自启 ∥ journald） |
 | `thincoder-server/deploy/docker-entrypoint.sh`（已落盘） | **7**（实读 2026-10-06——设计估 ≈12；§5.1） | 容器入口（壳） |
 | `thincoder-server/deploy/converge.mjs`（已落盘） | **197**（实读 2026-10-06——设计估 ≈85；§5.4(d)） | 壳引导收敛（零 App 依赖——自足） |
-| `thincoder-server/Dockerfile`（已落盘） | **28**（实读 2026-10-06——设计估 ≈30；本批 +12 = 壳化重设计） | 镜像构建（壳 + 构建期预装——§5.1） |
+| `thincoder-server/Dockerfile`（已落盘） | **34**（实读 2026-10-06——设计估 ≈30；#961 +12 = 壳化重设计；#963 +6 = `HEALTHCHECK`——§5.9） | 镜像构建（壳 + 构建期预装——§5.1） |
 | `thincoder-server/.dockerignore`（已落盘） | **8**（实读 2026-10-06——设计估 ≈10；本批 +1 = 注释随正——清单不变） | 构建上下文排除（config.json ∥ data ∥ docs ∥ .git） |
-| `thincoder-server/docker-compose.yml`（已落盘） | **19**（实读 2026-10-06——设计估 ≈30；本批 +4 = env ∥ 注释） | 容器样例（端口 ∥ 卷 ∥ env_file ∥ restart: unless-stopped） |
-| `thincoder-server/deploy/backup.mjs`（拟新增） | **无 ⇒ ≈45**（设计估——在线备份脚本：node:sqlite `backup()` ∥ `--config`/`--out` ∥ 时间戳命名——§5.5） | 备份（命令化——定时器样例在 README §9） |
-| `thincoder-server/README.md`（已落盘） | **142**（实读 2026-10-06 复测；本批 +17 = 更新章 ∥ 部署章随动） | 运维面：安装（npm ∥ Docker） ∥ 部署（systemd ∥ compose） ∥ 启动（首启引导） ∥ CLI 用法 ∥ 控制台 |
-| **小计** | **≈762 ⇒ 1246**（本批实读——+484 = 新三档 432 = update 228 ∥ converge 197 ∥ entrypoint 7；增档增量 52 = bin +9 ∥ config +6 ∥ example +1 ∥ service +2 ∥ Dockerfile +12 ∥ dockerignore +1 ∥ compose +4 ∥ README +17——presets ∥ log ∥ cli 零动） | —— |
+| `thincoder-server/docker-compose.yml`（已落盘） | **20**（实读 2026-10-06——设计估 ≈30；#961 +4 = env ∥ 注释；#963 +1 = healthy 继承注记——§5.9） | 容器样例（端口 ∥ 卷 ∥ env_file ∥ restart: unless-stopped） |
+| `thincoder-server/deploy/backup.mjs`（已落盘） | **无 ⇒ 86**（实读 2026-10-06——设计估 ≈45；在线备份脚本：node:sqlite `backup()` ∥ `--config`/`--out` ∥ 时间戳命名——§5.5） | 备份（命令化——定时器样例在 README §9） |
+| `thincoder-server/README.md`（已落盘） | **241**（实读 2026-10-06——#961 +17 = 更新章 ∥ 部署章随动；#962 +4 = §2 种子句 ∥ §6 控制台 ∥ §10 热载句收正；#963 +94 = §9 重写 ∥ §10–12 新节 ∥ §2 两行 ∥ §3 微改 ∥ §4/§6/§13 随动；i18n +1 = §6 控制台多语言行） | 运维面：安装（npm ∥ Docker） ∥ 部署（systemd ∥ compose） ∥ 启动（首启引导） ∥ CLI 用法 ∥ 控制台 |
+| **小计** | **≈762 ⇒ 1246 ⇒ 1270 ⇒ 1506 ⇒ 1507**（#961 实读——+484 = 新三档 432 = update 228 ∥ converge 197 ∥ entrypoint 7；增档增量 52 = bin +9 ∥ config +6 ∥ example +1 ∥ service +2 ∥ Dockerfile +12 ∥ dockerignore +1 ∥ compose +4 ∥ README +17——presets ∥ log ∥ cli 零动；#962 实读 +24 = bin +4 ∥ config +16 ∥ README +4；#963 实读 +236 = backup 新 86 ∥ README +94 ∥ bin +27 ∥ update +11 ∥ config +9 ∥ Dockerfile +6 ∥ example +2 ∥ compose +1；i18n 实读 +1 = README **241**——其余零动） | —— |
 
-provider 面随动（批 `docs/batches/2026-10-06-console-providers.md`——叠加口径 = 上表 #961 回填后）：`config.mjs` +≈15（种子语义 ∥ 校验单源导出 ∥ 载入期 `env:` 跳过）∥ `bin/thincoder-server.mjs` +≈8（运行时引导接线）∥ `README.md` +≈15（§2/§6/§10 随动）∥ `config.example.json` ±0（种子示例形保留）。
+provider 面回填（2026-10-06——批 `docs/batches/2026-10-06-console-providers.md`）：增量实数 = `config.mjs` **+16** ∥ `bin/thincoder-server.mjs` **+4** ∥ `README.md` **+4** ∥ `config.example.json` ±0——已并入上表。
 
-first-release-completeness 面随动（批 `docs/batches/2026-10-06-first-release-completeness.md`——叠加口径 = #962 回填后）：`config.mjs` +≈14（`trustProxy` ∥ `usageRetentionDays` 校验）∥ `update.mjs` +≈12（状态导出 `getStatus`）∥
-  `bin/thincoder-server.mjs` +≈12（系统面注册 ∥ 保留清理接线 ∥ 惰性状态访问器）∥ `Dockerfile` +≈4（HEALTHCHECK——§5.9）∥ `docker-compose.yml` +≈2（继承注释）∥
-  `README.md` +≈90（§10–12 新节 ∥ §9 重写 ∥ §2 两行 ∥ §13 随动）∥ `config.example.json` +≈2（两键）∥ `thincoder-server/deploy/backup.mjs`（拟新增）新 ≈45（上表在册）。
+first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10-06-first-release-completeness.md`）：增量实数 = `config.mjs` **+9** ∥ `update.mjs` **+11** ∥ `bin/thincoder-server.mjs` **+27** ∥
+  `Dockerfile` **+6** ∥ `docker-compose.yml` **+1** ∥ `README.md` **+94** ∥ `config.example.json` **+2** ∥ `thincoder-server/deploy/backup.mjs` 新 **86**——已并入上表。
 
 ## 7. 验收判据（机检面）
 
@@ -226,7 +227,7 @@ first-release-completeness 面随动（批 `docs/batches/2026-10-06-first-releas
 | AC-9（功能点 9——provider 预设；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 预设形展开（`{"preset":"deepseek","apiKey":"env:X"}` ⇒ `name`=`deepseek` ∥ `baseURL`=预设值 ∥ `models`=[默认模型] ⇒ `/v1/models` 含 `deepseek/deepseek-flash` ∥ 经 mock 上游完成一次请求）；未知预设名 ⇒ 拒启（报错列可用名）∥ `name` 缺省 = 预设名（显式者胜）∥ 条目覆盖 `baseURL`/`models` 生效 ∥ 手写形回归零变 ∥ 漂移件（CLI 表对照）绿 | 批内件（`docs/batches/2026-10-06-server-presets.test.mjs`——已落盘 347 行） |
 | AC-10（功能点 10——自动更新；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 自检（假 registry ⇒ 触发 ∥ 404/失败 ⇒ 静默）∥ 档位三值语义 + 非法值拒启 ∥ 自升执行器（成功 ⇒ 优雅停机；失败/超时 ⇒ 不退 ∥ 旧版续跑）∥ 启动日志 `ready` 行含 `version` ∥ 容器收敛判定表（converge 矩阵）；`docker build` + 起停 = 收口轮真机（#959 条件行同窗） | 批内件（`docs/batches/2026-10-06-server-auto-update.test.mjs`——已落盘 498 行）+ 收口轮 |
 | AC-11（功能点 11——种子与生效面） | 种子四格（库空+段 ⇒ 导入且 `env:` 保形 ∥ 非空库+段 ⇒ 忽略 + 警告 ∥ 两空 ⇒ 允许起 + 警告「零 provider」）∥ 零 provider 允许态（`/v1/models` = 空清单 ∥ chat ⇒ 404）∥ `env:` 缺位（启动 ⇒ 拒启 ∥ 保存 ⇒ 400）；端到端判据全文 = `gateway/API.md` §5 AC-11 行 | 批内件 |
-| AC-13（功能点 12——首版完备化⑤面与本域接线；候补——需求档回笔 = 主 agent 笔） | ⑤ 部署文档：README 结构断言（成员接入节 ∥ nginx 完整段 ∥ 备份命令/定时器样例）∥ `thincoder-server/deploy/backup.mjs`（拟新增）实跑 ⇒ 快照生成 + 可开（含热库在线备份）∥ Dockerfile `HEALTHCHECK` 行在册；配置校验：`trustProxy` 非布尔 ∥ `usageRetentionDays` 非法 ⇒ 拒启 | 批内件 + 收口轮 |
+| AC-13（功能点 12——首版完备化⑤面与本域接线；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ⑤ 部署文档：README 结构断言（成员接入节 ∥ nginx 完整段 ∥ 备份命令/定时器样例 ∥ 恢复步）∥ `thincoder-server/deploy/backup.mjs`（已落盘 86 行）实跑 ⇒ 快照生成 + 可开（含热库在线备份）∥ Dockerfile `HEALTHCHECK` 行在册；配置校验：`trustProxy` 非布尔 ∥ `usageRetentionDays` 非法 ⇒ 拒启 | 批内件 + 收口轮 |
 
 ## 8. 关键决策（本域）
 
@@ -235,10 +236,10 @@ first-release-completeness 面随动（批 `docs/batches/2026-10-06-first-releas
 | KD-SV-15 | **首启 admin 引导 = config `bootstrap` + 幂等**：仅零 admin 时依配置创建（`username` ∥ `password`——支持 `env:`）；建后配置可撤；零 admin 且未配置 ⇒ 启动告警；非零 ⇒ 跳过 | 「首启引导（env 或本机 CLI）」的需求形；幂等 = 只建不改（不覆盖已改口令）∥ 配置口令 ⇒ 操作者已知首密、零额外步骤 | 固定缺省口令（admin/admin123——裸奔）· 仅 CLI 建首管（多一步壳访问）· 每启对账改写（会把 admin 已改的口令回滚——非幂等） |
 | KD-SV-17 | **provider 预设 = server 自持表（快照——起步 20 家 OpenAI 兼容子集）**：`thincoder-server/src/ops/presets.mjs`（已落盘 50 行）静态表 `{ baseURL, model }` × 展开（`name` 缺省 = 预设名 ∥ 条目覆盖 `baseURL`/`models` ∥ 未知预设名拒启）；漂移 = 手工同步 + 批内件断言 | 需求 = 免手写 `baseURL`/默认模型（功能点 9）；自持 ⇒ 不动 KD-SV-2（运行时不 import core）∥ 表极小（≈45 行）∥ 快照口径 + 漂移件兜同步 | ② 边界例外引 core（重开 KD-SV-2——为 ≈40 行数据表动架构决策不值；核表字段面 ≠ server 面（`format`/`chatPath` 一族不消费）；且沿批档 §1 边界须停下上抛）· ③ 外部脚本生成（生成步 = 变相构建——违「无构建步骤」；产物仍为仓内快照——机制多而无得） |
 | KD-SV-18 | **自动更新 = 两路统一 npm 版本身份（自检 + 档位 + 自升执行器；容器 = 壳）**：版本真相 = npm 包（镜像 tag 不承担版本语义）；自检 = registry `latest`（`NPM_CONFIG_REGISTRY` 可指内网镜像；失败/404 静默）；`autoUpdate` = `false ∥ "notify" ∥ "auto"`（缺省 `"notify"`——可见不越权；`"auto"` = opt-in）；自升 = `npm i -g @thincoder/server@<版号>` 子进程（超时 120s；成功 ∧ 复读校验 ⇒ 优雅停机 ⇒ 守护重起；失败 ⇒ 恒保留旧版）；容器 = 壳镜像（构建期上下文包体预装——离线可运行；`TC_SERVER_VERSION` 三态收敛：空/钉/`latest`；钉版抑制自装）；全文 = §5.4 | 用户 15:33/15:37 两令（两路统一 npm 路径 + 容器壳化）；「退出 ⇒ 重起」两路守护既有（unit `Restart=always` ∥ compose `restart: unless-stopped`）；零第三方依赖（fetch = node 内建 ∥ 自升走 npm CLI）；自持实现（先例语义参考 `thincoder-cli/src/upgrade.mjs:7-19`——零代码共享：跨包不可 import） | 外部看门器（Watchtower ∥ 宿主定时——用户裁作废：版本路径不统一）· 容器烤树形镜像（版本身份由镜像承担——用户裁弃）· 自装改由 CLI 代跑（无进程常驻处 ∥ 守护不在 CLI 面）· 轻端点/响应头做版本可见性（新面/热路径——ready 行字段足） |
-| KD-SV-19 | **provider 配置面 = 库单源 + 保存即热生效**：控制台管理（`providers` 表——迁移 v2）；密钥落库（明文 ∥ `env:` 引用并存——引用保形）；`config.json` 的 `providers[]` 降为**一次性种子**（空库导入；非空库忽略 + 警告）；热生效 = 注册表重建 + 原子换表（在途请求 = 派发时快照） | 用户 2026-10-06 16:01 令（「不再只靠 `config.json` + 重启」——推翻「配置不热载」）；库 = 运行期单源（迁移链 G2 断点）；热生效免重启（零守护依赖 ∥ 亚秒级）；`env:` 保形（密钥卫生——种子不物化秘密）；预设衔接 = 界面「从预设快速添加」复用 `presets.mjs`（KD-SV-17） | 保存即重启（在途全断 ∥ 无守护场景不可用 ∥ 与自升停机面语义叠）· config 主从双向同步（漂移面 ∥ 无必要）· 全弃 config 段（旧部署须手抄——首启导入零成本更优）· `env:` 载入期解析 + 种子物化入库（密钥卫生退化）· meta 表种子标记（为罕见边角增表——表空即导 + 警告口径足） |
+| KD-SV-19 | **provider 配置面 = 库单源 + 保存即热生效**：控制台管理（`providers` 表——迁移 v2）；密钥落库（明文 ∥ `env:` 引用并存——引用保形）；`config.json` 的 `providers[]` 降为**一次性种子**（空库导入；非空库忽略 + 警告）；热生效 = 注册表重建 + 原子换表（在途请求 = 派发时快照） | 用户 2026-10-06 16:01 令（「不再只靠 `config.json` + 重启」）；库 = 运行期单源（迁移链 G2 断点）；热生效免重启（零守护依赖 ∥ 亚秒级）；`env:` 保形（密钥卫生——种子不物化秘密）；预设衔接 = 界面「从预设快速添加」复用 `presets.mjs`（KD-SV-17） | 保存即重启（在途全断 ∥ 无守护场景不可用 ∥ 与自升停机面语义叠）· config 主从双向同步（漂移面 ∥ 无必要）· 全弃 config 段（旧部署须手抄——首启导入零成本更优）· `env:` 载入期解析 + 种子物化入库（密钥卫生退化）· meta 表种子标记（为罕见边角增表——表空即导 + 警告口径足） |
 | KD-SV-23 | **健康检查 = `GET /healthz`（无鉴权只读探活）**：`{ status, version, uptime, db }`（`SELECT 1` 一探）；db 故障 ⇒ 503 `degraded`；no-store；接线 = Dockerfile `HEALTHCHECK` 单源（compose 继承——§5.9；探针面契约 = `gateway/API.md` §2.3） | 探针入口须零凭据（Docker/监控直调）；只读单探 = 零副作用；`version` 与 `ready` 行同源；接线单源 = 改一处 | 鉴权式（探针无法持会话/团队 key——接不进）· 并入 `/v1` 面（探针须持 key——否）· 详细依赖探活（膨胀——仅 db 一探）· 非 HTTP 探针（进程在 ≠ 服务可用） |
 | KD-SV-24 | **版本/更新可见面 = `GET /api/system`（会话——两角色）+ 控制台（meta 槽 ∥ 系统页）**：`{ version, update: { mode, lastCheckAt, latest } }`——数据 = 更新器进程内状态（`getStatus()` 导出）；`latest` = 已见新版（无/未检/失败 ⇒ `null`——静默同面） | 浏览器不可读日志 ⇒ 控制台可见须 HTTP 数据面（#961「ready 行足」限定 = 部署面——两消费方不同，不相抵）；系统页 = admin（动作方）；meta 槽 = 全角色（版本非敏感） | 并入 `/api/me`（语义 = 本人——服务器信息越界）· healthz 携更新字段（探活语义膨胀）· 日志/外发通知（控制台不可读） |
-| KD-SV-25 | **部署文档完备 = README 定稿（反代 = nginx 完整段 ∥ 备份 = `deploy/backup.mjs`（拟新增）+ systemd 定时器样例）**：反代段 = body 上限 32m ∥ SSE 免缓冲 ∥ `X-Real-IP`；备份 = node:sqlite `backup()`（WAL 在线一致——免停写窗；零外部工具） | 用户 16:04 令；nginx = 最常见 ∥ 不预设自动证书（内网自签直白）；node 自带备份 = sqlite3 CLI 不保证在；在线备份 = 免停写、与运行实例并存 | caddy（自动 HTTPS 面向公网域名——内网假设不符）· `sqlite3` CLI `.backup`（外部依赖）· 停写窗 `cp`（易漏 WAL 伴档）· cron 样例（与 systemd 部署面两套）· 定时器落 `deploy/` 真件（样例在 README 足） |
+| KD-SV-25 | **部署文档完备 = README 定稿（反代 = nginx 完整段 ∥ 备份 = `deploy/backup.mjs`（已落盘 86 行）+ systemd 定时器样例）**：反代段 = body 上限 32m ∥ SSE 免缓冲 ∥ `X-Real-IP`；备份 = node:sqlite `backup()`（WAL 在线一致——免停写窗；零外部工具） | 用户 16:04 令；nginx = 最常见 ∥ 不预设自动证书（内网自签直白）；node 自带备份 = sqlite3 CLI 不保证在；在线备份 = 免停写、与运行实例并存 | caddy（自动 HTTPS 面向公网域名——内网假设不符）· `sqlite3` CLI `.backup`（外部依赖）· 停写窗 `cp`（易漏 WAL 伴档）· cron 样例（与 systemd 部署面两套）· 定时器落 `deploy/` 真件（样例在 README 足） |
 
 ## 9. 用例（本域）
 
@@ -285,3 +286,9 @@ first-release-completeness 面随动（批 `docs/batches/2026-10-06-first-releas
 - 2026-10-06：实施后回填轮（R11 · 父侧直接执行 · 机械 · 可 revert）——§5.1 引导层两档标记翻正；§6 行数按实读收正（update **228** ∥ converge **197** ∥ entrypoint **7** ∥ bin **122** ∥ config **164** ∥ Dockerfile **28** ∥ compose **19** ∥ dockerignore **8** ∥ service **34** ∥ example **33** ∥ README **142**；小计 **1246**）；§7 AC-10 行标记收正（批内件实读 498）；批内件实读 **498** 入 `PROJECT.md` §6。
 - 2026-10-06：行宽机械拆行（父侧直接执行 · 可 revert）——§5.4(c) 行（356 字符 ⇒ 两行 ≤300）。
 - 2026-10-06：首版完备化设计轮（批 `docs/batches/2026-10-06-first-release-completeness.md`——需求 §2:12 ∥ 台账 #963）——§1 增 `trustProxy` ∥ `usageRetentionDays`（表 ∥ 模板 ∥ 启动校验）∥ §4 启动链补保留清理 ∥ §5.4(g) 补控制台可见面句 ∥ §5.5 备份重写（`thincoder-server/deploy/backup.mjs`（拟新增）在线快照 + 定时器样例）∥ §5.6 增反代样例（nginx 段要点 + `trustProxy` 前提）∥ §5.7 ⑤ 补 healthy 核对 ∥ §5.9 增健康检查接线 ∥ §6 预算（backup 拟新增 ≈45 + 叠加段）∥ §7 补 AC-13 候补行（⑤ 面）∥ §8 增 KD-SV-23/24/25 ∥ §9 增 N21 ∥ B17 ∥ E18/E19 ∥ §10 边界随正；同源随动 = `gateway/API.md` §2.3 ∥ `metering/METERING.md` §1 ∥ `accounts/ACCOUNTS.md` §2 ∥ `webui/WEBUI.md` §2.1。
+- 2026-10-06：fix 轮（评审轮次 1 #2/#3/#6/#8/#9/#11 收正——批 `docs/batches/2026-10-06-first-release-completeness.md` §3）：#2 §4 停机链补「清周期定时器（更新循环 ∥ 保留清理同法）」∥ #3 §5.1 门禁件数收正（八件 ⇒ 十件）∥ #6 §1 删「推翻式」残留（保「用户令」出处）∥ #8 §5.9 补容器路 `host` 注 ∥ #9 §5.5 补恢复步 + §7 AC-13⑤ 行随正 ∥ #11 §5.5 补 `backup()` 回退句。
+- 2026-10-06：KD-SV-19 理由句收正（父侧直接执行 · 机械 · 可 revert）——删「推翻「配置不热载」」残留（保用户令出处；同 #6 法——全档「推翻式」归零）。
+- 2026-10-06：AC-13 行候补标记收正（父侧直接执行 · 机械 · 可 revert——已落需求档验收表）。
+- 2026-10-06：实施后回填轮（R14——批 `docs/batches/2026-10-06-console-providers.md`）：§6 行数按实读收正（bin **126** ∥ config **180** ∥ README **146**；小计 1246 ⇒ **1270**）；provider 面随动段转回填记录。
+- 2026-10-06：实施后回填轮（R16——批 `docs/batches/2026-10-06-first-release-completeness.md`）：§5.5/§7/§8 backup 标记翻正；§6 行数按实读收正（update **239** ∥ config **189** ∥ bin **153** ∥ Dockerfile **34** ∥ compose **20** ∥ backup **86** ∥ README **240** ∥ example **35**；小计 ⇒ **1506**）；随动段转回填记录。
+- 2026-10-06：实施后回填轮（R18——批 `docs/batches/2026-10-06-server-i18n.md`）：§6 README 行实读收正（**241**——控制台节多语言行；小计 ⇒ **1507**）∥ §5.1 门禁件数随正（十件 ⇒ 十一件——本批件入列）。
