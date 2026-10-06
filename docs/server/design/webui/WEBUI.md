@@ -24,7 +24,7 @@
 | 我的 | `#/me/usage` | 本月额度/已用摘要 + 本人用量明细 | 全体 |
 | 我的 | `#/me/account` | 基本信息（展示名/用户名/角色）+ 自助改密 | 全体 |
 | 管理 | `#/admin/members` | 建成员（初始密码一次性回显） ∥ 成员表（key 清单/吊销/设额度/重置） | admin |
-| 管理 | `#/admin/providers` | provider 增删改 ∥ 模型发现/开放勾选 ∥ 测试/预设快速添加（契约 = `gateway/API.md` §2.2） | admin |
+| 管理 | `#/admin/providers` | provider 增删改 ∥ 模型发现/开放勾选 ∥ 测试/预设快速添加（数据源 = 预设列表端点——契约 = `gateway/API.md` §2.2） | admin |
 | 管理 | `#/admin/usage` | 全队用量表（过滤查询） | admin |
 | 管理 | `#/admin/system` | 版本与更新 ∥ 成员接入（骨架——随 `requirements/PROJECT.md` §2:12 面填充；侧栏底部 meta 槽同挂） | admin |
 
@@ -67,9 +67,9 @@
 
 | 需求 | 设计级判据 | 载体 |
 |---|---|---|
-| 非功能 · 前端自洽 | `public/**` 零外部引用（无 `http(s)://` 外链 ∥ 无 CDN ∥ 无外链字体——扫描断言，含新增五档）；静态直发 mime 正确 ∥ 路径穿越拒；档目断言随正（含 favicon.png 共十档——`-webui-deploy` 件） | 批内件 |
-| AC-11（控制台 provider 面——判据全文 = `gateway/API.md` §5 AC-11 行） | `#/admin/providers` 页在册（列表 ∥ 增/改/删 ∥ 发现/勾选 ∥ 测试 ∥ 预设快速添加）；端点契约 = `gateway/API.md` §2.2；密钥掩码回显（不回明文） | 批内件 |
-| AC-12（功能点 14——控制台 IA；候补行——需求档回笔 = 主 agent 笔） | `nav.mjs` 直测：组/项结构（我的 3 ∥ 管理 4 ∥ admin 组仅 admin） ∥ 重定向（`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/members`） ∥ 角色默认 ∥ admin 面 `denied`；静态九档在册 ∥ 管理页拆分（成员/用量各一页——单页堆叠消失） | 批内件 |
+| 非功能 · 前端自洽 | `public/**` 零外部引用（无 `http(s)://` 外链 ∥ 无 CDN ∥ 无外链字体——扫描断言，含新增五档）；静态直发 mime 正确 ∥ 路径穿越拒；档目断言随正（口径 = UI 代码档 9 ∥ 含 favicon 全目录 10——`-webui-deploy` 件） | 批内件 |
+| AC-11（控制台 provider 面——判据全文 = `gateway/API.md` §5 AC-11 行） | `#/admin/providers` 页在册（列表 ∥ 增/改/删 ∥ 发现/勾选 ∥ 测试 ∥ 预设快速添加——预设列表端点 ⇒ 预填）；端点契约 = `gateway/API.md` §2.2；密钥掩码回显（不回明文） | 批内件 |
+| AC-12（功能点 14——控制台 IA；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `nav.mjs` 直测：组/项结构（我的 3 ∥ 管理 4 ∥ admin 组仅 admin） ∥ 重定向（`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/members`） ∥ 角色默认 ∥ admin 面 `denied`；静态九档在册 ∥ 管理页拆分（成员/用量各一页——单页堆叠消失） | 批内件 |
 
 ## 7. 关键决策（本域）
 
@@ -88,3 +88,4 @@
 - 2026-10-06：fix 轮（评审轮次 1 #1）——管理视图数据源句补记：成员表行含各成员 key 清单（提示形 + id——`GET /api/members` 行内；契约 = `accounts/ACCOUNTS.md` §3）。
 - 2026-10-06：实施后回填轮（fix）——§1 JS 行与 §5 行数按实读回填（小计 ≈680 ⇒ 558；管理视图未出档）。
 - 2026-10-06：控制台 provider/模型管理 + IA 设计轮（批 `docs/batches/2026-10-06-console-providers.md`——需求 §2:11 ∥ §2:14 ∥ 台账 #962/#966）——§1 静态面九档重排（`views.mjs` 退役拆档）∥ §2 重写为「控制台 IA 与视图」（侧栏分组 ∥ 七页 ∥ 旧链重定向 ∥ `nav.mjs` 纯函数 ∥ 窄屏降级 ∥ 首版完备化/多语言面挂点）∥ §3/§4 随正 ∥ §5 预算（小计 558 ⇒ ≈1009）∥ §6 判据补 AC-11/AC-12 行 ∥ §7 增 KD-SV-20（KD-SV-9 行随正：计数句去「三视图」）∥ §8 增多语言留白句。
+- 2026-10-06：fix 轮（评审轮次 1 五条——批 `docs/batches/2026-10-06-console-providers.md` §3）：#1 §2 provider 页行/§6 AC-11 行补预设列表端点 ∥ #2 §6 AC-12 行标记收正（已落需求档）∥ #3 §6 前端自洽行档目口径统一（UI 代码档 9 ∥ 含 favicon 全目录 10）。

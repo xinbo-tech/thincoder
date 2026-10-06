@@ -129,7 +129,8 @@ services:
 
 - **（a）自检**：服务内周期自检——启动即检一次 + 每 6 小时（interval = 实现常量；不设配置项）；请求 = `<registry>/@thincoder%2fserver/latest`（直连 registry——scheme 随 `NPM_CONFIG_REGISTRY`（http(s) 皆可）；`%2f` 编码形实测在案 2026-10-06；超时 5s 沿 CLI 先例）；**失败/404 静默**（与「无新版」同面——不打扰）；更新源 = `NPM_CONFIG_REGISTRY`（§5.3）。
 - **（b）档位**（`autoUpdate`——§1；默认值论证）：`false` = 零检查（离线 ∥ 审计场景）；`"notify"` = 检查 + 日志（`update_available`——可见但不越权：**缺省**）；`"auto"` = 检查 + 自装（免值守——opt-in）。**抑制**：容器内 `TC_SERVER_VERSION` 为钉（非空且非 `latest`）⇒ 自装抑制（生效 = notify + 启动一条说明——升级 = 改钉值；防与壳收敛互搏）。
-- **（c）自升执行器**：`npm i -g @thincoder/server@<版号>`（版号 = 检查所得具体值——防标签竞态；`--no-audit --no-fund`）子进程（超时 120s）；成功判据 = 退出码 0 ∧ 复读版本变更 ⇒ **走既有优雅停机路径**（`shutdown`——`signal: "self-update"`；停收新连 ∥ 在途至多 10s ∥ 关库）⇒ 退出 ⇒ 守护重起拾新版；**失败/超时恒保留旧版运行**（warn `update_install_failed`——含重装提示；下轮再检）；**注入口径**（批内件替身）：npm 命令 ∥ 前缀 ∥ 周期/超时常量走可覆盖参数 + `??` 缺省（缺省 = 生产行为不变；测试内 finally 复原）。
+- **（c）自升执行器**：`npm i -g @thincoder/server@<版号>`（版号 = 检查所得具体值——防标签竞态；`--no-audit --no-fund`）子进程（超时 120s）；成功判据 = 退出码 0 ∧ 复读版本变更 ⇒ **走既有优雅停机路径**（`shutdown`——`signal: "self-update"`；停收新连 ∥ 在途至多 10s ∥ 关库）⇒ 退出 ⇒ 守护重起拾新版；
+  **失败/超时恒保留旧版运行**（warn `update_install_failed`——含重装提示；下轮再检）；**注入口径**（批内件替身）：npm 命令 ∥ 前缀 ∥ 周期/超时常量走可覆盖参数 + `??` 缺省（缺省 = 生产行为不变；测试内 finally 复原）。
 - **（d）容器收敛判定表**（`TC_SERVER_VERSION` × 已装——`converge.mjs`）：
 
 | `TC_SERVER_VERSION` | 已装 | 行为 |
@@ -246,3 +247,4 @@ provider 面随动（批 `docs/batches/2026-10-06-console-providers.md`——叠
 - 2026-10-06：自动更新设计轮（批 `docs/batches/2026-10-06-server-auto-update.md`——需求 §2:10 ∥ 台账 #961）——§1 配置面增 `autoUpdate` 档位 + 更新源行；§4 就绪日志句随动（`ready` 含 `version`）；§5 部署面按「两路统一 npm 版本身份 + 容器壳化」重写（5.1 分发 ∥ 5.2 守护 ∥ 5.3 配置 ∥ 5.4 升级/回滚全机制：自检/档位/自升/容器收敛表/失败安全链/版本可见性/发布接线 ∥ 5.7 清单）；§6 预算（新三档 + 增量预期）；§7 补 AC-10 候补行；§8 增 KD-SV-18；§9 增 N14/N15/B10–B13/E12–E13；§10 增更新面不做项。
 - 2026-10-06：控制台 provider/模型管理设计轮（批 `docs/batches/2026-10-06-console-providers.md`——需求 §2:11 ∥ 台账 #962）——§1 `providers[]` 降为**首启种子**（导入矩阵 ∥ 幂等边角 ∥ 密钥形态 ∥ 校验单源 ∥ fail-closed 改写：零 provider 允许态）∥ `env:` 例外（载入不解析——构建期）∥ key 轮换句收正（保存即热生效）∥ §4 启动链补运行时引导 ∥ §6 provider 面随动增量 ∥ §7 补 AC-11 种子行 ∥ §8 增 KD-SV-19 ∥ §10「动态热载配置」句收正（文件不热载 ∥ provider 数据面热生效）+ 增 provider 管理面不做项；机制全文 = `gateway/API.md` §2.2。
 - 2026-10-06：实施后回填轮（R11 · 父侧直接执行 · 机械 · 可 revert）——§5.1 引导层两档标记翻正；§6 行数按实读收正（update **228** ∥ converge **197** ∥ entrypoint **7** ∥ bin **122** ∥ config **164** ∥ Dockerfile **28** ∥ compose **19** ∥ dockerignore **8** ∥ service **34** ∥ example **33** ∥ README **142**；小计 **1246**）；§7 AC-10 行标记收正（批内件实读 498）；批内件实读 **498** 入 `PROJECT.md` §6。
+- 2026-10-06：行宽机械拆行（父侧直接执行 · 可 revert）——§5.4(c) 行（356 字符 ⇒ 两行 ≤300）。

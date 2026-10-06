@@ -148,8 +148,8 @@
 | AC-8（功能点 8——分发与部署） | `ops/OPS.md` §7 判据（`npm pack --dry-run` 通过——`files` 白名单齐 ∥ 零 install 步；`docker build` 成功 + compose 起停通；systemd unit 安放可启） | 收口轮（真机；发布动作 = 发布面轮） |
 | AC-9（功能点 9——provider 预设；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `ops/OPS.md` §7 判据（预设展开 ∥ 未知预设拒启 ∥ `name` 缺省 ∥ 覆盖语义 ∥ 漂移件） | 批内件 |
 | AC-10（功能点 10——自动更新；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `ops/OPS.md` §7 判据（自检 ∥ 档位 ∥ 自升 ∥ 版本可见性 ∥ 容器收敛——机制全文 = `ops/OPS.md` §5.4） | 批内件 + 收口轮 |
-| AC-11（功能点 11——控制台 provider/模型管理；候补行——需求档回笔 = 主 agent 笔） | `gateway/API.md` §5 判据（CRUD 三态 ∥ 保存即热生效 ∥ 密钥掩码/日志零明文 ∥ 发现与降级）+ `ops/OPS.md` §7 种子行 + `webui/WEBUI.md` §6 控制台行 | 批内件 |
-| AC-12（功能点 14——控制台 IA；候补行——需求档回笔 = 主 agent 笔） | `webui/WEBUI.md` §6 判据（`nav.mjs` 直测：组/项 ∥ 重定向 ∥ 角色默认 ∥ denied；静态九档 ∥ 拆分） | 批内件 |
+| AC-11（功能点 11——控制台 provider/模型管理；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `gateway/API.md` §5 判据（CRUD 三态 ∥ 保存即热生效 ∥ 密钥掩码/日志零明文 ∥ 发现与降级）+ `ops/OPS.md` §7 种子行 + `webui/WEBUI.md` §6 控制台行 | 批内件 |
+| AC-12（功能点 14——控制台 IA；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `webui/WEBUI.md` §6 判据（`nav.mjs` 直测：组/项 ∥ 重定向 ∥ 角色默认 ∥ denied；静态九档 ∥ 拆分） | 批内件 |
 | 非功能 · 零依赖 | 本档 §1 ∥ §5 KD-SV-2（口径）；全树 import 扫描断言 = 批内件 | 批内件 |
 | 非功能 · 仅内网 | `ops/OPS.md` 验收判据（`host` 必填 fail-closed + `0.0.0.0` 警告） | 批内件 |
 | 非功能 · 前端自洽 | `webui/WEBUI.md` 验收判据（零外部引用扫描） | 批内件 |
@@ -180,7 +180,7 @@
 | R10 | **发布面接线点**：`@thincoder/server` 发布前 ⇒ 自检恒「无新版」（404 静默）；发布后自生效（无需改动）；发布动作 = 发布面轮 | 后续轮（接线在案） | 发布面轮 |
 | R11 | **实施后回填（已办）**：预算实读（ops 小计 762 ⇒ **1246** ∥ 全树 2824 ⇒ **3308**）∥ 批内件实读 **498** | 实施后设计回填轮（沿先例） | 已办（2026-10-06） |
 | R12 | **需求档行宽破口（已办）**：`requirements/PROJECT.md:43` 已拆行（400 字符 ⇒ 三行 ≤300 ∥ 2026-10-06） | 需求档修复 | 已办（2026-10-06） |
-| R13 | **需求档回笔（主 agent 笔）**：AC-11 ∥ AC-12 两行候补（判据草案 = `gateway/API.md` §5 ∥ `webui/WEBUI.md` §6） | 需求档回笔 | 待办 |
+| R13 | **需求档回笔（已办）**：AC-11 ∥ AC-12 两行已落需求档验收表（`docs/server/requirements/PROJECT.md`——2026-10-06） | 需求档回笔 | 已办（2026-10-06） |
 | R14 | **实施后回填轮**：预算实读（webui 重排 ∥ 新档）∥ 批内件实读 ∥ 旧件随正清单核销（§2.4：base/webui-deploy/model-ref/presets 四件） | 实施后设计回填轮（沿先例） | 实施后轮 |
 
 ## 变更记录
@@ -197,3 +197,4 @@
 - 2026-10-06：自动更新设计轮（批 `docs/batches/2026-10-06-server-auto-update.md`——需求 §2:10 ∥ 台账 #961）——§2.1 ops 行五档（+ update）∥ 部署档组补 entrypoint/converge（拟新增）∥ §4 索引增 KD-SV-18（标题 1–17 ⇒ 1–18）∥ §6 预算随动（ops ⇒ 本批预期 ≈1107；全树 ⇒ ≈3170 ∥ 35 档；package.json 随动）∥ §6 随动表补本批批档/批内件行 ∥ §7 补 AC-10（候补）∥ §9 增 R9–R12（含需求档行宽破口报告项）；机制全文 = `ops/OPS.md` §5.4。
 - 2026-10-06：控制台 provider/模型管理 + IA 设计轮（批 `docs/batches/2026-10-06-console-providers.md`——需求 §2:11 ∥ §2:14 ∥ 台账 #962/#966）——§1 定位句随正（侧栏分组导航七页）∥ §2.1 gateway 行（+ provider-admin）∥ webui 行（九档重排——`views.mjs` 退役）∥ §2.2 控制台链随正 ∥ §4 索引增 KD-SV-19/20（标题 1–18 ⇒ 1–20）∥ §6 预算随动（产品面 ≈+840 ∥ 全树 35 ⇒ 41 档）∥ §6 随动表补本批批档/批内件行 ∥ §7 补 AC-11/AC-12 候补行 ∥ §9 增 R13/R14。
 - 2026-10-06：实施后回填轮（R11 · 父侧直接执行 · 机械 · 可 revert）——§6 全树 **3308 行（35 档）**（域级 ops ⇒ **1246**；含自动更新面 +484）∥ 随动表本批行收正（批内件实读 **498**）∥ §9 R11 销项；R2② provider 配置形态按 KD-SV-19 收正（已定）。
+- 2026-10-06：fix 轮（评审轮次 1 五条——批 `docs/batches/2026-10-06-console-providers.md` §3）：#2 §7 AC-11/AC-12 行标记收正（已落需求档）∥ §9 R13 销项（已办——沿 R7/R9 先例）。
