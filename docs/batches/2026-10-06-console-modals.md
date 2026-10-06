@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-06 · 来源 = 用户 2026-10-06 20:12「用户管理界面，我觉得应该用弹窗打开用户详情以后编辑修改，另外，弹窗我建议你做成一个公共组件，因为后续肯定会铺天盖地的使用弹窗」——成员详情弹窗 + 公共弹窗组件；需求档 = `docs/server/requirements/PROJECT.md` §2:16 + AC-16。
 > 台账 = #973（server · 归批）。前情 = 无（独立批——同域串行：`2026-10-06-console-completeness-2.md`〔在途〕→ 本批接）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-06
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 **§1 讨论（主 agent · 2026-10-06 20:1x）**
@@ -122,4 +122,51 @@
 
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（审计 clean ∥ 代码评审 pass ∥ fix 0 轮——终态 clean；随正五件（父侧）当刻为红（实证在段内 D8））
+
+
+
+**§5 实施记录（eng-coder · 2026-10-06 · 弹窗批 initial）**
+
+**交付摘要（逐档 file:line）**：
+- `public/modal.mjs`（新 · **68**）：`openModal` API（:19）∥ 单例开新先关旧（:20）∥ 壳 = 头（标题 + × 钮——aria-label = `common.close`，:22–33）∥ 体/脚（缺省无脚，:34–43）∥ 三路收口 `finish`/`close`（× ∥ ESC ∥ 句柄——幂等，:46–61）∥ `showModal()` + `body.modal-open` 滚动锁（:63–66）。
+- `public/views-models.mjs`（新 · **77**）：`deriveModels` 同源派生纯函数（:15–25）∥ `renderModels`（列表/空态/失败态，:27–43）∥ 行点击表（Enter/Space，:46–62）∥ 详情弹窗（复用 `openModal` + 嵌入行注「配置 = 系统页 · 向量服务卡」+ 配置骨架**零可编辑字段**，:65–77）。
+- `public/views-admin.mjs`（重写 · **169**）：`renderMembers`（页首「新建成员」钮 + 秘密区 + 表，:20–45）∥ 表列重排（展示名∥用户名∥角色∥额度∥已用∥key 数）+ 行点击（:48–66）∥ `openMemberModal` 三态（:70–169——查看 :104–125 ∥ 编辑 :127–142 ∥ 新建 :144–160）；旧表内「key 清单/操作」两列与页首建表单**撤除**（操作全迁窗内）。
+- `public/nav.mjs`（87 ⇒ **88**）：models 项（:23——provider 之后）∥ 头注「管理 7」/切换器注「十页」随正（:2/:85）。
+- `public/app.mjs`（299 ⇒ **300**）：`renderModels` 接线（:21/:213）；表头注释两行收拢一行（:9）——**health.mjs 拆分预案未启用**（见 D1）。
+- `public/style.css`（122 ⇒ **139**）：弹窗壳/遮罩/头体脚/滚动锁 ∥ 行点击 ∥ 详情栅格（:115–130）。
+- `public/i18n-zh.mjs`（292 ⇒ **312**）∥ `public/i18n-en.mjs`（288 ⇒ **308**）：新键 **18** 枚两表逐键同步（common.save|cancel|close ∥ admin.members.newBtn|colKeyCount|empty ∥ admin.models.* 11 ∥ nav.page.admin.models）。
+- `thincoder-server/package.json`（:13）：`prepublishOnly` 清单添本批件（十二 ⇒ **十三**件）。
+- `docs/batches/2026-10-06-console-modals.test.mjs`（新 · **391**）：六腿——① `modal.mjs`（桩 DOM 行为：单例/三路关闭/遮罩不关/aria-label/顶层零浏览器全局）∥ ② 成员弹窗三态 + 一次性秘密（假 ctx 行为直测）∥ ③ 服务模型（派生纯函数 + 列表/空态/失败态 + 详情骨架零字段）∥ ④ nav（管理 7 ∥ denied ∥ 重定向/默认不破）∥ ⑤ 静态面（档目 17∥18 ∥ 零外链 ∥ 两表键集/占位符 ∥ 键引用闭合 ∥ 两新档直发）∥ ⑥ 门禁清单（含本批件 ∥ 清单在盘）。
+
+**自跑读数**：`node --check` 九档全绿（8 产品档 + 批内件）；`node --test docs/batches/2026-10-06-console-modals.test.mjs`（自 `thincoder/`）= **tests 6 ∥ pass 6 ∥ fail 0**；静态自检 = 档目 **18 ∥ 17**（含 favicon ∥ UI 代码档）∥ `http(s)://`+`@import` **0 命中** ∥ 两表键集双向相等（除自称名族）∥ en 零 CJK ∥ 占位符逐键一致 ∥ 门禁清单 **13 件**含本批件。
+
+**决策透明表（披露）**：
+
+| # | 决策/披露 | 理由 |
+|---|---|---|
+| D1 | `app.mjs` 落 **300**（≤300 软线内）——表头注释收拢一行换接线 +2；**`health.mjs` 拆分未启用** | 设计 AC-16/17 与批档随正链均钉「档目 **17 ∥ 18**」（恰两新档）；拆第三档 ⇒ 18 ∥ 19 与验收判据/随正登记冲突。「越线即启用」以「越线」为条件——实读 300 ≤ 300 **未越线**。备选（拆 `health.mjs`）与 AC 冲突，未采；贴线风险与 +1 行触发预案已由评审记录（🔵）。 |
+| D2 | `views-admin.mjs` 导出 `openMemberModal`（设计未点名） | 批内件对「三态 + 一次性秘密」做行为直测所需（假 ctx + 桩 DOM）；零行为变化，仅可测性面。 |
+| D3 | 服务模型页引擎行：Provider = `"embedding"`（`/v1/models` `owned_by` 同口径）；上游模型名 = `—`（无首斜杠余段） | 贴合「与 `/v1/models` 同源」的最近既有约定；「—」= `fmtValue` 语言中性（零自造语义）。 |
+| D4 | 新键 **18 枚**（设计估 ≈17） | +1 = `admin.models.detailTitle`（详情弹窗标题——设计原文有「详情」面但未具名键）；族归属与设计枚举一致。 |
+| D5 | 两 i18n 表 **312/308**（>300 软线） | 设计已预判（`WEBUI.md` §2.2「双表均越 300 软线 ⇒ 按域拆表」）；处置 = **R25 独立结构轮**（本批零触）。 |
+| D6 | 旧键 `admin.members.tableTitle` 成孤儿（描述旧表形） | 评审 🔵 观察（:101/:97）——随 R25/回填轮清账；本批未删（避免越批清账面）。 |
+| D7 | 弹窗悬留跨路由：开窗期浏览器前进/后退 ⇒ `route()` 重渲而弹窗留驻（挂 `document.body`），其页级秘密区随旧 mount 脱链——窗内「重置/新建」成功则一次性明文不可见 | 评审 🟡（**非阻塞**）+ 审计无发现——**上抛父侧登记**（候选修法：`modal.mjs` 导出 `closeActiveModal()`，`route()` 起点调用；本批未动 = 设计未涉 + `app.mjs` 已贴线）。 |
+| D8 | 随正五件当刻为**红**（非本批文件——父侧登记 R26） | 实证：`-console-completeness-2.test.mjs:431`（档目 [16,15] ⇒ 18/17；另 :432 名单、:468 nav 名单）∥ `-console-providers.test.mjs:405`（admin 6 ⇒ 7）、`:426`（档名单 16 ⇒ 18）∥ `-server-gateway-webui-deploy.test.mjs:274`（档名单）∥ `-server-i18n.test.mjs:120`（JS_FILES 11 ⇒ 13）、`:159`（labelKeys 11 ⇒ 12）∥ `-server-auto-update.test.mjs:480`（门禁 12 ⇒ 13；注释 :9/:439 同拍）。收口前逐件随正；未随正前勿以 `prepublishOnly` 全绿作放行判据。 |
+
+**审计与代码评审轮次与终态**：
+- 内部发散审计（explore · 轮次 1）：**clean**——PARTIAL ∥ SILENT-SIMPLIFICATION ∥ DOC-DRIFT ∥ OUT-OF-LIST 四类均「无发现」；观察项 5（i18n 越线口径 ∥ 行数回填素材 ∥ 孤儿键 ∥ 零 CJK 值级口径 ∥ §5 时点）。
+- 独立代码评审（advisor · 轮次 1）：**pass（无 must-fix）**——🟡 3（D7 ∥ D5 ∥ D8）+ 🔵 4（D6 ∥ 额度输入整数守卫（`views-admin.mjs:128/:134`——建议 `step="1"` + `Number.isInteger`）∥ `app.mjs` 贴线（=D1）∥ 估数漂移（归 R27））。
+- fix round：**0 轮**（无 must-fix；🟡/🔵 按「登记/上抛」处置，未改码）。
+- **终态 = clean**（批内件 6/6 绿 ∥ 审计 clean ∥ 评审 pass）。
+
 ## §6 验证与收口（父代理）
+
+**§6 验证与收口（主 agent · 2026-10-06 21:3x）**
+
+- **全门禁（父侧唯一仓套件跑）**：`cd thincoder-server && npm run prepublishOnly` ⇒ **111/111 ∥ fail 0 ∥ exit 0**（13 件链——本批件第 13 位）。
+- **批内件**：`docs/batches/2026-10-06-console-modals.test.mjs`（391 行 ∥ 6/6 绿——AC-16/17 判据载体，随批留存）。
+- **随正五件（父侧）核销全绿**：`-console-completeness-2`（档目 17 ∥ 18 + 管理 7）∥ `-console-providers`（管理 7 + 十八档）∥ `-webui-deploy`（十八档）∥ `-server-i18n`（JS 档单 13 + labelKeys 12）∥ `-server-auto-update`（门禁 13 件）。
+- **披露处置**：D1（app.mjs 落 300 未越线 ⇒ `health.mjs` 不拆——AC 档目判据优先；评审 🔵 在案）∥ D2/D3/D4（导出面/引擎行口径/新键 18）——零阻在册 ∥ D5 → R25 独立结构轮（台账 `#976` 在账）∥ D6 孤儿键（`admin.members.tableTitle`）→ R25 清账 ∥ **D7 弹窗悬留跨路由 → 登记台账（新行）**。
+- **集成场景影响**：无新增（控制台浏览器走查 = 用户侧轮；本批判据 = 批内件）。
+- **冻结**：本档收口；台账 `#973`/`#974` 核销。

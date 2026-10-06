@@ -425,13 +425,13 @@ test("⑤ 向量面：真值零密钥 ∥ 试跑成功 + 四 kind ∥ 不落库�
 
 // ── ⑥ 前端静态面 + nav 直驱 + 健康三态 ───────────────────────────────────────
 
-test("⑥ 静态面：档目 15 ∥ 16 ∥ 零外链 ∥ 两表键集/键引用闭合 ∥ nav 直驱 ∥ 三新档直发 ∥ 健康三态", async () => {
-  // 档目（UI 代码档 15 ∥ 含 favicon 全目录 16）+ 零外链（零 http(s):// ∥ 零 @import）
+test("⑥ 静态面：档目 17 ∥ 18 ∥ 零外链 ∥ 两表键集/键引用闭合 ∥ nav 直驱 ∥ 三新档直发 ∥ 健康三态", async () => {
+  // 档目（UI 代码档 17 ∥ 含 favicon 全目录 18——弹窗批后）+ 零外链（零 http(s):// ∥ 零 @import）
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [16, 15])
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [18, 17])
   assert.deepEqual(names, [
-    "app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "nav.mjs", "style.css",
-    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-overview.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs",
+    "app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "nav.mjs", "style.css",
+    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs",
   ])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
@@ -462,10 +462,10 @@ test("⑥ 静态面：档目 15 ∥ 16 ∥ 零外链 ∥ 两表键集/键引用�
   }
   assert.ok(refs.length >= 200, `键引用过少（扫描失效？）：${refs.length}`)
   for (const [name, key] of refs) assert.ok(key in ZH && key in EN, `${name} 引用悬空键：${key}`)
-  // nav 直驱（管理 6 ∥ `#/admin` 重定向同指 ∥ 默认页 ∥ denied）
+  // nav 直驱（管理 7 ∥ `#/admin` 重定向同指 ∥ 默认页 ∥ denied）
   const [me, adminGroup] = NAV.NAV_GROUPS
   assert.deepEqual(me.items.map((item) => item.path), ["/me/keys", "/me/usage", "/me/account"])
-  assert.deepEqual(adminGroup.items.map((item) => item.path), ["/admin/overview", "/admin/members", "/admin/providers", "/admin/usage", "/admin/audit", "/admin/system"])
+  assert.deepEqual(adminGroup.items.map((item) => item.path), ["/admin/overview", "/admin/members", "/admin/providers", "/admin/models", "/admin/usage", "/admin/audit", "/admin/system"])
   const redirect = { path: "/admin/overview", redirect: true }
   assert.deepEqual([NAV.resolveRoute("/admin", "admin"), NAV.resolveRoute("/", "admin")], [redirect, redirect])
   assert.deepEqual([NAV.resolveRoute("/", "user"), NAV.resolveRoute("/admin/audit", "user"), NAV.resolveRoute("/admin/overview", "admin")], [{ path: "/me/keys", redirect: true }, { path: "/admin/audit", denied: true }, { path: "/admin/overview" }])

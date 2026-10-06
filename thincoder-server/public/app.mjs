@@ -6,8 +6,7 @@
  *
  * 判权全在后端：只做显隐与表单——`user` 直打管理端点由服务端 403（页面不是判据）；401 ⇒ 回 #/login；路由解析
  * （别名重定向 ∥ 角色默认 ∥ admin 面 denied）= nav.mjs 纯函数；旧链 `#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒
- * `#/admin/overview`。渲染一律 textContent；写请求一律 JSON 头 + JSON 体（型门）；零外部资源（内网自洽）；
- * 文案一律经 `t()` 取值。
+ * `#/admin/overview`。渲染一律 textContent；写请求一律 JSON 头 + JSON 体（型门）；零外部资源（内网自洽）；文案一律经 `t()` 取值。
  */
 import { t, mapError, initLang, setLang, langTag, applyDocument } from "./i18n.mjs"
 import { defaultPath, renderSidebar, resolveRoute } from "./nav.mjs"
@@ -19,6 +18,7 @@ import { renderSystem } from "./views-system.mjs"
 import { renderAdminUsage } from "./views-usage.mjs"
 import { renderOverview } from "./views-overview.mjs"
 import { renderAudit } from "./views-audit.mjs"
+import { renderModels } from "./views-models.mjs"
 
 const appEl = document.getElementById("app")
 const navEl = document.getElementById("nav")
@@ -210,6 +210,7 @@ const PAGES = {
   "/admin/overview": renderOverview,
   "/admin/members": renderMembers,
   "/admin/providers": renderProviders,
+  "/admin/models": renderModels,
   "/admin/usage": renderAdminUsage,
   "/admin/audit": renderAudit,
   "/admin/system": renderSystem,

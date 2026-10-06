@@ -14,6 +14,9 @@ export const ZH = Object.freeze({
   "common.loading": "加载中……",
   "common.quotaUnlimited": "不限",
   "common.secretNote": "{label}——仅此一次显示，请立即保存",
+  "common.save": "保存",
+  "common.cancel": "取消",
+  "common.close": "关闭",
   "denied.title": "无权限",
   "denied.hint": "该页面仅限 admin（判权在服务端）",
 
@@ -51,6 +54,7 @@ export const ZH = Object.freeze({
   "nav.page.admin.overview": "总览",
   "nav.page.admin.members": "成员",
   "nav.page.admin.providers": "Provider 与模型",
+  "nav.page.admin.models": "服务模型",
   "nav.page.admin.usage": "全队用量",
   "nav.page.admin.audit": "审计",
   "nav.page.admin.system": "系统",
@@ -104,6 +108,22 @@ export const ZH = Object.freeze({
   "admin.members.tempPwdLabel": "成员 {name} 的临时密码",
   "admin.members.colQuota": "额度",
   "admin.members.colKeys": "key 清单",
+  "admin.members.newBtn": "新建成员",
+  "admin.members.colKeyCount": "key 数",
+  "admin.members.empty": "暂无成员",
+
+  // ── 管理·服务模型（§2.4③——弹窗批） ──────────────────────────────────────
+  "admin.models.title": "服务模型",
+  "admin.models.colModel": "模型",
+  "admin.models.colProvider": "Provider",
+  "admin.models.colSurface": "面",
+  "admin.models.upstream": "上游模型名",
+  "admin.models.empty": "暂无服务模型",
+  "admin.models.loadFailed": "服务模型加载失败",
+  "admin.models.detailTitle": "模型详情",
+  "admin.models.embedNote": "配置 = 系统页 · 向量服务卡",
+  "admin.models.configTitle": "配置",
+  "admin.models.configSkeleton": "配置项待定——候选已上抛，裁定后另轮落地（当前零可编辑字段）",
 
   // ── 管理·全队用量 ──────────────────────────────────────────────────────────
   "admin.usage.title": "全队用量",

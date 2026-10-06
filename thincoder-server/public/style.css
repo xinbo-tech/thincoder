@@ -112,6 +112,23 @@ input.quota { width: 90px; }
 /* 向量服务提示条（views-me.mjs——§2.3①；模型名 + snippet + 用法） */
 .tip-bar { border-left: 3px solid var(--accent); }
 
+/* 弹窗（modal.mjs——§2.4①）：壳（头/体/脚）∥ 遮罩 ∥ 滚动锁；行点击 ∥ 详情栅格（§2.4②③） */
+body.modal-open { overflow: hidden; }
+dialog.modal { padding: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); max-width: 560px; width: min(560px, calc(100vw - 32px)); }
+dialog.modal::backdrop { background: rgba(15, 23, 42, 0.45); }
+.modal-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.modal-head h3 { margin: 0; flex: 1; }
+.modal-close { border: none; background: none; color: var(--muted); font-size: 18px; line-height: 1; padding: 2px 6px; }
+.modal-body { padding: 14px 16px; max-height: min(70vh, 560px); overflow-y: auto; }
+.modal-body h4 { margin: 12px 0 6px; font-size: 13px; color: var(--muted); }
+.modal-foot { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); }
+.detail-grid { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0 0 12px; font-size: 13px; }
+.detail-grid dt { color: var(--muted); }
+.detail-grid dd { margin: 0; }
+.row-clickable { cursor: pointer; }
+.row-clickable:hover { background: #f3f6fb; }
+.row-clickable:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
 /* 窄屏（≤760px）：侧栏降级为顶条（单条媒体查询——非移动端适配承诺——WEBUI §2） */
 @media (max-width: 760px) {
   .sidebar { position: static; width: auto; flex-direction: row; flex-wrap: wrap; align-items: center; border-right: none; border-bottom: 1px solid var(--border); }

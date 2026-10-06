@@ -1,5 +1,5 @@
 /**
- * nav.mjs — 控制台导航单源（webui/WEBUI.md §2 ∥ KD-SV-20）：组/项数据（我的 3 ∥ 管理 6）∥ `resolveRoute` 纯函数
+ * nav.mjs — 控制台导航单源（webui/WEBUI.md §2 ∥ KD-SV-20）：组/项数据（我的 3 ∥ 管理 7）∥ `resolveRoute` 纯函数
  * （无 DOM——批内件直测：别名重定向 ∥ 角色默认 ∥ admin 面 `denied`）∥ 侧栏渲染（品牌 ∥ 组标题/项/活动态 ∥
  * 底部 meta 槽（健康状态灯 + 版本行 + 语言切换器）+ 退出登录）。
  *
@@ -20,6 +20,7 @@ export const NAV_GROUPS = [
     { key: "overview", labelKey: "nav.page.admin.overview", path: "/admin/overview" },
     { key: "members", labelKey: "nav.page.admin.members", path: "/admin/members" },
     { key: "providers", labelKey: "nav.page.admin.providers", path: "/admin/providers" },
+    { key: "models", labelKey: "nav.page.admin.models", path: "/admin/models" },
     { key: "usage", labelKey: "nav.page.admin.usage", path: "/admin/usage" },
     { key: "audit", labelKey: "nav.page.admin.audit", path: "/admin/audit" },
     { key: "system", labelKey: "nav.page.admin.system", path: "/admin/system" },
@@ -81,7 +82,7 @@ export function renderSidebar(ctx, el) {
   nodes.push(h("div", { class: "nav-bottom" },
     h("div", { class: "health", id: "nav-health" }), // 健康状态灯（点 + 文案——三态 §2.3⑤；轮询回调直更）
     h("div", { class: "meta", id: "nav-meta", text: version ? `v${version}` : "" }), // meta 槽：版本行（全角色）
-    langSwitch(h, onChange), // 语言切换器（meta 槽同区——登录后九页全达；窄屏随顶条）
+    langSwitch(h, onChange), // 语言切换器（meta 槽同区——登录后十页全达；窄屏随顶条）
     h("button", { type: "button", class: "link", text: t("nav.logout"), onclick: onLogout })))
   el.replaceChildren(...nodes)
 }

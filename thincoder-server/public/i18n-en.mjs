@@ -14,6 +14,9 @@ export const EN = Object.freeze({
   "common.loading": "Loading…",
   "common.quotaUnlimited": "Unlimited",
   "common.secretNote": "{label} — shown only once; save it now.",
+  "common.save": "Save",
+  "common.cancel": "Cancel",
+  "common.close": "Close",
   "denied.title": "Permission denied",
   "denied.hint": "This page is for admins only (enforced server-side).",
 
@@ -51,6 +54,7 @@ export const EN = Object.freeze({
   "nav.page.admin.overview": "Overview",
   "nav.page.admin.members": "Members",
   "nav.page.admin.providers": "Providers & models",
+  "nav.page.admin.models": "Served models",
   "nav.page.admin.usage": "Team usage",
   "nav.page.admin.audit": "Audit",
   "nav.page.admin.system": "System",
@@ -100,6 +104,22 @@ export const EN = Object.freeze({
   "admin.members.tempPwdLabel": "Temporary password for member {name}",
   "admin.members.colQuota": "Quota",
   "admin.members.colKeys": "Keys",
+  "admin.members.newBtn": "New member",
+  "admin.members.colKeyCount": "Keys",
+  "admin.members.empty": "No members yet",
+
+  // ── Admin · served models (§2.4③ — modals batch) ─────────────────────────
+  "admin.models.title": "Served models",
+  "admin.models.colModel": "Model",
+  "admin.models.colProvider": "Provider",
+  "admin.models.colSurface": "Surface",
+  "admin.models.upstream": "Upstream model",
+  "admin.models.empty": "No served models",
+  "admin.models.loadFailed": "Failed to load served models",
+  "admin.models.detailTitle": "Model detail",
+  "admin.models.embedNote": "Configuration: System page · Vector service card",
+  "admin.models.configTitle": "Configuration",
+  "admin.models.configSkeleton": "Configuration fields pending — candidates raised; fields land in a later round (no editable fields yet)",
 
   // ── 管理·全队用量 ──────────────────────────────────────────────────────────
   "admin.usage.title": "Team usage",
