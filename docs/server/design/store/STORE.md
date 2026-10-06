@@ -8,9 +8,9 @@
 
 - 单库单连接（`DatabaseSync`）；PRAGMA：WAL ∥ `synchronous=NORMAL` ∥ `busy_timeout=5000` ∥ `foreign_keys=ON`。
 - 库文件默认 = `thincoder-server/data/gateway.db`（运行期生成，不入 git）。
-- 结构版本 = `PRAGMA user_version`（当前 = 3——v2 增 `providers` ∥ v3 增 `audit_events` 与三索引；未发布期连续演进，无历史库迁移包袱——旧库启动自动升；迁移链机制自 v1 起备）。
+- 结构版本 = `PRAGMA user_version`（当前 = 4——v2 增 `providers` ∥ v3 增 `audit_events` 与三索引 ∥ v4 增 `providers.settings_json`（模型设置——服务模型配置面）；未发布期连续演进，无历史库迁移包袱——旧库启动自动升；迁移链机制自 v1 起备）。
 
-## 2. DDL（v1 基线四表 + v2/v3 增段）
+## 2. DDL（v1 基线四表 + v2–v4 增段）
 
 ### v1 基线（四表——逐字）
 
@@ -100,7 +100,17 @@ CREATE INDEX IF NOT EXISTS idx_usage_key_ts ON usage(key_id, ts);
 - `audit_events` 语义与写入点清单 = `accounts/ACCOUNTS.md` §2.1；快照名（`actor_name` ∥ `target_name`）= 成员改名/删除后记录仍可读（无 FK 约束成员生命周期）；保留窗 = 与 usage 同窗同清（`metering/METERING.md` §1 口径）。
 - `idx_usage_key_ts` = key 级明细查询索引（「最后使用 ∥ 窗口内用量」——`metering/METERING.md` §3）。
 
-- 表归属：`members` ∥ `api_keys` ∥ `sessions` ∥ `audit_events` = accounts 域（`accounts/ACCOUNTS.md`）；`usage` = metering 域（`metering/METERING.md`）；`providers` = gateway 域（provider 管理面——`gateway/API.md` §2.2）；结构单源 = 本档。
+### v4 增段（`providers.settings_json`——gateway 域）
+
+```sql
+ALTER TABLE providers ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}';  -- 模型设置映射（JSON 对象——形见下）
+```
+
+- 形 = `{ "<上游模型名>": { rpm ∥ tpm（正整数 ∥ null） ∥ costIn ∥ costOut（≥0 数 ∥ null） ∥ note（≤200 字 ∥ null） } }`——`null`/缺省 = 未设；键 = 上游模型名（与 `models` 同空间；不在 `models` 的键合法——设置随名保留，停用不丢）。
+- 写面 = PATCH `/api/admin/providers/:id` 的 `settings` 键级合并（`gateway/API.md` §2.2）；校验单源 = `thincoder-server/src/ops/config.mjs`（`validateProviderEntry`/`validateProviderEntries` 扩 settings——未知子字段 ∥ 非法值 ⇒ 400/拒启）；装配载入缺省 = `{}`（配置种子零 settings 字段——控制台单一面）。
+- 消费 = 限流（`gateway/ratelimit.mjs`（拟新增）——KD-SV-35）读 `rpm`/`tpm`；`costIn`/`costOut`/`note` = 展示面（`webui/WEBUI.md` §2.4③）。
+
+- 表归属：`members` ∥ `api_keys` ∥ `sessions` ∥ `audit_events` = accounts 域（`accounts/ACCOUNTS.md`）；`usage` = metering 域（`metering/METERING.md`）；`providers` = gateway 域（provider 管理面 ∥ v4 模型设置——`gateway/API.md` §2.2）；结构单源 = 本档。
 
 ## 3. 迁移链（`user_version` 逐版升）
 
@@ -109,13 +119,14 @@ CREATE INDEX IF NOT EXISTS idx_usage_key_ts ON usage(key_id, ts);
 - 结构每变一次 = 追一段（+1）——空库 ∥ 旧库启动自动升，零手工脚本（断点列 = `EVOLUTION.md` §1-G2）。
 - v2 = provider 增段（`providers` 表——控制台 provider 管理；旧库（v1）启动自动升 ∥ 空库直落 v2）。
 - v3 = 审计增段（`audit_events` 表 + 三索引——`accounts/ACCOUNTS.md` §2.1 ∥ key 明细索引）；旧库（v1/v2）启动自动升 ∥ 空库直落 v3；判据（批内件）= 空库结构版本读数 3 ∥ v2 库升后读数 3 ∥ 迁移链幂等（再开零变）。
+- v4 = 模型设置增列（`providers.settings_json`——服务模型配置面）：**列级 ALTER = 表不重建**（SQLite `ADD COLUMN` 常量默认——存量行即刻得 `'{}'`）；旧库（v1–v3）启动自动升 ∥ 空库直落 v4；判据（批内件）= 空库读数 4 ∥ v3 库升后读数 4 ∥ v4 段幂等（再开零变）。
 - first-release-completeness 批（2026-10-06）：**零结构变更**（保留窗清理 = 删除式 ∥ 登录防护计数 = 进程内存——均无新表；结构版本不变）。
 
 ## 4. 本域文件与行数预算（本域族行）
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/store/db.mjs`（已落盘） | **124 ⇒ ≈160**（实读 2026-10-06——设计估 ≈175；#962 +14 = v2 段（`providers` DDL + 迁移段）；本批 +≈36 = v3 段（`audit_events` DDL + 三索引）） | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
+| `thincoder-server/src/store/db.mjs`（已落盘） | **124 ⇒ ≈160 ⇒ 144**（实读——v3 落地后）**⇒ ≈155**（服务模型配置面批 +≈11 = v4 段（ALTER + 迁移段）） | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
 
 ## 5. 关键决策（本域）
 
@@ -135,3 +146,4 @@ CREATE INDEX IF NOT EXISTS idx_usage_key_ts ON usage(key_id, ts);
 - 2026-10-06：首版完备化设计轮（批 `docs/batches/2026-10-06-first-release-completeness.md`——需求 §2:12 ∥ 台账 #963）——§3 补零结构变更句 ∥ §6 边界随正（清理 = 删除式保留窗；备份归部署侧面）。
 - 2026-10-06：实施后回填轮（R14——批 `docs/batches/2026-10-06-console-providers.md`）：§4 行数按实读收正（db **124**）。
 - 2026-10-06：控制台可见面二轮设计轮（批 `docs/batches/2026-10-06-console-completeness-2.md`——需求 §2:15 ∥ 台账 #972）——§1 结构版本 2 ⇒ 3 ∥ §2 增 v3 增段（`audit_events` + `idx_audit_ts`/`idx_audit_type_ts`/`idx_usage_key_ts`）∥ 表归属补 accounts 行 ∥ §3 迁移链补 v3 段 ∥ §4 预算（db 124 ⇒ ≈160）；同源随动 = `accounts/ACCOUNTS.md` §2.1 ∥ `metering/METERING.md` §3。
+- 2026-10-06：服务模型配置面设计轮（批 `docs/batches/2026-10-06-models-config.md`——需求 §2:17 ∥ 台账 #981）——§1 结构版本 3 ⇒ 4 ∥ §2 增 v4 增段（`ALTER TABLE providers ADD COLUMN settings_json`——形/写面/校验/消费）∥ 表归属 providers 行补 v4 ∥ §3 迁移链补 v4 段（表不重建 ∥ 判据）∥ §4 预算（db ⇒ ≈155；v4 段 +≈11）；同源随动 = `gateway/API.md` §2.2 ∥ `webui/WEBUI.md` §2.4③。
