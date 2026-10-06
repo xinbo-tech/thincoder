@@ -86,11 +86,18 @@ CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
 CREATE INDEX IF NOT EXISTS idx_usage_key_ts ON usage(key_id, ts);
 `
 
+/** v4 增段（`providers.settings_json`——store/STORE.md §2 v4 段逐字；gateway 域——模型设置映射）。
+ *  列级 ALTER = 表不重建（存量行即刻得 `'{}'`——§3 迁移链 v4）。 */
+const DDL_V4 = `
+ALTER TABLE providers ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}';  -- 模型设置映射（JSON 对象——形见 store/STORE.md §2 v4 段）
+`
+
 /** 迁移链：每段 = `{ v, up(db) }`（v = 目标结构版本，自 1 起递增）；结构每变一次追一段（+1）。 */
 export const MIGRATIONS = [
   { v: 1, up: (db) => db.exec(DDL_V1) },
   { v: 2, up: (db) => db.exec(DDL_V2) },
   { v: 3, up: (db) => db.exec(DDL_V3) },
+  { v: 4, up: (db) => db.exec(DDL_V4) },
 ]
 
 /** 当前结构版本（= 链尾段号——store/STORE.md §1）。 */

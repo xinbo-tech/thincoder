@@ -34,7 +34,7 @@ export async function renderMembers(ctx, mount) {
       return data.members
     } catch (error) {
       ctx.fail(error)
-      membersBox.replaceChildren(h("p", { class: "hint", text: t("admin.members.loadFailed") }))
+      membersBox.replaceChildren(h("p", { class: "hint error", text: t("admin.members.loadFailed") }))
       return null
     }
   }

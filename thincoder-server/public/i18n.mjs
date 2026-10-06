@@ -12,8 +12,8 @@ const TABLES = { zh: ZH, en: EN }
 const STORE_KEY = "tc_lang"
 /** documentElement.lang 取值（zh ⇒ zh-CN ∥ en ⇒ en）。 */
 const LANG_TAGS = { zh: "zh-CN", en: "en" }
-/** 控制台可达错误码全集（服务端消息零改——按 `code` 前端映射；WEBUI §2.2）。 */
-const ERROR_CODES = new Set(["unauthorized", "invalid_credentials", "forbidden", "not_found", "invalid_request_error", "upstream_error", "internal_error", "too_many_attempts"])
+/** 控制台可达错误码 + 预留（服务端消息零改——按 `code` 前端映射；WEBUI §2.2——`rate_limited` 仅 /v1 面产生）。 */
+const ERROR_CODES = new Set(["unauthorized", "invalid_credentials", "forbidden", "not_found", "invalid_request_error", "upstream_error", "internal_error", "too_many_attempts", "rate_limited"])
 
 let current = "zh"
 

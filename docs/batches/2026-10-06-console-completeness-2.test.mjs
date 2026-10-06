@@ -143,13 +143,13 @@ function fold(rows, pick, key = "name") {
 
 // ── ① store v3 迁移链（STORE §3 判据）────────────────────────────────────────
 
-test("① store v3：空库直落 3 ∥ v2 旧库自动升 ∥ 幂等 ∥ audit_events 九型 CHECK", () => {
+test("① store：空库直落 4 ∥ v2 旧库自动升 ∥ 幂等 ∥ audit_events 九型 CHECK", () => {
   const dir = mkdtempSync(join(tmpdir(), "tc2-db-"))
   const file = join(dir, "gateway.db")
   try {
     // 空库直落（六索引——含 v3 三索引）∥ 九型 CHECK 全可插 + 枚举外拒
     const fresh = DB.openDatabase(":memory:")
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [3, 3])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [4, 4])
     const indexes = fresh.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").all().map((row) => row.name)
     for (const index of ["idx_audit_ts", "idx_audit_type_ts", "idx_usage_key_ts"]) assert.ok(indexes.includes(index), index)
     assert.equal(indexes.length, 6)
@@ -164,15 +164,15 @@ test("① store v3：空库直落 3 ∥ v2 旧库自动升 ∥ 幂等 ∥ audit_
     assert.equal(AUDIT.pruneAuditEvents(fresh, { now: now + 4 * 24 * 60 * 60 * 1000, retentionDays: null }), 0)
     assert.throws(() => fresh.prepare("INSERT INTO audit_events (ts, type, actor_name) VALUES (1, 'nope', 't')").run(), /CHECK/i)
     fresh.close()
-    // v2 旧库（v1+v2 段）⇒ 启动自动升 3（旧数据保留）⇒ 再开幂等
+    // v2 旧库（v1+v2 段）⇒ 启动自动升 4（旧数据保留）⇒ 再开幂等
     const legacy = DB.openDatabase(file, { migrations: DB.MIGRATIONS.filter((step) => step.v <= 2) })
     assert.equal(DB.readVersion(legacy), 2)
     legacy.exec("INSERT INTO members (username, name, password_hash, created_at) VALUES ('old', 'old', 'scrypt$fixture', '2026-10-06')")
     legacy.close()
     const upgraded = DB.openDatabase(file)
-    assert.equal(DB.readVersion(upgraded), 3)
+    assert.equal(DB.readVersion(upgraded), 4)
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE name = 'audit_events'").get())
-    assert.deepEqual([upgraded.prepare("SELECT COUNT(*) AS n FROM members").get().n, DB.migrate(upgraded)], [1, 3])
+    assert.deepEqual([upgraded.prepare("SELECT COUNT(*) AS n FROM members").get().n, DB.migrate(upgraded)], [1, 4])
     assert.equal(upgraded.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").get().n, 6)
     upgraded.close()
   } finally {
@@ -425,13 +425,13 @@ test("⑤ 向量面：真值零密钥 ∥ 试跑成功 + 四 kind ∥ 不落库�
 
 // ── ⑥ 前端静态面 + nav 直驱 + 健康三态 ───────────────────────────────────────
 
-test("⑥ 静态面：档目 17 ∥ 18 ∥ 零外链 ∥ 两表键集/键引用闭合 ∥ nav 直驱 ∥ 三新档直发 ∥ 健康三态", async () => {
-  // 档目（UI 代码档 17 ∥ 含 favicon 全目录 18——弹窗批后）+ 零外链（零 http(s):// ∥ 零 @import）
+test("⑥ 静态面：档目 19 ∥ 20 ∥ 零外链 ∥ 两表键集/键引用闭合 ∥ nav 直驱 ∥ 三新档直发 ∥ 健康三态", async () => {
+  // 档目（UI 代码档 19 ∥ 含 favicon 全目录 20——配置面批后）+ 零外链（零 http(s):// ∥ 零 @import）
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [18, 17])
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [20, 19])
   assert.deepEqual(names, [
-    "app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "nav.mjs", "style.css",
-    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs",
+    "app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
+    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs",
   ])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")

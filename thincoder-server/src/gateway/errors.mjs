@@ -17,18 +17,21 @@ export const ERROR_CODES = {
   invalid_request_error: { status: 400, type: "invalid_request_error" }, // body 非 JSON ∥ 缺 model
   payload_too_large: { status: 413, type: "invalid_request_error" }, // 请求体超上限（32 MiB）
   quota_exceeded: { status: 429, type: "insufficient_quota" },       // 超额（message 含已用/额度）
+  rate_limited: { status: 429, type: "rate_limit_error" },           // per-model 限流（message 含模型/限值；`Retry-After` 秒——KD-SV-35）
   too_many_attempts: { status: 429, type: "rate_limit_error" },      // 登录锁定期（`Retry-After` 秒；两维同文案——ACCOUNTS §2）
   upstream_error: { status: 502, type: "upstream_error" },           // 上游不可达
   internal_error: { status: 500, type: "server_error" },             // 500 兜底（处理函数自身异常——API.md §3 表行）
 }
 
-/** 带 HTTP 语义的错误（body 读限等地方抛——分派层转统一错误形）。 */
+/** 带 HTTP 语义的错误（body 读限等地方抛——分派层转统一错误形）。
+ *  `headers` = 可选取值（附加响应头——如 `Retry-After`；`failRequest` 转交 `sendError`）。 */
 export class HttpError extends Error {
-  constructor(code, message) {
+  constructor(code, message, { headers = null } = {}) {
     super(message)
     this.name = "HttpError"
     this.code = ERROR_CODES[code] ? code : "internal_error"
     this.status = ERROR_CODES[this.code].status
+    this.headers = headers
   }
 }
 
@@ -39,18 +42,22 @@ export function errorBody(code, message) {
   return { error: { message, type: entry.type, code: finalCode } }
 }
 
-/** 发 JSON 响应（headers 已发出 ⇒ 不动——返回 false）。 */
-export function sendJson(res, status, payload) {
+/** 发 JSON 响应（headers 已发出 ⇒ 不动——返回 false）；`headers` = 附加响应头（如 `Retry-After`）。 */
+export function sendJson(res, status, payload, { headers = null } = {}) {
   if (res.headersSent) return false
   const text = JSON.stringify(payload)
-  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Content-Length": Buffer.byteLength(text) })
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Content-Length": Buffer.byteLength(text),
+    ...(headers ?? {}),
+  })
   res.end(text)
   return true
 }
 
-/** 发错误响应（状态/类型取自全码表）。 */
-export function sendError(res, code, message) {
+/** 发错误响应（状态/类型取自全码表；`headers` = 附加响应头——`HttpError.headers` 直通）。 */
+export function sendError(res, code, message, { headers = null } = {}) {
   const entry = ERROR_CODES[code] ?? ERROR_CODES.internal_error
   const finalCode = ERROR_CODES[code] ? code : "internal_error"
-  return sendJson(res, entry.status, errorBody(finalCode, message))
+  return sendJson(res, entry.status, errorBody(finalCode, message), { headers })
 }

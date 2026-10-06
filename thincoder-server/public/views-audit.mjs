@@ -43,7 +43,7 @@ export async function renderAudit(ctx, mount) {
       eventsBox.replaceChildren(eventsTable(ctx, data.events ?? []))
     } catch (error) {
       ctx.fail(error)
-      eventsBox.replaceChildren(h("p", { class: "hint", text: t("audit.loadFailed") }))
+      eventsBox.replaceChildren(h("p", { class: "hint error", text: t("audit.loadFailed") }))
     }
   }
   const filterForm = h("form", { class: "row-form" },

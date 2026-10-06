@@ -2,11 +2,14 @@
  * provider-admin.mjs — provider 管理面（控制台——仅 admin；gateway/API.md §2.2）：
  * 列表 ∥ 新增 ∥ 修改 ∥ 删除 ∥ 模型发现 ∥ 预设清单（六端点）。
  *
+ * 模型设置（v4 `settings`——KD-SV-34）：读面 = GET 行载全图；写面 = PATCH 键级合并
+ * （请求出现的键 = 整对象替换——值 `null` ⇒ 删键；未出现键 = 不动；合并后走进单源校验）。
+ *
  * 保存即热生效（四步——§2.2）：① 校验（单源 = `ops/config.mjs` 导出——与配置种子同规）→
  * ② 建候选注册表（`env:` 解析——缺位 ⇒ 400 不落库）→ ③ 落库 → ④ `runtime.set(候选)`（原子换表）；
  * 失败 ⇒ 库与运行时零变。密钥回显掩码（空 ⇒ "" ∥ `env:` 原文 ∥ 明文 ⇒ `…` + 末 4）；
  * 密钥值永不入日志（日志只带 provider 名/id 与动作）。模型发现 = `GET {baseURL}/models`（Authorization 同转发——
- * 空不发；超时 10s 可覆盖；失败 ⇒ 502 `upstream_error`——手填降级照常；草稿键不落库）。
+ * 空不发；超时 10s 可覆盖；失败 ⇒ 502 `upstream_error`（控制面提示 + 重试——**无手填兜底**）；草稿键不落库）。
  * 判权 = `requireAdmin`（`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401）；错误码全沿用（零新码）；写端点 JSON 型门 = 服务层径。
  */
 import { requireAdmin } from "../accounts/session.mjs"
@@ -26,6 +29,22 @@ export function maskApiKey(apiKey) {
   if (value === "") return ""
   if (value.startsWith("env:")) return value
   return `…${value.slice(-4)}`
+}
+
+/** `settings` 键级合并（PATCH 写面——gateway/API.md §2.2）：请求出现的键 = 整对象替换（值 `null` ⇒ 删键）；
+ *  未出现键 = 不动；`patch === undefined` ⇒ 现值原样（PATCH「字段缺省 = 不动」口径）。
+ *  值形与判据归单源校验（`ops/config.mjs` 的 settings 段——未知子字段 ∥ 非法值 ⇒ 400，库与运行时零变）。 */
+export function mergeProviderSettings(current, patch) {
+  if (patch === undefined) return current
+  if (patch === null || typeof patch !== "object" || Array.isArray(patch)) {
+    throw new Error("settings 须为对象（键 = 上游模型名——值 = 该模型完整设置对象 ∥ null（删键））")
+  }
+  const merged = { ...current }
+  for (const [model, value] of Object.entries(patch)) {
+    if (value === null) delete merged[model] // 值 null ⇒ 删键（§2.2）
+    else merged[model] = value // 出现的键 = 整对象替换
+  }
+  return merged
 }
 
 /** 入参归一：非对象（含 null/数组）⇒ `{}`——字段判据归单源校验（缺 ⇒ 报对应错误）。 */
@@ -76,6 +95,7 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
       baseURL: entry.baseURL,
       apiKey: maskApiKey(entry.apiKey), // 回显形——明文不出库面（§2.2）
       models: entry.models,
+      settings: entry.settings, // 模型设置全图（v4——读面；§2.2）
       createdAt: entry.createdAt,
       updatedAt: entry.updatedAt,
     }))
@@ -106,18 +126,21 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
     if (!row) throw new HttpError("not_found", `provider 不存在：${ctx.params.id}`)
     const body = bodyFields(await readJsonBody(req))
     const current = rowToEntry(row)
+    // `settings` 键级合并（值 null ⇒ 删键；未出现键 = 不动）——合并后与其余字段同走单源校验
+    const settings = asInvalidRequest(() => mergeProviderSettings(current.settings, body.settings))
     const entry = asInvalidRequest(() => validateProviderEntry({
       name: body.name !== undefined ? body.name : current.name,
       baseURL: body.baseURL !== undefined ? body.baseURL : current.baseURL,
       apiKey: body.apiKey !== undefined ? body.apiKey : current.apiKey, // `apiKey: ""` = 清除（§2.2）
       models: body.models !== undefined ? body.models : current.models,
+      settings,
     }, { where: "provider" }))
     if (entry.name !== current.name) assertNameFree(entry.name, { exceptId: current.id })
     const candidate = asInvalidRequest(() => buildCandidate(
       listProviderEntries(db).map((item) => (item.id === current.id ? { ...entry, id: current.id } : item)),
     ))
-    db.prepare("UPDATE providers SET name = ?, base_url = ?, api_key = ?, models_json = ?, updated_at = ? WHERE id = ?")
-      .run(entry.name, entry.baseURL, entry.apiKey, JSON.stringify(entry.models), new Date().toISOString(), current.id)
+    db.prepare("UPDATE providers SET name = ?, base_url = ?, api_key = ?, models_json = ?, settings_json = ?, updated_at = ? WHERE id = ?")
+      .run(entry.name, entry.baseURL, entry.apiKey, JSON.stringify(entry.models), JSON.stringify(entry.settings), new Date().toISOString(), current.id)
     runtime.set(candidate)
     log?.info("provider_updated", { id: current.id, name: entry.name })
     sendJson(res, 200, { ok: true, id: current.id })
@@ -161,25 +184,25 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
       })
     } catch (e) {
       log?.warn("provider_discover_failed", { baseURL: draft.baseURL, message: e.message })
-      throw new HttpError("upstream_error", `模型发现失败（上游不可达或超时）：${e.message}——可手填模型清单降级`)
+      throw new HttpError("upstream_error", `模型发现失败（上游不可达或超时）：${e.message}——请检查上游可达性后重试`)
     }
     let text
     try {
       text = await upstream.text()
     } catch (e) {
       log?.warn("provider_discover_failed", { baseURL: draft.baseURL, message: e.message })
-      throw new HttpError("upstream_error", `模型发现失败（响应读取失败）：${e.message}——可手填模型清单降级`)
+      throw new HttpError("upstream_error", `模型发现失败（响应读取失败）：${e.message}——请检查上游可达性后重试`)
     }
     let payload
     try {
       payload = JSON.parse(text)
     } catch {
       log?.warn("provider_discover_failed", { baseURL: draft.baseURL, message: `非 JSON（HTTP ${upstream.status}）` })
-      throw new HttpError("upstream_error", `模型发现失败：上游响应非 JSON（HTTP ${upstream.status}）——可手填模型清单降级`)
+      throw new HttpError("upstream_error", `模型发现失败：上游响应非 JSON（HTTP ${upstream.status}）——请检查上游可达性后重试`)
     }
     if (payload === null || typeof payload !== "object" || !Array.isArray(payload.data)) {
       log?.warn("provider_discover_failed", { baseURL: draft.baseURL, message: `无 data 清单（HTTP ${upstream.status}）` })
-      throw new HttpError("upstream_error", `模型发现失败：上游响应无 data 清单（HTTP ${upstream.status}）——可手填模型清单降级`)
+      throw new HttpError("upstream_error", `模型发现失败：上游响应无 data 清单（HTTP ${upstream.status}）——请检查上游可达性后重试`)
     }
     const models = [...new Set(payload.data.map((item) => item?.id).filter((id) => typeof id === "string" && id !== ""))]
     sendJson(res, 200, { models }) // 草稿键经 body 传入不落库（§2.2）

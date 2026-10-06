@@ -47,7 +47,7 @@ export async function renderOverview(ctx, mount) {
 
 /** 卡（标签 + 内容——内容可为节点）。 */
 function statCard(h, label, ...content) {
-  return h("section", { class: "card stat" }, h("div", { class: "stat-label", text: label }), ...content)
+  return h("section", { class: "card" }, h("div", { class: "stat-label", text: label }), ...content)
 }
 
 /** 更新卡：`latest` 在场 ⇒ 高亮提示 + 导流系统页；不在场 ⇒ 「未发现新版本」（自检失败同面——静默口径）。 */

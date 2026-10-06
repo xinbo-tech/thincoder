@@ -58,15 +58,18 @@ function vectorSection(ctx) {
 
   /** 探活/试跑共用（单端点——`text` 缺省 ⇒ 内置探针）；ok ⇒ 可达（维度/耗时）∥ fail ⇒ kind 四分类文案。 */
   const probe = async (text) => {
+    statusValue.className = ""
     statusValue.textContent = t("vector.checking")
     try {
       const result = await ctx.api("/api/admin/embedding/test", { method: "POST", body: text === undefined ? {} : { text } })
+      statusValue.className = result.ok ? "" : "error" // ⑨ 错态（`.error` 独立生效——WEBUI §2.5）
       statusValue.textContent = result.ok
         ? t("vector.reachable", { dimensions: result.dimensions, ms: result.ms })
         : t("vector.fail", { kind: kindLabel(result.error?.kind), message: result.error?.message ?? "" })
       return result
     } catch (error) {
       ctx.fail(error)
+      statusValue.className = ""
       statusValue.textContent = "—"
       return null
     }
@@ -81,7 +84,8 @@ function vectorSection(ctx) {
   testForm.addEventListener("submit", async (event) => {
     event.preventDefault()
     const result = await probe(testInput.value.trim() || undefined)
-    if (result === null) { testResult.textContent = ""; return }
+    if (result === null) { testResult.className = "hint"; testResult.textContent = ""; return }
+    testResult.className = result.ok ? "hint" : "hint error" // ⑨ 错态 = `.hint error`（试跑失败——WEBUI §2.5）
     testResult.textContent = result.ok
       ? t("vector.testDone", { dimensions: result.dimensions, ms: result.ms })
       : t("vector.fail", { kind: kindLabel(result.error?.kind), message: result.error?.message ?? "" })

@@ -69,7 +69,7 @@ export async function renderMeUsage(ctx, mount) {
       usageBox.replaceChildren(ctx.usageTable(data.rows, { withMember: false }))
     } catch (error) {
       ctx.fail(error)
-      usageBox.replaceChildren(h("p", { class: "hint", text: t("usage.loadFailed") }))
+      usageBox.replaceChildren(h("p", { class: "hint error", text: t("usage.loadFailed") }))
     }
   }
   filterEndpoint.addEventListener("change", () => { loadUsage() }) // 单控件即选即查（多字段面走提交钮——管理页）

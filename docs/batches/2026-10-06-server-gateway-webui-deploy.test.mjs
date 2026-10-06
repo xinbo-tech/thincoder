@@ -268,10 +268,10 @@ test("静态面：`/` ∥ `/app.mjs` ∥ `/nav.mjs` ∥ `/style.css` 直发（mi
   }
 })
 
-// ── 前端自洽：零外部资源 ∥ 十七档在册（含 favicon 共十八档）────────────────────
-test("前端自洽：`public/**` 十七档在册（含 favicon 共十八档） ∥ 零外部引用（无 http(s):// ∥ 无 @import——内网自洽，KD-SV-9）", () => {
+// ── 前端自洽：零外部资源 ∥ 十九档在册（含 favicon 共二十档）────────────────────
+test("前端自洽：`public/**` 十九档在册（含 favicon 共二十档） ∥ 零外部引用（无 http(s):// ∥ 无 @import——内网自洽，KD-SV-9）", () => {
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual(names, ["app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "nav.mjs", "style.css", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs"])
+  assert.deepEqual(names, ["app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs"])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
     assert.ok(!/https?:\/\//.test(text), `${name} 含外部链接（CDN/外链字体等——内网不达）`)

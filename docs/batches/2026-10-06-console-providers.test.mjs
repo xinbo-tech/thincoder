@@ -397,8 +397,8 @@ test("⑦ 校验单源：非法 ∥ 重名 ∥ env: 缺位 ⇒ 400 且库与运�
   } finally { await app.close(); await mock.close(); db.close() }
 })
 
-// ── ⑧ 导航直测 + 静态十二档 ───────────────────────────────────────────────────
-test("⑧ nav.mjs 直测（组/项结构 ∥ 重定向 ∥ 角色默认 ∥ denied）+ 静态十七档（含 favicon 共十八档 ∥ 零外链 ∥ 接线 ∥ 直发）", async () => {
+// ── ⑧ 导航直测 + 静态十九档 ───────────────────────────────────────────────────
+test("⑧ nav.mjs 直测（组/项结构 ∥ 重定向 ∥ 角色默认 ∥ denied）+ 静态十九档（含 favicon 共二十档 ∥ 零外链 ∥ 接线 ∥ 直发）", async () => {
   // 组/项结构：我的 3 ∥ 管理 7（弹窗批后） ∥ admin 组仅 admin；label 单源（文案挂点）
   const [me, adminGroup] = NAV.NAV_GROUPS
   assert.deepEqual(me.items.map((i) => i.path), ["/me/keys", "/me/usage", "/me/account"])
@@ -421,9 +421,9 @@ test("⑧ nav.mjs 直测（组/项结构 ∥ 重定向 ∥ 角色默认 ∥ deni
   assert.deepEqual(NAV.resolveRoute("/admin/providers", "user"), { path: "/admin/providers", denied: true })
   assert.deepEqual(NAV.resolveRoute("/admin/members", "admin"), { path: "/admin/members" })
 
-  // 静态十七档（含 favicon 共十八档）+ 零外链 + 模块接线（views.mjs 退役）
+  // 静态十九档（含 favicon 共二十档）+ 零外链 + 模块接线（views.mjs 退役）
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual(names, ["app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "nav.mjs", "style.css", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs"])
+  assert.deepEqual(names, ["app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs"])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
     assert.ok(!/https?:\/\//.test(text), `${name} 含外部链接（内网不达——KD-SV-9）`)

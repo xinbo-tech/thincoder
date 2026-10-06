@@ -130,14 +130,14 @@ export function readJsonBody(req, { limit = MAX_BODY_BYTES } = {}) {
   })
 }
 
-/** 处理函数异常收口：HttpError ⇒ 表内错误形；其余 ⇒ 500 `internal_error`（记日志）。 */
+/** 处理函数异常收口：HttpError ⇒ 表内错误形（附加头随 `HttpError.headers`——`Retry-After`）；其余 ⇒ 500 `internal_error`（记日志）。 */
 function failRequest(res, err, log) {
   if (res.headersSent || res.writableEnded) {
     res.destroy()
     return
   }
   if (err instanceof HttpError) {
-    sendError(res, err.code, err.message)
+    sendError(res, err.code, err.message, { headers: err.headers }) // 如 429 限流的 `Retry-After`（KD-SV-35）
     return
   }
   log?.error("handler_error", { message: err?.message ?? String(err) })

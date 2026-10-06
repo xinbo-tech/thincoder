@@ -117,7 +117,7 @@ test("② 检测矩阵：pickLang——记忆优先 ∥ zh*/en* 首命中 ∥ �
 // ── ③ 零 CJK 口径 ───────────────────────────────────────────────────────────
 
 test("③ 零 CJK 口径：前端 JS 代码档（排除两表）注释外零 CJK 字面量", () => {
-  assert.deepEqual(JS_FILES, ["app.mjs", "i18n.mjs", "modal.mjs", "nav.mjs", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs"])
+  assert.deepEqual(JS_FILES, ["app.mjs", "i18n.mjs", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs"])
   for (const name of JS_FILES) {
     const stripped = stripComments(readFileSync(join(PUBLIC_DIR, name), "utf8"))
     const hit = stripped.match(CJK)

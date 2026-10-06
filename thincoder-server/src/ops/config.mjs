@@ -5,7 +5,8 @@
  * 校验不过 ⇒ 抛（入口转非零退出 + 明确报错）；告警（如 host = 0.0.0.0）逐条返回，入口打印。
  * 归一出参：`{ config, warnings, baseDir, configPath }`——`config.db` 已按配置档所在目录解析为绝对路径。
  * provider 条目校验单源 = `validateProviderEntry`/`validateProviderEntries`（三径：配置载入 ∥ 启动构建/种子 ∥
- * 控制台保存——gateway/API.md §2.2）；例外：`providers[].apiKey` 载入不解析（引用保形——注册表构建期解析）。
+ * 控制台保存——gateway/API.md §2.2）；模型设置同源 = `validateProviderSettings`（v4 `settings`——未知子字段 ∥
+ * 非法值 ⇒ 拒／400）；例外：`providers[].apiKey` 载入不解析（引用保形——注册表构建期解析）。
  */
 import { readFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
@@ -17,6 +18,8 @@ export const MIN_PASSWORD_LENGTH = 8
 export const DEFAULT_AUTO_UPDATE = "notify" // 更新档位缺省（可见不越权——§5.4(b)）
 export const UPDATE_MODES = Object.freeze([false, "notify", "auto"])
 export const DEFAULT_USAGE_RETENTION_DAYS = 90 // 用量保留窗缺省（天——KD-SV-22：`null` = 不限）
+export const SETTINGS_SUB_FIELDS = Object.freeze(["rpm", "tpm", "costIn", "costOut", "note"]) // 模型设置子字段（v4——gateway/API.md §2.2）
+export const SETTINGS_NOTE_MAX = 200 // 「说明」字符上限（≤200 字——§2.2 D 组手填）
 
 /** 读配置档 → env 解析 → 校验 → 返回归一出参（任何一步不过 ⇒ 抛）。 */
 export function loadConfig(configPath, { env = process.env } = {}) {
@@ -136,7 +139,13 @@ export function validateProviderEntry(entry, { where = "providers[i]", seenNames
     seenInProvider.add(value)
     return value
   })
-  return { name, baseURL, apiKey: optionalString(expanded.apiKey, `${where}.apiKey`), models }
+  return {
+    name,
+    baseURL,
+    apiKey: optionalString(expanded.apiKey, `${where}.apiKey`),
+    models,
+    settings: validateProviderSettings(expanded.settings, { where: `${where}.settings` }), // v4 模型设置（缺省 = {}）
+  }
 }
 
 /** provider 条目批量校验（providers 间重名判据 = 批内单源——逐条归 `validateProviderEntry`）：出 = 归一条目数组。 */
@@ -144,6 +153,39 @@ export function validateProviderEntries(entries, { where = "providers" } = {}) {
   if (!Array.isArray(entries)) throw new Error("providers 须为数组（首启种子——缺省/空 = 零 provider 允许态）")
   const seenProviderNames = new Set() // provider 名重名（providers 间）⇒ 拒（派发歧义——ops/OPS.md §1 补条）
   return entries.map((entry, i) => validateProviderEntry(entry, { where: `${where}[${i}]`, seenNames: seenProviderNames }))
+}
+
+/** 模型设置映射校验（**校验单源**——三径同 `validateProviderEntry`；形 = store/STORE.md §2 v4 段 ∥
+ *  gateway/API.md §2.2）：入 = `{ "<上游模型名>": { rpm ∥ tpm ∥ costIn ∥ costOut ∥ note } }`（缺省 ⇒ `{}`）；
+ *  出 = 归一形（逐键全子字段在册——未设 ⇒ 显式 `null`）。判据（fail-closed——抛）：值为 null／非对象 ∥
+ *  未知子字段 ∥ rpm／tpm 非正整数 ∥ costIn／costOut 非 ≥0 数 ∥ note 非字符串或超 200 字符。
+ *  注：模型级 `null`（删键语义）= PATCH 请求的合并口径（`provider-admin.mjs` 合并层先处理——本函数不见后照抛）。 */
+export function validateProviderSettings(settings, { where = "settings" } = {}) {
+  if (settings === undefined || settings === null) return {}
+  if (typeof settings !== "object" || Array.isArray(settings)) {
+    throw new Error(`${where} 须为对象（模型设置映射：键 = 上游模型名）`)
+  }
+  const out = {}
+  for (const [model, value] of Object.entries(settings)) {
+    const at = `${where}["${model}"]`
+    if (model === "") throw new Error(`${at} 键须为非空字符串（上游模型名——与 models 同空间）`)
+    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error(`${at} 须为对象（rpm ∥ tpm ∥ costIn ∥ costOut ∥ note——未设子字段显式 null）`)
+    }
+    for (const field of Object.keys(value)) {
+      if (!SETTINGS_SUB_FIELDS.includes(field)) {
+        throw new Error(`${at} 未知子字段：${field}（合法：${SETTINGS_SUB_FIELDS.join(" ∥ ")}）`)
+      }
+    }
+    out[model] = {
+      rpm: optionalPositiveInt(value.rpm, `${at}.rpm`),
+      tpm: optionalPositiveInt(value.tpm, `${at}.tpm`),
+      costIn: optionalNonNegativeNumber(value.costIn, `${at}.costIn`),
+      costOut: optionalNonNegativeNumber(value.costOut, `${at}.costOut`),
+      note: optionalNote(value.note, `${at}.note`),
+    }
+  }
+  return out
 }
 
 /** 库路径归一：`:memory:` 原样（测试面）；其余相对 = 配置档所在目录 ⇒ 绝对。 */
@@ -165,6 +207,27 @@ function requireProviderName(value, where) {
   if (value.includes("/")) {
     throw new Error(`provider 名含 "/"：${value}（${where}.name——对外标识 provider/model 的前缀形不可解析；拒启）`)
   }
+  return value
+}
+
+function optionalPositiveInt(value, where) {
+  if (value === undefined || value === null) return null
+  if (!Number.isInteger(value) || value < 1) throw new Error(`${where} 须为正整数 ∥ null（空 = 未设——拒）`)
+  return value
+}
+
+function optionalNonNegativeNumber(value, where) {
+  if (value === undefined || value === null) return null
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    throw new Error(`${where} 须为 ≥0 的数 ∥ null（空 = 未设——拒）`)
+  }
+  return value
+}
+
+function optionalNote(value, where) {
+  if (value === undefined || value === null) return null
+  if (typeof value !== "string") throw new Error(`${where} 须为字符串（≤${SETTINGS_NOTE_MAX} 字符）∥ null`)
+  if (value.length > SETTINGS_NOTE_MAX) throw new Error(`${where} 超过 ${SETTINGS_NOTE_MAX} 字符（现 ${value.length} 字符——拒）`)
   return value
 }
 

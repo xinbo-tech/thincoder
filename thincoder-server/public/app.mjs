@@ -245,7 +245,7 @@ async function route() {
   // 登录门：无会话 ⇒ 登录页（无侧栏）；已登录访问登录页 ⇒ 角色默认页。
   if (!state.member) {
     if (path !== "/login") { navigate("/login"); return }
-    const mount = h("section", { class: "view" })
+    const mount = h("section")
     appEl.replaceChildren(mount)
     navEl.hidden = true
     renderLogin(viewCtx(), mount)
@@ -256,7 +256,7 @@ async function route() {
   const resolved = resolveRoute(path, state.member.role)
   if (resolved.redirect) { navigate(resolved.path); return } // 别名/根/未知 ⇒ 替换 hash（URL 与视图对齐）
 
-  const mount = h("section", { class: "view" })
+  const mount = h("section")
   appEl.replaceChildren(mount)
   if (!systemLoaded) { systemLoaded = true; await loadSystem() } // 装配取一次（登录晚于启动时兜底）
   renderSidebar({ h, member: state.member, path: resolved.path, onLogout: logout, version: state.system?.version, onChange: switchLang }, navEl)

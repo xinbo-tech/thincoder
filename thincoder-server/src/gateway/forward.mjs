@@ -14,6 +14,7 @@
  * - 上游不可达（连不上 ∥ fetch 内建超时）⇒ 502 `upstream_error` + `error` 行（E6）。
  * - 记账时点 = 请求终结（响应完 ∥ 流终结 ∥ 断连——KD-SV-8 单条 INSERT）；仅「已进入转发」的请求落行
  *   （准入前拒打不落用量：401 ∥ 429 ∥ 400 ∥ 404 ∥ 413 均无行）。
+ * - `onUsage`（可选钩子）= 用量到达即回调（限流窗计数——KD-SV-35：失败/断开无 tokens ⇒ 不调；钩子异常不反噬）。
  */
 import { once } from "node:events"
 
@@ -49,7 +50,7 @@ export function upstreamHeaders(provider) {
  * opts = `{ db, log, member, keyId, endpoint, model, ts, url, headers, payload, streaming }`。
  */
 export async function forwardRequest(req, res, opts) {
-  const { db, log, member, keyId, endpoint, model, ts, url, headers, payload, streaming } = opts
+  const { db, log, member, keyId, endpoint, model, ts, url, headers, payload, streaming, onUsage = null } = opts
   const started = Date.now()
   const controller = new AbortController()
   let clientGone = false
@@ -68,6 +69,14 @@ export async function forwardRequest(req, res, opts) {
   const finish = (status, tokens = null) => {
     if (recorded) return
     recorded = true
+    // 用量到达即计入限流窗（KD-SV-35——失败/断开 tokens = null ⇒ 不调；钩子自身异常不反噬请求）
+    if (tokens !== null && onUsage) {
+      try {
+        onUsage(tokens)
+      } catch (e) {
+        log?.warn("on_usage_failed", { message: e.message, endpoint, model })
+      }
+    }
     try {
       recordUsage(db, {
         ts,
@@ -167,8 +176,9 @@ function usageFromJson(bytes) {
 }
 
 /** 聊天面转发（`/v1/chat/completions`）：注入（KD-SV-5）+ 真 key 代持 + 账务字段装配。
- *  `model` = 记账用对外标识（`provider/model`）；`upstreamModel` = 上游请求体 model（首斜杠余段——API.md §2.1）。 */
-export async function forwardChat(req, res, { db, log, member, keyId, model, provider, upstreamModel, body, ts }) {
+ *  `model` = 记账用对外标识（`provider/model`）；`upstreamModel` = 上游请求体 model（首斜杠余段——API.md §2.1）；
+ *  `onUsage` = 用量到达钩子（限流窗计入——KD-SV-35）。 */
+export async function forwardChat(req, res, { db, log, member, keyId, model, provider, upstreamModel, body, ts, onUsage = null }) {
   return forwardRequest(req, res, {
     db,
     log,
@@ -181,5 +191,6 @@ export async function forwardChat(req, res, { db, log, member, keyId, model, pro
     url: upstreamUrl(provider.baseURL, "/chat/completions"),
     headers: upstreamHeaders(provider),
     payload: injectIncludeUsage({ ...body, model: upstreamModel }),
+    onUsage,
   })
 }

@@ -1,5 +1,6 @@
 /**
  * providers.mjs — provider 注册与模型派发（KD-SV-4：`provider/model` 复合键精确匹配——非别名 ∥ 非策略路由）
+ * + 模型设置（v4 `settings`——解码 ∥ 注册表携设置 ∥ `settingsFor`——KD-SV-34/35）
  * + 运行时箱（保存即热生效：`runtime.get()/set()` 原子换表——gateway/API.md §2.2）
  * + 装配引导（库单源：种子导入矩阵 ∥ 注册表构建（`env:` 解析）——ops/OPS.md §1）。
  *
@@ -19,7 +20,7 @@ export function splitModelRef(ref) {
   return { provider: ref.slice(0, cut), model: ref.slice(cut + 1) }
 }
 
-/** 库行 → provider 条目（store/STORE.md §2 v2 段列名映射 + `models_json` 解码）。 */
+/** 库行 → provider 条目（store/STORE.md §2 v2/v4 段列名映射 + `models_json`/`settings_json` 解码）。 */
 export function rowToEntry(row) {
   let models
   try {
@@ -27,12 +28,22 @@ export function rowToEntry(row) {
   } catch (e) {
     throw new Error(`providers 行数据损坏（id=${row.id}——models_json 非 JSON：${e.message}）`)
   }
+  let settings
+  try {
+    settings = JSON.parse(row.settings_json ?? "{}")
+  } catch (e) {
+    throw new Error(`providers 行数据损坏（id=${row.id}——settings_json 非 JSON：${e.message}）`)
+  }
+  if (settings === null || typeof settings !== "object" || Array.isArray(settings)) {
+    throw new Error(`providers 行数据损坏（id=${row.id}——settings_json 非对象）`)
+  }
   return {
     id: row.id,
     name: row.name,
     baseURL: row.base_url,
     apiKey: row.api_key,
     models,
+    settings, // 模型设置映射（v4——`{}` = 未设；判据单源 = ops/config.mjs）
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -60,6 +71,7 @@ export function resolveProviderKey(apiKey, { env = process.env, where = "apiKey"
 export function createProviderRegistry(entries, { env = process.env, engineModel = null } = {}) {
   const providers = (entries ?? []).map((entry) => ({
     ...entry,
+    settings: entry.settings ?? {}, // v4 模型设置随行（换表即随动——热生效：KD-SV-35）
     apiKey: resolveProviderKey(entry.apiKey, { env, where: `provider ${entry.name} 的 apiKey` }),
   }))
   const table = [] // chat 侧外部标识条目（条目序）：`{ ref, provider, model }`
@@ -84,6 +96,14 @@ export function createProviderRegistry(entries, { env = process.env, engineModel
     entries: () => table,
     /** provider 条目（归一条目序——诊断/管理面用）。 */
     providers: () => providers,
+    /** 模型设置（v4）：命中 ⇒ 该模型设置对象 ∥ 未设 ∥ 未知 provider ⇒ `null`（空 = 不限——KD-SV-35）。
+     *  `providerOrName` = 注册表 provider 对象（派发快照——推荐）∥ provider 名。 */
+    settingsFor(providerOrName, model) {
+      const provider = typeof providerOrName === "string" ? providers.find((item) => item.name === providerOrName) : providerOrName
+      const settings = provider?.settings
+      if (settings === null || typeof settings !== "object") return null
+      return settings[model] ?? null
+    },
     /** 嵌入引擎模型（`embedding.model`——非 provider 面，原样；装配期注入）。 */
     engineModel: () => engineModel,
   }
@@ -106,7 +126,8 @@ export function createProviderRuntime(registry) {
   }
 }
 
-/** 种子导入矩阵（ops/OPS.md §1——库单源）：库空 + 段在场 ⇒ 导入（`env:` 引用**保形**入库——种子不物化秘密）；
+/** 种子导入矩阵（ops/OPS.md §1——库单源）：库空 + 段在场 ⇒ 导入（`env:` 引用**保形**入库——种子不物化秘密；
+ *  `settings` 不入列——种子零 settings 字段（载入缺省 `{}`；模型设置 = 控制台单一面——KD-SV-34）；
  *  库空 + 段缺/空 ⇒ 不导（`empty`——调用方警告）；库非空 + 段在场 ⇒ 忽略（`ignored`——调用方警告）；
  *  库非空 + 段缺 ⇒ 正常（`kept`）。返回 `{ action, count? }` 读数（装配日志用）。 */
 export function importProviderSeed(db, config, { now = () => new Date().toISOString() } = {}) {

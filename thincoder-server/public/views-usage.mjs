@@ -54,8 +54,8 @@ export async function renderAdminUsage(ctx, mount) {
       detailBox.replaceChildren(ctx.usageTable(detail.rows, { withMember: true }))
     } catch (error) {
       ctx.fail(error)
-      reportBox.replaceChildren(h("p", { class: "hint", text: t("usage.loadFailed") }))
-      detailBox.replaceChildren(h("p", { class: "hint", text: t("usage.loadFailed") }))
+      reportBox.replaceChildren(h("p", { class: "hint error", text: t("usage.loadFailed") }))
+      detailBox.replaceChildren(h("p", { class: "hint error", text: t("usage.loadFailed") }))
     }
   }
 
@@ -103,7 +103,7 @@ function reportNodes(ctx, summary) {
 
 /** 卡（标签 + 数值）——概览卡 ∥ 总览页共用形。 */
 function statCard(h, label, value) {
-  return h("section", { class: "card stat" }, h("div", { class: "stat-label", text: label }), h("div", { class: "stat-value", text: value }))
+  return h("section", { class: "card" }, h("div", { class: "stat-label", text: label }), h("div", { class: "stat-value", text: value }))
 }
 
 /** 聚合/排行表（序号 ∥ 名称 ∥ 请求数 ∥ tokens——降序行序由服务端给定；空 ⇒ 提示文案）。 */
