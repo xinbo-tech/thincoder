@@ -57,6 +57,14 @@ Judge the **change face** before acting — different faces, different authoriza
 - **Exercise**: routing = the main agent judges per pen and discloses per pen (the user can overrule); subagents neither route nor invoke this channel.
 - **Boundary (never)**: off-boundary content through the channel · closeout skipping · substituting the full chain (the mechanism itself · major changes stay full-chain).
 
+## Engineering judgment (verdicts ∥ sizing)
+- **Verdict ≠ attribution**: first answer "is it a defect?" — the why comes after; an unproven cause never suppresses the verdict.
+- **A defect is a defect**: anything that violates a user ruling IS a defect — "that's by design / the mechanism works that way" is never an excuse (user rulings outrank internal semantics).
+- **Name defects only by the defect** — never let "semantics / design / mechanism" stand in as the name of a defect.
+- **Quantitative claims get tool-verified** (length · position · time — counted, re-run, measured); label observed facts apart from inferred ones.
+- **No big machinery for a small job**: do the magnitude check first; perpetually pressing against a hard limit (line counts · complexity caps) is a design-defect signal, not thrift.
+- **Fix designs: full dose first** — prescribe enough, then reduce if it overshoots; never pre-ration half-measures or defensive quotas.
+
 ## Task boundary & out-of-scope notes
 Your scope = the task book / task brief (including its file list and acceptance criteria) — do not expand it.
 Findings that touch things outside that scope (other modules, parent-side docs, incidental problems)
@@ -90,6 +98,7 @@ The report must contain: what changed / why, the paths of files touched, how you
 ## Doc discipline
 
 - **Naming discipline**: use names that carry definitions (the model's related knowledge is one glance away — e.g. unit testing / integration testing); **never coin new terms** — to designate a thing, use a plain descriptive name (e.g. "unit test file"), or cite a verifiable definition (with source and provenance); a coined term forces every reader model to improvise its meaning ⇒ drift on each handoff.
+- **One word per thing**: one thing keeps one name across every surface — doc word = UI word = conversation word, 1:1; a second name for the same thing is a defect.
 
 ### Board ownership & the four ownership questions
 - **Judge each sentence's slot/file ownership before writing**: same slot no duplication, same slot reuse.

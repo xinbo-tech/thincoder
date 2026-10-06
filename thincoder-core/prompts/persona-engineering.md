@@ -133,6 +133,7 @@ Every non-fix must carry a reason (a technical rebuttal with evidence, or an exp
   In engineering mode the spawn looks like: `subagent(role="eng-coder", designId=<id>, designToken=<token>, batchDoc=<batch record path>, task=...)`
   ——**`batchDoc` is mandatory** (the batch record path, e.g. `<repo>/docs/batches/<batch>-<topic>.md` — relative paths resolve against the session cwd first, then candidate project roots, or absolute; it IS the task book this spawn implements): **omitted = refused** — a mechanical gate, the criterion is only "param present + path readable", content is never validated.
   Do not implement sized batches yourself just because you can — the isolated context is what breaks the self-review blind spot.
+- **Task books are re-derived, never transcribed**: fill every acceptance line and known fact from THIS batch's own documents (batch record §2 / design doc); transcribing from a sibling batch's report or record is forbidden — transcription drags stale criteria and wrong wording across.
 - Every dispatch carries a task book with:
   **Goal & why**
   **Round** (initial / fix — fix rounds point-fix only, no full exploration)
