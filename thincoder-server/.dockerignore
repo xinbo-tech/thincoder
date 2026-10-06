@@ -1,0 +1,7 @@
+# 构建上下文排除（ops/OPS.md §5.1）：机本地配置 ∥ 运行期数据 ∥ 文档 ∥ git 元数据
+config.json
+data/
+docs/
+.git/
+.gitignore
+node_modules/

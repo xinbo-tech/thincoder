@@ -1,0 +1,25 @@
+{
+  "name": "@thincoder/server",
+  "version": "0.1.0",
+  "description": "Thincoder Server — internal token gateway (OpenAI-compatible surface + metering + quota + console).",
+  "type": "module",
+  "bin": {
+    "thincoder-server": "bin/thincoder-server.mjs"
+  },
+  "scripts": {
+    "start": "node bin/thincoder-server.mjs --config config.json",
+    "admin": "node src/ops/cli.mjs --config config.json",
+    "prepublishOnly": "node --check bin/thincoder-server.mjs && cd .. && node --test docs/batches/2026-10-06-server-gateway.test.mjs docs/batches/2026-10-06-server-gateway-accounts.test.mjs docs/batches/2026-10-06-server-gateway-metering.test.mjs docs/batches/2026-10-06-server-gateway-chat.test.mjs docs/batches/2026-10-06-server-gateway-webui-deploy.test.mjs docs/batches/2026-10-06-server-gateway-model-ref.test.mjs"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "license": "MIT",
+  "files": [
+    "bin/",
+    "src/",
+    "public/",
+    "config.example.json",
+    "README.md"
+  ]
+}

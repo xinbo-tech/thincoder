@@ -33,3 +33,5 @@ bench/results/*.pdf
 # 会话期临时输出（根目录——不进 git）
 _*.out
 _nat_test_out.txt
+thincoder-server/data/
+thincoder-server/config.json

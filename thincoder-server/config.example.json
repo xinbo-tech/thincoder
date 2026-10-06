@@ -1,0 +1,28 @@
+{
+  "host": "192.168.1.10",
+  "port": 8787,
+  "db": "data/gateway.db",
+  "bootstrap": {
+    "username": "admin",
+    "password": "env:TC_SERVER_ADMIN_PASSWORD"
+  },
+  "providers": [
+    {
+      "name": "bailian",
+      "baseURL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "apiKey": "env:DASHSCOPE_API_KEY",
+      "models": ["qwen3.5-plus", "qwen3.7-max", "deepseek-v3"]
+    },
+    {
+      "name": "internal",
+      "baseURL": "http://10.0.0.9:8000/v1",
+      "apiKey": "",
+      "models": ["deepseek-v3"]
+    }
+  ],
+  "embedding": {
+    "baseURL": "http://10.0.0.5:11434/v1",
+    "model": "bge-m3",
+    "apiKey": ""
+  }
+}

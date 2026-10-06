@@ -1,0 +1,15 @@
+# Thincoder Server — docker compose 样例（ops/OPS.md §5.1；registry ∥ 镜像名 ∥ 首版号 = 待定占位——部署时确认）。
+#
+# 用法：备好 ./config.json ∥ ./data/（可空目录）∥ .env（provider keys ∥ bootstrap 口令等 env: 引用）
+#       → docker compose up -d；日志 = docker logs（如 docker compose logs -f）。
+# 升级/回滚 = 换 tag + docker compose up -d（见 README「升级 ∥ 回滚」）。
+services:
+  server:
+    image: <registry>/thincoder-server:<tag>   # 待定占位——部署时确认
+    restart: unless-stopped                     # 容器路守护（无 systemd 依赖）；崩溃自愈 ∥ 开机自起
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./config.json:/app/config.json:ro       # 机本地配置（不入 git）
+      - ./data:/app/data                        # SQLite 库（data/gateway.db——备份 = 卷内文件）
+    env_file: .env                              # provider keys ∥ bootstrap 口令（配置面 env: 引用）

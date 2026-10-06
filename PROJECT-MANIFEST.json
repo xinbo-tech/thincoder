@@ -7,6 +7,7 @@
       "docs/cli/requirements",
       "docs/vsc/requirements",
       "docs/desktop/requirements",
+      "docs/server/requirements",
       "docs/RELEASE.md"
     ],
     "specs": "docs/core/requirements",
@@ -15,7 +16,8 @@
       "docs/cli/design",
       "docs/vsc/design",
       "docs/desktop/design",
-      "docs/render-core/design"
+      "docs/render-core/design",
+      "docs/server/design"
     ],
     "modules": "docs/core/design/modules",
     "batches": "docs/batches"

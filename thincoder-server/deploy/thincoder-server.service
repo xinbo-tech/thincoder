@@ -1,0 +1,32 @@
+# thincoder-server.service — systemd unit 模板（裸机路——ops/OPS.md §5.2；容器路 = compose restart 策略，不用本档）
+#
+# 安放（三步）：
+#   ① cp thincoder-server.service /etc/systemd/system/
+#   ② systemctl daemon-reload
+#   ③ systemctl enable --now thincoder-server     # enable = 开机自启；--now = 立即启动
+#
+# 日志：stdout 单行 JSON 由 journald 收 —— journalctl -u thincoder-server -f
+# 配置：--config 指机本地 config.json（不入 git）；provider keys ∥ bootstrap 口令走 env（EnvironmentFile）；
+#       改配置 ⇒ 改档 + systemctl restart（设计口径：配置不热载）。
+[Unit]
+Description=Thincoder Server（内网 token 网关 + 控制台）
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# 运行账号（按部署机调整——建议专用非 root 账号，且对配置档 ∥ data/ 可读可写）
+User=thincoder
+WorkingDirectory=/opt/thincoder-server
+# env：provider keys ∥ bootstrap 口令（env: 引用）；行首「-」= 档缺失不报错
+EnvironmentFile=-/etc/thincoder-server.env
+# ExecStart 二选一（留一行）：
+# ① npm i -g 装机（推荐——命令行 = 全局垫片）
+ExecStart=/usr/local/bin/thincoder-server --config /opt/thincoder-server/config.json
+# ② 仓内直启（不装全局包；路径按实际 clone 位置调整）
+# ExecStart=/usr/bin/node /opt/thincoder-server/bin/thincoder-server.mjs --config /opt/thincoder-server/config.json
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
