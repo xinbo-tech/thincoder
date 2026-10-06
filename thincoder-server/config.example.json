@@ -2,6 +2,7 @@
   "host": "192.168.1.10",
   "port": 8787,
   "db": "data/gateway.db",
+  "autoUpdate": "notify",
   "bootstrap": {
     "username": "admin",
     "password": "env:TC_SERVER_ADMIN_PASSWORD"

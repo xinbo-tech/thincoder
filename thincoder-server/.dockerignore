@@ -1,4 +1,5 @@
 # 构建上下文排除（ops/OPS.md §5.1）：机本地配置 ∥ 运行期数据 ∥ 文档 ∥ git 元数据
+# （壳化后：上下文供 `npm pack` 取包体（files 白名单）∥ `deploy/` 引导层入镜像——排除清单不变）
 config.json
 data/
 docs/

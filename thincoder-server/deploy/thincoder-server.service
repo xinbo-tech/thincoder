@@ -1,5 +1,7 @@
 # thincoder-server.service — systemd unit 模板（裸机路——ops/OPS.md §5.2；容器路 = compose restart 策略，不用本档）
 #
+# 装机（前缀式——自升前提 §5.1；以服务账号运行，前缀 = 下方 Environment）：
+#   NPM_CONFIG_PREFIX=/opt/thincoder-server/.npm-global npm i -g @thincoder/server
 # 安放（三步）：
 #   ① cp thincoder-server.service /etc/systemd/system/
 #   ② systemctl daemon-reload
@@ -15,16 +17,16 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-# 运行账号（按部署机调整——建议专用非 root 账号，且对配置档 ∥ data/ 可读可写）
+# 运行账号（按部署机调整——专用非 root 账号，且对配置档 ∥ data/ ∥ npm 前缀可读可写）
 User=thincoder
 WorkingDirectory=/opt/thincoder-server
 # env：provider keys ∥ bootstrap 口令（env: 引用）；行首「-」= 档缺失不报错
 EnvironmentFile=-/etc/thincoder-server.env
-# ExecStart 二选一（留一行）：
-# ① npm i -g 装机（推荐——命令行 = 全局垫片）
-ExecStart=/usr/local/bin/thincoder-server --config /opt/thincoder-server/config.json
-# ② 仓内直启（不装全局包；路径按实际 clone 位置调整）
-# ExecStart=/usr/bin/node /opt/thincoder-server/bin/thincoder-server.mjs --config /opt/thincoder-server/config.json
+# 更新/自升前提（§5.2）：npm 前缀/缓存 = 服务账号可写目录（装机与自升同前缀——§5.1）
+Environment=NPM_CONFIG_PREFIX=/opt/thincoder-server/.npm-global
+Environment=NPM_CONFIG_CACHE=/opt/thincoder-server/.npm-cache
+# ExecStart = 前缀垫片（npm i -g 装机——§5.1）；进程退出（含自升成功）⇒ Restart=always 重起拾新版（§5.2）
+ExecStart=/opt/thincoder-server/.npm-global/bin/thincoder-server --config /opt/thincoder-server/config.json
 Restart=always
 RestartSec=3
 

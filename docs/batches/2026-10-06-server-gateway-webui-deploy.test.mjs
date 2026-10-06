@@ -268,10 +268,10 @@ test("静态面：`/` ∥ `/app.mjs` ∥ `/style.css` 直发（mime ∥ no-cache
   }
 })
 
-// ── 前端自洽：零外部资源 ∥ 四档在册 ──────────────────────────────────────────
-test("前端自洽：`public/**` 四档在册 ∥ 零外部引用（无 http(s):// ∥ 无 @import——内网自洽，KD-SV-9）", () => {
+// ── 前端自洽：零外部资源 ∥ 五档在册 ──────────────────────────────────────────
+test("前端自洽：`public/**` 五档在册 ∥ 零外部引用（无 http(s):// ∥ 无 @import——内网自洽，KD-SV-9）", () => {
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual(names, ["app.mjs", "index.html", "style.css", "views.mjs"])
+  assert.deepEqual(names, ["app.mjs", "favicon.png", "index.html", "style.css", "views.mjs"])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
     assert.ok(!/https?:\/\//.test(text), `${name} 含外部链接（CDN/外链字体等——内网不达）`)
@@ -280,7 +280,7 @@ test("前端自洽：`public/**` 四档在册 ∥ 零外部引用（无 http(s):
 })
 
 // ── 部署资产：五件在册 ∥ 结构要点 ∥ files 白名单（AC-8 静态面）────────────────
-test("部署资产：五件在册 ∥ Dockerfile/unit/compose 结构要点 ∥ package.json `files` 白名单齐 ∥ 零 install 步", () => {
+test("部署资产：五件在册 ∥ Dockerfile/unit/compose 结构要点 ∥ package.json `files` 白名单齐 ∥ 构建期本地 tgz 预装（零 registry 依赖）", () => {
   const files = [
     join(SERVER_DIR, "deploy", "thincoder-server.service"),
     join(SERVER_DIR, "Dockerfile"),
@@ -294,8 +294,9 @@ test("部署资产：五件在册 ∥ Dockerfile/unit/compose 结构要点 ∥ p
   assert.match(dockerfile, /^FROM node:24-slim$/m)
   assert.match(dockerfile, /^EXPOSE 8787$/m)
   assert.match(dockerfile, /^VOLUME \/app\/data$/m)
-  assert.match(dockerfile, /^ENTRYPOINT \["node", "bin\/thincoder-server\.mjs", "--config", "\/app\/config\.json"\]$/m)
-  assert.ok(!/\bnpm (ci|install)\b/.test(dockerfile), "零依赖 ⇒ 无 install 步")
+  assert.match(dockerfile, /^ENTRYPOINT \["\/app\/deploy\/docker-entrypoint\.sh"\]$/m)
+  assert.match(dockerfile, /^RUN cd \/tmp\/build && npm pack --silent && npm i -g \.\/thincoder-server-\*\.tgz --no-audit --no-fund && rm -rf \/tmp\/build$/m)
+  assert.ok(!/\bnpm i -g @thincoder\/server@/.test(dockerfile), "构建期不得走 registry 装版（预装 = 本地 tgz）")
 
   const ignore = readFileSync(files[2], "utf8").split("\n")
   for (const entry of ["config.json", "data/", "docs/", ".git/"]) assert.ok(ignore.includes(entry), `.dockerignore 缺：${entry}`)

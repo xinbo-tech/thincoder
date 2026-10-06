@@ -1,15 +1,19 @@
-# Thincoder Server — docker compose 样例（ops/OPS.md §5.1；registry ∥ 镜像名 ∥ 首版号 = 待定占位——部署时确认）。
+# Thincoder Server — docker compose 样例（ops/OPS.md §5.1/§5.4(d)；registry ∥ 镜像名 ∥ tag = 待定占位——部署时确认）。
 #
-# 用法：备好 ./config.json ∥ ./data/（可空目录）∥ .env（provider keys ∥ bootstrap 口令等 env: 引用）
-#       → docker compose up -d；日志 = docker logs（如 docker compose logs -f）。
-# 升级/回滚 = 换 tag + docker compose up -d（见 README「升级 ∥ 回滚」）。
+# 用法：备好 ./config.json ∥ ./data/（可空目录，须 chown 1000:1000）∥ .env（provider keys ∥ bootstrap 口令等 env: 引用）
+#       → docker compose up -d；日志 = docker logs（如 docker compose logs -f——首启看 converge 行 + ready 行）。
+# 升级/回滚 = 改 TC_SERVER_VERSION + docker compose up -d（重跑壳收敛——§5.4(e)）：
+#       升级 = TC_SERVER_VERSION=0.2.0（或 latest）docker compose up -d ∥ 回滚 = 钉回旧版号（或留空 = 镜像预装版）+ up -d
 services:
   server:
-    image: <registry>/thincoder-server:<tag>   # 待定占位——部署时确认
+    image: <registry>/thincoder-server:<tag>   # 待定占位（壳 tag——不含版本语义）
     restart: unless-stopped                     # 容器路守护（无 systemd 依赖）；崩溃自愈 ∥ 开机自起
+    environment:
+      - TC_SERVER_VERSION=${TC_SERVER_VERSION:-}   # 钉死 = 写 x.y.z；留空（缺省空串）= 按镜像预装运行（离线）
+      # - NPM_CONFIG_REGISTRY=http://<内网镜像>/          # 更新源（选填——§5.4）
     ports:
       - "8787:8787"
     volumes:
       - ./config.json:/app/config.json:ro       # 机本地配置（不入 git）
-      - ./data:/app/data                        # SQLite 库（data/gateway.db——备份 = 卷内文件）
-    env_file: .env                              # provider keys ∥ bootstrap 口令（配置面 env: 引用）
+      - ./data:/app/data                        # SQLite 库（data/gateway.db）；须 chown 1000:1000（部署清单 ③）
+    env_file: .env

@@ -1,6 +1,6 @@
 /**
- * config.mjs — 配置加载与校验（ops/OPS.md §1）：读档 ∥ `env:` 前缀解析 ∥ 预设形展开（presets.mjs） ∥ 缺省值 ∥
- * 启动校验（fail-closed）。
+ * config.mjs — 配置加载与校验（ops/OPS.md §1）：读档 ∥ `env:` 前缀解析 ∥ 预设形展开（presets.mjs） ∥ 缺省值
+ * （含 `autoUpdate` 档位——§5.4(b)） ∥ 启动校验（fail-closed）。
  *
  * 校验不过 ⇒ 抛（入口转非零退出 + 明确报错）；告警（如 host = 0.0.0.0）逐条返回，入口打印。
  * 归一出参：`{ config, warnings, baseDir, configPath }`——`config.db` 已按配置档所在目录解析为绝对路径。
@@ -12,6 +12,8 @@ import { expandProviderEntry } from "./presets.mjs"
 export const DEFAULT_PORT = 8787
 export const DEFAULT_DB = "data/gateway.db"
 export const MIN_PASSWORD_LENGTH = 8
+export const DEFAULT_AUTO_UPDATE = "notify" // 更新档位缺省（可见不越权——§5.4(b)）
+export const UPDATE_MODES = Object.freeze([false, "notify", "auto"])
 
 /** 读配置档 → env 解析 → 校验 → 返回归一出参（任何一步不过 ⇒ 抛）。 */
 export function loadConfig(configPath, { env = process.env } = {}) {
@@ -70,6 +72,10 @@ export function validateConfig(raw) {
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error(`port 非法：${JSON.stringify(raw.port)}（须为 1–65535 的整数）`)
   const db = raw.db ?? DEFAULT_DB
   if (typeof db !== "string" || db.trim() === "") throw new Error("db 须为非空字符串路径（相对 = 配置档所在目录）")
+  const autoUpdate = raw.autoUpdate ?? DEFAULT_AUTO_UPDATE // 更新档位：false（关） ∥ "notify"（检查 + 日志） ∥ "auto"（检查 + 自装）
+  if (!UPDATE_MODES.includes(autoUpdate)) {
+    throw new Error(`autoUpdate 非法：${JSON.stringify(raw.autoUpdate)}（合法值：false ∥ "notify" ∥ "auto"——拒启）`)
+  }
   if (!Array.isArray(raw.providers) || raw.providers.length === 0) throw new Error("providers 须为非空数组（至少一个 provider）")
 
   const seenProviderNames = new Set() // provider 名重名（providers 间）⇒ 拒（派发歧义——ops/OPS.md §1 补条）
@@ -112,7 +118,7 @@ export function validateConfig(raw) {
     bootstrap = { username, password }
   }
 
-  return { host: host.trim(), port, db, bootstrap, providers, embedding: normalizedEmbedding }
+  return { host: host.trim(), port, db, autoUpdate, bootstrap, providers, embedding: normalizedEmbedding }
 }
 
 /** 库路径归一：`:memory:` 原样（测试面）；其余相对 = 配置档所在目录 ⇒ 绝对。 */
