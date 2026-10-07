@@ -473,14 +473,14 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 
 - **载体**：新档 `thincoder-vscode/webview/settings-provider-dialog.js`（表单族自 `settings-providers.js` 析出——表单 HTML 迁出卡片；`settings-providers.js` 的 P2-6 保表单段退场）。
 - **DOM 锚**：遮罩 = `.settings-dialog-backdrop`（新独立类——z 999；规格入 `settings.css` 新段：fixed inset 0 ∥ `--overlay` 底 ∥ 动效复用 `backdrop-in`；不与确认族共用类 `.auto-backdrop` 合流——隔离判由 = ① 关路句）；卡 = `#prov-add-dialog` + 新类 `.settings-dialog`（`settings.css` 新增小段：fixed 居中 ∥ z 1000 ∥ `--bg` 底 ∥ 1px 边框 ∥ 圆角 8px ∥ 宽 ≤ 420px；`role="dialog"` + `aria-modal="true"` + `aria-label` = `settings.addProviderTitle`）；卡体 = `.settings-card-body`（字段样式复用）+ 首件 `.settings-subtitle`（`settings.addProviderTitle`）。
-- **入口（两处）**：① `#prov-add-btn`（词 = `settings.addProvider`，既有——`settings-providers.js:195`）onclick ⇒ `window._openAddProviderDialog()`；② 首启板交棒——`webview/onboarding.js:62` 的 custom 径 ⇒ `window._openAddProviderDialog?.()`（`?.` 守卫保留；时序 = `_openSettings?.()` 后随调，面板 ∥ 框两处 +50ms 焦点定时器同拍序——框后调度 ⇒ 末位焦点 `#pa-type`；批档 §2.3）。
+- **入口（两处）**：① `#prov-add-btn`（词 = `settings.addProvider`，既有——`settings-providers.js:133`）onclick ⇒ `window._openAddProviderDialog()`；② 首启板交棒——`webview/onboarding.js:62` 的 custom 径 ⇒ `window._openAddProviderDialog?.()`（`?.` 守卫保留；时序 = `_openSettings?.()` 后随调，面板 ∥ 框两处 +50ms 焦点定时器同拍序——框后调度 ⇒ 末位焦点 `#pa-type`；批档 §2.3）。
 - **开（单例）**：已在框 ⇒ 零动作；否则建两件挂 `document.body`；开框重置 = 类型回首项 ∥ `#pa-key` 清空 ∥ `#pa-proxy` 未勾 ∥ `#pa-conn-status` 空 ∥ `#pa-model` 值 + 候选（datalist）清空 ⇒ `paTypeChanged()`；初始焦点 = `#pa-type`（+50ms）。**框实例代际**：开 ∥ 关自增 `_addDialogEpoch`；`_paFetchModels` 发起时记代际、`updateTestProviderResult` 落框前比对——不符 ⇒ 弃（在飞探果跨框零污染）。
-- **关（五路同效）**：保存（发消息后）∥ 取消钮 ∥ 背板点击 ∥ 框内 Esc（`stopPropagation` —— 不连带触 `webview/chat.js` 的关面板分支——沿确认弹框同判）∥ `closeSettings()` 同清——**落法**：`settings.js:163-172` 增调新档导出 `closeAddProviderDialog()`（与 `closeConfirmPopover()` 同拍）；**遮罩 = 独立类 `.settings-dialog-backdrop`**（z 999；样式入 `settings.css` 新段——**不入确认族共用类 `.auto-backdrop`**：确认族帚扫站点（`settings-widgets.js:109` ∥ `session-bar.js:103-104` ∥ `chat.js:100-101`）零误扫；框在场 ⇒ 确认族开 ∥ 关两向均不触框组；卡 ∥ 幕归 `closeAddProviderDialog` 独清）。
-- **与卡重绘关系**：框在卡外（挂 body）⇒ `renderProvidersCard()`（`:252-259`）的 P2-6 保表单段**删**（卡重建不再触碰框；在编输入由「框不重绘」天然保真）；`bindAddProviderForm()`（`:233-246`）域收窄为 `defaultmodel-btn` + 盘根行 `✕`（`pa-*` 绑定随档迁）。
+- **关（五路同效）**：保存（发消息后）∥ 取消钮 ∥ 背板点击 ∥ 框内 Esc（`stopPropagation` —— 不连带触 `webview/chat.js` 的关面板分支——沿确认弹框同判）∥ `closeSettings()` 同清——**落法**：`settings.js:167-177`（增调句 `:172`）增调新档导出 `closeAddProviderDialog()`（与 `closeConfirmPopover()` 同拍）；**遮罩 = 独立类 `.settings-dialog-backdrop`**（z 999；样式入 `settings.css` 新段——**不入确认族共用类 `.auto-backdrop`**：确认族帚扫站点（`settings-widgets.js:109` ∥ `session-bar.js:103-104` ∥ `chat.js:100-101`）零误扫；框在场 ⇒ 确认族开 ∥ 关两向均不触框组；卡 ∥ 幕归 `closeAddProviderDialog` 独清）。
+- **与卡重绘关系**：框在卡外（挂 body）⇒ `renderProvidersCard()`（`:159-164`）的 P2-6 保表单段**删**（卡重建不再触碰框；在编输入由「框不重绘」天然保真）；`bindAddProviderForm()`（`:143-153`）域收窄为 `defaultmodel-btn` + 盘根行 `✕`（`pa-*` 绑定随档迁）。
 
-**② 字段序（现行 → 目标；自定义形）**
+**② 字段序（改前 → 目标；自定义形）**
 
-- 现行（表单 HTML = `settings-providers.js:200-224`）：`pa-type → pa-preset-info → [pa-name → pa-url → pa-format → 拉取行 → pa-model] → pa-key → 保存 ∥ 取消`（key 垫底）。
+- 改前（as-of 设计轮 2026-10-07——表单 HTML 时为 `settings-providers.js:200-224`，随 #1029 迁 `settings-provider-dialog.js`）：`pa-type → pa-preset-info → [pa-name → pa-url → pa-format → 拉取行 → pa-model] → pa-key → 保存 ∥ 取消`（key 垫底）。
 - 目标：`pa-type → pa-preset-info → [pa-name → pa-url → pa-format] → pa-key → pa-proxy → [拉取行 → pa-model] → 保存 ∥ 取消`；`#pa-model` = **手输文本框 + 候选 datalist**（`<input id="pa-model" list="pa-model-candidates">`——本批改，原 `<select>`；#1031）。
 - 结构 = 两条件块 + 两常显件居中：`#pa-custom-fields`（名 ∥ URL ∥ 格式）+ `#pa-custom-tail`（拉取行 ∥ 模型）+ `#pa-key` ∥ `#pa-proxy`（两形皆显——预设形 = `pa-type → info → key → proxy → 保存`）。
 - 语义依据 = 用户填写序（名称→baseURL→格式→API Key→走 proxy→拉取→模型）：key 前置（拉取需 key）∥ `pa-proxy` 邻拉取（同链路口径）；三端表 = 批档 §2。
@@ -488,22 +488,23 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 **③ 走 proxy 开关（写面）**
 
 - **控件**：`#pa-proxy`（`.switch` 形复用（`settings.css` 既有）；词 = `settings.proxyRow` + `title` = `settings.proxyRowTitle`——与行开关同词键）。
-- **写面**：`addProvider` 载荷 + `proxy`（可选布尔，勾选 ⇒ `true`）⇒ 宿主 `handleAddProvider`（`src/extension/panel-messages-settings.mjs:66-92`）透传 `addProviderEntry` ⇒ 核 `addProviderEntry`（`thincoder-core/config-io.mjs:223-259`）迁受 `proxy`：`proxy === true` ⇒ 条目携 `proxy:true` 同批落盘；缺 ∥ 非真 ⇒ 零键。条目形状单源 = `docs/core/design/CONFIG.md`。
-- **与行开关一致性（点名）**：字段 = `providers[].proxy`（同一键）；行读 = `settings.mjs:88`（`proxy: entry.proxy === true`，行渲染 = `settings-providers.js:190`）；行写 = `handleSetProviderProxy`（`settings.mjs:129-136`：`true` 写 ∥ `false` 删键）。表单初值 = 未勾（新条目无旗）；勾选落盘后行面即显勾选（推送随动）；表单不读行值（新条目无既有态）。
+- **写面**：`addProvider` 载荷 + `proxy`（可选布尔，勾选 ⇒ `true`）⇒ 宿主 `handleAddProvider`（`src/extension/panel-messages-settings.mjs:66-92`）透传 `addProviderEntry` ⇒ 核 `addProviderEntry`（`thincoder-core/config-io.mjs:224-263`）迁受 `proxy`：`proxy === true` ⇒ 条目携 `proxy:true` 同批落盘；缺 ∥ 非真 ⇒ 零键。条目形状单源 = `docs/core/design/CONFIG.md`。
+- **与行开关一致性（点名）**：字段 = `providers[].proxy`（同一键）；行读 = `thincoder-vscode/src/extension/settings.mjs:89`（`proxy: entry.proxy === true`，行渲染 = `settings-providers.js:128`）；行写 = `thincoder-vscode/src/extension/settings.mjs:130-137`（`handleSetProviderProxy`：`true` 写 ∥ `false` 删键）。
+  表单初值 = 未勾（新条目无旗）；勾选落盘后行面即显勾选（推送随动）；表单不读行值（新条目无既有态）。
 - **生效面**：运行期模型请求（`injectProxy` 双门槛——组成式唯一式 = ③′；语义单源 = `docs/core/design/PROVIDER.md` §6.19 / #1026 面）；**表单内〔拉取〕路由 = 同判定（③′）**；双闸去留（行勾选在全局 `proxy.model` 关时静默无效——A2）= **裁讫 · B——另批**（去全局闸 · 逐渠独立；台账 #1042；本批机制面零动）。
 
 **③′〔拉取〕路由随勾选（已裁 · 父侧 2026-10-07 · 批内处置）**
 
 - 裁定：**耦合**——勾选 ⇒ 拉取按 `probeTargetOf` 同判定（勾 ⇒ 取全局判定（`uri ∧ model === true`）⇒ 走代理；未勾 ∥ 载荷缺 `proxy` ⇒ 直连）。理据 = 用户 17:58「provider 走不走 proxy 是每个 provider 单独选」的完整落实 + 自定形「拉取成功才可存」下不耦合即死结；「#1026 零动」原意 = 不回归它——本项 = 它的自然延伸。
-- 落法：`testProviderConnection`（`src/extension/settings.mjs:220-234`）改受 `proxy` 形参——目标 = `probeTargetOf({ name: "", baseURL: url, apiKey, format, proxy: proxy === true })` ⇒ `listModels(target)`（**双门槛组成式（唯一式）**：条目 `proxy === true` ∧ 全局 `proxy.model === true` ⇒ `proxyUri = proxy.uri`；否则 `undefined` ⇒ 直连——`uri` 缺席亦落 `undefined`；**`uri` 非第三门槛**，是代理目标本体；`injectProxy`（`thincoder-core/proxy.mjs:67-72`——判定式 `:70`）同式）；核 `probeTargetOf`（`thincoder-core/provider-flows.mjs:79-90`）= 组成式单源（判据体逐字复用，零第二份）；调用面 `handleTestProvider`（`panel-messages-settings.mjs:142-146`）透传 `proxy`；缺省 ∥ 未勾 ⇒ 直连（#1026 契约逐字不变）。
+- 落法：`testProviderConnection`（`thincoder-vscode/src/extension/settings.mjs:226-237`——目标构造 = `:232`）改受 `proxy` 形参——目标 = `probeTargetOf({ name: "", baseURL: url, apiKey, format, proxy: proxy === true })` ⇒ `listModels(target)`（**双门槛组成式（唯一式）**：条目 `proxy === true` ∧ 全局 `proxy.model === true` ⇒ `proxyUri = proxy.uri`；否则 `undefined` ⇒ 直连——`uri` 缺席亦落 `undefined`；**`uri` 非第三门槛**，是代理目标本体；`injectProxy`（`thincoder-core/proxy.mjs:67-72`——判定式 `:70`）同式）；核 `probeTargetOf`（`thincoder-core/provider-flows.mjs:79-90`）= 组成式单源（判据体逐字复用，零第二份）；调用面 `handleTestProvider`（`panel-messages-settings.mjs:142-146`）透传 `proxy`；缺省 ∥ 未勾 ⇒ 直连（#1026 契约逐字不变）。
 - 协议：`testProvider` 载荷 + `proxy`（可选布尔——`docs/vsc/design/WEBVIEW-PROTOCOL.md` §13 本行）。
-- 同族同径（本批共三条，三端同一判定）：**桌面**拉取 = 同一收敛（现取全局 `proxy.web` 旗——缺陷类 ∥ #1026 镜像，本批修：`thincoder-desktop/src/main/providers.mjs:273-274` 的 web 旗判定 ⇒ `probeTargetOf` 同判定）；**CLI** 探针 = 同一收敛（落盘条目随旗——`tui/provider-admin.mjs:28` ∥ `tui/cmd-config.mjs:296` ∥ `tui/wizard.mjs:216` ⇒ `probeTargetOf`；未落盘条目（`cli/setup-wizard.mjs:60`）= 无旗 ⇒ 直连缺省 ✓ 零改）。
+- 同族同径（本批共三条，三端同一判定）：**桌面**拉取 = 同一收敛（载荷 + `proxy`；主面 `thincoder-desktop/src/main/providers.mjs:276-288`——目标 = `probeTargetOf` 同判定（`:281`）；本批修 = #1026 镜像缺陷）；**CLI** 探针 = 同一收敛（落盘条目随旗——`thincoder-cli/src/tui/provider-admin.mjs:31` ∥ `tui/cmd-config.mjs:297` ∥ `tui/wizard.mjs:217` ⇒ `probeTargetOf`；未落盘条目（`cli/setup-wizard.mjs:60`）= 无旗 ⇒ 直连缺省 ✓ 零改）。
 
 **④ 扩面四件（父侧 2026-10-07 一次并入 #1031 / #1032 / #1033 / #1035——本批同稿）**
 
 - **#1031 自定形「拉取失败不可存」死路 ⇒ 修**：`#pa-model` 由 `<select>` 改 **手输文本框 + 候选 datalist**（`<input id="pa-model" list="pa-model-candidates">` + `<datalist id="pa-model-candidates">`——桌面既成形对齐）；`updateTestProviderResult` 探通 ⇒ 填 datalist 选项（不自动选中）；探不通 ⇒ `pa-conn-status` 明示 ✗ + 候选清空、**键入值零清**（不吞手输）。`_paSave` 自定形守卫改判 = model 空 ⇒ `settings.modelRequired`（新键；原 `settings.fetchModelsFirst` 无消费者 ⇒ 随实现净删）；**不拉取（候选空）只要 model 非空即可存**（走查要点：名 ∥ URL ∥ 格式 ∥ Key ∥ 模型手输 ⇒ 直接保存成功）。
-- **#1032「选择模型…」空表静默 ⇒ 提示**：`_defaultModelMenu` 空表（`SS.getModels()` 无可用行 ⇒ rows 空）⇒ 展示 `#defaultmodel-hint`（`.prov-hint` 形复用——零新 CSS；词 = `settings.pickModelEmpty`（新键））+ return（零菜单）；有候选 ⇒ 清提示 + 开菜单。hint 挂 `#prov-defaultmodel-row`（`:166-172`）`.prov-main` 之后；卡重建自随（新 HTML 默认隐藏）。
-- **#1033 硬编码串入表**：`(no default model)`（`:25` ∥ `:189`——词 `settings.noDefaultModel`）· `title` 英文句（`:168`——词 `settings.defaultModelTitle`）· **同线中文硬编码两处**（`:189`「宿主繁忙」∥「不可用」——词 `settings.providerHostBusy` ∥ `settings.providerUnavailable`；审计补：en 界面现显中文 = 缺陷类）⇒ `locales/en.json` ∥ `zh.json` 两语入表。
+- **#1032「选择模型…」空表静默 ⇒ 提示**：`_defaultModelMenu` 空表（`SS.getModels()` 无可用行 ⇒ rows 空）⇒ 展示 `#defaultmodel-hint`（`.prov-hint` 形复用——零新 CSS；词 = `settings.pickModelEmpty`（新键））+ return（零菜单）；有候选 ⇒ 清提示 + 开菜单。hint 挂 `#prov-defaultmodel-row`（`:103-110`）`.prov-main` 之后；卡重建自随（新 HTML 默认隐藏）。
+- **#1033 硬编码串入表**（下列坐标 = 改前字面位 · as-of 设计轮）：`(no default model)`（`:25` ∥ `:189`——词 `settings.noDefaultModel`；现值 = `settings-providers.js:127` ∥ `settings-provider-dialog.js:49`）· `title` 英文句（`:168`——词 `settings.defaultModelTitle`；现值 = `settings-providers.js:105`）· **同线中文硬编码两处**（`:189`「宿主繁忙」∥「不可用」——词 `settings.providerHostBusy` ∥ `settings.providerUnavailable`；现值 = `settings-providers.js:127`；审计补：en 界面现显中文 = 缺陷类）⇒ `locales/en.json` ∥ `zh.json` 两语入表。
 - **#1035 术语统一「API Key」**（用户 16:43 定音：实体名 = API Key，zh 保留英文形，裸「密钥」退场）：**词值改 6 键**——`settings.setKey`（en "Key" ⇒ "API Key" ∥ zh「密钥」⇒「API Key」）· `settings.addKey`（"Add Key" ⇒ "Add API Key" ∥「添加 Key」⇒「添加 API Key」）· `model.setKey`（"Key…" ⇒ "API Key…" ∥「设置密钥…」⇒「设置 API Key…」）· `error.provider` ∥ `error.failedProvider` ∥ `banner.notConfigured`（zh 内「API 密钥」⇒「API Key」；en 无裸 key 失范——不动）；`settings.keyOptional` 已合规（保持）；键数不变（值级改写）。
 
 **⑤ 边界**：行 ∥ 列表侧既有开关零改；运行期代理语义（核）零改；删除确认 ∥ 密钥行 ∥ 其余卡面零改；服务端面零触；#1036（MCP env 串）批外另立。
@@ -609,6 +610,8 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 | U-S17 | MCP 表单 env ∥ headers = **行式键值编辑器**（每行键格 + 值格 + ✕；行集下 `[+ 添加行]`；零项零行）；粘贴零解析；值 = 字面（零引号剥离）；提交四判据（空行丢 ∥ 重复后胜 ∥ 全空删字段 ∥ trim） | 已定（§2.4——MCP 键值行式输入批 · #1036；桌面逐元素同形 = `docs/desktop/design/SETTINGS.md` §1 **KD-76**） |
 
 ## 变更记录
+
+- 2026-10-07（**三端对齐批 · 收口回填轮（设计面）· eng-designer**——承批档 `docs/batches/2026-10-07-provider-config-parity.md` §5（舱二 §5.6 读数 ∥ 评审 🔵3）：§2.16 **坐标逐点收正**——活指针改指现盘（入口 `:195 ⇒ :133` ∥ 关路 `settings.js:163-172 ⇒ :167-177`（增调句 `:172`）∥ 卡重绘两处 `:252-259 ⇒ :159-164` ∥ `:233-246 ⇒ :143-153` ∥ 行读 `thincoder-vscode/src/extension/settings.mjs:88 ⇒ :89` ∥ 行渲染 `:190 ⇒ :128` ∥ 行写 `:129-136 ⇒ :130-137` ∥ 核 `config-io.mjs:223-259 ⇒ :224-263` ∥ 拉取 `:220-234 ⇒ :226-237`（目标构造 `:232`）∥ `#prov-defaultmodel-row` `:166-172 ⇒ :103-110` ∥ CLI 三探针点 `:28 ⇒ :31` ∥ `:296 ⇒ :297` ∥ `:216 ⇒ :217`）；框架句明标 as-of 两处（②「现行」⇒「改前」+ as-of 设计轮 ∥ #1033 字面位——现值 = `settings-providers.js:127/:105` ∥ `settings-provider-dialog.js:49`）。**零新语义**（坐标 ∥ 读数）。明细 = 批档 §2 追记⑨。
 
 - 2026-10-07（**三端对齐批（#1027–#1035）· 收口回填（VSC 侧）· 父侧直接执行〔可 revert〕**——承批档 `docs/batches/2026-10-07-provider-config-parity.md` §5.9）：§3 `settings.mjs` 登记读数 **359 ⇒ 406**（本批 +3——探针收敛核 `probeTargetOf`）∥ `settings.css` 登记读数 **385 ⇒ 412**（实施后实读——新增 `.settings-dialog` ∥ `.settings-dialog-backdrop` 段）。**零新语义**（读数回填）。
 

@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-07 · 来源 = 用户 2026-10-07 18:07 + 18:10 + 18:13 三条原话（逐字见 §1）——「改吧」= 点火。
 > 台账 = #1027/#1028/#1029（vscode · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：进行中（设计评审 pass（🔴0）· 修复轮 9/9 落 · 已代签 · 三舱交付齐（15/15 ∥ 15/15 ∥ 21/21）· 收口双轮在跑（#14 产品+测试 ∥ #15 设计回填）· 真机走查待）
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 ### 1.1 讨论来源（用户原话 · 逐字）
@@ -81,8 +81,17 @@
 - **上抛④（`PROXY.md:68` 例外句相抵）处置**：**就地收正**（父侧直接执行 · 可 revert）——探针已收敛核 `probeTargetOf`，旧「亦直连」表述 + 陈旧坐标 `settings.mjs:229` 同拍收。
 - 舱三（桌面）已在跑（#3）；#10（MCP）同时接棒（域冲突解除）。
 
+### 1.11 舱三（桌面）交付处置（主 agent · 2026-10-07 21:0x）
+
+- **核验**：`ADD_MODAL_GROUP` 四处在位（`mount-settings.mjs:38` ∥ `:46` ∥ `:48` ∥ `:60`）∥ 21/21（舱自跑）∥ 表外四件披露有因——**通过**。
+- **事故记（透明）**：首轮 D4 腿因核件模块实例分裂把三条 `tc-ds-*` 写进**真配置** `~/.thincoder/config.json`——已逐字复原 + 加「写前只读射程自证」护栏 + 改经 `node_modules` 同径取件；复跑全绿零残（详情 = §5.11）。
+- **上抛①（§2.16 条 3/5 未登记）⇒ 并入 #15 设计回填轮**：补直陈句（弹窗体三件随 handler 在场——向导步 1 预设单选为设计字面）+ §2.6 表外四件补列。
+- **上抛②（as-of 滞后）⇒ 并入 #15 收正/回填**：条 7 现读链 ∥ 条 1 坐标 `:46 ⇒ :48` ∥ PROJECT.md 两占位 ∥ 桌面 Δ 实读。
+- **知会三项**：批内件 1039 行 >500 ⇒ **裁定按舱拆**（#14 执行；采 4 件结构 = 三腿档 + `…-vsc-harness.mjs` 公档，每件 ≤500，纯搬移）；D39 双渲（非本舱域）∥ loading 瞬态（设计字面）⇒ 零动。
+- **收口双轮派发**：#14 产品+测试面（拆档 + 拒存徽标 + 拒存丢输入——父侧逐条裁定采纳）∥ #15 设计面（上列回填）——同设计令牌 fix 轮，两域并行。
+
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（fix 轮 1：评审轮 1 发现 #1–#12 逐号收正（#7 = 呈 §4 裁）∥ 用户 19:04 两裁收编（#1034 裁讫 · A = 本批落形 ∥ A2 裁讫 · B = 另批 #1042）· 2026-10-07）
+**状态行**：设计完成（fix 轮 2 = 收口回填轮（设计面）——预估/占位 ⇒ 实读 ∥ as-of 坐标逐点收正 ∥ 直陈补句（弹窗体三件）；2026-10-07）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 **接手轮（2026-10-07 · 前轮 designer 外部中断接稿）：**本稿 = 通读审计前轮 6 档未提交草稿 → 对照批档 §1 ∥ 父侧扩面令（18:31）补全 → 一次成稿。§2 内容 = 2.1–2.10。
@@ -278,6 +287,40 @@
 **2.9④ 随动（已收正）**：`proxy.mjs` 双门槛坐标 = `injectProxy` `:67-72`（判定式 `:70`）——父侧 §1.6 勘误已落；与 2.3 核条同口径。
 
 **§1.6 移交项入本批实现轮（不另开笔）**：`thincoder-vscode/src/extension/settings.mjs:225` 注释句「`config.proxy.web` 只管 websearch/fetch」与权威档（父侧 §1.6 引 `PROXY.md` §4——web 旗唯一活消费面 = CLI Test connection 探针；web 工具走逐次 `args.proxy`）相抵——实现轮随 `testProviderConnection`（`settings.mjs:220-234`——本批本就改签名）同面改述该注释块；**设计面零随动**（本批探针路由 = 耦合裁定语，不依赖该注释句；已核：设计档零复述该相抵句）。
+
+### 追记⑨（收口回填轮 · 设计面 · 2026-10-07 · eng-designer）
+
+**口径**：父侧派单 = 收口回填轮（设计面）——「预估/占位 ⇒ 实读」+ as-of 坐标逐点收正 + 直陈补句；**零新语义（读数 ∥ 坐标 ∥ 登记 ∥ 直陈句）**；产品码零触 ∥ 需求档零动 ∥ 批外档零触 ∥ §1/§3–§6 零动。读数 = 落盘时点复读（2026-10-07 21:1x）；口径 = `wc -l` 内容行数（文末换行不计）。
+
+**① VSC §2.16 坐标逐点收正 + as-of 两处**：活指针改指现盘（清单 = `docs/vsc/design/SETTINGS.md` 本日「收口回填轮（设计面）」变更行——入口 `:195 ⇒ :133` ∥ 关路 `settings.js:163-172 ⇒ :167-177`（增调句 `:172`）∥ 卡重绘 `:252-259 ⇒ :159-164` ∥ `:233-246 ⇒ :143-153` ∥ 行读 `settings.mjs:88 ⇒ :89` ∥ 行渲染 `:190 ⇒ :128` ∥ 行写 `:129-136 ⇒ :130-137` ∥ 核 `config-io.mjs:223-259 ⇒ :224-263` ∥ 拉取 `settings.mjs:220-234 ⇒ :226-237`（目标构造 `:232`）∥ `#prov-defaultmodel-row` `:166-172 ⇒ :103-110` ∥ CLI 三探针点 `:28 ⇒ :31` ∥ `:296 ⇒ :297` ∥ `:216 ⇒ :217`）；框架句明标 as-of 两处（②「现行」⇒「改前」+ as-of 设计轮 ∥ #1033 字面位——现值 = `settings-providers.js:127/:105` ∥ `settings-provider-dialog.js:49`）。
+
+**②③ 桌面 §2.16**：项 3 ∥ 项 5 补直陈句（弹窗体三件随 handler 在场——条件渲染（`settings-controls.mjs:97 ∥ :114 ∥ :122 ∥ :126 ∥ :183`）；向导步 1 保持预设单选 = 设计字面，非静默发散）∥ 项 7 现读链收正（渲染面 `mount-settings-segments-providers.mjs:137`（勾选 ⇒ `{ proxy: true }`——`:130`）⇒ 主面 `src/main/providers.mjs:276-288`（目标 = `probeTargetOf`——`:281`））∥ 项 1 坐标 `mount-settings.mjs:46 ⇒ :48`（同值实例 = §1 **KD-68** ④ 同拍）。
+
+**④ §2.6 桌面行 Δ 实读回填**（连 §5.11「连建议交父侧回填」兑现）：
+
+| 文件 | 表值（现） | 实读（2026-10-07） |
+|---|---|---|
+| `renderer/views/settings-controls.mjs` | 145 | **215** |
+| `renderer/views/settings-sections-providers.mjs` | 194 | **211** |
+| `renderer/views/settings.mjs` | 398 | **419** |
+| `renderer/mount-settings.mjs` | 251 | **259** |
+| `renderer/mount-settings-exits.mjs` | 254 | **289** |
+| `renderer/mount-settings-segments-providers.mjs` | 150 | **160** |
+| `renderer/store.mjs` | 368 | **370** |
+| `src/main/providers.mjs` | 317 | **324** |
+| `renderer/i18n-settings.mjs` | 150（59 键） | **152**（60 键） |
+| `renderer/i18n-views.mjs` | 398 | **406**（盘值——#1036 批随动后） |
+| `renderer/i18n-composer.mjs` | 92 | **92**（±0） |
+
+**④ 表外四件补列**（实施轮已自认 · §5.11——§2.6 表原缺）：`renderer/mount-onboarding.mjs` **96**（`presetValue` 选择器改名）∥ `renderer/settings-modal.mjs` **70**（初始焦点例外：`data-initial-focus="field"`）∥ `renderer/views/settings-sections.mjs` **95**（`providerAddBody` re-export）∥ `renderer/i18n.mjs` **420**（`settings.*` 59 ⇒ 60 键 + 链文）。
+
+**⑤⑥ 读数收正**：`views/settings.mjs` **398 ⇒ 419** ∥ `i18n.mjs` **416 ⇒ 420** ∥ `store.mjs` **341 ⇒ 370**（PROJECT.md §4.1 各处落数；同值实例 = 桌面 SETTINGS.md §3.1 本档行同拍）∥ `src/main/providers.mjs` 占位 ⇒ **324**。**⑦ 变更行**：三档各一条（VSC SETTINGS.md ∥ 桌面 SETTINGS.md ∥ 桌面 PROJECT.md——本日）。
+
+**他端行读数（复读——随付）**：VSC `webview/settings-provider-dialog.js` **282**（新档——收口轮①②实施后实读；§5.9 载 273）∥ `webview/settings-providers.js` **175** ∥ `webview/settings.js` **195**（§5.9 载 194——差 1，报告附项④）∥ `webview/onboarding.js` **81**（±0）∥ `webview/settings.css` **412** ∥ `src/extension/settings.mjs` **406** ∥ `src/extension/panel-messages-settings.mjs` **236**（±0）∥ `locales/en.json` ∥ `zh.json` **293 行 ∥ 291 键**（落盘时点实读；§5.9 载 289 ∥ 287——并行随动：`settings.providerUrlRequired` ∥ #1036 kv 键）∥ 核 `config-io.mjs` **281**（277 ⇒ 281）∥ CLI `provider-admin.mjs` **242**（213 ⇒ 242）∥ `cmd-config.mjs` **488** ∥ `wizard.mjs` **247** ∥ 测试件（按舱拆四件——§1.11① 裁 · 收口轮① 执行）：`-vsc.test.mjs` **412** ∥ `-vsc-harness.mjs` **210** ∥ `-desktop.test.mjs` **376** ∥ `-cli.test.mjs` **127**。
+
+**报告附项（非本笔修面 · 待裁）**：① `docs/desktop/design/UI.md` §4.1 两行同值未随（`i18n.mjs` **416 ⇒ 420** ∥ `i18n-settings.mjs` **150 ⇒ 152**——批外档，父侧裁）；② 桌面 SETTINGS.md §3.1 余行同类滞后（`settings-controls` 145 ∥ `settings-sections` 93 ∥ `settings-sections-providers` 194 ∥ `mount-settings` 251 ∥ `mount-settings-segments-providers` 150 ∥ `settings-modal` 63 ∥ `mount-onboarding` 95——非点单，父侧裁）；③ §2.6 测试行行名 = 拆前单件名（`…parity.test.mjs`——现盘四件）；④ `webview/settings.js` 读数差（§5.9 报 194 ∥ 盘 195——口径 = `wc -l`）。
+
+**追记⑨附注（落笔后自检 · 文档机检复跑 · 2026-10-07）**：`node scripts/doc-check.mjs`（仓库根）——本笔新写 ∥ 改写的坐标按「悬空 ⇒ 全形路径」逐点收正：桌面 SETTINGS.md `:197` ∥ `:452`（两处）∥ 同档 §1 **KD-75** ⑤ `:31`（同桩死指针 · 一致性面当场修 · 非点名单）∥ VSC SETTINGS.md `:492`（两处）∥ `:498` ∥ `:500` ∥ `:613`（三处 ⇒ 归并一锚）——共 11 处；VSC `:492` 因收正越宽 ⇒ 折行消解（本笔新越线零）。**复跑读数**：锚面 悬空 **17 ⇒ 6**（余 6 = 存量批外 ∥ 他批记录行：`BROWSER-TOOL.md:193/:365/:432` ∥ `PROXY.md:163` ∥ 桌面 `PROJECT.md:1867`（MCP 批变更行）∥ 桌面 `UI.md:311`——列报待裁）；行宽面 **30 行**（全 = 存量越线 + 本笔小增；本笔新越线零）；行数面 24 条（存量报告态）。
 
 ## §3 设计评审（评审子代理）
 
