@@ -115,7 +115,7 @@
 
 语义同源——VSC 档 F1–F7 / N1–N7 与 §4.1–§4.3 逐条同义（不重并）；VSC 独有事实 = ① **描述外部装载**：`DESC(name)` 运行时装载（`thincoder-vscode/src/tools/shared.mjs:15`）
 ——`src/tools/*.md` 25 档在位、接线命中 25 处（工具选择面与对端同构；CLI 装载面已列 §4.2，两端语义一致）· ② **打包面 N6**：`.vscodeignore` 不排除 `src/**/*.md`——25 档随扩展发布（发布前 `vsce ls` 清单核对）·
-③ 批合并询问 / child 审批（本端面——设计侧 = `docs/core/design/TOOLS.md` §6.11）。坐标（实核）＝ `thincoder-vscode/src/tools/index.mjs:50`（`builtinTools`）· `thincoder-vscode/src/tools/shared.mjs`（414 行）。测试 = `test/tool-descriptions.test.mjs` 全绿。
+③ 批合并询问 / child 审批（本端面——设计侧 = `docs/core/design/TOOLS.md` §6.11）。坐标（实核）＝ `thincoder-vscode/src/tools/index.mjs:50`（`builtinTools`）· `thincoder-vscode/src/tools/shared.mjs`（414 行）。测试 = `test/tool-descriptions.test.mjs` 全绿（已随 2026-09-28 测试树全清退场，留名存档）。（迁移期引文）
 
 ### 4.7 TTY 驱动能力（TTY-DRIVE——新能力条目 · 2026-09-15）
 

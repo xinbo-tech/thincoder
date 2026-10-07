@@ -148,7 +148,7 @@
 |---|---|---|
 | F1 | 评审通过 → 签发 designToken | **继承 v1**（`generateDesignToken` + `settleDesignReview` → designId+token） |
 | F2 | 链终消费制 | **继承 v1**（`consume-design` → `resolveDesignSlot` + `removeDesignTokenSlot`——消费后同 designId 再 spawn = `designId not found` 机械拒；重复消费幂等 no-op） |
-| F3 | 评审对象来源读 `docRoot` | `advisor.mjs` design-review 分支（文档分类）改读 `resolveReviewTargetPaths`（`agent/write-gate.mjs`，M4 产物——**同源单一权威，不重复实现**；不 import `dispatch.mjs`——簇间回边环风险）；**按用点解析增量**（2026-10-02 · #828）：同单点新导出 `resolveReviewRootsFor(dir)`（`write-gate.mjs:59`）——逐文档所属项目根集（`thincoder-core/agent-tools/advisor.mjs:125` → `:129` 第二腿；无主档回退会话根集判定）；**路径归一增量**（2026-10-04 · #921 设计轮）：documents 解析单源新导出 `resolveReviewDocPaths`（宿主 = `review-facts.mjs`——write-gate 同名再出口保指针面），逐文档四腿试探（会话根集 → 所属项目根集 → 候选项目根 → 歧义可读唯一化）——裸仓相对形按候选项目归一受理，多候选可读命中 ≥2 ⇒ fail-closed 拒（`scope-doc-ambiguous`）；冻结窗 `docAbs`（advisor-async）同源取 resolved（保护洞堵合）。实施 = eng-coder 轮；**锚祖先链增量**（2026-10-05 · #945 · 批档 `docs/batches/2026-10-05-review-face-gaps.md` §2.3）：腿③候选底座并入 **cwd 祖先链全量目录**（现行集在前 ∥ 祖先链随尾、去重保序）——容器相对形在子仓锚下受理；受理判据（目标解析位最近 manifest 声明面）∥ 围栏 ∥ 可读唯一化 ∥ fail-closed 歧义零改 |
+| F3 | 评审对象来源读 `docRoot` | `advisor.mjs` design-review 分支（文档分类）改读 `resolveReviewTargetPaths`（`agent/write-gate.mjs`，M4 产物——**同源单一权威，不重复实现**；不 import `dispatch.mjs`——簇间回边环风险）；**按用点解析增量**（2026-10-02 · #828）：同单点新导出 `resolveReviewRootsFor(dir)`（`write-gate.mjs:59`）——逐文档所属项目根集（`thincoder-core/agent-tools/advisor.mjs:125` → `:129` 第二腿；无主档回退会话根集判定）；**路径归一增量**（2026-10-04 · #921 设计轮）：documents 解析单源新导出 `resolveReviewDocPaths`（宿主 = `review-facts.mjs`），逐文档四腿试探（会话根集 → 所属项目根集 → 候选项目根 → 歧义可读唯一化）——裸仓相对形按候选项目归一受理，多候选可读命中 ≥2 ⇒ fail-closed 拒（`scope-doc-ambiguous`）；冻结窗 `docAbs`（advisor-async）同源取 resolved（保护洞堵合）。实施 = eng-coder 轮；**锚祖先链增量**（2026-10-05 · #945 · 批档 `docs/batches/2026-10-05-review-face-gaps.md` §2.3）：腿③候选底座并入 **cwd 祖先链全量目录**（现行集在前 ∥ 祖先链随尾、去重保序）——容器相对形在子仓锚下受理；受理判据（目标解析位最近 manifest 声明面）∥ 围栏 ∥ 可读唯一化 ∥ fail-closed 歧义零改 |
 | F4 | 凭证值不落文档 | token / designId **值**永不落档（只记 `review passed`）——`sanitizeText`/`CRED_RE` 机械剥除已实证（继承） |
 | F5 | 六 kind 不签发 | 非全绿（含 🔴）→ 不签发 token（fail-closed，继承） |
 
@@ -217,13 +217,15 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 **2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
 **本批（会话锚解析修复（多档并存支持） · 2026-10-02）落点表** = `docs/batches/2026-10-02-manifest-resolution-fix.md` §2（唯一承载面——一次性批次材料）。
 
+- 2026-10-07（**文档清账批 · fix 轮 · eng-designer**——承批档 `docs/batches/2026-10-07-doc-cleanup.md` §2 · 台账 #953）：§9 F3「路径归一增量」行删失真子句「write-gate 同名再出口保指针面」（现盘核：`thincoder-core/agent/write-gate.mjs` 对 `resolveReviewDocPaths` 零再出口——单源 = `review-facts.mjs`）；`:226` 同句随正。`resolveReviewRootsFor` 再出口谓词 = 现盘真，逐字保留。**零语义**（失真子句删）。
+
 - 2026-10-07（**批 ledger-tool · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-ledger-tool.md` §1 · 台账 #927 并入）：新增 **§10 槽位清点与批量消费**（F-SL1 `design-slots` 只读清点面——槽文件 ∪ 内存并集 / 列表面字段 / 「批」= `_advisorRuns.docSetKey` 反查；F-SL2 `consume-design` 选择器扩展——`designIds` / `expired` / `olderThanDays` 恰一 / 单 persist / 整体回滚；落点表 = 新档 `design-slots.mjs` + 四面随动；用例 U-SL1–U-SL9）+ §5 消耗语义行补指针。**签发链行为零改**（#868 面另论）；需求侧候补 = F-D6 邻位（主 agent 笔）。
 
 - 2026-10-07（**批 ledger-tool · 设计评审修正轮 1（发现 9）· eng-designer**——承批档 `docs/batches/2026-10-07-ledger-tool.md` §3 轮次 1）：§6.2 ① 补**本批到期处置**句——新面按「槽为准」（核现径）落 ∥ 两面对齐余项缓办（到期条件照旧）。**零新语义**。
 
 - 2026-10-07（**批 ledger-tool · 收口前指针重锚轮 · eng-designer**——父裁修正：消费核迁出随迁）：消费核活指针随迁收正（§5 `:45` / `:46` ∥ §6.1 `:72` ∥ §6.3 `:101`——`subagent-spawn.mjs` 坐标 ⇒ `design-slots.mjs`；§6.3 `:97` 内联验证 `:158-169` ⇒ `:235-239`）；§10 落点表两行估数随实读（`design-slots.mjs` 233 行 ∥ `subagent-spawn.mjs` 399 行）。**零语义改**。
 
-- 2026-10-04（**工具路径基面根治批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-tool-path-baseline.md` §2 · 台账 #921）：§9 F3 加「路径归一增量」——documents 解析单源 `resolveReviewDocPaths`（宿主 `review-facts.mjs`，write-gate 同名再出口）+ 冻结窗 docAbs 同源。实施 = eng-coder 轮。
+- 2026-10-04（**工具路径基面根治批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-tool-path-baseline.md` §2 · 台账 #921）：§9 F3 加「路径归一增量」——documents 解析单源 `resolveReviewDocPaths`（宿主 `review-facts.mjs`）+ 冻结窗 docAbs 同源。实施 = eng-coder 轮。
 
 - 2026-10-02（**会话锚解析修复批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-manifest-resolution-fix.md` §1 · 台账 #828 · 轮七回执③）：§9 F3 行文面加同单点新导出 `resolveReviewRootsFor`（`write-gate.mjs:59`——按用点解析增量；消费腿 `thincoder-core/agent-tools/advisor.mjs:125` → `:129`）。**判据语义零改**。
 

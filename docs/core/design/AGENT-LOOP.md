@@ -21,7 +21,7 @@
 | 权限 | `thincoder-cli/src/cli/permission.mjs` | `src/extension/permission-gate.mjs` · `agent-tools/child-permission.mjs` |
 | hooks | `src/hooks.mjs` | 核 `hooks.mjs`（静态引——Stop + 派发四事件已接线；见 §6.13 / §6.18） |
 | 工作区约定（技能 / 规则 / 同伴 / 台账） | —（另档） | → `docs/core/design/WORKSPACE.md` |
-| 推理档位 / 模型引用 | `src/auto-think.mjs` · `model-ref.mjs` | `src/extension/reasoning-mode.mjs` · `src/config.mjs`（模型引用解析段） |
+| 推理档位 / 模型引用 | `src/auto-think.mjs` · `model-ref.mjs` | `src/extension/reasoning-mode.mjs` · `src/config.mjs`（模型引用解析段） （迁移期引文——档已删） |
 | 探索蒸馏 | `thincoder-core/explore-distill.mjs` | 同名（同路径对） |
 | token 台账 | `src/agent-tools/design-token.mjs` · `src/token-ttl.mjs` | `src/agent/agent-state.mjs` · `agent/tool-gates.mjs` （迁移期引文——档已迁核） |
 
@@ -62,7 +62,7 @@
 | 166 | （CLI 无独立档）↔ `src/agent-tools/child-permission.mjs` | ② | 融合：子代理权限通道按核内结构归位（父卡归属 + 定向 signal） | 分叉 ＝ 拆档（VSC 独有拆面）；**承 §2.5 #112（装配）/ §2.12.1 事件语义面** | —（承 #112） | S1（建核补齐） |
 | 169 | `src/hooks.mjs` ↔ 核内（VSC 侧接线 2026-09-20——§2.16 / §2.17） | ③ | 以 CLI 为准（Stop 等四事件）——VSC 接线后开始触发（外部副作用随 #111 登记） | 分叉 ＝ **已消**（2026-09-20 机制层端差批 §2.16 / §2.17——端侧接线：Stop + 派发面三调用点 + `hooks` 配置段 plumb；见本档 §6.13 / §6.18）；**承 §2.5 #111** | —（承 #111） | S1（建核补齐） |
 | 175 | `src/auto-think.mjs` ↔ `src/extension/reasoning-mode.mjs` | ② | 融合：核内自动难度分级 + 端侧推理档位面——**端侧自有 · 经 provider 字段数据面**（UI 下拉 / 档位 patch；核内无需位——2026-09-15 裁定） | 分叉 ＝ 落点（CLI 自动难度分级 / VSC UI→provider 字段映射）；VSC DEFAULTS 已载 `autoThink`（`thincoder-vscode/src/config-io.mjs:319`）（as-of 2026-09-29）但**全仓无消费方** ⇒ 归一后接线（默认 `false` ⇒ 默认无行为变化） | **②**（丁组 D2） | S1（建核补齐） |
-| 176 | `src/model-ref.mjs` ↔ `src/config.mjs`（模型引用解析段）+ `specs.mjs` | ② | 融合：核内单一 `provider:model` 解析 | 分叉 ＝ 落点；解析口径（首冒号切分 / 双段非空 / 显式 `p:m` 一律放行）两端同源 ⇒ 前提成立 | — | S1（建核补齐） |
+| 176 | `src/model-ref.mjs` ↔ `src/config.mjs`（模型引用解析段）+ `specs.mjs` | ② | 融合：核内单一 `provider:model` 解析 | 分叉 ＝ 落点；解析口径（首冒号切分 / 双段非空 / 显式 `p:m` 一律放行）两端同源 ⇒ 前提成立 | — | S1（建核补齐） （迁移期引文——档已删） |
 | 184 | `thincoder-vscode/src/extension/suspension.mjs` ↔ `thincoder-cli/src/tui/suspension-drive.mjs` | ② | 融合：挂起 / 唤醒机制按核内结构归位（池载体按端注入） | 分叉 ＝ 目录（CLI 住 `tui/`）；VSC 头注自述「与 CLI 的结构差异（同语义移植）」`:9`（迁移期引文——该头注随 2026-09-29 parity-b1-vsc-core 收编退场）⇒ 前提成立 ⇒ **已收编（2026-09-29 · parity-b1-vsc-core）：核 `startSuspension` 单源、三端消费，端差只在装配面（见本档 §2.3）** | — | S1（建核补齐） |
 
 ### 2.3 #184 挂起 / 唤醒——核内形态（设计定案 · 2026-09-14 · S1 续轮执行面）

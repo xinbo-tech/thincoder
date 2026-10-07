@@ -19,8 +19,8 @@
 
 ## 2. 评审墙钟超时（配置化 + 默认 600s）
 
-- 默认常量：`REVIEW_TIMEOUT_MS = 600_000`（10 分钟）——`thincoder-core/advisor/compaction.mjs:37`（由 `thincoder-core/advisor/run.mjs:20` re-export）。
-- 循环内检查点读**配置**，缺省回退常量（`thincoder-core/advisor/loop.mjs:103`）：
+- 默认常量：`REVIEW_TIMEOUT_MS = 600_000`（10 分钟）——`thincoder-core/advisor/compaction.mjs:42`。
+- 循环内检查点读**配置**，缺省回退常量（`thincoder-core/advisor/loop.mjs:104`）：
 
 ```js
 const timeoutMs = (Number.isFinite(cfg) && cfg > 0) ? cfg : REVIEW_TIMEOUT_MS
@@ -28,7 +28,7 @@ const timeoutMs = (Number.isFinite(cfg) && cfg > 0) ? cfg : REVIEW_TIMEOUT_MS
 
 - **运行期校验**：手写 `config.json` 的非法值（0 / 负数 / 字符串）不得静默禁用或立即触发超时——**非法一律回退默认**。
 - 读取链：`thincoder-core/config.mjs:335` 把 `merged.agent.advisor` promote 为 `merged.advisor`（decoupled copy）⇒ `agent.config.advisor.timeoutMs` 天然可见；`runAdvisorToolLoop` 已接收 `agent` 参数，**无需改签名**。
-- **默认值单一来源**：**不**在 `DEFAULTS.agent.advisor` 写死 `timeoutMs`——默认值只住 `REVIEW_TIMEOUT_MS` 常量（`thincoder-core/advisor/compaction.mjs:37`），避免两处漂移（`thincoder-core/config.mjs:49` 的 advisor 默认块注释即登记 `timeoutMs` 为可覆盖项）。
+- **默认值单一来源**：**不**在 `DEFAULTS.agent.advisor` 写死 `timeoutMs`——默认值只住 `REVIEW_TIMEOUT_MS` 常量（`thincoder-core/advisor/compaction.mjs:42`），避免两处漂移（`thincoder-core/config.mjs:49` 的 advisor 默认块注释即登记 `timeoutMs` 为可覆盖项）。
 - **TUI 不新增编辑项**：`/config` 不提供 `timeoutMs` 菜单——手写 `config.json` 即可。
 
 ## 3. 主 agent 轮次上限（默认 200）
@@ -54,7 +54,7 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 
 | 参数 | 键 / 常量 | 默认 | 落点 |
 |---|---|---|---|
-| 评审墙钟 | `agent.config.advisor.timeoutMs` → `REVIEW_TIMEOUT_MS` | 600 000 ms | `thincoder-core/advisor/compaction.mjs:37` · 读取 `thincoder-core/advisor/loop.mjs:103` |
+| 评审墙钟 | `agent.config.advisor.timeoutMs` → `REVIEW_TIMEOUT_MS` | 600 000 ms | `thincoder-core/advisor/compaction.mjs:42` · 读取 `thincoder-core/advisor/loop.mjs:104` |
 | 主 agent 轮次 | `agent.maxTurns` → `DEFAULT_MAX_TURNS` | 200 | `thincoder-core/config.mjs:36` · `thincoder-core/agent/helpers.mjs:24` |
 | goal 模式轮次 | `agent.goalTurns` → `DEFAULT_GOAL_TURNS` | 200 | `thincoder-core/config.mjs:40` · `thincoder-core/agent/helpers.mjs:26` |
 | 子代理轮次 | `agent.subagentTurns` → `DEFAULT_SUBAGENT_TURNS` | 100 | `thincoder-core/agent/helpers.mjs:25` |
@@ -66,8 +66,8 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 
 | 面 | 落点 | 实核 |
 |---|---|---|
-| 评审默认常量 | `thincoder-core/advisor/compaction.mjs:37`（`REVIEW_TIMEOUT_MS` = 600 000） | 在位 |
-| 评审读取 + 运行期校验 | `thincoder-core/advisor/loop.mjs:103` | `Number.isFinite(cfg) && cfg > 0` 回退 |
+| 评审默认常量 | `thincoder-core/advisor/compaction.mjs:42`（`REVIEW_TIMEOUT_MS` = 600 000） | 在位 |
+| 评审读取 + 运行期校验 | `thincoder-core/advisor/loop.mjs:104` | `Number.isFinite(cfg) && cfg > 0` 回退 |
 | advisor 配置 promote | `thincoder-core/config.mjs:335` | `merged.advisor = { ...merged.agent.advisor }` |
 | advisor 默认块（含 timeoutMs 说明） | `thincoder-core/config.mjs:49` | 注释在位 |
 | `maxTurns` 默认 | `thincoder-core/config.mjs:36` · `thincoder-core/agent/helpers.mjs:24` | 均 200 |
@@ -86,7 +86,7 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 
 | 面 | VSC 落点（实核） |
 |---|---|
-| 评审超时默认 + re-export | `thincoder-core/advisor/compaction.mjs:37`（`REVIEW_TIMEOUT_MS` = 600 000）· `thincoder-core/advisor/run.mjs:19` re-export |
+| 评审超时默认 | `thincoder-core/advisor/compaction.mjs:42`（`REVIEW_TIMEOUT_MS` = 600 000） |
 | 评审检查点（配置覆盖 + 非法回退） | `thincoder-vscode/src/advisor/loop.mjs:98`（`Number.isFinite(cfg) && cfg > 0` → 缺省回退常量） |
 | advisor 配置读取链 | `thincoder-vscode/src/agent/setup.mjs:210`（初始 `{ guard: false }`）· `:232`（`raw.agent?.advisor ?? { guard: false }`） |
 | 面板保存透传 timeoutMs（P4——不静默丢） | `thincoder-vscode/src/extension/settings-panel-write.mjs:64`（`saveAgentSettingsFromPanel`）· `:112`–`:116`（合法 payload 胜，否则保留 current——不合并会丢字段；`thincoder-vscode/src/config-io.mjs:26` re-export） |
@@ -139,3 +139,4 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
   §4 补 VSC 注 + §8.2 VSC 行收口（(d) 类批次材料登记）；需求侧头注随批 4 建档收正。
 - 2026-09-26（**撞帽检查点批 · eng-coder**）：§5 总表 +1 行——登记 N7 零写盘带护栏键 `agent.barrenTurnLimit`（默认 120，常量单源；解析 / 计数 / 跳闸三点坐标实核，as-of 2026-09-26）。
 - 2026-09-26（**载入面缺口批 · eng-designer**——用户 14:50 裁定 D「取消零产出阈值」）：§5 总表 **删「零写盘带护栏（N7）」整行**——`agent.barrenTurnLimit` / `DEFAULT_BARREN_TURN_LIMIT` 常量与解析 / 计数 / 跳闸三点坐标一并撤销（N7 整条撤销；撞帽检查 = 无条件，取舍口径见 `docs/core/design/TURN-CAP-CONTINUE.md` §1 #8 / §5 D-TC18）。
+- 2026-10-07（**文档清账批 · fix 轮 · eng-designer**——承批档 `docs/batches/2026-10-07-doc-cleanup.md` §2 · 台账 #954b）：陈旧坐标收正——`REVIEW_TIMEOUT_MS` 常量 `compaction.mjs:37` ⇒ `:42`（五处）∥ 消费点 `loop.mjs:103` ⇒ `:104`（三处）∥ 「`run.mjs` re-export」谓词删（现盘核：零 re-export——`thincoder-core/advisor/compaction.mjs:42` ∥ `loop.mjs:104` 实读）。**零语义**。

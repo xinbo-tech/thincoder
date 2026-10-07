@@ -67,7 +67,7 @@ VSC 侧对应面住 `thincoder-core/advisor.mjs` + `src/advisor/*`（拆 `provid
 - **N-S1 预算**：`consultTurns` 默认 40 + 墙钟看门狗 `consultTimeoutMs` 600000ms（10min）——坐标（实核）＝ `thincoder-vscode/src/config-io.mjs:321-322`；判定权仍归主 agent（会诊 = 建议非门禁）。
 
 **端差（已裁保留 · 形态类——类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）**：呈现面（面板活动块 + 回复预览 vs TUI）+ 配置入口（Settings 面板 vs `/config`）。坐标（实核）＝ `thincoder-vscode/src/agent-tools/consult.mjs` · `config-consult.mjs`。（**迁核注 2026-09-20**：该两档已退役——**W12 迁核删除集**；现体 = 核面同族（W12 迁核后归核）。）
-**测试缺口（发现即报）**：VSC `test/` 对 `_consultSessions` / `runConsultChild` 直引零命中——既有间接回归 = `test/config-softfail.test.mjs` · `activity-flow.test.mjs` · `agent-lifecycle-singleton.test.mjs`。
+**测试缺口（发现即报）**：VSC `test/` 对 `_consultSessions` / `runConsultChild` 直引零命中——既有间接回归 = `test/config-softfail.test.mjs` · `activity-flow.test.mjs` · `agent-lifecycle-singleton.test.mjs`（已随 2026-09-28 测试树全清退场，留名存档）。（迁移期引文）
 
 **二态化裁定行（2026-09-25 · 台账 #339① 需求层复核）**：端差（呈现面 + 配置入口）= **已裁保留**（形态类——类判据单源 = `docs/vsc/design/WEBVIEW-PROTOCOL.md` §6.1 首）；迁核注在册（W12 迁核删除集——现体 = 核面同族）。
 

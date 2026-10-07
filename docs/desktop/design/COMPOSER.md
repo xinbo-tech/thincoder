@@ -207,7 +207,7 @@
 | 5 | 批内件 | `docs/batches/2026-10-01-desktop-slash-commands.test.mjs`（已建成 · 425 行——解析 ∥ 别名 ∥ 回落 ∥ 表纪律；随批留存 · 不进仓套件） | 全批 |
 | 6 | 设计档 | 本档 §3.2（本块）· `docs/desktop/design/UI.md` §1 输入区行 + 表行 15 + 本批注 + 变更记录 · `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-12 + §5 + §6 + §9 + 变更记录 | 全批 |
 
-零触面：`renderer/composer-wire.mjs` ∥ `renderer/composer-sync.mjs` ∥ `renderer/app.mjs` ∥ `index.html` ∥ `composer.css` ∥ `docs/desktop/design/IPC.md`（**零新通道**）∥ CLI 全树 ∥ VSC 全树 ∥ `thincoder-core`。
+零触面：`renderer/composer-wire.mjs` ∥ `renderer/composer-sync.mjs` ∥ `thincoder-desktop/renderer/app.mjs` ∥ `index.html` ∥ `composer.css` ∥ `docs/desktop/design/IPC.md`（**零新通道**）∥ CLI 全树 ∥ VSC 全树 ∥ `thincoder-core`。
 
 **本批（桌面 slash 命令 · `/help` 增量 · initial 轮 · 2026-10-01② · 台账 #761 · 批 `docs/batches/2026-10-01-desktop-slash-commands.md` §2.10）行「现行 ⇒ 实读（实施落盘 · 父侧回填 2026-10-01）」**（实读 2026-10-01②——内容行数口径（文末换行不计）；
   机制 ∕ 判据单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-12 增量句 ∥ §5 条 6 ∥ `docs/desktop/design/UI.md` §1 本批注项 8 ∥ `docs/desktop/design/RENDERER.md` §1.1 帮助行族条；**实施落盘（#86）· 父侧回填**）：
@@ -230,7 +230,7 @@
 | 14 | `thincoder-desktop/renderer/chat-fixes.css` | **118 ⇒ 124**（实读；帮助行族三行类） | 样式面 |
 | 15 | 批内件 | `docs/batches/2026-10-01-desktop-slash-commands.test.mjs` **345 ⇒ 425**（实读；+腿 8–11；既有腿随动收正——别名集 + `/h` ∥ `/help` 条 ∥ `slash.unknown` 新值） | 全批 |
 
-零触面：`renderer/composer-wire.mjs` ∥ `renderer/composer-sync.mjs` ∥ `renderer/app.mjs` ∥ `index.html` ∥ `docs/desktop/design/IPC.md`（**零新通道**）∥ CLI 全树 ∥ VSC 全树 ∥ `thincoder-core`。
+零触面：`renderer/composer-wire.mjs` ∥ `renderer/composer-sync.mjs` ∥ `thincoder-desktop/renderer/app.mjs` ∥ `index.html` ∥ `docs/desktop/design/IPC.md`（**零新通道**）∥ CLI 全树 ∥ VSC 全树 ∥ `thincoder-core`。
 
 **本批（attach 文件支持 · 设计轮 · 2026-10-05 · 台账 #948 · 批 `docs/batches/2026-10-05-attach-file-support.md`）行「现行 ⇒ 预期」**（实读 2026-10-05——内容行数口径（文末换行不计）；
   机制 ∕ 判据单源 = `docs/render-core/design/RENDER-CORE.md` §2 **KD-RC-13** ∥ §5 条 6；**设计轮——产品码零触**）：
@@ -321,7 +321,7 @@
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 · 台账 #841）：§2 增本批注（fallback 态明示行——`providerState` 载荷 ∥ 复用 #840 键与钮 ∥ 行序与清位）；**产品码零触（设计轮）**。机制单源 = `docs/core/design/PROVIDER.md` §6.22。
 - 2026-10-03（**首跑渠道提示修复批 · 修正轮 #7（用户 13:43 更正——13:09 口径系拼音误打）· eng-designer**——承批档 `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2 更正块 · 台账 #840）：本批注收正为**词面-only** 终形（`composer.send.noDefaultModel`——状态陈述）；动作面（`composer.send.chooseModel` ∥ handler ∥ 样式规则）作废；同笔收净 #841 明示行批注之同源引用（父侧「四档全域」裁）。**产品码零触（修正轮）**。明细 = 批档 §2 更正块。
 - 2026-10-03（**首跑渠道提示修复批 · 实施后文档面回填轮（§3.1 两行走读齐平）· eng-designer**——承批档 `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2 ∥ §5 · 台账 #840）：§3.1 两行实读对盘（`composer-wire.mjs` **262 ⇒ 266**——失败载体 `{ reason, kind }` ∥ `composer-sync.mjs` **302 ⇒ 306**——类路由（词面-only））；越层在册句随正（续期——引 `docs/desktop/design/PROJECT.md` §4.1 越层段）。**零新语义**（读数）。明细 = 批档 §5。
-- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 ∥ §5 · 台账 #841）：本批注两项收正——行面补**行锚 `data-notice="provider-fallback"`**（机检面）；第三刷新点收窄为**实落写点三处**（`thincoder-desktop/src/main/settings.mjs:230` ∥ `:330` ∥ `providers.mjs:181`——设计按盘回归；不取 `ask()` 边界形：盘上无该机制）；§3.1 三行走读齐平（`mount-composer` **297 ⇒ 299**（贴 300 层在册）∥ `composer-wire` **266 ⇒ 276** ∥ `composer-sync` **306 ⇒ 322**）。**零新语义**（读数 ∥ 坐标）。明细 = 批档 §2 回填轮块。
+- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 ∥ §5 · 台账 #841）：本批注两项收正——行面补**行锚 `data-notice="provider-fallback"`**（机检面）；第三刷新点收窄为**实落写点三处**（`thincoder-desktop/src/main/settings.mjs:230` ∥ `:330` ∥ `thincoder-desktop/src/main/providers.mjs:181`——设计按盘回归；不取 `ask()` 边界形：盘上无该机制）；§3.1 三行走读齐平（`mount-composer` **297 ⇒ 299**（贴 300 层在册）∥ `composer-wire` **266 ⇒ 276** ∥ `composer-sync` **306 ⇒ 322**）。**零新语义**（读数 ∥ 坐标）。明细 = 批档 §2 回填轮块。
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #9（评审轮 1 · 发现 4 ∥ 7）· eng-designer**——承批档 §3 轮次 1 · 台账 #841）：本批注收正——数据面载荷补 `invalidReason`（合成式可算）∥ 行面判据改 **`fallback` ∧ 非 invalid 类**（合成式单源 = `doc:PROVIDER.md:§6.22`）∥ 清位补**第三刷新点**（设置写回执——`settings:agent` ∥ `provider:save` 成功回执携 `providerState` ⇒ 即时退场）。**产品码零触（修正轮）**。
 - 2026-10-03（**会话选定写回批（default-model-carryover）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-default-model-carryover.md` §2 · 台账 #880）：§2 增本批注（选定写回——写路 ∥ 槽面实变判据 ∥ 回执 `providerState` ∥ 边界）；**产品码零触（设计轮）**。机制单源 = `docs/core/design/SESSION.md` §6.21 判据句 6。
 - 2026-10-03（**轻通道轮八 · fallback 明示行文案澄清 · 收口形式化轮 · eng-designer**——承批档 `docs/batches/2026-10-03-light-round-8.md` §1 · 台账 #879 · 实况 = 提交 `32216ffc`）：#841 批注收正——明示行词面由「逐字复用 #840 键」改为**新键 `composer.send.noDefaultModelFallback`**（澄清半句——**失败词 ∥ 态词分家**）；§3.1 `composer-sync.mjs` 行实读对盘（**322 ⇒ 324**）。**产品码零触**（收口形式化轮）。明细 = 批档 §2。

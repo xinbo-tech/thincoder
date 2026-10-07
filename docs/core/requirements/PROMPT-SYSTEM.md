@@ -155,7 +155,7 @@ discipline-normal.md 内容大纲（每节管什么）：
 | 会诊 Consult | 判断题第二意见——consult_start 并行只读 |
 | 飞刀 Escalate | 写权限交给更强模型——早点 escalate 不烧失败 |
 
-**附属纪律（已落提示词正本——本档不复制，D2）**：spawn 排队纪律、需求池攒批工作流（五条）——机制权威 = `docs/core/design/LEDGER.md`（v2 台账）。
+**附属纪律（已落提示词正本——本档不复制，D2）**：spawn 排队纪律、需求池攒批工作流（五条——正本 = `docs/core/design/prompts/persona-engineering.md` §「台账（需求池 / 技术待办）——攒批与生命周期」）；台账机制权威 = `docs/core/design/LEDGER.md`（v2 台账）。
 
 > 2026-09-21 修正（**tool-discipline 批 · 主 agent 落笔**——承 `docs/batches/2026-09-21-tool-discipline.md` · 台账 #214 · 机制 = `docs/core/requirements/TOOLS.md` F10）：**`task` 工具工程模式机械停用**（装配摘除 + 调用拒）后，提示词面三处撞点仍「指挥已停用工具」= 自相矛盾态 ⇒ 收正：
 > ① `discipline-engineering.md` 铁律 3「工作靠任务清单跟踪」→ 工程模式分支（追踪面 = 批次档 §2 + 台账）；② 同档需求完成判据句「任务清单是需求验收的标志」→ 批次档 §2 条目表 + 台账行；③ `persona-engineering.md` 欠账句「立即写进任务清单」→ 批次档 §6 未决（或台账行）。散文纪律句本体不删（机判 + 文案改指双轨）。（折两行 = 父侧直接执行 · 行宽收正 · 零语义 · 可 revert · 2026-09-22 hygiene 批）

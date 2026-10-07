@@ -76,7 +76,7 @@
 | D3 | §3-T4：CLI 命令入口面（`bin` 分发 / `USAGE` / shell 补全发射）设计档归属缺位 | 2026-09-25 cli-small-items 批：#350 载体收口——载体 = `docs/cli/design/CLI-ENTRY.md`（新建 · 命令树 / 补全发射契约 / #350 机检形迁入）+ `docs/README.md` §4 登记同批 ⇒ 归属缺位消解 |
 | D4 | A4：`bin/thincoder.mjs` **499**（贴 500 硬限——命令分发表外提触发已到） | 拆档批 R4 兑现（2026-09-28）：命令分发表外提 ⇒ `bin/thincoder.mjs` **178** · `src/command-table.mjs` **186** · `src/command-interactive.mjs` **187**（缝 = 同名转口 ∕ `ctx` 注入；三档均 <400）；MS-1 读取面同批随动（`docs/cli/design/CLI-ENTRY.md` §4）⇒ 移出 |
 | D5 | B8 `test/doc-check.test.mjs` **340**（越 300 咨询线登记——env-config-purge 批首登） | 档随 2026-09-28 测试树全清令退场（现盘 `thincoder-cli/test/` 零 `.test.mjs`——实读 2026-09-29；常驻重建挂台账 #590 面）⇒ 登记面消解（迁移期引文） |
-| D6 | A1：`src/tui/model-picker.mjs` **499**（贴 500 硬限——「触发式 · 不预拆」案在册） | 2026-09-29 structure-split-2 批拆分兑现：渠道管理四流 + `cascadeRemoveProvider` 出档 ⇒ `src/tui/provider-admin.mjs` **213**；主档 **316**（<400）⇒ 移出（`pickers.mjs` 注释指针一行级随批 ∥ import ∥ 装配面零改） |
+| D6 | A1：`src/tui/model-picker.mjs` **499**（贴 500 硬限——「触发式 · 不预拆」案在册） | 2026-09-29 structure-split-2 批拆分兑现：渠道管理四流 + `cascadeRemoveProvider` 出档 ⇒ `thincoder-cli/src/tui/provider-admin.mjs` **213**；主档 **316**（<400）⇒ 移出（`pickers.mjs` 注释指针一行级随批 ∥ import ∥ 装配面零改） |
 
 | D7 | §3-T2 ledger 补全缺口（三套皆缺） | 2026-09-30 crossline-clearance 批 I8 兑现——三套补 `migrate` ∕ `audit` 子命令 + 旗标（`--dry-run` ∕ `--confirm` ∕ `--from` ∕ `--root`；建议形 = 核解析空格形）：`thincoder-cli/src/completions.mjs` **126 → 136**（实读） |
 
@@ -119,6 +119,6 @@
 
 - 2026-09-29（**structure-split-2 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-09-29-structure-split-2.md` §1 ∕ §2.2-A · 台账 #620）：**A1 行转「本批执行」**（届盘实读 499 未变；两段切点 ∕ 预算 ≈315 ∕ ≈200 落行；`pickers.mjs` **import ∥ 装配面零改**——注释指针一行级随批）；拆后行移 §4 已消解 = 实施轮义务。**零语义**（登记面 ∕ 方案落位）。
 
-- 2026-09-29（**structure-split-2 批 · 收口轮（文档面回填）· eng-designer**——承批档 `docs/batches/2026-09-29-structure-split-2.md` §5 · 台账 #620）：A1 行兑现转出——拆分落盘后实读 **316** ∥ 新档 `src/tui/provider-admin.mjs` **213**；按 §1-2② 行维护规则移 **§4-D6**（留证据行 · 防回潮）；表 A 计数 **15 ⇒ 14 档**。**零语义**（登记面随实读）。
+- 2026-09-29（**structure-split-2 批 · 收口轮（文档面回填）· eng-designer**——承批档 `docs/batches/2026-09-29-structure-split-2.md` §5 · 台账 #620）：A1 行兑现转出——拆分落盘后实读 **316** ∥ 新档 `thincoder-cli/src/tui/provider-admin.mjs` **213**；按 §1-2② 行维护规则移 **§4-D6**（留证据行 · 防回潮）；表 A 计数 **15 ⇒ 14 档**。**零语义**（登记面随实读）。
 
 - 2026-09-30（**采集收网批 · 设计轮 · eng-designer**——承 `docs/batches/2026-09-30-heap-snapshot-switch.md` §2）：A6 行随触碰刷新（**472 ⇒ ≈490**——设计轮读数；**终值 = 488**——实施轮实读，2026-09-30；`diagnostics.heapSnapshot` 菜单项 ∥ 处理支）——未预拆维持 + 余量贴限注。**零新语义**（登记面）。

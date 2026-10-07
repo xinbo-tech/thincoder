@@ -49,7 +49,7 @@
    **slot 权威键 `agent.engineering`** = 会话槽面键——**设置面零行**（泛化编辑器全消——#635① · 2026-10-04；写面 = `session:flags` 槽写 ∥ 输入区模式钮）；写面归属 ∕ 拒码 = 本档 §1 **KD-49**。
 7. **S3 端差处置（消——2026-09-29 · 批 `docs/batches/2026-09-29-hatch-clearance-2.md`）**——行标面补 VSC `failure` 分档（hostBusy ⇒「宿主繁忙」+ 抑制失败句）：原「能力缺失」不成立（欠做）⇒ 补做三件 =
    ① 新档 `thincoder-desktop/src/main/loop-sampler.mjs`（port ≈45 行——源 = `thincoder-vscode/src/extension/loop-sampler.mjs:67-76`）
-   ② 行面 `failure` 键贯链（`providers.mjs:105-107` → 通道 → 渲染——渲染档点名 = `thincoder-desktop/renderer/views/settings-sections.mjs`）
+   ② 行面 `failure` 键贯链（`thincoder-desktop/src/main/providers.mjs:105-107` → 通道 → 渲染——渲染档点名 = `thincoder-desktop/renderer/views/settings-sections.mjs`）
    ③ 词键（落 `renderer/i18n-settings.mjs`——#614 第四档，词面阻已除）；判据 = 同宿主忙态两端行面同词 + 同抑制形。上抛行 = `docs/desktop/design/PROJECT.md` §10 **CG**（同拍定形）。
 8. **首屏引导门（R1）**——`data-boot` 补渲染消费：`≠ "ok"` 期间引导层在场；`"error"` ⇒ 错误面（可读原因）；`"ok"` ⇒ 撤（**零残留**）；写者单点零改（`thincoder-desktop/renderer/dom.mjs`）。
    **CJ 裁定落（#617-CJ · 波 C 已落）**：`error` 态 = **顶部横幅非模态**（载原因不覆盖交互——`inset: 0 0 auto` ∕ `pointer-events: none` ∕ z 序（9）低于设置面（10））⇒ 设置面可进可出 ∧ 原因可见；`ok` ∕ `loading` 两态零改；裁定行 = `docs/desktop/design/PROJECT.md` §10 **CJ**；真机复读 = 父侧（D16）。
@@ -232,7 +232,7 @@
 
 | 文件 | 实读落值（构成） | 舱 |
 |---|---|---|
-| W1+W4 舱（端）：`renderer/app.mjs` ∕ `thincoder-desktop/renderer/index.html` ∕ `renderer/skin.css` ∕ `renderer/chrome.css` ∕ `thincoder-desktop/renderer/i18n.mjs` ∕ `views/statusline-segments.mjs` ∕ `i18n-composer.mjs` | **293** ∕ **55** ∕ **18** ∕ **450** ∕ **500** ∕ **224** ∕ **92**（R1 引导门：静态层 + `settleBoot` + 两样式档；I2–I5 键面 ∕ 注释；届盘复读与 §5 记录差见批档 §2.16） | W1+W4 |
+| W1+W4 舱（端）：`thincoder-desktop/renderer/app.mjs` ∕ `thincoder-desktop/renderer/index.html` ∕ `renderer/skin.css` ∕ `renderer/chrome.css` ∕ `thincoder-desktop/renderer/i18n.mjs` ∕ `views/statusline-segments.mjs` ∕ `i18n-composer.mjs` | **293** ∕ **55** ∕ **18** ∕ **450** ∕ **500** ∕ **224** ∕ **92**（R1 引导门：静态层 + `settleBoot` + 两样式档；I2–I5 键面 ∕ 注释；届盘复读与 §5 记录差见批档 §2.16） | W1+W4 |
 | W1+W4 舱（VSC ∕ 核）：VSC `settings-panel-write.mjs` ∕ `presets.mjs` ∕ `thincoder-vscode/src/extension/settings.mjs` ∕ `locales/zh.json` ∕ 核 `thincoder-core/agent-tools/settings.mjs` | **183** ∕ **197** ∕ **350** ∕ 两值改 ∕ **271**（E1 改指核 `probeTargetOf`（`thincoder-core/provider-flows.mjs:79`）；S13 遮罩字面单源——核 `thincoder-core/agent-tools/settings.mjs:26` `MASKED` 转 export（随正 2026-10-02），桌面 ∕ VSC 同 import） | W1+W4 |
 | W2 舱：`providers.mjs` ∕ `ipc.mjs` ∕ `ipc-registry.mjs` ∕ `preload.cjs` ∕ `thincoder-desktop/src/main/settings.mjs` ∕ `mount-settings-exits.mjs` ∕ `mount-settings-segments.mjs` ∕ `views/settings-sections.mjs` ∕ `views/settings-controls.mjs` ∕ `views/settings-sections-tools.mjs` ∕ `thincoder-desktop/renderer/views/settings.mjs` ∕ `store.mjs` | **300** ∕ **322** ∕ **86** ∕ **78** ∕ **324** ∕ **224** ∕ **356** ∕ **297** ∕ **130** ∕ **161** ∕ **334** ∕ **300** | W2 |
 | W3 舱：`mcp-servers.mjs` ∕ `settings-values.mjs` ∕ `settings-env.mjs` ∕ `views/settings-agent.mjs` ∕ `views/settings-sections-mcp.mjs` ∕ 核 `shell-candidates.mjs`（新） ∕ `think-off.mjs` ∕ VSC `settings-panel-write.mjs`（再触碰） | **262** ∕ **109** ∕ **95** ∕ **227** ∕ **178** ∕ **78** ∕ **49** ∕ **183** | W3 |

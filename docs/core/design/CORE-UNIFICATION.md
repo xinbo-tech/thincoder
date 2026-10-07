@@ -743,7 +743,7 @@ VSC（`thincoder-vscode/`）：
 
 | 单元 | 档（原 `thincoder-cli/` 相对；已迁档注现态落点） | 行数 |
 |---|---|---|
-| U1 | `src/log.mjs` | 195 |
+| U1 | `thincoder-core/log.mjs` | 195 |
 | U2 | `src/prompts/advisor-design.md` | 41 |
 | U2 | `src/prompts/advisor-round1.md` | 41 |
 | U2 | `src/prompts/advisor-round2.md` | 46 |
@@ -827,7 +827,7 @@ VSC（`thincoder-vscode/`）：
 | U9 | `src/agent-tools/recent-changes.mjs` | 24 |
 | U10 | `src/provider/anthropic.mjs` | 225 |
 | U10 | `thincoder-core/provider/core.mjs` | 476 |
-| U10 | `src/provider/errors.mjs` | 101 |
+| U10 | `thincoder-core/provider/errors.mjs` | 101 |
 | U10 | `src/provider/google.mjs` | 257 |
 | U10 | `thincoder-core/provider/index.mjs` | 7 |
 | U10 | `src/provider/normalize.mjs` | 81 |
@@ -885,7 +885,7 @@ VSC（`thincoder-vscode/`）：
 | U13 | `thincoder-core/tools/shared.mjs` | 446 |
 | U13 | `src/tools/tree.mjs` | 65 |
 | U13 | `src/tools/web.mjs` | 224 |
-| U14 | `src/config.mjs` | 496 |
+| U14 | `thincoder-core/config.mjs` | 496 |
 | U14 | `src/config-migrate.mjs` | 70 |
 | U14 | `thincoder-core/agent-tools/settings.mjs` | 293（2026-09-29 实读） |
 | U15 | `thincoder-core/agent.mjs` | 417 |
@@ -1242,7 +1242,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 
 | 类 | 契约点（现状 · 证据） | 归一可能引入的变更 | 兼容形态（A7 要求） | 落地物 |
 |---|---|---|---|---|
-| **配置格式** | `~/.thincoder/config.json`：两端**同一文件同一格式**（严格 `JSON.parse`，无 JSONC）；顶层键 = `providers` / `defaultModel` / `agent` / `memory` / `shell` / `embedding` / `mcp.servers` / `websearch` / `traces` / `proxy`（全 camelCase）；迁移核 = `migrateLegacyModelFields`（两端各一份、无版本字段、写回、删旧键）——`thincoder-cli/src/config.mjs:24-25` · `thincoder-vscode/src/config-io.mjs:30-31` · `thincoder-cli/src/config-migrate.mjs:26-60` · `thincoder-vscode/src/config-migrate.mjs:30-78` · 用户面 `thincoder-cli/README.md:103-163` | 键名 / 默认值 / 口径归一（实测分叉：CLI-only `agent.goalTurns` · `agent.streamRules`；`agent.compactThreshold` 默认 100000 vs null——`thincoder-cli/src/config.mjs:66-74` ↔ `thincoder-vscode/src/config-io.mjs:312-331`）；`$schema` 注入与否（VSC 注入 / CLI 不注入——`thincoder-vscode/src/config-io.mjs:108` ↔ `thincoder-cli/src/config.mjs:493`） | ① **旧键可读**：保留现有「旧形态在场即迁移」的读入路径（幂等 / 失败不阻断 / 写回带 `.bak-{ts}`——`thincoder-cli/src/config.mjs:266-273` · `:470-496`）；② **不得静默丢弃**：用户已手写的键（含未知顶层键）在读写往返后仍在；③ 键名 / 默认值归一 ⇒ 登记 + CHANGELOG（旧键保留为读入别名）；④ `$schema` 差异归一取一侧时须登记（拟保留注入——编辑器补全；只建议不代裁） | 测试断言（旧配置读入 ⇒ 键仍在 / 旧键触发迁移）+ CHANGELOG 条目 + README 键面同步 |
+| **配置格式** | `~/.thincoder/config.json`：两端**同一文件同一格式**（严格 `JSON.parse`，无 JSONC）；顶层键 = `providers` / `defaultModel` / `agent` / `memory` / `shell` / `embedding` / `mcp.servers` / `websearch` / `traces` / `proxy`（全 camelCase）；迁移核 = `migrateLegacyModelFields`（两端各一份、无版本字段、写回、删旧键）——`thincoder-core/config.mjs:24-25` · `thincoder-vscode/src/config-io.mjs:30-31` · `thincoder-cli/src/config-migrate.mjs:26-60` · `thincoder-vscode/src/config-migrate.mjs:30-78` · 用户面 `thincoder-cli/README.md:103-163` | 键名 / 默认值 / 口径归一（实测分叉：CLI-only `agent.goalTurns` · `agent.streamRules`；`agent.compactThreshold` 默认 100000 vs null——`thincoder-core/config.mjs:66-74` ↔ `thincoder-vscode/src/config-io.mjs:312-331`）；`$schema` 注入与否（VSC 注入 / CLI 不注入——`thincoder-vscode/src/config-io.mjs:108` ↔ `thincoder-core/config.mjs:493`） | ① **旧键可读**：保留现有「旧形态在场即迁移」的读入路径（幂等 / 失败不阻断 / 写回带 `.bak-{ts}`——`thincoder-core/config.mjs:266-273` · `:470-496`）；② **不得静默丢弃**：用户已手写的键（含未知顶层键）在读写往返后仍在；③ 键名 / 默认值归一 ⇒ 登记 + CHANGELOG（旧键保留为读入别名）；④ `$schema` 差异归一取一侧时须登记（拟保留注入——编辑器补全；只建议不代裁） | 测试断言（旧配置读入 ⇒ 键仍在 / 旧键触发迁移）+ CHANGELOG 条目 + README 键面同步 |
 | **输出文案** | CLI = 源码内联字面量（USAGE `thincoder-cli/bin/thincoder.mjs:92-114`；stderr 前缀族 `[rate-limit]` / `[tool]` / `[context]` / `[task]` / `[usage]` `:183-211`；TUI 文案 `thincoder-cli/src/tui/cmd-help.mjs:17-25`）；VSC = `thincoder-vscode/locales/en.json` / `zh.json` + `t()`（`thincoder-vscode/src/i18n.mjs:49-56`）+ 扩展侧硬编码文案 | 归一后同一句只留一份 ⇒ 字面量可能与任一端旧文案不同 | ① **机器消费面不得改**（改前先列 §2.12.3）：CLI `[error] ` 前缀（`thincoder-cli/bin/thincoder.mjs:74`——`thincoder-cli/test/tui-stderr-capture.test.mjs:89` 锁定）· ACP 通知文案（`docs/design/ACP-CLIENT.md:47`）· VSC locale 逐字串（`thincoder-vscode/test/status-line.test.mjs:86-111` 锁定）；② **人读文案**：允许改，但**须登记** + CHANGELOG；③ VSC 字典面（key + 双语）整体迁移，不留半套（缺键回退返回 key——`thincoder-vscode/src/i18n.mjs:51`）；④ **不得只改一端**（同类文案两端同源） | 变更条目（两产品 CHANGELOG）+ 受影响测试同步 + §2.5 登记  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | **命令面** | CLI 子命令 13 项 + `--` 参数 + TUI 26 条斜杠命令 + 别名 + 补全词表（`thincoder-cli/bin/thincoder.mjs:92-114` / `:133` · `thincoder-cli/src/tui/slash-commands.mjs:39-69` · `thincoder-cli/src/completions.mjs:14-80`）；VSC 4 条命令 id + 菜单 + 快捷键 + 内部 `thincoder.buildIndex`（`thincoder-vscode/package.json:56-89` · `thincoder-vscode/extension.mjs:76`） | 合一时命令名 / 参数 / 行为取一侧 ⇒ 另一端旧名可能消失 | ① **旧命令名保留**（改名 ⇒ 旧名留为**别名**——CLI 别名机制已有：`thincoder-cli/bin/thincoder.mjs:397-403` · `thincoder-cli/src/tui/slash-commands.mjs:69`）；② **VSC 命令 id 视作冻结**（对外可绑定面：用户 keybindings / 第三方扩展——`thincoder-vscode/package.json:83-89`）；③ 端独有命令**不因归一而新造**（如 VSC 无 `/mcp` 命令面——`thincoder-vscode/docs/design/MCP.md:6`）⇒ 只统一**共同**命令面；④ 既有对外承诺漂移（与本板块无关）另报另批 | 别名实现 + CHANGELOG + README 命令表同步 |
 | **事件语义** | CLI：`⟦ev⟧` 文本 token 族（`thincoder-cli/src/tui/subagent-blocks.mjs:35-46`）· hooks 四事件（`thincoder-cli/src/hooks.mjs:7-11` / `:47-56`；`thincoder-cli/test/hooks-stop.test.mjs:247` 锁定）· ACP `session/update` 块（`thincoder-cli/src/acp/bridge.mjs:58-59` / `:186-227`；契约档 `docs/design/ACP-CLIENT.md`）；VSC：`postMessage` 50 类型（`thincoder-vscode/src/extension/panel-callbacks.mjs:119-176` → `thincoder-vscode/webview/chat.js:128-297`）· `subagent.status` 值域 · `onWait` phase 值域（VSC 多 `rate`——`thincoder-vscode/src/extension/panel-callbacks.mjs:88`） | 事件名 / 状态值域 / 载荷字段归一 ⇒ 任一端对侧语义可能变 | ① **对外事件面冻结**（ACP `session/update` 值域与载荷 · hooks 四事件名与 payload · VSC `postMessage` type 与 `subagent.status` 值域）——变更须列入 §2.12.3 并给迁移；② **归一的是语义（何时 / 什么状态），不是承载形态**（CLI 文本 token ↔ VSC 结构化消息 = 结构性不对称，留壳以注入表达——§2.2 契约 5）；③ **状态 / phase 值域统一 = 面内条目**（含 A11 ②：改对外可见语义 ⇒ 须裁）；④ 行为面分叉（如「子 agent 被丢弃」提醒：VSC 有 / CLI 无——`thincoder-vscode/src/agent-tools/async-discard.mjs:37-43` ↔ `thincoder-core/agent/run-stages.mjs:162-176`；登记 `docs/TODO.md:13`）以谁为准 = 逐条裁决 | 事件面变更登记 + 测试同步 + CHANGELOG  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
@@ -1358,7 +1358,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | #131 面板写面 | **部分**（自写通知订阅在核内 `thincoder-core/config-io.mjs:101`） | UI 壳按端注入（端侧） |
 | #177 provider 纯持久化 + UI 壳 | **部分**（纯持久化已落核 `thincoder-core/config-io.mjs:198`） | UI 壳按端注入（端侧） |
 | #109 评审进度行 | **有**（`seams.describeArgs`） | 端侧接线（**未接**——2026-09-28 实核：核 `thincoder-core/advisor/run.mjs:143` 调用未传 `seams`；展示面单源在盘——核 `thincoder-core/tool-args.mjs:16`（B7 1a 上提；CLI 转口 `thincoder-cli/src/tui/tool-args.mjs:14`）） |
-| #143 模型规格端侧派生面 | 无 | 端侧自有 · 经 provider 字段数据面（核内位 = 无 为正常形态、非缺位——2026-09-15 裁定〔与 #175 同案〕；数据源 = 核内规格表 `thincoder-core/model-specs.mjs`（`reasoningEffortEnum` 已落）；端侧派生面消费 = `thincoder-vscode/src/extension/settings.mjs:321`；端差字段 `reasoningEffortDefault` = 端侧扩展（CLI 无——W16 现体 = `thincoder-vscode/src/specs.mjs:17-26,38-42`，原 `thincoder-vscode/src/config.mjs:104` 已删）；CLI 同构先例 = `thincoder-cli/src/tui/cmd-think.mjs:16,118`） |
+| #143 模型规格端侧派生面 | 无 | 端侧自有 · 经 provider 字段数据面（核内位 = 无 为正常形态、非缺位——2026-09-15 裁定〔与 #175 同案〕；数据源 = 核内规格表 `thincoder-core/model-specs.mjs`（`reasoningEffortEnum` 已落）；端侧派生面消费 = `thincoder-vscode/src/extension/settings.mjs:321`；端差字段 `reasoningEffortDefault` = 端侧扩展（CLI 无——W16 现体 = `thincoder-vscode/src/specs.mjs:17-26,38-42`，原 `thincoder-vscode/src/config.mjs:104` 已删）；CLI 同构先例 = `thincoder-cli/src/tui/cmd-think.mjs:16,118`） （迁移期引文——档已删） |
 | #163 标题生成三格式分派 | 核内按 `provider.format` 分派（端无关实现） | 无（已满足；如需端差再补位） |
 | #52 / #64 question 无 UI 降级径 | **有**（`ctx.onQuestion`） | 端侧接线——**已接**（CLI `thincoder-cli/src/tui/tool-events.mjs:372` · VSC `thincoder-vscode/src/extension/panel-callbacks.mjs:250`（端接线已取核）） |
 | #53 bash `terminal` 参数段 | 文档面**有**（锚）；实现面在端 | 端侧接线（实现面）——**锚供值已接**（CLI `thincoder-cli/src/prompt-injections.mjs:17`（空串）· VSC `thincoder-vscode/src/prompt-injections.mjs:18`（`terminal` 面全文）） |
@@ -1727,7 +1727,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | VSC src | `thincoder-vscode/src/conventions.mjs` | 226 | 0（结构未变） |
 | VSC src | `thincoder-vscode/src/explore-distill.mjs` | 156 | 0（结构未变） |
 | VSC src | `thincoder-vscode/src/extension/suspension.mjs` | 362 | 0（结构未变） |
-| VSC src | `thincoder-vscode/src/log.mjs` | 196 | 0（结构未变） |
+| VSC src | `thincoder-vscode/src/log.mjs` | 196 | 0（结构未变） （迁移期引文——档已迁核） |
 | VSC src | `thincoder-vscode/src/memory.mjs` | 273 | 0（结构未变） （迁移期引文——档已迁核） |
 | VSC src | `thincoder-vscode/src/prompt-overlays.mjs` | 83 | 0（结构未变） |
 | VSC src | `thincoder-vscode/src/tools/checklist.mjs` | 438 | 0（结构未变） （迁移期引文——机制已废） |
@@ -1747,7 +1747,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | VSC test | `thincoder-vscode/test/wait-for-advisor-pool.test.mjs` | 59 | 0（结构未变）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | VSC test | `thincoder-vscode/test/webview-turnstate.test.mjs` | 325 | 0（结构未变）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | CLI test | `thincoder-cli/test/advisor-chain-guards.test.mjs` | 488 | 0（结构未变）  （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
-| CLI src | `thincoder-cli/src/log.mjs` | 195 | 0（结构未变） |
+| CLI src | `thincoder-cli/src/log.mjs` | 195 | 0（结构未变） （迁移期引文——档已迁核） |
 | scripts | `scripts/check-doc-width.mjs` | 109 | 0（结构未变） （迁移期引文——工具已退役） |
 | scripts | `scripts/check-ledger.mjs` | 259 | 0（结构未变） （迁移期引文——工具已退役） |
 | scripts | `scripts/doc-anchors-v5.mjs` | 255 | 0（结构未变） （迁移期引文——工具已退役） |

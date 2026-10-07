@@ -159,5 +159,5 @@ N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自
 - 2026-09-29（**provider-config-family 批 · 需求新增 · 父侧直接执行 · 可 revert**——承用户 20:45 请求「陈年导入你就不管了吗？」；台账 #177）：§2.1 新增条目「渠道收录判据成文」（判据单源 = 设计档 `PROVIDER.md` §6.21；本批同时新增 `huawei` 预设——`PROJECT.md` C3 计数 21→22 已随动）；**本档新增需求 1 条**。
 - 2026-09-30（**#735 · N-IDG-3 新增 · 主 agent 落笔**〔父侧直接执行 · 可 revert〕——承批 `docs/batches/2026-09-30-vsc-paste-cleanup.md` §2.7（设计轮草案）· 用户 18:24 ∥ 18:28 令）：§4.5 非功能段新增 **N-IDG-3**（VSC 贴图临时件有界——写时 mtime 3 天窗扫除 ∥ 核 `cleanupOldToolResults` 单源）；源 = 台账 #735（pairfix §2 F-1 上抛：VSC 贴图件无自动清理实锤）。
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 1 行折行（132——语义零改）。**零新语义**。
-- 2026-10-03（**死指针收正 · 主 agent 直接执行 · 可 revert**——承 crash-guards 批修复轮报备）：§4 R19 载体注收正——`test/provider-headers.test.mjs` 已随 2026-09-28 测试树全清退场（本行判据 as-of 批次窗），消除死指针。**零新语义**。
+- 2026-10-03（**死指针收正 · 主 agent 直接执行 · 可 revert**——承 crash-guards 批修复轮报备）：§4 R19 载体注收正——`test/provider-headers.test.mjs` 已随 2026-09-28 测试树全清退场（本行判据 as-of 批次窗），消除死指针。**零新语义**。（迁移期引文）
 - 2026-10-04（**#907 判据条目落档 · 主 agent**）：§2.1 新增 responses 适配面健壮性三判据条目（判据-D9/D8/D5——批 `docs/batches/2026-10-04-responses-robustness.md` §2；设计 = `PROVIDER.md` §6.13 + D-PR34/35/36）。〔评审 #5 发现 6：落档时漏行，本行随补〕

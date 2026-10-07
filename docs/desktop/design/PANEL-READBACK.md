@@ -60,7 +60,7 @@
   - `frozen` ∥ `awaitingDigest` = 归档闸两判据（`subagent-reduce.mjs:141`）逐字上报——**trio 判别主键**；
   - `region` = `"activity"`（驻右列）∥ `"flow"`（已入流——归档墓碑）——**入流位**；
   - `dom` = 渲染面元素在场：查 `[data-subname="<key>"]`（核件 `thincoder-render-core/subblocks/block.mjs:30` 单点盖章；活动区块与流内回显块**同属性** ⇒ 单查询覆盖两区）。
-- **推送点** = 渲染面**帧出口**（`renderer/app.mjs:307-315` `applyFrame` 五面分派之后——DOM 已落），按**签名**（上列字段串 + 会话键）去重：同签名零报；状态迁转 ∥ 出生 ∥ 归档 ∥ DOM 增减 ∥ 会话切换 ⇒ 一报。流式 `rows` 变化不入签名（内容面不属判别面——不产生逐 token 上报）。
+- **推送点** = 渲染面**帧出口**（`thincoder-desktop/renderer/app.mjs:307-315` `applyFrame` 五面分派之后——DOM 已落），按**签名**（上列字段串 + 会话键）去重：同签名零报；状态迁转 ∥ 出生 ∥ 归档 ∥ DOM 增减 ∥ 会话切换 ⇒ 一报。流式 `rows` 变化不入签名（内容面不属判别面——不产生逐 token 上报）。
 - **主侧缓存** = 新档 `thincoder-desktop/src/main/panel-live.mjs`（拟新增）（`Map key → readout`；`report(key, blocks)` ∥ `get(key)`；后报覆前报）。代理装配处挂 `agent._panelReadout = () => panelLive.get(key)`。
 - **工具读源链**（`executePanelAction` 视图面）：`ctx.readout()` 快照非空 ⇒ 返回 `{ source:"renderer", asOf, ageMs, panel[] }`——awaitingDigest 条目**读时交叉**核池/pending 标 `digested`（沿 CLI 面判据 `thincoder-core/agent-tools/subagent-panel.mjs:176-185`；consult 子块走同款消费判据）∥ 快照空（窗未载 ∥ 未报）⇒ 回落现链路（`ctx.state` → 降级池视图；两降级注保留）。
 - **陈旧呈现**：`ageMs` 恒携（防「读了旧镜不自知」）；**不设截断阈值**——卡留块状态恒定，旧镜亦真；截断反会隐藏判别面。

@@ -113,18 +113,18 @@
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/gateway/server.mjs`（已落盘） | **192 ⇒ ≈197**（实读 2026-10-06——设计估 ≈140；服务模型配置面批 +≈5 = `failRequest` 置 `Retry-After` 头） | http 服务 ∥ 注册行分派 ∥ body 读限（32 MiB） ∥ 请求日志 |
+| `thincoder-server/src/gateway/server.mjs`（已落盘） | **192 ⇒ ≈197**（实读 2026-10-06——设计估 ≈140；服务模型配置面批 +≈5 = `failRequest` 置 `Retry-After` 头）**⇒ 实读 192（2026-10-07——清账批复读）** | http 服务 ∥ 注册行分派 ∥ body 读限（32 MiB） ∥ 请求日志 |
 | `thincoder-server/src/gateway/routes.mjs`（已落盘） | **86 ⇒ ≈100**（实读 2026-10-06——设计估 ≈240；#962 +5 = 读运行时（`runtime.get()`）；服务模型配置面批 +≈14 = 限流准入接线（check + 用量回收口串联））**⇒ 实读 101 ⇒ ≈115**（配额分模型批：配额准入位移（体读前 ⇒ 派发后/转发前） ∥ 两字段传账 ∥ 嵌入面检查移除）**⇒ 实读 104 ⇒ ≈112 ⇒ 实读 111（2026-10-07）**（配额 v2 批落地：禁用准入条 ∥ `/v1/models` 过滤） | chat ∥ models ∥ embeddings 三处理 |
-| `thincoder-server/src/gateway/forward.mjs`（已落盘） | **185 ⇒ ≈191**（实读 2026-10-06——设计估 ≈190；服务模型配置面批 +≈6 = `onUsage` 回调（用量到达即计入限流窗））**⇒ 实读 196 ⇒ ≈204**（本批：`provider`/`model` 两字段入账 +≈8） | 上游 fetch ∥ 流式/非流式透传 ∥ tap 接线 ∥ 断连中止 ∥ 记账号 |
+| `thincoder-server/src/gateway/forward.mjs`（已落盘） | **185 ⇒ ≈191**（实读 2026-10-06——设计估 ≈190；服务模型配置面批 +≈6 = `onUsage` 回调（用量到达即计入限流窗））**⇒ 实读 196 ⇒ ≈204**（本批：`provider`/`model` 两字段入账 +≈8）**⇒ 实读 201（2026-10-07——清账批复读）** | 上游 fetch ∥ 流式/非流式透传 ∥ tap 接线 ∥ 断连中止 ∥ 记账号 |
 | `thincoder-server/src/gateway/sse-tap.mjs`（已落盘） | **90**（实读 2026-10-06——设计估 ≈80） | `data:` 行增量扫描 ∥ usage 提取 ∥ 有界缓冲 |
-| `thincoder-server/src/gateway/providers.mjs`（已落盘） | **146 ⇒ ≈165**（实读 2026-10-06——设计估 ≈70；#962 +91 = 行→条目 ∥ 注册表构建（`env:` 解析） ∥ 运行时箱 ∥ 装配引导；服务模型配置面批 +≈19 = `settings` 解码 ∥ 注册表携设置 ∥ `settingsFor`）**⇒ 实读 167 ⇒ ≈175**（模型元数据批：`rowToEntry` 解码 `model_meta_json`） | provider 注册 ∥ 模型派发 ∥ 派发失败形 ∥ 运行时（§2.2） |
+| `thincoder-server/src/gateway/providers.mjs`（已落盘） | **146 ⇒ ≈165**（实读 2026-10-06——设计估 ≈70；#962 +91 = 行→条目 ∥ 注册表构建（`env:` 解析） ∥ 运行时箱 ∥ 装配引导；服务模型配置面批 +≈19 = `settings` 解码 ∥ 注册表携设置 ∥ `settingsFor`）**⇒ 实读 167 ⇒ ≈175**（模型元数据批：`rowToEntry` 解码 `model_meta_json`）**⇒ 实读 177（2026-10-07——清账批复读）** | provider 注册 ∥ 模型派发 ∥ 派发失败形 ∥ 运行时（§2.2） |
 | `thincoder-server/src/gateway/provider-admin.mjs`（已落盘） | **197 ⇒ ≈225**（实读 2026-10-06——#962 设计估 ≈220；行 CRUD ∥ 掩码回显 ∥ 模型发现 ∥ 管理端点注册——§2.2；服务模型配置面批 +≈28 = GET 行 `settings` ∥ PATCH 键级合并 + 校验接线）**⇒ 实读 220 ⇒ ≈258 ⇒ 实读 284（2026-10-07）**（模型元数据批：`extractModelMeta` ∥ `filterModelMeta` ∥ discover 出图 ∥ GET 行 ∥ POST/PATCH 收 meta——§2.2） | provider 管理面（控制台——仅 admin） |
-| `thincoder-server/src/gateway/ratelimit.mjs`（拟新增） | **≈90**（设计估——进程内 60s 定窗计数（`check` ∥ `record`） ∥ `Retry-After` 计算 ∥ 纯函数可直测；§6 KD-SV-35） | 模型限流（per-model RPM/TPM） |
-| `thincoder-server/src/gateway/system.mjs`（已落盘） | **无 ⇒ 55 ⇒ ≈60**（实读 2026-10-06——设计估 ≈70；探活 handler ∥ `/api/system`（版本/更新状态；二轮 +≈5 = `embedding` 字段） ∥ 注册——§2.3） | 系统面（healthz ∥ system） |
-| `thincoder-server/src/gateway/embedding-admin.mjs`（拟新增） | **≈110**（设计估——引擎配置读（真值 ∥ 零密钥） ∥ 探活/试跑单端点（代发 ∥ kind 四归类 ∥ 超时） ∥ 注册——§2.4） | 向量服务面（控制台——仅 admin） |
-| `thincoder-server/src/gateway/overview.mjs`（已落盘） | **≈70 ⇒ 实读 28 ⇒ ≈30**（本批：今日合计读源 = `report.mjs`（`usageTotals` 迁址）——口径零变） | 管理总览读数（控制台——仅 admin） |
-| `thincoder-server/src/gateway/errors.mjs`（已落盘） | **56 ⇒ ≈65**（实读 2026-10-06——设计估 ≈50；#963 +1 = `too_many_attempts` 码；服务模型配置面批 +≈9 = `rate_limited` 码 ∥ `HttpError`/`sendError` 可选 headers（`Retry-After`）） | 错误形构造 ∥ 发送助手（含账号面码） |
-| **小计** | **≈770 ⇒ 658 ⇒ 951**（#962 实读：+293）**⇒ 1007**（#963 实读：+56 = system 新 55 ∥ errors +1——口径 = #962 后）**⇒ ≈1192**（二轮 +≈185 = embedding-admin 新 ≈110 ∥ overview 新 ≈70 ∥ system +≈5）**⇒ ≈1363**（服务模型配置面批估）**⇒ ≈1385**（配额分模型批：routes +≈14 ∥ forward +≈8；overview 实读回填）**⇒ ≈1393**（配额 v2 批：routes +≈8）**⇒ ≈1439**（模型元数据批：providers +≈8 ∥ provider-admin +≈38；以 v2 落定实读为基） | —— |
+| `thincoder-server/src/gateway/ratelimit.mjs`（已落盘） | **≈90**（设计估）**⇒ 实读 64（2026-10-07——清账批复读）**（进程内 60s 定窗计数（`check` ∥ `record`） ∥ `Retry-After` 计算 ∥ 纯函数可直测；§6 KD-SV-35） | 模型限流（per-model RPM/TPM） |
+| `thincoder-server/src/gateway/system.mjs`（已落盘） | **无 ⇒ 55 ⇒ ≈60**（实读 2026-10-06——设计估 ≈70；探活 handler ∥ `/api/system`（版本/更新状态；二轮 +≈5 = `embedding` 字段） ∥ 注册——§2.3）**⇒ 实读 57（2026-10-07——清账批复读）** | 系统面（healthz ∥ system） |
+| `thincoder-server/src/gateway/embedding-admin.mjs`（已落盘） | **≈110**（设计估）**⇒ 实读 96（2026-10-07——清账批复读）**（引擎配置读（真值 ∥ 零密钥） ∥ 探活/试跑单端点（代发 ∥ kind 四归类 ∥ 超时） ∥ 注册——§2.4） | 向量服务面（控制台——仅 admin） |
+| `thincoder-server/src/gateway/overview.mjs`（已落盘） | **≈70 ⇒ 实读 28 ⇒ ≈30**（本批：今日合计读源 = `report.mjs`（`usageTotals` 迁址）——口径零变）**⇒ 实读 27（2026-10-07——清账批复读）** | 管理总览读数（控制台——仅 admin） |
+| `thincoder-server/src/gateway/errors.mjs`（已落盘） | **56 ⇒ ≈65**（实读 2026-10-06——设计估 ≈50；#963 +1 = `too_many_attempts` 码；服务模型配置面批 +≈9 = `rate_limited` 码 ∥ `HttpError`/`sendError` 可选 headers（`Retry-After`））**⇒ 实读 63（2026-10-07——清账批复读）** | 错误形构造 ∥ 发送助手（含账号面码） |
+| **小计** | **≈770 ⇒ 658 ⇒ 951**（#962 实读：+293）**⇒ 1007**（#963 实读：+56 = system 新 55 ∥ errors +1——口径 = #962 后）**⇒ ≈1192**（二轮 +≈185 = embedding-admin 新 ≈110 ∥ overview 新 ≈70 ∥ system +≈5）**⇒ ≈1363**（服务模型配置面批估）**⇒ ≈1385**（配额分模型批：routes +≈14 ∥ forward +≈8；overview 实读回填）**⇒ ≈1393**（配额 v2 批：routes +≈8）**⇒ ≈1439**（模型元数据批：providers +≈8 ∥ provider-admin +≈38；以 v2 落定实读为基）**⇒ 实读 1362（2026-10-07——清账批逐档复读和）** | —— |
 
 ## 5. 验收判据（机检面）
 
@@ -230,3 +230,4 @@
 - 2026-10-07：fix 轮（评审轮次 1——批 `docs/batches/2026-10-07-quota-v2-member-models.md` §3 六发现，本档面）：§5 AC-23 行「候补」标记收正（已落需求档——沿 AC-13/AC-14 先例）。
 - 2026-10-07：Provider 模型元数据批设计轮（批 `docs/batches/2026-10-07-provider-model-metadata.md`——台账 #1005 + 并入 #984；用户 12:05/12:23 令）——§2.2 端点表四行随正（GET/POST/PATCH/discover——`modelMeta`）+ 增「模型元数据（留存图）」条 ∥ §4 预算（providers 167 ⇒ ≈175 ∥ provider-admin 220 ⇒ ≈258；小计 ⇒ ≈1439）∥ §5 增 AC-24 候补行 ∥ §7 增 N27/N28 ∥ B20 ∥ E20 ∥ §8 边界随正（存储同拍 = `store/STORE.md` §2 v7 段；展示 = `webui/WEBUI.md` §2.4④）。
 - 2026-10-07：fix 轮（评审轮次 1——批 `docs/batches/2026-10-07-provider-model-metadata.md` §3 九发现，本档面）：§2.2 `displayName` 补长度上限（≤200 字符——沿 settings `note` 先例）+「仅 ≠ 模型名」范围明写（两来源皆适用）∥ §5 AC-24 行「候补」标记收正（已落需求档——沿 AC-13/AC-14 先例）∥ §7 N17 预期输出补 `modelMeta`（经典四件 ⇒ `{}`——与 §2.2/N27 同形）。
+- 2026-10-07：文档清账批（fix 轮——承批档 `docs/batches/2026-10-07-doc-cleanup.md` §2 · 台账 #983）：§4 逐档实读收正（十一档；`ratelimit` **64** ∥ `embedding-admin` **96** ∥ `overview` **27**——三档「拟新增」标记随正（已落盘））；小计 ⇒ **实读 1362**（逐档复读和）。**零语义**。

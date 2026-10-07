@@ -460,7 +460,7 @@ node -e "const fs=require('fs');let n=0;fs.readdirSync('.',{recursive:true}).for
 
   **读数 = 116 − 在册活节（§2.x）引用 8 行 = 108**；该 8 行逐坐标 =
   `thincoder-core/agent/suspension.mjs:2` · `thincoder-core/agent-tools/async-settle.mjs:26` / `:41` / `:46` · `thincoder-core/agent-tools/parent-channel.mjs:14` ·
-  `thincoder-core/agent-tools/subagent-run.mjs:151` · `thincoder-vscode/src/agent.mjs:37` / `:132`。命中清单 = §3.9 J-1 残差块「逐处坐标清单」（45 档逐处坐标）。
+  `thincoder-core/agent-tools/subagent-run.mjs:151` · `thincoder-vscode/src/agent.mjs:37` / `:132`。命中清单 = §3.9 J-1 残差块「逐处坐标清单」（44 档逐处坐标）。
 - **模型可见位点点名（评审 #2 列出 9 处 + 2026-09-18 死名批二轮实核补 1 处 = 10 处——全在册）**：
   `thincoder-core/agent-tools/advisor.mjs` `:48` · `:50` · `advisor-async.mjs:365` · `subagent.mjs:123` · `:124` · `:135` · `:136` · `:156` · `:180` · `subagent.mjs:120`（**死名批二轮实核补入**）
   ——**均不在本批射程内**（归残差；坐标与 token 详见 §3.9 J-1 残差块「逐处坐标清单」）。
@@ -476,7 +476,6 @@ node -e "const fs=require('fs');let n=0;fs.readdirSync('.',{recursive:true}).for
 | `thincoder-cli/src/tui/subagent-panel.mjs` | 1 | `:2` `§7.2.1` |
 | `thincoder-cli/src/tui/suspension-drive.mjs` | 4 | `:7` `§9` · `:11` `§9.2` · `:29` `§11.3` · `:74` `§17` |
 | `thincoder-core/abort-provenance.mjs` | 3 | `:2` · `:15` · `:68` `§20.3` |
-| `thincoder-core/advisor/loop.mjs` | 1 | `:217` `§18.7` |
 | `thincoder-core/advisor/messages.mjs` | 1 | `:18` `§18.8` |
 | `thincoder-core/agent-tools/advisor-async.mjs` | **5** | `:2` `§11.2`（注释）· `:365` `§11.2`（模型可见错误串）· `:23` / `:281` `§6.10`（二轮补 · ED-4 族 · 注释 · **B**——行内带日期 `2026-09-16`）· `:367` `§6.10`（二轮补 · **A**——仅批号 `ED-4`、无时点锚） |
 | `thincoder-core/agent-tools/advisor.mjs` | **3** | `:48` `§18.8`（描述串）· `:50` `§11.2`（描述串）· `:215` `§6.10`（二轮补 · 注释 · **B**——行内带日期 `2026-09-16`） |
@@ -1676,3 +1675,4 @@ node -e "const s=require('fs').readFileSync('docs/core/design/DOC-MIGRATION.md',
 - 2026-10-04（**ACP 用户文档批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-acp-user-docs.md` §1 · 台账 #916）：D7 行槽位枚举增 **用户文档面同拍**（机制本体单源 = `design/BATCH-RECORD.md` §5.3——本行只挂槽位；需求面 ∕ 提示词面同步 = 主 agent 域）。**零机制语义**（纯新增槽位）。
 - 2026-10-04（**ACP 用户文档批 · 收口轮 · 父侧直接执行〔可 revert〕**——台账 #916/#917）：D7 槽位**三面齐平**——需求面（`docs/core/requirements/ENGINEERING-MODE-V2.md` D7 行）∥ 提示词面（`docs/core/design/prompts/discipline-engineering.md` D7 条）补「修正轮落地前置 ∥ 搁置清单回核 ∥ 用户文档面同拍」三槽（与本行齐）。**零机制语义**（槽位集齐平——承本批 U1/#917）。
 - 2026-10-07（**authoring-why 批 · 设计轮 · eng-designer**——承 `docs/batches/2026-10-07-authoring-why.md` §1 · 台账 #999）：新增 **D9「知其然知其所以然」**（§1 表 + D9 细则块——规范文本落笔携 why：改前知依据 ∥ 内容携 why ∥ why 来源可核 ∥ 从简）——板块行 / 节标题 / 指针枚举 D1–D8 → **D1–D9**、计数「八条纪律」→「九条」同步；D8 块「双面清单列 D1–D8」收窄为「补 D8 行」（去随清单扩员失真的区间读数——D3）；§3.13 防复发句「（D1–D8 计数守恒）」→「（D 表零动）」；需求侧 §13.1 同步 = 主 agent 域（U 项在册）；提示词面同步 = `common.md` 双面 +1 枚 ∥ `discipline-engineering.md` 双面 D 清单 +1 行（落点与相位 = 批档 §2）；`PROMPT-SYSTEM.md` §6.1 一行指针同落。
+- 2026-10-07（**文档清账批 · fix 轮 · eng-designer**——承批档 `docs/batches/2026-10-07-doc-cleanup.md` §2 · 台账 #954a）：§3.9 J-1 残差块「逐处坐标清单」核销一行——`thincoder-core/advisor/loop.mjs`（`§18.7`——该档现盘 grep 零命中，死行删）；表 45 ⇒ 44 档（`:463` 计数同拍）。**零语义**（死行核销）。

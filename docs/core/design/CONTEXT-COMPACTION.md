@@ -58,8 +58,8 @@
 ### 6.2 触发：仅安全点（D1）与阈值 0.6（D2）
 
 - **仅安全点检查**：history 末尾消息 role ∈ {user, tool} 时才检查压缩——压缩是结构性 splice（head + 摘要 + tail），在 assistant 半截切会破坏 tool 配对语境；安全点检查零成本。
-- **阈值**：显式 `config.agent.compactThreshold` 优先；否则 auto = `specForModel(model).context × 0.6`；**判定对象 = 完整 prompt 估算**（system + tools + history）≥ 阈值即触发。
-- **0.6 理由**：为注入上下文（git / 目录 / outline / memory / 文档——实测每轮 30–50K）+ 输出 / reasoning（部分模型 maxOutput 384K）留余量；0.8 在 1M 窗口只剩 200K，刚压缩完可能又超。
+- **阈值**：显式 `config.agent.compactThreshold` 优先；否则 auto = **可用窗口 × 0.6**（可用窗口 = 窗口 − 完成预留——预留 = 显式 `provider.maxTokens`，否则规格 `maxOutput`；比例单源 = `resolveCompactThreshold`）；**判定对象 = 完整 prompt 估算**（system + tools + history）≥ 阈值即触发。
+- **0.6 理由**：为注入上下文（git / 目录 / outline / memory / 文档——实测每轮 30–50K）留余量；输出 / reasoning 余量已由**可用窗口**链承担（预留坐在窗口里 ⇒ 压缩先行——2026-10-06 裁定）；0.8 在 1M 窗口只剩 200K，刚压缩完可能又超。
 - **provider 级覆盖**：`providers[].context`（K 单位）覆盖 MODEL_SPECS 的 context 后，阈值与 tail 公式跟随覆盖值（公式权威 → 本层 `PROVIDER.md` §6.15）。
 
 ### 6.3 token 判定（D3）——实测优先 + 增量估算
@@ -193,7 +193,7 @@
 
 - **判定点封装（端侧接线 · §2.13.4 #56 类）**：`checkAndCompact(agent, ctx)` 住 `thincoder-vscode/src/agent/run-stages.mjs`——循环骨架只留检查调用（`thincoder-vscode/src/agent.mjs` 主循环 LLM 调用前；
   安全点判定 = `history.at(-1)?.role` 为 `user` / `tool`）。封装体内驱动核 `compressIfNeeded` / `compressFallback`（触发 / 摘要 / 降级截断 / 尾部预算 / task+plan 回注 / 重建边界 / 基线失效全归核）。与 CLI 语义一致（D1）。
-- **阈值档位（核面）**：`resolveCompactThreshold(cfgCompactThreshold, provider)`（核 `config.mjs`——显式优先 / auto = providerSpec 窗口 × 0.6）——阈值随回合模型（档位跟随窗口，PROVIDER §15 T-C2）。旧 VSC 侧内联 `THRESHOLD_FRACTION` 实现随删档退场。
+- **阈值档位（核面）**：`resolveCompactThreshold(cfgCompactThreshold, provider)`（核 `config.mjs`——显式优先 / auto = **可用窗口 × 0.6**——可用窗口 = `usableWindow(context, outputReserve(provider, spec))`）——阈值随回合模型（档位跟随窗口，PROVIDER §15 T-C2）。旧 VSC 侧内联 `THRESHOLD_FRACTION` 实现随删档退场。
 - **端差适配（调用期——W11/W15 前载体形态）**：核压缩面读 CLI 载体字段名 `provider` / `tasks` / `planMode`——本端 agent 载体为 provider 入参（`ctx.provider`）/ `_tasks` / `_planMode` ⇒ `checkAndCompact` 调用期同指三键（核只读此三键）；核以新数组替换 `agent.history`（applyCompression / shrinkOversized 均 copy-on-write）⇒ 端侧回收共享数组（面板持有同一引用；数组自定义属性随原位回收保留）。
 - **预算端差——W6 退场**：旧 VSC `SUMMARY_SEGMENT_ESTIMATE = 1100`（与 CLI 1000 的语义等价差）**随迁核退场**——现体单源 = 核 `SUMMARY_TOKEN_ESTIMATE = 1000`（§6.4④ 两端差注随之收正）；`IMAGE_TOKEN_ESTIMATE = 2000`/part 两端同值不变。
 - **REVERSE 配对保护——W6 退场（回植候选登记）**：旧 VSC 特有判据（`callsGapAfter` / `reverseProtectTail`——tail 以悬空 assistant 开头的倒序形状处理）**随删档退场**；现体核面无本判据（§6.11 口径：CLI 不需要——`repairHistory` 在 run 起点保证顺序）。VSC 侧倒序来源若仍可达 ⇒ **回植候选 = 核内笔**（超本批写域；交付面登记见批次档 §5）。
@@ -671,7 +671,7 @@ Compaction so far: {none | last summary freed {freed} tokens | last fallback tru
 
 | # | 决策 | 理由 / 否决备选 |
 |---|---|---|
-| D-CC1 | 触发仅安全点（D1）+ 阈值显式优先 / auto = context × 0.6（D2） | 半截切破坏 tool 配对语境；0.6 为注入 + 输出留余量（0.8 留不够） |
+| D-CC1 | 触发仅安全点（D1）+ 阈值显式优先 / auto = 可用窗口 × 0.6（D2） | 半截切破坏 tool 配对语境；0.6 为注入留余量（输出余量由可用窗口链承担；0.8 留不够） |
 | D-CC2 | token 判定 = 实测优先 + 增量估算（D3） | 纯估算对 CJK 系统性低估——可能永不触发（实测教训） |
 | D-CC3 | tail 公式 = 候选条数（D4），最终受双约束 | 1M 窗口 10 条太薄；40% 上限防小窗口「压缩了个寂寞」 |
 | D-CC4 | KEEP_HEAD = 0（D12） | 多任务会话中旧任务原文锚住注意力（用户反馈实证）；摘要承担「已完成 vs 进行中」区分 |
@@ -730,6 +730,8 @@ Compaction so far: {none | last summary freed {freed} tokens | last fallback tru
 旧档需求面（原 §8.1 压缩体验 F1–F4 · §9.2 探索摘要条目 F1–F3 / N1–N3）=== 本板块需求层，已并入本层需求档 `docs/core/requirements/CONTEXT-COMPACTION.md`（**与本档同名成对**）——本档不重复。
 
 ## 变更记录
+- 2026-10-07（**文档清账批 · fix 轮 · eng-designer**——承批档 `docs/batches/2026-10-07-doc-cleanup.md` §2 · 台账 #977）：阈值公式句三处收正为**可用窗口**口径（`:61` ∥ `:196` ∥ `:674`——auto = 可用窗口 × 0.6；可用窗口 = 窗口 − 完成预留（显式 `maxTokens` 否则 `maxOutput`——现盘 `thincoder-core/config.mjs`））；`:62` 理由句随正（输出 / reasoning 余量由可用窗口链承担——不再重复计入）。**零语义**（口径随正——#975 裁定链）。
+
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§6.16.7 VSC 端差句前提收正（面板槽恒绑定——`thincoder-vscode/src/agent/setup.mjs:277`；I11 落机检双腿）。**零新语义**。
 
 - 2026-09-25（**hygiene-ab 批 · 文档面实施轮 · eng-designer**——承 `docs/batches/2026-09-25-hygiene-ab.md` §2 · 台账 #283）：§6.10 #9 形状限定段 + §7 D-CC22 行两处「活体形状缺字段 **400**」证据句按 **2026-09-22 复测**改述（三形态全 **200**——缺字段 400「`must be passed back`」**未复现**；mimo 已证）。**机制条文零改**。

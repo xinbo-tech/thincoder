@@ -35,7 +35,7 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 | **N2** | 预算可配 | `agent.maxTurns` / `agent.subagentTurns` / `agent.consultTurns`（默认 200 / 100 / 40——单源 `thincoder-core/agent/helpers.mjs:24-25`）；explore 执行体走 `subagentTurns`（30 硬帽已移除，双端对齐）（批 5 并入） |
 | **N3** | 时钟语义 | 会诊继续 = 新预算 = 墙钟 watchdog 重置（重挂点 VSC `agent-tools/consult.mjs:323-325`） （迁移期引文） |
 | **N4** | 显示 / 协议零改动 | 编号经既有回调与终态快照消费——**桥消息字段零新增**；webview 显示文件零改动 |
-| **N5** | 回归锁 | 跨段编号用例族（VSC `thincoder-vscode/test/turn-across-segments.test.mjs`）全绿 + 全量回归全绿；双端语义同源、**异载体**（VSC 种子经 `opts`、核侧同一 child 对象跨段 ⇒ 种子零作用） |
+| **N5** | 回归锁 | 跨段编号用例族（VSC `thincoder-vscode/test/turn-across-segments.test.mjs`——已随 2026-09-28 测试树全清退场，留名存档）（迁移期引文）全绿 + 全量回归全绿；双端语义同源、**异载体**（VSC 种子经 `opts`、核侧同一 child 对象跨段 ⇒ 种子零作用） |
 | **N6** | 零机制改动 | 段内帽判定（`turn < maxTurns`）与 `ContinueError` 抛点、续跑预算语义**零变化**——F7 只改展示 / 协议编号值（批 5 并入） |
 
 ## 4. 范围边界（不做）

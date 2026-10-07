@@ -54,7 +54,7 @@
 
 - MIME 白名单 = `.html` ∥ `.mjs` ∥ `.css` ∥ `.svg` ∥ `.png` ∥ `.woff2`（表逐项同 `protocol.mjs:24-31`；表外 ⇒ 404）。
 - 门（fail-closed）：点段（`.` ∥ `..` 段）⇒ 404；逃逸（resolve 越根）⇒ 404（判据形对齐 `protocol.mjs:53-61`）。
-- **注入**：`/` 与 `/index.html` 响应把 `thincoder-desktop/renderer/index.html:54` 的脚本行 `<script type="module" src="./app.mjs"></script>` 替换为 **shim 脚本行 + 原行**（模块脚本按文档序执行 ⇒ shim 先于 `app.mjs` 求值）；**锚缺失 ⇒ 500 + stderr 明示**（fail-loud——不静默出未注入页）。
+- **注入**：`/` 与 `/index.html` 响应把 `thincoder-desktop/renderer/index.html:54` 的脚本行 `<script type="module" src="app.mjs"></script>` 替换为 **shim 脚本行 + 原行**（模块脚本按文档序执行 ⇒ shim 先于 `app.mjs` 求值）；**锚缺失 ⇒ 500 + stderr 明示**（fail-loud——不静默出未注入页）。
 
 ### 3.2 host shim 契约（`host-shim.mjs`）
 
@@ -73,7 +73,7 @@ stub 表（回执逐形 = 实读锚）：
 | `sessions:list` | `{ sessions: [], ledger: null }` | `thincoder-desktop/renderer/session-wire.mjs:44-48` |
 | `model:catalog` | `{ ok: true, models: [], unavailable: [] }` | `thincoder-desktop/renderer/composer-sync.mjs:205-219`（两空 ⇒ 零推送） |
 | `provider:list` | `{ ok: true, active: null, presets: [], providers: [] }` | `thincoder-desktop/renderer/mount-settings-reads.mjs:51-71`（无激活 ⇒ 模型段零请求） |
-**5 通道来源**（引导链实际调用点实读——逐通道）：`config:read` = `renderer/app.mjs:213`（boot 往返）∥ `project:recent` + `sessions:list` = `renderer/session-wire.mjs:43`（`refreshRail` 并发两读）
+**5 通道来源**（引导链实际调用点实读——逐通道）：`config:read` = `thincoder-desktop/renderer/app.mjs:213`（boot 往返）∥ `project:recent` + `sessions:list` = `renderer/session-wire.mjs:43`（`refreshRail` 并发两读）
 ∥ `model:catalog` = `renderer/composer-sync.mjs:232`（装配首跑恰一次）∥ `provider:list` = `renderer/mount-settings.mjs:158`（`reads.loadProviders()`）。
 表外行为 = 拒 + 记录——**不猜、不造回执**。
 
@@ -199,5 +199,5 @@ stub 表（回执逐形 = 实读锚）：
 
 - 2026-10-01 建档：web 快筛设计（静态服务 + host shim + 真浏览器冒烟 · 九段；权威面 = Electron 裁定；KD-W1–W7；与 #433 复用 ∥ 边界在册）。
 - 2026-10-01（修复轮 · 评审轮次 1 · 发现 3/4/5）：WQ-4 机检形定形（不存在通道名 ⇒ 非零退出 + stderr 含通道名——§5③ ∥ §6 同拍）；§3.2「7 通道来源」改逐通道对应 + 装配链注（`mount-settings` → `mount-info`）；§5④ ∥ §7-4 零触句补「运行期产物根 `test/artifacts/` 除外」；`app.mjs` 调用点坐标实读收正 `:218 ⇒ :219`。
-- 2026-10-01（**复核扫面收正批（M7 派生）· 文档簇落地轮 · eng-designer**——承 `docs/batches/2026-10-01-audit-remediation.md` §2 · 台账 #769）：stub 表两行退场（`ledger:read` ∥ `batch:status`——复读面删）+ 通道计数 **7 ⇒ 5** 四处同拍（KD-W4 ∥ §3.2 表引 ∥ 来源注 ∥ §6 验收面）+ 装配链注届盘实读收正（`app.mjs:213` ∥ `mount-settings.mjs:158`）。明细 = 批档 §2。
+- 2026-10-01（**复核扫面收正批（M7 派生）· 文档簇落地轮 · eng-designer**——承 `docs/batches/2026-10-01-audit-remediation.md` §2 · 台账 #769）：stub 表两行退场（`ledger:read` ∥ `batch:status`——复读面删）+ 通道计数 **7 ⇒ 5** 四处同拍（KD-W4 ∥ §3.2 表引 ∥ 来源注 ∥ §6 验收面）+ 装配链注届盘实读收正（`thincoder-desktop/renderer/app.mjs:213` ∥ `mount-settings.mjs:158`）。明细 = 批档 §2。
 - 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 2c 前置步 · 文件账分片轮（切片 3 · 余量收尾）· eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：**§9 新立**（文件账）——§9.1 本域族行 **3** 行（`serve.mjs` ∥ `host-shim.mjs` ∥ `run.mjs`——自 `docs/desktop/design/PROJECT.md` §4.1 逐字迁入）＋ §9.2 批块 **1 块**（web 快筛——迁自 §4.2）。**零新语义**（迁移 ∥ 指针）。

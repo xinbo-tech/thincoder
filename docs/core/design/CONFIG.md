@@ -14,9 +14,9 @@
 
 | 面 | CLI 档（现体） | VSC 档（现体） |
 |---|---|---|
-| 装载器 / 默认值 | `thincoder-core/config.mjs`（U14 已迁核） | `thincoder-core/config-io.mjs` + `thincoder-core/config.mjs`（W16 已迁核——端侧镜像 `src/config-io.mjs` 已删；端壳读面 = `src/extension/presets.mjs`） |
+| 装载器 / 默认值 | `thincoder-core/config.mjs`（U14 已迁核） | `thincoder-core/config-io.mjs` + `thincoder-core/config.mjs`（W16 已迁核——端侧镜像 `src/config-io.mjs` 已删；端壳读面 = `thincoder-vscode/src/extension/presets.mjs`） |
 | 迁移 | `thincoder-core/config-migrate.mjs`（U14 已迁核） | `thincoder-core/config-migrate.mjs`（W16 已迁核——端侧 VS Code glue = `src/extension/migrate-settings.mjs`） |
-| 分段配置 | （内联于核 `config.mjs`） | `thincoder-core/config-presets.mjs`（W16 已迁核——VSC `config-presets.mjs` 已删）· 端壳段 = `config-mcp.mjs` · `embed-config.mjs` · 端侧 consult 读面 = `extension/presets.mjs` |
+| 分段配置 | （内联于核 `config.mjs`） | `thincoder-core/config-presets.mjs`（W16 已迁核——VSC `config-presets.mjs` 已删）· 端壳段 = `config-mcp.mjs` · `embed-config.mjs` · 端侧 consult 读面 = `thincoder-vscode/src/extension/presets.mjs` |
 | 写盘面 / 面板 | `src/cli/`（TUI 侧） | `src/extension/settings-panel-write.mjs`（`$schema` 缝供值）· `thincoder-vscode/src/extension/settings.mjs` · `config-watch.mjs` · `migrate-settings.mjs` |
 | settings 工具 | `thincoder-core/agent-tools/settings.mjs`（U14 已迁核） | 同核面（W16 已迁核——端侧实例化于 `thincoder-vscode/src/agent/setup.mjs`；类型表 = 核全量 DEFAULTS 派生，A5） |
 | 路径展开 | `thincoder-core/expand-home.mjs`（U14 已迁核） | `@thincoder/core/expand-home.mjs`（W4 已迁核） |
@@ -41,10 +41,10 @@
 
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
-| 128 | `src/config.mjs`（装载器 + DEFAULTS）↔ `src/config-io.mjs` | ② | 融合：以 CLI 装载器为准 + `$schema` 注入按端差注入 | 分叉 ＝ 拆分（VSC 拆 8 档）；同一 `~/.thincoder/config.json`、同一 v2 架构 ⇒ 前提成立；**承 §2.5 #80** | —（承 #80） | S1（建核补齐） |
-| 129 | `src/config.mjs`（`PROVIDER_PRESETS`）↔ `src/config-presets.mjs` | ② | 融合：取一侧（逐条同值） | 分叉 ＝ 拆档；VSC 头注自述「mirrors CLI PROVIDER_PRESETS…双端逐条同值」（`:2,7`）⇒ 前提成立 | — | S1（建核补齐） |
+| 128 | `src/config.mjs`（装载器 + DEFAULTS）↔ `src/config-io.mjs` | ② | 融合：以 CLI 装载器为准 + `$schema` 注入按端差注入 | 分叉 ＝ 拆分（VSC 拆 8 档）；同一 `~/.thincoder/config.json`、同一 v2 架构 ⇒ 前提成立；**承 §2.5 #80** | —（承 #80） | S1（建核补齐） （迁移期引文——档已迁核） |
+| 129 | `src/config.mjs`（`PROVIDER_PRESETS`）↔ `src/config-presets.mjs` | ② | 融合：取一侧（逐条同值） | 分叉 ＝ 拆档；VSC 头注自述「mirrors CLI PROVIDER_PRESETS…双端逐条同值」（`:2,7`）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文——档已迁核） |
 | 130 | `src/config.mjs`（consult / mcp / embedding 三段）↔ `src/config-consult.mjs`（W16 已删——端侧 consult 读面现体 = `thincoder-vscode/src/extension/presets.mjs`） · `config-mcp.mjs` · `embed-config.mjs` | ② | 融合：核内单一 DEFAULTS + 三段的端侧消费面按端注入 | 分叉 ＝ 拆档；三段均以同一 `config.json` 为源（VSC `config-consult.mjs:8` 自述「镜像 CLI config.mjs 同规则」）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
-| 131 | `src/config.mjs`（写盘面）↔ `src/extension/settings-panel-write.mjs` · `thincoder-vscode/src/extension/settings.mjs` | ② | 融合：核内单一读写 + 面板写面按端注入；**MCP 配置留 VS Code 设置** ＝ 端特有段 | 分叉 ＝ 写入口（VSC 设置面板 / CLI TUI）；写盘产物同一 `config.json`（VSC `thincoder-vscode/src/extension/settings.mjs:2` 自述「Backed by the shared ~/.thincoder/config.json」）⇒ 前提成立 | — | S1（建核补齐） |
+| 131 | `src/config.mjs`（写盘面）↔ `src/extension/settings-panel-write.mjs` · `thincoder-vscode/src/extension/settings.mjs` | ② | 融合：核内单一读写 + 面板写面按端注入；**MCP 配置留 VS Code 设置** ＝ 端特有段 | 分叉 ＝ 写入口（VSC 设置面板 / CLI TUI）；写盘产物同一 `config.json`（VSC `thincoder-vscode/src/extension/settings.mjs:2` 自述「Backed by the shared ~/.thincoder/config.json」）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文——档已迁核） |
 | 132 | （CLI 无监视面）↔ `thincoder-vscode/src/extension/config-watch.mjs` · `thincoder-vscode/src/extension/migrate-settings.mjs` | ④ | 端特有段（**判词收窄 · 2026-09-29**）：配置监视**宿主接线**（`workspace` 事件——端壳；纯逻辑已上提核 `thincoder-core/config-watch.mjs`）+ VS Code 旧设置 / 密钥库迁移 | 结构性不对称 = **依赖壳能力**（宿主文件监视 / `SecretStorage`）——CLI 无对应宿主面（B17）；依据是「**只在单侧存在**」，**非**「差异」（A9） | — | S1（建核补齐） |
 | 177 | `src/cli/setup-wizard.mjs` + `src/tui/model-picker.mjs` ↔ `thincoder-vscode/src/extension/settings.mjs` + `provider-flows.mjs` + `presets.mjs` | ② | 融合：provider 增删 / 密钥 / 激活的**纯持久化函数**取一侧 + UI 壳按端注入 | 分叉 ＝ UI 壳（QuickPick / TUI picker）+ 目录；持久化语义两端同（`config.json` `providers[]` + 单值 `model`——VSC `thincoder-vscode/src/extension/provider-flows.mjs:10` 自述「identical to the CLI」）⇒ 前提成立 | — | S1（建核补齐） |
 

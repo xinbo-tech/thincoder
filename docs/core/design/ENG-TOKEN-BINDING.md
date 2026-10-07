@@ -245,7 +245,7 @@ R16 语义（跨模式存活 + 三清时机 + 单一权威）**已全部落地**
 
 **F3 评审目标来源（v2 核心增量）**：`resolveReviewTargetPaths(agent)`——读 manifest `docRoot`（缺 `docRoot` 键 → 默认值 fallback，与架构 §2.3 E2 同源），产出评审对象 / 被审文件绝对路径集合。
 **按用点解析增量**（2026-10-02 · #828）：同单点新导出 `resolveReviewRootsFor(dir)`（判定本体 = `thincoder-core/agent-tools/review-facts.mjs`；`thincoder-core/agent/write-gate.mjs` 同名再出口）——按目标目录（其所属项目根——最近带档祖先）解析同一根集；M6 `thincoder-core/agent-tools/advisor.mjs` 逐文档所属项目腿消费（消费点 = `resolveReviewDocPaths`）；无主档回退会话根集判定（原行为零变）。
-**路径归一增量**（2026-10-04 · #921 设计轮 · 批档 `docs/batches/2026-10-04-tool-path-baseline.md` §2）：documents 解析单源新导出 `resolveReviewDocPaths(documents, cwd)`（宿主 = `thincoder-core/agent-tools/review-facts.mjs`——write-gate 同名再出口保指针面；零新模块边），逐文档四腿试探：
+**路径归一增量**（2026-10-04 · #921 设计轮 · 批档 `docs/batches/2026-10-04-tool-path-baseline.md` §2）：documents 解析单源新导出 `resolveReviewDocPaths(documents, cwd)`（宿主 = `thincoder-core/agent-tools/review-facts.mjs`；零新模块边），逐文档四腿试探：
 ① 会话根集 ② 所属项目根集——两腿既有行为零变封装；③ 候选项目根试探（`projectRootView(cwd)` 候选）④ 歧义可读唯一化——裸仓相对形（cwd 基面落空）按候选项目归一受理；多候选可读命中 ≥2 ⇒ fail-closed 拒（`scope-doc-ambiguous`）；冻结窗 `docAbs` 产出面（advisor-async）同源。实施 = eng-coder 轮。
 **锚祖先链增量**（2026-10-05 · #945 · 批档 `docs/batches/2026-10-05-review-face-gaps.md` §2.3）：腿③候选底座并入 **cwd 祖先链全量目录**（现行集在前 ∥ 祖先链随尾、去重保序）——容器相对形在子仓锚下受理；受理判据（目标解析位最近 manifest 声明面）∥ 围栏 ∥ 可读唯一化 ∥ fail-closed 歧义零改。实施 = eng-coder 轮。
 **落点 = 新文件 `thincoder-core/agent/write-gate.mjs`**（不是 `dispatch.mjs`——落 dispatch 会让 M6 `advisor.mjs` 反向 import 门禁簇成回边；write-gate 无上游依赖，三向消费不成环）：`dispatch.mjs` / VSC `tool-gates.mjs` / M6 `advisor.mjs` 三向 import 消费（单一权威源，不重复实现）。
@@ -276,6 +276,8 @@ token 门与冻结窗口判据复用 v1 现有导出（`anyLiveDesignSlot` / `in
 
 - 2026-10-07（**批 ledger-tool · 收口前指针重锚轮 · eng-designer**——父裁修正：消费核迁出随迁）：门禁过期拒删槽坐标 `:277` ⇒ `:237`（§4 ∥ §6.1 ∥ §6.3 三处——删段在前所致漂移）；§6.3 消费核 `:140` ⇒ `thincoder-core/agent-tools/design-slots.mjs:110`。**零语义改**。
 
+- 2026-10-07（**文档清账批 · fix 轮 · eng-designer**——承批档 `docs/batches/2026-10-07-doc-cleanup.md` §2 · 台账 #953）：F3「路径归一增量」行删「write-gate 同名再出口保指针面」子句（现盘核：`write-gate.mjs` 对 `resolveReviewDocPaths` 零再出口——单源 = `review-facts.mjs`）；`:295` 同句随正。**零语义**。
+
 - 2026-10-05（**批 review-gate-gaps · 收口随动末笔〔#37 上抛三项〕· eng-designer**——父裁：本轮内结清）：引用形收正〔明细 = 批档 §2.13〕——§9 两处（`resolveReviewRootsFor` 引用 → 判定本体 = `thincoder-core/agent-tools/review-facts.mjs` + write-gate 同名再出口；advisor.mjs 消费点 → `resolveReviewDocPaths`）∥ §6.3 恢复过滤边界 `:56-72` → `:57-75` ∥ §6.3 多槽原语行按符号拆分（`setSlotEngDesignTokens` 端侧定义 ∥ `mergeEngTokensForSave` 端侧转口 + 核定义）。**纯引用形收正，零语义改**。
 - 2026-10-05（**批 review-gate-gaps · 收口随动轮〔#35 披露①〕· eng-designer**——父裁：属本轮随动面，落）：坐标收正〔明细 = 批档 §2.12〕——−2 族八处（§3 ∥ §5.1 ∥ §6.1）+ 复扫扩面（§6.3 五处同族 ∥ §4/§6.1 的 eng·cmd-eng·spawn ∥ §6.1 session 面迁 `session-lifecycle.mjs` ∥ §6.3 符号名面 `tokenExpiryMs`）。**纯坐标随动，零语义改**。
 - 2026-10-05（**批 review-gate-gaps · 实施后坐标随动轮〔#31 披露项〕· eng-designer**——父裁：采纳 #31 披露项）：§5 / §5.1 / §5.2 / §6.1 实施后坐标随动（settleDesignReview `:115`⇒`:128` ∥ 未完成径 `:120-127`⇒`:133-140` ∥ 截断段 `:130-132`⇒`:143-145` ∥ 非回显径 return `:133-136`⇒`:146-149` ∥ 入槽 `:138`⇒`:158`）。**纯坐标随动，零语义改**。
@@ -292,7 +294,7 @@ token 门与冻结窗口判据复用 v1 现有导出（`anyLiveDesignSlot` / `in
 
 - 2026-10-03（**design-token 回显链缺陷修批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-design-token-echo.md` §1 · 台账 #884）：§5 扩展 + 新增 §5.1「回显链判定」（截断回显容忍——uuid 形认 pass、槽存全串；恒定标记二则逐字〔未签发 ∥ 截断〕；剥离单源 `stripDesignTokenEcho` + `makeDesignTokenPrefixRegex`；标记位置不变式〔suffix 恒居文末〕；回显指令加固句逐字）；§6.1 表增一行；§7 增 D-E8 / D-E9。**边界**：token 格式 ∥ TTL ∥ 门禁恒等比对语义 ∥ 「非回显 ≠ 通过」本体零改。
 
-- 2026-10-04（**工具路径基面根治批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-tool-path-baseline.md` §2 · 台账 #921）：§9 F3 加「路径归一增量」——documents 解析单源 `resolveReviewDocPaths`（宿主 `review-facts.mjs`，write-gate 同名再出口）+ 冻结窗 docAbs 同源。实施 = eng-coder 轮。
+- 2026-10-04（**工具路径基面根治批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-tool-path-baseline.md` §2 · 台账 #921）：§9 F3 加「路径归一增量」——documents 解析单源 `resolveReviewDocPaths`（宿主 `review-facts.mjs`）+ 冻结窗 docAbs 同源。实施 = eng-coder 轮。
 
 - 2026-10-02（**会话锚解析修复批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-02-manifest-resolution-fix.md` §1 · 台账 #828 · 轮七回执③）：§9 F3 文面加同单点新导出 `resolveReviewRootsFor`（按用点解析增量——`write-gate.mjs:59` ∥ 消费腿 `thincoder-core/agent-tools/advisor.mjs:125` → `:129`）。**判据语义零改**（登记面 / 文面对账）。
 

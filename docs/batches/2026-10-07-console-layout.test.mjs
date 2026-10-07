@@ -13,7 +13,7 @@
  *      预设模型表（单列「模型」：`code` 行）∥ 成员 key 表（四列头 ∥ 吊销钮行内 ∥ 空态 `noKeys` 不变量；配额批：随行形 `modelQuotas`）
  *   腿 E（左对齐——§2.6④）：`main` 规则 `max-width: 1100px` 在 ∥ margin 无 `auto`
  *   腿 F（i18n——§2.2 本批 6 键）：两表在册（非空 ∥ 占位符一致 ∥ en 零 CJK）∥ `t` 引用闭合
- *   腿 G（门禁——§6 AC-20 续）：`prepublishOnly` 含本批件（二十一件——Provider 模型元数据批后）∥ 清单目标在盘
+ *   腿 G（门禁——§6 AC-20 续）：`prepublishOnly` 含本批件（二十二件——文档清账批拆档后）∥ 清单目标在盘
  *   附加：AC-19 canon 不破（零新 `:root` 变量——38 ∥ 悬停清单八条 ∥ 内距 ∈ 刻度 ∪ {0, auto} ∪ 布局组 ∥ 类名双向闭合）
  */
 import test from "node:test"
@@ -439,9 +439,9 @@ test("腿 F i18n：本批 6 键两表在册（非空 ∥ 占位符一致 ∥ en 
 
 // ── 腿 G（门禁——§6 AC-20 续）───────────────────────────────────────────────
 
-test("腿 G 门禁：`prepublishOnly` 二十一件含本批件 ∥ 清单目标在盘", () => {
+test("腿 G 门禁：`prepublishOnly` 二十二件含本批件 ∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 21, `门禁清单件数（二十 ⇒ 二十一——Provider 模型元数据批）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 22, `门禁清单件数（二十一 ⇒ 二十二——文档清账批拆档）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-console-layout.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

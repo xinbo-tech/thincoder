@@ -16,7 +16,7 @@
  *      ∥ 保存线形（空图 ⇒ 省略键；非空 ⇒ 携）∥ 添加窗探针随 POST 携图（无探针 ⇒ 省略键）
  *   ⑤ 求交滑落（AC-24②——`filterModelMeta` 直测）：白名单 + 形不符即略 + 与 `models` 求交（非开放不入库）∥ 非对象 ⇒ 抛
  *   ⑥ i18n + 静态面（WEBUI §2.2 键族 +5 ∥ §6 AC-24 续）：两表 5 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集双向相等 ∥
- *      档目 19 ∥ 20 不变 ∥ 视图件行宽 ≤300 ∥ `style.css` 零动（`:root` 38 ∥ 悬停八条——AC-19 canon）∥ 门禁链 21 件
+ *      档目 19 ∥ 20 不变 ∥ 视图件行宽 ≤300 ∥ `style.css` 零动（`:root` 38 ∥ 悬停八条——AC-19 canon）∥ 门禁链 22 件
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -460,7 +460,7 @@ test("⑤ 求交滑落：白名单 + 形不符即略 + 与 models 求交（非�
 
 // ── ⑥ i18n + 静态面（WEBUI §2.2 键族 +5 ∥ §6 AC-24 续）──────────────────────────────
 
-test("⑥ i18n + 静态面：两表 5 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集相等 ∥ 档目 19 ∥ 20 ∥ 行宽 ≤300 ∥ AC-19 canon ∥ 门禁链 21 件", () => {
+test("⑥ i18n + 静态面：两表 5 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集相等 ∥ 档目 19 ∥ 20 ∥ 行宽 ≤300 ∥ AC-19 canon ∥ 门禁链 22 件", () => {
   const NEW_KEYS = ["admin.providers.candidatesLoading", "admin.providers.metaContext", "admin.providers.metaVision",
     "admin.providers.upstreamRetiredBadge", "admin.providers.upstreamRetiredNote"]
   for (const key of NEW_KEYS) {
@@ -489,9 +489,9 @@ test("⑥ i18n + 静态面：两表 5 键在场（en 零 CJK ∥ 占位符一致
   assert.equal(rootVars.length, 38, `:root 变量族计数（零新增）：${rootVars.length}`)
   const hover = [...css.matchAll(/([^{}]*:hover[^{}]*)\{/g)].map((match) => match[1].trim().replace(/\s+/g, " ")).sort()
   assert.deepEqual(hover, [".nav-item:hover", "tbody tr:hover", "li.key-item:hover", "button:hover", "button.tiny:hover", "button.danger:hover", "button.link:hover", ".modal-close:hover"].sort(), "悬停声明清单（八条——零新增）")
-  // 门禁链 21 件（本批件入链）∥ 清单目标在盘
+  // 门禁链 22 件（本批件入链——文档清账批拆档后）∥ 清单目标在盘
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 21, `门禁清单件数（二十 ⇒ 二十一）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 22, `门禁清单件数（二十一 ⇒ 二十二——文档清账批拆档）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-provider-model-metadata.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

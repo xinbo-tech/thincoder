@@ -204,7 +204,7 @@
 **本批（流尾台账行组退役 · 2026-10-04）落点表** = `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2（唯一承载面——一次性批次材料）。
 
 - 2026-10-04（**#905 §1 表归属收正 · 主 agent 直接执行 · 可 revert**——承 #883 修复轮 #10 号外观察 ∥ 台账 #905）：§1 命令层表——`model-picker.mjs` 行「+ `/model` Add / Remove / key 流程」归属收正（该流族自 2026-09-29 结构拆分迁出）+ 增 `provider-admin.mjs` 行（渠道管理流族 + `cascadeRemoveProvider`）。**零新语义**（结构快照对盘）。
-- 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 修正轮（评审轮次 1 · 发现 2）· eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §3 轮次 1 · 台账 #883）：§5.4 入口册两坐标对盘收正（`provider-admin.mjs:88` ∥ `:113`；调用点 `model-picker.mjs:77`）+ §1 `model-picker.mjs` 行括注收正（拉取失败 ⇒ 该渠道不可用——无预设回退）。**零新语义**（坐标与描述对盘）。
+- 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 修正轮（评审轮次 1 · 发现 2）· eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §3 轮次 1 · 台账 #883）：§5.4 入口册两坐标对盘收正（`thincoder-cli/src/tui/provider-admin.mjs:88` ∥ `:113`；调用点 `model-picker.mjs:77`）+ §1 `model-picker.mjs` 行括注收正（拉取失败 ⇒ 该渠道不可用——无预设回退）。**零新语义**（坐标与描述对盘）。
 
 - 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #863）：§5.3 增 **`/undo` 条**（快照双上界 + oversize 态 + 死副本清除）。实现 = 本批实施轮。
 

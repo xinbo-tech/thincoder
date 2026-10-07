@@ -349,7 +349,7 @@
 | 6 | 批内件 | `docs/batches/2026-10-01-digest-rows-natural-form.test.mjs`（**已建成 · 700 行**（内容行数口径〔文末换行不计〕· as-of 2026-10-01——A1–A3 补丁后）· 八腿（见 §7「消化行自然形收正批注」）；**8/8 绿**）；随批留存 · 不进仓套件 | 全批 |
 | 7 | 设计档 | 本档 §1 **KD-62**（整条重写）∥ KD-36 ∥ KD-55 ∥ KD-60 ①②⑥ ∥ §3（原 `docs/desktop/design/PROJECT.md` §2.2） ∥ `docs/desktop/design/PROJECT.md` §6.1 D4 行 ∥ §7（置换批注）∥ §10 DA ① ∥ CR 涉句 ∥ **§4.2 本块** · `docs/desktop/design/RENDERER.md` §1.1（八处）· `docs/desktop/design/UI.md` §1 对话流行 ∥ 间距注项 5 · `docs/desktop/design/IPC.md` §1 `ev:digest` 行 + 三档变更记录 | 全批 |
 
-零触面：核包 ∥ 协议（**零新通道** ∥ 载荷零变）∥ 记录面（形 ∥ 通道 ∥ 落盘节律 ∥ `clearDigest`——零动）∥ 宿主面（`src/main/**`——起跑窗 ∥ reclaim 零动）∥ `renderer/events.mjs`（分派零改）∥ `renderer/app.mjs`（构造 ∥ 结算径引调零改）∥ `renderer/store.mjs`（切片形状零改）
+零触面：核包 ∥ 协议（**零新通道** ∥ 载荷零变）∥ 记录面（形 ∥ 通道 ∥ 落盘节律 ∥ `clearDigest`——零动）∥ 宿主面（`src/main/**`——起跑窗 ∥ reclaim 零动）∥ `renderer/events.mjs`（分派零改）∥ `thincoder-desktop/renderer/app.mjs`（构造 ∥ 结算径引调零改）∥ `renderer/store.mjs`（切片形状零改）
 ∥ 两端（CLI ∥ VSC——**本批零触**；端差在册 = `docs/desktop/design/PROJECT.md` §10 **DA** ①）；测试面随修随加——不占设计条目（2026-09-27 裁定）。
 
 **本批（消化重放口径 · 2026-10-01 · 台账 #771 ∥ #773 · 批 `docs/batches/2026-10-01-digest-replay-choices.md`）行「现行 ⇒ 实读（实施落盘）」**（实读 2026-10-01——内容行数口径（文末换行不计）；机制 ∕ 判据单源 = 批档 §2 ∥ 本档 §1 **KD-62**；实施落盘 2026-10-01）：

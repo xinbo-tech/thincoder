@@ -1068,7 +1068,7 @@ v2.5 两行（本批改值面；其余字段零改）：
 
 | 消费点 | 读什么 | 三新款变化（数据驱动） |
 |---|---|---|
-| 压缩阈值 / 上下文占比 | `context`（核侧 `thincoder-core/config.mjs:104-110`（`resolveCompactThreshold`）· `thincoder-core/token-window.mjs:152`（窗口与占比）· `:161`；面板 `thincoder-vscode/src/specs.mjs:73` · `:87`；CLI 帧 `thincoder-cli/src/tui/render-frame.mjs:393`；坐标 as-of 2026-09-22 评审轮实读） | 128K → 1M（长会话截断面解除） |
+| 压缩阈值 / 上下文占比 | `context` · `maxOutput`（完成预留——可用窗口 = 窗口 − 预留；阈值 = 可用窗口 × 0.6；核侧 `thincoder-core/config.mjs:137-144`（`resolveCompactThreshold`）· `thincoder-core/token-window.mjs:152`（窗口与占比）· `:161`；面板 `thincoder-vscode/src/specs.mjs:73` · `:87`；CLI 帧 `thincoder-cli/src/tui/render-frame.mjs:393`；坐标 as-of 2026-09-22 评审轮实读） | 128K → 1M（长会话截断面解除） |
 | 温度钳位 | `tempRange`（`thincoder-core/provider/core.mjs:187-188`） | 不钳位 → 钳至 [0, 1.5]（越界值不再打到服务端吃 400） |
 | 视觉门（8 处） | `multimodal`（坐标 = §2.7 第 1 项，as-of 2026-09-22 评审轮实读更正） | 无视觉 → `read_image` 注册 + 贴图注入生效 |
 | 工具轮回声构造 | `reasoningEcho`（`thincoder-core/model-specs.mjs:288-290`——实施后实读，as-of 2026-09-22） | 无字段 → 工具轮 assistant 消息恒带 `reasoning_content`（缺值 ⇒ `""`；三形态全 200 实测支撑） |
@@ -1885,6 +1885,8 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 2. **`glm-5.2` / `glm-5` 的 `thinkAlwaysOn`——取证已落（2026-09-29）**（承 `docs/batches/2026-09-28-tech-debt-closeout.md` §5 · 台账 #356）：渠道校验级读数 = `{type:"disabled"}` **受理且生效**（载荷 200 · `reasoning_content` 缺席——off 路径存在，族形态与 `glm-5.3` 族相反）⇒ **维持不标**（D-11）· 判据默认侧（可宣称 OFF）成立。
 
 ## 变更记录
+- 2026-10-07（**文档清账批 · fix 轮 · eng-designer**——承批档 `docs/batches/2026-10-07-doc-cleanup.md` §2 · 台账 #977）：§12.4「压缩阈值」行「读什么」列补 `maxOutput`（完成预留——可用窗口 = 窗口 − 预留；阈值 = 可用窗口 × 0.6）∥ 核侧坐标 `thincoder-core/config.mjs:104-110` ⇒ `:137-144` 随正。**零语义**。
+
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§9.9 清单 6 引文回锚（VSC 枚举源 = 端单源 `thincoder-vscode/src/specs.mjs` `effortEnumForModel`——#677 I7 已落）。**零新语义**。
 
 - 2026-09-30（**doc-sweep 批 · 计数收正 · eng-designer**——承 `docs/batches/2026-09-30-doc-sweep.md` §2 · 台账 #676）：§9.7 计数同变面句收正——需求档现记 **22**（21⇒22，provider-config-family 批同变；产品文案两 README 现行句二十-two / 22）。**零新语义**（计数收正）。

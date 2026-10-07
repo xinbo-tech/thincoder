@@ -16,7 +16,7 @@
 | 基础件 | `src/provider/{sse,retry,normalize,errors,abort-provenance}.mjs` | 经核同列引用（W10 已迁核——内联面已归核） |
 | 限流 | `src/provider/rate.mjs` | 经 `@thincoder/core/provider/rate.mjs` 引用（W10 已迁核——同名镜像已删） |
 | 模型清单 | `src/provider/list-models.mjs` | 经 `@thincoder/core/provider/list-models.mjs` 引用（W10 已迁核——同名镜像已删） |
-| 模型规格 | `src/model-specs.mjs` | `src/config.mjs`（模型规格段）+ `specs.mjs`（W16 面——本批零动作） |
+| 模型规格 | `src/model-specs.mjs` | `src/config.mjs`（模型规格段）+ `specs.mjs`（W16 面——本批零动作） （迁移期引文——档已删） |
 
 ## 2. 核模块裁决行（自 `CORE-UNIFICATION.md` §2.5 搬入 · 逐字）
 
@@ -36,7 +36,7 @@
 | 140 | `src/provider/google.mjs` ↔ `src/provider/transports/google.mjs` | ② | 融合：同 #139 | 同 #139（VSC 头注自述「与 CLI 同修」）⇒ 前提成立 | — | S1（建核补齐） |
 | 141 | `src/provider/responses.mjs` ↔ `src/provider/transports/responses.mjs` | ② | 融合：同 #139 | 同 #139（VSC `:376` 自述「与 CLI/core 同构」）⇒ 前提成立 | — | S1（建核补齐） |
 | 142 | `src/provider/sse.mjs` · `retry.mjs` · `normalize.mjs` · `errors.mjs` · `abort-provenance.mjs` ↔ 核内（VSC 侧内联 / 无独立档） | ② | 融合：按核内结构归位（重试链 / 预发归一 / 错误分类 / abort 溯源） | 分叉 ＝ 拆档粒度（VSC 未拆）；VSC 多处自述「与 CLI 对齐」（`thincoder-vscode/src/provider.mjs:250` 等——该端档已退役〔W10 删除集〕）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
-| 143 | `src/model-specs.mjs` ↔ `src/config.mjs`（模型规格段）+ `specs.mjs` | ② | 融合：核内单一 `MODEL_SPECS` + 端侧派生面（面板下拉 / 默认档）按端注入 | 分叉 ＝ 档名与拆分（VSC `config.mjs` 实为规格表、`specs.mjs` 仅转发）；VSC 头注自述「与 CLI src/model-specs.mjs 的查找语义对齐，但非逐行等价」（`:103`）⇒ 前提成立；字段差（`reasoningEffortDefault`）按端差登记 | — | S1（建核补齐） |
+| 143 | `src/model-specs.mjs` ↔ `src/config.mjs`（模型规格段）+ `specs.mjs` | ② | 融合：核内单一 `MODEL_SPECS` + 端侧派生面（面板下拉 / 默认档）按端注入 | 分叉 ＝ 档名与拆分（VSC `config.mjs` 实为规格表、`specs.mjs` 仅转发）；VSC 头注自述「与 CLI src/model-specs.mjs 的查找语义对齐，但非逐行等价」（`:103`）⇒ 前提成立；字段差（`reasoningEffortDefault`）按端差登记 | — | S1（建核补齐） （迁移期引文——档已删） |
 
 ## 3. 须用户裁条目（自 `CORE-UNIFICATION.md` §2.5.1 搬入 · 逐字）
 
@@ -362,7 +362,7 @@ VSC 调用面已无相位传参点（W10 已迁核）——相位参数由核 ch
 本地接线不变 = responses provider 经 config.json 手写 `format: "responses"` 或预设扩展启用（custom 表单 format 下拉未加 responses 项——显式 opt-in，CLI parity）；
 finishReason 区分（`response.incomplete` 非长度原因不得报成 `length`）**保留为端侧验收面**。
 
-**能力适配端差**（语义同源不重并——坐标即指）：`specForModel` / `providerSpec` / `resolveEnableThinking` / `isBailianHost`（`thincoder-vscode/src/config.mjs:106 / :142 / :183 / :166`（as-of 2026-09-29）——W16 面）·
+**能力适配端差**（语义同源不重并——坐标即指）：`specForModel` / `providerSpec` / `resolveEnableThinking` / `isBailianHost`（`thincoder-vscode/src/config.mjs:106 / :142 / :183 / :166`（as-of 2026-09-29） （迁移期引文——档已删）——W16 面）·
 reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 真 off；**载荷形随 `doc:MODEL-SPECS.md:§16.2` 按族取形**）· escape v5 与 UTF-16 安全截断（核 `escape.mjs` + 端 `src/agent/run-helpers.mjs` `safeSliceUTF16`——§6.7 同构）·
 畸形 tool_calls 防御（W10 已迁核——现体 = 核 `provider/sse.mjs`；§6.10 同构）· 前缀剥离与 `DEFAULT_SPEC` 兜底（§6.9 同构）；
 规格表每行多 `reasoningEffortDefault`（§6.9 已登记端差）。**`provider.headers`：VS Code 端无 `providers[].headers` 概念**（§6.17 域外与端面已登记——对位引入属新需求）。
@@ -431,7 +431,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 
 > **来源**：用户 2026-10-03 13:07 原则裁定「三端界面可以不一样，但是逻辑应该是一样的」+ 13:10 取 **U3 档**（宽松 + 明示）；批档 = `docs/batches/2026-10-03-provider-invalid-unify.md` §2。本节 = 该机制**长期单源**；三端消费面只留各自落点细节（D2）。
 
-**问题（实读）**：「缺 ∥ 无效 `defaultModel`」这一态的**判定与处置**三端不等——核 ∥ CLI ∥ 桌面 = 严格（解析未过即无效态：`config.mjs:328-335`）；VSC = 接入面**自建回退链**绕过核判据（`panel-turn-stages.mjs:57-74` + `presets.mjs:107-117`）——既是偏离、也是事实标准。⇒ 同一配置态，一端能发、两端不能发。
+**问题（实读）**：「缺 ∥ 无效 `defaultModel`」这一态的**判定与处置**三端不等——核 ∥ CLI ∥ 桌面 = 严格（解析未过即无效态：`thincoder-core/config.mjs:328-335`）；VSC = 接入面**自建回退链**绕过核判据（`panel-turn-stages.mjs:57-74` + `thincoder-vscode/src/extension/presets.mjs:107-117`）——既是偏离、也是事实标准。⇒ 同一配置态，一端能发、两端不能发。
 
 **统一判据（核单源）**：核 `thincoder-core/model-ref.mjs` 导出 `resolveProviderPlan({ providers, defaultModel, slot })`（**纯函数 · 零 I/O**）——三端消费同一函数；`loadConfig` 的运行时 `provider` 取值切换至该函数（CLI ∥ 桌面经装配自动同源；VSC 回合面直调）。返回面：
 
@@ -450,7 +450,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 3. **首个持 key 渠道**：按 `providers` 表序首个持 key 者 ⇒ 入选（`source="registry"`）；
 4. 无 ⇒ `state="invalid"`（渠表空 ∥ 全表无 key）。
 
-「**持 key**」判据 = `providers[].apiKey` trim 后非空（`config.mjs:11`——env 变量不是密钥源）；槽渠道无 key ⇒ **跳过**（不把不可运行渠道钉进运行态——与 VSC 现行链同判）。
+「**持 key**」判据 = `providers[].apiKey` trim 后非空（`thincoder-core/config.mjs:11`——env 变量不是密钥源）；槽渠道无 key ⇒ **跳过**（不把不可运行渠道钉进运行态——与 VSC 现行链同判）。
 
 **模型面（逐步）**：① 入选来源 = 槽 ∧ 槽带模型 ⇒ 槽模型；② `defaultModel` 解析通过 ∧ 其渠道 == 入选渠道 ⇒ defaultModel 模型段；③ 入选渠道单值 `providers[].model`；④ 无 ⇒ `null`（合法——模型由运行期 `/models` 候选 ∥ 用户选择决定；消费者沿既有「model 缺失」处置；**明示词形随缺**——仅渠道名，见下表）。
 
@@ -460,10 +460,10 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - `fallback` —「**无有效 defaultModel**」类：`defaultModel` 缺 ∥ 不可解析 ∥ 所指渠道不在册 ∥ 所指渠道无 key；**且**全局存在可运行渠道 ⇒ **可运行 + 明示必达**；
 - `invalid` —「**无 provider/key**」类：渠表空 ∥ 全表无 key ⇒ **真无效 + 引导配置**。
 
-**端面「invalid 类」合成式（U-4 裁：两字段并存，不合并）**：`providerState`（key 面）∥ `providerInvalidReason`（**name 面**——`config.mjs:337` 产出：入选渠道具名 ⇒ null ∕ 无入选渠道 ⇒ 非空；语义不变）为**两字段并存**；端面「invalid 类」（= 出导引节点的类）判据 = **`state === "invalid"` ∨ `providerInvalidReason` 非空**（三端同一合成式 · 单判据）。
+**端面「invalid 类」合成式（U-4 裁：两字段并存，不合并）**：`providerState`（key 面）∥ `providerInvalidReason`（**name 面**——`thincoder-core/config.mjs:337` 产出：入选渠道具名 ⇒ null ∕ 无入选渠道 ⇒ 非空；语义不变）为**两字段并存**；端面「invalid 类」（= 出导引节点的类）判据 = **`state === "invalid"` ∨ `providerInvalidReason` 非空**（三端同一合成式 · 单判据）。
 「持 key 但结构不全」（缺 `baseURL` 等）**不在合成式内**——该角归**发送 ∕ 装配失败面**（装配标记 `_providerInvalid` 载体：桌面发送门〔#840 `provider` 类词〕∥ ACP `session/new` 装配后检查；CLI ∥ VSC 落发送期失败面），非导引节点——与断言③负向锁互洽。
 
-`loadConfig` 落三键：`provider` = `plan.provider`；`providerState`（三值：`ok` ∥ `fallback` ∥ `invalid`）+ `providerStateReason`（state≠ok 时非空）；`providerInvalidReason` 语义不变（无入选渠道时非空——`config.mjs:337` 产出，装配校验 `validateProvider` 消费面照旧〔reason 优先源〕）。
+`loadConfig` 落三键：`provider` = `plan.provider`；`providerState`（三值：`ok` ∥ `fallback` ∥ `invalid`）+ `providerStateReason`（state≠ok 时非空）；`providerInvalidReason` 语义不变（无入选渠道时非空——`thincoder-core/config.mjs:337` 产出，装配校验 `validateProvider` 消费面照旧〔reason 优先源〕）。
 
 **reason 文本（语义源 · 逐档）**：`fallback` = 沿用 `defaultModelReason` 现两档（缺 ∥ 无效）+ 新档「`defaultModel` 渠道 "<name>" 无 API 密钥——已回退到可用渠道」；`invalid` = 渠表空 ⇒ 现串「未配置任何 provider」∥ 有渠无 key ⇒ 新档「未配置 API 密钥（providers[].apiKey）——请先配置渠道密钥」。
 
@@ -617,7 +617,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #9（评审轮 1 · 发现 1–5 ∥ 9 ∥ 12）· eng-designer**——承批档 §3 轮次 1 · 台账 #841）：§6.22 补**端面「invalid 类」合成式**（`state === "invalid"` ∨ `providerInvalidReason` 非空——U-4 裁：两字段并存，不合并）；
   模型面 ④ 补 `model=null` 词形（仅渠道名）· 三端表 CLI 格补 `[:<模型>]` 缺省形与 headless/invalid 格（D-S4）；可机检断言①按**运行面（三端同喂假槽）∥ config 级（只比 `state`）**两腿钉定 + 断言③补 `model=null` 档与 invalid 类导引；§6.19 ⑤ 括注「VSC 独立实现」⇒「核转口（#841）」。**产品码零触（修正轮）**。
 
-- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #10（实施轮 A 单漂移回裁）· eng-designer**——承批档 §5 上抛 1 ∥ 2 · 台账 #841）：§6.22 `providerInvalidReason` 面收正为 **name 面**（`config.mjs:337`——「持 key 但结构不全」**不在 invalid 类合成式内**，归发送 ∕ 装配失败面；`:422` 括注 ∥ KD-841-4 同述连改）；
+- 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 修正轮 #10（实施轮 A 单漂移回裁）· eng-designer**——承批档 §5 上抛 1 ∥ 2 · 台账 #841）：§6.22 `providerInvalidReason` 面收正为 **name 面**（`thincoder-core/config.mjs:337`——「持 key 但结构不全」**不在 invalid 类合成式内**，归发送 ∕ 装配失败面；`:422` 括注 ∥ KD-841-4 同述连改）；
   新增 **第四消费面（ACP）注**——门判据随核切换（拒 ⇒ 放行）= U3 自然导出（行为变更在案，非缺陷）；协议面提示通道未决 ⇒ 如需另立设计。**产品码零触（修正轮）**。
 - 2026-10-03（**crash-guards 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-03-crash-guards.md` §2 · 台账 #866（GitHub #16））：§6.3 补 **body 终止守卫** 句（读侧空闲断流经单点 `destroyBody`——机制单源 = `doc:PROXY.md:§2`）。**产品码零触（设计轮）**。
 - 2026-10-03（**轻通道轮八连带 · PROVIDER.md 收正 · 父侧直接执行 · 可 revert**——承 `docs/batches/2026-10-03-light-round-8.md` §2 上抛 U-1 · 台账 #879）：§6.22 三端明示表桌面行 `fallback` 格字面收正——词 ⇒ **`composer.send.noDefaultModelFallback`**（澄清半句「— 正在使用可用渠道」；失败词 ∥ 态词分家）；原「逐字复用 #840 键」失效句按 D8 删除。**零语义改**（= 轮八裁定在设计面的对齐）。

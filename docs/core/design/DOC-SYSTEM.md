@@ -306,11 +306,10 @@ thincoder/                                  ← 合并仓根（git 仓）
 
 | # | 档 | 节 | 动作 |
 |---|---|---|---|
-| 1 | `docs/core/design/prompts/discipline-engineering.md`（**正本**） | §「需求池攒批工作流」第 5 条**边界**（现第 176 行——「池只收用户需求点……不混池」） | 在「边界」条**追加判据句**（同 §10.1 文本，不加新节） |
-| 2 | `thincoder-core/prompts/discipline-engineering.md`（**运行期落地档**） | §「需求池攒批工作流」第 5 条（现第 220 行） | 按正本**回写**（双源链路：先改正本 → 回填落地档） |
+| 1 | `docs/core/design/prompts/persona-engineering.md`（**正本**） | §「台账（需求池 / 技术待办）——攒批与生命周期」第 5 条**边界**（「池只收用户需求点……不混池」） | 在「边界」条**追加判据句**（同 §10.1 文本，不加新节） |
+| 2 | `thincoder-core/prompts/persona-engineering.md`（**运行期落地档**） | §「台账（需求池 / 技术待办）——攒批与生命周期」第 5 条 | 按正本**回写**（双源链路：先改正本 → 回填落地档） |
 
-**为何落这里（实核）**：两池机制的唯一详述处 = 该节（`discipline-engineering.md` 第 169 行起）；`persona-engineering.md` 只提「台账归你」，
-不带判据 ⇒ 判据句归**纪律层**、不归人格层（归属判定四问第 3 问）。**本批只给落点与文本，不写提示词档**（提示词 = 产品代码，内容权归主 agent）。
+**为何落这里（实核）**：两池机制的唯一详述处 = `docs/core/design/prompts/persona-engineering.md` §「台账（需求池 / 技术待办）——攒批与生命周期」（该节即攒批工作流 / 附属纪律的正本）。**本批只给落点与文本，不写提示词档**（提示词 = 产品代码，内容权归主 agent）。
 
 ## 11. 受影响文件清单（FR7 含实修）
 
@@ -399,6 +398,8 @@ thincoder/                                  ← 合并仓根（git 仓）
 
 **2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
 **本批（文档体系重组批（DOC-MIGRATION） · 2026-10-02）落点表** = `docs/batches/2026-10-02-doc-structure-reorg.md` §2（唯一承载面——一次性批次材料）。
+
+- 2026-10-07（**文档清账批 · fix 轮 · eng-designer**——承批档 `docs/batches/2026-10-07-doc-cleanup.md` §2 · 台账 #1000-②）：§10.3 落点表两行重锚至现家（攒批工作流 = `docs/core/design/prompts/persona-engineering.md` §「台账（需求池 / 技术待办）——攒批与生命周期」∥ 运行期落地档 = `thincoder-core/prompts/persona-engineering.md` 同节——旧行号锚弃）；§10「为何落这里」句随正（唯一详述处 = 现家节）。**零语义**。
 
 - 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 波 3 · 终扫轮 · eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：§4 第四部分段收正——需求侧**十档**（总览 + 九域卷，2026-10-02 波 3）；设计侧「无需求侧镜像」句按分卷后实况收正（九档有需求侧同名卷）。**零新语义**（实况枚举）。
 
