@@ -1006,7 +1006,7 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 - **输出面**：全量流式落盘 `configDir/tool-results/<ts>-bash-<id>.log`（同目录 + 轮转复用）；内存侧尾部环形缓冲（注入用）；运行中取件 = `read`。
 - **送达（settle）**：进程退出/被杀 ⇒ 结算 ⇒ digest 注入单点族：状态行（命令 ∥ 退出码/被杀 ∥ 耗时 ∥ log 路径）+ 尾部（≤120 行 ∧ ≤8KB 双帽 + 截尾注记）；全量恒在 log（注入不经预算 offload）。
 - **等待面**：`wait_for` 条件族 +`bash id:N done`（判据同式 `subagent id:N done`——池内 done ∥ 出池即 done）。
-- **终止面**：`process` 工具 +`kill` action（靶 = `pid` ∥ `id` 二选一；id ⇒ 池条目杀树 + 出池 + 墓碑；重复 = 幂等；审批 = 破坏性同径）——`tool-docs` 两处文本（`process.md:10` 欠面 ∥ `wait_for.md:4-9` 条件枚举）随 #15 轮（父侧笔）落。
+- **终止面**：`process` 工具 +`kill` action（靶 = `pid` ∥ `id` 二选一；id ⇒ 池条目杀树 + 出池 + 墓碑；重复 = 幂等；审批 = 破坏性同径）——`tool-docs` 两处文本（`process.md:10` 欠面 ∥ `wait_for.md:4-9` 条件枚举）**已落（2026-10-07——#1045 实施轮父侧笔）**。
 - **超时语义**：async 起跑不收默认 120s（长任务 = 本形目的）；显式 `timeout` 仍生效（到点杀树 + settle 状态 `killed: timeout`）；同步径默认 120s 照旧（§6.4 同句已限定）。
 - **收尾两档**：回合中断（停回合续跑）⇒ 不杀（F2 同款豁免——`docs/core/design/CONSULTATION.md`）；会话中止 ⇒ 逐条杀树 + 出池 + 墓碑（D-CO4 同规则）。
 - **帽**：`BG_TASK_MAX = 4`（对齐 `ASYNC_POOL_LIMITS` 单域 4）；超限显式拒（不静默）。
@@ -1028,7 +1028,7 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 
 **关键决策（承批档 §2.5 D9-1–D9-7）**：择 B 任务池（否决 A 真后台 ∥ C 会话挂起——口径统一硬要求）· 独立池 `_bgTasks` · async 默认无超时 · 跨会话不存活 · kill 收编 `process` · 注入恒尾截 + 全量在 log · 收尾两档。
 
-**`browser` 后台动作（同族并入 · 2026-10-07 · 批 browser-async-fix）**：`browser` 参数面 +`async: boolean`（depth-0 专项——删参单点 ∥ execute 面第二道，同 bash 双线）；池 = `_browserTasks`（帽 `BROWSER_TASK_MAX = 4`）；ack = `browser#<id> started (running) — <action> <subject>`；后台动作仍走同一串行队列（单页不引入并发）；结算 = 恒停靠 + 摘要注入（`injectBrowserResult`——完成 ∥ 失败 ∥ 被杀三态；取消无摘要）+ 取号扫描 ∥ 挂起活度 ∥ 收尾档同族并入；等待面 ∥ 终止面 = `wait_for` 条件 `browser id:N done` ∥ `process` kill id 路由（先 bg 后 browser）。
+**`browser` 后台动作（同族并入 · 2026-10-07 · 批 browser-async-fix）**：`browser` 参数面 +`async: boolean`（depth-0 专项——删参单点 ∥ execute 面第二道，同 bash 双线）；池 = `_browserTasks`（帽 `BROWSER_TASK_MAX = 4`）；ack = `browser#<id> started (running) — <action> <subject>`；后台动作仍走同一串行队列（单页不引入并发）；结算 = 恒停靠 + 摘要注入（`injectBrowserResult`——完成 ∥ 失败 ∥ 被杀三态；取消无摘要）+ 取号扫描 ∥ 挂起活度 ∥ 收尾档同族并入；等待面 ∥ 终止面 = `wait_for` 条件 `browser id:N done` ∥ `process` kill id 路由（先 bg 后 browser——两族皆未命中 ⇒ 合并错误句，`thincoder-core/tools/ops.mjs:109`）。
 
 > 用例表 ∕ 受影响文件与行数预算 ∕ 验收回指 = 批档 `docs/batches/2026-09-29-tools-carryover.md` §2（一次性批次材料——本档不重述）。
 
@@ -1350,3 +1350,4 @@ plan 工具退出文本收正为**批准语义**（**五处**：`thincoder-core/
 - 2026-10-07（**浏览器输入最大化批（browser-input）· 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-10-07-browser-input.md` §3 轮次 1 · 发现 6 ∥ 9）：§6.2 内置工具枚举补 **browser**（入「其余」组——`thincoder-core/tools/index.mjs:28` 注册已在册，枚举面滞后）· §6.11 描述装载面计数收正（48 ⇒ **49 档**——现盘 `tool-docs/` 实测，+`browser.md`）。**零新语义**（文档状态滞后收正）。
 
 - 2026-10-07（**浏览器异步化 + 硬超时批（browser-async-fix）· 设计轮 · eng-designer**——承 `docs/batches/2026-10-07-browser-async-fix.md` §2 · 台账 #1045）：§6.7 browser 条 +硬预算 ∥ 会话自愈 ∥ 异步通道（细则归 `BROWSER-TOOL.md` §2.9–§2.11）；§6.19 扩为后台任务族（+`browser` 后台动作——池 `_browserTasks` ∥ ack ∥ 摘要）；§6.7 wait_for 条件枚举补 `bash id:N done` ∥ `browser id:N done`（`bash` 条为**既有枚举滞后收正**——`tools/ops.mjs:172` 实读已有）。**零新语义**（本批批档 §2 设计的落位）。
+- 2026-10-07（**浏览器异步化 + 硬超时批（browser-async-fix）· 收口回填轮 · eng-designer**——承 `docs/batches/2026-10-07-browser-async-fix.md` §5 读数终核）：§6.19 browser 段 +合并错误句（id 路由先 bg 后 browser——两族皆未命中单句，`thincoder-core/tools/ops.mjs:109`）；§6.7 `wait_for` 条校核零改（`browser id:N done` 已载、与实现一致）。**零新语义**（= 批档 §5 上抛的收口回填）。

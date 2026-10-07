@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-07 · 来源 = 用户 2026-10-07 19:41 投诉（浏览器工具同步阻塞/吊死 agent）+ 19:43 裁「修彻底」（满量先行——不做止血半量）。
 > 台账 = #1045（core · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：进行中（设计评审 pass（🔴0）· 修复轮 11/11 落 · 已代签 · 实施 A 舱已交（9/9 绿 · 评审 clean）· B 舱接棒在跑 · 上抛 3 项待回填轮（session 493 余 7 ∥ 开启段句面））
+**状态行**：已收口 2026-10-07
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 ### 1.1 来源与裁定（父侧 · 2026-10-07 19:4x）
@@ -88,8 +88,25 @@
 
 Notes 行随动：「an unknown or already-finished **bash** task id」⇒ 去「bash」。
 
+### 1.9 舱 B 交付处置（主 agent · 2026-10-07 21:4x）
+
+- **核验**：`browser-async.mjs` 头注（池 4 ∥ 取消柄 = signal 缝 ∥ 墓碑/收尾语义）与设计 §2.9/§2.10/§2.11 逐条对得上 ∥ 拆分四档在盘 ∥ 原 A 档 334 行——**通过**。舱自跑：A 9/9 ∥ B 10/10 ∥ 冒烟 S19–S22 4/4（真 Edge）∥ 旧三档 21/21 ∥ 7/7 ∥ 4/4 ∥ `node --check` 16 档零错。
+- **披露①（测试拆 .a/.b）**：追加后 578 > 500 硬限 ⇒ 评审 must-fix 拆档——**准**（沿 `.a/.b` 先例；夹具块逐字复制）。
+- **披露②（kill 缝两参）**：= 父侧裁定①授权的实现（queue +3 ∥ session +1，纯增量、单笔可 revert）——**准**；设计面登记归 #18。
+- **上抛③（跨批陈旧断言）**：`docs/batches/2026-09-29-tools-carryover.test.mjs:318` 随合并句收正（`unknown background bash task id` ⇒ `unknown background task id`）——**父侧直接执行〔可 revert〕**，复跑 **16/16 绿**验证。
+- **上抛④（设计面读数/用例/依赖边）**：并入 #18 任务书。
+- **上抛⑤（`backgroundCounts` 计数面）= 裁 登记（b）**：browser 族同 `bash#` 先例不入 `backgroundCounts`——设计直陈（#18）；不扩扫域。
+- **上抛⑥（并行面两档 SETTINGS.md）**：确认非本舱所触（= parity #16 面）——零动。
+- **收口读数（父侧）**：`thincoder-cli` `npm test` ∥ `thincoder-vscode` `npm test` = **test manifest 为空 ⇒ zero tests = green**（2026-09-28 full reset 后核面如此——照实载；真实验证面 = 批内 unit 档 + 冒烟）。
+
+### 1.10 设计回填轮（#18）处置（主 agent · 2026-10-07 21:4x）
+
+- **核验**：`BROWSER-TOOL.md:214`（取消接线两参 + 行数 171 ∥ 494）∥ `:216`（开启段句面登记 + 到期条件）实读在位——**通过**；读数全表（复读口径）与 §5 终核一致。
+- **披露（表题收正「>300 档位处置」⇒「档位处置」）= 准**（表名与内容一致性；D3 随动）。
+- **附察（`TOOLS.md:1009` 时态滞后）= 收**——父侧直接执行〔可 revert〕：改为「**已落（2026-10-07——#1045 实施轮父侧笔）**」。
+
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（eng-designer · 2026-10-07 · 硬超时+外部关闭自愈+异步通道+用法认知（E1–E5））
+**状态行**：设计完成（eng-designer · 2026-10-07 · 硬超时+外部关闭自愈+异步通道+用法认知（E1–E5）· 收口回填轮已落）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 ### 2.1 本批条目（覆盖 —— 与需求档 / 设计档三联同源）
@@ -275,6 +292,25 @@ Notes 行随动：「an unknown or already-finished **bash** task id」⇒ 去�
 
 **上抛 / 未决**：无（11/11 落盘；附察 ② 待父侧酌处——「建议」类标记是否同收）。
 
+### 收口回填轮落盘（2026-10-07 · eng-designer · fix 轮——承本档 §5「读数终核」∥ 父侧裁定）
+
+**轮次**：fix（点修——只做 ①–③）。零新语义（读数 / 直陈 / 登记只）∥ 产品码零触 ∥ 需求档零动 ∥ §1 / §3–§6 零动（本块 = §2 追记）∥ 批外档零触（② 的 `TOOLS.md` 卷动 = 授权面）。落盘时点复读：表内全数读数与现盘一致（`readFileSync` 口径——与 §5 读数终核同法）。**两档行数**：`BROWSER-TOOL.md` 541 ⇒ 549 ∥ `TOOLS.md` 1,352 ⇒ 1,353。
+
+**逐项落盘（项 → 改动 file:line）**：
+
+1. `docs/core/design/BROWSER-TOOL.md` §5 读数回填（实施后实读——表头改「实施后实读」单列）——`:343`（标题）∥ `:345–370`（表）∥ `:372`（拆分决定）∥ `:374–375`（档位处置 += `session.mjs`（494——余 6，下次触碰先拆）∥ `queue.mjs`（171）∥ `browser-async.mjs`（198））∥ `:377`（依赖句 +`queue → actions`——wait 帽常量）。
+2. §2.9 补两直陈——取消接线（`browser/queue.mjs:157` `enqueue(...,signal)` ∥ `browser/session.mjs:489` `runAction(...,{signal})`——两参一条机制两个因由）`:214` ∥ 开启段句面（enables 帽句形 `<method> did not respond within <ms>ms`（`browser/cdp.mjs:80`）+ WS 断连走健康路径；到期条件 = 动作面失败句面下次触碰统一收编）`:216`。
+3. §2.11 补 `backgroundCounts` 直陈（后台任务族不入——同 bg 先例；本批不扩扫域）——`:250`。
+4. 用例面登记——§7 三行（F-BT16 + T27b `:439` ∥ F-BT17 + T44 `:440` ∥ N-BT10 + T43 `:443`）∥ §8 两行（U52 + T27b `:500` ∥ U58 + T44 `:506`）∥ 批内件拆 a/b 两档名与行数（`:366–368` ∥ 尾注 `:512`——A 334 ∥ B 386 ∥ 冒烟 173）。
+5. `docs/core/design/TOOLS.md` §6.19 browser 段 +合并错误句（id 路由两族皆未命中——`thincoder-core/tools/ops.mjs:109`）——`:1031`；§6.7 `wait_for` 条校核零改（`browser id:N done` 已载、与实现一致）。
+6. 两档各 +1 变更行——`BROWSER-TOOL.md:549` ∥ `TOOLS.md:1353`。
+
+**附察（报告、未动）**：`TOOLS.md:1009` 句尾「`tool-docs` 两处文本……随 #15 轮（父侧笔）落」时态滞后（两处已落成：`process.md:10` ∥ `wait_for.md:9`）——非本批 ② 面，报父侧酌处。
+
+**守界**：产品码 / `scripts/**` / 提示词零触；需求档（`docs/core/requirements/**`）零动；§1/§3–§6 零动；批外档零动。
+
+**上抛 / 未决**：无。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -412,3 +448,22 @@ VERDICT: pass
 `browser/queue.mjs` 171 ∥ `browser/session.mjs` 494 ∥ `agent-tools/browser-async.mjs` 198 ∥ `agent-tools/async-settle.mjs` 327 ∥ `agent-tools/async-discard.mjs` 220 ∥ `agent-tools/subagent-scheduler.mjs` **450**（上记 448——两处调用点注释收正 +2） ∥ `agent-tools/subagent-async.mjs` 477 ∥ `agent/suspension.mjs` 351 ∥ `agent/run-stages.mjs` 295 ∥ `agent/helpers.mjs` 490 ∥ `tools/browser.mjs` 161 ∥ `tools/ops.mjs` 346 ∥ `tool-docs/process.md` 14 ∥ 单测 A **334** ∥ 单测 B **386**（上修块记 387 = read 工具页脚口径，含尾行空段） ∥ 冒烟 173。全档 ≤500 ✓。
 
 ## §6 验证与收口（父代理）
+
+## 6. 验证与收口
+
+**收口日期**：2026-10-07（主 agent）
+**状态**：冻结——本档此后不再回改（外部记忆）。
+
+### 6.1 收口清单（结算同步）
+
+- **角色表（一段一作者）**：§1 主 agent ∥ §2 eng-designer（设计轮 + 收口回填轮 #18）∥ §3 设计评审（用户点火——pass，findings 表在档）∥ §4 主 agent（代签）∥ §5 eng-coder（A 舱 #11 ∥ B 舱 #12）∥ §6 主 agent。
+- **状态行**：§1 → 已收口（close 工具落）。
+- **计数**：档位处置三档 += `session.mjs`（**494**——余 6，下次触碰先拆）∥ `queue.mjs`（171）∥ `browser-async.mjs`（198）；测试面 = A **334** ∥ B **386** ∥ 冒烟 **173**（S19–S22）；旧三档 21 ∥ 7 ∥ 4——全在 `BROWSER-TOOL.md` §5。
+- **指针**：需求档 `docs/core/requirements/BROWSER-TOOL.md`（F-BT16–19 ∥ N-BT10——已落）∥ 设计档 `BROWSER-TOOL.md` ∥ `TOOLS.md`（变更行 `:549` ∥ `:1353`）。
+- **待办勾线**：#1045 核销（本 §6 = 证据）∥ 无本批新增欠账（#1052 系他批面，在册）。
+- **父侧直接执行件（可 revert）**：① 跨批陈旧断言收正（`docs/batches/2026-09-29-tools-carryover.test.mjs:318`——复跑 **16/16 绿**）；② `TOOLS.md:1009` 时态收正（「随 #15 轮落」⇒「已落」）。
+- **提交**：`c207c39`（核面 + prompt 三档）∥ `43268428`（异步通道 + kill 缝 + 测试拆档 + 跨批断言）；记录档随各笔提交。
+- **收口读数（唯一仓套件跑 · 父侧）**：`thincoder-cli` ∥ `thincoder-vscode` `npm test` = **test manifest 为空 ⇒ zero tests = green**（2026-09-28 full reset——照实载）；真实验证面 = 批内 unit（A **9/9** ∥ B **10/10**）+ 冒烟 **4/4**（真 Edge）∥ 旧三档全绿 ∥ `check-syntax` 16 档零错。
+- **走查**：本批验收含真浏览器面（S19–S22 真跑记录在 §5）——**无需人工走查**；用户可选抽验（一枪 `browser` + `process kill id`）。
+- **暂缓批复核**：无。
+- **结算行**：台账 `/ledger`——**#1045 → 已核销**（证据 = 本档 §5/§6 + 提交面）。
