@@ -78,6 +78,7 @@ test("③ testProviderConnection：网页代理在案（死代理），本地渠
   const gw = await mockGateway()
   const dir = mkdtempSync(join(tmpdir(), "tc-proxy-fix-"))
   const cfgPath = join(dir, "config.json")
+  // temp 注入用途 = 隔离真配置 + 旧读点回归绊线（`web: true` + 死代理串）：修后探针路径不取它——绊线判别力依赖 `CORE` 模块实例同一性（若回退取全局 `web` 旗即复红）。
   writeFileSync(cfgPath, JSON.stringify({
     // 现行代码把探针路由此器——死端口 1；修后应完全不取它
     proxy: { uri: "http://127.0.0.1:1", web: true, model: false },
