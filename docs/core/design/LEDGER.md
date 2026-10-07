@@ -156,10 +156,10 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 
 **统一入口收正（2026-10-05 批 · 收正点）**：适用面重述「五工具 → 统一入口五 action」；判据本体（P1–P6 ∥ 字段判据表 ∥ 声明派生）**零改**；**文案前缀渲染规则 = §11.3**（动作级 `ledger(<action>)：` ∥ 入口级 `ledger：`）——本表已按新渲染收正；**入参形态 = 已消费 `action` 的余键**（统一入口判序② 消费——`action` 不入 P2 域；§11.3）。
 
-**落点**：`thincoder-core/ledger-tools.mjs`（已落——工具定义 + 守卫 helper 的拆分落点；读数 = §11.8）统一入口 `execute` 顶端（守卫 = 工具档单点 helper——`assertToolArgs(tool, args)` **返回**入参对象；消费形 = action 分派后逐 action 以伪工具对象调用 `assertToolArgs(<伪工具>, <余键>)`（已消费 `action`——§11.3）——helper 零改）；
+**落点**：`thincoder-core/ledger-tools.mjs`（已落——工具定义 + 守卫 helper 的拆分落点；读数 = §11.8）统一入口 `execute` 顶端（守卫 = 工具档单点 helper——`assertToolArgs(tool, args)` **返回**入参对象；消费形 = action 分派后逐 action 以伪工具对象调用 `assertToolArgs(<伪工具>, <余键>)`（已消费 `action`——§11.3）——helper 机制沿用；「零改」面破例 = #1006 批增布尔分支（§13.9））；
   判序 = **参数守卫 →（核内）迁移表判 → 写门 → UPDATE**（§3.1 / §6.1 各自判序零变，守卫先于其全部）。
 
-- 理由：① 原始 args（含未知键）只在工具层存在——未知键闭合无法在核函数表达（`row` 已拆解）；② 拒因文案面向**模型**（修向指引），核函数既有文案面向直调面；③ 核函数（`ledgerAdd` / `ledgerUpdate` / `ledgerClose`）函数体零改。
+- 理由：① 原始 args（含未知键）只在工具层存在——未知键闭合无法在核函数表达（`row` 已拆解）；② 拒因文案面向**模型**（修向指引），核函数既有文案面向直调面；③ 核函数（`ledgerAdd` / `ledgerUpdate` / `ledgerClose`）函数体零改（「零改」面破例 = #1006 批——值计算落核内，与守卫面无关，§13.9）。
 - 落选（被拒方案）：核函数层守卫（照 §6.1 写门同层落）——写门守**数据不变量**（任意调用面须守），参数守卫守**模型调用契约**（只在工具边界成立）；且未知键判无法下沉。
 
 **机制（声明派生——单源）**：守卫消费工具对象自身的 `parameters`——枚举 / 必填 / 类型**不在守卫内复写**（D2：声明即校验，声明改动自动随守卫走）。派生所需两处声明收正（同批同档）：`ledger(update)` 的声明条目 `status` 属性**补 `enum`**（六态——原缺，description 已言明「六态之一」）；**五 action 声明条目** `parameters` 补 `additionalProperties: false`（闭合声明——与「未知键拒」同源宣告；读命令二具同拍——2026-09-28）。
@@ -174,7 +174,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 | P1 | 入参非对象 | `<工具>：参数须为对象（收到 <预览>）` |
 | P2 | 未知键 | `<工具>：未知参数：<键1> / <键2>（可用参数 = <可用1> / <可用2> / …）` |
 | P3 | 必填缺失 | `<工具>：<字段> 缺失（必填<；取值 ∈ {…}>）`——枚举字段带取值域，非枚举必填串带「；非空字符串」，非枚举数字字段仅「必填」 |
-| P4 | 类型不符（非枚举字段） | `<工具>：<字段> 非法：<预览>（应为字符串）` / `（应为数字）` |
+| P4 | 类型不符（非枚举字段） | `<工具>：<字段> 非法：<预览>（应为字符串）` / `（应为数字）` / `（应为布尔）` |
 | P5 | 枚举不符（含错型值） | `<工具>：<字段> 非法：<预览>（取值 ∈ {…}）` |
 | P6 | `title` 空串 / 全空白（两 action 同拒——add 必填面 / update 字段级） | `<工具>：<字段> 为空（必填；非空字符串）`；`ledger(update)` 形 = `<工具>：title 为空（非空字符串）`（字段可空、值不可空） |
 
@@ -190,10 +190,12 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 | `ledger(update)` | `status` | 可空 · ∈ 六态 | `ledger(update)：status 非法：<v>（取值 ∈ {待讨论, 待设计, 在途, 待核销, 已核销, 已废弃}）` |
 | `ledger(update)` | `title` | 可空 · 串（**值非空串**——空串 / 全空白 ⇒ 拒） | `ledger(update)：title 非法：<v>（应为字符串）` · `ledger(update)：title 为空（非空字符串）` |
 | `ledger(update)` | `board` / `req_doc` / `task_book` / `evidence` / `executor` | 可空 · 串 | `ledger(update)：<字段> 非法：<v>（应为字符串）` |
+| `ledger(update)` | `evidenceReplace` | 可空 · 布尔（`true` 须与 `evidence` 同传——旗独传 / 新值空白 ⇒ 核面拒〔§13.9〕；缺省 / `false` = 追加） | `ledger(update)：evidenceReplace 非法：<v>（应为布尔）` |
 | `ledger(update)` | `trigger` | 可空 · ∈ {归批, 条件, 认账不排期} | `ledger(update)：trigger 非法：<v>（取值 ∈ {归批, 条件, 认账不排期}）` |
 | `ledger(close)` | `id` | 必填 · 数字 | `ledger(close)：id 缺失（必填）` · `ledger(close)：id 非法：<v>（应为数字）` |
 | `ledger(close)` | `status` | 必填 · ∈ {已核销, 已废弃} | `ledger(close)：status 缺失（必填；取值 ∈ {已核销, 已废弃}）` · `ledger(close)：status 非法：<v>（取值 ∈ {已核销, 已废弃}）` |
-| `ledger(close)` | `evidence` | 可空 · 串（**值可空**——追认核销面由 `evidence` 门判**结果值**：缺 / 全空白 ⇒ 拒，文案逐字不变） | `ledger(close)：evidence 非法：<v>（应为字符串）` |
+| `ledger(close)` | `evidence` | 可空 · 串（**值可空**——追认核销面由 `evidence` 门判**结果值**：缺 / 全空白 ⇒ 拒，文案逐字不变；传入 = 追加缺省——§13.9） | `ledger(close)：evidence 非法：<v>（应为字符串）` |
+| `ledger(close)` | `evidenceReplace` | 同 `ledger(update)`（前缀换 `ledger(close)`——§13.9） | `ledger(close)：evidenceReplace 非法：<v>（应为布尔）` |
 | `ledger(query)` | `status` | 可空 · ∈ 六态 | `ledger(query)：status 非法：<v>（取值 ∈ {待讨论, 待设计, 在途, 待核销, 已核销, 已废弃}）` |
 | `ledger(query)` | `kind` | 可空 · ∈ {requirement, tech_todo} | `ledger(query)：kind 非法：<v>（取值 ∈ {requirement, tech_todo}）` |
 | `ledger(query)` | `board` / `cwd` | 可空 · 串 | `ledger(query)：<字段> 非法：<v>（应为字符串）` |
@@ -204,7 +206,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 ③ 非数字 `id` ⇒ 拒（不静默按数值命中）；④ 非串 / 错型值 ⇒ 拒（原文案外泄面收口）；⑤ 入参 `null` / 非对象 ⇒ 拒（`null` 视作 `{}` ⇒ 走缺参文案）；⑥ `cwd` 非串 ⇒ 拒。
 ⑦ **读面过滤参数非法 ⇒ 拒**（不再静默空集——`status: 123` / `kind: "bogus"` 现值 = 空集、`status: []` = 绑定原文；取舍：空集与「库不在 = 空账」不可区分 = 虚假读数，fail-closed 可见为上）；⑧ `executor` 显式 `null` ≡ 略去（工具层同缺省分支取 sessionId——§3.1 `null` 口径句）。逐条对照（旧形 ⇒ 新形）与探针实读 = 批档 §2。
 
-**可空串空串口径**：可空串字段的空串保留既有语义（`patch.x ?? 行值` 下 `""` 为唯一「清值」形——`null` 等同略去）；**例外 = `title` / `task_book`**：`title` 空串 / 全空白两 action 同拒（P6 字段级——无标题即无意义）；`task_book` 空串 / 全空白由 §6.1 写门承接（在途 / 待核销 ⇒ 拒）。
+**可空串空串口径**：可空串字段的空串保留既有语义（`patch.x ?? 行值` 下 `""` 为唯一「清值」形——`null` 等同略去）；**例外 = `title` / `task_book` / `evidence`**：`title` 空串 / 全空白两 action 同拒（P6 字段级——无标题即无意义）；`task_book` 空串 / 全空白由 §6.1 写门承接（在途 / 待核销 ⇒ 拒）；`evidence` 传入 = 追加缺省、空白 ⇒ 拒——清值形退役（#1006 批 · §13.9）。
 
 **受影响面（读数 as-of 2026-09-28；行数 = 现行 ⇒ 预期）**：
 
@@ -292,8 +294,8 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 | `ledgerQuery({ cwd, status, kind, board, trigger, now })` | SELECT 行集（只读，全角色）——本批增：`trigger` 等值过滤（§13.2）· 行集逐行携计算字段 `aged`（§13.4）· `now` 注入缝（确定性用例面） |
 | `ledgerCount({ cwd })` | `COUNT(*)` WHERE 未决四态（单源计数） |
 | `ledgerAdd({ cwd, row })` | INSERT（写命令，主 agent） |
-| `ledgerUpdate({ cwd, id, patch })` | UPDATE（写命令，主 agent——迁移表校验） |
-| `ledgerClose({ cwd, id, status, evidence })` | UPDATE status + `closed_at`，事务包裹（写命令，主 agent）——核销两源 = 待核销（勾销）· 待讨论 / 待设计（追认核销 · `evidence` 必填 · 缺则拒）；在途不可跳；本批增可选 `evidence` 参（一跳核销——追认门判结果值，§13.1） |
+| `ledgerUpdate({ cwd, id, patch })` | UPDATE（写命令，主 agent——迁移表校验）；#1006 批：`patch.evidence` 传值 = 追加缺省、`patch.evidenceReplace` = 布尔覆盖旗（§13.9） |
+| `ledgerClose({ cwd, id, status, evidence, evidenceReplace })` | UPDATE status + `closed_at`，事务包裹（写命令，主 agent）——核销两源 = 待核销（勾销）· 待讨论 / 待设计（追认核销 · `evidence` 必填 · 缺则拒）；在途不可跳；#998 增可选 `evidence` 参（一跳核销——追认门判结果值，§13.1）；#1006 批：`evidence` 传值 = 追加缺省、增 `evidenceReplace` 旗（§13.9） |
 | `findProject(anchor)` | 向上（含自身）最近的**已注册台账**目录（用户目录键控库存在）→ `{root, ledger}` / `null` |
 | `discoverFamily(anchor)` | `{current, projects}`——current = `findProject`（**歧义命中 ⇒ `null`**——按容器形落子目录族；§7.2 歧义根子例）；projects = current + 其同级含台账目录 |
 | `formatMarker(scan)` | §7.3 逐字（**签名与键语义不变**——L1 标记本批零扩，§7.3.1；**范围限定**：单 scan 逐字模板——范围求和不在本函数，经 `scopeMarkerOf` 委托出文（§7.2）） |
@@ -534,6 +536,10 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 
 - 2026-10-07（**批 ledger-tool · 设计评审修正轮 1（发现 1–9）· eng-designer**——承批档 `docs/batches/2026-10-07-ledger-tool.md` §3 轮次 1）：§7.1 导出契约两行随 §13 收正（`trigger` / `now` / `evidence` / `aged`）；§8 AC-M2-7 补点火边；§11.3 查询行枚举补 `trigger` + 新增字段注（close / query 声明 = 前身逐字 + 增量——防实现按「逐字」复制致新参被 P2 判未知键拒）；§13.3 可见面口径句；§13.5 受影两件核验行（`ledger-unification` = 零改 ∥ `carryover-15` = 不编辑）+ `ledger-cmd` 行补 ③ + 批内件规模收一（≈200–260）。**机制 / 参数语义零改**（仅文档面收正）；发现 10 = 接受现形。
 
+- 2026-10-07（**批 ledger-evidence-semantics · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-ledger-evidence-semantics.md` §1 · 台账 #1006）：新增 **§13.9 `evidence` 语义修正**（`update` ∥ `close` 传入 = 追加缺省——旧空直写 / 新值空白拒 / 「｜」零空格拼接 ∥ 布尔覆盖旗 `evidenceReplace: true` 同传——旗独传拒 ∥ close 追认门零变）+ §13.1 机制式随正（值计算 / 判序）∥ §3.2 判据表增 `evidenceReplace` 两行 + 可空串空串口径例外句增 `evidence` ∥ §7.1 两行随正；用例 U-LT11–U-LT18 / 验收 A-LT7 / KD-LT5。**实现 = 本批实施轮**；需求侧编号候补 = AC-M2-25（主 agent 笔）。
+
+- 2026-10-07（**批 ledger-evidence-semantics · 设计评审修正轮 1（发现 1/2/3/4/6——受理落修；5 父侧笔 / 7 收口轮）· eng-designer**——承批档 `docs/batches/2026-10-07-ledger-evidence-semantics.md` §3 轮次 1）：判序收正（拒面① 明写判于值计算阶段、先于追认门——`:924` / `:930–932`；U-LT17 补行态注 `:967`）∥ §3.2 P4 模板行增第三型「（应为布尔）」+ 随动清单同拍（`:177` / `:944`）∥ §3.2 落点句（`:159`）与 §11.3 新参注（`:581`）改述「本批破例 + 新形态」（档头注 `thincoder-core/ledger-tools.mjs:8` = 实施轮落点）∥ `:986` 改述「已落（AC-M2-25 · 需求档 `:83`）」。**零新语义**（仅文档面收正）。明细 = 批档 §2 修轮更正块。
+
 ## 11. Ledger-tool unification（2026-10-05 · 批档 `docs/batches/2026-10-05-ledger-unification.md`）
 
 **目标**：五散开工具 → 单入口 `ledger`（action = add / update / close / query / count），内部路由既有 `.cmd` 模块；**外部行为零变**（除错误消息前缀面——§11.3）。
@@ -570,9 +576,9 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 ### 11.3 守卫适配（action 判据表 + 文案前缀规则——[收正点]）
 
 **并集 schema 的必填缺口**：单对象 `parameters` 不表达 per-action required（providers 不强制——§3.2 背景同款）；运行时按 action 裁。
-**实现形（伪工具对象）**：每 action 一份声明条目 = 该 action 前身旧工具 `parameters` **逐字**；守卫消费形 = `assertToolArgs`（helper **零改**）喂伪工具对象 `{ name: "ledger(<action>)", parameters: <该 action 声明> }` ⇒ 既有「前缀 = tool.name」机制直接产出 `ledger(<action>)：…`。
+**实现形（伪工具对象）**：每 action 一份声明条目 = 该 action 前身旧工具 `parameters` **逐字**；守卫消费形 = `assertToolArgs`（helper **零改**——本批破例 = #1006 批增布尔分支，§13.9）喂伪工具对象 `{ name: "ledger(<action>)", parameters: <该 action 声明> }` ⇒ 既有「前缀 = tool.name」机制直接产出 `ledger(<action>)：…`。
 **入参形态（分派后——缝钉死）**：`action` 键在判序②**已消费**（`const { action, ...rest } = args` 形）——喂伪工具守卫 = **余键 `rest`**（`action` 键**不入 P2 域**；P2 未知键判域 = 余键集）。伪声明「前身逐字」零改——否决「伪声明并入单值 `action` 属性」（破声明源「逐字」不变量 ∥ 触 helper 语义面；KD-unif-8）。
-**本批新增字段注（2026-10-07 · §13.1 / §13.2）**：`close` / `query` 两行声明 = 前身逐字 **+ 本批新增参**（`evidence` ∥ `trigger`——皆可选，必填列零变）——守卫面必随：缺注则实现按「逐字」复制前身声明，新参被 P2 判未知键拒（§3.2 P2）；余三行（add / update / count）照旧逐字零变。
+**本批新增字段注（2026-10-07 · §13.1 / §13.2）**：`close` / `query` 两行声明 = 前身逐字 **+ 本批新增参**（`evidence` ∥ `trigger`——皆可选，必填列零变）——守卫面必随：缺注则实现按「逐字」复制前身声明，新参被 P2 判未知键拒（§3.2 P2）；#1006 批再增：`update` / `close` 两行各增 `evidenceReplace`（同式——§13.9）；余下 add / count 两行照旧逐字零变。
 **判序**：① 入参归一（P1 同式）→ ② 入口级 `action` 判（P3 缺失 / P5 非法——消费 `action`）→ ③ 分派后以**已消费 `action` 的余键**喂该 action 伪工具对象走 P2–P6（§3.2 同文——P2 域 = 余键）。
 
 **按 action 判据表**：
@@ -822,9 +828,9 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 ### 13.1 ① `close` 携 `evidence`（一跳核销）
 
 - **参数面**：`ledger(close)` 增可选 `evidence`（串）——`{ action:"close", id, status, evidence? }`；缺省 = 行现值不变（**向后兼容**：不带该参的既有调用行为零变）。
-- **语义**：核函数 `ledgerClose({ cwd, id, status, evidence })`——事务内 `nextEvidence = evidence ?? 行 evidence`；**追认口 `evidence` 门判 `nextEvidence`**（非空 / 非全空白——缺 / 全空白 ⇒ 拒，文案逐字不变）；`UPDATE` 落 `nextEvidence`。勾销 / 撤回路径同携（写值落行；内容不判）。
+- **语义**：核函数 `ledgerClose({ cwd, id, status, evidence, evidenceReplace })`——事务内 `nextEvidence` = 值计算（**#1006 批改追加缺省 / 覆盖旗——§13.9**）；**追认口 `evidence` 门判 `nextEvidence`**（非空 / 非全空白——缺 / 全空白 ⇒ 拒，文案逐字不变）；`UPDATE` 落 `nextEvidence`。勾销 / 撤回路径同携（值语义 = §13.9）。
 - **效果**：追认核销（待讨论 / 待设计 → 已核销）= 一跳（原「`update` 补证据 → `close`」两跳收敛）。
-- **判序零变**：源态判 → `evidence` 门 → UPDATE（参数守卫先于全部——§3.2）。
+- **判序**：源态判 → 值计算 → `evidence` 门 → 新值判（#1006 批增——§13.9）→ UPDATE（参数守卫先于全部——§3.2）。
 
 ### 13.2 ② `query` 按 `trigger` 过滤
 
@@ -905,4 +911,77 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 - 不做 `trigger = NULL` 过滤；不做 query 排序参数（批面未列）。
 - executor 不引入自动接手 / 心跳 / 清槽扩展（§3.1 ⑤ 既有禁止面不变）。
 - 老化不做趋势 / 报表（仅逐行布尔标记）。
+
+### 13.9 `evidence` 语义修正——追加缺省 + 布尔覆盖旗（2026-10-07 · 批档 `docs/batches/2026-10-07-ledger-evidence-semantics.md` · 台账 #1006）
+
+**背景（因何而立）**：`update` / `close` 的 `evidence` 传值语义从未定义（§3.2 仅「可空 · 串」）——实现按 `patch.evidence ?? 行值` 填空 = **静默整体替换**；调用侧「自拼原文」成习，一次漏拼即无声灭失出处。事故样本 = 2026-10-07 七行（#988 / #994 / #995 / #1001–1004）原文被顶掉、父侧手工还原。用户 12:20 定型「默认追加」、12:21 点火；覆盖旗形态 = 父侧定裁 **A（布尔旗与值同传）**（2026-10-07 设计轮回执）。
+
+**语义（update ∥ close 同式；`add` 零变——新行直写无旧值）**
+
+- **追加（缺省）**：传入 `evidence`（非 `null`——`null` ≡ 略去，§3.2 既有口径；close 侧勾销 ∥ 追认 ∥ 撤回三径同携）⇒ 旧值非空：值 = `旧 + "｜" + 新`（**「｜」两侧零空格直接相接**——房规形 = 「。｜【」块摞块，实材三处核讫 = #885 ∥ #922 ∥ #1006 evidence 逐字）；旧值空（`null` ∥ 空串 ∥ 全空白）⇒ 直写新值（零分隔符残留）；两值逐字落行（不裁 / 不判内容）。
+- **覆盖（显式）**：`{ evidence: 完整新文, evidenceReplace: true }`（**旗与值同传**——沿 `edit` `replace_all` 先例）⇒ 整段替换（旧文零保留）。
+- **拒面（两枚——文案逐字）**：① **旗独传**（`evidenceReplace: true` ∧ `evidence` 缺 / `null`）⇒ 拒——`ledgerUpdate：evidenceReplace 须与 evidence 同传（缺新文）`；close 同式（前缀换 `ledgerClose`）。② **新值全空白**（追加 ∥ 覆盖两径同判）⇒ 拒——`ledgerUpdate：evidence 为空（非空字符串）`；close 同式。
+- **close 门判照旧**：追认口 `evidence` 门判**结果值**（缺 / 全空白 ⇒ 拒——`ledgerClose：追认核销须带 evidence（现态 <X>）` 文案逐字不变）；拒面①（旗独传）判于**值计算阶段**（追认门之前——无新文可算，先拒）；拒面②落位于追认门**之后** ⇒ 追认 + 空白（旧空）先中追认门（U-LT2 零变）。
+- **清值形退役（如实）**：`evidence:""` 原为唯一「清值」形（§3.2 可空串空串口径）——随空白判 ⇒ 拒（本次修正对象；彻底改写 = 覆盖旗 + 新全文）。
+- **核内旗判**：只认 `=== true`（其余值 = 追加——类型严判在工具层 `（应为布尔）`）。
+
+**判序（既有判位零动；新判面落位如下）**
+
+- update：迁移表判 → 本语义（executor 目标值 + **evidence 值计算（含两拒面）**）→ 写门 → UPDATE。
+- close：目标集判 → 行取 → 源态判 → **值计算（追加 / 覆盖——拒面① 旗独传判于此）** → 追认门（原样）→ **拒面②（新值空白）** → UPDATE。
+- 工具层参数守卫先于全部（§3.2）。
+
+**兼容声明**
+
+- 不带 `evidence` 的既有调用行为零变（行值不变 ∥ 判行值）；`evidenceReplace` = 新增参（缺省 / `false` = 追加——无旧行为可破）。
+- 带 `evidence` 的行为 = **本次修正对象**（破坏性缺省 ⇒ 追加缺省）；上批件 `docs/batches/2026-10-07-ledger-tool.test.mjs` U-LT1 / U-LT3 值断言在新语义下同值（旧值空 ⇒ 直写）——零改零破；U-LT2 / U-LT3 / U-LT4 面零变（父裁）。
+
+**声明面随正（实施轮落）**
+
+- `thincoder-core/ledger-tools.mjs`：① update / close 两声明各增 `evidenceReplace`（`type:"boolean"`）+ `evidence` 描述改写（追加缺省 / 旧空直写 / 空白拒 / 覆盖旗同传）；② 并集 schema 两属性同增（两变体共享形态零变）；③ 合并句（`:157`）改写；④ close 路由携 `evidenceReplace`；
+⑤ 守卫 helper 增布尔分支——**「零改」面破例（理由随行）**：声明含 `type:"boolean"` 必判，不判则 `"true"` 串静默落追加模式（双态歧义 = 本批打击面）；文案 `（应为布尔）`，判据点 = §3.2；⑥ 档头注（`thincoder-core/ledger-tools.mjs:8`）「helper `assertToolArgs` 零改」句随正——同 ⑤（本批破例：增布尔分支）。
+- `thincoder-core/tool-docs/ledger.md`：update 行 ∥ close 行补传值语义全文（模型面单点——追加 / 覆盖 / 两拒面）。
+- 本档：§3.2 字段判据表增 `evidenceReplace` 两行 + P4 模板行增第三型「（应为布尔）」+ 落点句（`:159`）与 §11.3 新参注（`:581`）收正（本批破例 + 新形态）+ 可空串空串口径例外句增 `evidence`；§7.1 两行签名 / 注随正；§13.1 机制式随正（`:831` / `:833`）。
+
+**受影响文件与测试面（读数 as-of 2026-10-07；Δ = 实施轮以实读为准）**
+
+| 文件 | 现行 | 预期 | 改动 |
+|---|---|---|---|
+| `thincoder-core/ledger-cmd.mjs` | 153 | ≈170 | 值计算 helper（追加 / 覆盖 + 两拒面——两函数同源）∥ `ledgerUpdate` 消费 `patch.evidenceReplace` ∥ `ledgerClose` 增参 + 判位（两档均 <300 顾问线——零拆分） |
+| `thincoder-core/ledger-tools.mjs` | 254 | ≈268 | 两声明 × 2 键 ∥ 并集 2 属性 ∥ 描述 ×3 ∥ close 路由 ∥ 守卫布尔分支 |
+| `thincoder-core/tool-docs/ledger.md` | 6 | ≈7 | update ∥ close 两行 |
+| 批内件 `docs/batches/2026-10-07-ledger-evidence-semantics.test.mjs` | 新 | ≈180–240 | 用例 U-LT11–U-LT18——随批归档、**不进仓套件**；复跑 = 仓根（`thincoder/`）`node --test docs/batches/2026-10-07-ledger-evidence-semantics.test.mjs` |
+| `docs/core/design/LEDGER.md` | 909 | 本档 | §13.9 + §13.1 / §3.2 / §7.1 随动 + 变更记录 |
+| 零改面 | — | — | `ledger-db.mjs` ∥ `ledger-read.mjs` ∥ `ledger-migrate.mjs` ∥ `ledger-surface.mjs` ∥ `ledger-executors.mjs` ∥ 六态 / 迁移表 / DDL / 写门 ∥ 装配面 ∥ 命令行面 ∥ `add` 面 |
+
+**用例（U-LT11–U-LT18——批内件承载；编号沿 U-LT 族顺延）与验收（A-LT7）**
+
+| 用例 | 场景 | 期望 |
+|---|---|---|
+| U-LT11 | update 追加：旧值非空 + `evidence:"新注"` | 值逐字 = `旧｜新注`（例 = `【旧】甲。｜【新】乙`——零空格） |
+| U-LT12 | update 旧空直写：旧 = `null` ∥ `""` ∥ 全空白 | 值 = `新注`（零分隔符残留） |
+| U-LT13 | update 覆盖：`{evidence:"完整新文", evidenceReplace:true}`（旧非空） | 值 = `完整新文`（旧文零保留）；`evidenceReplace:false` ≡ 缺省（追加） |
+| U-LT14 | 旗独传拒（负例）：`{evidenceReplace:true}`（evidence 缺 / `null`） | 拒——`ledgerUpdate：evidenceReplace 须与 evidence 同传（缺新文）`；行不变 |
+| U-LT15 | 新值空白拒（负例）：`""` ∥ `"   "`（追加 ∥ 覆盖两径） | 拒——`ledgerUpdate：evidence 为空（非空字符串）`；行不变 |
+| U-LT16 | close 同法：勾销 / 追认携 evidence（旧非空 ⇒ 追加逐字；旧空 ⇒ 直写）；覆盖旗 ⇒ 整段替换 | 逐腿断言值 / 状态 / `closed_at` |
+| U-LT17 | close 负例（追认 ∥ 勾销两行态同判）：旗独传 ⇒ 新文案（判于值计算阶段、先于追认门）∥ 勾销 + 空白 ⇒ 新文案 ∥ 追认 + 空白（旧空）⇒ 原文案逐字（U-LT2 面零变） | 三面逐字；行不变 |
+| U-LT18 | 兼容零变：update / close 不带 evidence ∥ 不带旗；`add` 三径零变；上批件 U-LT1–U-LT4 抽跑 | 逐字等价（行值不变 ∥ 判行值） |
+
+| 验收 | 判据（回指） | 用例 |
+|---|---|---|
+| A-LT7 | 追加缺省成立（update ∥ close）∧ 拼接 / 直写逐字 ∧ 覆盖旗整段替换 ∧ 两拒面逐字（旗独传 ∥ 空白）∧ close 追认门零变 ∧ 兼容零变 ∧ 上批件零破 | U-LT11–U-LT18 |
+
+**关键决策**
+
+| KD | 决策 | 否决 |
+|---|---|---|
+| KD-LT5 | 覆盖 = 布尔旗与值同传（`{evidence, evidenceReplace:true}`——沿 `edit` `replace_all` 先例） | 独立值槽（`evidenceReplace:"全量新文"`——名实错位）∥ 独立 annotate action（用户 12:20 议而弃——参名仍 `evidence`、雷在原位；动因 = 失败代价不对称：忘旗 ⇒ 多留旧文可见可修，非无声灭失） |
+
+**边界（本批不做）**
+
+- 不新增 action；不做「新文含旧文自动判」/ 去重 / 魔法（拼接 = 纯字面）。
+- close 既有判序与追认门判零改；六态 / 迁移表 / DDL / 写门 / 装配面零动。
+- 不触 ledger 其余模块；需求档零碰（需求侧增量报父侧）；界面 / 交互面无（工具面参数语义）。
+
+**需求侧增量与纪律翻面（主 agent 笔）**：`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-LEDGER.md` 补行 + AC = **已落（AC-M2-25 · 需求档 `:83`）**；纪律翻面物 = 运行记忆条「自拼原文」⇒「只传新注」（**无 persona 句**——core 全树「自拼」零命中）；已登记随动项（批档 §2），落点 = 批收口 §6 父侧记录 + 实现落地后翻面。
 

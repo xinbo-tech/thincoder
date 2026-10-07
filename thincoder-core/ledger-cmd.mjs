@@ -103,9 +103,29 @@ function resolveExecutorTarget(row, to, patch, executorSessionId) {
   return patch.executor ?? row.executor ?? null
 }
 
+/** `evidence` 值计算（设计档 LEDGER.md §13.9——update / close 两函数同源一处落）：追加缺省（旧值非空 ⇒
+ *  `旧 + "｜" + 新`——「｜」两侧零空格直接相接；旧空（`null` ∥ 空串 ∥ 全空白）⇒ 直写，零分隔符残留）；
+ *  `evidenceReplace === true` 与值同传 ⇒ 整段替换（旧文零保留）；`evidence` 缺 / `null` ≡ 略去（零变）。
+ *  拒面①（旗独传——无新文可算）判于本阶段（close 侧先于追认门）；核内旗判只认 `=== true`（类型严判在
+ *  工具层）。两值逐字落行（不裁 / 不判内容）。 */
+function evidenceValue(fnName, oldValue, evidence, evidenceReplace) {
+  if (evidenceReplace === true && evidence == null) throw new Error(`${fnName}：evidenceReplace 须与 evidence 同传（缺新文）`)
+  if (evidence == null) return oldValue
+  const old = oldValue == null || String(oldValue).trim() === "" ? "" : String(oldValue)
+  return evidenceReplace === true || old === "" ? evidence : `${old}｜${evidence}`
+}
+
+/** 拒面②（新值全空白——追加 ∥ 覆盖两径同判）判点（§13.9 判序）：update 随值计算同拍 ∥ close 落
+ *  追认门之后；`evidence` 未传（`null` / 略去）⇒ 不判。 */
+function assertEvidenceValue(fnName, evidence) {
+  if (evidence != null && String(evidence).trim() === "") throw new Error(`${fnName}：evidence 为空（非空字符串）`)
+}
+
 /** 更新（写命令，仅主 agent）：UPDATE——状态迁移前判允许迁移表（不在表内 → 拒，行不变）。
  *  executor 目标值随同一 UPDATE 落列（LEDGER.md §3.1）；executorSessionId = 调用会话（函数参数注入——K-LX1
- *  纯函数可测；工具层动态 import getSessionId() 供值，零新静态边）。 */
+ *  纯函数可测；工具层动态 import getSessionId() 供值，零新静态边）。
+ *  `evidence` 传值 = 追加缺省、`patch.evidenceReplace` = 布尔覆盖旗（§13.9——值计算 / 两拒面 = `evidenceValue`
+ *  / `assertEvidenceValue`；判位 = 本语义段，随 executor 目标值同拍）。 */
 export function ledgerUpdate({ cwd, id, patch, executorSessionId }) {
   const db = openLedger(cwd, { create: true })
   try {
@@ -115,22 +135,27 @@ export function ledgerUpdate({ cwd, id, patch, executorSessionId }) {
     if (to !== row.status && !(ALLOWED_MIGRATIONS[row.status] ?? []).includes(to)) {
       throw new Error(`ledgerUpdate：迁移 ${row.status} → ${to} 不在允许迁移表`)
     }
-    const nextExecutor = resolveExecutorTarget(row, to, patch, executorSessionId) // 判序：迁移表判 → 本语义（算 executor 目标值）
+    // 判序（§13.9）：迁移表判 → 本语义（executor 目标值 + evidence 值计算——含两拒面）→ 写门 → UPDATE
+    const nextExecutor = resolveExecutorTarget(row, to, patch, executorSessionId)
+    const nextEvidence = evidenceValue("ledgerUpdate", row.evidence, patch.evidence, patch.evidenceReplace)
+    assertEvidenceValue("ledgerUpdate", patch.evidence)
     const nextTaskBook = patch.task_book ?? row.task_book
     assertTaskBookGate(cwd, "ledgerUpdate", to, nextTaskBook) // → 写门 → UPDATE
     const now = nowIso()
     db.prepare(`UPDATE items SET status = ?, title = ?, board = ?, req_doc = ?, task_book = ?, evidence = ?, trigger = ?, executor = ?, updated_at = ? WHERE id = ?`)
-      .run(to, patch.title ?? row.title, patch.board ?? row.board, patch.req_doc ?? row.req_doc, nextTaskBook, patch.evidence ?? row.evidence, patch.trigger ?? row.trigger, nextExecutor, now, id)
+      .run(to, patch.title ?? row.title, patch.board ?? row.board, patch.req_doc ?? row.req_doc, nextTaskBook, nextEvidence, patch.trigger ?? row.trigger, nextExecutor, now, id)
     return { id }
   } finally { db.close() }
 }
 
 /** 收口（写命令，仅主 agent）：核销两源（勾销：待核销 → 已核销；追认核销：待讨论 / 待设计 → 已核销，
  *  行 `evidence` 非空，缺 / 全空白 ⇒ 拒）/ 撤回（任意态 → 已废弃），事务包裹；归档 = 软删除。
- *  判序（同函数体同层）：目标集判 → 行取 → 源态判 → `evidence` 门 → UPDATE（LEDGER.md §3 收口两源）。
- *  可选 `evidence` 参（2026-10-07 批 ledger-tool · §13.1——一跳核销）：`nextEvidence = evidence ?? 行值`，
- *  追认门判**结果值**（缺 / 全空白 ⇒ 拒，文案逐字不变）；勾销 / 撤回路径同携（写值落行，内容不判）。 */
-export function ledgerClose({ cwd, id, status, evidence }) {
+ *  可选 `evidence` 参：传值 = 追加缺省（§13.9——旧空直写 / 旧非空拼 `旧｜新`）、`evidenceReplace: true`
+ *  同传 = 整段替换；勾销 / 追认 / 撤回三径同携（写值落行，内容不判）；两拒面（旗独传 @值计算 ∥
+ *  新值空白 @追认门后）见 `evidenceValue` / `assertEvidenceValue`。
+ *  判序（同函数体同层，§13.9）：目标集判 → 行取 → 源态判 → 值计算 → 追认门（原样——判**结果值**缺 /
+ *  全空白 ⇒ 拒，文案逐字不变）→ 拒面②（新值空白）→ UPDATE（LEDGER.md §3 收口两源）。 */
+export function ledgerClose({ cwd, id, status, evidence, evidenceReplace }) {
   if (status !== "已核销" && status !== "已废弃") throw new Error(`ledgerClose：目标态 ${status} ∉ {已核销, 已废弃}`)
   const db = openLedger(cwd, { create: true })
   try {
@@ -138,10 +163,11 @@ export function ledgerClose({ cwd, id, status, evidence }) {
     try {
       const row = db.prepare("SELECT * FROM items WHERE id = ?").get(id)
       if (!row) throw new Error(`ledgerClose：行 ${id} 不存在`)
-      const nextEvidence = evidence ?? row.evidence
-      // 判序：源态判（核销仅三源——在途不可跳）→ 追认口 `evidence` 门（判结果值非空，缺 / 全空白 ⇒ 拒）
+      // 判序（§13.9）：源态判（核销仅三源——在途不可跳）→ 值计算（拒面① 旗独传判于此）→ 追认口 `evidence` 门
       if (status === "已核销" && !["待讨论", "待设计", "待核销"].includes(row.status)) throw new Error(`ledgerClose：核销仅限 待讨论 / 待设计 / 待核销（现态 ${row.status}）`)
+      const nextEvidence = evidenceValue("ledgerClose", row.evidence, evidence, evidenceReplace)
       if (status === "已核销" && ["待讨论", "待设计"].includes(row.status) && (nextEvidence == null || String(nextEvidence).trim() === "")) throw new Error(`ledgerClose：追认核销须带 evidence（现态 ${row.status}）`)
+      assertEvidenceValue("ledgerClose", evidence) // 判序：拒面②（新值空白）落追认门之后 → UPDATE
       const now = nowIso()
       // 撤回（任意态 → 已废弃——含在途直撤）同步 executor = NULL（LEDGER.md §3.1 ④）；核销两源（勾销 / 追认）executor 零触碰（非在途出边）
       db.prepare("UPDATE items SET status = ?, closed_at = ?, updated_at = ?, executor = ?, evidence = ? WHERE id = ?").run(status, now, now, status === "已废弃" ? null : row.executor, nextEvidence, id)

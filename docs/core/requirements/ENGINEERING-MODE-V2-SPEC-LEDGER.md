@@ -80,6 +80,7 @@
 | AC-M2-22 | `query` 按 `trigger` 过滤（2026-10-07 · 批 ledger-tool）：`query` 增 `trigger` 一等值过滤（三枚举 `归批` / `条件` / `认账不排期`——与 status / kind / board 同式）；非法值 ⇒ 拒（文案逐字）；缺省不过滤；`trigger = NULL` 过滤不做（边界在册） | 批内件（U-LT5–U-LT6；设计档 §13.2） |
 | AC-M2-23 | `executor` 点火入边自动写（2026-10-07 · 批 ledger-tool）：`update` 进边集扩为两枚（`待讨论 → 待设计`〔点火边〕∥ `待设计 → 在途`）——executor = 显式 patch > 会话 sessionId > 行值 > NULL；出边 / 撤回仍清空、核销两源零触碰（F-LX1 既有语义逐拍零变） | 批内件（U-LT7–U-LT8；设计档 §3.1 ① / §13.3） |
 | AC-M2-24 | 查询面逐行 `aged`（2026-10-07 · 批 ledger-tool）：`query` 行集逐行携计算字段 `aged` = 未决四态 ∧ 行龄（`updated_at ?? created_at`）> 30 天（`AGING_DAYS` 常量单源）；缺 / 坏时间戳 ⇒ `false`；`now` 可注入（确定性用例面）；导出面零涉（不入 `DATA_COLUMNS` 白名单） | 批内件（U-LT9–U-LT10；设计档 §13.4） |
+| AC-M2-25 | `evidence` 语义修正——追加缺省 + 布尔覆盖旗（2026-10-07 · 批 ledger-evidence-semantics · 台账 #1006）：`update` / `close` 传 `evidence` = **追加**（旧非空 ⇒ `旧｜新` 零空格相接；旧空 ⇒ 直写；新值全空白 ⇒ 拒）；`evidenceReplace: true` 与 `evidence` 同传 = 整段替换（旗独传 ⇒ 拒）；close 追认门判照旧（结果值缺 / 全空白 ⇒ 拒——文案逐字）；不带 `evidence` 零变 | 批内件 `docs/batches/2026-10-07-ledger-evidence-semantics.test.mjs`（U-LT11–U-LT18；设计档 `docs/core/design/LEDGER.md` §13.9） |
 
 > AC-M2-6 = KD7 实核（M2 实现前必验；失败则重开存储选型）。
 
@@ -110,3 +111,4 @@ v2 §5.2（台账）· §5.4（条目字段）· 架构设计 §2.3 E1（表结�
 - 2026-09-28（**守卫族微修批 · 需求侧同步** · 主 agent——父侧笔）：新增 **AC-M2-16 读命令守卫 + `executor` 空值口径**（读二工具非法入参 ⇒ 拒 + 文案逐字；`executor` 显式 `null` ⇒ 按略去·取 sessionId）；来源 = 台账 #473 / #474 + 批 `docs/batches/2026-09-28-guard-face-micro.md`。
 - 2026-10-05（**批 ledger-variant-db-notice · 需求新增 · 父侧**——承 GitHub #19（zacharyyyang）请求② + 用户 16:50「已入账的需求处理掉吧」（16:50 系就地修正——原录 17:50 为父侧记误）+ 16:55「自动修完」= 全链跑授权）：新增 **F-LX3 变体键库首跑检测提示** + §③ 边界两条；验收 **AC-M2-20**（改号终值——17 = 设计档 #828 根解析面 ∥ 18 = 标记范围行 ∥ 19 = 歧义根子例均已占用；连避至 20，2026-10-05 逐号对读终裁，评审 #3 发现 1 处置）。痛点实证 = 旧产物持续写入小写盘符变体键（#19 报告：21 库中 10 为变体键、约 130 条搁浅），键归一修复已入版但用户无发现途径。批档 = `docs/batches/2026-10-05-ledger-variant-db-notice.md`（台账 #935）。
 - 2026-10-07（**批 ledger-tool · 需求新增 · 父侧**——用户 09:54「自动跑完」全链授权；承台账 #998）：新增 **AC-M2-21…24**（`close` 携证据一跳核销 ∥ `query` `trigger` 过滤 ∥ `executor` 点火入边 ∥ 查询面逐行 `aged`——逐条对应设计档 §13.1–§13.4 / §13.6 用例；编号 20 已占用——连避）。批档 = `docs/batches/2026-10-07-ledger-tool.md`。
+- 2026-10-07（**批 ledger-evidence-semantics · 需求新增 · 主 agent**——用户 12:18 指摘 + 12:20 定型 + 12:21「可以，那就开修吧」点火；台账 #1006）：新增 **AC-M2-25**（`evidence` 语义修正——`update` / `close` 传值 = 追加缺省 + 布尔覆盖旗 `evidenceReplace`；两拒面：旗独传 ∥ 新值全空白；close 追认门判零变；带 `evidence` 的旧行为 = 修正对象，不带零变）；设计档 = `docs/core/design/LEDGER.md` §13.9（新增）+ §3.2 / §7.1 / §13.1 随动。批档 = `docs/batches/2026-10-07-ledger-evidence-semantics.md`。

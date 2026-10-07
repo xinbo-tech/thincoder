@@ -5,7 +5,8 @@
  * 全量 = depth-0 五 action ∥ 只读 = depth>0 二 action）；旧五名 = code 面弃用壳（不入任何装配面）。
  * 守卫 = **声明派生**（设计档 §3.2 / §11.3：判序① 入参归一 → ② 入口级 action 判（消费 action）→
  * ③ 余键喂该 action 伪工具对象走 P2–P6——声明源 = 前身旧工具 `parameters` 逐字；helper `assertToolArgs`
- * 零改）；判于核函数之前 ⇒ 非法入参零写、零库动作、零 SQLite 原文外泄。
+ * 机制沿用，「零改」面破例 = #1006 批增布尔分支（§13.9））；判于核函数之前 ⇒ 非法入参零写、零库动作、
+ * 零 SQLite 原文外泄。
  * 接线：族出口 = `ledger.mjs`（re-export——消费面 agent/family-tools.mjs；旧读二装配面已清零）；
  * 消费侧一律动态 import（`ledger-db.mjs` 静态 import node:sqlite ⇒ W8 契约②）。
  */
@@ -62,6 +63,8 @@ function assertToolArgs(tool, args) {
       throw new Error(`${name}：${field} 非法：${argPreview(value)}（应为字符串）`)
     } else if (spec.type === "number" && typeof value !== "number") {
       throw new Error(`${name}：${field} 非法：${argPreview(value)}（应为数字）`)
+    } else if (spec.type === "boolean" && typeof value !== "boolean") {
+      throw new Error(`${name}：${field} 非法：${argPreview(value)}（应为布尔）`)
     }
     if (field === "title" && typeof value === "string" && value.trim() === "") {
       throw new Error(`${name}：${field} 为空（${required ? "必填；" : ""}非空字符串）`)
@@ -107,7 +110,8 @@ const ACTION_SPECS = {
       board: { type: "string", description: "归属板块（缺省 = 不变）" },
       req_doc: { type: "string", description: "需求档指针（缺省 = 不变）" },
       task_book: { type: "string", description: "任务书指针（缺省 = 不变）" },
-      evidence: { type: "string", description: "证据（缺省 = 不变）" },
+      evidence: { type: "string", description: "证据（缺省 = 不变；传入 = 追加——旧值非空 ⇒ 拼 `旧｜新`（「｜」零空格）、旧空直写；新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传）" },
+      evidenceReplace: { type: "boolean", description: "覆盖旗（布尔）：与 evidence 同传 = 整段替换（旧文零保留）；缺省 / false = 追加；旗独传（无新文）⇒ 拒" },
       trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "触发（缺省 = 不变）" },
       executor: { type: "string", description: "执行者 sessionId（可选——接手改写归属用；缺省 = 按状态迁移语义：进入待设计 / 在途自动写本会话；出在途 / 撤回清空）" },
     },
@@ -120,7 +124,8 @@ const ACTION_SPECS = {
       cwd: { type: "string", description: CWD_DESC },
       id: { type: "number", description: "条目 id" },
       status: { type: "string", enum: ["已核销", "已废弃"], description: "目标态（勾销 / 追认核销 / 撤回）" },
-      evidence: { type: "string", description: "最小证据行（可选——随本次写入行；追认核销面判结果值须非空：缺 / 全空白 ⇒ 拒）" },
+      evidence: { type: "string", description: "最小证据行（可选；传入 = 追加缺省——旧值非空 ⇒ 拼 `旧｜新`（「｜」零空格）、旧空直写；新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传。追认核销面判结果值须非空：缺 / 全空白 ⇒ 拒）" },
+      evidenceReplace: { type: "boolean", description: "覆盖旗（布尔）：与 evidence 同传 = 整段替换（旧文零保留）；缺省 / false = 追加；旗独传（无新文）⇒ 拒" },
     },
     additionalProperties: false,
   },
@@ -154,7 +159,8 @@ const UNION_PARAMETERS = {
     board: { type: "string", description: "归属板块（需求档文档名；add 可空 / update 缺省 = 不变 / query 过滤）" },
     req_doc: { type: "string", description: "需求档指针（add 可空 / update 缺省 = 不变）" },
     task_book: { type: "string", description: "任务书指针（add 可空 / update 缺省 = 不变；在途 / 待核销必填——咬合 CHECK）" },
-    evidence: { type: "string", description: "最小证据行（add 可空 / update 缺省 = 不变 / close 随本次写入；追认核销须非空）" },
+    evidence: { type: "string", description: "最小证据行（add 可空；update / close 传入 = 追加缺省——旧空直写、旧非空拼 `旧｜新`（「｜」零空格）、新值全空白 ⇒ 拒；覆盖 = 与 `evidenceReplace: true` 同传；update 缺省 = 不变 / close 缺省 = 判行值；追认核销须非空）" },
+    evidenceReplace: { type: "boolean", description: "覆盖旗（布尔）：与 evidence 同传 = 整段替换；缺省 / false = 追加；旗独传（无新文）⇒ 拒（update / close）" },
     trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "技术待办触发（add / update 可空 / query 过滤）" },
     id: { type: "number", description: "条目 id（update / close 必填）" },
     status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "状态（close 必填 ∈ {已核销, 已废弃}；update 迁移 / query 过滤——六态之一）" },
@@ -215,7 +221,7 @@ function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
           return JSON.stringify(ledgerUpdate({ cwd: cwd ?? cwdOf(ctx), id, patch, executorSessionId }))
         }
         case "close":
-          return JSON.stringify(ledgerClose({ cwd: rest.cwd ?? cwdOf(ctx), id: rest.id, status: rest.status, evidence: rest.evidence }))
+          return JSON.stringify(ledgerClose({ cwd: rest.cwd ?? cwdOf(ctx), id: rest.id, status: rest.status, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace }))
         case "query":
           return JSON.stringify(ledgerQuery({ cwd: rest.cwd ?? cwdOf(ctx), status: rest.status, kind: rest.kind, board: rest.board, trigger: rest.trigger }), null, 2)
         case "count":
