@@ -143,13 +143,13 @@ function fold(rows, pick, key = "name") {
 
 // ── ① store v3 迁移链（STORE §3 判据）────────────────────────────────────────
 
-test("① store：空库直落 6 ∥ v2 旧库自动升（链尾）∥ 幂等 ∥ audit_events 九型 CHECK", () => {
+test("① store：空库直落 7 ∥ v2 旧库自动升（链尾）∥ 幂等 ∥ audit_events 九型 CHECK", () => {
   const dir = mkdtempSync(join(tmpdir(), "tc2-db-"))
   const file = join(dir, "gateway.db")
   try {
     // 空库直落（六索引——含 v3 三索引）∥ 九型 CHECK 全可插 + 枚举外拒
     const fresh = DB.openDatabase(":memory:")
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [6, 6])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [7, 7])
     const indexes = fresh.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").all().map((row) => row.name)
     for (const index of ["idx_audit_ts", "idx_audit_type_ts", "idx_usage_key_ts"]) assert.ok(indexes.includes(index), index)
     assert.equal(indexes.length, 6)
@@ -164,15 +164,15 @@ test("① store：空库直落 6 ∥ v2 旧库自动升（链尾）∥ 幂等 �
     assert.equal(AUDIT.pruneAuditEvents(fresh, { now: now + 4 * 24 * 60 * 60 * 1000, retentionDays: null }), 0)
     assert.throws(() => fresh.prepare("INSERT INTO audit_events (ts, type, actor_name) VALUES (1, 'nope', 't')").run(), /CHECK/i)
     fresh.close()
-    // v2 旧库（v1+v2 段）⇒ 启动自动升 4（旧数据保留）⇒ 再开幂等
+    // v2 旧库（v1+v2 段）⇒ 启动自动升 7（旧数据保留）⇒ 再开幂等
     const legacy = DB.openDatabase(file, { migrations: DB.MIGRATIONS.filter((step) => step.v <= 2) })
     assert.equal(DB.readVersion(legacy), 2)
     legacy.exec("INSERT INTO members (username, name, password_hash, created_at) VALUES ('old', 'old', 'scrypt$fixture', '2026-10-06')")
     legacy.close()
     const upgraded = DB.openDatabase(file)
-    assert.equal(DB.readVersion(upgraded), 6)
+    assert.equal(DB.readVersion(upgraded), 7)
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE name = 'audit_events'").get())
-    assert.deepEqual([upgraded.prepare("SELECT COUNT(*) AS n FROM members").get().n, DB.migrate(upgraded)], [1, 6])
+    assert.deepEqual([upgraded.prepare("SELECT COUNT(*) AS n FROM members").get().n, DB.migrate(upgraded)], [1, 7])
     assert.equal(upgraded.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").get().n, 6)
     upgraded.close()
   } finally {

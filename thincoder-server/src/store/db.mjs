@@ -143,6 +143,18 @@ SELECT member_id, provider, model, strftime('%Y-%m', ts / 1000, 'unixepoch', 'lo
 FROM usage GROUP BY member_id, provider, model, month;
 `
 
+/** v6 增段（`members.model_disabled_json`——store/STORE.md §2 v6 段逐字；accounts 域——成员模型禁用集）。
+ *  列级 ALTER = 表不重建（存量行即刻得 `'{}'`——**默认全可用**；§3 迁移链 v6）。 */
+const DDL_V6 = `
+ALTER TABLE members ADD COLUMN model_disabled_json TEXT NOT NULL DEFAULT '{}';  -- 成员 × 模型禁用集（JSON 对象——键 = 对外标识；值 = true）
+`
+
+/** v7 增段（`providers.model_meta_json`——store/STORE.md §2 v7 段逐字；gateway 域——上游模型元数据留存图）。
+ *  列级 ALTER = 表不重建（存量行即刻得 `'{}'`——未存 = 无元数据；§3 迁移链 v7）。 */
+const DDL_V7 = `
+ALTER TABLE providers ADD COLUMN model_meta_json TEXT NOT NULL DEFAULT '{}';  -- 上游模型元数据留存图（JSON 对象——形见下）
+`
+
 /** 迁移链：每段 = `{ v, up(db) }`（v = 目标结构版本，自 1 起递增）；结构每变一次追一段（+1）。 */
 export const MIGRATIONS = [
   { v: 1, up: (db) => db.exec(DDL_V1) },
@@ -150,6 +162,8 @@ export const MIGRATIONS = [
   { v: 3, up: (db) => db.exec(DDL_V3) },
   { v: 4, up: (db) => db.exec(DDL_V4) },
   { v: 5, up: (db) => db.exec(DDL_V5) },
+  { v: 6, up: (db) => db.exec(DDL_V6) },
+  { v: 7, up: (db) => db.exec(DDL_V7) },
 ]
 
 /** 当前结构版本（= 链尾段号——store/STORE.md §1）。 */

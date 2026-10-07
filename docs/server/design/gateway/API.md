@@ -23,8 +23,8 @@
 
 | 方法 + 路径 | 鉴权 | 语义 |
 |---|---|---|
-| `POST /v1/chat/completions` | 团队 key | 上游聊天转发（流式 SSE ∥ 非流式 JSON 均透传）；记账；派发命中后过配额准入（429 `quota_exceeded`——§2.1/KD-SV-38）与模型限流准入（429 `rate_limited`——§2.1） |
-| `GET /v1/models` | 团队 key | 模型清单（chat = `provider/model` 前缀名清单 ∪ 嵌入引擎模型——**运行时注册表派生**：开放清单 = 库内 `providers.models`，保存即换表——§2.2） |
+| `POST /v1/chat/completions` | 团队 key | 上游聊天转发（流式 SSE ∥ 非流式 JSON 均透传）；记账；派发命中后过**成员模型禁用准入**（404 `model_not_found`——§2.1/KD-SV-42）与配额准入（429 `quota_exceeded`——§2.1/KD-SV-38）与模型限流准入（429 `rate_limited`——§2.1） |
+| `GET /v1/models` | 团队 key | 模型清单（chat = `provider/model` 前缀名清单 ∪ 嵌入引擎模型——**运行时注册表派生**：开放清单 = 库内 `providers.models`，保存即换表——§2.2；**成员禁用随动滤除**——调用者禁用集不在列（§2.1/KD-SV-42）） |
 | `POST /v1/embeddings` | 团队 key | 内网引擎转发（响应透传）；记账 |
 
 ### 2.1 转发与计量行为（三面共用）
@@ -32,6 +32,7 @@
 - **派发 = `provider/model` 复合键精确匹配**（注册表查表——装配期构建 ∥ 保存即换表（§2.2）；**首斜杠切分**：首段 = provider ∥ 余段 = 上游模型名（可含斜杠）；两段非空；裸名不解析；未命中 ∥ 裸名 ⇒ 404 `model_not_found`——提示带前缀形；**同 provider 内重名 ⇒ 拒启**）——KD-SV-4（§6）；**解析 = server 面自持**（不沿用核 `parseModelRef` 冒号家族——两套面：仓内他面锚 `provider:model` ∥ 本面锚 `provider/model`）。
 - **配额准入（功能点 21——KD-SV-38）**：派发命中后、转发前（与限流准入并列——准入前拒打不落用量不变）；三级解析（成员×模型覆盖 ⇒ 平台 `settings.quotaTokens` ⇒ 不限——覆盖随鉴权行、平台值随运行时快照）；不限 ⇒ **零 SQL 短路**；命中 ⇒ 计数表点查（O(1)——表 = `store/STORE.md` §2 v5 段；维护 = 记账同事务——`metering/METERING.md` §1）。
   超限 ⇒ 429 `quota_exceeded`（message 含模型外标 + 已用/额度；他模型不受累）；**仅 chat**——嵌入面零涉（用户 09:31 裁；旧总额检查已移除）。
+- **成员模型禁用准入（功能点 23③——KD-SV-42）**：派发命中后、**配额准入前**检该成员禁用集（随鉴权行——零查询）；被禁 ⇒ 404 `model_not_found`（消息明示「已对该成员禁用」——**零新码**）；**禁用优先于配额**（被禁即拒，不涉配额判定）；`/v1/models` 同判随动（输出 = 开放清单 − 调用者禁用集）；**仅 chat**——嵌入面零涉；机制全文 = `accounts/ACCOUNTS.md` §2.2（存储/写面/与配额关系/审计口径）。
 - **模型限流准入（功能点 17 C——KD-SV-35）**：派发命中后、转发前检 per-model RPM/TPM（配额准入之后——同一位点；进程内存 60s 定窗；通过 ⇒ 计次 +1；token 于用量到达计入——失败/断开计次不计 token）；超限 ⇒ 429 `rate_limited` + `Retry-After`（秒——距窗尾）；限值源 = provider `settings`（空 = 不限）；热生效 = 换表链随动；重启归零（软状态）；嵌入面零涉（引擎模型非 provider 模型——配置面 = 系统页）。
 - **SSE 逐块透传**：中继字节面原样 `pipe`（零改）；客户端断连 ⇒ 中止上游（记 `status='aborted'`）。
 - **流式计量注入**：`stream === true` 且未带 `stream_options.include_usage: true` ⇒ 置 true（显式 false 亦覆盖——计量完整性优先）——KD-SV-5（§6）。
@@ -45,18 +46,27 @@
 
 | 方法 + 路径 | 语义 |
 |---|---|
-| `GET /api/admin/providers` | 列表 `{ providers: [{ id, name, baseURL, apiKey, models, settings, createdAt, updatedAt }] }`——`settings` = 模型设置映射（见下）；`apiKey` = 回显形（掩码——见下） |
-| `POST /api/admin/providers` | 新增 `{ name, baseURL, apiKey?, models? }` ⇒ `{ ok, id }`；校验不过 ∥ 重名 ⇒ 400（库与运行时零变） |
-| `PATCH /api/admin/providers/:id` | 修改（字段缺省 = 不动；`apiKey: ""` = 清除；可含 `env:` 引用；`settings` = 模型设置局部映射——键级合并，见下）；不存在 ⇒ 404 |
+| `GET /api/admin/providers` | 列表 `{ providers: [{ id, name, baseURL, apiKey, models, settings, modelMeta, createdAt, updatedAt }] }`——`settings` = 模型设置映射（见下）；`modelMeta` = 上游模型元数据留存图（见下「模型元数据」）；`apiKey` = 回显形（掩码——见下） |
+| `POST /api/admin/providers` | 新增 `{ name, baseURL, apiKey?, models?, modelMeta? }` ⇒ `{ ok, id }`；校验不过 ∥ 重名 ⇒ 400（库与运行时零变）；`modelMeta` = 期望图（见下「模型元数据」） |
+| `PATCH /api/admin/providers/:id` | 修改（字段缺省 = 不动；`apiKey: ""` = 清除；可含 `env:` 引用；`settings` = 模型设置局部映射——键级合并，见下；`modelMeta` = 期望图——过滤 + 与提交 `models` 求交，见下）；不存在 ⇒ 404 |
 | `DELETE /api/admin/providers/:id` | 删除（硬删——用量行零触）；不存在 ⇒ 404 |
-| `POST /api/admin/providers/discover` | 模型发现（草稿可用）`{ baseURL, apiKey?, providerId? }` ⇒ `{ models: [...] }`；失败 ⇒ 502 `upstream_error` |
+| `POST /api/admin/providers/discover` | 模型发现（草稿可用）`{ baseURL, apiKey?, providerId? }` ⇒ `{ models: [...], modelMeta: { "<id>": {…} } }`（留存集——见下「模型元数据」）；失败 ⇒ 502 `upstream_error` |
 | `GET /api/admin/providers/presets` | 预设清单（只读——「从预设快速添加」数据源）`{ presets: [{ preset, name, baseURL, models }] }`——全表（起步 20 家）；缺省展开 = `expandProviderEntry`（`thincoder-server/src/ops/presets.mjs`——KD-SV-17）；**表零密钥**——响应无 `apiKey` 字段 |
 
 - **存储 = 库单源**：`providers` 表（`store/STORE.md` §2 v2 段）；`config.json` 的 `providers[]` 降为一次性种子（矩阵 = `ops/OPS.md` §1）。
 - **保存即热生效**（用户 2026-10-06 16:01 令）：装配期建 provider 运行时（箱内持注册表）；保存路径 = ① 校验（单源 = `thincoder-server/src/ops/config.mjs` 导出——与配置种子同规）→ ② 建候选注册表（`env:` 解析——缺位 ⇒ 400 不落库）→ ③ 落库 → ④ `runtime.set(候选)`（原子换表）；HTTP 面（`/v1/models` ∥ 派发）读 `runtime.get()`——**零重启**。
 - **在途请求口径**：派发时快照（转发闭包持当时 provider 对象）——换表只影响**后续**请求；删除/改名不断在途流。
 - **密钥回显形**（永不回明文）：空 ⇒ `""`；`env:` 引用 ⇒ 原文（引用非秘密）；明文 ⇒ `…` + 末 4 字符。密钥值**永不入日志**（日志只带 provider 名/id 与动作）。
-- **模型发现**：`GET {baseURL}/models`（Authorization 条件同转发——key 空不发）；超时 10s（常量可覆盖——实现注入口径）；解析 = `data[].id` 字符串集（去重）；不可达 ∥ 超时 ∥ 非 JSON ∥ 无 `data` ⇒ 502 `upstream_error`（可读消息——控制面提示 + 重试；**无手填兜底**——用户 2026-10-06 21:36 裁定，批 `console-provider-redo`；服务端语义零改）；草稿键经 body 传入**不落库**。
+- **模型发现**：`GET {baseURL}/models`（Authorization 条件同转发——key 空不发）；超时 10s（常量可覆盖——实现注入口径）；解析 = `data[].id` 字符串集（去重）+ **保留集元数据**（`modelMeta`——见下「模型元数据」条；同响应同集、去重首见）；
+  不可达 ∥ 超时 ∥ 非 JSON ∥ 无 `data` ⇒ 502 `upstream_error`（可读消息——控制面提示 + 重试；**无手填兜底**——用户 2026-10-06 21:36 裁定，批 `console-provider-redo`；服务端语义零改）；草稿键经 body 传入**不落库**。
+- **模型元数据（留存图——功能点 24：上游富字段保留 + 展示）**：保留集 = **白名单四字段**（用途先行——用户 2026-10-07 12:11 裁「只取有用途字段、不建机制、缺就空着」）——
+  `displayName`（展示名；来源 `display_name` ∥ `name`——两来源皆仅 ≠ 模型名时收；长度上限 ≤200 字符，沿 settings `note` 先例）∥ `contextWindow`（上下文窗口；来源 `context_window` ∥ `context_length` ∥ `max_model_len`——正整数）∥
+  `vision`（图片输入；来源 `supports_image_in === true` ∥ `input_modalities` 含 `image`——仅收 `true`）∥ `status`（上游状态原文；**仅命中退役词表**（`shutdown` ∥ `retired` ∥ `deprecated` 子串——大小写无关）才收，供退役提示）。
+  未收录不采（推理档位族 `effort`/`think_efforts`/`thinking_type`/`supports_reasoning` ∥ `supports_video_in` ∥ `max_output_tokens` ∥ `modalities`/`limit`（方向/形未明）∥ 噪声族——无展示/动作面，不堆砌）；形不符 ∥ 缺 ⇒ 略（零兜底值、零占位）。
+  形 = `{ "<上游模型名>": { displayName? ∥ contextWindow? ∥ vision? ∥ status? } }`——**≥1 字段才入键**；只含开放清单（`models`）模型。
+  写面 = POST/PATCH body `modelMeta`：**键在场 = 期望图**（白名单过滤 + 形不符即略 + 与提交 `models` 求交落库）；**键缺省 = 现存图按 `models` 求交**（删项随之滑落——零孤儿）；非对象 ⇒ 400（库与运行时零变）。
+  读面 = GET 行 `modelMeta`（恒在场——未存 ⇒ `{}`）；发现 = discover 响应 `modelMeta`（与 `models` 同集）。
+  落点 = `providers.model_meta_json`（v7——`store/STORE.md` §2）；**圈界** = 纯展示数据：转发 ∥ 派发 ∥ `/v1/models` ∥ 校验单源（`thincoder-server/src/ops/config.mjs`）零涉；不建元数据同步/校验/仲裁机制（用户 12:11 裁）。
 - **开放清单 = `models` 字段**（勾选区）：`/v1/models` 逐项 = `provider/model`；派发只命中开放清单（未开放 ⇒ 404——选择性中继口径保持）。
 - **模型设置（`settings`——功能点 17 配置面；用户 21:39/21:40 裁 A/C/D/E；功能点 21 扩配配额）**：形 = `{ "<上游模型名>": { rpm ∥ tpm（正整数 ∥ null） ∥ costIn ∥ costOut（≥0 数 ∥ null） ∥ note（≤200 字 ∥ null） ∥ quotaTokens（≥0 整数 ∥ null——每人每月默认用量） } }`——`null`/缺省 = 未设。
   键 = 上游模型名（与 `models` 同空间；不在 `models` 的键合法——设置随名保留，停用不丢）；`quotaTokens` 消费 = 配额平台层默认（`metering/METERING.md` §2——KD-SV-38）。
@@ -92,7 +102,7 @@
 ## 3. 错误形（全码单源）
 
 - 统一形：`{ "error": { "message": "…", "type": "…", "code": "…" } }`。
-- 本服务自产：401 `invalid_api_key`（无 key ∥ 未知 ∥ 吊销——不区分，防信息泄露）· 404 `model_not_found`（未配置模型）· 429 `quota_exceeded`（模型超额——message 含模型外标 + 已用/额度值；机制 = `metering/METERING.md` §2）· 429 `rate_limited`（per-model 限流——message 含模型/限值；`Retry-After` 秒头——沿 `too_many_attempts` 先例；机制 = §6 KD-SV-35）·
+- 本服务自产：401 `invalid_api_key`（无 key ∥ 未知 ∥ 吊销——不区分，防信息泄露）· 404 `model_not_found`（未配置模型 ∥ 该成员已禁用——消息区分）· 429 `quota_exceeded`（模型超额——message 含模型外标 + 已用/额度值；机制 = `metering/METERING.md` §2）· 429 `rate_limited`（per-model 限流——message 含模型/限值；`Retry-After` 秒头——沿 `too_many_attempts` 先例；机制 = §6 KD-SV-35）·
   400 `invalid_request_error`（body 非 JSON ∥ 缺 model）· 413 `payload_too_large`（请求体超上限——上限常量 32 MiB）· 502 `upstream_error`（上游不可达）。
 - 500 `internal_error`（兜底——处理函数自身异常）。
 - 账号面（`/api/*`——同形）：401 `unauthorized`（无 ∥ 过期会话）· 401 `invalid_credentials`（登录失败 ∥ 旧密错误——同措辞同耗时）· 403 `forbidden`（角色不足）· 404 `not_found`（成员 ∥ key 不存在）· 429 `too_many_attempts`（登录锁定期——`Retry-After` 头（秒）；两维同文案——`accounts/ACCOUNTS.md` §2）。
@@ -104,17 +114,17 @@
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
 | `thincoder-server/src/gateway/server.mjs`（已落盘） | **192 ⇒ ≈197**（实读 2026-10-06——设计估 ≈140；服务模型配置面批 +≈5 = `failRequest` 置 `Retry-After` 头） | http 服务 ∥ 注册行分派 ∥ body 读限（32 MiB） ∥ 请求日志 |
-| `thincoder-server/src/gateway/routes.mjs`（已落盘） | **86 ⇒ ≈100**（实读 2026-10-06——设计估 ≈240；#962 +5 = 读运行时（`runtime.get()`）；服务模型配置面批 +≈14 = 限流准入接线（check + 用量回收口串联））**⇒ 实读 101 ⇒ ≈115**（本批：配额准入位移（体读前 ⇒ 派发后/转发前） ∥ 两字段传账 ∥ 嵌入面检查移除） | chat ∥ models ∥ embeddings 三处理 |
+| `thincoder-server/src/gateway/routes.mjs`（已落盘） | **86 ⇒ ≈100**（实读 2026-10-06——设计估 ≈240；#962 +5 = 读运行时（`runtime.get()`）；服务模型配置面批 +≈14 = 限流准入接线（check + 用量回收口串联））**⇒ 实读 101 ⇒ ≈115**（配额分模型批：配额准入位移（体读前 ⇒ 派发后/转发前） ∥ 两字段传账 ∥ 嵌入面检查移除）**⇒ 实读 104 ⇒ ≈112 ⇒ 实读 111（2026-10-07）**（配额 v2 批落地：禁用准入条 ∥ `/v1/models` 过滤） | chat ∥ models ∥ embeddings 三处理 |
 | `thincoder-server/src/gateway/forward.mjs`（已落盘） | **185 ⇒ ≈191**（实读 2026-10-06——设计估 ≈190；服务模型配置面批 +≈6 = `onUsage` 回调（用量到达即计入限流窗））**⇒ 实读 196 ⇒ ≈204**（本批：`provider`/`model` 两字段入账 +≈8） | 上游 fetch ∥ 流式/非流式透传 ∥ tap 接线 ∥ 断连中止 ∥ 记账号 |
 | `thincoder-server/src/gateway/sse-tap.mjs`（已落盘） | **90**（实读 2026-10-06——设计估 ≈80） | `data:` 行增量扫描 ∥ usage 提取 ∥ 有界缓冲 |
-| `thincoder-server/src/gateway/providers.mjs`（已落盘） | **146 ⇒ ≈165**（实读 2026-10-06——设计估 ≈70；#962 +91 = 行→条目 ∥ 注册表构建（`env:` 解析） ∥ 运行时箱 ∥ 装配引导；服务模型配置面批 +≈19 = `settings` 解码 ∥ 注册表携设置 ∥ `settingsFor`） | provider 注册 ∥ 模型派发 ∥ 派发失败形 ∥ 运行时（§2.2） |
-| `thincoder-server/src/gateway/provider-admin.mjs`（已落盘） | **197 ⇒ ≈225**（实读 2026-10-06——#962 设计估 ≈220；行 CRUD ∥ 掩码回显 ∥ 模型发现 ∥ 管理端点注册——§2.2；服务模型配置面批 +≈28 = GET 行 `settings` ∥ PATCH 键级合并 + 校验接线） | provider 管理面（控制台——仅 admin） |
+| `thincoder-server/src/gateway/providers.mjs`（已落盘） | **146 ⇒ ≈165**（实读 2026-10-06——设计估 ≈70；#962 +91 = 行→条目 ∥ 注册表构建（`env:` 解析） ∥ 运行时箱 ∥ 装配引导；服务模型配置面批 +≈19 = `settings` 解码 ∥ 注册表携设置 ∥ `settingsFor`）**⇒ 实读 167 ⇒ ≈175**（模型元数据批：`rowToEntry` 解码 `model_meta_json`） | provider 注册 ∥ 模型派发 ∥ 派发失败形 ∥ 运行时（§2.2） |
+| `thincoder-server/src/gateway/provider-admin.mjs`（已落盘） | **197 ⇒ ≈225**（实读 2026-10-06——#962 设计估 ≈220；行 CRUD ∥ 掩码回显 ∥ 模型发现 ∥ 管理端点注册——§2.2；服务模型配置面批 +≈28 = GET 行 `settings` ∥ PATCH 键级合并 + 校验接线）**⇒ 实读 220 ⇒ ≈258 ⇒ 实读 284（2026-10-07）**（模型元数据批：`extractModelMeta` ∥ `filterModelMeta` ∥ discover 出图 ∥ GET 行 ∥ POST/PATCH 收 meta——§2.2） | provider 管理面（控制台——仅 admin） |
 | `thincoder-server/src/gateway/ratelimit.mjs`（拟新增） | **≈90**（设计估——进程内 60s 定窗计数（`check` ∥ `record`） ∥ `Retry-After` 计算 ∥ 纯函数可直测；§6 KD-SV-35） | 模型限流（per-model RPM/TPM） |
 | `thincoder-server/src/gateway/system.mjs`（已落盘） | **无 ⇒ 55 ⇒ ≈60**（实读 2026-10-06——设计估 ≈70；探活 handler ∥ `/api/system`（版本/更新状态；二轮 +≈5 = `embedding` 字段） ∥ 注册——§2.3） | 系统面（healthz ∥ system） |
 | `thincoder-server/src/gateway/embedding-admin.mjs`（拟新增） | **≈110**（设计估——引擎配置读（真值 ∥ 零密钥） ∥ 探活/试跑单端点（代发 ∥ kind 四归类 ∥ 超时） ∥ 注册——§2.4） | 向量服务面（控制台——仅 admin） |
 | `thincoder-server/src/gateway/overview.mjs`（已落盘） | **≈70 ⇒ 实读 28 ⇒ ≈30**（本批：今日合计读源 = `report.mjs`（`usageTotals` 迁址）——口径零变） | 管理总览读数（控制台——仅 admin） |
 | `thincoder-server/src/gateway/errors.mjs`（已落盘） | **56 ⇒ ≈65**（实读 2026-10-06——设计估 ≈50；#963 +1 = `too_many_attempts` 码；服务模型配置面批 +≈9 = `rate_limited` 码 ∥ `HttpError`/`sendError` 可选 headers（`Retry-After`）） | 错误形构造 ∥ 发送助手（含账号面码） |
-| **小计** | **≈770 ⇒ 658 ⇒ 951**（#962 实读：+293）**⇒ 1007**（#963 实读：+56 = system 新 55 ∥ errors +1——口径 = #962 后）**⇒ ≈1192**（二轮 +≈185 = embedding-admin 新 ≈110 ∥ overview 新 ≈70 ∥ system +≈5）**⇒ ≈1363**（服务模型配置面批估）**⇒ ≈1385**（本批：routes +≈14 ∥ forward +≈8；overview 实读回填） | —— |
+| **小计** | **≈770 ⇒ 658 ⇒ 951**（#962 实读：+293）**⇒ 1007**（#963 实读：+56 = system 新 55 ∥ errors +1——口径 = #962 后）**⇒ ≈1192**（二轮 +≈185 = embedding-admin 新 ≈110 ∥ overview 新 ≈70 ∥ system +≈5）**⇒ ≈1363**（服务模型配置面批估）**⇒ ≈1385**（配额分模型批：routes +≈14 ∥ forward +≈8；overview 实读回填）**⇒ ≈1393**（配额 v2 批：routes +≈8）**⇒ ≈1439**（模型元数据批：providers +≈8 ∥ provider-admin +≈38；以 v2 落定实读为基） | —— |
 
 ## 5. 验收判据（机检面）
 
@@ -127,6 +137,8 @@
 | AC-15①③（功能点 15——向量服务面 ∥ 管理总览；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① mock 引擎：探活/试跑 ⇒ `ok:true` + `dimensions` 逐值（两维向量 ⇒ 2） ∥ **不落库不计量**（usage 行数零增 ∥ 配额零涉） ∥ 不可达 ∥ 超时 ∥ HTTP 非 2xx ∥ 响应形不符 ⇒ `ok:false` + `kind` 四值分类 ∥ `GET /api/admin/embedding` = 配置真值且零 `apiKey` 字段 ∥ `/api/system` 含 `embedding.model`（两角色）且零地址字段；③ `/api/overview`：注入行集 ⇒ `today` 数值逐值 = 用量报表同日窗（同源断言）∥ 空集 ⇒ 0（零错）∥ admin 三态（user ⇒ 403 ∥ 无会话 ⇒ 401） | 批内件 |
 | AC-17（功能点 17——模型限流面 ∥ 停用径；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 派发命中 + 超限 ⇒ 429 `rate_limited` + `Retry-After`（秒 ≥1——距窗尾）∥ 额内 ⇒ 放行 ∥ 窗滚 ⇒ 恢复 ∥ 计数口径（通过即计次 +1；token 于用量到达计入；失败/断开计次不计 token）∥ 保存即热生效（PATCH `settings` ⇒ 下一请求按新限——零重启）∥ 非法限值 ⇒ 400 库与运行时零变 ∥ 重启归零（软状态——在案）∥ 停用径 = PATCH `models` 减项 ⇒ `/v1/models` 随动 + 派发 404 ∥ 嵌入面零涉 | 批内件 |
 | AC-21（功能点 21——网关配额检查面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 派发命中后/转发前：三级解析（覆盖 ⇒ 平台 ⇒ 不限）∥ 不限 ⇒ 零 SQL（计数探针）∥ 超限 ⇒ 429 `quota_exceeded` + message 含模型/已用/额度 ∥ 额内 ⇒ 放行 ∥ 他模型不受累 ∥ 嵌入零检查 ∥ 计数与记账同事务（明细可重算对账）∥ 保存即热生效（PATCH `settings` ⇒ 下一请求按新值；成员覆盖改行即改）∥ 旧 quota 端点已退役（404）（判据全文 = `metering/METERING.md` §4 AC-21 行） | 批内件 |
+| AC-23（功能点 23③——成员模型禁用执行面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 被禁模型（成员×模型）⇒ 404 `model_not_found`（消息明示「已对该成员禁用」）且**零用量行**（准入前拒打）∥ 未禁 ⇒ 200 ∥ 禁用先于配额（被禁 ∧ 超额 ⇒ 404 非 429）∥ 他成员不受累 ∥ 即时生效（写后下一请求——无缓存）∥ `/v1/models` 随动滤除（禁后不含 ∥ 恢复后含）∥ 嵌入面零涉 ∥ 零新错误码 | 批内件 |
+| AC-24（功能点 24——上游模型元数据留存与展示；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① discover 响应 `modelMeta`（保留集逐形：deepseek（`context_window`+`input_modalities`+`name`）∥ kimi 族（`context_length`+`supports_image_in`+`display_name`）∥ vLLM（`max_model_len`）三形直测；经典四件 ⇒ `{}`）∥ ② 保存求交（携 `modelMeta` ⇒ GET 行逐值、非开放模型不入库；仅 `models` ⇒ 现存图按求交滑动）∥ ③ 形不符 ⇒ 逐项略（零兜底）；`modelMeta` 非对象 ⇒ 400 库与运行时零变 ∥ ④ `/v1/models` ∥ 派发 ∥ 校验单源零涉（全回归） | 批内件 |
 
 ## 6. 关键决策（本域）
 
@@ -156,7 +168,7 @@
 | E6 | 错误 | 上游不可达（连不上/超时） | 502 `upstream_error`；记 error 行 |
 | E7 | 错误 | 请求体 > 32 MiB | 413 `payload_too_large`（不转发） |
 | N16 | 正常 | admin 会话：`POST /api/admin/providers`（mock 上游）⇒ 立即 `GET /v1/models` 立含新模型 ∥ 经新 provider 完成一次请求 | 零重启生效；记账 ok |
-| N17 | 正常 | admin 会话：`POST /api/admin/providers/discover`（mock 上游 `/models` 回 3 个 id） | `{models:[…]}`（去重）；勾选集保存后清单/派发按开放清单 |
+| N17 | 正常 | admin 会话：`POST /api/admin/providers/discover`（mock 上游 `/models` 回 3 个 id） | `{ models:[…], modelMeta:{} }`（去重；经典四件上游 ⇒ `modelMeta` = `{}`——与 §2.2/N27 同形）；勾选集保存后清单/派发按开放清单 |
 | N18 | 正常 | admin 会话：`PATCH` 改 `baseURL` 指第二 mock ∥ `DELETE` 一 provider | 下一请求命中新上游 ∥ 被删者下一请求 404（用量行零触） |
 | B14 | 边界 | 在途流式请求进行中删除其 provider | 流照常收尾（`ok` 记账）；后续请求 404 |
 | B15 | 边界 | 种子四格：空库+段 ⇒ 导入（`env:` 保形）∥ 非空库+段 ⇒ 忽略 + 警告 ∥ 两空 ⇒ 允许起 + 警告 | `/v1/models` 随格：含种子 ∥ 不变 ∥ 空清单（chat 404） |
@@ -176,14 +188,22 @@
 | N25 | 正常 | admin：PATCH `settings`（tpm）⇒ 用量到达后计入 ∥ 累计超 TPM ⇒ 429 | token 于用量到达计入口径 |
 | B18 | 边界 | 失败/断开请求（上游不可达 ∥ 中途断开）；rpm 计数含之；token 不计 ∥ 进程重启 ⇒ 计数归零 | 计次口径；软状态（重启归零在案） |
 | E19 | 错误 | `settings` 非法（rpm=0 ∥ costIn=−1 ∥ note 超长 ∥ 未知子字段）⇒ 400 库与运行时零变 ∥ 裸名/未命中 ⇒ 404（派发先于限流） | 校验单源；错误序 |
+| N26 | 正常 | 有效 key（成员已禁 `mock/mock-chat`）⇒ 派发该模型 ∥ 派发他模型 ∥ `GET /v1/models` | 404 `model_not_found`（消息含「禁用」）+ 零用量行；他模型 200；清单不含该模型（恢复后回列） |
+| B19 | 边界 | 被禁 ∧ 配额已超（同日）⇒ 派发该模型 ∥ 配额已超但未禁 ⇒ 派发 | 404（禁用优先——非 429）；429 `quota_exceeded`（未禁面不变） |
+| N27 | 正常 | admin：discover（mock 上游 `/models` 回富字段——`context_window` 1048576 ∥ `input_modalities: ["text","image"]` ∥ `name`） | 200 `{ models, modelMeta }`——`modelMeta[id]` 逐字段 = `{ displayName, contextWindow: 1048576, vision: true }`；经典四件上游 ⇒ `modelMeta: {}` |
+| N28 | 正常 | admin：PATCH `models` + `modelMeta`（期望图）⇒ GET 行；再 PATCH 仅 `models` 减项 | 首次 ⇒ 行 `modelMeta` 逐值（非开放模型不入库）；二次 ⇒ 现存图按求交滑动（未减项零动） |
+| B20 | 边界 | discover：`context_window: "1M"` ∥ `status: "online"`（未命中词表）∥ `display_name` 超长 ∥ `vision` 非布尔 | 逐项略（该字段不出；`modelMeta` 零占位、零兜底） |
+| E20 | 错误 | PATCH `modelMeta` 非对象（数组 ∥ 字符串） | 400 `invalid_request_error`；库与运行时零变 |
 
 ## 8. 本域边界（不做的面）
 
 - 非 OpenAI 协议翻译 ∥ 模型别名/策略路由 ∥ 上游重试（失败原样返回——重试语义留给客户端）∥ 并发/连接数限流（C = per-model RPM/TPM 速率限——KD-SV-35；配额 = 额度式双轨在案）∥ 跨进程/多实例限流（计数 = 单进程内存——多实例 = 触发项 `EVOLUTION.md` §2）∥ 限流窗口持久化（重启归零——软状态在案）∥ token 预估（TPM 计数 = 实际用量）∥ 请求体/响应的内容加工（压缩、改写、脱敏——纯透传）∥ CORS（消费方均为服务端工具）。
 - 嵌入引擎管理面（引擎起停手动——需求 §4）；多实例/横向扩展 = 触发项（`EVOLUTION.md` §2）。
 - provider 管理面不做：本机 CLI 面（控制台 = 单一面——需求点名）∥ URL 白名单/出口限制（admin 权限自担——内网工具面）∥ 变更历史/回滚（行即现值——无版本化）∥ 渠道/灰度/多版本并存（沿更新面不做项——`ops/OPS.md` §10）。
+- 模型元数据面不做：元数据同步/校验/仲裁机制（用户 12:11 裁）∥ 上游状态自动停用/自动勾选 ∥ 保留集外字段（推理档位/视频/输出上限等——无用途不堆砌）∥ 对外 `/v1/models` 元数据带出（须论证 + 点名方可议） ∥ 元数据参与转发/计费（纯展示）。
 - 健康/系统面不做：metrics/Prometheus ∥ 深度依赖探活（仅 db 一探） ∥ `unhealthy` 自动处置（外部工具面） ∥ `/api/system` 写面（只读）。
 - 控制台数据面不做：引擎试跑历史/存档（一次性读数） ∥ 总览图表（总览 = 数值卡——趋势归用量页） ∥ 引擎地址下发非 admin 面（用户面 = 模型名 + snippet——`webui/WEBUI.md` §2.3①）。
+- 成员模型禁用面不做：新错误码（404 复用——消息明示） ∥ 定时/条件禁用 ∥ 嵌入面禁用（零涉） ∥ 禁用变更审计（零增——`accounts/ACCOUNTS.md` §2.2）；禁用状态的成员可见面（只出清单与拒形）。
 
 ## 变更记录
 
@@ -206,3 +226,7 @@
 - 2026-10-07：配额分模型批设计轮（批 `docs/batches/2026-10-07-quota-per-model.md`——需求 §2:21 ∥ §2:22 ∥ 台账 #990/#991/#992）——§2 chat 行随正（配额准入 = 派发命中后/转发前）∥ §2.1 增配额准入条（三级 ∥ 短路 ∥ 点查 ∥ 429 形；限流条补位点次序）∥ §2.2 settings 形补 `quotaTokens` ∥ §3 `quota_exceeded` 消息补模型外标 ∥ §4 预算（routes 101 ⇒ ≈115 ∥ forward 196 ⇒ ≈204；小计 ⇒ ≈1385）∥ §5 增 AC-21 行 ∥ §8 边界随正（配额 = 额度式双轨在案）；机制全文 = `metering/METERING.md` §2。
 - 2026-10-06：fix 轮（评审 #94——批 `docs/batches/2026-10-06-console-provider-redo.md` §3；本档面）：§7 E15 行收正（发现失败 = 提示 + 重试 ∥ 无手填兜底——废止表述删净；与 §2.2/§5 同拍）∥ §1 静态面行档数收正（`views-*` 八档 ⇒ 十档——三档单源）。
 - 2026-10-06：fix 轮（评审 #95——批 `docs/batches/2026-10-06-models-config.md` §3；本档面）：§2.2「模型设置」补提交线形（键 = 上游模型名 ∥ 值 = 完整对象——未设/清空 = 显式 `null`；草稿初值 = GET 行 `settings`）∥ §4 两处「本批」改批名（二轮——system 行 ∥ 小计行）。
+- 2026-10-07：配额 v2 · 成员模型面批设计轮（批 `docs/batches/2026-10-07-quota-v2-member-models.md`——需求 §2:23 ∥ 台账 #1002/#1003/#1004 + 并入 #1001）——§2 chat 行与 `/v1/models` 行随正（禁用准入 ∥ 成员滤除）∥ §2.1 增禁用准入条（位点/错误形/禁用优先于配额/列表随动）∥ §3 404 行括注（禁用消息区分）∥ §4 routes 实读回基 + 小计 ⇒ ≈1393 ∥ §5 增 AC-23 行 ∥ §7 增 N26/B19 ∥ §8 边界随正；机制全文 = `accounts/ACCOUNTS.md` §2.2。
+- 2026-10-07：fix 轮（评审轮次 1——批 `docs/batches/2026-10-07-quota-v2-member-models.md` §3 六发现，本档面）：§5 AC-23 行「候补」标记收正（已落需求档——沿 AC-13/AC-14 先例）。
+- 2026-10-07：Provider 模型元数据批设计轮（批 `docs/batches/2026-10-07-provider-model-metadata.md`——台账 #1005 + 并入 #984；用户 12:05/12:23 令）——§2.2 端点表四行随正（GET/POST/PATCH/discover——`modelMeta`）+ 增「模型元数据（留存图）」条 ∥ §4 预算（providers 167 ⇒ ≈175 ∥ provider-admin 220 ⇒ ≈258；小计 ⇒ ≈1439）∥ §5 增 AC-24 候补行 ∥ §7 增 N27/N28 ∥ B20 ∥ E20 ∥ §8 边界随正（存储同拍 = `store/STORE.md` §2 v7 段；展示 = `webui/WEBUI.md` §2.4④）。
+- 2026-10-07：fix 轮（评审轮次 1——批 `docs/batches/2026-10-07-provider-model-metadata.md` §3 九发现，本档面）：§2.2 `displayName` 补长度上限（≤200 字符——沿 settings `note` 先例）+「仅 ≠ 模型名」范围明写（两来源皆适用）∥ §5 AC-24 行「候补」标记收正（已落需求档——沿 AC-13/AC-14 先例）∥ §7 N17 预期输出补 `modelMeta`（经典四件 ⇒ `{}`——与 §2.2/N27 同形）。

@@ -5,6 +5,12 @@
  * 模型设置（v4 `settings`——KD-SV-34）：读面 = GET 行载全图；写面 = PATCH 键级合并
  * （请求出现的键 = 整对象替换——值 `null` ⇒ 删键；未出现键 = 不动；合并后走进单源校验）。
  *
+ * 模型元数据留存图（v7 `modelMeta`——功能点 24/KD-SV-45）：保留集 = 白名单四字段（`displayName` ∥
+ * `contextWindow` ∥ `vision` ∥ `status`——用途先行；未收录不采、缺就空着）；读面 = GET 行载图（恒在场——
+ * 未存 ⇒ `{}`）∥ discover 出图（与 `models` 同集——`extractModelMeta`）；写面 = POST/PATCH `modelMeta`
+ * （`filterModelMeta`——白名单 + 形不符即略 + 与提交 `models` 求交；键缺省 = 现存按求交滑动；非对象 ⇒ 400）。
+ * 纯展示数据——转发 ∥ 派发 ∥ `/v1/models` 零涉。
+ *
  * 保存即热生效（四步——§2.2）：① 校验（单源 = `ops/config.mjs` 导出——与配置种子同规）→
  * ② 建候选注册表（`env:` 解析——缺位 ⇒ 400 不落库）→ ③ 落库 → ④ `runtime.set(候选)`（原子换表）；
  * 失败 ⇒ 库与运行时零变。密钥回显掩码（空 ⇒ "" ∥ `env:` 原文 ∥ 明文 ⇒ `…` + 末 4）；
@@ -52,6 +58,49 @@ function bodyFields(body) {
   return body !== null && typeof body === "object" && !Array.isArray(body) ? body : {}
 }
 
+/** 退役词表（§2.2——子串匹配·大小写无关；命中才收原文——供退役提示）。 */
+const RETIRED_STATUS_WORDS = ["shutdown", "retired", "deprecated"]
+
+/** 元数据四字段清洗（抽取/写面过滤共用——白名单 + 形不符即略；§2.2「模型元数据」条）：
+ *  `displayName`（≠ 模型名 ∧ ≤200 字符）∥ `contextWindow`（正整数）∥ `vision`（仅 `true`）∥ `status`（仅命中退役词表）。
+ *  出 = 洁净对象（≥1 字段才由调用方入键——零兜底值、零占位）。 */
+function cleanModelMeta(meta, model) {
+  const out = {}
+  if (meta === null || typeof meta !== "object" || Array.isArray(meta)) return out
+  const displayName = meta.displayName
+  if (typeof displayName === "string" && displayName.trim() !== "" && displayName !== model && displayName.length <= 200) out.displayName = displayName
+  if (typeof meta.contextWindow === "number" && Number.isInteger(meta.contextWindow) && meta.contextWindow > 0) out.contextWindow = meta.contextWindow
+  if (meta.vision === true) out.vision = true
+  const status = meta.status
+  if (typeof status === "string" && RETIRED_STATUS_WORDS.some((word) => status.toLowerCase().includes(word))) out.status = status
+  return out
+}
+
+/** 抽取（discover——上游 `/models` 条目 → 保留集四字段；各源：`display_name` ∥ `name` ∥ `context_window` ∥ `context_length` ∥
+ *  `max_model_len` ∥ `supports_image_in` ∥ `input_modalities` ∥ `status`；未收录不采、形不符即略）。 */
+export function extractModelMeta(item, id) {
+  const raw = item !== null && typeof item === "object" && !Array.isArray(item) ? item : {}
+  const displayName = typeof raw.display_name === "string" && raw.display_name.trim() !== "" ? raw.display_name : raw.name
+  const contextWindow = [raw.context_window, raw.context_length, raw.max_model_len].find((value) => value !== undefined && value !== null)
+  const vision = raw.supports_image_in === true || (Array.isArray(raw.input_modalities) && raw.input_modalities.includes("image"))
+  return cleanModelMeta({ displayName, contextWindow, vision: vision === true ? true : undefined, status: raw.status }, id)
+}
+
+/** 写面过滤（POST/PATCH `modelMeta`——§2.2）：非对象 ⇒ 抛（调用方转 400）∥ 白名单过滤 + 形不符即略 + 与提交
+ *  `models` 求交（只含开放清单——非开放模型不入库）；≥1 字段才入键（零占位）。 */
+export function filterModelMeta(raw, models) {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("modelMeta 须为对象（键 = 上游模型名——值 = { displayName ∥ contextWindow ∥ vision ∥ status }）")
+  }
+  const out = {}
+  for (const [model, meta] of Object.entries(raw)) {
+    if (!models.includes(model)) continue
+    const clean = cleanModelMeta(meta, model)
+    if (Object.keys(clean).length > 0) out[model] = clean
+  }
+  return out
+}
+
 /** 校验类错误 ⇒ 400 `invalid_request_error`（消息 = 单源原报文；库与运行时零变——§2.2）。 */
 function asInvalidRequest(fn) {
   try {
@@ -96,6 +145,7 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
       apiKey: maskApiKey(entry.apiKey), // 回显形——明文不出库面（§2.2）
       models: entry.models,
       settings: entry.settings, // 模型设置全图（v4——读面；§2.2）
+      modelMeta: entry.modelMeta, // 上游模型元数据留存图（v7——恒在场；未存 ⇒ {}；§2.2）
       createdAt: entry.createdAt,
       updatedAt: entry.updatedAt,
     }))
@@ -109,11 +159,13 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
       { name: body.name, baseURL: body.baseURL, apiKey: body.apiKey ?? "", models: body.models ?? [] },
       { where: "provider" },
     ))
+    // `modelMeta` 期望图（白名单 + 形不符即略 + 与提交 `models` 求交；缺省 ⇒ `{}`；非对象 ⇒ 400 库零变）
+    const modelMeta = asInvalidRequest(() => filterModelMeta(body.modelMeta === undefined ? {} : body.modelMeta, entry.models))
     assertNameFree(entry.name)
     const candidate = asInvalidRequest(() => buildCandidate([...listProviderEntries(db), entry])) // ②
     const now = new Date().toISOString()
-    const info = db.prepare("INSERT INTO providers (name, base_url, api_key, models_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)")
-      .run(entry.name, entry.baseURL, entry.apiKey, JSON.stringify(entry.models), now, now) // ③
+    const info = db.prepare("INSERT INTO providers (name, base_url, api_key, models_json, model_meta_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      .run(entry.name, entry.baseURL, entry.apiKey, JSON.stringify(entry.models), JSON.stringify(modelMeta), now, now) // ③
     runtime.set(candidate) // ④ 原子换表（零重启）
     const id = Number(info.lastInsertRowid)
     log?.info("provider_created", { id, name: entry.name })
@@ -136,11 +188,13 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
       settings,
     }, { where: "provider" }))
     if (entry.name !== current.name) assertNameFree(entry.name, { exceptId: current.id })
+    // `modelMeta` 期望图：键在场 = 提交图（白名单 + 形不符即略 + 求交）；缺省 = 现存图按求交滑动（删项随之滑落——零孤儿）
+    const modelMeta = asInvalidRequest(() => filterModelMeta(body.modelMeta === undefined ? current.modelMeta : body.modelMeta, entry.models))
     const candidate = asInvalidRequest(() => buildCandidate(
       listProviderEntries(db).map((item) => (item.id === current.id ? { ...entry, id: current.id } : item)),
     ))
-    db.prepare("UPDATE providers SET name = ?, base_url = ?, api_key = ?, models_json = ?, settings_json = ?, updated_at = ? WHERE id = ?")
-      .run(entry.name, entry.baseURL, entry.apiKey, JSON.stringify(entry.models), JSON.stringify(entry.settings), new Date().toISOString(), current.id)
+    db.prepare("UPDATE providers SET name = ?, base_url = ?, api_key = ?, models_json = ?, settings_json = ?, model_meta_json = ?, updated_at = ? WHERE id = ?")
+      .run(entry.name, entry.baseURL, entry.apiKey, JSON.stringify(entry.models), JSON.stringify(entry.settings), JSON.stringify(modelMeta), new Date().toISOString(), current.id)
     runtime.set(candidate)
     log?.info("provider_updated", { id: current.id, name: entry.name })
     sendJson(res, 200, { ok: true, id: current.id })
@@ -204,8 +258,18 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
       log?.warn("provider_discover_failed", { baseURL: draft.baseURL, message: `无 data 清单（HTTP ${upstream.status}）` })
       throw new HttpError("upstream_error", `模型发现失败：上游响应无 data 清单（HTTP ${upstream.status}）——请检查上游可达性后重试`)
     }
-    const models = [...new Set(payload.data.map((item) => item?.id).filter((id) => typeof id === "string" && id !== ""))]
-    sendJson(res, 200, { models }) // 草稿键经 body 传入不落库（§2.2）
+    const models = []
+    const modelMeta = {}
+    const seen = new Set()
+    for (const item of payload.data) {
+      const id = item?.id
+      if (typeof id !== "string" || id === "" || seen.has(id)) continue // 去重首见（与 models 同集）
+      seen.add(id)
+      models.push(id)
+      const meta = extractModelMeta(item, id)
+      if (Object.keys(meta).length > 0) modelMeta[id] = meta // ≥1 字段才入键（缺就空着——零兜底值、零占位）
+    }
+    sendJson(res, 200, { models, modelMeta }) // 草稿键经 body 传入不落库（§2.2）
   })
 
   routes.add("GET", "/api/admin/providers/presets", (req, res) => {

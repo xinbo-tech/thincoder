@@ -18,7 +18,7 @@
  *   ⑤ 类名双向闭合（AC-19 续）：档面字面类 ⊆ `style.css` 类选择器 ∥ `style.css` 类选择器 ⊆ 档面字面类 ∪ 态类 ∥
  *      死类零残留（`key-line`/`stat`/`view`——规则与字面两向）
  *   ⑥ 静态面：档目 19 ∥ 20（本批零新档）逐名同拍 ∥ `public/**` 零外链 ∥ 静态直发（200 ∥ mime ∥ 字节等于磁盘）
- *   ⑦ 门禁清单：`prepublishOnly` 二十件含本批件（配额 v2 批后）∥ 清单目标在盘
+ *   ⑦ 门禁清单：`prepublishOnly` 二十一件含本批件（Provider 模型元数据批后）∥ 清单目标在盘
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -132,7 +132,7 @@ test("③ 态面：行悬停声明清单（三声明同取 `var(--hover)`；清�
 
 // ── ④ 错态面（⑨ canon）：七处「加载失败」面 ∥ 系统页诊断失败面 2 处 ∥ 段内错误面 ──────────────
 
-test("④ 错态面：`.hint error` 逐面套用（七处 loadFailed + 系统页两处 + 段内三处 + 配额批窗内三处）∥ `\"hint error\"` 计数同拍 15", () => {
+test("④ 错态面：`.hint error` 逐面套用（七处 loadFailed + 系统页两处 + 段内三处 + 配额批窗内三处 + 模型元数据批两处）∥ `\"hint error\"` 计数同拍 17", () => {
   const FACES = [
     ["views-admin.mjs", "admin.members.loadFailed"],
     ["views-me.mjs", "usage.loadFailed"],
@@ -162,9 +162,10 @@ test("④ 错态面：`.hint error` 逐面套用（七处 loadFailed + 系统页
   assert.ok(readPublic("views-providers-modals.mjs").includes(`isError ? "hint error" : "hint"`), "测试连接失败未套 canon（同窗结果行）")
   // 计数同拍（错态不外溢——加载/空态保持纯 `.hint`）
   // 2026-10-07 配额批：views-admin 窗内状态行 +3（保存失败 ∥ 编辑态 hint ∥ 加载失败窗内行）⇒ 12 ⇒ 15（父侧直接执行 · 可 revert）
+  // 2026-10-07 模型元数据批：views-providers-modals 退役提示 +2（退役徽标 ∥ 退役注行）⇒ 15 ⇒ 17
   const total = ["views-admin.mjs", "views-me.mjs", "views-models.mjs", "views-usage.mjs", "views-audit.mjs", "views-providers.mjs", "views-providers-modals.mjs", "views-system.mjs"]
     .reduce((sum, file) => sum + (readPublic(file).match(/"hint error"/g) ?? []).length, 0)
-  assert.equal(total, 15, `\`"hint error"\` 计数不同拍：${total}`)
+  assert.equal(total, 17, `\`"hint error"\` 计数不同拍：${total}`)
 })
 
 // ── ⑤ 类名双向闭合（AC-19 续）：档面字面类 ↔ style.css 类选择器 ∥ 死类零残留 ─────────────────
@@ -227,11 +228,11 @@ test("⑥ 静态面：档目 19 ∥ 20 逐名同拍（本批零新档）∥ `pub
   }
 })
 
-// ── ⑦ 门禁清单：`prepublishOnly` 二十件（含本批件）∥ 清单目标在盘 ─────────────────────────────
+// ── ⑦ 门禁清单：`prepublishOnly` 二十一件（含本批件）∥ 清单目标在盘 ─────────────────────────────
 
-test("⑦ 门禁清单：`prepublishOnly` 二十件含本批件 ∥ 清单目标在盘", () => {
+test("⑦ 门禁清单：`prepublishOnly` 二十一件含本批件 ∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 20, `门禁清单件数（十九 ⇒ 二十——配额 v2 批）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 21, `门禁清单件数（二十 ⇒ 二十一——Provider 模型元数据批）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-06-console-list-style.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

@@ -2,7 +2,10 @@
  * views-providers-modals.mjs — Provider 双弹窗件（webui/WEBUI.md §2.4④——功能点 18 ∥ KD-SV-33；自
  * `views-providers.mjs` 拆出——双弹窗叠加破 300 软线）：添加弹窗（预设/自定义两径——预设表首开惰性拉取·
  * 已配名剔除）∥ 详情弹窗（信息段 + 候选勾选段——候选 = 上游发现；退役项只读注 + 恒保留；单脚区保存）；
- * 模型清单/候选勾选 = 表格形（§2.6⑤——单列「模型」：`label`（勾选 + 模型名）∥ `code` 行）。
+ * 模型清单/候选勾选 = 表格形（§2.6⑤——单列「模型」：`label`（勾选 + 模型名 + 富信息元）∥ `code` 行）；
+ * 候选行富信息（功能点 24——`displayName` 次级文本 ∥ `contextWindow`/`vision` 徽标；数据 = 发现 ∪ 存储逐字段·
+ * 发现优先）∥ 上游退役提示（`status` ⇒ 行标 + 注行——**只提示**，勾选/保存/派发零涉）∥ 候选段加载态（#984——
+ * 在飞 `.hint` 加载文案 + 触发钮禁用；一处落双窗）。
  *
  * 端点零新（契约 = gateway/API.md §2.2）：`GET /api/admin/providers/presets`（拉表）∥ `POST /api/admin/providers/discover`
  * （探针——「测试连接」= 同径复用，`providerId` 取库内 key；失败 ⇒ 段内提示 + 重试；无手填兜底）∥ `POST` 全字段 ∥
@@ -12,10 +15,43 @@
 import { mapError, t } from "./i18n.mjs"
 import { openModal } from "./modal.mjs"
 
+/** 令牌数格式化（`fmtTokens`——元数据展示助手）：≥1e6 ⇒ `xM`（一位小数舍零）∥ ≥1e3 ⇒ `xk` ∥ 原值。 */
+export function fmtTokens(value) {
+  if (value >= 1000000) {
+    const m = Math.round(value / 100000) / 10
+    return `${Number.isInteger(m) ? m : m.toFixed(1)}M`
+  }
+  if (value >= 1000) return `${Math.round(value / 1000)}k`
+  return String(value)
+}
+
+/** 元数据逐字段合并（发现值优先 ∥ 存储补齐——§2.4④）：两处皆缺 ⇒ 键不出。 */
+export function mergeModelMeta(stored, discovered) {
+  const merged = {}
+  for (const [model, meta] of Object.entries(stored ?? {})) merged[model] = { ...meta }
+  for (const [model, meta] of Object.entries(discovered ?? {})) merged[model] = { ...(merged[model] ?? {}), ...meta }
+  return merged
+}
+
+/** 候选行富信息元（§2.4④——有则示、零字段零占位）：次级文本 ∥ 上下文徽标 ∥ 视觉徽标 ∥ 上游退役徽标（`hint error`）。 */
+function metaParts(h, meta) {
+  const parts = []
+  if (typeof meta?.displayName === "string") parts.push(h("span", { class: "hint", text: meta.displayName }))
+  if (meta?.contextWindow !== undefined) parts.push(h("span", { class: "hint", text: t("admin.providers.metaContext", { value: fmtTokens(meta.contextWindow) }) }))
+  if (meta?.vision === true) parts.push(h("span", { class: "hint", text: t("admin.providers.metaVision") }))
+  if (typeof meta?.status === "string") parts.push(h("span", { class: "hint error", text: t("admin.providers.upstreamRetiredBadge") }))
+  return parts
+}
+
 /** 候选勾选清单（双弹窗复用——表格形：单列「模型」——§2.6⑤）：候选 = 上游发现集；`draft` = 勾选集（变化即写回）；
+ *  `meta` = 逐模型富信息图（发现 ∪ 存储——有则示、零字段零占位）；`loading` = 在飞态（#984——加载文案 ∥ 触发钮禁用 = 调用方）；
  *  发现失败 ⇒ 段内提示（重试 = 段内动作钮——调用方常驻持有）；空 ⇒ `emptyText`。
- *  「零手填」——候选面零文本输入（用户 2026-10-06 21:36 裁定）；行 = `label`（勾选 + 模型名——点题名同切换）。 */
-function renderPicks(h, box, { candidates, draft, onToggle, emptyText, errorText }) {
+ *  「零手填」——候选面零文本输入（用户 2026-10-06 21:36 裁定）；行 = `label`（勾选 + 模型名 + 富信息元——点题名同切换）。 */
+function renderPicks(h, box, { candidates, meta = {}, draft, onToggle, emptyText, errorText, loading = false }) {
+  if (loading === true) {
+    box.replaceChildren(h("p", { class: "hint", text: t("admin.providers.candidatesLoading") }))
+    return
+  }
   if (errorText !== null) {
     box.replaceChildren(h("p", { class: "hint error", text: errorText }))
     return
@@ -31,7 +67,8 @@ function renderPicks(h, box, { candidates, draft, onToggle, emptyText, errorText
       h("tbody", {}, ...models.map((model) => {
         const pick = h("input", { type: "checkbox", checked: draft.has(model) })
         pick.addEventListener("change", () => onToggle(model, pick.checked))
-        return h("tr", {}, h("td", {}, h("label", {}, pick, model)))
+        const rich = [model, ...metaParts(h, meta[model])].flatMap((part, index) => (index === 0 ? [part] : [" · ", part]))
+        return h("tr", {}, h("td", {}, h("label", {}, pick, ...rich)))
       })))))
 }
 
@@ -52,7 +89,7 @@ function sameSet(a, b) {
  *  （预设 ∥ 自定义）——预设径 = 选预设 ⇒ 信息行（地址 ∥ 模型清单——只读）+ 补 apiKey（可空——`env:` 照收）⇒ 保存；
  *  自定义径 = 名 ∥ baseURL ∥ apiKey +「获取模型」探针 ⇒ 候选勾选；保存不设发现门（models 可空——沿 POST 语义）。
  *  预设拉取失败 ⇒ 提示 + 自定义径照常；写入 = POST 全字段（无 `preset` 字段——校验不豁免）；成功 ⇒ 关窗 + 列表刷新
- *  + flash；失败 ⇒ flash（弹窗留驻）；取消/×/ESC = 弃稿。 */
+ *  + flash；失败 ⇒ 窗内状态行（弹窗留驻）；取消/×/ESC = 弃稿。 */
 export function openAddProviderModal(ctx, { providers = [], reload = null } = {}) {
   const { h } = ctx
   const existing = new Set(providers.map((item) => item.name)) // 已配名剔除（服务端复核为准——重名 ⇒ 400）
@@ -62,6 +99,8 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
 
   let presets = [] // 预设表（首开惰性拉取——已配名剔除）
   let candidates = null // null = 未拉取 ∥ 数组 = 最近一次发现结果
+  let probeMeta = {} // 探针所得元数据（discover 响应 `modelMeta`——无探针/零字段 ⇒ `{}` ⇒ 保存省略键）
+  let loading = false // 探针在飞（#984——加载文案 + 触发钮禁用）
   let errorText = null // 发现失败 ⇒ 段内提示（重试可达）
   const draft = new Set() // 勾选集（自定义径——保存提交）
 
@@ -76,7 +115,7 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
 
   const keyRow = () => h("div", { class: "provider-form" }, h("label", {}, t("admin.providers.apiKey"), apiKeyInput))
   const renderPicksArea = () => renderPicks(h, picksBox, {
-    candidates, draft, errorText,
+    candidates, meta: probeMeta, draft, errorText, loading,
     onToggle: (model, checked) => { if (checked) draft.add(model); else draft.delete(model) },
     emptyText: t("admin.providers.candidatesEmpty", { action: t("admin.providers.fetchModels") }),
   })
@@ -140,14 +179,21 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
     const body = { baseURL }
     const typed = apiKeyInput.value.trim()
     if (typed) body.apiKey = typed // 明传（可含 `env:` 引用——服务端解析）
+    loading = true // 在飞态（#984）
+    fetchBtn.disabled = true
+    renderPicksArea()
     try {
       const done = await ctx.api("/api/admin/providers/discover", { method: "POST", body })
       candidates = done.models
+      probeMeta = done.modelMeta ?? {} // 探针所得元数据（随保存落库——无 ⇒ 省略键）
       errorText = null
     } catch (error) {
       errorText = mapError(error) // 段内提示（保存不受阻——models 可空）
+    } finally {
+      loading = false
+      fetchBtn.disabled = false
+      renderPicksArea()
     }
-    renderPicksArea()
   })
 
   const save = async () => {
@@ -157,6 +203,7 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
     const body = value === "custom"
       ? { name: nameInput.value.trim(), baseURL: baseURLInput.value.trim(), apiKey: apiKeyInput.value.trim(), models: [...draft] }
       : { name: preset.name, baseURL: preset.baseURL, apiKey: apiKeyInput.value.trim(), models: [...preset.models] }
+    if (value === "custom" && Object.keys(probeMeta).length > 0) body.modelMeta = probeMeta // 探针所得（无探针/零字段 ⇒ 省略键）
     try {
       await ctx.api("/api/admin/providers", { method: "POST", body })
       ctx.flash(t("admin.providers.saved"))
@@ -190,6 +237,8 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
   const modal = openModal({ title: provider.name, body: bodyBox, footer: footBox })
 
   let candidates = null // null = 未拉取/失败前 ∥ 数组 = 最近一次发现结果（退役判定面）
+  let discoveredMeta = {} // 本次发现元数据（与存储逐字段合并——展示/保存同源；缺 ⇒ 空图）
+  let loading = false // 候选在飞（#984——加载文案 + 触发钮禁用）
   let errorText = null // 发现失败 ⇒ 段内提示
   const draft = new Set(provider.models) // 勾选草稿（初值 = 现配置；退役项不触碰 ⇒ 恒保留）
 
@@ -210,14 +259,21 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
   const loadCandidates = async () => {
     const baseURL = baseURLInput.value.trim()
     if (!baseURL) return
+    loading = true // 在飞态（#984）
+    refreshBtn.disabled = true
+    renderPicksArea()
     try {
       const done = await ctx.api("/api/admin/providers/discover", { method: "POST", body: { baseURL, providerId: provider.id } })
       candidates = done.models
+      discoveredMeta = done.modelMeta ?? {}
       errorText = null
     } catch (error) {
       errorText = mapError(error) // 段内提示 +「刷新候选」重试（保存不受阻——草稿 = 现配置未动 ⇒ 无损）
+    } finally {
+      loading = false
+      refreshBtn.disabled = false
+      renderPicksArea()
     }
-    renderPicksArea()
   }
   refreshBtn.addEventListener("click", () => loadCandidates())
 
@@ -245,19 +301,26 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
     }
   }
 
-  /** 勾选段重渲：错误态 ⇒ 段内提示；在位 ⇒ 候选勾选（勾选态 = 草稿）+ 退役项只读注行（不触碰 ⇒ 提交恒含）。 */
+  /** 勾选段重渲：错误态 ⇒ 段内提示；在位 ⇒ 候选勾选（勾选态 = 草稿）+ 退役项只读注行（不触碰 ⇒ 提交恒含）
+   *  + 上游退役注行（`status` 命中——只提示，勾选/保存/派发零涉）。 */
   const renderPicksArea = () => {
+    const meta = mergeModelMeta(provider.modelMeta, discoveredMeta)
     renderPicks(h, picksBox, {
-      candidates, draft, errorText,
+      candidates, meta, draft, errorText, loading,
       onToggle: (model, checked) => { if (checked) draft.add(model); else draft.delete(model) },
       emptyText: t("admin.providers.candidatesEmpty", { action: t("admin.providers.refreshCandidates") }),
     })
     const retired = candidates === null ? [] : provider.models.filter((model) => !candidates.includes(model))
-    noteBox.replaceChildren(...(retired.length === 0 ? []
-      : [h("p", { class: "hint", text: t("admin.providers.retiredNote", { models: retired.join(", ") }) })]))
+    const upstreamRetired = candidates === null ? [] : [...candidates].sort().filter((model) => typeof meta[model]?.status === "string")
+    const notes = []
+    if (retired.length > 0) notes.push(h("p", { class: "hint", text: t("admin.providers.retiredNote", { models: retired.join(", ") }) }))
+    if (upstreamRetired.length > 0) {
+      notes.push(h("p", { class: "hint error", text: t("admin.providers.upstreamRetiredNote", { models: upstreamRetired.map((model) => `${model} (${meta[model].status})`).join(", ") }) }))
+    }
+    noteBox.replaceChildren(...notes)
   }
 
-  /** 保存（PATCH 变更字段——`models` 全量数组单写 ⇒ 保存即热生效；零变更 ⇒ 直接关窗不请求）。 */
+  /** 保存（PATCH 变更字段——`models` 全量数组 + `modelMeta` 期望图（存储 ∪ 发现）随携 ⇒ 保存即热生效；零变更 ⇒ 直接关窗不请求）。 */
   const save = async () => {
     const body = {}
     if (nameInput.value.trim() !== provider.name) body.name = nameInput.value.trim()
@@ -266,7 +329,9 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
     else if (keyInput.value.trim()) body.apiKey = keyInput.value.trim()
     const models = [...draft]
     if (!sameSet(models, provider.models)) body.models = models // 全量数组（退役项恒保留）
-    if (Object.keys(body).length === 0) { modal.close(); return } // 零变更 ⇒ 直接关窗
+    if (Object.keys(body).length === 0) { modal.close(); return } // 零变更（可编辑面零动）⇒ 直接关窗零请求（发现富化不单独触发写——§2.4④）
+    const expected = mergeModelMeta(provider.modelMeta, discoveredMeta) // 期望图（发现值优先 ∥ 存储补齐）
+    if (Object.keys(expected).length > 0) body.modelMeta = expected // 空图 ⇒ 省略键
     try {
       await ctx.api(`/api/admin/providers/${provider.id}`, { method: "PATCH", body })
       ctx.flash(t("admin.providers.saved"))

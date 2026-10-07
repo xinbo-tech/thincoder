@@ -6,7 +6,7 @@
  * 射程（判据源 = `accounts/ACCOUNTS.md` §2.2/§3/§5 AC-23 ∥ `gateway/API.md` §2/§2.1/§5 AC-23 ∥
  * `metering/METERING.md` §2.3/§2.5/§4 AC-23 ∥ `store/STORE.md` §2 v6 段/§3 ∥
  * `webui/WEBUI.md` §2.2（KD-SV-44）∥ §2.4②③ ∥ §6 AC-23 两行；腿 ↔ 判据对照在括号）：
- *   ① v6 迁移（STORE §3）：空库直落 6 ∥ v5 库自动升 6（存量行得常量默认 `'{}'`——默认全可用）∥ 幂等
+ *   ① v6 迁移（STORE §3）：空库直落 7 ∥ v5 库自动升 7（存量行得常量默认 `'{}'`——默认全可用）∥ 幂等
  *      ∥ 新列常量默认在场（`pragma_table_info` dflt = `'{}'`）
  *   ② 禁用写/读面（ACCOUNTS §3 ∥ AC-23——真 HTTP）：`POST /api/members/:id/model-disables` 键级合并
  *      （`true` = 禁 ∥ `null` = 删键 ∥ 未出现键不动）⇒ 200 `{id, modelDisables}` ∥ 400（键形 ∥ 值——库零变）
@@ -21,7 +21,7 @@
  *      ∥ 报告路径（无 `--fix`）零事务
  *   ⑥ #1001③：`keyUsageStats` 窗沿 = 近 30 个本地日（今日起回溯——与报表窗同构；界日 -29 含 ∥ -30 不含）
  *   ⑦ #1001②：键形助手两 merge 共用（`model-quotas` ∥ `model-disables` 裸名 ∥ 空段 ⇒ 400 库零变）
- *   ⑧ 门禁清单：`prepublishOnly` 含本批件（二十件）∥ 清单目标在盘
+ *   ⑧ 门禁清单：`prepublishOnly` 含本批件（二十一件——Provider 模型元数据批后）∥ 清单目标在盘
  *   ⑨ i18n（WEBUI §2.2 KD-SV-44 ∥ §6 AC-23 续；#994/#988）：死键 2 枚零残留 ∥ 新 2 键两表 ∥ `.one` 7 枚仅 en ∥
  *      基键集双向相等（除自称名族 + `.one` 族）∥ 复数取形直测（en count=1 ⇒ 单形 ∥ 2 ⇒ 基 ∥ zh 不变）
  *   ⑩ 成员弹窗查看态（WEBUI §2.4② ∥ AC-23①③；#1002/#1004）：模型表直显 5 列（`deriveModels` 序）∥ 逐行已用（缺 ⇒ 0）∥
@@ -159,12 +159,12 @@ function probeDb(db) {
   }
 }
 
-// ── ① v6 迁移（STORE §3——判据：空库 6 ∥ v5 升 6 ∥ 幂等 ∥ 常量默认在场）────────────────
+// ── ① v6 迁移（STORE §3——判据：空库 7 ∥ v5 升 7 ∥ 幂等 ∥ 常量默认在场）────────────────
 
-test("① v6 迁移：空库直落 6 ∥ v5 库自动升 6（存量行得 '{}'）∥ 幂等 ∥ 新列常量默认在场", () => {
+test("① v6 迁移：空库直落 7 ∥ v5 库自动升 7（存量行得 '{}'）∥ 幂等 ∥ 新列常量默认在场", () => {
   const fresh = DB.openDatabase(":memory:")
   try {
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [6, 6])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [7, 7])
     const column = fresh.prepare("PRAGMA table_info(members)").all().find((item) => item.name === "model_disabled_json")
     assert.ok(column, "members.model_disabled_json 缺位")
     assert.deepEqual([column.type, column.notnull, column.dflt_value], ["TEXT", 1, "'{}'"]) // 常量默认 = '{}'（默认全可用）
@@ -181,11 +181,11 @@ test("① v6 迁移：空库直落 6 ∥ v5 库自动升 6（存量行得 '{}'�
     legacy.close()
     const db = DB.openDatabase(file) // 启动自动升
     try {
-      assert.equal(DB.readVersion(db), 6)
+      assert.equal(DB.readVersion(db), 7)
       const row = db.prepare("SELECT model_quotas_json, model_disabled_json FROM members WHERE username = 'old'").get()
       assert.deepEqual([row.model_quotas_json, row.model_disabled_json], ['{"mock/m":1}', "{}"], "存量行即刻得 '{}'——默认全可用")
       // 幂等：再跑迁移链 ⇒ 版本不变 ∥ 存量值不动
-      assert.equal(DB.migrate(db), 6)
+      assert.equal(DB.migrate(db), 7)
       assert.equal(db.prepare("SELECT model_disabled_json FROM members WHERE username = 'old'").get().model_disabled_json, "{}")
     } finally {
       db.close()
@@ -421,11 +421,11 @@ test("⑦ #1001②：模型禁用与配额覆盖同一键形助手（裸名/空�
   }
 })
 
-// ── ⑧ 门禁清单（`prepublishOnly` 二十件含本批两件 ∥ 清单在盘）──────────────────
+// ── ⑧ 门禁清单（`prepublishOnly` 二十一件含本批两件 ∥ 清单在盘）──────────────────
 
-test("⑧ 门禁清单：`prepublishOnly` 二十件含本批件（新建 ∥ 随正）∥ 清单目标在盘", () => {
+test("⑧ 门禁清单：`prepublishOnly` 二十一件含本批件（新建 ∥ 随正）∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 20, `门禁清单件数（十九 ⇒ 二十）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 21, `门禁清单件数（二十 ⇒ 二十一——Provider 模型元数据批）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-v2-member-models.test.mjs"), "本批件应入列")
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-per-model.test.mjs"), "随正件应在列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)

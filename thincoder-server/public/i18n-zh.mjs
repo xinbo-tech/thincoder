@@ -3,7 +3,7 @@
  * ∥ 参数 = `{name}` 占位（`t(key, params)` 替换）∥ `Object.freeze`（数据表只读）。
  *
  * 本档 = 唯一 CJK 档（零 CJK 机检口径——§6 AC-14：扫描面排除本档 ∥ `i18n-en.mjs` ∥ `index.html`）；
- * `lang.zh` ∥ `lang.en`（自称名）= 仅本档载体（切换器固定取本档渲染——不自译）。取载 = `i18n.mjs` 静态 import（零构建）。
+ * `lang.zh` ∥ `lang.en`（自称名）= 仅本档载体（切换器固定取本档渲染——不自译）；`.one` 复数变体族 = 仅 en 表载体（本档零枚——KD-SV-44）。取载 = `i18n.mjs` 静态 import（零构建）。
  */
 export const ZH = Object.freeze({
   // ── 应用壳 ∥ 通用 ──────────────────────────────────────────────────────────
@@ -43,7 +43,6 @@ export const ZH = Object.freeze({
   "col.role": "角色",
   "col.quota": "分模型配额",
   "col.used": "本月已用",
-  "col.actions": "操作",
   "col.item": "项",
   "col.value": "值",
 
@@ -120,7 +119,8 @@ export const ZH = Object.freeze({
   "admin.members.modelQuotaTitle": "分模型用量",
   "admin.members.colMonthlyQuota": "每月用量",
   "admin.members.colPlatformQuota": "平台默认",
-  "admin.members.quotaEmptyHint": "未设覆盖——按平台配置",
+  "admin.members.colDisabled": "禁用",
+  "admin.members.disableHint": "勾选 = 对该成员禁用（默认可用）",
   "admin.members.quotaOffListNote": "另有 {count} 项不在服务清单（保留）",
   "admin.members.quotaLoadFailed": "配额设置加载失败",
   "admin.members.quotaRetry": "重试",
@@ -192,6 +192,11 @@ export const ZH = Object.freeze({
   "admin.providers.openList": "服务的模型（勾选 = 对团队开放）",
   "admin.providers.candidatesEmpty": "暂无候选——点「{action}」拉取",
   "admin.providers.retiredNote": "不在上游发现列表中的已开放模型：{models}——停用入口 = 服务模型页",
+  "admin.providers.candidatesLoading": "正在获取候选模型……",
+  "admin.providers.metaContext": "上下文 {value}",
+  "admin.providers.metaVision": "视觉",
+  "admin.providers.upstreamRetiredBadge": "已退役",
+  "admin.providers.upstreamRetiredNote": "上游标记退役：{models}",
   "admin.providers.fetchModels": "获取模型",
   "admin.providers.refreshCandidates": "刷新候选",
   "admin.providers.customChoice": "自定义",

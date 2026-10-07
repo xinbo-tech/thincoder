@@ -6,7 +6,7 @@
  *   ③ 档位（false 零检查 ∥ 缺省 notify ∥ 启动即检 ∥ stop 清循环）　④ N14/B10（`update_available` ∥ 静默）
  *   ⑤ 自升/N15/B11（参数形 + 复读 + 回调停机；失败/超时保留旧版——含进程级 `signal:"self-update"` + 退出码 0）
  *   ⑥ B12（钉版抑制）　⑦ E12（非法拒启）∥ ready 含 `version`　⑧ converge 矩阵（七行 + 边界格；B13 回退 ∥ E13 拒启）
- *   ⑨ converge 进程级　⑩ 部署件结构 ∥ prepublishOnly 二十件　⑪ 零依赖扫描
+ *   ⑨ converge 进程级　⑩ 部署件结构 ∥ prepublishOnly 二十一件　⑪ 零依赖扫描
  * 假 npm 替身 = 临时 `.mjs`（`[node, <档>]` 命令形——跨平台；§5.4(c) 注入口径）；假 registry = 端口随机 `node:http`。
  */
 import test from "node:test"
@@ -436,7 +436,7 @@ test("converge 矩阵：latest（有/无 × 已最新/有新/不可达/装失败
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
-// ── ⑨ converge（进程级） ⑩ 部署件结构 ∥ prepublishOnly 二十件 ⑪ 零依赖扫描 ────
+// ── ⑨ converge（进程级） ⑩ 部署件结构 ∥ prepublishOnly 二十一件 ⑪ 零依赖扫描 ────
 
 test("converge（进程级）：空+有 ⇒ 退出码 0 + 收敛行 ∥ 空+无 ⇒ 拒启退出码 1 + refused 行", async () => {
   const dir = tmpDir("conv-proc")
@@ -477,7 +477,7 @@ test("部署件结构：Dockerfile 壳形（预装本地 tgz ∥ PATH ∥ USER n
   assert.match(unit, /^ExecStart=\/opt\/thincoder-server\/\.npm-global\/bin\/thincoder-server --config \/opt\/thincoder-server\/config\.json$/m)
   assert.match(unit, /^Restart=always$/m)
   const batchFiles = (PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? [])
-  assert.equal(batchFiles.length, 20, `prepublishOnly 应列二十件：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 21, `prepublishOnly 应列二十一件：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-06-server-auto-update.test.mjs"), "本批件应入列")
 })
 

@@ -8,9 +8,9 @@
 
 - 单库单连接（`DatabaseSync`）；PRAGMA：WAL ∥ `synchronous=NORMAL` ∥ `busy_timeout=5000` ∥ `foreign_keys=ON`。
 - 库文件默认 = `thincoder-server/data/gateway.db`（运行期生成，不入 git）。
-- 结构版本 = `PRAGMA user_version`（当前 = 5——v2 增 `providers` ∥ v3 增 `audit_events` 与三索引 ∥ v4 增 `providers.settings_json`（模型设置——服务模型配置面） ∥ v5 增模型标识两字段拆列 + 派生两表 + 成员配额列（详见 §2 v5 段）；未发布期连续演进，无历史库迁移包袱——旧库启动自动升；迁移链机制自 v1 起备）。
+- 结构版本 = `PRAGMA user_version`（当前 = **7**——v2 增 `providers` ∥ v3 增 `audit_events` 与三索引 ∥ v4 增 `providers.settings_json`（模型设置——服务模型配置面） ∥ v5 增模型标识两字段拆列 + 派生两表 + 成员配额列 ∥ v6 增成员模型禁用列（详见 §2 v5/v6 段） ∥ v7 增 provider 模型元数据留存列（详见 §2 v7 段）；未发布期连续演进，无历史库迁移包袱——旧库启动自动升；迁移链机制自 v1 起备）。
 
-## 2. DDL（v1 基线四表 + v2–v5 增段）
+## 2. DDL（v1 基线四表 + v2–v7 增段）
 
 ### v1 基线（四表——逐字）
 
@@ -164,6 +164,26 @@ FROM usage GROUP BY member_id, provider, model, month;
 - 两派生表 = **可重算**（`usage reconcile`——`metering/METERING.md` §2）；**不设 FK**（派生面自足——沿 `audit_events` 无 FK 口径；成员删除本无路径）；唯一键即查形（日表 = `day` 前缀日窗扫描；计数表 = 四列点查 O(1)——`EXPLAIN` 预期 `SEARCH … USING INDEX sqlite_autoindex_… (…)`）。
 - 保留/清理 = 与 usage **同窗同清**（`metering/METERING.md` §1——三表同事务删除）。
 
+### v6 增段（`members.model_disabled_json`——accounts 域；配额 v2 · 成员模型面批）
+
+```sql
+ALTER TABLE members ADD COLUMN model_disabled_json TEXT NOT NULL DEFAULT '{}';  -- 成员 × 模型禁用集（JSON 对象——键 = 对外标识；值 = true）
+```
+
+- 形 = `{ "<provider/model>": true }`——键 = 对外标识（与 `model_quotas_json` 同空间；键形校验同助手——首斜杠两段非空）；值仅 `true`（禁用）；删键 = 恢复可用；缺省 `{}` = **默认全可用**。
+- 机制全文 = `accounts/ACCOUNTS.md` §2.2；消费面 = 鉴权行携带（`accounts/keys.mjs` `verifyKey`——沿 `model_quotas_json` 零查询口径） ⇒ 网关准入（`gateway/API.md` §2.1）+ `/v1/models` 随动滤除 + 成员弹窗勾选态（`webui/WEBUI.md` §2.4②）。
+- 与 `model_quotas_json`（v5）并列：两列各管一轴——配额 = 用量限额 ∥ 禁用 = 可用性（优先级判据 = `accounts/ACCOUNTS.md` §2.2）。
+
+### v7 增段（`providers.model_meta_json`——gateway 域；Provider 模型元数据批）
+
+```sql
+ALTER TABLE providers ADD COLUMN model_meta_json TEXT NOT NULL DEFAULT '{}';  -- 上游模型元数据留存图（JSON 对象——形见下）
+```
+
+- 形 = `{ "<上游模型名>": { displayName? ∥ contextWindow?（正整数） ∥ vision?（`true`） ∥ status?（退役状态原文） } }`——**≥1 字段才入键**（缺就空着——零兜底值、零占位）；只含开放清单（`models_json`）模型（写面求交）。
+- 保留集与各上游来源映射 = `gateway/API.md` §2.2「模型元数据」条（逐字）；本列 = **纯展示数据**（转发 ∥ 派发 ∥ `/v1/models` 零涉）。
+- 写面 = 保存路径（POST/PATCH）携 `modelMeta`（键在场 = 期望图——白名单过滤 + 形不符即略 + 求交；缺省 = 现存按求交滑动）；读面 = `rowToEntry` 解码（坏 JSON ⇒ 行数据损坏抛——沿 `models_json`/`settings_json` 口径）；消费 = 控制台 Provider 详情弹窗（`webui/WEBUI.md` §2.4④）。
+
 - 表归属：`members` ∥ `api_keys` ∥ `sessions` ∥ `audit_events` = accounts 域（`accounts/ACCOUNTS.md`）；`usage` ∥ `usage_daily` ∥ `quota_counters` = metering 域（`metering/METERING.md`）；`providers` = gateway 域（provider 管理面 ∥ v4 模型设置——`gateway/API.md` §2.2）；结构单源 = 本档。
 
 ## 3. 迁移链（`user_version` 逐版升）
@@ -177,12 +197,14 @@ FROM usage GROUP BY member_id, provider, model, month;
 - first-release-completeness 批（2026-10-06）：**零结构变更**（保留窗清理 = 删除式 ∥ 登录防护计数 = 进程内存——均无新表；结构版本不变）。
 - v5 = 两字段拆列 + 派生两表 + 成员配额列（**配额分模型批**——需求 §2:21 ∥ §2:22 ∥ 台账 #990/#991/#992）：五步见 §2 v5 段（拆列 ∥ 建 `usage_daily`/`quota_counters` ∥ 成员列增删 ∥ 期初回填）。
   判据（批内件）= 空库读数 5 ∥ v4 库升后读数 5 ∥ v5 段幂等（再开零变）∥ 拆列抽样逐值（含 `model` 带斜杠 ∥ 嵌入行 `provider = ''`）∥ 回填两表逐值 = usage 重算 ∥ 旧列不在 `pragma_table_info('members')`；耗时（一次性 @500k 行——同构探针实读）= 日表回填 ≈1.2s ∥ 计数回填 ≈3.4s（合计 ≈5s 级）。
+- v6 = 成员模型禁用列（`members.model_disabled_json`——**配额 v2 · 成员模型面批** ∥ 台账 #1004）：**列级 ALTER = 表不重建**（存量行即刻得 `'{}'`——默认全可用）；旧库（v1–v5）启动自动升 ∥ 空库直落 v6；判据（批内件）= 空库读数 6 ∥ v5 库升后读数 6 ∥ v6 段幂等（再开零变）∥ 新列常量默认在场（`pragma_table_info('members')` 含列）。
+- v7 = provider 模型元数据留存列（`providers.model_meta_json`——**Provider 模型元数据批** ∥ 台账 #1005）：**列级 ALTER = 表不重建**（存量行即刻得 `'{}'`——未存 = 无元数据）；旧库（v1–v6）启动自动升 ∥ 空库直落 v7；判据（批内件）= 空库读数 7 ∥ v6 库升后读数 7 ∥ v7 段幂等（再开零变）∥ 新列常量默认在场（`pragma_table_info('providers')` 含列）。
 
 ## 4. 本域文件与行数预算（本域族行）
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/store/db.mjs`（已落盘） | **124 ⇒ ≈160 ⇒ 144**（实读——v3 落地后）**⇒ ≈155**（服务模型配置面批 +≈11 = v4 段（ALTER + 迁移段））**⇒ 实读 150 ⇒ ≈205**（本批 +≈55 = v5 段：拆列 ALTER/UPDATE ∥ 建两表 ∥ 两回填 INSERT ∥ 成员列增删） | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
+| `thincoder-server/src/store/db.mjs`（已落盘） | **124 ⇒ ≈160 ⇒ 144**（实读——v3 落地后）**⇒ ≈155**（服务模型配置面批 +≈11 = v4 段（ALTER + 迁移段））**⇒ 实读 150 ⇒ ≈205**（配额分模型批 +≈55 = v5 段：拆列 ALTER/UPDATE ∥ 建两表 ∥ 两回填 INSERT ∥ 成员列增删）**⇒ 实读 202 ⇒ ≈214**（配额 v2 批 +≈12 = v6 段（ALTER + 迁移段））**⇒ 实读 210（v6 落地后）⇒ ≈218**（模型元数据批 +≈8 = v7 段（ALTER + 迁移段——与 v6 段同构）） | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
 
 ## 5. 关键决策（本域）
 
@@ -205,3 +227,6 @@ FROM usage GROUP BY member_id, provider, model, month;
 - 2026-10-06：控制台可见面二轮设计轮（批 `docs/batches/2026-10-06-console-completeness-2.md`——需求 §2:15 ∥ 台账 #972）——§1 结构版本 2 ⇒ 3 ∥ §2 增 v3 增段（`audit_events` + `idx_audit_ts`/`idx_audit_type_ts`/`idx_usage_key_ts`）∥ 表归属补 accounts 行 ∥ §3 迁移链补 v3 段 ∥ §4 预算（db 124 ⇒ ≈160）；同源随动 = `accounts/ACCOUNTS.md` §2.1 ∥ `metering/METERING.md` §3。
 - 2026-10-06：服务模型配置面设计轮（批 `docs/batches/2026-10-06-models-config.md`——需求 §2:17 ∥ 台账 #981）——§1 结构版本 3 ⇒ 4 ∥ §2 增 v4 增段（`ALTER TABLE providers ADD COLUMN settings_json`——形/写面/校验/消费）∥ 表归属 providers 行补 v4 ∥ §3 迁移链补 v4 段（表不重建 ∥ 判据）∥ §4 预算（db ⇒ ≈155；v4 段 +≈11）；同源随动 = `gateway/API.md` §2.2 ∥ `webui/WEBUI.md` §2.4③。
 - 2026-10-07：配额分模型批设计轮（批 `docs/batches/2026-10-07-quota-per-model.md`——需求 §2:21 ∥ §2:22 ∥ 台账 #990/#991/#992）——§1 结构版本 4 ⇒ 5 ∥ §2 增 v5 增段（usage 两字段拆列 ∥ `usage_daily` ∥ `quota_counters` ∥ members 增 `model_quotas_json`/删 `quota_tokens` ∥ 期初回填——全 DDL 逐字）∥ v4 段 settings 形补 `quotaTokens`（消费补配额句）∥ 表归属补 metering 两表 ∥ §3 迁移链补 v5 段（判据 + 一次性耗时读数）∥ §4 预算（db 150 ⇒ ≈205）∥ §5 增 KD-SV-40；同源随动 = `metering/METERING.md` §1/§2 ∥ `gateway/API.md` §2.2。
+- 2026-10-07：配额 v2 · 成员模型面批设计轮（批 `docs/batches/2026-10-07-quota-v2-member-models.md`——需求 §2:23 ∥ 台账 #1002/#1003/#1004 + 并入 #1001/#994/#995/#988）——§1 结构版本 5 ⇒ 6 ∥ §2 增 v6 增段（`members.model_disabled_json`——形/消费/与配额列并置句）∥ §3 迁移链补 v6 段（判据）∥ §4 预算（db 实读 202 ⇒ ≈214）；同源随动 = `accounts/ACCOUNTS.md` §2.2/§3 ∥ `gateway/API.md` §2.1。
+- 2026-10-07：Provider 模型元数据批设计轮（批 `docs/batches/2026-10-07-provider-model-metadata.md`——台账 #1005 + 并入 #984）——§1 结构版本 6 ⇒ 7 ∥ §2 增 v7 增段（`providers.model_meta_json`——形/写面/读面/消费/圈界）∥ §3 迁移链补 v7 段（判据）∥ §4 预算（db 实读 210 ⇒ ≈218——v6 落地后基数重估）；同源随动 = `gateway/API.md` §2.2 ∥ `webui/WEBUI.md` §2.4④。
+- 2026-10-07：fix 轮（评审轮次 1——批 `docs/batches/2026-10-07-provider-model-metadata.md` §3 九发现，本档面）：§4 预算按现读重估（v6 已落盘——db 实读 210；v7 终值 ≈218——上条括注同拍）。

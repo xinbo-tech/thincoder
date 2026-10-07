@@ -20,7 +20,7 @@ export function splitModelRef(ref) {
   return { provider: ref.slice(0, cut), model: ref.slice(cut + 1) }
 }
 
-/** 库行 → provider 条目（store/STORE.md §2 v2/v4 段列名映射 + `models_json`/`settings_json` 解码）。 */
+/** 库行 → provider 条目（store/STORE.md §2 v2/v4/v7 段列名映射 + `models_json`/`settings_json`/`model_meta_json` 解码）。 */
 export function rowToEntry(row) {
   let models
   try {
@@ -37,6 +37,15 @@ export function rowToEntry(row) {
   if (settings === null || typeof settings !== "object" || Array.isArray(settings)) {
     throw new Error(`providers 行数据损坏（id=${row.id}——settings_json 非对象）`)
   }
+  let modelMeta
+  try {
+    modelMeta = JSON.parse(row.model_meta_json ?? "{}")
+  } catch (e) {
+    throw new Error(`providers 行数据损坏（id=${row.id}——model_meta_json 非 JSON：${e.message}）`)
+  }
+  if (modelMeta === null || typeof modelMeta !== "object" || Array.isArray(modelMeta)) {
+    throw new Error(`providers 行数据损坏（id=${row.id}——model_meta_json 非对象）`)
+  }
   return {
     id: row.id,
     name: row.name,
@@ -44,6 +53,7 @@ export function rowToEntry(row) {
     apiKey: row.api_key,
     models,
     settings, // 模型设置映射（v4——`{}` = 未设；判据单源 = ops/config.mjs）
+    modelMeta, // 上游模型元数据留存图（v7——`{}` = 未存；纯展示数据——§2.2「模型元数据」条）
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
