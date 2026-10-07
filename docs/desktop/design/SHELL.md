@@ -77,10 +77,11 @@ thincoder-desktop/                  ← 本端产品包
 │   ├── i18n-composer.mjs           ← 输入面板词族第三档（两语 VSC 逐字）
 │   ├── mount-settings-reads.mjs    ← 设置面七段读数供给族（R8 拆档）
 │   ├── mount-settings-exits.mjs    ← 设置面出口族 + 写路辅助（R8 拆档）
-│   ├── mount-settings-segments.mjs ← 设置面段出口族（env ∕ 工具与服务 ∕ MCP——R7 拆档）
+│   ├── mount-settings-segments.mjs ← 设置面段出口族（env ∕ 工具与服务——R7 拆档；MCP 族续拆 `mount-settings-segments-mcp.mjs`）
 │   ├── mount-settings-segments-models.mjs ← 设置面 models 段出口族（consult ∕ advisor——R7 拆档）
 │   ├── mount-settings-segments-providers.mjs ← 设置面渠道段出口族（B10 W2——S1 ∕ S2 ∕ S5 六出口，自 `mount-settings-exits.mjs` 按族续拆出档）
 │   ├── mount-settings-segments-agent.mjs ← 设置面 agent 段出口族（B10 W3——S10 ∕ S11 ∕ S14b 出口与单键 patch 写路）
+│   ├── mount-settings-segments-mcp.mjs ← 设置面 MCP 段出口族（MCP 键值行式输入批（#1036）拆档产出——自 `mount-settings-segments.mjs` 出档；MCP 族出口 + kv 行令牌两出口）
 │   ├── settings-confirm.mjs       ← 删除确认弹层件（B10 W2 · S6——`.auto-confirm` 族复用，零新 CSS；四门前置确认）
 │   ├── settings-modal.mjs        ← 设置组弹窗宿主件（**设置菜单升级批**新档 · D39——`settingsModalTree` 纯树 + 单例挂载 ∕ 刷新 ∕ 关闭 ∥ Esc ∥ 焦点；沿 `settings-confirm.mjs` 先例；单源 = `docs/desktop/design/SETTINGS.md` §1 **KD-68**）
 │   ├── events-subscribe.mjs        ← 订阅接线（自 `events.mjs` 拆出——`attachEvents({ on, store, invoke, onTurnTail })`（实读 **93**——`docs/desktop/design/PROJECT.md` §4.1 · 实读 2026-09-29）：**二十四条**通道订阅（现盘实读 23 + 本批 `ev:menu`）+ 回合尾标题刷新存续（`onTurnTail`——flush 携行已退役）；单向依赖归约档）
@@ -338,3 +339,4 @@ B10 拆出 ∕ 新档）+ 四行按盘收正（`settings.mjs` 多面清单 / `pr
 - 2026-10-03（**无效渠道态逻辑归一（provider-invalid-unify）批 · 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-03-provider-invalid-unify.md` §2 ∥ §5 · 台账 #841）：§5.1 `turn-input.mjs` 行走读齐平（**141 ⇒ 146**——`providerKindOf` ③ 判据换源 ∥ 成功回执携 `providerState`）。**零新语义**（读数）。明细 = 批档 §2 回填轮块。
 - 2026-10-03（**首跑渠道提示修复批 · 实施后文档面回填轮（§5.1 值行齐平 + turn-input 补登）· eng-designer**——承批档 `docs/batches/2026-10-03-desktop-firstrun-provider-notice.md` §2 ∥ §5 · 台账 #840）：§5.1 `agent-host.mjs` 行走读齐平（**298 ⇒ 306**——C ∥ KD-8 两件；**越 300 ⇒ 越层在册**——登记 = `docs/desktop/design/PROJECT.md` §4.1 越层段）＋ `turn-input.mjs` 行**补登**（**141**——structure-split-2 拆档产出、历轮未登记 ⇒ 本次补行；行数面机检随含）。**零新语义**（读数 ∥ 登记）。明细 = 批档 §5。
 - 2026-10-04（**模型切换解锁批 · 修正轮（评审 #53 · 发现 1 同机制残句扫）· eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §3 轮次 1 · 台账 #918）：§5.1 `agent-assemble.mjs` 行 setPrefs 句收正（在飞 ⇒ 写盘受理 ∥ 施加顺延——随 KD-19 收正）∥ §5.1 `agent-host.mjs` 行读数按盘收正（**306 ⇒ 327**——随 #6）。**零新语义**。明细 = 批档 §2 修正块。
+- 2026-10-07（**MCP 键值行式输入批 · 实施后回填轮（设计面）· eng-designer**——承批档 `docs/batches/2026-10-07-mcp-kv-input.md` §5 ∥ §2 追记⑧ · 台账 #1036）：§1 树增 `mount-settings-segments-mcp.mjs` 行（MCP 段出口族——拆档产出；同族行位 = `-agent.mjs` 后）+ `mount-settings-segments.mjs` 行族枚举随动（去 MCP——续拆出档）。**零新语义**（登记 ∥ 枚举）。明细 = 批档 §2 追记⑧。

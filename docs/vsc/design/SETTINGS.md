@@ -181,7 +181,7 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
   该行**不满足「可重填」前提**：重填 URL / 名**不恢复** key 原文，只能回服务商重取——原「重填 URL/名即可逆」的理由**被 `apiKey` 事实推翻**（用户 2026-09-19 08:11 逐字「**A，也入。**」）。
 
 **本批后态（唯一门）**：入口册 1–6 **全数**走 `_confirmSecretDelete`；门调用点 **6 处**（入口册 6 行 1:1）——`webview/settings-tools.js:46`（入口 1）· `:28`（入口 2）· `webview/settings-providers.js:57`（入口 3）·
-`:68`（入口 4）· `webview/settings-tools.js:196`（入口 5）· `webview/input.js:125`（入口 6——**经 hook 链路**：核 footer `onClick` ⇒ `hooks.confirmRemoveProvider` ⇒ 本桥调门）。
+`:68`（入口 4）· `webview/settings-mcp.js:182`（入口 5）· `webview/input.js:125`（入口 6——**经 hook 链路**：核 footer `onClick` ⇒ `hooks.confirmRemoveProvider` ⇒ 本桥调门）。
 `window._confirmDelete`（`thincoder-vscode/webview/settings.js:44`——**保留门**）**零调用点**（结构对账 W17-17 钉住）⇒ 全数删除入口**唯一通道 = 确认门**。
 `_confirmDelete` 的**定义仍在**（`:44`——保留门）；注释随本批收正（`:42-43` 失实分句退场 · `:45-48` 不可复得类枚举补 provider 行——**落 ① 已执行**，见 §3 登记条）；`test/smoke-settings.mjs:95` 的 handler 在位断言照绿。
 新增删除入口一律按上二分类判：本批后域内不存在直通调用点 ⇒ 误入直通即结构对账点名（fail-closed）。
@@ -199,15 +199,15 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 
 | # | 入口 | 载体（as-of 2026-09-19 · provider 行批实读） | 类 | 删除消息 |
 |---|---|---|---|---|
-| 1 | Web Search key ✕ | `webview/settings-tools.js:273`（`websearchRowHtml()` 的 ✕ 生成位）→ handler `:45-47` | 不可复得类 | `deleteWebsearchKey` |
-| 2 | 嵌入 key ✕（Semantic Index） | `webview/settings-tools.js:286`（`embedRowHtml()` 的 ✕ 生成位）→ handler `:27-29` | 不可复得类 | `deleteEmbedKey` |
+| 1 | Web Search key ✕ | `webview/settings-tools.js:103`（`websearchRowHtml()` 的 ✕ 生成位）→ handler `:45-47` | 不可复得类 | `deleteWebsearchKey` |
+| 2 | 嵌入 key ✕（Semantic Index） | `webview/settings-tools.js:116`（`embedRowHtml()` 的 ✕ 生成位）→ handler `:27-29` | 不可复得类 | `deleteEmbedKey` |
 | 3 | provider key | `webview/settings-providers.js:56-58`（`window._delKey`）——**现无 UI 载体**（承归档决策：UI 不再暴露「只删 key 留条目」的入口、协议保留不删——`thincoder-vscode/docs/design/_archive/SETTINGS-PANEL.md` D2） | 不可复得类 | `deleteProviderKey` |
 | 4 | provider 行 −（删整条） | `webview/settings-providers.js:182`（卡 HTML——本批改 `data-name` 承载 + 卡级装配位 `bindAddProviderForm()` 绑 `addEventListener`）+ 编辑行取消重建位 `:48-49`（**零改**） | 不可复得类（**本批改判**） | `removeProvider` |
-| 5 | MCP server 行 ✕ | `webview/settings-tools.js:187` 生成 / `:191-195` 绑定 | 不可复得类（**本批改判**） | `deleteMcpServer` |
+| 5 | MCP server 行 ✕ | `webview/settings-mcp.js:173` 生成 / `:177-184` 绑定 | 不可复得类（**本批改判**） | `deleteMcpServer` |
 | 6 | 模型菜单 footer「− Remove provider…」 | `thincoder-render-core/composer/model-menu.mjs:304`（footer 三入口 = 同档 `:302-307`；渲染位 = 同档 `:106-116`） | 不可复得类（**本批新增**） | `removeProvider`（**无 `name`**——目标由宿主 QuickPick 选定） |
 
 - 行 1–3 类名收正为「不可复得类」（原「密钥类」——同判据、类名按可复得性重述）；行 2 / 3 的载体与 handler 逐字未动。
-- **行 5 改判（2026-09-18 MCP 批）**：改动 = 绑定位**门名** + **载荷闭包**（生成位 `:187` 逐字零改）；判据 = 批档 §2.4 W17-16 / W17-19。
+- **行 5 改判（2026-09-18 MCP 批）**：改动 = 绑定位**门名** + **载荷闭包**（生成位 `settings-mcp.js:173` 逐字零改）；判据 = 批档 §2.4 W17-16 / W17-19。
 - **行 4 本批改判入本门（2026-09-19）**：理由 = 删整条时 `apiKey` 原文随条目消失（`thincoder-core/config-io.mjs:201-208` 写 / `:262-277` 整条 filter）⇒ 不可复得（用户 08:11 裁定 A）。
   零回归锚 = `_confirmDelete` 调用点**收敛为 0**（入口册 1–6 行全数过门）；判据 = 批档 §2.4 W17-14 / W17-15 / W17-26…W17-30。
 - **行 4 的载体改动（本批 · 两处）**：见下「provider 行载体」段——`_removeProvider` 只改**门名**（动作体 / 消息名 / 载荷逐字不变）。
@@ -218,14 +218,14 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   QuickPick 面 = 核 `thincoder-core/provider-flows.mjs` `removeProviderFlow`（parity-b4 迁移改指——VSC `provider-flows.mjs` 薄壳转口；候选 = 非 active 过滤 · 空集早退 · `showQuickPick`〔`ui.pick`〕· 取消早退 `if (!sel) return` · 删 `removeProviderEntry(sel.label)`）。
   渲染位与门位的先后（**本门前提**）：footer 行的 click 处理器（`thincoder-render-core/composer/model-menu.mjs:114`）=「先 `closeModelMenu()`、后调 `f.onClick()`」⇒ 弹框开在菜单 overlay 移除**之后**（弹框 `.auto-confirm` z-index 1000 / 遮罩 999——与 `mm-overlay` 1000 同层，无菜单在场即无遮挡）。
 - **MCP token / headers 无独立删除钮**：其唯一删除路径 = 编辑表单清空 token / headers 后保存（**表单语义，非删除按钮**——`thincoder-vscode/src/config-mcp.mjs:52-54` 的 `if (cfg.token)` / `if (cfg.headers)`：条目重建时字段随之消失）；
-  webview 侧 = `webview/settings-tools.js:117-136` 读表单（stdio / http / ws 三分支）→ `:138` 发 `editMcp` / `saveMcpServer`。
+  webview 侧 = `webview/settings-mcp.js:114-133` 读表单（stdio / http / ws 三分支）→ `:134` 发 `editMcp` / `saveMcpServer`。
   处置 = **已裁**（父侧 2026-09-18 22:13 裁定 ③：表单清空保存**不算「删除按钮」判据域** ⇒ 维持登记——出处 = `docs/vsc/requirements/WEBVIEW.md` 变更记录 22:1x 条）；**本批不动表单语义**。
 
 **确认形态 = 面板内轻量确认弹框**（否决「行内二次点击」——否决理由四条）：
 
 1. **行内「已武装」态无稳定宿主**：键行被推送**整行重绘**——
-   `renderKeyRow`（`webview/settings-tools.js:305-315`——消费位 = `updateWebsearchSettings`（`:317-320`）/ `renderIndexStatus`（`:327-347`））·
-   `renderProvidersCard`（`webview/settings-providers.js:237-242`）· `renderMcpList`（`webview/settings-tools.js:165-227`）；
+   `renderKeyRow`（`webview/settings-tools.js:138-148`——消费位 = `updateWebsearchSettings`（`:150-153`）/ `renderIndexStatus`（`:191-212`））·
+   `renderProvidersCard`（`webview/settings-providers.js:237-242`）· `renderMcpList`（`webview/settings-mcp.js:151-216`）；
    外部写盘还经 §2.7 事件驱动推轻量快照 ⇒ 武装态存于 DOM 时会被重绘抹掉：第二击落空，或退化为「重新武装」
    （若把态另存模块变量 + 重绘重贴 = 新机制）。
 2. **取消路径须第三方机制**：武装态要么定时回退（定时器——即 P5 明令删除的「2.5s 两段定时」形态），要么只靠失焦 / 点别处兜底（无显式取消面、「行内状态复原」无判据）。
@@ -237,14 +237,14 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - **件 = 既有形态**：`.auto-confirm`（`role="alertdialog"`）+ `.auto-backdrop`（`thincoder-render-core/composer/composer.css:407-483`）——**零新增 CSS**；`z-index` 1000 > 设置面板 `20`（`thincoder-vscode/webview/settings.css:7`）⇒ 恒在面板之上。
 - **挂位 = `document.body`**（不在键行内）⇒ 键行重绘**不打断**确认在位态。
 - **载荷闭包**：确认动作 = **开框时捕获**的 payload 闭包（不是确认时读 DOM）⇒ 弹框在位期间的行重绘**不改删除目标**、不吞确认。
-  **判别面明示（评审 id=116 发现 9）**：**W17-23 判「在位不打断 / 不改目标」，不判闭包形态**——`renderMcpList` 走 `list.innerHTML = …` 整表重建（`thincoder-vscode/webview/settings-tools.js:173-190`），旧钮节点脱离 DOM 后 `dataset.name` 仍为原名 ⇒ 「确认时读 DOM」与「开框时捕获」在该场景**载荷同值**；闭包形态由代码面复核守（批档 §2.2 D-M4），不以该例为判据。
+  **判别面明示（评审 id=116 发现 9）**：**W17-23 判「在位不打断 / 不改目标」，不判闭包形态**——`renderMcpList` 走 `list.innerHTML = …` 整表重建（`thincoder-vscode/webview/settings-mcp.js:159-176`），旧钮节点脱离 DOM 后 `dataset.name` 仍为原名 ⇒ 「确认时读 DOM」与「开框时捕获」在该场景**载荷同值**；闭包形态由代码面复核守（批档 §2.2 D-M4），不以该例为判据。
 - **单例**：开框前清既有 `.auto-confirm` / `.auto-backdrop`（**经同档导出的同一清除入口**——全局同名单例，与既有两处同规）⇒ 跨入口连开只剩一个框，框内动作只对应**最后一次**开框的入口。
 - **安全默认**：开框后焦点落「取消」（`setTimeout(..., 50)`——同既有两处）。
 - **连点护栏**：「删除」钮的 click 处理对 `e.detail > 1`（双击第二击）零动作——防「第二击恰好落在删除钮」的误确认。
-- **文案**：正文键 = `settings.secretDeleteConfirm`（双语在册——`locales/en.json:184` / `locales/zh.json:184`）；钮文案复用既有键（跨面复用已有先例——会话删除确认用 `question.cancel`）：确认 = `session.delete`、取消 = `question.cancel`。
+- **文案**：正文键 = `settings.secretDeleteConfirm`（双语在册——`locales/en.json:201` / `locales/zh.json:201`）；钮文案复用既有键（跨面复用已有先例——会话删除确认用 `question.cancel`）：确认 = `session.delete`、取消 = `question.cancel`。
   **本批重述为类通用式（父侧 2026-09-18 裁定 · 评审 id=116 发现 5 的 ② 案）**：原措辞按密钥类写就（「该密钥」·「界面只显示 ****」），对 MCP 行两处不成立（列表行无掩码位、删除目标 = 整条 server 条目）⇒ **值级改写 · 键数不变 · 键名不动**——三类入口（密钥 / 嵌入 key / MCP 整条）陈述均成立。改写值（实现轮逐字落盘）：
-  - zh（`locales/zh.json:184`）：`确定删除？删除后无法恢复——凭证原文不可复得，只能重新配置或回服务商重取。`
-  - en（`locales/en.json:184`）：`Delete? This cannot be undone — the original credential cannot be recovered; you would have to reconfigure it or get a new one from the provider.`
+  - zh（`locales/zh.json:201`）：`确定删除？删除后无法恢复——凭证原文不可复得，只能重新配置或回服务商重取。`
+  - en（`locales/en.json:201`）：`Delete? This cannot be undone — the original credential cannot be recovered; you would have to reconfigure it or get a new one from the provider.`
   **净增文案键 = 0 · 键数不变**（两档 259 ±0 行 · 键名与其余键零改）；判据 = AC-FW17B-6（值级改写 · 键数不变——非「`git diff locales` 空」）。
 
 **取消路径（四条 · 均零发值 ∧ 行内状态复原）**：
@@ -266,16 +266,16 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 
 **协议零增 / 宿主零改**：确认是 **webview 侧门**（确认动作内才 `postMessage`）⇒ 消息名与载荷零增（`WEBVIEW-PROTOCOL.md` §13 判别式集与 ④ 处置列不变），宿主删除语义（`thincoder-vscode/src/extension/settings.mjs` · `thincoder-vscode/src/extension/settings-panel-write.mjs`）**零改**。
 
-**载体绑定（密钥行两个控件：行内 `onclick` → `addEventListener`）**：两处密钥行的钮改由 `renderKeyRow(id, html, { skipWhileEditing })`（`webview/settings-tools.js:305-315`——渲染 + 绑定的**单点**；第三参 = 守卫开关，两处 `onCancel` 重建时显式置 `false`）装配——
+**载体绑定（密钥行两个控件：行内 `onclick` → `addEventListener`）**：两处密钥行的钮改由 `renderKeyRow(id, html, { skipWhileEditing })`（`webview/settings-tools.js:138-148`——渲染 + 绑定的**单点**；第三参 = 守卫开关，两处 `onCancel` 重建时显式置 `false`）装配——
 **绑定范围 = 该行的两个控件**：编辑钮（`[Change]`；空态为同位的 `[Add]`——同一 `.key-btn` 位）与删除钮 `✕`（`.del-key`）——两者**一并**落在该单点（行内属性绑定同步摘除）。
 重绘三处（`renderKeyRow` 守卫路径 + 两处 `keyRowEdit` 的 `onCancel` 重建位——原为手写 `outerHTML` 重建，现同经该单点——`webview/settings-tools.js:22` / `:40`）收敛到该单点。
-理由：① 同族 MCP 行（`renderMcpList` 的 `:191-195`）已用 `addEventListener` ⇒ 绑定形态归一；
+理由：① 同族 MCP 行（`renderMcpList` 的 `settings-mcp.js:177-184`）已用 `addEventListener` ⇒ 绑定形态归一；
 ② 行内属性绑定在测试夹具（happy-dom）下**不可驱动**（实测：`typeof el.onclick === "object"` ∧ `.click()` 零触发）
 ⇒「点击 ✕ ⇒ 不出删除」这一判据句的**动作面**无法机判，`[Change]` 侧同理（W17-18——同一夹具障碍、同一绑定动作覆盖）。
 **provider 行卡载体本批同改**（`settings-providers.js:182`——同一障碍、同一处置；见下「provider 行载体」段）· **编辑行取消重建位**（`:48-49`）本就不属行内属性形态（零改）。
 
-**MCP 行载体（2026-09-18 MCP 批 · 两处）**——生成位 `webview/settings-tools.js:187`（`.mcp-del-btn` 的钮字面）**逐字零改**；
-绑定位 `:191-195`（`renderMcpList` 内「每钮 `addEventListener`」）改**门名**（`window._confirmDelete` → `window._confirmSecretDelete`）
+**MCP 行载体（2026-09-18 MCP 批 · 两处）**——生成位 `webview/settings-mcp.js:173`（`.mcp-del-btn` 的钮字面）**逐字零改**；
+绑定位 `:177-184`（`renderMcpList` 内「每钮 `addEventListener`」）改**门名**（`window._confirmDelete` → `window._confirmSecretDelete`）
 + **载荷闭包改为开框时捕获**（`const name = btn.dataset.name` 于 click 时取值；闭包只发 `{type:"deleteMcpServer", name}`）——
 对齐本节「载荷闭包」条（确认期间的行重绘不改删除目标、不吞确认）。
 绑定形态（`addEventListener`）**零改**：MCP 行本不在 `renderKeyRow` 单点装配域内，本批**不并入**（并入 = 越本批目的的结构改动）。
@@ -319,13 +319,13 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 跨面夹具 = happy-dom 真 webview 点击 → 逐条喂回真宿主分发（先例 `test/settings-empty-no-write.test.mjs:86-90`）+ 临时 config（`_setConfigPathForTest`——**绝不触碰真实 `~/.thincoder/`**）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 结构对账 W17-17（域扩至 **9 档**）仍驻主档 `test/settings-secret-delete-confirm.test.mjs`（结构面单源）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
-**判据域边界（结构对账 W17-17 的扫描域）**：域 = **设置面档**（`thincoder-vscode/webview/settings*.js`——实读 **8 档**）∪ **`thincoder-vscode/webview/input.js`**（入口 6 桥——门调用 ∕ OUT 桥双落位）= **9 档**（扫描式 = 正则 `/^settings.*\.js$/` ∪ 显式名单 `input.js`；域外档一律不入集）。
+**判据域边界（结构对账 W17-17 的扫描域）**：域 = **设置面档**（`thincoder-vscode/webview/settings*.js`——实读 **10 档**——含并行批新档 `settings-provider-dialog.js` + 本批新档 `settings-mcp.js`）∪ **`thincoder-vscode/webview/input.js`**（入口 6 桥——门调用 ∕ OUT 桥双落位）= **11 档**（扫描式 = 正则 `/^settings.*\.js$/` ∪ 显式名单 `input.js`；域外档一律不入集）。
 **计数映射（D3 · 6 行 ↔ 5 名）**：入口册 **6 行** ⇒ 判别名 **5 个**（入口 4 = settings 面板 provider 行 − 与入口 6 = 模型菜单 footer **同名 `removeProvider`**）——`removeProvider` 域内发射 **2 处**（`webview/settings-providers.js:68` · 桥 `webview/input.js:33`——OUT 表逐字面；入口 6 闭包创造位 = 核 `model-menu.mjs:304`——域外面）。
 域内删除入口发射 **5 名**（`deleteEmbedKey` · `deleteWebsearchKey` · `deleteProviderKey` · `deleteMcpServer` · `removeProvider`）⇒ **5 名全数过 `_confirmSecretDelete`**（`settings*.js` 五处发射逐处落在门实参内；入口 6 经 hook 桥 `input.js:125` 过门——多载体同名同判）；`_confirmDelete(` 调用点 = **0**（fail-closed：新增直发项 / 未登记入口 ⇒ 红 + 点名）。
 域外：`webview/**` 其余删除入口——`deleteSession`（`webview/session-bar.js:131`——非不可复得类、已有自有确认面 `webview/session-bar.js:102-134`、零改）**不属本判据域**。
 
 **范围限制（三层 · 明示 · 评审 id=116 发现 11 + MCP 批代码评审 🔵4）**：本门的识别面 = ① **命名**（扫描名族 = `delete*` ∪ `remove*` 两个删除语族；`clear*` / `reset*` 等族外名不在识别面 ⇒ 该类入口由动作面用例 / 评审兜底）；
-② **书写**（只认 `type:` 后的**字面量**串——常量 / 变量 / 拼接书写的发射不被识别）；③ **枚举**（域档 = `readdirSync` 平铺 `settings*.js` ∪ 显式名单 `input.js`，非递归 ⇒ 移入子目录即静默缩域——由档数下限断言兜一道；本批域 **9 档** ⇒ 下限 **≥6**，实现轮按实读定值）。三层之外的新形态入口本门不认（既不静默漏计数，也不越形态）。
+② **书写**（只认 `type:` 后的**字面量**串——常量 / 变量 / 拼接书写的发射不被识别）；③ **枚举**（域档 = `readdirSync` 平铺 `settings*.js` ∪ 显式名单 `input.js`，非递归 ⇒ 移入子目录即静默缩域——由档数下限断言兜一道；域 **11 档** ⇒ 下限 **≥6**，实现轮按实读定值）。三层之外的新形态入口本门不认（既不静默漏计数，也不越形态）。
 
 ### 2.11 Shell 候选拉取异步化（F-W18——推送链有界）
 
@@ -527,8 +527,9 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   而 MCP server 行（入口册 #5）**不显掩码**、删除目标 = 整条 server 条目 ⇒ 该行文案贴合度存缺口。
   **处置 = 已裁 ②（父侧 2026-09-18 本轮 · 评审 id=116 发现 5）：本键文案改类通用式**——值级改写 · 键数不变 · 键名不动（写域 +`thincoder-vscode/locales/en.json` / `locales/zh.json` 两档）；改写值 = §2.10 文案条；**未采 ①**（新增 MCP 行专用键）。
   **已核销（2026-09-19 文档卫生轮 · 父侧直接执行）**——值级改写已随 MCP 批实现轮落盘（本批与 provider 行批均申报 `locales/**` 零改 ⇒ 现值 = 类通用式，即 §2.10 文案条）；到期条件达成。
-- **`settings-tools.js` 越 300 行建议线（拆分复核 · 评审 id=116 发现 4）**（结构面 · §2.10 载体登记）：**触发条款达成 ⇒ 拆档执行（MCP 键值行式输入批 · 2026-10-07 · 台账 #1036）**——原触发 = 阈值 450 行 ∨ **MCP / provider 面下次结构改动**（先到即拆）：本批 = MCP 表单结构性改动（env ∥ headers 改行式键值——§2.4）⇒ 第二条件达成（拆前实读 **433**；kv 面净增 ≈ +80 ⇒ 不拆则 ≈513 **越 500 硬限**）。
-  组边界 = ① **MCP 族**（`renderMcpList` / `updateMcpTools` / `updateMcpTestResult` / `parseHeadersLike`（随批净删）/ `openMcpForm` / `kvToInput`（随批净删）/ `bindToolsControls` MCP 段 / `toolsCardHtml` 表单段）② 密钥行族（`renderKeyRow` / `KEY_ROW_ACTIONS` / 三处 handler）③ 卡骨架 + 快照消费（`toolsCardHtml` / `updateWebsearchSettings` / `renderIndexStatus`）——① 拆出 = `thincoder-vscode/webview/settings-mcp.js`（**拟新增 · 缝 = `mcpFormHtml()` ∥ `bindMcpControls()` 两口回插**；对外导出名零改——`settings.js` ∥ `chat.js` 消费面零改）。
+- **`settings-tools.js` 越 300 行建议线（拆分复核 · 评审 id=116 发现 4）**（结构面 · §2.10 载体登记）：**触发条款达成 ⇒ 拆档已执行（MCP 键值行式输入批 · 2026-10-07 · 台账 #1036——实施落盘；拆后实读：本档 **212** ∥ 新档 `settings-mcp.js` **273**）**
+  ——原触发 = 阈值 450 行 ∨ **MCP / provider 面下次结构改动**（先到即拆）：本批 = MCP 表单结构性改动（env ∥ headers 改行式键值——§2.4）⇒ 第二条件达成（拆前实读 **433**；kv 面净增 ≈ +80 ⇒ 不拆则 ≈513 **越 500 硬限**）。
+  组边界 = ① **MCP 族**（`renderMcpList` / `updateMcpTools` / `updateMcpTestResult` / `parseHeadersLike`（随批净删）/ `openMcpForm` / `kvToInput`（随批净删）/ `bindToolsControls` MCP 段 / `toolsCardHtml` 表单段）② 密钥行族（`renderKeyRow` / `KEY_ROW_ACTIONS` / 三处 handler）③ 卡骨架 + 快照消费（`toolsCardHtml` / `updateWebsearchSettings` / `renderIndexStatus`）——① 拆出 = `thincoder-vscode/webview/settings-mcp.js`（**已落 · 273 行 · 缝 = `mcpFormHtml()` ∥ `bindMcpControls()` 两口回插**；对外导出名零改——`settings.js` ∥ `chat.js` 消费面零改）。
   生效窗口 = **先拆后改**（零语义搬移在改动前）；拆后两档实读 = 实施后回填轮落数。到期条件 = 阈值 450 行到达时（新触发——若拆后增量再逼近）。
 - **用例档越 300 行建议线（拆分复核 · 评审 id=116 发现 4）**（测试面 · §2.10 机检面）——**已终结**（2026-09-19 按实现实测收正，原「现 439 → 预估 ~516」为预估）：provider 行批实现轮实读触线 ⇒ **拆分已执行** = 主档 `settings-secret-delete-confirm.test.mjs`
  现 **412** · MCP 组析出 `settings-mcp-delete-confirm.test.mjs` **177**（已在 `thincoder-vscode/test/files.mjs` 在册）；**两档均 <500 硬限** ⇒ 不触发再拆；**下次触发条件 = 任一档实读 ≥500**（承批档 §2.2 D-M6「越线即当场拆」）。
@@ -711,3 +712,4 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - 2026-10-07（**MCP 键值行式输入批 · 设计轮续笔核验（重启接续）· eng-designer**——承本批批档 §2 追记⑥ · 台账 #1036）：§2.10 两处时态按实读收正（「拆档已执行」⇒「拆档执行」∥「已建」⇒「拟新增」——设计轮产品码零触 ∥ 新档实未建）；
   变更行「实施后回填面」四组坐标按现读收正（+5——`:206` ∥ `:210` ∥ `:220-221` ∥ `:228` ∥ `:240` ∥ `:277-281`）。**零新语义**（时态 ∥ 坐标）。明细 = 批档 §2 追记⑥。
 - 2026-10-07（**MCP 键值行式输入批 · 设计评审修复轮（§3 轮次 1 · 发现 3）· eng-designer**——承批档 `docs/batches/2026-10-07-mcp-kv-input.md` §3 轮次 1 ∥ §2 修复轮块 · 台账 #1036）：**实施后回填面 +1 项**——§2.10 判据域边界档数（按现盘：设置面档 **9 ⇒ 10** ∥ 合域 **10 ⇒ 11**——`settings-mcp.js` 命中 `/^settings.*\.js$/` 入域；随拆档同拍收正）——已并入上两笔「实施后回填面」清单（`:708`）。**另注**：现文所载「实读 8 档 ∥ 9 档」与现盘差一（并行批 #1029 新档 `settings-provider-dialog.js` 已落盘未计——该差项归并行批 / 回填轮同拍消解）。**零新语义**（登记）。明细 = 批档 §2 修复轮块。
+- 2026-10-07（**MCP 键值行式输入批 · 实施后回填轮（设计面）· eng-designer**——承批档 `docs/batches/2026-10-07-mcp-kv-input.md` §5 ∥ §2 追记⑧ · 台账 #1036）：§2.10 拆分复核条翻「拆档已执行」（拆后实读：本档 **212** ∥ 新档 `settings-mcp.js` **273**）；§2.10 判据域边界档数终值收正（设置面档 **10** ∥ 合域 **11**——含并行批新档 `settings-provider-dialog.js` + 本批新档 `settings-mcp.js`）；MCP 面活坐标按拆后实读改指 `settings-mcp.js`（入口册 #5 ∥ 门调用点 ∥ 读段 ∥ `renderMcpList` ∥ 行载体段 ∥ 同族绑定句）；同节非 MCP 活坐标随档缩按现盘重锚（`websearchRowHtml` ✕ `:273 ⇒ :103` ∥ `embedRowHtml` ✕ `:286 ⇒ :116` ∥ `renderKeyRow` `:305-315 ⇒ :138-148` ∥ `updateWebsearchSettings` `:317-320 ⇒ :150-153` ∥ `renderIndexStatus` `:327-347 ⇒ :191-212`——死指针一致性面当场修，逐条报告）+ 弹框契约坐标随盘（`locales` 正文键 `:184 ⇒ :201`）。**零新语义**（读数 ∥ 坐标）。明细 = 批档 §2 追记⑧。

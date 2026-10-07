@@ -22,7 +22,7 @@
 - **另认**：追记② `T-DSK64` 自铸（合规；占号冲突由届盘复核兜底）∥ 追记① 越域触（`MCP.md` 射程句 · 零语义改）——认，异议时单笔 revert 通道在册。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（两端行式键值编辑器（先拆后改两处 · 零新 CSS）· 续笔核验（追记⑥）· 修复轮（#1–#7 · 追记⑦）· 2026-10-07）
+**状态行**：设计完成（两端行式键值编辑器（先拆后改两处 · 零新 CSS）· 续笔核验（追记⑥）· 修复轮（#1–#7 · 追记⑦）· 实施后回填轮（追记⑧ · 2026-10-07））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 ### 本批条目（覆盖）
@@ -138,6 +138,27 @@
 - **#7** → `docs/desktop/design/SETTINGS.md:211`（§2.17 项 3）补机制句——类型切换出口行值捕获 = 与加删出口同一「自读 DOM 行集」面（`readMcpForm` 快照不采行件为前提——防实施轮误依赖 `draft`）；变更行同拍（`:449`）。
 
 **产品码零触（修复轮）**。明细 = §3 轮次 1 ∥ 本追记。
+
+**追记 ⑧（实施后回填轮 · 设计面 · 2026-10-07）**
+
+**口径**：父侧派单 = 实施后回填轮（设计面）——「预估 ⇒ 实读」回填 + 两档登记（拟新增 ⇒ 已落）+ 机制补句 + 活坐标改指；**零新语义（读数 ∥ 坐标 ∥ 登记）**；产品码零触 ∥ 需求档零动 ∥ 批外档零触 ∥ 记录面（历史变更行 ∥ 批档引文）零动。
+
+**逐号落盘（①–⑧ · 号 → 落点）**：
+
+- ① `docs/vsc/design/SETTINGS.md`：§2.10 拆分复核条翻「拆档已执行」（拆后实读：本档 **212** ∥ 新档 `settings-mcp.js` **273**）；判据域档数终值收正（设置面档 **10** ∥ 合域 **11**——含并行批 #1029 新档 `settings-provider-dialog.js` + 本批新档）；MCP 面活坐标改指 `settings-mcp.js` 实读位（入口册 #5 ∥ 门调用点 ∥ 读段 ∥ `renderMcpList` ∥ 行载体段 ∥ 同族绑定句）；弹框契约 `locales` 正文键坐标随盘（`:184 ⇒ :201`——en ∥ zh 同值）；同节非 MCP 活坐标随档缩按现盘重锚（`websearchRowHtml` ✕ `:273 ⇒ :103` ∥ `embedRowHtml` ✕ `:286 ⇒ :116` ∥ `renderKeyRow` `:305-315 ⇒ :138-148` ∥ `updateWebsearchSettings` `:317-320 ⇒ :150-153` ∥ `renderIndexStatus` `:327-347 ⇒ :191-212`——**超出点名单的同类死指针 · 一致性面当场修 · 逐条报告**）。
+- ② `docs/vsc/design/VSC-DEBT.md` §13.3：拆后两档实读回填（本档 **212** ∥ 新档 `settings-mcp.js` **273** ∥ 拆前 433）+ 触发格 ∥ 收束句收正（拆档已落）+ 标题随正。
+- ③ `docs/vsc/design/WEBVIEW-PROTOCOL.md` §13：MCP 发射坐标七行改指新档实读位（`deleteMcpServer` `:182` ∥ `editMcp` ∥ `saveMcpServer` `:134` ∥ `getMcpStatus` `:148` ∥ `mcpTools` `:192` ∥ `reconnectMcp` `:213` ∥ `testMcp` `:208`）+ `buildIndex` 随档缩重锚（`:150 ⇒ :83`）。
+- ④ `docs/vsc/design/WEBVIEW.md` §3 文件表：+`settings-mcp.js` 行（**273 行**——职责 + 拆出说明）+ `settings-tools.js` 读数（拆后 **212** ∥ 拆前 433）；模块计数按现盘收正（**44 ⇒ 47**）。
+- ⑤ `docs/desktop/design/SHELL.md` §1 树：+`mount-settings-segments-mcp.mjs` 行（同族行位 = `-agent.mjs` 后）+ `mount-settings-segments.mjs` 行族枚举随动（去 MCP）。
+- ⑥ `docs/desktop/design/SETTINGS.md`：§2.17 项 3 +**现读面机制句**（`mcpFormNode()` = 文档序末位 `[data-form="mcp"]`——页体 ∥ 组弹窗体；`mount-settings-segments-mcp.mjs:85-90`）∥ §2.17 项 5 ∥ §1 **KD-76** ⑤ 去「拟新增」（**已落 · 299**）∥ §3.1 四行实读回填（`views/settings-sections-mcp.mjs` **241** ∥ `mount-settings-segments.mjs` **164**（回线）∥ 新档 **已落 · 299** ∥ `mount-settings-exits.mjs` **289**）∥ §3.2 本批块翻「现行 ⇒ 实读（实施落盘）」（说明 ∥ 表头 ∥ 七行随正）。
+- ⑦ `docs/desktop/design/PROJECT.md`：§4.1 拆档链登记行去「拟新增」（已落）∥ 越层段 `mount-settings-segments.mjs` 行 **364 ⇒ 164**（除名兑现：十五 ⇒ 十四）+ 新档行（已落 · 299）+ `i18n-views.mjs` **406**（实读回填）∥ 次大两档句随正（次席回线出缺——待重排；**未新造排名**）∥ `views/settings-sections-mcp.mjs` 表行读数随正（**241**——表行机检对盘 ✓）。
+- ⑧ `docs/desktop/design/UI.md` §4.1：`i18n-views.mjs` 行**首列读数终值 406**（实读回填；表行机检对盘 ✓）。
+
+**机检（落笔后复跑）**：`node scripts/doc-check.mjs`——**行数面 26 ⇒ 25 条**（本批三档读数全对盘：`settings-sections-mcp` **241** ∥ `mount-settings-segments` **164** ∥ `i18n-views` **406**；余 25 条 = 他批存量，报告态不入闸）；**行宽面无新增**（本笔把 3 处新越线折行消解；余 PROJECT.md `:384`（437——原 398 已越）∥ `:400`（379——原 371）∥ vsc `SETTINGS.md:532`（482——原 475）三处 = 存量越线 + 本笔小增，报告待裁）；锚面：本笔新写坐标零 ✗。
+
+**报告附项（非本笔修面 · 待裁）**：① 现盘读数与文记不符三处——`views/settings.mjs` 实读 **418**（文记 398；三端对齐批「Δ ≈+6 ⇒ 预估 ≈404，实施后实读回填」未落）∥ `i18n.mjs` 实读 **420**（文记 416）∥ `store.mjs` 实读 **370**（文记 341）；② `docs/vsc/design/SETTINGS.md` §2.2 项 5 内坐标核 = 无（该条零 `file:line`）；③ `VSC-DEBT` §13.1「零执行（登记刷新）」行读数 398 未随 §13.3 收正——该节读数 as-of 2026-09-25 且显式指 §13.3 = 现行单源 ⇒ 维持不动（判读披露）。
+
+**产品码零触（回填轮）**。明细 = 交付报告。
 
 ## §3 设计评审（评审子代理）
 

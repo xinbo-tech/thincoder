@@ -38,7 +38,7 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 
 ## 3. 文件结构（现行）
 
-`index.html`（shell——CSP 注入 + CSS/JS URI 占位）→ 前端模块（`thincoder-vscode/webview/`，**44 档模块**（`.js` / `.mjs`；CSS 5 档 + `index.html` shell 另列）——as-of 2026-09-22 实读）：
+`index.html`（shell——CSP 注入 + CSS/JS URI 占位）→ 前端模块（`thincoder-vscode/webview/`，**47 档模块**（`.js` / `.mjs`；CSS 5 档 + `index.html` shell 另列）——as-of 2026-10-07 实读（含本批新档 `settings-mcp.js`））：
 
 | 模块 | 职责 |
 |---|---|
@@ -58,6 +58,7 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 | `diff.js` · `tool-card-restore.mjs` | diff 预览（apply_patch）/ 恢复会话的工具卡折叠语义（R2 迁核：核 `thincoder-render-core/flow/tool-card-restore.mjs`；本端 = 2 行 shim——仅测试面消费） |
 | `tool-summary.js` | 工具结果**一行式摘要单源**（`formatToolSummary` 分派：advisor / read / write / grep / glob / bash / 默认分支）——活卡 `finishToolCard` 与恢复卡 `buildToolHistory` 共用（X3 · X7） |
 | `settings.js` + `settings-*.js` | 设置面板（providers / agent / models / tools / env / widgets / state）——信息架构见同层 `SETTINGS.md` |
+| `settings-mcp.js` | MCP 面（服务器列表 + add ∕ edit 表单 + env ∥ headers 行式键值编辑器）——自 `settings-tools.js` 拆出（MCP 键值行式输入批 · 2026-10-07 · 台账 #1036）；**273 行**（`wc -l`——实读 2026-10-07）；拆后 `settings-tools.js` **212 行**（拆前 **433**） |
 | `model-picker.js` / `model-menu.js` | 模型选择两级菜单 |
 | `history.js` | 懒历史分页（`applyHistoryPage` `:43` · `loadOlder` 投递 `:87`） |
 | `scroll.js` | 滚动族装配 + 悬浮回底钮（`updateScrollBottomVisibility` `:29`） |
@@ -860,3 +861,4 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-10-04（**流尾台账行组退役批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2 · 台账 #913）：§3 其余行去 `ledger-line.js` ∥ R2 迁核注收正（**八拆档 ⇒ 七拆档**——投递壳退场，核构件随之删除）。**零新语义**。明细 = 批档 §2。
 - 2026-10-04（**收口轮 · 父侧直接执行〔可 revert〕**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §6）：§3 文件表 `chat-messages.js` 读数 238 ⇒ **267**（收口复读）；引文重锚（`ledger-surface.mjs` 的 `:125-126` ⇒ `:83` ∥ `chat-messages.js` 的 `:194-200` ⇒ `:191-197`）。**零新语义**（读数 ∥ 坐标）。
 - 2026-10-05（**批 digest-accounting · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §1 · 需求 §4.15 · 台账 #930）：§5.1 增**残余元素**条（`end` 载荷 `unsettled > 0` ⇒ 追加 `.digest-status` 残余元素——词键 `digest.residue` 核字典直取；`= 0` ⇒ 零元素）。**零新语义**（判据 / 机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31）。明细 = 批档 §2。
+- 2026-10-07（**MCP 键值行式输入批 · 实施后回填轮（设计面）· eng-designer**——承批档 `docs/batches/2026-10-07-mcp-kv-input.md` §5 ∥ §2 追记⑧ · 台账 #1036）：§3 文件表 +`settings-mcp.js` 行（**273 行**——自 `settings-tools.js` 拆出）+ `settings-tools.js` 读数（拆后 **212** ∥ 拆前 433）；模块计数随正（**44 ⇒ 47**——实读 2026-10-07）。**零新语义**（读数 ∥ 登记）。明细 = 批档 §2 追记⑧。
