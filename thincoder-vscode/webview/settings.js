@@ -10,6 +10,8 @@ import { t } from "./i18n.js"
 import { showConfirmPopover, closeConfirmPopover } from "./settings-widgets.js"
 import { installProviderHandlers, providersCardHtml, bindAddProviderForm, updateProviderStatus } from "./settings-providers.js"
 import { installProviderDialogHandlers, closeAddProviderDialog, updateTestProviderResult } from "./settings-provider-dialog.js"
+import { closeMcpDialog } from "./settings-mcp-dialog.js"
+import { closeConsultDialog } from "./settings-consult-dialog.js"
 import { agentCardHtml, consultAdvisorCardHtml, bindAgentControls, updateAgentSettings } from "./settings-agent.js"
 import { installToolsKeyHandlers, toolsCardHtml, bindToolsControls, updateWebsearchSettings, updateIndexStatus } from "./settings-tools.js"
 import { renderMcpList, updateMcpTools, updateMcpTestResult } from "./settings-mcp.js"
@@ -170,6 +172,8 @@ function closeSettings() {
   panel.setAttribute("aria-hidden", "true")
   closeConfirmPopover() // 取消路径 #4：关面板同清确认弹框 + 遮罩（零发值）
   closeAddProviderDialog() // #1029 关五路 #5：关面板同清添加弹窗（卡 ∥ 幕两件——同拍）
+  closeMcpDialog() // #1054 关五路 #5：MCP 弹窗同清（两新档三清同拍）
+  closeConsultDialog() // #1054 关五路 #5：会诊弹窗同清（同带浮层）
   // #640 失败面销账：关 = 清槽（关后重开不复现——与「关面板不丢」互补）
   _lastFailure = null
   document.getElementById("settings-error-banner")?.remove()

@@ -35,7 +35,7 @@
  * agent 段 auto-think 具名第十一键（`views/settings-agent.mjs`）—— 值逐字同 VSC `locales/{en,zh}.json` 同名键
  * （键名同形者即同名；`settings.proxyTest*` 三键 = VSC webview 内字面收归键面（en 逐字）· zh 本端拟定；
  * `settings.section.*` / `settings.consultProvider` / `settings.pickProvider` / `settings.deleteKey` /
- * `settings.effortLabel` / `settings.noneMark` / `settings.agent.autoThink` = 本端拟定（值面登记处 = 本组））。
+ * `settings.effortLabel` / `settings.noneMark` / `settings.agent.autoThink` = 本端拟定（值面登记处 = 本组）；**KD-77 ②（2026-10-07 · 台账 #1054）** 增 `settings.consultAddTitle`（会诊添加弹窗标题 —— 值逐字同 VSC 同批落地 `locales` 同名键））。
  * ⑫ **B10 W3 设置余面族**（MCP 编辑 ∕ 重连 · 子代理模型槽 · guard 开关 —— S8–S11 ∕ S14）：
  * MCP 表单结构化九键 + 两钮（值逐字同 VSC `settings.mcp.*` 同名键）· 重连两词（本端拟定）·
  * `settings.submodelGlobal`（VSC 逐字）· `settings.advisorGuard`（VSC 逐字）· `settings.reason.slotAuthority`（本端拟定）。
@@ -184,6 +184,7 @@ export const VIEWS_DICT = Object.freeze({
     "settings.mcp.params": "params: ${names}",
     "settings.consultSection": "Consultation models (multi-model consult)",
     "settings.consultAdd": "+ Add consult model",
+    "settings.consultAddTitle": "Add Consult Model",
     "settings.consultRemove": "Remove",
     "settings.consultActive": "Consultation active — ${n} model(s) will analyze in parallel when stuck",
     "settings.consultInactive": "Consultation is OFF — add models below to enable multi-model consults",
@@ -362,6 +363,7 @@ export const VIEWS_DICT = Object.freeze({
     "settings.mcp.params": "参数：${names}",
     "settings.consultSection": "会诊模型（多模型会诊）",
     "settings.consultAdd": "+ 添加会诊模型",
+    "settings.consultAddTitle": "添加会诊模型",
     "settings.consultRemove": "移除",
     "settings.consultActive": "会诊已启用 — 卡住时 ${n} 个模型并行分析",
     "settings.consultInactive": "会诊未启用 — 添加模型后即可在遇到疑难时多模型会诊",

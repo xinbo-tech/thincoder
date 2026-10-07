@@ -20,7 +20,10 @@ import { renderStatusBar } from "./status-bar.js"
 export const composerHooks = {}
 
 /** ② 出站表：判别式逐字面登记（协议提取器形态①——载荷透传 `...payload`，端侧零形状副本）；
- *  未登记判别式 fail-loud（禁静默丢——核件新增出站须同拍入表）。 */
+ *  未登记判别式 fail-loud（禁静默丢——核件新增出站须同拍入表）。
+ *  `addProvider` = **本地面动作**（添加入口弹窗统一批 · #1054——核 footer「+ Add provider…」由本表接为
+ *  直开添加弹窗，零出站；`SETTINGS.md` §2.17 ③——裸调用 ∥ 不取防御式回退：门由 `initSettings` 安装、
+ *  同文档 ⇒ 点击前必已安装，缺门响亮失败，沿 §2.10 纪律）。 */
 const OUT = {
   abort: (p) => vscode.postMessage({ type: "abort", ...p }),
   interrupt: (p) => vscode.postMessage({ type: "interrupt", ...p }),
@@ -29,7 +32,7 @@ const OUT = {
   queuedUserMessage: (p) => vscode.postMessage({ type: "queuedUserMessage", ...p }),
   selectModel: (p) => vscode.postMessage({ type: "selectModel", ...p }),
   selectReasoning: (p) => vscode.postMessage({ type: "selectReasoning", ...p }),
-  addProvider: (p) => vscode.postMessage({ type: "addProvider", ...p }),
+  addProvider: () => window._openAddProviderDialog(),
   removeProvider: (p) => vscode.postMessage({ type: "removeProvider", ...p }),
   setKey: (p) => vscode.postMessage({ type: "setKey", ...p }),
   setAutoApprove: (p) => vscode.postMessage({ type: "setAutoApprove", ...p }),

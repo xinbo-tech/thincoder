@@ -655,9 +655,9 @@
 | 档 | 现读数 | 拆点（现读区间 → 目标档 · 缝） | 触发（未到） |
 |---|---|---|---|
 | `thincoder-vscode/src/extension/settings.mjs` | **409** | 环境面七件 = `shellCandidates` :88-115 · `proxySettings` :224-227 · `websearchSettings` :230-233 · `saveWebsearchKeyFromPanel` :236-243 · `deleteWebsearchKeyFromPanel` :246-252 · `saveProxySettingsFromPanel` :276-287 · `testProxyConnection` :291-314（≈91 行）→ `settings-env.mjs`（缝 = re-export） | 净增 ≥40 ∨ 下次触碰（代理 / 检索面） |
-| `thincoder-vscode/webview/settings-tools.js` | **212**（#1036 拆档后——实读 2026-10-07；新档 `settings-mcp.js` **273**；拆前 **433**） | MCP 面 = `renderMcpList` ∥ `updateMcpTools` ∥ `updateMcpTestResult` ∥ `parseHeadersLike`（随批净删）∥ `openMcpForm` ∥ `kvToInput`（随批净删）∥ `bindToolsControls` MCP 段 ∥ `toolsCardHtml` 表单段（≈170 行）→ `settings-mcp.js`（缝 = `mcpFormHtml()` ∥ `bindMcpControls()`） | **达成 ⇒ 拆档已执行（2026-10-07 落盘）**（MCP 键值行式输入批 · 台账 #1036——MCP 表单结构性改动；先拆后改。不拆则 ≈513 越 500 硬限） |
+| `thincoder-vscode/webview/settings-tools.js` | **212**（#1036 拆档后——实读 2026-10-07；新档 `settings-mcp.js` **273** ⇒ **126**（添加入口弹窗统一批 · #1054——再收 147：弹窗体析出）；拆前 **433**） | MCP 面 = `renderMcpList` ∥ `updateMcpTools` ∥ `updateMcpTestResult` ∥ `parseHeadersLike`（随批净删）∥ `openMcpForm` ∥ `kvToInput`（随批净删）∥ `bindToolsControls` MCP 段 ∥ `toolsCardHtml` 表单段（≈170 行）→ `settings-mcp.js`（缝 = `mcpFormHtml()` ∥ `bindMcpControls()`） | **达成 ⇒ 拆档已执行（2026-10-07 落盘）**（MCP 键值行式输入批 · 台账 #1036——MCP 表单结构性改动；先拆后改。不拆则 ≈513 越 500 硬限） |
 
-两档：`settings.mjs` 触发未到 —— 零执行；`settings-tools.js` —— **拆档已落**（MCP 键值行式输入批 · 2026-10-07 · 台账 #1036；判定口径 = KD-20）：拆后实读 = 本档 **212** ∥ 新档 `settings-mcp.js` **273**。
+两档：`settings.mjs` 触发未到 —— 零执行；`settings-tools.js` —— **拆档已落**（MCP 键值行式输入批 · 2026-10-07 · 台账 #1036；判定口径 = KD-20）：拆后实读 = 本档 **212** ∥ 新档 `settings-mcp.js` **273** ⇒ **126**（添加入口弹窗统一批 · #1054——再收 147：弹窗体析出 `settings-mcp-dialog.js`）。
 
 ### 13.4 `thincoder-vscode/src/agent.mjs`（496 → 目标 ≤460）——响应后处理段外提 · `agent/response-stages.mjs`（已落 · 实读 **73**） （迁移期引文——档已迁核）
 
@@ -767,4 +767,6 @@
 - 2026-09-29（**residuals-round2 批 · 文档面实施轮 · eng-designer**——承批档 `docs/batches/2026-09-29-residuals-round2.md` §2 #586）：三处引文改指（`:353 ∕ :559 ∕ :692`）——判官载体 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`（单测树重建时回迁端侧单测档）。**零新语义**。
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 1 行折行（72——语义零改）。**零新语义**。
 - 2026-10-07（**MCP 键值行式输入批 · 实施后回填轮（设计面）· eng-designer**——承批档 `docs/batches/2026-10-07-mcp-kv-input.md` §5 ∥ §2 追记⑧ · 台账 #1036）：§13.3 拆后两档实读回填（本档 **212** ∥ 新档 `settings-mcp.js` **273**）+ 收束句收正（拆档已落）+ 标题随正（`settings-tools.js` 已拆 ∥ `settings.mjs` 零执行）。**零新语义**（读数 ∥ 登记）。明细 = 批档 §2 追记⑧。
+
+- 2026-10-07（**添加入口弹窗统一批 · 实施后回填轮（设计面）· eng-designer**——承批档 `docs/batches/2026-10-07-add-dialog-unify.md` §5 ∥ §2 回填轮块 · 台账 #1054）：§13.3 拆档行读数随正（「新档 `settings-mcp.js` **273**」⇒ **126**——弹窗体再析出；本批再收 147——表内桩格 ∥ 收束句两处）。**零新语义**（读数 ∥ 登记）。明细 = 批档 §2 回填轮块。
 

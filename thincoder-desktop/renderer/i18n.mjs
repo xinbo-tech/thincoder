@@ -101,6 +101,11 @@
  *      （增 `settings.addProvider` ∥ `settings.addProviderTitle` ∥ `settings.providers.customChoice` —— 添加入口两键 + 类型自定末项；
  *      净删 `settings.providers.addCustom` ∥ `.addPreset` —— 旧双表单提交词随表单退场）+ 值改 6 键（「API Key」形统一 —— 键数不变）
  *      ⇒ `HOST_DICT`（**合并表**，经合并点随动）**实读 319**（两语同拍、键集相等；届盘实读续链——链文前值 314 系滞后值：并行批增键未逐笔续计，本行按盘收正）。
+ *      **添加入口弹窗统一批增四键（2026-10-07 · 台账 #1054 · KD-77 ①②）**：`SETTINGS_DICT`（第四档）**60 ⇒ 63**
+ *      （增 `settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle` —— MCP 添加入口钮 + 表单两态标题）+
+ *      `VIEWS_DICT`（第二档）**144 ⇒ 149**（链文前值 144 系滞后值：MCP 键值行式输入批（#1036）四键未逐笔续计，本行按盘收正；
+ *      本批 +1 = `settings.consultAddTitle` —— 会诊添加弹窗标题）
+ *      ⇒ `HOST_DICT`（**合并表**，经合并点随动）**319 ⇒ 323**（两语同拍、键集相等；届盘实读续链）。
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；
@@ -128,7 +133,7 @@ import { VIEWS_DICT } from "./i18n-views.mjs"
  *  消费面 = `src/main/context-menu.mjs` `contextMenuLabels`，主进程直取本表）· `pool.*` = 活动池（标题 / 三族标 / 折叠控件两态 `aria-label` / 空态提示 ——
  *  折叠字形住 `renderer/pool.css`）· `approval.*` = 审批卡两形三出口词面 + 批形计数（`${count}` 占位；
  *  键位闭集住 `renderer/views/approval.mjs`）· `question.*` = 提问卡（文本控件 `aria-label` / 提交键 / 取消键 ——
- *  键位闭集住 `renderer/views/question.mjs`）· `settings.*` = 设置面（**60 键** —— 单源 = `renderer/i18n-settings.mjs`）·
+ *  键位闭集住 `renderer/views/question.mjs`）· `settings.*` = 设置面（**63 键** —— 单源 = `renderer/i18n-settings.mjs`）·
  *  `wizard.*` = 首启向导（标题 / 退场 / 三步名 / 两推进键 / 渠道提交键 / 目录步两词）·
  *  `composer.*` = 输入区（**换装后残余两族**：B21 发送失败行 `composer.send.failed`〔住 `renderer/i18n-views.mjs`〕+
  *  B22 降级提示行两键 `composer.attach.nonvision` ∕ `composer.attach.partial`——三键皆端侧自有词，非 VSC 源；

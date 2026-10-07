@@ -234,7 +234,7 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 5. **段态词恰一（同笔收正）**——`views/settings.mjs` `settingsModalTree` 现对非 add 组叠渲段态词（段体自带一件 + 支内再供一件）⇒ 去叠渲件（修前设计轮实测：`env` 组 loading = 2 节点 ∥ `providerAdd` = 1）。
 6. **计数（D3）**——词键 +4（`settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle`（i18n-settings.mjs）∥ `settings.consultAddTitle`（i18n-views.mjs）——两语）；弹窗值集 **八 ⇒ 十**（+`mcpForm` ∥ `consultAdd`——`SCOPES` 派生随动）；
 `MODAL_READS` 八组 ⇒ 十组（+2 行）；`store.mjs` 闭集注释 八值 ⇒ 十值（注释级）；通道 0 新（`mcp:save` ∥ `mcp:update` ∥ `settings:agent` 载荷形零改）；新档 0；CSS 0。
-7. **判据**——机检 = 批内件 `docs/batches/2026-10-07-add-dialog-unify.test.mjs`（拟新增——树面：两新组卡 ∥ 段体零表单 + 两入口钮 ∥ 焦点声明；出口面：入口 ⇒ `openSettingsModal` 两值 ∥ 成功径 ⇒ `closeModal` ∥ 取消 ⇒ 关框；页脚：`addProvider` ⇒ `openSettings(ADD_MODAL_GROUP)`；词面：四新键两语在场）；
+7. **判据**——机检 = 批内件 `docs/batches/2026-10-07-add-dialog-unify.test.mjs`（**已落**——树面：两新组卡 ∥ 段体零表单 + 两入口钮 ∥ 焦点声明；出口面：入口 ⇒ `openSettingsModal` 两值 ∥ 成功径 ⇒ `closeModal` ∥ 取消 ⇒ 关框；页脚：`addProvider` ⇒ `openSettings(ADD_MODAL_GROUP)`；词面：四新键两语在场）；
 真机 = 人工走查（MCP 新增 ∥ 编辑两态：五路关 ∥ 开框重置 ∥ 拒径不关框 ∥ 提交成功后列表随动；会诊：入口满 5 禁用 ∥ 提交成功关框；页脚直开）。
 8. **边界**——MCP 字段集 ∥ 型组 ∥ kv 行式机制 ∥ 探测 / 重连语义零改；会诊行渲染 ∥ effort 档 ∥ advisor 面零改；七段值面其余语义 ∥ 现有页 ∥ 核 ∥ `thincoder-render-core` ∥ CLI ∥ VSC 零触。
 
@@ -364,27 +364,28 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 
 零触面：段集 ∥ 段序 ∥ 七段值面其余字段语义 ∥ 现有页 ∥ 通道载荷形 ∥ 核 ∥ `thincoder-render-core` ∥ CLI；测试面随修随加——不占设计条目（2026-09-27 裁定）。
 
-**本批块（添加入口弹窗统一批 · 2026-10-07 · 台账 #1054）行「现行 ⇒ 预估（实施后回填）」**（内容行数口径；机制 ∥ 判据单源 = 本档 §1 **KD-77** ∥ §2.18；批档 = `docs/batches/2026-10-07-add-dialog-unify.md` §2）：
+**本批块（添加入口弹窗统一批 · 2026-10-07 · 台账 #1054）行「现行 ⇒ 实读（实施落盘）」**（实读 2026-10-07——内容行数口径；机制 ∥ 判据单源 = 本档 §1 **KD-77** ∥ §2.18；批档 = `docs/batches/2026-10-07-add-dialog-unify.md` §2 ∥ §5）：
 
-| # | 文件 | 现行 ⇒ 预估（实施后回填） | 面 |
+| # | 文件 | 现行 ⇒ 实读（实施落盘） | 面 |
 |---|---|---|---|
-| 1 | `thincoder-desktop/renderer/views/settings.mjs` | **419 ⇒ ≈445**（+两新组支 ∥ 标题逐态 ∥ 段态词恰一收正 ∥ 常量/副件） | 模态树面 |
-| 2 | `thincoder-desktop/renderer/views/settings-sections-mcp.mjs` | **241 ⇒ ≈256**（+`mcpFormBody` 导出 ∥ 入口钮 ∥ 新增态取消钮） | MCP 段体 |
-| 3 | `thincoder-desktop/renderer/views/settings-sections-models.mjs` | **164 ⇒ ≈175**（+`consultAddBody` 导出 ∥ 入口钮） | 模型段体 |
-| 4 | `thincoder-desktop/renderer/views/settings-sections.mjs` | **95 ⇒ ≈98**（re-export 两件） | 段体 hub |
-| 5 | `thincoder-desktop/renderer/mount-settings.mjs` | **259 ⇒ ≈264**（`SCOPES` +2 ∥ `MODAL_READS` +2） | 装配 |
-| 6 | `thincoder-desktop/renderer/mount-settings-exits.mjs` | **289 ⇒ ≈302**（两入口 handler ∥ `closeModal` 注入两工厂 ∥ `resetFacets` +2 支——**越 300 建议线 ⇒ 拆分评估登记（阈值 450 或出口面下次结构改动）**） | 出口面 |
-| 7 | `thincoder-desktop/renderer/mount-settings-segments-mcp.mjs` | **299 ⇒ ≈314**（入口/编辑开径 ∥ 成功径关框 ∥ 取消改关框——**越 300 建议线 ⇒ 拆分评估登记**） | MCP 出口族 |
-| 8 | `thincoder-desktop/renderer/mount-settings-segments-models.mjs` | **169 ⇒ ≈178**（入口 handler ∥ 成功径关框） | 模型出口族 |
-| 9 | `thincoder-desktop/renderer/composer-wire.mjs` | **283 ⇒ ≈285**（`addProvider` 映射改直开 + import） | 装配 |
-| 10 | `thincoder-desktop/renderer/mount-composer.mjs` | **299 ⇒ ≈302**（两 dep 转口携组名——**越 300 建议线 ⇒ 拆分评估登记**） | 装配 |
-| 11 | `thincoder-desktop/renderer/app.mjs` | **335 ⇒ ≈337**（双口提升） | 装配 |
-| 12 | `thincoder-desktop/renderer/i18n-settings.mjs` | **152 ⇒ ≈158**（+3 键 × 两语；`SETTINGS_DICT` 60 ⇒ 63） | 词面 |
-| 13 | `thincoder-desktop/renderer/i18n-views.mjs` | **406 ⇒ ≈408**（+1 键 × 两语） | 词面 |
-| 14 | `thincoder-desktop/renderer/store.mjs` | **370 ⇒ ≈370**（±0——闭集注释 八值 ⇒ 十值（注释级）；**越 300 在册**——非结构性触碰 ⇒ 续期） | 状态面 |
-| 15 | `thincoder-desktop/renderer/i18n.mjs` | **420 ⇒ ≈421**（键数链注续链；**越 300 在册**——非结构性触碰 ⇒ 续期） | 词面 |
-| 16 | 零改面 | `thincoder-desktop/renderer/settings-modal.mjs` ∥ `renderer/settings.css` ∥ `renderer/settings-modal.css` ∥ `src/main/**` ∥ 核 ∥ `thincoder-render-core` ∥ CLI ∥ VSC（VSC 同批自改——本端零触） | 零触 |
-| 17 | 批内件 | `docs/batches/2026-10-07-add-dialog-unify.test.mjs`（拟新增；随批留存 · 不进仓套件） | 全批 |
+| 1 | `thincoder-desktop/renderer/views/settings.mjs` | **419 ⇒ 439**（+两新组支 ∥ 标题逐态 ∥ 段态词恰一收正 ∥ 常量/副件） | 模态树面 |
+| 2 | `thincoder-desktop/renderer/views/settings-sections-mcp.mjs` | **241 ⇒ 261**（+`mcpFormBody` 导出 ∥ 入口钮 ∥ 新增态取消钮） | MCP 段体 |
+| 3 | `thincoder-desktop/renderer/views/settings-sections-models.mjs` | **164 ⇒ 186**（+`consultAddBody` 导出 ∥ 入口钮） | 模型段体 |
+| 4 | `thincoder-desktop/renderer/views/settings-sections.mjs` | **95 ⇒ 96**（re-export 两件） | 段体 hub |
+| 5 | `thincoder-desktop/renderer/mount-settings.mjs` | **259 ⇒ 264**（`SCOPES` +2 ∥ `MODAL_READS` +2） | 装配 |
+| 6 | `thincoder-desktop/renderer/mount-settings-exits.mjs` | **289 ⇒ 307**（`openModal` ∥ `closeModal` 同注入两段族 ∥ `resetFacets` +2 支；两入口 handler 住两段族内（行 7 ∥ 行 8——实装口径）——**越 300 建议线 ⇒ 拆分评估登记（阈值 450 或出口面下次结构改动）**） | 出口面 |
+| 7 | `thincoder-desktop/renderer/mount-settings-segments-mcp.mjs` | **299 ⇒ 327**（入口/编辑开径 ∥ 成功径关框 ∥ 取消改关框——**越 300 建议线 ⇒ 拆分评估登记**） | MCP 出口族 |
+| 8 | `thincoder-desktop/renderer/mount-settings-segments-models.mjs` | **169 ⇒ 192**（入口 handler ∥ 成功径关框） | 模型出口族 |
+| 9 | `thincoder-desktop/renderer/composer-wire.mjs` | **283 ⇒ 286**（`addProvider` 映射改直开 + import） | 装配 |
+| 10 | `thincoder-desktop/renderer/mount-composer.mjs` | **299 ⇒ 300**（两 dep 转口携组名——**恰在 300 线上未越**） | 装配 |
+| 11 | `thincoder-desktop/renderer/app.mjs` | **335 ⇒ 336**（双口提升） | 装配 |
+| 12 | `thincoder-desktop/renderer/i18n-settings.mjs` | **152 ⇒ 158**（+3 键 × 两语；`SETTINGS_DICT` 60 ⇒ 63） | 词面 |
+| 13 | `thincoder-desktop/renderer/i18n-views.mjs` | **406 ⇒ 408**（+1 键 × 两语） | 词面 |
+| 14 | `thincoder-desktop/renderer/store.mjs` | **370 ⇒ 370**（±0——闭集注释 八值 ⇒ 十值（注释级）；**越 300 在册**——非结构性触碰 ⇒ 续期） | 状态面 |
+| 15 | `thincoder-desktop/renderer/i18n.mjs` | **420 ⇒ 425**（键数链注续链；**越 300 在册**——非结构性触碰 ⇒ 续期） | 词面 |
+| 16 | `thincoder-desktop/renderer/mount-settings-reads.mjs`（出表件） | **204 ⇒ 206**（`loadMcp` 成功 ∥ 失败两径改「并持现切片」——新弹窗编辑态前提；批档 §5.2 决策 #1） | 读面 |
+| 17 | 零改面 | `thincoder-desktop/renderer/settings-modal.mjs` ∥ `thincoder-desktop/renderer/settings.css` ∥ `renderer/settings-modal.css` ∥ `src/main/**` ∥ 核 ∥ `thincoder-render-core` ∥ CLI ∥ VSC（VSC 同批自改——本端零触） | 零触 |
+| 18 | 批内件 | `docs/batches/2026-10-07-add-dialog-unify.test.mjs`（**已落**；随批留存 · 不进仓套件） | 全批 |
 
 零触面：段集 ∥ 段序 ∥ 七段值面语义 ∥ 现有页 ∥ 通道载荷形 ∥ 核 ∥ `thincoder-render-core` ∥ CLI；测试面随修随加——不占设计条目（2026-09-27 裁定）。
 
@@ -464,6 +465,8 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 - 2026-10-07（**添加入口弹窗统一批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-add-dialog-unify.md` §2 · 台账 #1054）：新增 **§1 KD-77**（添加入口统一：两新组弹窗 `mcpForm` ∥ `consultAdd` + 页脚直开 + 段态词恰一收正）+ **§2.18**（批注八项）+ **§3.2 本批块**（十五行）；**§1 KD-68 邻域**的 `SCOPES` 计数（八 ⇒ 十）随 §2.18 项 6 落（KD-68 ④ 本体内计数句 → 实施后回填）。**零新语义**（定形 + 落点；明细 = 批档 §2）。
 
 - 2026-10-07（**添加入口弹窗统一批 · 设计评审轮 1 修正（fix 轮 · 发现 1 ∥ 4 ∥ 5 ∥ 6 ∥ 7 逐号 · 父侧裁 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-07-add-dialog-unify.md` §3 轮次 1 ∥ §1.6 · 台账 #1054）：**KD-68 ④** 两处 `SCOPES` 计数收齐（「七名」句退场 ∥ 「八名」⇒ **十名**——+`mcpForm` ∥ `consultAdd`（同格仅存十值））；**§2.11** 现值收正（八名 ⇒ **十名** ∥ 八组 + **本批 +2 行 ⇒ 十组**（基数钉死）；`MODAL_READS` 定义位 `:49 ⇒ :52`）；**§2.10** 定义位 `:46 ⇒ :48`；**§3.1** 读数收正（`MODAL_READS` 九 ⇒ **八组**——实读对象恰 8 键）；**§3.2 本批块** +`store.mjs` ∥ `i18n.mjs` 两行（注释级 ∥ 链注——15 ⇒ **17 行**）；**KD-77 ②** ∥ **§2.18 项 3** 补 `consultAdd` 取消钮（词 `settings.cancel`；锚 `settings:consultCancel`——与 `mcpForm` 同形）；**KD-76 ①** ∥ **§2.18 项 3** 补行集起手口径（起手三组零行——「零项 ⇒ 零行」同判 ∥ 两端同值）。**产品码零触（fix 轮）· 零新语义**（计数 ∥ 措辞 ∥ 注 ∥ 边界面只）。明细 = 批档 §2 修正块。
+
+- 2026-10-07（**添加入口弹窗统一批 · 实施后回填轮（设计面）· eng-designer**——承批档 `docs/batches/2026-10-07-add-dialog-unify.md` §5（两舱交付）· 台账 #1054）：**§3.2 本批块翻「实读（实施落盘）」**（**17 ⇒ 18 行**——产品件 **15 ⇒ 16**：+`mount-settings-reads.mjs` **204 ⇒ 206**（出表件——两径并持现切片）；全表实读回填（偏离 6 件：sections-mcp +5 ∥ sections-models +11 ∥ segments-mcp +13 ∥ segments-models +14 ∥ exits +5 ∥ i18n.mjs +4；`mount-composer.mjs` **300 恰在线上未越**——原「越线登记」句随正）；两档越线（exits **307** ∥ segments-mcp **327**——拆分评估登记保持））；**行 6 措辞收正**（「两入口 handler」⇒ 实装口径「`openModal` ∥ `closeModal` 同注入两段族；两入口 handler 住两段族内（行 7 ∥ 行 8）」）；零改面行样式档补 `thincoder-desktop/` 前缀（悬空锚收正）。**零新语义**（实读值 ∥ 计数 ∥ 措辞 ∥ 登记；附：悬空锚收正 1 条）。明细 = 批档 §2 回填轮块。
 
 - 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 波 2b · eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：建档——本域单源档。迁入清单 = `PROJECT.md` §2（**KD-10 ∥ KD-11 ∥ KD-12 ∥ KD-13 ∥ KD-44 ∥ KD-45 ∥ KD-46 ∥ KD-49 ∥ KD-66**——逐字，表行形态）∥ `UI.md` §1（设置面行 ∥ 启动态行 ∥ 首启向导行 ∥ parity-b10-ui 注 10 项 ∥ 对齐第三批 P14 ∥ P15 ∥ F-Esc ∥ D37 注 8 项 ∥ 重建保真项 1 ∥ 批 B 注项 5——逐字，语义边界折行）；原址各留一行指针（`PROJECT.md` §2 · `UI.md` §1）。
   迁入文本内「本档 §x」回指按新落点改指（如「本批注（parity-b10-ui）」⇒「本档 §2.2」；「本批注（设置面样式收正 · D37）」⇒「本档 §2.5」）；**文件账未随本波迁入**（§4.1 settings-* 族行——随 2c）；域内余量（§4.2 批块 ∥ §6.1 ∥ §7 ∥ §10 涉行）未迁——随 2c 承接（批档 §2 同拍）。

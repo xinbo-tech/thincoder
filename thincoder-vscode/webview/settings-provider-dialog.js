@@ -176,7 +176,7 @@ function buildDialog() {
   )
   card.appendChild(body)
   document.body.append(backdrop, card)
-  return { type, presetInfo, customFields, customTail, name, url, format, key, proxy, status, model, candidates }
+  return { backdrop, card, type, presetInfo, customFields, customTail, name, url, format, key, proxy, status, model, candidates }
 }
 
 /** 开框（单例：已在框 ⇒ 零动作）：建两件 + 开框重置 + 代际自增 + 初始焦点 = `#pa-type`（+50ms）。 */
@@ -196,9 +196,11 @@ export function openAddProviderDialog() {
   setTimeout(() => els.type.focus(), 50)
 }
 
-/** 关框（五路同效的清除入口，幂等）：卡 ∥ 幕两件同清 + 代际自增 + 实件面弃置。 */
+/** 关框（五路同效的清除入口，幂等）：只清自身两件（卡 ∥ 幕——#1054 收窄：原按 `.settings-dialog*`
+ *  类全扫 ⇒ 第二弹窗入场即互清；各弹窗自清现为同规）+ 代际自增 + 实件面弃置。 */
 export function closeAddProviderDialog() {
-  document.querySelectorAll(".settings-dialog-backdrop, .settings-dialog").forEach((el) => el.remove())
+  _els?.card?.remove()
+  _els?.backdrop?.remove()
   _els = null
   _addDialogEpoch += 1
 }

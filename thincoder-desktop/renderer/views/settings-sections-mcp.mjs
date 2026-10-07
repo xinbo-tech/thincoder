@@ -24,6 +24,9 @@
  * 零 `node:` ∕ 零裸包。
  * **#604 增**：表单字段组（`fieldNode` 可编辑态 ∥ kv 行两格）携 `data-draft` —— 总闸捕获域；类型 `select` ＝写触发
  * 控件（改即写切片）⇒ 不入域（负向锁面 —— 批档 §2.2 判据 M-604b ∕ M-604c）。
+ * **添加入口弹窗统一批（2026-10-07 · 台账 #1054 · KD-77 ①）**：段体不再常驻表单（`mcpBody` = 行族 + 添加入口钮
+ * （新键 `settings.mcpAdd`；锚 `settings:mcpAddOpen`——加载态恒在场）；表单改由弹窗体分支渲出
+ * （`mcpFormBody`——`sectionBody("mcpForm")` 消费，零第二份）；新增态补取消钮（词 `settings.cancel`——两态同名钮）。
  */
 import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
@@ -169,6 +172,7 @@ function kvFieldNodes(group, labelKey, rows, handlers) {
 /** MCP 表单（S8 结构化 —— 名 + 类型 + 三型字段组 + 存 ∕ 消；`form` 缺 ⇒ 新增态空表单）。
  *  编辑态：名只读（不变量）+ 现值直取行 `config` 预填；类型切换 = 出口写切片致重挂（`onMcpFormType`），
  *  未落盘输入经 `form.draft` 快照回填（切换不丢手 —— 沿 S2 `draft` 先例）；行值单源 = `form.kv`（#1036）。
+ *  **KD-77 ①**：表单弹窗体（`mcpFormBody`）单件 —— 新增 ∥ 编辑两态同框（标题逐态归树面）；取消钮两态同名。
  *  `data-draft-scope` = 表单身份面（#604 总闸作用域键：新增 ∕ 改名各一骨 —— 身份换 ⇒ 旧草稿不复填）。 */
 function mcpFormNode(section, handlers) {
   const form = section?.form !== null && typeof section?.form === "object" ? section.form : null
@@ -213,13 +217,12 @@ function mcpFormNode(section, handlers) {
   const submit = editing === null
     ? { action: "settings:addMcp", word: t("settings.mcp.add"), handler: handlers?.onAddMcp }
     : { action: "settings:updateMcp", word: t("settings.save"), handler: handlers?.onUpdateMcp }
+  // 取消钮 = 两态同名（KD-77 ①——新增态补钮；出口 = 关弹窗，切片复位随关）；缺 handler ⇒ `wire` 落 `disabled`。
+  const onCancel = typeof handlers?.onMcpCancel === "function" ? handlers.onMcpCancel : undefined
   const buttons = [
     { tag: "button", props: wire({ class: "settings-submit", type: "button", "data-action": submit.action }, typeof submit.handler === "function" ? submit.handler : undefined), children: [submit.word] },
+    { tag: "button", props: wire({ class: "settings-submit", type: "button", "data-action": "settings:mcpCancel" }, onCancel), children: [t("settings.cancel")] },
   ]
-  if (editing !== null) {
-    const onCancel = typeof handlers?.onMcpCancel === "function" ? handlers.onMcpCancel : undefined
-    buttons.push({ tag: "button", props: wire({ class: "settings-submit", type: "button", "data-action": "settings:mcpCancel" }, onCancel), children: [t("settings.cancel")] })
-  }
   return {
     tag: "form",
     props: { class: "settings-form", "data-form": "mcp", "data-mcp-form": editing === null ? "add" : "edit", "data-draft-scope": editing === null ? "add" : `edit:${editing}` },
@@ -233,9 +236,26 @@ function mcpFormNode(section, handlers) {
   }
 }
 
-/** MCP 段体：行（+ 各行展开面）+ 表单（`loading` 期零表单 —— 载入中不落半形）。 */
+/** 添加入口钮（KD-77 ①）：锚 `settings:mcpAddOpen` + 词 `settings.mcpAdd`（值逐字同 VSC）；缺 handler ⇒ `wire` 落 `disabled`。 */
+function mcpAddButton(handlers) {
+  const onAdd = typeof handlers?.onMcpAddOpen === "function" ? () => handlers.onMcpAddOpen() : undefined
+  return {
+    tag: "button",
+    props: wire({ class: "settings-submit", type: "button", "data-action": "settings:mcpAddOpen" }, onAdd),
+    children: [t("settings.mcpAdd")],
+  }
+}
+
+/** MCP 段体（KD-77 ①）：行（+ 各行展开面）+ 添加入口钮（**恒在场** —— 读链不遮入口，沿 `providersBody` 先例）；
+ *  原常驻表单退场 ⇒ 弹窗体分支（`mcpFormBody`）渲出。 */
 export function mcpBody(section, handlers, deps = {}) {
   const details = section?.details !== null && typeof section?.details === "object" ? section.details : {}
   const rows = section.servers.flatMap((row) => [mcpRowNode(row, handlers), mcpDetailNode(row.name, details[row.name] ?? null, deps)])
-  return [...rows, section.state === "loading" ? null : mcpFormNode(section, handlers)]
+  return [...rows, mcpAddButton(handlers)]
+}
+
+/** MCP 表单弹窗体（KD-77 ① —— `sectionBody("mcpForm")` 消费，零第二份）：载入中零表单（沿段体旧闸 ——
+ *  载入中不落半形）；`loading` 外 = 表单唯内容面（名 ∥ 类型 ∥ 三型字段组 ∥ 存 ∥ 取消）。 */
+export function mcpFormBody(section, handlers) {
+  return section?.state === "loading" ? [] : [mcpFormNode(section, handlers)]
 }

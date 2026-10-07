@@ -64,8 +64,9 @@ const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —�
 // 设置面 / 向导一族（自持订阅 —— 出档 `renderer/mount-settings.mjs`；目录出口复用项目面链）；
 // `onProvidersChanged`（全渠扇出批 · #3）= 设置面 provider 写成功 ⇒ 输入区候选面强制刷新（迟绑定：`composer` 于下行装配）。
 const settingsFace = attachSettings(host, { onProjectOpened: openDir, onProvidersChanged: () => composer.refreshCandidates() })
-// 输入区一族（挂载 + deps 构造 → 核件工厂；出档 `renderer/mount-composer.mjs`）：`openSettings` = 控件行第 7 钮出口 ∕ `submit` = 直发径单副本（错误横幅重试消费）。
-const composer = attachComposer(host, { openSettings: () => settingsFace.openSettings() })
+// 输入区一族（挂载 + deps 构造 → 核件工厂；出档 `renderer/mount-composer.mjs`）：`openSettings(group?)` = 控件行第 7 钮 ∥
+// footer 三出口（KD-77 ③：双口提升 —— 缺组 ⇒ 既有页 ∥ 携组名 ⇒ 组弹窗，同 `menuActions` 形）；`submit` = 直发径单副本（错误横幅重试消费）。
+const composer = attachComposer(host, { openSettings: (group) => (typeof group === "string" && group !== "" ? settingsFace.openSettingsModal(group) : settingsFace.openSettings()) })
 const { paintStatus } = attachStatus() // 状态行一族（D17 / D22 承载 17 段单点重建 —— 出档 `renderer/mount-status.mjs`）
 
 /** 菜单动作分派（D36 · #811 ∥ 设置菜单升级批 · #817 —— `ev:menu` 窄口消费）：六动作 ⇒ 既有单一实现（零第二份）；`searchFace` 迟绑定（装配序在下行）。 */

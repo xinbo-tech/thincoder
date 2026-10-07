@@ -13,7 +13,8 @@
  * 缺省 ⇒ 零复位）· `slotFullNotice(message)`（#656 · cap 待答径队满可见形 —— 核件 toast `input.slotFull` +
  * 文本回注输入框，零丢失；回注缝 = 挂载面注入小口；缺省 ⇒ 零动作）· 映射 ∕ 纯动作件（`toImages` 载荷投影 ∕ `degradedCode` 降级码过闸 ∕ `effortOf`
  * 档位写向映射（与 mount 侧读向 `reasoningOf` 同表）∕ `withUserBlock` 用户块单源写（mount 侧同取 —— 出泡不变式）∕
- * `setAttachDegraded` ∕ `applyFlags`）· `openSettings()`（footer 三出口 —— A8 唯一映射点）。
+ * `setAttachDegraded` ∕ `applyFlags`）· `openSettings(group?)`（footer 三出口 —— A8 唯一映射点；KD-77 ③：添加出口携组名
+ * ⇒ 宿主双口直开弹窗，缺 ⇒ 既有页面）。
  *
  * 纪律（沿 mount 侧）：零 `node:` / 零裸包（渲染面静态闭包判据）；控制台诊断串非面向用户文案（不经 `t()`）。
  * **#597（发送忙态时机）+ #596（回执超时）**：`sendDirect` 三增 —— ① 失败回执 `started === false`（宿主未受理）⇒
@@ -32,7 +33,7 @@
  */
 import { clearRunning } from "./badges.mjs"
 import { clearTurnTraces, setProviderState, withFlowOp } from "./store.mjs"
-
+import { ADD_MODAL_GROUP } from "./views/settings.mjs" // KD-77 ③：添加弹窗组名单源（零双抄 —— 沿「不引视图面向下依赖」例外注：本档仍 node 可装载）
 /** 回执 `reason` 归一（缺 ∕ 非串 ∕ 空串 ⇒ `fallback`）—— 诊断串单源（mount 侧候选面同引）。 */
 export function reasonOf(receipt, fallback = "unknown") {
   return typeof receipt?.reason === "string" && receipt.reason !== "" ? receipt.reason : fallback
@@ -242,8 +243,10 @@ export function createComposerWire(deps = {}) {
       case "setPlanMode": return void writeFlags(key, flag("planMode"))
       case "setAdvisorGuard": return void writeFlags(key, flag("advisorGuard"))
       case "setEngineeringEnabled": return void writeFlags(key, flag("engineering"))
-      // footer 三出口 ⇒ 设置面（A8 唯一映射点）：渠道增 / 删 / 密钥三事皆住设置面（本端零第二实现）
-      case "addProvider": case "removeProvider": case "setKey": return void openSettings?.()
+      // footer 三出口 ⇒ 设置面（A8 唯一映射点）：渠道删 / 密钥两事开设置页（本端零第二实现）；
+      // 添加 ⇒ 直开添加弹窗（KD-77 ③ —— 组名单源 = 视图档 `ADD_MODAL_GROUP`；宿主双口：缺组 ⇒ 页）。
+      case "addProvider": return void openSettings?.(ADD_MODAL_GROUP)
+      case "removeProvider": case "setKey": return void openSettings?.()
       default: return void console.error(`[composer] unknown post type: ${String(type)}`)
     }
   }

@@ -157,7 +157,7 @@ export function attachComposer(host, deps = {}) {
     suspIdleOf, // 挂起空闲复位判据（挂起窗径批：窗内直发径未起跑 ⇒ loading 门禁归位）
     slotFullNotice, // #656：cap 待答径队满可见形缝（toast + 文本回注单点）
     toImages, degradedCode, effortOf, withUserBlock, setAttachDegraded, applyFlags,
-    openSettings: () => openSettings?.(), // footer 三出口（A8 唯一映射点）
+    openSettings: (group) => openSettings?.(group), // footer 三出口（A8 唯一映射点；KD-77 ③：组名透传 —— 缺参 ⇒ 页）
   })
   const post = wire.post
 
@@ -193,7 +193,7 @@ export function attachComposer(host, deps = {}) {
   }
 
   const hooks = {
-    openSettings: () => openSettings?.(),
+    openSettings: (group) => openSettings?.(group), // KD-77 ③：组名透传（⚙ 无参 ⇒ 既有页；footer 添加 ⇒ 携组名）
     onUserEcho,
     confirmRemoveProvider: () => openSettings?.(), // 删除渠道 = 设置面事（确认门 ∕ 执行面皆住该面）
   }

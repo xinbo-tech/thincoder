@@ -1,11 +1,12 @@
 /**
  * settings-tools.js — tools & services card (split out of settings.js): MCP server
- * list + add form, embedding/websearch key rows, semantic-index status.
+ * list（入口钮居本面 ∥ 表单族居 `settings-mcp-dialog.js`——#1054）, embedding/websearch
+ * key rows, semantic-index status.
  */
 import { t } from "./i18n.js"
 import { SS } from "./settings-state.js"
 import { keyRowEdit, flashSaved } from "./settings-widgets.js"
-import { mcpFormHtml, bindMcpControls } from "./settings-mcp.js"
+import { bindMcpControls } from "./settings-mcp.js"
 
 /** Install the window._* handlers the embed/websearch key rows' controls call（键行钮经
  *  `renderKeyRow` 单点绑到这些 handler——行内属性绑定已摘除，见 `SETTINGS.md` §2.10）。 */
@@ -55,8 +56,7 @@ export function toolsCardHtml() {
   html += `<div class="settings-subtitle">${t("settings.mcpSection")}</div>`
   html += `<div id="mcp-list"></div>`
   html += `<button id="mcp-add-btn" class="key-btn">${t("settings.mcpAdd")}</button>`
-  // MCP 表单 HTML —— `settings-mcp.js`（F5/MCP.md §4：同一表单服务 add 与 edit——token 一等字段 F6②）
-  html += mcpFormHtml()
+  // MCP 表单已迁弹窗（#1054——`settings-mcp-dialog.js`；卡内只留列表 + 入口钮）
   html += `<div class="settings-subtitle">${t("settings.websearchSection")}</div>`
   html += websearchRowHtml()
   html += `<div style="font-size:11px;opacity:0.55;padding:2px 0">${t("settings.websearchHelp")}</div>`
@@ -71,8 +71,8 @@ export function toolsCardHtml() {
   return html
 }
 
-/** Bind the index build button + render index status, and the MCP half (form controls,
- *  list render, status request) via `bindMcpControls()`（`settings-mcp.js`）。 */
+/** Bind the index build button + render index status, and the MCP half (list render ∥
+ *  status request) via `bindMcpControls()`（`settings-mcp.js`——表单族居弹窗档，#1054）。 */
 export function bindToolsControls() {
   // 键行单点装配（渲染 + 绑定）——行内属性绑定已摘除 ⇒ 钮必须经此重贴（建面 · 推送回填 · 取消重建三路同点）
   renderKeyRow("row-websearch", websearchRowHtml())

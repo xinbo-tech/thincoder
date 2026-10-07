@@ -1,18 +1,21 @@
 /**
  * mount-settings-segments-models.mjs — 设置面 **models 段出口族**（R7 · 桌面功能对位批；「先拆后改」：自
  * `renderer/mount-settings-segments.mjs` 拆出 —— 300 行层拆分）：consult 行族（增 ∕ 删 ∕ effort 行内改 ∕
- * 两 picker）与 advisor 行（provider ∕ model 两 picker + 存），共八出口。
+ * 两 picker）与 advisor 行（provider ∕ model 两 picker + 存），共**八**出口；
+ * **添加入口弹窗统一批（2026-10-07 · 台账 #1054 · KD-77 ②）**：增**两**出口 —— 入口开径（`onConsultAddOpen`）∥
+ * 取消（`onConsultCancel`——关弹窗）；开 ∥ 关径经 `deps.openModal` ∥ `deps.closeModal` 注入（缺 ⇒ 相关键降级）。
  *
  * 写径 = `settings:agent` `{ patch }`（**consult → `agent.consultModels` 整数组回写**；advisor → 两键）——
  * 本族零新通道；写后复读经读数供给族 `loadAgent`（`models` 块单源）。
  * 接线沿 `createSegmentExits` 注入先例：`createModelsExits(deps)` ——
- * `deps = { ask, store, setSettings, report, clearReport, reads }`；返回 `{ handlers }`（并回
+ * `deps = { ask, store, setSettings, report, clearReport, reads, openModal, closeModal }`；返回 `{ handlers }`（并回
  * `mount-settings-exits.mjs` 单一 handlers 表）。
  * 语义锚（`docs/desktop/design/IPC.md` §2 设置族注）：失败 ⇒ **零乐观写** + 段级失败面（scope = `models`）；
  * 端侧形判不齐 ⇒ **零发送**（`console.error` 零静默）；effort 归一沿 VSC `settings-state.js` `effortPayloadValue`
  * （「—」〔空值〕/ `none` / 空 ⇒ `null`）。
  * 纪律：零 `node:` / 零裸包 · 逐通道回执形单源 = IPC.md §2。
  */
+import { CONSULT_ADD_MODAL_GROUP } from "./views/settings.mjs"
 
 /** 列表切片：缺 / 非数组 ⇒ 空表（零节点 —— 禁假数据）。 */
 const listOf = (value) => (Array.isArray(value) ? value : [])
@@ -23,6 +26,8 @@ const str = (value) => (typeof value === "string" && value !== "" ? value : null
 export function createModelsExits(deps = {}) {
   const { ask, store, setSettings, report, clearReport, reads } = deps
   const { loadAgent } = reads ?? {}
+  const openModal = typeof deps.openModal === "function" ? deps.openModal : null
+  const closeModal = typeof deps.closeModal === "function" ? deps.closeModal : null
 
   /** models 段切片局部写（引用不变 ⇒ 零通知 —— 同值写零重绘）。 */
   const setModelsSlice = (patch) => {
@@ -49,7 +54,8 @@ export function createModelsExits(deps = {}) {
     effort: typeof row.effort === "string" ? row.effort : null,
   }))
 
-  /** 增行出口：picker 两值齐 ∧ 行未满 ⇒ 追加（effort 初值 = `null` ⇒ 「—」）；成功 ⇒ 清 picker。 */
+  /** 增行出口（KD-77 ②）：picker 两值齐 ∧ 行未满 ⇒ 追加（effort 初值 = `null` ⇒ 「—」）；成功 ⇒ 清 picker
+   *  + 关框（提交面只住弹窗 ⇒ 本弹窗在场即宿主关；失败径留框 —— 失败串落框体）。 */
   async function consultAdd() {
     const picker = store.get().settings?.models?.picker ?? {}
     const provider = typeof picker.provider === "string" ? picker.provider : ""
@@ -60,7 +66,11 @@ export function createModelsExits(deps = {}) {
       return
     }
     const ok = await writeConsult([...rows, { provider, model, effort: null }])
-    if (ok) setModelsSlice({ picker: { provider: "", rows: [], model: null } })
+    if (ok) {
+      setModelsSlice({ picker: { provider: "", rows: [], model: null } })
+      if (closeModal !== null) closeModal()
+      else console.error("[renderer] settings:agent: modal close unavailable")
+    }
   }
 
   /** 移除行出口：按两键定位（表外项 ⇒ 零变化 ⇒ 零发送）。 */
@@ -108,6 +118,16 @@ export function createModelsExits(deps = {}) {
   function consultPickModel(model) {
     const held = store.get().settings?.models?.picker ?? { provider: "", rows: [] }
     setModelsSlice({ picker: { provider: held.provider ?? "", rows: listOf(held.rows), model: str(typeof model === "string" ? model : "") } })
+  }
+
+  /** 取消出口（KD-77 ②）：**关弹窗**（切片复位随关 —— `resetFacets("consultAdd")` 复位 `models.picker`；
+   *  `closeModal` 缺 ⇒ 记错零静默（不落「看似已关」的假态））。 */
+  function consultCancel() {
+    if (closeModal === null) {
+      console.error("[renderer] settings:agent: modal close unavailable")
+      return
+    }
+    closeModal()
   }
 
   /** advisor provider 换出口（空 ⇒ 回 `Inherit` 态；非空 ⇒ 现取该渠道模型面）。 */
@@ -158,11 +178,14 @@ export function createModelsExits(deps = {}) {
     onConsultPickProvider: (provider) => void consultPickProvider(provider),
     onConsultPickModel: (model) => consultPickModel(model),
     onConsultAdd: () => void consultAdd(),
+    onConsultCancel: () => consultCancel(),
     onConsultRemove: (row) => void consultRemove(row),
     onConsultEffort: (row, value) => void consultEffort(row, value),
     onAdvisorPickProvider: (provider) => void advisorPickProvider(provider),
     onAdvisorPickModel: (model) => advisorPickModel(model),
     onAdvisorSave: () => void advisorSave(),
+    // KD-77 ②：入口开径（缺 `openModal` ⇒ 本键不注册 —— 钮面 `wire` 落 `disabled`）。
+    ...(openModal === null ? {} : { onConsultAddOpen: () => { openModal(CONSULT_ADD_MODAL_GROUP) } }),
   }
 
   return { handlers }

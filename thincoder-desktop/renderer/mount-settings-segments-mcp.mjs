@@ -1,14 +1,16 @@
 /**
  * mount-settings-segments-mcp.mjs — 设置面 **MCP 段出口族**（MCP 键值行式输入批 · 2026-10-07 · 台账 #1036；
  * 「先拆后改」：自 `renderer/mount-settings-segments.mjs` 拆出 —— 越 300 在册预案「MCP 族再出一档」兑现）：
- * MCP 增 ∕ 改 · 编辑 · 类型切换 · 移除 · 工具清单 · 探活 · 重连 + **kv 行加 ∕ 删两出口**，共**十一**出口。
+ * MCP 增 ∕ 改 · 编辑 · 类型切换 · 移除 · 工具清单 · 探活 · 重连 + **kv 行加 ∕ 删两出口** + **入口开径**（`onMcpAddOpen`——KD-77 ①），共**十二**出口。
  * 接线沿三先例：`createMcpExits(deps)`（`deps = { ask, store, setSettings, report, clearReport, reads, formOf,
- * invalidateDrafts }`）⇒ `{ handlers }` 并回 `mount-settings-exits.mjs` 单一 handlers 表（装配即合并，对外零改）。
+ * invalidateDrafts, openModal, closeModal }`——后两者 = 弹窗开 ∥ 关径（KD-77 ①），缺 ⇒ 相关键降级）⇒ `{ handlers }`
+ * 并回 `mount-settings-exits.mjs` 单一 handlers 表（装配即合并，对外零改）。
  * 机制与判据单源 = `docs/desktop/design/SETTINGS.md` §1 **KD-76** ∥ §2.17（行令牌态 × 加删两出口 × 类型切换 × 提交
- * 四判据 × `readMcpForm` 不采行件）；现读面 = **文档序末位 MCP 表单**（页体 ∥ 组弹窗体——弹窗体挂 `body` 尾）；随族迁来的 S6 ∕ S8 ∕ S9 与 #679 语义零改（单源 = 迁出前版本 + IPC.md §2）。
+ * 四判据 × `readMcpForm` 不采行件）；现读面 = **文档序末位 MCP 表单**（KD-77 ① 起表单只住弹窗体——弹窗体挂 `body` 尾）；随族迁来的 S6 ∕ S8 ∕ S9 与 #679 语义零改（单源 = 迁出前版本 + IPC.md §2）。
  * 纪律：零 `node:` ∕ 零裸包 · 端侧失败零静默（`console.error`）· 逐通道回执形单源 = IPC.md §2。
  */
 import { confirmSecretDelete } from "./settings-confirm.mjs"
+import { MCP_FORM_MODAL_GROUP } from "./views/settings.mjs"
 
 /** 列表切片：缺 / 非数组 ⇒ 空表（零节点 —— 禁假数据）。 */
 const listOf = (value) => (Array.isArray(value) ? value : [])
@@ -69,6 +71,8 @@ function mcpConfigFrom(data, type) {
 export function createMcpExits(deps = {}) {
   const { ask, store, setSettings, report, clearReport, reads, formOf, invalidateDrafts } = deps
   const { loadMcp } = reads ?? {}
+  const openModal = typeof deps.openModal === "function" ? deps.openModal : null
+  const closeModal = typeof deps.closeModal === "function" ? deps.closeModal : null
 
   /** MCP 段切片局部写（引用不变 ⇒ 零通知 —— 同值写零重绘）。 */
   const setMcpSlice = (patch) => {
@@ -80,8 +84,8 @@ export function createMcpExits(deps = {}) {
     const kv = form !== null && typeof form === "object" && form.kv !== null && typeof form.kv === "object" ? form.kv : {}
     return { env: kvRowsOf(kv.env), headers: kvRowsOf(kv.headers), wsHeaders: kvRowsOf(kv.wsHeaders) }
   }
-  /** MCP 表单现读面（**宿主无关**）：设置页体 ∥ 组弹窗体（`settings-modal.mjs` 卡挂 `body` 尾 ⇒ 文档序末位即交互面；
-   *  菜单「组弹窗」径页闭 ⇒ 槽内零表单——末位 = 弹窗体）。无 DOM 面 ⇒ `null`（退化式）。 */
+  /** MCP 表单现读面（**宿主无关**）：KD-77 ① 起表单只住弹窗体（页体零表单）——弹窗体挂 `body` 尾 ⇒
+   *  文档序末位即交互面；无 DOM 面 ⇒ `null`（退化式）。 */
   function mcpFormNode() {
     if (typeof document?.querySelectorAll !== "function") return null
     const forms = document.querySelectorAll('[data-form="mcp"]')
@@ -160,24 +164,42 @@ export function createMcpExits(deps = {}) {
     invalidateDrafts?.(typeof form.getAttribute === "function" ? form.getAttribute("data-draft-scope") : null) // #679 成功径：该表单草稿一次性作废（作用域自表单携）
     clearReport()
     setMcpSlice({ form: null })
+    if (store.get().settings?.modal === MCP_FORM_MODAL_GROUP) {
+      if (closeModal !== null) closeModal()
+      else console.error("[renderer] mcp:save: modal close unavailable")
+    }
     await loadMcp()
   }
 
-  /** MCP 编辑出口（S8）：开编辑态（`form.editing` = 名 ⇒ 行 `config` 预填 + 名只读；类型按条目形预置）；行令牌态 =
-   *  条目 `config` 三组生成（令牌取新号，永不复用）。 */
+  /** MCP 编辑出口（S8 ∥ KD-77 ①）：**开径 = 表单弹窗**（先开后写 —— `openSettingsModal` 内复位会清 `form`，
+   *  先写会被覆盖；开成后才写 `form.editing`）；`form.editing` = 名 ⇒ 行 `config` 预填 + 名只读；类型按条目形预置；
+   *  行令牌态 = 条目 `config` 三组生成（令牌取新号，永不复用）；开框被拒（如向导占槽）⇒ 零写零关（拒径不关框）。 */
   function editMcp(name) {
     const row = listOf(store.get().settings?.mcp?.servers).find((item) => item?.name === name)
     if (row === undefined) {
       console.error(`[renderer] mcp:edit unknown server: ${String(name)}`)
       return
     }
+    if (openModal === null) {
+      console.error("[renderer] mcp:edit skipped: modal open unavailable")
+      return
+    }
+    if (openModal(MCP_FORM_MODAL_GROUP) !== true) {
+      console.error("[renderer] mcp:edit skipped: modal open refused")
+      return
+    }
     const cfg = row.config !== null && typeof row.config === "object" ? row.config : {}
     const type = typeof cfg.wsUrl === "string" && cfg.wsUrl !== "" ? "ws" : typeof cfg.url === "string" && cfg.url !== "" ? "http" : "stdio"
     setMcpSlice({ form: { editing: name, type, kv: kvStateFrom(cfg) } })
   }
-  /** MCP 取消出口（S8）：回新增态（清编辑态 —— 表单字段随重挂回空）。 */
+  /** MCP 取消出口（S8 ∥ KD-77 ①）：**关弹窗**（切片复位随关 —— `resetFacets("mcpForm")` 清 `form`；两态同名钮）；
+   *  `closeModal` 缺 ⇒ 记错零静默（不落「看似已关」的假态）。 */
   function cancelMcp() {
-    setMcpSlice({ form: null })
+    if (closeModal === null) {
+      console.error("[renderer] mcp:cancel skipped: modal close unavailable")
+      return
+    }
+    closeModal()
   }
 
   /** 表单现态自读（S8：类型切换 = 重挂 ⇒ 未落盘输入经 `draft` 快照带回 —— 沿 S2 先例）：`input[name]` 集（**kv 行件不采** —— 行值归令牌态；重复 `name` 单值槽会塌缩）；无表单面 ⇒ `null`。 */
@@ -222,6 +244,10 @@ export function createMcpExits(deps = {}) {
     invalidateDrafts?.(typeof form.getAttribute === "function" ? form.getAttribute("data-draft-scope") : null) // #679 成功径：该表单草稿一次性作废（作用域自表单携）
     clearReport()
     setMcpSlice({ form: null })
+    if (store.get().settings?.modal === MCP_FORM_MODAL_GROUP) {
+      if (closeModal !== null) closeModal()
+      else console.error("[renderer] mcp:update: modal close unavailable")
+    }
     await loadMcp()
   }
   /** MCP 移除**执行径**（确认面「是」⇒ 本径）：失败 ⇒ 零乐观摘项。 */
@@ -293,6 +319,8 @@ export function createMcpExits(deps = {}) {
     onMcpTools: (name) => void mcpTools(name),
     onMcpTest: (name) => void mcpTest(name),
     onMcpReconnect: (name) => void mcpReconnect(name),
+    // KD-77 ①：入口开径（缺 `openModal` ⇒ 本键不注册 —— 钮面 `wire` 落 `disabled`）。
+    ...(openModal === null ? {} : { onMcpAddOpen: () => { openModal(MCP_FORM_MODAL_GROUP) } }),
   }
 
   return { handlers }

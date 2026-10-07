@@ -2,10 +2,10 @@
  * i18n-settings.mjs — 设置面词族第四档（i18n 拆分批 `docs/batches/2026-09-29-i18n-split.md` §2 · 台账 #614
  * 顶格消解：主档 `renderer/i18n.mjs` 内容行 500 顶格 ⇒ 自有 `settings.*` 族 55 键整族出档，本档承接）。
  *
- * 键面（**60 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59；**三端对齐批（2026-10-07 · 台账 #1027–#1035 · KD-75 ②③）**：增 `settings.addProvider` ∥ `settings.addProviderTitle` ∥ `settings.providers.customChoice` 三键，净删 `settings.providers.addCustom` ∥ `.addPreset` 两键（旧双表单提交词——表单退场随退）——59 ⇒ **60**）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
+ * 键面（**63 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59；**三端对齐批（2026-10-07 · 台账 #1027–#1035 · KD-75 ②③）**：增 `settings.addProvider` ∥ `settings.addProviderTitle` ∥ `settings.providers.customChoice` 三键，净删 `settings.providers.addCustom` ∥ `.addPreset` 两键（旧双表单提交词——表单退场随退）——59 ⇒ **60**；**添加入口弹窗统一批（2026-10-07 · 台账 #1054 · KD-77 ①）**：增 `settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle` 三键（MCP 添加入口 + 表单两态标题——值逐字同 VSC 同批落地 `locales` 同名键）——60 ⇒ **63**）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
  * 四段名 / 两段态 / 十三失败码 / 添加入口两键 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
  * 当前标 · 自定项键（KD-75 ③）/ 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
- * 移除 · 增键 —— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）。
+ * 移除 · 增键 · 添加入口 + 表单两态标题（KD-77 ①）—— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）。
  * S3 分档增（#673 · 2026-09-29）：失败码族补 `settings.reason.hostBusy`（渠行行标分档词 —— 消费面 =
  * `renderer/views/settings-sections.mjs`；值源 = VSC 硬编码词「宿主繁忙」同形，两语同增）。
  * 主题切换批增（#743 · 2026-09-30）：面头主题三态族四键（`settings.theme` ∥ `.system` ∥ `.light` ∥ `.dark` ——
@@ -85,6 +85,9 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.mcp.remove": "Remove ${name}",
     "settings.mcp.nameLabel": "Name",
     "settings.mcp.add": "Add server",
+    "settings.mcpAdd": "+ Add Server",
+    "settings.mcp.addTitle": "Add MCP Server",
+    "settings.mcp.editTitle": "Edit MCP Server",
   },
   zh: {
     // ── 设置面（批 9：`views/settings.mjs` + `views/settings-sections.mjs`）──
@@ -148,5 +151,8 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.mcp.remove": "移除 ${name}",
     "settings.mcp.nameLabel": "名称",
     "settings.mcp.add": "添加服务器",
+    "settings.mcpAdd": "+ 添加服务器",
+    "settings.mcp.addTitle": "添加 MCP 服务器",
+    "settings.mcp.editTitle": "编辑 MCP 服务器",
   },
 })

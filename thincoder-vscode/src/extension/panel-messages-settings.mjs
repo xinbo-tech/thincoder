@@ -20,7 +20,7 @@
  */
 import { loadRaw } from "@thincoder/core/config-io.mjs"
 import { loadMcpServers } from "../config-mcp.mjs"
-import { addProviderFlow, removeProviderFlow, setKeyFlow, probeProviderAdmission, ui } from "./provider-flows.mjs"
+import { removeProviderFlow, setKeyFlow, probeProviderAdmission, ui } from "./provider-flows.mjs"
 import { handleAddProvider as persistAddProvider, handleRemoveProvider as persistRemoveProvider, handleSetProviderProxy as persistSetProviderProxy, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection, postProviderError } from "./settings.mjs"
 import { setSlotAdvisorGuard, setSlotEngineering } from "./session-io.mjs"
 import { _cwd } from "./panel-messages.mjs"
@@ -63,10 +63,11 @@ export function handleEditMcp(panel, msg) { panel._editMcp(msg.name, msg.config 
 /** 迁出自 `panel-messages.mjs` 的 case "testMcp"。 */
 export async function handleTestMcp(panel, msg) { await panel._testMcp(msg.name) }
 
-/** 迁出自 `panel-messages.mjs` 的 case "addProvider"。#1027：载荷 +`proxy` 透传核 `addProviderEntry`（`=== true` ⇒ 同批落旗）。 */
+/** 迁出自 `panel-messages.mjs` 的 case "addProvider"。#1027：载荷 +`proxy` 透传核 `addProviderEntry`（`=== true` ⇒ 同批落旗）。
+ *  #1054（添加入口弹窗统一批）：无载荷支（QuickPick 增流程）退场——页脚「+ Add provider…」= webview
+ *  本地面动作（零出站）⇒ 残留分支 = 畸形载荷 ⇒ `console.error` 零动作（fail-loud）。 */
 export async function handleAddProvider(panel, msg) {
   // Payload form (settings panel add dialog): persist directly.
-  // No payload (model dropdown shortcut): interactive QuickPick flow.
   if (msg.preset || msg.custom) {
     const err = persistAddProvider({ preset: msg.preset, custom: msg.custom, key: msg.key, proxy: msg.proxy })
     if (err) {
@@ -87,7 +88,8 @@ export async function handleAddProvider(panel, msg) {
       }
     }
   } else {
-    await addProviderFlow(ui, () => panel._pushSettings())
+    // 无载荷支（QuickPick 增流程）随 #1054 退场（唯一调用点即此支）；畸形载荷 ⇒ fail-loud 零动作。
+    console.error("[addProvider] malformed payload (no preset/custom) — the no-payload QuickPick flow retired with #1054")
   }
 }
 

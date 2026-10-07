@@ -114,7 +114,7 @@ export function initialState() {
     settings: {
       open: false,
       notice: null,
-      modal: null, // 组弹窗切片（D39 ∥ D38 · #817：`null` ∥ 组名八值闭集——七段名 + 添加弹窗 `providerAdd`〔三端对齐批 · KD-75 ①②〕；写者 = `renderer/mount-settings.mjs` `openSettingsModal` ∥ `closeSettingsModal`）
+      modal: null, // 组弹窗切片（D39 ∥ D38 · #817：`null` ∥ 组名十值闭集——七段名 + `providerAdd`（三端对齐批 · KD-75 ①②）∥ `mcpForm` ∥ `consultAdd`（添加入口弹窗统一批 · KD-77 ①②）；写者 = `renderer/mount-settings.mjs` `openSettingsModal` ∥ `closeSettingsModal`）
       configured: null,
       defaultModel: null,
       wizard: { step: 1, dismissed: false, notice: null },

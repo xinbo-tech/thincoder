@@ -23,13 +23,16 @@
  * `settings.addProviderTitle`、体 = 失败串（scope = `providers` ∥ `panel`）+ 段态词（= `providers` 面态，第二闸在途判据面）
  * + 单表（`providerAddBody`——段名 ∥ 段标题不复述）；卡携 `data-initial-focus="field"`（初始焦点 = 首控件，宿主取用）。
  * 渠道段体（`providers`）同批：两形常显表单退场 ⇒ 段尾添加钮（`settings:addProvider`）。
+ * **添加入口弹窗统一批增（2026-10-07 · 台账 #1054 · KD-77 ①②）**：`MCP_FORM_MODAL_GROUP`（`mcpForm`——MCP 表单
+ * 弹窗，新增 ∥ 编辑两态同框、标题逐态）∥ `CONSULT_ADD_MODAL_GROUP`（`consultAdd`——会诊添加弹窗，标题
+ * `settings.consultAddTitle`）；两卡皆携 `data-initial-focus="field"`；`settingsModalTree` **段态词恰一收正**（非表单支不再叠渲）。
  */
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 import { THEMES } from "../theme.mjs"
 import { wire } from "./chat-tool.mjs"
 import { channelFormTree, verifyControl } from "./settings-controls.mjs"
-import { agentBody, envBody, mcpBody, modelBody, modelIdOf, modelsBody, providerAddBody, providersBody, toolsBody } from "./settings-sections.mjs"
+import { agentBody, consultAddBody, envBody, mcpBody, mcpFormBody, modelBody, modelIdOf, modelsBody, providerAddBody, providersBody, toolsBody } from "./settings-sections.mjs"
 
 // 两导出面随 R7 出档 `settings-controls.mjs`；本档 re-export ⇒ 导出面零改（消费面 = 首启向导）。
 export { channelFormTree, verifyControl } from "./settings-controls.mjs"
@@ -50,6 +53,11 @@ export const SECTIONS = Object.freeze([
 /** 添加弹窗组名（KD-75 ①②）：**非段名** —— 弹窗体 = `providers` 段域的单表（无行族）；
  *  **名单源在此**（`SCOPES`（`mount-settings.mjs`）∥ `MODAL_READS` ∥ 开径出口（`mount-settings-exits.mjs`）三面同领 —— 零双抄）。 */
 export const ADD_MODAL_GROUP = "providerAdd"
+
+/** 添加弹窗组名二（KD-77 ①②）：**非段名** —— `mcpForm` = MCP 表单（新增 ∥ 编辑两态同框）∥ `consultAdd` = 会诊添加；
+ *  名单源同 `ADD_MODAL_GROUP`（三面同领 —— 零双抄；常量名 = 设计原文 `MCP_FORM_MODAL_GROUP`——§2.18 项 3）。 */
+export const MCP_FORM_MODAL_GROUP = "mcpForm"
+export const CONSULT_ADD_MODAL_GROUP = "consultAdd"
 
 /** 段态出词闭集（两态：`none` / `loading`）；`ready` ⇒ 行内容（零状态词）。 */
 export const STATE_WORD = Object.freeze({
@@ -270,6 +278,9 @@ function sectionBody(name, model, handlers) {
   if (name === "env") return [sectionStateNode(model.env.state), ...(model.env.state === "ready" ? envBody(model.env, handlers) : [])]
   if (name === "tools") return [sectionStateNode(model.tools.state), ...toolsBody(model.tools, handlers)]
   if (name === "models") return [sectionStateNode(model.models.state), ...(model.models.state === "ready" ? modelsBody(model.models, handlers) : [])]
+  // 两新组弹窗体（KD-77 ①②）：段态词恰一（本支首件）+ 体件；`mcpForm` 载入中零表单（闸住 `mcpFormBody` 内——沿段体旧闸）；`consultAdd` = `ready` 才落体（沿 models 段门）。
+  if (name === MCP_FORM_MODAL_GROUP) return [sectionStateNode(model.mcp.state), ...mcpFormBody(model.mcp, handlers)]
+  if (name === CONSULT_ADD_MODAL_GROUP) return [sectionStateNode(model.models.state), ...(model.models.state === "ready" ? consultAddBody(model.models, handlers) : [])]
   return [sectionStateNode(model.mcp.state), ...mcpBody(model.mcp, handlers, deps)]
 }
 
@@ -358,28 +369,37 @@ export function settingsTree(model, handlers = {}) {
  *  （`noticeNode` ∥ `sectionStateNode` ∥ `sectionBody`）⇒ 零第二实现；三关 handler 全在树面（背板 ∥ ✕ ∥ 卡内 Esc
  *  〔`stopPropagation` —— 不连带触 F-Esc 关页〕）；表外组 ⇒ `null`（防御档——调用面已验 `SCOPES`）。
  *  体节点携 `data-state` = 组段态（装配面第二闸在途判据面 —— 与页侧 `[data-state="loading"]` 同形）。
- *  **添加支（KD-75 ①②）**：`group = ADD_MODAL_GROUP` ⇒ 标题词 `settings.addProviderTitle`（非段名——词键直取）、
- *  体 = 单表（`sectionBody` 同支），段态 ∥ 失败串 scope 皆落 `providers` 面（同段域）；卡携 `data-initial-focus="field"`
- *  （初始焦点 = 表单首控件——宿主 `settings-modal.mjs` 取用；他组缺省 ✕，KD-68 ⑥ 零动）。
- *  **段态词单点（添加支）**：段体分支皆自带段态词（`sectionBody` 首件）⇒ 本支不再叠渲（免双同词节点——§2.16 条 1 体式 = 段态词恰一）。 */
+ *  **表单支三组（KD-75 ①② ∥ KD-77 ①②）**：`providerAdd` ∥ `mcpForm` ∥ `consultAdd` ⇒ 标题词键直取（非段名）；
+ *  段态 ∥ 失败串 scope 落同段域（`providers` ∥ `mcp` ∥ `models`）；卡携 `data-initial-focus="field"`（初始焦点 =
+ *  表单首控件——宿主 `settings-modal.mjs` 取用；他组缺省 ✕，KD-68 ⑥ 零动）；`mcpForm` 标题逐态（`form.editing` 判
+ *  ——`settings.mcp.addTitle` ∥ `settings.mcp.editTitle`）、`consultAdd` 标题 `settings.consultAddTitle`。
+ *  **段态词恰一（全支——KD-77 ④收正）**：段体分支皆自带段态词（`sectionBody` 首件）⇒ 本支不再叠渲
+ *  （修前非表单支叠渲：`env` 组 loading = 2 同词节点——六组同病）。 */
 export function settingsModalTree(state, group, handlers = {}) {
   const model = settingsModel(state)
   const isAdd = group === ADD_MODAL_GROUP
+  const isMcpForm = group === MCP_FORM_MODAL_GROUP
+  const isConsult = group === CONSULT_ADD_MODAL_GROUP
   const section = SECTIONS.find((s) => s.name === group)
-  if (section === undefined && !isAdd) return null
+  if (section === undefined && !isAdd && !isMcpForm && !isConsult) return null
   const onClose = typeof handlers?.onCloseModal === "function" ? handlers.onCloseModal : undefined
   const close = () => { if (typeof onClose === "function") onClose() }
-  const scope = isAdd ? "providers" : group
+  const scope = isAdd ? "providers" : isMcpForm ? "mcp" : isConsult ? "models" : group
   const notice = model.notice !== null && (model.notice.scope === scope || model.notice.scope === "panel") ? model.notice : null
-  const groupState = isAdd ? model.providers.state : model[group]?.state ?? "none"
-  const titleWord = isAdd ? "settings.addProviderTitle" : section.word
+  const groupState = isAdd ? model.providers.state : isMcpForm ? model.mcp.state : isConsult ? model.models.state : model[group]?.state ?? "none"
+  const editing = isMcpForm && typeof model.mcp.form?.editing === "string" && model.mcp.form.editing !== ""
+  const titleWord = isAdd
+    ? "settings.addProviderTitle"
+    : isMcpForm
+      ? editing ? "settings.mcp.editTitle" : "settings.mcp.addTitle"
+      : isConsult ? "settings.consultAddTitle" : section.word
   return {
     backdrop: { tag: "div", props: { class: "settings-modal-backdrop", onClick: close }, children: [] },
     card: {
       tag: "div",
       props: {
         class: "settings-modal", role: "dialog", "aria-modal": "true", "aria-label": t(titleWord),
-        "data-initial-focus": isAdd ? "field" : undefined,
+        "data-initial-focus": isAdd || isMcpForm || isConsult ? "field" : undefined,
         onKeydown: (event) => { if (event?.key !== "Escape") return; event.stopPropagation?.(); close() },
       },
       children: [
@@ -387,7 +407,7 @@ export function settingsModalTree(state, group, handlers = {}) {
           { tag: "h2", props: { class: "settings-title" }, children: [t(titleWord)] },
           { tag: "button", props: wire({ class: "settings-close", type: "button", "data-action": "settings:modalClose", "aria-label": t("settings.close") }, onClose), children: [] },
         ] },
-        { tag: "div", props: { class: "settings-modal-body", "data-state": groupState }, children: [noticeNode(notice), ...(isAdd ? [] : [sectionStateNode(groupState)]), ...sectionBody(group, model, handlers)] },
+        { tag: "div", props: { class: "settings-modal-body", "data-state": groupState }, children: [noticeNode(notice), ...sectionBody(group, model, handlers)] },
       ],
     },
   }

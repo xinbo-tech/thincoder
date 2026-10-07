@@ -6,6 +6,9 @@ import { t } from "./i18n.js"
 import { openModelMenu } from "./model-menu.js"
 import { SS, labelFor, effortPayloadValue } from "./settings-state.js"
 import { buildEffortSelect } from "./settings-widgets.js"
+// 环 import（延迟解引用——两模块顶层零跨环读取，环安全）：会诊弹窗（#1054）消费本档行族两件
+// （`mountSlot` ∥ `setRowModel`），本档入口改开框反向消费其 `openConsultDialog`。
+import { openConsultDialog } from "./settings-consult-dialog.js"
 
 /** Read every consult row's live state from the DOM (including half-filled — a rebuild
  *  must re-render them intact instead of dropping the user's in-progress row). */
@@ -110,7 +113,8 @@ export function mountModelMenus() {
   }
 }
 
-function mountSlot(slot, { provider, model, onPick, onClear }) {
+/** 槽挂载（模型菜单触发钮——行族单点；会诊弹窗追加行同用 ⇒ 导出，`SETTINGS.md` §2.17 ②）。 */
+export function mountSlot(slot, { provider, model, onPick, onClear }) {
   if (!slot || slot.dataset.mounted === "1") return
   slot.dataset.mounted = "1"
   const models = SS.getModels?.() || []
@@ -135,7 +139,7 @@ function mountSlot(slot, { provider, model, onPick, onClear }) {
   }
 }
 
-function setRowModel(row, provider, model) {
+export function setRowModel(row, provider, model) {
   row.dataset.provider = provider
   row.dataset.model = model
   const btn = row.querySelector(".consult-model-slot .model-menu-btn")
@@ -197,19 +201,12 @@ export function bindConsultRows() {
     console.error("[consult] container or add button missing — rows:", !!rows, "add:", !!addBtn)
     return
   }
-  addBtn.onclick = () => {
-    try {
-      if (rows.querySelectorAll(".consult-row").length >= 5) return
-      const div = document.createElement("div")
-      div.className = "key-field consult-row"
-      div.innerHTML = '<span class="consult-model-slot"></span><button class="consult-del" title="' + t("settings.consultRemove") + '">✕</button>'
-      rows.appendChild(div)
-      mountSlot(div.querySelector(".consult-model-slot"), { provider: "", model: "", onPick: ({ provider, model }) => setRowModel(div, provider, model) })
-      rows.dispatchEvent(new window.Event("consult-rows-changed", { bubbles: true }))
-    } catch (e) {
-      console.error("[consult] add row failed:", e)
-    }
-  }
+  // 入口（#1054 改开框）：点击 = 开会诊添加弹窗；上限 5 = `.consult-row` 数 ≥ 5 ⇒ 钮 disabled
+  // （行集变动随刷——「consult-rows-changed」两径：弹窗提交追加 ∥ 行 ✕ 删除）。
+  addBtn.onclick = () => openConsultDialog()
+  const refreshAddBtn = () => { addBtn.disabled = rows.querySelectorAll(".consult-row").length >= 5 }
+  refreshAddBtn()
+  rows.addEventListener("consult-rows-changed", refreshAddBtn)
   for (const row of rows.querySelectorAll(".consult-row")) {
     row.querySelector(".consult-del")?.addEventListener("click", () => { row.remove(); rows.dispatchEvent(new window.Event("consult-rows-changed", { bubbles: true })) })
 

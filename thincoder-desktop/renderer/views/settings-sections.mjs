@@ -12,7 +12,8 @@
  * 与词表（`reasonWord`），本档零 import 反向（无环）—— **R7 起 = 六段体**（env ∕ models 两新段
  * 经本档 re-export 面入分派；MCP 体第三参 `deps` 供 `reasonWord` 出词）。
  * 导出面：`modelHeadNode` / `modelChoicesTree` 供首启向导第二步复用（单一 owner、零副本）；`providersBody` = D37 拆档 re-export（消费面零改）；
- * 三端对齐批：`providerAddBody`（添加弹窗体）随渠道族同档经本档 re-export。
+ * 三端对齐批：`providerAddBody`（添加弹窗体）随渠道族同档经本档 re-export；
+ * 添加入口弹窗统一批（KD-77 ①②）：`mcpFormBody`（MCP 表单弹窗体）∥ `consultAddBody`（会诊添加弹窗体）同径 re-export。
  * 纪律：零 DOM（描述符树）；文案一律经 `t()`；零 `node:` / 零裸包 / 零 `store.mjs` import。
  */
 import { t } from "../i18n.mjs"
@@ -22,11 +23,11 @@ import { wire } from "./chat-tool.mjs"
 export { agentBody, NAMED_FIELDS } from "./settings-agent.mjs"
 // 「工具与服务」段体（本批 = 索引族行）随 R2 拆出 `./settings-sections-tools.mjs`；本档 re-export ⇒ 导出面零改。
 export { toolsBody } from "./settings-sections-tools.mjs"
-// R7 两新段体（环境 ∕ 咨询与顾问）自立出档；本档 re-export ⇒ 分派面零改。
+// R7 两新段体（环境 ∕ 咨询与顾问）自立出档；本档 re-export ⇒ 分派面零改；KD-77 ②：同档增出 `consultAddBody`（会诊添加弹窗体）。
 export { envBody } from "./settings-sections-env.mjs"
-export { modelsBody } from "./settings-sections-models.mjs"
-// MCP 段体（R7 随两钮先拆后改 —— `-mcp.mjs`）同拍；本档 re-export ⇒ 分派面零改。
-export { mcpBody } from "./settings-sections-mcp.mjs"
+export { consultAddBody, modelsBody } from "./settings-sections-models.mjs"
+// MCP 段体（R7 随两钮先拆后改 —— `-mcp.mjs`）同拍；本档 re-export ⇒ 分派面零改；KD-77 ①：同档增出 `mcpFormBody`（MCP 表单弹窗体）。
+export { mcpBody, mcpFormBody } from "./settings-sections-mcp.mjs"
 // 渠道族（行族 + 段体）随 D37 先拆后改出档 `./settings-sections-providers.mjs`；本档 re-export ⇒ 分派面零改。
 // 三端对齐批：同档增出 `providerAddBody`（添加弹窗体 —— `views/settings.mjs` `providerAdd` 支消费）随本行 re-export。
 export { providerAddBody, providersBody } from "./settings-sections-providers.mjs"

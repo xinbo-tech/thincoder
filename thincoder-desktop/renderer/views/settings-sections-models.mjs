@@ -6,14 +6,17 @@
  *  ① **consult 行族** —— 逐行 = 名（`provider · model`）+ effort `select`（选项 = 「—」+ 该模型 spec 枚举
  *     [`effortEnum`]；枚举空 ⇒ 零控件 —— VSC `effortSelectView` 同判）+ 移除钮；行数 ≤5（VSC 同上限）；
  *     行族上状态行（在场 / OFF 两词）；
- *  ② **增行表单** —— provider `select`（候选 = 已配渠道）+ model `select`（候选 = 现取 `model:list` 投影）
- *     + `Add consult model` 钮（两值齐 ∧ 行未满才可用）；
+ *  ② **添加入口**（KD-77 ②）—— 段尾「+ Add consult model」钮（锚 `settings:consultAddOpen`；行满 5 ⇒ `disabled`）
+ *     + 弹窗体（`consultAddBody`）—— provider `select`（候选 = 已配渠道）+ model `select`（候选 = 现取 `model:list` 投影）
+ *     + `Add consult model` 钮（两值齐 ∧ 行未满才可用）+ 取消；
  *  ③ **advisor 行** —— provider `select`（空项 = `Inherit`）+ model `select` + `Save` 钮（空 provider ⇒
  *     清两键回 Inherit；provider + model ⇒ 落两键；形不齐 ⇒ 零发送）。
  *  现值恒在场（禁吞）：model 候选取表外现值 ⇒ **自成一选项**（沿档位控件同律 —— 不吞 · 零改写）。
  * 三态：`none` / `loading` ⇒ 段态词承载（本档零节点）；`ready` ⇒ 上述面。
  * 纪律：零 DOM（描述符树）；文案一律经 `t()`；缺 handlers ⇒ 控件 `disabled`（诚实非死控）；
  * 零 `node:` ∕ 零裸包。
+ * **添加入口弹窗统一批（2026-10-07 · 台账 #1054 · KD-77 ②）**：原内联增行表单退场——段尾添加入口钮 + 弹窗体
+ * （导出面 +`consultAddBody`）；开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `models.picker`）；成功 ⇒ 关框。
  */
 import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
@@ -106,17 +109,48 @@ function selectNode(props, options, handler) {
   }
 }
 
-/** models 段体：consult 行族 + 增行表单 + advisor 行 —— `section` = 面模型投影（渲染面零推导）。 */
-export function modelsBody(section, handlers = {}) {
+/** 会诊添加入口钮（KD-77 ②——段尾）：词 `settings.consultAdd`（既有）；`consult.length >= 5` ⇒ `disabled`
+ *  （对齐「行未满才可用」）；缺 handler ⇒ `wire` 落 `disabled`（诚实非死控）。 */
+function consultAddButton(consult, handlers) {
+  const onOpen = consult.length >= 5 || typeof handlers?.onConsultAddOpen !== "function" ? undefined : () => handlers.onConsultAddOpen()
+  return {
+    tag: "button",
+    props: wire({ class: "settings-submit", type: "button", "data-action": "settings:consultAddOpen" }, onOpen),
+    children: [t("settings.consultAdd")],
+  }
+}
+
+/** 会诊添加弹窗体（KD-77 ② —— `sectionBody("consultAdd")` 消费；载闸 = `ready` 归分派面）：两 select（选型面照现）
+ *  + 提交（词 `settings.consultAdd`——两值齐 ∧ 行未满才可用）+ 取消（词 `settings.cancel`；锚 `settings:consultCancel`）；
+ *  根件 = `form`（宿主 `data-initial-focus="field"` 取面：首控件 = provider select）。 */
+export function consultAddBody(section, handlers = {}) {
   const consult = listOf(section?.consult)
   const providers = listOf(section?.providers)
   const picker = { provider: section?.picker?.provider ?? "", rows: listOf(section?.picker?.rows), model: section?.picker?.model ?? null }
-  const advisorPicker = { provider: section?.advisorPicker?.provider ?? "", rows: listOf(section?.advisorPicker?.rows), model: section?.advisorPicker?.model ?? null }
   const onPickProvider = typeof handlers?.onConsultPickProvider === "function" ? (event) => handlers.onConsultPickProvider(String(event?.target?.value ?? "")) : undefined
   const onPickModel = typeof handlers?.onConsultPickModel === "function" ? (event) => handlers.onConsultPickModel(String(event?.target?.value ?? "")) : undefined
   const onAdd = picker.provider !== "" && picker.model !== null && consult.length < 5 && typeof handlers?.onConsultAdd === "function"
     ? () => handlers.onConsultAdd()
     : undefined
+  const onCancel = typeof handlers?.onConsultCancel === "function" ? handlers.onConsultCancel : undefined
+  return [{
+    tag: "form",
+    props: { class: "settings-form", "data-form": "consult", "data-field": "consult.add" },
+    children: [
+      selectNode({ class: "settings-field", "data-consult-pick": "provider", "aria-label": t("settings.consultProvider") }, providerOptions(providers, picker.provider, t("settings.pickProvider")), onPickProvider),
+      selectNode({ class: "settings-field", "data-consult-pick": "model", "aria-label": t("settings.providers.modelLabel") }, modelOptions(picker.rows, picker.model, t("settings.pickModel")), onPickModel),
+      { tag: "button", props: wire({ class: "settings-submit", type: "button", "data-action": "settings:consultAdd" }, onAdd), children: [t("settings.consultAdd")] },
+      { tag: "button", props: wire({ class: "settings-submit", type: "button", "data-action": "settings:consultCancel" }, onCancel), children: [t("settings.cancel")] },
+    ],
+  }]
+}
+
+/** models 段体（KD-77 ②）：consult 行族 + advisor 行 + 段尾添加入口钮（原内联增行表单退场 ⇒ 弹窗体
+ *  `consultAddBody`）；`section` = 面模型投影（渲染面零推导）。 */
+export function modelsBody(section, handlers = {}) {
+  const consult = listOf(section?.consult)
+  const providers = listOf(section?.providers)
+  const advisorPicker = { provider: section?.advisorPicker?.provider ?? "", rows: listOf(section?.advisorPicker?.rows), model: section?.advisorPicker?.model ?? null }
   const onAdvisorProvider = typeof handlers?.onAdvisorPickProvider === "function" ? (event) => handlers.onAdvisorPickProvider(String(event?.target?.value ?? "")) : undefined
   const onAdvisorModel = typeof handlers?.onAdvisorPickModel === "function" ? (event) => handlers.onAdvisorPickModel(String(event?.target?.value ?? "")) : undefined
   const onAdvisorSave = typeof handlers?.onAdvisorSave === "function" ? () => handlers.onAdvisorSave() : undefined
@@ -132,19 +166,6 @@ export function modelsBody(section, handlers = {}) {
       }],
     },
     ...consult.map((row) => consultRowNode(row, handlers)),
-    {
-      tag: "div",
-      props: { class: "settings-field-row", "data-field": "consult.add" },
-      children: [
-        selectNode({ class: "settings-field", "data-consult-pick": "provider", "aria-label": t("settings.consultProvider") }, providerOptions(providers, picker.provider, t("settings.pickProvider")), onPickProvider),
-        selectNode({ class: "settings-field", "data-consult-pick": "model", "aria-label": t("settings.providers.modelLabel") }, modelOptions(picker.rows, picker.model, t("settings.pickModel")), onPickModel),
-        {
-          tag: "button",
-          props: wire({ class: "settings-row-action", type: "button", "data-action": "settings:consultAdd" }, onAdd),
-          children: [t("settings.consultAdd")],
-        },
-      ],
-    },
     { tag: "div", props: { class: "settings-field-label", "data-subtitle": "advisor" }, children: [t("settings.advisorSection")] },
     {
       tag: "div",
@@ -160,5 +181,6 @@ export function modelsBody(section, handlers = {}) {
         },
       ],
     },
+    consultAddButton(consult, handlers),
   ]
 }

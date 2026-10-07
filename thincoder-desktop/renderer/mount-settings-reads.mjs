@@ -131,17 +131,19 @@ export function createReads(deps = {}) {
     })
   }
 
-  /** MCP 段读数（`mcp:list`：只列已配，不连接）；展开面切片（`details`）随段态保留（复读不清展开面）。 */
+  /** MCP 段读数（`mcp:list`：只列已配，不连接）；展开面切片（`details`）随段态保留（复读不清展开面）；
+   *  **KD-77 ①（2026-10-07 · 台账 #1054）**：表单切片（`form`）同并持 —— 读面零复位（复位权仅在出口族显式点，
+   *  同 #671 口径）；不并持则弹窗读取链（`MODAL_READS.mcpForm`）落地即清掉「编辑态 = 开径后写」的值。 */
   async function loadMcp() {
     setSettings({ mcp: { ...store.get().settings?.mcp, state: "loading" } })
     const receipt = await ask("mcp:list")
     if (receipt.ok !== true) {
-      setSettings({ mcp: { state: "none", servers: [], details: {} } })
+      setSettings({ mcp: { ...store.get().settings?.mcp, state: "none", servers: [], details: {} } }) // 并持现切片（`form` 存活）
       report("mcp", receipt, "mcp:list")
       return
     }
     const held = store.get().settings?.mcp ?? {}
-    setSettings({ notice: null, mcp: { state: "ready", servers: listOf(receipt.servers), details: held.details ?? {} } })
+    setSettings({ notice: null, mcp: { ...held, state: "ready", servers: listOf(receipt.servers), details: held.details ?? {} } }) // 并持现切片（`form` 存活）
   }
 
   /** env 段读数（`settings:env` 读 = `{}` —— R7）：`proxy` / `shell` 两键直落；`test` 结果 = 瞬时读数
