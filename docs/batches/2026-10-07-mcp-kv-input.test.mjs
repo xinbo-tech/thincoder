@@ -15,12 +15,13 @@
  */
 import test from "node:test"
 import assert from "node:assert/strict"
-import { readdirSync, readFileSync, statSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-const ROOT = resolve(HERE, "..", "..")
+// tmp 直跑适配（`add-dialog-verify/` 深度 3）：两候选根取命中——原位（depth 2）∥ tmp 两处皆兼容
+const ROOT = [resolve(HERE, "..", ".."), resolve(HERE, "..", "..", "..")].find((d) => existsSync(join(d, "thincoder-desktop")))
 const rel = (p) => join(ROOT, p)
 const mod = (p) => import(pathToFileURL(rel(p)).href)
 const src = (p) => readFileSync(rel(p), "utf8")
@@ -39,6 +40,7 @@ GlobalRegistrator.register()
 if (typeof Element.prototype.scrollIntoView !== "function") Element.prototype.scrollIntoView = function () {} // happy-dom 缺项垫片
 
 const vscMcp = await mod("thincoder-vscode/webview/settings-mcp.js")
+const vscMcpDialog = await mod("thincoder-vscode/webview/settings-mcp-dialog.js")
 
 // ─── 共用夹具 ─────────────────────────────────────────────────────────────────────────────
 
@@ -55,12 +57,12 @@ function flat(node, out = []) {
   return out
 }
 
-/** MCP 段体树（`state = ready` ∥ 零服务器 ∥ 注入 form）。 */
-const bodyOf = (form) => flat(mcpView.mcpBody({ state: "ready", servers: [], details: {}, form }, {}, DEP))
+/** MCP 表单树（`state = ready` ∥ 弹窗体分支 —— KD-77 ①：表单只住 `mcpFormBody`）。 */
+const bodyOf = (form) => flat(mcpView.mcpFormBody({ state: "ready", servers: [], details: {}, form }, {}))
 
-/** 表单元素（真视图描述符树 + 真 `dom.build`——两个宿主共用）。 */
+/** 表单元素（真视图描述符树 + 真 `dom.build`——两个宿主共用；表单树 = `mcpFormBody`）。 */
 function formEl(form, handlers = {}) {
-  const nodes = mcpView.mcpBody({ state: "ready", servers: [], details: {}, form }, handlers, DEP)
+  const nodes = mcpView.mcpFormBody({ state: "ready", servers: [], details: {}, form }, handlers)
   return dom.build(nodes.find((n) => n?.props?.["data-form"] === "mcp"))
 }
 
@@ -93,6 +95,7 @@ function harness(form, servers = []) {
     slot: '[data-slot="settings"]',
     formOf: (event) => event?.currentTarget?.closest?.("form") ?? null,
     invalidateDrafts: () => {},
+    openModal: () => true, closeModal: () => {}, // KD-77 ①：`onMcpEdit` 开径 = 先开弹窗后写 form（缺件 ⇒ 零写）
   })
   return { exits, calls, form: () => state.settings.mcp.form }
 }
@@ -130,7 +133,7 @@ test("L1-2 桌面构树：零项 ⇒ 零行 + 添加钮恒在场（form 缺 ∥ 
 
 test("L1-3 桌面构树：加删 handler 绑定（有 ⇒ onClick 函数 ∥ 缺 ⇒ disabled 诚实非死控）", () => {
   const form = { editing: "srv", type: "stdio", kv: { env: [{ t: 5, k: "A", v: "1" }], headers: [], wsHeaders: [] } }
-  const wired = bodyOf(form)[0] && flat(mcpView.mcpBody({ state: "ready", servers: [], details: {}, form }, { onMcpKvAdd: () => {}, onMcpKvRemove: () => {} }, DEP))
+  const wired = bodyOf(form)[0] && flat(mcpView.mcpFormBody({ state: "ready", servers: [], details: {}, form }, { onMcpKvAdd: () => {}, onMcpKvRemove: () => {} }))
   const addBtn = wired.find((n) => n.props?.["data-kv-group"] === "env")
   const delBtn = wired.find((n) => n.props?.["data-action"] === "settings:mcpKvRemove")
   assert.equal(typeof addBtn.props.onClick, "function", "添加钮已接线")
@@ -156,7 +159,7 @@ test("L1-4 桌面构树：行 id 唯一 ∥ 命名 = `mcp-<group>-<k|v>-<t>` ∥
   assert.deepEqual(nodes.filter((n) => n.props?.name === "env-k").length, 3, "FormData 载荷键 = `<group>-k`")
   const draftMarks = nodes.filter((n) => n.props?.["data-kv-part"] !== undefined && n.props["data-draft"] === "")
   assert.equal(draftMarks.length, 6, "两格皆申报草稿（#604 捕获域）")
-  const editNodes = flat(mcpView.mcpBody({ state: "ready", servers: [], details: {}, form: { editing: null, type: "stdio", kv: { env: [], headers: [], wsHeaders: [] } } }, {}, DEP))
+  const editNodes = flat(mcpView.mcpFormBody({ state: "ready", servers: [], details: {}, form: { editing: null, type: "stdio", kv: { env: [], headers: [], wsHeaders: [] } } }, {}))
   const nonRow = editNodes.filter((n) => n.props?.["data-draft"] === "" && n.props?.["data-kv-part"] === undefined).map((n) => n.props.id)
   assert.deepEqual(nonRow, ["mcp-name", "mcp-command", "mcp-args"], "非行控件同携（保输入链下半 = 草稿闸按 id 复填）")
   console.log(`[读数] L1-4: ${ids.length} id 唯一 ✓ · data-draft 行件 6 ∥ 非行 ${nonRow.length} ✓`)
@@ -267,10 +270,11 @@ test("L3-1 VSC 真 webview：加行 ∥ 保存载荷含逗号（`KEY=va,lue` 不
   window._vscode = { postMessage: (m) => posts.push(m) }
   window._mcpServers = []
   window._confirmSecretDelete = () => {}
-  document.body.innerHTML = `<div id="mcp-list"></div><button id="mcp-add-btn"></button>` + vscMcp.mcpFormHtml()
+  document.body.innerHTML = `<div id="mcp-list"></div><button id="mcp-add-btn"></button>`
   vscMcp.bindMcpControls()
-  vscMcp.openMcpForm(null)
-  assert.equal(document.getElementById("mcp-form").style.display, "block", "表单开")
+  vscMcpDialog.openMcpDialog(null)
+  assert.ok(document.getElementById("mcp-dialog") !== null, "弹窗在场（表单入框 —— KD-77 ①）")
+  assert.ok(document.getElementById("mcp-form") !== null, "表单在框体")
   assert.equal(document.querySelectorAll("[data-kv-row]").length, 0, "零项 ⇒ 零行")
   document.querySelector('[data-kv-add="env"]').click()
   assert.equal(document.querySelectorAll('[data-kv-row="env"]').length, 1, "加行 ⇒ 尾附一空行")
@@ -292,10 +296,10 @@ test("L3-2 VSC 真 webview：删行 ∥ 预填—保存互逆（零修改保存 
   window._vscode = { postMessage: (m) => posts.push(m) }
   window._mcpServers = []
   window._confirmSecretDelete = () => {}
-  document.body.innerHTML = `<div id="mcp-list"></div><button id="mcp-add-btn"></button>` + vscMcp.mcpFormHtml()
+  document.body.innerHTML = `<div id="mcp-list"></div><button id="mcp-add-btn"></button>`
   vscMcp.bindMcpControls()
   // 预填 ∥ 删
-  vscMcp.openMcpForm({ name: "srv", command: "npx", env: { A: "1", B: "va,lue" } })
+  vscMcpDialog.openMcpDialog({ name: "srv", command: "npx", env: { A: "1", B: "va,lue" } })
   let rows = document.querySelectorAll('[data-kv-row="env"]')
   assert.equal(rows.length, 2, "预填 = 逐项一行（插入序）")
   assert.deepEqual([...rows].map((r) => r.querySelector('[data-kv-part="v"]').value), ["1", "va,lue"], "值 = 字面")
@@ -308,13 +312,13 @@ test("L3-2 VSC 真 webview：删行 ∥ 预填—保存互逆（零修改保存 
   const edit = posts.find((m) => m.type === "editMcp")
   assert.deepEqual(edit.config.env, { B: "va,lue" }, "删后保存 ⇒ 载荷 = 余行")
   // 预填—保存互逆（零修改 ⇒ 载荷与现值同）
-  vscMcp.openMcpForm({ name: "srv", command: "npx", env: { A: "1", B: "va,lue" } })
+  vscMcpDialog.openMcpDialog({ name: "srv", command: "npx", env: { A: "1", B: "va,lue" } })
   posts.length = 0
   document.getElementById("mcp-save-btn").click()
   const again = posts.find((m) => m.type === "editMcp")
   assert.deepEqual(again.config.env, { A: "1", B: "va,lue" }, "read(render(cfg)) ≡ cfg（序保持 ∥ 值逐字）")
   // 全空 ⇒ 该字段不设（清空 = 删项）
-  vscMcp.openMcpForm({ name: "srv", command: "npx", env: { A: "1" } })
+  vscMcpDialog.openMcpDialog({ name: "srv", command: "npx", env: { A: "1" } })
   document.querySelector('[data-kv-row="env"] [data-kv-del]').click()
   posts.length = 0
   document.getElementById("mcp-save-btn").click()
@@ -328,9 +332,9 @@ test("L3-3 VSC 真 webview：三型组切换 ∥ 零项零行（三组）", () =
   window._vscode = { postMessage: (m) => posts.push(m) }
   window._mcpServers = []
   window._confirmSecretDelete = () => {}
-  document.body.innerHTML = `<div id="mcp-list"></div><button id="mcp-add-btn"></button>` + vscMcp.mcpFormHtml()
+  document.body.innerHTML = `<div id="mcp-list"></div><button id="mcp-add-btn"></button>`
   vscMcp.bindMcpControls()
-  vscMcp.openMcpForm(null)
+  vscMcpDialog.openMcpDialog(null)
   assert.equal(document.querySelectorAll('[data-kv-add]').length, 3, "三组各一添加钮")
   for (const group of ["env", "headers", "ws-headers"]) {
     assert.equal(document.querySelectorAll(`[data-kv-row="${group}"]`).length, 0, `${group} 零项零行`)

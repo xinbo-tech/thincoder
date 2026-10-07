@@ -234,7 +234,7 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 5. **段态词恰一（同笔收正）**——`views/settings.mjs` `settingsModalTree` 现对非 add 组叠渲段态词（段体自带一件 + 支内再供一件）⇒ 去叠渲件（修前设计轮实测：`env` 组 loading = 2 节点 ∥ `providerAdd` = 1）。
 6. **计数（D3）**——词键 +4（`settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle`（i18n-settings.mjs）∥ `settings.consultAddTitle`（i18n-views.mjs）——两语）；弹窗值集 **八 ⇒ 十**（+`mcpForm` ∥ `consultAdd`——`SCOPES` 派生随动）；
 `MODAL_READS` 八组 ⇒ 十组（+2 行）；`store.mjs` 闭集注释 八值 ⇒ 十值（注释级）；通道 0 新（`mcp:save` ∥ `mcp:update` ∥ `settings:agent` 载荷形零改）；新档 0；CSS 0。
-7. **判据**——机检 = 批内件 `docs/batches/2026-10-07-add-dialog-unify.test.mjs`（**已落**——树面：两新组卡 ∥ 段体零表单 + 两入口钮 ∥ 焦点声明；出口面：入口 ⇒ `openSettingsModal` 两值 ∥ 成功径 ⇒ `closeModal` ∥ 取消 ⇒ 关框；页脚：`addProvider` ⇒ `openSettings(ADD_MODAL_GROUP)`；词面：四新键两语在场）；
+7. **判据**——机检 = 批内件 `docs/batches/2026-10-07-add-dialog-unify-desktop.test.mjs`（**已落 · 5/5**——树面：两新组卡 ∥ 段体零表单 + 两入口钮 ∥ 焦点声明；出口面：入口 ⇒ `openSettingsModal` 两值 ∥ 成功径 ⇒ `closeModal` ∥ 取消 ⇒ 关框；页脚：`addProvider` ⇒ `openSettings(ADD_MODAL_GROUP)`；词面：四新键两语在场）；
 真机 = 人工走查（MCP 新增 ∥ 编辑两态：五路关 ∥ 开框重置 ∥ 拒径不关框 ∥ 提交成功后列表随动；会诊：入口满 5 禁用 ∥ 提交成功关框；页脚直开）。
 8. **边界**——MCP 字段集 ∥ 型组 ∥ kv 行式机制 ∥ 探测 / 重连语义零改；会诊行渲染 ∥ effort 档 ∥ advisor 面零改；七段值面其余语义 ∥ 现有页 ∥ 核 ∥ `thincoder-render-core` ∥ CLI ∥ VSC 零触。
 
@@ -385,7 +385,7 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 | 15 | `thincoder-desktop/renderer/i18n.mjs` | **420 ⇒ 425**（键数链注续链；**越 300 在册**——非结构性触碰 ⇒ 续期） | 词面 |
 | 16 | `thincoder-desktop/renderer/mount-settings-reads.mjs`（出表件） | **204 ⇒ 206**（`loadMcp` 成功 ∥ 失败两径改「并持现切片」——新弹窗编辑态前提；批档 §5.2 决策 #1） | 读面 |
 | 17 | 零改面 | `thincoder-desktop/renderer/settings-modal.mjs` ∥ `thincoder-desktop/renderer/settings.css` ∥ `renderer/settings-modal.css` ∥ `src/main/**` ∥ 核 ∥ `thincoder-render-core` ∥ CLI ∥ VSC（VSC 同批自改——本端零触） | 零触 |
-| 18 | 批内件 | `docs/batches/2026-10-07-add-dialog-unify.test.mjs`（**已落**；随批留存 · 不进仓套件） | 全批 |
+| 18 | 批内件 | `docs/batches/2026-10-07-add-dialog-unify.test.mjs` ∥ `docs/batches/2026-10-07-add-dialog-unify-desktop.test.mjs`（**已落** · 8/8 ∥ 5/5；随批留存 · 不进仓套件） | 全批 |
 
 零触面：段集 ∥ 段序 ∥ 七段值面语义 ∥ 现有页 ∥ 通道载荷形 ∥ 核 ∥ `thincoder-render-core` ∥ CLI；测试面随修随加——不占设计条目（2026-09-27 裁定）。
 

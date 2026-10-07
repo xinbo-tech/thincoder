@@ -17,7 +17,7 @@
  *          ∥ 宿主 re-export 同源）；
  *   波 2 腿 ⑤ 复用链 ∥ 状态：store 初值 `modal: null` ∥ 七组 → 读取链（逐组通道直测）∥ 闭集验证（表外 ⇒ 拒 + 记错 + 零动）
  *          ∥ 占槽拒 ∥ 开 ∥ 关 = 本组面态复位（限本组）∥ 出口映射（`exits.handlers` 全表注入 —— 源扫 + 树面活件）；
- *   波 2 腿 ⑥ 样式 ∥ 链序：z-20/21 ∥ 零 `--` 定义 ∥ 零 `@media` ∥ `settings.css` 零触（304 在盘 ∥ 无 modal 规则）
+ *   波 2 腿 ⑥ 样式 ∥ 链序：z-20/21 ∥ 零 `--` 定义 ∥ 零 `@media` ∥ `settings.css` 零触（303 在盘 ∥ 无 modal 规则）
  *          ∥ `index.html` 链序（settings.css 后）∥ 确认族 z 40/41 保留。
  *
  * 本件不进仓套件（批内件 · 随批留存）；跑法（任意 cwd —— 路径按本档自身位置解析）：
@@ -25,17 +25,20 @@
  */
 import test from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { createRequire } from "node:module"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import "../../thincoder-desktop/test/rc-resolve.mjs" // `/rc/` 解析钩子（须先于渲染档取件注册）
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..")
+const HERE = dirname(fileURLToPath(import.meta.url))
+// tmp 直跑适配（`add-dialog-verify/` 深度 3）：两候选根取命中——原位（depth 2）∥ tmp 两处皆兼容
+const ROOT = [join(HERE, "..", ".."), join(HERE, "..", "..", "..")].find((d) => existsSync(join(d, "thincoder-desktop")))
 const read = (rel) => readFileSync(join(ROOT, rel), "utf8")
 const at = (rel) => pathToFileURL(join(ROOT, rel)).href
 const require = createRequire(import.meta.url)
 const contentLines = (text) => (text.endsWith("\n") ? text.split("\n").length - 1 : text.split("\n").length)
+
+await import(at("thincoder-desktop/test/rc-resolve.mjs")) // `/rc/` 解析钩子（须先于渲染档取件注册）
 
 const i18n = await import(at("thincoder-desktop/renderer/i18n.mjs"))
 i18n.initDict({ locale: "zh" })
@@ -139,12 +142,12 @@ const GROUP_FIXTURES = {
   agent: {
     settings: { agent: { state: "ready", fields: [{ path: "custom.key", kind: "string" }] } },
     marker: (n) => n?.props?.["data-field-name"] === "agent.maxTurns",
-    probe: "settings:saveAgent",
+    probe: null, // 面已改：具名控件区（零 data-action）—— 代表动作键退场（本组循环已分支跳过）
   },
   mcp: {
     settings: { mcp: { state: "ready", servers: [{ name: "s1", kind: "command" }], details: {}, form: null } },
     marker: (n) => n?.props?.["data-mcp"] === "s1",
-    probe: "settings:addMcp",
+    probe: "settings:mcpAddOpen",
   },
   env: {
     settings: { env: { state: "ready", proxy: { uri: "", web: true, model: false }, shell: { current: null, candidates: [] }, test: null } },
@@ -424,9 +427,9 @@ test("波2腿⑤ 复用链 ∥ 状态：初值 ∥ 读取链逐组 ∥ 闭集验
     face.detach() // 防重绘（平 node 零 DOM 建面）
     const settle = () => new Promise((done) => setTimeout(done, 0))
 
-    // 七组 → 读取链（逐组通道直测 —— 单源 = MODAL_READS 表）
+    // 七组 → 读取链（逐组通道直测 —— 单源 = MODAL_READS 表；#1054 轮实读收正：providers 链 = 名单 + 两档目录读）
     const READ_CHANNEL = {
-      providers: ["provider:list"], model: ["provider:list"], agent: ["settings:agent"], mcp: ["mcp:list"],
+      providers: ["provider:list", "model:catalog", "model:catalog"], model: ["provider:list"], agent: ["settings:agent"], mcp: ["mcp:list"],
       env: ["settings:env"], tools: ["settings:tools", "index:status"], models: ["settings:agent"],
     }
     for (const name of SETTINGS_GROUPS) {
@@ -489,6 +492,8 @@ test("波2腿⑤ 复用链 ∥ 状态：初值 ∥ 读取链逐组 ∥ 闭集验
       const live = typeof node.props.onClick === "function"
       assert.ok(live || node.props.disabled === true, `${name} ${node.props["data-action"]}：活件或显式禁用（零静默死控）`)
     }
+    // agent 段体 = 具名控件区（P15 改面：零段体 `data-action`）—— 代表动作键退场（锚 = 波2腿④b 具名控件腿）
+    if (GROUP_FIXTURES[name].probe === null) continue
     const probe = byAction(tree.card, GROUP_FIXTURES[name].probe)
     assert.ok(probe !== null, `${name} 代表动作 ${GROUP_FIXTURES[name].probe} 在场`)
     assert.equal(typeof probe.props.onClick, "function", `${name} 代表动作活件（出口全表注入）`)
@@ -517,10 +522,10 @@ test("波2腿⑥ 样式 ∥ 链序：z-20/21 ∥ 零新变量 ∥ 零新断点 �
   // 样式纪律：零新变量 ∥ 零新断点
   assert.equal(css.split("\n").filter((line) => /^\s*--[\w-]+\s*:/.test(line)).length, 0, "零 `--` 定义")
   assert.equal(stripComments(css).includes("@media"), false, "零 `@media`（源面；注释内字面不计）")
-  // settings.css 零触（304 在盘 ∥ 无 modal 规则）
+  // settings.css 零触（303 在盘 ∥ 无 modal 规则 —— 行数为指纹值，随实读收正）
   const settings = read("thincoder-desktop/renderer/settings.css")
-  assert.equal(contentLines(settings), 304, "settings.css 行数不动（304 在盘）")
-  assert.equal(/settings-modal/.test(settings), false, "settings.css 无 modal 规则")
+  assert.equal(contentLines(settings), 303, "settings.css 行数不动（303 在盘）")
+  assert.equal(/settings-modal/.test(stripComments(settings)), false, "settings.css 无 modal 规则（注释内字面不计——沿本件同式）")
   // z 族在位（设置面 10 < 弹窗 20/21 < 确认 40/41）
   assert.ok(blockOf(stripComments(settings), "[data-slot=\"settings\"]").includes("z-index: 10"), "设置面 z-10 在位")
   const chrome = stripComments(read("thincoder-desktop/renderer/chrome.css"))

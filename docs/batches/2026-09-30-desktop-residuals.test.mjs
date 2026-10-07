@@ -9,7 +9,7 @@
  *   M-679a–d  草稿失效声明（#679）：MCP 增 ∕ tools 钥存 ∕ env shell 三成功径 ⇒ 本形草稿零复活（失败径零声明）；
  *             作用域件在场；跨形零误伤；scope=null 永不误伤（`dropDrafts` 直调）；agent 径零改（源扫）。
  *   M-685a–c  拆档落形（#685）：`ipc.mjs` ≤300 内容行 + 转口群档 24 导出；注册面零改（`registerIpcHandlers` 真跑 ——
- *             46 项全解析为函数 ∕ 注册序 = 白名单序）；转口直传抽查（源抽取 + 替身注入 —— 回执恒等 ∕ 两缝注入）。
+ *             48 项全解析为函数 ∕ 注册序 = 白名单序）；转口直传抽查（源抽取 + 替身注入 —— 回执恒等 ∕ 两缝注入）。
  *   M-686a–c  拒绝面（#686）：调用点注入恒拒 ⇒ `console.error` 落 ∧ 回执正常返回 ∧ 零未处理拒绝逃逸；`void` 语义锁
  *             （回执不候后台面）；静态面零裸 `void pushLedgerLines`。
  * 形态：electron 桩 = data: URL `registerHooks`（主侧三档装载面 —— 沿 enddiff 件先例）；设置面 = 真接线
@@ -17,18 +17,20 @@
  */
 import test from "node:test"
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { registerHooks } from "node:module"
 import vm from "node:vm"
-import "../../thincoder-desktop/test/rc-resolve.mjs" // `/rc/` 解析钩子（须先于任何渲染档取件注册）
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..")
+const HERE = dirname(fileURLToPath(import.meta.url))
+// tmp 直跑适配（`add-dialog-verify/` 深度 3）：两候选根取命中——原位（depth 2）∥ tmp 两处皆兼容
+const ROOT = [join(HERE, "..", ".."), join(HERE, "..", "..", "..")].find((d) => existsSync(join(d, "thincoder-desktop")))
 const read = (rel) => readFileSync(join(ROOT, rel), "utf8")
 const at = (rel) => pathToFileURL(join(ROOT, rel)).href
 const contentLines = (text) => { const parts = text.split("\n"); if (parts.length && parts[parts.length - 1] === "") parts.pop(); return parts.length }
 const settle = async (rounds = 4) => { for (let i = 0; i < rounds; i += 1) await new Promise((resolve) => setImmediate(resolve)) }
+await import(at("thincoder-desktop/test/rc-resolve.mjs")) // `/rc/` 解析钩子（须先于任何渲染档取件注册）
 
 // ─── electron 桩（主侧三档装载面；`ipcMain.handle` 记账供 M-685b）──────────────────────────
 globalThis.__ipcHandles = []
@@ -148,7 +150,7 @@ const SETTINGS_SEL = `[data-slot="settings"]`
 let doc = null
 function installFakeDom() {
   doc = {
-    slot: null, activeElement: null,
+    slot: null, activeElement: null, body: new FakeNode("body"), // `body` = 弹窗宿主挂点（KD-77 ①）
     createElement: (tag) => new FakeNode(tag),
     createTextNode: (value) => new FakeText(value),
     querySelector: (sel) => {
@@ -174,6 +176,7 @@ class FakeFormData {
     })
   }
   get(name) { const hit = this._entries.find(([key]) => key === name); return hit === undefined ? null : hit[1] }
+  getAll(name) { return this._entries.filter(([key]) => key === name).map(([, value]) => value) } // #1036：行列两取得
 }
 /** 单击 ∕ 变更派发（监听直调 —— 设置面控件皆为自身绑定）。 */
 const fire = (el, type) => { const event = { type, target: el, currentTarget: el, preventDefault: () => {}, stopPropagation: () => {} }; for (const entry of [...el.listeners]) if (entry.type === type) entry.fn(event); return event }
@@ -204,8 +207,8 @@ const receiptsOf = (seed) => ({
 })
 async function mountFace(seed, overrides = {}) {
   installFakeDom()
-  const { attachSettings } = await import("../../thincoder-desktop/renderer/mount-settings.mjs")
-  const { createStore, patchSettings } = await import("../../thincoder-desktop/renderer/store.mjs")
+  const { attachSettings } = await import(at("thincoder-desktop/renderer/mount-settings.mjs"))
+  const { createStore, patchSettings } = await import(at("thincoder-desktop/renderer/store.mjs"))
   const store = createStore()
   const slot = new FakeNode("div")
   slot.setAttribute("data-slot", "settings")
@@ -281,25 +284,39 @@ test("M-671d · 负控：显式复位点仍恒清（开 ∕ 关面 + 取消径�
 // ─── M-679 草稿失效声明（#679）─────────────────────────────────────────────────────────
 test("M-679a · MCP 增（成功 ⇒ 本形草稿零复活 ∕ 失败 ⇒ 零声明）+ 跨形零误伤", async () => {
   const ok = await mountFace(LOADING_AGENT, { "mcp:save": { ok: true, tools: 1 } })
-  const form = ok.slot.querySelector('[data-form="mcp"]')
-  form.querySelector('[name="name"]').value = "srv-a"
-  form.querySelector('[name="command"]').value = "node"
+  ok.face.openSettingsModal("mcpForm") // KD-77 ①：MCP 表单入弹窗体（挂 `document.body`）
+  await settle()
+  const modalForm = () => doc.body.querySelector('[data-form="mcp"]')
+  assert.ok(modalForm() !== null, "弹窗表单在场（前置真）")
+  modalForm().querySelector('[name="name"]').value = "srv-a"
+  modalForm().querySelector('[name="command"]').value = "node"
+  ok.face.refreshSettings() // 前置：重绘草稿复填（机制在 —— 与本腿成功径「零复活」同闸）
+  await settle()
+  assert.equal(modalForm().querySelector('[name="name"]').value, "srv-a", "重绘草稿复填（前置真）")
   click(ok.slot.querySelector('[data-action="settings:keyEdit"]'))
   ok.slot.querySelector("[data-key-input]").value = "sk-tools-kept"
-  click(ok.slot.querySelector('[data-action="settings:addMcp"]'))
+  click(modalForm().querySelector('[data-action="settings:addMcp"]'))
   await settle()
-  const after = ok.slot.querySelector('[data-form="mcp"]')
-  assert.ok(after !== null, "表单重建在场")
-  assert.equal(after.querySelector('[name="name"]').value, "", "成功径：本形草稿作废（零复活）")
-  assert.equal(after.querySelector('[name="command"]').value, "", "成功径：命令件同作废")
+  assert.equal(doc.body.querySelector('[data-form="mcp"]'), null, "成功径：弹窗关（表单退场）")
+  assert.equal(ok.store.get().settings.mcp.form, null, "成功径：切片复位（form 清）")
+  ok.face.openSettingsModal("mcpForm")
+  await settle()
+  assert.equal(modalForm().querySelector('[name="name"]').value, "", "成功径：本形草稿作废（零复活）")
+  assert.equal(modalForm().querySelector('[name="command"]').value, "", "成功径：命令件同作废")
   assert.equal(ok.slot.querySelector("[data-key-input]").value, "sk-tools-kept", "跨形零误伤（他形草稿存续）")
-  const fail = await mountFace(LOADING_AGENT, { "mcp:save": { ok: false, reason: "probe-failed" } })
-  const f2 = fail.slot.querySelector('[data-form="mcp"]')
-  f2.querySelector('[name="name"]').value = "srv-b"
-  f2.querySelector('[name="command"]').value = "node"
-  click(fail.slot.querySelector('[data-action="settings:addMcp"]'))
+  ok.face.closeSettingsModal()
   await settle()
-  assert.equal(fail.slot.querySelector('[data-form="mcp"] [name="name"]').value, "srv-b", "失败径：零声明（草稿保真）")
+  const fail = await mountFace(LOADING_AGENT, { "mcp:save": { ok: false, reason: "probe-failed" } })
+  fail.face.openSettingsModal("mcpForm")
+  await settle()
+  const failForm = () => doc.body.querySelector('[data-form="mcp"]')
+  failForm().querySelector('[name="name"]').value = "srv-b"
+  failForm().querySelector('[name="command"]').value = "node"
+  click(failForm().querySelector('[data-action="settings:addMcp"]'))
+  await settle()
+  assert.ok(failForm() !== null, "失败径：留框（拒径不关框）")
+  assert.equal(failForm().querySelector('[name="name"]').value, "srv-b", "失败径：零声明（草稿保真）")
+  fail.face.closeSettingsModal()
 })
 
 test("M-679b · tools 钥存（成功 ⇒ 零复活 ∕ 失败 ⇒ 保真）+ 作用域件在场", async () => {
@@ -336,7 +353,7 @@ test("M-679c · env shell（成功 ⇒ 零复活）+ 作用域件在场（`env:s
 })
 
 test("M-679d · 负控：scope=null 永不误伤（直调）∥ 跨形零误伤 ∥ agent 径零改（源扫）", async () => {
-  const { dropDrafts } = await import("../../thincoder-desktop/renderer/view-state.mjs")
+  const { dropDrafts } = await import(at("thincoder-desktop/renderer/view-state.mjs"))
   const snap = { scrolls: [], focus: null, drafts: [{ loc: { attr: "data-draft", value: "x", scope: null } }, { loc: { attr: "data-draft", value: "y", scope: "add" } }] }
   const kept = dropDrafts(snap, new Set(["add"]))
   assert.deepEqual(kept.drafts.map((entry) => entry.loc.value), ["x"], "无作用域件不被过滤（命中件照摘）")
@@ -344,7 +361,7 @@ test("M-679d · 负控：scope=null 永不误伤（直调）∥ 跨形零误伤 
   const agentSrc = read("thincoder-desktop/renderer/mount-settings-segments-agent.mjs")
   assert.equal(agentSrc.includes("invalidateDrafts"), false, "agent 族零声明（无对象 —— 免径不补申报）")
   assert.equal(agentSrc.includes("data-draft-scope"), false, "agent 族零作用域面")
-  assert.match(read("thincoder-desktop/renderer/mount-settings-exits.mjs"), /createAgentExits\(\{ ask, store, setSettings, report, clearReport, slot, paintSettings \}\)/, "agent 注入面零改")
+  assert.match(read("thincoder-desktop/renderer/mount-settings-exits.mjs"), /createAgentExits\(\{ ask, store, setSettings, report, clearReport, paintSettings \}\)/, "agent 注入面零改")
 })
 
 // ─── M-685 拆档落形（#685）────────────────────────────────────────────────────────────
@@ -358,14 +375,14 @@ test("M-685a · `ipc.mjs` ≤300 内容行回线 + 转口群档在位（24 导�
   assert.equal(typeof ipcMod.providerListChannel, "undefined", "转口名不在核心档（去 24 转口名）")
 })
 
-test("M-685b · 注册面零改：`registerIpcHandlers` 真跑 —— 46 项全解析为函数 ∕ 注册序 = 白名单序", () => {
-  assert.equal(ipcMod.CHANNELS.length, 46, "白名单 46 项（单源 = 预载档）")
+test("M-685b · 注册面零改：`registerIpcHandlers` 真跑 —— 48 项全解析为函数 ∕ 注册序 = 白名单序", () => {
+  assert.equal(ipcMod.CHANNELS.length, 48, "白名单 48 项（单源 = 预载档；#1054 轮实读收正）")
   globalThis.__ipcHandles.length = 0
   registryMod.registerIpcHandlers()
   const rows = [...globalThis.__ipcHandles]
-  assert.deepEqual(rows.map((row) => row.channel), [...ipcMod.CHANNELS], "注册 46 项且序 = 白名单序（零缺 ∕ 零增）")
-  assert.ok(rows.every((row) => typeof row.handler === "function"), "HANDLERS 全 46 项解析为函数（缺 ⇒ 注册期抛，未抛即证）")
-  assert.equal(rows[rows.length - 1].channel, "record:append", "定序末位 = 白名单现末位（record:append）")
+  assert.deepEqual(rows.map((row) => row.channel), [...ipcMod.CHANNELS], "注册 48 项且序 = 白名单序（零缺 ∕ 零增）")
+  assert.ok(rows.every((row) => typeof row.handler === "function"), "HANDLERS 全 48 项解析为函数（缺 ⇒ 注册期抛，未抛即证）")
+  assert.equal(rows[rows.length - 1].channel, "panel:state", "定序末位 = 白名单现末位（panel:state）")
 })
 
 test("M-685c · 转口直传抽查（源抽取 + 替身注入 ⇒ 回执恒等 ∕ `liveAgents` ∖ `currentCwd` 两缝）", () => {
@@ -463,6 +480,6 @@ test("M-689a · 注面口径统一：零「五尾组」残留 ∕ 压缩行单�
   const chat = read("thincoder-desktop/renderer/views/chat.mjs")
   const chrome = read("thincoder-desktop/renderer/views/chat-chrome.mjs")
   assert.equal(chat.includes("五尾组") || chrome.includes("五尾组"), false, "零「五尾组」残留")
-  assert.equal(chat.includes("四尾组") && chat.includes("压缩行例外 = 流元素冻结点"), true, "尾组 = 四名 + 压缩行例外句（字面组合）")
+  assert.equal(chat.includes("三尾组") && chat.includes("压缩行例外 = 流元素冻结点"), true, "尾组 = 三名 + 压缩行例外句（字面组合；#1054 轮实读收正）")
   assert.equal(chrome.includes("压缩行例外 = 流元素冻结点、不在块插入点上"), true, "压缩行例外句在档（插入点纪律单源）")
 })

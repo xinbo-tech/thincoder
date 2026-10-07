@@ -1,6 +1,6 @@
 /**
  * b10-w3.test.mjs — parity-b10-ui 批 · W3 设置面余面（S8–S11 ∕ S14 ∕ S17）批内件。
- * 覆盖 = §2.6 逐行「判据」列 + §2.12 用例表（T7 ∕ T8 ∕ T9）+ 通道面结构（45 项两向相等）+ S17 候选面对拍。
+ * 覆盖 = §2.6 逐行「判据」列 + §2.12 用例表（T7 ∕ T8 ∕ T9）+ 通道面结构（48 项两向相等）+ S17 候选面对拍。
  * 跑法：`node --test .thincoder/tmp/b10-w3.test.mjs`（cwd 任意；本件自锚仓根）——W6 汇总并入
  * `docs/batches/2026-09-29-parity-b10-ui.test.mjs`（本件 = 暂存件，勿直接写批内目录）。
  * 零第三方依赖（仅 node: 内建）；盘面用临时 config（`_setConfigPathForTest`）；槽面用临时 sessions 根
@@ -9,19 +9,22 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { createRequire } from "node:module"
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import "../../thincoder-desktop/test/rc-resolve.mjs" // `/rc/` 解析钩子（须先于渲染档取件）
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..") // 仓根
+const HERE = dirname(fileURLToPath(import.meta.url))
+// tmp 直跑适配（`add-dialog-verify/` 深度 3）：两候选根取命中——原位（depth 2）∥ tmp 两处皆兼容
+const ROOT = [join(HERE, "..", ".."), join(HERE, "..", "..", "..")].find((d) => existsSync(join(d, "thincoder-desktop"))) // 仓根
 const at = (p) => pathToFileURL(join(ROOT, p)).href
 const read = (p) => readFileSync(join(ROOT, p), "utf8")
 const deskReq = createRequire(join(ROOT, "thincoder-desktop/package.json"))
 const coreAt = (p) => pathToFileURL(deskReq.resolve("@thincoder/core/" + p)).href
 /** 确定性等待（fire-and-forget 链落定）。 */
 const settle = async (cond, tries = 200) => { for (let i = 0; i < tries && !cond(); i += 1) await new Promise((r) => setTimeout(r, 0)) }
+
+await import(at("thincoder-desktop/test/rc-resolve.mjs")) // `/rc/` 解析钩子（须先于渲染档取件）
 
 const coreIo = await import(coreAt("config-io.mjs"))
 const coreThinkOff = await import(coreAt("think-off.mjs"))
@@ -39,6 +42,7 @@ const agentView = await import(at("thincoder-desktop/renderer/views/settings-age
 const mcpView = await import(at("thincoder-desktop/renderer/views/settings-sections-mcp.mjs"))
 const agentExitsMod = await import(at("thincoder-desktop/renderer/mount-settings-segments-agent.mjs"))
 const segmentsMod = await import(at("thincoder-desktop/renderer/mount-settings-segments.mjs"))
+const mcpExitsMod = await import(at("thincoder-desktop/renderer/mount-settings-segments-mcp.mjs"))
 
 /** 临时 config 夹具（调用面自管 `_setConfigPathForTest` 复位）。 */
 function withConfig(seed) {
@@ -345,55 +349,69 @@ test("S8 ∕ 结构化表单树：三型字段组 ∕ 编辑态预填 + 名只�
   const handlers = { onAddMcp: () => {}, onUpdateMcp: () => {}, onMcpCancel: () => {}, onMcpFormType: () => {} }
   const deps = { reasonWord: () => null }
   const servers = [{ name: "srv", kind: "url", summary: "https://m.example/mcp", config: { url: "https://m.example/mcp", token: "tk", headers: { "X-Foo": "bar" } } }, { name: "cmd", kind: "command", summary: "node x.js", config: { command: "node", args: ["x.js", "-y"], env: { K: "v" } } }]
-  const formOf = (section) => mcpView.mcpBody(section, handlers, deps).find((n) => n?.props?.["data-form"] === "mcp")
+  const formOf = (section) => mcpView.mcpFormBody(section, handlers).find((n) => n?.props?.["data-form"] === "mcp") // KD-77 ①：表单树 = `mcpFormBody`
   const inputOf = (form, name) => form.children.find((c) => c?.tag === "input" && c.props.name === name)
-  // ① 编辑态（http 型）：名只读 + 现值预填；http 组在场、stdio 组零节点
-  const httpForm = formOf({ state: "ready", servers, details: {}, form: { editing: "srv", type: "http" } })
+  const kvRowsOf = (form, group) => form.children.filter((c) => c?.props?.["data-kv-row"] === group) // #1036：行集直取
+  const kvValueOf = (form, group) => kvRowsOf(form, group)[0]?.children.find((c) => c?.props?.["data-kv-part"] === "v")?.props.value
+  const submitPairOf = (form) => form.children.filter((c) => c?.tag === "button").map((b) => b.props["data-action"]).filter((action) => action !== "settings:mcpKvAdd")
+  // ① 编辑态（http 型）：名只读 + 现值预填；http 组行集在场、stdio 组零行
+  const httpKv = { env: [], headers: [{ t: 11, k: "X-Foo", v: "bar" }], wsHeaders: [] }
+  const httpForm = formOf({ state: "ready", servers, details: {}, form: { editing: "srv", type: "http", kv: httpKv } })
   assert.equal(httpForm.props["data-mcp-form"], "edit")
   assert.equal(inputOf(httpForm, "name").props.value, "srv")
   assert.equal(inputOf(httpForm, "name").props.readOnly, true, "名 = 不变量（只读）")
   assert.equal(inputOf(httpForm, "url").props.value, "https://m.example/mcp", "预填 = 现值")
   assert.equal(inputOf(httpForm, "token").props.value, "tk")
-  assert.equal(inputOf(httpForm, "headers").props.value, "X-Foo=bar")
+  assert.equal(kvRowsOf(httpForm, "headers").length, 1, "http 型 ⇒ headers 行集在场（#1036 行式）")
+  assert.equal(kvValueOf(httpForm, "headers"), "bar", "行值 = 切片行集")
+  assert.equal(kvRowsOf(httpForm, "env").length, 0, "http 型 ⇒ stdio 组零行")
   assert.equal(inputOf(httpForm, "command"), undefined, "http 型 ⇒ stdio 组零节点")
-  assert.equal(httpForm.children.filter((c) => c?.tag === "button").map((b) => b.props["data-action"]).join(","), "settings:updateMcp,settings:mcpCancel")
-  // ② 编辑态（stdio 型）：args 空格连串 / env 键值串
-  const stdioForm = formOf({ state: "ready", servers, details: {}, form: { editing: "cmd", type: "stdio" } })
+  assert.deepEqual(submitPairOf(httpForm), ["settings:updateMcp", "settings:mcpCancel"], "存 ∕ 消两钮（新增态补消钮）")
+  // ② 编辑态（stdio 型）：args 空格连串 ∕ env 行集直取
+  const stdioKv = { env: [{ t: 12, k: "K", v: "v" }], headers: [], wsHeaders: [] }
+  const stdioForm = formOf({ state: "ready", servers, details: {}, form: { editing: "cmd", type: "stdio", kv: stdioKv } })
   assert.equal(inputOf(stdioForm, "command").props.value, "node")
   assert.equal(inputOf(stdioForm, "args").props.value, "x.js -y")
-  assert.equal(inputOf(stdioForm, "env").props.value, "K=v")
+  assert.equal(kvValueOf(stdioForm, "env"), "v", "env 行集 = 切片行集")
+  assert.equal(kvRowsOf(stdioForm, "headers").length, 0, "stdio 型 ⇒ http 组零行")
   assert.equal(inputOf(stdioForm, "url"), undefined, "stdio 型 ⇒ http 组零节点")
   // ③ 新增态（form = null）：空表单 + 类型 stdio 缺省 + 添加钮
   const addForm = formOf({ state: "ready", servers, details: {}, form: null })
   assert.equal(addForm.props["data-mcp-form"], "add")
   assert.equal(inputOf(addForm, "name").props.value, "")
   assert.equal(inputOf(addForm, "name").props.readOnly, undefined)
-  assert.equal(addForm.children.filter((c) => c?.tag === "button").map((b) => b.props["data-action"]).join(","), "settings:addMcp")
+  assert.deepEqual(submitPairOf(addForm), ["settings:addMcp", "settings:mcpCancel"], "存 ∕ 消两钮（新增态补消钮）")
   // ④ 行面五钮（Tools ∕ Edit ∕ Test ∕ Reconnect ∕ Remove）
   const rowHandlers = { onMcpTools: () => {}, onMcpEdit: () => {}, onMcpTest: () => {}, onMcpReconnect: () => {}, onRemoveMcp: () => {} }
   const row = mcpView.mcpBody({ state: "ready", servers, details: {}, form: null }, rowHandlers, deps)[0]
   assert.deepEqual(row.children.filter((c) => c?.tag === "button").map((b) => b.props["data-action"]), ["settings:mcpTools", "settings:mcpEdit", "settings:mcpTest", "settings:mcpReconnect", "settings:removeMcp"])
-  // ⑤ draft 快照回填（类型切换不丢手）：切后组值 = 快照 > 现值
-  const draftForm = formOf({ state: "ready", servers, details: {}, form: { editing: "srv", type: "http", draft: { url: "https://typed.example", token: "typed-token" } } })
+  // ⑤ draft 快照回填（类型切换不丢手）：切后平字段值 = 快照 > 现值；行集单源 = `form.kv`
+  const draftForm = formOf({ state: "ready", servers, details: {}, form: { editing: "srv", type: "http", draft: { url: "https://typed.example", token: "typed-token" }, kv: httpKv } })
   assert.equal(inputOf(draftForm, "url").props.value, "https://typed.example", "未落盘输入优先于现值")
   assert.equal(inputOf(draftForm, "token").props.value, "typed-token")
-  assert.equal(inputOf(draftForm, "headers").props.value, "X-Foo=bar", "未触字段仍取现值")
+  assert.equal(kvValueOf(draftForm, "headers"), "bar", "未触组 = 切片行集（行值单源 = `form.kv`）")
 })
 
 test("S8 ∕ 表单出口：三型载荷构建（http ∕ ws ∕ stdio）∥ 形不齐 ⇒ 零发送 + 段级失败面", async () => {
   const fields = { name: "srv", type: "stdio", command: "node", args: "x.js  -y", env: "K=v, X-Y=z, ZQ=" }
+  // #1036：行集载荷 = `getAll("<group>-k" ∥ "<group>-v")` 两列对齐
+  const pairs = {
+    "env-k": ["K", "X-Y", "ZQ", ""], "env-v": ["v", "z", "", ""],
+    "headers-k": ["Authorization"], "headers-v": ["Bearer x"],
+    "wsHeaders-k": [], "wsHeaders-v": [],
+  }
   const realFormData = globalThis.FormData
-  globalThis.FormData = class { get(key) { return fields[key] ?? null } }
+  globalThis.FormData = class { get(key) { return fields[key] ?? null } getAll(key) { return pairs[key] ?? [] } }
   try {
     const calls = []
     const reports = []
     let reloads = 0
-    const exits = segmentsMod.createSegmentExits({
+    const exits = mcpExitsMod.createMcpExits({ // KD-77 ①：MCP 出口入组弹窗族（`createMcpExits`）
       ask: async (channel, payload) => { calls.push([channel, payload]); return { ok: true, reason: null } },
       store: fakeStore({ settings: { mcp: { servers: [], details: {}, form: null }, tools: {}, env: {}, models: {} } }),
       setSettings: () => {}, report: (...args) => reports.push(args), clearReport: () => {},
       reads: { loadMcp: async () => { reloads += 1 }, loadEnv: async () => {}, loadTools: async () => {}, loadAgent: async () => {} },
-      slot: '[data-slot="settings"]', formOf: () => ({}),
+      slot: '[data-slot="settings"]', formOf: () => ({}), invalidateDrafts: () => {}, openModal: () => true, closeModal: () => {},
     })
     await exits.handlers.onAddMcp({ currentTarget: {} })
     assert.deepEqual(calls[0], ["mcp:save", { name: "srv", config: { command: "node", args: ["x.js", "-y"], env: { K: "v", "X-Y": "z" } } }], "stdio 型载荷（空值项删 ∕ args 空格分）")
@@ -447,35 +465,38 @@ test("S11 ∕ 两端同 helper（结构）：VSC 写面改指核 `applyAdvisorEf
 
 test("S8 ∕ 类型切换出口：表单现态自读入 draft（未落盘输入随切带回）", () => {
   const inputs = [
-    { getAttribute: (k) => (k === "name" ? "url" : null), value: "https://typed.example" },
-    { getAttribute: (k) => (k === "name" ? "token" : null), value: "typed-token" },
+    { getAttribute: (k) => (k === "name" ? "url" : null), hasAttribute: () => false, value: "https://typed.example" },
+    { getAttribute: (k) => (k === "name" ? "token" : null), hasAttribute: () => false, value: "typed-token" },
   ]
-  globalThis.document = { querySelector: () => ({ querySelector: () => ({ querySelectorAll: () => inputs }) }) }
+  // KD-77 ①：现读面 = `document.querySelectorAll('[data-form="mcp"]')` 末位（弹窗体）
+  const formNode = { querySelectorAll: (sel) => (sel === "input" ? inputs : []), querySelector: () => null }
+  globalThis.document = { querySelectorAll: (sel) => (sel === '[data-form="mcp"]' ? [formNode] : []) }
   try {
     const patches = []
-    const exits = segmentsMod.createSegmentExits({
+    const closes = []
+    const exits = mcpExitsMod.createMcpExits({
       ask: async () => ({ ok: true }),
       store: fakeStore({ settings: { mcp: { servers: [], details: {}, form: { editing: "srv", type: "stdio" } }, tools: {}, env: {}, models: {} } }),
       setSettings: (patch) => patches.push(patch.mcp), report: () => {}, clearReport: () => {},
       reads: { loadMcp: async () => {}, loadEnv: async () => {}, loadTools: async () => {}, loadAgent: async () => {} },
-      slot: '[data-slot="settings"]', formOf: () => ({}),
+      slot: '[data-slot="settings"]', formOf: () => ({}), invalidateDrafts: () => {}, openModal: () => true, closeModal: () => closes.push(1),
     })
     exits.handlers.onMcpFormType("http")
-    assert.deepEqual(patches[0].form, { editing: "srv", type: "http", draft: { url: "https://typed.example", token: "typed-token" } })
+    assert.deepEqual(patches[0].form, { editing: "srv", type: "http", kv: { env: [], headers: [], wsHeaders: [] }, draft: { url: "https://typed.example", token: "typed-token" } })
     exits.handlers.onMcpCancel()
-    assert.equal(patches[1].form, null, "取消 ⇒ 回新增态（draft 随清）")
+    assert.equal(closes.length, 1, "取消 ⇒ 关框（切片复位 = 开径 resetFacets —— KD-77 ① 先开后写）")
   } finally { delete globalThis.document }
 })
 
 test("S9 ∕ 重连出口：连期词面 ⇒ 成功（计数行 + 行面复读）∥ 失败（失败句子面）", async () => {
   const details = []
   const reads = { loadMcp: async () => { reads.called = (reads.called ?? 0) + 1 }, loadEnv: async () => {}, loadTools: async () => {}, loadAgent: async () => {} }
-  const make = (receipt) => segmentsMod.createSegmentExits({
+  const make = (receipt) => mcpExitsMod.createMcpExits({
     ask: async () => receipt,
     store: fakeStore({ settings: { mcp: { servers: [], details: {}, form: null }, tools: {}, env: {}, models: {} } }),
     setSettings: (patch) => details.push(patch.mcp?.details),
     report: () => {}, clearReport: () => {},
-    reads, slot: '[data-slot="settings"]', formOf: () => ({}),
+    reads, slot: '[data-slot="settings"]', formOf: () => ({}), invalidateDrafts: () => {}, openModal: () => true, closeModal: () => {},
   })
   await make({ ok: true, tools: 3 }).handlers.onMcpReconnect("srv")
   assert.deepEqual(details[0].srv, { kind: "reconnect", state: "loading", tools: null, probe: null, reason: null }, "连期 loading 词面")
@@ -527,18 +548,19 @@ test("S17 ∕ 结构：两端零自持候选表（薄壳 re-export 核单源）�
   assert.match(coreSrc, /3000/, "超时值在核")
 })
 
-// ─── 通道面（结构）：45 项两向相等 ∕ 两新通道末位 ∕ 三档头计数 ∕ 渲染面闭包 ──────
+// ─── 通道面（结构）：48 项两向相等 ∕ 本批两通道在册 ∕ 三档头计数 ∕ 渲染面闭包 ──────
 
-test("通道面：白名单 45 项 ≡ 注册表 HANDLERS（两向相等）；两新通道末位；三档头计数四十五", () => {
+test("通道面：白名单 48 项 ≡ 注册表 HANDLERS（两向相等）；本批两通道在册；三档头计数四十八", () => {
   const preload = deskReq(join(ROOT, "thincoder-desktop/src/preload/preload.cjs"))
-  assert.equal(preload.CHANNELS.length, 45)
-  assert.deepEqual(preload.CHANNELS.slice(-2), ["mcp:update", "mcp:reconnect"], "两新通道定序末位")
+  assert.equal(preload.CHANNELS.length, 48)
+  assert.deepEqual(preload.CHANNELS.slice(-2), ["theme:state", "panel:state"], "末位两通道（#1054 轮实读收正：他批续并后）")
+  assert.ok(preload.CHANNELS.includes("mcp:update") && preload.CHANNELS.includes("mcp:reconnect"), "本批两通道在册")
   const registrySrc = read("thincoder-desktop/src/main/ipc-registry.mjs")
   const rows = [...registrySrc.matchAll(/^\s{2}"([^"]+)":/gm)].map((m) => m[1])
-  assert.equal(rows.length, 45)
+  assert.equal(rows.length, 48)
   assert.deepEqual([...new Set(rows)].sort(), [...preload.CHANNELS].sort(), "白名单 ↔ 注册表两向相等")
   for (const file of ["thincoder-desktop/src/main/ipc.mjs", "thincoder-desktop/src/main/ipc-registry.mjs", "thincoder-desktop/src/preload/preload.cjs"]) {
-    assert.match(read(file), /四十五项/, `${file} 档头计数随动`)
+    assert.match(read(file), /四十八项/, `${file} 档头计数随动`)
   }
   // 渲染面静态闭包纪律（零 `node:` ∕ 零裸包 —— 本批新改渲染档）
   for (const file of [
@@ -585,5 +607,7 @@ test("集成冒烟：settingsTree 全树（agent 段六模型槽 + guard 开关 
   for (const path of ["agent.subagentModel", "agent.subagentModels.explore", "agent.subagentModels.eng-designer", "agent.advisor.guard"]) {
     assert.match(text, new RegExp(`"data-field-name":"${path.replace(/[.]/g, "\\.")}"`), `${path} 在场`)
   }
-  assert.match(text, /"data-mcp-form":"add"/, "MCP 结构化表单（新增态）在场")
+  // KD-77 ①：MCP 结构化表单 = 弹窗体（页树零表单）—— 冒烟核弹窗树
+  const modalText = JSON.stringify(settingsView.settingsModalTree(state, "mcpForm", handlers))
+  assert.match(modalText, /"data-mcp-form":"add"/, "MCP 结构化表单（新增态）在场（弹窗树）")
 })

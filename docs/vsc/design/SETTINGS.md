@@ -552,7 +552,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - **宿主净删**：`handleAddProvider`（`src/extension/panel-messages-settings.mjs`）**无载荷 else 支**（QuickPick 增流程）随本批退场——残留分支 = 畸形载荷 ⇒ `console.error` 零动作（fail-loud）；`provider-flows.mjs` 的 `addProviderFlow` 包装（现 `:33`）**净删**（唯一调用点即该支；核流程 ∥ CLI 交互面零动——CLI 仍走核 `addProviderFlow`，判据「宿主原生专面各守其面」）。
 - **协议面**：`WEBVIEW-PROTOCOL.md` §13 `addProvider` 行发送列收正（页脚发送点退场 ⇒ 剩 onboarding ∥ 表单两处；host 消费位分支收正）。
 
-**判据 / 机检面（本批）**：批内件 `docs/batches/2026-10-07-add-dialog-unify.test.mjs`（**已落**——腿集：五路关 ∥ 开框重置 ∥ 单例 ∥ 拒因可见（name 空 ⇒ 零发 ∥ 不关框 ∥ 在编值保留）∥ 跨框互清（各弹窗只清自身两件）∥ 页脚零出站（`addProvider` = 本地面动作——零 `postMessage`）∥ 词面五新键两语）；真机 = 人工走查（MCP 新增 ∥ 编辑两态：五路关 ∥ 开框重置 ∥ 拒径不关框 ∥ 提交成功后列表随动；会诊：入口满 5 禁用 ∥ 提交成功关框；页脚直开）。
+**判据 / 机检面（本批）**：批内件 `docs/batches/2026-10-07-add-dialog-unify.test.mjs`（**已落 · 8/8**〔越 500 二分后 VSC 半——桌面半 = `2026-10-07-add-dialog-unify-desktop.test.mjs`〕——腿集：五路关 ∥ 开框重置 ∥ 单例 ∥ 拒因可见（name 空 ⇒ 零发 ∥ 不关框 ∥ 在编值保留）∥ 跨框互清（各弹窗只清自身两件）∥ 页脚零出站（`addProvider` = 本地面动作——零 `postMessage`）∥ 词面五新键两语）；真机 = 人工走查（MCP 新增 ∥ 编辑两态：五路关 ∥ 开框重置 ∥ 拒径不关框 ∥ 提交成功后列表随动；会诊：入口满 5 禁用 ∥ 提交成功关框；页脚直开）。
 
 **受影响文件（本批 · 现行 ⇒ 实读（实施落盘）· 内容行数口径）**：
 

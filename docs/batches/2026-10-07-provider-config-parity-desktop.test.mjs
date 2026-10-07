@@ -7,7 +7,7 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
@@ -21,7 +21,8 @@ function tmpConfigPath() {
 //   本段自持工具与夹具（与 V ∥ C ∥ L 腿零共享 —— 追加式共享件：勿动他人腿）。
 // ══════════════════════════════════════════════════════════════════════════════════════════
 
-const DESKTOP = new URL("../../thincoder-desktop/", import.meta.url).href
+// tmp 直跑适配（`add-dialog-verify/` 深度 3）：两候选取命中——原位（depth 2）∥ tmp 两处皆兼容
+const DESKTOP = [new URL("../../thincoder-desktop/", import.meta.url), new URL("../../../thincoder-desktop/", import.meta.url)].find((url) => existsSync(url)).href
 const deskSrc = (rel) => readFileSync(new URL(rel, DESKTOP), "utf8")
 const deskAt = (rel) => new URL(rel, DESKTOP).href
 await import(deskAt("test/rc-resolve.mjs")) // `/rc/` 解析钩子（须先于渲染档取件注册 —— 平 node 无 `app://desktop` origin）
@@ -205,10 +206,10 @@ test("D3 settingsModalTree(\"providerAdd\")：标题 + 单表（零行族）∥ 
   assert.equal(noticeOf("mcp"), null, "他组失败串隐（零节点）")
   // 表外组 ⇒ null（防御档零改）
   assert.equal(dsModalTree(dsState({}, { modal: "providerAdd" }), "bogus", {}), null, "表外组 ⇒ null")
-  // 源锁：SCOPES 八值（七段名 + 添加弹窗组名 —— 单源 = 视图档导出）∥ MODAL_READS 指名 loadProviders
+  // 源锁：SCOPES 十值（七段名 + 三弹窗组名 —— 单源 = 视图档导出；添加入口弹窗统一批 #1054：八 ⇒ 十）∥ MODAL_READS 指名
   const mount = deskSrc("renderer/mount-settings.mjs")
   assert.equal(ADD_MODAL_GROUP, "providerAdd", "组名单源 = 视图档导出字面")
-  assert.match(mount, /const SCOPES = Object\.freeze\(\[\.\.\.SECTIONS\.map\(\(section\) => section\.name\), ADD_MODAL_GROUP\]\)/, "SCOPES = 段名序 + providerAdd（八值）")
+  assert.match(mount, /const SCOPES = Object\.freeze\(\[\.\.\.SECTIONS\.map\(\(section\) => section\.name\), ADD_MODAL_GROUP, MCP_FORM_MODAL_GROUP, CONSULT_ADD_MODAL_GROUP\]\)/, "SCOPES = 段名序 + 三组名（十值）")
   assert.match(mount, /\[ADD_MODAL_GROUP\]: "loadProviders"/, "MODAL_READS 指名 loadProviders")
   assert.match(mount, /openModal: \(group\) => openSettingsModal\(group\)/, "开径注入（迟绑定）")
   assert.match(deskSrc("renderer/mount-settings-exits.mjs"), /onAddProvider: \(\) => \{ openModal\(ADD_MODAL_GROUP\) \}/, "onAddProvider 出口注册在案")
@@ -337,7 +338,7 @@ test("D6 添加钮开径腿：锚 ⇒ onAddProvider ⇒ openSettingsModal(\"prov
     await flush()
     // ① 出口在案（全表注入）
     assert.equal(typeof face.handlers.onAddProvider, "function", "onAddProvider 出口在案（mount-settings-exits.mjs handlers 表）")
-    // ② 开径：出口 ⇒ openSettingsModal（SCOPES 八值闭集内）⇒ 切片写 + 读取链
+    // ② 开径：出口 ⇒ openSettingsModal（SCOPES 十值闭集内 —— 添加入口弹窗统一批 #1054 起）⇒ 切片写 + 读取链
     calls.length = 0
     face.handlers.onAddProvider()
     assert.equal(store.get().settings.modal, "providerAdd", "开径 ⇒ `settings.modal = providerAdd`")
@@ -359,7 +360,7 @@ test("D6 添加钮开径腿：锚 ⇒ onAddProvider ⇒ openSettingsModal(\"prov
     assert.match(String(errors.at(-1)?.[0]), /wizard occupies/, "占槽拒记错词")
     // ⑤ 闭集守卫零改（表外 ⇒ 拒；providerAdd ⇒ 受）
     store.set(patchSettings(store.get(), { configured: true, wizard: { step: 1, dismissed: false, notice: null } }))
-    assert.equal(face.openSettingsModal("providerAdd"), true, "providerAdd = 闭集内（八值之第八）")
+    assert.equal(face.openSettingsModal("providerAdd"), true, "providerAdd = 闭集内（十值之一）")
     face.closeSettingsModal()
     const before2 = errors.length
     assert.equal(face.openSettingsModal("bogus"), false, "表外 ⇒ 拒")
