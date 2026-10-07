@@ -363,7 +363,8 @@
 - **Provider 详情弹窗·勾选段**：单列「模型」（表头 = `admin.models.colModel`）——行 = `label`（勾选 + 模型名）⇒ 点题名同切换保持（交互零改）；空态 = `.hint` ∥ 发现失败 = `.hint error`（§2.4④ 不变量）。
 - **添加弹窗·预设信息段**：模型清单 = 单列表（表头 = `admin.models.colModel`——行 = `code` 芯片）；地址行与 apiKey 面零动。
 - **成员详情弹窗·key 表**：四列 = 密钥（`code` hint） ∥ 最后使用（本地化 ∥ `neverUsed`） ∥ 近 30 天（`windowTokensCell`——既有窗口口径） ∥ 操作（表头 `admin.members.colActions`；吊销钮行内）；空态 = `.hint`（`admin.members.noKeys`）。
-- **弹窗内表自滚**（2026-10-07 走查收正 ∥ 同日实测修正——主信息不随表滚 ∥ **单滚动面**：伸缩链 = `.modal-body` flex 列 ⇒ **内容盒（`.modal-body > div`——modal.mjs 整只 append 的调用层盒）** flex 列 `min-height: 0` ⇒ 固定块 `flex: none` ∥ 清单区（`.pick-box`；直挂表区〔成员 key 表〕同形）`flex: 1 1 auto; min-height: 0` 自滚；外层 `overflow-y: auto` 仅极端兜底；Edge headless 同构实测红→绿在案）+ 表头吸附（`.modal-body .table-wrap thead th` sticky——同壳口径）。
+- **弹窗内表自滚**（2026-10-07 走查收正 ∥ 同日实测修正——主信息不随表滚 ∥ **单滚动面**：伸缩链 = `.modal-body` flex 列 ⇒ **内容盒（`.modal-body > div`——modal.mjs 整只 append 的调用层盒）** flex 列 `min-height: 0` ⇒ 固定块 `flex: none` ∥ 清单区（`.pick-box`；直挂表区〔成员 key 表〕同形）`flex: 1 1 auto; min-height: 0` 自滚；
+外层 `overflow-y: auto` 仅极端兜底；Edge headless 同构实测红→绿在案）+ 表头吸附（`.modal-body .table-wrap thead th` sticky——同壳口径）。
 - `.model-picks` 退役——规则与字面删净（S14 零登记口径）。
 
 ## 3. 判权与安全
@@ -484,3 +485,4 @@
 - 2026-10-07：走查收正三（用户 08:58「在弹窗里点测试连接，结果在弹窗外面显示了响应」）：§2.4④ 详情弹窗「测试连接」结果 = 同窗结果行（`testNote`——进行中/成功/失败段内；失败走 `mapError`；原 flash 在弹窗外——AC-18「测试同窗」的落实收正）；随正件 = `-console-provider-redo.test.mjs:443`（断言从 flash 改同窗行 + 零 flash）。
 - 2026-10-07：走查收正四（承三 + 父侧常识定则——**弹窗开着 ⇒ 一切反馈落窗内；窗关 ⇒ 页面 flash**）：§2.4④ 两窗同拍——获取模型（空地址/失败 ⇒ 窗内状态行；成功 flash 删——候选即反馈）∥ 保存（未选类型/失败 ⇒ 窗内；401 仍踢登录）∥ 刷新候选 flash 删；窗关后动作 flash 保持。随正件 = `-console-provider-redo.test.mjs` 四处 + `-console-list-style.test.mjs` ④ 计数 12。
 - 2026-10-07：修正轮（评审 #119——批 `docs/batches/2026-10-07-console-tfoot.md` §1 补记七；本档面）：「≤40vh」残留三处（:207/:293/:440）⇒「单滚动面伸缩链（§2.6⑤）」∥ §2.5⑨ 错误面坐标四处收正（`views-admin.mjs:45` ∥ `views-me.mjs:67` ∥ `views-models.mjs:79` ∥ `views-providers.mjs:35`）∥ §2.4③ 列表序 = `id` 升序（`views-models.mjs:26`）。
+- 2026-10-07：行宽收正（父侧机械折行——§2.6⑤ 363 字符行 ⇒ 折两行；doc-check 行宽闸读数）。**零语义**。

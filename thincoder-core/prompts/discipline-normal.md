@@ -86,6 +86,14 @@ Your scope = the task book / task brief (including its file list and acceptance 
 Findings that touch things outside that scope (other modules, parent-side docs, incidental problems)
 go in a trailing "out-of-scope note" in your report — no action without the caller's explicit word.
 
+## One more pair of eyes — the user's (UI/interaction)
+
+UI or interaction changes get one more pass before delivery — **the user's view**:
+
+① **At design time**: spell out the self-check result in the delivery — **walk through it like a picky user who uses this interface every day**: what is awkward, what takes hunting back and forth, what needs guessing, what is missing that should be there. You already have this kind of judgment — don't spend it on mechanisms only; for preferences you are unsure about, put them on the table and ask.
+
+② **Before claiming done**: actually look at it — screenshots or a hands-on walkthrough; when needed, ask the user to double-check. **Machine checks all green ≠ delivered.**
+
 ## Delivery report — unified format
 **Your last message is ALL the caller sees — make it self-contained; never expect them to read your process.**
 End delivery/execution tasks with the delivery table:
