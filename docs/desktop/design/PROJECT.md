@@ -127,6 +127,7 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | KD-73 | → `docs/desktop/design/PACKAGING.md` §1（as-of 2026-10-03） | — | — |
 | KD-74 | → `docs/desktop/design/RENDERER.md` §1.6（行痕族清点两门 · as-of 2026-10-04） | — | — |
 | KD-75 | → `docs/desktop/design/SETTINGS.md` §1（provider 添加弹窗 · 三端对齐批 · as-of 2026-10-07） | — | — |
+| KD-76 | → `docs/desktop/design/SETTINGS.md` §1（MCP 表单 env ∥ headers = 行式键值编辑器 · MCP 键值行式输入批 · as-of 2026-10-07） | — | — |
 
 ### 2.1 实测读数（实施批回填）
 
@@ -338,6 +339,7 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
 | `thincoder-desktop/renderer/mount-settings-exits.mjs`（R8 拆档产出） | → `docs/desktop/design/SETTINGS.md` §3.1（文件账 · as-of 2026-10-02） | — |
 | `thincoder-desktop/renderer/mount-settings-segments.mjs`（R7 拆档产出） | → `docs/desktop/design/SETTINGS.md` §3.1（文件账 · as-of 2026-10-02） | — |
 | `thincoder-desktop/renderer/mount-settings-segments-models.mjs`（R7 拆档产出） | → `docs/desktop/design/SETTINGS.md` §3.1（文件账 · as-of 2026-10-02） | — |
+| `thincoder-desktop/renderer/mount-settings-segments-mcp.mjs`（MCP 键值行式输入批（#1036）拆档产出 · 拟新增） | → `docs/desktop/design/SETTINGS.md` §3.1（文件账 · as-of 2026-10-07） | — |
 | `thincoder-desktop/renderer/mount-settings-segments-providers.mjs`（parity-b10 W2 拆出档） | → `docs/desktop/design/SETTINGS.md` §3.1（文件账 · as-of 2026-10-02） | — |
 | `thincoder-desktop/renderer/mount-settings-segments-agent.mjs`（parity-b10 W3 拆出档） | → `docs/desktop/design/SETTINGS.md` §3.1（文件账 · as-of 2026-10-02） | — |
 | `thincoder-desktop/renderer/settings-confirm.mjs`（parity-b10 W2 新档 · S6） | → `docs/desktop/design/SETTINGS.md` §3.1（文件账 · as-of 2026-10-02） | — |
@@ -379,7 +381,7 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
 **批 3 收口 · 行数回填**（内容行数口径——文末换行不计）：`thincoder-desktop/renderer/i18n.mjs` **93** · `styles.css` **180** · 两档超批 3 实施前预估界（89 / 162）但 ≪ 500 硬限 ⇒ **无拆分案**（上界系预估、以实读为准；明细 = `docs/batches/2026-09-25-desktop-impl-3.md` §5 D1）。
 
 行宽上限 = 500 行（仓级硬限）；**在册例外：无**（`thincoder-desktop/renderer/i18n.mjs` **500 ⇒ 393**——i18n 拆分批落地，2026-09-29 届盘实读）——**距硬限最近 = `thincoder-desktop/renderer/views/chat-text-segments.mjs` **497**（余 **3** 行——见下行越层段）**；
-  次大两档 = `thincoder-desktop/renderer/views/settings.mjs` **364** ∕ `thincoder-desktop/renderer/mount-settings-segments.mjs` **364**（实读 2026-10-01）；
+  次大两档 = `thincoder-desktop/renderer/views/settings.mjs` **364** ∕ `thincoder-desktop/renderer/mount-settings-segments.mjs` **364**（实读 2026-10-01）；**MCP 键值行式输入批（#1036 · 设计轮）= `mount-settings-segments.mjs` 拆档执行（本批）**（364 ⇒ ≈195 + 新档 ≈240——在册预案「MCP 族再出一档」触发；明细 = `docs/desktop/design/SETTINGS.md` §1 **KD-76** ∥ §2.17 ∥ §3.2 本批块）；
 **越 300 层在册（十五档——实读 2026-10-07（头行粘顶批（#1030 · 轻通道）再入册一档：`thincoder-desktop/renderer/settings.css` 296 ⇒ 303——十四 ⇒ 十五）；前读 十四档（实读 2026-10-04（渠道档位退役批（#902）回线除名一档：`thincoder-desktop/src/main/settings.mjs` 331 ⇒ 300——十五 ⇒ 十四））；
   更前 十五档（实读 2026-10-04（泛化编辑器退役批（#903）回线除名一档：`settings.css` 304 ⇒ 296——十六 ⇒ 十五））；再前 十六档（实读 2026-10-03（首跑渠道提示修复批（#840）新入册一档＋四档读数随正；轻通道轮八三档读数随正））；再前 十五档（实读 2026-10-01）；
   `subagent-reduce.mjs` = #765 回线除名（301 ⇒ 258 · 十四 ⇒ 十三）——实读兑现；越线档结构轮逐档复读 + 逐个裁定〔批档 `docs/batches/2026-09-29-structure-split-round.md` §2〕；`thincoder-desktop/renderer/i18n.mjs` = i18n 拆分批落地入册；`renderer/store.mjs` = desktop-residuals-round3 波 A–C 后新入册；
@@ -394,7 +396,7 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
   前读 **415**（实读 2026-10-03——轻通道轮八（412 ⇒ 415——键数链注续链（`VIEWS_DICT` 138 ⇒ 139 ∥ `HOST_DICT` 313 ⇒ 314）；非结构性触碰 ⇒ **续期**）；
   前读 **412**（续期——由 = i18n 拆分批落地（500 ⇒ 393）后仍越 300；实读 2026-10-03——首跑渠道提示修复批（#840）实施落盘（408 ⇒ 412——键数链注续链（`VIEWS_DICT` 137 ⇒ 138 ∥ `HOST_DICT` 312 ⇒ 313）；非结构性触碰 ⇒ **续期**）；前读 **408**（实读 2026-10-02——**桌面 UX 收尾批（#697）实施落盘**（404 ⇒ 408——键数链注续链（`HOST_DICT` 308 ⇒ 312）））；
   前读 **404**（实读 2026-10-01——#761 落盘后（394 ⇒ 404——`/help` 键 + 链回填））；预案 = 余族按消费族续拆；**第五档备案 = `thincoder-desktop/renderer/i18n-status.mjs`（拟新增——`status.*` 16 键 + `susp.*` 3 键 · 消费面 = `views/statusline*.mjs`）· 启动条件 = 本档加键致 >450**）·
-  `thincoder-desktop/renderer/mount-settings-segments.mjs` **364**（续期——由 = 设置面族在飞两批避让〔`docs/batches/2026-09-29-desktop-rebuild-fidelity.md` ∕ `docs/batches/2026-09-29-desktop-residuals-round3.md`〕；桌面残债批（#679）后（实读 2026-09-30）；预案 = MCP 族再出一档）·
+  `thincoder-desktop/renderer/mount-settings-segments.mjs` **364 ⇒ ≈195**（**在册预案触发 ⇒ 本批执行（MCP 键值行式输入批 · 2026-10-07 · 台账 #1036——MCP 族结构性触碰；先拆后改）**——拆前 **364**（实读 2026-09-30——桌面残债批（#679）后）；拆出档 = `thincoder-desktop/renderer/mount-settings-segments-mcp.mjs`（拟新增 · ≈240）；实施后回线 ⇒ **本档越层除名兑现**（十五 ⇒ 十四——回填轮落数）；明细 = `docs/desktop/design/SETTINGS.md` §1 **KD-76** ∥ §2.17 ∥ §3.1）·
   `thincoder-desktop/renderer/views/settings.mjs` **398**（实读 2026-10-02——设置体系升级批（#817）实施落盘（364 ⇒ 398：+`settingsModalTree` 单组树——**触属性复核 = 非结构性维持**（组合既有私有面、零既有结构变更 ⇒ 拆档评估不触发）；前读 **364**（实读 2026-10-01）；预案 = 段体续拆；**渠道档位退役批（#902）后 398（实读 2026-10-04——399 ⇒ 398）**；**三端对齐批（2026-10-07）触碰 = `settingsModalTree` `providerAdd` 支（Δ ≈+6 ⇒ 预估 ≈404，实施后实读回填）——非结构性维持（树面内容演进）⇒ 消解窗口顺延**）·
   `thincoder-desktop/renderer/i18n-views.mjs` **398**（实读 2026-10-05——附件扩展批（attach-file-support · 台账 #948）实施落盘（386 ⇒ 398——六键 × 两语（`composer.attach.*` 五 + `toolbar.attach` 值收正）；非结构性触碰 ⇒ **续期**）；
   前读 **386**（实读 2026-10-03——轻通道轮八（380 ⇒ 386——`composer.send.noDefaultModelFallback` 两语键值 + 两语类注（4 行）；非结构性触碰 ⇒ **续期**）；
@@ -1858,3 +1860,5 @@ T-DSK30 的机检面 = `thincoder-desktop/test/views-attach.test.mjs`（附件�
 - 2026-10-04（**行痕族消失时机批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-row-traces-clear-at-turn.md` §1 ∥ §2 · 台账 #919）：§2 KD 索引**补 KD-73 行**（PACKAGING 批未随索引——一致性面同笔）+ 增 **KD-74** 指针行（⇒ `RENDERER.md` §1.6——行痕族清点两门）；机制面同拍 = `RENDERER.md` ∥ `CHAT.md` ∥ `ACTIVITY.md` ∥ `COMPOSER.md` 四档。**产品码零触（设计轮）**。明细 = 批档 §2。
 - 2026-10-07（**头行粘顶批（设置页 ∥ 向导）· 设计形式化轮 · eng-designer**——承批档 `docs/batches/2026-10-07-settings-heads-sticky.md` §1 ∥ §2 · 台账 #1030）：§4.1 越层段**再入册一档**（`thincoder-desktop/renderer/settings.css` **296 ⇒ 303**——头行粘顶批（#1030）实施落盘；**十四 ⇒ 十五**）+ 该档册值收正（拆分预案复列 ∥ 消解窗口顺延；D33 块同拍）；`docs/desktop/design/SETTINGS.md` ∥ `docs/desktop/design/UI.md` 两档同拍（明细另见各档变更行）。**产品码零触（本笔）**。明细 = 批档 §2。
 - 2026-10-07（**三端对齐批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-07-provider-config-parity.md` §3 轮次 1）：§4.1 越层段两档触属性随动——`thincoder-desktop/src/main/providers.mjs`（探面收敛 + `provider:save` +`proxy`——非结构性 ⇒ 消解窗口顺延）∥ `thincoder-desktop/renderer/views/settings.mjs`（`settingsModalTree` `providerAdd` 支——非结构性维持 ⇒ 顺延）。**产品码零触（fix 轮）**。明细 = 批档 §2。
+- 2026-10-07（**MCP 键值行式输入批 · 设计轮（含续笔核验）· eng-designer**——承本批批档 §1 ∥ §2 · 台账 #1036）：§2 KD 索引 +**KD-76** 行；§4.1 次大两档句 ∥ 越层段该档行（在册预案触发 ⇒ 本批执行）+ 拆档链登记 +新档行（`mount-settings-segments-mcp.mjs` 拟新增）；
+  续笔：次大两档句时态收正（「拆档执行中」⇒「拆档执行（本批）」）。**产品码零触（设计轮）**。明细 = 批档 §2 ∥ 追记⑥。

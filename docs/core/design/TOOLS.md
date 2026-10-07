@@ -235,7 +235,7 @@ apply_patch——无坐标 hunk 宽容 + 文件头容缺；多文件原子。wri
 **先快照再执行 + 确认**，从不拦截（`gitGuardSnapshot`）；status 用 `runGitRaw` 保行前导空格（防 porcelain 误分类）。
 - **execute**：`code`（inline ESM）与 `scriptFile` 二选一必填；`nodeArgs` 禁 `--eval` / `--inspect` 类；scriptFile 可指向 workspace 外；超时默认 30s / 上限 600s。
 - **glob**：`{a,b}` brace 展开；`!` 排除前缀；不支持语法（`?(x)` / `@(a|b)` / `+(x)` / 空 / 未闭合 brace）**显式报错**（不静默漏匹配）。
-- **wait_for**：条件等待（非 sleep）——条件语义化（advisor settled / subagent id:N done / consult done / file exists / port open）；未知条件显式报错；timeout 默认 30s（config 可覆盖，cap 600s）；interval 默认 1s 下限 100ms。**`advisor settled` 判据** = 后台评审池真实态（无 running / queued 评审）——修前读子代理池的 advisor 条目（该池永无此类条目）⇒ **恒真 0ms 秒过**（用户实证）
+- **wait_for**：条件等待（非 sleep）——条件语义化（advisor settled / subagent id:N done / consult done / `bash id:N done` / `browser id:N done` / file exists / port open）；未知条件显式报错；timeout 默认 30s（config 可覆盖，cap 600s）；interval 默认 1s 下限 100ms。**`advisor settled` 判据** = 后台评审池真实态（无 running / queued 评审）——修前读子代理池的 advisor 条目（该池永无此类条目）⇒ **恒真 0ms 秒过**（用户实证）
 。机制面细则归 AGENT-LOOP 板。
 - **timer**：默认 180s；`seconds` 必须为有限正数；在途 ≤ 8（超限显式拒）；到期语义 = 在途跨 run 存活 + 到点自唤醒（空闲 / 挂起窗）——**支持面 = CLI / VSC / 桌面三端前台（headless 结构性不支持）**，逐格定义 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.5；机制 = 同档 §6.30（开关 `agent.timerWake` 默认开；端面接线 = §6.30.11）。
 - **task**：状态别名归一（completed / finished / …）+ warning；跨会话 / 项目级用**台账**（`/ledger`——描述含路由）。
@@ -243,7 +243,8 @@ apply_patch——无坐标 hunk 宽容 + 文件头容缺；多文件原子。wri
 - **read_image**：视觉模型读图；非视觉模型拒绝 / 占位（防 image_url 毒化会话）；svg 返回文本源码、bmp 拒绝并提示转 PNG。
 - **websearch / fetch**：网络边界见 §6.4；fetch 失败错误含 proxy 提示。
 - **browser**：自启系统 Edge/Chrome（独立 profile——`~/.thincoder/browser/profile`）+ CDP 直控（Node 原生 WebSocket——零第三方依赖）；十六动作 navigate/snapshot/click/type/evaluate/wait/screenshot/close + press/hover/wheel/mouse/drag/touch/insert/clipboard（CDP Input 真输入域 + 剪贴板保真读写）。
-  snapshot 回执 = 可交互元素清单 + 稳定引用（`e<N>`）+ 几何（视口外 `[outside]` 标记；ref 寻址动作前自动滚动到视）；click/type 按引用寻址；过审批门 = click/evaluate + press/mouse/drag/touch 点按 + clipboard 全量（`isReadonlyAction` 动作级分类——其余免审）。设计权威 = `BROWSER-TOOL.md`（本层）。
+  snapshot 回执 = 可交互元素清单 + 稳定引用（`e<N>`）+ 几何（视口外 `[outside]` 标记；ref 寻址动作前自动滚动到视）；click/type 按引用寻址；过审批门 = click/evaluate + press/mouse/drag/touch 点按 + clipboard 全量（`isReadonlyAction` 动作级分类——其余免审；分类不随 `async` 变）。
+  **硬预算**（每动作超时必返——错误句携卡点步名）；**会话不假定常驻**（外部关闭 ⇒ 在飞即时显式失败 + 下一次自愈重开）；**异步通道** `async:true`（ack `browser#<id>` + 结算摘要；`wait_for "browser id:N done"` ∥ `process` kill）。设计权威 = `BROWSER-TOOL.md`（本层）。
 - **process / file_ops / get_current_time / tree / lsp / lint / delete / bash**：按各自描述契约。
 - **batch**：批次档生命周期（action = create ∕ append ∕ status ∕ close；**无路径参数**——目标档 = spawn 绑定；身份定可写段）；append 段写入 append-only；写前剔凭证；工具盖轮次戳（仅 §3）；fail-closed 逐条 throw。权威 = 工程模式板。
 
@@ -995,7 +996,7 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 
 > 用例表 ∕ 受影响文件与行数预算 ∕ 验收回指 = 批档 `docs/batches/2026-09-29-desktop-execute-electron-node.md` §2（一次性批次材料——本档不重述）。
 
-### 6.19 `bash` 异步 ∥ 后台执行（2026-09-29 · 批 tools-carryover · 台账 #9）
+### 6.19 后台任务族：`bash` 异步 ∥ 后台执行（2026-09-29 · 批 tools-carryover · 台账 #9）＋ `browser` 后台动作（2026-10-07 · 批 browser-async-fix · 台账 #1045——设计权威 = `BROWSER-TOOL.md` §2.11）
 
 **机制**（设计面 = 批档 `docs/batches/2026-09-29-tools-carryover.md` §2.1；池面实现 = `thincoder-core/agent-tools/bash-async.mjs`（**已落** · 2026-09-29））：
 
@@ -1026,6 +1027,8 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 | 收尾面 | `thincoder-core/agent-tools/async-discard.mjs` | 中断豁免 ∥ 会话中止两档（逐条杀树 + 墓碑） |
 
 **关键决策（承批档 §2.5 D9-1–D9-7）**：择 B 任务池（否决 A 真后台 ∥ C 会话挂起——口径统一硬要求）· 独立池 `_bgTasks` · async 默认无超时 · 跨会话不存活 · kill 收编 `process` · 注入恒尾截 + 全量在 log · 收尾两档。
+
+**`browser` 后台动作（同族并入 · 2026-10-07 · 批 browser-async-fix）**：`browser` 参数面 +`async: boolean`（depth-0 专项——删参单点 ∥ execute 面第二道，同 bash 双线）；池 = `_browserTasks`（帽 `BROWSER_TASK_MAX = 4`）；ack = `browser#<id> started (running) — <action> <subject>`；后台动作仍走同一串行队列（单页不引入并发）；结算 = 恒停靠 + 摘要注入（`injectBrowserResult`——完成 ∥ 失败 ∥ 被杀三态；取消无摘要）+ 取号扫描 ∥ 挂起活度 ∥ 收尾档同族并入；等待面 ∥ 终止面 = `wait_for` 条件 `browser id:N done` ∥ `process` kill id 路由（先 bg 后 browser）。
 
 > 用例表 ∕ 受影响文件与行数预算 ∕ 验收回指 = 批档 `docs/batches/2026-09-29-tools-carryover.md` §2（一次性批次材料——本档不重述）。
 
@@ -1345,3 +1348,5 @@ plan 工具退出文本收正为**批准语义**（**五处**：`thincoder-core/
 - 2026-10-07（**浏览器输入最大化批（browser-input）· 设计轮 · eng-designer**——承 `docs/batches/2026-10-07-browser-input.md` §2 · 台账 #1018 ∥ #1019）：§6.7 browser 条随新动作面收正（八 ⇒ 十六动作；过门项扩展 press/mouse/drag/touch 点按/clipboard 全量；snapshot 几何标记随动）。**零新语义**（= 批档 §2 设计的落位——机制面细则归 `BROWSER-TOOL.md`）。
 
 - 2026-10-07（**浏览器输入最大化批（browser-input）· 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-10-07-browser-input.md` §3 轮次 1 · 发现 6 ∥ 9）：§6.2 内置工具枚举补 **browser**（入「其余」组——`thincoder-core/tools/index.mjs:28` 注册已在册，枚举面滞后）· §6.11 描述装载面计数收正（48 ⇒ **49 档**——现盘 `tool-docs/` 实测，+`browser.md`）。**零新语义**（文档状态滞后收正）。
+
+- 2026-10-07（**浏览器异步化 + 硬超时批（browser-async-fix）· 设计轮 · eng-designer**——承 `docs/batches/2026-10-07-browser-async-fix.md` §2 · 台账 #1045）：§6.7 browser 条 +硬预算 ∥ 会话自愈 ∥ 异步通道（细则归 `BROWSER-TOOL.md` §2.9–§2.11）；§6.19 扩为后台任务族（+`browser` 后台动作——池 `_browserTasks` ∥ ack ∥ 摘要）；§6.7 wait_for 条件枚举补 `bash id:N done` ∥ `browser id:N done`（`bash` 条为**既有枚举滞后收正**——`tools/ops.mjs:172` 实读已有）。**零新语义**（本批批档 §2 设计的落位）。

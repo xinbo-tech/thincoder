@@ -15,7 +15,7 @@
 | **Providers** | provider 行（状态点 / 标签 / 掩码 key / 模型·baseURL / proxy 勾选 / Key / ✕）+ Add 弹窗（弹框形态；字段序 = 名称→baseURL→格式→API Key→走 proxy→拉取→模型〔手输+datalist〕；§2.16） | `thincoder-vscode/webview/settings-providers.js` · `thincoder-vscode/webview/settings-provider-dialog.js` |
 | **Agent** | maxTurns（默认 200）· subagentTurns（默认 100）· compactThreshold（空 = auto）· verifyGuard · autoThink + Subagent models（global + explore/plan/coder/eng-coder，modelMenu 槽位） | `thincoder-vscode/webview/settings-agent.js` |
 | **Consult & Advisor** | 会诊行（modelMenu + effort 档 + ✕、+ 添加）+ Advisor（guard + provider/model + effort） | `thincoder-vscode/webview/settings-agent.js` |
-| **Tools & Services** | MCP servers（列表 + stdio/http/ws 表单 + 连接状态 ●/○ + Reconnect）+ Web Search key + Semantic Index（key + Build） | `thincoder-vscode/webview/settings-tools.js` |
+| **Tools & Services** | MCP servers（列表 + stdio/http/ws 表单（env ∥ headers = 行式键值——§2.4）+ 连接状态 ●/○ + Reconnect）+ Web Search key + Semantic Index（key + Build） | `thincoder-vscode/webview/settings-tools.js`（卡壳 ∥ 键行族 ∥ 索引）+ `thincoder-vscode/webview/settings-mcp.js`（MCP 面——§2.10 拆档产出） |
 | **Environment** | Proxy（URI / web / model 双开关 / Test）+ Shell（平台感知候选） | `thincoder-vscode/webview/settings-env.js` |
 
 ## 2. 面板 ↔ config 契约
@@ -46,7 +46,12 @@
 
 ### 2.4 MCP 存储
 
-共享 `config.json` 的 `mcp.servers[]`（两产品同格式）；旧 VS Code settings 已一次性迁移。重名拒绝、args 空格分隔、env `KEY=value`。
+共享 `config.json` 的 `mcp.servers[]`（两产品同格式）；旧 VS Code settings 已一次性迁移。重名拒绝、args 空格分隔。
+
+**env ∥ headers 输入 = 行式键值（MCP 键值行式输入批 · 2026-10-07 · 台账 #1036——两端同形，本端为准）**：表单三组（stdio `env` ∥ http `headers` ∥ ws `headers`）各为**行集**——每行 = 键格 + 值格 + ✕，行集下 `[+ 添加行]`；**零项 ⇒ 零行**（零假造）。
+提交判据：键 ∥ 值 trim 后**空键行 ∥ 空值行不提交**（空值 = 旧串式 `k=` 删项语义的自然延续）∥ 重复键**后行胜** ∥ 全空 ⇒ 该字段删除（config 键缺席——沿 `src/config-mcp.mjs:28 ∥ :54-56` 判）。
+回显 = 存储对象 `Object.entries` 序；**值 = 字面**（逗号 ∥ 等号 ∥ 引号 ∥ 空格原样——本批即修「值含逗号即坏」）；旧串式的成对引号剥离退场（行式下引号 = 正文字符，非语法记号）。
+粘贴 = **零解析**（不引「按换行分行」等隐式解析——取舍 = 批档 §2 KD-4）；值格 = 单行 `input`（**值内换行不可录入**——边界明示）。落盘形零改（`env` ∥ `headers` 仍为对象；载荷仍 `{name, config}`）；桌面逐元素同形（`docs/desktop/design/SETTINGS.md` §2.17 ∥ §1 KD-76）。
 
 **装配面第二源（2026-09-30 · 台账 #701）**：MCP **装配面**（`thincoder-vscode/src/extension/panel-turn-loop.mjs` ro 载荷——实施落点）另并项目根 `.mcp.json`——单层发现（`join(cwd, ".mcp.json")`）· 零交互信任 · config 同名优先 ∕ 异名追加（机制单源 = `doc:MCP.md:§6.4`）；**管理面**（本节列表 ∕ 增删改 ∕ 重连 ∕ 探活）仍 config 单源（`.mcp.json` 源不进管理列表——沿 CLI `/mcp` 口径）。
 
@@ -522,10 +527,9 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   而 MCP server 行（入口册 #5）**不显掩码**、删除目标 = 整条 server 条目 ⇒ 该行文案贴合度存缺口。
   **处置 = 已裁 ②（父侧 2026-09-18 本轮 · 评审 id=116 发现 5）：本键文案改类通用式**——值级改写 · 键数不变 · 键名不动（写域 +`thincoder-vscode/locales/en.json` / `locales/zh.json` 两档）；改写值 = §2.10 文案条；**未采 ①**（新增 MCP 行专用键）。
   **已核销（2026-09-19 文档卫生轮 · 父侧直接执行）**——值级改写已随 MCP 批实现轮落盘（本批与 provider 行批均申报 `locales/**` 零改 ⇒ 现值 = 类通用式，即 §2.10 文案条）；到期条件达成。
-- **`settings-tools.js` 越 300 行建议线（拆分复核 · 评审 id=116 发现 4）**（结构面 · §2.10 载体登记）：该档现 **395 行**（`wc -l` 口径；`split("\n")` 396）——**复核结论 = 本批不拆**（本批增量 = 绑定位门名 + 载荷闭包，不改结构 / 不增职责）。
-  拆分计划 = 触发阈值 **450 行** 或 **MCP / provider 面下次结构改动**（先到即拆）；
-  组边界 = ① **MCP 族**（`renderMcpList` + MCP 表单读段 + `bindToolsControls` 的 MCP 装配）② 密钥行族（`renderKeyRow` / `KEY_ROW_ACTIONS` / 三处 handler）③ 卡骨架 + 快照消费（`toolsCardHtml` / `updateWebsearchSettings` / `renderIndexStatus`）——① 拆出 = `thincoder-vscode/webview/settings-mcp.js`（拟新增）。
-  到期条件 = 触发阈值到达时 / MCP 面下次结构改动。
+- **`settings-tools.js` 越 300 行建议线（拆分复核 · 评审 id=116 发现 4）**（结构面 · §2.10 载体登记）：**触发条款达成 ⇒ 拆档执行（MCP 键值行式输入批 · 2026-10-07 · 台账 #1036）**——原触发 = 阈值 450 行 ∨ **MCP / provider 面下次结构改动**（先到即拆）：本批 = MCP 表单结构性改动（env ∥ headers 改行式键值——§2.4）⇒ 第二条件达成（拆前实读 **433**；kv 面净增 ≈ +80 ⇒ 不拆则 ≈513 **越 500 硬限**）。
+  组边界 = ① **MCP 族**（`renderMcpList` / `updateMcpTools` / `updateMcpTestResult` / `parseHeadersLike`（随批净删）/ `openMcpForm` / `kvToInput`（随批净删）/ `bindToolsControls` MCP 段 / `toolsCardHtml` 表单段）② 密钥行族（`renderKeyRow` / `KEY_ROW_ACTIONS` / 三处 handler）③ 卡骨架 + 快照消费（`toolsCardHtml` / `updateWebsearchSettings` / `renderIndexStatus`）——① 拆出 = `thincoder-vscode/webview/settings-mcp.js`（**拟新增 · 缝 = `mcpFormHtml()` ∥ `bindMcpControls()` 两口回插**；对外导出名零改——`settings.js` ∥ `chat.js` 消费面零改）。
+  生效窗口 = **先拆后改**（零语义搬移在改动前）；拆后两档实读 = 实施后回填轮落数。到期条件 = 阈值 450 行到达时（新触发——若拆后增量再逼近）。
 - **用例档越 300 行建议线（拆分复核 · 评审 id=116 发现 4）**（测试面 · §2.10 机检面）——**已终结**（2026-09-19 按实现实测收正，原「现 439 → 预估 ~516」为预估）：provider 行批实现轮实读触线 ⇒ **拆分已执行** = 主档 `settings-secret-delete-confirm.test.mjs`
  现 **412** · MCP 组析出 `settings-mcp-delete-confirm.test.mjs` **177**（已在 `thincoder-vscode/test/files.mjs` 在册）；**两档均 <500 硬限** ⇒ 不触发再拆；**下次触发条件 = 任一档实读 ≥500**（承批档 §2.2 D-M6「越线即当场拆」）。
   组边界 = **MCP 组**（W17-16 / W17-19…W17-25）析出为 `thincoder-vscode/test/settings-mcp-delete-confirm.test.mjs`（已落 · 实读 **177**——夹具经 `test/helpers/webview-env.mjs` 共享；自持 `before` / `beforeEach` / 驱动助手）· `thincoder-vscode/test/files.mjs` 同步登记（主档条注释随组边界同笔收正）。 （迁移期引文——档已删）
@@ -601,6 +605,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 | U-S14 | 添加渠道 = **弹窗形态**（单例 · 遮罩 + 居中卡 `#prov-add-dialog`；开 = `_openAddProviderDialog()`；关五路：保存 ∥ 取消 ∥ 背板 ∥ 框内 Esc ∥ 关面板；初始焦点 = 首控件）；字段序 = 用户填写序（名称→baseURL→格式→API key→走 proxy→拉取→模型）；表单「走 proxy」= 写 `providers[].proxy`（与行开关同字段 ∥ 同词键） | 已定（§2.16） |
 | U-S15 | 添加表单（弹窗）自定形 model = **手输文本框 + 拉取候选 datalist**（探通填候选、不自动选中；探败零清键入）；**不拉取亦可保存**（model 空 ⇒ 词 `settings.modelRequired`）；「选择模型…」无可用候选 ⇒ 行内提示（`#defaultmodel-hint`，词 `settings.pickModelEmpty`） | 已定（§2.16——#1031 ∥ #1032） |
 | U-S16 | provider 配置面词面：实体名 = **「API Key」**（zh 保留英文形；裸「密钥」退场——#1035，两端 i18n 词值改写）；卡面残余硬编码串入表（`settings.noDefaultModel` ∥ `settings.defaultModelTitle` ∥ `settings.providerHostBusy` ∥ `settings.providerUnavailable`——#1033） | 已定（§2.16） |
+| U-S17 | MCP 表单 env ∥ headers = **行式键值编辑器**（每行键格 + 值格 + ✕；行集下 `[+ 添加行]`；零项零行）；粘贴零解析；值 = 字面（零引号剥离）；提交四判据（空行丢 ∥ 重复后胜 ∥ 全空删字段 ∥ trim） | 已定（§2.4——MCP 键值行式输入批 · #1036；桌面逐元素同形 = `docs/desktop/design/SETTINGS.md` §1 **KD-76**） |
 
 ## 变更记录
 
@@ -699,3 +704,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - 2026-10-01（**记录清账批 · 文档面收正轮 · eng-designer**——承 `docs/batches/2026-10-01-records-docs-reconcile.md` §2 · 台账 #696）：超宽表行断行收形 1 处（`:389`「读面（预选取值）」——表行续行拆分（空首列续行）——单行 ≤300 ∥ 内容逐字零改 ∥ 条目数不变）。**零新语义**（断行）。明细 = 批档 §2。
 - 2026-10-02（**桌面 UX 收尾批 · 收口补充轮（VSC 侧）· eng-designer**——承批档 `docs/batches/2026-10-02-desktop-ux-closeout.md` §1 ∥ §5 · 台账 #697）：§2.5 P1 条定形值回填（词键 = `settings.indexDbSize` 整行模板 ∥ `settings.indexOriginCounts` 计数片段——两语值在册；形 = `#index-db-size` ∥ `#index-origins` 两读——缺位隐藏）；同笔按语义边界折行（原 442 超宽 ⇒ 四行 ≤300——零语义）。**零新语义**（回填 ∥ 折行）。明细 = 批档 §2。
 - 2026-10-04（**issue 修复批·三 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §2 · 台账 #823）：§2.4 补 **MCP 警告消费**句（装配尾入 `_pendingReminders`——首两段逐字同 CLI ∥ 末行指设置面 Reconnect ∥ 同指纹不重推 ∥ 零警告零写；机制单源 = `doc:MCP.md:§6.4`）。**零新语义**（端差归零落档）。明细 = 批档 §2。
+- 2026-10-07（**MCP 键值行式输入批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-mcp-kv-input.md` §1 ∥ §2 · 台账 #1036）：§2.4 补 **env ∥ headers 行式键值**段（行 = 键格 + 值格 + ✕ ∥ 提交四判据 ∥ 值 = 字面 ∥ 粘贴零解析 ∥ 单行值边界）；§1 卡表行 MCP 面实现入口补 `webview/settings-mcp.js`；§2.10 拆分复核条翻「触发条款达成 ⇒ 拆档已执行」（MCP 面出档 `settings-mcp.js`——先拆后改）；§5 增 **U-S17**。
+  **实施后回填面** = 本档 §2.10 入口册 #5 坐标（`:206` ∥ `:210`）∥ MCP token/headers 表单读段（`:220-221`）∥ `renderMcpList` 坐标（`:228` ∥ `:240`）∥ 行载体段（`:277-281`）——`settings-tools.js` ⇒ `settings-mcp.js`；`docs/vsc/design/WEBVIEW-PROTOCOL.md` 发射坐标七行（`:492 ∥ :496 ∥ :498 ∥ :502 ∥ :510 ∥ :517 ∥ :532`）同拍。**产品码零触（设计轮）**。明细 = 批档 §2。
+- 2026-10-07（**MCP 键值行式输入批 · 设计轮续笔核验（重启接续）· eng-designer**——承本批批档 §2 追记⑥ · 台账 #1036）：§2.10 两处时态按实读收正（「拆档已执行」⇒「拆档执行」∥「已建」⇒「拟新增」——设计轮产品码零触 ∥ 新档实未建）；
+  变更行「实施后回填面」四组坐标按现读收正（+5——`:206` ∥ `:210` ∥ `:220-221` ∥ `:228` ∥ `:240` ∥ `:277-281`）。**零新语义**（时态 ∥ 坐标）。明细 = 批档 §2 追记⑥。

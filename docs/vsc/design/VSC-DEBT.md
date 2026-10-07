@@ -655,9 +655,9 @@
 | 档 | 现读数 | 拆点（现读区间 → 目标档 · 缝） | 触发（未到） |
 |---|---|---|---|
 | `thincoder-vscode/src/extension/settings.mjs` | **409** | 环境面七件 = `shellCandidates` :88-115 · `proxySettings` :224-227 · `websearchSettings` :230-233 · `saveWebsearchKeyFromPanel` :236-243 · `deleteWebsearchKeyFromPanel` :246-252 · `saveProxySettingsFromPanel` :276-287 · `testProxyConnection` :291-314（≈91 行）→ `settings-env.mjs`（缝 = re-export） | 净增 ≥40 ∨ 下次触碰（代理 / 检索面） |
-| `thincoder-vscode/webview/settings-tools.js` | **398** | MCP 面 = `renderMcpList` :165-230 · `updateMcpTestResult` :233-241 · `updateMcpTools` :244-263 · `parseHeadersLike` :356-369 · `openMcpForm` :373-393 · `kvToInput` :396-398 · `bindToolsControls` MCP 段 :99-146（≈170 行）→ `settings-mcp.js` | 净增 ≥40 ∨ 下次触碰（MCP 表单 / 键行族） |
+| `thincoder-vscode/webview/settings-tools.js` | **433**（实读 2026-10-07——MCP 键值行式输入批设计轮） | MCP 面 = `renderMcpList` ∥ `updateMcpTools` ∥ `updateMcpTestResult` ∥ `parseHeadersLike`（随批净删）∥ `openMcpForm` ∥ `kvToInput`（随批净删）∥ `bindToolsControls` MCP 段 ∥ `toolsCardHtml` 表单段（≈170 行）→ `settings-mcp.js`（缝 = `mcpFormHtml()` ∥ `bindMcpControls()`） | **达成 ⇒ 拆档执行**（MCP 键值行式输入批 · 2026-10-07 · 台账 #1036——MCP 表单结构性改动；先拆后改。不拆则 ≈513 越 500 硬限） |
 
-两档触发未到 ⇒ 本批零执行（判定口径 = KD-20）。
+两档：`settings.mjs` 触发未到 —— 零执行；`settings-tools.js` 触发达成（MCP 表单 / 键行族）——拆档执行（MCP 键值行式输入批 · 2026-10-07 · 台账 #1036；判定口径 = KD-20）；拆后实读 = 实施后回填轮落数。
 
 ### 13.4 `thincoder-vscode/src/agent.mjs`（496 → 目标 ≤460）——响应后处理段外提 · `agent/response-stages.mjs`（已落 · 实读 **73**） （迁移期引文——档已迁核）
 
