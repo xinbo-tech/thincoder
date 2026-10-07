@@ -16,7 +16,7 @@ export async function renderProviders(ctx, mount) {
 
   const listBox = h("div", { class: "table-slot" }, h("p", { class: "hint", text: t("common.loading") }))
   const openAdd = () => openAddProviderModal(ctx, { providers, reload: loadList })
-  const shell = ctx.dataShell(mount, { // 视口高壳（§2.6②——页头工具条固定 ∥ 表槽吃剩高 ∥ 页脚行计数）
+  ctx.dataShell(mount, { // 视口高壳（§2.6②——页头工具条固定 ∥ 表槽吃剩高；表尾计数 = 表内 tfoot）
     head: h("div", { class: "toolbar" },
       h("h2", { text: t("admin.providers.title") }),
       h("button", { type: "button", text: t("admin.providers.add"), onclick: openAdd })),
@@ -30,11 +30,9 @@ export async function renderProviders(ctx, mount) {
       listBox.replaceChildren(...(data.providers.length === 0
         ? [h("p", { class: "hint", text: t("admin.providers.listEmpty") })]
         : [table(ctx, data.providers, (row) => openProviderDetailModal(ctx, { provider: row, reload: loadList }))]))
-      shell.setCount(data.providers.length)
     } catch (error) {
       ctx.fail(error)
       listBox.replaceChildren(h("p", { class: "hint error", text: t("admin.providers.listFailed") }))
-      shell.setCount(0)
     }
   }
   await loadList()
@@ -56,5 +54,8 @@ function table(ctx, providers, open) {
     return tr
   })
   return h("div", { class: "table-wrap" },
-    h("table", {}, h("thead", {}, h("tr", {}, ...headers.map((label) => h("th", { text: label })))), h("tbody", {}, ...body)))
+    h("table", {},
+      h("thead", {}, h("tr", {}, ...headers.map((label) => h("th", { text: label })))),
+      h("tbody", {}, ...body),
+      h("tfoot", {}, h("tr", {}, h("td", { colspan: String(headers.length), text: t("common.rowCount", { count: providers.length }) })))))
 }

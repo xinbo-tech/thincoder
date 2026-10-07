@@ -246,14 +246,14 @@ test("② 成员弹窗：三态（查看/编辑/新建）∥ 设额度/重置/�
 // ── ③ 服务模型页（AC-17——派生同源 ∥ 详情弹窗 ∥ 配置骨架）────────────────────
 
 test("③ 服务模型：`deriveModels` 同源派生 ∥ 列表/空态/失败态 ∥ 详情弹窗复用组件 ∥ 配置面在册（配置面批后）", async () => {
-  // 派生（纯函数）：providers 展平 = `provider/model` 前缀形（上游模型名 = 首斜杠余段——含斜杠模型名亦然）+ 引擎行
+  // 派生（纯函数）：providers 展平 = `provider/model` 前缀形（上游模型名 = 首斜杠余段——含斜杠模型名亦然）+ 引擎行；序 = id 升序（2026-10-07 走查收正——长清单可找）
   assert.deepEqual(MODELS.deriveModels([
     { name: "deepseek", models: ["deepseek-chat", "meta/llama-3"] },
     { name: "openai", models: [] },
   ], "bge-m3"), [
+    { id: "bge-m3", provider: "embedding", upstream: null, surface: "embeddings" },
     { id: "deepseek/deepseek-chat", provider: "deepseek", upstream: "deepseek-chat", surface: "chat" },
     { id: "deepseek/meta/llama-3", provider: "deepseek", upstream: "meta/llama-3", surface: "chat" },
-    { id: "bge-m3", provider: "embedding", upstream: null, surface: "embeddings" },
   ])
   assert.deepEqual([MODELS.deriveModels([], null), MODELS.deriveModels([{ name: "p", models: ["m"] }], null)], [[], [{ id: "p/m", provider: "p", upstream: "m", surface: "chat" }]])
   const src = readFileSync(join(PUBLIC_DIR, "views-models.mjs"), "utf8")
@@ -271,7 +271,7 @@ test("③ 服务模型：`deriveModels` 同源派生 ∥ 列表/空态/失败态
       dataShell: (mount, { head, area }) => {
         // 随正（2026-10-07 控制台布局收正批）：stub 语义近似——真品 = app.mjs dataShell；本件仅渲染面
         mount.append(head, area)
-        return { setCount: () => {} }
+         return undefined // setCount 已撤（2026-10-07 光通道轮——计数入表 tfoot）
       },
     }
     const mount = makeNode("section")
@@ -280,11 +280,12 @@ test("③ 服务模型：`deriveModels` 同源派生 ∥ 列表/空态/失败态
     const trs = findAll(mount, (node) => node.tag === "tr")
     assert.deepEqual(trs.map(rowText), [
       [ZH["admin.models.colModel"], ZH["admin.models.colProvider"], ZH["admin.models.colSurface"]].join("|"),
-      "deepseek/deepseek-chat|deepseek|chat",
       "bge-m3|embedding|embeddings",
-    ], "列表 = providers 展平 + 引擎模型（`/v1/models` 同源）")
+      "deepseek/deepseek-chat|deepseek|chat",
+      fill(ZH["common.rowCount"], { count: 2 }), // tfoot 计数行（序 = id 升序——2026-10-07 走查收正 ∥ 计数入表）
+    ], "列表 = providers 展平 + 引擎模型（`/v1/models` 同源）+ tfoot 计数")
     // 详情弹窗（行点击）：模型标识 ∥ Provider ∥ 上游模型名 ∥ 面 + 配置面（四组——配置面批后）
-    await trs[1].fire("click")
+    await trs[2].fire("click") // 升序后 deepseek 行 = 第 2 行（表头 0 ∥ bge-m3 1）
     let dialog = findNode(documentStub.body, (node) => node.tag === "dialog")
     assert.equal(dialog.children[0].children[0].textContent, ZH["admin.models.detailTitle"])
     let text = textOf(dialog)
@@ -294,8 +295,8 @@ test("③ 服务模型：`deriveModels` 同源派生 ∥ 列表/空态/失败态
     assert.equal(text.includes(ZH["admin.models.embedNote"]), false, "嵌入行注 = 仅嵌入行")
     assert.ok(findAll(dialog, (node) => ["input", "select", "textarea"].includes(node.tag)).length >= 1, "配置面批后 = 可编辑字段在册（骨架断言退役——配置判据 = `-models-config-ui` 件）")
     await dialog.children[0].children[1].fire("click") // × 关闭
-    // 嵌入行：行注在场（配置 = 系统页·向量服务卡）∥ 上游模型名 = 「—」（无首斜杠余段）
-    await trs[2].fire("click")
+    // 嵌入行：行注在场（配置 = 系统页·向量服务卡）∥ 上游模型名 = 「—」（无首斜杠余段）——升序后 = 第 1 行
+    await trs[1].fire("click")
     dialog = findNode(documentStub.body, (node) => node.tag === "dialog")
     text = textOf(dialog)
     assert.deepEqual([text.includes(ZH["admin.models.embedNote"]), text.includes("—"), findAll(dialog, (node) => node.tag === "input").length], [true, true, 0])

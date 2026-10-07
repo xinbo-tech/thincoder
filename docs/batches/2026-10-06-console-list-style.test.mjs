@@ -132,7 +132,7 @@ test("③ 态面：行悬停声明清单（三声明同取 `var(--hover)`；清�
 
 // ── ④ 错态面（⑨ canon）：七处「加载失败」面 ∥ 系统页诊断失败面 2 处 ∥ 段内错误面 ──────────────
 
-test("④ 错态面：`.hint error` 逐面套用（七处 loadFailed + 系统页两处 + 段内一处）∥ `\"hint error\"` 计数同拍 10", () => {
+test("④ 错态面：`.hint error` 逐面套用（七处 loadFailed + 系统页两处 + 段内三处）∥ `\"hint error\"` 计数同拍 12", () => {
   const FACES = [
     ["views-admin.mjs", "admin.members.loadFailed"],
     ["views-me.mjs", "usage.loadFailed"],
@@ -158,10 +158,12 @@ test("④ 错态面：`.hint error` 逐面套用（七处 loadFailed + 系统页
   assert.match(stripComments(CSS), /(?:^|[}\s])\.error\s*\{/, "`.error` 独立生效选择器缺位（`.hint.error` 复合不生效）")
   // #103 段内错误面（发现失败 ⇒ 段内提示 = 错态——本批以当刻盘面并入）
   assert.ok(readPublic("views-providers-modals.mjs").includes(`h("p", { class: "hint error", text: errorText })`), "段内错误面未套 canon")
+  // 2026-10-07 走查收正：测试连接结果行（失败 ⇒ 段内 `.hint error`——同窗；AC-18「测试同窗」）
+  assert.ok(readPublic("views-providers-modals.mjs").includes(`isError ? "hint error" : "hint"`), "测试连接失败未套 canon（同窗结果行）")
   // 计数同拍（错态不外溢——加载/空态保持纯 `.hint`）
   const total = ["views-admin.mjs", "views-me.mjs", "views-models.mjs", "views-usage.mjs", "views-audit.mjs", "views-providers.mjs", "views-providers-modals.mjs", "views-system.mjs"]
     .reduce((sum, file) => sum + (readPublic(file).match(/"hint error"/g) ?? []).length, 0)
-  assert.equal(total, 10, `\`"hint error"\` 计数不同拍：${total}`)
+  assert.equal(total, 12, `\`"hint error"\` 计数不同拍：${total}`)
 })
 
 // ── ⑤ 类名双向闭合（AC-19 续）：档面字面类 ↔ style.css 类选择器 ∥ 死类零残留 ─────────────────

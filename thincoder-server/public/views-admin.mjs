@@ -23,7 +23,7 @@ export async function renderMembers(ctx, mount) {
   const secretBox = h("div", { class: "secret", hidden: true })
 
   const membersBox = h("div", { class: "table-slot" }, h("p", { class: "hint", text: t("common.loading") }))
-  const shell = ctx.dataShell(mount, { // 视口高壳（§2.6②——页题/秘密区/新建行固定 ∥ 表槽吃剩高 ∥ 页脚行计数）
+  ctx.dataShell(mount, { // 视口高壳（§2.6②——页题/秘密区/新建行固定 ∥ 表槽吃剩高；表尾计数 = 表内 tfoot）
     head: [
       h("h2", { text: t("admin.members.title") }),
       secretBox,
@@ -39,12 +39,10 @@ export async function renderMembers(ctx, mount) {
       membersBox.replaceChildren(data.members.length === 0
         ? h("p", { class: "hint", text: t("admin.members.empty") })
         : membersTable(ctx, data.members, (member) => openMemberModal(ctx, { member, reload, secretBox })))
-      shell.setCount(data.members.length)
       return data.members
     } catch (error) {
       ctx.fail(error)
       membersBox.replaceChildren(h("p", { class: "hint error", text: t("admin.members.loadFailed") }))
-      shell.setCount(0)
       return null
     }
   }
@@ -69,7 +67,10 @@ function membersTable(ctx, members, open) {
     return tr
   })
   return h("div", { class: "table-wrap" },
-    h("table", {}, h("thead", {}, h("tr", {}, ...headers.map((label) => h("th", { text: label })))), h("tbody", {}, ...body)))
+    h("table", {},
+      h("thead", {}, h("tr", {}, ...headers.map((label) => h("th", { text: label })))),
+      h("tbody", {}, ...body),
+      h("tfoot", {}, h("tr", {}, h("td", { colspan: String(headers.length), text: t("common.rowCount", { count: members.length }) })))))
 }
 
 /** 成员弹窗（三态：查看 ∥ 编辑 ∥ 新建——§2.4②；`member = null` ⇒ 新建态）。幂等操作（额度 ∥ 吊销）成功 ⇒

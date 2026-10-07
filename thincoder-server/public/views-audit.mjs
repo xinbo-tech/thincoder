@@ -41,11 +41,9 @@ export async function renderAudit(ctx, mount) {
       const data = await ctx.api(`/api/audit?${params.toString()}`)
       const events = data.events ?? []
       eventsBox.replaceChildren(eventsTable(ctx, events))
-      shell.setCount(events.length)
     } catch (error) {
       ctx.fail(error)
       eventsBox.replaceChildren(h("p", { class: "hint error", text: t("audit.loadFailed") }))
-      shell.setCount(0)
     }
   }
   const filterForm = h("form", { class: "row-form" },
@@ -55,7 +53,7 @@ export async function renderAudit(ctx, mount) {
     h("button", { type: "submit", text: t("audit.submit") }),
   )
   filterForm.addEventListener("submit", (event) => { event.preventDefault(); loadEvents() })
-  const shell = ctx.dataShell(mount, { // 视口高壳（§2.6②——页题固定 ∥ 卡内过滤行 ∥ 表槽吃剩高 ∥ 页脚行计数）
+  ctx.dataShell(mount, { // 视口高壳（§2.6②——页题固定 ∥ 卡内过滤行 ∥ 表槽吃剩高；表尾计数 = 表内 tfoot）
     head: h("h2", { text: t("audit.title") }),
     area: h("section", { class: "card" }, h("h3", { text: t("audit.title") }), filterForm, eventsBox),
   })
@@ -73,7 +71,7 @@ function eventsTable(ctx, events) {
     event.target && event.target !== event.actor ? event.target : "—",
     detailText(event.detail),
   ])
-  return ctx.table([t("audit.col.time"), t("audit.col.type"), t("audit.col.actor"), t("audit.col.target"), t("audit.col.detail")], rows)
+  return ctx.table([t("audit.col.time"), t("audit.col.type"), t("audit.col.actor"), t("audit.col.target"), t("audit.col.detail")], rows, { foot: true })
 }
 
 /** 类型文案（九型枚举内 ⇒ 表键；枚举外 ⇒ 原值兜底——未来新型零遗漏）。 */

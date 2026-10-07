@@ -170,7 +170,16 @@ dialog.modal::backdrop { background: var(--backdrop); }
 .modal-head h3 { margin: 0; flex: 1; }
 .modal-close { border: none; background: none; color: var(--muted); font-size: var(--fs); border-radius: var(--r-2); padding: var(--sp-1) var(--sp-3); } /* ② 图符钮 */
 .modal-close:hover { background: var(--hover); color: var(--text); } /* ② 图符钮悬停 */
-.modal-body { padding: var(--sp-5) var(--sp-6); max-height: min(70vh, var(--modal-w)); overflow-y: auto; }
+.modal-body { padding: var(--sp-5) var(--sp-6); max-height: min(70vh, var(--modal-w)); overflow-y: auto; display: flex; flex-direction: column; }
+.modal-body > div { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; } /* 内容盒（调用点恒传单 div——modal.mjs 整只 append；修正：原选择器漏此层，链未接通——2026-10-07 实测复现后落） */
+.modal-body > div > * { flex: none; } /* 主信息（表单/信息格/说明）固定不收缩之一 */
+.modal-body > div > .table-wrap { flex: 1 1 auto; min-height: 0; } /* 直挂表区（成员 key 表）吃剩高 */
+.modal-body > div > .stack-models { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.stack-models > .pick-head, .stack-models > .pick-note { flex: none; }
+.stack-models > .pick-box { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.pick-box > .table-wrap { flex: 1; min-height: 0; overflow-y: auto; } /* 选择清单区自滚（表头吸附见下） */
+.modal-body .table-wrap { overflow-y: auto; }
+.modal-body .table-wrap thead th { position: sticky; top: 0; z-index: 1; } /* 弹窗内表头吸附（同壳口径——底色沿 `th` 族 `--fill`） */
 .modal-foot { display: flex; flex-wrap: wrap; gap: var(--sp-4); padding: var(--sp-5) var(--sp-6); border-top: var(--bw) solid var(--border); }
 .detail-grid { display: grid; grid-template-columns: max-content 1fr; gap: var(--sp-3) var(--sp-5); margin: 0 0 var(--sp-5); font-size: var(--fs); }
 .detail-grid dt { color: var(--muted); }
@@ -187,7 +196,7 @@ dialog.modal::backdrop { background: var(--backdrop); }
 .config-field .hint { margin: 0; }
 .config-group > .hint { margin: var(--sp-3) 0 0; }
 
-/* ── 数据表页视口高壳（§2.6②——高度链声明单源：页头固定 ∥ 表区吃剩高 ∥ 页脚行计数；回退见下）────── */
+/* ── 数据表页视口高壳（§2.6②——高度链声明单源：页头固定 ∥ 表区吃剩高；表尾行计数 = 表内 tfoot〔吸附表底〕；回退见下）────── */
 body.data-shell .content { height: 100dvh; display: flex; flex-direction: column; }
 body.data-shell main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 body.data-shell main > section { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -197,7 +206,7 @@ body.data-shell main > section { flex: 1; min-height: 0; display: flex; flex-dir
 .table-slot { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .table-slot > .table-wrap { flex: 1; min-height: 0; overflow-y: auto; }
 body.data-shell main thead th { position: sticky; top: 0; z-index: 1; } /* 吸附限 `main`——弹窗内表不吸附（弹窗直属 body） */
-.page-foot { flex: none; margin-top: var(--sp-4); color: var(--muted); }
+body.data-shell main tfoot td { position: sticky; bottom: 0; z-index: 1; background: var(--fill); color: var(--muted); } /* 表尾行计数（tfoot）吸附表底——与表头呼应 */
 
 /* ── 壳回退（≤760px 宽 ∥ ≤600px 高）：撤高度链——整页滚（吸附随壳失效；§2.6②）────────────────── */
 @media (max-width: 760px), (max-height: 600px) {

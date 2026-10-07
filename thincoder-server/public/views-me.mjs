@@ -61,16 +61,14 @@ export async function renderMeUsage(ctx, mount) {
     try {
       const data = await ctx.api(`/api/me/usage?${params.toString()}`)
       const rows = data.rows ?? []
-      usageBox.replaceChildren(ctx.usageTable(rows, { withMember: false }))
-      shell.setCount(rows.length)
+      usageBox.replaceChildren(ctx.usageTable(rows, { withMember: false, foot: true }))
     } catch (error) {
       ctx.fail(error)
       usageBox.replaceChildren(h("p", { class: "hint error", text: t("usage.loadFailed") }))
-      shell.setCount(0)
     }
   }
   filterEndpoint.addEventListener("change", () => { loadUsage() }) // 单控件即选即查（多字段面走提交钮——管理页）
-  const shell = ctx.dataShell(mount, { // 视口高壳（§2.6②——页题/提示条/摘要卡固定 ∥ 表槽吃剩高 ∥ 页脚行计数）
+  ctx.dataShell(mount, { // 视口高壳（§2.6②——页题/提示条/摘要卡固定 ∥ 表槽吃剩高；表尾计数 = 表内 tfoot）
     head: [
       h("h2", { text: t("me.usage.title") }),
       vectorTip(ctx), // 向量服务提示条（模型名 + snippet + 用法一句——地址/探活/试跑 = admin 面）

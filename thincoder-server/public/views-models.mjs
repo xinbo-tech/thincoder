@@ -23,7 +23,7 @@ export function deriveModels(providers, embeddingModel) {
     }
   }
   if (embeddingModel) rows.push({ id: embeddingModel, provider: "embedding", upstream: null, surface: "embeddings" })
-  return rows
+  return [...rows].sort((a, b) => a.id.localeCompare(b.id)) // id 升序（2026-10-07 走查收正——服务模型页长清单可找；同弹窗清单口径）
 }
 
 /** A 停用 = `models` 减项（纯函数——批内件直测；本页 = 开放清单自持操作面——退役项同口径）。 */
@@ -62,7 +62,7 @@ export function draftFromSettings(settings, upstream) {
 export async function renderModels(ctx, mount) {
   const { h } = ctx
   const listBox = h("div", { class: "table-slot" }, h("p", { class: "hint", text: t("common.loading") }))
-  const shell = ctx.dataShell(mount, { // 视口高壳（§2.6②——页题固定 ∥ 表槽吃剩高 ∥ 页脚行计数）
+  ctx.dataShell(mount, { // 视口高壳（§2.6②——页题固定 ∥ 表槽吃剩高；表尾计数 = 表内 tfoot）
     head: h("h2", { text: t("admin.models.title") }),
     area: h("section", { class: "card" }, listBox),
   })
@@ -74,11 +74,9 @@ export async function renderModels(ctx, mount) {
       listBox.replaceChildren(rows.length === 0
         ? h("p", { class: "hint", text: t("admin.models.empty") })
         : modelsTable(ctx, rows, providers, load))
-      shell.setCount(rows.length)
     } catch (error) {
       ctx.fail(error)
       listBox.replaceChildren(h("p", { class: "hint error", text: t("admin.models.loadFailed") }))
-      shell.setCount(0)
     }
   }
   await load()
@@ -101,7 +99,10 @@ function modelsTable(ctx, rows, providers, reload) {
     return tr
   })
   return h("div", { class: "table-wrap" },
-    h("table", {}, h("thead", {}, h("tr", {}, ...headers.map((label) => h("th", { text: label })))), h("tbody", {}, ...body)))
+    h("table", {},
+      h("thead", {}, h("tr", {}, ...headers.map((label) => h("th", { text: label })))),
+      h("tbody", {}, ...body),
+      h("tfoot", {}, h("tr", {}, h("td", { colspan: String(headers.length), text: t("common.rowCount", { count: rows.length }) })))))
 }
 
 /** 详情弹窗（复用公共组件；导出 = 批内件直测）：详情四行 + （chat 行）配置四组 ∥ 嵌入行注（四组不落该行）。

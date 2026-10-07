@@ -51,12 +51,14 @@ export function h(tag, props = {}, ...children) {
   return node
 }
 
-/** 表格（宽表横滚 = CSS `.table-wrap`）；cell = 值 ∥ 节点 ∥ 节点数组。 */
-export function table(headers, rows) {
+/** 表格（宽表横滚 = CSS `.table-wrap`）；cell = 值 ∥ 节点 ∥ 节点数组；`foot = true` ⇒ 表尾 `<tfoot>` 行计数
+ *  （「共 N 项」= 渲染行数派生——§2.6③；用户 2026-10-07 08:26 收正：计数 = 表内 tfoot，非壳级行）。 */
+export function table(headers, rows, { foot = false } = {}) {
   return h("div", { class: "table-wrap" },
     h("table", {},
       h("thead", {}, h("tr", {}, ...headers.map((label) => h("th", { text: label })))),
-      h("tbody", {}, ...rows.map((cells) => h("tr", {}, ...cells.map((cell) => h("td", {}, ...(Array.isArray(cell) ? cell : [cell]))))))))
+      h("tbody", {}, ...rows.map((cells) => h("tr", {}, ...cells.map((cell) => h("td", {}, ...(Array.isArray(cell) ? cell : [cell])))))),
+      ...(foot ? [h("tfoot", {}, h("tr", {}, h("td", { colspan: String(headers.length), text: t("common.rowCount", { count: rows.length }) })))] : [])))
 }
 
 export const fmtTs = (ts) => new Date(ts).toLocaleString(langTag()) // 语言随 locale（zh-CN ∥ en——§2.2）
@@ -72,8 +74,8 @@ export function showSecret(box, label, value) {
   box.hidden = false
 }
 
-/** 用量表（本人 ∥ 全队同构；全队加成员 + key 列）。 */
-export function usageTable(rows, { withMember = false } = {}) {
+/** 用量表（本人 ∥ 全队同构；全队加成员 + key 列；`foot = true` ⇒ 表尾计数行——仅我的·用量页〔壳面〕传）。 */
+export function usageTable(rows, { withMember = false, foot = false } = {}) {
   if (rows.length === 0) return h("p", { class: "hint", text: t("usage.empty") })
   const headers = [
     t("usage.col.time"), ...(withMember ? [t("usage.col.member"), t("usage.col.key")] : []), t("usage.col.endpoint"),
@@ -86,19 +88,17 @@ export function usageTable(rows, { withMember = false } = {}) {
     fmtValue(row.promptTokens), fmtValue(row.completionTokens), fmtValue(row.totalTokens),
     String(row.durationMs),
   ])
-  return table(headers, body)
+  return table(headers, body, { foot })
 }
 
-/** 数据表页视口高壳（§2.6②——页头固定 ∥ 表区吃剩高 ∥ 页脚行计数）：三段挂到视图根，返回 `{ setCount }`；
- *  行计数 = 渲染行数派生（`common.rowCount`——空/错 = 0；未取数 = 空）。挂载前提 = 视图根 `<section>` 直属 `main#app`。 */
+/** 数据表页视口高壳（§2.6②——页头固定 ∥ 表区吃剩高；行计数 = **表内 `<tfoot>`**〔`table(…, { foot: true })`〕）：
+ *  两段挂到视图根（表卡自持表尾计数——2026-10-07 08:26 用户收正：计数入表，非壳级行）。
+ *  挂载前提 = 视图根 `<section>` 直属 `main#app`。 */
 function dataShell(mount, { head, area }) {
-  const foot = h("p", { class: "page-foot" })
   mount.append(
     h("div", { class: "page-head" }, head),
     h("div", { class: "page-area" }, area),
-    foot,
   )
-  return { setCount: (count) => { foot.textContent = t("common.rowCount", { count }) } }
 }
 
 // ── 健康轮询（§2.3⑤——灯 ∥ 系统页块 ∥ 总览卡三落点共用）──────────────────────

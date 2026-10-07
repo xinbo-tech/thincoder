@@ -4,11 +4,11 @@
  * 运行（自 `thincoder/` 仓根）：`node --test docs/batches/2026-10-07-console-layout.test.mjs`
  *
  * 射程（判据源 = `webui/WEBUI.md` §2.6 ∥ §6 AC-20 两行 + 本批档 §2；腿 ↔ 判据对照在括号）：
- *   腿 A（壳机制源扫——§2.6②）：`app.mjs`——`dataShell` 三件构建 + `common.rowCount` 引用 ∥ `SHELL_PAGES` 五路径逐条钉表 ∥
- *      `route()` 切换 `data-shell`（登录径清除）∥ `viewCtx` 注入 ∥ 五页逐档 `ctx.dataShell(` + 取数渲染后 `setCount(`（空/错 = 0）
+ *   腿 A（壳机制源扫——§2.6②）：`app.mjs`——`dataShell` 两段构建 + 表尾计数（`table(…, { foot: true })`——`common.rowCount` 引用） ∥ `SHELL_PAGES` 五路径逐条钉表 ∥
+ *      `route()` 切换 `data-shell`（登录径清除）∥ `viewCtx` 注入 ∥ 五页逐档 `ctx.dataShell(` + 表尾 tfoot 接线
  *   腿 B（CSS 声明扫描——§2.6②）：高度链声明表逐条 ∥ `position: sticky` + `top: 0` ∥ 回退媒体查询（`height: auto`）∥
  *      `main` margin 无 `auto` ∥ `.model-picks` 零残留（规则 + 字面两向）
- *   腿 C（五页壳行为——stub ctx）：逐页渲染 N 行 ⇒ `setCount` 收 N；空/错 ⇒ 0；`head`/`area` 传参形状在册
+ *   腿 C（五页壳行为——stub ctx）：逐页渲染 N 行 ⇒ 表内 tfoot 计数 = N（「共 N 项」）；空/错 ⇒ 无表（hint——无 tfoot）；`head`/`area` 传参形状在册
  *   腿 D（弹窗表格形——DOM 桩）：详情勾选表（单列「模型」∥ 行 = `label`（勾选 + 模型名）∥ 失败 = `.hint error`）∥
  *      预设模型表（单列「模型」：`code` 行）∥ 成员 key 表（四列头 ∥ 吊销钮行内 ∥ 空态 `noKeys` 不变量）
  *   腿 E（左对齐——§2.6④）：`main` 规则 `max-width: 1100px` 在 ∥ margin 无 `auto`
@@ -30,8 +30,8 @@ const CSS = readPublic("style.css")
 const PKG = JSON.parse(readFileSync(join(ROOT, "thincoder-server", "package.json"), "utf8"))
 const load = (name) => import(pathToFileURL(join(PUBLIC_DIR, name)).href)
 
-const [{ ZH }, { EN }, ADMIN, PROVIDERS, MODELS, AUDIT, ME, MODALS] = await Promise.all([
-  load("i18n-zh.mjs"), load("i18n-en.mjs"), load("views-admin.mjs"), load("views-providers.mjs"), load("views-models.mjs"),
+const [{ ZH }, { EN }, I18N, ADMIN, PROVIDERS, MODELS, AUDIT, ME, MODALS] = await Promise.all([
+  load("i18n-zh.mjs"), load("i18n-en.mjs"), load("i18n.mjs"), load("views-admin.mjs"), load("views-providers.mjs"), load("views-models.mjs"),
   load("views-audit.mjs"), load("views-me.mjs"), load("views-providers-modals.mjs"),
 ])
 
@@ -120,17 +120,14 @@ const textOf = (node) => {
 }
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
 
-/** 壳桩（`ctx.dataShell` 语义近似——三段 + `setCount` 记录 ∥ 末次传参留档：断言面 = 形状 + 计数真值）。 */
+/** 壳桩（`ctx.dataShell` 语义近似——两段挂载 ∥ 末次传参留档：断言面 = 形状 + 表内 tfoot 计数真值）。 */
 function makeShell() {
-  const counts = []
   let last = null
   const dataShell = (mount, { head, area }) => {
     last = { head, area }
-    const foot = h("p", { class: "page-foot" })
-    mount.append(h("div", { class: "page-head" }, head), h("div", { class: "page-area" }, area), foot)
-    return { setCount: (count) => { counts.push(count); foot.textContent = fill(ZH["common.rowCount"], { count }) } }
+    mount.append(h("div", { class: "page-head" }, head), h("div", { class: "page-area" }, area))
   }
-  return { dataShell, counts, last: () => last }
+  return { dataShell, last: () => last }
 }
 
 /** 页桩 ctx（腿 C——取数面全注入；`table`/`usageTable` 同 app 助手语义近似）。 */
@@ -150,11 +147,14 @@ function pageCtx({ routes, state = {}, shell }) {
     fmtTs: (ts) => String(ts),
     fmtValue: (value) => (value === null || value === undefined ? "—" : String(value)),
     fmtQuota: (value) => (value === null || value === undefined ? "unlimited" : String(value)),
-    table: (headers, rows) => h("div", { class: "table-wrap" },
-      h("table", {}, h("thead", {}, h("tr", {}, ...headers.map((label) => h("th", { text: label })))), h("tbody", {}, ...rows.map((cells) => h("tr", {}, ...cells.map((cell) => h("td", {}, ...(Array.isArray(cell) ? cell : [cell])))))))),
-    usageTable: (rows) => (rows.length === 0
+    table: (headers, rows, { foot = false } = {}) => h("div", { class: "table-wrap" },
+      h("table", {},
+        h("thead", {}, h("tr", {}, ...headers.map((label) => h("th", { text: label })))),
+        h("tbody", {}, ...rows.map((cells) => h("tr", {}, ...cells.map((cell) => h("td", {}, ...(Array.isArray(cell) ? cell : [cell])))))),
+        ...(foot ? [h("tfoot", {}, h("tr", {}, h("td", { colspan: String(headers.length), text: I18N.t("common.rowCount", { count: rows.length }) })))] : []))),
+    usageTable: (rows, { foot = false } = {}) => (rows.length === 0
       ? h("p", { class: "hint", text: ZH["usage.empty"] })
-      : h("div", { class: "table-wrap" }, h("table", {}, h("tbody", {}, ...rows.map((row) => h("tr", {}, h("td", { text: String(row.ts ?? "") }))))))),
+      : h("div", { class: "table-wrap" }, h("table", {}, h("tbody", {}, ...rows.map((row) => h("tr", {}, h("td", { text: String(row.ts ?? "") })))), ...(foot ? [h("tfoot", {}, h("tr", {}, h("td", { text: I18N.t("common.rowCount", { count: rows.length }) })))] : [])))),
     dataShell: shell.dataShell,
   }
   return { ctx, calls }
@@ -162,12 +162,14 @@ function pageCtx({ routes, state = {}, shell }) {
 
 // ── 腿 A（壳机制源扫——§2.6②）──────────────────────────────────────────────
 
-test("腿 A 壳机制源扫：`dataShell` 三件 + `SHELL_PAGES` 五路径 + `route()` 切换 ∥ 五页接线在册", () => {
+test("腿 A 壳机制源扫：`dataShell` 两段 + `SHELL_PAGES` 五路径 + `route()` 切换 ∥ 五页接线在册", () => {
   const src = readPublic("app.mjs")
   // dataShell 三件构建 + 计数键引用（+ 挂载/脚注面）
   assert.match(src, /function dataShell\(mount, \{ head, area \}\)/, "dataShell 助手缺位")
-  for (const cls of ["page-head", "page-area", "page-foot"]) assert.ok(src.includes(`"${cls}"`), `壳三段缺位：${cls}`)
+  for (const cls of ["page-head", "page-area"]) assert.ok(src.includes(`"${cls}"`), `壳两段缺位：${cls}`)
+  assert.equal(src.includes("page-foot"), false, "page-foot 残留（计数应入表 tfoot）")
   assert.ok(src.includes('t("common.rowCount"'), "行计数键（`common.rowCount`）引用缺位")
+  assert.ok(src.includes(`text: t("common.rowCount", { count: rows.length })`), "table() 计数取值 ≠ rows.length（真品源断言——评审 #119 加严）")
   // SHELL_PAGES 五路径逐条钉表（恰五——不得多/少）
   const shellBlock = src.match(/const SHELL_PAGES = new Set\(\[([^\]]*)\]\)/)
   assert.ok(shellBlock !== null, "SHELL_PAGES 缺位")
@@ -182,8 +184,8 @@ test("腿 A 壳机制源扫：`dataShell` 三件 + `SHELL_PAGES` 五路径 + `ro
   for (const file of ["views-admin.mjs", "views-providers.mjs", "views-models.mjs", "views-audit.mjs", "views-me.mjs"]) {
     const pageSrc = readPublic(file)
     assert.ok(pageSrc.includes("ctx.dataShell("), `${file} 缺壳调用`)
-    assert.ok(pageSrc.includes("setCount("), `${file} 缺行计数接线`)
-    assert.ok(pageSrc.includes("setCount(0)"), `${file} 空/错态计数（= 0）缺位`)
+    assert.ok(pageSrc.includes("tfoot") || pageSrc.includes("foot: true"), `${file} 缺表尾计数（tfoot）接线`)
+    assert.equal(pageSrc.includes("setCount("), false, `${file} setCount 残留（计数应入表 tfoot）`)
   }
 })
 
@@ -200,7 +202,7 @@ test("腿 B CSS：高度链声明表逐条 ∥ 吸附 ∥ 回退媒体查询 ∥
     [".table-slot", ["flex: 1", "min-height: 0", "display: flex", "flex-direction: column"]],
     [".table-slot > .table-wrap", ["flex: 1", "min-height: 0", "overflow-y: auto"]],
     ["body.data-shell main thead th", ["position: sticky", "top: 0", "z-index: 1"]],
-    [".page-foot", ["flex: none", "margin-top: var(--sp-4)", "color: var(--muted)"]],
+    ["body.data-shell main tfoot td", ["position: sticky", "bottom: 0", "z-index: 1", "background: var(--fill)"]],
   ]
   for (const [selector, decls] of CHAIN) {
     const rule = cssRule(selector)
@@ -271,25 +273,27 @@ test("腿 C 五页壳：成功 = 行数 ∥ 空 = 0 ∥ 错 = 0 ∥ `head`/`area
       },
     ]
     for (const page of CASES) {
-      // 成功：计数 = 行数真值（`setCount` 恰一次）+ 页头/表区形状
+      // 成功：表内 tfoot 计数 = 行数真值（「共 N 项」）+ 页头/表区形状
       const okShell = makeShell()
       const okMount = makeNode("section")
       await page.render(pageCtx({ routes: { [page.key]: page.ok }, state: page.state, shell: okShell }).ctx, okMount)
-      assert.deepEqual(okShell.counts, [page.rows], `${page.label} setCount 恰一次 = 行数真值`)
+      const expectCount = I18N.t("common.rowCount", { count: page.rows })
+      const okFoot = findNode(okMount, (node) => node.tag === "td" && node.textContent === expectCount)
+      assert.ok(okFoot !== null, `${page.label} 表内 tfoot 计数缺位（期望：${expectCount}）`)
       assert.ok(page.head(okMount), `${page.label} 页头形状`)
       assert.ok(page.area(okMount), `${page.label} 表区形状`)
       assert.ok(okShell.last() !== null && okShell.last().head != null && okShell.last().area != null, `${page.label} dataShell 传参（head/area）`)
-      // 空态：计数 = 0（`emptyState` 在场则取——如服务模型页去嵌入行）
+      // 空态：无表 = 无 tfoot（hint 面）
       const emptyShell = makeShell()
       const emptyMount = makeNode("section")
       await page.render(pageCtx({ routes: { [page.key]: page.empty }, state: page.emptyState ?? page.state, shell: emptyShell }).ctx, emptyMount)
-      assert.deepEqual(emptyShell.counts, [0], `${page.label} 空态 setCount 恰一次 = 0`)
-      // 错误：fail 收口 + 计数 = 0
+      assert.equal(findNode(emptyMount, (node) => node.tag === "tfoot"), null, `${page.label} 空态不应有 tfoot`)
+      // 错误：fail 收口 + 无表（无 tfoot）
       const errShell = makeShell()
       const err = pageCtx({ routes: { [page.key]: () => { throw new Error("boom") } }, state: page.state, shell: errShell })
       const errMount = makeNode("section")
       await page.render(err.ctx, errMount)
-      assert.deepEqual([err.calls.some(([kind]) => kind === "fail"), errShell.counts], [true, [0]], `${page.label} 错态：fail + setCount 恰一次 = 0`)
+      assert.deepEqual([err.calls.some(([kind]) => kind === "fail"), findNode(errMount, (node) => node.tag === "tfoot")], [true, null], `${page.label} 错态：fail + 无表（无 tfoot）`)
     }
   } finally {
     delete globalThis.location
@@ -341,7 +345,7 @@ test("腿 D 弹窗表格形：详情勾选表 ∥ 预设模型表 ∥ 成员 key
 
     // ② 添加弹窗·预设信息段 = 单列表（表头「模型」——行 = `code` 芯片）；地址行零动
     const add = pageCtx({
-      routes: { "GET /api/admin/providers/presets": () => ({ presets: [{ preset: "deepseek", name: "deepseek", baseURL: "https://api.deepseek.com", models: ["deepseek-chat", "deepseek-reasoner"] }] }) },
+      routes: { "GET /api/admin/providers/presets": () => ({ presets: [{ preset: "deepseek", name: "deepseek", baseURL: "https://api.deepseek.com", models: ["deepseek-reasoner", "deepseek-chat"] }] }) }, // 乱序喂入——:359 断言升序 = 真排序机检（评审 #119 加严）
       shell: makeShell(),
     })
     const addModal = MODALS.openAddProviderModal(add.ctx, { providers: [] })
@@ -468,7 +472,7 @@ test("附加 AC-19 canon 不破：`:root` 38 ∥ 悬停清单八条 ∥ 内距 �
     }
     for (const m of src.matchAll(/classList\.(?:add|remove|toggle)\(\s*["']([^"']*)["']/g)) usedClasses.add(m[1])
   }
-  for (const known of ["row-clickable", "table-wrap", "key-item", "config-field", "hint", "tiny", "page-head", "page-area", "page-foot", "table-slot", "data-shell"]) {
+  for (const known of ["row-clickable", "table-wrap", "key-item", "config-field", "hint", "tiny", "page-head", "page-area", "table-slot", "data-shell"]) {
     assert.ok(usedClasses.has(known), `类面扫描失效（档面）：${known}`)
   }
   for (const known of ["card", "row-clickable", "key-item", "config-field", "modal", "error", "page-head", "table-slot", "data-shell"]) {

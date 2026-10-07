@@ -136,7 +136,7 @@ function makeCtx(routes = {}, { state = { system: null } } = {}) {
     dataShell: (mount, { head, area }) => {
       // 随正（2026-10-07 控制台布局收正批）：stub 语义近似——真品 = app.mjs dataShell；本件仅渲染面
       mount.append(head, area)
-      return { setCount: () => {} }
+       return undefined // setCount 已撤（2026-10-07 光通道轮——计数入表 tfoot）
     },
   }
   return { ctx, calls }
@@ -402,9 +402,9 @@ test("⑦c A 停用流（弹窗 × 列表）：「停用」confirm ⇒ PATCH `mo
     await MODELS.renderModels(ctx, mount)
     const rowText = (tr) => tr.children.map((cell) => textOf(cell)).join("|")
     const rows = findAll(mount, (node) => node.tag === "tr")
-    assert.deepEqual(rows.slice(1).map(rowText), ["p/retired-1|p|chat", "p/a|p|chat", "bge-m3|embedding|embeddings"], "列表 = 开放集展平 + 引擎行")
-    // 行点击（退役项——不在发现集仍开放）⇒ 详情弹窗 ⇒ 停用（confirm 通过）
-    await rows[1].fire("click")
+    assert.deepEqual(rows.slice(1).map(rowText), ["bge-m3|embedding|embeddings", "p/a|p|chat", "p/retired-1|p|chat", fill(ZH["common.rowCount"], { count: 3 })], "列表 = 开放集展平 + 引擎行 + tfoot 计数（序 = id 升序——2026-10-07 走查收正）")
+    // 行点击（退役项——不在发现集仍开放）⇒ 详情弹窗 ⇒ 停用（confirm 通过）——升序后退役行 = 第 3 行
+    await rows[3].fire("click")
     const dialog = findNode(documentStub.body, (node) => node.tag === "dialog")
     await byText(dialog, ZH["admin.models.disable"]).fire("click")
     assert.deepEqual(confirms, [fill(ZH["admin.models.disableConfirm"], { model: "p/retired-1" })], "confirm 文案在册（停用后果 + 重开路径）")
@@ -413,12 +413,12 @@ test("⑦c A 停用流（弹窗 × 列表）：「停用」confirm ⇒ PATCH `mo
     assert.ok(calls.some(([kind, value]) => kind === "flash" && value === fill(ZH["admin.models.disabled"], { model: "p/retired-1" })), "flash 已停用")
     // 列表刷新 ⇒ 行离列（重取系再渲）
     const rowsAfter = findAll(mount, (node) => node.tag === "tr")
-    assert.deepEqual(rowsAfter.slice(1).map(rowText), ["p/a|p|chat", "bge-m3|embedding|embeddings"], "行离列")
+    assert.deepEqual(rowsAfter.slice(1).map(rowText), ["bge-m3|embedding|embeddings", "p/a|p|chat", fill(ZH["common.rowCount"], { count: 2 })], "行离列 + tfoot 计数随动（序 = id 升序——2026-10-07 收正）")
     // 零上游探针：列表/详情/停用全程零 discover 调用（退役可见性 = Provider 页发现面）
     assert.equal(calls.filter(([, path]) => String(path).includes("/discover")).length, 0)
     // confirm 拒 ⇒ 零请求（弹窗留驻）
     globalThis.window.confirm = () => false
-    await rowsAfter[1].fire("click")
+    await rowsAfter[2].fire("click")
     const dialog2 = findNode(documentStub.body, (node) => node.tag === "dialog")
     const before = calls.length
     await byText(dialog2, ZH["admin.models.disable"]).fire("click")

@@ -153,7 +153,7 @@ function makeCtx(routes = {}) {
     dataShell: (mount, { head, area }) => {
       // 随正（2026-10-07 控制台布局收正批）：stub 语义近似——真品 = app.mjs dataShell；本件仅渲染面
       mount.append(head, area)
-      return { setCount: () => {} }
+      return undefined // setCount 已撤（2026-10-07 光通道轮——计数入表 tfoot）
     },
   }
   return { ctx, calls }
@@ -255,7 +255,7 @@ test("③ 添加弹窗：预设径（已配名剔除 ∥ 信息行 ∥ POST 全�
     const idle = MODALS.openAddProviderModal(ctxIdle, { providers: [] })
     await tick()
     await byText(idle.root, ZH["common.save"]).fire("click")
-    assert.deepEqual([callsIdle.at(-1), idle.root.open], [["flash", ZH["admin.providers.presetNeeded"]], true])
+    assert.deepEqual([callsIdle.some(([kind, value]) => kind === "flash" && value === ZH["admin.providers.presetNeeded"]), idle.root.open, textOf(idle.root).includes(ZH["admin.providers.presetNeeded"])], [false, true, true], "未选类型 ⇒ 窗内提示（不落窗外 flash）")
 
     // ── 自定义径（探针 ⇒ 候选勾选 ⇒ POST）──
     const { ctx: ctxCustom, calls: callsCustom } = makeCtx({
@@ -272,12 +272,12 @@ test("③ 添加弹窗：预设径（已配名剔除 ∥ 信息行 ∥ POST 全�
     assert.deepEqual(inputs.map((node) => node.attrs.placeholder), [ZH["admin.providers.namePh"], ZH["admin.providers.baseURLPh"], ZH["admin.providers.apiKeyPh"]])
     // 探针前置：无 baseURL ⇒ 提示（零请求）
     await byText(custom.root, ZH["admin.providers.fetchModels"]).fire("click")
-    assert.deepEqual([callsCustom.at(-1), callsCustom.filter(([kind, path]) => kind === "POST" && path === "/api/admin/providers/discover").length], [["flash", ZH["admin.providers.needBaseURL"]], 0])
+    assert.deepEqual([callsCustom.some(([kind, value]) => kind === "flash" && value === ZH["admin.providers.needBaseURL"]), callsCustom.filter(([kind, path]) => kind === "POST" && path === "/api/admin/providers/discover").length, textOf(custom.root).includes(ZH["admin.providers.needBaseURL"])], [false, 0, true], "空 baseURL ⇒ 窗内提示 + 零请求")
     inputs[0].value = "local"
     inputs[1].value = "http://10.0.0.5/v1"
     await byText(custom.root, ZH["admin.providers.fetchModels"]).fire("click")
-    assert.deepEqual(callsCustom.at(-2), ["POST", "/api/admin/providers/discover", { baseURL: "http://10.0.0.5/v1" }])
-    assert.ok(callsCustom.at(-1)[0] === "flash" && callsCustom.at(-1)[1] === fill(ZH["admin.providers.discovered"], { count: 2 }))
+    assert.deepEqual(callsCustom.at(-1), ["POST", "/api/admin/providers/discover", { baseURL: "http://10.0.0.5/v1" }])
+    assert.deepEqual([callsCustom.some(([kind, value]) => kind === "flash" && value === fill(ZH["admin.providers.discovered"], { count: 2 })), textOf(custom.root).includes("m-1")], [false, true], "获取模型 ⇒ 候选同窗渲染（不落窗外 flash）")
     // 候选勾选（零手填）⇒ 保存 = POST（models = 勾选集）
     assert.deepEqual(pickBoxes(custom.root).map((box) => box.parent.children[1]), ["m-1", "m-2"])
     const pick = pickBox(custom.root, "m-2")
@@ -365,7 +365,7 @@ test("④ 错误径：发现失败 ⇒ 段内提示 +「刷新候选」重试可
     assert.ok(textOf(modal2.root).includes(ZH["err.upstream_error"]))
     fail = false
     await byText(modal2.root, ZH["admin.providers.refreshCandidates"]).fire("click")
-    assert.deepEqual(pickBoxes(modal2.root).map((box) => box.parent.children[1]), ["kept-1", "fresh-1"], "重试 ⇒ 候选可达")
+    assert.deepEqual(pickBoxes(modal2.root).map((box) => box.parent.children[1]), ["fresh-1", "kept-1"], "重试 ⇒ 候选可达（名称升序——2026-10-07 走查收正）")
     assert.ok(textOf(modal2.root).includes(fill(ZH["admin.providers.retiredNote"], { models: "retired-2" })), "退役注行随发现面成立")
   } finally { delete globalThis.document }
 })
@@ -440,7 +440,8 @@ test("⑤ 写路径：PATCH `models` = 勾选集（全量数组）∥ 零变更 
     await byText(modal5.root, ZH["admin.providers.test"]).fire("click")
     const testCalls = calls.slice(before5)
     assert.deepEqual(testCalls.filter(([kind]) => kind === "POST").at(-1), ["POST", "/api/admin/providers/discover", { baseURL: "http://x/v1", providerId: 5 }])
-    assert.ok(testCalls.some(([kind, value]) => kind === "flash" && value === fill(ZH["admin.providers.testOk"], { name: "p5", count: 3 })))
+    assert.ok(textOf(modal5.root).includes(fill(ZH["admin.providers.testOk"], { name: "p5", count: 3 })), "测试连接 ⇒ 同窗结果行（AC-18「测试同窗」——2026-10-07 随正）")
+    assert.ok(!testCalls.some(([kind, value]) => kind === "flash" && value === fill(ZH["admin.providers.testOk"], { name: "p5", count: 3 })), "结果不再走弹窗外 flash")
     await byText(modal5.root, ZH["admin.providers.delete"]).fire("click")
     assert.deepEqual(calls.filter(([kind]) => kind === "DELETE").at(-1), ["DELETE", "/api/admin/providers/5", null])
     assert.equal(modal5.root.open, false, "删除 ⇒ 关窗 + 列表刷新")

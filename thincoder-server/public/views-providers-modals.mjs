@@ -20,7 +20,7 @@ function renderPicks(h, box, { candidates, draft, onToggle, emptyText, errorText
     box.replaceChildren(h("p", { class: "hint error", text: errorText }))
     return
   }
-  const models = candidates ?? []
+  const models = [...(candidates ?? [])].sort() // 名称升序（2026-10-07 走查收正——长清单可找）
   if (models.length === 0) {
     box.replaceChildren(h("span", { class: "hint", text: emptyText }))
     return
@@ -35,12 +35,12 @@ function renderPicks(h, box, { candidates, draft, onToggle, emptyText, errorText
       })))))
 }
 
-/** 预设模型清单表（§2.6⑤——单列「模型」：行 = `code` 芯片）。 */
+/** 预设模型清单表（§2.6⑤——单列「模型」：行 = `code` 芯片；名称升序）。 */
 function presetModelsTable(h, models) {
   return h("div", { class: "table-wrap" },
     h("table", {},
       h("thead", {}, h("tr", {}, h("th", { text: t("admin.models.colModel") }))),
-      h("tbody", {}, ...models.map((model) => h("tr", {}, h("td", {}, h("code", { text: model })))))))
+      h("tbody", {}, ...[...models].sort().map((model) => h("tr", {}, h("td", {}, h("code", { text: model })))))))
 }
 
 /** 集合等价（序无关——PATCH `models` 判「变更」用：全量数组单写）。 */
@@ -70,7 +70,9 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
   const baseURLInput = h("input", { placeholder: t("admin.providers.baseURLPh") })
   const apiKeyInput = h("input", { placeholder: t("admin.providers.apiKeyPh"), autocomplete: "off" })
   const fetchBtn = h("button", { type: "button", class: "tiny", text: t("admin.providers.fetchModels") })
-  const picksBox = h("div")
+  const askNote = h("p", { class: "hint", hidden: true }) // 窗内状态行（校验 ∥ 保存 ∥ 获取模型——2026-10-07 走查收正：反馈不落窗外）
+  const showNote = (text, isError = false) => { askNote.hidden = false; askNote.className = isError ? "hint error" : "hint"; askNote.textContent = text }
+  const picksBox = h("div", { class: "pick-box" })
 
   const keyRow = () => h("div", { class: "provider-form" }, h("label", {}, t("admin.providers.apiKey"), apiKeyInput))
   const renderPicksArea = () => renderPicks(h, picksBox, {
@@ -94,11 +96,12 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
         keyRow(),
         h("div", { class: "stack-models" },
           h("div", { class: "pick-head" }, h("span", { class: "hint", text: t("admin.providers.openList") }), fetchBtn),
-          picksBox))
+          picksBox),
+        askNote)
       return
     }
     if (preset === null) {
-      bodyBox.replaceChildren(typeRow)
+      bodyBox.replaceChildren(typeRow, askNote)
       return
     }
     bodyBox.replaceChildren(
@@ -106,7 +109,8 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
       h("dl", { class: "detail-grid" },
         h("dt", { text: t("admin.providers.baseURL") }), h("dd", {}, h("code", { text: preset.baseURL }) )),
       presetModelsTable(h, preset.models), // 模型清单 = 表格形（§2.6⑤——单列「模型」：`code` 行）
-      keyRow())
+      keyRow(),
+      askNote)
   }
   typeSelect.addEventListener("change", () => {
     renderBody()
@@ -132,7 +136,7 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
 
   fetchBtn.addEventListener("click", async () => {
     const baseURL = baseURLInput.value.trim()
-    if (!baseURL) { ctx.flash(t("admin.providers.needBaseURL")); return }
+    if (!baseURL) { showNote(t("admin.providers.needBaseURL"), true); return }
     const body = { baseURL }
     const typed = apiKeyInput.value.trim()
     if (typed) body.apiKey = typed // 明传（可含 `env:` 引用——服务端解析）
@@ -140,7 +144,6 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
       const done = await ctx.api("/api/admin/providers/discover", { method: "POST", body })
       candidates = done.models
       errorText = null
-      ctx.flash(t("admin.providers.discovered", { count: done.models.length }))
     } catch (error) {
       errorText = mapError(error) // 段内提示（保存不受阻——models 可空）
     }
@@ -150,7 +153,7 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
   const save = async () => {
     const value = typeSelect.value
     const preset = presets.find((item) => item.preset === value) ?? null
-    if (value === "") { ctx.flash(t("admin.providers.presetNeeded")); return }
+    if (value === "") { showNote(t("admin.providers.presetNeeded"), true); return }
     const body = value === "custom"
       ? { name: nameInput.value.trim(), baseURL: baseURLInput.value.trim(), apiKey: apiKeyInput.value.trim(), models: [...draft] }
       : { name: preset.name, baseURL: preset.baseURL, apiKey: apiKeyInput.value.trim(), models: [...preset.models] }
@@ -159,7 +162,10 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
       ctx.flash(t("admin.providers.saved"))
       modal.close()
       if (reload !== null) await reload()
-    } catch (error) { ctx.fail(error) } // 失败 ⇒ flash（弹窗留驻）
+    } catch (error) {
+      if (error?.status === 401 && error?.code !== "invalid_credentials") { ctx.fail(error); return } // 会话失效 ⇒ 照常踢登录
+      showNote(mapError(error), true) // 失败 ⇒ 窗内状态行（弹窗留驻）
+    }
   }
 
   footBox.replaceChildren(
@@ -194,35 +200,36 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
     autocomplete: "off",
   })
   const clearKey = h("input", { type: "checkbox" })
-  const picksBox = h("div")
-  const noteBox = h("div")
+  const picksBox = h("div", { class: "pick-box" })
+  const noteBox = h("div", { class: "pick-note" })
   const refreshBtn = h("button", { type: "button", class: "tiny", text: t("admin.providers.refreshCandidates") })
+  const testNote = h("p", { class: "hint", hidden: true }) // 测试连接结果行（同窗内——AC-18「测试同窗」；2026-10-07 走查收正）
+  const showNote = (text, isError = false) => { testNote.hidden = false; testNote.className = isError ? "hint error" : "hint"; testNote.textContent = text } // 窗内状态行（测试连接 ∥ 保存失败——2026-10-07 走查收正）
 
   /** 候选拉取（首开自动 ∥「刷新候选」）：`baseURL` 取草稿输入 ∥ key 取库内；失败 ⇒ 段内提示（重试可达候选）。 */
-  const loadCandidates = async ({ flash = false } = {}) => {
+  const loadCandidates = async () => {
     const baseURL = baseURLInput.value.trim()
     if (!baseURL) return
     try {
       const done = await ctx.api("/api/admin/providers/discover", { method: "POST", body: { baseURL, providerId: provider.id } })
       candidates = done.models
       errorText = null
-      if (flash) ctx.flash(t("admin.providers.discovered", { count: done.models.length }))
     } catch (error) {
       errorText = mapError(error) // 段内提示 +「刷新候选」重试（保存不受阻——草稿 = 现配置未动 ⇒ 无损）
     }
     renderPicksArea()
   }
-  refreshBtn.addEventListener("click", () => loadCandidates({ flash: true }))
+  refreshBtn.addEventListener("click", () => loadCandidates())
 
-  /** 测试连接（= discover 复用——`providerId` 取库内 key；零新端点）：结果 = flash（弹窗留驻——不触碰候选草稿）。 */
+  /** 测试连接（= discover 复用——`providerId` 取库内 key；零新端点）：结果 = **同窗结果行**（AC-18「测试同窗」；2026-10-07 走查收正——原 flash 在弹窗外）。 */
   const testConnection = async () => {
     const baseURL = baseURLInput.value.trim()
-    if (!baseURL) { ctx.flash(t("admin.providers.needBaseURL")); return }
-    ctx.flash(t("admin.providers.testing", { name: provider.name }))
+    if (!baseURL) { showNote(t("admin.providers.needBaseURL"), true); return }
+    showNote(t("admin.providers.testing", { name: provider.name }))
     try {
       const done = await ctx.api("/api/admin/providers/discover", { method: "POST", body: { baseURL, providerId: provider.id } })
-      ctx.flash(t("admin.providers.testOk", { name: provider.name, count: done.models.length }))
-    } catch (error) { ctx.fail(error) }
+      showNote(t("admin.providers.testOk", { name: provider.name, count: done.models.length }))
+    } catch (error) { showNote(mapError(error), true) }
   }
 
   const remove = async () => {
@@ -232,7 +239,10 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
       ctx.flash(t("admin.providers.deleted", { name: provider.name }))
       modal.close()
       if (reload !== null) await reload()
-    } catch (error) { ctx.fail(error) }
+    } catch (error) {
+      if (error?.status === 401 && error?.code !== "invalid_credentials") { ctx.fail(error); return } // 会话失效 ⇒ 照常踢登录
+      showNote(mapError(error), true) // 失败 ⇒ 窗内状态行（弹窗留驻——定则「弹窗开着 ⇒ 一切反馈落窗内」）
+    }
   }
 
   /** 勾选段重渲：错误态 ⇒ 段内提示；在位 ⇒ 候选勾选（勾选态 = 草稿）+ 退役项只读注行（不触碰 ⇒ 提交恒含）。 */
@@ -262,7 +272,10 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
       ctx.flash(t("admin.providers.saved"))
       modal.close()
       if (reload !== null) await reload()
-    } catch (error) { ctx.fail(error) } // 失败 ⇒ flash（弹窗留驻）
+    } catch (error) {
+      if (error?.status === 401 && error?.code !== "invalid_credentials") { ctx.fail(error); return } // 会话失效 ⇒ 照常踢登录
+      showNote(mapError(error), true) // 失败 ⇒ 窗内状态行（弹窗留驻）
+    }
   }
 
   bodyBox.replaceChildren(
@@ -274,6 +287,7 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
     h("div", { class: "info-actions" },
       h("button", { type: "button", text: t("admin.providers.test"), onclick: testConnection }),
       h("button", { type: "button", class: "danger", text: t("admin.providers.delete"), onclick: remove })),
+    testNote,
     h("div", { class: "stack-models" },
       h("div", { class: "pick-head" }, h("span", { class: "hint", text: t("admin.providers.openList") }), refreshBtn),
       picksBox, noteBox))
