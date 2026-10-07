@@ -2,9 +2,10 @@
  * views-providers-modals.mjs — Provider 双弹窗件（webui/WEBUI.md §2.4④——功能点 18 ∥ KD-SV-33；自
  * `views-providers.mjs` 拆出——双弹窗叠加破 300 软线）：添加弹窗（预设/自定义两径——预设表首开惰性拉取·
  * 已配名剔除）∥ 详情弹窗（信息段 + 候选勾选段——候选 = 上游发现；退役项只读注 + 恒保留；单脚区保存）；
- * 模型清单/候选勾选 = 表格形（§2.6⑤——单列「模型」：`label`（勾选 + 模型名 + 富信息元）∥ `code` 行）；
- * 候选行富信息（功能点 24——`displayName` 次级文本 ∥ `contextWindow`/`vision` 徽标；数据 = 发现 ∪ 存储逐字段·
- * 发现优先）∥ 上游退役提示（`status` ⇒ 行标 + 注行——**只提示**，勾选/保存/派发零涉）∥ 候选段加载态（#984——
+ * 模型清单/候选勾选 = 表格形（列式——2026-10-07 收正：模型 ∥ 展示名 ∥ 上下文 ∥ 视觉 ∥ 状态；首格 `label` = 勾选 + 模型名；
+ * 预设清单 = `code` 行）；
+ * 候选行富信息（功能点 24——列式：`displayName` ∥ `contextWindow` ∥ `vision` ∥ `status`；数据 = 发现 ∪ 存储逐字段·
+ * 发现优先；缺则空、零占位）；上游退役提示（`status` ⇒ 列内标 + 注行——**只提示**，勾选/保存/派发零涉）∥ 候选段加载态（#984——
  * 在飞 `.hint` 加载文案 + 触发钮禁用；一处落双窗）。
  *
  * 端点零新（契约 = gateway/API.md §2.2）：`GET /api/admin/providers/presets`（拉表）∥ `POST /api/admin/providers/discover`
@@ -33,20 +34,10 @@ export function mergeModelMeta(stored, discovered) {
   return merged
 }
 
-/** 候选行富信息元（§2.4④——有则示、零字段零占位）：次级文本 ∥ 上下文徽标 ∥ 视觉徽标 ∥ 上游退役徽标（`hint error`）。 */
-function metaParts(h, meta) {
-  const parts = []
-  if (typeof meta?.displayName === "string") parts.push(h("span", { class: "hint", text: meta.displayName }))
-  if (meta?.contextWindow !== undefined) parts.push(h("span", { class: "hint", text: t("admin.providers.metaContext", { value: fmtTokens(meta.contextWindow) }) }))
-  if (meta?.vision === true) parts.push(h("span", { class: "hint", text: t("admin.providers.metaVision") }))
-  if (typeof meta?.status === "string") parts.push(h("span", { class: "hint error", text: t("admin.providers.upstreamRetiredBadge") }))
-  return parts
-}
-
-/** 候选勾选清单（双弹窗复用——表格形：单列「模型」——§2.6⑤）：候选 = 上游发现集；`draft` = 勾选集（变化即写回）；
- *  `meta` = 逐模型富信息图（发现 ∪ 存储——有则示、零字段零占位）；`loading` = 在飞态（#984——加载文案 ∥ 触发钮禁用 = 调用方）；
- *  发现失败 ⇒ 段内提示（重试 = 段内动作钮——调用方常驻持有）；空 ⇒ `emptyText`。
- *  「零手填」——候选面零文本输入（用户 2026-10-06 21:36 裁定）；行 = `label`（勾选 + 模型名 + 富信息元——点题名同切换）。 */
+/** 候选勾选清单（双弹窗复用——**列式表**：模型 ∥ 展示名 ∥ 上下文 ∥ 视觉 ∥ 状态——2026-10-07 轻通道收正）：
+ *  候选 = 上游发现集；`draft` = 勾选集（变化即写回）；`meta` = 逐模型富信息图（发现 ∪ 存储——有则示、缺则空、零占位）；
+ *  `loading` = 在飞态（#984——加载文案 ∥ 触发钮禁用 = 调用方）；发现失败 ⇒ 段内提示（重试 = 段内动作钮）；空 ⇒ `emptyText`。
+ *  「零手填」——候选面零文本输入（用户 2026-10-06 21:36 裁定）；首格 = `label`（勾选 + 模型名——点题名同切换）。 */
 function renderPicks(h, box, { candidates, meta = {}, draft, onToggle, emptyText, errorText, loading = false }) {
   if (loading === true) {
     box.replaceChildren(h("p", { class: "hint", text: t("admin.providers.candidatesLoading") }))
@@ -61,14 +52,25 @@ function renderPicks(h, box, { candidates, meta = {}, draft, onToggle, emptyText
     box.replaceChildren(h("span", { class: "hint", text: emptyText }))
     return
   }
+  const cell = (value, cls = "hint") => h("td", {}, value === null ? null : h("span", { class: cls, text: String(value) }))
   box.replaceChildren(h("div", { class: "table-wrap" },
     h("table", {},
-      h("thead", {}, h("tr", {}, h("th", { text: t("admin.models.colModel") }))),
+      h("thead", {}, h("tr", {},
+        h("th", { text: t("admin.models.colModel") }),
+        h("th", { text: t("admin.providers.colDisplayName") }),
+        h("th", { text: t("admin.providers.colContext") }),
+        h("th", { text: t("admin.providers.metaVision") }),
+        h("th", { text: t("admin.providers.colStatus") }))),
       h("tbody", {}, ...models.map((model) => {
+        const item = meta[model] ?? {}
         const pick = h("input", { type: "checkbox", checked: draft.has(model) })
         pick.addEventListener("change", () => onToggle(model, pick.checked))
-        const rich = [model, ...metaParts(h, meta[model])].flatMap((part, index) => (index === 0 ? [part] : [" · ", part]))
-        return h("tr", {}, h("td", {}, h("label", {}, pick, ...rich)))
+        return h("tr", {},
+          h("td", {}, h("label", {}, pick, model)),
+          cell(typeof item.displayName === "string" ? item.displayName : null),
+          cell(item.contextWindow !== undefined ? fmtTokens(item.contextWindow) : null),
+          cell(item.vision === true ? "✓" : null),
+          cell(typeof item.status === "string" ? t("admin.providers.upstreamRetiredBadge") : null, "hint error"))
       })))))
 }
 

@@ -9,7 +9,7 @@
  *   腿 B（CSS 声明扫描——§2.6②）：高度链声明表逐条 ∥ `position: sticky` + `top: 0` ∥ 回退媒体查询（`height: auto`）∥
  *      `main` margin 无 `auto` ∥ `.model-picks` 零残留（规则 + 字面两向）
  *   腿 C（五页壳行为——stub ctx）：逐页渲染 N 行 ⇒ 表内 tfoot 计数 = N（「共 N 项」）；空/错 ⇒ 无表（hint——无 tfoot）；`head`/`area` 传参形状在册
- *   腿 D（弹窗表格形——DOM 桩）：详情勾选表（单列「模型」∥ 行 = `label`（勾选 + 模型名）∥ 失败 = `.hint error`）∥
+ *   腿 D（弹窗表格形——DOM 桩）：详情勾选表（五列 = 模型 ∥ 展示名 ∥ 上下文 ∥ 视觉 ∥ 状态 ∥ 首格 `label`（勾选 + 模型名）∥ 失败 = `.hint error`）∥
  *      预设模型表（单列「模型」：`code` 行）∥ 成员 key 表（四列头 ∥ 吊销钮行内 ∥ 空态 `noKeys` 不变量；配额批：随行形 `modelQuotas`）
  *   腿 E（左对齐——§2.6④）：`main` 规则 `max-width: 1100px` 在 ∥ margin 无 `auto`
  *   腿 F（i18n——§2.2 本批 6 键）：两表在册（非空 ∥ 占位符一致 ∥ en 零 CJK）∥ `t` 引用闭合
@@ -305,7 +305,7 @@ test("腿 C 五页壳：成功 = 行数 ∥ 空 = 0 ∥ 错 = 0 ∥ `head`/`area
 test("腿 D 弹窗表格形：详情勾选表 ∥ 预设模型表 ∥ 成员 key 表（四列 ∥ 吊销行内 ∥ 空态不变量）", async () => {
   globalThis.document = createDocument()
   try {
-    // ① 详情弹窗·勾选段 = 单列表（表头「模型」∥ 行 = `label`（勾选 + 模型名）∥ 勾选态 = 现配置）
+    // ① 详情弹窗·勾选段 = 列式表（五列表头 ∥ 首格 `label`（勾选 + 模型名）∥ 勾选态 = 现配置）
     const detail = pageCtx({
       routes: {
         "POST /api/admin/providers/discover": () => ({ models: ["m-1", "m-2"] }),
@@ -317,7 +317,7 @@ test("腿 D 弹窗表格形：详情勾选表 ∥ 预设模型表 ∥ 成员 key
     await tick() // 首开自动拉取候选
     const table = findNode(modal.root, (node) => node.tag === "table")
     assert.ok(table !== null, "详情勾选段缺表格形")
-    assert.deepEqual(findAll(table, (node) => node.tag === "th").map((cell) => cell.textContent), [ZH["admin.models.colModel"]], "单列表头 =「模型」")
+    assert.deepEqual(findAll(table, (node) => node.tag === "th").map((cell) => cell.textContent), [ZH["admin.models.colModel"], ZH["admin.providers.colDisplayName"], ZH["admin.providers.colContext"], ZH["admin.providers.metaVision"], ZH["admin.providers.colStatus"]], "五列表头 = 模型 ∥ 展示名 ∥ 上下文 ∥ 视觉 ∥ 状态")
     const pickLabels = findAll(table, (node) => node.tag === "label")
     assert.deepEqual(pickLabels.map((label) => label.children[1]), ["m-1", "m-2"], "行 = label（勾选 + 模型名）")
     for (const label of pickLabels) assert.deepEqual([label.children[0].tag, label.children[0].attrs.type], ["input", "checkbox"], "行内勾选框")

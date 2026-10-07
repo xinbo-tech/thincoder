@@ -15,8 +15,7 @@
  *      （有则示 ∥ 零字段零占位 ∥ 存储补齐）∥ 上游退役只提示（行标 + 注行；勾选/保存照常零停用）∥ 加载三态（在飞 ⇒ `.hint` + 钮禁用）
  *      ∥ 保存线形（空图 ⇒ 省略键；非空 ⇒ 携）∥ 添加窗探针随 POST 携图（无探针 ⇒ 省略键）
  *   ⑤ 求交滑落（AC-24②——`filterModelMeta` 直测）：白名单 + 形不符即略 + 与 `models` 求交（非开放不入库）∥ 非对象 ⇒ 抛
- *   ⑥ i18n + 静态面（WEBUI §2.2 键族 +5 ∥ §6 AC-24 续）：两表 5 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集双向相等 ∥
- *      档目 19 ∥ 20 不变 ∥ 视图件行宽 ≤300 ∥ `style.css` 零动（`:root` 38 ∥ 悬停八条——AC-19 canon）∥ 门禁链 22 件
+ *   ⑥ i18n + 静态面（WEBUI §2.2 键族 +7 ∥ §6 AC-24 续）：两表 7 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集双向相等 ∥ 档目 19 ∥ 20 不变 ∥ 视图件行宽 ≤300 ∥ `style.css` 零新增（`:root` 38 ∥ 悬停八条——AC-19 canon）∥ 门禁链 22 件
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -307,11 +306,11 @@ const byText = (root, text) => findNode(root, (node) => node.textContent === tex
 const textOf = (node) => (typeof node === "string" ? node : [node?.textContent ?? "", ...(node?.children ?? []).map(textOf)].filter(Boolean).join(" "))
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
 const createDocument = () => ({ body: makeNode("body"), createElement: (tag) => makeNode(tag), getElementById: () => null })
-/** 候选勾选钮（行形：`label[复选框, 模型名, …富信息]`；`key-clear` 勾不计）。 */
+/** 候选勾选钮（行形：首格 `label[复选框, 模型名]`；`key-clear` 勾不计）。 */
 const pickBoxes = (root) => findAll(root, (node) => node.tag === "input" && node.attrs.type === "checkbox" && node.parent?.tag === "label" && node.parent.className !== "key-clear")
 const pickBox = (root, model) => pickBoxes(root).find((box) => box.parent.children.includes(model)) ?? null
-/** 候选行文本部件（`label` 子项：分隔串 ∥ 富信息 span——零字段 ⇒ 恰 `[模型名]`）。 */
-const rowParts = (root, model) => pickBox(root, model).parent.children.filter((item) => typeof item === "string" || item.tag === "span").map((item) => (typeof item === "string" ? item : item.textContent))
+/** 候选行文本格（`tr` 逐 `td`——列式：模型 ∥ 展示名 ∥ 上下文 ∥ 视觉 ∥ 状态；缺则空；tr ← td ← label ← box）。 */
+const rowCells = (root, model) => pickBox(root, model).parent.parent.parent.children.filter((item) => item.tag === "td").map((item) => textOf(item))
 const CJK = /[\u3000-\u303f\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff00-\uffef]/
 const placeholders = (text) => [...String(text).matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort().join(",")
 const fill = (text, params) => String(text).replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match))
@@ -348,15 +347,15 @@ test("④ 弹窗 DOM 桩：富信息（有则示 ∥ 零占位 ∥ 存储补齐�
     assert.deepEqual([byText(modal.root, ZH["admin.providers.candidatesLoading"])?.className ?? null, byText(modal.root, ZH["admin.providers.refreshCandidates"]).disabled], ["hint", true], "在飞 ⇒ 加载文案 + 触发钮禁用")
     release()
     await tick()
-    // 行 = 勾选 + 模型名 + 富信息（次级文本 ∥ 上下文徽标 ∥ 视觉徽标 ∥ 退役徽标——名称升序）
+    // 行 = 列式（模型 ∥ 展示名 ∥ 上下文 ∥ 视觉 ∥ 状态——名称升序；缺则空、零占位）
     assert.deepEqual(pickBoxes(modal.root).map((box) => box.parent.children[1]), ["alpha", "bravo", "charlie", "delta-retired"])
-    assert.deepEqual(rowParts(modal.root, "alpha"), ["alpha", " · ", fill(ZH["admin.providers.metaContext"], { value: "262k" }), " · ", ZH["admin.providers.metaVision"]])
-    assert.deepEqual(rowParts(modal.root, "bravo"), ["bravo", " · ", "Stored Bravo"], "存储补齐（本次发现无 bravo）")
-    assert.deepEqual(rowParts(modal.root, "charlie"), ["charlie"], "零字段零占位")
-    assert.deepEqual(rowParts(modal.root, "delta-retired"), ["delta-retired", " · ", ZH["admin.providers.upstreamRetiredBadge"]])
-    // 类面：富信息 = `hint`；退役 = `hint error`（零新类——AC-19 canon）
-    const spans = (model) => pickBox(modal.root, model).parent.children.filter((item) => item.tag === "span").map((item) => item.className)
-    assert.deepEqual([spans("alpha"), spans("delta-retired"), spans("charlie")], [["hint", "hint"], ["hint error"], []])
+    assert.deepEqual(findAll(modal.root, (node) => node.tag === "th").map((node) => node.textContent),
+      [ZH["admin.models.colModel"], ZH["admin.providers.colDisplayName"], ZH["admin.providers.colContext"], ZH["admin.providers.metaVision"], ZH["admin.providers.colStatus"]], "列头五格")
+    assert.deepEqual(rowCells(modal.root, "alpha"), ["alpha", "", "262k", "✓", ""]); assert.deepEqual(rowCells(modal.root, "bravo"), ["bravo", "Stored Bravo", "", "", ""], "存储补齐（本次发现无 bravo）")
+    assert.deepEqual(rowCells(modal.root, "charlie"), ["charlie", "", "", "", ""], "零字段零占位（空格）"); assert.deepEqual(rowCells(modal.root, "delta-retired"), ["delta-retired", "", "", "", ZH["admin.providers.upstreamRetiredBadge"]])
+    // 类面：展示名/上下文/视觉 = `hint`；退役 = `hint error`（零新类——AC-19 canon；tr ← td ← label ← box）
+    const cellSpans = (model) => pickBox(modal.root, model).parent.parent.parent.children.filter((item) => item.tag === "td").flatMap((td) => td.children.filter((child) => child.tag === "span").map((child) => child.className))
+    assert.deepEqual([cellSpans("alpha"), cellSpans("delta-retired"), cellSpans("charlie")], [["hint", "hint"], ["hint error"], []])
     // 退役只提示：注行（「模型名 (状态原文)」清单）+ 被标记模型照常可勾（零停用）
     assert.ok(textOf(modal.root).includes(fill(ZH["admin.providers.upstreamRetiredNote"], { models: "delta-retired (Shutdown)" })), "退役注行在册")
     const retiredBox = pickBox(modal.root, "delta-retired")
@@ -411,7 +410,7 @@ test("④ 弹窗 DOM 桩：富信息（有则示 ∥ 零占位 ∥ 存储补齐�
     releaseAdd()
     await fired
     assert.deepEqual([byText(add.root, ZH["admin.providers.candidatesLoading"]), fetchBtn.disabled], [null, false], "完成 ⇒ 转场候选（钮恢复）")
-    assert.deepEqual(rowParts(add.root, "m-1"), ["m-1", " · ", fill(ZH["admin.providers.metaContext"], { value: "8k" })])
+    assert.deepEqual(rowCells(add.root, "m-1"), ["m-1", "", "8k", "", ""])
     const m1 = pickBox(add.root, "m-1"); m1.checked = true
     await m1.fire("change")
     await byText(add.root, ZH["common.save"]).fire("click")
@@ -458,11 +457,11 @@ test("⑤ 求交滑落：白名单 + 形不符即略 + 与 models 求交（非�
   assert.deepEqual(filterModelMeta(clean, ["m"]), clean)
 })
 
-// ── ⑥ i18n + 静态面（WEBUI §2.2 键族 +5 ∥ §6 AC-24 续）──────────────────────────────
+// ── ⑥ i18n + 静态面（WEBUI §2.2 键族 +7 ∥ §6 AC-24 续）──────────────────────────────
 
-test("⑥ i18n + 静态面：两表 5 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集相等 ∥ 档目 19 ∥ 20 ∥ 行宽 ≤300 ∥ AC-19 canon ∥ 门禁链 22 件", () => {
-  const NEW_KEYS = ["admin.providers.candidatesLoading", "admin.providers.metaContext", "admin.providers.metaVision",
-    "admin.providers.upstreamRetiredBadge", "admin.providers.upstreamRetiredNote"]
+test("⑥ i18n + 静态面：两表 7 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集相等 ∥ 档目 19 ∥ 20 ∥ 行宽 ≤300 ∥ AC-19 canon ∥ 门禁链 22 件", () => {
+  const NEW_KEYS = ["admin.providers.candidatesLoading", "admin.providers.metaVision", "admin.providers.upstreamRetiredBadge",
+    "admin.providers.upstreamRetiredNote", "admin.providers.colDisplayName", "admin.providers.colContext", "admin.providers.colStatus"]
   for (const key of NEW_KEYS) {
     assert.ok(key in ZH && key in EN, `新键缺位：${key}`)
     assert.ok(ZH[key].trim().length > 0 && EN[key].trim().length > 0, `空值键：${key}`)
@@ -483,7 +482,7 @@ test("⑥ i18n + 静态面：两表 5 键在场（en 零 CJK ∥ 占位符一致
   // 档目 19 ∥ 20 不变（零新 public 档）
   const names = readdirSync(PUBLIC_DIR).sort()
   assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [20, 19], "档目 19 ∥ 20 不变")
-  // AC-19 canon（`style.css` 零动）：`:root` 变量族 38 ∥ 悬停声明八条
+  // AC-19 canon（`style.css` 零新增）：`:root` 变量族 38 ∥ 悬停声明八条
   const css = readPublic("style.css").replace(/\/\*[\s\S]*?\*\//g, "")
   const rootVars = (css.match(/:root\s*\{[^{}]*\}/)?.[0] ?? "").match(/--[\w-]+\s*:/g) ?? []
   assert.equal(rootVars.length, 38, `:root 变量族计数（零新增）：${rootVars.length}`)

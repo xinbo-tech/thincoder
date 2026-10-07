@@ -57,7 +57,7 @@ const BASE_VARS = {
   "--mono": `ui-monospace, Consolas, "Courier New", monospace`,
   "--fs": "13px", "--lh": "1.5",
   "--bw": "1px", "--bw-strong": "2px",
-  "--nav-w": "200px", "--modal-w": "560px",
+  "--nav-w": "200px", "--modal-w": "clamp(560px, 78vw, 1200px)",
 }
 
 test("① 底座：`:root` 变量族 38（值表同拍）∥ 块外零颜色字面量", () => {

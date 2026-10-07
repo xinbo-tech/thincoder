@@ -36,7 +36,7 @@
   /* 线宽（S17——结构线/强调线） */
   --bw: 1px; --bw-strong: 2px;
   /* 布局（S15——宽值单源：侧栏宽 + 内容缩进 ∥ 弹窗宽三处） */
-  --nav-w: 200px; --modal-w: 560px;
+  --nav-w: 200px; --modal-w: clamp(560px, 78vw, 1200px);
 }
 * { box-sizing: border-box; }
 body { margin: 0; font-family: var(--font); font-size: var(--fs); line-height: var(--lh); background: var(--bg); color: var(--text); }
