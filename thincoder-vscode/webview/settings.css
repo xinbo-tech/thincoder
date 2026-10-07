@@ -283,6 +283,33 @@
 
 .settings-card-body input.input-error { border-color: var(--red); }
 
+/* ─── Add-provider dialog（三端对齐批 · #1029——框幕独立类，不入确认族共用类）─── */
+
+.settings-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  z-index: 999;
+  animation: backdrop-in 0.15s ease-out;
+}
+
+.settings-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  animation: confirm-in 0.15s ease-out;
+}
+
 /* ─── First-run onboarding panel ─────────────── */
 
 #welcome-panel {

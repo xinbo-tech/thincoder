@@ -542,7 +542,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - **入口 6 的确认不绑定目标**（交互面 · §2.10「模型菜单入口」段登记）：确认弹框发生在宿主 QuickPick 选定**之前**（文案 = 类通用式 `settings.secretDeleteConfirm`、不携 `name`）⇒ 与入口 1–5（目标 = 载体所在行）的确认力度不同；本批按批档 §1.3 ②「取消 ⇒ 零删除 ∧ 零消息副作用」的**严格读法**选门位（webview 侧调用点），代价入册。
   补偿 = 目标选定步（QuickPick）自身是显式选择（见 §2.10 补偿两条）；消解路径 = ① 若父侧裁定确认须绑定目标，则须先裁定该半句读法（严格 = 零发值 / 宽松 = 无持久副作用）+ 登记第二确认形态（VS Code 原生件）例外；② 或宿主把选定 `name` 回传 webview 走同件（须协议 +1 条消息）；到期条件 = 本门下次被触碰 / 父侧裁定。
 
-- **`thincoder-vscode/src/extension/settings.mjs` 越 300 行建议线（拆分复核 · 评审发现 #3）**（结构面 · §2.13 载体档）：该档现 **359**（内容行数口径 · 本批届盘复读 2026-09-29——350 ⇒ 359：本批净增 +9〔#640 助手 `postProviderError` + #17 读链补环〕；
+- **`thincoder-vscode/src/extension/settings.mjs` 越 300 行建议线（拆分复核 · 评审发现 #3）**（结构面 · §2.13 载体档）：该档现 **406**（内容行数口径 · 三端对齐批届盘复读 2026-10-07——本批净增 +3〔探针收敛核 `probeTargetOf`〕；届盘前读 403；09-29 届记 350 ⇒ 359：+9〔#640 助手 `postProviderError` + #17 读链补环〕；
   上届 410 ⇒ 350 之净减沿革 = B10 S17 族出档、shell 候选面上提核 `thincoder-core/shell-candidates.mjs`）——**仍越 300 建议线**（< 450 触发阈值）⇒ 拆分计划维持（快照面透传语义不变）。
   拆分组边界 = ① 快照族（`agentSettings` / `proxySettings` / `websearchSettings` / `fullStatus`）② 渠道路由族（provider 增删 / 代理旗标 / 连接测试）③ 密钥与 MCP 族（`saveProviderKey` / `deleteProviderKey` / MCP 三件）——① 拆出 = `thincoder-vscode/src/extension/settings-snapshots.mjs`（拟新增）。
   拆分计划 = 触发阈值 **450 行** 或该档下次结构改动（先到即拆）；到期条件 = 触发阈值到达时。
@@ -557,7 +557,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   `webview/mode-buttons.js:3-4`（「These mirror config.json fields」——engineering / advisor 两钮语境已失实）。
   台账 #378 在册集 = `docs/core/design/TOOLS.md:82` / `:123` + 注释三处（③ 前三项）；① 与 ③ 的 `mode-buttons.js` 项为本轮新增实读。
   消解路径 = 各档下次被触碰逐处收正（设计档笔 = eng-designer；注释 / 产品文本 = 产品代码面）；到期条件 = 各档下次被触碰 / 父侧另册归形小批。
-- **`thincoder-vscode/webview/settings.css` 越 300 行建议线（拆分复核）**（结构面 · §2.15 载体档）：该档现 **385** 行（内容行数口径 · 本批届盘复读 2026-09-29——本批 +6：#640 段标样式一条；**三端对齐批（2026-10-07）触碰 = 新增 `.settings-dialog` ∥ `.settings-dialog-backdrop` 段（Δ ≈+20 ⇒ 预估 ≈405；实施后实读回填）——非结构性（单组件样式段；不改三段组界 ∕ 不增职责）⇒ 消解窗口顺延**）——**复核结论 = 本批不拆**（本批增量 = 段标 span 单条样式，不改结构 ∕ 不增职责）。
+- **`thincoder-vscode/webview/settings.css` 越 300 行建议线（拆分复核）**（结构面 · §2.15 载体档）：该档现 **412** 行（内容行数口径 · 三端对齐批届盘复读 2026-10-07——本批 +27；09-29 届记 385（+6：#640 段标样式一条）；**三端对齐批（2026-10-07）触碰 = 新增 `.settings-dialog` ∥ `.settings-dialog-backdrop` 段（**385 ⇒ 412**——实施后实读 2026-10-07）——非结构性（单组件样式段；不改三段组界 ∕ 不增职责）⇒ 消解窗口顺延**）——**复核结论 = 本批不拆**（本批增量 = 段标 span 单条样式，不改结构 ∕ 不增职责）。
   拆分计划 = 触发阈值 **450 行** 或 **设置面样式族下次结构改动**（先到即拆）；
   组边界（三段 · 按现分节注释）= ① 面板骨架 + 通用件（面板框 ∕ 卡框 ∕ 字段 ∕ 按钮 ∕ 开关）② 卡面样式族（providers ∕ MCP ∕ consult ∕ agent 徽标 ∕ model-menu）③ first-run 面板段。
   到期条件 = 触发阈值到达时 ∕ 设置面样式族下次结构改动时。
@@ -608,6 +608,8 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 | U-S17 | MCP 表单 env ∥ headers = **行式键值编辑器**（每行键格 + 值格 + ✕；行集下 `[+ 添加行]`；零项零行）；粘贴零解析；值 = 字面（零引号剥离）；提交四判据（空行丢 ∥ 重复后胜 ∥ 全空删字段 ∥ trim） | 已定（§2.4——MCP 键值行式输入批 · #1036；桌面逐元素同形 = `docs/desktop/design/SETTINGS.md` §1 **KD-76**） |
 
 ## 变更记录
+
+- 2026-10-07（**三端对齐批（#1027–#1035）· 收口回填（VSC 侧）· 父侧直接执行〔可 revert〕**——承批档 `docs/batches/2026-10-07-provider-config-parity.md` §5.9）：§3 `settings.mjs` 登记读数 **359 ⇒ 406**（本批 +3——探针收敛核 `probeTargetOf`）∥ `settings.css` 登记读数 **385 ⇒ 412**（实施后实读——新增 `.settings-dialog` ∥ `.settings-dialog-backdrop` 段）。**零新语义**（读数回填）。
 
 - 2026-10-07（**provider 配置面三端对齐批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-provider-config-parity.md` §2 · 台账 #1027 ∥ #1028 ∥ #1029 ∥ #1031 ∥ #1032 ∥ #1033 ∥ #1035）：新增 **§2.16**（添加弹窗 ∥ 字段序 ∥ 走 proxy 开关 ∥ 拉取路由耦合 ∥ 扩面四件）；**§5** +U-S15 ∥ U-S16（U-S14 随稿）。**零新语义**（定形 + 修向；明细 = 批档 §2）。
 - 2026-10-07（**三端对齐批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-07-provider-config-parity.md` §3 轮次 1 ∥ 用户 2026-10-07 19:04 裁）：§2.16 收正——① 入口句直陈（交棒径 = `onboarding.js:62` ⇒ `window._openAddProviderDialog?.()`；批档 §2.3）∥ ② **框幕 = 独立类 `.settings-dialog-backdrop`**（确认族帚扫三站点零误扫——隔离判由 = ① 关路句）∥ ③ 双门槛**组成式唯一式**（`uri` 非门槛 = 目标本体；`proxy.mjs:67-72` 同式）∥ ④ #1034 裁讫 · A 落形（行删除符 `✕`——`settings-providers.js:48` ∥ `:185` 字面 + 注释随述）∥ ⑤ §2.12 展示面锚点收正（`:189` ∥ `:192`）∥ ⑥ §2.15 载体行触属性 + 顺延句（delta ≈+20）；§1 面图行 glyph 收正。**产品码零触（fix 轮）**。

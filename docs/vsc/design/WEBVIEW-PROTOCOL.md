@@ -483,7 +483,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | ① 判别式 | ② webview 发射点 | ③ host 消费位 | ④ 处置 | ⑤ 备注 |
 |---|---|---|---|---|
 | `abort` | webview/input.js:26 | src/extension/panel-messages.mjs:260 | `活` | — |
-| `addProvider` | thincoder-render-core/composer/model-menu.mjs:303/webview/onboarding.js:65（预设形直发位；首启交棒调用位 = `:62`）/webview/settings-provider-dialog.js（本批表单提交位——`custom` ∥ `preset` 两形发点；行号实施轮实读）（共 4 处——`settings-providers.js:146 ∥ :148` 两发点随表单迁入新档） | src/extension/panel-messages.mjs:279 | `活` | 载荷 + `proxy`（可选布尔——添加表单「走 proxy」勾选；`docs/vsc/design/SETTINGS.md` §2.16） |
+| `addProvider` | thincoder-render-core/composer/model-menu.mjs:303/webview/onboarding.js:65（预设形直发位；首启交棒调用位 = `:62`）/webview/settings-provider-dialog.js:245（本批表单提交位——`custom` ∥ `preset` 两形发点；实施后实读 2026-10-07）（共 4 处——`settings-providers.js:146 ∥ :148` 两发点随表单迁入新档） | src/extension/panel-messages.mjs:279 | `活` | 载荷 + `proxy`（可选布尔——添加表单「走 proxy」勾选；`docs/vsc/design/SETTINGS.md` §2.16） |
 | `atComplete` | thincoder-render-core/composer/atmenu.mjs:50 | src/extension/panel-messages.mjs:268 | `活` | — |
 | `batchPermissionResponse` | webview/permission.js:18（发射位——字面量构造 `:12`） | src/extension/panel-messages.mjs:270 | `活` | 载荷增 `promptId`（三发点同携——§4.6）；形状 = 局部箭头函数 |
 | `buildIndex` | webview/settings-tools.js:150 | src/extension/panel-messages.mjs:291 | `活` | — |
@@ -530,7 +530,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `setProviderProxy` | webview/settings-providers.js:62 | src/extension/panel-messages.mjs:284 | `活` | — |
 | `switchSession` | webview/session-bar.js:62 | src/extension/panel-messages.mjs:247 | `活` | — |
 | `testMcp` | webview/settings-tools.js:222 | src/extension/panel-messages.mjs:281 | `活` | — |
-| `testProvider` | webview/settings-provider-dialog.js（表单拉取位——新档行号实施轮实读） | src/extension/panel-messages.mjs:290 | `活` | 载荷 + `proxy`（可选布尔——勾选 ⇒ 探针按 `probeTargetOf` 双门槛判定；未勾 ∥ 缺省 ⇒ 直连；§vsc `SETTINGS.md` 2.16 ③′） |
+| `testProvider` | webview/settings-provider-dialog.js:222（表单拉取位——实施后实读 2026-10-07） | src/extension/panel-messages.mjs:290 | `活` | 载荷 + `proxy`（可选布尔——勾选 ⇒ 探针按 `probeTargetOf` 双门槛判定；未勾 ∥ 缺省 ⇒ 直连；§vsc `SETTINGS.md` 2.16 ③′） |
 | `testProxy` | webview/settings-env.js:99 | src/extension/panel-messages.mjs:355 | `活` | — |
 | `userMessage` | thincoder-render-core/composer/panel.mjs:341 | src/extension/panel-messages.mjs:204 | `活` | 双向同判别式（收面回显行 = §12） |
 | `webviewReady` | webview/chat.js:141 | src/extension/panel-messages.mjs:293 | `活` | — |
@@ -747,3 +747,4 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 - 2026-10-04（**模型切换解锁批 · 修正轮（评审 #53 · 发现 3）· eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §3 轮次 1 · 台账 #918 · 父侧裁 = 全采纳）：§4.4 忙态派生消费者行收正——**Send ∥ Stop 两组**在记 ∥ 模型 / 推理按钮零忙态门（单源指针保持 = `WEBVIEW.md` §4.2；D2 不复述）。**零新语义**。明细 = 批档 §2 修正块。
 - 2026-10-05（**批 digest-accounting · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §1 · 需求 §4.15 · 台账 #930）：§5 载荷增 `unsettled?`（end 形）+ `digest end` 增**残余元素**句 + §6.3 键表 **27 ⇒ 28 键**（+`digest.residue`——核容器键 + 登记注；D3：计数与列表同改）。**消息名 ∥ 既有载荷字段 ∥ 首列判别式集零变**（增字段；§3.2 增字段登记行 + **标题计数同改（二十三项 ⇒ 二十四项）** = 实施批随落——D3 同拍）。明细 = 批档 §2。
 - 2026-10-05（**批 digest-accounting · 实施轮 · 端面舱 #42 · eng-coder**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §2/§4 随落项）：§3.2 增**行 24**（`digest` 增字段 `unsettled`——非上行轮且 > 0 才携；发射 = `suspension.mjs` `driveTurn` 收尾（帧 ∥ 记录同点）∥ 接收 = `webview/chat-status.js` `showDigestStatus`（分发 `webview/chat-messages.js`）残余行元素）+ **标题计数 ∥ 行 1–24 ∥ D-P11 同改（二十三项 ⇒ 二十四项）**（D3：计数与列表同改）；上条设计轮句「= 实施批随落」兑现。**协议语义 ∥ 消息名 ∥ 既有载荷字段 ∥ 首列判别式集零变**（增字段登记）。明细 = 批档 §5。
+- 2026-10-07（**三端对齐批（#1027–#1035）· 收口回填 · 父侧直接执行〔可 revert〕**——承批档 `docs/batches/2026-10-07-provider-config-parity.md` §5.9④）：§13 两行占位回填——`addProvider` 行 ① 列新档位 **`:245`** ∥ `testProvider` 行 ① 列新档位 **`:222`**（实施后实读；「行号实施轮实读」占位标记退场）。**协议语义 ∥ 消息名 ∥ 载荷字段零变**（坐标回填）。

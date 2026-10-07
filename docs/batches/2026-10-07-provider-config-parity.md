@@ -72,6 +72,15 @@
 - **坐标口径随正**：§1.6 的「`:67-70`」按全批统一口径随正 = **`:67-72`**（`injectProxy` 实范围；判定式 `:70` 不变）——与 §2 各条（2.3 核条 ∥ 2.9④ 随动）同口径（评审轮 1 发现 #10 收正批）。
 - **状态随正**：§1.7 末行「§4（你的待裁项一并呈上）」——三件已于 19:04 全部裁讫（① #1034 = A ∥ ② A2 = B 另批 ∥ ③ #1036 开小批）⇒ §4 不再列待裁项。
 
+### 1.10 舱二（VSC）交付处置（主 agent · 2026-10-07 20:2x）
+
+- **核验**：抽读三处——新档 `settings-provider-dialog.js`（读回 274 行；单例 ∥ 五路关 ∥ 代际 ∥ 字段序头注在盘）∥ `settings.mjs` 长度 ≈406（吻合「403 ⇒ 406」）∥ 零触面声明（桌面 ∥ CLI ∥ 核档）与 `git status` 一致——**通过**。舱自跑：测试 15/15 pass ∥ check-syntax 136 档 OK ∥ smoke OK（父侧收口跑为唯一仓套件跑）。
+- **上抛①（测试件 679 行越 500）处置**：裁定 = **按舱拆档（三舱 = 三档）**，随舱三落地后于**收口轮**执行（同一设计令牌 fix 轮；拆后各档 ≤300）。不采「§2.6 明写豁免」——在册先例 = 破 500 即拆；无例外判据行可依。**本轮不阻**（舱三照常追加 D 腿）。
+- **上抛②（三小项）处置**：(a) 拒存仍闪「✓ 已保存」徽标 ∥ (b) 拒存即关框丢在编输入 —— **采纳修**，并入收口轮 fix（产品码面）。(c) 代际跨框残余窗口（需协议携请求 id）—— **落账**（条件行，随协议面触碰）。
+- **上抛③（设计面回填·VSC 侧）处置**：`docs/vsc/design/SETTINGS.md` §2.16 as-of 坐标 + §3 `settings.mjs` 读数 359 ⇒ 406 ∥ `WEBVIEW-PROTOCOL.md` §13 两行占位（= `settings-provider-dialog.js:245` ∥ `:222`）= **父侧直接执行**（机械读数/坐标，本轮落）；桌面侧回填随舱三。
+- **上抛④（`PROXY.md:68` 例外句相抵）处置**：**就地收正**（父侧直接执行 · 可 revert）——探针已收敛核 `probeTargetOf`，旧「亦直连」表述 + 陈旧坐标 `settings.mjs:229` 同拍收。
+- 舱三（桌面）已在跑（#3）；#10（MCP）同时接棒（域冲突解除）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（fix 轮 1：评审轮 1 发现 #1–#12 逐号收正（#7 = 呈 §4 裁）∥ 用户 19:04 两裁收编（#1034 裁讫 · A = 本批落形 ∥ A2 裁讫 · B = 另批 #1042）· 2026-10-07）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -330,7 +339,7 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder）
 
-**状态行**：实施完成（舱一 = 核+CLI；C1/L1 腿 4/4 绿 ∥ 审计轮 1 无发现 ∥ 评审轮 1 pass）
+**状态行**：实施完成（舱一 = 核+CLI（C1/L1 4/4）∥ 舱二 = VSC（V1–V11 11/11）∥ 舱三桌面未派——逐舱块见 5.1 ∥ 5.6）
 
 ### 5.1 交付摘要（舱一 = 核 + CLI：写面原语 + CLI 收敛 + 批本地测试件）
 
@@ -367,6 +376,53 @@ VERDICT: pass
 
 - `node --test docs/batches/2026-10-07-provider-config-parity.test.mjs` ⇒ **4/4 pass**（C1 ∥ L1a ∥ L1b ∥ L1c；≈124ms）——仓库根运行。
 - `node --check`（lint 逐档）：五档全 OK。
+- **not repo-suite verified**——the parent-side closeout run is the only repo-suite run。
+
+### 5.6 交付摘要（舱二 = VSC：弹窗化 ∥ 字段序 ∥ 走 proxy 开关 ∥ 扩面四件 ∥ 行删除符）
+
+- **接续判定 = 新起（零残留）**：开工首事 = 通读批档 §2 全档 + 设计档 `docs/vsc/design/SETTINGS.md` §2.16（含 §5 U-S14–U-S16 ∥ 变更记录）+ `WEBVIEW-PROTOCOL.md` §13 两行，再逐档实读现码；本舱开工时零产物（`git status` 无 VSC 面脏件）⇒ 无接续面。
+- **改动清单（file:line）**：
+  - **新档** `thincoder-vscode/webview/settings-provider-dialog.js`（273 行）：建两件（框幕 `.settings-dialog-backdrop` z 999 ∥ 卡 `#prov-add-dialog.settings-dialog` z 1000 · role/aria-modal/aria-label）+ 体 `.settings-card-body`（首件 `.settings-subtitle` 同词）+ 件全（`#pa-type` ∥ `#pa-preset-info` ∥ `#pa-custom-fields`〔`#pa-name`→`#pa-url`→`#pa-format`〕∥ `#pa-key` ∥ `#pa-proxy` ∥ `#pa-custom-tail`〔`#pa-fetch-btn` ∥ `#pa-conn-status` ∥ `#pa-model` + datalist `#pa-model-candidates`〕∥ `#pa-save-btn` ∥ `#pa-cancel-btn`）+ 开框单例 + 开框重置（类型回首项 ∥ key ∥ proxy ∥ 状态行 ∥ 模型值 + 候选）+ 初始焦点 `#pa-type`（+50ms）+ 五路关 + `_addDialogEpoch` 框代际。
+  - `webview/settings-providers.js`（286 ⇒ 175）：表单 HTML 族 ∥ `_toggleAddForm` ∥ `_paFetchModels` ∥ `_paSave` ∥ `paTypeChanged` ∥ `updateTestProviderResult` 全数迁出；`#prov-add-btn` onclick ⇒ `window._openAddProviderDialog()`；`#defaultmodel-hint` 入 `#prov-defaultmodel-row`（默认 `display:none`）+ `_defaultModelMenu` 空表提示/有候选清提示；行删除符 `−`⇒`✕` 两处（`:31` 编辑行取消重建位 ∥ `:123` 卡 HTML）+ 相关注释四处随述；`bindAddProviderForm` 域收窄（defaultmodel-btn + `#prov-list .del-key[data-name]`）；`renderProvidersCard` 的 P2-6 保表单段净删。
+  - `webview/settings.js`（190 ⇒ 194）：import 收正（`updateTestProviderResult` 改指新档）+ `installProviderDialogHandlers()` 接入 + `closeSettings()` 增调 `closeAddProviderDialog()`（`:171`，与 `closeConfirmPopover()` 同拍）。
+  - `webview/settings.css`（385 ⇒ 412）：新段 `.settings-dialog-backdrop`（fixed inset 0 ∥ `--overlay` ∥ z 999 ∥ `backdrop-in`）∥ `.settings-dialog`（fixed 居中 ∥ z 1000 ∥ `--bg` ∥ 1px 边框 ∥ 圆角 8px ∥ ≤420px ∥ `confirm-in`）+ 段注。
+  - `webview/onboarding.js`（81 持平）：`:62` ⇒ `window._openAddProviderDialog?.()`（守卫保留 ∥ `_openSettings?.()` 前序不变 ∥ `:59` 注释同步改述）。
+  - `src/extension/settings.mjs`（403 ⇒ 406）：`testProviderConnection` 签名 +`proxy`；目标构造单源 = `probeTargetOf({ name: "", baseURL: url, apiKey, format, proxy: proxy === true })`（零 `proxyUri: null` 硬编码）；注释按批档 §1.6⑤ 改述（`config.proxy.web` 唯一**活**消费面 = CLI `/config` Test connection 探针；web 工具走逐次 `args.proxy`——PROXY.md §4）。
+  - `src/extension/panel-messages-settings.mjs`（236 持平）：`handleAddProvider` 载荷链携 `proxy` ∥ `handleTestProvider` 透传 `proxy`（两 JSDoc 改述）。
+  - `locales/en.json` ∥ `zh.json`（284 ⇒ 289 行 / 287 键）：净 +5 键（+6 −1——增 `settings.modelRequired` ∥ `pickModelEmpty` ∥ `noDefaultModel` ∥ `defaultModelTitle` ∥ `providerHostBusy` ∥ `providerUnavailable`；删 `settings.fetchModelsFirst`）+ 六值改（`settings.setKey` ∥ `settings.addKey` ∥ `model.setKey` ∥ `error.provider` ∥ `error.failedProvider` ∥ `banner.notConfigured`——zh 裸「密钥」清零 ∥ 两语键集逐行相等）。
+  - 测试件 `docs/batches/2026-10-07-provider-config-parity.test.mjs`（130 ⇒ 679）：追加 V1–V11 腿（假 DOM harness + 真档链装载；C1/L1 与舱一产物零触）。
+- **行数实读回填（批档 §2.6 表口径 = 内容行数 · read 全档读数）**：`settings-provider-dialog.js` 273（新档 · 估 ≈200）∥ `settings-providers.js` 175（表 286）∥ `settings.js` 194（表 190 · 估 +3）∥ `settings.css` 412（表 385 · 估 ≈405）∥ `onboarding.js` 81（表 81 · ±0）∥ `settings.mjs` 406（表 403 · 估 +8）∥ `panel-messages-settings.mjs` 236（表 236 · 估 +2）∥ `en.json`/`zh.json` 289 行 · 287 键（估 ≈287 键）∥ 测试件 679（舱一时 130）。
+- **零动面核验（`git status`/`git diff` 佐证）**：桌面三档 ∥ CLI 三档 ∥ 核 `config-io.mjs`/`proxy.mjs`/`provider-flows.mjs` ∥ `webview/chat.js`（Esc 段原样）∥ 六档设计文档 ∥ `scripts/**` ∥ 批外测试件——本舱零触。
+
+### 5.7 决策透明表（实现轮内当场决策）
+
+| # | 决策 | 理由 | 依据 |
+|---|---|---|---|
+| 1 | `proxy` 载荷**仅勾选时携带**（`addProvider` ∥ `testProvider` 两处同式） | 未勾 ⇒ 载荷与 #1026 契约逐字同形（缺键 = 直连 ∥ 零键）；「可选布尔」直译 | SETTINGS.md §2.16 ③ / ③′「未勾 ∥ 缺省 ⇒ 直连」 |
+| 2 | 弹窗体 = `createElement` 建面（非 innerHTML 串） | 单例 ∥ 重置 ∥ 五路关 ∥ 代际四判据需实件引用；行为腿可直驱 | SETTINGS.md §2.16 ①（单例 + 开框重置语义）；沿 `showConfirmPopover` DOM 建面先例 |
+| 3 | `#pa-preset-info` 不携旧内联 `padding:2px 0` | 体 = `.settings-card-body`（flex column `gap:10px`）自带间距；设计未裁版式改动 | SETTINGS.md §2.16 ①（卡体 = `.settings-card-body`） |
+| 4 | 保留全局 `window._paSave`（表单族其余全局名随迁退出） | 仓件 smoke 把该名列为「handlers installed」断言面——移除即破仓件（非舱域内文件）；设计禁止面未涉 | `thincoder-vscode/test/smoke-settings.mjs:95` |
+| 5 | 保存被拒（model 空）仍闪「✓ 已保存」徽标 = **沿旧接线原样迁移**（未改） | 原接线即「click ⇒ `_paSave()` + `flashSaved`」，且原实现同样早期 return——改该反馈语义 = 自创交互（设计未裁）⇒ 上报不移；`parseSave` 返回值门控建议已入 5.9 | 内部审计 D1（记录面） |
+| 6 | 代际弃果 = 设计字面机制（未加强） | 「记代际 ∥ 落框前比对」即设计载明机制；跨框同代际残余窗口需协议携请求 id 才能完全隔离——超本批协议面 | SETTINGS.md §2.16 ①；内部审计 D2 |
+
+### 5.8 审计与代码评审轮次与终态
+
+- **内部发散审计（explore · 只读）轮 1**：四类偏差（发散 ∥ 越界 ∥ 漂移 ∥ DOC-DRIFT）**均无发现**（逐条已核：弹窗体 ∥ 字段序 ∥ 五路关 ∥ 换名残留 ∥ 四扩面 ∥ 拉取路由 ∥ 写面透传）；补记 2 低危（D1 假「已保存」徽标 = 旧接线迁移项 ∥ D2 代际跨框残余窗口 = 设计字面机制）+ 3 登记（协议 §13 行号占位待回填 ∥ SETTINGS.md as-of 坐标漂移 ∥ 舱二 §5 时点未落——本块即补齐）。审计限制：该装配无 shell ⇒ 未实跑；替代证据 = 逐档 `node --check` 全绿 + 输入面重算与其吻合 + `test()` 计数 15（父侧实跑读数见 5.10）。
+- **内部代码评审（advisor · code）轮 1**：**VERDICT: pass**（🔴 0 · 🟡 2 · 🔵 6，无 must-fix）——🟡① V 腿实跑读数待回填（= 5.10 本舱已补）∥ 🟡② 共享测试件 679 行 > 500 硬限（批本地件 + 三舱 append-only 共享设计；建议父侧裁「按舱拆 ∥ 登记豁免」）；🔵 六条 = §2.16 坐标漂移 ∥ `settings.mjs` 越线登记行读数 359 ⇒ 406 ∥ §2.6 预估回填（= 5.6 已补）∥ 拒存丢在编输入（设计既定「发消息后关」）∥ 关框帚扫选择器宽面 ∥ `window._delKey` 死码（§2.9③ 已登记）。
+- **终态 = clean**：无 must-fix；🟡/🔵 全为记录面 ∥ 登记面 ∥ 设计既定面——连建议移父侧 §6 裁（见 5.9 不修项）。
+
+### 5.9 fix round（≤5 轮）
+
+- **R0（0 笔代码修 · 收敛）**：审计 2（D1/D2）+ 评审 8（🟡2 + 🔵6）逐条判后**均不入本轮代码**，理由逐条落 5.7 #5/#6 与 5.8——D1 = 旧接线原样迁移（改则自创交互）∥ D2 = 设计字面机制（加强需协议面）∥ 其余 = 记录/回填/建议/已登记面。
+- **不修项（连建议 / 移父侧）**：① 「拒存 ⇒ 不关框」或保存前前置核 `customFieldsError` 守卫（评审 🔵6——设计既定面，改则交互变更）；② 关框帚扫选择器收窄（评审 🔵7——今日唯一产类名，零行为改）；③ `window._delKey` 死码（评审 🔵8 = §2.9③ 登记项）；④ SETTINGS.md §2.16 坐标回填 ∥ §3 `settings.mjs` 登记行读数（评审 🔵3/🔵4——设计面，本舱禁触）；⑤ `WEBVIEW-PROTOCOL.md` §13 两行占位回填坐标 = `addProvider` 两形发点 `webview/settings-provider-dialog.js:245` ∥ `testProvider` `:222`（父侧/设计面落笔）。
+- **出范围注记（不修 · 不判级）**：`docs/core/design/PROXY.md:68` 的例外句（「VSC 添加渠道表单的 Test connection 探针亦直连……不再取全局 `web` 旗」+ 坐标 `settings.mjs:229`）与 ③′（勾选 ⇒ `probeTargetOf` 同判定）相抵——该档不在本批判域，归属与到期交父侧。
+
+### 5.10 验证读数（本舱实跑）
+
+- `node --test docs/batches/2026-10-07-provider-config-parity.test.mjs` ⇒ **15/15 pass**（C1 ∥ L1a ∥ L1b ∥ L1c ∥ V1–V11；≈193ms）——仓库根运行。
+- `cd thincoder-vscode; node scripts/check-syntax.mjs` ⇒ `check-syntax: 136 JS files OK`（含新档）。
+- `cd thincoder-vscode; node test/smoke-settings.mjs` ⇒ `SMOKE-OK: settings panel split is behaviorally wired (build + updates + protocol)`。
+- 另跑（扫面佐证，非套件）：`_toggleAddForm` ∥ `prov-add-form` ∥ `fetchModelsFirst` ∥ 两处硬编码显示串 ∥ `settings-providers.js` 与弹窗档 U+2212 ——全 `thincoder-vscode/**`（除 `node_modules`）零命中。
 - **not repo-suite verified**——the parent-side closeout run is the only repo-suite run。
 
 ## §6 验证与收口（父代理）

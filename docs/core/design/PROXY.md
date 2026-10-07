@@ -65,7 +65,7 @@ const tlsSock = tlsConnect({ socket: sock, servername: target.hostname, rejectUn
 
 > `web` 字段仍可写、仍可在 `/config` 切换（`thincoder-cli/src/tui/cmd-config.mjs:111`），但其对 web 工具的门控已由 2026-08-31 裁定取消——**字段语义与菜单标签存在落差**，见 §8.1 登记。
 
-> 例外（2026-10-07 补 · #1026）：**loopback 目标永不经代理**——`localhost` ∥ `*.localhost` ∥ `127.0.0.0/8` ∥ `::1` 命中即直连（核内 `proxyFetch` 入口旁路——见 §2）；VSC 添加渠道表单的 Test connection 探针亦直连（未落盘条目 ⇒ 与运行期缺省一致；不再取全局 `web` 旗——`thincoder-vscode/src/extension/settings.mjs:229`）。
+> 例外（2026-10-07 补 · #1026）：**loopback 目标永不经代理**——`localhost` ∥ `*.localhost` ∥ `127.0.0.0/8` ∥ `::1` 命中即直连（核内 `proxyFetch` 入口旁路——见 §2）；VSC 添加渠道表单的 Test connection 探针**经核 `probeTargetOf` 单源**（表单「走 proxy」勾选随行——勾 ⇒ 双门槛判定 ∧ loopback 旁路照旧；未勾 ∥ 缺省 ⇒ 直连，与运行期缺省一致；不取全局 `web` 旗——`thincoder-vscode/src/extension/settings.mjs:232`；三端对齐批（2026-10-07 · 台账 #1027–#1035）收正）。
 
 ## 5. `/config` Proxy 子菜单与保存链
 
@@ -160,3 +160,4 @@ Clear proxy
 - 2026-10-04（**issue 修复批·一 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §2 · 台账 #878）：§2 新增 **web `ReadableStream` 断流通道**（`IDLE_ABORT` + `terminateBody`——直连 fetch 看门狗恢复有效）· §6.1 坐标行扩容（`terminateBody` 入单点）· §7 补 **D-PX8**。**零新语义**（= U-CG-1 残面的修复设计导出项）。
 - 2026-10-04（**issue 修复批·一 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round1.md` §3 轮次 1 发现 1）：§2 断流通道段收正——**建设点下移 `proxyFetch` 直连分支单点**（`core.mjs` 请求调用点收口恒走 `proxyFetch`——覆盖两条流式直连链；proxy 两分支零触）· 统一出口行补直连分支注（`:265 ⇒ :266-275`）· §6.1 补建设点 · §7 D-PX8 理由同拍补句。**零新语义**（= 评审发现的直接导出项）。
 - 2026-10-07（**VSC 渠道代理语义修复批 · 设计正式化 · eng-designer**——承批档 `docs/batches/2026-10-07-vsc-provider-proxy-fix.md` §2 · 台账 #1026）：§2 补 **loopback 旁路**语义 · §4 补例外注（loopback 永不经代理 + VSC 探针直连）· §6.1 补坐标行 ∥ 同源坐标清扫（proxy.mjs 全族 ∥ config.mjs ∥ provider 两坐标；逐条旧→新见承批档 §2 附）。**零新语义**（缺陷修复的机制收编）。
+- 2026-10-07（**三端对齐批（#1027–#1035）· 收口回填 · 父侧直接执行〔可 revert〕**——承批档 `docs/batches/2026-10-07-provider-config-parity.md`）：§4 例外注「VSC 探针亦直连」收正为「**经核 `probeTargetOf` 单源（勾选随行）**」+ 坐标 `settings.mjs:229 ⇒ :232`。**零新语义**（= ③′ 探针收敛的表述随正）。

@@ -10,6 +10,7 @@ import {
   providerLabel, readProviders, sanitizeConsultModels, warnConsultModelsFiltered,
 } from "./presets.mjs"
 import { loadRaw, resolveProviders, addProviderEntry, removeProviderEntry, conflictError, CONFIG_CONFLICT_HINT } from "@thincoder/core/config-io.mjs"
+import { probeTargetOf } from "@thincoder/core/provider-flows.mjs"
 import { DEFAULTS, loadConfig, normalizeProxy } from "@thincoder/core/config.mjs"
 import { loadMcpServers, addMcpServer, updateMcpServer, removeMcpServer } from "../config-mcp.mjs"
 import { vscPersistRaw, saveAgentSettingsFromPanel, saveShellSettingsFromPanel } from "./settings-panel-write.mjs"
@@ -213,20 +214,22 @@ export function deleteWebsearchKeyFromPanel() {
 
 /**
  * Probe a provider's connection by listing its /models. Used by the Add-Provider
- * form: validates baseURL+key AND returns the model list so a custom provider's
- * model can be PICKED (not hand-typed). Returns { ok, models } or { ok:false, error }.
- * `format`（openai/anthropic/google）随表单下发——M1 三格式分派（缺省 = openai）。
+ * dialog: validates baseURL+key AND returns the model list as field candidates.
+ * `format`（openai/anthropic/google）随表单下发——M1 三格式分派（缺省 = openai）；
+ * `proxy`（可选布尔——表单「走 proxy」勾选）随表单下发——③′ 拉取路由随勾选：
+ * 勾 ⇒ 探针目标 = 核 `probeTargetOf` 同判定（条目 `proxy` ∧ 全局 `proxy.model === true`
+ * ⇒ `proxy.uri`）；未勾 ∥ 缺省 ⇒ 直连（#1026 契约逐字不变）。
+ * 代理语义注：`config.proxy.web` 的唯一**活**消费面 = CLI `/config` 的 Test connection
+ * 探针；web 工具走逐次 `args.proxy`（`docs/core/design/PROXY.md` §4）。
+ * Returns { ok, models } or { ok:false, error }.
  */
-export async function testProviderConnection({ baseURL, apiKey, format }) {
+export async function testProviderConnection({ baseURL, apiKey, format, proxy }) {
   const url = (baseURL || "").trim().replace(/\/+$/, "")
   if (!url) return { ok: false, error: "baseURL is required" }
   if (!/^https?:\/\//.test(url)) return { ok: false, error: "baseURL must start with http:// or https://" }
-  // 代理语义 = 运行期同语义（#1026 · 用户 2026-10-07 裁定：provider 走不走代理 = 每个 provider
-  // 单独选；`config.proxy.web` 只管 websearch/fetch）。本表单 = 尚未落盘的条目 ⇒ 没有也带不上
-  // per-provider 勾选——与运行期缺省一致 = 直连（旧实现取全局 web 代理旗：本地渠道必被塞进
-  // 企业代理而假红 403）。未来若加「已存在渠道的行内测试」，把 name 带上走同一判定。
+  // 目标构造单源 = 核 `probeTargetOf`（判据体逐字复用，零第二份；双门槛组成式唯一式 = §2.16 ③′）。
   try {
-    const models = await listModels({ baseURL: url, apiKey: apiKey || "", model: "", format, proxyUri: null })
+    const models = await listModels(probeTargetOf({ name: "", baseURL: url, apiKey, format, proxy: proxy === true }))
     return { ok: true, models }
   } catch (e) {
     return { ok: false, error: e.message || String(e) }

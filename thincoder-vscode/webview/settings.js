@@ -8,9 +8,11 @@
 import { SS } from "./settings-state.js"
 import { t } from "./i18n.js"
 import { showConfirmPopover, closeConfirmPopover } from "./settings-widgets.js"
-import { installProviderHandlers, providersCardHtml, bindAddProviderForm, updateProviderStatus, updateTestProviderResult } from "./settings-providers.js"
+import { installProviderHandlers, providersCardHtml, bindAddProviderForm, updateProviderStatus } from "./settings-providers.js"
+import { installProviderDialogHandlers, closeAddProviderDialog, updateTestProviderResult } from "./settings-provider-dialog.js"
 import { agentCardHtml, consultAdvisorCardHtml, bindAgentControls, updateAgentSettings } from "./settings-agent.js"
-import { installToolsKeyHandlers, toolsCardHtml, bindToolsControls, renderMcpList, updateMcpTools, updateMcpTestResult, updateWebsearchSettings, updateIndexStatus } from "./settings-tools.js"
+import { installToolsKeyHandlers, toolsCardHtml, bindToolsControls, updateWebsearchSettings, updateIndexStatus } from "./settings-tools.js"
+import { renderMcpList, updateMcpTools, updateMcpTestResult } from "./settings-mcp.js"
 import { envCardHtml, bindEnvControls, updateShellCandidates, updateProxySettings, updateProxyTestResult } from "./settings-env.js"
 
 // openSettings refresh (GitHub #3): one-shot callbacks waiting for the next agentSettings
@@ -33,6 +35,8 @@ export function initSettings({ onClose, getModels }) {
 
   // Expose to inline onclick handlers
   installProviderHandlers()
+  // 添加弹窗（#1029）：开框单例 ∥ 保存直呼面（表单族 = `settings-provider-dialog.js`）
+  installProviderDialogHandlers()
   installToolsKeyHandlers()
 
   window._mcpServers = {}
@@ -165,6 +169,7 @@ function closeSettings() {
   panel.style.display = "none"
   panel.setAttribute("aria-hidden", "true")
   closeConfirmPopover() // 取消路径 #4：关面板同清确认弹框 + 遮罩（零发值）
+  closeAddProviderDialog() // #1029 关五路 #5：关面板同清添加弹窗（卡 ∥ 幕两件——同拍）
   // #640 失败面销账：关 = 清槽（关后重开不复现——与「关面板不丢」互补）
   _lastFailure = null
   document.getElementById("settings-error-banner")?.remove()
@@ -177,7 +182,7 @@ function buildSettings() {
   const body = document.getElementById("settings-body")
   body.innerHTML = providersCardHtml() + agentCardHtml() + consultAdvisorCardHtml() + toolsCardHtml() + envCardHtml()
 
-  // Bind Add-provider form controls
+  // Card-row bindings: default-model menu button + provider-row ✕ delete buttons
   bindAddProviderForm()
   // Agent/Consult/Advisor CHANGE-TO-SAVE bindings + model-menu/consult-row wiring
   bindAgentControls()

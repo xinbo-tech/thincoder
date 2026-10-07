@@ -63,12 +63,12 @@ export function handleEditMcp(panel, msg) { panel._editMcp(msg.name, msg.config 
 /** 迁出自 `panel-messages.mjs` 的 case "testMcp"。 */
 export async function handleTestMcp(panel, msg) { await panel._testMcp(msg.name) }
 
-/** 迁出自 `panel-messages.mjs` 的 case "addProvider"。 */
+/** 迁出自 `panel-messages.mjs` 的 case "addProvider"。#1027：载荷 +`proxy` 透传核 `addProviderEntry`（`=== true` ⇒ 同批落旗）。 */
 export async function handleAddProvider(panel, msg) {
-  // Payload form (settings panel [+ Add] form): persist directly.
+  // Payload form (settings panel add dialog): persist directly.
   // No payload (model dropdown shortcut): interactive QuickPick flow.
   if (msg.preset || msg.custom) {
-    const err = persistAddProvider({ preset: msg.preset, custom: msg.custom, key: msg.key })
+    const err = persistAddProvider({ preset: msg.preset, custom: msg.custom, key: msg.key, proxy: msg.proxy })
     if (err) {
       postProviderError(panel, "providers", err)
       panel._pushSettings()
@@ -138,10 +138,10 @@ export function handleDeleteWebsearchKey(panel) {
   panel._pushSettingsLight()
 }
 
-/** 迁出自 `panel-messages.mjs` 的 case "testProvider"。 */
+/** 迁出自 `panel-messages.mjs` 的 case "testProvider"。③′：载荷 +`proxy` 透传（未勾 ∥ 缺省 ⇒ 直连）。 */
 export async function handleTestProvider(panel, msg) {
   // M1 三 format 分派：format 随表单透传（anthropic/google 与 openai 端点/头不同）
-  const r = await testProviderConnection({ baseURL: msg.baseURL, apiKey: msg.apiKey, format: msg.format })
+  const r = await testProviderConnection({ baseURL: msg.baseURL, apiKey: msg.apiKey, format: msg.format, proxy: msg.proxy })
   panel._panel?.webview.postMessage({ type: "testProviderResult", ...r })
 }
 

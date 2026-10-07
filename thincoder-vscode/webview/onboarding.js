@@ -56,10 +56,10 @@ ctx.welcomeSaveBtn.addEventListener("click", () => {
   const key = ctx.welcomeKey.value.trim()
   if (!key) { ctx.welcomeKey.focus(); return }
   if (name === "custom") {
-    // Custom providers need more fields — hand off to the settings panel's add form.
+    // Custom providers need more fields — hand off to the settings panel's add-provider dialog.
     hideWelcomePanel()
     _openSettings?.()
-    window._toggleAddForm?.(true)
+    window._openAddProviderDialog?.()
     return
   }
   vscode.postMessage({ type: "addProvider", preset: name, key })
