@@ -483,7 +483,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | ① 判别式 | ② webview 发射点 | ③ host 消费位 | ④ 处置 | ⑤ 备注 |
 |---|---|---|---|---|
 | `abort` | webview/input.js:26 | src/extension/panel-messages.mjs:260 | `活` | — |
-| `addProvider` | thincoder-render-core/composer/model-menu.mjs:303/webview/onboarding.js:65/webview/settings-provider-dialog.js（本批表单提交位——新档行号实施轮实读）（共 4 处） | src/extension/panel-messages.mjs:279 | `活` | 载荷 + `proxy`（可选布尔——添加表单「走 proxy」勾选；`docs/vsc/design/SETTINGS.md` §2.16） |
+| `addProvider` | thincoder-render-core/composer/model-menu.mjs:303/webview/onboarding.js:65（预设形直发位；首启交棒调用位 = `:62`）/webview/settings-provider-dialog.js（本批表单提交位——`custom` ∥ `preset` 两形发点；行号实施轮实读）（共 4 处——`settings-providers.js:146 ∥ :148` 两发点随表单迁入新档） | src/extension/panel-messages.mjs:279 | `活` | 载荷 + `proxy`（可选布尔——添加表单「走 proxy」勾选；`docs/vsc/design/SETTINGS.md` §2.16） |
 | `atComplete` | thincoder-render-core/composer/atmenu.mjs:50 | src/extension/panel-messages.mjs:268 | `活` | — |
 | `batchPermissionResponse` | webview/permission.js:18（发射位——字面量构造 `:12`） | src/extension/panel-messages.mjs:270 | `活` | 载荷增 `promptId`（三发点同携——§4.6）；形状 = 局部箭头函数 |
 | `buildIndex` | webview/settings-tools.js:150 | src/extension/panel-messages.mjs:291 | `活` | — |

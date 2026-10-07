@@ -12,7 +12,7 @@
 
 | 卡 | 内容 | 实现入口 |
 |---|---|---|
-| **Providers** | provider 行（状态点 / 标签 / 掩码 key / 模型·baseURL / proxy 勾选 / Key / −）+ Add 弹窗（弹框形态；字段序 = 名称→baseURL→格式→API Key→走 proxy→拉取→模型〔手输+datalist〕；§2.16） | `thincoder-vscode/webview/settings-providers.js` · `thincoder-vscode/webview/settings-provider-dialog.js` |
+| **Providers** | provider 行（状态点 / 标签 / 掩码 key / 模型·baseURL / proxy 勾选 / Key / ✕）+ Add 弹窗（弹框形态；字段序 = 名称→baseURL→格式→API Key→走 proxy→拉取→模型〔手输+datalist〕；§2.16） | `thincoder-vscode/webview/settings-providers.js` · `thincoder-vscode/webview/settings-provider-dialog.js` |
 | **Agent** | maxTurns（默认 200）· subagentTurns（默认 100）· compactThreshold（空 = auto）· verifyGuard · autoThink + Subagent models（global + explore/plan/coder/eng-coder，modelMenu 槽位） | `thincoder-vscode/webview/settings-agent.js` |
 | **Consult & Advisor** | 会诊行（modelMenu + effort 档 + ✕、+ 添加）+ Advisor（guard + provider/model + effort） | `thincoder-vscode/webview/settings-agent.js` |
 | **Tools & Services** | MCP servers（列表 + stdio/http/ws 表单 + 连接状态 ●/○ + Reconnect）+ Web Search key + Semantic Index（key + Build） | `thincoder-vscode/webview/settings-tools.js` |
@@ -373,8 +373,8 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 
 **展示面分档（F-W19 验收③「失败原因可区分 · 展示面可分辨」）**：状态词级分档——**零版式变更**、`channelUnavailableMessage` 逐字零改：
 
-- `不可用`（渠道故障）：`failure ∈ {timeout, malformed}` ⇒ 状态词 `不可用`（`webview/settings-providers.js:186` 现状形态不变）+ `.prov-hint` 逐字渲 `unavailableReason`（`:189` 现状不变）；
-- `宿主繁忙`（非渠道故障）：`failure === "hostBusy"` ⇒ 状态词 `宿主繁忙`（硬编码同址、与 `:186` 同形）+ **抑制渠道故障 hint**——载体为宿主忙，不得渲渠道故障文案。
+- `不可用`（渠道故障）：`failure ∈ {timeout, malformed}` ⇒ 状态词 `不可用`（`webview/settings-providers.js:189` 现状形态不变）+ `.prov-hint` 逐字渲 `unavailableReason`（`:192` 现状不变）；
+- `宿主繁忙`（非渠道故障）：`failure === "hostBusy"` ⇒ 状态词 `宿主繁忙`（硬编码同址、与 `:189` 同形）+ **抑制渠道故障 hint**——载体为宿主忙，不得渲渠道故障文案。
 
 载荷：`providerStatus` 渠道项除 `available` / `unavailableReason` 外增 `failure`（端侧装配 = `thincoder-vscode/src/extension/settings.mjs:78` `admissionOf` → `:85` / `:89` 载荷路径）；**字段语义 / 分类判据 = `PROVIDER.md` §6.16**（本档只承载端侧装配与展示面，不重述）。
 **双向机检判据**：词 ⇒ 落账（渲 `宿主繁忙` ⇔ 载荷 `failure === "hostBusy"`；渲 `不可用` ⇔ 载荷 `failure ∈ {timeout, malformed}`）· 落账 ⇒ 词（反方向逐条）——两向均断言。
@@ -467,11 +467,11 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 **① 添加表单 → 弹窗（面形与开合）**
 
 - **载体**：新档 `thincoder-vscode/webview/settings-provider-dialog.js`（表单族自 `settings-providers.js` 析出——表单 HTML 迁出卡片；`settings-providers.js` 的 P2-6 保表单段退场）。
-- **DOM 锚**：遮罩 = `.auto-backdrop`（复用既有件，z 999——`thincoder-render-core/composer/composer.css:407-413`）；卡 = `#prov-add-dialog` + 新类 `.settings-dialog`（`settings.css` 新增小段：fixed 居中 ∥ z 1000 ∥ `--bg` 底 ∥ 1px 边框 ∥ 圆角 8px ∥ 宽 ≤ 420px；`role="dialog"` + `aria-modal="true"` + `aria-label` = `settings.addProviderTitle`）；卡体 = `.settings-card-body`（字段样式复用）+ 首件 `.settings-subtitle`（`settings.addProviderTitle`）。
-- **入口（两处）**：① `#prov-add-btn`（词 = `settings.addProvider`，既有——`settings-providers.js:195`）onclick ⇒ `window._openAddProviderDialog()`；② 首启板交棒——`webview/onboarding.js:62` 的 custom 径换名改调 `window._openAddProviderDialog?.()`（原 `window._toggleAddForm?.(true)`；`?.` 守卫保留、时序与焦点定时器同拍序——批档 §2.11；父侧直执行 · 单句收正 · 可回退）。
+- **DOM 锚**：遮罩 = `.settings-dialog-backdrop`（新独立类——z 999；规格入 `settings.css` 新段：fixed inset 0 ∥ `--overlay` 底 ∥ 动效复用 `backdrop-in`；不与确认族共用类 `.auto-backdrop` 合流——隔离判由 = ① 关路句）；卡 = `#prov-add-dialog` + 新类 `.settings-dialog`（`settings.css` 新增小段：fixed 居中 ∥ z 1000 ∥ `--bg` 底 ∥ 1px 边框 ∥ 圆角 8px ∥ 宽 ≤ 420px；`role="dialog"` + `aria-modal="true"` + `aria-label` = `settings.addProviderTitle`）；卡体 = `.settings-card-body`（字段样式复用）+ 首件 `.settings-subtitle`（`settings.addProviderTitle`）。
+- **入口（两处）**：① `#prov-add-btn`（词 = `settings.addProvider`，既有——`settings-providers.js:195`）onclick ⇒ `window._openAddProviderDialog()`；② 首启板交棒——`webview/onboarding.js:62` 的 custom 径 ⇒ `window._openAddProviderDialog?.()`（`?.` 守卫保留；时序 = `_openSettings?.()` 后随调，面板 ∥ 框两处 +50ms 焦点定时器同拍序——框后调度 ⇒ 末位焦点 `#pa-type`；批档 §2.3）。
 - **开（单例）**：已在框 ⇒ 零动作；否则建两件挂 `document.body`；开框重置 = 类型回首项 ∥ `#pa-key` 清空 ∥ `#pa-proxy` 未勾 ∥ `#pa-conn-status` 空 ∥ `#pa-model` 值 + 候选（datalist）清空 ⇒ `paTypeChanged()`；初始焦点 = `#pa-type`（+50ms）。**框实例代际**：开 ∥ 关自增 `_addDialogEpoch`；`_paFetchModels` 发起时记代际、`updateTestProviderResult` 落框前比对——不符 ⇒ 弃（在飞探果跨框零污染）。
-- **关（五路同效）**：保存（发消息后）∥ 取消钮 ∥ 背板点击 ∥ 框内 Esc（`stopPropagation` —— 不连带触 `webview/chat.js` 的关面板分支——沿确认弹框同判）∥ `closeSettings()` 同清——**落法**：`settings.js:163-172` 增调新档导出 `closeAddProviderDialog()`（与 `closeConfirmPopover()` 同拍）；背板类名 `.auto-backdrop` = 确认族共用类（`closeConfirmPopover` 帚扫本含背板——双清幂等；卡件归 `closeAddProviderDialog` 独清）。
-- **与卡重绘关系**：框在卡外（挂 body）⇒ `renderProvidersCard()`（`:252-259`）的 P2-6 保表单段**删**（卡重建不再触碰框；在编输入由「框不重绘」天然保真）；`bindAddProviderForm()`（`:233-246`）域收窄为 `defaultmodel-btn` + 盘根行 −（`pa-*` 绑定随档迁）。
+- **关（五路同效）**：保存（发消息后）∥ 取消钮 ∥ 背板点击 ∥ 框内 Esc（`stopPropagation` —— 不连带触 `webview/chat.js` 的关面板分支——沿确认弹框同判）∥ `closeSettings()` 同清——**落法**：`settings.js:163-172` 增调新档导出 `closeAddProviderDialog()`（与 `closeConfirmPopover()` 同拍）；**遮罩 = 独立类 `.settings-dialog-backdrop`**（z 999；样式入 `settings.css` 新段——**不入确认族共用类 `.auto-backdrop`**：确认族帚扫站点（`settings-widgets.js:109` ∥ `session-bar.js:103-104` ∥ `chat.js:100-101`）零误扫；框在场 ⇒ 确认族开 ∥ 关两向均不触框组；卡 ∥ 幕归 `closeAddProviderDialog` 独清）。
+- **与卡重绘关系**：框在卡外（挂 body）⇒ `renderProvidersCard()`（`:252-259`）的 P2-6 保表单段**删**（卡重建不再触碰框；在编输入由「框不重绘」天然保真）；`bindAddProviderForm()`（`:233-246`）域收窄为 `defaultmodel-btn` + 盘根行 `✕`（`pa-*` 绑定随档迁）。
 
 **② 字段序（现行 → 目标；自定义形）**
 
@@ -485,12 +485,12 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - **控件**：`#pa-proxy`（`.switch` 形复用（`settings.css` 既有）；词 = `settings.proxyRow` + `title` = `settings.proxyRowTitle`——与行开关同词键）。
 - **写面**：`addProvider` 载荷 + `proxy`（可选布尔，勾选 ⇒ `true`）⇒ 宿主 `handleAddProvider`（`src/extension/panel-messages-settings.mjs:66-92`）透传 `addProviderEntry` ⇒ 核 `addProviderEntry`（`thincoder-core/config-io.mjs:223-259`）迁受 `proxy`：`proxy === true` ⇒ 条目携 `proxy:true` 同批落盘；缺 ∥ 非真 ⇒ 零键。条目形状单源 = `docs/core/design/CONFIG.md`。
 - **与行开关一致性（点名）**：字段 = `providers[].proxy`（同一键）；行读 = `settings.mjs:88`（`proxy: entry.proxy === true`，行渲染 = `settings-providers.js:190`）；行写 = `handleSetProviderProxy`（`settings.mjs:129-136`：`true` 写 ∥ `false` 删键）。表单初值 = 未勾（新条目无旗）；勾选落盘后行面即显勾选（推送随动）；表单不读行值（新条目无既有态）。
-- **生效面**：运行期模型请求（`injectProxy` 双门槛——语义单源 = `docs/core/design/PROVIDER.md` §6.19 / #1026 面）；**表单内〔拉取〕路由 = 同判定（③′）**；双闸去留（行勾选在全局 `proxy.model` 关时静默无效——A2）= **批档 §2 上抛待裁**（本批零动）。
+- **生效面**：运行期模型请求（`injectProxy` 双门槛——组成式唯一式 = ③′；语义单源 = `docs/core/design/PROVIDER.md` §6.19 / #1026 面）；**表单内〔拉取〕路由 = 同判定（③′）**；双闸去留（行勾选在全局 `proxy.model` 关时静默无效——A2）= **裁讫 · B——另批**（去全局闸 · 逐渠独立；台账 #1042；本批机制面零动）。
 
 **③′〔拉取〕路由随勾选（已裁 · 父侧 2026-10-07 · 批内处置）**
 
 - 裁定：**耦合**——勾选 ⇒ 拉取按 `probeTargetOf` 同判定（勾 ⇒ 取全局判定（`uri ∧ model === true`）⇒ 走代理；未勾 ∥ 载荷缺 `proxy` ⇒ 直连）。理据 = 用户 17:58「provider 走不走 proxy 是每个 provider 单独选」的完整落实 + 自定形「拉取成功才可存」下不耦合即死结；「#1026 零动」原意 = 不回归它——本项 = 它的自然延伸。
-- 落法：`testProviderConnection`（`src/extension/settings.mjs:220-234`）改受 `proxy` 形参——目标 = `probeTargetOf({ name: "", baseURL: url, apiKey, format, proxy: proxy === true })` ⇒ `listModels(target)`（`probeTargetOf` 出面 `proxyUri` = 双门槛判定：勾 ∧ 全局 `uri` ∧ `model === true` ⇒ uri ∥ 否则 `undefined` ⇒ 直连）；核 `probeTargetOf`（`thincoder-core/provider-flows.mjs:79-90`）= 双门槛单源（判据体逐字复用，零第二份）；调用面 `handleTestProvider`（`panel-messages-settings.mjs:142-146`）透传 `proxy`；缺省 ∥ 未勾 ⇒ 直连（#1026 契约逐字不变）。
+- 落法：`testProviderConnection`（`src/extension/settings.mjs:220-234`）改受 `proxy` 形参——目标 = `probeTargetOf({ name: "", baseURL: url, apiKey, format, proxy: proxy === true })` ⇒ `listModels(target)`（**双门槛组成式（唯一式）**：条目 `proxy === true` ∧ 全局 `proxy.model === true` ⇒ `proxyUri = proxy.uri`；否则 `undefined` ⇒ 直连——`uri` 缺席亦落 `undefined`；**`uri` 非第三门槛**，是代理目标本体；`injectProxy`（`thincoder-core/proxy.mjs:67-72`——判定式 `:70`）同式）；核 `probeTargetOf`（`thincoder-core/provider-flows.mjs:79-90`）= 组成式单源（判据体逐字复用，零第二份）；调用面 `handleTestProvider`（`panel-messages-settings.mjs:142-146`）透传 `proxy`；缺省 ∥ 未勾 ⇒ 直连（#1026 契约逐字不变）。
 - 协议：`testProvider` 载荷 + `proxy`（可选布尔——`docs/vsc/design/WEBVIEW-PROTOCOL.md` §13 本行）。
 - 同族同径（本批共三条，三端同一判定）：**桌面**拉取 = 同一收敛（现取全局 `proxy.web` 旗——缺陷类 ∥ #1026 镜像，本批修：`thincoder-desktop/src/main/providers.mjs:273-274` 的 web 旗判定 ⇒ `probeTargetOf` 同判定）；**CLI** 探针 = 同一收敛（落盘条目随旗——`tui/provider-admin.mjs:28` ∥ `tui/cmd-config.mjs:296` ∥ `tui/wizard.mjs:216` ⇒ `probeTargetOf`；未落盘条目（`cli/setup-wizard.mjs:60`）= 无旗 ⇒ 直连缺省 ✓ 零改）。
 
@@ -501,7 +501,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - **#1033 硬编码串入表**：`(no default model)`（`:25` ∥ `:189`——词 `settings.noDefaultModel`）· `title` 英文句（`:168`——词 `settings.defaultModelTitle`）· **同线中文硬编码两处**（`:189`「宿主繁忙」∥「不可用」——词 `settings.providerHostBusy` ∥ `settings.providerUnavailable`；审计补：en 界面现显中文 = 缺陷类）⇒ `locales/en.json` ∥ `zh.json` 两语入表。
 - **#1035 术语统一「API Key」**（用户 16:43 定音：实体名 = API Key，zh 保留英文形，裸「密钥」退场）：**词值改 6 键**——`settings.setKey`（en "Key" ⇒ "API Key" ∥ zh「密钥」⇒「API Key」）· `settings.addKey`（"Add Key" ⇒ "Add API Key" ∥「添加 Key」⇒「添加 API Key」）· `model.setKey`（"Key…" ⇒ "API Key…" ∥「设置密钥…」⇒「设置 API Key…」）· `error.provider` ∥ `error.failedProvider` ∥ `banner.notConfigured`（zh 内「API 密钥」⇒「API Key」；en 无裸 key 失范——不动）；`settings.keyOptional` 已合规（保持）；键数不变（值级改写）。
 
-**⑤ 边界**：行 ∥ 列表侧既有开关零改；运行期代理语义（核）零改；删除确认 ∥ 密钥行 ∥ 其余卡面零改；服务端面零触；#1034（`−` vs `✕`）口径未定——本批只登记待裁（批档 §2），不实施；#1036（MCP env 串）批外另立。
+**⑤ 边界**：行 ∥ 列表侧既有开关零改；运行期代理语义（核）零改；删除确认 ∥ 密钥行 ∥ 其余卡面零改；服务端面零触；#1036（MCP env 串）批外另立。
 
 ## 3. 已知待办与已知限制
 
@@ -553,7 +553,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   `webview/mode-buttons.js:3-4`（「These mirror config.json fields」——engineering / advisor 两钮语境已失实）。
   台账 #378 在册集 = `docs/core/design/TOOLS.md:82` / `:123` + 注释三处（③ 前三项）；① 与 ③ 的 `mode-buttons.js` 项为本轮新增实读。
   消解路径 = 各档下次被触碰逐处收正（设计档笔 = eng-designer；注释 / 产品文本 = 产品代码面）；到期条件 = 各档下次被触碰 / 父侧另册归形小批。
-- **`thincoder-vscode/webview/settings.css` 越 300 行建议线（拆分复核）**（结构面 · §2.15 载体档）：该档现 **385** 行（内容行数口径 · 本批届盘复读 2026-09-29——本批 +6：#640 段标样式一条）——**复核结论 = 本批不拆**（本批增量 = 段标 span 单条样式，不改结构 ∕ 不增职责）。
+- **`thincoder-vscode/webview/settings.css` 越 300 行建议线（拆分复核）**（结构面 · §2.15 载体档）：该档现 **385** 行（内容行数口径 · 本批届盘复读 2026-09-29——本批 +6：#640 段标样式一条；**三端对齐批（2026-10-07）触碰 = 新增 `.settings-dialog` ∥ `.settings-dialog-backdrop` 段（Δ ≈+20 ⇒ 预估 ≈405；实施后实读回填）——非结构性（单组件样式段；不改三段组界 ∕ 不增职责）⇒ 消解窗口顺延**）——**复核结论 = 本批不拆**（本批增量 = 段标 span 单条样式，不改结构 ∕ 不增职责）。
   拆分计划 = 触发阈值 **450 行** 或 **设置面样式族下次结构改动**（先到即拆）；
   组边界（三段 · 按现分节注释）= ① 面板骨架 + 通用件（面板框 ∕ 卡框 ∕ 字段 ∕ 按钮 ∕ 开关）② 卡面样式族（providers ∕ MCP ∕ consult ∕ agent 徽标 ∕ model-menu）③ first-run 面板段。
   到期条件 = 触发阈值到达时 ∕ 设置面样式族下次结构改动时。
@@ -605,6 +605,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 ## 变更记录
 
 - 2026-10-07（**provider 配置面三端对齐批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-provider-config-parity.md` §2 · 台账 #1027 ∥ #1028 ∥ #1029 ∥ #1031 ∥ #1032 ∥ #1033 ∥ #1035）：新增 **§2.16**（添加弹窗 ∥ 字段序 ∥ 走 proxy 开关 ∥ 拉取路由耦合 ∥ 扩面四件）；**§5** +U-S15 ∥ U-S16（U-S14 随稿）。**零新语义**（定形 + 修向；明细 = 批档 §2）。
+- 2026-10-07（**三端对齐批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-07-provider-config-parity.md` §3 轮次 1 ∥ 用户 2026-10-07 19:04 裁）：§2.16 收正——① 入口句直陈（交棒径 = `onboarding.js:62` ⇒ `window._openAddProviderDialog?.()`；批档 §2.3）∥ ② **框幕 = 独立类 `.settings-dialog-backdrop`**（确认族帚扫三站点零误扫——隔离判由 = ① 关路句）∥ ③ 双门槛**组成式唯一式**（`uri` 非门槛 = 目标本体；`proxy.mjs:67-72` 同式）∥ ④ #1034 裁讫 · A 落形（行删除符 `✕`——`settings-providers.js:48` ∥ `:185` 字面 + 注释随述）∥ ⑤ §2.12 展示面锚点收正（`:189` ∥ `:192`）∥ ⑥ §2.15 载体行触属性 + 顺延句（delta ≈+20）；§1 面图行 glyph 收正。**产品码零触（fix 轮）**。
 
 - 2026-10-02（**桌面 UX 收尾批 · 设计轮（VSC 侧）· eng-designer**——承批档 `docs/batches/2026-10-02-desktop-ux-closeout.md` §2 · 台账 #697）：§2.5 增「P1 读数扩面」条（`pushIndexStatus` 载荷 +2 键 ∥ `#index-status` 区增两读 ∥ 刷新拍 = 既有推送时点；决策单源 = `docs/desktop/design/PROJECT.md` §2 **KD-69**）。**零新语义**（读数扩面定形）。
 

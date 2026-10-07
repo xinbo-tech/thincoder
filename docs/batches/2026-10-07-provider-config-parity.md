@@ -67,8 +67,13 @@
 - **处置**：#1–#6、#8–#12 → **修复轮已派**（eng-designer · round=fix · 只按号定点收正）；#7（A2 双闸）= 父侧 §4 批准面呈请（含 A 案可见后果）。
 - **续链**：修复轮落定 → 父侧核验 → 重评审（轮 2）→ pass 出 token → §4（你的待裁项一并呈上）。
 
+### 1.8 §1 随正两笔（2026-10-07 19:2x · 父侧）
+
+- **坐标口径随正**：§1.6 的「`:67-70`」按全批统一口径随正 = **`:67-72`**（`injectProxy` 实范围；判定式 `:70` 不变）——与 §2 各条（2.3 核条 ∥ 2.9④ 随动）同口径（评审轮 1 发现 #10 收正批）。
+- **状态随正**：§1.7 末行「§4（你的待裁项一并呈上）」——三件已于 19:04 全部裁讫（① #1034 = A ∥ ② A2 = B 另批 ∥ ③ #1036 开小批）⇒ §4 不再列待裁项。
+
 ## §2 批次任务与设计（eng-designer）
-**状态行**：✅ 设计完成（接手轮（前轮中断接稿）——审计前轮 6 档草稿 + 扩面四件（#1031–#1035）一次成稿；覆盖 #1027–#1036 全列；上抛 6 项见 2.9）
+**状态行**：设计完成（fix 轮 1：评审轮 1 发现 #1–#12 逐号收正（#7 = 呈 §4 裁）∥ 用户 19:04 两裁收编（#1034 裁讫 · A = 本批落形 ∥ A2 裁讫 · B = 另批 #1042）· 2026-10-07）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 **接手轮（2026-10-07 · 前轮 designer 外部中断接稿）：**本稿 = 通读审计前轮 6 档未提交草稿 → 对照批档 §1 ∥ 父侧扩面令（18:31）补全 → 一次成稿。§2 内容 = 2.1–2.10。
@@ -79,13 +84,16 @@
 |---|---|---|
 | **#1027** | 三端「走 proxy」开关（用户 18:07） | 添加入口补开关：VSC 表单 `#pa-proxy` ∥ 桌面单表 `name="proxy"` ∥ CLI 添加流代理问句——写同一键 `providers[].proxy`（`true` 写 ∥ 缺 ∥ 非真 ⇒ 零键）；行侧既有开关零动 |
 | **#1028** | 字段序（API Key 不垫底） | 源 = VSC 表单：名称→baseURL→格式→API Key→走 proxy→拉取→模型；桌面逐元素照搬；CLI 同向（proxy 问句 + 探针收敛；残余问序端差登记——2.9⑤） |
-| **#1029** | VSC 添加渠道 = 弹窗（用户 18:13） | 新档 `settings-provider-dialog.js`（`.auto-backdrop` + `#prov-add-dialog` + `.settings-dialog`）；桌面骑 D39 宿主（`settings.modal` 值 +`providerAdd`）同形 |
+| **#1029** | VSC 添加渠道 = 弹窗（用户 18:13） | 新档 `settings-provider-dialog.js`（框幕 `.settings-dialog-backdrop`——独立类 D12 + `#prov-add-dialog` + `.settings-dialog`）；桌面骑 D39 宿主（`settings.modal` 值 +`providerAdd`）同形 |
+| **#1030** | 头行粘顶（设置页 ∥ 向导 · sticky） | **批外**——另批 `docs/batches/2026-10-07-settings-heads-sticky.md`（同日；本批零触） |
 | **#1031** | VSC「拉取失败不可存」死路 | `#pa-model` 改手输文本框 + 候选 datalist（对齐桌面形）；不拉取可存；model 空 ⇒ 新词 `settings.modelRequired`（`fetchModelsFirst` 随实现净删） |
 | **#1032** | 「选择模型…」空表静默 | 空表 ⇒ `#defaultmodel-hint` 行内提示（新词 `settings.pickModelEmpty`）+ 零菜单 |
 | **#1033** | 三处硬编码英文 ⇒ 词表 | `(no default model)` ×2 ⇒ `settings.noDefaultModel`；`:168` title ⇒ `settings.defaultModelTitle`；审计补：同线中文硬编码两处 ⇒ `settings.providerHostBusy` ∥ `settings.providerUnavailable`（en 面现显中文 = 缺陷类） |
 | **#1035** | 术语统一「API Key」（用户 16:43 定音） | 两端 i18n 词值改：VSC 6 键 ∥ 桌面 6 键（zh 裸「密钥」清零、en「Key ∥ API key」规范化）；键数不变 |
-| **#1034** | `−` vs `✕` 符号 | **待裁登记**（选项 + 建议 = 2.9①；本批不实施） |
+| **#1034** | 行删除符统一 `✕`（用户 19:04 裁 · A） | VSC 渠道行 `−` ⇒ `✕`（`:48` ∥ `:185` 两处 + 注释三处随述）；桌面 `✕` 不动；作用域注记 = 各端自解释（桌面 ✕ 删钥 ∥ VSC ✕ 删条目） |
 | **#1036** | MCP env 逗号分隔串 | **批外另立**（不碰） |
+
+**范围核对（D3）**：台账 #1027–#1036 十条——本批实施面 8 条（#1027 ∥ #1028 ∥ #1029 ∥ #1031 ∥ #1032 ∥ #1033 ∥ #1034 ∥ #1035）；#1030 = 批外（另批 `docs/batches/2026-10-07-settings-heads-sticky.md`）；#1036 = 批外另立。
 
 **零动面（冻结）**：运行期代理语义（核判据体）∥ 核 `probeTargetOf` 判据体 ∥ 行/列表侧既有开关 ∥ #1026 已修面（不回归）∥ 服务端面。
 **探针耦合裁定（父裁 · 已载 VSC §2.16 ③′ · 不翻案）**：勾选 ⇒ 拉取按 `probeTargetOf` 同判定；未勾 ∥ 缺省 ⇒ 直连；桌面「取全局 `proxy.web` 旗」= #1026 镜像缺陷本批修；CLI 三探针点向同一判定收敛。
@@ -94,19 +102,19 @@
 
 | 档 | 落点 | 动作 |
 |---|---|---|
-| `docs/vsc/design/SETTINGS.md` | §2.16（新增）+ 扩面块 + §5 U-S14–16 + 变更记录 | **改+补**（本轮落：弹窗 ∥ 字段序 ∥ 开关 ∥ 拉取路由 ∥ 扩面四件） |
-| `docs/desktop/design/SETTINGS.md` | §1 KD-75（+ ⑨ 计数随动）∥ §2.16 尾扩面块 ∥ 变更记录 | **改+补**（本轮落：桌面同形 + 扩面随动） |
-| `docs/vsc/design/WEBVIEW-PROTOCOL.md` | §13 两行（`addProvider` ∥ `testProvider` 载荷 +`proxy`） | 留（审计通过） |
-| `docs/core/design/PROVIDER.md` | §8 代理条（写面 + 探针单源指针） | 留（审计通过） |
+| `docs/vsc/design/SETTINGS.md` | §2.16（新增）+ 扩面块 + §5 U-S14–16 + §1 面图行 + §2.12 锚点 + §2.15 载体行 + 变更记录 | **改+补**（设计轮：弹窗 ∥ 字段序 ∥ 开关 ∥ 拉取路由 ∥ 扩面四件；fix 轮：入口句直陈 ∥ 框幕独立类（D12）∥ 双门槛唯一式 ∥ 删除符 #1034 落形 ∥ 展示面锚点收正 ∥ 越线触属性随动） |
+| `docs/desktop/design/SETTINGS.md` | §1 KD-75（+ ⑨ 计数随动）∥ §2.11 七名句 ∥ §2.16 尾扩面块 ∥ 变更记录 | **改+补**（设计轮：桌面同形 + 扩面随动；fix 轮：七名句 as-of 收正 ∥ 向导径明写 ∥ 越层触属性句 ∥ #1034 注记更新） |
+| `docs/vsc/design/WEBVIEW-PROTOCOL.md` | §13 `addProvider` 行（计数收正 ∥ 交棒/发射两值注明）+ `testProvider` 行（载荷 +`proxy` 已在位） | **改**（fix 轮：#4② ∥ #10④） |
+| `docs/core/design/PROVIDER.md` | §6.16（M8/M9 ∥ UI 决策）适用面限定 + §7 D-PR16 同口径 ∥ §6.19 ② 写面/探针指针（已在位）+ 变更记录 | **改+补**（fix 轮：#1031 准入判据适用面 = 模型候选面 ∥ 自定形表单 model 手输兜底登记 ∥ 变更记录补 2026-10-07 条） |
 | `docs/desktop/design/IPC.md` | §2 两行（`provider:save` ∥ `provider:models` 载荷 +`proxy`） | 留（审计通过） |
-| `docs/desktop/design/PROJECT.md` | §2 KD 索引 +KD-75 | 留（审计通过） |
+| `docs/desktop/design/PROJECT.md` | §2 KD 索引 +KD-75 ∥ §4.1 越层段两行触属性随动 + 变更记录 | **改**（fix 轮：#5 越层同步） |
 
-草稿修正两处（本轮复核改）：① `providerAddFormTree` 命名弃 ⇒ `channelFormTree` 内容演进（名不换 ⇒ 调用面零改，省 rename 波及）；② 桌面初始焦点 ✕ ⇒ 首控件（源对齐——登记）。
+**桌面侧定形两处**：① 单表 = `channelFormTree` 内容演进（名不换 ⇒ 调用面零改）；② 弹窗初始焦点 = 首控件（源对齐——KD-68 ⑥ ✕ 默认之表单例外；登记）。
 
 ### 2.3 机制设计
 
 **VSC（源）**
-- **弹窗（#1029）**：新档 `webview/settings-provider-dialog.js`——背板 `.auto-backdrop`（`composer.css:407-413`，z 999）+ 卡 `#prov-add-dialog.settings-dialog`（z 1000；`role="dialog"` + `aria-modal="true"` + `aria-label` = `settings.addProviderTitle`）挂 `document.body`；开 = `_openAddProviderDialog()`（`#prov-add-btn` onclick——`:195`）；关五路（保存 ∥ 取消 ∥ 背板 ∥ 框内 Esc〔`stopPropagation`〕∥ `closeSettings()` 增调 `closeAddProviderDialog()`——`settings.js:163-172` 与 `closeConfirmPopover()` 同拍）；初始焦点 `#pa-type`（+50ms）；`_addDialogEpoch` 护在飞探果。
+- **弹窗（#1029）**：新档 `webview/settings-provider-dialog.js`——框幕独立类 `.settings-dialog-backdrop`（z 999；不并入确认族共用类 `.auto-backdrop`——D12；样式入 `settings.css` 新段）+ 卡 `#prov-add-dialog.settings-dialog`（z 1000；`role="dialog"` + `aria-modal="true"` + `aria-label` = `settings.addProviderTitle`）挂 `document.body`；开-调用面两处 = `#prov-add-btn` onclick（`settings-providers.js:195`——既有句照旧）∥ 首启板交棒径（`onboarding.js:62` ⇒ `window._openAddProviderDialog?.()`；`?.` 守卫保留；时序 = `_openSettings?.()` 后随调，面板 ∥ 框两处 +50ms 焦点定时器同拍序——框后调度 ⇒ 末位焦点 `#pa-type`）；关五路（保存 ∥ 取消 ∥ 背板 ∥ 框内 Esc〔`stopPropagation`〕∥ `closeSettings()` 增调 `closeAddProviderDialog()`——`settings.js:163-172`，与 `closeConfirmPopover()` 同拍）；初始焦点 `#pa-type`（+50ms）；`_addDialogEpoch` 护在飞探果；`_toggleAddForm` 族（定义 ∥ 四处调用）随表单族迁移净清（V9 锁）。
 - **字段序（#1028）+ 模型控件（#1031）**：`pa-type → pa-preset-info → [pa-name → pa-url → pa-format] → pa-key → pa-proxy → [拉取行 → pa-model] → 保存 ∥ 取消`；`#pa-model` = `<input id="pa-model" list="pa-model-candidates">` + datalist；探通填候选（不自动选中）、探败清候选零清键入；model 空 ⇒ `settings.modelRequired`；**不拉取可存**（走查要点）。
 - **开关写面（#1027）**：`addProvider` 载荷 +`proxy` ⇒ `panel-messages-settings.mjs:70-71` ⇒ `settings.mjs:124`（纯透传）⇒ 核 `addProviderEntry`（`config-io.mjs:223`）受 `proxy`：`=== true` ⇒ `entry.proxy = true` 同批落盘；缺 ∥ 非真 ⇒ 零键。行开关 `handleSetProviderProxy`（`settings.mjs:129-136`）零改。
 - **拉取路由（③′）**：`testProvider` 载荷 +`proxy` ⇒ `handleTestProvider`（`panel-messages-settings.mjs:142-146`）⇒ `testProviderConnection({ baseURL, apiKey, format, proxy })`（`settings.mjs:220-234`）⇒ 目标 = `probeTargetOf({ name: "", baseURL, apiKey, format, proxy: proxy === true })` ⇒ `listModels(target)`。
@@ -114,7 +122,7 @@
 - **词面（#1033 / #1035）**：两语 locales——净 +5 键（+6 −1）+ 值改 6 键；明细 = VSC §2.16 ④。
 
 **桌面（照源）**
-- **弹窗（#1029）**：骑 D39 宿主——`settings.modal` 值 +`providerAdd`（`SCOPES` 七 ⇒ 八；`mount-settings.mjs:46`）；`MODAL_READS` +1 = `loadProviders`（`:49-57`）；`settingsModalTree` `providerAdd` 支 = 标题 `settings.addProviderTitle` + 体 = 单表；关/背板/Esc/第二闸/z 族 20/21 全复用；初始焦点 = 首控件（源对齐——KD-68 ⑥ ✕ 默认之表单例外，登记）。
+- **弹窗（#1029）**：骑 D39 宿主——`settings.modal` 值 +`providerAdd`（`SCOPES` 七 ⇒ 八；`mount-settings.mjs:46`）；`MODAL_READS` +1 = `loadProviders`（`:49-57`）；`settingsModalTree` `providerAdd` 支 = 标题 `settings.addProviderTitle` + 体 = 单表；**开径 = 段体添加钮**（`data-action="settings:addProvider"`）⇒ `onAddProvider` 出口（`mount-settings-exits.mjs` handlers 表注册；`deps.openModal` 迟绑定注入——沿 `paintSettings` 先例）⇒ `openSettingsModal("providerAdd")`；关/背板/Esc/第二闸/z 族 20/21 全复用；初始焦点 = 首控件（源对齐——KD-68 ⑥ ✕ 默认之表单例外，登记）。
 - **单表**：`channelFormTree` 内容演进（名不换 ⇒ 调用面零改；`settings-controls.mjs:69-122`）——类型 `select[name=preset]` + 预设信息行 + 条件块 A（name/baseURL/format）+ key + proxy（D37 拨杆；`proxyRow`/`proxyRowTitle` 同词键）+ 条件块 B（拉取行 + model〔手输+datalist 既有〕）+ 保存/取消；`active` 复选条件渲染（`activeDefault !== undefined`——向导步 1 保留）。
 - **段体（页 ∥ 弹窗两面同源）**：双表单退场 ⇒ 添加钮（`settings:addProvider`；词 `settings.addProvider` = "+ Add"/"+ 添加"——新键）。
 - **写面**：`provider:save` 载荷 +`proxy` ⇒ `providerSave`（`src/main/providers.mjs:131-160`）⇒ `addProviderEntry` 同键；**探面收敛**：`mount-settings-segments-providers.mjs:132` 载荷 +`proxy` ⇒ `providers.mjs:273-275` 改 `probeTargetOf`（修 `proxy.web` 旗取用）。
@@ -132,10 +140,10 @@
 | # | 元素 | VSC 源（file:line） | 桌面落点 | CLI 落点 |
 |---|---|---|---|---|
 | 1 | 添加入口钮 | `settings-providers.js:195`（`#prov-add-btn`；词 `settings.addProvider` = "+ Add"/"+ 添加"） | 段体添加钮（新；`settings:addProvider`；同词） | `addProviderFlow`（model-picker 链路唤起） |
-| 2 | 遮罩 | `.auto-backdrop`（`composer.css:407-413`，z 999） | `settings-modal-backdrop`（`settings-modal.css:10-15`——D39 宿主） | 无（TUI） |
+| 2 | 遮罩 | `.settings-dialog-backdrop`（新独立类——z 999；样式入 `settings.css` 新段；不并入 `.auto-backdrop` 确认族共用类——D12） | `settings-modal-backdrop`（`settings-modal.css:10-15`——D39 宿主） | 无（TUI） |
 | 3 | 卡 | `#prov-add-dialog` + `.settings-dialog`（新段；z 1000；role/aria-modal/aria-label） | `div.settings-modal`（`views/settings.mjs:358-362`——宿主既有） | 无 |
 | 4 | 标题 | `.settings-subtitle`（`:201`；`settings.addProviderTitle`） | `header.settings-head` 标题 = `settings.addProviderTitle`（新键） | picker 标题 "Add Provider"（`provider-admin.mjs:47`） |
-| 5 | 开 | `_openAddProviderDialog()`（单例；重置；焦点） | `openSettingsModal("providerAdd")`（`mount-settings.mjs:144-157`） | `addProviderFlow()` |
+| 5 | 开 | `_openAddProviderDialog()`（单例；重置；焦点）+ 调用面两处（`#prov-add-btn` ∥ 首启板交棒——`onboarding.js:62`） | `openSettingsModal("providerAdd")`（`mount-settings.mjs:144-157`——经 `onAddProvider` 出口 ∥ `mount-settings-exits.mjs`） | `addProviderFlow()` |
 | 6 | 关·保存 | `:234`（发消息后关） | 提交 ⇒ 宿主关（KD-68 关径） | 流程落盘后自退 |
 | 7 | 关·取消 | `#pa-cancel-btn`（`:223`/`:235`） | 取消钮（`settings:modalClose`） | Esc 全程可退（`:48`） |
 | 8 | 关·背板 | 背板点击 | `settings-modal-backdrop` onClick | 无 |
@@ -156,60 +164,65 @@
 | 23 | 表头 | `.settings-subtitle`（`:201`） | 卡标题（modal head） | picker 标题 |
 | 24 | 行代理开关 | `:190`（词 `proxyRow`/`proxyRowTitle`） | `settings-sections-providers.mjs:94-103`（同词键） | /config 全局面（`cmd-config.mjs:113-170`；行级不适用） |
 | 25 | 「设为当前」 | **无**（VSC 表单无此元素） | 表单退场（KD-75 ⑤；等价 = 模型段「采用」∥ B① 补全） | defaultModel 子菜单（`:289-335`） |
-| 26 | 行删除符 | `−`（`:48` ∥ `:185`） | `✕`（`keyDelete` 值）+「移除」词（`:139`） | removeProviderFlow（词） |
+| 26 | 行删除符 | `✕`（`:48` ∥ `:185`——#1034 本批改） | `✕`（`keyDelete` 值）+「移除」词（`:139`） | removeProviderFlow（词） |
 | 27 | 默认模型行 ∥ 空表 | `:166-172` ∥ `:94-113`（#1032 提示落此） | **无对应元素**（模型段候选行——差异登记） | /config defaultModel 子菜单（差异登记） |
 | 28 | 键编辑钮词 | `setKey`/`addKey`（#1035） | `changeKey`/`addKey`（#1035） | `setKeyFlow`（`:113-121`——零改） |
 
 ### 2.5 弹窗落形锚（全量）
 
-**VSC**：背板 `.auto-backdrop`（body 直挂；z 999）∥ 卡 `#prov-add-dialog.settings-dialog`（z 1000；`role="dialog"` + `aria-modal="true"` + `aria-label` = `settings.addProviderTitle`）∥ 体 `.settings-card-body` + 首件 `.settings-subtitle`（同词）∥ 件：`#pa-type` ∥ `#pa-preset-info` ∥ `#pa-custom-fields`（`#pa-name` ∥ `#pa-url` ∥ `#pa-format`）∥ `#pa-key` ∥ `#pa-proxy` ∥ `#pa-custom-tail`（`#pa-fetch-btn` ∥ `#pa-conn-status` ∥ `#pa-model` + `#pa-model-candidates`）∥ `#pa-save-btn` ∥ `#pa-cancel-btn` ∥ 开 = `window._openAddProviderDialog()` 单例 ∥ 关五路（2.4 行 6–10）∥ 焦点 `#pa-type` ∥ `_addDialogEpoch` 代际。
+**VSC**：框幕 `.settings-dialog-backdrop`（body 直挂；z 999——独立类 · D12）∥ 卡 `#prov-add-dialog.settings-dialog`（z 1000；`role="dialog"` + `aria-modal="true"` + `aria-label` = `settings.addProviderTitle`）∥ 体 `.settings-card-body` + 首件 `.settings-subtitle`（同词）∥ 件：`#pa-type` ∥ `#pa-preset-info` ∥ `#pa-custom-fields`（`#pa-name` ∥ `#pa-url` ∥ `#pa-format`）∥ `#pa-key` ∥ `#pa-proxy` ∥ `#pa-custom-tail`（`#pa-fetch-btn` ∥ `#pa-conn-status` ∥ `#pa-model` + `#pa-model-candidates`）∥ `#pa-save-btn` ∥ `#pa-cancel-btn` ∥ 开 = `window._openAddProviderDialog()` 单例 ∥ 关五路（2.4 行 6–10）∥ 焦点 `#pa-type` ∥ `_addDialogEpoch` 代际。
 **桌面**：卡 = 宿主 `div.settings-modal`（role/aria 既有）+ `settings-modal-backdrop` ∥ 头 `header.settings-head`（标题 `settings.addProviderTitle`；✕ = `settings:modalClose`）∥ 体 `div.settings-modal-body`（失败串 scope = `providers` ∥ `panel` + 单表）∥ 单表件 = `channelFormTree` 节点（`data-form="preset"|"custom"`；`data-preset-info`；`name=proxy` 复选；`data-action` 提交/取消）∥ 开 = `settings:addProvider` ⇒ `openSettingsModal("providerAdd")` ∥ 焦点 = 首控件。
 
 ### 2.6 受影响文件与测试面
 
-**受影响文件（行数 = 本轮实读（as-of 2026-10-07）；Δ = 预估）**
+**受影响文件（行数 = `wc -l` 口径（内容行数）· 本轮实读 as-of 2026-10-07；Δ = 预估）**
 
 | 端 | 文件 | 现 | Δ（预估） |
 |---|---|---|---|
-| VSC | `thincoder-vscode/webview/settings-provider-dialog.js` | **新** | ≈200（表单族迁入 + 弹窗开合） |
-| VSC | `thincoder-vscode/webview/settings-providers.js` | 287 | ≈−90（表单族 ∥ pa 绑定 ∥ `updateTestProviderResult` 迁出；+`#defaultmodel-hint`） |
-| VSC | `thincoder-vscode/webview/settings.js` | 191 | +≈3（import 收正 + `closeSettings` 增调 `closeAddProviderDialog()`） |
-| VSC | `thincoder-vscode/webview/settings.css` | 386 | +≈14（`.settings-dialog` 小段——越 300 在册档，结构零触碰） |
-| VSC | `thincoder-vscode/locales/en.json` ∥ `zh.json` | 285（282 键） | 键净 +5（+6 −1）⇒ ≈287 键 ∥ ≈291 行 |
-| VSC | `thincoder-vscode/src/extension/settings.mjs` | 404 | +≈8（`testProviderConnection` +`proxy`；越 300 在册档 ✓ <450） |
-| VSC | `thincoder-vscode/src/extension/panel-messages-settings.mjs` | 237 | +≈2（payload 两处 +`proxy`） |
-| 桌面 | `thincoder-desktop/renderer/views/settings-controls.mjs` | 146 | +≈30（单表演进：序 ∥ proxy ∥ active 条件化 ∥ 预设信息行） |
-| 桌面 | `thincoder-desktop/renderer/views/settings-sections-providers.mjs` | 195 | −≈10（双表退场 ∥ 添加钮） |
-| 桌面 | `thincoder-desktop/renderer/views/settings.mjs` | 399 | +≈6（`settingsModalTree` `providerAdd` 支） |
-| 桌面 | `thincoder-desktop/renderer/mount-settings.mjs` | 252 | +≈2（`SCOPES` ∥ `MODAL_READS`） |
+| VSC | `thincoder-vscode/webview/settings-provider-dialog.js` | **新** | ≈200（表单族迁入 + 弹窗开合；框幕独立类 `.settings-dialog-backdrop`——D12） |
+| VSC | `thincoder-vscode/webview/settings-providers.js` | 286 | ≈−90（表单族 ∥ pa 绑定 ∥ `updateTestProviderResult` 迁出；+`#defaultmodel-hint`；行删除符 `−` ⇒ `✕` 两处 + 注释三处随述——#1034） |
+| VSC | `thincoder-vscode/webview/settings.js` | 190 | +≈3（import 收正 + `closeSettings` 增调 `closeAddProviderDialog()`） |
+| VSC | `thincoder-vscode/webview/onboarding.js` | 81 | ±1（`:62` 交棒调用句 ⇒ `window._openAddProviderDialog?.()` ∥ `:59` 注释句改述「add-provider dialog」；两处行内、净行数持平） |
+| VSC | `thincoder-vscode/webview/settings.css` | 385 | +≈20（`.settings-dialog` ∥ `.settings-dialog-backdrop` 两小段——非结构性触碰 ⇒ 在册窗口顺延（§2.15 载体档随动）） |
+| VSC | `thincoder-vscode/locales/en.json` ∥ `zh.json` | 284（282 键） | 键净 +5（+6 −1）⇒ ≈287 键 ∥ ≈290 行 |
+| VSC | `thincoder-vscode/src/extension/settings.mjs` | 403 | +≈8（`testProviderConnection` +`proxy`；越 300 在册档 ✓ <450） |
+| VSC | `thincoder-vscode/src/extension/panel-messages-settings.mjs` | 236 | +≈2（payload 两处 +`proxy`） |
+| 桌面 | `thincoder-desktop/renderer/views/settings-controls.mjs` | 145 | +≈30（单表演进：序 ∥ proxy ∥ active 条件化 ∥ 预设信息行） |
+| 桌面 | `thincoder-desktop/renderer/views/settings-sections-providers.mjs` | 194 | −≈10（双表退场 ∥ 添加钮） |
+| 桌面 | `thincoder-desktop/renderer/views/settings.mjs` | 398 | +≈6（`settingsModalTree` `providerAdd` 支——非结构性（树面内容演进）⇒ 消解窗口顺延（PROJECT.md 越层段随动）） |
+| 桌面 | `thincoder-desktop/renderer/mount-settings.mjs` | 251 | +≈3（`SCOPES` ∥ `MODAL_READS` ∥ `openModal` 迟绑定注入） |
+| 桌面 | `thincoder-desktop/renderer/mount-settings-exits.mjs` | 254 | +≈2（`onAddProvider` 出口注册 ∥ 接线——「添加钮 ⇒ 开弹窗」开径） |
 | 桌面 | `thincoder-desktop/renderer/mount-settings-segments-providers.mjs` | 150 | +≈2（载荷 +`proxy`） |
-| 桌面 | `thincoder-desktop/renderer/store.mjs` | 369 | +1 键（`providers.addShape`——非结构性） |
-| 桌面 | `thincoder-desktop/src/main/providers.mjs` | 318 | +≈5（探面收敛 + `provider:save` +`proxy`；越 300 在册档 ✓） |
-| 桌面 | `thincoder-desktop/renderer/i18n-settings.mjs` | 151 | 键 +3 −2（净 +1）∥ 值改随 #1035 |
-| 桌面 | `thincoder-desktop/renderer/i18n-views.mjs` | 399 | ±0（值改：`addKey` ∥ `deleteKey` ∥ `composer.send.noProvider`） |
-| 桌面 | `thincoder-desktop/renderer/i18n-composer.mjs` | 93 | ±0（值改：`model.setKey`） |
-| 核 | `thincoder-core/config-io.mjs` | 278 | +≈3（`addProviderEntry` +`proxy`） |
-| CLI | `thincoder-cli/src/tui/provider-admin.mjs` | 214 | +≈12（问句 ×2 支 + 收敛 + import） |
-| CLI | `thincoder-cli/src/tui/cmd-config.mjs` | 488 | ≈+1（`:296` 收敛） |
-| CLI | `thincoder-cli/src/tui/wizard.mjs` | 247 | ≈+1（`:216` 收敛） |
+| 桌面 | `thincoder-desktop/renderer/store.mjs` | 368 | +1 键（`providers.addShape`——非结构性） |
+| 桌面 | `thincoder-desktop/src/main/providers.mjs` | 317 | +≈5（探面收敛 + `provider:save` +`proxy`；越 300 在册档——非结构性触碰 ⇒ 消解窗口顺延（PROJECT.md 越层段随动）） |
+| 桌面 | `thincoder-desktop/renderer/i18n-settings.mjs` | 150 | 键 +3 −2（净 +1）∥ 值改随 #1035 |
+| 桌面 | `thincoder-desktop/renderer/i18n-views.mjs` | 398 | ±0（值改：`addKey` ∥ `deleteKey` ∥ `composer.send.noProvider`） |
+| 桌面 | `thincoder-desktop/renderer/i18n-composer.mjs` | 92 | ±0（值改：`model.setKey`） |
+| 核 | `thincoder-core/config-io.mjs` | 277 | +≈3（`addProviderEntry` +`proxy`） |
+| CLI | `thincoder-cli/src/tui/provider-admin.mjs` | 213 | +≈12（问句 ×2 支 + 收敛 + import） |
+| CLI | `thincoder-cli/src/tui/cmd-config.mjs` | 487 | ≈+1（`:296` 收敛） |
+| CLI | `thincoder-cli/src/tui/wizard.mjs` | 246 | ≈+1（`:216` 收敛） |
 | 测试 | `docs/batches/2026-10-07-provider-config-parity.test.mjs` | **新** | 批本地件（随批归档 · 不入仓套件） |
 
 **测试面（断言点名——批本地件）**
 
 - **VSC（假 DOM harness ∥ 源锁——沿 `docs/batches/2026-09-29-vsc-carryover-settings.test.mjs` 先例）：**
-  - V1 新档+锚源锁：`settings-provider-dialog.js` 在案且含 `#prov-add-dialog` ∥ `role="dialog"` ∥ `aria-modal` ∥ 五路关；`settings-providers.js` 零 `prov-add-form` 字面。
+  - V1 新档+锚源锁：`settings-provider-dialog.js` 在案且含 `#prov-add-dialog` ∥ `.settings-dialog-backdrop` ∥ `role="dialog"` ∥ `aria-modal` ∥ 五路关；`settings-providers.js` 零 `prov-add-form` 字面。
   - V2 元素序源锁（indexOf 序）：`pa-type → pa-custom-fields（name→url→format）→ pa-key → pa-proxy → pa-fetch-btn → pa-model → save/cancel`。
-  - V3 行为腿：开框 ⇒ body 两件（`.auto-backdrop` + `#prov-add-dialog`）单例；关五路逐验；`closeSettings()` ⇒ 框净。
+  - V3 行为腿：开框 ⇒ body 两件（`.settings-dialog-backdrop` + `#prov-add-dialog`）单例；关五路逐验；`closeSettings()` ⇒ 框净。
   - V4 行为腿（#1031）：无拉取 + 填 model ⇒ `addProvider` posted（携 model）；model 空 ⇒ `settings.modelRequired` 显 ∥ 零发。
   - V5 行为腿（#1032）：`SS.getModels()` 空 ⇒ `_defaultModelMenu()` ⇒ `#defaultmodel-hint` 显 ∥ 零菜单。
   - V6 载荷腿：`testProvider` 携 `proxy` = 勾选态；探果 ok ⇒ datalist 选项数 = models 数 ∥ 输入值不清；代际不符 ⇒ 弃。
   - V7 词面锁：#1033 三处字面零残留（`(no default model)` ∥ `宿主繁忙` ∥ `不可用`）；两语键集相等；`fetchModelsFirst` 缺席；#1035 六值改毕（zh 零「密钥」）。
   - V8 扩展侧文本锁：`testProviderConnection` 体含 `probeTargetOf(` ∥ 零 `proxyUri: null` 硬编码；`handleTestProvider` 透传 `proxy`；`handleAddProvider` 链携 `proxy`。
+  - V9 首启交棒腿（源锁 + 行为腿）：源锁——`onboarding.js` 含 `window._openAddProviderDialog?.(` ∥ webview 全档 `_toggleAddForm` 字面零残留（定义 ∥ 四处调用全清）；行为腿——装真档链（新档 + `onboarding.js`）+ 预置 `ctx.welcomeProvider.value = "custom"` ∥ `welcomeKey` 非空 + fire `welcomeSaveBtn` click ⇒ `_openSettings` 调 1 ∧ `document.body` 得 `.settings-dialog-backdrop` + `#prov-add-dialog` 两件（**可开框**——两定时器同拍序末位焦点 `#pa-type`）。
+  - V10 行删除符腿（源锁——#1034）：`settings-providers.js` 两处删除钮字面 = `✕`（`:48` `delBtn.textContent` ∥ `:185` 卡 HTML）；全档 `−` 字面零残留（注释随述）。
+  - V11 遮罩隔离腿（#12）：框在场 ⇒ `closeConfirmPopover()` 直呼 ∥ `showConfirmPopover()` 开框 ⇒ 框 ∥ 幕零动（独立类不入确认族帚扫域）∧ 确认件在场（可叠于框上）。
 - **核（行为腿——tmp config 直驱）：** C1 `addProviderEntry` 三径（`proxy:true` ⇒ 条目带旗 ∥ 缺 ⇒ 零键 ∥ `false` ⇒ 零键）。
-- **桌面（树面 ∥ 主面）：** D1 `providersBody` 树 = 行族 + 校验回退 + 添加钮（零表单节点）；D2 `channelFormTree` 节点序（custom/preset 两形 + `activeDefault` 条件化）；D3 `settingsModalTree("providerAdd")` = 标题 + 单表；`SCOPES` 含 `providerAdd`；`MODAL_READS.providerAdd === "loadProviders"`；D4 主面：`providerSave` 携 proxy 落条 ∥ `providerModels` 目标携 `proxyUri`（双门槛 ∥ 直连两径；源锁 `probeTargetOf(` ∥ 零 web 旗）；D5 词面锁：#1035 六值。
+- **桌面（树面 ∥ 主面）：** D1 `providersBody` 树 = 行族 + 校验回退 + 添加钮（零表单节点）；D2 `channelFormTree` 节点序（custom/preset 两形 + `activeDefault` 条件化 + `proxy` 节点两形皆在场——向导步 1 同径）；D3 `settingsModalTree("providerAdd")` = 标题 + 单表；`SCOPES` 含 `providerAdd`；`MODAL_READS.providerAdd === "loadProviders"`；D4 主面：`providerSave` 携 proxy 落条 ∥ `providerModels` 目标携 `proxyUri`（双门槛 ∥ 直连两径；源锁 `probeTargetOf(` ∥ 零 web 旗）；D5 词面锁：#1035 六值。D6 添加钮开径腿：`data-action="settings:addProvider"` ⇒ `onAddProvider` 出口（`mount-settings-exits.mjs` 在案）⇒ `openSettingsModal("providerAdd")`（`SCOPES` 闭集内；向导占槽 ⇒ 拒，零静默）。
 - **CLI（源锁 + 人工走查）：** L1 `provider-admin.mjs` 含 `probeTargetOf(` ∥ `cfg.proxy = true`（两支）∥ 代理问句；`cmd-config.mjs` ∥ `wizard.mjs` 探针行含 `probeTargetOf(`。
-- **真机（父侧）：** 三端添加流走查——弹窗四径 ∥ 字段序 ∥ 不拉取保存 ∥ 勾选落盘 + 行面勾选随动 ∥ 拉取随勾选 ∥ CLI 问句。
-- 计数/枚举随动（D3）：台账条目 #1027–#1036 全列（2.1）；断言 V1–V8 ∥ C1 ∥ D1–D5 ∥ L1 = 15 组点名。
+- **真机（父侧）：** 三端添加流走查——弹窗四径 ∥ 字段序 ∥ 不拉取保存 ∥ 勾选落盘 + 行面勾选随动 ∥ 拉取随勾选 ∥ 向导步 1「走 proxy」在场 + 勾选落盘 ∥ VSC 行删除符目视（`✕`）∥ CLI 问句。
+- 计数/枚举随动（D3）：台账条目 #1027–#1036 全列（2.1——本批面 8 条 ∥ #1030 批外另批 ∥ #1036 批外另立）；断言 V1–V11 ∥ C1 ∥ D1–D6 ∥ L1 = 19 组点名。
 
 ### 2.7 验收对照（条目 → 机检点名）
 
@@ -217,11 +230,12 @@
 |---|---|---|
 | #1027 | V6 ∥ V8 ∥ C1 ∥ D4 ∥ L1 | 勾选落盘 + 行面勾选随动 |
 | #1028 | V2 ∥ D2 ∥ L1（问序） | 三端添加流走查 |
-| #1029 | V1 ∥ V3 ∥ D3 | 弹窗四径 |
+| #1029 | V1 ∥ V3 ∥ V9 ∥ V11 ∥ D3 | 弹窗四径 |
 | #1031 | V4 ∥ V7（`fetchModelsFirst` 缺席） | 不拉取保存 |
 | #1032 | V5 | 空表提示 |
 | #1033 | V7（字面零残留） | — |
 | #1035 | V7 ∥ D5 | — |
+| #1034 | V10 | 行删除符目视（VSC 行 = `✕`） |
 | ③′ 拉取路由 | V8 ∥ D4 ∥ L1 | 拉取随勾选 |
 
 ### 2.8 关键决策
@@ -232,63 +246,29 @@
 - **D4 #1032 落形** = 点击触发行内提示（`#defaultmodel-hint`；`.prov-hint` 形复用、零新 CSS；非常显——修「点击静默」最小面）。
 - **D5 #1033 扩补** = 同线中文硬编码两处同拍入表（en 面现显中文 = 缺陷类——审计发现）。
 - **D6 #1035 范围** = 两端 i18n 词值各 6 键（值级；键数不变）+ zh 裸「密钥」清零 + en「Key ∥ API key」规范化。
-- **D7 桌面单表 = `channelFormTree` 演进**（名不换 ⇒ 调用面零改；原稿 `providerAddFormTree` 命名弃）。
+- **D7 桌面单表 = `channelFormTree` 内容演进**（名不换 ⇒ 调用面零改）。被否：改名 `providerAddFormTree`（rename 波及调用面 ≫ 收益）。
 - **D8 桌面初始焦点 = 首控件**（源对齐；KD-68 ⑥ ✕ 默认之表单例外——登记）。
 - **D9 CLI 探针收敛 = 目标构造走核 `probeTargetOf`**；执行体（`tui/model-catalog.mjs:63`——同名异签名）与返形零改。
 - **D10 `active` 退场**（设置面表单；向导 `activeDefault` 保留 + 条件渲染）。
+- **D11 首启交棒换名 = 新档导出 + 换名统一**（弃薄别名）：新档导出 `window._openAddProviderDialog`；`onboarding.js:62` 改调（`?.` 守卫保留）。被否：`settings-providers.js` 留薄别名 `window._toggleAddForm = () => window._openAddProviderDialog?.()`（旧名残留、读码二次追源；省 1 行不抵调用面两名并存）。
+- **D12 VSC 框幕 = 独立类 `.settings-dialog-backdrop`**（评审 #12 收正 · fix 轮；z 999）：与确认族共用类 `.auto-backdrop` 解耦——确认族帚扫站点（`settings-widgets.js:109` ∥ `session-bar.js:103-104` ∥ `chat.js:100-101`）只扫 `.auto-backdrop`，独立类零误扫（框在场 ⇒ 确认族开 ∥ 关两向均不触框组；确认可叠于框上——沿桌面「确认盖弹窗」z 族语义）。样式 = `.settings-dialog` 同段入 `settings.css`。被否：沿共用类 + 帚扫站点 `:not()` 排除（站点 ×3 同改——波及扩面）。
 
 ### 2.9 上抛项
 
-- **① [上抛·待裁] #1034 删除符（`−` vs `✕`）**——选项：**A（建议）统一 `✕` 作破坏性删除符**——VSC 行 `−` ⇒ `✕`（`:48` ∥ `:185` 两处）；桌面不动（`keyDelete` 值 = "✕"——`i18n-views.mjs:176/:350`）；理由 = ✕ 为通用破坏性删除形、各端内自洽（桌面 ✕ = 删钥 ∥ VSC ✕ = 删条目——作用域各端自解释）。B 统一 `−`（桌面 ✕ ⇒ `−`）——不取（✕ 先例更广）。C 现状登记——如需零动。
-- **② [上抛·待裁] A2 半开关（双闸去留）**——运行期 = `entry.proxy ∧ 全局 proxy.model`（`proxy.mjs:70`）；全局关 ⇒ 行/表单勾选静默无效（仅 tooltip 明示）；用户 18:07「每个 provider 单独选」指向逐渠独立。选项：**A（推荐本批）现状保持**（零动；双闸语义在册）；**B 去全局闸（逐渠独立）**——动核 `injectProxy` ∥ `probeTargetOf` + CLI `/config` 全局面语义重定 + 三端 UI 提示随动 ⇒ **超本批零动边界，需用户显式裁（另批）**；C 保持语义 + UI 明示增强（全局关时行面可见态——超本批）。
+- **① [裁讫] #1034 行删除符 = `✕`（裁讫 · A · 用户 2026-10-07 19:04）**——统一 `✕` 作破坏性删除符：VSC 渠道行 `−` ⇒ `✕`（`settings-providers.js:48` ∥ `:185` 两处 + 注释三处随述）；桌面 `✕` 不动（`keyDelete` 值 = "✕"——`i18n-views.mjs:176` ∥ `:350`）。作用域注记 = 各端自解释（桌面 ✕ = 删钥 ∥ VSC ✕ = 删条目）。**本批实施**：Δ = 2.6 `settings-providers.js` 行；机检 = V10；走查 = 2.6 真机行删除符目视 + 2.7 #1034 行。
+- **② [裁讫] A2 双闸去留（裁讫 · B——另批 · 用户 2026-10-07 19:04）**——**去全局闸 · 逐渠独立**：动核 `injectProxy`（`proxy.mjs:67-72`——判定式 `:70`）∥ `probeTargetOf` ∥ CLI `/config` 全局面语义 ∥ 三端 UI 提示随动；**另批**（台账 #1042；排队 = parity 收口后点火）。**本批机制面零动**（运行期双门槛语义照旧——全局关 ⇒ 行/表单勾选静默无效、仅 tooltip 明示，现状保持）。
 - **③ [上抛·登记] 桌面行动作簇四件 ∥ VSC 两件**——建议保持桌面四件（#635⑤ 先例「校验」保留、差异在位置）+ 登记；**发现项：VSC 无「仅删钥」入口**（`settings-providers.js:56 _delKey` 定义零调用 = 死码）；如需 1:1 再议（桌面削至两件 ∥ VSC 补删钥入口）。
-- **④ [上抛·知会] 批档 §1 坐标漂移**——`thincoder-core/proxy.mjs:50-55`（§1.2 与 §1.5 引作「运行期 `providers[].proxy` 读取」）as-read = `isLoopbackTarget` 段（#1026 改动后）；双门槛判据在同档 `:67-72`（`:70`）。§1 笔 = 父侧（未改）。
+- **④ [知会] 批档 §1 坐标漂移（已收正）**——双门槛坐标 = `injectProxy` `:67-72`（判定式 `:70`；`isLoopbackTarget` 插入后读数——§1.2 ∥ §1.5 的 `:50-55` 指该段）；§1.6 勘误已落（父侧笔）。
 - **⑤ [上抛·知会] CLI 残余端差（字段序）**——model↔format 问序（CLI 先 model——手输无拉取依赖）；key/代理在条目落盘后问（D-F5a 先盘后存结构决定）；无拉取行。如要 1:1 另议。
 - **⑥ [上抛·知会] `settings.proxyModel` zh 露代码 token**（「模型请求（proxy: true 的 provider）」——`locales/zh.json:124`）——A2-C 材料。
 
 ### 2.10 边界（本批不做）
 
-运行期代理语义（核判据体）∥ 行/列表侧既有开关 ∥ #1026 已修面 ∥ 服务端面 ∥ #1034 实施 ∥ #1036（MCP env 串——批外另立）∥ CLI TUI 1:1 克隆（差异登记）∥ 桌面行动作簇改造（登记）∥ 独立弹层基建（D39 宿主既定）。
+运行期代理语义（核判据体）∥ 行/列表侧既有开关 ∥ #1026 已修面 ∥ 服务端面 ∥ #1036（MCP env 串——批外另立）∥ CLI TUI 1:1 克隆（差异登记）∥ 桌面行动作簇改造（登记）∥ 独立弹层基建（D39 宿主既定）。
 
-**2.9④ 随动（父侧 §1.6 已落 · 2026-10-07 18:3x）**：批档 §1 坐标漂移已由父侧 §1.6 勘误收正（`isLoopbackTarget` 插入后 `proxy.mjs` 双门槛 = `:67-70`——`injectProxy` :67 ∥ 判定式 :70；与本稿 2.3 核条 `:67-72`（判定式 `:70`）同口径）——上抛④ 由「待处理」降为「已收正（知会归档）」。
+**2.9④ 随动（已收正）**：`proxy.mjs` 双门槛坐标 = `injectProxy` `:67-72`（判定式 `:70`）——父侧 §1.6 勘误已落；与 2.3 核条同口径。
 
 **§1.6 移交项入本批实现轮（不另开笔）**：`thincoder-vscode/src/extension/settings.mjs:225` 注释句「`config.proxy.web` 只管 websearch/fetch」与权威档（父侧 §1.6 引 `PROXY.md` §4——web 旗唯一活消费面 = CLI Test connection 探针；web 工具走逐次 `args.proxy`）相抵——实现轮随 `testProviderConnection`（`settings.mjs:220-234`——本批本就改签名）同面改述该注释块；**设计面零随动**（本批探针路由 = 耦合裁定语，不依赖该注释句；已核：设计档零复述该相抵句）。
-
-### 2.11 fix 轮（eng-designer · 2026-10-07）——父侧预审定点补缺：#1029 首启交棒调用面
-
-**来源**（父侧预审 · 定点补缺 · 只此一件）：VSC 弹窗化（#1029）迁移表单族时，首启板「自定义（手动配置）」路径的唯一外档调用 `thincoder-vscode/webview/onboarding.js:62` 的 `window._toggleAddForm?.(true)` 会随旧名退场被**可选链静默吞掉**——不报错、开设置面板但不弹框（同类「点了不弹」回归）；2.3 / 2.4 行 5 的开-调用面、2.6 表、测试面未列该调用点与随动。本块 = 四处随动落定 + 决策行（补 2.8 族）。
-
-**事实面（父侧 grep 全表实读 + 本席实读复核）**：`_toggleAddForm` 全部出现 = `onboarding.js:62`（唯一外档调用）∥ 定义 `settings-providers.js:70` ∥ `:150`（保存后收形）∥ `:195`（`#prov-add-btn` onclick）∥ `:235`（取消钮）。
-
-迁移后：`:70` 定义退场（表单-列表换位语义随内联表单归零）· `:150` / `:195` / `:235` 三处随表单族迁入新档（2.3 既定）· `onboarding.js:62` 换名（本块 ①）。
-
-**①（2.3 补 · 开-调用面列全）**：「开 = `_openAddProviderDialog()`」调用面 = **两处**：
-
-- `#prov-add-btn` onclick（卡片件——`settings-providers.js:195`；既有句照旧）；
-- **首启板交棒径（补）**：`onboarding.js:62` ⇒ `window._openAddProviderDialog?.()`（换名自 `window._toggleAddForm?.(true)`；`?.` 守卫形保留）；时序不变（`_openSettings?.()` 后随调）；面板 ∥ 框两处 +50ms 焦点定时器同拍序（框后调度 ⇒ 末位焦点 = `#pa-type`）。
-
-**②（2.4 行 5 补 · 开）**：行 5 VSC 格读法 = `_openAddProviderDialog()`（单例；重置；焦点）+ **调用面两处**（`#prov-add-btn` ∥ 首启板交棒——`onboarding.js:62`）。
-
-**③（2.6 补 · 受影响文件表 +1 行）**：
-
-| 端 | 文件 | 现 | Δ（预估） |
-|---|---|---|---|
-| VSC | `thincoder-vscode/webview/onboarding.js` | 82 | ±1（`:62` 调用面换名 ∥ `:59` 注释句改述「add form」⇒「add-provider dialog」；两处行内、净行数持平） |
-
-**④（测试面补 · V9 + 计数随动）**：**V9 首启交棒腿（源锁 + 行为腿）**——
-
-- 源锁：`onboarding.js` 含 `window._openAddProviderDialog?.(` ∥ webview 全档 `_toggleAddForm` 字面**零残留**（定义 ∥ 四处调用全清）。
-- 行为腿：装真档链（新档 + `onboarding.js`）+ 预置 `ctx.welcomeProvider.value = "custom"` ∥ `welcomeKey` 非空 + fire `welcomeSaveBtn` click ⇒ `_openSettings` 调 1 ∧ `document.body` 得 `.auto-backdrop` + `#prov-add-dialog` 两件（**可开框**）。
-- 计数随动（D3）：断言点名 15 组 ⇒ **16 组**（V1–V9 ∥ C1 ∥ D1–D5 ∥ L1）；2.7 #1029 行机检随补 = `V1 ∥ V3 ∥ V9 ∥ D3`。
-
-**决策（补 2.8 族 · D11）——落法取 ①（新档导出 + 换名统一），弃 ②（薄别名）**：
-
-- **①（取）**：新档 `settings-provider-dialog.js` 导出 `window._openAddProviderDialog`；`onboarding.js:62` 改调 `window._openAddProviderDialog?.()`。由 = 迁移后 toggle 语义已死（别名名实不符）∥ 两名并存 ⇒ 调用面割裂、下次触点再理一次；代价 = onboarding 行内 1 处（已在 ③ 表内）。
-- **②（弃）**：`settings-providers.js` 留薄别名 `window._toggleAddForm = () => window._openAddProviderDialog?.()`（onboarding 零改）。弃由 = 旧名残留（「切换」名下一律开框——读码需二次追源）；省 1 行不抵调用面长期两名并存。
-
-**读法声明**：以上四处随动以本块为准（与上文对应句冲突处，以本块读法为准）；①–④ 即该四处的落定文本（原位并入与否由父侧处置）。
-
-**未触碰**：`src/**` 与前端产品码（未到实施轮）∥ 批档 §1 ∥ §3–§6 ∥ 设计档（VSC / 桌面 / 核）∥ 他批档——本轮 = §2 单段补缺。
 
 ## §3 设计评审（评审子代理）
 
@@ -317,6 +297,36 @@ VERDICT: changes-required
 
 **评审计范围声明**（随表并入）：审阅面 = 批档 + 六档设计档全文；无项目标准档声明 ⇒ 方法学按 Project Guide（AGENTS.md）∥ 各档自持单源纪律（D2 ∥ D3）判；无文档地图 ⇒ 文档归属按各档自持「机制单源」指针判；本轮未读产品码 ⇒ 无法在审阅面内交叉核对的读数（如 `cmd-config.mjs` 488 行）按「申报未复核」对待。
 
+### 轮次 2（评审子代理）
+
+**轮 2 复核（上轮 12 条修态 + 两裁收编）**
+
+**评审计数：原 12 条 = Fixed 10 ∥ Accepted 1（#7——用户 19:04 裁讫收编）∥ Unfixed 1（#10——② 残余，①③④ 已修）；新增 0；未决 🔴 = 0 ∥ 🟡 = 0 ∥ 🔵 = 1（不阻塞）。VERDICT: pass（批准信号已出——token ∕ designId 值见评审报告，本段不载）。**
+
+| # | Orig# | File | Severity | Status | Notes（本轮实读证据） |
+|---|-------|------|----------|--------|----------------------|
+| 1 | 1 | `docs/core/design/PROVIDER.md` | 🔴 | **Fixed** | §6.16 ∥ §7 补「适用面 = 模型候选面」+ 自定形手输兜底登记 + 取代关系 + 变更记录：`:291`「**M8/M9 渠道准入**：`/models` 不可用 → **该渠道模型候选面视为不可用**」∥「**自定形添加表单 model = 手输兜底**（可保存——保存不依赖拉取；探不通 ⇒ 标 `不可用`）＝端面既成形（桌面基线；VSC 对齐 = 三端对齐批 · 2026-10-07 · 台账 #1031）」；`:296`「**添加表单 model 字段 = 手输文本框 + 探果候选**（端面既成形——桌面基线；VSC 对齐 = 三端对齐批 · 台账 #1031）」；`:515`「渠道准入判据 = **`/models` 可用**（适用面 = **模型候选面**）」；`:633`「**取代关系登记**：「无手输绕过 ∥ 不加 UI 手输行」的适用面收窄为**模型候选面**（命令面 `provider:model` 放行不变；添加表单 model 字段不属该判据域）——依据 = 用户 2026-10-07 授权」 |
+| 2 | 2 | 批档 §2.3 ∥ §2.6 ∥ 测试面；`docs/desktop/design/SETTINGS.md` | 🟡 | **Fixed** | 受影响文件表补行 `:194`「`onAddProvider` 出口注册 ∥ 接线——「添加钮 ⇒ 开弹窗」开径」；开径链指名 `:125`「开径 = 段体添加钮（`data-action="settings:addProvider"`）⇒ `onAddProvider` 出口（`mount-settings-exits.mjs` handlers 表注册」；机检腿 D6 `:222`「D6 添加钮开径腿：`data-action="settings:addProvider"` ⇒ `onAddProvider` 出口（`mount-settings-exits.mjs` 在案）⇒ `openSettingsModal("providerAdd")`（`SCOPES` 闭集内；向导占槽 ⇒ 拒，零静默）」 |
+| 3 | 3 | 批档 §2.2；`docs/core/design/PROVIDER.md` | 🟡 | **Fixed** | 指位收正 `:108`「§6.16（M8/M9 ∥ UI 决策）适用面限定 + §7 D-PR16 同口径 ∥ §6.19 ② 写面/探针指针（已在位）+ 变更记录 | **改+补**」；PROVIDER.md 变更记录补 2026-10-07 条（`:633`，含「**产品码零触（fix 轮）**」） |
+| 4 | 4 | 批档 §2.1 ∥ §2.6；`docs/vsc/design/WEBVIEW-PROTOCOL.md` | 🟡 | **Fixed** | ① `:88`「| **#1030** | 头行粘顶（设置页 ∥ 向导 · sticky） | **批外**——另批 `docs/batches/2026-10-07-settings-heads-sticky.md`（同日；本批零触） |」+ `:96`「**范围核对（D3）**：台账 #1027–#1036 十条——本批实施面 8 条」+ `:225`「台账条目 #1027–#1036 全列（2.1——本批面 8 条 ∥ #1030 批外另批 ∥ #1036 批外另立）」；② 协议行 `:486` 计数与列举同齐 =「（共 4 处——`settings-providers.js:146 ∥ :148` 两发点随表单迁入新档）」 |
+| 5 | 5 | 批档 §2.6；`docs/vsc/design/SETTINGS.md`；`docs/desktop/design/PROJECT.md` | 🟡 | **Fixed** | 三越线档触属性齐：VSC `:556`「**三端对齐批（2026-10-07）触碰 = 新增 `.settings-dialog` ∥ `.settings-dialog-backdrop` 段（Δ ≈+20 ⇒ 预估 ≈405；实施后实读回填）——非结构性（单组件样式段；不改三段组界 ∕ 不增职责）⇒ 消解窗口顺延**」；PROJECT.md `:398`「**三端对齐批（2026-10-07）触碰 = `settingsModalTree` `providerAdd` 支（Δ ≈+6 ⇒ 预估 ≈404，实施后实读回填）——非结构性维持（树面内容演进）⇒ 消解窗口顺延**」∥ `:420`「**三端对齐批（2026-10-07）触碰 = 探面收敛（`providerModels` ⇒ `probeTargetOf`）∥ `provider:save` 载荷 +`proxy`（Δ ≈+5 ⇒ 预估 ≈322，实施后实读回填）——非结构性（判据收敛 ∥ 载荷 +1 字段）⇒ 消解窗口顺延**」；PROJECT.md `:1860` 变更记录 fix 轮条在 |
+| 6 | 6 | `docs/vsc/design/SETTINGS.md`；批档 | 🟡 | **Fixed** | 入口句直陈 `:471`「② 首启板交棒——`webview/onboarding.js:62` 的 custom 径 ⇒ `window._openAddProviderDialog?.()`（`?.` 守卫保留」——「（原 `window._toggleAddForm?.(true)`…单句收正 · 可回退）」类对照语已清；批档「草稿修正两处」句退场，改直陈 `:112`「**桌面侧定形两处**：① 单表 = `channelFormTree` 内容演进（名不换 ⇒ 调用面零改）；② 弹窗初始焦点 = 首控件（源对齐——KD-68 ⑥ ✕ 默认之表单例外；登记）」；§2.10④ 改直陈 `:261`「**④ [知会] 批档 §1 坐标漂移（已收正）**」 |
+| 7 | 7 | 批档 §2.9② ∥ §1.8 | 🟡 | **Accepted（裁讫收编——非阻塞）** | 用户 19:04 已裁 B（另批 #1042）：`:259`「**② [裁讫] A2 双闸去留（裁讫 · B——另批 · 用户 2026-10-07 19:04）**——**去全局闸 · 逐渠独立**…**本批机制面零动**」；`:73`「三件已于 19:04 全部裁讫（① #1034 = A ∥ ② A2 = B 另批 ∥ ③ #1036 开小批）⇒ §4 不再列待裁项」——原「呈 §4 请裁」建议已由用户裁讫吸收 |
+| 8 | 8 | `docs/desktop/design/SETTINGS.md` | 🟡 | **Fixed** | §2.11 两处 as-of 收正 `:127`「（**as-of 本批——现值八名**：三端对齐批（2026-10-07）增 `providerAdd`，见 §1 **KD-75**）」+「（**as-of 本批七组——现值八组**：+`providerAdd` → `loadProviders`；设置页对齐；菜单可达面 = 六组弹窗）」 |
+| 9 | 9 | `docs/vsc/design/SETTINGS.md` | 🔵 | **Fixed** | 双门槛组成式唯一化 `:493`「**双门槛组成式（唯一式）**：条目 `proxy === true` ∧ 全局 `proxy.model === true` ⇒ `proxyUri = proxy.uri`」（+「`uri` 非第三门槛，是代理目标本体」注；`injectProxy`（`thincoder-core/proxy.mjs:67-72`——判定式 `:70`）同式）；`:488` 指「运行期模型请求（`injectProxy` 双门槛——组成式唯一式 = ③′」 |
+| 10 | 10 | 批档 | 🔵 | **Unfixed（② 残余；①③④ Fixed）** | ② 两值并存且零理由未随修：`:41`「`/config` 代理菜单 = `tui/cmd-config.mjs:113-165`（仅全局面）。」 vs `:165`「/config 全局面（`cmd-config.mjs:113-170`；行级不适用）」；① Fixed（`:72`「§1.6 的「`:67-70`」按全批统一口径随正 = **`:67-72`**（`injectProxy` 实范围；判定式 `:70` 不变）」）∥ ③ Fixed（VSC `:376` 锚收正「状态词 `不可用`（`webview/settings-providers.js:189` 现状形态不变）+ `.prov-hint` 逐字渲 `unavailableReason`（`:192` 现状不变）」）∥ ④ Fixed（协议 `:486` 分列「webview/onboarding.js:65（预设形直发位；首启交棒调用位 = `:62`）」） |
+| 11 | 11 | `docs/desktop/design/SETTINGS.md` | 🔵 | **Fixed** | §2.16 项 5 明写向导径 `:194`「**向导步 1「走 proxy」在场（明写）**——`proxy` 件无条件渲染 ⇒ 向导步 1 同在场（未勾 ⇒ 提交零键——项 6 读法）」；机检/走查随补（`:222`「`proxy` 节点两形皆在场——向导步 1 同径」∥ 真机行 `:224`「向导步 1「走 proxy」在场 + 勾选落盘」） |
+| 12 | 12 | 批档 §2.8 D12；`docs/vsc/design/SETTINGS.md` | 🔵 | **Fixed** | 框幕改独立类（与确认族解耦）`:254`「**D12 VSC 框幕 = 独立类 `.settings-dialog-backdrop`**（评审 #12 收正 · fix 轮；z 999）」+ 被否案在册（沿共用类 + 帚扫站点 `:not()` 排除）；VSC `:473`「**遮罩 = 独立类 `._settings-dialog-backdrop`**（z 999；样式入 `settings.css` 新段——**不入确认族共用类 `.auto-backdrop`**」+ 三帚扫站点零误扫句；机检 V11 `:220`「框在场 ⇒ `closeConfirmPopover()` 直呼 ∥ `showConfirmPopover()` 开框 ⇒ 框 ∥ 幕零动（独立类不入确认族帚扫域）」 |
+
+**残余（🔵 · 不阻塞）**：仅 #10② 一处（`cmd-config.mjs` 同面对两范围 `:113-165` ∥ `:113-170`，未随修、零理由登记）。
+
+**审阅面声明（随表并入）**：本轮 = 上轮 12 条修态核验 + 两裁（#1034=A ∥ A2=B）收编核验；实读 = 批档（全文）· `PROVIDER.md`（§6.16 ∥ §6.19 ∥ §7 ∥ 变更记录）· `docs/desktop/design/SETTINGS.md`（§2.11 ∥ §2.16 ∥ §3.1 ∥ 变更记录）· `docs/vsc/design/SETTINGS.md`（§2.12 ∥ §2.16 ∥ §3 载体行）· `WEBVIEW-PROTOCOL.md` §13 · `PROJECT.md`（§2 KD 索引 ∥ §4.1 越层段 ∥ 变更记录 2026-10-07 行）；本轮未读产品码 ⇒ 行数/坐标类申报读数（如 `cmd-config.mjs` 487 ∥ `mount-settings-exits.mjs` 254）按「申报未复核」对待。
+
+VERDICT: pass
+
 ## §4 用户批准（主 agent）
+
+**批准（代签 · 2026-10-07 · 自动跑授权内）**：设计评审轮 2 = **pass**（🔴 0 ∥ 🟡 0；残余 🔵 1 条非阻塞——#10② `cmd-config` 坐标双值）；批准信号已出（token ∕ designId = 运行时凭据，不载文档）。依据 = 用户 2026-10-07 18:31「剩下都自动跑」授权；用户口径三件已裁讫收编（#1034-A ∥ A2-B 另批 #1042 ∥ #1036 开小批）。**实施轮已派**（三舱按域拆分：核+CLI ∥ VSC ∥ 桌面——共享批本地测试件串行）。
+
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）
