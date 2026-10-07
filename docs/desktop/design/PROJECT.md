@@ -126,6 +126,7 @@ CLI = 裸 ANSI 终端 + 单会话前台；扩展端 = VS Code 宿主内的 Webvi
 | KD-72 | → `docs/desktop/design/PACKAGING.md` §1（as-of 2026-10-02） | — | — |
 | KD-73 | → `docs/desktop/design/PACKAGING.md` §1（as-of 2026-10-03） | — | — |
 | KD-74 | → `docs/desktop/design/RENDERER.md` §1.6（行痕族清点两门 · as-of 2026-10-04） | — | — |
+| KD-75 | → `docs/desktop/design/SETTINGS.md` §1（provider 添加弹窗 · 三端对齐批 · as-of 2026-10-07） | — | — |
 
 ### 2.1 实测读数（实施批回填）
 
@@ -379,8 +380,9 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
 
 行宽上限 = 500 行（仓级硬限）；**在册例外：无**（`thincoder-desktop/renderer/i18n.mjs` **500 ⇒ 393**——i18n 拆分批落地，2026-09-29 届盘实读）——**距硬限最近 = `thincoder-desktop/renderer/views/chat-text-segments.mjs` **497**（余 **3** 行——见下行越层段）**；
   次大两档 = `thincoder-desktop/renderer/views/settings.mjs` **364** ∕ `thincoder-desktop/renderer/mount-settings-segments.mjs` **364**（实读 2026-10-01）；
-**越 300 层在册（十四档——实读 2026-10-04（渠道档位退役批（#902）回线除名一档：`thincoder-desktop/src/main/settings.mjs` 331 ⇒ 300——十五 ⇒ 十四）；前读 十五档（实读 2026-10-04（泛化编辑器退役批（#903）回线除名一档：`settings.css` 304 ⇒ 296——十六 ⇒ 十五））；更前 十六档（实读 2026-10-03（首跑渠道提示修复批（#840）新入册一档＋四档读数随正；轻通道轮八三档读数随正））；再前 十五档（实读 2026-10-01）；
-  `subagent-reduce.mjs` = #765 回线除名（301 ⇒ 258 · 十四 ⇒ 十三）——实读兑现； · 越线档结构轮逐档复读 + 逐个裁定〔批档 `docs/batches/2026-09-29-structure-split-round.md` §2〕；`thincoder-desktop/renderer/i18n.mjs` = i18n 拆分批落地入册；`renderer/store.mjs` = desktop-residuals-round3 波 A–C 后新入册；
+**越 300 层在册（十五档——实读 2026-10-07（头行粘顶批（#1030 · 轻通道）再入册一档：`thincoder-desktop/renderer/settings.css` 296 ⇒ 303——十四 ⇒ 十五）；前读 十四档（实读 2026-10-04（渠道档位退役批（#902）回线除名一档：`thincoder-desktop/src/main/settings.mjs` 331 ⇒ 300——十五 ⇒ 十四））；
+  更前 十五档（实读 2026-10-04（泛化编辑器退役批（#903）回线除名一档：`settings.css` 304 ⇒ 296——十六 ⇒ 十五））；再前 十六档（实读 2026-10-03（首跑渠道提示修复批（#840）新入册一档＋四档读数随正；轻通道轮八三档读数随正））；再前 十五档（实读 2026-10-01）；
+  `subagent-reduce.mjs` = #765 回线除名（301 ⇒ 258 · 十四 ⇒ 十三）——实读兑现；越线档结构轮逐档复读 + 逐个裁定〔批档 `docs/batches/2026-09-29-structure-split-round.md` §2〕；`thincoder-desktop/renderer/i18n.mjs` = i18n 拆分批落地入册；`renderer/store.mjs` = desktop-residuals-round3 波 A–C 后新入册；
   `views/chat-chrome.mjs` ∥ `src/main/turn-driver.mjs` 两档 = structure-split-2 拆分兑现（2026-09-29）⇒ 除名；
   `src/main/ipc.mjs` = 桌面残债批（#685 · 2026-09-30）拆档兑现（265 ≤300）⇒ 除名；
   `thincoder-desktop/src/main/suspension-drive.mjs` ∥ `renderer/views/chat.mjs` 两档 = 消化面留档批（#719 · 2026-09-30）拆档兑现（**285** ∥ **234** ≤300）⇒ 除名；
@@ -406,7 +408,9 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
   前读 **331**（实读 2026-10-02——设置体系升级批（#817）实施落盘（330 ⇒ 331：`settings.modal` +1 键——**非结构性**（无新切片）⇒ 消解窗口顺延）；预案 = 续拆评估（切片族）· 消解窗口 = 该档下次**结构性**触碰的批；前史：**#761 ∥ #764 落盘 = 两度结构性触碰**（`helpLines` 切片 ∥ `flowOps` 切片——有新增面）**⇒ 拆档评估窗口触发；父侧裁 = 续期**（实读 330））·
   （`store.mjs` 拆点 = 初始字面段出档 `thincoder-desktop/renderer/store-initial.mjs`（拟新增）· 触发 = 届盘实读 > 500）·
   `thincoder-desktop/renderer/views/settings-sections.mjs` **309 ⇒ 164（D37 拆档兑现（渠道族出档）；回线 ⇒ 除名兑现，2026-10-02；十五 ⇒ 十四）**（原入册——由 = 桌面收尾批（#652 钥行补 `[data-draft]` 标记 · 属性级）后越线〔批档 `docs/batches/2026-09-29-desktop-carryover.md` §5-c1——舱 1 实施〕 + 口子清零二轮续增（S3 行标分档渲染）；预案 = 段体续拆——**D37 落盘 164**——预案注销）·
-  `thincoder-desktop/renderer/settings.css` **304 ⇒ 296（泛化编辑器退役批（#903）实施落盘——回线 ⇒ 除名兑现，2026-10-04；十六 ⇒ 十五）**（原入册——由 = D37 实施落盘（268 ⇒ 304——行族通则 ∥ 两行卡 ∥ 拨杆 ∥ MCP 展开面 ∥ ①④ 补则）；拆分预案 = 控件族出档评估（拟新增 `settings-controls.css`）——**泛化批落盘 296（实读兑现）**——预案注销；父裁 2026-10-02「在册越线不拆」随回线失效）·
+  `thincoder-desktop/renderer/settings.css` **296 ⇒ 303（头行粘顶批（#1030 · 轻通道）实施落盘——再入册，2026-10-07；十四 ⇒ 十五）**（由 = 页 ∥ 向导头行粘顶——`thincoder-desktop/renderer/settings.css:43-57`（+7 = 注释 3 + 声明 4）；非结构性触碰 ⇒ 消解窗口顺延至该档下次**结构性**触碰的批（注释 ∥ 坐标 ∥ 词值 ∥ 行级小修不计）；
+  拆分预案 = 控件族出档评估（拟新增 `thincoder-desktop/renderer/settings-controls.css`——泛化批注销后随再入册复列）；前史：**304 ⇒ 296（泛化编辑器退役批（#903）实施落盘——回线 ⇒ 除名兑现，2026-10-04；十六 ⇒ 十五）**；
+  原入册由 = D37 实施落盘（268 ⇒ 304——行族通则 ∥ 两行卡 ∥ 拨杆 ∥ MCP 展开面 ∥ ①④ 补则）——**泛化批落盘 296（实读兑现）**——预案注销；父裁 2026-10-02「在册越线不拆」随回线失效）·
   `thincoder-desktop/renderer/composer-sync.mjs` **324**（实读 2026-10-03——轻通道轮八（322 ⇒ 324——`providerNotice` 词路由换新键（`composer.send.noDefaultModelFallback` 澄清半句）+ 注释随正；非结构性触碰 ⇒ **续期**）；
   前读 **322**（实读 2026-10-03——无效渠道态逻辑归一批（#841）实施落盘（306 ⇒ 322——`providerNotice` 态明示行（`fallback` ∧ 非 invalid 类 ⇒ 带尾行）+ 清位面；非结构性触碰 ⇒ **续期**）；
   前读 **306**（实读 2026-10-03——首跑渠道提示修复批（#840）实施落盘（302 ⇒ 306——`providerKind` 类路由（词面-only——`failedNotice` 按类出词）+ 载体 `{ reason, kind }` 消费；非结构性触碰 ⇒ **续期**））；前读 **302**（新入册——由 = 口子清零二轮（引导形路由 + 注释收正）后越线；预案 = 续拆评估 · 消解窗口 = 该档下次**结构性**触碰的批（注释 ∕ 坐标 ∕ 词值 ∕ 行级小修不计）））·
@@ -427,7 +431,7 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
   `thincoder-desktop/renderer/mount-composer.mjs` **299**（实读 2026-10-03——无效渠道态逻辑归一批（#841）实施落盘（297 ⇒ 299——`COMPOSER_KEYS` 补 `providerState`（第三刷新点重派生闭环）；装配接线（非结构性）——+1 行即越线）；
   预案 = 各自下次**结构性**触碰的批（注释 ∕ 坐标 ∕ 词值 ∕ 行级小修不计）。
 **本批（主题切换 · D33 · 2026-09-30）触碰贴层两档 ⇒ 越 300 咨询线**：`thincoder-desktop/renderer/app.mjs` **300 ⇒ 305**（实读 2026-10-01——主题切换批落盘；其后 #764 ⇒ **299** 回线 ✓）∥ `thincoder-desktop/renderer/settings.css` **298 ⇒ ≈301**（主题钮族带上）——逐档「现行 ⇒ 预期」= §4.2 本批行；
-  **拆分预案** = app 装配段 ∥ settings 控件族出档评估（拟新增 `thincoder-desktop/renderer/settings-controls.css`——**settings 侧 = 泛化编辑器退役批回线（296）⇒ 注销，2026-10-04**）；
+  **拆分预案** = app 装配段 ∥ settings 控件族出档评估（拟新增 `thincoder-desktop/renderer/settings-controls.css`——**settings 侧 = 泛化编辑器退役批回线（296）⇒ 注销，2026-10-04；头行粘顶批（#1030）再入册（303）⇒ 复列，2026-10-07**）；
   **消解窗口** = 各自下次**结构性**触碰的批（注释 ∕ 坐标 ∕ 词值 ∕ 行级小修不计）。
 **本批（口子清零二轮 · #673 · 2026-09-29）触碰贴层两档 ⇒ 越 300**（`thincoder-desktop/src/main/providers.mjs` **300 ⇒ 315**（S3 `failure` 键贯链）∥ `thincoder-desktop/renderer/core.css` **299 ⇒ 332**（面 20 段覆盖））——逐档「现行 ⇒ 预期」= §4.2 本批行（**就地给数**）；
   **拆分预案 = 验证 ∕ 探针族出档 `thincoder-desktop/src/main/provider-verify.mjs`（拟新增）· 推理盒族出档 `thincoder-desktop/renderer/core-reasoning.css`（拟新增）· 消解窗口 = 下个结构性触碰的批**；
@@ -1852,3 +1856,4 @@ T-DSK30 的机检面 = `thincoder-desktop/test/views-attach.test.mjs`（附件�
 - 2026-10-04（**模型切换解锁批 · 修正轮（评审 #53 · 发现 1 ∥ 6 ∥ 7 逐号 · 父侧裁 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §3 轮次 1 · 台账 #918）：§7 **T-DSK43 ③** 判据行去沿革从句（新态直陈——沿革载本档变更记录）+ 输入列面名收正（忙态写门 ⇒ 忙态两钮可点）∥ 对齐第三批小修族注（「离线不可产面」串）同笔 ∥ **批 B 注**（T-DSK28 机检面）「在飞拒 `busy` 零写」⇒「在飞受理（写盘 + 回执携 `meta`）」∥ §4.1 越层段 `agent-host.mjs` 册值按盘收正（**306 ⇒ 327**）。**零新语义**。明细 = 批档 §2 修正块。
 - 2026-10-04（**模型切换解锁批 · 实施后实读回填（父侧直接执行〔机械值面〕 · 可 revert）**——承批档 §5 A3：§4.1 `agent-host.mjs` 册值按盘收正（327 ⇒ **333**）。**零新语义**（读数）。
 - 2026-10-04（**行痕族消失时机批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-row-traces-clear-at-turn.md` §1 ∥ §2 · 台账 #919）：§2 KD 索引**补 KD-73 行**（PACKAGING 批未随索引——一致性面同笔）+ 增 **KD-74** 指针行（⇒ `RENDERER.md` §1.6——行痕族清点两门）；机制面同拍 = `RENDERER.md` ∥ `CHAT.md` ∥ `ACTIVITY.md` ∥ `COMPOSER.md` 四档。**产品码零触（设计轮）**。明细 = 批档 §2。
+- 2026-10-07（**头行粘顶批（设置页 ∥ 向导）· 设计形式化轮 · eng-designer**——承批档 `docs/batches/2026-10-07-settings-heads-sticky.md` §1 ∥ §2 · 台账 #1030）：§4.1 越层段**再入册一档**（`thincoder-desktop/renderer/settings.css` **296 ⇒ 303**——头行粘顶批（#1030）实施落盘；**十四 ⇒ 十五**）+ 该档册值收正（拆分预案复列 ∥ 消解窗口顺延；D33 块同拍）；`docs/desktop/design/SETTINGS.md` ∥ `docs/desktop/design/UI.md` 两档同拍（明细另见各档变更行）。**产品码零触（本笔）**。明细 = 批档 §2。

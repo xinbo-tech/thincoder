@@ -211,7 +211,7 @@
    覆盖 = 各滚动容器（`.pool-body` / `.flow` / 设置面板）；两主题同式（`--fg` 混同）。
 
 5. **设置面映射（同规则带上 · 用户未见 mock——父侧默认；本注 = 落形）**（落点 = `thincoder-desktop/renderer/settings.css`）：
-   - 面头线（`.settings-head` / `.wizard-head` · `:44-51`）⇒ 底线 transparent（同骨架线族）。
+   - 面头线（`.settings-head` / `.wizard-head` · `:43-57`）⇒ 底线 transparent（同骨架线族）；**头行粘顶同体（头行粘顶批 · 2026-10-07 · 轻通道 · 台账 #1030）**——`position: sticky` ∥ `top: 0` ∥ `z-index: 1` ∥ 底 `--bg`（单源 = `docs/desktop/design/SETTINGS.md` §2.12）。
    - 结构框归零 + 升底：`.settings-form`（`:173-180`）⇒ 边框 transparent + `background: var(--bg-raised)`（面板底 = `--bg` ⇒ 表单浮起——同主壳「卡在底上」语）；`.settings-notice` / `.wizard-notice`（`:105-117`）⇒ 边框 transparent（警示语义已由 `--accent` 字色承载）。
    - 卡界（`.settings-row` · `:141-157`）⇒ 1px 描边 + 圆角 6px（**VSC 实形**——用户 2026-10-02 10:27 裁定；单源 = `docs/desktop/design/SETTINGS.md` §2.5「本批注（设置面样式收正 · D37 · 2026-10-02）」项 1 ③）。
    - 活动 / 当前行：`.settings-row[data-active]` / `[data-current]` ⇒ **accent 描边改底色态**（同 R5 语）：`background: color-mix(in srgb, var(--accent) 14%, var(--bg))`（不透明混同；**基色随行域静息底**——卡底让位后 = `--bg`）。
@@ -812,3 +812,4 @@
 - 2026-10-04（**渠道档位退役批 · 实施后回填轮 · 父侧直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-desktop-channel-tier-retire.md` §5 · 台账 #902）：§4.1 两行走读齐平（`thincoder-desktop/renderer/i18n-settings.mjs` **152 ⇒ 150** ∥ `SETTINGS_DICT` 两语各 **60 ⇒ 59** 键；`thincoder-desktop/renderer/i18n.mjs` **415 ⇒ 413**——链尾 **312 ⇒ 309**）。**零新语义**（读数）。
 - 2026-10-04（**流尾台账行组退役批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2 · 台账 #913）：§1 对话流行「对齐第三批」枚举去「台账行」（项号随正）∥ 本批注（对齐第三批）计数随正（小修族 **24 ⇒ 23** ∥ 对话流 **12 ⇒ 11** ∥ A 指针列去 A12）∥ 核面新消费件枚举去「核台账行产」。**零新语义**。明细 = 批档 §2。
 - 2026-10-04（**模型切换解锁批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §2 · 台账 #918）：§1 输入区行「忙态写门 = 两钮 `disabled`」句收正（**恒可点**——写面保护单源指针两处）；`docs/desktop/design/{COMPOSER,IPC,E2E-TESTING,PROJECT}.md` 四档同拍（明细另见各档变更行）。**产品码零触（设计轮）**。明细 = 批档 §2。
+- 2026-10-07（**头行粘顶批（设置页 ∥ 向导）· 设计形式化轮 · eng-designer**——承批档 `docs/batches/2026-10-07-settings-heads-sticky.md` §1 ∥ §2 · 台账 #1030）：§1 本批注（外壳视觉降噪 · D24）项 5 面头线坐标随正（`:44-51` ⇒ `:43-57`）+ 粘顶同体句增（单源 = `docs/desktop/design/SETTINGS.md` §2.12）。**产品码零触（本笔）**。明细 = 批档 §2。
