@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-07 · 来源 = 父侧盘点（VSC MCP 表单 env 逗号分隔串 + 桌面同病实读补证）+ 用户 2026-10-07 19:04「3开小批now」（台账 #1036）。
 > 台账 = #1036（vsc · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：进行中（设计评审 pass（🔴0∥🟡4∥🔵3）· 修复轮七号落（追记⑦）· 已代签 · 实施舱 #10 在队（排 parity VSC 舱后））
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 ### 1.1 讨论与登记（2026-10-07 19:0x · 父侧）
@@ -22,7 +22,7 @@
 - **另认**：追记② `T-DSK64` 自铸（合规；占号冲突由届盘复核兜底）∥ 追记① 越域触（`MCP.md` 射程句 · 零语义改）——认，异议时单笔 revert 通道在册。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（两端行式键值编辑器（先拆后改两处 · 零新 CSS）· 续笔核验（追记⑥）· 2026-10-07）
+**状态行**：设计完成（两端行式键值编辑器（先拆后改两处 · 零新 CSS）· 续笔核验（追记⑥）· 修复轮（#1–#7 · 追记⑦）· 2026-10-07）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 ### 本批条目（覆盖）
@@ -123,7 +123,53 @@
 ⑥ 登记（非阻塞 · 实现轮顺手）：`mount-settings-segments.mjs:30-31` 注释引 `settings-tools.js:356-369`（旧坐标；实位 `:391-404`）——随 kv 件重写自然消解。
 ⑦ 三档变更行追行已落（`docs/vsc/design/SETTINGS.md` ∥ `docs/desktop/design/SETTINGS.md` ∥ `docs/desktop/design/PROJECT.md`——含 PROJECT 前轮欠行补记）；批内件未写（承追记③）；**产品码零触（续笔）**；追记④⑤（回填面清单 ∥ 上抛）结论不变。
 
+**追记 ⑦（设计评审修复轮——§3 轮次 1 · 发现 #1–#7 逐号落实 · 2026-10-07）**
+
+**口径**：父侧裁 = 七发现全采纳（🟡×4 ∥ 🔵×3）；本轮点修——只修 #1–#7（零新语义 ∥ 零扩面 ∥ 不改判据 ∥ 不加机制 ∥ 不重排结构）；产品码零触；§1 ∥ §3–§6 零动；需求档零动。
+
+**逐号落盘（号 → 落点）**：
+
+- **#1** → `docs/core/design/MCP.md:106`（§6.5）主句改 CLI 作用域——「**headers / env 键值对输入**：**CLI `/mcp` 表单面 = 逗号分隔**」（「统一」残句删）；射程句（`:107`）∥ §7 D-MC9（`:193`）括注零动；变更行同拍（`:252`）。
+- **#2**（登记 · 回填面 +2 项）→ ① `docs/desktop/design/SHELL.md` §1 树 +新档行（`mount-settings-segments-mcp.mjs`——MCP 键值行式输入批（#1036）拆档产出 · 拟新增；同族行位 = `:80-85`；先例 = `SHELL.md:330`「§1 树增一行（`settings-modal.mjs`——D39 新档）」），相关计数行随动；② `docs/vsc/design/WEBVIEW.md` §3 文件表 +新档行（`settings-mcp.js`——拟新增）+ `settings-tools.js` 读数随动（**433 ⇒ ≈270**；先例 = `WEBVIEW.md:722`「§3 文件表 **+2 行**（`chat-messages.js` **234** / `chat-status.js` **124**——读数 + 面）」）。**随实现轮 / 回填轮落**（落地后去「拟新增」+ 实读回填）。
+- **#3**（登记 · 回填面 +1 项）→ `docs/vsc/design/SETTINGS.md` §2.10 判据域边界档数——**按现盘基数**：设置面档 **9 ⇒ 10** ∥ 合域含 `input.js` **10 ⇒ 11**（`settings-mcp.js` 命中 `/^settings.*\.js$/` 入域）；随拆档同拍收正——已并入该档「实施后回填面」清单（`:708`）+ 修复轮变更行（`:711`）。**另注（事实）**：现文「实读 8 档 ∥ 9 档」与现盘差一——并行批（`2026-10-07-provider-config-parity` · #1029）新档 `thincoder-vscode/webview/settings-provider-dialog.js`（已落盘）未计；差项归并行批 / 回填轮同拍消解（本笔不改其数）。
+- **#4** → `docs/desktop/design/PROJECT.md:401`（§4.1 越层段 `i18n-views.mjs` 行）补本批触属性句（**398 ⇒ ≈406**——kv 四新键 × 两语 + 值改 2；非结构性 ⇒ 续期；与同批 `mount-settings-segments.mjs` 行「**364 ⇒ ≈195**」句式对齐）；`docs/desktop/design/UI.md:500`（§4.1 同值行）同拍；两档变更行同拍（PROJECT `:1865` ∥ UI `:816`）。
+- **#5** → `docs/desktop/design/PROJECT.md:384` 次大两档句 `views/settings.mjs` 读数按现读收正（**364（实读 2026-10-01）⇒ 398**——实读 2026-10-02；本修复轮复读 2026-10-07 同值；消解与同档 `:400` 的自相矛盾）；变更行同拍。
+- **#6** → 本表端归属（本追记收正）：受影响文件表 `:69` 零触行第三路径 `src/extension/panel-mcp.mjs` 属 **VSC 树**（`thincoder-vscode/src/extension/panel-mcp.mjs`）；桌面零触两路径 = `renderer/settings.css` ∥ `src/main/mcp-servers.mjs`；对照 = `docs/desktop/design/SETTINGS.md:338` 零触格（VSC 以括注列、不列路径）；原行零动（表格 append-only）；**零触结论不变**。
+- **#7** → `docs/desktop/design/SETTINGS.md:211`（§2.17 项 3）补机制句——类型切换出口行值捕获 = 与加删出口同一「自读 DOM 行集」面（`readMcpForm` 快照不采行件为前提——防实施轮误依赖 `draft`）；变更行同拍（`:449`）。
+
+**产品码零触（修复轮）**。明细 = §3 轮次 1 ∥ 本追记。
+
 ## §3 设计评审（评审子代理）
+
+### 轮次 1（评审子代理）
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | 文档卫生（规范面残留） | 🟡 | `docs/core/design/MCP.md:106` 规范面主句仍为失实措辞「**headers / env 键值对输入**：统一为**逗号分隔**」——同批仅在 `:107` 追加射程句「本条 = **CLI `/mcp` 表单面**输入语义」而未改主句；同档变更记录 `:251` 自认「原「统一」措辞对三端面不再成立」。读者据主句可得「三端统一串式」的失实结论。 | 主句改写为 CLI 作用域表述（如「CLI `/mcp` 表单面 = 逗号分隔」），删「统一」残句；射程句与 `:193` D-MC9 括注保持不变。 |
+| 2 | 文档归属（模块图 ∥ 文件表同拍） | 🟡 | 两新档未入模块图 / 文件表，且批档落点 ∥ 回填面（`docs/batches/2026-10-07-mcp-kv-input.md:36-39`）均未点名：① 桌面新档 `mount-settings-segments-mcp.mjs` 未入 `docs/desktop/design/SHELL.md` §1 树（同族行位 = `SHELL.md:80-85`；先例 = `SHELL.md:330`「§1 树增一行（`settings-modal.mjs`——D39 新档）」）；② VSC 新档 `settings-mcp.js` + `settings-tools.js` 读数未入 `docs/vsc/design/WEBVIEW.md` §3 文件表（先例 = `WEBVIEW.md:722`「§3 文件表 **+2 行**（`chat-messages.js` **234** / `chat-status.js` **124**——读数 + 面）」）。 | 把 `docs/desktop/design/SHELL.md` §1 树（新档一行）与 `docs/vsc/design/WEBVIEW.md` §3 文件表（新档一行 + `settings-tools.js` 读数）补进「实施后回填面」点名表。 |
+| 3 | 文档状态（计数漂移预防） | 🟡 | VSC 侧新档入结构对账扫描域而域档数未入回填面：`docs/vsc/design/SETTINGS.md:322` 记域 = 设置面档（「实读 **8 档**」）∪ `input.js` = **9 档**（`:328`「本批域 **9 档** ⇒ 下限 **≥6**」）——`settings-mcp.js` 命中 `/^settings.*\.js$/` ⇒ 域变 9 档 + `input.js` = 10 档；`:708` 的「**实施后回填面** = 本档 §2.10 入口册 #5 坐标（`:206` ∥ `:210`）」等四条未含该计数。 | 回填面 +1 项：§2.10 判据域边界档数（8 ⇒ 9 ∥ 9 ⇒ 10）随拆档同拍收正。 |
+| 4 | 文档状态（在册档触碰登记） | 🟡 | 在册 >300 档 `i18n-views.mjs` 本批触碰（`docs/desktop/design/SETTINGS.md:336`「**398 ⇒ ≈406**」）未落同拍登记：`docs/desktop/design/PROJECT.md:399` 已为同批 `mount-settings-segments.mjs` 落触属性句（「**364 ⇒ ≈195**」），而 `:401` 的 i18n-views 行（「**398**（实读 2026-10-05」）无本批句；该档文件账住 `PROJECT.md:301` 所指 `docs/desktop/design/UI.md` §4.1，亦未列同拍。 | `PROJECT.md` §4.1 越层段 i18n-views 行补触属性句（预估 ≈406 ∥ 非结构性 ⇒ 续期）；`docs/desktop/design/UI.md` §4.1 同值行列入同拍面。 |
+| 5 | 文件账（读数失真） | 🔵 | `docs/desktop/design/PROJECT.md:384`「次大两档 = `thincoder-desktop/renderer/views/settings.mjs` **364**」（标实读 2026-10-01）与本档 `:400` 同文件「**398**（实读 2026-10-02」自相矛盾——本批已触碰该行（新增 #1036 拆档句）未顺手收正。 | 该行读数按现读收正（或明标 as-of 口径）；`mount-settings-segments.mjs` 侧 364 本批已收正。 |
+| 6 | 受影响文件表（端归属） | 🔵 | 批档 §2 受影响表零触行把 VSC 路径挂在桌面行下：`docs/batches/2026-10-07-mcp-kv-input.md:69`「| 桌面 | `thincoder-desktop/renderer/settings.css` ∥ `src/main/mcp-servers.mjs` ∥ `src/extension/panel-mcp.mjs` | — | **零触** |」——`src/extension/panel-mcp.mjs` 属 VSC 树。 | 该路径改挂 VSC 零触列（桌面档同格 = `docs/desktop/design/SETTINGS.md:338` 作对照；零触结论不变）。 |
+| 7 | 清晰度（机制名未明示） | 🔵 | 桌面「类型切换保真」的取值路径未点名：`docs/desktop/design/SETTINGS.md:211` 同时定「**类型切换出口**同拍同步当前组行集（切换不丢手」与「`readMcpForm` 草稿快照**不采行件**」——`mcpFormType` 现径只取 `readMcpForm()` 快照，行值捕获须由 kv 专用读取面承接（未明示）；结局已由 `:388` T-DSK64 ② 钉住。 | 在 §2.17 项 3 明示类型切换出口的行值捕获 = 与加删出口同一「自读 DOM 行集」面（防实施轮误依赖 `draft`）。 |
+
+VERDICT: pass
+
+**计数**：🔴 0 ∥ 🟡 4（#1–#4）∥ 🔵 3（#5–#7）——无阻断项（🟡/🔵 不阻 pass）。
+
+**本轮验证（抽检 · 证据）**：行数抽检四档与设计所记逐档一致（口径 = 内容行数，文末换行不计）：`thincoder-vscode/webview/settings-tools.js` 433 ∥ `thincoder-desktop/renderer/mount-settings-segments.mjs` 364 ∥ `thincoder-desktop/renderer/views/settings-sections-mcp.mjs` 185 ∥ `thincoder-desktop/renderer/mount-settings-exits.mjs` 254 ∥ `i18n-views.mjs` 398；病灶坐标实读在位（`webview/settings-tools.js:66 ∥ :391-404` ∥ 桌面 `views/settings-sections-mcp.mjs:92-96` ∥ `mount-settings-segments.mjs:30-44` ∥ `view-state.mjs:168-174`）；零新 CSS 类族在位（VSC `.key-row:122 ∥ .del-key:150`；桌面 `.settings-field-row:210 ∥ .settings-row-action:178 ∥ .settings-submit:74`）；缝可行性在位（`webview/settings.js:13` 模块 import 面——新档无需 HTML 注册；桌面 `mount-settings-exits.mjs:191-201` `resetFacets` 整键置换 ⇒ `form.kv` 随 `form` 复位，`store.mjs` 免改）。
+
+**限制声明**：本评审对象 = 声明所载（批档 §2 + 五档设计档）；文件清单未列批档，但 Target 段点名「批档 §2」⇒ 已并入读（#6 引文出自该档）。项目无标准档声明、无文档地图 ⇒ 方法学合轨按 `AGENTS.md` + 各档在盘惯例（指针 / 计数 / 同拍纪律）判；文档归属按各档自带的单源指针判。
+
 ## §4 用户批准（主 agent）
+
+**代签（主 agent · 2026-10-07 20:1x · 自动跑授权内——用户 19:43「修彻底」）**
+
+- 评审链：设计评审轮 1 = **pass**（🔴 0 ∥ 🟡 4（#1–#4）∥ 🔵 3（#5–#7）——发现表在 §3 轮次 1）；七号修复轮逐号落盘（**§2 追记⑦**）。
+- 父侧核验（抽读，全在盘）：`docs/core/design/MCP.md:106`（主句 =「**CLI `/mcp` 表单面 = 逗号分隔**」）∥ `docs/desktop/design/PROJECT.md:384`（398 读数消矛盾）∥ `:401`（i18n-views 本批触属性句）∥ `docs/desktop/design/SETTINGS.md:211`（类型切换行值捕获径句）∥ 追记⑦ `:126–140`（七号逐条）。
+- 上抛三项处置：① #2 执行口径 = **维持登记制**（`SHELL.md` ∥ `WEBVIEW.md` 本体随实施/回填轮落——去「拟新增」+ 实读回填）；② #3 基数 = **按现盘登记 9 ⇒ 10 ∥ 10 ⇒ 11**——终值随实施回填同拍写足（变更行注明组成 = 并行批 #1029 新档 + 本批新档；「8 ∥ 9」现文一并收正）；③ 观察句（`PROJECT.md:384`「次大两档」）= **维持**（历史语境句，非排行断言）。
+- **准予实施**：产品码面 = VSC（`settings-tools.js` 拆档 ∥ `settings-mcp.js` 新档 ∥ 表单行式化）∥ 桌面（`mount-settings-segments-mcp.mjs` 新档 ∥ 段体与装配）；回填面 = `SHELL.md` ∥ `WEBVIEW.md` ∥ VSC SETTINGS §2.10 计数 ∥ PROJECT/UI 实读。
+- 令牌 = 运行时凭据（不入档）；实施舱随本签派发。
+
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）

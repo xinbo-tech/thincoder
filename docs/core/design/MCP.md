@@ -103,7 +103,7 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
 - **按传输的 config 形态**：`stdio: { name, command, args?, env? }` · `HTTP: { name, url, token?, headers? }` · `WS: { name, wsUrl, token?, headers? }`；name 是唯一键控名（不可改）；`headers` / `env` 为键值对象；`token` 为**一等可选字段**（HTTP/WS）；项目级 `.mcp.json` 亦可提供 server，但 `/mcp` 管理入口操作的仍是 `config.json` 的 `mcp.servers`。
 - **token 合成规则**：client 自动合成 `headers.Authorization = "Bearer " + token`——**仅当 headers 未显式含 Authorization 时**（显式 headers 优先）；合成发生在传给 transport 前，**不写回 config**；WS 经 **subprotocol**（`bearer.<token>`）传递（Node 内置 WebSocket 无法自定义请求头；不注入 URL query——防日志泄露凭证）；
 **fingerprint 计入 `token` 字段**（改 token → 指纹变更 → 重连）；token 明文存 `config.json`（不引入 keychain）——`token` ∕ `headers` ∕ `env` 值亦可存 `${env:VAR}` 引用（落盘不落明文；解析 = MCP 传输建连侧，单源 = `doc:CONFIG.md:§6.3`；指纹 ∕ 漂移比对仍按存储原文——env 变更不伪装为配置漂移；重连按当时环境重解析）。
-- **headers / env 键值对输入**：统一为**逗号分隔**（`key=value, key2=value2`，value 可含空格）——取代旧空格 `split`（后者把 `Authorization=Bearer xxx` 截成 `"Bearer"`，token 丢失）。字段输入语义：空输入 = 不变；`-` = 删除可选字段；`key=`（空 value）= 删除该项；required 字段（name / url / wsUrl / command）拒绝 `-`。
+- **headers / env 键值对输入**：**CLI `/mcp` 表单面 = 逗号分隔**（`key=value, key2=value2`，value 可含空格）——取代旧空格 `split`（后者把 `Authorization=Bearer xxx` 截成 `"Bearer"`，token 丢失）。字段输入语义：空输入 = 不变；`-` = 删除可选字段；`key=`（空 value）= 删除该项；required 字段（name / url / wsUrl / command）拒绝 `-`。
   **射程（2026-10-07 · 台账 #1036）**：本条 = **CLI `/mcp` 表单面**输入语义；GUI 两端（VSC ∥ 桌面）表单 = **行式键值编辑器**（每行键格 + 值格 + ✕；加删行——口径单源 = `docs/vsc/design/SETTINGS.md` §2.4 ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-76**）——三端**管理面输入形现不一致**（CLI 串式 vs GUI 行式），端差登记在册。
 
 ### 6.6 传输层与活性（isAlive 三态）
@@ -249,3 +249,4 @@ MCP 工具、下轮重试）。**子代理不含 MCP**：装配仅 depth-0 展�
 - 2026-10-04（**issue 修复批·三 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round3.md` §3 轮次 1 发现 1）：§6.4 项目文件源括注按 **#701 实况收正**（「VSC 端第三面未并」⇒「已并——2026-10-01 vsc-cleanup 批 · 台账 #701 已核销；三端同判」）；
   同批设计轮条「端差归零」辖域限定 = **消费面**。**零新语义**（时态 ∥ 辖域收正；#701 实况 = 台账已核销 + `thincoder-vscode/src/config-mcp.mjs:85-104` ∥ `thincoder-vscode/src/extension/panel-turn-loop.mjs:165` 在盘实读）。
 - 2026-10-07（**MCP 键值行式输入批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-mcp-kv-input.md` §1 ∥ §2 · 台账 #1036）：§6.5 「headers / env 键值对输入」条补 **射程句**（本条 = CLI `/mcp` 表单面；GUI 两端 = 行式键值编辑器——口径单源 = `docs/vsc/design/SETTINGS.md` §2.4 ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-76**；三端管理面输入形不一致 = 端差在册）· §7 **D-MC9** 同拍（射程括注）。**零新语义**（射程 ∥ 辖域收正——原「统一」措辞对三端面不再成立）。明细 = 批档 §2。
+- 2026-10-07（**MCP 键值行式输入批 · 设计评审修复轮（§3 轮次 1 · 发现 1）· eng-designer**——承批档 `docs/batches/2026-10-07-mcp-kv-input.md` §3 轮次 1 ∥ §2 修复轮块 · 台账 #1036）：§6.5「headers / env 键值对输入」**主句改 CLI 作用域表述**（「统一为逗号分隔」⇒「**CLI `/mcp` 表单面 = 逗号分隔**」——「统一」残句删；射程句 ∥ §7 **D-MC9** 括注零动）。**零新语义**（辖域表述收正）。明细 = 批档 §2 修复轮块。
