@@ -483,7 +483,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | ① 判别式 | ② webview 发射点 | ③ host 消费位 | ④ 处置 | ⑤ 备注 |
 |---|---|---|---|---|
 | `abort` | webview/input.js:26 | src/extension/panel-messages.mjs:260 | `活` | — |
-| `addProvider` | thincoder-render-core/composer/model-menu.mjs:303/webview/onboarding.js:65（预设形直发位；首启交棒调用位 = `:62`）/webview/settings-provider-dialog.js:245（本批表单提交位——`custom` ∥ `preset` 两形发点；实施后实读 2026-10-07）（共 4 处——`settings-providers.js:146 ∥ :148` 两发点随表单迁入新档） | src/extension/panel-messages.mjs:279 | `活` | 载荷 + `proxy`（可选布尔——添加表单「走 proxy」勾选；`docs/vsc/design/SETTINGS.md` §2.16） |
+| `addProvider` | webview/onboarding.js:65（预设形直发位；首启交棒调用位 = `:62`）/webview/settings-provider-dialog.js:245（表单提交位——`custom` ∥ `preset` 两形发点；实施后实读 2026-10-07）（共 2 处——`settings-providers.js:146 ∥ :148` 两发点随表单迁入新档） | src/extension/panel-messages.mjs:279 | `活` | 载荷 + `proxy`（可选布尔——添加表单「走 proxy」勾选；`docs/vsc/design/SETTINGS.md` §2.16）；**页脚「+ Add provider…」发送点退场（添加入口弹窗统一批 · #1054）**——核 `thincoder-render-core/composer/model-menu.mjs:308` 的 `post("addProvider")` 由 VSC 桥 `webview/input.js` OUT 表接为**本地面动作**（开添加弹窗——零出站；`SETTINGS.md` §2.17 ③）；host 无载荷 else 支（QuickPick 增流程）同批净删 |
 | `atComplete` | thincoder-render-core/composer/atmenu.mjs:50 | src/extension/panel-messages.mjs:268 | `活` | — |
 | `batchPermissionResponse` | webview/permission.js:18（发射位——字面量构造 `:12`） | src/extension/panel-messages.mjs:270 | `活` | 载荷增 `promptId`（三发点同携——§4.6）；形状 = 局部箭头函数 |
 | `buildIndex` | webview/settings-tools.js:83 | src/extension/panel-messages.mjs:291 | `活` | — |
@@ -493,7 +493,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `deleteProviderKey` | webview/settings-providers.js:57 | src/extension/panel-messages.mjs:276 | `活` | — |
 | `deleteSession` | webview/session-bar.js:131 | src/extension/panel-messages.mjs:248 | `活` | — |
 | `deleteWebsearchKey` | webview/settings-tools.js:46 | src/extension/panel-messages.mjs:289 | `活` | — |
-| `editMcp` | webview/settings-mcp.js:134 | src/extension/panel-messages.mjs:277 | `活` | 三元双分支（同点 `saveMcpServer`） |
+| `editMcp` | webview/settings-mcp-dialog.js（实施后回填坐标——表单族随拆档迁出 `settings-mcp.js`；原 `:134`） | src/extension/panel-messages.mjs:277 | `活` | 三元双分支（同点 `saveMcpServer`）；弹窗体（添加入口弹窗统一批 · #1054——表单入弹窗，§2.17 ①） |
 | `getAgentSettings` | webview/settings.js:103 | src/extension/panel-messages.mjs:295 | `活` | 回批 = §12 打开拍（本档 §12 方向口径） |
 | `getMcpStatus` | webview/settings-mcp.js:148 | src/extension/panel-messages.mjs:292 | `活` | — |
 | `getShellCandidates` | webview/settings.js:40 | src/extension/panel-messages.mjs:352 | `活` | — |
@@ -514,7 +514,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `retry` | webview/ui.js:171 | src/extension/panel-messages.mjs:251 | `活` | — |
 | `saveAgentSettings` | webview/settings-agent.js:145/webview/settings-providers.js:89 | src/extension/panel-messages.mjs:294 | `活` | — |
 | `saveEmbedKey` | webview/settings-tools.js:18 | src/extension/panel-messages.mjs:286 | `活` | — |
-| `saveMcpServer` | webview/settings-mcp.js:134 | src/extension/panel-messages.mjs:277 | `活` | 三元双分支（同点 `editMcp`） |
+| `saveMcpServer` | webview/settings-mcp-dialog.js（实施后回填坐标——表单族随拆档迁出 `settings-mcp.js`；原 `:134`） | src/extension/panel-messages.mjs:277 | `活` | 三元双分支（同点 `editMcp`）；弹窗体（添加入口弹窗统一批 · #1054——表单入弹窗，§2.17 ①） |
 | `saveProviderKey` | webview/settings-providers.js:39 | src/extension/panel-messages.mjs:275 | `活` | — |
 | `saveProxySettings` | webview/settings-env.js:113 | src/extension/panel-messages.mjs:351 | `活` | 载荷 = 逐字段（`SETTINGS.md` §2.8） |
 | `saveShellSettings` | webview/settings-env.js:129/:144 | src/extension/panel-messages.mjs:350 | `活` | F-W11 接线落地（`SETTINGS.md` §2.9）；空值 ⇒ 删键 = 路径册 #2（`System default` 显式项） |
@@ -538,6 +538,8 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 **方向口径**：本表只收 webview → host。**「删」= host 消费位在位而 webview 发射恒无（死 handler）**——处置逐条入批档（`docs/batches/2026-09-18-vsc-settings-wiring.md` §2）并已随实现落地（三删 + 一接线转活——**本表现零 `删` 行**）；**删除落地 ⇒ 源零位 ⇒ 表行同步退场**（不留悬空行——同 §12 口径）。**「补」= 发射在位而 host 缺消费位**（本表现零行）。
 
 ## 变更记录
+
+- 2026-10-07（**添加入口弹窗统一批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-add-dialog-unify.md` §2 · 台账 #1054）：§13 三行随动——`addProvider` 行发送列收正（**页脚「+ Add provider…」发送点退场**：核 footer 的 `post` 由 VSC 桥接为本地面动作零出站；剩 onboarding ∥ 表单两处）+ 备注句（host 无载荷支净删）；`editMcp` ∥ `saveMcpServer` 两行发送列改指新档 `webview/settings-mcp-dialog.js`（表单入弹窗——坐标 **实施后回填**）。**协议判别式集 ∥ 消息名 ∥ 载荷字段 ∥ ④ 处置列零变**（发送列 ∥ 备注）。明细 = 批档 §2。
 - 2026-10-04（**模型切换解锁批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §2 · 台账 #918）：§13 `selectModel` / `selectReasoning` 两行注列收正（忙态门 ⇒ 忙期照写——落盘保护指针）。**消息名 ∥ 载荷字段 ∥ 判值列零变**。明细 = 批档 §2。
 - 2026-10-04（**③ 列机械对账重锚 · 父侧直接执行**——承台账 #845 · 文献清账轮）：§12 表 ③ 列（webview 消费位）**51 格逐行重锚**——`case` 首现锚法（`webview/chat-messages.js` 唯一 `case "名"` 行号实读；提取器已随测试树退场年代的手维对账）；as-of 头注刷新（③ 列 = 2026-10-04 ∥ ② 列 = 2026-09-25〔在册〕）。**协议语义 / 消息名 / 载荷字段 / ④ 处置列零变**；② 列未随扫（在册）。
 - 2026-10-01（**跨端消化面恢复批 · 收尾轮（#27 报备之未及项）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §2 随落笔轮随见 ∥ §3 轮次 4 发现 3 同族）：§12 `subagent` 行 ② 列 `thincoder-vscode/src/extension/suspension.mjs:89/:96` ⇒ **`:91/:97`**；§12 `suspension` 行 ② 列 `thincoder-vscode/src/extension/suspension.mjs:125/:134` ⇒ **`:137/:146`**（两行 = 两发射行实读 · as-of 2026-10-01）。**零新语义**（坐标收正——④ 处置列 ∥ 载荷字段 ∥ 首列判别式集零变）。

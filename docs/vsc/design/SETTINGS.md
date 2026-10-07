@@ -14,8 +14,8 @@
 |---|---|---|
 | **Providers** | provider 行（状态点 / 标签 / 掩码 key / 模型·baseURL / proxy 勾选 / Key / ✕）+ Add 弹窗（弹框形态；字段序 = 名称→baseURL→格式→API Key→走 proxy→拉取→模型〔手输+datalist〕；§2.16） | `thincoder-vscode/webview/settings-providers.js` · `thincoder-vscode/webview/settings-provider-dialog.js` |
 | **Agent** | maxTurns（默认 200）· subagentTurns（默认 100）· compactThreshold（空 = auto）· verifyGuard · autoThink + Subagent models（global + explore/plan/coder/eng-coder，modelMenu 槽位） | `thincoder-vscode/webview/settings-agent.js` |
-| **Consult & Advisor** | 会诊行（modelMenu + effort 档 + ✕、+ 添加）+ Advisor（guard + provider/model + effort） | `thincoder-vscode/webview/settings-agent.js` |
-| **Tools & Services** | MCP servers（列表 + stdio/http/ws 表单（env ∥ headers = 行式键值——§2.4）+ 连接状态 ●/○ + Reconnect）+ Web Search key + Semantic Index（key + Build） | `thincoder-vscode/webview/settings-tools.js`（卡壳 ∥ 键行族 ∥ 索引）+ `thincoder-vscode/webview/settings-mcp.js`（MCP 面——§2.10 拆档产出） |
+| **Consult & Advisor** | 会诊行（modelMenu + effort 档 + ✕）+ **添加弹窗**（`#consult-add-dialog`——provider ∥ model 两字段 + 提交；§2.17 ②）+ Advisor（guard + provider/model + effort） | `thincoder-vscode/webview/settings-agent.js` · `thincoder-vscode/webview/settings-consult-dialog.js` |
+| **Tools & Services** | MCP servers（列表 + **添加/编辑弹窗**（stdio/http/ws 表单；env ∥ headers = 行式键值——§2.4；§2.17 ①）+ 连接状态 ●/○ + Reconnect）+ Web Search key + Semantic Index（key + Build） | `thincoder-vscode/webview/settings-tools.js`（卡壳 ∥ 键行族 ∥ 索引）+ `thincoder-vscode/webview/settings-mcp.js`（MCP 列表面——§2.10 拆档产出）+ `thincoder-vscode/webview/settings-mcp-dialog.js`（MCP 弹窗体——§2.17 ①） |
 | **Environment** | Proxy（URI / web / model 双开关 / Test）+ Shell（平台感知候选） | `thincoder-vscode/webview/settings-env.js` |
 
 ## 2. 面板 ↔ config 契约
@@ -48,10 +48,12 @@
 
 共享 `config.json` 的 `mcp.servers[]`（两产品同格式）；旧 VS Code settings 已一次性迁移。重名拒绝、args 空格分隔。
 
-**env ∥ headers 输入 = 行式键值（MCP 键值行式输入批 · 2026-10-07 · 台账 #1036——两端同形，本端为准）**：表单三组（stdio `env` ∥ http `headers` ∥ ws `headers`）各为**行集**——每行 = 键格 + 值格 + ✕，行集下 `[+ 添加行]`；**零项 ⇒ 零行**（零假造）。
+**env ∥ headers 输入 = 行式键值（MCP 键值行式输入批 · 2026-10-07 · 台账 #1036——两端同形，本端为准）**：表单三组（stdio `env` ∥ http `headers` ∥ ws `headers`）各为**行集**——每行 = 键格 + 值格 + ✕，行集下 `[+ 添加行]`；**零项 ⇒ 零行**（零假造——存量回显 ∥ 新增态起手同判：起手三组皆零行，行由 `[+ 添加行]` 落——加行 = 尾附一空行）。
 提交判据：键 ∥ 值 trim 后**空键行 ∥ 空值行不提交**（空值 = 旧串式 `k=` 删项语义的自然延续）∥ 重复键**后行胜** ∥ 全空 ⇒ 该字段删除（config 键缺席——沿 `src/config-mcp.mjs:28 ∥ :54-56` 判）。
 回显 = 存储对象 `Object.entries` 序；**值 = 字面**（逗号 ∥ 等号 ∥ 引号 ∥ 空格原样——本批即修「值含逗号即坏」）；旧串式的成对引号剥离退场（行式下引号 = 正文字符，非语法记号）。
-粘贴 = **零解析**（不引「按换行分行」等隐式解析——取舍 = 批档 §2 KD-4）；值格 = 单行 `input`（**值内换行不可录入**——边界明示）。落盘形零改（`env` ∥ `headers` 仍为对象；载荷仍 `{name, config}`）；桌面逐元素同形（`docs/desktop/design/SETTINGS.md` §2.17 ∥ §1 KD-76）。
+粘贴 = **零解析**（不引「按换行分行」等隐式解析——取舍 = 批档 §2 KD-4）；值格 = 单行 `input`（**值内换行不可录入**——边界明示）。落盘形零改（`env` ∥ `headers` 仍为对象；载荷仍 `{name, config}`）；桌面逐元素同形（`docs/desktop/design/SETTINGS.md` §2.18 ∥ §1 KD-77）。
+
+**面形（添加入口弹窗统一批 · 2026-10-07 · 台账 #1054）**：表单 = **弹窗形态**（`#mcp-dialog`——五路关 ∥ 开框重置 ∥ 拒因可见；机制 = §2.17 ①）。本节只承存储 ∥ 字段集 ∥ 提交判据（三面零改）；形面 ∥ 关路 ∥ 入出口归 §2.17。
 
 **装配面第二源（2026-09-30 · 台账 #701）**：MCP **装配面**（`thincoder-vscode/src/extension/panel-turn-loop.mjs` ro 载荷——实施落点）另并项目根 `.mcp.json`——单层发现（`join(cwd, ".mcp.json")`）· 零交互信任 · config 同名优先 ∕ 异名追加（机制单源 = `doc:MCP.md:§6.4`）；**管理面**（本节列表 ∕ 增删改 ∕ 重连 ∕ 探活）仍 config 单源（`.mcp.json` 源不进管理列表——沿 CLI `/mcp` 口径）。
 
@@ -319,13 +321,15 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 跨面夹具 = happy-dom 真 webview 点击 → 逐条喂回真宿主分发（先例 `test/settings-empty-no-write.test.mjs:86-90`）+ 临时 config（`_setConfigPathForTest`——**绝不触碰真实 `~/.thincoder/`**）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 结构对账 W17-17（域扩至 **9 档**）仍驻主档 `test/settings-secret-delete-confirm.test.mjs`（结构面单源）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
-**判据域边界（结构对账 W17-17 的扫描域）**：域 = **设置面档**（`thincoder-vscode/webview/settings*.js`——实读 **10 档**——含并行批新档 `settings-provider-dialog.js` + 本批新档 `settings-mcp.js`）∪ **`thincoder-vscode/webview/input.js`**（入口 6 桥——门调用 ∕ OUT 桥双落位）= **11 档**（扫描式 = 正则 `/^settings.*\.js$/` ∪ 显式名单 `input.js`；域外档一律不入集）。
+**判据域边界（结构对账 W17-17 的扫描域）**：域 = **设置面档**（`thincoder-vscode/webview/settings*.js`——实读 **10 档**（含并行批新档 `settings-provider-dialog.js` + MCP 批新档 `settings-mcp.js`）+ **添加入口弹窗统一批两新档**（`settings-mcp-dialog.js` ∥ `settings-consult-dialog.js`——2026-10-07 · 台账 #1054）= **12 档**）
+∪ **`thincoder-vscode/webview/input.js`**（入口 6 桥——门调用 ∥ OUT 桥双落位）= **13 档**（扫描式 = 正则 `/^settings.*\.js$/` ∪ 显式名单 `input.js`；域外档一律不入集）。
 **计数映射（D3 · 6 行 ↔ 5 名）**：入口册 **6 行** ⇒ 判别名 **5 个**（入口 4 = settings 面板 provider 行 − 与入口 6 = 模型菜单 footer **同名 `removeProvider`**）——`removeProvider` 域内发射 **2 处**（`webview/settings-providers.js:68` · 桥 `webview/input.js:33`——OUT 表逐字面；入口 6 闭包创造位 = 核 `model-menu.mjs:304`——域外面）。
 域内删除入口发射 **5 名**（`deleteEmbedKey` · `deleteWebsearchKey` · `deleteProviderKey` · `deleteMcpServer` · `removeProvider`）⇒ **5 名全数过 `_confirmSecretDelete`**（`settings*.js` 五处发射逐处落在门实参内；入口 6 经 hook 桥 `input.js:125` 过门——多载体同名同判）；`_confirmDelete(` 调用点 = **0**（fail-closed：新增直发项 / 未登记入口 ⇒ 红 + 点名）。
 域外：`webview/**` 其余删除入口——`deleteSession`（`webview/session-bar.js:131`——非不可复得类、已有自有确认面 `webview/session-bar.js:102-134`、零改）**不属本判据域**。
 
 **范围限制（三层 · 明示 · 评审 id=116 发现 11 + MCP 批代码评审 🔵4）**：本门的识别面 = ① **命名**（扫描名族 = `delete*` ∪ `remove*` 两个删除语族；`clear*` / `reset*` 等族外名不在识别面 ⇒ 该类入口由动作面用例 / 评审兜底）；
-② **书写**（只认 `type:` 后的**字面量**串——常量 / 变量 / 拼接书写的发射不被识别）；③ **枚举**（域档 = `readdirSync` 平铺 `settings*.js` ∪ 显式名单 `input.js`，非递归 ⇒ 移入子目录即静默缩域——由档数下限断言兜一道；域 **11 档** ⇒ 下限 **≥6**，实现轮按实读定值）。三层之外的新形态入口本门不认（既不静默漏计数，也不越形态）。
+② **书写**（只认 `type:` 后的**字面量**串——常量 / 变量 / 拼接书写的发射不被识别）；③ **枚举**（域档 = `readdirSync` 平铺 `settings*.js` ∪ 显式名单 `input.js`，非递归 ⇒ 移入子目录即静默缩域——由档数下限断言兜一道；域 **13 档** ⇒ 下限 **≥6**，实现轮按实读定值）。三层之外的新形态入口本门不认（既不静默漏计数，也不越形态）。
+**实施后回填面（添加入口弹窗统一批 · 2026-10-07 · 台账 #1054）**：本章入口 5 载体 ∥ 门调用点清单（`webview/settings-mcp.js` 拆档后行号）∥ 域档数——按实施后实读回填。
 
 ### 2.11 Shell 候选拉取异步化（F-W18——推送链有界）
 
@@ -510,6 +514,66 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 
 **⑤ 边界**：行 ∥ 列表侧既有开关零改；运行期代理语义（核）零改；删除确认 ∥ 密钥行 ∥ 其余卡面零改；服务端面零触；#1036（MCP env 串）批外另立。
 
+### 2.17 添加入口弹窗统一（MCP 表单 ∥ 会诊添加 ∥ 模型菜单页脚直开）（2026-10-07 批 · 台账 #1054）
+
+**来源**：用户 2026-10-07 22:01（逐字）「MCP添加服务服务器那个界面不好，我希望添加也在弹窗里实现，再见检查一下，还有没有别的地方添加不在弹窗里的，我希望这个行为统一一下。」；批档 = `docs/batches/2026-10-07-add-dialog-unify.md`（扫面表 = 批档 §1.4）。
+
+**统一判据（本批单源 · 两端同判——判据句）**：**表单类添加 ⇒ 弹窗**（单例 ∥ 五路关：保存（守卫通过才发 + 关）∥ 取消 ∥ 背板 ∥ 框内 Esc ∥ `closeSettings()` 同清 ∥ 开框重置 ∥ 初始焦点 = 首控件）∥ **单字段就地编辑 ⇒ 行内**（键行 Change ∥ provider 行编辑等——本批零动）∥ **首启 ∥ 宿主原生专面 ⇒ 各守其面**（首启板 ∥ 向导 ∥ CLI 交互面——本批零动）。
+本端判入面 = 三改（MCP 添加 ∥ 会诊添加 ∥ 模型菜单页脚「+ Add provider…」⇒ 直开）；判出 = VSC 键行「Change」（单字段就地编辑 ⇒ 保持行内）。
+
+**① MCP 表单 → 弹窗**
+
+- **载体**：新档 `thincoder-vscode/webview/settings-mcp-dialog.js`（表单族自 `settings-mcp.js` 析出——沿 `settings-provider-dialog.js` 先例；`settings-mcp.js` 只留列表 ∥ 探测结果 ∥ 状态）。导出面更名 `openMcpForm` ⇒ `openMcpDialog`（弹窗语义）+ `closeMcpDialog`。
+- **面形（沿 §2.16 ① 全件复用）**：幕 = `.settings-dialog-backdrop`（既有独立类）；卡 = `#mcp-dialog` + `.settings-dialog`（z 999/1000 既有）；体 = `.settings-card-body`；首件 `.settings-subtitle` = 态标题（新增态 `settings.mcp.addTitle` ∥ 编辑态 `settings.mcp.editTitle`——沿 `settings.addProviderTitle` 先例立两键）；
+窗体容器保留既有 `#mcp-form`（id ∥ 字段 id ∥ kv 行集助手 ∥ 三型组零改）；体尾增状态行 `#mcp-status`（`.key-status` 样式复用——零新 CSS；拒因可视面）。
+- **入口（两处）**：① 卡内 `#mcp-add-btn`（词 `settings.mcpAdd` 既有）⇒ `openMcpDialog(null)`；② 行「Edit」⇒ `openMcpDialog({ ...cfg, name })`（既有语义随迁：name 只读 ∥ 预填）。
+- **开（单例 ∥ 开框重置）**：已在框 ⇒ 零动作；否则建两件挂 `document.body`；新增态 = 表单空（type 回首项 ∥ 三组行集零行——「零项 ⇒ 零行」同判（起手零行，行由「添加行」落）∥ `#mcp-status` 清）；编辑态 = 预填 + name 只读；初始焦点 = `#mcp-name`（新增）∥ `#mcp-type`（编辑）（+50ms）。
+- **关（五路同效）**：保存（守卫通过才发 + 关）∥「取消」∥ 背板 ∥ 框内 Esc（`stopPropagation`——不连带触 `webview/chat.js` 关面板分支）∥ `closeSettings()` 同清（`webview/settings.js` 关面板径增调 `closeMcpDialog()`——与 `closeAddProviderDialog()` ∥ `closeConfirmPopover()` 同拍）。
+- **拒因可见（#1031 同判）**：name 空 ⇒ 零发 ∥ 不关框 ∥ 在编值保留 ∥ `#mcp-status` 显 `settings.mcp.nameRequired`（新键）；command ∥ url 判据零改（两端有意分家——已档）。
+- **在飞果与框的关系（明写）**：本框**无在飞果入框路径**（探测 ∥ 重连结果皆落列表行面——`updateMcpTools` ∥ `updateMcpTestResult`）⇒ **代际弃果不适用**（与添加弹窗有拉取探果不同，不设 epoch）。
+- **跨框互清收正（本批同笔 · 机制修复）**：`settings-provider-dialog.js` 关径现按 `.settings-dialog*` **类全扫**（`closeAddProviderDialog()` 现 `:200-204`——第二弹窗入场即互清）⇒ 收窄为**各弹窗只清自身两件**（模块持引定点清）；`closeSettings()` = 三清（provider ∥ mcp ∥ consult 同拍）。
+
+**② 会诊添加 → 弹窗**
+
+- **载体**：新档 `thincoder-vscode/webview/settings-consult-dialog.js`（`#consult-add` 出口改开框；行追加 ∥ 保存径 = 既有 `consult-rows-changed` ⇒ 零新协议）。
+- **面形**：幕复用；卡 = `#consult-add-dialog`（`.settings-dialog`）；首件 `.settings-subtitle` = `settings.consultAddTitle`（新键）；两字段 = provider ∥ model（显示值——`.key-field` 标签 + 值 span；词 = `settings.consultProvider`（新键 · 值同桌面）+ `settings.model`（既有））；
+**模型选择件 = 现有浮层复用**（`openModelMenu`——点选回填两字段；`closeConsultDialog` 同清浮层）；提交 = `settings.consultAdd`（既有键）∥ 取消 = `settings.cancel`（既有）。
+- **层序前提（浮层与弹窗同屏——本面）**：模型浮层 = 核件 `thincoder-render-core/composer/model-menu.mjs`（`.mm-overlay` z **1000** ∥ `.mm-panel` **1001** ∥ `.mm-flyout` **1002**——`thincoder-render-core/composer/model-menu.css:11 ∥ :13 ∥ :31`；overlay 挂 `document.body` 尾——`:145`）。
+弹窗 = 幕 **999** ∥ 卡 **1000**（`webview/settings.css:292 ∥ :301`；两件挂 `document.body`——`settings-provider-dialog.js:178`，两新框同径）。
+**同层（1000）以挂载序破平——后开者在上**：浮层由弹窗内点按开启（晚于弹窗挂载）⇒ 恒在弹窗之上；`mm-panel` ∥ `mm-flyout`（1001 ∥ 1002）直接高于卡；`closeConsultDialog` 同清浮层 ⇒ 关框零残留。
+- **上限 5 判据保留**：入口钮在 `.consult-row` 数 ≥ 5 时 `disabled`（对齐桌面「行未满才可用」）；提交守卫同判据（不齐 ∥ 满 ⇒ 零发送）。
+- **关（五路同效）**：提交（通过才追加 + 关）∥ 取消 ∥ 背板 ∥ 框内 Esc ∥ `closeSettings()` 同清（`closeConsultDialog()`）。
+- **提交径**：追加完整行（provider + model，effort 空）进 `#consult-rows` ⇒ 派 `consult-rows-changed`（既有保存链）⇒ 关框；**无在飞果 ∥ 无代际面**（选型浮层 = 同步选择）。
+
+**③ 模型菜单页脚「+ Add provider…」⇒ 直开（本端零宿主往返）**
+
+- **落法**：`webview/input.js`（OUT 表 `addProvider` 条——现 `:32`）由「出站消息」改**本地面动作**（`window._openAddProviderDialog()`——**裸调用 ∥ 不取防御式回退**：门由 `initSettings`（`webview/settings.js:39`）安装、同文档 ⇒ 点击前必已安装；缺门响亮失败——沿 §2.10 纪律）——与桌面「post 映射 = 本地面」对称（桌面 `composer-wire` 同拍改）；
+`removeProvider` ∥ `setKey` 两条仍走既有出站（确认门 ∥ 消息）。
+- **宿主净删**：`handleAddProvider`（`src/extension/panel-messages-settings.mjs`）**无载荷 else 支**（QuickPick 增流程）随本批退场——残留分支 = 畸形载荷 ⇒ `console.error` 零动作（fail-loud）；`provider-flows.mjs` 的 `addProviderFlow` 包装（现 `:33`）**净删**（唯一调用点即该支；核流程 ∥ CLI 交互面零动——CLI 仍走核 `addProviderFlow`，判据「宿主原生专面各守其面」）。
+- **协议面**：`WEBVIEW-PROTOCOL.md` §13 `addProvider` 行发送列收正（页脚发送点退场 ⇒ 剩 onboarding ∥ 表单两处；host 消费位分支收正）。
+
+**判据 / 机检面（本批）**：批内件 `docs/batches/2026-10-07-add-dialog-unify.test.mjs`（拟新增——腿集：五路关 ∥ 开框重置 ∥ 单例 ∥ 拒因可见（name 空 ⇒ 零发 ∥ 不关框 ∥ 在编值保留）∥ 跨框互清（各弹窗只清自身两件）∥ 页脚零出站（`addProvider` = 本地面动作——零 `postMessage`）∥ 词面五新键两语）；真机 = 人工走查（MCP 新增 ∥ 编辑两态：五路关 ∥ 开框重置 ∥ 拒径不关框 ∥ 提交成功后列表随动；会诊：入口满 5 禁用 ∥ 提交成功关框；页脚直开）。
+
+**受影响文件（本批 · 现行 ⇒ 预估 · 内容行数口径；实施后回填）**：
+
+| # | 文件 | 现行 ⇒ 预估 | 面 |
+|---|---|---|---|
+| 1 | `thincoder-vscode/webview/settings-mcp-dialog.js`（新档） | **0 ⇒ ≈125** | MCP 弹窗体（表单族析出） |
+| 2 | `thincoder-vscode/webview/settings-consult-dialog.js`（新档） | **0 ⇒ ≈95** | 会诊弹窗体 |
+| 3 | `thincoder-vscode/webview/settings-mcp.js` | **273 ⇒ ≈185** | MCP 列表面（表单族析出——拆档实读 273，§3） |
+| 4 | `thincoder-vscode/webview/settings-provider-dialog.js` | **282 ⇒ ≈280** | 添加弹窗体（跨框互清收窄为自身两件） |
+| 5 | `thincoder-vscode/webview/settings.js` | **195 ⇒ ≈200** | 面板壳（关面板增调两新清） |
+| 6 | `thincoder-vscode/webview/settings-models.js` | **217 ⇒ ≈205** | 会诊入口改开框 ∥ 行追加口出让 |
+| 7 | `thincoder-vscode/webview/input.js` | **125 ⇒ ≈125** | OUT 表 1 条改体（`addProvider` ⇒ 本地面动作） |
+| 8 | `thincoder-vscode/src/extension/panel-messages-settings.mjs` | **236 ⇒ ≈225** | 宿主消息面（无载荷支净删） |
+| 9 | `thincoder-vscode/src/extension/provider-flows.mjs` | **38 ⇒ ≈36** | 宿主流程壳（`addProviderFlow` 包装净删） |
+| 10 | `thincoder-vscode/locales/en.json ∥ zh.json` | **293 ⇒ ≈298**（+5 键 × 两语） | 词面 |
+| 11 | `thincoder-vscode/webview/settings.css` | **412 ⇒ ±0** | 样式（零新 CSS——类全复用） |
+
+**跨 300 面**：`settings.css` **412**（>300 在册——本批 `±0` ⇒ 拆分窗口顺延；单源 = §3 样式档行）；其余各档皆 <300（`settings-provider-dialog.js` 282 ∥ `settings-mcp.js` 273——本批收缩）。零触面 = 核 ∥ CLI ∥ 桌面（另面同批自改——本端零触）。
+
+**④ 边界**：MCP 字段集 ∥ 型组 ∥ kv 行式机制 ∥ 探测/重连语义零改；会诊行渲染 ∥ effort 档 ∥ advisor 面零改；键行就地编辑保持行内；首启板 ∥ 向导 ∥ CLI 交互面零动；桌面另面（`docs/desktop/design/SETTINGS.md` §2.18 ∥ §1 KD-77）。
+
 ## 3. 已知待办与已知限制
 
 - **运行时当次展开缺口**（§2.6）：磁盘原文保留 `~` 的配置在面板 / `settings` 工具写面不展开——登记在案（与对端同姿态）。
@@ -560,7 +624,8 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   `webview/mode-buttons.js:3-4`（「These mirror config.json fields」——engineering / advisor 两钮语境已失实）。
   台账 #378 在册集 = `docs/core/design/TOOLS.md:82` / `:123` + 注释三处（③ 前三项）；① 与 ③ 的 `mode-buttons.js` 项为本轮新增实读。
   消解路径 = 各档下次被触碰逐处收正（设计档笔 = eng-designer；注释 / 产品文本 = 产品代码面）；到期条件 = 各档下次被触碰 / 父侧另册归形小批。
-- **`thincoder-vscode/webview/settings.css` 越 300 行建议线（拆分复核）**（结构面 · §2.15 载体档）：该档现 **412** 行（内容行数口径 · 三端对齐批届盘复读 2026-10-07——本批 +27；09-29 届记 385（+6：#640 段标样式一条）；**三端对齐批（2026-10-07）触碰 = 新增 `.settings-dialog` ∥ `.settings-dialog-backdrop` 段（**385 ⇒ 412**——实施后实读 2026-10-07）——非结构性（单组件样式段；不改三段组界 ∕ 不增职责）⇒ 消解窗口顺延**）——**复核结论 = 本批不拆**（本批增量 = 段标 span 单条样式，不改结构 ∕ 不增职责）。
+- **`thincoder-vscode/webview/settings.css` 越 300 行建议线（拆分复核）**（结构面 · §2.15 载体档）：该档现 **412** 行（内容行数口径 · 三端对齐批届盘复读 2026-10-07——本批 +27；09-29 届记 385（+6：#640 段标样式一条）；
+**三端对齐批（2026-10-07）触碰 = 新增 `.settings-dialog` ∥ `.settings-dialog-backdrop` 段（**385 ⇒ 412**——实施后实读 2026-10-07）——非结构性（单组件样式段；不改三段组界 ∕ 不增职责）⇒ 消解窗口顺延**）——**复核结论 = 本批不拆**（本批增量 = 段标 span 单条样式，不改结构 ∕ 不增职责）。
   拆分计划 = 触发阈值 **450 行** 或 **设置面样式族下次结构改动**（先到即拆）；
   组边界（三段 · 按现分节注释）= ① 面板骨架 + 通用件（面板框 ∕ 卡框 ∕ 字段 ∕ 按钮 ∕ 开关）② 卡面样式族（providers ∕ MCP ∕ consult ∕ agent 徽标 ∕ model-menu）③ first-run 面板段。
   到期条件 = 触发阈值到达时 ∕ 设置面样式族下次结构改动时。
@@ -609,8 +674,13 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 | U-S15 | 添加表单（弹窗）自定形 model = **手输文本框 + 拉取候选 datalist**（探通填候选、不自动选中；探败零清键入）；**不拉取亦可保存**（model 空 ⇒ 词 `settings.modelRequired`）；「选择模型…」无可用候选 ⇒ 行内提示（`#defaultmodel-hint`，词 `settings.pickModelEmpty`） | 已定（§2.16——#1031 ∥ #1032） |
 | U-S16 | provider 配置面词面：实体名 = **「API Key」**（zh 保留英文形；裸「密钥」退场——#1035，两端 i18n 词值改写）；卡面残余硬编码串入表（`settings.noDefaultModel` ∥ `settings.defaultModelTitle` ∥ `settings.providerHostBusy` ∥ `settings.providerUnavailable`——#1033） | 已定（§2.16） |
 | U-S17 | MCP 表单 env ∥ headers = **行式键值编辑器**（每行键格 + 值格 + ✕；行集下 `[+ 添加行]`；零项零行）；粘贴零解析；值 = 字面（零引号剥离）；提交四判据（空行丢 ∥ 重复后胜 ∥ 全空删字段 ∥ trim） | 已定（§2.4——MCP 键值行式输入批 · #1036；桌面逐元素同形 = `docs/desktop/design/SETTINGS.md` §1 **KD-76**） |
+| U-S18 | **添加入口统一判据（本批）**：表单类添加 ⇒ **弹窗**（单例 ∥ 五路关：保存（守卫通过才发 + 关）∥ 取消 ∥ 背板 ∥ 框内 Esc ∥ `closeSettings()` 同清 ∥ 开框重置 ∥ 初始焦点 = 首控件）；单字段就地编辑 ⇒ **行内**；首启 ∥ 宿主原生专面 ⇒ 各守其面。本端落形 = MCP 弹窗 ∥ 会诊弹窗 ∥ 页脚「+ Add provider…」直开（零宿主往返）；MCP name 空 ⇒ 拒因可见（`settings.mcp.nameRequired`） | 已定（§2.17——添加入口弹窗统一批 · #1054；桌面同判 = `docs/desktop/design/SETTINGS.md` §1 **KD-77**） |
 
 ## 变更记录
+
+- 2026-10-07（**添加入口弹窗统一批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-add-dialog-unify.md` §2 · 台账 #1054）：新增 **§2.17**（添加入口统一判据 + VSC 三面：MCP 表单 ⇒ 弹窗 ∥ 会诊添加 ⇒ 弹窗 ∥ 模型菜单页脚 ⇒ 直开）；**§1** 两卡行随动（Tools & Services MCP 弹窗体 ∥ Consult & Advisor 添加弹窗 + 两新档登记）；**§2.4** 增面形指针；**§2.10** 判据域边界档数 10 ⇒ 12 ∥ 合域 11 ⇒ 13 + 实施后回填面句；**§5** +U-S18。**零新语义**（定形 + 落点；明细 = 批档 §2）。
+
+- 2026-10-07（**添加入口弹窗统一批 · 设计评审轮 1 修正（fix 轮 · 发现 2 ∥ 3 ∥ 5 ∥ 8 ∥ 9 逐号 · 父侧裁 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-07-add-dialog-unify.md` §3 轮次 1 ∥ §1.6 · 台账 #1054）：§2.17 补 **判据 / 机检面**（批内件 `docs/batches/2026-10-07-add-dialog-unify.test.mjs`——六腿：五路关 ∥ 开框重置 ∥ 单例 ∥ 拒因可见 ∥ 跨框互清 ∥ 页脚零出站）+ **受影响文件表**（十一行——现行 ⇒ 预估；现行读值按实读收正四处：`settings-provider-dialog.js` **282** ∥ `input.js` **125** ∥ `panel-messages-settings.mjs` **236** ∥ `provider-flows.mjs` **38**——批档 §2 原读 +1 差随正；`settings.css` 412 >300 在册随注）∥ ② 补**层序前提**（浮层 1000/1001/1002 与弹窗 999/1000——同层挂载序破平「后开者在上」）∥ ③ 页脚 `?.` ⇒ **裸调用**（`window._openAddProviderDialog()`——§2.10 纪律；缺门响亮失败）∥ ① 开框重置行收正（三组行集**零行**——「零项 ⇒ 零行」同判；原「各一空行」与两端实现 ∥ KV 批实读不符）∥ §2.4 补行集规则边界（存量回显 ∥ 新增态起手同判）。**产品码零触（fix 轮）· 零新语义**（计数 ∥ 措辞 ∥ 注 ∥ 边界面只）。明细 = 批档 §2 修正块。
 
 - 2026-10-07（**三端对齐批 · 收口轮设计随动（末笔）· eng-designer**——承批档 `docs/batches/2026-10-07-provider-config-parity.md` §5.16（收口轮 #14 落形）∥ §2 追记⑩）：§2.16 ①「关（五路同效）」保存支收正——**保存 = 守卫通过才发 + 关**；本地守卫拒 ⇒ 零发 ∥ 不关框 ∥ 在编值保留（落点 = `settings-provider-dialog.js:158-159` ∥ `:226-256`；残余 = 宿主后置拒仍走「发后关」旧径——无保存回执可相关，在册 #1053）∥ ① 补**保存徽标句**（受理径才闪——`flashSaved` 既有词/样式复用）∥ ④ 守卫集补载（baseURL 空 ⇒ `settings.providerUrlRequired` ∥ model 空 ⇒ `settings.modelRequired`）。**零新语义**（落形收正）。明细 = 批档 §2 追记⑩。
 
