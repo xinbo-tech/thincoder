@@ -78,7 +78,7 @@
 | `task` | 任务分解追踪，进度显示，自动过滤已完成项 |
 | `plan` | Plan Mode：只读探索 + 设计，用户批准后实施 |
 | `goal` | 长期目标追踪，预算进度与预警 |
-| `subagent` | 子代理族——动作含 `spawn` / `status` / `observe` / `send` / `escalate` / `cancel` / `panel` / `consume-design`；角色 = explore（只读搜索）/ plan（只读设计）/ coder（实现）/ eng-coder（工程实现，需设计令牌）/ eng-designer（设计写作） |
+| `subagent` | 子代理族——动作含 `spawn` / `status` / `observe` / `send` / `escalate` / `cancel` / `panel` / `consume-design` / `design-slots`；角色 = explore（只读搜索）/ plan（只读设计）/ coder（实现）/ eng-coder（工程实现，需设计令牌）/ eng-designer（设计写作） |
 | `verify` | 见 §2.2 |
 | `timer` | 思考时间预算，超时提醒去动手 |
 | `advisor` | 独立设计 / 代码评审（只读子代理） |
@@ -214,3 +214,4 @@
   对账执行明细 = `docs/core/design/DOC-CODE-RECONCILE.md` §5.1；层 0 判据句 = `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.20。
 
 - 2026-10-05（**引擎工具面缺口批 · 需求侧同步 · 主 agent**）：§2.1 `delete` 行补「或空目录（非空拒绝，不递归）」。来源 = 批 `docs/batches/2026-10-05-engine-tools-gaps.md` §2（delete 空目录臂设计）；台账 #943。
+- 2026-10-07（**批 ledger-tool · 需求侧同步 · 主 agent 笔**——承批档上抛②）：§2.7 `subagent` 行动作清单补 `design-slots`（槽位清点只读——与 `consume-design` 并列）。批档 = `docs/batches/2026-10-07-ledger-tool.md`（台账 #998 / #927）。

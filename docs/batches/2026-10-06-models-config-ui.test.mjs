@@ -6,11 +6,11 @@
  *
  * 射程（判据源 = `webui/WEBUI.md` §6 AC-17 ∥ AC-17（续）行 + 本批档 §2；腿 ↔ 轴对照在括号）：
  *   ② A 热生效（内存库——真网关）：PATCH `models` 减项 ⇒ `/v1/models` 随动 + 派发 404（退役项仍开放）
- *   ④ C 热生效（真网关——限流器注时钟）：PATCH `settings`（全对象线形）⇒ 超限 ⇒ 429 `rate_limited` +
+ *   ④ C 热生效（真网关——限流器注时钟）：PATCH `settings`（全对象线形——含 `quotaTokens`）⇒ 超限 ⇒ 429 `rate_limited` +
  *      `Retry-After`（不转发）∥ 注时钟滚窗 ⇒ 放行 ∥ 非法 ⇒ 400 库与读面零变 ∥ 部分字段保存/单字段清空读回
- *   ⑦ 弹窗面（桩 DOM）：详情四行 + 配置四组（A/C/D/E）∥ 嵌入行注（四组不落该行）∥ 未知模型 ⇒「未收录」 ∥
+ *   ⑦ 弹窗面（桩 DOM）：详情四行 + 配置五组（A/C/F/D/E）∥ 嵌入行注（五组不落该行）∥ 未知模型 ⇒「未收录」 ∥
  *      保存 = PATCH `settings` 单键全对象（弹窗留驻 + flash ∥ 部分字段保存 ⇒ 重开草稿同源 ∥ 单字段清空 = 显式 `null` ∥
- *      非法 ⇒ 就地提示不提交）∥ 停用流（confirm ⇒ PATCH `models` 减项 ⇒ 关窗 + 行离列 + flash ∥ confirm 拒 ⇒ 零请求 ∥
+ *      非法 ⇒ 就地提示不提交——含 F 组 `ruleNonNegativeInt`）∥ 停用流（confirm ⇒ PATCH `models` 减项 ⇒ 关窗 + 行离列 + flash ∥ confirm 拒 ⇒ 零请求 ∥
  *      零上游探针）∥ 空态（`admin.models.empty`）∥ 与 Provider 页协同（单源 `models`——停用后其只读注不含）
  */
 import test from "node:test"
@@ -257,21 +257,27 @@ test("④ C 热生效：PATCH `settings` ⇒ 超限 ⇒ 429 `rate_limited` + `Re
     const id = created.json.id
     const patch = (settings) => call(app.base, "PATCH", `/api/admin/providers/${id}`, { cookie, body: { settings } })
     const settingsOf = async () => (await call(app.base, "GET", "/api/admin/providers", { cookie })).json.providers[0].settings
-    const full = { rpm: 1, tpm: null, costIn: 0.5, costOut: 0.25, note: "keep" }
+    const full = { rpm: 1, tpm: null, costIn: 0.5, costOut: 0.25, note: "keep", quotaTokens: 500 }
     // 线形：键 = 上游模型名 ∥ 值 = 全字段对象；GET 读回全子字段在册
     assert.equal((await patch({ m1: full })).status, 200)
     assert.deepEqual(await settingsOf(), { m1: full })
     // 部分字段编辑 = 全对象提交 ⇒ 其余字段保留；单字段清空 = 显式 null ⇒ 不误伤
     assert.equal((await patch({ m1: { ...full, tpm: 100 } })).status, 200)
-    assert.deepEqual((await settingsOf()).m1, { rpm: 1, tpm: 100, costIn: 0.5, costOut: 0.25, note: "keep" })
+    assert.deepEqual((await settingsOf()).m1, { rpm: 1, tpm: 100, costIn: 0.5, costOut: 0.25, note: "keep", quotaTokens: 500 })
     assert.equal((await patch({ m1: { ...full, tpm: null } })).status, 200)
-    assert.deepEqual((await settingsOf()).m1, { rpm: 1, tpm: null, costIn: 0.5, costOut: 0.25, note: "keep" }, "单字段清空 = 显式 null（其余不误伤）")
+    assert.deepEqual((await settingsOf()).m1, { rpm: 1, tpm: null, costIn: 0.5, costOut: 0.25, note: "keep", quotaTokens: 500 }, "单字段清空 = 显式 null（其余不误伤）")
     // 非法 ⇒ 400 `invalid_request_error` ∥ 库与读面零变
-    for (const bad of [{ ...full, rpm: 0 }, { ...full, rpm: 1.5 }, { ...full, costIn: -1 }, { ...full, note: "x".repeat(201) }, { ...full, bogus: 1 }]) {
+    for (const bad of [{ ...full, rpm: 0 }, { ...full, rpm: 1.5 }, { ...full, costIn: -1 }, { ...full, quotaTokens: -1 }, { ...full, quotaTokens: 1.5 }, { ...full, note: "x".repeat(201) }, { ...full, bogus: 1 }]) {
       const denied = await patch({ m1: bad })
       assert.deepEqual([denied.status, denied.json.error.code], [400, "invalid_request_error"], JSON.stringify(bad))
     }
-    assert.deepEqual((await settingsOf()).m1, { rpm: 1, tpm: null, costIn: 0.5, costOut: 0.25, note: "keep" }, "400 ⇒ 库与读面零变")
+    assert.deepEqual((await settingsOf()).m1, { rpm: 1, tpm: null, costIn: 0.5, costOut: 0.25, note: "keep", quotaTokens: 500 }, "400 ⇒ 库与读面零变")
+    // 配额平台层默认（`quotaTokens`——AC-21①）：改值即读回 ∥ 清空 = 显式 null ∥ 非法 400（上块已含）
+    assert.equal((await patch({ m1: { ...full, quotaTokens: 2000 } })).status, 200)
+    assert.equal((await settingsOf()).m1.quotaTokens, 2000, "quotaTokens 保存即读回（热生效）")
+    assert.equal((await patch({ m1: { ...full, quotaTokens: null } })).status, 200)
+    assert.equal((await settingsOf()).m1.quotaTokens, null, "quotaTokens 清空 = 显式 null")
+    assert.equal((await patch({ m1: full })).status, 200) // 归位（后续腿读回 full）
     // 热生效：第 1 请求 200（通过 ⇒ 计次）∥ 第 2 请求超限 ⇒ 429 + `Retry-After`
     const first = await chat(app.base, { teamKey: key, body: { model: "p2/m1", messages: [] } })
     assert.equal(first.status, 200)
@@ -292,9 +298,9 @@ test("④ C 热生效：PATCH `settings` ⇒ 超限 ⇒ 429 `rate_limited` + `Re
   }
 })
 
-// ── ⑦ 弹窗面（桩 DOM——详情 ∥ 配置四组 ∥ 保存流 ∥ 停用流 ∥ 空态 ∥ 协同）────
+// ── ⑦ 弹窗面（桩 DOM——详情 ∥ 配置五组 ∥ 保存流 ∥ 停用流 ∥ 空态 ∥ 协同）────
 
-test("⑦a 弹窗：详情四行 + 配置四组（A/C/D/E）∥ 嵌入行注（四组不落该行）∥ 未知模型 ⇒「未收录」", () => {
+test("⑦a 弹窗：详情四行 + 配置五组（A/C/F/D/E）∥ 嵌入行注（五组不落该行）∥ 未知模型 ⇒「未收录」", () => {
   globalThis.document = createDocument()
   try {
     const { ctx } = makeCtx({})
@@ -305,6 +311,7 @@ test("⑦a 弹窗：详情四行 + 配置四组（A/C/D/E）∥ 嵌入行注（�
     for (const piece of ["deepseek/deepseek-flash", ZH["admin.models.colProvider"], "deepseek", ZH["admin.models.upstream"], ZH["admin.models.colSurface"],
       ZH["admin.models.configTitle"], ZH["admin.models.status"], ZH["admin.models.open"], ZH["admin.models.disable"], ZH["admin.models.disableHint"],
       ZH["admin.models.rateTitle"], ZH["admin.models.rpm"], ZH["admin.models.tpm"], ZH["admin.models.rateHint"],
+      ZH["admin.models.quotaTitle"], ZH["admin.members.colMonthlyQuota"], ZH["admin.models.quotaHint"],
       ZH["admin.models.metaTitle"], ZH["admin.models.context"], ZH["admin.models.maxOutput"], ZH["admin.models.multimodal"], ZH["admin.models.metaHint"],
       ZH["admin.models.note"], ZH["admin.models.weightTitle"], ZH["admin.models.costIn"], ZH["admin.models.costOut"],
       ZH["admin.models.weightHint"], ZH["admin.models.weightNote"], ZH["common.save"], ZH["common.cancel"]]) {
@@ -314,12 +321,13 @@ test("⑦a 弹窗：详情四行 + 配置四组（A/C/D/E）∥ 嵌入行注（�
     // D 组：已知模型 ⇒ 快照三值（上下文 ∥ 最大输出 ∥ 多模态）
     for (const shown of ["1000000", "384000", "✓"]) assert.ok(text.includes(shown), `元数据行缺：${shown}`)
     assert.equal(findAll(modal.root, (node) => node.textContent === ZH["admin.models.notCollected"]).length, 0, "已知模型零「未收录」")
-    // 输入面 = rpm/tpm/costIn/costOut + 说明（5 枚）；文本型（非 number——非法态可判，不被浏览器吞成空）
+    // 输入面 = rpm/tpm/costIn/costOut/quotaTokens + 说明（6 枚）；文本型（非 number——非法态可判，不被浏览器吞成空）
     const inputs = inputsOf(modal.root)
-    assert.deepEqual(inputs.map((node) => node.value), ["", "", "", "", ""])
-    assert.deepEqual(inputs.map((node) => node.attrs.type ?? "text"), ["text", "text", "text", "text", "text"])
+    assert.deepEqual(inputs.map((node) => node.value), ["", "", "", "", "", ""])
+    assert.deepEqual(inputs.map((node) => node.attrs.type ?? "text"), ["text", "text", "text", "text", "text", "text"])
     assert.equal(fieldInput(modal.root, ZH["admin.models.note"]).attrs.maxlength, "200", "说明 ≤200 字符（与 HTML maxlength 同口径）")
-    assert.deepEqual([fieldInput(modal.root, ZH["admin.models.rpm"]) !== null, fieldInput(modal.root, ZH["admin.models.costOut"]) !== null], [true, true])
+    assert.deepEqual([fieldInput(modal.root, ZH["admin.models.rpm"]) !== null, fieldInput(modal.root, ZH["admin.models.costOut"]) !== null,
+      fieldInput(modal.root, ZH["admin.members.colMonthlyQuota"]) !== null], [true, true, true], "F 组输入（quotaTokens）在册")
     modal.close()
     // 未知模型 ⇒ 「未收录」×3（不套兜底值）
     const unknownRow = { id: "p/whatever", provider: "p", upstream: "whatever", surface: "chat" }
@@ -332,7 +340,7 @@ test("⑦a 弹窗：详情四行 + 配置四组（A/C/D/E）∥ 嵌入行注（�
     const embedText = textOf(embed.root)
     assert.ok(embedText.includes(ZH["admin.models.embedNote"]))
     assert.equal(embedText.includes("—"), true, "上游模型名 = 「—」（引擎行无常量段）")
-    for (const absent of [ZH["admin.models.status"], ZH["admin.models.rateTitle"], ZH["admin.models.metaTitle"], ZH["admin.models.weightTitle"], ZH["common.save"]]) {
+    for (const absent of [ZH["admin.models.status"], ZH["admin.models.rateTitle"], ZH["admin.models.quotaTitle"], ZH["admin.models.metaTitle"], ZH["admin.models.weightTitle"], ZH["common.save"]]) {
       assert.equal(embedText.includes(absent), false, `嵌入行不得含：${absent}`)
     }
     assert.deepEqual([inputsOf(embed.root).length, embed.root.children.length], [0, 2], "零输入 ∥ 零脚区（头 + 体）")
@@ -342,16 +350,17 @@ test("⑦a 弹窗：详情四行 + 配置四组（A/C/D/E）∥ 嵌入行注（�
   }
 })
 
-test("⑦b 保存流：PATCH `settings` 单键全对象（留驻 + flash）∥ 部分字段保存 ⇒ 重开草稿同源 ∥ 单字段清空 = 显式 null ∥ 非法 ⇒ 就地提示不提交", async () => {
+test("⑦b 保存流：PATCH `settings` 单键全对象（留驻 + flash）∥ 部分字段保存 ⇒ 重开草稿同源 ∥ 单字段清空 = 显式 null ∥ 非法（含 F 组）⇒ 就地提示不提交", async () => {
   globalThis.document = createDocument()
   try {
-    const entry = { id: 3, name: "p", models: ["m1"], settings: { m1: { rpm: 5, tpm: 100, costIn: 0.25, costOut: null, note: "hi" } } }
+    const entry = { id: 3, name: "p", models: ["m1"], settings: { m1: { rpm: 5, tpm: 100, costIn: 0.25, costOut: null, note: "hi", quotaTokens: 200 } } }
     const { ctx, calls } = makeCtx({ "PATCH /api/admin/providers/3": () => ({ ok: true, id: 3 }) })
     const row = { id: "p/m1", provider: "p", upstream: "m1", surface: "chat" }
     const modal = MODELS.openModelModal(ctx, { row, entry, reload: async () => {} })
-    // 草稿初值 = GET 行 settings 该键值（全部子字段在册）
+    // 草稿初值 = GET 行 settings 该键值（全部子字段在册——含 F 组 quotaTokens）
     const field = (label) => fieldInput(modal.root, label)
-    assert.deepEqual([field(ZH["admin.models.rpm"]).value, field(ZH["admin.models.tpm"]).value, field(ZH["admin.models.costIn"]).value, field(ZH["admin.models.costOut"]).value, field(ZH["admin.models.note"]).value], ["5", "100", "0.25", "", "hi"])
+    assert.deepEqual([field(ZH["admin.models.rpm"]).value, field(ZH["admin.models.tpm"]).value, field(ZH["admin.models.costIn"]).value, field(ZH["admin.models.costOut"]).value,
+      field(ZH["admin.members.colMonthlyQuota"]).value, field(ZH["admin.models.note"]).value], ["5", "100", "0.25", "", "200", "hi"])
     // 非法 ⇒ 就地提示不提交（零 PATCH）
     field(ZH["admin.models.rpm"]).value = "0"
     await byText(modal.root, ZH["common.save"]).fire("click")
@@ -359,23 +368,31 @@ test("⑦b 保存流：PATCH `settings` 单键全对象（留驻 + flash）∥ �
     const hints = findAll(modal.root, (node) => node.className === "hint error" && node.hidden === false)
     assert.equal(hints.length, 1)
     assert.equal(hints[0].textContent, fill(ZH["admin.models.invalidNumber"], { field: ZH["admin.models.rpm"], rule: ZH["admin.models.rulePositive"] }))
-    // 修正 ⇒ 保存 = 全对象（其余字段保留 ∥ 空字段显式 null）
+    // F 组非法（quotaTokens 非 ≥0 整数——ruleNonNegativeInt）⇒ 就地提示不提交
     field(ZH["admin.models.rpm"]).value = "7"
+    field(ZH["admin.members.colMonthlyQuota"]).value = "1.5"
+    await byText(modal.root, ZH["common.save"]).fire("click")
+    assert.equal(calls.filter(([kind]) => kind === "PATCH").length, 0, "F 组非法 ⇒ 不提交")
+    assert.equal(findAll(modal.root, (node) => node.className === "hint error" && node.hidden === false)[0].textContent,
+      fill(ZH["admin.models.invalidNumber"], { field: ZH["admin.members.colMonthlyQuota"], rule: ZH["admin.models.ruleNonNegativeInt"] }))
+    // 修正 ⇒ 保存 = 全对象（其余字段保留 ∥ 空字段/未设显式 null——含 quotaTokens）
+    field(ZH["admin.members.colMonthlyQuota"]).value = "200"
     await byText(modal.root, ZH["common.save"]).fire("click")
     assert.deepEqual(calls.filter(([kind]) => kind === "PATCH").at(-1),
-      ["PATCH", "/api/admin/providers/3", { settings: { m1: { rpm: 7, tpm: 100, costIn: 0.25, costOut: null, note: "hi" } } }])
+      ["PATCH", "/api/admin/providers/3", { settings: { m1: { rpm: 7, tpm: 100, costIn: 0.25, costOut: null, note: "hi", quotaTokens: 200 } } }])
     assert.ok(calls.some(([kind, value]) => kind === "flash" && value === ZH["admin.models.saved"]), "flash 已保存")
     assert.deepEqual([modal.root.open, modal.root.parent !== null], [true, true], "保存 ⇒ 弹窗留驻")
     // 重开草稿同源：部分字段保存 ⇒ 其余字段在（不丢）
     modal.close()
     const modal2 = MODELS.openModelModal(ctx, { row, entry, reload: async () => {} })
     const field2 = (label) => fieldInput(modal2.root, label)
-    assert.deepEqual([field2(ZH["admin.models.rpm"]).value, field2(ZH["admin.models.tpm"]).value, field2(ZH["admin.models.costIn"]).value, field2(ZH["admin.models.note"]).value], ["7", "100", "0.25", "hi"], "重开 = 全字段仍在")
+    assert.deepEqual([field2(ZH["admin.models.rpm"]).value, field2(ZH["admin.models.tpm"]).value, field2(ZH["admin.models.costIn"]).value,
+      field2(ZH["admin.members.colMonthlyQuota"]).value, field2(ZH["admin.models.note"]).value], ["7", "100", "0.25", "200", "hi"], "重开 = 全字段仍在")
     // 单字段清空 = 显式 null（其余不误伤）
     field2(ZH["admin.models.tpm"]).value = ""
     await byText(modal2.root, ZH["common.save"]).fire("click")
     assert.deepEqual(calls.filter(([kind]) => kind === "PATCH").at(-1),
-      ["PATCH", "/api/admin/providers/3", { settings: { m1: { rpm: 7, tpm: null, costIn: 0.25, costOut: null, note: "hi" } } }])
+      ["PATCH", "/api/admin/providers/3", { settings: { m1: { rpm: 7, tpm: null, costIn: 0.25, costOut: null, note: "hi", quotaTokens: 200 } } }])
     modal2.close()
     // 取消 = 弃稿（零请求——开新草稿 ≠ 已保存值）
     const modal3 = MODELS.openModelModal(ctx, { row, entry, reload: async () => {} })

@@ -42,7 +42,7 @@
 | OFF→ON | **不重评**——上次评审 token 继续有效（TTL 内） |
 | 重启 / 恢复 | **TTL 过滤**——过期不读回内存（丢弃，下次 save 自然清字段）；有效跨重启存活 |
 | 开工程模式 | 清**过期** token（有效保留）——`eng` enter 真转换路径（`thincoder-core/agent-tools/eng.mjs:92`）· `/eng` ON 路径（`thincoder-cli/src/tui/cmd-eng.mjs:69`） |
-| spawn 门禁 | 过期拒 + **顺手删该 designId 槽**（`thincoder-core/agent-tools/subagent-spawn.mjs:277`——**仅过期拒删**；mismatch / 格式拒**不删**） |
+| spawn 门禁 | 过期拒 + **顺手删该 designId 槽**（`thincoder-core/agent-tools/subagent-spawn.mjs:237`——**仅过期拒删**；mismatch / 格式拒**不删**） |
 | 会话切换（`/new`） | 清 token（`resetSessionState`）——会话切换不是模式切换 |
 | TTL | 7 天默认（可配），fail-closed 不变 |
 
@@ -169,7 +169,7 @@ The verdict line is checked mechanically: without a `VERDICT: pass` line, or wit
 | 开模式清过期（TUI 面） | `thincoder-cli/src/tui/cmd-eng.mjs:69` | 在位 |
 | 恢复过滤 | `thincoder-core/session-lifecycle.mjs:123`–`:124` | 在位 |
 | `/new` 清 token | `thincoder-core/session-lifecycle.mjs:303`–`:304` | 在位 |
-| 门禁过期拒删槽 | `thincoder-core/agent-tools/subagent-spawn.mjs:277` | 在位 |
+| 门禁过期拒删槽 | `thincoder-core/agent-tools/subagent-spawn.mjs:237` | 在位 |
 | 槽清理原语 | `thincoder-core/token-ttl.mjs:65`（`removeDesignTokenSlot`）· `:90`（`purgeExpiredDesignTokens`） | 在位 |
 | TUI OFF 不清 token | `thincoder-cli/src/tui/cmd-eng.mjs`（OFF 路径） | 在位 |
 
@@ -190,7 +190,7 @@ R16 语义（跨模式存活 + 三清时机 + 单一权威）**已全部落地**
 | 过期判定 + validate + 回显匹配 | 核 `thincoder-core/agent-tools/design-token.mjs:55`（`validateDesignToken`——fail-closed）· `:61`（`makeDesignTokenRegex`——转义整 token 回显匹配） |
 | 恢复过滤（逐槽 TTL 校验） | 端壳 hydrate：`thincoder-vscode/src/agent/agent-state.mjs:57-75`（`reconcileEngDesignTokens`——逐槽 TTL 校验、过期丢弃、内存项保留）· `:70-71`（legacy 单值一次性迁移读） |
 | 开工程模式清过期 | **W9 已迁核**——现体 = 核 `thincoder-core/agent-tools/eng.mjs:92`（`purgeExpiredDesignTokens`——仅删过期、有效保留）；原端侧 `eng.mjs:20/:74/:79` 已删 |
-| spawn 门禁族 | **W12/W13 已迁核**——现体 = 核 `thincoder-core/agent-tools/subagent-spawn.mjs:100`（`resolveDesignSlot`——精确槽 / 单槽 / 多槽拒；内存 miss 回读槽）· `:277`（仅过期拒才删槽——`removeDesignTokenSlot`）· `:140`（`executeConsumeDesignAction`——链终消费 + 落盘对称）；原端侧 `subagent-spawn-gate.mjs:70/:101/:124/:145` 已删 （迁移期引文） |
+| spawn 门禁族 | **W12/W13 已迁核**——现体 = 核 `thincoder-core/agent-tools/subagent-spawn.mjs:100`（`resolveDesignSlot`——精确槽 / 单槽 / 多槽拒；内存 miss 回读槽）· `:237`（仅过期拒才删槽——`removeDesignTokenSlot`）· `thincoder-core/agent-tools/design-slots.mjs:110`（`executeConsumeDesignAction`——链终消费 + 落盘对称）；原端侧 `subagent-spawn-gate.mjs:70/:101/:124/:145` 已删 （迁移期引文） |
 | 内存运行态 + 回合尾落盘 | 端壳 `thincoder-vscode/src/agent/setup.mjs:53`（`_engDesignTokens` 惰性 Map——每 run 重建 agent 后水合）· `:191`（`setSlotEngDesignTokens` 回合尾 flush） |
 | 多槽持久化原语 | `setSlotEngDesignTokens` = 端侧定义（`thincoder-vscode/src/extension/session-slot-write.mjs`）；`mergeEngTokensForSave` = 端侧转口 re-export（别名 `engTokensMergeForSave`）→ 核 `thincoder-core/session-slot-write.mjs` 定义；原 `thincoder-vscode/src/extension/session-io.mjs:43` re-export 行随 W11 重排 |
 
@@ -273,6 +273,8 @@ token 门与冻结窗口判据复用 v1 现有导出（`anyLiveDesignSlot` / `in
 **本批（会话锚解析修复（多档并存支持） · 2026-10-02）落点表** = `docs/batches/2026-10-02-manifest-resolution-fix.md` §2（唯一承载面——一次性批次材料）。
 **本批（design-token 回显链修复 · 2026-10-03）落点表** = `docs/batches/2026-10-03-design-token-echo.md` §2（唯一承载面——一次性批次材料）。
 **本批（评审闸缺口 · 2026-10-05）落点表** = `docs/batches/2026-10-05-review-gate-gaps.md` §2（唯一承载面——一次性批次材料；#940 自 engine-face-gaps 批转出——L7 二度拆分产物）。
+
+- 2026-10-07（**批 ledger-tool · 收口前指针重锚轮 · eng-designer**——父裁修正：消费核迁出随迁）：门禁过期拒删槽坐标 `:277` ⇒ `:237`（§4 ∥ §6.1 ∥ §6.3 三处——删段在前所致漂移）；§6.3 消费核 `:140` ⇒ `thincoder-core/agent-tools/design-slots.mjs:110`。**零语义改**。
 
 - 2026-10-05（**批 review-gate-gaps · 收口随动末笔〔#37 上抛三项〕· eng-designer**——父裁：本轮内结清）：引用形收正〔明细 = 批档 §2.13〕——§9 两处（`resolveReviewRootsFor` 引用 → 判定本体 = `thincoder-core/agent-tools/review-facts.mjs` + write-gate 同名再出口；advisor.mjs 消费点 → `resolveReviewDocPaths`）∥ §6.3 恢复过滤边界 `:56-72` → `:57-75` ∥ §6.3 多槽原语行按符号拆分（`setSlotEngDesignTokens` 端侧定义 ∥ `mergeEngTokensForSave` 端侧转口 + 核定义）。**纯引用形收正，零语义改**。
 - 2026-10-05（**批 review-gate-gaps · 收口随动轮〔#35 披露①〕· eng-designer**——父裁：属本轮随动面，落）：坐标收正〔明细 = 批档 §2.12〕——−2 族八处（§3 ∥ §5.1 ∥ §6.1）+ 复扫扩面（§6.3 五处同族 ∥ §4/§6.1 的 eng·cmd-eng·spawn ∥ §6.1 session 面迁 `session-lifecycle.mjs` ∥ §6.3 符号名面 `tokenExpiryMs`）。**纯坐标随动，零语义改**。

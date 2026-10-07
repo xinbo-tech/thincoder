@@ -122,10 +122,10 @@ const writeConfig = (dir, config) => { const file = join(dir, "config.json"); wr
 function seedUsage(db, alice, bob, aKey, bKey) {
   const today = USAGE.localDayStart(Date.now(), 0)
   const yesterday = USAGE.localDayStart(Date.now(), -1)
-  USAGE.recordUsage(db, { ts: today + 1000, memberId: alice.id, keyId: aKey, endpoint: "chat", model: "prov/a", status: "ok", promptTokens: 60, completionTokens: 40, totalTokens: 100, durationMs: 120 })
-  USAGE.recordUsage(db, { ts: today + 2000, memberId: alice.id, keyId: aKey, endpoint: "embeddings", model: "bge-m3", status: "ok", promptTokens: 20, completionTokens: 0, totalTokens: 20, durationMs: 50 })
-  USAGE.recordUsage(db, { ts: today + 3000, memberId: bob.id, keyId: bKey, endpoint: "chat", model: "prov/a", status: "error", durationMs: 30 })
-  USAGE.recordUsage(db, { ts: yesterday + 1000, memberId: alice.id, keyId: aKey, endpoint: "chat", model: 'prov/b, "x"', status: "ok", promptTokens: 120, completionTokens: 80, totalTokens: 200, durationMs: 80 })
+  USAGE.recordUsage(db, { ts: today + 1000, memberId: alice.id, keyId: aKey, endpoint: "chat", provider: "prov", model: "a", status: "ok", promptTokens: 60, completionTokens: 40, totalTokens: 100, durationMs: 120 })
+  USAGE.recordUsage(db, { ts: today + 2000, memberId: alice.id, keyId: aKey, endpoint: "embeddings", provider: "", model: "bge-m3", status: "ok", promptTokens: 20, completionTokens: 0, totalTokens: 20, durationMs: 50 })
+  USAGE.recordUsage(db, { ts: today + 3000, memberId: bob.id, keyId: bKey, endpoint: "chat", provider: "prov", model: "a", status: "error", durationMs: 30 })
+  USAGE.recordUsage(db, { ts: yesterday + 1000, memberId: alice.id, keyId: aKey, endpoint: "chat", provider: "prov", model: 'b, "x"', status: "ok", promptTokens: 120, completionTokens: 80, totalTokens: 200, durationMs: 80 })
 }
 
 /** 明细归并（同源断言用——降序 = tokens DESC ∥ 名称 ASC；`null` token 计 0；`key` = 输出键名）。 */
@@ -149,7 +149,7 @@ test("① store：空库直落 4 ∥ v2 旧库自动升 ∥ 幂等 ∥ audit_eve
   try {
     // 空库直落（六索引——含 v3 三索引）∥ 九型 CHECK 全可插 + 枚举外拒
     const fresh = DB.openDatabase(":memory:")
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [4, 4])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [5, 5])
     const indexes = fresh.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").all().map((row) => row.name)
     for (const index of ["idx_audit_ts", "idx_audit_type_ts", "idx_usage_key_ts"]) assert.ok(indexes.includes(index), index)
     assert.equal(indexes.length, 6)
@@ -170,9 +170,9 @@ test("① store：空库直落 4 ∥ v2 旧库自动升 ∥ 幂等 ∥ audit_eve
     legacy.exec("INSERT INTO members (username, name, password_hash, created_at) VALUES ('old', 'old', 'scrypt$fixture', '2026-10-06')")
     legacy.close()
     const upgraded = DB.openDatabase(file)
-    assert.equal(DB.readVersion(upgraded), 4)
+    assert.equal(DB.readVersion(upgraded), 5)
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE name = 'audit_events'").get())
-    assert.deepEqual([upgraded.prepare("SELECT COUNT(*) AS n FROM members").get().n, DB.migrate(upgraded)], [1, 4])
+    assert.deepEqual([upgraded.prepare("SELECT COUNT(*) AS n FROM members").get().n, DB.migrate(upgraded)], [1, 5])
     assert.equal(upgraded.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").get().n, 6)
     upgraded.close()
   } finally {
@@ -373,7 +373,7 @@ test("④ 总览：数值形（与报表同源）∥ 空集零 ∥ 判权三态"
 test("⑤ 向量面：真值零密钥 ∥ 试跑成功 + 四 kind ∥ 不落库不计量 ∥ /api/system 两角色 ∥ /v1/models 同源", async () => {
   const db = DB.openDatabase(":memory:")
   await makeMember(db, "admin", "admin")
-  db.prepare("UPDATE members SET quota_tokens = 0 WHERE username = 'admin'").run() // 配额零涉（试跑面不经配额准入）
+  db.prepare("UPDATE members SET model_quotas_json = ? WHERE username = 'admin'").run(JSON.stringify({ "any/model": 0 })) // 配额零涉（试跑面不经配额准入）
   const alice = await makeMember(db, "alice")
   const teamKey = KEYS.issueKey(db, alice.id)
   const config = configWith({ baseURL: "http://engine.test/v1", model: "bge-m3", apiKey: ENGINE_KEY })

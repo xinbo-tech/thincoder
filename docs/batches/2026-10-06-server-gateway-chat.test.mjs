@@ -37,10 +37,10 @@ function configWith(baseURL, models = ["mock-chat"]) {
   })
 }
 
-function seedMember(db, { username = "alice", quotaTokens = null } = {}) {
+function seedMember(db, { username = "alice", modelQuotas = {} } = {}) {
   const info = db
-    .prepare("INSERT INTO members (username, name, password_hash, quota_tokens, created_at) VALUES (?, ?, 'scrypt$fixture', ?, ?)")
-    .run(username, username, quotaTokens, new Date().toISOString())
+    .prepare("INSERT INTO members (username, name, password_hash, model_quotas_json, created_at) VALUES (?, ?, 'scrypt$fixture', ?, ?)")
+    .run(username, username, JSON.stringify(modelQuotas), new Date().toISOString())
   return Number(info.lastInsertRowid)
 }
 
@@ -238,7 +238,7 @@ test("N1：流式两帧间隔（非整段缓冲）∥ 注入 ∥ 真 key 代持 
     assert.equal(row.status, "ok")
     assert.equal(row.endpoint, "chat")
     assert.equal(row.stream, 1)
-    assert.equal(row.model, "mock/mock-chat") // 记账 model = 对外标识（provider/model 前缀形）
+    assert.deepEqual([row.provider, row.model], ["mock", "mock-chat"]) // 拆列两字段（回拼 = 对外标识 mock/mock-chat）
     assert.deepEqual([row.member_id, row.key_id], [memberId, key.id])
     assert.deepEqual([row.prompt_tokens, row.completion_tokens, row.total_tokens], [3, 4, 7]) // AC-3 逐值
   } finally {
@@ -458,7 +458,7 @@ test("AC-1 ∥ 准入门：/v1/models 三态（无 ∥ 非 Bearer ∥ 坏 ∥ �
   })
   const db = DB.openDatabase(":memory:")
   const app = await startGateway({ db, config: configWith(`${mock.base}/v1`) })
-  const memberId = seedMember(db, { quotaTokens: 5 })
+  const memberId = seedMember(db, { modelQuotas: { "mock/mock-chat": 5 } })
   const valid = KEYS.issueKey(db, memberId)
   const revoked = KEYS.issueKey(db, memberId)
   KEYS.revokeKey(db, revoked.id)
@@ -481,13 +481,13 @@ test("AC-1 ∥ 准入门：/v1/models 三态（无 ∥ 非 Bearer ∥ 坏 ∥ �
     assert.equal(denied.status, 401)
     assert.equal(denied.json.error.code, "invalid_api_key")
     assert.equal(mock.requests.length, 0)
-    USAGE.recordUsage(db, { memberId, keyId: valid.id, endpoint: "chat", model: "mock/mock-chat", status: "ok", totalTokens: 5 })
+    USAGE.recordUsage(db, { memberId, keyId: valid.id, endpoint: "chat", provider: "mock", model: "mock-chat", status: "ok", totalTokens: 5 })
     const exceeded = await chatJson(app.base, { key: valid.plain, body: { model: "mock/mock-chat", messages: [] } })
-    assert.equal(exceeded.status, 429) // [3] 准入拒绝（已用 ≥ 额度）
+    assert.equal(exceeded.status, 429) // [4.5] 准入拒绝（派发命中后/转发前——已用 ≥ 额度）
     assert.equal(exceeded.json.error.code, "quota_exceeded")
     assert.match(exceeded.json.error.message, /已用 5 \/ 额度 5/) // 可读提示（AC-4 ∥ E2 面）
     assert.equal(mock.requests.length, 0)
-    db.prepare("UPDATE members SET quota_tokens = 50 WHERE id = ?").run(memberId)
+    db.prepare("UPDATE members SET model_quotas_json = ? WHERE id = ?").run(JSON.stringify({ "mock/mock-chat": 50 }), memberId) // 覆盖整值替换（改行即改——热生效）
     const allowed = await chatJson(app.base, { key: valid.plain, body: { model: "mock/mock-chat", messages: [] } })
     assert.equal(allowed.status, 200) // 额内放行（逐请求查库——改额度即生效）
     assert.equal(mock.requests.length, 1)

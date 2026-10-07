@@ -8,9 +8,9 @@
 
 - 单库单连接（`DatabaseSync`）；PRAGMA：WAL ∥ `synchronous=NORMAL` ∥ `busy_timeout=5000` ∥ `foreign_keys=ON`。
 - 库文件默认 = `thincoder-server/data/gateway.db`（运行期生成，不入 git）。
-- 结构版本 = `PRAGMA user_version`（当前 = 4——v2 增 `providers` ∥ v3 增 `audit_events` 与三索引 ∥ v4 增 `providers.settings_json`（模型设置——服务模型配置面）；未发布期连续演进，无历史库迁移包袱——旧库启动自动升；迁移链机制自 v1 起备）。
+- 结构版本 = `PRAGMA user_version`（当前 = 5——v2 增 `providers` ∥ v3 增 `audit_events` 与三索引 ∥ v4 增 `providers.settings_json`（模型设置——服务模型配置面） ∥ v5 增模型标识两字段拆列 + 派生两表 + 成员配额列（详见 §2 v5 段）；未发布期连续演进，无历史库迁移包袱——旧库启动自动升；迁移链机制自 v1 起备）。
 
-## 2. DDL（v1 基线四表 + v2–v4 增段）
+## 2. DDL（v1 基线四表 + v2–v5 增段）
 
 ### v1 基线（四表——逐字）
 
@@ -106,11 +106,65 @@ CREATE INDEX IF NOT EXISTS idx_usage_key_ts ON usage(key_id, ts);
 ALTER TABLE providers ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}';  -- 模型设置映射（JSON 对象——形见下）
 ```
 
-- 形 = `{ "<上游模型名>": { rpm ∥ tpm（正整数 ∥ null） ∥ costIn ∥ costOut（≥0 数 ∥ null） ∥ note（≤200 字 ∥ null） } }`——`null`/缺省 = 未设；键 = 上游模型名（与 `models` 同空间；不在 `models` 的键合法——设置随名保留，停用不丢）。
+- 形 = `{ "<上游模型名>": { rpm ∥ tpm（正整数 ∥ null） ∥ costIn ∥ costOut（≥0 数 ∥ null） ∥ note（≤200 字 ∥ null） ∥ quotaTokens（≥0 整数 ∥ null——每人每月默认用量；v5 批新增） } }`——`null`/缺省 = 未设；键 = 上游模型名（与 `models` 同空间；不在 `models` 的键合法——设置随名保留，停用不丢）。
 - 写面 = PATCH `/api/admin/providers/:id` 的 `settings` 键级合并（`gateway/API.md` §2.2）；校验单源 = `thincoder-server/src/ops/config.mjs`（`validateProviderEntry`/`validateProviderEntries` 扩 settings——未知子字段 ∥ 非法值 ⇒ 400/拒启）；装配载入缺省 = `{}`（配置种子零 settings 字段——控制台单一面）。
-- 消费 = 限流（`gateway/ratelimit.mjs`（拟新增）——KD-SV-35）读 `rpm`/`tpm`；`costIn`/`costOut`/`note` = 展示面（`webui/WEBUI.md` §2.4③）。
+- 消费 = 限流（`gateway/ratelimit.mjs`——KD-SV-35）读 `rpm`/`tpm`；`costIn`/`costOut`/`note` = 展示面（`webui/WEBUI.md` §2.4③）；`quotaTokens` = 配额平台层默认值（`metering/METERING.md` §2——三级之一，KD-SV-38）。
 
-- 表归属：`members` ∥ `api_keys` ∥ `sessions` ∥ `audit_events` = accounts 域（`accounts/ACCOUNTS.md`）；`usage` = metering 域（`metering/METERING.md`）；`providers` = gateway 域（provider 管理面 ∥ v4 模型设置——`gateway/API.md` §2.2）；结构单源 = 本档。
+### v5 增段（模型标识两字段拆列 + 派生两表 + 成员配额列——metering ∥ accounts 域；配额分模型批）
+
+```sql
+-- ① usage 两字段拆列（KD-SV-40）：对外标识 `provider/model` 无损回拼（首斜杠切分同派发面；`model` 可含斜杠）；嵌入行 `provider = ''`（无前缀命名空间）
+ALTER TABLE usage ADD COLUMN provider TEXT NOT NULL DEFAULT '';
+UPDATE usage SET provider = substr(model, 1, instr(model, '/') - 1), model = substr(model, instr(model, '/') + 1)
+  WHERE endpoint = 'chat' AND instr(model, '/') > 0;
+
+-- ② 预聚合日表（汇表面读源——KD-SV-39；粒度 = 日 × 成员 × key × provider × model × endpoint）
+CREATE TABLE IF NOT EXISTS usage_daily (
+  day               TEXT NOT NULL,              -- 'YYYY-MM-DD'（服务器本地日界——与 trend strftime 同形）
+  member_id         INTEGER NOT NULL,
+  key_id            INTEGER NOT NULL,
+  provider          TEXT NOT NULL,              -- '' = 无 provider 维（嵌入面）
+  model             TEXT NOT NULL,
+  endpoint          TEXT NOT NULL CHECK (endpoint IN ('chat','embeddings')),
+  requests          INTEGER NOT NULL DEFAULT 0, -- 请求数（含 error ∥ aborted）
+  prompt_tokens     INTEGER NOT NULL DEFAULT 0,
+  completion_tokens INTEGER NOT NULL DEFAULT 0,
+  total_tokens      INTEGER NOT NULL DEFAULT 0, -- NULL 计 0（口径同 SUM 聚合）
+  duration_ms       INTEGER NOT NULL DEFAULT 0,
+  errors            INTEGER NOT NULL DEFAULT 0, -- status = 'error' 计数
+  PRIMARY KEY (day, member_id, key_id, provider, model, endpoint)
+);
+
+-- ③ 配额计数表（检查面点查源——KD-SV-38；粒度 = 成员 × provider × 模型 × 自然月）
+CREATE TABLE IF NOT EXISTS quota_counters (
+  member_id INTEGER NOT NULL,
+  provider  TEXT NOT NULL,               -- 检查只读 chat 键（provider 非空）∥ 嵌入行照计不读
+  model     TEXT NOT NULL,
+  month     TEXT NOT NULL,               -- 'YYYY-MM'（服务器本地时区）
+  tokens    INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (member_id, provider, model, month)
+);
+
+-- ④ 成员分模型覆盖列 + 旧总量列退役（被 ①② 取代）
+ALTER TABLE members ADD COLUMN model_quotas_json TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE members DROP COLUMN quota_tokens;
+
+-- ⑤ 期初回填（一次性聚合——usage = 真源；两表与真源逐值可重算）
+INSERT INTO usage_daily (day, member_id, key_id, provider, model, endpoint, requests, prompt_tokens, completion_tokens, total_tokens, duration_ms, errors)
+SELECT strftime('%Y-%m-%d', ts / 1000, 'unixepoch', 'localtime') AS day, member_id, key_id, provider, model, endpoint,
+       COUNT(*), COALESCE(SUM(prompt_tokens), 0), COALESCE(SUM(completion_tokens), 0), COALESCE(SUM(total_tokens), 0),
+       COALESCE(SUM(duration_ms), 0), COALESCE(SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END), 0)
+FROM usage GROUP BY day, member_id, key_id, provider, model, endpoint;
+INSERT INTO quota_counters (member_id, provider, model, month, tokens)
+SELECT member_id, provider, model, strftime('%Y-%m', ts / 1000, 'unixepoch', 'localtime') AS month, COALESCE(SUM(total_tokens), 0)
+FROM usage GROUP BY member_id, provider, model, month;
+```
+
+- `provider` 约定（usage ∥ usage_daily ∥ quota_counters 三表同构）：chat 行 = provider 名（无 `/`）；嵌入行 = `''`（无 provider 维——回拼 = `model` 单段）。
+- 两派生表 = **可重算**（`usage reconcile`——`metering/METERING.md` §2）；**不设 FK**（派生面自足——沿 `audit_events` 无 FK 口径；成员删除本无路径）；唯一键即查形（日表 = `day` 前缀日窗扫描；计数表 = 四列点查 O(1)——`EXPLAIN` 预期 `SEARCH … USING INDEX sqlite_autoindex_… (…)`）。
+- 保留/清理 = 与 usage **同窗同清**（`metering/METERING.md` §1——三表同事务删除）。
+
+- 表归属：`members` ∥ `api_keys` ∥ `sessions` ∥ `audit_events` = accounts 域（`accounts/ACCOUNTS.md`）；`usage` ∥ `usage_daily` ∥ `quota_counters` = metering 域（`metering/METERING.md`）；`providers` = gateway 域（provider 管理面 ∥ v4 模型设置——`gateway/API.md` §2.2）；结构单源 = 本档。
 
 ## 3. 迁移链（`user_version` 逐版升）
 
@@ -121,18 +175,21 @@ ALTER TABLE providers ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}';  -- �
 - v3 = 审计增段（`audit_events` 表 + 三索引——`accounts/ACCOUNTS.md` §2.1 ∥ key 明细索引）；旧库（v1/v2）启动自动升 ∥ 空库直落 v3；判据（批内件）= 空库结构版本读数 3 ∥ v2 库升后读数 3 ∥ 迁移链幂等（再开零变）。
 - v4 = 模型设置增列（`providers.settings_json`——服务模型配置面）：**列级 ALTER = 表不重建**（SQLite `ADD COLUMN` 常量默认——存量行即刻得 `'{}'`）；旧库（v1–v3）启动自动升 ∥ 空库直落 v4；判据（批内件）= 空库读数 4 ∥ v3 库升后读数 4 ∥ v4 段幂等（再开零变）。
 - first-release-completeness 批（2026-10-06）：**零结构变更**（保留窗清理 = 删除式 ∥ 登录防护计数 = 进程内存——均无新表；结构版本不变）。
+- v5 = 两字段拆列 + 派生两表 + 成员配额列（**配额分模型批**——需求 §2:21 ∥ §2:22 ∥ 台账 #990/#991/#992）：五步见 §2 v5 段（拆列 ∥ 建 `usage_daily`/`quota_counters` ∥ 成员列增删 ∥ 期初回填）。
+  判据（批内件）= 空库读数 5 ∥ v4 库升后读数 5 ∥ v5 段幂等（再开零变）∥ 拆列抽样逐值（含 `model` 带斜杠 ∥ 嵌入行 `provider = ''`）∥ 回填两表逐值 = usage 重算 ∥ 旧列不在 `pragma_table_info('members')`；耗时（一次性 @500k 行——同构探针实读）= 日表回填 ≈1.2s ∥ 计数回填 ≈3.4s（合计 ≈5s 级）。
 
 ## 4. 本域文件与行数预算（本域族行）
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/store/db.mjs`（已落盘） | **124 ⇒ ≈160 ⇒ 144**（实读——v3 落地后）**⇒ ≈155**（服务模型配置面批 +≈11 = v4 段（ALTER + 迁移段）） | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
+| `thincoder-server/src/store/db.mjs`（已落盘） | **124 ⇒ ≈160 ⇒ 144**（实读——v3 落地后）**⇒ ≈155**（服务模型配置面批 +≈11 = v4 段（ALTER + 迁移段））**⇒ 实读 150 ⇒ ≈205**（本批 +≈55 = v5 段：拆列 ALTER/UPDATE ∥ 建两表 ∥ 两回填 INSERT ∥ 成员列增删） | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
 
 ## 5. 关键决策（本域）
 
 | # | 决策 | 理由 | 被否候选与何故否 |
 |---|---|---|---|
 | KD-SV-3 | **存储 = `node:sqlite`（`DatabaseSync`）**——WAL ∥ `user_version` 结构版本 | 需求候选 + 仓内先例（核 `thincoder-core/ledger-db.mjs:18` 同技术）；零依赖 ∥ 单文件 ∥ SQL 聚合天然贴合看板/配额 | JSON 文件（并发/查询弱、无原子写）· 外部 DB（违零依赖 ∥ 运维重）· 内存（重启即失——违计量本意） |
+| KD-SV-40 | **v5 迁移 = 模型标识两字段（`provider` ∥ `model`）+ 派生两表 + 旧列删除**：拆列判据 = `endpoint = 'chat'`（嵌入行 `provider = ''`——无前缀命名空间）；派生两表 = 可重算（对账兜底）+ 不设 FK；旧 `members.quota_tokens` **删列**（`DROP COLUMN`——`node:sqlite`（SQLite 3.53.4）实核可）不弃用：总量 ≠ 分模型无保义映射（不转换 ⇒ 列删）；`ADD COLUMN` 常量默认 = 表不重建 | 用户 09:38 直令（「应该分两个字段，将来统计的时候需要按provider」——需求 §2:22）；迁移窗口 = 配额分模型批同窗（§2:22③）；弃用列留残 = 双源混乱 ∥ 转换 = 语义放大（总量复制到每模型）；派生面同事务维护（`metering/METERING.md` §1） | 转换旧值到每模型覆盖（无保义——总量 ≠ 分模型）· 保留旧列只读弃用（死列 ∥ 归拼口径分裂）· 拆列按全行 `instr > 0`（嵌入名可含斜杠 ⇒ 误拆——故以 `endpoint` 为判据）· 派生表异步回填（两写路径 = 漂移面） |
 
 ## 6. 本域边界（不做的面）
 
@@ -147,3 +204,4 @@ ALTER TABLE providers ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}';  -- �
 - 2026-10-06：实施后回填轮（R14——批 `docs/batches/2026-10-06-console-providers.md`）：§4 行数按实读收正（db **124**）。
 - 2026-10-06：控制台可见面二轮设计轮（批 `docs/batches/2026-10-06-console-completeness-2.md`——需求 §2:15 ∥ 台账 #972）——§1 结构版本 2 ⇒ 3 ∥ §2 增 v3 增段（`audit_events` + `idx_audit_ts`/`idx_audit_type_ts`/`idx_usage_key_ts`）∥ 表归属补 accounts 行 ∥ §3 迁移链补 v3 段 ∥ §4 预算（db 124 ⇒ ≈160）；同源随动 = `accounts/ACCOUNTS.md` §2.1 ∥ `metering/METERING.md` §3。
 - 2026-10-06：服务模型配置面设计轮（批 `docs/batches/2026-10-06-models-config.md`——需求 §2:17 ∥ 台账 #981）——§1 结构版本 3 ⇒ 4 ∥ §2 增 v4 增段（`ALTER TABLE providers ADD COLUMN settings_json`——形/写面/校验/消费）∥ 表归属 providers 行补 v4 ∥ §3 迁移链补 v4 段（表不重建 ∥ 判据）∥ §4 预算（db ⇒ ≈155；v4 段 +≈11）；同源随动 = `gateway/API.md` §2.2 ∥ `webui/WEBUI.md` §2.4③。
+- 2026-10-07：配额分模型批设计轮（批 `docs/batches/2026-10-07-quota-per-model.md`——需求 §2:21 ∥ §2:22 ∥ 台账 #990/#991/#992）——§1 结构版本 4 ⇒ 5 ∥ §2 增 v5 增段（usage 两字段拆列 ∥ `usage_daily` ∥ `quota_counters` ∥ members 增 `model_quotas_json`/删 `quota_tokens` ∥ 期初回填——全 DDL 逐字）∥ v4 段 settings 形补 `quotaTokens`（消费补配额句）∥ 表归属补 metering 两表 ∥ §3 迁移链补 v5 段（判据 + 一次性耗时读数）∥ §4 预算（db 150 ⇒ ≈205）∥ §5 增 KD-SV-40；同源随动 = `metering/METERING.md` §1/§2 ∥ `gateway/API.md` §2.2。

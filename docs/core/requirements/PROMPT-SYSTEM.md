@@ -155,7 +155,7 @@ discipline-normal.md 内容大纲（每节管什么）：
 | 会诊 Consult | 判断题第二意见——consult_start 并行只读 |
 | 飞刀 Escalate | 写权限交给更强模型——早点 escalate 不烧失败 |
 
-**附属纪律（已落提示词正本——本档不复制，D2）**：spawn 排队纪律、需求池攒批工作流（六条）——机制权威 = `docs/core/design/LEDGER.md`（v2 台账）。
+**附属纪律（已落提示词正本——本档不复制，D2）**：spawn 排队纪律、需求池攒批工作流（五条）——机制权威 = `docs/core/design/LEDGER.md`（v2 台账）。
 
 > 2026-09-21 修正（**tool-discipline 批 · 主 agent 落笔**——承 `docs/batches/2026-09-21-tool-discipline.md` · 台账 #214 · 机制 = `docs/core/requirements/TOOLS.md` F10）：**`task` 工具工程模式机械停用**（装配摘除 + 调用拒）后，提示词面三处撞点仍「指挥已停用工具」= 自相矛盾态 ⇒ 收正：
 > ① `discipline-engineering.md` 铁律 3「工作靠任务清单跟踪」→ 工程模式分支（追踪面 = 批次档 §2 + 台账）；② 同档需求完成判据句「任务清单是需求验收的标志」→ 批次档 §2 条目表 + 台账行；③ `persona-engineering.md` 欠账句「立即写进任务清单」→ 批次档 §6 未决（或台账行）。散文纪律句本体不删（机判 + 文案改指双轨）。（折两行 = 父侧直接执行 · 行宽收正 · 零语义 · 可 revert · 2026-09-22 hygiene 批）
@@ -283,4 +283,5 @@ discipline-normal.md 内容大纲（每节管什么）：
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 1 行折行（92 续折——语义零改）。**零新语义**。
 - 2026-10-06（**#956 三层结构常识 · 主 agent 落笔**——用户 08:14/08:16/08:18 令）：§2.3 公共层大纲 **新增第 15 节「工作结构常识（板 → 域 → 档）」**（why 段（并行写冲突因果）+ 判域口径 + 四条规矩；**讲道理式**——用户 08:18 定）+ 计数 14 → 15（标题 + 表行，D3）；同批：§2.4 纪律层「按域分界」同族条收窄为「细则」（去重 2 留 3——公共层已承载，D2）；设计面 = `docs/core/design/PROMPT-SYSTEM.md` §6.16 ∥ D-PS22/23；CN 正本已落（`common.md` §15 ∥ `discipline-engineering.md:101-105`）；EN 运行期 = 实施轮（译本稿 = 批档 §2.4）。批 = `docs/batches/2026-10-06-prompt-three-layer.md`（台账 #956）。
 - 2026-10-07（**用户视角门批 · 主 agent 落笔**——承批 `docs/batches/2026-10-07-prompt-user-view.md` · 台账 #987；用户 08:42「可以」+ 09:05 全链授权）：§2.4 discipline-normal 内容大纲**补「用户视角门（界面/交互面）」行**（U1——D3 随动）；四档落笔 = 实施轮（CN 正本 ×2 + EN 运行面 ×2——逐字 7/7 ×4 ∥ 机检 0 命中）；设计面 = `docs/core/design/PROMPT-SYSTEM.md` §6.18 ∥ §10.2 行 7/行 8 复算 **17/17** ∥ **21/21**（U2）。
+- 2026-10-07（**计数随正 · 主 agent 落笔**〔父侧直接执行 · 可 revert〕——承 #996 设计轮观察 U2）：`:158`「需求池攒批工作流（**六条**）」⇒「（**五条**）」（现盘攒批主列 = 5 条（入池路由 ∥ 达阈值提醒 ∥ 快车道 ∥ 批设计 ∥ 边界）——旧档六条枚举遗留（旧枚举在 `thincoder-cli/docs/_archive/requirements/PROMPT-SYSTEM.md:119-124`）；`docs/core/design/prompts/persona-engineering.md` 台账节实读）；同族观察 = 存量死指针三处入账（台账 **#1000**——随文档清账轮重锚）。
 

@@ -144,9 +144,9 @@ test("同名模型跨两 provider 并存且各自可达 ∥ 上游 model = 余�
     assert.equal(mockA.requests[0].headers.authorization, "Bearer sk-a")
     assert.equal(mockB.requests[0].headers.authorization, "Bearer sk-b")
 
-    // 记账 = 对外标识（同名可分）
+    // 记账 = 拆列两字段（回拼 = 对外标识；同名可分）
     await waitFor(() => db.prepare("SELECT COUNT(*) AS n FROM usage").get().n === 2)
-    assert.deepEqual(db.prepare("SELECT model FROM usage ORDER BY id").all().map((r) => r.model), ["up-a/shared-model", "up-b/shared-model"])
+    assert.deepEqual(db.prepare("SELECT provider, model FROM usage ORDER BY id").all().map((r) => [r.provider, r.model]), [["up-a", "shared-model"], ["up-b", "shared-model"]])
   } finally {
     await app.close()
     await mockA.close()

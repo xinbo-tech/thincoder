@@ -36,9 +36,9 @@
 ① config 加载期清洗——`subagentModel` / `subagentModels.*` 非「非空字符串」者不采纳（回退 `null` ∕ 剔除该键）+ 一次性警告（`loadConfig`——沿 `sanitizeConsultModels` 先例）；
 ② 运行期解析入口对非字符串入参抛**明确错误**（不裸 TypeError；tool `model` 参数面同防）；③ settings 写面形状表拒非法（既有）。VSC 端壳自读 raw 配置（不经核 `loadConfig`）——**端差处置 = VSC 端壳同拍清洗**：清洗逻辑核内单源（沿 `sanitizeConsultModels` 先例）、端壳于 raw 读点（`thincoder-vscode/src/agent/setup.mjs:131-132`）同拍消费 ⇒ 两端同判、用户零可见端差；宿主能力面举证不成立（清洗为纯函数、无宿主约束）。
 
-### 6.7.2 单工具动作面（七动作）
+### 6.7.2 单工具动作面（九动作）
 
-`spawn / status / observe / send / escalate / cancel / panel`（`check` 已删——§6.7.5）；`action` 缺省 = `spawn`——既有 subagent 调用（无 action）零迁移。**eng-coder role 覆盖**照旧（role 参数不影响工程协议）。
+`spawn / status / observe / send / escalate / cancel / panel / consume-design / design-slots`（`check` 已删——§6.7.5）；`action` 缺省 = `spawn`——既有 subagent 调用（无 action）零迁移。**eng-coder role 覆盖**照旧（role 参数不影响工程协议）。
 
 | action | 参数 | 返回 | 阻塞 |
 |---|---|---|---|
@@ -49,8 +49,10 @@
 | escalate | task / model? | 术后报告（缺省 async——settle 三分类 → digest） | 缺省 async |
 | cancel | id（必填——防误全停） | `{ id, status: "cancelled" }` | 立即（定向 abort） |
 | panel | `{ view?, freeze? }`（互斥） | 镜像快照 / 冻结回收确认 | 同步 |
+| consume-design | designId? ∥ designIds? ∥ expired? ∥ olderThanDays?（选择器恰一） | 消费回执（逐枚 ∥ 批量——逐枚行 + 计数） | 同步（父侧 · 工程模式——语义 = `DESIGN-TOKEN-SETTLEMENT.md` §5 / §10） |
+| design-slots | 无（父侧 · 工程模式 · 只读） | 槽位清单（designId ∥ live/expired ∥ 时龄 ∥ 批——龄升序）+ 计数尾行 | 同步（只读） |
 
-**depth 可用性（本表 = 锚 `§6.7.2` 的规则住所）**：`status` 与 `observe` / `send` / `escalate` / `cancel` / `panel freeze` **同为 depth 0 专有**——子代（`depth>0`）调用 ⇒ 显式拒（子代无自有异步池）；
+**depth 可用性（本表 = 锚 `§6.7.2` 的规则住所）**：`status` 与 `observe` / `send` / `escalate` / `cancel` / `panel freeze` **同为 depth 0 专有**——子代（`depth>0`）调用 ⇒ 显式拒（子代无自有异步池）；**`consume-design` / `design-slots` 同属父侧（depth-0）面**（受限变体拒绝清单在案）；
 `spawn` **例外**（depth>0 合法——子代 spawn 恒同步）。拒收文案族与返回形（JSON `status:"error"` 对象形）= §6.25 ①/A1b。
 
 **observe 契约**（readonly——摘要不灌全量）：目标 = 父自身 spawn 的异步子代理池条目（`_asyncSubagents`，非 advisor / escalate）；数据源 = `entry.childAgent`（`_fullHistory` 最近 N 条回合摘要 + `_touchedFiles` + dispatch in-flight `_inflightTools` 当前工具 + turn / maxTurns）；**不读写 token / designId**。
@@ -1035,3 +1037,4 @@ a missing field is a dispatch defect and the spawn is refused.
 - 2026-10-04（**ACP 协议面补全批 · 收口笔 · 父侧直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-acp-face-completion.md` §2 落点表 · 台账 #862）：§6.7.2 邻域补 **事件 token 文法机读单源指针**（`thincoder-core/agent/subagent-event.mjs`——零依赖叶：哨兵 ∥ 形态判据 ∥ 逐事件投影；消费方 = ACP 桥 `doc:ACP-CLIENT.md:§12`）。**零语义改**（= 文法单源的指针落位）。
 - 2026-10-05（**工具面首用可发现性批（toolface-first-use-fixes）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-toolface-first-use-fixes.md` §1 · 台账 #938）：新增 **§6.30**（F2 六字段入描述面——`tool-docs/subagent.md` 增一段清单；门零改）；同族 batch 面两件 = `TOOLS.md` §6.20。**零新语义**（可见性缺口修复——门禁判据集零改）。
 - 2026-10-05（**工具面首用可发现性批（toolface-first-use-fixes）· 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-05-toolface-first-use-fixes.md` §3 轮次 1 发现 1 / 2）：§6.25 边界括注收正——`subagent` 工具描述面 = `thincoder-core/tool-docs/subagent.md`（原「内联 `description`——无独立 `tool-docs/*.md`」为描述外置后失实句；全仓同式扫描仅此一处）；§6.30 描述半句**核真零改**（「English equivalents」= 门侧双语 marker 同收——`spawn-gates.mjs:18-24` 实读）。**零新语义**。
+- 2026-10-07（**批 ledger-tool · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-ledger-tool.md` §1 · 台账 #998 / #927 并入）：§6.7.2 动作面表随动——七 ⇒ 九（补 `consume-design`——存量漏登就地收正 ∥ 新 `design-slots` 行）+ 首句动作清单与 depth 可用性句同拍；槽位面语义单源 = `DESIGN-TOKEN-SETTLEMENT.md` §10（本档不重述）。**零新语义**（机制本体 = 令牌结算面批）。

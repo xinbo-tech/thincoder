@@ -10,10 +10,10 @@
  *      `main` margin 无 `auto` ∥ `.model-picks` 零残留（规则 + 字面两向）
  *   腿 C（五页壳行为——stub ctx）：逐页渲染 N 行 ⇒ 表内 tfoot 计数 = N（「共 N 项」）；空/错 ⇒ 无表（hint——无 tfoot）；`head`/`area` 传参形状在册
  *   腿 D（弹窗表格形——DOM 桩）：详情勾选表（单列「模型」∥ 行 = `label`（勾选 + 模型名）∥ 失败 = `.hint error`）∥
- *      预设模型表（单列「模型」：`code` 行）∥ 成员 key 表（四列头 ∥ 吊销钮行内 ∥ 空态 `noKeys` 不变量）
+ *      预设模型表（单列「模型」：`code` 行）∥ 成员 key 表（四列头 ∥ 吊销钮行内 ∥ 空态 `noKeys` 不变量；配额批：随行形 `modelQuotas`）
  *   腿 E（左对齐——§2.6④）：`main` 规则 `max-width: 1100px` 在 ∥ margin 无 `auto`
  *   腿 F（i18n——§2.2 本批 6 键）：两表在册（非空 ∥ 占位符一致 ∥ en 零 CJK）∥ `t` 引用闭合
- *   腿 G（门禁——§6 AC-20 续）：`prepublishOnly` 含本批件（十八件）∥ 清单目标在盘
+ *   腿 G（门禁——§6 AC-20 续）：`prepublishOnly` 含本批件（十九件——配额分模型批后）∥ 清单目标在盘
  *   附加：AC-19 canon 不破（零新 `:root` 变量——38 ∥ 悬停清单八条 ∥ 内距 ∈ 刻度 ∪ {0, auto} ∪ 布局组 ∥ 类名双向闭合）
  */
 import test from "node:test"
@@ -146,7 +146,7 @@ function pageCtx({ routes, state = {}, shell }) {
     state,
     fmtTs: (ts) => String(ts),
     fmtValue: (value) => (value === null || value === undefined ? "—" : String(value)),
-    fmtQuota: (value) => (value === null || value === undefined ? "unlimited" : String(value)),
+    fmtModelQuotas: (quotas) => { const count = Object.keys(quotas ?? {}).length; return count === 0 ? ZH["common.quotaByPlatform"] : fill(ZH["common.modelQuotaCount"], { count }) },
     table: (headers, rows, { foot = false } = {}) => h("div", { class: "table-wrap" },
       h("table", {},
         h("thead", {}, h("tr", {}, ...headers.map((label) => h("th", { text: label })))),
@@ -226,7 +226,7 @@ test("腿 B CSS：高度链声明表逐条 ∥ 吸附 ∥ 回退媒体查询 ∥
 
 // ── 腿 C（五页壳行为——stub ctx）────────────────────────────────────────────
 
-const MEMBER = { id: 1, name: "Alice", username: "alice", role: "user", quotaTokens: null, usedTokens: 0, keys: [] }
+const MEMBER = { id: 1, name: "Alice", username: "alice", role: "user", modelQuotas: {}, usedTokens: 0, keys: [] }
 const MEMBER2 = { ...MEMBER, id: 2, name: "Bob", username: "bob" }
 
 test("腿 C 五页壳：成功 = 行数 ∥ 空 = 0 ∥ 错 = 0 ∥ `head`/`area` 传参形状在册", async () => {
@@ -363,7 +363,7 @@ test("腿 D 弹窗表格形：详情勾选表 ∥ 预设模型表 ∥ 成员 key
 
     // ③ 成员详情弹窗·key 表（四列：密钥 ∥ 最后使用 ∥ 近 30 天 ∥ 操作——吊销钮行内；空态 = `.hint` 不变量）
     const member = {
-      id: 1, name: "Alice", username: "alice", role: "user", quotaTokens: null, usedTokens: 42,
+      id: 1, name: "Alice", username: "alice", role: "user", modelQuotas: { "p/x": 5, "ghost/x": 1 }, usedTokens: 42,
       keys: [
         { id: 7, hint: "sk-tc-abcd", lastUsedAt: null, windowTokens: 0 },
         { id: 8, hint: "sk-tc-efgh", lastUsedAt: 1700000000000, windowTokens: 12 },
@@ -372,12 +372,14 @@ test("腿 D 弹窗表格形：详情勾选表 ∥ 预设模型表 ∥ 成员 key
     const memberCtx = {
       h, state: {},
       api: async () => ({}), fail: () => {}, showSecret: () => {},
-      fmtQuota: (value) => (value === null || value === undefined ? "unlimited" : String(value)),
+      fmtModelQuotas: (quotas) => { const count = Object.keys(quotas ?? {}).length; return count === 0 ? ZH["common.quotaByPlatform"] : fill(ZH["common.modelQuotaCount"], { count }) },
       fmtValue: (value) => (value === null || value === undefined ? "—" : String(value)),
       fmtTs: (ts) => `t:${ts}`,
     }
     const keyModal = ADMIN.openMemberModal(memberCtx, { member, reload: async () => [member], secretBox: makeNode("div") })
-    const keyTable = findNode(keyModal.root, (node) => node.tag === "table")
+    assert.ok(textOf(keyModal.root).includes(fill(ZH["common.modelQuotaCount"], { count: 2 })), "详情行 = 覆盖计数（配额批行形）")
+    for (const model of ["p/x", "ghost/x"]) assert.ok(textOf(keyModal.root).includes(model), `分模型用量节缺行：${model}`)
+    const keyTable = findNode(keyModal.root, (node) => node.tag === "table" && findAll(node, (cell) => cell.tag === "th").some((cell) => cell.textContent === ZH["admin.members.colKey"]))
     assert.ok(keyTable !== null, "成员弹窗缺 key 表")
     assert.deepEqual(findAll(keyTable, (node) => node.tag === "th").map((cell) => cell.textContent),
       [ZH["admin.members.colKey"], ZH["admin.members.colLastUsed"], ZH["admin.members.colWindowTokens"], ZH["admin.members.colActions"]], "四列表头")
@@ -390,7 +392,7 @@ test("腿 D 弹窗表格形：详情勾选表 ∥ 预设模型表 ∥ 成员 key
     assert.deepEqual([keyRows[0].children[0].children[0].tag, keyRows[0].children[3].children[0].tag], ["code", "button"], "密钥 = `code` ∥ 吊销钮行内")
     keyModal.close()
     const emptyKeyModal = ADMIN.openMemberModal(memberCtx, { member: { ...member, keys: [] }, reload: async () => [], secretBox: makeNode("div") })
-    assert.deepEqual([byText(emptyKeyModal.root, ZH["admin.members.noKeys"]) !== null, findNode(emptyKeyModal.root, (node) => node.tag === "table")], [true, null], "空态 = `.hint`（noKeys——零表）")
+    assert.deepEqual([byText(emptyKeyModal.root, ZH["admin.members.noKeys"]) !== null, findAll(emptyKeyModal.root, (node) => node.tag === "table").length], [true, 1], "空态 = `.hint`（noKeys——零 key 表；分模型用量表不受累）")
     emptyKeyModal.close()
   } finally {
     delete globalThis.document
@@ -433,9 +435,9 @@ test("腿 F i18n：本批 6 键两表在册（非空 ∥ 占位符一致 ∥ en 
 
 // ── 腿 G（门禁——§6 AC-20 续）───────────────────────────────────────────────
 
-test("腿 G 门禁：`prepublishOnly` 十八件含本批件 ∥ 清单目标在盘", () => {
+test("腿 G 门禁：`prepublishOnly` 十九件含本批件 ∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 18, `门禁清单件数（十七 ⇒ 十八）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 19, `门禁清单件数（十八 ⇒ 十九——配额分模型批）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-console-layout.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

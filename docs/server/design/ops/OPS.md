@@ -31,7 +31,7 @@
 | `db` | 否 | SQLite 库路径（相对 = 本配置档所在目录）；缺省 `data/gateway.db` |
 | `autoUpdate` | 否 | 更新档位：`false`（关——零检查） ∥ `"notify"`（检查 + 日志） ∥ `"auto"`（检查 + 自装）；缺省 `"notify"`；非法值 ⇒ 拒启（机制 = §5.4） |
 | `trustProxy` | 否 | 反代场景客户端 IP 口径：`false`（缺省——IP = 连接对端地址） ∥ `true`（读 `X-Real-IP` 头——反代须 set 形覆盖客户端伪造；前提 = 服务端口仅反代可达）；登录防爆破 IP 维消费（`accounts/ACCOUNTS.md` §2） |
-| `usageRetentionDays` | 否 | 保留窗（天；**用量与审计事件同窗**——单一旋钮）：正整数 ∥ `null`（不限——保留全量）；缺省 `90`；非正整数 ∥ 非法值 ⇒ 拒启（机制 = `metering/METERING.md` §1 ∥ `accounts/ACCOUNTS.md` §2.1） |
+| `usageRetentionDays` | 否 | 保留窗（天；**用量（含 `usage_daily`/`quota_counters` 两派生表）与审计事件同窗**——单一旋钮）：正整数 ∥ `null`（不限——保留全量）；缺省 `90`；非正整数 ∥ 非法值 ⇒ 拒启（机制 = `metering/METERING.md` §1 ∥ `accounts/ACCOUNTS.md` §2.1） |
 | `bootstrap` | 否 | 首启引导凭据（`username` ∥ `password`——支持 `env:`）；仅零 admin 时消费（§2——幂等） |
 | `providers[]` | 否 | **首启种子**（一次性导入——矩阵见下；此后控制台管理——`gateway/API.md` §2.2）。**两种条目形**：预设形（`preset` = 预设名——缺省字段展开，见下）∥ 手写形（`name` ∥ `baseURL` ∥ `models` 自备）。两形共有字段：`name`（预设形可省——缺省 = 预设名） ∥ `baseURL`（OpenAI 兼容根——预设形可省） ∥ `apiKey`（可空——空则不发 Authorization 头；支持 `env:` 引用——载入不解析，引用保形） ∥ `models`（开放清单——预设形可省；对外标识 = `provider/model`） |
 | `embedding` | 是 | `baseURL` ∥ `model` ∥ `apiKey`（选填——本地引擎常无鉴权） |
@@ -67,12 +67,13 @@
 ```text
 node src/ops/cli.mjs --config <配置档> <命令>
   member add <name> [--username <u>] [--role admin|user] [--password <pw>]   # 建成员（缺省 username = name ∥ user；无 --password ⇒ 生成临时密码打印一次）
-  member list                           # 成员 + 角色 + 额度 + 本月已用
-  member quota <name> <N|none>          # 设额度（none = 不限）
+  member list                           # 成员 + 角色 + 分模型覆盖数 + 本月已用
+  member quota <name> <model> <N|none>  # 设分模型覆盖（model = 对外标识；none = 删覆盖）
   member passwd <name> [--password <pw>]  # 重置密码（本机兜底；无 --password ⇒ 生成打印一次）
   key issue <member>                    # 签发——全文只打印一次（+ key id）
   key revoke <id|hint>                  # 吊销（立即生效）
   key list [--member <m>]               # 提示形清单（无明文）
+  usage reconcile [--month YYYY-MM] [--fix]  # 派生两表对账重算（vs 明细；--fix = 覆写）
 ```
 
 - 落点 = `thincoder-server/src/ops/cli.mjs`（已落盘）；直开库（不经 HTTP）——服务器本机兜底。
@@ -199,11 +200,11 @@ services:
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
 | `thincoder-server/bin/thincoder-server.mjs`（已落盘） | **153 ⇒ ≈172**（实读 2026-10-06——设计估 ≈50；#961 +9 = 版本读取 ∥ 更新循环接线 ∥ 停机清循环；#962 +4 = 运行时引导接线；#963 +27 = 系统面注册 ∥ 保留清理接线 ∥ 停机清周期 ∥ 惰性访问器 ∥ 登录守卫注入；本批 +≈19 = 审计清理接线（启动 + 周期） ∥ 两注册行（overview ∥ embedding） ∥ 守卫 `onLock` 接线） | argv ∥ 配置加载 ∥ 首启引导 ∥ 启动 ∥ 停机 |
-| `thincoder-server/src/ops/config.mjs`（已落盘） | **189**（实读 2026-10-06——设计估 ≈150；#961 +6 = `autoUpdate` 校验 ∥ 常量导出；#962 +16 = 种子语义 ∥ 校验单源导出 ∥ 载入期 `env:` 跳过；#963 +9 = `trustProxy` ∥ `usageRetentionDays` 校验） | 读档 ∥ 校验（fail-closed） ∥ `env:` 解析 ∥ 缺省值 ∥ 预设展开接线 |
+| `thincoder-server/src/ops/config.mjs`（已落盘） | **189**（实读 2026-10-06——设计估 ≈150；#961 +6 = `autoUpdate` 校验 ∥ 常量导出；#962 +16 = 种子语义 ∥ 校验单源导出 ∥ 载入期 `env:` 跳过；#963 +9 = `trustProxy` ∥ `usageRetentionDays` 校验）**⇒ 实读 252 ⇒ ≈262**（配额批：settings 子字段 `quotaTokens` +≈10） | 读档 ∥ 校验（fail-closed） ∥ `env:` 解析 ∥ 缺省值 ∥ 预设展开接线 |
 | `thincoder-server/src/ops/update.mjs`（已落盘） | **239**（实读 2026-10-06——设计估 ≈160；§5.4 a–c；#963 +11 = 状态导出 `getStatus`） | 更新机制 |
 | `thincoder-server/src/ops/presets.mjs`（已落盘） | **50**（实读 2026-10-06——设计估 ≈45） | 预设表（`SERVER_PRESETS`——起步 20 家 `{ baseURL, model }`） ∥ 展开（`expandProviderEntry`：`name` 缺省 ∥ 覆盖 ∥ 未知预设拒启） |
 | `thincoder-server/src/ops/log.mjs`（已落盘） | **35**（实读 2026-10-06——设计估 ≈35） | 单行 JSON 日志（stdout） |
-| `thincoder-server/src/ops/cli.mjs`（已落盘） | **179 ⇒ ≈195**（实读 2026-10-06——设计估 ≈240；本批 +≈16 = 四命令审计写（member add ∥ member passwd ∥ key issue ∥ key revoke——actor = `cli`）） | 运维 CLI 七命令（含密码面） |
+| `thincoder-server/src/ops/cli.mjs`（已落盘） | **179 ⇒ ≈195**（实读 2026-10-06——设计估 ≈240；本批 +≈16 = 四命令审计写（member add ∥ member passwd ∥ key issue ∥ key revoke——actor = `cli`））**⇒ 实读 189 ⇒ ≈215**（配额批：member quota 换形（model 参） ∥ `usage reconcile` 新组（布尔参） ∥ member list 列随正） | 运维 CLI（成员/密钥/对账） |
 | `thincoder-server/config.example.json`（已落盘） | **35**（实读 2026-10-06——设计估 ≈40；#961 +1 = `autoUpdate`；#963 +2 = `trustProxy` ∥ `usageRetentionDays`） | 配置模板（无真 key——预设形 ∥ 手写形并存） |
 | `thincoder-server/deploy/thincoder-server.service`（已落盘） | **34**（实读 2026-10-06——设计估 ≈40；本批 +2 = 前缀 env ∥ ExecStart） | systemd unit 模板（裸机路——Restart=always ∥ 开机自启 ∥ journald） |
 | `thincoder-server/deploy/docker-entrypoint.sh`（已落盘） | **7**（实读 2026-10-06——设计估 ≈12；§5.1） | 容器入口（壳） |
@@ -296,3 +297,4 @@ first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10
 - 2026-10-06：实施后回填轮（R18——批 `docs/batches/2026-10-06-server-i18n.md`）：§6 README 行实读收正（**241**——控制台节多语言行；小计 ⇒ **1507**）∥ §5.1 门禁件数随正（十件 ⇒ 十一件——本批件入列）。
 - 2026-10-06：控制台可见面二轮设计轮（批 `docs/batches/2026-10-06-console-completeness-2.md`——需求 §2:15 ∥ 台账 #972）——§1 `usageRetentionDays` 行补「审计同窗」∥ §3 增 CLI 审计句 ∥ §4 启动链同拍（审计清理同周期）∥ §6 预算（bin ⇒ ≈172 ∥ cli ⇒ ≈195 ∥ README ⇒ ≈255；小计 ⇒ ≈1556）。
 - 2026-10-06：fix 轮（评审 #69——批 `docs/batches/2026-10-06-console-completeness-2.md` §3 十项，本档面）：§5.1 门禁件数随正（十一件 ⇒ 十二件——本批件入列；清单文本 = `thincoder-server/package.json` 单行添项——实施轮落地）。
+- 2026-10-07：配额分模型批设计轮（批 `docs/batches/2026-10-07-quota-per-model.md`——需求 §2:21 ∥ §2:22 ∥ 台账 #990/#991/#992）——§1 `usageRetentionDays` 行补「派生两表同窗」∥ §3 CLI 块随正（member list 列（分模型覆盖数） ∥ member quota 换形（+ model 参） ∥ `usage reconcile` 新组（--month/--fix））∥ §6 预算（config 252 ⇒ ≈262 ∥ cli 189 ⇒ ≈215）；机制全文 = `metering/METERING.md` §1/§2。

@@ -219,7 +219,7 @@ test("登录：200 + cookie 属性齐 ∥ 错凭据同措辞同耗时 ∥ /api/m
     assert.ok(wrongMs >= 5 && ghostMs >= 5, `两况均须真跑散列（${wrongMs}ms / ${ghostMs}ms）`)
     const me = await get(app.base, "/api/me", { cookie })
     assert.equal(me.status, 200)
-    assert.deepEqual(me.json, { id: alice.id, name: "alice", username: "alice", role: "user", quotaTokens: null, usedTokens: 0, keys: [] })
+    assert.deepEqual(me.json, { id: alice.id, name: "alice", username: "alice", role: "user", modelQuotas: {}, usedTokens: 0, keys: [] })
     const key = KEYS.issueKey(app.db, alice.id)
     assert.deepEqual((await get(app.base, "/api/me", { cookie })).json.keys, [{ id: key.id, hint: key.hint, lastUsedAt: null, windowTokens: 0 }])
   } finally {
@@ -319,7 +319,7 @@ test("管理面：无会话 401 ∥ user 越权 ⇒ 403（读+写）∥ 建成�
       ["GET", "/api/members"],
       ["GET", "/api/usage"],
       ["POST", "/api/members"],
-      ["POST", `/api/members/${alice.id}/quota`],
+      ["POST", `/api/members/${alice.id}/model-quotas`],
       ["POST", `/api/members/${alice.id}/keys/1/revoke`],
       ["POST", `/api/members/${alice.id}/password-reset`],
     ]
@@ -338,7 +338,7 @@ test("管理面：无会话 401 ∥ user 越权 ⇒ 403（读+写）∥ 建成�
     assert.equal((await post(app.base, "/api/members", { cookie: admin.cookie, body: { username: "bob" } })).status, 400) // 重名 ⇒ 400
     const list = await get(app.base, "/api/members", { cookie: admin.cookie })
     assert.deepEqual(list.json.members.map((m) => m.username), ["admin", "alice", "bob"])
-    assert.deepEqual(list.json.members[1], { id: alice.id, name: "alice", username: "alice", role: "user", quotaTokens: null, usedTokens: 0, keys: [] })
+    assert.deepEqual(list.json.members[1], { id: alice.id, name: "alice", username: "alice", role: "user", modelQuotas: {}, usedTokens: 0, keys: [] })
   } finally {
     await app.close()
   }
@@ -407,9 +407,10 @@ test("CLI：member add→list→quota→passwd ∥ key issue→list→revoke（�
     assert.equal(list.code, 0)
     assert.ok(list.out.includes(KEYS.keyHint(plain)), "列表只出提示形")
     assert.ok(!list.out.includes(plain), "列表不得含明文")
-    assert.equal((await run(["member", "quota", "alice", "1000"])).code, 0)
+    assert.equal((await run(["member", "quota", "alice", "mock/m1", "1000"])).code, 0) // 分模型覆盖（model = 对外标识）
     const memberList = await run(["member", "list"])
-    assert.ok(memberList.out.split("\n").some((line) => line === "1\talice\talice\tuser\t1000\t0"), memberList.out)
+    assert.ok(memberList.out.split("\n").some((line) => line === "1\talice\talice\tuser\t1\t0"), memberList.out) // 列 = 分模型覆盖数
+    assert.match((await run(["member", "quota", "alice", "mock/m1", "none"])).out, /覆盖已删：alice ⇒ mock\/m1/)
     assert.equal((await run(["key", "revoke", String(keyId)])).code, 0)
     const afterRevoke = DB.openDatabase(dbFile)
     assert.equal(KEYS.verifyKey(afterRevoke, plain), null) // 吊销立即生效

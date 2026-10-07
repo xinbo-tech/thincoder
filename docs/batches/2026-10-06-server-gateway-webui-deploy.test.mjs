@@ -45,10 +45,10 @@ function configWith(baseURL, { engineKey = "" } = {}) {
   })
 }
 
-function seedMember(db, { username = "alice", quotaTokens = null } = {}) {
+function seedMember(db, { username = "alice", modelQuotas = {} } = {}) {
   const info = db
-    .prepare("INSERT INTO members (username, name, password_hash, quota_tokens, created_at) VALUES (?, ?, 'scrypt$fixture', ?, ?)")
-    .run(username, username, quotaTokens, new Date().toISOString())
+    .prepare("INSERT INTO members (username, name, password_hash, model_quotas_json, created_at) VALUES (?, ?, 'scrypt$fixture', ?, ?)")
+    .run(username, username, JSON.stringify(modelQuotas), new Date().toISOString())
   return Number(info.lastInsertRowid)
 }
 

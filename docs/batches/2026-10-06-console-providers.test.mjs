@@ -274,7 +274,7 @@ test("③ 在途口径：流式请求进行中删除其 provider ⇒ 流照常�
     assert.match(text, /\[DONE\]/)
     await waitFor(() => lastUsage(db)?.status === "ok")
     const row = lastUsage(db)
-    assert.deepEqual([row.status, row.stream, row.model], ["ok", 1, "live/live-model"])
+    assert.deepEqual([row.status, row.stream, row.provider, row.model], ["ok", 1, "live", "live-model"])
     assert.deepEqual([row.prompt_tokens, row.completion_tokens, row.total_tokens], [2, 2, 4]) // usage 帧照常提取
     assert.equal((await call(app.base, "POST", "/v1/chat/completions", { key: key.plain, body: { model: "live/live-model", messages: [] } })).status, 404)
   } finally {

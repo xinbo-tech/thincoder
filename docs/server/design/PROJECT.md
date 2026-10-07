@@ -24,8 +24,8 @@
 | 入口（板级） | `thincoder-server/bin/thincoder-server.mjs`（已落盘） | argv ∥ 配置加载 ∥ 首启引导 ∥ 装配/启动 ∥ 停机 | `ops/OPS.md` |
 | gateway | `thincoder-server/src/gateway/` 十一档（server ∥ routes ∥ forward ∥ sse-tap ∥ providers ∥ provider-admin ∥ system ∥ errors + embedding-admin ∥ overview ∥ ratelimit） | http 服务 ∥ 注册行分派 ∥ OpenAI 三面 ∥ 转发 ∥ usage 旁路扫描 ∥ 模型派发 ∥ 模型限流（per-model RPM/TPM——§2.2） ∥ provider 管理面（§2.2） ∥ 系统面（探活/版本——§2.3） ∥ 控制台数据面（总览/向量服务——§2.4） ∥ 错误形 | `gateway/API.md` |
 | accounts | `thincoder-server/src/accounts/` 七档（keys ∥ members ∥ session ∥ routes ∥ routes-admin ∥ login-guard + audit） | 团队 key ∥ 账号/成员 ∥ 会话/登录 ∥ 密码 ∥ 登录防爆破 ∥ 审计事件（§2.1） ∥ 自助/管理端点 | `accounts/ACCOUNTS.md` |
-| metering | `thincoder-server/src/metering/` 三档（usage ∥ quota ∥ routes）（已落盘） | 记账 ∥ 配额 ∥ 用量/配额端点（含报表/导出——§3） ∥ 保留窗清理 | `metering/METERING.md` |
-| store | `thincoder-server/src/store/` 一档（db）（已落盘） | 库 ∥ DDL ∥ 迁移链（各域共用；v4 = 模型设置增列） | `store/STORE.md` |
+| metering | `thincoder-server/src/metering/` 五档（usage ∥ aggregates ∥ report ∥ quota ∥ routes） | 记账（同事务三写：usage + 派生两表） ∥ 配额（三级计数准入） ∥ 用量/配额端点（含报表/导出——§3） ∥ 保留窗清理 | `metering/METERING.md` |
+| store | `thincoder-server/src/store/` 一档（db）（已落盘） | 库 ∥ DDL ∥ 迁移链（各域共用；v5 = 模型标识两字段拆列 + 派生两表 + 成员配额列） | `store/STORE.md` |
 | webui | `thincoder-server/src/webui/` 一档（static）+ `thincoder-server/public/` 十九档（静态——`index.html` ∥ `app.mjs` ∥ `nav.mjs` ∥ `views-*` 十档 ∥ `modal.mjs` ∥ `i18n.mjs` ∥ `i18n-zh.mjs` ∥ `i18n-en.mjs` ∥ `model-specs-snapshot.mjs` ∥ `style.css`；`views.mjs` 退役） | 页面路由 ∥ HTML/JS/CSS ∥ 静态直发 ∥ IA/导航 ∥ 多语言（§2.2） ∥ 可见面二轮（§2.3） ∥ 弹窗与服务模型配置面（§2.4） ∥ 样式族规范（§2.5） | `webui/WEBUI.md` |
 | ops | `thincoder-server/src/ops/` 五档（config ∥ log ∥ cli ∥ presets ∥ update）+ 部署档组（`thincoder-server/deploy/thincoder-server.service` ∥ `thincoder-server/deploy/docker-entrypoint.sh` ∥ `thincoder-server/deploy/converge.mjs` ∥ `thincoder-server/deploy/backup.mjs` ∥ `thincoder-server/Dockerfile` ∥ `thincoder-server/.dockerignore` ∥ `thincoder-server/docker-compose.yml`）+ 模板/说明档（`thincoder-server/config.example.json` ∥ `thincoder-server/README.md`）（已落盘） | 配置（含 provider 预设） ∥ 日志 ∥ 运维 CLI ∥ 更新机制（自检/自升/收敛） ∥ 部署面（npm ∥ Docker ∥ systemd ∥ 备份） | `ops/OPS.md` |
 
@@ -41,11 +41,11 @@
   ▼
 [1] 路由 /v1/chat/completions（注册行分派）
 [2] 鉴权（sha256 → api_keys ⋈ members；未知 ∥ 吊销 ⇒ 401）
-[3] 配额准入（本月累计 ≥ 额度 ⇒ 429；额内 ⇒ 放行）
-[4] body → model → providers 精确匹配派发（未命中 ⇒ 404；命中 ⇒ 模型限流准入——per-model RPM/TPM 超限 ⇒ 429 `rate_limited` + `Retry-After`；KD-SV-35）
+[3] body → model 形校（缺 model ⇒ 400）
+[4] providers 精确匹配派发（未命中 ⇒ 404）→ 准入双闸：配额（三级分模型——计数表点查；超限 ⇒ 429 `quota_exceeded`；KD-SV-38）→ 模型限流（per-model RPM/TPM 超限 ⇒ 429 `rate_limited` + `Retry-After`；KD-SV-35）
 [5] 转发上游（网关侧真 key；流式注入 stream_options.include_usage）
 [6] 响应透传（SSE 逐块 ∥ 旁路 tap 只读扫描 usage——字节零改）
-[7] 记账（usage 行落库——请求结束/流终结/客户端断开时单条 INSERT）
+[7] 记账（请求结束/流终结/客户端断开时——同事务三写：usage 行 INSERT + usage_daily/quota_counters 两 upsert）
 ```
 
 **控制台请求**（B 案——登录与会话）：
@@ -81,7 +81,7 @@
 | `webui/WEBUI.md` | 域 | webui | 静态面 ∥ 控制台 IA 与视图 ∥ 多语言（i18n） ∥ 弹窗机制（§2.4） ∥ 样式族规范（§2.5） ∥ 判权/自托管约束 ∥ 本域文件与预算 ∥ 验收判据 |
 | `ops/OPS.md` | 域 | ops | 配置面 ∥ 首启引导 ∥ 运维 CLI ∥ 启动/停机/部署面 ∥ 日志 ∥ 本域文件与预算 ∥ 验收判据 ∥ 用例 |
 
-## 4. 决策索引（KD-SV-1–36）
+## 4. 决策索引（KD-SV-1–41）
 
 | # | 决策一句话 | 所在档 |
 |---|---|---|
@@ -90,9 +90,9 @@
 | KD-SV-3 | 存储 = `node:sqlite`（WAL ∥ `user_version`） | `store/STORE.md` |
 | KD-SV-4 | 模型派发 = `provider/model` 复合键精确匹配 | `gateway/API.md` |
 | KD-SV-5 | 流式计量 = 注入 `stream_options.include_usage` + 旁路 tap | `gateway/API.md` |
-| KD-SV-6 | 配额 = 成员月度 token 累计·准入检查 | `metering/METERING.md` |
+| KD-SV-6 | 配额周期/单位 = 自然月 ∥ token（机制 = KD-SV-38） | `metering/METERING.md` |
 | KD-SV-7 | 管理/自助面 = 登录制页面 + 本机 CLI 兜底 | `accounts/ACCOUNTS.md` |
-| KD-SV-8 | 计量写入 = 请求终结后单条 INSERT | `metering/METERING.md` |
+| KD-SV-8 | 计量写入 = 请求终结后同事务三写（usage + 派生两表） | `metering/METERING.md` |
 | KD-SV-9 | 控制台前端 = vanilla 静态面（零框架 ∥ 零构建 ∥ 零外部资源） | `webui/WEBUI.md` |
 | KD-SV-10 | SSE tap = 有界只读扫描 | `gateway/API.md` |
 | KD-SV-11 | 团队 key 校验 = 逐请求查库（无缓存） | `accounts/ACCOUNTS.md` |
@@ -121,6 +121,11 @@
 | KD-SV-34 | 服务模型配置面 = A/C/D/E 落字段（A = `models` 成员·服务页自持；`settings`（v4 + PATCH 键级合并）；D = 规格快照 + 说明；E = 内部估算参考） | `webui/WEBUI.md` §7 |
 | KD-SV-35 | 模型限流 = per-model RPM/TPM（内存定窗；429 `rate_limited` + `Retry-After`；换表热生效） | `gateway/API.md` §6 |
 | KD-SV-36 | 控制台样式族 = 变量单源 + 一套刻度 + 系统基线对齐（一字族/一字号 13px/行距 1.5/零粗体·色区分；悬停底同值（列表行/中性面）；可点行三件套；族目勘误 = +⑩ 码面 ∥ 变量单源为底座） | `webui/WEBUI.md` §7 |
+| KD-SV-37 | 控制台布局收正 = 数据表五页视口高壳 + 左对齐 + 弹窗列表表格化 | `webui/WEBUI.md` §7 |
+| KD-SV-38 | 配额分模型 = 三级（成员×模型覆盖 ⇒ 平台默认 ⇒ 不限）+ 计数固定字段点查准入（计数 = 记账同事务；三级全无 ⇒ 零 SQL 短路；检查点 = 派发命中后/转发前——仅 chat） | `metering/METERING.md` §6 |
+| KD-SV-39 | 汇表面（报表/成员页/汇总）= 预聚合日表 `usage_daily`（记账同事务 upsert；明细/导出/审计零动——真源；API 契约不变；回填 + `usage reconcile` 对账） | `metering/METERING.md` §6 |
+| KD-SV-40 | v5 迁移 = 模型标识两字段（`provider` ∥ `model`）+ 派生两表 + 旧列删除（拆列判据 = `endpoint='chat'`；嵌入 `provider=''`；旧 `quota_tokens` 删列不弃用） | `store/STORE.md` §5 |
+| KD-SV-41 | 配额配置面 = 服务模型页 F 组（settings `quotaTokens`）+ 成员弹窗分模型覆盖（键级合并——不在清单键恒保留） | `webui/WEBUI.md` §7 |
 
 ## 5. 关键决策（本档）
 
@@ -144,7 +149,7 @@
 
 - **板级**：`thincoder-server/package.json`（可发布形：`@thincoder/server`（拟） ∥ `files` 白名单 ∥ `bin` = `thincoder-server` ∥ engines `node>=24` ∥ `prepublishOnly` 门禁；`private` 撤；dependencies 空；实读 26 行（估 ≈30；含 `dev` 脚本行）；`prepublishOnly` 清单十二件 ⇒ 十三件
   （八 + #962 件 + #963 件 + i18n 件 + #972 件 + 弹窗批件——以 #972 随正落地后实读为准））。
-- **各域预算表**（「本域文件与行数预算」节）：gateway **≈770 ⇒ 658 ⇒ 951 ⇒ 1007** ∥ accounts **≈570 ⇒ 493 ⇒ 632** ∥ metering **≈260 ⇒ 218 ⇒ 233** ∥ store **≈175 ⇒ 110 ⇒ 124 ⇒ ≈160 ⇒ 144 ⇒ ≈155** ∥
+- **各域预算表**（「本域文件与行数预算」节）：gateway **≈770 ⇒ 658 ⇒ 951 ⇒ 1007** ∥ accounts **≈570 ⇒ 493 ⇒ 632** ∥ metering **≈260 ⇒ 218 ⇒ 233 ⇒ ≈377 ⇒ 实读 416 ⇒ ≈690** ∥ store **≈175 ⇒ 110 ⇒ 124 ⇒ ≈160 ⇒ 144 ⇒ ≈155 ⇒ 实读 150 ⇒ ≈205** ∥
   webui **≈680 ⇒ 558 ⇒ 943 ⇒ 1006 ⇒ 1545** ∥ ops **≈762 ⇒ 1246 ⇒ 1270 ⇒ 1506 ⇒ 1507** —— 合计 **≈3217 ⇒ 3283 ⇒ 3999 ⇒ 4508 ⇒ 5048**
   （二轮面——2026-10-06 设计轮：gateway **≈1192** ∥ accounts **≈785** ∥ metering **≈377** ∥ store **≈160** ∥ webui **≈2247** ∥ ops **≈1556** —— 合计 **≈6317**）
   （弹窗批——2026-10-06 设计轮：webui **≈2646**（+≈399）；余域不动 —— 合计 **≈6716**）
@@ -213,9 +218,12 @@
 | AC-14（功能点 13——控制台多语言；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `webui/WEBUI.md` §6 判据（检测矩阵 ∥ 两表键集对齐 ∥ 键引用闭合 ∥ 错误码映射 ∥ 档目/静态直发随正） | 批内件 + 收口轮 |
 | AC-15（功能点 15——控制台可见面六面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 分六面判据：① `gateway/API.md` §5 + `webui/WEBUI.md` §6 ∥ ② `metering/METERING.md` §4 + `webui/WEBUI.md` §6 ∥ ③ `gateway/API.md` §5 + `webui/WEBUI.md` §6 ∥ ④ `accounts/ACCOUNTS.md` §5 + `store/STORE.md` §3 ∥ ⑤ `webui/WEBUI.md` §6 ∥ ⑥ `metering/METERING.md` §4 + `webui/WEBUI.md` §6 | 批内件 + 收口轮 |
 | AC-16（功能点 16——控制台弹窗交互；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `webui/WEBUI.md` §6 判据（`modal.mjs` 在册 ∥ 成员三态弹窗 ∥ 一次性秘密不破 ∥ 静态档目 17/18 ⇒ 18/19（provider 重做批后）⇒ 配置面批后 **19 ∥ 20**） | 批内件 + 收口轮 |
-| AC-17（功能点 17——服务模型页 ∥ 配置面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `webui/WEBUI.md` §6 判据（列表同源 ∥ 详情/配置四组 A/C/D/E ∥ 停用流（含退役可停 ∥ 与 Provider 页单源协同） ∥ 限流 429 形 ∥ admin 面）+ `gateway/API.md` §5 判据（限流面机检） | 批内件 + 收口轮 |
+| AC-17（功能点 17——服务模型页 ∥ 配置面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `webui/WEBUI.md` §6 判据（列表同源 ∥ 详情/配置五组（A/C/D/E/F——F 判据 = AC-21 行） ∥ 停用流（含退役可停 ∥ 与 Provider 页单源协同） ∥ 限流 429 形 ∥ admin 面）+ `gateway/API.md` §5 判据（限流面机检） | 批内件 + 收口轮 |
 | AC-18（功能点 18——Provider 管理面重做；已落需求档） | `webui/WEBUI.md` §6 判据（nav 值「Provider」 ∥ 列表 + 双弹窗 ∥ 零内联面 ∥ 候选 = 上游发现（零手填） ∥ 勾选保存 ⇒ PATCH `models` ⇒ `/v1/models` 随动 ∥ 退役项只读注 ∥ 测试同窗；档目 18/19 ⇒ 配置面批后 **19 ∥ 20**） | 批内件 + 收口轮 |
 | AC-19（功能点 19——样式族总体统一；已落需求档） | `webui/WEBUI.md` §6 判据（§2.5 散置清单 ∥ 变量单源 ∥ 族值表 + 逐族套用表 ①–⑩（含 #87/#88 接续） ∥ 可点行判据 ∥ 空/错/加载态；视觉收口轮实走） | 批内件 + 收口轮 |
+| AC-20（功能点 20——控制台布局收正；已落需求档） | `webui/WEBUI.md` §6 判据（五页视口高壳（页头固定 ∥ 表头吸附 ∥ 行区滚动 ∥ 表尾行计数）∥ 内容左对齐 ∥ 弹窗内列表表格化（Provider 模型 ∥ 成员 key）∥ 矮视口回退整页滚；浏览器实走 = 收口轮） | 批内件 + 收口轮 |
+| AC-21（功能点 21——配额分模型；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 分三面判据：`metering/METERING.md` §4 AC-21 行（三级 ∥ 计数点查 ∥ 零 SQL 短路 ∥ 自然月窗口 ∥ 429 形）∥ `gateway/API.md` §5 AC-21 行（检查点 = 派发命中后/转发前机检）∥ `webui/WEBUI.md` §6 AC-21 行（F 组 ∥ 分模型覆盖面） | 批内件 + 收口轮（浏览器实走） |
+| AC-22（功能点 22——模型标识两字段；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `metering/METERING.md` §4 AC-22 行（两字段记账/计数 ∥ 列直操作聚合 ∥ 迁移拆分回填逐值 ∥ 对外契约不变）+ `store/STORE.md` §3 v5 段判据（拆列抽样逐值 ∥ 两表回填逐值） | 批内件 |
 | 非功能 · 零依赖 | 本档 §1 ∥ §5 KD-SV-2（口径）；全树 import 扫描断言 = 批内件 | 批内件 |
 | 非功能 · 仅内网 | `ops/OPS.md` 验收判据（`host` 必填 fail-closed + `0.0.0.0` 警告） | 批内件 |
 | 非功能 · 前端自洽 | `webui/WEBUI.md` 验收判据（零外部引用扫描） | 批内件 |
@@ -308,3 +316,5 @@
 - 2026-10-06：fix 轮（评审 #94——批 `docs/batches/2026-10-06-console-provider-redo.md` §3；本档面）：§7 AC-11 行删「手填降级」残留引文（无手填在案——校正历史 = §9 R28）∥ §6 本批预算行 i18n 净增量口径统一（净 ≈−1/表；聚合估数回填轮实读收正）。
 - 2026-10-06：fix 轮（评审 #95——批 `docs/batches/2026-10-06-models-config.md` §3 受理项；本档面）：§6 预算收正（产品面 ≈+526 ⇒ ≈+527 ∥ 全树 ≈7465 ⇒ **≈7467**——分项和闭式；样式行 ≈7491 ⇒ ≈7493 随动 ∥ 域表 store 行对齐 `store/STORE.md` 实读链）∥ §6 注⑧ v4 读点逐点列明 ∥ §7 AC-12/AC-16/AC-18 档目链补「配置面批后 19 ∥ 20」∥ §9 R39 增（退役且已停用模型重开径披露）+ R34/R36 推算值随正。
 - 2026-10-06：fix 轮（评审 #96——批 `docs/batches/2026-10-06-console-list-style.md` §3 七条；本档面）：§3 文档地图 webui 行补「样式族规范（§2.5）」∥ §4 索引 KD-SV-36 悬停句收正（列表行/中性面）∥ §6 口径句限定时点 + 越线在册 ∥ §6 随动表本批行 + 注⑨（新批内件估算 ≈400 ∥ 拆档预案）∥ §9 R37 销项。
+- 2026-10-07：配额分模型批设计轮（批 `docs/batches/2026-10-07-quota-per-model.md`——需求 §2:21 ∥ §2:22 ∥ 台账 #990/#991/#992）——§2 控制台链随正（[3] 体读形校 → [4] 派发 + 准入双闸：配额（KD-SV-38）→ 限流）；§2.1 metering 行（三档 ⇒ 五档：+ aggregates/report）∥ store 行（v5）∥ §4 索引增 KD-SV-38–41（标题 1–36 ⇒ 1–41）∥ §6 预算随动（metering ⇒ ≈690；各域档同拍——`store/STORE.md` §4 ∥ `gateway/API.md` §4 ∥ `webui/WEBUI.md` §5 ∥ `ops/OPS.md` §6；全树总账回收 = 实施后回填轮）∥ §7 判据行（AC-21/AC-22 已入需求档验收表——各域判据行同拍）；机制全文 = `metering/METERING.md` §2 ∥ `store/STORE.md` §2 v5 段。
+- 2026-10-07：fix 轮（评审 #126——批 `docs/batches/2026-10-07-quota-per-model.md` §3 十项，本档面）：§2.2 [7] 记账收正为三写形（单条 INSERT 退役表述删净）∥ §4 标题 ⇒ 1–41 + 补 KD-SV-37 行（索引缺口闭）∥ §6 链补 metering 实读 416 ⇒ ≈690 ∥ store 实读 150 ⇒ ≈205 ∥ §7 补 AC-21/AC-22 判据行 + AC-17 行配置组随正（五组）。

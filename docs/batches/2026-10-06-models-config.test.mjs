@@ -7,7 +7,7 @@
  *
  * 射程（判据源 = `webui/WEBUI.md` §6 AC-17 ∥ AC-17（续）行 + 本批档 §2；腿 ↔ 轴对照在括号）：
  *   ① A 停用侧件 + 线形侧件（纯函数）：`modelsWithout` 减项 ∥ `draftFromSettings` 初值 ∥
- *      `settingsValueFromDraft` 全字段对象（空/清空 = 显式 `null` ∥ 非法 ⇒ `{invalid}`）
+ *      `settingsValueFromDraft` 全字段对象（含 `quotaTokens`——≥0 整数；空/清空 = 显式 `null` ∥ 非法 ⇒ `{invalid}`）
  *   ③ C 限流（纯函数/桩时钟）：rpm ∥ tpm ∥ 窗滚恢复 ∥ 空限值 = 零状态 ∥ `Retry-After` 秒
  *   ⑤ settings 线形（服务端件）：`mergeProviderSettings` 键级合并（值整对象替换 ∥ null 删键 ∥ 未出现键不动）∥
  *      `validateProviderSettings` 全子字段归一 ∥ 非法判据 ∥ 前端线形 × 合并 × 单源校验（部分字段保存 ⇒ 其余保留 ∥
@@ -73,21 +73,22 @@ test("① 纯函数：`modelsWithout` 减项 ∥ `draftFromSettings` 初值 ∥ 
   assert.deepEqual(MODELS.modelsWithout(["a"], "nope"), ["a"])
   assert.deepEqual(MODELS.modelsWithout(null, "a"), [])
   // 草稿初值 = GET 行 settings 该键值（部分字段编辑不丢其余字段）；未设 ⇒ 空串
-  assert.deepEqual(MODELS.draftFromSettings({ m1: { rpm: 5, tpm: null, costIn: 0.25, costOut: 0, note: "hi" } }, "m1"),
-    { rpm: "5", tpm: "", costIn: "0.25", costOut: "0", note: "hi" })
-  assert.deepEqual(MODELS.draftFromSettings({}, "m1"), { rpm: "", tpm: "", costIn: "", costOut: "", note: "" })
-  assert.deepEqual(MODELS.draftFromSettings(undefined, "m1"), { rpm: "", tpm: "", costIn: "", costOut: "", note: "" })
+  assert.deepEqual(MODELS.draftFromSettings({ m1: { rpm: 5, tpm: null, costIn: 0.25, costOut: 0, note: "hi", quotaTokens: 500 } }, "m1"),
+    { rpm: "5", tpm: "", costIn: "0.25", costOut: "0", quotaTokens: "500", note: "hi" })
+  assert.deepEqual(MODELS.draftFromSettings({}, "m1"), { rpm: "", tpm: "", costIn: "", costOut: "", quotaTokens: "", note: "" })
+  assert.deepEqual(MODELS.draftFromSettings(undefined, "m1"), { rpm: "", tpm: "", costIn: "", costOut: "", quotaTokens: "", note: "" })
   // 值对象 = 全子字段在册（空 ⇒ 显式 null）；数值归一（trim ∥ 数值化）；说明 trim ∥ 空 ⇒ null
   const empty = MODELS.settingsValueFromDraft({})
-  assert.deepEqual(empty.value, { rpm: null, tpm: null, costIn: null, costOut: null, note: null })
-  assert.deepEqual(Object.keys(empty.value).sort(), ["costIn", "costOut", "note", "rpm", "tpm"])
-  assert.deepEqual(MODELS.settingsValueFromDraft({ rpm: " 5 ", tpm: "100", costIn: "0.25", costOut: "0", note: " hi " }).value,
-    { rpm: 5, tpm: 100, costIn: 0.25, costOut: 0, note: "hi" })
+  assert.deepEqual(empty.value, { rpm: null, tpm: null, costIn: null, costOut: null, quotaTokens: null, note: null })
+  assert.deepEqual(Object.keys(empty.value).sort(), ["costIn", "costOut", "note", "quotaTokens", "rpm", "tpm"])
+  assert.deepEqual(MODELS.settingsValueFromDraft({ rpm: " 5 ", tpm: "100", costIn: "0.25", costOut: "0", quotaTokens: "1000", note: " hi " }).value,
+    { rpm: 5, tpm: 100, costIn: 0.25, costOut: 0, quotaTokens: 1000, note: "hi" })
   // 非法 ⇒ { invalid: { field, ruleKey } }（就地提示——不提交；服务端复核为准）
-  const cases = [["rpm", "0"], ["rpm", "1.5"], ["rpm", "abc"], ["rpm", "-1"], ["tpm", "0"], ["costIn", "-1"], ["costIn", "x"], ["costOut", "-0.5"]]
-  for (const [field, raw] of cases) {
-    const ruleKey = field === "rpm" || field === "tpm" ? "admin.models.rulePositive" : "admin.models.ruleNonNegative"
-    assert.deepEqual(MODELS.settingsValueFromDraft({ [field]: raw }).invalid, { field, ruleKey }, `${field}=${raw}`)
+  const cases = [["rpm", "0", "rulePositive"], ["rpm", "1.5", "rulePositive"], ["rpm", "abc", "rulePositive"], ["rpm", "-1", "rulePositive"], ["tpm", "0", "rulePositive"],
+    ["costIn", "-1", "ruleNonNegative"], ["costIn", "x", "ruleNonNegative"], ["costOut", "-0.5", "ruleNonNegative"],
+    ["quotaTokens", "-1", "ruleNonNegativeInt"], ["quotaTokens", "1.5", "ruleNonNegativeInt"], ["quotaTokens", "abc", "ruleNonNegativeInt"]]
+  for (const [field, raw, rule] of cases) {
+    assert.deepEqual(MODELS.settingsValueFromDraft({ [field]: raw }).invalid, { field, ruleKey: `admin.models.${rule}` }, `${field}=${raw}`)
   }
 })
 
@@ -126,34 +127,35 @@ test("③ C 限流：rpm ∥ tpm ∥ 窗滚恢复（定窗 60s）∥ 空限值 =
 
 // ── ⑤ settings 线形（服务端件——键级合并 ∥ 全子字段归一 ∥ 非法判据）──────────
 
-test("⑤ settings 线形：`mergeProviderSettings` 键级合并（值整对象替换 ∥ null 删键 ∥ 未出现键不动）∥ 全子字段归一 ∥ 非法判据", () => {
+test("⑤ settings 线形：`mergeProviderSettings` 键级合并（值整对象替换 ∥ null 删键 ∥ 未出现键不动——含 `quotaTokens`）∥ 全子字段归一 ∥ 非法判据", () => {
   const merge = PROVIDER_ADMIN.mergeProviderSettings
-  const current = { m1: { rpm: 5, tpm: 100, costIn: 0.1, costOut: 0.2, note: "keep" }, m2: { rpm: 1, tpm: null, costIn: null, costOut: null, note: null } }
+  const current = { m1: { rpm: 5, tpm: 100, costIn: 0.1, costOut: 0.2, note: "keep", quotaTokens: 500 }, m2: { rpm: 1, tpm: null, costIn: null, costOut: null, note: null, quotaTokens: null } }
   // 未出现键 = 不动（字段缺省 ⇒ 现值原样）
   assert.deepEqual(merge(current, undefined), current)
   // 出现的键 = 整对象替换；同请求其余键不动
-  const replaced = merge(current, { m1: { rpm: 9, tpm: null, costIn: null, costOut: null, note: null } })
-  assert.deepEqual(replaced, { ...current, m1: { rpm: 9, tpm: null, costIn: null, costOut: null, note: null } })
+  const replaced = merge(current, { m1: { rpm: 9, tpm: null, costIn: null, costOut: null, note: null, quotaTokens: null } })
+  assert.deepEqual(replaced, { ...current, m1: { rpm: 9, tpm: null, costIn: null, costOut: null, note: null, quotaTokens: null } })
   // 值 null ⇒ 删键（同请求其余键不动）
   assert.deepEqual(merge(current, { m1: null }), { m2: current.m2 })
   // 非法形 ⇒ 抛（映射层；转 400 归调用方）
   for (const bad of [null, [], "x", 1]) assert.throws(() => merge(current, bad), /settings 须为对象/, String(bad))
-  // 全子字段归一（未设 ⇒ 显式 null）；非法判据（未知子字段 ∥ 非正整数 ∥ 负/非数 ∥ note 超 200）
-  assert.deepEqual(CONFIG.validateProviderSettings({ m: { rpm: 5 } }), { m: { rpm: 5, tpm: null, costIn: null, costOut: null, note: null } })
+  // 全子字段归一（未设 ⇒ 显式 null）；非法判据（未知子字段 ∥ 非正整数 ∥ 负/非数 ∥ quotaTokens 非 ≥0 整数 ∥ note 超 200）
+  assert.deepEqual(CONFIG.validateProviderSettings({ m: { rpm: 5 } }), { m: { rpm: 5, tpm: null, costIn: null, costOut: null, note: null, quotaTokens: null } })
   assert.deepEqual(CONFIG.validateProviderSettings(undefined), {})
   for (const bad of [
     { m: null }, { m: [1] }, { m: { rpm: 0 } }, { m: { rpm: 1.5 } }, { m: { tpm: -1 } }, { m: { costIn: -0.1 } },
-    { m: { costOut: "1" } }, { m: { note: "x".repeat(201) } }, { m: { bogus: 1 } }, { m: { note: 5 } },
+    { m: { costOut: "1" } }, { m: { quotaTokens: -1 } }, { m: { quotaTokens: 1.5 } }, { m: { quotaTokens: "1" } },
+    { m: { note: "x".repeat(201) } }, { m: { bogus: 1 } }, { m: { note: 5 } },
   ]) assert.throws(() => CONFIG.validateProviderSettings(bad), /m/, JSON.stringify(bad))
   // 前端线形 × 服务端合并 × 单源校验（部分字段保存 ⇒ 其余字段保留 ∥ 单字段清空 = 显式 null 不误伤）
   const draft = MODELS.draftFromSettings(current, "m1")
-  assert.deepEqual(draft, { rpm: "5", tpm: "100", costIn: "0.1", costOut: "0.2", note: "keep" })
+  assert.deepEqual(draft, { rpm: "5", tpm: "100", costIn: "0.1", costOut: "0.2", quotaTokens: "500", note: "keep" })
   draft.rpm = "9" // 部分字段编辑
   const edited = MODELS.settingsValueFromDraft(draft)
-  assert.deepEqual(edited.value, { rpm: 9, tpm: 100, costIn: 0.1, costOut: 0.2, note: "keep" })
+  assert.deepEqual(edited.value, { rpm: 9, tpm: 100, costIn: 0.1, costOut: 0.2, quotaTokens: 500, note: "keep" })
   assert.deepEqual(CONFIG.validateProviderSettings(merge(current, { m1: edited.value })).m1, edited.value, "部分字段保存 ⇒ 其余字段保留")
   const cleared = MODELS.settingsValueFromDraft({ ...draft, tpm: "" })
-  assert.deepEqual(cleared.value, { rpm: 9, tpm: null, costIn: 0.1, costOut: 0.2, note: "keep" })
+  assert.deepEqual(cleared.value, { rpm: 9, tpm: null, costIn: 0.1, costOut: 0.2, quotaTokens: 500, note: "keep" })
   assert.deepEqual(CONFIG.validateProviderSettings(merge(current, { m1: cleared.value })).m1, cleared.value, "单字段清空 = 显式 null 不误伤")
 })
 
