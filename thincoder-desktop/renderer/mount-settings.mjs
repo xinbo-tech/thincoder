@@ -35,17 +35,20 @@ import { createExits } from "./mount-settings-exits.mjs"
 import { renderSettingsModal, settingsModalNode } from "./settings-modal.mjs"
 import { closeSettingsConfirm } from "./settings-confirm.mjs"
 import { mountWizard, wizardModel } from "./views/onboarding.mjs"
-import { SECTIONS, mountSettings, settingsModalTree } from "./views/settings.mjs"
+import { SECTIONS, ADD_MODAL_GROUP, mountSettings, settingsModalTree } from "./views/settings.mjs"
 
 /** 设置 / 向导容器锚（**一容器两树互斥** —— 骨架属性住 `index.html`）。 */
 export const SETTINGS_SLOT = '[data-slot="settings"]'
 /** 重挂触发切片：`settings`（设置族全态）/ `locale`（词表切换重挂）/ `theme`（主题三态 —— 设置面头当前态随动；D33 · 台账 #743）。 */
 export const SETTINGS_KEYS = Object.freeze(["settings", "locale", "theme"])
 
-/** 段名闭集（**由视图 `SECTIONS` 派生** —— 同源单份，零双抄；失败面段标域；表外 ⇒ `panel`）。 */
-const SCOPES = Object.freeze(SECTIONS.map((section) => section.name))
+/** 段名闭集（**由视图 `SECTIONS` 派生** —— 同源单份，零双抄；失败面段标域；表外 ⇒ `panel`）。
+ *  **三端对齐批（KD-75 ①②）**：七 ⇒ **八** —— 增添加弹窗组名 `ADD_MODAL_GROUP`（`providerAdd`——非段名，
+ *  名单单源 = 视图档导出，本档 ∥ `MODAL_READS` ∥ 开径出口三面同领）。 */
+const SCOPES = Object.freeze([...SECTIONS.map((section) => section.name), ADD_MODAL_GROUP])
 
-/** 弹窗七组读取链（KD-68 ③ 逐组指名表：`model` 随渠道面（含模型候选随动）∥ `models` 随 agent 面（models 块 —— R7 同拍））。 */
+/** 弹窗读取链（KD-68 ③ 逐组指名表：`model` 随渠道面（含模型候选随动）∥ `models` 随 agent 面（models 块 —— R7 同拍）；
+ *  **添加弹窗**（KD-75 ②）随 `providers` 面 —— 体 = 单表，预设 ∥ 候选项两源皆 `provider:list` 回执）。 */
 const MODAL_READS = Object.freeze({
   providers: "loadProviders",
   model: "loadProviders",
@@ -54,6 +57,7 @@ const MODAL_READS = Object.freeze({
   env: "loadEnv",
   tools: "loadTools",
   models: "loadAgent",
+  [ADD_MODAL_GROUP]: "loadProviders",
 })
 
 /**
@@ -129,10 +133,14 @@ export function attachSettings(host, deps = {}) {
     else console.error("[renderer] invalidateDrafts dropped: missing draft scope")
   }
 
-  /** 出口族 + 写路辅助（出档 `mount-settings-exits.mjs` —— 共享项注入，本档零副本；`paintSettings` 迟绑定穿透）。 */
+  /** 出口族 + 写路辅助（出档 `mount-settings-exits.mjs` —— 共享项注入，本档零副本；`paintSettings` 迟绑定穿透）。
+   *  **开 ∕ 关双向注入**（函数声明提升 ⇒ 注入先于定义安全）：`openModal` = 添加弹窗开径（`settings:addProvider`
+   *  出口 —— KD-75 ②，沿 `paintSettings` 迟绑定先例）；`closeModal` = 保存成功径宿主关（KD-75 ⑥——§2.4 行 6
+   *  「提交 ⇒ 宿主关（KD-68 关径）」）。 */
   const exits = createExits({
     ask, store, setSettings, report, clearReport, occupies, reads, onProvidersChanged, invalidateDrafts,
     slot: SETTINGS_SLOT, paintSettings: (state) => paintSettings(state),
+    openModal: (group) => openSettingsModal(group), closeModal: () => closeSettingsModal(),
   })
 
   /** 弹窗出口面（KD-68 ③⑥ —— 出口链 = **同一 `exits.handlers` 全表**（零第二份）+ 关三路（✕ ∥ 背板 ∥ 卡内 Esc）

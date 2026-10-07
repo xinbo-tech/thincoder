@@ -6,6 +6,7 @@
  *   ① **刷新 = 换卡**（卡根整体替换 —— 组名面 ∥ 内容 ∥ 属性（`aria-label`）随新树；卡片根捕获 ∕ 复填归装配面
  *      「第二闸」（`renderer/mount-settings.mjs`），卡根读面 = `settingsModalNode`）；背板首挂一次（其 handler 无内容依赖）。
  *   ② **初始焦点 = ✕**（+50ms —— 沿确认件先例：`setTimeout(() => face?.card.querySelector?.(".settings-close")?.focus?.(), 50)`）；
+ *      **表单弹窗例外（三端对齐批 · 2026-10-07 · KD-75 ①）**：卡携 `data-initial-focus="field"`（树面声明）⇒ 首控件（表单首个 `.settings-field` —— 源对齐 VSC 弹窗 `#pa-type` 同拍）；他组卡无此声明 ⇒ ✕（KD-68 ⑥ 零动）。
  *      零焦点陷阱（边界 —— 沿确认件 ∥ 现状；Tab 可出卡）。
  *   ③ **关 = 两件同清 + 子确认层同清**（`closeSettingsConfirm` —— 弹窗退场 ⇒ 叠于其上的删除确认同清；沿
  *      `closeSettings` 同形）；无弹窗 ⇒ 零动作。宿主缺 `append` 面 ⇒ 记错零动作（零静默 —— 沿确认件同形）。
@@ -44,7 +45,13 @@ export function renderSettingsModal(tree) {
     body.append(backdrop)
     body.append(card)
     face = { backdrop, card }
-    setTimeout(() => { face?.card.querySelector?.(".settings-close")?.focus?.() }, 50)
+    setTimeout(() => {
+      // 初始焦点（KD-68 ⑥ ∥ KD-75 ①）：表单弹窗（`data-initial-focus="field"`——树面声明）⇒ 首控件；他组 ⇒ ✕。
+      const target = face?.card?.getAttribute?.("data-initial-focus") === "field"
+        ? face.card.querySelector?.("form .settings-field") ?? face.card.querySelector?.(".settings-close")
+        : face?.card.querySelector?.(".settings-close")
+      target?.focus?.()
+    }, 50)
   } else {
     face.card.replaceWith(card)
     face.card = card

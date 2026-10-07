@@ -21,13 +21,17 @@
  * **S3 分档增（#673 · 2026-09-29）**：行面增 `failure` 分档键（票面「消（补做——欠做，非能力缺失）」第三件——
  * 渲染面 `hostBusy` ⇒ 「宿主繁忙」+ 抑制失败句）；两探径失败支经 `loop-sampler.mjs` `overrideAdmissionIfHostBusy`
  * 以宿主证据覆盖落账分类（`reason` 逐字不动——核 `deps.hostBusyOverride` 缝同判）。
+ * **三端对齐批（2026-10-07 · 台账 #1027–#1029 · KD-75 ④⑤）**：① `provider:save` 载荷 + `proxy`（勾选 ⇒ `true`）
+ * ⇒ 核 `addProviderEntry` 同批落条（仅真值落键）；② `provider:models` 探针目标收敛为核 `probeTargetOf` 同判定
+ * （双门槛组成式唯一式：条目 `proxy` ∧ 全局 `proxy.model === true` ⇒ `proxy.uri`；未勾 ∥ 缺省 ⇒ 直连）——
+ * 原全局 `proxy.web` 旗取用退场（web 旗活消费面唯一 = 核 `proxy.mjs` 的 web 工具链 —— `docs/core/design/PROXY.md` §4）。
  */
-import { PROVIDER_PRESETS, loadConfig, normalizeProxy } from "@thincoder/core/config.mjs"
+import { PROVIDER_PRESETS, loadConfig } from "@thincoder/core/config.mjs"
 import {
-  _configPath, addProviderEntry, loadRaw, removeProviderEntry, removeProviderKeyFromConfig,
+  _configPath, addProviderEntry, removeProviderEntry, removeProviderKeyFromConfig,
   resolveProviders, setProviderKey, writeConfigAtomic,
 } from "@thincoder/core/config-io.mjs"
-import { customFieldsError, probeAdmission } from "@thincoder/core/provider-flows.mjs"
+import { customFieldsError, probeAdmission, probeTargetOf } from "@thincoder/core/provider-flows.mjs"
 import { admissionOf, probeChannelModels } from "@thincoder/core/provider/list-models.mjs"
 import { proxyFetch } from "@thincoder/core/proxy.mjs"
 import { maskKey } from "./settings.mjs"
@@ -116,7 +120,8 @@ export function probeAfterWrite(name) {
 
 /**
  * `provider:save(payload)` ⇒ `{ ok:true, reason:null }` ∥ `{ ok:false, reason }`。
- * 载荷 `{ name, shape:"preset"|"custom", preset?, baseURL?, model?, key?, format?, active? }`；
+ * 载荷 `{ name, shape:"preset"|"custom", preset?, baseURL?, model?, key?, format?, active?, proxy? }`；
+ * `proxy`（可选布尔 —— 表单「走 proxy」勾选，KD-75 ④）：`true` ⇒ 条目同批落 `proxy: true`（缺 ∥ 非真 ⇒ 零键）；
  * `reason` = 核 `addProviderEntry` 错误串**直传**（预设名不存在 / 重名 / 激活渠道保护…）∥ 端侧形判
  * `invalid-shape`（形不在两形 / custom 缺 `baseURL`·`model` / `format` 出三协议——**步序判据单源** = 核流程族
  * `customFieldsError`，端码照旧）。
@@ -133,16 +138,18 @@ export function providerSave(payload) {
   const shape = payload?.shape
   if (!name || !SHAPES.includes(shape)) return { ok: false, reason: "invalid-shape" }
   const key = typeof payload?.key === "string" && payload.key ? payload.key : undefined
+  // KD-75 ④：走 proxy 旗随载荷（仅真值落键 —— 判据单源 = 核 `addProviderEntry` `proxy === true`）。
+  const proxy = payload?.proxy === true
   let err
   if (shape === "preset") {
-    err = addProviderEntry({ preset: name, key })
+    err = addProviderEntry({ preset: name, key, proxy })
   } else {
     const baseURL = String(payload?.baseURL ?? "").trim()
     const model = String(payload?.model ?? "").trim()
     const format = payload?.format ?? "openai"
     // 自定形必填步序（baseURL → model → format）+ 协议域 = 核流程族判据（R8）——端侧零副本、拒码照旧。
     if (customFieldsError({ baseURL, model, format }) !== null) return { ok: false, reason: "invalid-shape" }
-    err = addProviderEntry({ custom: { name, baseURL, model, format }, key })
+    err = addProviderEntry({ custom: { name, baseURL, model, format }, key, proxy })
   }
   if (err) return { ok: false, reason: err }
   probeAfterWrite(name) // S3：加渠道 = 配置写入面 —— 写后探一次（零阻断）
@@ -260,19 +267,19 @@ export async function providerVerify(payload) {
 }
 
 /**
- * `provider:models(payload)` ⇒ `{ ok:true, models }` ∥ `{ ok:false, models:[], reason }` —— 自定形「拉取模型」（S2：VSC
+ * `provider:models(payload)` ⇒ `{ ok:true, models }` ∥ `{ ok:false, models:[], reason }` —— 「拉取模型」（S2：VSC
  * `testProviderConnection` 对位）。载荷 = **表单暂存值**（**不落盘 ∕ 不入账**）；探面单源 = 核 `probeChannelModels`
- * （零第二探针），代理口径沿 VSC 同函数（全局 web 代理）。**名传空串** ⇒ 核 `recordAdmission` 空名早退 ⇒ 不落账
- * （免污染同名既有渠行面读数 —— S3 行面单源）。探不通 ⇒ `reason` = 核失败句，**不阻断保存**。
+ * （零第二探针），**探针目标 = 核 `probeTargetOf` 同判定**（KD-75 ⑤ 缺陷修复并本批：条目 `proxy` ∧ 全局
+ * `proxy.model === true` ⇒ `proxy.uri`；未勾 ∥ 缺省 ⇒ 直连 —— 原全局 `proxy.web` 旗取用退场）。**名传空串** ⇒ 核
+ * `recordAdmission` 空名早退 ⇒ 不落账（免污染同名既有渠行面读数 —— S3 行面单源）。探不通 ⇒ `reason` = 核失败句，**不阻断保存**。
  */
 export async function providerModels(payload) {
   const baseURL = String(payload?.baseURL ?? "").trim().replace(/\/+$/, "")
   if (!baseURL) return { ok: false, models: [], reason: "invalid-shape" }
   const apiKey = typeof payload?.apiKey === "string" ? payload.apiKey.trim() : ""
   const format = typeof payload?.format === "string" && payload.format !== "" ? payload.format : "openai"
-  const px = normalizeProxy(loadRaw()?.proxy)
-  const proxyUri = px?.uri && px.web !== false ? px.uri : null
-  const probe = await probeChannelModels("", { baseURL, apiKey, format, proxyUri })
+  const target = probeTargetOf({ name: "", baseURL, apiKey, format, proxy: payload?.proxy === true })
+  const probe = await probeChannelModels("", target)
   if (probe?.ok !== true) {
     const reason = typeof probe?.error === "string" && probe.error !== "" ? probe.error : "invalid-shape"
     return { ok: false, models: [], reason }

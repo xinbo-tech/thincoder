@@ -7,7 +7,9 @@
  * 会话族与活动池切片随各自批次填充。
  * 批 9 增 `settings` 切片（开合 / 四段三态 / 向导 / 校验结果 —— `docs/desktop/design/UI.md` §1 设置面行）——**值面归接线层**（`renderer/mount-settings.mjs` 只经
  * `patchSettings` 落值），本档只持槽位 + 四条纯动作；`configured` 为**三态读数**（`null` = 未知）。
- * **B10 W2 增三键**（`settings.providers` 切片 —— S1 ∕ S2 面）：`edit`（行内钥编辑态 = 渠名；写者 = 出口，`loadProviders` ∕ 关面复位）· `probe`（自定形「拉取模型」三态果 `{ state, models, reason }`）· `draft`（表单暂存值回填快照 —— 探果写切片致重挂时救回未落盘输入）。
+ * **B10 W2 增三键**（`settings.providers` 切片 —— S1 ∕ S2 面）：`edit`（行内钥编辑态 = 渠名；写者 = 出口，`loadProviders` ∕ 关面复位）· `probe`（「拉取模型」三态果 `{ state, models, reason }`）· `draft`（表单暂存值回填快照 —— 探果写切片致重挂时救回未落盘输入）。
+ * **三端对齐批增一键**（2026-10-07 · 台账 #1027–#1029 · KD-75 ③）：`addShape`（添加弹窗**形状唯一源** ——
+ *  值 = 类型选择现值：预设名 ∥ `"custom"`；缺省 `"preset"`；写者 = 出口族 `onAddShape`，开 ∥ 关弹窗 ∥ 写成功径复位）。
  * **桌面残余三轮 · 波 C 增一键**（#615② —— 改钥失败径草稿种子）：`keyDraft`（`{ name, value }` ∕ `null` —— 设 ∕ 改钥失败 ⇒ 键入值落此槽，重挂后行内输入按名回填；
  *  成功 ∕ 取消 ∕ 开面 ∕ 关面四处复位；写者 = `renderer/mount-settings-segments-providers.mjs`）。
  * R3a 增四槽（D17 状态行读数面 —— `renderer/views/statusline.mjs` 读面）：`turns` / `turnStarts` / `tokens` / `timers`（后两槽 = `ev:usage` 载荷扩）。
@@ -112,11 +114,11 @@ export function initialState() {
     settings: {
       open: false,
       notice: null,
-      modal: null, // 组弹窗切片（D39 ∥ D38 · #817：`null` ∥ 组名七值闭集；写者 = `renderer/mount-settings.mjs` `openSettingsModal` ∥ `closeSettingsModal`）
+      modal: null, // 组弹窗切片（D39 ∥ D38 · #817：`null` ∥ 组名八值闭集——七段名 + 添加弹窗 `providerAdd`〔三端对齐批 · KD-75 ①②〕；写者 = `renderer/mount-settings.mjs` `openSettingsModal` ∥ `closeSettingsModal`）
       configured: null,
       defaultModel: null,
       wizard: { step: 1, dismissed: false, notice: null },
-      providers: { state: "none", presets: [], providers: [], edit: null, probe: null, draft: null, keyDraft: null },
+      providers: { state: "none", presets: [], providers: [], edit: null, probe: null, draft: null, keyDraft: null, addShape: "preset" },
       verify: null,
       model: { state: "none", provider: null, current: null, models: [] },
       agent: { state: "none", fields: [] },

@@ -6,6 +6,9 @@
  *
  * 出口（六件）：钥行编辑态两件（开 ∕ 消）· 设 ∕ 改钥 · 删钥（确认门经 `settings-confirm.mjs`）·
  * 渠级代理开关 · 「拉取模型」（暂存值直探）。
+ * **三端对齐批（2026-10-07 · 台账 #1027–#1029 · KD-75 ③⑤）**：新增**添加表单类型切换出口** `onAddShape`
+ * （写 `providers.addShape` —— 形状唯一源；值 = 类型选择现值：预设名 ∥ `"custom"`）；`fetchModels` 载荷 + `proxy`
+ * （表单勾选 ⇒ `true`；未勾 ∥ 缺 ⇒ 直连 —— 探针路由随勾选，主侧 `probeTargetOf` 同判定）。
  * **桌面残余三轮 · 波 C（#615②）**：改钥失败径 ⇒ 键入值落 `providers.keyDraft`（重挂后行内输入按名回填 —— 失败不丢键入）；
  * 复位四点（`keyDraft` 族）= 成功 ∕ 取消（本档两件）＋ 开面 ∕ 关面（`mount-settings-exits.mjs`）；读面种子消费 = `views/settings-sections.mjs` `keyControls`。
  * **#652**：成功径在复位写前声明该行草稿失效（`invalidateDrafts(scope)` 注入 —— 作用域 = 输入件自携 `data-draft-scope`；
@@ -110,7 +113,8 @@ export function createProviderExits(deps = {}) {
    * 「拉取模型」出口（S2）：读表单暂存值（DOM 直读 —— **不落盘**）⇒ `provider:models`；探期 ∕ 两态落
    * `providers.probe`，**同批写 `providers.draft`**（表单现值快照 —— 探果写切片 ⇒ 树重挂 ⇒ 未落盘输入
    * 由回填救回）。`baseURL` 空 ⇒ 本地前置拒（`base-url-required` 词面，零发送 —— 沿 VSC `_paFetchModels`）；
-   * 探不通 ⇒ 失败词驻状态行，**保存径零阻断**。
+   * 探不通 ⇒ 失败词驻状态行，**保存径零阻断**。**KD-75 ⑤**：载荷 + `proxy`（勾选 ⇒ `true` —— 探针路由
+   * 随勾选；未勾 ∥ 缺 ⇒ 直连，目标构造归核 `probeTargetOf`）。
    */
   async function fetchModels(event) {
     const form = typeof formOf === "function" ? formOf(event) : null
@@ -123,18 +127,23 @@ export function createProviderExits(deps = {}) {
       format: String(data.get("format") ?? ""),
       key: String(data.get("key") ?? ""),
     }
+    const proxy = data.get("proxy") !== null ? { proxy: true } : {}
     if (draft.baseURL.trim() === "") {
       console.error("[renderer] provider:models skipped: baseURL is required")
       setProvidersSlice({ probe: { state: "fail", models: [], reason: "base-url-required" }, draft })
       return
     }
     setProvidersSlice({ probe: { state: "running", models: [], reason: null }, draft })
-    const receipt = await ask("provider:models", { baseURL: draft.baseURL, apiKey: draft.key, format: draft.format })
+    const receipt = await ask("provider:models", { baseURL: draft.baseURL, apiKey: draft.key, format: draft.format, ...proxy })
     const probe = receipt.ok === true
       ? { state: "ok", models: listOf(receipt.models), reason: null }
       : { state: "fail", models: [], reason: reasonOf(receipt) }
     setProvidersSlice({ probe, draft })
   }
+
+  /** 添加表单类型切换出口（KD-75 ③）：写形状唯一源 `providers.addShape`（值 = 类型选择现值：预设名 ∥ `"custom"`）；
+   *  写后重绘（已填输入经第二闸复填 —— 草稿作用域单骨 `add:provider` 跨形恒同）；表外 ∥ 空 ⇒ `"preset"`（不猜）。 */
+  const setAddShape = (value) => setProvidersSlice({ addShape: typeof value === "string" && value !== "" ? value : "preset" })
 
   /** 出口族表（锚名逐字 = 视图 `data-action` 同域）。 */
   const handlers = {
@@ -144,6 +153,7 @@ export function createProviderExits(deps = {}) {
     onProviderKeyDelete: (name) => deleteProviderKey(name),
     onSetProxy: (name, value) => void setProviderProxy(name, value),
     onFetchModels: (event) => void fetchModels(event),
+    onAddShape: (value) => setAddShape(value),
   }
 
   return { handlers }

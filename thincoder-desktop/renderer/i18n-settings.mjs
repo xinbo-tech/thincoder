@@ -2,9 +2,9 @@
  * i18n-settings.mjs — 设置面词族第四档（i18n 拆分批 `docs/batches/2026-09-29-i18n-split.md` §2 · 台账 #614
  * 顶格消解：主档 `renderer/i18n.mjs` 内容行 500 顶格 ⇒ 自有 `settings.*` 族 55 键整族出档，本档承接）。
  *
- * 键面（**59 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
- * 四段名 / 两段态 / 十三失败码 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
- * 当前标 · 两增键 / 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
+ * 键面（**60 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59；**三端对齐批（2026-10-07 · 台账 #1027–#1035 · KD-75 ②③）**：增 `settings.addProvider` ∥ `settings.addProviderTitle` ∥ `settings.providers.customChoice` 三键，净删 `settings.providers.addCustom` ∥ `.addPreset` 两键（旧双表单提交词——表单退场随退）——59 ⇒ **60**）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
+ * 四段名 / 两段态 / 十三失败码 / 添加入口两键 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
+ * 当前标 · 自定项键（KD-75 ③）/ 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
  * 移除 · 增键 —— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）。
  * S3 分档增（#673 · 2026-09-29）：失败码族补 `settings.reason.hostBusy`（渠行行标分档词 —— 消费面 =
  * `renderer/views/settings-sections.mjs`；值源 = VSC 硬编码词「宿主繁忙」同形，两语同增）。
@@ -52,21 +52,22 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.reason.timeout": "Timed out",
     "settings.reason.malformed": "Malformed response",
     "settings.reason.probeFailed": "Probe failed",
+    "settings.addProvider": "+ Add",
+    "settings.addProviderTitle": "Add Provider",
     "settings.providers.nameLabel": "Name",
     "settings.providers.presetLabel": "Preset",
     "settings.providers.baseURLLabel": "Base URL",
     "settings.providers.modelLabel": "Model",
     "settings.providers.formatLabel": "Format",
-    "settings.providers.keyLabel": "API key",
+    "settings.providers.keyLabel": "API Key",
     "settings.providers.activeToggle": "Set as active provider",
-    "settings.providers.addCustom": "Add custom provider",
-    "settings.providers.addPreset": "Add preset provider",
+    "settings.providers.customChoice": "Custom (manual config)",
     "settings.providers.verify": "Verify",
     "settings.providers.verify.ok": "Verified · ${count} models",
     "settings.providers.verify.fail": "Verification failed: ${reason}",
     "settings.providers.verify.okShort": "Verified",
     "settings.providers.verify.failShort": "Failed",
-    "settings.providers.noKey": "No API key",
+    "settings.providers.noKey": "No API Key",
     "settings.providers.remove": "Remove ${name}",
     "settings.providers.active": "Active",
     "settings.proxyRow": "proxy",
@@ -114,21 +115,22 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.reason.timeout": "超时",
     "settings.reason.malformed": "响应格式畸形",
     "settings.reason.probeFailed": "探活失败",
+    "settings.addProvider": "+ 添加",
+    "settings.addProviderTitle": "添加 Provider",
     "settings.providers.nameLabel": "名称",
     "settings.providers.presetLabel": "预设",
     "settings.providers.baseURLLabel": "Base URL",
     "settings.providers.modelLabel": "模型",
     "settings.providers.formatLabel": "协议格式",
-    "settings.providers.keyLabel": "API 密钥",
+    "settings.providers.keyLabel": "API Key",
     "settings.providers.activeToggle": "设为当前渠道",
-    "settings.providers.addCustom": "添加自定义渠道",
-    "settings.providers.addPreset": "添加预设渠道",
+    "settings.providers.customChoice": "自定义（手动配置）",
     "settings.providers.verify": "校验",
     "settings.providers.verify.ok": "校验通过 · ${count} 个模型",
     "settings.providers.verify.fail": "校验失败：${reason}",
     "settings.providers.verify.okShort": "校验通过",
     "settings.providers.verify.failShort": "校验失败",
-    "settings.providers.noKey": "未配置密钥",
+    "settings.providers.noKey": "未配置 API Key",
     "settings.providers.remove": "移除 ${name}",
     "settings.providers.active": "当前",
     "settings.proxyRow": "代理",

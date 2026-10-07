@@ -18,9 +18,10 @@ import { configuredFlag, dismissWizard, patchSettings, setWizardStep } from "./s
 const wizardOf = (state) => state?.settings?.wizard ?? {}
 
 /** 向导步 1 校验（`onVerify(null)`）：自读表单现选 —— 槽内预设选择器现值；缺 ⇒ `null`（零发送）。
- *  槽锚由调用面给（单一 owner = `SETTINGS_SLOT` 所在档）—— 本档零锚串副本。 */
+ *  槽锚由调用面给（单一 owner = `SETTINGS_SLOT` 所在档）—— 本档零锚串副本。
+ *  **选择器随三端对齐批随正**（KD-75 ③）：单表类型选择 `name="preset"`（原 `name="name"` —— 旧预设单选）。 */
 export function presetValue(slot) {
-  const select = document.querySelector(`${slot} select[name="name"]`)
+  const select = document.querySelector(`${slot} select[name="preset"]`)
   const value = select === null ? "" : String(select.value ?? "")
   return value === "" ? null : value
 }

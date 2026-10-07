@@ -339,7 +339,7 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder）
 
-**状态行**：实施完成（舱一 = 核+CLI（C1/L1 4/4）∥ 舱二 = VSC（V1–V11 11/11）∥ 舱三桌面未派——逐舱块见 5.1 ∥ 5.6）
+**状态行**：实施完成（舱一 = 核+CLI（C1/L1 4/4）∥ 舱二 = VSC（V1–V11 11/11）∥ 舱三 = 桌面（D1–D6，批内件合计 21/21）——逐舱块见 5.1 ∥ 5.6 ∥ 5.11）
 
 ### 5.1 交付摘要（舱一 = 核 + CLI：写面原语 + CLI 收敛 + 批本地测试件）
 
@@ -424,5 +424,65 @@ VERDICT: pass
 - `cd thincoder-vscode; node test/smoke-settings.mjs` ⇒ `SMOKE-OK: settings panel split is behaviorally wired (build + updates + protocol)`。
 - 另跑（扫面佐证，非套件）：`_toggleAddForm` ∥ `prov-add-form` ∥ `fetchModelsFirst` ∥ 两处硬编码显示串 ∥ `settings-providers.js` 与弹窗档 U+2212 ——全 `thincoder-vscode/**`（除 `node_modules`）零命中。
 - **not repo-suite verified**——the parent-side closeout run is the only repo-suite run。
+
+### 5.11 交付摘要（舱三 = 桌面：添加弹窗化 ∥ 单表字段序 ∥ 走 proxy 开关）
+
+- **接续判定 = 新起（零残留）**：开工首事 = 通读批档 §2 全档 + `docs/desktop/design/SETTINGS.md` §2.16（KD-75 九条）；本舱开工时桌面面零脏件 ⇒ 无接续面。
+- **改动清单（file:line · 15 档 = 表内 11 + 表外 4）**：
+  - `renderer/views/settings-controls.mjs`（145 ⇒ 215；表内）：单表重写——形状读 `form?.shape`（`CUSTOM_CHOICE` 归一）⇒ 节序 `[shape(hidden), preset(select), (preset-info), (名称块 name→baseURL→format), key, proxy, (拉取行, model), 提交, 取消]`；弹窗体三件（类型切换接线 ∥ 预设信息行 ∥ 自定末项 ∥ 取消钮）随 handler 在场条件化（`:97` ∥ `:114` ∥ `:126` ∥ `:183`）；`active` 复选改 `activeDefault !== undefined` 条件件（`:164-171`）；`proxy` 件无条件（`:146-153`）。
+  - `renderer/views/settings-sections-providers.mjs`（194 ⇒ 211；表内）：原 `presetFormTree`/`customFormTree` 双表单退场；段体 = 行族 + 单列写侧校验回退 +「+ 添加」钮（锚 `settings:addProvider`）；新增导出 `providerAddBody`。
+  - `renderer/views/settings.mjs`（398 ⇒ 419；表内）：`ADD_MODAL_GROUP = "providerAdd"` 单源导出；`settingsModel.addShape`（缺省 `"preset"`）；`sectionBody` 添加支；`settingsModalTree` 添加支（标题 `settings.addProviderTitle` ∥ 体 = 单表 ∥ 段态词单点——添加支不叠渲）；卡携 `data-initial-focus="field"`。
+  - `renderer/mount-settings.mjs`（251 ⇒ 259；表内）：`SCOPES` 七 ⇒ 八（含 `ADD_MODAL_GROUP`）∥ `MODAL_READS` +1 = `loadProviders` ∥ `createExits` 增 `openModal` 迟绑定注入（函数声明提升 ⇒ 零 TDZ）。
+  - `renderer/mount-settings-exits.mjs`（254 ⇒ 289；表内）：`submitChannel` 两处改线（读 `preset` 键 ∥ `proxy` 仅勾选携 `true` ∥ 成功径宿主关）∥ `onAddProvider` 出口注册 ∥ `resetFacets("providerAdd")` 支。
+  - `renderer/mount-settings-segments-providers.mjs`（150 ⇒ 160；表内）：`fetchModels` 载荷 +`proxy`（同式）∥ 新增 `onAddShape` 出口（写切片重绘）。
+  - `renderer/store.mjs`（368 ⇒ 370；表内）：`providers.addShape` 初值 `"preset"` + 切片注。
+  - `src/main/providers.mjs`（317 ⇒ 324；表内）：`providerSave` + `proxy`（`payload?.proxy === true` 双门槛 ⇒ 落条）∥ `providerModels` 目标收敛 `probeTargetOf({ name: "", baseURL, apiKey, format, proxy: payload?.proxy === true })`；`normalizeProxy`/`loadRaw` 取用退场（web 旗径零残引）。
+  - `renderer/i18n-settings.mjs`（150 ⇒ 152；表内）：键 +3 −2（净 +1；59 ⇒ 60）+ #1035 两值（`keyLabel` ∥ `noKey`）。
+  - `renderer/i18n-views.mjs`（表 398 ⇒ 406；表内）：值改 #1035（`addKey` ∥ `deleteKey` ∥ `composer.send.noProvider`——零净行变；读数为盘读数）。
+  - `renderer/i18n-composer.mjs`（92 ⇒ 92；表内）：值改 #1035（`model.setKey`：en "Key…" ⇒ "API Key…"；zh 同）。
+  - **表外四件（已自认 · 随动/注释；逐件理由见 5.12）**：`renderer/mount-onboarding.mjs`（96；`presetValue` 选择器 `select[name="name"]` ⇒ `select[name="preset"]`）∥ `renderer/settings-modal.mjs`（70；初始焦点例外：卡携 `data-initial-focus="field"` ⇒ 焦点落表单首控件，他组仍 ✕）∥ `renderer/views/settings-sections.mjs`（95；`providerAddBody` re-export）∥ `renderer/i18n.mjs`（420；`settings.*` 59 ⇒ 60 键 + 链文续一行——注释/计数面）。
+  - 测试件 `docs/batches/2026-10-07-provider-config-parity.test.mjs`（679 ⇒ 1039；批本地件）：追加 D1–D6 腿（C1/L1/V 腿零触）。
+- **行数实读回填（批档 §2.6 表口径 = `wc -l` 内容行数 · read 全档读数）**：见上；与 §2.6 Δ 预估的偏差（215 vs 145+≈30 ∥ 419 vs 398+≈6 ∥ 289 vs 254+≈2 ∥ 160 vs 150+≈2 ∥ 259 vs 251+≈3 ∥ 324 vs 317+≈5 ∥ 211 vs 194−≈10）连建议交父侧回填（评审 🔵）。
+- **零动面核验**：桌面 CSS 零档 ∥ `renderer/dom.mjs` ∥ `renderer/view-state.mjs` ∥ `renderer/settings-confirm.mjs` ∥ `renderer/mount-settings-reads.mjs` ∥ `renderer/mount-settings-segments-models.mjs` ∥ `src/main/ipc.mjs` ∥ 核件/CLI/VSC 面——本舱零触（`git status` 佐证；在飞并行批 `thincoder-core/browser/**` ∥ `renderer/mount-settings-segments.mjs` ∥ `-mcp.mjs` 属 #1036，非本舱）。
+- **事故与复原（透明记）**：首轮 D4 腿因**核件模块实例分裂**（测试以 `file:///d:/...` 直引核件，而桌面主面经 `thincoder-desktop/node_modules/@thincoder/core` 链接解析 —— 两实例各持 `_configPath` 缝）⇒ 该腿三次 `providerSave` 落到**真配置** `~/.thincoder/config.json`（增 `tc-ds-a`〔`proxy:true`〕∥ `tc-ds-b` ∥ `tc-ds-c` 三条）。发现即处置：按原格式逐字复原（摘三条；原样往返 `JSON.stringify(raw, null, 2) + "\n"` 与全文逐字同形，其余 14 条 ∥ 全部顶层键零改，含 `defaultModel`）；测试腿增设**写前只读射程自证**（哨兵配置 + 桌面主面读面必见 ⇒ 否则即拒、零误写）+ 核件改经 `node_modules/@thincoder/core/...` 同径取件；复跑 21/21 绿、真配置零残（14 条）。
+- **验收判据**：批档 §2.6 桌面行 D1–D6 全落（读数见 5.15）。
+
+### 5.12 决策透明表（实现轮内当场决策）
+
+| # | 决策 | 理由 | 依据 |
+|---|---|---|---|
+| 1 | 弹窗体三件（类型切换接线 ∥ 自定末项 ∥ 预设信息行 ∥ 取消钮）**随 handler 在场**渲染（`onAddShape` ∥ `onCloseModal`） | 同一 `channelFormTree` 供向导步 1 复用（调用面零改）；向导无切换出口（选型无回环 ⇒ 信息行必失真）+ 无弹窗宿主（取消钮无动作）⇒ 无条件渲染即**死控**；条件化后向导保持预设单选语义（与改前一致 ∥ D2 腿已钉两形） | 设计 §2.16 条 3/5（条 3 节序未登记该条件化——**设计面登记缺口，已上报**，见 5.13） |
+| 2 | 「提交 ⇒ 宿主关」按**成功径**实施（回执 ok ⇒ 宿主关；失败径留框 + 失败串归体） | 失败径留框示错才能承载设计条 1 的失败串（scope = providers ∥ panel）语义；发即关 = 核拒绝后用户输入全丢（零静默 ⇒ 反） | 批档 §2.4 行 6「提交 ⇒ 宿主关」（按成功径读）∥ 设计 §2.16 条 1 失败串归卡体 |
+| 3 | `providers.addShape` 值域 = 类型选择**现值**（预设名 ∥ `"custom"`；缺省 `"preset"`） | 单源载体：选中回环（预设形隐式选中首项 ⇒ 需具名）∥ 预设信息行数据源 ∥ 隐藏 `shape` 与选中一致 | 设计 §2.16 条 3/1（形状唯一源 + `resetFacets` 回 `"preset"`） |
+| 4 | 草稿作用域**单骨** `add:provider`（原两形两骨 `add:preset`/`add:custom`） | 跨形切换 = 同一表单重绘 ⇒ 两骨会在切形时把在编输入判为「他表单草稿」丢弃；单骨 = 切换保真（设计「切换 = 重绘（第二闸复填在编输入）」的前提）；副作用 = 向导径与弹窗径共骨（同表单词义，语义自洽） | 设计 §2.16 条 3（切换 = 重绘 + 复填）∥ `renderer/view-state.mjs` 作用域语义 |
+| 5 | 初始焦点走**树面声明**（`data-initial-focus="field"`）而非宿主硬编码组名 | 宿主知「哪组」= 视图档组名第二副本；树面声明 = 单源（视图档自知其形），宿主零组名知识 | 设计 §2.16 条 1（初始焦点 = 首控件 ∥ KD-68 ⑥ 表单除外，登记） |
+| 6 | 段态词**单点**（添加支体面不叠渲 `sectionStateNode` —— `sectionBody` 首件已携） | 免 `none`/`loading` 期体面两枚同词节点（条 1 体式 = 失败串 + 段态词 + 单表 ⇒ 恰一枚）；他组双渲 = D39 既有、不在本舱域（见 5.13/5.14） | 内部审计 O1 ∥ 设计 §2.16 条 1 体式 |
+| 7 | 测试腿增设**写前只读射程自证** | 5.11 事故的机制性防复发：实例/路径任一变化 ⇒ 该腿在**任何写之前**红，绝不落真配置 | 本舱实测事故（5.11）∥ 核件测试缝语义 |
+| 8 | D5 键数断言取**下限**（≥ 60）而非等值 | `i18n-settings.mjs` 另有并行批（#1036 MCP）在飞增键 ⇒ 等值断言会跨批假红；本批判据 = 「+3 −2 净 +1」的**成员断言**（三新键在案 + 两旧键缺席） | 批档 §2.6 判据 D5 ∥ 并行批共存事实 |
+
+### 5.13 审计与代码评审轮次与终态
+
+- **内部发散审计（explore · 只读）轮 1**：State = DEVIATIONS —— 逐条比对后 **无行为级 must-fix**（设计 §2.16 条 1–9 行为面逐条落地 ∥ D1–D6 覆盖判据文本 ∥ 词面逐字合 ∥ 无静默缩小 ∥ 无未自认改写）；余项 = ① 记录面 must-fix「舱三 §5 未落」（**本块即补齐**）② 表外四件（已自认，成立；批档 §2.6 表未列 ⇒ 设计档漂移）③ 观察三条：O1 添加支体面段态词双渲（本舱已修，见 5.14 R1）∥ O2「提交 ⇒ 宿主关」仅源锁、无行为腿（真机走查补）∥ O3 设计档 §2.16 as-of 读数回填未随舱三（父侧面）。
+- **内部代码评审（advisor · code）轮 1**：**VERDICT: pass**（🔴 0 · 🟡 3 · 🔵 5，全非阻塞）——
+  - 🟡① 交付记录面未随舱三落（§5 状态行「舱三桌面未派」+ 无舱三块）——本块补齐；状态行随正归父侧；
+  - 🟡② 设计档 §2.16 条 7「现读链」与落形相抵（仍作「`ask("provider:models", { baseURL, apiKey, format })`——无 proxy 位」∥ 主面「`normalizeProxy(loadRaw()?.proxy)`」）+ 条 1 坐标 `mount-settings.mjs:46` 现为 `:48` —— 设计面（本舱禁触）⇒ 父侧/设计层随正；
+  - 🟡③ 单表件条件化未登记（= 本块 5.12 #1 的档面缺口）——设计面；
+  - 🔵 五条 = 数值/回填漂移（§2.6 Δ 预估 vs 实读 ∥ PROJECT.md 两行仍携「预估 ≈404，实施后实读回填」∥「预估 ≈322，实施后实读回填」）∥ `loading` 瞬时空预设期类型选择显示自定项（与隐藏 `shape` 暂不一致；该窗点存 ⇒ `invalid-shape` 失败串，零静默零崩）∥ 越线在册（`src/main/providers.mjs` 324 ∥ `views/settings.mjs` 419 ∥ `i18n-views.mjs` 406 ∥ `i18n.mjs` 420；批内件 1039 已裁按舱拆）∥ 注释级不齐（`views/settings-controls.mjs:12` 作「形状唯一源 = `form.shape`」而实读 `form?.shape`；`views/settings.mjs:21` 台账号 `#1027–#1028` 宜含 `#1029`）∥ 验证面口径（桌面仓套件清单空 `thincoder-desktop/test/files.mjs:3` `export default []` ⇒ D 腿零仓套件守卫；D4 行为腿与 21/21 读数该评审未复跑）。
+- **终态 = clean**：无 must-fix；🟡 全为记录面 ∥ 设计面 ∥ 设计登记缺口（连建议移父侧 §6 裁），🔵 为知会/父侧回填。
+
+### 5.14 fix round（≤5 轮）
+
+- **R1（1 笔 · 审计 O1 内部修复）**：`views/settings.mjs` 添加支不叠渲段态词（体面恰一枚）+ 批内件 D3 腿补「`loading` 态段态词恰一」∥「体段态锚随 providers 面态」两断言 ⇒ 复跑 21/21 绿。
+- **R2（1 笔 · 事故防复发）**：D4 腿核件取件改经 `thincoder-desktop/node_modules/@thincoder/core/...`（与桌面主面同实例）+ 增设写前只读射程自证（哨兵必见）⇒ 复跑 21/21 绿；D4 首轮曾误写真配置（见 5.11 事故段，已复原）。
+- **不修项（越界/设计定/记录面，连建议移父侧 §6）**：① D39 既有他组体面段态词双渲（他组不在 KD-75 域，改则越舱）；② 设计档 §2.16 条 7 现读链改述 + 条 1 坐标随正（评审 🟡②）；③ §2.6 桌面行 Δ/实读回填 + PROJECT.md 两行越层读数（评审 🔵）；④ 批内件按舱拆档（评审 🔵；父侧已裁随收口）；⑤ `views/settings-controls.mjs:12` ∥ `views/settings.mjs:21` 注释级不齐（评审 🔵）；⑥ `loading` 期类型选择显示自定项（评审 🔵；设计条 3 字面下「预设项空 + 末项在」= 合法，不判缺陷）。
+
+### 5.15 验证读数（本舱实跑）
+
+- `node --test docs/batches/2026-10-07-provider-config-parity.test.mjs` ⇒ **21/21 pass**（C1 ∥ L1a–c ∥ V1–V11 ∥ D1–D6；≈380ms）——仓库根（`d:\teamcode\thincoder`）运行。
+- `node --check` 逐档（15 档 + 批内件）⇒ 全 OK。
+- 真 DOM 形自证（局部一次性探针 · 经 `renderer/dom.mjs` 建面实读）：自定形节序 = `[shape, preset, name, baseURL, format, key, proxy, 拉取行, model, save(addCustom), cancel]` ∥ 预设形 = `[shape, preset, info, key, proxy, save(addPreset), cancel]`；弹窗卡属性 = `class/role/aria-modal/aria-label="Add Provider"/data-initial-focus` 全在案；预设形选中回环 = `selected` 恰一枚。
+- 词面：`SETTINGS_DICT` en = zh = 60（+3 −2）∥ `HOST_DICT`（合并表）实读 319 ∥ zh 四表裸「密钥」零命中。
+- **not repo-suite verified** —— the parent-side closeout run is the only repo-suite run（桌面仓套件清单为空：`thincoder-desktop/test/files.mjs:3` `export default []` ⇒ 无套件可跑）。
+- **真机走查（父侧人工验收 · 未跑）**：弹窗四径（✕ ∥ 背板 ∥ Esc ∥ 保存成功关）∥ 向导步 1 proxy 勾选随写 ∥ 行面勾选随动探针。
 
 ## §6 验证与收口（父代理）

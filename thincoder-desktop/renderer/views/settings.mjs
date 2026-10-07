@@ -18,13 +18,18 @@
  * 文案一律经 `t()`、零字形字面（字形住 `renderer/settings.css` content）；缺 handlers ⇒ `wire` 落 `disabled: true`。
  * **D39（设置菜单升级批 · #817）增**：`settingsModalTree`（单组弹窗树——复用档内私有 `noticeNode` ∥ `sectionStateNode`
  * ∥ `sectionBody`，零第二实现；宿主 = `renderer/settings-modal.mjs`；决策单源 = `docs/desktop/design/SETTINGS.md` §1 **KD-68**）。
+ * **三端对齐批增（2026-10-07 · 台账 #1027–#1028 · KD-75 ①②）**：`ADD_MODAL_GROUP`（`providerAdd`——弹窗面第八值，
+ * 名单源于此，`SCOPES` ∥ `MODAL_READS` ∥ 开径出口三面同领）+ `settingsModalTree` 添加支：标题词
+ * `settings.addProviderTitle`、体 = 失败串（scope = `providers` ∥ `panel`）+ 段态词（= `providers` 面态，第二闸在途判据面）
+ * + 单表（`providerAddBody`——段名 ∥ 段标题不复述）；卡携 `data-initial-focus="field"`（初始焦点 = 首控件，宿主取用）。
+ * 渠道段体（`providers`）同批：两形常显表单退场 ⇒ 段尾添加钮（`settings:addProvider`）。
  */
 import { build, clear } from "../dom.mjs"
 import { t } from "../i18n.mjs"
 import { THEMES } from "../theme.mjs"
 import { wire } from "./chat-tool.mjs"
 import { channelFormTree, verifyControl } from "./settings-controls.mjs"
-import { agentBody, envBody, mcpBody, modelBody, modelIdOf, modelsBody, providersBody, toolsBody } from "./settings-sections.mjs"
+import { agentBody, envBody, mcpBody, modelBody, modelIdOf, modelsBody, providerAddBody, providersBody, toolsBody } from "./settings-sections.mjs"
 
 // 两导出面随 R7 出档 `settings-controls.mjs`；本档 re-export ⇒ 导出面零改（消费面 = 首启向导）。
 export { channelFormTree, verifyControl } from "./settings-controls.mjs"
@@ -41,6 +46,10 @@ export const SECTIONS = Object.freeze([
   { name: "tools", word: "settings.section.tools" },
   { name: "models", word: "settings.section.models" },
 ])
+
+/** 添加弹窗组名（KD-75 ①②）：**非段名** —— 弹窗体 = `providers` 段域的单表（无行族）；
+ *  **名单源在此**（`SCOPES`（`mount-settings.mjs`）∥ `MODAL_READS` ∥ 开径出口（`mount-settings-exits.mjs`）三面同领 —— 零双抄）。 */
+export const ADD_MODAL_GROUP = "providerAdd"
 
 /** 段态出词闭集（两态：`none` / `loading`）；`ready` ⇒ 行内容（零状态词）。 */
 export const STATE_WORD = Object.freeze({
@@ -152,6 +161,8 @@ export function settingsModel(state) {
       rows: listOf(settings.providers?.providers).filter((p) => p && typeof p.name === "string"),
       verify: settings.verify !== null && typeof settings.verify === "object" ? settings.verify : null,
       edit: str(settings.providers?.edit), probe: objOf(settings.providers?.probe), draft: objOf(settings.providers?.draft),
+      // KD-75 ③：类型选择现值（形状唯一源）——预设名 ∥ `"custom"`；缺 / 空 ⇒ `"preset"`（缺省态 = 预设形首项）。
+      addShape: str(settings.providers?.addShape) ?? "preset",
       // #615②：失败径草稿种子（`{ name, value }` ∕ `null` —— 消费面 = 渠道段钥行输入回填，`settings-sections.mjs` `keyControls`）
       keyDraft: objOf(settings.providers?.keyDraft),
     },
@@ -250,6 +261,8 @@ function sectionStateNode(state) {
 function sectionBody(name, model, handlers) {
   const deps = { channelForm: channelFormTree, verifyControl, reasonWord, formats: FORMATS, edit: model?.providers?.edit ?? null, keyDraft: model?.providers?.keyDraft ?? null }
   if (name === "providers") return [sectionStateNode(model.providers.state), ...providersBody(model.providers, handlers, deps)]
+  // 添加弹窗体（KD-75 ①）：零行族 —— 单表唯内容；三源（形状 ∥ 暂存值 ∥ 候选）同住 `providers` 切片。
+  if (name === ADD_MODAL_GROUP) return [sectionStateNode(model.providers.state), ...providerAddBody(model.providers, handlers, deps)]
   if (name === "model") return [sectionStateNode(model.model.state), ...modelBody(model.model, handlers)]
   if (name === "agent") {
     return [sectionStateNode(model.agent.state), ...(model.agent.state === "loading" ? [] : agentBody(model.agent, handlers))]
@@ -344,29 +357,37 @@ export function settingsTree(model, handlers = {}) {
  *  体 = 失败串（`notice.scope` = 本组 ∨ `panel`——他组隐）+ 段态词 + 段体，段标题不复述〕；复用档内私有三件
  *  （`noticeNode` ∥ `sectionStateNode` ∥ `sectionBody`）⇒ 零第二实现；三关 handler 全在树面（背板 ∥ ✕ ∥ 卡内 Esc
  *  〔`stopPropagation` —— 不连带触 F-Esc 关页〕）；表外组 ⇒ `null`（防御档——调用面已验 `SCOPES`）。
- *  体节点携 `data-state` = 组段态（装配面第二闸在途判据面 —— 与页侧 `[data-state="loading"]` 同形）。 */
+ *  体节点携 `data-state` = 组段态（装配面第二闸在途判据面 —— 与页侧 `[data-state="loading"]` 同形）。
+ *  **添加支（KD-75 ①②）**：`group = ADD_MODAL_GROUP` ⇒ 标题词 `settings.addProviderTitle`（非段名——词键直取）、
+ *  体 = 单表（`sectionBody` 同支），段态 ∥ 失败串 scope 皆落 `providers` 面（同段域）；卡携 `data-initial-focus="field"`
+ *  （初始焦点 = 表单首控件——宿主 `settings-modal.mjs` 取用；他组缺省 ✕，KD-68 ⑥ 零动）。
+ *  **段态词单点（添加支）**：段体分支皆自带段态词（`sectionBody` 首件）⇒ 本支不再叠渲（免双同词节点——§2.16 条 1 体式 = 段态词恰一）。 */
 export function settingsModalTree(state, group, handlers = {}) {
   const model = settingsModel(state)
+  const isAdd = group === ADD_MODAL_GROUP
   const section = SECTIONS.find((s) => s.name === group)
-  if (section === undefined) return null
+  if (section === undefined && !isAdd) return null
   const onClose = typeof handlers?.onCloseModal === "function" ? handlers.onCloseModal : undefined
   const close = () => { if (typeof onClose === "function") onClose() }
-  const notice = model.notice !== null && (model.notice.scope === group || model.notice.scope === "panel") ? model.notice : null
-  const groupState = model[group]?.state ?? "none"
+  const scope = isAdd ? "providers" : group
+  const notice = model.notice !== null && (model.notice.scope === scope || model.notice.scope === "panel") ? model.notice : null
+  const groupState = isAdd ? model.providers.state : model[group]?.state ?? "none"
+  const titleWord = isAdd ? "settings.addProviderTitle" : section.word
   return {
     backdrop: { tag: "div", props: { class: "settings-modal-backdrop", onClick: close }, children: [] },
     card: {
       tag: "div",
       props: {
-        class: "settings-modal", role: "dialog", "aria-modal": "true", "aria-label": t(section.word),
+        class: "settings-modal", role: "dialog", "aria-modal": "true", "aria-label": t(titleWord),
+        "data-initial-focus": isAdd ? "field" : undefined,
         onKeydown: (event) => { if (event?.key !== "Escape") return; event.stopPropagation?.(); close() },
       },
       children: [
         { tag: "header", props: { class: "settings-head" }, children: [
-          { tag: "h2", props: { class: "settings-title" }, children: [t(section.word)] },
+          { tag: "h2", props: { class: "settings-title" }, children: [t(titleWord)] },
           { tag: "button", props: wire({ class: "settings-close", type: "button", "data-action": "settings:modalClose", "aria-label": t("settings.close") }, onClose), children: [] },
         ] },
-        { tag: "div", props: { class: "settings-modal-body", "data-state": groupState }, children: [noticeNode(notice), sectionStateNode(groupState), ...sectionBody(group, model, handlers)] },
+        { tag: "div", props: { class: "settings-modal-body", "data-state": groupState }, children: [noticeNode(notice), ...(isAdd ? [] : [sectionStateNode(groupState)]), ...sectionBody(group, model, handlers)] },
       ],
     },
   }

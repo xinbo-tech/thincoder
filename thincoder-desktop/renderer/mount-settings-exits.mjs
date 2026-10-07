@@ -1,11 +1,13 @@
 /**
  * mount-settings-exits.mjs — 设置面出口族 + 写路辅助（「桌面处理流 · VSC 对齐」批 R8 · 自
  * `renderer/mount-settings.mjs` 拆出 —— 300 行层拆分，零语义变化）：**本档直辖出口**（提交 ∕ 校验 ∕ 移除 ∕
- * 采用模型 ∕ 语言 ∕ 开合 ＋ Esc 关闭绑定）+ **四族出口工厂装配**（段 ∕ models ∕ 渠道 ∕ agent ——
+ * 采用模型 ∕ 语言 ∕ 开合 ＋ Esc 关闭绑定）+ **五族出口工厂装配**（段 ∕ MCP ∕ models ∕ 渠道 ∕ agent ——
  * 本档装配合并，单一 `handlers` 表对外零改）。
  * **R7（桌面功能对位批）先拆后改**：MCP 增删 ∕ 索引构建三出口 + 新增段出口（env ∕ 两 key ∕ models ∕ MCP
  * 展开面）共**二十一**出口随族迁出（env ∕ 工具 ∕ MCP **十三** = `renderer/mount-settings-segments.mjs`；models 八 =
  * `renderer/mount-settings-segments-models.mjs`）；`formOf` 经 `deps` 回注段族（单一 owner ⇒ 零副本）。
+ * **MCP 键值行式输入批（#1036 · 2026-10-07）**：MCP 族**九**出口自 `mount-settings-segments.mjs` 拆出
+ * `renderer/mount-settings-segments-mcp.mjs`（该族现**十一** = 九搬移 + kv 加 ∕ 删两新；先拆后改——越 300 在册预案兑现；本档装配即合并，对外零改）。
  *
  * 接线沿 `mount-onboarding.mjs` 注入先例：`createExits(deps)` —— `deps = { ask, store, setSettings, report, clearReport, occupies, reads, slot, paintSettings }`
  * （窄桥 ∕ 值面 ∕ 失败面 ∕ 读数供给 ∕ 槽锚 ∕ 重绘归装配面）；返回 `{ handlers, openSettings, closeSettings }`（`handlers` = 视图 `data-action` 同域出口表）。
@@ -22,7 +24,12 @@
  * 写成功 ⇒ 清失败串 + 重读本段。**#652**：写成功径（渠道两形提交 ∕ 钥存）在复位写前声明草稿失效（`invalidateDrafts(scope)`
  * 注入 —— 作用域取值面 = 视图档 `[data-draft-scope]` 自携；失败径零声明 —— 草稿保真）。**2026-10-01 复核扫面收正批（M2）**：
  * 渠道提交成功径同清**草稿专件** `providers.draft`（复位点表第五点 —— 现役注面 = `mount-settings-segments-providers.mjs` 档头）。**P14 出值规范化**（数值 ⇒ `Number(v)`〔空 / 非数 ⇒ 零发送〕· 布尔 ⇒ `.checked` · 串 ⇒ 原串；无效值 ⇒ 控件回退现值）· **P15 具名控件即改即存**（单键 patch 直发 —— 写路随 W3 迁 `mount-settings-segments-agent.mjs`）· **F-Esc 关面板**（Esc ⇒ 既有 `closeSettings` 出口，单一实现 —— 绑定宿主 = `document`）。
- * **D39（设置菜单升级批 · #817 ∥ KD-68）**：`resetFacets(state, group)` = 本组面态复位原语（modal 开 ∥ 关**限本组** —— 开 ∥ 关面整复位同源取用）；`closeSettings` 同拍清 `modal`；F-Esc 闸增 `modal != null` 守卫（弹窗体自持卡内 Esc —— 不连带关页）。
+ * **D39（设置菜单升级批 · #817 ∥ KD-68）**：`resetFacets(state, group)` = 本组面态复位原语（modal 开 ∥ 关**限本组** ——
+ * 开 ∥ 关面整复位同源取用）；`closeSettings` 同拍清 `modal`；F-Esc 闸增 `modal != null` 守卫（弹窗体自持卡内 Esc —— 不连带关页）。
+ * **三端对齐批（2026-10-07 · 台账 #1027–#1029 · KD-75 ②⑥）**：新增「添加入口」出口 `onAddProvider`
+ *  （`deps.openModal` 迟绑定注入 —— 沿 `paintSettings` 先例；缺 ⇒ 本键不注册）；`submitChannel` 随单表改线：
+ *  名称 ∥ 形状自 `preset` ∥ 隐藏 `shape` 读、载荷 + `proxy`（勾选 ⇒ `true`）、成功径宿主关（`deps.closeModal` —— KD-68 关径）；
+ *  `resetFacets` 增添加弹窗组支（`addShape` 回报 `"preset"` + `probe` ∥ `draft` 清）。
  * **#841（provider 态第三刷新点）**：设置写成功回执（`settings:agent` ∥ `provider:save`）携 `providerState` ⇒
  * 同写点落切片（`useModel` ∥ `submitChannel` 两处；键缺席 ⇒ 零写）——设置面修好 `defaultModel`
  * 后输入区提示行即时退场；单源 = `docs/desktop/design/IPC.md` §2「provider 态投影注」项 3。
@@ -33,10 +40,12 @@ import { configuredFlag, patchSettings, setProviderState } from "./store.mjs"
 import { setTheme } from "./theme.mjs"
 import { presetValue } from "./mount-onboarding.mjs"
 import { createSegmentExits } from "./mount-settings-segments.mjs"
+import { createMcpExits } from "./mount-settings-segments-mcp.mjs"
 import { createModelsExits } from "./mount-settings-segments-models.mjs"
 import { createProviderExits } from "./mount-settings-segments-providers.mjs"
 import { createAgentExits } from "./mount-settings-segments-agent.mjs"
 import { closeSettingsConfirm, confirmSecretDelete } from "./settings-confirm.mjs"
+import { ADD_MODAL_GROUP } from "./views/settings.mjs"
 
 /** 表单自取：提交控件 `type="button"`（handlers 直传 ⇒ 监听器 = 本函数，收 **Event**）⇒ `closest("form")`。 */
 function formOf(event) {
@@ -52,32 +61,46 @@ const reasonOf = (receipt) => (typeof receipt?.reason === "string" && receipt.re
 
 /**
  * 出口族工厂。`deps.reads = { loadProviders, loadAgent, loadMcp }`（读数供给族注入）；`deps.paintSettings`
- * = 装配面重绘口（无效数值回退现值用）；`deps.slot` = 设置槽锚（表单现选自读）。
+ * = 装配面重绘口（无效数值回退现值用）；`deps.slot` = 设置槽锚（表单现选自读）；`deps.openModal` = 添加弹窗开径
+ * （`onAddProvider` 出口 —— KD-75 ②；缺 ⇒ 出口不注册，钮面 `wire` 落 `disabled`）；`deps.closeModal` = 保存成功径宿主关
+ * （KD-75 ⑥ —— §2.4 行 6「提交 ⇒ 宿主关（KD-68 关径）」）。
  */
 export function createExits(deps = {}) {
   const { ask, store, setSettings, report, clearReport, occupies, slot, paintSettings, onProvidersChanged, invalidateDrafts } = deps
   const { loadProviders, loadAgent, loadMcp, loadEnv, loadTools } = deps.reads ?? {}
+  const openModal = typeof deps.openModal === "function" ? deps.openModal : null
+  const closeModal = typeof deps.closeModal === "function" ? deps.closeModal : null
 
-  /** 渠道表单提交（两形同一路）：载荷按形直取（表内 `name` = 载荷键）—— 空名 ⇒ 端侧形判 `invalid-shape` 零发送。 */
+  /** 渠道表单提交（单表一路）：载荷按形直取（表内 `name` = 载荷键）——空名 ⇒ 端侧形判 `invalid-shape` 零发送。
+   *  形状判据 = 隐藏携带值（`providers.addShape` 渲染面）为主；类型选择现选为 `"custom"`（预设表空时兜底现选）⇒ 自定形。
+   *  名称：自定形读 `name`；预设形读 `preset`（类型选择现值 = 预设名）。`proxy`：勾选 ⇒ `true`；未勾 ∥ 缺 ⇒ 直连（零键）。
+   *  **关·保存**（KD-75 ⑥）：弹窗体提交（成盘回执 `ok`）⇒ 宿主关（KD-68 关径 —— 切片清 + 本组面态复位 + 子确认同清）；
+   *  失败径留框（失败串落框体 —— 零静默）；向导步 1 提交（无弹窗体）零动作。 */
   async function submitChannel(event) {
     const form = formOf(event)
     if (form === null) return
     const data = new FormData(form)
-    const shape = String(data.get("shape") ?? "")
-    const name = String(data.get("name") ?? "")
+    const choice = String(data.get("preset") ?? "")
+    const shape = data.get("shape") === "custom" || choice === "custom" ? "custom" : "preset"
+    const name = shape === "custom" ? String(data.get("name") ?? "") : choice
     const key = String(data.get("key") ?? "")
     if (name === "") {
       console.error("[renderer] provider:save: empty name")
       report("providers", { reason: "invalid-shape" }, "provider:save")
       return
     }
+    const common = { active: data.get("active") !== null, ...(data.get("proxy") !== null ? { proxy: true } : {}), ...(key === "" ? {} : { key }) }
     const payload = shape === "custom"
-      ? { name, shape, baseURL: String(data.get("baseURL") ?? ""), model: String(data.get("model") ?? ""), format: String(data.get("format") ?? ""), active: data.get("active") !== null, ...(key === "" ? {} : { key }) }
-      : { name, shape: "preset", preset: name, active: data.get("active") !== null, ...(key === "" ? {} : { key }) }
+      ? { name, shape, baseURL: String(data.get("baseURL") ?? ""), model: String(data.get("model") ?? ""), format: String(data.get("format") ?? ""), ...common }
+      : { name, shape: "preset", preset: name, ...common }
     const receipt = await ask("provider:save", payload)
     if (receipt.ok !== true) {
       report("providers", receipt, "provider:save")
       return
+    }
+    if (store.get().settings?.modal === ADD_MODAL_GROUP) {
+      if (closeModal !== null) closeModal()
+      else console.error("[renderer] provider:save: modal close unavailable")
     }
     store.set(setProviderState(store.get(), receipt.providerState)) // #841：设置写回执 providerState 落切片（第三刷新点；键缺席 ⇒ 零写）
     // #652 写成功径：该表单草稿一次性作废（作用域 = 表单自携 `data-draft-scope` —— 单源在视图档；失败径零声明）。
@@ -143,9 +166,9 @@ export function createExits(deps = {}) {
     await loadProviders()
   }
 
-  /** 段出口族（env ∕ 工具与服务 ∕ MCP **十八**项 + models 八项 —— 合 **26**）随 R7 ∕ W3 迁 `mount-settings-segments.mjs` ∕
-   *  `mount-settings-segments-models.mjs`（段出口族工厂 —— 共享项注入，本档零副本）；`formOf` 回注
-   *  （单一 owner 在本档）；**#679**：`invalidateDrafts` 随注入（段族三径声明 —— MCP 增 ∕ 改 · tools 钥存 ∕ 删钥 · env shell）。 */
+  /** 段出口族（env ∕ 工具与服务 **九** ∥ MCP **十一** ∥ models **八**）随 R7 ∕ W3 ∕ #1036 迁 `mount-settings-segments.mjs` ∕
+   *  `mount-settings-segments-models.mjs` ∕ `mount-settings-segments-mcp.mjs`（段出口族工厂 —— 共享项注入，本档零副本）；`formOf` 回注
+   *  （单一 owner 在本档）；**#679**：`invalidateDrafts` 随注入（段族声明径 —— tools 钥存 ∕ 删钥 · env shell · MCP 增 ∕ 改）。 */
   const segments = createSegmentExits({
     ask, store, setSettings, report, clearReport, reads: deps.reads ?? {}, slot, formOf, invalidateDrafts,
   })
@@ -160,6 +183,9 @@ export function createExits(deps = {}) {
   /** agent 段出口族（S10 ∕ S11 ∕ S14b —— 随本批按族拆出 `mount-settings-segments-agent.mjs`：本档装配
    *  即合并，单一 `handlers` 表对外零改）。 */
   const agentSegments = createAgentExits({ ask, store, setSettings, report, clearReport, paintSettings })
+  /** MCP 段出口族（S8 ∕ S9 —— MCP 键值行式输入批（#1036）按族拆出 `mount-settings-segments-mcp.mjs`：
+   *  本档装配即合并，单一 `handlers` 表对外零改）。 */
+  const mcpSegments = createMcpExits({ ask, store, setSettings, report, clearReport, reads: deps.reads ?? {}, slot, formOf, invalidateDrafts })
 
   /** 语言出口（`config:write` 键白名单仅 `locale`）：成功回带 `{ locale, dict, configured }` ⇒ 词表重刷 + 向导闸随新档态（**一次写**）。 */
   async function toggleLang(target) {
@@ -187,11 +213,17 @@ export function createExits(deps = {}) {
   }
 
   /** 本组面态复位（D39 ∥ KD-68 ④ —— modal 开 ∥ 关**限本组**；原语与开 ∥ 关面整复位同口径：providers →
-   *  `edit/probe/draft/keyDraft`（S1 ∕ S2 ∕ #615②）∥ mcp → `form`（S8）；他组零动）。返回 `setSettings` 补丁。 */
+   *  `edit/probe/draft/keyDraft`（S1 ∕ S2 ∕ #615②）∥ mcp → `form`（S8）；
+   *  **添加弹窗组（KD-75 ②）** → `addShape` 回 `"preset"`（形状复位 = 缺省态）+ `probe` ∥ `draft` 清
+   *  （行面态 `edit` ∥ `keyDraft` 不住本组 —— 零动）；他组零动）。返回 `setSettings` 补丁。 */
   function resetFacets(state, group) {
     if (group === "providers") {
       const providers = state.settings?.providers ?? {}
       return { providers: { ...providers, edit: null, probe: null, draft: null, keyDraft: null } }
+    }
+    if (group === ADD_MODAL_GROUP) {
+      const providers = state.settings?.providers ?? {}
+      return { providers: { ...providers, addShape: "preset", probe: null, draft: null } }
     }
     if (group === "mcp") {
       const mcp = state.settings?.mcp ?? {}
@@ -221,13 +253,16 @@ export function createExits(deps = {}) {
     setSettings({ open: false, notice: null, modal: null, ...resetFacets(state, "providers"), ...resetFacets(state, "mcp") })
   }
 
-  /** 设置面出口族（锚名逐字 = 视图 `data-action` 同域；具名控件面 = 单键同路；段族 **26** 项经 `segments` ∕
-   *  `modelSegments` ∕ `agentSegments` 合并 + 渠道面 **6** 项经 `providerSegments` 合并 —— 四档出口族工厂）。 */
+  /** 设置面出口族（锚名逐字 = 视图 `data-action` 同域；具名控件面 = 单键同路；段族 **30** 项（`segments` 9 ∥ `modelSegments` 8 ∥
+   *  `mcpSegments` 11 ∥ `agentSegments` 2）经四族合并 + 渠道面 **7** 项经 `providerSegments` 合并 + **添加弹窗开径 1 项**
+   *  （`onAddProvider` —— KD-75 ②；`openModal` 缺 ⇒ 本键不注册，钮面 `wire` 落 `disabled`）—— 五档出口族工厂）。 */
   const handlers = {
     ...segments.handlers,
     ...modelSegments.handlers,
+    ...mcpSegments.handlers,
     ...providerSegments.handlers,
     ...agentSegments.handlers,
+    ...(openModal === null ? {} : { onAddProvider: () => { openModal(ADD_MODAL_GROUP) } }),
     onToggleLang: (target) => void toggleLang(target),
     onSetTheme: (target) => setThemeFace(target),
     onCloseSettings: () => closeSettings(),
