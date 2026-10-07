@@ -155,7 +155,8 @@ function buildDialog() {
   saveBtn.id = "pa-save-btn"
   saveBtn.className = "key-btn"
   saveBtn.textContent = t("settings.save")
-  saveBtn.addEventListener("click", () => { paSave(); flashSaved(saveBtn) })
+  // 收口轮②：徽标按保存结果门控——本地守卫拒 ⇒ 零闪；受理径（已发消息）才亮（settings-widgets 词/样式复用）。
+  saveBtn.addEventListener("click", () => { if (paSave()) flashSaved(saveBtn) })
   const cancelBtn = document.createElement("button")
   cancelBtn.id = "pa-cancel-btn"
   cancelBtn.className = "key-btn"
@@ -222,28 +223,36 @@ function paFetchModels() {
   window._vscode.postMessage(payload)
 }
 
-/** 保存：两形发点（custom ∥ preset）；自定形 model 空 ⇒ 词 `settings.modelRequired`（不拉取可存）。 */
+/** 保存：两形发点（custom ∥ preset）。本地守卫（custom 形 = baseURL ∥ model 非空——序同核
+ *  `customFieldsError`）：守卫拒 ⇒ 展示拒因 + `false`——不发布 ∥ 不关框（在编值保留，可即改即重存）；
+ *  受理 ⇒ 发布 + 关框 + `true`（徽标按返回值门控——见保存钮接线）。不拉取可存 = #1031（手输直存）。 */
 function paSave() {
-  if (!_els) return
+  if (!_els) return false
   const type = _els.type.value
   const key = _els.key.value?.trim() || undefined
   const payload = { type: "addProvider" }
   if (type === "custom") {
+    const baseURL = _els.url.value?.trim()
+    if (!baseURL) {
+      _els.status.textContent = t("settings.providerUrlRequired")
+      _els.status.style.color = "var(--red)"
+      return false
+    }
     const model = _els.model.value?.trim()
     if (!model) {
-      // #1031：唯一守卫 = model 非空（原「先拉取才可存」死路已撤——手输直存）
       _els.status.textContent = t("settings.modelRequired")
       _els.status.style.color = "var(--red)"
-      return
+      return false
     }
-    payload.custom = { name: _els.name.value?.trim(), baseURL: _els.url.value?.trim(), model, format: _els.format.value }
+    payload.custom = { name: _els.name.value?.trim(), baseURL, model, format: _els.format.value }
   } else {
     payload.preset = type
   }
   payload.key = key
   if (_els.proxy.checked === true) payload.proxy = true
   window._vscode.postMessage(payload)
-  closeAddProviderDialog() // 关·保存 = 发消息后关（§2.16 ①）
+  closeAddProviderDialog() // 关·保存 = 发消息后关（§2.16 ①——受理径）
+  return true
 }
 
 /** 探果落框：代际不符 ⇒ 弃；探通 ⇒ 填候选（datalist，不自动选中）∥ 探败 ⇒ ✗ + 候选清空（键入值零清）。 */

@@ -382,7 +382,7 @@ VERDICT: pass
 
 ## §5 实施记录（eng-coder）
 
-**状态行**：实施完成（舱一 = 核+CLI（C1/L1 4/4）∥ 舱二 = VSC（V1–V11 11/11）∥ 舱三 = 桌面（D1–D6，批内件合计 21/21）——逐舱块见 5.1 ∥ 5.6 ∥ 5.11）
+**状态行**：实施完成（舱一 4/4 ∥ 舱二 11/11 ∥ 舱三 21/21 ∥ 收口轮 #14 = 拆档四件（127/412/376/210）+ ②③ 收口（V12/V13）——评审 clean；逐舱块见 5.1 ∥ 5.6 ∥ 5.11 ∥ 5.16）
 
 ### 5.1 交付摘要（舱一 = 核 + CLI：写面原语 + CLI 收敛 + 批本地测试件）
 
@@ -527,5 +527,52 @@ VERDICT: pass
 - 词面：`SETTINGS_DICT` en = zh = 60（+3 −2）∥ `HOST_DICT`（合并表）实读 319 ∥ zh 四表裸「密钥」零命中。
 - **not repo-suite verified** —— the parent-side closeout run is the only repo-suite run（桌面仓套件清单为空：`thincoder-desktop/test/files.mjs:3` `export default []` ⇒ 无套件可跑）。
 - **真机走查（父侧人工验收 · 未跑）**：弹窗四径（✕ ∥ 背板 ∥ Esc ∥ 保存成功关）∥ 向导步 1 proxy 勾选随写 ∥ 行面勾选随动探针。
+
+### 5.16 交付摘要（收口轮 #14 = 产品 + 测试面：按舱拆档 4 件 ∥ 保存徽标门控② ∥ 拒存保在编输入③）
+
+- **接续判定 = 新起（承父侧裁定）**：本轮 = 父侧 §1.10 上抛①②裁定（拆档 + 两小修）+ §1.11「收口双轮派发」的 #14 面。开工先复核拆分前提——「三新档 + 纯搬移」与「硬限 ≤500」不可同持（VSC 段纯搬移 **547** 行；删空行仍 **515**；加 ②③ 新腿 ≈610）⇒ 上抛冲突 + 倾斜（测试台抽公档）⇒ 父侧裁**采倾斜**（4 件结构；硬界 = 每件 ≤500 ∥ 逐字节搬移 + harness 仅加 `export` ∥ 逐档全绿 + 原档零残 ∥ ②③ 并入 vsc 腿档）——逐条落。
+- **改动清单（file:line）**：
+  - **拆档 = 逐字节区间搬移**（脚本 `.thincoder/tmp/2026-10-07-parity-split.mjs`——临时区、gitignored；写前边界断言 + 逐段 `raw.includes(body)` 自证；四件头注 = 手写新增，逐件声明拆档由来）：
+    - `docs/batches/2026-10-07-provider-config-parity-cli.test.mjs`（**127** 行 = 头 10 + 正文 117）：C1 ∥ L1a–c；正文 = 原档 `:14-130` 逐字节。
+    - `docs/batches/2026-10-07-provider-config-parity-vsc.test.mjs`（**412** 行 = 头 + import 16 + 正文 341 + V12/V13 55）：V1–V13；正文 = 原档 `:338-678` 逐字节 + 收口轮新腿。
+    - `docs/batches/2026-10-07-provider-config-parity-desktop.test.mjs`（**376** 行 = 头 + import + `tmpConfigPath` 17 + 正文 359）：D1–D6；正文 = 原档 `:680-1038` 逐字节。
+    - `docs/batches/2026-10-07-provider-config-parity-vsc-harness.mjs`（**210** 行）：VSC 测试台（mini 假 DOM + 装缝 + 真词面装载）= 原档 `:138-336` 逐字节 + 18 处 `export ` 前缀 + `readdirSync` 行 +`readFileSync`（唯一非 `export` 增量——原由共享件顶部行提供 ⇒ `vscSrc` 自持）。
+    - 原档 `docs/batches/2026-10-07-provider-config-parity.test.mjs`（1039 行）删除 = `git rm --cached`（staged D）+ 工作树删除；`git status` 核 = 零残（`docs/batches` 只余四新档）。
+  - **产品修** `thincoder-vscode/webview/settings-provider-dialog.js`（273 ⇒ **282**）：`:158-159` 保存钮门控（`if (paSave()) flashSaved(saveBtn)`——本地守卫拒 ⇒ 零闪；受理径才亮）；`:226-256` `paSave`：custom 形双守卫（baseURL 空 ⇒ `settings.providerUrlRequired` ∥ model 空 ⇒ `settings.modelRequired`——序同核 `customFieldsError`）⇒ 拒 = `return false`（不发布 ∥ 不关框 ∥ 在编值原样）；受理 = 发布 + 关框 + `return true`。
+  - **新腿**（vsc 档尾）：V12 徽标门控（拒径 ×2 零闪 ∥ 受理径闪 + 词 `settings.autoSaved`）∥ V13 拒存保输入（缺 baseURL ⇒ 零发 ∥ 框在 ∥ 拒因词 ∥ 在编值四件保留 ∥ 补填原值携发重存）。
+  - **零触声明**：`settings-widgets.js`（徽标件——词/样式原样复用）∥ `settings-providers.js`（落点清单「若有随动」——无需）∥ 设计六档 ∥ locales ∥ VSC 其余档 ∥ 桌面/CLI/核 ∥ `scripts/**`——本轮零触（`git status` 佐证：本轮面 = 四新档 ?? + dialog M + 原档 staged D；树内其余脏件 = 并行批，非本轮）。
+
+### 5.17 决策透明表（本轮当场决策）
+
+| # | 决策 | 理由 | 依据 |
+|---|---|---|---|
+| 1 | 4 件结构 = 三腿档 + `…-vsc-harness.mjs` 测试台公档 | 「三新档 + 纯搬移 + ≤500」不可同持（VSC 段 547 行；删空行 515；+新腿 ≈610）⇒ 上抛，父侧裁采倾斜 | 父侧裁定（2026-10-07 21:0x）；先例 = `2026-10-07-browser-input.harness.mjs`（「测试台抽公档（第三档，报备）」） |
+| 2 | 拆档 = 逐字节区间搬移（脚本 + 手写头注；harness 增量 = `export` 类） | 保腿内容零改写（机检：正文逐字节 ⊆ 原档）；头注 ∥ import 块 = 拆档必需新增（逐件披露） | 父侧硬界㈡；内部审计 R5（披露落盘建议） |
+| 3 | ② 门控 = 本地守卫口径（`paSave()` 返回 `true` 才闪） | 「只受理成功路径亮」在零新协议约束内的可达落形；宿主侧后置拒无 ack 可相关 | 父侧裁定「本地守卫门控」；残余照实写（见 5.20） |
+| 4 | ③ 守卫扩展 = baseURL 空同拒（不发布 ∥ 不关框） | 原「发消息后关」下 baseURL 空缺件会先发布、由宿主后置拒 ⇒ 框已关、输入丢；本地前置 ⇒ 即改即重存 | 父侧裁定「关前核 `customFieldsError` 且保留在编值」；核序（baseURL → model） |
+| 5 | 原档删除 = `git rm --cached` + 工作树删除 | 任务书点名「`git rm` 或 `delete` force」；暂存删除使收口提交可携删档记录 | 本轮任务书（验收②） |
+
+### 5.18 审计与代码评审轮次与终态
+
+- **内部发散审计（explore · 只读）轮 1**：无行为级 must-fix；四类（发散 ∥ 越界 ∥ 漂移 ∥ 缺陷）无发现。余项处置：R1/R2 = 设计面漂移（`SETTINGS.md` §2.16 ①/④ 未载 ②③ 落形——只报不改）；R3 = 交底读数收正（vsc 档实读 **412**，非估算 ≈436）；R4 = §5 欠记（本块即补）；R5 = 拆档脚本留存临时区（gitignored——披露已落本记录）。审计限制：该装配无 shell ⇒ 未复跑（读数 = 本轮实跑记录）。
+- **内部代码评审（advisor · code）轮 1**：**VERDICT: pass**（🔴 0 ∥ 🟡 2 ∥ 🔵 3，全非阻塞）——🟡① 批内件 >300（vsc 412 ∥ desktop 376；父侧已裁 ≤500 窗口——不翻案）∥ 🟡② 协调项：② 宿主侧残余文字落点（本轮补）；🔵 = desktop 档 `:335` 注释失实（「本件 V 腿已把…捕获桩」拆档后不成立——D6 现跑真计时器；随文登记不修——保逐字节）∥ 命名点形/横线形注记 ∥ 「正文逐字节」披露落盘（本记录补）。
+- **终态 = clean**：无 must-fix；🟡/🔵 全为非阻塞（裁定窗口 ∥ 记录面 ∥ 口径注记）。
+
+### 5.19 fix round（≤5 轮）
+
+- **R0（0 笔代码修 · 收敛）**——审计/评审全数非阻塞：R3 收正（412）；R4/R5 处置入本记录（5.16/5.20）；设计面 R1/R2 连建议移父侧（5.20）。逐一判断留痕：desktop `:335` 注释失实**不修**（逐字节边界优先，随文登记）；命名注记不修（父侧点名形）。
+
+### 5.20 验证读数（本轮实跑）+ 残余与漂移（照实写）
+
+- `node --test docs/batches/2026-10-07-provider-config-parity-cli.test.mjs` ⇒ **4/4 pass**（C1 ∥ L1a–c）。
+- `node --test docs/batches/2026-10-07-provider-config-parity-vsc.test.mjs` ⇒ 纯搬移态 **11/11** ⇒ 加 V12/V13 ⇒ **11 pass ∥ 2 fail**（真红：V12「拒径 ⇒ 徽标零闪」∥ V13「缺 baseURL ⇒ 零发」）⇒ 产品修 ⇒ **13/13 pass**。
+- `node --test docs/batches/2026-10-07-provider-config-parity-desktop.test.mjs` ⇒ **6/6 pass**（D1–D6）。
+- `cd thincoder-vscode; node test/smoke-settings.mjs` ⇒ `SMOKE-OK: settings panel split is behaviorally wired (build + updates + protocol)`。
+- `node scripts/check-syntax.mjs` ⇒ `check-syntax: 137 JS files OK`（舱二读数 136 ⇒ 137 = 并行批新增档，非本轮）。
+- `node --check` 逐档（dialog + 四新档）全 OK；逐字节自证脚本：三档正文逐字节 ⊆ 原档 ∥ harness 剥离 `export ` 后逐字节、唯一 diff = `readFileSync` 行。
+- **行数实读**（content 行口径）：cli **127** ∥ vsc **412** ∥ desktop **376** ∥ harness **210**（全 ≤500）；dialog **282**（273 ⇒ +9 = 本轮两笔）。
+- **not repo-suite verified** —— the parent-side closeout run is the only repo-suite run。
+- **残余（照实写 · ② 口径）**：本地守卫覆盖 = baseURL 空 ∥ model 空；**宿主侧拒因**（name 空 ∥ 重名 ∥ 未知预设——核 `config-io.mjs:240-241`）仍走「发消息后关」⇒ 框已关 + 徽标已闪 + 在编输入丢；机制级解 = **保存回执由宿主返回、徽标按回执亮**（`docs/vsc/design/SETTINGS.md:519` 在册）。处置 = 父侧已落账（协议面条件行）。
+- **设计面/记录面漂移（连建议 · 本舱禁触）**：`docs/vsc/design/SETTINGS.md` §2.16 ①（关·保存「发消息后关」现读 = 受理径）∥ ④（守卫句「model 空」⇒ 现为 baseURL ∥ model；`settings.providerUrlRequired` 两语已在位未入表）未载 ②③；批档 §2.6 测试面计数（V1–V11 ⇒ V1–V13）∥ 测试档名（拆前单件名 ⇒ 四件）∥ `docs/desktop/design/SETTINGS.md:198` 旧档名指针——建议随 §6/设计回填收正。
 
 ## §6 验证与收口（父代理）
