@@ -174,7 +174,8 @@ dialog.modal::backdrop { background: var(--backdrop); }
 .modal-body { padding: var(--sp-5) var(--sp-6); max-height: min(70vh, var(--modal-w)); overflow-y: auto; display: flex; flex-direction: column; }
 .modal-body > div { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; } /* 内容盒（调用点恒传单 div——modal.mjs 整只 append；修正：原选择器漏此层，链未接通——2026-10-07 实测复现后落） */
 .modal-body > div > * { flex: none; } /* 主信息（表单/信息格/说明）固定不收缩之一 */
-.modal-body > div > .table-wrap { flex: 1 1 auto; min-height: 0; } /* 直挂表区（成员 key 表）吃剩高 */
+.modal-body > div > .table-wrap { flex: 1 1 auto; min-height: min-content; } /* 直挂表区（成员 key 表 ∥ 配额表）：短表保自然全高不缩；长表承缩自滚 */
+.modal-body > div > .quota-table { min-height: 140px; } /* 长表（配额）承缩下限（≈三行）——再挤 ⇒ 体滚兜底（:174） */
 .modal-body > div > .stack-models { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .stack-models > .pick-head, .stack-models > .pick-note { flex: none; }
 .stack-models > .pick-box { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
