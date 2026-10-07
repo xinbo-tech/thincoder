@@ -13,6 +13,7 @@ import { lspTool } from "./lsp.mjs";
 import { executeTool } from "./execute.mjs";
 import { fileOpsTool, processTool, getCurrentTimeTool, waitForTool } from "./ops.mjs";
 import { treeTool } from "./tree.mjs";
+import { browserTool } from "./browser.mjs";
 
 // Instance-independent built-in table. `read_image` is deliberately NOT here:
 // its registration is capability-gated per model — see `assembleBuiltinTools`.
@@ -24,6 +25,7 @@ export const builtinTools = [
   lintTool, lspTool, executeTool,
   fileOpsTool, processTool, getCurrentTimeTool, waitForTool,
   treeTool,
+  browserTool,
 ];
 
 export {
@@ -34,6 +36,7 @@ export {
   lintTool, lspTool, executeTool,
   fileOpsTool, processTool, getCurrentTimeTool, waitForTool,
   treeTool,
+  browserTool,
 };
 
 // ── Full built-in registry (CORE-UNIFICATION TOOLS #70) ─────────────────────

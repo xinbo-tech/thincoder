@@ -82,6 +82,9 @@ export const DEFAULTS = {
     // Structured search via Tavily when a key is set — empty apiKey → Bing RSS/HTML fallback (zero-config).
     apiKey: "",          // Tavily key (tvly-...) — optional
   },
+  // 浏览器工具（BROWSER-TOOL.md §3.2）：非空 ⇒ navigate 目标 host ∥ click/evaluate/type 的当前页 host 须命中
+  //（全等（大小写不敏感）∥ `*.` 前缀 = 子域通配）——收束面非沙箱；缺省空 = 不设限。
+  browser: { allowDomains: [] },
   traces: {
     enabled: false,  // §18.6 D-TR6 修订（2026-09-05 用户裁定——发布隐私："不希望用户那边也采集"）：轨迹存档默认 OFF——新用户零采集；本地调试分析可显式开（~/.thincoder/config.json traces.enabled:true）
     retentionHours: 24, // D-TR10：轨迹文件保留小时数——CLI 启动时删除超过该时长的文件（默认 24h）
@@ -313,6 +316,7 @@ export function loadConfig() {
     agent: { ...DEFAULTS.agent, ...config.agent },
     memory: { ...DEFAULTS.memory, ...config.memory },
     embedding: { ...DEFAULTS.embedding, ...config.embedding },
+    browser: { ...DEFAULTS.browser, ...config.browser },
     traces: { ...DEFAULTS.traces, ...config.traces },
     diagnostics: { ...DEFAULTS.diagnostics },
   }

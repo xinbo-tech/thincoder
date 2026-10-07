@@ -24,6 +24,7 @@ import { gitTool as coreGitTool } from "@thincoder/core/tools/git.mjs"
 import { websearchTool, fetchTool } from "@thincoder/core/tools/web.mjs"
 import { fileOpsTool, processTool, getCurrentTimeTool, waitForTool } from "@thincoder/core/tools/ops.mjs"
 import { treeTool } from "@thincoder/core/tools/tree.mjs"
+import { browserTool } from "@thincoder/core/tools/browser.mjs"
 import { toOpenAISchema } from "@thincoder/core/tools/shared.mjs"
 // ── VSC 装配面（保留档）──────────────────────────────────────────────
 import { bashTool } from "./shell.mjs"
@@ -182,5 +183,6 @@ export const builtinTools = [
   fileOpsTool, processTool, getCurrentTimeTool,
   waitForTool,
   treeTool,
+  browserTool,
   peerInstancesTool, // R10 L2——只读（纯查询——不认领不写）
 ]

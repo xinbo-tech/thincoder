@@ -242,6 +242,8 @@ apply_patch——无坐标 hunk 宽容 + 文件头容缺；多文件原子。wri
 - **verify**：通用验证门禁——语言 / 框架 / 项目无关，不自动跑任何测试命令；模型经 `verification:{status:"passed"|"failed"|"skipped", command?, summary?}` 声明验证状态（passed 放行 / failed 打回 / skipped 放行但须 summary 理由）；参数已删 `full` / `testNamePattern` / `filter`，保留 `workdir`。
 - **read_image**：视觉模型读图；非视觉模型拒绝 / 占位（防 image_url 毒化会话）；svg 返回文本源码、bmp 拒绝并提示转 PNG。
 - **websearch / fetch**：网络边界见 §6.4；fetch 失败错误含 proxy 提示。
+- **browser**：自启系统 Edge/Chrome（独立 profile——`~/.thincoder/browser/profile`）+ CDP 直控（Node 原生 WebSocket——零第三方依赖）；八动作 navigate/snapshot/click/type/evaluate/wait/screenshot/close。
+  snapshot 回执 = 可交互元素清单 + 稳定引用（`e<N>`），click/type 按引用寻址；click/evaluate 过审批门（`isReadonlyAction` 动作级分类——其余动作免审）。设计权威 = `BROWSER-TOOL.md`（本层）。
 - **process / file_ops / get_current_time / tree / lsp / lint / delete / bash**：按各自描述契约。
 - **batch**：批次档生命周期（action = create ∕ append ∕ status ∕ close；**无路径参数**——目标档 = spawn 绑定；身份定可写段）；append 段写入 append-only；写前剔凭证；工具盖轮次戳（仅 §3）；fail-closed 逐条 throw。权威 = 工程模式板。
 
@@ -1188,6 +1190,8 @@ Notes:
 **边界（本增量不做）**：不做 task 工具本体改动（保留）；不做台账（M2 承接）；不做「归册三选一」替代流程（M10 一并砍）。
 
 ## 变更记录
+
+- 2026-10-07（**浏览器工具批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-browser-tool.md` §2 · 台账 #1007）：§6.7 逐工具契约加 **browser** 条（自启浏览器 + CDP 直控 + 引用步进 + click/evaluate 审批门；设计权威 = `BROWSER-TOOL.md`）。
 
 - 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 4 处处置（R3 裸名化 2 处——融合表行 `batch-segment.mjs` 旧树形随迁核退场；R4 形退场 2 处——端档已删 `tool-gates.mjs` ∥ `execute-tools.mjs` 去目录段 ∕ 坐标）。**零新语义**。
 

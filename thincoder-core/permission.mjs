@@ -13,6 +13,7 @@
  * dispatch 内；本档只管「问一次 + 拿到布尔」。
  */
 import { createInterface } from "node:readline"
+import { lastPageUrl } from "./browser/session.mjs"
 
 /** CLI tool arg summary (truncated long JSON) */
 export function summarize(toolArgs) {
@@ -41,6 +42,13 @@ export function formatPermission(name, args) {
     if (action === "delete") return args.id ? `id=${args.id}${args.layer ? ` layer=${args.layer}` : ""}` : `batch delete layer=${args.layer ?? ""} type=${args.type ?? ""} keyword=${args.keyword ?? ""} confirm=${args.confirm}`
     if (action === "clear") return `clear layer=${args.layer ?? ""} confirm=${args.confirm}`
     return cap(summarize(args), 300)
+  }
+  if (base === "browser") {
+    // BROWSER-TOOL.md §3.1/§10.1：`<action> ref=<ref> @ <最近页 URL>`；无 ref 动作 = `<action> <url 或表达式头 80 字符>`
+    const action = String(args.action ?? "")
+    const at = lastPageUrl() ? ` @ ${lastPageUrl()}` : ""
+    const detail = args.ref ? `ref=${args.ref}` : String(args.url ?? args.expression ?? "").slice(0, 80)
+    return cap(`${action}${detail ? ` ${detail}` : ""}${at}`, 300)
   }
   return cap(summarize(args), 300)
 }
