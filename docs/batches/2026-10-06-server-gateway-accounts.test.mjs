@@ -221,7 +221,9 @@ test("登录：200 + cookie 属性齐 ∥ 错凭据同措辞同耗时 ∥ /api/m
     assert.equal(me.status, 200)
     assert.deepEqual(me.json, { id: alice.id, name: "alice", username: "alice", role: "user", modelQuotas: {}, modelUsage: {}, modelDisables: {}, usedTokens: 0, keys: [] })
     const key = KEYS.issueKey(app.db, alice.id)
-    assert.deepEqual((await get(app.base, "/api/me", { cookie })).json.keys, [{ id: key.id, hint: key.hint, lastUsedAt: null, windowTokens: 0 }])
+    const [keyRow] = (await get(app.base, "/api/me", { cookie })).json.keys // 行形（me-keys 批）：+= name/createdAt
+    assert.deepEqual([keyRow.id, keyRow.name, keyRow.hint, keyRow.lastUsedAt, keyRow.windowTokens], [key.id, key.name, key.hint, null, 0])
+    assert.equal(typeof keyRow.createdAt, "string")
   } finally {
     await app.close()
   }
@@ -303,7 +305,9 @@ test("轮换：新明文一次性 ∥ 旧 key 即失效 ∥ /api/me 清单只剩
     const second = await post(app.base, "/api/me/keys/rotate", { cookie })
     assert.equal(KEYS.verifyKey(app.db, first.json.plain), null) // 旧 key 下一次校验即 null（AC-5）
     assert.ok(KEYS.verifyKey(app.db, second.json.plain))
-    assert.deepEqual((await get(app.base, "/api/me", { cookie })).json.keys, [{ id: second.json.id, hint: second.json.hint, lastUsedAt: null, windowTokens: 0 }])
+    const [rotatedRow] = (await get(app.base, "/api/me", { cookie })).json.keys // 行形同拍（+= name/createdAt）；轮换新签行 = 默认名
+    assert.deepEqual([rotatedRow.id, rotatedRow.name, rotatedRow.hint, rotatedRow.lastUsedAt, rotatedRow.windowTokens], [second.json.id, "key-2", second.json.hint, null, 0])
+    assert.equal(typeof rotatedRow.createdAt, "string")
   } finally {
     await app.close()
   }

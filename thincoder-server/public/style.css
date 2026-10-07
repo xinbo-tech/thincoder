@@ -49,7 +49,7 @@ h1, h2, h3, h4, h5, h6, th { font-weight: 400; } /* 零粗体（⑤——UA 700 
 .nav-group { display: flex; flex-direction: column; gap: var(--sp-1); }
 .nav-group-title { font-size: var(--fs); color: var(--muted); padding: 0 var(--sp-3); }
 .nav-item { color: var(--text); text-decoration: none; padding: var(--sp-2) var(--sp-4); border-radius: var(--r-2); font-size: var(--fs); }
-.nav-item:hover { background: var(--hover); } /* ① 行悬停（中性面——导航项；唯一行悬停声明一） */
+.nav-item:hover { background: var(--hover); } /* ① 行悬停（中性面——导航项） */
 .nav-item.active { background: var(--selected); color: var(--accent); } /* ① 选中/活动态（底 --selected ∥ 字 --accent） */
 .nav-bottom { margin-top: auto; display: flex; flex-direction: column; gap: var(--sp-3); padding: 0 var(--sp-3); }
 .nav-bottom .meta { font-size: var(--fs); color: var(--muted); min-height: 14px; }
@@ -99,13 +99,6 @@ button:disabled { color: var(--muted); background: var(--fill); cursor: default;
 .secret { border: var(--bw) dashed var(--danger); background: var(--danger-fill); border-radius: var(--r-3); padding: var(--sp-4) var(--sp-5); margin: var(--sp-4) 0; } /* ⑥ 密钥面 */
 .secret-label { margin: 0 0 var(--sp-3); font-size: var(--fs); color: var(--danger); }
 .secret-value { display: block; word-break: break-all; user-select: all; } /* ⑩ 密钥字面量（可全选——保留） */
-
-/* ── key 清单（① 列表面——ul 清单行：悬停 ∥ 内距 --sp-1 --sp-2 ∥ 圆角 --r-2）────────────────── */
-.key-list { list-style: none; margin: 0 0 var(--sp-4); padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
-.key-item { padding: var(--sp-1) var(--sp-2); border-radius: var(--r-2); }
-.key-list .key-item { margin-bottom: var(--sp-3); }
-li.key-item:hover { background: var(--hover); } /* ① 行悬停（ul 清单行——唯一 ul 行悬停声明） */
-.key-meta { font-size: var(--fs); color: var(--muted); margin-top: var(--sp-1); }
 
 /* ── 码面（⑩——`--mono` 唯一族例外：同号同重）──────────────────────────────────────────────── */
 code { font-family: var(--mono); font-size: var(--fs); background: var(--fill); padding: var(--sp-1) var(--sp-2); border-radius: var(--r-1); }

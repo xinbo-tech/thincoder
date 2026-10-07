@@ -143,13 +143,13 @@ function fold(rows, pick, key = "name") {
 
 // ── ① store v3 迁移链（STORE §3 判据）────────────────────────────────────────
 
-test("① store：空库直落 7 ∥ v2 旧库自动升（链尾）∥ 幂等 ∥ audit_events 九型 CHECK", () => {
+test("① store：空库直落 8 ∥ v2 旧库自动升（链尾）∥ 幂等 ∥ audit_events 九型 CHECK", () => {
   const dir = mkdtempSync(join(tmpdir(), "tc2-db-"))
   const file = join(dir, "gateway.db")
   try {
     // 空库直落（六索引——含 v3 三索引）∥ 九型 CHECK 全可插 + 枚举外拒
     const fresh = DB.openDatabase(":memory:")
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [7, 7])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [8, 8])
     const indexes = fresh.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").all().map((row) => row.name)
     for (const index of ["idx_audit_ts", "idx_audit_type_ts", "idx_usage_key_ts"]) assert.ok(indexes.includes(index), index)
     assert.equal(indexes.length, 6)
@@ -164,15 +164,15 @@ test("① store：空库直落 7 ∥ v2 旧库自动升（链尾）∥ 幂等 �
     assert.equal(AUDIT.pruneAuditEvents(fresh, { now: now + 4 * 24 * 60 * 60 * 1000, retentionDays: null }), 0)
     assert.throws(() => fresh.prepare("INSERT INTO audit_events (ts, type, actor_name) VALUES (1, 'nope', 't')").run(), /CHECK/i)
     fresh.close()
-    // v2 旧库（v1+v2 段）⇒ 启动自动升 7（旧数据保留）⇒ 再开幂等
+    // v2 旧库（v1+v2 段）⇒ 启动自动升 8（旧数据保留）⇒ 再开幂等
     const legacy = DB.openDatabase(file, { migrations: DB.MIGRATIONS.filter((step) => step.v <= 2) })
     assert.equal(DB.readVersion(legacy), 2)
     legacy.exec("INSERT INTO members (username, name, password_hash, created_at) VALUES ('old', 'old', 'scrypt$fixture', '2026-10-06')")
     legacy.close()
     const upgraded = DB.openDatabase(file)
-    assert.equal(DB.readVersion(upgraded), 7)
+    assert.equal(DB.readVersion(upgraded), 8)
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE name = 'audit_events'").get())
-    assert.deepEqual([upgraded.prepare("SELECT COUNT(*) AS n FROM members").get().n, DB.migrate(upgraded)], [1, 7])
+    assert.deepEqual([upgraded.prepare("SELECT COUNT(*) AS n FROM members").get().n, DB.migrate(upgraded)], [1, 8])
     assert.equal(upgraded.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").get().n, 6)
     upgraded.close()
   } finally {
@@ -305,7 +305,12 @@ test("③ 报表：summary 同源/趋势零填充/聚合排行 ∥ export CSV（
     assert.equal((await get(app.base, "/api/me/usage?endpoint=chat", { cookie: alice1.cookie })).json.rows.length, 2)
     const meKeys = (await get(app.base, "/api/me", { cookie: alice1.cookie })).json.keys // key 归因（单源 = memberView）：同形 + 逐值（MAX(ts) ∥ 30 天 SUM ∥ 从未使用 ⇒ null/0）
     const memberKeys = (await get(app.base, "/api/members", { cookie: admin1.cookie })).json.members.find((member) => member.username === "alice").keys
-    assert.deepEqual([meKeys, memberKeys], [memberKeys, [{ id: aKey, hint: memberKeys[0].hint, lastUsedAt: USAGE.localDayStart(Date.now(), 0) + 2000, windowTokens: 320 }, { id: aKey2, hint: memberKeys[1].hint, lastUsedAt: null, windowTokens: 0 }]])
+    assert.deepEqual(meKeys, memberKeys, "两路同形（memberView 单源——me-keys 批 += name/createdAt）")
+    assert.deepEqual(memberKeys.map(({ id, name, hint, lastUsedAt, windowTokens }) => ({ id, name, hint, lastUsedAt, windowTokens })), [
+      { id: aKey, name: "key-1", hint: memberKeys[0].hint, lastUsedAt: USAGE.localDayStart(Date.now(), 0) + 2000, windowTokens: 320 },
+      { id: aKey2, name: "key-2", hint: memberKeys[1].hint, lastUsedAt: null, windowTokens: 0 },
+    ])
+    for (const key of memberKeys) assert.equal(typeof key.createdAt, "string")
     for (const path of ["/api/usage?endpoint=audio", "/api/me/usage?endpoint=audio", "/api/usage/summary?endpoint=audio", "/api/usage/export?endpoint=audio"]) {
       const bad = await get(app.base, path, { cookie: admin1.cookie })
       assert.deepEqual([bad.status, bad.json.error.code], [400, "invalid_request_error"], path)

@@ -6,7 +6,7 @@
  * 射程（判据源 = `accounts/ACCOUNTS.md` §2.2/§3/§5 AC-23 ∥ `gateway/API.md` §2/§2.1/§5 AC-23 ∥
  * `metering/METERING.md` §2.3/§2.5/§4 AC-23 ∥ `store/STORE.md` §2 v6 段/§3 ∥
  * `webui/WEBUI.md` §2.2（KD-SV-44）∥ §2.4②③ ∥ §6 AC-23 两行；腿 ↔ 判据对照在括号）：
- *   ① v6 迁移（STORE §3）：空库直落 7 ∥ v5 库自动升 7（存量行得常量默认 `'{}'`——默认全可用）∥ 幂等
+ *   ① v6 迁移（STORE §3）：空库直落 8 ∥ v5 库自动升 8（存量行得常量默认 `'{}'`——默认全可用）∥ 幂等
  *      ∥ 新列常量默认在场（`pragma_table_info` dflt = `'{}'`）
  *   ② 禁用写/读面（ACCOUNTS §3 ∥ AC-23——真 HTTP）：`POST /api/members/:id/model-disables` 键级合并
  *      （`true` = 禁 ∥ `null` = 删键 ∥ 未出现键不动）⇒ 200 `{id, modelDisables}` ∥ 400（键形 ∥ 值——库零变）
@@ -21,14 +21,14 @@
  *      ∥ 报告路径（无 `--fix`）零事务
  *   ⑥ #1001③：`keyUsageStats` 窗沿 = 近 30 个本地日（今日起回溯——与报表窗同构；界日 -29 含 ∥ -30 不含）
  *   ⑦ #1001②：键形助手两 merge 共用（`model-quotas` ∥ `model-disables` 裸名 ∥ 空段 ⇒ 400 库零变）
- *   ⑧ 门禁清单：`prepublishOnly` 含本批件（二十二件——文档清账批拆档后）∥ 清单目标在盘
+ *   ⑧ 门禁清单：`prepublishOnly` 含本批件（二十四件——文档清账批拆档后）∥ 清单目标在盘
  *   ⑨ i18n（WEBUI §2.2 KD-SV-44 ∥ §6 AC-23 续；#994/#988）：死键 2 枚零残留 ∥ 新 2 键两表 ∥ `.one` 7 枚仅 en ∥
  *      基键集双向相等（除自称名族 + `.one` 族）∥ 复数取形直测（en count=1 ⇒ 单形 ∥ 2 ⇒ 基 ∥ zh 不变）
  *   ⑩ 成员弹窗查看态（WEBUI §2.4② ∥ AC-23①③；#1002/#1004）：模型表直显 5 列（`deriveModels` 序）∥ 逐行已用（缺 ⇒ 0）∥
  *      禁用勾选即时写（在飞禁用 ∥ 失败回弹 + 窗内状态行 ∥ 成功静默）∥ 离表注行只数覆盖键 ∥ 两态共用取数（单次）
  *   ⑪ 服务模型页配额列 ∥ 审计页单标题（WEBUI §2.4③/#1003 ∥ #995）：三态（值 ∥「不限」 ∥ 嵌入「—」）∥
  *      保存后列表刷新随动（与 F 组单源）∥ `audit.title` 单点引用
- *   ⑫ 静态面（§6 AC-23 续）：档目 19 ∥ 20 不变 ∥ 六档行宽 ≤300 ∥ `:root` 38 ∥ 悬停清单八条（AC-19 canon 不破）
+ *   ⑫ 静态面（§6 AC-23 续）：档目 19 ∥ 20 不变 ∥ 六档行宽 ≤300 ∥ `:root` 38 ∥ 悬停清单七条（AC-19 canon 不破）
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -159,12 +159,12 @@ function probeDb(db) {
   }
 }
 
-// ── ① v6 迁移（STORE §3——判据：空库 7 ∥ v5 升 7 ∥ 幂等 ∥ 常量默认在场）────────────────
+// ── ① v6 迁移（STORE §3——判据：空库 8 ∥ v5 升 8 ∥ 幂等 ∥ 常量默认在场）────────────────
 
-test("① v6 迁移：空库直落 7 ∥ v5 库自动升 7（存量行得 '{}'）∥ 幂等 ∥ 新列常量默认在场", () => {
+test("① v6 迁移：空库直落 8 ∥ v5 库自动升 8（存量行得 '{}'）∥ 幂等 ∥ 新列常量默认在场", () => {
   const fresh = DB.openDatabase(":memory:")
   try {
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [7, 7])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [8, 8])
     const column = fresh.prepare("PRAGMA table_info(members)").all().find((item) => item.name === "model_disabled_json")
     assert.ok(column, "members.model_disabled_json 缺位")
     assert.deepEqual([column.type, column.notnull, column.dflt_value], ["TEXT", 1, "'{}'"]) // 常量默认 = '{}'（默认全可用）
@@ -181,11 +181,11 @@ test("① v6 迁移：空库直落 7 ∥ v5 库自动升 7（存量行得 '{}'�
     legacy.close()
     const db = DB.openDatabase(file) // 启动自动升
     try {
-      assert.equal(DB.readVersion(db), 7)
+      assert.equal(DB.readVersion(db), 8)
       const row = db.prepare("SELECT model_quotas_json, model_disabled_json FROM members WHERE username = 'old'").get()
       assert.deepEqual([row.model_quotas_json, row.model_disabled_json], ['{"mock/m":1}', "{}"], "存量行即刻得 '{}'——默认全可用")
       // 幂等：再跑迁移链 ⇒ 版本不变 ∥ 存量值不动
-      assert.equal(DB.migrate(db), 7)
+      assert.equal(DB.migrate(db), 8)
       assert.equal(db.prepare("SELECT model_disabled_json FROM members WHERE username = 'old'").get().model_disabled_json, "{}")
     } finally {
       db.close()
@@ -421,11 +421,11 @@ test("⑦ #1001②：模型禁用与配额覆盖同一键形助手（裸名/空�
   }
 })
 
-// ── ⑧ 门禁清单（`prepublishOnly` 二十二件含本批两件 ∥ 清单在盘）──────────────────
+// ── ⑧ 门禁清单（`prepublishOnly` 二十四件含本批两件 ∥ 清单在盘）──────────────────
 
-test("⑧ 门禁清单：`prepublishOnly` 二十二件含本批件（新建 ∥ 随正）∥ 清单目标在盘", () => {
+test("⑧ 门禁清单：`prepublishOnly` 二十四件含本批件（新建 ∥ 随正）∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 22, `门禁清单件数（二十一 ⇒ 二十二——文档清账批拆档）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 24, `门禁清单件数（二十二 ⇒ 二十四——me-keys 批两件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-v2-member-models.test.mjs"), "本批件应入列")
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-per-model.test.mjs"), "随正件应在列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
@@ -547,7 +547,7 @@ test("⑨ i18n：死键 2 枚零残留 ∥ 新 2 键两表 ∥ `.one` 7 枚仅 e
       I18N.t("admin.providers.discovered", { count: 1 }),
       I18N.t("admin.providers.testOk", { name: "p1", count: 1 }),
     ], [
-      "1 item", "2 items", "1 model", "1 token", "Last 30 days: 1 token",
+      "1 item", "2 items", "1 model", "1 token", "1 token",
       fill(EN["admin.members.quotaOffListNote.one"], { count: 1 }),
       fill(EN["admin.providers.discovered.one"], { count: 1 }),
       fill(EN["admin.providers.testOk.one"], { name: "p1", count: 1 }),
@@ -726,7 +726,7 @@ test("⑪ 服务模型页配额列三态（值 ∥「不限」 ∥ 嵌入「—�
 
 // ── ⑫ 静态面（§6 AC-23 续——档目 ∥ 行宽 ∥ AC-19 canon）───────────────────────────────
 
-test("⑫ 静态面：档目 19 ∥ 20 不变 ∥ 六档行宽 ≤300 ∥ `:root` 38 ∥ 悬停清单八条（AC-19 canon 不破）", () => {
+test("⑫ 静态面：档目 19 ∥ 20 不变 ∥ 六档行宽 ≤300 ∥ `:root` 38 ∥ 悬停清单七条（AC-19 canon 不破）", () => {
   const names = readdirSync(PUBLIC_DIR).sort()
   assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [20, 19], "档目 19 ∥ 20 不变（本批零新 public 档）")
   for (const file of ["views-admin.mjs", "views-models.mjs", "views-audit.mjs", "i18n.mjs", "i18n-zh.mjs", "i18n-en.mjs"]) {
@@ -736,10 +736,10 @@ test("⑫ 静态面：档目 19 ∥ 20 不变 ∥ 六档行宽 ≤300 ∥ `:root
   const adminLines = readPublic("views-admin.mjs").split("\n")
   const adminCount = adminLines[adminLines.length - 1] === "" ? adminLines.length - 1 : adminLines.length
   assert.ok(adminCount > 300 && adminCount <= 500, `views-admin 行数 = ${adminCount}（越 300 在册 ∥ ≤500 硬限）`)
-  // AC-19 canon（style.css 本批零触）：`:root` 变量族 38 ∥ 悬停清单八条
+  // AC-19 canon（style.css 本批零触）：`:root` 变量族 38 ∥ 悬停清单七条
   const css = readPublic("style.css").replace(/\/\*[\s\S]*?\*\//g, "")
   const rootVars = (css.match(/:root\s*\{[^{}]*\}/)?.[0] ?? "").match(/--[\w-]+\s*:/g) ?? []
   assert.equal(rootVars.length, 38, `:root 变量族计数（零新增）：${rootVars.length}`)
   const hover = [...css.matchAll(/([^{}]*:hover[^{}]*)\{/g)].map((match) => match[1].trim().replace(/\s+/g, " ")).sort()
-  assert.deepEqual(hover, [".nav-item:hover", "tbody tr:hover", "li.key-item:hover", "button:hover", "button.tiny:hover", "button.danger:hover", "button.link:hover", ".modal-close:hover"].sort(), "悬停声明清单（八条——零新增）")
+  assert.deepEqual(hover, [".nav-item:hover", "tbody tr:hover", "button:hover", "button.tiny:hover", "button.danger:hover", "button.link:hover", ".modal-close:hover"].sort(), "悬停声明清单（七条——零新增）")
 })

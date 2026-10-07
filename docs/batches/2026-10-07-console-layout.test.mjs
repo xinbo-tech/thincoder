@@ -13,8 +13,8 @@
  *      预设模型表（单列「模型」：`code` 行）∥ 成员 key 表（四列头 ∥ 吊销钮行内 ∥ 空态 `noKeys` 不变量；配额批：随行形 `modelQuotas`）
  *   腿 E（左对齐——§2.6④）：`main` 规则 `max-width: 1100px` 在 ∥ margin 无 `auto`
  *   腿 F（i18n——§2.2 本批 6 键）：两表在册（非空 ∥ 占位符一致 ∥ en 零 CJK）∥ `t` 引用闭合
- *   腿 G（门禁——§6 AC-20 续）：`prepublishOnly` 含本批件（二十二件——文档清账批拆档后）∥ 清单目标在盘
- *   附加：AC-19 canon 不破（零新 `:root` 变量——38 ∥ 悬停清单八条 ∥ 内距 ∈ 刻度 ∪ {0, auto} ∪ 布局组 ∥ 类名双向闭合）
+ *   腿 G（门禁——§6 AC-20 续）：`prepublishOnly` 含本批件（二十四件——文档清账批拆档后）∥ 清单目标在盘
+ *   附加：AC-19 canon 不破（零新 `:root` 变量——38 ∥ 悬停清单七条 ∥ 内距 ∈ 刻度 ∪ {0, auto} ∪ 布局组 ∥ 类名双向闭合）
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -439,23 +439,23 @@ test("腿 F i18n：本批 6 键两表在册（非空 ∥ 占位符一致 ∥ en 
 
 // ── 腿 G（门禁——§6 AC-20 续）───────────────────────────────────────────────
 
-test("腿 G 门禁：`prepublishOnly` 二十二件含本批件 ∥ 清单目标在盘", () => {
+test("腿 G 门禁：`prepublishOnly` 二十四件含本批件 ∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 22, `门禁清单件数（二十一 ⇒ 二十二——文档清账批拆档）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 24, `门禁清单件数（二十二 ⇒ 二十四——me-keys 批两件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-console-layout.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })
 
 // ── 附加（AC-19 canon 不破——本批零新变量/悬停/越刻度/未闭合类）────────────────
 
-test("附加 AC-19 canon 不破：`:root` 38 ∥ 悬停清单八条 ∥ 内距 ∈ 刻度 ∥ 类名双向闭合", () => {
+test("附加 AC-19 canon 不破：`:root` 38 ∥ 悬停清单七条 ∥ 内距 ∈ 刻度 ∥ 类名双向闭合", () => {
   // 零新 `:root` 变量（变量族计数 = 38——新增即破）
   const rootMatch = CSS_CLEAN.match(/:root\s*\{[^{}]*\}/)
   assert.ok(rootMatch !== null, ":root 变量底座缺位")
   const rootVars = [...rootMatch[0].matchAll(/(--[\w-]+)\s*:/g)]
   assert.equal(rootVars.length, 38, `:root 变量族计数（零新增）：${rootVars.length}`)
-  // 悬停清单（行悬停三 + 交互件五——本批零新增）
-  const ROW_HOVER = [".nav-item:hover", "tbody tr:hover", "li.key-item:hover"]
+  // 悬停清单（行悬停二 + 交互件五——本批零新增）
+  const ROW_HOVER = [".nav-item:hover", "tbody tr:hover"]
   const CTRL_HOVER = ["button:hover", "button.tiny:hover", "button.danger:hover", "button.link:hover", ".modal-close:hover"]
   const hoverRules = CSS_RULES.filter((rule) => rule.selector.includes(":hover"))
   assert.deepEqual(hoverRules.map((rule) => rule.selector).sort(), [...ROW_HOVER, ...CTRL_HOVER].sort(), "悬停声明清单外残留")
@@ -478,10 +478,10 @@ test("附加 AC-19 canon 不破：`:root` 38 ∥ 悬停清单八条 ∥ 内距 �
     }
     for (const m of src.matchAll(/classList\.(?:add|remove|toggle)\(\s*["']([^"']*)["']/g)) usedClasses.add(m[1])
   }
-  for (const known of ["row-clickable", "table-wrap", "key-item", "config-field", "hint", "tiny", "page-head", "page-area", "table-slot", "data-shell"]) {
+  for (const known of ["row-clickable", "table-wrap", "secret", "config-field", "hint", "tiny", "page-head", "page-area", "table-slot", "data-shell"]) {
     assert.ok(usedClasses.has(known), `类面扫描失效（档面）：${known}`)
   }
-  for (const known of ["card", "row-clickable", "key-item", "config-field", "modal", "error", "page-head", "table-slot", "data-shell"]) {
+  for (const known of ["card", "row-clickable", "secret", "config-field", "modal", "error", "page-head", "table-slot", "data-shell"]) {
     assert.ok(cssClasses.has(known), `样式类扫描失效：${known}`)
   }
   const STATE = new Set(["active", "ok", "degraded", "down", "error", "modal-open"])

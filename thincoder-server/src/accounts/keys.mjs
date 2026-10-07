@@ -3,14 +3,23 @@
  *
  * 形：`sk-tc-` + 32 字节随机（base64url——43 字符）；存储 = `sha256(明文)` hex（单列唯一——库内无明文）；
  * 明文仅签发时回显一次（此后只留提示形 `sk-tc-ab12cd…wxyz`）。
+ * 命名（§1.1——me-keys 批）：签发可携名（各创建路径共用默认名助手——trim 后空 ⇒ `key-N` 落库 ∥ ≤40 字符）；
+ * 自助面 active 上限 = `MAX_ACTIVE_KEYS`（计数函数归本档；判归路由——轮转 ∥ CLI 不受限）。
  * 校验 = 逐请求查库（KD-SV-11——无缓存；吊销下一次请求即判）；成员行携 `modelQuotas`（分模型覆盖）
  * 与 `modelDisables`（模型禁用集）——均随鉴权行零查询（KD-SV-38 ∥ KD-SV-42）。
  */
 import { createHash, randomBytes } from "node:crypto"
 
+import { HttpError } from "../gateway/errors.mjs"
 import { parseModelDisables, parseModelQuotas } from "./members.mjs"
 
 export const KEY_PREFIX = "sk-tc-"
+
+/** 自助面 active 上限（§1.1——第 21 把签发 ⇒ 400；轮转 ∥ CLI 不受限）。 */
+export const MAX_ACTIVE_KEYS = 20
+
+/** key 名称上限（§1.1——trim 后；超长 ∥ 非字符串 ⇒ 400）。 */
+const MAX_KEY_NAME_LENGTH = 40
 
 /** 签发：新明文（调用方负责一次性回显）。 */
 export function generateApiKey() {
@@ -53,14 +62,39 @@ export function verifyKey(db, plain) {
   }
 }
 
-/** 签发一行（新行——轮转不复用旧行）：`{ id, plain, hint }`。 */
-export function issueKey(db, memberId, { now = Date.now() } = {}) {
+/** 名称校验/归一（各创建路径共用）：空缺省 ⇒ null（落默认名）∥ 非字符串 ⇒ 400 ∥ trim 后空 ⇒ null（默认名）∥
+ *  trim 后 >40 字符 ⇒ 400（§1.1）。 */
+export function normalizeKeyName(name) {
+  if (name === null || name === undefined) return null
+  if (typeof name !== "string") throw new HttpError("invalid_request_error", `名称须为字符串：${JSON.stringify(name)}`)
+  const trimmed = name.trim()
+  if (trimmed === "") return null
+  if (trimmed.length > MAX_KEY_NAME_LENGTH) {
+    throw new HttpError("invalid_request_error", `名称超长（≤ ${MAX_KEY_NAME_LENGTH} 字符；实长 ${trimmed.length}）`)
+  }
+  return trimmed
+}
+
+/** 默认名助手（各创建路径共用——§1.1「命名落位」）：`key-N`——N = 该成员签发序号（含吊销行——单调不复用）。 */
+function nextDefaultKeyName(db, memberId) {
+  const n = Number(db.prepare("SELECT COUNT(*) AS n FROM api_keys WHERE member_id = ?").get(memberId).n)
+  return `key-${n + 1}`
+}
+
+/** 签发一行（新行——轮转不复用旧行）：`{ id, plain, hint, name }`；携名（§1.1——trim 后空 ⇒ 默认名 `key-N` 落库）。 */
+export function issueKey(db, memberId, { name = null, now = Date.now() } = {}) {
   const plain = generateApiKey()
   const hint = keyHint(plain)
+  const resolved = normalizeKeyName(name) ?? nextDefaultKeyName(db, memberId)
   const info = db
-    .prepare("INSERT INTO api_keys (member_id, key_hash, key_hint, status, created_at) VALUES (?, ?, ?, 'active', ?)")
-    .run(memberId, hashKey(plain), hint, new Date(now).toISOString())
-  return { id: Number(info.lastInsertRowid), plain, hint }
+    .prepare("INSERT INTO api_keys (member_id, key_hash, key_hint, name, status, created_at) VALUES (?, ?, ?, ?, 'active', ?)")
+    .run(memberId, hashKey(plain), hint, resolved, new Date(now).toISOString())
+  return { id: Number(info.lastInsertRowid), plain, hint, name: resolved }
+}
+
+/** 该成员 active key 计数（§1.1 上限判据——签发前计数；与 INSERT 同同步段调用）。 */
+export function countActiveKeys(db, memberId) {
+  return Number(db.prepare("SELECT COUNT(*) AS n FROM api_keys WHERE member_id = ? AND status = 'active'").get(memberId).n)
 }
 
 /** 单 key 读数（含吊销行；无 ⇒ null）。 */
@@ -74,9 +108,9 @@ export function findKeysByHint(db, hint) {
   return db.prepare("SELECT * FROM api_keys WHERE key_hint = ? ORDER BY id").all(hint)
 }
 
-/** 成员未吊销 key 清单（提示形 + id——管理列表 ∥ `/api/me` 数据源；KD-SV-16）。 */
+/** 成员未吊销 key 清单（名称 + 提示形 + id + 签发时间——管理列表 ∥ `/api/me` 数据源；KD-SV-16 ∥ §1.1）。 */
 export function activeKeysOf(db, memberId) {
-  return db.prepare("SELECT id, key_hint, created_at FROM api_keys WHERE member_id = ? AND status = 'active' ORDER BY id").all(memberId)
+  return db.prepare("SELECT id, name, key_hint, created_at FROM api_keys WHERE member_id = ? AND status = 'active' ORDER BY id").all(memberId)
 }
 
 /** key 清单（CLI `key list`——含吊销行 + 成员名）。 */

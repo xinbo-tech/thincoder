@@ -7,7 +7,7 @@
  * `webui/WEBUI.md` §2.4④/§6 AC-24 两行/§7 KD-SV-45/46；腿 ↔ 判据对照在括号）：
  *   ① 保留集抽取（AC-24①——`extractModelMeta` 直测）：deepseek 形（`context_window`+`input_modalities`+`name`）∥ kimi 形（`context_length`+`supports_image_in`+`display_name`）∥
  *      vLLM 形（`max_model_len`）⇒ 逐字段出图；经典四件 ⇒ `{}`；形不符逐项略（`context_window:"1M"` ∥ `status:"online"` ∥ 超长名 ∥ `display_name` = 模型名）
- *   ② v7 迁移（STORE §3）：空库直落 7 ∥ v6 库自动升 7（存量行得常量默认 `'{}'`）∥ 幂等 ∥ 新列常量默认在场
+ *   ② v7 迁移（STORE §3）：空库直落 8 ∥ v6 库自动升 8（存量行得常量默认 `'{}'`）∥ 幂等 ∥ 新列常量默认在场
  *      ∥ `rowToEntry` 往返逐值 ∥ 坏 JSON ∥ 非对象 ⇒ 行数据损坏抛（沿 `settings_json` 口径）
  *   ③ 接口逐值（AC-24①②——真 HTTP）：discover 双集（富字段逐值 ∥ 经典 ⇒ `{}` ∥ 去重首见）∥ POST 携图 ⇒ GET 行逐值（非开放不入库）∥
  *      PATCH 不携 ⇒ 现存按求交滑动 ∥ PATCH 携 ⇒ 期望图替换（形不符即略）∥ 非对象 ⇒ 400 库与运行时零变 ∥ 探针零落库 ∥ `/v1/models` 零涉（元数据零带出）
@@ -15,7 +15,7 @@
  *      （有则示 ∥ 零字段零占位 ∥ 存储补齐）∥ 上游退役只提示（行标 + 注行；勾选/保存照常零停用）∥ 加载三态（在飞 ⇒ `.hint` + 钮禁用）
  *      ∥ 保存线形（空图 ⇒ 省略键；非空 ⇒ 携）∥ 添加窗探针随 POST 携图（无探针 ⇒ 省略键）
  *   ⑤ 求交滑落（AC-24②——`filterModelMeta` 直测）：白名单 + 形不符即略 + 与 `models` 求交（非开放不入库）∥ 非对象 ⇒ 抛
- *   ⑥ i18n + 静态面（WEBUI §2.2 键族 +7 ∥ §6 AC-24 续）：两表 7 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集双向相等 ∥ 档目 19 ∥ 20 不变 ∥ 视图件行宽 ≤300 ∥ `style.css` 零新增（`:root` 38 ∥ 悬停八条——AC-19 canon）∥ 门禁链 22 件
+ *   ⑥ i18n + 静态面（WEBUI §2.2 键族 +7 ∥ §6 AC-24 续）：两表 7 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集双向相等 ∥ 档目 19 ∥ 20 不变 ∥ 视图件行宽 ≤300 ∥ `style.css` 零新增（`:root` 38 ∥ 悬停七条——AC-19 canon）∥ 门禁链 24 件
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -143,12 +143,12 @@ test("① 保留集抽取：deepseek/kimi/vLLM 三形逐字段 ∥ ark 状态命
   assert.deepEqual(extractModelMeta({ id: "m", name: 42 }, "m"), {})
 })
 
-// ── ② v7 迁移（STORE §3——判据：空库 7 ∥ v6 升 7 ∥ 幂等 ∥ 常量默认在场）──────────────
+// ── ② v7 迁移（STORE §3——判据：空库 8 ∥ v6 升 8 ∥ 幂等 ∥ 常量默认在场）──────────────
 
-test("② v7 迁移：空库直落 7 ∥ v6 库自动升 7（存量行得 '{}'）∥ 幂等 ∥ 新列常量默认在场 + rowToEntry 往返/坏 JSON", () => {
+test("② v7 迁移：空库直落 8 ∥ v6 库自动升 8（存量行得 '{}'）∥ 幂等 ∥ 新列常量默认在场 + rowToEntry 往返/坏 JSON", () => {
   const fresh = DB.openDatabase(":memory:")
   try {
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [7, 7])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [8, 8])
     const column = fresh.prepare("PRAGMA table_info(providers)").all().find((item) => item.name === "model_meta_json")
     assert.ok(column, "providers.model_meta_json 缺位")
     assert.deepEqual([column.type, column.notnull, column.dflt_value], ["TEXT", 1, "'{}'"]) // 常量默认 = '{}'（未存 = 无元数据）
@@ -165,10 +165,10 @@ test("② v7 迁移：空库直落 7 ∥ v6 库自动升 7（存量行得 '{}'�
     legacy.close()
     const db = DB.openDatabase(file) // 启动自动升
     try {
-      assert.equal(DB.readVersion(db), 7)
+      assert.equal(DB.readVersion(db), 8)
       assert.equal(db.prepare("SELECT model_meta_json FROM providers WHERE name = 'old'").get().model_meta_json, "{}", "存量行即刻得 '{}'")
       // 幂等：再跑迁移链 ⇒ 版本不变 ∥ 存量值不动
-      assert.equal(DB.migrate(db), 7)
+      assert.equal(DB.migrate(db), 8)
       assert.equal(db.prepare("SELECT model_meta_json FROM providers WHERE name = 'old'").get().model_meta_json, "{}")
       // rowToEntry 往返逐值 ∥ 坏 JSON ∥ 非对象 ⇒ 行数据损坏抛（沿 settings_json 口径）
       const spec = { m: { displayName: "M", contextWindow: 8192, vision: true, status: "Shutdown" } }
@@ -482,15 +482,15 @@ test("⑥ i18n + 静态面：两表 7 键在场（en 零 CJK ∥ 占位符一致
   // 档目 19 ∥ 20 不变（零新 public 档）
   const names = readdirSync(PUBLIC_DIR).sort()
   assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [20, 19], "档目 19 ∥ 20 不变")
-  // AC-19 canon（`style.css` 零新增）：`:root` 变量族 38 ∥ 悬停声明八条
+  // AC-19 canon（`style.css` 零新增）：`:root` 变量族 38 ∥ 悬停声明七条
   const css = readPublic("style.css").replace(/\/\*[\s\S]*?\*\//g, "")
   const rootVars = (css.match(/:root\s*\{[^{}]*\}/)?.[0] ?? "").match(/--[\w-]+\s*:/g) ?? []
   assert.equal(rootVars.length, 38, `:root 变量族计数（零新增）：${rootVars.length}`)
   const hover = [...css.matchAll(/([^{}]*:hover[^{}]*)\{/g)].map((match) => match[1].trim().replace(/\s+/g, " ")).sort()
-  assert.deepEqual(hover, [".nav-item:hover", "tbody tr:hover", "li.key-item:hover", "button:hover", "button.tiny:hover", "button.danger:hover", "button.link:hover", ".modal-close:hover"].sort(), "悬停声明清单（八条——零新增）")
-  // 门禁链 22 件（本批件入链——文档清账批拆档后）∥ 清单目标在盘
+  assert.deepEqual(hover, [".nav-item:hover", "tbody tr:hover", "button:hover", "button.tiny:hover", "button.danger:hover", "button.link:hover", ".modal-close:hover"].sort(), "悬停声明清单（七条——零新增）")
+  // 门禁链 24 件（本批件入链——文档清账批拆档后）∥ 清单目标在盘
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 22, `门禁清单件数（二十一 ⇒ 二十二——文档清账批拆档）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 24, `门禁清单件数（二十二 ⇒ 二十四——me-keys 批两件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-provider-model-metadata.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

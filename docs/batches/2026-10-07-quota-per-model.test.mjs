@@ -16,7 +16,7 @@
  *   ⑤ 对账（METERING §2.5）：零漂移 ∥ 注入漂移 ⇒ 检出 ∥ `--fix` ⇒ 覆写后复查零漂 ∥ CLI `usage reconcile` 实跑
  *   ⑥ 端到端（真 HTTP）：平台层 `quotaTokens` 热生效 ⇒ 429 ∥ 成员覆盖 ⇒ 放行 ∥ 嵌入零检查 ∥ 404 先于 429-quota
  *      ∥ 旧额度端点 404 ∥ `/api/me` 行形
- *   ⑦ 门禁清单：`prepublishOnly` 含本批件（二十二件——文档清账批拆档后）∥ 清单目标在盘
+ *   ⑦ 门禁清单：`prepublishOnly` 含本批件（二十四件——文档清账批拆档后）∥ 清单目标在盘
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -144,10 +144,10 @@ function runCli(args) {
 
 // ── ① v5 迁移（STORE §3 ∥ AC-22③——KD-SV-40）────────────────────────────────
 
-test("① v5 迁移：空库直落 7（链尾——Provider 模型元数据批后）∥ v4 库自动升 7 ∥ 幂等 ∥ 拆列抽样逐值 ∥ 回填逐值 = usage 重算 ∥ 旧列已删", () => {
+test("① v5 迁移：空库直落 8（链尾——Provider 模型元数据批后）∥ v4 库自动升 8 ∥ 幂等 ∥ 拆列抽样逐值 ∥ 回填逐值 = usage 重算 ∥ 旧列已删", () => {
   const fresh = DB.openDatabase(":memory:")
   try {
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [7, 7])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [8, 8])
     assert.ok(fresh.prepare("PRAGMA table_info(usage)").all().some((column) => column.name === "provider"), "usage.provider 缺位")
     const memberColumns = fresh.prepare("PRAGMA table_info(members)").all().map((column) => column.name)
     assert.ok(memberColumns.includes("model_quotas_json"), "members.model_quotas_json 缺位")
@@ -177,7 +177,7 @@ test("① v5 迁移：空库直落 7（链尾——Provider 模型元数据批�
     legacy.close()
     const db = DB.openDatabase(file) // 启动自动升
     try {
-      assert.equal(DB.readVersion(db), 7)
+      assert.equal(DB.readVersion(db), 8)
       // 拆列抽样逐值（判据 = endpoint='chat' + 首斜杠；嵌入行 provider = ''）
       assert.deepEqual(
         db.prepare("SELECT provider, model, endpoint FROM usage ORDER BY id").all().map((row) => [row.provider, row.model, row.endpoint]),
@@ -190,7 +190,7 @@ test("① v5 迁移：空库直落 7（链尾——Provider 模型元数据批�
       assert.deepEqual([bailian.requests, bailian.prompt_tokens, bailian.completion_tokens, bailian.total_tokens, bailian.errors], [2, 10, 20, 30, 1])
       assert.equal(db.prepare("SELECT tokens FROM quota_counters WHERE provider = 'meta' AND model = 'inner/llama'").get().tokens, 3)
       // 幂等：再跑迁移链 ⇒ 版本不变 ∥ 回填不重复
-      assert.equal(DB.migrate(db), 7)
+      assert.equal(DB.migrate(db), 8)
       assert.equal(db.prepare("SELECT COUNT(*) AS n FROM usage_daily").get().n, 3)
     } finally {
       db.close()
@@ -437,11 +437,11 @@ test("⑥ 端到端：平台层热生效 ⇒ 429 ∥ 成员覆盖 ⇒ 放行 ∥
   }
 })
 
-// ── ⑦ 门禁清单（`prepublishOnly` 二十二件含本批件 ∥ 清单在盘）──────────────────
+// ── ⑦ 门禁清单（`prepublishOnly` 二十四件含本批件 ∥ 清单在盘）──────────────────
 
-test("⑦ 门禁清单：`prepublishOnly` 二十二件含本批件 ∥ 清单目标在盘", () => {
+test("⑦ 门禁清单：`prepublishOnly` 二十四件含本批件 ∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 22, `门禁清单件数（二十一 ⇒ 二十二——文档清账批拆档）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 24, `门禁清单件数（二十二 ⇒ 二十四——me-keys 批两件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-per-model.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

@@ -1,47 +1,119 @@
 /**
- * views-me.mjs — 我的三页（webui/WEBUI.md §2）：`#/me/keys`（key 清单——含最后使用/近 30 天用量 ∥ 签发/轮换）∥
+ * views-me.mjs — 我的三页（webui/WEBUI.md §2）：`#/me/keys`（API Key 表六列——多把并存 ∥ 签发/逐把吊销双弹窗 ∥
+ * 页级一次性秘密区 ∥ 接入指南卡（`accessCard` 成员变体——同源复用）——§2.3⑥）∥
  * `#/me/usage`（分模型配额摘要/本月已用 + 本人用量明细（端点过滤）+ 向量服务提示条）∥ `#/me/account`（基本信息 + 自助改密）；
  * 自 views.mjs 拆档（一页一职责）。
  *
- * 数据全经 /api/*（契约 = accounts/ACCOUNTS.md §3 ∥ metering/METERING.md §3）；一次性秘密（key 明文）
- * 只回显一次（ctx.showSecret）；提示条模型名经 `/api/system` 的 `embedding.model` 下发（零地址——§2.3①）；
- * 渲染一律节点 + textContent；文案经 `t()` 取值（§2.2）。
+ * 数据全经 /api/*（契约 = accounts/ACCOUNTS.md §3 ∥ metering/METERING.md §3；key 行形 = `memberView`——名称/`hint`/
+ * 签发时间/最后使用/近 30 天）；一次性秘密（key 明文）只回显一次（ctx.showSecret——复制钮三路回退住 app.mjs）；
+ * 轮换（全换）按钮下架（多把并存下与逐把模型相抵——端点保留，WEBUI §2.3⑥）；提示条模型名经 `/api/system` 的
+ * `embedding.model` 下发（零地址——§2.3①）；渲染一律节点 + textContent；文案经 `t()` 取值（§2.2）。
  */
-import { t } from "./i18n.mjs"
+import { mapError, t } from "./i18n.mjs"
+import { openModal } from "./modal.mjs"
+import { accessCard } from "./views-system.mjs"
 
 // ── 页：key 与签发 ──────────────────────────────────────────────────────────
 
 export function renderMeKeys(ctx, mount) {
   const { h } = ctx
-  const member = ctx.state.member
-  mount.append(h("h2", { text: t("me.keys.title") }))
-
   const secretBox = h("div", { class: "secret", hidden: true })
-  const keyList = h("ul", { class: "key-list" })
-  const renderKeys = () => {
-    const keys = ctx.state.member?.keys ?? member.keys // refresh 后取新清单（轮换后旧 key 即时退场）
-    keyList.replaceChildren(...(keys.length
-      ? keys.map((key) => h("li", { class: "key-item" },
-          h("code", { text: key.hint }),
-          h("div", { class: "key-meta", text: key.lastUsedAt === null || key.lastUsedAt === undefined
-            ? t("me.keys.neverUsed")
-            : t("me.keys.lastUsed", { time: ctx.fmtTs(key.lastUsedAt) }) }),
-          h("div", { class: "key-meta", text: t("me.keys.windowTokens", { tokens: key.windowTokens ?? 0 }) })))
-      : [h("li", { class: "hint", text: t("me.keys.empty") })]))
-  }
-  renderKeys()
+  const tableBox = h("div")
 
-  const rotate = h("button", { type: "button", text: t("me.keys.rotate") })
-  rotate.addEventListener("click", async () => {
-    if (!window.confirm(t("me.keys.rotateConfirm"))) return
+  /** 表重渲（签发/吊销成功后——数据 = `memberView` key 行：名称 ∥ `hint` ∥ 签发时间 ∥ 最后使用 ∥ 近 30 天 ∥ 吊销）。 */
+  const renderTable = () => {
+    const keys = ctx.state.member?.keys ?? []
+    tableBox.replaceChildren(keys.length === 0
+      ? h("p", { class: "hint", text: t("me.keys.empty") })
+      : ctx.table(
+          [t("me.keys.colName"), t("me.keys.colKey"), t("me.keys.colCreated"), t("me.keys.colLastUsed"), t("me.keys.colWindow"), t("me.keys.colActions")],
+          keys.map((key) => [
+            key.name,
+            h("code", { text: key.hint }),
+            ctx.fmtTs(key.createdAt),
+            key.lastUsedAt === null || key.lastUsedAt === undefined ? t("me.keys.neverUsed") : t("me.keys.lastUsed", { time: ctx.fmtTs(key.lastUsedAt) }),
+            t("me.keys.windowTokens", { tokens: key.windowTokens ?? 0 }),
+            h("button", { class: "tiny danger", text: t("admin.members.revoke"), onclick: () => openRevokeModal(ctx, { key, reload }) }),
+          ])))
+  }
+  /** 刷新会话态（`/api/me`——签发/吊销后取新清单）+ 表重渲；失败 ⇒ 错误收口。 */
+  const reload = async () => {
+    try { await ctx.refresh() } catch (error) { ctx.fail(error); return }
+    renderTable()
+  }
+  renderTable()
+
+  mount.append(h("h2", { text: t("me.keys.title") }))
+  mount.append(h("div", { class: "row-form" }, h("button", { type: "button", text: t("me.keys.issue"), onclick: () => openIssueModal(ctx, { reload, secretBox }) })))
+  mount.append(secretBox) // 页级一次性回显（签发成功后明文落此——仅一次）
+  mount.append(h("section", { class: "card" }, h("h3", { text: t("me.keys.listTitle") }), tableBox))
+  mount.append(accessCard(ctx, "member")) // 接入指南（成员面——与 admin 接入卡同源复用，§2.3⑥）
+}
+
+/** 签发流（弹窗——§2.3⑥）：名称可空（留空 ⇒ 服务端默认名 `key-N`——落库）∥ 明文仅一次说明 ∥ 上限提示；
+ *  成功 ⇒ 关窗 + 页级秘密区回显明文 + 表刷新；失败 ⇒ 窗内状态行（弹窗定则——反馈落窗内）。 */
+function openIssueModal(ctx, { reload, secretBox }) {
+  const { h } = ctx
+  const nameInput = h("input", { placeholder: t("me.keys.namePh") })
+  const status = h("p", { class: "hint error", hidden: true })
+  const submit = async () => {
+    status.hidden = true
     try {
-      const issued = await ctx.api("/api/me/keys/rotate", { method: "POST" })
-      ctx.showSecret(secretBox, t("me.keys.secretLabel"), issued.plain)
-      await ctx.refresh()
-      renderKeys()
-    } catch (error) { ctx.fail(error) }
+      const issued = await ctx.api("/api/me/keys/issue", { method: "POST", body: { name: nameInput.value.trim() || null } })
+      ctx.showSecret(secretBox, t("me.keys.secretLabel"), issued.plain) // 明文一次性回显（关窗 + 页级）
+      modal.close()
+      await reload()
+    } catch (error) {
+      if (error?.status === 401 && error?.code !== "invalid_credentials") { ctx.fail(error); return } // 会话失效 ⇒ 照常踢登录
+      status.textContent = mapError(error)
+      status.hidden = false
+    }
+  }
+  const modal = openModal({
+    title: t("me.keys.issueTitle"),
+    body: h("div", { class: "stack" },
+      h("label", {}, t("me.keys.nameLabel"), nameInput),
+      h("p", { class: "hint", text: t("me.keys.nameHint") }),
+      h("p", { class: "hint", text: t("me.keys.issueHint") }),
+      h("p", { class: "hint", text: t("me.keys.capHint") }),
+      status),
+    footer: h("div", { class: "row-form" },
+      h("button", { type: "button", text: t("me.keys.issueSubmit"), onclick: submit }),
+      h("button", { type: "button", class: "tiny", text: t("common.cancel"), onclick: () => modal.close() })),
   })
-  mount.append(h("section", { class: "card" }, h("h3", { text: t("me.keys.listTitle") }), keyList, h("p", {}, rotate), secretBox))
+  nameInput.focus() // 焦点入窗首选（平台缺省 = 首可聚焦元素——显式定首）
+  return modal
+}
+
+/** 吊销流（弹窗——§2.3⑥）：名 + `hint` + 后果文案（即断/不可撤销）；成功 ⇒ 关窗 + 表刷新（行离列）+ flash「已吊销」；
+ *  失败 ⇒ 窗内状态行。零原生 confirm（页面零调用——机检扫描面）。 */
+function openRevokeModal(ctx, { key, reload }) {
+  const { h } = ctx
+  const status = h("p", { class: "hint error", hidden: true })
+  const revoke = async () => {
+    status.hidden = true
+    try {
+      await ctx.api(`/api/me/keys/${key.id}/revoke`, { method: "POST" })
+      modal.close()
+      await reload()
+      ctx.flash(t("me.keys.revoked"))
+    } catch (error) {
+      if (error?.status === 401 && error?.code !== "invalid_credentials") { ctx.fail(error); return } // 会话失效 ⇒ 照常踢登录
+      status.textContent = mapError(error)
+      status.hidden = false
+    }
+  }
+  const modal = openModal({
+    title: t("me.keys.revokeTitle"),
+    body: h("div", { class: "stack" },
+      h("p", {}, key.name, " ", h("code", { text: key.hint })),
+      h("p", { class: "hint", text: t("me.keys.revokeConsequence") }),
+      status),
+    footer: h("div", { class: "row-form" },
+      h("button", { type: "button", class: "danger", text: t("me.keys.revokeSubmit"), onclick: revoke }),
+      h("button", { type: "button", class: "tiny", text: t("common.cancel"), onclick: () => modal.close() })),
+  })
+  return modal
 }
 
 // ── 页：我的用量 ────────────────────────────────────────────────────────────

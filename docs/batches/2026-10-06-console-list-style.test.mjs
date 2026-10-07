@@ -9,16 +9,16 @@
  *   ② 一套刻度（②④⑤）：`font-size` 全 `var(--fs)`（缺省撤销——含 UA 带字号元素覆盖面）∥ `font-weight` 全 ≤400 ∥ `line-height` 全
  *      `var(--lh)` ∥ padding/margin/gap ∈ `--sp-*` ∪ {0, auto} ∪ 布局组（`var(--nav-w)`——底座布局行 ∥ S15：
  *      内容缩进；白名单口径 = AC-19 续行「∪ 布局组变量」）
- *   ③ 态面（④）：行悬停声明清单（`.nav-item:hover` ∥ `tbody tr:hover` ∥ `li.key-item:hover`——同取 `--hover`；
+ *   ③ 态面（④）：行悬停声明清单（`.nav-item:hover` ∥ `tbody tr:hover`——同取 `--hover`；
  *      清单外零行悬停声明）∥ 聚焦环单形（`--bw-strong solid var(--accent)`——全档 outline 同形；控件外偏 2px ∥
  *      行内缩 −2px）
  *   ④ 错态面（⑨ canon）：七处「加载失败」面 = `.hint error`（逐面逐行）∥ 系统页诊断失败面 2 处（状态行 ⇒
  *      `.error`——独立生效选择器；试跑行 ⇒ `.hint error`）∥ #103 段内错误面 = `.hint error` ∥ `"hint error"`
- *      全档计数同拍（10——错态不外溢）
+ *      全档计数同拍（19——错态不外溢）
  *   ⑤ 类名双向闭合（AC-19 续）：档面字面类 ⊆ `style.css` 类选择器 ∥ `style.css` 类选择器 ⊆ 档面字面类 ∪ 态类 ∥
  *      死类零残留（`key-line`/`stat`/`view`——规则与字面两向）
  *   ⑥ 静态面：档目 19 ∥ 20（本批零新档）逐名同拍 ∥ `public/**` 零外链 ∥ 静态直发（200 ∥ mime ∥ 字节等于磁盘）
- *   ⑦ 门禁清单：`prepublishOnly` 二十二件含本批件（文档清账批拆档后）∥ 清单目标在盘
+ *   ⑦ 门禁清单：`prepublishOnly` 二十四件含本批件（文档清账批拆档后）∥ 清单目标在盘
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -111,12 +111,12 @@ test("② 一套刻度：`font-size` 全 `var(--fs)`（缺省撤销——含覆�
 
 // ── ③ 态面（口径④）：行悬停声明清单 ∥ 聚焦环单形 ─────────────────────────────────────────────
 
-test("③ 态面：行悬停声明清单（三声明同取 `var(--hover)`；清单外零行悬停声明）∥ 聚焦环单形", () => {
+test("③ 态面：行悬停声明清单（两声明同取 `var(--hover)`；清单外零行悬停声明）∥ 聚焦环单形", () => {
   const rules = rulesOf(stripComments(CSS))
-  const ROW_HOVER = [".nav-item:hover", "tbody tr:hover", "li.key-item:hover"]
+  const ROW_HOVER = [".nav-item:hover", "tbody tr:hover"]
   const CTRL_HOVER = ["button:hover", "button.tiny:hover", "button.danger:hover", "button.link:hover", ".modal-close:hover"]
   const hoverRules = rules.filter((rule) => rule.selector.includes(":hover"))
-  assert.deepEqual(hoverRules.map((rule) => rule.selector).sort(), [...ROW_HOVER, ...CTRL_HOVER].sort(), "悬停声明清单外残留（行悬停三 + 交互件五）")
+  assert.deepEqual(hoverRules.map((rule) => rule.selector).sort(), [...ROW_HOVER, ...CTRL_HOVER].sort(), "悬停声明清单外残留（行悬停二 + 交互件五）")
   for (const selector of ROW_HOVER) {
     const rule = hoverRules.find((item) => item.selector === selector)
     assert.equal(rule.body.replace(/\s+/g, " ").trim(), "background: var(--hover);", `${selector} 悬停底非同值（唯一行悬停取色）`)
@@ -132,7 +132,7 @@ test("③ 态面：行悬停声明清单（三声明同取 `var(--hover)`；清�
 
 // ── ④ 错态面（⑨ canon）：七处「加载失败」面 ∥ 系统页诊断失败面 2 处 ∥ 段内错误面 ──────────────
 
-test("④ 错态面：`.hint error` 逐面套用（七处 loadFailed + 系统页两处 + 段内三处 + 配额批窗内三处 + 模型元数据批两处）∥ `\"hint error\"` 计数同拍 17", () => {
+test("④ 错态面：`.hint error` 逐面套用（七处 loadFailed + 系统页两处 + 段内三处 + 配额批窗内三处 + 模型元数据批两处 + me-keys 批窗内两处）∥ `\"hint error\"` 计数同拍 19", () => {
   const FACES = [
     ["views-admin.mjs", "admin.members.loadFailed"],
     ["views-me.mjs", "usage.loadFailed"],
@@ -163,9 +163,10 @@ test("④ 错态面：`.hint error` 逐面套用（七处 loadFailed + 系统页
   // 计数同拍（错态不外溢——加载/空态保持纯 `.hint`）
   // 2026-10-07 配额批：views-admin 窗内状态行 +3（保存失败 ∥ 编辑态 hint ∥ 加载失败窗内行）⇒ 12 ⇒ 15（父侧直接执行 · 可 revert）
   // 2026-10-07 模型元数据批：views-providers-modals 退役提示 +2（退役徽标 ∥ 退役注行）⇒ 15 ⇒ 17
+  // 2026-10-07 me-keys 批：views-me 双弹窗窗内状态行 +2（签发/吊销失败）⇒ 17 ⇒ 19
   const total = ["views-admin.mjs", "views-me.mjs", "views-models.mjs", "views-usage.mjs", "views-audit.mjs", "views-providers.mjs", "views-providers-modals.mjs", "views-system.mjs"]
     .reduce((sum, file) => sum + (readPublic(file).match(/"hint error"/g) ?? []).length, 0)
-  assert.equal(total, 17, `\`"hint error"\` 计数不同拍：${total}`)
+  assert.equal(total, 19, `\`"hint error"\` 计数不同拍：${total}`)
 })
 
 // ── ⑤ 类名双向闭合（AC-19 续）：档面字面类 ↔ style.css 类选择器 ∥ 死类零残留 ─────────────────
@@ -185,8 +186,8 @@ test("⑤ 类名双向闭合 ∥ 死类零残留（`key-line`/`stat`/`view`）",
     for (const m of src.matchAll(/classList\.(?:add|remove|toggle)\(\s*["']([^"']*)["']/g)) usedClasses.add(m[1])
   }
   // 提取器健康（零误扫卫——两向各抽正例）
-  for (const known of ["row-clickable", "table-wrap", "key-item", "config-field", "hint", "tiny"]) assert.ok(usedClasses.has(known), `类面扫描失效：${known}`)
-  for (const known of ["card", "row-clickable", "key-item", "config-field", "modal", "error"]) assert.ok(cssClasses.has(known), `样式类扫描失效：${known}`)
+  for (const known of ["row-clickable", "table-wrap", "secret", "config-field", "hint", "tiny"]) assert.ok(usedClasses.has(known), `类面扫描失效：${known}`)
+  for (const known of ["card", "row-clickable", "secret", "config-field", "modal", "error"]) assert.ok(cssClasses.has(known), `样式类扫描失效：${known}`)
   const STATE = new Set(STATE_CLASSES)
   for (const token of usedClasses) assert.ok(cssClasses.has(token), `档面类无样式规则：${token}`)
   for (const cls of cssClasses) assert.ok(usedClasses.has(cls) || STATE.has(cls), `样式类零消费者：.${cls}`)
@@ -228,11 +229,11 @@ test("⑥ 静态面：档目 19 ∥ 20 逐名同拍（本批零新档）∥ `pub
   }
 })
 
-// ── ⑦ 门禁清单：`prepublishOnly` 二十二件（含本批件）∥ 清单目标在盘 ─────────────────────────────
+// ── ⑦ 门禁清单：`prepublishOnly` 二十四件（含本批件）∥ 清单目标在盘 ─────────────────────────────
 
-test("⑦ 门禁清单：`prepublishOnly` 二十二件含本批件 ∥ 清单目标在盘", () => {
+test("⑦ 门禁清单：`prepublishOnly` 二十四件含本批件 ∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 22, `门禁清单件数（二十一 ⇒ 二十二——文档清账批拆档）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 24, `门禁清单件数（二十二 ⇒ 二十四——me-keys 批两件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-06-console-list-style.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

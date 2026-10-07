@@ -1,5 +1,6 @@
 /**
  * app.mjs — 控制台前端入口（webui/WEBUI.md §1–§3）：哈希路由（`#/<组>/<页>`）∥ fetch 封装 ∥ 会话态 ∥ 渲染助手 ∥
+ * 一次性秘密区复制钮（三路回退——§2.3⑥）∥
  * 视图装配（一页一职责）∥ 数据表页视口高壳（`dataShell`——§2.6②）∥ 系统信息（`/api/system`——装配取一次；失败静默留空——§2.1）∥ 健康轮询（§2.3⑤：
  * 登录后启动——立即一次 + 30s；登出停止；灯/系统页块/总览卡三落点共用）∥ 多语言接线（`initLang` ∥ 错误映射 ∥
  * 格式化本地化 ∥ `Retry-After` 捕捉 ∥ `rerender` 口 ∥ title——§2.2）。
@@ -69,13 +70,41 @@ export const fmtModelQuotas = (modelQuotas) => {
   return count === 0 ? t("common.quotaByPlatform") : t("common.modelQuotaCount", { count })
 }
 
-/** 一次性秘密回显区（key 明文 ∥ 临时密码——「仅此一次」提示 + 可全选文本）。 */
+/** 一次性秘密回显区（key 明文 ∥ 临时密码——「仅此一次」提示 + 可全选文本 + 复制钮；三处秘密面随动）。 */
 export function showSecret(box, label, value) {
+  const code = h("code", { class: "secret-value", text: value })
+  const button = h("button", { type: "button", class: "tiny", text: t("common.copy") })
+  button.addEventListener("click", () => { copyText(value, code, button) })
   box.replaceChildren(
     h("p", { class: "secret-label", text: t("common.secretNote", { label }) }),
-    h("code", { class: "secret-value", text: value }),
+    code,
+    button,
   )
   box.hidden = false
+}
+
+/** 复制三路回退（§2.3⑥——`showSecret` 全局随动）：① `navigator.clipboard.writeText`（安全上下文）⇒
+ *  ② 选中明文 + `document.execCommand("copy")` ⇒ ③ 仍失败 ⇒ 保持选中 + flash 手动提示；
+ *  成功反馈 = 钮文案「已复制」（2s 复位）。 */
+async function copyText(value, code, button) {
+  let copied = false
+  try {
+    await navigator.clipboard.writeText(value) // ① 安全上下文
+    copied = true
+  } catch { /* 落② */ }
+  if (!copied) {
+    try {
+      const range = document.createRange()
+      range.selectNodeContents(code)
+      const selection = window.getSelection()
+      selection.removeAllRanges()
+      selection.addRange(range) // 选中明文（②③ 共用——③ 保持选中）
+      copied = document.execCommand("copy") === true // ② 遗留通道
+    } catch { /* 落③（选中未成——手动提示同面） */ }
+  }
+  if (!copied) { flash(t("common.copyManual")); return } // ③ 手动兜底
+  button.textContent = t("common.copied")
+  setTimeout(() => { button.textContent = t("common.copy") }, 2000)
 }
 
 /** 用量表（本人 ∥ 全队同构；全队加成员 + key 列；`foot = true` ⇒ 表尾计数行——仅我的·用量页〔壳面〕传）。 */

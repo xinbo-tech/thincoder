@@ -4,9 +4,9 @@
  *
  * 数据 = `ctx.state.system`（`GET /api/system`——app.mjs 装配取一次；失败 ⇒ 留空静默）+ `GET /api/admin/embedding`
  * （配置真值——零密钥）+ `POST /api/admin/embedding/test`（探活/试跑单端点——诊断自含形，不落库不计量）+
- * 前端健康共享态（§2.3⑤——`ctx.onHealth` 订阅，30s 自动刷新）。接入卡 = admin 面（供分发给成员）；成员面成文
- * = README「成员接入」节。渲染沿 `h`/`textContent`（零拼串）；baseURL = 运行时 origin（`location.origin` + `/v1`
- * ——零硬编码，反代/改端口自动随动）；文案经 `t()` 取值（§2.2）。
+ * 前端健康共享态（§2.3⑤——`ctx.onHealth` 订阅，30s 自动刷新）。接入卡 = `accessCard(ctx, variant)` 同源构件
+ * （admin 面供分发给成员 ∥ 成员面 `#/me/keys`——me-keys 批）；成员面成文 = README「成员接入」节。渲染沿 `h`/`textContent`
+ * （零拼串）；baseURL = 运行时 origin（`location.origin` + `/v1`——零硬编码，反代/改端口自动随动）；文案经 `t()` 取值（§2.2）。
  */
 import { t } from "./i18n.mjs"
 
@@ -139,9 +139,11 @@ function healthSection(ctx) {
     h("p", { class: "hint", text: t("health.autoNote") }))
 }
 
-/** 节「成员接入」：baseURL（运行时 origin）∥ key 提示 ∥ 四端示例（四字段）∥ curl 冒烟一行。 */
-function accessSection(ctx) {
+/** 节「成员接入」（同源构件——me-keys 批 §2.3⑥）：baseURL（运行时 origin）∥ key 提示 ∥ 四端示例（四字段）∥ curl 冒烟一行。
+ *  `variant`：`"admin"` = admin 面措辞（现行——零改）∥ `"member"` = 成员面措辞四键（`me.keys.access*`；素材同源）。 */
+export function accessCard(ctx, variant = "admin") {
   const { h } = ctx
+  const member = variant === "member"
   const baseURL = `${location.origin}/v1`
   const fields = `{ "name": "team", "baseURL": "${baseURL}", "model": "<provider>/<model>", "apiKey": "sk-tc-…" }`
   const ends = [
@@ -150,10 +152,11 @@ function accessSection(ctx) {
     ["system.endDesktop", "system.endDesktopPath"],
     ["system.endOther", "system.endOtherPath"],
   ]
+  const keyRow = member ? [t("me.keys.accessKeyRow"), t("me.keys.accessKeyValue")] : [t("system.teamKey"), t("system.teamKeyValue")]
   return h("section", { class: "card" },
-    h("h3", { text: t("system.accessTitle") }),
-    h("p", { class: "hint", text: t("system.accessHint") }),
-    ctx.table([t("col.item"), t("col.value")], [[t("system.baseURLRow"), baseURL], [t("system.teamKey"), t("system.teamKeyValue")]]),
+    h("h3", { text: t(member ? "me.keys.accessTitle" : "system.accessTitle") }),
+    h("p", { class: "hint", text: t(member ? "me.keys.accessHint" : "system.accessHint") }),
+    ctx.table([t("col.item"), t("col.value")], [[t("system.baseURLRow"), baseURL], keyRow]),
     h("h4", { text: t("system.fieldsTitle") }),
     snippet(h, fields),
     h("ul", { class: "end-list" },
@@ -166,7 +169,7 @@ export function renderSystem(ctx, mount) {
   const { h } = ctx
   mount.append(h("h2", { text: t("system.title") }))
   mount.append(versionSection(ctx, ctx.state.system ?? null))
-  mount.append(accessSection(ctx))
+  mount.append(accessCard(ctx, "admin"))
   mount.append(vectorSection(ctx))
   mount.append(healthSection(ctx))
 }
