@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-07 · 来源 = 用户 2026-10-07 19:41 投诉（浏览器工具同步阻塞/吊死 agent）+ 19:43 裁「修彻底」（满量先行——不做止血半量）。
 > 台账 = #1045（core · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：进行中（设计评审 pass（🔴0∥🟡7∥🔵4）· 修复轮 11/11 落 · 已代签 · 实施舱 A 已派 ∥ B 待 A 号随派）
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 ### 1.1 来源与裁定（父侧 · 2026-10-07 19:4x）
@@ -57,6 +57,36 @@
 - **既有面发现（上抛 5）**：**已就地修**——`tool-docs/bash.md:15` 参数清单补 `async` 行（父侧直接执行 · 单笔可 revert）。
 - 核验记录：设计档 §2.9–§2.11 与批档 §2 逐条吻合（抽读）；工作树 = 两设计档在盘、零产品码冒触。
 - 停点：设计评审点火（评审子代理——两设计档 + 需求档 + 本档）。
+
+### 1.8 修复轮核验 ∥ 附察处置 ∥ prompt 面文本（主 agent · 2026-10-07 20:2x）
+
+**A. 修复轮核验（抽读实读——全在盘）**：动作数 16（设计 `:237` ∥ KD-24 `:402`；记录 `:140` ∥ `:184` ∥ `:200` 同族）∥ 用例续编 T27–T42 ∥ S19–S22（设计 §7 `:432–:436` ∥ §8 落点列；记录 `:173–:174`/`:184–:188`）∥ §7 五行去「建议编号」限定 ∥ 档头 `:4` 与 §7 标题 `:404` 计数 ∥ §5「>300 档位处置」段（`:367–:368`）∥ KD-20 详版改述（`:398`——「空闲 >5s 时含一次入口心跳」）∥ §2.9 开启段中止（`:212`）∥ 队列等待计入预算 + `queue wait` 步名（`:191` ∥ `:210`）∥ §2.11 与 bash 异句（`:237`）∥ 墙钟断言改确定性判据（记录 `:185`/`:186` ∥ 设计 `:433`/`:434`）∥ Δ 取 +1/±1（记录 `:172`）。**结论：11/11 成立、零新语义（抽读 12 处）。**
+
+**B. 附察处置**：① 设计 §7 F-BT16 无「17」实例——属实零改；② 记录 §2.1「（建议）」×5 ∥ §2.7「（待裁）」= 设计轮残留标记——**效力终了**（需求档已落；处置以 §1.7/§1.8 为准），随实施后回填轮同拍清（设计面）；③ doc-check 他档余量（悬空 11 ∥ 行宽 28）——**已落账**（非本批面）。
+
+**C. prompt 面文本（主 agent 笔——实施轮逐字落地 · 零改写）**：
+
+〔1〕`tool-docs/browser.md`：参数段（`clipboard` 行后）+1 行：
+> - async: run this action in the background (default false) — returns an ack at once (`browser#<N> started (running) — <action> <subject>`); the finished result arrives later as a system reminder summary. Use `wait_for "browser id:N done"` to wait; `process {action:"kill", id:N}` to cancel. Depth-0 only.
+
+〔2〕`tool-docs/browser.md`：Notes 段（`Permission:` 行后）+2 行：
+> - Timeouts are explicit: every action returns within a hard budget (navigate 45s; most actions 30s; type/snapshot 15s; wait = its `timeoutMs` + 15s overhead; `timeoutMs` overrides any action, cap 120s). A timeout reads `Error: <action> timed out after <ms>ms (stuck in <step>)` — retry, or run `close` to reset the session.
+> - Session loss is explicit too: if the browser is closed externally while an action runs, it fails at once with `closed externally`; the next action opens a fresh session automatically (page state lost, profile/login kept — the receipt notes it). Do not assume the self-started browser stays alive between calls.
+
+〔3〕`tool-docs/browser.md`：文末（`CLI, VS Code and desktop share…` 行**前**）新增段（≈9 行）：
+> **Real-world practice** — this tool drives a fresh automated browser; real sites may fight back:
+> - Anti-bot walls / login gates: some sites block or challenge automated browsers — expect missing content, CAPTCHAs, or login redirects. Don't hammer a wall: report what you saw (URL + wall type) instead of blind retries.
+> - Pacing: after a click that navigates, `snapshot` again before the next action; space out actions on flaky pages; re-snapshot instead of reusing stale refs.
+> - Session assumptions: the session may be closed externally or timed out — never assume it is alive; on `closed externally`, just run the action again (fresh session, login kept).
+> - When not to use it: static page / API → `fetch`; a link needing no interaction → just produce the URL; a step needing a human (2FA, payment) → ask the user to do it in a headed session.
+
+〔4〕`tool-docs/wait_for.md`：条件枚举（`bash id:N done` 行后）+1 行：
+>   - `browser id:N done` — a background browser task N (the id from the ack, `browser#N`) has settled — finished, or already left the pool (nothing left to wait on)
+
+〔5〕`tool-docs/process.md`：`id` 行改写（±1）：
+> - id: (kill) background task id — a `bash#N` (bash async ack) or `browser#N` (browser async ack): bash ⇒ its process tree is terminated; browser ⇒ a queued task is dropped, a running one is aborted (the browser itself is not killed); either way the entry leaves the pool and no digest will arrive (a bash task's log so far stays readable).
+
+Notes 行随动：「an unknown or already-finished **bash** task id」⇒ 去「bash」。
 
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（eng-designer · 2026-10-07 · 硬超时+外部关闭自愈+异步通道+用法认知（E1–E5））
@@ -137,7 +167,7 @@
 
 - 形态：`async:true`（depth-0 专项，schema 删参 + 运行期第二道——bash 双线先例）⇒ ack `browser#<N> started (running) — <action> <subject>` ⇒ **池化排队执行**（后台动作仍走同一串行队列——单页不引入并发）⇒ 结算 ⇒ 摘要 `[System reminder: background browser#<N> finished — <action> <subject> (<ok> ∥ <failed: …>, <s>s)]` + 回执正文（escapeXml）；取消 ⇒ 无摘要（墓碑 + 杀点确认即凭据）。
 - 池：`_browserTasks`（角色 `"browser"`；帽 `BROWSER_TASK_MAX=4`，第 5 条显式拒）；结算**恒停靠** `_pendingAsyncResults` + `wakeAsyncWaiters`（bg 同式——消化轮注入）。
-- 可异步动作 = **全 17 动作统一**（零二次分类；对瞬时动作无意义但统一允许）。
+- 可异步动作 = **全 16 动作统一**（零二次分类；对瞬时动作无意义但统一允许）。
 - 门：审批门在**起跑调用**处照常（异步 ≠ 免审；planMode/批量语义零变）。
 - 取消：`process action=kill id:N`（id 路由先 bg 后 browser）——queued ⇒ 丢队（从未运行）；running ⇒ abort（动作展开）⇒ 结算 cancelled（墓碑 `cancelled`）；重复幂等。**不杀浏览器**（重置会话经 `close`——保持「杀 ⟺ 控制器已中止」不变式）。
 - 收尾：Stop ∥ 会话中止 ⇒ `discardAbortedBrowserTasks` 逐条 abort + 墓碑 `discarded` + 出池；Ctrl+I 豁免（池保留）。
@@ -169,9 +199,9 @@
 | `thincoder-core/agent-tools/subagent-async.mjs` | 474 | +≈5 ⇒ ≈479 | 注入分发分支（压 500 硬限——零余量，**须保 ≤±5**） |
 | `thincoder-core/agent-tools/subagent-scheduler.mjs` | 448 | +≈1 ⇒ ≈449 | 取号扫描 +池 |
 | `thincoder-core/tool-docs/browser.md`（**prompt 面——建议文本入 2.8，落笔 = 主 agent/eng-coder**） | 40 | +≈14 ⇒ ≈54 | `async` ∥ 超时/外部关闭语义 ∥ **「现实环境实践」段（E5）** |
-| `thincoder-core/tool-docs/{wait_for,process}.md`（同上） | 24 / 15 | +2 / ±2 | 条件枚举 ∥ kill 靶面 |
-| `docs/batches/2026-10-07-browser-async-fix.test.mjs`（新档） | 新档 | ≈320 | 机检单测（点名见 2.5——假传输 ∥ 假子进程事件 ∥ 零真实浏览器） |
-| `docs/batches/2026-10-07-browser-async-fix.smoke.mjs`（新档） | 新档 | ≈180 | 真 Edge 冒烟：S1 硬超时（永不响应本地服务）∥ S2 关闭后自愈重开 ∥ S3 异步 ack+摘要 ∥ S4 kill |
+| `thincoder-core/tool-docs/{wait_for,process}.md`（同上） | 24 / 15 | +1 / ±1 | 条件枚举 ∥ kill 靶面 |
+| `docs/batches/2026-10-07-browser-async-fix.test.mjs`（新档） | 新档 | ≈320 | 机检单测 T27–T42（点名见 2.5——假传输 ∥ 假子进程事件 ∥ 零真实浏览器） |
+| `docs/batches/2026-10-07-browser-async-fix.smoke.mjs`（新档） | 新档 | ≈180 | 真 Edge 冒烟：S19 硬超时（永不响应本地服务）∥ S20 关闭后自愈重开 ∥ S21 异步 ack+摘要 ∥ S22 kill |
 | `docs/core/design/BROWSER-TOOL.md` | 434 | +≈120 ⇒ ≈555 | 本设计收编（§2.9–§2.11 新增 ∥ §5 家底收正 ∥ §6/§7/§8/§9/§10 随动） |
 | `docs/core/requirements/BROWSER-TOOL.md` | 76 | +≈18 | **父侧笔**（建议文本见 2.8） |
 
@@ -181,11 +211,11 @@
 
 | 条目 | 判据（机检） | 用例落点 |
 |---|---|---|
-| E1 | ① 挂死型假传输 ⇒ 全 17 动作各自在预算（注入 `timeoutMs:150`）内拒绝，错误句含 `timed out after` + `(stuck in `；② `ACTION_BUDGETS` 覆盖 `BROWSER_ACTIONS` 全体；③ `connectCdp`/`/json/new`/`cdp.call` 缺省帽各自有界（小值注入）；④ 旧两测试档全绿（回执文法零变 ∥ 队列序保持） | 单测 T1–T4 · 冒烟 S1 |
-| E2 | ① 假 WS close ⇒ 在飞动作 ≤100ms 拒，错误句明示外部关闭 + 重试引导；② 假 child `exit` 事件 ⇒ 同判；③ 死会话后下一动作 ⇒ open 计数 +1（重开）+ 回执尾行注记；再下一动作 **无**注记；④ 探针三检各自短路路径 | 单测 T5–T7 · 冒烟 S2 · 走查 W1 |
-| E3 | ① ack 即时返回（`browser#N started (running)`）且调用方未被动作阻塞；② 池 `_browserTasks` 含条目；③ 结算 ⇒ 出池 + `_pendingAsyncResults` + 摘要文法（ok ∥ failed）；④ kill：queued（执行计数 0）∥ running（≤200ms 展开）∥ 幂等；⑤ 第 5 条起跑显式拒；⑥ depth>0 运行期拒 + 子代 schema 无 `async` 参 | 单测 T8–T13 · 冒烟 S3/S4 |
-| E4 | ① 超时错误句携在飞 CDP 方法名（如 `Runtime.evaluate`）∥ 显式阶段名（如 `waitForReady`）；② kill/Stop 终态有墓碑；③ 外部关闭在飞 ⇒ 摘要 `failed:` 必达 | 单测 T4 · T12 · T14/T15 |
-| E5 | 描述档（`tool-docs/browser.md`）含「现实环境实践」段四小节（反爬墙/登录门 ∥ 节奏 ∥ 会话假设 ∥ 弃用转路）——对表 grep（prompt 面，落笔后生效） | 单测 T16（文本面 grep——落笔件） |
+| E1 | ① 挂死型假传输 ⇒ 全 16 动作各自在预算（注入 `timeoutMs:150`）内拒绝，错误句含 `timed out after` + `(stuck in `；② `ACTION_BUDGETS` 覆盖 `BROWSER_ACTIONS` 全体；③ `connectCdp`/`/json/new`/`cdp.call` 缺省帽各自有界（小值注入）；④ 旧两测试档全绿（回执文法零变 ∥ 队列序保持） | 单测 T27–T30 · 冒烟 S19 |
+| E2 | ① 假 WS close ⇒ 在飞动作即时拒（下一事件循环内——确定性判据，非墙钟界），错误句明示外部关闭 + 重试引导；② 假 child `exit` 事件 ⇒ 同判；③ 死会话后下一动作 ⇒ open 计数 +1（重开）+ 回执尾行注记；再下一动作 **无**注记；④ 探针三检各自短路路径 | 单测 T31–T33 · 冒烟 S20 · 走查 W1 |
+| E3 | ① ack 即时返回（`browser#N started (running)`）且调用方未被动作阻塞；② 池 `_browserTasks` 含条目；③ 结算 ⇒ 出池 + `_pendingAsyncResults` + 摘要文法（ok ∥ failed）；④ kill：queued（执行计数 0）∥ running（即时展开——下一事件循环内，非墙钟界）∥ 幂等；⑤ 第 5 条起跑显式拒；⑥ depth>0 运行期拒 + 子代 schema 无 `async` 参 | 单测 T34–T39 · 冒烟 S21/S22 |
+| E4 | ① 超时错误句携在飞 CDP 方法名（如 `Runtime.evaluate`）∥ 显式阶段名（如 `waitForReady`）；② kill/Stop 终态有墓碑；③ 外部关闭在飞 ⇒ 摘要 `failed:` 必达 | 单测 T30 · T38 · T40/T41 |
+| E5 | 描述档（`tool-docs/browser.md`）含「现实环境实践」段四小节（反爬墙/登录门 ∥ 节奏 ∥ 会话假设 ∥ 弃用转路）——对表 grep（prompt 面，落笔后生效） | 单测 T42（文本面 grep——落笔件） |
 
 ### 2.6 关键决策（KD-18–KD-24 —— 详版入设计档 §6）
 
@@ -197,7 +227,7 @@
 | KD-21 | 外部关闭 ⇒ **显式失败 + 下一次自愈**，不做透明重试 | 页面态已丢——静默重放会掩盖事实；显式失败给了模型决策点 | 透明重试（语义歧义）· 会话保持「半死」（中毒——实录根因） |
 | KD-22 | 异步 = **池化排队执行**（同一串行队列），独立域池 `_browserTasks` 帽 4 | 单页不引入并发（语义零变）；独立域池 ⇒ 帽/错误句/结算不与他族混 | 并入 `_bgTasks`（域混 ∥ 帽共享）· 真并发动作（单页交错——破坏性） |
 | KD-23 | 取消 = queued 丢队 ∥ running abort（**不杀浏览器**） | 保持「杀 ⟺ 控制器已中止」不变式；浏览器重置是独立动作（`close`） | 杀浏览器（误伤 ∥ 缓不济急） |
-| KD-24 | 全 17 动作统一可异步 + 门在起跑处 | 零二次分类；异步 ≠ 免审 | 白名单异步（多一套分类面） |
+| KD-24 | 全 16 动作统一可异步 + 门在起跑处 | 零二次分类；异步 ≠ 免审 | 白名单异步（多一套分类面） |
 
 ### 2.7 上抛项
 
@@ -219,7 +249,64 @@
 
 **prompt 面增改骨架（主 agent 笔）**：`tool-docs/browser.md` — 参数段 +`async`（depth-0 ∥ ack ∥ 摘要 ∥ `wait_for`/`process` 用法）+「Timeout & session loss」注（超时必返、外部关闭即失败、重开注记；勿假定常驻）+「现实环境实践」段（E5 四小节）；`wait_for.md` 条件枚举 +`browser id:N done`；`process.md` id 靶描述覆盖后台浏览器任务。
 
+### 设计评审修轮 1 落盘（11 条发现 · 2026-10-07 · eng-designer）
+
+**段位**：评审轮 1 = pass（🔴 0 / 🟡 7 / 🔵 4）——11 条经父侧裁定全部采纳；本轮 = 点修复轮（按号修、按号报）。落盘面 = `docs/core/design/BROWSER-TOOL.md`（就地）∥ 本档 §2 行级收正（#1/#2/#8/#11 所点行位——§2.3 `:140` · §2.4 `:172`–`:174` · §2.5 `:184`–`:188` · §2.6 `:200`）；设计档变更记录 +1 行。零新语义 ∥ 产品码零触 ∥ 需求档零触 ∥ §1/§3–§6 零触 ∥ `TOOLS.md` 零触。
+
+**逐号落盘（号 → 改动）**：
+
+1. 动作数收正 16——设计档 §2.11（`:234`）∥ KD-24（`:398`）∥ 本档 §2.3（`:140`）∥ §2.5 E1（`:184`）∥ **§2.6 KD-24 行（`:200`）——父侧清单外同族实例，一并收正**。
+2. 用例编号跨批续编（避撞号）——新批 = 单测 **T27–T42** ∥ 冒烟 **S19–S22**（W1 保留）：设计档 §7 五行（`:428`–`:432`）∥ §8 U52–U60 落点列（`:489`–`:497`）∥ §8 尾注 +归属行（`:500`–`:501`）∥ §5 冒烟行（`:358`——父侧清单外同族）∥ 本档 §2.4（`:173`–`:174`）∥ §2.5 用例列（`:184`–`:188`）；设计档落点列标「（本批新档）」。
+3. §7 五行删「建议编号」限定（`:428`–`:432`）——正式编号回指（需求档 F-BT16–19/N-BT10 已落）。
+4. 设计档档头计数收正（`:4`）：F-BT1–F-BT19 ∥ N-BT1–N-BT10；§7 标题同族计数（`:400`）随正。
+5. §5 补「>300 档位处置」段（`:364`——拆分决定段后）：`ops.mjs` ∥ `helpers.mjs`（余 8 行）∥ `suspension.mjs` ∥ `async-settle.mjs` ∥ `subagent-scheduler.mjs` ∥ `subagent-async.mjs`（指针）+ 批内件单测档（≈320——父侧清单外同族补入）：本批不拆 ∥ 触发条件 = 下次实质改动时核、越 500 即拆。
+6. KD-20 括注改述（`:394`）：「（+ 空闲期心跳）⇒（空闲 >5s 时含一次入口心跳）」——与 §2.10 同形。
+7. §2.9 补「开启段中止」处置句（`:209`——按 §2.10 同式复位 + 释放 profile 锁 + 置重开注记）；U52（`:489`）「不中毒」判据覆盖「预算落在开启段」一格。
+8. 墙钟断言改确定性判据（下一事件循环内——非墙钟界）：设计档 §7 F-BT17/F-BT18（`:429`/`:430`）∥ §8 U55（`:492`）/U59（`:496`）∥ 本档 §2.5 E2①（`:185`）/E3④（`:186`）同拍。
+9. §2.9 明写「队列等待计入预算（有意）」+ 终态回执形（`:188`——步名 `queue wait`）；步名枚举（`:207`）随动；U22（`:459`）补时序断言。
+10. §2.11 补句（`:234`）：后台动作仍受 §2.9 动作预算、`timeoutMs` 可覆写——与 bash「async 起跑不收默认 120s」异（显式登记）。
+11. Δ 预估取单一读数：本档 §2.4（`:172`）收正为「+1 / ±1」（与设计档 §5 `:356` 同拍）。
+
+**选择项（择一法取法）**：#2 = 跨批续编（沿 T16+ / S8+ 先例；非前缀法）∥ #7 = §2.10 同式复位处置（非「探针兜住」声明）∥ #9 = 计入排队（非「起执行起算」）∥ #10 = 落设计档 §2.11（`TOOLS.md` 零触）∥ #11 = 取「+1 / ±1」（按一行枚举落笔口径）。
+
+**附察（父侧清单外——报备，未动）**：① 设计档 §7 F-BT16 行零「17」实例（父侧清单所列坐标核过——实为 E1 判据文言面，零改）；② 本档 §2.1 对位列「（建议）」×5 ∥ §2.7 上抛 1「（待裁）」——同类滞后（需求档已落、§1.7 已处置）；未动（#3 坐标仅指设计档 §7）。
+
+**守界**：产品码 / `scripts/**` / 提示词零触；§1/§3–§6 零动；需求档零动；批外档零动（`TOOLS.md` 未动）。设计档 §1/§3/§4/§9/§10 未动。
+
+**上抛 / 未决**：无（11/11 落盘；附察 ② 待父侧酌处——「建议」类标记是否同收）。
+
 ## §3 设计评审（评审子代理）
+
+### 轮次 1（评审子代理）
+
+审查对象 = 声明面（本档 §2 ∥ `docs/core/design/BROWSER-TOOL.md` §2.9–§2.11/§5–§10 ∥ `docs/core/design/TOOLS.md` 收编面 ∥ `docs/core/requirements/BROWSER-TOOL.md` F-BT16–F-BT19/N-BT10）；三档全文 + 本档 §1/§2 已通读。限制：无项目标准档 / 无文档地图声明 ⇒ methodology 与 ownership 两判据降级评定；按声明不读声明面外文件 ⇒ 受影响文件行数标注只核内部自洽与档位处置，未对盘 spot-check。
+
+| # | Category | Severity | Issue | Suggestion |
+|---|---|---|---|---|
+| 1 | Acceptance criteria | 🟡 | 动作总数两口径并存：`BROWSER-TOOL.md:13`「动作面十六（八基线 + 输入域八扩展」、`:47`「required（十六动作）」、`TOOLS.md:245`「十六动作 navigate/snapshot/click/type/evaluate/wait/screenshot/close」——而 `BROWSER-TOOL.md:230`「全 17 动作统一」、`BROWSER-TOOL.md:392`（KD-24）「全 17 动作统一可异步」、本档 `:140` ∥ `:184`（E1 判据①）同写 17；§2.2 表实有 16 行、§2.9 预算表恰列 16 动作 ⇒ E1「全 17 动作各自在预算内拒绝」不可机检成立 | 统一为 16（`BROWSER-TOOL.md` §2.11 ∥ KD-24 + 本档 §2.3 ∥ §2.5 四处）；若确含第 17 项动作 ⇒ 在 §2.1 schema ∥ §2.2 契约表补该动作行 |
+| 2 | Clarity | 🟡 | 新批用例沿用 T1–T16 ∥ S1–S4，与前两批已占编号撞号（前批面 = `BROWSER-TOOL.md:494`「T16–T26 ∥ S8–S18」）：同一 §7 表内 T16 双义（`:412`「∥ T16（schema 面）」 vs `:425`「单测 T16（描述档四小节存在」）、S1 双义（`:398`「冒烟 S1：零预置条件下自启成功」 vs `:422`「冒烟 S1（永不响应服务）」）、S3/S4 双义（`:402`「冒烟 S3（wait selector 命中）、S4（wait 超时回执）」 vs `:424`「冒烟 S3 / S4」）；§8 U 表落点随带歧义（U5 与 U57 均引「冒烟 S3」） | 跨批续编序号（新用例 = T27+ ∥ S19–S22）或加批前缀（如 `AF-T1`），并在 §7/§8 落点列标明用例所属文件（旧两档 vs 本批新档） |
+| 3 | Document ownership | 🟡 | §7 五行仍带「建议编号」限定（`:422`「动作硬超时（建议编号——需求档待父侧落）」、`:423`–`:426` 同族），而需求档已正式落条目（`requirements/BROWSER-TOOL.md:45`「动作硬超时（有界不悬挂——用户 19:41 投诉）」）、本档 §1.7 亦记「**已落笔**（父侧）」——设计档读数滞后 | 五行删「建议编号」限定，统一为正式编号回指 |
+| 4 | Document ownership | 🟡 | 设计档头需求计数滞后：`BROWSER-TOOL.md:4`「（F-BT1–F-BT15 ∥ N-BT1–N-BT9——本档逐条回指，不复制）」 vs 需求档现态 `requirements/BROWSER-TOOL.md:4`「（F-BT1–F-BT19 / N-BT1–N-BT10 判定句）」——本批新增 F-BT16–19 / N-BT10 未回头计数 | 档头收正为 F-BT1–F-BT19 ∥ N-BT1–N-BT10（与 §7 新行口径一致） |
+| 5 | Affected-file size annotations | 🟡 | §5 只对 `session.mjs` 给出拆分决定（`:358`「拆出新档 `browser/queue.mjs`」）+ 两行压力注（`:349`「压 500 硬限——零余量，须保 ≤±5」）；同为 >300 且本批有 Δ 的档位无处置句——`helpers.mjs` `:344`「490 | +≈2 ⇒ ≈492」距 500 硬限仅 8 行、比 `subagent-async.mjs`（479）更近硬限却零注；`tools/ops.mjs`（331⇒349）∥ `suspension.mjs`（349⇒354）∥ `async-settle.mjs`（327⇒329）∥ `subagent-scheduler.mjs`（448⇒449）同无 | 为 >300 且本批有 Δ 的档位各补一句处置（本批不拆 + 余量 + 触发条件 = 下次实质改动 / 越 500 即拆），至少覆盖 `helpers.mjs`（余 8 行） |
+| 6 | Clarity | 🟡 | `BROWSER-TOOL.md:388`（KD-20）「入口探针（+ 空闲期心跳），**不做常驻心跳定时器**」与 `:213`（§2.10）「**不做常驻心跳定时器**（检测延迟只在「在飞」有意义」并置——括注「+ 空闲期心跳」可被读成后台/常驻心跳（KD-20 否决列含「常驻心跳（成本零收益）」），与 §2.10 三源定式（入口探针 >5s 条件心跳）不同读 | 括注改述为与 §2.10 同形（如「入口探针（空闲 >5s 时含一次入口心跳）」）或删括注，消自相矛盾读法 |
+| 7 | Completeness | 🟡 | 预算到点落于会话自启序列「中途」时的会话态处置未定：`BROWSER-TOOL.md:182`「到点 ⇒ 动作控制器 `abort`（超时因由）」∥ `:201`「abort 后一切后续调用**快速失败**（清理路径不得再起命令——防僵尸命令与下一动作交错）」只覆盖在飞命令；navigate 预算 `:192`「含会话自启（12s 启动帽内）+ 导航 + 就绪轮询 + 快照」= 45s，而开启段内层帽之和可达 ≈57s（`:202`「`connectCdp` open 10s ∥ `/json/new` fetch 5s」+ 三个 `*.enable` 各 10s + 启动 12s）⇒ 半开态（cdp 已置 / enable 序列未完）可被外层预算留下；`:483`（U52）「其后动作可继续（工具不中毒）」只对「页面挂死」（健康会话）举证 | 明确该态处置（如：开启段失败/中止 ⇒ 按 §2.10 同式复位 + 释放 profile 锁 + 置重开注记；或声明入口探针兜住半开态），并把 U52「不中毒」判据覆盖「预算落在开启段」一格 |
+| 8 | Acceptance criteria | 🔵 | 墙钟断言：本档 `:185`（E2①）「假 WS close ⇒ 在飞动作 ≤100ms 拒」、`:186`（E3④）「running（≤200ms 展开）」及设计 `:486`「（≤100ms）」 ∥ `:490`「≤200ms」——与机器负载相关，易 flaky | 改确定性判据（下一事件循环 / 结算入口即达）或放宽界并显式登记「经验界非契约值」（沿 `TOOLS.md:632`「**< 5s = 经验界**、与机器负载相关、非契约值」先例） |
+| 9 | Clarity | 🔵 | 预算自入队起算（`BROWSER-TOOL.md:182`「每动作入队即记预算 deadline」）⇒ 串行队列排队期计入预算：排队中到点的动作报何步名未定（`:205` 步名枚举「`launch browser` / `connect CDP` / `waitForReady` / `wait poll` / `scroll settle`」无排队项），U22（并行调用串行）无时序断言 | 明写「队列等待计入预算（有意）」并补排队步名（如 `queue wait`）与终态回执形；或声明预算自「起执行」起算（二者取一） |
+| 10 | Document ownership | 🔵 | 后台动作是否仍受动作预算未点明：`BROWSER-TOOL.md:197`「`timeoutMs` 参数 = 各动作预算 override（硬上限 120s；wait 语义不变）」对全动作成立，而 `TOOLS.md:1010` bash 条明写「async 起跑不收默认 120s（长任务 = 本形目的）」——两族并列易被读成族统一 | 在 `BROWSER-TOOL.md` §2.11 或 `TOOLS.md` §6.19 browser 段加一句：后台动作仍受 §2.9 动作预算、`timeoutMs` 可覆写（与 bash 异——显式登记） |
+| 11 | Doc hygiene | 🔵 | 同一预估两读数：`BROWSER-TOOL.md:352`「+1 ∥ ±1」 vs 本档 `:172`「+2 / ±2」（`tool-docs/wait_for.md` ∥ `process.md` 的 Δ 预估） | 取单一读数（按一行枚举的实际落笔口径统一为 +1 或 +2） |
+
+计数：🔴 0 · 🟡 7 · 🔵 4（共 11）
+VERDICT: pass
+
 ## §4 用户批准（主 agent）
+
+**代签（主 agent · 2026-10-07 20:2x · 自动跑授权内——用户 19:43「修彻底」）**
+
+- 评审链：设计评审轮 1 = **pass**（🔴 0 ∥ 🟡 7（#1–#7）∥ 🔵 4（#8–#11）——发现表在 §3 轮次 1）；11 号修复轮逐号落盘（§2 修轮块 + 设计档就地）；父侧核验抽读 12 处全在盘（§1.8 A）。
+- 附察处置：§2「（建议）/（待裁）」残留标记随回填轮清 ∥ doc-check 他档余量落账 ∥ 附察①零改（§1.8 B）。
+- **准予实施**：两舱拆分——**舱 A**（核 + prompt 面 + 单测 A 腿：`browser/queue.mjs` 新档 ∥ `session` ∥ `cdp` ∥ `actions` ∥ `input-actions` ∥ 三 prompt 档 ∥ 单测档）∥ **舱 B**（agent 集成 + 异步通道 + B 腿 + 冒烟：`agent-tools/browser-async.mjs` 新档 ∥ 各单点接线 ∥ `tools/{browser,ops}` ∥ 单测追加 ∥ `…smoke.mjs`；dependsOn A）。
+- prompt 面文本 = §1.8 C（主 agent 笔——实施轮逐字落地，零改写）。
+- 令牌 = 运行时凭据（不入档）；实施舱随本签派发。
+
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）
