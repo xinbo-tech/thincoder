@@ -218,9 +218,10 @@ export function removeProviderKeyFromConfig(name) {
 
 const FORMATS = ["openai", "anthropic", "google"]
 
-/** 新增渠道。payload: { preset?: name, custom?: { name, baseURL, model, format }, key? }
+/** 新增渠道。payload: { preset?: name, custom?: { name, baseURL, model, format }, key?, proxy? }
+ *  `proxy === true` ⇒ 同批落 `proxy: true`（缺 ∥ 非真 ⇒ 零键——与行面 `handleSetProviderProxy` 同判据）。
  *  返回错误串或 null。 */
-export function addProviderEntry({ preset, custom, key } = {}) {
+export function addProviderEntry({ preset, custom, key, proxy } = {}) {
   let providers
   try {
     ({ providers } = resolveProviders())
@@ -249,6 +250,9 @@ export function addProviderEntry({ preset, custom, key } = {}) {
   } else {
     return "Add provider needs a preset or a custom config"
   }
+
+  // #1027（三端对齐批）：走 proxy 旗——仅真值落键（运行期 = 逐渠 `proxy: true` ∧ 全局 `proxy.model`）
+  if (proxy === true) entry.proxy = true
 
   const r = persistRaw((raw) => { (raw.providers ??= []).push(entry) })
   const err = conflictError(r)

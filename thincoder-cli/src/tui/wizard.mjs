@@ -10,6 +10,7 @@ import { PROVIDER_PRESETS as PRESETS } from "@thincoder/core/config.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { computeLayout } from "./layout.mjs"
 import { probeChannelModels } from "./model-catalog.mjs"
+import { probeTargetOf } from "@thincoder/core/provider-flows.mjs"
 
 /**
  * Creates the wizard controller.
@@ -213,7 +214,7 @@ export function createWizard(ctx) {
     pushLine(`Setup complete: ${f.name} / ${agent.activeModel} (defaultModel 已设——新会话起点)`, C.tool)
     // M9 配置阶段准入：加渠道属配置写入面——保存已落，探一次 `/models`（探不通标「不可用」+ 明示原因；不阻断）
     const channel = agent.providers.find((p) => p.name === f.name) ?? providerRec
-    const probe = await probeChannelModels(channel)
+    const probe = await probeChannelModels(probeTargetOf(channel)) // 探针目标构造收敛核判据（③′——执行体与返形零改）
     if (probe.ok) {
       delete channel._unavailable
       pushLine(`${f.name}: /models 可用（${probe.list.length} 个模型可候选）`, C.tool)

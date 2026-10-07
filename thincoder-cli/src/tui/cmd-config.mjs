@@ -1,5 +1,6 @@
 import { ansi, C } from "./ansi.mjs"
 import { probeChannelModels, dedupeModels } from "./model-catalog.mjs"
+import { probeTargetOf } from "@thincoder/core/provider-flows.mjs"
 /** Merge an embedding-key save into the raw config, backfilling baseURL/model from defaults.
  *  Keeps existing custom values (Ollama/local embedding); defaults are the single source
  *  (TUI.md §9.3D — NF1). Exported for unit tests. */
@@ -293,7 +294,7 @@ export async function handleConfigCommand(ctx, args = []) {
     const probes = new Map()
     pushLine("Fetching channel model lists (GET /models)…", C.dim)
     await Promise.all(agent.providers.map(async (p) => {
-      const r = await probeChannelModels(p)
+      const r = await probeChannelModels(probeTargetOf(p)) // 探针目标构造收敛核判据（③′——逐渠旗 ∧ 全局 proxy.model；执行体零改）
       probes.set(p.name, r)
       if (r.ok) delete p._unavailable
       else p._unavailable = true

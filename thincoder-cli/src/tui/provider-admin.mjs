@@ -12,8 +12,11 @@
  * 历史导出面零改）。零环：本档不 import 主档（宿主 → 本档单向）。
  * 语义（迁出原文照录）：四流 = provider 级 config 写——M9 配置阶段准入探一次 `/models`（不阻断保存）
  * ∥ F-4 (IKCDMR)：removeProviderFlow 级联清理悬挂引用（consultModels ∕ subagentModels ∕ advisor.provider）。
+ * 2026-10-07 三端对齐批（#1027）：添加流两支 +走 proxy 问句（写同一键 `providers[].proxy`）；
+ * 三端探针目标构造收敛核 `probeTargetOf`（③′）。
  */
 import { PROVIDER_PRESETS as PRESETS, providerSpec } from "@thincoder/core/config.mjs"
+import { probeTargetOf } from "@thincoder/core/provider-flows.mjs"
 import { probeChannelModels } from "./model-catalog.mjs"
 
 /** createProviderAdmin(ctx) → { addProviderFlow, removeProviderFlow, setKeyFlow, setProviderKey, setContextFlow } */
@@ -25,7 +28,7 @@ export function createProviderAdmin(ctx) {
   /** M9 配置阶段准入探：探通 → 清标记；探不通 → 会话内存标「不可用」+ 明示原因（绝不落 config；
    *  不阻断保存——条目已保存，仅标注）。 */
   async function probeChannelFlow(cfg, label) {
-    const r = await probeChannelModels(cfg)
+    const r = await probeChannelModels(probeTargetOf(cfg)) // 探针目标构造收敛核判据（③′——三端同判定；执行体零改）
     if (r.ok) {
       delete cfg._unavailable
       pushLine(`${label}: /models 可用（${r.list.length} 个模型可候选）`, C.tool)
@@ -67,6 +70,19 @@ export function createProviderAdmin(ctx) {
       agent.providers.push(cfg)
       const key = await askQuestion(`Enter API key for ${name} (skip if none):`)
       if (key) await setProviderKey(name, key, { probe: false }) // 探统一在流尾（M9——精确一次）
+      // #1027 走 proxy 问句（key 后、流尾探针前——写同一键 providers[].proxy；No/Esc ⇒ 零键零写）
+      const route = await showPicker("Route this provider's model requests through the proxy (needs global proxy.model on)", [
+        { type: "item", text: "No (direct)", name: "no" },
+        { type: "item", text: "Yes (proxy)", name: "yes" },
+      ])
+      if (route?.name === "yes") {
+        await persistRaw((raw) => { // D-F5a 先盘后存（代理单键补丁——不取内存 providers 整数组）
+          raw.providers ??= []
+          const t = raw.providers.find((p) => p?.name === name)
+          if (t) t.proxy = true
+        })
+        cfg.proxy = true // 会话内存镜像（cfg = agent.providers 内同一对象）
+      }
       await probeChannelFlow(cfg, name) // M9 准入探（加渠道配置写入面；保存已落——不阻断）
       return
     }
@@ -82,6 +98,19 @@ export function createProviderAdmin(ctx) {
     agent.providers.push(cfg)
     const key = await askQuestion(`Enter API key for ${se.name} (skip if none):`)
     if (key) await setProviderKey(se.name, key, { probe: false }) // 探统一在流尾（M9——精确一次）
+    // #1027 走 proxy 问句（key 后、流尾探针前——写同一键 providers[].proxy；No/Esc ⇒ 零键零写）
+    const route = await showPicker("Route this provider's model requests through the proxy (needs global proxy.model on)", [
+      { type: "item", text: "No (direct)", name: "no" },
+      { type: "item", text: "Yes (proxy)", name: "yes" },
+    ])
+    if (route?.name === "yes") {
+      await persistRaw((raw) => { // D-F5a 先盘后存（代理单键补丁——不取内存 providers 整数组）
+        raw.providers ??= []
+        const t = raw.providers.find((p) => p?.name === se.name)
+        if (t) t.proxy = true
+      })
+      cfg.proxy = true // 会话内存镜像（cfg = agent.providers 内同一对象）
+    }
     await probeChannelFlow(cfg, se.name) // M9 准入探（加渠道配置写入面；保存已落——不阻断）
   }
 

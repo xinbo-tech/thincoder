@@ -329,4 +329,44 @@ VERDICT: pass
 **批准（代签 · 2026-10-07 · 自动跑授权内）**：设计评审轮 2 = **pass**（🔴 0 ∥ 🟡 0；残余 🔵 1 条非阻塞——#10② `cmd-config` 坐标双值）；批准信号已出（token ∕ designId = 运行时凭据，不载文档）。依据 = 用户 2026-10-07 18:31「剩下都自动跑」授权；用户口径三件已裁讫收编（#1034-A ∥ A2-B 另批 #1042 ∥ #1036 开小批）。**实施轮已派**（三舱按域拆分：核+CLI ∥ VSC ∥ 桌面——共享批本地测试件串行）。
 
 ## §5 实施记录（eng-coder）
+
+**状态行**：实施完成（舱一 = 核+CLI；C1/L1 腿 4/4 绿 ∥ 审计轮 1 无发现 ∥ 评审轮 1 pass）
+
+### 5.1 交付摘要（舱一 = 核 + CLI：写面原语 + CLI 收敛 + 批本地测试件）
+
+- **接续判定 = 继续**：前轮 eng-coder 于 19:41 桌面重启被杀（无报告）；本舱开工首事 = `git diff` 通读其未提交产物（核 `config-io.mjs` + CLI `provider-admin.mjs` ∥ `cmd-config.mjs` ∥ `wizard.mjs` + untracked 测试件），逐条对照批档 §2.2 ∥ §2.3 ∥ §2.4 ∥ §2.8 核验 ⇒ 与设计逐条对齐 ∥ 无静默简化 ∥ 无越界（VSC ∥ 桌面产品码 ∥ 六档设计档零触）⇒ **全量保留**；本人本轮唯一改动 = 测试件补 2 条断言（5.4 R1）。
+- **改动清单（file:line）**：
+  - `thincoder-core/config-io.mjs:224`（签名 +`proxy`）∥ `:254-255`：`if (proxy === true) entry.proxy = true`——哨位在分支合流后、`persistRaw` 前 ⇒ 同批落条；缺 ∥ 非真 ⇒ 零键（与行面既有 `=== true` 判据同式——VSC `settings.mjs:133` 实核同判据）。
+  - `thincoder-cli/src/tui/provider-admin.mjs:73-85`（custom 支）∥ `:101-113`（preset 支）：代理问句入链（key 后、流尾探针前；「No (direct)」首项 = 缺省 ∥「Yes (proxy)」⇒ `persistRaw` 单键补丁 + 内存镜像 `cfg.proxy = true`；No/Esc ⇒ 零键零写）；`:31` 探针目标收敛。
+  - `thincoder-cli/src/tui/cmd-config.mjs:3`（import）∥ `:297`：探针收敛 `probeChannelModels(probeTargetOf(p))`。
+  - `thincoder-cli/src/tui/wizard.mjs:13`（import）∥ `:217`：探针收敛（步骤链零改）。
+  - `docs/batches/2026-10-07-provider-config-parity.test.mjs`（新档 130 行）：C1 腿（`addProviderEntry` 三径 + preset 径，载荷/落条实读）+ L1 腿（三探针点源锁 · 问句两支/问序/行序 · `probeTargetOf` 双门槛同判定执行自证）。
+- **零动面核验（mtime + 内容 + 坐标三证）**：`tui/model-catalog.mjs` ∥ `cli/setup-wizard.mjs` ∥ 核 `provider-flows.mjs` ∥ 核 `proxy.mjs` ∥ VSC/桌面产品码 ∥ 六档设计档——本舱零触。
+- **行数实读回填（批档 §2.6 表口径 = 内容行数；read 全档读数）**：`config-io.mjs` 281（表 277 · 估 +3）∥ `provider-admin.mjs` 242（表 213 · 估 +12——实际差源 = 问句两支各 13 行）∥ `cmd-config.mjs` 488（表 487 · 估 +1）∥ `wizard.mjs` 247（表 246 · 估 +1）∥ 测试件 130（新档）。
+
+### 5.2 决策透明表（实现轮内当场决策）
+
+| # | 决策 | 理由 | 依据 |
+|---|---|---|---|
+| 1 | 代理旗 = 第二笔 `persistRaw` 单键补丁（不并入首笔落条） | 问序 key 后晚于 D-F5a 首笔落条 ⇒ 首笔时旗不可知；补丁按名定位、冲突即抛（`config-helpers.mjs:17`）不留 ghost | 批档 §2.3 CLI 问序 |
+| 2 | 问句标题尾注「(needs global proxy.model on)」 | 本批机制面零动（A2-B 另批）——双门槛现状下明示全局依赖（防「勾了不生效」无解释） | 批档 §2.9② |
+| 3 | 测试件 L1b 补 2 条断言（行序 ∥ 旗落位） | 内部发散审计 N2：原断言不锁「No 在前 ⇒ 缺省」——两行互换仍绿 | 内部审计报告 N2 |
+
+### 5.3 审计与代码评审轮次与终态
+
+- **内部发散审计（explore · 只读）轮 1**：四类偏差（发散 ∥ 越界 ∥ 漂移 ∥ 缺陷）**均无发现**；补充观察 N1–N5。处置：N2 = 修复（5.4 R1）；N4/N5 = 本记录回填；N1/N3 = 登记（5.4）。
+- **内部代码评审（advisor · code）轮 1**：**VERDICT: pass**——🔴 0 ∥ 🟡 3（全非阻塞：① 探针目标不携 `providers[].headers`——字段面收窄未登记；② CLI 首启向导无代理问句——设计登记缺口；③ `cmd-config.mjs` 488 行越 300 建议阈——在册债）∥ 🔵 5（throw 路径 ∥ 逐渠全量盘读 ∥ 真值 vs `=== true` 分叉 ∥ 行数申报漂移 ∥ §5 空）。8 条全量清单 = convergence 基线。
+- **终态 = clean**：无 must-fix；🟡① ② 属设计面/登记类（连建议移父侧 §6 处置：登记 ∨ 另批），🔵 为知会。
+
+### 5.4 fix round（≤5 轮）
+
+- **R1（1 笔）**：测试件 L1b 补「No (direct) 在前（缺省 = 直连）」+「旗落位在问句后、流尾探针前」两断言——重跑 4/4 绿。
+- **不修项（越界/设计定零动，连建议移父侧）**：① headers 面收窄（核 `probeTargetOf` 设计定零动）② 向导问句（批档 §2.3 明写「步骤链零改」，加问句越界）。
+
+### 5.5 验证读数（本舱实跑）
+
+- `node --test docs/batches/2026-10-07-provider-config-parity.test.mjs` ⇒ **4/4 pass**（C1 ∥ L1a ∥ L1b ∥ L1c；≈124ms）——仓库根运行。
+- `node --check`（lint 逐档）：五档全 OK。
+- **not repo-suite verified**——the parent-side closeout run is the only repo-suite run。
+
 ## §6 验证与收口（父代理）
