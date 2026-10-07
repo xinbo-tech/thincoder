@@ -3,9 +3,12 @@
  *
  * 形：`sk-tc-` + 32 字节随机（base64url——43 字符）；存储 = `sha256(明文)` hex（单列唯一——库内无明文）；
  * 明文仅签发时回显一次（此后只留提示形 `sk-tc-ab12cd…wxyz`）。
- * 校验 = 逐请求查库（KD-SV-11——无缓存；吊销下一次请求即判）。
+ * 校验 = 逐请求查库（KD-SV-11——无缓存；吊销下一次请求即判）；成员行携 `modelQuotas`（分模型覆盖——
+ * 随鉴权行零查询，KD-SV-38）。
  */
 import { createHash, randomBytes } from "node:crypto"
+
+import { parseModelQuotas } from "./members.mjs"
 
 export const KEY_PREFIX = "sk-tc-"
 
@@ -24,12 +27,13 @@ export function hashKey(plain) {
   return createHash("sha256").update(plain).digest("hex")
 }
 
-/** 校验（KD-SV-11）：active 命中 ⇒ `{ keyId, memberId, member }`；未知 ∥ 吊销一律 null（不区分——防信息泄露）。 */
+/** 校验（KD-SV-11）：active 命中 ⇒ `{ keyId, memberId, member }`（成员行携 `modelQuotas`——配额覆盖随行）；
+ *  未知 ∥ 吊销一律 null（不区分——防信息泄露）。 */
 export function verifyKey(db, plain) {
   if (typeof plain !== "string" || !plain.startsWith(KEY_PREFIX)) return null
   const row = db
     .prepare(
-      `SELECT k.id AS key_id, k.member_id, m.username, m.name, m.role, m.quota_tokens
+      `SELECT k.id AS key_id, k.member_id, m.username, m.name, m.role, m.model_quotas_json
        FROM api_keys k JOIN members m ON m.id = k.member_id
        WHERE k.key_hash = ? AND k.status = 'active'`,
     )
@@ -38,7 +42,7 @@ export function verifyKey(db, plain) {
   return {
     keyId: row.key_id,
     memberId: row.member_id,
-    member: { id: row.member_id, username: row.username, name: row.name, role: row.role, quota_tokens: row.quota_tokens },
+    member: { id: row.member_id, username: row.username, name: row.name, role: row.role, modelQuotas: parseModelQuotas(row.model_quotas_json) },
   }
 }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * cli.mjs — 运维 CLI（ops/OPS.md §3——七命令）：member add/list/quota/passwd ∥ key issue/revoke/list。
+ * cli.mjs — 运维 CLI（ops/OPS.md §3——八命令）：member add/list/quota/passwd ∥ key issue/revoke/list ∥ usage reconcile。
  * 直开库（不经 HTTP）——服务器本机兜底；与页面同库同语义（KD-SV-7 ∥ accounts/ACCOUNTS.md §3）。
  * 审计：改动类四命令（member add ∥ member passwd ∥ key issue ∥ key revoke）各记一条审计事件
  * （`actor = "cli"`——ACCOUNTS.md §2.1；直开库同一连接内写入）。
@@ -12,8 +12,9 @@ import { pathToFileURL } from "node:url"
 
 import { recordAudit } from "../accounts/audit.mjs"
 import { findKeysByHint, getKeyById, issueKey, listKeys, revokeKey } from "../accounts/keys.mjs"
-import { createMember, findMemberById, findMemberByName, generateTempPassword, listMembers, setMemberPassword, setMemberQuota } from "../accounts/members.mjs"
+import { createMember, findMemberById, findMemberByName, generateTempPassword, listMembers, mergeMemberModelQuotas, parseModelQuotas, setMemberPassword } from "../accounts/members.mjs"
 import { revokeMemberSessions } from "../accounts/session.mjs"
+import { reconcileUsage } from "../metering/aggregates.mjs"
 import { monthlyTokensByMember } from "../metering/usage.mjs"
 import { openDatabase } from "../store/db.mjs"
 import { loadConfig } from "./config.mjs"
@@ -21,17 +22,19 @@ import { loadConfig } from "./config.mjs"
 export const USAGE = [
   "用法：node src/ops/cli.mjs --config <配置档> <命令>",
   "  member add <name> [--username <u>] [--role admin|user] [--password <pw>]   # 建成员（缺省 username = name ∥ user；无 --password ⇒ 生成临时密码打印一次）",
-  "  member list                           # 成员 + 角色 + 额度 + 本月已用",
-  "  member quota <name> <N|none>          # 设额度（none = 不限）",
+  "  member list                           # 成员 + 角色 + 分模型覆盖数 + 本月已用",
+  "  member quota <name> <model> <N|none>  # 设分模型覆盖（model = 对外标识；none = 删覆盖）",
   "  member passwd <name> [--password <pw>]  # 重置密码（本机兜底；无 --password ⇒ 生成打印一次）",
   "  key issue <member>                    # 签发——全文只打印一次（+ key id）",
   "  key revoke <id|hint>                  # 吊销（立即生效）",
   "  key list [--member <m>]               # 提示形清单（无明文）",
+  "  usage reconcile [--month YYYY-MM] [--fix]  # 派生两表对账重算（vs 明细；--fix = 覆写）",
 ].join("\n")
 
-const OPTION_NAMES = ["config", "username", "role", "password", "member"]
+const OPTION_NAMES = ["config", "username", "role", "password", "member", "month"]
+const FLAG_NAMES = ["fix"] // 布尔开关（裸出现 = true；不吃后续位置参数）
 
-/** argv 解析：`--名 值` ∥ `--名=值`；其余 = 位置参数（`<group> <action> ...`）。 */
+/** argv 解析：`--名 值` ∥ `--名=值` ∥ 开关（`--fix`）；其余 = 位置参数（`<group> <action> ...`）。 */
 export function parseCliArgs(argv) {
   const options = {}
   const positional = []
@@ -43,6 +46,10 @@ export function parseCliArgs(argv) {
     }
     const eq = arg.indexOf("=")
     const name = eq >= 0 ? arg.slice(2, eq) : arg.slice(2)
+    if (FLAG_NAMES.includes(name)) {
+      options[name] = eq >= 0 ? arg.slice(eq + 1) : true
+      continue
+    }
     if (!OPTION_NAMES.includes(name)) throw new Error(`未知参数：--${name}\n${USAGE}`)
     const value = eq >= 0 ? arg.slice(eq + 1) : i + 1 < argv.length && !argv[i + 1].startsWith("--") ? argv[++i] : null
     if (value === null) throw new Error(`参数缺值：--${name}（值以「--」开头时用 --${name}=<值> 形式）`)
@@ -60,8 +67,27 @@ function requireMemberByName(db, name) {
 }
 
 function parseQuota(value) {
-  if (!/^\d+$/.test(value)) throw new Error(`额度非法：${value}（正整数或 none）`)
+  if (!/^\d+$/.test(value)) throw new Error(`额度非法：${value}（非负整数或 none）`)
   return Number(value)
+}
+
+/** 漂移行读数（`usage reconcile` 输出形——键 · 实 ∥ 算）。 */
+function formatDrift(drift) {
+  const row = (side) => (side === null ? "缺行" : Object.entries(side).map(([key, value]) => `${key}=${value}`).join(" "))
+  return `${Object.values(drift.key).join(" · ")}：实 ${row(drift.actual)} ∥ 算 ${row(drift.expected)}`
+}
+
+/** `usage` 子命令（OPS §3）：`reconcile [--month YYYY-MM] [--fix]`——派生两表 vs 明细重算（缺省月 = 当本月）。 */
+function dispatchUsage(db, action, options, stdout) {
+  if (action !== "reconcile") throw new Error(`未知 usage 子命令：${action ?? "（缺）"}\n${USAGE}`)
+  const month = options.month ?? null
+  if (month !== null && !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error(`--month 形非法：${month}（YYYY-MM）`)
+  const report = reconcileUsage(db, { month, fix: options.fix === true })
+  stdout.write(`对账（${report.month}）：usage_daily 比对 ${report.daily.checked} 键 ∥ 漂移 ${report.daily.drifted.length} 行；quota_counters 比对 ${report.counters.checked} 键 ∥ 漂移 ${report.counters.drifted.length} 行\n`)
+  for (const drift of report.daily.drifted) stdout.write(`  - usage_daily ${formatDrift(drift)}\n`)
+  for (const drift of report.counters.drifted) stdout.write(`  - quota_counters ${formatDrift(drift)}\n`)
+  if (report.fixed) stdout.write("已按重算值覆写（--fix）——复查零漂\n")
+  return 0
 }
 
 async function dispatchMember(db, action, positional, options, stdout) {
@@ -82,19 +108,21 @@ async function dispatchMember(db, action, positional, options, stdout) {
   }
   if (action === "list") {
     const used = monthlyTokensByMember(db)
-    stdout.write("id\tname\tusername\trole\tquota\tused\n")
+    stdout.write("id\tname\tusername\trole\tquotas\tused\n")
     for (const member of listMembers(db)) {
-      stdout.write(`${member.id}\t${member.name}\t${member.username}\t${member.role}\t${member.quota_tokens ?? "不限"}\t${used.get(member.id) ?? 0}\n`)
+      const quotas = Object.keys(parseModelQuotas(member.model_quotas_json)).length // 分模型覆盖数（OPS §3）
+      stdout.write(`${member.id}\t${member.name}\t${member.username}\t${member.role}\t${quotas}\t${used.get(member.id) ?? 0}\n`)
     }
     return 0
   }
   if (action === "quota") {
-    const [name, value] = positional
-    if (!name || value === undefined) throw new Error("用法：member quota <name> <N|none>")
+    const [name, model, value] = positional
+    if (!name || !model || value === undefined) throw new Error("用法：member quota <name> <model> <N|none>")
     const member = requireMemberByName(db, name)
-    const quotaTokens = value === "none" ? null : parseQuota(value)
-    setMemberQuota(db, member.id, quotaTokens)
-    stdout.write(`额度已设：${member.name} ⇒ ${quotaTokens ?? "不限"}\n`)
+    const quota = value === "none" ? null : parseQuota(value)
+    const updated = mergeMemberModelQuotas(db, member.id, { [model]: quota }) // 键级合并（其余键不动）
+    const keys = Object.keys(parseModelQuotas(updated.model_quotas_json)).length
+    stdout.write(quota === null ? `覆盖已删：${member.name} ⇒ ${model}（现存 ${keys} 键）\n` : `覆盖已设：${member.name} ⇒ ${model} = ${quota}（现存 ${keys} 键）\n`)
     return 0
   }
   if (action === "passwd") {
@@ -160,6 +188,7 @@ function dispatchKey(db, action, positional, options, stdout) {
 async function dispatch(db, { group, action, positional, options }, stdout) {
   if (group === "member") return dispatchMember(db, action, positional, options, stdout)
   if (group === "key") return dispatchKey(db, action, positional, options, stdout)
+  if (group === "usage") return dispatchUsage(db, action, options, stdout)
   throw new Error(`未知命令：${[group, action].filter(Boolean).join(" ") || "（缺）"}\n${USAGE}`)
 }
 

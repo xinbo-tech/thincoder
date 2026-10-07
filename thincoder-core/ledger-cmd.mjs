@@ -11,13 +11,26 @@
  * 消费侧静态 import 会破 W8 契约②）。
  */
 import { resolve } from "node:path"
-import { ALLOWED_MIGRATIONS, nowIso, openLedger, PENDING_STATUSES } from "./ledger-db.mjs"
+import { ALLOWED_MIGRATIONS, nowIso, openLedger, PENDING_STATUSES, AGING_DAYS } from "./ledger-db.mjs"
 import { resolveProjectRoot } from "./manifest.mjs"
 import { resolveDeclaredRef } from "./declaration.mjs"
 
-/** 查询（只读，全角色）：SELECT 行集（status/kind/board 过滤，缺省 = 全部行；id 升序）。库不在 = 空账。
- *  只读开库（readOnly 句柄 + 零 DDL/ALTER——read-data-interface 批 FR2③）；库档非台账库 ⇒ 空账。 */
-export function ledgerQuery({ cwd, status = null, kind = null, board = null } = {}) {
+/** 逐行老化判真（LEDGER.md §13.4 · 2026-10-07 批 ledger-tool）：未决四态（`PENDING_STATUSES`）∧
+ *  行龄 > `AGING_DAYS` 天；行龄源 = `updated_at ?? created_at`（§5 同源）；时间戳缺 / 不可解析
+ *  ⇒ `false`（零假阳降级——与 `buildScan` 行龄口径同源）。 */
+function isRowAged(row, now) {
+  if (!PENDING_STATUSES.includes(row.status)) return false
+  const t = row.updated_at ?? row.created_at
+  if (t == null) return false
+  const ms = Date.parse(String(t))
+  return Number.isFinite(ms) && (now - ms) / 86400000 > AGING_DAYS
+}
+
+/** 查询（只读，全角色）：SELECT 行集（status / kind / board / trigger 等值过滤并取，缺省 = 全部行；id 升序）。
+ *  库不在 = 空账。只读开库（readOnly 句柄 + 零 DDL/ALTER——read-data-interface 批 FR2③）；库档非台账库 ⇒ 空账。
+ *  逐行携计算字段 `aged: boolean`（§13.4——不入库、不入导出白名单 DATA_COLUMNS）；`trigger` 过滤
+ *  仅三枚举等值（`NULL` 不过滤——批面未列，§13.2）；`now` = 注入缝（确定性用例面）。 */
+export function ledgerQuery({ cwd, status = null, kind = null, board = null, trigger = null, now = Date.now() } = {}) {
   const db = openLedger(cwd, { readOnly: true })
   if (!db) return []
   try {
@@ -25,7 +38,9 @@ export function ledgerQuery({ cwd, status = null, kind = null, board = null } = 
     if (status) { where.push("status = ?"); args.push(status) }
     if (kind) { where.push("kind = ?"); args.push(kind) }
     if (board) { where.push("board = ?"); args.push(board) }
-    return db.prepare(`SELECT * FROM items${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY id`).all(...args)
+    if (trigger) { where.push("trigger = ?"); args.push(trigger) }
+    const rows = db.prepare(`SELECT * FROM items${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY id`).all(...args)
+    return rows.map((r) => ({ ...r, aged: isRowAged(r, now) }))
   } finally { db.close() }
 }
 
@@ -75,9 +90,11 @@ export function ledgerAdd({ cwd, row }) {
 }
 
 /** executor 目标值计算（设计档 docs/core/design/LEDGER.md §3.1——判位在 ledgerUpdate 体内：迁移表判 → 本语义 → 写门 → UPDATE）。
- *  优先级 = patch 显式 > 自动语义（进在途 = executorSessionId / 出在途 = NULL）> 行现值兜底 > NULL。 */
+ *  优先级 = patch 显式 > 自动语义（进边 = executorSessionId / 出边 = NULL）> 行现值兜底 > NULL。
+ *  进边集（2026-10-07 批 ledger-tool 扩面——§13.3 / KD-LT1）：`待讨论 → 待设计`（批点火边）∥
+ *  `待设计 → 在途`（实施入边）——两枚同式。 */
 function resolveExecutorTarget(row, to, patch, executorSessionId) {
-  if (row.status === "待设计" && to === "在途") {
+  if ((row.status === "待讨论" && to === "待设计") || (row.status === "待设计" && to === "在途")) {
     return patch.executor ?? executorSessionId ?? row.executor ?? null
   }
   if (row.status === "在途" && (to === "待核销" || to === "已废弃")) {
@@ -98,9 +115,9 @@ export function ledgerUpdate({ cwd, id, patch, executorSessionId }) {
     if (to !== row.status && !(ALLOWED_MIGRATIONS[row.status] ?? []).includes(to)) {
       throw new Error(`ledgerUpdate：迁移 ${row.status} → ${to} 不在允许迁移表`)
     }
+    const nextExecutor = resolveExecutorTarget(row, to, patch, executorSessionId) // 判序：迁移表判 → 本语义（算 executor 目标值）
     const nextTaskBook = patch.task_book ?? row.task_book
-    assertTaskBookGate(cwd, "ledgerUpdate", to, nextTaskBook) // 判序：迁移表判 → 本门 → UPDATE
-    const nextExecutor = resolveExecutorTarget(row, to, patch, executorSessionId)
+    assertTaskBookGate(cwd, "ledgerUpdate", to, nextTaskBook) // → 写门 → UPDATE
     const now = nowIso()
     db.prepare(`UPDATE items SET status = ?, title = ?, board = ?, req_doc = ?, task_book = ?, evidence = ?, trigger = ?, executor = ?, updated_at = ? WHERE id = ?`)
       .run(to, patch.title ?? row.title, patch.board ?? row.board, patch.req_doc ?? row.req_doc, nextTaskBook, patch.evidence ?? row.evidence, patch.trigger ?? row.trigger, nextExecutor, now, id)
@@ -110,8 +127,10 @@ export function ledgerUpdate({ cwd, id, patch, executorSessionId }) {
 
 /** 收口（写命令，仅主 agent）：核销两源（勾销：待核销 → 已核销；追认核销：待讨论 / 待设计 → 已核销，
  *  行 `evidence` 非空，缺 / 全空白 ⇒ 拒）/ 撤回（任意态 → 已废弃），事务包裹；归档 = 软删除。
- *  判序（同函数体同层）：目标集判 → 行取 → 源态判 → `evidence` 门 → UPDATE（LEDGER.md §3 收口两源）。 */
-export function ledgerClose({ cwd, id, status }) {
+ *  判序（同函数体同层）：目标集判 → 行取 → 源态判 → `evidence` 门 → UPDATE（LEDGER.md §3 收口两源）。
+ *  可选 `evidence` 参（2026-10-07 批 ledger-tool · §13.1——一跳核销）：`nextEvidence = evidence ?? 行值`，
+ *  追认门判**结果值**（缺 / 全空白 ⇒ 拒，文案逐字不变）；勾销 / 撤回路径同携（写值落行，内容不判）。 */
+export function ledgerClose({ cwd, id, status, evidence }) {
   if (status !== "已核销" && status !== "已废弃") throw new Error(`ledgerClose：目标态 ${status} ∉ {已核销, 已废弃}`)
   const db = openLedger(cwd, { create: true })
   try {
@@ -119,12 +138,13 @@ export function ledgerClose({ cwd, id, status }) {
     try {
       const row = db.prepare("SELECT * FROM items WHERE id = ?").get(id)
       if (!row) throw new Error(`ledgerClose：行 ${id} 不存在`)
-      // 判序：源态判（核销仅三源——在途不可跳）→ 追认口 `evidence` 门（行字段非空，缺 / 全空白 ⇒ 拒）
+      const nextEvidence = evidence ?? row.evidence
+      // 判序：源态判（核销仅三源——在途不可跳）→ 追认口 `evidence` 门（判结果值非空，缺 / 全空白 ⇒ 拒）
       if (status === "已核销" && !["待讨论", "待设计", "待核销"].includes(row.status)) throw new Error(`ledgerClose：核销仅限 待讨论 / 待设计 / 待核销（现态 ${row.status}）`)
-      if (status === "已核销" && ["待讨论", "待设计"].includes(row.status) && (row.evidence == null || String(row.evidence).trim() === "")) throw new Error(`ledgerClose：追认核销须带 evidence（现态 ${row.status}）`)
+      if (status === "已核销" && ["待讨论", "待设计"].includes(row.status) && (nextEvidence == null || String(nextEvidence).trim() === "")) throw new Error(`ledgerClose：追认核销须带 evidence（现态 ${row.status}）`)
       const now = nowIso()
       // 撤回（任意态 → 已废弃——含在途直撤）同步 executor = NULL（LEDGER.md §3.1 ④）；核销两源（勾销 / 追认）executor 零触碰（非在途出边）
-      db.prepare("UPDATE items SET status = ?, closed_at = ?, updated_at = ?, executor = ? WHERE id = ?").run(status, now, now, status === "已废弃" ? null : row.executor, id)
+      db.prepare("UPDATE items SET status = ?, closed_at = ?, updated_at = ?, executor = ?, evidence = ? WHERE id = ?").run(status, now, now, status === "已废弃" ? null : row.executor, nextEvidence, id)
       db.exec("COMMIT")
       return { id, status }
     } catch (e) { db.exec("ROLLBACK"); throw e }

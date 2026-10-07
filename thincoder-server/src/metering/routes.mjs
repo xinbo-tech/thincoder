@@ -1,14 +1,14 @@
 /**
  * routes.mjs — 计量端点（metering/METERING.md §3）：`/api/me/usage` ∥ `/api/usage` ∥ `/api/usage/summary`
- * ∥ `/api/usage/export` ∥ `/api/members/:id/quota`。
+ * ∥ `/api/usage/export` ∥ `/api/members/:id/model-quotas`（分模型覆盖——键级合并）。
  *
- * 鉴权：本人用量 = 会话（成员固定本人）；全队用量 ∥ 报表 ∥ 导出 ∥ 设额度 = admin（服务端判定）。
+ * 鉴权：本人用量 = 会话（成员固定本人）；全队用量 ∥ 报表 ∥ 导出 ∥ 设覆盖 = admin（服务端判定）。
  * 行形 = METERING §3；过滤：member ∥ model ∥ endpoint ∥ from ∥ to ∥ limit（缺省 100 ∥ 上限 500——四读端点同门）；
  * 报表/导出与明细同源（同一过滤构建器——usage.mjs）；导出 = 服务端 CSV（英文表头 ∥ ISO ts ∥ RFC 4180 ∥ BOM）。
  */
 import { HttpError, sendJson } from "../gateway/errors.mjs"
 import { readJsonBody } from "../gateway/server.mjs"
-import { findMemberById, findMemberByName, setMemberQuota } from "../accounts/members.mjs"
+import { findMemberById, findMemberByName, mergeMemberModelQuotas, parseModelQuotas } from "../accounts/members.mjs"
 import { requireAdmin, requireSession } from "../accounts/session.mjs"
 import { exportUsageRows, parseUsageEndpoint, parseUsageLimit, parseUsageTime, queryUsage, usageSummary } from "./usage.mjs"
 
@@ -97,15 +97,15 @@ export function registerMeteringRoutes(routes, { db } = {}) {
     res.end(toCsv(rows))
   })
 
-  routes.add("POST", "/api/members/:id/quota", async (req, res, ctx) => {
+  routes.add("POST", "/api/members/:id/model-quotas", async (req, res, ctx) => {
     requireAdmin(db, req)
     const member = findMemberById(db, Number(ctx.params.id))
     if (!member) throw new HttpError("not_found", `成员不存在：${ctx.params.id}`)
     const body = await readJsonBody(req)
-    if (body === null || typeof body !== "object" || !("quotaTokens" in body)) {
-      throw new HttpError("invalid_request_error", "缺 quotaTokens（≥0 整数或 null——null = 不限）")
+    if (body === null || typeof body !== "object" || !("quotas" in body)) {
+      throw new HttpError("invalid_request_error", `缺 quotas（{ "<provider/model>": N|null }——值 null = 删键）`)
     }
-    const updated = setMemberQuota(db, member.id, body.quotaTokens)
-    sendJson(res, 200, { id: updated.id, quotaTokens: updated.quota_tokens })
+    const updated = mergeMemberModelQuotas(db, member.id, body.quotas) // 键级合并：未出现键不动
+    sendJson(res, 200, { id: updated.id, modelQuotas: parseModelQuotas(updated.model_quotas_json) })
   })
 }

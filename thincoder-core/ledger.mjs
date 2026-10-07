@@ -18,12 +18,10 @@
 import { opendirSync, statSync } from "node:fs"
 import { basename, dirname, join, resolve } from "node:path"
 import { projectRootView } from "./manifest.mjs"
-import { ledgerDbPath, PENDING_STATUSES } from "./ledger-db.mjs"
+import { ledgerDbPath, PENDING_STATUSES, AGING_DAYS } from "./ledger-db.mjs"
 import { ledgerQuery } from "./ledger-cmd.mjs"
 import { executorTail } from "./ledger-executors.mjs"
 
-/** 老化阈值（天——口径 = 需求档；`days` 参数可覆盖）。 */
-export const AGING_DAYS = 30
 /** 「可开批」阈值：同一板块（需求类条目 board 列）未决 ≥ 2。 */
 export const THRESHOLD_BOARD = 2
 /** 「可开批」阈值：需求池未决 ≥ 3。 */
@@ -185,8 +183,9 @@ export function detailScans(scans, current) {
   return out
 }
 
-// ── re-export（拆分件接口——命令面接线 = 动态 import 本档，KD-M2-3） ──
-export { ALLOWED_MIGRATIONS, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn } from "./ledger-db.mjs"
+// ── re-export（拆分件接口——命令面接线 = 动态 import 本档，KD-M2-3；`AGING_DAYS` 常量单源 = `ledger-db.mjs`
+//    ——2026-10-07 批 ledger-tool 自本档迁入，公共面零变） ──
+export { AGING_DAYS, ALLOWED_MIGRATIONS, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn } from "./ledger-db.mjs"
 export { ledgerAdd, ledgerClose, ledgerCount, ledgerQuery, ledgerUpdate } from "./ledger-cmd.mjs"
 export { ledgerTool, ledgerReadTool, ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool } from "./ledger-tools.mjs"
 export { runLedgerAudit, runLedgerMigrate } from "./ledger-migrate.mjs"

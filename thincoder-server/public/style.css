@@ -80,7 +80,8 @@ label { display: inline-flex; gap: var(--sp-3); align-items: center; font-size: 
 .row-form { display: flex; flex-wrap: wrap; gap: var(--sp-4); align-items: center; }
 .row-form h3 { width: 100%; margin: 0; }
 input.tiny { padding: var(--sp-1) var(--sp-3); font-size: var(--fs); }
-input.quota { width: 90px; } /* 尺寸字面（非刻度面——原值保留） */
+input.quota { width: 90px; } /* 尺寸字面（非刻度面——原值保留；`.quota-table` 内为唯一消费面） */
+.quota-table td .hint { margin: var(--sp-2) 0 0; white-space: normal; } /* 成员弹窗·分模型配额表（§2.4②）：就地提示（表内收边——长文案可折行） */
 button { padding: var(--sp-3) var(--sp-5); border: var(--bw) solid var(--accent); border-radius: var(--r-2); background: var(--accent); color: var(--accent-contrast); cursor: pointer; font: inherit; }
 button:hover { background: var(--accent-hover); border-color: var(--accent-hover); } /* ② 主钮悬停（底/边） */
 button.tiny { padding: var(--sp-1) var(--sp-3); font-size: var(--fs); border-color: var(--border); background: var(--panel); color: var(--text); }
@@ -185,7 +186,7 @@ dialog.modal::backdrop { background: var(--backdrop); }
 .detail-grid dt { color: var(--muted); }
 .detail-grid dd { margin: 0; }
 
-/* ── 服务模型配置面（views-models.mjs——§2.4③）：配置区四组 ∥ 表单网格 ∥ 停用钮行 ∥ 元数据行 ─── */
+/* ── 服务模型配置面（views-models.mjs——§2.4③）：配置区五组（A/C/F/D/E） ∥ 表单网格 ∥ 停用钮行 ∥ 元数据行 ─── */
 .config-group { margin-top: var(--sp-4); }
 .config-group h5 { margin: 0 0 var(--sp-3); font-size: var(--fs); color: var(--muted); }
 .config-row { display: flex; align-items: center; gap: var(--sp-4); }

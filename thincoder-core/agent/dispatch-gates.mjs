@@ -87,6 +87,9 @@ export function isSubagentReadonlyAction(toolName, args) {
   if (action === "observe") return true
   // AGENT-LOOP-SUBAGENT.md §6.7.2 panel view 面（freeze 缺省/空 = 视图请求——readonly；非空 freeze 归控制类）
   if (action === "panel" && (args.freeze === undefined || args.freeze === null || String(args.freeze) === "")) return true
+  // DESIGN-TOKEN-SETTLEMENT.md §10 F-SL1（2026-10-07 批 ledger-tool）：design-slots = 只读清点
+  // （同 status / observe——planMode 放行 / 免审批 / digest 放行；工程模式父侧门在执行器内）。
+  if (action === "design-slots") return true
   return false
 }
 export function isSubagentControlAction(toolName, args) {

@@ -63,7 +63,11 @@ export function table(headers, rows, { foot = false } = {}) {
 
 export const fmtTs = (ts) => new Date(ts).toLocaleString(langTag()) // 语言随 locale（zh-CN ∥ en——§2.2）
 export const fmtValue = (value) => (value === null || value === undefined ? "—" : String(value)) // 「—」语言中性（保留）
-export const fmtQuota = (value) => (value === null || value === undefined ? t("common.quotaUnlimited") : String(value))
+/** 分模型配额 = 覆盖计数（§2.4②——列表列 ∥ 弹窗 ∥ 我的页三处同源）：0 ⇒「按平台」∥ N ⇒「N 个模型」。 */
+export const fmtModelQuotas = (modelQuotas) => {
+  const count = Object.keys(modelQuotas ?? {}).length
+  return count === 0 ? t("common.quotaByPlatform") : t("common.modelQuotaCount", { count })
+}
 
 /** 一次性秘密回显区（key 明文 ∥ 临时密码——「仅此一次」提示 + 可全选文本）。 */
 export function showSecret(box, label, value) {
@@ -236,7 +240,7 @@ function currentPath() {
 
 /** 视图上下文（各页共用面——showSecret/usageTable = 跨页共用助手，单源住本档；onChange = 语言切换回调）。 */
 function viewCtx() {
-  return { h, table, api, state, fail, flash, refresh, navigate, fmtTs, fmtValue, fmtQuota, showSecret, usageTable, dataShell, onChange: switchLang, onHealth, health: healthSnapshot }
+  return { h, table, api, state, fail, flash, refresh, navigate, fmtTs, fmtValue, fmtModelQuotas, showSecret, usageTable, dataShell, onChange: switchLang, onHealth, health: healthSnapshot }
 }
 
 /** 重渲口（语言切换——侧栏 ∥ 视图同拍；§2.2）。 */

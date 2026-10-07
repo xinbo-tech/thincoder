@@ -13,6 +13,8 @@ export const EN = Object.freeze({
   "app.loggedOut": "Signed out",
   "common.loading": "Loading…",
   "common.quotaUnlimited": "Unlimited",
+  "common.modelQuotaCount": "{count} models",
+  "common.quotaByPlatform": "By platform",
   "common.rowCount": "{count} items",
   "common.secretNote": "{label} — shown only once; save it now.",
   "common.save": "Save",
@@ -39,7 +41,7 @@ export const EN = Object.freeze({
   "col.name": "Display name",
   "col.username": "Username",
   "col.role": "Role",
-  "col.quota": "Monthly quota",
+  "col.quota": "Model quotas",
   "col.used": "Used this month",
   "col.actions": "Actions",
   "col.item": "Item",
@@ -103,7 +105,6 @@ export const EN = Object.freeze({
   "admin.members.resetPwd": "Reset password",
   "admin.members.resetConfirm": "Reset the password for {name}? A one-time password will be generated and all of their sessions revoked.",
   "admin.members.tempPwdLabel": "Temporary password for member {name}",
-  "admin.members.colQuota": "Quota",
   "admin.members.colKeys": "Keys",
   "admin.members.colKey": "Key",
   "admin.members.colLastUsed": "Last used",
@@ -112,9 +113,16 @@ export const EN = Object.freeze({
   "admin.members.windowTokensCell": "{tokens} tokens",
   "admin.members.newBtn": "New member",
   "admin.members.colKeyCount": "Keys",
+  "admin.members.modelQuotaTitle": "Model usage",
+  "admin.members.colMonthlyQuota": "Monthly quota",
+  "admin.members.colPlatformQuota": "Platform default",
+  "admin.members.quotaEmptyHint": "No overrides — platform config applies",
+  "admin.members.quotaOffListNote": "{count} more overrides are outside the served list (kept)",
+  "admin.members.quotaLoadFailed": "Failed to load quota settings",
+  "admin.members.quotaRetry": "Retry",
   "admin.members.empty": "No members yet",
 
-  // ── Admin · served models (§2.4③ — modals batch + config batch: A/C/D/E groups) ──
+  // ── Admin · served models (§2.4③ — modals batch + config batch + quota batch: A/C/F/D/E groups) ──
   "admin.models.title": "Served models",
   "admin.models.colModel": "Model",
   "admin.models.colProvider": "Provider",
@@ -151,6 +159,9 @@ export const EN = Object.freeze({
   "admin.models.invalidNumber": "Invalid {field}: must be {rule}",
   "admin.models.rulePositive": "a positive integer or empty",
   "admin.models.ruleNonNegative": "a number ≥ 0 or empty",
+  "admin.models.quotaTitle": "Quota",
+  "admin.models.quotaHint": "Per-member monthly default; unset = unlimited; members can override per model in the member dialog",
+  "admin.models.ruleNonNegativeInt": "an integer ≥ 0 or empty",
 
   // ── 管理·全队用量 ──────────────────────────────────────────────────────────
   "admin.usage.title": "Team usage",

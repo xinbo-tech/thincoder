@@ -109,7 +109,7 @@ const ACTION_SPECS = {
       task_book: { type: "string", description: "任务书指针（缺省 = 不变）" },
       evidence: { type: "string", description: "证据（缺省 = 不变）" },
       trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "触发（缺省 = 不变）" },
-      executor: { type: "string", description: "执行者 sessionId（可选——接手改写归属用；缺省 = 按状态迁移语义：进在途自动写本会话 / 出在途自动清空 / 其余不变）" },
+      executor: { type: "string", description: "执行者 sessionId（可选——接手改写归属用；缺省 = 按状态迁移语义：进入待设计 / 在途自动写本会话；出在途 / 撤回清空）" },
     },
     additionalProperties: false,
   },
@@ -120,6 +120,7 @@ const ACTION_SPECS = {
       cwd: { type: "string", description: CWD_DESC },
       id: { type: "number", description: "条目 id" },
       status: { type: "string", enum: ["已核销", "已废弃"], description: "目标态（勾销 / 追认核销 / 撤回）" },
+      evidence: { type: "string", description: "最小证据行（可选——随本次写入行；追认核销面判结果值须非空：缺 / 全空白 ⇒ 拒）" },
     },
     additionalProperties: false,
   },
@@ -130,6 +131,7 @@ const ACTION_SPECS = {
       status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "按状态过滤（六态之一，缺省 = 不过滤）" },
       kind: { type: "string", enum: ["requirement", "tech_todo"], description: "按类别过滤" },
       board: { type: "string", description: "按归属板块过滤（需求档文档名）" },
+      trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "按技术待办触发过滤（三枚举，缺省 = 不过滤——无触发（NULL）不过滤）" },
     },
     additionalProperties: false,
   },
@@ -152,11 +154,11 @@ const UNION_PARAMETERS = {
     board: { type: "string", description: "归属板块（需求档文档名；add 可空 / update 缺省 = 不变 / query 过滤）" },
     req_doc: { type: "string", description: "需求档指针（add 可空 / update 缺省 = 不变）" },
     task_book: { type: "string", description: "任务书指针（add 可空 / update 缺省 = 不变；在途 / 待核销必填——咬合 CHECK）" },
-    evidence: { type: "string", description: "最小证据行（add 可空 / update 缺省 = 不变；追认核销须非空）" },
-    trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "技术待办触发（add / update 可空）" },
+    evidence: { type: "string", description: "最小证据行（add 可空 / update 缺省 = 不变 / close 随本次写入；追认核销须非空）" },
+    trigger: { type: "string", enum: ["归批", "条件", "认账不排期"], description: "技术待办触发（add / update 可空 / query 过滤）" },
     id: { type: "number", description: "条目 id（update / close 必填）" },
     status: { type: "string", enum: ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"], description: "状态（close 必填 ∈ {已核销, 已废弃}；update 迁移 / query 过滤——六态之一）" },
-    executor: { type: "string", description: "执行者 sessionId（update 可选——接手改写归属；缺省 = 按状态迁移语义）" },
+    executor: { type: "string", description: "执行者 sessionId（update 可选——接手改写归属；缺省 = 按状态迁移语义：进入待设计 / 在途自动写本会话；出在途 / 撤回清空）" },
   },
   additionalProperties: false,
 }
@@ -213,9 +215,9 @@ function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
           return JSON.stringify(ledgerUpdate({ cwd: cwd ?? cwdOf(ctx), id, patch, executorSessionId }))
         }
         case "close":
-          return JSON.stringify(ledgerClose({ cwd: rest.cwd ?? cwdOf(ctx), id: rest.id, status: rest.status }))
+          return JSON.stringify(ledgerClose({ cwd: rest.cwd ?? cwdOf(ctx), id: rest.id, status: rest.status, evidence: rest.evidence }))
         case "query":
-          return JSON.stringify(ledgerQuery({ cwd: rest.cwd ?? cwdOf(ctx), status: rest.status, kind: rest.kind, board: rest.board }), null, 2)
+          return JSON.stringify(ledgerQuery({ cwd: rest.cwd ?? cwdOf(ctx), status: rest.status, kind: rest.kind, board: rest.board, trigger: rest.trigger }), null, 2)
         case "count":
           return JSON.stringify({ count: ledgerCount({ cwd: rest.cwd ?? cwdOf(ctx) }) })
         default:

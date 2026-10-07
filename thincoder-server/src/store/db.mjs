@@ -92,12 +92,64 @@ const DDL_V4 = `
 ALTER TABLE providers ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}';  -- 模型设置映射（JSON 对象——形见 store/STORE.md §2 v4 段）
 `
 
+/** v5 增段（模型标识两字段拆列 + 派生两表 + 成员配额列——store/STORE.md §2 v5 段逐字；metering ∥ accounts 域）。
+ *  ① usage 拆列（判据 = `endpoint = 'chat'` + 首斜杠；嵌入行 `provider = ''`）；② 预聚合日表 `usage_daily`；
+ *  ③ 配额计数表 `quota_counters`；④ 成员分模型覆盖列增 + 旧总量列删；⑤ 期初回填（usage = 真源）。 */
+const DDL_V5 = `
+-- ① usage 两字段拆列（KD-SV-40）：对外标识 \`provider/model\` 无损回拼（首斜杠切分同派发面；\`model\` 可含斜杠）；嵌入行 \`provider = ''\`（无前缀命名空间）
+ALTER TABLE usage ADD COLUMN provider TEXT NOT NULL DEFAULT '';
+UPDATE usage SET provider = substr(model, 1, instr(model, '/') - 1), model = substr(model, instr(model, '/') + 1)
+  WHERE endpoint = 'chat' AND instr(model, '/') > 0;
+
+-- ② 预聚合日表（汇表面读源——KD-SV-39；粒度 = 日 × 成员 × key × provider × model × endpoint）
+CREATE TABLE IF NOT EXISTS usage_daily (
+  day               TEXT NOT NULL,              -- 'YYYY-MM-DD'（服务器本地日界——与 trend strftime 同形）
+  member_id         INTEGER NOT NULL,
+  key_id            INTEGER NOT NULL,
+  provider          TEXT NOT NULL,              -- '' = 无 provider 维（嵌入面）
+  model             TEXT NOT NULL,
+  endpoint          TEXT NOT NULL CHECK (endpoint IN ('chat','embeddings')),
+  requests          INTEGER NOT NULL DEFAULT 0, -- 请求数（含 error ∥ aborted）
+  prompt_tokens     INTEGER NOT NULL DEFAULT 0,
+  completion_tokens INTEGER NOT NULL DEFAULT 0,
+  total_tokens      INTEGER NOT NULL DEFAULT 0, -- NULL 计 0（口径同 SUM 聚合）
+  duration_ms       INTEGER NOT NULL DEFAULT 0,
+  errors            INTEGER NOT NULL DEFAULT 0, -- status = 'error' 计数
+  PRIMARY KEY (day, member_id, key_id, provider, model, endpoint)
+);
+
+-- ③ 配额计数表（检查面点查源——KD-SV-38；粒度 = 成员 × provider × 模型 × 自然月）
+CREATE TABLE IF NOT EXISTS quota_counters (
+  member_id INTEGER NOT NULL,
+  provider  TEXT NOT NULL,               -- 检查只读 chat 键（provider 非空）∥ 嵌入行照计不读
+  model     TEXT NOT NULL,
+  month     TEXT NOT NULL,               -- 'YYYY-MM'（服务器本地时区）
+  tokens    INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (member_id, provider, model, month)
+);
+
+-- ④ 成员分模型覆盖列 + 旧总量列退役（被 ①② 取代）
+ALTER TABLE members ADD COLUMN model_quotas_json TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE members DROP COLUMN quota_tokens;
+
+-- ⑤ 期初回填（一次性聚合——usage = 真源；两表与真源逐值可重算）
+INSERT INTO usage_daily (day, member_id, key_id, provider, model, endpoint, requests, prompt_tokens, completion_tokens, total_tokens, duration_ms, errors)
+SELECT strftime('%Y-%m-%d', ts / 1000, 'unixepoch', 'localtime') AS day, member_id, key_id, provider, model, endpoint,
+       COUNT(*), COALESCE(SUM(prompt_tokens), 0), COALESCE(SUM(completion_tokens), 0), COALESCE(SUM(total_tokens), 0),
+       COALESCE(SUM(duration_ms), 0), COALESCE(SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END), 0)
+FROM usage GROUP BY day, member_id, key_id, provider, model, endpoint;
+INSERT INTO quota_counters (member_id, provider, model, month, tokens)
+SELECT member_id, provider, model, strftime('%Y-%m', ts / 1000, 'unixepoch', 'localtime') AS month, COALESCE(SUM(total_tokens), 0)
+FROM usage GROUP BY member_id, provider, model, month;
+`
+
 /** 迁移链：每段 = `{ v, up(db) }`（v = 目标结构版本，自 1 起递增）；结构每变一次追一段（+1）。 */
 export const MIGRATIONS = [
   { v: 1, up: (db) => db.exec(DDL_V1) },
   { v: 2, up: (db) => db.exec(DDL_V2) },
   { v: 3, up: (db) => db.exec(DDL_V3) },
   { v: 4, up: (db) => db.exec(DDL_V4) },
+  { v: 5, up: (db) => db.exec(DDL_V5) },
 ]
 
 /** 当前结构版本（= 链尾段号——store/STORE.md §1）。 */

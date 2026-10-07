@@ -13,7 +13,7 @@ import { keyUsageStats, monthlyTokensForMember } from "../metering/usage.mjs"
 import { recordAudit } from "./audit.mjs"
 import { activeKeysOf, rotateKey } from "./keys.mjs"
 import { clientIp, defaultLoginGuard } from "./login-guard.mjs"
-import { findMemberByUsername, setMemberPassword, validatePassword, verifyPassword } from "./members.mjs"
+import { findMemberByUsername, parseModelQuotas, setMemberPassword, validatePassword, verifyPassword } from "./members.mjs"
 import {
   clearSessionCookie,
   createSession,
@@ -24,8 +24,9 @@ import {
   serializeSessionCookie,
 } from "./session.mjs"
 
-/** 成员行（页面消费形——ACCOUNTS §3）：`{ id, name, username, role, quotaTokens, usedTokens, keys[{id,hint,lastUsedAt,windowTokens}] }`。
- *  本人面 ∥ 管理列表同形（KD-SV-16）；`usedTokens` = 本月累计（METERING §2 同口径）；
+/** 成员行（页面消费形——ACCOUNTS §3）：`{ id, name, username, role, modelQuotas, usedTokens, keys[{id,hint,lastUsedAt,windowTokens}] }`。
+ *  本人面 ∥ 管理列表同形（KD-SV-16）；`modelQuotas` = 分模型覆盖 map（键 = 对外标识；未设 = 用平台——METERING §2）；
+ *  `usedTokens` = 本月累计（日表口径——METERING §3）；
  *  key 行归因（AC-15⑥）单源 = `keyUsageStats`：`lastUsedAt` = MAX(ts) ∥ `windowTokens` = 近 30 天（从未使用 ⇒ null/0）。
  *  `keyStats` 给定 = 调用侧一次装配（`GET /api/members` 全员免 N+1）；缺省 = 就地一次取。 */
 export function memberView(db, member, { now = Date.now(), usedTokens = null, keyStats = null } = {}) {
@@ -35,7 +36,7 @@ export function memberView(db, member, { now = Date.now(), usedTokens = null, ke
     name: member.name,
     username: member.username,
     role: member.role,
-    quotaTokens: member.quota_tokens,
+    modelQuotas: parseModelQuotas(member.model_quotas_json),
     usedTokens: usedTokens ?? monthlyTokensForMember(db, member.id, { now }),
     keys: activeKeysOf(db, member.id).map((key) => ({
       id: key.id,

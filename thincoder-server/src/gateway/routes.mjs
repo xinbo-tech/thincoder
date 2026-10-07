@@ -1,14 +1,16 @@
 /**
  * routes.mjs — OpenAI 面处理（gateway/API.md §2）：chat ∥ models ∥ embeddings 三面。
  *
- * 七步链（PROJECT.md §2）：[2] 鉴权（团队 key——sha256 查库）→ [3] 配额准入 → [4] `provider/model` 复合键派发
- * （首斜杠切分——上游请求体 model = 余段；记账 model = 对外标识）→ [4.5] 模型限流准入（派发命中后/转发前——
- * per-model RPM/TPM；超限 ⇒ 429 `rate_limited` + `Retry-After`；KD-SV-35）→ [5] 转发（真 key 代持）→ [6] 透传 + tap
- * → [7] 记账；[5]–[7] 归 forward.mjs（含 `onUsage` 钩子——用量到达即计入限流窗）。
+ * 链（PROJECT.md §2）：[2] 鉴权（团队 key——sha256 查库）→ [4] `provider/model` 复合键派发
+ * （首斜杠切分——上游请求体 model = 余段；记账 provider/model = 拆列两字段）→ [4.5] 准入（派发命中后/转发前）：
+ * 配额（三级解析 ⇒ 零 SQL 短路 ⇒ 计数点查；**仅 chat**——KD-SV-38）+ 模型限流（per-model RPM/TPM；
+ * 超限 ⇒ 429 `rate_limited` + `Retry-After`——KD-SV-35）→ [5] 转发（真 key 代持）→ [6] 透传 + tap
+ * → [7] 记账（同事务三写）；[5]–[7] 归 forward.mjs（含 `onUsage` 钩子——用量到达即计入限流窗）。
  * provider 表 = 运行时箱（装配期引导——种子导入 → 构建）；`/v1/models` 与派发读 `runtime.get()`——保存即换表
  * （零重启；在途 = 派发时快照——gateway/API.md §2.2）。
  * 鉴权三态不区分（无 key ∥ 未知 ∥ 吊销 ⇒ 401 `invalid_api_key`——防信息泄露）；准入前拒打不落用量。
- * embeddings = 内网引擎转发（地址配置面——OPS §1 `embedding` 段；响应透传 + 同形记账）。
+ * embeddings = 内网引擎转发（地址配置面——OPS §1 `embedding` 段；响应透传 + 同形记账）；**嵌入面零配额检查**
+ * （仅计量照记——用户 09:31 裁）。
  */
 import { verifyKey } from "../accounts/keys.mjs"
 import { assertQuota } from "../metering/quota.mjs"
@@ -38,15 +40,15 @@ export function registerGatewayRoutes(routes, { db, config, runtime = null, log 
   routes.add("POST", "/v1/chat/completions", async (req, res, ctx) => {
     const ts = Date.now() // 账务行 ts = 请求开始
     const { keyId, member } = requireApiKey(db, req) // [2]
-    assertQuota(db, member) // [3] 超额 ⇒ 429 quota_exceeded（含已用/额度）
     const body = await readJsonBody(req) // 413（读限）∥ 400（非 JSON）
     if (typeof body?.model !== "string" || body.model === "") {
       throw new HttpError("invalid_request_error", "请求体缺 model 字段")
     }
     const dispatch = providerRuntime.get().dispatch(body.model) // [4] 复合键派发（裸名 ∥ 未命中 ⇒ 404 model_not_found；派发时快照）
     if (dispatch.miss) throw new HttpError(dispatch.miss.body.error.code, dispatch.miss.body.error.message)
-    // [4.5] 模型限流准入（派发命中后、转发前——KD-SV-35）：通过 ⇒ 计次 +1；超限 ⇒ 429 + `Retry-After`（秒——距窗尾）
-    const settings = providerRuntime.get().settingsFor(dispatch.provider, dispatch.model) // v4 设置（空 = 不限）
+    // [4.5] 准入（派发命中后、转发前——KD-SV-38 ∥ KD-SV-35）：配额（三级 ∥ 零 SQL 短路——不触库）⇒ 限流
+    const settings = providerRuntime.get().settingsFor(dispatch.provider, dispatch.model) // v4 设置（空 = 不限——平台层与限流同源）
+    assertQuota(db, member, { model: body.model, provider: dispatch.provider.name, upstreamModel: dispatch.model, settings: settings ?? {} }) // 超限 ⇒ 429 quota_exceeded（含模型/已用/额度）
     const verdict = rateLimiter.check(dispatch.provider.name, dispatch.model, settings ?? {})
     if (verdict.limited) {
       const dimension = verdict.dimension === "rpm" ? "每分钟请求数" : "每分钟 token 数"
@@ -56,9 +58,9 @@ export function registerGatewayRoutes(routes, { db, config, runtime = null, log 
     }
     await forwardChat(req, res, {
       db, log: ctx.log, member, keyId,
-      model: body.model, // 记账 model = 对外标识（provider/model——与 /v1/models 清单同形）
-      upstreamModel: dispatch.model, // 上游请求体 model = 首斜杠余段（上游模型名——API.md §2.1）
-      provider: dispatch.provider, body, ts,
+      provider: dispatch.provider, // 转发面（baseURL/密钥——真 key 代持）
+      model: dispatch.model, // 记账 model 列 ∥ 上游请求体 model = 上游模型名（对外标识 = provider/model 回拼）
+      body, ts,
       // 用量到达即计入限流窗（失败/断开计次不计 token——计次已发生在准入；KD-SV-35）
       onUsage: verdict.tracked ? (usage) => rateLimiter.record(dispatch.provider.name, dispatch.model, usage?.totalTokens) : null,
     })
@@ -70,11 +72,11 @@ export function registerGatewayRoutes(routes, { db, config, runtime = null, log 
   })
 
   // 嵌入面 = 内网引擎转发（引擎模型 = `embedding.model`——非 provider 面 ∥ 无前缀；其余 ⇒ 404）：
-  // 响应透传（非流式 JSON——usage 从响应体拾取）∥ 记账 `endpoint='embeddings'`（AC-6 ∥ N3）。
+  // 响应透传（非流式 JSON——usage 从响应体拾取）∥ 记账 `endpoint='embeddings'`（provider = ''——无前缀命名空间；
+  // 零配额检查——仅计量照记（AC-6 ∥ N3）。
   routes.add("POST", "/v1/embeddings", async (req, res, ctx) => {
     const ts = Date.now() // 账务行 ts = 请求开始
     const { keyId, member } = requireApiKey(db, req) // [2]
-    assertQuota(db, member) // [3]
     const body = await readJsonBody(req) // 413（读限）∥ 400（非 JSON）
     if (typeof body?.model !== "string" || body.model === "") {
       throw new HttpError("invalid_request_error", "请求体缺 model 字段")
@@ -88,6 +90,7 @@ export function registerGatewayRoutes(routes, { db, config, runtime = null, log 
       member,
       keyId,
       endpoint: "embeddings",
+      providerName: "", // 嵌入行 = 无 provider 维（拆列判据 = endpoint——STORE §2 v5 段）
       model: body.model,
       ts,
       streaming: false, // 嵌入面 = 非流式（响应 JSON 透传；无 KD-SV-5 注入——只属 chat 流式）

@@ -20,7 +20,7 @@ import { allocRelay, wrapChildCallbacks, relayPrefixOf } from "../agent/spawn-ch
 // TUI-OOM-ROOTCAUSE（AGENT-LOOP.md §6.15）：子代理人读线窗口常量单源（store 零依赖）。
 import { RECORD_WINDOW_MESSAGES } from "../session-store.mjs"
 import { validateDesignToken } from "./advisor.mjs"
-import { tokenExpired, removeDesignTokenSlot, reconcileEngTokensFromSlot, persistEngTokens } from "../token-ttl.mjs"
+import { tokenExpired, removeDesignTokenSlot, reconcileEngTokensFromSlot } from "../token-ttl.mjs"
 import { resolveChildProvider, buildChildRunOpts, enqueueAsk } from "./subagent-async.mjs"
 import { nextSubagentId } from "./subagent-scheduler.mjs"
 import {
@@ -125,54 +125,14 @@ export function resolveDesignSlot(parent, designIdArg) {
 
 /**
  * consume-design 动作执行器（2026-09-07 token 链终消费制——ENGINEERING-MODE.md §2.6 F1）：
- * 父侧验收核销时显式调用——读槽值 → removeDesignTokenSlot（token-ttl.mjs——移除该
- * designId 槽）→ 消费后同 designId 再 spawn = resolveDesignSlot not found 机械拒。调用
- * 形态定死（评审 #3）：参数 designId（单设计会话可省略——FR3 spawn 同款语义）；未知
- * designId 与重复消费同款 no-op 提示（幂等——不报错）。DESIGN-TOKEN-SETTLEMENT D3
- * （2026-09-08）：单值镜像 `_engDesignToken` 已退役——无镜像兼容值清/兜底读（AC3）。
- * consume 落盘对称（2026-09-08 D1 段 + AC7）：删内存槽后当场 persistEngTokens 同步
- * 落盘删除（旧台账不留盘——防 D2 门禁 miss 回读复活已消费 token）；落盘失败回滚
- * 内存槽 + 抛错（不留半消费态，可重试——D1 评审 #1 同款失败语义）。
- * dispatch 分类（评审 #7d）：非只读控制动作——depth-0 + 工程模式
- * 限定（受限变体门在 subagent.mjs 分流处；本器自持工程模式门）——planMode 拒绝
- * （dispatch 不豁免）——不入批审批分组（dispatch 免审直行——无文件写）。
+ * 父侧验收核销时显式调用——读槽值 → removeDesignTokenSlot（移除该 designId 槽）→ 消费后同
+ * designId 再 spawn = resolveDesignSlot not found 机械拒；落盘失败回滚内存槽 + 抛错
+ * （不留半消费态，可重试——D1 评审 #1 同款失败语义）。
+ * 2026-10-07 批 ledger-tool（#927 并入）：选择器扩展（designIds / expired / olderThanDays——
+ * 恰一，fail-closed）+ 清点面 `design-slots` 落 `./design-slots.mjs`（清点 / 批量选择 / 消费核
+ * 单源迁入——单枚形态拒文 / 回执逐字不变）；本处仅保本档 import 面（subagent.mjs / 既有消费点零改）。
  */
-export function executeConsumeDesignAction(args, ctx) {
-  const parent = ctx.agent
-  if (!parent?.config?.agent?.engineering) {
-    throw new Error("Engineering mode is not active — consume-design applies only to engineering-mode design tokens (spawn 同门).")
-  }
-  const designId = args?.designId ? String(args.designId) : undefined
-  const slots = parent?._engDesignTokens
-  const hasSlots = slots instanceof Map && slots.size > 0
-  // 多槽缺 designId → 拒（spawn 同款语义——不误消费任一槽）
-  if (!designId && hasSlots && slots.size > 1) {
-    throw new Error(`consume-design: Multiple approved designs in this session (${slots.size}) — pass the designId parameter (echoed with each token) to choose which design to close out.`)
-  }
-  // 读槽值：给定 designId → 精确槽（未知/已消费 → undefined）；缺省 → 唯一槽
-  let token = null
-  if (designId && hasSlots) token = slots.get(designId) ?? null
-  else if (!designId && hasSlots) token = [...slots.values()][0]
-  // 未知 designId / 已消费 / 无任何槽 → 幂等 no-op 提示（不报错——评审 #3 定死）
-  if (!token) {
-    return `consume-design: no live slot${designId ? ` for designId ${designId}` : ""} (already consumed or never issued) — idempotent no-op, nothing changed.`
-  }
-  // consume 落盘对称（DESIGN-TOKEN-SETTLEMENT D1 段 + AC7——交付 🔴 复活洞修复）：
-  // 删内存槽后当场同步落盘删除（D1 同款 persistEngTokens——空 Map → 槽文件
-  // engDesignTokens 字段删除，旧台账不留盘）。否则消费→回合尾 saveSession 窗口内
-  // spawn 门禁 miss 回读（D2）会从盘上复活已消费 token。
-  const slotId = designId ?? [...slots.keys()][0]
-  removeDesignTokenSlot(parent, designId, token)
-  try {
-    persistEngTokens(parent)
-  } catch (e) {
-    // 落盘失败 → 回滚内存槽 + 抛错（不留半消费态——盘上仍有旧台账时消费不得报
-    // 成功；可重试——D1 评审 #1 settle 同款失败语义）
-    if (slotId) parent._engDesignTokens.set(slotId, token)
-    throw new Error(`consume-design: the slot was removed in memory but could NOT be durably deleted from the slot file (${e.message}) — the slot is restored in memory; retry consume-design.`)
-  }
-  return `design slot consumed — designId ${designId ?? "(single-design session)"} is closed out; a further eng-coder spawn for this design is mechanically rejected, and any new work (including deviation fixes) requires a fresh advisor(type='design') review and token.`
-}
+export { executeConsumeDesignAction } from "./design-slots.mjs"
 
 // ── spawn 调度参数准入（AGENT-LOOP-SUBAGENT.md §6.9 D-SD1/D-SD3）────────────
 // files/dependsOn 声明即契约（v1：不做任务书文本自动解析——不可靠）。缺省（两者皆

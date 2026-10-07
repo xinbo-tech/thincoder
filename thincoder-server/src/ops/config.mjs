@@ -18,7 +18,7 @@ export const MIN_PASSWORD_LENGTH = 8
 export const DEFAULT_AUTO_UPDATE = "notify" // 更新档位缺省（可见不越权——§5.4(b)）
 export const UPDATE_MODES = Object.freeze([false, "notify", "auto"])
 export const DEFAULT_USAGE_RETENTION_DAYS = 90 // 用量保留窗缺省（天——KD-SV-22：`null` = 不限）
-export const SETTINGS_SUB_FIELDS = Object.freeze(["rpm", "tpm", "costIn", "costOut", "note"]) // 模型设置子字段（v4——gateway/API.md §2.2）
+export const SETTINGS_SUB_FIELDS = Object.freeze(["rpm", "tpm", "costIn", "costOut", "note", "quotaTokens"]) // 模型设置子字段（v4 + 配额批 quotaTokens——gateway/API.md §2.2）
 export const SETTINGS_NOTE_MAX = 200 // 「说明」字符上限（≤200 字——§2.2 D 组手填）
 
 /** 读配置档 → env 解析 → 校验 → 返回归一出参（任何一步不过 ⇒ 抛）。 */
@@ -156,9 +156,9 @@ export function validateProviderEntries(entries, { where = "providers" } = {}) {
 }
 
 /** 模型设置映射校验（**校验单源**——三径同 `validateProviderEntry`；形 = store/STORE.md §2 v4 段 ∥
- *  gateway/API.md §2.2）：入 = `{ "<上游模型名>": { rpm ∥ tpm ∥ costIn ∥ costOut ∥ note } }`（缺省 ⇒ `{}`）；
+ *  gateway/API.md §2.2）：入 = `{ "<上游模型名>": { rpm ∥ tpm ∥ costIn ∥ costOut ∥ note ∥ quotaTokens } }`（缺省 ⇒ `{}`）；
  *  出 = 归一形（逐键全子字段在册——未设 ⇒ 显式 `null`）。判据（fail-closed——抛）：值为 null／非对象 ∥
- *  未知子字段 ∥ rpm／tpm 非正整数 ∥ costIn／costOut 非 ≥0 数 ∥ note 非字符串或超 200 字符。
+ *  未知子字段 ∥ rpm／tpm 非正整数 ∥ costIn／costOut 非 ≥0 数 ∥ note 非字符串或超 200 字符 ∥ quotaTokens 非 ≥0 整数。
  *  注：模型级 `null`（删键语义）= PATCH 请求的合并口径（`provider-admin.mjs` 合并层先处理——本函数不见后照抛）。 */
 export function validateProviderSettings(settings, { where = "settings" } = {}) {
   if (settings === undefined || settings === null) return {}
@@ -183,6 +183,7 @@ export function validateProviderSettings(settings, { where = "settings" } = {}) 
       costIn: optionalNonNegativeNumber(value.costIn, `${at}.costIn`),
       costOut: optionalNonNegativeNumber(value.costOut, `${at}.costOut`),
       note: optionalNote(value.note, `${at}.note`),
+      quotaTokens: optionalNonNegativeInt(value.quotaTokens, `${at}.quotaTokens`), // 配额平台层默认（每人每月 token——KD-SV-38）
     }
   }
   return out
@@ -213,6 +214,13 @@ function requireProviderName(value, where) {
 function optionalPositiveInt(value, where) {
   if (value === undefined || value === null) return null
   if (!Number.isInteger(value) || value < 1) throw new Error(`${where} 须为正整数 ∥ null（空 = 未设——拒）`)
+  return value
+}
+
+/** ≥0 整数 ∥ null（`quotaTokens`——每人每月默认用量；0 = 立即用尽，合法）。 */
+function optionalNonNegativeInt(value, where) {
+  if (value === undefined || value === null) return null
+  if (!Number.isInteger(value) || value < 0) throw new Error(`${where} 须为 ≥0 整数 ∥ null（空 = 未设——拒）`)
   return value
 }
 

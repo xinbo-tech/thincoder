@@ -1,8 +1,9 @@
 /**
  * views-models.mjs — 管理·服务模型页（webui/WEBUI.md §2/§2.4③——KD-SV-32/34：`#/admin/models`——仅 admin）：
  * 列表 = `/v1/models` 同源（`GET /api/admin/providers` 的 `models` 展平为 `provider/model` 前缀形 + 嵌入引擎
- * 模型 `state.system.embedding.model`）∥ 行点击 ⇒ 详情弹窗（复用 `modal.mjs`）；配置四组 = A 开放状态（停用流）∥
- * C 限流（RPM/TPM）∥ D 展示元数据（规格快照查表 + 手填「说明」）∥ E 成本权重——保存 = PATCH `settings`
+ * 模型 `state.system.embedding.model`）∥ 行点击 ⇒ 详情弹窗（复用 `modal.mjs`）；配置五组 = A 开放状态（停用流）∥
+ * C 限流（RPM/TPM）∥ F 配额（`quotaTokens`——每人每月默认用量）∥ D 展示元数据（规格快照查表 + 手填「说明」）∥ E 成本权重
+ * ——保存 = PATCH `settings`
  * （单键全对象提交——全子字段在册；未设/清空 = 显式 `null`；草稿初值 = GET 行 `settings` 该键值）。
  *
  * 零新端点（目录来源 = provider 配置派生——需求边界）；**零上游探针**（列表/详情/停用皆不引发现面——退役项同口径
@@ -31,9 +32,10 @@ export function modelsWithout(models, model) {
   return (models ?? []).filter((item) => item !== model)
 }
 
-/** 数值字段判据（前端先行——服务端复核为准）：rpm/tpm = 正整数 ∥ 空（不限）；costIn/costOut = ≥0 数 ∥ 空（未设）。 */
-const NUMERIC_FIELDS = [["rpm", "positive"], ["tpm", "positive"], ["costIn", "nonNegative"], ["costOut", "nonNegative"]]
-const FIELD_LABELS = { rpm: "admin.models.rpm", tpm: "admin.models.tpm", costIn: "admin.models.costIn", costOut: "admin.models.costOut" }
+/** 数值字段判据（前端先行——服务端复核为准）：rpm/tpm = 正整数 ∥ costIn/costOut = ≥0 数 ∥ quotaTokens = ≥0 整数（每人每月默认用量）；空 = 未设（rpm/tpm/quotaTokens = 不限、其余 = 未设）。 */
+const NUMERIC_FIELDS = [["rpm", "positive"], ["tpm", "positive"], ["costIn", "nonNegative"], ["costOut", "nonNegative"], ["quotaTokens", "nonNegativeInt"]]
+const FIELD_LABELS = { rpm: "admin.models.rpm", tpm: "admin.models.tpm", costIn: "admin.models.costIn", costOut: "admin.models.costOut", quotaTokens: "admin.members.colMonthlyQuota" }
+const RULE_KEYS = { positive: "admin.models.rulePositive", nonNegative: "admin.models.ruleNonNegative", nonNegativeInt: "admin.models.ruleNonNegativeInt" }
 
 /** 草稿汇总 → `settings` 值对象（§2.4③ 线形：键 = 上游模型名 ∥ 值 = 全字段对象——未设/清空 = 显式 `null`）。
  *  非法 ⇒ `{ invalid: { field, ruleKey } }`（就地提示——不提交；服务端复核为准）。 */
@@ -43,8 +45,10 @@ export function settingsValueFromDraft(draft) {
     const raw = String(draft?.[field] ?? "").trim()
     if (raw === "") { value[field] = null; continue }
     const num = Number(raw)
-    const ok = rule === "positive" ? Number.isInteger(num) && num >= 1 : Number.isFinite(num) && num >= 0
-    if (!ok) return { invalid: { field, ruleKey: rule === "positive" ? "admin.models.rulePositive" : "admin.models.ruleNonNegative" } }
+    const ok = rule === "positive" ? Number.isInteger(num) && num >= 1
+      : rule === "nonNegativeInt" ? Number.isInteger(num) && num >= 0
+        : Number.isFinite(num) && num >= 0
+    if (!ok) return { invalid: { field, ruleKey: RULE_KEYS[rule] } }
     value[field] = num
   }
   const note = String(draft?.note ?? "").trim()
@@ -56,7 +60,7 @@ export function settingsValueFromDraft(draft) {
 export function draftFromSettings(settings, upstream) {
   const value = settings?.[upstream] ?? {}
   const text = (item) => (item === null || item === undefined ? "" : String(item))
-  return { rpm: text(value.rpm), tpm: text(value.tpm), costIn: text(value.costIn), costOut: text(value.costOut), note: value.note ?? "" }
+  return { rpm: text(value.rpm), tpm: text(value.tpm), costIn: text(value.costIn), costOut: text(value.costOut), quotaTokens: text(value.quotaTokens), note: value.note ?? "" }
 }
 
 export async function renderModels(ctx, mount) {
@@ -105,7 +109,7 @@ function modelsTable(ctx, rows, providers, reload) {
       h("tfoot", {}, h("tr", {}, h("td", { colspan: String(headers.length), text: t("common.rowCount", { count: rows.length }) })))))
 }
 
-/** 详情弹窗（复用公共组件；导出 = 批内件直测）：详情四行 + （chat 行）配置四组 ∥ 嵌入行注（四组不落该行）。
+/** 详情弹窗（复用公共组件；导出 = 批内件直测）：详情四行 + （chat 行）配置五组（A/C/F/D/E）∥ 嵌入行注（五组不落该行）。
  *  停用 = confirm ⇒ PATCH `models` 减项 ⇒ 关窗 + 列表刷新 + flash；保存 = PATCH `settings`（单键全对象）⇒ flash + 弹窗留驻。 */
 export function openModelModal(ctx, { row, entry, reload }) {
   const { h } = ctx
@@ -118,7 +122,7 @@ export function openModelModal(ctx, { row, entry, reload }) {
     h("dt", { text: t("admin.models.colProvider") }), h("dd", { text: row.provider }),
     h("dt", { text: t("admin.models.upstream") }), h("dd", { text: ctx.fmtValue(row.upstream) }),
     h("dt", { text: t("admin.models.colSurface") }), h("dd", { text: row.surface }))
-  if (!isChat) { // 嵌入模型行：注 = 系统页 · 向量服务卡（A/C/D/E 四组不落该行）；零脚区
+  if (!isChat) { // 嵌入模型行：注 = 系统页 · 向量服务卡（A/C/F/D/E 五组不落该行）；零脚区
     bodyBox.replaceChildren(details, h("p", { class: "hint", text: t("admin.models.embedNote") }))
     return modal
   }
@@ -149,7 +153,7 @@ export function openModelModal(ctx, { row, entry, reload }) {
   /** 保存 = PATCH `settings`（单键全对象——§2.4③ 线形）；非法 ⇒ 就地提示不提交（服务端复核为准）。 */
   const save = async () => {
     for (const hint of Object.values(hints)) hint.hidden = true
-    const read = { rpm: inputs.rpm.value, tpm: inputs.tpm.value, costIn: inputs.costIn.value, costOut: inputs.costOut.value, note: noteInput.value }
+    const read = { rpm: inputs.rpm.value, tpm: inputs.tpm.value, costIn: inputs.costIn.value, costOut: inputs.costOut.value, quotaTokens: inputs.quotaTokens.value, note: noteInput.value }
     const { value, invalid } = settingsValueFromDraft(read)
     if (invalid) {
       hints[invalid.field].textContent = t("admin.models.invalidNumber", { field: t(FIELD_LABELS[invalid.field]), rule: t(invalid.ruleKey) })
@@ -175,6 +179,10 @@ export function openModelModal(ctx, { row, entry, reload }) {
   const groupC = group("admin.models.rateTitle",
     h("div", { class: "config-grid" }, numericField("rpm"), numericField("tpm")),
     h("p", { class: "hint", text: t("admin.models.rateHint") }))
+  // F · 配额（每人每月默认用量——空 = 不限；成员可在成员弹窗分模型覆盖——机制全文 = metering/METERING.md §2 KD-SV-38）
+  const groupF = group("admin.models.quotaTitle",
+    h("div", { class: "config-grid" }, numericField("quotaTokens")),
+    h("p", { class: "hint", text: t("admin.models.quotaHint") }))
   // D · 展示元数据（规格快照查表——未知 ⇒「未收录」零兜底；手填「说明」≤200 字符）
   const spec = specForDisplay(row.upstream)
   const specText = (value) => (spec === null ? t("admin.models.notCollected") : ctx.fmtValue(value))
@@ -191,7 +199,7 @@ export function openModelModal(ctx, { row, entry, reload }) {
     h("p", { class: "hint", text: t("admin.models.weightHint") }),
     h("p", { class: "hint", text: t("admin.models.weightNote") }))
 
-  bodyBox.replaceChildren(details, h("h4", { text: t("admin.models.configTitle") }), groupA, groupC, groupD, groupE)
+  bodyBox.replaceChildren(details, h("h4", { text: t("admin.models.configTitle") }), groupA, groupC, groupF, groupD, groupE)
   footBox.replaceChildren(
     h("button", { type: "button", text: t("common.save"), onclick: save }),
     h("button", { type: "button", class: "tiny", text: t("common.cancel"), onclick: () => modal.close() })) // 取消 ∥ × ∥ ESC = 弃稿

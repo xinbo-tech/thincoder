@@ -12,8 +12,9 @@
  *   探针实证（Node v24.19.0）：gzip 上游经 fetch 到手即明文 JSON，故本档不回 `content-encoding`
  *   （压缩上游到达客户端为解压形、自洽）；其余上游头（`retry-after` 等）不透传。
  * - 上游不可达（连不上 ∥ fetch 内建超时）⇒ 502 `upstream_error` + `error` 行（E6）。
- * - 记账时点 = 请求终结（响应完 ∥ 流终结 ∥ 断连——KD-SV-8 单条 INSERT）；仅「已进入转发」的请求落行
- *   （准入前拒打不落用量：401 ∥ 429 ∥ 400 ∥ 404 ∥ 413 均无行）。
+ * - 记账时点 = 请求终结（响应完 ∥ 流终结 ∥ 断连——KD-SV-8 **同事务三写**：usage 行 + 派生两表 upsert）；
+ *   仅「已进入转发」的请求落行（准入前拒打不落用量：401 ∥ 429 ∥ 400 ∥ 404 ∥ 413 均无行）。
+ *   模型标识 = `providerName`/`model` 拆列两字段（嵌入面 `providerName = ''`——STORE §2 v5 段）。
  * - `onUsage`（可选钩子）= 用量到达即回调（限流窗计数——KD-SV-35：失败/断开无 tokens ⇒ 不调；钩子异常不反噬）。
  */
 import { once } from "node:events"
@@ -46,11 +47,12 @@ export function upstreamHeaders(provider) {
 }
 
 /**
- * 转发并中继 + 记账（三面共用——embeddings 同径：传 `endpoint:'embeddings'` ∥ url ∥ payload 即接入）。
- * opts = `{ db, log, member, keyId, endpoint, model, ts, url, headers, payload, streaming }`。
+ * 转发并中继 + 记账（三面共用——embeddings 同径：传 `endpoint:'embeddings'` ∥ `providerName: ""` ∥ url ∥ payload 即接入）。
+ * opts = `{ db, log, member, keyId, endpoint, providerName, model, ts, url, headers, payload, streaming }`。
+ * `providerName`/`model` = 记账拆列两字段（chat = provider 名 + 上游模型名；嵌入 = `''` + 引擎模型名）。
  */
 export async function forwardRequest(req, res, opts) {
-  const { db, log, member, keyId, endpoint, model, ts, url, headers, payload, streaming, onUsage = null } = opts
+  const { db, log, member, keyId, endpoint, providerName = "", model, ts, url, headers, payload, streaming, onUsage = null } = opts
   const started = Date.now()
   const controller = new AbortController()
   let clientGone = false
@@ -83,6 +85,7 @@ export async function forwardRequest(req, res, opts) {
         memberId: member.id,
         keyId,
         endpoint,
+        provider: providerName, // 拆列两字段（KD-SV-40）：provider 名 ∥ 嵌入行 = ''
         model,
         status,
         stream: streaming === true,
@@ -92,7 +95,7 @@ export async function forwardRequest(req, res, opts) {
         durationMs: Date.now() - started,
       })
     } catch (e) {
-      log?.error("usage_record_failed", { message: e.message, endpoint, model })
+      log?.error("usage_record_failed", { message: e.message, endpoint, provider: providerName, model })
     }
   }
 
@@ -176,21 +179,23 @@ function usageFromJson(bytes) {
 }
 
 /** 聊天面转发（`/v1/chat/completions`）：注入（KD-SV-5）+ 真 key 代持 + 账务字段装配。
- *  `model` = 记账用对外标识（`provider/model`）；`upstreamModel` = 上游请求体 model（首斜杠余段——API.md §2.1）；
+ *  `provider` = 派发快照（baseURL/密钥——真 key 代持）；`model` = 上游模型名（首斜杠余段——API.md §2.1）
+ *  —— 上游请求体 model 与记账 `model` 列同值，记账 `provider` 列 = `provider.name`；
  *  `onUsage` = 用量到达钩子（限流窗计入——KD-SV-35）。 */
-export async function forwardChat(req, res, { db, log, member, keyId, model, provider, upstreamModel, body, ts, onUsage = null }) {
+export async function forwardChat(req, res, { db, log, member, keyId, provider, model, body, ts, onUsage = null }) {
   return forwardRequest(req, res, {
     db,
     log,
     member,
     keyId,
     endpoint: "chat",
+    providerName: provider.name, // 记账 provider 列（无 `/` 前缀名）
     model,
     ts,
     streaming: body.stream === true,
     url: upstreamUrl(provider.baseURL, "/chat/completions"),
     headers: upstreamHeaders(provider),
-    payload: injectIncludeUsage({ ...body, model: upstreamModel }),
+    payload: injectIncludeUsage({ ...body, model }),
     onUsage,
   })
 }

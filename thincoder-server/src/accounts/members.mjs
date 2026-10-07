@@ -1,6 +1,6 @@
 /**
  * members.mjs — 成员面（accounts/ACCOUNTS.md §2）：CRUD ∥ scrypt 散列/校验（KD-SV-13——异步） ∥
- * 角色 ∥ 临时密码 ∥ 首启引导（KD-SV-15——幂等）。
+ * 角色 ∥ 分模型配额覆盖（`model_quotas_json`——键级合并） ∥ 临时密码 ∥ 首启引导（KD-SV-15——幂等）。
  *
  * 密码规则：最小长度 8（建成员 ∥ 改密 ∥ 重置统一校验——MIN_PASSWORD_LENGTH）；
  * 编码串自描述 `scrypt$N$r$p$salt$hash`；校验 `timingSafeEqual`；
@@ -114,7 +114,7 @@ export async function createMember(db, { username, name = null, role = "user", p
   let id
   try {
     const info = db
-      .prepare("INSERT INTO members (username, name, password_hash, role, quota_tokens, created_at) VALUES (?, ?, ?, ?, NULL, ?)")
+      .prepare("INSERT INTO members (username, name, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?)")
       .run(username.trim(), displayName, passwordHash, role, new Date(now).toISOString())
     id = Number(info.lastInsertRowid)
   } catch (e) {
@@ -133,13 +133,39 @@ export async function setMemberPassword(db, memberId, password) {
   if (Number(info.changes) === 0) throw new HttpError("not_found", `成员不存在：${memberId}`)
 }
 
-/** 设额度（`quota_tokens`；null = 不限）。 */
-export function setMemberQuota(db, memberId, quotaTokens) {
-  if (quotaTokens !== null && (!Number.isInteger(quotaTokens) || quotaTokens < 0)) {
-    throw new HttpError("invalid_request_error", "quotaTokens 须为 ≥0 整数或 null（null = 不限）")
+/** 分模型覆盖表解析（`model_quotas_json` ⇒ map；缺省 ∥ 畸形 ∥ 非对象 ⇒ `{}`——零覆盖，不抛）。 */
+export function parseModelQuotas(json) {
+  if (typeof json !== "string" || json === "") return {}
+  try {
+    const parsed = JSON.parse(json)
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return {}
+    return parsed
+  } catch {
+    return {}
   }
-  const info = db.prepare("UPDATE members SET quota_tokens = ? WHERE id = ?").run(quotaTokens, memberId)
-  if (Number(info.changes) === 0) throw new HttpError("not_found", `成员不存在：${memberId}`)
+}
+
+/** 设分模型覆盖（`model_quotas_json`——**键级合并**：出现键 = 整值替换（`null` ⇒ 删键）∥ 未出现键不动）。
+ *  校验先行（非法 ⇒ 400 库零变）；返回更新后成员行（404 归本函数）。 */
+export function mergeMemberModelQuotas(db, memberId, quotas) {
+  if (quotas === null || typeof quotas !== "object" || Array.isArray(quotas)) {
+    throw new HttpError("invalid_request_error", `quotas 须为对象（{ "<provider/model>": N|null }）：${JSON.stringify(quotas)}`)
+  }
+  const member = findMemberById(db, memberId)
+  if (!member) throw new HttpError("not_found", `成员不存在：${memberId}`)
+  const merged = { ...parseModelQuotas(member.model_quotas_json) }
+  for (const [key, value] of Object.entries(quotas)) {
+    if (typeof key !== "string" || key.trim() === "") throw new HttpError("invalid_request_error", "覆盖键须为非空字符串（对外标识 provider/model）")
+    if (value === null) {
+      delete merged[key] // null = 删键
+      continue
+    }
+    if (!Number.isInteger(value) || value < 0) {
+      throw new HttpError("invalid_request_error", `覆盖值须为 ≥0 整数或 null（删键）：${key} = ${JSON.stringify(value)}`)
+    }
+    merged[key] = value
+  }
+  db.prepare("UPDATE members SET model_quotas_json = ? WHERE id = ?").run(JSON.stringify(merged), memberId)
   return findMemberById(db, memberId)
 }
 

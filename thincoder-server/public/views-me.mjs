@@ -1,6 +1,6 @@
 /**
  * views-me.mjs — 我的三页（webui/WEBUI.md §2）：`#/me/keys`（key 清单——含最后使用/近 30 天用量 ∥ 签发/轮换）∥
- * `#/me/usage`（本月额度/已用摘要 + 本人用量明细（端点过滤）+ 向量服务提示条）∥ `#/me/account`（基本信息 + 自助改密）；
+ * `#/me/usage`（分模型配额摘要/本月已用 + 本人用量明细（端点过滤）+ 向量服务提示条）∥ `#/me/account`（基本信息 + 自助改密）；
  * 自 views.mjs 拆档（一页一职责）。
  *
  * 数据全经 /api/*（契约 = accounts/ACCOUNTS.md §3 ∥ metering/METERING.md §3）；一次性秘密（key 明文）
@@ -74,7 +74,7 @@ export async function renderMeUsage(ctx, mount) {
       vectorTip(ctx), // 向量服务提示条（模型名 + snippet + 用法一句——地址/探活/试跑 = admin 面）
       h("section", { class: "card" }, h("h3", { text: t("me.usage.summary") }),
         ctx.table([t("col.name"), t("col.username"), t("col.quota"), t("col.used")], [[
-          member.name, member.username, ctx.fmtQuota(member.quotaTokens), ctx.fmtValue(member.usedTokens),
+          member.name, member.username, ctx.fmtModelQuotas(member.modelQuotas), ctx.fmtValue(member.usedTokens),
         ]])),
     ],
     area: h("section", { class: "card" }, h("h3", { text: t("me.usage.detail") }),

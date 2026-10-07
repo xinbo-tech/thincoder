@@ -27,7 +27,7 @@ import { SUBAGENT_TOOL_EXCLUSIONS } from "@thincoder/core/agent/helpers.mjs"
  *   ② #99（CORE-UNIFICATION §2.13.4 / AGENT-LOOP-SUBAGENT.md §6.7.2 AC-P4）：核登记册的工具面含 `panel`
  *      动作（CLI TUI 面板镜像），VSC 载荷面不存在 ⇒ **装配层剔除**（端侧过滤、零核改动）——
  *      action enum 去项 + 描述去 panel 段 + view/freeze 两参数（仅 panel 消费）移除。
- *   ③ 动作级分类（`isReadonlyAction` status/observe · `isControlAction` cancel/send）——端旧消费者
+ *   ③ 动作级分类（`isReadonlyAction` status/observe/design-slots · `isControlAction` cancel/send）——端旧消费者
  *      （已删 `execute-tools` ∕ `tool-gates`）随取核退役；**E1 已落**（2026-09-29 parity-b1 P4-II：核
  *      `dispatch-gates.mjs` 两谓词 + `dispatch.mjs` 两门禁位消费——钩子优先；本面 = 核分类的端装饰供体）。
  *   ④ escalate 候选池（取核拷贝——核 `family-tools.mjs:69-74` 同位同文案；非工程模式 + 池非空才挂）。
@@ -82,7 +82,7 @@ export function vscSubagentFace(tool, { engineering = false, consultModels = [] 
     },
     isReadonlyAction(args) {
       const act = args?.action
-      return act === "status" || act === "observe"
+      return act === "status" || act === "observe" || act === "design-slots"
     },
     isControlAction(args) {
       const act = args?.action

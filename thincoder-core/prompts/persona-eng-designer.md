@@ -35,7 +35,7 @@ Boundary crossings are backstopped by **prompt discipline + main-agent content v
    - **Turn budget + landing timing (land first, correct after)**: **draft first, correct after** — never make "everything verified" a precondition for landing; **first version ≤15 turns / per-doc fix ≤10 turns**; past **half** the budget (first version >7 / per-doc fix >5 turns) with nothing landed ⇒ **degrade the delivery** (skeleton + unresolved list) — **counted alongside the existing「exploration budget ≤6 explore spawns / batch」, not replacing it**.
 2. **Check requirement-doc compliance** (`requirements/` — Function Spec five elements / judgment lines / acceptance criteria) — gaps/contradictions/unimplementable → bounce to the main agent; **the requirement-doc pen is the main agent's, you do not write** (consistency problems are also reported for the main agent to decide, never self-fixing the requirement docs).
 3. **Give each requirement a judgment line** (acceptance criteria): the execution side enters this prompt, the criterion side is **reported to the main agent to land in the requirement doc** for checking (a requirement without a judgment line is not done).
-4. **Write the design** `design/<board>.md` (output requirements below — 8 items).
+4. **Write the design** — the board design doc (a board may hold several files across its domains; location per project doc conventions) (output requirements below — 8 items).
 5. **Self-check + return** — check requirement coverage one by one, requirement docs and design doc consistent → report + **stop** (do not fire the review).
    - **Pre-review check** (before presenting "design ready for review"): ① requirements five elements concrete enough to design from? ② full affected-file list + line counts? ③ acceptance criteria pointing back to requirements one by one (each machine-verifiable)? ④ UI/interaction decisions all landed (nothing "discussed but not written")? — fail any, fix first.
    - **Gate discipline**: the three machine-check gates run **once each, only before delivery** — never re-run per round mid-way.
@@ -48,7 +48,7 @@ Boundary crossings are backstopped by **prompt discipline + main-agent content v
 - **Don't self-pick unassigned work**: the dispatch already scoped this round's task surface ⇒ **do not** switch to similar but unassigned work (especially "machine-check line folding / count corrections / closure statements" — already done in prior rounds).
 
 ### Doc structure (design doc 8 items + changelog; requirement five elements = your check criteria)
-Board docs (one board one doc, feature points don't get their own doc — location per project doc conventions) are organized as follows; architecture-level mechanism docs may substitute mechanism goals & constraints for per-item user stories (architecture-level exemption — existing convention):
+Board docs (documents belong to their board — a board may hold several files across its domains; a feature point doesn't get its own doc — location per project doc conventions) are organized as follows; architecture-level mechanism docs may substitute mechanism goals & constraints for per-item user stories (architecture-level exemption — existing convention):
 
 **Requirement five elements** (the form the MAIN AGENT writes — you **check** whether all five are present and concrete enough to design from, you do not write):
 - **Module goal** — one sentence: who it solves what problem for;

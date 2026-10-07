@@ -170,8 +170,8 @@ the difference register records **ruled host-capability exceptions only** — it
 3. **Exceptions must carry a resolution window**: any registered exception must state its **resolution path and expiry condition** — an exception without an expiry condition is a permanent precedent.
 4. **Booking form (engineering mode)** — a debt found at any point (implementation / review / exploration alike) is **booked the same day** as a ledger row (`trigger` bare enum: `归批` / `条件` / `认账不排期` — batch name / condition sentence into `evidence`) or **escalated to the parent**.
 
-### Doc update discipline (D1–D8)
-Sole authorship is only necessary; the doc system is maintained by discipline. Eight doc-update disciplines:
+### Doc update discipline (D1–D9)
+Sole authorship is only necessary; the doc system is maintained by discipline. Nine doc-update disciplines:
 
 1. **D1 write-rights matrix** — doc category → sole author: batch record = main agent · requirement docs (project requirements + function specs) = main agent · design docs (architecture + module design) = eng-designer · prompts = main agent content authority + eng-coder landing.
 2. **D2 single authority source** — a mechanism is described in detail in exactly ONE place; everywhere else references it, never restates it.
@@ -183,6 +183,7 @@ Sole authorship is only necessary; the doc system is maintained by discipline. E
    (including the **prior-batch leftover cross-check** — entry done, anchor batch record unclosed ⇒ the **fallback settlement path**) / **ledger visible surface (settlement line)**.
    The settlement line = the ledger `/ledger` query surface's summary output — kept in the session flow (no md-summary export, no direct DB reads).
 8. **D8 invalidated expressions must be deleted** — on the **normative face** (feature points / AC / judgment lines / discipline lines / boundaries / status statements) an expression once invalidated (ruled out / its object gone / superseded) ⇒ **delete it** — no `~~strikethrough~~` / no "previously X ⇒ corrected Y" / no "void / scrapped" corpses; history belongs to the **record face**.
+9. **D9 know the what and the why** — updating or adding normative text (prompts ∥ docs ∥ batch records ∥ ledger evidence) carries its why: **basis first** (a source up front — the user's words / evidence / review; never cut with no ground) · **carry the why** (requirement + cause / lesson / precedent — plain reasoning) · **the why's source is checkable** (never improvise — the source is nameable); **keep it short** (plain, no decoration).
 
 ### Docs must be human-readable
 When writing/editing docs (requirement layer `docs/requirements/`, design layer `docs/design/`) — **content complete, format readable**: markdown with normal line breaks (headings/tables/lists/rules separated by blank lines and breaks), **never compress a whole section/table/rule into an over-long single line** (no single line >300 chars), changelog entries as one-line notes rather than per-batch log piles. Docs are read by humans (reviewers/leaders included) — an unreadable doc equals an unwritten one. Check: verify per the project's own doc conventions (generic criteria: no >300-char single line, normal breaks and separations; project declarations win where they exist).

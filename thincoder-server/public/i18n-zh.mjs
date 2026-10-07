@@ -13,6 +13,8 @@ export const ZH = Object.freeze({
   "app.loggedOut": "已退出登录",
   "common.loading": "加载中……",
   "common.quotaUnlimited": "不限",
+  "common.modelQuotaCount": "{count} 个模型",
+  "common.quotaByPlatform": "按平台",
   "common.rowCount": "共 {count} 项",
   "common.secretNote": "{label}——仅此一次显示，请立即保存",
   "common.save": "保存",
@@ -39,7 +41,7 @@ export const ZH = Object.freeze({
   "col.name": "展示名",
   "col.username": "用户名",
   "col.role": "角色",
-  "col.quota": "本月额度",
+  "col.quota": "分模型配额",
   "col.used": "本月已用",
   "col.actions": "操作",
   "col.item": "项",
@@ -107,7 +109,6 @@ export const ZH = Object.freeze({
   "admin.members.resetPwd": "重置密码",
   "admin.members.resetConfirm": "重置 {name} 的密码？将生成一次性临时密码，并吊销其全部会话。",
   "admin.members.tempPwdLabel": "成员 {name} 的临时密码",
-  "admin.members.colQuota": "额度",
   "admin.members.colKeys": "key 清单",
   "admin.members.colKey": "密钥",
   "admin.members.colLastUsed": "最后使用",
@@ -116,9 +117,16 @@ export const ZH = Object.freeze({
   "admin.members.windowTokensCell": "{tokens} tokens",
   "admin.members.newBtn": "新建成员",
   "admin.members.colKeyCount": "key 数",
+  "admin.members.modelQuotaTitle": "分模型用量",
+  "admin.members.colMonthlyQuota": "每月用量",
+  "admin.members.colPlatformQuota": "平台默认",
+  "admin.members.quotaEmptyHint": "未设覆盖——按平台配置",
+  "admin.members.quotaOffListNote": "另有 {count} 项不在服务清单（保留）",
+  "admin.members.quotaLoadFailed": "配额设置加载失败",
+  "admin.members.quotaRetry": "重试",
   "admin.members.empty": "暂无成员",
 
-  // ── 管理·服务模型（§2.4③——弹窗批 + 配置面批：A/C/D/E 四组） ─────────────
+  // ── 管理·服务模型（§2.4③——弹窗批 + 配置面批 + 配额批：A/C/F/D/E 五组） ─────────────
   "admin.models.title": "服务模型",
   "admin.models.colModel": "模型",
   "admin.models.colProvider": "Provider",
@@ -155,6 +163,9 @@ export const ZH = Object.freeze({
   "admin.models.invalidNumber": "{field} 非法：须为 {rule}",
   "admin.models.rulePositive": "正整数或留空",
   "admin.models.ruleNonNegative": "≥0 的数或留空",
+  "admin.models.quotaTitle": "配额",
+  "admin.models.quotaHint": "每人每月默认用量；不设 = 不限；成员可在成员弹窗分模型覆盖",
+  "admin.models.ruleNonNegativeInt": "≥0 的整数或留空",
 
   // ── 管理·全队用量 ──────────────────────────────────────────────────────────
   "admin.usage.title": "全队用量",

@@ -55,6 +55,12 @@ export function ledgerDbPath(cwd) {
 /** 未决四态（「活条目」口径 = 计数单源 WHERE 集；已核销 / 已废弃 = 归档态）。 */
 export const PENDING_STATUSES = ["待讨论", "待设计", "在途", "待核销"]
 
+/** 老化阈值（天——口径 = 需求档；消费面 = `buildScan`（展示，`days` 可覆盖）+ `ledgerQuery` 逐行
+ *  `aged`（查询面，`now` 可注入））。2026-10-07 批 ledger-tool：自 `ledger.mjs` 迁入（枚举常量档单源
+ *  ——`ledgerQuery` 计算面直引本档，消 `ledger-cmd ↔ ledger.mjs` 新环；`ledger.mjs` 同名 re-export
+ *  保公共面零变——LEDGER.md §13.4）。 */
+export const AGING_DAYS = 30
+
 /** 台账库结构版本（N2 标记**单源**——`PRAGMA user_version` 落标：写面开库 `v < 本值 ⇒ 置`；
  *  读面如实回读（旧库未标 = 0）；结构变更（新列 / 新表）同步升号——2026-10-03 read-data-interface 批）。 */
 export const LEDGER_SCHEMA_VERSION = 1
