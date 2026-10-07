@@ -13,8 +13,6 @@ export const WHEEL_SETTLE_MS = 800 // 卷动稳定读数上限（§2.2 wheel 判
 export const IME_COMMIT_BREATH_MS = 50 // 组合与提交之间留一拍（中间态可观察——KD-17）
 export const DRAG_INTERCEPT_TIMEOUT_MS = 5_000 // html5 拖拽拦截等待（无拦截事件 ⇒ 明示拒——不悬挂）
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-
 async function sendAll(h, commands) {
   for (const cmd of commands) await h.call(cmd.method, cmd.params)
 }
@@ -73,18 +71,20 @@ async function actHover(args, ctx, h) {
   return `[hover] ${t.label}`
 }
 
-/** 卷动稳定读数（≤800ms——两次连读相等即定）。 */
+/** 卷动稳定读数（≤800ms——两次连读相等即定）；标 `scroll settle` 步名（§2.9 卡点可诊断）。 */
 async function settleScroll(h, maxMs = WHEEL_SETTLE_MS) {
-  const deadline = Date.now() + maxMs
-  let last = null
-  for (;;) {
-    const v = await h.evalRaw("({ x: Math.round(window.scrollX), y: Math.round(window.scrollY) })")
-    const reading = { x: Number(v?.x ?? 0), y: Number(v?.y ?? 0) }
-    if (last && last.x === reading.x && last.y === reading.y) return reading
-    if (Date.now() >= deadline) return reading
-    last = reading
-    await sleep(100)
-  }
+  return h.step("scroll settle", async () => {
+    const deadline = Date.now() + maxMs
+    let last = null
+    for (;;) {
+      const v = await h.evalRaw("({ x: Math.round(window.scrollX), y: Math.round(window.scrollY) })")
+      const reading = { x: Number(v?.x ?? 0), y: Number(v?.y ?? 0) }
+      if (last && last.x === reading.x && last.y === reading.y) return reading
+      if (Date.now() >= deadline) return reading
+      last = reading
+      await h.sleep(100)
+    }
+  })
 }
 
 /** wheel（§2.2）：落点缺省 = 视口中心；回执 = 卷动后 window 读数。 */
@@ -119,7 +119,8 @@ async function html5Drag(h, from, to, steps) {
     intercepted.catch(() => {})
     await sendAll(h, dragSequence({ from, to, steps, release: false }))
     let data
-    try { data = (await intercepted).data } catch {
+    try { data = (await intercepted).data } catch (e) {
+      if (e?.browserAbort || e?.sessionLost) throw e // 预算中止 / 外部关闭 ⇒ 原样上报（不冒名「未拦截」）
       throw new Error("html5 drag was not intercepted — the source may not be a native draggable; retry without html5")
     }
     await h.call("Input.dispatchDragEvent", { type: "dragEnter", x: to.x, y: to.y, data })
@@ -162,7 +163,7 @@ async function actTouch(args, ctx, h) {
   // tap / doubleTap：显式序列；doubleTap = 两轮 + 双击窗内间隔（KD-14 收正）
   const rounds = gesture === "doubleTap" ? 2 : 1
   for (let i = 0; i < rounds; i++) {
-    if (i > 0) await sleep(TOUCH_TAP_GAP_MS)
+    if (i > 0) await h.sleep(TOUCH_TAP_GAP_MS)
     await sendAll(h, touchSequence({ gesture, x: t.x, y: t.y }))
   }
   return `[touch] ${gesture} ${t.label}`
@@ -177,7 +178,7 @@ async function actInsert(args, ctx, h) {
   if (typeof args.ref === "string" && args.ref !== "") target = await h.focusRef(args.ref)
   if (ime) {
     await h.call("Input.imeSetComposition", { text: ime, selectionStart: ime.length, selectionEnd: ime.length })
-    await sleep(IME_COMMIT_BREATH_MS)
+    await h.sleep(IME_COMMIT_BREATH_MS)
   }
   await h.call("Input.insertText", { text })
   const chars = `← ${text.length} chars${ime ? " (ime)" : ""}`

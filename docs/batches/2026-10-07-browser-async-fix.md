@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-07 · 来源 = 用户 2026-10-07 19:41 投诉（浏览器工具同步阻塞/吊死 agent）+ 19:43 裁「修彻底」（满量先行——不做止血半量）。
 > 台账 = #1045（core · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：进行中（设计评审 pass（🔴0∥🟡7∥🔵4）· 修复轮 11/11 落 · 已代签 · 实施舱 A 已派 ∥ B 待 A 号随派）
+**状态行**：进行中（设计评审 pass（🔴0）· 修复轮 11/11 落 · 已代签 · 实施 A 舱已交（9/9 绿 · 评审 clean）· B 舱接棒在跑 · 上抛 3 项待回填轮（session 493 余 7 ∥ 开启段句面））
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 ### 1.1 来源与裁定（父侧 · 2026-10-07 19:4x）
@@ -309,4 +309,48 @@ VERDICT: pass
 - 令牌 = 运行时凭据（不入档）；实施舱随本签派发。
 
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（舱 A 落码 + A 腿 9/9 绿 + 旧三档零回归；审计 1 轮 + 代码评审 2 轮收敛（终态 clean））
+
+
+
+### 交付摘要（舱 A：核 + prompt 面 + 单测 A 腿）
+
+- **改动面**：`thincoder-core/browser/queue.mjs`（新增——调度策略：串行队列 ∥ `ACTION_BUDGETS` 预算表 ∥ `ActionController`（超时/取消单点）∥ 步名跟踪 ∥ abort 后快速失败）；`browser/session.mjs`（队列接线 ∥ 健康三源 ∥ `failSession` 单点 ∥ 自愈重开注记 ∥ 一切 CDP 命令单点 `cdpCall`）；`browser/cdp.mjs`（三层帽：`call` 缺省 15s ∥ `connectCdp` open 10s ∥ `/json/new` 5s + 断连订阅 `onDisconnect`）；`browser/actions.mjs`（wait 轮询帧 + 受控 sleep）；`browser/input-actions.mjs`（`scroll settle` 帧 + html5 拦截中止透传）；`thincoder-core/tool-docs/{browser,wait_for,process}.md`（§1.8 C 逐字）；`docs/batches/2026-10-07-browser-async-fix.test.mjs`（新增 · A 腿）。
+- **实读行数（内容行）**：queue 168 ∥ session 493（≤500 硬限，余 7）∥ cdp 161 ∥ actions 163 ∥ input-actions 197 ∥ 单测 334 ∥ browser.md 48 ∥ wait_for.md 24 ∥ process.md 14。
+- **验证读数**：`node --test docs/batches/2026-10-07-browser-async-fix.test.mjs` ⇒ **9/9 绿**（23.6s：T27 十六动作逐于预算内拒绝 · T27b 开启段中止 · T28 预算表逐格 · T29 三层帽小值注入 · T30 卡点步名三源 · T31 连接断 · T32 子进程退 · T33 自愈重开+探针三检 · T42 描述档）；旧三档复跑 ⇒ browser-tool **21/21** ∥ browser-input **7/7** ∥ browser-input.clipboard **4/4**（零回归）；`node --check` 六档全绿。**未跑仓级套件**（发布闸在父侧收口，本舱不跑）。
+- **口径落点**：单时钟预算自**入队**起算（队列等待计入——有意）；三层帽 = 动作控制器（层一）∥ 显式帽（enables 10s · `Browser.close` 3s · 探针 2s · 关闭等待 3s）∥ `cdp.call` 兜底 15s；步名 = `queue wait` / `launch browser` / `connect CDP` / `waitForReady` / `wait poll` / `scroll settle` + CDP 方法名（无自创阶段名）；会话健康三源 = child exit/error ∥ WS 断连 ∥ 入口探针（存活∧未关恒检，距上次成功活动 >5s 才心跳 `Browser.getVersion` 2s 帽）；`failSession` = 拒在飞（同一因由实例）⇒ 态复位 ⇒ 杀树兜底 ⇒ 释放 profile 锁 ⇒ 置注记（不调 `Browser.close`）。
+
+### 决策透明表（设计未定处的实现裁决——逐条披露）
+
+| # | 裁决点 | 选择 | 依据 |
+| 1 | 动作内未显式配帽的 CDP 调用兜底帽 | `max(15s, 剩余预算 + 1s)`——控制器恒先于兜底帽裁决 | §2.9「层一优先」；否则预算 >15s 时兜底帽会先于动作预算抛裸句（T27 wait 格曾红） |
+| 2 | 排队期 abort 的调用方回执 | 排队期（未起执行）即时以 `queue wait` 拒；起执行后由任务自身守卫裁决——回执晚于动作收尾 | 否则在飞中止时调用方早于动作收尾拿到终态，残留 aborted 控制器污染后续 `closeSession`（T27/T30 曾因此红） |
+| 3 | 开启段中止的注记文案与置位点 | 复用 §2.10 同款重开注记文本；置位收在 `ensureSession` 单点，`openBrowserReal` 只做半开态复位 | 设计只定「置重开注记」未另定文案；单点 ⇒ 真路径与替身同一置位语义（T27b 可机检） |
+| 4 | 探针的子进程存活检查面 | 仅对具 `.on` 的真 ChildProcess 形态生效（无事件面的替身跳过该检） | 保旧 fixture 语义不回归（旧三档 fixture 无 `exitCode` 判据）；真实现恒有事件面 |
+| 5 | cancel 句文案 | `<action> cancelled (stuck in <步名>)` | 设计只定「错误句分形」未定文案 |
+| 6 | html5 拖放拦截的步名 | `Input.dragIntercepted`（`once` 帧 = CDP 方法名） | §2.9 步名枚举含「CDP 方法名」，未引入新阶段名 |
+| 7 | 开启段中止落在「launch 未返回」窗口 | 留存自启 promise（`launching`），结算即补杀；`child` 已赋值路径不变 | 评审 must-fix：该窗口内杀树兜底无从执行（`child` 未赋值）⇒ 孤儿浏览器 + 锁提前释放（`launchBrowser` 无外部取消点，中止后仍轮询到成功） |
+
+### 审计与代码评审轮次与终态
+
+| 轮 | 形式 | 发现 | 处置 |
+| 1 | 内部 explore 发散审计（只读） | 🟡×1（U52「预算落于开启段」一格缺机检）· 🔵×2（文档面：U53 落点指针 ∥ 设计 Δ 读数） | 补 **T27b**（开启段中止 ⇒ 干净重开 + 首回执注记）；补杀/置位收 `ensureSession` 单点；两蓝为文档面，报告上抛 |
+| 2 | advisor 代码评审（第一轮全量） | **changes-required**：must-fix #1（launch 窗口孤儿）+ 🟡×3（档位/Δ ∥ 依赖图登记 ∥ prompt 先行承诺）+ 🔵×3（T27b 登记 ∥ 开启段裸句面 ∥ §5 空） | #1 已修（决策表 #7）；🟡/🔵 均为文档层/协同/记录面，报告上抛（不改码） |
+| 3 | advisor 代码评审（第二轮——仅核销 #1 修复声明） | **pass**：must-fix 已 Fixed；无新发现 | 收敛，终态 = clean |
+
+**fix round 计数**：3（① 实现内自纠：queue 排队期中止语义 + 动作内兜底帽余量；② 审计驱动：T27b + 注记单点；③ 评审驱动：launch 窗口补杀）。**终态 = clean（pass）**。
+
+### 上抛（父侧/文档层处置——本舱不改码）
+
+- **档位压力**：`session.mjs` 实读 493（设计/批档 Δ 估 ≈410，不符），未入设计 §5「>300 档位处置」清单——建议收口登记「本批不拆 + 触发条件 = 下次实质改动时核 ∥ 越 500 即拆」。
+- **依赖图登记**：新增 `queue → actions`（wait 帽常量）未登记设计 §5 依赖行；`T27b` 未入 §7/§8 用例面。
+- **prompt 先行承诺**：`browser.md` async 行 ∥ `wait_for "browser id:N done"` ∥ `process` kill id 行承诺舱 B 行为——同批同拍交付则无悬置。
+- **开启段裸句面**：enables 10s 帽命中 ∥ 开启段内 WS 断连 ⇒ 回执为裸 CDP 句（无 `(stuck in …)`/动作名/重试引导）——或统一句面，或在 §2.9 登记例外。
+
+### 舱 B 依赖的导出面（核层已就位）
+
+- `session.mjs`：`runAction(action,args,ctx)`（队列入口——回执串 ∥ 拒绝）· `closeSession()` · `lastPageUrl()` · `hostAllowed(host,list)` · `_deps{openBrowser,killBrowser,saveShot}` · `IDLE_MS`；错误标记：`browserAbort` / `abortReason` / `sessionLost` / `pageReceipt`。
+- `queue.mjs`：`ACTION_BUDGETS` · `budgetFor(action,args)` · `ActionController` · `createActionQueue()` · `BUDGET_FALLBACK_MS` · `BUDGET_MAX_MS` · `WAIT_MARGIN_MS` · `QUEUE_WAIT_STEP`。
+- `cdp.mjs`：`DEFAULT_CALL_TIMEOUT_MS` · `CONNECT_TIMEOUT_MS` · `NEWTAB_TIMEOUT_MS` · `cdpTimeout` 错误标记。
+
 ## §6 验证与收口（父代理）

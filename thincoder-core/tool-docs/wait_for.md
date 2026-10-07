@@ -6,6 +6,7 @@ Parameters:
   - `subagent id:N done` — async subagent N (the id your async spawn ack returned) has settled
   - `consult done` — every consult_start session has drained
   - `bash id:N done` — background bash task N (the id from the bash async ack, `bash#N`) has finished — settled, or already left the pool (nothing left to wait on)
+  - `browser id:N done` — a background browser task N (the id from the ack, `browser#N`) has settled — finished, or already left the pool (nothing left to wait on)
   - `file exists:path` — the file at path exists (path relative to cwd)
   - `port open:N` — something is listening on 127.0.0.1 port N
   - The agent-internal conditions (advisor / subagent / consult / bash) apply to ASYNC sessions only — a synchronous call already completed before it returned and has nothing to wait for. An unknown condition is an explicit error (`wait_for: unsupported condition "..."` — the supported forms are listed above), never a silent wait.

@@ -2,8 +2,10 @@
  * browser/actions.mjs — 基线八动作实现（navigate / snapshot / click / type / evaluate / wait / screenshot / close）
  * （BROWSER-TOOL.md §2.2 ∥ §2.4；KD-10：click / type 内部选型**不迁** Input 域——对外语义零回归）。
  *
- * 会话能力一律经句柄取（`h.call` / `h.evalRaw` / `h.takeSnapshot` / `h.ensureSession` / `h.pageError` …）——
- * 本档不 import `session.mjs`（DAG 单向，§5 拆分决定）。
+ * 会话能力一律经句柄取（`h.call` / `h.evalRaw` / `h.takeSnapshot` / `h.ensureSession` / `h.pageError` /
+ * `h.step` / `h.sleep` …）——本档不 import `session.mjs`（DAG 单向，§5 拆分决定）。
+ * 硬超时（§2.9）：wait 的谓词帽（`timeoutMs`：缺省 30s · 上限 120s）语义零变——动作预算 = 谓词帽 + 15s
+ * 余量（`queue.mjs` 预算表）；轮询循环标 `wait poll` 步名（卡点可诊断——N-BT10）。
  */
 import { DEFAULT_MAX, clickExpression, typeExpression, truncateText, waitExpression } from "./snapshot.mjs"
 
@@ -12,8 +14,6 @@ export const WAIT_TIMEOUT_MAX = 120_000
 export const WAIT_POLL_MS = 150
 export const NETWORK_QUIET_MS = 500
 export const MAX_EVAL_CHARS = 8_000
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 function normalizeHttpUrl(value) {
   const raw = String(value ?? "")
@@ -95,6 +95,7 @@ async function actEvaluate(args, ctx, h) {
   try {
     value = await h.evalRaw(String(args.expression))
   } catch (e) {
+    if (e?.browserAbort || e?.sessionLost) throw e // 预算中止 / 外部关闭 ⇒ 原样上报（不裹进页面异常句）
     throw h.pageError(`evaluate failed: ${e?.message ?? e}`)
   }
   return `[evaluate @ ${info.url}] ${truncateText(jsonOf(value), MAX_EVAL_CHARS, "narrow the expression")}`
@@ -117,15 +118,17 @@ async function actWait(args, ctx, h) {
   const wanted = Number(args.timeoutMs)
   const timeoutMs = Math.max(1, Math.min(Number.isFinite(wanted) && wanted > 0 ? wanted : WAIT_TIMEOUT_DEFAULT, WAIT_TIMEOUT_MAX))
   const started = Date.now()
-  for (;;) {
-    if (pred.kind === "networkIdle") {
-      const net = h.networkState()
-      if (net.inflight.size === 0 && Date.now() - net.lastEventAt >= NETWORK_QUIET_MS) break
-    } else if (await h.evalRaw(waitExpression(pred.kind, pred.value)) === true) break
-    if (Date.now() - started >= timeoutMs) throw h.pageError(`wait timed out after ${timeoutMs}ms (${pred.label})`)
-    await sleep(WAIT_POLL_MS)
-  }
-  return `[wait] ${pred.label} — ok after ${Date.now() - started}ms`
+  return h.step("wait poll", async () => {
+    for (;;) {
+      if (pred.kind === "networkIdle") {
+        const net = h.networkState()
+        if (net.inflight.size === 0 && Date.now() - net.lastEventAt >= NETWORK_QUIET_MS) break
+      } else if (await h.evalRaw(waitExpression(pred.kind, pred.value)) === true) break
+      if (Date.now() - started >= timeoutMs) throw h.pageError(`wait timed out after ${timeoutMs}ms (${pred.label})`)
+      await h.sleep(WAIT_POLL_MS)
+    }
+    return `[wait] ${pred.label} — ok after ${Date.now() - started}ms`
+  })
 }
 
 /** screenshot（§2.2）：PNG 落盘返路径（KD-6——模型经 read_image 查看）。 */
