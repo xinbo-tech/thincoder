@@ -459,7 +459,7 @@ test("⑤ 求交滑落：白名单 + 形不符即略 + 与 models 求交（非�
 
 // ── ⑥ i18n + 静态面（WEBUI §2.2 键族 +7 ∥ §6 AC-24 续）──────────────────────────────
 
-test("⑥ i18n + 静态面：两表 7 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集相等 ∥ 档目 19 ∥ 20 ∥ 行宽 ≤300 ∥ AC-19 canon ∥ 门禁链 22 件", () => {
+test("⑥ i18n + 静态面：两表 7 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集相等 ∥ 档目 19 ∥ 20 ∥ 行宽 ≤300 ∥ AC-19 canon ∥ 门禁链 26 件", () => {
   const NEW_KEYS = ["admin.providers.candidatesLoading", "admin.providers.metaVision", "admin.providers.upstreamRetiredBadge",
     "admin.providers.upstreamRetiredNote", "admin.providers.colDisplayName", "admin.providers.colContext", "admin.providers.colStatus"]
   for (const key of NEW_KEYS) {
