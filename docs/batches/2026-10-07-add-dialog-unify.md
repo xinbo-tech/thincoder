@@ -58,6 +58,11 @@
 - **观测三条处置**：① `openSettings?.` 既有形 ⇒ 零动 **照准**；② §2 记录面两处读数差（「四新键」vs「+5 键」∥ 现读 ±1）——**照准**（记录面 as-of 保留 + §2 修正块 :124/:125 已载照正，不追改原文——合「记录面不 back-edit」纪律）；③ 存量门红他批归属 **照准**。
 - 复评（轮 2——验修正）已点火。
 
+### 1.8 评审轮 2 首跑（#13）机检未过 → 复跑（主 agent · 2026-10-07 23:07）
+
+- **#13 = 机检裁定非通过**（token 未签发）：四档修正实体均落位（其逐项核对 = 10/10 修正 + 无 🔴；父侧抽读同证——§1.7 在案），但 **4 条引文含省略号（非连续子串）⇒ 0/4 过校验** ⇒ 整体降级 changes-required。**非实质发现**（评审侧引文格式所致）。
+- 处置 = **复跑轮 2**（附引文规范提示：完整路径 + 连续子串；禁省略号/拼接）。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（板档四份落毕 + 评审轮 1 修正 10/10 落（§2 修正块）+ 行宽收正 14 行（追记：触碰面零命中）；机检面 = 批内件（实施轮建））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -168,6 +173,49 @@
 计数：🔴 1 · 🟡 5 · 🔵 4（共 10）。
 
 VERDICT: changes-required
+
+### 轮次 2（评审子代理）
+
+**轮 2 · 验修正（findings 1–10 逐项 · 四档 fresh read）**
+
+| # | Orig# | 文件 | 严重度 | 状态 | 备注 |
+|---|---|---|---|---|---|
+| 1 | 1 | `docs/desktop/design/SETTINGS.md` | — | Fixed | KD-68 ④ 计数收齐（:29）——「`null ∥ 十值闭集`（七段名 + `providerAdd`（三端对齐批）∥ `mcpForm` ∥ `consultAdd`…）= 校验面 `SCOPES`」∥「**校验面 `SCOPES` = 十名**（七段名 + `providerAdd`…）」；「七名」句退场、「八名」无残留；旁证 §2.11 现值十名（:130）∥ §2.18 项 6 弹窗值集 八 ⇒ 十（:235） |
+| 2 | 2 | `docs/vsc/design/SETTINGS.md` | — | Fixed | §2.17 判据 / 机检面在位（:555）——批内件腿集（五路关 ∥ 开框重置 ∥ 单例 ∥ 拒因可见 ∥ 跨框互清 ∥ 页脚零出站 ∥ 词面五新键两语）+ 真机走查 |
+| 3 | 3 | `docs/vsc/design/SETTINGS.md` | — | Fixed | §2.17 受影响文件表十一行在位（:557–:573）；四实读收正入表（`settings-provider-dialog.js` 282 ∥ `input.js` 125 ∥ `panel-messages-settings.mjs` 236 ∥ `provider-flows.mjs` 38）；`settings.css` 412 >300 随注（:573） |
+| 4 | 4 | `docs/desktop/design/SETTINGS.md` | — | Fixed | §2.10 项 3 定义位 :46 ⇒ :48（:122），与 KD-68 ④（:29）∥ §2.16 项 1（:194）同值 |
+| 5 | 5 | vsc+desktop SETTINGS | — | Fixed | 行集起手口径两端收齐「起手零行」：vsc :530（三组行集零行）∥ §2.4 :51（存量回显 ∥ 新增态起手同判）；desktop KD-76 ①（:32）∥ §2.18 项 3（:229） |
+| 6 | 5 | `docs/desktop/design/SETTINGS.md` | — | Fixed | §2.11 现值收正（:130/:131）——十名 ∥ 八组 + 本批 +2 ⇒ 十组（`MODAL_READS` 定义位 :52）；§3.1 `MODAL_READS` 九 ⇒ 八组（:265） |
+| 7 | 6 | `docs/desktop/design/SETTINGS.md` | — | Fixed | §3.2 本批块 17 行（15 ⇒ 17）：+`store.mjs`（:384）∥ +`i18n.mjs`（:385） |
+| 8 | 7 | `docs/desktop/design/SETTINGS.md` | — | Fixed | `consultAdd` 取消钮补位：KD-77 ②（:33）∥ §2.18 项 3（:231）——词 `settings.cancel`、锚 `settings:consultCancel`，与 `mcpForm` 同形 |
+| 9 | 8 | `docs/vsc/design/SETTINGS.md` | — | Fixed | §2.17 ② 层序前提在位（:541–:543）——浮层 1000/1001/1002 与弹窗 999/1000、同层挂载序「后开者在上」 |
+| 10 | 9 | `docs/vsc/design/SETTINGS.md` | — | Fixed | §2.17 ③ 页脚改裸调用（:550）——`window._openAddProviderDialog()`、不取防御式回退 |
+| 11 | 10 | `docs/desktop/design/UI.md` | — | Fixed | §4.1 三行 #1054 触碰登记（:499/:500/:502：`i18n.mjs` ≈421 ∥ `i18n-views.mjs` ≈408 ∥ `i18n-settings.mjs` ≈158）+ 变更行（:820） |
+| 12 | (new) | `docs/vsc/design/SETTINGS.md` | 🔵 | New（非阻塞） | 变更行「六腿：五路关 ∥ 开框重置 ∥ 单例 ∥ 拒因可见 ∥ 跨框互清 ∥ 页脚零出站」（:683）与 §2.17 腿集枚举（:555，含「词面五新键两语」——共七项）数目不一；建议下一笔对齐或注明 |
+
+计数：🔴 0 · 🟡 0 · 🔵 1（原 findings 1–10 全 Fixed；新 🔵 1）
+VERDICT: pass
+
+### 轮次 3（评审子代理）
+
+**轮 2 复跑（引文收正 · findings 1–10 逐项 · 四档 fresh read）**
+
+| # | Orig# | 文件 | 严重度 | 状态 | 备注 |
+|---|---|---|---|---|---|
+| 1 | 1 | `docs/desktop/design/SETTINGS.md` | — | Fixed | KD-68 ④ 两处计数收齐（:29「`null ∥ 十值闭集`」与「**校验面 `SCOPES` = 十名**（七段名 + `providerAdd`（三端对齐批 · 2026-10-07——§1 **KD-75**）∥ `mcpForm` ∥ `consultAdd`」同格并在；「七名」句已退）；§2.11 现值十名（:130）∥ §2.18 项 6「弹窗值集 **八 ⇒ 十**（+`mcpForm` ∥ `consultAdd`——`SCOPES` 派生随动）」（:235） |
+| 2 | 2 | `docs/vsc/design/SETTINGS.md` | — | Fixed | §2.17 判据 / 机检面在位（:555——「腿集：五路关 ∥ 开框重置 ∥ 单例 ∥ 拒因可见（name 空 ⇒ 零发 ∥ 不关框 ∥ 在编值保留）∥ 跨框互清（各弹窗只清自身两件）∥ 页脚零出站（`addProvider` = 本地面动作——零 `postMessage`）∥ 词面五新键两语」+ 真机走查） |
+| 3 | 3 | `docs/vsc/design/SETTINGS.md` | — | Fixed | §2.17 受影响文件表十一行在位（:557-:573）；四实读收正入表：:564「`thincoder-vscode/webview/settings-provider-dialog.js` | **282 ⇒ ≈280**」∥ :567「`thincoder-vscode/webview/input.js` | **125 ⇒ ≈125**」∥ :568「**236 ⇒ ≈225**」∥ :569「**38 ⇒ ≈36**」；跨 300 面注在（:573「**跨 300 面**：`settings.css` **412**（>300 在册——本批 `±0` ⇒ 拆分窗口顺延；单源 = §3 样式档行）」） |
+| 4 | 4 | `docs/desktop/design/SETTINGS.md` | — | Fixed | §3.2 本批块补两行（15 ⇒ **17 行**）：:384「`thincoder-desktop/renderer/store.mjs` | **370 ⇒ ≈370**（±0——闭集注释 八值 ⇒ 十值（注释级）」∥ :385「`thincoder-desktop/renderer/i18n.mjs` | **420 ⇒ ≈421**（键数链注续链」 |
+| 5 | 5 | vsc+desktop SETTINGS | — | Fixed | 行集起手零行两端收齐：vsc :530「三组行集零行——「零项 ⇒ 零行」同判（起手零行，行由「添加行」落）」∥ vsc §2.4 :51「**零项 ⇒ 零行**（零假造——存量回显 ∥ 新增态起手同判：起手三组皆零行，行由 `[+ 添加行]` 落——加行 = 尾附一空行）」∥ desktop KD-76 ① :32「**零项 ⇒ 零行**（存量回显 ∥ 新增态起手同判——起手三组皆零行，行由「添加行」钮落）」∥ desktop §2.18 项 3 :229「三组行集零行（「零项 ⇒ 零行」同判 ∥ 两端同值）」 |
+| 6 | 6 | `docs/desktop/design/SETTINGS.md` | — | Fixed | `consultAdd` 取消钮补位：KD-77 ② :33「**取消 = `settings.cancel` 钮（与 `mcpForm` 同形）= 关弹窗（切片复位随关）**」∥ §2.18 项 3 :231「**取消 = 钮（词 `settings.cancel`；锚 `settings:consultCancel`——与 `mcpForm` 同形）= 关弹窗（切片复位随关）**」 |
+| 7 | 7 | `docs/desktop/design/SETTINGS.md` | — | Fixed | §2.10 定义位 :48（:122「定义位 = `thincoder-desktop/renderer/mount-settings.mjs:48`」）∥ §2.11 `MODAL_READS` 定义位 :52 +「**本批 +2 行 ⇒ 十组**」（:131）∥ §3.1 读数（:265「`SCOPES` 八名闭集（含 `ADD_MODAL_GROUP`）∥ `MODAL_READS` 八组」） |
+| 8 | 8 | `docs/vsc/design/SETTINGS.md` | — | Fixed | §2.17 ③ 页脚裸调用（:550「（`window._openAddProviderDialog()`——**裸调用 ∥ 不取防御式回退**：门由 `initSettings`（`webview/settings.js:39`）安装、同文档 ⇒ 点击前必已安装；缺门响亮失败——沿 §2.10 纪律）」） |
+| 9 | 9 | `docs/vsc/design/SETTINGS.md` | — | Fixed | §2.17 ② 层序前提在位（:541「**层序前提（浮层与弹窗同屏——本面）**」∥ :543「**同层（1000）以挂载序破平——后开者在上**：浮层由弹窗内点按开启（晚于弹窗挂载）⇒ 恒在弹窗之上」） |
+| 10 | 10 | `docs/desktop/design/UI.md` | — | Fixed | §4.1 三行 #1054 触碰登记（:499「**≈421**（本批 #1054 触碰登记——键数链注续链；实施后回填）」∥ :500「**≈408**（本批 #1054 触碰登记——+1 键 × 两语（`settings.consultAddTitle`）；实施后回填）」∥ :502「**≈158**（本批 #1054 触碰登记——+3 键 × 两语（`settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle`）；键族 60 ⇒ 63；实施后回填）」）+ 变更行（:820） |
+| 11 | (new) | `docs/vsc/design/SETTINGS.md` | 🔵 | New（非阻塞） | 变更行 :683「六腿：五路关 ∥ 开框重置 ∥ 单例 ∥ 拒因可见 ∥ 跨框互清 ∥ 页脚零出站」与 §2.17 :555 腿集枚举七项（含「词面五新键两语」）计数不一；建议下一笔对齐或注明 |
+
+计数：findings 1–10 全 Fixed（无剩余）；新增非阻塞 🔵 1。
+VERDICT: pass
 
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
