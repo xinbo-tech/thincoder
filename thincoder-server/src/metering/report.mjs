@@ -1,5 +1,6 @@
 /**
- * report.mjs — 汇表面读（metering/METERING.md §2.3/§3——KD-SV-39）：summary ∥ totals ∥ key 窗 ∥ 成员月累计
+ * report.mjs — 汇表面读（metering/METERING.md §2.3/§3——KD-SV-39/50）：summary ∥ 本人报表（`memberUsageSummary`）
+ * ∥ totals ∥ key 窗 ∥ 成员月累计
  * （读 `usage_daily`——本地日粒度，窗沿取整含端日；API 形零变）+ 查询面共用件（过滤构建 ∥ 日/月键助手——
  * 明细/导出与汇表面**同一过滤面**；`usage.mjs` 复用其过滤构建并原址 re-export 保名面）。
  *
@@ -142,6 +143,63 @@ export function usageSummary(db, { memberId = null, model = null, endpoint = nul
     .all(...args)
     .map((row) => ({ member: row.member, requests: Number(row.requests), totalTokens: Number(row.total_tokens) }))
   return { totals, trend, byModel, byMember }
+}
+
+/**
+ * 本人用量报表（METERING §3——`GET /api/me/usage/summary`；KD-SV-50——me 用量图表化批）：
+ * 调 `usageSummary({ memberId })`（成员固定——既有函数零改）+ 独立拆 totals 查询（同窗同过滤——`promptTokens`/`completionTokens`
+ * 拆 = 本端点独有）+ 两维序查询（`trendByEndpoint` ∥ `trendByModel`）；响应形 = §3；admin 端点/读函数/响应组装零触。
+ */
+export function memberUsageSummary(db, { memberId, model = null, endpoint = null, from = null, to = null, now = Date.now() } = {}) {
+  const start = from ?? localDayStart(now, -(USAGE_SUMMARY_DAYS - 1))
+  const filters = { memberId, model, endpoint, from: start, to }
+  const base = usageSummary(db, { ...filters, now }) // 复用（成员固定）；byMember = 本人面不设
+  const { clause, args } = buildUsageWhere({ ...filters, daily: true })
+  const totals = db
+    .prepare(
+      `SELECT COALESCE(SUM(u.requests), 0) AS requests, COALESCE(SUM(u.prompt_tokens), 0) AS prompt_tokens,
+              COALESCE(SUM(u.completion_tokens), 0) AS completion_tokens, COALESCE(SUM(u.total_tokens), 0) AS total_tokens
+       FROM usage_daily u ${clause}`,
+    )
+    .get(...args)
+  return {
+    totals: {
+      requests: Number(totals.requests),
+      promptTokens: Number(totals.prompt_tokens),
+      completionTokens: Number(totals.completion_tokens),
+      totalTokens: Number(totals.total_tokens),
+    },
+    trend: base.trend,
+    trendByEndpoint: dimensionSeries(db, { clause, args, key: "endpoint", dim: "u.endpoint", start, to, now }),
+    trendByModel: dimensionSeries(db, { clause, args, key: "model", dim: MODEL_REF_SQL, start, to, now }),
+    byModel: base.byModel,
+  }
+}
+
+/** 维序零填充（`trendByEndpoint`/`trendByModel` 共用——METERING §3）：逐（维值 × 日）——维值集 = 窗口内有数据者，
+ *  缺日计 0；行序 = 维值升序 + 日升序（`ORDER BY dim, u.day`——前端按维值配色）。 */
+function dimensionSeries(db, { clause, args, key, dim, start, to, now }) {
+  const group = key === "endpoint" ? "u.endpoint" : "u.provider, u.model"
+  const rows = db
+    .prepare(
+      `SELECT ${dim} AS dim, u.day AS day, COALESCE(SUM(u.requests), 0) AS requests, COALESCE(SUM(u.total_tokens), 0) AS total_tokens
+       FROM usage_daily u ${clause} GROUP BY ${group}, u.day ORDER BY dim, u.day`,
+    )
+    .all(...args)
+  const byDim = new Map()
+  for (const row of rows) {
+    if (!byDim.has(row.dim)) byDim.set(row.dim, new Map())
+    byDim.get(row.dim).set(row.day, row)
+  }
+  const series = []
+  const lastDay = localDayStart(to ?? now)
+  for (const [value, days] of byDim) {
+    for (let day = localDayStart(start); day <= lastDay; day = localDayStart(day, 1)) {
+      const hit = days.get(dayKey(day))
+      series.push({ day: dayKey(day), [key]: value, requests: hit ? Number(hit.requests) : 0, totalTokens: hit ? Number(hit.total_tokens) : 0 })
+    }
+  }
+  return series
 }
 
 /**

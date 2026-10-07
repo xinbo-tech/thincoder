@@ -153,6 +153,15 @@ pre.snippet { font-family: var(--mono); font-size: var(--fs); margin: var(--sp-3
 .chart-axis { display: flex; justify-content: space-between; margin-top: var(--sp-2); font-size: var(--fs); color: var(--muted); }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-5); }
 
+/* ── me 用量堆叠柱件（views-me.mjs——§2.3⑦）：段 ∥ 维度切换 ∥ 图例点（零新颜色变量——段色 = --accent + 内联透明度阶梯）── */
+.bar-stacked { width: 100%; display: flex; flex-direction: column-reverse; border-radius: var(--r-1) var(--r-1) 0 0; overflow: hidden; }
+.bar-seg { width: 100%; background: var(--accent); }
+.chart-toggle { display: flex; gap: var(--sp-3); margin-top: var(--sp-3); }
+.chart-toggle .active { background: var(--selected); border-color: var(--accent); color: var(--accent); } /* ① 选中态（.lang-switch .active 同形） */
+.bar-legend { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-5); margin-top: var(--sp-3); color: var(--muted); }
+.bar-legend > span { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.bar-swatch { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; } /* 尺寸字面（非刻度面——原值保留，同 .quota 先例） */
+
 /* ── 向量服务提示条（views-me.mjs——§2.3①）：卡 + 左强调规（⑥）────────────────────────────── */
 .tip-bar { border-left: var(--bw-strong) solid var(--accent); }
 
@@ -196,8 +205,9 @@ body.data-shell .content { height: 100dvh; display: flex; flex-direction: column
 body.data-shell main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 body.data-shell main > section { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .page-head { flex: none; }
-.page-area { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.page-area { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--sp-6); } /* 多卡壳页：卡间距（单卡页零影响——me 用量图表化批） */
 .page-area > .card { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
+.page-area > .card.report-card { flex: none; max-height: 55%; overflow-y: auto; } /* 报表卡：自然高不承缩；上限 = 页区高 55%（超限卡内自滚——明细卡恒得剩余高；§2.6②） */
 .table-slot { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .table-slot > .table-wrap { flex: 1; min-height: 0; overflow-y: auto; }
 body.data-shell main thead th { position: sticky; top: 0; z-index: 1; } /* 吸附限 `main`——弹窗内表不吸附（弹窗直属 body） */

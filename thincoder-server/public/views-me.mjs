@@ -1,7 +1,8 @@
 /**
  * views-me.mjs — 我的三页（webui/WEBUI.md §2）：`#/me/keys`（API Key 表六列——多把并存 ∥ 签发/逐把吊销双弹窗 ∥
  * 页级一次性秘密区 ∥ 接入指南卡（`accessCard` 成员变体——同源复用）——§2.3⑥）∥
- * `#/me/usage`（分模型配额摘要/本月已用 + 本人用量明细（端点过滤）+ 向量服务提示条）∥ `#/me/account`（基本信息 + 自助改密）；
+ * `#/me/usage`（图表化——概览卡行 ∥ 筛选行四控件 ∥ KPI 行 ∥ 按日堆叠柱主图（维度切换 端点/模型）∥ 分模型区 ∥ 明细表——§2.3⑦）
+ * ∥ `#/me/account`（基本信息 + 自助改密）；
  * 自 views.mjs 拆档（一页一职责）。
  *
  * 数据全经 /api/*（契约 = accounts/ACCOUNTS.md §3 ∥ metering/METERING.md §3；key 行形 = `memberView`——名称/`hint`/
@@ -12,6 +13,7 @@
 import { mapError, t } from "./i18n.mjs"
 import { openModal } from "./modal.mjs"
 import { accessCard } from "./views-system.mjs"
+import { statCard } from "./views-overview.mjs"
 
 // ── 页：key 与签发 ──────────────────────────────────────────────────────────
 
@@ -116,41 +118,140 @@ function openRevokeModal(ctx, { key, reload }) {
   return modal
 }
 
-// ── 页：我的用量 ────────────────────────────────────────────────────────────
+// ── 页：我的用量（图表化——§2.3⑦）────────────────────────────────────────────
+
+/** 段色阶梯（`--accent` 透明度——§2.3⑦；第 5 段起 0.3；零新颜色变量）。 */
+const BAR_ALPHA = [1, 0.7, 0.45, 0.3]
 
 export async function renderMeUsage(ctx, mount) {
   const { h } = ctx
   const member = ctx.state.member
-  const filterEndpoint = h("select", { title: t("usageReport.endpoint") },
-    h("option", { value: "", text: t("usageReport.endpointAll") }),
-    h("option", { value: "chat", text: "chat" }),
-    h("option", { value: "embeddings", text: "embeddings" }))
-  const usageBox = h("div", { class: "table-slot" }, h("p", { class: "hint", text: t("common.loading") }))
-  const loadUsage = async () => {
+
+  // 筛选行四控件（时间维度三档 ∥ 端点 ∥ 模型 ∥ 清除——即选即查；缺省 30 = 服务端缺省窗同构）
+  const filterRange = h("select", { title: t("me.usage.range") }, h("option", { value: "7", text: t("me.usage.range7") }), h("option", { value: "30", text: t("me.usage.range30") }), h("option", { value: "month", text: t("me.usage.rangeMonth") }))
+  filterRange.value = "30"
+  const filterEndpoint = h("select", { title: t("usageReport.endpoint") }, h("option", { value: "", text: t("usageReport.endpointAll") }), h("option", { value: "chat", text: "chat" }), h("option", { value: "embeddings", text: "embeddings" }))
+  const filterModel = h("input", { placeholder: t("me.usage.modelPh") })
+  const clearBtn = h("button", { type: "button", class: "tiny", text: t("me.usage.clear") })
+
+  const kpiBox = h("div", { class: "stat-grid" })
+  const chartBox = h("div")
+  const modelBox = h("div")
+  const reportBox = h("div", {}, h("p", { class: "hint", text: t("common.loading") }))
+  const detailBox = h("div", { class: "table-slot" }, h("p", { class: "hint", text: t("common.loading") }))
+
+  let summary = null
+  let dim = "endpoint" // 主图维度（端点 ∥ 模型——本地切换零重取）
+
+  /** 窗换算（三档 ⇒ `from` ms；正午锚防时区跳变——admin 先例同构）。 */
+  const windowFrom = () => {
+    const d = new Date()
+    if (filterRange.value === "month") return new Date(d.getFullYear(), d.getMonth(), 1).getTime()
+    d.setHours(12, 0, 0, 0)
+    d.setDate(d.getDate() - (filterRange.value === "7" ? 6 : 29))
+    d.setHours(0, 0, 0, 0)
+    return d.getTime()
+  }
+
+  /** 单过滤面（四区同参——两读同拍；`from` 键以模板字面量书写——沿 views-usage 先例）。 */
+  const filterParams = () => {
     const params = new URLSearchParams()
-    if (filterEndpoint.value) params.set("endpoint", filterEndpoint.value) // 端点过滤（与全队用量同参数——§2.3①）
-    params.set("limit", "100")
+    if (filterEndpoint.value) params.set("endpoint", filterEndpoint.value)
+    if (filterModel.value.trim()) params.set("model", filterModel.value.trim())
+    params.set(`from`, String(windowFrom()))
+    return params
+  }
+
+  /** 主图（纯 CSS 堆叠柱——维度切换 = 本地重画）：柱高 = 当日 tokens/峰值；段 = 维值（色 = 阶梯——按维值总量降序）。 */
+  const renderChart = () => {
+    const trend = summary?.trend ?? []
+    const series = (dim === "endpoint" ? summary?.trendByEndpoint : summary?.trendByModel) ?? []
+    const byDay = new Map()
+    const dimTotals = new Map()
+    for (const seg of series) {
+      const value = seg[dim]
+      if (!byDay.has(seg.day)) byDay.set(seg.day, new Map())
+      byDay.get(seg.day).set(value, seg)
+      dimTotals.set(value, (dimTotals.get(value) ?? 0) + seg.totalTokens)
+    }
+    const dims = [...dimTotals.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).map(([value]) => value)
+    const max = Math.max(...trend.map((day) => day.totalTokens), 1)
+    const alphaOf = (index) => BAR_ALPHA[Math.min(index, BAR_ALPHA.length - 1)]
+    const toggle = (value) => h("button", { type: "button", class: value === dim ? "tiny active" : "tiny", text: t(value === "endpoint" ? "usageReport.endpoint" : "usage.col.model"), onclick: () => { dim = value; renderChart() } })
+    const empty = trend.length === 0 || (summary?.totals?.requests ?? 0) === 0
+    chartBox.replaceChildren(
+      h("h4", { text: t("usageReport.trend") }),
+      h("div", { class: "chart" },
+        h("div", { class: "chart-toggle" }, toggle("endpoint"), toggle("model")),
+        ...(empty ? [h("p", { class: "hint", text: t("usageReport.trendEmpty") })] : [
+          h("div", { class: "bar-legend" }, ...dims.map((value, index) => h("span", {}, h("span", { class: "bar-swatch", style: `opacity:${alphaOf(index)}` }), value))),
+          h("div", { class: "chart-bars" }, ...trend.map((day) => h("div", { class: "bar-col" },
+            h("div", { class: "bar-stacked", style: `height:${Math.round((day.totalTokens / max) * 100)}%` },
+              ...dims.map((value, index) => {
+                const seg = byDay.get(day.day)?.get(value)
+                if (!seg || seg.totalTokens <= 0) return null // 零段不画（柱高 = tokens）
+                return h("div", { class: "bar-seg", style: `height:${Math.round((seg.totalTokens / day.totalTokens) * 100)}%;opacity:${alphaOf(index)}`, title: `${day.day} · ${value} · ${t("usageReport.requests")} ${seg.requests} · ${seg.totalTokens} ${t("usageReport.tokens")}` })
+              }))))),
+          h("div", { class: "chart-axis" }, h("span", { text: trend[0].day }), h("span", { text: trend[trend.length - 1].day })),
+        ]),
+      ))
+  }
+
+  /** 报表区（KPI ∥ 主图 ∥ 分模型——随两读同拍刷新；概览卡行 = 月语境不随筛选）。 */
+  const renderReport = () => {
+    const totals = summary?.totals ?? {}
+    const days = summary?.byModel ?? []
+    const month = member?.modelUsage ?? {}
+    const seen = new Set(days.map((row) => row.model))
+    // 殿后行：范围无行而本月有量者（月窗含嵌入；端过滤只裁窗表——§2.3⑦）
+    const tail = Object.entries(month).filter(([value, tokens]) => tokens > 0 && !seen.has(value)).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
+    kpiBox.replaceChildren(
+      statCard(h, t("usageReport.requests"), h("div", { class: "stat-value", text: String(totals.requests ?? 0) })),
+      statCard(h, t("usageReport.tokens"), h("div", { class: "stat-value", text: String(totals.totalTokens ?? 0) }),
+        h("p", { class: "hint", text: t("me.usage.kpiSplit", { prompt: totals.promptTokens ?? 0, completion: totals.completionTokens ?? 0 }) })))
+    renderChart()
+    const rows = [...days.map((row) => [row.model, String(row.requests), String(row.totalTokens), String(month[row.model] ?? 0)]), ...tail.map(([value, tokens]) => [value, "0", "0", String(tokens)])]
+    modelBox.replaceChildren(h("h4", { text: t("usageReport.byModel") }),
+      rows.length === 0
+        ? h("p", { class: "hint", text: t("usage.empty") })
+        : ctx.table([t("usageReport.colRank"), t("usage.col.model"), t("usageReport.requests"), t("usageReport.tokens"), t("me.usage.used")], rows.map((cells, index) => [String(index + 1), ...cells])))
+  }
+
+  /** 四区同拍（`Promise.all` 两读同参——summary + 明细）；失败 ⇒ 两区各 `.hint error`（`ctx.fail` 收口）。 */
+  const loadUsage = async () => {
+    const params = filterParams()
+    const detailParams = new URLSearchParams(params)
+    detailParams.set("limit", "100")
     try {
-      const data = await ctx.api(`/api/me/usage?${params.toString()}`)
-      const rows = data.rows ?? []
-      usageBox.replaceChildren(ctx.usageTable(rows, { withMember: false, foot: true }))
+      const [report, detail] = await Promise.all([ctx.api(`/api/me/usage/summary?${params.toString()}`), ctx.api(`/api/me/usage?${detailParams.toString()}`)])
+      summary = report
+      reportBox.replaceChildren(kpiBox, chartBox, modelBox)
+      renderReport()
+      detailBox.replaceChildren(ctx.usageTable(detail.rows ?? [], { withMember: false, foot: true }))
     } catch (error) {
       ctx.fail(error)
-      usageBox.replaceChildren(h("p", { class: "hint error", text: t("usage.loadFailed") }))
+      reportBox.replaceChildren(h("p", { class: "hint error", text: t("usage.loadFailed") }))
+      detailBox.replaceChildren(h("p", { class: "hint error", text: t("usage.loadFailed") }))
     }
   }
-  filterEndpoint.addEventListener("change", () => { loadUsage() }) // 单控件即选即查（多字段面走提交钮——管理页）
-  ctx.dataShell(mount, { // 视口高壳（§2.6②——页题/提示条/摘要卡固定 ∥ 表槽吃剩高；表尾计数 = 表内 tfoot）
+  filterRange.addEventListener("change", () => { loadUsage() })
+  filterEndpoint.addEventListener("change", () => { loadUsage() })
+  filterModel.addEventListener("change", () => { loadUsage() })
+  clearBtn.addEventListener("click", () => { filterRange.value = "30"; filterEndpoint.value = ""; filterModel.value = ""; loadUsage() })
+
+  ctx.dataShell(mount, { // 视口高壳（§2.6②——页头固定；报表卡上限自滚 + 明细卡承缩）
     head: [
       h("h2", { text: t("me.usage.title") }),
       vectorTip(ctx), // 向量服务提示条（模型名 + snippet + 用法一句——地址/探活/试跑 = admin 面）
-      h("section", { class: "card" }, h("h3", { text: t("me.usage.summary") }),
-        ctx.table([t("col.name"), t("col.username"), t("col.quota"), t("col.used")], [[
-          member.name, member.username, ctx.fmtModelQuotas(member.modelQuotas), ctx.fmtValue(member.usedTokens),
-        ]])),
+      h("div", { class: "stat-grid" },
+        statCard(h, t("me.usage.used"), h("div", { class: "stat-value", text: ctx.fmtValue(member.usedTokens) })),
+        statCard(h, t("col.quota"), h("div", { class: "stat-value", text: ctx.fmtModelQuotas(member.modelQuotas) }))),
+      h("div", { class: "row-form" }, h("label", {}, t("me.usage.range"), filterRange), h("label", {}, t("usageReport.endpoint"), filterEndpoint), filterModel, clearBtn),
     ],
-    area: h("section", { class: "card" }, h("h3", { text: t("me.usage.detail") }),
-      h("div", { class: "row-form" }, h("label", {}, t("usageReport.endpoint"), filterEndpoint)), usageBox),
+    area: [
+      h("section", { class: "card report-card" }, reportBox),
+      h("section", { class: "card" }, h("h3", { text: t("me.usage.detail") }), detailBox),
+    ],
   })
   await loadUsage()
 }

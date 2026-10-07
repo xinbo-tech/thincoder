@@ -1,8 +1,8 @@
 /**
- * routes.mjs — 计量端点（metering/METERING.md §3）：`/api/me/usage` ∥ `/api/usage` ∥ `/api/usage/summary`
- * ∥ `/api/usage/export` ∥ `/api/members/:id/model-quotas`（分模型覆盖——键级合并）。
+ * routes.mjs — 计量端点（metering/METERING.md §3）：`/api/me/usage` ∥ `/api/me/usage/summary`（本人报表——KD-SV-50）
+ * ∥ `/api/usage` ∥ `/api/usage/summary` ∥ `/api/usage/export` ∥ `/api/members/:id/model-quotas`（分模型覆盖——键级合并）。
  *
- * 鉴权：本人用量 = 会话（成员固定本人）；全队用量 ∥ 报表 ∥ 导出 ∥ 设覆盖 = admin（服务端判定）。
+ * 鉴权：本人用量（明细 ∥ 报表）= 会话（成员固定本人）；全队用量 ∥ 报表 ∥ 导出 ∥ 设覆盖 = admin（服务端判定）。
  * 行形 = METERING §3；过滤：member ∥ model ∥ endpoint ∥ from ∥ to ∥ limit（缺省 100 ∥ 上限 500——四读端点同门）；
  * 报表/导出与明细同源（同一过滤构建器——usage.mjs）；导出 = 服务端 CSV（英文表头 ∥ ISO ts ∥ RFC 4180 ∥ BOM）。
  */
@@ -11,6 +11,7 @@ import { readJsonBody } from "../gateway/server.mjs"
 import { findMemberById, findMemberByName, mergeMemberModelQuotas, parseModelQuotas } from "../accounts/members.mjs"
 import { requireAdmin, requireSession } from "../accounts/session.mjs"
 import { exportUsageRows, parseUsageEndpoint, parseUsageLimit, parseUsageTime, queryUsage, usageSummary } from "./usage.mjs"
+import { memberUsageSummary } from "./report.mjs"
 
 /** `member` 过滤取值：全数字 ⇒ id；否则按展示名（未命中 ⇒ 空集哨兵 -1）。 */
 function resolveMemberFilter(db, raw) {
@@ -77,6 +78,11 @@ export function registerMeteringRoutes(routes, { db } = {}) {
     const { member } = requireSession(db, req)
     const params = paramsOf(req.url)
     sendJson(res, 200, { rows: queryUsage(db, { ...usageFiltersOf(db, params, { memberId: member.id }), limit: parseUsageLimit(params.get(`limit`)) }) })
+  })
+
+  routes.add("GET", "/api/me/usage/summary", (req, res) => {
+    const { member } = requireSession(db, req) // 会话鉴权（本人固定——无会话 ⇒ 401；user ∥ admin 同门——KD-SV-50）
+    sendJson(res, 200, memberUsageSummary(db, usageFiltersOf(db, paramsOf(req.url), { memberId: member.id })))
   })
 
   routes.add("GET", "/api/usage", (req, res) => {

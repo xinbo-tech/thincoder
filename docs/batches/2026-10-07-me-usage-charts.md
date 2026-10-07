@@ -56,6 +56,13 @@
 - **需求档回笔（R41①）已落**：功能点 26 + AC-26 + 计数行（二十六条）+ 变更记录——提交 `34c18e55`（已双推）。
 - **§4 代签落**（三条件齐备：轮 2 pass 0🔴 ∥ 修正全落并逐条核验 ∥ token 已签发〔值不落档〕）——**实施舱已派**（设计档 = 任务书；token/designId = 运行时凭据）。
 
+### 1.9 随正扩展 + 门禁计数收正（主 agent · 2026-10-07 22:5x）
+
+- **#12 上抛照准**：本批入链 = **两件**（`-me-usage-charts.test.mjs` + `-me-usage-charts-ui.test.mjs`——沿 me-keys 域/UI 分档先例）⇒ 门禁清单 24 ⇒ **26**（设计 注⑪「+1」为估——随正清单一并扩）。
+- **父侧直接执行〔可 revert〕**：五件断言件计数收正（`-console-list-style:234/:236` ∥ `-server-auto-update:9/:439/:480` ∥ `-provider-model-metadata:18/:491/:493` ∥ `-quota-per-model:19/:440/:442/:444` ∥ `-quota-v2-member-models:24/:424/:426/:428`——断言 + 注释 + 题面同拍 24 ⇒ 26）；`-console-layout:442/:444` 归 #12 件内（更正指令已发）。
+- 设计面随正（注⑪ 扩为六件 + 两新件入链）= 回填轮随 §5 实读一并收。
+- 另：#1 服务态（8787）= 1h 超时收割后已重启（bash#14，24h 时限）——运行态不受影响。
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（fix 轮（评审轮次 1）findings 1–8 落修完毕——三档随正 + 注⑪ + 门禁复跑零新增（悬空 25 ∥ 行宽 40 同基线））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
@@ -208,4 +215,56 @@ VERDICT: pass
 **批准范围 = 本批全量**：端点（`GET /api/me/usage/summary`）∥ 页面（`WEBUI.md` §2.3⑦ 六区）∥ `style`/`i18n`/`views-overview` 随动 ∥ 批内件 + 随正件两笔。
 
 ## §5 实施记录（eng-coder）
+
+**状态行**：实施完成 2026-10-07（产品面 8 档 + 批内件两件 + `package.json` 门禁 24 ⇒ 26；本批两件实跑 9/9 绿 ∥ 跨批补件 8/8、7/7 绿；内审 findings（1 高 = 跨批在册件 ∥ 1 低 = 记录面）∥ 内评 VERDICT pass（0🔴 ∥ 🟡2 ∥ 🔵3）；`-console-layout` 跨批写门拒 ⇒ 补件待父侧落）
+
+**交付摘要（逐档；行数 = 本会话实读〔内容行，末行无尾空行计〕；估值 = 批档 §2.4）**
+
+- 新建/重写 `thincoder-server/src/metering/report.mjs`（168 ⇒ **226**，估 ≈225——在估）：`memberUsageSummary`（= `usageSummary` 复用〔成员固定〕+ 拆 totals 四字段 + 两维序）+ `dimensionSeries`（逐（维值 × 日）零填充；维值升序 × 日升序）；admin 读面零改（`usageSummary`/`usageTotals`/`byMember` 形体原样——admin 响应形回归含批内件断言）。
+- `thincoder-server/src/metering/routes.mjs`（111 ⇒ **117**，估 ≈120——在估）：`GET /api/me/usage/summary`（`requireSession` 本人固定 ∥ `memberId` 取自会话——零查询参；过滤器同门）；头注收正。
+- `thincoder-server/public/views-me.mjs`（194 ⇒ **295**，估 ≈280——越估 15，≤300 软线内、拆分预案未触发）：用量页图表化重写（§2.3⑦ 六区：页头四件〔页题 ∥ 向量提示条 ∥ 概览卡 2（`me.usage.used` ∥ `col.quota`）∥ 筛选四控件〕∥ 报表卡〔KPI 2 + `kpiSplit` 拆注 ∥ 主图堆叠柱/切换 2/图例/轴标/空态 ∥ 分模型表五列 + 殿后行〕∥ 明细卡〔`usageTable({ withMember: false, foot: true })`〕）；单过滤面 `Promise.all` 两读同参；窗三档（-6/-29/月首）；维度切换 = 本地重画零重取；失败 ⇒ 两区 `.hint error`；import += `statCard`；key/account 两面零改。
+- `thincoder-server/public/views-overview.mjs`（74 ⇒ **74**，±0）：`statCard` 行 +`export `（1 词改、行数零变、函数体零改）。
+- `thincoder-server/public/style.css`（218 ⇒ **228**，估 ≈240——在估）：新面 `.bar-stacked`/`.bar-seg`/`.bar-swatch`/`.chart-toggle`（含 `.active`）/`.bar-legend` + `.page-area` gap + `.page-area > .card.report-card`（`flex: none` + `max-height: 55%` + `overflow-y: auto`）；零新 `:root` 变量（38）∥ 零新悬停规则（七条）∥ 内距仅 `--sp-*`/0（批内件断言）。
+- `thincoder-server/public/i18n-zh.mjs` ∥ `i18n-en.mjs`（375 ⇒ **382** ∥ 378 ⇒ **385**，估 ≈382 ∥ ≈385——在估）：+8 键（`me.usage.range/range7/range30/rangeMonth/clear/modelPh/used/kpiSplit`）∥ −1 键（`me.usage.summary` 退役——产品面零残留）。
+- `thincoder-server/package.json`（26 ⇒ **26**，±0）：`prepublishOnly` 清单 24 ⇒ **26**（本批两件入链——单行清单、行数零变）。
+- 新建批内件两件（**越 500 硬线拆档**——沿 me-keys 两件先例；合体 ≈631 行）：
+  - `docs/batches/2026-10-07-me-usage-charts.test.mjs`（**228 行**——服务端腿：腿 A 端点真 HTTP（判权 401/恒本人 ∥ N32 逐值/零填充 ∥ 过滤器同门 + 非法 400 ∥ N33 同源 ∥ B25 空集 ∥ admin 端点零动回归）+ 腿 D 门禁 26 件）。
+  - `docs/batches/2026-10-07-me-usage-charts-ui.test.mjs`（**403 行**——页面腿：腿 B 桩 DOM（六区 ∥ 两读同拍同参 ∥ 三档窗换算 ∥ 维度切换零重取 ∥ 殿后行 ∥ 空/错态）+ 腿 C 静态面（样式在册/链行 ∥ `:root` 38 ∥ 悬停七条 ∥ 键集 +8/−1 两表同步 ∥ `statCard` 导出 ∥ `views-me` ≤300 ∥ 零外链））。
+
+**读数（本会话实跑 · cwd = `thincoder/`）**
+
+- 本批两件：`node --test docs/batches/2026-10-07-me-usage-charts.test.mjs docs/batches/2026-10-07-me-usage-charts-ui.test.mjs` ⇒ **9/9 全绿**（Tests 3 + 6 ∥ Fail 0 ∥ duration_ms ≈1091 ∥ 146）。
+- 跨批写门拒（非越权披露）：`-console-layout.test.mjs`（属他批）写被机械拒（「cross-batch batch-record write」）⇒ 补件落 `.thincoder/tmp/me-usage-charts-verify/`：`console-layout-patched.test.mjs` ⇒ **8/8 绿** ∥ `console-list-style-patched.test.mjs` ⇒ **7/7 绿**（原件副本 + 改点；父侧可整档覆盖）。
+- 现状红面（待父侧落件）：`-console-layout` ×2（腿 C me 用例〔桩缺 summary 路由 + 页头断言引退役键〕∥ 腿 G 计数 24 ⇒ 26）∥ `-console-list-style` ×1（④ 面计数：faceCount 7 ⇒ 8、`"hint error"` 19 ⇒ 21——用量页失败面两区 +2；补件已验绿）——其余四件父侧已落、复跑全绿。
+- `node --check` 八档全过（`report` ∥ `routes` ∥ `views-me` ∥ `views-overview` ∥ i18n 两表 ∥ 两批内件）+ `package.json` JSON.parse OK。
+- `node scripts/doc-check.mjs`（仓根）：悬空 **28** ∥ 行宽 **29**——皆 core/desktop/vsc/cli 域（并行会话在写）；**server 域零闸内项**（两处列报 = 迁移期引文·不入闸，非本批面）；本批零新增。
+- **仓套件未跑** —— `not repo-suite verified — the parent-side closeout run is the only repo-suite run.`
+
+**决策透明表**
+
+| # | 决策 | 备选 | 何故 |
+|---|---|---|---|
+| 1 | 批内件拆两档（服务端腿 ∥ 页面腿） | 顺写单件（合体 ≈631 行） | 越 500 硬线 ⇒ 先拆后改（设计预书拆档形 = 迁移+端点腿 ∥ 页面静态面；沿 me-keys 两件先例） |
+| 2 | `views-me.mjs` 重写压行至 295（≤300） | 触发拆分预案建 `views-me-usage.mjs` | 硬线未越；新建档击穿「档目 19 ∥ 20 不变（零新档）」AC-26 续 + 须触 `app.mjs` import（本批禁触面）——压行不损任何设计元素 |
+| 3 | `-console-layout` 改点只落补件（`.thincoder/tmp/`） | 直写原件 | 跨批写门机械拒；不绕门；补件全绿供父侧整档覆盖（原件字节 = 副本减改点） |
+| 4 | 段色阶梯 = 内联 `opacity`（`--accent` 单源） | 新颜色变量 | 设计明钉「零新颜色变量——段色 = `--accent` 透明度阶梯〔1/0.7/0.45/0.3〕」 |
+| 5 | 维度切换 = 本地重画（同 `summary` 对象） | 切换即重取 | 设计明钉「维度切换 = 本地重画（零重取）」（AC-26 续机检口径同拍） |
+| 6 | 随正清单按实读扩围并上抛 | 照设计件单（两件） | 实跑实证：件数断言散布六件（24 ⇒ 26）+ `-console-list-style` 错态计数面——注⑪ 只列一件 = 设计枚举缺项（已上抛知会，父侧已落五件） |
+
+**审计与代码评审轮次与终态**
+
+- ① 内探索背离审计（只读子代理；对照批档 §2 + `WEBUI.md` §2.3⑦/§6 AC-26 + `METERING.md` §3/§4）：**findings**——② 静默简化 ∥ ④ 越清单 **零命中**；① 部分实现 ×1（= `-console-layout` 旧件随正未落、现行必红——成因 = 跨批写门，补件在盘/已上抛）∥ ③ 文档漂移 ×1（记录面「单件/25」未收正——回填轮面）。挂账：行数回填（回填轮）。
+- ② 内 advisor 代码评审（十档 + 三文档）：**VERDICT pass**——0🔴 ∥ 🟡2（`.bar-legend` 设计面清单滞后一件——回填轮随 §5 实读收 ∥ i18n 两表 382/385 行越 300 咨询线——在册结构轮 #976）∥ 🔵3（批内件壁钟锚定跨零点抖建议 ∥ `from` 键模板字面量避扫描正则〔先例在册〕∥ `usageSummary` 复用连带 `byMember` 聚合〔设计钉死接缝·非缺陷〕）。越界注记：console-layout/console-list-style 待落 ∥ 设计档数字旧值 ∥ 本段原空（即补）。
+- fix round（自纠 ≤5）：**2 轮**——第 1 轮：批内件合体 610 行越 500 ⇒ 拆两档（决策 1）+ `views-me.mjs` 首版 325 行越 300 ⇒ 重写压行至 295（决策 2）；第 2 轮：批内件悬停清单断言未排序自纠（复跑全绿）。评审后零 must-fix ⇒ 无追加修轮。
+- 终态：**converged（clean）**。
+
+**披露（偏离/越限/待办）**
+
+- **跨批件写门（非越权）**：`-console-layout.test.mjs` ∥ `-console-list-style.test.mjs`（及五件计数断言件）属他批 ⇒ 本子代理写被机械拒；补件两枚在 `.thincoder/tmp/me-usage-charts-verify/`（全绿）——父侧落件前门禁套件不可能全绿（在册待办）。
+- **越清单**：无——除声明件目（批档 §2.4 表 + 批内件）外零改动；产品面零新档（档目 19 ∥ 20 不变）。
+- **零触实核**：`gateway/**` ∥ `accounts/**` ∥ `store/**` ∥ `ops/**` ∥ `public/views-usage.mjs` ∥ `public/app.mjs` ∥ `public/modal.mjs` ∥ `public/nav.mjs` ∥ `public/index.html` ∥ 其余旧批测试件——零触。
+- **行数越估**：`views-me.mjs` 295（估 ≈280——越估 15，软线内）；批内件 228 + 403（拟单件 ≈400 ⇒ 硬线拆档）。
+- **设计枚举缺项（已上抛知会）**：注⑪ 随正清单只列 `-console-layout` 一件；实读另有五件件数断言（24 ⇒ 26）+ `-console-list-style` ④ 面计数两处（19 ⇒ 21 口径）——父侧已落五件；设计档数字「24 ⇒ 25」实为 **26**（回填轮随 §5 实读收）。
+- 单测隔离：内存库（`:memory:`）+ 进程内 HTTP——零碰真库/生产数据；`.thincoder/tmp/` 补件 = 临时面（不随批留存）。
+
 ## §6 验证与收口（父代理）

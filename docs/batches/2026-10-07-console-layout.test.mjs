@@ -13,7 +13,7 @@
  *      预设模型表（单列「模型」：`code` 行）∥ 成员 key 表（四列头 ∥ 吊销钮行内 ∥ 空态 `noKeys` 不变量；配额批：随行形 `modelQuotas`）
  *   腿 E（左对齐——§2.6④）：`main` 规则 `max-width: 1100px` 在 ∥ margin 无 `auto`
  *   腿 F（i18n——§2.2 本批 6 键）：两表在册（非空 ∥ 占位符一致 ∥ en 零 CJK）∥ `t` 引用闭合
- *   腿 G（门禁——§6 AC-20 续）：`prepublishOnly` 含本批件（二十四件——文档清账批拆档后）∥ 清单目标在盘
+ *   腿 G（门禁——§6 AC-20 续）：`prepublishOnly` 含本批件（二十六件——me 用量图表化批两件入链）∥ 清单目标在盘
  *   附加：AC-19 canon 不破（零新 `:root` 变量——38 ∥ 悬停清单七条 ∥ 内距 ∈ 刻度 ∪ {0, auto} ∪ 布局组 ∥ 类名双向闭合）
  */
 import test from "node:test"
@@ -228,6 +228,10 @@ test("腿 B CSS：高度链声明表逐条 ∥ 吸附 ∥ 回退媒体查询 ∥
 
 const MEMBER = { id: 1, name: "Alice", username: "alice", role: "user", modelQuotas: {}, usedTokens: 0, keys: [] }
 const MEMBER2 = { ...MEMBER, id: 2, name: "Bob", username: "bob" }
+/** me 用量页 summary 桩（两读同拍面——空窗形：KPI 0 ∥ 主图空态 ∥ 分模型空态——me 用量图表化批随正）。 */
+const ME_SUMMARY = { totals: { requests: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0 }, trend: [], trendByEndpoint: [], trendByModel: [], byModel: [] }
+/** 取数路由表（主路由 + 页附加读——`more`：me 用量页两读同拍）。 */
+const routesOf = (page, handler) => ({ [page.key]: handler, ...(page.more ?? {}) })
 
 test("腿 C 五页壳：成功 = 行数 ∥ 空 = 0 ∥ 错 = 0 ∥ `head`/`area` 传参形状在册", async () => {
   globalThis.location = { origin: "http://console.test" } // me/usage 提示条 snippet 取 origin（node 无 location）
@@ -266,9 +270,10 @@ test("腿 C 五页壳：成功 = 行数 ∥ 空 = 0 ∥ 错 = 0 ∥ `head`/`area
       },
       {
         label: "我的用量（#/me/usage——用量明细）", render: ME.renderMeUsage, key: "GET /api/me/usage",
+        more: { "GET /api/me/usage/summary": () => ME_SUMMARY }, // 路由桩补 summary（me 用量图表化批——两读同拍）
         ok: () => ({ rows: [{ ts: 1700000000000 }, { ts: 1700000001000 }, { ts: 1700000002000 }] }),
         empty: () => ({ rows: [] }), state: { member: MEMBER, system: { embedding: { model: "bge-m3" } } }, rows: 3,
-        head: (mount) => byText(mount, ZH["me.usage.title"]) !== null && byText(mount, ZH["me.usage.summary"]) !== null,
+        head: (mount) => byText(mount, ZH["me.usage.title"]) !== null && byText(mount, ZH["me.usage.used"]) !== null, // 页头改点：概览卡「本月已用」（`me.usage.summary` 键退役）
         area: (mount) => findNode(mount, (node) => node.className === "table-slot") !== null,
       },
     ]
@@ -276,7 +281,7 @@ test("腿 C 五页壳：成功 = 行数 ∥ 空 = 0 ∥ 错 = 0 ∥ `head`/`area
       // 成功：表内 tfoot 计数 = 行数真值（「共 N 项」）+ 页头/表区形状
       const okShell = makeShell()
       const okMount = makeNode("section")
-      await page.render(pageCtx({ routes: { [page.key]: page.ok }, state: page.state, shell: okShell }).ctx, okMount)
+      await page.render(pageCtx({ routes: routesOf(page, page.ok), state: page.state, shell: okShell }).ctx, okMount)
       const expectCount = I18N.t("common.rowCount", { count: page.rows })
       const okFoot = findNode(okMount, (node) => node.tag === "td" && node.textContent === expectCount)
       assert.ok(okFoot !== null, `${page.label} 表内 tfoot 计数缺位（期望：${expectCount}）`)
@@ -286,11 +291,11 @@ test("腿 C 五页壳：成功 = 行数 ∥ 空 = 0 ∥ 错 = 0 ∥ `head`/`area
       // 空态：无表 = 无 tfoot（hint 面）
       const emptyShell = makeShell()
       const emptyMount = makeNode("section")
-      await page.render(pageCtx({ routes: { [page.key]: page.empty }, state: page.emptyState ?? page.state, shell: emptyShell }).ctx, emptyMount)
+      await page.render(pageCtx({ routes: routesOf(page, page.empty), state: page.emptyState ?? page.state, shell: emptyShell }).ctx, emptyMount)
       assert.equal(findNode(emptyMount, (node) => node.tag === "tfoot"), null, `${page.label} 空态不应有 tfoot`)
       // 错误：fail 收口 + 无表（无 tfoot）
       const errShell = makeShell()
-      const err = pageCtx({ routes: { [page.key]: () => { throw new Error("boom") } }, state: page.state, shell: errShell })
+      const err = pageCtx({ routes: routesOf(page, () => { throw new Error("boom") }), state: page.state, shell: errShell })
       const errMount = makeNode("section")
       await page.render(err.ctx, errMount)
       assert.deepEqual([err.calls.some(([kind]) => kind === "fail"), findNode(errMount, (node) => node.tag === "tfoot")], [true, null], `${page.label} 错态：fail + 无表（无 tfoot）`)
@@ -439,9 +444,9 @@ test("腿 F i18n：本批 6 键两表在册（非空 ∥ 占位符一致 ∥ en 
 
 // ── 腿 G（门禁——§6 AC-20 续）───────────────────────────────────────────────
 
-test("腿 G 门禁：`prepublishOnly` 二十四件含本批件 ∥ 清单目标在盘", () => {
+test("腿 G 门禁：`prepublishOnly` 二十六件含本批件 ∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 24, `门禁清单件数（二十二 ⇒ 二十四——me-keys 批两件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 26, `门禁清单件数（二十四 ⇒ 二十六——me 用量图表化批两件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-console-layout.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

@@ -45,8 +45,8 @@ export async function renderOverview(ctx, mount) {
   }
 }
 
-/** 卡（标签 + 内容——内容可为节点）。 */
-function statCard(h, label, ...content) {
+/** 卡（标签 + 内容——内容可为节点；`views-me.mjs` 用量页复用——§2.3⑦）。 */
+export function statCard(h, label, ...content) {
   return h("section", { class: "card" }, h("div", { class: "stat-label", text: label }), ...content)
 }
 

@@ -132,7 +132,7 @@ test("③ 态面：行悬停声明清单（两声明同取 `var(--hover)`；清�
 
 // ── ④ 错态面（⑨ canon）：七处「加载失败」面 ∥ 系统页诊断失败面 2 处 ∥ 段内错误面 ──────────────
 
-test("④ 错态面：`.hint error` 逐面套用（七处 loadFailed + 系统页两处 + 段内三处 + 配额批窗内三处 + 模型元数据批两处 + me-keys 批窗内两处）∥ `\"hint error\"` 计数同拍 19", () => {
+test("④ 错态面：`.hint error` 逐面套用（八处 loadFailed + 系统页两处 + 段内三处 + 配额批窗内三处 + 模型元数据批两处 + me-keys 批窗内两处）∥ `\"hint error\"` 计数同拍 20", () => {
   const FACES = [
     ["views-admin.mjs", "admin.members.loadFailed"],
     ["views-me.mjs", "usage.loadFailed"],
@@ -150,7 +150,7 @@ test("④ 错态面：`.hint error` 逐面套用（七处 loadFailed + 系统页
       assert.ok(line.includes(`class: "hint error"`), `${file} 错误面未套 canon（${key}）：${line.trim()}`)
     }
   }
-  assert.equal(faceCount, 7, "七处「加载失败」面计数同拍")
+  assert.equal(faceCount, 8, "八处「加载失败」面计数同拍")
   // 系统页诊断失败面 2 处：状态行 ⇒ `.error`（独立生效——该面现无 `.hint`）∥ 试跑行 ⇒ `.hint error`
   const system = readPublic("views-system.mjs")
   assert.ok(system.includes(`statusValue.className = result.ok ? "" : "error"`), "状态行失败文案未携 `.error`")
@@ -164,9 +164,10 @@ test("④ 错态面：`.hint error` 逐面套用（七处 loadFailed + 系统页
   // 2026-10-07 配额批：views-admin 窗内状态行 +3（保存失败 ∥ 编辑态 hint ∥ 加载失败窗内行）⇒ 12 ⇒ 15（父侧直接执行 · 可 revert）
   // 2026-10-07 模型元数据批：views-providers-modals 退役提示 +2（退役徽标 ∥ 退役注行）⇒ 15 ⇒ 17
   // 2026-10-07 me-keys 批：views-me 双弹窗窗内状态行 +2（签发/吊销失败）⇒ 17 ⇒ 19
+  // 2026-10-07 me 用量图表化批：views-me 用量页失败面两区 +1（报表卡/明细卡各一）⇒ 19 ⇒ 20
   const total = ["views-admin.mjs", "views-me.mjs", "views-models.mjs", "views-usage.mjs", "views-audit.mjs", "views-providers.mjs", "views-providers-modals.mjs", "views-system.mjs"]
     .reduce((sum, file) => sum + (readPublic(file).match(/"hint error"/g) ?? []).length, 0)
-  assert.equal(total, 19, `\`"hint error"\` 计数不同拍：${total}`)
+  assert.equal(total, 20, `\`"hint error"\` 计数不同拍：${total}`)
 })
 
 // ── ⑤ 类名双向闭合（AC-19 续）：档面字面类 ↔ style.css 类选择器 ∥ 死类零残留 ─────────────────
