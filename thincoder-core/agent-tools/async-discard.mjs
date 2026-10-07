@@ -17,6 +17,8 @@
  * ——其控制器链只作**判据**（杀 ⟺ 控制器已中止），杀树动作经本收尾面 `spec.dispose` 钩子落
  * `bash-async.mjs` 杀单点（`killBgTree`）；回合中断（Ctrl+I）经 `bindChildController`
  * interrupt 豁免不中止控制器 ⇒ 本面零动作（F2 同款豁免——池保留）。
+ * 批 browser-async-fix（2026-10-07）：browser 后台动作族同面并入（`BROWSER_SPEC`——dispose = 条目
+ * 控制器 abort ⇒ 动作展开 / 排队丢队；**不杀浏览器**）。
  *
  * 判据口径（D-AD6）：两接线点**均不传 `ctx`** ⇒ 实走 controller 支（`parentAborted(null, entry)`）
  * ——与对侧有效判据同判（对侧传入的 `ctx` 为死参）；`ctx` 保留为签名备用面（直调用例 / 对侧收敛）。
@@ -58,6 +60,11 @@ const advisorReminderText = (n, list) =>
 const bgReminderText = (n, list) =>
   `[System reminder: ${n} background bash task(s) were killed by the user's Stop — their processes are gone and no digest will arrive: ${list}. ` +
   "Full output logs remain on disk (paths were given in the start ack).]"
+
+/** browser 后台动作族提醒模板（同族形态——取消无摘要：终止凭据 = 墓碑 + 杀点确认；浏览器本体不杀）。 */
+const browserReminderText = (n, list) =>
+  `[System reminder: ${n} background browser task(s) were cancelled by the user's Stop — no digest will arrive: ${list}. ` +
+  "The browser session itself was not killed (run `close` to reset it).]"
 
 /** 列表词（wasStatus 数据源）：queued → "(was queued — never started)"；其余 "(was running)"。 */
 const wasPhrase = (wasStatus) => (wasStatus === "queued" ? " (was queued — never started)" : " (was running)")
@@ -151,6 +158,21 @@ const BG_SPEC = {
   },
 }
 
+/** browser 后台动作族 spec（批 browser-async-fix——收尾档同面）：dispose = 中止在飞（条目控制器
+ *  abort ⇒ running 动作展开 / queued 丢队从未运行）+ 标记 discarded（settle 面据此不注入——摘要不可达）；
+ *  无队列面（帽 = 起跑显式拒）。**不杀浏览器**（会话重置是独立动作 `close`）。 */
+const BROWSER_SPEC = {
+  pool: "browser",
+  describe: (entry) => ({ id: entry.id, role: "browser", action: entry.action }),
+  roleOf: () => "browser",
+  listPhrase: (d) => `browser#${d.id} (${d.action})`,
+  reminder: browserReminderText,
+  dispose: (entry) => {
+    entry.discarded = true
+    entry.controller?.abort?.({ abortTrigger: "discard" })
+  },
+}
+
 /**
  * 中止收尾（F1–F3）：只清已死子代理条目——写 `discarded` 墓碑 + 出池 + 队列剔除 + 整批一次提醒。
  * @param parent agent 形态（载体双形经 `getAsyncPool` / `writeTombstone` 吸收）
@@ -183,4 +205,16 @@ export function discardAbortedAdvisors(parent, ctx = null) {
  */
 export function discardAbortedBgTasks(parent, ctx = null) {
   return discardRole(parent, BG_SPEC, ctx)
+}
+
+/**
+ * 中止收尾（browser 后台动作族——同面并入）：只清已死条目——逐条中止在飞（running ⇒ 动作展开；
+ * queued ⇒ 丢队从未运行）+ `discarded` 墓碑 + 出池 + 整批一次提醒；回合中断（Ctrl+I）不中止控制器
+ * ⇒ 本面零动作（池保留——与 bg 同豁免）。
+ * @param parent agent 形态
+ * @param ctx 判据 ctx（接线点不传——controller 支，同上）
+ * @returns {{discarded: Array<{id, role: "browser", action}>, kept: number}}
+ */
+export function discardAbortedBrowserTasks(parent, ctx = null) {
+  return discardRole(parent, BROWSER_SPEC, ctx)
 }

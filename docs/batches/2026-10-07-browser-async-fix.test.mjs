@@ -5,7 +5,7 @@
  *
  * 缝纪律（§7 N-BT6）：`WebSocketImpl`（假传输：挂死开关 ∥ 断连面）+ `_deps`（开启 ∥ 杀树 ∥ 落盘替身）——
  * 缺省回落真实现（`??`），用例 `finally` 还原；本件零真实浏览器、零真实 profile、零真实文件写。
- * B 腿（T34–T41——异步通道）由实施舱 B 追加，本件不写。
+ * B 腿（T34–T43——异步通道）另档自持：`2026-10-07-browser-async-fix.b.test.mjs`（拆因 = 单档越 500 硬限——评审轮 1 must-fix）。
  * 跑法（仓根 `thincoder/`，cwd 无关）：node --test docs/batches/2026-10-07-browser-async-fix.test.mjs
  */
 import test from "node:test"

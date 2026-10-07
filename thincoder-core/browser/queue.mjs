@@ -152,9 +152,12 @@ export function createActionQueue() {
   return {
     /** 入队动作：`run(ctl)` 起执行；返回终态（回执 ∥ 拒绝）。排队中到点 ⇒ 即时以同失败形拒绝
      *  （`queue wait`——动作从未起执行）；起执行后由任务自身守卫裁决 —— 回执/拒绝晚于动作收尾
-     *  （调用方拿到终态时会话侧清理已完成，不留残余控制器）。 */
-    enqueue(action, args, run) {
+     *  （调用方拿到终态时会话侧清理已完成，不留残余控制器）。
+     *  signal（批 browser-async-fix 最小增补——可选取消柄）：abort ⇒ `cancel()`（queued 丢队 ∥ running 展开）；缺省 null 旧调用零变。 */
+    enqueue(action, args, run, signal = null) {
       const ctl = new ActionController({ action, budgetMs: budgetFor(action, args) })
+      if (signal?.aborted) ctl.cancel()
+      else signal?.addEventListener("abort", () => ctl.cancel(), { once: true })
       let started = false
       const task = chain(() => { started = true; return run(ctl) }).finally(() => ctl.finish())
       return new Promise((resolve, reject) => {

@@ -397,14 +397,15 @@ export function maybeRefillAsync(parent) {
  * 域 = 进程内（不做槽持久化——reload 后池清块消失，新进程从 1 无冲突——设计范围边界）。
  * spawn（subagent-spawn.mjs async 分支）、escalate（escalate-async.mjs）、async-advisor
  * 池（advisor-async.mjs——§6.10 跨池共号）、**后台 bash 任务池**（bash-async.mjs——#9：
- * `_bgTasks` 同入扫描域——VSC 形计数器不随 run 存活，缺此扫描会与在途 bg 条目撞号）共用；
+ * `_bgTasks` 同入扫描域——VSC 形计数器不随 run 存活，缺此扫描会与在途 bg 条目撞号）、
+ * **后台浏览器动作池**（browser-async.mjs——批 browser-async-fix：`_browserTasks` 同入）共用；
  * executeAsyncSpawn 直读 counter（分配与
  * 消费同步——无 await 间隙）。CLI 两池键均为字符串（set(String(id))——解析分支防御保留）。
  * @returns {number} 全池唯一的下一 id（单调——进程内）
  */
 export function nextSubagentId(parent) {
   let poolMax = 0
-  for (const pool of [carrierField(parent, "_asyncSubagents"), carrierField(parent, "_asyncAdvisors"), carrierField(parent, "_bgTasks")]) {
+  for (const pool of [carrierField(parent, "_asyncSubagents"), carrierField(parent, "_asyncAdvisors"), carrierField(parent, "_bgTasks"), carrierField(parent, "_browserTasks")]) {
     if (!pool || pool.size === 0) continue
     for (const k of pool.keys()) {
       const n = typeof k === "number" ? k : Number.parseInt(k, 10)
@@ -426,7 +427,8 @@ export function nextSubagentId(parent) {
  * nextSubagentId ⇒ 令牌缺位/错号 ⇒ 抛错——防直读陈旧 counter 的静默覆写），断言
  * 通过即置 `undefined`（一次性——同一令牌跨站点复用第二消费必抛）。
  * 调用点：executeAsyncSpawn（subagent-run.mjs）· launchEscalateAsync（escalate-async.mjs）·
- * launchAsyncAdvisor（advisor-async.mjs）——site = 站点名（错误文案定位面）。
+ * launchAsyncAdvisor（advisor-async.mjs）· launchBrowserTask（browser-async.mjs——批 browser-async-fix
+ * 第四站点）——site = 站点名（错误文案定位面）。
  */
 export function consumeSubagentToken(parent, id, site, role) {
   if (parent?._lastSubagentId !== id) {
@@ -436,9 +438,10 @@ export function consumeSubagentToken(parent, id, site, role) {
 }
 
 /**
- * ED-5（§6.21）入池键守卫——三入池点同族：`set(String(id))` 前断言键不存在；命中 =
+ * ED-5（§6.21）入池键守卫——四入池点同族：`set(String(id))` 前断言键不存在；命中 =
  * 覆写（静默丢报告 + status/cancel 错址）⇒ 抛错。调用点：子代理池（subagent-run.mjs）·
- * escalate（escalate-async.mjs）· advisor 池（advisor-async.mjs）。
+ * escalate（escalate-async.mjs）· advisor 池（advisor-async.mjs）· browser 池（browser-async.mjs——
+ * 批 browser-async-fix 同族实例）。
  */
 export function assertPoolKeyFree(pool, id, role) {
   if (pool.has(String(id))) {

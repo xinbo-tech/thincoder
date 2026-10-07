@@ -309,7 +309,7 @@ VERDICT: pass
 - 令牌 = 运行时凭据（不入档）；实施舱随本签派发。
 
 ## §5 实施记录（eng-coder）
-**状态行**：实施完成（舱 A 落码 + A 腿 9/9 绿 + 旧三档零回归；审计 1 轮 + 代码评审 2 轮收敛（终态 clean））
+**状态行**：实施完成（舱 A（A 腿 9/9 ∥ 旧三档零回归；审计 1 + 代码评审 2 轮——终态 clean）∥ 舱 B（A 腿 9/9 + B 腿 10/10 ∥ 冒烟 S19–S22 4/4 真 Edge；审计 1 + 代码评审 2 轮——终态 clean））
 
 
 
@@ -352,5 +352,63 @@ VERDICT: pass
 - `session.mjs`：`runAction(action,args,ctx)`（队列入口——回执串 ∥ 拒绝）· `closeSession()` · `lastPageUrl()` · `hostAllowed(host,list)` · `_deps{openBrowser,killBrowser,saveShot}` · `IDLE_MS`；错误标记：`browserAbort` / `abortReason` / `sessionLost` / `pageReceipt`。
 - `queue.mjs`：`ACTION_BUDGETS` · `budgetFor(action,args)` · `ActionController` · `createActionQueue()` · `BUDGET_FALLBACK_MS` · `BUDGET_MAX_MS` · `WAIT_MARGIN_MS` · `QUEUE_WAIT_STEP`。
 - `cdp.mjs`：`DEFAULT_CALL_TIMEOUT_MS` · `CONNECT_TIMEOUT_MS` · `NEWTAB_TIMEOUT_MS` · `cdpTimeout` 错误标记。
+
+### 交付摘要（舱 B：异步通道 + agent 集成 + 批内件两档 + 冒烟）
+
+- **改动面（新档 1 + 接线 7 + 工具面 2 档 + tool-docs 1 + 批内件 3）**：
+  - 新档 `thincoder-core/agent-tools/browser-async.mjs` —— 池 ∥ 起跑 ∥ 结算单点 ∥ 注入 ∥ 杀单点 ∥ `wait_for` 判据 ∥ subject 标签；导出 `BROWSER_TASK_MAX` / `launchBrowserTask` / `browserTaskEntry` / `browserTaskDone` / `killBrowserTask` / `injectBrowserResult` / `browserSubject`。
+  - 接线：`agent-tools/async-settle.mjs`（`getAsyncPool` role `"browser"` → `_browserTasks`）∥ `agent-tools/subagent-scheduler.mjs`（取号扫描域 +`_browserTasks`；两处调用点注释收正）∥ `agent-tools/async-discard.mjs`（`BROWSER_SPEC` + `discardAbortedBrowserTasks`）∥ `agent/suspension.mjs`（`poolLive` 第四域；中止收尾调用）∥ `agent/run-stages.mjs`（回合尾中止第四域）∥ `agent/helpers.mjs`（`excludeSubagentTools` 删参面扩至 `browser` 的 `async`）∥ `agent-tools/subagent-async.mjs`（`injectAsyncResult` role 分发 + 静态 import）。
+  - 工具面：`tools/browser.mjs`（`async` 参 schema ∥ `timeoutMs` 描述收正 ∥ depth 第二道 ∥ 起跑动态 import）∥ `tools/ops.mjs`（kill id 路由先 bg 后 browser + 合并错误句 ∥ `wait_for` 条件 `browser id:N done`（解析/判据/枚举）∥ `id`/`action` 描述收正）∥ `tool-docs/process.md`（去 bash 单族残留：首行 ∥ action 行；`id` 行合 §1.8 C〔5〕逐字）。
+  - 批内件：单测档拆 a/b 两档（`…fix.test.mjs` = A 腿 ∥ `…fix.b.test.mjs` = B 腿）∥ 冒烟新档 `…fix.smoke.mjs`。
+- **实读行数（内容行）**：`browser/queue.mjs` 171 ∥ `browser/session.mjs` 494 ∥ `agent-tools/browser-async.mjs` 200 ∥ `tools/browser.mjs` 161 ∥ `tools/ops.mjs` 346 ∥ `agent/helpers.mjs` 490 ∥ `agent/suspension.mjs` 351 ∥ `agent/run-stages.mjs` 295 ∥ `agent-tools/async-settle.mjs` 327 ∥ `agent-tools/async-discard.mjs` 220 ∥ `agent-tools/subagent-async.mjs` 477 ∥ `agent-tools/subagent-scheduler.mjs` 448 ∥ 单测 A 334 + B 390 ∥ 冒烟 173 ∥ `tool-docs/process.md` 14。全档 ≤500 ✓（拆档前单测档 578 > 500——评审轮 2 must-fix，已拆；`async-discard` 实读 220 vs 设计估 ≈209、`browser-async` 200 vs 估 ≈180 见上抛）。
+- **验证读数**：
+  - 单测 A 腿（T27 · T27b · T28–T33 · T42）**9/9 绿**（23.6s）∥ B 腿（T34–T41 · T43 · T44）**10/10 绿**（1.2s）。
+  - 冒烟（真 Edge/Chrome 无头）**S19–S22 4/4 绿**：S19 6003ms → `Error: navigate timed out after 6000ms (stuck in Page.navigate) — retry the action, or run \`close\` to reset the session` + 其后动作照常 ∥ S20 真杀本工具自启浏览器进程树 → 自愈重开 + 注记（再下一动作无注记）∥ S21 ack `browser#1 started (running) — navigate http://127.0.0.1:<port>/` → 摘要 `[System reminder: background browser#1 finished — navigate http://127.0.0.1:<port>/ (ok, 0.1s)]` ∥ S22 `browser#2` 取消确认 + 无摘要 + 其后 navigate 照常（浏览器仍活）。
+  - 旧三档复跑零回归：browser-tool **21/21** ∥ browser-input **7/7** ∥ browser-input.clipboard **4/4**；`node --check` 十四档零错。**未跑仓级套件**（发布闸 = 父侧收口；核 `thincoder-core/test/run.mjs` 收集面 = `test/*.test.mjs` 单层 glob——批内件不在收集面）。
+  - **kill 腿真红→绿（父侧硬界㈢）**：两缝回退态 ⇒ T37 红 `1 !== 0`（queued 受害件真被执行）∥ T38 红 `false !== true`（running 未即时展开）；缝复位 ⇒ 绿。**F1 修复轮红→绿**：竞态窗降级支在场 ⇒ T43 红（`未及见 ≠ 墓碑`——实得 `{status:'cancelled',role:'browser'}`）；支删除 ⇒ 绿。
+- **口径落点**：后台动作仍受 §2.9 动作预算（`timeoutMs` 可覆写——与 bash async 的「起跑不收默认 120s」异，§2.11 显式登记）；帽 `BROWSER_TASK_MAX=4`（对齐单域 4）；结算**恒停靠** `_pendingAsyncResults` + `wakeAsyncWaiters`；取消 = queued 丢队 ∥ running abort（**不杀浏览器**——KD-23）；`wait_for` 判据 = 池内 done ∥ **出池即 done**；depth 双线 = schema 删参（`helpers.mjs`）+ 运行期第二道（`tools/browser.mjs`）。
+
+### 决策透明表（设计未定处的实现裁决——逐条披露）
+
+| # | 裁决点 | 选择 | 依据 |
+|---|---|---|---|
+| 1 | ack subject 标签取法 | `navigate`=url；余按 ref/selector/url/key/op/from/networkIdle → 坐标 → expression（60 截）→ text（40 截）；全空 ⇒ 省略 | 设计只定 ack 形 `<action> <subject>`，未定 subject 面 |
+| 2 | 摘要 ok/failed 判据 | reject 形（`entry.error`）∥ resolve 形失败回执（首行 `Error: …`）⇒ `failed: <首行去前缀>`；余 ⇒ ok | §2.11 文法 `(<ok> ∥ <failed: …>, <s>s)`；resolve 形失败不得报 ok（T40 机检） |
+| 3 | 摘要状态词截断 | 200 字符 + `…` | 首行单行可读（T36 长因由 118 字符未截——实测） |
+| 4 | 取消两态与 Stop 竞态窗 | `cancelled`/`discarded` ⇒ 只落终态 + `_settle`（无摘要——凭据 = 杀点确认 ∥ 收尾整批提醒）；其余（含中止竞态窗）⇒ 恒停靠 pending（**不**自落「仅墓碑」支——墓碑非模型可见凭据） | §2.11 取消无摘要 + N-BT10 零静默丢失；`bash-async` finalize 同式 |
+| 5 | `killBrowserTask` 幂等判据 | 出池后凭墓碑：`cancelled`+role browser ⇒ 同确认；`consumed`/`failed` ⇒ 「已结束」错误句；空/`undefined`/`null` ⇒ 显式靶句 | §2.11「重复幂等」；ops id 路由需 browser 自辨靶错（bg 未命中才落此段） |
+| 6 | 合并错误句文案 | `Error: unknown background task id: N — it has finished, was killed, or was never started (no live bash# or browser# task under this id)` | §2.2 kill 行「合并错误句」；id 族两义并列（不偏向任一族） |
+| 7 | 帽错误句文案 | `browser task cap reached (4/4 running: browser#…) — wait for one to settle (wait_for "browser id:N done") or kill one (process action='kill' id:N)` | 对齐 bg 帽句形（携可行动作）；第 5 条显式拒、零静默丢 |
+| 8 | depth 第二道文案 | `browser async is depth-0 only — a child agent has no background task pool (run the action synchronously)` | schema 主门在 `helpers.mjs`（删参）；第二道留显式可读句（不静默转同步） |
+| 9 | 失败墓碑状态词 | 注入时按 `error`/`failed` 判 ⇒ 墓碑 `failed`/`consumed` | 墓碑族复用（D2）；与 bg 同形 |
+| 10 | 批内件拆档 | 单测档拆 A/B 两档（A 334 + B 390），夹具块逐字复制（逐字核过；先例 `2026-10-04-issue-fix-round1.a/.b`） | 单档越 500 硬限（评审轮 2 must-fix）；文件名/行数入设计面 = 父侧收口轮 |
+
+### 审计与代码评审轮次与终态（舱 B）
+
+| 轮 | 形式 | 发现 | 处置 |
+|---|---|---|---|
+| 1 | 内部 explore 发散审计（只读） | 🟡×1（Stop 竞态窗降级为「仅墓碑」——零模型可见凭据，N-BT10 在此落空）· 🟡×1（Stop 面无机检落点，E4② Stop 半）· 🔵×3（`tools/ops.mjs` action 行残留 bash 单族 ∥ scheduler 两处调用点注释未随扩列 ∥ §5 舱 B 段待写） | 竞态窗降级支删除（改走 bg 族兜底：恒停靠——摘要即凭据）∥ 补 **T43**（Stop 收尾面：discard ⇒ 墓碑 `discarded`/出池/整批一次提醒 + 竞态窗兜底停靠）∥ `ops` action 行 + `tool-docs/process.md` 同拍去 bash 残留 ∥ scheduler 两处注释收正 |
+| 2 | advisor 代码评审（第一轮全量） | **changes-required**：🔴 must-fix×1（批内件单测档 578 行破 500 硬限——METHODOLOGY F3-1「>500 必拆——硬限无例外」）· 🟡×3（§5 缺舱 B 记录 ∥ 设计「队列未启动条目 ⇒ 自愈重开后照跑」语义悬空无用例 ∥ >300 档位数值/登记差）· 🔵×4（T27b/T43 未入用例表 ∥ 中止「单点」注释与两处调用不符 ∥ 依赖图缺 `queue → actions` ∥ 计数面不含后台任务族） | ① 拆 a/b 两档（A 334 ∥ B 390——夹具块逐字核过）；② 本 §5 块即补；③ 补 **T44**（外部关闭遇排队条目：未启动件不呆等 ⇒ 自愈重开后照跑、回执携注记——§2.10 队列格机检）；④ 注释改述「同一机制两处调用」；余为文档面（设计 §5/§7/§8 数值与用例登记）与计数面决策——见上抛 |
+| 3 | advisor 代码评审（第二轮——仅核销修复声明） | 待回执 | 待回执 |
+
+**fix round 计数**：4（① 实现内自纠：T37/T38 红判定基准——挂死型假传输下页面表达式不可归因「起执行」，改 `Page.navigate` 唯一 url 计数 ∥ 冒烟 stall 服务 socket `'error'` 零接管轰进程（实测一次，已补接管）；② 审计驱动：F1 竞态窗降级支删除 + T43；③ 评审驱动：>500 拆档；④ 评审驱动：T44 + 注释收正）。
+
+### 上抛与披露（父侧/文档面处置——本舱不改码）
+
+- **最小增补两缝（父侧裁定 ①——授权内，逐条披露）**：`browser/queue.mjs` `enqueue(action, args, run, signal = null)`（aborted ⇒ `cancel()`；否则 abort 监听 `{once:true}`）∥ `browser/session.mjs` `runAction(action, args, ctx, { signal = null } = {})` 透传——合计 +4 行（queue 168→171 ∥ session 493→494），纯增量、单笔可 revert；`browser/*` 其余零触。设计 §2.4 文件表未列此两档 ⇒ **设计面登记归父侧收口轮**。
+- **跨批件残留（工具门禁拒写——预期）**：`docs/batches/2026-09-29-tools-carryover.test.mjs:318` 断言 `^Error: unknown background bash task id: 9999`，本批合并错误句（§2.2 kill 行）使其失效（该格单跑实测红）；跨批写被门禁拒（正确行为）⇒ **请父侧收口轮一笔收正，或裁定改回 bg 前缀形**。
+- **设计面读数与用例登记（文档面）**：① `session.mjs` 实读 494（设计/批档 Δ 估 ≈410——舱 A 已上抛）∥ `helpers.mjs` 余量实读 10 行（设计记「余 8 行」）；② `async-discard.mjs` 实读 220（设计估 ≈209）∥ `browser-async.mjs` 实读 200（估 ≈180）；③ 用例面 T27b/T43/T44 未入设计 §7/§8 与批档 §2.5；④ 依赖图行缺 `queue → actions`（舱 A 已上抛）；⑤ 批内件拆档后设计 §2.4/§5 的文件名与行数需随正（原「≈320」估失效）。
+- **计数面（🔵 未改码）**：`agent/suspension.mjs` `backgroundCounts` 仍只扫 `_asyncSubagents`/`_asyncAdvisors`（bg 先例同形）⇒ 仅剩后台浏览器动作在飞时宿主状态行显示 0 而会话仍挂起；设计未要求覆盖，扩扫域超本批授权 ⇒ 报父侧酌处（扩扫域 ∥ 设计登记「计数面不含后台任务族」）。
+- **越批（不扩面）**：VSC 自持 `thincoder-vscode/src/agent-tools/async-discard.mjs` 无 `BROWSER_SPEC`/`_browserTasks` 面——批档 §2.7 上抛 4 已落账 #1047；端壳残余注入面经 `injectAsyncResult` role 分发自动覆盖 `role="browser"`，无端侧缺口。
+
+### 终态（评审轮 3 回执——轮 2 核销）
+
+- **advisor 代码评审第二轮（仅核销修复声明）⇒ pass**：① 拆档 Fixed（A 334 ∥ B **387**——**读数收正：B 实读 387，上记 390 为写入时估值**；两档 ≤500；夹具块逐字同形；零悬引用）∥ ② §5 舱 B 块 Fixed ∥ ③ T44 Fixed ∥ ④ 中止注释改述 Fixed；轮 1 余项（>300 读数 ∥ 用例登记 ∥ 依赖图行 ∥ 计数面）按上抛记录 Accepted，理由成立；**新 🔴 = 0**。
+- **残余小项（不阻塞——归父侧收口轮一笔随清）**：① 批档 `:363`/`:384` 所记 B 档 390 → **387**；② §5 状态行（`:312`）旧文仍仅述舱 A（本次 status 已随动）；③ 两档头注用例行未含 T44（批档 `:365` 已含）；④ 同一 must-fix 编号两处不一（档头「评审轮 1」vs 批档「评审轮 2」）。
+- **fix round 计数**：5（① 实现内自纠：kill 腿判据基准 + 冒烟 socket 接管；② 审计驱动：F1 降级支删除 + T43；③ 评审驱动：>500 拆档；④ 评审驱动：T44 + 注释收正；⑤ 评审轮 2 核销——零新改码，仅本收正块）。**终态 = clean（pass）**。
+
+### 读数终核（`readFileSync` 口径，与全批同法——收正上两块的写入估值）
+
+`browser/queue.mjs` 171 ∥ `browser/session.mjs` 494 ∥ `agent-tools/browser-async.mjs` 198 ∥ `agent-tools/async-settle.mjs` 327 ∥ `agent-tools/async-discard.mjs` 220 ∥ `agent-tools/subagent-scheduler.mjs` **450**（上记 448——两处调用点注释收正 +2） ∥ `agent-tools/subagent-async.mjs` 477 ∥ `agent/suspension.mjs` 351 ∥ `agent/run-stages.mjs` 295 ∥ `agent/helpers.mjs` 490 ∥ `tools/browser.mjs` 161 ∥ `tools/ops.mjs` 346 ∥ `tool-docs/process.md` 14 ∥ 单测 A **334** ∥ 单测 B **386**（上修块记 387 = read 工具页脚口径，含尾行空段） ∥ 冒烟 173。全档 ≤500 ✓。
 
 ## §6 验证与收口（父代理）

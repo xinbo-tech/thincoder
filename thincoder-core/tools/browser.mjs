@@ -7,6 +7,8 @@
  * `hover` ∥ `wheel` ∥ `insert` ∥ `touch` 手势（swipe / pinch）——同一钩子按参数分类，机制零新增。
  * 失败回执**返回**（不 throw）——首行 `Error: …` = 模型面失败形（`bash`/`execute` 既例；dispatch 侧按该前缀
  * 判失败——`agent/dispatch-run.mjs:77` ∥ `:129` ∥ `:135`）。
+ * 异步面（§2.11——批 browser-async-fix）：`async:true`（depth-0 专项）⇒ `agent-tools/browser-async.mjs`
+ * 起跑（ack 即返——本档薄接线；depth 第二道在此，schema 删参在 `agent/helpers.mjs` `excludeSubagentTools`）。
  */
 import { CLIPBOARD_OPS } from "../browser/clipboard.mjs"
 import { TOUCH_GESTURES, parseTargetSpec } from "../browser/input.mjs"
@@ -101,7 +103,7 @@ export const browserTool = {
       clear: { type: "boolean", description: "type: replace the field content instead of appending (default false)." },
       max: { type: "number", description: "snapshot: max elements to list (default 100, hard cap 200)." },
       networkIdle: { type: "boolean", description: "wait: true = wait until network activity is quiet for 500ms." },
-      timeoutMs: { type: "number", description: "wait: timeout in ms (default 30000, cap 120000)." },
+      timeoutMs: { type: "number", description: "Budget override in ms: wait = the predicate timeout (default 30000, cap 120000); other actions = the whole-call budget (default per action table, hard cap 120000)." },
       fullPage: { type: "boolean", description: "screenshot: true = capture the whole page, false = viewport (default)." },
       headless: { type: "boolean", description: "Session-open parameter (any action): default true. A different value on a running session is an error — close it first." },
       key: { type: "string", description: "press: key name (Enter, Escape, Tab, Backspace, Delete, Space, Insert, Home, End, PageUp, PageDown, Arrows, F1-F12, modifiers) or a single character." },
@@ -122,6 +124,7 @@ export const browserTool = {
       scale: { type: "number", description: "touch pinch: scale factor (>1 zoom in, <1 zoom out)." },
       ime: { type: "string", description: "insert: IME composition text staged before the committed text is inserted." },
       op: { type: "string", description: "clipboard: read | write | copy | paste." },
+      async: { type: "boolean", description: "Run this action in the background (default false, depth-0 only): returns an ack at once (browser#<N> started (running) — <action> <subject>); the finished result arrives later as a system reminder summary. Use wait_for \"browser id:N done\" to wait; process {action:\"kill\", id:N} to cancel." },
     },
     required: ["action"],
   },
@@ -137,6 +140,18 @@ export const browserTool = {
   async execute(args, ctx) {
     const invalid = validateArgs(args)
     if (invalid) return invalid
+    if (args.async === true) {
+      // depth 第二道（schema 主门 = agent/helpers.mjs excludeSubagentTools 删参——与 bash 双线同式：
+      // 子代实装亦拒——留一条显式文案，不静默转同步）。
+      if ((ctx?.depth ?? 0) > 0) {
+        return "Error: browser async is depth-0 only — a child agent has no background task pool (run the action synchronously)"
+      }
+      // 动态 import（W8 契约②：agent-tools 静态链达 node:sqlite——端壳静态闭包须保持零命中）。
+      const { launchBrowserTask } = await import("../agent-tools/browser-async.mjs")
+      const launched = await launchBrowserTask(ctx?.agent, ctx, args)
+      if (launched?.error) return `Error: ${launched.error}`
+      return launched.ack
+    }
     try {
       return await runAction(args.action, args, ctx)
     } catch (e) {

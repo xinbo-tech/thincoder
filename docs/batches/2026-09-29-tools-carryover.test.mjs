@@ -315,7 +315,7 @@ test("T9a · kill 靶二选一校验 ∥ 未知 id ∥ 深度起跑拒", async (
   const parent = makeParent()
   assert.match(await processTool.execute({ action: "kill", pid: 1, id: 2 }, ctxOf(parent)), /^Error: kill requires exactly one target/)
   assert.match(await processTool.execute({ action: "kill" }, ctxOf(parent)), /^Error: kill requires exactly one target/)
-  assert.match(await processTool.execute({ action: "kill", id: 9999 }, ctxOf(parent)), /^Error: unknown background bash task id: 9999/)
+  assert.match(await processTool.execute({ action: "kill", id: 9999 }, ctxOf(parent)), /^Error: unknown background task id: 9999/)
   assert.match(await processTool.execute({ action: "bogus" }, ctxOf(parent)), /^Error: action must be list \| kill/)
   assert.match(await processTool.execute({ action: "kill", pid: "abc" }, ctxOf(parent)), /^Error: kill pid/)
   const refused = await ba.launchBgTask(parent, { depth: 1 }, { command: "echo x" })

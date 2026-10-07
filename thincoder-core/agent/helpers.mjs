@@ -377,12 +377,13 @@ export const SUBAGENT_TOOL_EXCLUSIONS = new Set(["question"])
 /** Apply the depth>0 exclusion set — always returns a NEW array (parent table untouched).
  *  #9（TOOLS.md §6.19）：`bash` 的 `async` 参仅 depth-0——子代副本删参（照 `family-tools.mjs:98`
  *  先例；返回值仍恒新数组、未命中条目原对象直传）。运行期第二道在 `tools/bash.mjs` execute
- *  （照 `read_image`「schema 门 + 运行期第二道」双线先例）。 */
+ *  （照 `read_image`「schema 门 + 运行期第二道」双线先例）；批 browser-async-fix（#1045）同线
+ *  扩至 `browser` 的 `async` 参（运行期第二道在 `tools/browser.mjs` execute）。 */
 export function excludeSubagentTools(tools) {
   return tools
     .filter((t) => !SUBAGENT_TOOL_EXCLUSIONS.has(t.name))
     .map((t) => {
-      if (t.name !== "bash" || !t.parameters?.properties || !("async" in t.parameters.properties)) return t
+      if (!(t.name === "bash" || t.name === "browser") || !t.parameters?.properties || !("async" in t.parameters.properties)) return t
       const { async: _asyncDrop, ...restProps } = t.parameters.properties
       return { ...t, parameters: { ...t.parameters, properties: restProps } }
     })

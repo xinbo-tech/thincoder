@@ -113,11 +113,12 @@ export function bindChildController(ctrl, baseSignal) {
 
 /** 池 accessor（D1）：role "advisor" → `_asyncAdvisors`（独立评审池——无队列独立调度）·
  *  role "consult" → `_consultSessions`（会话池）· role "bg" → `_bgTasks`（#9 后台 bash
- *  任务池）· 其余 → `_asyncSubagents`（子代理/飞刀共享槽位队列池）。载体经 `carrierField`
+ *  任务池）· role "browser" → `_browserTasks`（批 browser-async-fix 后台浏览器动作池）·
+ *  其余 → `_asyncSubagents`（子代理/飞刀共享槽位队列池）。载体经 `carrierField`
  *  吸收（#94）；未初始化返 null——调用方以 `?? new Map()` / 可选链处置。 */
 export function getAsyncPool(parent, role) {
   const field = role === "advisor" ? "_asyncAdvisors" : role === "consult" ? "_consultSessions"
-    : role === "bg" ? "_bgTasks" : "_asyncSubagents"
+    : role === "bg" ? "_bgTasks" : role === "browser" ? "_browserTasks" : "_asyncSubagents"
   return carrierField(parent, field) ?? null
 }
 

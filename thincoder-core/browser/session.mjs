@@ -484,10 +484,11 @@ async function runSerial(action, args, ctx, ctl) {
   }
 }
 
-/** 动作入口：串行队列 + 单时钟动作预算（§2.9——deadline 自入队起算；批并行调用按调用序排队）。 */
-export function runAction(action, args, ctx) {
+/** 动作入口：串行队列 + 单时钟动作预算（§2.9——deadline 自入队起算；批并行调用按调用序排队）。
+ *  `opts.signal`（批 browser-async-fix 最小增补——后台任务取消柄）：abort ⇒ 控制器 `cancel()`（queued 丢队 ∥ running 展开）；缺省 null 旧径零变。 */
+export function runAction(action, args, ctx, { signal = null } = {}) {
   return queue.enqueue(action, args, (ctl) => {
     currentController = ctl
     return runSerial(action, args, ctx, ctl).finally(() => { currentController = null })
-  })
+  }, signal)
 }

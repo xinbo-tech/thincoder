@@ -4,7 +4,8 @@
  * for a dedicated tool instead of shelling out to `bash` for the same operation
  * (parity with thinworker).
  * #9：process 收编 `kill`（靶 = pid ∥ 后台 bash 任务 id——欠面收正：原须绕 bash taskkill）；
- * wait_for 条件族 +`bash id:N done`。list ∥ 既有条件面零变。
+ * wait_for 条件族 +`bash id:N done`。list ∥ 既有条件面零变。批 browser-async-fix（#1045）：kill id
+ * 路由先 bg 后 browser（同一 id 命名空间）∥ wait_for 条件族 +`browser id:N done`。
  */
 import { DESC, resolveInCwd, truncate } from "./shared.mjs"
 // 单一写路径点（编辑器编辑径注入缝——CORE-UNIFICATION §2.13.5）：路径操作也经它落盘
@@ -53,10 +54,10 @@ export const processTool = {
   parameters: {
     type: "object",
     properties: {
-      action: { type: "string", enum: ["list", "kill"], description: "list (default) — show running processes; kill — terminate a process tree (target: pid) or a background bash task (target: id)" },
+      action: { type: "string", enum: ["list", "kill"], description: "list (default) — show running processes; kill — terminate a process tree (target: pid) or a background task (target: id)" },
       name: { type: "string", description: "Optional name substring filter for list (case-insensitive)" },
       pid: { type: "number", description: "kill target: process id — the whole tree is terminated (taskkill /T /F on win32; POSIX group kill)" },
-      id: { type: "number", description: "kill target: background bash task id (bash#N from the bash async ack)" },
+      id: { type: "number", description: "kill target: background task id — a bash#N (bash async ack) or browser#N (browser async ack): bash ⇒ its process tree is terminated; browser ⇒ a queued task is dropped, a running one is aborted (the browser itself is not killed); either way the entry leaves the pool and no digest will arrive." },
     },
   },
   // #9：动作分级——list 保持只读分类（dispatch-gates `isSubagentReadonlyAction`：planMode 放行/
@@ -81,13 +82,14 @@ export const processTool = {
   },
 }
 
-/** #9 kill 执行体（靶 = pid ∥ 后台任务 id 二选一；两靶皆树杀）。动态 import（W8 契约②：
- *  agent-tools 链静态达 node:sqlite——端壳静态闭包须保持零命中）。 */
+/** #9 ∥ 批 browser-async-fix kill 执行体（靶 = pid ∥ 后台任务 id 二选一；pid ⇒ 树杀；id ⇒ 路由先
+ *  bg 后 browser——两族共用 id 命名空间）。动态 import（W8 契约②：agent-tools 链静态达
+ *  node:sqlite——端壳静态闭包须保持零命中）。 */
 async function executeKill({ pid, id }, ctx) {
   const hasPid = pid !== undefined && pid !== null && String(pid).trim() !== ""
   const hasId = id !== undefined && id !== null && String(id).trim() !== ""
   if (hasPid === hasId) {
-    return "Error: kill requires exactly one target — pid (process id) or id (background bash task id)"
+    return "Error: kill requires exactly one target — pid (process id) or id (background task id)"
   }
   const { killBgTask, killBgPid } = await import("../agent-tools/bash-async.mjs")
   if (hasPid) {
@@ -95,8 +97,16 @@ async function executeKill({ pid, id }, ctx) {
     return `killed process tree ${Number(pid)} (taskkill /T /F on win32; POSIX group kill)`
   }
   const res = killBgTask(ctx?.agent, id)
-  if (res.status === "error") return `Error: ${res.error}`
-  return `killed background bash#${res.id} — its process tree was terminated; no digest will arrive${res.logPath ? ` — log so far: ${res.logPath}` : ""}`
+  if (res.status !== "error") {
+    return `killed background bash#${res.id} — its process tree was terminated; no digest will arrive${res.logPath ? ` — log so far: ${res.logPath}` : ""}`
+  }
+  // id 路由第二段：browser 后台动作（同一 id 命名空间——bg 未命中才落此段）
+  const { killBrowserTask } = await import("../agent-tools/browser-async.mjs")
+  const bres = killBrowserTask(ctx?.agent, id)
+  if (bres.status !== "error") {
+    return `cancelled background browser#${bres.id} — a queued task is dropped, a running one is aborted (the browser itself is not killed); no digest will arrive`
+  }
+  return `Error: unknown background task id: ${String(id)} — it has finished, was killed, or was never started (no live bash# or browser# task under this id)`
 }
 
 function listWindows() {
@@ -170,10 +180,11 @@ export function parseWaitForCondition(condition) {
   if (c === "consult done") return { kind: "consult", arg: null }
   if ((m = c.match(/^subagent id:\s*(\d+) done$/))) return { kind: "subagent", arg: String(Number(m[1])) }
   if ((m = c.match(/^bash id:\s*(\d+) done$/))) return { kind: "bash", arg: String(Number(m[1])) }
+  if ((m = c.match(/^browser id:\s*(\d+) done$/))) return { kind: "browser", arg: String(Number(m[1])) }
   if ((m = c.match(/^file exists:\s*(.+)$/))) return { kind: "file", arg: m[1].trim() }
   if ((m = c.match(/^port open:\s*(\d+)$/))) return { kind: "port", arg: Number(m[1]) }
   throw new Error(
-    `wait_for: unsupported condition "${c}" — supported: "advisor settled", "subagent id:N done", "consult done", "bash id:N done", "file exists:path", "port open:N"`,
+    `wait_for: unsupported condition "${c}" — supported: "advisor settled", "subagent id:N done", "consult done", "bash id:N done", "browser id:N done", "file exists:path", "port open:N"`,
   )
 }
 
@@ -271,6 +282,11 @@ export async function evaluateWaitForCondition(condition, ctx) {
       const { bgTaskDone } = await import("../agent-tools/bash-async.mjs")
       return bgTaskDone(agent, parsed.arg)
     }
+    case "browser": {
+      // 批 browser-async-fix：后台浏览器动作判据（池内 done ∥ 出池即 done——`browser-async.mjs` 单点）。
+      const { browserTaskDone } = await import("../agent-tools/browser-async.mjs")
+      return browserTaskDone(agent, parsed.arg)
+    }
     case "consult":
       return consultAllDone(agent)
     case "file":
@@ -293,7 +309,7 @@ export const waitForTool = {
   parameters: {
     type: "object",
     properties: {
-      condition: { type: "string", description: 'Condition expression — "advisor settled", "subagent id:N done", "consult done", "bash id:N done", "file exists:path", "port open:N"' },
+      condition: { type: "string", description: 'Condition expression — "advisor settled", "subagent id:N done", "consult done", "bash id:N done", "browser id:N done", "file exists:path", "port open:N"' },
       interval_ms: { type: "integer", description: "Poll interval in ms (default 1000, floor 100)" },
       timeout_ms: { type: "integer", description: "Overall timeout in ms (default 30000, cap 600000; config.json agent.waitForTimeoutMs overrides the default)" },
     },
