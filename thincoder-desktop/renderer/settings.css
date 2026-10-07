@@ -47,6 +47,13 @@
   gap: 8px;
   padding-bottom: 8px;
   border-bottom: 1px solid transparent;
+  /* 头行粘顶（#1030 · 用户 2026-10-07：「上滚一下以后连关闭按钮都找不到」）：页／向导同容器滚
+     （`[data-slot="settings"]` overflow:auto）⇒ 头行钉住；不透明底 = 页底同色防透底。弹窗面
+     （`.settings-modal .settings-head`）已持同径专指规则（底 `--bg-raised`，专指度更高、不受本处影响）。 */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg);
 }
 .settings-title,
 .wizard-title {
