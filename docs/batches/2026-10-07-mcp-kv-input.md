@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-07 · 来源 = 父侧盘点（VSC MCP 表单 env 逗号分隔串 + 桌面同病实读补证）+ 用户 2026-10-07 19:04「3开小批now」（台账 #1036）。
 > 台账 = #1036（vsc · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：进行中（设计评审 pass（🔴0∥🟡4∥🔵3）· 修复轮七号落（追记⑦）· 已代签 · 实施舱 #10 在队（排 parity VSC 舱后））
+**状态行**：进行中（设计评审 pass（🔴0）· 修复轮七号落 · 已代签 · 实施舱已交（13/13 绿 · 评审 clean）· 回填轮在派 ∥ 真机走查待（T-DSK64））
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 ### 1.1 讨论与登记（2026-10-07 19:0x · 父侧）
@@ -172,4 +172,83 @@ VERDICT: pass
 - 令牌 = 运行时凭据（不入档）；实施舱随本签派发。
 
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（批内件 13/13 绿 ∥ 审计 clean ∥ 代码评审 1🔴 已修 → clean ∥ 新档 299 ≤300 · 主档回线 212/164）
+
+
+
+**实施轮（eng-coder · 2026-10-07 · 台账 #1036）**
+
+**面**：两端 MCP 表单 `env ∥ headers` 行式键值 + 两处先拆后改 + 词面 8 笔。**成品**：产品码 8 改 2 增（VSC 3 改 1 增 ∥ 桌面 5 改 1 增）+ 批内件 1 档 + 词面 2 档；`settings.css` ×2 ∥ `src/main/mcp-servers.mjs` ∥ `panel-mcp.mjs` 零触（`git status` 实读）。
+
+### 交付对照（§2 机制 ①–⑩）
+
+| # | 状态 | 交付（落点） | 机检 |
+|---|---|---|---|
+| ① 行式编辑器 | ✅ | 两端三组行集（键格 ∥ 值格 ∥ ✕ + `[+ 添加行]`；零项零行；字段序零改）：VSC `webview/settings-mcp.js`（`kvRowHtml` ∥ `kvRowsInto` ∥ `kvObjectOf` + 行容器事件委托）∥ 桌面 `views/settings-sections-mcp.mjs`（`kvRowNode` ∥ `kvFieldNodes`）+ `mount-settings-segments-mcp.mjs`（令牌件） | L1-1 ∥ L1-2 ∥ L3-1 ∥ L3-3 |
+| ② 提交口径 | ✅ | 两端同判 trim ∥ 空键 ∥ 空值行丢 ∥ 重复后胜 ∥ 全空 ⇒ 键缺席（VSC `kvObjectOf`；桌面 `kvFromForm`） | L2-3 ∥ L3-2 |
+| ③ 回显口径 | ✅ | 插入序保持 ∥ 值 = 字面（**零引号剥离**——旧串式剥离随 `parseHeadersLike` ∥ `parseKv` 同笔净删） | L1-1 ∥ L3-2 互逆 |
+| ④ 粘贴零解析 | ✅ | 无任何隐式解析面（值格 = 单行 `input`，整块文本落一格） | L1-4 值格型 |
+| ⑤ 边界 | ✅ | 值格单行 `input`；键格零字符限制（trim 裁首尾）；加删行零落盘（VSC 纯 DOM ∥ 桌面仅切片） | L1-4 ∥ L2-1 |
+| ⑥ 两端实现形 | ✅ | VSC DOM 即态（表单态不入 SS）∥ 桌面 `form.kv` 令牌态（随 `form` 生命周期复位 = `resetFacets` 现径）；加删出口先自读 DOM 行集 ⇒ 写切片 ⇒ 重挂；`readMcpForm` 不采行件 | L2-1 ∥ L2-2 ∥ L2-3 |
+| ⑦ 拆档两处（先拆后改） | ✅ | VSC：`settings-tools.js` **433 ⇒ 212**、新档 `settings-mcp.js` **273**（缝 = `mcpFormHtml()` ∥ `bindMcpControls()` 两口回插；对外导出名零改）；桌面：`mount-settings-segments.mjs` **364 ⇒ 164**、新档 `mount-settings-segments-mcp.mjs` **298**（缝 = 同形工厂 `createMcpExits(deps)`；装配点 `mount-settings-exits.mjs` 装配即合并） | 行数实读 + 装载实读（41 handlers 零重名） |
+| ⑧ 文案 8 笔 | ✅ | VSC `locales/en.json` ∥ `zh.json` 两语同拍（各 291 键）∥ 桌面 `i18n-views.mjs` 两语同拍 | L4-1 |
+| ⑨ 零新 CSS | ✅ | 两 `settings.css` 零触（复用既有类 + 行内宽度） | `git status` 零涉 |
+| ⑩ 零新状态源 | ✅ | VSC 零（DOM 即态）∥ 桌面 +`settings.mcp.form.kv`（表单面态内部形——非切片新族） | 结构 + L2-1 |
+
+**验收 A1–A6 实读**：A1 ✅ 值含逗号不坏（读数 `{"KEY":"va,lue"}`——L2-3 ∥ L3-1）· A2 ✅ 两端同形（行件三元素 ∥ 添加钮 ∥ 零项零行 ∥ 四词面 8 值逐字同）· A3 ✅ 互逆（零修改保存 ⇒ 载荷与现值同——L3-2；桌面编辑态起表单同判——L2-1）· A4 ✅ 四判据（L2-3）· A5 ✅ 零残留（L4-2 扫 155 档命中 0；另全仓源面 208 档 grep 零命中）· A6 ✅ 行数：新档 **273 ∥ 298**、回线 **212 ∥ 164**、硬限 500 全绿（`i18n-views.mjs` **406** 在册越 300——本批词值级触碰）。
+
+### 决策透明表（实施轮判定）
+
+| # | 判定 | 依据 ∥ 影响 |
+|---|---|---|
+| D1 | VSC ws 组 DOM 组名 = `ws-headers`（桌面切片键 = `wsHeaders`） | 组名只在各端内部（VSC = DOM 锚；桌面 = 切片键）；两端提交皆映 `config.headers` ⇒ 对外零差 |
+| D2 | 桌面 kv 两出口**不**随写携 `draft` 快照 | §2.17 项 3：行值保真 = 令牌态 + 草稿闸两层（`#604` 按 `id` 复填；非行控件 id 稳定 ⇒ 跨重挂保输入）；`draft` 仅承「类型切换」跨型带货 |
+| D3 | `mcpFormType` 写表单对象 = 新构 `{ editing, type, kv, draft }`（非 spread held） | 沿迁出前现径（该出口原即新构）；`kv` = 本批新增键，其余键集同 |
+| D4 | 桌面新档初稿 **327** ⇒ 压注释 ∥ 空行至 **298**（**零代码行改动**） | A6 两新档 ≤300；压掉的是与 §2.17 重复的机制复述（单源纪律） |
+| D5 | 测试 L1-4 增「非行控件同携 `data-draft`」1 断言（§2 枚举外） | 保输入链下半（草稿闸按 id 复填）为本批依赖——不测则链断无声；已在此披露 |
+| D6 | 桌面 kv 出口空转径（无 DOM/表外令牌）记 `console.error` 后零写 | 沿域内「零静默」口径（§2.17 只说「空转」，不说「无语」） |
+
+### 实施读数（实读）
+
+- 行数：VSC `settings-mcp.js` **273** ∥ `settings-tools.js` **433 ⇒ 212** ∥ `settings.js` **195**；桌面 `mount-settings-segments-mcp.mjs` **298** ∥ `mount-settings-segments.mjs` **364 ⇒ 164** ∥ `mount-settings-exits.mjs` **289**（261 ⇒ 289：+import/call/spread 三处 + 注）∥ `views/settings-sections-mcp.mjs` **241** ∥ `i18n-views.mjs` **398 ⇒ 406**；批内件 **354**。
+- 词面：VSC `locales/{en,zh}.json` **291 键**（各 293 行）∥ 桌面 `VIEWS_DICT` 两语同拍；`settings.mcp.env ∥ .headers` 值改 + 四新键（L4-1 读数「四键 × 4 词面 ✓」）。
+- 装载：`createExits`（桩 deps）装载实读 **41 handlers**（MCP 十一项在场 ∥ keys 去重零损）——拆档后装配面对外零改。
+- 测试：批内件 **12/12 绿**（L1 4 ∥ L2 3 ∥ L3 3 ∥ L4 2）；VSC `node test/smoke-settings.mjs` = **SMOKE-OK**（真 webview 装配面）。
+- 仓套件：**未跑**（本仓纪律 = 父侧收口跑为唯一仓套件跑）；集成面零涉（表单面非集成档位）。
+- 观察（非本批改动）：`thincoder-vscode/webview/settings.js` 的本批 import 一行改已被并行批提交（`5ac999ef`）带走，故不在本批 `git status` 未提交面——内容实读在位（`:15` import 自 `settings-mcp.js`）。
+
+### 审计轮（内部 · explore 只读发散审计）
+
+- **轮次 1**（交付后）：四类偏差（PARTIAL ∥ SILENT-SIMPLIFICATION ∥ DOC-DRIFT ∥ OUT-OF-LIST）**零发现**；A1–A6 静态条条可对；新增/改动 11 档 + 批内件**全在批档受影响文件表内**（零表外）。VERDICT = **clean**（限制声明：该装配无执行工具——`node --test` ∥ smoke ∥ 真机走查由其标为「交父侧收口跑复核」）。
+- **审计观察四条（🔵）与处置**：
+  1. **计数账失真（已修）**：`mount-settings-exits.mjs` 头注「段族 **19** 项」与所列举四族实读不符 ⇒ 收正为 **30**（`segments` 9 ∥ `modelSegments` 8 ∥ `mcpSegments` 11 ∥ `agentSegments` 2）∥ 渠道面 **6 ⇒ 7**（含并行批 `onAddProvider` 之前的 `providerSegments` 七项）；同处 R7 历史句「env ∕ 工具 **十一**」⇒ 回「**十三**」（R7 迁出数），#1036 句改「族**九**出口拆出（该族现**十一**）」。
+  2. **§5 装载读数更正（本追加）**：上文「41 handlers」= **过时读数**（该值取自拆档后、kv 两出口落盘前）⇒ 落盘实读 **44**（`openModal` 缺省径；`openModal` 在位 ⇒ 45）＝ 家族 **37**（9+8+11+7+2）＋ 直表 **7**；零重名。**并记**：并行批（provider-config 在途）同刻在改 `providerSegments` 族件，故两读数差 3 = 上批 1 项 + 本批 kv 2 项。
+  3. **令牌退化小疵（已修）**：`readKvRows` 缺 `data-kv-token` 属性时 `Number(null) = 0` ⇒ 已改 `raw === null || raw === "" ⇒ NaN ⇒ 取新号`（现实不可达径的稳健性收口）。
+  4. **回填面（非本批交付 · 交父侧回填轮）**：桌面 `SETTINGS.md` §3.1 与 `PROJECT.md` 的数条预估数需按实读收正（本档 §5.3 实读族即据：`views/settings-sections-mcp.mjs` `185⇒≈250` → 实读 **241** ∥ `mount-settings-segments.mjs` `364⇒≈195` → **164** ∥ 新档 `0⇒≈240` → **298** ∥ `mount-settings-exits.mjs` `254⇒≈258` → **289** ∥ VSC `settings.js` `190⇒190` → **195**（并行批混入改（注）；本批仅 import 一行）。
+- **修后复跑**：批内件 **12/12 绿**（读数同前）∥ VSC `smoke-settings.mjs` **SMOKE-OK** ∥ `node --check` 全绿 ∥ 行数：新档 **299** ∥ `exits.mjs` **289**。
+
+### 代码评审轮（内部 · advisor · code）
+
+**轮次 1（交付后 · 阻塞）**：VERDICT = **changes-required**（1 🔴 + 3 🟡 + 2 🔵）：
+- 🔴 **kv 三出口的 DOM 读取面绑死设置槽 ⇒ 组弹窗面死钮**：`readKvRows` ∥ `readMcpForm` 以 `document.querySelector(slot)`（`[data-slot="settings"]`）为作用域，而 MCP 组弹窗体由 `settings-modal.mjs:45-46`（`body.append(backdrop)` ∥ `body.append(card)`）挂 `document.body`（**槽外**），且 `openSettingsModal` 不置 `open`（页树 `open` 假 ⇒ 零子节点）；菜单「MCP…」径（`src/main/app-menu.mjs:36` `SETTINGS_GROUPS` 含 `mcp` ⇒ `app.mjs:76` `settingsFace.openSettingsModal(group)`）页闭 ⇒ 槽内零表单 ⇒ 加 ∥ 删 **零写**（仅 `console.error`——钮可见可按）；页 ∥ 弹窗同开 ⇒ 读命中**页体**（跨面读）。验收 A2/T-DSK64 的「弹窗两态」不可达；本批机检（L2 夹具挂槽内）与审计轮（无执行面 ∥ 未分析弹窗宿主）均未覆盖 ⇒ 上条「A1–A6 ✅」在弹窗面不成立（本席收正）。
+- 🟡 三条（非阻塞）：① 回填面未落（父侧回填轮——`SETTINGS.md` `0 ⇒ ≈240` 对实读 299 等四组）；② 批内件超 300 顾问线；③ L2 无弹窗宿主腿（随修一并补）。
+- 🔵 两条：① `mount-settings-segments.mjs:150` 计数陈旧（「MCP 族九项」vs 同档头「十一」）；② 新档 299 行零余量（设计预估 ≈240 低 25%）。
+
+**修轮（轮 1）三处落地**：
+1. **现读面宿主无关化**：新件 `mcpFormNode()`（`mount-settings-segments-mcp.mjs:83-89`）——现读面 = **文档序末位 `[data-form="mcp"]`**（弹窗体挂 `body` 尾 ⇒ 在场即交互面；页闭径末位 = 弹窗体）；`readKvRows` ∥ `readMcpForm` 两读口同源收正（`slot` 依赖自该档 destructure 移除——注入口子在主档保留，调用面零改）。
+2. **批内件增 L2-4**（弹窗宿主：单宿主加 ∥ 删 + 两宿主并存读末位 ∥ 弹窗体键入值保真）——**红→绿**结构性护栏：旧读链（`querySelector(slot)` → `querySelector('[data-form="mcp"]')`）在 L2-4 夹具（页闭 + 表单挂 `body`）下恒 `null` ⇒ 旧码必红。
+3. **🔵① 收正**：`mount-settings-segments.mjs:150`「MCP 族九项」⇒「MCP 族十一项」。
+
+**轮次 2（复跑）**：批内件 **13/13 绿**（新腿读数：单宿主加/删 `1 ⇒ 0` ∥ 双宿主 `rows=[["MODAL","m,v"],["",""]]`）∥ 新档 **299** 行 ≤300 ✓ ∥ `node --check` 全绿。
+**终态**：**clean**（🔴 已修并复跑；🟡① 非本席可闭（父侧回填轮）、🟡② 披露如下、🟡③ 已补；🔵① 已收正、🔵② 交父侧）。
+
+**披露（D3 计数纪律）**：批内件 **390** 行 > 300 顾问线——件为随批遗留物（不进仓套件），四腿 **13** 例含 1 条弹窗宿主回归护栏；不拆档的给由 = 保改批复查的单档可跑性（父侧可裁）。
+
+**代码评审轮 2（复核 · 仅查修复声明）**：VERDICT = **pass**——
+① 🔴 修复声明**已核实**（三读口同源收正 ∥ `slot` 全档零命中 ∥ 末位假设独立复核：`settings-modal.mjs:46` 卡挂 `body` 尾 → `:56` 刷新保位 → `:65` 关＝清根 ⇒ 弹窗在场＝读面、退场＝回页体、页单独＝页体，零残件陷阱）；
+② L2-4 腿**已核实**为真红→绿护栏（判别断言在旧槽作用域链下必红）；
+③ 新档 299 ≤300 **实测相符**。
+不阻塞项 6 条（本轮不改判）：🟡① 回填面（父侧回填轮）∥ 🟡② 批内件 390 行（已披露，父侧可裁）∥ 🟡③ 新增：**设计单源缺句**——现读面宿主判据只住码内头注 + 批档，`SETTINGS.md` §2.17 项 3 ∥ KD-76 未载（单向缺口非矛盾；建议回填轮同拍补机制句，先例 :449）∥ 🔵① 计数陈旧——**本轮已落盘收正**（`mount-settings-segments.mjs:150`「MCP 族九项」⇒「十一项」，与同档头注对齐）∥ 🔵② 新档零余量（信息项）。
+**终态（收口）**：**clean** —— 内部审计 clean ∥ 代码评审 1🔴 已修已核 + round 2 pass ∥ 批内件 13/13 绿 ∥ 行数纪律全绿（新档 299 ∥ 273；回线 212 ∥ 164；硬限 500 ✓）。
+
 ## §6 验证与收口（父代理）

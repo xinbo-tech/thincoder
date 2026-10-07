@@ -2,23 +2,27 @@
  * settings-sections-mcp.mjs — 设置面 MCP 段体（R7 · 桌面功能对位批 · 批档 §2 R7 #6；**先拆后改**：段体自立 ——
  * 自 `renderer/views/settings-sections.mjs` 命名面出档，本档 = 单一 owner，原档 re-export ⇒ 分派面零改）。
  *
- * 面形（源 = VSC `settings-tools.js` MCP 卡（`:165-263`）+ 「R7 增」两钮〔`Tools` ∕ `Test`〕+ **B10 W3 编辑 ∕
- * 重连两面**〔S8 ∕ S9；VSC `:184` ∕ `:186` ∕ `:225-229`〕）：
+ * 面形（源 = VSC `settings-tools.js` MCP 卡 + 「R7 增」两钮〔`Tools` ∕ `Test`〕+ **B10 W3 编辑 ∕
+ * 重连两面**〔S8 ∕ S9〕+ **#1036 kv 行式输入**）：
  *  ① **行** = 名 + 形词（表外原样）+ 摘要（主侧出口——不含密钥面）+ 五控件（`Tools` 展开 ∕ `Edit` 编辑 ∕
  *     `Test` 探活 ∕ `Reconnect` 重连 ∕ 移除 —— VSC 同行序）；
  *  ② **展开面**（按服务器名 —— `data-mcp-detail-for`）：`Tools` 径 = 逐工具三键行（名 ∕ 描述 ∕ params——
  *     空 params 零段节点）；`Test` ∕ `Reconnect` 径 = 回执一行（`✓ OK — ${count} tools, ${latency}ms` ∕
  *     `✓ Reconnected — ${count} tools`）；各径失败面（连接 ∕ 探活错误串经 `deps.reasonWord` 直传；
  *     探期词 = 「加载中…」∕「测试中…」∕「重连中…」）；
- *  ③ **表单**（S8 结构化）= 名（**编辑态只读**——名 = 不变量）+ 类型 `select`（`stdio` ∕ `http` ∕ `ws`）+
- *     三型字段组（按 `section.form.type` 条件渲染；字段集 = VSC `settings-tools.js:60-80` 同族：stdio ⇒
- *     command ∕ args ∕ env · http ⇒ url ∕ token ∕ headers · ws ⇒ wsUrl ∕ token ∕ headers）+ 存 ∕ 消两钮；
+ *  ③ **表单**（S8 结构化）= 名（**编辑态只读**——名 = 不变量）+ 类型 `select`（`stdio` ∥ `http` ∥ `ws`）+
+ *     三型字段组（按 `section.form.type` 条件渲染；字段集 = VSC 同族：stdio ⇒ command ∕ args ∥ **env 行集** ·
+ *     http ⇒ url ∥ token ∥ **headers 行集** · ws ⇒ wsUrl ∥ token ∥ **headers 行集**）+ 存 ∕ 消两钮；
  *     `form = null` ⇒ 新增态（空表单）；编辑态 = `form.editing` 非空（**预填 = 行 `config` 现值**
- *     —— `mcp:list` 回执 S8 增键；`config` 缺 / 形不合 ⇒ 空表，零假造）。
+ *     —— `mcp:list` 回执 S8 增键；`config` 缺 / 形不合 ⇒ 空表，零假造）；
+ *     **#1036**：env ∥ headers = **行式键值编辑器**（每行 = 键格 + 值格 + ✕，行集下「添加行」；
+ *     **零项 ⇒ 零行**；行态 = `form.kv`（`{ env ∥ headers ∥ wsHeaders: [{ t, k, v }] }`——令牌单调递增永不复用
+ *     ⇒ 草稿闸按 `id` 定位不复灌残值）；行件 = `.settings-field-row` + 两 `.settings-field` + `.settings-row-action`
+ *     ✕（零新 CSS）；机制单源 = `docs/desktop/design/SETTINGS.md` §1 **KD-76** ∥ §2.17）。
  * 三态：`loading` 期零表单（载入中不落半形）；`details` 缺该项 ⇒ 零展开面（禁假造）。
  * 纪律：零 DOM（描述符树）；文案一律经 `t()`；缺 handlers ⇒ `wire` 落 `disabled: true`（诚实非死控）；
  * 零 `node:` ∕ 零裸包。
- * **#604 增**：表单字段组（`fieldNode` 可编辑态）携 `data-draft` —— 总闸捕获域；类型 `select` ＝写触发
+ * **#604 增**：表单字段组（`fieldNode` 可编辑态 ∥ kv 行两格）携 `data-draft` —— 总闸捕获域；类型 `select` ＝写触发
  * 控件（改即写切片）⇒ 不入域（负向锁面 —— 批档 §2.2 判据 M-604b ∕ M-604c）。
  */
 import { t } from "../i18n.mjs"
@@ -89,12 +93,6 @@ function mcpDetailNode(name, detail, deps) {
   return { tag: "div", props: { class: "settings-mcp-detail", "data-mcp-detail-for": name }, children }
 }
 
-/** `env` ∕ `headers` 对象 → 单行输入串（`k=v, k2=v2` —— 与提交端解析互逆；非对象 ⇒ 空串，零假造）。 */
-function kvToInput(value) {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) return ""
-  return Object.entries(value).map(([k, v]) => `${k}=${v}`).join(", ")
-}
-
 /** 表单字段行（标签 + 文本输入；`name` 属性 = FormData 载荷键）。
  *  `data-draft` = **草稿申报标记**（#604 总闸捕获域 —— 键取 `id` = `mcp-<name>`）；
  *  `readOnly` 态（编辑态名）＝模型镜像（非草稿）⇒ 不申报（入域会掩蔽编辑目标切换）。 */
@@ -112,9 +110,65 @@ function fieldNode(labelKey, name, value, readOnly = false) {
   ]
 }
 
+/** 行式键值行集归一（`form.kv[group]` → `[{ t, k, v }]`；缺 ∥ 形不合项剔除——零假造）。 */
+function kvRowsOf(value) {
+  return listOf(value)
+    .filter((row) => row !== null && typeof row === "object" && Number.isInteger(row.t))
+    .map((row) => ({ t: row.t, k: typeof row.k === "string" ? row.k : "", v: typeof row.v === "string" ? row.v : "" }))
+}
+
+/** 行式键值单行（`.settings-field-row` + 键格 ∥ 值格 + ✕）：`name` = `<group>-k` ∥ `<group>-v`（FormData 配对键——
+ *  按 DOM 序逐位配对）；`id` = `mcp-<group>-<k|v>-<t>`（令牌永不复用 ⇒ 草稿闸按 `id` 定位不复灌残值）；
+ *  两格携 `data-draft`（#604 捕获 ∥ 复填保输入）；✕ 携令牌（`onMcpKvRemove(group, t)`）。 */
+function kvRowNode(group, row, onRemove) {
+  return {
+    tag: "div",
+    props: { class: "settings-field-row", "data-kv-row": group, "data-kv-token": String(row.t) },
+    children: [
+      {
+        tag: "input",
+        props: {
+          class: "settings-field", type: "text", id: `mcp-${group}-k-${row.t}`, name: `${group}-k`,
+          value: row.k, placeholder: t("settings.mcp.kvKey"), "data-kv-part": "k", "data-draft": "",
+        },
+      },
+      {
+        tag: "input",
+        props: {
+          class: "settings-field", type: "text", id: `mcp-${group}-v-${row.t}`, name: `${group}-v`, style: "flex: 2",
+          value: row.v, placeholder: t("settings.mcp.kvValue"), "data-kv-part": "v", "data-draft": "",
+        },
+      },
+      {
+        tag: "button",
+        props: wire({
+          class: "settings-row-action", type: "button", "data-action": "settings:mcpKvRemove",
+          "data-kv-token": String(row.t), "aria-label": t("settings.mcp.kvRemove"),
+        }, onRemove === undefined ? undefined : () => onRemove(row.t)),
+        children: ["✕"],
+      },
+    ],
+  }
+}
+
+/** 行式键值组（标签 + 行集 + `[+ 添加行]` 钮）：零项 ⇒ 零行（零假造）；缺 handlers ⇒ 两控件 `disabled`（诚实非死控）。 */
+function kvFieldNodes(group, labelKey, rows, handlers) {
+  const onAdd = typeof handlers?.onMcpKvAdd === "function" ? () => handlers.onMcpKvAdd(group) : undefined
+  const onRemove = typeof handlers?.onMcpKvRemove === "function" ? (token) => handlers.onMcpKvRemove(group, token) : undefined
+  return [
+    { tag: "label", props: { class: "settings-field-label" }, children: [t(labelKey)] },
+    ...rows.map((row) => kvRowNode(group, row, onRemove)),
+    {
+      tag: "button",
+      props: wire({ class: "settings-submit", type: "button", "data-action": "settings:mcpKvAdd", "data-kv-group": group }, onAdd),
+      children: [t("settings.mcp.kvAdd")],
+    },
+  ]
+}
+
 /** MCP 表单（S8 结构化 —— 名 + 类型 + 三型字段组 + 存 ∕ 消；`form` 缺 ⇒ 新增态空表单）。
  *  编辑态：名只读（不变量）+ 现值直取行 `config` 预填；类型切换 = 出口写切片致重挂（`onMcpFormType`），
- *  未落盘输入经 `form.draft` 快照回填（切换不丢手 —— 沿 S2 `draft` 先例）。
+ *  未落盘输入经 `form.draft` 快照回填（切换不丢手 —— 沿 S2 `draft` 先例）；行值单源 = `form.kv`（#1036）。
  *  `data-draft-scope` = 表单身份面（#604 总闸作用域键：新增 ∕ 改名各一骨 —— 身份换 ⇒ 旧草稿不复填）。 */
 function mcpFormNode(section, handlers) {
   const form = section?.form !== null && typeof section?.form === "object" ? section.form : null
@@ -125,6 +179,8 @@ function mcpFormNode(section, handlers) {
   const draft = form !== null && form.draft !== null && typeof form.draft === "object" && !Array.isArray(form.draft) ? form.draft : null
   const valueOf = (name, fallback) => (draft !== null && typeof draft[name] === "string" ? draft[name] : fallback)
   const textOf = (value) => (typeof value === "string" ? value : "")
+  const kv = form !== null && form.kv !== null && typeof form.kv === "object" && !Array.isArray(form.kv) ? form.kv : null
+  const kvRows = (group) => (kv === null ? [] : kvRowsOf(kv[group]))
   const onType = typeof handlers?.onMcpFormType === "function" ? (event) => handlers.onMcpFormType(String(event?.target?.value ?? "")) : undefined
   const typeSelect = {
     tag: "select",
@@ -141,18 +197,18 @@ function mcpFormNode(section, handlers) {
     ? [
       ...fieldNode("settings.mcp.url", "url", valueOf("url", textOf(cfg.url))),
       ...fieldNode("settings.mcp.token", "token", valueOf("token", textOf(cfg.token))),
-      ...fieldNode("settings.mcp.headers", "headers", valueOf("headers", kvToInput(cfg.headers))),
+      ...kvFieldNodes("headers", "settings.mcp.headers", kvRows("headers"), handlers),
     ]
     : type === "ws"
       ? [
         ...fieldNode("settings.mcp.wsUrl", "wsUrl", valueOf("wsUrl", textOf(cfg.wsUrl))),
         ...fieldNode("settings.mcp.token", "token", valueOf("token", textOf(cfg.token))),
-        ...fieldNode("settings.mcp.headers", "headers", valueOf("headers", kvToInput(cfg.headers))),
+        ...kvFieldNodes("wsHeaders", "settings.mcp.headers", kvRows("wsHeaders"), handlers),
       ]
       : [
         ...fieldNode("settings.mcp.command", "command", valueOf("command", textOf(cfg.command))),
         ...fieldNode("settings.mcp.args", "args", valueOf("args", Array.isArray(cfg.args) ? cfg.args.join(" ") : "")),
-        ...fieldNode("settings.mcp.env", "env", valueOf("env", kvToInput(cfg.env))),
+        ...kvFieldNodes("env", "settings.mcp.env", kvRows("env"), handlers),
       ]
   const submit = editing === null
     ? { action: "settings:addMcp", word: t("settings.mcp.add"), handler: handlers?.onAddMcp }
