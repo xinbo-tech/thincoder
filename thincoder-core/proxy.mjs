@@ -2,7 +2,7 @@
  * proxy.mjs — Shared proxy tunnel for websearch, fetch, and provider calls.
  * Zero dependencies: Node built-ins only (net, tls, http, url).
  */
-import { connect } from "node:net";
+import { connect, isIP } from "node:net";
 import { connect as tlsConnect } from "node:tls";
 import { PassThrough } from "node:stream";
 import { URL } from "node:url";
@@ -40,6 +40,23 @@ export function resolveProxyConfig(ctx) {
 export function resolveWebProxy(ctx) {
   const cfg = resolveProxyConfig(ctx)
   return (cfg.uri && cfg.web) ? cfg.uri : null
+}
+
+/**
+ * Loopback 目标判定（NO_PROXY 语义——#1026，2026-10-07 用户案）：
+ * `localhost` ∥ `*.localhost`（RFC 6761）∥ `127.0.0.0/8` ∥ `::1` —— 此类目标永不经代理。
+ * 解析失败 ⇒ false（未知串不宣称 loopback）；尾点（`localhost.`）先归一。
+ */
+export function isLoopbackTarget(urlStr) {
+  let host
+  try { host = new URL(urlStr).hostname } catch { return false }
+  if (host.startsWith("[") && host.endsWith("]")) host = host.slice(1, -1) // IPv6 带括号（URL.hostname 规范形）
+  if (host.endsWith(".")) host = host.slice(0, -1)
+  if (host === "localhost" || host.endsWith(".localhost")) return true
+  const v = isIP(host)
+  if (v === 4) return host.split(".")[0] === "127"
+  if (v === 6) return host === "::1"
+  return false
 }
 
 /**
@@ -267,6 +284,8 @@ function tcpConnectProxy(proxyUri, signal, timeout) {
  * （`readSSE` ∥ `parseGeminiStream`）经 `terminateBody` 恢复有效；proxy 两分支不挂（自有 `_bodyIdleMs`）。
  */
 export async function proxyFetch(urlStr, opts, proxyUri) {
+  // Loopback 目标永不经代理（NO_PROXY 语义——#1026：本地网关被塞进代理 ⇒ 403 假红）：
+  if (proxyUri && isLoopbackTarget(urlStr)) proxyUri = null
   if (!proxyUri) {
     const idleAbort = new AbortController()
     const signal = opts?.signal ? AbortSignal.any([opts.signal, idleAbort.signal]) : idleAbort.signal

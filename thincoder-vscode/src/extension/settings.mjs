@@ -221,11 +221,12 @@ export async function testProviderConnection({ baseURL, apiKey, format }) {
   const url = (baseURL || "").trim().replace(/\/+$/, "")
   if (!url) return { ok: false, error: "baseURL is required" }
   if (!/^https?:\/\//.test(url)) return { ok: false, error: "baseURL must start with http:// or https://" }
-  // Route through the configured web proxy (same as websearch/fetch).
-  const px = normalizeProxy(loadRaw().proxy)
-  const proxyUri = px && px.web !== false ? px.uri : null
+  // 代理语义 = 运行期同语义（#1026 · 用户 2026-10-07 裁定：provider 走不走代理 = 每个 provider
+  // 单独选；`config.proxy.web` 只管 websearch/fetch）。本表单 = 尚未落盘的条目 ⇒ 没有也带不上
+  // per-provider 勾选——与运行期缺省一致 = 直连（旧实现取全局 web 代理旗：本地渠道必被塞进
+  // 企业代理而假红 403）。未来若加「已存在渠道的行内测试」，把 name 带上走同一判定。
   try {
-    const models = await listModels({ baseURL: url, apiKey: apiKey || "", model: "", format, proxyUri })
+    const models = await listModels({ baseURL: url, apiKey: apiKey || "", model: "", format, proxyUri: null })
     return { ok: true, models }
   } catch (e) {
     return { ok: false, error: e.message || String(e) }
