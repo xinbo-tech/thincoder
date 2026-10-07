@@ -1,6 +1,6 @@
 /**
  * app.mjs — 控制台前端入口（webui/WEBUI.md §1–§3）：哈希路由（`#/<组>/<页>`）∥ fetch 封装 ∥ 会话态 ∥ 渲染助手 ∥
- * 视图装配（一页一职责）∥ 系统信息（`/api/system`——装配取一次；失败静默留空——§2.1）∥ 健康轮询（§2.3⑤：
+ * 视图装配（一页一职责）∥ 数据表页视口高壳（`dataShell`——§2.6②）∥ 系统信息（`/api/system`——装配取一次；失败静默留空——§2.1）∥ 健康轮询（§2.3⑤：
  * 登录后启动——立即一次 + 30s；登出停止；灯/系统页块/总览卡三落点共用）∥ 多语言接线（`initLang` ∥ 错误映射 ∥
  * 格式化本地化 ∥ `Retry-After` 捕捉 ∥ `rerender` 口 ∥ title——§2.2）。
  *
@@ -87,6 +87,18 @@ export function usageTable(rows, { withMember = false } = {}) {
     String(row.durationMs),
   ])
   return table(headers, body)
+}
+
+/** 数据表页视口高壳（§2.6②——页头固定 ∥ 表区吃剩高 ∥ 页脚行计数）：三段挂到视图根，返回 `{ setCount }`；
+ *  行计数 = 渲染行数派生（`common.rowCount`——空/错 = 0；未取数 = 空）。挂载前提 = 视图根 `<section>` 直属 `main#app`。 */
+function dataShell(mount, { head, area }) {
+  const foot = h("p", { class: "page-foot" })
+  mount.append(
+    h("div", { class: "page-head" }, head),
+    h("div", { class: "page-area" }, area),
+    foot,
+  )
+  return { setCount: (count) => { foot.textContent = t("common.rowCount", { count }) } }
 }
 
 // ── 健康轮询（§2.3⑤——灯 ∥ 系统页块 ∥ 总览卡三落点共用）──────────────────────
@@ -224,7 +236,7 @@ function currentPath() {
 
 /** 视图上下文（各页共用面——showSecret/usageTable = 跨页共用助手，单源住本档；onChange = 语言切换回调）。 */
 function viewCtx() {
-  return { h, table, api, state, fail, flash, refresh, navigate, fmtTs, fmtValue, fmtQuota, showSecret, usageTable, onChange: switchLang, onHealth, health: healthSnapshot }
+  return { h, table, api, state, fail, flash, refresh, navigate, fmtTs, fmtValue, fmtQuota, showSecret, usageTable, dataShell, onChange: switchLang, onHealth, health: healthSnapshot }
 }
 
 /** 重渲口（语言切换——侧栏 ∥ 视图同拍；§2.2）。 */
@@ -239,12 +251,16 @@ function switchLang(lang) {
   rerender()
 }
 
+/** 壳页表（数据表五页——§2.6① 钉表；`body.data-shell` 标记面——登录/登出径清除）。 */
+const SHELL_PAGES = new Set(["/admin/members", "/admin/providers", "/admin/models", "/admin/audit", "/me/usage"])
+
 async function route() {
   const path = currentPath()
 
   // 登录门：无会话 ⇒ 登录页（无侧栏）；已登录访问登录页 ⇒ 角色默认页。
   if (!state.member) {
     if (path !== "/login") { navigate("/login"); return }
+    document.body.classList.remove("data-shell") // 登录面 = 非壳（登出/会话失效同径）
     const mount = h("section")
     appEl.replaceChildren(mount)
     navEl.hidden = true
@@ -255,6 +271,7 @@ async function route() {
 
   const resolved = resolveRoute(path, state.member.role)
   if (resolved.redirect) { navigate(resolved.path); return } // 别名/根/未知 ⇒ 替换 hash（URL 与视图对齐）
+  document.body.classList.toggle("data-shell", SHELL_PAGES.has(resolved.path)) // 壳页标记（五路径——§2.6②）
 
   const mount = h("section")
   appEl.replaceChildren(mount)

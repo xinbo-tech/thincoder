@@ -1,7 +1,8 @@
 /**
  * views-providers-modals.mjs — Provider 双弹窗件（webui/WEBUI.md §2.4④——功能点 18 ∥ KD-SV-33；自
  * `views-providers.mjs` 拆出——双弹窗叠加破 300 软线）：添加弹窗（预设/自定义两径——预设表首开惰性拉取·
- * 已配名剔除）∥ 详情弹窗（信息段 + 候选勾选段——候选 = 上游发现；退役项只读注 + 恒保留；单脚区保存）。
+ * 已配名剔除）∥ 详情弹窗（信息段 + 候选勾选段——候选 = 上游发现；退役项只读注 + 恒保留；单脚区保存）；
+ * 模型清单/候选勾选 = 表格形（§2.6⑤——单列「模型」：`label`（勾选 + 模型名）∥ `code` 行）。
  *
  * 端点零新（契约 = gateway/API.md §2.2）：`GET /api/admin/providers/presets`（拉表）∥ `POST /api/admin/providers/discover`
  * （探针——「测试连接」= 同径复用，`providerId` 取库内 key；失败 ⇒ 段内提示 + 重试；无手填兜底）∥ `POST` 全字段 ∥
@@ -11,22 +12,35 @@
 import { mapError, t } from "./i18n.mjs"
 import { openModal } from "./modal.mjs"
 
-/** 候选勾选清单（双弹窗复用）：候选 = 上游发现集；`draft` = 勾选集（变化即写回）；发现失败 ⇒ 段内提示
- *  （重试 = 段内动作钮——调用方常驻持有）；空 ⇒ `emptyText`。
- *  「零手填」——候选面零文本输入（用户 2026-10-06 21:36 裁定）。 */
+/** 候选勾选清单（双弹窗复用——表格形：单列「模型」——§2.6⑤）：候选 = 上游发现集；`draft` = 勾选集（变化即写回）；
+ *  发现失败 ⇒ 段内提示（重试 = 段内动作钮——调用方常驻持有）；空 ⇒ `emptyText`。
+ *  「零手填」——候选面零文本输入（用户 2026-10-06 21:36 裁定）；行 = `label`（勾选 + 模型名——点题名同切换）。 */
 function renderPicks(h, box, { candidates, draft, onToggle, emptyText, errorText }) {
   if (errorText !== null) {
     box.replaceChildren(h("p", { class: "hint error", text: errorText }))
     return
   }
   const models = candidates ?? []
-  box.replaceChildren(...(models.length === 0
-    ? [h("span", { class: "hint", text: emptyText })]
-    : models.map((model) => {
-      const pick = h("input", { type: "checkbox", checked: draft.has(model) })
-      pick.addEventListener("change", () => onToggle(model, pick.checked))
-      return h("label", {}, pick, model)
-    })))
+  if (models.length === 0) {
+    box.replaceChildren(h("span", { class: "hint", text: emptyText }))
+    return
+  }
+  box.replaceChildren(h("div", { class: "table-wrap" },
+    h("table", {},
+      h("thead", {}, h("tr", {}, h("th", { text: t("admin.models.colModel") }))),
+      h("tbody", {}, ...models.map((model) => {
+        const pick = h("input", { type: "checkbox", checked: draft.has(model) })
+        pick.addEventListener("change", () => onToggle(model, pick.checked))
+        return h("tr", {}, h("td", {}, h("label", {}, pick, model)))
+      })))))
+}
+
+/** 预设模型清单表（§2.6⑤——单列「模型」：行 = `code` 芯片）。 */
+function presetModelsTable(h, models) {
+  return h("div", { class: "table-wrap" },
+    h("table", {},
+      h("thead", {}, h("tr", {}, h("th", { text: t("admin.models.colModel") }))),
+      h("tbody", {}, ...models.map((model) => h("tr", {}, h("td", {}, h("code", { text: model })))))))
 }
 
 /** 集合等价（序无关——PATCH `models` 判「变更」用：全量数组单写）。 */
@@ -56,7 +70,7 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
   const baseURLInput = h("input", { placeholder: t("admin.providers.baseURLPh") })
   const apiKeyInput = h("input", { placeholder: t("admin.providers.apiKeyPh"), autocomplete: "off" })
   const fetchBtn = h("button", { type: "button", class: "tiny", text: t("admin.providers.fetchModels") })
-  const picksBox = h("div", { class: "model-picks" })
+  const picksBox = h("div")
 
   const keyRow = () => h("div", { class: "provider-form" }, h("label", {}, t("admin.providers.apiKey"), apiKeyInput))
   const renderPicksArea = () => renderPicks(h, picksBox, {
@@ -90,8 +104,8 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
     bodyBox.replaceChildren(
       typeRow,
       h("dl", { class: "detail-grid" },
-        h("dt", { text: t("admin.providers.baseURL") }), h("dd", {}, h("code", { text: preset.baseURL })),
-        h("dt", { text: t("admin.models.colModel") }), h("dd", {}, ...preset.models.map((model) => h("code", { text: model })))),
+        h("dt", { text: t("admin.providers.baseURL") }), h("dd", {}, h("code", { text: preset.baseURL }) )),
+      presetModelsTable(h, preset.models), // 模型清单 = 表格形（§2.6⑤——单列「模型」：`code` 行）
       keyRow())
   }
   typeSelect.addEventListener("change", () => {
@@ -180,7 +194,7 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
     autocomplete: "off",
   })
   const clearKey = h("input", { type: "checkbox" })
-  const picksBox = h("div", { class: "model-picks" })
+  const picksBox = h("div")
   const noteBox = h("div")
   const refreshBtn = h("button", { type: "button", class: "tiny", text: t("admin.providers.refreshCandidates") })
 

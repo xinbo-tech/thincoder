@@ -61,9 +61,11 @@ export function draftFromSettings(settings, upstream) {
 
 export async function renderModels(ctx, mount) {
   const { h } = ctx
-  mount.append(h("h2", { text: t("admin.models.title") }))
-  const listBox = h("div", {}, h("p", { class: "hint", text: t("common.loading") }))
-  mount.append(h("section", { class: "card" }, listBox))
+  const listBox = h("div", { class: "table-slot" }, h("p", { class: "hint", text: t("common.loading") }))
+  const shell = ctx.dataShell(mount, { // 视口高壳（§2.6②——页题固定 ∥ 表槽吃剩高 ∥ 页脚行计数）
+    head: h("h2", { text: t("admin.models.title") }),
+    area: h("section", { class: "card" }, listBox),
+  })
   const load = async () => {
     try {
       const data = await ctx.api("/api/admin/providers")
@@ -72,9 +74,11 @@ export async function renderModels(ctx, mount) {
       listBox.replaceChildren(rows.length === 0
         ? h("p", { class: "hint", text: t("admin.models.empty") })
         : modelsTable(ctx, rows, providers, load))
+      shell.setCount(rows.length)
     } catch (error) {
       ctx.fail(error)
       listBox.replaceChildren(h("p", { class: "hint error", text: t("admin.models.loadFailed") }))
+      shell.setCount(0)
     }
   }
   await load()

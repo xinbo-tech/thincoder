@@ -268,6 +268,11 @@ test("③ 服务模型：`deriveModels` 同源派生 ∥ 列表/空态/失败态
       api: async () => ({ providers: [{ id: 1, name: "deepseek", baseURL: "https://up.example/v1", apiKey: "", models: ["deepseek-chat"] }] }),
       fail: (error) => { throw new Error(`fail 不应被调用：${error}`) },
       fmtValue: (value) => (value === null || value === undefined ? "—" : String(value)),
+      dataShell: (mount, { head, area }) => {
+        // 随正（2026-10-07 控制台布局收正批）：stub 语义近似——真品 = app.mjs dataShell；本件仅渲染面
+        mount.append(head, area)
+        return { setCount: () => {} }
+      },
     }
     const mount = makeNode("section")
     await MODELS.renderModels(ctx, mount)

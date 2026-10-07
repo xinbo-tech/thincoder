@@ -54,7 +54,7 @@ h1, h2, h3, h4, h5, h6, th { font-weight: 400; } /* 零粗体（⑤——UA 700 
 .nav-bottom { margin-top: auto; display: flex; flex-direction: column; gap: var(--sp-3); padding: 0 var(--sp-3); }
 .nav-bottom .meta { font-size: var(--fs); color: var(--muted); min-height: 14px; }
 .content { margin-left: var(--nav-w); } /* 布局（底座：--nav-w = 侧栏宽 + 内容缩进） */
-main { max-width: 1100px; margin: 0 auto; padding: var(--sp-7); }
+main { max-width: 1100px; margin: 0; padding: var(--sp-7); }
 
 /* ── 主区（⑤ 字排：页题/卡题同号同重——h2/h3 = --text ∥ h4 = --muted；层级 = 结构通道）───────── */
 h2 { margin: var(--sp-2) 0 var(--sp-6); font-size: var(--fs); } /* 含页题——一字号（UA 1.5em 撤） */
@@ -118,7 +118,6 @@ pre.snippet { font-family: var(--mono); font-size: var(--fs); margin: var(--sp-3
 .provider-form input { min-width: 210px; } /* 尺寸字面（非刻度面——原值保留） */
 .provider-form .key-clear { flex-direction: row; align-items: center; }
 .stack-models { margin: var(--sp-2) 0 var(--sp-4); }
-.model-picks { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin-top: var(--sp-3); }
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-5); margin-bottom: var(--sp-6); }
 .toolbar h2 { margin: 0; }
 .pick-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); }
@@ -187,6 +186,23 @@ dialog.modal::backdrop { background: var(--backdrop); }
 .config-field input { width: 100%; max-width: 420px; }
 .config-field .hint { margin: 0; }
 .config-group > .hint { margin: var(--sp-3) 0 0; }
+
+/* ── 数据表页视口高壳（§2.6②——高度链声明单源：页头固定 ∥ 表区吃剩高 ∥ 页脚行计数；回退见下）────── */
+body.data-shell .content { height: 100dvh; display: flex; flex-direction: column; }
+body.data-shell main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+body.data-shell main > section { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.page-head { flex: none; }
+.page-area { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.page-area > .card { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
+.table-slot { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.table-slot > .table-wrap { flex: 1; min-height: 0; overflow-y: auto; }
+body.data-shell main thead th { position: sticky; top: 0; z-index: 1; } /* 吸附限 `main`——弹窗内表不吸附（弹窗直属 body） */
+.page-foot { flex: none; margin-top: var(--sp-4); color: var(--muted); }
+
+/* ── 壳回退（≤760px 宽 ∥ ≤600px 高）：撤高度链——整页滚（吸附随壳失效；§2.6②）────────────────── */
+@media (max-width: 760px), (max-height: 600px) {
+  body.data-shell .content { height: auto; }
+}
 
 /* ── 窄屏（≤760px）：侧栏降级为顶条（单条媒体查询——非移动端适配承诺——WEBUI §2）────────────── */
 @media (max-width: 760px) {

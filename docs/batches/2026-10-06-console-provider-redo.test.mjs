@@ -150,6 +150,11 @@ function makeCtx(routes = {}) {
     },
     fail: (error) => calls.push(["fail", error?.message ?? String(error)]),
     flash: (message) => calls.push(["flash", message]),
+    dataShell: (mount, { head, area }) => {
+      // 随正（2026-10-07 控制台布局收正批）：stub 语义近似——真品 = app.mjs dataShell；本件仅渲染面
+      mount.append(head, area)
+      return { setCount: () => {} }
+    },
   }
   return { ctx, calls }
 }

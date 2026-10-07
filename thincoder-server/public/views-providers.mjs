@@ -1,6 +1,6 @@
 /**
  * views-providers.mjs — 管理·Provider 页（webui/WEBUI.md §2/§2.4④——功能点 18 ∥ KD-SV-33）：`#/admin/providers`——仅 admin；
- * 页首 = 标题「Provider」+「添加」钮；列表（名称 ∥ baseURL ∥ 密钥（掩码 ∥ 未配置）∥ 服务模型数）；行点击
+ * 页首 = 标题「Provider」+「添加」钮（视口高壳页头——§2.6②）；列表（名称 ∥ baseURL ∥ 密钥（掩码 ∥ 未配置）∥ 服务模型数）；行点击
  * （Enter/Space 同开——沿成员页口径）⇒ 详情弹窗；**零内联添加/编辑面**（旧表单撤除——判据 = §6 AC-18 行）。
  * 双弹窗（添加 ∥ 详情）= 同域拆档 `views-providers-modals.mjs`（叠加破 300 软线——§5 拆分两档）。
  *
@@ -14,12 +14,14 @@ export async function renderProviders(ctx, mount) {
   const { h } = ctx
   let providers = [] // 最近一次列表（添加弹窗——已配名剔除用）
 
-  const listBox = h("div", {}, h("p", { class: "hint", text: t("common.loading") }))
+  const listBox = h("div", { class: "table-slot" }, h("p", { class: "hint", text: t("common.loading") }))
   const openAdd = () => openAddProviderModal(ctx, { providers, reload: loadList })
-  mount.append(h("div", { class: "toolbar" },
-    h("h2", { text: t("admin.providers.title") }),
-    h("button", { type: "button", text: t("admin.providers.add"), onclick: openAdd })))
-  mount.append(h("section", { class: "card" }, listBox))
+  const shell = ctx.dataShell(mount, { // 视口高壳（§2.6②——页头工具条固定 ∥ 表槽吃剩高 ∥ 页脚行计数）
+    head: h("div", { class: "toolbar" },
+      h("h2", { text: t("admin.providers.title") }),
+      h("button", { type: "button", text: t("admin.providers.add"), onclick: openAdd })),
+    area: h("section", { class: "card" }, listBox),
+  })
 
   async function loadList() {
     try {
@@ -28,9 +30,11 @@ export async function renderProviders(ctx, mount) {
       listBox.replaceChildren(...(data.providers.length === 0
         ? [h("p", { class: "hint", text: t("admin.providers.listEmpty") })]
         : [table(ctx, data.providers, (row) => openProviderDetailModal(ctx, { provider: row, reload: loadList }))]))
+      shell.setCount(data.providers.length)
     } catch (error) {
       ctx.fail(error)
       listBox.replaceChildren(h("p", { class: "hint error", text: t("admin.providers.listFailed") }))
+      shell.setCount(0)
     }
   }
   await loadList()

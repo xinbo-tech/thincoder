@@ -1,6 +1,7 @@
 /**
- * views-admin.mjs — 管理·成员页（webui/WEBUI.md §2/§2.4②）：`#/admin/members`——成员表（行点击 ⇒ 三态弹窗：
- * 查看 ∥ 编辑 ∥ 新建）；现行操作（设额度 ∥ 重置密码 ∥ 逐 key 吊销）全迁入弹窗；表 = 概览 + 入口（key 数）。
+ * views-admin.mjs — 管理·成员页（webui/WEBUI.md §2/§2.4②）：`#/admin/members`（视口高壳——§2.6②）——成员表（行点击 ⇒ 三态弹窗：
+ * 查看 ∥ 编辑 ∥ 新建）；现行操作（设额度 ∥ 重置密码 ∥ 逐 key 吊销）全迁入弹窗；表 = 概览 + 入口（key 数）；
+ * 查看态 key 表 = 表格形（§2.6⑤——密钥 ∥ 最后使用 ∥ 近 30 天 ∥ 操作）。
  * 一次性秘密（新建初始密码 ∥ 重置临时密码）= `ctx.showSecret`（关窗 + 页级回显——仅一次，语义不变）。
  * 原「管理」单页堆叠拆开（一页一职责）；全队用量看板 = views-usage.mjs（二轮迁出——§2.3②）。
  *
@@ -19,11 +20,18 @@ function detailGrid(h, pairs) {
 
 export async function renderMembers(ctx, mount) {
   const { h } = ctx
-  mount.append(h("h2", { text: t("admin.members.title") }))
   const secretBox = h("div", { class: "secret", hidden: true })
-  mount.append(secretBox)
 
-  const membersBox = h("div", {}, h("p", { class: "hint", text: t("common.loading") }))
+  const membersBox = h("div", { class: "table-slot" }, h("p", { class: "hint", text: t("common.loading") }))
+  const shell = ctx.dataShell(mount, { // 视口高壳（§2.6②——页题/秘密区/新建行固定 ∥ 表槽吃剩高 ∥ 页脚行计数）
+    head: [
+      h("h2", { text: t("admin.members.title") }),
+      secretBox,
+      h("div", { class: "row-form" },
+        h("button", { type: "button", text: t("admin.members.newBtn"), onclick: () => openMemberModal(ctx, { member: null, reload, secretBox }) })),
+    ],
+    area: h("section", { class: "card" }, membersBox),
+  })
   /** 取成员集（表渲染 + 弹窗刷新共用）：失败 ⇒ null（降级面 = 页内文案；调用方按需处置）。 */
   const reload = async () => {
     try {
@@ -31,16 +39,15 @@ export async function renderMembers(ctx, mount) {
       membersBox.replaceChildren(data.members.length === 0
         ? h("p", { class: "hint", text: t("admin.members.empty") })
         : membersTable(ctx, data.members, (member) => openMemberModal(ctx, { member, reload, secretBox })))
+      shell.setCount(data.members.length)
       return data.members
     } catch (error) {
       ctx.fail(error)
       membersBox.replaceChildren(h("p", { class: "hint error", text: t("admin.members.loadFailed") }))
+      shell.setCount(0)
       return null
     }
   }
-  mount.append(h("div", { class: "row-form" },
-    h("button", { type: "button", text: t("admin.members.newBtn"), onclick: () => openMemberModal(ctx, { member: null, reload, secretBox }) })))
-  mount.append(h("section", { class: "card" }, membersBox))
   await reload()
 }
 
@@ -101,16 +108,24 @@ export function openMemberModal(ctx, { member, reload, secretBox }) {
     } catch (error) { ctx.fail(error) }
   }
 
+  /** key 表（表格形——§2.6⑤：密钥 ∥ 最后使用 ∥ 近 30 天 ∥ 操作（吊销行内）；空态 = `.hint` 不进表）。 */
+  const keyTable = () => h("div", { class: "table-wrap" },
+    h("table", {},
+      h("thead", {}, h("tr", {},
+        h("th", { text: t("admin.members.colKey") }),
+        h("th", { text: t("admin.members.colLastUsed") }),
+        h("th", { text: t("admin.members.colWindowTokens") }),
+        h("th", { text: t("admin.members.colActions") }))),
+      h("tbody", {}, ...current.keys.map((key) => h("tr", {},
+        h("td", {}, h("code", { text: key.hint })),
+        h("td", { text: key.lastUsedAt === null || key.lastUsedAt === undefined ? t("me.keys.neverUsed") : ctx.fmtTs(key.lastUsedAt) }),
+        h("td", { text: t("admin.members.windowTokensCell", { tokens: key.windowTokens ?? 0 }) }),
+        h("td", {}, h("button", { class: "tiny danger", text: t("admin.members.revoke"), onclick: () => revoke(key) })))))))
+
   const renderView = () => {
     const keyList = current.keys.length === 0
       ? h("p", { class: "hint", text: t("admin.members.noKeys") })
-      : h("ul", { class: "key-list" }, ...current.keys.map((key) => h("li", { class: "key-item" },
-          h("code", { text: key.hint }),
-          h("div", { class: "key-meta", text: key.lastUsedAt === null || key.lastUsedAt === undefined
-            ? t("me.keys.neverUsed")
-            : t("me.keys.lastUsed", { time: ctx.fmtTs(key.lastUsedAt) }) }),
-          h("div", { class: "key-meta", text: t("me.keys.windowTokens", { tokens: key.windowTokens ?? 0 }) }),
-          h("button", { class: "tiny danger", text: t("admin.members.revoke"), onclick: () => revoke(key) }))))
+      : keyTable()
     bodyBox.replaceChildren(detailGrid(h, [
       [t("col.name"), current.name],
       [t("col.username"), current.username],

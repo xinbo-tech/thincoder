@@ -22,7 +22,6 @@ const AUDIT_TYPES = [
 
 export async function renderAudit(ctx, mount) {
   const { h } = ctx
-  mount.append(h("h2", { text: t("audit.title") }))
 
   const filterType = h("select", { title: t("audit.typeLabel") },
     h("option", { value: "", text: t("audit.typeAll") }),
@@ -31,7 +30,7 @@ export async function renderAudit(ctx, mount) {
   const filterFrom = h("input", { type: "datetime-local", title: t("admin.usage.fromTitle") })
   const filterTo = h("input", { type: "datetime-local", title: t("admin.usage.toTitle") })
 
-  const eventsBox = h("div", {}, h("p", { class: "hint", text: t("common.loading") }))
+  const eventsBox = h("div", { class: "table-slot" }, h("p", { class: "hint", text: t("common.loading") }))
   const loadEvents = async () => {
     const params = new URLSearchParams()
     if (filterType.value) params.set("type", filterType.value)
@@ -40,10 +39,13 @@ export async function renderAudit(ctx, mount) {
     if (filterTo.value) params.set(`to`, String(new Date(filterTo.value).getTime()))
     try {
       const data = await ctx.api(`/api/audit?${params.toString()}`)
-      eventsBox.replaceChildren(eventsTable(ctx, data.events ?? []))
+      const events = data.events ?? []
+      eventsBox.replaceChildren(eventsTable(ctx, events))
+      shell.setCount(events.length)
     } catch (error) {
       ctx.fail(error)
       eventsBox.replaceChildren(h("p", { class: "hint error", text: t("audit.loadFailed") }))
+      shell.setCount(0)
     }
   }
   const filterForm = h("form", { class: "row-form" },
@@ -53,7 +55,10 @@ export async function renderAudit(ctx, mount) {
     h("button", { type: "submit", text: t("audit.submit") }),
   )
   filterForm.addEventListener("submit", (event) => { event.preventDefault(); loadEvents() })
-  mount.append(h("section", { class: "card" }, h("h3", { text: t("audit.title") }), filterForm, eventsBox))
+  const shell = ctx.dataShell(mount, { // 视口高壳（§2.6②——页题固定 ∥ 卡内过滤行 ∥ 表槽吃剩高 ∥ 页脚行计数）
+    head: h("h2", { text: t("audit.title") }),
+    area: h("section", { class: "card" }, h("h3", { text: t("audit.title") }), filterForm, eventsBox),
+  })
   await loadEvents()
 }
 

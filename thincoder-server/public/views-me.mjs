@@ -49,32 +49,39 @@ export function renderMeKeys(ctx, mount) {
 export async function renderMeUsage(ctx, mount) {
   const { h } = ctx
   const member = ctx.state.member
-  mount.append(h("h2", { text: t("me.usage.title") }))
-  mount.append(vectorTip(ctx)) // 向量服务提示条（模型名 + snippet + 用法一句——地址/探活/试跑 = admin 面）
-  mount.append(h("section", { class: "card" }, h("h3", { text: t("me.usage.summary") }),
-    ctx.table([t("col.name"), t("col.username"), t("col.quota"), t("col.used")], [[
-      member.name, member.username, ctx.fmtQuota(member.quotaTokens), ctx.fmtValue(member.usedTokens),
-    ]])))
   const filterEndpoint = h("select", { title: t("usageReport.endpoint") },
     h("option", { value: "", text: t("usageReport.endpointAll") }),
     h("option", { value: "chat", text: "chat" }),
     h("option", { value: "embeddings", text: "embeddings" }))
-  const usageBox = h("div", {}, h("p", { class: "hint", text: t("common.loading") }))
+  const usageBox = h("div", { class: "table-slot" }, h("p", { class: "hint", text: t("common.loading") }))
   const loadUsage = async () => {
     const params = new URLSearchParams()
     if (filterEndpoint.value) params.set("endpoint", filterEndpoint.value) // 端点过滤（与全队用量同参数——§2.3①）
     params.set("limit", "100")
     try {
       const data = await ctx.api(`/api/me/usage?${params.toString()}`)
-      usageBox.replaceChildren(ctx.usageTable(data.rows, { withMember: false }))
+      const rows = data.rows ?? []
+      usageBox.replaceChildren(ctx.usageTable(rows, { withMember: false }))
+      shell.setCount(rows.length)
     } catch (error) {
       ctx.fail(error)
       usageBox.replaceChildren(h("p", { class: "hint error", text: t("usage.loadFailed") }))
+      shell.setCount(0)
     }
   }
   filterEndpoint.addEventListener("change", () => { loadUsage() }) // 单控件即选即查（多字段面走提交钮——管理页）
-  mount.append(h("section", { class: "card" }, h("h3", { text: t("me.usage.detail") }),
-    h("div", { class: "row-form" }, h("label", {}, t("usageReport.endpoint"), filterEndpoint)), usageBox))
+  const shell = ctx.dataShell(mount, { // 视口高壳（§2.6②——页题/提示条/摘要卡固定 ∥ 表槽吃剩高 ∥ 页脚行计数）
+    head: [
+      h("h2", { text: t("me.usage.title") }),
+      vectorTip(ctx), // 向量服务提示条（模型名 + snippet + 用法一句——地址/探活/试跑 = admin 面）
+      h("section", { class: "card" }, h("h3", { text: t("me.usage.summary") }),
+        ctx.table([t("col.name"), t("col.username"), t("col.quota"), t("col.used")], [[
+          member.name, member.username, ctx.fmtQuota(member.quotaTokens), ctx.fmtValue(member.usedTokens),
+        ]])),
+    ],
+    area: h("section", { class: "card" }, h("h3", { text: t("me.usage.detail") }),
+      h("div", { class: "row-form" }, h("label", {}, t("usageReport.endpoint"), filterEndpoint)), usageBox),
+  })
   await loadUsage()
 }
 
