@@ -171,7 +171,7 @@
 ### 6.2 注册与 schema
 
 - **内置工具**（`thincoder-core/tools/index.mjs` `builtinTools`）：file 6（read / write / edit / insert_after / hashline_edit / read_image）· patch 2（apply_patch / delete）· system 4（bash / glob / grep / ls）· web 2（websearch / fetch）· git 2（git / question）· 
-其余 lint / lsp / execute / tree / ops 4（file_ops / process / get_current_time / wait_for）。（read_pdf 已移除；sleep 已删——见 wait_for。）
+其余 lint / lsp / execute / tree / browser / ops 4（file_ops / process / get_current_time / wait_for）。（read_pdf 已移除；sleep 已删——见 wait_for。）
 - **元工具**（`thincoder-core/agent-tools.mjs`）：task / plan / goal / verify / batch / subagent / skill / recent_changes / advisor / eng / timer / read_history / context / consult_start / consult_stop——readonly 自管纪律工具。
 - 子代理按 role 过滤（explore/plan 只读，eng-coder 额外门控）；`context`（主动整理上下文 · 单工具三操作 · depth-0 段——形态与机制权威 = 本层 `CONTEXT-COMPACTION.md` §6.16）。
 - `read_history` 语义权威 = SESSION 板（本层 `SESSION.md`）。
@@ -242,8 +242,8 @@ apply_patch——无坐标 hunk 宽容 + 文件头容缺；多文件原子。wri
 - **verify**：通用验证门禁——语言 / 框架 / 项目无关，不自动跑任何测试命令；模型经 `verification:{status:"passed"|"failed"|"skipped", command?, summary?}` 声明验证状态（passed 放行 / failed 打回 / skipped 放行但须 summary 理由）；参数已删 `full` / `testNamePattern` / `filter`，保留 `workdir`。
 - **read_image**：视觉模型读图；非视觉模型拒绝 / 占位（防 image_url 毒化会话）；svg 返回文本源码、bmp 拒绝并提示转 PNG。
 - **websearch / fetch**：网络边界见 §6.4；fetch 失败错误含 proxy 提示。
-- **browser**：自启系统 Edge/Chrome（独立 profile——`~/.thincoder/browser/profile`）+ CDP 直控（Node 原生 WebSocket——零第三方依赖）；八动作 navigate/snapshot/click/type/evaluate/wait/screenshot/close。
-  snapshot 回执 = 可交互元素清单 + 稳定引用（`e<N>`），click/type 按引用寻址；click/evaluate 过审批门（`isReadonlyAction` 动作级分类——其余动作免审）。设计权威 = `BROWSER-TOOL.md`（本层）。
+- **browser**：自启系统 Edge/Chrome（独立 profile——`~/.thincoder/browser/profile`）+ CDP 直控（Node 原生 WebSocket——零第三方依赖）；十六动作 navigate/snapshot/click/type/evaluate/wait/screenshot/close + press/hover/wheel/mouse/drag/touch/insert/clipboard（CDP Input 真输入域 + 剪贴板保真读写）。
+  snapshot 回执 = 可交互元素清单 + 稳定引用（`e<N>`）+ 几何（视口外 `[outside]` 标记；ref 寻址动作前自动滚动到视）；click/type 按引用寻址；过审批门 = click/evaluate + press/mouse/drag/touch 点按 + clipboard 全量（`isReadonlyAction` 动作级分类——其余免审）。设计权威 = `BROWSER-TOOL.md`（本层）。
 - **process / file_ops / get_current_time / tree / lsp / lint / delete / bash**：按各自描述契约。
 - **batch**：批次档生命周期（action = create ∕ append ∕ status ∕ close；**无路径参数**——目标档 = spawn 绑定；身份定可写段）；append 段写入 append-only；写前剔凭证；工具盖轮次戳（仅 §3）；fail-closed 逐条 throw。权威 = 工程模式板。
 
@@ -279,7 +279,7 @@ VS Code 端在 extension host 内运行的**端独有增强**（CLI 无对应面
 - **权限审批面**：webview 逐工具弹窗 + 批合并询问（`permission-gate.mjs` / `batchPermissionGate`）+ 逐项 diff 预览；子代理（depth>0）审批卡（归属 `<child key> · <tool>`——`makeChildPermission`）+ Stop 释放挂起门
   （abort → resolve(false)/deny，循环不悬挂——接线 = `docs/core/design/AGENT-LOOP.md` §6.18）。**W14 端增量（2026-09-15）**：git 工具动作级只读分类（`isReadonlyAction`）迁入 VSC 装配面 `thincoder-vscode/src/tools/index.mjs`（核 git 工具无此概念）；
   审批层还消费 `configureGitApproval` / `configureEditReceipt` 缝（本批按缺省不覆盖——端审批在工具执行前）。
-- **描述装载面**：两端同源 = 核包 `tool-docs/*.md`（`DESC()` = 核 `loadToolDoc` 单一解析面；CLI 随 U2 / VSC 随 W2 落——VSC 原 `.mjs` 内嵌面已退场；锚替换调用期应用）；48 档随包发布（`.vscodeignore` 不排除 `node_modules/@thincoder/core/**`——打包面 N6 需求侧承载）。
+- **描述装载面**：两端同源 = 核包 `tool-docs/*.md`（`DESC()` = 核 `loadToolDoc` 单一解析面；CLI 随 U2 / VSC 随 W2 落——VSC 原 `.mjs` 内嵌面已退场；锚替换调用期应用）；49 档随包发布（`.vscodeignore` 不排除 `node_modules/@thincoder/core/**`——打包面 N6 需求侧承载）。
 - **工具面接线（2026-09-20 · 机制层端差批）**：① **派发面 hooks 三调用点**（核 `thincoder-core/agent/dispatch.mjs` PreToolUse〔可阻断——阻断结果逐字同核 `:337-338`〕· `thincoder-core/agent/dispatch-run.mjs` PostToolUse ∕ PostToolUseFailure；机制 = `AGENT-LOOP.md` §6.13 / §6.18——端已取核）；
   ② **台账工具面随核家族段装配**（统一入口 `ledger`——读二 `action=query` / `action=count` 随核 `assembleFamilyTools` 到达；VSC 端侧自持读二追加入口退场〔`thincoder-vscode/src/agent/tool-table.mjs`——2026-10-05 台账工具统一批，端侧自持项清零〕⇒ 模型面 + 子代装配面同核口径；写三 `action=add` / `action=update` / `action=close` 随核家族段在端可达）。
 
@@ -1341,3 +1341,7 @@ plan 工具退出文本收正为**批准语义**（**五处**：`thincoder-core/
 - 2026-10-05（**引擎工具面缺口批（engine-tools-gaps）· 设计评审修正轮（评审 #22 发现 4）· eng-designer**——承批档 `docs/batches/2026-10-05-engine-tools-gaps.md` §3）：**§6.21 补快照面注（undo）**——空目录移除**不产生 undo 条目**（零内容语义；`snapshotForUndo` 对目录目标读文本失败即跳）。**注记面——机制零改**。
 
 - 2026-10-05（**引擎工具面缺口批（engine-tools-gaps）· 设计评审修正轮（评审 #28 轮 2 发现 3 / 4）· eng-designer**——承批档 `docs/batches/2026-10-05-engine-tools-gaps.md` §3 轮次 2）：§6.21 补**范围注**（「不经跟踪检查」放宽面——索引条目（gitlink）对应空目录路径一类 unverified）∥ 补**口径注**（逐字文本面归属——本节内联 = 本批改前→改后留痕；实读 `PROMPT-SYSTEM.md` 现持面 = §6.11 机制与预算）。**注记面——机制零改**。
+
+- 2026-10-07（**浏览器输入最大化批（browser-input）· 设计轮 · eng-designer**——承 `docs/batches/2026-10-07-browser-input.md` §2 · 台账 #1018 ∥ #1019）：§6.7 browser 条随新动作面收正（八 ⇒ 十六动作；过门项扩展 press/mouse/drag/touch 点按/clipboard 全量；snapshot 几何标记随动）。**零新语义**（= 批档 §2 设计的落位——机制面细则归 `BROWSER-TOOL.md`）。
+
+- 2026-10-07（**浏览器输入最大化批（browser-input）· 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-10-07-browser-input.md` §3 轮次 1 · 发现 6 ∥ 9）：§6.2 内置工具枚举补 **browser**（入「其余」组——`thincoder-core/tools/index.mjs:28` 注册已在册，枚举面滞后）· §6.11 描述装载面计数收正（48 ⇒ **49 档**——现盘 `tool-docs/` 实测，+`browser.md`）。**零新语义**（文档状态滞后收正）。

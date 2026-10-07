@@ -1,9 +1,11 @@
 /**
- * browser/snapshot.mjs — 页面侧快照脚本 ∥ 结果归一 ∥ 引用表 ∥ 紧凑渲染 ∥ 页摘（BROWSER-TOOL.md §2.3）。
+ * browser/snapshot.mjs — 页面侧快照脚本 ∥ 几何 ∥ 点 / 聚焦表达式 ∥ 结果归一 ∥ 引用表 ∥ 紧凑渲染 ∥ 页摘
+ * （BROWSER-TOOL.md §2.3 ∥ §2.7）。
  *
  * 页面侧脚本一律经 `Runtime.evaluate` **一次性执行、不驻留**（§3.3）；每条表达式带一个块注释标识
  * 前缀（`thincoder-browser:<种类>`）——回执/调试可辨出处，单测假传输按此前缀派发。
  * 引用表：`key = tag + "|" + selector`，跨快照复用原号（KD-1 / F-BT4「微变不全失效」）。
+ * 几何（F-BT14）：每条记录携 `geo`（视口 CSS 像素）与 `inViewport`；`[outside]` 仅标视口外行（KD-15）。
  */
 export const DEFAULT_MAX = 100
 export const MAX_ELEMENTS = 200
@@ -17,6 +19,7 @@ const mark = (kind) => `/*thincoder-browser:${kind}*/`
  * 走交互元素（§2.3）：`a[href]` / `button` / `input`（非 hidden） / `select` / `textarea` /
  * `[role=button]` / `[onclick]` / `[tabindex]`；`selector` = 稳定寻址链（`#id` → `[data-testid]`
  * → `[name]` → `[href]` → 结构路径）；password 输入**不取 value**（N-BT4）。
+ * 几何随记录（§2.7）：`geo = {x,y,w,h}` 取整 + `inViewport`（非零面积 ∩ 视口）。
  */
 export const SNAPSHOT_EXPR = String.raw`function (opts) {
   var SEL = 'a[href],button,input:not([type=hidden]),select,textarea,[role=button],[onclick],[tabindex]'
@@ -70,6 +73,13 @@ export const SNAPSHOT_EXPR = String.raw`function (opts) {
     // 可及名取序照 §2.3：aria-label ∥ 文本 ∥ placeholder ∥ title
     return norm(el.getAttribute('aria-label') || el.innerText || el.textContent || el.getAttribute('placeholder') || el.getAttribute('title') || '')
   }
+  var rectOf = function (el) {
+    var r = el.getBoundingClientRect()
+    return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) }
+  }
+  var inViewportOf = function (g) {
+    return g.w > 0 && g.h > 0 && g.x < innerWidth && g.y < innerHeight && g.x + g.w > 0 && g.y + g.h > 0
+  }
   var root = (opts && opts.selector) ? document.querySelector(opts.selector) : document
   if (!root) return { missing: true, url: location.href, title: document.title, elements: [], total: 0 }
   var nodes = []
@@ -82,12 +92,15 @@ export const SNAPSHOT_EXPR = String.raw`function (opts) {
     var el = nodes[j]
     var tag = el.tagName.toLowerCase()
     var role = roleOf(el, tag)
+    var geo = rectOf(el)
     var rec = {
       tag: tag,
       role: role,
       name: nameOf(el),
       selector: selectorOf(el),
       disabled: Boolean(el.disabled) || el.getAttribute('aria-disabled') === 'true',
+      geo: geo,
+      inViewport: inViewportOf(geo),
     }
     if (role === 'textbox' || role === 'select') rec.value = norm(el.value)
     elements.push(rec)
@@ -139,6 +152,32 @@ export function typeExpression(selector, tag, text, clear) {
 })()`
 }
 
+/** 点表达式（ref → 真点——§2.7）：`scrollIntoView({block:'center'})` → 重测 → 返回中心点与 `{found, tag?}`。 */
+export function pointExpression(selector, tag) {
+  return `${mark("point")}(function () {
+  var el = document.querySelector(${JSON.stringify(selector)})
+  if (!el) return { found: false }
+  var tag = el.tagName.toLowerCase()
+  if (tag !== ${JSON.stringify(tag)}) return { found: false, tag: tag }
+  el.scrollIntoView({ block: 'center' })
+  var r = el.getBoundingClientRect()
+  return { found: true, x: r.left + r.width / 2, y: r.top + r.height / 2 }
+})()`
+}
+
+/** 聚焦表达式（§2.7）：`scrollIntoView` + `focus()` → `{found, tag?, focused}`；不可聚焦 ⇒ `focused:false`。 */
+export function focusExpression(selector, tag) {
+  return `${mark("focus")}(function () {
+  var el = document.querySelector(${JSON.stringify(selector)})
+  if (!el) return { found: false }
+  var tag = el.tagName.toLowerCase()
+  if (tag !== ${JSON.stringify(tag)}) return { found: false, tag: tag }
+  el.scrollIntoView({ block: 'center' })
+  try { el.focus() } catch (e) { /* 不可聚焦元素（div 等）——focused 读回自证 */ }
+  return { found: true, focused: document.activeElement === el }
+})()`
+}
+
 /** 等待谓词表达式（selector ∥ text ∥ url——networkIdle 走核侧事件计数）。 */
 export function waitExpression(kind, value) {
   const expr = kind === "selector" ? `!!document.querySelector(${JSON.stringify(value)})`
@@ -150,6 +189,7 @@ export function waitExpression(kind, value) {
 /** 页面侧结果 → 形状归一的记录集（不可信输入：缺字段/异型一律归一，不抛）。 */
 export function normalizeSnapshot(raw) {
   const r = raw && typeof raw === "object" ? raw : {}
+  const num = (v) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : 0)
   const elements = (Array.isArray(r.elements) ? r.elements : [])
     .filter((e) => e && typeof e === "object" && e.selector)
     .map((e) => {
@@ -161,6 +201,10 @@ export function normalizeSnapshot(raw) {
         disabled: e.disabled === true,
       }
       if (e.value !== undefined && e.value !== null && String(e.value) !== "") rec.value = String(e.value)
+      if (e.geo && typeof e.geo === "object") {
+        rec.geo = { x: num(e.geo.x), y: num(e.geo.y), w: num(e.geo.w), h: num(e.geo.h) }
+      }
+      if (e.inViewport === false) rec.inViewport = false // 仅视口外落标记（在屏行文法零动——KD-15）
       return rec
     })
   return {
@@ -196,12 +240,13 @@ export function assignRefs(table, elements) {
   return rows
 }
 
-/** 结果行文法：`<ref> <role> "<name>"` + `[value=…]`（password 除外）+ `[new]` + `[disabled]`。 */
+/** 结果行文法：`<ref> <role> "<name>"` + `[value=…]`（password 除外）+ `[new]` + `[disabled]` + `[outside]`。 */
 export function rowLine(row) {
   const marks = []
   if (row.role !== "password" && row.value !== undefined && String(row.value) !== "") marks.push(`[value="${row.value}"]`)
   if (row.isNew) marks.push("[new]")
   if (row.disabled) marks.push("[disabled]")
+  if (row.inViewport === false) marks.push("[outside]")
   return `${row.ref} ${row.role} "${row.name}"${marks.length ? ` ${marks.join(" ")}` : ""}`
 }
 

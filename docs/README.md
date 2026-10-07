@@ -72,7 +72,7 @@
 
 **`core/design/` 其余 37 档（工具 · 机制 · 流程面——批 11 补登 · 2026-10-07 补登记一档 · 判据 = `core/design/DOC-MIGRATION.md` §9.3 A21 · 计数随批收正 2026-10-07）**：
 - 文件 / 编辑 / 执行工具面 **8 档**：`APPLY-PATCH.md` · `EDIT.md` · `EDIT-HELPERS.md` · `HASHLINE-EDIT.md` · `INSERT-AFTER.md` · `TOOL-OUTPUT-LIMITS.md` · `WRITE.md` · `BASH-EXECUTOR-FACE.md`（bash 执行器语义面——运行时探测与声明单源；2026-10-04 建档，2026-10-07 补登记）；
-- 浏览器工具面 **1 档**：`BROWSER-TOOL.md`（浏览器工具——自启浏览器驱动面：八动作契约 ∥ 引用机制 ∥ 会话模型 ∥ 写闸；2026-10-07 建档）；
+- 浏览器工具面 **1 档**：`BROWSER-TOOL.md`（浏览器工具——自启浏览器驱动面：十六动作契约（基线八 + 输入域八：press/hover/wheel/mouse/drag/touch/insert/clipboard）∥ 引用 / 几何机制 ∥ 会话模型 ∥ 写闸 ∥ 剪贴板面；2026-10-07 建档）；
 - 顾问 / 协作 / 子代理面 **9 档**：`ADVISOR-CONVERGENCE.md` · `ADVISOR-GUARDS.md` · `AGENT-LOOP-ASYNC-POOL.md` · `AGENT-LOOP-SUBAGENT.md` · `AGENT-LOOP-UPSTREAM.md` · `ESCALATE.md` · `MULTI-INSTANCE-COLLAB.md` · `PROXY.md` · `SEND-STALL-DISTILL.md`；
 - 令牌 / 参数 / 设置面 **5 档**：`AGENT-PARAMS.md` · `DESIGN-TOKEN-SETTLEMENT.md` · `ENG-TOKEN-BINDING.md` · `SETTINGS-TOOL.md` · `VERIFY-REDESIGN.md`；
 - 流程 / 文档机制面 **12 档**：`ANCHOR-DEBT-REPAIR.md` · `BATCH-RECORD.md` · `DOC-CODE-RECONCILE.md` · `DOC-DISCIPLINE.md` · `ENGINEERING-MODE-V2.md` · `LEDGER.md` · `LEDGER-SELF-CONTAINED.md` · `LIGHT-CHANNEL.md`（轻通道机制——细节面 ∥ 收敛面受控旁路设计；2026-09-30 建档 · 2026-10-02 扩容）·
@@ -93,6 +93,8 @@
 - **五部分不各设地图**——本 README = 五部分（`core/` · `cli/` · `vsc/` · `desktop/` · `render-core/`）的唯一地图（目标结构 `core/design/DOC-SYSTEM.md` §4）；`cli/` · `vsc/` 两产品面档所对应的产品树旧档（`thincoder-cli/docs/**` · `thincoder-vscode/docs/**`）= 迁移期参照历史（§2 政策——保留 ≠ 维护）。
 
 ## 变更记录
+
+- 2026-10-07（**浏览器输入最大化批（browser-input）· 设计轮 · eng-designer**——承 `docs/batches/2026-10-07-browser-input.md` §2 · 台账 #1018 ∥ #1019）：§4 浏览器工具面登记行描述随动（八动作 ⇒ 十六动作 + 几何 / 剪贴板面）；档数不变（59 = 59——计数核对行不动，不触发复跑）。
 
 - 2026-10-07（**浏览器工具批 · 设计轮 + 父侧笔**——承批档 `docs/batches/2026-10-07-browser-tool.md` §2 · 台账 #1007）：§4「其余」组 **35 ⇒ 37 档**（+ 浏览器工具面 **1 档**：`BROWSER-TOOL.md`——浏览器工具设计档，2026-10-07 建档；+ 补登记 `BASH-EXECUTOR-FACE.md`——bash 执行器语义面（2026-10-04 建档漏登）），计数核对行收正 **实档 59 = 登记 59 + 待补登 0**（复跑 as-of 2026-10-07）。
 

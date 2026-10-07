@@ -131,11 +131,11 @@ const run = (action, args, ctx = ctx0()) => browserTool.execute({ action, ...arg
 /** CDP `Runtime.evaluate` 应答形：`{ result: { result: RemoteObject, exceptionDetails? } }`（真形——勿简化）。 */
 const evalOk = (value) => ({ result: { result: { type: value === null ? "object" : typeof value, value } } })
 
-test("T1 schema：八动作枚举 + 参数字典（§2.1）", () => {
+test("T1 schema：十六动作枚举 + 参数字典（§2.1）", () => {
   assert.equal(browserTool.name, "browser")
   assert.equal(browserTool.parameters.required[0], "action")
   assert.deepEqual(browserTool.parameters.properties.action.enum,
-    ["navigate", "snapshot", "click", "type", "evaluate", "wait", "screenshot", "close"])
+    ["navigate", "snapshot", "click", "type", "evaluate", "wait", "screenshot", "close", "press", "hover", "wheel", "mouse", "drag", "touch", "insert", "clipboard"])
   const dict = {
     url: "string", ref: "string", text: "string", expression: "string", selector: "string",
     clear: "boolean", max: "number", networkIdle: "boolean", timeoutMs: "number", fullPage: "boolean", headless: "boolean",
@@ -476,7 +476,7 @@ test("U15/U21 参数校验：scheme 与非 http(s) ⇒ 拒；缺必填 ⇒ Error
   assert.equal(await run("type", { ref: "e1" }), "Error: type requires text")
   assert.equal(await run("evaluate", {}), "Error: evaluate requires expression")
   assert.equal(await run("frobnicate", {}),
-    'Error: unknown browser action "frobnicate" — actions: navigate, snapshot, click, type, evaluate, wait, screenshot, close')
+    'Error: unknown browser action "frobnicate" — actions: navigate, snapshot, click, type, evaluate, wait, screenshot, close, press, hover, wheel, mouse, drag, touch, insert, clipboard')
   await withPage(fakePage({}), async (fix) => {
     assert.match(await run("navigate", { url: "file:///etc/passwd" }), /^Error: navigate requires an http\/https url — got "file:\/\/\/etc\/passwd"$/)
     assert.equal(fix.opened.length, 0, "校验失败不开启会话")

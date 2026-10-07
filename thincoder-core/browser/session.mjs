@@ -1,28 +1,28 @@
 /**
- * browser/session.mjs — 会话单例：惰性开启 ∥ 串行队列 ∥ 八动作 ∥ 引用寻址 ∥ 空闲自动关 ∥ 关闭清场。
- * 设计权威 = `docs/core/design/BROWSER-TOOL.md` §2.2（动作契约）∥ §2.4（会话模型）∥ §3（安全面）。
+ * browser/session.mjs — 会话单例：惰性开启 ∥ 串行队列 ∥ 生命周期 ∥ 页原语 ∥ 安全助手 ∥ 分发表 ∥ 会话句柄。
+ * 设计权威 = `docs/core/design/BROWSER-TOOL.md` §2.4（会话模型）∥ §2.5（数据流）∥ §3（安全面）∥ §5（拆分决定）。
  *
  * 单会话/进程（KD-5）：同进程所有 agent 共一份浏览器；动作串行（promise 链——批并行调用天然排队）。
  * `headless` = 会话开启参数（KD-4：异值报错，不热切）；空闲 15 分钟自动关（KD-8）+ 进程退出杀树兜底。
+ * 动作实施层 = `actions.mjs`（基线八）+ `input-actions.mjs`（新七）+ `clipboard.mjs`——经会话句柄取能力，
+ * 不 import 本档（DAG 单向：`session → {actions, input-actions, clipboard} → {input, snapshot, cdp}`，§5）。
  *
  * 注入缝（N-BT6）：`_deps.openBrowser` ∥ `_deps.killBrowser` ∥ `_deps.saveShot`——缺省 null ⇒
  * 回落真实现（`??`）；用例注入后 `finally` 还原。
  */
 import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
+import { ACTIONS } from "./actions.mjs"
+import { CLIPBOARD_ACTIONS } from "./clipboard.mjs"
+import { INPUT_ACTIONS } from "./input-actions.mjs"
 import { connectCdp, newTabWebSocketUrl } from "./cdp.mjs"
 import { acquireProfileLock, browserPaths, killBrowser, launchBrowser, releaseProfileLock, resolveBrowser } from "./launch.mjs"
 import {
-  COMPACT_ROWS, DEFAULT_MAX, MAX_ELEMENTS, assignRefs, clickExpression, createRefTable, normalizeSnapshot,
-  pageInfoExpression, renderSnapshot, snapshotExpression, truncateText, typeExpression, waitExpression,
+  COMPACT_ROWS, DEFAULT_MAX, MAX_ELEMENTS, assignRefs, createRefTable, focusExpression, normalizeSnapshot,
+  pageInfoExpression, renderSnapshot, snapshotExpression,
 } from "./snapshot.mjs"
 
 export const IDLE_MS = 15 * 60 * 1000
-export const WAIT_TIMEOUT_DEFAULT = 30_000
-export const WAIT_TIMEOUT_MAX = 120_000
-export const WAIT_POLL_MS = 150
-export const NETWORK_QUIET_MS = 500
-export const MAX_EVAL_CHARS = 8_000
 const READY_TIMEOUT_MS = 10_000
 const NAV_SETTLE_MS = 1_000
 const GRACEFUL_CLOSE_MS = 3_000
@@ -89,6 +89,10 @@ function registerExitHook() {
   process.once("exit", () => { if (state.child) (_deps.killBrowser ?? killBrowser)(state.child) })
 }
 
+function headlessOf(args) {
+  return typeof args?.headless === "boolean" ? args.headless : undefined
+}
+
 /** 会话开启（惰性 + headless 一致性判据）。 */
 async function ensureSession(wanted) {
   if (state.cdp) {
@@ -151,7 +155,7 @@ export function lastPageUrl() {
   return state.lastUrl
 }
 
-// ── 页面侧原语 ──────────────────────────────────────────────────────────────
+// ── 页原语 ──────────────────────────────────────────────────────────────────
 
 async function evalRaw(expression) {
   // CDP 形：`call()` 解到命令的 result（`{result: RemoteObject}`）——页面值在 `result.result.value`
@@ -212,6 +216,22 @@ async function takeSnapshot({ selector = null, max = DEFAULT_MAX } = {}) {
   }
 }
 
+/** ref → 引用表条目（未在表 ⇒ 同 stale 句式——§2.3 失效口径）。 */
+function resolveRef(ref) {
+  const entry = state.table.byRef.get(String(ref))
+  if (!entry) throw pageError(`ref ${ref} is stale (was "unknown") — run snapshot again`)
+  return entry
+}
+
+/** ref → 聚焦（§2.7）：表查 + `focusExpression`；不可聚焦 ⇒ 明示拒（不静默错投）。 */
+async function focusRef(ref) {
+  const entry = resolveRef(ref)
+  const f = await evalRaw(focusExpression(entry.selector, entry.tag))
+  if (!f?.found || f.tag) throw pageError(`ref ${ref} is stale (was "${entry.name}") — run snapshot again`)
+  if (f.focused === false) throw pageError(`ref ${ref} "${entry.name}" is not focusable — keys would go to another element`)
+  return { ref, name: entry.name, label: `${ref} "${entry.name}"` }
+}
+
 // ── 安全面 ──────────────────────────────────────────────────────────────────
 
 /** 域允许清单匹配（§3.2）：全等（大小写不敏感）∥ `*.` 前缀 = 子域通配。 */
@@ -256,124 +276,6 @@ function pageError(message) {
   return err
 }
 
-// ── 八动作 ──────────────────────────────────────────────────────────────────
-
-function headlessOf(args) {
-  return typeof args?.headless === "boolean" ? args.headless : undefined
-}
-
-function normalizeHttpUrl(value) {
-  const raw = String(value ?? "")
-  let url
-  try { url = new URL(raw) } catch { url = null }
-  if (!url || (url.protocol !== "http:" && url.protocol !== "https:")) {
-    throw new Error(`navigate requires an http/https url — got "${raw}"`)
-  }
-  return url.toString()
-}
-
-function resolveRef(ref) {
-  const entry = state.table.byRef.get(String(ref))
-  if (!entry) throw pageError(`ref ${ref} is stale (was "unknown") — run snapshot again`)
-  return entry
-}
-
-async function actNavigate(args, ctx) {
-  const url = normalizeHttpUrl(args.url)
-  assertHostAllowed(url, ctx) // 静态参数面先检——被拦的 host 不得起浏览器（§3.2「不执行」）
-  await ensureSession(headlessOf(args))
-  await state.cdp.call("Page.navigate", { url })
-  await waitForReady()
-  const snap = await takeSnapshot({ max: DEFAULT_MAX })
-  return `[navigate] ${snap.url}\n${snap.text}`
-}
-
-async function actSnapshot(args) {
-  await ensureSession(headlessOf(args))
-  const snap = await takeSnapshot({ selector: args.selector ?? null, max: args.max ?? DEFAULT_MAX })
-  return snap.text
-}
-
-async function actClick(args, ctx) {
-  await ensureSession(headlessOf(args))
-  const info = await pageInfo()
-  assertHostAllowed(info.url, ctx)
-  const entry = resolveRef(args.ref)
-  const res = await evalRaw(clickExpression(entry.selector, entry.tag))
-  if (!res?.found || res.tag) throw pageError(`ref ${args.ref} is stale (was "${entry.name}") — run snapshot again`)
-  if (res.disabled) throw pageError(`ref ${args.ref} is disabled ("${entry.name}")`)
-  const out = [`[click] ${args.ref} "${entry.name}"`]
-  const landed = await waitForUrlChange(info.url)
-  if (landed) {
-    await waitForReady()
-    const snap = await takeSnapshot({ max: DEFAULT_MAX })
-    out.push(`[navigated] ${snap.url}`, snap.text)
-  } else {
-    out.push("[no navigation]")
-  }
-  return out.join("\n")
-}
-
-async function actType(args, ctx) {
-  await ensureSession(headlessOf(args))
-  const info = await pageInfo()
-  assertHostAllowed(info.url, ctx)
-  const entry = resolveRef(args.ref)
-  const text = String(args.text)
-  const res = await evalRaw(typeExpression(entry.selector, entry.tag, text, args.clear === true))
-  if (!res?.found || res.tag) throw pageError(`ref ${args.ref} is stale (was "${entry.name}") — run snapshot again`)
-  if (res.fillable === false) {
-    throw pageError(`ref ${args.ref} is not a fillable field ("${entry.name}", <${entry.tag}>) — use snapshot to pick an input/textarea`)
-  }
-  if (res.disabled) throw pageError(`ref ${args.ref} is disabled ("${entry.name}")`)
-  return `[type] ${args.ref} "${entry.name}" ← ${text.length} chars${res.password ? " (hidden)" : ""}`
-}
-
-async function actEvaluate(args, ctx) {
-  await ensureSession(headlessOf(args))
-  const info = await pageInfo()
-  assertHostAllowed(info.url, ctx)
-  const r = await state.cdp.call("Runtime.evaluate", {
-    expression: String(args.expression),
-    awaitPromise: true,
-    returnByValue: true,
-  })
-  if (r?.exceptionDetails) throw pageError(`evaluate failed: ${exceptionText(r.exceptionDetails)}`)
-  return `[evaluate @ ${info.url}] ${truncateText(jsonOf(r?.result?.value), MAX_EVAL_CHARS, "narrow the expression")}`
-}
-
-function jsonOf(value) {
-  if (value === undefined) return "undefined"
-  try { return JSON.stringify(value) ?? String(value) }
-  catch { return String(value) }
-}
-
-function waitPredicate(args) {
-  if (args.networkIdle === true) return { kind: "networkIdle", value: null, label: "networkIdle" }
-  for (const kind of ["selector", "text", "url"]) {
-    const value = args[kind]
-    if (typeof value === "string" && value !== "") return { kind, value, label: `${kind} ${JSON.stringify(value)}` }
-  }
-  // 工具层已校验互斥（§2.2）——此处兜底（直调会话面时同样不悬挂）
-  throw new Error("wait requires exactly one of selector|text|url|networkIdle")
-}
-
-async function actWait(args) {
-  await ensureSession(headlessOf(args))
-  const pred = waitPredicate(args)
-  const wanted = Number(args.timeoutMs)
-  const timeoutMs = Math.max(1, Math.min(Number.isFinite(wanted) && wanted > 0 ? wanted : WAIT_TIMEOUT_DEFAULT, WAIT_TIMEOUT_MAX))
-  const started = Date.now()
-  for (;;) {
-    if (pred.kind === "networkIdle") {
-      if (state.net.inflight.size === 0 && Date.now() - state.net.lastEventAt >= NETWORK_QUIET_MS) break
-    } else if (await evalRaw(waitExpression(pred.kind, pred.value)) === true) break
-    if (Date.now() - started >= timeoutMs) throw pageError(`wait timed out after ${timeoutMs}ms (${pred.label})`)
-    await sleep(WAIT_POLL_MS)
-  }
-  return `[wait] ${pred.label} — ok after ${Date.now() - started}ms`
-}
-
 /** 真落盘（screenshot 缝的缺省实现）：`~/.thincoder/browser/shots/shot-<ISO>.png`。 */
 async function saveShotToDisk(buffer) {
   const dir = browserPaths().shots
@@ -383,37 +285,54 @@ async function saveShotToDisk(buffer) {
   return { path, bytes: buffer.length }
 }
 
-async function actScreenshot(args) {
-  await ensureSession(headlessOf(args))
-  const shot = await state.cdp.call("Page.captureScreenshot", {
-    format: "png",
-    ...(args.fullPage === true ? { captureBeyondViewport: true } : {}),
+// ── 会话句柄（动作模块的能力面——§5：动作模块不 import 本档）──────────────────
+
+/** 等一条 CDP 事件（一次性；超时 ⇒ 拒——html5 拖拽拦截链用）。 */
+function once(method, timeoutMs = 10_000) {
+  return new Promise((resolve, reject) => {
+    if (!state.cdp) { reject(new Error("no browser session")); return }
+    let timer = null
+    const off = state.cdp.on(method, (params) => {
+      if (timer) clearTimeout(timer)
+      off()
+      resolve(params)
+    })
+    timer = setTimeout(() => { off(); reject(new Error(`timed out waiting for ${method}`)) }, timeoutMs)
+    timer.unref?.()
   })
-  if (typeof shot?.data !== "string") throw new Error("screenshot failed: the browser returned no image data")
-  const saved = await (_deps.saveShot ?? saveShotToDisk)(Buffer.from(shot.data, "base64"))
-  return `[screenshot] ${saved.path} (${saved.bytes} bytes)`
 }
 
-async function actClose() {
-  if (!state.cdp) return "[close] no browser session"
-  await closeSession()
-  return "[close] browser session closed"
+const sessionHandle = {
+  ensureSession: (args) => ensureSession(headlessOf(args)),
+  closeSession,
+  connection: () => state.cdp,
+  call: (method, params) => {
+    if (!state.cdp) throw new Error("no browser session — run navigate first")
+    return state.cdp.call(method, params)
+  },
+  once,
+  evalRaw,
+  pageInfo,
+  waitForReady: (maxMs) => waitForReady(maxMs),
+  waitForUrlChange: (before, maxMs) => waitForUrlChange(before, maxMs),
+  takeSnapshot,
+  resolveRef,
+  focusRef,
+  assertHostAllowed,
+  failureReceipt,
+  pageError,
+  saveShot: (buffer) => (_deps.saveShot ?? saveShotToDisk)(buffer),
+  networkState: () => state.net,
 }
 
-// ── 入口 ────────────────────────────────────────────────────────────────────
+// ── 分发表 ∥ 入口 ────────────────────────────────────────────────────────────
+
+const ACTION_TABLE = { ...ACTIONS, ...INPUT_ACTIONS, ...CLIPBOARD_ACTIONS }
 
 async function dispatchAction(action, args, ctx) {
-  switch (action) {
-    case "navigate": return actNavigate(args, ctx)
-    case "snapshot": return actSnapshot(args)
-    case "click": return actClick(args, ctx)
-    case "type": return actType(args, ctx)
-    case "evaluate": return actEvaluate(args, ctx)
-    case "wait": return actWait(args)
-    case "screenshot": return actScreenshot(args)
-    case "close": return actClose()
-    default: throw new Error(`unknown browser action "${action}"`)
-  }
+  const handler = ACTION_TABLE[action]
+  if (typeof handler !== "function") throw new Error(`unknown browser action "${action}"`)
+  return handler(args, ctx, sessionHandle)
 }
 
 async function runSerial(action, args, ctx) {
