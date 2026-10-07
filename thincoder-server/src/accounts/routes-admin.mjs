@@ -1,6 +1,6 @@
 /**
  * routes-admin.mjs — 管理端点（accounts/ACCOUNTS.md §3——admin）：members 列表/建 ∥ key 吊销 ∥ 密码重置
- * ∥ 审计列表（`GET /api/audit`——§2.1）。
+ * ∥ 模型禁用集（`POST /api/members/:id/model-disables`——§2.2）∥ 审计列表（`GET /api/audit`——§2.1）。
  *
  * 角色判定在服务端（requireAdmin——页面显隐非判据）；`user` ⇒ 403；无 ∥ 过期会话 ⇒ 401。
  * 成员不存在 ∥ key 不属该成员 ⇒ 404 `not_found`；吊销已有 key 幂等（行保留——软删纪律）。
@@ -9,11 +9,12 @@
  */
 import { HttpError, sendJson } from "../gateway/errors.mjs"
 import { readJsonBody } from "../gateway/server.mjs"
+import { monthlyCountersByMember } from "../metering/aggregates.mjs"
 import { keyUsageStats, monthlyTokensByMember, parseUsageLimit, parseUsageTime } from "../metering/usage.mjs"
 import { queryAudit, recordAudit } from "./audit.mjs"
 import { getKeyById, revokeKey } from "./keys.mjs"
 import { defaultLoginGuard } from "./login-guard.mjs"
-import { createMember, findMemberById, findMemberByName, generateTempPassword, listMembers, setMemberPassword } from "./members.mjs"
+import { createMember, findMemberById, findMemberByName, generateTempPassword, listMembers, mergeMemberModelDisables, parseModelDisables, setMemberPassword } from "./members.mjs"
 import { memberView } from "./routes.mjs"
 import { requireAdmin, revokeMemberSessions } from "./session.mjs"
 
@@ -46,8 +47,9 @@ export function registerAdminRoutes(routes, { db, guard = defaultLoginGuard } = 
     requireAdmin(db, req)
     const now = Date.now()
     const used = monthlyTokensByMember(db, { now }) // 全员本月累计（一次装配——避免 N+1）
+    const usage = monthlyCountersByMember(db, { now }) // 全员逐模型已用（同上——免 N+1；AC-23）
     const keyStats = keyUsageStats(db, { now }) // 全员 key 归因（同上——AC-15⑥）
-    const members = listMembers(db).map((member) => memberView(db, member, { now, usedTokens: used.get(member.id) ?? 0, keyStats }))
+    const members = listMembers(db).map((member) => memberView(db, member, { now, usedTokens: used.get(member.id) ?? 0, modelUsage: usage.get(member.id) ?? {}, keyStats }))
     sendJson(res, 200, { members })
   })
 
@@ -91,5 +93,17 @@ export function registerAdminRoutes(routes, { db, guard = defaultLoginGuard } = 
   routes.add("GET", "/api/audit", (req, res) => {
     requireAdmin(db, req) // 判权三态：user ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200
     sendJson(res, 200, { events: auditQueryOf(db, req.url) })
+  })
+
+  routes.add("POST", "/api/members/:id/model-disables", async (req, res, ctx) => {
+    requireAdmin(db, req) // 判权三态：user ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200
+    const member = findMemberById(db, Number(ctx.params.id))
+    if (!member) throw new HttpError("not_found", `成员不存在：${ctx.params.id}`)
+    const body = await readJsonBody(req)
+    if (body === null || typeof body !== "object" || !("disables" in body)) {
+      throw new HttpError("invalid_request_error", `缺 disables（{ "<provider/model>": true|null }——true = 禁用；值 null = 删键恢复）`)
+    }
+    const updated = mergeMemberModelDisables(db, member.id, body.disables) // 键级合并：未出现键不动；变更不入审计（§2.1/§2.2）
+    sendJson(res, 200, { id: updated.id, modelDisables: parseModelDisables(updated.model_disabled_json) })
   })
 }

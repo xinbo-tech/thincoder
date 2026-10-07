@@ -3,7 +3,7 @@
  * ∥ 参数 = `{name}` 占位（`t(key, params)` 替换）∥ `Object.freeze`（数据表只读）。
  *
  * 本档 = 零 CJK 档（零 CJK 机检口径——§6 AC-14）；键集与 `i18n-zh.mjs` 双向相等（除自称名族 `lang.zh` ∥ `lang.en`
- * ——仅 zh 表载体）。取载 = `i18n.mjs` 静态 import（零构建）。
+ * ——仅 zh 表载体；∪ `.one` 复数变体族——仅本表载体，KD-SV-44）。取载 = `i18n.mjs` 静态 import（零构建）。
  */
 export const EN = Object.freeze({
   // ── 应用壳 ∥ 通用 ──────────────────────────────────────────────────────────
@@ -14,8 +14,10 @@ export const EN = Object.freeze({
   "common.loading": "Loading…",
   "common.quotaUnlimited": "Unlimited",
   "common.modelQuotaCount": "{count} models",
+  "common.modelQuotaCount.one": "{count} model",
   "common.quotaByPlatform": "By platform",
   "common.rowCount": "{count} items",
+  "common.rowCount.one": "{count} item",
   "common.secretNote": "{label} — shown only once; save it now.",
   "common.save": "Save",
   "common.cancel": "Cancel",
@@ -43,7 +45,6 @@ export const EN = Object.freeze({
   "col.role": "Role",
   "col.quota": "Model quotas",
   "col.used": "Used this month",
-  "col.actions": "Actions",
   "col.item": "Item",
   "col.value": "Value",
 
@@ -79,6 +80,7 @@ export const EN = Object.freeze({
   "me.keys.lastUsed": "Last used: {time}",
   "me.keys.neverUsed": "Never used",
   "me.keys.windowTokens": "Last 30 days: {tokens} tokens",
+  "me.keys.windowTokens.one": "Last 30 days: {tokens} token",
   "me.usage.title": "My usage",
   "me.usage.summary": "This month",
   "me.usage.detail": "Usage detail (newest first)",
@@ -111,13 +113,16 @@ export const EN = Object.freeze({
   "admin.members.colWindowTokens": "Last 30 days",
   "admin.members.colActions": "Actions",
   "admin.members.windowTokensCell": "{tokens} tokens",
+  "admin.members.windowTokensCell.one": "{tokens} token",
   "admin.members.newBtn": "New member",
   "admin.members.colKeyCount": "Keys",
   "admin.members.modelQuotaTitle": "Model usage",
   "admin.members.colMonthlyQuota": "Monthly quota",
   "admin.members.colPlatformQuota": "Platform default",
-  "admin.members.quotaEmptyHint": "No overrides — platform config applies",
+  "admin.members.colDisabled": "Disabled",
+  "admin.members.disableHint": "Checked = disabled for this member (models are available by default)",
   "admin.members.quotaOffListNote": "{count} more overrides are outside the served list (kept)",
+  "admin.members.quotaOffListNote.one": "{count} more override is outside the served list (kept)",
   "admin.members.quotaLoadFailed": "Failed to load quota settings",
   "admin.members.quotaRetry": "Retry",
   "admin.members.empty": "No members yet",
@@ -188,12 +193,18 @@ export const EN = Object.freeze({
   "admin.providers.openList": "Served models (checked = open to the team)",
   "admin.providers.candidatesEmpty": "No candidates yet — click “{action}” to fetch",
   "admin.providers.retiredNote": "Open models not in the upstream discovery list: {models} — disable them on the Served models page",
+  "admin.providers.candidatesLoading": "Fetching candidates…",
+  "admin.providers.metaContext": "Context {value}",
+  "admin.providers.metaVision": "Vision",
+  "admin.providers.upstreamRetiredBadge": "Retired",
+  "admin.providers.upstreamRetiredNote": "Marked retired upstream: {models}",
   "admin.providers.fetchModels": "Fetch models",
   "admin.providers.refreshCandidates": "Refresh candidates",
   "admin.providers.customChoice": "Custom",
   "admin.providers.saved": "Saved — effective immediately (no restart)",
   "admin.providers.needBaseURL": "Fill in baseURL first",
   "admin.providers.discovered": "Found {count} models — check the ones to open, then save",
+  "admin.providers.discovered.one": "Found {count} model — check the one to open, then save",
   "admin.providers.presetPick": "Choose a preset…",
   "admin.providers.presetSelectCount": "Choose a preset ({count})",
   "admin.providers.presetOption": "{name} ({preset})",
@@ -203,6 +214,7 @@ export const EN = Object.freeze({
   "admin.providers.listFailed": "Failed to load the list",
   "admin.providers.testing": "Testing {name}…",
   "admin.providers.testOk": "Reachable: {name} — upstream reports {count} models",
+  "admin.providers.testOk.one": "Reachable: {name} — upstream reports {count} model",
   "admin.providers.keepKey": "Leave empty to keep the current one ({mask})",
   "admin.providers.keepKeyNone": "Leave empty to keep it (no key set)",
   "admin.providers.colKey": "Key (masked)",

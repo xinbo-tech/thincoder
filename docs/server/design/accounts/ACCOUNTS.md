@@ -49,7 +49,18 @@
 
 - **「成员删」= 零写入点**：全库零成员删除路径（实核）；审计面只覆盖「增」——需求措辞面（「成员增删」含删）已上抛披露（成员删除功能本身不在任何功能点内）。
 - **列表**：`GET /api/audit`（admin——§3 端点表）；过滤 = 类型 ∥ 成员 ∥ 时段（`member` 取 id ∥ 展示名——解析同 usage 口径；匹配 `actor_id` ∥ `target_id`）。
-- **边界**：不做告警推送 ∥ 不做事件导出 ∥ 不做不可篡改/防删面（库文件权限自担——内网工具面）；OpenAI 请求不入审计（= 用量面——`metering/METERING.md` §1）。
+- **边界**：不做告警推送 ∥ 不做事件导出 ∥ 不做不可篡改/防删面（库文件权限自担——内网工具面）；OpenAI 请求不入审计（= 用量面——`metering/METERING.md` §1）；**成员配置写（分模型覆盖 ∥ 模型禁用集）不入审计**（admin 成员管理动作——沿覆盖先例，审计九型零增）；被拒调用 = 网关行为（同口径）。
+
+### 2.2 成员模型禁用（配额 v2——功能点 23③ ∥ 台账 #1004）
+
+- **语义**：**默认全可用**；禁用 = 对该成员禁用某 chat 模型（对外标识粒度）——**服务端执行**（被禁模型调用 ⇒ 拒；控制台仅写配置）。可用性轴，与配额（用量限额轴）独立（关系判据见下）。
+- **存储**：`members.model_disabled_json`（JSON 对象——键 = 对外标识；值 `true`；缺省 `{}`）；形/DDL = `store/STORE.md` §2 v6 段；随鉴权行携带（零查询——沿 `model_quotas_json` 口径）。
+- **写面**：`POST /api/members/:id/model-disables`（admin——§3 端点表）：**键级合并** `{disables: {"<provider/model>": true|null}}`——`true` = 禁用 ∥ `null` = 删键（恢复）∥ 未出现键不动；键形校验（首斜杠两段非空——**与 `model-quotas` 同助手**，裸名键 ⇒ 400）；值非 `true`/`null` ⇒ 400（库零变）；成员不存在 ⇒ 404。
+- **读面**：`memberView` 增 `modelDisables`（map——`/api/me` ∥ `/api/members` 同源；控制台勾选态直读）。
+- **执行面**（消费细节 = `gateway/API.md` §2.1）：派发命中后、配额准入前——随鉴权行（零查询）；被禁 ⇒ 404 `model_not_found`（消息明示「已对该成员禁用」——零新码）；`/v1/models` 随动滤除（输出 = 开放清单 − 调用者禁用集）；仅 chat（嵌入面零涉——沿配额/限流口径）。
+- **与配额三级的关系（优先级判据）**：**禁用优先**——被禁 ⇒ 拒（404），不涉配额判定（零 SQL）；未禁 ⇒ 才走三级（覆盖 > 平台 > 不限）。两轴独立：禁用不触计数/记账（准入前拒打不落用量——既口径）；配额超额不改禁用态。
+- **审计面**：禁用集变更不入审计（§2.1 边界）；被拒调用不入审计（= 用量面/网关行为）。
+- **边界**：不做 CLI 设置面 ∥ 定时/条件禁用 ∥ 禁用统计面 ∥ 嵌入模型禁用（嵌入面零涉）；成员删除路径零改。
 
 ## 3. 端点表（`/api/*`——登录 ∥ 自助 ∥ 管理）
 
@@ -59,13 +70,14 @@
 |---|---|---|
 | `POST /api/login` | 公开 | 登入：`{username, password}` ⇒ 200 + `Set-Cookie`（会话）；失败 ⇒ 401 `invalid_credentials`；锁定期 ⇒ **429 `too_many_attempts`** + `Retry-After`（两维同文案——防枚举面保持，§2） |
 | `POST /api/logout` | 会话 | 销当前会话（删行 + 清 cookie） |
-| `GET /api/me` | 会话 | 本人信息（`id ∥ name ∥ username ∥ role ∥ modelQuotas ∥ usedTokens`——分模型覆盖 map（键 = 对外标识；额度口径 = `metering/METERING.md` §2））+ 本人 key 清单（行形 = `memberView`：`{ id, hint, lastUsedAt, windowTokens }`——提示形 + id ∥ 最后使用 ∥ 近 30 天用量） |
+| `GET /api/me` | 会话 | 本人信息（`id ∥ name ∥ username ∥ role ∥ modelQuotas ∥ modelUsage ∥ modelDisables ∥ usedTokens`——覆盖 map（键 = 对外标识；额度口径 = `metering/METERING.md` §2）∥ 逐模型已用 map（当月——`metering/METERING.md` §2.3）∥ 禁用集 map（§2.2））+ 本人 key 清单（行形 = `memberView`：`{ id, hint, lastUsedAt, windowTokens }`——提示形 + id ∥ 最后使用 ∥ 近 30 天用量） |
 | `POST /api/me/password` | 会话 | 自助改密：`{oldPassword, newPassword}`；旧密错 ⇒ 401 `invalid_credentials`；成功 ⇒ 吊销本人其他会话（当前保留） |
 | `POST /api/me/keys/rotate` | 会话 | 轮转本人 key：新签 + 吊销旧（无旧 ⇒ 等同首签）；新明文一次性回显（同 §1 语义） |
-| `GET /api/members` | admin | 全队成员 + 分模型覆盖 + 本月已用 + 各成员 key 清单（行形同 `GET /api/me`——单源 = `memberView`：提示形 + id ∥ `lastUsedAt` ∥ `windowTokens`；仅列未吊销） |
+| `GET /api/members` | admin | 全队成员 + 分模型覆盖 + 逐模型已用 + 禁用集 + 本月已用 + 各成员 key 清单（行形同 `GET /api/me`——单源 = `memberView`：提示形 + id ∥ `lastUsedAt` ∥ `windowTokens`；仅列未吊销） |
 | `POST /api/members` | admin | 建成员：`{username, name?, role?}` ⇒ 一次性临时密码回显（服务器生成——同签发语义） |
 | `POST /api/members/:id/keys/:keyId/revoke` | admin | 吊销指定 key（立即生效） |
 | `POST /api/members/:id/password-reset` | admin | 重置密码（KD-SV-14——在）：一次性临时密码回显 + 吊销该成员全部会话；旧密即失效（首登后应自助改密——页面提示，不强制门） |
+| `POST /api/members/:id/model-disables` | admin | 设成员模型禁用集（键级合并）：`{disables: {"<provider/model>": true|null}}`——`true` = 禁用 ∥ `null` = 删键（恢复可用）；未出现键不动；键形校验（首斜杠两段非空——与 `model-quotas` 同助手）∥ 值非 `true`/`null` ⇒ 400（库零变）∥ 成员不存在 ⇒ 404；返回 `{id, modelDisables}`（机制全文 = §2.2） |
 | `GET /api/audit` | admin | 审计事件列表（过滤：type ∥ member ∥ from ∥ to ∥ limit——缺省 100 ∥ 上限 500，沿用量口径）；返回 `{ events: [ { id, ts, type, actor, actorId, target, targetId, detail } ] }`（倒序——新在前；`detail` = 解码对象；类型枚举 = §2.1） |
 
 - 用量与配额端点（`/api/me/usage` ∥ `/api/usage` ∥ `/api/members/:id/model-quotas`）= `metering/METERING.md` §3。
@@ -77,14 +89,14 @@
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/accounts/keys.mjs`（已落盘） | **98**（实读 2026-10-06）**⇒ 本批 +≈7**（校验面携 `modelQuotas`——`verifyKey` 解析随行；配额批） | key 校验 ∥ key 签发/吊销/轮转（页面与 CLI 共用） |
-| `thincoder-server/src/accounts/members.mjs`（已落盘） | **161 ⇒ ≈165**（实读 2026-10-06——本批 +≈4 = `countMembers`（总览读数））**⇒ 实读 166 ⇒ ≈190**（配额批：`mergeMemberModelQuotas`（键级合并） ∥ `setMemberQuota` 退役（旧列删） ∥ 建成员 INSERT 列随正） | 成员 CRUD ∥ scrypt 散列/校验 ∥ 角色 ∥ 临时密码 ∥ 首启引导 |
+| `thincoder-server/src/accounts/keys.mjs`（已落盘） | **98**（实读 2026-10-06）**⇒ 本批 +≈7**（校验面携 `modelQuotas`——`verifyKey` 解析随行；配额批）**⇒ 实读 102 ⇒ ≈108 ⇒ 实读 109（2026-10-07）**（配额 v2 批落地：鉴权行携 `model_disabled_json`——`verifyKey` SELECT + parse 随行） | key 校验 ∥ key 签发/吊销/轮转（页面与 CLI 共用） |
+| `thincoder-server/src/accounts/members.mjs`（已落盘） | **161 ⇒ ≈165**（实读 2026-10-06——本批 +≈4 = `countMembers`（总览读数））**⇒ 实读 166 ⇒ ≈190**（配额批：`mergeMemberModelQuotas`（键级合并） ∥ `setMemberQuota` 退役（旧列删） ∥ 建成员 INSERT 列随正）**⇒ 实读 192 ⇒ ≈210 ⇒ 实读 241（2026-10-07）**（配额 v2 批落地：`parseModelDisables` ∥ `mergeMemberModelDisables` ∥ 键形助手（覆盖 ∥ 禁用两合并共用——#1001②）；+49——越估 31） | 成员 CRUD ∥ scrypt 散列/校验 ∥ 角色 ∥ 临时密码 ∥ 首启引导 |
 | `thincoder-server/src/accounts/session.mjs`（已落盘） | **95**（实读 2026-10-06——本批零动） | 会话签发/校验/吊销 ∥ cookie 序列化/解析 ∥ 过期清理 |
-| `thincoder-server/src/accounts/routes.mjs`（已落盘） | **98 ⇒ ≈112**（实读 2026-10-06——本批 +≈14 = 登录成/败审计写 ∥ 轮换/改密审计写 ∥ `memberView` key 行归并（`lastUsedAt`/`windowTokens`））**⇒ 实读 112 ⇒ ≈118**（配额批：`memberView` 配额字段换形（`modelQuotas`）） | 自助端点：login ∥ logout ∥ me ∥ me/password ∥ me/keys/rotate |
-| `thincoder-server/src/accounts/routes-admin.mjs`（已落盘） | **61 ⇒ ≈100**（实读 2026-10-06——本批 +≈39 = 三处审计写（建/吊销/重置） ∥ `GET /api/audit` 注册行（过滤三轴）） | 管理端点：members 列表/建 ∥ 吊销 ∥ 重置 ∥ 审计列表 |
+| `thincoder-server/src/accounts/routes.mjs`（已落盘） | **98 ⇒ ≈112**（实读 2026-10-06——本批 +≈14 = 登录成/败审计写 ∥ 轮换/改密审计写 ∥ `memberView` key 行归并（`lastUsedAt`/`windowTokens`））**⇒ 实读 112 ⇒ ≈118**（配额批：`memberView` 配额字段换形（`modelQuotas`））**⇒ 实读 113 ⇒ ≈122 ⇒ 实读 118（2026-10-07）**（配额 v2 批落地：`memberView` 两新字段（`modelUsage` ∥ `modelDisables`）∥ 取数装配） | 自助端点：login ∥ logout ∥ me ∥ me/password ∥ me/keys/rotate |
+| `thincoder-server/src/accounts/routes-admin.mjs`（已落盘） | **61 ⇒ ≈100**（实读 2026-10-06——本批 +≈39 = 三处审计写（建/吊销/重置） ∥ `GET /api/audit` 注册行（过滤三轴））**⇒ 实读 95 ⇒ ≈112 ⇒ 实读 109（2026-10-07）**（配额 v2 批落地：`model-disables` 端点注册行（合并 ∥ 校验 ∥ 404 ∥ 返回）） | 管理端点：members 列表/建 ∥ 吊销 ∥ 重置 ∥ 审计列表 |
 | `thincoder-server/src/accounts/login-guard.mjs`（已落盘） | **119 ⇒ ≈125**（实读 2026-10-06——本批 +≈6 = `onLock` 回调（置锁处）） | 登录防爆破 |
 | `thincoder-server/src/accounts/audit.mjs`（拟新增） | **≈90**（设计估——`recordAudit` ∥ `queryAudit`（过滤/分页） ∥ `pruneAuditEvents` ∥ 行解码） | 审计事件（§2.1） |
-| **小计** | **≈570 ⇒ 493 ⇒ 632 ⇒ ≈785**（#963 实读：+139）**⇒ ≈822**（配额批：+≈37 = members +≈24 ∥ keys +≈7 ∥ routes +≈6） | —— |
+| **小计** | **≈570 ⇒ 493 ⇒ 632 ⇒ ≈785**（#963 实读：+139）**⇒ ≈822**（配额批：+≈37 = members +≈24 ∥ keys +≈7 ∥ routes +≈6）**⇒ ≈872 ⇒ 实读 897（2026-10-07——配额 v2 批落地后；Δ+75 = members +49 ∥ keys +7 ∥ routes +5 ∥ routes-admin +14——越估 ≈25）**（本批：+≈50 = members +≈18 ∥ routes-admin +≈17 ∥ routes +≈9 ∥ keys +≈6） | —— |
 
 ## 5. 验收判据（机检面）
 
@@ -95,6 +107,7 @@
 | AC-7（功能点 7——B 案） | ① 正确凭据登录 ⇒ 200 + 会话 cookie；错凭据（含不存在用户）⇒ 401 `invalid_credentials`（同措辞）② 无/过期会话访问 `/api/me` ∥ `/api/usage` ⇒ 401 `unauthorized` ③ `user` 会话调管理写（建成员 ∥ 配额（分模型覆盖） ∥ 吊销 ∥ 重置）⇒ 403 `forbidden`（服务端判）④ 自助改密 ⇒ 旧密登录失败 + 新密登录成功 + 本人其他会话失效（当前保留）⑤ admin 重置 ⇒ 旧密失效 + 临时密码可登（一次性回显——同签发语义）⑥ 自助轮换 ⇒ 新 key 通行 + 旧 key 下一请求 401 ⑦ 首启引导幂等（零 admin + 配置 ⇒ 建；再启动 ⇒ 不重建不改密——机制 = `ops/OPS.md` §2） | 批内件 |
 | AC-13②（功能点 12——登录防爆破；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 5 连败（同用户名）⇒ 第 6 次（含正确密码）⇒ 429 `too_many_attempts` + `Retry-After`（秒）；锁窗过后 ⇒ 正确密码 200；成功 ⇒ 清计；IP 维 20 阈值（`trustProxy` 下取 `X-Real-IP`）；不存在用户名同锁（枚举零差——措辞/计时面）；admin 重置 ⇒ 该用户名锁清（旧密 401、临时密码 200）；锁触发日志 `login_throttled` 在册 | 批内件 |
 | AC-15④（功能点 15——审计/安全面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 事件落库（逐写入点实走 ⇒ 各型行在场：登录成/败/锁 ∥ 轮换/签发/吊销 ∥ 改密/重置 ∥ 建成员——含 CLI 面 `actor=cli`）∥ 列表过滤（类型 ∥ 成员 ∥ 时段逐轴生效）∥ 失败登录可见（N 连败 ⇒ `login_failure` 行 + 第 5 次起 `login_locked` 行）∥ 判权三态（user ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200）∥ 保留清理（注入时钟 ⇒ 窗外删——同窗接线） | 批内件 |
+| AC-23（功能点 23③——成员模型禁用写/读面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 写面：`POST /api/members/:id/model-disables` 键级合并（`true` = 禁用 ∥ `null` = 删键 ∥ 未出现键不动）∥ 键形非法（裸名 ∥ 空段）⇒ 400 ∥ 值非 `true`/`null` ⇒ 400（库零变）∥ 不存在 ⇒ 404 ∥ 返回 `{id, modelDisables}` ∥ 判权三态（user ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200）；读面：`memberView` 新字段 `modelUsage`（当月逐模型已用——键 = 外标）∥ `modelDisables`——`/api/me` ∥ `/api/members` 同形；变更不入审计（九型零增）；覆盖键形校验同拍（#1001②——`model-quotas` 裸名键 ⇒ 400） | 批内件 |
 
 ## 6. 关键决策（本域）
 
@@ -108,6 +121,7 @@
 | KD-SV-16 | **管理面 key 枚举 = `GET /api/members` 成员行内附清单**（提示形 + id；仅列未吊销）——不设 `/api/members/:id/keys` 子资源 | 管理页一次装配（成员表 + 吊销控件同响应——vanilla 前端一跳）；与 `GET /api/me`「本人信息 + key 清单」同形；端点面零增 | 独立子资源（`GET /api/members/:id/keys`——页面 N+1 请求 ∥ 无其它消费方，吊销流多一跳） |
 | KD-SV-21 | **登录防爆破 = 双维内存锁**（用户名维 5 次 ∥ IP 维 20 次——窗/锁各 15 分钟；任一中锁 ⇒ 429 `too_many_attempts` + `Retry-After`；两维同文案——防枚举面保持；成功/改密/重置清计；重启清零（在案））；IP 口径 = 对端地址 ∥ `trustProxy: true` 读 `X-Real-IP` | 内网面在线爆破防护（分钟级窗）；内存 = 零表零写（登录热路径不落库）∥ 双维 = 兼顾定向与喷洒；快速拒绝（429）优于服务端 sleep（挂连接/事件循环面）；固定窗不升级（升档留后续） | DB 持久化（每条失败一写 + 新表——重启清零可接受，收益低）· 逐次延迟响应（挂连接）· 仅用户名维（喷洒无阻）· 仅 IP 维（定向爆破不阻 ∥ 反代聚合面误伤）· 验证码/外部组件（内网工具面——不做） |
 | KD-SV-28 | **审计事件 = 库表（v3）+ 名快照 + 与用量同保留窗**：`audit_events`（九型 CHECK）；写入口 = `thincoder-server/src/accounts/audit.mjs`（拟新增——`recordAudit` 由调用侧显式传型/主体——HTTP 路由与 CLI 同覆盖）；列表 = `GET /api/audit`（admin——过滤三轴）；清理复用 `usageRetentionDays` 与调度点 | 浏览器可读（审计页）+ 过滤 ∥ 库表 = 与全系统同库单源；快照名 = 改名后记录仍自足（列无 FK——不约束成员生命周期）；同窗单旋钮 = 保留治理一处配置；CLI 覆盖 = 本机改动也入审计（单点漏检面） | 日志文件（控制台不可读 ∥ 无过滤 ∥ 轮转面）· 内存（重启清零）· 独立保留窗配置（口径分裂——两窗默认值不同徒增疑问）· 服务层函数内隐式落库（`setMemberPassword` 三调用方异型——无法区分自助/重置/CLI） |
+| KD-SV-42 | **成员模型禁用 = 默认全可用 + 勾选即禁用（即时写）+ 存储 `members.model_disabled_json`（JSON map——沿覆盖列口径）+ 派发命中后/配额前执行（404 `model_not_found`——消息明示）+ `/v1/models` 随动滤除**：写面 = 键级合并 `POST model-disables`（`true`/`null`）；检查 = 随鉴权行零查询；**禁用优先于配额**（可用性 ≠ 用量限额——两轴独立）；审计零增（沿覆盖先例）；仅 chat（嵌入面零涉） | 需求 §2:23③（用户 11:16 走查「默认可用、勾选即禁用」——机制选择为设计裁定）；沿 `model_quotas_json` 先例（JSON 列随鉴权行——零新表零新查询）；错误形零新码（沿「未开放 ⇒ 404」选择性中继口径——列表/派发两面同判）；即时写 = 布尔勾选（沿吊销在窗「即点即效」先例；额度输入仍草稿+保存——值面校验/误触面） | 新错误码（新契约 + i18n + 四端未知码面——无收益）· 独立禁用表（键查 + N+1 面）· 列表照列仅拒调用（可观察面自相矛盾：列表可选中而调用必 404）· 草稿+保存提交（勾选语义失即时性；且与配额提交并批 = 二写非原子）· 嵌入面禁（表不列嵌入行——面外） |
 
 ## 7. 用例（本域）
 
@@ -135,6 +149,11 @@
 | B25 | 边界 | CLI 面四命令（member add ∥ member passwd ∥ key issue ∥ key revoke） | 对应事件行（actor = `cli`） |
 | E21 | 错误 | 无会话 ∥ user ⇒ `GET /api/audit`；`type`/`limit` 非法 | 401 `unauthorized` ∥ 403 `forbidden` ∥ 400 `invalid_request_error` |
 | N28 | 正常 | 注入时钟：窗外一行 + 窗内一行 ⇒ `pruneAuditEvents` | 界外删、窗内留 |
+| N29 | 正常 | admin 设禁用 `{disables:{"mock/mock-chat":true}}` ⇒ 该成员调 `mock/mock-chat` ∥ 他成员同调 | 404 `model_not_found`（消息含「已对该成员禁用」）；`/v1/models`（该成员）不含；他成员 200（不受累） |
+| N30 | 正常 | `{disables:{"mock/mock-chat":null}}`（恢复）⇒ 下一请求 | 200；`/v1/models` 恢复含；即时生效（无缓存——写后下一请求） |
+| B26 | 边界 | 禁用键不在服务清单（离表） ∥ 禁用后模型被停用再重开 | 键恒保留（与覆盖键同口径——重开即再禁）；行可读（map 面） |
+| B27 | 边界 | 键形非法（`m` ∥ `/m` ∥ `p/` ∥ `""`） ∥ 值 `false`/`0`/`"x"` | 400 `invalid_request_error`；库零变 |
+| E22 | 错误 | `user` ∥ 无会话 ∥ 成员不存在 ⇒ 禁用端点 | 403 `forbidden` ∥ 401 `unauthorized` ∥ 404 `not_found` |
 
 ## 8. 本域边界（不做的面）
 
@@ -142,6 +161,7 @@
 - 密码复杂度策略（仅最小长度 8） ∥ 会话管理面（会话列表 ∥ 多端踢出——改密/重置吊销属被动机制） ∥ 登录防护不做：跨重启持久锁 ∥ IP 黑白名单/验证码 ∥ 改密/重置端点的失败限速（需已持会话——在案） ∥ 离线撞库（防线外）。
 - 角色只两级（admin ∥ user——不做细粒度权限/自定义角色）。
 - 审计面不做：告警推送 ∥ 事件导出 ∥ 不可篡改/防删面（库文件权限自担）；OpenAI 请求不入审计（= 用量面）。
+- 成员模型禁用面不做：CLI 设置面 ∥ 定时/条件禁用 ∥ 禁用统计/看板 ∥ 嵌入模型禁用（嵌入面零涉——沿配额/限流口径）；审计零增（§2.1/§2.2）。
 
 ## 变更记录
 
@@ -157,3 +177,5 @@
 - 2026-10-06：fix 轮（评审 #69——批 `docs/batches/2026-10-06-console-completeness-2.md` §3 十项，本档面）：§3 两行 key 行形收正（补 `lastUsedAt`/`windowTokens`——单源 = `memberView`；与 `metering/METERING.md` §4 AC-15⑥ 断言口径对齐）。
 - 2026-10-07：配额分模型批设计轮（批 `docs/batches/2026-10-07-quota-per-model.md`——需求 §2:21 ∥ 台账 #992）——§3 三行随正（`GET /api/me` 字段 `quotaTokens` ⇒ `modelQuotas` ∥ `GET /api/members` 同拍 ∥ 配额端点指针 ⇒ `/api/members/:id/model-quotas`）；同源随动 = `metering/METERING.md` §2/§3 ∥ `store/STORE.md` §2 v5 段 ∥ `webui/WEBUI.md` §2.4②。
 - 2026-10-07：fix 轮（评审 #126 #7——批 `docs/batches/2026-10-07-quota-per-model.md` §3，本档面）：§4 小计复算收正（≈785 + ≈37 ⇒ **≈822**——改前 ≈820 系加法口误）。
+- 2026-10-07：配额 v2 · 成员模型面批设计轮（批 `docs/batches/2026-10-07-quota-v2-member-models.md`——需求 §2:23 ∥ 台账 #1002/#1003/#1004 + 并入 #1001/#994/#995/#988）——§2.1 边界句（成员配置写不入审计）∥ 增 §2.2（成员模型禁用：语义/存储/写面/读面/执行面/与配额关系/审计口径/边界——机制全文）∥ §3 端点表（`/api/me` 与 `/api/members` 行补 `modelUsage`/`modelDisables` ∥ 新增 `model-disables` 行）∥ §4 四行实读回基 + 小计 ⇒ ≈872 ∥ §5 增 AC-23 行 ∥ §6 增 KD-SV-42 ∥ §7 增 N29/N30 ∥ B26/B27 ∥ E22 ∥ §8 边界随正；同源随动 = `store/STORE.md` §2 v6 段 ∥ `gateway/API.md` §2.1 ∥ `webui/WEBUI.md` §2.4②。
+- 2026-10-07：fix 轮（评审轮次 1——批 `docs/batches/2026-10-07-quota-v2-member-models.md` §3 六发现，本档面）：§5 AC-23 行「候补」标记收正（已落需求档——沿 AC-13/AC-14 先例）。

@@ -219,7 +219,7 @@ test("登录：200 + cookie 属性齐 ∥ 错凭据同措辞同耗时 ∥ /api/m
     assert.ok(wrongMs >= 5 && ghostMs >= 5, `两况均须真跑散列（${wrongMs}ms / ${ghostMs}ms）`)
     const me = await get(app.base, "/api/me", { cookie })
     assert.equal(me.status, 200)
-    assert.deepEqual(me.json, { id: alice.id, name: "alice", username: "alice", role: "user", modelQuotas: {}, usedTokens: 0, keys: [] })
+    assert.deepEqual(me.json, { id: alice.id, name: "alice", username: "alice", role: "user", modelQuotas: {}, modelUsage: {}, modelDisables: {}, usedTokens: 0, keys: [] })
     const key = KEYS.issueKey(app.db, alice.id)
     assert.deepEqual((await get(app.base, "/api/me", { cookie })).json.keys, [{ id: key.id, hint: key.hint, lastUsedAt: null, windowTokens: 0 }])
   } finally {
@@ -338,7 +338,7 @@ test("管理面：无会话 401 ∥ user 越权 ⇒ 403（读+写）∥ 建成�
     assert.equal((await post(app.base, "/api/members", { cookie: admin.cookie, body: { username: "bob" } })).status, 400) // 重名 ⇒ 400
     const list = await get(app.base, "/api/members", { cookie: admin.cookie })
     assert.deepEqual(list.json.members.map((m) => m.username), ["admin", "alice", "bob"])
-    assert.deepEqual(list.json.members[1], { id: alice.id, name: "alice", username: "alice", role: "user", modelQuotas: {}, usedTokens: 0, keys: [] })
+    assert.deepEqual(list.json.members[1], { id: alice.id, name: "alice", username: "alice", role: "user", modelQuotas: {}, modelUsage: {}, modelDisables: {}, usedTokens: 0, keys: [] })
   } finally {
     await app.close()
   }

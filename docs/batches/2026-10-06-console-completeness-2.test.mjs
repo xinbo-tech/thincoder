@@ -143,13 +143,13 @@ function fold(rows, pick, key = "name") {
 
 // ── ① store v3 迁移链（STORE §3 判据）────────────────────────────────────────
 
-test("① store：空库直落 4 ∥ v2 旧库自动升 ∥ 幂等 ∥ audit_events 九型 CHECK", () => {
+test("① store：空库直落 6 ∥ v2 旧库自动升（链尾）∥ 幂等 ∥ audit_events 九型 CHECK", () => {
   const dir = mkdtempSync(join(tmpdir(), "tc2-db-"))
   const file = join(dir, "gateway.db")
   try {
     // 空库直落（六索引——含 v3 三索引）∥ 九型 CHECK 全可插 + 枚举外拒
     const fresh = DB.openDatabase(":memory:")
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [5, 5])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [6, 6])
     const indexes = fresh.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").all().map((row) => row.name)
     for (const index of ["idx_audit_ts", "idx_audit_type_ts", "idx_usage_key_ts"]) assert.ok(indexes.includes(index), index)
     assert.equal(indexes.length, 6)
@@ -170,9 +170,9 @@ test("① store：空库直落 4 ∥ v2 旧库自动升 ∥ 幂等 ∥ audit_eve
     legacy.exec("INSERT INTO members (username, name, password_hash, created_at) VALUES ('old', 'old', 'scrypt$fixture', '2026-10-06')")
     legacy.close()
     const upgraded = DB.openDatabase(file)
-    assert.equal(DB.readVersion(upgraded), 5)
+    assert.equal(DB.readVersion(upgraded), 6)
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE name = 'audit_events'").get())
-    assert.deepEqual([upgraded.prepare("SELECT COUNT(*) AS n FROM members").get().n, DB.migrate(upgraded)], [1, 5])
+    assert.deepEqual([upgraded.prepare("SELECT COUNT(*) AS n FROM members").get().n, DB.migrate(upgraded)], [1, 6])
     assert.equal(upgraded.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").get().n, 6)
     upgraded.close()
   } finally {
@@ -437,17 +437,16 @@ test("⑥ 静态面：档目 19 ∥ 20 ∥ 零外链 ∥ 两表键集/键引用�
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
     assert.deepEqual([/https?:\/\//.test(text), /@import/.test(text)], [false, false], `${name} 含外部引用（内网不达——KD-SV-9）`)
   }
-  // 两表键集相等（除自称名族）∥ en 零 CJK ∥ 占位符逐键一致 ∥ 本批键族在场
+  // 两表基键集相等（除自称名族 + `.one` 变体族——KD-SV-44）∥ en 零 CJK ∥ 占位符逐键一致 ∥ 本批键族在场
   const zhKeys = Object.keys(ZH)
   const enKeys = Object.keys(EN)
+  const enBase = enKeys.filter((key) => !key.endsWith(".one")) // `.one` 变体族 = 仅 en 表载体（KD-SV-44）
   for (const key of zhKeys.filter((key) => !SELF_NAMES.includes(key))) assert.ok(key in EN, `en 表缺键：${key}`)
-  for (const key of enKeys) {
-    assert.ok(key in ZH, `en 表多出键：${key}`)
-    assert.ok(!CJK.test(EN[key]), `en 表含 CJK：${key}`)
-  }
+  for (const key of enKeys) assert.ok(!CJK.test(EN[key]), `en 表含 CJK：${key}`)
+  for (const key of enBase) assert.ok(key in ZH, `en 表多出键：${key}`)
   for (const key of SELF_NAMES) assert.ok(!(key in EN), `自称名族不得入 en 表：${key}`)
-  assert.equal(zhKeys.length - SELF_NAMES.length, enKeys.length)
-  for (const key of enKeys) assert.equal(placeholders(ZH[key]), placeholders(EN[key]), `占位符不一致：${key}`)
+  assert.equal(zhKeys.length - SELF_NAMES.length, enBase.length)
+  for (const key of enBase) assert.equal(placeholders(ZH[key]), placeholders(EN[key]), `占位符不一致：${key}`)
   const family = (prefix) => zhKeys.filter((key) => key.startsWith(prefix)).length
   for (const [prefix, count] of [["vector.", 20], ["health.", 10], ["overview.", 8], ["usageReport.", 14], ["audit.", 27]]) assert.equal(family(prefix), count, prefix)
   for (const key of ["nav.page.admin.overview", "nav.page.admin.audit", "me.keys.lastUsed", "me.keys.neverUsed", "me.keys.windowTokens"]) assert.ok(key in ZH && key in EN, key)

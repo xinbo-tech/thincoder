@@ -1,7 +1,8 @@
 /**
  * views-models.mjs — 管理·服务模型页（webui/WEBUI.md §2/§2.4③——KD-SV-32/34：`#/admin/models`——仅 admin）：
  * 列表 = `/v1/models` 同源（`GET /api/admin/providers` 的 `models` 展平为 `provider/model` 前缀形 + 嵌入引擎
- * 模型 `state.system.embedding.model`）∥ 行点击 ⇒ 详情弹窗（复用 `modal.mjs`）；配置五组 = A 开放状态（停用流）∥
+ * 模型 `state.system.embedding.model`）∥ 配额列（`settings[上游].quotaTokens`——未设 ⇒「不限」 ∥ 嵌入行「—」；与 F 组单源）∥
+ * 行点击 ⇒ 详情弹窗（复用 `modal.mjs`）；配置五组 = A 开放状态（停用流）∥
  * C 限流（RPM/TPM）∥ F 配额（`quotaTokens`——每人每月默认用量）∥ D 展示元数据（规格快照查表 + 手填「说明」）∥ E 成本权重
  * ——保存 = PATCH `settings`
  * （单键全对象提交——全子字段在册；未设/清空 = 显式 `null`；草稿初值 = GET 行 `settings` 该键值）。
@@ -86,15 +87,22 @@ export async function renderModels(ctx, mount) {
   await load()
 }
 
-/** 列表（列 = 模型 ∥ Provider ∥ 面）：行点击（Enter/Space 同开——键盘可达）⇒ 详情弹窗（entry = 该行 provider 行——设置/停用取数源）。 */
+/** 列表（列 = 模型 ∥ Provider ∥ 面 ∥ 配额）：行点击（Enter/Space 同开——键盘可达）⇒ 详情弹窗（entry = 该行 provider 行——设置/停用取数源）；
+ *  配额 = `settings[上游].quotaTokens`（未设/清空 ⇒「不限」 ∥ 嵌入行 ⇒「—」——与 F 组单源，零第二存储）。 */
 function modelsTable(ctx, rows, providers, reload) {
   const { h } = ctx
-  const headers = [t("admin.models.colModel"), t("admin.models.colProvider"), t("admin.models.colSurface")]
+  const headers = [t("admin.models.colModel"), t("admin.models.colProvider"), t("admin.models.colSurface"), t("admin.models.quotaTitle")]
+  const quotaOf = (row) => {
+    if (row.surface !== "chat") return "—" // 嵌入行（配置 = 系统页 · 向量服务卡）
+    const value = ((providers.find((item) => item.name === row.provider) ?? {}).settings ?? {})[row.upstream]?.quotaTokens
+    return value === null || value === undefined ? t("common.quotaUnlimited") : String(value)
+  }
   const body = rows.map((row) => {
     const tr = h("tr", { class: "row-clickable", tabindex: "0" },
       h("td", {}, h("code", { text: row.id })),
       h("td", { text: row.provider }),
-      h("td", { text: row.surface }))
+      h("td", { text: row.surface }),
+      h("td", { text: quotaOf(row) }))
     const open = () => openModelModal(ctx, { row, entry: providers.find((item) => item.name === row.provider) ?? null, reload })
     tr.addEventListener("click", open)
     tr.addEventListener("keydown", (event) => {
@@ -165,6 +173,7 @@ export function openModelModal(ctx, { row, entry, reload }) {
       await ctx.api(`/api/admin/providers/${entry.id}`, { method: "PATCH", body: { settings: { [row.upstream]: value } } })
       entry.settings = { ...(entry.settings ?? {}), [row.upstream]: value } // 弹窗留驻——重开草稿同源（其余字段不丢）
       ctx.flash(t("admin.models.saved"))
+      await reload?.() // 保存后列表刷新随动（配额列与 F 组单源——§2.4③）
     } catch (error) { ctx.fail(error) }
   }
 

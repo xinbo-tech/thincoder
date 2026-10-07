@@ -19,11 +19,13 @@ import assert from "node:assert/strict"
 import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { createServer } from "node:http"
 import { dirname, join, resolve } from "node:path"
+import { pathToFileURL } from "node:url"
 
 const ROOT = process.cwd()
 if (!existsSync(join(ROOT, "thincoder-server"))) throw new Error(`须从仓库根（thincoder/）运行——cwd = ${ROOT}`)
 const PUBLIC_DIR = join(ROOT, "thincoder-server", "public")
-const load = (name) => import(new URL(`../../thincoder-server/public/${name}`, import.meta.url).href)
+// 随正（配额 v2 批）：模块目标从 `import.meta.url` 相对式改为 cwd 相对式——本件已硬要求 cwd = 仓根（上行）∥ 本副本住 tmp 舱（层级与 docs/batches/ 不等）⇒ 相对式在舱内不可达
+const load = (name) => import(pathToFileURL(join(PUBLIC_DIR, name)).href)
 
 const { ZH } = await load("i18n-zh.mjs")
 const { EN } = await load("i18n-en.mjs")
@@ -69,15 +71,16 @@ function stripComments(src) {
 
 // ── ① 表对齐 ────────────────────────────────────────────────────────────────
 
-test("① 表对齐：键集双向相等（除自称名族）∥ 占位符逐键一致 ∥ en 零 CJK ∥ 全键非空", () => {
+test("① 表对齐：基键集双向相等（除自称名族 + `.one` 族）∥ 占位符逐键一致 ∥ en 零 CJK ∥ 全键非空", () => {
   const zhKeys = Object.keys(ZH)
   const enKeys = Object.keys(EN)
+  const enBase = enKeys.filter((key) => !key.endsWith(".one")) // `.one` 变体族 = 仅 en 表载体（KD-SV-44）
   const zhShared = zhKeys.filter((key) => !SELF_NAMES.includes(key))
   for (const key of SELF_NAMES) assert.ok(key in ZH, `zh 表缺自称名键：${key}`)
   for (const key of zhShared) assert.ok(key in EN, `en 表缺键：${key}`)
-  for (const key of enKeys) assert.ok(key in ZH, `en 表多出键：${key}`)
+  for (const key of enBase) assert.ok(key in ZH, `en 表多出键：${key}`)
   for (const key of SELF_NAMES) assert.ok(!(key in EN), `自称名族不得入 en 表：${key}`)
-  assert.equal(zhShared.length, enKeys.length, "共享键集长度不等")
+  assert.equal(zhShared.length, enBase.length, "共享基键集长度不等")
   for (const key of zhShared) {
     assert.equal(typeof ZH[key], "string", `zh 值非字符串：${key}`)
     assert.equal(typeof EN[key], "string", `en 值非字符串：${key}`)
@@ -181,7 +184,7 @@ test("④ 静态面：t 字面量 ⊆ 表键 ∥ nav labelKey 面 ∥ import 图
     }
   }
   // 三新档静态直发：真句柄（node:http + static.mjs）⇒ 200 ∥ text/javascript
-  const site = (await import(new URL("../../thincoder-server/src/webui/static.mjs", import.meta.url).href)).createStaticSite()
+  const site = (await import(pathToFileURL(join(ROOT, "thincoder-server", "src", "webui", "static.mjs")).href)).createStaticSite()
   const server = createServer((req, res) => {
     if (!site.serve(req, res, new URL(req.url, "http://localhost").pathname)) {
       res.writeHead(404)

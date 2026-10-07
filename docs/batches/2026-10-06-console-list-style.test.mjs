@@ -18,7 +18,7 @@
  *   ⑤ 类名双向闭合（AC-19 续）：档面字面类 ⊆ `style.css` 类选择器 ∥ `style.css` 类选择器 ⊆ 档面字面类 ∪ 态类 ∥
  *      死类零残留（`key-line`/`stat`/`view`——规则与字面两向）
  *   ⑥ 静态面：档目 19 ∥ 20（本批零新档）逐名同拍 ∥ `public/**` 零外链 ∥ 静态直发（200 ∥ mime ∥ 字节等于磁盘）
- *   ⑦ 门禁清单：`prepublishOnly` 十九件含本批件 ∥ 清单目标在盘
+ *   ⑦ 门禁清单：`prepublishOnly` 二十件含本批件（配额 v2 批后）∥ 清单目标在盘
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -227,11 +227,11 @@ test("⑥ 静态面：档目 19 ∥ 20 逐名同拍（本批零新档）∥ `pub
   }
 })
 
-// ── ⑦ 门禁清单：`prepublishOnly` 十九件（含本批件）∥ 清单目标在盘 ─────────────────────────────
+// ── ⑦ 门禁清单：`prepublishOnly` 二十件（含本批件）∥ 清单目标在盘 ─────────────────────────────
 
-test("⑦ 门禁清单：`prepublishOnly` 十九件含本批件 ∥ 清单目标在盘", () => {
+test("⑦ 门禁清单：`prepublishOnly` 二十件含本批件 ∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 19, `门禁清单件数（十八 ⇒ 十九）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 20, `门禁清单件数（十九 ⇒ 二十——配额 v2 批）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-06-console-list-style.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

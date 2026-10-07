@@ -3,7 +3,8 @@
  *
  * 链（PROJECT.md §2）：[2] 鉴权（团队 key——sha256 查库）→ [4] `provider/model` 复合键派发
  * （首斜杠切分——上游请求体 model = 余段；记账 provider/model = 拆列两字段）→ [4.5] 准入（派发命中后/转发前）：
- * 配额（三级解析 ⇒ 零 SQL 短路 ⇒ 计数点查；**仅 chat**——KD-SV-38）+ 模型限流（per-model RPM/TPM；
+ * 成员模型禁用（随鉴权行零查询——被禁 ⇒ 404 `model_not_found` 消息明示；**禁用优先于配额**——KD-SV-42）+ 配额
+ * （三级解析 ⇒ 零 SQL 短路 ⇒ 计数点查；**仅 chat**——KD-SV-38）+ 模型限流（per-model RPM/TPM；
  * 超限 ⇒ 429 `rate_limited` + `Retry-After`——KD-SV-35）→ [5] 转发（真 key 代持）→ [6] 透传 + tap
  * → [7] 记账（同事务三写）；[5]–[7] 归 forward.mjs（含 `onUsage` 钩子——用量到达即计入限流窗）。
  * provider 表 = 运行时箱（装配期引导——种子导入 → 构建）；`/v1/models` 与派发读 `runtime.get()`——保存即换表
@@ -46,7 +47,10 @@ export function registerGatewayRoutes(routes, { db, config, runtime = null, log 
     }
     const dispatch = providerRuntime.get().dispatch(body.model) // [4] 复合键派发（裸名 ∥ 未命中 ⇒ 404 model_not_found；派发时快照）
     if (dispatch.miss) throw new HttpError(dispatch.miss.body.error.code, dispatch.miss.body.error.message)
-    // [4.5] 准入（派发命中后、转发前——KD-SV-38 ∥ KD-SV-35）：配额（三级 ∥ 零 SQL 短路——不触库）⇒ 限流
+    // [4.5] 准入（派发命中后、转发前）：禁用（可用性——**先于配额**，零新码）⇒ 配额（三级 ∥ 零 SQL 短路）⇒ 限流
+    if (member.modelDisables?.[body.model] === true) {
+      throw new HttpError("model_not_found", `模型 ${body.model} 已对该成员禁用`) // 404（KD-SV-42——禁用优先于配额，不涉配额判定）
+    }
     const settings = providerRuntime.get().settingsFor(dispatch.provider, dispatch.model) // v4 设置（空 = 不限——平台层与限流同源）
     assertQuota(db, member, { model: body.model, provider: dispatch.provider.name, upstreamModel: dispatch.model, settings: settings ?? {} }) // 超限 ⇒ 429 quota_exceeded（含模型/已用/额度）
     const verdict = rateLimiter.check(dispatch.provider.name, dispatch.model, settings ?? {})
@@ -67,8 +71,11 @@ export function registerGatewayRoutes(routes, { db, config, runtime = null, log 
   })
 
   routes.add("GET", "/v1/models", (req, res) => {
-    requireApiKey(db, req) // 团队 key（API.md §1——AC-1 三态门）
-    sendJson(res, 200, modelList(providerRuntime.get())) // 运行时派生（保存即换表——§2.2）
+    const { member } = requireApiKey(db, req) // 团队 key（API.md §1——AC-1 三态门）
+    const list = modelList(providerRuntime.get()) // 运行时派生（保存即换表——§2.2）
+    const disables = member.modelDisables ?? {}
+    // 成员禁用随动滤除（输出 = 开放清单 − 调用者禁用集——KD-SV-42）
+    sendJson(res, 200, { ...list, data: list.data.filter((item) => disables[item.id] !== true) })
   })
 
   // 嵌入面 = 内网引擎转发（引擎模型 = `embedding.model`——非 provider 面 ∥ 无前缀；其余 ⇒ 404）：

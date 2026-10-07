@@ -187,16 +187,17 @@ test("⑥ D 快照：`specForDisplay` 前缀查表（大小写不敏感 ∥ 命�
 
 // ── ⑧ i18n（两表 ∥ 新键/退役键 ∥ E 注 ∥ 映射集）─────────────────────────────
 
-test("⑧ i18n：两表键集相等 ∥ en 零 CJK ∥ 占位符一致 ∥ 新键在册 ∥ `configSkeleton` 退役 ∥ E 注在册 ∥ `err.rate_limited` 入映射集", () => {
+test("⑧ i18n：两表基键集相等 ∥ en 零 CJK ∥ 占位符一致 ∥ 新键在册 ∥ `configSkeleton` 退役 ∥ E 注在册 ∥ `err.rate_limited` 入映射集", () => {
   const zhKeys = Object.keys(ZH)
   const enKeys = Object.keys(EN)
+  const enBase = enKeys.filter((key) => !key.endsWith(".one")) // `.one` 变体族 = 仅 en 表载体（KD-SV-44）
   for (const key of zhKeys.filter((key) => !SELF_NAMES.includes(key))) assert.ok(key in EN, `en 表缺键：${key}`)
-  for (const key of enKeys) {
+  for (const key of enKeys) assert.ok(!CJK.test(EN[key]), `en 表含 CJK：${key}`)
+  for (const key of enBase) {
     assert.ok(key in ZH, `en 表多出键：${key}`)
-    assert.ok(!CJK.test(EN[key]), `en 表含 CJK：${key}`)
     assert.equal(placeholders(ZH[key]), placeholders(EN[key]), `占位符不一致：${key}`)
   }
-  assert.equal(zhKeys.length - SELF_NAMES.length, enKeys.length)
+  assert.equal(zhKeys.length - SELF_NAMES.length, enBase.length)
   assert.equal(NEW_KEYS.length, 27)
   for (const key of NEW_KEYS) assert.ok(key in ZH && key in EN, `本批新键缺位：${key}`)
   for (const key of RETIRED_KEYS) assert.ok(!(key in ZH) && !(key in EN), `退役键未删：${key}`)

@@ -36,6 +36,7 @@
 
 - **`quota_counters`**（检查面）：粒度 = 成员 × provider × 模型 × 自然月（`tokens` 列）；维护 = 随记账**同事务 upsert 累加**（§1——单写点防漂移）；全记账行照计（含嵌入——检查只读 chat 键）；月翻滚 = 新月份键自然归零（零翻转逻辑）；期初 = v5 迁移自 usage 一次性聚合回填。
 - **`usage_daily`**（汇表面——#990）：粒度 = 日 × 成员 × key × provider × model × endpoint（请求数 ∥ 三 token 和 ∥ 时长和 ∥ 错误数）；维护 = 同事务 upsert 累加（同上）；日键翻滚自然归零；期初 = v5 回填。
+- **计数表读面两形**（配额 v2 批）：① 点查（准入——§2.4）∥ ② 成员月表读（`monthlyCountersByMember`——成员弹窗逐行已用：Map 成员 → 外标 → tokens；外标回拼 = `provider = '' ? model : provider + '/' + model`（同记账口径）；`memberId` 给定 ⇒ 唯一键前缀查询 ∥ 缺省 = 全员一次装配（免 N+1））。
 - 两表 = 可重算派生面（真源 = usage）；保留/清理同窗（§1）；**键时基 = 行 `ts` 同源**（`day`/`month` 随 `usage.ts` 推导——与回填/对账同表达式；跨零点/月初终结请求 ⇒ 键归 `ts` 所在日/月——对账零幻影漂移；§1）。
 
 ### 2.4 检查查询与性能（用户 09:31 点名——硬要求；#991 转正）
@@ -49,7 +50,8 @@
 
 ### 2.5 对账与修复（防漂移兜底）
 
-- `node src/ops/cli.mjs --config <档> usage reconcile [--month YYYY-MM] [--fix]`（本机直开库——`ops/OPS.md` §3）：对账面 = `usage_daily` + `quota_counters` **vs usage 重算**（缺省窗 = 当本月；重算 = 同回填 SQL 逐值）；只报缺省——`--fix` = 以重算值覆写；读数 = 漂移行清单 + 合计。
+- `node src/ops/cli.mjs --config <档> usage reconcile [--month YYYY-MM] [--fix]`（本机直开库——`ops/OPS.md` §3）：对账面 = `usage_daily` + `quota_counters` **vs usage 重算**（缺省窗 = 当本月；重算 = 同回填 SQL 逐值）；只报缺省——`--fix` = 以重算值覆写；读数 = 漂移行清单 + 合计；
+  `--fix` 路径 = **读快照与覆写同事务**（`BEGIN IMMEDIATE` 先行——CLI 对账 × server 记账的跨进程并发窗闭合；报告路径（无 `--fix`）零改——#1001① 收正）。
 - 口径注：对账只对**完整月**有意义（当本月 ∥ 指定月；保留窗切割月含清理残差——读数自明）；两派生表自 usage 全量可重算（真源单点）。
 
 ## 3. 查询与额度端点（本域）
@@ -65,7 +67,7 @@
 | `POST /api/members/:id/model-quotas` | admin | 设分模型覆盖（键级合并）：`{quotas: {"<provider/model>": N|null}}`——值 null = 删键 ∥ ≥0 整数；未出现键不动；返回 `{id, modelQuotas}` |
 
 （过滤参数 `endpoint` ∈ `chat` ∥ `embeddings`（缺省 = 不过滤；非法值 ⇒ 400 `invalid_request_error`）——四读端点同门（两明细 ∥ summary ∥ export）；`model` 过滤 = 对外标识形；解析优先级：`endpoint = embeddings` 在场 ⇒ 全串按 `provider = ''`（嵌入命名空间——嵌入名可含斜杠，不切分）∥ 否则含斜杠 ⇒ `(provider, model)` 逐值对 ∥ 否则 ⇒ `provider = ''`。
-  **数据源分面**：明细 ∥ 导出 = `usage`（真源——毫秒精度零改）∥ `summary`/totals/key 窗/成员月累计 = 预聚合日表 `usage_daily`（本地日粒度——窗沿取整含端日；API 形零变）。）
+  **数据源分面**：明细 ∥ 导出 = `usage`（真源——毫秒精度零改）∥ `summary`/totals/key 窗/成员月累计 = 预聚合日表 `usage_daily`（本地日粒度——窗沿取整含端日；API 形零变）；**key 窗 ∥ 报表缺省窗 = 近 30 个本地日（今日起回溯——同构；`KEY_USAGE_WINDOW_DAYS` ∥ `USAGE_SUMMARY_DAYS`；#1001③ 收正）**。）
 
 ## 4. 验收判据（机检面）
 
@@ -76,19 +78,20 @@
 | AC-13⑥（功能点 12——用量保留；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 窗内旧行删除（注入时钟：刚出窗的行删、窗内行留）∥ `null` ⇒ 零删 ∥ 启动清理 + 24h 周期接线（批内件直调 `pruneUsage` + 断言入口接线）∥ 查询面三端点回归零变 | 批内件 |
 | AC-15②（功能点 15——用量看板升级；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 与 `/api/usage` **同源**（同一过滤面；数据源 = 预聚合日表——本地日粒度）：注入行集（日对齐窗）⇒ `summary.totals` 逐值 = 明细归并 ∥ trend 按日归并逐值 + 零填充全长 ∥ byModel（provider×model **两列聚合**——回拼展示）/byMember 降序逐值；CSV/明细 = 真源行集（列形 ∥ RFC 4180 转义 ∥ ISO ts ∥ 空单元格 ∥ BOM）；空集 ⇒ 空数组/totals 0/仅表头（零错）；`endpoint` 过滤（两合法值生效 ∥ 非法 400——四读端点同门）∥ `summary`/`export` 判权三态（user ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200）∥ 实测：30 天窗四查合计 p50 ≈11ms @500k（原明细口径 ≈2.7–4.8s——同构探针；KD-SV-39） | 批内件 |
 | AC-21（功能点 21——配额分模型；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① 平台「每人每月默认用量」= settings `quotaTokens`（PATCH 保存即热生效 ∥ 非法 ⇒ 400 库与运行时零变）∥ ② 成员覆盖可设（`POST /api/members/:id/model-quotas` 键级合并 ∥ null 删键 ∥ 非法 400 ∥ 404）∥ ③ 三级序逐级生效（覆盖 > 平台 > 不限；短路 = 零 SQL——计数探针注入）∥ ④ 检查 = 仅 chat（派发命中后/转发前）∥ 窗口 = 自然月（服务器本地时区——月键 `'YYYY-MM'`；跨零点/跨月（含月初终结）键随行 `ts`、新月键零起）∥ 超限 ⇒ 429 `quota_exceeded`（message 含模型）且他模型不受累 ∥ ⑤ 嵌入零检查（旧总额检查已移除）∥ 旧总量字段退役（旧列不在 schema ∥ 旧端点 404）（判据全文 = `webui/WEBUI.md` §6 AC-21 行 + `gateway/API.md` §5 AC-21 行） | 批内件 |
+| AC-23（功能点 23①——逐行已用数据面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `monthlyCountersByMember`：逐值 = 注入记账归并（自然月键——与配额检查同源同窗）∥ 外标回拼无损（`model` 带斜杠 ∥ 嵌入行单段）∥ `memberId` 给定（唯一键前缀）与全员装配逐值相等 ∥ 控制面字段形 = `webui/WEBUI.md` §6 AC-23 行 | 批内件 |
 | AC-22（功能点 22——模型标识分字段；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① 记账 ∥ 计数行备 `provider`/`model` 两字段（回拼无损——含 `model` 带斜杠 ∥ 嵌入 `provider = ''`）∥ ② 统计聚合 = 列直操作（provider ∥ model ∥ 两者——`summary.byModel` 两列聚合；无字符串切分）∥ ③ 迁移拆分回填抽样比对（与旧复合值首斜杠拆逐值相等）∥ 对外契约不变（API/展示斜杠形——回拼） | 批内件 |
-| AC-15⑥（功能点 15——key 明细数据面；已落需求档） | `keyUsageStats`：`lastUsedAt` = `MAX(ts)`（key_id 归因——读 `usage`） ∥ `windowTokens` = 近 30 天（日粒度窗——读 `usage_daily`；`KEY_USAGE_WINDOW_DAYS`）——逐值 = 注入 usage 行推导；从未使用 ⇒ `null`/0；`/api/me` 与 `/api/members` key 行同形（单源 = `memberView`） | 批内件 |
+| AC-15⑥（功能点 15——key 明细数据面；已落需求档） | `keyUsageStats`：`lastUsedAt` = `MAX(ts)`（key_id 归因——读 `usage`） ∥ `windowTokens` = 近 30 个本地日（今日起回溯——与报表窗同构；读 `usage_daily`；`KEY_USAGE_WINDOW_DAYS`——#1001③ 收正）——逐值 = 注入 usage 行推导；从未使用 ⇒ `null`/0；`/api/me` 与 `/api/members` key 行同形（单源 = `memberView`） | 批内件 |
 
 ## 5. 本域文件与行数预算（本域族行）
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
 | `thincoder-server/src/metering/usage.mjs`（已落盘） | **147 ⇒ ≈230**（2026-10-06 实读）**⇒ 实读 278 ⇒ ≈255**（本批：记账三写 +≈18 ∥ 拆列/回拼 +≈9 ∥ `model` 过滤两字段 +≈10 ∥ 报表读族迁出 −≈60） | 记账（单写点） ∥ 明细查询 ∥ 导出 ∥ 过滤构建 ∥ 保留清理 ∥ 时间助手 |
-| `thincoder-server/src/metering/aggregates.mjs`（拟新增） | **≈150**（设计估） | 派生两表写（`usage_daily` ∥ `quota_counters` upsert） ∥ 计数点查 ∥ 对账重算 ∥ 派生清理 |
-| `thincoder-server/src/metering/report.mjs`（拟新增） | **≈105**（设计估——自 usage.mjs 迁出） | 汇表面读（summary ∥ totals ∥ key 窗 ∥ 成员月累计——读 `usage_daily`） |
+| `thincoder-server/src/metering/aggregates.mjs`（已落盘） | **≈150**（设计估）**⇒ 实读 141 ⇒ ≈160 ⇒ 实读 173（2026-10-07）**（配额 v2 批落地：`monthlyCountersByMember`（月表读两形） ∥ `--fix` 事务合围重排；+32——越估 13） | 派生两表写（`usage_daily` ∥ `quota_counters` upsert） ∥ 计数点查 ∥ 成员月表读 ∥ 对账重算 ∥ 派生清理 |
+| `thincoder-server/src/metering/report.mjs`（已落盘） | **≈105**（设计估——自 usage.mjs 迁出）**⇒ 实读 169 ⇒ ≈170 ⇒ 实读 168（2026-10-07）**（配额 v2 批落地：key 窗沿同构收正——#1001③；死常量 `DAY_MS` 随删） | 汇表面读（summary ∥ totals ∥ key 窗 ∥ 成员月累计——读 `usage_daily`） |
 | `thincoder-server/src/metering/quota.mjs`（已落盘） | **27 ⇒ ≈55**（本批 +≈28 = 三级解析 ∥ 覆盖 map 读 ∥ 计数点查准入 ∥ 短路 ∥ 429 形（模型口径）） | 配额准入（点查——非 SUM） ∥ 429 形 |
 | `thincoder-server/src/metering/routes.mjs`（已落盘） | **59 ⇒ ≈120**（2026-10-06 实读）**⇒ 实读 111 ⇒ ≈125**（本批：quota 端点换形 +≈14；读端点零改） | 用量查询 ∥ 配额设置端点（分模型覆盖） |
-| **小计** | **≈260 ⇒ 218 ⇒ 233 ⇒ ≈377 ⇒ 实读 416 ⇒ ≈690**（本批：+2 新档（aggregates ≈150 ∥ report ≈105） ∥ 三档净 +≈19） | —— |
+| **小计** | **≈260 ⇒ 218 ⇒ 233 ⇒ ≈377 ⇒ 实读 416 ⇒ ≈690**（配额分模型批：+2 新档（aggregates ≈150 ∥ report ≈105） ∥ 三档净 +≈19）**⇒ ≈710**（配额 v2 批：aggregates +≈19 ∥ report +≈1） | —— |
 
 ## 6. 关键决策（本域）
 
@@ -126,6 +129,7 @@
 
 - 归档面不做（清理 = 删除式保留窗——§1；`null` 可关）∥ 阈值告警（80% 等——需求 §4 不做）∥ 金额/计费（对外计费 = 不做项）∥ token 预估/预扣（无 tokenizer——不做）。
 - **明细导出 = 在**（CSV——§3；「导出」= 当前数据集下载，非归档语义——不涉保留窗）；JSON 导出不另设（`/api/usage` 即 JSON 面）∥ **汇表面 = 预聚合日表**（本批——#990；覆盖索引未采——§2.4）∥ 明细面毫秒精度不变（真源）∥ 我的用量页不做趋势/聚合（管理面专属——`webui/WEBUI.md` §2）。
+- 成员面读（逐模型已用）= 与配额同窗（自然月——§2.3）；报表/key 面 = 近 30 个本地日——两窗并存为设计（配额周期 = 自然月——KD-SV-6）；成员总额（`usedTokens`）含嵌入行（现口径保持）。
 
 ## 变更记录
 
@@ -139,3 +143,5 @@
 - 2026-10-06：fix 轮（评审 #69——批 `docs/batches/2026-10-06-console-completeness-2.md` §3 十项，本档面）：§4 AC-15② 行补判权三态断言（`summary`/`export`：user ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200——沿同批新端点口径）。
 - 2026-10-07：配额分模型批设计轮（批 `docs/batches/2026-10-07-quota-per-model.md`——需求 §2:21 ∥ §2:22 ∥ 台账 #990/#991/#992）——§1 记账重写（同事务三写 ∥ 两字段 （`provider`/`model`）∥ 派生两表 ∥ 三表同窗清理 ∥ 查询面分面）∥ §2 重写为「分模型三级·计数准入」（三级 ∥ 检查点 ∥ 计数维护 ∥ 点查与短路（现状缺陷收正）∥ 性能目标与实测法 ∥ 对账命令∥覆盖索引降对账面候选）∥ §3 quota 端点换形（`model-quotas`）+ `model` 过滤两字段解析 + 数据源分面句 ∥ §4 AC-15② 重写 + AC-3/AC-15⑥ 随正 + 新增 AC-21/AC-22 行 ∥ §5 预算（+ `aggregates.mjs` ≈150 ∥ `report.mjs` ≈105；小计 ⇒ ≈690）∥ §6 KD-SV-6/8/22/27 随正 + 新增 KD-SV-38/39 ∥ §7 E2 随正 + N28–N31/B24 ∥ §8 边界随正（汇表面 = 日表；覆盖索引未采）；同源随动 = `store/STORE.md` §2/§3 ∥ `gateway/API.md` §2/§2.1/§3 ∥ `webui/WEBUI.md` §6。
 - 2026-10-07：fix 轮（评审 #126——批 `docs/batches/2026-10-07-quota-per-model.md` §3 十项，本档面）：§1/§2.3 钉派生 upsert 键时基（`day`/`month` = 行 `ts` 同源——回填/对账同表达式）∥ §3 `model` 过滤补解析优先级（`endpoint = embeddings` 在场 ⇒ `provider = ''` 兜底）∥ §4 AC-21 行编号对齐（①–⑤）+ 自然月窗口断言点入行内 ∥ §7 B24 扩跨零点/月初终结断言。
+- 2026-10-07：配额 v2 · 成员模型面批设计轮（批 `docs/batches/2026-10-07-quota-v2-member-models.md`——需求 §2:23 ∥ 台账 #1002/#1003/#1004 + 并入 #1001）——§2.3 增计数表读面两形（`monthlyCountersByMember`）∥ §2.5 `--fix` 事务合围（#1001①）∥ §3 窗注（key 窗∥报表同构——#1001③）∥ §4 AC-15⑥ 窗沿收正 + 增 AC-23 行 ∥ §5 两档实读回基 + 小计 ⇒ ≈710 ∥ §8 两窗并存句；同源随动 = `accounts/ACCOUNTS.md` §3 ∥ `webui/WEBUI.md` §2.4②。
+- 2026-10-07：fix 轮（评审轮次 1——批 `docs/batches/2026-10-07-quota-v2-member-models.md` §3 六发现，本档面）：§4 AC-23 行「候补」标记收正（已落需求档——沿 AC-13/AC-14 先例）。

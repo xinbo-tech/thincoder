@@ -205,20 +205,28 @@ test("② 成员弹窗：三态（查看/编辑/新建）∥ 分模型覆盖面�
     const member = { id: 1, name: "Alice", username: "alice", role: "user", modelQuotas: { "p2/x": 7, "ghost/model": 3 }, usedTokens: 42, keys: [{ id: 7, hint: "sk-tc-abcd", lastUsedAt: null, windowTokens: 0 }] }
     const reload = async () => members
     const secretBox = makeNode("div")
-    /** 编辑态覆盖表（表头含「平台默认」列——与 key 表区分）。 */
+    /** 配额表（表头含「平台默认」列——查看/编辑两态同形；与 key 表区分）。 */
     const quotaTableOf = (root) => findNode(root, (node) => node.tag === "table"
       && findAll(node, (cell) => cell.tag === "th").some((cell) => cell.textContent === ZH["admin.members.colPlatformQuota"]))
 
-    // 查看态：详情（含分模型配额覆盖计数）+ 分模型用量节（覆盖行表：模型 ∥ 每月用量）+ key 清单（提示形）+ 三操作
+    // 查看态：详情（含分模型配额覆盖计数）+ 分模型用量节 = 模型表直显（配额 v2 批——5 列）+ key 清单（提示形）+ 三操作
     const modal = ADMIN.openMemberModal(ctx, { member, reload, secretBox })
     assert.deepEqual([modal.root.open, modal.root.children[0].children[0].textContent], [true, "Alice"])
     for (const text of [ZH["admin.members.setQuota"], ZH["admin.members.resetPwd"], ZH["common.close"], ZH["admin.members.revoke"], ZH["admin.members.modelQuotaTitle"]]) {
       assert.ok(byText(modal.root, text), `查看态缺控件：${text}`)
     }
     assert.ok(byText(modal.root, "sk-tc-abcd"), "key 清单入窗（提示形）")
-    assert.ok(textOf(modal.root).includes("p2/x") && textOf(modal.root).includes("ghost/model"), "覆盖行全列（含不在服务清单的键）")
     assert.ok(textOf(modal.root).includes(fill(ZH["common.modelQuotaCount"], { count: 2 })), "覆盖计数 = 2 个模型（详情行——三处同源）")
     assert.equal(secrets.length, 0, "查看态零秘密回显")
+    // 模型表直显（进窗即惰性拉 providers）：5 列 ∥ 服务清单行 ∥ 离表覆盖键 ⇒ 注行（只数覆盖键）
+    await tick()
+    const viewTable = quotaTableOf(modal.root)
+    assert.ok(viewTable !== null, "查看态模型表缺位")
+    assert.deepEqual(findAll(viewTable, (node) => node.tag === "th").map((cell) => cell.textContent),
+      [ZH["admin.models.colModel"], ZH["admin.members.colMonthlyQuota"], ZH["admin.members.colPlatformQuota"], ZH["col.used"], ZH["admin.members.colDisabled"]], "5 列逐头")
+    assert.ok(textOf(viewTable).includes("p2/x"), "服务清单行在表（p2/x）")
+    assert.ok(byText(modal.root, fill(ZH["admin.members.quotaOffListNote"], { count: 1 })) !== null, "离表覆盖键 ⇒ 注行（ghost/model——只数覆盖键）")
+    assert.ok(byText(modal.root, ZH["admin.members.disableHint"]) !== null, "表下禁用语义提示")
 
     // 吊销（幂等）：弹窗留驻 + 就地重渲
     members.splice(0, members.length, { ...member, keys: [] })
@@ -226,12 +234,11 @@ test("② 成员弹窗：三态（查看/编辑/新建）∥ 分模型覆盖面�
     assert.deepEqual(calls.at(-1), ["POST", "/api/members/1/keys/7/revoke", null])
     assert.deepEqual([modal.root.open, modal.root.parent !== null, byText(modal.root, ZH["admin.members.noKeys"]) !== null], [true, true, true])
 
-    // 编辑态：惰性拉 providers（进态首个）⇒ 全 chat 模型行（id 升序 ∥ 空 = 按平台 ∥ 平台默认只读 ∥ 不在清单键注行）
-    const entering = byText(modal.root, ZH["admin.members.setQuota"]).fire("click")
-    assert.ok(byText(modal.root, ZH["common.loading"]) !== null, "进态首个 = 加载中 hint")
-    await entering
-    await tick()
-    assert.deepEqual(calls.at(-1), ["GET", "/api/admin/providers", null], "惰性拉 providers")
+    // 编辑态：配额面两态共用（取数 = 进窗首个——已就绪零重拉）⇒ 全 chat 模型行（id 升序 ∥ 空 = 按平台 ∥ 平台默认只读 ∥ 不在清单键注行）
+    const fetches = () => calls.filter(([method, path]) => method === "GET" && path === "/api/admin/providers").length
+    const fetched = fetches()
+    await byText(modal.root, ZH["admin.members.setQuota"]).fire("click")
+    assert.deepEqual([quotaTableOf(modal.root) !== null, fetches() - fetched], [true, 0], "进态零重拉（查看/编辑两态共用单次取数）")
     const table = quotaTableOf(modal.root)
     assert.ok(table !== null, "覆盖表缺位")
     assert.deepEqual(findAll(table, (node) => node.tag === "tr").slice(1).map((tr) => tr.children.map((cell) => textOf(cell)).join("|")),
@@ -246,7 +253,7 @@ test("② 成员弹窗：三态（查看/编辑/新建）∥ 分模型覆盖面�
     members.splice(0, members.length, { ...member, modelQuotas: { "p1/m-a": 1200, "ghost/model": 3 }, keys: [] })
     await byText(modal.root, ZH["common.save"]).fire("click")
     assert.deepEqual(calls.at(-1), ["POST", "/api/members/1/model-quotas", { quotas: { "p1/m-a": 1200, "p1/m-b": null, "p2/x": null } }], "提交 = 表行全体（空 = null）∥ 不在清单键不入体")
-    assert.deepEqual([byText(modal.root, ZH["admin.members.setQuota"]) !== null, textOf(modal.root).includes("p1/m-a"), textOf(modal.root).includes("ghost/model")], [true, true, true], "保存 ⇒ 回查看态 + 刷新（表与弹窗同拍）")
+    assert.deepEqual([byText(modal.root, ZH["admin.members.setQuota"]) !== null, textOf(modal.root).includes("p1/m-a"), byText(modal.root, fill(ZH["admin.members.quotaOffListNote"], { count: 1 })) !== null], [true, true, true], "保存 ⇒ 回查看态 + 刷新（表与弹窗同拍）")
 
     // 非法 ⇒ 就地提示不提交（零请求）
     await byText(modal.root, ZH["admin.members.setQuota"]).fire("click")
@@ -263,14 +270,10 @@ test("② 成员弹窗：三态（查看/编辑/新建）∥ 分模型覆盖面�
     await byText(modal.root, ZH["common.cancel"]).fire("click")
     assert.deepEqual([byText(modal.root, ZH["admin.members.setQuota"]) !== null, calls.length - beforeCancel], [true, 0], "取消丢弃输入")
 
-    // 加载失败 ⇒ 窗内状态行 + 「重试」（重试可达覆盖表——弹窗反馈定则）
-    providersFail = true
+    // 编辑态复用同面（配额面两态共用——已就绪零重拉；失败径 = 尾部新窗验）
+    const sharedFetches = fetches()
     await byText(modal.root, ZH["admin.members.setQuota"]).fire("click")
-    await tick()
-    assert.ok(byText(modal.root, ZH["admin.members.quotaLoadFailed"]) !== null, "失败 ⇒ 窗内状态行")
-    await byText(modal.root, ZH["admin.members.quotaRetry"]).fire("click")
-    await tick()
-    assert.ok(quotaTableOf(modal.root) !== null, "重试 ⇒ 覆盖表在册")
+    assert.deepEqual([quotaTableOf(modal.root) !== null, fetches() - sharedFetches], [true, 0], "进态零重拉（两态共用单次取数）")
 
     // 保存失败 ⇒ 窗内状态行（弹窗留驻——定则「弹窗开着 ⇒ 一切反馈落窗内」）
     quotasFail = true
@@ -299,6 +302,15 @@ test("② 成员弹窗：三态（查看/编辑/新建）∥ 分模型覆盖面�
     assert.deepEqual(calls.at(-1), ["POST", "/api/members", { username: "bob", name: null, role: "admin" }])
     assert.deepEqual([secrets.at(-1).box === secretBox, secrets.at(-1).label, secrets.at(-1).value], [true, fill(ZH["admin.members.secretLabel"], { username: "bob" }), "temp-pw-1"])
     assert.deepEqual([modal2.root.open, modal2.root.parent], [false, null], "新建 ⇒ 关窗 + 页级秘密区")
+
+    // 取数失败 ⇒ 窗内状态行 + 「重试」（取数 = 进窗首个；重试可达模型表——弹窗反馈定则）
+    providersFail = true
+    const failModal = ADMIN.openMemberModal(ctx, { member, reload, secretBox })
+    await tick()
+    assert.ok(byText(failModal.root, ZH["admin.members.quotaLoadFailed"]) !== null, "失败 ⇒ 窗内状态行")
+    await byText(failModal.root, ZH["admin.members.quotaRetry"]).fire("click")
+    await tick()
+    assert.ok(quotaTableOf(failModal.root) !== null, "重试 ⇒ 模型表在册")
   } finally {
     delete globalThis.window
     delete globalThis.document
@@ -341,11 +353,11 @@ test("③ 服务模型：`deriveModels` 同源派生 ∥ 列表/空态/失败态
     const rowText = (tr) => tr.children.map((cell) => textOf(cell)).join("|")
     const trs = findAll(mount, (node) => node.tag === "tr")
     assert.deepEqual(trs.map(rowText), [
-      [ZH["admin.models.colModel"], ZH["admin.models.colProvider"], ZH["admin.models.colSurface"]].join("|"),
-      "bge-m3|embedding|embeddings",
-      "deepseek/deepseek-chat|deepseek|chat",
+      [ZH["admin.models.colModel"], ZH["admin.models.colProvider"], ZH["admin.models.colSurface"], ZH["admin.models.quotaTitle"]].join("|"),
+      "bge-m3|embedding|embeddings|—",
+      "deepseek/deepseek-chat|deepseek|chat|" + ZH["common.quotaUnlimited"],
       fill(ZH["common.rowCount"], { count: 2 }), // tfoot 计数行（序 = id 升序——2026-10-07 走查收正 ∥ 计数入表）
-    ], "列表 = providers 展平 + 引擎模型（`/v1/models` 同源）+ tfoot 计数")
+    ], "列表 = providers 展平 + 引擎模型（`/v1/models` 同源）+ 配额列（未设 ⇒「不限」∥ 嵌入「—」）+ tfoot 计数")
     // 详情弹窗（行点击）：模型标识 ∥ Provider ∥ 上游模型名 ∥ 面 + 配置面（四组——配置面批后）
     await trs[2].fire("click") // 升序后 deepseek 行 = 第 2 行（表头 0 ∥ bge-m3 1）
     let dialog = findNode(documentStub.body, (node) => node.tag === "dialog")
@@ -406,16 +418,17 @@ test("⑤ 静态面：档目 19 ∥ 20 ∥ 零外链 ∥ 两表键集/占位符 
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
     assert.deepEqual([/https?:\/\//.test(text), /@import/.test(text)], [false, false], `${name} 含外部引用（内网不达——KD-SV-9）`)
   }
-  // 两表键集双向相等（除自称名族）∥ en 零 CJK ∥ 占位符逐键一致 ∥ 本批新键两表在册
+  // 两表基键集双向相等（除自称名族 + `.one` 变体族——KD-SV-44）∥ en 零 CJK ∥ 占位符逐键一致 ∥ 本批新键两表在册
   const zhKeys = Object.keys(ZH)
   const enKeys = Object.keys(EN)
+  const enBase = enKeys.filter((key) => !key.endsWith(".one")) // `.one` 变体族 = 仅 en 表载体（KD-SV-44）
   for (const key of zhKeys.filter((key) => !SELF_NAMES.includes(key))) assert.ok(key in EN, `en 表缺键：${key}`)
-  for (const key of enKeys) {
+  for (const key of enKeys) assert.ok(!CJK.test(EN[key]), `en 表含 CJK：${key}`)
+  for (const key of enBase) {
     assert.ok(key in ZH, `en 表多出键：${key}`)
-    assert.ok(!CJK.test(EN[key]), `en 表含 CJK：${key}`)
     assert.equal(placeholders(ZH[key]), placeholders(EN[key]), `占位符不一致：${key}`)
   }
-  assert.equal(zhKeys.length - SELF_NAMES.length, enKeys.length)
+  assert.equal(zhKeys.length - SELF_NAMES.length, enBase.length)
   for (const key of NEW_KEYS) assert.ok(key in ZH && key in EN, `本批新键缺位：${key}`)
   // 键引用闭合：`t("…")` 字面量 ⊆ 表键（全档扫面）∥ 两新档 + 成员页裸键字面量 ⊆ 表键
   const refs = []

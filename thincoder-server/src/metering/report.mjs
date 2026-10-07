@@ -9,9 +9,7 @@
  * 否则 ⇒ `provider = ''`。对外标识回拼 = `MODEL_REF_SQL`（嵌入行 `provider = ''` ⇒ 单段）。
  */
 export const USAGE_SUMMARY_DAYS = 30 // 报表缺省时段（近 30 天——含今日；from 缺省 = 今日起回溯 30 个本地日）
-export const KEY_USAGE_WINDOW_DAYS = 30 // key 窗口用量（近 30 天——`keyUsageStats`）
-
-const DAY_MS = 24 * 60 * 60 * 1000
+export const KEY_USAGE_WINDOW_DAYS = 30 // key 窗口用量（近 30 个本地日——今日起回溯；`keyUsageStats`）
 
 /** 对外标识回拼（`provider/model` 无损——两读面同源）：嵌入行 `provider = ''` ⇒ `model` 单段。 */
 export const MODEL_REF_SQL = "CASE WHEN u.provider = '' THEN u.model ELSE u.provider || '/' || u.model END"
@@ -148,15 +146,16 @@ export function usageSummary(db, { memberId = null, model = null, endpoint = nul
 
 /**
  * key 归因读数（AC-15⑥——`memberView` 消费）：Map keyId → `{ lastUsedAt, windowTokens }`；
- * `lastUsedAt` = `MAX(ts)`（全时段——读 `usage` 真源）∥ `windowTokens` = 近 `KEY_USAGE_WINDOW_DAYS` 天 token 和
- * （日粒度窗——读 `usage_daily`；NULL 计 0）；从未使用 ⇒ 图内无键（消费侧缺省 `null`/`0`）。两张聚合一次取。
+ * `lastUsedAt` = `MAX(ts)`（全时段——读 `usage` 真源）∥ `windowTokens` = 近 `KEY_USAGE_WINDOW_DAYS` 个本地日 token 和
+ * （`localDayStart(now, -(KEY_USAGE_WINDOW_DAYS-1))` 起——与报表窗同构；读 `usage_daily`；NULL 计 0；#1001③）；
+ * 从未使用 ⇒ 图内无键（消费侧缺省 `null`/`0`）。两张聚合一次取。
  */
 export function keyUsageStats(db, { now = Date.now() } = {}) {
   const stats = new Map()
   for (const row of db.prepare("SELECT key_id, MAX(ts) AS last_used FROM usage GROUP BY key_id").all()) {
     stats.set(row.key_id, { lastUsedAt: row.last_used, windowTokens: 0 })
   }
-  const windowStart = dayKey(now - KEY_USAGE_WINDOW_DAYS * DAY_MS)
+  const windowStart = dayKey(localDayStart(now, -(KEY_USAGE_WINDOW_DAYS - 1)))
   const windowRows = db
     .prepare("SELECT key_id, COALESCE(SUM(total_tokens), 0) AS tokens FROM usage_daily WHERE day >= ? GROUP BY key_id")
     .all(windowStart)

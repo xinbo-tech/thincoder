@@ -1,6 +1,7 @@
 /**
  * members.mjs — 成员面（accounts/ACCOUNTS.md §2）：CRUD ∥ scrypt 散列/校验（KD-SV-13——异步） ∥
- * 角色 ∥ 分模型配额覆盖（`model_quotas_json`——键级合并） ∥ 临时密码 ∥ 首启引导（KD-SV-15——幂等）。
+ * 角色 ∥ 分模型配额覆盖（`model_quotas_json`——键级合并） ∥ 模型禁用集（`model_disabled_json`——键级合并）
+ * ∥ 临时密码 ∥ 首启引导（KD-SV-15——幂等）。
  *
  * 密码规则：最小长度 8（建成员 ∥ 改密 ∥ 重置统一校验——MIN_PASSWORD_LENGTH）；
  * 编码串自描述 `scrypt$N$r$p$salt$hash`；校验 `timingSafeEqual`；
@@ -10,6 +11,7 @@ import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:cry
 import { promisify } from "node:util"
 
 import { HttpError } from "../gateway/errors.mjs"
+import { splitModelRef } from "../gateway/providers.mjs"
 import { MIN_PASSWORD_LENGTH } from "../ops/config.mjs"
 
 const scrypt = promisify(scryptCallback)
@@ -145,6 +147,17 @@ export function parseModelQuotas(json) {
   }
 }
 
+/** 外标键形校验（#1001②——`model-quotas` ∥ `model-disables` 两 merge 共用）：`provider/model` 形
+ *  （首斜杠两段非空——形规则单源 = 派发面 `splitModelRef`）；裸名 ∥ 空段 ⇒ 400（库零变由调用方校验先行保证）。 */
+export function assertModelRefKey(key) {
+  if (typeof key !== "string" || key.trim() === "") {
+    throw new HttpError("invalid_request_error", "键须为非空字符串（对外标识 provider/model）")
+  }
+  if (splitModelRef(key) === null) {
+    throw new HttpError("invalid_request_error", `键形非法（对外标识 provider/model——首斜杠两段非空）：${JSON.stringify(key)}`)
+  }
+}
+
 /** 设分模型覆盖（`model_quotas_json`——**键级合并**：出现键 = 整值替换（`null` ⇒ 删键）∥ 未出现键不动）。
  *  校验先行（非法 ⇒ 400 库零变）；返回更新后成员行（404 归本函数）。 */
 export function mergeMemberModelQuotas(db, memberId, quotas) {
@@ -155,7 +168,7 @@ export function mergeMemberModelQuotas(db, memberId, quotas) {
   if (!member) throw new HttpError("not_found", `成员不存在：${memberId}`)
   const merged = { ...parseModelQuotas(member.model_quotas_json) }
   for (const [key, value] of Object.entries(quotas)) {
-    if (typeof key !== "string" || key.trim() === "") throw new HttpError("invalid_request_error", "覆盖键须为非空字符串（对外标识 provider/model）")
+    assertModelRefKey(key)
     if (value === null) {
       delete merged[key] // null = 删键
       continue
@@ -166,6 +179,42 @@ export function mergeMemberModelQuotas(db, memberId, quotas) {
     merged[key] = value
   }
   db.prepare("UPDATE members SET model_quotas_json = ? WHERE id = ?").run(JSON.stringify(merged), memberId)
+  return findMemberById(db, memberId)
+}
+
+/** 模型禁用集解析（`model_disabled_json` ⇒ map；缺省 ∥ 畸形 ∥ 非对象 ⇒ `{}`——默认全可用，不抛）。 */
+export function parseModelDisables(json) {
+  if (typeof json !== "string" || json === "") return {}
+  try {
+    const parsed = JSON.parse(json)
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return {}
+    return parsed
+  } catch {
+    return {}
+  }
+}
+
+/** 设模型禁用集（`model_disabled_json`——**键级合并**：`true` = 禁用 ∥ `null` = 删键（恢复）∥ 未出现键不动）。
+ *  校验先行（键形 / 值非法 ⇒ 400 库零变）；返回更新后成员行（404 归本函数）——ACCOUNTS §2.2。 */
+export function mergeMemberModelDisables(db, memberId, disables) {
+  if (disables === null || typeof disables !== "object" || Array.isArray(disables)) {
+    throw new HttpError("invalid_request_error", `disables 须为对象（{ "<provider/model>": true|null }）：${JSON.stringify(disables)}`)
+  }
+  const member = findMemberById(db, memberId)
+  if (!member) throw new HttpError("not_found", `成员不存在：${memberId}`)
+  const merged = { ...parseModelDisables(member.model_disabled_json) }
+  for (const [key, value] of Object.entries(disables)) {
+    assertModelRefKey(key)
+    if (value === null) {
+      delete merged[key] // null = 删键（恢复可用）
+      continue
+    }
+    if (value !== true) {
+      throw new HttpError("invalid_request_error", `禁用值须为 true（禁用）或 null（删键）：${key} = ${JSON.stringify(value)}`)
+    }
+    merged[key] = true
+  }
+  db.prepare("UPDATE members SET model_disabled_json = ? WHERE id = ?").run(JSON.stringify(merged), memberId)
   return findMemberById(db, memberId)
 }
 

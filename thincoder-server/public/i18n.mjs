@@ -1,5 +1,5 @@
 /**
- * i18n.mjs — 控制台多语言运行时（webui/WEBUI.md §2.2——KD-SV-26）：语言态 ∥ 检测/记忆 ∥ `t()` ∥ 切换器组件
+ * i18n.mjs — 控制台多语言运行时（webui/WEBUI.md §2.2——KD-SV-26/44）：语言态 ∥ 检测/记忆 ∥ `t()`（含计数复数形）∥ 切换器组件
  * （`h` + `onChange` 注入——侧栏 meta 槽 ∥ 登录卡两处复用）∥ 错误码映射 ∥ `document` 接线。
  *
  * 模块顶层零浏览器全局访问——`document`/`localStorage`/`navigator` 仅在 init/绑定函数内触碰；检测输入经参数注入
@@ -34,9 +34,33 @@ export function langTag() {
   return LANG_TAGS[current]
 }
 
-/** 取值（缺键回退链——当前表 → zh 表 → 键原文 + `console.warn`；参数 = `{name}` 占位替换）。 */
+/** 取值（缺键回退链——当前表 → zh 表 → 键原文 + `console.warn`；参数 = `{name}` 占位替换）。
+ *  计数复数形（KD-SV-44）：数字参 `count` ∥ `tokens` ⇒ `Intl.PluralRules` 取形选键——查序 = `${key}.${form}`（当前表 → zh 表）
+ *  → 基键；`.one` 变体族仅 en 表载体（zh 无复数区分——`select` 恒 `other` ⇒ 落基键）。 */
 export function t(key, params) {
+  const base = typeof params?.count === "number" ? params.count : typeof params?.tokens === "number" ? params.tokens : null
+  if (base !== null) {
+    const variant = `${key}.${pluralForm(base)}`
+    const text = TABLES[current][variant] ?? TABLES.zh[variant]
+    if (text !== undefined) return fill(text, params)
+  }
   return lookup(TABLES[current], key, params)
+}
+
+/** `Intl.PluralRules` 按语言缓存（零依赖内建）。 */
+const PLURAL_RULES = new Map()
+function pluralForm(count) {
+  let rules = PLURAL_RULES.get(current)
+  if (rules === undefined) {
+    rules = new Intl.PluralRules(current)
+    PLURAL_RULES.set(current, rules)
+  }
+  return rules.select(count)
+}
+
+/** 占位替换（`{name}`——params 缺名 ⇒ 原样留存）。 */
+function fill(text, params) {
+  return text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match))
 }
 
 function lookup(table, key, params) {
@@ -47,7 +71,7 @@ function lookup(table, key, params) {
     return String(key)
   }
   if (params === undefined) return text
-  return text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match))
+  return fill(text, params)
 }
 
 /** 自称名（固定取 zh 表渲染——`lang.zh` ∥ `lang.en` 仅 zh 表载体，不自译；WEBUI §2.2）。 */

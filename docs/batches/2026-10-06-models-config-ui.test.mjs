@@ -419,7 +419,12 @@ test("⑦c A 停用流（弹窗 × 列表）：「停用」confirm ⇒ PATCH `mo
     await MODELS.renderModels(ctx, mount)
     const rowText = (tr) => tr.children.map((cell) => textOf(cell)).join("|")
     const rows = findAll(mount, (node) => node.tag === "tr")
-    assert.deepEqual(rows.slice(1).map(rowText), ["bge-m3|embedding|embeddings", "p/a|p|chat", "p/retired-1|p|chat", fill(ZH["common.rowCount"], { count: 3 })], "列表 = 开放集展平 + 引擎行 + tfoot 计数（序 = id 升序——2026-10-07 走查收正）")
+    assert.deepEqual(rows.slice(1).map(rowText), [
+      "bge-m3|embedding|embeddings|—",
+      "p/a|p|chat|" + ZH["common.quotaUnlimited"],
+      "p/retired-1|p|chat|" + ZH["common.quotaUnlimited"],
+      fill(ZH["common.rowCount"], { count: 3 }),
+    ], "列表 = 开放集展平 + 引擎行 + 配额列（未设 ⇒「不限」∥ 嵌入「—」）+ tfoot 计数（序 = id 升序——2026-10-07 走查收正）")
     // 行点击（退役项——不在发现集仍开放）⇒ 详情弹窗 ⇒ 停用（confirm 通过）——升序后退役行 = 第 3 行
     await rows[3].fire("click")
     const dialog = findNode(documentStub.body, (node) => node.tag === "dialog")
@@ -430,7 +435,11 @@ test("⑦c A 停用流（弹窗 × 列表）：「停用」confirm ⇒ PATCH `mo
     assert.ok(calls.some(([kind, value]) => kind === "flash" && value === fill(ZH["admin.models.disabled"], { model: "p/retired-1" })), "flash 已停用")
     // 列表刷新 ⇒ 行离列（重取系再渲）
     const rowsAfter = findAll(mount, (node) => node.tag === "tr")
-    assert.deepEqual(rowsAfter.slice(1).map(rowText), ["bge-m3|embedding|embeddings", "p/a|p|chat", fill(ZH["common.rowCount"], { count: 2 })], "行离列 + tfoot 计数随动（序 = id 升序——2026-10-07 收正）")
+    assert.deepEqual(rowsAfter.slice(1).map(rowText), [
+      "bge-m3|embedding|embeddings|—",
+      "p/a|p|chat|" + ZH["common.quotaUnlimited"],
+      fill(ZH["common.rowCount"], { count: 2 }),
+    ], "行离列 + tfoot 计数随动（序 = id 升序——2026-10-07 收正）")
     // 零上游探针：列表/详情/停用全程零 discover 调用（退役可见性 = Provider 页发现面）
     assert.equal(calls.filter(([, path]) => String(path).includes("/discover")).length, 0)
     // confirm 拒 ⇒ 零请求（弹窗留驻）

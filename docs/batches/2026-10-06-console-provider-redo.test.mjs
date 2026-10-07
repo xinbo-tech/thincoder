@@ -519,16 +519,17 @@ test("⑦ 静态面：档目 19 ∥ 20 ∥ 零外链 ∥ 两表键集/占位符/
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
     assert.deepEqual([/https?:\/\//.test(text), /@import/.test(text)], [false, false], `${name} 含外部引用（内网不达——KD-SV-9）`)
   }
-  // 两表键集双向相等（除自称名族）∥ en 零 CJK ∥ 占位符逐键一致 ∥ 全键非空
+  // 两表基键集双向相等（除自称名族 + `.one` 变体族——KD-SV-44）∥ en 零 CJK ∥ 占位符逐键一致 ∥ 全键非空
   const zhKeys = Object.keys(ZH)
   const enKeys = Object.keys(EN)
+  const enBase = enKeys.filter((key) => !key.endsWith(".one")) // 变体族 = 仅 en 表载体
   for (const key of zhKeys.filter((key) => !SELF_NAMES.includes(key))) assert.ok(key in EN, `en 表缺键：${key}`)
-  for (const key of enKeys) {
+  for (const key of enKeys) assert.ok(!CJK.test(EN[key]), `en 表含 CJK：${key}`)
+  for (const key of enBase) {
     assert.ok(key in ZH, `en 表多出键：${key}`)
-    assert.ok(!CJK.test(EN[key]), `en 表含 CJK：${key}`)
     assert.equal(placeholders(ZH[key]), placeholders(EN[key]), `占位符不一致：${key}`)
   }
-  assert.equal(zhKeys.length - SELF_NAMES.length, enKeys.length)
+  assert.equal(zhKeys.length - SELF_NAMES.length, enBase.length)
   for (const key of NEW_KEYS) assert.ok(key in ZH && key in EN, `本批新键缺位：${key}`)
   for (const key of RETIRED_KEYS) assert.ok(!(key in ZH) && !(key in EN), `旧内联面键未退役：${key}`)
   assert.ok(!Object.values(ZH).some((value) => value.includes("手填")), "「手填」残留（用户 21:36 裁定——零手填）")

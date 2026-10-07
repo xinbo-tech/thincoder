@@ -54,8 +54,8 @@ export async function renderAudit(ctx, mount) {
   )
   filterForm.addEventListener("submit", (event) => { event.preventDefault(); loadEvents() })
   ctx.dataShell(mount, { // 视口高壳（§2.6②——页题固定 ∥ 卡内过滤行 ∥ 表槽吃剩高；表尾计数 = 表内 tfoot）
-    head: h("h2", { text: t("audit.title") }),
-    area: h("section", { class: "card" }, h("h3", { text: t("audit.title") }), filterForm, eventsBox),
+    head: h("h2", { text: t("audit.title") }), // 单标题（head 的 h2；卡内 h3 已删——#995）
+    area: h("section", { class: "card" }, filterForm, eventsBox),
   })
   await loadEvents()
 }

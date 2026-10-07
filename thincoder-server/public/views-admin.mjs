@@ -1,9 +1,11 @@
 /**
  * views-admin.mjs — 管理·成员页（webui/WEBUI.md §2/§2.4②）：`#/admin/members`（视口高壳——§2.6②）——成员表（行点击 ⇒ 三态弹窗：
- * 查看 ∥ 编辑 ∥ 新建）；现行操作（分模型配额覆盖 ∥ 重置密码 ∥ 逐 key 吊销）全迁入弹窗；表 = 概览 + 入口（key 数）；
- * 查看态 = 详情（分模型配额 = 覆盖计数）+ 分模型用量节（覆盖行表）+ key 表（表格形——§2.6⑤）；编辑态 = 分模型覆盖表
- * （全 chat 模型行（`deriveModels` 同源序）：模型 ∥ 每月用量输入（空 = 按平台）∥ 平台默认——惰性拉 providers；失败 ⇒
- * 窗内状态行 +「重试」；保存 = `POST /api/members/:id/model-quotas` 键级合并（空 ⇒ 显式 null 删键）——机制全文 = §2.4②/KD-SV-41）。
+ * 查看 ∥ 编辑 ∥ 新建）；现行操作（分模型配额覆盖 ∥ 禁用勾选 ∥ 重置密码 ∥ 逐 key 吊销）全迁入弹窗；表 = 概览 + 入口（key 数）；
+ * 查看态 = 详情（分模型配额 = 覆盖计数）+ 分模型用量节 = 模型表直显（5 列：模型 ∥ 每月用量（覆盖 ∥「按平台」）∥ 平台默认
+ * （∥「不限」）∥ 本月已用（`modelUsage` 逐行——缺 ⇒ 0）∥ 禁用勾选（即时写——KD-SV-43））+ key 表（表格形——§2.6⑤）；
+ * 编辑态 = 分模型覆盖表（全 chat 模型行（`deriveModels` 同源序）：模型 ∥ 每月用量输入（空 = 按平台）∥ 平台默认）。
+ * providers 取数 = 进窗即惰性拉（查看/编辑两态共用）；失败 ⇒ 窗内状态行 +「重试」；保存 = `POST /api/members/:id/model-quotas`
+ * 键级合并（空 ⇒ 显式 null 删键）；禁用勾选 = `POST /api/members/:id/model-disables` 单键合并（true 禁 ∥ null 恢复）——机制全文 = §2.4②/KD-SV-41/43。
  * 一次性秘密（新建初始密码 ∥ 重置临时密码）= `ctx.showSecret`（关窗 + 页级回显——仅一次，语义不变）。
  * 原「管理」单页堆叠拆开（一页一职责）；全队用量看板 = views-usage.mjs（二轮迁出——§2.3②）。
  *
@@ -85,8 +87,8 @@ export function openMemberModal(ctx, { member, reload, secretBox }) {
   const footBox = h("div", { class: "row-form" })
   let current = member // 查看 ∥ 编辑 = 当前成员行（reload 后就地换新）；新建 = null
   let mode = member === null ? "new" : "view"
-  let quotaFace = null // 编辑态配额面：null ∥ { status: "loading" | "error" } ∥ { status: "ready", rows, platforms, inputs, hints }
-  const quotaNote = h("p", { class: "hint error", hidden: true }) // 窗内状态行（保存失败——定则「弹窗开着 ⇒ 一切反馈落窗内」）
+  let quotaFace = null // 配额面（查看/编辑两态共用——进窗即惰性拉）：null ∥ { status: "loading" | "error" } ∥ { status: "ready", rows, platforms, inputs, hints }
+  const quotaNote = h("p", { class: "hint error", hidden: true }) // 窗内状态行（保存/禁用失败——定则「弹窗开着 ⇒ 一切反馈落窗内」）
   const modal = openModal({
     title: member === null ? t("admin.members.createTitle") : member.name,
     body: bodyBox,
@@ -115,15 +117,67 @@ export function openMemberModal(ctx, { member, reload, secretBox }) {
     } catch (error) { ctx.fail(error) }
   }
 
-  /** 查看态·分模型用量节（覆盖行表：模型 ∥ 每月用量——数据 = `modelQuotas`（含不在服务清单的键）；空 ⇒ hint「未设覆盖——按平台配置」）。 */
-  const quotaSummary = () => {
-    const rows = Object.entries(current.modelQuotas ?? {}).sort(([left], [right]) => left.localeCompare(right))
-    return rows.length === 0
-      ? h("p", { class: "hint", text: t("admin.members.quotaEmptyHint") })
-      : h("div", { class: "table-wrap" },
+  /** 查看态·分模型用量节（§2.4②——模型表直显）：分类面 = 加载中 hint ∥ 失败（窗内状态行 +「重试」）∥ 模型表。 */
+  const viewQuotaSection = () => {
+    const face = quotaFace
+    if (face === null || face.status === "loading") return [h("p", { class: "hint", text: t("common.loading") })]
+    return face.status === "error" ? quotaFailFace() : quotaViewTable(face)
+  }
+
+  /** 查看态·模型表（直显 5 列：模型 ∥ 每月用量（覆盖 ∥「按平台」）∥ 平台默认（∥「不限」）∥ 本月已用（`modelUsage`——缺 ⇒ 0）∥ 禁用勾选）；
+   *  离表覆盖键 ⇒ 注行（只数覆盖键；离表禁用键不计 N、不列示——键恒保留，恢复 = 回行后取消勾选）；表下 = 禁用语义提示。 */
+  const quotaViewTable = (face) => {
+    const body = face.rows.map((row) => {
+      const override = current.modelQuotas?.[row.id]
+      const platform = face.platforms.get(row.id)
+      const box = h("input", { type: "checkbox", checked: current.modelDisables?.[row.id] === true })
+      box.addEventListener("change", () => toggleDisable(row, box))
+      return h("tr", {},
+        h("td", {}, h("code", { text: row.id })),
+        h("td", { text: override === undefined ? t("common.quotaByPlatform") : String(override) }),
+        h("td", { text: platform === null ? t("common.quotaUnlimited") : String(platform) }),
+        h("td", { text: String(current.modelUsage?.[row.id] ?? 0) }),
+        h("td", {}, box))
+    })
+    const offList = Object.keys(current.modelQuotas ?? {}).filter((id) => !face.rows.some((row) => row.id === id))
+    return [
+      h("div", { class: "table-wrap quota-table" },
         h("table", {},
-          h("thead", {}, h("tr", {}, h("th", { text: t("admin.models.colModel") }), h("th", { text: t("admin.members.colMonthlyQuota") }))),
-          h("tbody", {}, ...rows.map(([model, quota]) => h("tr", {}, h("td", {}, h("code", { text: model })), h("td", { text: String(quota) }))))))
+          h("thead", {}, h("tr", {},
+            h("th", { text: t("admin.models.colModel") }),
+            h("th", { text: t("admin.members.colMonthlyQuota") }),
+            h("th", { text: t("admin.members.colPlatformQuota") }),
+            h("th", { text: t("col.used") }),
+            h("th", { text: t("admin.members.colDisabled") }))),
+          h("tbody", {}, ...body))),
+      ...(offList.length === 0 ? [] : [h("p", { class: "hint", text: t("admin.members.quotaOffListNote", { count: offList.length }) })]),
+      h("p", { class: "hint", text: t("admin.members.disableHint") }),
+      quotaNote,
+    ]
+  }
+
+  /** providers 取数失败面（查看/编辑两态共用——窗内状态行 +「重试」；§2.4②）。 */
+  const quotaFailFace = () => [
+    h("p", { class: "hint error", text: t("admin.members.quotaLoadFailed") }),
+    h("button", { type: "button", class: "tiny", text: t("admin.members.quotaRetry"), onclick: () => loadQuotaFace() }),
+  ]
+
+  /** 禁用勾选即时写（§2.4②——单键合并：`true` = 禁 ∥ `null` = 恢复；在飞期勾选框禁用；成功 = 静默（勾选态即反馈）；
+   *  失败 ⇒ 勾选回弹 + 窗内状态行（`mapError`）——不重渲，勾选态自持）。 */
+  const toggleDisable = async (row, box) => {
+    const next = box.checked
+    box.disabled = true
+    quotaNote.hidden = true
+    try {
+      const done = await ctx.api(`/api/members/${current.id}/model-disables`, { method: "POST", body: { disables: { [row.id]: next ? true : null } } })
+      current = { ...current, modelDisables: done.modelDisables ?? current.modelDisables }
+    } catch (error) {
+      if (error?.status === 401 && error?.code !== "invalid_credentials") { ctx.fail(error); return } // 会话失效 ⇒ 照常踢登录
+      box.checked = !next // 回弹
+      quotaNote.hidden = false
+      quotaNote.textContent = mapError(error)
+    }
+    box.disabled = false
   }
 
   /** key 表（表格形——§2.6⑤：密钥 ∥ 最后使用 ∥ 近 30 天 ∥ 操作（吊销行内）；空态 = `.hint` 不进表）。 */
@@ -150,9 +204,9 @@ export function openMemberModal(ctx, { member, reload, secretBox }) {
       [t("col.role"), current.role],
       [t("col.quota"), ctx.fmtModelQuotas(current.modelQuotas)], // 覆盖计数（0 ⇒「按平台」∥ N ⇒「N 个模型」——三处同源）
       [t("col.used"), ctx.fmtValue(current.usedTokens)],
-    ]), h("h4", { text: t("admin.members.modelQuotaTitle") }), quotaSummary(), h("h4", { text: t("admin.members.colKeys") }), keyList)
+    ]), h("h4", { text: t("admin.members.modelQuotaTitle") }), ...viewQuotaSection(), h("h4", { text: t("admin.members.colKeys") }), keyList)
     footBox.replaceChildren(
-      h("button", { type: "button", text: t("admin.members.setQuota"), onclick: () => { mode = "edit"; quotaFace = null; render(); loadQuotaFace() } }),
+      h("button", { type: "button", text: t("admin.members.setQuota"), onclick: () => { mode = "edit"; render() } }), // 切编辑态（配额面两态共用——在飞/已就绪不重拉）
       h("button", { type: "button", class: "danger", text: t("admin.members.resetPwd"), onclick: resetPassword }),
       h("button", { type: "button", class: "tiny", text: t("common.close"), onclick: () => modal.close() }))
   }
@@ -188,11 +242,12 @@ export function openMemberModal(ctx, { member, reload, secretBox }) {
     ]
   }
 
-  /** 惰性拉 providers（进编辑态首个）：成功 ⇒ 全 chat 模型行（同源序）+ 平台默认；失败 ⇒ 窗内状态行 +「重试」（§2.4②）。 */
+  /** 惰性拉 providers（进窗即首个——查看/编辑两态共用）：成功 ⇒ 全 chat 模型行（同源序）+ 平台默认；失败 ⇒ 窗内状态行 +「重试」（§2.4②）。 */
   const loadQuotaFace = async () => {
+    if (quotaFace?.status === "loading") return // 在飞不重拉（两态共用——单次取数）
     quotaFace = { status: "loading" }
     quotaNote.hidden = true
-    if (mode === "edit") render()
+    if (mode !== "new") render()
     try {
       const data = await ctx.api("/api/admin/providers")
       const providers = data.providers ?? []
@@ -203,15 +258,14 @@ export function openMemberModal(ctx, { member, reload, secretBox }) {
       if (error?.status === 401 && error?.code !== "invalid_credentials") { ctx.fail(error); return } // 会话失效 ⇒ 照常踢登录
       quotaFace = { status: "error" }
     }
-    if (mode === "edit") render() // 落定后重渲（期间取消切走 ⇒ 不覆盖查看态）
+    if (mode !== "new") render() // 落定后重渲（两态各自面）
   }
 
   const renderEdit = () => {
     const face = quotaFace
     bodyBox.replaceChildren(h("h4", { text: t("admin.members.modelQuotaTitle") }),
       ...(face === null || face.status === "loading" ? [h("p", { class: "hint", text: t("common.loading") })]
-        : face.status === "error" ? [h("p", { class: "hint error", text: t("admin.members.quotaLoadFailed") }),
-          h("button", { type: "button", class: "tiny", text: t("admin.members.quotaRetry"), onclick: () => loadQuotaFace() })]
+        : face.status === "error" ? quotaFailFace()
           : [...quotaEditTable(face), quotaNote]))
     footBox.replaceChildren(
       h("button", { type: "button", text: t("common.save"), disabled: face?.status !== "ready", onclick: saveQuotas }),
@@ -266,10 +320,12 @@ export function openMemberModal(ctx, { member, reload, secretBox }) {
   }
 
   const render = () => {
+    quotaNote.hidden = true // 切态/重渲 ⇒ 清窗内状态行（防跨态残留——失败文案不随切换带走）
     if (mode === "new") renderNew()
     else if (mode === "edit") renderEdit()
     else renderView()
   }
   render()
+  if (member !== null) loadQuotaFace() // 进窗即惰性拉 providers（查看/编辑两态共用——§2.4②）
   return modal
 }

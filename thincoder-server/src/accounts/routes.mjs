@@ -9,11 +9,12 @@
  */
 import { HttpError, sendJson } from "../gateway/errors.mjs"
 import { readJsonBody } from "../gateway/server.mjs"
+import { monthlyCountersByMember } from "../metering/aggregates.mjs"
 import { keyUsageStats, monthlyTokensForMember } from "../metering/usage.mjs"
 import { recordAudit } from "./audit.mjs"
 import { activeKeysOf, rotateKey } from "./keys.mjs"
 import { clientIp, defaultLoginGuard } from "./login-guard.mjs"
-import { findMemberByUsername, parseModelQuotas, setMemberPassword, validatePassword, verifyPassword } from "./members.mjs"
+import { findMemberByUsername, parseModelDisables, parseModelQuotas, setMemberPassword, validatePassword, verifyPassword } from "./members.mjs"
 import {
   clearSessionCookie,
   createSession,
@@ -24,12 +25,14 @@ import {
   serializeSessionCookie,
 } from "./session.mjs"
 
-/** 成员行（页面消费形——ACCOUNTS §3）：`{ id, name, username, role, modelQuotas, usedTokens, keys[{id,hint,lastUsedAt,windowTokens}] }`。
+/** 成员行（页面消费形——ACCOUNTS §3）：`{ id, name, username, role, modelQuotas, modelUsage, modelDisables, usedTokens, keys[{id,hint,lastUsedAt,windowTokens}] }`。
  *  本人面 ∥ 管理列表同形（KD-SV-16）；`modelQuotas` = 分模型覆盖 map（键 = 对外标识；未设 = 用平台——METERING §2）；
+ *  `modelUsage` = 当月逐模型已用 map（键 = 对外标识——`monthlyCountersByMember`；METERING §2.3）∥ `modelDisables` = 模型禁用集 map（ACCOUNTS §2.2）；
  *  `usedTokens` = 本月累计（日表口径——METERING §3）；
  *  key 行归因（AC-15⑥）单源 = `keyUsageStats`：`lastUsedAt` = MAX(ts) ∥ `windowTokens` = 近 30 天（从未使用 ⇒ null/0）。
- *  `keyStats` 给定 = 调用侧一次装配（`GET /api/members` 全员免 N+1）；缺省 = 就地一次取。 */
-export function memberView(db, member, { now = Date.now(), usedTokens = null, keyStats = null } = {}) {
+ *  `keyStats` 给定 = 调用侧一次装配（`GET /api/members` 全员免 N+1）；缺省 = 就地一次取；
+ *  `modelUsage` 同口径（`memberId` 给定 ⇒ 唯一键前缀点查；缺省 = 就地一次取）。 */
+export function memberView(db, member, { now = Date.now(), usedTokens = null, modelUsage = null, keyStats = null } = {}) {
   const stats = keyStats ?? keyUsageStats(db, { now })
   return {
     id: member.id,
@@ -37,6 +40,8 @@ export function memberView(db, member, { now = Date.now(), usedTokens = null, ke
     username: member.username,
     role: member.role,
     modelQuotas: parseModelQuotas(member.model_quotas_json),
+    modelUsage: modelUsage ?? (monthlyCountersByMember(db, { memberId: member.id, now }).get(member.id) ?? {}),
+    modelDisables: parseModelDisables(member.model_disabled_json),
     usedTokens: usedTokens ?? monthlyTokensForMember(db, member.id, { now }),
     keys: activeKeysOf(db, member.id).map((key) => ({
       id: key.id,
