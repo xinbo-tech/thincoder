@@ -7,7 +7,8 @@
  */
 import { FILE_MUTATORS, toolTouchPaths } from "./helpers.mjs"
 import { runHooks } from "../hooks.mjs"
-import { isCodePath, loadProjectDeclaration } from "../conventions.mjs"
+import { isCodePath, declarationForTarget } from "../conventions.mjs"
+import { manifestFilePath } from "../manifest.mjs"
 import { resolve, relative } from "node:path"
 import { anyLiveDesignSlot } from "../token-ttl.mjs"
 // M4 写权门禁（模块设计 §2.1#2）：冻结窗口判据组装（被审文件集 = 声明文档集 + 批次档
@@ -83,6 +84,10 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // design token. The project can declare its own code paths (the manifest's
     // `codePaths`) so a non-src layout is not silently exempted. Mechanically
     // blocks "talk then code".
+    // F11（#1104 · PORTABILITY §3.9 / D20）：辖域 = 目标所属项目——逐目标沿祖先链取最近带档
+    // 目录（`declarationForTarget`——nearest wins ∥ 纯向上 ∥ 发现梯不参与）；出辖（祖先链无档）
+    // ⇒ 放行（门只管 manifest 树以内的内容）。相对形先按会话 cwd 解析（cwd 只是相对基，非声明源）；
+    // 在辖目标按所属项目装载声明，项目内判定（code 段 ∥ 兜底 fail-closed ∥ doc·temp·aux·state 豁免）零改。
     // DESIGN-TOKEN-SETTLEMENT D3（2026-09-08）：资格判据 = 权威槽"任一活槽存在"
     // （anyLiveDesignSlot——查内存 Map，miss 回读槽文件——单值镜像 `_engDesignToken`
     // 已退役，门禁不再读镜像——AC4）。
@@ -90,17 +95,26 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         && !anyLiveDesignSlot(agent)
         && FILE_MUTATORS.has(toolCall.name)) {
       const paths = toolTouchPaths(tool, args)
-      const conv = loadProjectDeclaration(agent.cwd)
-      // Unknown/missing paths (non-string, e.g. no path argument) are treated
-      // as code — cannot tell what they touch, so block conservatively. Known
-      // paths go through the single shared classifier: a declared code segment
-      // (default: "src") at ANY depth, else anything that is not documentation.
-      const touchesCode = paths.some((p) => typeof p !== "string" || isCodePath(p, conv))
-      if (touchesCode) {
-        // Undeclared project → point at the declaration file (§4.3 降级可见契约).
-        const convNote = conv.declared
-          ? ""
-          : ` — this path was classified as product code by the default conventions (code paths: ${conv.codePaths.join(", ")}); declare project conventions in PROJECT-MANIFEST.json to adjust.`
+      // Unknown/missing paths (non-string / empty — nothing to judge) block conservatively.
+      // Known paths are judged per target: resolve against the session cwd first, then
+      // classify on the ABSOLUTE form against the target's OWNING PROJECT declaration
+      // (the segment face anchors at that project's root — D17). Out of jurisdiction ⇒ the
+      // target passes; non-string / empty targets keep blocking above (nothing to judge).
+      let blocked = false
+      let noteConv = null // first undeclared-and-blocked target's project (hint pointer — #1102)
+      for (const p of paths) {
+        if (typeof p !== "string" || p.trim() === "") { blocked = true; continue }
+        const abs = resolve(agent.cwd, p)
+        const conv = declarationForTarget(abs)
+        if (!conv || !isCodePath(abs, conv)) continue
+        blocked = true
+        if (!noteConv && !conv.declared) noteConv = conv
+      }
+      if (blocked) {
+        // Undeclared project → point at ITS declaration file (§4.3 降级可见契约; #1102).
+        const convNote = noteConv
+          ? ` — this path was classified as product code by the default conventions (code paths: ${noteConv.codePaths.join(", ")}); declare project conventions in ${manifestFilePath(noteConv.root)} to adjust.`
+          : ""
         prepared.push({
           toolCall, tool, denied: true,
           reason: "engineering design gate",

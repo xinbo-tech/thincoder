@@ -7,7 +7,7 @@
  */
 import { existsSync, statSync } from "node:fs"
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path"
-import { DEFAULT_MANIFEST, manifestFilePath, readManifest } from "./manifest.mjs"
+import { DEFAULT_MANIFEST, manifestFilePath, owningProject, readManifest } from "./manifest.mjs"
 import { logEvent } from "./log.mjs"
 
 /** Retired declaration carrier (project-root relative). Its EXISTENCE is checked, its
@@ -215,4 +215,20 @@ export function loadProjectDeclaration(cwd) {
   }
   _cache.set(file, decl)
   return decl
+}
+
+/**
+ * 辖域单点（F11 · 2026-10-08 · #1104 · PORTABILITY §3.2 行 8 / §3.9 / D20）：目标**绝对路径**
+ * ⇒ 沿祖先链取**最近**带档目录（`owningProject` 归属形——nearest wins ∕ 纯 fs）⇒ 该项目的声明
+ * 对象（`loadProjectDeclaration` 本体零改——按档路径缓存）；祖先链无档 ⇒ `null` = **出辖**
+ * （不在任何 manifest 树内——父侧门不判不拦）。
+ * **发现梯（`discoverProjects`）不参与**——无候选 ∥ 歧义均出辖（不在无档面凭空落脚）。
+ * 相对形由消费面按会话 cwd 先解析（判据面 = 目标所属项目，非会话 cwd）。
+ * @param {string} targetAbs 目标绝对路径（目录 / 文件）
+ * @returns {Readonly<object>|null} 所属项目的声明对象 / null = 出辖
+ */
+export function declarationForTarget(targetAbs) {
+  const root = owningProject(targetAbs)
+  if (!root) return null
+  return loadProjectDeclaration(root)
 }
