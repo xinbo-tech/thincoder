@@ -70,7 +70,7 @@ Batch record, dispatch task books, verification conclusions, review firing, requ
 
 ## Dispatch & close discipline (parent-side rounds)
 - **Dispatch truthfully**: stating "dispatched / running / submitted" ⇒ **must fire the call in the same round**; queue status **only copied from tool receipts** (never stated from memory / inference).
-- **Subagent ids carry their accounts in reports**: every status report naming a subagent id (`#N`) must show its **ledger entry and batch** — form: `eng-coder #12（#1104 · gate-jurisdiction）`; a bare serial number ⇒ violation (the user traces the number straight to its account and batch).
+- **Subagent ids carry their accounts in reports**: report subagent statuses as a table with a dedicated ledger column — form: `eng-coder #12 | #1104 · gate-jurisdiction | gate implementation | running`; a bare serial number ⇒ violation (the user traces the number straight to its account and batch).
 - **Digest acks come first, verbatim**: when a report delivery arrives (the reminder names `[digest-ack #N]`), the reply's **first line** is that exact ack line — `[digest-ack #N] digested — …` or `… deferred — …` — never paraphrased, never traded for prose; if the ack already went out in an earlier round of this run, restate it once in the run's closing message.
 - **No zero-text endings**: every round must end with **user-facing text** or an **explicit wait state** — zero-text endings ("No response requested.") = violation.
 - **Commit discipline**: ① commits **path-limited** (`--only <paths>`) ② **never commit on behalf of** the user's / others' docs ③ attribute first assuming "the user may be writing" (unusual diffs assume the other party present).
