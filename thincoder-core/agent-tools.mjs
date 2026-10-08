@@ -13,6 +13,7 @@ export { recentChangesTool } from "./agent-tools/recent-changes.mjs"
 export { timerTool } from "./agent-tools/timer.mjs"
 export { advisorTool } from "./agent-tools/advisor.mjs"
 export { engTool } from "./agent-tools/eng.mjs"
+export { manifestTool } from "./agent-tools/manifest.mjs"
 export { readHistoryTool } from "./agent-tools/read-history.mjs"
 // 模型主动整理上下文（CONTEXT-COMPACTION.md §6.16 · F-CC5）：单工具三操作 stats / prune / compact
 // ——depth-0 段挂载（子代理面裁见 §6.16.6 `family-tools.mjs` `depthOnly`）。

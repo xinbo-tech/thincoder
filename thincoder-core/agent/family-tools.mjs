@@ -26,7 +26,7 @@ export async function assembleFamilyTools({
   decorate = null,       // object   端差面：{ subagent?, consultStart?, consultStop?, settings? }
 } = {}) {
   // CORE-UNIFICATION TOOLS #83：consult 家族随统一登记册自 `../agent-tools.mjs` 取用（单一来源）
-  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, contextTool, batchTool, consultStartTool, consultStopTool, parentChannelTool } = await import("../agent-tools.mjs")
+  const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recentChangesTool, timerTool, advisorTool, engTool, readHistoryTool, contextTool, batchTool, manifestTool, consultStartTool, consultStopTool, parentChannelTool } = await import("../agent-tools.mjs")
   // 台账统一入口（2026-10-05 统一入口批——台账 #923）：全量变体 = depth-0 段 ∥ 只读变体 = 全部
   // depth>0 段。动态 import——ledger 链静态达 node:sqlite（W8 契约②）；两变体同名单对象、schema 窄化。
   const { ledgerTool, ledgerReadTool } = await import("../ledger.mjs")
@@ -143,6 +143,9 @@ export async function assembleFamilyTools({
       ...consultTools,
       // 台账全量变体（五 action——仅主 agent 装配；fail-closed：子代理段只挂读变体 = 写面机械不可达）
       ledgerTool,
+      // manifest 工具（`MANIFEST.md` §2.10 · 2026-10-08 · 台账 #1098）：主 agent 读写出口——
+      // **两模式同挂**（需求未设模式门）；子代理各段零挂（未装配 = 权限面第一道）。
+      manifestTool,
       // 端差（decorate.settings——VSC depth-0 主 agent 面；缺省不追加）：核默认形态里
       // settings 住**基础集**（`tools/index.mjs` `assembleBuiltinTools`），端侧自持清单
       // 无该面 ⇒ 端以 decorate 补位（收敛通道 = 将来去 decorate 项即归核位）。

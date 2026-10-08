@@ -76,6 +76,11 @@ export function isSubagentReadonlyAction(toolName, args) {
     const action = args?.action
     return action === "list" || action === "get"
   }
+  // manifest read 只读格（`MANIFEST.md` §2.10 · 台账 #1098——settings list/get 同分类；init / write 保持侧效门）
+  if (toolName === "manifest") {
+    const action = args?.action
+    return action === "read"
+  }
   // #9（TOOLS.md §6.19）：process 动作分级——list 保持只读分类（planMode 放行/免审批/可批并行）；
   // kill 是破坏性动作（审批门 + planMode 拒）。
   if (toolName === "process") return args?.action !== "kill"

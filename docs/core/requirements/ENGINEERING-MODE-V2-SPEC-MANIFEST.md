@@ -26,12 +26,19 @@
 4. **缺键 fallback**：manifest 存在但缺某键 → 用默认值（便利 fallback，不拒绝）。
 5. **写门**：唯一作者 = 主 agent（非主 agent 写 → 拒）。
 6. **`docRoot` 值形态（多根数组 + `null`）**：值可以是非空字符串、非空数组，或 `null`。`null` 表示「本面没有」，是合法值；此时解析为空、键留着不被默认值顶回来。数组仍是完整声明，不与默认合并。空字符串、空数组、混合数组仍然拒绝，不静默通过。多根数组 = 2026-09-17 用户裁定；`null` = 2026-10-05 增补（台账 #944）。
+7. **agent 工具面（2026-10-08 用户裁定 · 台账 #1098）**：主 agent 对 manifest 的**全键读写**出口。现状 = 机制代码在场但无出口——装配侧内部调用之外，agent 侧唯一写点 = 工程模式翻转对缺档锚建默认档。五项：
+   - **读**：现档 + 校验态（`ok` / `missingKeys` / `unknownKeys` / `errors` / 缺档报明）——`readManifest` 语义；
+   - **建**：缺档 ⇒ 建默认档（`initManifest`；默认档 = `DEFAULT_MANIFEST`）；
+   - **写**：**全键族**可改——`version` / `phase` / `docRoot.*` / `promptsLanding` / `checkConfig.*` / `codePaths` / `index.*`（含 `publicRepos`——「标记引用公共仓」）/ `advisor.*`；落盘前经 `validateManifest`（非法 ⇒ 拒 + 盘零变，fail-closed 照旧）；
+   - **目标面**：显式目标目录参数（缺省 = 会话锚 / 按用点解析语义——歧义不猜、多候选列报）；
+   - **权限面**：工具只挂**主 agent**（沿写门不变）；子代理两道防线不动（工具不在其装配 + `files` 域拒）。
 
 ## ③ 边界（不做什么）
 
 - 不做台账（M2）；不做机检（M8）；不做批次档写入（M3）。
 - 不替被开发项目创建目录；不做交互式初始化问答（初始化流程归两端壳面，本模块只提供读写校验）。
 - 不承载「待裁 / 决策」类内容（manifest 是纯机器状态，决策进文档）。
+- **agent 工具面（2026-10-08 增补）**：单目标逐次调用——不做批量自动发现；不做 CLI 子命令（人面另议）；不替代既有装配侧调用点（翻转 ∥ 情境行 ∥ 钩子照旧零动）。
 
 ## ④ 验收（逐条可机判）
 
@@ -45,11 +52,15 @@
 | AC-M1-7 | `docRoot` 值形态：单串、数组、`null` 都要通过；`null` 解析为空且不被默认顶回；空串、空数组、混合数组拒绝。 | 设计 `docs/core/design/MANIFEST.md` §3.1 AC-7–AC-13、AC-39 |
 | AC-M1-8 | 二道防线（M5 spawn 门）：工程模式子代理 `files` 声明含 `PROJECT-MANIFEST.json`（任意层 / 任意大小写）→ 拒（专用文案） | 声明该路径 → 期望拒 |
 | AC-M1-9 | 项目声明三族键（`codePaths` / `index.*Extensions` / `advisor.*`）：形态非法 ⇒ 档非法（fail-closed）+ 消费面逐族回默认 + 可见；退役档（`.thincoder/conventions.json`）在场 ⇒ 零生效 + 一行告警（零并存） | 判据逐条 = 设计 `docs/core/design/MANIFEST.md` §3.1 AC-31–AC-34 ∕ §3.2 T56–T58；来源 = 批 `docs/batches/2026-09-27-conventions-retire.md` §2 |
+| AC-M1-10 | agent 工具面·读写往返（全键）：对样例项目读（含校验态）→ 各键族逐键写 → 回读逐键相等；缺档 ⇒ 建档 → 回读 `ok` | 工具调用往返 → 逐键 diff |
+| AC-M1-11 | agent 工具面·fail-closed：非法值写 ⇒ 拒（报明）+ 盘零变；缺档读 ⇒ 报明（不砖死） | 构造非法/缺档 → 期望拒/报明 ∧ 文件逐字节未变 |
+| AC-M1-12 | agent 工具面·权限面：子代理工具面不可达（未装配 + 写门拒）；主 agent 写 ⇒ 放行 | 子代理实调 → 拒；主 agent 实调 → 过 |
 
 ## ⑤ 依赖
 
 - **上游**：无（基础模块）。
 - **下游**：M2 / M3 / M4 / M6 / M8 / M9 读 manifest 字段（`docRoot` / `checkConfig` / `phase` / `promptsLanding`）。
+- **agent 工具面（2026-10-08 增补）**：上游 = 本条读写校验器（`manifest.mjs` ∥ `manifest-schema.mjs`）+ 工具装配面（`agent/family-tools.mjs`）；下游 = 主 agent 运行面（工具调用）。
 
 ## ⑥ 解析模型与作用定位（2026-09-21 用户裁定 · 按用点解析）
 
@@ -82,3 +93,4 @@ v2 §5.1（manifest）· §6（文档体系四层 + 目录约定 + 声明面覆�
 - 2026-09-27（**声明三族并入 schema 收正** · 主 agent——规格档笔权）：②.1 schema 计数「五键 ⇒ **八键**」+ 末三键（`codePaths` / `index` / `advisor`——项目声明三族，自 `.thincoder/conventions.json` 退役并入）；⑥ 「现五键 ⇒ 现八键」。来源 = 用户 2026-09-27 19:39 裁定 + 批 `docs/batches/2026-09-27-conventions-retire.md`。
 - 2026-09-27（**声明三族 AC 补锚** · 主 agent——规格档笔权）：④ 增 **AC-M1-9**（三族键形态 fail-closed + 退役档零并存）——回指设计 AC-31–AC-34 / T56–T58；来源 = 批设计评审 #103 发现 4（协调项）。
 - 2026-10-05（引擎面缺口批 · 需求侧同步）：②.6 值域增加 `null`（本面无）；AC-M1-7 补 `null` 一格。来源 = 批 `docs/batches/2026-10-05-engine-face-gaps.md`；台账 #944。
+- 2026-10-08（**agent 工具面增补** · 主 agent——用户 15:47「project-manifest在内核中有管理代码，但是没有开放工具给agent」+ 15:52「我实际是需要project-manifest的各节点都能被agent读写」✗ 承台账 #1098）：② 增第 7 条（读/建/写全键族 + 目标面 + 权限面）；③ 增边界三句；④ 增 AC-M1-10–12；⑤ 增工具面上下游。
