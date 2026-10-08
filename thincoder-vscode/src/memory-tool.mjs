@@ -1,9 +1,9 @@
 /**
- * memory-tool.mjs — the merged `memory` agent tool (MEMORY.md §6 six · five actions).
+ * memory-tool.mjs — the merged `memory` agent tool (MEMORY.md §6 six · six actions).
  *
  * W8（`docs/batches/2026-09-15-vsc-core-wiring.md` §2 · 2026-09-15）：存储 / 检索已归一核面
  * （`@thincoder/core/memory.mjs`——sqlite；端壳文件制镜像 `src/memory.mjs` 随本单元删除）。
- * **工具面（五动作 · layer 参数 · 无 team 层）曾为本端自持**；执行器 / 输出契约 / **描述 ∕ 参数面
+ * **工具面（六动作 · layer 参数 · 无 team 层）曾为本端自持**；执行器 / 输出契约 / **描述 ∕ 参数面
  * （I9 · #677）** 均取核工具生成器（`memoryTools`——MEMORY.md §6.6.4「两端同文」单一契约，
  * 不再留第二实现）——描述 ∕ 参数面 = 装配期动态注入（`wireMemoryFace`，见下），端面只留
  * layer 值域守卫（enum 收窄 personal|project + team 拒回——MEMORY.md §6.9）。
@@ -20,7 +20,7 @@ import { DESC } from "@thincoder/core/tools/shared.mjs" // 描述单源（核 `m
 
 // ─── tools ────────────────────────────────────────────────────
 
-const MEMORY_ACTIONS = ["search", "put", "list", "delete", "clear"]
+const MEMORY_ACTIONS = ["search", "put", "list", "delete", "clear", "maintain"]
 const VSC_LAYERS = ["personal", "project"]
 
 /** team layer refusal — this end has no team layer (MEMORY.md §6.6「layer 值域按端」). */

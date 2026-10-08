@@ -58,7 +58,7 @@ CLI 侧住 `thincoder-cli/src/memory/**`（8 档）与 `memory.mjs` 转口；VSC
 | F1 | 三层记忆 | 写入时指定 layer：personal（纯 DB 行）/ project（项目 markdown 文件为源，DB 为索引）/ team（git 仓库同步） |
 | F2 | 磁盘为真相 | project / team 层：**markdown 文件即知识本体**（可人工编辑、可 git 管理）；DB 只是可重建索引 |
 | F3 | 双路检索 | FTS5（含 CJK 逐字分段）+ 向量余弦（懒构建，失败**静默降级纯 FTS**） |
-| F4 | 单一工具面 | `memory` 单工具、`action` 路由五动作（search / put / list / delete / clear）——旧 `memory_put/search/delete` 裸工具已合并退役 |
+| F4 | 单一工具面 | `memory` 单工具、`action` 路由六动作（search / put / list / delete / clear / maintain）——旧 `memory_put/search/delete` 裸工具已合并退役 |
 | F5 | 代码 / 文档索引 | 与记忆同库检索面（`code_search` / `doc_search` / `repo_outline`） |
 
 ### 4.3 非功能性需求（旧 §3——N1–N4）
@@ -138,9 +138,9 @@ N-M3 零依赖 / 可移植（无迭代器则**键序分页**——游标键随�
 
 | # | 需求（VSC 端） | 判定句（验收语义） |
 |---|---|---|
-| F-M1 | 两层记忆 + legacy 根：写入指定 layer；物理目录 = `memoryDir(cwd)/<scope>`；legacy 根目录（无 layer）参与全量读取（标 `_scope="root"`） | personal / project 写入落对应目录；legacy 根条目可被读取；`layer:"team"` 五 action 全拒并指路 |
+| F-M1 | 两层记忆 + legacy 根：写入指定 layer；物理目录 = `memoryDir(cwd)/<scope>`；legacy 根目录（无 layer）参与全量读取（标 `_scope="root"`） | personal / project 写入落对应目录；legacy 根条目可被读取；`layer:"team"` 五 action 全拒并指路（`maintain` 无 layer 参——不在拒面） |
 | F-M2 | 文件即真相（零 DB）：markdown + frontmatter（与 CLI byte-compatible 序列化）；文件名 `YYYYMMDD-<slug>-<rand4>.md`；旧 `.json` 只读兼容 | 条目文件可人工编辑 / git 管理；索引可整体重建 |
-| F-M3 | 单工具五动作：`memory` 单工具、`action` 路由（search / put / list / delete / clear）；**action 级只读**（search / list 免审批 / 并行） | 五动作分派在位；search / list 无审批门；put / delete / clear 走审批门 |
+| F-M3 | 单工具六动作：`memory` 单工具、`action` 路由（search / put / list / delete / clear / maintain）；**action 级只读**（search / list 免审批 / 并行） | 六动作分派在位；search / list 无审批门；put / delete / clear ∥ maintain（confirm:true）走审批门 |
 | F-M4 | 检索双通道：向量优先（embedder + 索引在位 → `searchIndex(kind:"memory")` → 活文件 guard）→ 无命中 / 异常回退关键词（子串打分 title 3 / tag 2 / content 1） | 无 embedder 时关键词路径照常出结果（score>0）；已删条目不被向量通道重新浮出 |
 | F-M5 | 三 kind 索引 + 重建判定（memory 优先 → code / doc；`needsRebuild` reason ∈ 七词表） | 三 kind 检索面在位；重建判定可机判（**随归一退场**——2026-09-15：核面 sync 承接） |
 | F-M6 | 有效性校验（换模型不静默）：`indexCompat`（模型比对 → `model-changed`）+ 维度硬闸 + 可见面两推口（状态 + 重建提示） | 换模型后检索不产出无效结果；状态面显示「模型不匹配 + 重建入口」；失败仍静默降级关键词（两语义不冲突）（**随归一退场**——2026-09-15：核面承接 = 失效向量置空 + 检索懒回填） |
@@ -208,7 +208,7 @@ ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `
 |---|---|---|
 | F-S6 索引范围声明与子树剪枝 | 项目经 `PROJECT-MANIFEST.json → index.excludePaths` 声明**项目根相对路径前缀**（归一 ∕ 去重 ∕ 缺省空）；同步三起效点（git ∕ walk 列文件、diff 表、单文件缝）同谓词过滤；存量行经 `memory sweep --origin --path` **备份先行 · 干跑默认 · 写后回读**剪枝 | 产品不硬编码参考系目录名；前缀语义不做通配（glob ∕ regex）；`--path` 须与 `--origin` 同用；真实库写 = 用户批准 + 父侧 ops |
 | F-S7 大库操作面处置 | 每回合的 embedding 回填**探针**走部分索引（schema v10——只增索引）；`COUNT` ∕ 大纲面 **origin 限定 + 有界形**；全量同步**收尾 stale 删除循环**同款让出；**读面零写**（模型失效判定留读面 = 降级 FTS-only + 一行可见，失效执行移维护口） | 不引 worker_thread（升级触发 = 修复后单回合召回墙钟仍 ≥ 0.5 s）；不改召回语义 ∕ limit ∕ RRF；不建 ANN |
-| F-S8 体积护栏与增量维护 | `memoryStatus` 出 `dbBytes` + 逐 origin 行数；每 origin 行预算（WARN 20k ∕ CAP 100k——只停新增，行序确定性）；commit 锚改 **per-origin** 键（旧键兼容 = 全扫一次）；`gitSync` diff 表带 `--relative`（路径形态与索引同形） | 无自动删除 ∕ 自动 VACUUM；不做写侧 checkpoint；`D:/dgx-spark` 系存量 = 用户裁定项 |
+| F-S8 体积护栏与增量维护 | `memoryStatus` 出 `dbBytes` + 逐 origin 行数；每 origin 行预算（WARN 20k ∕ CAP 100k——只停新增，行序确定性）；commit 锚改 **per-origin** 键（旧键兼容 = 全扫一次）；`gitSync` diff 表带 `--relative`（路径形态与索引同形） | 自动删除 ∥ 自动 VACUUM 归 **§4.12 维护面**（维护 ≠ 收录裁决）；不做写侧 checkpoint；`D:/dgx-spark` 系存量 = 用户裁定项 |
 
 **非功能**：N-S4 **剪枝安全可机判**（零命中 ⇒ 无备份；`--confirm` 后命中行 0 ∧ 非命中行逐键等前值 ∧ `integrity_check` ok）· N-S5 **成本可证**（探针计划含 `USING INDEX`；预算越界返回「+」形）· N-S6 **零行为变化（排除面 ∕ v10 面）**（`excludePaths` 缺省 `[]`、v10 只增索引）；
   **默认面行为变化（在册）** = ① M1 锚 per-origin 化（旧单键 ⇒ 该 origin 首扫一次）② M2 子目录 origin 落行 path 形态收正 ③ B3 ∕ B4 越界返回「+」形 ∥ 提示行。
@@ -235,6 +235,25 @@ ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `
 
 **设计侧 = `docs/core/design/MEMORY.md` §6.14 段族（与 §6.11 口径对齐）**（批次档 `docs/batches/2026-10-08-diskroot-gate-index-excludes.md` §2 三方一致）——本档不复制。
 
+### 4.12 索引自动维护（自愈轮 · 2026-10-08 · 用户实报 · 编号族续 §4.11）
+
+**总体需求**：作为**长期挂着同一工作区、索引随日子自己长胖的开发者**，我想要**索引把「该清的清、该压的压、该轮转的轮转」自己完成（也可由 agent 显式触发一次全套维护）**，以便**不靠人盯也能保持检索面干净、库体量健康、备份不失控**。
+
+来源 = 用户 2026-10-08 14:43「我发现我们需要索引的自动维护能力」+ 14:46「可以，应该也允许agent触发」；父侧实核（当日全手动清算 = 本件证据面）：盘根僵尸 13.2 万行（手清）∥ 反斜杠变体 239 行折叠（手扫）∥ obj/vendor 98 行（手清）∥ **跨 origin 鬼行 8,419 行（无工具面——手写 SQL 清）**∥ 压实 2054.1 ⇒ 1006.0 MiB（手跑 VACUUM）∥ 备份 9 枚手清。
+
+| # | 需求（能力逐条可交付） | 范围边界（明确不做什么） |
+|---|---|---|
+| F-S10 跨 origin 鬼行 GC | 对**全 origin**（含停更的历史 origin——sync stale 收尾只治正在同步者，此为其缺口）扫 **`code_chunks` ∥ `doc_chunks`** 中「文件已不在」的行并回收（`files` 表不涉——记忆层非项目文件）；判定 = **仅 ENOENT 判亡**（其余错误保留——承 sweep 探针口径）；回收动作走安全三件（备份先行 ∥ 干跑读数随行——工具面缺省 = 干跑 ∥ 写后回读） | 活行零触；不删任何「文件在盘」的行——无论其是否「看起来无关」（收录范围 ≠ 维护面） |
+| F-S11 压实自触发 | freelist ∕ 尺寸越阈值 ⇒ 低峰窗口自动 `VACUUM`（零动作 = 余量正常时空转零次） | 不自动改库结构 ∥ schema；不自动增删索引定义 |
+| F-S12 备份轮转 | 维护型备份保 **N 枚最新**（N 可配），旧枚自动清（走既有删除面纪律） | 不自动删非本机制所产文件；N 下限护栏（≥1 锚） |
+| F-S13 agent 触发通道 | agent（工具面）可**显式触发一次全套维护**（含读数回报）——当日手写 SQL 的缺口正面补上 | 触发面只做「维护动作」，不做收录范围裁决（范围 = 声明 ∕ 名单面） |
+
+**非功能**：N-S8 **安全封套同律**（自动与 agent 触发 = 同一引擎同一安全口径：备份先行 ∥ ENOENT-only ∥ 干跑读数随行 ∥ 写后回读）· **低峰不阻塞**（大库操作不拖交互——承 §4.10 N-S5 口径）；N-S9 **零空转**（余量正常 ⇒ 零动作零写入）。
+
+**判定句**：F-S10 —— 构造鬼行夹具（停更 origin + 删档）⇒ 触发 ⇒ 鬼行 0（`code_chunks` ∥ `doc_chunks`）∧ 活行逐字不变 ∧ 备份在册 ∧ 干跑先行读数在；F-S11 —— 注入 freelist 越阈 ⇒ 触发 ⇒ freelist 回落 ∧ 未越阈时零执行；F-S12 —— 造 N+k 枚备份 ⇒ 触发 ⇒ 恰余 N ∧ 最老者被清；F-S13 —— agent 通道（工具面）一次调用产出全读数（各动作执行 ∥ 跳过 + 理由）。
+
+**设计侧 = `docs/core/design/MEMORY.md` §6.14 段族（与 §6.11 ∥ §6.13 口径对齐）**（批次档 `docs/batches/2026-10-08-index-automaintain.md` §2 三方一致）——本档不复制。
+
 ## 5. 不并项与历史沿革（批 5 · 2026-09-15）
 
 | 旧档节 | 内容 | 何故不并 |
@@ -258,3 +277,5 @@ ASCII / BMP 跨界 · emoji 全内（代理对完整）· 短文本 ⇒ 与裸 `
 - 2026-09-30（**memory.db 家族批 · 设计轮 · 父侧笔**——承 `docs/batches/2026-09-30-memory-db-family.md` §2 上抛① · 台账 #693）：新增 §4.10「索引规模治理与大库操作面」（F-S6–F-S8 / N-S4–N-S6 + 判定句——与设计档 §6.14 ∕ D-MEM23–28、批次档 §2 三方一致）。
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：宽面 2 行折行（213 ∥ 215——语义零改）。**零新语义**。
 - 2026-10-08（**盘根门 ∥ 索引排除批 · 需求侧立案 · 主 agent**）：新增 §4.11「索引排除名单补强」（F-S9 ∕ N-S7 + 判定句）。批档 = `docs/batches/2026-10-08-diskroot-gate-index-excludes.md`（台账 #1081）；配套 = `docs/cli/requirements/FEATURES.md` §3 N10（盘根启动门——同批）。
+- 2026-10-08（**索引自维护批 · 计数与边界收正 · 主 agent**）：§4.2 F4 ∥ §4.7 F-M3 动作数五⇒六（+ `maintain`——承 §4.12 F-S13）；§4.10 F-S8 边界句收正（自动删除 ∥ 自动 VACUUM 归 §4.12 维护面）；`NORMAL-MODE.md` F9 例单同拍。
+- 2026-10-08（**索引自维护批 · 评审裁定收正 · 主 agent**）：§4.12 收正——F-S10 表集点名（`code_chunks` ∥ `doc_chunks`；`files` 不涉）∥ 安全三件措辞对齐（干跑读数随行——工具面缺省 = 干跑；N-S8 同拍）∥ F-S13 判定句收窄为工具面（命令形 = 边界在册）。

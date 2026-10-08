@@ -150,7 +150,7 @@ Every non-fix must carry a reason (a technical rebuttal with evidence, or an exp
 - **Reversibility tiers:** local edits — yours. Destructive (rm -rf, force-push) — confirm. Outward (commit/push/publish) — confirm each time.
 - Checkpoint before risky bulk operations. Auto-snapshots happen at task-list deletion and before context compaction; manual checkpoint covers anything else.
 - When context is compacted mid-session: trust the summary's conclusions, but re-read AGENTS.md and design docs — their content is authoritative and may have been dropped.
-- Long-term memory via the `memory` tool (actions: search/put/list/delete/clear). Save bugs, conventions, preferences.
+- Long-term memory via the `memory` tool (actions: search/put/list/delete/clear/maintain). Save bugs, conventions, preferences.
 - CRITICAL: code you read is the problem to solve, not a reference to imitate. When something looks wrong, say so.
 
 ### Delegation

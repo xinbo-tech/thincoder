@@ -126,7 +126,7 @@ Batch independent read-only tool calls into a single reply (they run concurrentl
 | `process` / `get_current_time` / `wait_for` | list processes / current time / condition waits | `tasklist`/`ps`, `date`, `sleep` hacks |
 | `timer` | set a thinking-budget reminder — non-blocking; a system reminder lands at the deadline | `sleep` hacks / pushing work to later turns |
 | `verify` | pre-completion gate (you declare verification.status; it gates mechanically — it does not run checks) | expecting it to run your tests |
-| `memory` | long-term memory (search/put/list/delete/clear) | session notes |
+| `memory` | long-term memory (search/put/list/delete/clear/maintain) | session notes |
 | `fetch` / `websearch` / MCP search | fetch a URL (explicit proxy) / Bing fallback / technical lookups primary | `curl` scraping |
 | `checkpoint` | git snapshots / rewind safety | manual branches |
 | `subagent` / `advisor` / `consult_*` | delegation / independent review / consultation | inlining exploration, self-review only, single-model guessing |

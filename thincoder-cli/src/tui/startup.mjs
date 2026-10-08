@@ -331,4 +331,13 @@ export async function backgroundIndex(ctx) {
     ? `Ready — idx code ${codeFiles} doc ${docFiles}`
     : "Ready"
   render()
+
+  // 索引自维护启动拍（自愈轮 · MEMORY.md §6.14 面⑤-5 · 台账 #1096）：Ready 置后邻位——核侧 3 s
+  // 延迟拍、每进程一次、异步非阻塞、失败静默；有动作 ⇒ 一行可见（零动作 ⇒ 零行）。维护为库全局、
+  // 非 cwd 依赖；home 跳过档在其上早退（不拍——登记接受面）。
+  const { scheduleMemoryMaintenance, maintainActionCount, maintainLine } = await import("@thincoder/core/memory/maintain.mjs")
+  scheduleMemoryMaintenance({
+    dbPath: agent.memory?.dbPath ?? null,
+    onReport: (report) => { if (maintainActionCount(report) > 0) pushLine(maintainLine(report), C.dim) },
+  })
 }

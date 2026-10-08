@@ -22,6 +22,7 @@ import { currentCwd, restoreLastProject } from "./projects.mjs"
 import { startSampler, stopSampler } from "./loop-sampler.mjs"
 // 会话维护线（R1 · 桌面功能对位批）：启动拍供面（GC ∕ 索引两枚延迟拍 —— 处理体同档）。
 import { scheduleSessionMaintenancePasses } from "./session-maintenance.mjs"
+import { scheduleMemoryMaintenance } from "./memory-maintenance.mjs" // 记忆维护启动拍（自愈轮 §6.14 面⑤-5——惰性转口）
 // 堆遥测与冻结取证（KD-53 · 批档 §2.11 D7–D9 · 台账 #694）：策略面出档 `heap-watch.mjs`（零 `electron`
 // 顶层 import——四缝合件）；本档 = 装配面（三注入 + `diagnostics.*` 两键消费 + 冻结钩族 + 恢复动作序）。
 import { createHeapWatch, mainHeapReading, PING_TIMEOUT_MS } from "./heap-watch.mjs"
@@ -248,6 +249,8 @@ async function main() {
   // 失败静默 —— 索引 = 派生品）。GC 拍须项目 cwd：开机未开项目 ⇒ 此处零动作，由恢复入口（`ipc.mjs`
   // `session:resume` 成功径）同款点火；索引拍 = 全根扫描（无需 cwd），此处恒点火（核内每进程一次去重）。
   void scheduleSessionMaintenancePasses({ cwd: currentCwd() })
+  // 记忆维护启动拍（自愈轮 · §6.14 面⑤-5 · 台账 #1096）：与上拍邻位（核侧 3 s 延迟拍、每进程一次、异步非阻塞、失败静默；库不在盘 ⇒ 零动作）。
+  void scheduleMemoryMaintenance()
   if (!SMOKE) return // 常态启动 = 窗口常驻（不取读数、不退出）
 
   const reading = await runSmoke(win, recordError)

@@ -149,7 +149,7 @@
 - **可逆性分级**：本地编辑——你的事。破坏性（rm -rf、force-push）——先确认。对外（commit/push/publish）——每次确认。
 - 危险批量操作前 checkpoint。任务清单删除和上下文压缩前自动快照；其余手动 checkpoint 覆盖。
 - 会话中途被压缩：相信摘要的结论，但重读 AGENTS.md 和设计文档——其内容是权威的，可能被压缩丢了。
-- 长期记忆用 `memory` 工具（actions: search/put/list/delete/clear）。存 bug、约定、偏好。
+- 长期记忆用 `memory` 工具（actions: search/put/list/delete/clear/maintain）。存 bug、约定、偏好。
 - 关键：你读到的代码是要解决的问题，不是模仿的参照。看到不对的地方，说出来。
 
 ### 委派

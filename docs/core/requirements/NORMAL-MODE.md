@@ -67,7 +67,7 @@ Normal 模式 = 默认（非工程模式）会话的提示词基底。装配层�
 | F6 | **交付透明** | 改了什么 / 为什么 / 简化了什么 / 没做什么——逐条交代（用户看不见代码，只听得见你说的话） |
 | F7 | **自动代码评审** | 改完代码调 `advisor`（须给 paths 或 documents）；评审后按裁决表回应；🔴 不得埋；≤5 轮收敛；全清后跑 `verify` |
 | F8 | **委派** | 子代理 explore / coder / plan（普通模式装配；工程模式禁用 coder 角色） |
-| F9 | **跨会话记忆** | `memory` 工具（search / put / list / delete / clear）——存 bug、约定、偏好 |
+| F9 | **跨会话记忆** | `memory` 工具（search / put / list / delete / clear / maintain）——存 bug、约定、偏好 |
 | F10 | **任务跟踪** | 每档都用 `task`（同时只有一条 in_progress）；complex 档另建**台账条目**（跨会话持久、每条需求一条——`/ledger`） |
 
 ### 5.3 非功能性需求

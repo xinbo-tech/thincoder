@@ -95,7 +95,7 @@
 - **三层记忆**（写入时指定 layer）：personal（纯 DB 行）/ project（项目 markdown 文件为源，DB 为索引）/ team（git 仓库同步）。
 - **双路检索**：FTS5（含 CJK 逐字分段）+ 向量余弦（懒构建，失败静默降级纯 FTS）。
 - **磁盘为真相**（project / team 层）：markdown 文件即知识本体，可人工编辑、可 git 管理；DB 只是**可重建索引**。
-- **单一 agent 工具面**：`memory` 单工具、`action` 路由五动作（search / put / list / delete / clear）——旧 `memory_put` / `search` / `delete` 三个裸工具已合并退役。
+- **单一 agent 工具面**：`memory` 单工具、`action` 路由六动作（search / put / list / delete / clear / maintain）——旧 `memory_put` / `search` / `delete` 三个裸工具已合并退役。
 
 默认位置定义于 `thincoder-core/config.mjs` 的 `config.memory` 段（`dbPath` / `projectDir` / `team`），可在 `~/.thincoder/config.json` 覆盖。
 
@@ -189,20 +189,21 @@
 - **门禁**：`search` / `list` 只读放行（免权限询问）；`put` 侧效门；批量 delete / clear = `confirm:true` + layer 门禁（**confirm 参数即门禁**——直接删裁定，无第二层人类确认）。
 - **只读子代理工具集过滤**：`explore` / `plan` / `consult` 只读子代理按**工具级 readonly** 过滤工具表——memory 工具 `readonly: false`（工具级），故从这些子代理的工具表消失（不再能 `memory search`）；动作级只读分类只覆盖 dispatch 门位，**不覆盖**子代理工具集过滤。
 
-### 6.6 memory 工具契约（单工具五动作）
+### 6.6 memory 工具契约（单工具六动作）
 
-**单一 agent 工具** `memory`，`action` 枚举 `["search", "put", "list", "delete", "clear"]`，参数按 action 分支；工具级 `readonly: false`。
+**单一 agent 工具** `memory`，`action` 枚举 `["search", "put", "list", "delete", "clear", "maintain"]`，参数按 action 分支；工具级 `readonly: false`。
 action 枚举 / 参数形态住 `thincoder-core/memory/memory-tool.mjs`（2026-10-01 拆分批自 `memory/docs.mjs` 迁出，经其转口可达）；描述文本 = `thincoder-core/tool-docs/memory.md`（`DESC()` 单一解析面——接线 `thincoder-core/memory/memory-tool.mjs:57`）——双端**语义同源**（内容断言各自 fail-when-unchanged）。
 
 **layer 值域按端**：CLI = personal / project / team；VSC 无 team（收到 team 明确拒绝并指引 CLI）。action 侧缺省 / 必填：`put` 缺省 personal；`search` / `list` 缺省搜全部层；`delete`（批删）/ `clear` 必填 layer。
 
-#### 6.6.1 五动作
+#### 6.6.1 六动作
 
 - **search**（只读）——`{ query, layer?, limit? }`：自然语言查；limit 默认 5。输出带 id（`[layer][type] title (id=uid)`）。空 query 短路（§6.3）。
 - **put**——`{ type, title, content, tags?, layer? }`：type 限四类；写 personal（纯 DB 行）或 project / team（`putMarkdown`）。project / team 输出带完整 uid（与 delete 接受的 id 一致）。
 - **list**（只读）——`{ layer?, type?, keyword?, limit? }`：过滤输出紧凑清单，**不拉全文**；limit 默认 50。
 - **delete**——单条形态 `{ id, layer? }`（§6.6.2）+ **条件批量形态** `{ layer, type 和/或 keyword, confirm:true }`（§6.6.3）。
 - **clear**——`{ layer: "personal", confirm: true }` 清空 personal 全部；layer 必填且**仅接受 personal**，project / team 明确拒绝。
+- **maintain**——`{ confirm? }`：索引自维护一卷（鬼行 GC ∥ 压实 ∥ 备份轮转——机制 ∕ 安全 ∕ 触发 = §6.14 面 ⑤）；缺省 = 干跑（计划 + 逐动作读数——零写），`confirm:true` 落写。无 layer 参数（库全局操作——非层内）；输出 = 逐动作段（执行 ∥ 跳过 + 理由 + 读数——非 §6.6.4 逐字表内面）。
 
 **list / 批量删的 origin 限定**：`files` 层行（list + 批量 delete）按**当前上下文目录**（projectDir / team dir）过滤——其他项目 / 团队克隆的存量行不进入 list / 批量删（工具只能动它能定位的文件）；单条 delete 仍按 uid 全语义；team layer 的 search 仍全 origin（检索面不变）。
 
@@ -298,7 +299,7 @@ action 枚举 / 参数形态住 `thincoder-core/memory/memory-tool.mjs`（2026-1
   端壳文件制索引（`indexer` 族）与宿主 regex 回退**退役**——`code_search` / `doc_search` 面经核工具生成器调用（描述/输出契约同文）。
 - **工具面（契约规范源 + 端面形态 · 2026-09-30 单源化已落）**：**规范源 = 核**——执行器 / 输出契约 = 核工具生成器 `memoryTools`（`thincoder-core/memory/memory-tool.mjs:49`——2026-10-01 拆分批自 `memory/docs.mjs` 迁出，经其转口可达；§6.6.4 同文）；
   端面 = **核单源挂载**（#677 I9 已落——`thincoder-vscode/src/memory-tool.mjs` 描述面退场、零自持描述字面；描述 / 参数随装配期 `wireMemoryFace` 注入核单源；端仅留 `layer` 值域守卫）。
-  端面保留：五动作 + 工具级 `readonly: false` + 动作级只读分类（search / list 只读放行——planMode 放行、免审批、可并行）+ put / delete / clear 副作用门 + `layer` 值域（`personal|project`、无 team——`team` 拒回并指引 CLI）。
+  端面保留：六动作 + 工具级 `readonly: false` + 动作级只读分类（search / list 只读放行——planMode 放行、免审批、可并行）+ put / delete / clear / maintain 副作用门 + `layer` 值域（`personal|project`、无 team——`team` 拒回并指引 CLI）。
   **语义同源**（team 归属句两面同契：核「team (CLI only)」∥ 端「team is managed by the CLI」——非机制面差异，不作端差登记）。
 - **迁移路径**：VSC 老用户文件制 personal 记忆 = `memory import` 一次性导入器（CLI 面——**未落**，登记于该批次档「发现」清单）；project 层 = `.thincoder/memory/*.md`（双端同目录，磁盘为真相）。
 - **重建面（端壳）**：入口 = 面板「构建索引」（`thincoder.buildIndex`）→ 核序 `gitSync` → 回退 `codeSync`+`docSync`（并行）；
@@ -562,7 +563,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
   过 `INDEX_ORIGIN_ROW_WARN = 20,000`（≈0.5 s 趟）出**一行**可见警示（每趟至多一行）；过 `INDEX_ORIGIN_ROW_CAP = 100,000` ⇒ 同步**跳过后列文件**——**处理序（行序）确定性**：文件列序钉死 = `rel` 字典序（现 walk ∕ git 列序不确定）、越界跳过 = 列序后缀；
   **跳过语义 = 不落行 ∕ 不记 mtime**（下趟重试；既有行不失效）。回执 `budgetSkipped` + 一行可见句（指路 `index.excludePaths` ∕ 剪枝）+ `logEvent`。存量行不因预算失效。
    **机制现体 = `memory/sync-tail.mjs` `createRowBudget:35-56`**（WARN ∕ CAP 单源——`originRowCount` ∕ `rowCountOfPath` 同档；消费 = `code-sync.mjs:232` ∕ `docs.mjs:52`）。
-- **P3 触发位**：同步尾（预算判定 + `budgetSkipped` 回执）；开库一次性（WAL checkpoint——§6.12 既有）；桌面 ∕ VSC 状态面（既有读数位）。**库字节读数（`dbBytes` + 逐 origin 行数）= `memoryStatus` 核出口**（P1 面）。**无任一自动删除**。
+- **P3 触发位**：同步尾（预算判定 + `budgetSkipped` 回执）；开库一次性（WAL checkpoint——§6.12 既有）；桌面 ∕ VSC 状态面（既有读数位）。**库字节读数（`dbBytes` + 逐 origin 行数）= `memoryStatus` 核出口**（P1 面）。**自动删除 ∥ 自动 VACUUM ∥ 备份轮转 = 面 ⑤（自愈轮 · 2026-10-08）**（P 族判据零改）。
 - **M1 per-origin 锚**：`meta.last_indexed_commit` 现为**全局单键**（实读：全库恰一枚）——多 origin 互相覆盖 ⇒ 他仓 diff 失锚（`git diff <旧锚> HEAD` 未知修订 ⇒ `gitSync` 返 null ⇒ 全扫兜底，慢但不错）；**改 `last_indexed_commit:<归一键>`**；兼容窗 = 旧键在而 per-origin 键缺 ⇒ 视为无锚（该 origin 全扫一次）；旧键清退 = 全部 origin 落锚后（ops）。
 - **M2 gitSync 路径形态收正**：diff 表为**仓根相对**（实读：子目录内 `git diff --name-only` 回 `scripts/…`），而索引路径为 **cwd 相对**（`git ls-files` 同读回 `src/tui/…`；`codeSync` 与库内 path 同形）。
   子目录 origin（`…/thincoder-cli` ∕ `…/thincoder-vscode`）下 diff 命中点错位：`join(dir, rel)` 指向他处文件（ENOENT ⇒ 走「删除支」；同形路径存在 ⇒ 错内容入库），而**真改动漏索引且锚照常前移 = 静默陈旧**。
@@ -642,7 +643,63 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
   ③ **零回归**——POSIX 逐字（含垃圾族）；位置族全平台逐字（收正前后判定同）；win32 折仅垃圾族（有意面——`Node_Modules` 类）∥ 位置族变体判假锁（全表折误剪面 443 行的判别形）；
   ④ **存量收敛（ops 判据）**——`sweep --origin <o> --path <前缀>` 干跑 = 仅命中行动作 `delete`；`--confirm`（沙箱库）⇒ 命中行 0 ∧ 非命中行逐键不变 ∧ 备份 `integrity_check` ok；实库存量现值 = 0（obj ∥ vendor 已清——在册）。
 
-**边界（本批不做）**：不引入 worker ∕ 线程化（升级触发见上）；不改召回语义（F-M3：仍全表评分、无近似 ∕ 剪枝）；不动 ANN ∕ 向量索引（D-MEM13）；不改工具契约 ∕ limit ∕ RRF；v10 只**增索引**（无表结构 ∕ 行级变更）；不做自动删除 ∕ 自动 VACUUM（破坏性操作 = 用户批准 + 父侧 ops）；`D:/dgx-spark` 系 origin（含变体）处置 = 用户裁定项（非本批默认动作）；不并 #694（渲染侧）。
+**边界（本批不做）**：不引入 worker ∕ 线程化（升级触发见上）；不改召回语义（F-M3：仍全表评分、无近似 ∕ 剪枝）；不动 ANN ∕ 向量索引（D-MEM13）；不改工具契约 ∕ limit ∕ RRF；v10 只**增索引**（无表结构 ∕ 行级变更）；自动删除 ∕ 自动 VACUUM = **面 ⑤（自愈轮——2026-10-08 用户拍）**；`D:/dgx-spark` 系 origin（含变体）处置 = 用户裁定项（非本批默认动作）；不并 #694（渲染侧）。
+
+**面 ⑤：索引自动维护（自愈轮 · 2026-10-08 · 台账 #1096）**
+
+需求锚 = `docs/core/requirements/MEMORY.md` §4.12（F-S10–F-S13 ∕ N-S8–N-S9——判定句回指该节，本处只给机制）。
+
+**病灶读数（as-of 2026-10-08 · 父侧实核 = §4.12 来源段）**：跨 origin 鬼行 8,419 行（死档 1,173——停更嵌套 origin 三个：`…/thincoder` 836 ∕ `…/thincoder-vscode` 228 ∕ `…/thincoder-cli` 109；sync stale 收尾只治正在同步的 origin ⇒ 无工具面，手写 SQL 清）∥ 压实 2054.1 ⇒ 1006.0 MiB（手跑 `VACUUM`）∥ 备份 9 枚（手清）。
+
+**引擎（核新档 `thincoder-core/memory/maintain.mjs`（拟新增））**——三动作 + 单入口 `maintainMemory`；与既有面单源关系（复用 ∥ 扩展）：
+
+| 面 | 单源 | 关系 |
+|---|---|---|
+| 探针 ∕ 树态 | `sweep.mjs` `probeOriginPath`（仅 ENOENT 判亡）∥ `treeState`（原样 ∥ 归一形双路径） | 复用（鬼行 GC 逐档探针同谓词；`treeState` 加 `export`（`probeOriginPath` 原已 export）——零行为变） |
+| 备份 | `sweep.mjs` `takeBackup` ∥ `backupPathFor`（`VACUUM INTO` + 判据；命名 `.sweep-backup-<戳>`） | 复用（维护跑与 sweep 同判据同命名；`takeBackup` 加 `export`） |
+| 计数 | `sweep.mjs` `originCounts`（写后回读基准） | 复用（加 `export`——零行为变） |
+| 折叠 | §6.11 步 2 ∕ §6.13 信号 A | **不涉**——鬼行 GC 不折叠（信号 A 归 sweep 全扫档；判据零改） |
+| 事务 ∕ 回读 | §6.13 写面形（`BEGIN IMMEDIATE` + 写后回读 + 失败回滚） | 同款（逐动作判据定制） |
+
+**⑤-1 跨 origin 鬼行 GC（F-S10）**：扫描 = `code_chunks` ∥ `doc_chunks` 按 `(origin, path)` 分组（全 origin——含停更者）；
+判亡 = 逐档探针 `join(origin, path)`——**原样 ∥ 归一形两路径皆 ENOENT 才判亡**，其余错误保留（仅 ENOENT 判亡同律）；
+**origin 树亡短路** = `treeState` dead ⇒ 该 origin 全档判亡（同一判据免逐档探针）；**活行零触**（文件在盘 = 保留——收录范围 ≠ 维护面）。
+写面 = 单事务逐 `(origin, path)` 删行（FTS 随触发器同步）；备份档位同 §6.13（命中 > 0 才取；dry-run ∥ 零命中不取）；
+写后回读 = 命中组零行 ∧ 非命中组逐键等前值 ∧ 保留（探针错）组零变。`files` 表不涉（记忆层非项目文件——§6.14 既有口径）。
+
+**⑤-2 压实自触发（F-S11）**：判据 = `freelist_bytes ≥ 64 MiB` ∧ `freelist_bytes ∕ db_bytes ≥ 20%`（双式联立——核常量 · 缺省值 = 用户拍项；常量不声明——先例「行预算常量不可声明」）。
+读数 = `PRAGMA freelist_count × page_size` ∥ `statSync(dbPath)`（承 §4.10 读数面口径）。未越阈 ⇒ 跳过（零动作 ∥ 零写入——N-S9）。
+执行 = `VACUUM`（写后回读 = freelist 回落 ∧ 尺寸 ≤ 前）；忙 ∥ 失败 ⇒ 跳过（fail-safe——不改数据）。不自动改库结构 ∥ schema ∥ 索引定义。测试缝 = 阈值注入参数（`??` 缺省核常量）∥ `vacuumFn` 注入（缺省 = `exec` 形 `VACUUM`——执行观测 = 注入计数）。
+
+**⑤-3 备份轮转（F-S12）**：口径 = 维护型备份族 = `<basename(dbPath)>.sweep-backup-<14 位戳>`（严格名匹配——非前缀）；
+保最新 N 枚（N = `config.memory.maintain.backupKeep`——缺省 2 · 钳 ≥ 1），其余逐枚删除（引擎直落 `unlink`；失败跳过计数——不抛）；非本族文件零触。
+删除面纪律 = 引擎直落 ∥ 不经 agent 工具面（分类门辖 agent 写面——库外 `.thincoder/*` 无声明段命中 ⇒ 兜底 code 面；手动清理既有通路 = 改名 `tmp-*`（temp 面）后经 delete 工具——本会话实证，登记为 ops 参考）。
+
+**⑤-4 agent 触发通道（F-S13）**：`memory` 工具新增 action `maintain`（六动作）；缺省 = 干跑（计划 + 逐动作读数——零写）；`confirm:true` ⇒ 执行。
+执行序 = 备份先行 ⟶ 鬼行 GC ⟶ 压实（按后读 freelist 判）⟶ 轮转；输出 = 逐动作段（执行 ∥ 跳过 + 理由 + 读数）。
+描述文本（`tool-docs/memory.md`）= 提示词面（主 agent 定稿）；VSC 工具面（`thincoder-vscode/src/memory-tool.mjs`）动作清单同批补 `maintain`（执行委托核面——端区零自持算法）。
+
+**⑤-5 触发接线（启动后低峰窗口 · 幂等）**：核侧调度 `scheduleMemoryMaintenance({ dbPath, delayMs = 3000 })`——**每进程一次** + 延迟拍 + 异步非阻塞 + 失败静默（+ `logEvent`）；库不在盘 ⇒ 零动作（不建库——读面纪律）；测试缝 = `_setMemoryMaintenanceDelayForTest`。**自动拍写姿态 = 非干跑**——计划随行后执行 ∥ 备份先行；干跑默认只辖工具缺省（⑤-4）。
+落点 = ① CLI：`thincoder-cli/src/tui/startup.mjs` `backgroundIndex` 收尾（Ready 置后；home 跳过档不拍——登记接受面）② 桌面：`thincoder-desktop/src/main/main.mjs` 启动拍邻位 + 新档 `memory-maintenance.mjs` 惰性转口（`node:sqlite` 不入端壳静态闭包）③ agent：会话内工具显式（⑤-4）。**VSC 自动拍缺位登记** = 端壳多窗 ∥ 惰性句柄——自动拍不落 VSC；触发经工具面（⑤-4）。
+幂等 = 进程内一次性 + 逐动作阈值 ∥ 空集判（后到者零写）+ 跨进程单事务 ∥ `busy_timeout` 兜底 ∥ 备份撞名 fail-closed（§6.13 既有判据）。
+
+**⑤-6 安全封套 ∥ 读数（N-S8 显式化）**：**同一引擎同一安全口径** = 自动拍 ∥ 工具（∥ 将来命令形）皆经 `maintainMemory` 单点——备份先行 ∥ ENOENT-only ∥ 干跑读数随行（工具面缺省 = 干跑；自动拍写姿态 = 非干跑——⑤-5）∥ 写后回读。
+**低峰不阻塞** = 鬼行扫描分片让出（`SCAN_YIELD_MS` 口径——探针循环读钟让出）∥ 写面短事务 ∥ `VACUUM` 单语句不可让出（成本 ∝ 库重写——仅双式越阈 ∥ 窗口内执行；升级路径 = worker，承面② 判据腿）。
+**读数面挂靠 §4.10**（`dbBytes` ∥ 逐 origin 行数 = `memoryStatus` 口径不变——零新计数面；freelist = 维护内部读数，不入可见面）。可见面 = CLI 有动作时一行 ∥ `logEvent`（端面板零改）。
+
+**判据腿（逐条机检 · 号承 §6.14 上族）**：
+
+- **L-⑥-1（F-S10 · 鬼行 GC）**：表集 = `code_chunks` ∥ `doc_chunks`（夹具 ∥ 读回 ∥ 「鬼行 0」皆限于此二表；`files` 行归 §6.13 sweep ∥ `syncDir` 面）；沙箱夹具三 origin——A 树亡 ∥ B 树活且独档被删 ∥ C 树活全档在盘；① 干跑 = 计划含 A 全档 + B 死档 ∧ 零写（行 ∥ 字节不变、无备份）；② `confirm` ⇒ A ∥ B 死档行归零 ∧ C 逐键等前值 ∧ 探针错档零变 ∧ 备份在册（`integrity_check` = ok）∧ 报告含干跑先行读数；
+  ③ 探针错腿 = `probeFn` 注入缝返回 unknown ⇒ 该档保留。
+- **L-⑥-2（F-S11 · 压实）**：阈值注入参数（`??` 缺省核常量——⑤-2）置小值 + 沙箱库造 freelist：① 双式全越 ⇒ 执行（注入计数 `vacuumFn` = 1）∧ freelist 后 < 前 ∧ 读数在；② 单越一式 ⇒ 跳过 + 理由；③ 全未越 ⇒ 零执行（注入计数 `vacuumFn` 零调用）；已知界（登记）= `VACUUM` 单语句不可让出——阻塞 = 恰一次全库重写（本批手清实例 2054.1 ⇒ 1006.0 MiB；时长未记）。
+- **L-⑥-3（F-S12 · 轮转）**：N+k 枚族内夹具 + 干扰档（8 位戳 ∥ 族外名）⇒ `confirm` ⇒ 恰余 N ∧ 最老者被清 ∧ 干扰档在场 ∧ 失败档（占用）跳过计数不抛；干跑 ⇒ 零删 + 清单在；钳制支 = N=0 ∥ 负值 ⇒ 引擎钳 1 ⇒ 恰余 1。
+- **L-⑥-4（F-S13 · 工具）**：① 缺省调用 = 干跑零写 + 逐动作段（执行 ∥ 跳过 + 理由）在场；② `confirm:true`（沙箱）⇒ 执行读数 + 备份在册；③ VSC 面动作闭集含 `maintain`；④ 未知 action 仍拒。
+- **L-⑥-5（N-S8 ∥ N-S9 · 封套）**：① 单点结构断言——自动 ∥ 工具两入口皆经 `maintainMemory` ∧ 同夹具两入口读数等值；② 备份判据两腿——命中 > 0 才取 ∥ 目标已存在 ⇒ 抛 ⇒ 零写；③ 零空转 = 干净夹具（零鬼行 ∧ 未越阈 ∧ 备份 ≤ N）`confirm` ⇒ 零写（行 ∥ 字节 ∥ 备份集全前值）；④ 让出腿 = 注入计数 `yieldFn` ⇒ 鬼行扫描越阈值时让出次数 ≥ 1（承 L-②-3 形——N-S8「低峰不阻塞」半条）。
+- **L-⑥-6（接线 · 幂等）**：① 调度器直测——二次调用返 `false` ∧ 延迟缝在场 ∧ 库不在盘 ⇒ 零动作且不建库；② 落点结构断言——CLI `backgroundIndex` 尾 ∥ 桌面启动拍邻位 + 惰性转口（静态闭包零 `node:sqlite`——承壳护栏判据）；③ 并发腿 = 先后两跑同夹具 ⇒ 后到者逐动作零写 ∥ 跳过。
+
+**边界（本批不做）**：不做 origin 结构卫生（盘根僵尸 ∥ 变体折叠 ∥ 嵌套重叠 ∥ 存量树——另议）；不自动扩缩收录范围（收录 = 声明 ∥ 名单面——维护 ≠ 裁决）；
+不提供绕过阈值的强制压实；不做 CLI 命令形（引擎已备——出现实测需求再补；**工具一面即达标**——命令形 = 边界在册）；`files` 表不涉；不引 worker（升级触发承面② 判据腿）；
+§6.11 ∥ §6.13 既有判据零改（折叠 ∥ 探针 ∥ 安全三件 = 复用非改）。
 
 ### 6.15 声明公共仓的索引接入与跨仓引用（2026-10-02 · 台账 #832 · 设计轮）
 
@@ -660,7 +717,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 **机制（三项）**：
 
 1. **同步展开（写侧）**：三个同步入口（`codeSync` ∥ `docSync` ∥ `gitSync`）对**声明根集**逐根处理（入口 dir + 声明公共仓）——公共仓与入口同款：增量可行 ⇒ 增量（per-origin 锚既有），否则全扫；**展开只做一层**（公共仓自身的声明不递归）；各根自持其声明与行预算（WARN ∕ CAP 逐 origin 独立）。
-   声明根缺位 ⇒ **整根跳过**（展开前判存在性——不扫不删：存量行保留，收敛 = 树恢复后同步 ∥ ops `sweep --origin`；树改名 ⇒ 旧 origin 存量行同此）+ 一行 `logEvent`。
+   声明根缺位 ⇒ **整根跳过**（展开前判存在性——同步面不扫不删；存量行归 §6.14 面 ⑤ 维护面回收（备份窗内可回滚；树恢复 ⇒ 重新同步）；树改名 ⇒ 旧 origin 存量行同此；ops `sweep --origin` 通路仍在）+ 一行 `logEvent`。
 2. **读面 origin 集（读侧）**：`docSearch` ∥ `codeSearch` 过滤集 = 项目 origin ∪ 声明公共仓 origin（各经 `normalizeOrigin`）；**单 origin（未声明 / 无项目）⇒ 逐字零行为**；多 origin ⇒ **逐 origin 分趟**：矢量扫描支 = 每趟**单 origin 等值**（`AND origin = ?`——游标键 `["path","line_start"]`，与单 origin 快径逐字同形同计划）；FTS 支 = `origin IN (…)` 单趟（无游标面）。
    **不取**「`origin IN (…)` + 全 PK 游标」形（与 D-MEM22 否决形同构相邻——未取证形不引）；**合并** = 各趟候选统一收集后经既有稳定排序，并列分数定序 = **PK 元组升序**（`origin` → `path` → `line_start`——单 origin 面即扫描序；与趟序 / 到达序无关）。`thincoder-core/agent/setup.mjs` 每回合召回注入与计数行（B3）同用该集。
 3. **跨仓引用（可核形——记录面同用）**：形态 / 解析序 / 处置 = `docs/core/design/DOC-DISCIPLINE.md` §4.2.2；记录面有界例外 = `docs/core/design/LEDGER-SELF-CONTAINED.md` §5.1；本档登记**解析消费面** = 锚机检声明源候选（`scripts/doc-check-anchors.mjs` 接线）。
@@ -675,7 +732,8 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - **L-6.15-4（跨仓引用三态——三条独立谓词，各带一例；#832 父侧钉二）**：① `声明源在场 ∧ 目标档在` ⇒ **可解析（核绿）**（例：声明 `docs-repo` ∧ 目录在场 ∧ 声明仓内 `x.md` 在 ⇒ 非悬空）；② `声明源缺位` ⇒ **未核列报（报告面，不入闸——exit 0）**（例：同引用、`docs-repo` 目录不在 ⇒ 未核行列 + 汇总计数，不判悬空）；
   ③ `不可解析 ∧ 未声明` ⇒ **照旧判（悬空红）**（例：未声明仓 `other-repo` 的前缀引用——机检解析序不可达且无声明 ⇒ 悬空照红）；`声明在场 ∧ 目标档缺` ⇒ 悬空照红（真悬空）。细节 = 批内件——批档 §2。
 
-**边界（本批不做）**：不做跨仓写（各仓写侧自持不变；`reindexFile` 单文件缝不覆盖公共仓——公共仓内改动由下次同步收敛，登记为已知形态）；不做自动同步（不 clone ∕ 不 pull ∕ 不跨仓搬内容——只把**已在本地**的声明目录纳入索引）；不新造索引系统（复用既有 origin ∥ 同步 ∥ 读面机制）；不改召回语义 ∥ RRF ∥ 工具契约；公共仓缺位不自动删存量行（删除 = ops——§6.13 口径）。**读源为默认面；发布包 ∕ 已装包（`node_modules` 树）不入射程**（SKIP_DIRS 既有排除——登记；如需消费另裁）。
+**边界（本批不做）**：不做跨仓写（各仓写侧自持不变；`reindexFile` 单文件缝不覆盖公共仓——公共仓内改动由下次同步收敛，登记为已知形态）；不做自动同步（不 clone ∕ 不 pull ∕ 不跨仓搬内容——只把**已在本地**的声明目录纳入索引）；不新造索引系统（复用既有 origin ∥ 同步 ∥ 读面机制）；不改召回语义 ∥ RRF ∥ 工具契约；公共仓缺位 ⇒ 存量行归 §6.14 面 ⑤ 维护面回收（备份窗内可回滚；树恢复 ⇒ 重新同步）；ops `sweep --origin` 通路仍在。
+  **读源为默认面；发布包 ∕ 已装包（`node_modules` 树）不入射程**（SKIP_DIRS 既有排除——登记；如需消费另裁）。
 
 ## 7. 并入的关键决策记录（含否决备选）
 
@@ -704,15 +762,21 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 | D-MEM22 | 扫描游标 = **PK 序游标**（键列由调用点声明，缺省 `["rowid"]`；键 = 表 PK 去掉等值过滤前缀列） | `ORDER BY rowid` 与索引序不一致 ⇒ 每块 `USE TEMP B-TREE FOR ORDER BY`（重排整个过滤集、排序物化含 blob）= 29.4 s；PK 游标同覆盖 1.71 s（父侧真库实测 · §6.10 修法 A1）。**否决**「全 PK 元组 + 前导列等值并存」（SQLite 不作索引约束 ⇒ 静默二次方：本机 20 万行夹具 2.19 s vs 0.50 s，且无 `TEMP B-TREE`、无报错）· 否决「新索引 `(origin, rowid)`」（SQLite 拒：`no such column: rowid`——rowid 不入索引表达式）· 否决「`entries` / `files` 游标一并改」（现状已零排序：`SEARCH … USING INTEGER PRIMARY KEY (rowid>?)`）· **rowid 分类鉴别**：`rowid` **不可作索引键列**（本机实测 `no such column: rowid`——并入否决句）；其于**部分索引 `WHERE` 内**的引用可行性以实施期实测为准（勿臆断） |
 | D-MEM16 | 嵌入输入截断 = 复用核级单一来源（`thincoder-core/text-budget.mjs` 的 `safeSliceUTF16`，三处统一） | 该函数已有共享单一来源声明 · 零 import 叶档（可被任意层引用）· 已有消费先例（`thincoder-core/explore-distill.mjs:13`）；否决引 `thincoder-core/agent/helpers.mjs` 私持复本（子系统反向依赖 + 并行批写域）· 否决新档（与既有单一来源同函数双份）〔2026-09-18 注记 · 漂移收正轮：先例坐标 `thincoder-core/explore-distill.mjs:13` 随蒸馏前缀批序列化面退役（该处 import 已删）；**声明本体与单一来源不变**（函数仍有 memory 族消费方——现体消费 = `thincoder-core/memory/core.mjs:15` / `code-sync.mjs:15` / `docs.mjs:17`；声明位 = `thincoder-core/text-budget.mjs:55`）〕 |
 | D-MEM23 | 索引范围 = **声明面**（`index.excludePaths`）+ 前缀谓词单源三起效点；产品不硬编码参考系 | 范围是用户的工作集安排，产品无判据猜；单一声明载体 = manifest（KD-M1-31）。否决「`SKIP_DIRS` 硬加目录名」（用户布局各异 ⇒ 硬编码面）·「按体积自动排除」（静默行为、不可声明） |
-| D-MEM24 | 存量剪枝 = `sweep --origin + --path`（备份先行 · 干跑默认 · 写后回读） | 复用 §6.13 安全三件；`--origin` 整档做不到子树粒度；自动删除不可接受（用户批准 + 父侧 ops） |
+| D-MEM24 | 存量剪枝 = `sweep --origin + --path`（备份先行 · 干跑默认 · 写后回读） | 复用 §6.13 安全三件；`--origin` 整档做不到子树粒度；存量剪枝须用户批准 + 父侧 ops（自动删除 = §6.14 面 ⑤） |
 | D-MEM25 | **读面零写**：embedding 失效**判定**留读面（降级 FTS-only + 可见），失效**执行**移维护口 | 读路径（每回合）不得触发 162k 行级写；F-M6 ∕ D-MEM14「不产出无效结果 + 可见」两条同守（不评旧向量 ∥ 失效可见）。否决「保持现状 + 仅加日志」（巨写仍在 UI 路径）·「读面直接懒重建」（网络 + 写双爆点） |
-| D-MEM26 | 体积护栏 = 读数（`dbBytes` + 逐 origin 行数）+ 行预算常量（WARN 20k ∕ CAP 100k，只停新增——计数基准 = origin 库内行数）+ 触发三处；**无自动删除** | 成本 ∝ 行数（实测 26 µs ∕ 行）；**WARN = 0.5 s 趟量级（× 2 万 ≈ 0.52 s——提示线）；CAP = 2.6 s 趟量级（× 10 万——该档即 worker 升级触发的行数区）**；常量先落（可声明面 = §8.3 登记）。否决「按字节算」（需全表 SUM——本身即大操作）·「自动剪枝」（破坏性） |
+| D-MEM26 | 体积护栏 = 读数（`dbBytes` + 逐 origin 行数）+ 行预算常量（WARN 20k ∕ CAP 100k，只停新增——计数基准 = origin 库内行数）+ 触发三处；**自动删除 = §6.14 面 ⑤** | 成本 ∝ 行数（实测 26 µs ∕ 行）；**WARN = 0.5 s 趟量级（× 2 万 ≈ 0.52 s——提示线）；CAP = 2.6 s 趟量级（× 10 万——该档即 worker 升级触发的行数区）**；常量先落（可声明面 = §8.3 登记）。否决「按字节算」（需全表 SUM——本身即大操作）·「自动剪枝」（破坏性） |
 | D-MEM27 | 增量维护三收正：per-origin commit 锚 ∕ `gitSync` `--relative`（路径形态与索引同形）∕ 探针部分索引（v10） | 实读：锚单键被多 origin 互覆；diff 路径仓根相对 vs 索引 cwd 相对 = 静默陈旧；探针 `SCAN` 实读（每回合三趟）。v10 = 只增索引（无行级变更） |
 | D-MEM28 | 本批**不**引 worker_thread；升级触发 = 修复后单回合召回墙钟仍 ≥ 0.5 s（**缺省工作集 origin 复测**——基线 ∕ 判别换算式见 §6.14 L-②-5） | 三爆点皆可去废 ∕ 分片消解；worker 牵动三端句柄直用面；承 D-MEM17 登记不执行 |
 | D-MEM29 | 声明载体 = `PROJECT-MANIFEST.json → index.publicRepos`（嵌 index 族——顶层键族与默认档计数零扰动；缺省 `[]` = 零行为） | 声明载体唯一化既有裁定（KD-M1-31——单一项目声明档）；嵌 index 族的理由 = 检索范围声明（同款先例 = `index.excludePaths`——同为解析期路径列表，元素层归一宽容 ∕ 数组层 fail-closed）。被否候选：◎顶层新键（「三族→四族」与「默认八键→九键」计数族全档连带）· ◎工作区级声明档（无此概念 = 新机制 + 跨仓协调面，违仓自持）· ◎约定位置发现（隐式魔法——不可声明 ∥ 不可核） |
 | D-MEM30 | 接入形 = **多根同步 + 读面 origin 集**（复用既有 origin 机制——不新造索引系统；展开一层不递归；单 origin 快径逐字零变） | 机械根因 = 语料单根 + 读面等值过滤 ⇒ 修法 = 语料加根（多 origin）+ 读面集化；「不新造索引系统」= 既有 origin ∥ 同步 ∥ 读面机制原样。被否候选：◎读面全放开（跨项目污染——origin 隔离本为防串项目）· ◎只直读不接入（纪律单腿——检索面缺口不闭）· ◎独立第二索引（新系统——违边界） |
 | D-MEM31 | 毒行两道防线 = **发送前 `sanitizeLoneSurrogates`（主修）∥ 400 类批失败逐条隔离（兜底）** | 单条孤立代理毒行 ⇒ 硅基流动 400/20015 ⇒ 补嵌 backlog 永久堵死（22,957 待补嵌——每轮取同批头部）。清洗令存量毒行发前净化（根因消除）；逐条隔离只兜未知毒形（不引 schema 变更 / 持久标记——过度工程）。被否：400 加入 RETRYABLE（加重试税、无治愈）· 毒行持久登记（新存储面——清洗后已知毒源已消）。 |
 | D-MEM32 | 排除表补强 = **通用生态名入表**（精确 basename + `bazel-` 前缀）+ **族分折**（垃圾 ∕ 产物族 win32 折 ∥ 位置族全平台精确 ∥ POSIX 一律精确——2026-10-08 父侧裁定）；`bin` 不进排除表 | 名 = 目录身份，但**族不同判不同**：垃圾名 = 「这类目录」语义（拼写变体同物 ⇒ win32 折）；位置名 = 「某位置」语义（变体非同物 ⇒ 精确；全表折实核误剪 443 行——`desktop` 428 ∥ `library` 15）。精确 ∥ 前缀收的是「名」不是「模式」（`out` 不吞 `output`）。否决「全表折」（误剪合法同名面——本批实核证据）·「全平台折」（POSIX 上 `Pods` ∥ `pods` 是两个目录）·「维持全精确」（win32 上 `Node_Modules` 与 `node_modules` 是同一目录——不折 = 漏剪，F-S9 源起面）·「`bazel-*` 逐名枚举」（含工作区名——不可穷举）·「折叠扩至路径键」（§6.11 口径——两回事）。 |
+| D-MEM33 | 自愈轮 = **单引擎单入口**（`maintain.mjs` `maintainMemory`——自动拍 ∥ 工具同一单点）；三动作 = 鬼行 GC ∥ 压实 ∥ 轮转 | N-S8「同一引擎同一安全口径」的单点形；三动作共享备份先行 ∥ 读数随行 ∥ 写后回读。否决「各端各实现维护」（安全口径漂移）·「自动 ∥ 工具两套引擎」 |
+| D-MEM34 | 鬼行 GC = **逐档 ENOENT 双路径判亡** + **origin 树亡短路**；不折叠 | 承 §6.13 探针口径（仅 ENOENT；fail-safe）；双路径 = `treeState` 同形（单源）；树亡短路 = 同一判据免逐档探针。否决「时间 ∕ mtime 判据」（§6.13 既有否决）·「自动删『看起来无关』的活行」（维护 ≠ 收录裁决） |
+| D-MEM35 | 压实判据 = **freelist 双式联立**（`≥ 64 MiB` ∧ `freelist ∕ db ≥ 20%`——核常量 · 缺省值 = 用户拍项） | 两实测点：3 MiB ⇒ 零收益（§6.14 面③ 实判）∥ ~1 GiB ∕ 51% ⇒ 实清（2026-10-08）；比值防「大库小益」·下限防「小库频压」。否决「尺寸独立触发」（VACUUM 成本 ∝ 全库重写——freelist 小 = 纯成本）·「纯绝对阈值」 |
+| D-MEM36 | 备份轮转 = **严格名族匹配**（14 位戳）+ 保 N（`config.memory.maintain.backupKeep`——缺省 2 · 钳 ≥ 1）；引擎直落删 | 「不删非本机制所产文件」的可机检形 = 名族精确匹配（非前缀）；N ≥ 1 = 需求明文锚。否决「按 mtime 邻域清」（他产文件误伤面）·「rename 回收站形」（备份 = 派生副本——先例 = trace ∕ log 清理直删） |
+| D-MEM37 | agent 触发 = **`memory` 工具 action `maintain`**（干跑默认 ∥ `confirm` 落写）；命令形不做（**工具一面即达标**——命令形 = 边界在册） | 工具面 = 跨端同面（命令形 = CLI shell 通道——VSC 无终端子命令面，端差）；干跑默认 = 工具先例（delete 批 ∥ clear 的 confirm 形）。否决「CLI 命令形」（新命令面 ∥ 端差；出现 ops 实测需求再补——边界在册） |
+| D-MEM38 | 触发 = **启动后延迟拍**（每进程一次 · 缺省 3 s——先例 = 会话索引拍 `thincoder-core/session-index-pass.mjs:15` `INDEX_PASS_DELAY_MS = 3000`）；幂等三腿（进程内 ∥ 逐动作闸 ∥ 跨进程事务） | 「启动后低峰窗口」= 用户拍触发模型；延迟拍 = 既有先例形。否决「常驻周期拍」（长驻进程——交互高峰不可控）·「阈值不越不拍」（鬼行无阈值面——扫描 = 判定成本；写入面仍零空转） |
 
 ## 8. 不并项与历史沿革
 
@@ -747,7 +811,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - **模型可见 id 的 origin 形态变更（§6.11）**：归一后文件层 id 的 origin 段由原样拼写（`C:\…` / `d:\…`）变为归一形（`C:/…`）——旧形态 id 仍可删（`deleteByUid` 归一化解析），**比对面**（脚本 / 断言 / 提示词字面 id）须按归一形；模型面 id 只在检索输出中生成，无持久化契约。
 - **扫描面已知上界与墙钟（§6.10 已知上界）**：单次事件循环占用 = 时间片 + 单块物化（单块 `.all()` 不可中断）；单趟墙钟 = **1.7 s 量级**（PK 游标后 · A1；改前 29.4 s 量级）。若实测单块物化本身超预期，消解路径 = 下调 `SCAN_CHUNK_ROWS`（与内存上界契约联动，须同批改契约）；再压墙钟量级 ⇒ ANN / 分层候选（D-MEM13 后续项）。
 - **扫描期并发写可见性（§6.10）**：扫描与并发写并存时无快照隔离（改前改后同）；扫描期间被改写 / 被删的行是否计入本次召回无保证——既有面，登记不修。
-- **VSC 镜像面**：memory 工具面（五动作 + layer 值域按端）语义同源；**VSC 存储 = 核 sqlite（与 CLI 同库）——见 §6.9（W8 归一落地 2026-09-15）**。原「VSC 存储为**文件制**（检索实时扫文件）」为 W8 前现状，与 §6.9 相抵——2026-09-18 修正轮收正；原随之的「存量根目录 legacy 条目 search 可见但 delete 不可删」所述路径 = 文件制检索面，已随 W8 退场而失据（存量文件条目去向 = `memory import` 一次性导入器——未落，登记于该批次档）。
+- **VSC 镜像面**：memory 工具面（六动作 + layer 值域按端）语义同源；**VSC 存储 = 核 sqlite（与 CLI 同库）——见 §6.9（W8 归一落地 2026-09-15）**。原「VSC 存储为**文件制**（检索实时扫文件）」为 W8 前现状，与 §6.9 相抵——2026-09-18 修正轮收正；原随之的「存量根目录 legacy 条目 search 可见但 delete 不可删」所述路径 = 文件制检索面，已随 W8 退场而失据（存量文件条目去向 = `memory import` 一次性导入器——未落，登记于该批次档）。
 - **只读子代理不能 `memory search`**（§6.5——工具级 readonly 过滤）；如需恢复，改 allowed 集为动作感知。
 - **doc-sweep**：`docs/` 若干现状描述文件仍含旧 memory 三工具名 / 向量目录旧说——活文收正列为独立后续任务。
 - **CLI 人类命令面**（`thincoder memory <list|search|put|remove|sweep>`）：`list` / `search` / `put` 为 personal-only 核心面（search limit 10、list 支持 `--type`）；`remove` 走同一 `deleteByUid` 路由（uid 全 layer + 裸数字兼容）——命令行与工具核心路由复用，无漂移；命令面**无**共享层 list / 过滤形态、**无** clear / 批量删（那些是 agent 工具面能力）。
@@ -755,11 +819,17 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 
 - **索引范围声明的边界（§6.14）**：`index.excludePaths` 只辖**未来**同步（含单文件缝）；存量行收敛 = `sweep --path`（ops）——**同步收尾删除对排除路径短路**（存量行零触碰——同步不代行剪枝）。前缀语义不展开通配（glob ∕ 正则不做——出现实测需求再补）。**比较基 = 项目根相对面（实装同步——2026-09-30 #700 落）**：排除谓词携 `base` 换算（cwd 深于项目根亦等义）；换算越出根面 ⇒ 不命中（保守不排除）。
 - **行预算常量不可声明（§6.14 P2）**：WARN ∕ CAP 为核常量；需要按项目调节时另立声明键（触发 = 实测需要）。
-- **声明公共仓 origin 面（§6.15）**：公共仓改名 ∕ 移走 ⇒ 旧 origin 存量行保留（不自动删——收敛 = 树恢复 ∥ ops `sweep --origin`）；声明根缺位期间检索可能命中存量行（树不在场时的陈旧面——接受，登记）。声明根与其自身 manifest 缺位并存时各根回默认（既有声明回退链，零新语义）。
+- **声明公共仓 origin 面（§6.15）**：公共仓改名 ∕ 移走 ∥ 声明根缺位 ⇒ 旧 origin 存量行归 §6.14 面 ⑤ 维护面回收（备份窗内可回滚；树恢复 ⇒ 重新同步）。声明根与其自身 manifest 缺位并存时各根回默认（既有声明回退链，零新语义）。
 - **`D:/dgx-spark` 系 origin（含变体）与未归一变体 `D:\teamcode`**：存量行处置 = sweep 面（信号 A 折叠 + 用户裁定的 origin ∕ 子树删除）；非本批默认动作。
 
 ## 变更记录
 
+- 2026-10-08（**索引自维护批 · 交付评审收口轮（设计侧 3 条 + ① 口径族随裁扩面 · 父侧裁定）· eng-designer**——承批档 `docs/batches/2026-10-08-index-automaintain.md` §5.5）：§6.15 机制 1 ∥ 边界 + §8.3 登记面收正（#832 期「保留」口径由维护面收编——存量行归 §6.14 面 ⑤ 维护面回收）∥
+  §6.14 面 ⑤ 引擎表 `export` 计数收正 = **实增 3 处**（`treeState` ∥ `originCounts` ∥ `takeBackup`；`probeOriginPath` ∥ `backupPathFor` 原已 export）∥ §7 D-MEM24 ∥ D-MEM26 失效字面收正（存量剪枝面收窄 ∥ 改指 §6.14 面 ⑤）。**零机制改**。
+- 2026-10-08（**索引自维护批 · 设计评审修正轮 1（发现 1–7 · 父侧逐条裁定接受）· eng-designer**——承批档 `docs/batches/2026-10-08-index-automaintain.md` §3 轮次 1）：
+  面⑤：⑤-5 ∥ ⑤-6 明写**自动拍写姿态**（计划随行后执行 ∥ 备份先行——非干跑；干跑默认只辖工具缺省）∥ ⑤-5 补 **VSC 自动拍缺位登记**（端壳多窗 ∥ 惰性句柄）∥ ⑤-2 ∥ L-⑥-2 点名两缝（阈值注入参数 ∥ `vacuumFn` 注入——`exec` 形观测改注入计数）∥ L-⑥-1 点名**表集**（`code_chunks` ∥ `doc_chunks`）∥ L-⑥-2 登记 **`VACUUM` 已知界** ∥ L-⑥-3 补**钳制支**（N=0 ∥ 负值 ⇒ 钳 1）∥ L-⑥-5 补**让出腿**（`yieldFn` 注入计数）；§7 D-MEM33 措辞对齐（读数随行）∥ D-MEM37 + 面⑤ 边界补「**工具一面即达标**（命令形 = 边界在册）」。**零机制改**（发现逐号落位）。
+- 2026-10-08（**索引自维护批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-08-index-automaintain.md` §2 · 台账 #1096）：§6.14 新增**面 ⑤**（自愈轮：跨 origin 鬼行 GC ∥ 压实自触发 ∥ 备份轮转 ∥ agent 工具触发 ∥ 启动拍接线 + 判据腿 **L-⑥**）；§7 补 **D-MEM33–D-MEM38**；
+  §6 族动作计数**五 ⇒ 六**（+ `maintain`——§6.1 ∥ §6.6 ∥ §6.6.1 ∥ §6.9 ∥ §8.3 五处同拍）；§6.14 两处失效句收正（面③ P3「无任一自动删除」∥ §6.14 尾「不做自动删除 ∕ 自动 VACUUM」——改指面 ⑤）。**产品码零触**（实现 = 本批实施轮）。
 - 2026-10-08（**盘根门 ∥ 索引排除批 · 实施后随动修正轮 · eng-designer**——承批档 `docs/batches/2026-10-08-diskroot-gate-index-excludes.md` §5 上抛 ∥ §2 尾修正轮记录块）：§6.10 ∥ §6.12 ∥ §6.13 ∥ §6.14 引程改指（`schema.mjs` ∥ `file-walk.mjs` 坐标 12 行（18 处）——逐处解析现行；细目 = 批档 §2 尾）+ §6.14 面④ 补 **`bazel-` 前缀支文件名面登记**（接受面——零现值影响）。**零机制改**。
 - 2026-10-08（**盘根门 ∥ 索引排除批 · 设计评审修正轮 1（发现 2 ∥ 3 · 父侧逐条裁定接受）· eng-designer**——承批档 `docs/batches/2026-10-08-diskroot-gate-index-excludes.md` §3 轮次 1）：
   §6.14 面④ 补**枚举对账句**（两族 + `.git` 单列 = `schema.mjs:46-57` 常量全集 39 名——既有 33 + 新六）∥ **`.git` 处置点名**（点段规则覆盖——`file-walk.mjs:26`；行为零变）；设计轮读数 `bin` 行注补**时点锚**（清后现值 45——立案时 82 = 含盘根重复账）∥ 面④ 边界行**折行**（303 ⇒ ≤300 字符——零语义）。**零机制改**（措辞 ∥ 可核面 ∥ 行宽收正）。

@@ -1,14 +1,15 @@
 /**
  * memory/memory-tool.mjs — memory agent 工具面（自 `memory/docs.mjs` 迁出 · 2026-10-01 core 拆分批 #755 ∥ #786）。
  * 内容 = `MEMORY_ACTIONS` ∥ `MEMORY_LAYERS` ∥ 校验 / 格式化小件 ∥ `memoryTools`（单一 `memory` 工具，
- * 五 action）+ 各 action 执行器（`execSearch` / `execPut` / `execList` / `execDelete` / `execDeleteSingle`
- * / `execClear`）——迁出块逐字；原档 `memory/docs.mjs` 经 `export { … } from` 转口保名
+ * 六 action）+ 各 action 执行器（`execSearch` / `execPut` / `execList` / `execDelete` / `execDeleteSingle`
+ * / `execClear` / `execMaintain`）——迁出块逐字；原档 `memory/docs.mjs` 经 `export { … } from` 转口保名
  * （消费链 `memory.mjs → docs.mjs → memory-tool.mjs` 零改）。
  */
 import { isAbsolute, join } from "node:path"
 import { put, search, putMarkdown, clearPersonal } from "./core.mjs"
 import { deleteByUid, matchMemoryRows, deleteWhere } from "./delete.mjs"
 import { commitAndPush } from "../git/gitmem.mjs"
+import { formatMaintainReport, maintainMemory } from "./maintain.mjs" // F-S13：同一单点（自愈轮 §6.14 面⑤）
 import { DESC } from "../tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/memory.md
 
 // ---------------------------------------------------------------- agent tools
@@ -17,7 +18,7 @@ import { DESC } from "../tools/shared.mjs" // #15 描述外置：文本单点 = 
  *  VS Code face (`thincoder-vscode/src/memory-tool.mjs`); the description is a per-end form —
  *  core text lives in `tool-docs/memory.md` (DESC() load; #15 外置). Layer VALUES per end
  *  (VS Code has no team layer and rejects it with CLI guidance). */
-const MEMORY_ACTIONS = ["search", "put", "list", "delete", "clear"]
+const MEMORY_ACTIONS = ["search", "put", "list", "delete", "clear", "maintain"]
 const MEMORY_LAYERS = ["personal", "project", "team"]
 
 function validateTypeFilter(type) {
@@ -39,11 +40,12 @@ function fmtDate(ts) {
 const listRowLine = (r) => `[${r.layer}] ${r.id} [${r.type}] ${r.title}（${fmtDate(r.ts)}）`
 
 /**
- * Generate the memory agent tool — ONE `memory` tool with five actions (MEMORY.md §6 D-M1).
+ * Generate the memory agent tool — ONE `memory` tool with six actions (MEMORY.md §6 D-M1).
  * search/list are read-only actions (planMode pass / no permission ask — dispatch classifies
  * them action-level, same as subagent check/status); put keeps its side-effect permission
  * gate; batch delete/clear gate on confirm:true + layer inside the tool (direct-delete
- * ruling — the confirm parameter IS the gate) and stay non-readonly like the retired tools.
+ * ruling — the confirm parameter IS the gate) and stay non-readonly like the retired tools;
+ * maintain (index self-maintenance) gates on confirm:true inside the tool too — default = dry-run.
  * opts: { cwd, projectDir, author, team: { dir, name } | null }
  */
 export function memoryTools(memory, opts = {}) {
@@ -68,7 +70,7 @@ export function memoryTools(memory, opts = {}) {
           keyword: { type: "string", description: "list/delete batch: filter matching title/content" },
           id: { type: "string", description: "delete single: the entry id from put/search/list output" },
           limit: { type: "number", description: "Max rows: list 50 by default, search 5 by default" },
-          confirm: { type: "boolean", description: "delete batch/clear: must be true — without it the tool refuses" },
+          confirm: { type: "boolean", description: "delete batch/clear: must be true — without it the tool refuses; maintain: true executes the maintenance run (omitted = dry-run)" },
         },
         required: ["action"],
       },
@@ -84,6 +86,7 @@ export function memoryTools(memory, opts = {}) {
           case "list": return execList(memory, args, dirs)
           case "delete": return execDelete(memory, args, dirs)
           case "clear": return execClear(memory, args)
+          case "maintain": return execMaintain(memory, args)
         }
       },
     },
@@ -226,4 +229,16 @@ function execClear(memory, args) {
   if (args.confirm !== true) throw new Error("clear requires confirm:true — this wipes ALL personal memory")
   const n = clearPersonal(memory)
   return `Cleared personal memory (${n} entries deleted)`
+}
+
+/** action maintain — index self-maintenance (MEMORY.md §6.14 面⑤ · F-S13): dry-run by default
+ *  (plan + per-action readings, zero writes); `confirm:true` executes. Same single engine the
+ *  automatic startup pass runs (`maintain.mjs` `maintainMemory` — no second implementation).
+ *  No layer parameter (library-global operation — §6.6.1); output = per-action sections. */
+async function execMaintain(memory, args) {
+  const report = await maintainMemory(memory, {
+    confirm: args.confirm === true,
+    dbPath: typeof memory?.dbPath === "string" ? memory.dbPath : null,
+  })
+  return formatMaintainReport(report)
 }

@@ -37,14 +37,16 @@ export function probeOriginPath(p) {
   try { statSync(p); return "alive" } catch (e) { return e?.code === "ENOENT" ? "dead" : "unknown" }
 }
 
-/** 双路径树读数（原样 + 归一形）：alive 优先；两路径皆死才判亡；任一探针错误 ⇒ unknown（保留）。 */
-function treeState(o) {
+/** 双路径树读数（原样 + 归一形）：alive 优先；两路径皆死才判亡；任一探针错误 ⇒ unknown（保留）。
+ *  export 供 `maintain.mjs` 复用（§6.14 面⑤ 引擎表——鬼行 GC 树亡短路同谓词；零行为变）。 */
+export function treeState(o) {
   const a = probeOriginPath(o), b = probeOriginPath(normalizeOrigin(o))
   return { alive: a === "alive" || b === "alive", dead: a === "dead" && b === "dead", unknown: a === "unknown" || b === "unknown" }
 }
 
-/** 逐（原样 origin）行数：Map<origin, { code, doc, files }>——三表并集。 */
-function originCounts(db) {
+/** 逐（原样 origin）行数：Map<origin, { code, doc, files }>——三表并集。
+ *  export 供 `maintain.mjs` 复用（§6.14 面⑤ 引擎表——写后回读基准；零行为变）。 */
+export function originCounts(db) {
   const map = new Map()
   for (const { key, table } of TABLES) {
     for (const r of db.prepare(`SELECT origin, COUNT(*) AS n FROM ${table} GROUP BY origin`).all()) {
@@ -127,8 +129,9 @@ export function backupPathFor(dbPath, now = new Date()) {
 /**
  * 备份前置（`--confirm` 档且命中 > 0）：`VACUUM INTO` + 判据（存在 ∧ 大小 > 0 ∧ `integrity_check` = ok）。
  * 目标已存在 / 判据不过 ⇒ 抛错（调用方在**任何写之前**收到 ⇒ 零写）。返回备份路径。
+ *  export 供 `maintain.mjs` 复用（§6.14 面⑤ 引擎表——维护跑与 sweep 同判据同命名；零行为变）。
  */
-function takeBackup(db, path) {
+export function takeBackup(db, path) {
   if (existsSync(path)) throw new Error(`memory sweep: backup target already exists (${path}) — aborted with zero writes`)
   db.exec(`VACUUM INTO '${path.replaceAll("'", "''")}'`)
   if (!existsSync(path) || statSync(path).size <= 0) throw new Error(`memory sweep: backup judgment failed (missing or empty: ${path}) — aborted with zero writes`)
