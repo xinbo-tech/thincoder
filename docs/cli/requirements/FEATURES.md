@@ -177,6 +177,7 @@
 | N7 | 输出上限 | 工具输出超限落盘 + 预览（保头保尾） |
 | N8 | 崩溃可取证 | 异常终止落崩溃记录 + 近堆快照 + 堆预警（CLI 侧面见 `docs/cli/design/CRASH-REPORTS.md`） |
 | N9 | 对外文档契约面 | README / `USAGE` / 用户可见提示串对 slash 命令 · 子命令 · 配置键 · 机制事件的列举须与实装可达面一致（判据句见 §2.13）。**度量方式**：无机检门——对外文本面不在 V5 源域（`docs/**`）内、`scripts/doc-check-anchors.mjs` 不覆盖 ⇒ 守护 = 同批改动 + 人巡；漂移处置 = 能力在位 ⇒ 改文档（反向删实装 = 违规） |
+| N10 | 盘根启动门 | cwd = 磁盘根（`X:\` ∥ `/`；win32 大小写归一）⇒ 会话面硬拦（默认 TUI ∥ `tui` ∥ `chat` ∥ `acp`）：一行提示（先进工作目录再启动）+ 非零退出；信息维护面（`-v` ∥ `--help` ∥ `memory` ∥ `upgrade` ∥ `completion` ∥ `session *`）放行。动机 = 盘根启动 ⇒ 全盘索引（实测案：`D:/` origin 13.2 万行，2026-10-08 已清）。**无强开旗**；家目录维持软防护（#867 先例，不升硬拦） |
 
 ## 4. 不并项与历史沿革
 
@@ -215,3 +216,4 @@
 
 - 2026-10-05（**引擎工具面缺口批 · 需求侧同步 · 主 agent**）：§2.1 `delete` 行补「或空目录（非空拒绝，不递归）」。来源 = 批 `docs/batches/2026-10-05-engine-tools-gaps.md` §2（delete 空目录臂设计）；台账 #943。
 - 2026-10-07（**批 ledger-tool · 需求侧同步 · 主 agent 笔**——承批档上抛②）：§2.7 `subagent` 行动作清单补 `design-slots`（槽位清点只读——与 `consume-design` 并列）。批档 = `docs/batches/2026-10-07-ledger-tool.md`（台账 #998 / #927）。
+- 2026-10-08（**盘根门 ∥ 索引排除批 · 需求侧立案 · 主 agent**）：§3 增 **N10 盘根启动门**。批档 = `docs/batches/2026-10-08-diskroot-gate-index-excludes.md`（台账 #1080）；配对需求 = `docs/core/requirements/MEMORY.md` §4.11（F-S9）。

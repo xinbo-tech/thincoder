@@ -1,7 +1,7 @@
 # CLI 命令入口（CLI-ENTRY）· CLI 面 · 设计
 
 > 板块 = **CLI 命令入口**——`thincoder` 可执行面对使用者的**命令词面**：argv 命令树（命令 / 子命令 / 旗标）· 分发 · `USAGE` · shell 补全脚本发射。
-> 配对需求档 = `docs/cli/requirements/FEATURES.md`（§2.13 对外文档契约面 + §3 N9——命令 · 子命令 · 旗标「文档说得到、敲得通」的判据句；层归属不对称：机制设计住本档）。
+> 配对需求档 = `docs/cli/requirements/FEATURES.md`（§2.13 对外文档契约面 + §3 N9 ∥ N10——N9 = 命令 · 子命令 · 旗标「文档说得到、敲得通」的判据句；N10 = 盘根启动门（§1 门条）；层归属不对称：机制设计住本档）。
 > 对位档 = **无**（VSC 端无 argv 命令面——结构性不对称，P2 产品面 ⇒ 落 `docs/cli/`）。
 > 建档：2026-09-25（**cli-small-items 批 · 台账 #350 命令入口面载体收口**——承设计评审轮 1 发现 11：命令入口面设计档归属缺位 = 本册指定的收口）。
 > 论域文件 = `thincoder-cli/bin/thincoder.mjs`（壳：argv 预处理 + `USAGE` 常量装配 + 分发入口；**178**）· `thincoder-cli/src/command-table.mjs`（命令分发表——拆档批 R4 外提：分发骨架 + 八薄命令族 + help ∕ version；**186**）
@@ -20,6 +20,16 @@
 - **启动前置校验**（2026-10-04 · #867）：入口链首个可执行点 = `thincoder-cli/bin/thincoder.cjs`（shim）**首行**——先于 `.mjs` 链任何 ESM 静态 import 求值；
   校验 = 纯函数 `nodeVersionError(version = process.versions.node)`（`thincoder-cli/bin/node-version-gate.cjs`——供直测假版本；issue 修复批·五 · 2026-10-04 已落），不满足 ⇒ 一行显式错误（当前版本 + 要求）+ `exit 1`（fail-fast；`node:sqlite` 等核 API 在旧版行为不可期）。零依赖（主版本整数比较）。
   接线 = `thincoder-cli/bin/thincoder.cjs` shim 首行（`enforceNodeMajor()` 先于 `import("./thincoder.mjs")`）——实施同批已落（真机读：达标零误触 ∥ 假旧版 ⇒ 逐字错误 + exit 1）。
+- **盘根启动门**（2026-10-08 · 批 `2026-10-08-diskroot-gate-index-excludes` · 台账 #1080）：**会话面**（无参默认 ∥ `tui` ∥ `chat` ∥ `acp`）于 `cwd = 磁盘根`时 ⇒ **一行提示 + 非零退出**（`process.exit(1)`——同版本门先例）；
+  其余面一律放行（判定式 = 会话集成员——含 N10 点名的信息维护面 `-v` ∥ `--help` ∥ `memory` ∥ `upgrade` ∥ `completion` ∥ `session *`）；**无强开旗**；家目录维持软防护（不升硬拦——机制见 `docs/core/design/MEMORY.md` §6.14 L-④）。
+  判定 = `resolve(cwd)` 与其路径根（`parse(p).root`）相等（win32 大小写归一；覆盖 `X:\` ∥ `/` ∥ UNC 共享根）。
+  落点 = `thincoder-cli/bin/thincoder.mjs` argv 解析（`:41`）之后 ∥ TUI 包装块（`:52`）之前——**非 shim**：版本门居 shim 首行 = 因旧 Node 不能求值 ESM 链（运行时依赖）；本门零 API 依赖 ⇒ 落 `.mjs` 首段可单点消费既有 argv 解析（含 `--tui-wrapped` 自剥离）且同盖直跑；
+  **包装子进程面** = `src/tui/wrapped-spawn.mjs:48` 以 `bin/thincoder.mjs` 直起（绕 shim）——父进程先判（阻断 ⇒ 包装不发生）、子进程复判幂等（cwd 同源）。
+  判定体 = 纯函数 `diskRootGateError({ command, cwd, platform })`（新档 `thincoder-cli/bin/disk-root-gate.mjs`（拟新增）——`null` ∥ 一行文案；`platform` 入参供直测双道——先例 `nodeVersionError(version)`）；
+  文案 = **英文一行（逐字钉 · 含 N10「先进工作目录再启动」语义）**：`thincoder cannot start from a disk root — cd into a working directory and start again`——输出流 = **stderr**、退出码 = `process.exit(1)`（承版本门 ∥ 家目录护栏先例；i18n 键面 = 否决备选——本面为入口单语面、不涉核域容器键冻结契约）。
+  直测腿（登记——实施轮批内件 `docs/batches/2026-10-08-diskroot-gate-index-excludes.test.mjs`（拟新增））：`diskRootGateError` 直调（win32 ∥ POSIX 双道——根矩阵 11 例）∥ 子进程 e2e（卷根 cwd ⇒ stderr 逐字本句 + exit 1；同 cwd `-v` ⇒ exit 0；沙箱 HOME 纪律照 §3）。
+  设计轮读数（只读实核 · 2026-10-08）：判定矩阵 11 例零错（win32 `D:\` ∥ `d:\` ∥ `D:/` 判真 ∥ `D:\teamcode` 判假；posix `/` 判真 ∥ `/home/*` 判假；UNC 根判真 ∥ 子判假）；盘根实 cwd = `"D:\\"`（大小写随启动拼写——归一判据必要）。实现 = 本批实施轮。
+- **盘根门已知限制（登记——本批不取）**：显式索引命令 `reindex` ∥ `sync` 属放行面（判定式 = 会话集成员）——盘根下运行经同链仍触发索引（N10 动机面「盘根 ⇒ 全盘索引」可达）；需求（N10）只圈会话面 ⇒ 本批循需求不拦——**残留面登记**，后续批或需求侧可取。
 - 与 `docs/cli/design/TUI-COMMANDS.md` 的分界：后者 = TUI 内 **slash 命令层**；本档 = **argv 命令层**（进程级）。
 
 ## 2. 命令树与旗标（as-of 2026-09-25 实读）
@@ -35,7 +45,7 @@
 | | `search` | 位置参 query | `src/cli/memory-command.mjs` |
 | | `put` | `--type=` · `--title=` · `--content=` · `--tags=` | `src/cli/memory-command.mjs` |
 | | `remove` | 位置参 uid | `src/cli/memory-command.mjs` |
-| | `sweep` | `--origin <o>`（空格形 / `=` 形）· `--dry-run` / `--confirm`（互斥；缺省干跑） | `src/cli/memory-command.mjs`（`parseSweepArgs`） |
+| | `sweep` | `--origin <o>`（空格形 / `=` 形）· `--path <sub>`（空格形 / `=` 形；须与 `--origin` 同用）· `--dry-run` / `--confirm`（互斥；缺省干跑） | `src/cli/memory-command.mjs`（`parseSweepArgs`） |
 | `sync` | —— | —— | `bin/thincoder.mjs` |
 | `reindex` | —— | —— | `bin/thincoder.mjs` |
 | `distill` | —— | `--yes` · `--layer=<s>` + 位置参 file | `src/cli/distill-command.mjs` |
@@ -83,7 +93,13 @@
 **2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
 **本批（read-data-interface · 2026-10-03）落点表** = `docs/batches/2026-10-03-read-data-interface.md` §2（唯一承载面——一次性批次材料）。
 **本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
+**本批（盘根门 ∥ 索引排除批 · 2026-10-08）落点表** = `docs/batches/2026-10-08-diskroot-gate-index-excludes.md` §2（唯一承载面——一次性批次材料）。
 
+- 2026-10-08（**盘根门 ∥ 索引排除批 · 实施后随动修正轮 · eng-designer**——承批档 `docs/batches/2026-10-08-diskroot-gate-index-excludes.md` §5 上抛 ∥ §2 尾修正轮记录块）：§1 盘根门条**落点引程改指**（`thincoder-cli/bin/thincoder.mjs`：argv 解析 `:41` 后 ∥ TUI 包装块 `:52` 前——实施后实读）。**零新语义**。
+- 2026-10-08（**盘根门 ∥ 索引排除批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-08-diskroot-gate-index-excludes.md` §2 · 台账 #1080）：§1 启动前置校验族新增**盘根启动门**条（会话面硬拦 + 维护面放行 + 落点 = `bin/thincoder.mjs` argv 解析后 + 判定纯函数新档；实现 = 本批实施轮）。
+- 2026-10-08（**同批随动 · 词表收正 · eng-designer**）：§2 `sweep` 行补 `--path <sub>`（空格形 / `=` 形；须与 `--origin` 同用）——实装早已在位（`thincoder-cli/src/cli/memory-command.mjs:85` ∥ `parseSweepArgs` · 2026-09-30 #693 落），词表 as-of 2026-09-25 未随动；本次仅词面收正。**零新语义**。
+- 2026-10-08（**盘根门 ∥ 索引排除批 · 设计评审修正轮 1（发现 4 ∥ 5 ∥ 6 · 父侧逐条裁定接受）· eng-designer**——承批档 `docs/batches/2026-10-08-diskroot-gate-index-excludes.md` §3 轮次 1）：
+  §1 盘根门条——文案**逐字钉**（英文定点句 + 输出流 stderr + 退出码 `process.exit(1)`）+ 直测腿登记（`diskRootGateError` 直调 ∥ 子进程 e2e）+ **已知限制登记**（显式 `reindex` ∥ `sync` 索引面 = 残留——需求未圈、后续可取）；档头配对需求行随动列 **§3 N10**。**零新语义**（逐号落位）。
 - 2026-10-04（**issue 修复批·五 · 登记/回填轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §2.8（父侧裁定）：§1 启动前置校验条「（拟新增）」标记退场 + 实现态翻落（`thincoder-cli/bin/node-version-gate.cjs` 已落；接线 = `thincoder-cli/bin/thincoder.cjs` shim 首行）。**零新语义**（实施批翻已落形）。
 - 2026-10-04（**issue 修复批·五 · 修轮收正 · 父侧直接执行 · 可 revert**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §2.3 注（eng-designer 预置文本 · 评审轮 1 号 7））：§1 启动前置校验条收正——校验点位钉 = **shim 首行**（先于 ESM 静态 import）∥ 校验体 = 纯函数 `nodeVersionError(version = process.versions.node)`（新档 `bin/node-version-gate.cjs`（拟新增））。**零新语义**（预置文本落盘）。
 - 2026-10-04（**issue 修复批·五 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round5.md` §1 · 台账 #867）：§1 增**启动前置校验**条（运行时 Node 主版本 ≥24——fail-fast）。实现 = 本批实施轮。

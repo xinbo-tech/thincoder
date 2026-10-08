@@ -10,20 +10,32 @@
  */
 import { readdir } from "node:fs/promises"
 import { join } from "node:path"
-import { SKIP_DIRS } from "./schema.mjs"
+import { SKIP_DIRS, SKIP_DIRS_FOLD, SKIP_DIR_PREFIXES } from "./schema.mjs"
+
+/** win32 fold index for the junk/product family (canonical spellings live in `SKIP_DIRS_FOLD`). */
+const SKIP_DIRS_FOLD_LOWER = new Set([...SKIP_DIRS_FOLD].map((n) => n.toLowerCase()))
 
 /** Upper guard for the walk: stop after this many matched files (runaway trees). */
 export const MAX_WALK_FILES = 20000
 
 /**
- * Shared skip predicate for project-relative paths: any SKIP_DIRS basename, or any
- * dot-prefixed segment (`.git`, `.cache`, `.thincoder`…). Accepts both separators.
+ * Shared skip predicate for project-relative paths (§6.14 面④ family split · 台账 #1081): exact
+ * basename (`SKIP_DIRS`) ∨ segment prefix (`SKIP_DIR_PREFIXES` — `bazel-*`; POSIX literal ∥ win32
+ * folded) ∨ (win32 only) folded junk/product family (`SKIP_DIRS_FOLD`); dot segments via the dot
+ * rule. `platform` is a test seam (default `process.platform`; callers keep the one-arg form).
  */
-export function isSkippedRelPath(rel) {
+export function isSkippedRelPath(rel, platform = process.platform) {
+  const fold = platform === "win32"
   return String(rel ?? "")
     .replace(/\\/g, "/")
     .split("/")
-    .some((seg) => seg !== "" && (seg.startsWith(".") || SKIP_DIRS.has(seg)))
+    .some((seg) => {
+      if (seg === "") return false
+      if (seg.startsWith(".")) return true
+      if (SKIP_DIRS.has(seg)) return true
+      if (SKIP_DIR_PREFIXES.some((p) => (fold ? seg.toLowerCase() : seg).startsWith(p))) return true
+      return fold && SKIP_DIRS_FOLD_LOWER.has(seg.toLowerCase())
+    })
 }
 
 /** Lower-cased ".ext" of a path, or "" when it has no extension. */

@@ -41,8 +41,10 @@ export const CODE_EXTS = new Set([
 // Doc index: markdown / plain text (separate index makes it easier for LLM to distinguish "design specs" from "existing code")
 // Same declaration rule as CODE_EXTS (index.docExtensions).
 export const DOC_EXTS = new Set([".md", ".mdc", ".mdx", ".txt", ".rst", ".adoc", ".org", ".wiki", ".tex"])
-// Directory names always skipped during code/doc indexing
-// NOTE: these are case-sensitive basename matches; add common platform-specific dirs
+// Directory names skipped during code/doc indexing — family split (§6.14 面④ · 台账 #1081): junk/product
+// family (`SKIP_DIRS_FOLD`) folds on win32 (that filesystem is case-insensitive — `Node_Modules` must
+// still prune); position family (user/system dirs) stays exact on every platform; POSIX is exact
+// throughout. `.git` is covered by the dot-segment rule (file-walk.mjs) — it belongs to no family.
 export const SKIP_DIRS = new Set([
   "node_modules", ".git", "dist", "build", ".turbo", "coverage",
   "__pycache__", ".venv", "venv", "target", ".next", ".nuxt", ".svelte-kit",
@@ -54,7 +56,17 @@ export const SKIP_DIRS = new Set([
   "Library", "go",
   // Other common non-code directories
   "Program Files", "Program Files (x86)", "Windows", "$Recycle.Bin",
+  // Generic ecosystem names (§6.14 面④ — exact basename, any depth; `bin` deliberately NOT included)
+  "vendor", "Pods", "bower_components", "third_party", "obj", "out",
 ])
+/** Junk/product family full list (the win32 fold subset — matched only via `isSkippedRelPath`). */
+export const SKIP_DIRS_FOLD = new Set([
+  "node_modules", "dist", "build", ".turbo", "coverage",
+  "__pycache__", ".venv", "venv", "target", ".next", ".nuxt", ".svelte-kit",
+  "vendor", "Pods", "bower_components", "third_party", "obj", "out",
+])
+/** Directory-name prefixes (Bazel convenience dirs `bazel-<workspace>` — the workspace name rules out enumeration). */
+export const SKIP_DIR_PREFIXES = ["bazel-"]
 // Files larger than these limits are skipped during bulk indexing
 // (minified bundles, test fixtures, generated code, etc.)
 export const MAX_CODE_FILE_BYTES = 1024 * 1024   // 1 MB
