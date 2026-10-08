@@ -112,7 +112,7 @@ export async function prepareRun(agent, input, callbacks, {
     if (agent.memory && depth === 0) {
       const docs = await docSearch(agent.memory, input, { limit: DOC_SEARCH_LIMIT })
       if (docs.length > 0) {
-        // §6.14 B3 + §6.15：origin 集限定 + 有界计数（子查询 LIMIT = WARN+1 形——越界回「20000+」；跨 origin 全扫不再回升）
+        // §6.14 B3 + §6.15：origin 集限定 + 有界计数（子查询 LIMIT = WARN+1 形——越界回「+」形（WARN 值）；跨 origin 全扫不再回升）
         const origins = searchOrigins(agent.memory)
         const bound = INDEX_ORIGIN_ROW_WARN + 1
         const countFilter = origins.length === 1 ? " WHERE origin = ?" : origins.length > 1 ? ` WHERE origin IN (${origins.map(() => "?").join(", ")})` : ""

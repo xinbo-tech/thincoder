@@ -20,10 +20,10 @@ export const SQLITE_BUSY_TIMEOUT = 3000
 /** WAL 回收后的文件截断上界（§6.12 修法①——防复胀；实测曾达 587 MB）。 */
 export const WAL_SIZE_LIMIT_BYTES = 64 * 1024 * 1024
 
-/** 索引行预算（§6.14 面③ P2——每 origin 库内行数 code+doc 合计）：WARN 线出**一行**可见警示
- *  （≈0.5 s 趟量级）；CAP 线起同步跳过后列文件（只停新增——存量行不失效）。B3 ∕ B4 复用 WARN 值。 */
-export const INDEX_ORIGIN_ROW_WARN = 20000
-export const INDEX_ORIGIN_ROW_CAP = 100000
+/** 索引行预算（§6.14 面③ P2——每 origin 库内行数 code+doc 合计）：WARN 线出一行中性信息
+ *  （真实行数——F-S14 ①）；CAP 线起同步跳过后列文件（只停新增——存量行不失效）。B3 ∕ B4 复用 WARN 值。 */
+export const INDEX_ORIGIN_ROW_WARN = 100000
+export const INDEX_ORIGIN_ROW_CAP = 300000
 
 // Code index: source file extensions. Curated DEFAULTS — a project can declare
 // more (union) through PROJECT-MANIFEST.json → index.codeExtensions
