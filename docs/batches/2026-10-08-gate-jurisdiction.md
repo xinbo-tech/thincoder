@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-08 · 来源 = 用户 2026-10-08 16:37 裁定「拒绝的机制有问题——只能拒绝有 manifest 的目录以下的内容，不能管 manifest 范围以外的东西」+ 16:38「可以，自动跑到交付」（全链授权）。
 > 台账 = #1104（core · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-08
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 ### 1.1 批件（用户 2026-10-08 16:37 裁定 + 16:38 全链授权）
@@ -178,3 +178,24 @@
 - [上抛·知会] **#1103 逐字性**：无同源基线可 diff——以改前副本 `.thincoder/tmp/lc818-baseline/en-persona-engineering.md`（09-30）比对，确认 `:56` 括注改述与 `:59` 新段「确为本次新落」（Δ +2 与 §2.4 行 7 相符）。
 
 ## §6 验证与收口（父代理）
+
+### 6.1 验证（父侧亲验 · 2026-10-08 17:1x–17:5x）
+
+**批内件（本批不变量面）**：`node --test docs/batches/2026-10-08-gate-jurisdiction.test.mjs` ⇒ **tests 8 · pass 8 · fail 0**（父侧复跑 ✓；红基线 = 实施前 pass 3 · fail 5——红绿对在 §5.2）。八腿 + T-36/T-37/T-38/T-V28 全绿；范围外放行实证全部走 fixture（工作区根真文件零触 ✓）。
+
+**仓套件（收口唯一一次）**：`cd thincoder-cli && node test/run.mjs` ⇒ `test manifest is empty — zero tests = green (2026-09-28 full reset)`（exit 0）。
+
+**该面回归**：既有件 **25/25**（`2026-10-05-engine-face-gaps` ∥ `2026-10-02-manifest-resolution-fix` ∥ `2026-10-08-manifest-agent-tool`——§5.3）；3 组前置红（干净 HEAD worktree 复跑同失败 ⇒ 非本批）已归 **#1108**。
+
+**合约面**：`node scripts/api-contract.mjs --check` ⇒ 骨架零漂移（刷新后）。
+
+**代码面亲验（父侧逐读）**：辖域逐目标判 `dispatch.mjs:105-112` ∥ 出辖放行 `:109`（`!conv ||` 短路）∥ hint 所属项目 manifest 绝对路径 `:116`（`manifestFilePath(noteConv.root)`）∥ `declarationForTarget` = `declaration.mjs:230-234`（`owningProject` ⇒ 声明 ∥ null = 出辖）∥ 提示词两句逐字在位（`persona-engineering.md:56`「several = ambiguous — a stop: list the candidates, never guess, never land one」∥ `:59`「A workspace is not itself a project…never land a manifest at its root.」）。
+
+**机检面**：doc-check = 本批两档零入闸（悬空 2 ∥ 行宽 0——本批外读数归 #1105）；设计档坐标实施后读回已落（五处 + changelog 一行 · 父侧直接执行标注 ✓）。
+
+### 6.2 提交与结算证据
+
+- 提交 **`147831e7`**（8 档 · +554 ∥ −20）——**双推实证**：origin ∥ github 均至 `147831e7`（ls-remote 逐端核）。
+- **提交面披露（防夹带——混合档排除）**：`docs/core/design/AGENT-LOOP.md`（门行 `:287` 本批 + `:74` 处 500/800 口径批在编 hunk）∥ `docs/desktop/design/SHELL.md`（行数回填 265⇒268 本批 + 500/800 批 hunk 族）——两档本批内容**已在盘**、随 500/800 批提交携带；`API-CONTRACT.md` 生成区刷新已在盘（`--check` 零漂移 ✓）——全树快照含他流在编面，未随本批签入（归后续签入携带）。
+- 台账：**#1104 已核销**（本 §6 为据）∥ **#1102 ∥ #1103 追认核销**（并批与伴随随本批闭口——evidence = 本 §6 指针）。token 消费 ✓（**值不入档**）。
+- 另披露：工作区根 `.wt-head-probe/`（2026-09-16 遗留 worktree——实施轮发现，未动）。
