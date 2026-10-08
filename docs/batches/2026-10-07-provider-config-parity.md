@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-07 · 来源 = 用户 2026-10-07 18:07 + 18:10 + 18:13 三条原话（逐字见 §1）——「改吧」= 点火。
 > 台账 = #1027/#1028/#1029（vscode · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：进行中（设计评审 pass（🔴0）· 三舱交付齐（15/15 ∥ 15/15 ∥ 21/21）· 收口双轮已交（拆档四件全绿 ∥ 设计随动齐）· 套件读数已取（空 manifest 照实载）· 真机走查待）
+**状态行**：已收口 2026-10-08
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 ### 1.1 讨论来源（用户原话 · 逐字）
@@ -598,3 +598,27 @@ VERDICT: pass
 - **设计面/记录面漂移（连建议 · 本舱禁触）**：`docs/vsc/design/SETTINGS.md` §2.16 ①（关·保存「发消息后关」现读 = 受理径）∥ ④（守卫句「model 空」⇒ 现为 baseURL ∥ model；`settings.providerUrlRequired` 两语已在位未入表）未载 ②③；批档 §2.6 测试面计数（V1–V11 ⇒ V1–V13）∥ 测试档名（拆前单件名 ⇒ 四件）∥ `docs/desktop/design/SETTINGS.md:198` 旧档名指针——建议随 §6/设计回填收正。
 
 ## §6 验证与收口（父代理）
+
+## 6. 验证与收口（父代理）
+
+**收口日期：2026-10-08**（三件父侧复跑全绿 ∥ 套件读数齐 ∥ 用户走查通过 ∥ 核销 #1027–#1029 + #1031–#1035 ∥ 设计槽已消费）
+
+### 6.1 验证读数（父侧亲跑）
+- 批内件（收口轮拆档四件）：`-provider-config-parity-cli.test.mjs`（127 行）**4/4** ∥ `-vsc.test.mjs`（412 行）**13/13** ∥ `-desktop.test.mjs`（376 行）**6/6**（2026-10-08 父侧实跑）；`-vsc-harness.mjs`（210 行）= 测试台公档（随 vsc 件跑，无独立例）。
+- 套件：thincoder-cli ∥ thincoder-vscode ∥ thincoder-desktop `npm test` = **空清单绿**（exit 0——2026-09-28 全清制度态，三仓同拍）。
+- 舱内读数（三舱 + 收口轮在案）：`check-syntax` **137** 档 OK ∥ `smoke-settings` SMOKE-OK ∥ 逐档 `node --check` OK ∥ 逐字节搬移自证（三档正文 ⊆ 原档 ∥ harness 唯一 diff = `readFileSync` 行）。
+
+### 6.2 交付物与提交
+- 产品面：CLI 四档（`config-io` ∥ `provider-admin` ∥ `cmd-config` ∥ `wizard`）∥ VSC 八档（新档 `settings-provider-dialog.js` **282** ∥ `settings-providers` **175** ∥ `settings.js` **194** ∥ `settings.css` **412** ∥ `onboarding` **81** ∥ `settings.mjs` **406** ∥ `panel-messages-settings` **236** ∥ locales）∥ 桌面十五档（`settings-controls` **215** ∥ `settings-sections-providers` **211** ∥ `settings` **419** ∥ `mount-settings` **259** ∥ `mount-settings-exits` **289** ∥ `-segments-providers` **160** ∥ `store` **370** ∥ `providers.mjs` **324** ∥ i18n ×4 ∥ 表外四件）；批内件四档（收口轮拆档）。
+- 提交：`d42e64fa`（核+CLI 腿）∥ `5ac999ef`（VSC 腿）∥ `fc5208cf`（桌面腿）∥ `3cd8bd4a`（拆档 + 徽标/拒存修）∥ 文档面 `ae2ccced`/`5ce2a235`/`98856ef9`/`a1409d5a`——双推 ✓。
+
+### 6.3 裁决与转出
+- **用户走查 = 真机走查通过**（2026-10-08 10:47「配置感觉可以了，先收尾吧」）——验收面：弹窗四径（✕ ∥ 背板 ∥ Esc ∥ 保存成功关）∥ 向导步 1 proxy 勾选随写 ∥ 行面勾选随动探针 ∥ 字段序（API key 上移）∥ 走 proxy 开关。
+- 残余转出（均在册）：宿主侧拒因「发消息后关」⇒ 保存回执协议面 **#1053**（条件）∥ `window._delKey` 死码 **#1040** ∥ headers 面探针收窄 ∥ 向导问句 **#1048/#1049**；越线档（437/482 三处）= 存量报告态。
+- 设计面零星收正（§2.16 ①/④ 落形句 ∥ §2.6 计数 ∥ `SETTINGS.md:198` 旧档名指针）＝ 随设计面下次触碰（在册）。
+- 事故复原记（D4 腿曾误写真配置 `~/.thincoder/config.json` ⇒ 逐字复原 + 写前只读射程自证防复发）——§5.11 在案。
+
+### 6.4 核销与结算
+- 台账 8 条：#1027/#1028/#1029 ∥ #1031/#1032/#1033/#1034/#1035——在途 ⇒ 待核销 ⇒ **已核销**。
+- 设计槽：**consume-design 已执行**（值不落档——运行时凭据）。
+- 结算清单：五段齐（§2 设计 + 追记 ∥ §3 评审 + 修复轮 ∥ §4 代签 ∥ §5 三舱 + 收口轮 ∥ §6 收口）∥ 计数同拍（键面 +5 −1 ∥ D1–D6 ∥ 九条目）∥ 指针解析 ∥ changelog 面 = 无 ∥ 台账可见面 = 结算行随收口出。
