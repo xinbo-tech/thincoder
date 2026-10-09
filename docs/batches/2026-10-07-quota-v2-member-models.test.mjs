@@ -21,14 +21,14 @@
  *      ∥ 报告路径（无 `--fix`）零事务
  *   ⑥ #1001③：`keyUsageStats` 窗沿 = 近 30 个本地日（今日起回溯——与报表窗同构；界日 -29 含 ∥ -30 不含）
  *   ⑦ #1001②：键形助手两 merge 共用（`model-quotas` ∥ `model-disables` 裸名 ∥ 空段 ⇒ 400 库零变）
- *   ⑧ 门禁清单：`prepublishOnly` 含本批件（二十六件——文档清账批拆档后）∥ 清单目标在盘
+ *   ⑧ 门禁清单：`prepublishOnly` 含本批件（二十八件——结构轮批件入链）∥ 清单目标在盘
  *   ⑨ i18n（WEBUI §2.2 KD-SV-44 ∥ §6 AC-23 续；#994/#988）：死键 2 枚零残留 ∥ 新 2 键两表 ∥ `.one` 7 枚仅 en ∥
  *      基键集双向相等（除自称名族 + `.one` 族）∥ 复数取形直测（en count=1 ⇒ 单形 ∥ 2 ⇒ 基 ∥ zh 不变）
  *   ⑩ 成员弹窗查看态（WEBUI §2.4② ∥ AC-23①③；#1002/#1004）：模型表直显 5 列（`deriveModels` 序）∥ 逐行已用（缺 ⇒ 0）∥
  *      禁用勾选即时写（在飞禁用 ∥ 失败回弹 + 窗内状态行 ∥ 成功静默）∥ 离表注行只数覆盖键 ∥ 两态共用取数（单次）
  *   ⑪ 服务模型页配额列 ∥ 审计页单标题（WEBUI §2.4③/#1003 ∥ #995）：三态（值 ∥「不限」 ∥ 嵌入「—」）∥
  *      保存后列表刷新随动（与 F 组单源）∥ `audit.title` 单点引用
- *   ⑫ 静态面（§6 AC-23 续）：档目 19 ∥ 20 不变 ∥ 六档行宽 ≤300 ∥ `:root` 38 ∥ 悬停清单七条（AC-19 canon 不破）
+ *   ⑫ 静态面（§6 AC-23 续）：档目 29 ∥ 30（结构轮后）∥ 十四档行宽 ≤300 ∥ `:root` 38 ∥ 悬停清单七条（AC-19 canon 不破）
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -421,11 +421,11 @@ test("⑦ #1001②：模型禁用与配额覆盖同一键形助手（裸名/空�
   }
 })
 
-// ── ⑧ 门禁清单（`prepublishOnly` 二十六件含本批两件 ∥ 清单在盘）──────────────────
+// ── ⑧ 门禁清单（`prepublishOnly` 二十八件含本批两件 ∥ 清单在盘）──────────────────
 
-test("⑧ 门禁清单：`prepublishOnly` 二十六件含本批件（新建 ∥ 随正）∥ 清单目标在盘", () => {
+test("⑧ 门禁清单：`prepublishOnly` 二十八件含本批件（新建 ∥ 随正）∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 26, `门禁清单件数（二十二 ⇒ 二十六——me-keys 批两件入链 ∥ me-usage-charts 批两件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 28, `门禁清单件数（二十六 ⇒ 二十八——结构轮批件入链 ∥ 10-09 bin 修复批件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-v2-member-models.test.mjs"), "本批件应入列")
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-per-model.test.mjs"), "随正件应在列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
@@ -726,16 +726,12 @@ test("⑪ 服务模型页配额列三态（值 ∥「不限」 ∥ 嵌入「—�
 
 // ── ⑫ 静态面（§6 AC-23 续——档目 ∥ 行宽 ∥ AC-19 canon）───────────────────────────────
 
-test("⑫ 静态面：档目 19 ∥ 20 不变 ∥ 六档行宽 ≤300 ∥ `:root` 38 ∥ 悬停清单七条（AC-19 canon 不破）", () => {
+test("⑫ 静态面：档目 29 ∥ 30 ∥ 十四档行宽 ≤300 ∥ `:root` 38 ∥ 悬停清单七条（AC-19 canon 不破）", () => {
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [20, 19], "档目 19 ∥ 20 不变（本批零新 public 档）")
-  for (const file of ["views-admin.mjs", "views-models.mjs", "views-audit.mjs", "i18n.mjs", "i18n-zh.mjs", "i18n-en.mjs"]) {
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [30, 29], "档目 29 ∥ 30（结构轮后——十新档）")
+  for (const file of ["views-admin.mjs", "views-models.mjs", "views-audit.mjs", "i18n.mjs", ...readdirSync(PUBLIC_DIR).filter((name) => /^i18n-(zh|en)/.test(name)).sort()]) {
     for (const line of readPublic(file).split("\n")) assert.ok(line.length <= 300, `${file} 行宽越界：${line.slice(0, 60)}…`)
   }
-  // views-admin 越 300 软线在册（拆分预案 = WEBUI §5 `views-admin-modal.mjs`；增量皆 §2.4② 必落行为——硬限 500 内）
-  const adminLines = readPublic("views-admin.mjs").split("\n")
-  const adminCount = adminLines[adminLines.length - 1] === "" ? adminLines.length - 1 : adminLines.length
-  assert.ok(adminCount > 300 && adminCount <= 500, `views-admin 行数 = ${adminCount}（越 300 在册 ∥ ≤500 硬限）`)
   // AC-19 canon（style.css 本批零触）：`:root` 变量族 38 ∥ 悬停清单七条
   const css = readPublic("style.css").replace(/\/\*[\s\S]*?\*\//g, "")
   const rootVars = (css.match(/:root\s*\{[^{}]*\}/)?.[0] ?? "").match(/--[\w-]+\s*:/g) ?? []

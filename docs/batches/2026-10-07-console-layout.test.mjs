@@ -4,7 +4,7 @@
  * 运行（自 `thincoder/` 仓根）：`node --test docs/batches/2026-10-07-console-layout.test.mjs`
  *
  * 射程（判据源 = `webui/WEBUI.md` §2.6 ∥ §6 AC-20 两行 + 本批档 §2；腿 ↔ 判据对照在括号）：
- *   腿 A（壳机制源扫——§2.6②）：`app.mjs`——`dataShell` 两段构建 + 表尾计数（`table(…, { foot: true })`——`common.rowCount` 引用） ∥ `SHELL_PAGES` 五路径逐条钉表 ∥
+ *   腿 A（壳机制源扫——§2.6②）：`dom.mjs`（结构轮外拆）+ `app.mjs`——`dataShell` 两段构建 + 表尾计数（`table(…, { foot: true })`——`common.rowCount` 引用） ∥ `SHELL_PAGES` 五路径逐条钉表 ∥
  *      `route()` 切换 `data-shell`（登录径清除）∥ `viewCtx` 注入 ∥ 五页逐档 `ctx.dataShell(` + 表尾 tfoot 接线
  *   腿 B（CSS 声明扫描——§2.6②）：高度链声明表逐条 ∥ `position: sticky` + `top: 0` ∥ 回退媒体查询（`height: auto`）∥
  *      `main` margin 无 `auto` ∥ `.model-picks` 零残留（规则 + 字面两向）
@@ -13,7 +13,7 @@
  *      预设模型表（单列「模型」：`code` 行）∥ 成员 key 表（四列头 ∥ 吊销钮行内 ∥ 空态 `noKeys` 不变量；配额批：随行形 `modelQuotas`）
  *   腿 E（左对齐——§2.6④）：`main` 规则 `max-width: 1100px` 在 ∥ margin 无 `auto`
  *   腿 F（i18n——§2.2 本批 6 键）：两表在册（非空 ∥ 占位符一致 ∥ en 零 CJK）∥ `t` 引用闭合
- *   腿 G（门禁——§6 AC-20 续）：`prepublishOnly` 含本批件（二十六件——me 用量图表化批两件入链）∥ 清单目标在盘
+ *   腿 G（门禁——§6 AC-20 续）：`prepublishOnly` 含本批件（二十八件——结构轮批件入链）∥ 清单目标在盘
  *   附加：AC-19 canon 不破（零新 `:root` 变量——38 ∥ 悬停清单七条 ∥ 内距 ∈ 刻度 ∪ {0, auto} ∪ 布局组 ∥ 类名双向闭合）
  */
 import test from "node:test"
@@ -162,14 +162,14 @@ function pageCtx({ routes, state = {}, shell }) {
 
 // ── 腿 A（壳机制源扫——§2.6②）──────────────────────────────────────────────
 
-test("腿 A 壳机制源扫：`dataShell` 两段 + `SHELL_PAGES` 五路径 + `route()` 切换 ∥ 五页接线在册", () => {
-  const src = readPublic("app.mjs")
-  // dataShell 三件构建 + 计数键引用（+ 挂载/脚注面）
-  assert.match(src, /function dataShell\(mount, \{ head, area \}\)/, "dataShell 助手缺位")
-  for (const cls of ["page-head", "page-area"]) assert.ok(src.includes(`"${cls}"`), `壳两段缺位：${cls}`)
-  assert.equal(src.includes("page-foot"), false, "page-foot 残留（计数应入表 tfoot）")
-  assert.ok(src.includes('t("common.rowCount"'), "行计数键（`common.rowCount`）引用缺位")
-  assert.ok(src.includes(`text: t("common.rowCount", { count: rows.length })`), "table() 计数取值 ≠ rows.length（真品源断言——评审 #119 加严）")
+test("腿 A 壳机制源扫（`dom.mjs` + `app.mjs`）：`dataShell` 两段 + `SHELL_PAGES` 五路径 + `route()` 切换 ∥ 五页接线在册", () => {
+  const src = readPublic("app.mjs"), domSrc = readPublic("dom.mjs") // dom.mjs = 结构轮外拆（渲染助手 + 表尾计数）
+  // dataShell 三件构建 + 计数键引用（+ 挂载/脚注面）——dom.mjs；SHELL_PAGES/route/viewCtx——app.mjs
+  assert.match(domSrc, /function dataShell\(mount, \{ head, area \}\)/, "dataShell 助手缺位")
+  for (const cls of ["page-head", "page-area"]) assert.ok(domSrc.includes(`"${cls}"`), `壳两段缺位：${cls}`)
+  assert.equal(domSrc.includes("page-foot"), false, "page-foot 残留（计数应入表 tfoot）")
+  assert.ok(domSrc.includes('t("common.rowCount"'), "行计数键（`common.rowCount`）引用缺位")
+  assert.ok(domSrc.includes(`text: t("common.rowCount", { count: rows.length })`), "table() 计数取值 ≠ rows.length（真品源断言——评审 #119 加严）")
   // SHELL_PAGES 五路径逐条钉表（恰五——不得多/少）
   const shellBlock = src.match(/const SHELL_PAGES = new Set\(\[([^\]]*)\]\)/)
   assert.ok(shellBlock !== null, "SHELL_PAGES 缺位")
@@ -429,14 +429,14 @@ test("腿 F i18n：本批 6 键两表在册（非空 ∥ 占位符一致 ∥ en 
   }
   // 引用闭合：全档 `t("…")` 字面量 ⊆ 两表
   const refs = []
-  for (const name of readdirSync(PUBLIC_DIR).filter((item) => item.endsWith(".mjs") && !["i18n-zh.mjs", "i18n-en.mjs"].includes(item))) {
+  for (const name of readdirSync(PUBLIC_DIR).filter((item) => item.endsWith(".mjs") && !/^i18n-(zh|en)/.test(item))) {
     const src = readPublic(name)
     for (const match of src.matchAll(/\bt\(\s*"([^"]+)"\s*[,)]/g)) refs.push([name, match[1]])
   }
   assert.ok(refs.length >= 150, `t 字面量过少（扫描失效？）：${refs.length}`)
   for (const [name, key] of refs) assert.ok(key in ZH && key in EN, `${name} 引用悬空键：${key}`)
-  // 本批键消费点在册（页脚 + 成员 key 表）
-  assert.ok(readPublic("app.mjs").includes('t("common.rowCount"'), "行计数键未接线")
+  // 本批键消费点在册（页脚——结构轮外拆 `dom.mjs` + 成员 key 表）
+  assert.ok(readPublic("dom.mjs").includes('t("common.rowCount"'), "行计数键未接线")
   for (const key of ["admin.members.colKey", "admin.members.colLastUsed", "admin.members.colWindowTokens", "admin.members.colActions", "admin.members.windowTokensCell"]) {
     assert.ok(readPublic("views-admin.mjs").includes(`t("${key}"`), `成员 key 表引用缺位：${key}`)
   }
@@ -444,9 +444,9 @@ test("腿 F i18n：本批 6 键两表在册（非空 ∥ 占位符一致 ∥ en 
 
 // ── 腿 G（门禁——§6 AC-20 续）───────────────────────────────────────────────
 
-test("腿 G 门禁：`prepublishOnly` 二十六件含本批件 ∥ 清单目标在盘", () => {
+test("腿 G 门禁：`prepublishOnly` 二十八件含本批件 ∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 26, `门禁清单件数（二十四 ⇒ 二十六——me 用量图表化批两件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 28, `门禁清单件数（二十六 ⇒ 二十八——结构轮批件入链 ∥ 10-09 bin 修复批件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-console-layout.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

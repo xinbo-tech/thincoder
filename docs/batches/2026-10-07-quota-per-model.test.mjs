@@ -16,7 +16,7 @@
  *   ⑤ 对账（METERING §2.5）：零漂移 ∥ 注入漂移 ⇒ 检出 ∥ `--fix` ⇒ 覆写后复查零漂 ∥ CLI `usage reconcile` 实跑
  *   ⑥ 端到端（真 HTTP）：平台层 `quotaTokens` 热生效 ⇒ 429 ∥ 成员覆盖 ⇒ 放行 ∥ 嵌入零检查 ∥ 404 先于 429-quota
  *      ∥ 旧额度端点 404 ∥ `/api/me` 行形
- *   ⑦ 门禁清单：`prepublishOnly` 含本批件（二十六件——文档清账批拆档后）∥ 清单目标在盘
+ *   ⑦ 门禁清单：`prepublishOnly` 含本批件（二十八件——结构轮批件入链）∥ 清单目标在盘
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -437,11 +437,11 @@ test("⑥ 端到端：平台层热生效 ⇒ 429 ∥ 成员覆盖 ⇒ 放行 ∥
   }
 })
 
-// ── ⑦ 门禁清单（`prepublishOnly` 二十六件含本批件 ∥ 清单在盘）──────────────────
+// ── ⑦ 门禁清单（`prepublishOnly` 二十八件含本批件 ∥ 清单在盘）──────────────────
 
-test("⑦ 门禁清单：`prepublishOnly` 二十六件含本批件 ∥ 清单目标在盘", () => {
+test("⑦ 门禁清单：`prepublishOnly` 二十八件含本批件 ∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 26, `门禁清单件数（二十二 ⇒ 二十六——me-keys 批两件入链 ∥ me-usage-charts 批两件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 28, `门禁清单件数（二十六 ⇒ 二十八——结构轮批件入链 ∥ 10-09 bin 修复批件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-per-model.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

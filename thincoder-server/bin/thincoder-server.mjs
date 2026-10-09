@@ -9,6 +9,7 @@
  * 本档 = 装配面（配置 ∥ 库 ∥ 首启引导 ∥ 各域注册行 + 系统面 + 控制台数据面）——D1 骨架 + D2 账号/计量面 + D3 聊天链
  * （bootstrap + gateway ∥ accounts ∥ metering 注册行）+ D4 webui 静态面（`public/` 直发——路由优先）+ D5 更新面。
  */
+import { realpathSync } from "node:fs"
 import { pathToFileURL } from "node:url"
 
 import { loadConfig } from "../src/ops/config.mjs"
@@ -173,4 +174,5 @@ export async function run(argv = process.argv.slice(2), log = createLogger(), { 
   process.on("SIGTERM", () => stop("SIGTERM"))
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await run()
+// 入口判据：argv[1] 先经 realpath 解析再比——npm 全局装（POSIX）bin = 符号链接形：argv[1] 非真身路径，不解析 ⇒ 判据恒假 ⇒ 静默退出 0；不可解析 ⇒ 抛（显式，不静默）。
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) await run()

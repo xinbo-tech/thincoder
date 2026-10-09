@@ -17,8 +17,8 @@
  *      全档计数同拍（19——错态不外溢）
  *   ⑤ 类名双向闭合（AC-19 续）：档面字面类 ⊆ `style.css` 类选择器 ∥ `style.css` 类选择器 ⊆ 档面字面类 ∪ 态类 ∥
  *      死类零残留（`key-line`/`stat`/`view`——规则与字面两向）
- *   ⑥ 静态面：档目 19 ∥ 20（本批零新档）逐名同拍 ∥ `public/**` 零外链 ∥ 静态直发（200 ∥ mime ∥ 字节等于磁盘）
- *   ⑦ 门禁清单：`prepublishOnly` 二十六件含本批件（文档清账批拆档后）∥ 清单目标在盘
+ *   ⑥ 静态面：档目 29 ∥ 30（结构轮后）逐名同拍 ∥ `public/**` 零外链 ∥ 静态直发（200 ∥ mime ∥ 字节等于磁盘）
+ *   ⑦ 门禁清单：`prepublishOnly` 二十八件含本批件（文档清账批拆档后）∥ 清单目标在盘
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -198,15 +198,15 @@ test("⑤ 类名双向闭合 ∥ 死类零残留（`key-line`/`stat`/`view`）",
   }
 })
 
-// ── ⑥ 静态面：档目 19 ∥ 20 ∥ 零外链 ∥ 直发（200 ∥ mime ∥ 字节等于磁盘）────────────────────────
+// ── ⑥ 静态面：档目 29 ∥ 30 ∥ 零外链 ∥ 直发（200 ∥ mime ∥ 字节等于磁盘）────────────────────────
 
-test("⑥ 静态面：档目 19 ∥ 20 逐名同拍（本批零新档）∥ `public/**` 零外链 ∥ 直发", async () => {
+test("⑥ 静态面：档目 29 ∥ 30 逐名同拍（结构轮后）∥ `public/**` 零外链 ∥ 直发", async () => {
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [20, 19], "全目录 20 ∥ UI 代码档 19")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [30, 29], "全目录 30 ∥ UI 代码档 29")
   assert.deepEqual(names, [
-    "app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
-    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs",
-    "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs",
+    "app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs",
+    "i18n-zh-me.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
+    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs",
   ])
   for (const name of names) {
     const text = readPublic(name)
@@ -230,11 +230,11 @@ test("⑥ 静态面：档目 19 ∥ 20 逐名同拍（本批零新档）∥ `pub
   }
 })
 
-// ── ⑦ 门禁清单：`prepublishOnly` 二十六件（含本批件）∥ 清单目标在盘 ─────────────────────────────
+// ── ⑦ 门禁清单：`prepublishOnly` 二十八件（含本批件）∥ 清单目标在盘 ─────────────────────────────
 
-test("⑦ 门禁清单：`prepublishOnly` 二十六件含本批件 ∥ 清单目标在盘", () => {
+test("⑦ 门禁清单：`prepublishOnly` 二十八件含本批件 ∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 26, `门禁清单件数（二十二 ⇒ 二十六——me-keys 批两件入链 ∥ me-usage-charts 批两件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 28, `门禁清单件数（二十二 ⇒ 二十八——me-keys 批两件入链 ∥ me-usage-charts 批两件入链 ∥ 结构轮件入链 ∥ 10-09 bin 修复批件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-06-console-list-style.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })
