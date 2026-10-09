@@ -163,8 +163,8 @@ export async function assembleFamilyTools({
     // BATCH-RECORD §4.3 挂载表（批次档生命周期工具化批）：eng 两分支各挂主名 `batch`
     // （绑定段 append/status；目标 = spawn 绑定 `child._batchDoc`）——BATCH-RECORD.md §4.2 的 batch_segment
     // 挂载形态已随单名化收口退役；depth-0 主 agent 同表挂载
-    // `batch`（D-BR18 扩权——create/close + append §1/§4/§6 + status §1（轮 2 裁定②：§4/§6
-    // 状态面走普通文档写），目标走可选 path / 在飞扫描）。
+    // `batch`（D-BR18 扩权——create/close + append/status 域随模式（工程面 = append §1/§4/§6 ∥ status §1；普通面 =
+    // append §1/§2/§4/§5/§6 ∥ status §1/§2/§5）（轮 2 裁定②：§4/§6 状态面走普通文档写），目标走可选 path / 在飞扫描）。
     // §4.16（2026-10-09）：coder 分支**携绑定追加** `batchTool(batchDoc)`——未绑定不挂载
     // （工具不在表 = 语法面不可达——同评审面先例）；绑定值 = spawn 可选绑定 `child._batchDoc`。
     // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-UPSTREAM.md §6.27.4 装配接线）：子代理上行通道

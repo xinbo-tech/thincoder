@@ -77,7 +77,7 @@ export function defaultModelReason(providers, defaultModel) {
 }
 
 /** 「持 key」判据（#841——`providers[].apiKey` trim 后非空；env 变量不是密钥源，config.mjs 档头同判）。 */
-function hasKey(entry) {
+export function hasKey(entry) {
   return typeof entry?.apiKey === "string" && entry.apiKey.trim() !== ""
 }
 

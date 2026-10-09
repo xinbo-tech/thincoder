@@ -20,7 +20,7 @@
 import { existsSync } from "node:fs"
 import { resolveCompactThreshold } from "./config.mjs"
 // 槽面判据单源（#841 KD-841-2：槽渠道 key 门 + 模型面序——PROVIDER.md §6.22）。
-import { resolveChannelModel, resolveProviderPlan } from "./model-ref.mjs"
+import { hasKey, resolveChannelModel, resolveProviderPlan } from "./model-ref.mjs"
 import {
   slotPath, loadManifest, saveManifest, slotDigest, writeSessionFile, getSessionId,
   writeEndMarker, sessionEnd, ownerPid, ownerPids,
@@ -392,7 +392,7 @@ export function sessionReading(data, { providers, fallback, defaultModel } = {})
   const ch = data.contextHistory
   const machine = (Array.isArray(ch) && ch.length > 0) ? ch : full.map(stripTruncatedToolArgs)
   const line = mergeAdjacentAssistantEchoes(machine)
-  const entry = data.activeProvider ? providers?.find((pr) => pr.name === data.activeProvider) : null
+  const entry = data.activeProvider ? providers?.find((pr) => pr.name === data.activeProvider && hasKey(pr)) : null
   // #638：非串 ∕ 空串 `activeModel` 归一（与 applySession 模型合并支 ① 同判）——脏值不达 `historyPercent`；
   // 未登记 ⇒ 落现行模型链（`defaultModel` 属本渠段 ∥ `null`——渠道单值退场，2026-10-09 清除批）。
   const slotModel = (typeof data.activeModel === "string" && data.activeModel) ? data.activeModel : null

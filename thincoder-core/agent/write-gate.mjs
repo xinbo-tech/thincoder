@@ -135,7 +135,7 @@ function isOwnBatchCompanion(targetKey, boundKey) {
  * 携绑定的子代理（`depth > 0` ∧ `agent._batchDoc` 在场——工程角色 ∥ 普通面 coder，`BATCH-RECORD.md` §4.16）对**批次档文件**的写 ⇒ 目标 ≠ 绑定档
  * **且非绑定批次的伴随件**（见 `isOwnBatchCompanion`）⇒ 冲突（fail-closed；写自己绑定的档 ∥
  * 自身批次伴随件 = 正常面放行）。比较键 = 绝对路径 + win32 大小写归一。
- * 界面：depth 0（主 agent——跨档处置是父侧职责）· 无 `_batchDoc`（非工程绑定族）· 主基底外的
+ * 界面：depth 0（主 agent——跨档处置是父侧职责）· 无 `_batchDoc`（未携绑定族——普通面 coder 亦入绑定面）· 主基底外的
  * 普通文件写 —— 三种形态均不进本门（返回 null，行为零变）。判据集由调用方限定 = `FILE_MUTATORS`
  * （`file_ops` / 读类不在门内——§6.29.1 边界）。
  * 拒绝文案**单源 = 本档**（两端直取 `message`——零字面副本）。

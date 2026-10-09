@@ -65,7 +65,7 @@ export async function assembleAgent({ cwd, deps = {}, toolsFinalize = null }) {
   const config = D.loadConfig()
   const provider = config.provider
   const providers = config.providersList
-  // 代理注入（double opt-in: provider.proxy + config.proxy.model）；config.provider 是 loadConfig 里的
+  // 代理注入（逐渠独立：provider.proxy ∧ `proxy.uri` 在案 ⇒ 该渠模型请求经代理——无全局闸，2026-10-08）；config.provider 是 loadConfig 里的
   // 独立拷贝 —— 同步注入结果（proxyUri）。
   const injectProxy = D.injectProxy ?? (await import("../proxy.mjs")).injectProxy
   injectProxy(providers, config)

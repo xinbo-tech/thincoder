@@ -6,9 +6,9 @@
  * 消费面 = VSC `image-handler.mjs`（已改指本档）· 桌面 `src/main/attachments.mjs`
  * （降级适配器缺省 = 本档 —— `visionReader` 缝的核默认实现）。
  *
- * `findVisionChannel`（纯函数）：渠道表 ⇒ 视觉读图渠道 —— 判定源随 2026-10-09 清除批退场（渠道不携
- * 模型——R3 零读写）；判定源重定在途（台账）；现行为恒 `null` ⇒ 消费方走既有「无视觉渠道」可读
- * 报错径（F-IDG-2——不静默丢图）。
+ * `findVisionChannel`（纯函数）：渠道表 ⇒ 视觉读图渠道 —— 判定源（渠道单值模型）随 2026-10-09 清除批退场
+ * （渠道不携模型——R3 零读写）；**明书不恢复**（无载体可扫——不以运行期探针另立判定源，M9）⇒ 恒 `null` =
+ * **常规态** ⇒ 消费方走既有「无视觉渠道」可读报错径（F-IDG-2——不静默丢图）。
  *
  * `runVisionReader`：一次性 depth-1 只读 explore 子代理读图返回文本描述。
  *  渠道 = 视觉渠道（`resolveProviders()` 现读；`findVisionChannel` 判源退场 ⇒ 现恒无渠道）；provider = 核 `resolveChildProvider`（`<渠道>:<模型>`）；
@@ -29,8 +29,9 @@ import { assembleBuiltinTools } from "./tools/index.mjs"
 export const VISION_READ_TIMEOUT_MS = 60_000
 
 /** 找可跑视觉读图的渠道：`{ provider, model }` ∥ `null`。
- *  判定源随 2026-10-09 清除批退场（渠道不携模型——R3 零读写）；判定源重定在途（台账）。
- *  现行为恒 `null` ⇒ 消费方走既有「无视觉渠道」可读报错径（F-IDG-2——不静默丢图）。 */
+ *  判定源（渠道单值模型）随 2026-10-09 清除批退场（渠道不携模型——R3 零读写）；**明书不恢复**（无载体可扫
+ *  ——不以运行期探针另立判定源，M9）⇒ 恒 `null` = **常规态** ⇒ 消费方走既有「无视觉渠道」可读报错径
+ *  （F-IDG-2——不静默丢图）。 */
 export function findVisionChannel(providers, currentName = "") {
   return null
 }

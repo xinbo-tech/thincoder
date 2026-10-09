@@ -104,13 +104,17 @@ export async function syncDocRoot(memory, dir, { onProgress, yieldFn = yieldTick
 /**
  * Doc search: FTS5(BM25) + optional vector cosine, RRF merged.
  * Falls back to pure FTS when no embedder; falls back to pure vector when ftsQuery is empty and embedder is present.
+ * `origins`（可选覆盖参 · 2026-10-10 #1100）：缺省 `null` ⇒ 现行为（本函数自取 `searchOrigins`）**逐字**；
+ * 给定 ⇒ 以其为 origin 集（复用既有单/多 origin SQL 形）；空数组 ⇒ 现「不过滤」语义（本设计调用方不产此形）。
+ * 消费方 = `thincoder-core/agent/setup.mjs` 注入块两腿分取（配额策略 = `docs/core/design/AGENT-LOOP.md` §6.3）。
  */
-export async function docSearch(memory, query, { limit = 5 } = {}) {
+export async function docSearch(memory, query, { limit = 5, origins: originsOverride = null } = {}) {
   const ftsQuery = buildFtsQuery(query)
   if (!ftsQuery && !memory.embedder) return []
 
   // §6.15 读面 origin 集（项目 ∪ 声明公共仓；单 origin ⇒ 逐字零行为——快径 SQL 形零改）
-  const origins = searchOrigins(memory)
+  // #1100：`origins` 覆盖参在位时以其为集（缺省 `null` ⇒ 原式逐字）
+  const origins = originsOverride ?? searchOrigins(memory)
   const ftsOriginFilter = origins.length === 1 ? `AND d.origin = ?` : origins.length > 1 ? `AND d.origin IN (${origins.map(() => "?").join(", ")})` : ""
   const originParams = origins
 

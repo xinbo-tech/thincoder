@@ -11,6 +11,8 @@ import { isCodePath, declarationForTarget } from "../conventions.mjs"
 import { manifestFilePath } from "../manifest.mjs"
 import { resolve, relative } from "node:path"
 import { anyLiveDesignSlot } from "../token-ttl.mjs"
+// F-LC5（LIGHT-CHANNEL §2.8 · 2026-10-09）：轻通道轮在盘谓词（代码笔通路——两件双在盘 ⇒ 父侧代码笔放行）。
+import { lightRoundOpen } from "./light-round.mjs"
 // M4 写权门禁（模块设计 §2.1#2）：冻结窗口判据组装（被审文件集 = 声明文档集 + 批次档
 // 的合流点）落 write-gate.mjs 单一权威源——本档只 import 消费（KD-M4-4 拆分点）。
 import { freezeWindowConflict, batchRecordWriteConflict } from "./write-gate.mjs"
@@ -84,6 +86,8 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // design token. The project can declare its own code paths (the manifest's
     // `codePaths`) so a non-src layout is not silently exempted. Mechanically
     // blocks "talk then code".
+    // F-LC5（LIGHT-CHANNEL §2.8 · 2026-10-09）：轻通道轮在盘 = 机械开路——轮次台账行（在途 · title 携「收尾链
+    // 待跑」· 携指针）与所指轮档（§1 状态行「进行中」）双在盘期间父侧代码笔放行（谓词 fail-closed）。
     // F11（#1104 · PORTABILITY §3.9 / D20）：辖域 = 目标所属项目——逐目标沿祖先链取最近带档
     // 目录（`declarationForTarget`——nearest wins ∥ 纯向上 ∥ 发现梯不参与）；出辖（祖先链无档）
     // ⇒ 放行（门只管 manifest 树以内的内容）。相对形先按会话 cwd 解析（cwd 只是相对基，非声明源）；
@@ -93,7 +97,8 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // 已退役，门禁不再读镜像——AC4）。
     if (agent.config?.agent?.engineering && depth === 0
         && !anyLiveDesignSlot(agent)
-        && FILE_MUTATORS.has(toolCall.name)) {
+        && FILE_MUTATORS.has(toolCall.name)
+        && !(await lightRoundOpen(agent))) {
       const paths = toolTouchPaths(tool, args)
       // Unknown/missing paths (non-string / empty — nothing to judge) block conservatively.
       // Known paths are judged per target: resolve against the session cwd first, then
@@ -118,7 +123,8 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         prepared.push({
           toolCall, tool, denied: true,
           reason: "engineering design gate",
-          hint: `Engineering mode: write the design document first（location per your project's document conventions）, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.${convNote}`,
+          hint: `Engineering mode: write the design document first（location per your project's document conventions）, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.${convNote} ` +
+            `If this is a light-channel code pen: book the round first — an in-flight batch record plus a 在途 ledger row carrying 「收尾链待跑」 pointing at the record — code pens pass once that is on disk.`,
         })
         continue
       }

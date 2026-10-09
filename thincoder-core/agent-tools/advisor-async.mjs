@@ -31,7 +31,7 @@
  *     non-stale code review marks _calledAdvisorThisRun; a passing design review
  *     issues its token under the designId slot at settle time.
  *     2026-09-11 第 11 批拆分：settle 记账 + 变更日志 + 陈旧/冻结判定迁 `advisor-settle.mjs`
- *     （本文件 500 行 = 硬帽在册）；既有 import 面经本文件 re-export 保持不变。
+ *     （本文件 500 行——2026-09-11 拆分时）；既有 import 面经本文件 re-export 保持不变。
  *
  * The sync path (depth>0 eng-coder self-review / explicit async:false) reuses
  * the same instance resolution (rounds/prior/cap) — its accounting still lands

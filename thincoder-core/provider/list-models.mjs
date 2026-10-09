@@ -21,7 +21,8 @@ const LIST_TIMEOUT_MS = 15_000
 const MAX_PAGES = 10
 const ANTHROPIC_VERSION = "2023-06-01"
 
-/** 单页 GET + JSON 解析（非 2xx → throw；非 JSON 响应 → throw——§2.5 #115 并入 VSC 明确报错）。 */
+/** 单页 GET + JSON 解析（非 2xx → throw；非 JSON 响应 → throw——§2.5 #115 并入 VSC 明确报错）。
+ *  载荷读取失败（断流 ∥ idle 超时 ∥ 网络）⇒ 原错误直抛（#1068——不吞根因；`non-JSON` 文案只给真非 JSON）。 */
 async function fetchJson(provider, url, headers, signal) {
   const opts = {
     headers,
@@ -36,7 +37,7 @@ async function fetchJson(provider, url, headers, signal) {
     e.status = response.status // 展示面可判「不可用」
     throw e
   }
-  const rawText = await response.text().catch(() => "")
+  const rawText = await response.text()
   try {
     return JSON.parse(rawText)
   } catch {

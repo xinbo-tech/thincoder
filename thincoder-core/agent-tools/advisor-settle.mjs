@@ -1,7 +1,7 @@
 /**
  * advisor-settle.mjs — advisor settle accounting + mutation log + stale / freeze
- * determination（2026-09-11 第 11 批自 advisor-async.mjs 拆出——500 行 = 硬帽在册，
- * 任何新增必越；既有 import 面经 advisor-async.mjs **re-export 保持不变**
+ * determination（2026-09-11 第 11 批自 advisor-async.mjs 拆出；
+ * 既有 import 面经 advisor-async.mjs **re-export 保持不变**
  * （noteMutations / mutationSeqOf / reviewIsStale / settleAdvisorRun）。
  *
  * 内容 = 迁入（逐字搬移含注释）+ 本批两处接线：

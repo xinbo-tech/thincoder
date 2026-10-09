@@ -244,7 +244,7 @@ function warnSubagentModelsFiltered(dropped, path) {
 
 /**
  * Find provider by name in providers[].
- * Throws if name is non-empty but not found — a typo in activeProvider silently falling to the first provider would use the wrong key on the wrong endpoint.
+ * Throws if name is non-empty but not found — a typo in the caller-supplied name (e.g. `defaultModel`) silently falling to the first provider would use the wrong key on the wrong endpoint.
  * Returns the first provider when name is empty.
  */
 export function findProvider(providers, name) {
@@ -252,7 +252,7 @@ export function findProvider(providers, name) {
     const found = providers.find((p) => p.name === name)
     if (found) return found
     const available = providers.map((p) => p.name).join(", ") || "(empty)"
-    throw new Error(`activeProvider "${name}" not in providers list (available: ${available}); check for a typo in: ${configPath}`)
+    throw new Error(`provider "${name}" not in providers list (available: ${available}); check for a typo in: ${configPath}`)
   }
   return providers[0] ?? { name: "default", baseURL: "" }
 }
@@ -269,7 +269,7 @@ export function normalizeProxy(proxy) {
 /**
  * Load configuration.
  * No env-var overrides — config.json is the single source of truth
- * (API keys, baseURL, model, activeProvider all come from the file).
+ * (API keys, baseURL, defaultModel all come from the file).
  */
 /** Keep only { header: "string value" } pairs from a provider's headers field — anything
  *  else (null, arrays, nested objects) is dropped so it can never reach a fetch call.
@@ -416,7 +416,7 @@ export function loadConfig() {
 /**
  * MCP.md §5 D-3 (2026-09-01): re-read config.json and replace ONLY the agent's mcp section
  * — the agent 代配 closed loop (agent edits config.json with its edit tool, /mcp picks it
- * up). Never touches other config sections (providers/activeProvider stay as loaded).
+ * up). Never touches other config sections (providers/defaultModel stay as loaded).
  *
  * Malformed disk config → memory state kept, { ok:false, error } returned (the /mcp menu
  * shows "⚠ disk config unreadable"). Never throws.

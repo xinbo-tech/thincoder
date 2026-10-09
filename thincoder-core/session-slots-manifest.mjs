@@ -1,7 +1,7 @@
 /**
  * session-slots-manifest.mjs — 清单 / 认领 / 属主面（init-block 批 · F-MI7 拆分：
  * `session-slots.mjs` 探测束接线后实读 517 行，破 490 判定线并越 500 硬限 ⇒ 按
- * `CORE-UNIFICATION.md` §2.8.1 表第 3 行随批执行外提；各函数语义**原样**迁移）：
+ * `CORE-UNIFICATION.md` §2.8.1 子表原行 3（已随 2026-10-08 批清账）随批执行外提；各函数语义**原样**迁移）：
  * 摘要面（`extractSlotMeta` / `slotDigest`）· 清单读写（`loadManifest` / `saveManifest`）·
  * 属主面（`ownerPid` / `ownerPids` / `ownerStateOf` / `ownerArgs` / `cleanDeadOwners`）·
  * 认领面（`ensureActive` / `allocateFresh` / `claimSlot` / `activeSlot` / **认领释放集

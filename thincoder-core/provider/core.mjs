@@ -120,6 +120,11 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   // （CONFIG.md §6.3）。格式分派之前：四 transport ∕ 续写 ∕ advisor ∕ 子代理 ∕ 压缩同享；
   // 未设 ∕ 空串 ∕ 畸形 ⇒ 此处抛错（点名变量，无回退）。
   provider = resolveProviderSecrets(provider)
+  // #1063（PROVIDER.md §6.23）：缺钥前置守卫——trim 空 ⇒ 可读错误 + **零请求**（先于 rateGate ∥
+  // 全部 fetch）。单点覆盖四 transport（openai ∥ anthropic ∥ google ∥ responses）与续写 ∕ advisor ∕
+  // 子代理 ∕ consult 全链；四档凭据位不各自加守卫（避判据增殖）。
+  const apiKey = typeof provider?.apiKey === "string" ? provider.apiKey.trim() : ""
+  if (!apiKey) throw new Error(`API key missing for provider "${provider?.name ?? provider?.model ?? "unknown"}" — configure it in Settings (Providers) or ~/.thincoder/config.json`)
   // Sanitize BEFORE format dispatch — image poisoning bricks anthropic/google sessions
   // the same way it bricks OpenAI-format ones (all raster-only).
   // providerSpec: spec with the provider-level context override (PROVIDER.md §6.15) — the

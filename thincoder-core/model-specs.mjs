@@ -244,11 +244,12 @@ const DEFAULT_SPEC = { context: 128_000, maxOutput: 32_000 }
 
 /** Look up spec by model name prefix (case-insensitive), conservative default for unknown models.
  *
- * Vendor-namespace prefix stripping (2026-09-04)：第三方 token 市场（roapi/new-api/one-api/
- * aiproxy 聚合网关）惯例在模型名前加厂商前缀（zhipu/glm-5.3、openai/gpt-4o）。完整名未命中
- * 且含 "/" 时，剥掉第一个 "/" 前的 namespace 再按前缀匹配一次——ZHIPU/GLM-5.3 → glm-5.3 命中
- * 真实规格，不再降级 128K 默认。kimi/kimi-k3 的显式 alias 行保留为文档锚（发送路径
- * provider.core isRouter 依赖含 "/" 判定），通用机制已覆盖同类。 */
+ * Vendor-namespace stripping (2026-09-04；末段形 2026-10-10——用户裁定「只取最后一段」)：第三方
+ * token 市场（roapi/new-api/one-api/aiproxy 聚合网关）惯例在模型名前加厂商前缀（zhipu/glm-5.3、
+ * openai/gpt-4o），链式网关下可叠多段（测试服务器 qwen/ZHIPU/GLM-5.3）。完整名未命中且含 "/" 时，
+ * 取最后一个 "/" 之后的段再按前缀匹配一次——单段 ZHIPU/GLM-5.3 → glm-5.3（两法等价）、多段
+ * qwen/ZHIPU/GLM-5.3 → glm-5.3 均命中真实规格，不再降级 128K 默认。kimi/kimi-k3 的显式 alias
+ * 行保留为文档锚（发送路径 provider.core isRouter 依赖含 "/" 判定），通用机制已覆盖同类。 */
 const warnedModels = new Set() // warn once per model name — spec lookup runs on every request (hot path)
 // Pre-sorted once at module scope — spec lookup runs on every request (agent, provider core,
 // context, auto-think, TUI rendering); re-sorting per call was wasteful.
@@ -264,8 +265,8 @@ function lookupSpec(model) {
   for (const [prefix, spec] of SORTED_SPECS) {
     if (m.startsWith(prefix.toLowerCase())) return spec
   }
-  // Vendor-namespace strip: vendor/model — retry the prefix match on the bare model part.
-  const slash = m.indexOf("/")
+  // Vendor-namespace strip: take the LAST "/"-separated segment — retry the prefix match on it.
+  const slash = m.lastIndexOf("/")
   if (slash > 0) {
     const bare = m.slice(slash + 1)
     for (const [prefix, spec] of SORTED_SPECS) {
