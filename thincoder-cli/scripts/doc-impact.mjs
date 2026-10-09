@@ -16,7 +16,7 @@
  * 薄 git 包装（子进程——`slow()` 归册）+ CLI。扫描域取**声明面** `checkConfig.scanDirs`（D2 单源——manifest；2026-09-18 判据面批收正）。
  * 导出：isStrongSymbol / changedTokensFromDiff / docImpact / gitChangedSurface / main（`test/doc-impact.test.mjs` 消费）。
  */
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -141,5 +141,5 @@ export function main(argv = process.argv.slice(2), { cwd = process.cwd() } = {})
   return 0;
 }
 
-const isMain = process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
+const isMain = process.argv[1] && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url;
 if (isMain) process.exit(main());

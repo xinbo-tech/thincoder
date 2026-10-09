@@ -131,11 +131,10 @@ export async function handleConfigCommand(ctx, args = []) {
         if (c.action === "seturi") {
           const newUri = await askQuestion("Proxy URI (e.g. http://127.0.0.1:7890):")
           if (!newUri) continue // 空输入不改动
-          // web 默认 true（对象形态——既有键原样保留）；旧 string 形态升级为规范对象
+          // 写即归一：两键重建 `{ uri, web }`——旧 string 形态 ∥ 盘上退役残键（如 `model`）读后即清；
+          // `web` 不显式 OFF 即 true（沿现值显示口径 `!pc || pc.web`——改 URI 不动 web 开合）。
           await saveProxy((raw) => {
-            raw.proxy = raw.proxy && typeof raw.proxy === "object" && !Array.isArray(raw.proxy)
-              ? { ...raw.proxy, uri: newUri }
-              : { uri: newUri, web: true }
+            raw.proxy = { uri: newUri, web: !pc || pc.web !== false }
           })
           pushLabel("❯ Config", ansi.bold + C.tool)
           pushLine(`proxy.uri = ${newUri}`, C.tool)

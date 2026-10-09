@@ -193,6 +193,7 @@ export async function startTUI(agent, opts = {}) {
   // First-launch config wizard: implemented in wizard.mjs, closure deps passed via ctx
   const { startWizard, renderWizard, wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems } = createWizard({
     agent, state, pushLine, pushLabel, render, persistRaw,
+    showPicker, // #1049 补步：向导末问「走 proxy」picker（装配处注入——随 openModelPicker 先例）
     openModelPicker: () => openModelPicker(),
     onModalClose: reevalTimerWake, // #448①「关闭后补评估」（wizard 退场点）
   })

@@ -88,6 +88,11 @@ export function finishSubTaskKey(state, key, lastError = null) {
 export function freezeSubTaskLines(state, sub, anchor = undefined) {
   if (!sub) return
   closeOpenSubChildren(sub) // R23 D-R23c2——开子块随外层冻结定格 stopped（SUBAGENT-TAIL：② 防御性保留）
+  // #821（跨端显示面差归一 · 2026-10-10）：冻结单点补**错误面事实**（与写面 status 推导同式——
+  // lifecycle-records.mjs `subagentRecord` `stopped ? stopped : lastError ? error : done`）：非停止 ∧
+  // 携 lastError ⇒ errored（显示面 `⏹` + `error` + 括号外注记；重建面 errored 同判 = `synthSubTask`）。
+  // 显示层瞬时事实（随冻结块对象生存）——记录形 ∥ 载荷零触（记录 status 仍由上式推导）。
+  if (!sub.stopped && sub.lastError) sub.errored = true
   state._frozenSubKeys ??= new Set()
   state._frozenSubKeys.add(sub.key)
   sub.done = true

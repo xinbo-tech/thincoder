@@ -87,10 +87,16 @@ function frozenSubTaskLines(state, sub, cols, maxRows) {
   const turnPart = sub.maxTurns > 0 ? ` · turn ${sub.turn}/${sub.maxTurns}` : ""
   const errPart = sub.lastError ? ` — ${sub.lastError}` : ""
   // 图标三态互斥（2026-09-20 端差·显示面消差批 M5）：修前 stopped 冻结头 `✓` 与 verb 相抵
-  // ⇒ 补齐 VSC `webview/activity-view.js:46-49` 已成的 cancelled → `⏹` 形态（VSC 标尺，CLI 缺面）。
-  const icon = sub.approval ? "⏸" : sub.stopped ? "⏹" : "✓"
-  const verb = sub.stopped ? "stopped" : "done" // AGENT-LOOP-SUBAGENT.md §6.7.2: cancel 冻结标题 "stopped"
-  const header = `[${icon} ${sub.key}${modePart}${modelPart} · ${verb} ${elapsed}s${turnPart}${errPart}]`
+  // ⇒ 补齐 VSC `webview/activity-view.js:46-49` 已成的 cancelled → `⏹` 形态（VSC 标尺；#821 起
+  // error 面同归 `⏹`——见下）。
+  // #821（跨端显示面差归一 · 2026-10-10）：错误面并入 `⏹`（`errored` 事实两路同判——冻结单点 ∥
+  // 合成件）；verb 三词 stopped/error/done；错误面注记移出括号——与核件 `subblocks/activity-view.mjs:88-91`
+  // 同形 `[…] — <err>`；stopped ∥ done ∥ queued 三面注记位逐字不变（负控）。
+  const errored = sub.errored === true
+  const icon = sub.approval ? "⏸" : (sub.stopped || errored) ? "⏹" : "✓"
+  const verb = sub.stopped ? "stopped" : errored ? "error" : "done" // AGENT-LOOP-SUBAGENT.md §6.7.2: cancel 冻结标题 "stopped"
+  const head = `[${icon} ${sub.key}${modePart}${modelPart} · ${verb} ${elapsed}s${turnPart}`
+  const header = errored ? `${head}]${errPart}` : `${head}${errPart}]`
   const out = []
   if (isExpanded(state, foldKey)) {
     // Expanded: shared component renders blank + ▼ control + full timeline,

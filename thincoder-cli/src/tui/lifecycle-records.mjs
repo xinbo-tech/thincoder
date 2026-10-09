@@ -130,7 +130,7 @@ export function digestTraceLines(rec, startN = null) {
 // ─── ③ 重建（读面）：subagent 记录 ⇒ 合成件 ────────────────────────────────
 
 /** subagent 记录 ⇒ `_frozenSubTask` 合成件（重建面；渲染端零改消费——折叠头 + tail-3 原式）。
- *  meta 块头事实逐项回填（渲染端读面：started→elapsed ∥ turn/maxTurns ∥ stopped ∥ error→errPart）；
+ *  meta 块头事实逐项回填（渲染端读面：started→elapsed ∥ turn/maxTurns ∥ stopped ∥ errored ∥ error→errPart）；
  *  #790：`pool`/`queued` ⇒ CLI 本地两事实（`async`/`queued`）∥ `key` 剥 `sub:` 前缀（显示 = 本地无前缀形）。 */
 export function synthSubTask(rec) {
   const meta = rec?.meta ?? {}
@@ -152,6 +152,9 @@ export function synthSubTask(rec) {
     // #795 残项批：停止面词集扩三词（stopped ∥ cancelled ∥ terminated——词面判据单源 = §6.26；VSC/桌面写 cancelled）。
     stopped: meta.status === "stopped" || meta.status === "cancelled"
       || meta.status === "terminated",
+    // #821（跨端显示面差归一 · 2026-10-10）：错误面事实（词面判据单源 = §6.26 判据②——error ∥ failed；
+    // 缺 status ∥ 未知词照 done）；显示面 = `⏹` + `error` + 括号外注记（与活流冻结面同判）。
+    errored: meta.status === "error" || meta.status === "failed",
     lastError: typeof meta.error === "string" ? meta.error : null,
     blocks,
     _charCount: blocks.reduce((n, b) => n + b.text.length, 0), // 行集字符和（§5.4 账实一致——恢复直算同源）

@@ -1,31 +1,67 @@
 import { C } from "./ansi.mjs"
-// #58（hygiene-sweep 批）：headers/env 现值脱敏判据 = 核 settings 同源单点（不再各自为政）。
+// #58（hygiene-sweep 批）∥ #1046：headers/env 行集现值 ∥ 问句脱敏判据 = 核 settings 同源单点（不再各自为政）。
 import { isSensitiveKey } from "@thincoder/core/agent-tools/settings.mjs"
 
 /** MCP.md §5 v2（D-1）：edit/add 统一字段 picker 表单机制。
  *  fieldPicker 循环：picker 列字段行（label + 当前值打码）+ `✓ Save & test` 末行；
- *  选中字段 → askQuestion 只输入该字段新值——空=不变、`-`=删除可选字段、`k=`=删除
- *  header/env 项、required 字段拒绝 `-`（不许删空）→ 回 picker（已改值保留——T18b
- *  中间 Esc 回 picker 不丢）；选 `✓ Save & test` → 必填校验（add 含 name 重复检查）
- *  → 调用方走 F2 预览+探活确认环；探活失败回同一 picker（AC2——独立 retry 路径废除）。
- *  本文件为 v1 cmd-mcp.mjs 的 mergeKeyValuePairs/maskToken 迁移落点（逗号分隔 kv 解析
- *  并入 mergeKeyValuePairs——v2 的 headers/env 输入统一按"键值对合并/删除"语义处理，
- *  原 parseHeaders 整段替换语义不再需要）；拆分前置——cmd-mcp.mjs 499 行压 500 硬限，评审 #1）。 */
+ *  选中字段 → askQuestion 只输入该字段新值——空=不变、`-`=删除可选字段、required 字段
+ *  拒绝 `-`（不许删空）→ 回 picker（已改值保留——T18b 中间 Esc 回 picker 不丢）；
+ *  选 `✓ Save & test` → 必填校验（add 含 name 重复检查）→ 调用方走 F2 预览+探活确认环；
+ *  探活失败回同一 picker（AC2——独立 retry 路径废除）。
+ *  **headers / env = 逐对行集编辑**（#1046 行集化 · 2026-10-10，口径单源 = docs/core/design/MCP.md
+ *  §6.5）：选中该字段 ⇒ 行集选择器（每行 = 一对 `k=<值/掩码>`——敏感值掩码沿 `isSensitiveKey`
+ *  单源；末两行 `＋ Add row` ∥ `← Back`）→ 选某对问值 ∥ `＋ Add row` 问 `key=value`；提交四判据
+ *  同 GUI 两端行格（trim ∥ 空键/空值行不提交 ∥ 重复键后行胜 ∥ 全空 ⇒ 字段删除）；值 = 字面——
+ *  串式半语法（comma-split ∥ 引号剥离 ∥ `-` 整串清空）退场。本文件亦为 v1 cmd-mcp.mjs 的
+ *  maskToken 迁移落点（拆分前置——cmd-mcp.mjs 499 行压 500 硬限，评审 #1）。 */
 
-/** F3 评审 #3 清除语义（T12）：`k=`（空 value）= 从 merged 中删除该项；`k=v` = 设置。
- *  返回更新后的对象（无项时 null——调用方据此 delete 字段）。 */
-function mergeKeyValuePairs(merged, input) {
-  for (const pair of String(input).split(",")) {
-    const eq = pair.indexOf("=")
-    if (eq > 0) {
-      const key = pair.slice(0, eq).trim()
-      const value = pair.slice(eq + 1).trim().replace(/^["']|["']$/g, "")
-      if (!key) continue
-      if (value) merged[key] = value
-      else delete merged[key]
+/** 行集字段面字（提示语 / 拒收文案共用；`title` = 行级词，`field` = 字段词）。 */
+const PAIR_LABELS = {
+  headers: { title: "Header", field: "Headers" },
+  env: { title: "Env var", field: "Env" },
+}
+
+/** #1046 行集编辑（headers/env——逐对；终端原生载体 = 既有 `showPicker` + `askQuestion`，零新组件类）。
+ *  语义沿 GUI 两端行格编辑器四判据（口径单源 = `docs/core/design/MCP.md` §6.5）：trim ∥ 空键/空值
+ *  行不提交（拒 + 提示）∥ 重复键后行胜 ∥ 全空 ⇒ 字段删除；值 = 字面（零引号剥离 ∥ 零逗号切分——
+ *  逗号/等号/引号/空格原样）。Esc ∥ `← Back` ⇒ 回字段 picker（已改值不丢——T18b 同径）。 */
+async function editPairs(ctx, entry, field, title) {
+  const { showPicker, askQuestion, pushLine } = ctx
+  const words = PAIR_LABELS[field]
+  for (;;) {
+    const sel = await showPicker(`${title} · ${words.field}`, [
+      ...Object.entries(entry[field] ?? {}).map(([k, v]) => ({
+        type: "item",
+        text: `${k}=${isSensitiveKey(k) ? "••••" : String(v)}`, // 敏感键值位脱敏（核 settings 同源谓词）
+        action: `row:${k}`,
+      })),
+      { type: "item", text: "＋ Add row", action: "add" },
+      { type: "item", text: "← Back", action: "back" },
+    ])
+    if (!sel || sel.action === "back") return
+    if (sel.action === "add") {
+      const raw = ((await askQuestion(`${words.title} entry (key=value):`)) ?? "").trim()
+      const eq = raw.indexOf("=")
+      if (eq === -1) { pushLine(`[mcp] ${words.title} entry needs key=value — not added`, C.error); continue }
+      const key = raw.slice(0, eq).trim()
+      const value = raw.slice(eq + 1).trim()
+      if (!key) { pushLine(`[mcp] ${words.title} key is empty — not added`, C.error); continue }
+      if (!value) { pushLine(`[mcp] ${words.title} value is empty — not added`, C.error); continue }
+      entry[field] = { ...(entry[field] ?? {}), [key]: value } // 重复键 = 后行胜（同键赋值 ⇒ 原位覆盖）
+      continue
+    }
+    const key = sel.action.slice("row:".length)
+    const shown = isSensitiveKey(key) ? "••••" : String(entry[field]?.[key] ?? "")
+    const input = ((await askQuestion(`${words.title} "${key}" (current: ${shown}; '-' removes; empty keeps):`)) ?? "").trim()
+    if (input === "-") {
+      const next = { ...entry[field] }
+      delete next[key]
+      if (Object.keys(next).length > 0) entry[field] = next
+      else delete entry[field] // 全删 ⇒ 字段删除（沿 GUI「全空 ⇒ 字段删除」）
+    } else if (input) {
+      entry[field] = { ...entry[field], [key]: input } // 值 = 字面（引号不剥——串式半语法退场）
     }
   }
-  return Object.keys(merged).length > 0 ? merged : null
 }
 
 /** F2（评审 #6）：预览 token 遮蔽——len > 12 显示前 4 字符 + "…"，否则全遮。 */
@@ -113,19 +149,11 @@ function formEntries(entry, transport, mode) {
   ]
 }
 
-/** #58（hygiene-sweep 批）：headers/env 现值列示——敏感键名（谓词 = 核 settings 同源
- *  `isSensitiveKey`）的值位一律 `••••`（人读面不再明文）；非敏感键名保可读（`k=v`）。 */
-function currentPairs(v) {
-  const pairs = Object.entries(v ?? {}).map(([k, val]) => (isSensitiveKey(k) ? `${k}=••••` : `${k}=${val}`))
-  return pairs.length ? pairs.join(", ") : "none"
-}
-
-/** 字段输入提示 `(current: …)`——token 打码（maskToken）、headers/env 列键值对（敏感值位遮）、
- *  args 空格串接；空值 → "none"。 */
+/** 字段输入提示 `(current: …)`——token 打码（maskToken）、args 空格串接；空值 → "none"。
+ *  headers/env 不入本径（行集编辑——现值列示 ∥ 脱敏在 `editPairs` 行集面）。 */
 function currentText(entry, field) {
   const v = entry[field]
   if (field === "token") return v ? maskToken(v) : "none"
-  if (field === "headers" || field === "env") return currentPairs(v)
   if (field === "args") return (v ?? []).length ? v.join(" ") : "none"
   return String(v ?? "") || "none"
 }
@@ -135,19 +163,17 @@ const PROMPT_BASES = {
   url: "HTTP URL",
   wsUrl: "WebSocket URL",
   token: "Auth token (Bearer, optional; '-' clears, empty keeps)",
-  headers: "Headers (key=value, comma-separated; key= removes; empty keeps; '-' clears all)",
   command: "Command",
   args: "Arguments (space-separated; '-' clears, empty keeps)",
-  env: "Environment variables (key=value, comma-separated; key= removes; empty keeps; '-' clears all)",
 }
 
 function fieldPrompt(entry, field) {
   return `${PROMPT_BASES[field]} (current: ${currentText(entry, field)}):`
 }
 
-/** 字段输入应用（UI 决策 #3）：空=不变；`-`=删除可选字段（token/headers/env/args）；
- *  `k=`=删 header/env 项；required 字段（name/url/wsUrl/command）拒绝 `-`——必填不许删空。
- *  返回错误文案（调用方 pushLine）或 null。 */
+/** 字段输入应用（UI 决策 #3）：空=不变；`-`=删除可选字段（token/args）；required 字段
+ *  （name/url/wsUrl/command）拒绝 `-`——必填不许删空。headers/env 不入本径（行集编辑——
+ *  `editPairs`：空=不变 ∥ `-`=删该行）。返回错误文案（调用方 pushLine）或 null。 */
 function applyFieldInput(entry, field, input, required) {
   if (required) {
     if (input === "-") return `${FIELD_LABELS[field]} is required — cannot be cleared`
@@ -157,13 +183,6 @@ function applyFieldInput(entry, field, input, required) {
   if (field === "token") {
     if (input === "-") delete entry.token
     else if (input) entry.token = input
-  } else if (field === "headers" || field === "env") {
-    if (input === "-") delete entry[field]
-    else if (input) {
-      const updated = mergeKeyValuePairs(entry[field] ? { ...entry[field] } : {}, input)
-      if (updated) entry[field] = updated
-      else delete entry[field]
-    }
   } else if (field === "args") {
     if (input === "-") delete entry.args
     else if (input) entry.args = input.split(/\s+/)
@@ -195,6 +214,10 @@ export async function fieldPicker(ctx, { title, mode, entry, transport, existing
       return { action: "save", entry }
     }
     const field = sel.action.slice("field:".length)
+    if (field === "headers" || field === "env") {
+      await editPairs(ctx, entry, field, title) // #1046：行集编辑（Esc ∥ `← Back` 回本 picker）
+      continue
+    }
     const raw = ((await askQuestion(fieldPrompt(entry, field))) ?? "").trim()
     const err = applyFieldInput(entry, field, raw, required.includes(field))
     if (err) pushLine(`[mcp] ${err}`, C.error)

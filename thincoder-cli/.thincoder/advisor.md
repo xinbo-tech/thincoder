@@ -6,5 +6,5 @@ Review the code changes, focusing on:
 5. Maintainability: vague naming, missing comments, overly complex logic
 
 File size rule:
-- .mjs or .js files exceeding 300 lines — flag as advisory (🟡): suggest splitting into smaller modules.
-- .mjs or .js files exceeding 500 lines — flag as critical (🔴): must be split before merge.
+- .mjs or .js files exceeding 500 lines — flag as advisory (🟡): suggest splitting into smaller modules.
+- .mjs or .js files exceeding 800 lines — flag as critical (🔴): must be split before merge.

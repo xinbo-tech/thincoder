@@ -1,6 +1,6 @@
 /**
  * smoke-responses-chain.mjs — Responses 链收益真机测量（2026-08-31）
- * 用法：node test/smoke-responses-chain.mjs --name qwen
+ * 用法：node test/smoke-responses-chain.mjs --name <渠> --model <模型名>（模型须显式给——渠道不携模型 · 2026-10-09 清除批）
  * 流程：①第一轮引导模型调 get_time 工具（拿到 call_id + responseId/链 id）
  *       ②伪造 agent 往返：messages = 全量 + assistant(tc) + tool 结果
  *       ③buildBody 决策打印（previous_response_id 是否生效 + 增量 input 长度）
@@ -24,10 +24,17 @@ if (!name) {
   process.exit(0)
 }
 
+const model = args.model
+if (!model) {
+  // 渠道不携模型（2026-10-09 清除批）——模型须显式给；缺 ⇒ 明确报错（不静默）
+  console.error("[smoke] --model <模型名> required（渠道不携模型——2026-10-09 清除批）")
+  process.exit(1)
+}
+
 const cfg = JSON.parse(readFileSync(join(homedir(), ".thincoder", "config.json"), "utf8"))
 const found = (cfg.providers ?? []).find((p) => p.name === name)
 if (!found) { console.error(`provider "${name}" not found`); process.exit(1) }
-const provider = { ...found, baseURL: args.baseURL ?? found.baseURL, format: "responses", stateful: true }
+const provider = { ...found, baseURL: args.baseURL ?? found.baseURL, format: "responses", stateful: true, model }
 
 const { chat } = await import("@thincoder/core/provider/core.mjs")
 const { buildBody } = await import("@thincoder/core/provider/responses.mjs")

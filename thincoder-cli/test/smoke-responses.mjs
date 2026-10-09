@@ -1,6 +1,6 @@
 /**
  * smoke-responses.mjs — Responses API 真机冒烟（2026-08-31，测试禁用——仅手动跑）
- * 用法：node test/smoke-responses.mjs --name <provider名> [--prompt "…"]
+ * 用法：node test/smoke-responses.mjs --name <provider名> --model <模型名> [--prompt "…"]（模型须显式给——渠道不携模型 · 2026-10-09 清除批）
  * 前置：~/.thincoder/config.json 中有对应 provider（读本机 key，打印不透出、不分发）
  * 验证点：
  *  A. 文本流 content 非空 + usage（completed 帧）
@@ -26,6 +26,13 @@ if (!name) {
   process.exit(0)
 }
 
+const model = args.model
+if (!model) {
+  // 渠道不携模型（2026-10-09 清除批）——模型须显式给；缺 ⇒ 明确报错（不静默）
+  console.error("[smoke] --model <模型名> required（渠道不携模型——2026-10-09 清除批）")
+  process.exit(1)
+}
+
 const cfg = JSON.parse(readFileSync(join(homedir(), ".thincoder", "config.json"), "utf8"))
 const found = (cfg.providers ?? []).find((p) => p.name === name)
 if (!found) { console.error(`provider "${name}" not found in ~/.thincoder/config.json`); process.exit(1) }
@@ -35,6 +42,7 @@ const provider = {
   baseURL: args.baseURL ?? found.baseURL, // --baseURL 覆盖（GLM responses 端点 ≠ 预设 chat 路径）
   format: "responses", // 冒烟强制 responses
   stateful: true, // 默认值显式化（白名单 host 生效；灰名单自动降级）
+  model, // 显式模型（渠道不携模型——2026-10-09 清除批）
 }
 
 const { chat } = await import("@thincoder/core/provider/core.mjs")
