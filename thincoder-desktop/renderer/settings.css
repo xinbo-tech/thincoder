@@ -1,12 +1,13 @@
 /* settings.css — 设置面 / 首启向导两面样式（形态单源 = `docs/desktop/design/UI.md` §1 设置面 · 批档 §2.12–§2.15）。
    分档理由（沿 `pool.css` / `chat.css` 先例：零搬移 · 零断点 · 零重立变量）：`styles.css` 实读 284 行贴 300 层
-   （批档 §2.13 表）⇒ 两面随视图出档。挂载面（一容器住 `renderer/index.html`）：
+   （批档 §2.13 表）⇒ 两面随视图出档（`styles.css` 后随 R13 四拆退场）。挂载面（一容器住 `renderer/index.html`）：
      ① `[data-slot="settings"]` = **窗口级覆盖层面**（三列栅格之外 —— body 末子元素）：**一容器两树互斥占槽**
         （向导 ∥ 设置 —— 占槽裁决 = `renderer/mount-settings.mjs`）；两退场都清容器（构零子节点）⇒ 本档兜住
         空容器 / 关态（`:empty` + `[data-state="closed"]` 整层退场），否则定层盖住主 UI。
    树面锚：`views/settings.mjs`（头 / 段 / 体）· `views/settings-sections*.mjs`（段体 · 行 / 表单——D37 渠道族拆出
    `views/settings-sections-providers.mjs`）· `views/onboarding.mjs`（向导）。字形面 = 关闭 / 退场两控件的 ✕（`content` ——
-   **视图档零字形字面**，沿 `pool.css` 折叠控件同纪律）；变量单源 = `theme.css` `:root`（零新变量 · 零断点常量）。 */
+   **视图档零字形字面**，沿 `pool.css` 折叠控件同纪律）；变量单源 = `theme.css` `:root`（零新变量 · 零断点常量）。
+   **该档越 300 顾问线，在册**（实读 **304** 行——口径 `split("\n").length−1`）。 */
 
 /* ── ① 设置 / 向导：窗口级覆盖层面 ─────────────────────────────────────── */
 [data-slot="settings"] {

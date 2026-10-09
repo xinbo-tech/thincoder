@@ -273,7 +273,7 @@ const PROXY_TEST_URL = "https://www.gstatic.com/generate_204"
  * `{ ok:false, status }`（连通但非 2xx）∥ `{ ok:false, error }`（形态非法 ∕ 连接失败 ∕ 超时）。
  * 探针面 = 核 `proxyFetch`（**零第二 HTTP 客户端** —— 全端同一条代理链）；空 uri = 直连（VSC 同判据）。
  * 形态前置校验（同 VSC：非法 URI 不探、给可读句）；5s 超时（同 VSC）——超时径 `abort()` 中止底层请求
- * （核 `proxyFetch` 支持 `opts.signal`：`thincoder-core/proxy.mjs:191-200`；关 socket，不留后台在飞）。
+ * （核 `proxyFetch` 支持 `opts.signal`：`thincoder-core/proxy-transport.mjs:27` ∥ `:39-55` ∥ `:177-186`；关 socket，不留后台在飞）。
  */
 export async function testProxy(payload) {
   const uri = typeof payload?.uri === "string" ? payload.uri.trim() : ""

@@ -2,7 +2,7 @@
  * memory/code-index.mjs — code and document chunking, language detection, symbol extraction
  */
 
-import { segmentCJK, CODE_EXTS, DOC_EXTS, SKIP_DIRS, BIG_FILE_LINES } from "./schema.mjs"
+import { segmentCJK, BIG_FILE_LINES } from "./schema.mjs"
 
 /** Infer file language by extension */
 export function detectLanguage(filename) {

@@ -1,7 +1,7 @@
 /**
  * run-helpers.mjs — VSC 端 agent 辅助（2026-09-29 parity-b1 · 批档 §2.2 表注① 拆分落形）：
  * 转口核单源（`FILE_MUTATORS` ∕ `turnFrame` ∕ `escapeXml` ← 核 `agent/helpers.mjs`；
- * `hasCodeMutations` ← 核 `advisor/repos.mjs`；`pushReal` ← 核 `context.mjs`——端载体形适配见下）
+ * `pushReal` ← 核 `context.mjs`——端载体形适配见下）
  * + 端独有保留（`safeSliceUTF16` ∕ `safeSliceUTF16Tail` ∕ `buildHeadTailPreview` ∕ `agentState`）。
  * 核有同物（端删——同表注）：`configuredMaxTurns`（核 `prepareRun` 读 `agent.config.agent.maxTurns`）·
  * `MAX_VERIFY_PUSHBACKS/RETRIES` ∕ `MAX_EMPTY_RETRIES` ∕ `STALL_*`（核 `completion.mjs` ∕
@@ -12,7 +12,6 @@ import { pushReal as corePushReal } from "@thincoder/core/context.mjs"
 
 // ── 转口核（单源）──────────────────────────────────────────────
 export { FILE_MUTATORS, turnFrame, escapeXml } from "@thincoder/core/agent/helpers.mjs"
-export { hasCodeMutations } from "@thincoder/core/advisor/repos.mjs"
 
 /** pushReal —— 核单源（`@thincoder/core/context.mjs`）的端载体形适配：核签名 `pushReal(agent, msg)`
  *  （写 `agent.history` + `agent._fullHistory` + ts 打点），本端消费面（`queued-pickup`——B7 3a 后

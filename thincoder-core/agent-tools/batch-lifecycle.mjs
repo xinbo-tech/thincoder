@@ -309,6 +309,10 @@ export function statusBatchRecord({ args, ctx, review, pickTarget, onWritten }) 
   // depth-0 普通面（§4.16）= **取段**——写域集 §1/§2/§5、缺省 §1、越出集合 ⇒ 拒（模式化新串）；
   // depth-0 工程面 ∥ 子代理 ∥ 评审 = **声明段核对**（声明段 ≠ 身份写域段 ⇒ 拒；身份写域段可省略）。
   const declared = args?.segment === undefined || args?.segment === null ? null : segmentNumber(args.segment)
+  // 传值而解析不可得 ⇒ 显式拒（#1116——镜像 append 面「unknown segment」串形；未传 = 缺省语义零变）。
+  if (declared === null && args?.segment !== undefined && args?.segment !== null) {
+    throw new Error(`batch: unknown segment ${JSON.stringify(args?.segment ?? null)} — pass the section number you write (e.g. "§${seg}"), or omit it. Nothing was written.`)
+  }
   if (depth0 && !review && !engineering) {
     const target = declared ?? 1
     if (!DEPTH0_SEGMENTS.status.normal.includes(target)) {

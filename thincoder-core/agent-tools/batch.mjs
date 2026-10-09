@@ -164,12 +164,16 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const engineering = !!agent?.config?.agent?.engineering
   const seg = allowedSegment(agent, review, engineering)
   if (!depth0 && seg === null) {
-    throw new Error("batch_segment: no segment is writable by this caller — the channel exists for eng-designer (§2), eng-coder (§5) and design reviews bound to a batch record (§3); the parent agent writes §1/§4/§6 through ordinary document writes.")
+    throw new Error(engineering
+      ? "batch_segment: no segment is writable by this caller — the channel exists for eng-designer (§2), eng-coder (§5) and design reviews bound to a batch record (§3); the parent agent writes §1/§4/§6 through ordinary document writes."
+      : "batch_segment: no segment is writable by this caller — the channel exists for eng-designer (§2), eng-coder (§5) and design reviews bound to a batch record (§3); in normal mode the parent agent writes §1/§2/§4/§5/§6 through ordinary document writes.")
   }
   const n = segmentNumber(args?.segment)
   if (n === null) {
     if (depth0) {
-      throw new Error(`batch: unknown segment ${JSON.stringify(args?.segment ?? null)} — depth-0 append writes §1/§4/§6 of the in-flight record (pass the section number you write, e.g. "§4").`)
+      throw new Error(engineering
+        ? `batch: unknown segment ${JSON.stringify(args?.segment ?? null)} — depth-0 append writes §1/§4/§6 of the in-flight record (pass the section number you write, e.g. "§4").`
+        : `batch: unknown segment ${JSON.stringify(args?.segment ?? null)} — in normal mode depth-0 append writes §1/§2/§4/§5/§6 of the in-flight record (pass the section number you write, e.g. "§4").`)
     }
     throw new Error(`batch_segment: unknown segment ${JSON.stringify(args?.segment ?? null)} — pass the section number you write (e.g. "§${seg}").`)
   }

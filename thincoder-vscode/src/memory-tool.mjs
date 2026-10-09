@@ -40,7 +40,7 @@ export const memoryTool = {
   // 占位骨架（装配期由 `wireMemoryFace` 换核面；本档零自持描述字面）
   parameters: { type: "object", properties: { action: { type: "string", enum: MEMORY_ACTIONS } }, required: ["action"] },
   readonly: false,
-  // §3 action-level classification (execute-tools.mjs reads this): search/list are read-only
+  // §3 action-level classification (核 `dispatch-gates.mjs` reads this): search/list are read-only
   isReadonlyAction(args) {
     const action = args?.action
     return action === "search" || action === "list"

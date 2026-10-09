@@ -25,7 +25,7 @@ import { setSlotEngineering } from "../extension/session-slot-write.mjs"
 // VSC 特有增量随删旧迁入端壳（四步协议 ②）：核 `agent-tools/batch.mjs` 的写入回调默认
 // no-op；本端在装配层注册 = 写入成功即记绑定档绝对路径入 `agent._touchedFiles`（与删除前
 // `src/agent-tools/batch-segment.mjs:184` 逐字同语义——Array.isArray 守卫 + includes 去重）——
-// 冻结窗口 / 子代理合入记账（execute-tools 的 recordFileMutation 同一载体）行为不变。
+// 冻结窗口 / 子代理合入记账（核 `agent/record-results.mjs` 的 `_touchedFiles` mutation 记账同一载体）行为不变。
 configureBatchSegment({
   onWrite: (agent, abs) => {
     if (Array.isArray(agent._touchedFiles) && !agent._touchedFiles.includes(abs)) agent._touchedFiles.push(abs)

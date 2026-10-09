@@ -12,10 +12,10 @@
  * 认领面（§4.4）归口 `./peer-claims.mjs`——本档 re-export 路径缝与认领 API（旧 re-export 面保形
  * ——名面不缩）。
  *
- * 调用点（§2.3 件 5——端 adapter 改核形）：`execute-tools.mjs` = `peerCollabNote(agent, tool, args)`
- * ＋ `recordPeerWrites(agent, tool, args)` ＋ `markClaimNoted`；`run-stages.mjs` =
- * `flushPeerDomains(agent)`（去重集清空 = 其首步）。软提示行间 ∕ 附加分隔符 = 核形 `\n`（原端块内
- * 空行 `\n\n` 退场——分隔符不属逐字锚，§4.3 在册）。
+ * 调用点（§2.3 件 5——端 adapter 改核形）：核 `agent/dispatch-run.mjs:67` · `:79-80` · `:130` · `:150` =
+ * `peerCollabNote(agent, tool, args)` ＋ `recordPeerWrites(agent, tool, args)` ＋ `markClaimNoted`；
+ * `agent/run-stages.mjs:171` = `flushPeerDomains(agent)`（去重集清空 = 其首步）。软提示行间 ∕ 附加
+ * 分隔符 = 核形 `\n`（原端块内空行 `\n\n` 退场——分隔符不属逐字锚，§4.3 在册）。
  */
 export {
   HOT_WINDOW_MS, PEER_WRITE_TOOLS, peerWriteTargets,

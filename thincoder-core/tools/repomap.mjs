@@ -115,7 +115,7 @@ function normalizeExt(p) {
 /** B4 越界提示行（跳过大纲构建；指路 = 声明 ∕ 剪枝）——两入口（buildSummary ∕ buildOutline）同文；
  *  `origin` 给出时才缀「for this origin」（repo_outline 工具缝不传 origin——跨 origin 行不假称本 origin）。 */
 function outlineOverLimit(origin = null) {
-  return `(code index too large for an outline: > ${INDEX_ORIGIN_ROW_WARN} files${origin ? " for this origin" : ""} — declare index.excludePaths in PROJECT-MANIFEST.json, or prune: thincoder memory sweep --origin <o> --path <sub>)`
+  return `(code index too large for an outline: > ${INDEX_ORIGIN_ROW_WARN} files${origin ? " for this origin" : ""} — Options: exclude paths from indexing (index.excludePaths in PROJECT-MANIFEST.json), or remove old rows (thincoder memory sweep --origin <o> --path <sub>))`
 }
 
 /**

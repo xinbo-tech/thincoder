@@ -132,7 +132,7 @@ function isOwnBatchCompanion(targetKey, boundKey) {
 /**
  * 批次档写门判据（#309 · `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.29.1——containment；
  * 2026-09-29 收窄 · 台账 #545）：
- * 工程角色子代理（`depth > 0` ∧ `agent._batchDoc` 在场）对**批次档文件**的写 ⇒ 目标 ≠ 绑定档
+ * 携绑定的子代理（`depth > 0` ∧ `agent._batchDoc` 在场——工程角色 ∥ 普通面 coder，`BATCH-RECORD.md` §4.16）对**批次档文件**的写 ⇒ 目标 ≠ 绑定档
  * **且非绑定批次的伴随件**（见 `isOwnBatchCompanion`）⇒ 冲突（fail-closed；写自己绑定的档 ∥
  * 自身批次伴随件 = 正常面放行）。比较键 = 绝对路径 + win32 大小写归一。
  * 界面：depth 0（主 agent——跨档处置是父侧职责）· 无 `_batchDoc`（非工程绑定族）· 主基底外的

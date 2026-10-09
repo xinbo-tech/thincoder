@@ -94,8 +94,8 @@ export function permissionGate(panel) {
  * D-B1 batch permission gate: one merged ask for a same-response batch of non-readonly
  * tools. Returns "approveAll" / "oneByOne" / "deny" (deny → the whole batch is refused,
  * no second ask; oneByOne → the caller falls back to the per-item channel).
- * No handler → execute-tools falls back to per-item asks (NF-B1: ACP bridge / headless /
- * old versions are never blocked by the batch).
+ * No handler → 核 dispatch 落逐项通道（`agent/dispatch.mjs:188` ∕ `:200`——NF-B1: ACP bridge /
+ * headless / old versions are never blocked by the batch).
  * AGENT-LOOP-SUBAGENT.md §6.7.6 C-1/Q1：批合并保持 depth-0（child 不入批合并——逐项卡）。
  * @param {{ _autoApprove: boolean, _batchPermissionQueue: {resolve: Function}[], _panel?: { webview: { postMessage: Function } } }} panel
  */

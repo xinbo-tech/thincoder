@@ -63,9 +63,8 @@ export const V1_BLOCK_NAMES = {
 
 /** 载荷外工具名候选表（§11.10-②：实例绑定族 + depth 绑定族）——枚举块文本内**零命中**（§11.11 机检腿）。 */
 export const OFF_PAYLOAD_TOOL_NAMES = [
-  "memory", "memory_search", "memory_put", "code_search", "doc_search", "repo_outline",
-  "settings", "peer_instances", "ledger_query", "ledger_count", "ledger_add", "ledger_update", "ledger_close",
-  "subagent", "advisor", "consult",
+  "memory", "ledger", "code_search", "doc_search", "repo_outline", "settings",
+  "peer_instances", "subagent", "advisor", "consult",
 ]
 
 /** V1 参数面唯一缺口补齐（§11.4：`edit.edits[].*` 逐项 `description`——恰 7 项，多一处即红）。 */

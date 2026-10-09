@@ -5,8 +5,8 @@
  * 自持工具实现面退场——12 同路径镜像档 + 7 M 档删除，工具实现经 `@thincoder/core/tools/*`
  * 单源引用（核内零改动）；本档保留 = VSC 登记表（宿主工具 `ide/focus/shell/code` +
  * 自持 `builtinTools` 清单）+ **两处端壳增量**（同一份登记面，不另立档）：
- *   ① `gitTool` 动作级只读分类装饰（`isReadonlyAction`——端审批面 execute-tools 权限门 /
- *      planMode 门消费；核 git 工具无此概念）；
+ *   ① `gitTool` 动作级只读分类装饰（`isReadonlyAction`——核动作级分类消费 =
+ *      `agent/dispatch-gates.mjs:130` 谓词 + `dispatch.mjs` 两门禁位（权限短路 ∕ planMode）；核 git 工具无此概念）；
  *   ② LSP 宿主语言服务桥（`configureLspHost` 供值：VS Code 语言服务直用，零自起进程——
  *      原 `src/tools/lsp.mjs` 端实现随删旧迁入本档）。
  */
@@ -37,8 +37,8 @@ import { peerInstancesTool } from "../extension/peer-instances.mjs" // R10 L2（
 
 /**
  * git 工具 + 端只读分类装饰（迁自删除档 `src/tools/git.mjs:81-93`，逐字同语义）。
- * 端审批面（`agent/execute-tools.mjs` 权限门 + `agent/tool-gates.mjs` planMode 门）按
- * `tool.isReadonlyAction(args)` 判动作级只读——核 git 工具无该钩子（核内零端名/零端概念），
+ * 核动作级分类消费（`agent/dispatch-gates.mjs:130` 谓词 + `dispatch.mjs` 两门禁位：权限短路 ∕
+ * planMode 门）按 `tool.isReadonlyAction(args)` 判动作级只读——核 git 工具无该钩子（核内零端名/零端概念），
  * 故端侧以装饰面承载：只读动作免审批免拦，写动作（commit/push/rm/reset…）照常询问。
  */
 export const gitTool = {
