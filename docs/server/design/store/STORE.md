@@ -9,7 +9,7 @@
 - 单库单连接（`DatabaseSync`）；PRAGMA：WAL ∥ `synchronous=NORMAL` ∥ `busy_timeout=5000` ∥ `foreign_keys=ON`。
 - 库文件默认 = `thincoder-server/data/gateway.db`（运行期生成，不入 git）。
 - 结构版本 = `PRAGMA user_version`（当前 = **10**——v2 增 `providers` ∥ v3 增 `audit_events` 与三索引 ∥ v4 增 `providers.settings_json`（模型设置——服务模型配置面） ∥
-  v5 增模型标识两字段拆列 + 派生两表 + 成员配额列 ∥ v6 增成员模型禁用列（详见 §2 v5/v6 段） ∥ v7 增 provider 模型元数据留存列 ∥ **v8 增 key 名称列（`api_keys.name`——me-keys 批）**（详见 §2 v7/v8/v9 段） ∥ **v10 增审计型 `config_update`（`audit_events` 重建——CHECK 扩型；配置控制台批）**（详见 §2 v10 段）；
+  v5 增模型标识两字段拆列 + 派生两表 + 成员配额列 ∥ v6 增成员模型禁用列（详见 §2 v5/v6 段） ∥ v7 增 provider 模型元数据留存列 ∥ **v8 增 key 名称列（`api_keys.name`——me-keys 批）**（详见 §2 v7/v8/v9 段） ∥ v9 增 provider 上游代理旗（`providers.proxy`——server 代理批） ∥ **v10 增审计型 `config_update`（`audit_events` 重建——CHECK 扩型；配置控制台批）**（详见 §2 v10 段）；
   未发布期连续演进，无历史库迁移包袱——旧库启动自动升；迁移链机制自 v1 起备）。
 
 ## 2. DDL（v1 基线四表 + v2–v10 增段）
@@ -286,3 +286,4 @@ CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
 - 2026-10-07：me-keys 批设计轮（批 `docs/batches/2026-10-07-me-keys-redo.md`——需求 §2:25 ∥ 台账 #1023）——§1 结构版本 7 ⇒ 8 ∥ §2 增 v8 增段（`api_keys.name`——形/语义指针/写读面/回填口径）∥ §3 迁移链补 v8 段（判据）∥ §4 预算（db 实读 210 ⇒ ≈228——v8 段 +≈10）；同源随动 = `accounts/ACCOUNTS.md` §1.1 ∥ `webui/WEBUI.md` §2.3⑥。
 - 2026-10-09：server 代理批设计轮（批 `docs/batches/2026-10-09-server-gemini-openai-preset.md`——台账 #1129；用户 13:5x 令）：§1 结构版本 8 ⇒ **9** ∥ §2 增 v9 增段（`providers.proxy`——形/语义指针/圈界）∥ §3 迁移链补 v9 段（判据）∥ §4 预算（db 实读 ≈224 ⇒ ≈234——v9 段 +≈10）；同源随动 = `gateway/API.md` §2.2/§6 KD-SV-55 ∥ `ops/OPS.md` §1 ∥ `webui/WEBUI.md` §2.4④。
 - 2026-10-09：配置控制台批设计轮（批 `docs/batches/2026-10-09-server-console-config.md`——台账 #1139；用户 15:51–15:57 三连）：§1 结构版本 9 ⇒ **10** ∥ §2 增 v10 增段（`audit_events` CHECK 扩型——表重建 SQL 逐字 ∥ 语义/圈界）∥ §2 标题随正 ∥ §3 迁移链补 v10 段（判据）∥ §4 预算（db 实读 231 ⇒ ≈256——v10 段 +≈25）；同源随动 = `accounts/ACCOUNTS.md` §2.1（事件型/写入面） ∥ `webui/WEBUI.md` §2.3④（十型）。**产品码零触（设计轮）**。
+- 2026-10-09：设计修正轮（fix——批 `docs/batches/2026-10-09-server-console-config.md` §3 评审发现 6，本档面）：§1 版本枚举补 v9 条（`providers.proxy`——server 代理批）。**零新语义**（评审发现直接导出项）。

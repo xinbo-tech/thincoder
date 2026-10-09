@@ -18,7 +18,7 @@
 - **命名落位（各创建路径）**：自助签发 ∥ 轮换端点新签 ∥ CLI `key issue`（无命名参数——在案）**共用同一默认名助手**——空名入参 ⇒ 同口径落 `key-N`；**库内空串 = 仅限迁移前存量行**（v8 回填后零残留——`store/STORE.md` §2 v8 段）。
 - **上限（防滥用）**：每成员 **active key ≤ 20**（自助面判据）：签发前计数（`COUNT(*) … status='active'`）⇒ 已达 ⇒ 400 `invalid_request_error`（消息明示上限与处置）；计数与 INSERT 同同步段（无 await 间点——单写者 SQLite 下无竞态面）；**CLI `key issue` 不设限**（本机兜底面——操作者可控；在案）；轮转端点不受限（先吊销后签发 ⇒ 计数归 1）。
 - **吊销语义**：立即生效（逐请求查库——KD-SV-11 不变）；幂等（已吊销 ⇒ 200——软删纪律，行保留）；吊销后 key 行离列表（仅列未吊销——KD-SV-16 口径不变；页面行消失 + flash）。
-- **审计**：入既有两型（写作点 = §2.1 表：`key_issue` ∥ `key_revoke`——主体 = 本人）；**九型零增**。
+- **审计**：入既有两型（写作点 = §2.1 表：`key_issue` ∥ `key_revoke`——主体 = 本人）；**十型零增**。
 - **数据面**：`api_keys.name`（v8 迁移——`store/STORE.md` §2/§3；存量行回填默认名）；`created_at` 既有（本批起随行下发——§3 行形）。
 - **端点**：`POST /api/me/keys/issue` ∥ `POST /api/me/keys/:keyId/revoke`（§3 表）；轮换端点 `POST /api/me/keys/rotate` = **保留**（既有批内件与审计型零动——页面露出面 = `webui/WEBUI.md` §2.3⑥）；其新签行 `name` = 默认名助手（空名入参——请求/响应形零改）。
 - **边界**：不做改名 ∥ 不做 key 级有效期/过期 ∥ 不做删除行（软删纪律）∥ CLI 命名参数（后续如需——在案）。
@@ -42,7 +42,7 @@
 
 ### 2.1 审计事件（audit——功能点 15④）
 
-- **形态**：事件落库（`audit_events` 表——`store/STORE.md` §2 v3 段）；写入口 = `thincoder-server/src/accounts/audit.mjs`（拟新增——`recordAudit` ∥ `queryAudit` ∥ `pruneAuditEvents`）；保留 = 与用量同窗同清（`usageRetentionDays`；启动一次 + 24h 同调度点——`metering/METERING.md` §1）。
+- **形态**：事件落库（`audit_events` 表——`store/STORE.md` §2 v3 段）；写入口 = `thincoder-server/src/accounts/audit.mjs`（`recordAudit` ∥ `queryAudit` ∥ `pruneAuditEvents`）；保留 = 与用量同窗同清（`usageRetentionDays`；启动一次 + 24h 同调度点——`metering/METERING.md` §1）。
 - **名快照**：`actor_name` ∥ `target_name` = 落库时点名（改名后记录仍可读；列无 FK——历史记录自足，不约束成员生命周期）。
 - **CLI 口径**：本机操作（无会话）⇒ `actor_name = "cli"`（`actor_id` NULL）。
 - **事件目录与写入点（逐点——既有函数/路由坐标）**：
@@ -58,10 +58,11 @@
 | `password_change` | 本人 | —— | —— | `thincoder-server/src/accounts/routes.mjs` POST /api/me/password |
 | `password_reset` | admin ∥ `cli` | 目标成员 | —— | `thincoder-server/src/accounts/routes-admin.mjs` 重置路由 ∥ `thincoder-server/src/ops/cli.mjs` `member passwd` |
 | `member_create` | admin ∥ `cli` | 新成员 | `{ role }` | `thincoder-server/src/accounts/routes-admin.mjs` 建成员路由 ∥ `thincoder-server/src/ops/cli.mjs` `member add` |
+| `config_update` | admin（名快照） | —— | `{ keys }`（变更键名清单——值永不入） | `thincoder-server/src/gateway/config-admin.mjs`（拟新增）PATCH /api/admin/config 写盘成功后一条（失败 ⇒ warn——不反噬已落盘事实） |
 
 - **「成员删」= 零写入点**：全库零成员删除路径（实核）；审计面只覆盖「增」——需求措辞面（「成员增删」含删）已上抛披露（成员删除功能本身不在任何功能点内）。
 - **列表**：`GET /api/audit`（admin——§3 端点表）；过滤 = 类型 ∥ 成员 ∥ 时段（`member` 取 id ∥ 展示名——解析同 usage 口径；匹配 `actor_id` ∥ `target_id`）。
-- **边界**：不做告警推送 ∥ 不做事件导出 ∥ 不做不可篡改/防删面（库文件权限自担——内网工具面）；OpenAI 请求不入审计（= 用量面——`metering/METERING.md` §1）；**成员配置写（分模型覆盖 ∥ 模型禁用集）不入审计**（admin 成员管理动作——沿覆盖先例，审计九型零增）；被拒调用 = 网关行为（同口径）。
+- **边界**：不做告警推送 ∥ 不做事件导出 ∥ 不做不可篡改/防删面（库文件权限自担——内网工具面）；OpenAI 请求不入审计（= 用量面——`metering/METERING.md` §1）；**成员配置写（分模型覆盖 ∥ 模型禁用集）不入审计**（admin 成员管理动作——沿覆盖先例，审计十型零增）；被拒调用 = 网关行为（同口径）。
 
 ### 2.2 成员模型禁用（配额 v2——功能点 23③ ∥ 台账 #1004）
 
@@ -109,7 +110,7 @@
 | `thincoder-server/src/accounts/routes.mjs`（已落盘） | **98 ⇒ ≈112**（实读 2026-10-06——本批 +≈14 = 登录成/败审计写 ∥ 轮换/改密审计写 ∥ `memberView` key 行归并（`lastUsedAt`/`windowTokens`））**⇒ 实读 112 ⇒ ≈118**（配额批：`memberView` 配额字段换形（`modelQuotas`））**⇒ 实读 113 ⇒ ≈122 ⇒ 实读 118（2026-10-07）**（配额 v2 批落地：`memberView` 两新字段（`modelUsage` ∥ `modelDisables`）∥ 取数装配）**⇒ ≈152**（me-keys 批：两新路由（issue ∥ revoke——校验/上限/所有权/审计）+≈30 ∥ key 行 += name/createdAt +≈4） | 自助端点：login ∥ logout ∥ me ∥ me/password ∥ me/keys/issue ∥ me/keys/:keyId/revoke ∥ me/keys/rotate |
 | `thincoder-server/src/accounts/routes-admin.mjs`（已落盘） | **61 ⇒ ≈100**（实读 2026-10-06——本批 +≈39 = 三处审计写（建/吊销/重置） ∥ `GET /api/audit` 注册行（过滤三轴））**⇒ 实读 95 ⇒ ≈112 ⇒ 实读 109（2026-10-07）**（配额 v2 批落地：`model-disables` 端点注册行（合并 ∥ 校验 ∥ 404 ∥ 返回）） | 管理端点：members 列表/建 ∥ 吊销 ∥ 重置 ∥ 审计列表 |
 | `thincoder-server/src/accounts/login-guard.mjs`（已落盘） | **119 ⇒ ≈125**（实读 2026-10-06——本批 +≈6 = `onLock` 回调（置锁处）） | 登录防爆破 |
-| `thincoder-server/src/accounts/audit.mjs`（拟新增） | **≈90**（设计估——`recordAudit` ∥ `queryAudit`（过滤/分页） ∥ `pruneAuditEvents` ∥ 行解码） | 审计事件（§2.1） |
+| `thincoder-server/src/accounts/audit.mjs`（已落盘） | **≈90**（设计估——`recordAudit` ∥ `queryAudit`（过滤/分页） ∥ `pruneAuditEvents` ∥ 行解码）**⇒ 实读 109**（2026-10-09——首版完备化批落地后首读） | 审计事件（§2.1） |
 | **小计** | **≈570 ⇒ 493 ⇒ 632 ⇒ ≈785**（#963 实读：+139）**⇒ ≈822**（配额批：+≈37 = members +≈24 ∥ keys +≈7 ∥ routes +≈6）**⇒ ≈872 ⇒ 实读 897（2026-10-07——配额 v2 批落地后；Δ+75 = members +49 ∥ keys +7 ∥ routes +5 ∥ routes-admin +14——越估 ≈25）⇒ ≈953（me-keys 批：+≈56 = keys +22 ∥ routes +34 ∥ members/routes-admin ±0——实施实读为准）** | —— |
 
 ## 5. 验收判据（机检面）
@@ -121,8 +122,8 @@
 | AC-7（功能点 7——B 案） | ① 正确凭据登录 ⇒ 200 + 会话 cookie；错凭据（含不存在用户）⇒ 401 `invalid_credentials`（同措辞）② 无/过期会话访问 `/api/me` ∥ `/api/usage` ⇒ 401 `unauthorized` ③ `user` 会话调管理写（建成员 ∥ 配额（分模型覆盖） ∥ 吊销 ∥ 重置）⇒ 403 `forbidden`（服务端判）④ 自助改密 ⇒ 旧密登录失败 + 新密登录成功 + 本人其他会话失效（当前保留）⑤ admin 重置 ⇒ 旧密失效 + 临时密码可登（一次性回显——同签发语义）⑥ 自助轮换 ⇒ 新 key 通行 + 旧 key 下一请求 401 ⑦ 首启引导幂等（零 admin + 配置 ⇒ 建；再启动 ⇒ 不重建不改密——机制 = `ops/OPS.md` §2） | 批内件 |
 | AC-13②（功能点 12——登录防爆破；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 5 连败（同用户名）⇒ 第 6 次（含正确密码）⇒ 429 `too_many_attempts` + `Retry-After`（秒）；锁窗过后 ⇒ 正确密码 200；成功 ⇒ 清计；IP 维 20 阈值（`trustProxy` 下取 `X-Real-IP`）；不存在用户名同锁（枚举零差——措辞/计时面）；admin 重置 ⇒ 该用户名锁清（旧密 401、临时密码 200）；锁触发日志 `login_throttled` 在册 | 批内件 |
 | AC-15④（功能点 15——审计/安全面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 事件落库（逐写入点实走 ⇒ 各型行在场：登录成/败/锁 ∥ 轮换/签发/吊销 ∥ 改密/重置 ∥ 建成员——含 CLI 面 `actor=cli`）∥ 列表过滤（类型 ∥ 成员 ∥ 时段逐轴生效）∥ 失败登录可见（N 连败 ⇒ `login_failure` 行 + 第 5 次起 `login_locked` 行）∥ 判权三态（user ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200）∥ 保留清理（注入时钟 ⇒ 窗外删——同窗接线） | 批内件 |
-| AC-23（功能点 23③——成员模型禁用写/读面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 写面：`POST /api/members/:id/model-disables` 键级合并（`true` = 禁用 ∥ `null` = 删键 ∥ 未出现键不动）∥ 键形非法（裸名 ∥ 空段）⇒ 400 ∥ 值非 `true`/`null` ⇒ 400（库零变）∥ 不存在 ⇒ 404 ∥ 返回 `{id, modelDisables}` ∥ 判权三态（user ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200）；读面：`memberView` 新字段 `modelUsage`（当月逐模型已用——键 = 外标）∥ `modelDisables`——`/api/me` ∥ `/api/members` 同形；变更不入审计（九型零增）；覆盖键形校验同拍（#1001②——`model-quotas` 裸名键 ⇒ 400） | 批内件 |
-| AC-25（功能点 25——key 多把并存/命名/自助签发/逐把吊销；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 签发：`POST /api/me/keys/issue`（会话）——`{name?}` ⇒ 200 `{id,name,hint,plain}`（明文一次性；**旧 key 照常可用**——多把并存）；空名 ⇒ 默认 `key-N`（单调——含吊销行）；名 ≤40 字符（trim；超长/非字符串 ⇒ 400 `invalid_request_error`）；重名允许；active ≥20 ⇒ 400（消息明示上限——防滥用；CLI 不设限在案）∥ 吊销：`POST /api/me/keys/:keyId/revoke` ⇒ 200；**他人 key ⇒ 404 `not_found`**（不属本人与不存在不区分——防枚举）；已吊销 ⇒ 幂等 200；吊销即断（下一 `/v1` 请求 401——逐请求查库）∥ 行形：`/api/me` ∥ `/api/members` key 行 += `name`/`createdAt`（单源 = `memberView`；仅未吊销）∥ 审计：两型既有（`key_issue` ∥ `key_revoke`——主体 = 本人；九型零增）∥ 判权：无会话 ⇒ 401；轮换端点保留（页面不再露出——兼容不变量）∥ 数据面：`api_keys.name`（v8 迁移——存量行回填默认名）∥ **空串零残留断点**（v8 回填后全表实读——全部创建路径经默认名助手；空串仅限迁移前存量） | 批内件 |
+| AC-23（功能点 23③——成员模型禁用写/读面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 写面：`POST /api/members/:id/model-disables` 键级合并（`true` = 禁用 ∥ `null` = 删键 ∥ 未出现键不动）∥ 键形非法（裸名 ∥ 空段）⇒ 400 ∥ 值非 `true`/`null` ⇒ 400（库零变）∥ 不存在 ⇒ 404 ∥ 返回 `{id, modelDisables}` ∥ 判权三态（user ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200）；读面：`memberView` 新字段 `modelUsage`（当月逐模型已用——键 = 外标）∥ `modelDisables`——`/api/me` ∥ `/api/members` 同形；变更不入审计（十型零增）；覆盖键形校验同拍（#1001②——`model-quotas` 裸名键 ⇒ 400） | 批内件 |
+| AC-25（功能点 25——key 多把并存/命名/自助签发/逐把吊销；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 签发：`POST /api/me/keys/issue`（会话）——`{name?}` ⇒ 200 `{id,name,hint,plain}`（明文一次性；**旧 key 照常可用**——多把并存）；空名 ⇒ 默认 `key-N`（单调——含吊销行）；名 ≤40 字符（trim；超长/非字符串 ⇒ 400 `invalid_request_error`）；重名允许；active ≥20 ⇒ 400（消息明示上限——防滥用；CLI 不设限在案）∥ 吊销：`POST /api/me/keys/:keyId/revoke` ⇒ 200；**他人 key ⇒ 404 `not_found`**（不属本人与不存在不区分——防枚举）；已吊销 ⇒ 幂等 200；吊销即断（下一 `/v1` 请求 401——逐请求查库）∥ 行形：`/api/me` ∥ `/api/members` key 行 += `name`/`createdAt`（单源 = `memberView`；仅未吊销）∥ 审计：两型既有（`key_issue` ∥ `key_revoke`——主体 = 本人；十型零增）∥ 判权：无会话 ⇒ 401；轮换端点保留（页面不再露出——兼容不变量）∥ 数据面：`api_keys.name`（v8 迁移——存量行回填默认名）∥ **空串零残留断点**（v8 回填后全表实读——全部创建路径经默认名助手；空串仅限迁移前存量） | 批内件 |
 
 ## 6. 关键决策（本域）
 
@@ -135,9 +136,9 @@
 | KD-SV-14 | **admin 重置成员密码 = 在**（用户 2026-10-06 08:06 定）；语义 = 服务器生成**一次性临时密码**（回显一次——同签发语义）+ 吊销该成员全部会话；首登后应自助改密（页面提示——不设强制门） | 忘密唯一兜底（找回 = 不做项——无外部通道）∥ 一次性临时密码 = 管理侧零知情（admin 不见成员自设密码）∥ 与 key 签发同语义——两族凭证一致 | admin 直接设新密（admin 知晓成员密码——凭据卫生否）· 自助找回（邮件/短信——不做项）· 不落（兜底缺——忘密只剩本机 shell） |
 | KD-SV-16 | **管理面 key 枚举 = `GET /api/members` 成员行内附清单**（提示形 + id；仅列未吊销）——不设 `/api/members/:id/keys` 子资源 | 管理页一次装配（成员表 + 吊销控件同响应——vanilla 前端一跳）；与 `GET /api/me`「本人信息 + key 清单」同形；端点面零增 | 独立子资源（`GET /api/members/:id/keys`——页面 N+1 请求 ∥ 无其它消费方，吊销流多一跳） |
 | KD-SV-21 | **登录防爆破 = 双维内存锁**（用户名维 5 次 ∥ IP 维 20 次——窗/锁各 15 分钟；任一中锁 ⇒ 429 `too_many_attempts` + `Retry-After`；两维同文案——防枚举面保持；成功/改密/重置清计；重启清零（在案））；IP 口径 = 对端地址 ∥ `trustProxy: true` 读 `X-Real-IP` | 内网面在线爆破防护（分钟级窗）；内存 = 零表零写（登录热路径不落库）∥ 双维 = 兼顾定向与喷洒；快速拒绝（429）优于服务端 sleep（挂连接/事件循环面）；固定窗不升级（升档留后续） | DB 持久化（每条失败一写 + 新表——重启清零可接受，收益低）· 逐次延迟响应（挂连接）· 仅用户名维（喷洒无阻）· 仅 IP 维（定向爆破不阻 ∥ 反代聚合面误伤）· 验证码/外部组件（内网工具面——不做） |
-| KD-SV-28 | **审计事件 = 库表（v3）+ 名快照 + 与用量同保留窗**：`audit_events`（九型 CHECK）；写入口 = `thincoder-server/src/accounts/audit.mjs`（拟新增——`recordAudit` 由调用侧显式传型/主体——HTTP 路由与 CLI 同覆盖）；列表 = `GET /api/audit`（admin——过滤三轴）；清理复用 `usageRetentionDays` 与调度点 | 浏览器可读（审计页）+ 过滤 ∥ 库表 = 与全系统同库单源；快照名 = 改名后记录仍自足（列无 FK——不约束成员生命周期）；同窗单旋钮 = 保留治理一处配置；CLI 覆盖 = 本机改动也入审计（单点漏检面） | 日志文件（控制台不可读 ∥ 无过滤 ∥ 轮转面）· 内存（重启清零）· 独立保留窗配置（口径分裂——两窗默认值不同徒增疑问）· 服务层函数内隐式落库（`setMemberPassword` 三调用方异型——无法区分自助/重置/CLI） |
+| KD-SV-28 | **审计事件 = 库表（v3）+ 名快照 + 与用量同保留窗**：`audit_events`（十型 CHECK）；写入口 = `thincoder-server/src/accounts/audit.mjs`（`recordAudit` 由调用侧显式传型/主体——HTTP 路由与 CLI 同覆盖）；列表 = `GET /api/audit`（admin——过滤三轴）；清理复用 `usageRetentionDays` 与调度点 | 浏览器可读（审计页）+ 过滤 ∥ 库表 = 与全系统同库单源；快照名 = 改名后记录仍自足（列无 FK——不约束成员生命周期）；同窗单旋钮 = 保留治理一处配置；CLI 覆盖 = 本机改动也入审计（单点漏检面） | 日志文件（控制台不可读 ∥ 无过滤 ∥ 轮转面）· 内存（重启清零）· 独立保留窗配置（口径分裂——两窗默认值不同徒增疑问）· 服务层函数内隐式落库（`setMemberPassword` 三调用方异型——无法区分自助/重置/CLI） |
 | KD-SV-42 | **成员模型禁用 = 默认全可用 + 勾选即禁用（即时写）+ 存储 `members.model_disabled_json`（JSON map——沿覆盖列口径）+ 派发命中后/配额前执行（404 `model_not_found`——消息明示）+ `/v1/models` 随动滤除**：写面 = 键级合并 `POST model-disables`（`true`/`null`）；检查 = 随鉴权行零查询；**禁用优先于配额**（可用性 ≠ 用量限额——两轴独立）；审计零增（沿覆盖先例）；仅 chat（嵌入面零涉） | 需求 §2:23③（用户 11:16 走查「默认可用、勾选即禁用」——机制选择为设计裁定）；沿 `model_quotas_json` 先例（JSON 列随鉴权行——零新表零新查询）；错误形零新码（沿「未开放 ⇒ 404」选择性中继口径——列表/派发两面同判）；即时写 = 布尔勾选（沿吊销在窗「即点即效」先例；额度输入仍草稿+保存——值面校验/误触面） | 新错误码（新契约 + i18n + 四端未知码面——无收益）· 独立禁用表（键查 + N+1 面）· 列表照列仅拒调用（可观察面自相矛盾：列表可选中而调用必 404）· 草稿+保存提交（勾选语义失即时性；且与配额提交并批 = 二写非原子）· 嵌入面禁（表不列嵌入行——面外） |
-| KD-SV-48 | **key 自助面 = 多把并存（签发 + 逐把吊销）+ 命名 + 上限**：端点 = `POST /api/me/keys/issue` ∥ `POST /api/me/keys/:keyId/revoke`（会话面——判权本人）；命名 = 可空 ⇒ 默认 `key-N`（**落库**——单调不复用）∥ ≤40 字符 ∥ 重名允许（名称 = 标签；寻址 = id/提示形）；上限 = active ≤20（自助面判据；超 ⇒ 400 明示；CLI 免——本机兜底）；他人 key ⇒ 404（不区分——防枚举，沿 admin 先例）；审计 = 既有两型（主体 = 本人；九型零增）；轮换端点保留（页面下架——API 契约零动）；存储 = `api_keys.name`（v8） | 需求 §2:25（用户 16:06/16:08/16:1x——「一个用户可能会有多个Key」硬需求）；沿 admin 吊销先例（404 口径 ∥ 幂等）；默认名落库 = 显示稳定（吊销/新增不重排）；名称 = 标签非标识（唯一索引无收益） | 「轮换（全换）」为唯一签发径（页面下架——误读为「换一把」即全断；需求 ① 允许留/否）· 空名零默认（表列无所指）· 重名禁止（唯一索引 + 冲突路径——收益低）· 上限落 CLI（本机兜底面——免）· 改名/排序面（面外） |
+| KD-SV-48 | **key 自助面 = 多把并存（签发 + 逐把吊销）+ 命名 + 上限**：端点 = `POST /api/me/keys/issue` ∥ `POST /api/me/keys/:keyId/revoke`（会话面——判权本人）；命名 = 可空 ⇒ 默认 `key-N`（**落库**——单调不复用）∥ ≤40 字符 ∥ 重名允许（名称 = 标签；寻址 = id/提示形）；上限 = active ≤20（自助面判据；超 ⇒ 400 明示；CLI 免——本机兜底）；他人 key ⇒ 404（不区分——防枚举，沿 admin 先例）；审计 = 既有两型（主体 = 本人；十型零增）；轮换端点保留（页面下架——API 契约零动）；存储 = `api_keys.name`（v8） | 需求 §2:25（用户 16:06/16:08/16:1x——「一个用户可能会有多个Key」硬需求）；沿 admin 吊销先例（404 口径 ∥ 幂等）；默认名落库 = 显示稳定（吊销/新增不重排）；名称 = 标签非标识（唯一索引无收益） | 「轮换（全换）」为唯一签发径（页面下架——误读为「换一把」即全断；需求 ① 允许留/否）· 空名零默认（表列无所指）· 重名禁止（唯一索引 + 冲突路径——收益低）· 上限落 CLI（本机兜底面——免）· 改名/排序面（面外） |
 
 ## 7. 用例（本域）
 
@@ -176,7 +177,7 @@
 | B28 | 边界 | active = 20 时第 21 把签发 ∥ 吊销一把后再签 | 400 `invalid_request_error`（消息明示上限）∥ 吊销后 ⇒ 200 |
 | B29 | 边界 | 名 41 字符 ∥ 两把同名 ∥ 名全空白 | 400 `invalid_request_error`；库零变 ∥ 200（重名允许） ∥ 200（默认名） |
 | E23 | 错误 | A 会话吊销 B 的 key（B 的 keyId） ∥ 无会话 ∥ keyId 不存在 | 404 `not_found`（A 的操作零变——B key 仍 active） ∥ 401 `unauthorized` ∥ 404 `not_found` |
-| N34 | 正常 | 走签发 + 自助吊销链 ⇒ `GET /api/audit` | `key_issue` ∥ `key_revoke` 行在场（actor = 本人 ∥ detail = keyHint；九型零增——既有型复用） |
+| N34 | 正常 | 走签发 + 自助吊销链 ⇒ `GET /api/audit` | `key_issue` ∥ `key_revoke` 行在场（actor = 本人 ∥ detail = keyHint；十型零增——既有型复用） |
 
 ## 8. 本域边界（不做的面）
 
@@ -205,3 +206,4 @@
 - 2026-10-07：fix 轮（评审轮次 1——批 `docs/batches/2026-10-07-quota-v2-member-models.md` §3 六发现，本档面）：§5 AC-23 行「候补」标记收正（已落需求档——沿 AC-13/AC-14 先例）。
 - 2026-10-07：me-keys 批设计轮（批 `docs/batches/2026-10-07-me-keys-redo.md`——需求 §2:25 ∥ 台账 #1023）——§1 签发/吊销句随正（多把并存 ∥ 轮转页面下架）+ 增 §1.1（key 自助面：命名 ∥ 上限 ∥ 吊销语义 ∥ 审计 ∥ 数据面 ∥ 边界）∥ §2.1 两写入点随正（key_issue/key_revoke——本人）∥ §3 增两行 + 三行行形随正 ∥ §4 两行预算 + 小计 ⇒ ≈953（上链无批名估算残留随正）∥ §5 增 AC-25 行 ∥ §6 增 KD-SV-48 ∥ §7 增 N31–N34 ∥ B28/B29 ∥ E23 ∥ §8 边界随正；同源随动 = `webui/WEBUI.md` §2.3⑥ ∥ `store/STORE.md` v8 段 ∥ `design/PROJECT.md` §4/§7。
 - 2026-10-07：fix 轮（评审 #43——批 `docs/batches/2026-10-07-me-keys-redo.md` §3 七号落修；本档面 = #2）：命名面闭合——全部创建路径（自助签发 ∥ 轮换新签 ∥ CLI `key issue`）共用默认名助手（§1.1 增「命名落位」条 ∥ §1.1 端点行 ∥ §3 轮换行 `name` 落位同拍）∥ §5 AC-25 行增「空串零残留」断点（库内空串 = 仅限迁移前存量——v8 回填后零残留）；`store/STORE.md` 零动（不变量在闭合后成立）。
+- 2026-10-09：fix 轮（射程外收口——承批 `docs/batches/2026-10-09-server-console-config.md` §3 轮 1 ∥ 同批修轮射程外发现）：审计面随 v10 十型——§2.1 事件目录增 `config_update` 行（actor = admin 名快照 ∥ detail = 键名清单、值永不入 ∥ 写入点 = `thincoder-server/src/gateway/config-admin.mjs`（拟新增））∥ 全档审计型表述随正为「十型」（§1.1 ∥ §2.1 边界 ∥ §5 AC-23/AC-25 ∥ §6 KD-SV-28/KD-SV-48 ∥ §7 N34）；同源 = `store/STORE.md` §2 v10 段。
