@@ -31,6 +31,31 @@ export const EN_SYSTEM = Object.freeze({
   "system.endOtherPath": "Fill in baseURL + key directly (any SDK or client)",
   "system.curlTitle": "curl smoke test",
 
+  // ── System · server config card (§2.1——config console batch; KD-SV-56: file face + restart to apply) ──
+  "system.configTitle": "Server config",
+  "system.configHint": "Values come from the config file (effective values, defaults filled in); writable items take effect after a service restart.",
+  "system.cfgHost": "Listen address (host)",
+  "system.cfgPort": "Port",
+  "system.cfgDb": "Database",
+  "system.cfgTopologyNote": "The three rows above are deployment topology items (read-only) — edit the config file and restart the service to change them.",
+  "system.cfgAutoUpdate": "Update mode",
+  "system.cfgAutoUpdateOff": "Off",
+  "system.cfgAutoUpdateNotify": "Notify",
+  "system.cfgAutoUpdateAuto": "Auto",
+  "system.cfgTrustProxy": "Trust reverse-proxy IP header",
+  "system.cfgRetention": "Usage/audit retention (days)",
+  "system.cfgRetentionUnlimited": "Unlimited",
+  "system.cfgRetentionInvalid": "Retention must be a positive integer, or check “Unlimited”",
+  "system.cfgProxyUri": "Upstream proxy address (proxy.uri)",
+  "system.cfgProxyUriPh": "Must be an http URL (empty = disabled)",
+  "system.cfgProvidersRow": "providers (first-boot seeds)",
+  "system.cfgProvidersValue": "Ongoing management = Providers page",
+  "system.cfgBootstrapRow": "bootstrap (bootstrap account)",
+  "system.cfgBootstrapValue": "One-shot (void once the account is created); the password is never echoed",
+  "system.cfgSaved": "Saved — takes effect after the service restarts",
+  "system.cfgLoadFailed": "Failed to load the config",
+  "system.cfgRestartNote": "Takes effect after a restart (the config file is not hot-reloaded)",
+
   // ── System · vector service (§2.3①——system page card ∥ my-usage tip bar) ──
   "vector.title": "Vector service",
   "vector.baseURL": "Engine address",
@@ -51,6 +76,10 @@ export const EN_SYSTEM = Object.freeze({
   "vector.testPh": "Type a short text…",
   "vector.testBtn": "Run",
   "vector.testDone": "Dimensions {dimensions} · {ms} ms (no records, no metering)",
+  "vector.apiKey": "API key",
+  "vector.apiKeyPh": "Leave empty to keep the current one ({mask})",
+  "vector.clearApiKey": "Clear key (no Authorization header after save)",
+  "vector.draftNote": "The reachability check and try-run use the current form values (test before saving); an unedited API key falls back to the saved config.",
   "vector.meTitle": "Vector service (on-prem embedding engine)",
 
   // ── System · service health (§2.3⑤——sidebar light ∥ system block ∥ overview card) ──
@@ -91,7 +120,7 @@ export const EN_SYSTEM = Object.freeze({
   "usageReport.export": "Export CSV",
   "usageReport.exported": "CSV exported",
 
-  // ── Admin · audit (§2.3④——nine types = accounts/ACCOUNTS.md §2.1) ─────────
+  // ── Admin · audit (§2.3④——ten types = accounts/ACCOUNTS.md §2.1) ─────────
   "audit.title": "Audit",
   "audit.typeLabel": "Type",
   "audit.typeAll": "All types",
@@ -110,6 +139,7 @@ export const EN_SYSTEM = Object.freeze({
   "audit.dimension": "Dimension",
   "audit.keyHint": "key",
   "audit.role": "Role",
+  "audit.keys": "Keys",
   "audit.type.login_success": "Sign-in succeeded",
   "audit.type.login_failure": "Sign-in failed",
   "audit.type.login_locked": "Sign-in locked",
@@ -119,4 +149,5 @@ export const EN_SYSTEM = Object.freeze({
   "audit.type.password_change": "Password changed",
   "audit.type.password_reset": "Password reset",
   "audit.type.member_create": "Member created",
+  "audit.type.config_update": "Config updated",
 })

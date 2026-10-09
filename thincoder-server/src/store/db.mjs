@@ -168,6 +168,29 @@ const DDL_V9 = `
 ALTER TABLE providers ADD COLUMN proxy INTEGER NOT NULL DEFAULT 0;  -- 上游代理旗（1 = 该渠上游请求经代理；0 = 直连——缺省）
 `
 
+/** v10 增段（`audit_events.type` CHECK 扩型——store/STORE.md §2 v10 段逐字；accounts 域——配置控制台批）。
+ *  SQLite 不可改 CHECK ⇒ **表重建**（建新表 ∥ 拷贝 ∥ 换名 ∥ 索引重建）；净零新表/新列（§3 迁移链 v10）。 */
+const DDL_V10 = `
+-- 事件型 CHECK 扩十型（+ 'config_update'）——SQLite 不可改 CHECK ⇒ 表重建（建新表 ∥ 拷贝 ∥ 换名 ∥ 索引重建）
+CREATE TABLE audit_events_v10 (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts          INTEGER NOT NULL,              -- unix ms（事件时刻）
+  type        TEXT NOT NULL CHECK (type IN ('login_success','login_failure','login_locked',
+    'key_rotate','key_issue','key_revoke','password_change','password_reset','member_create','config_update')),
+  actor_id    INTEGER,                       -- 行为人成员 id（无会话 ∥ 未知用户名 ⇒ NULL；无 FK——历史记录自足）
+  actor_name  TEXT NOT NULL,                 -- 行为人名快照（用户名 ∥ 展示名 ∥ 'cli'）
+  target_id   INTEGER,                       -- 对象成员 id（无对象 ⇒ NULL）
+  target_name TEXT NOT NULL DEFAULT '',      -- 对象名快照（无对象 ⇒ 空串）
+  detail      TEXT NOT NULL DEFAULT '{}'     -- 附加形（JSON：ip ∥ dimension ∥ keyHint ∥ role ∥ keys 等）
+);
+INSERT INTO audit_events_v10 (id, ts, type, actor_id, actor_name, target_id, target_name, detail)
+  SELECT id, ts, type, actor_id, actor_name, target_id, target_name, detail FROM audit_events;
+DROP TABLE audit_events;
+ALTER TABLE audit_events_v10 RENAME TO audit_events;
+CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_events(ts);
+CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
+`
+
 /** 迁移链：每段 = `{ v, up(db) }`（v = 目标结构版本，自 1 起递增）；结构每变一次追一段（+1）。 */
 export const MIGRATIONS = [
   { v: 1, up: (db) => db.exec(DDL_V1) },
@@ -179,6 +202,7 @@ export const MIGRATIONS = [
   { v: 7, up: (db) => db.exec(DDL_V7) },
   { v: 8, up: (db) => db.exec(DDL_V8) },
   { v: 9, up: (db) => db.exec(DDL_V9) },
+  { v: 10, up: (db) => db.exec(DDL_V10) },
 ]
 
 /** 当前结构版本（= 链尾段号——store/STORE.md §1）。 */

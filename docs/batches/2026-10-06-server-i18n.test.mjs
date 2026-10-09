@@ -6,10 +6,10 @@
  *   ① 表对齐：两表键集双向相等（除自称名族 `lang.zh` ∥ `lang.en`——仅 zh 表载体）∥ 占位符逐键一致 ∥
  *      en 表零 CJK ∥ 全键非空
  *   ② 检测矩阵：`pickLang(stored, languages)`（记忆优先 ∥ `zh*`/`en*` 首命中 ∥ 无匹配 ⇒ zh ∥ 非法记忆值忽略）
- *   ③ 零 CJK 口径：前端 JS 代码档（排除 `i18n-zh.mjs` ∥ `i18n-en.mjs` ∥ `index.html`）注释外零 CJK 字面量
+ *   ③ 零 CJK 口径：前端 JS 代码档（排除 i18n 表族——前缀 `i18n-zh*`/`i18n-en*`（门面 + 八部件） ∥ `index.html`）注释外零 CJK 字面量
  *      （CJK 类 = Han ∥ CJK 标点 ∥ 全角形；「—」U+2014 ∥ 「…」U+2026 等中性标点不在内——`fmtValue` 中性保留在案）
  *   ④ 静态面：各前端档 `t("…")` 字面量 ⊆ 表键 ∥ `nav.mjs` `labelKey` 面（数据持键、无 `label` 字面量）∥
- *      相对 import 目标在册（import 图闭合——零裸说明符）∥ 三新档静态直发 200 + `text/javascript`
+ *      相对 import 目标在册（import 图闭合——零裸说明符）∥ i18n 表族静态直发 200 + `text/javascript`
  *   ⑤ 错误映射：可达码全集八枚（两表全键 ∥ 映射按码 ∥ 参数码句末附服务端原文 ∥ `Retry-After` 秒数注入 ∥
  *      未知码原文兜底——纯函数面）
  *   ⑥ 渲染冒烟：切换器组件 `h` 注入（自称名固定 ∥ 当前态高亮 ∥ `onChange` 回调）+ 缺键回退链（键原文 + `console.warn`）
@@ -38,8 +38,10 @@ const CJK = /[\u3000-\u303f\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff00-\uffef]
 const SELF_NAMES = ["lang.zh", "lang.en"]
 /** 控制台可达错误码全集八枚（服务端零改——按 `code` 前端映射）。 */
 const ERROR_CODES = ["unauthorized", "invalid_credentials", "forbidden", "not_found", "invalid_request_error", "upstream_error", "internal_error", "too_many_attempts"]
-/** 零 CJK / 键引用扫描面 = 前端 JS 代码档（排除两张文案表；index.html 非 JS 档——静态缺省豁免在案）。 */
-const JS_FILES = readdirSync(PUBLIC_DIR).filter((name) => name.endsWith(".mjs") && !["i18n-zh.mjs", "i18n-en.mjs"].includes(name)).sort()
+/** i18n 表族（结构轮前缀式——门面 + 八部件；import 图面 ∥ 直发面同取）。 */
+const TABLE_FAMILY = readdirSync(PUBLIC_DIR).filter((name) => /^i18n-(zh|en)/.test(name)).sort()
+/** 零 CJK / 键引用扫描面 = 前端 JS 代码档（排除 i18n 表族；index.html 非 JS 档——静态缺省豁免在案）。 */
+const JS_FILES = readdirSync(PUBLIC_DIR).filter((name) => name.endsWith(".mjs") && !TABLE_FAMILY.includes(name)).sort()
 
 const placeholders = (text) => [...String(text).matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(",")
 /** 剥注释（字符串态感知——`//`/`/*` 出现在字符串内不误剥；「注释外零 CJK」判据取此——防日后 URL 串削弱判据）。 */
@@ -119,20 +121,20 @@ test("② 检测矩阵：pickLang——记忆优先 ∥ zh*/en* 首命中 ∥ �
 
 // ── ③ 零 CJK 口径 ───────────────────────────────────────────────────────────
 
-test("③ 零 CJK 口径：前端 JS 代码档（排除两表）注释外零 CJK 字面量", () => {
-  assert.deepEqual(JS_FILES, ["app.mjs", "i18n.mjs", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs"])
+test("③ 零 CJK 口径：前端 JS 代码档（排除 i18n 表族）注释外零 CJK 字面量", () => {
+  assert.deepEqual(JS_FILES, ["app.mjs", "dom.mjs", "health.mjs", "i18n.mjs", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs"])
   for (const name of JS_FILES) {
     const stripped = stripComments(readFileSync(join(PUBLIC_DIR, name), "utf8"))
     const hit = stripped.match(CJK)
-    assert.equal(hit, null, `${name} 注释外含 CJK：${JSON.stringify(hit?.[0])}——文案应入 i18n-zh.mjs`)
+    assert.equal(hit, null, `${name} 注释外含 CJK：${JSON.stringify(hit?.[0])}——文案应入 zh 族（i18n-zh*）`)
   }
-  const zhText = readFileSync(join(PUBLIC_DIR, "i18n-zh.mjs"), "utf8")
-  assert.ok(CJK.test(zhText), "zh 表应为 CJK 载体（唯一）")
+  const zhText = TABLE_FAMILY.filter((name) => name.startsWith("i18n-zh")).map((name) => readFileSync(join(PUBLIC_DIR, name), "utf8")).join("\n")
+  assert.ok(CJK.test(zhText), "zh 族应为 CJK 载体（唯一）")
 })
 
 // ── ④ 静态面（键引用闭合 ∥ import 图 ∥ 直发）────────────────────────────────
 
-test("④ 静态面：t 字面量 ⊆ 表键 ∥ nav labelKey 面 ∥ import 图闭合 ∥ 三新档静态直发", async () => {
+test("④ 静态面：t 字面量 ⊆ 表键 ∥ nav labelKey 面 ∥ import 图闭合 ∥ i18n 表族静态直发", async () => {
   // t("…") 字面量（单参 ∥ 多参形——本仓先例 t 实参一律单行字符串）
   const refs = []
   for (const name of JS_FILES) {
@@ -170,7 +172,7 @@ test("④ 静态面：t 字面量 ⊆ 表键 ∥ nav labelKey 面 ∥ import 图
     }
   }
   // import 图闭合：相对说明符目标在册 ∥ 零裸说明符（浏览器原生 ESM——零构建）
-  for (const name of [...JS_FILES, "i18n-zh.mjs", "i18n-en.mjs"]) {
+  for (const name of [...JS_FILES, ...TABLE_FAMILY]) {
     const src = readFileSync(join(PUBLIC_DIR, name), "utf8")
     for (const line of src.split("\n")) {
       if (!line.startsWith("import ")) continue
@@ -183,7 +185,7 @@ test("④ 静态面：t 字面量 ⊆ 表键 ∥ nav labelKey 面 ∥ import 图
       assert.equal(dirname(target), PUBLIC_DIR, `${name} import 越出 public/：${spec}`)
     }
   }
-  // 三新档静态直发：真句柄（node:http + static.mjs）⇒ 200 ∥ text/javascript
+  // i18n 表族静态直发：真句柄（node:http + static.mjs）⇒ 200 ∥ text/javascript
   const site = (await import(pathToFileURL(join(ROOT, "thincoder-server", "src", "webui", "static.mjs")).href)).createStaticSite()
   const server = createServer((req, res) => {
     if (!site.serve(req, res, new URL(req.url, "http://localhost").pathname)) {
@@ -194,7 +196,7 @@ test("④ 静态面：t 字面量 ⊆ 表键 ∥ nav labelKey 面 ∥ import 图
   await new Promise((done) => server.listen(0, "127.0.0.1", done))
   try {
     const { port } = server.address()
-    for (const name of ["i18n.mjs", "i18n-zh.mjs", "i18n-en.mjs"]) {
+    for (const name of ["i18n.mjs", ...TABLE_FAMILY]) {
       const response = await fetch(`http://127.0.0.1:${port}/${name}`)
       assert.equal(response.status, 200, `静态直发 ${name}`)
       assert.match(response.headers.get("content-type"), /text\/javascript/, `mime ${name}`)

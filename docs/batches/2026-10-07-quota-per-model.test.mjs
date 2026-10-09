@@ -144,10 +144,10 @@ function runCli(args) {
 
 // ── ① v5 迁移（STORE §3 ∥ AC-22③——KD-SV-40）────────────────────────────────
 
-test("① v5 迁移：空库直落 9（链尾——Provider 模型元数据批后）∥ v4 库自动升 9 ∥ 幂等 ∥ 拆列抽样逐值 ∥ 回填逐值 = usage 重算 ∥ 旧列已删", () => {
+test("① v5 迁移：空库直落 10（链尾——配置控制台批后）∥ v4 库自动升 10 ∥ 幂等 ∥ 拆列抽样逐值 ∥ 回填逐值 = usage 重算 ∥ 旧列已删", () => {
   const fresh = DB.openDatabase(":memory:")
   try {
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [9, 9])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [10, 10])
     assert.ok(fresh.prepare("PRAGMA table_info(usage)").all().some((column) => column.name === "provider"), "usage.provider 缺位")
     const memberColumns = fresh.prepare("PRAGMA table_info(members)").all().map((column) => column.name)
     assert.ok(memberColumns.includes("model_quotas_json"), "members.model_quotas_json 缺位")
@@ -177,7 +177,7 @@ test("① v5 迁移：空库直落 9（链尾——Provider 模型元数据批�
     legacy.close()
     const db = DB.openDatabase(file) // 启动自动升
     try {
-      assert.equal(DB.readVersion(db), 9)
+      assert.equal(DB.readVersion(db), 10)
       // 拆列抽样逐值（判据 = endpoint='chat' + 首斜杠；嵌入行 provider = ''）
       assert.deepEqual(
         db.prepare("SELECT provider, model, endpoint FROM usage ORDER BY id").all().map((row) => [row.provider, row.model, row.endpoint]),
@@ -190,7 +190,7 @@ test("① v5 迁移：空库直落 9（链尾——Provider 模型元数据批�
       assert.deepEqual([bailian.requests, bailian.prompt_tokens, bailian.completion_tokens, bailian.total_tokens, bailian.errors], [2, 10, 20, 30, 1])
       assert.equal(db.prepare("SELECT tokens FROM quota_counters WHERE provider = 'meta' AND model = 'inner/llama'").get().tokens, 3)
       // 幂等：再跑迁移链 ⇒ 版本不变 ∥ 回填不重复
-      assert.equal(DB.migrate(db), 9)
+      assert.equal(DB.migrate(db), 10)
       assert.equal(db.prepare("SELECT COUNT(*) AS n FROM usage_daily").get().n, 3)
     } finally {
       db.close()
@@ -441,7 +441,7 @@ test("⑥ 端到端：平台层热生效 ⇒ 429 ∥ 成员覆盖 ⇒ 放行 ∥
 
 test("⑦ 门禁清单：`prepublishOnly` 三十一件含本批件 ∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 31, `门禁清单件数（二十六 ⇒ 三十一——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 32, `门禁清单件数（二十六 ⇒ 三十二——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-per-model.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

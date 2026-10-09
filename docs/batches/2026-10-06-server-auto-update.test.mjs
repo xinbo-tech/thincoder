@@ -466,7 +466,7 @@ test("部署件结构：Dockerfile 壳形（预装本地 tgz ∥ PATH ∥ USER n
   const entry = readFileSync(join(SERVER_DIR, "deploy", "docker-entrypoint.sh"), "utf8")
   assert.match(entry, /^#!\/bin\/sh$/m)
   assert.match(entry, /^node \/app\/deploy\/converge\.mjs \|\| exit 1$/m)
-  assert.match(entry, /^exec thincoder-server --config \/app\/config\.json$/m)
+  assert.match(entry, /^exec thincoder-server --config \/app\/config\/config\.json$/m)
   const compose = readFileSync(join(SERVER_DIR, "docker-compose.yml"), "utf8")
   assert.match(compose, /^\s+- TC_SERVER_VERSION=\$\{TC_SERVER_VERSION:-\}/m) // 空态透传（留空 = 按镜像预装运行）
   assert.match(compose, /restart: unless-stopped/)
@@ -477,7 +477,7 @@ test("部署件结构：Dockerfile 壳形（预装本地 tgz ∥ PATH ∥ USER n
   assert.match(unit, /^ExecStart=\/opt\/thincoder-server\/\.npm-global\/bin\/thincoder-server --config \/opt\/thincoder-server\/config\.json$/m)
   assert.match(unit, /^Restart=always$/m)
   const batchFiles = (PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? [])
-  assert.equal(batchFiles.length, 31, `prepublishOnly 应列三十一件：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 32, `prepublishOnly 应列三十二件：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-06-server-auto-update.test.mjs"), "本批件应入列")
 })
 

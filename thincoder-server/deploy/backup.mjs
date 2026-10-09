@@ -7,7 +7,7 @@
  * 运行：node deploy/backup.mjs --config <配置档> [--out <目录>]
  *   `--out` 缺省 = 配置档旁 `backups/`；产物 = `<out>/gateway-<时间戳>.db`（本地时间 `YYYYMMDD-HHmmss`）。
  *   `db` 的 `env:` 引用照配置契约解析（ops/OPS.md §1——缺位 ⇒ 退出 1）。
- *   容器路：docker compose exec server node /app/deploy/backup.mjs --config /app/config.json --out /app/data/backups
+ *   容器路：docker compose exec server node /app/deploy/backup.mjs --config /app/config/config.json --out /app/data/backups
  * 退出码：0 = 快照已生成（stdout 一行 = 产物路径——可管道消费）∥ 1 = 失败（stderr 说明）。
  * 同名碰撞（同一秒重复运行——时间戳同秒）⇒ 拒写退出 1（不覆盖既有快照——换秒重试或换 `--out`）。
  * 环境回退：若本机 `backup()` 不可用/核验不过 ⇒ 回退 = 停写窗快照方案（停服 ⇒ 以快照替换库 + 清 `-wal`/`-shm`

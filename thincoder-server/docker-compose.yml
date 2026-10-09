@@ -1,6 +1,8 @@
 # Thincoder Server — docker compose 样例（ops/OPS.md §5.1/§5.4(d)；registry ∥ 镜像名 ∥ tag = 待定占位——部署时确认）。
 #
-# 用法：备好 ./config.json ∥ ./data/（可空目录，须 chown 1000:1000）∥ .env（provider keys ∥ bootstrap 口令等 env: 引用）
+# 用法：备好 ./config/（内含 config.json——即容器内 /app/config/config.json（entrypoint 传 --config））；
+#       目录须可写（写面原子写（同目录 tmp ⇒ rename）须之；chown 1000:1000）；`db` 写绝对形 /app/data/gateway.db
+#       ∥ ./data/（可空目录，须 chown 1000:1000）∥ .env（provider keys ∥ bootstrap 口令等 env: 引用）
 #       → docker compose up -d；日志 = docker logs（如 docker compose logs -f——首启看 converge 行 + ready 行）。
 # 升级/回滚 = 改 TC_SERVER_VERSION + docker compose up -d（重跑壳收敛——§5.4(e)）：
 #       升级 = TC_SERVER_VERSION=0.2.0（或 latest）docker compose up -d ∥ 回滚 = 钉回旧版号（或留空 = 镜像预装版）+ up -d
@@ -15,6 +17,6 @@ services:
     ports:
       - "8787:8787"
     volumes:
-      - ./config.json:/app/config.json:ro       # 机本地配置（不入 git）
-      - ./data:/app/data                        # SQLite 库（data/gateway.db）；须 chown 1000:1000（部署清单 ③）
+      - ./config:/app/config                    # 配置目录（目录级 rw——写面原子写（同目录 tmp ⇒ `rename`）须之；须 chown 1000:1000）
+      - ./data:/app/data                        # SQLite 库（db 写 `/app/data/gateway.db`）；须 chown 1000:1000（部署清单 ③）
     env_file: .env

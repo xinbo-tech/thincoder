@@ -284,7 +284,11 @@ test("③ 系统页四节（描述符树直测）：版本/更新四项 ∥ 接�
   const origin = "http://10.1.2.3:8787"
   const prevLocation = globalThis.location
   globalThis.location = { origin }
-  const el = (tag, props = {}, ...children) => ({ tag, props, children: children.flat(Infinity).filter((c) => c !== null && c !== undefined && c !== false), addEventListener: () => {} })
+  const el = (tag, props = {}, ...children) => {
+    const node = { tag, props, children: children.flat(Infinity).filter((c) => c !== null && c !== undefined && c !== false), addEventListener: () => {} }
+    node.replaceChildren = (...next) => { node.children = next.flat(Infinity).filter((c) => c !== null && c !== undefined && c !== false) }
+    return node
+  }
   const text = (node, out = []) => {
     if (node === null || node === undefined || node === false) return out
     if (typeof node === "string") { out.push(node); return out }

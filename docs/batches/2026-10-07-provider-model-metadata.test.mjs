@@ -143,12 +143,12 @@ test("① 保留集抽取：deepseek/kimi/vLLM 三形逐字段 ∥ ark 状态命
   assert.deepEqual(extractModelMeta({ id: "m", name: 42 }, "m"), {})
 })
 
-// ── ② v7 迁移（STORE §3——判据：空库 9 ∥ v6 升 9 ∥ 幂等 ∥ 常量默认在场）──────────────
+// ── ② v7 迁移（STORE §3——判据：空库 10 ∥ v6 升 10 ∥ 幂等 ∥ 常量默认在场）──────────────
 
-test("② v7 迁移：空库直落 9 ∥ v6 库自动升 9（存量行得 '{}'）∥ 幂等 ∥ 新列常量默认在场 + rowToEntry 往返/坏 JSON", () => {
+test("② v7 迁移：空库直落 10 ∥ v6 库自动升 10（存量行得 '{}'）∥ 幂等 ∥ 新列常量默认在场 + rowToEntry 往返/坏 JSON", () => {
   const fresh = DB.openDatabase(":memory:")
   try {
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [9, 9])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [10, 10])
     const column = fresh.prepare("PRAGMA table_info(providers)").all().find((item) => item.name === "model_meta_json")
     assert.ok(column, "providers.model_meta_json 缺位")
     assert.deepEqual([column.type, column.notnull, column.dflt_value], ["TEXT", 1, "'{}'"]) // 常量默认 = '{}'（未存 = 无元数据）
@@ -165,10 +165,10 @@ test("② v7 迁移：空库直落 9 ∥ v6 库自动升 9（存量行得 '{}'�
     legacy.close()
     const db = DB.openDatabase(file) // 启动自动升
     try {
-      assert.equal(DB.readVersion(db), 9)
+      assert.equal(DB.readVersion(db), 10)
       assert.equal(db.prepare("SELECT model_meta_json FROM providers WHERE name = 'old'").get().model_meta_json, "{}", "存量行即刻得 '{}'")
       // 幂等：再跑迁移链 ⇒ 版本不变 ∥ 存量值不动
-      assert.equal(DB.migrate(db), 9)
+      assert.equal(DB.migrate(db), 10)
       assert.equal(db.prepare("SELECT model_meta_json FROM providers WHERE name = 'old'").get().model_meta_json, "{}")
       // rowToEntry 往返逐值 ∥ 坏 JSON ∥ 非对象 ⇒ 行数据损坏抛（沿 settings_json 口径）
       const spec = { m: { displayName: "M", contextWindow: 8192, vision: true, status: "Shutdown" } }
@@ -479,7 +479,7 @@ test("⑥ i18n + 静态面：两表 7 键在场（en 零 CJK ∥ 占位符一致
   for (const line of modalLines) assert.ok(line.length <= 300, `行宽越界：${line.slice(0, 60)}…`)
   // 档目 29 ∥ 30（结构轮后——十新档：i18n 部件八档 + `dom.mjs`/`health.mjs`）
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [30, 29], "档目 29 ∥ 30（结构轮后）")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [31, 30], "档目 30 ∥ 31（结构轮后）")
   // AC-19 canon（`style.css` 零新增）：`:root` 变量族 38 ∥ 悬停声明七条
   const css = readPublic("style.css").replace(/\/\*[\s\S]*?\*\//g, "")
   const rootVars = (css.match(/:root\s*\{[^{}]*\}/)?.[0] ?? "").match(/--[\w-]+\s*:/g) ?? []
@@ -488,7 +488,7 @@ test("⑥ i18n + 静态面：两表 7 键在场（en 零 CJK ∥ 占位符一致
   assert.deepEqual(hover, [".nav-item:hover", "tbody tr:hover", "button:hover", "button.tiny:hover", "button.danger:hover", "button.link:hover", ".modal-close:hover"].sort(), "悬停声明清单（七条——零新增）")
   // 门禁链 31 件（结构轮批件入链 ∥ 10-09 代理批件入链）∥ 清单目标在盘
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 31, `门禁清单件数（二十六 ⇒ 三十一——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 32, `门禁清单件数（二十六 ⇒ 三十二——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-provider-model-metadata.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

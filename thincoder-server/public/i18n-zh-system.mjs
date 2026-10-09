@@ -31,6 +31,31 @@ export const ZH_SYSTEM = Object.freeze({
   "system.endOtherPath": "直接填 baseURL + key（SDK/客户端皆可）",
   "system.curlTitle": "curl 冒烟",
 
+  // ── 系统·服务配置卡（§2.1——配置控制台批；KD-SV-56：文件面读写 + 重启生效） ──────────────────
+  "system.configTitle": "服务配置",
+  "system.configHint": "值 = 配置文件面（有效值——缺省回填）；可写项保存后重启服务生效。",
+  "system.cfgHost": "监听地址 host",
+  "system.cfgPort": "端口 port",
+  "system.cfgDb": "数据库 db",
+  "system.cfgTopologyNote": "以上三项为部署拓扑项（只读）——改动需编辑配置档并重启服务。",
+  "system.cfgAutoUpdate": "更新档位",
+  "system.cfgAutoUpdateOff": "关",
+  "system.cfgAutoUpdateNotify": "通知",
+  "system.cfgAutoUpdateAuto": "自动",
+  "system.cfgTrustProxy": "信任反代 IP 头",
+  "system.cfgRetention": "用量/审计保留天数",
+  "system.cfgRetentionUnlimited": "不限",
+  "system.cfgRetentionInvalid": "保留天数须为正整数，或勾选「不限」",
+  "system.cfgProxyUri": "上游代理地址 proxy.uri",
+  "system.cfgProxyUriPh": "须为 http 协议串（留空 = 不启用）",
+  "system.cfgProvidersRow": "providers（首启种子）",
+  "system.cfgProvidersValue": "常态管理 = Provider 页",
+  "system.cfgBootstrapRow": "bootstrap（引导账号）",
+  "system.cfgBootstrapValue": "一次性（建号后失效）；口令永不回显",
+  "system.cfgSaved": "已保存——重启服务后生效",
+  "system.cfgLoadFailed": "配置读取失败",
+  "system.cfgRestartNote": "重启生效（配置文件不热载）",
+
   // ── 系统·向量服务（§2.3①——系统页卡 ∥ 我的用量提示条共用） ────────────────
   "vector.title": "向量服务",
   "vector.baseURL": "引擎地址",
@@ -51,6 +76,10 @@ export const ZH_SYSTEM = Object.freeze({
   "vector.testPh": "输入一段短文本……",
   "vector.testBtn": "试跑",
   "vector.testDone": "维度 {dimensions} · 耗时 {ms} ms（不落库不计量）",
+  "vector.apiKey": "API Key",
+  "vector.apiKeyPh": "留空 = 不修改（当前：{mask}）",
+  "vector.clearApiKey": "清除密钥（保存后不发 Authorization 头）",
+  "vector.draftNote": "探活/试跑按表单当前值进行（未保存亦可先验）；API Key 未编辑则按已存配置。",
   "vector.meTitle": "向量服务（内网嵌入引擎）",
 
   // ── 系统·服务健康（§2.3⑤——侧栏灯 ∥ 系统页块 ∥ 总览卡三落点共用） ─────────
@@ -91,7 +120,7 @@ export const ZH_SYSTEM = Object.freeze({
   "usageReport.export": "导出 CSV",
   "usageReport.exported": "已导出 CSV",
 
-  // ── 管理·审计（§2.3④——九型枚举 = accounts/ACCOUNTS.md §2.1） ──────────────
+  // ── 管理·审计（§2.3④——十型枚举 = accounts/ACCOUNTS.md §2.1） ──────────────
   "audit.title": "审计",
   "audit.typeLabel": "类型",
   "audit.typeAll": "全部类型",
@@ -110,6 +139,7 @@ export const ZH_SYSTEM = Object.freeze({
   "audit.dimension": "维度",
   "audit.keyHint": "key",
   "audit.role": "角色",
+  "audit.keys": "键名",
   "audit.type.login_success": "登录成功",
   "audit.type.login_failure": "登录失败",
   "audit.type.login_locked": "登录锁定",
@@ -119,4 +149,5 @@ export const ZH_SYSTEM = Object.freeze({
   "audit.type.password_change": "自助改密",
   "audit.type.password_reset": "密码重置",
   "audit.type.member_create": "成员创建",
+  "audit.type.config_update": "配置变更",
 })

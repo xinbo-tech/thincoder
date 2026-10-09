@@ -41,7 +41,7 @@
 |---|---|---|
 | `host` | 是 | 内网接口地址；填 `0.0.0.0` 时启动警告（仅单接口机可接受） |
 | `port` | 否 | 缺省 `8787` |
-| `db` | 否 | SQLite 库路径（相对 = 配置档所在目录）；缺省 `data/gateway.db` |
+| `db` | 否 | SQLite 库路径（相对 = 配置档所在目录）；缺省 `data/gateway.db`；容器路写绝对形 `/app/data/gateway.db`（配置档在 `/app/config`——相对形会落配置目录内，见 §3） |
 | `autoUpdate` | 否 | 更新档位：`false`（关——零检查） ∥ `"notify"`（检查 + 日志） ∥ `"auto"`（检查 + 自装）；缺省 `"notify"`；非法值 ⇒ 拒启（见 §8） |
 | `trustProxy` | 否 | 反代场景客户端 IP 口径：`false`（缺省——IP = 连接对端地址） ∥ `true`（读 `X-Real-IP` 头）；前提 = 服务端口仅反代可达（反代须 `set` 形覆盖客户端伪造——见 §11）；登录防爆破 IP 维消费 |
 | `usageRetentionDays` | 否 | 用量保留窗（天）：正整数 ∥ `null`（不限——保留全量）；缺省 `90`；非正整数/非法值 ⇒ 拒启（清理时机 = 启动一次 + 每 24h） |
@@ -65,7 +65,10 @@
 - 启动校验（fail-closed）：缺 `host` ∥ provider `name` 缺/空 ∥ `name` 含 `/` ∥ `name` 重名（provider 间） ∥ 同 provider 内模型重名 ∥ `baseURL` 非 http(s) ∥ 未知预设名 ⇒
   拒启（非零退出 + 明确报错）。**零 provider = 允许态**（服务照常起 + 警告——控制台为配置路径）。
 - provider 变更（增/删/改 ∥ 含密钥）= 控制台 `#/admin/providers` 保存即热生效（零重启；在途请求照常收尾）；`config.json` 文件本身不热载（改动仍须重启）。
-- **上游代理（逐渠——顶层 `proxy.uri` + 条目 `providers[].proxy`）**：条目旗布尔（缺省 `false` = 直连；非布尔 ⇒ 拒启 ∥ 保存 400）；控制台 Provider 双弹窗「走代理」勾选 = 同字段（保存即热生效）。
+- **配置写面（控制台——`#/admin/system`「服务配置」卡 + 向量卡）**：可写 = `autoUpdate` ∥ `trustProxy` ∥ `usageRetentionDays` ∥ `proxy.uri` ∥ `embedding.{baseURL,model,apiKey}`
+  （向量卡 = 三输入 + 保存 + 草稿探活——按表单值先验，未保存亦可）；只读展示 = `host` ∥ `port` ∥ `db`（部署拓扑项——不做写面）+ `bootstrap`（口令永不回显）+ `providers[]`（指针——常态管理 = `#/admin/providers`）。
+  保存 = 读改写本文件（校验门 ∥ 原子写——失败 ⇒ 文件零变）；密钥回显掩码（`env:` 保形 ∥ 明文 ⇒ `…`+末 4）；**生效 = 重启**（文件不热载）；容器路前提 = 配置目录可写（`./config:/app/config` 目录级 rw 挂载——§3；单文件挂载下保存必失败）。
+- **上游代理（逐渠——顶层 `proxy.uri` + 条目 `providers[].proxy`）**：条目旗布尔（缺省 `false` = 直连；非布尔 ⇒ 拒启 ∥ 保存 400）；控制台 Provider 双弹窗「走代理」勾选 = 同字段（保存即热生效）；`proxy.uri` 写面 = 系统页「服务配置」卡。
   判定 = 旗 `true` **且** 顶层 `uri` 在案 ⇒ 该渠 chat 转发 ∥ 模型发现经代理；loopback 目标恒直连（`localhost` ∥ `127.0.0.1` ∥ `::1`——NO_PROXY 语义）；旗 `true` 而 `uri` 缺位 ⇒ 直连 + 启动警告（旗未生效）；无全局闸（逐渠判定）。
   代理传输：明文 `http:` 代理串 ⇒ 启动警告（上游密钥经代理外发——确认代理可信）；https 目标 = CONNECT 隧道 ∥ http 目标 = 经典转发；TLS 全量校验（无关闭开关）；不支持代理认证 ∥ 链路代理 ∥ 连接池（每请求独立连接）。嵌入引擎（`embedding`）不走代理。
 
@@ -86,7 +89,8 @@
 
 1. 装 Docker
 2. `docker build -t <registry>/thincoder-server:<tag> .`（构建上下文 = `thincoder-server/`；壳 + 构建期预装——离线可构建）
-3. 备 `config.json` + `data/`（`chown 1000:1000`——容器内 node 账号）+ `.env`（`TC_SERVER_VERSION` 可选——见 §8）
+3. 备 `config/`（内含 `config.json`——目录须可写：控制台保存落盘须之（`chown 1000:1000 ./config`）；`db` 写绝对形 `/app/data/gateway.db`）
+   + `data/`（`chown 1000:1000`——容器内 node 账号）+ `.env`（`TC_SERVER_VERSION` 可选——见 §8）
 4. `docker compose up -d`
 5. 首启日志确认（`converge:` 收敛行 + env 建首个 admin；`docker compose ps` 可见 `(healthy)`——见 §12）
 6. 验收同 npm 路（端口 `8787`）
@@ -112,7 +116,7 @@
   `#/me/usage`（本月额度/已用 + 用量明细 + 端点过滤 + 向量服务提示条）∥ `#/me/account`（基本信息 ∥ 改密）；管理（admin）= `#/admin/overview`（落地页：
   今日请求/token ∥ 成员数 ∥ 健康 ∥ 更新提示 ∥ 快捷入口）∥ `#/admin/members`（成员表含各成员 key 清单与吊销 ∥ 建成员初始密码一次性回显 ∥ 设额度 ∥
   重置密码）∥ `#/admin/providers`（provider 增删改 ∥ 模型发现/勾选开放 ∥ 测试 ∥ 预设快速添加）∥ `#/admin/usage`（用量看板：过滤 + 趋势/聚合/排行 + CSV 导出）∥
-  `#/admin/audit`（审计事件：类型/成员/时段过滤）∥ `#/admin/system`（版本与更新 ∥ 成员接入卡 ∥ 向量服务卡（地址/模型/探活/试跑）∥ 服务健康——数据 = `/api/system`）。
+  `#/admin/audit`（审计事件：类型/成员/时段过滤）∥ `#/admin/system`（版本与更新 ∥ 成员接入卡 ∥ 向量服务卡（地址/模型/探活/试跑——配置面：保存 + 草稿探活）∥ 服务配置卡（只读三行 ∥ 可写四项 ∥ 保存——重启生效）∥ 服务健康——数据 = `/api/system`）。
 - 侧栏底部 meta 槽：服务器版本 + 健康状态灯（30s 轮询 `GET /healthz`——绿 ∥ 黄（DB 异常）∥ 红（不可达）；全角色）；更新提示在 `#/admin/system`（可动作方 = admin）。
 - 旧链重定向：`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/overview`；`#/` 与未知 hash ⇒ 角色默认页（admin ⇒ 总览 ∥ user ⇒ 我的 key）。
 - provider 保存即热生效（零重启）；密钥列表回显掩码（明文永不回显）。
@@ -154,7 +158,7 @@ node src/ops/cli.mjs --config <配置档> <命令>
   源库只读开（零触）；node 自带 ⇒ 零外部工具依赖）。`deploy/` 档组不入 npm 包 ⇒ **自仓库取脚本**。
   - 裸机路：`node deploy/backup.mjs --config <配置档>` ⇒ 产物 `<配置档目录>/backups/gateway-<时间戳>.db`
     （`--out <目录>` 指定落点；同一秒重跑拒写退出 1——不覆盖既有快照）。
-  - 容器路：`docker compose exec server node /app/deploy/backup.mjs --config /app/config.json --out /app/data/backups`
+  - 容器路：`docker compose exec server node /app/deploy/backup.mjs --config /app/config/config.json --out /app/data/backups`
     （镜像含 `deploy/`；产物落卷）。
   - 回退句：若本机 `backup()` 不可用/核验不过 ⇒ 回退 = **停写窗快照**（停服 ⇒ 复制库文件 + 清伴档 ⇒ 起服）。
   - 权限：快照 = 库全量（含 provider 密钥与口令散列）——备份目录限服务账号可读（如 `chmod 700 backups`）。

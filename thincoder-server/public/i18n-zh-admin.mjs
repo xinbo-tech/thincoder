@@ -100,7 +100,7 @@ export const ZH_ADMIN = Object.freeze({
   "admin.providers.baseURLPh": "baseURL（OpenAI 兼容根——如 api.example.com/v1）",
   "admin.providers.apiKeyPh": "apiKey（可空；支持 env:变量名）",
   "admin.providers.clearKey": "清除密钥（保存后不发 Authorization 头）",
-  "admin.providers.useProxy": "走代理（该渠上游请求经代理——需服务端配置 proxy.uri）",
+  "admin.providers.useProxy": "走代理（该渠上游请求经代理——代理地址在「系统 → 服务配置」设置）",
   "admin.providers.openList": "服务的模型（勾选 = 对团队开放）",
   "admin.providers.candidatesEmpty": "暂无候选——点「{action}」拉取",
   "admin.providers.retiredNote": "不在上游发现列表中的已开放模型：{models}——停用入口 = 服务模型页",

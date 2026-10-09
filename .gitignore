@@ -13,6 +13,7 @@ coverage/
 
 # Env / secrets
 .env
+.env.*
 
 # Auto-generated agent state
 .thincoder/index/
@@ -35,3 +36,5 @@ _*.out
 _nat_test_out.txt
 thincoder-server/data/
 thincoder-server/config.json
+thincoder-server/config/
+thincoder-server/backups/

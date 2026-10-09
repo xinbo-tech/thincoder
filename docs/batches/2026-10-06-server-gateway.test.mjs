@@ -161,11 +161,11 @@ test("config：缺省值 ∥ env: 解析 ∥ 库路径归一 ∥ 0.0.0.0 告警"
 
 // ── ③ db 迁移链 ──────────────────────────────────────────────────────────────
 
-test("db：迁移链 ⇒ 八表 + 六索引 + user_version=9 ∥ 约束生效", () => {
+test("db：迁移链 ⇒ 八表 + 六索引 + user_version=10 ∥ 约束生效", () => {
   const db = DB.openDatabase(":memory:")
   try {
-    assert.equal(DB.SCHEMA_VERSION, 9)
-    assert.equal(DB.readVersion(db), 9)
+    assert.equal(DB.SCHEMA_VERSION, 10)
+    assert.equal(DB.readVersion(db), 10)
     const names = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name)
     for (const table of ["members", "api_keys", "sessions", "usage", "providers", "audit_events", "usage_daily", "quota_counters"]) assert.ok(names.includes(table), `缺表：${table}`)
     const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").all()
@@ -183,7 +183,7 @@ test("db：迁移链 ⇒ 八表 + 六索引 + user_version=9 ∥ 约束生效", 
       /CHECK/i,
     )
     // 幂等：同库再跑迁移 ⇒ 版本不变、不报错
-    assert.equal(DB.migrate(db), 9)
+    assert.equal(DB.migrate(db), 10)
   } finally {
     db.close()
   }
@@ -198,15 +198,15 @@ test("db：文件库重开幂等（旧库自动升 ∥ 数据保留）∥ 迁移
     first.close()
 
     const second = DB.openDatabase(file)
-    assert.equal(DB.readVersion(second), 9)
+    assert.equal(DB.readVersion(second), 10)
     assert.equal(second.prepare("SELECT count(*) AS n FROM members").get().n, 1)
 
     // 失败迁移：段内先建表再抛 ⇒ 整段回滚（表不落 ∥ 版本不动）
-    const failing = [...DB.MIGRATIONS, { v: 10, up: (handle) => { handle.exec("CREATE TABLE v10_probe (x INTEGER)"); throw new Error("boom") } }]
+    const failing = [...DB.MIGRATIONS, { v: 11, up: (handle) => { handle.exec("CREATE TABLE v11_probe (x INTEGER)"); throw new Error("boom") } }]
     try {
-      assert.throws(() => DB.migrate(second, { migrations: failing }), /迁移失败（v10）/)
-      assert.equal(DB.readVersion(second), 9)
-      assert.equal(second.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name = 'v10_probe'").get().n, 0)
+      assert.throws(() => DB.migrate(second, { migrations: failing }), /迁移失败（v11）/)
+      assert.equal(DB.readVersion(second), 10)
+      assert.equal(second.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name = 'v11_probe'").get().n, 0)
     } finally {
       second.close()
     }

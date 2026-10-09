@@ -21,6 +21,7 @@ import { registerGatewayRoutes } from "../src/gateway/routes.mjs"
 import { registerProviderAdminRoutes } from "../src/gateway/provider-admin.mjs"
 import { registerSystemRoutes } from "../src/gateway/system.mjs"
 import { registerEmbeddingAdminRoutes } from "../src/gateway/embedding-admin.mjs"
+import { registerConfigAdminRoutes } from "../src/gateway/config-admin.mjs"
 import { registerOverviewRoutes } from "../src/gateway/overview.mjs"
 import { ensureBootstrap, findMemberByUsername } from "../src/accounts/members.mjs"
 import { createLoginGuard } from "../src/accounts/login-guard.mjs"
@@ -93,7 +94,7 @@ export async function run(argv = process.argv.slice(2), log = createLogger(), { 
   }
   try {
     const { configPath } = parseArgs(argv)
-    const { config, warnings } = loadConfig(configPath)
+    const { config, warnings, configPath: configFile } = loadConfig(configPath)
     for (const warning of warnings) log.warn("config_warning", { message: warning })
     db = openDatabase(config.db)
     const bootstrap = await ensureBootstrap(db, config.bootstrap) // 首启引导（KD-SV-15——幂等）
@@ -145,6 +146,7 @@ export async function run(argv = process.argv.slice(2), log = createLogger(), { 
     // 控制台数据面（gateway/API.md §2.4——功能点 15①③）：/api/overview（总览——与报表同源）∥ /api/admin/embedding（+test——配置真值 ∥ 探活/试跑）
     registerOverviewRoutes(routes, { db })
     registerEmbeddingAdminRoutes(routes, { db, config, log })
+    registerConfigAdminRoutes(routes, { db, configPath: configFile, log }) // 配置面（§2.4——文件面读写；生效 = 重启——KD-SV-56）
     // D4 面：webui 静态面（`public/` 直发——注册路由优先；`/v1/*` ∥ `/api/*` 不走静态面）
     const server = createGatewayServer({ config, routes, log, staticSite: createStaticSite() })
     app = { server, db }

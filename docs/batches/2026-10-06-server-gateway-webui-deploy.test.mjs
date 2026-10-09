@@ -10,7 +10,7 @@
  *   ③ 静态面单件：mime 表 ∥ `/` ⇒ index.html ∥ 防路径穿越（编码形 ∥ 反斜杠 ∥ 非法百分号）
  *   ④ 静态面集成：`/` ∥ `/app.mjs` ∥ `/style.css` 直发（mime ∥ no-cache ∥ 字节等于磁盘）∥ 未知 ⇒ 404 JSON ∥ 注册路由优先
  *   ⑤ 部署资产：五件在册 ∥ Dockerfile/unit/compose 结构要点 ∥ package.json `files` 白名单（AC-8 静态面）
- *   ⑥ 前端自洽：`public/**` 零外部引用（无 http(s):// ∥ 无 @import）∥ 十二档在册（含 favicon 共十三档——零框架 ∥ 零构建）
+ *   ⑥ 前端自洽：`public/**` 零外部引用（无 http(s):// ∥ 无 @import）∥ 二十九档在册（含 favicon 共三十档——零框架 ∥ 零构建）
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -268,10 +268,10 @@ test("静态面：`/` ∥ `/app.mjs` ∥ `/nav.mjs` ∥ `/style.css` 直发（mi
   }
 })
 
-// ── 前端自洽：零外部资源 ∥ 十九档在册（含 favicon 共二十档）────────────────────
-test("前端自洽：`public/**` 十九档在册（含 favicon 共二十档） ∥ 零外部引用（无 http(s):// ∥ 无 @import——内网自洽，KD-SV-9）", () => {
+// ── 前端自洽：零外部资源 ∥ 二十九档在册（含 favicon 共三十档）────────────────────
+test("前端自洽：`public/**` 二十九档在册（含 favicon 共三十档） ∥ 零外部引用（无 http(s):// ∥ 无 @import——内网自洽，KD-SV-9）", () => {
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual(names, ["app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs"])
+  assert.deepEqual(names, ["app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs", "i18n-zh-me.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs"])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
     assert.ok(!/https?:\/\//.test(text), `${name} 含外部链接（CDN/外链字体等——内网不达）`)
@@ -304,7 +304,7 @@ test("部署资产：五件在册 ∥ Dockerfile/unit/compose 结构要点 ∥ p
   const compose = readFileSync(files[3], "utf8")
   assert.match(compose, /restart: unless-stopped/)
   assert.match(compose, /- "8787:8787"/)
-  assert.match(compose, /\.\/config\.json:\/app\/config\.json:ro/)
+  assert.match(compose, /\.\/config:\/app\/config/)
   assert.match(compose, /\.\/data:\/app\/data/)
   assert.match(compose, /env_file: \.env/)
 

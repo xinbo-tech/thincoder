@@ -4,7 +4,7 @@
  * 运行（自 `thincoder/` 仓根）：`node --test docs/batches/2026-10-08-server-public-structure.test.mjs`
  *
  * 射程（判据源 = `webui/WEBUI.md` §1/§2.2/§2.3⑤/§5 ∥ §6 AC-14/AC-20 续 + 本批档 §2.3；判据 ↔ 腿对照在括号）：
- *   ① 键集指纹（基线 = 拆表零语义 ⊕ 2026-10-09 代理批 +1 键——sorted-key 序列化 sha256 两枚 ∥ 键数 339 ∥ 344）
+ *   ① 键集指纹（基线 = 拆表零语义 ⊕ 2026-10-09 代理批 +1 键 ⊕ 配置面批 +29 键——sorted-key 序列化 sha256 两枚 ∥ 键数 368 ∥ 373）
  *   ② 部件互斥/并集（八部件两两互斥 ∧ 并集 = 门面全键 ∥ 归属 = 剥 `.one` 首段前缀（域界机检）∥ 部件冻结）
  *   ③ 门面 identity（`ZH`/`EN` 导出名 ∥ `i18n.mjs` 取件行零改 ∥ `t()` 缺省 zh ∥ 缺键回退链（键原文）∥
  *      `.one` 复数取形（en 单形 ∥ zh 落基键））
@@ -47,20 +47,20 @@ const DOMAINS = {
   system: ["system", "vector", "health", "overview", "usageReport", "audit"],
 }
 const domainOf = (key) => PARTS.find((part) => DOMAINS[part].includes(key.replace(/\.one$/, "").split(".")[0])) ?? null
-/** 键集指纹基线（2026-10-08 拆表零语义基线；2026-10-09 代理批 +1 键（`admin.providers.useProxy`）随正——批档 §2.3①）。 */
+/** 键集指纹基线（2026-10-08 拆表零语义基线；2026-10-09 代理批 +1 键（`admin.providers.useProxy`）随正 ∥ 2026-10-09 配置面批 +29 键随正——批档 §2.3①）。 */
 const ANCHOR = {
-  zh: "7f232e3de876ae6c90fe08676da0fab1f0c67bb51e4128e20a2ea254a1e25c57",
-  en: "1c5685928024b95d8ab7f249d3b5b8b7f5172734bb3a3f7c881d91d94bbe5660",
+  zh: "12d4ea59b17ddd585642f5daa71c0718cf36d60fb14688b7098e2614823033e6",
+  en: "5aca0563ac35db3a2d2715fe4064484225af845bb26103ee4bfb2bc5ebca8222",
 }
 const fingerprint = (TABLE) => createHash("sha256").update(JSON.stringify(Object.keys(TABLE).sort().map((key) => [key, TABLE[key]]))).digest("hex")
 
 // ── ① 键集指纹（拆表 = 纯结构；基线随后续增键批同拍随正）────────────────────────────
 
-test("① 键集指纹：`ZH`/`EN` sorted-key 序列化 sha256 = 基线（拆表 ⊕ 10-09 代理批）∥ 键数 339 ∥ 344 ∥ 门面冻结", () => {
+test("① 键集指纹：`ZH`/`EN` sorted-key 序列化 sha256 = 基线（拆表 ⊕ 10-09 代理批 ⊕ 配置面批）∥ 键数 368 ∥ 373 ∥ 门面冻结", () => {
   assert.equal(fingerprint(ZH), ANCHOR.zh, "zh 指纹漂移（键集/值须逐字同基线）")
   assert.equal(fingerprint(EN), ANCHOR.en, "en 指纹漂移（键集/值须逐字同基线）")
-  assert.equal(Object.keys(ZH).length, 339, "zh 键数 339（拆表 338 + 代理批 1）")
-  assert.equal(Object.keys(EN).length, 344, "en 键数 344（含 `.one` 变体族）")
+  assert.equal(Object.keys(ZH).length, 368, "zh 键数 368（拆表 338 + 代理批 1 + 配置面批 29）")
+  assert.equal(Object.keys(EN).length, 373, "en 键数 373（含 `.one` 变体族）")
   assert.ok(Object.isFrozen(ZH) && Object.isFrozen(EN), "门面 `Object.freeze`（聚合门面封闭）")
 })
 

@@ -143,36 +143,36 @@ function fold(rows, pick, key = "name") {
 
 // ── ① store v3 迁移链（STORE §3 判据）────────────────────────────────────────
 
-test("① store：空库直落 9 ∥ v2 旧库自动升（链尾）∥ 幂等 ∥ audit_events 九型 CHECK", () => {
+test("① store：空库直落 10 ∥ v2 旧库自动升（链尾）∥ 幂等 ∥ audit_events 九型 CHECK", () => {
   const dir = mkdtempSync(join(tmpdir(), "tc2-db-"))
   const file = join(dir, "gateway.db")
   try {
     // 空库直落（六索引——含 v3 三索引）∥ 九型 CHECK 全可插 + 枚举外拒
     const fresh = DB.openDatabase(":memory:")
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [9, 9])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [10, 10])
     const indexes = fresh.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").all().map((row) => row.name)
     for (const index of ["idx_audit_ts", "idx_audit_type_ts", "idx_usage_key_ts"]) assert.ok(indexes.includes(index), index)
     assert.equal(indexes.length, 6)
     for (const type of AUDIT.AUDIT_TYPES) AUDIT.recordAudit(fresh, { type, actor: "t", ts: 1 })
-    assert.equal(AUDIT.queryAudit(fresh, { limit: 100 }).length, 9)
+    assert.equal(AUDIT.queryAudit(fresh, { limit: 100 }).length, 10)
     assert.throws(() => AUDIT.recordAudit(fresh, { type: "nope", actor: "t" }), /审计类型非法/)
     // 保留清理（注入时钟）：窗外删 ∥ 窗内留 ∥ null = 不限（零删）
     const now = Date.now()
     AUDIT.recordAudit(fresh, { type: "login_success", actor: "t2", ts: now })
-    assert.equal(AUDIT.pruneAuditEvents(fresh, { now: now + 2 * 24 * 60 * 60 * 1000, retentionDays: 2 }), 9)
+    assert.equal(AUDIT.pruneAuditEvents(fresh, { now: now + 2 * 24 * 60 * 60 * 1000, retentionDays: 2 }), 10)
     assert.deepEqual(AUDIT.queryAudit(fresh, {}).map((event) => event.actor), ["t2"])
     assert.equal(AUDIT.pruneAuditEvents(fresh, { now: now + 4 * 24 * 60 * 60 * 1000, retentionDays: null }), 0)
     assert.throws(() => fresh.prepare("INSERT INTO audit_events (ts, type, actor_name) VALUES (1, 'nope', 't')").run(), /CHECK/i)
     fresh.close()
-    // v2 旧库（v1+v2 段）⇒ 启动自动升 9（旧数据保留）⇒ 再开幂等
+    // v2 旧库（v1+v2 段）⇒ 启动自动升 10（旧数据保留）⇒ 再开幂等
     const legacy = DB.openDatabase(file, { migrations: DB.MIGRATIONS.filter((step) => step.v <= 2) })
     assert.equal(DB.readVersion(legacy), 2)
     legacy.exec("INSERT INTO members (username, name, password_hash, created_at) VALUES ('old', 'old', 'scrypt$fixture', '2026-10-06')")
     legacy.close()
     const upgraded = DB.openDatabase(file)
-    assert.equal(DB.readVersion(upgraded), 9)
+    assert.equal(DB.readVersion(upgraded), 10)
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE name = 'audit_events'").get())
-    assert.deepEqual([upgraded.prepare("SELECT COUNT(*) AS n FROM members").get().n, DB.migrate(upgraded)], [1, 9])
+    assert.deepEqual([upgraded.prepare("SELECT COUNT(*) AS n FROM members").get().n, DB.migrate(upgraded)], [1, 10])
     assert.equal(upgraded.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").get().n, 6)
     upgraded.close()
   } finally {
@@ -233,7 +233,7 @@ test("② 审计：九型写入点（HTTP ∥ CLI）落库 ∥ /api/audit 列表
     const events = list.json.events
     assert.deepEqual([list.status, events.length], [200, 19])
     assert.deepEqual(events.filter((event) => event.actor.startsWith("probe-")).map((event) => event.actor), ["probe-keep"]) // 启动清理：同窗（config 5 天）窗外删
-    for (const type of AUDIT.AUDIT_TYPES) assert.ok(events.some((event) => event.type === type), `缺型：${type}`)
+    for (const type of AUDIT.AUDIT_TYPES.filter((name) => name !== "config_update")) assert.ok(events.some((event) => event.type === type), `缺型：${type}`) // 本档九写入点面（config_update = 配置面批自测面——非本档写入点）
     for (let i = 1; i < events.length; i++) {
       assert.ok(events[i - 1].ts > events[i].ts || (events[i - 1].ts === events[i].ts && events[i - 1].id > events[i].id), "倒序破")
     }
@@ -433,11 +433,11 @@ test("⑤ 向量面：真值零密钥 ∥ 试跑成功 + 四 kind ∥ 不落库�
 test("⑥ 静态面：档目 29 ∥ 30 ∥ 零外链 ∥ 两表键集/键引用闭合 ∥ nav 直驱 ∥ 三新档直发 ∥ 健康三态", async () => {
   // 档目（UI 代码档 29 ∥ 含 favicon 全目录 30——结构轮后）+ 零外链（零 http(s):// ∥ 零 @import）
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [30, 29])
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [31, 30])
   assert.deepEqual(names, [
     "app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs",
     "i18n-zh-me.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
-    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs",
+    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs",
   ])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
@@ -454,7 +454,7 @@ test("⑥ 静态面：档目 29 ∥ 30 ∥ 零外链 ∥ 两表键集/键引用�
   assert.equal(zhKeys.length - SELF_NAMES.length, enBase.length)
   for (const key of enBase) assert.equal(placeholders(ZH[key]), placeholders(EN[key]), `占位符不一致：${key}`)
   const family = (prefix) => zhKeys.filter((key) => key.startsWith(prefix)).length
-  for (const [prefix, count] of [["vector.", 20], ["health.", 10], ["overview.", 8], ["usageReport.", 14], ["audit.", 27]]) assert.equal(family(prefix), count, prefix)
+  for (const [prefix, count] of [["vector.", 24], ["health.", 10], ["overview.", 8], ["usageReport.", 14], ["audit.", 29]]) assert.equal(family(prefix), count, prefix)
   for (const key of ["nav.page.admin.overview", "nav.page.admin.audit", "me.keys.lastUsed", "me.keys.neverUsed", "me.keys.windowTokens"]) assert.ok(key in ZH && key in EN, key)
   for (const type of AUDIT.AUDIT_TYPES) assert.ok(`audit.type.${type}` in ZH && `audit.type.${type}` in EN, type)
   // 键引用闭合：`t("…")` 字面量 ⊆ 表键 ∥ 裸命名空间键（点分键面）

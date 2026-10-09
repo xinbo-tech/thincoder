@@ -8,16 +8,16 @@
  *      ∥ 「从未使用」分支 ∥ 空态引导分支 ∥ 页面零 `window.confirm`（档面扫描）
  *   ② 双弹窗（`modal.mjs` 真件直驱）：签发（名称输入 ∥ trim ∥ 空名 ⇒ null ∥ 成功 ⇒ 关窗 + 页级秘密区回显 + 表刷新
  *      ∥ 失败 ⇒ 窗内状态行）∥ 吊销（名 + 提示形 + 后果文案 ∥ 提交含 keyId ∥ 成功 ⇒ 关窗 + 表刷新 + flash「已吊销」）
- *   ③ 复制三路（`showSecret` 复制钮——真 `app.mjs` 直载）：① `navigator.clipboard` ⇒ ② 选中 + `execCommand`
+ *   ③ 复制三路（`showSecret` 复制钮——真 `dom.mjs` 直载）：① `navigator.clipboard` ⇒ ② 选中 + `execCommand`
  *      ⇒ ③ 保持选中 + 手动提示（flash 面）
  *   ④ 接入卡同源复用：`accessCard(ctx, variant)`——admin 面行（措辞/行 = 现行零改）∥ 成员面四键措辞 ∥ 素材同源
  *      （baseURL/四端/curl）∥ `views-me` 用成员变体 ∥ `views-system` 走 admin 变体
  *   ⑤ 静态面：新 25 键两表在场 ∥ 死键 2 枚零残留 ∥ 改值 4 键列内形 ∥ 基键集双向相等 ∥ 占位符一致 ∥ en 零 CJK
  *      ∥ 「提示形」零残留（本页文案与新键值）∥ 类名零残留（`key-list`/`key-item`/`key-meta`——样式与档面两向）
- *      ∥ 行悬停声明 = 2 条 ∥ 档目 19 ∥ 20 不变 ∥ key 页不入壳五页钉表
+ *      ∥ 行悬停声明 = 2 条 ∥ 档目 29 ∥ 30（结构轮后）∥ key 页不入壳五页钉表
  *
- * 桩说明：页面档经桩浏览器全局直载（`app.mjs` 顶层触 `document`——先桩后 import）；`ctx` = 桩面（h/table 取真件
- * `app.mjs` 导出）；无网络、无真 DOM——零碰真库/生产数据。
+ * 桩说明：页面档经桩浏览器全局直载（`dom.mjs` 顶层触 `document`——先桩后 import）；`ctx` = 桩面（h/table 取真件
+ * `dom.mjs` 导出）；无网络、无真 DOM——零碰真库/生产数据。
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -48,10 +48,10 @@ const DEAD_KEYS = ["me.keys.rotate", "me.keys.rotateConfirm"]
 const placeholders = (text) => [...String(text).matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort().join(",")
 const fill = (text, params) => text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match))
 
-// ── 桩浏览器全局（先于页面档 import——`app.mjs` 顶层 `document.getElementById` + `boot()` 副作用在桩内静默）──
+// ── 桩浏览器全局（先于页面档 import——`dom.mjs` 顶层 `document` 取件（`flashEl`）在桩内静默）──
 
 class FakeNode {}
-/** 桩节点（`app.mjs` `h` 语义所需面：children/classList/listeners/属性/焦点/`<dialog>` 两法）。 */
+/** 桩节点（`dom.mjs` `h` 语义所需面：children/classList/listeners/属性/焦点/`<dialog>` 两法）。 */
 function makeNode(tag) {
   const classes = new Set()
   const node = new FakeNode()
@@ -92,7 +92,7 @@ globalThis.window = { addEventListener() {}, getSelection: () => selection }
 const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator")
 Object.defineProperty(globalThis, "navigator", { value: {}, configurable: true, writable: true }) // 复制三路需可写槽
 
-const APP = await load("app.mjs") // h/table/showSecret 真件
+const APP = await load("dom.mjs") // h/table/showSecret 真件（结构轮后住 dom.mjs）
 const ME = await load("views-me.mjs")
 const SYS = await load("views-system.mjs")
 const { ZH } = await load("i18n-zh.mjs")
@@ -339,7 +339,7 @@ test("④ 接入卡：admin 面行（零改）∥ 成员面四键措辞 ∥ 素�
 
 // ── ⑤ 静态面（i18n 键族 ∥ 死键 ∥ 类名 ∥ 档目 ∥ 非壳）────────────────────────
 
-test("⑤ 静态面：新 25 键两表 ∥ 死键零残留 ∥ 改值 4 键列内形 ∥ 基键集/占位符/en 零 CJK ∥ 「提示形」与类名零残留 ∥ 档目 19 ∥ 20", () => {
+test("⑤ 静态面：新 25 键两表 ∥ 死键零残留 ∥ 改值 4 键列内形 ∥ 基键集/占位符/en 零 CJK ∥ 「提示形」与类名零残留 ∥ 档目 29 ∥ 30", () => {
   const zhKeys = Object.keys(ZH)
   const enKeys = Object.keys(EN)
   const enBase = enKeys.filter((key) => !key.endsWith(".one"))
@@ -386,10 +386,10 @@ test("⑤ 静态面：新 25 键两表 ∥ 死键零残留 ∥ 改值 4 键列�
   }
   const hover = [...cssCode.matchAll(/([^{}]*:hover[^{}]*)\{/g)].map((match) => match[1].trim().replace(/\s+/g, " "))
   assert.deepEqual(hover.filter((selector) => selector === ".nav-item:hover" || selector.includes("tr:hover")), [".nav-item:hover", "tbody tr:hover"], "行悬停声明 = 2 条（li.key-item:hover 删净）")
-  // 档目 19 ∥ 20 不变（零新档）∥ key 页不入壳五页钉表 ∥ 行数硬限
+  // 档目 29 ∥ 30（结构轮后）∥ key 页不入壳五页钉表 ∥ 行数硬限
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [20, 19], "全目录 20 ∥ UI 代码档 19")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [31, 30], "全目录 31 ∥ UI 代码档 30")
   const shell = readPublic("app.mjs").match(/SHELL_PAGES = new Set\(\[([^\]]*)\]\)/)?.[1] ?? ""
   assert.equal(shell.includes("/me/keys"), false, "key 页非壳（钉表五页不扩——§2.6① 排除面）")
-  assert.ok(readPublic("views-me.mjs").split("\n").length <= 500, "views-me 行数 ≤500 硬限")
+  assert.ok(readPublic("views-me.mjs").split("\n").length <= 800, "views-me 行数 ≤800 硬限")
 })

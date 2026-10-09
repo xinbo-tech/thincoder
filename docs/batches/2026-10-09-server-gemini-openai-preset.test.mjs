@@ -6,7 +6,7 @@
  * 射程（判据源 = 本批档 §2 ②/③/④ ∥ gateway/API.md §2.1/§2.2/§5/§6 KD-SV-55 ∥ ops/OPS.md §1/§7 ∥ store/STORE.md §2 v9）：
  *   A 配置面：顶层 `proxy.uri` 拒启族（非对象 ∥ 空串 ∥ 非 URL ∥ scheme 非 `http:`）∥ 条目 `proxy` 非布尔拒启
  *     ∥ 两启动 warn 逐字 ∥ loopback 判定（NO_PROXY 语义）
- *   B 存储 v9：空库直落 9 ∥ v8 库自动升 9（存量行得 0）∥ 迁移幂等 ∥ `rowToEntry` 解码 ∥ 种子列
+ *   B 存储 v10：空库直落 10 ∥ v8 库自动升 10（存量行得 0）∥ 迁移幂等 ∥ `rowToEntry` 解码 ∥ 种子列
  *   C 端点字段往返：GET/POST/PATCH `proxy` 布尔 ∥ 非布尔 400（库零变）∥ discover 非布尔 400
  *   D 模型发现判定：明传优先 ∥ `providerId` 条目旗兜底 ∥ 皆无 ⇒ 直连 ∥ loopback 恒直连（假代理零命中）
  *   E 转发判定：http 目标经典转发（绝对 URI 请求行）∥ https 目标 CONNECT 隧道（自签 fixture 全量 TLS 校验）
@@ -255,20 +255,20 @@ test("A4 loopback 判定（NO_PROXY 语义）：localhost ∥ *.localhost ∥ 12
   }
 })
 
-// ── B 存储 v9 ───────────────────────────────────────────────────────────────
+// ── B 存储 v10 ───────────────────────────────────────────────────────────────
 
-test("B1 空库直落 9 ∥ providers.proxy 列形（INTEGER NOT NULL DEFAULT 0）∥ 迁移链尾 = v9", () => {
+test("B1 空库直落 10 ∥ providers.proxy 列形（INTEGER NOT NULL DEFAULT 0）∥ 迁移链尾 = v10", () => {
   const fresh = DB.openDatabase(":memory:")
   try {
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [9, 9])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [10, 10])
     const column = fresh.prepare("PRAGMA table_info(providers)").all().find((item) => item.name === "proxy")
     assert.ok(column, "providers.proxy 缺位")
     assert.deepEqual([column.type, column.notnull, String(column.dflt_value)], ["INTEGER", 1, "0"])
-    assert.equal(DB.MIGRATIONS.at(-1).v, 9)
+    assert.equal(DB.MIGRATIONS.at(-1).v, 10)
   } finally { fresh.close() }
 })
 
-test("B2 v8 库自动升 9：存量行得 0（缺省直连）∥ 迁移幂等 ∥ rowToEntry 解码 1/0 ⇒ true/false", () => {
+test("B2 v8 库自动升 10：存量行得 0（缺省直连）∥ 迁移幂等 ∥ rowToEntry 解码 1/0 ⇒ true/false", () => {
   const file = join(tmpBox("v9"), "gateway.db")
   const legacy = DB.openDatabase(file, { migrations: DB.MIGRATIONS.filter((step) => step.v <= 8) })
   assert.equal(DB.readVersion(legacy), 8)
@@ -276,9 +276,9 @@ test("B2 v8 库自动升 9：存量行得 0（缺省直连）∥ 迁移幂等 �
   legacy.close()
   const db = DB.openDatabase(file) // 启动自动升
   try {
-    assert.equal(DB.readVersion(db), 9, "v8 库自动升 9")
+    assert.equal(DB.readVersion(db), 10, "v8 库自动升 10")
     assert.equal(db.prepare("SELECT proxy FROM providers WHERE name = 'old'").get().proxy, 0, "存量行即刻得 0")
-    assert.equal(DB.migrate(db), 9, "幂等（再跑迁移链零效）")
+    assert.equal(DB.migrate(db), 10, "幂等（再跑迁移链零效）")
     const row = () => db.prepare("SELECT * FROM providers WHERE name = 'old'").get()
     assert.equal(PROVIDERS.rowToEntry(row()).proxy, false, "解码 0 ⇒ false")
     db.prepare("UPDATE providers SET proxy = 1 WHERE name = 'old'").run()

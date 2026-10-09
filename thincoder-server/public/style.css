@@ -110,6 +110,7 @@ pre.snippet { font-family: var(--mono); font-size: var(--fs); margin: var(--sp-3
 .provider-form { display: flex; flex-wrap: wrap; gap: var(--sp-4); align-items: flex-end; margin-bottom: var(--sp-4); }
 .provider-form > label { display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-start; }
 .provider-form input { min-width: 210px; } /* 尺寸字面（非刻度面——原值保留） */
+.provider-form input[type="checkbox"] { min-width: 0; } /* 勾选形豁免最小宽（210px 面向文本/数值输入——实测：勾选形落 210px 拉伸） */
 .provider-form .key-clear { flex-direction: row; align-items: center; }
 .stack-models { margin: var(--sp-2) 0 var(--sp-4); }
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-5); margin-bottom: var(--sp-6); }

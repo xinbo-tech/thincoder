@@ -1,14 +1,15 @@
 /**
  * views-system.mjs — 系统页（webui/WEBUI.md §2/§2.1：`#/admin/system`——仅 admin）：版本与更新 ∥ 成员接入 ∥
- * 向量服务 ∥ 服务健康四节。
+ * 向量服务 ∥ 服务配置（卡体 = `views-system-config.mjs`）∥ 服务健康五节。
  *
- * 数据 = `ctx.state.system`（`GET /api/system`——app.mjs 装配取一次；失败 ⇒ 留空静默）+ `GET /api/admin/embedding`
- * （配置真值——零密钥）+ `POST /api/admin/embedding/test`（探活/试跑单端点——诊断自含形，不落库不计量）+
- * 前端健康共享态（§2.3⑤——`ctx.onHealth` 订阅，30s 自动刷新）。接入卡 = `accessCard(ctx, variant)` 同源构件
+ * 数据 = `ctx.state.system`（`GET /api/system`——app.mjs 装配取一次；失败 ⇒ 留空静默）+ `GET /api/admin/config`
+ * （配置面文件面——向量卡三输入 ∥ 密钥掩码回显）+ `POST /api/admin/embedding/test`（探活/试跑单端点——诊断自含形，
+ * 不落库不计量）+ 前端健康共享态（§2.3⑤——`ctx.onHealth` 订阅，30s 自动刷新）。接入卡 = `accessCard(ctx, variant)` 同源构件
  * （admin 面供分发给成员 ∥ 成员面 `#/me/keys`——me-keys 批）；成员面成文 = README「成员接入」节。渲染沿 `h`/`textContent`
  * （零拼串）；baseURL = 运行时 origin（`location.origin` + `/v1`——零硬编码，反代/改端口自动随动）；文案经 `t()` 取值（§2.2）。
  */
-import { t } from "./i18n.mjs"
+import { mapError, t } from "./i18n.mjs"
+import { systemConfigSection } from "./views-system-config.mjs"
 
 /** 代码样例行（`pre > code`——textContent 直落）。 */
 const snippet = (h, text) => h("pre", { class: "snippet" }, h("code", { text }))
@@ -38,30 +39,53 @@ function versionSection(ctx, system) {
     h("p", { class: "update-tip", text: latest ? t("system.latestTip", { version: latest }) : t("system.latestNone") }))
 }
 
-/** 节「向量服务」（admin——§2.3①）：配置真值（地址/模型）∥ 可达性（渲染自动探活 + 重新检测）∥ snippet ∥
- *  用法一句 ∥ 试跑（短文本 ⇒ 维度 ∥ 耗时——不落库不计量）。 */
+/** 节「向量服务」（admin——§2.3①）：配置面（引擎地址 ∥ 模型 ∥ API Key 三输入 + 保存——`GET`/`PATCH /api/admin/config`；
+ *  值 = 文件面；API Key 掩码回显（`env:` 保形 ∥ 明文 ⇒ `…`+末 4））∥ 可达性（渲染自动探活 + 「重新检测」——`POST
+ *  /api/admin/embedding/test`——单端点 ∥ 诊断自含形 ∥ 不落库不计量）∥ snippet ∥ 用法一句 ∥ 试跑。
+ *  探活/试跑 = 表单草稿口径（标量三项明传优先——KD-SV-54 口径镜像；未保存亦可先验；API Key 未编辑 ⇒ 不携
+ *  ⇒ 运行配置回落）；保存 = `PATCH /api/admin/config`（`embedding` 子键级——重启生效）。 */
 function vectorSection(ctx) {
   const { h } = ctx
-  const addressValue = h("span", { text: "…" })
-  const modelValue = h("span", { text: "…" })
+  const baseURLInput = h("input", { autocomplete: "off" })
+  const modelInput = h("input", { autocomplete: "off" })
+  const apiKeyInput = h("input", { autocomplete: "off", placeholder: t("vector.apiKeyPh", { mask: "—" }) })
+  const clearBox = h("input", { type: "checkbox" })
   const statusValue = h("span", { text: t("vector.checking") })
   const usageValue = h("p", { class: "hint" })
   const snippetCode = h("code", { text: embeddingSnippet(null) })
   const testResult = h("p", { class: "hint" })
+  const saveNote = h("p", { class: "hint error", hidden: true })
 
-  const applyConfig = (config) => {
-    addressValue.textContent = config?.baseURL ?? "—"
-    modelValue.textContent = config?.model ?? "—"
-    usageValue.textContent = t("vector.usage", { model: config?.model ?? "—" })
-    snippetCode.textContent = embeddingSnippet(config?.model ?? null)
+  /** 草稿 key 判定（保存 ∥ 探活同源——三态）：清除勾 ⇒ 显式空 `""` ∥ 明填 ⇒ 明传 ∥ 未编辑 ⇒ 不携。 */
+  const draftKey = () => {
+    if (clearBox.checked) return { apiKey: "" }
+    const typed = apiKeyInput.value.trim()
+    return typed ? { apiKey: typed } : {}
+  }
+  /** 掩码回显式（同 `maskApiKey` 三态：空 ⇒ `—`（占位约定）∥ `env:` 引用 ⇒ 原文（引用非秘密）∥ 明文 ⇒ `…`+末 4）。 */
+  const maskForm = (key) => (key === "" ? "—" : key.startsWith("env:") ? key : `…${key.slice(-4)}`)
+  /** 探活体（标量三项明传优先——缺位（空值）⇒ 不携 ⇒ 服务端落运行配置回落）。 */
+  const probeBody = (text) => {
+    const body = text === undefined ? {} : { text }
+    if (baseURLInput.value.trim()) body.baseURL = baseURLInput.value.trim()
+    if (modelInput.value.trim()) body.model = modelInput.value.trim()
+    return { ...body, ...draftKey() }
   }
 
-  /** 探活/试跑共用（单端点——`text` 缺省 ⇒ 内置探针）；ok ⇒ 可达（维度/耗时）∥ fail ⇒ kind 四分类文案。 */
+  const applyConfig = (embedding) => {
+    baseURLInput.value = embedding?.baseURL ?? ""
+    modelInput.value = embedding?.model ?? ""
+    apiKeyInput.placeholder = t("vector.apiKeyPh", { mask: embedding?.apiKey || "—" })
+    usageValue.textContent = t("vector.usage", { model: embedding?.model ?? "—" })
+    snippetCode.textContent = embeddingSnippet(embedding?.model ?? null)
+  }
+
+  /** 探活/试跑共用（单端点——`text` 缺省 ⇒ 内置探针；体 = 表单草稿）：ok ⇒ 可达（维度/耗时）∥ fail ⇒ kind 四分类文案。 */
   const probe = async (text) => {
     statusValue.className = ""
     statusValue.textContent = t("vector.checking")
     try {
-      const result = await ctx.api("/api/admin/embedding/test", { method: "POST", body: text === undefined ? {} : { text } })
+      const result = await ctx.api("/api/admin/embedding/test", { method: "POST", body: probeBody(text) })
       statusValue.className = result.ok ? "" : "error" // ⑨ 错态（`.error` 独立生效——WEBUI §2.5）
       statusValue.textContent = result.ok
         ? t("vector.reachable", { dimensions: result.dimensions, ms: result.ms })
@@ -91,18 +115,39 @@ function vectorSection(ctx) {
       : t("vector.fail", { kind: kindLabel(result.error?.kind), message: result.error?.message ?? "" })
   })
 
-  ctx.api("/api/admin/embedding").then(applyConfig).catch((error) => { ctx.fail(error); applyConfig(null) })
-  probe() // 渲染自动探活（一次）
+  /** 保存（`embedding` 子键级——所见即所存；key 三态同探活）：成功 ⇒ flash「已保存——重启服务后生效」∥ 失败 ⇒ 卡内提示。 */
+  const save = async (event) => {
+    event.preventDefault()
+    saveNote.hidden = true
+    const embedding = { baseURL: baseURLInput.value.trim(), model: modelInput.value.trim(), ...draftKey() }
+    try {
+      await ctx.api("/api/admin/config", { method: "PATCH", body: { embedding } })
+      ctx.flash(t("system.cfgSaved"))
+      if ("apiKey" in embedding) apiKeyInput.placeholder = t("vector.apiKeyPh", { mask: maskForm(embedding.apiKey) }) // 保存后掩码随新值（同服务端口径）
+    } catch (error) {
+      if (error?.status === 401 && error?.code !== "invalid_credentials") { ctx.fail(error); return } // 会话失效 ⇒ 照常踢登录
+      saveNote.textContent = mapError(error)
+      saveNote.hidden = false
+    }
+  }
+
+  ctx.api("/api/admin/config").then((data) => applyConfig(data?.config?.embedding ?? null)).catch((error) => { ctx.fail(error); applyConfig(null) })
+  probe() // 渲染自动探活（一次——字段未编辑 ⇒ 不携 ⇒ 运行配置回落）
 
   return h("section", { class: "card" },
     h("h3", { text: t("vector.title") }),
-    ctx.table([t("col.item"), t("col.value")], [
-      [t("vector.baseURL"), addressValue],
-      [t("vector.model"), modelValue],
-      [t("vector.status"), statusValue],
-    ]),
+    h("form", { class: "provider-form", onsubmit: save },
+      h("label", {}, h("span", { text: t("vector.baseURL") }), baseURLInput),
+      h("label", {}, h("span", { text: t("vector.model") }), modelInput),
+      h("label", {}, h("span", { text: t("vector.apiKey") }), apiKeyInput),
+      h("label", { class: "key-clear" }, clearBox, t("vector.clearApiKey")),
+      h("button", { type: "submit", text: t("common.save") })),
+    h("p", { class: "hint", text: t("vector.draftNote") }),
+    h("p", { class: "hint", text: t("system.cfgRestartNote") }),
+    saveNote,
+    h("h4", { text: t("vector.status") }),
+    h("p", {}, statusValue, " ", recheck),
     h("p", { class: "hint", text: t("vector.autoNote") }),
-    h("p", {}, recheck),
     h("h4", { text: t("vector.snippetTitle") }),
     h("pre", { class: "snippet" }, snippetCode),
     usageValue,
@@ -165,11 +210,13 @@ export function accessCard(ctx, variant = "admin") {
     snippet(h, `curl -H "Authorization: Bearer sk-tc-…" ${baseURL}/models`))
 }
 
+/** 系统页装配（五节——§2.1：版本/更新 ∥ 接入卡 ∥ 向量服务 ∥ 服务配置 ∥ 服务健康）。 */
 export function renderSystem(ctx, mount) {
   const { h } = ctx
   mount.append(h("h2", { text: t("system.title") }))
   mount.append(versionSection(ctx, ctx.state.system ?? null))
   mount.append(accessCard(ctx, "admin"))
   mount.append(vectorSection(ctx))
+  mount.append(systemConfigSection(ctx)) // 服务配置卡（新档——同拍取数，卡体异步就位）
   mount.append(healthSection(ctx))
 }

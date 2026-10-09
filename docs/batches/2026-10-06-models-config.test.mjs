@@ -16,7 +16,7 @@
  *      漂移件（核 `model-specs.mjs` 只读对照——逐行三值同拍）
  *   ⑧ i18n：两表键集相等（除自称名族）∥ en 零 CJK ∥ 占位符一致 ∥ 本批新键在册 ∥ `configSkeleton` 退役 ∥
  *      E 注在册 ∥ `err.rate_limited` 入映射集（`mapError` 行为直测）
- *   ⑨ 静态面：档目 19 ∥ 20 ∥ 零外链 ∥ 键引用闭合 ∥ 新档静态直发（200 ∥ text/javascript）
+ *   ⑨ 静态面：档目 29 ∥ 30 ∥ 零外链 ∥ 键引用闭合 ∥ 新档静态直发（200 ∥ text/javascript）
  *   ⑩ 门禁清单：`prepublishOnly` 含本批两件 ∥ 清单目标在盘
  */
 import test from "node:test"
@@ -211,15 +211,15 @@ test("⑧ i18n：两表基键集相等 ∥ en 零 CJK ∥ 占位符一致 ∥ �
   assert.equal(I18N.mapError({ code: "brand_new_code", message: "raw" }), "raw")
 })
 
-// ── ⑨ 静态面（档目 19 ∥ 20 ∥ 零外链 ∥ 键引用闭合 ∥ 直发）────────────────────
+// ── ⑨ 静态面（档目 29 ∥ 30 ∥ 零外链 ∥ 键引用闭合 ∥ 直发）────────────────────
 
-test("⑨ 静态面：档目 19 ∥ 20 ∥ 零外链 ∥ 键引用闭合 ∥ 新档静态直发（200 ∥ text/javascript）", async () => {
+test("⑨ 静态面：档目 29 ∥ 30 ∥ 零外链 ∥ 键引用闭合 ∥ 新档静态直发（200 ∥ text/javascript）", async () => {
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [20, 19], "全目录 20 ∥ UI 代码档 19")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [31, 30], "全目录 31 ∥ UI 代码档 30")
   assert.deepEqual(names, [
-    "app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
-    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs",
-    "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs",
+    "app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs",
+    "i18n-zh-me.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
+    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs",
   ])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
@@ -227,7 +227,7 @@ test("⑨ 静态面：档目 19 ∥ 20 ∥ 零外链 ∥ 键引用闭合 ∥ 新
   }
   // 键引用闭合：`t("…")` 字面量 ⊆ 表键（全档扫面）∥ 两新档裸键字面量 ⊆ 表键
   const refs = []
-  for (const name of names.filter((name) => name.endsWith(".mjs") && !["i18n-zh.mjs", "i18n-en.mjs"].includes(name))) {
+  for (const name of names.filter((name) => name.endsWith(".mjs") && !name.startsWith("i18n-zh") && !name.startsWith("i18n-en"))) {
     const src = readFileSync(join(PUBLIC_DIR, name), "utf8")
     for (const match of src.matchAll(/\bt\(\s*"([^"]+)"\s*[,)]/g)) refs.push([name, match[1]])
     for (const match of src.matchAll(/\bt\(\s*'([^']+)'\s*[,)]/g)) refs.push([name, match[1]])
