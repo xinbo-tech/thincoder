@@ -181,7 +181,9 @@
   ops ≈+35——`config.mjs` 实读 ≈260 ⇒ ≈278（`proxy` 段校验 ∥ 条目判据 +≈18） ∥ `presets.mjs` 实读 **51** ⇒ ≈53（`gemini-openai` 行 ∥ 头注 +≈2） ∥ `README.md` 实读 **247** ⇒ ≈259（proxy 配置行 ∥ 说明 +≈12） ∥ `config.example.json` 实读 **35** ⇒ ≈37（`proxy` 段示例） ∥ `package.json` ±0（`prepublishOnly` 清单 30 ⇒ **31**——本批件入链；单行清单行数零变）；
   store ≈+10——`db.mjs` 实读 **≈224** ⇒ ≈234（v9 段）；webui ≈+23——`views-providers-modals.mjs` 实读 **376** ⇒ ≈395（两窗勾选 ∥ 探针随携 +≈19） ∥ i18n 两表 +≈2/表；核侧 ≈+3——`thincoder-core/config-presets.mjs` 实读 **53** ⇒ ≈56（`gemini-openai` 行 + 注释）；
   批内件一件（**已落盘 735 行**·19 例——`docs/batches/2026-10-09-server-gemini-openai-preset.test.mjs`）；
-  随正件 = 漂移件 `docs/batches/2026-10-06-server-presets.test.mjs`（`:123` `20 ⇒ 21`——本批实施落）+ `docs/batches/2026-10-09-provider-default-model-purge-server.test.mjs`（四处 `20 ⇒ 21`——跨批面父侧落）；机制全文 = `gateway/API.md` §6 KD-SV-55 ∥ `ops/OPS.md` §1；**实施后回填（父侧 · 2026-10-09——实读）**：`forward.mjs` **208** ∥ `providers.mjs` **184** ∥ `provider-admin.mjs` **305** ∥ `config.mjs` **301** ∥ `presets.mjs` **52** ∥ `README.md` **252** ∥ `config.example.json` **38** ∥ `db.mjs` **231** ∥ `views-providers-modals.mjs` **385** ∥ `config-presets.mjs` **66**；i18n 两表 = 138 ∥ 142（+1 键）。
+  随正件 = 漂移件 `docs/batches/2026-10-06-server-presets.test.mjs`（`:123` `20 ⇒ 21`——本批实施落）+ `docs/batches/2026-10-09-provider-default-model-purge-server.test.mjs`（四处 `20 ⇒ 21`——跨批面父侧落）；机制全文 = `gateway/API.md` §6 KD-SV-55 ∥ `ops/OPS.md` §1；
+  **实施后回填（父侧 · 2026-10-09——实读）**：`forward.mjs` **208** ∥ `providers.mjs` **184** ∥ `provider-admin.mjs` **305** ∥ `config.mjs` **301** ∥ `presets.mjs` **52** ∥ `README.md` **252**；
+  `config.example.json` **38** ∥ `db.mjs` **231** ∥ `views-providers-modals.mjs` **385** ∥ `config-presets.mjs` **66**；i18n 两表 = 138 ∥ 142（+1 键）。
   ※ 2026-10-07 各批（布局收正 ∥ 配额分模型 ∥ 配额 v2 ∥ 模型元数据 ∥ 列式收正）的总账行未回填——**滞账在册（§9 R40②）**；
   本行原值以各域档小计为准（webui **3350** ∥ accounts **897** ∥ store/db **210**——各批实读在盘）。
   对照设计总账 ≈5237（= 闭式 ≈3247 + 控制台面预期 ≈840 + 完备化面预期 ≈518 + 多语言面预期 ≈632；实读差 −163 = 前账超出 +61 ∥ 控制台面回落 −124 ∥ 完备化面回落 −9 ∥ 多语言面回落 −92 ∥ package.json +1）。
