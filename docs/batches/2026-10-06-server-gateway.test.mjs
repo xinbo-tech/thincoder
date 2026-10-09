@@ -6,7 +6,7 @@
  * 射程（D1 骨架段——设计 §8 D1：store/db → ops/config → gateway/server ∥ `/v1/models`）：
  *   ① 配置校验（fail-closed：host 必填 ∥ 零 provider = 允许（条目级 fail-closed） ∥ 同 provider 内模型重名拒（跨 provider 同名放行） ∥ baseURL 非 http(s) 拒 ∥
  *      bootstrap 口令 < 8 拒 ∥ port 非法拒）② 缺省值 ∥ `env:` 保形（载入不解析——构建期解析） ∥ 库路径归一（相对 = 配置档目录）
- *   ③ db 迁移链（八表 + 六索引 + `user_version=8`——v8 追加 `api_keys.name` 列 + 存量回填默认名（2026-10-07 me-keys 批）；v7 追加 `providers.model_meta_json` 列（2026-10-07 Provider 模型元数据批）；v6 追加 `members.model_disabled_json` 列（2026-10-07 配额 v2 · 成员模型面批）；v5 追加 `usage` 拆列（`provider`/`model` 两字段）+ 派生两表 `usage_daily`/`quota_counters` + 成员配额列（2026-10-07 配额分模型批）；v4 追加 `providers.settings_json` 列（2026-10-06 服务模型配置面批）；v3 追加 `audit_events` + 三索引（console-completeness-2 批） ∥ 文件库重开幂等 ∥ 迁移段单事务回滚 ∥ FK/CHECK 生效）
+ *   ③ db 迁移链（八表 + 六索引 + `user_version=9`——v9 追加 `providers.proxy` 列（2026-10-09 代理批）；v8 追加 `api_keys.name` 列 + 存量回填默认名（2026-10-07 me-keys 批）；v7 追加 `providers.model_meta_json` 列（2026-10-07 Provider 模型元数据批）；v6 追加 `members.model_disabled_json` 列（2026-10-07 配额 v2 · 成员模型面批）；v5 追加 `usage` 拆列（`provider`/`model` 两字段）+ 派生两表 `usage_daily`/`quota_counters` + 成员配额列（2026-10-07 配额分模型批）；v4 追加 `providers.settings_json` 列（2026-10-06 服务模型配置面批）；v3 追加 `audit_events` + 三索引（console-completeness-2 批） ∥ 文件库重开幂等 ∥ 迁移段单事务回滚 ∥ FK/CHECK 生效）
  *   ④ providers 派发（`provider/model` 复合键——首斜杠切分 ∥ 裸名/未命中 404 形 ∥ 同名跨 provider 并存 ∥ `/v1/models` 前缀名清单）
  *   ⑤ 路由注册表（注册行 ∥ `:参数` ∥ 重复注册拒）⑥ 服务冒烟（200/404/400/413 ∥ 逐请求日志 ∥ 停机）
  *   ⑦ 日志形（单行 JSON）⑧ 零第三方依赖扫描（import 面仅 `node:`/相对 ∥ dependencies 空）
@@ -161,11 +161,11 @@ test("config：缺省值 ∥ env: 解析 ∥ 库路径归一 ∥ 0.0.0.0 告警"
 
 // ── ③ db 迁移链 ──────────────────────────────────────────────────────────────
 
-test("db：迁移链 ⇒ 八表 + 六索引 + user_version=8 ∥ 约束生效", () => {
+test("db：迁移链 ⇒ 八表 + 六索引 + user_version=9 ∥ 约束生效", () => {
   const db = DB.openDatabase(":memory:")
   try {
-    assert.equal(DB.SCHEMA_VERSION, 8)
-    assert.equal(DB.readVersion(db), 8)
+    assert.equal(DB.SCHEMA_VERSION, 9)
+    assert.equal(DB.readVersion(db), 9)
     const names = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name)
     for (const table of ["members", "api_keys", "sessions", "usage", "providers", "audit_events", "usage_daily", "quota_counters"]) assert.ok(names.includes(table), `缺表：${table}`)
     const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").all()
@@ -183,7 +183,7 @@ test("db：迁移链 ⇒ 八表 + 六索引 + user_version=8 ∥ 约束生效", 
       /CHECK/i,
     )
     // 幂等：同库再跑迁移 ⇒ 版本不变、不报错
-    assert.equal(DB.migrate(db), 8)
+    assert.equal(DB.migrate(db), 9)
   } finally {
     db.close()
   }
@@ -198,15 +198,15 @@ test("db：文件库重开幂等（旧库自动升 ∥ 数据保留）∥ 迁移
     first.close()
 
     const second = DB.openDatabase(file)
-    assert.equal(DB.readVersion(second), 8)
+    assert.equal(DB.readVersion(second), 9)
     assert.equal(second.prepare("SELECT count(*) AS n FROM members").get().n, 1)
 
     // 失败迁移：段内先建表再抛 ⇒ 整段回滚（表不落 ∥ 版本不动）
-    const failing = [...DB.MIGRATIONS, { v: 9, up: (handle) => { handle.exec("CREATE TABLE v9_probe (x INTEGER)"); throw new Error("boom") } }]
+    const failing = [...DB.MIGRATIONS, { v: 10, up: (handle) => { handle.exec("CREATE TABLE v10_probe (x INTEGER)"); throw new Error("boom") } }]
     try {
-      assert.throws(() => DB.migrate(second, { migrations: failing }), /迁移失败（v9）/)
-      assert.equal(DB.readVersion(second), 8)
-      assert.equal(second.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name = 'v9_probe'").get().n, 0)
+      assert.throws(() => DB.migrate(second, { migrations: failing }), /迁移失败（v10）/)
+      assert.equal(DB.readVersion(second), 9)
+      assert.equal(second.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name = 'v10_probe'").get().n, 0)
     } finally {
       second.close()
     }

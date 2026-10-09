@@ -9,6 +9,7 @@
  *   ③ 留空 ⇒「测试连接」+ 首开自动拉取（同支）：同②（回归）
  *   ④ 清除勾（留空 ∥ 另填两态）⇒「测试连接」/「刷新候选」：= `{ baseURL, apiKey: "" }` 不含 `providerId`（红→绿）
  *   ⑤ 添加弹窗参照面回归：「获取模型」留空 ⇒ 无 `apiKey`；明填（含 `env:` 引用）⇒ 原文照送（参照面零改）
+ *   ⑥（代理批随正——2026-10-09）各探针体随携「走代理」勾选态（未勾 ⇒ `proxy: false`）——各腿期望体同拍
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -122,20 +123,20 @@ test("① 明填 sk-new-123 ⇒「测试连接」：请求体 apiKey = 草稿值
     await tick() // 首开自动拉取（空 key——回落支）
     textInputs(modal.root)[2].value = "sk-new-123"
     await byText(modal.root, ZH["admin.providers.test"]).fire("click")
-    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, apiKey: "sk-new-123" }, "测试连接须以草稿 key 为准")
+    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, apiKey: "sk-new-123", proxy: false }, "测试连接须以草稿 key 为准")
   } finally { delete globalThis.document }
 })
 
-// ── ② 留空 ⇒「刷新候选」：回落 providerId（不含 apiKey）──────────────────────
+// ── ② 留空 ⇒「刷新候选」：回落 providerId（不含 apiKey；体携 `proxy` 勾选态）──────────
 
-test("② 留空 ⇒「刷新候选」：= { baseURL, providerId } 不含 apiKey（回归）", async () => {
+test("② 留空 ⇒「刷新候选」：= { baseURL, providerId, proxy } 不含 apiKey（回归）", async () => {
   globalThis.document = createDocument()
   try {
     const { ctx, calls } = makeCtx({ "POST /api/admin/providers/discover": () => ({ models: ["deepseek-chat"] }) })
     const modal = MODALS.openProviderDetailModal(ctx, { provider: PROVIDER })
     await tick()
     await byText(modal.root, ZH["admin.providers.refreshCandidates"]).fire("click")
-    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, providerId: PROVIDER.id })
+    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, providerId: PROVIDER.id, proxy: false })
   } finally { delete globalThis.document }
 })
 
@@ -147,15 +148,15 @@ test("③ 留空 ⇒「测试连接」+ 首开自动拉取：= { baseURL, provid
     const { ctx, calls } = makeCtx({ "POST /api/admin/providers/discover": () => ({ models: ["deepseek-chat"] }) })
     const modal = MODALS.openProviderDetailModal(ctx, { provider: PROVIDER })
     await tick() // 首开自动拉取
-    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, providerId: PROVIDER.id }, "首开自动拉取回落 providerId")
+    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, providerId: PROVIDER.id, proxy: false }, "首开自动拉取回落 providerId")
     await byText(modal.root, ZH["admin.providers.test"]).fire("click")
-    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, providerId: PROVIDER.id }, "测试连接留空回落 providerId")
+    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, providerId: PROVIDER.id, proxy: false }, "测试连接留空回落 providerId")
   } finally { delete globalThis.document }
 })
 
 // ── ④ 清除勾 ⇒ 显式空 apiKey（留空 ∥ 另填两态——不含 providerId）─────────────
 
-test("④ 清除勾（留空 ∥ 另填）⇒「测试连接」/「刷新候选」：= { baseURL, apiKey: \"\" } 不含 providerId", async () => {
+test("④ 清除勾（留空 ∥ 另填）⇒「测试连接」/「刷新候选」：= { baseURL, apiKey: \"\", proxy } 不含 providerId", async () => {
   globalThis.document = createDocument()
   try {
     const { ctx, calls } = makeCtx({ "POST /api/admin/providers/discover": () => ({ models: ["deepseek-chat"] }) })
@@ -165,14 +166,14 @@ test("④ 清除勾（留空 ∥ 另填）⇒「测试连接」/「刷新候选�
     assert.ok(clear !== null, "缺「清除密钥」勾")
     clear.checked = true
     await byText(modal.root, ZH["admin.providers.test"]).fire("click")
-    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, apiKey: "" }, "清除勾（留空）⇒ 显式空——测试连接")
+    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, apiKey: "", proxy: false }, "清除勾（留空）⇒ 显式空——测试连接")
     await byText(modal.root, ZH["admin.providers.refreshCandidates"]).fire("click")
-    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, apiKey: "" }, "清除勾（留空）⇒ 显式空——刷新候选")
+    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, apiKey: "", proxy: false }, "清除勾（留空）⇒ 显式空——刷新候选")
     textInputs(modal.root)[2].value = "sk-typed" // 另填值 ∧ 清除勾 ⇒ 以清除为准（保存同式）
     await byText(modal.root, ZH["admin.providers.test"]).fire("click")
-    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, apiKey: "" }, "清除勾 ⊃ 明填（以清除为准）——测试连接")
+    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, apiKey: "", proxy: false }, "清除勾 ⊃ 明填（以清除为准）——测试连接")
     await byText(modal.root, ZH["admin.providers.refreshCandidates"]).fire("click")
-    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, apiKey: "" }, "清除勾 ⊃ 明填（以清除为准）——刷新候选")
+    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: PROVIDER.baseURL, apiKey: "", proxy: false }, "清除勾 ⊃ 明填（以清除为准）——刷新候选")
   } finally { delete globalThis.document }
 })
 
@@ -193,9 +194,9 @@ test("⑤ 添加弹窗参照面回归：「获取模型」留空 ⇒ 无 apiKey�
     const inputs = findAll(modal.root, (node) => node.tag === "input")
     inputs[1].value = "http://10.0.0.5/v1"
     await byText(modal.root, ZH["admin.providers.fetchModels"]).fire("click")
-    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: "http://10.0.0.5/v1" }, "留空 ⇒ 无 apiKey")
+    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: "http://10.0.0.5/v1", proxy: false }, "留空 ⇒ 无 apiKey")
     inputs[2].value = "env:MOONSHOT_KEY"
     await byText(modal.root, ZH["admin.providers.fetchModels"]).fire("click")
-    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: "http://10.0.0.5/v1", apiKey: "env:MOONSHOT_KEY" }, "明填 ⇒ 原文照送（含 env: 引用）")
+    assert.deepEqual(discoverCalls(calls).at(-1)[2], { baseURL: "http://10.0.0.5/v1", apiKey: "env:MOONSHOT_KEY", proxy: false }, "明填 ⇒ 原文照送（含 env: 引用）")
   } finally { delete globalThis.document }
 })

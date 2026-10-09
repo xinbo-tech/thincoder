@@ -1,6 +1,7 @@
 /**
  * providers.mjs — provider 注册与模型派发（KD-SV-4：`provider/model` 复合键精确匹配——非别名 ∥ 非策略路由）
  * + 模型设置（v4 `settings`——解码 ∥ 注册表携设置 ∥ `settingsFor`——KD-SV-34/35）
+ * + 上游代理旗（v9 `proxy`——解码 ∥ 注册表 `proxyUri` 注入（逐渠旗 ∧ 顶层 uri）——KD-SV-55）
  * + 运行时箱（保存即热生效：`runtime.get()/set()` 原子换表——gateway/API.md §2.2）
  * + 装配引导（库单源：种子导入矩阵 ∥ 注册表构建（`env:` 解析）——ops/OPS.md §1）。
  *
@@ -20,7 +21,7 @@ export function splitModelRef(ref) {
   return { provider: ref.slice(0, cut), model: ref.slice(cut + 1) }
 }
 
-/** 库行 → provider 条目（store/STORE.md §2 v2/v4/v7 段列名映射 + `models_json`/`settings_json`/`model_meta_json` 解码）。 */
+/** 库行 → provider 条目（store/STORE.md §2 v2/v4/v7/v9 段列名映射 + `models_json`/`settings_json`/`model_meta_json` 解码）。 */
 export function rowToEntry(row) {
   let models
   try {
@@ -54,6 +55,7 @@ export function rowToEntry(row) {
     models,
     settings, // 模型设置映射（v4——`{}` = 未设；判据单源 = ops/config.mjs）
     modelMeta, // 上游模型元数据留存图（v7——`{}` = 未存；纯展示数据——§2.2「模型元数据」条）
+    proxy: row.proxy === 1, // 上游代理旗（v9——SQLite 无布尔：1/0 ⇒ boolean；缺省 0 = 直连——KD-SV-55）
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -77,11 +79,14 @@ export function resolveProviderKey(apiKey, { env = process.env, where = "apiKey"
 }
 
 /** provider 注册表（条目 → 派发表；构建期解析 `env:` 引用——缺位 ⇒ 抛，调用方转拒启/400）。
+ *  `proxyUri` = 顶层 `proxy.uri`（装配 ∥ 保存两构建点同源——KD-SV-55）：逐渠旗 `proxy === true` ∧ uri 在案
+ *  ⇒ 条目注入 `proxyUri`（chat 转发 ∥ 模型发现同判定）；缺省 ∥ 无 uri ⇒ `undefined`（直连——无全局闸）。
  *  在途口径 = 派发时快照（转发闭包持当时 provider 对象）；换表只影响后续请求（§2.2）。 */
-export function createProviderRegistry(entries, { env = process.env, engineModel = null } = {}) {
+export function createProviderRegistry(entries, { env = process.env, engineModel = null, proxyUri = null } = {}) {
   const providers = (entries ?? []).map((entry) => ({
     ...entry,
     settings: entry.settings ?? {}, // v4 模型设置随行（换表即随动——热生效：KD-SV-35）
+    proxyUri: entry.proxy === true && proxyUri ? proxyUri : undefined, // 逐渠判定注入（v9——镜像客户端 injectProxy）
     apiKey: resolveProviderKey(entry.apiKey, { env, where: `provider ${entry.name} 的 apiKey` }),
   }))
   const table = [] // chat 侧外部标识条目（条目序）：`{ ref, provider, model }`
@@ -145,11 +150,13 @@ export function importProviderSeed(db, config, { now = () => new Date().toISOStr
   const seed = Array.isArray(config?.providers) ? config.providers : []
   if (existing > 0) return seed.length > 0 ? { action: "ignored", count: seed.length } : { action: "kept" }
   if (seed.length === 0) return { action: "empty" }
-  const insert = db.prepare("INSERT INTO providers (name, base_url, api_key, models_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)")
+  const insert = db.prepare("INSERT INTO providers (name, base_url, api_key, models_json, proxy, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
   const ts = now()
   db.exec("BEGIN")
   try {
-    for (const entry of seed) insert.run(entry.name, entry.baseURL, entry.apiKey ?? "", JSON.stringify(entry.models ?? []), ts, ts)
+    for (const entry of seed) {
+      insert.run(entry.name, entry.baseURL, entry.apiKey ?? "", JSON.stringify(entry.models ?? []), entry.proxy === true ? 1 : 0, ts, ts)
+    }
     db.exec("COMMIT")
   } catch (e) {
     db.exec("ROLLBACK")
@@ -172,6 +179,6 @@ export function bootstrapProviderRuntime({ db, config, log = null, env = process
     log?.warn("providers_empty", { message: "零 provider——服务照常起；控制台添加（或留配置种子）" })
   }
   const entries = validateProviderEntries(listProviderEntries(db)) // 启动构建径（单源校验——坏行 ⇒ 拒启）
-  const registry = createProviderRegistry(entries, { env, engineModel: config.embedding?.model ?? null })
+  const registry = createProviderRegistry(entries, { env, engineModel: config.embedding?.model ?? null, proxyUri: config.proxy?.uri ?? null })
   return createProviderRuntime(registry)
 }

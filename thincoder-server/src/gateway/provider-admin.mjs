@@ -11,6 +11,10 @@
  * （`filterModelMeta`——白名单 + 形不符即略 + 与提交 `models` 求交；键缺省 = 现存按求交滑动；非对象 ⇒ 400）。
  * 纯展示数据——转发 ∥ 派发 ∥ `/v1/models` 零涉。
  *
+ * 上游代理旗（v9 `proxy`——KD-SV-55）：读面 = GET 行载 `proxy`（布尔）；写面 = POST/PATCH `proxy`（布尔——
+ * 非布尔 ⇒ 400 库与运行时零变）；候选注册表携顶层 `proxy.uri`（保存即热生效——换表随动）；
+ * discover 代理判定 = 明传优先 ∥ `providerId` 条目旗兜底 ∥ 皆无 ⇒ 直连（与 chat 转发同判定；出口 = `proxyFetch`）。
+ *
  * 保存即热生效（四步——§2.2）：① 校验（单源 = `ops/config.mjs` 导出——与配置种子同规）→
  * ② 建候选注册表（`env:` 解析——缺位 ⇒ 400 不落库）→ ③ 落库 → ④ `runtime.set(候选)`（原子换表）；
  * 失败 ⇒ 库与运行时零变。密钥回显掩码（空 ⇒ "" ∥ `env:` 原文 ∥ 明文 ⇒ `…` + 末 4）；
@@ -23,6 +27,7 @@ import { validateProviderEntry } from "../ops/config.mjs"
 import { SERVER_PRESETS, expandProviderEntry } from "../ops/presets.mjs"
 import { HttpError, sendJson } from "./errors.mjs"
 import { upstreamUrl } from "./forward.mjs"
+import { proxyFetch } from "./proxy.mjs"
 import { createProviderRegistry, listProviderEntries, resolveProviderKey, rowToEntry } from "./providers.mjs"
 import { readJsonBody } from "./server.mjs"
 
@@ -114,13 +119,14 @@ function asInvalidRequest(fn) {
 /**
  * 注册 provider 管理面六端点（§2.2）：`db` = openDatabase 产物 ∥ `config` = 校验后配置 ∥
  * `runtime` = gateway 注册行装配期引导的**同一实例**（换表两族同见）。
- * 注入口径（批内件替身）：`env` ∥ `fetchImpl` ∥ `discoverTimeoutMs` 走可覆盖参数（缺省 = 生产行为不变）。
+ * 注入口径（批内件替身）：`env` ∥ `fetchImpl` ∥ `discoverTimeoutMs` 走可覆盖参数（缺省 = 生产行为不变）；
+ * `fetchImpl` 缺省 = `proxyFetch`（KD-SV-55——discover 出口同转发；无代理串 ⇒ 原生 fetch 直连）。
  */
-export function registerProviderAdminRoutes(routes, { db, config, runtime, log = null, env = process.env, fetchImpl = fetch, discoverTimeoutMs = PROVIDER_DISCOVER_TIMEOUT_MS } = {}) {
+export function registerProviderAdminRoutes(routes, { db, config, runtime, log = null, env = process.env, fetchImpl = proxyFetch, discoverTimeoutMs = PROVIDER_DISCOVER_TIMEOUT_MS } = {}) {
   if (!db || !config || !runtime) throw new Error("registerProviderAdminRoutes：缺少 db ∥ config ∥ runtime（同一实例——装配面接线）")
 
-  /** 候选注册表（保存路径②——`env:` 解析；抛出归调用方转 400/拒启）。 */
-  const buildCandidate = (entries) => createProviderRegistry(entries, { env, engineModel: config.embedding?.model ?? null })
+  /** 候选注册表（保存路径②——`env:` 解析；顶层代理串同源注入——旗随保存热生效：KD-SV-55）。 */
+  const buildCandidate = (entries) => createProviderRegistry(entries, { env, engineModel: config.embedding?.model ?? null, proxyUri: config.proxy?.uri ?? null })
 
   /** 行定位（id 非法/不存在 ⇒ null——调用方转 404）。 */
   const findRow = (rawId) => {
@@ -146,6 +152,7 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
       models: entry.models,
       settings: entry.settings, // 模型设置全图（v4——读面；§2.2）
       modelMeta: entry.modelMeta, // 上游模型元数据留存图（v7——恒在场；未存 ⇒ {}；§2.2）
+      proxy: entry.proxy, // 上游代理旗（v9——布尔；KD-SV-55）
       createdAt: entry.createdAt,
       updatedAt: entry.updatedAt,
     }))
@@ -156,7 +163,7 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
     requireAdmin(db, req)
     const body = bodyFields(await readJsonBody(req))
     const entry = asInvalidRequest(() => validateProviderEntry(
-      { name: body.name, baseURL: body.baseURL, apiKey: body.apiKey ?? "", models: body.models ?? [] },
+      { name: body.name, baseURL: body.baseURL, apiKey: body.apiKey ?? "", models: body.models ?? [], proxy: body.proxy },
       { where: "provider" },
     ))
     // `modelMeta` 期望图（白名单 + 形不符即略 + 与提交 `models` 求交；缺省 ⇒ `{}`；非对象 ⇒ 400 库零变）
@@ -164,8 +171,8 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
     assertNameFree(entry.name)
     const candidate = asInvalidRequest(() => buildCandidate([...listProviderEntries(db), entry])) // ②
     const now = new Date().toISOString()
-    const info = db.prepare("INSERT INTO providers (name, base_url, api_key, models_json, model_meta_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .run(entry.name, entry.baseURL, entry.apiKey, JSON.stringify(entry.models), JSON.stringify(modelMeta), now, now) // ③
+    const info = db.prepare("INSERT INTO providers (name, base_url, api_key, models_json, proxy, model_meta_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(entry.name, entry.baseURL, entry.apiKey, JSON.stringify(entry.models), entry.proxy === true ? 1 : 0, JSON.stringify(modelMeta), now, now) // ③
     runtime.set(candidate) // ④ 原子换表（零重启）
     const id = Number(info.lastInsertRowid)
     log?.info("provider_created", { id, name: entry.name })
@@ -185,6 +192,7 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
       baseURL: body.baseURL !== undefined ? body.baseURL : current.baseURL,
       apiKey: body.apiKey !== undefined ? body.apiKey : current.apiKey, // `apiKey: ""` = 清除（§2.2）
       models: body.models !== undefined ? body.models : current.models,
+      proxy: body.proxy !== undefined ? body.proxy : current.proxy, // 布尔直写；缺省 = 不动（§2.2）
       settings,
     }, { where: "provider" }))
     if (entry.name !== current.name) assertNameFree(entry.name, { exceptId: current.id })
@@ -193,8 +201,8 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
     const candidate = asInvalidRequest(() => buildCandidate(
       listProviderEntries(db).map((item) => (item.id === current.id ? { ...entry, id: current.id } : item)),
     ))
-    db.prepare("UPDATE providers SET name = ?, base_url = ?, api_key = ?, models_json = ?, settings_json = ?, model_meta_json = ?, updated_at = ? WHERE id = ?")
-      .run(entry.name, entry.baseURL, entry.apiKey, JSON.stringify(entry.models), JSON.stringify(entry.settings), JSON.stringify(modelMeta), new Date().toISOString(), current.id)
+    db.prepare("UPDATE providers SET name = ?, base_url = ?, api_key = ?, models_json = ?, proxy = ?, settings_json = ?, model_meta_json = ?, updated_at = ? WHERE id = ?")
+      .run(entry.name, entry.baseURL, entry.apiKey, JSON.stringify(entry.models), entry.proxy === true ? 1 : 0, JSON.stringify(entry.settings), JSON.stringify(modelMeta), new Date().toISOString(), current.id)
     runtime.set(candidate)
     log?.info("provider_updated", { id: current.id, name: entry.name })
     sendJson(res, 200, { ok: true, id: current.id })
@@ -220,14 +228,27 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
       { name: "discover-draft", baseURL: body.baseURL, apiKey: "", models: [] },
       { where: "body" },
     ))
+    // `providerId` 条目（key ∥ 代理旗双兜底面；id 非法/不存在 ⇒ 404——仅 key 兜底径判，沿原行为）
+    const storedRow = body.providerId !== undefined && body.providerId !== null ? findRow(body.providerId) : null
     let apiKey = ""
     if (body.apiKey !== undefined && body.apiKey !== null) {
       apiKey = body.apiKey
+    } else if (storedRow !== null) {
+      apiKey = storedRow.api_key
     } else if (body.providerId !== undefined && body.providerId !== null) {
-      const stored = findRow(body.providerId)
-      if (!stored) throw new HttpError("not_found", `provider 不存在：${body.providerId}`)
-      apiKey = stored.api_key
+      throw new HttpError("not_found", `provider 不存在：${body.providerId}`)
     }
+    // 代理判定（KD-SV-55——与 chat 转发同判定）：明传优先 → providerId 条目旗兜底 → 皆无 ⇒ 直连
+    let proxy = false
+    if (body.proxy !== undefined) {
+      if (typeof body.proxy !== "boolean") {
+        throw new HttpError("invalid_request_error", `discover.proxy 须为布尔（true ∥ false——现 ${JSON.stringify(body.proxy)}）`)
+      }
+      proxy = body.proxy
+    } else if (storedRow !== null) {
+      proxy = storedRow.proxy === 1
+    }
+    const proxyUri = proxy === true ? (config.proxy?.uri ?? null) : null
     const resolvedKey = asInvalidRequest(() => resolveProviderKey(apiKey, { env, where: "discover.apiKey" })) // `env:` 引用服务端解析
     let upstream
     try {
@@ -235,7 +256,7 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
         method: "GET",
         headers: resolvedKey ? { authorization: `Bearer ${resolvedKey}` } : {}, // Authorization 同转发口径——key 空不发
         signal: AbortSignal.timeout(discoverTimeoutMs),
-      })
+      }, proxyUri)
     } catch (e) {
       log?.warn("provider_discover_failed", { baseURL: draft.baseURL, message: e.message })
       throw new HttpError("upstream_error", `模型发现失败（上游不可达或超时）：${e.message}——请检查上游可达性后重试`)

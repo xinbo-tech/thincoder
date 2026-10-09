@@ -143,13 +143,13 @@ function fold(rows, pick, key = "name") {
 
 // ── ① store v3 迁移链（STORE §3 判据）────────────────────────────────────────
 
-test("① store：空库直落 8 ∥ v2 旧库自动升（链尾）∥ 幂等 ∥ audit_events 九型 CHECK", () => {
+test("① store：空库直落 9 ∥ v2 旧库自动升（链尾）∥ 幂等 ∥ audit_events 九型 CHECK", () => {
   const dir = mkdtempSync(join(tmpdir(), "tc2-db-"))
   const file = join(dir, "gateway.db")
   try {
     // 空库直落（六索引——含 v3 三索引）∥ 九型 CHECK 全可插 + 枚举外拒
     const fresh = DB.openDatabase(":memory:")
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [8, 8])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [9, 9])
     const indexes = fresh.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").all().map((row) => row.name)
     for (const index of ["idx_audit_ts", "idx_audit_type_ts", "idx_usage_key_ts"]) assert.ok(indexes.includes(index), index)
     assert.equal(indexes.length, 6)
@@ -164,15 +164,15 @@ test("① store：空库直落 8 ∥ v2 旧库自动升（链尾）∥ 幂等 �
     assert.equal(AUDIT.pruneAuditEvents(fresh, { now: now + 4 * 24 * 60 * 60 * 1000, retentionDays: null }), 0)
     assert.throws(() => fresh.prepare("INSERT INTO audit_events (ts, type, actor_name) VALUES (1, 'nope', 't')").run(), /CHECK/i)
     fresh.close()
-    // v2 旧库（v1+v2 段）⇒ 启动自动升 8（旧数据保留）⇒ 再开幂等
+    // v2 旧库（v1+v2 段）⇒ 启动自动升 9（旧数据保留）⇒ 再开幂等
     const legacy = DB.openDatabase(file, { migrations: DB.MIGRATIONS.filter((step) => step.v <= 2) })
     assert.equal(DB.readVersion(legacy), 2)
     legacy.exec("INSERT INTO members (username, name, password_hash, created_at) VALUES ('old', 'old', 'scrypt$fixture', '2026-10-06')")
     legacy.close()
     const upgraded = DB.openDatabase(file)
-    assert.equal(DB.readVersion(upgraded), 8)
+    assert.equal(DB.readVersion(upgraded), 9)
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE name = 'audit_events'").get())
-    assert.deepEqual([upgraded.prepare("SELECT COUNT(*) AS n FROM members").get().n, DB.migrate(upgraded)], [1, 8])
+    assert.deepEqual([upgraded.prepare("SELECT COUNT(*) AS n FROM members").get().n, DB.migrate(upgraded)], [1, 9])
     assert.equal(upgraded.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").get().n, 6)
     upgraded.close()
   } finally {
@@ -430,12 +430,13 @@ test("⑤ 向量面：真值零密钥 ∥ 试跑成功 + 四 kind ∥ 不落库�
 
 // ── ⑥ 前端静态面 + nav 直驱 + 健康三态 ───────────────────────────────────────
 
-test("⑥ 静态面：档目 19 ∥ 20 ∥ 零外链 ∥ 两表键集/键引用闭合 ∥ nav 直驱 ∥ 三新档直发 ∥ 健康三态", async () => {
-  // 档目（UI 代码档 19 ∥ 含 favicon 全目录 20——配置面批后）+ 零外链（零 http(s):// ∥ 零 @import）
+test("⑥ 静态面：档目 29 ∥ 30 ∥ 零外链 ∥ 两表键集/键引用闭合 ∥ nav 直驱 ∥ 三新档直发 ∥ 健康三态", async () => {
+  // 档目（UI 代码档 29 ∥ 含 favicon 全目录 30——结构轮后）+ 零外链（零 http(s):// ∥ 零 @import）
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [20, 19])
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [30, 29])
   assert.deepEqual(names, [
-    "app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
+    "app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs",
+    "i18n-zh-me.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
     "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs",
   ])
   for (const name of names) {
@@ -458,7 +459,7 @@ test("⑥ 静态面：档目 19 ∥ 20 ∥ 零外链 ∥ 两表键集/键引用�
   for (const type of AUDIT.AUDIT_TYPES) assert.ok(`audit.type.${type}` in ZH && `audit.type.${type}` in EN, type)
   // 键引用闭合：`t("…")` 字面量 ⊆ 表键 ∥ 裸命名空间键（点分键面）
   const refs = []
-  for (const name of names.filter((name) => name.endsWith(".mjs") && !["i18n-zh.mjs", "i18n-en.mjs"].includes(name))) {
+  for (const name of names.filter((name) => name.endsWith(".mjs") && !name.startsWith("i18n-zh") && !name.startsWith("i18n-en"))) {
     const src = readFileSync(join(PUBLIC_DIR, name), "utf8")
     for (const match of src.matchAll(/\bt\(\s*"([^"]+)"\s*[,)]/g)) refs.push([name, match[1]])
     for (const match of src.matchAll(/\bt\(\s*'([^']+)'\s*[,)]/g)) refs.push([name, match[1]])
@@ -476,8 +477,9 @@ test("⑥ 静态面：档目 19 ∥ 20 ∥ 零外链 ∥ 两表键集/键引用�
   // 接线：三新档 + 灯（30s 轮询 ∥ meta 槽 id ∥ 三态文案键）
   const appSrc = readFileSync(join(PUBLIC_DIR, "app.mjs"), "utf8")
   for (const dep of ["./views-usage.mjs", "./views-overview.mjs", "./views-audit.mjs"]) assert.ok(appSrc.includes(dep), dep)
-  assert.ok(appSrc.includes("HEALTH_POLL_MS = 30000"))
-  for (const key of ["health.ok", "health.degraded", "health.down"]) assert.ok(appSrc.includes(key), key)
+  const healthSrc = readFileSync(join(PUBLIC_DIR, "health.mjs"), "utf8") // 健康轮询结构轮外拆（§2.3⑤）
+  assert.ok(healthSrc.includes("HEALTH_POLL_MS = 30000"))
+  for (const key of ["health.ok", "health.degraded", "health.down"]) assert.ok(healthSrc.includes(key), key)
   assert.ok(readFileSync(join(PUBLIC_DIR, "nav.mjs"), "utf8").includes('id: "nav-health"'))
   // 三新档静态直发（200 ∥ text/javascript ∥ no-cache ∥ 字节 = 磁盘）+ 健康三态（绿/黄/红）
   const db = DB.openDatabase(":memory:")

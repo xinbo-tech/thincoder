@@ -7,7 +7,7 @@
  *   ⑤ 写路径：PATCH `models` = 勾选集（全量数组）∥ 零变更 ⇒ 直接关窗 ∥ 清除密钥 ⇒ `apiKey:""` ∥
  *      测试连接 = discover 复用（`providerId` 取库内 key）∥ 删除（confirm）∥ confirm 拒 ⇒ 零请求
  *   ⑥ 热生效链：PATCH `models`（详情弹窗保存形）⇒ `/v1/models` 随动（内存库——真网关 API 级复跑）
- *   ⑦ 静态面：档目 19 ∥ 20 ∥ 零外链 ∥ 两表键集/占位符/en 零 CJK ∥ 键引用闭合 ∥ 旧内联键退役（零「手填」残留）∥
+ *   ⑦ 静态面：档目 29 ∥ 30 ∥ 零外链 ∥ 两表键集/占位符/en 零 CJK ∥ 键引用闭合 ∥ 旧内联键退役（零「手填」残留）∥
  *      两档静态直发
  */
 import test from "node:test"
@@ -221,7 +221,7 @@ test("⑤ 写路径：PATCH `models` = 勾选集（全量数组）∥ 零变更 
     const before5 = calls.length
     await byText(modal5.root, ZH["admin.providers.test"]).fire("click")
     const testCalls = calls.slice(before5)
-    assert.deepEqual(testCalls.filter(([kind]) => kind === "POST").at(-1), ["POST", "/api/admin/providers/discover", { baseURL: "http://x/v1", providerId: 5 }])
+    assert.deepEqual(testCalls.filter(([kind]) => kind === "POST").at(-1), ["POST", "/api/admin/providers/discover", { baseURL: "http://x/v1", providerId: 5, proxy: false }])
     assert.ok(textOf(modal5.root).includes(fill(ZH["admin.providers.testOk"], { name: "p5", count: 3 })), "测试连接 ⇒ 同窗结果行（AC-18「测试同窗」——2026-10-07 随正）")
     assert.ok(!testCalls.some(([kind, value]) => kind === "flash" && value === fill(ZH["admin.providers.testOk"], { name: "p5", count: 3 })), "结果不再走弹窗外 flash")
     await byText(modal5.root, ZH["admin.providers.delete"]).fire("click")
@@ -289,13 +289,13 @@ test("⑥ 热生效链：PATCH `models`（详情弹窗保存形）⇒ `/v1/model
 
 // ── ⑦ 静态面（档目 ∥ 两表 ∥ 键引用闭合 ∥ 退役键 ∥ 直发）─────────────────────
 
-test("⑦ 静态面：档目 19 ∥ 20 ∥ 零外链 ∥ 两表键集/占位符/en 零 CJK ∥ 键引用闭合 ∥ 退役键删净 ∥ 两档直发", async () => {
+test("⑦ 静态面：档目 29 ∥ 30 ∥ 零外链 ∥ 两表键集/占位符/en 零 CJK ∥ 键引用闭合 ∥ 退役键删净 ∥ 两档直发", async () => {
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [20, 19], "全目录 20 ∥ UI 代码档 19")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [30, 29], "全目录 30 ∥ UI 代码档 29")
   assert.deepEqual(names, [
-    "app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
-    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs",
-    "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs",
+    "app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs",
+    "i18n-zh-me.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
+    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs",
   ])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
@@ -317,7 +317,7 @@ test("⑦ 静态面：档目 19 ∥ 20 ∥ 零外链 ∥ 两表键集/占位符/
   assert.ok(!Object.values(ZH).some((value) => value.includes("手填")), "「手填」残留（用户 21:36 裁定——零手填）")
   // 键引用闭合：`t("…")` 字面量 ⊆ 表键（全档扫面）∥ 两新档裸键字面量 ⊆ 表键
   const refs = []
-  for (const name of names.filter((name) => name.endsWith(".mjs") && !["i18n-zh.mjs", "i18n-en.mjs"].includes(name))) {
+  for (const name of names.filter((name) => name.endsWith(".mjs") && !name.startsWith("i18n-zh") && !name.startsWith("i18n-en"))) {
     const src = readFileSync(join(PUBLIC_DIR, name), "utf8")
     for (const match of src.matchAll(/\bt\(\s*"([^"]+)"\s*[,)]/g)) refs.push([name, match[1]])
     for (const match of src.matchAll(/\bt\(\s*'([^']+)'\s*[,)]/g)) refs.push([name, match[1]])

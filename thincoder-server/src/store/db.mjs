@@ -162,6 +162,12 @@ ALTER TABLE api_keys ADD COLUMN name TEXT NOT NULL DEFAULT '';  -- key 名称（
 UPDATE api_keys SET name = 'key-' || (SELECT COUNT(*) FROM api_keys k2 WHERE k2.member_id = api_keys.member_id AND k2.id <= api_keys.id);  -- 存量行回填默认名（key-N——按成员签发序）
 `
 
+/** v9 增段（`providers.proxy`——store/STORE.md §2 v9 段逐字；gateway 域——上游代理旗）。
+ *  列级 ALTER = 表不重建（存量行即刻得 0——缺省直连；§3 迁移链 v9）。 */
+const DDL_V9 = `
+ALTER TABLE providers ADD COLUMN proxy INTEGER NOT NULL DEFAULT 0;  -- 上游代理旗（1 = 该渠上游请求经代理；0 = 直连——缺省）
+`
+
 /** 迁移链：每段 = `{ v, up(db) }`（v = 目标结构版本，自 1 起递增）；结构每变一次追一段（+1）。 */
 export const MIGRATIONS = [
   { v: 1, up: (db) => db.exec(DDL_V1) },
@@ -172,6 +178,7 @@ export const MIGRATIONS = [
   { v: 6, up: (db) => db.exec(DDL_V6) },
   { v: 7, up: (db) => db.exec(DDL_V7) },
   { v: 8, up: (db) => db.exec(DDL_V8) },
+  { v: 9, up: (db) => db.exec(DDL_V9) },
 ]
 
 /** 当前结构版本（= 链尾段号——store/STORE.md §1）。 */

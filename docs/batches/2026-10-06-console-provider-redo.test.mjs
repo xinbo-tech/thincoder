@@ -208,8 +208,8 @@ test("③ 添加弹窗：预设径（已配名剔除 ∥ 信息行 ∥ POST 全�
     await select.fire("change")
     const presetText = textOf(modal.root)
     assert.deepEqual([presetText.includes("https://api.moonshot.cn/v1"), presetText.includes("moonshot-v1")], [true, true], "信息行 = 地址 ∥ 模型清单（只读）")
-    assert.equal(findAll(modal.root, (node) => node.tag === "input").length, 1, "预设径输入面 = 仅 apiKey")
-    findNode(modal.root, (node) => node.tag === "input").value = "sk-abc"
+    assert.equal(findAll(modal.root, (node) => node.tag === "input" && node.attrs.type !== "checkbox").length, 1, "预设径输入面 = 仅 apiKey（「走代理」复选框另计）")
+    findNode(modal.root, (node) => node.tag === "input" && node.attrs.type !== "checkbox").value = "sk-abc"
     await byText(modal.root, ZH["common.save"]).fire("click")
     assert.deepEqual(calls.filter(([kind, path]) => kind === "POST" && path === "/api/admin/providers").at(-1), ["POST", "/api/admin/providers", { name: "moonshot", baseURL: "https://api.moonshot.cn/v1", apiKey: "sk-abc", models: ["moonshot-v1"] }])
     assert.deepEqual([modal.root.open, reloads], [false, 1], "成功 ⇒ 关窗 + 列表刷新")
@@ -231,7 +231,7 @@ test("③ 添加弹窗：预设径（已配名剔除 ∥ 信息行 ∥ POST 全�
     const select2 = findNode(custom.root, (node) => node.tag === "select")
     select2.value = "custom"
     await select2.fire("change")
-    const inputs = findAll(custom.root, (node) => node.tag === "input")
+    const inputs = findAll(custom.root, (node) => node.tag === "input" && node.attrs.type !== "checkbox")
     assert.deepEqual(inputs.map((node) => node.attrs.placeholder), [ZH["admin.providers.namePh"], ZH["admin.providers.baseURLPh"], ZH["admin.providers.apiKeyPh"]])
     // 探针前置：无 baseURL ⇒ 提示（零请求）
     await byText(custom.root, ZH["admin.providers.fetchModels"]).fire("click")
@@ -239,7 +239,7 @@ test("③ 添加弹窗：预设径（已配名剔除 ∥ 信息行 ∥ POST 全�
     inputs[0].value = "local"
     inputs[1].value = "http://10.0.0.5/v1"
     await byText(custom.root, ZH["admin.providers.fetchModels"]).fire("click")
-    assert.deepEqual(callsCustom.at(-1), ["POST", "/api/admin/providers/discover", { baseURL: "http://10.0.0.5/v1" }])
+    assert.deepEqual(callsCustom.at(-1), ["POST", "/api/admin/providers/discover", { baseURL: "http://10.0.0.5/v1", proxy: false }])
     assert.deepEqual([callsCustom.some(([kind, value]) => kind === "flash" && value === fill(ZH["admin.providers.discovered"], { count: 2 })), textOf(custom.root).includes("m-1")], [false, true], "获取模型 ⇒ 候选同窗渲染（不落窗外 flash）")
     // 候选勾选（零手填）⇒ 保存 = POST（models = 勾选集）
     assert.deepEqual(pickBoxes(custom.root).map((box) => box.parent.children[1]), ["m-1", "m-2"])
@@ -261,7 +261,7 @@ test("③ 添加弹窗：预设径（已配名剔除 ∥ 信息行 ∥ POST 全�
       [ZH["admin.providers.presetFailed"], ZH["admin.providers.customChoice"]], "失败 ⇒ 提示 + 自定义径在位")
     select3.value = "custom"
     await select3.fire("change")
-    const inputs3 = findAll(down.root, (node) => node.tag === "input")
+    const inputs3 = findAll(down.root, (node) => node.tag === "input" && node.attrs.type !== "checkbox")
     inputs3[0].value = "p3"
     inputs3[1].value = "http://x/v1"
     await byText(down.root, ZH["common.save"]).fire("click")
@@ -288,7 +288,7 @@ test("④ 详情弹窗：信息段（预填 ∥ 掩码占位 ∥ 清除密钥 �
     assert.deepEqual([byText(modal.root, ZH["admin.providers.test"]) !== null, byText(modal.root, ZH["admin.providers.delete"]) !== null], [true, true])
     // 首开自动拉取：providerId 取库内 key（测试连接 = discover 复用的同径）
     await tick()
-    assert.deepEqual(calls.at(-1), ["POST", "/api/admin/providers/discover", { baseURL: "https://api.deepseek.com", providerId: 7 }])
+    assert.deepEqual(calls.at(-1), ["POST", "/api/admin/providers/discover", { baseURL: "https://api.deepseek.com", providerId: 7, proxy: false }])
     // 候选勾选：勾选态 = 现配置；退役项（不在发现列表的已开放模型）只读注行——不入候选面（不可勾 ⇒ 恒保留）
     assert.deepEqual(pickBoxes(modal.root).map((box) => box.parent.children[1]), ["deepseek-chat", "deepseek-reasoner"])
     assert.deepEqual(pickBoxes(modal.root).filter((box) => box.checked).map((box) => box.parent.children[1]), ["deepseek-chat"])

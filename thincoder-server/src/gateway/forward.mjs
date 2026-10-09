@@ -11,7 +11,10 @@
  * - 响应头最小面 = `content-type`（+ 非流式 `content-length` 重算）；中继体 = fetch **解码后**字节——
  *   探针实证（Node v24.19.0）：gzip 上游经 fetch 到手即明文 JSON，故本档不回 `content-encoding`
  *   （压缩上游到达客户端为解压形、自洽）；其余上游头（`retry-after` 等）不透传。
- * - 上游不可达（连不上 ∥ fetch 内建超时）⇒ 502 `upstream_error` + `error` 行（E6）。
+ * - 上游不可达（连不上 ∥ fetch 内建超时 ∥ 代理不可达）⇒ 502 `upstream_error` + `error` 行（E6）。
+ * - 上游出口 = `proxyFetch`（gateway/proxy.mjs——KD-SV-55）：`opts.proxyUri` 在场（逐渠旗 ∧ uri 在案——派发时快照）
+ *   ⇒ 经代理（CONNECT 隧道 ∥ 经典转发）；缺省 ⇒ 直连；嵌入面不传。断连中止 = `opts.signal` ⇒ 拆除代理 socket
+ *   ⇒ 上游中止（§2.1 契约零回归——本档按 `clientGone` 记 `aborted`）。
  * - 记账时点 = 请求终结（响应完 ∥ 流终结 ∥ 断连——KD-SV-8 **同事务三写**：usage 行 + 派生两表 upsert）；
  *   仅「已进入转发」的请求落行（准入前拒打不落用量：401 ∥ 429 ∥ 400 ∥ 404 ∥ 413 均无行）。
  *   模型标识 = `providerName`/`model` 拆列两字段（嵌入面 `providerName = ''`——STORE §2 v5 段）。
@@ -21,6 +24,7 @@ import { once } from "node:events"
 
 import { recordUsage } from "../metering/usage.mjs"
 import { sendError } from "./errors.mjs"
+import { proxyFetch } from "./proxy.mjs"
 import { createUsageTap, pickUsage } from "./sse-tap.mjs"
 
 /** KD-SV-5 注入：`stream === true` 且 `include_usage !== true` ⇒ 置 true（显式 false 亦覆盖）；非流式不动。 */
@@ -48,11 +52,12 @@ export function upstreamHeaders(provider) {
 
 /**
  * 转发并中继 + 记账（三面共用——embeddings 同径：传 `endpoint:'embeddings'` ∥ `providerName: ""` ∥ url ∥ payload 即接入）。
- * opts = `{ db, log, member, keyId, endpoint, providerName, model, ts, url, headers, payload, streaming }`。
+ * opts = `{ db, log, member, keyId, endpoint, providerName, model, ts, url, headers, payload, streaming, proxyUri }`。
  * `providerName`/`model` = 记账拆列两字段（chat = provider 名 + 上游模型名；嵌入 = `''` + 引擎模型名）。
+ * `proxyUri` = 上游代理串（KD-SV-55——chat 面由 `forwardChat` 自 provider 快照携；缺省/嵌入面 ⇒ null（直连））。
  */
 export async function forwardRequest(req, res, opts) {
-  const { db, log, member, keyId, endpoint, providerName = "", model, ts, url, headers, payload, streaming, onUsage = null } = opts
+  const { db, log, member, keyId, endpoint, providerName = "", model, ts, url, headers, payload, streaming, proxyUri = null, onUsage = null } = opts
   const started = Date.now()
   const controller = new AbortController()
   let clientGone = false
@@ -102,7 +107,7 @@ export async function forwardRequest(req, res, opts) {
   try {
     let upstream
     try {
-      upstream = await fetch(url, { method: "POST", headers, body: JSON.stringify(payload), signal: controller.signal })
+      upstream = await proxyFetch(url, { method: "POST", headers, body: JSON.stringify(payload), signal: controller.signal }, proxyUri)
     } catch (e) {
       if (clientGone) {
         finish("aborted")
@@ -179,7 +184,8 @@ function usageFromJson(bytes) {
 }
 
 /** 聊天面转发（`/v1/chat/completions`）：注入（KD-SV-5）+ 真 key 代持 + 账务字段装配。
- *  `provider` = 派发快照（baseURL/密钥——真 key 代持）；`model` = 上游模型名（首斜杠余段——API.md §2.1）
+ *  `provider` = 派发快照（baseURL/密钥/代理串——真 key 代持；`proxyUri` = 注册表构建期注入——逐渠旗 ∧ uri 在案，
+ *  KD-SV-55）；`model` = 上游模型名（首斜杠余段——API.md §2.1）
  *  —— 上游请求体 model 与记账 `model` 列同值，记账 `provider` 列 = `provider.name`；
  *  `onUsage` = 用量到达钩子（限流窗计入——KD-SV-35）。 */
 export async function forwardChat(req, res, { db, log, member, keyId, provider, model, body, ts, onUsage = null }) {
@@ -196,6 +202,7 @@ export async function forwardChat(req, res, { db, log, member, keyId, provider, 
     url: upstreamUrl(provider.baseURL, "/chat/completions"),
     headers: upstreamHeaders(provider),
     payload: injectIncludeUsage({ ...body, model }),
+    proxyUri: provider.proxyUri ?? null, // 派发时快照（逐渠旗 ∧ uri 在案 ⇒ 经代理；缺省 ⇒ 直连——KD-SV-55）
     onUsage,
   })
 }

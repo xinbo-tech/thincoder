@@ -5,6 +5,9 @@
   "autoUpdate": "notify",
   "trustProxy": false,
   "usageRetentionDays": 90,
+  "proxy": {
+    "uri": "http://10.2.2.112:3128"
+  },
   "bootstrap": {
     "username": "admin",
     "password": "env:TC_SERVER_ADMIN_PASSWORD"

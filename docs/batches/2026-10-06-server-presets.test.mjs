@@ -173,7 +173,7 @@ test("N12：{preset:'deepseek',apiKey:'env:X'} 载入 ⇒ 展开（`models` = �
     // 最小形（零覆盖）：展开值与核表实读一致
     const bareFile = writeConfig(dir, { host: "127.0.0.1", providers: [{ preset: "deepseek", apiKey: "env:TC_TEST_KEY" }], embedding: EMBEDDING })
     const loaded = CONFIG.loadConfig(bareFile, { env: ENV }).config.providers[0]
-    assert.deepEqual(loaded, { name: "deepseek", baseURL: deepseek.baseURL, apiKey: "env:TC_TEST_KEY", models: [], settings: {} })
+    assert.deepEqual(loaded, { name: "deepseek", baseURL: deepseek.baseURL, apiKey: "env:TC_TEST_KEY", models: [], proxy: false, settings: {} })
 
     // 实请求段：同预设条目 + baseURL 覆盖指 mock + 清单自备（勾选面模拟）——预设形 models 缺省 = 空
     const liveFile = writeConfig(dir, { host: "127.0.0.1", providers: [{ preset: "deepseek", baseURL: `${mock.base}/v1`, apiKey: "env:TC_TEST_KEY", models: [picked] }], embedding: EMBEDDING })
@@ -215,7 +215,7 @@ test("N13：预设形 + 条目覆盖（name ∥ baseURL ∥ models 自备）⇒ 
       embedding: EMBEDDING,
     })
     const loaded = CONFIG.loadConfig(file, { env: ENV }).config.providers[0]
-    assert.deepEqual(loaded, { name: "bailian", baseURL: `${mock.base}/v1`, apiKey: "env:TC_TEST_KEY", models: ["qwen3.5-plus", "qwen3.7-max"], settings: {} })
+    assert.deepEqual(loaded, { name: "bailian", baseURL: `${mock.base}/v1`, apiKey: "env:TC_TEST_KEY", models: ["qwen3.5-plus", "qwen3.7-max"], proxy: false, settings: {} })
     const app = await startGateway({ db, config: CONFIG.loadConfig(file, { env: ENV }).config, env: ENV })
     try {
       const key = KEYS.issueKey(db, seedMember(db)).plain
@@ -297,7 +297,7 @@ test("手写形回归 ∥ config.example.json 冒烟：预设形 ∥ 手写形�
       embedding: EMBEDDING,
     })
     const { config } = CONFIG.loadConfig(file, { env: ENV })
-      assert.deepEqual(config.providers[0], { name: "internal", baseURL: "http://10.0.0.9:8000/v1", apiKey: "", models: ["deepseek-v3"], settings: {} }) // 手写形零变
+      assert.deepEqual(config.providers[0], { name: "internal", baseURL: "http://10.0.0.9:8000/v1", apiKey: "", models: ["deepseek-v3"], proxy: false, settings: {} }) // 手写形零变
     assert.equal(config.providers[1].name, "glm")
     assert.deepEqual(config.providers[1].models, []) // 预设形 = 空清单（2026-10-09 清除批）
 

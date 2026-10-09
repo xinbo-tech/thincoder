@@ -27,6 +27,7 @@
   "autoUpdate": "notify",
   "trustProxy": false,
   "usageRetentionDays": 90,
+  "proxy": { "uri": "http://10.2.2.112:3128" },
   "bootstrap": { "username": "admin", "password": "env:TC_SERVER_ADMIN_PASSWORD" },
   "providers": [
     { "name": "bailian", "baseURL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
@@ -44,6 +45,7 @@
 | `autoUpdate` | 否 | 更新档位：`false`（关——零检查） ∥ `"notify"`（检查 + 日志） ∥ `"auto"`（检查 + 自装）；缺省 `"notify"`；非法值 ⇒ 拒启（见 §8） |
 | `trustProxy` | 否 | 反代场景客户端 IP 口径：`false`（缺省——IP = 连接对端地址） ∥ `true`（读 `X-Real-IP` 头）；前提 = 服务端口仅反代可达（反代须 `set` 形覆盖客户端伪造——见 §11）；登录防爆破 IP 维消费 |
 | `usageRetentionDays` | 否 | 用量保留窗（天）：正整数 ∥ `null`（不限——保留全量）；缺省 `90`；非正整数/非法值 ⇒ 拒启（清理时机 = 启动一次 + 每 24h） |
+| `proxy` | 否 | **上游出口代理**：形 = `{ "uri": "http://host:port" }`；**仅收 `http:`**（https 代理串 ∥ 非对象 ∥ 非 URL ⇒ 拒启）；缺省 = 直连；生效 = 重启（见下「上游代理」） |
 | `bootstrap` | 否 | 首启引导凭据（仅零 admin 时消费——见 §5）；口令 ≥8 字符 |
 | `providers[]` | 否 | **首启种子**（一次性导入——此后控制台管理：`#/admin/providers`）。`name` ∥ `baseURL`（OpenAI 兼容根） ∥ `apiKey`（可空——空则不发 Authorization 头；支持 `env:` 引用） ∥ `models`（开放清单——对外标识 = `provider/model`）；预设形（`preset`）可省字段。零 provider = 允许态（服务照常起 + 警告） |
 | `embedding` | 是 | `baseURL` ∥ `model` ∥ `apiKey`（选填——本地引擎常无鉴权） |
@@ -63,6 +65,9 @@
 - 启动校验（fail-closed）：缺 `host` ∥ provider `name` 缺/空 ∥ `name` 含 `/` ∥ `name` 重名（provider 间） ∥ 同 provider 内模型重名 ∥ `baseURL` 非 http(s) ∥ 未知预设名 ⇒
   拒启（非零退出 + 明确报错）。**零 provider = 允许态**（服务照常起 + 警告——控制台为配置路径）。
 - provider 变更（增/删/改 ∥ 含密钥）= 控制台 `#/admin/providers` 保存即热生效（零重启；在途请求照常收尾）；`config.json` 文件本身不热载（改动仍须重启）。
+- **上游代理（逐渠——顶层 `proxy.uri` + 条目 `providers[].proxy`）**：条目旗布尔（缺省 `false` = 直连；非布尔 ⇒ 拒启 ∥ 保存 400）；控制台 Provider 双弹窗「走代理」勾选 = 同字段（保存即热生效）。
+  判定 = 旗 `true` **且** 顶层 `uri` 在案 ⇒ 该渠 chat 转发 ∥ 模型发现经代理；loopback 目标恒直连（`localhost` ∥ `127.0.0.1` ∥ `::1`——NO_PROXY 语义）；旗 `true` 而 `uri` 缺位 ⇒ 直连 + 启动警告（旗未生效）；无全局闸（逐渠判定）。
+  代理传输：明文 `http:` 代理串 ⇒ 启动警告（上游密钥经代理外发——确认代理可信）；https 目标 = CONNECT 隧道 ∥ http 目标 = 经典转发；TLS 全量校验（无关闭开关）；不支持代理认证 ∥ 链路代理 ∥ 连接池（每请求独立连接）。嵌入引擎（`embedding`）不走代理。
 
 ## 3. 首部署清单（两版）
 
@@ -111,6 +116,7 @@
 - 侧栏底部 meta 槽：服务器版本 + 健康状态灯（30s 轮询 `GET /healthz`——绿 ∥ 黄（DB 异常）∥ 红（不可达）；全角色）；更新提示在 `#/admin/system`（可动作方 = admin）。
 - 旧链重定向：`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/overview`；`#/` 与未知 hash ⇒ 角色默认页（admin ⇒ 总览 ∥ user ⇒ 我的 key）。
 - provider 保存即热生效（零重启）；密钥列表回显掩码（明文永不回显）。
+- Provider 双弹窗各有「走代理」勾选（添加 ∥ 详情——详情窗初值 = 行 `proxy`；测试连接 ∥ 刷新候选 ∥ 获取模型探针随携当前勾选态）。
 - 界面多语言：中文 ∥ English——自动检测浏览器语言（缺省中文）；侧栏底部与登录卡可随时切换（记忆存浏览器本地）；错误提示按错误码本地化。
 - 判权全在后端（会话 cookie + 角色）：`user` 直打管理端点 ⇒ 403——页面显隐不是判据。
 

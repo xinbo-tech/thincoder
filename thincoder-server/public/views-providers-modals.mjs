@@ -6,7 +6,8 @@
  * 预设清单 = `code` 行）；
  * 候选行富信息（功能点 24——列式：`displayName` ∥ `contextWindow` ∥ `vision` ∥ `status`；数据 = 发现 ∪ 存储逐字段·
  * 发现优先；缺则空、零占位）；上游退役提示（`status` ⇒ 列内标 + 注行——**只提示**，勾选/保存/派发零涉）∥ 候选段加载态（#984——
- * 在飞 `.hint` 加载文案 + 触发钮禁用；一处落双窗）。
+ * 在飞 `.hint` 加载文案 + 触发钮禁用；一处落双窗）∥ 「走代理」勾选（2026-10-09 代理批——WEBUI §2.4④ 两窗：勾选态随探针
+ * （测试/刷新/获取模型——先验连通）；保存 = 变更才携（添加窗 = 勾才携 `proxy: true`）——KD-SV-55 前端面）。
  *
  * 端点零新（契约 = gateway/API.md §2.2）：`GET /api/admin/providers/presets`（拉表）∥ `POST /api/admin/providers/discover`
  * （探针——「测试连接」= 同径复用，key = 表单草稿口径：明填 ⇒ 明传 `apiKey`，留空且未勾清除 ⇒ `providerId` 库内回落，清除勾 ⇒ 显式空；失败 ⇒ 段内提示 + 重试；无手填兜底）∥ `POST` 全字段 ∥
@@ -110,12 +111,14 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
   const nameInput = h("input", { placeholder: t("admin.providers.namePh") })
   const baseURLInput = h("input", { placeholder: t("admin.providers.baseURLPh") })
   const apiKeyInput = h("input", { placeholder: t("admin.providers.apiKeyPh"), autocomplete: "off" })
+  const proxyCheck = h("input", { type: "checkbox" }) // 「走代理」（两径共用——勾⇒POST `proxy:true`；未勾⇒省略键）
   const fetchBtn = h("button", { type: "button", class: "tiny", text: t("admin.providers.fetchModels") })
   const askNote = h("p", { class: "hint", hidden: true }) // 窗内状态行（校验 ∥ 保存 ∥ 获取模型——2026-10-07 走查收正：反馈不落窗外）
   const showNote = (text, isError = false) => { askNote.hidden = false; askNote.className = isError ? "hint error" : "hint"; askNote.textContent = text }
   const picksBox = h("div", { class: "pick-box" })
 
   const keyRow = () => h("div", { class: "provider-form" }, h("label", {}, t("admin.providers.apiKey"), apiKeyInput))
+  const proxyRow = () => h("div", { class: "provider-form" }, h("label", { class: "key-clear" }, proxyCheck, t("admin.providers.useProxy")))
   const renderPicksArea = () => renderPicks(h, picksBox, {
     candidates, meta: probeMeta, draft, errorText, loading,
     onToggle: (model, checked) => { if (checked) draft.add(model); else draft.delete(model) },
@@ -135,6 +138,7 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
           h("label", {}, t("admin.providers.name"), nameInput),
           h("label", {}, t("admin.providers.baseURL"), baseURLInput)),
         keyRow(),
+        proxyRow(),
         h("div", { class: "stack-models" },
           h("div", { class: "pick-head" }, h("span", { class: "hint", text: t("admin.providers.openList") }), fetchBtn),
           picksBox),
@@ -151,6 +155,7 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
         h("dt", { text: t("admin.providers.baseURL") }), h("dd", {}, h("code", { text: preset.baseURL }) )),
       presetModelsTable(h, preset.models), // 模型清单 = 表格形（§2.6⑤——单列「模型」：`code` 行）
       keyRow(),
+      proxyRow(),
       askNote)
   }
   typeSelect.addEventListener("change", () => {
@@ -178,7 +183,7 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
   fetchBtn.addEventListener("click", async () => {
     const baseURL = baseURLInput.value.trim()
     if (!baseURL) { showNote(t("admin.providers.needBaseURL"), true); return }
-    const body = { baseURL }
+    const body = { baseURL, proxy: proxyCheck.checked } // 探针随携当前勾选态（proxy 明传——先验连通；WEBUI §2.4④）
     const typed = apiKeyInput.value.trim()
     if (typed) body.apiKey = typed // 明传（可含 `env:` 引用——服务端解析）
     loading = true // 在飞态（#984）
@@ -206,6 +211,7 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
       ? { name: nameInput.value.trim(), baseURL: baseURLInput.value.trim(), apiKey: apiKeyInput.value.trim(), models: [...draft] }
       : { name: preset.name, baseURL: preset.baseURL, apiKey: apiKeyInput.value.trim(), models: [...preset.models] }
     if (value === "custom" && Object.keys(probeMeta).length > 0) body.modelMeta = probeMeta // 探针所得（无探针/零字段 ⇒ 省略键）
+    if (proxyCheck.checked) body.proxy = true // 勾 ⇒ 携 `proxy: true`；未勾 ⇒ 省略键（缺省直连——WEBUI §2.4④）
     try {
       await ctx.api("/api/admin/providers", { method: "POST", body })
       ctx.flash(t("admin.providers.saved"))
@@ -251,6 +257,7 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
     autocomplete: "off",
   })
   const clearKey = h("input", { type: "checkbox" })
+  const proxyCheck = h("input", { type: "checkbox", checked: provider.proxy === true }) // 「走代理」初值 = 行 `proxy`（布尔直写——§2.4④）
   const picksBox = h("div", { class: "pick-box" })
   const noteBox = h("div", { class: "pick-note" })
   const refreshBtn = h("button", { type: "button", class: "tiny", text: t("admin.providers.refreshCandidates") })
@@ -274,7 +281,7 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
     refreshBtn.disabled = true
     renderPicksArea()
     try {
-      const done = await ctx.api("/api/admin/providers/discover", { method: "POST", body: { baseURL, ...draftKey() } })
+      const done = await ctx.api("/api/admin/providers/discover", { method: "POST", body: { baseURL, ...draftKey(), proxy: proxyCheck.checked } })
       candidates = done.models
       discoveredMeta = done.modelMeta ?? {}
       errorText = null
@@ -294,7 +301,7 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
     if (!baseURL) { showNote(t("admin.providers.needBaseURL"), true); return }
     showNote(t("admin.providers.testing", { name: provider.name }))
     try {
-      const done = await ctx.api("/api/admin/providers/discover", { method: "POST", body: { baseURL, ...draftKey() } })
+      const done = await ctx.api("/api/admin/providers/discover", { method: "POST", body: { baseURL, ...draftKey(), proxy: proxyCheck.checked } })
       showNote(t("admin.providers.testOk", { name: provider.name, count: done.models.length }))
     } catch (error) { showNote(mapError(error), true) }
   }
@@ -340,6 +347,7 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
     else if (keyInput.value.trim()) body.apiKey = keyInput.value.trim()
     const models = [...draft]
     if (!sameSet(models, provider.models)) body.models = models // 全量数组（退役项恒保留）
+    if (proxyCheck.checked !== (provider.proxy === true)) body.proxy = proxyCheck.checked // 勾选态变更才携（PATCH「缺省 = 不动」）
     if (Object.keys(body).length === 0) { modal.close(); return } // 零变更（可编辑面零动）⇒ 直接关窗零请求（发现富化不单独触发写——§2.4④）
     const expected = mergeModelMeta(provider.modelMeta, discoveredMeta) // 期望图（发现值优先 ∥ 存储补齐）
     if (Object.keys(expected).length > 0) body.modelMeta = expected // 空图 ⇒ 省略键
@@ -360,6 +368,7 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
       h("label", {}, t("admin.providers.baseURL"), baseURLInput),
       h("label", {}, t("admin.providers.apiKey"), keyInput),
       h("label", { class: "key-clear" }, clearKey, t("admin.providers.clearKey"))),
+    h("div", { class: "provider-form" }, h("label", { class: "key-clear" }, proxyCheck, t("admin.providers.useProxy"))),
     h("div", { class: "info-actions" },
       h("button", { type: "button", text: t("admin.providers.test"), onclick: testConnection }),
       h("button", { type: "button", class: "danger", text: t("admin.providers.delete"), onclick: remove })),

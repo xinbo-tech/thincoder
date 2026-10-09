@@ -2,11 +2,12 @@
  * config.mjs — 配置加载与校验（ops/OPS.md §1）：读档 ∥ `env:` 前缀解析 ∥ 预设形展开（presets.mjs） ∥ 缺省值
  * （`autoUpdate` 档位 §5.4(b) ∥ `trustProxy` ∥ `usageRetentionDays`） ∥ 启动校验（fail-closed）。
  *
- * 校验不过 ⇒ 抛（入口转非零退出 + 明确报错）；告警（如 host = 0.0.0.0）逐条返回，入口打印。
+ * 校验不过 ⇒ 抛（入口转非零退出 + 明确报错）；告警（如 host = 0.0.0.0 ∥ 代理两条）逐条返回，入口打印。
  * 归一出参：`{ config, warnings, baseDir, configPath }`——`config.db` 已按配置档所在目录解析为绝对路径。
  * provider 条目校验单源 = `validateProviderEntry`/`validateProviderEntries`（三径：配置载入 ∥ 启动构建/种子 ∥
  * 控制台保存——gateway/API.md §2.2）；模型设置同源 = `validateProviderSettings`（v4 `settings`——未知子字段 ∥
- * 非法值 ⇒ 拒／400）；例外：`providers[].apiKey` 载入不解析（引用保形——注册表构建期解析）。
+ * 非法值 ⇒ 拒／400）；上游代理同源 = `validateProxyConfig`（顶层 `proxy` 段——KD-SV-55：非对象 ∥ uri 非法 ∥
+ * scheme 非 `http:` ⇒ 拒启）+ 条目 `proxy` 布尔判据（`validateProviderEntry` 内）；例外：`providers[].apiKey` 载入不解析（引用保形——注册表构建期解析）。
  */
 import { readFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
@@ -42,9 +43,15 @@ export function loadConfig(configPath, { env = process.env } = {}) {
   const baseDir = dirname(configPathAbs)
   const config = validateConfig(resolveEnvRefs(raw, env))
   config.db = resolveDatabasePath(config.db, baseDir)
-  const warnings = config.host === "0.0.0.0"
-    ? ["host = 0.0.0.0：监听全部接口（仅单接口机可接受——ops/OPS.md §1）"]
-    : []
+  const warnings = []
+  if (config.host === "0.0.0.0") warnings.push("host = 0.0.0.0：监听全部接口（仅单接口机可接受——ops/OPS.md §1）")
+  // 启动 warn 两条（载入期触发；文案 = gateway/API.md §6 KD-SV-55——中文单行）
+  if (config.proxy !== null) {
+    warnings.push("proxy.uri 为明文 http——上游密钥经代理外发（确认代理可信）") // uri 射程 = http: 仅（见 validateProxyConfig）
+  }
+  if (config.proxy === null && config.providers.some((entry) => entry.proxy === true)) {
+    warnings.push("条目 proxy: true 而顶层 uri 缺位——该渠直连（旗未生效）")
+  }
   return { config, warnings, baseDir, configPath: configPathAbs }
 }
 
@@ -91,6 +98,9 @@ export function validateConfig(raw) {
   if (usageRetentionDays !== null && (!Number.isInteger(usageRetentionDays) || usageRetentionDays < 1)) {
     throw new Error(`usageRetentionDays 非法：${JSON.stringify(raw.usageRetentionDays)}（正整数 ∥ null（不限）——拒启）`)
   }
+  // 顶层 proxy 段（KD-SV-55——上游出口代理；配置面 = ops/OPS.md §1）：缺省/缺位 ⇒ null（零代理）；
+  // 在场 ⇒ 严格校验（fail-closed——与客户端「非对象一律丢弃」差异在案）；生效 = 重启（文件不热载）。
+  const proxy = raw.proxy === undefined ? null : validateProxyConfig(raw.proxy)
   // providers[] = 首启种子（可缺/可空——零 provider 允许态；控制台 = 常态管理面——ops/OPS.md §1）
   const providers = raw.providers === undefined ? [] : validateProviderEntries(raw.providers)
 
@@ -114,7 +124,31 @@ export function validateConfig(raw) {
     bootstrap = { username, password }
   }
 
-  return { host: host.trim(), port, db, autoUpdate, trustProxy, usageRetentionDays, bootstrap, providers, embedding: normalizedEmbedding }
+  return { host: host.trim(), port, db, autoUpdate, trustProxy, usageRetentionDays, proxy, bootstrap, providers, embedding: normalizedEmbedding }
+}
+
+/** 顶层 `proxy` 段校验（**校验单源**——配置载入径；gateway/API.md §6 KD-SV-55 ∥ ops/OPS.md §1）：
+ *  形 = `{ "uri": "http://host:port" }`（代理目标本体——非门槛）；uri 射程 = `http:` 仅（https: 代理串 ⇒
+ *  拒启——传输为裸 TCP 连代理免「校验通过、传输不支持」边角）；非对象（数组 ∥ 数字 ∥ null）∥ uri 非字符串 ∥
+ *  空串 ∥ 非 URL ∥ 裸串形 ∥ scheme 非 http: ⇒ 抛（拒启——fail-closed）。 */
+export function validateProxyConfig(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`顶层 proxy 须为对象（形 = { "uri": "http://host:port" }——拒启）`)
+  }
+  const uri = value.uri
+  if (typeof uri !== "string" || uri.trim() === "") {
+    throw new Error(`proxy.uri 须为非空字符串（形 = "http://host:port"——拒启）`)
+  }
+  let parsed
+  try {
+    parsed = new URL(uri)
+  } catch {
+    throw new Error(`proxy.uri 非法 URL：${uri}（形 = "http://host:port"——拒启）`)
+  }
+  if (parsed.protocol !== "http:") {
+    throw new Error(`proxy.uri 仅收 http: 代理串：${uri}（现 scheme = ${parsed.protocol}——拒启）`)
+  }
+  return { uri }
 }
 
 /** provider 条目校验（**校验单源**——三径：配置载入 ∥ 启动构建/种子 ∥ 控制台保存——ops/OPS.md §1）：
@@ -139,11 +173,18 @@ export function validateProviderEntry(entry, { where = "providers[i]", seenNames
     seenInProvider.add(value)
     return value
   })
+  // 逐渠上游代理旗（KD-SV-55——v9）：布尔（缺省 false = 直连）；非布尔 ⇒ 拒启（配置径）∥ 400（保存径）。
+  // 生效条件 = 旗 ∧ 顶层 `proxy.uri` 在案（判定 = gateway/proxy.mjs 消费面——无全局闸）。
+  const proxy = expanded.proxy === undefined ? false : expanded.proxy
+  if (typeof proxy !== "boolean") {
+    throw new Error(`${where}.proxy 须为布尔（true = 该渠上游请求经代理 ∥ 缺省 false = 直连——现 ${JSON.stringify(expanded.proxy)}；拒）`)
+  }
   return {
     name,
     baseURL,
     apiKey: optionalString(expanded.apiKey, `${where}.apiKey`),
     models,
+    proxy,
     settings: validateProviderSettings(expanded.settings, { where: `${where}.settings` }), // v4 模型设置（缺省 = {}）
   }
 }
