@@ -12,7 +12,7 @@
 | provider 管理面 | `GET/POST/PATCH/DELETE /api/admin/providers*` | admin 会话（服务端判定——`user` ⇒ 403） | 本档 §2.2 |
 | 账号/自助/管理面 | `/api/*`（成员/用量族——provider 管理面另列） | 会话 cookie + 角色判定 | `accounts/ACCOUNTS.md` §3 ∥ `metering/METERING.md` §3（用量/配额端点） |
 | 系统面 | `GET /healthz`（公开——零鉴权只读探活） ∥ `GET /api/system`（会话——版本/更新状态） | 无 ∥ 会话 | 本档 §2.3 |
-| 控制台数据面 | `GET /api/overview`（管理总览读数） ∥ `GET /api/admin/embedding` ∥ `POST /api/admin/embedding/test`（向量服务面——探活/试跑） | admin 会话（服务端判定——`user` ⇒ 403） | 本档 §2.4 |
+| 控制台数据面 | `GET /api/overview`（管理总览读数） ∥ `GET /api/admin/embedding` ∥ `POST /api/admin/embedding/test`（向量服务面——探活/试跑） ∥ `GET/PATCH /api/admin/config`（配置面——读写 config.json；`ops/OPS.md` §1） | admin 会话（服务端判定——`user` ⇒ 403） | 本档 §2.4 |
 | 前端静态面 | `GET /` ∥ `public/**`（`app.mjs` ∥ `nav.mjs` ∥ `views-*` 十档 ∥ `style.css`） | 公开（页面壳零数据） | `webui/WEBUI.md` §1 |
 | 其余 | —— | —— | 404（JSON 错误形 = §3） |
 
@@ -91,13 +91,15 @@
 
 ### 2.4 控制台数据面（管理总览 ∥ 向量服务——功能点 15①③）
 
-（端点族 = `/api/overview` ∥ `/api/admin/embedding*`；判权 = `requireAdmin` 口径——`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401；错误形 = §3 全码沿用——无新码；写端点 JSON 型门同 §1 前言）
+（端点族 = `/api/overview` ∥ `/api/admin/embedding*` ∥ `/api/admin/config`；判权 = `requireAdmin` 口径——`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401；错误形 = §3 全码沿用——无新码；写端点 JSON 型门同 §1 前言）
 
 | 方法 + 路径 | 语义 |
 |---|---|
 | `GET /api/overview` | 管理总览读数（`webui/WEBUI.md` §2.3③）：`{ today: { requests, totalTokens }, members: { count } }`——`today` = 服务器本地自然日窗（界 = 当日 00:00；与用量报表**同源**——同一聚合函数）；`requests` = 行数（含 error/aborted）∥ `totalTokens` = `SUM(total_tokens)`（NULL 不计）。健康/更新两卡不走本端点（前端共享态——`webui/WEBUI.md` §2.3⑤） |
 | `GET /api/admin/embedding` | 引擎配置真值：`{ baseURL, model }`（= `config.embedding`——逐值同源）；**`apiKey` 不出响应**（密钥面零下发） |
-| `POST /api/admin/embedding/test` | 探活/试跑（单端点——**服务端代发**；引擎 key 代持——浏览器零涉）：body `{ text? }`（缺省 = 内置短探针文本）；成功 ⇒ 200 `{ ok: true, dimensions, ms }`（`dimensions` = `data[0].embedding.length` ∥ `ms` = 用时）；失败 ⇒ 200 `{ ok: false, error: { kind, message }, ms? }`——`kind` ∈ `timeout` ∥ `unreachable` ∥ `http_error` ∥ `bad_response`；**不走统一错误信封**（诊断自含状态——沿 `/healthz` 先例）；超时 10s（沿发现家族）；**不落库不计量**（不经 usage 记账路径 ∥ 不查配额） |
+| `POST /api/admin/embedding/test` | 探活/试跑（单端点——**服务端代发**；引擎 key 代持——浏览器零涉）：body `{ text?, baseURL?, model?, apiKey? }`（缺省 = 内置短探针文本；**标量三项 = 明传优先（草稿口径——KD-SV-54 口径镜像）：在场 ⇒ 按明传值探活（未保存亦可先验）∥ 缺省 ⇒ 运行配置回落**；`env:` 引用按字面值探发——引用解析面 = 保存/载入）；成功 ⇒ 200 `{ ok: true, dimensions, ms }`（`dimensions` = `data[0].embedding.length` ∥ `ms` = 用时）；失败 ⇒ 200 `{ ok: false, error: { kind, message }, ms? }`——`kind` ∈ `timeout` ∥ `unreachable` ∥ `http_error` ∥ `bad_response`；**不走统一错误信封**（诊断自含状态——沿 `/healthz` 先例）；超时 10s（沿发现家族）；**不落库不计量**（不经 usage 记账路径 ∥ 不查配额） |
+| `GET /api/admin/config` | 配置文件面读（文件不热载——生效 = 重启；机制全文 = `ops/OPS.md` §1）：`{ config: { host, port, db, autoUpdate, trustProxy, usageRetentionDays, proxyUri, embedding: { baseURL, model, apiKey } ∥ null, bootstrap: { username } ∥ null } }`——值为**有效值**（文件在场值 ∥ 缺省回填）；密钥面 = `apiKey` 掩码（`env:` 保形 ∥ 明文 ⇒ `…`+末 4 ∥ 空 ⇒ `""`——规则 = §2.2）；`bootstrap.password` 面零列（永不回显）；读档失败 ⇒ 500 |
+| `PATCH /api/admin/config` | 配置写（白名单五键——`autoUpdate` ∥ `trustProxy` ∥ `usageRetentionDays`（正整数 ∥ null） ∥ `proxyUri`（`http:` URL ∥ `""` = 清除该段） ∥ `embedding: { baseURL, model, apiKey }`（`apiKey: ""` = 显式空））：出现的键 = 应用（未出现 = 不动；未知键 ∥ 空提交 ⇒ 400）；合并原档**保未知键** ⇒ 门 = `resolveEnvRefs` + `validateConfig`（**载入面等价两跳**——写入的文件必可载入；不过 ⇒ 400 原报文 + 文件零变）⇒ **原子写**（同目录 tmp ⇒ `rename` 覆盖；失败 ⇒ 文件零变 + 500）⇒ 审计 `config_update`（detail = 变更键名清单——值永不入）；⇒ `{ ok: true }`；生效 = 重启（统一标注——`ops/OPS.md` §1） |
 
 - **装配接线**：gateway 注册行一条（同 provider 管理面——`bin/thincoder-server.mjs` 一行注册）。
 
@@ -124,10 +126,11 @@
 | `thincoder-server/src/gateway/provider-admin.mjs`（已落盘） | **197 ⇒ ≈225**（实读 2026-10-06——#962 设计估 ≈220；行 CRUD ∥ 掩码回显 ∥ 模型发现 ∥ 管理端点注册——§2.2；服务模型配置面批 +≈28 = GET 行 `settings` ∥ PATCH 键级合并 + 校验接线）**⇒ 实读 220 ⇒ ≈258 ⇒ 实读 284（2026-10-07）**（模型元数据批：`extractModelMeta` ∥ `filterModelMeta` ∥ discover 出图 ∥ GET 行 ∥ POST/PATCH 收 meta——§2.2）**⇒ 实读 305**（2026-10-09 代理批：discover `proxy` ∥ GET/POST/PATCH 面 ∥ 出口换——实读） | provider 管理面（控制台——仅 admin） |
 | `thincoder-server/src/gateway/ratelimit.mjs`（已落盘） | **≈90**（设计估）**⇒ 实读 64（2026-10-07——清账批复读）**（进程内 60s 定窗计数（`check` ∥ `record`） ∥ `Retry-After` 计算 ∥ 纯函数可直测；§6 KD-SV-35） | 模型限流（per-model RPM/TPM） |
 | `thincoder-server/src/gateway/system.mjs`（已落盘） | **无 ⇒ 55 ⇒ ≈60**（实读 2026-10-06——设计估 ≈70；探活 handler ∥ `/api/system`（版本/更新状态；二轮 +≈5 = `embedding` 字段） ∥ 注册——§2.3）**⇒ 实读 57（2026-10-07——清账批复读）** | 系统面（healthz ∥ system） |
-| `thincoder-server/src/gateway/embedding-admin.mjs`（已落盘） | **≈110**（设计估）**⇒ 实读 96（2026-10-07——清账批复读）**（引擎配置读（真值 ∥ 零密钥） ∥ 探活/试跑单端点（代发 ∥ kind 四归类 ∥ 超时） ∥ 注册——§2.4） | 向量服务面（控制台——仅 admin） |
+| `thincoder-server/src/gateway/embedding-admin.mjs`（已落盘） | **≈110**（设计估）**⇒ 实读 96（2026-10-07——清账批复读）⇒ ≈108（本批：草稿三项明传优先 +≈12——实读待回填）**（引擎配置读（真值 ∥ 零密钥） ∥ 探活/试跑单端点（代发 ∥ kind 四归类 ∥ 超时） ∥ 注册——§2.4） | 向量服务面（控制台——仅 admin） |
+| `thincoder-server/src/gateway/config-admin.mjs`（拟新增） | **无 ⇒ ≈160**（设计估——配置面：GET 文件面读（有效值 ∥ 密钥掩码） ∥ PATCH 白名单合并/校验门/原子写/审计 ∥ 助手导出（合并 ∥ 原子写——批内件直测）；§2.4） | 配置面（控制台——仅 admin） |
 | `thincoder-server/src/gateway/overview.mjs`（已落盘） | **≈70 ⇒ 实读 28 ⇒ ≈30**（本批：今日合计读源 = `report.mjs`（`usageTotals` 迁址）——口径零变）**⇒ 实读 27（2026-10-07——清账批复读）** | 管理总览读数（控制台——仅 admin） |
 | `thincoder-server/src/gateway/errors.mjs`（已落盘） | **56 ⇒ ≈65**（实读 2026-10-06——设计估 ≈50；#963 +1 = `too_many_attempts` 码；服务模型配置面批 +≈9 = `rate_limited` 码 ∥ `HttpError`/`sendError` 可选 headers（`Retry-After`））**⇒ 实读 63（2026-10-07——清账批复读）** | 错误形构造 ∥ 发送助手（含账号面码） |
-| **小计** | **≈770 ⇒ 658 ⇒ 951**（#962 实读：+293）**⇒ 1007**（#963 实读：+56 = system 新 55 ∥ errors +1——口径 = #962 后）**⇒ ≈1192**（二轮 +≈185 = embedding-admin 新 ≈110 ∥ overview 新 ≈70 ∥ system +≈5）**⇒ ≈1363**（服务模型配置面批估）**⇒ ≈1385**（配额分模型批：routes +≈14 ∥ forward +≈8；overview 实读回填）**⇒ ≈1393**（配额 v2 批：routes +≈8）**⇒ ≈1439**（模型元数据批：providers +≈8 ∥ provider-admin +≈38；以 v2 落定实读为基）**⇒ 实读 1362（2026-10-07——清账批逐档复读和）⇒ ≈1605（2026-10-09 代理批：proxy 新档 ∥ forward ∥ providers ∥ provider-admin 四档）⇒ 实读 1664**（2026-10-09——本批四档实读和：proxy 267 ∥ forward 208 ∥ providers 184 ∥ provider-admin 305） | —— |
+| **小计** | **≈770 ⇒ 658 ⇒ 951**（#962 实读：+293）**⇒ 1007**（#963 实读：+56 = system 新 55 ∥ errors +1——口径 = #962 后）**⇒ ≈1192**（二轮 +≈185 = embedding-admin 新 ≈110 ∥ overview 新 ≈70 ∥ system +≈5）**⇒ ≈1363**（服务模型配置面批估）**⇒ ≈1385**（配额分模型批：routes +≈14 ∥ forward +≈8；overview 实读回填）**⇒ ≈1393**（配额 v2 批：routes +≈8）**⇒ ≈1439**（模型元数据批：providers +≈8 ∥ provider-admin +≈38；以 v2 落定实读为基）**⇒ 实读 1362（2026-10-07——清账批逐档复读和）⇒ ≈1605（2026-10-09 代理批：proxy 新档 ∥ forward ∥ providers ∥ provider-admin 四档）⇒ 实读 1664**（2026-10-09——本批四档实读和：proxy 267 ∥ forward 208 ∥ providers 184 ∥ provider-admin 305）⇒ ≈1844（配置控制台批：+≈180 = `config-admin.mjs` 新 ≈160 ∥ `embedding-admin.mjs` ≈+12；余档零动——实读待回填） | —— |
 
 ## 5. 验收判据（机检面）
 
@@ -143,6 +146,7 @@
 | AC-23（功能点 23③——成员模型禁用执行面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 被禁模型（成员×模型）⇒ 404 `model_not_found`（消息明示「已对该成员禁用」）且**零用量行**（准入前拒打）∥ 未禁 ⇒ 200 ∥ 禁用先于配额（被禁 ∧ 超额 ⇒ 404 非 429）∥ 他成员不受累 ∥ 即时生效（写后下一请求——无缓存）∥ `/v1/models` 随动滤除（禁后不含 ∥ 恢复后含）∥ 嵌入面零涉 ∥ 零新错误码 | 批内件 |
 | AC-24（功能点 24——上游模型元数据留存与展示；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① discover 响应 `modelMeta`（保留集逐形：deepseek（`context_window`+`input_modalities`+`name`）∥ kimi 族（`context_length`+`supports_image_in`+`display_name`）∥ vLLM（`max_model_len`）三形直测；经典四件 ⇒ `{}`）∥ ② 保存求交（携 `modelMeta` ⇒ GET 行逐值、非开放模型不入库；仅 `models` ⇒ 现存图按求交滑动）∥ ③ 形不符 ⇒ 逐项略（零兜底）；`modelMeta` 非对象 ⇒ 400 库与运行时零变 ∥ ④ `/v1/models` ∥ 派发 ∥ 校验单源零涉（全回归） | 批内件 |
 | 上游代理（台账 #1129——KD-SV-55） | 判定与同判定（chat ∥ discover 两链）：假代理（进程内 CONNECT 替身）命中 + 经代理完成请求 ∥ 无旗 ∥ 无 uri ∥ loopback ⇒ 直连（假代理零命中）∥ SSE 逐块经代理透传（非整段缓冲——mock 两帧间隔）∥ 代理不可达 ⇒ 502 `upstream_error` ∥ 代理路径断连 ⇒ 中止上游 + 记 `status='aborted'`（§2.1 契约零回归）∥ 启动 warn 两条（明文 `http:` ∥ 旗 `true` 缺 uri——触发/文案 = §6 KD-SV-55）∥ `proxy` 字段往返（POST/PATCH/GET ∥ 非布尔 400 库与运行时零变）∥ 热生效（PATCH 旗 ⇒ 下一请求随动；在途照旧） | 批内件 |
+| AC-28（功能点 28——配置控制台写面；候补——需求档落点 = 主 agent） | GET = 文件面值（有效值回填 ∥ 密钥掩码零泄漏 ∥ `bootstrap.password` 面零列）∥ PATCH：白名单（未知键 ⇒ 400）∥ 合并保未知键 ∥ 校验门（非法值 ∥ `env:` 缺位 ⇒ 400 且文件字节零变）∥ 原子写（tmp 零残留 ∥ rename 覆盖）∥ 审计 `config_update`（detail = 键名 ∥ 值零入）∥ 并发（同步段单写者）∥ 写后 GET 回读逐值（round-trip）∥ 草稿探活（test 端点明传优先——缺省回落） | 批内件 |
 
 ## 6. 关键决策（本域）
 
@@ -205,6 +209,10 @@
 | B22 | 边界 | 旗 `true` + 顶层 `proxy` 段缺位 | 直连（零代理——镜像语义；启动 warn 一条在案） |
 | E21 | 错误 | 条目 `proxy` 非布尔（`"yes"` ∥ 数组 ∥ 数字）∥ 顶层 `proxy` 非对象（数组 ∥ 数字）∥ 顶层 `proxy.uri` 非法（非字符串 ∥ 空串 ∥ 非 URL ∥ 裸串形 ∥ scheme 非 `http:`——仅 `http:` 收） | 400（保存径——库与运行时零变）∥ 拒启（配置径——fail-closed） |
 | E22 | 错误 | 假代理不可达 ∥ CONNECT 拒（非 200） | 502 `upstream_error`（chat ∥ discover 同）；服务照常 |
+| N31 | 正常 | admin：`GET /api/admin/config`（文件在场）⇒ `PATCH`（autoUpdate ∥ proxyUri）⇒ 再 `GET` | GET 逐值 = 文件（密钥掩码）∥ PATCH ⇒ `{ ok: true }` ∥ 回读逐值 = 新值 ∥ 未托管键原样保形（保未知键） ∥ 落盘形 = 2 空格缩进 + 末尾换行 ∥ 审计一行（detail = 键名 × 值零入） |
+| B23 | 边界 | 文件缺 `autoUpdate`/`usageRetentionDays`（GET）；`usageRetentionDays: null`；`proxyUri: ""` | GET ⇒ 有效值回填（`notify` ∥ 90）∥ null ⇒ 不限（原样）∥ `""` ⇒ `proxy` 段删净（再 GET ⇒ `proxyUri: null`） |
+| E23 | 错误 | PATCH：未知键（顶层 ∥ `embedding` 子键）∥ 非法值（`autoUpdate:"yes"` ∥ `usageRetentionDays:0` ∥ `proxyUri:"https://x"` ∥ `embedding.baseURL` 非法） | 400（原报文；文件字节零变；运行态零变） |
+| E24 | 错误 | PATCH `embedding.apiKey: "env:NO_SUCH_VAR"`；写盘失败（fs 注入口径） | 400（环境变量缺位——文件零变）∥ 写入失败 ⇒ 500（文件零变 ∥ tmp 零残留） |
 
 ## 8. 本域边界（不做的面）
 
@@ -216,6 +224,7 @@
 - 控制台数据面不做：引擎试跑历史/存档（一次性读数） ∥ 总览图表（总览 = 数值卡——趋势归用量页） ∥ 引擎地址下发非 admin 面（用户面 = 模型名 + snippet——`webui/WEBUI.md` §2.3①）。
 - 成员模型禁用面不做：新错误码（404 复用——消息明示） ∥ 定时/条件禁用 ∥ 嵌入面禁用（零涉） ∥ 禁用变更审计（零增——`accounts/ACCOUNTS.md` §2.2）；禁用状态的成员可见面（只出清单与拒形）。
 - 上游代理面不做：全局代理闸 ∥ 环境变量回落（`HTTPS_PROXY` 一族——显式配置面）∥ `insecureTls` opt-in 通道 ∥ 代理认证（`Proxy-Authorization`——如内网代理需认证 ⇒ 停报另议）∥ 代理连接复用/连接池（每请求独立连接）∥ 按目标分层代理（单一 uri）∥ 嵌入面代理（零涉）。
+- 配置面不做（2026-10-09 配置批）：配置文件热载/运行态注入（生效 = 重启——`ops/OPS.md` §1）∥ `host`/`port`/`db` 写面（部署拓扑项）∥ 配置版本史/回滚 ∥ 写前备份 ∥ 多实例并发写（单写者部署模型）∥ `providers[]`/`bootstrap` 写面（各有其面）。
 
 ## 变更记录
 
@@ -247,3 +256,4 @@
 - 2026-10-09（**provider-default-model-purge 批 · 实施期发现收正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §2 · 台账 #1122；实施期上抛经父侧裁定：端点半形状保留 `models`（空清单））：§2.2 预设端点行样本补 `models: []` + 两键区分半句（`model` 键退场 ∥ `models` 空清单保留）∥ §5 AC-11 行措辞消歧同拍。**零新语义**（响应线形收正——样本漏笔，与实装对齐）。明细 = 批档 §2 补记。
 - 2026-10-09（**server-gemini-openai-preset 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-server-gemini-openai-preset.md` §2 · 台账 #1128 ∥ #1129；用户 13:45/13:5x 两令）：§2.1 增**上游出口代理**条（逐渠判定 ∥ 同判定 ∥ loopback 旁路 ∥ 无全局闸；机制全文 = §6 KD-SV-55）∥ §2.2 增「上游代理旗」条 + GET/POST/PATCH/discover 四行字段随正 + presets 行 20 ⇒ **21 家** ∥ §4 预算（`proxy.mjs` 拟新增 ≈200 ∥ forward/providers/provider-admin 增量）∥ §5 增代理判据行 + AC-11 行 21 家随正 ∥ §6 **增 KD-SV-55** ∥ §7 增 N29/N30/B21/B22/E21/E22 ∥ §8 增代理面不做句。**产品码零触（设计轮）**。明细 = 批档 §2。
 - 2026-10-09：设计修正轮（fix——批 `docs/batches/2026-10-09-server-gemini-openai-preset.md` §3 评审发现 1/2/6/7，本档面）：§6 KD-SV-55 补两启动 warn（触发/文案）∥ 断连中止契约句（`opts.signal` ⇒ socket 拆除 ⇒ 记 `aborted`）∥ 头阶段 600s 先例钉定（客户端 provider 面 `fetchTimeoutMs`——`docs/core/design/PROVIDER.md:114`）∥ uri 射程（`http:` 仅）；§5 代理行补两 warn 与断连腿；§7 E21 补非对象形态与射程。**零新语义**（评审发现直接导出项）。
+- 2026-10-09：配置控制台批设计轮（批 `docs/batches/2026-10-09-server-console-config.md`——台账 #1139；用户 15:51–15:57 三连）——§1 路由族表控制台数据面行增 `GET/PATCH /api/admin/config` ∥ §2.4 端点族随正 + 增两端点行（文件面读 ∥ 白名单写/载入面等价校验门/原子写/审计）+ test 行草稿三项明传优先 ∥ §4 预算（`config-admin.mjs` 新 ≈160 ∥ embedding-admin ⇒ ≈108；小计 ⇒ ≈1844）∥ §5 增 AC-28 行 ∥ §7 增 N31/B23/E23/E24 ∥ §8 增配置面不做项；机制全文 = `ops/OPS.md` §1 + §8 KD-SV-56。**产品码零触（设计轮）**。
