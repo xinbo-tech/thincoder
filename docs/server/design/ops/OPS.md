@@ -86,13 +86,20 @@ node src/ops/cli.mjs --config <配置档> <命令>
   **provider 运行时引导（种子导入 ∥ 注册表构建——§1）** → `node:http` 监听 → 就绪日志（`ready` 行含 `version` 字段——§5.4(g)）。
 - 停机 = SIGINT/SIGTERM ⇒ 优雅收尾（停收新连 ∥ 清周期定时器（更新循环 ∥ 保留清理同法） ∥ 关闭库）。
 - 日志 = `thincoder-server/src/ops/log.mjs`（已落盘）：单行 JSON 到 stdout（逐请求一行 + 启动/引导/错误事件）；采集/落盘 = 部署面（§5——裸机 journald ∥ 容器 docker logs）。
+- **入口判据（bin 垫片形——#1113）**：主入口判定 = `argv[1]` 经 `realpathSync` 解析后与 `import.meta.url` 比对——npm 全局装（POSIX）= bin 符号链接形：`argv[1]` 为符号链接路径而 `import.meta.url` 为真身路径，不解析 ⇒ 判据恒假 ⇒ **静默退出 0**（`run` 从不执行）；路径不可解析 ⇒ 抛（显式报错——不静默）；模块被 import（非主入口）⇒ `run` 不自动执行（测试面可导入）。判据行最终形（`:12` 邻增 import ∥ `:176`）：
+
+```js
+import { realpathSync } from "node:fs"
+// 入口判据：argv[1] 先经 realpath 解析再比——npm 全局装（POSIX）bin = 符号链接形：argv[1] 非真身路径，不解析 ⇒ 判据恒假 ⇒ 静默退出 0；不可解析 ⇒ 抛（显式，不静默）。
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) await run()
+```
 
 ## 5. 部署面（两路统一：版本身份 = npm 包；容器 = 壳；守护两路：systemd ∥ 容器 restart）
 
 ### 5.1 分发（两路——版本身份 = npm 包 `@thincoder/server`，唯一真相）
 
 - **版本身份 = npm 包**（两路同源）：升级 = 装 npm 新版 + 重启（§5.4）；**镜像 tag 不承担版本语义**（tag 只标壳——除 Node 基座换代外无需重建镜像）。
-- **npm 路（包体就绪——发布动作 = 发布面轮）**：`thincoder-server/package.json` 转可发布形——撤 `private` ∥ 包名 = `@thincoder/server`（拟——发布轮验 registry 占用/scope 权限；更优命名可上抛） ∥ `bin` = `thincoder-server` ∥ `engines` node>=24 ∥ `prepublishOnly` 门禁（全树 `node --check` + 批内件十二件（八 + #962 件 + #963 件 + i18n 件 + #972 件））。
+- **npm 路（包体就绪——发布动作 = 发布面轮）**：`thincoder-server/package.json` 转可发布形——撤 `private` ∥ 包名 = `@thincoder/server`（拟——发布轮验 registry 占用/scope 权限；更优命名可上抛） ∥ `bin` = `thincoder-server` ∥ `engines` node>=24 ∥ `prepublishOnly` 门禁（全树 `node --check` + 批内件 28 ⇒ 29 件（八 + #962/#963/i18n/#972 件 + 后续各批 16 件））。
   - `files` 白名单 = bin ∥ src ∥ public ∥ config.example.json ∥ README.md（`deploy/` 档组 = 仓内部署面——不入包）。
 - **npm 路装机 = 前缀式**（自升前提）：`NPM_CONFIG_PREFIX` 指**服务账号可写目录**（建议 `/opt/thincoder-server/.npm-global`——与配置/数据同根）⇒ 装机（`npm i -g @thincoder/server`）与自升（服务进程内——§5.4）同前缀、免 sudo 重写；安放后该根目录整归服务账号（`chown -R`）。
 - **Docker 路 = 壳镜像**（`thincoder-server/Dockerfile`——重设计）：基座 `node:24-slim` + 引导层（`thincoder-server/deploy/docker-entrypoint.sh`（已落盘 7 行） ∥ `thincoder-server/deploy/converge.mjs`（已落盘 197 行））；**App 代码由 npm 取装**——镜像本体只含壳（不带版本身份）。
@@ -199,7 +206,7 @@ services:
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/bin/thincoder-server.mjs`（已落盘） | **153 ⇒ ≈172**（实读 2026-10-06——设计估 ≈50；#961 +9 = 版本读取 ∥ 更新循环接线 ∥ 停机清循环；#962 +4 = 运行时引导接线；#963 +27 = 系统面注册 ∥ 保留清理接线 ∥ 停机清周期 ∥ 惰性访问器 ∥ 登录守卫注入；本批 +≈19 = 审计清理接线（启动 + 周期） ∥ 两注册行（overview ∥ embedding） ∥ 守卫 `onLock` 接线） | argv ∥ 配置加载 ∥ 首启引导 ∥ 启动 ∥ 停机 |
+| `thincoder-server/bin/thincoder-server.mjs`（已落盘） | **153 ⇒ ≈172**（实读 2026-10-06——设计估 ≈50；#961 +9 = 版本读取 ∥ 更新循环接线 ∥ 停机清循环；#962 +4 = 运行时引导接线；#963 +27 = 系统面注册 ∥ 保留清理接线 ∥ 停机清周期 ∥ 惰性访问器 ∥ 登录守卫注入；本批 +≈19 = 审计清理接线（启动 + 周期） ∥ 两注册行（overview ∥ embedding） ∥ 守卫 `onLock` 接线）**；实读 **176**（2026-10-09）⇒ **实读 178**（#1113 批：+2 = `realpathSync` import ∥ 注释——判据行就地改写 ±0）** | argv ∥ 配置加载 ∥ 首启引导 ∥ 启动 ∥ 停机 |
 | `thincoder-server/src/ops/config.mjs`（已落盘） | **189**（实读 2026-10-06——设计估 ≈150；#961 +6 = `autoUpdate` 校验 ∥ 常量导出；#962 +16 = 种子语义 ∥ 校验单源导出 ∥ 载入期 `env:` 跳过；#963 +9 = `trustProxy` ∥ `usageRetentionDays` 校验）**⇒ 实读 252 ⇒ ≈262**（配额批：settings 子字段 `quotaTokens` +≈10） | 读档 ∥ 校验（fail-closed） ∥ `env:` 解析 ∥ 缺省值 ∥ 预设展开接线 |
 | `thincoder-server/src/ops/update.mjs`（已落盘） | **239**（实读 2026-10-06——设计估 ≈160；§5.4 a–c；#963 +11 = 状态导出 `getStatus`） | 更新机制 |
 | `thincoder-server/src/ops/presets.mjs`（已落盘） | **50**（实读 2026-10-06——设计估 ≈45） | 预设表（`SERVER_PRESETS`——起步 20 家 `{ baseURL, model }`） ∥ 展开（`expandProviderEntry`：`name` 缺省 ∥ 覆盖 ∥ 未知预设拒启） |
@@ -231,6 +238,7 @@ first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10
 | AC-10（功能点 10——自动更新；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 自检（假 registry ⇒ 触发 ∥ 404/失败 ⇒ 静默）∥ 档位三值语义 + 非法值拒启 ∥ 自升执行器（成功 ⇒ 优雅停机；失败/超时 ⇒ 不退 ∥ 旧版续跑）∥ 启动日志 `ready` 行含 `version` ∥ 容器收敛判定表（converge 矩阵）；`docker build` + 起停 = 收口轮真机（#959 条件行同窗） | 批内件（`docs/batches/2026-10-06-server-auto-update.test.mjs`——已落盘 498 行）+ 收口轮 |
 | AC-11（功能点 11——种子与生效面） | 种子四格（库空+段 ⇒ 导入且 `env:` 保形 ∥ 非空库+段 ⇒ 忽略 + 警告 ∥ 两空 ⇒ 允许起 + 警告「零 provider」）∥ 零 provider 允许态（`/v1/models` = 空清单 ∥ chat ⇒ 404）∥ `env:` 缺位（启动 ⇒ 拒启 ∥ 保存 ⇒ 400）；端到端判据全文 = `gateway/API.md` §5 AC-11 行 | 批内件 |
 | AC-13（功能点 12——首版完备化⑤面与本域接线；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ⑤ 部署文档：README 结构断言（成员接入节 ∥ nginx 完整段 ∥ 备份命令/定时器样例 ∥ 恢复步）∥ `thincoder-server/deploy/backup.mjs`（已落盘 86 行）实跑 ⇒ 快照生成 + 可开（含热库在线备份）∥ Dockerfile `HEALTHCHECK` 行在册；配置校验：`trustProxy` 非布尔 ∥ `usageRetentionDays` 非法 ⇒ 拒启 | 批内件 + 收口轮 |
+| 功能点 8（分发与部署——npm 全局装启动链；缺陷 #1113） | 经符号链接（bin 垫片形 ∥ 目录连接形）调用入口 ⇒ 程序真执行（进入正常输出/错误路径——非静默退 0）；路径不可解析 ⇒ 显式报错（非静默）；普通 `node <真身路径>` 调用不回归 | 批内件（`docs/batches/2026-10-09-server-bin-guard-fix.test.mjs`——已落盘 112 行） |
 
 ## 8. 关键决策（本域）
 
@@ -243,6 +251,7 @@ first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10
 | KD-SV-23 | **健康检查 = `GET /healthz`（无鉴权只读探活）**：`{ status, version, uptime, db }`（`SELECT 1` 一探）；db 故障 ⇒ 503 `degraded`；no-store；接线 = Dockerfile `HEALTHCHECK` 单源（compose 继承——§5.9；探针面契约 = `gateway/API.md` §2.3） | 探针入口须零凭据（Docker/监控直调）；只读单探 = 零副作用；`version` 与 `ready` 行同源；接线单源 = 改一处 | 鉴权式（探针无法持会话/团队 key——接不进）· 并入 `/v1` 面（探针须持 key——否）· 详细依赖探活（膨胀——仅 db 一探）· 非 HTTP 探针（进程在 ≠ 服务可用） |
 | KD-SV-24 | **版本/更新可见面 = `GET /api/system`（会话——两角色）+ 控制台（meta 槽 ∥ 系统页）**：`{ version, update: { mode, lastCheckAt, latest } }`——数据 = 更新器进程内状态（`getStatus()` 导出）；`latest` = 已见新版（无/未检/失败 ⇒ `null`——静默同面） | 浏览器不可读日志 ⇒ 控制台可见须 HTTP 数据面（#961「ready 行足」限定 = 部署面——两消费方不同，不相抵）；系统页 = admin（动作方）；meta 槽 = 全角色（版本非敏感） | 并入 `/api/me`（语义 = 本人——服务器信息越界）· healthz 携更新字段（探活语义膨胀）· 日志/外发通知（控制台不可读） |
 | KD-SV-25 | **部署文档完备 = README 定稿（反代 = nginx 完整段 ∥ 备份 = `deploy/backup.mjs`（已落盘 86 行）+ systemd 定时器样例）**：反代段 = body 上限 32m ∥ SSE 免缓冲 ∥ `X-Real-IP`；备份 = node:sqlite `backup()`（WAL 在线一致——免停写窗；零外部工具） | 用户 16:04 令；nginx = 最常见 ∥ 不预设自动证书（内网自签直白）；node 自带备份 = sqlite3 CLI 不保证在；在线备份 = 免停写、与运行实例并存 | caddy（自动 HTTPS 面向公网域名——内网假设不符）· `sqlite3` CLI `.backup`（外部依赖）· 停写窗 `cp`（易漏 WAL 伴档）· cron 样例（与 systemd 部署面两套）· 定时器落 `deploy/` 真件（样例在 README 足） |
+| KD-SV-53 | **bin 主入口判据 = `argv[1]` 经 `realpathSync` 解析后与 `import.meta.url` 比对（#1113）**：符号链接（npm 全局装（POSIX）垫片）∥ 目录连接（dev 树 junction）两形均可主入口执行；路径不可解析 ⇒ 抛（显式报错——不静默）；比较用 `node:fs` `realpathSync`（拼写保持面——与 ESM 装载器的模块 URL 解析同面；`.native` 会归一盘符/大小写——小写拼写调用恒假） | 缺陷双证（ECS 2026-10-09：垫片形 = 零输出退 0、服务永不启动；真身直跑 = 真执行）+ 本机实证（2026-10-09：文件符号链接 ∥ junction 两形旧判据恒假、realpath 判据恒真） | 仅 `resolve()` 面（不解析链接——同病）· `realpathSync.native`（大小写归一与装载器拼写保持面不咬合）· `throwIfNoEntry: false` 吞缺位（静默面残留）· 仅文档约定「勿用符号链接调用」（根因不动）· 部署壳绕行长期化（ECS `entrypoint:` 覆盖 = 临时态——随修复移除） |
 
 ## 9. 用例（本域）
 
@@ -265,6 +274,7 @@ first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10
 | B17 | 边界 | 服务运行中（热库 ∥ WAL）执行备份 | 快照一致可用（在线备份——无需停写）；源库零触 |
 | E18 | 错误 | `usageRetentionDays` 非法（0 ∥ 负 ∥ 非数） | 拒启（fail-closed） |
 | E19 | 错误 | `trustProxy` 非布尔 | 拒启（fail-closed） |
+| B30 | 边界 | 经符号链接（bin 垫片形）∥ 目录连接形调用入口（无 `--config`）∥ 不可解析 `argv[1]`（伪构造：不存在路径 + 动态导入） | 程序真执行：`startup_failed` + 退 1（非静默退 0）；不可解析 ⇒ 显式报错（非静默——退非 0）；普通 `node <真身路径>` 调用同读数（不回归） |
 
 ## 10. 本域边界（不做的面）
 
@@ -298,3 +308,7 @@ first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10
 - 2026-10-06：控制台可见面二轮设计轮（批 `docs/batches/2026-10-06-console-completeness-2.md`——需求 §2:15 ∥ 台账 #972）——§1 `usageRetentionDays` 行补「审计同窗」∥ §3 增 CLI 审计句 ∥ §4 启动链同拍（审计清理同周期）∥ §6 预算（bin ⇒ ≈172 ∥ cli ⇒ ≈195 ∥ README ⇒ ≈255；小计 ⇒ ≈1556）。
 - 2026-10-06：fix 轮（评审 #69——批 `docs/batches/2026-10-06-console-completeness-2.md` §3 十项，本档面）：§5.1 门禁件数随正（十一件 ⇒ 十二件——本批件入列；清单文本 = `thincoder-server/package.json` 单行添项——实施轮落地）。
 - 2026-10-07：配额分模型批设计轮（批 `docs/batches/2026-10-07-quota-per-model.md`——需求 §2:21 ∥ §2:22 ∥ 台账 #990/#991/#992）——§1 `usageRetentionDays` 行补「派生两表同窗」∥ §3 CLI 块随正（member list 列（分模型覆盖数） ∥ member quota 换形（+ model 参） ∥ `usage reconcile` 新组（--month/--fix））∥ §6 预算（config 252 ⇒ ≈262 ∥ cli 189 ⇒ ≈215）；机制全文 = `metering/METERING.md` §1/§2。
+- 2026-10-09：bin 入口 guard 修复设计轮（批 `docs/batches/2026-10-09-server-bin-guard-fix.md`——台账 #1113）——§4 增入口判据条（`argv[1]` realpath 解析 ∥ 不可解析 ⇒ 显式报错 ∥ import 不自动执行；判据行最终形与注释在册）∥ §6 bin 行预算（实读 176 ⇒ ≈179）∥ §7 补功能点 8 判据行（符号链接调用不静默）∥ §8 增 KD-SV-53 ∥ §9 增 B30。
+- 2026-10-09：fix 轮（评审轮次 1 #1–#3——批 `docs/batches/2026-10-09-server-bin-guard-fix.md` §3）：#1 §7 功能点 8 判据行补「路径不可解析 ⇒ 显式报错（非静默）」支（机检腿入批内件）∥ §9 B30 输入/预期扩同支 ∥ #2 §5.1 门禁件数随正（十二件 ⇒ 27；本批件入链 ⇒ 28）∥ #3 §6 bin 行预算收正（≈179 ⇒ ≈178；+≈2 = `realpathSync` import ∥ 注释——判据行就地改写 ±0）。
+- 2026-10-09：fix 轮（评审轮次 1 #1——批 `docs/batches/2026-10-09-server-console-testkey-fix.md` §3）：§5.1 门禁件数随正（28 ⇒ 29——本批件入链；七件断言随正登记 = `design/PROJECT.md` §6 本批预算行 ∥ §9 R44③）。
+- 2026-10-09：实施后回填轮（bin 入口 guard 修复批——批 `docs/batches/2026-10-09-server-bin-guard-fix.md`）：§7 功能点 8 判据行「拟新增」标记翻正（批内件已落盘 112 行）；同源随动 = `design/PROJECT.md` §6/§7/变更记录。
