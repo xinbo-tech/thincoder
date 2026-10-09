@@ -2,9 +2,9 @@
  * settings-sections-env.mjs — 设置面「Environment」段体（R7 · 桌面功能对位批 · 批档 §2 R7 #2/#1；**先拆后改**：
  * 段体自立 —— 自 `renderer/views/settings-sections.mjs` 命名面出档）。
  *
- * 面形（源 = VSC `webview/settings-env.js`（204）：proxy 卡 + shell 卡；桌面成语 = 描述符树 + 原生控件）：
+ * 面形（源 = VSC `webview/settings-env.js`（195）：proxy 卡 + shell 卡；桌面成语 = 描述符树 + 原生控件）：
  *  ① proxy 子节 —— uri 输入（change-to-save：屏值 ≠ 切片现值才发；发值 = 单字段 `{ proxy: { <field> } }`）·
- *     web ∕ model 两复选（同律）+ Test Connection 钮 + 结果行（三态：未测 ∕ ✓ ∕ ✗）；
+ *     web 复选（同律）+ Test Connection 钮 + 结果行（三态：未测 ∕ ✓ ∕ ✗）；
  *  ② shell 子节 —— 候选 `select`（「System default」= 空值项；回显表达式逐字沿 VSC `shellEchoState`：
  *     现值命中候选 ⇒ 选中该项 + 自定义框空 ∕ 不命中 ⇒ 选中哨兵 `__custom__` + 自定义框 = 现值）+
  *     自定义路径输入（空值 = 未完成输入 ⇒ **零发送**，沿 VSC 路径册 #3）。
@@ -51,7 +51,7 @@ function testWord(test) {
 
 /** env 段体（proxy 子节 + shell 子节）：`section = { proxy, shell, test }`（面模型投影 —— 渲染面零推导）。 */
 export function envBody(section, handlers = {}) {
-  const proxy = section?.proxy ?? { uri: "", web: true, model: false }
+  const proxy = section?.proxy ?? { uri: "", web: true }
   const candidates = listOf(section?.shell?.candidates).filter((c) => c && typeof c.name === "string")
   const current = typeof section?.shell?.current === "string" && section.shell.current !== "" ? section.shell.current : null
   const matched = candidates.find((c) => (c.value ?? null) === current) ?? null
@@ -82,14 +82,6 @@ export function envBody(section, handlers = {}) {
       children: [
         { tag: "input", props: changeProps({ class: "settings-field", id: "proxy-web", name: "proxy.web", type: "checkbox", checked: proxy.web === true ? true : undefined }, onProxy("web", (e) => e?.target?.checked === true)) },
         { tag: "label", props: { class: "settings-field-label", for: "proxy-web" }, children: [t("settings.proxyWeb")] },
-      ],
-    },
-    {
-      tag: "div",
-      props: { class: "settings-field-row", "data-field": "proxy.model" },
-      children: [
-        { tag: "input", props: changeProps({ class: "settings-field", id: "proxy-model", name: "proxy.model", type: "checkbox", checked: proxy.model === true ? true : undefined }, onProxy("model", (e) => e?.target?.checked === true)) },
-        { tag: "label", props: { class: "settings-field-label", for: "proxy-model" }, children: [t("settings.proxyModel")] },
       ],
     },
     {

@@ -4,8 +4,8 @@
  * ① 段 = 渲染文本 12K 字符（上限）；进分段阈值 > 24K（预筛 = `block.text` 长，廉价先于 DOM 走）；分区 = 文本节点级 `splitText`
  *    + 行内续跑 `<span data-seg="<段号>">` 包壳（块级件下潜不跨语境 ⇒ 全挂态折行同未分段；字符零增 ∕ 减 ∕ 变）；
  * ② 窗 = 视口段 ±1（跟滚 ⇒ 底窗零读）；切换 = `display:none`（**文本恒在 DOM**）；每帧段状态变更 ≤2（初窗 ∥ 重挂转移不计）；
- * ③ 补偿 = 帧尾第 ⑦ 步（六步之后 —— 与 [t0,t1] ∥ 回填互不叠算）：只计视口顶锚之上净变；**先读后卸**；读 ∥ 写分拍
- *    （**写后复读仅补偿路径**）；跟滚帧零读（贴底写覆盖）；
+ * ③ 补偿 = 帧尾第 ⑦ 步（六步之后 —— 与 [t0,t1] ∥ 回填互不叠算）：只计视口顶锚之上净变；**面序结算**（复读径取代式 —— 前序面位移不入后序面 delta；序 = `mounted` 上帧 DOM 块节点序）；
+ *    **先读后卸**；读 ∥ 写分拍（**写后复读仅补偿路径**）；跟滚帧零读（贴底写覆盖）；
  * ④ 分区 = 纯后处理（`patchTextBlock` ∥ 核画件调用点零改）；流式 = 帧尾「推进分区前沿」——滞后一帧稳态化（只切保持
  *    既有节点身份的件）；核画件换代件（`_liveMd.hot` 桶，**只读**）自然隔断；断链 ⇒ 全量重切（幂等）；
  * ⑤ 回滚三形：常量 `SEGMENT_MOUNT` ∥ 自动回退（分区抛错 ⇒ 该面退段 + `console.error`，不抛 ∥ 不全量放行）∥
@@ -127,7 +127,7 @@ export function segmentShift({ anchorSeg = 0, anchorTop = 0, hides = [], shows =
   return delta
 }
 
-const ACCOUNTS = new WeakMap() // 面账（face → 记录）
+export const ACCOUNTS = new WeakMap() // 面账（face → 记录）——导出面：披露助手 `chat-segment-reveal.mjs` 只读消费
 
 /** 行内件表（可整件入壳；表外（含 md 块级产出）一律下潜 —— 块级不跨语境包壳）。 */
 const INLINE_TAGS = new Set([
@@ -312,12 +312,12 @@ function advance(record, raw, pending, hot) {
   return record.chars - before
 }
 
-/** 窗落盘：`applyWindow` = **一次性**（初窗 ∥ 重挂转移；不计帧预算）；`applyStep` = 帧步（预算裁剪 —— ≤ 一卸 + 一挂；
+/** 窗落盘：`applyWindow`（**导出面** —— 披露助手一次性放窗消费）= **一次性**（初窗 ∥ 重挂转移；不计帧预算）；`applyStep` = 帧步（预算裁剪 —— ≤ 一卸 + 一挂；
  *  窗记录 = 应用后实况）∥ 段矩形（首 ∥ 末壳联集 —— 只对已显示段有真值；缺壳 ⇒ `null`）。 */
 const setSegDisplay = (record, seg, visible) => {
   for (const span of record.segs[seg] ?? []) span.style.display = visible ? "" : "none"
 }
-function applyWindow(record, next) {
+export function applyWindow(record, next) {
   const delta = windowDelta(record.window, next, record.count)
   for (const seg of delta.hides) setSegDisplay(record, seg, false)
   for (const seg of delta.shows) setSegDisplay(record, seg, true)
@@ -438,7 +438,7 @@ export function mountSegmentWindows(root, model, transfer) {
 /**
  * 帧尾第 ⑦ 步（`settleFrame` 六步**之后** —— 独立显式补偿；与 [t0, t1] ∥ 回填互不叠算）：
  * ① 分区保持 ∥ 稳态推进 ② 读（目标窗；跟滚帧零读）②′ 读（先读后卸：锚分类 + 待卸段矩形）③ 写（切换 `display`）
- * ④ 补偿（跟滚 ⇒ 贴底写覆盖；非跟滚 ⇒ **写后复读**锚段首壳顶 ⇒ 真位移；锚段不可测 ⇒ 段序算式回退）。
+ * ④ 补偿（跟滚 ⇒ 贴底写覆盖；非跟滚 ⇒ **写后复读**锚段首壳顶 ⇒ 真位移；复读径**面序结算**（复读位移含前序面已写入位移 ⇒ 取代式取本面自担量）；锚段不可测 ⇒ 段序算式回退）。
  * 返回读数面（探针 ∥ 单测假源消费：`{ faces, hides, shows, delta, following }`）。
  */
 export function segmentViewStep(root, model, mounted) {
@@ -484,7 +484,8 @@ export function segmentViewStep(root, model, mounted) {
       const seg = plan.anchorClass?.seg
       const after = seg === undefined ? null : segmentRect(plan.record, seg)?.top ?? null
       if (plan.anchorBefore !== null && after !== null) {
-        delta += after - plan.anchorBefore
+        // 面序结算（取代式）：复读位移 = 已结算前序合计 + 本面自担量（`mounted` 文档序 ⇒ 前序面位移已并入 delta）
+        delta = after - plan.anchorBefore // ≡ delta += measured − delta（measured = 复读位移）——前序面位移不再二次计入
         continue
       }
       const shows = plan.delta.shows.map((entry) => ({ seg: entry, rect: segmentRect(plan.record, entry) }))

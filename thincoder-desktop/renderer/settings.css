@@ -7,7 +7,7 @@
    树面锚：`views/settings.mjs`（头 / 段 / 体）· `views/settings-sections*.mjs`（段体 · 行 / 表单——D37 渠道族拆出
    `views/settings-sections-providers.mjs`）· `views/onboarding.mjs`（向导）。字形面 = 关闭 / 退场两控件的 ✕（`content` ——
    **视图档零字形字面**，沿 `pool.css` 折叠控件同纪律）；变量单源 = `theme.css` `:root`（零新变量 · 零断点常量）。
-   **该档越 300 顾问线，在册**（实读 **304** 行——口径 `split("\n").length−1`）。 */
+   **该档越 300 顾问线，在册**（实读 **306** 行——口径 `split("\n").length−1`；2026-10-10 #1039 增两行后随正）。 */
 
 /* ── ① 设置 / 向导：窗口级覆盖层面 ─────────────────────────────────────── */
 [data-slot="settings"] {
@@ -19,6 +19,8 @@
   gap: var(--gap);
   padding: calc(var(--gap) * 1.5) var(--gap);
   overflow: auto;
+  /* 滚动定位避遮（#1039）：头顶粘行（页头行）——锚点定位留白 = 一行基线 + 上下内距。 */
+  scroll-padding-top: calc(var(--fs) * var(--lh) + 2 * var(--gap));
   background: var(--bg);
   color: var(--fg);
   font: var(--fs)/var(--lh) var(--font);

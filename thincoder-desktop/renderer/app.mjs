@@ -262,10 +262,12 @@ document.addEventListener("DOMContentLoaded", boot)
 
 /** 滚动接线（装配一次 · 批 6 + 批 8 回填档）：容器 = 对话流宿主自身（骨架 `data-slot="flow"`）；三出口 + 只读口
  *  只经 store 纯动作读写切片（`onBackfill` 判据单源 = `beginBackfill`）；容器缺位 ⇒ `null`（帧尾零写）。
+ *  **回填收束帧（#914）**：`onBackfill` 包装 = 受理动作 + 显式 `frame.flush()` —— 取页受理帧（`inFlight: true`）先落 ⇒
+ *  回执帧成**收束帧**（上帧在飞 ∧ 本帧坍落 ∧ 非跟滚 ⇒ 视口补偿门可达）；不 flush ⇒ 两态并入同帧 ⇒ 门不可判（漏补偿）。
  *  **`onScrollTick`**（E4-JS 支）：平滑窗门后每 scroll 事件 ⇒ `frame.mark(["segView"])`（**哨兵键 —— 非切片**；
  *  巨块段窗滚动作 —— 帧合并节流 ≥50ms ⇒ ≤20 拍 ∕ 秒）。 */
 chatScroll = attachScroll(document.querySelector(FLOW_SLOT), {
-  onBackfill: backfill,
+  onBackfill: () => { backfill(); frame.flush() },
   onFollow: () => store.set(setFollowing(store.get(), true)),
   onUnfollow: () => store.set(setFollowing(store.get(), false)),
   guards: () => ({ hasOlder: store.get().history?.hasOlder === true, inFlight: store.get().history?.inFlight === true }),

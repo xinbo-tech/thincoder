@@ -202,7 +202,6 @@ export function settingsModel(state) {
       proxy: {
         uri: typeof settings.env?.proxy?.uri === "string" ? settings.env.proxy.uri : "",
         web: settings.env?.proxy?.web !== false,
-        model: settings.env?.proxy?.model === true,
       },
       shell: {
         current: str(settings.env?.shell?.current),

@@ -140,7 +140,7 @@ export function createTurnDriver({
    *  + 输入 ∕ 关闭路由 + 提示面两档；`runTurn` = 本档单回合执行面 —— `send` ∕ 驱动同源）。 */
   suspension = createSuspensionDrive({
     post, runTurn: executeTurn, notify: notifier,
-    postQueue: chain.postQueue, // 窗队五帧出站（= 链 `postQueue`——帧构造单点保位 `turn-chain.mjs`）
+    postQueue: chain.postQueue, // 窗队六帧出站（= 链 `postQueue`——帧构造单点保位 `turn-chain.mjs`）
     prepare, // 送达面单点（窗内携图径——与链同源）
     degrade, // 降级面单点（窗内非视觉读图——与链同源）
     hold, // W2 降级窗占位（窗径两调用点——起窗 ∕ 查位 ∕ `release` 守卫序列 `suspension-guard.mjs`；函数声明提升 ⇒ 此处引用先于定义安全）

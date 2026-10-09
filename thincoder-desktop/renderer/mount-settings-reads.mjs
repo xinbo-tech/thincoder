@@ -68,7 +68,6 @@ export function createReads(deps = {}) {
     // #671 ready 写并持现切片（草稿四切片读面零复位 —— 同失败径）；`presets` ∕ 名单两键照刷。
     setSettings({
       notice: null,
-      defaultModel: current,
       providers: { ...store.get().settings?.providers, state: "ready", presets: listOf(receipt.presets), providers: listOf(receipt.providers) },
       model: { state: held.state ?? "none", provider, current, models: kept ? listOf(held.models) : [] },
     })

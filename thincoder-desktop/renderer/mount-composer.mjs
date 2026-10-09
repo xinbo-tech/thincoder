@@ -156,6 +156,7 @@ export function attachComposer(host, deps = {}) {
     onLoadingReset: () => { sync.resetBusy() }, // 忙态派生缓存复位（收正轮 · 行 8）
     suspIdleOf, // 挂起空闲复位判据（挂起窗径批：窗内直发径未起跑 ⇒ loading 门禁归位）
     slotFullNotice, // #656：cap 待答径队满可见形缝（toast + 文本回注单点）
+    rollbackPrefs: (key) => sync.rollbackPrefs(key), // #1121 修③：写失败回滚钩（槽现值重派生——核 `applyModels` 单点）
     toImages, degradedCode, effortOf, withUserBlock, setAttachDegraded, applyFlags,
     openSettings: (group) => openSettings?.(group), // footer 三出口（A8 唯一映射点；KD-77 ③：组名透传 —— 缺参 ⇒ 页）
   })

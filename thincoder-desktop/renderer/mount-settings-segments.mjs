@@ -7,7 +7,7 @@
  * （三档同经本装配面合并）。
  *
  * 接线沿 `createExits` 注入先例：`createSegmentExits(deps)` ——
- * `deps = { ask, store, setSettings, report, clearReport, reads, slot }`；返回 `{ handlers }`
+ * `deps = { ask, store, setSettings, report, clearReport, reads }`；返回 `{ handlers }`
  * （并回 `mount-settings-exits.mjs` 单一 handlers 表）。
  * 语义锚（`docs/desktop/design/IPC.md` §2 设置族注）：出站失败 ⇒ **零乐观写**（不摘项、不改段读数）；
  * 写成功 ⇒ 清失败串 + 复读本段（单源 = 读数供给族 `mount-settings-reads.mjs`）；端侧形判不齐 ⇒ **零发送**
@@ -22,11 +22,10 @@ import { confirmSecretDelete } from "./settings-confirm.mjs"
 /** 自定义哨兵（与 `views/settings-sections-env.mjs` 同值 —— 切换输入意图，非写意图）。 */
 const CUSTOM_SENTINEL = "__custom__"
 
-/** 段出口族工厂。`deps.reads = { loadEnv, loadTools }`（读数供给族注入 —— 写后复读；MCP 复读口随族出档）；
- * `deps.slot` = 设置槽锚（key 输入现读作用域）。
+/** 段出口族工厂。`deps.reads = { loadEnv, loadTools }`（读数供给族注入 —— 写后复读；MCP 复读口随族出档）。
  */
 export function createSegmentExits(deps = {}) {
-  const { ask, store, setSettings, report, clearReport, reads, slot, invalidateDrafts } = deps
+  const { ask, store, setSettings, report, clearReport, reads, invalidateDrafts } = deps
   const { loadEnv, loadTools } = reads ?? {}
 
   /** 段切片局部写（引用不变 ⇒ 零通知 —— 同值写零重绘）。 */
@@ -97,9 +96,10 @@ export function createSegmentExits(deps = {}) {
 
   /* ── 工具与服务族（`settings:tools` 两 key + `index:build`）────────────────────────────── */
 
-  /** 密钥行存出口（编辑态输入现值 ⇒ 写）：空值 ⇒ **零发送**（清键归删除出口）。 */
+  /** 密钥行存出口（编辑态输入现值 ⇒ 写）：空值 ⇒ **零发送**（清键归删除出口）。现读 = **宿主无关**（文档序末位 = 交互面 —— 页槽 ∥ 组弹窗体两宿主同取，沿 `mcpFormNode` 先例）。 */
   async function keySave(kind) {
-    const input = typeof document?.querySelector === "function" ? document.querySelector(`${slot} [data-key-input="${kind}"]`) : null
+    const inputs = typeof document?.querySelectorAll === "function" ? document.querySelectorAll(`[data-key-input="${kind}"]`) : []
+    const input = inputs.length > 0 ? inputs[inputs.length - 1] : null
     const value = typeof input?.value === "string" ? input.value.trim() : ""
     if (value === "") {
       console.error(`[renderer] settings:tools skipped: empty key for ${kind}`)

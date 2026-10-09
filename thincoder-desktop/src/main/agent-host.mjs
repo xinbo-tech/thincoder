@@ -230,7 +230,8 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
    *  未装配者只写盘（不隐式装配）。成功 ⇒ 族信封 + `meta`（与 `history:page` 同源投影）；失败 ⇒ 信封**无 `meta` 键** + 零写。
    *  **选定写回（#880 · 判据句 6 ∥ 项 8）**：**槽面实变**（`written.changed`）∧ `provider` + `model` 同在
    *  ⇒ `defaultModel` 同拍写回（定序 = 槽先配置后；等值零写住写回单点）；配置面失败**不反扑**（回执仍
-   *  `ok:true`——本会话已生效）+ `console.error` 记错（零静默）⇒ 回执零叠加（`providerState` 键缺席）；
+   *  `ok:true`——本会话已生效）+ `console.error` 记错（零静默）⇒ 回执**叠加失败码** `carryover:
+   *  { ok:false, reason }`（#1121 修③——渲染面据该键出同一条失败行；`providerState` 仍缺席）；
    *  写回成功 ⇒ 回执另携 `providerState`（写后核读——第四刷新点；键缺席 ⇒ 渲染面零写）。 */
   function setPrefs(key, patch) {
     const cwd = projects?.currentCwd()
@@ -245,11 +246,14 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
     const receipt = { ok: true, reason: null, cwd, slot, meta: written.meta }
     // 选定写回（#880）：只认「槽面实变」——回声（会话切换 ∥ 同值回写）与档位径天然落空；`provider`+`model`
     // 同在（值串判据已由 `prefsPatchFailure` 把守）⇒ 写回单点（定序 = 槽先配置后；与下行重施互不依赖）。
-    // 失败不反扑：回执不改、记错零静默。
+    // 失败不反扑：槽面写受理不改 ∥ 回执照 `ok:true`；配置面失败码随回执叠出（#1121 修③）。
     if (written.changed === true && typeof patch.provider === "string" && typeof patch.model === "string") {
       const carried = carryoverDefaultModel(patch.provider, patch.model)
-      if (carried.ok !== true) console.error(`[agent-host] default model carryover failed: ${carried.reason}`)
-      else if (carried.providerState !== undefined) receipt.providerState = carried.providerState
+      if (carried.ok !== true) {
+        console.error(`[agent-host] default model carryover failed: ${carried.reason}`)
+        // #1121 修③：失败码随回执叠出（渲染面同一条失败行——槽写照旧不反扑，回执仍 `ok:true`）。
+        receipt.carryover = { ok: false, reason: carried.reason }
+      } else if (carried.providerState !== undefined) receipt.providerState = carried.providerState
     }
     if (agents.has(key)) {
       const agent = agents.get(key)

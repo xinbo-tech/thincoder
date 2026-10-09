@@ -10,11 +10,14 @@
  * 危险面（实测 2026-10-01）：`rmSync(recursive)` 会**穿透 junction 递归删除目标内容**——
  * 故删链位一律走 `unlinkSync`（只摘链，不进链内）；仅真目录（上轮物化残留）才递归删自身副本。
  *
+ * 构建窗纪律（2026-10-02 实证 · 台账 #839）：物化 ∥ deps 还原前先确认桌面未在运行——运行中应用的
+ * node_modules 被换 ⇒ 主进程冻结（须强杀重启）；先停应用再构建，或换输出位规避。
+ *
  * 用法：`node scripts/materialize-deps.mjs`（`npm run package` 经 `prepackage` 自动前置）。
  * 退出码：0 = 两包落位自检通过 ∥ 1 = 失败（源缺位 ∕ 自检判红）。
  * 纯函数面（`planMaterialize` ∥ `classifyTarget` ∥ `isExcluded`）可直测（批内件 L1）。
  */
-import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, rmSync, unlinkSync } from "node:fs"
+import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, unlinkSync } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 
@@ -139,5 +142,5 @@ function main() {
   return 0
 }
 
-const isMain = process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url
+const isMain = process.argv[1] && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url
 if (isMain) process.exit(main())

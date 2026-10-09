@@ -21,7 +21,7 @@
  *   ④ 失败面零静默：读 / 写失败 ⇒ `console.error` + 面级失败串（设置面 `{ scope, reason }`、向导面单串）——
  *      核错误串直传、表内码出词归视图 `reasonWord`；本档 = 两落位口（`report` ∕ `clearReport`）单一 owner。
  *   ⑤ 重绘 = 本档自持订阅（触发切片 `SETTINGS_KEYS`）—— 消费面（`app.mjs`）只一行 `attachSettings(host, …)`
- *      （该档 300 行硬线 —— 批档 §2.15）；`config:write` 成功同回带 ⇒ 词表重刷与向导闸随新档态（**免二跳**）。
+ *      （该档行预算 —— `docs/desktop/design/PROJECT.md` §4.1 本端文件清单与行数预算）；`config:write` 成功同回带 ⇒ 词表重刷与向导闸随新档态（**免二跳**）。
  *   ⑥ 向导步 3 目录出口走装配面注入的项目面链（`onProjectOpened` = `app.mjs` `openDir`，含刷新 + 「点开即可续」）：
  *      注入点在本档、连线归向导接线族，本档零算法副本。
  *   ⑦ 「对齐第三批」三面（随出口族迁 `mount-settings-exits.mjs`）：P14 出值规范化 ∕ P15 具名控件即改即存 ∕ F-Esc 关面板。

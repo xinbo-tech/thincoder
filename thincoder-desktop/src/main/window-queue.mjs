@@ -10,8 +10,10 @@
  *      `{ text, ts }` —— `dataURL` 不回传渲染面，两端同形）。
  *   ② 窗队投影 = 每窗一表（载体 = 窗条目 `entry.pending`；本档只操作不持有）：受理入队 · 步边界取批（`stepPickup`）·
  *      残值倾出 · 窗中止清队；取项 = 核件 `takeQueuedBatchItem`（**取项单源——本档零第二判据**）。
- *   ③ 五帧（推送点 = 窗内受理 ∕ 步边界消费 ∕ 窗内消费 ∕ 残输入续发 ∕ 窗中止清队）：受理 ∕ 清队 ⇒ 状态形（快照整置 · 幂等）；
- *      消费 ∕ 残续发 ∕ 步边界消费 ⇒ 消费回执形（`delivered = { text, ts?, degraded? }`）。帧出站经注入 `postQueue`（= 链
+ *   ③ 六帧（推送点 = 窗内受理 ∕ 步边界消费 ∕ 窗内消费 ∕ 残输入续发 ∕ 窗中止清队 ∕ **残值弃件链尾**）：
+ *      受理 ∕ 清队 ∥ 链尾 ⇒ 状态形（快照整置 · 幂等）；消费 ∕ 残续发 ∕ 步边界消费 ⇒ 消费回执形（`delivered = { text, ts?, degraded? }`）。
+ *      链尾状态帧 = 弃件径收口（#912）——**帧类记一，物理站点两**（墓碑出口 ∥ `!stillHeld` 断点——均住 `suspension-drive.mjs` `resumeResidual`）。
+ *      帧出站经注入 `postQueue`（= 链
  *      `postQueue` —— **帧构造单点保位 `turn-chain.mjs`**，本档只定点不造形）。
  *   ④ 送达面（携图径 —— 与 `turn-chain.mjs` **同判据**）：`prepare` 判决 ⇒ `degrade` 定局（非视觉读图：成功 = 描述
  *      注文 ∕ 失败 = 原文 + 说明行），`delivered.degraded` 取定局后判决码（零弃 ⇒ 键缺席）。
@@ -34,7 +36,7 @@ const hasImages = (q) => Array.isArray(q?.images) && q.images.length > 0
 /** 窗队工厂：`postQueue(key, delivered?)` = `ev:queue` 出站（链 `postQueue` 注入 —— 快照源 = 两源合并读面）·
  *  `prepare(text, images, agent)` = 送达面附件装配转口（`prepareTurnAttachments`）· `degrade(attached, agent, signal)`
  *  = 非视觉降级转口（`degradeTurnAttachments` —— 两件皆与 `turn-chain.mjs` 同源单点，缺省 ⇒ 无附件径）。
- *  返回 `{ accept, stepPickup, drain, consume, clear, snapshot }`。 */
+ *  返回 `{ accept, stepPickup, drain, consume, clear, emitState, snapshot }`。 */
 export function createWindowQueue({ postQueue = null, prepare = null, degrade = null } = {}) {
   /** 帧出站（`delivered` 缺 ⇒ 状态形；帧形构造单点住链 —— 本档只定点）。 */
   const emit = (key, delivered = null) => { if (typeof postQueue === "function") postQueue(key, delivered) }
@@ -95,6 +97,9 @@ export function createWindowQueue({ postQueue = null, prepare = null, degrade = 
       emit(key)
       return n
     },
+    /** 链尾状态帧（弃件径收口 · #912）：把当前投影再置一次（快照整置 · 幂等）——`emit` 的公开面（帧形
+     *  零第二构造）。消费侧：`resumeResidual` 两弃件出口（墓碑 ∥ `!stillHeld`）各补一帧 ⇒ 镜面恒收口为实况。 */
+    emitState(key) { emit(key) },
     /** 投影读面（并源读面窗半 —— 图不入快照，恰形 `{ text, ts }`）。 */
     snapshot(pending) {
       return (Array.isArray(pending) ? pending : []).map((entry) => ({ text: textOf(entry), ts: entryTimeOf(entry) }))

@@ -41,9 +41,9 @@
 .chat-stopped { margin-top: 0; color: var(--warn); font-style: italic; }
 
 /* 帮助行族（slash 面增量（`/help`）· 2026-10-01② —— 流内非块行族 `[data-help]`（尾组槽位：卡前）；
-   三行类 = 标签加重 ∥ 组行 dim ∥ 命令行常规；`pre-wrap` = 双空格列间隔保形（零 padEnd——比例字体；值源 = CLI `cmd-help.mjs` 三段形）。 */
+   三行类 = 标签 accent 强调（D29 ② 色位通道——字重恒 400；#809 逃逸收口） ∥ 组行 dim ∥ 命令行常规；`pre-wrap` = 双空格列间隔保形（零 padEnd——比例字体；值源 = CLI `cmd-help.mjs` 三段形）。 */
 .chat-help { margin-top: 0; font-size: var(--fs); color: var(--fg); white-space: pre-wrap; }
-.chat-help .help-label { font-weight: 600; }
+.chat-help .help-label { font-weight: 400; color: var(--accent); }
 .chat-help .help-group { color: var(--fg-muted); }
 
 /* 流内压缩状态行（R4 · 桌面功能对位批 —— 单元素四态；类名面沿 VSC `webview/base.css:203-226` 同名类族，

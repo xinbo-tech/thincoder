@@ -7,7 +7,7 @@
  * 编码：RGBA PNG（手写 chunks + zlib deflate）装进 ICO 容器（Vista+ PNG 形态——记 bitCount 32）。
  * 用法：`node scripts/make-icon.mjs`；纯函数面（`renderIcon` ∥ `encodePng` ∥ `encodeIco`）可直测（批内件 L2）。
  */
-import { mkdirSync, writeFileSync } from "node:fs"
+import { mkdirSync, realpathSync, writeFileSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { deflateSync } from "node:zlib"
@@ -167,5 +167,5 @@ function main() {
   return 0
 }
 
-const isMain = process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url
+const isMain = process.argv[1] && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url
 if (isMain) process.exit(main())

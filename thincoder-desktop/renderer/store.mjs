@@ -116,7 +116,6 @@ export function initialState() {
       notice: null,
       modal: null, // 组弹窗切片（D39 ∥ D38 · #817：`null` ∥ 组名十值闭集——七段名 + `providerAdd`（三端对齐批 · KD-75 ①②）∥ `mcpForm` ∥ `consultAdd`（添加入口弹窗统一批 · KD-77 ①②）；写者 = `renderer/mount-settings.mjs` `openSettingsModal` ∥ `closeSettingsModal`）
       configured: null,
-      defaultModel: null,
       wizard: { step: 1, dismissed: false, notice: null },
       providers: { state: "none", presets: [], providers: [], edit: null, probe: null, draft: null, keyDraft: null, addShape: "preset" },
       verify: null,
@@ -124,7 +123,7 @@ export function initialState() {
       agent: { state: "none", fields: [] },
       mcp: { state: "none", servers: [], details: {}, form: null },
       // R7 两新段（env = proxy ∕ shell；models = consult ∕ advisor 行两 picker）与 tools 段键族（R2 起自持）：
-      env: { state: "none", proxy: { uri: "", web: true, model: false }, shell: { current: null, candidates: [] }, test: null },
+      env: { state: "none", proxy: { uri: "", web: true }, shell: { current: null, candidates: [] }, test: null },
       // tools 段：`keys` 初始 `null`〔键面读数未达〕⇒ 两 key 行零节点（首读落位后成对象）；`edit` = 行内编辑态。
       tools: { state: "none", status: null, building: false, keys: null, edit: null },
       models: {

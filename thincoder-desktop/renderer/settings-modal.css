@@ -26,6 +26,8 @@
   flex-direction: column;
   gap: var(--gap);
   padding: calc(var(--gap) * 1.5) var(--gap);
+  /* 滚动定位避遮（#1039）：头顶粘行（弹窗头行）——锚点定位留白 = 一行基线 + 上下内距（同页层单值）。 */
+  scroll-padding-top: calc(var(--fs) * var(--lh) + 2 * var(--gap));
   background: var(--bg-raised);
   color: var(--fg);
   font: var(--fs)/var(--lh) var(--font);

@@ -170,7 +170,7 @@ export function createExits(deps = {}) {
     }
     store.set(setProviderState(store.get(), receipt.providerState)) // #841：设置写回执 providerState 落切片（第三刷新点；键缺席 ⇒ 零写）
     clearReport()
-    setSettings({ defaultModel: composite, agent: { state: "ready", fields: listOf(receipt.fields) } })
+    setSettings({ agent: { state: "ready", fields: listOf(receipt.fields) } })
     await loadProviders()
   }
 

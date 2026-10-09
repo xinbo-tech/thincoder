@@ -7,6 +7,8 @@
  * 只取三计数 + 阈值读数（行集不下发——批档 §2.10 项 1）。
  * 项目相位 = 核 `readManifest(cwd)` 回执 `manifest.phase`（`thincoder-core/manifest.mjs:334`；
  * **无顶层 `phase`**——批档 §2.10 项 2）——非 ENOENT 读错**上抛**（`:342`）⇒ invoke 拒绝直传（不吞）。
+ * **歧义锚（#831）**：`buildScan` 链 `solveProjectRoot` 抛「项目不可解析」（容器根多候选）⇒ 本档**不吞**——
+ * invoke 拒绝直传（诚实拒）；两域界限明写：锚不可解析 ⇒ 拒（本条）∥ cwd 可解析而库缺 ⇒ 三计数 0 空读（上段）。
  *
  * **台账刷新面（R8 · 桌面功能对位批「台账周期刷新 + L2 明细」——推解 `docs/desktop/design/UI.md`
  * open 行）**：`pushLedgerLines` = 开项目成功链起（`ipc.mjs` `session:resume` 成功径）——

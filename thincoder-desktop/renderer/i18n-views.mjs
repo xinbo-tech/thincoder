@@ -63,6 +63,9 @@ export const VIEWS_DICT = Object.freeze({
     "chat.pending.more": "… [${lines} lines — shown in full once sent]",
     // ── ② 输入区（P26 发送失败 / P22 非栅格粘贴拒——`:${type}` 值逐字同 VSC）──
     "composer.send.failed": "Send failed (${reason}) — the text was kept",
+    // 切模型 ∥ 档位写失败（#1121 修③）：词面按**来源**分家（`data-notice="prefs-failed"`）；「发送失败」词不可套用
+    // （写面非发送——一词两义即失实）；`${reason}` = 回执码。消费面 = `renderer/composer-sync.mjs` `failedNotice`。
+    "composer.prefs.failed": "Model switch did not take effect (${reason})",
     // 引导形（#673）：`provider-invalid` 词 —— 值逐字同 VSC `locales/en.json` `error.provider`（基准归一——两端可见面同词）。
     "composer.send.noProvider": "No provider configured — click ⚙ to set API keys",
     // 真因分类词（#840 · 2026-10-03）：`provider-invalid` ∧ `providerKind === "defaultModel"`（缺 ∥ 无效 defaultModel）
@@ -243,6 +246,9 @@ export const VIEWS_DICT = Object.freeze({
     "chat.pending.more": "… [该条共 ${lines} 行——发送后完整显示]",
     // ── ② 输入区 ──
     "composer.send.failed": "发送失败（${reason}）——文本已保留",
+    // 切模型 ∥ 档位写失败（#1121 修③）：词面按**来源**分家（`data-notice="prefs-failed"`）；「发送失败」词不可套用
+    // （写面非发送——一词两义即失实）；`${reason}` = 回执码。消费面 = `renderer/composer-sync.mjs` `failedNotice`。
+    "composer.prefs.failed": "模型切换未生效（${reason}）",
     // 引导形（#673）：`provider-invalid` 词 —— 值逐字同 VSC `locales/zh.json` `error.provider`（基准归一——两端可见面同词）。
     "composer.send.noProvider": "未配置 API Key — 点击 ⚙ 设置",
     // 真因分类词（#840 · 2026-10-03）：`provider-invalid` ∧ `providerKind === "defaultModel"`（缺 ∥ 无效 defaultModel）
