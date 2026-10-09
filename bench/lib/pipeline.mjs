@@ -1,5 +1,5 @@
 /**
- * lib/pipeline.mjs — 运行编排（run.mjs 超 300 行 ⇒ 拆出；2026-09-24 判官面增量再次拆分：
+ * lib/pipeline.mjs — 运行编排（run.mjs 行数超线 ⇒ 拆出；2026-09-24 判官面增量再次拆分：
  * 落档面 → `lib/output.mjs` · 离线重算面 → `lib/recompute.mjs`——设计档 §3 拆分触发条件）。
  *
  * `runMain`：真实运行 / dry-run 自检（夹具表由 run.mjs 传入——夹具落点仍住 run.mjs）。

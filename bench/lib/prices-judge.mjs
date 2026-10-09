@@ -1,7 +1,7 @@
 /**
  * lib/prices-judge.mjs — 判官 / 复核账目（设计 §2.10.5 / §2.10.6 / §2.2-16 · AC-4 / AC-10）。
  *
- * 自 `prices.mjs` 迁出（该档 300 行上限 + 级联计价增量）：单价**同源** `prices.json`（匹配与计算式复用
+ * 自 `prices.mjs` 迁出（该档行数超线拆分 + 级联计价增量——现行口径：软线 500 行 / 硬限 800 行）：单价**同源** `prices.json`（匹配与计算式复用
  * `prices.mjs` 的 `matchPrice` / `costOf`——两档互为环状 import，但两侧只导出函数声明（实例化期已初始化）⇒ 安全）。
  * 计价键 = **该次调用的实际身份**（§2.10.5）：`calls[].level`（1 = 原位 ⇒ 不写）映射到当时的替代级身份
  * （`judges[].substitutes[]` 的 `level` → `provider:model`）——**不按原位键**；缺价 ⇒ `costCny = null` +

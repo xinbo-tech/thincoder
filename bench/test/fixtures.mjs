@@ -1,6 +1,6 @@
 /**
- * test/fixtures.mjs — 重算 / 渲染两档测试共用件（`report-recompute.test.mjs` 超 300 行 ⇒ 按设计档 §3 拆出）。
- * 本档即夹具档（§3 夹具落点——`report-recompute.test.mjs` 超 300 行拆分时提取）：`fixtureResult` 族 + CLI 驱动 + 沙箱。
+ * test/fixtures.mjs — 重算 / 渲染两档测试共用件（`report-recompute.test.mjs` 行数超线 ⇒ 按设计档 §3 拆出）。
+ * 本档即夹具档（§3 夹具落点——`report-recompute.test.mjs` 行数超线拆分时提取）：`fixtureResult` 族 + CLI 驱动 + 沙箱。
  * 装载期即设 `setResultsDir` 缝 ⇒ 每档写自己的临时沙箱，不触 `bench/results/`（读点惰性 · 与 import 顺序无关）。
  */
 

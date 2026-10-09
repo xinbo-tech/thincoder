@@ -1,6 +1,6 @@
 /**
  * lib/report-params.mjs — 报告的**逐档参数表**分段（设计 §2.3 骨架 + §2.3-9 · KD-35 / 台账 #269；
- * `report-tables.mjs` 超 300 行 ⇒ 拆分——体例同 `report-review.mjs` / `report-time.mjs`）。
+ * `report-tables.mjs` 行数超线 ⇒ 拆分——体例同 `report-review.mjs` / `report-time.mjs`）。
  *
  * 冻结口径（§2.3-9）：行 = 每一在册被测档（序同概览模型表）；列 = {模型 · 路由（`provider:model@host`）·
  * temperature · 思考强度（`reasoningEffort` + 来源）· maxTokens（取自 `run.maxTokens`）}——**单源 = 结果 JSON**；

@@ -12,10 +12,11 @@
  * 退出码（§2.1-5）：0 = 跑完（模型用例失败不影响退出码——失败是数据不是错误）· 1 = 基建错误（参数错 /
  * 未知模型 / provider 缺配置 / 数据档不合 schema / **预检枚举面阻断**）· 130 = SIGINT（中止在飞调用、**不落档**）。
  * 跑前枚举面预检（§2.13-1 · KD-34）= **本档启动门**（`startupPreflight`）：判定实现单源 = `lib/params.mjs`
- * （与 `bench/preflight.mjs` 共用同一函数）。编排本体在 `lib/pipeline.mjs`（run.mjs 超 300 行 ⇒ 按设计档
+ * （与 `bench/preflight.mjs` 共用同一函数）。编排本体在 `lib/pipeline.mjs`（run.mjs 行数超线 ⇒ 按设计档
  * §3 拆分触发条件拆出）；夹具表仍住本档。
  */
 
+import { realpathSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { CAPABILITY_SELECTOR, DIMENSIONS, MANUAL_DIM } from "./cases/index.mjs"
@@ -301,7 +302,7 @@ export async function main(argv = process.argv.slice(2)) {
 
 export { FIXTURE }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   main().then((code) => { process.exitCode = code }).catch((e) => {
     console.error(`[bench] ${e?.stack ?? e}`)
     process.exitCode = 1

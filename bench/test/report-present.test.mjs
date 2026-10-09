@@ -1,5 +1,5 @@
 /**
- * test/report-present.test.mjs — 报告呈现面用例（§5.13 `render.3` / `render.4` / `render.5`；`report-render.test.mjs` 超 300 行 ⇒ 拆分）。
+ * test/report-present.test.mjs — 报告呈现面用例（§5.13 `render.3` / `render.4` / `render.5`；`report-render.test.mjs` 行数超线 ⇒ 拆分）。
  * `render.3` = 成本表列集（八列 · 定域反例）+ 报告零金额（md）与账目面反控（JSON 零改）+ 交叉列三列（⑦⑧⑨⑩——同源对读 / 缺数据 / 行序 / 轴子集——增补③ · #276）；
  * `render.4` = 用时表（Σ 定域 / 相对倍率 / 排名并列顺延 / 采样 run 数 / 轴门控 + ⑦ 口径行两短语与已记录 `error` run 照计 / ⑧ 部分未记录腿——2026-09-24 error-duration 批 + ⑨⑩⑪ 交叉列两列——#276 + ⑫ `skipped` 排除腿——2026-09-25 bench-micro 批）；
  * `render.5` = 温度例外披露句（例外档在位 / 全 0 不在位 / 旧档缺字段 ≡ 全 0——2026-09-24 roster-expand 批）；

@@ -7,7 +7,7 @@
  *   缺失 ⇒ 0 并记 cachedUnknown 警告。schema 校验 fail-closed（input/output 缺失或非数字 ⇒ 装载即拒）。
  *
  * 判官 / 复核账目（`applyJudgeCosts`——按 `calls[].level` 的实际身份键计价 + 替代池逐项）自本档迁出至
- * `prices-judge.mjs`（本档 300 行上限）；本档保留**被测与人工 lane**账目，并经 `applyPricesToResult` 调其入账。
+ * `prices-judge.mjs`（本档行数超线拆分——现行口径：软线 500 行 / 硬限 800 行）；本档保留**被测与人工 lane**账目，并经 `applyPricesToResult` 调其入账。
  */
 
 import { readFileSync } from "node:fs"

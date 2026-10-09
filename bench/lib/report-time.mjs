@@ -1,5 +1,5 @@
 /**
- * lib/report-time.mjs — 报告的用时表分段（设计 §2.3-7 用时聚合 · KD-28；`report-tables.mjs` 超 300 行 ⇒ 拆分）。
+ * lib/report-time.mjs — 报告的用时表分段（设计 §2.3-7 用时聚合 · KD-28；`report-tables.mjs` 行数超线 ⇒ 拆分）。
  *
  * 冻结口径：累计耗时 = Σ 该模型面内**实际执行**的 run 的 `runs[].metrics.totalMs`（`skipped` 不入 ·
  * **error run 已记录耗时照计** · `null` = **未记录** ⇒ 不计入（不按 0 计）· 部分 call 未记录 ⇒ 按已记录之和

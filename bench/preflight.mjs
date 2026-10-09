@@ -12,6 +12,7 @@
  * **零落库**（§2.13）：不写 `bench/results/`、不写台账、不改用户 config——读数入控制台 + 批次档 §5。
  */
 
+import { realpathSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { head } from "./lib/output.mjs"
@@ -112,7 +113,7 @@ export async function main(argv = process.argv.slice(2)) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   main().then((code) => { process.exitCode = code }).catch((e) => {
     console.error(`[preflight] ${e?.stack ?? e}`)
     process.exitCode = 1

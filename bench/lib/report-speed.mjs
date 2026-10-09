@@ -1,6 +1,6 @@
 /**
  * lib/report-speed.mjs — 报告速度表分段（设计 §2.3 骨架 + §2.3-10① · 增补轮 #271；
- * `report-tables.mjs` 超 300 行 ⇒ 拆分——体例同 `report-review.mjs` / `report-time.mjs`）。
+ * `report-tables.mjs` 行数超线 ⇒ 拆分——体例同 `report-review.mjs` / `report-time.mjs`）。
  *
  * 双表冻结（#271）：表 A = 按 **TTFT 中位升序**（现状口径）；表 B = 按 **tok/s 中位降序**（快者在前）。
  * 两表**列集逐字相同**；缺数据居末（`null` 键 A `?? Infinity` / B `?? -Infinity`）；同键并列 = label 字典序；

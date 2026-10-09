@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url"
 import { after, test } from "node:test"
 
 import { builtinTools, readImageTool, toOpenAISchema } from "../../thincoder-core/tools/index.mjs"
+import { consultStartTool, consultStopTool, makeMainHistoryTool } from "../../thincoder-core/agent-tools/consult.mjs"
 import { CASES, V1_IMPACT, casesDigest, validateCases } from "../toolcall/cases.mjs"
 import {
   OFF_PAYLOAD_TOOL_NAMES, SYSTEM_BASE, TOOL_PROBE_VERSION, V1_BLOCK_NAMES, V1_ENUM_BLOCKS, V1_PARAM_DESCRIPTIONS,
@@ -152,6 +153,21 @@ test("AC-2：V1 枚举块点名工具名 ⊆ 载荷面（5 块逐名对读——
       assert.equal(block.includes(off), false, `块「${tool}」命中载荷外工具名「${off}」`)
     }
   }
+  // 负向名单自锚（§11.11 · 收严）：名数 / 去重（含子串最小性）/ 现役对读
+  assert.equal(OFF_PAYLOAD_TOOL_NAMES.length, 12, "负向名单名数锚（收严后 = 12 名）")
+  assert.equal(new Set(OFF_PAYLOAD_TOOL_NAMES).size, OFF_PAYLOAD_TOOL_NAMES.length, "负向名单去重锚")
+  for (const a of OFF_PAYLOAD_TOOL_NAMES)
+    for (const b of OFF_PAYLOAD_TOOL_NAMES)
+      if (a !== b) assert.equal(b.includes(a), false, `子串最小性：「${a}」⊆「${b}」（子串匹配语义下冗余）`)
+  const toolDocNames = readdirSync(fileURLToPath(new URL("../../thincoder-core/tool-docs", import.meta.url)))
+    .filter((f) => f.endsWith(".md")).map((f) => f.slice(0, -3))
+  for (const off of OFF_PAYLOAD_TOOL_NAMES) {
+    assert.equal(face.has(off), false, `现役对读·载荷面：名「${off}」已入载荷面（升格 ⇒ 名单须退场）`)
+    assert.equal(toolDocNames.includes(off), true, `现役对读·tool-docs：名「${off}」零载体（退场 / 改名 ⇒ 名单须收正）`)
+  }
+  const consultFamily = [consultStartTool.name, consultStopTool.name, makeMainHistoryTool({ history: [] }).name]
+  for (const n of consultFamily)
+    assert.equal(OFF_PAYLOAD_TOOL_NAMES.some((off) => n.includes(off)), true, `现役对读·consult 族：「${n}」未被负向名单覆盖`)
 })
 
 test("AC-3/AC-6：--dry-run 全链路（夹具六形态 + 三轴 / 分母口径 + tool.13 零调用腿 + 空响应 error 腿）——零网络", async () => {
