@@ -82,7 +82,7 @@
 | AC-23（功能点 23①——逐行已用数据面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `monthlyCountersByMember`：逐值 = 注入记账归并（自然月键——与配额检查同源同窗）∥ 外标回拼无损（`model` 带斜杠 ∥ 嵌入行单段）∥ `memberId` 给定（唯一键前缀）与全员装配逐值相等 ∥ 控制面字段形 = `webui/WEBUI.md` §6 AC-23 行 | 批内件 |
 | AC-22（功能点 22——模型标识分字段；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① 记账 ∥ 计数行备 `provider`/`model` 两字段（回拼无损——含 `model` 带斜杠 ∥ 嵌入 `provider = ''`）∥ ② 统计聚合 = 列直操作（provider ∥ model ∥ 两者——`summary.byModel` 两列聚合；无字符串切分）∥ ③ 迁移拆分回填抽样比对（与旧复合值首斜杠拆逐值相等）∥ 对外契约不变（API/展示斜杠形——回拼） | 批内件 |
 | AC-15⑥（功能点 15——key 明细数据面；已落需求档） | `keyUsageStats`：`lastUsedAt` = `MAX(ts)`（key_id 归因——读 `usage`） ∥ `windowTokens` = 近 30 个本地日（今日起回溯——与报表窗同构；读 `usage_daily`；`KEY_USAGE_WINDOW_DAYS`——#1001③ 收正）——逐值 = 注入 usage 行推导；从未使用 ⇒ `null`/0；`/api/me` 与 `/api/members` key 行同形（单源 = `memberView`） | 批内件 |
-| AC-26（功能点 26——我的用量页图表化；候补——需求档落点 = 主 agent） | `GET /api/me/usage/summary`：① 判权 = 本人（无会话 ⇒ 401；user ∥ admin 会话 ⇒ 200 且恒本人——双成员注入 ⇒ 响应只含本人值）∥ ② 逐值/零填充（totals 四字段 = 明细归并（日对齐窗）——prompt/completion/total 各自相等 ∥ trend 按日零填充全长 ∥ 两维序逐（维值 × 日）零填充（缺日 = 0） ∥ byModel 降序）∥ ③ 过滤器同门（model ∥ endpoint ∥ from/to 生效；非法 endpoint ⇒ 400——五读端点同门）∥ ④ 空集 ⇒ totals 全 0 + trend 全零全长 + 两维序/排行空数组（零错）∥ ⑤ admin 端点零动（`/api/usage/summary` 响应形与既有件回归零改） | 批内件 |
+| AC-26（功能点 26——我的用量页图表化） | `GET /api/me/usage/summary`：① 判权 = 本人（无会话 ⇒ 401；user ∥ admin 会话 ⇒ 200 且恒本人——双成员注入 ⇒ 响应只含本人值）∥ ② 逐值/零填充（totals 四字段 = 明细归并（日对齐窗）——prompt/completion/total 各自相等 ∥ trend 按日零填充全长 ∥ 两维序逐（维值 × 日）零填充（缺日 = 0） ∥ byModel 降序）∥ ③ 过滤器同门（model ∥ endpoint ∥ from/to 生效；非法 endpoint ⇒ 400——五读端点同门）∥ ④ 空集 ⇒ totals 全 0 + trend 全零全长 + 两维序/排行空数组（零错）∥ ⑤ admin 端点零动（`/api/usage/summary` 响应形与既有件回归零改） | 批内件 |
 
 ## 5. 本域文件与行数预算（本域族行）
 

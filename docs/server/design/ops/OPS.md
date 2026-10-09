@@ -35,7 +35,7 @@
 | `usageRetentionDays` | 否 | 保留窗（天；**用量（含 `usage_daily`/`quota_counters` 两派生表）与审计事件同窗**——单一旋钮）：正整数 ∥ `null`（不限——保留全量）；缺省 `90`；非正整数 ∥ 非法值 ⇒ 拒启（机制 = `metering/METERING.md` §1 ∥ `accounts/ACCOUNTS.md` §2.1） |
 | `bootstrap` | 否 | 首启引导凭据（`username` ∥ `password`——支持 `env:`）；仅零 admin 时消费（§2——幂等） |
 | `providers[]` | 否 | **首启种子**（一次性导入——矩阵见下；此后控制台管理——`gateway/API.md` §2.2）。**两种条目形**：预设形（`preset` = 预设名——缺省字段展开，见下）∥ 手写形（`name` ∥ `baseURL` ∥ `models` 自备）。两形共有字段：`name`（预设形可省——缺省 = 预设名） ∥ `baseURL`（OpenAI 兼容根——预设形可省） ∥ `apiKey`（可空——空则不发 Authorization 头；支持 `env:` 引用——载入不解析，引用保形） ∥ `models`（开放清单——预设形可省；对外标识 = `provider/model`） ∥ `proxy`（布尔——true = 该渠上游请求经代理；缺省/非真 = 直连——机制 = `gateway/API.md` §6 KD-SV-55） |
-| `embedding` | 是 | `baseURL` ∥ `model` ∥ `apiKey`（选填——本地引擎常无鉴权） |
+| `embedding` | 否 | 嵌入引擎（旁路进程——内网）接入段：`baseURL` ∥ `model` ∥ `apiKey`（选填——本地引擎常无鉴权）。**缺位 ∥ `null` = 禁用态**（服务照常起 + 启动警告一条——`/v1/embeddings` ⇒ 404 `model_not_found` 消息明示未配置；控制台向量卡「未配置」态可创建——见下「配置写面」）；**在场 ⇒ 严格校验**（`baseURL` 须 http(s) ∥ `model` 非空串——非法 ⇒ 拒启）；机制全文 = §8 KD-SV-57 |
 
 - 字符串值支持 `env:变量名` 前缀（加载期解析；变量缺位 ⇒ 启动失败）——真实 key 可只住环境变量。**例外 = `providers[].apiKey`**：载入/种子期不解析（引用保形）；解析 = provider 注册表构建期——缺位 ⇒ 启动拒启 ∥ 保存 400（`gateway/API.md` §2.2）。
 - 更新源 = 环境变量 `NPM_CONFIG_REGISTRY`（可指内网镜像——npm 同名配置；自检与自装同源）；缺省 `https://registry.npmjs.org`（机制 = §5.4）。
@@ -52,7 +52,9 @@
 - **provider 密钥形态（库面）**：明文 ∥ `env:` 引用并存（明文 = 部署机文件权限自担；引用 = 秘密只住环境）；界面回显掩码（规则 = `gateway/API.md` §2.2）；**永不入日志**。
 - **条目校验单源** = `thincoder-server/src/ops/config.mjs` 导出（`validateProviderEntry` ∥ `validateProviderEntries`）——三径调用：配置载入 ∥ 启动构建/种子 ∥ 控制台保存（`gateway/API.md` §2.2）。
 - **启动校验（fail-closed）**：`host` 缺失 ∥ 种子/库内 provider `name` 缺/空 ∥ `name` 含 `/` ∥ `name` 重名（providers 间） ∥ **同 provider 内**模型重名 ∥ `baseURL` 非 http(s) ∥ **未知预设名** ∥ `trustProxy` 非布尔 ∥ `usageRetentionDays` 非正整数且非 `null`
+  ∥ `embedding` 在场非对象 ∥ 在场缺 `baseURL`/`model`（或 `baseURL` 非 http(s)）
   ⇒ 非零退出 + 明确报错；`bootstrap` 在场时 `password` ≥8 字符（否则启动失败）。**零 provider = 允许态**（服务照常起 + 警告；控制台/种子为两条配置路径）。
+  **零 embedding = 允许态**（2026-10-09 embed 解耦批；台账 #1147——用户 17:24）——嵌入面禁用 + 启动警告一条（「嵌入引擎未配置（config.json 缺 embedding 段）——/v1/embeddings 禁用；配置后重启生效」）；机制全文 = §8 KD-SV-57。
 - provider `name` 校验缘由（对外标识 = `provider/model` 首斜杠切分）：`name` 缺/空 ∥ 含 `/` ⇒ 前缀形不可解析（清单列示而派发 404）；`name` 重名 ⇒ 派发歧义。
 - 对外模型标识 = `provider/model`（**首斜杠切分**——首段 = provider `name` ∥ 余段 = 上游模型名（可含斜杠）；两段非空；裸名不解析；**同名模型跨 provider 并存且各自可达**）；`/v1/models` = 带前缀名清单。
 - 模板 = `thincoder-server/config.example.json`（已落盘——预设形 ∥ 手写形并存）；真档 = `thincoder-server/config.json`（部署机本地——不入 git）（机检豁免——部署机本地档）。
@@ -62,6 +64,7 @@
   读写形 = **文件面**（读 = config.json 现值（缺省回填展示） ∥ 写 = 读改写）；
   写路径 = ① 白名单（未知键 ⇒ 400）→ ② 合并原档（**保未知键**；`proxyUri: ""` ⇒ 删 `proxy` 段）→ ③ 门 = `resolveEnvRefs` + `validateConfig`（**载入面等价两跳**——写入的文件必可载入；不过 ⇒ 400 原报文，文件零变）→ ④ 原子写（同目录 tmp ⇒ `rename` 覆盖；写盘形 = 2 空格缩进 + 末尾换行——与现档同形）→ ⑤ 审计 `config_update`（detail = 键名清单；值永不入）。
   **生效 = 重启**（统一标注——配置文件不热载 §10 不破；本批不做运行态注入）。单写者（进程内同步读改写 + 部署模型单实例；跨进程并发 = 不做）。**写面前提 = 配置档所在目录可写**（容器路 = 配置目录级可写挂载——§5.1；裸机 = 部署者自管）。端点 = `gateway/API.md` §2.4；决策 = §8 KD-SV-56。
+  **`embedding` 缺段创建（2026-10-09 embed 解耦批）**：缺段档保存向量卡 ⇒ 子键合并自动建段（从无到有——同一 PATCH）；缺段档 PATCH 他键照常过门（校验门容缺段——载入面等价两跳）；部分子键（仅 `baseURL` ∥ 仅 `model`）⇒ 400（在场须完整——载入门判）；控制台删除/清空 `embedding` 段 = 不做（编辑配置文件；PATCH `embedding: null` ⇒ 400）。机制全文 = §8 KD-SV-57。
 
 ## 2. 首启引导（幂等）
 
@@ -106,8 +109,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
 ### 5.1 分发（两路——版本身份 = npm 包 `@thincoder/server`，唯一真相）
 
 - **版本身份 = npm 包**（两路同源）：升级 = 装 npm 新版 + 重启（§5.4）；**镜像 tag 不承担版本语义**（tag 只标壳——除 Node 基座换代外无需重建镜像）。
-- **npm 路（包体就绪——发布动作 = 发布面轮）**：`thincoder-server/package.json` 转可发布形——撤 `private` ∥ 包名 = `@thincoder/server`（拟——发布轮验 registry 占用/scope 权限；更优命名可上抛） ∥ `bin` = `thincoder-server` ∥ `engines` node>=24 ∥ `prepublishOnly` 门禁（全树 `node --check` + 批内件 30 ⇒ 31 ⇒
-  **32 件**（八 + #962/#963/i18n/#972 件 + 后续各批 18 ⇒ 19 件——本批件入链））。
+- **npm 路（包体就绪——发布动作 = 发布面轮）**：`thincoder-server/package.json` 转可发布形——撤 `private` ∥ 包名 = `@thincoder/server`（拟——发布轮验 registry 占用/scope 权限；更优命名可上抛） ∥ `bin` = `thincoder-server` ∥ `engines` node>=24 ∥ `prepublishOnly` 门禁（全树 `node --check` + 批内件 30 ⇒ 31 ⇒ 32 ⇒
+  **33 件**（八 + #962/#963/i18n/#972 件 + 后续各批 18 ⇒ 19 ⇒ 20 件——本批件入链））。
   - `files` 白名单 = bin ∥ src ∥ public ∥ config.example.json ∥ README.md（`deploy/` 档组 = 仓内部署面——不入包）。
 - **npm 路装机 = 前缀式**（自升前提）：`NPM_CONFIG_PREFIX` 指**服务账号可写目录**（建议 `/opt/thincoder-server/.npm-global`——与配置/数据同根）⇒ 装机（`npm i -g @thincoder/server`）与自升（服务进程内——§5.4）同前缀、免 sudo 重写；安放后该根目录整归服务账号（`chown -R`）。
 - **Docker 路 = 壳镜像**（`thincoder-server/Dockerfile`——重设计）：基座 `node:24-slim` + 引导层（`thincoder-server/deploy/docker-entrypoint.sh`（已落盘 7 行） ∥ `thincoder-server/deploy/converge.mjs`（已落盘 197 行））；**App 代码由 npm 取装**——镜像本体只含壳（不带版本身份）。
@@ -135,7 +138,7 @@ services:
 ```
 
 - **容器路配置形（写面前提——2026-10-09 配置控制台批）**：配置档 = `/app/config/config.json`（entrypoint 传 `--config`——`thincoder-server/deploy/docker-entrypoint.sh`）；挂载 = `./config` **目录级 rw**——单文件挂载下原子写（同目录 tmp ⇒ `rename`）换不了挂载点 ⇒ 保存必失败；容器路 `db` 取**绝对值** `/app/data/gateway.db`（配置档在 `/app/config`——相对形会落配置目录内）。
-- **随正件（实施轮——防泄面）**：`thincoder-server/.dockerignore` 添 `config/`（构建上下文排除——自仓构建场景） ∥ 仓根 `.gitignore` 添 `thincoder-server/config/`（自仓运行场景）。
+- **随正件（实施轮——防泄面）**：`thincoder-server/.dockerignore` 添 `config/` ∥ `.env` ∥ `.env.*` ∥ `backups/`（构建上下文排除——自仓构建场景；密钥/口令永不入镜像层；`backups/` 为旧布局备份默认落位） ∥ 仓根 `.gitignore` 添 `thincoder-server/config/` ∥ `thincoder-server/backups/`（自仓运行场景——旧布局备份落位；库全量）∥ `.env` 行补 `.env.*` 变体（两防泄通道口径对称）。
 - **既有部署迁移（单文件挂载 ⇒ 目录级）**：配置档移入 `./config/` ∥ 卷两行随正 ∥ `db` 改绝对形 ∥ `chown -R 1000:1000 ./config` ⇒ `docker compose up -d`。
 
 - **待定占位**：镜像 registry ∥ 镜像名 ∥ tag（部署时确认——tag 不含版本语义）。
@@ -219,8 +222,8 @@ services:
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/bin/thincoder-server.mjs`（已落盘） | **153 ⇒ ≈172**（实读 2026-10-06——设计估 ≈50；#961 +9 = 版本读取 ∥ 更新循环接线 ∥ 停机清循环；#962 +4 = 运行时引导接线；#963 +27 = 系统面注册 ∥ 保留清理接线 ∥ 停机清周期 ∥ 惰性访问器 ∥ 登录守卫注入；本批 +≈19 = 审计清理接线（启动 + 周期） ∥ 两注册行（overview ∥ embedding） ∥ 守卫 `onLock` 接线）**；实读 **176**（2026-10-09）⇒ **实读 178**（#1113 批：+2 = `realpathSync` import ∥ 注释——判据行就地改写 ±0）⇒ ≈180（配置控制台批：config 注册行 ∥ `configPath` 传递 +≈2——实读待回填）** | argv ∥ 配置加载 ∥ 首启引导 ∥ 启动 ∥ 停机 |
-| `thincoder-server/src/ops/config.mjs`（已落盘） | **189**（实读 2026-10-06——设计估 ≈150；#961 +6 = `autoUpdate` 校验 ∥ 常量导出；#962 +16 = 种子语义 ∥ 校验单源导出 ∥ 载入期 `env:` 跳过；#963 +9 = `trustProxy` ∥ `usageRetentionDays` 校验）**⇒ 实读 252 ⇒ ≈262**（配额批：settings 子字段 `quotaTokens` +≈10）**⇒ 实读 ≈260（2026-10-09）⇒ 实读 301**（本批 proxy：`proxy` 段校验 ∥ 条目 `proxy` 判据——实读） | 读档 ∥ 校验（fail-closed） ∥ `env:` 解析 ∥ 缺省值 ∥ 预设展开接线 |
+| `thincoder-server/bin/thincoder-server.mjs`（已落盘） | **153 ⇒ ≈172**（实读 2026-10-06——设计估 ≈50；#961 +9 = 版本读取 ∥ 更新循环接线 ∥ 停机清循环；#962 +4 = 运行时引导接线；#963 +27 = 系统面注册 ∥ 保留清理接线 ∥ 停机清周期 ∥ 惰性访问器 ∥ 登录守卫注入；本批 +≈19 = 审计清理接线（启动 + 周期） ∥ 两注册行（overview ∥ embedding） ∥ 守卫 `onLock` 接线）**；实读 **176**（2026-10-09）⇒ **实读 178**（#1113 批：+2 = `realpathSync` import ∥ 注释——判据行就地改写 ±0）⇒ ≈180（配置控制台批：config 注册行 ∥ `configPath` 传递 +≈2）⇒ 实读 **180**（2026-10-09 配置控制台批落地后）** | argv ∥ 配置加载 ∥ 首启引导 ∥ 启动 ∥ 停机 |
+| `thincoder-server/src/ops/config.mjs`（已落盘） | **189**（实读 2026-10-06——设计估 ≈150；#961 +6 = `autoUpdate` 校验 ∥ 常量导出；#962 +16 = 种子语义 ∥ 校验单源导出 ∥ 载入期 `env:` 跳过；#963 +9 = `trustProxy` ∥ `usageRetentionDays` 校验）**⇒ 实读 252 ⇒ ≈262**（配额批：settings 子字段 `quotaTokens` +≈10）**⇒ 实读 ≈260（2026-10-09）⇒ 实读 301**（本批 proxy：`proxy` 段校验 ∥ 条目 `proxy` 判据——实读）**⇒ ≈306（2026-10-09 embed 解耦批：`embedding` 可选分支 ∥ 告警一行 +≈5——实读待回填）** | 读档 ∥ 校验（fail-closed） ∥ `env:` 解析 ∥ 缺省值 ∥ 预设展开接线 |
 | `thincoder-server/src/ops/update.mjs`（已落盘） | **239**（实读 2026-10-06——设计估 ≈160；§5.4 a–c；#963 +11 = 状态导出 `getStatus`） | 更新机制 |
 | `thincoder-server/src/ops/presets.mjs`（已落盘） | **51**（实读 2026-10-09——设计估 ≈45）**⇒ 实读 52**（本批：`gemini-openai` 行 ∥ 头注随正——实读） | 预设表（`SERVER_PRESETS`——起步 **21** 家 `{ baseURL }`；**2026-10-09 清除批：零 `model` 键**） ∥ 展开（`expandProviderEntry`：`name` 缺省 ∥ 覆盖 ∥ 未知预设拒启） |
 | `thincoder-server/src/ops/log.mjs`（已落盘） | **35**（实读 2026-10-06——设计估 ≈35） | 单行 JSON 日志（stdout） |
@@ -230,11 +233,11 @@ services:
 | `thincoder-server/deploy/docker-entrypoint.sh`（已落盘） | **7**（实读 2026-10-06——设计估 ≈12；§5.1）**⇒ ±0（配置控制台批：`--config` 路径随正 `/app/config/config.json`——文本改，行数零变）** | 容器入口（壳——`exec … --config /app/config/config.json`） |
 | `thincoder-server/deploy/converge.mjs`（已落盘） | **197**（实读 2026-10-06——设计估 ≈85；§5.4(d)） | 壳引导收敛（零 App 依赖——自足） |
 | `thincoder-server/Dockerfile`（已落盘） | **34**（实读 2026-10-06——设计估 ≈30；#961 +12 = 壳化重设计；#963 +6 = `HEALTHCHECK`——§5.9） | 镜像构建（壳 + 构建期预装——§5.1） |
-| `thincoder-server/.dockerignore`（已落盘） | **8**（实读 2026-10-06——设计估 ≈10；本批 +1 = 注释随正——清单不变）**⇒ ≈9（配置控制台批：+1 = `config/` 排除——挂载形随正（构建上下文防泄）；实读待回填）** | 构建上下文排除（config.json ∥ config/ ∥ data ∥ docs ∥ .git） |
-| `thincoder-server/docker-compose.yml`（已落盘） | **20**（实读 2026-10-06——设计估 ≈30；#961 +4 = env ∥ 注释；#963 +1 = healthy 继承注记——§5.9）**⇒ ≈24（配置控制台批：卷行改目录级 rw 挂载 ∥ 用法注释随正 +≈4——实读待回填）** | 容器样例（端口 ∥ 卷（配置目录 rw ∥ 数据） ∥ env_file ∥ restart: unless-stopped） |
+| `thincoder-server/.dockerignore`（已落盘） | **8**（实读 2026-10-06——设计估 ≈10；本批 +1 = 注释随正——清单不变）**⇒ ≈9（配置控制台批：+1 = `config/` 排除——挂载形随正（构建上下文防泄）**⇒ 实读 12**（2026-10-09 配置控制台批落地后——+4）** | 构建上下文排除（config.json ∥ config/ ∥ data ∥ docs ∥ .git） |
+| `thincoder-server/docker-compose.yml`（已落盘） | **20**（实读 2026-10-06——设计估 ≈30；#961 +4 = env ∥ 注释；#963 +1 = healthy 继承注记——§5.9）**⇒ ≈24（配置控制台批：卷行改目录级 rw 挂载 ∥ 用法注释随正 +≈4）⇒ 实读 **22**（2026-10-09 配置控制台批落地后——+2）** | 容器样例（端口 ∥ 卷（配置目录 rw ∥ 数据） ∥ env_file ∥ restart: unless-stopped） |
 | `thincoder-server/deploy/backup.mjs`（已落盘） | **无 ⇒ 86**（实读 2026-10-06——设计估 ≈45；在线备份脚本：node:sqlite `backup()` ∥ `--config`/`--out` ∥ 时间戳命名——§5.5） | 备份（命令化——定时器样例在 README §9） |
-| `thincoder-server/README.md`（已落盘） | **241 ⇒ ≈255**（实读 2026-10-06——#961 +17 = 更新章 ∥ 部署章随动；#962 +4 = §2 种子句 ∥ §6 控制台 ∥ §10 热载句收正；#963 +94 = §9 重写 ∥ §10–12 新节 ∥ §2 两行 ∥ §3 微改 ∥ §4/§6/§13 随动；i18n +1 = §6 控制台多语言行；本批 +≈14 = §6 控制台节随正（九页 ∥ 状态灯 ∥ 审计） ∥ §10 成员接入（向量调用句））**⇒ 实读 247（2026-10-09）⇒ 实读 252**（本批 proxy：配置表行 ∥ 代理说明——实读）⇒ ≈264（配置控制台批：§6 控制台节随正 ∥ 配置写面句 +≈10 ∥ 容器路配置目录前提（可写挂载 ∥ `db` 绝对形）+≈2——实读待回填） | 运维面：安装（npm ∥ Docker） ∥ 部署（systemd ∥ compose） ∥ 启动（首启引导） ∥ CLI 用法 ∥ 控制台 |
-| **小计** | **≈762 ⇒ 1246 ⇒ 1270 ⇒ 1506 ⇒ 1507 ⇒ ≈1556**（#961 实读——+484 = 新三档 432 = update 228 ∥ converge 197 ∥ entrypoint 7；增档增量 52 = bin +9 ∥ config +6 ∥ example +1 ∥ service +2 ∥ Dockerfile +12 ∥ dockerignore +1 ∥ compose +4 ∥ README +17——presets ∥ log ∥ cli 零动；#962 实读 +24 = bin +4 ∥ config +16 ∥ README +4；#963 实读 +236 = backup 新 86 ∥ README +94 ∥ bin +27 ∥ update +11 ∥ config +9 ∥ Dockerfile +6 ∥ example +2 ∥ compose +1；i18n 实读 +1 = README **241**——其余零动；本批估 +≈49 = bin +19 ∥ cli +16 ∥ README +14）⇒ +≈19（配置控制台批：bin +≈2 ∥ README +≈12 ∥ `docker-compose.yml` +≈4 ∥ `.dockerignore` +≈1；余档 ±0——实读待回填） | —— |
+| `thincoder-server/README.md`（已落盘） | **241 ⇒ ≈255**（实读 2026-10-06——#961 +17 = 更新章 ∥ 部署章随动；#962 +4 = §2 种子句 ∥ §6 控制台 ∥ §10 热载句收正；#963 +94 = §9 重写 ∥ §10–12 新节 ∥ §2 两行 ∥ §3 微改 ∥ §4/§6/§13 随动；i18n +1 = §6 控制台多语言行；本批 +≈14 = §6 控制台节随正（九页 ∥ 状态灯 ∥ 审计） ∥ §10 成员接入（向量调用句））**⇒ 实读 247（2026-10-09）⇒ 实读 252**（本批 proxy：配置表行 ∥ 代理说明——实读）**⇒ 实读 256（2026-10-09——配置控制台批落地后：§6 控制台节随正 ∥ 配置写面句 ∥ 容器路配置目录前提）⇒ ≈258（2026-10-09 embed 解耦批：嵌入可选句 +≈2——实读待回填）** | 运维面：安装（npm ∥ Docker） ∥ 部署（systemd ∥ compose） ∥ 启动（首启引导） ∥ CLI 用法 ∥ 控制台 |
+| **小计** | **≈762 ⇒ 1246 ⇒ 1270 ⇒ 1506 ⇒ 1507 ⇒ ≈1556**（#961 实读——+484 = 新三档 432 = update 228 ∥ converge 197 ∥ entrypoint 7；增档增量 52 = bin +9 ∥ config +6 ∥ example +1 ∥ service +2 ∥ Dockerfile +12 ∥ dockerignore +1 ∥ compose +4 ∥ README +17——presets ∥ log ∥ cli 零动；#962 实读 +24 = bin +4 ∥ config +16 ∥ README +4；#963 实读 +236 = backup 新 86 ∥ README +94 ∥ bin +27 ∥ update +11 ∥ config +9 ∥ Dockerfile +6 ∥ example +2 ∥ compose +1；i18n 实读 +1 = README **241**——其余零动；本批估 +≈49 = bin +19 ∥ cli +16 ∥ README +14）⇒ +≈19（配置控制台批：bin +≈2 ∥ README +≈12 ∥ `docker-compose.yml` +≈4 ∥ `.dockerignore` +≈1；余档 ±0——实读待回填）⇒ 实读增量 **+12**（2026-10-09 配置控制台批落地后——逐档见上表）**⇒ +≈7（2026-10-09 embed 解耦批：`config.mjs` +≈5 ∥ `README.md` +≈2——实读待回填）** | —— |
 
 provider 面回填（2026-10-06——批 `docs/batches/2026-10-06-console-providers.md`）：增量实数 = `config.mjs` **+16** ∥ `bin/thincoder-server.mjs` **+4** ∥ `README.md` **+4** ∥ `config.example.json` ±0——已并入上表。
 
@@ -253,7 +256,8 @@ first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10
 | AC-13（功能点 12——首版完备化⑤面与本域接线；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ⑤ 部署文档：README 结构断言（成员接入节 ∥ nginx 完整段 ∥ 备份命令/定时器样例 ∥ 恢复步）∥ `thincoder-server/deploy/backup.mjs`（已落盘 86 行）实跑 ⇒ 快照生成 + 可开（含热库在线备份）∥ Dockerfile `HEALTHCHECK` 行在册；配置校验：`trustProxy` 非布尔 ∥ `usageRetentionDays` 非法 ⇒ 拒启 | 批内件 + 收口轮 |
 | 功能点 8（分发与部署——npm 全局装启动链；缺陷 #1113） | 经符号链接（bin 垫片形 ∥ 目录连接形）调用入口 ⇒ 程序真执行（进入正常输出/错误路径——非静默退 0）；路径不可解析 ⇒ 显式报错（非静默）；普通 `node <真身路径>` 调用不回归 | 批内件（`docs/batches/2026-10-09-server-bin-guard-fix.test.mjs`——已落盘 112 行） |
 | 上游代理（台账 #1129——机制 = `gateway/API.md` §6 KD-SV-55） | 判定（旗 `proxy: true` ∧ 顶层 `proxy.uri` 在案 ⇒ 经代理；缺省 ∥ 无 uri ⇒ 直连——两条链同判定：chat 转发 ∥ 模型发现）；loopback 目标恒直连；假代理回放（CONNECT 命中 + SSE 逐块透传）；代理不可达 ⇒ 502 `upstream_error`；代理路径断连 ⇒ 中止上游 + 记 `status='aborted'`（§2.1 契约零回归）；启动 warn 两条（明文 `http:` ∥ 旗 `true` 缺 uri——触发/文案 = KD-SV-55）；迁移 v9（空库 9 ∥ v8 升 9 ∥ 幂等）；配置面：顶层 `proxy` 段校验（非法 ⇒ 拒启）∥ 条目 `proxy` 布尔判据（非布尔 ⇒ 拒启/400）∥ 管理面字段往返（POST/PATCH/GET）；控制台勾选（添加 ∥ 详情两窗） | 批内件 + 收口轮（浏览器实走） |
-| AC-28（功能点 28——配置控制台写面；候补——需求档落点 = 主 agent） | 写路径机检（`config-admin.mjs` 导出直测）：白名单（未知键 ⇒ 400）∥ 合并保未知键（写回后非托管键原样）∥ 校验门（非法值 ⇒ 400 且文件字节零变；`env:` 缺位 ⇒ 400）∥ 原子写（tmp 零残留 ∥ rename 覆盖 ∥ 落盘形 = 2 空格缩进 + 末尾换行同现档）∥ 单写者（同步段无交错）∥ 生效标注统一「重启生效」∥ 审计行（`config_update` ∥ detail = 键名清单 ∥ 值零入）∥ 写后 GET 回读逐值（round-trip） | 批内件 |
+| AC-6（功能点 6——嵌入配置可选与禁用形态；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 缺 `embedding` 段（∥ 显式 `null`）⇒ 载入通过 + 警告恰一条（嵌入未配置）∥ 服务照常起（`/healthz` 200）∥ 缺段档创建（PATCH `embedding` ⇒ 建段 ⇒ 重启启用）∥ 在场非对象 ∥ 缺子键 ⇒ 拒启 ∥ 400（文件零变）；判据全文 = §9 B33/B34 ∥ E22 | 批内件 |
+| AC-28（功能点 28——配置控制台写面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 写路径机检（`config-admin.mjs` 导出直测）：白名单（未知键 ⇒ 400）∥ 合并保未知键（写回后非托管键原样）∥ 校验门（非法值 ⇒ 400 且文件字节零变；`env:` 缺位 ⇒ 400）∥ 原子写（tmp 零残留 ∥ rename 覆盖 ∥ 落盘形 = 2 空格缩进 + 末尾换行同现档）∥ 单写者（同步段无交错）∥ 生效标注统一「重启生效」∥ 审计行（`config_update` ∥ detail = 键名清单 ∥ 值零入）∥ 写后 GET 回读逐值（round-trip） | 批内件 |
 
 ## 8. 关键决策（本域）
 
@@ -268,6 +272,7 @@ first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10
 | KD-SV-25 | **部署文档完备 = README 定稿（反代 = nginx 完整段 ∥ 备份 = `deploy/backup.mjs`（已落盘 86 行）+ systemd 定时器样例）**：反代段 = body 上限 32m ∥ SSE 免缓冲 ∥ `X-Real-IP`；备份 = node:sqlite `backup()`（WAL 在线一致——免停写窗；零外部工具） | 用户 16:04 令；nginx = 最常见 ∥ 不预设自动证书（内网自签直白）；node 自带备份 = sqlite3 CLI 不保证在；在线备份 = 免停写、与运行实例并存 | caddy（自动 HTTPS 面向公网域名——内网假设不符）· `sqlite3` CLI `.backup`（外部依赖）· 停写窗 `cp`（易漏 WAL 伴档）· cron 样例（与 systemd 部署面两套）· 定时器落 `deploy/` 真件（样例在 README 足） |
 | KD-SV-53 | **bin 主入口判据 = `argv[1]` 经 `realpathSync` 解析后与 `import.meta.url` 比对（#1113）**：符号链接（npm 全局装（POSIX）垫片）∥ 目录连接（dev 树 junction）两形均可主入口执行；路径不可解析 ⇒ 抛（显式报错——不静默）；比较用 `node:fs` `realpathSync`（拼写保持面——与 ESM 装载器的模块 URL 解析同面；`.native` 会归一盘符/大小写——小写拼写调用恒假） | 缺陷双证（ECS 2026-10-09：垫片形 = 零输出退 0、服务永不启动；真身直跑 = 真执行）+ 本机实证（2026-10-09：文件符号链接 ∥ junction 两形旧判据恒假、realpath 判据恒真） | 仅 `resolve()` 面（不解析链接——同病）· `realpathSync.native`（大小写归一与装载器拼写保持面不咬合）· `throwIfNoEntry: false` 吞缺位（静默面残留）· 仅文档约定「勿用符号链接调用」（根因不动）· 部署壳绕行长期化（ECS `entrypoint:` 覆盖 = 临时态——随修复移除） |
 | KD-SV-56 | **配置控制台 = 文件面读写 + 重启生效 + 原子写 + 校验单源 + 单写者**：写端点 = `PATCH /api/admin/config`（白名单五键 ∥ 未知键 400 ∥ 合并保未知键 ∥ 载入面等价两跳门 ∥ 同目录 tmp ⇒ `rename` ∥ 审计 `config_update`）；读 = 文件面有效值（缺省回填 ∥ 密钥掩码）；`host`/`port`/`db` 只读展示（定则例外显式说明）；容器路写面前提 = 配置目录级可写挂载（§5.1） | 用户 2026-10-09 15:51–15:57 定则（「任何配置项必须有配置界面」——台账 #1139 ∥ #1138 ∥ #1123）；文件面 = 单源不改（KD-SV-19 库面零涉）；原子写 = 半写零暴露（同目录 tmp ⇒ `rename`）；校验门复用载入单源（写入的文件必可载入）；单写者 = 部署模型单实例 | 运行态注入（逐消费点快照差异 ⇒ 语义碎片 + 触「不重构 config 加载」红线）· 内存主/文件辅（双源漂移）· `host`/`port`/`db` 可写（改端口 = 自断 ∥ 改库 = 迁移动作）· 配置版本史/回滚（零需求新存储面）· 写前 `.bak` 备份（部署面 §5.5 已有）· 单文件挂载维持（保存必失败——挂载形与写面互斥） |
+| KD-SV-57 | **嵌入配置可选 = 禁用态 + 控制台可从无到有创建（2026-10-09 embed 解耦批；台账 #1147——用户 17:24「这个约束不合理，不应该强制必须配置以后才能启动」）**：`embedding` 缺位 ∥ `null` ⇒ 归一 `null`（服务照常起 + 启动警告一条）；禁用语义 = `/v1/embeddings` ⇒ 404 `model_not_found`（消息明示未配置——**零新码**）；在场 ⇒ 严格校验保持（`baseURL` http(s) ∥ `model` 非空；部分子键 ⇒ 400）；控制台向量卡「未配置」态 + 保存创建（同一 PATCH——缺段合并建段）；全下游随动 = `/api/system.embedding.model = null` ∥ `GET /api/admin/embedding` 两值 `null` ∥ 探活无草稿 ⇒ 400（携草稿照常）；生效 = 重启 | 用户 17:24 裁（强制配置「不合理」）；「服务照起 + 缺时明确禁用语义」= 批档条目①目标形；错误码沿既有族（零新码纪律）；引擎可不在线语义不变（启动路径零探引擎——既有） | 保持必填（用户裁否）· 503 `service_unavailable` 新码（零新码纪律 + 家族沿袭——否）· 缺配静默 200/空向量（谎报——否）· 客户端直连引擎回落（拆面——否）· 控制台删除/清空段（写面仅创建/改值——缺段 = 编辑配置文件——否） |
 
 ## 9. 用例（本域）
 
@@ -296,6 +301,9 @@ first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10
 | E20 | 错误 | 顶层 `proxy` 非对象（数组 ∥ 数字）∥ 顶层 `proxy.uri` 非法（非字符串 ∥ 空串 ∥ 非 URL ∥ 裸串形 ∥ scheme 非 `http:`——仅 `http:` 收） | 拒启（fail-closed；报错提示规范形 `{ "uri": "http://host:port" }`） |
 | E21 | 错误 | 条目 `proxy` 非布尔（如 `"yes"`） | 拒启（配置载入径）∥ 400（控制台保存径——库与运行时零变） |
 | B32 | 边界 | 控制台 PATCH（`usageRetentionDays` ∥ `proxy.uri` ∥ `embedding.model`）⇒ 重启 | 启动按新值运行（保留清理窗/代理判定/引擎指向随动——文件面读写闭环）；未重启 ⇒ 运行值不变（重启生效标注语义） |
+| B33 | 边界 | 配置档缺 `embedding` 段（∥ 显式 `null`）⇒ 载入 + 起服 | `loadConfig` 通过（warnings 恰含一条「嵌入引擎未配置」）；服务照常起（`/healthz` 200 ∥ `ready` 行在）——嵌入面禁用态（2026-10-09 embed 解耦批） |
+| B34 | 边界 | 缺段档 + admin PATCH `embedding:{baseURL,model}` ⇒ 重启 | 200（建段——原子写落盘）⇒ 重启后嵌入面启用（`/v1/embeddings` 照常 ∥ `/api/system.embedding.model` = 新值）；缺段档 PATCH 他键（`trustProxy`）⇒ 200（门容缺段） |
+| E22 | 错误 | `embedding` 在场非对象（字符串 ∥ 数组 ∥ 数字）∥ PATCH `embedding:{baseURL}` 缺 `model` | 拒启（fail-closed）∥ 400（文件零变——在场须完整） |
 
 ## 10. 本域边界（不做的面）
 
@@ -304,6 +312,7 @@ first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10
 - 更新面不做：渠道（beta ∥ canary） ∥ 灰度分批 ∥ 多版本并存（A/B 双装 ∥ 秒切） ∥ 进程内热载 ∥ 认证型 registry 的自检凭据面（fetch 不带 npm 凭据——如内网镜像要求认证 ⇒ 自检静默不更新；自装经 npm 凭据面但需手工触发） ∥ 自动备份（回滚前备份 = 命令 + 定时器样例——§5.5）。
 - 健康面不做：metrics/Prometheus ∥ 深度依赖探活 ∥ `unhealthy` 自动处置（探针接线 = §5.9）；反代配置生成/托管不做（样例仅文档——§5.6）；备份轮转/保留策略不做（部署方自管）。
 - 配置控制台面不做（2026-10-09 配置批）：`config.json` 热载/运行态注入（生效 = 统一重启——§10 不破）∥ `host`/`port`/`db` 写面（部署拓扑项——只读展示；定则例外显式说明）∥ 配置版本史/回滚 ∥ 写前 `.bak` 备份（备份 = 部署侧面——§5.5）∥ 多实例并发写（部署模型 = 单写者）。
+- 嵌入配置面不做（2026-10-09 embed 解耦批）：控制台删除/清空 `embedding` 段（缺段 = 编辑配置文件；界面仅创建/改值）∥ 嵌入面新错误码（404 `model_not_found` 复用——零新码）∥ 引擎进程起停管理（手动——不变）。
 
 ## 变更记录
 
@@ -340,3 +349,6 @@ first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10
 - 2026-10-09：设计修正轮（fix——批 `docs/batches/2026-10-09-server-gemini-openai-preset.md` §3 评审发现 1/2/6，本档面）：§1 `proxy` 行补两启动 warn（明文 `http:` ∥ 旗 true 缺 uri——触发/文案 = `gateway/API.md` §6 KD-SV-55）+ 校验射程（非对象 ∥ scheme 非 `http:` ⇒ 拒启）∥ §7 上游代理行补两 warn 判据与代理路径断连腿 ∥ §9 E20 补非对象形态与 scheme 射程。**零新语义**（评审发现直接导出项）。
 - 2026-10-09：配置控制台批设计轮（批 `docs/batches/2026-10-09-server-console-config.md`——台账 #1139 ∥ #1138 ∥ #1123；用户 15:51–15:57 三连）——§1 增**配置写面**块（可写/只读项表 ∥ 文件面读写 ∥ 白名单/保未知键/载入面等价校验门/原子写/审计 ∥ 重启生效统一 ∥ 单写者）∥ §5.1 门禁件数随正（31 ⇒ **32**——本批件入链）∥ §6 预算（bin ⇒ ≈180 ∥ README ⇒ ≈262）∥ §7 增 AC-28 写路径判据行 ∥ §8 增配置面不做项；决策 = §8 KD-SV-56。**产品码零触（设计轮）**。
 - 2026-10-09（**server-console-config 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-server-console-config.md` §3 轮次 1 · 台账 #1139）：**#1（🔴）容器路挂载形收正**——§5.1 样例卷行改目录级可写挂载（`./config:/app/config`）+ 增「容器路配置形（写面前提）」注（配置档 = `/app/config/config.json` ∥ 容器路 `db` 取绝对值 ∥ 随正件（`.dockerignore` ∥ 仓根 `.gitignore`） ∥ 既有部署迁移四步）∥ §1 补写面前提句 ∥ §5.3/§5.5/§5.7 随正（备份命令 ∥ Docker 路 ③ 步）∥ §6 预算（compose ⇒ ≈24 ∥ entrypoint ±0 ∥ README ⇒ ≈264 ∥ `.dockerignore` ⇒ ≈9 ∥ 小计 +≈19）；#2 §8 补 **KD-SV-56** 行（决策/理由/被否候选——素材 = 批档 §2.6）——全档「§8 KD-SV-56」指针解悬。**零新语义**（评审发现直接导出项）。明细 = 批档 §2 修复轮块。
+- 2026-10-09：embed 解耦批设计轮（批 `docs/batches/2026-10-09-server-embedding-decouple.md`——台账 #1147 ∥ #1148；用户 17:24 两条之 1/2）——§1 `embedding` 行改可选（缺位/`null` = 禁用态 ∥ 在场严格校验保持）+ 启动校验补嵌入判据与允许态句 + 配置写面块补「缺段创建」∥ §7 增 AC-6 判据行 ∥ §8 增 **KD-SV-57** ∥ §9 增 B33/B34/E22 ∥ §10 增嵌入配置面不做项。**产品码零触（设计轮）**。
+- 2026-10-09：设计修正轮（fix——批 `docs/batches/2026-10-09-server-embedding-decouple.md` §3 评审发现 5–7 ∥ 9，本档面）：§5.1 门禁件数链收正（⇒ **33 件**——本批件入链；组成式 18 ⇒ 19 ⇒ 20 件）∥ §6 `README.md` 行按配置控制台批落地实读收正（252 ⇒ **实读 256** ⇒ ≈258——陈值 ≈264 删）∥ §7 AC-6/AC-28 两行「候补」标记收正（已落需求档）∥ §1 配置写面块补 `embedding: null` ⇒ 400 半句（与 `gateway/API.md` §7 E25 同拍）。**零新语义**（评审发现直接导出项）。
+- 2026-10-09：评审 #14 复评收（父侧机械注 · 可 revert——承批档 `docs/batches/2026-10-09-server-embedding-decouple.md` §3 轮次 2 新 🔵 一条）：§6 `config.mjs` 行补本批增量注（⇒ ≈306）∥ 小计补「⇒ +≈7」——计数注位补齐，零新语义。
