@@ -9,7 +9,7 @@
  *      ② 逐值/零填充（N32：totals 四字段 = 明细归并 ∥ trend 按日零填充全长 ∥ 两维序逐（维值 × 日）零填充 ∥ byModel 降序）∥
  *      ③ 过滤器同门（model ∥ endpoint ∥ from/to 生效；非法 endpoint ⇒ 400）∥ ④ 同源（N33：summary 逐值 = 明细日对齐归并）∥
  *      ⑤ B25 空集（totals 全 0 ∥ trend 全零全长 ∥ 三面空数组）∥ ⑥ admin 端点零动（`/api/usage/summary` 响应形与汇总回归——无拆字段）
- *   腿 D（门禁）：`prepublishOnly` 二十八件含本批两件 ∥ 清单目标在盘
+ *   腿 D（门禁）：`prepublishOnly` 二十九件含本批两件 ∥ 清单目标在盘
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -219,10 +219,10 @@ test("腿 A 空集：B25（totals 全 0 ∥ trend 全零全长 ∥ 三面空数�
 
 // ── 腿 D（门禁）─────────────────────────────────────────────────────────────
 
-test("腿 D 门禁：`prepublishOnly` 二十八件含本批两件 ∥ 清单目标在盘", () => {
+test("腿 D 门禁：`prepublishOnly` 二十九件含本批两件 ∥ 清单目标在盘", () => {
   const PKG = JSON.parse(readRepo("thincoder-server/package.json"))
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 28, `门禁清单件数（二十六 ⇒ 二十八——结构轮批件入链 ∥ 10-09 bin 修复批件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 29, `门禁清单件数（二十六 ⇒ 二十九——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链）：${batchFiles.length}`)
   for (const file of BATCH_FILES) assert.ok(batchFiles.includes(file), `本批件应入列：${file}`)
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

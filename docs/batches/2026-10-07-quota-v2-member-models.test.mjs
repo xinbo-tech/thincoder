@@ -21,7 +21,7 @@
  *      ∥ 报告路径（无 `--fix`）零事务
  *   ⑥ #1001③：`keyUsageStats` 窗沿 = 近 30 个本地日（今日起回溯——与报表窗同构；界日 -29 含 ∥ -30 不含）
  *   ⑦ #1001②：键形助手两 merge 共用（`model-quotas` ∥ `model-disables` 裸名 ∥ 空段 ⇒ 400 库零变）
- *   ⑧ 门禁清单：`prepublishOnly` 含本批件（二十八件——结构轮批件入链）∥ 清单目标在盘
+ *   ⑧ 门禁清单：`prepublishOnly` 含本批件（二十九件——结构轮批件入链）∥ 清单目标在盘
  *   ⑨ i18n（WEBUI §2.2 KD-SV-44 ∥ §6 AC-23 续；#994/#988）：死键 2 枚零残留 ∥ 新 2 键两表 ∥ `.one` 7 枚仅 en ∥
  *      基键集双向相等（除自称名族 + `.one` 族）∥ 复数取形直测（en count=1 ⇒ 单形 ∥ 2 ⇒ 基 ∥ zh 不变）
  *   ⑩ 成员弹窗查看态（WEBUI §2.4② ∥ AC-23①③；#1002/#1004）：模型表直显 5 列（`deriveModels` 序）∥ 逐行已用（缺 ⇒ 0）∥
@@ -421,11 +421,11 @@ test("⑦ #1001②：模型禁用与配额覆盖同一键形助手（裸名/空�
   }
 })
 
-// ── ⑧ 门禁清单（`prepublishOnly` 二十八件含本批两件 ∥ 清单在盘）──────────────────
+// ── ⑧ 门禁清单（`prepublishOnly` 二十九件含本批两件 ∥ 清单在盘）──────────────────
 
-test("⑧ 门禁清单：`prepublishOnly` 二十八件含本批件（新建 ∥ 随正）∥ 清单目标在盘", () => {
+test("⑧ 门禁清单：`prepublishOnly` 二十九件含本批件（新建 ∥ 随正）∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 28, `门禁清单件数（二十六 ⇒ 二十八——结构轮批件入链 ∥ 10-09 bin 修复批件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 29, `门禁清单件数（二十六 ⇒ 二十九——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-v2-member-models.test.mjs"), "本批件应入列")
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-per-model.test.mjs"), "随正件应在列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)

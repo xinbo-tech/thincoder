@@ -9,7 +9,7 @@
  * 在飞 `.hint` 加载文案 + 触发钮禁用；一处落双窗）。
  *
  * 端点零新（契约 = gateway/API.md §2.2）：`GET /api/admin/providers/presets`（拉表）∥ `POST /api/admin/providers/discover`
- * （探针——「测试连接」= 同径复用，`providerId` 取库内 key；失败 ⇒ 段内提示 + 重试；无手填兜底）∥ `POST` 全字段 ∥
+ * （探针——「测试连接」= 同径复用，key = 表单草稿口径：明填 ⇒ 明传 `apiKey`，留空且未勾清除 ⇒ `providerId` 库内回落，清除勾 ⇒ 显式空；失败 ⇒ 段内提示 + 重试；无手填兜底）∥ `POST` 全字段 ∥
  * `PATCH` 变更字段（`models` 全量数组——保存即热生效）∥ `DELETE`。弹窗 = 公共组件 `modal.mjs`（单例 ∥ 遮罩/关闭/焦点）；
  * 渲染一律节点 + textContent；文案经 `t()` 取值；错误经 `mapError` 映射（§2.2）。
  */
@@ -227,7 +227,7 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
 }
 
 /** 详情弹窗（行点击；两段 + 单脚区）：信息段 = 名称 ∥ baseURL（预填输入——「改」承接旧编辑面）∥ 密钥（输入 +
- *  掩码占位「留空 = 不修改」+「清除密钥」勾）∥「测试连接」（= discover 复用——`providerId` 取库内 key）∥「删除」
+ *  掩码占位「留空 = 不修改」+「清除密钥」勾）∥「测试连接」（= discover 复用——key = 表单草稿口径）∥「删除」
  *  （confirm ⇒ DELETE）；勾选段 = 「服务的模型」——候选 = 上游发现集（首开自动拉取 ∥「刷新候选」重试；失败 ⇒
  *  段内提示，草稿 = 现配置未动 ⇒ 无损）；退役项（不在发现列表的已开放模型）只读注 + 恒保留（停用入口 = 服务
  *  模型页——用户 2026-10-06 21:40 裁）；脚区 = 保存（PATCH 变更字段——`models` 全量数组；零变更 ⇒ 直接关窗）∥
@@ -257,7 +257,16 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
   const testNote = h("p", { class: "hint", hidden: true }) // 测试连接结果行（同窗内——AC-18「测试同窗」；2026-10-07 走查收正）
   const showNote = (text, isError = false) => { testNote.hidden = false; testNote.className = isError ? "hint error" : "hint"; testNote.textContent = text } // 窗内状态行（测试连接 ∥ 保存失败——2026-10-07 走查收正）
 
-  /** 候选拉取（首开自动 ∥「刷新候选」）：`baseURL` 取草稿输入 ∥ key 取库内；失败 ⇒ 段内提示（重试可达候选）。 */
+  /** 草稿 key 判定（测试连接 ∥ 刷新候选同源——与保存 key 判定同式）：清除勾 ⇒ `{ apiKey: "" }`（显式空——保存语义镜像）∥
+   *  明填（trim 非空）⇒ `{ apiKey: <草稿值> }`（`env:` 引用原文照送——前端零解析）∥ 否则 ⇒ `{ providerId: provider.id }`（库内 key 回落）。 */
+  const draftKey = () => {
+    if (clearKey.checked) return { apiKey: "" }
+    const typed = keyInput.value.trim()
+    if (typed) return { apiKey: typed }
+    return { providerId: provider.id }
+  }
+
+  /** 候选拉取（首开自动 ∥「刷新候选」）：`baseURL` 取草稿输入 ∥ key = 表单草稿口径（`draftKey()`——与测试连接同源）；失败 ⇒ 段内提示（重试可达候选）。 */
   const loadCandidates = async () => {
     const baseURL = baseURLInput.value.trim()
     if (!baseURL) return
@@ -265,7 +274,7 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
     refreshBtn.disabled = true
     renderPicksArea()
     try {
-      const done = await ctx.api("/api/admin/providers/discover", { method: "POST", body: { baseURL, providerId: provider.id } })
+      const done = await ctx.api("/api/admin/providers/discover", { method: "POST", body: { baseURL, ...draftKey() } })
       candidates = done.models
       discoveredMeta = done.modelMeta ?? {}
       errorText = null
@@ -279,13 +288,13 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
   }
   refreshBtn.addEventListener("click", () => loadCandidates())
 
-  /** 测试连接（= discover 复用——`providerId` 取库内 key；零新端点）：结果 = **同窗结果行**（AC-18「测试同窗」；2026-10-07 走查收正——原 flash 在弹窗外）。 */
+  /** 测试连接（= discover 复用——key = 表单草稿口径，`draftKey()` 与刷新候选同源；零新端点）：结果 = **同窗结果行**（AC-18「测试同窗」；2026-10-07 走查收正——原 flash 在弹窗外）。 */
   const testConnection = async () => {
     const baseURL = baseURLInput.value.trim()
     if (!baseURL) { showNote(t("admin.providers.needBaseURL"), true); return }
     showNote(t("admin.providers.testing", { name: provider.name }))
     try {
-      const done = await ctx.api("/api/admin/providers/discover", { method: "POST", body: { baseURL, providerId: provider.id } })
+      const done = await ctx.api("/api/admin/providers/discover", { method: "POST", body: { baseURL, ...draftKey() } })
       showNote(t("admin.providers.testOk", { name: provider.name, count: done.models.length }))
     } catch (error) { showNote(mapError(error), true) }
   }
