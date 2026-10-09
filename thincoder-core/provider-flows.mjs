@@ -54,17 +54,16 @@ export function providerNameError(name, existing = new Set()) {
 }
 
 /**
- * 自定形必填字段校验（VSC `addProviderFlow` 自定径输入步步序 = baseURL → model → format；
- * name 步单列见 `providerNameError`）。三拒因串 = 核持久化面**同条件串**逐字（`config-io.mjs`
- * `addProviderEntry`）——VSC 该三步为静默中止位（无消息可搬）⇒ 取同条件核串，保「同条件同词」。
+ * 自定形必填字段校验（VSC `addProviderFlow` 自定径输入步步序 = baseURL → format；
+ * name 步单列见 `providerNameError`。2026-10-09 清除批：model 步退场——渠道不携模型）。
+ * 两拒因串 = 核持久化面**同条件串**逐字（`config-io.mjs`
+ * `addProviderEntry`）——VSC 该两步为静默中止位（无消息可搬）⇒ 取同条件核串，保「同条件同词」。
  * `format` 缺省 = `"openai"`（沿端侧形判同式）。
  * @returns {string|null} 首个失败字段的拒因串；全过 ⇒ `null`
  */
 export function customFieldsError(fields) {
   const baseURL = String(fields?.baseURL ?? "").trim()
   if (!baseURL) return "Base URL is required"
-  const model = String(fields?.model ?? "").trim()
-  if (!model) return "Model is required"
   const format = fields?.format ?? "openai"
   if (!FORMATS.includes(format)) return `Unknown API format: ${format} (expected ${FORMATS.join("/")})`
   return null
@@ -73,19 +72,21 @@ export function customFieldsError(fields) {
 /**
  * M9 探针目标构造（上提源 = VSC `provider-flows.mjs:38` 的实参面 `presets.mjs` `probeTargetFromEntry`——
  * 逐条随迁）：渠道条目 ⇒ `listModels` 可消费的探针目标。代理链与 chat 请求同规则（per-provider `proxy: true`
- * ∧ 全局 `proxy.model === true` ⇒ 探针也走该代理）；apiKey 归一（trim；缺 ⇒ 空串——探针会如实失败 ⇒
- * 渠道标「不可用」——准入判据 M8）。
+ * ∧ `proxy.uri` 在案 ⇒ 探针也走该代理；无全局闸——2026-10-08 批落）；apiKey 归一（trim；缺 ⇒ 空串——探针会
+ * 如实失败 ⇒ 渠道标「不可用」——准入判据 M8）。`headers` 字段面（#1048①）：仅 plain-object 才携；缺 ∥ 非法 ⇒
+ * 零键（同 apiKey 归一律）——来源面 = 盘上条目 ∥ 表单；消费点 = `list-models` 各 format 分支请求头展开。
  */
 export function probeTargetOf(entry) {
   const raw = loadRaw()
   const proxyCfg = normalizeProxy(raw.proxy)
-  const proxyUri = entry?.proxy === true && proxyCfg?.uri && proxyCfg.model === true ? proxyCfg.uri : undefined
+  const proxyUri = entry?.proxy === true && proxyCfg?.uri ? proxyCfg.uri : undefined
   return {
     name: entry?.name,
     baseURL: entry?.baseURL,
     apiKey: typeof entry?.apiKey === "string" ? entry.apiKey.trim() : "",
     format: entry?.format,
     proxyUri,
+    ...(entry?.headers && typeof entry.headers === "object" && !Array.isArray(entry.headers) ? { headers: entry.headers } : {}),
   }
 }
 
@@ -146,8 +147,8 @@ export async function addProviderFlow(ui, refresh, deps = {}) {
 
   const items = Object.entries(PROVIDER_PRESETS)
     .filter(([name]) => !existing.has(name))
-    .map(([name, p]) => ({ label: name, description: p.desc, detail: p.model ?? "", kind: "preset", name }))
-  items.push({ label: "Custom (manual config)", description: "enter baseURL/model/format", kind: "custom" })
+    .map(([name, p]) => ({ label: name, description: p.desc, detail: p.baseURL ?? "", kind: "preset", name }))
+  items.push({ label: "Custom (manual config)", description: "enter baseURL/format", kind: "custom" })
 
   const sel = await host.pick(items, {
     placeHolder: "Add provider — select a preset",
@@ -166,14 +167,12 @@ export async function addProviderFlow(ui, refresh, deps = {}) {
       placeHolder: "https://api.example.com/v1",
     }))?.trim()
     if (!baseURL) return
-    const model = (await host.input({ prompt: `Model name for ${name}` }))?.trim()
-    if (!model) return
     const format = await host.pick(
       FORMATS.map((f) => ({ label: f, description: f === "openai" ? "(default)" : f === "anthropic" ? "Messages API" : "streamGenerateContent" })),
       { placeHolder: "API format" },
     )
     if (!format) return
-    const err = addProviderEntry({ custom: { name, baseURL, model, format: format.label } })
+    const err = addProviderEntry({ custom: { name, baseURL, format: format.label } })
     if (err) { host.error(err); return }
     const key = await host.input({ prompt: `API key for ${name} (leave empty to skip)`, password: true })
     if (key?.trim()) {
@@ -213,7 +212,7 @@ export async function removeProviderFlow(ui, refresh) {
     return
   }
   const sel = await host.pick(
-    candidates.map((p) => ({ label: p.name, description: p.model ?? "" })),
+    candidates.map((p) => ({ label: p.name, description: p.baseURL ?? "" })),
     { placeHolder: "Remove provider" },
   )
   if (!sel) return

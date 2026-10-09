@@ -19,7 +19,7 @@ Like the CLI, it's pure `.mjs`, zero third-party runtime dependencies, and conne
 - **Multi-session** — save and switch between conversation sessions with session bar; LLM auto-generates titles
 - **Image input** — paste or drag images into chat, or use `read_image` tool; supported on vision models (Kimi K3, Qwen3.7, MiniMax M3)
 - **Reasoning display** — collapsible "Thinking..." block shows the model's reasoning process in real-time
-- **24 provider presets** — DeepSeek, Kimi, Kimi For Coding, GLM, GLM Coding Plan, Qwen, Qwen Token Plan, MiMo, MiMo Token Plan, MiniMax, OpenAI, Claude, Gemini, Grok, Mistral, Volcengine, Hunyuan, Tencent TokenHub, Huawei Cloud MaaS, SiliconFlow, OpenRouter, Groq, OpenCode Go (same key, two protocol sides: OpenAI-compatible + Anthropic Messages) + custom OpenAI-compatible endpoint
+- **25 provider presets** — DeepSeek, Kimi, Kimi For Coding, GLM, GLM Coding Plan, Qwen, Qwen Token Plan, MiMo, MiMo Token Plan, MiniMax, OpenAI, Claude, Gemini, Gemini (OpenAI-compatible — same key), Grok, Mistral, Volcengine, Hunyuan, Tencent TokenHub, Huawei Cloud MaaS, SiliconFlow, OpenRouter, Groq, OpenCode Go (same key, two protocol sides: OpenAI-compatible + Anthropic Messages) + custom OpenAI-compatible endpoint
 - **Vector search** — semantic code search with BAAI/bge-m3 embeddings via SiliconFlow (configurable in Settings)
 - **Model selection** — choose from all available models per provider, with reasoning effort control
 - **Permission control** — session-level AUTO mode (off by default): every file-modifying tool prompts for approval until you click the AUTO toolbar button or "Approve All"; the flip takes effect immediately, even mid-turn
@@ -87,6 +87,7 @@ No key (or a bad key) → the tool silently falls back to Bing, so agents never 
 | OpenAI | `gpt-4o` | `https://api.openai.com/v1` |
 | Claude (Anthropic) | `claude-sonnet-4` | `https://api.anthropic.com/v1` |
 | Gemini (Google) | `gemini-2.5-flash` | `https://generativelanguage.googleapis.com/v1beta` |
+| Gemini (OpenAI-compatible) | — | `https://generativelanguage.googleapis.com/v1beta/openai` — OpenAI-compatible side; same key as Gemini |
 | Grok (xAI) | `grok-4.5` | `https://api.x.ai/v1` |
 | Mistral | `mistral-large` | `https://api.mistral.ai/v1` |
 | Volcengine Ark (豆包) | `doubao-seed-2-0-code-preview-260215` | `https://ark.cn-beijing.volces.com/api/v3` |

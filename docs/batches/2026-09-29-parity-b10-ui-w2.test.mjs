@@ -6,6 +6,10 @@
  * 判据面 = 批档 `docs/batches/2026-09-29-parity-b10-ui.md` §2.6 S1–S7 ∕ S12 各行 + §2.7 通道面（白名单 ∕ 注册表两向相等）。
  * 零第三方依赖（仅 node: 内建）；盘面用临时 config（`_setConfigPathForTest`）；探针经核测试缝注入（零真网络，
  * 仅 S2 死端口一支走真探 —— 本机回环拒绝即返）。
+ * **2026-10-09 清除批随正（fix 轮）**：① 本批面——`draft` ∥ 行面 ∥ 表单树 ∥ S7 去 `model`（渠道单值模型退场：
+ *   行 model 段 ∥ 候选 `datalist` ∥ model 输入件 ∥ 预设 `(model)` 后缀全退场）；② 跨批点修——通道计数锁 45⇒48
+ *   （后续三增 `record:append` ∥ `theme:state` ∥ `panel:state`）· 拉取钮断言改查表单件所在树面（`settingsModalTree`
+ *   添加弹窗体——两形常显表单退场批）· 钥输入假 DOM 面随「宿主无关读」补 `querySelectorAll` 面。
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -270,11 +274,11 @@ test("S2 出口：拉取模型写切片（probe 三态 + draft 快照）—— �
   globalThis.document = {
     addEventListener() {}, removeEventListener() {},
     querySelector(sel) { return String(sel).includes("data-provider-key-input") ? keyInput : null },
-    querySelectorAll() { return [] },
+    querySelectorAll(sel) { return String(sel).includes("data-provider-key-input") ? [keyInput] : [] },
     createElement: () => ({ setAttribute() {}, append() {}, addEventListener() {}, remove() {}, querySelector: () => null }),
     body: { append() {} },
   }
-  const fields = { name: "n1", baseURL: "https://x.example/v1", model: "", format: "openai", key: "sk-1" }
+  const fields = { name: "n1", baseURL: "https://x.example/v1", format: "openai", key: "sk-1" }
   const realFormData = globalThis.FormData
   globalThis.FormData = class { constructor() {} get(k) { return fields[k] ?? null } }
   try {
@@ -295,7 +299,7 @@ test("S2 出口：拉取模型写切片（probe 三态 + draft 快照）—— �
     assert.deepEqual(calls[0], ["provider:models", { baseURL: "https://x.example/v1", apiKey: "sk-1", format: "openai" }], "载荷 = 表单暂存值（不落盘）")
     const probeWrite = patches.filter((p) => p.providers?.probe !== undefined).pop()
     assert.deepEqual(probeWrite.providers.probe, { state: "ok", models: ["m1", "m2"], reason: null }, "探通 ⇒ 候选入切片")
-    assert.deepEqual(probeWrite.providers.draft, { name: "n1", baseURL: "https://x.example/v1", model: "", format: "openai", key: "sk-1" }, "暂存值快照同批落（重挂回填）")
+    assert.deepEqual(probeWrite.providers.draft, { name: "n1", baseURL: "https://x.example/v1", format: "openai", key: "sk-1" }, "暂存值快照同批落（重挂回填）——零 model 键（清除批）")
     // 空 baseURL ⇒ 本地前置拒（零发送 + 失败词驻状态行）
     fields.baseURL = "   "
     const before = calls.length
@@ -328,91 +332,93 @@ test("S4 ∕ S3 ∕ S5 ∕ S1 行面：sub 段非空才显 ∕ 可用性两态 �
   const handlers = { onSetProxy: () => {}, onProviderKeyEdit: () => {}, onProviderKeyDelete: () => {} }
   const full = {
     name: "openai", hasKey: true, maskedKey: coreSettings.MASKED, baseURL: "https://api.openai.com/v1",
-    model: "gpt-4o", active: true, proxy: true, effort: "auto", available: false, unavailableReason: "探不通句",
+    active: true, proxy: true, effort: "auto", available: false, unavailableReason: "探不通句",
   }
   const body = sections.providersBody({ state: "ready", presets: [], rows: [full], verify: null, probe: null, draft: null }, handlers, deps)
   const row = body[0]
   const childOf = (node, attr, value = undefined) => node.children.find((c) => c && c.props && (value === undefined ? c.props[attr] !== undefined : c.props[attr] === value))
-  // S4：sub 段（非空才显）
-  assert.equal(childOf(row, "data-provider-model").children[0], "gpt-4o")
-  assert.equal(childOf(row, "data-provider-baseurl").children[0], "https://api.openai.com/v1")
+  // 行结构（D37 两行卡）：主行 ∥ 副行（2026-10-09 清除批：sub = baseURL 单段）
+  const main = childOf(row, "class", "settings-row-main")
+  const sub = childOf(row, "class", "settings-row-sub")
+  // S4：sub 段（非空才显；model 段随 2026-10-09 清除批退场 —— 单段 = baseURL）
+  assert.equal(sub.children.filter((c) => c && c.props && c.props.class === "settings-row-value").length, 1, "sub 段恰一（零 model 段）")
+  assert.equal(childOf(sub, "class", "settings-row-value").children[0], "https://api.openai.com/v1", "sub = baseURL")
   // S3：不可用标 + 失败句
-  assert.equal(childOf(row, "data-available").children[0], "不可用")
+  assert.equal(childOf(sub, "data-available", "false").children[0], "不可用")
   assert.equal(childOf(row, "data-unavailable-reason").children[0], "探不通句")
   // S5：代理复选（值 = 行投影；复选住 label 内 —— label 包裹形）
-  const proxyLabel = row.children.find((c) => c && c.tag === "label" && Array.isArray(c.children) && c.children.some((x) => x && x.props && x.props["data-provider-proxy"] !== undefined))
+  const proxyLabel = sub.children.find((c) => c && c.tag === "label" && Array.isArray(c.children) && c.children.some((x) => x && x.props && x.props["data-provider-proxy"] !== undefined))
   const proxyInput = proxyLabel.children.find((x) => x && x.props && x.props["data-provider-proxy"] !== undefined)
   assert.equal(proxyInput.props.checked, true)
   // S1：静止态两控件（已配 ⇒ 改钥 + 删钥）
-  assert.equal(childOf(row, "data-action", "settings:providerKeyEdit").children[0], "修改")
-  assert.ok(childOf(row, "data-action", "settings:providerKeyDelete") !== undefined)
+  assert.equal(childOf(main, "data-action", "settings:providerKeyEdit").children[0], "修改")
+  assert.ok(childOf(main, "data-action", "settings:providerKeyDelete") !== undefined)
   // 空值 / 未配渠：零节点（禁假造）
   const bare = { name: "p2", hasKey: false, maskedKey: null, baseURL: "", proxy: false }
   const bareRow = sections.providersBody({ state: "ready", presets: [], rows: [bare], verify: null }, handlers, deps)[0]
-  assert.equal(childOf(bareRow, "data-provider-model"), undefined)
+  const bareMain = childOf(bareRow, "class", "settings-row-main")
+  const bareSub = childOf(bareRow, "class", "settings-row-sub")
   assert.equal(childOf(bareRow, "data-unavailable-reason"), undefined)
-  assert.equal(childOf(bareRow, "data-action", "settings:providerKeyDelete"), undefined, "未配 ⇒ 零删钥控件")
-  assert.equal(childOf(bareRow, "data-action", "settings:providerKeyEdit").children[0], "添加 Key")
+  assert.equal(bareSub.children.some((c) => c && c.props && c.props.class === "settings-row-value"), false, "空 baseURL ⇒ 零段节点（禁假造）")
+  assert.equal(childOf(bareMain, "data-action", "settings:providerKeyDelete"), undefined, "未配 ⇒ 零删钥控件")
+  assert.equal(childOf(bareMain, "data-action", "settings:providerKeyEdit").children[0], "添加 API Key")
   // S1：编辑态换形（钥输入 + 存 ∕ 消；移除 ∕ 代理暂撤）
   const editRow = sections.providersBody({ state: "ready", presets: [], rows: [full], verify: null }, handlers, { ...deps, edit: "openai" })[0]
+  const editMain = childOf(editRow, "class", "settings-row-main")
   assert.ok(editRow.props["data-edit"] !== undefined)
-  assert.equal(childOf(editRow, "data-provider-key-input").props.type, "password")
-  assert.equal(childOf(editRow, "data-action", "settings:providerKeySave").children[0], "保存")
-  assert.equal(childOf(editRow, "data-action", "settings:providerKeyCancel").children[0], "取消")
-  assert.equal(childOf(editRow, "data-action", "settings:providerRemove"), undefined, "编辑态：移除暂撤（取消即回）")
+  assert.equal(childOf(editMain, "data-provider-key-input").props.type, "password")
+  assert.equal(childOf(editMain, "data-action", "settings:providerKeySave").children[0], "保存")
+  assert.equal(childOf(editMain, "data-action", "settings:providerKeyCancel").children[0], "取消")
+  assert.equal(childOf(editMain, "data-action", "settings:removeProvider"), undefined, "编辑态：移除暂撤（取消即回）")
 })
 
-// ─── S2 表单树（探通候选 ∕ 探不通失败面 ∕ 手输兜底 ∕ 暂存值回填 ∕ 向导零回归）────
+// ─── S2 表单树（探通 ∕ 探不通两态 ∕ 零候选零 model 件 ∕ 暂存值回填 ∕ 向导零回归）────
 
-test("S2 表单树：候选 datalist + 状态行三态 ∕ 手输兜底 ∕ draft 回填 ∕ 缺 handler 零钮", () => {
+test("S2 表单树：状态行两态（探通 ∕ 探不通）+ 零候选 ∥ 零 model 件（2026-10-09 清除批）∕ draft 回填 ∕ 缺 handler 零钮", () => {
   i18n.initDict({ locale: "zh" })
   const okForm = controls.channelFormTree({
     shape: "custom", presets: [], formats: ["openai", "anthropic"], probe: { state: "ok", word: "✓ 连接成功 — 2 个模型" },
-    draft: { name: "n1", baseURL: "https://x.example/v1", model: "m1", format: "anthropic", key: "sk-1" },
-    modelCandidates: ["m1", "m2"],
+    draft: { name: "n1", baseURL: "https://x.example/v1", format: "anthropic", key: "sk-1" },
   }, { onFetchModels: () => {} })
   const fetchRow = okForm.children.find((c) => c.props && c.props["data-fetch-models"] !== undefined)
   assert.equal(fetchRow.children[0].props["data-action"], "settings:fetchModels")
   assert.equal(fetchRow.children[0].props.disabled, undefined, "有 handler ⇒ 非禁用")
   assert.equal(fetchRow.children[1].props["data-probe"], "ok")
   assert.equal(fetchRow.children[1].children[0], "✓ 连接成功 — 2 个模型")
-  const datalist = okForm.children.find((c) => c.tag === "datalist")
-  assert.deepEqual(datalist.children.map((o) => o.props.value), ["m1", "m2"], "下拉候选 = 探回模型集")
-  const modelInput = okForm.children.find((c) => c.props && c.props.name === "model")
-  assert.equal(modelInput.props.list, datalist.props.id, "模型框引用候选面")
-  assert.equal(modelInput.props.type, "text", "手输不受限（零阻断保存）")
-  assert.equal(modelInput.props.value, "m1", "暂存值回填（探果重挂不丢）")
+  // 2026-10-09 清除批：候选 `datalist` ∥ model 输入件退场（保存径控件集不含 model）
+  assert.equal(okForm.children.some((c) => c.tag === "datalist"), false, "零候选面")
+  assert.equal(okForm.children.some((c) => c.props && c.props.name === "model"), false, "零 model 件")
   assert.equal(okForm.children.find((c) => c.props && c.props.name === "baseURL").props.value, "https://x.example/v1")
   assert.equal(okForm.children.find((c) => c.props && c.props.name === "key").props.value, "sk-1")
   const formatSel = okForm.children.find((c) => c.props && c.props.name === "format")
   assert.equal(formatSel.children.find((o) => o.props.selected === true).props.value, "anthropic", "格式暂存回填")
   // 探不通：失败词在场 + 零候选 + 零阻断（模型仍文本输入）
-  const failForm = controls.channelFormTree({ shape: "custom", presets: [], formats: ["openai"], probe: { state: "fail", word: "需要 baseURL" }, modelCandidates: [] }, { onFetchModels: () => {} })
-  assert.equal(failForm.children.find((c) => c.tag === "datalist"), undefined, "探不通 ⇒ 零候选面")
+  const failForm = controls.channelFormTree({ shape: "custom", presets: [], formats: ["openai"], probe: { state: "fail", word: "需要 baseURL" } }, { onFetchModels: () => {} })
+  assert.equal(failForm.children.some((c) => c.tag === "datalist"), false, "探不通 ⇒ 零候选面")
   assert.equal(failForm.children.find((c) => c.props && c.props["data-fetch-models"] !== undefined).children[1].children[0], "需要 baseURL")
-  assert.equal(failForm.children.find((c) => c.props && c.props.name === "model").props.type, "text")
-  assert.equal(failForm.children.filter((c) => c.props && c.props.name === "model").length, 1, "保存径控件集零变（零阻断）")
+  assert.equal(failForm.children.some((c) => c.props && c.props.name === "model"), false, "保存径控件集零变（零阻断 —— 零 model 件）")
   // 缺 handler（向导径）⇒ 拉取控件零节点（零回归）
   const wizardForm = controls.channelFormTree({ shape: "custom", presets: [], formats: ["openai"] }, {})
   assert.equal(wizardForm.children.some((c) => c.props && c.props["data-fetch-models"] !== undefined), false)
-  assert.equal(wizardForm.children.find((c) => c.props && c.props.name === "model").props.value, undefined, "无 draft ⇒ 零回填（零行为改）")
+  assert.equal(wizardForm.children.find((c) => c.props && c.props.name === "name").props.value, undefined, "无 draft ⇒ 零回填（零行为改）")
+  assert.equal(wizardForm.children.some((c) => c.props && c.props.name === "model"), false, "零 model 件（向导全径同）")
 })
 
-// ─── S7：预设项携 desc ∕ model（数据仍取核表）────────────────────────────────
+// ─── S7：预设项携 desc（数据仍取核表；model 段随 2026-10-09 清除批退场）────────────────
 
 test("S7：presetChoices 转发 desc（值取核表）；预设项标签 = VSC 串形", () => {
   const presets = providers.providerList().presets
   const deepseek = presets.find((p) => p.name === "deepseek")
   assert.equal(deepseek.desc, "DeepSeek", "desc 直取核 PROVIDER_PRESETS")
-  assert.equal(typeof deepseek.model, "string")
+  assert.equal("model" in deepseek, false, "零 model 键（渠道单值模型退场）")
   assert.ok(presets.every((p) => typeof p.desc === "string" && p.desc !== ""), "逐条携 desc")
   i18n.initDict({ locale: "en" })
-  assert.equal(controls.presetLabel({ name: "deepseek", desc: "DeepSeek", model: "deepseek-flash" }), "deepseek — DeepSeek (deepseek-flash)")
+  assert.equal(controls.presetLabel({ name: "deepseek", desc: "DeepSeek", model: "deepseek-flash" }), "deepseek — DeepSeek", "标签 = name — desc（入参遗留 model 段零参与）")
   assert.equal(controls.presetLabel({ name: "x" }), "x", "缺段不落空括号（禁假造）")
   const form = controls.channelFormTree({ shape: "preset", presets: [deepseek], formats: ["openai"] }, {})
   const option = form.children.find((c) => c.tag === "select").children[0]
   assert.equal(option.props.value, "deepseek")
-  assert.match(option.children[0], /deepseek — DeepSeek \(deepseek-flash\)/, "项文本携 desc ∕ model")
+  assert.match(option.children[0], /deepseek — DeepSeek/, "项文本携 desc（model 后缀退场）")
 })
 
 // ─── S12：index 空态（无 key ⇒ 提示 + 钮禁用；有 key ⇒ 既有两态零变）──────────────
@@ -437,7 +443,7 @@ test("S12：无 embedding key ⇒ 提示词 + 构建钮禁用；有 key ⇒ 既�
 
 // ─── 集成冒烟：全树（settingsModel 归一 + 段分派 + S1 ∕ S2 切片键）──────────────────
 
-test("集成冒烟：settingsTree 全树（S1 ∕ S2 切片键经归一入段）零抛，渠道段含钥输入与拉取钮", async () => {
+test("集成冒烟：settingsTree 全树（S1 ∕ S2 切片键经归一入段）零抛，渠道段含钥输入；拉取钮在添加弹窗体（表单件树面）", async () => {
   i18n.initDict({ locale: "zh" })
   const settingsView = await import(at("thincoder-desktop/renderer/views/settings.mjs"))
   const state = {
@@ -475,29 +481,37 @@ test("集成冒烟：settingsTree 全树（S1 ∕ S2 切片键经归一入段）
   const tree = settingsView.settingsTree(model, handlers)
   const text = JSON.stringify(tree)
   assert.match(text, /"data-provider-key-input"/, "S1 编辑态：行内钥输入在场")
-  assert.match(text, /settings:fetchModels/, "S2：拉取模型钮在场（有 handler）")
-  assert.match(text, /"data-fetch-models"/)
+  // S2 拉取钮住表单件树面（添加弹窗体 —— 两形常显表单退场批：页树零表单；自定形 ∧ handler 给 ⇒ 在场）
+  const modalWith = (base) => JSON.stringify(settingsView.settingsModalTree(
+    { ...base, settings: { ...base.settings, providers: { ...base.settings.providers, addShape: "custom" } } },
+    settingsView.ADD_MODAL_GROUP, handlers))
+  const modalText = modalWith(state)
+  assert.match(modalText, /settings:fetchModels/, "S2：拉取模型钮在场（表单件树面 · 有 handler）")
+  assert.match(modalText, /"data-fetch-models"/)
   assert.equal(text.includes("settings:providerKeyDelete"), false, "编辑态下删钥控件暂撤（取消即回）")
   // 无 edit ∕ probe ∕ draft ⇒ 静止态（零回归）
-  const still = settingsView.settingsModel({ ...state, settings: { ...state.settings, providers: { ...state.settings.providers, edit: null, probe: null, draft: null } } })
+  const stillState = { ...state, settings: { ...state.settings, providers: { ...state.settings.providers, edit: null, probe: null, draft: null } } }
+  const still = settingsView.settingsModel(stillState)
   const stillText = JSON.stringify(settingsView.settingsTree(still, handlers))
   assert.match(stillText, /settings:providerKeyDelete/, "静止态：删钥控件在位")
-  assert.equal(stillText.includes("data-fetch-models"), true, "拉取钮恒在（handler 给）")
+  assert.equal(modalWith(stillState).includes("data-fetch-models"), true, "拉取钮恒在（表单件树面 · handler 给）")
 })
 
 
-// ─── 通道面（结构）：45 项两向相等 ∕ 六新通道末位（W2 四 + W3 两） ∕ 档头计数 ∕ 渲染面闭包纪律 ──────
+// ─── 通道面（结构）：48 项两向相等 ∕ W2/W3 六新连块定序 ∕ 档头计数 ∕ 渲染面闭包纪律 ──────
 
-test("通道面：白名单 45 项 ≡ 注册表 HANDLERS（两向相等）；六新通道末位；三档头计数四十五（W3 后随动——父侧）", () => {
+test("通道面：白名单 48 项 ≡ 注册表 HANDLERS（两向相等）；W2/W3 六新连块定序；三档头计数四十八（跨批随动——含后续三增）", () => {
   const preload = deskReq(join(ROOT, "thincoder-desktop/src/preload/preload.cjs"))
-  assert.equal(preload.CHANNELS.length, 45)
-  assert.deepEqual(preload.CHANNELS.slice(-6), ["provider:setKey", "provider:delKey", "provider:models", "provider:setProxy", "mcp:update", "mcp:reconnect"], "四新 + 两新定序末位")
+  assert.equal(preload.CHANNELS.length, 48, "48 项（W2/W3 六增 + 后续三增：`record:append` ∥ `theme:state` ∥ `panel:state`）")
+  const w23 = preload.CHANNELS.indexOf("provider:setKey")
+  assert.deepEqual(preload.CHANNELS.slice(w23, w23 + 6), ["provider:setKey", "provider:delKey", "provider:models", "provider:setProxy", "mcp:update", "mcp:reconnect"], "W2 四新 + W3 两新 = 连块定序（后续三增随其后）")
+  assert.deepEqual(preload.CHANNELS.slice(-3), ["record:append", "theme:state", "panel:state"], "后续三增定序末位（他批增量——随动）")
   const registrySrc = read("thincoder-desktop/src/main/ipc-registry.mjs")
   const rows = [...registrySrc.matchAll(/^\s{2}"([^"]+)":/gm)].map((m) => m[1])
-  assert.equal(rows.length, 45)
+  assert.equal(rows.length, 48)
   assert.deepEqual([...new Set(rows)].sort(), [...preload.CHANNELS].sort(), "白名单 ↔ 注册表两向相等")
   for (const file of ["thincoder-desktop/src/main/ipc.mjs", "thincoder-desktop/src/main/ipc-registry.mjs", "thincoder-desktop/src/preload/preload.cjs"]) {
-    assert.match(read(file), /四十五项/, `${file} 档头计数随动`)
+    assert.match(read(file), /四十八项/, `${file} 档头计数随动`)
   }
   // 渲染面静态闭包纪律（零 `node:` ∕ 零裸包 —— 本批新改渲染档）
   for (const file of [

@@ -88,15 +88,17 @@ export class ProviderError extends Error {
 }
 
 /**
- * F-1 (MODEL-400-FIX) 根因兜底——请求体组装前断言：渠道裸克隆（`{...渠道}`——渠道只带
- * 默认单值 `model`，克隆链未重派生 `.model` 时）provider.model 为 undefined/null——
+ * F-1 (MODEL-400-FIX) 根因兜底——请求体组装前断言：渠道裸克隆（`{...渠道}`——渠道条目不携
+ * 模型，克隆链未重派生 `.model` 时）provider.model 为 undefined/null——
  * JSON.stringify 会丢 undefined 键 → 无 model 请求 → serde 400。
  * fail-fast 报可读错误（带 provider 名 + 修复线索），不发病体。core.mjs chatImpl openai body 组装
  * 前调用（单行——core.mjs 500 行硬限）。
+ * 2026-10-09 清除批（R3）：指引收正——模型身份唯二 = 顶层 `defaultModel` 复合串 ∥ 会话槽选定
+ * （渠道单值模型退场，不再作指引）。
  */
 export function assertProviderModel(provider) {
   if (!provider.model) {
-    throw new ProviderError(provider, "model is undefined — provider cloned without model re-derivation (set providers[].model — the channel default model)")
+    throw new ProviderError(provider, "model is undefined — provider cloned without model re-derivation (set the default model (provider:model) or the session slot model)")
   }
 }
 

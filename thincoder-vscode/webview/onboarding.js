@@ -20,10 +20,11 @@ export function initOnboarding({ openSettings }) {
 /** Show the onboarding panel, pre-filled with the unadded provider presets. */
 export function showWelcomePanel(status) {
   if (S._welcomeDismissed) return
-  const presets = (status?.presets || []).map((p) => ({ name: p.name, label: p.desc || p.name, model: p.model }))
+  // 选项 label = 描述 ∥ 名（2026-10-09 清除批：渠道条目不携模型——模型尾缀退场）
+  const presets = (status?.presets || []).map((p) => ({ name: p.name, label: p.desc || p.name }))
   const sel = ctx.welcomeProvider
   sel.innerHTML = presets
-    .map((p) => `<option value="${escHtml(p.name)}">${escHtml(p.label)} — ${escHtml(p.model)}</option>`)
+    .map((p) => `<option value="${escHtml(p.name)}">${escHtml(p.label)}</option>`)
     .join("") + `<option value="custom">${escHtml(t("settings.customChoice"))}</option>`
   ctx.welcomeHeading.textContent = t("welcome.heading")
   ctx.welcomeText.textContent = t("welcome.text")

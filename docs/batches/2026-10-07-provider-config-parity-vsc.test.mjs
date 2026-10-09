@@ -7,6 +7,9 @@
  * `docs/batches/2026-10-07-provider-config-parity-vsc-harness.mjs`（本档 import 面）。
  * 拆档由来 = 共享件破 500 硬限 ⇒ 按舱拆档；VSC 档腿 + 测试台合计仍越限 ⇒ 测试台抽公档
  * （沿 `2026-10-07-browser-input.harness.mjs` 先例——「测试台抽公档（第三档，报备）」）。
+ * **2026-10-09 清除批随正（fix 轮）**：`pa-model` 输入件 ∥ `pa-model-candidates` 候选面退场（渠道不携模型）；
+ *   `model` 必填门 ⇒ `providerUrlRequired` 单门；两死键（`settings.noDefaultModel` ∥ `settings.modelRequired`）
+ *   净删随正；V2/V3/V4/V6/V7/V12/V13 断言随正（V7 键集 = 两语相等 ∧ 死键缺席 ∧ 活键在位）。
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
@@ -40,9 +43,9 @@ test("V1 新档+锚源锁：弹窗档在案（卡 ∥ 框幕独立类 ∥ role/a
 
 // ─── V2 元素序（源锁 indexOf 序 + 建面 DOM 序双证）─────────────────────────────────
 
-test("V2 元素序：源锁 indexOf 序 + 建面 DOM 序 = type→[name→url→format]→key→proxy→[拉取→model]→save/cancel", () => {
+test("V2 元素序：源锁 indexOf 序 + 建面 DOM 序 = type→[name→url→format]→key→proxy→[拉取]→save/cancel", () => {
   const dlg = vscSrc("webview/settings-provider-dialog.js")
-  const chain = ["pa-type", "pa-custom-fields", "pa-name", "pa-url", "pa-format", "pa-key", "pa-proxy", "pa-custom-tail", "pa-fetch-btn", "pa-model", "pa-save-btn", "pa-cancel-btn"]
+  const chain = ["pa-type", "pa-custom-fields", "pa-name", "pa-url", "pa-format", "pa-key", "pa-proxy", "pa-custom-tail", "pa-fetch-btn", "pa-save-btn", "pa-cancel-btn"]
   let at = -1
   for (const tok of chain) {
     const i = dlg.indexOf(`"${tok}"`)
@@ -54,12 +57,16 @@ test("V2 元素序：源锁 indexOf 序 + 建面 DOM 序 = type→[name→url→
   const ids = []
   byId("prov-add-dialog").walk((n) => { if (n.id) ids.push(n.id) })
   const pos = (id) => ids.indexOf(id)
-  for (const id of ["pa-type", "pa-name", "pa-url", "pa-format", "pa-key", "pa-proxy", "pa-custom-tail", "pa-fetch-btn", "pa-conn-status", "pa-model", "pa-save-btn", "pa-cancel-btn"]) {
+  for (const id of ["pa-type", "pa-name", "pa-url", "pa-format", "pa-key", "pa-proxy", "pa-custom-tail", "pa-fetch-btn", "pa-conn-status", "pa-save-btn", "pa-cancel-btn"]) {
     assert.ok(pos(id) >= 0, `${id} 建面在场`)
   }
-  const order = ["pa-type", "pa-name", "pa-url", "pa-format", "pa-key", "pa-proxy", "pa-custom-tail", "pa-fetch-btn", "pa-conn-status", "pa-model", "pa-save-btn", "pa-cancel-btn"].map(pos)
-  assert.deepEqual(order, [...order].sort((a, b) => a - b), "DOM 序 = 用户填写序（name→url→format→key→proxy→拉取→model）")
+  const order = ["pa-type", "pa-name", "pa-url", "pa-format", "pa-key", "pa-proxy", "pa-custom-tail", "pa-fetch-btn", "pa-conn-status", "pa-save-btn", "pa-cancel-btn"].map(pos)
+  assert.deepEqual(order, [...order].sort((a, b) => a - b), "DOM 序 = 用户填写序（name→url→format→key→proxy→拉取）")
   assert.ok(pos("pa-preset-info") > pos("pa-type") && pos("pa-preset-info") < pos("pa-custom-fields"), "预设信息行居中（type 后、条件块前）")
+  // 2026-10-09 清除批：model 输入件 ∥ 候选面退场（渠道不携模型）
+  assert.equal(byId("pa-model"), null, "model 输入件退场")
+  assert.equal(byId("pa-model-candidates"), null, "候选面退场")
+  assert.equal(dlg.includes("pa-model"), false, "源面零 pa-model 字面")
   clearAll()
 })
 
@@ -84,7 +91,7 @@ test("V3 开框（单例 ∥ 重置 ∥ 初始焦点）与五路关（取消 ∥
   assert.equal(bodyEl.children.filter((c) => c.classList?.contains("settings-dialog-backdrop")).length, 1, "幕仅一")
   // 开框重置 + 初始焦点（+50ms）
   assert.equal(byId("pa-type").value, "deepseek", "类型回首项")
-  byId("pa-key").value = "sk-typed"; byId("pa-proxy").checked = true; byId("pa-model").value = "typed"; byId("pa-conn-status").textContent = "stale"
+  byId("pa-key").value = "sk-typed"; byId("pa-proxy").checked = true; byId("pa-conn-status").textContent = "stale"
   drainTimers()
   assert.equal(_focused.at(-1)?.id, "pa-type", "初始焦点 = #pa-type（+50ms）")
   // 关①：取消钮
@@ -111,49 +118,49 @@ test("V3 开框（单例 ∥ 重置 ∥ 初始焦点）与五路关（取消 ∥
   assert.equal(surface().card, null, "closeSettings ⇒ 框净")
   assert.equal(surface().backdrop, null, "closeSettings ⇒ 幕净")
   // 重置语义的判别腿：开-填-关-复开 ⇒ 全新空件
-  openDialog(); setType("custom"); byId("pa-key").value = "sk-x"; byId("pa-model").value = "m"
+  openDialog(); setType("custom"); byId("pa-key").value = "sk-x"
   byId("pa-cancel-btn").fire("click")
   openDialog()
   assert.equal(byId("pa-type").value, "deepseek", "复开 ⇒ 类型回首项")
   assert.equal(byId("pa-key").value, "", "复开 ⇒ key 清空")
   assert.equal(byId("pa-proxy").checked, false, "复开 ⇒ proxy 未勾")
-  assert.equal(byId("pa-model").value, "", "复开 ⇒ 模型值清空")
-  assert.equal(byId("pa-model-candidates").children.length, 0, "复开 ⇒ 候选清空")
   assert.equal(byId("pa-conn-status").textContent, "", "复开 ⇒ 状态行空")
   clearAll()
 })
 
 // ─── V4 不拉取可存（#1031）+ 开关写面（#1027 表单半）───────────────────────────────
 
-test("V4 行为腿（#1031 ∥ #1027）：无拉取 + 填 model ⇒ addProvider posted（携 model ∥ 勾选携 proxy）；model 空 ⇒ modelRequired ∥ 零发", () => {
+test("V4 行为腿（#1031 ∥ #1027；2026-10-09 清除批随正）：不拉取 + 填件 ⇒ addProvider posted（custom 携 name/baseURL/format ∥ 勾选携 proxy）；baseURL 空 ⇒ providerUrlRequired ∥ 零发", () => {
   clearAll(); setPresets()
-  // ① 不拉取直存（候选空）
+  // ① 不拉取直存（零候选面）
   openDialog(); setType("custom")
   byId("pa-name").value = "my-prov"; byId("pa-url").value = "https://my.example.com/v1"
-  byId("pa-model").value = "hand-typed-model"
+  byId("pa-format").value = "anthropic"
   byId("pa-key").value = "sk-1"
   let before = postSink.length
   byId("pa-save-btn").fire("click")
   let sent = postSink.slice(before).filter((m) => m.type === "addProvider")
   assert.equal(sent.length, 1, "不拉取 ⇒ 可存（原死路已撤）")
-  assert.equal(sent[0].custom.model, "hand-typed-model", "custom 携 model")
+  assert.equal(sent[0].custom.name, "my-prov", "custom 携名")
+  assert.equal(sent[0].custom.baseURL, "https://my.example.com/v1", "custom 携 baseURL")
+  assert.equal(sent[0].custom.format, "anthropic", "custom 携格式")
+  assert.equal("model" in sent[0].custom, false, "零 model 键（渠道不携模型——清除批）")
   assert.equal(sent[0].key, "sk-1", "key 随载荷")
   assert.equal("proxy" in sent[0], false, "未勾 ⇒ 载荷缺 proxy（缺省 = 零键）")
   // ② 勾选 ⇒ 载荷 +proxy（可选布尔——勾选 ⇒ true）
   openDialog(); setType("custom")
-  byId("pa-name").value = "my-prov2"; byId("pa-url").value = "https://my2.example.com/v1"
-  byId("pa-model").value = "m2"; byId("pa-proxy").checked = true
+  byId("pa-name").value = "my-prov2"; byId("pa-url").value = "https://my2.example.com/v1"; byId("pa-proxy").checked = true
   before = postSink.length
   byId("pa-save-btn").fire("click")
   sent = postSink.slice(before).filter((m) => m.type === "addProvider")
   assert.equal(sent[0].proxy, true, "勾选 ⇒ 载荷 +proxy:true")
-  // ③ model 空 ⇒ 词 settings.modelRequired ∥ 零发
+  // ③ baseURL 空 ⇒ 词 settings.providerUrlRequired ∥ 零发（model 必填门随件退场——清除批）
   openDialog(); setType("custom")
-  byId("pa-name").value = "my-prov3"; byId("pa-url").value = "https://my3.example.com/v1"
+  byId("pa-name").value = "my-prov3"; byId("pa-url").value = ""
   before = postSink.length
   byId("pa-save-btn").fire("click")
-  assert.equal(postSink.slice(before).filter((m) => m.type === "addProvider").length, 0, "model 空 ⇒ 零发")
-  assert.equal(byId("pa-conn-status").textContent, EN["settings.modelRequired"], "词 = settings.modelRequired")
+  assert.equal(postSink.slice(before).filter((m) => m.type === "addProvider").length, 0, "baseURL 空 ⇒ 零发")
+  assert.equal(byId("pa-conn-status").textContent, EN["settings.providerUrlRequired"], "词 = settings.providerUrlRequired")
   assert.ok(surface().card, "拒存 ⇒ 框仍在（修正后可再存）")
   // ④ 预设形：勾选 ⇒ proxy 随载荷
   openDialog(); setType("glm"); byId("pa-proxy").checked = true
@@ -191,7 +198,7 @@ test("V5 行为腿（#1032）：getModels 空 ⇒ #defaultmodel-hint 显 ∥ 零
 
 // ─── V6 拉取路由载荷 + 探果落框 + 代际（③′ / #1031）───────────────────────────────
 
-test("V6 载荷腿（③′）：testProvider 携 proxy = 勾选态；探果 ok ⇒ 候选填充 ∥ 键入值零清；探败 ⇒ 候选清空；代际不符 ⇒ 弃", () => {
+test("V6 载荷腿（③′；2026-10-09 清除批随正）：testProvider 携 proxy = 勾选态；探果 ok ⇒ 状态行 ✓（计数）∥ 探败 ⇒ ✗ + 错误串；代际不符 ⇒ 弃；零候选面", () => {
   clearAll(); setPresets()
   openDialog(); setType("custom")
   byId("pa-url").value = "https://my.example.com/v1"
@@ -212,16 +219,13 @@ test("V6 载荷腿（③′）：testProvider 携 proxy = 勾选态；探果 ok 
   byId("pa-fetch-btn").fire("click")
   sent = postSink.slice(before).filter((m) => m.type === "testProvider")
   assert.equal("proxy" in sent[0], false, "未勾 ⇒ 缺 proxy 键")
-  // 探果 ok ⇒ 候选填充（不自动选中）∥ 键入值零清
-  byId("pa-model").value = "typed-model"
+  // 探果 ok ⇒ 状态行连通词（计数）——零候选 ∥ 零 model 件（清除批：不喂候选）
   api.updateTestProviderResult({ ok: true, models: ["m-a", "m-b", "m-c"] })
-  assert.equal(byId("pa-model-candidates").children.length, 3, "候选数 = models 数")
-  assert.equal(byId("pa-model").value, "typed-model", "键入值零清（不自动选中）")
   assert.equal(byId("pa-conn-status").textContent, EN["settings.connOk"].replace("${count}", "3"), "连通态词面")
-  // 探败 ⇒ 候选清空 ∥ ✗ + 错误串 ∥ 键入值零清
+  assert.equal(byId("pa-model"), null, "零 model 件")
+  assert.equal(byId("pa-model-candidates"), null, "零候选面（探果不喂候选）")
+  // 探败 ⇒ ✗ + 错误串
   api.updateTestProviderResult({ ok: false, error: "boom-403" })
-  assert.equal(byId("pa-model-candidates").children.length, 0, "探败 ⇒ 候选清空")
-  assert.equal(byId("pa-model").value, "typed-model", "探败 ⇒ 键入值零清（不吞手输）")
   assert.equal(byId("pa-conn-status").textContent, "✗ boom-403", "✗ + 原样错误串")
   // 代际：关框 + 复开 ⇒ 老框在飞探果弃（新框零污染）
   byId("pa-cancel-btn").fire("click")
@@ -229,7 +233,6 @@ test("V6 载荷腿（③′）：testProvider 携 proxy = 勾选态；探果 ok 
   const status = byId("pa-conn-status")
   api.updateTestProviderResult({ ok: true, models: ["zombie"] })
   assert.equal(status.textContent, "", "代际不符 ⇒ 弃（状态行零动）")
-  assert.equal(byId("pa-model-candidates").children.length, 0, "代际不符 ⇒ 零候选落框")
   // 框不在场 ⇒ 零动（无落点）
   byId("pa-cancel-btn").fire("click")
   api.updateTestProviderResult({ ok: true, models: ["ghost"] })
@@ -239,7 +242,7 @@ test("V6 载荷腿（③′）：testProvider 携 proxy = 勾选态；探果 ok 
 
 // ─── V7 词面锁（#1033 / #1035）────────────────────────────────────────────────────
 
-test("V7 词面锁：三处字面零残留 ∥ 两语键集相等 ∥ fetchModelsFirst 缺席 ∥ 六值改毕（zh 零「密钥」）", () => {
+test("V7 词面锁：三处字面零残留 ∥ 两语键集相等 ∥ fetchModelsFirst 缺席 ∥ 两死键净删 ∥ 六值改毕（zh 零「密钥」）", () => {
   // webview 全档扫：三处硬编码显示串零残留（带引号的字面形——散文注释不属显示面）
   for (const f of readdirSync(new URL("webview/", VSC))) {
     if (!f.endsWith(".js")) continue
@@ -248,15 +251,17 @@ test("V7 词面锁：三处字面零残留 ∥ 两语键集相等 ∥ fetchModel
     assert.ok(!s.includes('"宿主繁忙"'), `${f}："宿主繁忙" 零残留`)
     assert.ok(!s.includes('"不可用"'), `${f}："不可用" 零残留`)
   }
-  // 词面（显示面）改经词键
+  // 词面（显示面）改经词键（2026-10-09 清除批：settings.noDefaultModel ∥ settings.modelRequired 两死键净删）
   const prov = vscSrc("webview/settings-providers.js")
-  assert.ok(prov.includes('t("settings.noDefaultModel")') && prov.includes('t("settings.providerHostBusy")') && prov.includes('t("settings.providerUnavailable")'), "卡面三词经词键")
+  assert.ok(prov.includes('t("settings.providerHostBusy")') && prov.includes('t("settings.providerUnavailable")'), "卡面两词经词键")
   assert.ok(prov.includes('t("settings.defaultModelTitle")') && prov.includes('t("settings.pickModelEmpty")'), "title ∥ 空表提示经词键")
-  assert.ok(vscSrc("webview/settings-provider-dialog.js").includes('t("settings.noDefaultModel")'), "弹窗预设行同词")
-  // 两语键集相等 ∥ fetchModelsFirst 缺席 ∥ 新键在位
+  assert.ok(!prov.includes("settings.noDefaultModel") && !vscSrc("webview/settings-provider-dialog.js").includes("settings.noDefaultModel"), "noDefaultModel 零引用（死键净删随实现）")
+  // 两语键集相等 ∥ fetchModelsFirst 缺席 ∥ 两死键缺席 ∥ 活键在位
   assert.deepEqual(Object.keys(EN).sort(), Object.keys(ZH).sort(), "两语键集相等")
   assert.ok(!("settings.fetchModelsFirst" in EN) && !("settings.fetchModelsFirst" in ZH), "fetchModelsFirst 缺席（随实现净删）")
-  for (const k of ["settings.modelRequired", "settings.pickModelEmpty", "settings.noDefaultModel", "settings.defaultModelTitle", "settings.providerHostBusy", "settings.providerUnavailable"]) {
+  assert.ok(!("settings.noDefaultModel" in EN) && !("settings.noDefaultModel" in ZH), "settings.noDefaultModel 缺席（清除批净删）")
+  assert.ok(!("settings.modelRequired" in EN) && !("settings.modelRequired" in ZH), "settings.modelRequired 缺席（清除批净删）")
+  for (const k of ["settings.pickModelEmpty", "settings.defaultModelTitle", "settings.providerHostBusy", "settings.providerUnavailable", "settings.providerUrlRequired"]) {
     assert.ok(k in EN && k in ZH, `${k} 两语在位`)
   }
   // #1035：六值改毕（zh 裸「密钥」清零）
@@ -358,22 +363,17 @@ test("V11 遮罩隔离腿（D12）：框在场 ⇒ 确认族开 ∥ 关两向均
 
 // ─── V12 ∥ V13（收口轮 · 父侧裁 2026-10-07）：② 保存徽标门控 ∥ ③ 拒存保在编输入 ───────────
 
-test("V12 保存徽标门控腿（收口轮②）：本地拒（model 空 ∥ baseURL 空）⇒ 零闪「✓ 已保存」∥ 受理径 ⇒ 闪（既有词/样式）", () => {
+test("V12 保存徽标门控腿（收口轮②；2026-10-09 清除批随正）：本地拒（baseURL 空）⇒ 零闪「✓ 已保存」∥ 受理径 ⇒ 闪（既有词/样式）", () => {
   clearAll(); setPresets()
   const badge = byId("agent-saved-badge")
   badge.classList.remove("visible")
-  // ① 拒径（model 空）：零发 + 徽标零闪（修前红：click 未门控 ⇒ 早退径仍闪）
+  // ① 拒径（baseURL 空）：零发 + 徽标零闪（修前红：click 未门控 ⇒ 早退径仍闪）
   openDialog(); setType("custom")
-  byId("pa-name").value = "my-prov"; byId("pa-url").value = "https://my.example.com/v1"
-  byId("pa-save-btn").fire("click")
-  assert.equal(postSink.filter((m) => m.type === "addProvider").length, 0, "model 空 ⇒ 零发")
-  assert.equal(badge.classList.contains("visible"), false, "拒径 ⇒ 徽标零闪")
-  // ② 拒径（baseURL 空）：零发 + 徽标零闪
-  byId("pa-url").value = ""; byId("pa-model").value = "m"
+  byId("pa-name").value = "my-prov"; byId("pa-url").value = ""
   byId("pa-save-btn").fire("click")
   assert.equal(postSink.filter((m) => m.type === "addProvider").length, 0, "baseURL 空 ⇒ 零发")
-  assert.equal(badge.classList.contains("visible"), false, "拒径 ⇒ 徽标零闪（baseURL 空）")
-  // ③ 受理径：补全 ⇒ 发 + 闪（词 ∥ 样式复用——零新词）
+  assert.equal(badge.classList.contains("visible"), false, "拒径 ⇒ 徽标零闪")
+  // ② 受理径：补全 ⇒ 发 + 闪（词 ∥ 样式复用——零新词）
   byId("pa-url").value = "https://my.example.com/v1"
   byId("pa-save-btn").fire("click")
   assert.equal(postSink.filter((m) => m.type === "addProvider").length, 1, "受理径 ⇒ 发")
@@ -383,10 +383,10 @@ test("V12 保存徽标门控腿（收口轮②）：本地拒（model 空 ∥ ba
   clearAll()
 })
 
-test("V13 拒存保在编输入腿（收口轮③）：缺 baseURL ⇒ 零发 ∥ 不关框 ∥ 在编值保留 ∥ 补填 ⇒ 原值携发可重存", () => {
+test("V13 拒存保在编输入腿（收口轮③；2026-10-09 清除批随正）：缺 baseURL ⇒ 零发 ∥ 不关框 ∥ 在编值保留 ∥ 补填 ⇒ 原值携发可重存", () => {
   clearAll(); setPresets()
   openDialog(); setType("custom")
-  byId("pa-name").value = "keep-prov"; byId("pa-model").value = "keep-model"
+  byId("pa-name").value = "keep-prov"
   byId("pa-key").value = "sk-keep"; byId("pa-proxy").checked = true
   byId("pa-url").value = ""
   byId("pa-save-btn").fire("click")
@@ -394,7 +394,6 @@ test("V13 拒存保在编输入腿（收口轮③）：缺 baseURL ⇒ 零发 �
   assert.ok(surface().card, "拒存 ⇒ 框仍在（不关框）")
   assert.equal(byId("pa-conn-status").textContent, EN["settings.providerUrlRequired"], "拒因词 = settings.providerUrlRequired（既有词）")
   assert.equal(byId("pa-name").value, "keep-prov", "在编值保留：名")
-  assert.equal(byId("pa-model").value, "keep-model", "在编值保留：模型")
   assert.equal(byId("pa-key").value, "sk-keep", "在编值保留：key")
   assert.equal(byId("pa-proxy").checked, true, "在编值保留：proxy 勾选")
   // 即改即重存：补 baseURL ⇒ 原在编值随载荷发出（受理 ⇒ 关框——既有径）
@@ -403,7 +402,7 @@ test("V13 拒存保在编输入腿（收口轮③）：缺 baseURL ⇒ 零发 �
   const sent = postSink.filter((m) => m.type === "addProvider")
   assert.equal(sent.length, 1, "补填 ⇒ 可重存")
   assert.equal(sent[0].custom.name, "keep-prov", "原值携发：名")
-  assert.equal(sent[0].custom.model, "keep-model", "原值携发：模型")
+  assert.equal("model" in sent[0].custom, false, "零 model 键（清除批）")
   assert.equal(sent[0].custom.baseURL, "https://keep.example.com/v1", "补填件入载荷")
   assert.equal(sent[0].key, "sk-keep", "原值携发：key")
   assert.equal(sent[0].proxy, true, "原值携发：proxy 勾选")

@@ -4,9 +4,9 @@
  *
  * 射程（ops/OPS.md §1「预设形」∥ §9 用例 ∥ KD-SV-17）：
  *   ① 漂移件：server 键集 = 核表（`thincoder-core/config-presets.mjs`——只读对照）OpenAI 兼容子集
- *      （`!format && !chatPath` 派生）∥ 同键 `baseURL`/`model` 逐值相等（核表更新后重跑本件即报）
- *   ② 展开单元：缺省（`name` = 预设名 ∥ `baseURL`/`model` 取预设值）∥ 覆盖（显式在场者胜）∥ 未知拒启（列可用名）∥ 手写形原样
- *   ③ N12：预设形最小条目载入展开（默认模型值 = 核表实读）∥ `/v1/models` 含 `deepseek/<默认模型>` ∥ 经 mock 上游完成一次请求
+ *      （`!format && !chatPath` 派生）∥ 同键 `baseURL` 逐值相等（2026-10-09 清除批——渠道单值 `model` 退场）
+ *   ② 展开单元：缺省（`name` = 预设名 ∥ `baseURL` 取预设值 ∥ `models` = 空）∥ 覆盖（显式在场者胜）∥ 未知拒启（列可用名）∥ 手写形原样
+ *   ③ N12：预设形最小条目载入展开（`models` = 空——勾选面模拟）∥ 条目自备清单后 `/v1/models` 含 `deepseek/<选中模型>` ∥ 经 mock 上游完成一次请求
  *   ④ N13：条目覆盖生效（预设值不吞条目字段）∥ 派发与清单按条目展开
  *   ⑤ B9：同预设双条、均未给 `name` ⇒ 拒启（重名）∥ 其一显式 `name` ⇒ 放行
  *   ⑥ E11：未知预设名 ⇒ 拒启（报错列可用名；排除面不在列）∥ 入口非零退出
@@ -114,19 +114,18 @@ function spawnNode(args) {
 
 // ── ① 漂移件（server 自持表 ↔ CLI 核表——快照口径，KD-SV-17）─────────────────
 
-test("漂移件：server 键集 = 核表 OpenAI 兼容子集（!format && !chatPath）∥ 同键 baseURL/model 逐值相等", () => {
+test("漂移件：server 键集 = 核表 OpenAI 兼容子集（!format && !chatPath）∥ 同键 baseURL 逐值相等（2026-10-09 清除批——model 键退场）", () => {
   const serverKeys = Object.keys(PRESETS.SERVER_PRESETS)
   const coreKeys = Object.entries(CORE.PROVIDER_PRESETS)
     .filter(([, preset]) => !preset.format && !preset.chatPath)
     .map(([key]) => key)
   assert.deepEqual([...serverKeys].sort(), [...coreKeys].sort(), "键集漂移（核表更新 ⇒ 表 ∥ OPS.md 名单 ∥ 本件三处同改）")
-  assert.equal(serverKeys.length, 20, "起步 20 家（ops/OPS.md §1 覆盖面）")
+  assert.equal(serverKeys.length, 21, "起步 21 家（ops/OPS.md §1 覆盖面）")
   for (const key of serverKeys) {
     const server = PRESETS.SERVER_PRESETS[key]
     const core = CORE.PROVIDER_PRESETS[key]
-    assert.deepEqual(Object.keys(server).sort(), ["baseURL", "model"], `${key}：每键只载 { baseURL, model }`)
+    assert.deepEqual(Object.keys(server).sort(), ["baseURL"], `${key}：每键只载 { baseURL }（2026-10-09 清除批——渠道单值 model 退场）`)
     assert.equal(server.baseURL, core.baseURL, `${key}：baseURL 逐值相等`)
-    assert.equal(server.model, core.model, `${key}：model 逐值相等`)
   }
   for (const key of ["claude", "gemini", "opencode-go-anthropic", "minimax"]) { // 排除 4 家（format/chatPath 面——非 OpenAI 协议）
     assert.ok(!serverKeys.includes(key), `排除面混入：${key}`)
@@ -140,7 +139,7 @@ test("expandProviderEntry：缺省 ∥ 覆盖 ∥ 未知拒启（列可用名）
   const bare = PRESETS.expandProviderEntry({ preset: "deepseek", apiKey: "env:X" })
   assert.equal(bare.name, "deepseek") // name 缺省 = 预设名
   assert.equal(bare.baseURL, core.baseURL)
-  assert.deepEqual(bare.models, [core.model]) // models 缺省 = [预设默认模型]
+  assert.deepEqual(bare.models, []) // models 缺省 = 空（2026-10-09 清除批——预设表零 `model` 键；勾选走「模型发现」）
   assert.equal(bare.apiKey, "env:X") // apiKey 只住条目（原样携带——解析归注册表构建期）
 
   const over = PRESETS.expandProviderEntry({ preset: "qwen", name: "bailian", baseURL: "http://10.0.0.9:8000/v1", models: ["m1", "m2"], apiKey: "k" })
@@ -164,33 +163,34 @@ test("expandProviderEntry：缺省 ∥ 覆盖 ∥ 未知拒启（列可用名）
 
 // ── ③ N12：最小预设形（展开 ∥ 清单 ∥ 经 mock 上游一次请求）────────────────────
 
-test("N12：{preset:'deepseek',apiKey:'env:X'} 载入 ⇒ 展开（核表实读值）∥ /v1/models 含 deepseek/<默认模型> ∥ 经 mock 上游完成一次请求", async () => {
+test("N12：{preset:'deepseek',apiKey:'env:X'} 载入 ⇒ 展开（`models` = 空——预设表零 `model` 键）∥ 条目自备清单（勾选面模拟）后 /v1/models 含 deepseek/<选中模型> ∥ 经 mock 上游完成一次请求", async () => {
   const dir = tmpDir("preset-n12")
   const deepseek = CORE.PROVIDER_PRESETS.deepseek
+  const picked = "deepseek-chat" // 勾选面模拟：现场选定模型（预设表零 `model` 键后模型来源必经此径）
   const mock = await startMockUpstream()
   const db = DB.openDatabase(":memory:")
   try {
     // 最小形（零覆盖）：展开值与核表实读一致
     const bareFile = writeConfig(dir, { host: "127.0.0.1", providers: [{ preset: "deepseek", apiKey: "env:TC_TEST_KEY" }], embedding: EMBEDDING })
     const loaded = CONFIG.loadConfig(bareFile, { env: ENV }).config.providers[0]
-    assert.deepEqual(loaded, { name: "deepseek", baseURL: deepseek.baseURL, apiKey: "env:TC_TEST_KEY", models: [deepseek.model], settings: {} })
+    assert.deepEqual(loaded, { name: "deepseek", baseURL: deepseek.baseURL, apiKey: "env:TC_TEST_KEY", models: [], settings: {} })
 
-    // 实请求段：同预设条目 + baseURL 覆盖指 mock（唯一可达 mock 路）——name/models 仍取预设缺省
-    const liveFile = writeConfig(dir, { host: "127.0.0.1", providers: [{ preset: "deepseek", baseURL: `${mock.base}/v1`, apiKey: "env:TC_TEST_KEY" }], embedding: EMBEDDING })
+    // 实请求段：同预设条目 + baseURL 覆盖指 mock + 清单自备（勾选面模拟）——预设形 models 缺省 = 空
+    const liveFile = writeConfig(dir, { host: "127.0.0.1", providers: [{ preset: "deepseek", baseURL: `${mock.base}/v1`, apiKey: "env:TC_TEST_KEY", models: [picked] }], embedding: EMBEDDING })
     const live = CONFIG.loadConfig(liveFile, { env: ENV }).config
     assert.equal(live.providers[0].name, "deepseek")
-    assert.deepEqual(live.providers[0].models, [deepseek.model])
+    assert.deepEqual(live.providers[0].models, [picked]) // 条目自备清单（预设零 model 键——勾选面模拟）
     const app = await startGateway({ db, config: live, env: ENV })
     try {
       const key = KEYS.issueKey(db, seedMember(db)).plain
       const list = await fetch(`${app.base}/v1/models`, { headers: { authorization: `Bearer ${key}` } })
-      assert.ok((await list.json()).data.map((m) => m.id).includes(`deepseek/${deepseek.model}`), "清单应含 deepseek/<默认模型>")
-      const chat = await chatJson(app.base, { key, body: { model: `deepseek/${deepseek.model}`, messages: [] } })
+      assert.ok((await list.json()).data.map((m) => m.id).includes(`deepseek/${picked}`), "清单应含 deepseek/<选中模型>")
+      const chat = await chatJson(app.base, { key, body: { model: `deepseek/${picked}`, messages: [] } })
       assert.equal(chat.status, 200)
       assert.equal(chat.json.choices[0].message.content, "from-mock")
       assert.equal(mock.requests.length, 1)
       assert.equal(mock.requests[0].url, "/v1/chat/completions")
-      assert.equal(mock.requests[0].body.model, deepseek.model) // 上游 model = 首斜杠余段
+      assert.equal(mock.requests[0].body.model, picked) // 上游 model = 首斜杠余段
       assert.equal(mock.requests[0].headers.authorization, "Bearer sk-test-value") // 真 key 代持（env: 构建期解析）
     } finally {
       await app.close()
@@ -225,7 +225,7 @@ test("N13：预设形 + 条目覆盖（name ∥ baseURL ∥ models 自备）⇒ 
       const chat = await chatJson(app.base, { key, body: { model: "bailian/qwen3.5-plus", messages: [] } })
       assert.equal(chat.status, 200)
       assert.equal(mock.requests.length, 1)
-      assert.equal(mock.requests[0].body.model, "qwen3.5-plus") // 上游 model = 条目清单值（预设默认模型不吞）
+      assert.equal(mock.requests[0].body.model, "qwen3.5-plus") // 上游 model = 条目清单值（预设零 model 键——不吞条目字段）
     } finally {
       await app.close()
     }
@@ -262,8 +262,10 @@ test("E11：未知预设名 ⇒ 拒启（报错列可用名；排除面不在列
     const file = writeConfig(dir, { host: "127.0.0.1", providers: [{ preset: "deepseek-x", apiKey: "" }], embedding: EMBEDDING })
     assert.throws(() => CONFIG.loadConfig(file), (err) => {
       assert.match(err.message, /未知预设名："deepseek-x"/)
-      for (const key of Object.keys(PRESETS.SERVER_PRESETS)) assert.ok(err.message.includes(key), `可用名单缺 ${key}`)
-      for (const key of ["claude", "gemini", "minimax", "anthropic"]) assert.ok(!err.message.includes(key), `排除面入列：${key}`)
+      const listed = err.message.split("可用预设：")[1]?.split("；")[0]?.split(" ∥ ") ?? []
+      for (const key of Object.keys(PRESETS.SERVER_PRESETS)) assert.ok(listed.includes(key), `可用名单缺 ${key}`)
+      // 排除面按整名判（子串判会被 `gemini-openai` 的前缀 `gemini` 命中——2026-10-09 server 预设批）
+      for (const key of ["claude", "gemini", "minimax", "anthropic"]) assert.ok(!listed.includes(key), `排除面入列：${key}`)
       return true
     })
     const child = spawnNode([BIN_PATH, "--config", file]) // 拒启 = 非零退出 + 明确报错（fail-closed 出口）
@@ -297,7 +299,7 @@ test("手写形回归 ∥ config.example.json 冒烟：预设形 ∥ 手写形�
     const { config } = CONFIG.loadConfig(file, { env: ENV })
       assert.deepEqual(config.providers[0], { name: "internal", baseURL: "http://10.0.0.9:8000/v1", apiKey: "", models: ["deepseek-v3"], settings: {} }) // 手写形零变
     assert.equal(config.providers[1].name, "glm")
-    assert.deepEqual(config.providers[1].models, [CORE.PROVIDER_PRESETS.glm.model])
+    assert.deepEqual(config.providers[1].models, []) // 预设形 = 空清单（2026-10-09 清除批）
 
     const examplePath = join(ROOT, "thincoder-server", "config.example.json")
     const example = JSON.parse(readFileSync(examplePath, "utf8"))
@@ -318,7 +320,7 @@ test("手写形回归 ∥ config.example.json 冒烟：预设形 ∥ 手写形�
     const { config: exampleConfig } = CONFIG.loadConfig(examplePath, { env: { DEEPSEEK_API_KEY: "sk-ds", DASHSCOPE_API_KEY: "sk-d", TC_SERVER_ADMIN_PASSWORD: "password123" } })
     assert.equal(exampleConfig.providers.length, example.providers.length)
     assert.equal(exampleConfig.providers[0].name, "deepseek")
-    assert.deepEqual(exampleConfig.providers[0].models, [CORE.PROVIDER_PRESETS.deepseek.model])
+    assert.deepEqual(exampleConfig.providers[0].models, []) // 预设形 = 空清单（2026-10-09 清除批）
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

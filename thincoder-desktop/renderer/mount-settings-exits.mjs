@@ -37,6 +37,8 @@
  * **#841（provider 态第三刷新点）**：设置写成功回执（`settings:agent` ∥ `provider:save`）携 `providerState` ⇒
  * 同写点落切片（`useModel` ∥ `submitChannel` 两处；键缺席 ⇒ 零写）——设置面修好 `defaultModel`
  * 后输入区提示行即时退场；单源 = `docs/desktop/design/IPC.md` §2「provider 态投影注」项 3。
+ * **2026-10-09 清除批**：`submitChannel` 载荷去 `model` ∥ `active`（渠道单值模型退场——`defaultModel` 写入面
+ * = 视图出口 ∥ 选定写回；向导步 1 复选随实施期 fix 轮退场〔`active` 无写路 ⇒ 死控——件 ∥ 参双净删〕）。
  * 纪律：零 `node:` / 零裸包 · 逐通道回执形单源 = IPC.md §2。
  */
 import { initDict } from "./i18n.mjs"
@@ -79,6 +81,7 @@ export function createExits(deps = {}) {
   /** 渠道表单提交（单表一路）：载荷按形直取（表内 `name` = 载荷键）——空名 ⇒ 端侧形判 `invalid-shape` 零发送。
    *  形状判据 = 隐藏携带值（`providers.addShape` 渲染面）为主；类型选择现选为 `"custom"`（预设表空时兜底现选）⇒ 自定形。
    *  名称：自定形读 `name`；预设形读 `preset`（类型选择现值 = 预设名）。`proxy`：勾选 ⇒ `true`；未勾 ∥ 缺 ⇒ 直连（零键）。
+   *  **2026-10-09 清除批**：载荷去 `active` ∥ `model`（渠道单值模型退场——形 = `IPC.md` §2 `provider:save` 行）。
    *  **关·保存**（KD-75 ⑥）：弹窗体提交（成盘回执 `ok`）⇒ 宿主关（KD-68 关径 —— 切片清 + 本组面态复位 + 子确认同清）；
    *  失败径留框（失败串落框体 —— 零静默）；向导步 1 提交（无弹窗体）零动作。 */
   async function submitChannel(event) {
@@ -94,9 +97,9 @@ export function createExits(deps = {}) {
       report("providers", { reason: "invalid-shape" }, "provider:save")
       return
     }
-    const common = { active: data.get("active") !== null, ...(data.get("proxy") !== null ? { proxy: true } : {}), ...(key === "" ? {} : { key }) }
+    const common = { ...(data.get("proxy") !== null ? { proxy: true } : {}), ...(key === "" ? {} : { key }) }
     const payload = shape === "custom"
-      ? { name, shape, baseURL: String(data.get("baseURL") ?? ""), model: String(data.get("model") ?? ""), format: String(data.get("format") ?? ""), ...common }
+      ? { name, shape, baseURL: String(data.get("baseURL") ?? ""), format: String(data.get("format") ?? ""), ...common }
       : { name, shape: "preset", preset: name, ...common }
     const receipt = await ask("provider:save", payload)
     if (receipt.ok !== true) {
@@ -175,7 +178,7 @@ export function createExits(deps = {}) {
    *  `mount-settings-segments-models.mjs` ∕ `mount-settings-segments-mcp.mjs`（段出口族工厂 —— 共享项注入，本档零副本）；`formOf` 回注
    *  （单一 owner 在本档）；**#679**：`invalidateDrafts` 随注入（段族声明径 —— tools 钥存 ∕ 删钥 · env shell · MCP 增 ∕ 改）。 */
   const segments = createSegmentExits({
-    ask, store, setSettings, report, clearReport, reads: deps.reads ?? {}, slot, formOf, invalidateDrafts,
+    ask, store, setSettings, report, clearReport, reads: deps.reads ?? {}, formOf, invalidateDrafts,
   })
   // KD-77 ②：`openModal` ∥ `closeModal` 同注入（入口开径 ∥ 成功 ∥ 取消三径的弹窗开关）。
   const modelSegments = createModelsExits({ ask, store, setSettings, report, clearReport, reads: deps.reads ?? {}, openModal, closeModal })
@@ -183,7 +186,7 @@ export function createExits(deps = {}) {
    *  本档装配即合并，单一 `handlers` 表对外零改；`loadProviders` 绑定 `{ models: false }` —— 渠行面
    *  复读不重探模型面（候选面随动另路 = `onProvidersChanged`））。 */
   const providerSegments = createProviderExits({
-    ask, store, setSettings, report, clearReport, onProvidersChanged, slot, formOf, invalidateDrafts,
+    ask, store, setSettings, report, clearReport, onProvidersChanged, formOf, invalidateDrafts,
     loadProviders: () => loadProviders({ models: false }),
   })
   /** agent 段出口族（S10 ∕ S11 ∕ S14b —— 随本批按族拆出 `mount-settings-segments-agent.mjs`：本档装配

@@ -11,7 +11,7 @@
  *   ⑥ 种子四格（导入保形 ∥ 忽略 + 警告 ∥ 允许起 + 警告 ∥ 正常——`bootstrapProviderRuntime`）
  *   ⑦ 校验单源（非法/重名/env: 缺位 ⇒ 400 且库与运行时零变；不存在 id ⇒ 404）
  *   ⑧ nav.mjs 直测（组/项结构 ∥ 重定向 ∥ 角色默认 ∥ denied）+ 静态十二档（含 favicon 共十三档 ∥ 零外链 ∥ 接线 ∥ 直发）
- *   ⑨ 预设列表（20 家 ∥ 缺省展开 ∥ 响应零 apiKey 字段；预填不豁免校验）
+ *   ⑨ 预设列表（21 家 ∥ 缺省展开 ∥ 响应零 apiKey 字段；预填不豁免校验）
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -397,8 +397,8 @@ test("⑦ 校验单源：非法 ∥ 重名 ∥ env: 缺位 ⇒ 400 且库与运�
   } finally { await app.close(); await mock.close(); db.close() }
 })
 
-// ── ⑧ 导航直测 + 静态十九档 ───────────────────────────────────────────────────
-test("⑧ nav.mjs 直测（组/项结构 ∥ 重定向 ∥ 角色默认 ∥ denied）+ 静态十九档（含 favicon 共二十档 ∥ 零外链 ∥ 接线 ∥ 直发）", async () => {
+// ── ⑧ 导航直测 + 静态二十九档 ───────────────────────────────────────────────────
+test("⑧ nav.mjs 直测（组/项结构 ∥ 重定向 ∥ 角色默认 ∥ denied）+ 静态二十九档（含 favicon 共三十档 ∥ 零外链 ∥ 接线 ∥ 直发）", async () => {
   // 组/项结构：我的 3 ∥ 管理 7（弹窗批后） ∥ admin 组仅 admin；label 单源（文案挂点）
   const [me, adminGroup] = NAV.NAV_GROUPS
   assert.deepEqual(me.items.map((i) => i.path), ["/me/keys", "/me/usage", "/me/account"])
@@ -421,9 +421,9 @@ test("⑧ nav.mjs 直测（组/项结构 ∥ 重定向 ∥ 角色默认 ∥ deni
   assert.deepEqual(NAV.resolveRoute("/admin/providers", "user"), { path: "/admin/providers", denied: true })
   assert.deepEqual(NAV.resolveRoute("/admin/members", "admin"), { path: "/admin/members" })
 
-  // 静态十九档（含 favicon 共二十档）+ 零外链 + 模块接线（views.mjs 退役）
+  // 静态二十九档（含 favicon 共三十档）+ 零外链 + 模块接线（views.mjs 退役）
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual(names, ["app.mjs", "favicon.png", "i18n-en.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs"])
+  assert.deepEqual(names, ["app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs", "i18n-zh-me.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system.mjs", "views-usage.mjs"])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
     assert.ok(!/https?:\/\//.test(text), `${name} 含外部链接（内网不达——KD-SV-9）`)
@@ -452,7 +452,7 @@ test("⑧ nav.mjs 直测（组/项结构 ∥ 重定向 ∥ 角色默认 ∥ deni
 })
 
 // ── ⑨ 预设 ──────────────────────────────────────────────────────────────────
-test("⑨ 预设列表：20 家 ∥ 缺省展开 ∥ 响应零 apiKey 字段；预填不豁免校验（重名 ⇒ 400）", async () => {
+test("⑨ 预设列表：21 家 ∥ 缺省展开 ∥ 响应零 apiKey 字段；预填不豁免校验（重名 ⇒ 400）", async () => {
   const db = DB.openDatabase(":memory:")
   await makeMember(db, { username: "admin", role: "admin" })
   const app = await startApp({ db, config: configWith({ providers: [{ name: "deepseek", baseURL: "http://127.0.0.1:9/v1", apiKey: "", models: ["deepseek-flash"] }] }) })
@@ -461,15 +461,15 @@ test("⑨ 预设列表：20 家 ∥ 缺省展开 ∥ 响应零 apiKey 字段；�
     assert.equal((await get(app.base, "/api/admin/providers/presets")).status, 401) // 同族判权（只读同门）
     const res = await get(app.base, "/api/admin/providers/presets", { cookie: admin.cookie })
     assert.equal(res.status, 200)
-    assert.equal(res.json.presets.length, 20) // 全表（起步 20 家）
+    assert.equal(res.json.presets.length, 21) // 全表（起步 21 家）
     assert.ok(!res.text.includes('"apiKey"')) // 表零密钥
     for (const preset of res.json.presets) {
-      assert.ok(preset.preset && preset.name && preset.baseURL && Array.isArray(preset.models) && preset.models.length > 0, JSON.stringify(preset))
+      assert.ok(preset.preset && preset.name && preset.baseURL && Array.isArray(preset.models) && preset.models.length === 0, JSON.stringify(preset)) // 预设形 models = 空清单（2026-10-09 清除批）
     }
     const deepseek = res.json.presets.find((p) => p.preset === "deepseek") // 缺省展开（expandProviderEntry 单源）
     assert.equal(deepseek.name, "deepseek")
     assert.equal(deepseek.baseURL, "https://api.deepseek.com")
-    assert.deepEqual(deepseek.models, ["deepseek-flash"])
+    assert.deepEqual(deepseek.models, []) // 预设形 = 空清单（2026-10-09 清除批——勾选走「模型发现」）
     // 快速添加通道 = 拉表 ⇒ 预填 ⇒ POST 全字段——预填不豁免校验
     const prefilled = await call(app.base, "POST", "/api/admin/providers", { cookie: admin.cookie, body: { name: deepseek.name, baseURL: deepseek.baseURL, models: deepseek.models } })
     assert.equal(prefilled.status, 400)

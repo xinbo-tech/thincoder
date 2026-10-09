@@ -4,7 +4,8 @@
  * 三端对齐批（2026-10-07 · 台账 #1027 / #1028 / #1029 / #1031 / #1033）——设计单源 =
  * `docs/vsc/design/SETTINGS.md` §2.16：单例开合 ∥ 开框重置 ∥ 五路关（保存 ∥ 取消 ∥ 背板 ∥
  * 框内 Esc〔stopPropagation——不连带关设置面板〕∥ `closeSettings()` 同清）∥ 框实例代际
- * （在飞探果跨框零污染）∥ 字段序 = 用户填写序（名称→baseURL→格式→API Key→走 proxy→拉取→模型）。
+ * （在飞探果跨框零污染）∥ 字段序 = 用户填写序（名称→baseURL→格式→API Key→走 proxy→拉取；
+ * **`model` 输入件退场**——2026-10-09 清除批：渠道不携模型（C4）；「拉取」钮 = 渠道校验）。
  *
  * 框幕 = 独立类 `.settings-dialog-backdrop`（z 999——不入确认族共用类 `.auto-backdrop`：
  * 确认族帚扫站点零误扫）；卡 = `#prov-add-dialog` + 新类 `.settings-dialog`（z 1000）。
@@ -45,8 +46,8 @@ function paTypeChanged() {
   _els.presetInfo.style.display = "block"
   _els.customFields.style.display = "none"
   _els.customTail.style.display = "none"
-  // MODEL-SELECTION：预设行显单值默认模型（候选清单字段已退场）
-  _els.presetInfo.textContent = p ? `${p.model || t("settings.noDefaultModel")} · ${p.baseURL ?? ""}` : ""
+  // 预设信息行 = `baseURL`（2026-10-09 清除批：渠道条目不携模型——单值模型退场）
+  _els.presetInfo.textContent = p ? (p.baseURL ?? "") : ""
 }
 
 /** 建两件（框幕 + 卡）并挂 `document.body`——字段序 = 用户填写序（§2.16 ②）。 */
@@ -80,7 +81,7 @@ function buildDialog() {
   for (const p of presets) {
     const opt = document.createElement("option")
     opt.value = p.name
-    opt.textContent = `${p.name} — ${p.desc} (${p.model || ""})`
+    opt.textContent = `${p.name} — ${p.desc}`
     type.appendChild(opt)
   }
   const customOpt = document.createElement("option")
@@ -91,7 +92,7 @@ function buildDialog() {
 
   const presetInfo = document.createElement("div")
   presetInfo.id = "pa-preset-info"
-  presetInfo.className = "prov-model"
+  presetInfo.className = "prov-model" // 类名沿旧（样式复用——内容 = baseURL；2026-10-09 清除批）
 
   const customFields = document.createElement("div")
   customFields.id = "pa-custom-fields"
@@ -144,12 +145,7 @@ function buildDialog() {
   const fetchRow = document.createElement("div")
   fetchRow.className = "key-row"
   fetchRow.append(fetchBtn, status)
-  const model = document.createElement("input")
-  model.id = "pa-model"
-  model.setAttribute("list", "pa-model-candidates")
-  const candidates = document.createElement("datalist")
-  candidates.id = "pa-model-candidates"
-  customTail.append(fetchRow, field(t("settings.model"), model), candidates)
+  customTail.append(fetchRow)
 
   const saveBtn = document.createElement("button")
   saveBtn.id = "pa-save-btn"
@@ -176,7 +172,7 @@ function buildDialog() {
   )
   card.appendChild(body)
   document.body.append(backdrop, card)
-  return { backdrop, card, type, presetInfo, customFields, customTail, name, url, format, key, proxy, status, model, candidates }
+  return { backdrop, card, type, presetInfo, customFields, customTail, name, url, format, key, proxy, status }
 }
 
 /** 开框（单例：已在框 ⇒ 零动作）：建两件 + 开框重置 + 代际自增 + 初始焦点 = `#pa-type`（+50ms）。 */
@@ -185,13 +181,11 @@ export function openAddProviderDialog() {
   _addDialogEpoch += 1
   const els = buildDialog()
   _els = els
-  // 开框重置（§2.16 ①）：类型回首项 ∥ key 清空 ∥ 走 proxy 未勾 ∥ 状态行空 ∥ 模型值 + 候选清空
+  // 开框重置（§2.16 ①）：类型回首项 ∥ key 清空 ∥ 走 proxy 未勾 ∥ 状态行空
   els.type.value = els.type.options[0]?.value ?? "custom"
   els.key.value = ""
   els.proxy.checked = false
   els.status.textContent = ""
-  els.model.value = ""
-  els.candidates.replaceChildren()
   paTypeChanged()
   setTimeout(() => els.type.focus(), 50)
 }
@@ -225,9 +219,10 @@ function paFetchModels() {
   window._vscode.postMessage(payload)
 }
 
-/** 保存：两形发点（custom ∥ preset）。本地守卫（custom 形 = baseURL ∥ model 非空——序同核
- *  `customFieldsError`）：守卫拒 ⇒ 展示拒因 + `false`——不发布 ∥ 不关框（在编值保留，可即改即重存）；
- *  受理 ⇒ 发布 + 关框 + `true`（徽标按返回值门控——见保存钮接线）。不拉取可存 = #1031（手输直存）。 */
+/** 保存：两形发点（custom ∥ preset）。本地守卫（custom 形 = baseURL 非空——序同核
+ *  `customFieldsError`；2026-10-09 清除批：model 必填门随件退场——渠道不携模型）：守卫拒 ⇒
+ *  展示拒因 + `false`——不发布 ∥ 不关框（在编值保留，可即改即重存）；受理 ⇒ 发布 + 关框 + `true`
+ *  （徽标按返回值门控——见保存钮接线）。不拉取可存 = #1031（手输直存）。 */
 function paSave() {
   if (!_els) return false
   const type = _els.type.value
@@ -240,13 +235,7 @@ function paSave() {
       _els.status.style.color = "var(--red)"
       return false
     }
-    const model = _els.model.value?.trim()
-    if (!model) {
-      _els.status.textContent = t("settings.modelRequired")
-      _els.status.style.color = "var(--red)"
-      return false
-    }
-    payload.custom = { name: _els.name.value?.trim(), baseURL, model, format: _els.format.value }
+    payload.custom = { name: _els.name.value?.trim(), baseURL, format: _els.format.value }
   } else {
     payload.preset = type
   }
@@ -257,23 +246,16 @@ function paSave() {
   return true
 }
 
-/** 探果落框：代际不符 ⇒ 弃；探通 ⇒ 填候选（datalist，不自动选中）∥ 探败 ⇒ ✗ + 候选清空（键入值零清）。 */
+/** 探果落框：代际不符 ⇒ 弃；探通 ⇒ 状态行 ✓（渠道校验——不喂候选：模型件已退场）∥ 探败 ⇒ 状态行 ✗。 */
 export function updateTestProviderResult(r) {
   if (!_els || _fetchEpoch !== _addDialogEpoch) return
   const statusEl = _els.status
   if (r?.ok) {
     statusEl.textContent = t("settings.connOk", { count: r.models?.length ?? 0 })
     statusEl.style.color = "var(--green)"
-    _els.candidates.replaceChildren()
-    for (const m of r.models ?? []) {
-      const opt = document.createElement("option")
-      opt.value = m
-      _els.candidates.appendChild(opt)
-    }
   } else {
     statusEl.textContent = "✗ " + (r?.error || t("settings.connFailed"))
     statusEl.style.color = "var(--red)"
-    _els.candidates.replaceChildren()
   }
 }
 

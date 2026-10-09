@@ -12,7 +12,7 @@
  * @param {string} providerName 本回合 provider
  * @param {string|null|undefined} modelOverride 显式 per-message 模型（webview echo / 试运行）
  * @param {{provider: string, model: string|null}|null} slotRef 可运行槽复合（面板回合入口恒读）
-  * @param {string|null} baseModel 该渠道默认解析值（defaultModel 属该渠道或渠道默认单值；无 → null）
+  * @param {string|null} baseModel 该渠道解析值（defaultModel 属该渠道；无 → null——清除批：渠道单值模型退场）
  * @returns {{ runModel: string|null, trialOverride: boolean, stampProvider: string,
  *            sessionStampModel: string|null }}
  */

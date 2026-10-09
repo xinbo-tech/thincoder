@@ -2,7 +2,7 @@
  * i18n-settings.mjs — 设置面词族第四档（i18n 拆分批 `docs/batches/2026-09-29-i18n-split.md` §2 · 台账 #614
  * 顶格消解：主档 `renderer/i18n.mjs` 内容行 500 顶格 ⇒ 自有 `settings.*` 族 55 键整族出档，本档承接）。
  *
- * 键面（**63 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59；**三端对齐批（2026-10-07 · 台账 #1027–#1035 · KD-75 ②③）**：增 `settings.addProvider` ∥ `settings.addProviderTitle` ∥ `settings.providers.customChoice` 三键，净删 `settings.providers.addCustom` ∥ `.addPreset` 两键（旧双表单提交词——表单退场随退）——59 ⇒ **60**；**添加入口弹窗统一批（2026-10-07 · 台账 #1054 · KD-77 ①）**：增 `settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle` 三键（MCP 添加入口 + 表单两态标题——值逐字同 VSC 同批落地 `locales` 同名键）——60 ⇒ **63**）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
+ * 键面（**62 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59；**三端对齐批（2026-10-07 · 台账 #1027–#1035 · KD-75 ②③）**：增 `settings.addProvider` ∥ `settings.addProviderTitle` ∥ `settings.providers.customChoice` 三键，净删 `settings.providers.addCustom` ∥ `.addPreset` 两键（旧双表单提交词——表单退场随退）——59 ⇒ **60**；**添加入口弹窗统一批（2026-10-07 · 台账 #1054 · KD-77 ①）**：增 `settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle` 三键（MCP 添加入口 + 表单两态标题——值逐字同 VSC 同批落地 `locales` 同名键）——60 ⇒ **63**；**2026-10-09 清除批（实施期 fix 轮）**：净删 `settings.providers.activeToggle` 一键（向导步 1 复选退场——无消费者随实现净删）——63 ⇒ **62**）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
  * 四段名 / 两段态 / 十三失败码 / 添加入口两键 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
  * 当前标 · 自定项键（KD-75 ③）/ 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
  * 移除 · 增键 · 添加入口 + 表单两态标题（KD-77 ①）—— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）。
@@ -60,7 +60,6 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.providers.modelLabel": "Model",
     "settings.providers.formatLabel": "Format",
     "settings.providers.keyLabel": "API Key",
-    "settings.providers.activeToggle": "Set as active provider",
     "settings.providers.customChoice": "Custom (manual config)",
     "settings.providers.verify": "Verify",
     "settings.providers.verify.ok": "Verified · ${count} models",
@@ -71,7 +70,7 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.providers.remove": "Remove ${name}",
     "settings.providers.active": "Active",
     "settings.proxyRow": "proxy",
-    "settings.proxyRowTitle": "Route this provider's model requests through the proxy (needs global proxy.model on)",
+    "settings.proxyRowTitle": "Route this provider's model requests through the proxy.",
     "settings.fetchModels": "Fetch Models",
     "settings.connecting": "Connecting…",
     "settings.connOk": "✓ Connected — ${count} models",
@@ -126,7 +125,6 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.providers.modelLabel": "模型",
     "settings.providers.formatLabel": "协议格式",
     "settings.providers.keyLabel": "API Key",
-    "settings.providers.activeToggle": "设为当前渠道",
     "settings.providers.customChoice": "自定义（手动配置）",
     "settings.providers.verify": "校验",
     "settings.providers.verify.ok": "校验通过 · ${count} 个模型",
@@ -137,7 +135,7 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.providers.remove": "移除 ${name}",
     "settings.providers.active": "当前",
     "settings.proxyRow": "代理",
-    "settings.proxyRowTitle": "该 provider 的模型请求走代理（需全局 proxy.model 开启）",
+    "settings.proxyRowTitle": "该 provider 的模型请求走代理。",
     "settings.fetchModels": "拉取模型",
     "settings.connecting": "连接中…",
     "settings.connOk": "✓ 连接成功 — ${count} 个模型",

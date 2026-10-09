@@ -50,10 +50,12 @@
 
 - 字符串值支持 `env:变量名` 前缀（加载期解析；变量缺位 ⇒ 启动失败）——真实 key 可只住环境变量。例外 = `providers[].apiKey`：载入不解析（引用保形），注册表构建期解析（缺位 ⇒ 启动拒启 ∥ 保存 400）。
 - 更新源 = 环境变量 `NPM_CONFIG_REGISTRY`（可指内网镜像——npm 同名配置；自检与自装同源）；缺省 = npmjs（机制见 §8）。
-- **预设形条目**（内建 provider 预设——`preset` = 预设名）：清单 = `src/ops/presets.mjs`（起步 20 家 OpenAI 兼容上游——
+- **预设形条目**（内建 provider 预设——`preset` = 预设名）：清单 = `src/ops/presets.mjs`（起步 21 家 OpenAI 兼容上游——
   快照口径 = CLI 预设表的只读子集，核表更新后由后续版本手工同步）。
-- `{ "preset": "deepseek", "apiKey": "env:DEEPSEEK_API_KEY" }` ⇒ `name` 缺省 = 预设名、`baseURL`/`models` 缺省取预设值
-  （`models` = `[预设默认模型]`）；条目自带 `name`/`baseURL`/`models` 覆盖预设值（显式在场者胜）。
+- `{ "preset": "deepseek", "apiKey": "env:DEEPSEEK_API_KEY" }` ⇒ `name` 缺省 = 预设名、`baseURL` 缺省取预设值；
+  条目自带 `name`/`baseURL`/`models` 覆盖预设值（显式在场者胜）。
+- `models` 无预设缺省（2026-10-09 清除批：预设表零 `model` 键）——条目未自备 `models` ⇒ 空清单，
+  经控制台「模型发现」（详情弹窗「刷新候选」）勾选后保存。
 - 未知预设名 ⇒ 拒启（报错列可用名——fail-closed）。
 - 预设双消费面：① 配置种子（预设形条目——上条）；② 控制台「从预设快速添加」（`#/admin/providers`——拉预设表 ⇒ 预填 ⇒ 补 `apiKey` ⇒ 保存；写入仍走全字段校验）。
 - 对外模型标识 = `provider/model`（首斜杠切分：首段 = provider `name` ∥ 余段 = 上游模型名（可含斜杠）；

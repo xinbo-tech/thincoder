@@ -5,17 +5,14 @@
  * the caller (CLI: config.mjs loadConfig; VSC: config-io.mjs loadRaw — same rule, 双端各自
  * 独立实现——不做同步依赖).
  *
- * 目标形态 C：每渠道恰好一个默认模型（`providers[].model` 单值）+ 顶层 `defaultModel` 复合。
+ * 目标形态 C（2026-10-09 清除批：渠道单值模型退场——M7 v2）：渠道**不携模型**（`providers[].model` /
+ * `models[]` 一律删）+ 顶层 `defaultModel` 复合（新会话起点）。
  * 老形态迁移（v2）：
- * - A：`providers[].model` + `activeProvider/activeModel` → `p.model` **保留**（不再搬入 models）；
- *   `activeProvider/activeModel` → `defaultModel` 复合（`activeModel` 优先；AP 不存在/AM 空 → 首渠道回退）
- * - B：`providers[].models[]` → `p.model = defaultModel 属本渠道的模型段 ?? 现有 p.model（非空字符串）
- *   ?? models[] 首个非空字符串`，然后 `delete p.models`
- * - 混合/垃圾：非数组 `p.models` / 非字符串（空串）`p.model` → 删除（清理）
- * - 顺序：先构造/读取有效 `defaultModel` 值（含老 active* 转换），再按它给各渠道播种 `p.model`
- * - 幂等：无老字段（无 `models` / 无 active* / 无垃圾值）→ 返回 false 不动；slot 旧字段
+ * - A：`activeProvider/activeModel` → `defaultModel` 复合（`activeModel` 优先；AP 不存在/AM 空 → 首渠道回退）
+ * - B：`providers[].models[]` / `providers[].model` → 一律删除（清理）
+ * - 顺序：先构造/读取有效 `defaultModel` 值（含老 active* 转换），再清各渠道 `model` / `models` 键
+ * - 幂等：无老字段（无 `models` / 无 `model` / 无 active*）→ 返回 false 不动；slot 旧字段
  *   （会话文件内）不迁移——读侧容忍
- * - 空结果合法：渠道无模型来源 → `p.model` 不设（模型选择经 `/models` 拉取候选——M8/M9）
  *
  * ── 核内合并（CORE-UNIFICATION §2.5 #79 · CONFIG 组「取并集」）──
  * ② `migrateCore`（VS Code 旧设置 / 密钥库迁移遍——VSC 侧逐字随迁 + 依赖面收核为注入参数）：
@@ -46,25 +43,12 @@ export function migrateLegacyModelFields(raw) {
     changed = true
   }
 
-  // ── ② 渠道播种单值 `p.model` + 清 models ──
-  const dm = typeof raw.defaultModel === "string" && raw.defaultModel.trim() ? raw.defaultModel : null
-  const dmSep = dm ? dm.indexOf(":") : -1
-  const dmProvider = dmSep > 0 ? dm.slice(0, dmSep) : null
-  const dmModel = dmSep > 0 && dmSep < dm.length - 1 ? dm.slice(dmSep + 1) : null
+  // ── ② 渠道模型键清除（2026-10-09 清除批——M7 v2：渠道不携模型，`model` / `models` 一律删；
+  //    幂等 = 无键零改）──
   for (const p of providers) {
     if (!p || typeof p !== "object") continue
-    if (Array.isArray(p.models)) {
-      const next = (p.name === dmProvider && dmModel)
-        ? dmModel
-        : (typeof p.model === "string" && p.model.trim() ? p.model : seedModel(p))
-      if (next == null) delete p.model
-      else p.model = next
-      delete p.models
-      changed = true
-      continue
-    }
-    if (p.models !== undefined) { delete p.models; changed = true } // 非数组 models —— 垃圾清理
-    if (p.model !== undefined && !(typeof p.model === "string" && p.model.trim())) { delete p.model; changed = true }
+    if (p.models !== undefined) { delete p.models; changed = true }
+    if (p.model !== undefined) { delete p.model; changed = true }
   }
   return changed
 }
@@ -93,7 +77,7 @@ function seedModel(p) {
  *
  * Never overwrites an apiKey already present in config.json (the CLI may have written it first).
  * Builtin preset names missing from providers[] are created from PROVIDER_PRESETS; unknown
- * names are only created when baseURL/model metadata is recoverable.
+ * names are only created when baseURL metadata is recoverable (渠道不携模型——2026-10-09 清除批).
  */
 export async function migrateCore(deps) {
   const { secrets, flags, legacySettings, clearLegacySettings } = deps
@@ -122,8 +106,8 @@ export async function migrateCore(deps) {
         entry = presetToEntry(name)
       } else {
         const meta = legacyMeta[name]
-        if (!meta?.baseURL || !meta?.model) return // orphan key, no way to reconstruct
-        entry = { name, baseURL: meta.baseURL, model: meta.model }
+        if (!meta?.baseURL) return // orphan key, no way to reconstruct（渠道不携模型——2026-10-09 清除批：门只认 baseURL，model 零读零落）
+        entry = { name, baseURL: meta.baseURL }
         // PROVIDER.md §15 D-C4: migrate-settings is the same source — a legacy
         // settings entry carrying context (K units) rides along into config.json.
         if (meta.context != null) entry.context = meta.context

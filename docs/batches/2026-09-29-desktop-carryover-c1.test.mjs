@@ -14,6 +14,13 @@
  *   M-652e 源面扫描：失效集落点 ∕ `dropDrafts` 纯函数 ∕ 标记面（表单独携 ∕ 钥行件自携）在位。
  * 跑法（自仓库根）：`node --test .thincoder/tmp/2026-09-29-desktop-carryover-c1.test.mjs`
  * （两层深 ⇒ 与终位 `docs/batches/` 同深；暂存位 = 写门拒 `docs/batches` 直落 —— 父侧收口转正，披露见批档 §5）。
+ * **2026-10-09 清除批随正（本批面两处）**：表单 `model` 件随渠道单值模型退场 ⇒ 清空腿删该件键入 ∕ 回填两行。
+ * **余红分类（存量——非本批；父侧已记账在办。实跑 = 2 绿 ∕ 7 红；M-652d 偶发进程 OOM 崩——崩时 d ∥ e 例不达）**：① 清空 ∥ M-652b ∥ M-652c「两形在场」＝ 10-07 弹窗批（两形常显表单
+ *   退场 ⇒ 表单只在 `settingsModalTree` 弹窗、挂 `document.body`；本测试台假 DOM 无 body/modal 宿主）；
+ *   ② 收形 ∥ 取消两例「编辑态件」＝ 10-07 宿主无关读（源 = `document.querySelectorAll("[data-provider-key-input]")`；
+ *   本测试台 `querySelectorAll: () => []`）；③ M-652d ∥ M-652e **不达**：d 例令进程 OOM 崩（假 DOM × 现盘渲染链存量——
+ *   原档复跑同崩；渲染链零点本批核件）· e 例另含 10-07 单骨漂移锁（`add:custom` ∥ `add:preset` ⇒ 现盘 `add:provider`）。全量重基（改写四用例为弹窗面 + 假 DOM 补 body/modal 宿主 +
+ *   形状切换流）超随正射程——归 10-07 弹窗批存量处置。
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -466,7 +473,6 @@ test("M-652a·清空腿：渠表单提交成功 ⇒ 本形草稿作废（口令�
     assert.ok(custom !== null && preset !== null, "两形表单在场")
     custom.querySelector('[name="name"]').value = "draft-name"
     custom.querySelector('[name="baseURL"]').value = "http://draft.invalid/v1"
-    custom.querySelector('[name="model"]').value = "draft-model"
     custom.querySelector('[name="format"]').value = "anthropic"
     custom.querySelector('[name="key"]').value = "sk-typed"
     preset.querySelector('[name="key"]').value = "sk-preset-kept"
@@ -481,7 +487,6 @@ test("M-652a·清空腿：渠表单提交成功 ⇒ 本形草稿作废（口令�
     assert.ok(custom2 !== null, "提交后自定形仍在场（重建）")
     assert.equal(custom2.querySelector('[name="key"]').value, "", "口令件清空（旧值零留驻 —— 零重提）")
     assert.equal(custom2.querySelector('[name="baseURL"]').value, "", "非口令件同作废（该表单草稿一次性）")
-    assert.equal(custom2.querySelector('[name="model"]').value, "", "model 件回模型新值")
     assert.equal(custom2.querySelector('[name="name"]').value, "", "name 件回模型新值")
     assert.equal(custom2.querySelector('[name="format"]').value, "openai", "format 回模型缺省首项")
 

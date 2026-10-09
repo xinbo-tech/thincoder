@@ -8,7 +8,7 @@
  * `thincoder-vscode/webview/settings-providers.js:178-193`）：
  *  ① **两行卡**（`[data-provider]` 行根纵排）：**主行**（`.settings-row-main`）= 名 + 钥面（masked ∥ 未设词）+
  *     当前标 + 动作簇（修改 ∥ ✕ 删钥 ∥ 校验 ∥ 移除名 —— 四件全保留、序恒定 = 现盘序）；**副行**（`.settings-row-sub`）
- *     = `模型 · baseURL`（串形照 VSC —— 缺段不落空分隔符）+ 不可用标 + 行尾代理开关；**第三行**（条件）=
+ *     = `baseURL`（2026-10-09 清除批：渠道条目不携模型——原 `模型 · baseURL` 两段式收为单段）+ 不可用标 + 行尾代理开关；**第三行**（条件）=
  *     不可用原因句（`!hostBusy` 时 —— S3 分档保持；锚 `[data-unavailable-reason]`）。
  *  ② **编辑态**（钥行编辑中，`deps.edit` = 本行名）= 主行换形：名 + 钥面 + 输入（伸缩）+ 存 ∥ 消；
  *     代理 ∥ 移除 ∥ 校验暂撤（取消即回 —— 沿既有 `providerRowNode` 换形；输入种子 = `deps.keyDraft`）。
@@ -58,11 +58,11 @@ function rowButton(action, name, word, aria, handler) {
   }
 }
 
-/** 副行串（D37 项 2）：`模型 · baseURL` 串形（照 VSC `${model} · ${baseURL}` —— 缺段不落空分隔符）；
- *  两段皆空 ⇒ `null`（零节点 —— 禁假造）。 */
+/** 副行串（D37 项 2 · 2026-10-09 清除批）：`baseURL` 单段（渠道条目不携模型——原 `模型 · baseURL` 两段式收为单段）；
+ *  空 ⇒ `null`（零节点 —— 禁假造）。 */
 function subLineWord(row) {
-  const parts = [row?.model, row?.baseURL].filter((value) => typeof value === "string" && value !== "")
-  return parts.length > 0 ? parts.join(" · ") : null
+  const baseURL = typeof row?.baseURL === "string" && row.baseURL !== "" ? row.baseURL : null
+  return baseURL
 }
 
 /** 副行节点：串（省略中段）+ 不可用标 + 行尾代理开关（编辑态由调用面抽去代理件；三段皆空 ⇒ 零节点）。
@@ -200,12 +200,11 @@ export function providersBody(section, handlers, deps) {
 }
 
 /** 添加弹窗体（KD-75 ①｜体唯一内容面——失败串 ∥ 段态词归宿主体装配）：单表（`channelFormTree`）。
- *  三源皆住 `providers` 切片：形状 = `addShape`（选中回环）· 暂存值 = `draft`（探果重挂回填）· 候选 = `probe`
- *  （探通才有候选 —— 零假造）；`probe` 经 `probeFace` 出词（弹窗面与渠行段面同形）。 */
+ *  三源皆住 `providers` 切片：形状 = `addShape`（选中回环）· 暂存值 = `draft`（探果重挂回填）· 探果 = `probe`
+ *  （`probeFace` 出词——弹窗面与渠行段面同形；候选 `datalist` 随 2026-10-09 清除批退场 ⇒ 探果不再入表单）。 */
 export function providerAddBody(section, handlers, deps) {
-  const candidates = section?.probe?.state === "ok" ? listOf(section.probe.models) : []
   return [deps.channelForm({
     shape: section?.addShape, presets: section?.presets, formats: deps.formats,
-    probe: probeFace(section?.probe ?? null, deps), draft: section?.draft ?? null, modelCandidates: candidates,
+    probe: probeFace(section?.probe ?? null, deps), draft: section?.draft ?? null,
   }, handlers)]
 }

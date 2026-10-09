@@ -144,13 +144,11 @@ function guardFlagOf(state) {
 }
 
 /** advisor 推理档**归属模型**（S11 收正 · 顾问评审 🟡2——写面 ∕ 候选面同源同序；对位核 `resolveAdvisorProvider`
- *  `thincoder-core/advisor/run.mjs:26-56`「cfg.model > 渠道 model > 主 provider model」）：
- *  `advisor.model` ⇒ 该值；否则 advisor 渠条目默认模型；再缺 ⇒ 主模型段（`defaultModel`）；无 ⇒ `null`。 */
+ *  `thincoder-core/advisor/run.mjs:26-56`「cfg.model > 父解析模型单档」——**2026-10-09 清除批**：原「渠道 model」腿
+ *  随渠道单值模型退场）：`advisor.model` ⇒ 该值；再缺 ⇒ 主模型段（`defaultModel`）；无 ⇒ `null`。 */
 function advisorTargetOf(settings) {
   const advisor = settings.models?.advisor ?? {}
-  const provider = str(advisor.provider)
-  const channelModel = provider === null ? null : str(listOf(settings.providers?.providers).find((p) => p?.name === provider)?.model)
-  return str(advisor.model) ?? channelModel ?? modelSegmentOf(settings.model?.current)
+  return str(advisor.model) ?? modelSegmentOf(settings.model?.current)
 }
 
 /** 面模型（纯 · 零 DOM）：开合 + 失败面 + 七段（各段现态直读 —— 渲染面零推导）。 */

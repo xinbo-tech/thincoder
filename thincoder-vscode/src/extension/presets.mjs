@@ -3,9 +3,9 @@
  * provider/config 访问层——核无对位件的端侧读面逐字迁入本档）。
  *
  * Single source of truth is the shared ~/.thincoder/config.json (CLI format:
- * providers[] with a single `model` default per channel + top-level defaultModel composite —
- * MODEL-SELECTION：渠道单值 = 新装种子/槽空兜底/显示回退；provider.model = 运行时解析值；
- * 候选面 = 运行期 `/models` 拉取（非配置字段））。
+ * providers[] + top-level defaultModel composite；渠道条目不携模型——2026-10-09 清除批：单值模型退场）：
+ * MODEL-SELECTION：provider.model = 运行时解析值（`defaultModel` 属渠段 ∥ null）；
+ * 候选面 = 运行期 `/models` 拉取（非配置字段）。
  * 预设表 = 核单源 `@thincoder/core/config.mjs`（PROVIDER_PRESETS——#129 取一侧）。
  *
  * W16 迁入的端侧面（核无对位件——CORE-UNIFICATION §2.5 #177「UI 壳按端注入」/ #130
@@ -103,8 +103,8 @@ export function resolveKey(entry) {
 /**
  * Runtime model for an entry——#841 核转口（单源 = `@thincoder/core/model-ref.mjs`
  * `resolveChannelModel`——接入面自持解析退场）：① `defaultModel` 复合属本渠道 → 其模型段；
- * ② 渠道默认单值 `entry.model`；③ null。
- *（不再静默回退 models[0]——候选清单字段已退场；空值合法——准入/候选经 /models 拉取）。
+ * ② null（2026-10-09 清除批：渠道单值模型退场——原第二档 `entry.model` 无源可读）。
+ *（不静默回退 models[0]——候选清单字段已退场；空值合法——准入/候选经 /models 拉取）。
  */
 export function resolveDefaultModel(entry, raw) {
   return resolveChannelModel(entry, raw?.defaultModel ?? null)
@@ -128,10 +128,10 @@ export function providerFromConfig(name) {
   }
   if (provider.baseURL) provider.baseURL = provider.baseURL.replace(/\/+$/, "")
 
-  // Proxy: per-provider `proxy: true` AND global config.proxy.model === true (CLI injectProxy parity).
-  // Default model requests go direct — proxy.model is opt-in.
+  // Proxy: per-provider `proxy: true` AND `proxy.uri` present (CLI injectProxy parity) — 逐渠独立,
+  // no global gate (2026-10-08). Default model requests go direct — the per-provider flag is opt-in.
   const proxyCfg = normalizeProxy(raw.proxy)
-  if (target.proxy === true && proxyCfg?.uri && proxyCfg.model === true) {
+  if (target.proxy === true && proxyCfg?.uri) {
     provider.proxyUri = proxyCfg.uri
   }
   return provider

@@ -6,12 +6,12 @@
  * 消费面 = VSC `image-handler.mjs`（已改指本档）· 桌面 `src/main/attachments.mjs`
  * （降级适配器缺省 = 本档 —— `visionReader` 缝的核默认实现）。
  *
- * `findVisionChannel`（纯函数）：渠道表 ⇒ 视觉读图渠道 —— 「优先同名（当前主）渠道的视觉默认模型，
- * else 全渠道首个视觉默认模型者」；判据 = `specForModel(p.model).multimodal`
- * （与 `read_image` 注册门 ∕ `isNonVisionModel` 同源）。
+ * `findVisionChannel`（纯函数）：渠道表 ⇒ 视觉读图渠道 —— 判定源随 2026-10-09 清除批退场（渠道不携
+ * 模型——R3 零读写）；判定源重定在途（台账）；现行为恒 `null` ⇒ 消费方走既有「无视觉渠道」可读
+ * 报错径（F-IDG-2——不静默丢图）。
  *
  * `runVisionReader`：一次性 depth-1 只读 explore 子代理读图返回文本描述。
- *  渠道 = 视觉渠道（`resolveProviders()` 现读）；provider = 核 `resolveChildProvider`（`<渠道>:<模型>`）；
+ *  渠道 = 视觉渠道（`resolveProviders()` 现读；`findVisionChannel` 判源退场 ⇒ 现恒无渠道）；provider = 核 `resolveChildProvider`（`<渠道>:<模型>`）；
  *  工具 = 按**该渠道模型**装配的只读族（`read_image` 随 multimodal 注册 —— 主模型非视觉时其工具表
  *  本无该件，故按子代理模型重装，不沿用主代理工具表）；`config ∕ memory` = 主代理同源。
  *  失败径全 `null`（原样兜底，不静默丢）：无渠道 ∕ 渠道未知 ∕ 渠道无 key（spawn 期失败回落）∕
@@ -20,26 +20,19 @@
  *  W8 契约②（2026-09-29 断链）：`agent.mjs` ∕ `agent-tools/subagent-async.mjs` 静态链达 `node:sqlite`
  *  （`agent.mjs` → `agent/setup.mjs` → `memory.mjs` → `memory/schema.mjs`）⇒ 两端一律**函数体内动态 import**
  *  （约定源 = `ledger.mjs:16`；实例 = `tools/index.mjs:63`）；本档静态边只留闭包净件（`config-io.mjs` ∕
- *  `model-specs.mjs` ∕ `tools/index.mjs`）。
+ *  `tools/index.mjs`）。
  */
 import { resolveProviders } from "./config-io.mjs"
-import { specForModel } from "./model-specs.mjs"
 import { assembleBuiltinTools } from "./tools/index.mjs"
 
 /** 读图墙钟上限（VSC `image-handler.mjs:70` 同值——一次性子代理的成功径上限）。 */
 export const VISION_READ_TIMEOUT_MS = 60_000
 
-/** 找可跑视觉读图的渠道：`{ provider, model }` ∥ `null`——优先同名（当前主）渠道的视觉默认模型，
- *  else 全渠道首个视觉默认模型者（"优先同名渠道视觉模型 → 首视觉渠道"）。 */
+/** 找可跑视觉读图的渠道：`{ provider, model }` ∥ `null`。
+ *  判定源随 2026-10-09 清除批退场（渠道不携模型——R3 零读写）；判定源重定在途（台账）。
+ *  现行为恒 `null` ⇒ 消费方走既有「无视觉渠道」可读报错径（F-IDG-2——不静默丢图）。 */
 export function findVisionChannel(providers, currentName = "") {
-  const first = []
-  for (const p of providers ?? []) {
-    const model = typeof p?.model === "string" && p.model && specForModel(p.model).multimodal ? p.model : ""
-    if (!model) continue
-    if (p.name === currentName) return { provider: p.name, model }
-    first.push({ provider: p.name, model })
-  }
-  return first[0] ?? null
+  return null
 }
 
 /** 降级读图跑者（缝契约 = `visionReader({ paths, signal }) ⇒ { ok: true, description }` ∥ `null`

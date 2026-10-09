@@ -141,7 +141,7 @@ const warnedContext = new Set()
 /**
  * Resolve providers list + active name from disk（VSC `config-io.mjs` 逐字随迁）。BaseURL
  * trailing slashes normalized. `activeProvider` 语义 = config.defaultModel 的渠道；缺失/失效
- * → 回退首 provider。渠道单值 `model` 归一：非字符串/空串删除。
+ * → 回退首 provider。渠道单值 `model` 一律删除（2026-10-09 清除批——渠道不携模型，零回落）。
  */
 export function resolveProviders() {
   const raw = loadRaw()
@@ -150,8 +150,8 @@ export function resolveProviders() {
     : []
   for (const p of providers) {
     if (typeof p.baseURL === "string") p.baseURL = p.baseURL.replace(/\/+$/, "")
-    if (typeof p.model === "string" && p.model.trim()) p.model = p.model.trim()
-    else delete p.model
+    // 2026-10-09 清除批（PROVIDER.md §6.16 M3）：渠道不携模型——一律删，不落任何回退
+    delete p.model
     // PROVIDER.md §15 D-C1: providers[].context must be a positive integer (K units).
     if (p.context != null) {
       const n = Number(p.context)
@@ -218,8 +218,9 @@ export function removeProviderKeyFromConfig(name) {
 
 const FORMATS = ["openai", "anthropic", "google"]
 
-/** 新增渠道。payload: { preset?: name, custom?: { name, baseURL, model, format }, key?, proxy? }
+/** 新增渠道。payload: { preset?: name, custom?: { name, baseURL, format }, key?, proxy? }
  *  `proxy === true` ⇒ 同批落 `proxy: true`（缺 ∥ 非真 ⇒ 零键——与行面 `handleSetProviderProxy` 同判据）。
+ *  2026-10-09 清除批：custom 不携 `model`——必填判 ∥ 落键双退（渠道不携模型——R3）。
  *  返回错误串或 null。 */
 export function addProviderEntry({ preset, custom, key, proxy } = {}) {
   let providers
@@ -241,25 +242,25 @@ export function addProviderEntry({ preset, custom, key, proxy } = {}) {
     if (existing.has(name) || PROVIDER_PRESETS[name]) return `Name "${name}" is already in use`
     const baseURL = (custom.baseURL || "").trim().replace(/\/+$/, "")
     if (!baseURL) return "Base URL is required"
-    const model = (custom.model || "").trim()
-    if (!model) return "Model is required"
     const format = (custom.format || "openai").trim()
     if (!FORMATS.includes(format)) return `Unknown API format: ${format} (expected ${FORMATS.join("/")})`
-    entry = { name, baseURL, model } // MODEL-SELECTION：渠道单值默认模型（候选清单字段已退场）
+    entry = { name, baseURL } // 2026-10-09 清除批：渠道不携模型——单值 model 双退（R3 零读写）
     if (format !== "openai") entry.format = format
   } else {
     return "Add provider needs a preset or a custom config"
   }
 
-  // #1027（三端对齐批）：走 proxy 旗——仅真值落键（运行期 = 逐渠 `proxy: true` ∧ 全局 `proxy.model`）
+  // #1027（三端对齐批）：走 proxy 旗——仅真值落键（运行期 = 逐渠 `proxy: true` ∧ 代理 `uri` 在案——无全局闸；2026-10-08）
   if (proxy === true) entry.proxy = true
 
-  const r = persistRaw((raw) => { (raw.providers ??= []).push(entry) })
-  const err = conflictError(r)
-  if (err) return err // F5b：config 被并发方改过——放弃 + 提示重试（决策① A）
+  // #1062（PROVIDER.md §6.23）：落条与置钥合为**一次**写——单写原子（不被两段写撕开 ⇒ 半状态
+  // 不可达）；F5b 冲突 ⇒ 提示串且零落盘（条目 ∥ 钥俱不落）。
   const k = (key || "").trim()
-  if (k) setProviderKey(entry.name, k)
-  return null
+  const r = persistRaw((raw) => {
+    (raw.providers ??= []).push(entry)
+    if (k) entry.apiKey = k
+  })
+  return conflictError(r)
 }
 
 /** 移除渠道。激活渠道受保护（CLI parity）。返回错误串或 null。 */

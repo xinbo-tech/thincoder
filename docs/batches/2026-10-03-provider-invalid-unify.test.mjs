@@ -4,12 +4,14 @@
  *   node --test docs/batches/2026-10-03-provider-invalid-unify.test.mjs
  *
  * 腿（批档 §2 验收对照 :104-113 + 修正块 :171-200 权威读法；矩阵 S1–S10 = :120-130 + S10 = 修正块 :179）：
- *   T1  核回退序三步逐档 + 模型面四步 + `resolveChannelModel` 单值面（纯函数直读）
+ *   T1  核回退序三步逐档 + 模型面三步 + `resolveChannelModel` 面（纯函数直读）
  *   T2  状态分界矩阵 S1–S10（真夹具 + `loadConfig()` 实读——config 级三键逐行；S9 单列口径）
  *   T3  断言 C 明示必达（CLI 腿：TUI 三态分流 + 负向锁 + 结构不全径；headless 腿 = 源码判据）
  *   T4  断言 A 解析一致（两腿：config 级只比 `state`；运行面 = 三端同喂同一假槽逐字段）
  *   T5  断言 B 单源（源码判据）+ VSC 回归对拍 S1/S2/S6（可用性不得降）
  * 三端腿中 VSC/桌面面由 B/C 单实现——A 单提交时相应断言按现盘读（未落 ⇒ 预期红；报明，勿删）。
+ * 2026-10-09 清除批随正：渠道单值模型退场——夹具去单值（渠条目不携 `model`）；矩阵/断言模型面随正
+ * （渠道单值零参与；`resolveChannelModel` ②档 = `null`）。
  * 纪律：只读面 ∥ 行为断言（真核件优先——桩只在「非射程面」）；⌛ 面（真机读数）归父侧闭合。
  */
 import test from "node:test"
@@ -52,26 +54,27 @@ const cfgIoVsc = await mod("thincoder-vscode/node_modules/@thincoder/core/config
 const cfgIoDesk = await mod("thincoder-desktop/node_modules/@thincoder/core/config-io.mjs")
 const coreCfgDesk = await mod("thincoder-desktop/node_modules/@thincoder/core/config.mjs")
 
-// ── 夹具（设计 §2 :118-130 真核口径：deepseek ∥ kimi 双渠 + 无 key 渠 + 无单值模型渠）──
-const DS = { name: "deepseek", baseURL: "https://api.deepseek.com/v1", model: "deepseek-flash", apiKey: "sk-ds" }
-const KM = { name: "kimi", baseURL: "https://api.moonshot.cn/v1", model: "kimi-k3", apiKey: "sk-km" }
-const NK = { name: "nokey", baseURL: "https://api.nokey.example/v1", model: "nk-1" } // 无 apiKey
-const SOLO = { name: "solo", baseURL: "https://api.solo.example/v1", apiKey: "sk-solo" } // 无单值模型
+// ── 夹具（设计 §2 :118-130 真核口径：deepseek ∥ kimi 双渠 + 无 key 渠；渠道不携模型——
+//    2026-10-09 清除批：`providers[].model` 退场，模型面单源 = `defaultModel` ∥ 槽）──
+const DS = { name: "deepseek", baseURL: "https://api.deepseek.com/v1", apiKey: "sk-ds" }
+const KM = { name: "kimi", baseURL: "https://api.moonshot.cn/v1", apiKey: "sk-km" }
+const NK = { name: "nokey", baseURL: "https://api.nokey.example/v1" } // 无 apiKey
+const SOLO = { name: "solo", baseURL: "https://api.solo.example/v1", apiKey: "sk-solo" }
 
-/** 三端同喂的同一假槽（S9 行口径 = 槽渠道持 key ∧ 无槽模型 ⇒ 模型面回退链）。 */
+/** 三端同喂的同一假槽（S9 行口径 = 槽渠道持 key ∧ 无槽模型 ⇒ 模型面链：dm 属渠段 ∥ `null`）。 */
 const FAKE_SLOT = { provider: "deepseek", model: null }
 
 /** 矩阵 S1–S10（`cfg` = config 级 / `run` = 运行面——同喂 `FAKE_SLOT`）。 */
 const MATRIX = [
-  { id: "S1", config: { providers: [DS] }, cfg: { state: "fallback", channel: "deepseek", model: "deepseek-flash" }, run: { state: "fallback", source: "slot", channel: "deepseek", model: "deepseek-flash" } },
-  { id: "S2", config: { providers: [DS], defaultModel: "deepseek:" }, cfg: { state: "fallback", channel: "deepseek", model: "deepseek-flash" }, run: { state: "fallback", source: "slot", channel: "deepseek", model: "deepseek-flash" } },
+  { id: "S1", config: { providers: [DS] }, cfg: { state: "fallback", channel: "deepseek", model: null }, run: { state: "fallback", source: "slot", channel: "deepseek", model: null } },
+  { id: "S2", config: { providers: [DS], defaultModel: "deepseek:" }, cfg: { state: "fallback", channel: "deepseek", model: null }, run: { state: "fallback", source: "slot", channel: "deepseek", model: null } },
   { id: "S3", config: { providers: [DS], defaultModel: "deepseek:deepseek-v4-pro" }, cfg: { state: "ok", channel: "deepseek", model: "deepseek-v4-pro" }, run: { state: "ok", source: "slot", channel: "deepseek", model: "deepseek-v4-pro" } },
   { id: "S4", config: { providers: [] }, cfg: { state: "invalid", channel: null, model: null }, run: { state: "invalid", source: null, channel: null, model: null } },
   { id: "S5", config: { providers: [NK] }, cfg: { state: "invalid", channel: null, model: null }, run: { state: "invalid", source: null, channel: null, model: null } },
-  { id: "S6", config: { providers: [DS, KM], defaultModel: "kimi:kimi-k3" }, cfg: { state: "ok", channel: "kimi", model: "kimi-k3" }, run: { state: "ok", source: "slot", channel: "deepseek", model: "deepseek-flash" } },
-  { id: "S7", config: { providers: [DS, KM], defaultModel: "nope:x" }, cfg: { state: "fallback", channel: "deepseek", model: "deepseek-flash" }, run: { state: "fallback", source: "slot", channel: "deepseek", model: "deepseek-flash" } },
-  { id: "S8", config: { providers: [NK, KM], defaultModel: "nokey:x" }, cfg: { state: "fallback", channel: "kimi", model: "kimi-k3" }, run: { state: "fallback", source: "registry", channel: "kimi", model: "kimi-k3" } },
-  { id: "S9", config: { providers: [DS, KM], defaultModel: "kimi:kimi-k3" }, slotRow: true, cfg: { state: "ok", channel: "kimi", model: "kimi-k3" }, run: { state: "ok", source: "slot", channel: "deepseek", model: "deepseek-flash" } },
+  { id: "S6", config: { providers: [DS, KM], defaultModel: "kimi:kimi-k3" }, cfg: { state: "ok", channel: "kimi", model: "kimi-k3" }, run: { state: "ok", source: "slot", channel: "deepseek", model: null } },
+  { id: "S7", config: { providers: [DS, KM], defaultModel: "nope:x" }, cfg: { state: "fallback", channel: "deepseek", model: null }, run: { state: "fallback", source: "slot", channel: "deepseek", model: null } },
+  { id: "S8", config: { providers: [NK, KM], defaultModel: "nokey:x" }, cfg: { state: "fallback", channel: "kimi", model: null }, run: { state: "fallback", source: "registry", channel: "kimi", model: null } },
+  { id: "S9", config: { providers: [DS, KM], defaultModel: "kimi:kimi-k3" }, slotRow: true, cfg: { state: "ok", channel: "kimi", model: "kimi-k3" }, run: { state: "ok", source: "slot", channel: "deepseek", model: null } },
   { id: "S10", config: { providers: [SOLO] }, cfg: { state: "fallback", channel: "solo", model: null }, run: { state: "fallback", source: "registry", channel: "solo", model: null } },
 ]
 
@@ -109,14 +112,14 @@ const LIGHT_DEPS = {
   author: () => "test",
 }
 
-// ─── T1 · 核回退序三步逐档 + 模型面四步 + resolveChannelModel ────────────────
+// ─── T1 · 核回退序三步逐档 + 模型面三步 + resolveChannelModel ────────────────
 
-test("T1 核回退序三步逐档 + 模型面四步 + resolveChannelModel（纯函数 · 零 I/O）", () => {
+test("T1 核回退序三步逐档 + 模型面三步 + resolveChannelModel（纯函数 · 零 I/O）", () => {
   const plan = (providers, defaultModel, slot) => coreRef.resolveProviderPlan({ providers, defaultModel, slot })
 
-  // ① 会话槽渠道（在册 ∧ 持 key）——带槽模型 ⇒ 模型面①；无槽模型 ⇒ 回退链
+  // ① 会话槽渠道（在册 ∧ 持 key）——带槽模型 ⇒ 模型面①；无槽模型 ⇒ 模型面②（dm 属渠段 ∥ `null`——渠道单值退场）
   assert.deepEqual(proj(plan([DS, KM], "kimi:kimi-k3", FAKE_SLOT)),
-    { state: "ok", source: "slot", channel: "deepseek", model: "deepseek-flash", "provider.name": "deepseek", "provider.model": "deepseek-flash" }, "槽渠道入选（source=slot）")
+    { state: "ok", source: "slot", channel: "deepseek", model: null, "provider.name": "deepseek", "provider.model": null }, "槽渠道入选（source=slot——渠道单值退场 ⇒ 模型面 null）")
   assert.equal(plan([DS, KM], "kimi:kimi-k3", { provider: "deepseek", model: "ds-slot" }).model, "ds-slot", "模型面①：槽带模型 ⇒ 槽模型")
   // ① 跳过两档（KD-841-2 key 门 + 在册门）
   assert.equal(plan([NK, KM], null, { provider: "nokey", model: "x" }).channel, "kimi", "槽无 key ⇒ 跳过（不钉进运行态）")
@@ -141,15 +144,16 @@ test("T1 核回退序三步逐档 + 模型面四步 + resolveChannelModel（纯�
   assert.match(plan([NK, KM], "nokey:x", null).reason, /无 API 密钥——已回退到可用渠道/, "fallback reason（渠道无 key——新档）")
   assert.equal(plan([DS], "deepseek:deepseek-v4-pro", null).reason, null, "ok ⇒ reason null")
 
-  // 模型面 ②③④（② defaultModel 属入选渠道 ⇒ 其模型段）
+  // 模型面 ①②③（② defaultModel 属入选渠道 ⇒ 其模型段；③ 无 ⇒ null）
   assert.equal(plan([DS], "deepseek:m2", null).model, "m2", "模型面②：dm 属入选渠道")
-  assert.equal(plan([DS], "kimi:k1", null).model, "deepseek-flash", "模型面②不属（他渠）⇒ ③ 渠道单值")
-  assert.equal(plan([SOLO], null, null).model, null, "模型面④：无 ⇒ null（合法）")
+  assert.equal(plan([DS], "kimi:k1", null).model, null, "模型面②不属（他渠 ∕ 不可解析）⇒ null（渠道单值退场——不回退）")
+  assert.equal(plan([DS, KM], "kimi:k1", { provider: "deepseek", model: null }).model, null, "模型面②：dm 属他渠 ∧ 槽无模型 ⇒ null（零回落）")
+  assert.equal(plan([SOLO], null, null).model, null, "模型面③：无 ⇒ null（合法）")
 
-  // resolveChannelModel 单值面（VSC 转口面——逐行同判 VSC 原 `resolveDefaultModel`）
+  // resolveChannelModel 面（VSC 转口面——① dm 属本渠 ⇒ 模型段；② 其余 ⇒ null）
   assert.equal(coreRef.resolveChannelModel(DS, "deepseek:x"), "x", "转口①：dm 属本渠 ⇒ 模型段")
-  assert.equal(coreRef.resolveChannelModel(DS, "kimi:k3"), "deepseek-flash", "转口②：他渠 ⇒ 渠道单值")
-  assert.equal(coreRef.resolveChannelModel(DS, "deepseek:"), "deepseek-flash", "转口：空模型段 ⇒ 渠道单值")
+  assert.equal(coreRef.resolveChannelModel(DS, "kimi:k3"), null, "转口②：他渠 ⇒ null（不回退渠道单值）")
+  assert.equal(coreRef.resolveChannelModel(DS, "deepseek:"), null, "转口：空模型段 ⇒ null（不回退渠道单值）")
   assert.equal(coreRef.resolveChannelModel(SOLO, null), null, "转口③：无 ⇒ null")
 })
 
@@ -290,8 +294,8 @@ test("T5 断言 B 单源（源码判据）+ VSC 回归对拍 S1/S2/S6（可用�
   // ① VSC 回归对拍（S1/S2/S6 新读数 == 设计矩阵「现 · VSC」列——渠道+key 已配 ⇒ 三端仍直接可发）
   try {
     for (const row of [
-      { id: "S1", config: { providers: [DS] }, was: ["deepseek", "deepseek-flash"] },
-      { id: "S2", config: { providers: [DS], defaultModel: "deepseek:" }, was: ["deepseek", "deepseek-flash"] },
+      { id: "S1", config: { providers: [DS] }, was: ["deepseek", null] },
+      { id: "S2", config: { providers: [DS], defaultModel: "deepseek:" }, was: ["deepseek", null] },
       { id: "S6", config: { providers: [DS, KM], defaultModel: "kimi:kimi-k3" }, was: ["kimi", "kimi-k3"] },
     ]) {
       withConfig(row.config)

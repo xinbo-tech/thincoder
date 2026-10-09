@@ -6,8 +6,8 @@
  *          `checked` ∕ 焦点 ∕ 光标区间 ∕ 根 `scrollTop` 保真（设置树 + 向导树两径 —— 两树一闸）。
  *   M-604b 负向锁：非 `[data-draft]` 控件（MCP 类型 `select` ∕ `proxy.uri`）⇒ 重建后取新模型值（旧 DOM 值零回写）。
  *   M-604c 捕获域：申报域逐控件携 `[data-draft]`（树面断言 + 源面扫描逐档计数）；写触发控件不在域。
- * 跑法（自仓库根）：`node --test .thincoder/tmp/2026-09-29-desktop-rebuild-fidelity-M604.test.mjs`
- * （两层深 ⇒ 与终位 `docs/batches/` 同深；暂存位披露见批档 §5）。
+ * 跑法（自仓库根）：`node --test docs/batches/2026-09-29-desktop-rebuild-fidelity-M604.test.mjs`
+ * （现家位 = `docs/batches/`；暂存位历史披露见批档 `docs/batches/2026-09-29-desktop-rebuild-fidelity.md` §5）。
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -265,59 +265,56 @@ const WIZARD_SEED = {
 
 // ─── M-604a 保真 ───────────────────────────────────────────────────────────────
 
-// 【#1054 轮注 —— 本腿遗留红（他批面）】本腿前置依赖**页槽内**渠道两形表单（`[data-form="preset" ∥ "custom"]`）。
-// 三端对齐批 #1027–#1029 已将两形表单迁入 `providerAdd` 弹窗体且**单形渲染**（类型切换换骨 —— `providers.addShape`）⇒
-// 原「两形同刷 + 根滚位」矩阵需重设计（非容器换名可了）。本批未改本腿语义（越「MCP 随正」射程）——留红待那侧收口；
-// 弹窗体接线脚手架（`mountFace` 回 `face` ∥ `doc.body` ∥ FakeNode `replaceWith`）已就位，收口时可直接复用。
-test("M-604a·设置树两轮重绘：值 ∕ checked ∕ 焦点 ∕ 光标区间 ∕ 根 scrollTop 保真", async () => {
+// 【#1059 重锚注 —— 观测根按现拓扑改位（断言面零删 · 对照表见批档 §2.3）】三端对齐批 #1027–#1029 起渠道两形表单入
+// `providerAdd` 弹窗体且**单形渲染**（类型切换换骨 —— `providers.addShape`）⇒ 本腿改断「两宿主两轮重绘保真」：
+// 弹窗体富形（`[data-form-shape="custom"]` —— 第二闸卡根）六值面 + 焦点 ∥ 光标 + 卡根滚位；页槽两件（工具 key ∥
+// env shell）+ 槽根滚位同轮；覆盖缺口去处（两形同刷矩阵 ∥ nth 消歧 ∥ 跨形切换 —— 登记）见批档 §2.3 缺口 1–3。
+test("M-604a·两宿主两轮重绘（弹窗体富形 ∥ 页槽）：值 ∕ checked ∕ 焦点 ∕ 光标区间 ∕ 两根 scrollTop 保真", async () => {
   installFakeDom()
   try {
-    const { store, slot, patchSettings } = await mountFace(SETTINGS_SEED)
+    const { store, slot, patchSettings, face } = await mountFace(SETTINGS_SEED)
+    const { settingsModalNode } = await import(at("thincoder-desktop/renderer/settings-modal.mjs"))
     assert.equal(slot.getAttribute("data-state"), "open", "设置树占槽（属性面应收进槽 + 开态）")
-    const preset = control(slot, '[data-form="preset"]')
-    const custom = control(slot, '[data-form="custom"]')
-    const mcpForm = control(slot, '[data-form="mcp"]')
+    face.openSettingsModal("providerAdd") // KD-75 ①：渠道表单入弹窗体（设置弹窗不传 `activeDefault` ⇒ 零 active 件）
+    const held = store.get().settings.providers
+    store.set(patchSettings(store.get(), { providers: { ...held, state: "ready", addShape: "custom" } })) // 确定性落切片（开径触发 `loadProviders` 挂起）
+    const custom = control(settingsModalNode(), '[data-form-shape="custom"]')
     const nameInput = control(custom, '[name="name"]')
+    const toolsInput = control(slot, '[data-key-input="embedding"]')
 
-    // 首轮：填值 + 勾选 + 置焦 + 设光标（申报域逐面 —— 渠道两形 ∕ MCP 字段 ∕ 工具 key ∕ env shell）
+    // 首轮：填值 + 勾选 + 置焦 + 设光标（申报域逐面 —— 弹窗体富形五件 ∕ 页槽 工具 key + env shell）
     control(custom, '[name="baseURL"]').value = "http://draft.invalid/v1"
-    control(custom, '[name="model"]').value = "draft-model"
-    control(custom, '[name="format"]').value = "anthropic"
-    control(custom, '[name="active"]').checked = true
+     control(custom, '[name="format"]').value = "anthropic"
+    control(custom, '[name="proxy"]').checked = true
     control(custom, '[name="key"]').value = "sk-custom-draft"
     nameInput.value = "draft-name"
-    control(preset, '[name="key"]').value = "sk-preset-draft"
-    control(preset, '[name="name"]').value = "preset-b"
-    control(mcpForm, '[name="command"]').value = "npx draft-cmd"
     control(slot, '[data-key-input="embedding"]').value = "sk-tools-draft"
     control(slot, '[name="shell.path"]').value = "C:\\draft\\shell"
     nameInput.focus()
     nameInput.setSelectionRange(2, 5)
-    slot.scrollTop = 120
+    settingsModalNode().scrollTop = 120
+    slot.scrollTop = 60
 
-    // 次轮：模型有变（`verify` 切片写 ⇒ 唯一重绘点径）⇒ 重建（forms 前插一节点 —— 结构位序随动）
+    // 次轮：模型有变（`verify` 切片写 ⇒ 唯一重绘点径）⇒ 重建（弹窗体换卡 ∥ 页槽重建 —— 两宿主同轮）
     store.set(patchSettings(store.get(), { verify: { kind: "ok", count: 2, reason: null } }))
 
-    const preset2 = control(slot, '[data-form="preset"]')
-    const custom2 = control(slot, '[data-form="custom"]')
-    const mcpForm2 = control(slot, '[data-form="mcp"]')
-    assert.notEqual(custom2, custom, "重建 = 新节点（旧树摘除）")
-    assert.equal(control(custom2, '[name="name"]').value, "draft-name", "自定形名保真")
+    const custom2 = control(settingsModalNode(), '[data-form-shape="custom"]')
+    assert.notEqual(custom2, custom, "重建 = 新节点（弹窗体换卡）")
+    assert.equal(control(custom2, '[name="name"]').value, "draft-name", "富形名保真")
     assert.equal(control(custom2, '[name="baseURL"]').value, "http://draft.invalid/v1", "baseURL 保真")
-    assert.equal(control(custom2, '[name="model"]').value, "draft-model", "model 保真")
-    assert.equal(control(custom2, '[name="format"]').value, "anthropic", "format select 保真（新树缺省首项 openai）")
-    assert.equal(control(custom2, '[name="active"]').checked, true, "active 复选保真（checked 纳域）")
-    assert.equal(control(custom2, '[name="key"]').value, "sk-custom-draft", "自定形 key 保真（同键多例 id=key）")
-    assert.equal(control(preset2, '[name="key"]').value, "sk-preset-draft", "预设形 key 保真（同键多例消歧）")
-    assert.equal(control(preset2, '[name="name"]').value, "preset-b", "预设名 select 保真")
-    assert.equal(control(mcpForm2, '[name="command"]').value, "npx draft-cmd", "MCP 字段保真")
-    assert.equal(control(slot, '[data-key-input="embedding"]').value, "sk-tools-draft", "工具 key 保真（无 id ⇒ 标记取值作键）")
+     assert.equal(control(custom2, '[name="format"]').value, "anthropic", "format select 保真（新树缺省首项 openai）")
+    assert.equal(control(custom2, '[name="proxy"]').checked, true, "proxy 复选保真（checked 纳域）")
+    assert.equal(control(custom2, '[name="key"]').value, "sk-custom-draft", "富形 key 保真")
+    const toolsInput2 = control(slot, '[data-key-input="embedding"]')
+    assert.notEqual(toolsInput2, toolsInput, "页槽同轮重建（新节点）")
+    assert.equal(toolsInput2.value, "sk-tools-draft", "工具 key 保真（无 id ⇒ 标记取值作键）")
     assert.equal(control(slot, '[name="shell.path"]').value, "C:\\draft\\shell", "env shell 输入保真")
     const focusNow = doc.activeElement
-    assert.equal(focusNow, custom2.querySelector('[name="name"]'), "焦点保真（id 键 + 位序消歧 ⇒ 自定形名）")
+    assert.equal(focusNow, custom2.querySelector('[name="name"]'), "焦点保真（id 键回退链 ⇒ 弹窗体富形名）")
     assert.equal(focusNow.selectionStart, 2, "光标区间起")
     assert.equal(focusNow.selectionEnd, 5, "光标区间止")
-    assert.equal(slot.scrollTop, 120, "根 scrollTop 保真")
+    assert.equal(settingsModalNode().scrollTop, 120, "卡根 scrollTop 保真")
+    assert.equal(slot.scrollTop, 60, "槽根 scrollTop 保真")
   } finally {
     restoreDom()
   }
@@ -373,36 +370,44 @@ test("M-604a·容器缺位零动作（捕获 null ∕ 复填零抛）+ 闸落点
 
 // ─── M-604a 在途窗携带 ────────────────────────────────────────────────────────
 
-// 【#1054 轮注 —— 本腿遗留红（他批面）】同 M-604a·设置树：`[data-form="custom"]` 已入 `providerAdd` 弹窗体；
-// 「在途面内容短 ⇒ 根滚位写入被截」的观测位随那两形表单迁出页槽而变（待 #1027–#1029 侧重锚）。
-test("M-604a·在途重建（读 → loading → 结）携带：草稿 ∕ 焦点 ∕ 根滚位跨 loading 窗保真", async () => {
+// 【#1059 重锚注 —— 观测根按现拓扑改位（断言面零删 · 对照表见批档 §2.3）】同 M-604a·两宿主：MCP 表单（`mcpForm`）
+// 入弹窗体 ⇒「在途面内容短 ⇒ 卡根滚位写入被截」的观测位迁至第二闸卡根（`settingsModalNode`）—— 草稿 ∥ 焦点 ∥
+// 光标 ∥ 零表单 ∥ 截断 ∥ 回位六面逐面保留。
+test("M-604a·在途重建（读 → loading → 结）携带：草稿 ∕ 焦点 ∕ 卡根滚位跨 loading 窗保真", async () => {
   installFakeDom()
   try {
-    const { store, slot, patchSettings } = await mountFace(SETTINGS_SEED)
-    const custom = control(slot, '[data-form="custom"]')
-    const nameInput = control(custom, '[name="name"]')
+    const { store, patchSettings, face } = await mountFace(SETTINGS_SEED)
+    const { settingsModalNode } = await import(at("thincoder-desktop/renderer/settings-modal.mjs"))
+    face.openSettingsModal("mcpForm") // KD-77 ①：MCP 表单入弹窗体
+    const heldMcp = store.get().settings.mcp
+    store.set(patchSettings(store.get(), { mcp: { ...heldMcp, state: "ready" } })) // 确定性落切片（开径触发 `loadMcp` 挂起；载入中零表单）
+    const card = settingsModalNode()
+    const nameInput = control(card, '[data-form="mcp"] [name="name"]')
     nameInput.value = "inflight-draft"
     nameInput.focus()
     nameInput.setSelectionRange(3, 6)
-    slot.scrollTop = slot.scrollHeight - slot.clientHeight
-    const scrollBefore = slot.scrollTop
-    assert.ok(scrollBefore > 0, "根滚位非零（判据非平凡）")
+    card.scrollTop = card.scrollHeight - card.clientHeight
+    const scrollBefore = card.scrollTop
+    assert.ok(scrollBefore > 0, "卡根滚位非零（判据非平凡）")
 
-    // 读 ①：段入 loading（树面表单暂缺 —— 单轮捕获 ∕ 复填达不了底 ⇒ 残件携带）
-    const held = store.get().settings.providers
-    store.set(patchSettings(store.get(), { providers: { ...held, state: "loading" } }))
-    assert.equal(slot.querySelector('[data-form="custom"]'), null, "loading 面零表单（段体零行）")
-    assert.ok(slot.scrollTop < scrollBefore, "在途面内容短 ⇒ 根滚位写入被截（残件携带的机制位可观测）")
+    // 读 ①：段入 loading（卡面表单暂缺 —— 单轮捕获 ∕ 复填达不了底 ⇒ 残件携带）
+    const held = store.get().settings.mcp
+    store.set(patchSettings(store.get(), { mcp: { ...held, state: "loading" } }))
+    const cardL = settingsModalNode()
+    assert.notEqual(cardL, card, "换卡新节点")
+    assert.equal(cardL.querySelector('[data-form="mcp"]'), null, "loading 面零表单（卡面零行）")
+    assert.ok(cardL.scrollTop < scrollBefore, "在途面内容短 ⇒ 卡根滚位写入被截（残件携带的机制位可观测）")
 
-    // 读 ②：结 —— 表单回树；残件须已在定型树复填
-    store.set(patchSettings(store.get(), { providers: { ...held, state: "ready" } }))
+    // 读 ②：结 —— 表单回卡；残件须已在定型卡复填
+    store.set(patchSettings(store.get(), { mcp: { ...held, state: "ready" } }))
 
-    const custom2 = control(slot, '[data-form="custom"]')
-    assert.equal(control(custom2, '[name="name"]').value, "inflight-draft", "草稿跨 loading 窗保真")
-    assert.equal(doc.activeElement, custom2.querySelector('[name="name"]'), "焦点跨 loading 窗保真")
+    const card2 = settingsModalNode()
+    const form2 = control(card2, '[data-form="mcp"]')
+    assert.equal(control(form2, '[name="name"]').value, "inflight-draft", "草稿跨 loading 窗保真")
+    assert.equal(doc.activeElement, form2.querySelector('[name="name"]'), "焦点跨 loading 窗保真")
     assert.equal(doc.activeElement.selectionStart, 3, "光标区间起")
     assert.equal(doc.activeElement.selectionEnd, 6, "光标区间止")
-    assert.equal(slot.scrollTop, scrollBefore, "根滚位跨 loading 窗保真（在途面截断不回写 —— 携带窗信任规则）")
+    assert.equal(card2.scrollTop, scrollBefore, "卡根滚位跨 loading 窗保真（在途面截断不回写 —— 携带窗信任规则）")
   } finally {
     restoreDom()
   }
@@ -493,7 +498,7 @@ test("M-604c·捕获域（树面）：申报域逐控件携 [data-draft]；写�
     store.set(patchSettings(store.get(), { mcp: { ...store.get().settings.mcp, state: "ready" } }))
     assert.deepEqual(keysOf(doc.body), ["id:mcp-name", "id:mcp-command", "id:mcp-args"], "MCP 弹窗体申报域（stdio 新增态）")
     assert.equal(control(doc.body, '[data-form="mcp"] [name="type"]').getAttribute("data-draft"), null, "类型 select（写触发：改即写切片）不在申报域")
-    for (const sel of ['[name="proxy.uri"]', '[name="proxy.web"]', '[name="proxy.model"]', '[name="shell.select"]']) {
+    for (const sel of ['[name="proxy.uri"]', '[name="proxy.web"]', '[name="shell.select"]']) {
       assert.equal(control(slot, sel).getAttribute("data-draft"), null, `即改即存 ∕ 写触发控件不在域：${sel}`)
     }
   } finally {
@@ -507,7 +512,7 @@ test("M-604c·捕获域（源面扫描）：四档申报点逐档计数 + 逐组
   const tools = readRepo(`${RENDERER}/views/settings-sections-tools.mjs`)
   const env = readRepo(`${RENDERER}/views/settings-sections-env.mjs`)
   const countOf = (src) => (src.match(/"data-draft":/g) ?? []).length
-  assert.equal(countOf(controls), 6, "settings-controls 申报点计 6（fieldPair + 自定形 name + 两 select + active + 实读面）")
+  assert.equal(countOf(controls), 5, "settings-controls 申报点计 5（fieldPair + 自定形 name + 两 select + proxy 复选；active 退场）")
   assert.equal(countOf(mcp), 3, "settings-sections-mcp 申报点计 3（fieldNode 可编辑态 + 行集两格；类型 select 零标记）")
   assert.equal(countOf(tools), 1, "settings-sections-tools 申报点计 1（编辑态 key 输入）")
   assert.equal(countOf(env), 1, "settings-sections-env 申报点计 1（shell 自定义路径；proxy ∕ shell select 零标记）")
@@ -515,7 +520,6 @@ test("M-604c·捕获域（源面扫描）：四档申报点逐档计数 + 逐组
   assert.match(controls, /id: "name", name: "name", type: "text", "data-draft": ""/, "自定形 name 文本携标记")
   assert.match(controls, /props: \{ class: "settings-field", id: "format", name: "format", "data-draft": "" \}/, "自定形 format select 携标记")
   assert.match(controls, /id: "preset", name: "preset", "data-draft": ""/, "预设形 name select 携标记（现骨 = `selectProps` 单行）")
-  assert.match(controls, /id: "active", name: "active", type: "checkbox", "data-draft": ""/, "active 复选携标记")
   assert.match(mcp, /\.\.\.\(readOnly \? \{ readOnly: true \} : \{ "data-draft": "" \}\)/, "MCP 字段组：可编辑态携标记 ∕ readOnly 态不申报")
   assert.match(tools, /"data-draft": kind/, "工具 key 输入：标记取值作显式键")
   assert.match(env, /id: "shell-path", name: "shell\.path", type: "text", "data-draft": ""/, "env shell 输入携标记")

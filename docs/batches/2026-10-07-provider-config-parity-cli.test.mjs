@@ -29,29 +29,29 @@ function readSrc(rel) {
 
 // ═══ C1（核 · 舱一）：addProviderEntry 受 proxy——三径 ═══
 
-test("C1 addProviderEntry 受 proxy：true 落旗 ∥ 缺 ⇒ 零键 ∥ 非真 ⇒ 零键（载荷/落条实读）", async () => {
+test("C1 addProviderEntry 受 proxy：true 落旗 ∥ 缺 ⇒ 零键 ∥ 非真 ⇒ 零键（载荷/落条实读——2026-10-09 清除批随正：条目零 `model`）", async () => {
   const { addProviderEntry, _setConfigPathForTest, _resetConfigPathForTest, PROVIDER_PRESETS } =
     await import(CORE + "config-io.mjs")
   const cfgPath = tmpConfigPath()
   _setConfigPathForTest(cfgPath)
   try {
     // ① proxy: true ⇒ 同批落 `proxy: true`
-    assert.equal(addProviderEntry({ custom: { name: "tc-a", baseURL: "https://a.example.com/v1", model: "m-a" }, proxy: true }), null)
+    assert.equal(addProviderEntry({ custom: { name: "tc-a", baseURL: "https://a.example.com/v1" }, proxy: true }), null)
     // ② 缺（payload 无 proxy 键）⇒ 零键
-    assert.equal(addProviderEntry({ custom: { name: "tc-b", baseURL: "https://b.example.com/v1", model: "m-b" } }), null)
+    assert.equal(addProviderEntry({ custom: { name: "tc-b", baseURL: "https://b.example.com/v1" } }), null)
     // ③ 非真 ⇒ 零键（判据 = `=== true`；false ∥ 字符串 "true" 均不落）
-    assert.equal(addProviderEntry({ custom: { name: "tc-c", baseURL: "https://c.example.com/v1", model: "m-c" }, proxy: false }), null)
-    assert.equal(addProviderEntry({ custom: { name: "tc-d", baseURL: "https://d.example.com/v1", model: "m-d" }, proxy: "true" }), null)
+    assert.equal(addProviderEntry({ custom: { name: "tc-c", baseURL: "https://c.example.com/v1" }, proxy: false }), null)
+    assert.equal(addProviderEntry({ custom: { name: "tc-d", baseURL: "https://d.example.com/v1" }, proxy: "true" }), null)
     // ④ 预设形同径（旗判据在分支合流后——两形共享同一条）
     const presetName = Object.keys(PROVIDER_PRESETS)[0]
     assert.equal(addProviderEntry({ preset: presetName, proxy: true }), null)
 
     const raw = JSON.parse(readFileSync(cfgPath, "utf8"))
     const get = (n) => raw.providers.find((p) => p?.name === n)
-    assert.deepEqual(get("tc-a"), { name: "tc-a", baseURL: "https://a.example.com/v1", model: "m-a", proxy: true })
-    assert.deepEqual(get("tc-b"), { name: "tc-b", baseURL: "https://b.example.com/v1", model: "m-b" })
-    assert.deepEqual(get("tc-c"), { name: "tc-c", baseURL: "https://c.example.com/v1", model: "m-c" })
-    assert.deepEqual(get("tc-d"), { name: "tc-d", baseURL: "https://d.example.com/v1", model: "m-d" })
+    assert.deepEqual(get("tc-a"), { name: "tc-a", baseURL: "https://a.example.com/v1", proxy: true })
+    assert.deepEqual(get("tc-b"), { name: "tc-b", baseURL: "https://b.example.com/v1" })
+    assert.deepEqual(get("tc-c"), { name: "tc-c", baseURL: "https://c.example.com/v1" })
+    assert.deepEqual(get("tc-d"), { name: "tc-d", baseURL: "https://d.example.com/v1" })
     assert.equal(get(presetName).proxy, true)
     assert.equal(get(presetName).name, presetName)
   } finally {
@@ -104,7 +104,7 @@ test("L1b 添加流代理问句：两支各一（No (direct) 缺省 ∥ Yes (pro
   }
 })
 
-test("L1c 同判定自证（执行）：逐渠旗 ∧ 全局 proxy.model ⇒ 代理目标 ∥ 否则直连", async () => {
+test("L1c 同判定自证（执行）：逐渠旗 ∧ 在案 uri ⇒ 代理目标 ∥ 否则直连（2026-10-08 去全局闸随正）", async () => {
   const { _setConfigPathForTest, _resetConfigPathForTest } = await import(CORE + "config-io.mjs")
   const { probeTargetOf } = await import(CORE + "provider-flows.mjs")
   const cfgPath = tmpConfigPath()
@@ -112,15 +112,15 @@ test("L1c 同判定自证（执行）：逐渠旗 ∧ 全局 proxy.model ⇒ 代
   try {
     writeFileSync(cfgPath, JSON.stringify({ proxy: { uri: "http://127.0.0.1:9", model: true } }))
     const on = probeTargetOf({ name: "p", baseURL: "https://p.example.com/v1", apiKey: " sk ", format: "anthropic", proxy: true })
-    assert.equal(on.proxyUri, "http://127.0.0.1:9", "双门槛齐 ⇒ 探针走代理目标")
+    assert.equal(on.proxyUri, "http://127.0.0.1:9", "渠旗 ∧ uri 在案 ⇒ 探针走代理目标")
     assert.deepEqual(Object.keys(on).sort(), ["apiKey", "baseURL", "format", "name", "proxyUri"], "返形 = listModels 可消费目标")
     assert.equal(on.apiKey, "sk", "apiKey 归一（trim）")
-    // 逐渠旗缺 ∥ 非真 ⇒ 直连（同一全局闸开也不走）
+    // 逐渠旗缺 ∥ 非真 ⇒ 直连（同一 uri 在案也不走）
     assert.equal(probeTargetOf({ name: "p", baseURL: "https://p.example.com/v1" }).proxyUri, undefined)
     assert.equal(probeTargetOf({ name: "p", baseURL: "https://p.example.com/v1", proxy: false }).proxyUri, undefined)
-    // 全局 proxy.model 关 ⇒ 直连（双门槛）
+    // 盘上 model 键零影响（逐渠独立——去全局闸）：model:false ⇒ 仍走代理
     writeFileSync(cfgPath, JSON.stringify({ proxy: { uri: "http://127.0.0.1:9", model: false } }))
-    assert.equal(probeTargetOf({ name: "p", baseURL: "https://p.example.com/v1", proxy: true }).proxyUri, undefined)
+    assert.equal(probeTargetOf({ name: "p", baseURL: "https://p.example.com/v1", proxy: true }).proxyUri, "http://127.0.0.1:9", "model 键零影响（旗 ∧ 在案 uri）")
   } finally {
     _resetConfigPathForTest()
   }

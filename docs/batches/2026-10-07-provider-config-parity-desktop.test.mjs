@@ -127,14 +127,14 @@ test("D1 providersBody 树：行族 + 校验回退 + 添加钮（零表单节点
   assert.equal(dCollect(inRow, (n) => n?.props?.["data-verify"] === "fail").length, 1, "有行渲出 ⇒ 就地一次")
 })
 
-// ─── D2 单表树：两形节序 ∥ activeDefault 条件化 ∥ proxy 两形皆在场 ─────────────────
+// ─── D2 单表树：两形节序 ∥ 零 active 件（fix 轮：件 ∥ 参双净删）∥ proxy 两形皆在场 ─────────
 
-test("D2 channelFormTree 节序：custom/preset 两形 ∥ activeDefault 条件化 ∥ proxy 两形皆在场（向导步 1 同径）", () => {
+test("D2 channelFormTree 节序：custom/preset 两形 ∥ 零 active 件 ∥ proxy 两形皆在场（向导步 1 同径）", () => {
   const preset = dsFormTree({ shape: "preset", presets: DS_PRESETS, formats: DS_FORMATS }, dsModalHandlers)
   const custom = dsFormTree({ shape: "custom", presets: DS_PRESETS, formats: DS_FORMATS }, dsModalHandlers)
   // 两形节序（KD-75 ③ 字段序 = 用户填写序）
   assert.deepEqual(dSigs(preset), ["shape", "preset", "preset-info", "key", "proxy", "settings:addPreset", "settings:modalClose"], "预设形节序")
-  assert.deepEqual(dSigs(custom), ["shape", "preset", "name", "baseURL", "format", "key", "proxy", "settings:fetchModels", "model", "settings:addCustom", "settings:modalClose"], "自定形节序")
+  assert.deepEqual(dSigs(custom), ["shape", "preset", "name", "baseURL", "format", "key", "proxy", "settings:fetchModels", "settings:addCustom", "settings:modalClose"], "自定形节序")
   // proxy 节点两形皆在场（KD-75 ⑤ 明写）
   assert.equal(dFind(preset, (n) => n?.props?.name === "proxy")?.props?.type, "checkbox", "预设形 proxy 拨杆在场")
   assert.equal(dFind(custom, (n) => n?.props?.name === "proxy")?.props?.type, "checkbox", "自定形 proxy 拨杆在场")
@@ -147,19 +147,18 @@ test("D2 channelFormTree 节序：custom/preset 两形 ∥ activeDefault 条件�
   assert.equal(dFind(dsFormTree({ shape: "glm", presets: DS_PRESETS, formats: DS_FORMATS }, dsModalHandlers), (n) => n?.tag === "option" && n?.props?.selected === true)?.props?.value, "glm", "切片值 ⇒ 命中项选中")
   assert.deepEqual(dSigs(dsFormTree({ shape: "custom", presets: DS_PRESETS, formats: DS_FORMATS }, dsModalHandlers)).slice(0, 2), ["shape", "preset"], "自定形：选择器居首（无 info 行）")
   assert.equal(dCollect(custom, (n) => n?.props?.selected === true).filter((o) => o.tag === "option").length, 1, "自定形：恰一项 selected（免双选中竞位）")
-  // 预设信息行：model · baseURL（缺段不落空分隔符）—— 随切片选中
+  // 预设信息行：baseURL 单段（`model` 段随 2026-10-09 清除批退场；缺段不落空分隔符）—— 随切片选中
   const glmForm = dsFormTree({ shape: "glm", presets: DS_PRESETS, formats: DS_FORMATS }, dsModalHandlers)
-  assert.deepEqual(dFind(glmForm, (n) => n?.props?.["data-preset-info"] !== undefined).children, ["glm-4 · https://open.bigmodel.cn/api/paas/v4"], "切片值 = glm ⇒ 信息行随选中")
-  assert.deepEqual(dFind(preset, (n) => n?.props?.["data-preset-info"] !== undefined).children, ["deepseek-chat · https://api.deepseek.com"], "缺省哨位 ⇒ 首项信息行")
+  assert.deepEqual(dFind(glmForm, (n) => n?.props?.["data-preset-info"] !== undefined).children, ["https://open.bigmodel.cn/api/paas/v4"], "切片值 = glm ⇒ 信息行随选中")
+  assert.deepEqual(dFind(preset, (n) => n?.props?.["data-preset-info"] !== undefined).children, ["https://api.deepseek.com"], "缺省哨位 ⇒ 首项信息行")
   assert.equal(dFind(custom, (n) => n?.props?.["data-preset-info"] !== undefined), null, "自定形零信息行")
   assert.equal(dFind(dsFormTree({ shape: "preset", presets: [{ name: "bare" }], formats: DS_FORMATS }, dsModalHandlers), (n) => n?.props?.["data-preset-info"] !== undefined), null, "两段皆空 ⇒ 零信息行（禁假造）")
-  // activeDefault 条件化（KD-75 ⑤：设置弹窗不传 ⇒ 零节点 ∥ 向导 true ⇒ 在场且勾选）
-  assert.equal(dFind(preset, (n) => n?.props?.name === "active"), null, "弹窗体（不传 activeDefault）⇒ 零 active 节点")
-  const wizard = dsFormTree({ shape: "preset", presets: DS_PRESETS, activeDefault: true, submitKey: "wizard.save" }, { onSubmit: () => {} })
-  const active = dFind(wizard, (n) => n?.props?.name === "active")
-  assert.equal(active?.props?.checked, true, "向导步 1：active 在场且缺省勾选")
+  // 零 active 件（2026-10-09 清除批 fix 轮：激活渠复选 ∥ 其 `activeDefault` 条件参双净删——无 active 写路死控；设置弹窗 ∥ 向导全径零节点）
+  assert.equal(dFind(preset, (n) => n?.props?.name === "active"), null, "弹窗体 ⇒ 零 active 节点")
+  const wizard = dsFormTree({ shape: "preset", presets: DS_PRESETS, submitKey: "wizard.save" }, { onSubmit: () => {} })
+  assert.equal(dFind(wizard, (n) => n?.props?.name === "active"), null, "向导步 1 ⇒ 零 active 节点（参删 ⇒ 件退）")
   assert.equal(dFind(wizard, (n) => n?.props?.name === "proxy")?.props?.type, "checkbox", "向导步 1：proxy 同在场（KD-75 ⑤ 明写）")
-  assert.deepEqual(dSigs(wizard), ["shape", "preset", "key", "proxy", "active", "settings:addPreset"], "向导步 1 节序（单表同径 —— 无弹窗体三件）")
+  assert.deepEqual(dSigs(wizard), ["shape", "preset", "key", "proxy", "settings:addPreset"], "向导步 1 节序（单表同径 —— 无弹窗体三件 ∥ 零 active 件）")
   assert.equal(dFind(wizard, (n) => n?.tag === "button").children[0], deskI18n.t("wizard.save"), "提交词 = 调用面 submitKey（向导词零改）")
   assert.equal(dFind(preset, (n) => n?.tag === "button").children[0], deskI18n.t("settings.save"), "设置弹窗提交词 = settings.save")
   // 提交锚按形（锚名不碎）
@@ -243,17 +242,17 @@ test("D4 主面写/探面：providerSave 携 proxy 落条 ∥ providerModels 目
     assert.equal(get("tc-ds-a").proxy, true, "勾选 ⇒ 落旗")
     assert.equal("proxy" in get("tc-ds-b"), false, "缺 ⇒ 零键")
     assert.equal("proxy" in get("tc-ds-c"), false, "非真 ⇒ 零键")
-    // ② providerModels：目标构造 = 核 probeTargetOf 同判定（双门槛 ∥ 直连两径）
+    // ② providerModels：目标构造 = 核 probeTargetOf 同判定（逐渠旗 ∧ 在案 uri ∥ 直连两径）
     writeFileSync(cfgPath, JSON.stringify({ proxy: { uri: "http://127.0.0.1:9", model: true } }))
     assert.equal((await main.providerModels({ baseURL: "https://x.example.com/v1", apiKey: " sk ", format: "anthropic", proxy: true })).ok, true)
-    assert.equal(seen.at(-1).target.proxyUri, "http://127.0.0.1:9", "双门槛齐 ⇒ 目标携 proxyUri")
+    assert.equal(seen.at(-1).target.proxyUri, "http://127.0.0.1:9", "渠旗 ∧ uri 在案 ⇒ 目标携 proxyUri")
     assert.equal(seen.at(-1).target.apiKey, "sk", "apiKey 归一（同判定）")
     assert.equal(seen.at(-1).name, "", "名传空串（落账面零改）")
     await main.providerModels({ baseURL: "https://x.example.com/v1", apiKey: "sk", format: "anthropic" })
     assert.equal("proxyUri" in seen.at(-1).target && seen.at(-1).target.proxyUri !== undefined, false, "未勾 ⇒ 直连（零 proxyUri）")
     writeFileSync(cfgPath, JSON.stringify({ proxy: { uri: "http://127.0.0.1:9", model: false } }))
     await main.providerModels({ baseURL: "https://x.example.com/v1", apiKey: "sk", format: "anthropic", proxy: true })
-    assert.equal(seen.at(-1).target.proxyUri, undefined, "勾但全局 proxy.model 关 ⇒ 直连（双门槛）")
+    assert.equal(seen.at(-1).target.proxyUri, "http://127.0.0.1:9", "盘上 model 键零影响（逐渠——旗 ∧ 在案 uri 仍走代理）")
     // ③ 源锁（残件零留）：目标构造单源 ∥ 零 web 旗 ∥ 零 normalizeProxy
     const src = deskSrc("src/main/providers.mjs")
     const modelsBody = src.slice(src.indexOf("export async function providerModels"), src.indexOf("const PROXY_TEST_URL"))

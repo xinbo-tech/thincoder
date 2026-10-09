@@ -52,12 +52,12 @@ function stepsNode(step) {
   }
 }
 
-/** 步 1 体 = 渠道表单（预设形 · `active:true` 缺省勾选 —— 渠道开箱可用）+ 校验控件。 */
+/** 步 1 体 = 渠道表单（预设形——**2026-10-09 清除批 fix 轮**：激活渠 `active` 复选 ∥ 其条件参随同退场
+ *  〔无 active 写路 ⇒ 死控——件 ∥ 参双净删；等价路径 = 模型段「采用」〕）+ 校验控件。 */
 function channelBody(model, handlers) {
   const form = channelFormTree({
     shape: "preset",
     presets: model.presets,
-    activeDefault: true,
     submitKey: "wizard.save",
   }, handlers)
   return [form, verifyControl(null, handlers)]

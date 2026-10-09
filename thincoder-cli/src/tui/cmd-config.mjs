@@ -38,11 +38,11 @@ export async function handleConfigCommand(ctx, args = []) {
   let tc = agent.config?.traces ?? {}
   let dc = agent.config?.diagnostics ?? {}
 
-  // agent.config.proxy 已被 loadConfig 归一化为 { uri, web, model } | undefined
+  // agent.config.proxy 已被 loadConfig 归一化为 { uri, web } | undefined
   function proxySummary() {
     const pc = agent.config?.proxy
     if (!pc) return "not configured"
-    return `${pc.uri} web:${pc.web ? "on" : "off"} model:${pc.model ? "on" : "off"}`
+    return `${pc.uri} web:${pc.web ? "on" : "off"}`
   }
 
   async function setEmbedKey() {
@@ -63,7 +63,7 @@ export async function handleConfigCommand(ctx, args = []) {
 
   /** 保存后的公共重载：loadConfig → injectProxy → 恢复运行时 provider 选择。
    *  MODEL-MERGE-SESSION 三支改写（cfg 无 active*）：运行时由「会话槽复合仍在 providers 中 →
-   *  保持槽值」或「config defaultModel（新会话起点）」决定——不再有渠道默认字段可回退。 */
+   *  保持槽值」或「config defaultModel（新会话起点）」决定（渠道条目不携模型——2026-10-09 清除批）。 */
   async function reloadConfig() {
     const { loadConfig } = await import("@thincoder/core/config.mjs")
     const { injectProxy } = await import("@thincoder/core/proxy.mjs")
@@ -76,9 +76,10 @@ export async function handleConfigCommand(ctx, args = []) {
     agent.config.agent ??= {}
     const keep = sessionName ? cfg.providersList.find((p) => p.name === sessionName) : null
     if (keep) {
-      // 会话 provider 仍存在 → 会话复合优先（槽值——不看 cfg 默认；模型空时落默认复合/渠道默认单值）
+      // 会话 provider 仍存在 → 会话复合优先（槽值——不看 cfg 默认；模型空时落默认复合；
+      // 渠道侧无模型可回落——单值退场 2026-10-09 清除批：缺 ⇒ 明示未设置）
       const dm = cfg.provider.name ? cfg.provider : null
-      const model = sessionModel ?? (dm && dm.name === sessionName ? dm.model : keep.model ?? "")
+      const model = sessionModel ?? (dm && dm.name === sessionName ? dm.model : "")
       agent.activeProvider = keep.name
       agent.activeModel = model || null
       agent.provider = { ...keep }
@@ -114,12 +115,11 @@ export async function handleConfigCommand(ctx, args = []) {
   async function proxyMenu() {
     let proxyIdx = 0
     for (;;) {
-      const pc = agent.config?.proxy // 已归一化 { uri, web, model } | undefined
+      const pc = agent.config?.proxy // 已归一化 { uri, web } | undefined
       const entries = [
         { type: "header", text: `Proxy: ${pc?.uri || "(not set)"}` },
         { type: "item", text: "Set proxy URI…", action: "seturi" },
         { type: "item", text: `Web tools (fetch/websearch): ${!pc || pc.web ? "ON" : "OFF"}`, action: "toggleweb" },
-        { type: "item", text: `Model requests (providers with proxy:true): ${pc?.model ? "ON" : "OFF"}`, action: "togglemodel" },
         { type: "item", text: "Test connection", action: "test" },
         { type: "item", text: "Clear proxy", action: "clear" },
       ]
@@ -131,20 +131,19 @@ export async function handleConfigCommand(ctx, args = []) {
         if (c.action === "seturi") {
           const newUri = await askQuestion("Proxy URI (e.g. http://127.0.0.1:7890):")
           if (!newUri) continue // 空输入不改动
-          // web 默认 true、保留原 model 值（对象形态）；旧 string 形态升级为规范对象
+          // web 默认 true（对象形态——既有键原样保留）；旧 string 形态升级为规范对象
           await saveProxy((raw) => {
             raw.proxy = raw.proxy && typeof raw.proxy === "object" && !Array.isArray(raw.proxy)
               ? { ...raw.proxy, uri: newUri }
-              : { uri: newUri, web: true, model: false }
+              : { uri: newUri, web: true }
           })
           pushLabel("❯ Config", ansi.bold + C.tool)
           pushLine(`proxy.uri = ${newUri}`, C.tool)
-        } else if (c.action === "toggleweb" || c.action === "togglemodel") {
+        } else if (c.action === "toggleweb") {
           if (!pc) { pushLine("Proxy URI not set — use Set proxy URI… first", C.error); continue }
-          const key = c.action === "toggleweb" ? "web" : "model"
-          await saveProxy((raw) => { raw.proxy = { ...pc, [key]: !pc[key] } })
+          await saveProxy((raw) => { raw.proxy = { ...pc, web: !pc.web } })
           pushLabel("❯ Config", ansi.bold + C.tool)
-          pushLine(`proxy.${key} = ${!pc[key] ? "on" : "off"}`, C.tool)
+          pushLine(`proxy.web = ${!pc.web ? "on" : "off"}`, C.tool)
         } else if (c.action === "test") {
           const { proxyFetch, resolveWebProxy } = await import("@thincoder/core/proxy.mjs")
           const { UA } = await import("@thincoder/core/tools/web.mjs")
@@ -294,7 +293,7 @@ export async function handleConfigCommand(ctx, args = []) {
     const probes = new Map()
     pushLine("Fetching channel model lists (GET /models)…", C.dim)
     await Promise.all(agent.providers.map(async (p) => {
-      const r = await probeChannelModels(probeTargetOf(p)) // 探针目标构造收敛核判据（③′——逐渠旗 ∧ 全局 proxy.model；执行体零改）
+      const r = await probeChannelModels(probeTargetOf(p)) // 探针目标构造收敛核判据（③′——逐渠旗 ∧ `uri` 在案；执行体零改）
       probes.set(p.name, r)
       if (r.ok) delete p._unavailable
       else p._unavailable = true
@@ -307,8 +306,8 @@ export async function handleConfigCommand(ctx, args = []) {
           const r = probes.get(p.name)
           if (!r?.ok) return { type: "item", text: `${p.name.padEnd(10)} 不可用`, action: "provider", provider: p.name, unavailable: true }
           const n = r.list.length
-          // M3③：渠道行显示渠道默认模型（单值）+ 探得候选数
-          return { type: "item", text: `${p.name.padEnd(10)} ${p.model ?? "(no default model)"} (${n} model${n === 1 ? "" : "s"})`, action: "provider", provider: p.name }
+          // M3③：渠道行显示回退 = `baseURL`（渠道条目不携模型——2026-10-09 清除批）+ 探得候选数
+          return { type: "item", text: `${p.name.padEnd(10)} ${p.baseURL} (${n} model${n === 1 ? "" : "s"})`, action: "provider", provider: p.name }
         }),
       ]
       const c = await showPicker("Default Model (新会话起点)", entries, { defaultIndex: idx })

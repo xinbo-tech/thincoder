@@ -4,22 +4,23 @@
  * new-session starting point) and session slots both speak this language. 有效域 = **provider 存在
  * + 双段非空**：清单不再人工维护（模型清单由 provider 运行期 `GET /models` 拉取决定——
  * PROVIDER.md §16），候选成员校验**已废除**——显式 `p:m` 一律放行（含多冒号首分割）。
- * providers[].model 是渠道默认模型（单值）——候选清单字段 models[] 已整字段退场。
+ * 渠道不携模型——单值 `providers[].model` 与候选清单字段 `models[]` 均已退场（2026-10-09 清除批：
+ * 渠道模型面零读写）；模型身份唯二 = 顶层 `defaultModel` 复合串 ∥ 会话槽选定。
  *
- * Strict first-colon split — deliberately does NOT reuse resolveChildProvider's loose
- * three-state resolution: ① legacy single-provider configs and ② model-name-only refs
- * are gone with activeProvider/activeModel (F-1), so a bare provider or bare model is
- * invalid everywhere (裁定③——裸 provider 拒——显式 p:m)。
+ * Strict first-colon split — deliberately does NOT reuse `resolveChildProvider`'s
+ * override resolution: ① legacy single-provider configs and ② model-name-only refs
+ * are gone with activeProvider/activeModel (F-1) — 本解析面（`defaultModel` ∥ 槽）一律显式
+ * `p:m`（裁定③——裸 provider 拒）；子代理覆写面另判（`resolveChildProvider`——裸模型名换型）。
  *
  * Runtime model resolution (#841 单源 = resolveProviderPlan——机制全文 PROVIDER.md §6.22):
  *   parseModelRef(ref, providers)      → { ok, provider, model } | { ok:false, reason }
  *   resolveChannelModel(entry, defaultModel)
  *                                      → 渠道模型面单值：defaultModel 属本渠道 ⇒ 其模型段 ∥
- *                                        渠道单值 `entry.model` ∥ null（VSC 转口面）
+ *                                        null（渠道不携模型——不回退渠道单值；VSC 转口面）
  *   resolveProviderPlan({ providers, defaultModel, slot })
  *                                      → { state, source, channel, model, provider, reason }
  *                                        统一回退解析（纯函数 · 零 I/O——三端消费同一函数）：
- *                                        渠道面回退序三步 + 模型面四步 + 三态 ok ∥ fallback ∥ invalid
+ *                                        渠道面回退序三步 + 模型面三步 + 三态 ok ∥ fallback ∥ invalid
  *   resolveRuntimeProvider(providers, defaultModel)
  *                                      → provider object with `.model` set, or {} when
  *                                        defaultModel is null/invalid (D-S1: callers mark
@@ -80,9 +81,10 @@ function hasKey(entry) {
   return typeof entry?.apiKey === "string" && entry.apiKey.trim() !== ""
 }
 
-/** 渠道模型面单值（#841 模型面 ②③——VSC `resolveDefaultModel` 转口面 · 纯函数）：
+/** 渠道模型面单值（#841 模型面——VSC `resolveDefaultModel` 转口面 · 纯函数）：
  *  ① `defaultModel` 解析通过 ∧ 其渠道 == `entry` ⇒ 其模型段（首冒号分割 · 双段非空 · name 相等）；
- *  ② 渠道单值 `entry.model`（非空串）；③ `null`（合法——模型由运行期 `/models` 候选 ∥ 用户选择决定）。
+ *  ② `null`——渠道不携模型（2026-10-09 清除批：`entry.model` 读退场，不回退渠道单值）；模型由
+ *  运行期 `/models` 候选 ∥ 用户选择 ∥ 顶层 `defaultModel` 决定。
  *  @param {object|null} entry — providers[] 条目（或同形对象）
  *  @param {string|null} defaultModel — 顶层复合串
  *  @returns {string|null} */
@@ -91,7 +93,7 @@ export function resolveChannelModel(entry, defaultModel) {
     const ref = parseModelRef(defaultModel, [entry])
     if (ref.ok) return ref.model
   }
-  return typeof entry?.model === "string" && entry.model ? entry.model : null
+  return null // ② 档：渠道不携模型（2026-10-09 清除批）——不回退渠道单值
 }
 
 /** 运行时渠道/模型统一解析（#841 核单源——机制全文 PROVIDER.md §6.22；纯函数 · 零 I/O）。
@@ -103,7 +105,8 @@ export function resolveChannelModel(entry, defaultModel) {
  *  （按表序 ⇒ `source="registry"`）；④ 无 ⇒ `state="invalid"`（渠表空 ∥ 全表无 key）。
  *  槽无 key ⇒ **跳过**（不把不可运行渠道钉进运行态）。
  *  **模型面**：① 入选来源 = 槽 ∧ 槽带模型 ⇒ 槽模型；② defaultModel 属入选渠道 ⇒ 其模型段；
- *  ③ 入选渠道单值；④ 无 ⇒ `null`（消费者沿既有「model 缺失」处置；明示词形随缺 = 仅渠道名）。
+ *  ③ 无 ⇒ `null`（2026-10-09 清除批：渠道单值退场——不回退渠道单值；消费者沿既有「model 缺失」
+ *  处置；明示词形随缺 = 仅渠道名）。
  *  **三态（config 级——KD-841-3：槽改写「谁在跑」，不改「默认模型是否有效」）**：`ok` =
  *  defaultModel 独立成立（解析通过 ∧ 该渠道持 key）⇒ 零明示；`fallback` =「无有效 defaultModel」类
  *   ∧ 全局有可运行渠道 ⇒ 可运行 + 明示必达；`invalid` =「无 provider/key」类 ⇒ 真无效 + 引导配置。
@@ -129,7 +132,7 @@ export function resolveProviderPlan({ providers, defaultModel, slot } = {}) {
     if (first) { entry = first; source = "registry" }
   }
 
-  // ── 模型面（四步；无入选渠道 ⇒ null）──
+  // ── 模型面（三步；无入选渠道 ⇒ null）──
   const model = entry ? (source === "slot" && slotModel ? slotModel : resolveChannelModel(entry, defaultModel)) : null
 
   // ── 三态（config 级）──

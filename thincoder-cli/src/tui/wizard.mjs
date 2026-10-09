@@ -1,9 +1,11 @@
 /**
  * wizard.mjs — first-launch config wizard
- * Extracted from index.mjs: provider select → step-by-step input (name/baseURL/model/format/key/embedkey)
- * → persist → then model picker. Custom 分支含 API format 步（D-C2，TUI.md §10.6D）。
+ * Extracted from index.mjs: provider select → step-by-step input (name/baseURL/format/key/embedkey)
+ * → 末问「走 proxy」（#1049 补步——showPicker，落盘前）→ persist → then model picker. Custom 分支含 API format 步（D-C2，TUI.md §10.6D）。
+ * 2026-10-09 清除批：**渠道条目不携模型**（单值 `providers[].model` 退场）——落盘后由模型 picker 显式选定
+ * （`selectModel` 选定即写回 config.defaultModel）；零播种 ∥ 零静默回落。
  * Accesses shared state and UI functions from the startTUI closure via ctx object.
- * ctx: { agent, state, pushLine, pushLabel, render, persistRaw, openModelPicker }
+ * ctx: { agent, state, pushLine, pushLabel, render, persistRaw, showPicker, openModelPicker }
  */
 
 import { PROVIDER_PRESETS as PRESETS } from "@thincoder/core/config.mjs"
@@ -17,19 +19,20 @@ import { probeTargetOf } from "@thincoder/core/provider-flows.mjs"
  * Returns { startWizard, renderWizard, wizardChooseProvider, wizardSubmitText, cancelWizard, finishWizard }
  */
 export function createWizard(ctx) {
-  const { agent, state, pushLine, pushLabel, render, persistRaw, onModalClose = null } = ctx
+  const { agent, state, pushLine, pushLabel, render, persistRaw, showPicker, onModalClose = null } = ctx
 
   /** Candidates for the menu step: existing providers (marked "no key" if missing), unadded presets, custom
-   *  MODEL-SELECTION v2：渠道默认模型 = 单值 `model`（preset 自带；候选清单运行期拉取） */
+   *  渠道条目不携模型（2026-10-09 清除批：单值 `providers[].model` 退场）——条目只携 name/baseURL + 预设扩展字段；
+   *  模型在向导尾由模型 picker 显式选定（候选清单运行期拉取）。 */
   function wizardProviderItems() {
     const items = []
     for (const p of agent.providers) {
-      items.push({ kind: "existing", name: p.name, baseURL: p.baseURL, model: p.model ?? "", label: `${p.name} (added${p.apiKey ? "" : ", no key"})` })
+      items.push({ kind: "existing", name: p.name, baseURL: p.baseURL, label: `${p.name} (added${p.apiKey ? "" : ", no key"})` })
     }
     for (const [name, p] of Object.entries(PRESETS)) {
       if (!agent.providers.some((x) => x.name === name)) {
         items.push({
-          kind: "preset", name, baseURL: p.baseURL, model: p.model ?? "", label: `${name} (${p.desc})`,
+          kind: "preset", name, baseURL: p.baseURL, label: `${name} (${p.desc})`,
           // 预设自身声明的扩展字段随 preset 直达落盘（code review 🟡——与 pickers preset 路径同构；
           // claude/gemini 缺 format、deepseek/glm 缺 thinking/maxTokens 会静默错配）；不新增提问步。
           format: p.format, thinking: p.thinking, reasoningEffort: p.reasoningEffort,
@@ -52,10 +55,6 @@ export function createWizard(ctx) {
       prompt: "Enter baseURL (e.g. https://api.openai.com/v1)",
       validate: (v) => /^https?:\/\/.+/.test(v) || "baseURL must start with http(s)://",
     },
-    model: {
-      prompt: "Enter model name (e.g. gpt-4o)",
-      validate: (v) => v.length > 0 || "Model name required",
-    },
     // D-C2（TUI.md §10.6D）：Custom 分支的 API format 步（endpoint 后 key 前——与 Add Provider
     // picker 路径两入口一致；默认 openai）。空输入 = openai 直过（Enter 即默认——同 D-C1 index=0）；
     // Esc 在该步沿用 wizard 既有“Esc 随时跳过”语义（取消整个向导——无半配置落盘）。
@@ -73,7 +72,7 @@ export function createWizard(ctx) {
       validate: () => true, // skippable
     },
   }
-  const WIZARD_NEXT = { name: "baseURL", baseURL: "model", model: "format", format: "key", key: "embedkey", embedkey: null }
+  const WIZARD_NEXT = { name: "baseURL", baseURL: "format", format: "key", key: "embedkey", embedkey: null }
 
   function startWizard() {
     state.wizard = { step: "provider", index: 0, scroll: 0, selectedLine: 0, fields: {}, error: null, lines: [] }
@@ -97,7 +96,6 @@ export function createWizard(ctx) {
       const f = w.fields
       if (f.name) lines.push({ text: ` Provider:  ${f.name}`, color: C.dim })
       if (f.baseURL) lines.push({ text: ` baseURL: ${f.baseURL}`, color: C.dim })
-      if (f.model) lines.push({ text: ` Model:   ${f.model}`, color: C.dim })
       lines.push({ text: ` ❯ ${WIZARD_STEPS[w.step].prompt}`, color: ansi.bold + C.text })
       lines.push({ text: " (type in input box below)", color: C.dim })
       w.selectedLine = 0
@@ -125,8 +123,9 @@ export function createWizard(ctx) {
     if (item.kind === "custom") {
       w.step = "name"
     } else {
-      w.fields = { name: item.name, baseURL: item.baseURL, model: item.model }
-      // preset 直达：其余扩展字段照旧（渠道默认模型 = 单值 model——随 fields 落盘）
+      // 2026-10-09 清除批：渠道条目不携模型——fields 只收 name/baseURL + 预设扩展字段
+      w.fields = { name: item.name, baseURL: item.baseURL }
+      // preset 直达：其余扩展字段照旧（随 fields 落盘）
       for (const k of ["format", "thinking", "reasoningEffort", "maxTokens", "chatPath"]) {
         if (item[k]) w.fields[k] = item[k]
       }
@@ -171,28 +170,36 @@ export function createWizard(ctx) {
     if (state.picker == null) ctx.onModalClose?.()
   }
 
-  /** Wizard complete: write provider (update if exists) with its single default model (`model`),
-   *  set config.defaultModel（裁定⑦——首配模型即写 defaultModel——新会话起点）, then open the
-   *  session model picker. 加渠道 = 配置写入面——落盘后探一次 `/models`（M9：探不通标「不可用」
-   *  + 明示原因，不阻断保存）。 */
+  /** Wizard complete: write provider（**渠道条目不携模型**——单值退场 2026-10-09 清除批）、清 legacy 顶层键，
+   *  然后打开会话模型 picker——模型由用户在 picker 里**显式选定**（选定即写回 config.defaultModel——判据句 6）。
+   *  加渠道 = 配置写入面——落盘后探一次 `/models`（M9：探不通标「不可用」+ 明示原因，不阻断保存）。 */
   async function finishWizard() {
     const f = state.wizard.fields
     state.wizard = null
     // D-C2：format 非默认（anthropic/google）时落盘；openai = 默认省略（与 D-C1 picker 路径同构）
-    // MODEL-SELECTION v2：渠道默认模型 = 单值 model
-    const providerRec = { name: f.name, baseURL: f.baseURL, model: f.model, apiKey: f.key }
+    const providerRec = { name: f.name, baseURL: f.baseURL, apiKey: f.key }
     if (f.format && f.format !== "openai") providerRec.format = f.format
     for (const k of ["thinking", "reasoningEffort", "maxTokens", "chatPath"]) {
       if (f[k]) providerRec[k] = f[k]
     }
+    // #1049 补步（2026-10-08 裁「补步」）：向导末问——「走 proxy」问句（形 ≡ add 流既有问句——
+    // provider-admin.mjs add 流两支同形：No (direct) / Yes (proxy)，缺省 No/Esc；本档载体 = showPicker
+    // 同形调用（ctx 注入——index.mjs 装配处随 openModelPicker 先例）。答 Yes ⇒ 条目 proxy: true
+    // （随下方落盘一次写）；No ∥ 缺省 ⇒ 零 proxy 键。
+    const route = await showPicker("Route this provider's model requests through the proxy", [
+      { type: "item", text: "No (direct)", name: "no" },
+      { type: "item", text: "Yes (proxy)", name: "yes" },
+    ])
+    if (route?.name === "yes") providerRec.proxy = true
     // D-F5a（wizard finishWizard——清单外同型写回补正）先盘后存：磁盘 fresh raw 单操作
-    // （upsert 目标项 + defaultModel + 清 legacy 字段）——冲突放弃不留下内存 ghost（F5 约定）
+    // （upsert 目标项 + 清 legacy 字段）——冲突放弃不留下内存 ghost（F5 约定）。
+    // 2026-10-09 清除批：不写 `raw.defaultModel`——模型面写入唯二径 = picker 显式选定（carryoverDefaultModel）
+    // ∥ /config 默认模型子菜单；渠道条目零 `model`。
     await persistRaw((raw) => {
       raw.providers ??= []
       const existing = raw.providers.find((p) => p?.name === f.name)
       if (existing) Object.assign(existing, providerRec)
       else raw.providers.push(providerRec)
-      raw.defaultModel = `${f.name}:${providerRec.model}`
       delete raw.activeProvider
       delete raw.activeModel
       // 渠道老字段（models 候选清单）由 config-migrate 在下次 load 统一清理（迁移唯一权威）
@@ -200,18 +207,9 @@ export function createWizard(ctx) {
     const existing = agent.providers.find((p) => p.name === f.name)
     if (existing) Object.assign(existing, providerRec)
     else agent.providers.push(providerRec)
-    agent.activeProvider = f.name
-    agent.activeModel = providerRec.model
-    agent.provider = { ...agent.providers.find((p) => p.name === f.name) }
-    agent.provider.model = agent.activeModel
-    if (agent.config?.agent?.compactThresholdAuto) {
-      const { resolveCompactThreshold } = await import("@thincoder/core/config.mjs")
-      agent.config.agent.compactThreshold = resolveCompactThreshold(null, agent.provider).value
-    }
-    // agent.config 是 loadConfig merged——无 active* 键可写——defaultModel 随内存 merged 更新
-    agent.config.defaultModel = `${f.name}:${agent.activeModel}`
+    // 会话槽（activeProvider/activeModel/provider）不在此播种——由向导尾 picker 的显式选定一次写入
     pushLabel(`❯ Setup`, ansi.bold + C.tool)
-    pushLine(`Setup complete: ${f.name} / ${agent.activeModel} (defaultModel 已设——新会话起点)`, C.tool)
+    pushLine(`Setup complete: ${f.name}（渠道已落盘——默认模型下一步选定）`, C.tool)
     // M9 配置阶段准入：加渠道属配置写入面——保存已落，探一次 `/models`（探不通标「不可用」+ 明示原因；不阻断）
     const channel = agent.providers.find((p) => p.name === f.name) ?? providerRec
     const probe = await probeChannelModels(probeTargetOf(channel)) // 探针目标构造收敛核判据（③′——执行体与返形零改）
@@ -236,7 +234,7 @@ export function createWizard(ctx) {
     } else {
       pushLine(`Vector search disabled (memory falls back to text-only search). Run /config embedkey <key> to enable.`, C.dim)
     }
-    pushLine(`Select model (Esc to keep ${agent.activeModel})`, C.dim)
+    pushLine(`Select a model (选定即成为默认模型；Esc 跳过——之后可用 /model 选定)`, C.dim)
     // #448①「关闭后补评估」：收尾链落定（模型 picker 关闭 ∕ 零弹面两态）⇒ 通知链尾（闩重武装——幂等）。
     ctx.openModelPicker()
       .catch((e) => pushLine(`[error] ${e.message}`, C.error))

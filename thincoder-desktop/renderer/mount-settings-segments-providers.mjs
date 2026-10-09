@@ -5,7 +5,7 @@
  * `mount-settings-segments-models.mjs`（models）同族先例）。
  *
  * 出口（六件）：钥行编辑态两件（开 ∕ 消）· 设 ∕ 改钥 · 删钥（确认门经 `settings-confirm.mjs`）·
- * 渠级代理开关 · 「拉取模型」（暂存值直探）。
+ * 渠级代理开关 · 渠道校验（暂存值直探 —— S2 收窄，2026-10-09 清除批）。
  * **三端对齐批（2026-10-07 · 台账 #1027–#1029 · KD-75 ③⑤）**：新增**添加表单类型切换出口** `onAddShape`
  * （写 `providers.addShape` —— 形状唯一源；值 = 类型选择现值：预设名 ∥ `"custom"`）；`fetchModels` 载荷 + `proxy`
  * （表单勾选 ⇒ `true`；未勾 ∥ 缺 ⇒ 直连 —— 探针路由随勾选，主侧 `probeTargetOf` 同判定）。
@@ -30,13 +30,13 @@ const listOf = (value) => (Array.isArray(value) ? value : [])
 const reasonOf = (receipt) => (typeof receipt?.reason === "string" && receipt.reason !== "" ? receipt.reason : "invalid-shape")
 
 /**
- * 渠道面出口族工厂。`deps = { ask, store, setSettings, report, clearReport, loadProviders, slot, formOf,
+ * 渠道面出口族工厂。`deps = { ask, store, setSettings, report, clearReport, loadProviders, formOf,
  * onProvidersChanged }`（`loadProviders` = 读数供给族本段复读口，已绑定 `{ models: false }`；`formOf` =
  * 表单自取 —— 单一 owner 住 `mount-settings-exits.mjs`，经注入零副本）；返回 `{ handlers }`（并回单一
  * `handlers` 表）。
  */
 export function createProviderExits(deps = {}) {
-  const { ask, store, setSettings, report, clearReport, loadProviders, slot, formOf, onProvidersChanged, invalidateDrafts } = deps
+  const { ask, store, setSettings, report, clearReport, loadProviders, formOf, onProvidersChanged, invalidateDrafts } = deps
 
   /** 渠道段切片局部写（引用不变 ⇒ 零通知 —— 同值写零重绘；沿段族 `setEnvSlice` 先例）。 */
   const setProvidersSlice = (patch) => {
@@ -47,18 +47,20 @@ export function createProviderExits(deps = {}) {
   /** 钥行编辑态开（S1）：行内换形（钥输入 + 存 ∕ 消）——行面判据单源 = 视图 `deps.edit`。 */
   const openKeyEdit = (name) => setProvidersSlice({ edit: typeof name === "string" && name !== "" ? name : null })
   /** 钥行编辑态消（S1 ∕ 取消）：回静止态（**零发送** —— 取消非写意图）；#615②：失败草稿随取消清（取消 = 弃输入）。
-   *  **#652**：同拍声明该行草稿失效（弃输入 = 草稿作废 —— 在途窗内复开亦不复活；作用域自输入件自携）。 */
+   *  **#652**：同拍声明该行草稿失效（弃输入 = 草稿作废 —— 在途窗内复开亦不复活；作用域自输入件自携）。**现读同 `saveProviderKey`**（宿主无关 · 文档序末位）。 */
   const cancelKeyEdit = () => {
-    const input = typeof document?.querySelector === "function" ? document.querySelector(`${slot} [data-provider-key-input]`) : null
+    const inputs = typeof document?.querySelectorAll === "function" ? document.querySelectorAll("[data-provider-key-input]") : []
+    const input = inputs.length > 0 ? inputs[inputs.length - 1] : null
     invalidateDrafts?.(typeof input?.getAttribute === "function" ? input.getAttribute("data-draft-scope") : null)
     setProvidersSlice({ edit: null, keyDraft: null })
   }
 
   /** 设 ∕ 改钥出口（S1）：读行内输入现值 ⇒ `provider:setKey`（写后复读行面）；空值 ⇒ **零发送**（零静默）。
    *  **#615②**：失败径 ⇒ 段级失败面 + `providers.keyDraft` 落键入值（重挂后同点回填 —— 失败不丢键入）。
-   *  读面 = 无参选择器：行内编辑态单例（`edit` 单名）⇒ 在场输入唯一（免名字插值进选择器）。 */
+   *  现读 = **宿主无关**（文档序末位 = 交互面 —— 页槽 ∥ 组弹窗体两宿主同取，沿 `mcpFormNode` 先例）。 */
   async function saveProviderKey(name) {
-    const input = typeof document?.querySelector === "function" ? document.querySelector(`${slot} [data-provider-key-input]`) : null
+    const inputs = typeof document?.querySelectorAll === "function" ? document.querySelectorAll("[data-provider-key-input]") : []
+    const input = inputs.length > 0 ? inputs[inputs.length - 1] : null
     const value = typeof input?.value === "string" ? input.value.trim() : ""
     if (value === "") {
       console.error(`[renderer] provider:setKey skipped: empty key for ${name}`)
@@ -110,11 +112,11 @@ export function createProviderExits(deps = {}) {
   }
 
   /**
-   * 「拉取模型」出口（S2）：读表单暂存值（DOM 直读 —— **不落盘**）⇒ `provider:models`；探期 ∕ 两态落
-   * `providers.probe`，**同批写 `providers.draft`**（表单现值快照 —— 探果写切片 ⇒ 树重挂 ⇒ 未落盘输入
-   * 由回填救回）。`baseURL` 空 ⇒ 本地前置拒（`base-url-required` 词面，零发送 —— 沿 VSC `_paFetchModels`）；
-   * 探不通 ⇒ 失败词驻状态行，**保存径零阻断**。**KD-75 ⑤**：载荷 + `proxy`（勾选 ⇒ `true` —— 探针路由
-   * 随勾选；未勾 ∥ 缺 ⇒ 直连，目标构造归核 `probeTargetOf`）。
+   * 渠道校验出口（S2 收窄 · 2026-10-09 清除批）：读表单暂存值（DOM 直读 —— **不落盘**）⇒ `provider:models`；
+   * 探期 ∕ 两态落 `providers.probe`，**同批写 `providers.draft`**（表单现值快照 —— 探果写切片 ⇒ 树重挂 ⇒ 未落盘输入
+   * 由回填救回；暂存键 = 名 ∕ baseURL ∕ 格式 ∕ 钥 —— `model` 键随渠道单值模型退场）。`baseURL` 空 ⇒ 本地前置拒
+   * （`base-url-required` 词面，零发送 —— 沿 VSC `_paFetchModels`）；探不通 ⇒ 失败词驻状态行，**保存径零阻断**。
+   * **KD-75 ⑤**：载荷 + `proxy`（勾选 ⇒ `true` —— 探针路由随勾选；未勾 ∥ 缺 ⇒ 直连，目标构造归核 `probeTargetOf`）。
    */
   async function fetchModels(event) {
     const form = typeof formOf === "function" ? formOf(event) : null
@@ -123,7 +125,6 @@ export function createProviderExits(deps = {}) {
     const draft = {
       name: String(data.get("name") ?? ""),
       baseURL: String(data.get("baseURL") ?? ""),
-      model: String(data.get("model") ?? ""),
       format: String(data.get("format") ?? ""),
       key: String(data.get("key") ?? ""),
     }

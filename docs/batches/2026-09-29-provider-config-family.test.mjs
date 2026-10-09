@@ -1,13 +1,13 @@
 /**
  * 2026-09-29-provider-config-family.test.mjs — 批内件（provider-config-family 批 · #176 ∥ #177 ∥ #57）。
  * 名随批次档 · 不进仓套件 · 随批留存。**终位 = `docs/batches/2026-09-29-provider-config-family.test.mjs`**
-* **as-of 注（父侧小笔 · 2026-10-04 · 可 revert）**：「预设总数 = 22」等计数值冻结于 2026-09-29 口径——2026-10-04 opencode-go-preset 批后 = **24**（+ `opencode-go` ∥ `opencode-go-anthropic`）；护栏现形 = `docs/batches/2026-10-04-opencode-go-preset.test.mjs`（G-3）。复跑本件计数腿**预期红**（存量口径——非缺陷；沿「预期红 + 收口互指」先例）。
+ * **as-of 注（父侧小笔 · 2026-10-04；2026-10-09 清除批随正）**：计数值口径 = **25**（2026-10-04 opencode-go-preset 批后 +2：`opencode-go` ∥ `opencode-go-anthropic`；2026-10-09 server 预设批 +1：`gemini-openai`）——本轮随正入断言（原 22 冻结口径之「预期红」消解）；模型面随清除批（逐条无 `model` 键——渠道单值模型退场）。护栏现形 = `docs/batches/2026-10-04-opencode-go-preset.test.mjs`（G-3）。
  * （本副本 = 落位期暂存 `.thincoder/tmp/`，父侧转正；导入按 `process.cwd()`（仓库根）解析 ⇒ tmp ∕ 终位两处可跑）。
  * 复跑（仓库根 `thincoder/`）：
  *   node --test .thincoder/tmp/2026-09-29-provider-config-family.test.mjs
  *   node --test docs/batches/2026-09-29-provider-config-family.test.mjs   （转正后同跑）
  *
- * 覆盖 = 批档 §2.2.4 用例表：H-1..H-3（预设面——护栏重立：逐预设 `specMatch` 漂移白名单只减不增）∥
+ * 覆盖 = 批档 §2.2.4 用例表：H-1..H-3（预设面——2026-10-09 清除批随正：行形零 `model` ∥ 全表 25 条逐条无 `model` 键；原 `specMatch` 漂移白名单判据对象随渠道单值模型退场删除）∥
  * E-1..E-9（解析面 + 遮蔽零改 + 点集静态断言）+ 评审 #9 标题径行为例（设值 ⇒ Authorization 真值；
  * 未设 ⇒ 零请求 + 标题 null）+ 五族读点补齐（embedding ∕ websearch——E-1/E-4 同判据延伸）。
  * H-4（无 key 实拉不可达）= 非机检——批档 §5 记「待验（无 key）」。
@@ -25,7 +25,6 @@ if (!existsSync(join(ROOT, "thincoder-core"))) throw new Error(`须从仓库根�
 const mod = (rel) => import(pathToFileURL(resolve(ROOT, rel)).href)
 
 const presets = await mod("thincoder-core/config-presets.mjs")
-const specs = await mod("thincoder-core/model-specs.mjs")
 const envRef = await mod("thincoder-core/env-ref.mjs")
 const core = await mod("thincoder-core/provider/core.mjs")
 const listModels = await mod("thincoder-core/provider/list-models.mjs")
@@ -43,48 +42,38 @@ const chatOk = (content) => new Response(
 
 // ─── #176 预设面（H-1..H-3） ───
 
-test("H-1/H-2 预设面：huawei 行形（最小三字段）+ 22 键 + 既有 21 键零改（抽样逐字段）", () => {
+test("H-1/H-2 预设面：huawei 行形（最小两字段）+ 25 键 + 既有 21 键零改（抽样逐字段）", () => {
   const names = Object.keys(presets.PROVIDER_PRESETS)
-  assert.equal(names.length, 22, "预设总数 = 22")
+  assert.equal(names.length, 25, "预设总数 = 25（2026-10-04 opencode-go-preset 批后；2026-10-09 server 预设批 +gemini-openai）")
   assert.deepEqual(names.slice(names.indexOf("tokenhub"), names.indexOf("tokenhub") + 2), ["tokenhub", "huawei"], "插位 = tokenhub 后（国内云厂商组尾）")
-  // 行形：presetToEntry ⇒ { name, baseURL, model }（desc 剥离；无 thinking ∕ reasoningEffort ∕ maxTokens 键）
+  // 行形：presetToEntry ⇒ { name, baseURL }（desc 剥离；零 model——2026-10-09 清除批；无 thinking ∕ reasoningEffort ∕ maxTokens 键）
   assert.deepEqual(presets.presetToEntry("huawei"), {
     name: "huawei",
     baseURL: "https://api.modelarts-maas.com/openai/v1",
-    model: "glm-5.3",
   })
   const raw = presets.PROVIDER_PRESETS.huawei
-  assert.deepEqual(Object.keys(raw).sort(), ["baseURL", "desc", "model"], "预设行 = 最小三字段")
+  assert.deepEqual(Object.keys(raw).sort(), ["baseURL", "desc"], "预设行 = 最小两字段（零 model——渠道单值模型退场）")
   assert.equal(raw.desc, "Huawei Cloud ModelArts Studio (华为云 MaaS)")
   // 既有 21 键零改：全键名 + 抽样逐字段 deepEqual（含 thinking ∕ effort ∕ maxTokens ∕ format ∕ chatPath 形态位）
   const OLD21 = ["deepseek", "kimi", "kimi-code", "glm", "glm-code", "qwen", "qwenplan", "mimo", "mimoplan", "minimax", "openai", "claude", "gemini", "grok", "mistral", "volcengine", "hunyuan", "tokenhub", "siliconflow", "openrouter", "groq"]
-  assert.deepEqual([...names].sort(), [...OLD21, "huawei"].sort(), "键集 = 21 旧键 + huawei（零增删）")
+  assert.deepEqual([...names].sort(), [...OLD21, "huawei", "opencode-go", "opencode-go-anthropic", "gemini-openai"].sort(), "键集 = 21 旧键 + huawei + 两 opencode-go 键 + gemini-openai（零增删）")
   const SAMPLE = {
-    deepseek: { baseURL: "https://api.deepseek.com", model: "deepseek-flash", thinking: { type: "enabled" }, reasoningEffort: "max", maxTokens: 384_000, desc: "DeepSeek" },
-    "kimi-code": { baseURL: "https://api.kimi.com/coding/v1", model: "k3", thinking: null, reasoningEffort: "max", maxTokens: 131072, desc: "Kimi For Coding (platform.kimi.com — sk-kimi- keys; NOT interchangeable with Moonshot)" },
-    minimax: { baseURL: "https://api.minimaxi.com/v1", model: "MiniMax-M3", thinking: { type: "adaptive" }, maxTokens: 128000, chatPath: "/text/chatcompletion_v2", desc: "MiniMax" },
-    claude: { baseURL: "https://api.anthropic.com/v1", model: "claude-sonnet-4", format: "anthropic", maxTokens: 8192, desc: "Claude (Anthropic)" },
-    gemini: { baseURL: "https://generativelanguage.googleapis.com/v1beta", model: "gemini-2.5-flash", format: "google", maxTokens: 8192, desc: "Gemini (Google)" },
-    volcengine: { baseURL: "https://ark.cn-beijing.volces.com/api/v3", model: "doubao-seed-2-0-code-preview-260215", maxTokens: 131072, desc: "Volcengine Ark (豆包)" },
-    tokenhub: { baseURL: "https://tokenhub.tencentmaas.com/v1", model: "hy3", desc: "Tencent TokenHub (腾讯混元网关)" },
-    siliconflow: { baseURL: "https://api.siliconflow.cn/v1", model: "deepseek-ai/DeepSeek-V3", maxTokens: 32_000, desc: "SiliconFlow (硅基流动)" },
+    deepseek: { baseURL: "https://api.deepseek.com", thinking: { type: "enabled" }, reasoningEffort: "max", maxTokens: 384_000, desc: "DeepSeek" },
+    "kimi-code": { baseURL: "https://api.kimi.com/coding/v1", thinking: null, reasoningEffort: "max", maxTokens: 131072, desc: "Kimi For Coding (platform.kimi.com — sk-kimi- keys; NOT interchangeable with Moonshot)" },
+    minimax: { baseURL: "https://api.minimaxi.com/v1", thinking: { type: "adaptive" }, maxTokens: 128000, chatPath: "/text/chatcompletion_v2", desc: "MiniMax" },
+    claude: { baseURL: "https://api.anthropic.com/v1", format: "anthropic", maxTokens: 8192, desc: "Claude (Anthropic)" },
+    gemini: { baseURL: "https://generativelanguage.googleapis.com/v1beta", format: "google", maxTokens: 8192, desc: "Gemini (Google)" },
+    volcengine: { baseURL: "https://ark.cn-beijing.volces.com/api/v3", maxTokens: 131072, desc: "Volcengine Ark (豆包)" },
+    tokenhub: { baseURL: "https://tokenhub.tencentmaas.com/v1", desc: "Tencent TokenHub (腾讯混元网关)" },
+    siliconflow: { baseURL: "https://api.siliconflow.cn/v1", maxTokens: 32_000, desc: "SiliconFlow (硅基流动)" },
   }
   for (const [name, expect] of Object.entries(SAMPLE)) assert.deepEqual(presets.PROVIDER_PRESETS[name], expect, `预设 ${name} 零改`)
 })
 
-test("H-3 护栏：逐预设 specMatch ∕ 漂移白名单 {hunyuan, siliconflow, groq} 只减不增（huawei 命中既有行）", () => {
-  const WHITELIST = new Set(["hunyuan", "siliconflow", "groq"])
-  const unmatched = []
-  const warn = console.warn
-  console.warn = () => {} // 未知模型一次性告警静音（与断言面无关）
-  try {
-    for (const [name, p] of Object.entries(presets.PROVIDER_PRESETS)) {
-      if (!specs.specMatch(p.model).matched) unmatched.push(name)
-    }
-  } finally { console.warn = warn }
-  const grown = unmatched.filter((n) => !WHITELIST.has(n))
-  assert.deepEqual(grown, [], `漂移白名单只减不增——新增未命中：${grown.join(", ")}`)
-  assert.equal(specs.specMatch(presets.PROVIDER_PRESETS.huawei.model).matched, true, "huawei 选名命中既有规格行")
+test("H-3 护栏（2026-10-09 清除批随正）：全表 25 条逐条无 `model` 键（原 specMatch 漂移白名单判据对象随渠道单值模型退场删除）", () => {
+  for (const [name, p] of Object.entries(presets.PROVIDER_PRESETS)) {
+    assert.equal("model" in p, false, `${name} 无 model 键`)
+  }
 })
 
 // ─── #57 解析面（E-1..E-9） ───

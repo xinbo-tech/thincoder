@@ -6,7 +6,8 @@
  * 会话级模型面**实变** ⇒ 同拍写回 config.defaultModel（判据句 6——写面单点 = `config-helpers.mjs`
  * `carryoverDefaultModel`；等值 ∕ 回声零写）。候选 = **运行期拉取**（`GET /models`——M2；
  * 拉到的行直接可选）；显式 `provider:model` 一律放行（M4——仅[空值/裸值/未知 provider]无效）。
- * 切换成功回显规格来源（M6）；渠道默认模型 = `providers[].model` 单值（M3——显示回退读取）。
+ * 切换成功回显规格来源（M6）；渠道条目不携模型（单值 `providers[].model` 退场——2026-10-09 清除批；
+ * 渠道行显示回退 = 渠道 note 的 `baseURL`）。
  * 配置写入面（加渠道 / 设 key）探一次 `/models`（M9——探不通标「不可用」+ 明示原因，不阻断保存）。
  * 渠道管理流（add/remove/key/context）是 provider 级 config 写——语义不变；2026-09-29 结构拆分起
  * 四流居 provider-admin.mjs（本档装配 ∥ 尾同名再出口）。F-4 (ISSUE-FIX-BATCH)：removeProviderFlow
@@ -26,7 +27,7 @@ export function createModelPicker(ctx) {
   const { agent, state, pushLine, persistRaw, askQuestion, maskKey, showPicker, closePicker, renderPickerLines, confirmDelete = () => { throw new Error("ctx.confirmDelete missing — deletion refused (fail-closed)") } } = ctx
   const { ansi, C } = ctx
   // 渠道管理四流 + 级联清理（provider-admin.mjs——structure-split-2 迁出：本档装配 ∥ 尾同名再出口）
-  const admin = createProviderAdmin({ agent, pushLine, persistRaw, askQuestion, maskKey, showPicker, confirmDelete, C, fmtContextK, defaultModelLabel })
+  const admin = createProviderAdmin({ agent, pushLine, persistRaw, askQuestion, maskKey, showPicker, confirmDelete, C, fmtContextK })
 
   /** entry 唯一标识：异步更新 entries 后按它恢复选中项 */
   function entryKey(e) {
@@ -43,11 +44,6 @@ export function createModelPicker(ctx) {
   /** Get API key for a provider (config.json only — env vars are not a key source) */
   function getApiKey(providerConfig) {
     return providerConfig.apiKey
-  }
-
-  /** 渠道默认模型显示值（M3③：无默认模型显 "(no default model)"——替代旧 "(no candidates)"）。 */
-  function defaultModelLabel(p) {
-    return p?.model ? p.model : "(no default model)"
   }
 
   /** 异步更新 entries 后的选中项恢复（selKey 命中则回原位，否则钳位）。 */
@@ -111,12 +107,14 @@ export function createModelPicker(ctx) {
     return false
   }
 
-  /** Build entries for Level 1: provider list（L1 = 渠道面——session 复合态随行显示） */
+  /** Build entries for Level 1: provider list（L1 = 渠道面——session 复合态随行显示）。
+   *  2026-10-09 清除批：渠道条目不携模型——模型段只显**会话槽**值（仅当前会话渠道），
+   *  其余显示回退 = 行 note 的 `baseURL`。 */
   function buildProviderEntries() {
     const entries = []
     for (const p of agent.providers) {
       const active = p.name === agent.activeProvider
-      const shown = active ? (agent.activeModel ?? defaultModelLabel(p)) : defaultModelLabel(p)
+      const shown = active && agent.activeModel ? ` ${agent.activeModel}` : ""
       const marker = active ? "●" : ""
       // A1（第 20 批 §12.5）：渠道警示（(no key) / (不可用)）上移 text——与既有状态标
       // （(ctx …) / ← session）同簇（先例 = provider-admin.mjs setKeyFlow / wizard 的 (added, no key)）：
@@ -127,7 +125,7 @@ export function createModelPicker(ctx) {
       const ctxTag = ` (ctx ${fmtContextK(providerSpec(p).context)})`
       entries.push({
         type: "item",
-        text: `${p.name.padEnd(12)} ${shown}${ctxTag}${keyStatus}${unavailable}${sessionNote}`,
+        text: `${p.name.padEnd(12)}${shown}${ctxTag}${keyStatus}${unavailable}${sessionNote}`,
         action: "open-models",
         provider: p.name,
         marker,
@@ -273,7 +271,7 @@ export function createModelPicker(ctx) {
       if (!providers.length) return null
       const e = await showPicker("Select provider", providers.map((p) => ({
         type: "item",
-        text: `${p.name.padEnd(12)} ${defaultModelLabel(p)}`,
+        text: `${p.name.padEnd(12)} ${p.baseURL}`,
         action: "open-models",
         provider: p.name,
       })))

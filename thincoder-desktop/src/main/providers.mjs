@@ -23,8 +23,11 @@
  * 以宿主证据覆盖落账分类（`reason` 逐字不动——核 `deps.hostBusyOverride` 缝同判）。
  * **三端对齐批（2026-10-07 · 台账 #1027–#1029 · KD-75 ④⑤）**：① `provider:save` 载荷 + `proxy`（勾选 ⇒ `true`）
  * ⇒ 核 `addProviderEntry` 同批落条（仅真值落键）；② `provider:models` 探针目标收敛为核 `probeTargetOf` 同判定
- * （双门槛组成式唯一式：条目 `proxy` ∧ 全局 `proxy.model === true` ⇒ `proxy.uri`；未勾 ∥ 缺省 ⇒ 直连）——
+ * （逐渠判定组成式唯一式：条目 `proxy` ∧ 代理 `uri` 在案 ⇒ `proxy.uri`；未勾 ∥ 缺省 ⇒ 直连）——
  * 原全局 `proxy.web` 旗取用退场（web 旗活消费面唯一 = 核 `proxy.mjs` 的 web 工具链 —— `docs/core/design/PROXY.md` §4）。
+ * **2026-10-09 清除批（台账 #1122）**：渠道单值模型退场 —— `provider:save` 的 `model` ∕ `active` 参与缺省补写支
+ * 一并退场（`defaultModel` 写入面 = 视图出口 ∥ 会话选定写回）；`provider:list` 行去 `model` 键、顶层增
+ * `defaultModel`（渲染面两读数「复合串直读」的载荷载体）；预设面投影去 `model`；自定形必填步 = baseURL → format。
  */
 import { PROVIDER_PRESETS, loadConfig } from "@thincoder/core/config.mjs"
 import {
@@ -51,20 +54,21 @@ function hasKeyOf(entry) {
 
 /**
  * 预设候选面（端侧零表 · KD-10）：逐条取自核表 `PROVIDER_PRESETS`（`thincoder-core/config-presets.mjs:16`）
- * ——转发四字段 `{ name, desc, baseURL, model }`（**S7 增 `desc`**：候选项标签 `name — desc (model)` 串形
- * 归渲染面；值直取核表 ⇒ 端侧零表、零自持文案）。
+ * ——转发三字段 `{ name, desc, baseURL }`（**S7 增 `desc`**：候选项标签 `name — desc` 串形归渲染面；
+ * 值直取核表 ⇒ 端侧零表、零自持文案；`model` 键随 2026-10-09 清除批退场 —— 核表零该键）。
  */
 function presetChoices() {
   return Object.entries(PROVIDER_PRESETS).map(([name, preset]) => ({
     name,
     desc: preset.desc,
     baseURL: preset.baseURL,
-    model: preset.model,
   }))
 }
 
 /**
- * `provider:list` ⇒ `{ ok, presets:[{ name, desc, baseURL, model }], providers:[{ name, shape, baseURL, model?, hasKey, maskedKey, active, proxy, available?, unavailableReason? }], active }`。
+ * `provider:list` ⇒ `{ ok, presets:[{ name, desc, baseURL }], providers:[{ name, shape, baseURL, hasKey, maskedKey, active, proxy, available?, unavailableReason? }], active, defaultModel }`。
+ * **2026-10-09 清除批**：行去 `model` 键（渠道条目不携模型）；顶层增 `defaultModel`（核 `loadConfig` 单源
+ * 直取 —— 渲染面「激活渠道 ∥ 当前模型」两读数由该复合串直读；缺 ∕ 非串 ⇒ `null`）。
  * `presets` = 核预设表投影（24 条 · 序 = 核表声明序——供设置面渠道段与首启向导第一步选预设，
  * 消费面无第二份表）；`shape` = 名在核预设表 ⇒ `preset`，否则 `custom`；
  * `active` 单源 = 核 `resolveProviders().activeProvider`
@@ -75,10 +79,13 @@ function presetChoices() {
  */
 export function providerList() {
   const { providers, activeProvider } = resolveProviders()
+  const defaultModel = loadConfig()?.defaultModel
   return {
     ok: true,
     presets: presetChoices(),
     active: activeProvider ?? null,
+    // 2026-10-09 清除批：两读数载荷载体（复合串单源直取；缺 ∕ 非串 ⇒ null —— 禁假造）。
+    defaultModel: typeof defaultModel === "string" && defaultModel !== "" ? defaultModel : null,
     providers: providers.map((p) => {
       const hasKey = hasKeyOf(p)
       const admission = admissionOf(p.name) // S3：读账优先（端侧零再分类副本）
@@ -86,7 +93,6 @@ export function providerList() {
         name: p.name,
         shape: PROVIDER_PRESETS[p.name] ? "preset" : "custom",
         baseURL: p.baseURL ?? "",
-        ...(typeof p.model === "string" && p.model ? { model: p.model } : {}),
         hasKey,
         maskedKey: hasKey ? maskKey(`providers.${p.name}.apiKey`, p.apiKey) : null,
         active: p.name === activeProvider,
@@ -120,15 +126,13 @@ export function probeAfterWrite(name) {
 
 /**
  * `provider:save(payload)` ⇒ `{ ok:true, reason:null }` ∥ `{ ok:false, reason }`。
- * 载荷 `{ name, shape:"preset"|"custom", preset?, baseURL?, model?, key?, format?, active?, proxy? }`；
+ * 载荷 `{ name, shape:"preset"|"custom", preset?, baseURL?, key?, format?, proxy? }`（**2026-10-09 清除批**：
+ * `model` ∥ `active` 参退场 —— 渠道单值模型退场；`defaultModel` 写入面 = 视图出口 ∥ 会话选定写回，
+ * 单源 = `docs/desktop/design/IPC.md` §2 注 8①）；
  * `proxy`（可选布尔 —— 表单「走 proxy」勾选，KD-75 ④）：`true` ⇒ 条目同批落 `proxy: true`（缺 ∥ 非真 ⇒ 零键）；
  * `reason` = 核 `addProviderEntry` 错误串**直传**（预设名不存在 / 重名 / 激活渠道保护…）∥ 端侧形判
- * `invalid-shape`（形不在两形 / custom 缺 `baseURL`·`model` / `format` 出三协议——**步序判据单源** = 核流程族
+ * `invalid-shape`（形不在两形 / custom 缺 `baseURL` / `format` 出三协议——**步序判据单源** = 核流程族
  * `customFieldsError`，端码照旧）。
- * `active:true` ⇒ 同批追加写 `defaultModel = "<name>:<model>"`（核无「置激活」子 ⇒ 端侧经唯一写盘执行体
- * 落该键；模型缺失 ⇒ `invalid-shape`，零激活改写）。
- * **B① 首跑补全**（批 §2 ∥ KD-4 ∥ KD-5；`active` 非真径）：条目有效 ∧ `defaultModel` **仅缺失** ⇒
- * 同写盘执行体补写（既有非空——含无效-非空——**零覆盖**；两支排他——`active:true` 不重入补写支）。
  * 校验失败**零写盘**（核变更子内部生效前不落盘）。
  * **#841**：成功回执另携 `providerState`（设置写回执 —— 第三刷新点：设置面修好 `defaultModel` 后
  * 提示行即时退场；投影单源 = `session-slots.mjs` `providerStateOf`，写后核读）。
@@ -145,40 +149,14 @@ export function providerSave(payload) {
     err = addProviderEntry({ preset: name, key, proxy })
   } else {
     const baseURL = String(payload?.baseURL ?? "").trim()
-    const model = String(payload?.model ?? "").trim()
     const format = payload?.format ?? "openai"
-    // 自定形必填步序（baseURL → model → format）+ 协议域 = 核流程族判据（R8）——端侧零副本、拒码照旧。
-    if (customFieldsError({ baseURL, model, format }) !== null) return { ok: false, reason: "invalid-shape" }
-    err = addProviderEntry({ custom: { name, baseURL, model, format }, key, proxy })
+    // 自定形必填步序（baseURL → format）+ 协议域 = 核流程族判据（R8）——端侧零副本、拒码照旧。
+    if (customFieldsError({ baseURL, format }) !== null) return { ok: false, reason: "invalid-shape" }
+    err = addProviderEntry({ custom: { name, baseURL, format }, key, proxy })
   }
   if (err) return { ok: false, reason: err }
   probeAfterWrite(name) // S3：加渠道 = 配置写入面 —— 写后探一次（零阻断）
-  if (payload?.active === true) {
-    const entry = resolveProviders().providers.find((p) => p.name === name)
-    const model = typeof entry?.model === "string" ? entry.model : ""
-    if (!model) return { ok: false, reason: "invalid-shape" }
-    const w = writeConfigAtomic(_configPath(), (disk) => { disk.defaultModel = `${name}:${model}` })
-    if (!w.ok) return { ok: false, reason: w.reason }
-  } else {
-    const backfill = backfillDefaultModel(name)
-    if (backfill !== null) return backfill
-  }
   return { ok: true, reason: null, providerState: providerStateOf(loadConfig()) }
-}
-
-/** B① 首跑补全（`defaultModel` **仅缺失** ⇒ 补写条目 `name:model` —— 批 §2）：保存成功径消费——
- * 条件三件（条目有效 = `name+model+baseURL` 全非空 ∧ `defaultModel` 非串 ∥ trim 空 ∧ 写盘成功）；
- * **既有非空（含无效-非空）零覆盖**（KD-5 —— 无效态归 A 词面引导）。返回 = `null`（未触发 ∥ 成功——
- * 调用面落 `ok:true`）∥ 失败回执 `{ ok:false, reason }`（同 `active` 支形——写盘失败如实上报）。 */
-function backfillDefaultModel(name) {
-  const defaultModel = loadConfig()?.defaultModel
-  if (typeof defaultModel === "string" && defaultModel.trim() !== "") return null // 既有非空零覆盖
-  const entry = resolveProviders().providers.find((p) => p.name === name)
-  const model = typeof entry?.model === "string" ? entry.model : ""
-  const baseURL = typeof entry?.baseURL === "string" ? entry.baseURL : ""
-  if (!name || !model || !baseURL) return null // 条目有效判据三件（无效条目零写）
-  const w = writeConfigAtomic(_configPath(), (disk) => { disk.defaultModel = `${name}:${model}` })
-  return w.ok ? null : { ok: false, reason: w.reason }
 }
 
 /** `provider:remove(payload)` ⇒ `{ ok:true, reason:null }` ∥ `{ ok:false, reason }`（核错误串直传——
@@ -269,8 +247,8 @@ export async function providerVerify(payload) {
 /**
  * `provider:models(payload)` ⇒ `{ ok:true, models }` ∥ `{ ok:false, models:[], reason }` —— 「拉取模型」（S2：VSC
  * `testProviderConnection` 对位）。载荷 = **表单暂存值**（**不落盘 ∕ 不入账**）；探面单源 = 核 `probeChannelModels`
- * （零第二探针），**探针目标 = 核 `probeTargetOf` 同判定**（KD-75 ⑤ 缺陷修复并本批：条目 `proxy` ∧ 全局
- * `proxy.model === true` ⇒ `proxy.uri`；未勾 ∥ 缺省 ⇒ 直连 —— 原全局 `proxy.web` 旗取用退场）。**名传空串** ⇒ 核
+ * （零第二探针），**探针目标 = 核 `probeTargetOf` 同判定**（KD-75 ⑤ 缺陷修复并本批：条目 `proxy` ∧ 代理
+ * `uri` 在案 ⇒ `proxy.uri`——逐渠独立、无全局闸，2026-10-08；未勾 ∥ 缺省 ⇒ 直连 —— 原全局 `proxy.web` 旗取用退场）。**名传空串** ⇒ 核
  * `recordAdmission` 空名早退 ⇒ 不落账（免污染同名既有渠行面读数 —— S3 行面单源）。探不通 ⇒ `reason` = 核失败句，**不阻断保存**。
  */
 export async function providerModels(payload) {

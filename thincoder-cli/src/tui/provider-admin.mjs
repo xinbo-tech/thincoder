@@ -6,7 +6,7 @@
  * `docs/batches/2026-09-29-structure-split-2.md` §2.2-A。
  *
  * 装配 = `createProviderAdmin(ctx)`（ctx = `{ agent, showPicker, askQuestion, pushLine, persistRaw,
- * maskKey, confirmDelete, C, fmtContextK, defaultModelLabel }`——后两名 = 主档纯 helper，ctx 注入
+ * maskKey, confirmDelete, C, fmtContextK }`——`fmtContextK` = 主档纯 helper，ctx 注入
  * 同 `maskKey` 先例）→ `{ addProviderFlow, removeProviderFlow, setKeyFlow, setProviderKey,
  * setContextFlow }`；`cascadeRemoveProvider` 模块级导出（宿主 `model-picker.mjs` 尾同名再出口——
  * 历史导出面零改）。零环：本档不 import 主档（宿主 → 本档单向）。
@@ -21,7 +21,7 @@ import { probeChannelModels } from "./model-catalog.mjs"
 
 /** createProviderAdmin(ctx) → { addProviderFlow, removeProviderFlow, setKeyFlow, setProviderKey, setContextFlow } */
 export function createProviderAdmin(ctx) {
-  const { agent, showPicker, askQuestion, pushLine, persistRaw, maskKey, confirmDelete, C, fmtContextK, defaultModelLabel } = ctx
+  const { agent, showPicker, askQuestion, pushLine, persistRaw, maskKey, confirmDelete, C, fmtContextK } = ctx
 
   // ═══ 渠道管理流（provider 级 config 写——语义不变——与 /model 会话选择分离）═══
 
@@ -43,7 +43,7 @@ export function createProviderAdmin(ctx) {
     const entries = [
       { type: "header", text: "Select a preset provider" },
       ...Object.entries(PRESETS).filter(([name]) => !agent.providers.some((p) => p.name === name))
-        .map(([name, p]) => ({ type: "item", text: `${name.padEnd(10)} ${p.desc ?? ""} (${p.model ?? ""})`, name, kind: "preset" })),
+        .map(([name, p]) => ({ type: "item", text: `${name.padEnd(10)} ${p.desc ?? ""}`, name, kind: "preset" })),
       { type: "header", text: "Other" },
       { type: "item", text: "Custom (manual config)", name: "__custom__", kind: "custom" },
     ]
@@ -55,15 +55,13 @@ export function createProviderAdmin(ctx) {
       if (agent.providers.some((p) => p.name === name)) return
       const baseURL = (await askQuestion("Enter baseURL:")).replace(/\/+$/, "")
       if (!baseURL) return
-      const model = await askQuestion("Enter model name:")
-      if (!model) return
       const format = await showPicker("API format", [
         { type: "item", text: "openai", name: "openai" },
         { type: "item", text: "anthropic", name: "anthropic" },
         { type: "item", text: "google", name: "google" },
       ])
       if (!format) return // Esc/取消 → 中止流程
-      const cfg = { name, baseURL, model }
+      const cfg = { name, baseURL } // 2026-10-09 清除批：渠道条目不携 `model`（表单不设 model 输入件）
       if (format.name === "anthropic" || format.name === "google") cfg.format = format.name
       else if (format.name !== "openai") return // 防御：未知格式（理论不可达——picker 枚举）
       await persistRaw((raw) => { raw.providers ??= []; raw.providers.push(cfg) }) // D-F5a 先盘后存
@@ -71,7 +69,7 @@ export function createProviderAdmin(ctx) {
       const key = await askQuestion(`Enter API key for ${name} (skip if none):`)
       if (key) await setProviderKey(name, key, { probe: false }) // 探统一在流尾（M9——精确一次）
       // #1027 走 proxy 问句（key 后、流尾探针前——写同一键 providers[].proxy；No/Esc ⇒ 零键零写）
-      const route = await showPicker("Route this provider's model requests through the proxy (needs global proxy.model on)", [
+      const route = await showPicker("Route this provider's model requests through the proxy", [
         { type: "item", text: "No (direct)", name: "no" },
         { type: "item", text: "Yes (proxy)", name: "yes" },
       ])
@@ -88,7 +86,7 @@ export function createProviderAdmin(ctx) {
     }
     const preset = PRESETS[se.name]
     if (!preset || agent.providers.some((p) => p.name === se.name)) return
-    const cfg = { name: se.name, baseURL: preset.baseURL, model: preset.model }
+    const cfg = { name: se.name, baseURL: preset.baseURL } // 2026-10-09 清除批：渠道条目不携 `model`（零播种）
     if (preset.thinking) cfg.thinking = preset.thinking
     if (preset.reasoningEffort) cfg.reasoningEffort = preset.reasoningEffort
     if (preset.maxTokens) cfg.maxTokens = preset.maxTokens
@@ -99,7 +97,7 @@ export function createProviderAdmin(ctx) {
     const key = await askQuestion(`Enter API key for ${se.name} (skip if none):`)
     if (key) await setProviderKey(se.name, key, { probe: false }) // 探统一在流尾（M9——精确一次）
     // #1027 走 proxy 问句（key 后、流尾探针前——写同一键 providers[].proxy；No/Esc ⇒ 零键零写）
-    const route = await showPicker("Route this provider's model requests through the proxy (needs global proxy.model on)", [
+    const route = await showPicker("Route this provider's model requests through the proxy", [
       { type: "item", text: "No (direct)", name: "no" },
       { type: "item", text: "Yes (proxy)", name: "yes" },
     ])
@@ -119,7 +117,7 @@ export function createProviderAdmin(ctx) {
     if (!candidates.length) return
     const se = await showPicker("Remove Provider", [
       { type: "header", text: "Select provider to remove" },
-      ...candidates.map((p) => ({ type: "item", text: `${p.name} (${defaultModelLabel(p)})`, name: p.name })),
+      ...candidates.map((p) => ({ type: "item", text: `${p.name} (${p.baseURL})`, name: p.name })),
     ])
     if (!se) return
     if (!(await confirmDelete(`Remove provider ${se.name}?`))) return
@@ -218,7 +216,7 @@ export function createProviderAdmin(ctx) {
 
 /** F-4 (IKCDMR) 级联清理（删渠道共享写点）：raw/merged config 移除 name 渠道后清悬挂引用——
  *  agent.consultModels 条目 / agent.subagentModels 角色值（=== name 或 "name:…" 前缀——
- *  角色值是 "provider:model" | 裸渠道名 | 裸模型名）/ agent.advisor.provider。
+ *  角色值是 "provider:model" | 裸渠道名（遗留值——清除批起解析层拒） | 裸模型名）/ agent.advisor.provider。
  *  纯 mutate（removeProviderFlow persistRaw 的 D-F5 新鲜 raw 上调用；agent.config 内存镜像
  *  子树与 raw.agent 同构可复用）。空数组/空对象键删除（规范形态）。 */
 export function cascadeRemoveProvider(raw, name) {

@@ -83,7 +83,7 @@ export async function resolveTurnStage({ panel, turnSlot, providerName, modelOve
   if (!p) { panel._panel?.webview.postMessage({ type: "error", text: t("error.failedProvider", { name: resolvedName }), needsSetup: true }); return { done: true } }
   // MODEL-MERGE-SESSION：模型/stamp 决策收敛纯函数（resolveTurnModelAndStamp——导出供单测
   // 锚——语义见函数头注释：真 override 单回合不落槽——无 override 落实际运行模型）
-  const baseModel = p.model ?? null // 渠道默认解析值（defaultModel 属该渠道 → 用之；否则渠道默认单值）
+  const baseModel = p.model ?? null // 解析值（defaultModel 属该渠道 → 用之；否则 null——清除批：渠道单值模型退场）
   const { runModel, stampProvider, sessionStampModel } = resolveTurnModelAndStamp({ providerName: resolvedName, modelOverride, slotRef, baseModel })
   if (runModel && runModel !== p.model) p = { ...p, model: runModel }
   const slotStamp = { activeProvider: stampProvider, activeModel: sessionStampModel }

@@ -32,10 +32,10 @@ export function resolveAdvisorProvider(agent) {
       const provider = findProvider(agent.providers?.length ? agent.providers : agent.config?.providersList ?? [agent.provider], cfg.provider)
       // F-2a (MODEL-400-FIX)：无 cfg.model 时渠道克隆须重派生 model——渠道裸克隆会丢 model 键
       // → 无 model 请求 → serde 400。
-      // MODEL-SELECTION v2（M3④）：无 cfg.model → 命中渠道自己的默认模型（`provider.model`
-      // 单值）；渠道无默认模型 → 父 provider 兜底（与 subagent F-2c 同构）——绝不产出静默
-      // undefined-model 请求（最极端两者皆无 → chat 前 assertProviderModel fail-fast）。
-      const result = cfg.model ? { ...provider, model: cfg.model } : { ...provider, model: provider.model ?? agent.provider?.model }
+      // 2026-10-09 清除批（与 CLI `cmd-advisor` 同族收正）：模型面 = **父解析单档**——渠条目不携
+      // 模型（渠道单值模型退场）⇒ 无 cfg.model 取父运行模型 `agent.provider?.model`；两者皆无 →
+      // chat 前 `assertProviderModel` fail-fast（不静默）。
+      const result = cfg.model ? { ...provider, model: cfg.model } : { ...provider, model: agent.provider?.model }
       // 台账 #329 / `MODEL-SPECS.md §15.4-3`：off 形须**活着到达载荷层**——载荷层 off 门首款 = `provider.thinking === null`
       // （`thincoder-core/provider/core.mjs:213-219`）；归一为 `undefined` 会让该门永不开（effort 族 advisor
       // 关思考静默失效）。显式 off 同清**继承档**（渠条目自带 / 主 provider 的 `reasoningEffort` 不得随行——

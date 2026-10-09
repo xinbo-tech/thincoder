@@ -26,9 +26,9 @@ function slotDisplay(agent, role) {
  *  /submodel <type> <value>         → set a role slot
  *  /submodel <type>                 → show a slot
  *  /submodel reset [type]           → clear global (or a slot)
- *  value forms: provider:model | provider name | model name (same as subagent tool model arg) —
+ *  value forms: provider:model | model name（同 subagent 工具 model 入参；裸渠名 = 清除批前遗留值——2026-10-09 起解析层拒）
  *  MODEL-MERGE-SESSION：会话模型 = provider:model 复合（agent.activeProvider/activeModel 双字段
- *  恒非空——无渠道默认字段——父会话模型引用一律复合值）。 */
+ *  恒非空——渠道条目不携模型（单值退场——2026-10-09 清除批）——父会话模型引用一律复合值）。 */
 export async function handleSubmodelCommand(ctx, args = []) {
   const { agent, pushLine, showPicker, askQuestion, persistRaw, pickModelForSlot } = ctx
   const input = args.join(" ").trim()

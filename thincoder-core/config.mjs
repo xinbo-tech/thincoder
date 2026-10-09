@@ -1,9 +1,9 @@
 /**
  * config.mjs — configuration loading and saving
- * Model-merge schema v2 (2026-09-10 MODEL-SELECTION): providers[] carry ONE default model
- * per channel (`providers[].model` — the new-install seed / empty-slot fallback); the
- * candidates list field models[] is gone — the available-model list is fetched from the
- * provider at runtime (`GET /models`, PROVIDER.md §16). config.defaultModel (top level,
+ * Model-merge schema v2 (2026-09-10 MODEL-SELECTION; 2026-10-09 清除批：渠道单值模型退场):
+ * providers[] carry NO channel default model (`providers[].model` retired — 渠道不是模型选择
+ * 单位); the candidates list field models[] is gone — the available-model list is fetched from
+ * the provider at runtime (`GET /models`, PROVIDER.md §16). config.defaultModel (top level,
  * "provider:model" composite) is the new-session starting point; activeProvider/activeModel
  * are gone from config (session slots keep their own double fields). Legacy fields migrate
  * on load (write-back failure never blocks startup).
@@ -35,7 +35,7 @@ export const DEFAULTS = {
   agent: {
     maxTurns: 200,
     subagentTurns: 100,
-    subagentModel: null,  // default subagent model: "provider:model" | provider name | model name (parent provider); null = inherit parent provider
+    subagentModel: null,  // default subagent model: "provider:model" | model name (parent provider); null = inherit parent provider
     subagentModels: {},   // per-type override: { explore, plan, coder, "eng-coder" } — priority: subagent tool model arg > this[role] > subagentModel > parent provider
     goalTurns: 200,
     compactThreshold: 100000,
@@ -69,6 +69,8 @@ export const DEFAULTS = {
     dbPath: join(configDir, "memory.db"),
     projectDir: ".thincoder/memory",
     team: null,
+    // 索引自维护（§6.14 面⑤ · 台账 #1096）：维护型备份保留枚数（轮转保最新 N——引擎钳 ≥ 1）
+    maintain: { backupKeep: 2 },
   },
   shell: null,            // bash tool shell executable (e.g. "C:\\Program Files\\Git\\bin\\bash.exe" or "pwsh"); null = system default (cmd on Windows, /bin/sh elsewhere)
   embedding: {
@@ -218,7 +220,7 @@ function warnConsultModelsFiltered(dropped, path) {
 /** #861（AGENT-LOOP-SUBAGENT.md §6.7.1）：subagent 模型覆盖加载期清洗——单源纯函数（核 loadConfig ∥ VSC 端壳 raw 读点同消费）；非法形态不 throw（`subagentModel` 非法 ⇒ null、`subagentModels` 非对象 ⇒ {}、值非法 ⇒ 剔除该键）。 */
 export function sanitizeSubagentModel(v) {
   const ok = typeof v === "string" && v.trim()
-  const dropped = ok || v == null ? [] : [`agent.subagentModel must be a non-empty string ("provider:model" | provider | model) — got ${Array.isArray(v) ? "array" : typeof v} — ignored (inherits the parent provider)`]
+  const dropped = ok || v == null ? [] : [`agent.subagentModel must be a non-empty string ("provider:model" | model) — got ${Array.isArray(v) ? "array" : typeof v} — ignored (inherits the parent provider)`]
   return { value: ok ? v : null, dropped }
 }
 export function sanitizeSubagentModels(v) {
@@ -227,7 +229,7 @@ export function sanitizeSubagentModels(v) {
   const value = {}, dropped = []
   for (const [role, val] of Object.entries(v)) {
     if (typeof val === "string" && val.trim()) { value[role] = val; continue }
-    dropped.push(`agent.subagentModels.${role} must be a non-empty string ("provider:model" | provider | model) — got ${Array.isArray(val) ? "array" : typeof val} — dropped`)
+    dropped.push(`agent.subagentModels.${role} must be a non-empty string ("provider:model" | model) — got ${Array.isArray(val) ? "array" : typeof val} — dropped`)
   }
   return { value, dropped }
 }
@@ -237,7 +239,7 @@ function warnSubagentModelsFiltered(dropped, path) {
   if (warnedSubagentModels || dropped.length === 0) return
   warnedSubagentModels = true
   console.warn(`[config] agent.subagentModel/subagentModels: ${dropped.length} invalid entr${dropped.length === 1 ? "y ignored" : "ies ignored"} (filtered — startup continues; no crash):\n` +
-    `${dropped.map((d) => `  - ${d}`).join("\n")}\n  Fix: clean it in ${path} — "provider:model" | provider | model.`)
+    `${dropped.map((d) => `  - ${d}`).join("\n")}\n  Fix: clean it in ${path} — "provider:model" | model.`)
 }
 
 /**
@@ -252,16 +254,16 @@ export function findProvider(providers, name) {
     const available = providers.map((p) => p.name).join(", ") || "(empty)"
     throw new Error(`activeProvider "${name}" not in providers list (available: ${available}); check for a typo in: ${configPath}`)
   }
-  return providers[0] ?? { name: "default", baseURL: "", model: "" }
+  return providers[0] ?? { name: "default", baseURL: "" }
 }
 
-/** Normalize proxy config to { uri, web, model } or undefined (uri/url both accepted; invalid types dropped) */
+/** Normalize proxy config to { uri, web } or undefined (uri/url both accepted; invalid types dropped) */
 export function normalizeProxy(proxy) {
-  if (typeof proxy === "string") return proxy ? { uri: proxy, web: true, model: false } : undefined
+  if (typeof proxy === "string") return proxy ? { uri: proxy, web: true } : undefined
   if (!proxy || typeof proxy !== "object" || Array.isArray(proxy)) return undefined
   const uri = proxy.uri || proxy.url || ""
   if (typeof uri !== "string" || !uri) return undefined
-  return { uri, web: proxy.web !== false, model: proxy.model === true }
+  return { uri, web: proxy.web !== false }
 }
 
 /**
@@ -334,10 +336,9 @@ export function loadConfig() {
   const _diagRaw = config.diagnostics && typeof config.diagnostics === "object" && !Array.isArray(config.diagnostics) ? config.diagnostics : {}
   for (const key of ["heapWatch", "heapSnapshot"]) if (typeof _diagRaw[key] === "boolean") merged.diagnostics[key] = _diagRaw[key]
 
-  // providers[].model 内存归一（v2 M3：非空字符串保留；非字符串/空串归一删除）——渠道默认模型
-  // 单值；无默认模型合法（模型选择经 /models 拉取候选——准入判据见 M8/M9）。
+  // providers[].model 一律删除（2026-10-09 清除批——渠道单值模型退场：渠道不携模型，不落任何
+  // 回退；模型身份唯二 = 顶层 defaultModel 复合串 ∥ 会话槽选定——PROVIDER.md §6.16 M3）。
   for (const p of merged.providers) {
-    if (typeof p.model === "string" && p.model.trim()) continue
     if (p.model !== undefined) delete p.model
   }
 
@@ -379,7 +380,7 @@ export function loadConfig() {
     if (p.baseURL) p.baseURL = p.baseURL.replace(/\/+$/, "")
   }
 
-  // Normalize proxy: string → { uri, web:true, model:false }; object 补默认值；非法类型丢弃。
+  // Normalize proxy: string → { uri, web:true }; object 补默认值；非法类型丢弃。
   // 保证 agent.config.proxy 永远是规范形态或 undefined
   merged.proxy = normalizeProxy(merged.proxy)
 

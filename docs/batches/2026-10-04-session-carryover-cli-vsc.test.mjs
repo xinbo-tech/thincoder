@@ -22,6 +22,9 @@
  * `2026-09-30-vsc-cleanup-701.test.mjs:30-39`）。HOME ∥ USERPROFILE 重定向于一切 (动态) import
  * 之前（安全网——核 configDir 装载期取值）；config 面经 `_setConfigPathForTest` 缝 ∥ 槽面经
  * `_setSessionsDirForTest` 缝。零网络（写后探针桩注入——非射程面）。
+ * 2026-10-09 清除批随正：渠夹具去单值模型（渠道条目不携 `model`——M7 v2 迁移②段一律删，遗留
+ * 键会触发载入写回、T-V3「等值零写」字节断言失守）；`resolveDefaultModel` 面 = 核转口
+ * （① `defaultModel` 属本渠 ⇒ 模型段；② `null`——不回退渠道单值）。
  */
 import test, { after } from "node:test"
 import assert from "node:assert/strict"
@@ -74,8 +77,8 @@ after(() => {
   rmSync(HOME_SANDBOX, { recursive: true, force: true })
 })
 
-/** 渠夹具（持 key ∧ 有单值模型——写回后 config 级解析可成立）。 */
-const P1 = { name: "p1", baseURL: "https://api.invalid/v1", model: "m1", apiKey: "k1" }
+/** 渠夹具（持 key；渠道条目不携模型——2026-10-09 清除批：模型身份唯二 = `defaultModel` 复合 ∥ 会话槽）。 */
+const P1 = { name: "p1", baseURL: "https://api.invalid/v1", apiKey: "k1" }
 
 /** 真核数据层夹具：写临时 config ⇒ `loadConfig()` 实读（临时配置路径缝）。 */
 function withConfig(obj) {

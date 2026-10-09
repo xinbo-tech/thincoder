@@ -14,7 +14,7 @@ export const PROVIDER_LABELS = {
 }
 
 export const SS = {
-  /** @type {{ providers?: Record<string,{configured:boolean,masked:string}>, custom?: {baseURL?:string,model?:string}, labels?: Record<string,string>, presets?: object[] }} */
+  /** @type {{ providers?: Record<string,{configured:boolean,masked:string,baseURL?:string}>, custom?: {baseURL?:string,hasKey?:boolean}, labels?: Record<string,string>, presets?: {name:string,desc?:string,baseURL?:string}[] }} */
   providerStatus: {},
   /** Model list getter (chat panel's ctx._models) — supplies the advisor model dropdown. */
   getModels: null,

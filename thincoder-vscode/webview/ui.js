@@ -56,7 +56,9 @@ export function updateWelcomeStatus(ctx) {
 /** provider 态横幅（#841 三态——单源 = `docs/vsc/design/WEBVIEW.md` §4.8）：`ps` = providerState 载荷
  *  `{ state, channel, model, reason, invalidReason }`（null = 载荷缺/配置不可读）；三态 = state 单判据
  *  直映射（首支 = invalid 类合成式——fallback 不被它吃掉）：invalid 类 ⇒ 现键 `banner.notConfigured`；
- *  `fallback` ⇒ 新键 `banner.defaultModelFallback` + 动作钮「选择默认模型」（`banner.chooseDefaultModel`）；
+ *  `fallback` ⇒ **两字面按载荷 `model` 在场分**（在场 ⇒ 现字面 `banner.defaultModelFallback` ∥ 缺 ⇒
+ *  未定变体 `banner.defaultModelFallbackNoModel`——2026-10-09 清除批：渠道单值模型退场，「模型未定」
+ *  态独立成句）+ 动作钮「选择默认模型」（`banner.chooseDefaultModel`）；
  *  `ok` ⇒ 现键 `banner.configured`。`onChoose` = 动作钮出口（chat-messages 注入 `openSettings`）——
  *  钮不开会话级模型菜单（真修口 = 设置面默认模型段；避死端同 #840 KD-3）。 */
 export function showBanner(ctx, ps, onChoose) {
@@ -71,7 +73,11 @@ export function showBanner(ctx, ps, onChoose) {
   // invalid 类合成式（= `state === "invalid"` ∨ `invalidReason` 非空——单源 = `PROVIDER.md` §6.22）
   const invalidClass = !ps || ps.state === "invalid" || !!ps.invalidReason
   const fallback = !invalidClass && ps.state === "fallback"
-  const key = invalidClass ? "banner.notConfigured" : fallback ? "banner.defaultModelFallback" : "banner.configured"
+  // 2026-10-09 清除批（两字面单源 = `docs/vsc/design/WEBVIEW.md` §4.8 :202-203）：fallback 按载荷
+  // `model` 在场分——非空串 ⇒ 现字面；null ∥ 空串（模型未定）⇒ 未定变体。data-banner-key 同键随分。
+  const key = invalidClass ? "banner.notConfigured"
+    : fallback ? (ps.model ? "banner.defaultModelFallback" : "banner.defaultModelFallbackNoModel")
+    : "banner.configured"
   banner.className = invalidClass || fallback ? "provider-banner warn" : "provider-banner ok"
   const label = document.createElement("span")
   // data-banner-key：横幅可能创建于 i18n 消息到达前（t() 返回键名——2026-09-05

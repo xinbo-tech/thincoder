@@ -71,6 +71,8 @@ export const VIEWS_DICT = Object.freeze({
     // fallback 明示行（轻通道轮八 · 2026-10-03）：澄清半句 —— 与 VSC `banner.defaultModelFallback` 同构（banner 版带 ⚠ 前缀）；
     // 原「逐字复用 #840 键」收正（失败词 ∥ 态词分家）。消费面 = `renderer/composer-sync.mjs` `providerNotice`。
     "composer.send.noDefaultModelFallback": "Default model missing or invalid — using an available channel",
+    // 缺档变体（2026-10-09 清除批）：载荷 `model` 缺 ⇒ 未设置变体（澄清半句换形 —— 「渠道可用、模型未定」；同键两字面）。
+    "composer.send.noDefaultModelFallbackUnset": "Default model missing — channel available, model not chosen",
     "paste.unsupportedFormat": "Only png / jpg / gif / webp images are supported (got ${type})",
     // attach 文件支持批（2026-10-05 · 台账 #948）：六拒面 toast 词——值逐字同 VSC `locales/en.json` 同名键。
     "composer.attach.tooLarge": "File too large (max 256 KB): ${name}",
@@ -153,7 +155,6 @@ export const VIEWS_DICT = Object.freeze({
     "settings.proxySection": "Proxy",
     "settings.proxyUri": "Proxy URI (http://host:port)",
     "settings.proxyWeb": "Web tools (websearch/fetch)",
-    "settings.proxyModel": "Model requests (providers with proxy: true)",
     "settings.proxyTest": "Test Connection",
     "settings.proxyTestRunning": "Testing…",
     "settings.proxyTestOk": "✓ OK (HTTP ${status})",
@@ -250,6 +251,8 @@ export const VIEWS_DICT = Object.freeze({
     // fallback 明示行（轻通道轮八 · 2026-10-03）：澄清半句 —— 与 VSC `banner.defaultModelFallback` 同构（banner 版带 ⚠ 前缀）；
     // 原「逐字复用 #840 键」收正（失败词 ∥ 态词分家）。消费面 = `renderer/composer-sync.mjs` `providerNotice`。
     "composer.send.noDefaultModelFallback": "默认模型未设置或无效 — 正在使用可用渠道",
+    // 缺档变体（2026-10-09 清除批）：载荷 `model` 缺 ⇒ 未设置变体（澄清半句换形 —— 「渠道可用、模型未定」；同键两字面）。
+    "composer.send.noDefaultModelFallbackUnset": "默认模型未设置 — 渠道可用、模型未定",
     "paste.unsupportedFormat": "仅支持 png / jpg / gif / webp 图片（收到 ${type}）",
     // attach 文件支持批（2026-10-05 · 台账 #948）：六拒面 toast 词——值逐字同 VSC `locales/zh.json` 同名键。
     "composer.attach.tooLarge": "文件过大（上限 256 KB）：${name}",
@@ -332,7 +335,6 @@ export const VIEWS_DICT = Object.freeze({
     "settings.proxySection": "代理",
     "settings.proxyUri": "代理 URI（http://host:port）",
     "settings.proxyWeb": "Web 工具（websearch/fetch）",
-    "settings.proxyModel": "模型请求（proxy: true 的 provider）",
     "settings.proxyTest": "测试连接",
     "settings.proxyTestRunning": "测试中…",
     "settings.proxyTestOk": "✓ 连接正常（HTTP ${status}）",

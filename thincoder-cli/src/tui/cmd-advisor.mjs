@@ -208,10 +208,9 @@ export async function handleAdvisorCommand(ctx) {
 // ── Model helpers ──
 
 function getEffectiveModel(agent, cfg) {
-  const providerForDefaults = cfg.provider
-    ? agent.providers?.find(p => p.name === cfg.provider) || agent.provider
-    : agent.provider
-  return cfg.model || providerForDefaults.model
+  // 2026-10-09 清除批：渠道条目不携模型——无 `cfg.model` ⇒ 父解析模型单档（M3③ 消费者行；核
+  // `resolveAdvisorProvider` 同判定）——渠道侧零回落，与 `advisorStatus` 的 `curModel` 同式。
+  return cfg.model || agent.provider?.model
 }
 
 async function fetchAdvisorModels(agent) {
@@ -242,14 +241,10 @@ function buildModelEntries(agent, cfg, cache) {
     if (cached?.error) noteParts.push(`(fetch failed: ${cached.error})`)
     entries.push({ type: "header", text: p.name, note: noteParts.join(" ") })
 
-    // Default model
-    const isDefault = cfg.provider === p.name && cfg.model === p.model
-    entries.push({ type: "item", text: `${isDefault ? "● " : "  "}${p.model}`, action: "switch", provider: p.name, model: p.model })
-
-    // Additional models from API, excluding the default model
+    // 候选行 = 运行期拉取清单（2026-10-09 清除批：渠道条目不携模型——渠道侧无模型可列；
+    // 拉不到 ⇒ 该渠道只有 header（note 携失败原因）——不造第二真源）
     if (cached?.models) {
       for (const m of cached.models) {
-        if (m === p.model) continue
         const isSelected = cfg.provider === p.name && cfg.model === m
         entries.push({ type: "item", text: `${isSelected ? "● " : "  "}${m}`, action: "switch", provider: p.name, model: m })
       }
@@ -263,7 +258,7 @@ async function buildThinkingEntries(agent, cfg) {
   const providerForDefaults = cfg.provider
     ? agent.providers?.find(p => p.name === cfg.provider) || agent.provider
     : agent.provider
-  const effectiveModel = cfg.model || providerForDefaults.model
+  const effectiveModel = getEffectiveModel(agent, cfg) // 2026-10-09 清除批：渠道侧零回落（同上）
   const spec = specForModel(effectiveModel)
   const thinkOnValue = spec.thinkEnabledValue ?? "enabled"
   const isCustomThink = thinkOnValue !== "enabled"

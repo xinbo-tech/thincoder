@@ -16,7 +16,7 @@
  *     T-B9 对象形态 config ⇒ 加载期不采纳（= null）+ 警告一条；spawn 链零 TypeError
  *     T-B10 subagentModels 非法值键 ⇒ 剔除 + 警告；其余键生效（非对象形态 ⇒ {} 同款）
  *     T-B11 对象 ∕ 数组 ∕ 数字入 resolveChildProvider ⇒ 明确 Error（非 TypeError）
- *     T-B12 合法链（default ∕ p:m ∕ 渠道 ∕ 模型）逐字零回归
+ *     T-B12 合法链（default ∕ p:m ∕ 裸模型名；裸渠名 ⇒ 拒——2026-10-09 清除批）
  *     T-B13 VSC 端壳同拍清洗（结构腿：核内单源函数 + raw 读点消费 + 同一物理模块）
  *
  * 跑法（仓根 thincoder/）：`node --test docs/batches/2026-10-04-issue-fix-round1.b.test.mjs`
@@ -349,7 +349,7 @@ test("T-B11 #861 对象 ∕ 数组 ∕ 数字 ∕ 布尔（含 falsy）入 resol
   assert.throws(() => SUB_ASYNC.resolveChildProvider(parent2, SUB_SPAWN.effectiveSubagentModel(parent2, "explore", { model: "x" })), /must be a string/)
 })
 
-test("T-B12 #861 合法链（default ∕ p:m ∕ 渠道 ∕ 模型）逐字零回归；null ∕ 空串 = 不覆盖", () => {
+test("T-B12 #861 合法链（default ∕ p:m ∕ 裸模型名）逐字零回归；裸渠名 ⇒ 拒；null ∕ 空串 = 不覆盖", () => {
   const KIMI = { name: "kimi", model: "k3", apiKey: " key " }
   const parent = { provider: { name: "kimi", model: "k3", apiKey: "key", baseURL: "http://x" }, config: { providersList: [KIMI], agent: {} } }
   assert.deepEqual(SUB_ASYNC.resolveChildProvider(parent, null), { ...parent.provider }, "null ⇒ 父 provider 原样")
@@ -358,8 +358,13 @@ test("T-B12 #861 合法链（default ∕ p:m ∕ 渠道 ∕ 模型）逐字零�
   assert.deepEqual(SUB_ASYNC.resolveChildProvider(parent, "default"), { ...parent.provider }, "default 别名 ⇒ 不覆盖")
   assert.deepEqual(SUB_ASYNC.resolveChildProvider(parent, "DEFAULT"), { ...parent.provider }, "default 大小写不敏感")
   assert.deepEqual(SUB_ASYNC.resolveChildProvider(parent, "kimi:k3x"), { name: "kimi", model: "k3x", apiKey: "key" }, "p:m 形")
-  assert.deepEqual(SUB_ASYNC.resolveChildProvider(parent, "kimi"), { name: "kimi", model: "k3", apiKey: "key" }, "渠道名（重派生渠道默认模型、key trim）")
-  assert.deepEqual(SUB_ASYNC.resolveChildProvider(parent, "some-model"), { ...parent.provider, model: "some-model" }, "模型名（换型保父渠道）")
+  // 裸渠名 ⇒ 拒（2026-10-09 清除批：渠道无默认模型可派生；遗留渠道级 model 在场亦不回落——文案逐字）
+  assert.throws(() => SUB_ASYNC.resolveChildProvider(parent, "kimi"), (e) => {
+    assert.equal(e.constructor.name, "Error")
+    assert.equal(e.message, "渠道无默认模型，请用 provider:model", "裸渠名拒文案逐字")
+    return true
+  })
+  assert.deepEqual(SUB_ASYNC.resolveChildProvider(parent, "some-model"), { ...parent.provider, model: "some-model" }, "模型名（换型保父渠道——渠道级 model 零参与）")
 })
 
 test("T-B13 #861 VSC 端壳同拍清洗（结构腿：核内单源函数 + raw 读点消费 + 同一物理模块）", () => {

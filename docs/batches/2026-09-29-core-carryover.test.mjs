@@ -4,8 +4,8 @@
  * 落位：`.thincoder/tmp/` 暂存位（与终位 `docs/batches/` 同深 ⇒ 相对 import 一致）；
  * 终位 = `docs/batches/2026-09-29-core-carryover.test.mjs`（父侧移档）。
  * 覆盖（三组）：
- *   ① #638 fixtures（AC-638-1..5）：adoption 边界归一（非串 `activeModel` 三型 ⇒ 回退渠道模型 ∕
- *      串值 ∕ 空串径零回归）· 读数面（`sessionReading` 非串零抛 ∧ = `entry.model` 直算同值）·
+ *   ① #638 fixtures（AC-638-1..5；2026-10-09 清除批随正）：adoption 边界归一（非串 `activeModel` 三型 ∕
+ *      空串 ⇒ 未登记——模型面零回落 ∕ 串值径零回归）· 读数面（`sessionReading` 非串零抛 ∧ 模型缺位默认规格同值）·
  *      查表全性（`specForModel` ∕ `providerSpec` ∕ `historyPercent` ∕ `contextUsage` ∕ `compressIfNeeded`
  *      非串零抛）· 同类面 `resolveEnableThinking` 非串零抛 + 串值判据逐字回归 ·
  *      命名三面串值基线（`agent-host.mjs:148` 端侧经 `historyPercent` 同函数承判——跨端码面不单测）。
@@ -43,30 +43,31 @@ const out = (label, value) => process.stderr.write(`[读数] ${label}: ${value}\
 
 // ─── ① #638 fixtures ─────────────────────────────────────────────────────────
 
-const mkAdoptAgent = () => ({ history: [], config: { agent: {} }, tasks: [], providers: [{ name: "p", model: "m" }] })
+const mkAdoptAgent = () => ({ history: [], config: { agent: {} }, tasks: [], providers: [{ name: "p", apiKey: "sk-x" }] })
 
-test("638-1 adoption 归一：非串 ⇒ 回退渠道模型（串值 ∕ 空串径零回归）", () => {
+test("638-1 adoption 归一：非串 ∕ 空串 ⇒ 未登记（模型面零回落——2026-10-09 清除批；串值径零回归）", () => {
   const cases = [
     [42, "number 脏载"], [true, "boolean 脏载"], [{}, "object 脏载"],
-    ["", "空串 ⇒ 回退（既有 `||` 语义）"], ["m2", "串值径零回归"],
+    ["", "空串 ⇒ 未登记"], ["m2", "串值径零回归"],
   ]
   for (const [activeModel, label] of cases) {
     const agent = mkAdoptAgent()
     applySession(agent, { activeProvider: "p", activeModel })
-    const expect = activeModel === "m2" ? "m2" : "m"
-    assert.equal(agent.provider.model, expect, `${label}：provider.model`)
+    const expect = activeModel === "m2" ? "m2" : null
     assert.equal(agent.activeModel, expect, `${label}：activeModel`)
+    if (expect === null) assert.equal("model" in agent.provider, false, `${label}：provider 不落 model 键`)
+    else assert.equal(agent.provider.model, expect, `${label}：provider.model`)
   }
-  out("638-1", "非串三型 ⇒ 回退 m · 空串 ⇒ 回退 · 串值 m2")
+  out("638-1", "非串三型 ∥ 空串 ⇒ 未登记（零回落）· 串值 m2 零回归")
 })
 
-test("638-2 读数面：非串 activeModel 零抛 ∧ = entry.model 直算同值", () => {
+test("638-2 读数面：非串 activeModel 零抛 ∧ = 模型缺位（默认规格）直算同值", () => {
   const history = [{ role: "user", content: "u".repeat(6000) }, { role: "assistant", content: "a".repeat(6000) }]
-  const providers = [{ name: "p", model: "m" }]
+  const providers = [{ name: "p", apiKey: "sk-x" }]
   const got = sessionReading({ activeProvider: "p", activeModel: 42, history }, { providers, fallback: { model: "f" } })
   assert.equal(typeof got, "number", "非串 ⇒ 返回数字（零抛）")
   assert.ok(got > 0, "夹具非平凡（>0——回退确实生效而非空算）")
-  assert.equal(got, historyPercent(history, providers[0]), "= 以 entry.model 直算同值")
+  assert.equal(got, historyPercent(history, providers[0]), "= 模型缺位（默认规格）直算同值")
   assert.equal(sessionReading({ activeProvider: "p", activeModel: "m", history }, { providers, fallback: { model: "f" } }), got, "串值径同值（零回归）")
   out("638-2", `reading=${got}`)
 })

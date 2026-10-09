@@ -1,11 +1,22 @@
 // smoke-qwen-thinking.mjs — 真实端点 T7 冒烟：验证 enable_thinking 映射在百炼 Qwen 上真正生效
-// 用法：node test/smoke-qwen-thinking.mjs --smoke [providerName]   （默认 qwenplan，回退 qwen）
-// 在本机运行。从 ~/.thincoder/config.json 读 baseURL/model/apiKey —— key 不打印、不外传、不落盘。
+// 用法：node test/smoke-qwen-thinking.mjs --smoke <provider>:<model>
+//   显式选路（2026-10-09 清除批：渠道单值模型退场——不再从 providers[].model 取模型）；
+//   解析语义同核 `parseModelRef`：首冒号分割（多冒号模型名可用）∥ 双段非空 ∥ provider 在册。
+// 在本机运行。从 ~/.thincoder/config.json 读 baseURL/apiKey —— key 不打印、不外传、不落盘。
 // 三连测（走 CLI 真实 chat() 全链路，含 resolveEnableThinking 注入）：
 //   1. OFF  ：provider.thinking = null    → 期望响应 reasoning 为空（enable_thinking:false 生效）
 //   2. XHIGH：provider.reasoningEffort    → 期望响应 reasoning 非空（思考恢复）
 //   3. 对照  ：无思考字段                  → 服务端默认（qwen3.x 默认思考）→ reasoning 非空
 // 通过 = OFF 无思考 且 XHIGH/对照 有思考 且 三请求均无 400/网络错误。退出码 0/1。
+
+/** 探针目标解析（入参 = 显式 `provider:model`；语义单源 = 核 `parseModelRef`——首冒号分割 ∥ 双段非空 ∥
+ *  provider 在册）。2026-10-09 清除批：渠道单值模型退场，选路不得再读 `providers[].model`。
+ *  导出供批内件直测（正常 ∥ 多冒号 ∥ 非法三例）。
+ *  @returns {Promise<{ok:true, provider:object, model:string} | {ok:false, reason:string}>} */
+export async function parseSmokeTarget(ref, providers) {
+  const { parseModelRef } = await import("@thincoder/core/config.mjs")
+  return parseModelRef(ref, providers)
+}
 
 /**
  * 真实端点 smoke（enable_thinking 映射）：花真金白银的 token + 网络抖动，
@@ -22,12 +33,18 @@ if (!process.argv.includes("--smoke")) {
   const { chat } = await import("@thincoder/core/provider/index.mjs")
 
 const cfg = loadConfig()
-const want = process.argv.slice(2).find((a) => !a.startsWith("--")) ?? "qwenplan"
-const prov = cfg.providers.find((p) => p.name === want) ?? cfg.providers.find((p) => /^qwen/i.test(p.name))
-if (!prov) {
-  console.error(`no provider "${want}" in config (available: ${cfg.providers.map((p) => p.name).join(", ") || "none"})`)
+const arg = process.argv.slice(2).find((a) => !a.startsWith("--"))
+if (!arg) {
+  console.error("Usage: node test/smoke-qwen-thinking.mjs --smoke <provider>:<model>")
   process.exit(2)
 }
+const target = await parseSmokeTarget(arg, cfg.providers)
+if (!target.ok) {
+  console.error(`[smoke] bad target "${arg}" — ${target.reason}`)
+  process.exit(2)
+}
+const prov = target.provider
+const model = target.model
 if (!prov.apiKey) {
   console.error(`provider "${prov.name}" has no apiKey — can't smoke-test without a key (your key stays local)`)
   process.exit(2)
@@ -39,14 +56,14 @@ if (!prov.apiKey) {
 // 打印原因并指引——不是失败（环境不满足，非测试失败）。发版判断人工确认。
 const { isBailianHost } = await import("@thincoder/core/config.mjs")
 const baiHost = isBailianHost ? isBailianHost(prov.baseURL ?? "") : false
-const qwenModel = /^qwen/i.test(prov.model ?? "") // T5 判例：qwen3-coder 等非思考型号排除——目标是 enable_thinking 白名单 qwen 思考型号
+const qwenModel = /^qwen/i.test(model) // T5 判例：qwen3-coder 等非思考型号排除——目标是 enable_thinking 白名单 qwen 思考型号
 if (!baiHost || !qwenModel) {
-  console.log(`[smoke] skip — provider "${prov.name}" model=${prov.model} 非白名单百炼 qwen 思考型号（enable_thinking:false 映射只对百炼 qwen 生效；OFF 断言需要该目标）。指定百炼 qwen 模型（配置 providers 或传 provider 名参数）后再跑。`)
+  console.log(`[smoke] skip — provider "${prov.name}" model=${model} 非白名单百炼 qwen 思考型号（enable_thinking:false 映射只对百炼 qwen 生效；OFF 断言需要该目标）。指定百炼 qwen 模型（传 \`<provider>:<model>\` 入参）后再跑。`)
   process.exit(0)
 }
 
-const base = { baseURL: prov.baseURL, apiKey: prov.apiKey, model: prov.model, maxTokens: 2048 }
-console.log(`provider=${prov.name} model=${prov.model} baseURL=${prov.baseURL.replace(/^https?:\/\//, "")}`)
+const base = { baseURL: prov.baseURL, apiKey: prov.apiKey, model, maxTokens: 2048 }
+console.log(`provider=${prov.name} model=${model} baseURL=${prov.baseURL.replace(/^https?:\/\//, "")}`)
 
 const messages = [{ role: "user", content: "用一句话回答：9.9 和 9.11 谁大？" }]
 
@@ -70,7 +87,7 @@ const off = await one("OFF", { thinking: null })
 // 2026-08-31：XHIGH 档不再写死 "xhigh"——上游模型枚举各异（deepseek-v4-flash 是 low/high/max，
 // qwen3 是 low/medium/high/xhigh）——取 spec 枚举末值（"最高档"语义，任何模型通用）
 const { specForModel } = await import("@thincoder/core/model-specs.mjs")
-const spec = specForModel(prov.model)
+const spec = specForModel(model)
 const effortHigh = spec?.reasoningEffortEnum?.slice(-1)[0] ?? "high"
 const xh = await one("XHIGH", { reasoningEffort: effortHigh })
 const def = await one("DEFAULT", {})

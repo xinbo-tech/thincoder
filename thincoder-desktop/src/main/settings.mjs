@@ -155,17 +155,14 @@ export async function modelList(payload) {
 const ADVISOR_EFFORT_PATH = "agent.advisor.reasoningEffort"
 
 /** advisor 推理档的 spec 取形模型（S11 收正 · 顾问评审 🟡2）：与渲染面候选面同源同序——
- *  `advisor.model` ⇒ 该值；否则 `advisor.provider` 渠条目 `model`；再缺 ⇒ `defaultModel` 模型段；无 ⇒ `""`。
- *  对位核运行期 `resolveAdvisorProvider`（`thincoder-core/advisor/run.mjs:26-56`：cfg.model > 渠道 model > 主 provider model）
+ *  `advisor.model` ⇒ 该值；再缺 ⇒ `defaultModel` 模型段（父解析模型单档）；无 ⇒ `""`。
+ *  对位核运行期 `resolveAdvisorProvider`（`thincoder-core/advisor/run.mjs:26-56`：cfg.model > 父解析模型单档
+ *  —— **2026-10-09 清除批**：原「渠道 model」腿随渠道单值模型退场，链上该腿删）
  *  —— 判据 = 写后投影恒等 ∕ 族别 off 形真有效（旧式 `advisor.model ?? ""` 在无覆写时落 DEFAULT_SPEC ⇒
  *  effort 族主模型下写 `{type:"disabled"}` ⇒ 核档自注「关思考静默失效」）。 */
 function advisorSpecModel(disk) {
   const adv = disk?.agent?.advisor !== null && typeof disk?.agent?.advisor === "object" ? disk.agent.advisor : {}
   if (typeof adv.model === "string" && adv.model.trim()) return adv.model.trim()
-  if (typeof adv.provider === "string" && adv.provider !== "") {
-    const entry = (Array.isArray(disk.providers) ? disk.providers : []).find((p) => p?.name === adv.provider)
-    if (typeof entry?.model === "string" && entry.model.trim()) return entry.model.trim()
-  }
   const composite = typeof disk.defaultModel === "string" ? disk.defaultModel : ""
   const at = composite.indexOf(":")
   return at > 0 ? composite.slice(at + 1) : ""
