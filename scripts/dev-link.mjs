@@ -168,5 +168,5 @@ export function main(argv = process.argv.slice(2), { log = console.log, errorLog
   return r.ok ? 0 : 1;
 }
 
-const isMain = process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
+const isMain = process.argv[1] && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url;
 if (isMain) process.exit(main());

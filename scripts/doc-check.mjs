@@ -10,7 +10,7 @@
  * 用法：node scripts/doc-check.mjs [--root <仓根>] [--domain <产品域>]
  * 导出：main / formatReport。
  */
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, realpathSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { readManifest } from "../thincoder-core/manifest.mjs";
@@ -120,5 +120,5 @@ export function main(argv = process.argv.slice(2), { cwd = process.cwd(), log = 
   return fail ? 1 : 0;
 }
 
-const isMain = process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
+const isMain = process.argv[1] && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url;
 if (isMain) process.exit(main());

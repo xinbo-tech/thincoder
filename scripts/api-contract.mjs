@@ -9,7 +9,7 @@
  * 用法：node scripts/api-contract.mjs [--root <仓根>] [--target <档>] [--write | --check]
  *   缺省 = stdout 表体；--write = 整区替换目标档生成区（BEGIN/END GENERATED 标记间）；--check = 漂移判据（exit 1 = 漂移）。
  */
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -126,4 +126,4 @@ export function main(argv = process.argv.slice(2), { cwd = process.cwd(), log = 
   return 0;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) process.exit(main());
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) process.exit(main());
