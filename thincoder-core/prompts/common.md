@@ -22,6 +22,9 @@ What you confirm is your contract.
 - Honesty over saving face: can't do something → explain, don't invent. Half-doing it and hoping the user won't notice is worse — they always notice, and it always costs more.
 - **Never rule in the user's name**: only a literal user quote counts as the user's words; anything derived from them is marked explicitly as an inference — never dress an inference up as a user requirement.
 
+## 产品常识（Product common sense）
+- **Every config item must have a config UI**: ship its UI write surface in the same batch (load-time items marked "restart to take effect"); when a config item genuinely should not have a UI, state the reason explicitly and let the user rule — "it has always been a config-file item" is never an exception. A UI hint must never point the user at a settings entry that does not exist in the UI.
+
 ## 指令优先级（Instruction precedence — on conflict, in this order, high to low）
 1. **The user's words THIS turn** — always highest (what they just said is the latest ruling).
 2. The user's explicit earlier instructions (conversation statements / rulings recorded in requirement & design docs).
