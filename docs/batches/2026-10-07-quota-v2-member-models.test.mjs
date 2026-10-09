@@ -283,9 +283,9 @@ test("③ 执行面：被禁 ⇒ 404 + 消息明示 + 零用量行 ∥ 列表滤
     assert.deepEqual([denied.status, denied.json.error.code, denied.json.error.type], [404, "model_not_found", "invalid_request_error"]) // 零新码
     assert.match(denied.json.error.message, /已对该成员禁用/)
     assert.deepEqual([usageRows(), mock.requests.length], [rowsAfterOk, 1], "准入前拒打——零用量行、零转发")
-    // 列表随动滤除（禁后不含 ∥ 他成员含 ∥ 嵌入引擎模型照列）
+    // 列表随动滤除（禁后不含 ∥ 他成员含 ∥ 引擎模型不入通用清单——KD-SV-58）
     assert.deepEqual((await models(aliceKey.plain)).includes("mock/mock-chat"), false)
-    assert.ok((await models(aliceKey.plain)).includes("bge-m3"))
+    assert.equal((await models(aliceKey.plain)).includes("bge-m3"), false, "零引擎行（2026-10-09 embed 解耦批）")
     assert.ok((await models(bobKey.plain)).includes("mock/mock-chat"), "他成员不受累")
     assert.equal((await chat(bobKey.plain)).status, 200)
     // 嵌入面零涉：被禁成员照常嵌入（禁用只读 chat 外标）
@@ -421,11 +421,11 @@ test("⑦ #1001②：模型禁用与配额覆盖同一键形助手（裸名/空�
   }
 })
 
-// ── ⑧ 门禁清单（`prepublishOnly` 三十一件含本批两件 ∥ 清单在盘）──────────────────
+// ── ⑧ 门禁清单（`prepublishOnly` 三十三件含本批两件 ∥ 清单在盘）──────────────────
 
-test("⑧ 门禁清单：`prepublishOnly` 三十一件含本批件（新建 ∥ 随正）∥ 清单目标在盘", () => {
+test("⑧ 门禁清单：`prepublishOnly` 三十三件含本批件（新建 ∥ 随正）∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 32, `门禁清单件数（二十六 ⇒ 三十二——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 33, `门禁清单件数（二十六 ⇒ 三十三——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-v2-member-models.test.mjs"), "本批件应入列")
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-per-model.test.mjs"), "随正件应在列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
@@ -695,15 +695,14 @@ test("⑪ 服务模型页配额列三态（值 ∥「不限」 ∥ 嵌入「—�
     const rowText = (tr) => tr.children.map((cell) => textOf(cell)).join("|")
     assert.deepEqual(findAll(mount, (node) => node.tag === "tr").map(rowText), [
       [ZH["admin.models.colModel"], ZH["admin.models.colProvider"], ZH["admin.models.colSurface"], ZH["admin.models.quotaTitle"]].join("|"),
-      "bge-m3|embedding|embeddings|—",
       "p1/m-1|p1|chat|500",
       "p1/m-2|p1|chat|" + ZH["common.quotaUnlimited"],
-      fill(ZH["common.rowCount"], { count: 3 }),
-    ], "配额列三态（值 ∥「不限」 ∥ 嵌入「—」）∥ tfoot 计数随动")
+      fill(ZH["common.rowCount"], { count: 2 }),
+    ], "配额列三态（值 ∥「不限」）∥ tfoot 计数随动（零引擎行——KD-SV-58）")
     // 保存后刷新随动（与 F 组单源）：开详情 ⇒ F 组输入 2000 ⇒ 保存 ⇒ PATCH + 列表重取 + 列值随动
     const fetches = () => calls.filter(([method, path]) => method === "GET" && path === "/api/admin/providers").length
     const fetched = fetches()
-    await findAll(mount, (node) => node.tag === "tr")[3].fire("click") // p1/m-2 行（id 升序：bge-m3 1 ∥ m-1 2 ∥ m-2 3）
+    await findAll(mount, (node) => node.tag === "tr")[2].fire("click") // p1/m-2 行（id 升序：m-1 1 ∥ m-2 2）
     const dialog = findNode(globalThis.document.body, (node) => node.tag === "dialog")
     findAll(dialog, (node) => node.tag === "input")[2].value = "2000" // 序 = rpm ∥ tpm ∥ quotaTokens（F 组）∥ note ∥ costIn ∥ costOut
     await byText(dialog, ZH["common.save"]).fire("click")

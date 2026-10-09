@@ -256,10 +256,10 @@ test("providers：`provider/model` 复合键派发（首斜杠切分）∥ 裸�
   const list = PROVIDERS.modelList(registry)
   assert.equal(list.object, "list")
   assert.deepEqual(list.data.map((m) => m.id), [
-    "bailian/qwen3.5-plus", "bailian/qwen3.7-max", "bailian/deepseek-v3", "internal/deepseek-v3", "bge-m3",
+    "bailian/qwen3.5-plus", "bailian/qwen3.7-max", "bailian/deepseek-v3", "internal/deepseek-v3",
   ])
   assert.equal(list.data[0].owned_by, "bailian")
-  assert.equal(list.data.at(-1).owned_by, "embedding") // 引擎模型原样（非 provider 面）
+  assert.equal(list.data.some((m) => m.owned_by === "embedding" || m.id === "bge-m3"), false, "零引擎行（KD-SV-58——2026-10-09 embed 解耦批）")
 })
 
 // ── ⑤ 路由注册表 ─────────────────────────────────────────────────────────────
@@ -314,7 +314,7 @@ test("server：服务冒烟（200/404/400/413 ∥ 逐请求日志 ∥ 停机）"
     assert.equal(models.status, 200)
     assert.match(models.headers.get("content-type"), /application\/json/)
     const payload = await models.json()
-    assert.deepEqual(payload.data.map((m) => m.id), ["bailian/qwen3.5-plus", "bailian/qwen3.7-max", "bailian/deepseek-v3", "internal/deepseek-v3", "bge-m3"])
+    assert.deepEqual(payload.data.map((m) => m.id), ["bailian/qwen3.5-plus", "bailian/qwen3.7-max", "bailian/deepseek-v3", "internal/deepseek-v3"])
 
     // 404：未知路由
     const missing = await fetch(`${base}/v1/nope`)
@@ -446,7 +446,7 @@ test("入口：就绪 + /v1/models 鉴权（无 key ⇒ 401 ∥ 携 key ⇒ 200�
       assert.equal((await unauth.json()).error.code, "invalid_api_key")
       const response = await fetch(`http://127.0.0.1:${port}/v1/models`, { headers: { authorization: `Bearer ${apiKey.plain}` } })
       assert.equal(response.status, 200)
-      assert.equal((await response.json()).data.length, 5)
+      assert.equal((await response.json()).data.length, 4)
       assert.match(cli.out(), /"event":"ready"/)
     } finally {
       cli.child.kill()

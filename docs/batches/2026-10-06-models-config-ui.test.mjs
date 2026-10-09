@@ -224,11 +224,11 @@ test("② A 热生效：PATCH `models` 减项 ⇒ `/v1/models` 随动 + 派发 4
     const created = await call(app.base, "POST", "/api/admin/providers", { cookie, body: { name: "p1", baseURL: `${mock.base}/v1`, apiKey: "", models: ["a", "retired-1"] } })
     assert.equal(created.status, 200)
     const listModels = async () => (await call(app.base, "GET", "/v1/models", { teamKey: key })).json.data.map((model) => model.id)
-    assert.deepEqual(await listModels(), ["p1/a", "p1/retired-1", "bge-m3"])
+    assert.deepEqual(await listModels(), ["p1/a", "p1/retired-1"])
     // 停用（本页自持操作面）⇒ PATCH `models` 减项
     const patched = await call(app.base, "PATCH", `/api/admin/providers/${created.json.id}`, { cookie, body: { models: ["retired-1"] } })
     assert.equal(patched.status, 200)
-    assert.deepEqual(await listModels(), ["p1/retired-1", "bge-m3"], "减项 ⇒ 清单随动（零重启）")
+    assert.deepEqual(await listModels(), ["p1/retired-1"], "减项 ⇒ 清单随动（零重启）；零引擎行")
     // 派发 404（未开放）∥ 退役项仍开放（不在发现集不移除——同口径可停的另一面）
     const gone = await chat(app.base, { teamKey: key, body: { model: "p1/a", messages: [] } })
     assert.deepEqual([gone.status, gone.json.error.code], [404, "model_not_found"])
@@ -334,17 +334,9 @@ test("⑦a 弹窗：详情四行 + 配置五组（A/C/F/D/E）∥ 嵌入行注�
     const unknown = MODELS.openModelModal(ctx, { row: unknownRow, entry: { id: 2, name: "p", models: ["whatever"], settings: {} }, reload: async () => {} })
     assert.equal(findAll(unknown.root, (node) => node.textContent === ZH["admin.models.notCollected"]).length, 3, "上下文/最大输出/多模态三行皆「未收录」")
     unknown.close()
-    // 嵌入模型行：注在场 ∥ 四组不落该行 ∥ 零输入 ∥ 零脚区（无保存/取消）
-    const embedRow = { id: "bge-m3", provider: "embedding", upstream: null, surface: "embeddings" }
-    const embed = MODELS.openModelModal(ctx, { row: embedRow, entry: null, reload: async () => {} })
-    const embedText = textOf(embed.root)
-    assert.ok(embedText.includes(ZH["admin.models.embedNote"]))
-    assert.equal(embedText.includes("—"), true, "上游模型名 = 「—」（引擎行无常量段）")
-    for (const absent of [ZH["admin.models.status"], ZH["admin.models.rateTitle"], ZH["admin.models.quotaTitle"], ZH["admin.models.metaTitle"], ZH["admin.models.weightTitle"], ZH["common.save"]]) {
-      assert.equal(embedText.includes(absent), false, `嵌入行不得含：${absent}`)
-    }
-    assert.deepEqual([inputsOf(embed.root).length, embed.root.children.length], [0, 2], "零输入 ∥ 零脚区（头 + 体）")
-    embed.close()
+    // 嵌入行面已退役（KD-SV-58——2026-10-09 embed 解耦批）：`admin.models.embedNote` 键净（两表）∥ 派生出口零引擎行
+    assert.equal("admin.models.embedNote" in ZH, false, "embedNote 键已退役")
+    assert.equal(MODELS.deriveModels([{ name: "p", models: ["m"] }]).some((row) => row.surface !== "chat"), false, "派生零引擎行")
   } finally {
     delete globalThis.document
   }
@@ -420,13 +412,12 @@ test("⑦c A 停用流（弹窗 × 列表）：「停用」confirm ⇒ PATCH `mo
     const rowText = (tr) => tr.children.map((cell) => textOf(cell)).join("|")
     const rows = findAll(mount, (node) => node.tag === "tr")
     assert.deepEqual(rows.slice(1).map(rowText), [
-      "bge-m3|embedding|embeddings|—",
       "p/a|p|chat|" + ZH["common.quotaUnlimited"],
       "p/retired-1|p|chat|" + ZH["common.quotaUnlimited"],
-      fill(ZH["common.rowCount"], { count: 3 }),
-    ], "列表 = 开放集展平 + 引擎行 + 配额列（未设 ⇒「不限」∥ 嵌入「—」）+ tfoot 计数（序 = id 升序——2026-10-07 走查收正）")
-    // 行点击（退役项——不在发现集仍开放）⇒ 详情弹窗 ⇒ 停用（confirm 通过）——升序后退役行 = 第 3 行
-    await rows[3].fire("click")
+      fill(ZH["common.rowCount"], { count: 2 }),
+    ], "列表 = 开放集展平（零引擎行——KD-SV-58）+ 配额列（未设 ⇒「不限」）+ tfoot 计数（序 = id 升序——2026-10-07 走查收正）")
+    // 行点击（退役项——不在发现集仍开放）⇒ 详情弹窗 ⇒ 停用（confirm 通过）——升序后退役行 = 第 2 行
+    await rows[2].fire("click")
     const dialog = findNode(documentStub.body, (node) => node.tag === "dialog")
     await byText(dialog, ZH["admin.models.disable"]).fire("click")
     assert.deepEqual(confirms, [fill(ZH["admin.models.disableConfirm"], { model: "p/retired-1" })], "confirm 文案在册（停用后果 + 重开路径）")
@@ -436,15 +427,14 @@ test("⑦c A 停用流（弹窗 × 列表）：「停用」confirm ⇒ PATCH `mo
     // 列表刷新 ⇒ 行离列（重取系再渲）
     const rowsAfter = findAll(mount, (node) => node.tag === "tr")
     assert.deepEqual(rowsAfter.slice(1).map(rowText), [
-      "bge-m3|embedding|embeddings|—",
       "p/a|p|chat|" + ZH["common.quotaUnlimited"],
-      fill(ZH["common.rowCount"], { count: 2 }),
+      fill(ZH["common.rowCount"], { count: 1 }),
     ], "行离列 + tfoot 计数随动（序 = id 升序——2026-10-07 收正）")
     // 零上游探针：列表/详情/停用全程零 discover 调用（退役可见性 = Provider 页发现面）
     assert.equal(calls.filter(([, path]) => String(path).includes("/discover")).length, 0)
     // confirm 拒 ⇒ 零请求（弹窗留驻）
     globalThis.window.confirm = () => false
-    await rowsAfter[2].fire("click")
+    await rowsAfter[1].fire("click")
     const dialog2 = findNode(documentStub.body, (node) => node.tag === "dialog")
     const before = calls.length
     await byText(dialog2, ZH["admin.models.disable"]).fire("click")

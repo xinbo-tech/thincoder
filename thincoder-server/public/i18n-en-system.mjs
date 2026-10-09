@@ -63,6 +63,8 @@ export const EN_SYSTEM = Object.freeze({
   "vector.status": "Reachability",
   "vector.recheck": "Recheck",
   "vector.checking": "Checking…",
+  "vector.unconfigured": "Not configured",
+  "vector.unconfiguredHint": "The embedding engine is not configured — fill in the fields and save to enable it (takes effect after a restart)",
   "vector.reachable": "Reachable ({dimensions} dims · {ms} ms)",
   "vector.autoNote": "Checked once automatically when this page opens",
   "vector.fail": "{kind}: {message}",

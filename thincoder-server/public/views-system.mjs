@@ -3,7 +3,7 @@
  * 向量服务 ∥ 服务配置（卡体 = `views-system-config.mjs`）∥ 服务健康五节。
  *
  * 数据 = `ctx.state.system`（`GET /api/system`——app.mjs 装配取一次；失败 ⇒ 留空静默）+ `GET /api/admin/config`
- * （配置面文件面——向量卡三输入 ∥ 密钥掩码回显）+ `POST /api/admin/embedding/test`（探活/试跑单端点——诊断自含形，
+ * （配置面文件面——向量卡三输入 ∥ 密钥掩码回显；缺 `embedding` 段 ⇒ 「未配置」态——§8 KD-SV-57）+ `POST /api/admin/embedding/test`（探活/试跑单端点——诊断自含形，
  * 不落库不计量）+ 前端健康共享态（§2.3⑤——`ctx.onHealth` 订阅，30s 自动刷新）。接入卡 = `accessCard(ctx, variant)` 同源构件
  * （admin 面供分发给成员 ∥ 成员面 `#/me/keys`——me-keys 批）；成员面成文 = README「成员接入」节。渲染沿 `h`/`textContent`
  * （零拼串）；baseURL = 运行时 origin（`location.origin` + `/v1`——零硬编码，反代/改端口自动随动）；文案经 `t()` 取值（§2.2）。
@@ -43,7 +43,9 @@ function versionSection(ctx, system) {
  *  值 = 文件面；API Key 掩码回显（`env:` 保形 ∥ 明文 ⇒ `…`+末 4））∥ 可达性（渲染自动探活 + 「重新检测」——`POST
  *  /api/admin/embedding/test`——单端点 ∥ 诊断自含形 ∥ 不落库不计量）∥ snippet ∥ 用法一句 ∥ 试跑。
  *  探活/试跑 = 表单草稿口径（标量三项明传优先——KD-SV-54 口径镜像；未保存亦可先验；API Key 未编辑 ⇒ 不携
- *  ⇒ 运行配置回落）；保存 = `PATCH /api/admin/config`（`embedding` 子键级——重启生效）。 */
+ *  ⇒ 运行配置回落）；保存 = `PATCH /api/admin/config`（`embedding` 子键级——重启生效）。
+ *  缺 `embedding` 段（§8 KD-SV-57——2026-10-09 embed 解耦批）：未配置态 = 三输入空 ∥ 状态行「未配置」∥ 不自动探活；
+ *  提示句在册（填写并保存后启用——重启生效）；保存 = 创建段（同一 PATCH）；填写后「重新检测」/试跑按草稿照常。 */
 function vectorSection(ctx) {
   const { h } = ctx
   const baseURLInput = h("input", { autocomplete: "off" })
@@ -55,6 +57,7 @@ function vectorSection(ctx) {
   const snippetCode = h("code", { text: embeddingSnippet(null) })
   const testResult = h("p", { class: "hint" })
   const saveNote = h("p", { class: "hint error", hidden: true })
+  const unconfiguredNote = h("p", { class: "hint", hidden: true, text: t("vector.unconfiguredHint") }) // 缺段态提示句（未配置态显示——KD-SV-57）
 
   /** 草稿 key 判定（保存 ∥ 探活同源——三态）：清除勾 ⇒ 显式空 `""` ∥ 明填 ⇒ 明传 ∥ 未编辑 ⇒ 不携。 */
   const draftKey = () => {
@@ -131,8 +134,19 @@ function vectorSection(ctx) {
     }
   }
 
-  ctx.api("/api/admin/config").then((data) => applyConfig(data?.config?.embedding ?? null)).catch((error) => { ctx.fail(error); applyConfig(null) })
-  probe() // 渲染自动探活（一次——字段未编辑 ⇒ 不携 ⇒ 运行配置回落）
+  // 值载入（文件面）+ 渲染自动探活（一次）：缺段 ⇒ 未配置态（三输入空 ∥ 状态行「未配置」∥ 不自动探活——无值可探）；
+  // 在场 ⇒ 先探后载值（体 = 空表单 ⇒ 不携草稿 ⇒ 运行配置回落）；读档失败 ⇒ 探运行配置回落（状态未知，不标未配置）
+  ctx.api("/api/admin/config").then((data) => {
+    const embedding = data?.config?.embedding ?? null
+    if (embedding === null) {
+      applyConfig(null)
+      statusValue.textContent = t("vector.unconfigured")
+      unconfiguredNote.hidden = false
+      return
+    }
+    probe() // 自动探活（字段未载 ⇒ 不携 ⇒ 运行配置回落）
+    applyConfig(embedding)
+  }).catch((error) => { ctx.fail(error); applyConfig(null); probe() })
 
   return h("section", { class: "card" },
     h("h3", { text: t("vector.title") }),
@@ -142,6 +156,7 @@ function vectorSection(ctx) {
       h("label", {}, h("span", { text: t("vector.apiKey") }), apiKeyInput),
       h("label", { class: "key-clear" }, clearBox, t("vector.clearApiKey")),
       h("button", { type: "submit", text: t("common.save") })),
+    unconfiguredNote,
     h("p", { class: "hint", text: t("vector.draftNote") }),
     h("p", { class: "hint", text: t("system.cfgRestartNote") }),
     saveNote,

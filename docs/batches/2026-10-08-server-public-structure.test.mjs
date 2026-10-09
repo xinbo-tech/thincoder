@@ -47,20 +47,20 @@ const DOMAINS = {
   system: ["system", "vector", "health", "overview", "usageReport", "audit"],
 }
 const domainOf = (key) => PARTS.find((part) => DOMAINS[part].includes(key.replace(/\.one$/, "").split(".")[0])) ?? null
-/** 键集指纹基线（2026-10-08 拆表零语义基线；2026-10-09 代理批 +1 键（`admin.providers.useProxy`）随正 ∥ 2026-10-09 配置面批 +29 键随正——批档 §2.3①）。 */
+/** 键集指纹基线（2026-10-08 拆表零语义基线；2026-10-09 代理批 +1 键（`admin.providers.useProxy`）随正 ∥ 2026-10-09 配置面批 +29 键随正 ∥ 2026-10-09 embed 解耦批 +1 键随正（system +2 ∥ admin −1））。 */
 const ANCHOR = {
-  zh: "12d4ea59b17ddd585642f5daa71c0718cf36d60fb14688b7098e2614823033e6",
-  en: "5aca0563ac35db3a2d2715fe4064484225af845bb26103ee4bfb2bc5ebca8222",
+  zh: "444706c64324342167a21fd6fd66be018b44cb20e4b5ce9075c9b5716f0f269b",
+  en: "1878488d3913d585bb63159d6bd500478c8db49943f01131864b450b4d4104bf",
 }
 const fingerprint = (TABLE) => createHash("sha256").update(JSON.stringify(Object.keys(TABLE).sort().map((key) => [key, TABLE[key]]))).digest("hex")
 
 // ── ① 键集指纹（拆表 = 纯结构；基线随后续增键批同拍随正）────────────────────────────
 
-test("① 键集指纹：`ZH`/`EN` sorted-key 序列化 sha256 = 基线（拆表 ⊕ 10-09 代理批 ⊕ 配置面批）∥ 键数 368 ∥ 373 ∥ 门面冻结", () => {
+test("① 键集指纹：`ZH`/`EN` sorted-key 序列化 sha256 = 基线（拆表 ⊕ 10-09 代理批 ⊕ 配置面批 ⊕ embed 解耦批）∥ 键数 369 ∥ 374 ∥ 门面冻结", () => {
   assert.equal(fingerprint(ZH), ANCHOR.zh, "zh 指纹漂移（键集/值须逐字同基线）")
   assert.equal(fingerprint(EN), ANCHOR.en, "en 指纹漂移（键集/值须逐字同基线）")
-  assert.equal(Object.keys(ZH).length, 368, "zh 键数 368（拆表 338 + 代理批 1 + 配置面批 29）")
-  assert.equal(Object.keys(EN).length, 373, "en 键数 373（含 `.one` 变体族）")
+  assert.equal(Object.keys(ZH).length, 369, "zh 键数 369（拆表 338 + 代理批 1 + 配置面批 29 + embed 解耦批 1）")
+  assert.equal(Object.keys(EN).length, 374, "en 键数 374（含 `.one` 变体族）")
   assert.ok(Object.isFrozen(ZH) && Object.isFrozen(EN), "门面 `Object.freeze`（聚合门面封闭）")
 })
 

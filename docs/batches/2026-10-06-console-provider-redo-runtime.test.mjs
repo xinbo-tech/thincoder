@@ -272,11 +272,11 @@ test("⑥ 热生效链：PATCH `models`（详情弹窗保存形）⇒ `/v1/model
     // 添加弹窗写形 = POST 全字段 ⇒ 清单立见（零重启）
     const added = await call("POST", "/api/admin/providers", { cookie, body: { name: "p1", baseURL: "http://127.0.0.1:9/v1", apiKey: "", models: ["a"] } })
     assert.equal(added.status, 200)
-    assert.deepEqual(await listModels(), ["p1/a", "bge-m3"])
+    assert.deepEqual(await listModels(), ["p1/a"])
     // 详情弹窗保存形 = PATCH `models` 全量数组 ⇒ `/v1/models` 随动（勾选集 = 服务集——同源链闭合）
     const patched = await call("PATCH", `/api/admin/providers/${added.json.id}`, { cookie, body: { models: ["b", "c"] } })
     assert.equal(patched.status, 200)
-    assert.deepEqual(await listModels(), ["p1/b", "p1/c", "bge-m3"])
+    assert.deepEqual(await listModels(), ["p1/b", "p1/c"])
     // 库面同拍（控制台列表数据源）
     const list = await call("GET", "/api/admin/providers", { cookie })
     assert.deepEqual(list.json.providers[0].models, ["b", "c"])

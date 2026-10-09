@@ -128,7 +128,7 @@ test("同名模型跨两 provider 并存且各自可达 ∥ 上游 model = 余�
 
     // /v1/models：带前缀名清单（同名并列）+ 引擎模型
     const list = await fetch(`${app.base}/v1/models`, { headers: { authorization: `Bearer ${key.plain}` } })
-    assert.deepEqual((await list.json()).data.map((m) => m.id), ["up-a/shared-model", "up-b/shared-model", "bge-m3"])
+    assert.deepEqual((await list.json()).data.map((m) => m.id), ["up-a/shared-model", "up-b/shared-model"])
 
     // 两请求分别命中各自上游（各自真 key；上游请求体 model = 首斜杠余段）
     const a = await chatJson(app.base, { key: key.plain, body: { model: "up-a/shared-model", messages: [] } })

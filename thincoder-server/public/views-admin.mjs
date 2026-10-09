@@ -251,7 +251,7 @@ export function openMemberModal(ctx, { member, reload, secretBox }) {
     try {
       const data = await ctx.api("/api/admin/providers")
       const providers = data.providers ?? []
-      const rows = deriveModels(providers, null)
+      const rows = deriveModels(providers)
       const platformOf = (row) => ((providers.find((item) => item.name === row.provider)?.settings ?? {})[row.upstream] ?? {}).quotaTokens ?? null
       quotaFace = { status: "ready", rows, platforms: new Map(rows.map((row) => [row.id, platformOf(row)])) }
     } catch (error) {

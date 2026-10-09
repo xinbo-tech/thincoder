@@ -11,11 +11,13 @@
  * 草稿口径（§2.4——KD-SV-54 口径镜像）：**标量三项 = 明传优先**——在场 ⇒ 按明传值探活（未保存亦可先验）∥
  * 缺省 ⇒ 运行配置回落；**掩码回显形（`…`+末 4）不作明传值**（⇒ 回落）；`apiKey: ""` = 清除勾（显式空——不发
  * Authorization）；`env:` 引用按字面值探发（引用解析面 = 保存/载入）。
+ * 缺 `embedding` 段（禁用态——§8 KD-SV-57）：GET 两值 `null` ∥ 探活无草稿 ⇒ 400 `invalid_request_error`（消息明示未配置——
+ * 携草稿（`baseURL` + `model`）⇒ 照常探活）。
  * 判权 = `requireAdmin`（`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401）；错误码全沿用（零新码）；写端点 JSON 型门 = 服务层径。
  */
 import { requireAdmin } from "../accounts/session.mjs"
 import { isMaskEcho } from "./config-admin.mjs"
-import { sendJson } from "./errors.mjs"
+import { HttpError, sendJson } from "./errors.mjs"
 import { upstreamHeaders, upstreamUrl } from "./forward.mjs"
 import { readJsonBody } from "./server.mjs"
 
@@ -26,11 +28,12 @@ export const EMBEDDING_TEST_TIMEOUT_MS = 10000
 export const EMBEDDING_PROBE_TEXT = "ping"
 
 /** 探活目标解析（§2.4——标量三项明传优先：非空（trim）字符串 ⇒ 按明传值；缺省 ∥ 空串/空白串 ⇒ 运行配置回落）。
- *  `apiKey` 三态 = 未编辑 ⇒ 不携（回落——含掩码回显形误送回） ∥ 编辑 ⇒ 明传（含 `""` = 清除勾即显式空）∥ 其余（非字符串）⇒ 回落。 */
+ *  `apiKey` 三态 = 未编辑 ⇒ 不携（回落——含掩码回显形误送回） ∥ 编辑 ⇒ 明传（含 `""` = 清除勾即显式空）∥ 其余（非字符串）⇒ 回落。
+ *  `runtime` = `config.embedding`（缺段 ⇒ `null`——回落值归 `null`，由调用面判 400——§8 KD-SV-57）。 */
 export function resolveProbeTarget(body, runtime) {
   const pick = (value, fallback) => (typeof value === "string" && value.trim() !== "" ? value : fallback)
-  const apiKey = typeof body?.apiKey === "string" && !isMaskEcho(body.apiKey) ? body.apiKey : (runtime.apiKey ?? "")
-  return { baseURL: pick(body?.baseURL, runtime.baseURL), model: pick(body?.model, runtime.model), apiKey }
+  const apiKey = typeof body?.apiKey === "string" && !isMaskEcho(body.apiKey) ? body.apiKey : (runtime?.apiKey ?? "")
+  return { baseURL: pick(body?.baseURL, runtime?.baseURL ?? null), model: pick(body?.model, runtime?.model ?? null), apiKey }
 }
 
 /** 失败自含形（不走统一错误信封——UI 直接渲染失败分类；§2.4）。 */
@@ -56,14 +59,18 @@ export function registerEmbeddingAdminRoutes(routes, { db, config, log = null, f
 
   routes.add("GET", "/api/admin/embedding", (req, res) => {
     requireAdmin(db, req)
-    sendJson(res, 200, { baseURL: config.embedding.baseURL, model: config.embedding.model }) // `apiKey` 不出响应（零密钥下发——§2.4）
+    // 缺段 ⇒ 两值 `null`（未配置态——§8 KD-SV-57）；`apiKey` 不出响应（零密钥下发——§2.4）
+    sendJson(res, 200, { baseURL: config.embedding?.baseURL ?? null, model: config.embedding?.model ?? null })
   })
 
   routes.add("POST", "/api/admin/embedding/test", async (req, res) => {
     requireAdmin(db, req) // user ⇒ 403 ∥ 无/过期会话 ⇒ 401（同族口径）
     const body = await readJsonBody(req)
     const text = typeof body?.text === "string" && body.text !== "" ? body.text : EMBEDDING_PROBE_TEXT
-    const target = resolveProbeTarget(body, config.embedding) // 草稿三项明传优先（未保存亦可先验）；缺省 ⇒ 运行配置回落
+    const target = resolveProbeTarget(body, config.embedding ?? null) // 草稿三项明传优先（未保存亦可先验）；缺省 ⇒ 运行配置回落
+    if (target.baseURL === null || target.model === null) { // 缺配 ∧ 无草稿（无值可探——§8 KD-SV-57）⇒ 400 明示未配置
+      throw new HttpError("invalid_request_error", "嵌入引擎未配置（config.json 缺 embedding 段）——请先填写 baseURL 与 model 后重试（未保存亦可先验）")
+    }
     const started = Date.now()
     const signal = AbortSignal.timeout(timeoutMs) // 超时中止（分类判据 = `signal.aborted`——超时时必为 true）
     let upstream

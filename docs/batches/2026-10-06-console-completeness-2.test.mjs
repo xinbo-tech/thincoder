@@ -419,9 +419,9 @@ test("⑤ 向量面：真值零密钥 ∥ 试跑成功 + 四 kind ∥ 不落库�
       const res = await get(app.base, "/api/system", { cookie: session.cookie })
       assert.deepEqual([res.status, res.json.embedding.model, "baseURL" in res.json.embedding, res.text.includes("engine.test") || res.text.includes(ENGINE_KEY), Object.keys(res.json).sort().join()], [200, "bge-m3", false, false, "embedding,update,version"], who)
     }
-    // /v1/models 同源（引擎模型在场——单源 = config.embedding.model）
+    // /v1/models 同源（零引擎行——KD-SV-58；引擎面 = 单独命名空间，不入通用清单——2026-10-09 embed 解耦批）
     const models = await get(app.base, "/v1/models", { key: teamKey.plain })
-    assert.deepEqual([models.status, models.json.data.at(-1).id, models.json.data.at(-1).owned_by], [200, "bge-m3", "embedding"])
+    assert.deepEqual([models.status, models.json.data.some((m) => m.owned_by === "embedding" || m.id === "bge-m3")], [200, false])
   } finally {
     await app.close()
     db.close()
@@ -454,7 +454,7 @@ test("⑥ 静态面：档目 29 ∥ 30 ∥ 零外链 ∥ 两表键集/键引用�
   assert.equal(zhKeys.length - SELF_NAMES.length, enBase.length)
   for (const key of enBase) assert.equal(placeholders(ZH[key]), placeholders(EN[key]), `占位符不一致：${key}`)
   const family = (prefix) => zhKeys.filter((key) => key.startsWith(prefix)).length
-  for (const [prefix, count] of [["vector.", 24], ["health.", 10], ["overview.", 8], ["usageReport.", 14], ["audit.", 29]]) assert.equal(family(prefix), count, prefix)
+  for (const [prefix, count] of [["vector.", 26], ["health.", 10], ["overview.", 8], ["usageReport.", 14], ["audit.", 29]]) assert.equal(family(prefix), count, prefix)
   for (const key of ["nav.page.admin.overview", "nav.page.admin.audit", "me.keys.lastUsed", "me.keys.neverUsed", "me.keys.windowTokens"]) assert.ok(key in ZH && key in EN, key)
   for (const type of AUDIT.AUDIT_TYPES) assert.ok(`audit.type.${type}` in ZH && `audit.type.${type}` in EN, type)
   // 键引用闭合：`t("…")` 字面量 ⊆ 表键 ∥ 裸命名空间键（点分键面）

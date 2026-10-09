@@ -2,7 +2,7 @@
  * config.mjs — 配置加载与校验（ops/OPS.md §1）：读档 ∥ `env:` 前缀解析 ∥ 预设形展开（presets.mjs） ∥ 缺省值
  * （`autoUpdate` 档位 §5.4(b) ∥ `trustProxy` ∥ `usageRetentionDays`） ∥ 启动校验（fail-closed）。
  *
- * 校验不过 ⇒ 抛（入口转非零退出 + 明确报错）；告警（如 host = 0.0.0.0 ∥ 代理两条）逐条返回，入口打印。
+ * 校验不过 ⇒ 抛（入口转非零退出 + 明确报错）；告警（如 host = 0.0.0.0 ∥ 代理两条 ∥ 嵌入未配置）逐条返回，入口打印。
  * 归一出参：`{ config, warnings, baseDir, configPath }`——`config.db` 已按配置档所在目录解析为绝对路径。
  * provider 条目校验单源 = `validateProviderEntry`/`validateProviderEntries`（三径：配置载入 ∥ 启动构建/种子 ∥
  * 控制台保存——gateway/API.md §2.2）；模型设置同源 = `validateProviderSettings`（v4 `settings`——未知子字段 ∥
@@ -45,6 +45,8 @@ export function loadConfig(configPath, { env = process.env } = {}) {
   config.db = resolveDatabasePath(config.db, baseDir)
   const warnings = []
   if (config.host === "0.0.0.0") warnings.push("host = 0.0.0.0：监听全部接口（仅单接口机可接受——ops/OPS.md §1）")
+  // 零 embedding = 允许态（§8 KD-SV-57——2026-10-09 embed 解耦批）：嵌入面禁用 + 警告一条；服务照常起。
+  if (config.embedding === null) warnings.push("嵌入引擎未配置（config.json 缺 embedding 段）——/v1/embeddings 禁用；配置后重启生效")
   // 启动 warn 两条（载入期触发；文案 = gateway/API.md §6 KD-SV-55——中文单行）
   if (config.proxy !== null) {
     warnings.push("proxy.uri 为明文 http——上游密钥经代理外发（确认代理可信）") // uri 射程 = http: 仅（见 validateProxyConfig）
@@ -77,7 +79,8 @@ export function resolveEnvRefs(value, env = process.env, path = "") {
 
 /** 启动校验（fail-closed——ops/OPS.md §1）：host 必填 ∥ 条目判据归 `validateProviderEntries`（单源）∥
  *  bootstrap 在场时 password ≥8 字符（跨 provider 模型同名 = 合法——各自可达）。
- *  `providers[]` 可缺/可空——**零 provider = 允许态**（服务照常起 + 警告——控制台/种子为两条配置路径）。 */
+ *  `providers[]` 可缺/可空——**零 provider = 允许态**（服务照常起 + 警告——控制台/种子为两条配置路径）。
+ *  `embedding` 可缺/`null`——**禁用态**（服务照常起 + 警告；在场严格校验保持——§8 KD-SV-57）。 */
 export function validateConfig(raw) {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) throw new Error("配置根须为 JSON 对象")
   const host = raw.host
@@ -104,15 +107,9 @@ export function validateConfig(raw) {
   // providers[] = 首启种子（可缺/可空——零 provider 允许态；控制台 = 常态管理面——ops/OPS.md §1）
   const providers = raw.providers === undefined ? [] : validateProviderEntries(raw.providers)
 
-  const embedding = raw.embedding
-  if (embedding === null || typeof embedding !== "object" || Array.isArray(embedding)) {
-    throw new Error("配置缺 embedding 段（baseURL ∥ model——必填）")
-  }
-  const normalizedEmbedding = {
-    baseURL: requireHttpURL(embedding.baseURL, "embedding.baseURL"),
-    model: requireString(embedding.model, "embedding.model"),
-    apiKey: optionalString(embedding.apiKey, "embedding.apiKey"),
-  }
+  // 嵌入配置可选（§8 KD-SV-57——2026-10-09 embed 解耦批）：缺位 ∥ null ⇒ null（禁用态——服务照常起 + 启动警告一条）；
+  // 在场 ⇒ 严格校验保持（fail-closed——「未配置」与「配错」两义分离）；非对象非 null（字符串 ∥ 数组 ∥ 数字 ∥ 布尔）⇒ 拒启。
+  const embedding = raw.embedding === undefined || raw.embedding === null ? null : normalizeEmbedding(raw.embedding)
 
   let bootstrap = null
   if (raw.bootstrap !== undefined) {
@@ -124,7 +121,20 @@ export function validateConfig(raw) {
     bootstrap = { username, password }
   }
 
-  return { host: host.trim(), port, db, autoUpdate, trustProxy, usageRetentionDays, proxy, bootstrap, providers, embedding: normalizedEmbedding }
+  return { host: host.trim(), port, db, autoUpdate, trustProxy, usageRetentionDays, proxy, bootstrap, providers, embedding }
+}
+
+/** `embedding` 段归一（**校验单源**——配置载入 ∥ PATCH 门两径；§8 KD-SV-57）：在场须为对象——`baseURL` http(s) ∥
+ *  `model` 非空串 ∥ `apiKey` 可空；非对象（字符串 ∥ 数组 ∥ 数字 ∥ 布尔）⇒ 抛（拒启 ∥ 保存 400——报错明示「对象 ∥ null」两形）。 */
+function normalizeEmbedding(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`embedding 段须为对象 ∥ null（缺位 ∥ null = 禁用态——可选段；在场须给 baseURL ∥ model）——现 ${JSON.stringify(value)}；拒`)
+  }
+  return {
+    baseURL: requireHttpURL(value.baseURL, "embedding.baseURL"),
+    model: requireString(value.model, "embedding.model"),
+    apiKey: optionalString(value.apiKey, "embedding.apiKey"),
+  }
 }
 
 /** 顶层 `proxy` 段校验（**校验单源**——配置载入径；gateway/API.md §6 KD-SV-55 ∥ ops/OPS.md §1）：

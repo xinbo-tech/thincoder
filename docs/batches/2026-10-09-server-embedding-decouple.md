@@ -191,4 +191,69 @@ VERDICT: pass
 - **范围红线**：`routes.mjs` 派发面零动 ∥ 零新依赖 ∥ 他批面零触。
 
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（17/17 pass；回归子集失败全数归属随正件旧断言面；审计+评审判定 clean/pass）
+
+
+
+**交付摘要**（本批两件：台账 #1147 嵌入面可选化 ∥ #1148 引擎模型退场；产品面 14 档 + 批内件 1 件）
+
+- `src/ops/config.mjs`：嵌入段可选归一（缺位 ∥ `null` ⇒ `null`；非对象非 `null` ⇒ 拒启，报错明示「对象 ∥ null」两形）+ `normalizeEmbedding` 单源（配置载入 ∥ PATCH 门两径）+ `loadConfig` 缺段警告恰一条（文案逐字沿设计）。
+- `src/gateway/routes.mjs`：`/v1/embeddings` 缺段守卫（404 `model_not_found`，消息明示未配置；零新码）；原派发判断行文本原样、仅下移一行，转发链零动。
+- `src/gateway/embedding-admin.mjs`：GET 缺段两值 `null`；`resolveProbeTarget` 容 `null` runtime（回落值归 `null`）；缺配 ∧ 无草稿 ⇒ 400 `invalid_request_error`（携 `baseURL`+`model` 草稿照常探活）。
+- `src/gateway/providers.mjs`：`modelList` 引擎行删净；引擎签名 `engineModel()` 保留（派发面消费）。
+- `public/views-system.mjs`：向量卡未配置态（三输入空 ∥ 状态行「未配置」∥ 不自动探活 ∥ 提示句在册 ∥ 保存 = 创建段）；在场「先探后载值」自动探活体 `{}` 不回归；读档失败回落探活（不标未配置）。
+- `public/views-models.mjs`：`deriveModels(providers)` 去第二参、引擎行 ∥ `quotaOf` 死支 ∥ 弹窗 `embedNote` 块删净；`public/views-admin.mjs` 调用点随正。
+- `public/views-me.mjs`：成员面提示条 `model === null` ⇒ 整条不渲染（AC-15①——**设计落位表外档**，见决策表①）。
+- i18n 四件：system 两表 `vector.unconfigured` ∥ `vector.unconfiguredHint`（+2）∥ admin 两表 `admin.models.embedNote` 退役（−1）；消费点零残留。
+- `thincoder-server/package.json`：`prepublishOnly` 清单 32 ⇒ 33（本批件入链）。`thincoder-server/README.md`：嵌入段可选语义（§2 表缺位 ∥ `null` = 禁用态 ∥ §10 向量节）。
+- 批内件：`docs/batches/2026-10-09-server-embedding-decouple.test.mjs`（实读 **579** 行；17 例：A1–A3 载入族 ∥ B1–B2 派发族 ∥ C1–C2 清单族 ∥ D1–D3 控制台数据面 ∥ E1–E6 界面/i18n/文案面 ∥ F1 依赖扫描）。
+
+**验证读数**
+
+- 批内件：`node --test docs/batches/2026-10-09-server-embedding-decouple.test.mjs` ⇒ **17/17 pass**（含事后补齐 2 条覆盖腿：D2 混填按字段回落 ∥ E1 en 新键零 CJK）。
+- 回归子集（改动面直接相关）：`-server-console-config` **30/30** ✓ ∥ `-server-i18n` ✓ ∥ `-first-release-completeness` ✓ ∥ `-me-usage-charts-ui` ✓ ∥ `-models-config` ∥ `-me-keys-redo-ui` ∥ `-server-presets` ∥ `-server-gateway-webui-deploy` ∥ `-console-providers` 系 ∥ `-server-gateway-accounts/-metering` 等 ✓；失败全部落「引擎模型入清单/入页」旧断言面 + 门禁件数 32 ⇒ 33（随正件十件 = 父侧收，本批零写）。
+- 静态：14 档 `node --check` 全 OK；批内件 F1（12 档 import）零第三方；E6（注释外零 CJK ∥ `t()` 字面量 ⊆ 表键）✓；`scripts/doc-check.mjs` 唯一 FAIL = `docs/server/design/PROJECT.md:196` 行宽（745 字符；`git status` 零改 ⇒ 存件、非本批写面）——**范围外发现，父侧裁**。
+- 未跑：全仓套件（归父侧收口轮）∥ `prepublishOnly`（十件随正未落 ⇒ 必红，父侧同拍）。
+
+**决策透明表**
+
+① `public/views-me.mjs` 属设计落位表外：AC-15① 要求「成员面提示条缺段不渲染」，设计仅在行为面在册（`webui/WEBUI.md` §6 AC-15①），文件表/预算注未列本档；不改则判据无实现面 ⇒ 改 2 行（注释 + `if (model === null) return null`）并在此披露。
+② `routes.mjs` 缺段判据取 `providerRuntime.get().engineModel()`（沿批档 §2.2「accessor 保留——派发面在用」），非设计 §2.1 字面 `config.embedding?.model ?? null`；两者在仓内全部构建点同源等价（`providers.mjs:181` ∥ `provider-admin.mjs:129`）。评审判 🔵 潜伏项，本批不改（🔵 出口 = 下批/台账）。
+③ 批内件行数实读 579（设计估 ≈450）：**单件不拆**（设计档「批内件一件」+ 仓先例「越 500 软线…免拆（≤800）」）；评审列 🟡 advisory（非阻塞）。
+④ 探活 400 判据 = `target.baseURL === null ∥ target.model === null`（任一归 `null`）；`apiKey` 空串属合法探发（不判 400）——沿 §2.4「标量三项明示优先」。
+⑤ README 实读 256 行（净 ±0；设计估 ≈258）：语义确已落地（§2 表 ∥ §6 一条 ∥ §10），估差挂父侧回填。
+⑥ `config-admin.mjs` 本批零改（设计「现件已满足」）：`embedding: null` 天然 400（非对象门）∥ 缺段档 PATCH 他键过门（门 = `validateConfig` 容缺段）∥ 缺段档建段子键合并——批内件 D3 逐条钉住。
+
+**审计与代码评审轮次与终态**
+
+- 发散审计（explore · 1 轮）：PARTIAL ∥ SILENT-SIMPLIFICATION ∥ DOC-DRIFT 三类**零发现**；列表外改动 1 条（= 决策表①，判「已报告可接受」）；轻覆盖缺口 2 条 → 本轮已补（D2 混填腿 ∥ E1 en 零 CJK）；硬边界复核（`routes.mjs` 派发行 ∥ 零第三方 ∥ `docs/server/**` 零写 ∥ 十件随正零写 ∥ 他批面零触）✓。
+- 代码评审（advisor type=code · 1 轮）：`VERDICT: pass` —— 0 🔴 ∥ 1 🟡（批内件 579 行越 500 软线，advisory 非阻塞）∥ 3 🔵（未配置态「用法」行取 `—` 与禁用语义相抵 ∥ README 行数估差 ∥ `routes.mjs` 同源假设潜伏项）。
+- fix round：**1 轮**（仅批内件覆盖补齐；产品面零改）；评审后零改（🔵 按规则出口下批/台账；🟡 非阻塞）。
+- 终态：**clean**。
+
 ## §6 验证与收口（父代理）
+
+### 验收与收口（父侧 · 2026-10-09）
+
+**验证读数（收口轮亲跑）**
+
+- 批内件 `docs/batches/2026-10-09-server-embedding-decouple.test.mjs`：**17/17 pass**（`node --test` 亲跑）。
+- 随正件 **16 件**（反证清单收正）：**121/121 pass**。
+- 门禁全链 `npm run prepublishOnly`（**33 件**链）：**277 跑 · exit 0**。
+- `scripts/doc-check.mjs`：**EXIT 0**（悬空 0 ∥ 行宽 0 超 300）；本收口轮收正 `design/PROJECT.md:196` 回填行超宽（745 字符 ⇒ 折三行）。
+- 实施轮随记：14 档 `node --check` ✓ ∥ 零第三方 import ✓（批内件 F1 腿）。
+
+**随正件清单（16 件）**
+
+- 设计注⑭十件：`-server-gateway`（清单 5⇒4 + 零引擎行断言换形）∥ `-server-gateway-chat` ∥ `-server-gateway-model-ref` ∥ `-console-provider-redo-runtime` ∥ `-console-providers` ∥ `-models-config-ui`（行序 3⇒2 ∥ confirm 拒段行序随动）∥ `-console-completeness-2`（`vector.` 键族 24⇒26）∥ `-console-modals`（NEW_KEYS 除名 ∥ derive 去参 ∥ 行序）∥ `-provider-model-metadata` ∥ `-quota-v2-member-models`（列表滤除断言翻转 ∥ 行序）。
+- 名单外六件（实读补齐）：`-console-list-style` ∥ `-server-auto-update` ∥ `-console-layout`（模型页 tfoot 夹具 2⇒1；me/usage 夹具保持 3——本轮一次误改已自查回退）∥ `-me-usage-charts` ∥ `-quota-per-model` ∥ `-server-public-structure`（指纹双枚重锚 zh `444706c6…` ∥ en `1878488d…`；键数 368∥373 ⇒ **369∥374**）。
+- 两处未登记断点（实施轮上抛）：`-server-public-structure:59` ∥ `-console-completeness-2:457`——本轮同收。
+- 门禁件数断言七件（32⇒33）：`-console-list-style` ∥ `-server-auto-update` ∥ `-console-layout` ∥ `-me-usage-charts` ∥ `-provider-model-metadata` ∥ `-quota-per-model` ∥ `-quota-v2-member-models`——全收（注释/件名同拍）。
+
+**预算回填**：产品面实读增量 ≈**+23**（估 ≈+27）∥ 批内件 **579 行**（估 ≈300）∥ 逐档实读落 `design/PROJECT.md:203-205`。
+
+**评审余项出口**：code 评审（advisor · 实施轮）3🔵——README 行数估差 = 随回填收（实读 ±0）；「用法」行语义 ∥ routes 同源假设 = 入台账 **#1151 ∥ #1152**（归批）。
+
+**自裁两处（已在场报与 §4 代签随记）**：缺段时成员面提示条不渲染 ∥ PATCH `embedding: null` ⇒ 400；如用户另裁 = 改点极小。
+
+**暂缓批复核**：无（全库零活标记）。**前批遗留核对**：无（console ∥ ECS 两批已收口冻结）。

@@ -1,7 +1,7 @@
 /**
  * views-models.mjs — 管理·服务模型页（webui/WEBUI.md §2/§2.4③——KD-SV-32/34：`#/admin/models`——仅 admin）：
- * 列表 = `/v1/models` 同源（`GET /api/admin/providers` 的 `models` 展平为 `provider/model` 前缀形 + 嵌入引擎
- * 模型 `state.system.embedding.model`）∥ 配额列（`settings[上游].quotaTokens`——未设 ⇒「不限」 ∥ 嵌入行「—」；与 F 组单源）∥
+ * 列表 = `/v1/models` 同源（`GET /api/admin/providers` 的 `models` 展平为 `provider/model` 前缀形——**嵌入引擎模型不入本列表**
+ * （单独命名空间——KD-SV-58；2026-10-09 embed 解耦批））∥ 配额列（`settings[上游].quotaTokens`——未设 ⇒「不限」；与 F 组单源）∥
  * 行点击 ⇒ 详情弹窗（复用 `modal.mjs`）；配置五组 = A 开放状态（停用流）∥
  * C 限流（RPM/TPM）∥ F 配额（`quotaTokens`——每人每月默认用量）∥ D 展示元数据（规格快照查表 + 手填「说明」）∥ E 成本权重
  * ——保存 = PATCH `settings`
@@ -14,9 +14,9 @@ import { t } from "./i18n.mjs"
 import { openModal } from "./modal.mjs"
 import { specForDisplay } from "./model-specs-snapshot.mjs"
 
-/** 服务模型行集（与 `/v1/models` 同源——纯函数，批内件直测）：providers 展平 + 引擎模型（在场则列）。
- *  行形 = `{ id（前缀形 ∥ 引擎模型原样）, provider, upstream（首斜杠余段——引擎行无此段）, surface }`。 */
-export function deriveModels(providers, embeddingModel) {
+/** 服务模型行集（与 `/v1/models` 同源——纯函数，批内件直测）：providers 展平（**嵌入引擎模型不入本列表**——
+ *  单独命名空间，KD-SV-58）。行形 = `{ id（前缀形）, provider, upstream（首斜杠余段）, surface（恒 chat） }`。 */
+export function deriveModels(providers) {
   const rows = []
   for (const provider of providers ?? []) {
     for (const model of provider.models ?? []) {
@@ -24,7 +24,6 @@ export function deriveModels(providers, embeddingModel) {
       rows.push({ id, provider: provider.name, upstream: id.slice(id.indexOf("/") + 1), surface: "chat" })
     }
   }
-  if (embeddingModel) rows.push({ id: embeddingModel, provider: "embedding", upstream: null, surface: "embeddings" })
   return [...rows].sort((a, b) => a.id.localeCompare(b.id)) // id 升序（2026-10-07 走查收正——服务模型页长清单可找；同弹窗清单口径）
 }
 
@@ -75,7 +74,7 @@ export async function renderModels(ctx, mount) {
     try {
       const data = await ctx.api("/api/admin/providers")
       const providers = data.providers ?? []
-      const rows = deriveModels(providers, ctx.state.system?.embedding?.model ?? null)
+      const rows = deriveModels(providers)
       listBox.replaceChildren(rows.length === 0
         ? h("p", { class: "hint", text: t("admin.models.empty") })
         : modelsTable(ctx, rows, providers, load))
@@ -88,12 +87,11 @@ export async function renderModels(ctx, mount) {
 }
 
 /** 列表（列 = 模型 ∥ Provider ∥ 面 ∥ 配额）：行点击（Enter/Space 同开——键盘可达）⇒ 详情弹窗（entry = 该行 provider 行——设置/停用取数源）；
- *  配额 = `settings[上游].quotaTokens`（未设/清空 ⇒「不限」 ∥ 嵌入行 ⇒「—」——与 F 组单源，零第二存储）。 */
+ *  配额 = `settings[上游].quotaTokens`（未设/清空 ⇒「不限」——与 F 组单源，零第二存储）。 */
 function modelsTable(ctx, rows, providers, reload) {
   const { h } = ctx
   const headers = [t("admin.models.colModel"), t("admin.models.colProvider"), t("admin.models.colSurface"), t("admin.models.quotaTitle")]
   const quotaOf = (row) => {
-    if (row.surface !== "chat") return "—" // 嵌入行（配置 = 系统页 · 向量服务卡）
     const value = ((providers.find((item) => item.name === row.provider) ?? {}).settings ?? {})[row.upstream]?.quotaTokens
     return value === null || value === undefined ? t("common.quotaUnlimited") : String(value)
   }
@@ -117,23 +115,18 @@ function modelsTable(ctx, rows, providers, reload) {
       h("tfoot", {}, h("tr", {}, h("td", { colspan: String(headers.length), text: t("common.rowCount", { count: rows.length }) })))))
 }
 
-/** 详情弹窗（复用公共组件；导出 = 批内件直测）：详情四行 + （chat 行）配置五组（A/C/F/D/E）∥ 嵌入行注（五组不落该行）。
+/** 详情弹窗（复用公共组件；导出 = 批内件直测）：详情四行 + 配置五组（A/C/F/D/E）。
  *  停用 = confirm ⇒ PATCH `models` 减项 ⇒ 关窗 + 列表刷新 + flash；保存 = PATCH `settings`（单键全对象）⇒ flash + 弹窗留驻。 */
 export function openModelModal(ctx, { row, entry, reload }) {
   const { h } = ctx
-  const isChat = row.surface === "chat"
   const bodyBox = h("div")
   const footBox = h("div", { class: "row-form" })
-  const modal = openModal({ title: t("admin.models.detailTitle"), body: bodyBox, footer: isChat ? footBox : null })
+  const modal = openModal({ title: t("admin.models.detailTitle"), body: bodyBox, footer: footBox })
   const details = h("dl", { class: "detail-grid" },
     h("dt", { text: t("admin.models.colModel") }), h("dd", {}, h("code", { text: row.id })),
     h("dt", { text: t("admin.models.colProvider") }), h("dd", { text: row.provider }),
     h("dt", { text: t("admin.models.upstream") }), h("dd", { text: ctx.fmtValue(row.upstream) }),
     h("dt", { text: t("admin.models.colSurface") }), h("dd", { text: row.surface }))
-  if (!isChat) { // 嵌入模型行：注 = 系统页 · 向量服务卡（A/C/F/D/E 五组不落该行）；零脚区
-    bodyBox.replaceChildren(details, h("p", { class: "hint", text: t("admin.models.embedNote") }))
-    return modal
-  }
 
   const draft = draftFromSettings(entry?.settings, row.upstream)
   const inputs = {} // field ⇒ input（读数用）

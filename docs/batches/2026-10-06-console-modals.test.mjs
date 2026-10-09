@@ -37,7 +37,7 @@ const NEW_KEYS = [
   "admin.members.newBtn", "admin.members.colKeyCount", "admin.members.empty",
   "admin.models.title", "admin.models.colModel", "admin.models.colProvider", "admin.models.colSurface",
   "admin.models.upstream", "admin.models.empty", "admin.models.loadFailed", "admin.models.detailTitle",
-  "admin.models.embedNote", "admin.models.configTitle", // configSkeleton 随配置面批退役（2026-10-06）
+    "admin.models.configTitle", // configSkeleton 随配置面批退役（2026-10-06）∥ embedNote 随 embed 解耦批退役（2026-10-09）
   "nav.page.admin.models",
 ]
 const placeholders = (text) => [...String(text).matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort().join(",")
@@ -320,16 +320,15 @@ test("② 成员弹窗：三态（查看/编辑/新建）∥ 分模型覆盖面�
 // ── ③ 服务模型页（AC-17——派生同源 ∥ 详情弹窗 ∥ 配置五组 A/C/F/D/E）────────────────
 
 test("③ 服务模型：`deriveModels` 同源派生 ∥ 列表/空态/失败态 ∥ 详情弹窗复用组件 ∥ 配置五组在册", async () => {
-  // 派生（纯函数）：providers 展平 = `provider/model` 前缀形（上游模型名 = 首斜杠余段——含斜杠模型名亦然）+ 引擎行；序 = id 升序（2026-10-07 走查收正——长清单可找）
+  // 派生（纯函数）：providers 展平 = `provider/model` 前缀形（上游模型名 = 首斜杠余段——含斜杠模型名亦然；零引擎行——KD-SV-58）；序 = id 升序（2026-10-07 走查收正——长清单可找）
   assert.deepEqual(MODELS.deriveModels([
     { name: "deepseek", models: ["deepseek-chat", "meta/llama-3"] },
     { name: "openai", models: [] },
-  ], "bge-m3"), [
-    { id: "bge-m3", provider: "embedding", upstream: null, surface: "embeddings" },
+  ]), [
     { id: "deepseek/deepseek-chat", provider: "deepseek", upstream: "deepseek-chat", surface: "chat" },
     { id: "deepseek/meta/llama-3", provider: "deepseek", upstream: "meta/llama-3", surface: "chat" },
   ])
-  assert.deepEqual([MODELS.deriveModels([], null), MODELS.deriveModels([{ name: "p", models: ["m"] }], null)], [[], [{ id: "p/m", provider: "p", upstream: "m", surface: "chat" }]])
+  assert.deepEqual([MODELS.deriveModels([]), MODELS.deriveModels([{ name: "p", models: ["m"] }])], [[], [{ id: "p/m", provider: "p", upstream: "m", surface: "chat" }]])
   const src = readFileSync(join(PUBLIC_DIR, "views-models.mjs"), "utf8")
   assert.ok(src.includes('import { openModal } from "./modal.mjs"'), "详情弹窗复用公共组件")
 
@@ -354,12 +353,11 @@ test("③ 服务模型：`deriveModels` 同源派生 ∥ 列表/空态/失败态
     const trs = findAll(mount, (node) => node.tag === "tr")
     assert.deepEqual(trs.map(rowText), [
       [ZH["admin.models.colModel"], ZH["admin.models.colProvider"], ZH["admin.models.colSurface"], ZH["admin.models.quotaTitle"]].join("|"),
-      "bge-m3|embedding|embeddings|—",
       "deepseek/deepseek-chat|deepseek|chat|" + ZH["common.quotaUnlimited"],
-      fill(ZH["common.rowCount"], { count: 2 }), // tfoot 计数行（序 = id 升序——2026-10-07 走查收正 ∥ 计数入表）
-    ], "列表 = providers 展平 + 引擎模型（`/v1/models` 同源）+ 配额列（未设 ⇒「不限」∥ 嵌入「—」）+ tfoot 计数")
+      fill(ZH["common.rowCount"], { count: 1 }), // tfoot 计数行（序 = id 升序——2026-10-07 走查收正 ∥ 计数入表）
+    ], "列表 = providers 展平（零引擎行——KD-SV-58）+ 配额列（未设 ⇒「不限」）+ tfoot 计数")
     // 详情弹窗（行点击）：模型标识 ∥ Provider ∥ 上游模型名 ∥ 面 + 配置面（四组——配置面批后）
-    await trs[2].fire("click") // 升序后 deepseek 行 = 第 2 行（表头 0 ∥ bge-m3 1）
+    await trs[1].fire("click") // 升序后 deepseek 行 = 第 1 行（表头 0——零引擎行后）
     let dialog = findNode(documentStub.body, (node) => node.tag === "dialog")
     assert.equal(dialog.children[0].children[0].textContent, ZH["admin.models.detailTitle"])
     let text = textOf(dialog)
@@ -370,12 +368,8 @@ test("③ 服务模型：`deriveModels` 同源派生 ∥ 列表/空态/失败态
     assert.equal(text.includes(ZH["admin.models.embedNote"]), false, "嵌入行注 = 仅嵌入行")
     assert.ok(findAll(dialog, (node) => ["input", "select", "textarea"].includes(node.tag)).length === 6, "配置五组 = 可编辑字段六枚（rpm/tpm/costIn/costOut/quotaTokens/note——A/C/F/D/E）")
     await dialog.children[0].children[1].fire("click") // × 关闭
-    // 嵌入行：行注在场（配置 = 系统页·向量服务卡）∥ 上游模型名 = 「—」（无首斜杠余段）——升序后 = 第 1 行
-    await trs[1].fire("click")
-    dialog = findNode(documentStub.body, (node) => node.tag === "dialog")
-    text = textOf(dialog)
-    assert.deepEqual([text.includes(ZH["admin.models.embedNote"]), text.includes("—"), text.includes(ZH["admin.models.quotaTitle"]), findAll(dialog, (node) => node.tag === "input").length], [true, true, false, 0])
-    await dialog.children[0].children[1].fire("click")
+    // 嵌入行详情面已退役（KD-SV-58——2026-10-09 embed 解耦批）：列表零引擎行 ⇒ 无嵌入行可点；引擎面 = 单独命名空间
+    assert.equal(trs.slice(1).some((tr) => rowText(tr).startsWith("bge-m3|")), false, "列表零引擎行")
     // 空态 / 失败态
     const emptyMount = makeNode("section")
     await MODELS.renderModels({ ...ctx, api: async () => ({ providers: [] }), state: { system: null } }, emptyMount)

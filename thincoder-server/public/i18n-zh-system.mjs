@@ -63,6 +63,8 @@ export const ZH_SYSTEM = Object.freeze({
   "vector.status": "可达性",
   "vector.recheck": "重新检测",
   "vector.checking": "检测中……",
+  "vector.unconfigured": "未配置",
+  "vector.unconfiguredHint": "嵌入引擎未配置——填写并保存后启用（重启生效）",
   "vector.reachable": "可达（{dimensions} 维 · {ms} ms）",
   "vector.autoNote": "进入本页自动检测一次",
   "vector.fail": "{kind}：{message}",

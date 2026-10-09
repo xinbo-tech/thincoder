@@ -256,10 +256,12 @@ export async function renderMeUsage(ctx, mount) {
   await loadUsage()
 }
 
-/** 向量服务提示条（用户面——模型名 + snippet + 用法一句；地址/探活/试跑 = admin 面；§2.3①）。 */
+/** 向量服务提示条（用户面——模型名 + snippet + 用法一句；地址/探活/试跑 = admin 面；§2.3①）。
+ *  缺 `embedding` 段（`embedding.model = null`）⇒ 整条不渲染（成员面不呈「未配置」态——2026-10-09 embed 解耦批）。 */
 function vectorTip(ctx) {
   const { h } = ctx
   const model = ctx.state.system?.embedding?.model ?? null
+  if (model === null) return null
   return h("section", { class: "card tip-bar" },
     h("h3", { text: t("vector.meTitle") }),
     h("p", { class: "hint", text: t("vector.usage", { model: model ?? "—" }) }),

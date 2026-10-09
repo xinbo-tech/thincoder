@@ -48,7 +48,7 @@
 | `proxy` | 否 | **上游出口代理**：形 = `{ "uri": "http://host:port" }`；**仅收 `http:`**（https 代理串 ∥ 非对象 ∥ 非 URL ⇒ 拒启）；缺省 = 直连；生效 = 重启（见下「上游代理」） |
 | `bootstrap` | 否 | 首启引导凭据（仅零 admin 时消费——见 §5）；口令 ≥8 字符 |
 | `providers[]` | 否 | **首启种子**（一次性导入——此后控制台管理：`#/admin/providers`）。`name` ∥ `baseURL`（OpenAI 兼容根） ∥ `apiKey`（可空——空则不发 Authorization 头；支持 `env:` 引用） ∥ `models`（开放清单——对外标识 = `provider/model`）；预设形（`preset`）可省字段。零 provider = 允许态（服务照常起 + 警告） |
-| `embedding` | 是 | `baseURL` ∥ `model` ∥ `apiKey`（选填——本地引擎常无鉴权） |
+| `embedding` | 否 | 嵌入引擎接入段：`baseURL` ∥ `model` ∥ `apiKey`（选填——本地引擎常无鉴权）。**缺位 ∥ `null` = 禁用态**（服务照常起 + 启动警告一条——`/v1/embeddings` ⇒ 404 `model_not_found` 消息明示未配置；控制台向量卡「未配置」态可创建）；在场 ⇒ 严格校验（`baseURL` http(s) ∥ `model` 非空——非法 ⇒ 拒启） |
 
 - 字符串值支持 `env:变量名` 前缀（加载期解析；变量缺位 ⇒ 启动失败）——真实 key 可只住环境变量。例外 = `providers[].apiKey`：载入不解析（引用保形），注册表构建期解析（缺位 ⇒ 启动拒启 ∥ 保存 400）。
 - 更新源 = 环境变量 `NPM_CONFIG_REGISTRY`（可指内网镜像——npm 同名配置；自检与自装同源）；缺省 = npmjs（机制见 §8）。
@@ -62,8 +62,8 @@
 - 预设双消费面：① 配置种子（预设形条目——上条）；② 控制台「从预设快速添加」（`#/admin/providers`——拉预设表 ⇒ 预填 ⇒ 补 `apiKey` ⇒ 保存；写入仍走全字段校验）。
 - 对外模型标识 = `provider/model`（首斜杠切分：首段 = provider `name` ∥ 余段 = 上游模型名（可含斜杠）；
   两段非空；裸名不解析；同名模型跨 provider 并存且各自可达）；`/v1/models` = 带前缀名清单。
-- 启动校验（fail-closed）：缺 `host` ∥ provider `name` 缺/空 ∥ `name` 含 `/` ∥ `name` 重名（provider 间） ∥ 同 provider 内模型重名 ∥ `baseURL` 非 http(s) ∥ 未知预设名 ⇒
-  拒启（非零退出 + 明确报错）。**零 provider = 允许态**（服务照常起 + 警告——控制台为配置路径）。
+- 启动校验（fail-closed）：缺 `host` ∥ provider `name` 缺/空 ∥ `name` 含 `/` ∥ `name` 重名（provider 间） ∥ 同 provider 内模型重名 ∥ `baseURL` 非 http(s) ∥ 未知预设名 ∥ `embedding` 在场非对象/缺子键 ⇒
+  拒启（非零退出 + 明确报错）。**零 provider = 允许态**（服务照常起 + 警告——控制台为配置路径）；**零 embedding = 允许态**（服务照常起 + 警告；嵌入面禁用——`/v1/embeddings` 404 明示未配置）；嵌入引擎模型不入 `/v1/models`（单独命名空间）。
 - provider 变更（增/删/改 ∥ 含密钥）= 控制台 `#/admin/providers` 保存即热生效（零重启；在途请求照常收尾）；`config.json` 文件本身不热载（改动仍须重启）。
 - **配置写面（控制台——`#/admin/system`「服务配置」卡 + 向量卡）**：可写 = `autoUpdate` ∥ `trustProxy` ∥ `usageRetentionDays` ∥ `proxy.uri` ∥ `embedding.{baseURL,model,apiKey}`
   （向量卡 = 三输入 + 保存 + 草稿探活——按表单值先验，未保存亦可）；只读展示 = `host` ∥ `port` ∥ `db`（部署拓扑项——不做写面）+ `bootstrap`（口令永不回显）+ `providers[]`（指针——常态管理 = `#/admin/providers`）。

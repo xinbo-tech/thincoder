@@ -11,7 +11,7 @@
  * （零重启；在途 = 派发时快照——gateway/API.md §2.2）。
  * 鉴权三态不区分（无 key ∥ 未知 ∥ 吊销 ⇒ 401 `invalid_api_key`——防信息泄露）；准入前拒打不落用量。
  * embeddings = 内网引擎转发（地址配置面——OPS §1 `embedding` 段；响应透传 + 同形记账）；**嵌入面零配额检查**
- * （仅计量照记——用户 09:31 裁）。
+ * （仅计量照记——用户 09:31 裁）；缺段 = 禁用态（404 `model_not_found` 消息明示未配置——§8 KD-SV-57）。
  */
 import { verifyKey } from "../accounts/keys.mjs"
 import { assertQuota } from "../metering/quota.mjs"
@@ -80,13 +80,16 @@ export function registerGatewayRoutes(routes, { db, config, runtime = null, log 
 
   // 嵌入面 = 内网引擎转发（引擎模型 = `embedding.model`——非 provider 面 ∥ 无前缀；其余 ⇒ 404）：
   // 响应透传（非流式 JSON——usage 从响应体拾取）∥ 记账 `endpoint='embeddings'`（provider = ''——无前缀命名空间；
-  // 零配额检查——仅计量照记（AC-6 ∥ N3）。
+  // 零配额检查——仅计量照记（AC-6 ∥ N3）。缺 `embedding` 段（禁用态）⇒ 404 `model_not_found` 消息明示未配置——KD-SV-57。
   routes.add("POST", "/v1/embeddings", async (req, res, ctx) => {
     const ts = Date.now() // 账务行 ts = 请求开始
     const { keyId, member } = requireApiKey(db, req) // [2]
     const body = await readJsonBody(req) // 413（读限）∥ 400（非 JSON）
     if (typeof body?.model !== "string" || body.model === "") {
       throw new HttpError("invalid_request_error", "请求体缺 model 字段")
+    }
+    if (providerRuntime.get().engineModel() === null) { // 缺 embedding 段 = 禁用态（KD-SV-57）：404 明示未配置（零新码——沿既有错误族）
+      throw new HttpError("model_not_found", "嵌入引擎未配置（config.json 缺 embedding 段）——/v1/embeddings 已禁用；配置后重启生效")
     }
     if (body.model !== providerRuntime.get().engineModel()) { // [4] 引擎模型外 ⇒ 404 model_not_found（引擎面 = 单独命名空间）
       throw new HttpError("model_not_found", `模型未配置：${body.model}`)

@@ -217,7 +217,7 @@ test("③ 接口逐值：discover 双集（富字段逐值 ∥ 经典 ⇒ {} ∥
     assert.deepEqual((await row()).modelMeta, { "rich-a": { displayName: "Rich A", contextWindow: 1048576, vision: true, status: "Shutdown" }, "plain-c": { contextWindow: 5 } }, "非开放模型不入库（closed-x 滑落）")
     // ④ `/v1/models` 零涉：元数据零带出（条目形不变——对外契约零动）
     const listed = await get(app.base, "/v1/models", { headers: { authorization: `Bearer ${key.plain}` } })
-    assert.deepEqual(listed.json.data.map((item) => item.id).sort(), ["bge-m3", "prov/plain-c", "prov/rich-a"])
+    assert.deepEqual(listed.json.data.map((item) => item.id).sort(), ["prov/plain-c", "prov/rich-a"])
     assert.deepEqual(Object.keys(listed.json.data.find((item) => item.id === "prov/rich-a")).sort(), ["created", "id", "object", "owned_by"])
     // ⑤ PATCH 不携 ⇒ 现存按求交滑动（删项随之滑落——零孤儿）
     assert.deepEqual((await patch(app.base, "/api/admin/providers/1", { cookie: adminSession.cookie, body: { models: ["rich-a"] } })).json, { ok: true, id: 1 })
@@ -486,9 +486,9 @@ test("⑥ i18n + 静态面：两表 7 键在场（en 零 CJK ∥ 占位符一致
   assert.equal(rootVars.length, 38, `:root 变量族计数（零新增）：${rootVars.length}`)
   const hover = [...css.matchAll(/([^{}]*:hover[^{}]*)\{/g)].map((match) => match[1].trim().replace(/\s+/g, " ")).sort()
   assert.deepEqual(hover, [".nav-item:hover", "tbody tr:hover", "button:hover", "button.tiny:hover", "button.danger:hover", "button.link:hover", ".modal-close:hover"].sort(), "悬停声明清单（七条——零新增）")
-  // 门禁链 31 件（结构轮批件入链 ∥ 10-09 代理批件入链）∥ 清单目标在盘
+  // 门禁链 33 件（结构轮批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链）∥ 清单目标在盘
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 32, `门禁清单件数（二十六 ⇒ 三十二——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 33, `门禁清单件数（二十六 ⇒ 三十三——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-provider-model-metadata.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

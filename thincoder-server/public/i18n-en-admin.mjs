@@ -48,7 +48,6 @@ export const EN_ADMIN = Object.freeze({
   "admin.models.empty": "No served models",
   "admin.models.loadFailed": "Failed to load served models",
   "admin.models.detailTitle": "Model detail",
-  "admin.models.embedNote": "Configuration: System page · Vector service card",
   "admin.models.configTitle": "Configuration",
   "admin.models.status": "Open state",
   "admin.models.open": "Open",

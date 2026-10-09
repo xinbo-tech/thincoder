@@ -46,7 +46,6 @@ export const ZH_ADMIN = Object.freeze({
   "admin.models.empty": "暂无服务模型",
   "admin.models.loadFailed": "服务模型加载失败",
   "admin.models.detailTitle": "模型详情",
-  "admin.models.embedNote": "配置 = 系统页 · 向量服务卡",
   "admin.models.configTitle": "配置",
   "admin.models.status": "开放状态",
   "admin.models.open": "开放",

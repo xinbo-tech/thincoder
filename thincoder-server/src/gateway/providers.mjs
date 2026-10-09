@@ -119,17 +119,16 @@ export function createProviderRegistry(entries, { env = process.env, engineModel
       if (settings === null || typeof settings !== "object") return null
       return settings[model] ?? null
     },
-    /** 嵌入引擎模型（`embedding.model`——非 provider 面，原样；装配期注入）。 */
+    /** 嵌入引擎模型（`embedding.model`——非 provider 面，原样；装配期注入；缺段 ⇒ `null`）。
+     *  消费面 = 嵌入派发（`routes.mjs`——单独命名空间）；清单（`modelList`）零涉——KD-SV-58。 */
     engineModel: () => engineModel,
   }
 }
 
-/** `/v1/models` 清单（注册表派生：chat = 带前缀名 ∥ 引擎模型原样——N4）。 */
+/** `/v1/models` 清单（注册表派生：chat = `provider/model` 前缀名——**引擎模型不入本清单**（单独命名空间——KD-SV-58；
+ *  2026-10-09 embed 解耦批；引擎模型仍走 `engineModel()`——派发面单独命名空间，清单零涉）。 */
 export function modelList(registry) {
-  const data = registry.entries().map(({ ref, provider }) => ({ id: ref, object: "model", created: 0, owned_by: provider.name }))
-  const engine = registry.engineModel()
-  if (engine) data.push({ id: engine, object: "model", created: 0, owned_by: "embedding" })
-  return { object: "list", data }
+  return { object: "list", data: registry.entries().map(({ ref, provider }) => ({ id: ref, object: "model", created: 0, owned_by: provider.name })) }
 }
 
 /** 运行时箱（保存即热生效——§2.2）：装配期建一次；保存路径 `set(候选)` 原子换表；HTTP 面 `get()` 读当时表。 */

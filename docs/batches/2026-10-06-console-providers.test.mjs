@@ -197,7 +197,7 @@ test("② 保存即热生效：POST ⇒ 立见 + 上游完成请求 ∥ PATCH �
   const app = await startApp({ db, config })
   try {
     const admin = await login(app.base, "admin")
-    assert.deepEqual(await listModels(app, key.plain), ["seed/seed-model", "bge-m3"]) // 种子导入（格① 同径）
+    assert.deepEqual(await listModels(app, key.plain), ["seed/seed-model"]) // 种子导入（格① 同径）；零引擎行（KD-SV-58）
     const created = await call(app.base, "POST", "/api/admin/providers", { cookie: admin.cookie, body: { name: "fresh", baseURL: `${freshMock.base}/v1`, apiKey: "sk-plain-1234", models: ["fresh-model"] } })
     assert.equal(created.status, 200)
     assert.equal(created.json.ok, true)

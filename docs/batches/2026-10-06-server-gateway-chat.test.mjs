@@ -476,7 +476,7 @@ test("AC-1 ∥ 准入门：/v1/models 三态（无 ∥ 非 Bearer ∥ 坏 ∥ �
     }
     const ok = await fetch(`${app.base}/v1/models`, { headers: { authorization: `Bearer ${valid.plain}` } })
     assert.equal(ok.status, 200)
-    assert.deepEqual((await ok.json()).data.map((m) => m.id), ["mock/mock-chat", "bge-m3"])
+    assert.deepEqual((await ok.json()).data.map((m) => m.id), ["mock/mock-chat"])
     const denied = await chatJson(app.base, { body: { model: "mock/mock-chat", messages: [] } }) // chat 同门（无 key）
     assert.equal(denied.status, 401)
     assert.equal(denied.json.error.code, "invalid_api_key")
