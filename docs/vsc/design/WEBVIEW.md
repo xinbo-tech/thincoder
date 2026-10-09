@@ -199,12 +199,15 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 - **判据单源 = `docs/core/design/PROVIDER.md` §6.22**（U3 宽松+明示：`ok` ∥ `fallback` ∥ `invalid` 三态 + **invalid 类合成式**；本段只落本端呈现面与数据面）。
 - **数据面**：`providerStatus` 消息载荷增 `providerState` 键（`{ state, channel, model, reason, invalidReason }`——主侧 = `thincoder-vscode/src/extension/settings.mjs` `providerStatus()` ∥ `pushStatus`，经核统一解析出值 + `providerInvalidReason` 快照）；刷新点 = `pushStatus` 现推点（面板就绪 / provider 写后 / 准入落账后）——**零新通道**。
 - **横幅三态**（`#provider-banner` · `webview/ui.js` `showBanner`——**state 单判据直映射**）：**invalid 类**（`state === "invalid"` ∨ `invalidReason` 非空）⇒ 现键 `banner.notConfigured` 逐字不变；
-  `state === "fallback"` ⇒ **新键 `banner.defaultModelFallback`**（zh `⚠ 默认模型未设置或无效 — 正在使用可用渠道` ∥ en `⚠ Default model missing or invalid — using an available channel`）+ **动作钮**「选择默认模型」（新键 `banner.chooseDefaultModel`——zh `选择默认模型` ∥ en `Choose default model`）→ `openSettings()`（设置面默认模型段）；
+  `state === "fallback"` ⇒ **两键按载荷 `model` 在场分**——在场 = **`banner.defaultModelFallback`**（zh `⚠ 默认模型未设置或无效 — 正在使用可用渠道` ∥ en `⚠ Default model missing or invalid — using an available channel`）；
+  `model` 缺 = **`banner.defaultModelFallbackNoModel`**（zh `⚠ 默认模型未设置 — 渠道已就绪、模型未定` ∥ en `⚠ Default model missing — channel ready, model not chosen`）
+  + **动作钮**「选择默认模型」（新键 `banner.chooseDefaultModel`——zh `选择默认模型` ∥ en `Choose default model`）→ `openSettings()`（设置面默认模型段）；
   `state === "ok"` ⇒ 现键 `banner.configured`（不变）。
 - **`keyOk` 收正（判据钉定）**：`keyOk := 非 invalid 类`（= `state !== "invalid"` ∧ `invalidReason` 空）——端侧布尔收正为**核态派生（单判据）**，去第二判据；欢迎面 ∥ 向导面既有消费随此派生（`notConfigured` ⟺ invalid 类）。
 - **动作落点**：钮不开会话级模型菜单——真修口 = 设置面默认模型段（与 `#840` 桌面 KD-3 同判；会话级选定亦同拍写回 `defaultModel`（判据句 6）——本钮仍指设置面：显式默认口 ∥ 不依赖会话在场）。
 - **链收正（机制面，本段不重述）**：`panel-turn-stages.mjs` 接入面自建回退链改核函数 ∥ `presets.mjs` `resolveDefaultModel` 改核转口（单源 = `doc:PROVIDER.md:§6.22`）；**可用性不得降**（渠道+key 已配 ⇒ 直接可发——事实标准不回退）。
 - **边界**：发送失败面（`error.provider` 词 ∥ `needsSetup` 径）零改；welcome 面板两键零改；`i18n-dom` 横幅键刷新面随三态键扩（`data-banner-key` 取值闭集）。
+- **登记（2026-10-09 清除批）**：本节两字面（载荷 `model` 在场 ∥ 缺）与渠道单值模型退场后口径零冲突 ⇒ **零改在册**（本批复核）；第二字面键名 `banner.defaultModelFallbackNoModel` 补登（`data-banner-key` 取值闭集闭合——#22 实装键名）。
 
 ### 4.9 状态行 thinking 占位改静态（2026-10-04 · 台账 #854）
 
@@ -700,6 +703,8 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 **边界（本节不做）**：不做常驻仪表（默认一次性探针）；不加 webview `performance` 标记（真画证据归真机 QA · 台账 #162）；口径 A 不入本批。**读数留档** = 批次档 §5 / §6（一次性材料）；探针撤除后 `git diff` 空 = 方案自身验证面。
 
 ## 变更记录
+- 2026-10-09（**provider-default-model-purge 批 · 实施期收正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §2 ∥ §5 舱4 · 台账 #1122）：§4.8 fallback 第二字面键名补登（`banner.defaultModelFallbackNoModel`——`data-banner-key` 取值闭集闭合；#22 实装键名）+ 登记条同拍。**零新语义**（键名补登）。
+- 2026-10-09（**provider-default-model-purge 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §3 轮次 1 · 台账 #1122）：§4.8 补批名登记（两字面与渠道单值模型退场后口径零冲突 ⇒ 零改在册）。**零新语义**（零改登记）。明细 = 批档 §2 修复轮块。
 - 2026-10-04（**模型切换解锁批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-desktop-model-switch-unlock.md` §2 · 台账 #918）：**§4.2 整节重写**（F-W14 收正——钮面零忙态门 ∥ 写面保护 = 偏好键单写者 ∥ 自动回写门保留 ∥ 下一回合生效）· **D-W16** ∥ **U-W9** ∥ §10 回指行同拍。**零既有语义改**（判据面收正——钮面零门由共享核改正兑现）。明细 = 批档 §2。
 - 2026-09-30（**跨端消化面恢复批 · 修正轮（评审轮 1 · 发现 1 ∥ 4 ∥ 7）· eng-designer**——承 `docs/batches/2026-09-30-cross-end-digest-recovery.md` §3 轮次 1）：§5.7 出站字面统一 `recordAppend`（协议登记面同拍）；写面处理体载体收正（人读线数组 `fullHistory` 同引用 + 载体缺位失败面）；§5.4 归档块锚面按径分述（live 不补锚 ∥ 重建携锚）+ 防双渲染判据；§5.7 cap 坐标 `:82-83` ⇒ `:83`；§10 行 17 同拍。**零既有语义改**。
 

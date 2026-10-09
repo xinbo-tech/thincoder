@@ -10,7 +10,7 @@
 
 | 号 | 决策 | 依据 | 被否候选 |
 |---|---|---|---|
-| KD-17 | **`effort` 的会话级载体 = 槽数据文件顶层字段**（`null` = 未设 ⇒ 回落渠道默认）；`provider` / `model` 两键入参**不新增字段**——映射既有 `activeProvider` / `activeModel`；`newSlotData` 产 `effort: null`；`saveSession` 字段表**须携 `effort`**（缺之 ⇒ 下一次回合保存把槽写面结果整对象抹除——实读 `thincoder-core/session.mjs:120-138` 现表无该键）；老槽无键 ⇒ 按 `null` 容忍（**禁回填**——沿 `createdBy` 先例） | 需求档 §3.1:47（会话级三值 = **会话级**状态 · D6）——须随槽持久化、且与 CLI / 扩展端**同一份**槽；核现无该键的槽写出口（既有四钥 = `autoApprove` / `planMode` / `engineering` / `advisor.guard`）⇒ 端侧只剩两条错路：落 config（全局态——切一处波及全部会话）∥ 自建副本（跨端互写失守）；判据单源 = `docs/core/design/SESSION.md` §6.21 判据句 1 / 5 | 落 config 全局态（需求明写「会话级」）· 端自建槽副本（第二份存储）· 老槽回填（违批 A 已裁的禁回填先例） |
+| KD-17 | **`effort` 的会话级载体 = 槽数据文件顶层字段**（`null` = 未设 ⇒ 回落渠道级 `reasoningEffort`（config 链））；`provider` / `model` 两键入参**不新增字段**——映射既有 `activeProvider` / `activeModel`；`newSlotData` 产 `effort: null`；`saveSession` 字段表**须携 `effort`**（缺之 ⇒ 下一次回合保存把槽写面结果整对象抹除——实读 `thincoder-core/session.mjs:120-138` 现表无该键）；老槽无键 ⇒ 按 `null` 容忍（**禁回填**——沿 `createdBy` 先例） | 需求档 §3.1:47（会话级三值 = **会话级**状态 · D6）——须随槽持久化、且与 CLI / 扩展端**同一份**槽；核现无该键的槽写出口（既有四钥 = `autoApprove` / `planMode` / `engineering` / `advisor.guard`）⇒ 端侧只剩两条错路：落 config（全局态——切一处波及全部会话）∥ 自建副本（跨端互写失守）；判据单源 = `docs/core/design/SESSION.md` §6.21 判据句 1 / 5 | 落 config 全局态（需求明写「会话级」）· 端自建槽副本（第二份存储）· 老槽回填（违批 A 已裁的禁回填先例） |
 | KD-18 | **档位枚举化（会话级）**：居所 = 输入区控件行（写槽）；枚举**单源** = 核 `specForModel(model).reasoningEffortEnum`（**逐模型取**——不落全局一份表）；端侧候选面 = `model:list` 回执**逐模型元素投影 `{ id, effortEnum, thinkOff }`**（`thinkOff` = off 可达判据——单源 = 核 `thinkOffPath`）；表外档位字面串 ⇒ **归一 `null`**（未设——写面不预校验）；`null` 仅允许 `effort` 一键；`provider` 变更须**同送 `model`**（槽双字段恒非空） | 需求档 §3.5 项 6 逐字「自由文本 ⇒ 枚举选项」；枚举值域逐模型不同 ⇒ 端侧自持一份表必错（第二值域 = 漂移面）；候选面须离线可用（先例 = `thincoder-vscode/src/extension/settings.mjs:207-213`）；**缺口闭合** = 端 `model:list` 现仅回 `{ ok, models }`（实读 `thincoder-desktop/src/main/settings.mjs:118-129`）⇒ 补逐模型 `effortEnum` / `thinkOff` 投影（主进程引核函数 = 零副本，沿 `listModels` 转口先例） | 端侧自持族别表（第二份值域）· 自由文本保留（需求明写收枚举）· 渲染面直引核（渲染面零 Node ⇒ 守卫 T-DSK16 红）· 全档共用一份 effort 表（逐模型值域不同）· 不补 `model:list` 投影 · 候选面恒含 off（不可达模型写后归一 `null`——两族在候选面不可区分）· `"none"` 列独立候选（与 `off` 同义重复——`off` 族判据正看它） |
 | KD-19 | **施加径 = 写盘 → 重施**（`loadAgentSlot`）单点；**在飞**（`flights.has(key)`）⇒ **写盘受理 ∥ 施加顺延**（回合尾 `settleTurn` 落盘后重施——2026-10-04 解锁批收正；在飞不重施 ⇒ 回合一致性保持；落盘面 = **偏好键单写者**——回合关联落盘不携 `activeProvider`/`activeModel`/`effort`，播种除外） | 施加面唯一 = 核 `applySession`（判据单源 = `docs/core/design/SESSION.md` §6.21 判据句 4——三端共用）；端侧内存态不手改（第二施加面 = 漂移）；回合在飞时改 provider / 模型 ⇒ 同会话前后分属两模型（回合一致性失守）；写盘后不重施 ⇒ 活动会话读数与内存态分叉 | 端侧直改内存态（第二施加面）· 在飞静默接受（回合内混模型）· 写盘后不重施 |
 | KD-21 | **附件 = 渲染面零 fs**：`paste` 取剪贴板图像 → `FileReader` 转 `dataURL` ⇒ 随 `msg:send` 载荷 `images`（**dataURL 串数组**——严格串形，A1 收正）→ 主进程落盘 + 核 `appendImagePointer` 深 import（**核零改**）；**非视觉模型前置门**（核 spec `multimodal` 判据 · parity-b4 对齐 VSC 面）⇒ 先落盘 + 降级跑者（成功 = 描述注文 ∕ 失败 = 说明行，回执携 `degraded`）；单图上限 **15MB** | 沙箱渲染面零 Node ⇒ 无 fs（KD-3）；落盘与指针段住核（先例 = CLI / VSC 同径）⇒ 端侧零第二份实现；上限与弃项判据单源 = `docs/desktop/design/IPC.md` §2「附件注」（本档不重述） | 渲染面直写文件（越 KD-3）· 端侧自建落盘 + 指针格式（第二份实现 / 跨端不可读）· 静默丢图（须出 `degraded` 提示行） |
@@ -120,7 +120,8 @@
 
 1. **数据面**：`history:page` 回执（会话打开）∥ `msg:send` 回执（发送刷新）∥ **设置写回执**（`settings:agent` ∥ `provider:save` 成功回执——**第三刷新点**；实落写点三处 = `thincoder-desktop/src/main/settings.mjs:230` ∥ `:330` ∥ `thincoder-desktop/src/main/providers.mjs:181`）
    新增 `providerState` 键（形 = `{ state, channel, model, reason, invalidReason }`）；渲染面落 store 切片（写点与 `meta` 同族）⇒ 提示带重派生（`paintNotices`）。
-2. **行面**：`state === "fallback"` ∧ **非 invalid 类**（合成式 = `state === "invalid"` ∨ `providerInvalidReason` 非空——单源 = `doc:PROVIDER.md:§6.22`）⇒ 本行在场——词 = `composer.send.noDefaultModelFallback`（**澄清半句**「— 正在使用可用渠道」——与 VSC `banner.defaultModelFallback` 同构；composer-notice 系无 ⚠ 先例），词为**态陈述行**，非发送失败行；
+2. **行面**：`state === "fallback"` ∧ **非 invalid 类**（合成式 = `state === "invalid"` ∨ `providerInvalidReason` 非空——单源 = `doc:PROVIDER.md:§6.22`）⇒ 本行在场——词 = `composer.send.noDefaultModelFallback`（**澄清半句两字面按载荷 `model` 在场分**（2026-10-09 清除批）：在场「— 正在使用可用渠道」∥ 缺「— 渠道可用、模型未定」
+   ——与 VSC `banner.defaultModelFallback` 同构；composer-notice 系无 ⚠ 先例），词为**态陈述行**，非发送失败行；
    行锚 = `data-notice="provider-fallback"`（机检面——与失败行锚 `send-failed` 分判）；`state === "ok"` ⇒ 零行（负向锁——invalid 类除外）；invalid 类 ⇒ 本行零行（归发送失败行——#840 面）。
 3. **行序**：提示带尾（现序 [待发送? ∥ 降级? ∥ 失败?] 零动，本行追加于带尾）。
 4. **清位**：`state` 转 `ok` 的一次 `msg:send` 回执到达 ⇒ 行退场；**第三刷新点（评审发现 7）**：设置写回执（`settings:agent` ∥ `provider:save` 成功回执；实落写点三处 = `thincoder-desktop/src/main/settings.mjs:230` ∥ `:330` ∥ `thincoder-desktop/src/main/providers.mjs:181`）携 `providerState` ⇒ 同点落切片（渲染面三出口）⇒ 行随重派生
@@ -154,9 +155,9 @@
 | `thincoder-desktop/src/main/file-refs.mjs`（@ 文件引用对齐批新档） | **19**（实读 2026-09-29） | 端薄壳（核单源 = `thincoder-core/file-refs.mjs`）：`node:fs` 三件探针 + 核件注入转口 + `stripAtRefs` re-export；消费面 = 注入缝（`turn-driver.mjs`）∥ 恢复面剥离（`session-slots.mjs`） |
 | `thincoder-desktop/src/main/at-complete.mjs`（R1 输入面板移植新档） | **74**（实读 2026-09-29） | `at:complete` 文件枚举过滤（@ 前缀剥离 → 项目树枚举 → 过滤 → 封顶 20；零改 `file-links.mjs`） |
 | `thincoder-desktop/renderer/queue.mjs`（对齐第二批拆分产出） | **40**（实读 2026-09-29——宿主镜面收正后余快照应用） | 队列面出档（三纯动作 + `QUEUE_MAX`——自 `thincoder-desktop/renderer/store.mjs`） |
-| `thincoder-desktop/renderer/mount-composer.mjs` | **299**（实读 2026-10-03——无效渠道态逻辑归一批（#841）实施落盘（297 ⇒ 299——`COMPOSER_KEYS` 补 `providerState`（第三刷新点重派生闭环）；**贴 300 层在册**（+1 行即越线——`docs/desktop/design/PROJECT.md` §4.1 贴层段））；前读 **297**（实读 2026-10-02——菜单体系批实施落盘（296 ⇒ 297）；前读 **296**（实读 2026-10-01——**#761 落盘后**（`formatHelp` import ∥ `printHelp` 口 ∥ deps 键））；前读 **276**（实读 2026-09-30——扁平化 v4 迁行（+15）后；前读 261（桌面收尾批（#656）后 ∥ 模型菜单全渠批 +1））） | 输入区挂载出档（自 `thincoder-desktop/renderer/app.mjs` 拆出——批 A）：两态落形 · Enter / Shift+Enter 键位 · 忙态入队（受理交宿主任判——「回合中插入」批收正）· 满队提示（按键判）；**批 B**：附件条挂载（根锚 `data-attachments`——构树 / 采集住 `thincoder-desktop/renderer/attach.mjs`）+ 附件随 `msg:send` 载荷 `images` 出口 + `degraded` 提示行；**模型菜单全渠批**：`refreshCandidates` 透传导出（`sync.refreshCandidates`——`:243`）+ 句柄注；形态单源 = `docs/desktop/design/UI.md` §1 输入区行（批 B 注项 2） |
-| `thincoder-desktop/renderer/composer-wire.mjs`（输入逻辑收正轮拆分产出） | **276**（实读 2026-10-03——无效渠道态逻辑归一批（#841）实施落盘（266 ⇒ 276——三路成功回执落切片（`sendDirect` ∥ `healLate` ∥ `sendQueued`——键缺席 ⇒ 零写））；前读 **266**（实读 2026-10-03——首跑渠道提示修复批（#840）实施落盘（262 ⇒ 266——失败载体 `{ reason, kind }`（`providerKind` 透传——`failure()` 单消费点）+ 注））；前读 **262**（实读 2026-10-01——**#764 落盘后**（退流一作业点 `cut` + 摘空并 `build`）；前读 **254**（实读 2026-09-29——桌面收尾批（#656 `queue-full` 可见形消费缝）后；desktop-residuals-round3 波 B（#613）后）） | 输入区写面出档（通道往返归一 + 逐类型出站 handler：`msg:send` ∕ `msg:interrupt` ∕ `at:complete` ∕ `session:prefs` ∕ `session:flags` ∕ footer 三出口；本地先行块登记与退流 ∕ 失败态行源） |
-| `thincoder-desktop/renderer/composer-sync.mjs`（#510 留守拆档产出） | **324**（实读 2026-10-03——轻通道轮八（322 ⇒ 324——`providerNotice` 词路由换新键（`composer.send.noDefaultModelFallback` 澄清半句）+ 注释随正）；前读 **322**（实读 2026-10-03——无效渠道态逻辑归一批（#841）实施落盘（306 ⇒ 322——`providerNotice` 态明示行（`fallback` ∧ 非 invalid 类 ⇒ 带尾行——词 `composer.send.noDefaultModel` 逐字复用）+ 清位面）；前读 **306**（实读 2026-10-03——首跑渠道提示修复批（#840）实施落盘（302 ⇒ 306——`providerKind` 类路由（词面-only）+ 载体 `{ reason, kind }` 消费））；**越 300** ⇒ 越层在册——见 `docs/desktop/design/PROJECT.md` §4.1 越层段（本批 = 续期）；前读 **302**（实读 2026-09-29——口子清零二轮（引导形路由 + 注释收正）后）） | 输入面板随动派生面（自 `thincoder-desktop/renderer/mount-composer.mjs` 拆出——`state` 读面 + 忙态 ∕ 守卫派生 + 模式位推送 + 候选面 + 两挂件锚窄刷（提示带 ∕ 末条复制控件）+ `syncPanel`）；**本批（复制面对齐）**：`syncLastCopy` 族与 `writeText` / `tailOf` deps 随摘；**模型菜单全渠批**：候选面重写（`land` ∕ `fetchCatalog` ∕ `startRetryChain` ∕ `syncCandidates` ∕ `pushModels` ∕ `refreshCandidates`）+ 旧端差登记注删（该端差本批闭合）；形态单源 = `docs/desktop/design/UI.md` §1 输入区行 |
+| `thincoder-desktop/renderer/mount-composer.mjs` | **299**（实读 2026-10-03——无效渠道态逻辑归一批（#841）实施落盘（297 ⇒ 299——`COMPOSER_KEYS` 补 `providerState`（第三刷新点重派生闭环）；**（≤500 ⇒ 贴层解消——500/800 口径更换批）**）；前读 **297**（实读 2026-10-02——菜单体系批实施落盘（296 ⇒ 297）；前读 **296**（实读 2026-10-01——**#761 落盘后**（`formatHelp` import ∥ `printHelp` 口 ∥ deps 键））；前读 **276**（实读 2026-09-30——扁平化 v4 迁行（+15）后；前读 261（桌面收尾批（#656）后 ∥ 模型菜单全渠批 +1））） | 输入区挂载出档（自 `thincoder-desktop/renderer/app.mjs` 拆出——批 A）：两态落形 · Enter / Shift+Enter 键位 · 忙态入队（受理交宿主任判——「回合中插入」批收正）· 满队提示（按键判）；**批 B**：附件条挂载（根锚 `data-attachments`——构树 / 采集住 `thincoder-desktop/renderer/attach.mjs`）+ 附件随 `msg:send` 载荷 `images` 出口 + `degraded` 提示行；**模型菜单全渠批**：`refreshCandidates` 透传导出（`sync.refreshCandidates`——`:243`）+ 句柄注；形态单源 = `docs/desktop/design/UI.md` §1 输入区行（批 B 注项 2） |
+| `thincoder-desktop/renderer/composer-wire.mjs`（输入逻辑收正轮拆分产出） | **286**（实读 2026-10-08——届盘实读收正（表载 276 ⇒ 286；文档卫生批行数面回填）；前读 **276**（实读 2026-10-03——无效渠道态逻辑归一批（#841）实施落盘（266 ⇒ 276——三路成功回执落切片（`sendDirect` ∥ `healLate` ∥ `sendQueued`——键缺席 ⇒ 零写））；前读 **266**（实读 2026-10-03——首跑渠道提示修复批（#840）实施落盘（262 ⇒ 266——失败载体 `{ reason, kind }`（`providerKind` 透传——`failure()` 单消费点）+ 注））；前读 **262**（实读 2026-10-01——**#764 落盘后**（退流一作业点 `cut` + 摘空并 `build`）；前读 **254**（实读 2026-09-29——桌面收尾批（#656 `queue-full` 可见形消费缝）后；desktop-residuals-round3 波 B（#613）后）） | 输入区写面出档（通道往返归一 + 逐类型出站 handler：`msg:send` ∕ `msg:interrupt` ∕ `at:complete` ∕ `session:prefs` ∕ `session:flags` ∕ footer 三出口；本地先行块登记与退流 ∕ 失败态行源） |
+| `thincoder-desktop/renderer/composer-sync.mjs`（#510 留守拆档产出） | **328**（实读 2026-10-09——清除批实施落盘（324 ⇒ 328；行数账回填）；前读 **324**（实读 2026-10-03——轻通道轮八（322 ⇒ 324——`providerNotice` 词路由换新键（`composer.send.noDefaultModelFallback` 澄清半句）+ 注释随正）；前读 **322**（实读 2026-10-03——无效渠道态逻辑归一批（#841）实施落盘（306 ⇒ 322——`providerNotice` 态明示行（`fallback` ∧ 非 invalid 类 ⇒ 带尾行——词 `composer.send.noDefaultModel` 逐字复用）+ 清位面）；前读 **306**（实读 2026-10-03——首跑渠道提示修复批（#840）实施落盘（302 ⇒ 306——`providerKind` 类路由（词面-only）+ 载体 `{ reason, kind }` 消费））；**（≤500 ⇒ 免拆——500/800 口径更换批）**；前读 **302**（实读 2026-09-29——口子清零二轮（引导形路由 + 注释收正）后）） | 输入面板随动派生面（自 `thincoder-desktop/renderer/mount-composer.mjs` 拆出——`state` 读面 + 忙态 ∕ 守卫派生 + 模式位推送 + 候选面 + 两挂件锚窄刷（提示带 ∕ 末条复制控件）+ `syncPanel`）；**本批（复制面对齐）**：`syncLastCopy` 族与 `writeText` / `tailOf` deps 随摘；**模型菜单全渠批**：候选面重写（`land` ∕ `fetchCatalog` ∕ `startRetryChain` ∕ `syncCandidates` ∕ `pushModels` ∕ `refreshCandidates`）+ 旧端差登记注删（该端差本批闭合）；形态单源 = `docs/desktop/design/UI.md` §1 输入区行 |
 | `thincoder-desktop/renderer/attach.mjs`（批 B） | **54**（实读 2026-09-29——输入面板上提后） | 附件采集与构树纯函数（输入区 `paste` → `FileReader` → `dataURL` 条目集 + 移除控件；**零 fs** ⇒ 平 node 直测）；形态单源 = `docs/desktop/design/UI.md` §1 输入区行（批 B 注项 2） |
 | `thincoder-desktop/renderer/chat-composer.css` | **136**（实读 2026-10-01——扁平化随动收口批（#713）落盘后（138 ⇒ 136）；更前实读 2026-09-30——门回填（排版覆盖段等近批随动）；前读 70（扁平化 v3+v4 覆盖段后）∕ 48；未越 300） | 输入区段样式（自 `thincoder-desktop/renderer/chat.css` 四拆）：变量别名块（C2 唯一桥）+ 提示行锚 + 扁平化覆盖段（v3 圆角 ∥ v4 迁行）；面板族本体单源 = 核件 `composer/composer.css`——**本批（复制面对齐）**：两控件族 + `⧉` 字形 + 尾锚规则随摘 |
 
@@ -170,7 +171,7 @@
 
 | 文件 | 实读落值（构成） | 批 |
 |---|---|---|
-| `thincoder-desktop/src/main/suspension-drive.mjs` | **326**（实读 2026-09-29——#119 合并实施轮后；**越 300**（≤500 硬限内）⇒ 越层在册 + 拆分已执行：窗队 ∕ 帧构造面出档 `thincoder-desktop/src/main/window-queue.mjs`（**91**）仍未回线 ⇒ 拆分预案 = 窗内时效 ∕ 时序守卫面出档（≈30 行）· 消解窗口 = 该档下次**结构性**触碰的批（注释 ∕ 坐标 ∕ 词值 ∕ 行级小修不计）；构成 = 注入转口（`postQueue` ∕ `prepare` ∕ `degrade`）· `pushInput(key, text, images)` 受理 · 窗内消费 ∕ 残续发调用点 · 窗中止清队 · `inputSnapshot` 读面） | 挂起窗径批 ∥ 窗队列批 |
+| `thincoder-desktop/src/main/suspension-drive.mjs` | **326**（实读 2026-09-29——#119 合并实施轮后；**（≤500 ⇒ 免拆——500/800 口径更换批）**；拆分已执行：窗队 ∕ 帧构造面出档 `thincoder-desktop/src/main/window-queue.mjs`（**91**）仍未回线；构成 = 注入转口（`postQueue` ∕ `prepare` ∕ `degrade`）· `pushInput(key, text, images)` 受理 · 窗内消费 ∕ 残续发调用点 · 窗中止清队 · `inputSnapshot` 读面） | 挂起窗径批 ∥ 窗队列批 |
 | `thincoder-desktop/src/main/turn-driver.mjs` | **291**（实读 2026-09-29——#119 合并实施轮后；届盘按盘收正 = 队列取项边缘收正批；构成 = 挂起支回执 `queued` · `queueView` 并源 · `queueSnapshot` 读面 · 窗支携图受理 ∕ `createSuspensionDrive({ prepare })` 注入；差额含并行批先落） | 挂起窗径批 ∥ 窗队列批 |
 | `thincoder-desktop/renderer/views/chrome.mjs` | **198**（实读 2026-09-29——#119 合并实施轮后；`suspActiveOf`——`busyOf` 邻位导出） | 挂起窗径批 |
 | `thincoder-desktop/renderer/composer-wire.mjs` | **176**（实读 2026-09-29——#119 合并实施轮后；`sendDirect` 队形支退流 + 挂起空闲复位 · 失败径退流 · `noteEcho` null 登记） | 挂起窗径批 |
@@ -185,7 +186,7 @@
 
 | 文件 | 实读落值（构成） | 批 |
 |---|---|---|
-| `thincoder-desktop/src/main/suspension-drive.mjs` | **337**（窗面接线（步边界取批 ∕ 窗优先组合）+ 容量满判（`"full"`）+ 残值按批 + 时序守卫面出档（⇒ `suspension-guard.mjs`）——**仍越 300** ⇒ 越层在册 + 预案更新 = 窗内时效面出档） | 队列取项边缘收正批 |
+| `thincoder-desktop/src/main/suspension-drive.mjs` | **337**（窗面接线（步边界取批 ∕ 窗优先组合）+ 容量满判（`"full"`）+ 残值按批 + 时序守卫面出档（⇒ `suspension-guard.mjs`）——**（≤500 ⇒ 免拆——500/800 口径更换批）**） | 队列取项边缘收正批 |
 | `thincoder-desktop/src/main/suspension-guard.mjs`（新档） | **27**（`guardedDeliver`——hold 占位守卫序列出档；纯结构搬） | 同 |
 | `thincoder-desktop/src/main/queued-input.mjs` | **78**（`peek` ∕ `take` 核件形取项 + `plan` 形收正（`slash` ∕ `entries` 退役）——73 ⇒ 78） | 同 |
 | `thincoder-desktop/src/main/window-queue.mjs` | **103**（步边界取批 `stepPickup` + 五帧；`take`（find-by-text）退役——91 ⇒ 103） | 同 |
@@ -202,8 +203,8 @@
 |---|---|---|---|
 | 1 | `thincoder-desktop/renderer/slash-commands.mjs`（已落） | — ⇒ **65**（实读 2026-10-02——命令表 4 条 + 别名 2——全调 `ctx.actions`；零第二实现） | 端表层 |
 | 2 | `thincoder-desktop/renderer/mount-composer.mjs` | **276 ⇒ ≈282**（+import + `slash` deps 一处装配） | 装配面 |
-| 3 | `thincoder-desktop/renderer/i18n-views.mjs` | **336 ⇒ 348**（+3 键 × 2 语 + ⑬ 组注——实读 2026-10-01；**越 300 在册**——键行 = 非结构性触碰 ⇒ 续期；预案 = 词族按视图面续拆——见 `PROJECT.md` §4.1 行） | 词面 |
-| 4 | 核包（`thincoder-render-core/`） | `thincoder-render-core/composer/slash.mjs`（已落）**43** · `thincoder-render-core/composer/panel.mjs` **439 ⇒ 489**（实读 2026-10-01——硬限余 **11**；越 500 先落在册拆档）· `thincoder-render-core/composer/model-menu.mjs` **448 ⇒ 456**（实读 2026-10-01；**越 300 在册**——续期说明：提取 + 导出（≈+12 · 机械提取零新面 ⇒ 非结构性触碰）；拆分预案 = 菜单族按段出档；消解窗口 = 该档下次结构性触碰的批——单源 = `docs/render-core/design/RENDER-CORE.md` §6 本批随动段）· `thincoder-render-core/composer/controls.mjs` **205 ⇒ 219**（实读 2026-10-01）——逐档 = `docs/render-core/design/RENDER-CORE.md` §6 本批随动段 | 核面 |
+| 3 | `thincoder-desktop/renderer/i18n-views.mjs` | **336 ⇒ 348**（+3 键 × 2 语 + ⑬ 组注——实读 2026-10-01；**（≤500 ⇒ 免拆——500/800 口径更换批）**） | 词面 |
+| 4 | 核包（`thincoder-render-core/`） | `thincoder-render-core/composer/slash.mjs`（已落）**43** · `thincoder-render-core/composer/panel.mjs` **439 ⇒ 489**（实读 2026-10-01；**（≤500 ⇒ 免拆——500/800 口径更换批）**）· `thincoder-render-core/composer/model-menu.mjs` **448 ⇒ 456**（实读 2026-10-01；**（≤500 ⇒ 免拆——500/800 口径更换批）**）· `thincoder-render-core/composer/controls.mjs` **205 ⇒ 219**（实读 2026-10-01）——逐档 = `docs/render-core/design/RENDER-CORE.md` §6 本批随动段 | 核面 |
 | 5 | 批内件 | `docs/batches/2026-10-01-desktop-slash-commands.test.mjs`（已建成 · 425 行——解析 ∥ 别名 ∥ 回落 ∥ 表纪律；随批留存 · 不进仓套件） | 全批 |
 | 6 | 设计档 | 本档 §3.2（本块）· `docs/desktop/design/UI.md` §1 输入区行 + 表行 15 + 本批注 + 变更记录 · `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-12 + §5 + §6 + §9 + 变更记录 | 全批 |
 
@@ -215,7 +216,7 @@
 | # | 档 | 现行 ⇒ 预期 | 面 |
 |---|---|---|---|
 | 1 | `thincoder-render-core/composer/slash.mjs` | **43 ⇒ 69**（实读；+`formatHelp` 表→行集 ∥ 组序常量） | 核面 |
-| 2 | `thincoder-render-core/composer/panel.mjs` | **489（零触 · 实读同值**——打印口 = 端侧表构造期闭包注入；`deps.slash`/`ctx` 零改 ∥ 硬限余 11 保持） | 核面 |
+| 2 | `thincoder-render-core/composer/panel.mjs` | **489（零触 · 实读同值**——打印口 = 端侧表构造期闭包注入；`deps.slash`/`ctx` 零改 ∥ 距 800 硬限余 **311**） | 核面 |
 | 3 | `thincoder-desktop/renderer/slash-commands.mjs` | **41 ⇒ 65**（实读；4 条补 `group`/`descKey` + `/help` 条（别名 `/h`）） | 端表层 |
 | 4 | `thincoder-desktop/renderer/mount-composer.mjs` | **283 ⇒ 296**（实读；+`formatHelp` import ∥ `printHelp` 口 ∥ deps 装配补键） | 装配面 |
 | 5 | `thincoder-desktop/renderer/store.mjs` | **307 ⇒ 322**（实读；+`helpLines` 槽 ∥ `setHelpLines` 纯动作；**越层在册——结构性触碰 ⇒ 拆档评估窗口触发；处置 = **父侧裁 2026-10-01 = 续期**（其后 #764 再触 ⇒ 见 `PROJECT.md` §4.2 流面对账重写批块）**） | 状态树 |
@@ -225,7 +226,7 @@
 | 9 | `thincoder-desktop/renderer/views/compress-status.mjs` | **75 ⇒ 75**（实读；`compressAnchorOf` 链补） | 锚面 |
 | 10 | `thincoder-desktop/renderer/frame-dispatch.mjs` | **53 ⇒ 53**（实读；`CHAT_KEYS` += `helpLines`） | 帧分派 |
 | 11 | `thincoder-desktop/renderer/page-read.mjs` | **282 ⇒ 293**（实读；+`clearHelpLines`——运行期痕五清） | 页读面 |
-| 12 | `thincoder-desktop/renderer/i18n-views.mjs` | **348 ⇒ 362**（实读；+6 键 × 2 语 + ⑬ 组注；**越 300 在册**——键行 = 非结构性触碰 ⇒ 续期） | 词面 |
+| 12 | `thincoder-desktop/renderer/i18n-views.mjs` | **348 ⇒ 362**（实读；+6 键 × 2 语 + ⑬ 组注；**（≤500 ⇒ 免拆——500/800 口径更换批）**） | 词面 |
 | 13 | `thincoder-desktop/renderer/i18n.mjs` | **401 ⇒ 404**（实读；键数链回填：`VIEWS_DICT` 129 ⇒ 135 ∥ `HOST_DICT` 302 ⇒ 308） | 词面 |
 | 14 | `thincoder-desktop/renderer/chat-fixes.css` | **118 ⇒ 124**（实读；帮助行族三行类） | 样式面 |
 | 15 | 批内件 | `docs/batches/2026-10-01-desktop-slash-commands.test.mjs` **345 ⇒ 425**（实读；+腿 8–11；既有腿随动收正——别名集 + `/h` ∥ `/help` 条 ∥ `slash.unknown` 新值） | 全批 |
@@ -237,7 +238,7 @@
 
 | # | 档 | 现行 ⇒ 预期 | 面 |
 |---|---|---|---|
-| 1 | `thincoder-desktop/renderer/i18n-views.mjs` | **384 ⇒ ≈399**（+6 键 × 2 语 + ② 组注；**越 300 在册**——键行 = 非结构性触碰 ⇒ 续期） | 词面 |
+| 1 | `thincoder-desktop/renderer/i18n-views.mjs` | **384 ⇒ ≈399**（+6 键 × 2 语 + ② 组注；**（≤500 ⇒ 免拆——500/800 口径更换批）**） | 词面 |
 | 2 | `thincoder-desktop/renderer/i18n.mjs` | **413 ⇒ ≈419**（键数链续链：`VIEWS_DICT` 实读 **138 ⇒ 144** ∥ `HOST_DICT` 实读 **308 ⇒ 314**） | 词面 |
 | 3 | 桌面端面（`thincoder-desktop/renderer/attach.mjs` ∥ `thincoder-desktop/renderer/composer-wire.mjs` ∥ `thincoder-desktop/renderer/composer-sync.mjs` ∥ `thincoder-desktop/renderer/mount-composer.mjs` ∥ `thincoder-desktop/renderer/chat-composer.css`） | **零触**（内联在核——文本档不经 `images` 列 ∥ 不经端写面） | 端面 |
 | 4 | 批内件 | `docs/batches/2026-10-05-attach-file-support.test.mjs`（拟新增——平 node + happy-dom；随批留存 · 不进仓套件） | 全批 |
@@ -335,3 +336,4 @@
 - 2026-10-04（**行痕族消失时机批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-row-traces-clear-at-turn.md` §2 · 台账 #919）：§2 批注项 8 帮助行族生命周期句 ⇒ 两门（首屏 ∥ 回合起跑——去「同 `[data-timer]` 族」）∥ T-DSK56 ② 补出站负判腿。**产品码零触（设计轮）**。明细 = 批档 §2。
 - 2026-10-05（**attach 文件支持批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-attach-file-support.md` §1 · 台账 #948）：§2 增本批注（文本/源码档内联——机制单源 = `docs/render-core/design/RENDER-CORE.md` §2 KD-RC-13）；§3.2 增本批行「现行 ⇒ 预期」（词面两档 + 端面零触）；变更记录落点指针 +1 行。**产品码零触（设计轮）**。明细 = 批档 §2。
 - 2026-10-05（**attach 文件支持批 · 修正轮（评审轮 1 · 九项逐号 · 父侧裁 = 全采纳）· eng-designer**——承 `docs/batches/2026-10-05-attach-file-support.md` §3 轮次 1 · 台账 #948）：本批注项 1 词面六拒键（+`composer.attach.readFailed`）∥ 项 2 机检面 T1–T15（受纳两半支 ∥ 读取失败腿）；§3.2 本批行读数收正（i18n-views ≈399 ∥ 键数链 `VIEWS_DICT` 138 ⇒ 144 ∥ `HOST_DICT` 308 ⇒ 314）。**零新语义**（键面 ∥ 腿面 ∥ 读数）。明细 = 批档 §2 修正块。
+- 2026-10-09（**provider-default-model-purge 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §3 轮次 1 · 台账 #1122）：§2 本批注注记名统一「2026-10-09 清除批」（fallback 两字面分档句）。**零新语义**（注记名收正）。明细 = 批档 §2 修复轮块。

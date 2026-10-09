@@ -207,9 +207,9 @@
 - **TUI 路径**：仅在 `state === "invalid"`（无 provider/key）于 `startTUI` 前置 `agent.provider = null`（`fallback` 态 provider 有效——不清）。
 - **D-S2 TUI 重选流程**：`startTUI` 首帧前按核统一态分流（单源 = `doc:PROVIDER.md:§6.22`）：
   **invalid 类**（`state === "invalid"` ∨ `providerInvalidReason` 非空——合成式单源 = `doc:PROVIDER.md:§6.22`）⇒ 弹模型选择 picker → 选定后继续正常启动；取消（Esc）⇒ **仍进入 TUI** + 提示行（措辞指渠道 ∕ 密钥——绝不因无 provider 拒绝进入）；
-  **`fallback`**（无有效 defaultModel 但可运行）⇒ **不弹 picker**（不打断）+ 提示行明示（「尚未设置默认模型：本次使用 `<渠道>[:<模型>]`——/config → 默认模型 设置一次（或 /model 选定即成为默认模型）」；`model` 缺省 ⇒ 仅渠道名）；headless（D-S4）同态出 stderr 一行明示。
+  **`fallback`**（无有效 defaultModel 但可运行）⇒ **不弹 picker**（不打断）+ 提示行明示（**同键两字面按 `model` 在场分**：在场「尚未设置默认模型：本次使用 `<渠道>:<模型>`——/config → 默认模型 设置一次（或 /model 选定即成为默认模型）」∥ 缺「尚未设置默认模型：渠道 `<渠道>` 已就绪、模型未定——/config → 默认模型 设置一次（或 /model 选定即成为默认模型）」）；headless（D-S4）同态出 stderr 一行明示。
 - **D-S3 恢复优先级**（`applySession`）：① 槽 `activeProvider` 在册**且持 key** → provider/model 按槽值设（槽 `activeModel` 缺省 = `defaultModel` 属本渠道 ⇒ 其模型段，
-  否则回渠道默认单值——模型面单源 = `doc:PROVIDER.md:§6.22`）+ 重算 compactThreshold（auto 时）+ 返回 switched；**槽无 key ⇒ 跳过（落 config 链——不把不可运行渠道钉进运行态；跳过不写槽——原槽值保留）**；
+  否则 `null`（2026-10-09 清除批：渠道单值模型退场——不回落；模型面单源 = `doc:PROVIDER.md:§6.22`）+ 重算 compactThreshold（auto 时）+ 返回 switched；**槽无 key ⇒ 跳过（落 config 链——不把不可运行渠道钉进运行态；跳过不写槽——原槽值保留）**；
   ② 槽 provider 没了 → **静默保持现状**（仅当两方都无效才弹）。
 - **D-S4 headless**（`thincoder chat`）：遇 **invalid 类**（无 provider/key——不可运行）⇒ `console.error` 可读消息 + `exitSoon(1)`（不弹 UI、明确退出码）；**`fallback`（无有效 defaultModel 但可运行）⇒ stderr 一行明示 + 继续运行**（不退出——D-S2 同态同解）。
 - **关键决策**：检测后置 provider = null（空对象流入下游是崩溃源）；校验点收敛到 assembleAgent 之后一处；**否决**启动即退出打印「请编辑 config」（TUI——绝不因无效态拒绝进入；headless 退出码归 D-S4）· **静默**回退首个持 key 渠道（回退可行——必带明示；静默形仍否）· 自动用 defaultModel 覆盖会话槽模型（用户上次明确选的模型不能静默丢）。
@@ -730,7 +730,7 @@ user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独
 > 解决的问题：桌面端「会话级模型 / provider / 推理档位」要求随会话槽持久化、与 CLI / 扩展端**同一份槽**（`docs/desktop/requirements/PROJECT.md` §3.1:47）；而核现无这三键的槽写出口（既有四钥 = `autoApprove` / `planMode` / `engineering` / `advisor.guard`），`effort` **连槽字段都不存在**（`saveSession` 字段表无之）⇒ 端侧只能落 config（全局态：切一处波及全部会话）或自建副本（跨端互写）。
 > 本批取**授权核面小改**（批档 §1.2 A）：纯加法、老槽零行为变更。端侧契约（通道 / 载荷 / 回执）= `docs/desktop/design/IPC.md` §2「会话级偏好注」。
 
-- **判据句 1（槽字段）**：`effort` = 槽数据文件顶层字段，值闭集 = `null`（未设 ⇒ 回落配置面 / 渠道默认——**老槽即此态**）∥ `"off"`（关思考**记号**，非枚举字面）∥ `specForModel(model).reasoningEffortEnum` 的成员字面。`provider` / `model` 两键入参映射既有 `activeProvider` / `activeModel`（不新增字段）。
+- **判据句 1（槽字段）**：`effort` = 槽数据文件顶层字段，值闭集 = `null`（未设 ⇒ 回落配置面——渠道级 `reasoningEffort`；**老槽即此态**）∥ `"off"`（关思考**记号**，非枚举字面）∥ `specForModel(model).reasoningEffortEnum` 的成员字面。`provider` / `model` 两键入参映射既有 `activeProvider` / `activeModel`（不新增字段）。
 - **判据句 2（写出口单点）**：新增 `setSlotPrefs(cwd, slot, patch)`（`thincoder-core/session-slot-write.mjs`）——沿 `setSlotAutoApprove` 同形，复用 `writeFlag`（读 → 改 → `saveSlotData`）单点；槽不可读 ⇒ `false`（写未发生）。`patch` 键闭集 = `provider` / `model` / `effort`，**至少一键**（零键 ⇒ 调用面拒）。
 - **判据句 3（档位归一纯函数）**：`resolveEffortPatch(level, model)` —— `level` → 槽 `effort` 值；纯函数、不抛：`null` / `undefined` / `"auto"` ⇒ `null`；`"off"` ⇒ `thinkOffPath(specForModel(model))` 真 ⇒ `"off"`、假 ⇒ `null`（该模型无 off 路径）；其余 ⇒ 枚举含之 ⇒ 原字面、不含 / 无枚举 ⇒ `null`。
   **off 记号可达性判据单源 = `thincoder-core/think-off.mjs`**（`thinkOffPath` / `thinkOffShape`）、**档位值域单源 = `specForModel(model).reasoningEffortEnum`**（`thincoder-core/model-specs.mjs`）——核内零第二份族别表。`model` 取 `patch.model ?? 槽现值 activeModel`（同 patch 带 model ⇒ 以新值为准）。
@@ -750,7 +750,7 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 
 | 情形 | 行为 | 说明 |
 |---|---|---|
-| 老槽（无 `effort` 键） | 不设档位（回落 config / 渠道默认） | 禁回填——老槽零行为变更（同 `createdBy` 先例） |
+| 老槽（无 `effort` 键） | 不设档位（回落 config 渠道级 `reasoningEffort`） | 禁回填——老槽零行为变更（同 `createdBy` 先例） |
 | 表外档位串（跨端 / 手工写入） | 按 `null` 处理（不设） | 读侧容忍——核不校验端侧控件域（沿核读侧口径） |
 | `"off"` 而模型不可 off（`thinkAlwaysOn` 族 / effort 族无 `none`） | 归为 `null` | 判据单源 = `thinkOffPath`——与端侧候选面同判据（两面不漂移） |
 | 换模型（`patch.model` 不带 `effort`） | 槽 `effort` 原值保留、写入不做迁移 | 与新模型枚举不符 ⇒ 按表外行处理；不静默改写槽值 |
@@ -872,17 +872,17 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 
 > 来源 = 用户 2026-09-28 04:55 走查裁定（台账 #479「D17 恢复态播种」立链——桌面端打开 / 切换既有会话后状态行读数段不亮；CLI 对位 = 恢复即水合，`thincoder-core/session-lifecycle.mjs:110` `agent.tasks = data.tasks ?? []`）。批档 = `docs/batches/2026-09-28-desktop-residuals.md`；需求层 = `docs/desktop/requirements/PROJECT.md` §4 D17 补句。
 
-**判据句 1（出口面 · 只读纯投影）**：核新出口 `sessionReading(data, { providers, fallback })`（`thincoder-core/session-lifecycle.mjs`；`thincoder-core/session.mjs` 同名 re-export 随动）——槽数据 ⇒ 状态行上下文读数百分数（整数）。
-**零副作用**：`data` / `providers` / `fallback` 皆入参（不读盘、不写盘、不改任何进程态）；`data` 非对象 ⇒ `0`（与空历史同值——「非正 ⇒ 零节点」显示门归端侧，沿 `historyPercent` 空历史口径）。
+**判据句 1（出口面 · 只读纯投影）**：核新出口 `sessionReading(data, { providers, fallback, defaultModel })`（`thincoder-core/session-lifecycle.mjs`；`thincoder-core/session.mjs` 同名 re-export 随动）——槽数据 ⇒ 状态行上下文读数百分数（整数）。
+**零副作用**：`data` / `providers` / `fallback` / `defaultModel` 皆入参（不读盘、不写盘、不改任何进程态）；`data` 非对象 ⇒ `0`（与空历史同值——「非正 ⇒ 零节点」显示门归端侧，沿 `historyPercent` 空历史口径）。
 
 **判据句 2（与 applySession 后读数同源同式 · 三事同判）**：读数 = `historyPercent(mergeAdjacentAssistantEchoes(machineLine), mergedProvider)`——与 `applySession` 后的 `historyPercent(agent.history, agent.provider)` 同输入同公式：
 
 - **线选**：`contextHistory` 非空 ⇒ 取之；否则 `history` 经 `stripTruncatedToolArgs` 回退（v1 老档同径——与 `applySession` 机读线选择同判）。
 - **回声归并**：`mergeAdjacentAssistantEchoes`（`thincoder-core/context-echo.mjs`——经 `context.mjs` 转口可达；`applySession` 装线前同一步；干净输入同引用返回）。
-- **渠道合并**：槽 `activeProvider` 在册**且持 key** ⇒ `{ ...entry, model }`——`model` 按统一模型面序取（槽 `data.activeModel` ∥ `defaultModel` 属本渠道 ⇒ 其模型段 ∥ `entry.model`；单源 = `doc:PROVIDER.md:§6.22`）；未命中（不在册 ∥ 无 key）⇒ `fallback`（支 ②「静默保持现状」的装配口径 = `loadConfig().provider`）。
+- **渠道合并**：槽 `activeProvider` 在册**且持 key** ⇒ `{ ...entry, model }`——`model` 按统一模型面序取（槽 `data.activeModel` ∥ `defaultModel` 属本渠道 ⇒ 其模型段；单源 = `doc:PROVIDER.md:§6.22`）；未命中（不在册 ∥ 无 key）⇒ `fallback`（支 ②「静默保持现状」的装配口径 = `loadConfig().provider`）。
 - **公式**：`historyPercent`（`thincoder-core/token-window.mjs`——与 CLI 状态行 / VSC `ctxPercentForHistory` 同式；不新增第三口径）。
 
-**判据句 3（端壳转口 · 零算法副本）**：桌面端壳 `thincoder-desktop/src/main/session-slots.mjs` 只做出参装配（`loadConfig()` → `providersList` / `provider` 传入）与有效门（数字 ∧ `> 0` ⇒ 携读数；否则键缺席）；配置不可读 / 读数计算抛 ⇒ `usage` 键缺席 + `console.error`（零静默；`history:page` 读面保持 fail-soft）。
+**判据句 3（端壳转口 · 零算法副本）**：桌面端壳 `thincoder-desktop/src/main/session-slots.mjs` 只做出参装配（`loadConfig()` → `providersList` / `provider` / `defaultModel` 传入）与有效门（数字 ∧ `> 0` ⇒ 携读数；否则键缺席）；配置不可读 / 读数计算抛 ⇒ `usage` 键缺席 + `console.error`（零静默；`history:page` 读面保持 fail-soft）。
 
 **判据句 4（消费面 = 桌面打开态播种 —— 本批范围）**：桌面「打开 / 切换既有会话」以本读数播种状态行读数切片（载波 = `history:page` 回执 `seed`；形态 / 在场条件 / 缺席降级单源 = `docs/desktop/design/IPC.md` §2「打开态播种注」）。
 本出口 = **只读**面——CLI / VSC 状态行既有读数路径（活 agent 逐帧）零改；核内 `applySession` / `saveSession` / 槽字段零动。
@@ -1149,6 +1149,7 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 | 源档 §10 注入序的 `loadSession` 同步会话级 UI（_autoApprove/planMode 面板标志 + 工具条按钮同步） | VSC 装配细节 | 面板 UI 同步 = VSC 专有面（`thincoder-vscode/**`）；注入序本体已入 §6.15 |
 
 ## 变更记录
+- 2026-10-09（**provider-default-model-purge 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §3 轮次 1 · 台账 #1122）：§6.8 D-S3 注记补批名前缀（「渠道单值模型退场」⇒「2026-10-09 清除批：渠道单值模型退场」——扫描口径统一）。**零新语义**（注记名收正）。明细 = 批档 §2 修复轮块。
 - 2026-10-02（**记录形残项批（#794 ∥ #795）· 设计档随动轮 · eng-designer**——承批档 `docs/batches/2026-10-02-record-shape-residuals.md` §2 随动表）：§6.26 补**词面判据三条**（`status` 读面归一——停止 ∥ 错误 ∥ done 三面词集 + 写面词表零动）＋**读面归一义务（字段级）**（他端记录 ⇒ 块头字段归一：`label`/`role`/`id` 由 `key` 派生 ∥ `frozen` 恒真 ∥ 两时间戳互填）。**零机制改**（判据单源落位）。
 
 - 2026-10-02（**文档清账轮 · 执行轮 2（core/design 后段）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R2 改指（`session-control.mjs`——左列裁撤后行元数据族现体，坐标随读）；宽面 2 行折行（970 ∥ 1000——语义零改）。**零新语义**。

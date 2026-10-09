@@ -70,7 +70,7 @@
 - `marker` = `"  " + marker`（有 marker 时——`●` = 当前会话渠道）；
 - `note` = `"  " + note`（有 note 时）；无 note 零追加（不产生尾随空格）。
 
-例（未选中、无 key 渠道）：`   deepseek     deepseek-chat (ctx 128K) (no key)  https://api.deepseek.com`
+例（未选中、无 key 渠道）：`   deepseek     (ctx 125K) (no key)  https://api.deepseek.com`
 
 - **宽度预算**：判定式 = **任意渲染行 `stringWidth ≤ cols − 8`**（含 `↑ more` / `↓ more` 指示行——指示位宽在 8 格余量外另扣、以 pad 补齐）；
   超宽右截断 + `…`。**保序 = prefix → text → marker → note；截断从行尾开始——note（附注段）最先牺牲**。
@@ -202,6 +202,8 @@
 **本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
 **本批（CLI ∥ VSC 会话选定写回 · 2026-10-04）落点表** = `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §2（唯一承载面——一次性批次材料）。
 **本批（流尾台账行组退役 · 2026-10-04）落点表** = `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §2（唯一承载面——一次性批次材料）。
+
+- 2026-10-09（**provider-default-model-purge 批 · 实施期收正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §5 舱2（上抛④）· 台账 #1122）：§4 示例行收正——渠级模型段退场（L1 渠行显示回退 = `baseURL` 同全域口径；`model-picker.mjs` `buildProviderEntries` 模型段只随会话槽值）；**零新语义**（示例随正）。
 
 - 2026-10-04（**#905 §1 表归属收正 · 主 agent 直接执行 · 可 revert**——承 #883 修复轮 #10 号外观察 ∥ 台账 #905）：§1 命令层表——`model-picker.mjs` 行「+ `/model` Add / Remove / key 流程」归属收正（该流族自 2026-09-29 结构拆分迁出）+ 增 `provider-admin.mjs` 行（渠道管理流族 + `cascadeRemoveProvider`）。**零新语义**（结构快照对盘）。
 - 2026-10-04（**CLI ∥ VSC 会话选定写回批 · 修正轮（评审轮次 1 · 发现 2）· eng-designer**——承批档 `docs/batches/2026-10-04-session-carryover-cli-vsc.md` §3 轮次 1 · 台账 #883）：§5.4 入口册两坐标对盘收正（`thincoder-cli/src/tui/provider-admin.mjs:88` ∥ `:113`；调用点 `model-picker.mjs:77`）+ §1 `model-picker.mjs` 行括注收正（拉取失败 ⇒ 该渠道不可用——无预设回退）。**零新语义**（坐标与描述对盘）。
