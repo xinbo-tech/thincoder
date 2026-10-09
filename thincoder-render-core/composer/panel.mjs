@@ -35,9 +35,7 @@
  * `setLoading()`（缺省 = 现刻 `isRunning`——VSC `panels.js:95,114` `setLoading(ctx, ctx.isRunning)` 同式）；
  * `workspaceGuard` 推送 ⇒ `applyBusyLock()`（VSC `chat-messages.js:99` 同式）。
  *
- * **拆分债注记**：本档 **472 行**（口径 = 内容行数；2026-10-05 attach 文件支持批按盘复核——`send()` 两径内联 +7）——越 300 顾问线；
- * 处置 = **续期**（在册 = `docs/render-core/design/RENDER-CORE.md` §6 本批随动段），距 500 硬限余 **28**；**拆分预案** = 提交 ∕ 斜径拦截段出档
- * （拟新增 `thincoder-render-core/composer/panel-submit.mjs`）；**消解窗口** = 下次结构性触碰的批。
+ * **行数读数**：本档 **470 行**（口径 = 内容行数；2026-10-05 attach 文件支持批按盘复核——`send()` 两径内联 +7；2026-10-08 500/800 口径更换批按盘复核——义务句删 −2）。
  *
  * 回合起点钩的相对序（对 VSC 逐行的唯一近似，见 `send.js:62-72`）：`onTurnStart` 置于 `setLoading` **之前**——
  * 取「`_turnStart` 先于状态行刷新落位」（VSC `:62` 早于 `:68` 的同点，elapsed 段首帧即新回合）；其 `clearPanels`

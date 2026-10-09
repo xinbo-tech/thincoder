@@ -4,15 +4,16 @@
  * `webview/settings-state.js:44-56` 搬核——VSC 侧改指本档 ∕ 留 re-export，§2.7）。
  *
  * 导出面（四件 · 单源）：`effortSelection` ∕ `createModelMenu`（工厂）∥ **`openModelMenu` ∕ `closeModelMenu`**（模块级——
- * `model-menu.js:76-271` 逐字：全屏 overlay 收外点 ∕ 定位于触发钮视口矩形（下无位翻上）· provider 行 + 悬停 flyout
- * （事件驱动零 timer——row ∪ flyout 内陆保持）· 过滤框（子串 ∕ ↑↓ 高亮 ∕ Enter 取）· footer 管理三项；`onPick` ∕
- * `footer` 由调用方给）。独立导出与工厂**共用同一份实现**（禁两份）——消费面三处：本档两钮接线 ∕ VSC 设置族两档
- * （`settings-models.js:6` ∕ `settings-providers.js:9`——经 `model-menu.js` re-export shim）∥ 桌面。
+ * `model-menu.js:76-271` 逐字：全屏 overlay 收外点 ∕ 定位于触发钮视口矩形（下无位翻上）· provider 行 = **分组/展开控件**
+ * （`role=button` + `aria-expanded` 随组体开合；点击 = 展开⇄收起，菜单层恒不因行点击而关）· 悬停 flyout（事件驱动
+ * 零 timer——row ∪ flyout 内陆保持）· 过滤框（子串 ∕ ↑↓ 高亮 ∕ Enter 取）· footer 管理三项；`onPick({ provider,
+ * model, row })` ∕ `footer` 由调用方给）。独立导出与工厂**共用同一份实现**（禁两份）——消费面三处：本档两钮接线 ∕ VSC 设置族两档
+ * （`settings-models.js:6` ∕ `settings-providers.js:10`——经 `model-menu.js` re-export shim）∥ 桌面。
  *
  * 面：
  *  - 两钮接线（`model-picker.js:13-36`）：模型钮 ⇒ `openModelMenu`（`up: true`）；推理钮 ⇒ 推理下拉开关（`:38-69` 档位列表 + ✓ 选中态 + 空档位两行说明）。
  *  - 候选推送面（`:111-151` handleModelsMessage 逐字）：`models` 推送 ⇒ 缓存 + 现值标记（忙态零回写——回写门 · 2026-10-04 收窄）·
- *    表外 prefs 复合 ⇒ 只显不写槽（M10 v2）。
+ *    表外 prefs 复合 ⇒ 只显不写槽（M10 v2）· `rollback` 位（写失败回滚重推 —— #1121 修③）∧ 槽复合缺 ⇒ 钮回「未选」空态。
  *  - `mm-*` 样式 = **静态承载** `./model-menu.css`（2026-09-28 输入逻辑收正轮：原 JS 注入形在桌面侧依 CSP
  *    （`style-src 'self'`）被拒 ⇒ 注入路径撤，样式落静态资产；两端各以自身静态装载形引入 —— VSC = `webview/controls.css`
  *    `@import`，桌面 = `renderer/mount-composer.mjs` 注 `<link>`。单体量免越 500 硬限，故独立成档（同族 `composer.css` 口径））。
@@ -74,8 +75,9 @@ function onEsc(e) { if (e.key === "Escape") closeModelMenu() }
  * Open the model menu anchored to a trigger element.
  * @param anchorEl  the trigger (button) — menu positions from its viewport rect
  * @param models    [{ id, provider, group, label, reasoning, ... }]
- * @param value     { provider, model } | null — marks the current row with a check
- * @param onPick    ({ provider, model }) => void — menu closes before the callback
+ * @param value     { provider, model } | null — 组体内命中条目标 ✓（行零选中语义 —— #1121）
+ * @param onPick    ({ provider, model, row }) => void — menu closes before the callback；`row` = 渲染时行对象
+ *                  （菜单在场期候选换行集 ⇒ 消费者优先取 `row`，零回查丢点）
  * @param footer    [{ label, onClick }] — management entries (add/remove provider, set key)
  */
 export function openModelMenu({ anchorEl, models, value, onPick, footer = [], up = false }) {
@@ -136,8 +138,7 @@ export function openModelMenu({ anchorEl, models, value, onPick, footer = [], up
     if (!row) return
     const fly = overlay.querySelector(".mm-flyout")
     if (row.contains(e.target) || (fly && fly.contains(e.target))) return
-    for (const f of overlay.querySelectorAll(".mm-flyout")) f.remove()
-    delete row.dataset.flyoutOpen
+    closeFlyout(overlay)
   })
   document.addEventListener("keydown", onEsc, true)
   window.addEventListener("resize", closeModelMenu)
@@ -150,12 +151,12 @@ export function openModelMenu({ anchorEl, models, value, onPick, footer = [], up
 }
 
 function providerRow(provider, group, models, value, onPick, overlay) {
-  const current = models.find((m) => m.id === value?.model && (m.provider || "") === (value?.provider || ""))
-
   const item = document.createElement("div")
   item.className = "mm-row"
-  item.setAttribute("role", "option")
-  item.setAttribute("aria-selected", String(!!current))
+  // 行 = 分组/展开控件（零选中语义）：`role=option` ∕ `aria-selected` 退场——「当前模型归属」由组体内条目的 ✓ 勾选承载；
+  // `aria-expanded` 随本行组体开合同拍（展开 ∕ 收起两态可观测）。
+  item.setAttribute("role", "button")
+  item.setAttribute("aria-expanded", "false")
   const name = document.createElement("span")
   name.textContent = shortName(provider, group)
   const arrow = document.createElement("span")
@@ -167,7 +168,7 @@ function providerRow(provider, group, models, value, onPick, overlay) {
   // Close condition: a mouseover bubbles up landing OUTSIDE (row ∪ flyout).
   // A stationary pointer generates no events → nothing closes. Ever.
   let flyout = null
-  const pickModel = (m) => { closeModelMenu(); onPick({ provider: m.provider || provider, model: m.id }) }
+  const pickModel = (m) => { closeModelMenu(); onPick({ provider: m.provider || provider, model: m.id, row: m }) }
   const openFlyout = () => {
     // The overlay-level mouseover handler removes flyouts from the DOM WITHOUT touching
     // this closure — a stale `flyout` reference made "hover back onto the same row" a
@@ -175,11 +176,11 @@ function providerRow(provider, group, models, value, onPick, overlay) {
     // closure: isConnected === genuinely open.
     if (flyout && flyout.isConnected) return
     flyout = null
-    overlay.querySelectorAll(".mm-flyout").forEach((f) => f.remove()) // one flyout at a time
-    overlay.querySelectorAll(".mm-row[data-flyout-open]").forEach((r) => delete r.dataset.flyoutOpen)
+    closeFlyout(overlay) // one flyout at a time（单点：摘件 + 行标 + aria 同拍）
     flyout = document.createElement("div")
     flyout.className = "mm-flyout"
     item.dataset.flyoutOpen = "1"
+    item.setAttribute("aria-expanded", "true")
 
     // Filter box (GitHub #4, 2026-08-31): type to narrow by case-insensitive
     // substring, same semantics as the CLI picker. ↑↓ moves a highlight,
@@ -219,7 +220,9 @@ function providerRow(provider, group, models, value, onPick, overlay) {
         lbl.textContent = m.label
         row.appendChild(lbl)
         if (sel) { const c = document.createElement("span"); c.className = "mm-check"; c.textContent = "✓"; row.appendChild(c) }
-        row.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); pickModel(m) })
+        // 拾取单点：`mousedown` 仅作 preventDefault + stopPropagation（防焦点移出 ∥ 防「mousedown 关菜单 ⇒ 幽灵点击落下方元素」）；
+        // 拾取恒由 `click` 触发——双发（`mousedown` 与 `click` 各 post 一次）退场。
+        row.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation() })
         row.addEventListener("click", (e) => { e.stopPropagation(); pickModel(m) })
         listBox.appendChild(row)
       })
@@ -247,10 +250,26 @@ function providerRow(provider, group, models, value, onPick, overlay) {
   item.addEventListener("mouseenter", openFlyout)
   // Leaving the row alone does NOT close — the shared overlay mouseover handler decides
   // based on where the pointer actually lands (row ∪ flyout stays open, anything else closes).
-  // Click on the row is a NO-OP toggle fix (GitHub #4): it only ensures the flyout is open —
-  // with hover already having opened it, clicking no longer closes it ("clicked, nothing happened").
-  item.addEventListener("click", (e) => { e.stopPropagation(); openFlyout() })
+  // 行点击 = **展开⇄收起**（行 = 分组/展开控件）：未展开 ⇒ 展开（沿 `openFlyout` 全行为——一次一浮出 ∥ 过滤框聚焦）；
+  // 已展开（本行组体在场）⇒ 收起（组体退场 + `aria-expanded=false`）。菜单层（overlay + panel）恒不因行点击而关——开合
+  // 两级解耦；触摸/无 hover 径的点开亦走此径（零 hover 依赖）。零 post ∕ 零槽写两态皆然（行非拾取面——拾取在组体条目）。
+  item.addEventListener("click", (e) => {
+    e.stopPropagation()
+    if (flyout && flyout.isConnected) closeFlyout(overlay)
+    else openFlyout()
+  })
   return item
+}
+
+/** 组体（flyout）收起**单点**：摘件 + 行标（`data-flyout-open`）+ `aria-expanded` 同拍——悬停移出（overlay mouseover）
+ *  与行点击（展开⇄收起）两径共此一门（零双实现——两处状态不得走形）。 */
+function closeFlyout(overlay) {
+  const row = overlay.querySelector(".mm-row[data-flyout-open]")
+  for (const f of overlay.querySelectorAll(".mm-flyout")) f.remove()
+  if (row !== null) {
+    delete row.dataset.flyoutOpen
+    row.setAttribute("aria-expanded", "false")
+  }
 }
 
 /**
@@ -300,9 +319,12 @@ export function createModelMenu(deps) {
       anchorEl: modelBtn,
       models: _models,
       value: { provider: selectedProvider, model: selectedModel },
-      onPick: ({ provider, model }) => {
-        const m = _models.find((x) => x.id === model && (x.provider || "") === provider)
+      onPick: ({ provider, model, row }) => {
+        // `row` 直传优先（#1121 修② —— 菜单在场期候选推送换行集 ⇒ 旧行对象仍在手：零「查无即静默丢」）；缺 `row` 的
+        // 调用方（VSC 三消费面不吃该键）走回查；回查亦无 ⇒ 记错一行（零静默）。
+        const m = row ?? _models.find((x) => x.id === model && (x.provider || "") === provider)
         if (m) selectModel(m)
+        else console.error(`[composer] model menu: unknown pick ${provider}:${model}`)
       },
       footer: [
         { label: t("model.addProvider"), onClick: () => post("addProvider") },
@@ -410,8 +432,10 @@ export function createModelMenu(deps) {
         const visible = levels.length > 0 ? selectedReasoning : "off"
         reasoningBtn.textContent = visible === "" ? "—" : visible === "none" ? "off" : (reasoningLabel(visible))
         reasoningBtn.classList.toggle("active", levels.length > 0 && visible !== "off" && visible !== "")
-        // 回写门（F-W14 判据收窄 · 2026-10-04 解锁批——只治系统回声径）：忙态零回写（显示仍更新——上列已刷）——不携快照覆写槽；idle 零回归（照发）
-        if (!blocked()) {
+        // 回写门（F-W14 判据收窄 · 2026-10-04 解锁批——只治系统回声径）：忙态零回写（显示仍更新——上列已刷）——不携快照覆写槽；idle 零回归（照发）。
+        // **回滚位零回写（#1121 修③）**：`rollback` 位 = 写失败后的**显示 ∥ 本地选中态重派生**（非重写）——缺该位
+        // 则「失败 ⇒ 回滚重推 ⇒ 自动回写 ⇒ 失败」自激（系统性失败：`slot-missing` 等恒复现）；位在场 ⇒ 槽零写。
+        if (!blocked() && m.rollback !== true) {
           post("selectModel", { model: match.id, provider: match.provider })
           post("selectReasoning", { reasoning: selectedReasoning })
         }
@@ -425,6 +449,12 @@ export function createModelMenu(deps) {
         selectedModel = prefs.model
         selectedProvider = prefs.provider
         modelBtn.textContent = prefs.model
+      } else if (m.rollback === true) {
+        // 写失败回滚（#1121 修③）∧ 槽复合缺 ⇒ 显示 ∥ 本地选中态复归「未选」空态（乐观值零留影）。本支只认
+        // `rollback` 位（回滚重推专属标记）：常规 `models` 推送零位 ⇒ 空复合仍沿现行零动作（跨端既有面零变）。
+        selectedModel = ""
+        selectedProvider = ""
+        modelBtn.textContent = ""
       }
     } else {
       modelBtn.textContent = ""

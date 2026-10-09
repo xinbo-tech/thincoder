@@ -11,8 +11,9 @@
  * 3. 每次搜索都 scrollIntoView（强制整页布局）
  * 修复：150ms 防抖 + 500 mark 上限（超限计数显示 "N/500+"）+ 搜索本身不滚动（仅跳转时滚动）
  *
- * 注入面（**唯一项** —— 与设计句「`root` 元素供面」一致）：
+ * 注入面（`root` 必给 —— 与设计句「`root` 元素供面」一致；`reveal` = **可选披露缝**）：
  *   `root`——扫描 ∕ 高亮容器（源 `ctx.messagesEl`）；VSC = `#messages`，桌面 = `[data-slot="flow"]`；必给。
+ *   `reveal`——可选回调（用户跳转时、`scrollIntoView` 之前调；缺省零变——VSC 端壳不传；桌面 = 巨块段窗披露）。
  * 其余两触点在源档即**文档级同字面**（两端同字形 ⇒ 不入注入面）：
  *   · `#search-bar` 插入锚 = 源 `document.getElementById("toolbar")` 同字面（VSC 静态骨架 id；桌面
  *     输入区槽 id 由 `thincoder-desktop/renderer/mount-composer.mjs` 同字面赋——核件样式规则命中物）；
@@ -24,14 +25,14 @@
  * 取词 = 核 i18n（`./i18n.mjs` `t`）——源档 `./i18n.js` 即本模块的再出口（VSC 同实例，零改）；桌面供给面 =
  * `renderer/app.mjs` 单点注册 `setStringsSink(setStrings)`（键族 `search.*` 由宿主词表供给）。
  *
- * 返回面：`{ openSearch, closeSearch, performSearch, jumpSearch }`——端壳消费 = 桌面 `renderer/app.mjs:277` 捕获 + `:70` `openSearch` 分派（菜单批接线）∥ VSC 既有宿主键位注册（同件零副本）；
+ * 返回面：`{ openSearch, closeSearch, performSearch, jumpSearch }`——端壳消费 = 桌面 `renderer/app.mjs:288` 捕获 + `:74` `openSearch` 分派（菜单批接线）∥ VSC 既有宿主键位注册（同件零副本）；
  * 探针 ∕ 后续程序化驱动可及（工厂化面，非源档新增语义）。
  */
 import { t } from "./i18n.mjs"
 
 /**
  * 建会话内搜索面（工厂：实例态 = 源档模块级五变量）。
- * @param {{ root: Element }} deps —— `root` = 扫描 ∕ 高亮容器（消息区）；缺 ⇒ 抛出（fail-loud）。
+ * @param {{ root: Element, reveal?: (el: Element) => void }} deps —— `root` = 扫描 ∕ 高亮容器（消息区；缺 ⇒ 抛出 fail-loud）；`reveal` = 可选披露回调（跳转前调，缺省零变）。
  */
 export function createSearch(deps = {}) {
   const { root } = deps
@@ -107,7 +108,11 @@ export function createSearch(deps = {}) {
   /** 修复 3：scrollIntoView（强制布局）只在用户跳转时发生；搜索自跑仅更新 current class。 */
   function showCurrentMatch(scroll = false) {
     _searchMatches.forEach((m, i) => m.classList.toggle("current", i === _searchIndex))
-    if (scroll) _searchMatches[_searchIndex]?.scrollIntoView({ block: "center" })
+    if (!scroll) return
+    const el = _searchMatches[_searchIndex]
+    if (!el) return
+    try { deps.reveal?.(el) } catch (error) { console.error("[search] reveal hook failed:", error) } // 披露缝失败仍照常跳转（下限不劣化）
+    el.scrollIntoView({ block: "center" })
   }
 
   function updateSearchCount() {
