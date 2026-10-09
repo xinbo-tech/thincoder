@@ -176,12 +176,12 @@
   provider 默认模型清除批（2026-10-09——服务端舱；台账 #1122）：产品面 实读 **+3**——`thincoder-server/src/ops/presets.mjs` 实读 **50 ⇒ 51**（头注 ∥ 表注 ∥ 展开注随正；表 20 键逐键去 `model`——行数不变） ∥
   `thincoder-server/README.md` 实读 **244 ⇒ 246**（预设句块 +2——覆盖句 ∥ `models` 无预设缺省 + 勾选路径句）；`thincoder-server/package.json` ±0（`prepublishOnly` 清单添本批件——本批 +1 件（已落盘）；单行清单行数零变）∥
   批内件一件（已落盘——`docs/batches/2026-10-09-provider-default-model-purge-server.test.mjs`，实读 **180** 行）；机制全文 = `ops/OPS.md` §1。
-  server 代理批预算（2026-10-09 设计轮——本批；台账 #1128 ∥ #1129；用户 13:45/13:5x 两令）：产品面 ≈+311（gateway ≈+243——`proxy.mjs`（拟新增 ≈200——自持 std 传输） ∥
+  server 代理批预算（2026-10-09 设计轮——本批；台账 #1128 ∥ #1129；用户 13:45/13:5x 两令）：产品面 ≈+311（gateway ≈+243——`proxy.mjs`（**已落盘 267**——自持 std 传输） ∥
   `forward.mjs` 实读 **201** ⇒ ≈210（`proxyUri` 参 ∥ 出口换 +≈9） ∥ `providers.mjs` 实读 **177** ⇒ ≈195（`proxy` 解码 ∥ 注入 ∥ 种子列 +≈18） ∥ `provider-admin.mjs` 实读 **284** ⇒ ≈300（discover `proxy` ∥ GET/POST/PATCH 面 +≈16）；
   ops ≈+35——`config.mjs` 实读 ≈260 ⇒ ≈278（`proxy` 段校验 ∥ 条目判据 +≈18） ∥ `presets.mjs` 实读 **51** ⇒ ≈53（`gemini-openai` 行 ∥ 头注 +≈2） ∥ `README.md` 实读 **247** ⇒ ≈259（proxy 配置行 ∥ 说明 +≈12） ∥ `config.example.json` 实读 **35** ⇒ ≈37（`proxy` 段示例） ∥ `package.json` ±0（`prepublishOnly` 清单 30 ⇒ **31**——本批件入链；单行清单行数零变）；
   store ≈+10——`db.mjs` 实读 **≈224** ⇒ ≈234（v9 段）；webui ≈+23——`views-providers-modals.mjs` 实读 **376** ⇒ ≈395（两窗勾选 ∥ 探针随携 +≈19） ∥ i18n 两表 +≈2/表；核侧 ≈+3——`thincoder-core/config-presets.mjs` 实读 **53** ⇒ ≈56（`gemini-openai` 行 + 注释）；
-  批内件一件（拟新增——`docs/batches/2026-10-09-server-gemini-openai-preset.test.mjs`）；
-  随正件 = 漂移件 `docs/batches/2026-10-06-server-presets.test.mjs`（`:123` `20 ⇒ 21`——本批实施落）+ `docs/batches/2026-10-09-provider-default-model-purge-server.test.mjs`（四处 `20 ⇒ 21`——跨批面父侧落）；机制全文 = `gateway/API.md` §6 KD-SV-55 ∥ `ops/OPS.md` §1；实施后回填轮校正。
+  批内件一件（**已落盘 735 行**·19 例——`docs/batches/2026-10-09-server-gemini-openai-preset.test.mjs`）；
+  随正件 = 漂移件 `docs/batches/2026-10-06-server-presets.test.mjs`（`:123` `20 ⇒ 21`——本批实施落）+ `docs/batches/2026-10-09-provider-default-model-purge-server.test.mjs`（四处 `20 ⇒ 21`——跨批面父侧落）；机制全文 = `gateway/API.md` §6 KD-SV-55 ∥ `ops/OPS.md` §1；**实施后回填（父侧 · 2026-10-09——实读）**：`forward.mjs` **208** ∥ `providers.mjs` **184** ∥ `provider-admin.mjs` **305** ∥ `config.mjs` **301** ∥ `presets.mjs` **52** ∥ `README.md` **252** ∥ `config.example.json` **38** ∥ `db.mjs` **231** ∥ `views-providers-modals.mjs` **385** ∥ `config-presets.mjs` **66**；i18n 两表 = 138 ∥ 142（+1 键）。
   ※ 2026-10-07 各批（布局收正 ∥ 配额分模型 ∥ 配额 v2 ∥ 模型元数据 ∥ 列式收正）的总账行未回填——**滞账在册（§9 R40②）**；
   本行原值以各域档小计为准（webui **3350** ∥ accounts **897** ∥ store/db **210**——各批实读在盘）。
   对照设计总账 ≈5237（= 闭式 ≈3247 + 控制台面预期 ≈840 + 完备化面预期 ≈518 + 多语言面预期 ≈632；实读差 −163 = 前账超出 +61 ∥ 控制台面回落 −124 ∥ 完备化面回落 −9 ∥ 多语言面回落 −92 ∥ package.json +1）。
@@ -207,7 +207,7 @@
 | `docs/server/design/`（本设计集——板 2 档 + 域 6 档） | 建档（本补轮按三层结构 + B 案织入） | 八档 |
 | `docs/batches/2026-10-06-server-gateway.md` | §2 批次任务与设计（批档唯一写入面） | append |
 | `docs/batches/2026-10-06-server-gateway.test.mjs`（已落盘） | 批内件（单位测试——随批留存；见 §8） | 新建——实读 **496** 行；另按域拆档五件（`-accounts` 493 ∥ `-metering` 188 ∥ `-chat` 498 ∥ `-webui-deploy` 322 ∥ `-model-ref` 194）——合计六件 |
-| `docs/batches/2026-10-06-server-presets.md` ∥ `docs/batches/2026-10-06-server-presets.test.mjs`（已落盘） | 本批（provider 预设）批档 §2 ∥ 批内件（单位测试——随批留存；见 §8） | append ∥ 新建——实读 347 行 |
+| `docs/batches/2026-10-06-server-presets.md` ∥ `docs/batches/2026-10-06-server-presets.test.mjs`（已落盘） | 本批（provider 预设）批档 §2 ∥ 批内件（单位测试——随批留存；见 §8） | append ∥ 新建——实读 349 行 |
 | `docs/batches/2026-10-06-server-auto-update.md` ∥ `docs/batches/2026-10-06-server-auto-update.test.mjs`（已落盘） | 本批（自动更新）批档 §2 ∥ 批内件（单位测试——随批留存；见 §8） | append ∥ 新建——实读 498 行 |
 | `docs/batches/2026-10-06-console-providers.md` ∥ `docs/batches/2026-10-06-console-providers.test.mjs`（已落盘） | 本批（控制台 provider 管理 + IA/导航）批档 §2 ∥ 批内件（单位测试——随批留存；见 §8） | append ∥ 新建——实读 **479** 行 |
 | `docs/batches/2026-10-06-first-release-completeness.md` ∥ `docs/batches/2026-10-06-first-release-completeness.test.mjs`（已落盘） | 本批（首版完备化六项）批档 §2 ∥ 批内件（单位测试——随批留存；见 §8） | append ∥ 新建——实读 **497** 行 |
