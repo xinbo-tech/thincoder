@@ -916,9 +916,9 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 
 | # | 消费点 | 形态 | 守卫 |
 |---|---|---|---|
-| 1 | `thincoder-core/agent/dispatch.mjs:126`（执行即刻记账 `noteExecutedMutation`） | `args ?? {}` + `[args?.path]` | 有（try/catch 包体） |
-| 2 | `thincoder-core/agent/dispatch.mjs:198`（工程设计闸） | `touchedPaths(args)` + `[args.path]` | **无** |
-| 3 | `thincoder-core/agent/dispatch.mjs:229`（D5 冻结窗） | `touchedPaths(args)` + `[args.path]` | 有（try/catch → `[]`） |
+| 1 | `thincoder-core/agent/dispatch-run.mjs:82` · `:136`（执行即刻记账 `noteExecutedMutation`） | `args ?? {}` + `[args?.path]` | 有（try/catch 包体） |
+| 2 | `thincoder-core/agent/dispatch.mjs:97`（工程设计闸） | `touchedPaths(args)` + `[args.path]` | **无** |
+| 3 | `thincoder-core/agent/dispatch.mjs:139`（D5 冻结窗） | `touchedPaths(args)` + `[args.path]` | 有（try/catch → `[]`） |
 | 4 | `thincoder-core/agent/record-results.mjs:150`（`_touchedFiles` + 重建索引） | `touchedPaths(args)` + `[args.path]`；`:148` 二次 `JSON.parse` 无守卫 | **无** |
 | 5 | `thincoder-core/agent.mjs:401`（中断分支记账） | `touchedPaths(args)` + `[args.path]` | 有（try/catch 包体） |
 | 6 | `thincoder-core/peer-domains.mjs:80`（L3 写前查 + 足迹登记） | `touchedPaths(args ?? {})` | **无**（调用本体无零抛兜底） |

@@ -37,7 +37,7 @@
   - agent 对象**无该字段初始化**：`thincoder-core/agent.mjs:69`–`:71`。
   - 会话复位不再清镜像：`thincoder-core/session.mjs:437`–`:438`。
 - **存量兼容**：旧会话槽文件可能残留镜像字段值——恢复时**一次性**读取迁入 Map（**唯一迁移读点**，此后不写不读）：`thincoder-core/token-ttl.mjs:131`（`restoreEngTokens`）；落盘时该 legacy 字段被一并删除（`token-ttl.mjs:271`）。
-- **dispatch 写门**：资格判定改问**「任一活槽存在」**——`thincoder-core/token-ttl.mjs:211`（`anyLiveDesignSlot`），调用点 `thincoder-core/agent/dispatch.mjs:196`。
+- **dispatch 写门**：资格判定改问**「任一活槽存在」**——`thincoder-core/token-ttl.mjs:211`（`anyLiveDesignSlot`），调用点 `thincoder-core/agent/dispatch.mjs:95`。
 
 ## 5. consume 落盘对称（交付 🔴 复活洞修复）与用例面
 
@@ -70,7 +70,7 @@
 | 槽序列化 / 恢复 | `thincoder-core/token-ttl.mjs:112` · `:131` | 在位 |
 | spawn 门禁解析 | `thincoder-core/agent-tools/subagent-spawn.mjs:100` | 在位 |
 | consume 落盘对称 | `thincoder-core/agent-tools/design-slots.mjs:150` · `:152` | 在位 |
-| dispatch 写门 | `thincoder-core/agent/dispatch.mjs:196` | 在读任一活槽 |
+| dispatch 写门 | `thincoder-core/agent/dispatch.mjs:95` | 在读任一活槽 |
 | 镜像零写 | `thincoder-core/agent.mjs:69`–`:71` · `thincoder-core/session.mjs:437`–`:438` | 无字段初始化 |
 | 轮转守卫（拆分产物） | `thincoder-core/session-guard.mjs:35` | 与 `saveSession` 共用 |
 | 凭证工具组（拆分产物） | `thincoder-core/agent-tools/design-token.mjs` | 签发 / 校验 / 结算纯函数 |
