@@ -199,6 +199,9 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 路径语义照 `files` 先例：cwd 相对或绝对均可，`\` 归一为 `/`；解析序单源 = §4.15（cwd → 项目根 →
   // 逐基底，读面取首个可读）——cwd 非项目根时根相对串不再必拒（BR-29/BR-33）。错误文案带
   // **实际角色名**（§2.15 越界文案参数化——designer 撞门时不误导）与逐字不可读后缀。
+  // §4.16（2026-10-09）：coder（普通模式）**可选**携 `batchDoc`——非强制（「spawn 强制 batchDoc」=
+  // 工程专属、不移植）；传则须可读（同评审面判据）⇒ `child._batchDoc` 绑定 §5 记录通道；
+  // 未携 ⇒ 不绑定、照常 spawn。
   let batchDocAbs = null
   if (role === "eng-coder" || role === "eng-designer") {
     const given = typeof args.batchDoc === "string" ? args.batchDoc.trim() : ""
@@ -209,6 +212,14 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     if (!batchDocAbs) throw refusal(" (given path is not a readable file)")
     // #309 形三：任务书中的他批批次档引用观测留痕（不阻断——放行不受影响）。
     logBatchDocRefs(parent, role, args.task, batchDocAbs)
+  } else if (role === "coder") {
+    const given = typeof args.batchDoc === "string" ? args.batchDoc.trim() : ""
+    if (given) {
+      batchDocAbs = resolveBatchReadPath(parent.cwd ?? process.cwd(), given)
+      if (!batchDocAbs) {
+        throw new Error("batchDoc for role='coder' — pass the batch record path (e.g. <repo>/docs/batches/<batch>-<topic>.md; relative paths resolve against the session cwd first, then candidate project roots — or absolute); when provided it must resolve to a readable file (omit batchDoc to spawn without the §5 record-write binding).")
+      }
+    }
   }
 
   // M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2）：任务书六强制字段门——
@@ -304,10 +315,12 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 每个 child 原先各自一份永不压缩的 _fullHistory（勘察 C2 乘数面）。
   child._historyWindow = RECORD_WINDOW_MESSAGES
 
-  // BATCH-RECORD.md §2 批次档段写入通道绑定（第 4 批）：工程角色（eng-coder/eng-designer）把批次档
-  // 绝对路径记在 child 上——setup 挂载 `batch` 时读它。无路径参数的工具靠这条
-  // 绑定决定目标档（spawn 门已保证「参数在 + 路径可读」）。
-  if (engineeringRole) child._batchDoc = batchDocAbs
+  // BATCH-RECORD.md §2 批次档段写入通道绑定（第 4 批；§4.16 扩 coder 可选臂）：工程角色
+  // （eng-coder/eng-designer）把批次档绝对路径记在 child 上——setup 挂载 `batch` 时读它；
+  // 携绑定的 coder（普通模式，可选）同点绑定。无路径参数的工具靠这条绑定决定目标档
+  // （spawn 门已保证「参数在 + 路径可读」）。
+  const batchBound = engineeringRole || (role === "coder" && !!batchDocAbs)
+  if (batchBound) child._batchDoc = batchDocAbs
 
   // Token-verified design review → child is authorized to modify files without re-reviewing
   if (role === "eng-coder") child._engDesignReviewed = true
@@ -343,8 +356,9 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // §2.11 第 1 点（FR16 载体 + FR17 铁律 #5 的机械面）：批次档**绝对路径**下发给工程角色
   // （eng-coder 实现 / eng-designer 写稿）——任务文本本身不动（批次档 §2 才是任务书本体；
   // 本行让子代理"拿到本档路径"）。行文不含 summarizeEngTaskBook 的三组段 marker
-  // （Docs involved / Files list / Acceptance criteria）——段匹配不受影响。仅工程角色注入。
-  if (engineeringRole) spawnBlocks.push(`Batch record (batchDoc): ${batchDocAbs}`)
+  // （Docs involved / Files list / Acceptance criteria）——段匹配不受影响。工程角色恒注入；
+  // 携绑定 coder（§4.16）随绑定注入（绑定 coder 要能读到本档）。
+  if (batchBound) spawnBlocks.push(`Batch record (batchDoc): ${batchDocAbs}`)
   // AGENT-LOOP-SUBAGENT.md §6.7.6 D-E2 ③ (round4 #4, T-E13/T-E15): an eng-coder audit spawn's task book is
   // the eng-coder's OWN spawn task — mechanically kept as _engTaskInput by the
   // parent spawn and injected as the D-TS5 A2 mechanical summary (design docs /

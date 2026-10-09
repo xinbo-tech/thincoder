@@ -783,7 +783,8 @@ A-3 机检（单行 · cmd.exe · cwd = `thincoder-vscode/`；§3 复评 🔵#3 
 
 ### 6.29.1 形一 · 批次档写门（containment）
 
-**判据（逐字）**：工程角色子代理（`depth > 0` ∧ `agent._batchDoc` 在场）对**批次档文件**（目标路径落 `batchDocBases(cwd)` 任一基底内——声明面单源 `thincoder-core/agent-tools/batch-paths.mjs`）的写（`FILE_MUTATORS`）⇒ 目标 ≠ 绑定 `_batchDoc` **且非绑定批次的伴随件** ⇒ **拒绝**（fail-closed）；写自己绑定的档 ∥ **自身批次伴随件** ⇒ 放行（正常面）。比较键 = 绝对路径 + win32 大小写归一。
+**判据（逐字）**：**携绑定的子代理**（`depth > 0` ∧ `agent._batchDoc` 在场——工程角色 ∥ 普通面 coder，`BATCH-RECORD.md` §4.16）对**批次档文件**（目标路径落 `batchDocBases(cwd)` 任一基底内——声明面单源 `thincoder-core/agent-tools/batch-paths.mjs`）的写（`FILE_MUTATORS`）
+⇒ 目标 ≠ 绑定 `_batchDoc` **且非绑定批次的伴随件** ⇒ **拒绝**（fail-closed）；写自己绑定的档 ∥ **自身批次伴随件** ⇒ 放行（正常面）。比较键 = 绝对路径 + win32 大小写归一。
 
 **伴随件判据（三合取——2026-09-29 收窄 · 台账 #545）**：① 目标**非 `.md`**（批次档本体永在门内——一切 `.md`、含近词干形如 `<词干>-v2.md`）；② 目标与绑定档**同目录**（按比较键归一）；③ 目标基名以 `<词干>+「.」或「-」`打头（词干 = 绑定档基名剥 `.md`）。三合取全中 ⇒ 不进本门；余者照拒（他批 `.md` ∕ 他批伴随件 ∕ 异目录伴随件均拒）。
 
@@ -1038,3 +1039,7 @@ a missing field is a dispatch defect and the spawn is refused.
 - 2026-10-05（**工具面首用可发现性批（toolface-first-use-fixes）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-toolface-first-use-fixes.md` §1 · 台账 #938）：新增 **§6.30**（F2 六字段入描述面——`tool-docs/subagent.md` 增一段清单；门零改）；同族 batch 面两件 = `TOOLS.md` §6.20。**零新语义**（可见性缺口修复——门禁判据集零改）。
 - 2026-10-05（**工具面首用可发现性批（toolface-first-use-fixes）· 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-05-toolface-first-use-fixes.md` §3 轮次 1 发现 1 / 2）：§6.25 边界括注收正——`subagent` 工具描述面 = `thincoder-core/tool-docs/subagent.md`（原「内联 `description`——无独立 `tool-docs/*.md`」为描述外置后失实句；全仓同式扫描仅此一处）；§6.30 描述半句**核真零改**（「English equivalents」= 门侧双语 marker 同收——`spawn-gates.mjs:18-24` 实读）。**零新语义**。
 - 2026-10-07（**批 ledger-tool · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-ledger-tool.md` §1 · 台账 #998 / #927 并入）：§6.7.2 动作面表随动——七 ⇒ 九（补 `consume-design`——存量漏登就地收正 ∥ 新 `design-slots` 行）+ 首句动作清单与 depth 可用性句同拍；槽位面语义单源 = `DESIGN-TOKEN-SETTLEMENT.md` §10（本档不重述）。**零新语义**（机制本体 = 令牌结算面批）。
+
+- 2026-10-09（**普通模式工作管理统一批（normal-work-management）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-normal-work-management.md` §2.2 · 台账 #1111）：§6.29.1 判据行主语收正——「工程角色子代理」⇒「**携绑定的子代理**（工程角色 ∥ 普通面 coder——`BATCH-RECORD.md` §4.16）」（绑定键 = `_batchDoc` 在场——判据 / 文案 / 伴随件三合取**零改**）。**零新语义**（射程随绑定面扩——门本体零改）。
+
+- 2026-10-09（**普通模式工作管理统一批（normal-work-management）· 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-normal-work-management.md` §3 轮次 1 发现 9 · 台账 #1111）：上条来源指针收正——`§2` ⇒ **`§2.2`**（精确形——机制来源 = §2.2 行为 deltas「随带效果」行）。**零新语义**（指针形态收正）。

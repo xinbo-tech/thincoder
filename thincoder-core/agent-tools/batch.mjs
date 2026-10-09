@@ -12,9 +12,10 @@
  * eng 子代理 `depth > 0`（`agent._role` 定段）；评审实例 ctx 无 depth 但工具以 `review: true`
  * 绑定。create/close 仅 depth-0 放行；depth-0 的 append/status/close 可选 `path`（D-BR21：
  * 缺省 = findInFlightBatch 取唯一在飞批，0/复数 ⇒ throw）；子代理/评审传 path ⇒ 拒（目标 =
- * spawn/实例注入，语法上写不到别处——运行期门拒）。append 段白名单：depth-0 → §1/§4/§6 ·
- * eng-designer → §2 · 评审 → §3 · eng-coder → §5；status 写域 = 调用者自己段（主 agent 仅 §1
- * ——轮 2 #3 裁定②）。append 迁移面错误串**逐字保持 "batch_segment:" 前缀**（§4.1 全表锚断言）；
+ * spawn/实例注入，语法上写不到别处——运行期门拒）。append 段白名单（**模式感知**——§4.16）：
+ * depth-0 → 工程 §1/§4/§6 ∥ 普通 §1/§2/§4/§5/§6 · eng-designer → §2 · 评审 → §3 · eng-coder → §5 ·
+ * coder（普通模式腿增表——SEGMENT_BY_ROLE_NORMAL）→ §5；status 写域 = 调用者自己段（模式感知
+ * ——见 batch-lifecycle.mjs）。append 迁移面错误串**逐字保持 "batch_segment:" 前缀**（§4.1 全表锚断言）；
  * "batch:" 前缀 = 本批新增错误面（create/close/status/findInFlight/path 门/dispatch）。
  *
  * 导出面：`batchTool`（主名）· `resolveBatchDocPath` · `batchDocBases` · `batchDocForReview` ·
@@ -29,7 +30,7 @@ import { readFileSync, writeFileSync } from "node:fs"
 
 // 描述面 = `tool-docs/batch.md`（#15 描述外置统一——工厂形描述经 DESC 单一解析面，工厂调用期取值）
 import { DESC } from "../tools/shared.mjs"
-import { SEGMENT_BY_ROLE, readBatchStatusLine, sectionHeaderRe, findPlaceholderResidue, placeholderResidueError } from "./batch-skeleton.mjs"
+import { SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, DEPTH0_SEGMENTS, readBatchStatusLine, sectionHeaderRe, findPlaceholderResidue, placeholderResidueError } from "./batch-skeleton.mjs"
 import { batchDocBases, resolveBatchDocPath } from "./batch-paths.mjs"
 import { closeBatchRecord, createBatchRecord, findInFlightBatch, statusBatchRecord } from "./batch-lifecycle.mjs"
 
@@ -93,10 +94,12 @@ function segmentNumber(raw) {
 }
 
 /** 身份 → 可写段号；无写权身份 → null。评审实例绑定优先（评审者的身份即"设计评审"。）
- *  depth-0 的段白名单（append = §1/§4/§6）由 appendBatchRecord 分支，不经本表。 */
-function allowedSegment(agent, review) {
+ *  depth-0 的段白名单（append——模式感知，§4.16）由 appendBatchRecord 分支，不经本表；
+ *  普通模式腿额外合并 coder 增表（`SEGMENT_BY_ROLE_NORMAL`——**合并查只在普通模式腿**）。 */
+function allowedSegment(agent, review, engineering) {
   if (review) return 3
-  return SEGMENT_BY_ROLE[agent?._role] ?? null
+  const role = agent?._role
+  return SEGMENT_BY_ROLE[role] ?? (engineering ? null : SEGMENT_BY_ROLE_NORMAL[role]) ?? null
 }
 
 /**
@@ -146,8 +149,9 @@ function insertIntoSection(src, seg, text) {
 
 /**
  * append 执行体（action=append——原 batch_segment execute 迁移 + depth-0 分支）：
- *  - 段白名单：depth-0 → §1/§4/§6（新错误面，"batch:" 前缀）；eng-designer → §2 · 评审 → §3 ·
- *    eng-coder → §5（迁移错误面，"batch_segment:" 前缀**逐字保持**）；
+ *  - 段白名单（**模式感知**——§4.16）：depth-0 工程 → §1/§4/§6（新错误面，"batch:" 前缀）∥
+ *    depth-0 普通 → §1/§2/§4/§5/§6（模式化新串）；eng-designer → §2 · 评审 → §3 ·
+ *    eng-coder → §5 · coder（普通模式腿增表）→ §5（迁移错误面，"batch_segment:" 前缀**逐字保持**）；
  *  - 目标定位（D-BR21）：depth-0 path 可选（缺省 = findInFlightBatch 唯一在飞批）；子代理/评审
  *    传 path ⇒ 拒，目标 = spawn/实例绑定；
  *  - 其余（gate / text 校验 / 剥凭证 / 骨架保护 / **死占位机检（F11-C）** / 插入 / 记账 / 回执）逐字保持原语义。
@@ -156,7 +160,9 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const agent = ctx?.agent ?? {}
   const cwd = agent.cwd ?? process.cwd()
   const depth0 = ctx?.depth === 0
-  const seg = allowedSegment(agent, review)
+  // 模式位执行期实读（§4.16——同款先例 = task.mjs execute 门；翻转即时生效——D-BR26）
+  const engineering = !!agent?.config?.agent?.engineering
+  const seg = allowedSegment(agent, review, engineering)
   if (!depth0 && seg === null) {
     throw new Error("batch_segment: no segment is writable by this caller — the channel exists for eng-designer (§2), eng-coder (§5) and design reviews bound to a batch record (§3); the parent agent writes §1/§4/§6 through ordinary document writes.")
   }
@@ -168,8 +174,11 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
     throw new Error(`batch_segment: unknown segment ${JSON.stringify(args?.segment ?? null)} — pass the section number you write (e.g. "§${seg}").`)
   }
   if (depth0) {
-    if (n !== 1 && n !== 4 && n !== 6) {
-      throw new Error(`batch: §${n} is not yours to write — depth-0 append writes §1/§4/§6 only (一段一作者: §2 = eng-designer, §3 = design review, §5 = eng-coder).`)
+    const domain = engineering ? DEPTH0_SEGMENTS.append.engineering : DEPTH0_SEGMENTS.append.normal
+    if (!domain.includes(n)) {
+      throw new Error(engineering
+        ? `batch: §${n} is not yours to write — depth-0 append writes §1/§4/§6 only (一段一作者: §2 = eng-designer, §3 = design review, §5 = eng-coder).`
+        : `batch: §${n} is not yours to write — in normal mode depth-0 append writes §1/§2/§4/§5/§6 (一段一作者: §3 = design review only). Nothing was written.`)
     }
   } else if (n !== seg) {
     throw new Error(`batch_segment: §${n} is not yours to write — this caller writes §${seg} only (一段一作者: eng-designer → §2, design review → §3, eng-coder → §5).`)
@@ -246,7 +255,7 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
         },
         segment: {
           type: "string",
-          description: "append/status only — the batch-record section you are writing (e.g. \"§4\"). Declares the section number only; your identity decides what is actually writable (main agent: append §1/§4/§6 · status §1; eng-designer §2; design review §3; eng-coder §5).",
+          description: "append/status only — the batch-record section you are writing (e.g. \"§4\"). Declares the section number only; your identity decides what is actually writable (main agent: append §1/§4/§6 · status §1 (engineering) / append §1/§2/§4/§5/§6 · status §1/§2/§5 (normal); eng-designer §2; eng-coder §5; normal-mode coder with a batchDoc binding §5; design review §3).",
         },
         text: {
           type: "string",

@@ -22,7 +22,7 @@ export async function assembleFamilyTools({
   role = null,           // string   子代理角色（eng-coder / eng-designer / coder / consult / explore / …）
   engineering = false,   // boolean  depth-0 role enum 注入用（工程模式）
   consultModels = [],    // array    consult 池（[] ⇒ consult 工具不注册）
-  batchDoc = null,       // string   批次档绑定路径（eng 角色 → batchTool 绑定）
+  batchDoc = null,       // string   批次档绑定路径（eng 角色恒挂 ∥ 普通面 coder 携绑定挂——batchTool 绑定）
   decorate = null,       // object   端差面：{ subagent?, consultStart?, consultStop?, settings? }
 } = {}) {
   // CORE-UNIFICATION TOOLS #83：consult 家族随统一登记册自 `../agent-tools.mjs` 取用（单一来源）
@@ -165,6 +165,8 @@ export async function assembleFamilyTools({
     // 挂载形态已随单名化收口退役；depth-0 主 agent 同表挂载
     // `batch`（D-BR18 扩权——create/close + append §1/§4/§6 + status §1（轮 2 裁定②：§4/§6
     // 状态面走普通文档写），目标走可选 path / 在飞扫描）。
+    // §4.16（2026-10-09）：coder 分支**携绑定追加** `batchTool(batchDoc)`——未绑定不挂载
+    // （工具不在表 = 语法面不可达——同评审面先例）；绑定值 = spawn 可选绑定 `child._batchDoc`。
     // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-UPSTREAM.md §6.27.4 装配接线）：子代理上行通道
     // （`notify_parent`）随 depth>0 段**前置**——4 处携带 = eng-coder / eng-designer / coder / 兜底段
     // （未列名 depth>0 role 落同一兜底段 ⇒ 亦装配；语义 =「depth>0 且非 consult 皆装配」）；
@@ -173,7 +175,7 @@ export async function assembleFamilyTools({
     // 台账只读变体（query / count）——全部 depth>0 角色段（含 consult ∕ 兜底；写三 schema 级不可达）
     : engChildRole === "eng-coder" ? [parentChannelTool, ledgerReadTool, advisorTool, verifyTool, batchTool(batchDoc), ...(engChildSubagent ? [engChildSubagent] : [])]
     : engChildRole === "eng-designer" ? [parentChannelTool, ledgerReadTool, batchTool(batchDoc), ...(engChildSubagent ? [engChildSubagent] : [])]
-    : role === "coder" ? [parentChannelTool, ledgerReadTool, verifyTool, advisorTool]
+    : role === "coder" ? [parentChannelTool, ledgerReadTool, verifyTool, advisorTool, ...(batchDoc ? [batchTool(batchDoc)] : [])]
     : role === "consult" ? [recentChangesTool, ledgerReadTool]
     : [parentChannelTool, ledgerReadTool]
 

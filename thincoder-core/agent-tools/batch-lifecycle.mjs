@@ -12,14 +12,15 @@
  * 身份判据（D-BR17/D-BR18/D-BR21）：主 agent 的工具调用 ctx 带 `depth === 0`（dispatch 装配）；
  * eng 子代理 `ctx.depth > 0`；评审实例 ctx 无 depth 但工具以 `review: true` 绑定。create/close
  * 仅 depth-0 放行（BR-19/BR-24「… is main-agent-only」）；status 写域 = 调用者自己段
- * （eng-designer → §2 · 评审 → §3 · eng-coder → §5 · 主 agent → §1——轮 2 #3 裁定②，§4/§6
- * 状态面走普通文档写）；depth-0 的 status/path 面按 D-BR21（可选 path，缺省 = 在飞批唯一时取）。
+ * （eng-designer → §2 · 评审 → §3 · eng-coder → §5 · coder → §5【普通模式腿增表】· 主 agent →
+ * 工程 §1 ∥ 普通 §1/§2/§5【取段——§4.16】——§4/§6 状态面走普通文档写）；depth-0 的 status/path 面
+ * 按 D-BR21（可选 path，缺省 = 在飞批唯一时取）。
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 
 import {
-  SEGMENT_BY_ROLE, STATUS_WORDS, STATUS_LINE_RE, readBatchStatusLine, sectionHasStatusLine, sectionHeaderRe, batchSkeleton,
+  SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, DEPTH0_SEGMENTS, STATUS_WORDS, STATUS_LINE_RE, readBatchStatusLine, sectionHasStatusLine, sectionHeaderRe, batchSkeleton,
   TEMPLATE_PLACEHOLDERS, findPlaceholderResidue, placeholderResidueError,
 } from "./batch-skeleton.mjs"
 import { resolveBatchCreatePath } from "./batch-paths.mjs"
@@ -122,6 +123,8 @@ export function findInFlightBatch(cwd, bases) {
  * ⇒ create 即拒，不留死锁）；`prev` 传入值**幂等剥**「前情 = 」前缀（值规范化；默认值零变）。
  * 2026-10-05（A-2）：`ledger` / `board` 可选参**建即填**台账行（归一契约 = §4.11；回执两态 =
  * 两参皆给 ⇒ 标注已填 ∥ 未给（任一）⇒ 填法句）。
+ * 2026-10-09（§4.16）：骨架**按模式位取形**（`batchSkeleton({…, mode})`——执行期实读；普通面
+ * 作者标签四处替换，工程面骨架产出逐字不变）。
  * @returns {string} 成功消息（含落盘绝对路径）
  */
 export function createBatchRecord({ args, ctx, review, cwd, bases, onWritten }) {
@@ -161,7 +164,9 @@ export function createBatchRecord({ args, ctx, review, cwd, bases, onWritten }) 
   const prevRaw = typeof args?.prev === "string" ? args.prev.trim() : ""
   const prev = prevRaw ? (prevRaw.replace(/^(?:前情\s*[=：:]\s*)+/g, "").trim() || "无（独立批）") : "无（独立批）"
   mkdirSync(dirname(abs), { recursive: true })
-  writeFileSync(abs, batchSkeleton({ date, topic, source, prev, ledger, board }))
+  // 模式位执行期实读（§4.16——骨架取形时点 = 建档即固；翻转不回写既有骨架）
+  const mode = ctx?.agent?.config?.agent?.engineering ? "engineering" : "normal"
+  writeFileSync(abs, batchSkeleton({ date, topic, source, prev, ledger, board, mode }))
   onWritten?.(ctx?.agent ?? {}, abs)
   // 回执两态（`TOOLS.md` §6.20 逐字）：两参皆给 ⇒ 标注已填；未给（任一）⇒ 填法句（填法 = 文件编辑）
   const headerNote = ledger !== null && board !== null
@@ -281,24 +286,36 @@ function assertStatusNote(note) {
 }
 
 /**
- * status——状态行流转（§4.12，段属主）。写域 = 调用者自己段内 `**状态行**：` 行（eng-designer →
- * §2 · 评审 → §3 · eng-coder → §5 · 主 agent → §1——轮 2 #3 裁定②）；值域 = STATUS_WORDS 该段项
- * 恰一词（**余核 = 关键词**——F11-A 谓词收紧），散文说明走独立 `note` 字段（落状态行括注）；
- * 冻结真值不变（gate 只读 §1）。path 参数 = 仅 depth-0（D-BR21）——子代理/评审传 path
- * ⇒ 拒（目标 = spawn/实例注入，语法上写不到别处）。F11-C 挂点 = 写盘前（assertStatusValue 后）：
- * 档头结构行含骨架死占位 ⇒ 拒（段体引用豁免；close 不拦——收口是主 agent 终态动作）。
+ * status——状态行流转（§4.12，段属主；§4.16 模式感知）。写域 = 调用者自己段内 `**状态行**：`
+ * 行（评审 → §3 · eng-designer → §2 · eng-coder / coder → §5 · 主 agent：工程 §1 ∥ 普通
+ * §1/§2/§5 取段——缺省 §1）；值域 = STATUS_WORDS 该段项恰一词（**余核 = 关键词**——F11-A
+ * 谓词收紧），散文说明走独立 `note` 字段（落状态行括注）；冻结真值不变（gate 只读 §1）。
+ * path 参数 = 仅 depth-0（D-BR21）——子代理/评审传 path ⇒ 拒（目标 = spawn/实例注入，语法上
+ * 写不到别处）。F11-C 挂点 = 写盘前（assertStatusValue 后）：档头结构行含骨架死占位 ⇒ 拒
+ * （段体引用豁免；close 不拦——收口是主 agent 终态动作）。
  * @returns {string} 成功消息
  */
 export function statusBatchRecord({ args, ctx, review, pickTarget, onWritten }) {
   const depth0 = isDepthZero(ctx)
-  const seg = review ? 3 : depth0 ? 1 : SEGMENT_BY_ROLE[ctx?.agent?._role] ?? null
+  // 模式位执行期实读（§4.16——同款先例 = task.mjs execute 门；翻转即时生效——D-BR26）。
+  // 写域：评审 → §3 · 子代理 → 身份段（普通模式腿合并 coder 增表——工程模式腿不查）·
+  // depth-0 工程 → §1 ∥ 普通 → §1/§2/§5（取段——缺省 §1）。
+  const engineering = !!ctx?.agent?.config?.agent?.engineering
+  let seg = review ? 3 : depth0 ? 1 : SEGMENT_BY_ROLE[ctx?.agent?._role] ?? (engineering ? null : SEGMENT_BY_ROLE_NORMAL[ctx?.agent?._role] ?? null)
   if (seg === null) {
     throw new Error("batch: no segment is writable by this caller — status writes the caller's OWN section (eng-designer → §2, design review → §3, eng-coder → §5, main agent → §1).")
   }
-  // 声明段核对（BR-22「eng-designer 对 §1 调 status ⇒ 段白名单拒绝」——镜像 append 面：
-  // segment 可声明，但声明段 ≠ 身份写域段 ⇒ 拒；身份写域段可省略——身份即写域）。
+  // 段域判据（BR-22「eng-designer 对 §1 调 status ⇒ 段白名单拒」——镜像 append 面）：
+  // depth-0 普通面（§4.16）= **取段**——写域集 §1/§2/§5、缺省 §1、越出集合 ⇒ 拒（模式化新串）；
+  // depth-0 工程面 ∥ 子代理 ∥ 评审 = **声明段核对**（声明段 ≠ 身份写域段 ⇒ 拒；身份写域段可省略）。
   const declared = args?.segment === undefined || args?.segment === null ? null : segmentNumber(args.segment)
-  if (declared !== null && declared !== seg) {
+  if (depth0 && !review && !engineering) {
+    const target = declared ?? 1
+    if (!DEPTH0_SEGMENTS.status.normal.includes(target)) {
+      throw new Error(`batch: §${declared} is not yours to write — in normal mode status writes §1/§2/§5 only (一段一作者: §3 = design review; §4/§6 carry no status word list). Nothing was written.`)
+    }
+    seg = target
+  } else if (declared !== null && declared !== seg) {
     throw new Error(`batch: §${declared} is not yours to write — status writes YOUR OWN section §${seg} only (一段一作者: eng-designer → §2, design review → §3, eng-coder → §5, main agent → §1). Nothing was written.`)
   }
   if (args?.path !== undefined && args?.path !== null && !depth0) {

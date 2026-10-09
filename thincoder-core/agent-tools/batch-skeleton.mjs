@@ -39,10 +39,23 @@ export const STATUS_WORDS = Object.freeze({
 })
 
 /** 身份 → 可写段号（append 段白名单的**子代理面**——原 batch-segment.mjs 逐字迁移；主 agent
- *  的 depth-0 白名单（append = §1/§4/§6 · status = §1——轮 2 #3 裁定②）由身份判据在
- *  batch.mjs / batch-lifecycle.mjs 分支，不经本表。旧 batch-segment.mjs 导出面等价保持——
- *  本符号经 batch.mjs re-export（过渡 shim 面零触）。 */
+ *  的 depth-0 白名单（模式感知——工程 §1/§4/§6 · §1 ∥ 普通 §1/§2/§4/§5/§6 · §1/§2/§5，§4.16）
+ *  由身份判据在 batch.mjs / batch-lifecycle.mjs 分支，不经本表。旧 batch-segment.mjs 导出面等价
+ *  保持——本符号经 batch.mjs re-export（过渡 shim 面零触）。**表零字面改**——普通模式另立增表
+ *  `SEGMENT_BY_ROLE_NORMAL`（合并查只在普通模式腿）；工程面「逐字不变」判据据此成立。 */
 export const SEGMENT_BY_ROLE = { "eng-designer": 2, "eng-coder": 5 }
+
+/** 普通模式增表（§4.16——**合并查只在普通模式腿**，工程模式腿不消费本表）：coder 承办 ⇒ §5
+ *  实施记录（可选绑定自写——未绑定由主 agent 代记、行内注明来源）。 */
+export const SEGMENT_BY_ROLE_NORMAL = { "coder": 5 }
+
+/** depth-0 段白名单（§4.16——**模式键两集**；工程面判定字面逐字保持、普通面新增）：
+ *  append：工程 = §1/§4/§6 ∥ 普通 = §1/§2/§4/§5/§6（§2 = 设计师席并入主 agent；§5 = 直做实施记录）；
+ *  status：工程 = §1 ∥ 普通 = §1/§2/§5（写域仍「调用者自己段」；`segment` 缺省 = §1）。 */
+export const DEPTH0_SEGMENTS = Object.freeze({
+  append: Object.freeze({ engineering: Object.freeze([1, 4, 6]), normal: Object.freeze([1, 2, 4, 5, 6]) }),
+  status: Object.freeze({ engineering: Object.freeze([1]), normal: Object.freeze([1, 2, 5]) }),
+})
 
 /** §1 状态行前缀形态（`**状态行**：` 独立行——表格行 / 块引用行不命中；判定只认关键字）。 */
 export const STATUS_LINE_RE = /^\s*\*\*状态行\*\*[：:]\s*(.*)$/
@@ -178,22 +191,27 @@ export function sectionHasStatusLine(src, seg) {
  * 留存时（未给参）由主 agent 文件编辑填（台账登记 = 主 agent 既有义务，create 不代建——填充
  * 时点 = 建档后、本档首个 append/status 之前）。
  * 本批改形删除（F11-B）：旧 `# …（<BATCH-ID>）` 后缀与 `来源 = <讨论来源>` 占位实参化。
+ * 模式取形（§4.16——普通模式变体**四处替换**、余行逐字同；`mode` 缺省 = "engineering" ⇒
+ * 工程产出逐字不变）：① 汇总行 §2/§5 标签；② `## §2` 段头；③ §2 状态占位句；④ `## §5` 段头。
  */
-export function batchSkeleton({ date, topic, source, prev, ledger = null, board = null }) {
+export function batchSkeleton({ date, topic, source, prev, ledger = null, board = null, mode = "engineering" }) {
+  const normal = mode === "normal"
+  const designerSeat = normal ? "主 agent" : "eng-designer" // ① 汇总行 §2 标签 ∥ ② §2 段头
+  const implementerSeat = normal ? "实施者：主 agent ∥ coder" : "eng-coder" // ① 汇总行 §5 标签 ∥ ④ §5 段头
   return [
     `# ${date} · ${topic}`,
-    "> 六段 append-only，一段一作者：§1 讨论（主 agent）· §2 批次任务与设计（eng-designer）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）。",
+    `> 六段 append-only，一段一作者：§1 讨论（主 agent）· §2 批次任务与设计（${designerSeat}）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（${implementerSeat}）· §6 验证与收口（父代理）。`,
     `> 编制：主 agent · ${date} · 来源 = ${source}。`,
     `> 台账 = ${ledger ?? "#<编号>"}（${board ?? "<板块>"} · 归批）。前情 = ${prev}。`,
     "## §1 讨论（主 agent）",
     `**状态行**：🔄 ${STATUS_WORDS[1].open}（…）`,
     "<§1 模板占位：本批条目 / 关键判据 / 授权口径>",
-    "## §2 批次任务与设计（eng-designer）",
-    "**状态行**：（eng-designer 写入时更新）",
+    `## §2 批次任务与设计（${designerSeat}）`,
+    `**状态行**：（${normal ? "主 agent" : "eng-designer"} 写入时更新）`, // ③ §2 状态占位句
     "<§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>",
     "## §3 设计评审（评审子代理）",
     "## §4 用户批准（主 agent）",
-    "## §5 实施记录（eng-coder）",
+    `## §5 实施记录（${implementerSeat}）`,
     "## §6 验证与收口（父代理）",
     "",
   ].join("\n")
