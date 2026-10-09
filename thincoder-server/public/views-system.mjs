@@ -41,7 +41,7 @@ function versionSection(ctx, system) {
 
 /** 节「向量服务」（admin——§2.3①）：配置面（引擎地址 ∥ 模型 ∥ API Key 三输入 + 保存——`GET`/`PATCH /api/admin/config`；
  *  值 = 文件面；API Key 掩码回显（`env:` 保形 ∥ 明文 ⇒ `…`+末 4））∥ 可达性（渲染自动探活 + 「重新检测」——`POST
- *  /api/admin/embedding/test`——单端点 ∥ 诊断自含形 ∥ 不落库不计量）∥ snippet ∥ 用法一句 ∥ 试跑。
+ *  /api/admin/embedding/test`——单端点 ∥ 诊断自含形 ∥ 不落库不计量）∥ snippet ∥ 用法一句（**缺段不渲染**——#1151）∥ 试跑。
  *  探活/试跑 = 表单草稿口径（标量三项明传优先——KD-SV-54 口径镜像；未保存亦可先验；API Key 未编辑 ⇒ 不携
  *  ⇒ 运行配置回落）；保存 = `PATCH /api/admin/config`（`embedding` 子键级——重启生效）。
  *  缺 `embedding` 段（§8 KD-SV-57——2026-10-09 embed 解耦批）：未配置态 = 三输入空 ∥ 状态行「未配置」∥ 不自动探活；
@@ -53,7 +53,7 @@ function vectorSection(ctx) {
   const apiKeyInput = h("input", { autocomplete: "off", placeholder: t("vector.apiKeyPh", { mask: "—" }) })
   const clearBox = h("input", { type: "checkbox" })
   const statusValue = h("span", { text: t("vector.checking") })
-  const usageValue = h("p", { class: "hint" })
+  const usageSlot = h("div") // 「用法」行槽（缺段 ⇒ 零节点——#1151 字面「不渲染」；在场 ⇒ 挂 `p.hint`）
   const snippetCode = h("code", { text: embeddingSnippet(null) })
   const testResult = h("p", { class: "hint" })
   const saveNote = h("p", { class: "hint error", hidden: true })
@@ -79,7 +79,7 @@ function vectorSection(ctx) {
     baseURLInput.value = embedding?.baseURL ?? ""
     modelInput.value = embedding?.model ?? ""
     apiKeyInput.placeholder = t("vector.apiKeyPh", { mask: embedding?.apiKey || "—" })
-    usageValue.textContent = t("vector.usage", { model: embedding?.model ?? "—" })
+    usageSlot.replaceChildren(embedding === null ? [] : h("p", { class: "hint", text: t("vector.usage", { model: embedding.model }) }))
     snippetCode.textContent = embeddingSnippet(embedding?.model ?? null)
   }
 
@@ -165,7 +165,7 @@ function vectorSection(ctx) {
     h("p", { class: "hint", text: t("vector.autoNote") }),
     h("h4", { text: t("vector.snippetTitle") }),
     h("pre", { class: "snippet" }, snippetCode),
-    usageValue,
+    usageSlot,
     h("h4", { text: t("vector.testTitle") }),
     testForm,
     testResult,

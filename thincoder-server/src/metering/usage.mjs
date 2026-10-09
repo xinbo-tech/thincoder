@@ -3,7 +3,8 @@
  * 导出查询（`exportUsageRows`——行数上限） ∥ 保留窗清理（`pruneUsage`——删除式：usage + 派生两表同事务同窗；
  * 启动一次 + 24h 周期，入口接线）。
  *
- * 行形 = 一行/请求：成员 × key × 模型（**`provider` ∥ `model` 两字段**——对外标识 `provider/model` 无损回拼；
+ * 行形 = 一行/请求：成员 × key × 模型（**`provider` ∥ `model` 两字段**——内部真名（别名下亦存真名——KD-SV-59）；
+ * 对外标识 = 读面回映射（配别名 ⇒ 别名 ∥ 未配 ⇒ `provider/model`）——单源 = `gateway/providers.mjs` 别名索引；
  * 嵌入行 `provider = ''`）× 时段（`ts`）× token；token 三列 = 上游 usage 原值（逐值不加工），上游未回 ⇒ 三列 NULL
  * （status 照记实况）。派生两表（`usage_daily` ∥ `quota_counters`）= 同事务 upsert（aggregates.mjs）。
  * 汇表面读（summary/totals/key 窗/成员月累计）∥ 过滤构建 ∥ 时间助手 = `report.mjs`——本址 re-export 保名面（读侧零改）。
@@ -12,7 +13,7 @@
 import { HttpError } from "../gateway/errors.mjs"
 import { DEFAULT_USAGE_RETENTION_DAYS } from "../ops/config.mjs"
 import { bumpDerived, pruneDerived } from "./aggregates.mjs"
-import { buildUsageWhere, MODEL_REF_SQL } from "./report.mjs"
+import { buildUsageWhere, resolveAliases } from "./report.mjs"
 
 export const USAGE_LIMIT_DEFAULT = 100
 export const USAGE_LIMIT_MAX = 500
@@ -36,8 +37,8 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const ENDPOINTS = ["chat", "embeddings"]
 const STATUSES = ["ok", "error", "aborted"]
 
-/** 明细行 SELECT（明细 ∥ 导出共用——行形 = METERING §3；`model` = 对外标识回拼）。 */
-const ROW_SELECT = `SELECT u.id, u.ts, u.endpoint, ${MODEL_REF_SQL} AS model, u.status, u.stream, u.prompt_tokens, u.completion_tokens,
+/** 明细行 SELECT（明细 ∥ 导出共用——行形 = METERING §3；`model` = 对外标识回映射（`mapUsageRow`——KD-SV-59））。 */
+const ROW_SELECT = `SELECT u.id, u.ts, u.endpoint, u.provider, u.model, u.status, u.stream, u.prompt_tokens, u.completion_tokens,
        u.total_tokens, u.duration_ms, m.name AS member_name, k.key_hint
 FROM usage u JOIN members m ON m.id = u.member_id JOIN api_keys k ON k.id = u.key_id`
 
@@ -106,15 +107,16 @@ export function pruneUsage(db, { now = Date.now(), retentionDays = DEFAULT_USAGE
   }
 }
 
-/** 行形映射（明细 ∥ 导出共用——camelCase；`ts` 原样 unix ms，页面本地化显示）。 */
-function mapUsageRow(row) {
+/** 行形映射（明细 ∥ 导出共用——camelCase；`ts` 原样 unix ms，页面本地化显示）。
+ *  `model` = **对外标识**（配别名 ⇒ 别名——KD-SV-59；嵌入行（`provider = ''`）⇒ 引擎模型名单段）。 */
+function mapUsageRow(row, aliases) {
   return {
     id: row.id,
     ts: row.ts,
     member: row.member_name,
     keyHint: row.key_hint,
     endpoint: row.endpoint,
-    model: row.model,
+    model: aliases.externalId(row.provider, row.model),
     status: row.status,
     stream: row.stream === 1,
     promptTokens: row.prompt_tokens,
@@ -126,24 +128,27 @@ function mapUsageRow(row) {
 
 /**
  * 明细查询（METERING §3 行形；倒序新在前）。
- * 过滤：`{ memberId, model, endpoint, from, to, limit }`（null = 不过滤；limit 夹在 1..USAGE_LIMIT_MAX）。
+ * 过滤：`{ memberId, model, endpoint, from, to, limit, aliases }`（null = 不过滤；limit 夹在 1..USAGE_LIMIT_MAX；
+ * `aliases` = 别名索引（`model` 过滤反查 ∥ 外标回映射——KD-SV-59；缺省 ⇒ 库单源构建）。
  */
-export function queryUsage(db, { memberId = null, model = null, endpoint = null, from = null, to = null, limit = USAGE_LIMIT_DEFAULT } = {}) {
-  const { clause, args } = buildUsageWhere({ memberId, model, endpoint, from, to })
+export function queryUsage(db, { memberId = null, model = null, endpoint = null, from = null, to = null, limit = USAGE_LIMIT_DEFAULT, aliases = null } = {}) {
+  const index = resolveAliases(db, aliases)
+  const { clause, args } = buildUsageWhere({ memberId, model, endpoint, from, to, aliases: index })
   const capped = Math.min(Math.max(1, Number.isInteger(limit) ? limit : USAGE_LIMIT_DEFAULT), USAGE_LIMIT_MAX)
   const rows = db.prepare(`${ROW_SELECT} ${clause} ORDER BY u.ts DESC, u.id DESC LIMIT ?`).all(...args, capped)
-  return rows.map(mapUsageRow)
+  return rows.map((row) => mapUsageRow(row, index))
 }
 
 /**
  * 导出查询（METERING §3——`GET /api/usage/export` 数据面）：同过滤面、倒序（同明细口径）；
  * 行数 > `max`（缺省 `USAGE_EXPORT_MAX`——常量注入口径）⇒ 400（收窄时段提示）。
  */
-export function exportUsageRows(db, { memberId = null, model = null, endpoint = null, from = null, to = null, max = USAGE_EXPORT_MAX } = {}) {
-  const { clause, args } = buildUsageWhere({ memberId, model, endpoint, from, to })
+export function exportUsageRows(db, { memberId = null, model = null, endpoint = null, from = null, to = null, max = USAGE_EXPORT_MAX, aliases = null } = {}) {
+  const index = resolveAliases(db, aliases)
+  const { clause, args } = buildUsageWhere({ memberId, model, endpoint, from, to, aliases: index })
   const rows = db.prepare(`${ROW_SELECT} ${clause} ORDER BY u.ts DESC, u.id DESC LIMIT ?`).all(...args, max + 1)
   if (rows.length > max) throw new HttpError("invalid_request_error", `导出行数超过上限（${max}）——请收窄时段`)
-  return rows.map(mapUsageRow)
+  return rows.map((row) => mapUsageRow(row, index))
 }
 
 /** 查询参数解析（路由共用）：limit 缺省 100（非正整数 ⇒ 400）；显式上限在 `queryUsage` 夹 500。 */

@@ -47,7 +47,7 @@
 | `usageRetentionDays` | 否 | 用量保留窗（天）：正整数 ∥ `null`（不限——保留全量）；缺省 `90`；非正整数/非法值 ⇒ 拒启（清理时机 = 启动一次 + 每 24h） |
 | `proxy` | 否 | **上游出口代理**：形 = `{ "uri": "http://host:port" }`；**仅收 `http:`**（https 代理串 ∥ 非对象 ∥ 非 URL ⇒ 拒启）；缺省 = 直连；生效 = 重启（见下「上游代理」） |
 | `bootstrap` | 否 | 首启引导凭据（仅零 admin 时消费——见 §5）；口令 ≥8 字符 |
-| `providers[]` | 否 | **首启种子**（一次性导入——此后控制台管理：`#/admin/providers`）。`name` ∥ `baseURL`（OpenAI 兼容根） ∥ `apiKey`（可空——空则不发 Authorization 头；支持 `env:` 引用） ∥ `models`（开放清单——对外标识 = `provider/model`）；预设形（`preset`）可省字段。零 provider = 允许态（服务照常起 + 警告） |
+| `providers[]` | 否 | **首启种子**（一次性导入——此后控制台管理：`#/admin/providers`）。`name` ∥ `baseURL`（OpenAI 兼容根） ∥ `apiKey`（可空——空则不发 Authorization 头；支持 `env:` 引用） ∥ `models`（开放清单——**条目两形**：字符串（无别名）∥ `{ "name": "…", "alias": "…" }`（配别名）；对外标识 = 别名（配了）∥ `provider/model`）；预设形（`preset`）可省字段。零 provider = 允许态（服务照常起 + 警告） |
 | `embedding` | 否 | 嵌入引擎接入段：`baseURL` ∥ `model` ∥ `apiKey`（选填——本地引擎常无鉴权）。**缺位 ∥ `null` = 禁用态**（服务照常起 + 启动警告一条——`/v1/embeddings` ⇒ 404 `model_not_found` 消息明示未配置；控制台向量卡「未配置」态可创建）；在场 ⇒ 严格校验（`baseURL` http(s) ∥ `model` 非空——非法 ⇒ 拒启） |
 
 - 字符串值支持 `env:变量名` 前缀（加载期解析；变量缺位 ⇒ 启动失败）——真实 key 可只住环境变量。例外 = `providers[].apiKey`：载入不解析（引用保形），注册表构建期解析（缺位 ⇒ 启动拒启 ∥ 保存 400）。
@@ -59,16 +59,18 @@
 - `models` 无预设缺省（2026-10-09 清除批：预设表零 `model` 键）——条目未自备 `models` ⇒ 空清单，
   经控制台「模型发现」（详情弹窗「刷新候选」）勾选后保存。
 - 未知预设名 ⇒ 拒启（报错列可用名——fail-closed）。
+- **种子导入 nuance（#967）**：导入 = **一次性**（此后库为准——不再需要该段就删掉它）；导入后库行留存、**无回滚**（要撤 = 控制台手删）；
+  `env:` 引用解析 = 注册表构建期 ⇒ **先配好环境变量再入库**（否则入库即拒启——修复 = 补变量后重启）。
 - 预设双消费面：① 配置种子（预设形条目——上条）；② 控制台「从预设快速添加」（`#/admin/providers`——拉预设表 ⇒ 预填 ⇒ 补 `apiKey` ⇒ 保存；写入仍走全字段校验）。
-- 对外模型标识 = `provider/model`（首斜杠切分：首段 = provider `name` ∥ 余段 = 上游模型名（可含斜杠）；
-  两段非空；裸名不解析；同名模型跨 provider 并存且各自可达）；`/v1/models` = 带前缀名清单。
-- 启动校验（fail-closed）：缺 `host` ∥ provider `name` 缺/空 ∥ `name` 含 `/` ∥ `name` 重名（provider 间） ∥ 同 provider 内模型重名 ∥ `baseURL` 非 http(s) ∥ 未知预设名 ∥ `embedding` 在场非对象/缺子键 ⇒
+- 对外模型标识 = **别名（配了——全服唯一 ∥ 不含斜杠）∥ `provider/model`**（首斜杠切分：首段 = provider `name` ∥ 余段 = 上游模型名（可含斜杠）；
+  两段非空；同名模型跨 provider 并存且各自可达；**配了只认别名**（旧前缀名 ⇒ 404 并提示别名））；`/v1/models` = 对外标识清单。
+- 启动校验（fail-closed）：缺 `host` ∥ provider `name` 缺/空 ∥ `name` 含 `/` ∥ `name` 重名（provider 间） ∥ 同 provider 内模型重名 ∥ 别名形非法（空 ∥ 含斜杠 ∥ 首尾空白） ∥ 别名重名（全服唯一——含跨 provider） ∥ `baseURL` 非 http(s) ∥ 未知预设名 ∥ `embedding` 在场非对象/缺子键 ⇒
   拒启（非零退出 + 明确报错）。**零 provider = 允许态**（服务照常起 + 警告——控制台为配置路径）；**零 embedding = 允许态**（服务照常起 + 警告；嵌入面禁用——`/v1/embeddings` 404 明示未配置）；嵌入引擎模型不入 `/v1/models`（单独命名空间）。
 - provider 变更（增/删/改 ∥ 含密钥）= 控制台 `#/admin/providers` 保存即热生效（零重启；在途请求照常收尾）；`config.json` 文件本身不热载（改动仍须重启）。
-- **配置写面（控制台——`#/admin/system`「服务配置」卡 + 向量卡）**：可写 = `autoUpdate` ∥ `trustProxy` ∥ `usageRetentionDays` ∥ `proxy.uri` ∥ `embedding.{baseURL,model,apiKey}`
+- **配置写面（控制台——`#/admin/system`「服务配置」卡 + 向量卡 ∥ `#/admin/proxy` 代理页）**：可写 = `autoUpdate` ∥ `trustProxy` ∥ `usageRetentionDays` ∥ `embedding.{baseURL,model,apiKey}`（`proxy.uri` 写面 = 代理页——见下条）
   （向量卡 = 三输入 + 保存 + 草稿探活——按表单值先验，未保存亦可）；只读展示 = `host` ∥ `port` ∥ `db`（部署拓扑项——不做写面）+ `bootstrap`（口令永不回显）+ `providers[]`（指针——常态管理 = `#/admin/providers`）。
   保存 = 读改写本文件（校验门 ∥ 原子写——失败 ⇒ 文件零变）；密钥回显掩码（`env:` 保形 ∥ 明文 ⇒ `…`+末 4）；**生效 = 重启**（文件不热载）；容器路前提 = 配置目录可写（`./config:/app/config` 目录级 rw 挂载——§3；单文件挂载下保存必失败）。
-- **上游代理（逐渠——顶层 `proxy.uri` + 条目 `providers[].proxy`）**：条目旗布尔（缺省 `false` = 直连；非布尔 ⇒ 拒启 ∥ 保存 400）；控制台 Provider 双弹窗「走代理」勾选 = 同字段（保存即热生效）；`proxy.uri` 写面 = 系统页「服务配置」卡。
+- **上游代理（逐渠——顶层 `proxy.uri` + 条目 `providers[].proxy`）**：条目旗布尔（缺省 `false` = 直连；非布尔 ⇒ 拒启 ∥ 保存 400）；控制台 Provider 双弹窗「走代理」勾选 = 同字段（保存即热生效）；`proxy.uri` 写面 = `#/admin/proxy` 代理页（含连通测试——真打读数：同传输 ∥ 同 loopback 旁路；不落库不计费；`""` = 删段）。
   判定 = 旗 `true` **且** 顶层 `uri` 在案 ⇒ 该渠 chat 转发 ∥ 模型发现经代理；loopback 目标恒直连（`localhost` ∥ `127.0.0.1` ∥ `::1`——NO_PROXY 语义）；旗 `true` 而 `uri` 缺位 ⇒ 直连 + 启动警告（旗未生效）；无全局闸（逐渠判定）。
   代理传输：明文 `http:` 代理串 ⇒ 启动警告（上游密钥经代理外发——确认代理可信）；https 目标 = CONNECT 隧道 ∥ http 目标 = 经典转发；TLS 全量校验（无关闭开关）；不支持代理认证 ∥ 链路代理 ∥ 连接池（每请求独立连接）。嵌入引擎（`embedding`）不走代理。
 
@@ -116,7 +118,7 @@
   `#/me/usage`（本月额度/已用 + 用量明细 + 端点过滤 + 向量服务提示条）∥ `#/me/account`（基本信息 ∥ 改密）；管理（admin）= `#/admin/overview`（落地页：
   今日请求/token ∥ 成员数 ∥ 健康 ∥ 更新提示 ∥ 快捷入口）∥ `#/admin/members`（成员表含各成员 key 清单与吊销 ∥ 建成员初始密码一次性回显 ∥ 设额度 ∥
   重置密码）∥ `#/admin/providers`（provider 增删改 ∥ 模型发现/勾选开放 ∥ 测试 ∥ 预设快速添加）∥ `#/admin/usage`（用量看板：过滤 + 趋势/聚合/排行 + CSV 导出）∥
-  `#/admin/audit`（审计事件：类型/成员/时段过滤）∥ `#/admin/system`（版本与更新 ∥ 成员接入卡 ∥ 向量服务卡（地址/模型/探活/试跑——配置面：保存 + 草稿探活）∥ 服务配置卡（只读三行 ∥ 可写四项 ∥ 保存——重启生效）∥ 服务健康——数据 = `/api/system`）。
+  `#/admin/audit`（审计事件：类型/成员/时段过滤）∥ `#/admin/system`（版本与更新 ∥ 成员接入卡 ∥ 向量服务卡（地址/模型/探活/试跑——配置面：保存 + 草稿探活）∥ 服务配置卡（只读三行 ∥ 可写三项 ∥ 保存——重启生效）∥ 服务健康——数据 = `/api/system`）∥ `#/admin/proxy`（代理设置（`proxy.uri`——保存 ∥ 重启生效）∥ 连通测试（真打读数——目标预填首个 provider 地址；不落库不计量））。
 - 侧栏底部 meta 槽：服务器版本 + 健康状态灯（30s 轮询 `GET /healthz`——绿 ∥ 黄（DB 异常）∥ 红（不可达）；全角色）；更新提示在 `#/admin/system`（可动作方 = admin）。
 - 旧链重定向：`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/overview`；`#/` 与未知 hash ⇒ 角色默认页（admin ⇒ 总览 ∥ user ⇒ 我的 key）。
 - provider 保存即热生效（零重启）；密钥列表回显掩码（明文永不回显）。

@@ -11,7 +11,7 @@ import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:cry
 import { promisify } from "node:util"
 
 import { HttpError } from "../gateway/errors.mjs"
-import { splitModelRef } from "../gateway/providers.mjs"
+import { isExternalModelRef } from "../gateway/providers.mjs"
 import { MIN_PASSWORD_LENGTH } from "../ops/config.mjs"
 
 const scrypt = promisify(scryptCallback)
@@ -147,14 +147,12 @@ export function parseModelQuotas(json) {
   }
 }
 
-/** 外标键形校验（#1001②——`model-quotas` ∥ `model-disables` 两 merge 共用）：`provider/model` 形
- *  （首斜杠两段非空——形规则单源 = 派发面 `splitModelRef`）；裸名 ∥ 空段 ⇒ 400（库零变由调用方校验先行保证）。 */
+/** 外标键形校验（#1001② ∥ #1008——`model-quotas` ∥ `model-disables` 两 merge 共用；形规则**单源 = 别名层**
+ *  `isExternalModelRef`——接点零行）：非空 ∥ 无首尾空白 ∥ 含斜杠时两段非空（**裸名 = 别名形合法**——KD-SV-59）；
+ *  不合形 ⇒ 400（库零变由调用方校验先行保证）。 */
 export function assertModelRefKey(key) {
-  if (typeof key !== "string" || key.trim() === "") {
-    throw new HttpError("invalid_request_error", "键须为非空字符串（对外标识 provider/model）")
-  }
-  if (splitModelRef(key) === null) {
-    throw new HttpError("invalid_request_error", `键形非法（对外标识 provider/model——首斜杠两段非空）：${JSON.stringify(key)}`)
+  if (!isExternalModelRef(key)) {
+    throw new HttpError("invalid_request_error", `键形非法（对外标识 = 别名（裸名） ∥ provider/model 首斜杠两段非空；无首尾空白）：${JSON.stringify(key)}`)
   }
 }
 
@@ -162,7 +160,7 @@ export function assertModelRefKey(key) {
  *  校验先行（非法 ⇒ 400 库零变）；返回更新后成员行（404 归本函数）。 */
 export function mergeMemberModelQuotas(db, memberId, quotas) {
   if (quotas === null || typeof quotas !== "object" || Array.isArray(quotas)) {
-    throw new HttpError("invalid_request_error", `quotas 须为对象（{ "<provider/model>": N|null }）：${JSON.stringify(quotas)}`)
+    throw new HttpError("invalid_request_error", `quotas 须为对象（{ "<对外标识（别名（裸名） ∥ provider/model 前缀形）>": N|null }）：${JSON.stringify(quotas)}`)
   }
   const member = findMemberById(db, memberId)
   if (!member) throw new HttpError("not_found", `成员不存在：${memberId}`)
@@ -198,7 +196,7 @@ export function parseModelDisables(json) {
  *  校验先行（键形 / 值非法 ⇒ 400 库零变）；返回更新后成员行（404 归本函数）——ACCOUNTS §2.2。 */
 export function mergeMemberModelDisables(db, memberId, disables) {
   if (disables === null || typeof disables !== "object" || Array.isArray(disables)) {
-    throw new HttpError("invalid_request_error", `disables 须为对象（{ "<provider/model>": true|null }）：${JSON.stringify(disables)}`)
+    throw new HttpError("invalid_request_error", `disables 须为对象（{ "<对外标识（别名（裸名） ∥ provider/model 前缀形）>": true|null }）：${JSON.stringify(disables)}`)
   }
   const member = findMemberById(db, memberId)
   if (!member) throw new HttpError("not_found", `成员不存在：${memberId}`)

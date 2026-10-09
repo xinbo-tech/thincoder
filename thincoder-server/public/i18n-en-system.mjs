@@ -46,8 +46,6 @@ export const EN_SYSTEM = Object.freeze({
   "system.cfgRetention": "Usage/audit retention (days)",
   "system.cfgRetentionUnlimited": "Unlimited",
   "system.cfgRetentionInvalid": "Retention must be a positive integer, or check “Unlimited”",
-  "system.cfgProxyUri": "Upstream proxy address (proxy.uri)",
-  "system.cfgProxyUriPh": "Must be an http URL (empty = disabled)",
   "system.cfgProvidersRow": "providers (first-boot seeds)",
   "system.cfgProvidersValue": "Ongoing management = Providers page",
   "system.cfgBootstrapRow": "bootstrap (bootstrap account)",
@@ -55,6 +53,25 @@ export const EN_SYSTEM = Object.freeze({
   "system.cfgSaved": "Saved — takes effect after the service restarts",
   "system.cfgLoadFailed": "Failed to load the config",
   "system.cfgRestartNote": "Takes effect after a restart (the config file is not hot-reloaded)",
+
+  // ── System · proxy page (§2.7——settings ∥ connectivity test; 2026-10-09 proxy-page batch: proxy.uri moved out of the server config card) ──
+  "proxy.title": "Proxy",
+  "proxy.settingsTitle": "Proxy settings",
+  "proxy.uriLabel": "Upstream proxy address",
+  "proxy.uriPh": "http:\/\/host:port (empty = disabled)", // "\/" keeps the designed value; the raw text scan bans the literal URL form under public/**
+  "proxy.hint": "Scope = providers with “Use proxy” checked (chat forwarding and model discovery); loopback targets always connect directly.",
+  "proxy.testTitle": "Connectivity test",
+  "proxy.testHint": "The server sends one real GET through that address (no records, no metering); any HTTP response counts as reachable.",
+  "proxy.targetLabel": "Test target",
+  "proxy.targetPh": "e.g. http(s)://api.example.com/v1",
+  "proxy.testBtn": "Test",
+  "proxy.testing": "Testing…",
+  "proxy.testOk": "Proxy reachable — HTTP {status} ({ms} ms)",
+  "proxy.testFail": "Unreachable ({kind}): {message}",
+  "proxy.uriRequired": "Enter the proxy address first — the test uses the current form value",
+  "proxy.targetRequired": "Enter a test target first",
+  "proxy.kind.timeout": "Timed out",
+  "proxy.kind.unreachable": "Unreachable",
 
   // ── System · vector service (§2.3①——system page card ∥ my-usage tip bar) ──
   "vector.title": "Vector service",

@@ -6,7 +6,9 @@
  * 键时基 = 行 `ts` 同源：`day`/`month` 由 `strftime(…, ts / 1000, 'unixepoch', 'localtime')` 推导（**与 v5 回填/
  * 对账 SQL 同表达式**——非入账时刻；跨零点/月初终结请求 ⇒ 键归 `ts` 所在日/月，对账零幻影行）。
  * 写入口 = `usage.mjs` `recordUsage`（单写点——同事务三写）；本档不自开事务。
+ * 键口径：内部真名（`provider` ∥ `model`——别名零涉）；对外标识 = 读面回映射（月表读即回映射之一——KD-SV-59）。
  */
+import { providerAliasIndex } from "../gateway/providers.mjs"
 const DAILY_COLUMNS = ["day", "member_id", "key_id", "provider", "model", "endpoint"]
 const DAILY_VALUES = ["requests", "prompt_tokens", "completion_tokens", "total_tokens", "duration_ms", "errors"]
 const COUNTER_COLUMNS = ["member_id", "provider", "model", "month"]
@@ -76,9 +78,10 @@ export function quotaCounterTokens(db, { memberId, provider, model, now = Date.n
 }
 
 /** 成员月表读（配额 v2 批——METERING §2.3；成员弹窗逐行已用 ∥ AC-23）：Map memberId → `{ 外标: tokens }`（自然月）。
- *  外标回拼同记账口径（`provider = ''` ⇒ `model` 单段——无损）；`memberId` 给定 ⇒ 唯一键前缀查询
- *  ∥ 缺省 = 全员一次装配（免 N+1）；无行成员不在图内（消费侧缺省 `{}`——两形逐值相等）。 */
-export function monthlyCountersByMember(db, { memberId = null, now = Date.now() } = {}) {
+ *  键 = **对外标识**（配别名 ⇒ 别名 ∥ 未配 ⇒ `provider/model`；嵌入行 `provider = ''` ⇒ 单段——KD-SV-59）；
+ *  `memberId` 给定 ⇒ 唯一键前缀查询 ∥ 缺省 = 全员一次装配（免 N+1）；无行成员不在图内（消费侧缺省 `{}`——两形逐值相等）。 */
+export function monthlyCountersByMember(db, { memberId = null, now = Date.now(), aliases = null } = {}) {
+  const index = aliases ?? providerAliasIndex(db) // 别名索引（库单源——缺省读 providers 行；KD-SV-59）
   const month = monthKeyOf(db, now)
   const where = memberId === null ? "WHERE month = ?" : "WHERE member_id = ? AND month = ?"
   const args = memberId === null ? [month] : [memberId, month]
@@ -89,7 +92,7 @@ export function monthlyCountersByMember(db, { memberId = null, now = Date.now() 
       entry = {}
       byMember.set(row.member_id, entry)
     }
-    entry[row.provider === "" ? row.model : `${row.provider}/${row.model}`] = Number(row.tokens)
+    entry[index.externalId(row.provider, row.model)] = Number(row.tokens)
   }
   return byMember
 }

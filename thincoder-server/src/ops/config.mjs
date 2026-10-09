@@ -8,6 +8,8 @@
  * 控制台保存——gateway/API.md §2.2）；模型设置同源 = `validateProviderSettings`（v4 `settings`——未知子字段 ∥
  * 非法值 ⇒ 拒／400）；上游代理同源 = `validateProxyConfig`（顶层 `proxy` 段——KD-SV-55：非对象 ∥ uri 非法 ∥
  * scheme 非 `http:` ⇒ 拒启）+ 条目 `proxy` 布尔判据（`validateProviderEntry` 内）；例外：`providers[].apiKey` 载入不解析（引用保形——注册表构建期解析）。
+ * 模型别名（`models` 条目两形——KD-SV-59）：形判归 `normalizeModelEntry`（别名非空 ∥ 不含斜杠 ∥ 无首尾空白——
+ * 缺省/`null`/`""` ⇒ 归一无别名）；**别名全服唯一** = `assertAliasesUnique`（单条内 ∥ 全量批量 ∥ 保存径对既有集三面同助手）。
  */
 import { readFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
@@ -164,7 +166,8 @@ export function validateProxyConfig(value) {
 /** provider 条目校验（**校验单源**——三径：配置载入 ∥ 启动构建/种子 ∥ 控制台保存——ops/OPS.md §1）：
  *  入 = 条目（可含 `preset`——预设形先展开；手写形原样）；出 = 归一条目 `{ name, baseURL, apiKey, models }`
  *  （`apiKey` 可空——`env:` 引用原样保留，解析 = 注册表构建期）。判据（fail-closed——抛）：name 缺/空 ∥ 含 `/`；
- *  baseURL 非 http(s)；models 非字符串数组 ∥ 同 provider 内重名；preset 未知（展开期——报错列可用名）。
+ *  baseURL 非 http(s)；models 非数组 ∥ 条目非两形（字符串 ∥ `{ name, alias }`）∥ 同 provider 内模型重名 ∥ 别名形非法
+ *  （空/含斜杠/首尾空白——KD-SV-59①）；preset 未知（展开期——报错列可用名）。
  *  `seenNames` 在场时兼判 providers 间重名（批量径）。 */
 export function validateProviderEntry(entry, { where = "providers[i]", seenNames = null } = {}) {
   if (entry === null || typeof entry !== "object" || Array.isArray(entry)) throw new Error(`${where} 须为对象`)
@@ -175,13 +178,21 @@ export function validateProviderEntry(entry, { where = "providers[i]", seenNames
     seenNames.add(name)
   }
   const baseURL = requireHttpURL(expanded.baseURL, `${where}.baseURL`)
-  if (!Array.isArray(expanded.models)) throw new Error(`${where}.models 须为字符串数组（本 provider 上游模型名清单——对外标识 = provider/model）`)
+  if (!Array.isArray(expanded.models)) throw new Error(`${where}.models 须为数组（本 provider 开放清单——条目两形：字符串 ∥ 对象 { name, alias }）`)
   const seenInProvider = new Set() // 同 provider 内重名 ⇒ 拒（跨 provider 同名 = 合法——并存且各自可达）
+  const seenAliases = new Set() // 单条内别名重名 ⇒ 拒（全服唯一——KD-SV-59③ 三径之一）
   const models = expanded.models.map((model, j) => {
-    const value = requireString(model, `${where}.models[${j}]`)
+    const normalized = normalizeModelEntry(model, `${where}.models[${j}]`)
+    const value = typeof normalized === "string" ? normalized : normalized.name
     if (seenInProvider.has(value)) throw new Error(`模型重名：${value}（${where}.models 内重复——拒启防笔误）`)
     seenInProvider.add(value)
-    return value
+    if (typeof normalized === "object") {
+      if (seenAliases.has(normalized.alias)) {
+        throw new Error(`别名重名：${normalized.alias}（${where}.models 内重复——别名全服唯一；拒）`)
+      }
+      seenAliases.add(normalized.alias)
+    }
+    return normalized
   })
   // 逐渠上游代理旗（KD-SV-55——v9）：布尔（缺省 false = 直连）；非布尔 ⇒ 拒启（配置径）∥ 400（保存径）。
   // 生效条件 = 旗 ∧ 顶层 `proxy.uri` 在案（判定 = gateway/proxy.mjs 消费面——无全局闸）。
@@ -199,11 +210,49 @@ export function validateProviderEntry(entry, { where = "providers[i]", seenNames
   }
 }
 
-/** provider 条目批量校验（providers 间重名判据 = 批内单源——逐条归 `validateProviderEntry`）：出 = 归一条目数组。 */
+/** provider 条目批量校验（providers 间重名判据 = 批内单源——逐条归 `validateProviderEntry`）：出 = 归一条目数组；
+ *  批量面 = 别名全服唯一（别名 vs 别名——KD-SV-59③ 三径之一：载入径 ∥ 启动构建/种子径同走本函数）。 */
 export function validateProviderEntries(entries, { where = "providers" } = {}) {
   if (!Array.isArray(entries)) throw new Error("providers 须为数组（首启种子——缺省/空 = 零 provider 允许态）")
   const seenProviderNames = new Set() // provider 名重名（providers 间）⇒ 拒（派发歧义——ops/OPS.md §1 补条）
-  return entries.map((entry, i) => validateProviderEntry(entry, { where: `${where}[${i}]`, seenNames: seenProviderNames }))
+  const normalized = entries.map((entry, i) => validateProviderEntry(entry, { where: `${where}[${i}]`, seenNames: seenProviderNames }))
+  assertAliasesUnique(normalized)
+  return normalized
+}
+
+/** 别名全服唯一（KD-SV-59③——三径同助手：单条内 ∥ 全量批量 ∥ 保存径对既有集）：入 = 归一条目数组（`models` 两形）；
+ *  撞 ⇒ 抛（配置载入径 ⇒ 拒启 ∥ 控制台保存径 ⇒ 400——库与运行时零变）。别名 vs 带前缀名 = 形上不相交
+ *  （别名无斜杠 ∥ 前缀名恒含斜杠——唯一可能撞法 = 别名含 `"/"` ⇒ 形校验拒），故本检查只对别名 vs 别名。 */
+export function assertAliasesUnique(entries) {
+  const seen = new Map() // 别名 → "provider/model"（先到者）
+  for (const entry of entries ?? []) {
+    for (const item of entry?.models ?? []) {
+      if (item === null || typeof item !== "object" || typeof item.alias !== "string") continue // 字符串条目 = 无别名（归一无别名不注册）
+      const owner = `${entry.name}/${item.name}`
+      const prev = seen.get(item.alias)
+      if (prev !== undefined) throw new Error(`别名重名：${item.alias}（${prev} 与 ${owner}——别名全服唯一；拒）`)
+      seen.set(item.alias, owner)
+    }
+  }
+}
+
+/** `models` 条目两形归一（**校验单源**——KD-SV-59①；三径同 `validateProviderEntry`）：字符串 = 上游模型名（无别名——
+ *  `requireString` 判非空）∥ 对象 `{ name, alias }`；`alias` 缺省 ∥ `null` ∥ `""` ⇒ **归一无别名**（回落字符串形——
+ *  保存径归一；store/STORE.md §2 v2 段）；别名在场须非空 ∥ 不含斜杠 ∥ 无首尾空白；其余类型（数字 ∥ 布尔 ∥ null 条目 ∥ 数组）⇒ 抛。 */
+function normalizeModelEntry(model, where) {
+  if (typeof model === "string") return requireString(model, where)
+  if (model === null || typeof model !== "object" || Array.isArray(model)) {
+    throw new Error(`${where} 须为字符串（上游模型名——无别名）∥ 对象 { name, alias }（配别名——现 ${JSON.stringify(model)}；拒）`)
+  }
+  const name = requireString(model.name, `${where}.name`)
+  const raw = model.alias
+  if (raw === undefined || raw === null || raw === "") return name // 缺省/空 ⇒ 归一无别名（回落字符串形）
+  if (typeof raw !== "string") {
+    throw new Error(`${where}.alias 须为字符串（非空、不含斜杠、无首尾空白）∥ null ∥ 缺省（现 ${JSON.stringify(raw)}；拒）`)
+  }
+  if (raw !== raw.trim()) throw new Error(`${where}.alias 含首尾空白：${JSON.stringify(raw)}（别名非空、不含斜杠、无首尾空白——拒）`)
+  if (raw.includes("/")) throw new Error(`${where}.alias 含 "/"：${raw}（别名不含斜杠——与前缀名形上不相交；拒）`)
+  return { name, alias: raw }
 }
 
 /** 模型设置映射校验（**校验单源**——三径同 `validateProviderEntry`；形 = store/STORE.md §2 v4 段 ∥

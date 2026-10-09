@@ -11,11 +11,12 @@
  *
  * 端点零新（契约 = gateway/API.md §2.2）：`GET /api/admin/providers/presets`（拉表）∥ `POST /api/admin/providers/discover`
  * （探针——「测试连接」= 同径复用，key = 表单草稿口径：明填 ⇒ 明传 `apiKey`，留空且未勾清除 ⇒ `providerId` 库内回落，清除勾 ⇒ 显式空；失败 ⇒ 段内提示 + 重试；无手填兜底）∥ `POST` 全字段 ∥
- * `PATCH` 变更字段（`models` 全量数组——保存即热生效）∥ `DELETE`。弹窗 = 公共组件 `modal.mjs`（单例 ∥ 遮罩/关闭/焦点）；
+ * `PATCH` 变更字段（`models` 全量数组——**按名匹配保形**：存量条目两形与别名随携不动，KD-SV-59；保存即热生效）∥ `DELETE`。弹窗 = 公共组件 `modal.mjs`（单例 ∥ 遮罩/关闭/焦点）；
  * 渲染一律节点 + textContent；文案经 `t()` 取值；错误经 `mapError` 映射（§2.2）。
  */
 import { mapError, t } from "./i18n.mjs"
 import { openModal } from "./modal.mjs"
+import { modelNameOf } from "./views-models.mjs"
 
 /** 令牌数格式化（`fmtTokens`——元数据展示助手）：≥1e6 ⇒ `xM`（一位小数舍零）∥ ≥1e3 ⇒ `xk` ∥ 原值。 */
 export function fmtTokens(value) {
@@ -236,7 +237,8 @@ export function openAddProviderModal(ctx, { providers = [], reload = null } = {}
  *  掩码占位「留空 = 不修改」+「清除密钥」勾）∥「测试连接」（= discover 复用——key = 表单草稿口径）∥「删除」
  *  （confirm ⇒ DELETE）；勾选段 = 「服务的模型」——候选 = 上游发现集（首开自动拉取 ∥「刷新候选」重试；失败 ⇒
  *  段内提示，草稿 = 现配置未动 ⇒ 无损）；退役项（不在发现列表的已开放模型）只读注 + 恒保留（停用入口 = 服务
- *  模型页——用户 2026-10-06 21:40 裁）；脚区 = 保存（PATCH 变更字段——`models` 全量数组；零变更 ⇒ 直接关窗）∥
+  *  模型页——用户 2026-10-06 21:40 裁）；脚区 = 保存（PATCH 变更字段——`models` **按名匹配保形**全量数组（存量条目
+  *  两形与别名不动——KD-SV-59）；零变更 ⇒ 直接关窗）∥
  *  取消（弃稿）。 */
 export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
   const { h } = ctx
@@ -248,7 +250,7 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
   let discoveredMeta = {} // 本次发现元数据（与存储逐字段合并——展示/保存同源；缺 ⇒ 空图）
   let loading = false // 候选在飞（#984——加载文案 + 触发钮禁用）
   let errorText = null // 发现失败 ⇒ 段内提示
-  const draft = new Set(provider.models) // 勾选草稿（初值 = 现配置；退役项不触碰 ⇒ 恒保留）
+  const draft = new Set((provider.models ?? []).map(modelNameOf)) // 勾选草稿（初值 = 现配置**名集**；退役项不触碰 ⇒ 恒保留）
 
   const nameInput = h("input", { value: provider.name })
   const baseURLInput = h("input", { value: provider.baseURL })
@@ -328,7 +330,7 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
       onToggle: (model, checked) => { if (checked) draft.add(model); else draft.delete(model) },
       emptyText: t("admin.providers.candidatesEmpty", { action: t("admin.providers.refreshCandidates") }),
     })
-    const retired = candidates === null ? [] : provider.models.filter((model) => !candidates.includes(model))
+    const retired = candidates === null ? [] : (provider.models ?? []).map(modelNameOf).filter((model) => !candidates.includes(model))
     const upstreamRetired = candidates === null ? [] : [...candidates].sort().filter((model) => typeof meta[model]?.status === "string")
     const notes = []
     if (retired.length > 0) notes.push(h("p", { class: "hint", text: t("admin.providers.retiredNote", { models: retired.join(", ") }) }))
@@ -345,8 +347,8 @@ export function openProviderDetailModal(ctx, { provider, reload = null } = {}) {
     if (baseURLInput.value.trim() !== provider.baseURL) body.baseURL = baseURLInput.value.trim()
     if (clearKey.checked) body.apiKey = "" // 清除密钥（§2.2——保存后不发 Authorization 头）
     else if (keyInput.value.trim()) body.apiKey = keyInput.value.trim()
-    const models = [...draft]
-    if (!sameSet(models, provider.models)) body.models = models // 全量数组（退役项恒保留）
+    const models = [...draft].map((model) => (provider.models ?? []).find((item) => modelNameOf(item) === model) ?? model) // 保形携带（存量条目原样——别名不丢；新勾项 ⇒ 字符串形）
+    if (!sameSet(models.map(modelNameOf), (provider.models ?? []).map(modelNameOf))) body.models = models // 全量数组（退役项恒保留）
     if (proxyCheck.checked !== (provider.proxy === true)) body.proxy = proxyCheck.checked // 勾选态变更才携（PATCH「缺省 = 不动」）
     if (Object.keys(body).length === 0) { modal.close(); return } // 零变更（可编辑面零动）⇒ 直接关窗零请求（发现富化不单独触发写——§2.4④）
     const expected = mergeModelMeta(provider.modelMeta, discoveredMeta) // 期望图（发现值优先 ∥ 存储补齐）

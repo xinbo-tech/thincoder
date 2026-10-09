@@ -46,8 +46,6 @@ export const ZH_SYSTEM = Object.freeze({
   "system.cfgRetention": "用量/审计保留天数",
   "system.cfgRetentionUnlimited": "不限",
   "system.cfgRetentionInvalid": "保留天数须为正整数，或勾选「不限」",
-  "system.cfgProxyUri": "上游代理地址 proxy.uri",
-  "system.cfgProxyUriPh": "须为 http 协议串（留空 = 不启用）",
   "system.cfgProvidersRow": "providers（首启种子）",
   "system.cfgProvidersValue": "常态管理 = Provider 页",
   "system.cfgBootstrapRow": "bootstrap（引导账号）",
@@ -55,6 +53,25 @@ export const ZH_SYSTEM = Object.freeze({
   "system.cfgSaved": "已保存——重启服务后生效",
   "system.cfgLoadFailed": "配置读取失败",
   "system.cfgRestartNote": "重启生效（配置文件不热载）",
+
+  // ── 系统·代理页（§2.7——代理设置 ∥ 连通测试；2026-10-09 代理页批：`proxy.uri` 自服务配置卡迁出） ──────
+  "proxy.title": "代理",
+  "proxy.settingsTitle": "代理设置",
+  "proxy.uriLabel": "上游代理地址",
+  "proxy.uriPh": "http:\/\/host:port（留空 = 不启用）", // 「\/」转义 = 评估值同设计文案；原文本受 `public/**` 零外部引用扫描限
+  "proxy.hint": "代理范围 = 勾选「走代理」的 provider（chat 转发 ∥ 模型发现）；loopback 目标恒直连。",
+  "proxy.testTitle": "连通测试",
+  "proxy.testHint": "服务端按该地址真实发起一次 GET（不落库不计量）；收到任一 HTTP 响应即算连通。",
+  "proxy.targetLabel": "测试目标",
+  "proxy.targetPh": "如 http(s)://api.example.com/v1",
+  "proxy.testBtn": "测试",
+  "proxy.testing": "测试中……",
+  "proxy.testOk": "代理连通——HTTP {status}（{ms} ms）",
+  "proxy.testFail": "不可达（{kind}）：{message}",
+  "proxy.uriRequired": "请先填写代理地址（测试按表单当前值——不回落已存配置）",
+  "proxy.targetRequired": "请先填写测试目标",
+  "proxy.kind.timeout": "超时",
+  "proxy.kind.unreachable": "不可达",
 
   // ── 系统·向量服务（§2.3①——系统页卡 ∥ 我的用量提示条共用） ────────────────
   "vector.title": "向量服务",

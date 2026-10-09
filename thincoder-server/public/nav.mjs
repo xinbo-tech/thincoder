@@ -1,5 +1,5 @@
 /**
- * nav.mjs — 控制台导航单源（webui/WEBUI.md §2 ∥ KD-SV-20）：组/项数据（我的 3 ∥ 管理 7）∥ `resolveRoute` 纯函数
+ * nav.mjs — 控制台导航单源（webui/WEBUI.md §2 ∥ KD-SV-20）：组/项数据（我的 3 ∥ 管理 8）∥ `resolveRoute` 纯函数
  * （无 DOM——批内件直测：别名重定向 ∥ 角色默认 ∥ admin 面 `denied`）∥ 侧栏渲染（品牌 ∥ 组标题/项/活动态 ∥
  * 底部 meta 槽（健康状态灯 + 版本行 + 语言切换器）+ 退出登录）。
  *
@@ -24,6 +24,7 @@ export const NAV_GROUPS = [
     { key: "usage", labelKey: "nav.page.admin.usage", path: "/admin/usage" },
     { key: "audit", labelKey: "nav.page.admin.audit", path: "/admin/audit" },
     { key: "system", labelKey: "nav.page.admin.system", path: "/admin/system" },
+    { key: "proxy", labelKey: "nav.page.admin.proxy", path: "/admin/proxy" },
   ] },
 ]
 

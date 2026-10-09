@@ -76,6 +76,10 @@ export const ZH_ADMIN = Object.freeze({
   "admin.models.quotaTitle": "配额",
   "admin.models.quotaHint": "每人每月默认用量；不设 = 不限；成员可在成员弹窗分模型覆盖",
   "admin.models.ruleNonNegativeInt": "≥0 的整数或留空",
+  "admin.models.aliasLabel": "别名",
+  "admin.models.aliasPh": "留空即用 provider/model 前缀名",
+  "admin.models.aliasHint": "配了 ⇒ 对外一律用别名（清单与请求名）；全服唯一 ∥ 不含斜杠；改别名当即生效",
+  "admin.models.ruleAlias": "别名：非空、不含斜杠、首尾不留空白",
 
   // ── 管理·全队用量 ──────────────────────────────────────────────────────────
   "admin.usage.title": "全队用量",
@@ -99,7 +103,7 @@ export const ZH_ADMIN = Object.freeze({
   "admin.providers.baseURLPh": "baseURL（OpenAI 兼容根——如 api.example.com/v1）",
   "admin.providers.apiKeyPh": "apiKey（可空；支持 env:变量名）",
   "admin.providers.clearKey": "清除密钥（保存后不发 Authorization 头）",
-  "admin.providers.useProxy": "走代理（该渠上游请求经代理——代理地址在「系统 → 服务配置」设置）",
+  "admin.providers.useProxy": "走代理（该渠上游请求经代理——代理地址在「代理」页设置）",
   "admin.providers.openList": "服务的模型（勾选 = 对团队开放）",
   "admin.providers.candidatesEmpty": "暂无候选——点「{action}」拉取",
   "admin.providers.retiredNote": "不在上游发现列表中的已开放模型：{models}——停用入口 = 服务模型页",

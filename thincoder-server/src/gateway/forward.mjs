@@ -4,7 +4,7 @@
  *
  * 行为契约：
  * - 转发 = provider.baseURL + 端点路径；真 key 代持（provider.apiKey——空则不发 Authorization 头）；
- *   请求体 model = 上游模型名（chat 面 = 首斜杠余段——KD-SV-4）。
+ *   请求体 model = **上游真名**（chat 面 = 派发命中后解析出的上游模型名——外标（别名 ∥ `provider/model`）在表外，KD-SV-59）。
  * - 流式（客户端 `stream === true`）⇒ 逐块原样转发（字节零改）+ 旁路 tap 只读扫描（【6】）；
  *   客户端断连 ⇒ `AbortController` 中止上游 + 记 `status='aborted'`（B3）。
  * - 上游已到达（含 4xx/5xx）⇒ 状态码与 body 原样透传（不包不改）；≥400 记 `error` 行（token NULL——E5）。
@@ -185,7 +185,7 @@ function usageFromJson(bytes) {
 
 /** 聊天面转发（`/v1/chat/completions`）：注入（KD-SV-5）+ 真 key 代持 + 账务字段装配。
  *  `provider` = 派发快照（baseURL/密钥/代理串——真 key 代持；`proxyUri` = 注册表构建期注入——逐渠旗 ∧ uri 在案，
- *  KD-SV-55）；`model` = 上游模型名（首斜杠余段——API.md §2.1）
+ *  KD-SV-55）；`model` = 上游**真名**（外标解析后取余段——API.md §2.1/KD-SV-59；配别名模型亦转真名）
  *  —— 上游请求体 model 与记账 `model` 列同值，记账 `provider` 列 = `provider.name`；
  *  `onUsage` = 用量到达钩子（限流窗计入——KD-SV-35）。 */
 export async function forwardChat(req, res, { db, log, member, keyId, provider, model, body, ts, onUsage = null }) {

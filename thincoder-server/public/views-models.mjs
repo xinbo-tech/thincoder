@@ -1,35 +1,70 @@
 /**
- * views-models.mjs — 管理·服务模型页（webui/WEBUI.md §2/§2.4③——KD-SV-32/34：`#/admin/models`——仅 admin）：
- * 列表 = `/v1/models` 同源（`GET /api/admin/providers` 的 `models` 展平为 `provider/model` 前缀形——**嵌入引擎模型不入本列表**
- * （单独命名空间——KD-SV-58；2026-10-09 embed 解耦批））∥ 配额列（`settings[上游].quotaTokens`——未设 ⇒「不限」；与 F 组单源）∥
- * 行点击 ⇒ 详情弹窗（复用 `modal.mjs`）；配置五组 = A 开放状态（停用流）∥
- * C 限流（RPM/TPM）∥ F 配额（`quotaTokens`——每人每月默认用量）∥ D 展示元数据（规格快照查表 + 手填「说明」）∥ E 成本权重
- * ——保存 = PATCH `settings`
- * （单键全对象提交——全子字段在册；未设/清空 = 显式 `null`；草稿初值 = GET 行 `settings` 该键值）。
+ * views-models.mjs — 管理·服务模型页（webui/WEBUI.md §2/§2.4③——KD-SV-32/34/59：`#/admin/models`——仅 admin）：
+ * 列表 = `/v1/models` 同源（`GET /api/admin/providers` 的 `models` 展平——`id` = **对外标识**（配别名 ⇒ 别名 ∥ 未配 ⇒
+ * `provider/model` 前缀形）；**嵌入引擎模型不入本列表**（单独命名空间——KD-SV-58））∥ 配额列（`settings[上游].quotaTokens`
+ * ——未设 ⇒「不限」；与 F 组单源）∥ 行点击 ⇒ 详情弹窗（复用 `modal.mjs`）；配置**六组** = A 开放状态（停用流）∥
+ * C 限流（RPM/TPM）∥ F 配额（`quotaTokens`——每人每月默认用量）∥ G 别名（写入 = PATCH `models` 全量数组——
+ * 仅别名变更时随携；条目保形）∥ D 展示元数据（规格快照查表 + 手填「说明」）∥ E 成本权重
+ * ——保存 = PATCH `settings`（单键全对象提交——全子字段在册；未设/清空 = 显式 `null`；草稿初值 = GET 行 `settings` 该键值）。
  *
+ * `models` 条目**两形**（KD-SV-59①）：字符串 = 无别名 ∥ `{ name, alias }` = 配别名；本页写面一律**按名匹配保形**
+ * （停用减项 ∥ 别名改写——其余条目两形与对象他字段不动）；别名清空 ⇒ 回落字符串形（两形归一）。
  * 零新端点（目录来源 = provider 配置派生——需求边界）；**零上游探针**（列表/详情/停用皆不引发现面——退役项同口径
- * 可停）；判权全在后端（admin 面——服务端 403 为准）；渲染一律节点 + textContent；文案经 `t()` 取值（§2.2）。
- */
+ * 可停）；判权全在后端（admin 面——服务端 403 为准）；渲染一律节点 + textContent；文案经 `t()` 取值（§2.2）。 */
 import { t } from "./i18n.mjs"
 import { openModal } from "./modal.mjs"
 import { specForDisplay } from "./model-specs-snapshot.mjs"
 
+/** 条目名取读（两形——纯函数，批内件直测）：字符串 = 名 ∥ 对象 ⇒ `name`（形判/归一单源在服务端——本侧只读）。 */
+export function modelNameOf(item) {
+  return typeof item === "string" ? item : String(item?.name ?? "")
+}
+
+/** 条目别名取读（两形 ⇒ 别名 ∥ `null`——纯函数，批内件直测）。 */
+export function modelAliasOf(models, model) {
+  const hit = (models ?? []).find((item) => modelNameOf(item) === model)
+  return hit !== null && typeof hit === "object" && typeof hit.alias === "string" && hit.alias !== "" ? hit.alias : null
+}
+
 /** 服务模型行集（与 `/v1/models` 同源——纯函数，批内件直测）：providers 展平（**嵌入引擎模型不入本列表**——
- *  单独命名空间，KD-SV-58）。行形 = `{ id（前缀形）, provider, upstream（首斜杠余段）, surface（恒 chat） }`。 */
+ *  单独命名空间，KD-SV-58）。行形 = `{ id（**对外标识**——配别名 ⇒ 别名 ∥ 未配 ⇒ 前缀形）, provider, upstream（上游真名）, surface（恒 chat） }`。
+ *  条目两形（字符串 ∥ `{ name, alias }`——KD-SV-59①）；零迁移：存量字符串条目 ⇒ `id` 仍回落前缀形。 */
 export function deriveModels(providers) {
   const rows = []
   for (const provider of providers ?? []) {
-    for (const model of provider.models ?? []) {
-      const id = `${provider.name}/${model}`
-      rows.push({ id, provider: provider.name, upstream: id.slice(id.indexOf("/") + 1), surface: "chat" })
+    for (const item of provider.models ?? []) {
+      const upstream = modelNameOf(item)
+      const alias = typeof item === "string" ? null : modelAliasOf([item], upstream)
+      rows.push({ id: alias ?? `${provider.name}/${upstream}`, provider: provider.name, upstream, surface: "chat" })
     }
   }
   return [...rows].sort((a, b) => a.id.localeCompare(b.id)) // id 升序（2026-10-07 走查收正——服务模型页长清单可找；同弹窗清单口径）
 }
 
-/** A 停用 = `models` 减项（纯函数——批内件直测；本页 = 开放清单自持操作面——退役项同口径）。 */
+/** A 停用 = `models` 减项（纯函数——批内件直测；本页 = 开放清单自持操作面——退役项同口径）。
+ *  **按名匹配保形**（KD-SV-59）：其余条目两形原样携带——别名不丢。 */
 export function modelsWithout(models, model) {
-  return (models ?? []).filter((item) => item !== model)
+  return (models ?? []).filter((item) => modelNameOf(item) !== model)
+}
+
+/** G 别名写面（纯函数——批内件直测）：`models` 全量数组，目标条目别名改写（别名清空 `null` ⇒ **回落字符串形**——
+ *  两形归一）；其余条目**按名匹配保形**携带（两形与别名不动——服务端归一 = 规范两字段 `{name, alias}`）；目标不在清单 ⇒ 原样（防御——本页不会发生）。 */
+export function modelsWithAlias(models, model, alias) {
+  return (models ?? []).map((item) => {
+    if (modelNameOf(item) !== model) return item
+    if (alias === null || alias === "") return model // 清空 ⇒ 字符串形（归一无别名）
+    if (typeof item === "string") return { name: item, alias }
+    return { ...item, name: item.name, alias }
+  })
+}
+
+/** 别名草稿先行校验（前端先行——服务端复核为准；§2.4③ G 组）：空 = 不设/清空（合法）∥ 非空 ⇒ 无首尾空白 ∧ 不含斜杠；
+ *  合法 ⇒ `null` ∥ 非法 ⇒ `admin.models.ruleAlias`（就地提示键——不提交）。 */
+export function aliasDraftInvalid(raw) {
+  if (raw === "") return null
+  if (raw !== raw.trim()) return "admin.models.ruleAlias"
+  if (raw.includes("/")) return "admin.models.ruleAlias"
+  return null
 }
 
 /** 数值字段判据（前端先行——服务端复核为准）：rpm/tpm = 正整数 ∥ costIn/costOut = ≥0 数 ∥ quotaTokens = ≥0 整数（每人每月默认用量）；空 = 未设（rpm/tpm/quotaTokens = 不限、其余 = 未设）。 */
@@ -115,8 +150,9 @@ function modelsTable(ctx, rows, providers, reload) {
       h("tfoot", {}, h("tr", {}, h("td", { colspan: String(headers.length), text: t("common.rowCount", { count: rows.length }) })))))
 }
 
-/** 详情弹窗（复用公共组件；导出 = 批内件直测）：详情四行 + 配置五组（A/C/F/D/E）。
- *  停用 = confirm ⇒ PATCH `models` 减项 ⇒ 关窗 + 列表刷新 + flash；保存 = PATCH `settings`（单键全对象）⇒ flash + 弹窗留驻。 */
+/** 详情弹窗（复用公共组件；导出 = 批内件直测）：详情四行 + 配置六组（A/C/F/G/D/E）。
+ *  停用 = confirm ⇒ PATCH `models` 减项（保形）⇒ 关窗 + 列表刷新 + flash；保存 = PATCH `settings`（单键全对象——
+ *  **仅别名变更时随携 `models` 全量数组**，KD-SV-59）⇒ flash + 弹窗留驻。 */
 export function openModelModal(ctx, { row, entry, reload }) {
   const { h } = ctx
   const bodyBox = h("div")
@@ -139,6 +175,9 @@ export function openModelModal(ctx, { row, entry, reload }) {
     return h("label", { class: "config-field" }, h("span", { text: t(FIELD_LABELS[field]) }), input, hint)
   }
   const noteInput = h("input", { maxlength: "200", value: draft.note })
+  // G · 别名（输入初值 = 该模型现有别名 ∥ 空 = 未配；写面 = PATCH `models` 全量数组（仅变更时随携——保形），KD-SV-59）
+  const aliasInput = h("input", { type: "text", value: modelAliasOf(entry?.models, row.upstream) ?? "", placeholder: t("admin.models.aliasPh"), "aria-label": t("admin.models.aliasLabel") })
+  hints.alias = h("p", { class: "hint error", hidden: true })
 
   /** A · 停用流（本页 = 开放清单自持操作面——退役项同口径；零上游探针）。 */
   const disable = async () => {
@@ -151,7 +190,8 @@ export function openModelModal(ctx, { row, entry, reload }) {
     } catch (error) { ctx.fail(error) } // 失败 ⇒ flash（弹窗留驻）
   }
 
-  /** 保存 = PATCH `settings`（单键全对象——§2.4③ 线形）；非法 ⇒ 就地提示不提交（服务端复核为准）。 */
+  /** 保存 = PATCH `settings`（单键全对象——§2.4③ 线形；别名变更时同携 `models` 全量数组——KD-SV-59）；
+   *  非法 ⇒ 就地提示不提交（服务端复核为准）。 */
   const save = async () => {
     for (const hint of Object.values(hints)) hint.hidden = true
     const read = { rpm: inputs.rpm.value, tpm: inputs.tpm.value, costIn: inputs.costIn.value, costOut: inputs.costOut.value, quotaTokens: inputs.quotaTokens.value, note: noteInput.value }
@@ -162,9 +202,23 @@ export function openModelModal(ctx, { row, entry, reload }) {
       inputs[invalid.field].focus()
       return
     }
+    const alias = aliasInput.value.trim()
+    const aliasBad = aliasDraftInvalid(aliasInput.value)
+    if (aliasBad !== null) { // 前端先行校验（非法 ⇒ 就地提示不提交——服务端复核为准）
+      hints.alias.textContent = t(aliasBad)
+      hints.alias.hidden = false
+      aliasInput.focus()
+      return
+    }
+    const body = { settings: { [row.upstream]: value } }
+    const currentAlias = modelAliasOf(entry?.models, row.upstream)
+    if (currentAlias !== (alias === "" ? null : alias)) {
+      body.models = modelsWithAlias(entry?.models, row.upstream, alias === "" ? null : alias) // 仅别名变更随携（全量数组——其余条目保形）
+    }
     try {
-      await ctx.api(`/api/admin/providers/${entry.id}`, { method: "PATCH", body: { settings: { [row.upstream]: value } } })
+      await ctx.api(`/api/admin/providers/${entry.id}`, { method: "PATCH", body })
       entry.settings = { ...(entry.settings ?? {}), [row.upstream]: value } // 弹窗留驻——重开草稿同源（其余字段不丢）
+      if (body.models) entry.models = body.models // 别名随写回（列表 id 随 reload 换新——弹窗内续改仍对得上）
       ctx.flash(t("admin.models.saved"))
       await reload?.() // 保存后列表刷新随动（配额列与 F 组单源——§2.4③）
     } catch (error) { ctx.fail(error) }
@@ -185,6 +239,10 @@ export function openModelModal(ctx, { row, entry, reload }) {
   const groupF = group("admin.models.quotaTitle",
     h("div", { class: "config-grid" }, numericField("quotaTokens")),
     h("p", { class: "hint", text: t("admin.models.quotaHint") }))
+  // G · 别名（对外标识——配了 ⇒ 清单与请求名一律用别名；全服唯一 ∥ 不含斜杠；保存即热生效——KD-SV-59）
+  const groupG = group("admin.models.aliasLabel",
+    h("label", { class: "config-field" }, aliasInput, hints.alias),
+    h("p", { class: "hint", text: t("admin.models.aliasHint") }))
   // D · 展示元数据（规格快照查表——未知 ⇒「未收录」零兜底；手填「说明」≤200 字符）
   const spec = specForDisplay(row.upstream)
   const specText = (value) => (spec === null ? t("admin.models.notCollected") : ctx.fmtValue(value))
@@ -201,7 +259,7 @@ export function openModelModal(ctx, { row, entry, reload }) {
     h("p", { class: "hint", text: t("admin.models.weightHint") }),
     h("p", { class: "hint", text: t("admin.models.weightNote") }))
 
-  bodyBox.replaceChildren(details, h("h4", { text: t("admin.models.configTitle") }), groupA, groupC, groupF, groupD, groupE)
+  bodyBox.replaceChildren(details, h("h4", { text: t("admin.models.configTitle") }), groupA, groupC, groupF, groupG, groupD, groupE)
   footBox.replaceChildren(
     h("button", { type: "button", text: t("common.save"), onclick: save }),
     h("button", { type: "button", class: "tiny", text: t("common.cancel"), onclick: () => modal.close() })) // 取消 ∥ × ∥ ESC = 弃稿

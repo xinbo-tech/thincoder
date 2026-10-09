@@ -4,9 +4,10 @@
  * `/healthz` = 无鉴权只读探针（零凭据可直调；`SELECT 1` 一探；db 故障 ⇒ 503 `degraded`；`Cache-Control: no-store`；
  * **不走统一错误信封**——探活响应自含状态）；仅注册 GET（HEAD ∥ POST ⇒ 404——探针面单一）。
  * `/api/system` = 会话门（两角色）：`{ version, update: { mode, lastCheckAt, latest }, embedding: { model } }`——更新状态经访问器惰性取
- * （路由注册先于更新器创建——入口注入；未就位 ⇒ 全 `null` 形）；`embedding.model` = 配置真值直读（`config.embedding` 组装注入；
+ * （路由注册先于更新器创建——入口注入；未就位 ⇒ 全 `null` 形）；`embedding.model` = 嵌入引擎模型名（调用所需非机密；
+ * **缺配判据单源 = 运行时 accessor**（`providerRuntime.get().engineModel()`——派发面同判，构建点注入同源等价；#1152）；
  * **地址不下发**——`baseURL` 归 admin 面 = §2.4）。
- * 注入口径（批内件替身）：`probeDb`（探活失败注入） ∥ `uptimeS` ∥ `getUpdateStatus` ∥ `embedding`（配置段——只读 `model`） ∥ `version` 走可覆盖参数 + 缺省。
+ * 注入口径（批内件替身）：`probeDb`（探活失败注入） ∥ `uptimeS` ∥ `getUpdateStatus` ∥ `providerRuntime`（运行时箱——缺配判据；缺省 ⇒ `embedding` 段回落） ∥ `embedding`（配置段替身——只读 `model`） ∥ `version` 走可覆盖参数 + 缺省。
  */
 import { requireSession } from "../accounts/session.mjs"
 import { readPackageVersion } from "../ops/update.mjs"
@@ -31,6 +32,7 @@ export function registerSystemRoutes(routes, {
   getUpdateStatus = () => null,
   probeDb = probeDefault,
   embedding = null,
+  providerRuntime = null,
 } = {}) {
   if (!db) throw new Error("registerSystemRoutes：缺少 db（openDatabase 产物）")
 
@@ -52,6 +54,8 @@ export function registerSystemRoutes(routes, {
 
   routes.add("GET", "/api/system", (req, res) => {
     requireSession(db, req) // 无 ∥ 过期会话 ⇒ 401 `unauthorized`（同族口径）
-    sendJson(res, 200, { version, update: getUpdateStatus() ?? NO_UPDATE_STATUS, embedding: { model: embedding?.model ?? null } })
+    // 缺配判据单源 = 运行时 accessor（#1152——派发面同判；缺段 ⇒ `null`）：装箱在 ⇒ 以箱为准，否则回落到注入段（批内件替身）。
+    const engineModel = providerRuntime ? (providerRuntime.get().engineModel() ?? null) : (embedding?.model ?? null)
+    sendJson(res, 200, { version, update: getUpdateStatus() ?? NO_UPDATE_STATUS, embedding: { model: engineModel } })
   })
 }

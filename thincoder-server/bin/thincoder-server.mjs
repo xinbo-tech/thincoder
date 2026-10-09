@@ -23,6 +23,7 @@ import { registerSystemRoutes } from "../src/gateway/system.mjs"
 import { registerEmbeddingAdminRoutes } from "../src/gateway/embedding-admin.mjs"
 import { registerConfigAdminRoutes } from "../src/gateway/config-admin.mjs"
 import { registerOverviewRoutes } from "../src/gateway/overview.mjs"
+import { registerProxyAdminRoutes } from "../src/gateway/proxy-admin.mjs"
 import { ensureBootstrap, findMemberByUsername } from "../src/accounts/members.mjs"
 import { createLoginGuard } from "../src/accounts/login-guard.mjs"
 import { pruneAuditEvents, recordAudit } from "../src/accounts/audit.mjs"
@@ -141,12 +142,13 @@ export async function run(argv = process.argv.slice(2), log = createLogger(), { 
     registerAccountRoutes(routes, { db, guard: loginGuard }) // D2 面：login ∥ logout ∥ me ∥ me/password ∥ me/keys/rotate
     registerAdminRoutes(routes, { db, guard: loginGuard })   // D2 面：members 列表/建 ∥ 吊销 ∥ 重置
     registerMeteringRoutes(routes, { db }) // D2 面：用量查询 ∥ 设额度
-    // 系统面（gateway/API.md §2.3——首版完备化①③）：/healthz 探活 ∥ /api/system（惰性状态访问器——更新器在其后创建；embedding.model = 配置真值——地址不下发）
-    registerSystemRoutes(routes, { db, version, getUpdateStatus: () => updater?.getStatus() ?? null, embedding: config.embedding })
+    // 系统面（gateway/API.md §2.3——首版完备化①③）：/healthz 探活 ∥ /api/system（惰性状态访问器——更新器在其后创建；embedding.model = 运行时 accessor`engineModel()`——#1152 ∥ 地址不下发）
+    registerSystemRoutes(routes, { db, version, getUpdateStatus: () => updater?.getStatus() ?? null, embedding: config.embedding, providerRuntime }) // #1152：embedding 缺配判据 = 运行时 accessor（`engineModel()`——与派发面同源；`embedding` 段 = 替身回落）
     // 控制台数据面（gateway/API.md §2.4——功能点 15①③）：/api/overview（总览——与报表同源）∥ /api/admin/embedding（+test——配置真值 ∥ 探活/试跑）
     registerOverviewRoutes(routes, { db })
     registerEmbeddingAdminRoutes(routes, { db, config, log })
     registerConfigAdminRoutes(routes, { db, configPath: configFile, log }) // 配置面（§2.4——文件面读写；生效 = 重启——KD-SV-56）
+    registerProxyAdminRoutes(routes, { db, log }) // 代理连通测试面（§2.4——真打 ∥ 自含形；零落库零计费——KD-SV-60）
     // D4 面：webui 静态面（`public/` 直发——注册路由优先；`/v1/*` ∥ `/api/*` 不走静态面）
     const server = createGatewayServer({ config, routes, log, staticSite: createStaticSite() })
     app = { server, db }

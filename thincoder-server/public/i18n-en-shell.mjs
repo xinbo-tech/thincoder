@@ -50,6 +50,7 @@ export const EN_SHELL = Object.freeze({
   "nav.page.admin.usage": "Team usage",
   "nav.page.admin.audit": "Audit",
   "nav.page.admin.system": "System",
+  "nav.page.admin.proxy": "Proxy",
   "nav.logout": "Sign out",
 
   // ── 登录 ───────────────────────────────────────────────────────────────────

@@ -16,19 +16,20 @@
  * discover 代理判定 = 明传优先 ∥ `providerId` 条目旗兜底 ∥ 皆无 ⇒ 直连（与 chat 转发同判定；出口 = `proxyFetch`）。
  *
  * 保存即热生效（四步——§2.2）：① 校验（单源 = `ops/config.mjs` 导出——与配置种子同规）→
- * ② 建候选注册表（`env:` 解析——缺位 ⇒ 400 不落库）→ ③ 落库 → ④ `runtime.set(候选)`（原子换表）；
+ * ② 建候选注册表（`env:` 解析——缺位 ⇒ 400 不落库；**别名全服唯一对既有集**——撞 ⇒ 400 库与运行时零变，KD-SV-59③）
+ * → ③ 落库 → ④ `runtime.set(候选)`（原子换表）；
  * 失败 ⇒ 库与运行时零变。密钥回显掩码（空 ⇒ "" ∥ `env:` 原文 ∥ 明文 ⇒ `…` + 末 4）；
  * 密钥值永不入日志（日志只带 provider 名/id 与动作）。模型发现 = `GET {baseURL}/models`（Authorization 同转发——
  * 空不发；超时 10s 可覆盖；失败 ⇒ 502 `upstream_error`（控制面提示 + 重试——**无手填兜底**）；草稿键不落库）。
  * 判权 = `requireAdmin`（`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401）；错误码全沿用（零新码）；写端点 JSON 型门 = 服务层径。
  */
 import { requireAdmin } from "../accounts/session.mjs"
-import { validateProviderEntry } from "../ops/config.mjs"
+import { assertAliasesUnique, validateProviderEntry } from "../ops/config.mjs"
 import { SERVER_PRESETS, expandProviderEntry } from "../ops/presets.mjs"
 import { HttpError, sendJson } from "./errors.mjs"
 import { upstreamUrl } from "./forward.mjs"
 import { proxyFetch } from "./proxy.mjs"
-import { createProviderRegistry, listProviderEntries, resolveProviderKey, rowToEntry } from "./providers.mjs"
+import { createProviderRegistry, listProviderEntries, modelEntriesOf, resolveProviderKey, rowToEntry } from "./providers.mjs"
 import { readJsonBody } from "./server.mjs"
 
 /** 模型发现超时（§2.2——10s；注入口径 = 注册参数 `discoverTimeoutMs`）。 */
@@ -92,14 +93,16 @@ export function extractModelMeta(item, id) {
 }
 
 /** 写面过滤（POST/PATCH `modelMeta`——§2.2）：非对象 ⇒ 抛（调用方转 400）∥ 白名单过滤 + 形不符即略 + 与提交
- *  `models` 求交（只含开放清单——非开放模型不入库）；≥1 字段才入键（零占位）。 */
+ *  `models` 求交（只含开放清单——非开放模型不入库；键空间 = **上游模型名**（`models` 条目两形归一后逐名比对
+ *  ——KD-SV-59）；≥1 字段才入键（零占位）。 */
 export function filterModelMeta(raw, models) {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error("modelMeta 须为对象（键 = 上游模型名——值 = { displayName ∥ contextWindow ∥ vision ∥ status }）")
   }
+  const names = new Set(modelEntriesOf(models).map((item) => item.name)) // 条目两形 ⇒ 上游模型名集
   const out = {}
   for (const [model, meta] of Object.entries(raw)) {
-    if (!models.includes(model)) continue
+    if (!names.has(model)) continue
     const clean = cleanModelMeta(meta, model)
     if (Object.keys(clean).length > 0) out[model] = clean
   }
@@ -125,8 +128,12 @@ function asInvalidRequest(fn) {
 export function registerProviderAdminRoutes(routes, { db, config, runtime, log = null, env = process.env, fetchImpl = proxyFetch, discoverTimeoutMs = PROVIDER_DISCOVER_TIMEOUT_MS } = {}) {
   if (!db || !config || !runtime) throw new Error("registerProviderAdminRoutes：缺少 db ∥ config ∥ runtime（同一实例——装配面接线）")
 
-  /** 候选注册表（保存路径②——`env:` 解析；顶层代理串同源注入——旗随保存热生效：KD-SV-55）。 */
-  const buildCandidate = (entries) => createProviderRegistry(entries, { env, engineModel: config.embedding?.model ?? null, proxyUri: config.proxy?.uri ?? null })
+  /** 候选注册表（保存路径②——`env:` 解析；顶层代理串同源注入——旗随保存热生效：KD-SV-55）；
+   *  别名全服唯一（保存径对既有集——候选 = 既有全部 + 本次条目；KD-SV-59③ 三径同助手——撞 ⇒ 400）。 */
+  const buildCandidate = (entries) => {
+    assertAliasesUnique(entries)
+    return createProviderRegistry(entries, { env, engineModel: config.embedding?.model ?? null, proxyUri: config.proxy?.uri ?? null })
+  }
 
   /** 行定位（id 非法/不存在 ⇒ null——调用方转 404）。 */
   const findRow = (rawId) => {

@@ -21,6 +21,7 @@ import { renderAdminUsage } from "./views-usage.mjs"
 import { renderOverview } from "./views-overview.mjs"
 import { renderAudit } from "./views-audit.mjs"
 import { renderModels } from "./views-models.mjs"
+import { renderProxy } from "./views-proxy.mjs"
 
 const appEl = document.getElementById("app")
 const navEl = document.getElementById("nav")
@@ -99,6 +100,7 @@ const PAGES = {
   "/admin/usage": renderAdminUsage,
   "/admin/audit": renderAudit,
   "/admin/system": renderSystem,
+  "/admin/proxy": renderProxy,
 }
 
 function currentPath() {
