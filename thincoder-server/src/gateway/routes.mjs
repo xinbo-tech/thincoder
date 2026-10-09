@@ -1,8 +1,8 @@
 /**
  * routes.mjs — OpenAI 面处理（gateway/API.md §2）：chat ∥ models ∥ embeddings 三面。
  *
- * 链（PROJECT.md §2）：[2] 鉴权（团队 key——sha256 查库）→ [4] `provider/model` 复合键派发
- * （首斜杠切分——上游请求体 model = 余段；记账 provider/model = 拆列两字段）→ [4.5] 准入（派发命中后/转发前）：
+ * 链（PROJECT.md §2）：[2] 鉴权（团队 key——sha256 查库）→ [4] 对外标识派发（别名（配了）∥ `provider/model` 前缀形——两形精确匹配；
+ * 上游请求体 model = 上游模型名；记账 = 拆列两字段）→ [4.5] 准入（派发命中后/转发前）：
  * 成员模型禁用（随鉴权行零查询——被禁 ⇒ 404 `model_not_found` 消息明示；**禁用优先于配额**——KD-SV-42）+ 配额
  * （三级解析 ⇒ 零 SQL 短路 ⇒ 计数点查；**仅 chat**——KD-SV-38）+ 模型限流（per-model RPM/TPM；
  * 超限 ⇒ 429 `rate_limited` + `Retry-After`——KD-SV-35）→ [5] 转发（真 key 代持）→ [6] 透传 + tap
@@ -45,7 +45,7 @@ export function registerGatewayRoutes(routes, { db, config, runtime = null, log 
     if (typeof body?.model !== "string" || body.model === "") {
       throw new HttpError("invalid_request_error", "请求体缺 model 字段")
     }
-    const dispatch = providerRuntime.get().dispatch(body.model) // [4] 复合键派发（裸名 ∥ 未命中 ⇒ 404 model_not_found；派发时快照）
+    const dispatch = providerRuntime.get().dispatch(body.model) // [4] 对外标识派发（裸名 ∥ 未命中 ⇒ 404 model_not_found；派发时快照）
     if (dispatch.miss) throw new HttpError(dispatch.miss.body.error.code, dispatch.miss.body.error.message)
     // [4.5] 准入（派发命中后、转发前）：禁用（可用性——**先于配额**，零新码）⇒ 配额（三级 ∥ 零 SQL 短路）⇒ 限流
     if (member.modelDisables?.[body.model] === true) {
@@ -63,7 +63,7 @@ export function registerGatewayRoutes(routes, { db, config, runtime = null, log 
     await forwardChat(req, res, {
       db, log: ctx.log, member, keyId,
       provider: dispatch.provider, // 转发面（baseURL/密钥——真 key 代持）
-      model: dispatch.model, // 记账 model 列 ∥ 上游请求体 model = 上游模型名（对外标识 = provider/model 回拼）
+      model: dispatch.model, // 记账 model 列 ∥ 上游请求体 model = 上游模型名（对外标识 = 配别名 ⇒ 别名 ∥ 未配 ⇒ `provider/model`——KD-SV-59）
       body, ts,
       // 用量到达即计入限流窗（失败/断开计次不计 token——计次已发生在准入；KD-SV-35）
       onUsage: verdict.tracked ? (usage) => rateLimiter.record(dispatch.provider.name, dispatch.model, usage?.totalTokens) : null,

@@ -8,6 +8,8 @@
  * 文案经 `t()` 取值（§2.2）；导出经 fetch ⇒ blob ⇒ 临时链接（400 走错误映射——不用裸链接导航）。
  */
 import { t } from "./i18n.mjs"
+// 卡件单源（概览卡行共用形——本页原本地件已并，§2.2）
+import { statCard } from "./views-overview.mjs"
 
 /** 端点过滤两值（明细 ∥ summary ∥ export 同门——`usage.col.endpoint` 列值即此词汇）。 */
 const ENDPOINTS = ["chat", "embeddings"]
@@ -82,8 +84,8 @@ function reportNodes(ctx, summary) {
   const max = Math.max(...trend.map((day) => day.requests), 1)
   return [
     h("div", { class: "stat-grid" },
-      statCard(h, t("usageReport.requests"), String(summary.totals?.requests ?? 0)),
-      statCard(h, t("usageReport.tokens"), String(summary.totals?.totalTokens ?? 0))),
+      statCard(h, t("usageReport.requests"), h("div", { class: "stat-value", text: String(summary.totals?.requests ?? 0) })),
+      statCard(h, t("usageReport.tokens"), h("div", { class: "stat-value", text: String(summary.totals?.totalTokens ?? 0) }))),
     h("h4", { text: t("usageReport.trend") }),
     trend.length === 0 // 空态 ⇒ 文案（零错——服务端零填充序列在场时才有柱）
       ? h("p", { class: "hint", text: t("usageReport.trendEmpty") })
@@ -99,11 +101,6 @@ function reportNodes(ctx, summary) {
       h("div", {}, h("h4", { text: t("usageReport.byModel") }), rankTable(ctx, summary.byModel ?? [], (row) => row.model)),
       h("div", {}, h("h4", { text: t("usageReport.byMember") }), rankTable(ctx, summary.byMember ?? [], (row) => row.member))),
   ]
-}
-
-/** 卡（标签 + 数值）——概览卡 ∥ 总览页共用形。 */
-function statCard(h, label, value) {
-  return h("section", { class: "card" }, h("div", { class: "stat-label", text: label }), h("div", { class: "stat-value", text: value }))
 }
 
 /** 聚合/排行表（序号 ∥ 名称 ∥ 请求数 ∥ tokens——降序行序由服务端给定；空 ⇒ 提示文案）。 */

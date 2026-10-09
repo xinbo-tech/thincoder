@@ -7,7 +7,7 @@
  * 检查点 = 派发命中后、转发前（`gateway/routes.mjs`——与限流准入并列）；**仅 chat**（嵌入面零涉——用户 09:31 裁）。
  * 超限 ⇒ 429 `quota_exceeded`（message 含模型外标 + 已用/额度；他模型不受累——按请求模型判）。
  * 已知边界：单笔可越顶（准入不知本笔产出——KD-SV-6 在册）。
- * 键口径：覆盖键 = 对外标识（`provider/model`）∥ 计数键 = 拆列两段（provider + 上游模型名）。
+ * 键口径：覆盖键 = 对外标识（配别名 ⇒ 别名 ∥ 未配 ⇒ `provider/model`——KD-SV-59）∥ 计数键 = 拆列两段（provider + 上游模型名）。
  */
 import { HttpError } from "../gateway/errors.mjs"
 import { quotaCounterTokens } from "./aggregates.mjs"

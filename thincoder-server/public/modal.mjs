@@ -4,6 +4,7 @@
  *
  * API：`openModal({ title, body, footer, onClose })` ⇒ 句柄 `{ close(), root }`；`title` = 字符串（textContent）；
  * `body`/`footer` = 调用方以 `h` 构建的节点（footer 缺省 ⇒ 无脚区）；`onClose` = 关闭回调（任意路径——一次）。
+ * `closeActiveModal()` = 清单例窗（路由切换收口 —— 幂等单源；无在场 ⇒ 零动作）。
  * 单例：同时最多一窗——开新先关旧（不叠加）。关闭 = × 钮 ∥ `Esc` ∥ `close()`；遮罩点击不关（平台缺省——防误触
  * 丢表单）；任意关闭 = 丢弃未保存草稿（在案）。开窗期锁背景滚动（`body.modal-open` 类——`close` 事件收口）；
  * 焦点/背景 inert/关闭还原 = 平台语义（调用方以 `autofocus` ∥ `focus()` 定首选）。
@@ -65,4 +66,12 @@ export function openModal({ title, body = null, footer = null, onClose = null } 
   active = { close, root }
   root.showModal()
   return active
+}
+
+/** 清单例窗（路由切换收口 —— #979）：`active?.close()` 幂等单源（`close` 内 `closed` 卫 + 槽自清）；
+ *  无在场 ⇒ 零动作；返回是否有窗在闭（调用面零依赖 —— 路由链直呼）。 */
+export function closeActiveModal() {
+  if (active === null) return false
+  active.close()
+  return true
 }

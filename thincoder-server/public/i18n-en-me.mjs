@@ -9,7 +9,7 @@ export const EN_ME = Object.freeze({
   "usage.loadFailed": "Failed to load usage",
   "usage.col.time": "Time",
   "usage.col.member": "Member",
-  "usage.col.key": "key",
+  "usage.col.key": "API key",
   "usage.col.endpoint": "Endpoint",
   "usage.col.model": "Model",
   "usage.col.status": "Status",
@@ -19,9 +19,9 @@ export const EN_ME = Object.freeze({
   "usage.col.duration": "Duration ms",
 
   // ── 我的（三页） ───────────────────────────────────────────────────────────
-  "me.keys.title": "My keys",
+  "me.keys.title": "My API keys",
   "me.keys.empty": "No API keys yet — click “Issue new API key” to create one",
-  "me.keys.secretLabel": "New key (plaintext)",
+  "me.keys.secretLabel": "New API key (plaintext)",
   "me.keys.listTitle": "API keys",
   "me.keys.colName": "Name",
   "me.keys.colKey": "API key",

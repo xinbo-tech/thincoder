@@ -109,7 +109,7 @@ export function registerMeteringRoutes(routes, { db } = {}) {
     if (!member) throw new HttpError("not_found", `成员不存在：${ctx.params.id}`)
     const body = await readJsonBody(req)
     if (body === null || typeof body !== "object" || !("quotas" in body)) {
-      throw new HttpError("invalid_request_error", `缺 quotas（{ "<provider/model>": N|null }——值 null = 删键）`)
+      throw new HttpError("invalid_request_error", `缺 quotas（{ "<对外标识（别名（裸名） ∥ provider/model 前缀形）>": N|null }——值 null = 删键）`)
     }
     const updated = mergeMemberModelQuotas(db, member.id, body.quotas) // 键级合并：未出现键不动
     sendJson(res, 200, { id: updated.id, modelQuotas: parseModelQuotas(updated.model_quotas_json) })

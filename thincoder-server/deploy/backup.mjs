@@ -13,7 +13,7 @@
  * 环境回退：若本机 `backup()` 不可用/核验不过 ⇒ 回退 = 停写窗快照方案（停服 ⇒ 以快照替换库 + 清 `-wal`/`-shm`
  *   伴档 ⇒ 起服；README「备份」节明示——本档不做）。
  */
-import { existsSync, mkdirSync, readFileSync } from "node:fs"
+import { existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs"
 import { dirname, isAbsolute, join, resolve } from "node:path"
 import { DatabaseSync, backup } from "node:sqlite"
 import { pathToFileURL } from "node:url"
@@ -81,6 +81,6 @@ export async function runBackup(argv = process.argv.slice(2), { print = console.
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   process.exitCode = await runBackup()
 }

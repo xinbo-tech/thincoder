@@ -15,7 +15,7 @@
  * 注入口径（批内件替身）：`npmCommand` ∥ `print` ∥ `readInstalled` 走可覆盖参数 + `??` 缺省（缺省 = 生产行为不变）。
  */
 import { spawn } from "node:child_process"
-import { existsSync, readFileSync } from "node:fs"
+import { existsSync, readFileSync, realpathSync } from "node:fs"
 import { join } from "node:path"
 import { pathToFileURL } from "node:url"
 
@@ -191,7 +191,7 @@ export async function converge({
   return refuse(`装 latest（${latest}）失败且无已装版本可跑：${result.message}（修复：① 联网后重试 ∥ ② 钉一个可用版本 ∥ ③ 使用含预装版的镜像）`)
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   const result = await converge()
   if (!result.ok) process.exitCode = 1
 }

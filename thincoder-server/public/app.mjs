@@ -9,6 +9,7 @@
  * `#/admin/overview`。渲染一律 textContent；写请求一律 JSON 头 + JSON 体（型门）；零外部资源（内网自洽）；文案一律经 `t()` 取值。
  */
 import { t, mapError, initLang, setLang, applyDocument } from "./i18n.mjs"
+import { closeActiveModal } from "./modal.mjs"
 import { h, table, flash, fmtTs, fmtValue, fmtModelQuotas, showSecret, usageTable, dataShell } from "./dom.mjs"
 import { onHealth, healthSnapshot, renderHealthLight, startHealthPolling, stopHealthPolling, clearHealthListeners } from "./health.mjs"
 import { defaultPath, renderSidebar, resolveRoute } from "./nav.mjs"
@@ -130,6 +131,7 @@ function switchLang(lang) {
 const SHELL_PAGES = new Set(["/admin/members", "/admin/providers", "/admin/models", "/admin/audit", "/me/usage"])
 
 async function route() {
+  closeActiveModal() // 路由切换收口（#979）：原窗随视图卸载——先清（幂等单源；无在场 ⇒ 零动作）
   const path = currentPath()
 
   // 登录门：无会话 ⇒ 登录页（无侧栏）；已登录访问登录页 ⇒ 角色默认页。

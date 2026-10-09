@@ -9,7 +9,7 @@ export const ZH_ME = Object.freeze({
   "usage.loadFailed": "用量加载失败",
   "usage.col.time": "时间",
   "usage.col.member": "成员",
-  "usage.col.key": "key",
+  "usage.col.key": "API Key",
   "usage.col.endpoint": "端点",
   "usage.col.model": "模型",
   "usage.col.status": "状态",
@@ -19,9 +19,9 @@ export const ZH_ME = Object.freeze({
   "usage.col.duration": "耗时 ms",
 
   // ── 我的（三页） ───────────────────────────────────────────────────────────
-  "me.keys.title": "我的 key",
+  "me.keys.title": "我的 API Key",
   "me.keys.empty": "暂无 API Key——点「签发新 API Key」生成（明文仅显示一次）",
-  "me.keys.secretLabel": "新 key（明文）",
+  "me.keys.secretLabel": "新 API Key（明文）",
   "me.keys.listTitle": "API Key 清单",
   "me.keys.colName": "名称",
   "me.keys.colKey": "API Key",

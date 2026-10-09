@@ -8,6 +8,7 @@
  * 运行：node src/ops/cli.mjs --config <配置档> <命令>
  * （配置用于定位库——db 相对 = 配置档所在目录；配置校验照常 fail-closed；输出走 stdout，错误走 stderr + 非零退出。）
  */
+import { realpathSync } from "node:fs"
 import { pathToFileURL } from "node:url"
 
 import { recordAudit } from "../accounts/audit.mjs"
@@ -213,6 +214,6 @@ export async function runCli(argv = process.argv.slice(2), { stdout = process.st
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   process.exitCode = await runCli()
 }

@@ -101,7 +101,7 @@ export function registerAdminRoutes(routes, { db, guard = defaultLoginGuard } = 
     if (!member) throw new HttpError("not_found", `成员不存在：${ctx.params.id}`)
     const body = await readJsonBody(req)
     if (body === null || typeof body !== "object" || !("disables" in body)) {
-      throw new HttpError("invalid_request_error", `缺 disables（{ "<provider/model>": true|null }——true = 禁用；值 null = 删键恢复）`)
+      throw new HttpError("invalid_request_error", `缺 disables（{ "<对外标识（别名（裸名） ∥ provider/model 前缀形）>": true|null }——true = 禁用；值 null = 删键恢复）`)
     }
     const updated = mergeMemberModelDisables(db, member.id, body.disables) // 键级合并：未出现键不动；变更不入审计（§2.1/§2.2）
     sendJson(res, 200, { id: updated.id, modelDisables: parseModelDisables(updated.model_disabled_json) })

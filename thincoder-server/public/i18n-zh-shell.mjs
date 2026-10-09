@@ -38,7 +38,7 @@ export const ZH_SHELL = Object.freeze({
   "nav.brand": "Thincoder Server",
   "nav.group.me": "我的",
   "nav.group.admin": "管理",
-  "nav.page.me.keys": "key 与签发",
+  "nav.page.me.keys": "API Key 与签发",
   "nav.page.me.usage": "我的用量",
   "nav.page.me.account": "账户设置",
   "nav.page.admin.overview": "总览",

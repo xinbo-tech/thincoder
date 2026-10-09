@@ -40,7 +40,7 @@ export const EN_SHELL = Object.freeze({
   "nav.brand": "Thincoder Server",
   "nav.group.me": "My",
   "nav.group.admin": "Admin",
-  "nav.page.me.keys": "Keys & issuing",
+  "nav.page.me.keys": "API keys & issuing",
   "nav.page.me.usage": "My usage",
   "nav.page.me.account": "Account settings",
   "nav.page.admin.overview": "Overview",

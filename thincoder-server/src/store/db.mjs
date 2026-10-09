@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS providers (
   name        TEXT NOT NULL UNIQUE,             -- 对外标识前缀（无 \`/\`；重名拒）
   base_url    TEXT NOT NULL,                    -- OpenAI 兼容根
   api_key     TEXT NOT NULL DEFAULT '',         -- 明文 ∥ \`env:NAME\` 引用（空 = 不发 Authorization；解析 = 注册表构建期）
-  models_json TEXT NOT NULL DEFAULT '[]',       -- 开放清单（JSON 数组——上游模型名；对外 = provider/model）
+  models_json TEXT NOT NULL DEFAULT '[]',       -- 开放清单（JSON 数组——条目两形：字符串 = 上游模型名（无别名）∥ 对象 { name, alias }（配别名）；对外标识 = alias ∥ provider/model——2026-10-09 alias 批）
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL
 );
@@ -96,7 +96,7 @@ ALTER TABLE providers ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}';  -- �
  *  ① usage 拆列（判据 = `endpoint = 'chat'` + 首斜杠；嵌入行 `provider = ''`）；② 预聚合日表 `usage_daily`；
  *  ③ 配额计数表 `quota_counters`；④ 成员分模型覆盖列增 + 旧总量列删；⑤ 期初回填（usage = 真源）。 */
 const DDL_V5 = `
--- ① usage 两字段拆列（KD-SV-40）：对外标识 \`provider/model\` 无损回拼（首斜杠切分同派发面；\`model\` 可含斜杠）；嵌入行 \`provider = ''\`（无前缀命名空间）
+-- ① usage 两字段拆列（KD-SV-40）：内部真名两字段（对外显示 = 别名回映射——2026-10-09 alias 批）；\`model\` 可含斜杠；嵌入行 \`provider = ''\`（无前缀命名空间）
 ALTER TABLE usage ADD COLUMN provider TEXT NOT NULL DEFAULT '';
 UPDATE usage SET provider = substr(model, 1, instr(model, '/') - 1), model = substr(model, instr(model, '/') + 1)
   WHERE endpoint = 'chat' AND instr(model, '/') > 0;
