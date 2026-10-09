@@ -11,6 +11,7 @@
 - 结构版本 = `PRAGMA user_version`（当前 = **10**——v2 增 `providers` ∥ v3 增 `audit_events` 与三索引 ∥ v4 增 `providers.settings_json`（模型设置——服务模型配置面） ∥
   v5 增模型标识两字段拆列 + 派生两表 + 成员配额列 ∥ v6 增成员模型禁用列（详见 §2 v5/v6 段） ∥ v7 增 provider 模型元数据留存列 ∥ **v8 增 key 名称列（`api_keys.name`——me-keys 批）**（详见 §2 v7/v8/v9 段） ∥ v9 增 provider 上游代理旗（`providers.proxy`——server 代理批） ∥ **v10 增审计型 `config_update`（`audit_events` 重建——CHECK 扩型；配置控制台批）**（详见 §2 v10 段）；
   未发布期连续演进，无历史库迁移包袱——旧库启动自动升；迁移链机制自 v1 起备）。
+- server-model-alias 批（2026-10-09——台账 #1153）：**零结构变更**（别名落 `models_json` 元素——JSON 文本内演进；无新列/新表/新段——结构版本保持 **10**）。
 
 ## 2. DDL（v1 基线四表 + v2–v10 增段）
 
@@ -74,11 +75,13 @@ CREATE TABLE IF NOT EXISTS providers (
   name        TEXT NOT NULL UNIQUE,             -- 对外标识前缀（无 `/`；重名拒）
   base_url    TEXT NOT NULL,                    -- OpenAI 兼容根
   api_key     TEXT NOT NULL DEFAULT '',         -- 明文 ∥ `env:NAME` 引用（空 = 不发 Authorization；解析 = 注册表构建期）
-  models_json TEXT NOT NULL DEFAULT '[]',       -- 开放清单（JSON 数组——上游模型名；对外 = provider/model）
+  models_json TEXT NOT NULL DEFAULT '[]',       -- 开放清单（JSON 数组——条目两形：字符串 = 上游模型名（无别名）∥ 对象 { name, alias }（配别名）；对外标识 = alias ∥ provider/model——2026-10-09 alias 批）
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL
 );
 ```
+
+- 条目两形与别名语义（2026-10-09 alias 批——KD-SV-59）：别名 = 元素内字段（`{ name, alias }`——alias 非空 ∥ 不含斜杠；字符串条目 = 无别名）；**零迁移**（列形不变——旧行字符串天然兼容；保存径归一 = 别名缺省/空回落字符串形）；校验/唯一性/派发 = `gateway/API.md` §2.2 ∥ §6 KD-SV-59；配置面（种子）= `ops/OPS.md` §1。
 
 ### v3 增段（`audit_events` 事件表 + 三索引——accounts 域 ∥ metering 域）
 
@@ -115,7 +118,7 @@ ALTER TABLE providers ADD COLUMN settings_json TEXT NOT NULL DEFAULT '{}';  -- �
 ### v5 增段（模型标识两字段拆列 + 派生两表 + 成员配额列——metering ∥ accounts 域；配额分模型批）
 
 ```sql
--- ① usage 两字段拆列（KD-SV-40）：对外标识 `provider/model` 无损回拼（首斜杠切分同派发面；`model` 可含斜杠）；嵌入行 `provider = ''`（无前缀命名空间）
+-- ① usage 两字段拆列（KD-SV-40）：内部真名两字段（对外显示 = 别名回映射——2026-10-09 alias 批）；`model` 可含斜杠；嵌入行 `provider = ''`（无前缀命名空间）
 ALTER TABLE usage ADD COLUMN provider TEXT NOT NULL DEFAULT '';
 UPDATE usage SET provider = substr(model, 1, instr(model, '/') - 1), model = substr(model, instr(model, '/') + 1)
   WHERE endpoint = 'chat' AND instr(model, '/') > 0;
@@ -162,7 +165,7 @@ SELECT member_id, provider, model, strftime('%Y-%m', ts / 1000, 'unixepoch', 'lo
 FROM usage GROUP BY member_id, provider, model, month;
 ```
 
-- `provider` 约定（usage ∥ usage_daily ∥ quota_counters 三表同构）：chat 行 = provider 名（无 `/`）；嵌入行 = `''`（无 provider 维——回拼 = `model` 单段）。
+- `provider` 约定（usage ∥ usage_daily ∥ quota_counters 三表同构）：chat 行 = provider 名（无 `/`）；嵌入行 = `''`（无 provider 维——回拼 = `model` 单段）；**对外标识 = 别名回映射**（配别名模型——读面单源 = `thincoder-server/src/gateway/providers.mjs` 别名索引；2026-10-09 alias 批——KD-SV-59）。
 - 两派生表 = **可重算**（`usage reconcile`——`metering/METERING.md` §2）；**不设 FK**（派生面自足——沿 `audit_events` 无 FK 口径；成员删除本无路径）；唯一键即查形（日表 = `day` 前缀日窗扫描；计数表 = 四列点查 O(1)——`EXPLAIN` 预期 `SEARCH … USING INDEX sqlite_autoindex_… (…)`）。
 - 保留/清理 = 与 usage **同窗同清**（`metering/METERING.md` §1——三表同事务删除）。
 
@@ -172,7 +175,7 @@ FROM usage GROUP BY member_id, provider, model, month;
 ALTER TABLE members ADD COLUMN model_disabled_json TEXT NOT NULL DEFAULT '{}';  -- 成员 × 模型禁用集（JSON 对象——键 = 对外标识；值 = true）
 ```
 
-- 形 = `{ "<provider/model>": true }`——键 = 对外标识（与 `model_quotas_json` 同空间；键形校验同助手——首斜杠两段非空）；值仅 `true`（禁用）；删键 = 恢复可用；缺省 `{}` = **默认全可用**。
+- 形 = `{ "<对外标识（别名 ∥ provider/model）>": true }`——键 = 对外标识（与 `model_quotas_json` 同空间；键形校验同助手——非空 ∥ 无首尾空白 ∥ 含斜杠时两段非空（裸名 = 别名形合法——#1008 收正；2026-10-09 alias 批））；值仅 `true`（禁用）；删键 = 恢复可用；缺省 `{}` = **默认全可用**。
 - 机制全文 = `accounts/ACCOUNTS.md` §2.2；消费面 = 鉴权行携带（`accounts/keys.mjs` `verifyKey`——沿 `model_quotas_json` 零查询口径） ⇒ 网关准入（`gateway/API.md` §2.1）+ `/v1/models` 随动滤除 + 成员弹窗勾选态（`webui/WEBUI.md` §2.4②）。
 - 与 `model_quotas_json`（v5）并列：两列各管一轴——配额 = 用量限额 ∥ 禁用 = 可用性（优先级判据 = `accounts/ACCOUNTS.md` §2.2）。
 
@@ -231,7 +234,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
 ```
 
 - 形 = 十型（九型 + `config_update`——配置写入事件）；`detail.keys` = 变更键名清单（值永不入——密钥/uri 洁癖）；actor = admin 名快照（target = 无——空串）。
-- 语义与写入点 = `accounts/ACCOUNTS.md` §2.1（写入面 = `src/gateway/config-admin.mjs`（拟新增）——写盘成功后一条；失败 ⇒ warn，不反噬已落盘事实）；消费 = 审计页十型下拉/文案（`webui/WEBUI.md` §2.3④）。
+- 语义与写入点 = `accounts/ACCOUNTS.md` §2.1（写入面 = `src/gateway/config-admin.mjs`（已落盘 · 实读 **182** 行）——写盘成功后一条；失败 ⇒ warn，不反噬已落盘事实）；消费 = 审计页十型下拉/文案（`webui/WEBUI.md` §2.3④）。
 - 圈界：重建净零新表/新列——判据 = 行拷贝逐值（含 id 连续）+ 两索引在场。
 
 - 表归属：`members` ∥ `api_keys` ∥ `sessions` ∥ `audit_events` = accounts 域（`accounts/ACCOUNTS.md`）；`usage` ∥ `usage_daily` ∥ `quota_counters` = metering 域（`metering/METERING.md`）；`providers` = gateway 域（provider 管理面 ∥ v4 模型设置——`gateway/API.md` §2.2）；结构单源 = 本档。
@@ -252,12 +255,13 @@ CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
 - v8 = key 名称列（`api_keys.name`——**me-keys 批** ∥ 台账 #1023）：**列级 ALTER = 表不重建**（存量行即刻得 `''` ⇒ 随段回填默认名 `key-N`——按成员签发序）；旧库（v1–v7）启动自动升 ∥ 空库直落 v8；判据（批内件）= 空库读数 8 ∥ v7 库升后读数 8 ∥ v8 段幂等（再开零变）∥ 新列在场（`pragma_table_info('api_keys')` 含 `name`）∥ 存量回填抽查（多 key 成员：行名 = `key-1..key-N` 按 id 序 ∥ 空串零残留）。
 - v9 = provider 上游代理旗（`providers.proxy`——**server 代理批** ∥ 台账 #1129）：**列级 ALTER = 表不重建**（存量行即刻得 `0`——缺省直连）；旧库（v1–v8）启动自动升 ∥ 空库直落 v9；判据（批内件）= 空库读数 9 ∥ v8 库升后读数 9 ∥ v9 段幂等（再开零变）∥ 新列在场（`pragma_table_info('providers')` 含 `proxy`）∥ 存量默认值抽查（迁移后旧行 `proxy = 0`——直连缺省）。
 - v10 = 审计事件型扩（`audit_events` CHECK 扩十型——**配置控制台批** ∥ 台账 #1139）：**表重建**（SQLite 不可改 CHECK——建新表 ∥ 拷贝 ∥ 换名 ∥ 索引重建）；旧库（v1–v9）启动自动升 ∥ 空库直落 v10；判据（批内件）= 空库读数 10 ∥ v9 库升后读数 10 ∥ v10 段幂等（再开零变）∥ 存量行逐值保形（id/时刻/型/详情——拷贝前后全等）∥ 两索引在场 ∥ `config_update` 型可写（CHECK 放行）∥ `sqlite_sequence` 连续（新事件 id 不撞存量）。
+- server-model-alias 批（2026-10-09——台账 #1153）：**零结构变更**（别名 = `models_json` 元素升级——JSON 文本内演进；无新列/新表/新段——结构版本保持 **10**；旧行字符串天然兼容）；判据（批内件）= 迁移链读数仍 10 ∥ 别名增删往返不改库结构（`pragma_table_info('providers')` 零变）。
 
 ## 4. 本域文件与行数预算（本域族行）
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/store/db.mjs`（已落盘） | **124 ⇒ ≈160 ⇒ 144**（实读——v3 落地后）**⇒ ≈155**（服务模型配置面批 +≈11 = v4 段（ALTER + 迁移段））**⇒ 实读 150 ⇒ ≈205**（配额分模型批 +≈55 = v5 段：拆列 ALTER/UPDATE ∥ 建两表 ∥ 两回填 INSERT ∥ 成员列增删）**⇒ 实读 202 ⇒ ≈214**（配额 v2 批 +≈12 = v6 段（ALTER + 迁移段））**⇒ 实读 210（v6 落地后）⇒ ≈218**（模型元数据批 +≈8 = v7 段（ALTER + 迁移段——与 v6 段同构））**⇒ ≈228**（me-keys 批 +≈10 = v8 段（ALTER + 回填 UPDATE + 迁移段——较 v6/v7 段多一条回填））**⇒ 实读 ≈224（2026-10-09）⇒ ≈234**（本批代理：v9 段 +≈10——实读待回填）**⇒ 实读 231（2026-10-09——本设计轮复读）⇒ ≈256（配置控制台批：v10 重建段 +≈25——建新表/拷贝/换名/索引重建 ∥ 迁移段；实读待回填）** | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
+| `thincoder-server/src/store/db.mjs`（已落盘） | **124 ⇒ ≈160 ⇒ 144**（实读——v3 落地后）**⇒ ≈155**（服务模型配置面批 +≈11 = v4 段（ALTER + 迁移段））**⇒ 实读 150 ⇒ ≈205**（配额分模型批 +≈55 = v5 段：拆列 ALTER/UPDATE ∥ 建两表 ∥ 两回填 INSERT ∥ 成员列增删）**⇒ 实读 202 ⇒ ≈214**（配额 v2 批 +≈12 = v6 段（ALTER + 迁移段））**⇒ 实读 210（v6 落地后）⇒ ≈218**（模型元数据批 +≈8 = v7 段（ALTER + 迁移段——与 v6 段同构））**⇒ ≈228**（me-keys 批 +≈10 = v8 段（ALTER + 回填 UPDATE + 迁移段——较 v6/v7 段多一条回填））**⇒ 实读 ≈224（2026-10-09）⇒ ≈234**（本批代理：v9 段 +≈10——实读待回填）**⇒ 实读 231（2026-10-09——本设计轮复读）⇒ ≈256（配置控制台批：v10 重建段 +≈25——建新表/拷贝/换名/索引重建 ∥ 迁移段；实读待回填）⇒ 实读 255（2026-10-09——配置控制台批落地后）∥ ±0（2026-10-09 alias 批：零结构变更——无 v11 段）** | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
 
 ## 5. 关键决策（本域）
 
@@ -287,3 +291,4 @@ CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
 - 2026-10-09：server 代理批设计轮（批 `docs/batches/2026-10-09-server-gemini-openai-preset.md`——台账 #1129；用户 13:5x 令）：§1 结构版本 8 ⇒ **9** ∥ §2 增 v9 增段（`providers.proxy`——形/语义指针/圈界）∥ §3 迁移链补 v9 段（判据）∥ §4 预算（db 实读 ≈224 ⇒ ≈234——v9 段 +≈10）；同源随动 = `gateway/API.md` §2.2/§6 KD-SV-55 ∥ `ops/OPS.md` §1 ∥ `webui/WEBUI.md` §2.4④。
 - 2026-10-09：配置控制台批设计轮（批 `docs/batches/2026-10-09-server-console-config.md`——台账 #1139；用户 15:51–15:57 三连）：§1 结构版本 9 ⇒ **10** ∥ §2 增 v10 增段（`audit_events` CHECK 扩型——表重建 SQL 逐字 ∥ 语义/圈界）∥ §2 标题随正 ∥ §3 迁移链补 v10 段（判据）∥ §4 预算（db 实读 231 ⇒ ≈256——v10 段 +≈25）；同源随动 = `accounts/ACCOUNTS.md` §2.1（事件型/写入面） ∥ `webui/WEBUI.md` §2.3④（十型）。**产品码零触（设计轮）**。
 - 2026-10-09：设计修正轮（fix——批 `docs/batches/2026-10-09-server-console-config.md` §3 评审发现 6，本档面）：§1 版本枚举补 v9 条（`providers.proxy`——server 代理批）。**零新语义**（评审发现直接导出项）。
+- 2026-10-09（**server-model-alias 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-server-model-alias.md` §2 · 台账 #1153；需求 §2:29 + AC-29）：§1 补零结构变更句 ∥ §2 v2 段 `models_json` 注释两形 + 增条目两形/别名语义条 ∥ v5 拆列注释随正（内部真名）+ `provider` 约定句补别名回映射 ∥ v6 禁令键形收正（裸名合法 + 首尾空白 400——#1008）∥ §3 补零结构变更条（版本保持 **10**）∥ §4 db.mjs 行 ±0 句。**产品码零触（设计轮）**。

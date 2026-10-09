@@ -626,7 +626,7 @@ const fEmbedding = (over = {}) => ({ embedding: { baseURL: F_BASE_URL, model: "b
 const fFlash = (calls) => calls.filter(([tag]) => tag === "flash").at(-1)
 // ── F1 服务配置卡（§2.1——只读三行 ∥ 可写四项；写路径 = OPS §7 AC-28）────────────────────────
 
-test("F1 服务配置卡：只读三行不入 PATCH 体 ∥ 四写控件 ∥ 不限 ⇒ null ∥ 非法 ⇒ 不提交 ∥ 读档失败 ⇒ 就地错态", async () => {
+test("F1 服务配置卡：只读三行不入 PATCH 体 ∥ 三写控件 ∥ 不限 ⇒ null ∥ 非法 ⇒ 不提交 ∥ 读档失败 ⇒ 就地错态", async () => {
   globalThis.document = stubDocument()
   try {
     const { ctx, calls } = fCtx({ "GET /api/admin/config": () => ({ config: fConfig() }), "PATCH /api/admin/config": () => ({ ok: true }) })
@@ -638,15 +638,14 @@ test("F1 服务配置卡：只读三行不入 PATCH 体 ∥ 四写控件 ∥ 不
     const select = fFind(form, (n) => n.tag === "select")
     const boxes = fFindAll(form, (n) => n.tag === "input" && n.attrs.type === "checkbox")
     const days = fFind(form, (n) => n.tag === "input" && n.attrs.type === "number")
-    const proxy = fFind(form, (n) => n.tag === "input" && n.attrs.type === undefined)
-    assert.deepEqual([select.value, boxes.length, days.value, proxy.attrs.placeholder], ["notify", 2, "90", ZH["system.cfgProxyUriPh"]], "四写控件初值 = 文件面")
+    assert.equal(fFind(form, (n) => n.tag === "input" && n.attrs.type === undefined), null, "零代理行（proxy.uri 已迁「代理」页）")
+    assert.deepEqual([select.value, boxes.length, days.value], ["notify", 2, "90"], "三写控件初值 = 文件面")
     select.value = "off"
     boxes[0].checked = true
     days.value = "30"
-    proxy.value = "http://10.0.0.9:3128"
     await form.fire("submit")
     const offBody = fPatches(calls).at(-1)[2]
-    assert.deepEqual(offBody, { autoUpdate: false, trustProxy: true, usageRetentionDays: 30, proxyUri: "http://10.0.0.9:3128" }, "可写四项提交（所见即所存——档位 off ⇒ false）")
+    assert.deepEqual(offBody, { autoUpdate: false, trustProxy: true, usageRetentionDays: 30 }, "可写三项提交（所见即所存——档位 off ⇒ false）")
     for (const key of ["host", "port", "db"]) assert.equal(key in offBody, false, `只读行不入 PATCH 体：${key}`)
     assert.deepEqual(fFlash(calls), ["flash", ZH["system.cfgSaved"]], "成功 ⇒ flash 统一文案（重启生效）")
     boxes[1].checked = true
@@ -738,28 +737,27 @@ test("F3 审计：十型下拉（全部 + 十型）∥ `config_update` 行详情
     assert.ok(cells.includes("IP: 10.0.0.1"), "既有详情支（IP）不破")
   } finally { delete globalThis.document }
 })
-// ── F4 i18n（§2.2——本批 29 键 ∥ `useProxy` 改向）───────────────────────────────────────────
+// ── F4 i18n（§2.2——本批 29 键（代理页批退役 2 ⇒ 27） ∥ `useProxy` 改向）───────────────────────────────────────────
 
-/** 本批新增 29 键（§2.2 键族登记——两表逐键同步）。 */
+/** 本批新增 29 键（§2.2 键族登记——两表逐键同步；代理页批 2026-10-09 退役 2 ⇒ 余 27）。 */
 const F_NEW_KEYS = [
   "system.configTitle", "system.configHint", "system.cfgHost", "system.cfgPort", "system.cfgDb", "system.cfgTopologyNote",
   "system.cfgAutoUpdate", "system.cfgAutoUpdateOff", "system.cfgAutoUpdateNotify", "system.cfgAutoUpdateAuto",
-  "system.cfgTrustProxy", "system.cfgRetention", "system.cfgRetentionUnlimited", "system.cfgRetentionInvalid",
-  "system.cfgProxyUri", "system.cfgProxyUriPh", "system.cfgProvidersRow", "system.cfgProvidersValue",
+  "system.cfgTrustProxy", "system.cfgRetention", "system.cfgRetentionUnlimited", "system.cfgRetentionInvalid", "system.cfgProvidersRow", "system.cfgProvidersValue",
   "system.cfgBootstrapRow", "system.cfgBootstrapValue", "system.cfgSaved", "system.cfgLoadFailed", "system.cfgRestartNote", "vector.apiKey", "vector.apiKeyPh", "vector.clearApiKey", "vector.draftNote", "audit.type.config_update", "audit.keys",
 ]
 const fPlaceholders = (text) => [...String(text).matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(",")
 
-test("F4 i18n：本批 29 键两表在位（非空 ∥ 占位对位）∥ `useProxy` 改向", () => {
-  assert.equal(F_NEW_KEYS.length, 29, "本批新键计数 = 29")
+test("F4 i18n：本批 27 键两表在位（非空 ∥ 占位对位）∥ `useProxy` 改向", () => {
+  assert.equal(F_NEW_KEYS.length, 27, "本批新键计数 = 27（代理页批退役 2）")
   for (const key of F_NEW_KEYS) {
     assert.ok(key in ZH, `zh 表缺新键：${key}`)
     assert.ok(key in EN, `en 表缺新键：${key}`)
     assert.ok(String(ZH[key]).trim() !== "" && String(EN[key]).trim() !== "", `空值键：${key}`)
     assert.equal(fPlaceholders(ZH[key]), fPlaceholders(EN[key]), `占位符不一致：${key}`)
   }
-  assert.ok(ZH["admin.providers.useProxy"].includes("系统 → 服务配置"), `useProxy 改向（zh）：${ZH["admin.providers.useProxy"]}`)
-  assert.ok(EN["admin.providers.useProxy"].includes("System → Server config"), `useProxy 改向（en）：${EN["admin.providers.useProxy"]}`)
+  assert.ok(ZH["admin.providers.useProxy"].includes("「代理」页"), `useProxy 改向（zh）：${ZH["admin.providers.useProxy"]}`)
+  assert.ok(EN["admin.providers.useProxy"].includes("Proxy page"), `useProxy 改向（en）：${EN["admin.providers.useProxy"]}`)
 })
 // ── F5 静态面 ∥ 本批三档零 CJK ∥ `t("…")` ⊆ 表键 ────────────────────────────────────────────
 

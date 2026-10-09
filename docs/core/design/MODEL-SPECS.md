@@ -112,7 +112,7 @@
 **关键澄清（两件事不得混同，批次档 §1.6 末注）**：`thincoder-core/config.mjs:133-140` 的
 `resolveEnableThinking` 判据 = **名称前缀 `startsWith("qwen")` + `isBailianHost`**，
 **不读 `MODEL_SPECS`** ⇒ 删 `qwen` spec 行**完全不影响**它（实测两机制零耦合）。
-`thincoder-core/provider/normalize.mjs:22` / `thincoder-vscode/src/extension/vision-channel.mjs:17` 等
+`thincoder-core/provider/normalize.mjs:22` / `thincoder-vscode/src/extension/image-handler.mjs:110` 等
 **模态与视觉门确实读 spec**，删行的真实后果在这些面上。
 
 ### 2.4 逐名处置表（AC-14 · 判据 = 零静默退化）
@@ -152,7 +152,7 @@
 `thinking` / `reasoningEffortEnum` / `partialMode` 全缺 ⇒ 思考下拉空、autoThink 直接 `return null`
 （`thincoder-core/auto-think.mjs:67-68`）、consult effort 不钳制（`thincoder-core/agent/spawn-child.mjs:188-195`）、
 截断续写从 Partial Mode 退到普通续写（`thincoder-core/provider/core.mjs:253`）、
-视觉门判据转假（八个消费点坐标见 §2.7 第 1 项）。
+视觉门判据转假（七个消费点坐标见 §2.7 第 1 项）。
 
 **判据达成方式**：AC-14 的「无任何一名静默退化」= 本表 15 行（18 具名 + 1 类未知名）穷举 + 上方四项后果共用行 +
 测试面 T-4 断言「托底名退化形状已知」（不退化成「无人认账的意外」）。
@@ -176,7 +176,7 @@
 | `thincoder-cli/src/tui/slash-commands.mjs:150-157` | `reasoningEffortEnum`（`:154` 补全候选） | **出批零改**（listing-only）：`/think effort <Tab>` 候选随枚举显真相 |
 | `thincoder-cli/src/tui/cmd-config.mjs:172-184` | `reasoningEffortEnum`（`:180` `["none", ...enumList]` · `:205` 过滤 `!== "none"`） | **出批零改**：枚举含 `"none"` 的档 picker 出双 `none` 行 = **既有形态**（`glm-5` / `glm-5.2` 在册）⇒ 收账于台账（父侧面） |
 | `thincoder-core/provider/core.mjs:253` | `partialMode` | 四新行沿用 true ⇒ 与今日蹭 `qwen` 行同值，零变化 |
-| 八个消费点：核 `thincoder-core/tools/index.mjs:64` · `thincoder-core/tools/file.mjs:159` · `thincoder-core/agent/record-results.mjs:51` · `thincoder-core/agent/setup-reminders.mjs:251` · `thincoder-core/provider/normalize.mjs:22` · VSC `thincoder-vscode/src/extension/vision-channel.mjs:17` · `thincoder-vscode/src/agent/setup-tooltable.mjs:305` · `thincoder-vscode/src/extension/image-handler.mjs:110` | `multimodal`（共 8 处，逐处语义见 §2.7 第 1 项） | **八个消费点全部零改**；四新行置 true ⇒ 两 flash 档由「蹭来」变「声明」，布尔语义无失真（实测见 §2.7） |
+| 七个消费点：核 `thincoder-core/tools/index.mjs:64` · `thincoder-core/tools/file.mjs:159` · `thincoder-core/agent/record-results.mjs:51` · `thincoder-core/agent/setup-reminders.mjs:251` · `thincoder-core/provider/normalize.mjs:22` · VSC `thincoder-vscode/src/agent/setup-tooltable.mjs:305` · `thincoder-vscode/src/extension/image-handler.mjs:110` | `multimodal`（共 7 处，逐处语义见 §2.7 第 1 项） | **七个消费点全部零改**；四新行置 true ⇒ 两 flash 档由「蹭来」变「声明」，布尔语义无失真（实测见 §2.7）。**后记（2026-10-10 · `#1127`）**：原第八项 `thincoder-vscode/src/extension/vision-channel.mjs` 随批删档退场（零引用——计数 八 ⇒ 七）（迁移期引文） |
 
 **关键事实（修正批次档 §1.1 的后果评估）**：核/CLI 路径上**没有任何一处读 `spec.thinking`**
 （全仓 `spec.thinking` 仅 1 处消费 = 上面 VSC 那行（`thincoder-vscode/src/extension/provider-probe-window.mjs:66`）+ 1 处测试断言）。
@@ -208,12 +208,12 @@
 
 **裁定：不扩 `modalities` 字段**；音频/视频以**行注承载**，不入结构化字段。
 
-1. **布尔语义无失真（实测）**：`multimodal` 全部 8 个消费点的判据都是**图像**（坐标一律自仓根完整路径，评审发现 #2；读数 as-of 2026-09-22 评审轮实读更正）：
+1. **布尔语义无失真（实测）**：`multimodal` 全部 7 个消费点的判据都是**图像**（坐标一律自仓根完整路径，评审发现 #2；读数 as-of 2026-09-22 评审轮实读更正）：
    核 `thincoder-core/tools/index.mjs:64`（`read_image` 注册门）· `thincoder-core/tools/file.mjs:159`（读图门）·
    `thincoder-core/agent/record-results.mjs:51` 与 `thincoder-core/agent/setup-reminders.mjs:251`（多模态注入门）·
    `thincoder-core/provider/normalize.mjs:22`（`type:"image_url"` part 剥除门）；
-   VSC `thincoder-vscode/src/extension/vision-channel.mjs:17` · `thincoder-vscode/src/agent/setup-tooltable.mjs:305` ·
-   `thincoder-vscode/src/extension/image-handler.mjs:110`（三处贴图门）
+   VSC `thincoder-vscode/src/agent/setup-tooltable.mjs:305` ·
+   `thincoder-vscode/src/extension/image-handler.mjs:110`（两处贴图门；`vision-channel` 项随 `#1127` 删档退场——2026-10-10）
    ⇒ 「支持图像输入」这一语义对 omni 档**恰好为真**，不存在「装不下四模态」的实际破损。
 2. **扩字段必造死字段**：全仓**无任何音频发送路径**（实测：无 `input_audio`、
    无 `type:"audio"` 字面量；`RASTER_IMAGE_URL = /^data:image\/(png|jpe?g|gif|webp);base64,/`
@@ -397,7 +397,7 @@
 - 不给 `specMatch` 的 `matched` 位加第三态；不改 `lookupSpec` 返回形状与热路径。
 - 不新增思考关闭开关：`"none"` 已是枚举成员（四新档首项），`resolveEnableThinking`（`thincoder-core/config.mjs:137`）对显式 off 的既有覆盖即够（§2.6）——该函数现无「effort=none ⇒ `enable_thinking:false`」分支，本批不加；`"none"` 面的矛盾组合消除在**生产端**（§2.8-2 / A-18），不经该函数。
 - 不为 qwen 之外的族新增/删除任何托底或冗余行（`glm` / `mimo` 族泛前缀行为**既有已核验设计**，本批不碰）。
-- 不扩 `modalities` 结构化字段（§2.7 裁定）；不改 8 个 `multimodal` 消费点的任何判据（八处完整坐标 = §2.5 表末行 + §2.7 第 1 项）。
+- 不扩 `modalities` 结构化字段（§2.7 裁定）；不改 7 个 `multimodal` 消费点的任何判据（七处完整坐标 = §2.5 表末行 + §2.7 第 1 项）。
 - 不引入网络探测 / 自动校正；全部字段均**人工登记**。
 - **`cacheMode` 登记形态不统一（历史面 · 随 §14 收口）**：2026-09-22 设计轮实读 = 在册规格 **53 行** / 40 行登记 / **13 行缺**
   （其中 mimo 两行 = 本批处置面：`mimo-v2.5-pro` `:119` · `mimo-v2.5` `:120`，随 v2.5 对齐补键，§12；余 11 行两类：① 渠道批五行**有意不设**——
@@ -1067,7 +1067,7 @@ v2.5 两行（本批改值面；其余字段零改）：
 |---|---|---|
 | 压缩阈值 / 上下文占比 | `context` · `maxOutput`（完成预留——可用窗口 = 窗口 − 预留；阈值 = 可用窗口 × 0.6；核侧 `thincoder-core/config.mjs:137-144`（`resolveCompactThreshold`）· `thincoder-core/token-window.mjs:152`（窗口与占比）· `:161`；面板 `thincoder-vscode/src/specs.mjs:73` · `:87`；CLI 帧 `thincoder-cli/src/tui/render-frame.mjs:393`；坐标 as-of 2026-09-22 评审轮实读） | 128K → 1M（长会话截断面解除） |
 | 温度钳位 | `tempRange`（`thincoder-core/provider/core.mjs:187-188`） | 不钳位 → 钳至 [0, 1.5]（越界值不再打到服务端吃 400） |
-| 视觉门（8 处） | `multimodal`（坐标 = §2.7 第 1 项，as-of 2026-09-22 评审轮实读更正） | 无视觉 → `read_image` 注册 + 贴图注入生效 |
+| 视觉门（7 处） | `multimodal`（坐标 = §2.7 第 1 项，as-of 2026-09-22 评审轮实读更正） | 无视觉 → `read_image` 注册 + 贴图注入生效 |
 | 工具轮回声构造 | `reasoningEcho`（`thincoder-core/model-specs.mjs:288-290`——实施后实读，as-of 2026-09-22） | 无字段 → 工具轮 assistant 消息恒带 `reasoning_content`（缺值 ⇒ `""`；三形态全 200 实测支撑） |
 | VSC 思考下拉档位 | `thinking`（`thincoder-vscode/src/extension/provider-probe-window.mjs:66`） | 档位空 → 单档 `"enabled"` |
 | 输出上限登记位 | `maxOutput`（非 OpenAI 载荷面 = `thincoder-core/provider/anthropic.mjs:56` · `thincoder-core/provider/responses.mjs:207`——mimo 不走此两格式） | 32K → 131_072（登记面 + 面板显示） |
@@ -1613,7 +1613,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 | 设计档 | — | 设计轮 + 修正轮笔 | 本档 §15 · `PROVIDER.md` §6.9/§6.11/§6.12 · `docs/vsc/design/SETTINGS.md` §2.13 + §3 + U-S12 · `docs/vsc/design/WEBVIEW.md` §6 D-W41 / §8 U-W20（WEBVIEW 两行为设计轮已落、修正轮零改） |
 
 **`settings.mjs` 拆分复核注（>300 · 修正轮）**：组边界 = ① 快照族（`agentSettings` / `proxySettings` / `websearchSettings` / `fullStatus`）② 渠道路由族（provider 增删 / 代理旗标 / 连接测试）③ 密钥与 MCP 族（`saveProviderKey` / `deleteProviderKey` / MCP 三件）——① 拆出 = `src/extension/settings-snapshots.mjs`（拟新增）；
-拆分计划 = 触发阈值 **450 行** 或该档下次结构改动（先到即拆）；**登记 = `doc:SETTINGS.md:§3`**。
+拆分计划 = 触发阈值 **750 行** 或该档下次结构改动（先到即拆）；**登记 = `doc:SETTINGS.md:§3`**。
 
 **前置核对（实施轮核实后再落）**：① `thincoder-vscode/webview/send.js:55/:83` 的 `reasoning: ctx.selectedReasoning` 无真值强转
 （中性档 `""` 须保持假值语义——设计轮实读为原生透传，余两处 = `queuedUserMessage` 同形）；
@@ -1881,6 +1881,111 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 连带面（同变）= §15.4-2 表 · §16.2 派生与生产者第 2 行 · §16.4 表第 3 行 · §16.8 AC-1 / AC-3 · §16.9 T-4 / R-2。
 2. **`glm-5.2` / `glm-5` 的 `thinkAlwaysOn`——取证已落（2026-09-29）**（承 `docs/batches/2026-09-28-tech-debt-closeout.md` §5 · 台账 #356）：渠道校验级读数 = `{type:"disabled"}` **受理且生效**（载荷 200 · `reasoning_content` 缺席——off 路径存在，族形态与 `glm-5.3` 族相反）⇒ **维持不标**（D-11）· 判据默认侧（可宣称 OFF）成立。
 
+## 17. 查表命名空间兜底取末段（2026-10-10 批 · 台账 #1167）
+
+> 来源 = 用户 2026-10-10 02:56 / 03:01 / 03:05——测试服务器 GLM-5.3 形查表误报；修法裁「只取最后一段」。需求判据 = `docs/core/requirements/PROVIDER.md` §4.6（R22 ①–⑤ / N13–N14）；
+> 机制句落点 = `docs/core/design/PROVIDER.md` §6.9（本批同拍收正）；本节 = 本批交付面（改法逐字 / 影响文件 / 用例 / 边界）。
+
+### 17.1 方案与理由
+
+**问题（批档 §1 实跑钉证）**：测试服务器（ECS 10.0.0.5）清单内 `qwen/ZHIPU/GLM-5.3` ∥ `qwen/ZHIPU/GLM-5.3-FlashX` 两名 ⇒ `specMatch` 判 `matched:false`
+⇒ 未知名告警 + `DEFAULT_SPEC`（128K / 32K）误报。根因 = `lookupSpec` 命名空间兜底为**单跳**（`thincoder-core/model-specs.mjs:268`——完整名未命中且含 `/` 时只剥**首个**段重试一次）：
+服务端外标 = `provider/上游名`，上游名自身含厂商前缀 ⇒ 双段，单跳后得 `zhipu/glm-5.3` 仍无行命中。大小写非成因（`:263` / `:265` / `:272` 已 `.toLowerCase()`——`Qwen/` 变体实跑同判；口径本批不动）。
+
+**修法（用户裁定）**：兜底「取末段」——完整名未命中且含 `/` ⇒ 取**最后一个** `/` 之后的段重试前缀扫描**一次**；命中即返；仍不中 ⇒ `null`（调用侧 `DEFAULT_SPEC` + 告警零变）。完整名直扫保留最前；单段名两法等价（零回归）。**被否 = 逐段迭代**（沿 `/` 逐层剥、多次重扫；`/` 链深无界 ⇒ 扫描次数无界 = 违 N13 热路径形态；用例 U-6 钉「只取末段、不回扫中间段」）。
+**认账的行为变更 = U-6 名类**（≥2 斜杠 ∧ 倒数第二段为在册前缀——旧形取 `glm-5.3/zzz` 为裸段候选 ⇒ 命中 `glm-5.3` 行、`matched === true`；新形只扫末段 `zzz` ⇒ `false`）——该类不在「零回归」口径内，用例 U-6 钉新形。
+
+### 17.2 机制改法逐字（目标形 · 实施轮照此落笔）
+
+**核侧 = `thincoder-core/model-specs.mjs`**（唯一 token 改动 = `:268` `m.indexOf("/")` ⇒ `m.lastIndexOf("/")`；守卫 `slash > 0` 保持）：
+
+```js
+  // Vendor-namespace strip: take the LAST "/"-separated segment — retry the prefix match on it.
+  const slash = m.lastIndexOf("/")
+  if (slash > 0) {
+    const bare = m.slice(slash + 1)
+    for (const [prefix, spec] of SORTED_SPECS) {
+      if (bare.startsWith(prefix.toLowerCase())) return spec
+    }
+  }
+  return null
+```
+
+**核侧档头注（`:245-251` 现文）目标形**：
+
+```js
+/** Look up spec by model name prefix (case-insensitive), conservative default for unknown models.
+ *
+ * Vendor-namespace stripping (2026-09-04；末段形 2026-10-10——用户裁定「只取最后一段」)：第三方
+ * token 市场（roapi/new-api/one-api/aiproxy 聚合网关）惯例在模型名前加厂商前缀（zhipu/glm-5.3、
+ * openai/gpt-4o），链式网关下可叠多段（测试服务器 qwen/ZHIPU/GLM-5.3）。完整名未命中且含 "/" 时，
+ * 取最后一个 "/" 之后的段再按前缀匹配一次——单段 ZHIPU/GLM-5.3 → glm-5.3（两法等价）、多段
+ * qwen/ZHIPU/GLM-5.3 → glm-5.3 均命中真实规格，不再降级 128K 默认。kimi/kimi-k3 的显式 alias
+ * 行保留为文档锚（发送路径 provider.core isRouter 依赖含 "/" 判定），通用机制已覆盖同类。 */
+```
+
+**VSC 侧 = `thincoder-vscode/src/specs.mjs`（同判随正——主 agent 2026-10-10 03:1x 裁）**：`:56` `indexOf` ⇒ `lastIndexOf` 一 token（守卫 `slash >= 0` = 该端现行形，保持）；行注 `:55` 与档头注 `:20` 的「按裸模型段重试」句改「按**末段**重试（链式网关可叠多段）」。语义 = 与核同形（双段名 `reasoningEffortDefault` 由 `undefined` 转注册默认档命中面——`EFFORT_DEFAULT_PREFIXES` 表体零改）。
+**守卫端差（既有 · 本批不动 · 认账）**：核 `slash > 0` ∥ VSC `slash >= 0`——首位斜杠形 `/glm-5.3`：核 miss（U-8）∥ VSC 命中 `glm-5` 默档（`reasoningEffortDefault === "max"`）；需求档 §4.6 同拍记「同判（守卫 = 既有端差）」。
+
+### 17.3 受影响文件清单（as-of 2026-10-10 设计轮实读 · `split("\n").length − 1` 口径）
+
+| 文件 | 现状 | 预期增删 | 说明 |
+|---|---|---|---|
+| `thincoder-core/model-specs.mjs` | **357** | **+1**（档头注 7 行 ⇒ 8 行；+ 1 token 同位改） | §17.2 核侧目标形；零结构 / 零导出面 / 零表行。>300 处置 = 登记 + 拆分计划——现读落点 = 本档 §13.6「行数处置」段（拆点 / 落点 / 消解窗口住彼）；机检登记面 = `thincoder-core/test/core-hygiene.test.mjs` 的 `SOFT_LINE_REGISTRY`（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）；`docs/core/design/CORE-UNIFICATION.md` §2.8.1 子表空壳（已随 2026-10-08 批清账）；本次 ∉「实质改动」（§13.6 口径） |
+| `thincoder-vscode/src/specs.mjs` | **100** | ±0（注释改述 + 1 token） | §17.2 VSC 侧目标形（同判随正）；零结构 / 零导出面 |
+| `docs/batches/2026-10-10-spec-namespace-last-segment.test.mjs`（拟新增 · 批内件） | 0 | ~45–60 | §17.6 用例 U-1..U-9 + `[vsc]` V-1..V-3；复跑 = 仓根 `node --test docs/batches/2026-10-10-spec-namespace-last-segment.test.mjs`；形态循 `docs/batches/2026-10-09-provider-default-model-purge-vsc.test.mjs`（ROOT 相对 + `pathToFileURL`） |
+| `docs/core/design/PROVIDER.md` | **704** | **+1**（机制句 1 行改述 ±0 + 变更记录 1 行新增——704 ⇒ 705） | §6.9 `:171` 随正（本设计轮笔） |
+| `docs/core/design/MODEL-SPECS.md` | **2092** | +本节 ∥ +变更记录 1 行 | 本节 |
+| `docs/batches/2026-10-10-spec-namespace-last-segment.md` | —（纯 `.md` 免档位判定） | 随批轮次追加（非产品面） | §2 批次任务与设计（eng-designer 笔——非产品面） |
+
+**零触面**：规格表行值 · `SORTED_SPECS` 排序 · 告警文案（`warnUnknownModel`）· 回落语义（`DEFAULT_SPEC` / `specMatch` 返回形状）· 服务器侧（§17.7 披露）。
+
+### 17.4 验收标准回指（与批档 §2 / 需求档 §4.6 三分同源）
+
+| 判据 | 条目 | 设计落点 | 判定方式（机器核） |
+|---|---|---|---|
+| R22-① | #1167 | §17.2 | `specMatch("qwen/ZHIPU/GLM-5.3")` ⇒ `matched === true` ∧ spec = `glm-5.3` 行（context 1_000_000 / maxOutput 128_000） |
+| R22-② | #1167 | §17.2 | `specMatch("qwen/ZHIPU/GLM-5.3-FlashX")` ⇒ `matched === true` ∧ spec = `glm-5.3-flashx` 行（context 1_000_000 / maxOutput 131_072） |
+| R22-③ | #1167 | §17.2 | 大小写变体 `Qwen/ZHIPU/GLM-5.3` 与 ① 同判（双侧 `.toLowerCase()` 口径零改） |
+| R22-④ | #1167 | §17.2 | 既有面零回归：单段 `ZHIPU/GLM-5.3` · 裸名 `glm-5.3-flash` · 单段对照 `qwen/qwen3.7-max` · `deepseek/deepseek-flash` 逐名与批前同判（本行「零回归」面不含 U-6 名类——≥2 斜杠 ∧ 倒数第二段为在册前缀 = 认账的行为变更，见 §17.1） |
+| R22-⑤ | #1167 | §17.2 | `zzz/unknown-x` ⇒ `matched === false` ∧ spec = `DEFAULT_SPEC`（128_000 / 32_000）∧ 告警一次 |
+| R22 同判（VSC 载体） | #1167 | §17.2 VSC 段 | V-1..V-3（§17.6）——`specForModel` 双段名 `reasoningEffortDefault` 命中注册默认档；单段 / 未知名零变 |
+| N13 | #1167 | §17.2 | 形态不变（纯函数；完整名直扫 + 末段重试一次）——U-6 钉「不回扫中间段」（逐段迭代形负控） |
+| N14 | #1167 | §17.2 | 过匹配防回归：未知名仍兜底（⑤）+ 既有命中面逐一回归（④） |
+
+### 17.5 待裁项结论（VSC 端差表 · 已裁 = 同判随正）
+
+裁定（主 agent 2026-10-10 03:1x · 承设计轮上抛）= **同判随正**：多实现面纪律默认消除端差——同一机制第二载体（该档注释自述「与核 `lookupSpec` 命名空间剥离同法」），`qwen/ZHIPU/GLM-5.3` 形在 VSC 端同样落空 = 同一缺陷的第二载体；用户机制裁定（取末段）= 本族规则，适用于各载体。需求档边界句已同拍收正（主 agent 笔）；落点 = §17.2 VSC 段 + §17.6 `[vsc]` 段。
+
+### 17.6 用例表（12 条 = 正常 / 边界 / 错误 · 落点 = 批内件（拟新增））
+
+| id | 类 | 输入 | 期望输出与判据 |
+|---|---|---|---|
+| U-1 | 正常 | `qwen/ZHIPU/GLM-5.3` | `matched === true`；spec = `glm-5.3` 行（context 1_000_000 · maxOutput 128_000）——R22① |
+| U-2 | 正常 | `qwen/ZHIPU/GLM-5.3-FlashX` | `matched === true`；spec = `glm-5.3-flashx` 行（context 1_000_000 · maxOutput 131_072；长前缀先命中）——R22② |
+| U-3 | 边界 | `Qwen/ZHIPU/GLM-5.3` | 与 U-1 同判（大小写不敏感）——R22③ |
+| U-4 | 回归 | 单段 `ZHIPU/GLM-5.3` · 裸名 `glm-5.3-flash` · 单段对照 `qwen/qwen3.7-max` · `deepseek/deepseek-flash` | 逐名命中与批前同判（单段名两法等价）——R22④ |
+| U-5 | 错误 | `zzz/unknown-x` | `matched === false`；spec = `DEFAULT_SPEC`（128_000 / 32_000）；告警一次（既有 dedupe 面零变）——R22⑤ |
+| U-6 | 边界 | `qwen/glm-5.3/zzz`（中间段为在册行、末段无行） | `matched === false`——**只取末段**：不得回扫中间段 / 不得叠剥（逐段迭代形负控）——N13 |
+| U-7 | 边界 | `glm-5.3/`（尾斜杠形） | `matched === true` ∧ spec = `glm-5.3` 行（context 1_000_000 · maxOutput 128_000）——直扫即中（`"glm-5.3/".startsWith("glm-5.3")`；在册行 `thincoder-core/model-specs.mjs:69`）；兜底支不可达 |
+| U-8 | 边界 | `/glm-5.3`（唯一斜杠在首位） | 兜底不触发（`slash > 0` 门保持）；`matched === false`——与批前同判 |
+| U-9 | 边界 | `/qwen/glm-5.3`（前导斜杠 + 多段；末斜杠非首位） | 取末段命中 `glm-5.3`（多段形同判） |
+| V-1 | 正常 | `[vsc]` `specForModel("qwen/ZHIPU/GLM-5.3")` | `reasoningEffortDefault === "max"`（`glm-5` 前缀条目命中）——R22 同判（VSC 载体） |
+| V-2 | 回归 | `[vsc]` `specForModel("ZHIPU/GLM-5.3")` | `reasoningEffortDefault === "max"`——单段零回归 |
+| V-3 | 边界 | `[vsc]` `specForModel("zzz/unknown-x")` | `reasoningEffortDefault === undefined`（未知名不过匹配）∧ spec = 核 `DEFAULT_SPEC` 立面 |
+
+### 17.7 边界（本节不做）与射程外披露
+
+- 不做：改表行值 / 改 `SORTED_SPECS` 排序 / 改告警文案 / 改回落语义 / 引入别名映射表 / 引入「逐段迭代」循环 / 动服务器侧（外标形 `provider/model` 不变）/ 改大小写口径。
+- **残余端差（既有 · 认账 · 本批不动）**：守卫取值端差——核 `slash > 0` ∥ VSC `slash >= 0`；首位斜杠形 `/glm-5.3`：核不触发兜底（`matched === false`，U-8）∥ VSC 触发兜底、命中 `glm-5` 端差默认档（`reasoningEffortDefault === "max"`）。
+- **射程外披露（报告项 · 本批零触）**：`thincoder-server/public/model-specs-snapshot.mjs:97`（`specForDisplay`）= **同形第三载体**（手工同步快照——注释自述「剥厂商命名空间再查——与核查表同口径」；`indexOf` 单跳）；已由主 agent 登记归批（台账 #1169）。
+
+### 17.8 UI/交互决策（本批 UI 面零改）
+
+- 核 / CLI / 桌面面：零 UI 变化（查表结果面，无形态改动）。
+- VSC 面（同判）：仅「双段外标名的 effort 默认档由占位「—」转注册默认档」= 数据面修复自动生效；下拉本体零改。
+- 无 `open` 项。
+
 ## 变更记录
 - 2026-10-09（**provider-default-model-purge 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §2 · 台账 #1122）：渠道单值模型退场——§9 病例 P-1..P-3 随正（计数 24 / 逐条无 `model` 键）；探针脚本入参改显式 `provider:model`（§2.2 / §7）；§12 预设面随正。**零新语义**（本批立法落位）。
 - 2026-10-07（**文档清账批 · fix 轮 · eng-designer**——承批档 `docs/batches/2026-10-07-doc-cleanup.md` §2 · 台账 #977）：§12.4「压缩阈值」行「读什么」列补 `maxOutput`（完成预留——可用窗口 = 窗口 − 预留；阈值 = 可用窗口 × 0.6）∥ 核侧坐标 `thincoder-core/config.mjs:104-110` ⇒ `:137-144` 随正。**零语义**。
@@ -2028,7 +2133,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
   `VSC image-downgrade 用例档`（现仅测 deepseek/glm/kimi 族，qwen 不在射程），用例 14→**15 条**；
   ④ F-5 本档 §2.4 表头与表行数口径对齐（三档处置 → 两档 + 并入既有行）；⑤ F-6～F-8（🟡/🟢）`EFFORT_DEFAULT_PREFIXES`
   坐标、探针预算句、§2.3 判据表述去对不存在的函数引用；⑥ F-9～F-10（🟢）裸段坐标全部补仓根完整路径（核 / VSC 侧各消费点：`thincoder-core/config.mjs` /
-  `thincoder-core/provider/normalize.mjs` / `thincoder-vscode/src/extension/vision-channel.mjs` /
+  `thincoder-core/provider/normalize.mjs` /（`vision-channel` 档随 `#1127` 删——2026-10-10，原项退场）
   `thincoder-core/auto-think.mjs` / `thincoder-core/agent/spawn-child.mjs` /
   `thincoder-vscode/webview/model-picker.js` / `thincoder-vscode/src/extension/reasoning-mode.mjs` /
   `thincoder-vscode/src/extension/provider-probe-window.mjs` / `thincoder-vscode/src/agent/execute-tools.mjs`）、现行数 211→210 与 `docs/core/design/PROVIDER.md` 402→417； （迁移期引文——档已迁核）
@@ -2090,3 +2195,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
   本轮副作用面新增）· §9.9 B-5 guard 数三 → 四（§9.8 AC-9 行同步）· §9.8 AC-8 行 B-1..B-3 → B-1..B-6；③ **死指针**：变更记录
   旧条中指向本仓不存在文件的指针改描述性写法（不追改历史事实，只收正可解析性）。详细面见批次档 §2。
 - 2026-10-09（**server-gemini-openai-preset 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-server-gemini-openai-preset.md` §2 · 台账 #1128；用户 2026-10-09 13:45 令）：§9 病例 P-1 计数 24 ⇒ **25** ∥ P-3 全表 25 条（+ `gemini-openai`——Google 官方 OpenAI 兼容端点）。**产品码零触（设计轮）**。
+- 2026-10-10（**spec-namespace-last-segment 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-spec-namespace-last-segment.md` §2 · 台账 #1167；用户 2026-10-10 03:05 裁「只取最后一段」）：新增 **§17**（查表命名空间兜底取末段——机制改法逐字 / 影响文件 / R22 回指 / 用例 U-1..U-9 + `[vsc]` V-1..V-3 / 边界）；`docs/core/design/PROVIDER.md` §6.9 机制句同拍收正；VSC 端差表 = 同判随正（主 agent 03:1x 裁）。**产品码零触（设计轮）**。
+- 2026-10-10（**spec-namespace-last-segment 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-spec-namespace-last-segment.md` §3 轮次 1（🔴1 / 🟡1 / 🔵5）· 台账 #1167）：逐号收正——① §17.6 U-7 期望改钉真实读数——`glm-5.3/` 直扫即中（`"glm-5.3/".startsWith("glm-5.3")`）⇒ `matched === true` ∧ spec = `glm-5.3` 行、兜底支不可达（一行注）；② §17.3 登记指针收正（拆分计划 ⇒ 本档 §13.6「行数处置」段；机检登记面随 2026-09-28 测试树退场——档不在盘；`docs/core/design/CORE-UNIFICATION.md` §2.8.1 子表空壳）；③ 两行「±0」⇒ 实笔净 +1（`thincoder-core/model-specs.mjs` 档头注 7 行 ⇒ 8 行 ∥ `docs/core/design/PROVIDER.md` 704 ⇒ 705——KD-4 口径复算）；④ 批档行去读数（纯 `.md` 免档位判定）；⑤ §17.2 / §17.7 补守卫端差注（`/glm-5.3`：核 miss ∥ VSC 命中 `glm-5` 默档——既有端差、认账）；⑦ §17.1 / §17.4 补 U-6 名类 = 认账的行为变更（⑥ 需求档措辞 = 父侧笔已落，本档零触）。**零新语义**（评审发现的直接导出项）。
+- 2026-10-10（**purge-residue-sweep 批 · 设计档随动轮 · eng-coder**——承 `docs/batches/2026-10-10-purge-residue-sweep.md` §2 设计档落点表 · 台账 #1127）：VSC 薄壳档 `vision-channel.mjs` 随批删档（零引用）⇒ `spec.multimodal` 消费点面随动：
+  §2.7 第 1 项**消费点清单与计数八 ⇒ 七**（`:179` 表行改七项 + 后记 ∥ `:155` ∥ `:211` ∥ `:400` ∥ `:1070`）；`:115` 门位改指 `thincoder-vscode/src/extension/image-handler.mjs:110`；`:215-216` 贴图门枚举「三处 ⇒ 两处」（该项退场）；`:2136` 裸路径改叙述（原项退场）。**零新语义**（= 删档随动读数与枚举收正）。

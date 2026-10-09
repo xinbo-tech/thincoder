@@ -65,7 +65,7 @@
 | M1 | 项目状态档 manifest | `thincoder-core/manifest.mjs`（**新增**，v1 无对应物）——机制代码在核，操作对象 = 被开发项目**项目根（= 带 manifest 的目录——**git 非前提**；归属 = 最近祖先优先 / 发现梯 = 纯向下一层；2026-09-21 用户裁定——明细 = `docs/core/design/MANIFEST.md` §2.2 / §2.9）**的 `PROJECT-MANIFEST.json`（数据档，N3 迁移点）；`thincoder-core/agent/setup-reminders.mjs` + `thincoder-core/agent/run-stages.mjs`（**修改**——情境行注入，E5.1） | JSON schema + 读/写/校验（五键 version/phase/docRoot/promptsLanding/checkConfig + 声明三族 codePaths/index/advisor——共八键）+ 情境值 → 模型注入行 | §5.1 · §6 · §9 |
 | M2 | 台账（SQLite） | `thincoder-core/ledger.mjs`（228 行·**修改**）+ `ledger-surface.mjs`（77 行·**修改**）+ CLI/VSC 端 `ledger-surface.mjs`（70/119 行·**修改**，完整清单见接线表） | md 读面 → `node:sqlite` 读面 + 写命令 + 六态 CHECK schema | §5.2 |
 | M3 | 批次档生命周期工具 | `batch-segment.mjs` → **改名 `batch.mjs`**（265 行·**修改**——action 分发扩 create/status/close，超硬顶则拆 `batch-skeleton.mjs` 模板档） | 批次档生命周期（create/append/status/close）+ 段白名单 + 状态行冻结拒写 | §5.3 · `design/BATCH-RECORD.md` §4.11–§4.13 |
-| M4 | 写权门禁（token 门 + 冻结窗口） | `thincoder-core/agent/dispatch.mjs`（490 行·**修改**，**拆分候选**——近 500 硬上限，拆出 `write-gate.mjs`）+ 新档 `write-gate.mjs`（`resolveReviewTargetPaths` + 冻结窗口判据组装）+ VSC `tool-gates.mjs`（165 行·**修改**，完整清单见接线表） | token 门 + D5 冻结窗口——评审对象/被审文件读 manifest `docRoot`（去硬编码 docs/） | §7 · §8.5 |
+| M4 | 写权门禁（token 门 + 冻结窗口） | `thincoder-core/agent/dispatch.mjs`（490 行·**修改**）+ 新档 `write-gate.mjs`（`resolveReviewTargetPaths` + 冻结窗口判据组装）+ VSC `tool-gates.mjs`（165 行·**修改**，完整清单见接线表） | token 门 + D5 冻结窗口——评审对象/被审文件读 manifest `docRoot`（去硬编码 docs/） | §7 · §8.5 |
 | M5 | 委派与 spawn 门 | `thincoder-core/agent-tools/subagent-spawn.mjs`（484 行·**修改**，**拆分候选**——as-of 2026-09-17 实测；F3 拆除后 ~469）+ `subagent-scheduler.mjs`（428 行·**修改**，**拆分候选**） | 任务书强制字段（轮次）+ files 声明面拦截 | §8.1–8.2 · §9.3 |
 | M6 | 评审凭证（advisor + token） | `thincoder-core/advisor.mjs`（274 行·**修改**）+ `token-ttl.mjs`（286 行·**零改（继承）**）+ `agent-tools/design-token.mjs`（118 行·**零改（继承）**） | 评审对象来源读 `docRoot`（唯一微调，继承 v1 不重写） | §8.5 |
 | M7 | checklist 废除 | 删 checklist 族 3 档 + 摘挂载/移除注入（核 2 + VSC 2）+ 死指针 2 + 门禁 1 + 测试 5——完整清单见接线表 | 待办跟踪统一到台账六态 | §5.2 · §10.1 |
@@ -429,7 +429,7 @@ engineering 真值 ──► 固定段裁剪（plan / task 不入表）───
 **VSC `thincoder-vscode/src/agent/setup.mjs` 拆分（2026-09-21 manifest 解析模型收正批执行）**：该档 500 行 > 300 软线 ∧ 本批触碰 ∧ 增量后越 500 硬限 ⇒ 触发条件达成，**本批执行拆分**。
 拆分对象 = 装配段（家族段装配 / MCP 连接 / 基础集 · 全表 · `toolByName` · `toolSchemas` 构建；`thincoder-vscode/src/agent/setup.mjs:222-304` as-of 2026-09-21 读盘）⇒ 迁入既有邻档 `thincoder-vscode/src/agent/setup-tooltable.mjs`
 （纯结构搬移零语义；缝 = 导出函数 `buildToolTable`；落位与行数增量见 `docs/core/design/MANIFEST.md` §2.3 行 16 · 行 29）。
-触发条件（拆分后沿用）= 越 500 硬限，或下一次触碰该档的批。拆后估算：`setup.mjs` ≈432 · `setup-tooltable.mjs` ≈325（实施轮回填实读）。
+触发条件（拆分后沿用）= 越 800 硬限，或下一次触碰该档的批。拆后估算：`setup.mjs` ≈432 · `setup-tooltable.mjs` ≈325（实施轮回填实读）。
 
 **提示词面（评估结论 = 零改，理由三条）**：① 工程两档（`persona-engineering.md` / `discipline-engineering.md`）与中文模板零处指示 plan 模式（实读 grep 命中仅「并发池上限：其他角色（explore/plan/coder）池」= 角色域枚举，非 plan 模式指令）；② 工具不注册已由结构兜底——再加「不要用 plan 模式」句 = 为不可见选项写限制（承 2026-09-18 反模式之裁）；③ `ENG_ON_REMINDER`（`agent/helpers.mjs:376-381`）无 plan 字样，无悬挂指令。
 

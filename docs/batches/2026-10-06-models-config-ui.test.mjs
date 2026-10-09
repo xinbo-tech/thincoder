@@ -8,7 +8,7 @@
  *   ② A 热生效（内存库——真网关）：PATCH `models` 减项 ⇒ `/v1/models` 随动 + 派发 404（退役项仍开放）
  *   ④ C 热生效（真网关——限流器注时钟）：PATCH `settings`（全对象线形——含 `quotaTokens`）⇒ 超限 ⇒ 429 `rate_limited` +
  *      `Retry-After`（不转发）∥ 注时钟滚窗 ⇒ 放行 ∥ 非法 ⇒ 400 库与读面零变 ∥ 部分字段保存/单字段清空读回
- *   ⑦ 弹窗面（桩 DOM）：详情四行 + 配置五组（A/C/F/D/E）∥ 嵌入行注（五组不落该行）∥ 未知模型 ⇒「未收录」 ∥
+ *   ⑦ 弹窗面（桩 DOM）：详情四行 + 配置六组（A/C/F/G/D/E）∥ 嵌入行注（六组不落该行）∥ 未知模型 ⇒「未收录」 ∥
  *      保存 = PATCH `settings` 单键全对象（弹窗留驻 + flash ∥ 部分字段保存 ⇒ 重开草稿同源 ∥ 单字段清空 = 显式 `null` ∥
  *      非法 ⇒ 就地提示不提交——含 F 组 `ruleNonNegativeInt`）∥ 停用流（confirm ⇒ PATCH `models` 减项 ⇒ 关窗 + 行离列 + flash ∥ confirm 拒 ⇒ 零请求 ∥
  *      零上游探针）∥ 空态（`admin.models.empty`）∥ 与 Provider 页协同（单源 `models`——停用后其只读注不含）
@@ -298,9 +298,9 @@ test("④ C 热生效：PATCH `settings` ⇒ 超限 ⇒ 429 `rate_limited` + `Re
   }
 })
 
-// ── ⑦ 弹窗面（桩 DOM——详情 ∥ 配置五组 ∥ 保存流 ∥ 停用流 ∥ 空态 ∥ 协同）────
+// ── ⑦ 弹窗面（桩 DOM——详情 ∥ 配置六组 ∥ 保存流 ∥ 停用流 ∥ 空态 ∥ 协同）────
 
-test("⑦a 弹窗：详情四行 + 配置五组（A/C/F/D/E）∥ 嵌入行注（五组不落该行）∥ 未知模型 ⇒「未收录」", () => {
+test("⑦a 弹窗：详情四行 + 配置六组（A/C/F/G/D/E）∥ 嵌入行注（六组不落该行）∥ 未知模型 ⇒「未收录」", () => {
   globalThis.document = createDocument()
   try {
     const { ctx } = makeCtx({})
@@ -321,10 +321,10 @@ test("⑦a 弹窗：详情四行 + 配置五组（A/C/F/D/E）∥ 嵌入行注�
     // D 组：已知模型 ⇒ 快照三值（上下文 ∥ 最大输出 ∥ 多模态）
     for (const shown of ["1000000", "384000", "✓"]) assert.ok(text.includes(shown), `元数据行缺：${shown}`)
     assert.equal(findAll(modal.root, (node) => node.textContent === ZH["admin.models.notCollected"]).length, 0, "已知模型零「未收录」")
-    // 输入面 = rpm/tpm/costIn/costOut/quotaTokens + 说明（6 枚）；文本型（非 number——非法态可判，不被浏览器吞成空）
+    // 输入面 = rpm/tpm/costIn/costOut/quotaTokens + 说明 + 别名（7 枚）；文本型（非 number——非法态可判，不被浏览器吞成空）
     const inputs = inputsOf(modal.root)
-    assert.deepEqual(inputs.map((node) => node.value), ["", "", "", "", "", ""])
-    assert.deepEqual(inputs.map((node) => node.attrs.type ?? "text"), ["text", "text", "text", "text", "text", "text"])
+    assert.deepEqual(inputs.map((node) => node.value), ["", "", "", "", "", "", ""])
+    assert.deepEqual(inputs.map((node) => node.attrs.type ?? "text"), ["text", "text", "text", "text", "text", "text", "text"])
     assert.equal(fieldInput(modal.root, ZH["admin.models.note"]).attrs.maxlength, "200", "说明 ≤200 字符（与 HTML maxlength 同口径）")
     assert.deepEqual([fieldInput(modal.root, ZH["admin.models.rpm"]) !== null, fieldInput(modal.root, ZH["admin.models.costOut"]) !== null,
       fieldInput(modal.root, ZH["admin.members.colMonthlyQuota"]) !== null], [true, true, true], "F 组输入（quotaTokens）在册")

@@ -54,7 +54,7 @@
 
 - MIME 白名单 = `.html` ∥ `.mjs` ∥ `.css` ∥ `.svg` ∥ `.png` ∥ `.woff2`（表逐项同 `protocol.mjs:24-31`；表外 ⇒ 404）。
 - 门（fail-closed）：点段（`.` ∥ `..` 段）⇒ 404；逃逸（resolve 越根）⇒ 404（判据形对齐 `protocol.mjs:53-61`）。
-- **注入**：`/` 与 `/index.html` 响应把 `thincoder-desktop/renderer/index.html:54` 的脚本行 `<script type="module" src="app.mjs"></script>` 替换为 **shim 脚本行 + 原行**（模块脚本按文档序执行 ⇒ shim 先于 `app.mjs` 求值）；**锚缺失 ⇒ 500 + stderr 明示**（fail-loud——不静默出未注入页）。
+- **注入**：`/` 与 `/index.html` 响应把 `thincoder-desktop/renderer/index.html:55` 的脚本行 `<script type="module" src="app.mjs"></script>` 替换为 **shim 脚本行 + 原行**（模块脚本按文档序执行 ⇒ shim 先于 `app.mjs` 求值）；**锚缺失 ⇒ 500 + stderr 明示**（fail-loud——不静默出未注入页）。
 
 ### 3.2 host shim 契约（`host-shim.mjs`）
 
@@ -177,7 +177,7 @@ stub 表（回执逐形 = 实读锚）：
 | `thincoder-desktop/tools/web-quickcheck/host-shim.mjs`（已落 · web 快筛批） | **42**（实读 2026-10-02） | host shim（`window.thincoder` 窄桥同形 + 有限 stub 表（7 通道）+ 表外拒 + `__quickcheck` 记录面）——单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.2 |
 | `thincoder-desktop/tools/web-quickcheck/run.mjs`（已落 · web 快筛批） | **191**（实读 2026-10-02） | 快筛冒烟（系统浏览器 channel（缺省 `msedge`）+ 九段断言序 + 截图落 `thincoder-desktop/test/artifacts/quickcheck-boot.png`）——单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.3 |
 
-**行数面机检**：本表迁出后，`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`）读取面 = `docs/desktop/design/PROJECT.md` §4.1（运行根单读）——本表行按同值同步；后续本域新档由落盘批在本表补行（沿 §4.1 纪律）。
+**行数面机检**：`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`，运行根单读）**逐条声明节域——本表为其一**（本域值行单源）；后续本域新档由落盘批在本表补值行，`docs/desktop/design/PROJECT.md` §4.1 同拍补指针行（沿 §4.1 纪律）。
 **原址指针**：本族各行在 `docs/desktop/design/PROJECT.md` §4.1 已改一行指针（as-of 2026-10-02）。
 
 ### 9.2 现有文件改动 · 批块（本域 · 迁自 `PROJECT.md` §4.2——逐字）

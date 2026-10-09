@@ -912,15 +912,15 @@ VSC `thincoder-vscode/src/agent.mjs` 494（>300 软线、≤500 硬限；本批 
 2. **同参两通道归宿分歧**：`edits` 真值非数组 + 合法单形态参数并存时——ACP 桥路由按 `Array.isArray` 判 ⇒ 走单形态、**写入落地**；核 `execute` 按真值判 ⇒ 容器成形错误（`thincoder-cli/src/acp/bridge.mjs:311` / `:313` ↔ `thincoder-core/tools/file.mjs:274`）。
 3. **零触达语义的前提被 2 打穿**：`touchedPaths` 真值非数组 ⇒ 返 `[]`（#325 D-6「该调用必败 ⇒ 零触达」）；分歧形态下该调用**不败**（桥径写成功），而门禁 / 记账 / L3 看到零路径 ⇒ 写落地但零门禁、零变更记账（fail-open 面）。
 
-**消费点逐点实读（行号 = 现盘重锚 · 2026-09-25 修正轮 + 实施后重锚；形态 / 守卫列 = 本批（#327）落地前实读——变化面见下裁定）**：
+**消费点逐点实读（行号 = 现盘重锚 · 2026-09-25 修正轮 + 实施后重锚；2026-10-10 收拢轮复锚〔行 4–6——台账 #1132〕；形态 / 守卫列 = 本批（#327）落地前实读——变化面见下裁定）**：
 
 | # | 消费点 | 形态 | 守卫 |
 |---|---|---|---|
 | 1 | `thincoder-core/agent/dispatch-run.mjs:82` · `:136`（执行即刻记账 `noteExecutedMutation`） | `args ?? {}` + `[args?.path]` | 有（try/catch 包体） |
 | 2 | `thincoder-core/agent/dispatch.mjs:97`（工程设计闸） | `touchedPaths(args)` + `[args.path]` | **无** |
 | 3 | `thincoder-core/agent/dispatch.mjs:139`（D5 冻结窗） | `touchedPaths(args)` + `[args.path]` | 有（try/catch → `[]`） |
-| 4 | `thincoder-core/agent/record-results.mjs:150`（`_touchedFiles` + 重建索引） | `touchedPaths(args)` + `[args.path]`；`:148` 二次 `JSON.parse` 无守卫 | **无** |
-| 5 | `thincoder-core/agent.mjs:401`（中断分支记账） | `touchedPaths(args)` + `[args.path]` | 有（try/catch 包体） |
+| 4 | `thincoder-core/agent/record-results.mjs:157`（`_touchedFiles` 落账 `:161` + 重建索引 `:169`） | `touchedPaths(args)` + `[args.path]`；`:156` 二次 `JSON.parse` 无守卫（现盘重锚） | **无** |
+| 5 | `thincoder-core/agent/turn-loop.mjs:235`（中断分支记账——落账 `:238`；原址 = `thincoder-core/agent.mjs` 大档，随 agent 三拆迁出） | `touchedPaths(args)` + `[args.path]` | 有（try/catch 包体） |
 | 6 | `thincoder-core/peer-domains.mjs:80`（L3 写前查 + 足迹登记） | `touchedPaths(args ?? {})` | **无**（调用本体无零抛兜底） |
 | 7 | `thincoder-vscode/src/agent/tool-gates.mjs:23`（`l3TouchedPaths` 定义——端侧路径提取单源） | `touchedPaths(args ?? {})` + 尾 `.filter`（本批裁定 5 落地后 = 整面转调单源谓词 + `toolName` 参删） （迁移期引文——档已迁核） | **无** |
 | 8 | `thincoder-vscode/src/agent/execute-tools.mjs:351`（`_touchedFiles` 记账） | `touchedPaths(args)` + `[args?.path]` | **无** （迁移期引文——档已迁核） |

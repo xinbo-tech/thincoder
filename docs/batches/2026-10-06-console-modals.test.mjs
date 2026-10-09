@@ -7,7 +7,7 @@
  *   ① 组件 = AC-16（`modal.mjs`：零依赖 ∥ `<dialog>` 基座 ∥ 复用 API ∥ 单例/关闭/遮罩策略 ∥ 顶层零浏览器全局
  *      ——桩 DOM 行为直测）② 成员弹窗 = AC-16 ∥ AC-21②（三态 ∥ 分模型覆盖（惰性 providers ∥ 键级合并）∥ 一次性秘密不破——假 ctx 行为直测）
  *   ③ 服务模型页 = AC-17（`deriveModels` 同源派生纯函数 ∥ 详情弹窗复用组件 ∥ 配置五组在册——A/C/F/D/E）
- *   ④ nav（AC-16/17 面：管理 7 ∥ 新路径 ∥ denied ∥ 重定向/默认页不破）⑤ 静态面（档目 29 ∥ 30 ∥ 零外链 ∥
+ *   ④ nav（AC-16/17 面：管理 8 ∥ 新路径 ∥ denied ∥ 重定向/默认页不破）⑤ 静态面（档目 31 ∥ 32 ∥ 零外链 ∥
  *      两表键集/占位符 ∥ 键引用闭合 ∥ 两新档静态直发）⑥ 门禁清单（`prepublishOnly` 含本批件 ∥ 清单在盘）。
  */
 import test from "node:test"
@@ -366,7 +366,7 @@ test("③ 服务模型：`deriveModels` 同源派生 ∥ 列表/空态/失败态
       assert.ok(text.includes(piece), `详情缺：${piece}`)
     }
     assert.equal(text.includes(ZH["admin.models.embedNote"]), false, "嵌入行注 = 仅嵌入行")
-    assert.ok(findAll(dialog, (node) => ["input", "select", "textarea"].includes(node.tag)).length === 6, "配置五组 = 可编辑字段六枚（rpm/tpm/costIn/costOut/quotaTokens/note——A/C/F/D/E）")
+    assert.ok(findAll(dialog, (node) => ["input", "select", "textarea"].includes(node.tag)).length === 7, "配置六组 = 可编辑字段七枚（rpm/tpm/costIn/costOut/quotaTokens/note/alias——A/C/F/G/D/E）")
     await dialog.children[0].children[1].fire("click") // × 关闭
     // 嵌入行详情面已退役（KD-SV-58——2026-10-09 embed 解耦批）：列表零引擎行 ⇒ 无嵌入行可点；引擎面 = 单独命名空间
     assert.equal(trs.slice(1).some((tr) => rowText(tr).startsWith("bge-m3|")), false, "列表零引擎行")
@@ -383,12 +383,12 @@ test("③ 服务模型：`deriveModels` 同源派生 ∥ 列表/空态/失败态
   }
 })
 
-// ── ④ nav（管理 7 ∥ 新路径 ∥ denied ∥ 重定向/默认页不破）────────────────────
+// ── ④ nav（管理 8 ∥ 新路径 ∥ denied ∥ 重定向/默认页不破）────────────────────
 
-test("④ nav：管理 7 ∥ `/admin/models` 在册 ∥ denied ∥ 重定向/默认页不破 ∥ labelKey 闭包", () => {
+test("④ nav：管理 8 ∥ `/admin/models` 在册 ∥ denied ∥ 重定向/默认页不破 ∥ labelKey 闭包", () => {
   const [me, admin] = NAV.NAV_GROUPS
   assert.deepEqual(me.items.map((item) => item.path), ["/me/keys", "/me/usage", "/me/account"])
-  assert.deepEqual(admin.items.map((item) => item.path), ["/admin/overview", "/admin/members", "/admin/providers", "/admin/models", "/admin/usage", "/admin/audit", "/admin/system"])
+  assert.deepEqual(admin.items.map((item) => item.path), ["/admin/overview", "/admin/members", "/admin/providers", "/admin/models", "/admin/usage", "/admin/audit", "/admin/system", "/admin/proxy"])
   for (const item of [...me.items, ...admin.items]) {
     assert.ok(item.labelKey && !("label" in item), item.path)
     assert.ok(item.labelKey in ZH && item.labelKey in EN, `labelKey 悬空：${item.labelKey}`)
@@ -399,15 +399,15 @@ test("④ nav：管理 7 ∥ `/admin/models` 在册 ∥ denied ∥ 重定向/默
   assert.deepEqual([NAV.resolveRoute("/", "user"), NAV.resolveRoute("/nope", "user"), NAV.resolveRoute("/me", "user")], [{ path: "/me/keys", redirect: true }, { path: "/me/keys", redirect: true }, { path: "/me/keys", redirect: true }])
 })
 
-// ── ⑤ 静态面（档目 29 ∥ 30 ∥ 零外链 ∥ i18n 键集/键引用闭合 ∥ 直发）────────────
+// ── ⑤ 静态面（档目 31 ∥ 32 ∥ 零外链 ∥ i18n 键集/键引用闭合 ∥ 直发）────────────
 
-test("⑤ 静态面：档目 29 ∥ 30 ∥ 零外链 ∥ 两表键集/占位符 ∥ 本批新键 ∥ 键引用闭合 ∥ 两新档直发", async () => {
+test("⑤ 静态面：档目 31 ∥ 32 ∥ 零外链 ∥ 两表键集/占位符 ∥ 本批新键 ∥ 键引用闭合 ∥ 两新档直发", async () => {
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [31, 30]) // 含 favicon 全目录 ∥ UI 代码档
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [32, 31]) // 含 favicon 全目录 ∥ UI 代码档
   assert.deepEqual(names, [
     "app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs",
     "i18n-zh-me.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
-    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs",
+    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-proxy.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs",
   ])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")

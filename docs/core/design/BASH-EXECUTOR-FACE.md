@@ -121,7 +121,7 @@ win32 只用于决定「config.shell 空时读 %COMSPEC% 还是 SHELL」这一 s
 | 10 | `docs/core/design/PROMPT-SYSTEM.md` | 650 | 0（行内收正） | §6.3 处置语（§3.4） |
 | 11 | `docs/core/design/CORE-UNIFICATION.md` | 2054 | 0（行内收正） | §2.13.2 处置语（§3.4） |
 
-档位判定：新档 `shell-identity.mjs` ≈70 行 ≤300 软线 ✓；`bash.mjs` 289 +6 = ≈295 仍 ≤300 ✓；`shell.mjs` 331 −8 = ≈323（**既有超软线档——减行不触登记义务**；其登记面 = 既有拆分计划，本批零新语义）。测试档不入仓套件（批档 §5 单测面——随批归档）。
+档位判定：新档 `shell-identity.mjs` ≈70 行 ≤500 软线 ✓；`bash.mjs` 289 +6 = ≈295 仍 ≤500 ✓；`shell.mjs` 331 −8 = ≈323。测试档不入仓套件（批档 §5 单测面——随批归档）。
 
 ## 5. 关键决策记录（含否决备选）
 

@@ -96,7 +96,7 @@ thincoder-desktop/                  ← 本端产品包
 │   ├── menu-actions.mjs            ← 菜单动作落面（**菜单体系批**新档 · D36）：`ev:menu` **六动作** → 各既有单一实现分派（+`openSettings`——设置页 ∥ 组弹窗；**设置菜单升级批** 五 ⇒ 六；注入缝 ⇒ 平 node 直测；单源 = `docs/desktop/design/MENU.md` §1 **KD-65 ∥ KD-67**）
 │   ├── dom.mjs                     ← 手写 DOM 工具（元素构造 / 事件委托 / 增量渲染）
 │   ├── i18n.mjs                    ← 词表面：核域键取 `config:read` 语言面下发投影 + 宿主 UI 专有键（两语）+ `t()`（供给面 = `docs/desktop/design/IPC.md` §2）；**sink 槽 + `setStringsSink` 注册面导出**（「对齐第二批」修复轮——node-safe 档：零 `/rc/` 静态导入）
-│   ├── i18n-views.mjs              ← 词族第二档（按视图面分组；合并点 = `initDict` 装配——自 `thincoder-desktop/renderer/i18n.mjs`；实读 **328**——`docs/desktop/design/PROJECT.md` §4.1 · 实读 2026-09-29）
+│   ├── i18n-views.mjs              ← 词族第二档（按视图面分组；合并点 = `initDict` 装配——自 `thincoder-desktop/renderer/i18n.mjs`；实读 **410**——`docs/desktop/design/PROJECT.md` §4.1 · 实读 2026-10-10）
 │   ├── i18n-settings.mjs           ← 设置面词族第四档（i18n 拆分批产出——`SETTINGS_DICT` 两语各 **62** 键；自 `thincoder-desktop/renderer/i18n.mjs` 整族出档；合并点 = `HOST_DICT` 两语展开；实读 **156**——`docs/desktop/design/PROJECT.md` §4.1 · 实读 2026-10-02〔轮六收口侧数滞收正——原 55 键 ∕ 137 为 D33 前存量〕）
 │   ├── store.mjs                   ← 单状态树 + 订阅（会话 / 标签页 / 活动池 / 待审批 / 设置 / 项目级信息——批 9 增两切片；批 A 增 `questions` / `tasks` 两切片 + 队列面（「回合中插入」批收正：`pending` 切片 = `ev:queue` 镜面——原三纯动作退场）；批 A 修正轮增换形态态 `railForm{ key, mode }` + 两纯动作 `openRailForm` / `closeRailForm`）
 │   └── views/                      ← session-control.mjs · chat.mjs · chat-stream.mjs · chat-scroll.mjs · chat-tool.mjs · chat-cards.mjs · chat-chrome.mjs · chat-text.mjs · chat-pending.mjs · chat-subagent.mjs · chat-guide.mjs · compress-status.mjs · approval.mjs · question.mjs · plan.mjs
@@ -107,7 +107,7 @@ thincoder-desktop/                  ← 本端产品包
                                       （单元 = 单元测试档（名随批次档 · 住 `docs/batches/` · 不登记 · 随批留存）——单源 = `docs/batches/2026-09-28-test-layer-prompts.md` §1.15–§1.23；集成件 = 落盘时登记 +1）
 ```
 
-**作用域注**：本树只落**模块形态与一行职责**；逐文件**行数预算**按域住各域档「文件账」节（宿主族 = 本档 §5.1；未迁族仍 = `docs/desktop/design/PROJECT.md` §4.1）——本树不复制预算列。
+**作用域注**：本树只落**模块形态与一行职责**；逐文件**行数预算**按域住各域档「文件账」节（宿主族 = 本档 §5.1）——本树不复制预算列。
 
 **分层铁律**：渲染面代码**不得** import 任何 `node:` 内置或 `@thincoder/core`（照扩展端守卫先例——渲染面静态闭包不得到达 `node:sqlite`：W8 契约②判据——现载体 = 批件 `docs/batches/2026-09-29-residuals-round2.test.mjs`，单测树重建时回迁端侧单测档）；跨面一律走 `window.thincoder`（通道面 = `docs/desktop/design/IPC.md` §1 / §2）。
 
@@ -193,7 +193,7 @@ thincoder-desktop/                  ← 本端产品包
 | `thincoder-desktop/src/main/loop-sampler.mjs`（口子清零二轮新档） | **77**（实读 2026-09-30——已落；port 源 = `thincoder-vscode/src/extension/loop-sampler.mjs:67-76`；VSC 现读 **82**） | 宿主忙采样器（S3 `failure` 分档三件之一——供行标分档；零宿主依赖面 ⇒ 平 node 直测；单源 = `docs/desktop/design/PROJECT.md` §4.2 本批行） |
 | `thincoder-desktop/src/main/heap-watch.mjs`（桌面堆取证修复批 · 新档） | **315**（实读 2026-09-30——快照开关批（#740）后（299 ⇒ 315）；内容行数口径；四缝合件——采样 ∕ 快照 ∕ 现场 ∕ 冻结门与恢复动作；port 源 = CLI `thincoder-cli/src/heap-watch.mjs:41-79`（采样 ∕ 双档 ∕ warn 行）+ `thincoder-cli/src/crash-reports.mjs:79-92`（快照武装 ∕ 现场记录）+ Electron 冻结原语〔经注入〕） | 桌面堆遥测与冻结取证（60s 采样 · 双档 70 ∕ 85 · 进程标签 warn 行 · 快照 ∕ 现场动作编排 · **隔离形 = 策略面零 `electron`（顶层 import 面禁令）**——注入键点名 = `sample` ∕ `snapshot` ∕ `log`（+ 冻结 ∕ 恢复动作原语）⇒ 平 node 直测；装配 = `src/main/main.mjs`；单源 = **KD-53**〔`docs/desktop/design/PROJECT.md` §2——未迁行〕 ∕ 批档 `docs/batches/2026-09-30-desktop-heap-freeze.md` §2） |
 
-**行数面机检**：本表迁出后，`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`）读取面 = `docs/desktop/design/PROJECT.md` §4.1（运行根单读）——本表行按同值同步；后续本域新档由落盘批在本表补行（沿 §4.1 纪律）。
+**行数面机检**：`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`，运行根单读）**逐条声明节域——本表为其一**（本域值行单源）；后续本域新档由落盘批在本表补值行，`docs/desktop/design/PROJECT.md` §4.1 同拍补指针行（沿 §4.1 纪律）。
 
 ### 5.2 现有文件改动 · 批块（宿主族 · 迁自 `PROJECT.md` §4.2——逐字；块内「本档」类回指已按新落点改指）
 

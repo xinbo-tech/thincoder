@@ -27,7 +27,7 @@ _cwd() = _cwdOverride ?? workspaceFolders[0] ?? process.cwd()
 
 - `setProjectFolder(fsPath)`（`panel-messages.mjs:79`）：**校验 fsPath 必须是 `workspaceFolders` 成员**，否则拒绝。
 - 切换后，所有既有 `_cwd()` 调用点（会话 slot、索引、`@` 补全、agent 启动）**自动生效**——无需逐个改调用方。
-- **不跨窗口持久化**：重启后回到 `workspaceFolders[0]`。
+- **跨重启记忆（多根面）**：记录 = 最后一次成功切换的锚（workspaceState 键 `thincoder.projectFolder`）——重启恢复所选根；未选定 ∥ 失效记录 ⇒ `workspaceFolders[0]` 兜底（详 = §3.1）。单根 ∥ 无工作区 = 不读不写（行为不变）。
 - `clearProjectOverride()`（`panel-messages.mjs:89`）：清除 override，`_cwd()` 回落 `workspaceFolders[0]`。
 - **无工作区守卫**（2026-09-21 批）：`workspaceFolders` 为空时，`_cwd()` 的 `process.cwd()` 回落**不再被守卫面八个工作入口（§4.1）消费**（判据 / 守卫面 / 提示面 = §4.1；回落链本身逐字未改）；射程外链判定（`atComplete`）= §4.1 派生面。
 
@@ -56,6 +56,20 @@ _cwd() = _cwdOverride ?? workspaceFolders[0] ?? process.cwd()
 - `pickProject(panel)`：QuickPick 固定选项 = 工作区根列表（当前项 ✓）+「跟随活动文件」开关项（切换后循环重开显示最新状态）。
 - `ChatPanel` 构造时注册 `onDidChangeActiveTextEditor`：设置开启**且**活动文件所属根 ≠ 当前 cwd **且**无任务运行 → 自动切换。
 - `onDidChangeWorkspaceFolders`：override 失效校验 + 切换回落（**防 agent 指向死目录**）——详 = §4.1 恢复面「第三支路」。
+
+### 3.1 锚记忆与未选定面（#1101㈠——2026-10-10 vsc-consistency 批）
+
+**锚语义**（需求回指 = `docs/vsc/requirements/PROJECT.md:27`）：「当前项目」= 显式选定并跨重启记忆；未选定 ⇒ `folders[0]` 兜底 + 面板钮标「· 未选定」。多根面新增；单根 ∥ 无工作区 = 不读不写（行为不变）。
+
+**记录读写**（`thincoder-vscode/src/extension/session-io.mjs:256-267`）：键 = workspaceState `thincoder.projectFolder`（fsPath 串）；读写宽容（缺 ∥ 抛 ⇒ 空串 ∥ 零写——沿 `loadModelPrefs` / `saveModelPrefs` 先例）。
+
+**写点**（成功切换后单点 = `rememberProjectFolder`——`panel-project.mjs:47`）：picker 径 ∥ `setProject`-fsPath 径（两路同点 = `applyProjectSwitch` `:71`）∥ 跟随自动切换（`chat-panel.mjs:115`）；拒径（busy ∥ 非成员）= 零写。**记录 = 最后一次成功切换的锚——非活锚**（工作区兜底回落径（`chat-panel.mjs:156-164`）改活锚而不写记录——两义分立）。
+
+**恢复点**（`ChatPanel` 构造内 · 订阅块之前——`chat-panel.mjs:92-96`；先于一切 `_cwd()` 消费）：多根 ∧ 无活 override ∧ 记录 ∈ folders ⇒ `setProjectFolder(记录)`（`panel-project.mjs:150`）；失效记录忽略（成员校验拒）⇒ 零动作。
+
+**首开弹拍**（`resolveWebviewView`——`chat-panel.mjs:182-185`）：门四 = 多根 ∧ `!hasProjectOverride()` ∧ 未弹过 ∧ `!turnBusy()`——全过 ⇒ 弹一次（复用 `pickProject`——`panel-project.mjs:164`）；「未弹过」= workspaceState `thincoder.projectPickOffered`（弹即写，结果无关；ESC 后不再主动弹）；频度 = 每工作区恰一次。
+
+**未选定标记**（`projectInfo` 载荷增 `chosen` = `hasProjectOverride()`——`panel-messages.mjs:48-50`）：`session-bar.js:158-165`——`chosen` 缺 ∥ false ⇒ 钮文本 `📁 {name} · {t("project.notChosen")}`（title 同携；zh `未选定` ∥ en `not chosen`——`locales/{zh,en}.json:278`）；已选定 ∥ 单根 ⇒ 零变。
 
 ## 4. 边界规则
 
@@ -139,6 +153,8 @@ _cwd() = _cwdOverride ?? workspaceFolders[0] ?? process.cwd()
 | U-P9 | 守卫态 Send 按钮**保持可见**（点击即提示）——与 C-14「running 期隐藏」分道：守卫态 = 用户可自解态，保留可发现入口 | 已定（§4.1） |
 
 ## 变更记录
+
+- 2026-10-10（**vsc-consistency 批 · 设计档随正轮 · eng-coder**——承 `docs/batches/2026-10-10-vsc-consistency.md` §2（`1101-6`）· 台账 #1101）：§2 `:30` 句随正（「不跨窗口持久化」⇒ 跨重启记忆——指向 §3.1）；新增 **§3.1 锚记忆与未选定面**（记录读写 ∥ 写点 ∥ 恢复点 ∥ 首开弹拍 ∥ 未选定标记 + 边界句「记录 = 最后一次成功切换的锚——非活锚」）。**零新语义**（= 已落行为的档面收正）。
 
 - 2026-09-22（**structure-debt 批 · 档面车道（#163 尾账）· eng-designer**——承 `docs/batches/2026-09-22-structure-debt.md` §2.4）：§3 切换流程表 `case "project"` 消息路由行改指新档（`webview/chat.js` → **`webview/chat-messages.js`**，坐标 `:202` → **`:134`**——#163 拆分后消息分发循环迁出）。**零语义**：机制 / 守卫面 / 提示面零变。
 

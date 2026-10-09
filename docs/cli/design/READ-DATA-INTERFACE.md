@@ -158,7 +158,7 @@ thincoder ledger list --json [--full] [--family] [--cwd <dir>]
 | `thincoder-core/ledger-read.mjs`（拟新增） | M2 | — | ~150 | ≤300 | 序列化 + 三口径 + `runLedgerList` |
 | `thincoder-core/agent-tools/batch-skeleton.mjs` | M3 | 174 | +22 | ~196 | `:113` 邻位增 `readSectionStatusWord` |
 | `thincoder-core/agent-tools/batch-read.mjs`（拟新增） | M3 | — | ~90 | ≤300 | 记录列举 + sections 组装 |
-| `thincoder-core/agent-tools/batch-lifecycle.mjs` | M3 | 332 | 0 | 332 | `:62` 收集器转导出（存量越顾问线——本批零增） |
+| `thincoder-core/agent-tools/batch-lifecycle.mjs` | M3 | 332 | 0 | 332 | `:62` 收集器转导出（本批零增） |
 | `thincoder-core/ledger.mjs` | M2 | 241 | 0 | 241 | 零编辑——只 import `discoverFamily`（规避在飞写域；§5 D-11） |
 | `thincoder-cli/src/acp/read-data.mjs`（拟新增） | — | — | ~150 | ≤300 | 三方法 + 观察器 |
 | `thincoder-cli/src/acp.mjs` | — | 143 | +13 | ~156 | `:116-122` 工厂接线 + watcher 出参 + 启动 |
@@ -245,6 +245,8 @@ thincoder ledger list --json [--full] [--family] [--cwd <dir>]
 
 **2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
 **本批（read-data-interface · 2026-10-03）落点表** = `docs/batches/2026-10-03-read-data-interface.md` §2（唯一承载面——一次性批次材料）。
+
+- 2026-10-08（**代码长度上限 500/800 口径更换批 · 实施轮 · eng-coder**——承 `docs/batches/2026-10-08-code-limit-500-800.md` §2 · 台账 #1072）：§4 `batch-lifecycle` 行「存量越顾问线」注删（丙——行留守 · 义务格删）；§4 三处预算格 ≤300 = 闭合批叙述面（B 史实保留 ⇒ 零动）。**零语义外扩**（可 revert）。
 
 - 2026-10-04（**read-data-interface 批 · 修复轮（设计评审 #41 · pass · 🔴0 ∥ 🟡3 ∥ 🔵6 · 九条全采纳）· eng-designer**——承批档 `docs/batches/2026-10-03-read-data-interface.md` §3 轮次 1）：① §1 口径厘清补第二处（`docs/core/design/LEDGER.md:453` §9 边界 + 「不监听文件系统」= 非 `fs.watch` 监听）+ 引用精度收正（「§7.8 不变量 ⑤」= `docs/core/design/LEDGER.md:361`）；② §2.6 ∥ §3.4 写死通知观察域（服务进程 cwd——每轮 `ctx.getCwd()` 求值，与 `params.cwd` 缺省同取值；非观察项目不通知）；③ §3.2 写死 `root` / `name` 派生（与库键同源解析项目根 + basename）；④ §3.3 `ledger/count` 补语义（未决四态计数）；⑤ §4 表增模块列（M2 ∥ M3 · 余 `—`）+ L7 复核行（去重 = 2 ≤ 2——不拆批）+ `docs/README.md` ∥ `docs/cli/design/ACP-CLIENT.md` 两行收正（已落 ∥ 随动落点补 §3 枚举、§3.5 模块表两处）；⑥ §7 RDI-4 补一腿（文件在盘但非台账库 ⇒ `projects: []` ∧ 文件零改）。文档面收正（零语义外扩）。
 

@@ -211,7 +211,6 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 **受影响面（读数 as-of 2026-09-28；行数 = 现行 ⇒ 预期）**：
 
 - ① 实现（本批拆分落地）：拆分后 = `thincoder-core/ledger-tools.mjs`（已落 · 实读 **187**——五工具定义 + 守卫 helper 三件 + tool 层 `getSessionId` 动态 import）+ `thincoder-core/ledger-cmd.mjs`（298 行 ⇒ 核心函数档 ≈140 行）+ `thincoder-core/ledger.mjs`（214 行 ⇒ re-export 面两源 ±2 行）。
-  拆分触发 = `ledger-cmd.mjs` 298 行贴 300 顾问线，本批增量（读面守卫 ×2 + `additionalProperties` ×2）必越线 ⇒ 按既有登记「下一增量轮先审视拆分」落地。
 - ② 用例 = 档 `thincoder-core/test/ledger-args-guard.test.mjs`（**已随 2026-09-28 测试树全清退场——档不在盘**；原读数 198 行 · as-of 2026-09-28——T37–T44；本批增量 = T43 / T44 ⇒ ≈240 行；照 `thincoder-core/test/ledger-close.test.mjs`（同样已随 09-28 全清退场；原 153 行）同规模形）。
 - ③ 文档 = 本档 + 批档 §2。
 - ④ 零改面 = `thincoder-core/ledger-db.mjs`（DDL）· `thincoder-core/agent/family-tools.mjs`（装配）· 需求档（`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-LEDGER.md`：补行**已落**——AC-M2-15 + 变更记录 2026-09-27（父侧）；本批设计面零碰）。
@@ -312,7 +311,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
    - **歧义根子例（轻通道轮 · 2026-10-04）**：命中锚若 `projectRootView` `ambiguous`（如锚位存量键控库先于 #828 写门）⇒ **不充当台账项目**（键控库存在 ≠ 可作项目）——按容器根形落子目录族（消静默缺席）；T51 面（**可解析**项目命中但不可读 ⇒ `null`）不受触。
    - **两参对账**：`family` 判归属 ∥ `scans` 载体——范围 = 归属 ∩ 已读（「已读」= 在 `scans` 中：构建期不可读项目已跳过）；`current` 缺席 ⇒ 范围 = `scans` 全体。
    - **文本产出**：`marker` 文本 = 委托 `formatMarker` 逐字模板（求和值入参；`formatMarker` 仍居调用链——§7.1）。
-- **标记范围批（#882）受影响面**：源/测试全清单（现行行数 × 增量——含批内单测件）= 批档 `docs/batches/2026-10-03-ledger-family-aggregate.md` §2.4；贴线判 = 本批有增量档全列 ≤300 顾问线（最高 241——`ledger.mjs`·实读）⇒ 零拆分义务。
+- **标记范围批（#882）受影响面**：源/测试全清单（现行行数 × 增量——含批内单测件）= 批档 `docs/batches/2026-10-03-ledger-family-aggregate.md` §2.4；贴线判 = 本批有增量档全列 ≤500 顾问线（最高 241——`ledger.mjs`·实读）⇒ 零拆分义务。
 - **行龄**：SQLite 时间戳距今（非 git / 无时间戳 → 标「年龄未知」照列、不判老化）。
 - **性能**：SQLite `COUNT` / 索引查询替代 v1 的 git blame 全档扫描。
 
@@ -670,7 +669,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 | `docs/core/design/LEDGER.md` | 前 592 ⇒ 落档 710（实施后同步实读——末行号法；+5 = 实施中裁定轮，本笔 +3） | 本档 | §11 + §3.2 / §8 名称面 + 变更记录 |
 | `docs/batches/2026-10-05-ledger-unification.test.mjs` | 新（拟新增） | 估 ≈260 | 批内件（§11.6——五腿） |
 
-**跨文件极限**：`thincoder-core/ledger-tools.mjs` 估 ≈265 行 ≤300 顾问线（零拆分义务）；若实施轮实装越线 ⇒ 拆分预案 = 统一入口出档（先例 = 2026-09-28 拆分）。余档均小。
+**跨文件极限**：`thincoder-core/ledger-tools.mjs` 估 ≈265 行 ≤500 顾问线（零拆分义务）；若实施轮实装越线 ⇒ 拆分预案 = 统一入口出档（先例 = 2026-09-28 拆分）。余档均小。
 
 ### 11.9 接口索引面（API-CONTRACT）与工程随动
 
@@ -815,7 +814,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 | KD | 决策 | 否决方案 |
 |---|---|---|
 | KD-VN1 | 「在盘」判据 = 文件存在（零开库） | 读行数（开库读——坏档 / 空库漏报 + 启动期触 SQLite） |
-| KD-VN2 | 检测 / 文案落新档 `thincoder-core/ledger-variant-notice.mjs`（拟新增——本批实施轮落盘） | 并入 `ledger-migrate.mjs`（+≈30 ⇒ 约 330 越 300 顾问线）∥ 并入 `ledger-db.mjs`（与 migrate 成环） |
+| KD-VN2 | 检测 / 文案落新档 `thincoder-core/ledger-variant-notice.mjs`（拟新增——本批实施轮落盘） | 并入 `ledger-migrate.mjs`∥ 并入 `ledger-db.mjs`（与 migrate 成环） |
 | KD-VN3 | 一次为限 = 核内闩（+ 重置缝） | 调用面结构事实（随未来调用面漂移、无直测面） |
 | KD-VN4 | 承载 = opts 拷贝 + `showStartup` 渲染（`crashNotice` 同款） | `showStartup` 内计算（sync 面不可动态 import）∥ 独立启动器（超面） |
 | KD-VN5 | 文案单源 = i18n 键（zh ∥ en；locale = `agent.config?.locale`） | CLI 内联字面（第二副本）∥ 固定中文（违 i18n 单源） |
@@ -947,7 +946,7 @@ key = sha1(normalizeCwd(resolveProjectRoot(cwd) ?? resolve(cwd ?? "."))).slice(0
 
 | 文件 | 现行 | 预期 | 改动 |
 |---|---|---|---|
-| `thincoder-core/ledger-cmd.mjs` | 153 | ≈170 | 值计算 helper（追加 / 覆盖 + 两拒面——两函数同源）∥ `ledgerUpdate` 消费 `patch.evidenceReplace` ∥ `ledgerClose` 增参 + 判位（两档均 <300 顾问线——零拆分） |
+| `thincoder-core/ledger-cmd.mjs` | 153 | ≈170 | 值计算 helper（追加 / 覆盖 + 两拒面——两函数同源）∥ `ledgerUpdate` 消费 `patch.evidenceReplace` ∥ `ledgerClose` 增参 + 判位（两档均 <500 顾问线——零拆分） |
 | `thincoder-core/ledger-tools.mjs` | 254 | ≈268 | 两声明 × 2 键 ∥ 并集 2 属性 ∥ 描述 ×3 ∥ close 路由 ∥ 守卫布尔分支 |
 | `thincoder-core/tool-docs/ledger.md` | 6 | ≈7 | update ∥ close 两行 |
 | 批内件 `docs/batches/2026-10-07-ledger-evidence-semantics.test.mjs` | 新 | ≈180–240 | 用例 U-LT11–U-LT18——随批归档、**不进仓套件**；复跑 = 仓根（`thincoder/`）`node --test docs/batches/2026-10-07-ledger-evidence-semantics.test.mjs` |

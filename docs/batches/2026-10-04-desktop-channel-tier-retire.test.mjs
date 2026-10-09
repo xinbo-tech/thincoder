@@ -13,7 +13,7 @@
  *      `{ id, effortEnum, thinkOff }`（结构机检）+ 核导入形（`thinkOffPath` 保留）∥
  *      `session:prefs` 键闭集含 `effort` + 失败径四档（bad-key ∥ invalid-patch ∥ model-required ∥ slot-missing）
  *   ⑤ 词键零残留：两语零 `settings.model.tier` / `effort.auto` / `effort.off` ∥ 两语键集相等 ∥
- *      键数按盘（`SETTINGS_DICT` 59 ∥ `HOST_DICT` 309——键数注同源）
+ *      键数按盘（`SETTINGS_DICT` 62 ∥ `HOST_DICT` 322——键数注同源）
  *   ⑥ U1 段名收正：两语 `settings.section.model` 精确等值 = zh「模型」∕ en「Model」∥ 注释面两树
  *      （`renderer/` + `src/`）零「模型与档位」∧ 零「Model & tier」
  * 纪律：只读面 ∥ 行为断言（真档取件 · config 走测试缝临时档）；真机走查归父侧。
@@ -98,11 +98,12 @@ test("腿①：控件零节点 ∥ 零导出面（`modelBody` 两段 · 导出�
 // ─── 腿 ② · 写径拒收（KD-902-2 顶层有效键闭集）───────────────────────────────
 test("腿②：写径拒收 —— `{ tier }` ⇒ invalid-patch 零写 ∥ `{ patch }` 正径 ∥ 读面两向照常", () => {
   const evidence = () => ({ content: readFileSync(CFG_FILE, "utf8"), mtime: statSync(CFG_FILE).mtimeMs })
+  settingsMain.settingsAgent({}) // 预热：载入期归一化（缩进 2 + 尾换行 ∥ 退役键迁移）先落，再取读后快照
   const before = evidence()
   const refused = settingsMain.settingsAgent({ tier: { provider: "p1", model: "m1", level: "auto" } })
   assert.equal(refused.ok, false, "退役档位意图载荷 ⇒ 拒收（非静默落读面）")
   assert.equal(refused.reason, "invalid-patch", "拒码 = `invalid-patch`")
-  assert.deepEqual(evidence(), before, "拒收 ⇒ 零写盘（内容 ∥ mtime 双证）")
+  assert.deepEqual(evidence(), before, "拒收 ⇒ 零写盘（读后快照逐字 ∥ mtime 双证）")
 
   const stray = settingsMain.settingsAgent({ nope: 1 })
   assert.equal(stray.ok, false, "表外顶层有效键 ⇒ 拒收（闭集 `{ patch }`）")
@@ -161,7 +162,7 @@ test("腿④-C：`session:prefs` 键闭集含 `effort` + 失败径四档（真�
 })
 
 // ─── 腿 ⑤ · 词键零残留 ──────────────────────────────────────────────────────
-test("腿⑤：词键零残留 —— 两语零三键 ∥ 键集相等 ∥ 键数按盘（59 ∥ 309）", () => {
+test("腿⑤：词键零残留 —— 两语零三键 ∥ 键集相等 ∥ 键数按盘（62 ∥ 322）", () => {
   for (const key of ["settings.model.tier", "effort.auto", "effort.off"]) {
     for (const lang of ["en", "zh"]) assert.equal(Object.hasOwn(hostDict[lang], key), false, `${lang} 零 ${key}`)
   }
@@ -169,8 +170,8 @@ test("腿⑤：词键零残留 —— 两语零三键 ∥ 键集相等 ∥ 键�
   assert.equal(Object.hasOwn(settingsDict.zh, "settings.model.tier"), false, "`SETTINGS_DICT` zh 零 `settings.model.tier`")
   assert.deepEqual(Object.keys(hostDict.en).sort(), Object.keys(hostDict.zh).sort(), "两语键集相等")
   assert.deepEqual(Object.keys(settingsDict.en).sort(), Object.keys(settingsDict.zh).sort(), "第四档两语键集相等")
-  assert.equal(Object.keys(settingsDict.en).length, 59, "`SETTINGS_DICT` = 59 键（键数注同源）")
-  assert.equal(Object.keys(hostDict.en).length, 309, "`HOST_DICT` 合并表 = 309 键（键数链同源）")
+  assert.equal(Object.keys(settingsDict.en).length, 62, "`SETTINGS_DICT` = 62 键（键数注同源）")
+  assert.equal(Object.keys(hostDict.en).length, 322, "`HOST_DICT` 合并表 = 322 键（键数链同源）")
 })
 
 // ─── 腿 ⑥ · U1 段名收正（词面 ∥ 注释面）──────────────────────────────────────

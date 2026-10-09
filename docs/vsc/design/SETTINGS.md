@@ -481,9 +481,10 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 卡 = `#prov-add-dialog` + 新类 `.settings-dialog`（`settings.css` 新增小段：fixed 居中 ∥ z 1000 ∥ `--bg` 底 ∥ 1px 边框 ∥ 圆角 8px ∥ 宽 ≤ 420px；`role="dialog"` + `aria-modal="true"` + `aria-label` = `settings.addProviderTitle`）；
 卡体 = `.settings-card-body`（字段样式复用）+ 首件 `.settings-subtitle`（`settings.addProviderTitle`）。
 - **入口（两处）**：① `#prov-add-btn`（词 = `settings.addProvider`，既有——`settings-providers.js:133`）onclick ⇒ `window._openAddProviderDialog()`；
-② 首启板交棒——`webview/onboarding.js:62` 的 custom 径 ⇒ `window._openAddProviderDialog?.()`（`?.` 守卫保留；时序 = `_openSettings?.()` 后随调，面板 ∥ 框两处 +50ms 焦点定时器同拍序——框后调度 ⇒ 末位焦点 `#pa-type`；批档 §2.3）。
+② 首启板交棒——`webview/onboarding.js:63` 的 custom 径 ⇒ `window._openAddProviderDialog?.({ key })`（`?.` 守卫保留；**分支前移**——custom 分支先于 key 校验 ⇒ 空键亦交棒（板面不再强制键——与弹窗键面「键可选」一致）；
+   **携 key 预填**——板面键入值随交棒入框（`#pa-key`；开框重置序之后落 —— 零重输）；时序 = `_openSettings?.()` 后随调，面板 ∥ 框两处 +50ms 焦点定时器同拍序——框后调度 ⇒ 末位焦点 `#pa-type`；批档 §2.3 · 台账 #1041）。（父侧拆行 2026-10-10 · 可 revert）
 - **开（单例）**：已在框 ⇒ 零动作；否则建两件挂 `document.body`；开框重置 = 类型回首项 ∥ `#pa-key` 清空 ∥ `#pa-proxy` 未勾 ∥ `#pa-conn-status` 空 ⇒ `paTypeChanged()`；
-初始焦点 = `#pa-type`（+50ms）。**框实例代际**：开 ∥ 关自增 `_addDialogEpoch`；`_paFetchModels` 发起时记代际、`updateTestProviderResult` 落框前比对——不符 ⇒ 弃（在飞探果跨框零污染）。
+初始焦点 = `#pa-type`（+50ms）。**探针结果归属（请求 id——#1051）**：`_paFetchModels` 发起时自增 `_fetchSeq` 记在飞 `_pendingFetchId`（载荷携 `id`）；`updateTestProviderResult` 落框前比对——缺 ∥ 不符 ⇒ 弃；命中即清（防重放）；开 ∥ 关框双清在飞（在飞探果跨框零污染）。
 - **关（五路同效）**：保存（**守卫通过才发 + 关**——本地守卫拒 ⇒ 零发 ∥ 不关框 ∥ 在编值保留；落点 = `settings-provider-dialog.js:158-159` ∥ `:226-256`；残余 = 添加弹窗径宿主后置拒仍走「发后关」旧径——回执形见 §2.18；弹窗径 = 条件行）
 ∥ 取消钮 ∥ 背板点击 ∥ 框内 Esc（`stopPropagation` —— 不连带触 `webview/chat.js` 的关面板分支——沿确认弹框同判）∥ `closeSettings()` 同清——**落法**：`settings.js:169-181`（增调句 `:174`）增调新档导出 `closeAddProviderDialog()`（与 `closeConfirmPopover()` 同拍）；
 **遮罩 = 独立类 `.settings-dialog-backdrop`**（z 999；样式入 `settings.css` 新段——**不入确认族共用类 `.auto-backdrop`**：确认族帚扫站点（`settings-widgets.js:109` ∥ `session-bar.js:103-104` ∥ `chat.js:100-101`）零误扫；框在场 ⇒ 确认族开 ∥ 关两向均不触框组；卡 ∥ 幕归 `closeAddProviderDialog` 独清）。
@@ -604,15 +605,18 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 
 **判据（拒 ⇒ 零闪 ∥ 行不关 ∥ 拒因可见；受理 ⇒ 闪 + 行关）**：
 
-- **受理回执**（新消息 `providerKeySaved { name }`——host → webview）：宿主 `handleSaveProviderKey` 保存**成功**后发（`src/extension/panel-messages-settings.mjs:29-32`）；webview 收 ⇒ 同名字行在编 ⇒ 恢复静态行（现读 SS——与取消径同形）+ `flashSaved`（词 ∥ 样式复用，零新件）。
+- **受理回执**（新消息 `providerKeySaved { name }`——host → webview）：宿主 `handleSaveProviderKey` 保存**成功**后发（`thincoder-vscode/src/extension/panel-messages-settings.mjs:43`——行号随本批三态门）；webview 收 ⇒ 同名字行在编 ⇒ 恢复静态行（现读 SS——与取消径同形）+ `flashSaved`（词 ∥ 样式复用，零新件）。
 - **拒径**：零回执 ⇒ **零闪**；宿主失败照旧发 `providerError`（`scope:"providers"`——失败面单槽 banner，§2.15；#640 机制零改）⇒ **拒因可见**；**行不关** = providers 卡重绘守卫——在编密钥编辑（`#prov-list` 内 password 输入在位）⇒ `updateProviderStatus` 本拍只更新 SS、不重绘（用户输入优先于推送——沿 U-S10 工具键行 `skipWhileEditing` 同判；在编值保留、可即改即重存）。
 - **行关不依赖状态推送**（同值重存 ⇒ 状态无差、无重绘）：由回执径就地恢复——受理径恒达。
+- **无写径（2026-10-10 · 尾行收口批 · #1073）**：空 ∥ 全空白钥 ⇒ 写面守卫早退（零写盘 ∥ 零错误）⇒ 宿主**零回执**（回执 ⟺ 真写）+ `console.warn` 一条（零静默；亦不判失败——发送面守卫使该径 UI 不可达）。
+  写面三态 = `{ status: "ok" | "no-write" | "conflict", hint? }`（单源 = `thincoder-vscode/src/extension/presets.mjs` `storeProviderKey`——透传链 = `settings.mjs` `saveProviderKey`）。
 
 **边界**：添加弹窗径（`addProvider` 宿主后置拒）不在本节——残余 = §2.16 ①（条件行）；本回执形为其复用模板。桌面对位（`provider:setKey` 回执 + 失败草稿——`renderer/mount-settings-segments-providers.mjs:57-79`；主面回读核验「零假成功」——`thincoder-desktop/src/main/providers.mjs:198-209`）= 已收正先例（零改）。
 
 **机检面（拟）**：批内件 `docs/batches/2026-10-08-provider-key-guards-vsc.test.mjs`（实施轮落）——① 宿主：成功 ⇒ sink 恰 `providerStatus` + `providerKeySaved{name}`；
 冲突注入（假 config-io 短接——沿 `docs/batches/2026-09-30-vsc-cleanup-695.test.mjs` 先例）⇒ 恰 `providerError{scope:"providers",reason:"mtime-conflict"}` ∧ 零回执；
 ② webview：保存动作 ⇒ 零闪；回执 ⇒ 行恢复 + 徽标显；在编行在位 + 状态推送 ⇒ 卡不重绘（password 输入与在编值俱在）；③ 拒径复合 ⇒ banner 在场 + 行在 + 零闪。
+**#1073 追补（2026-10-10 · 尾行收口批）**：三态门 + 真写面腿 = 批内件 `docs/batches/2026-10-10-tail-residues.test.mjs` ③甲（假 panel 三态：`ok` ⇒ 恰一条回执 ∥ `no-write` ⇒ 零回执 + warn 一条 ∥ `conflict` ⇒ `providerError{providers,mtime-conflict}` ∧ 零回执）+ ③乙（真写面——临时 config 缝：空钥 ⇒ `no-write` 零写盘 ∥ 真钥 ⇒ `ok` 落盘 ∥ 冲突注入 ⇒ `conflict`）。
 
 ### 2.19 会诊行 ✕ 容器级委托（2026-10-08 · 台账 #1058）
 
@@ -643,12 +647,12 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   **处置 = 已裁 ②（父侧 2026-09-18 本轮 · 评审 id=116 发现 5）：本键文案改类通用式**——值级改写 · 键数不变 · 键名不动（写域 +`thincoder-vscode/locales/en.json` / `locales/zh.json` 两档）；改写值 = §2.10 文案条；**未采 ①**（新增 MCP 行专用键）。
   **已核销（2026-09-19 文档卫生轮 · 父侧直接执行）**——值级改写已随 MCP 批实现轮落盘（本批与 provider 行批均申报 `locales/**` 零改 ⇒ 现值 = 类通用式，即 §2.10 文案条）；到期条件达成。
 - **`settings-tools.js` 越 300 行建议线（拆分复核 · 评审 id=116 发现 4）**（结构面 · §2.10 载体登记）：**触发条款达成 ⇒ 拆档已执行（MCP 键值行式输入批 · 2026-10-07 · 台账 #1036——实施落盘；拆后实读：本档 **212** ∥ 新档 `settings-mcp.js` **273** ⇒ **126**（添加入口弹窗统一批 · #1054——再收 147：弹窗体析出））**
-  ——原触发 = 阈值 450 行 ∨ **MCP / provider 面下次结构改动**（先到即拆）：本批 = MCP 表单结构性改动（env ∥ headers 改行式键值——§2.4）⇒ 第二条件达成（拆前实读 **433**；kv 面净增 ≈ +80 ⇒ 不拆则 ≈513 **越 500 硬限**）。
+  ——原触发 = 阈值 750 行 ∨ **MCP / provider 面下次结构改动**（先到即拆）：本批 = MCP 表单结构性改动（env ∥ headers 改行式键值——§2.4）⇒ 第二条件达成（拆前实读 **433**；kv 面净增 ≈ +80 ⇒ 不拆则 ≈513 **越 500 硬限**）。
   组边界 = ① **MCP 族**（`renderMcpList` / `updateMcpTools` / `updateMcpTestResult` / `parseHeadersLike`（随批净删）/ `openMcpForm` / `kvToInput`（随批净删）/ `bindToolsControls` MCP 段 / `toolsCardHtml` 表单段）
 ② 密钥行族（`renderKeyRow` / `KEY_ROW_ACTIONS` / 三处 handler）③ 卡骨架 + 快照消费（`toolsCardHtml` / `updateWebsearchSettings` / `renderIndexStatus`）
 ——① 拆出 = `thincoder-vscode/webview/settings-mcp.js`（**已落 · 273 行 ⇒ 126**（添加入口弹窗统一批 · #1054——再收 147：弹窗体析出）；
 缝 = `mcpFormHtml()` ∥ `bindMcpControls()` 两口回插；对外导出名零改——`settings.js` ∥ `chat.js` 消费面零改）。
-  生效窗口 = **先拆后改**（零语义搬移在改动前）；拆后两档实读 = 实施后回填轮落数。到期条件 = 阈值 450 行到达时（新触发——若拆后增量再逼近）。
+  生效窗口 = **先拆后改**（零语义搬移在改动前）；拆后两档实读 = 实施后回填轮落数。到期条件 = 阈值 750 行到达时（新触发——若拆后增量再逼近）。
 - **用例档越 300 行建议线（拆分复核 · 评审 id=116 发现 4）**（测试面 · §2.10 机检面）——**已终结**（2026-09-19 按实现实测收正，原「现 439 → 预估 ~516」为预估）：provider 行批实现轮实读触线 ⇒ **拆分已执行** = 主档 `settings-secret-delete-confirm.test.mjs`
  现 **412** · MCP 组析出 `settings-mcp-delete-confirm.test.mjs` **177**（已在 `thincoder-vscode/test/files.mjs` 在册）；**两档均 <500 硬限** ⇒ 不触发再拆；**下次触发条件 = 任一档实读 ≥500**（承批档 §2.2 D-M6「越线即当场拆」）。
   组边界 = **MCP 组**（W17-16 / W17-19…W17-25）析出为 `thincoder-vscode/test/settings-mcp-delete-confirm.test.mjs`（已落 · 实读 **177**——夹具经 `test/helpers/webview-env.mjs` 共享；自持 `before` / `beforeEach` / 驱动助手）· `thincoder-vscode/test/files.mjs` 同步登记（主档条注释随组边界同笔收正）。 （迁移期引文——档已删）
@@ -662,9 +666,9 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   补偿 = 目标选定步（QuickPick）自身是显式选择（见 §2.10 补偿两条）；消解路径 = ① 若父侧裁定确认须绑定目标，则须先裁定该半句读法（严格 = 零发值 / 宽松 = 无持久副作用）+ 登记第二确认形态（VS Code 原生件）例外；② 或宿主把选定 `name` 回传 webview 走同件（须协议 +1 条消息）；到期条件 = 本门下次被触碰 / 父侧裁定。
 
 - **`thincoder-vscode/src/extension/settings.mjs` 越 300 行建议线（拆分复核 · 评审发现 #3）**（结构面 · §2.13 载体档）：该档现 **406**（内容行数口径 · 三端对齐批届盘复读 2026-10-07——本批净增 +3〔探针收敛核 `probeTargetOf`〕；届盘前读 403；09-29 届记 350 ⇒ 359：+9〔#640 助手 `postProviderError` + #17 读链补环〕；
-  上届 410 ⇒ 350 之净减沿革 = B10 S17 族出档、shell 候选面上提核 `thincoder-core/shell-candidates.mjs`）——**仍越 300 建议线**（< 450 触发阈值）⇒ 拆分计划维持（快照面透传语义不变）。
+  上届 410 ⇒ 350 之净减沿革 = B10 S17 族出档、shell 候选面上提核 `thincoder-core/shell-candidates.mjs`）——**仍越 300 建议线**（< 750 触发阈值）⇒ 拆分计划维持（快照面透传语义不变）。
   拆分组边界 = ① 快照族（`agentSettings` / `proxySettings` / `websearchSettings` / `fullStatus`）② 渠道路由族（provider 增删 / 代理旗标 / 连接测试）③ 密钥与 MCP 族（`saveProviderKey` / `deleteProviderKey` / MCP 三件）——① 拆出 = `thincoder-vscode/src/extension/settings-snapshots.mjs`（拟新增）。
-  拆分计划 = 触发阈值 **450 行** 或该档下次结构改动（先到即拆）；到期条件 = 触发阈值到达时。
+  拆分计划 = 触发阈值 **750 行** 或该档下次结构改动（先到即拆）；到期条件 = 触发阈值到达时。
 
 - **`advisor.guard: null` 磁盘形态 vs 判据用例域**（边界面 · §2.14 载体）：种子循环（`settings-panel-write.mjs:135-139`）对 `v === null` 除 `thinking` 外 continue
   ⇒ 面板通用保存不 verbatim 携带该形态（既有通例，非本批引入）。本批判据（翻转 / 任意保存前后 config 逐字不变）的用例域 = {键缺席 / `true` / `false`}；
@@ -678,7 +682,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   消解路径 = 各档下次被触碰逐处收正（设计档笔 = eng-designer；注释 / 产品文本 = 产品代码面）；到期条件 = 各档下次被触碰 / 父侧另册归形小批。
 - **`thincoder-vscode/webview/settings.css` 越 300 行建议线（拆分复核）**（结构面 · §2.15 载体档）：该档现 **412** 行（内容行数口径 · 三端对齐批届盘复读 2026-10-07——本批 +27；09-29 届记 385（+6：#640 段标样式一条）；
 **三端对齐批（2026-10-07）触碰 = 新增 `.settings-dialog` ∥ `.settings-dialog-backdrop` 段（**385 ⇒ 412**——实施后实读 2026-10-07）——非结构性（单组件样式段；不改三段组界 ∕ 不增职责）⇒ 消解窗口顺延**）——**复核结论 = 本批不拆**（本批增量 = 段标 span 单条样式，不改结构 ∕ 不增职责）。
-  拆分计划 = 触发阈值 **450 行** 或 **设置面样式族下次结构改动**（先到即拆）；
+  拆分计划 = 触发阈值 **750 行** 或 **设置面样式族下次结构改动**（先到即拆）；
   组边界（三段 · 按现分节注释）= ① 面板骨架 + 通用件（面板框 ∕ 卡框 ∕ 字段 ∕ 按钮 ∕ 开关）② 卡面样式族（providers ∕ MCP ∕ consult ∕ agent 徽标 ∕ model-menu）③ first-run 面板段。
   到期条件 = 触发阈值到达时 ∕ 设置面样式族下次结构改动时。
 
@@ -727,7 +731,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 | U-S16 | provider 配置面词面：实体名 = **「API Key」**（zh 保留英文形；裸「密钥」退场——#1035，两端 i18n 词值改写）；卡面残余硬编码串入表（`settings.defaultModelTitle` ∥ `settings.providerHostBusy` ∥ `settings.providerUnavailable`——#1033；`settings.noDefaultModel` 随 2026-10-09 清除批退场） | 已定（§2.16） |
 | U-S17 | MCP 表单 env ∥ headers = **行式键值编辑器**（每行键格 + 值格 + ✕；行集下 `[+ 添加行]`；零项零行）；粘贴零解析；值 = 字面（零引号剥离）；提交四判据（空行丢 ∥ 重复后胜 ∥ 全空删字段 ∥ trim） | 已定（§2.4——MCP 键值行式输入批 · #1036；桌面逐元素同形 = `docs/desktop/design/SETTINGS.md` §1 **KD-76**） |
 | U-S18 | **添加入口统一判据（本批）**：表单类添加 ⇒ **弹窗**（单例 ∥ 五路关：保存（守卫通过才发 + 关）∥ 取消 ∥ 背板 ∥ 框内 Esc ∥ `closeSettings()` 同清 ∥ 开框重置 ∥ 初始焦点 = 首控件）；单字段就地编辑 ⇒ **行内**；首启 ∥ 宿主原生专面 ⇒ 各守其面。本端落形 = MCP 弹窗 ∥ 会诊弹窗 ∥ 页脚「+ Add provider…」直开（零宿主往返）；MCP name 空 ⇒ 拒因可见（`settings.mcp.nameRequired`） | 已定（§2.17——添加入口弹窗统一批 · #1054；桌面同判 = `docs/desktop/design/SETTINGS.md` §1 **KD-77**） |
-| U-S19 | 密钥行保存回执：受理（宿主保存成功径）⇒ 行就地恢复 + 闪；拒 ⇒ **零闪** + 行不关（卡重绘在编守卫）+ 拒因可见（`providerError` banner）——回执单消息 `providerKeySaved { name }` | 已定（§2.18——provider 密钥链守卫批 · #1053） |
+| U-S19 | 密钥行保存回执：受理（宿主保存成功径）⇒ 行就地恢复 + 闪；拒 ⇒ **零闪** + 行不关（卡重绘在编守卫）+ 拒因可见（`providerError` banner）——回执单消息 `providerKeySaved { name }`；**无写（空钥守卫）⇒ 零回执 + warn 一条**（回执 ⟺ 真写——#1073 · 2026-10-10） | 已定（§2.18——provider 密钥链守卫批 · #1053 ∥ 尾行收口批 · #1073） |
 
 ## 变更记录
 
@@ -859,3 +863,6 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - 2026-10-09（**provider-default-model-purge 批 · 实施期收正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §2 ∥ §5 舱4 · 台账 #1122）：§2.16 model 控件面收正——`#pa-model` ∥ model 必填门 ∥ `settings.modelRequired` ∥ `settings.noDefaultModel` 随 VSC 自定形表单 model 退场（C4「渠道不携模型」逐端面）逐处翻转（§1 卡行 ∥ §2.16 ②④——#1031/#1033；U-S14/U-S15/U-S16 同拍 ∥ guard 集 `settings.fetchModelsFirst` 退场句）。**零新语义**（实装随正）。
 - 2026-10-09（**stale-fixes 轮 · 坐标随正（父侧笔〔父侧直接执行 · 可 revert〕）**——承批 `docs/batches/2026-10-09-stale-fixes.md` §1 · 台账 #1070 ∥ #1086）：§2.10/§2.11 残余坐标随正至现盘（2026-10-09 实读）——卡 HTML 载体 `settings-providers.js:182`/`:123`/`:132` ⇒ `:137`（`:207` ∥ `:277` ∥ `:286` ∥ `:639`）∥ 取消重建位 `:48-49 ⇒ :22-23`（`:277` ∥ `:288` ∥ `:639`）∥ 装配位两锚（`:287`）：`settings.js:181 ⇒ :190` · `settings-providers.js:241 ⇒ :177`；
   `_confirmDelete :44 ⇒ :50`（`:181` ∥ `:187` ∥ `:657`）∥ `closeSettings :163-172 ⇒ :169-181`（调用位 `:167 ⇒ :173` ∥ 增调句 `:172 ⇒ :174`——`:259` ∥ `:488`）∥ `_confirmSecretDelete :50-57 ⇒ :56-63`（`:299`）∥ `btn` 注 `:49 ⇒ :55`（`:309`）∥ `initSettings :25 ⇒ :29`（`:311`）∥ `renderProvidersCard :237-242 ⇒ :173-178`（`:230`）。**零新语义**（坐标）。
+- 2026-10-10（**尾行收口批（#1073）· 实施轮 · eng-coder**——承批档 `docs/batches/2026-10-10-tail-residues.md` §2）：§2.18 增**无写径**条（空钥守卫 ⇒ 零写盘 ∥ 零回执 + warn 一条；写面三态单源 = `thincoder-vscode/src/extension/presets.mjs` `storeProviderKey`）+ 机检面补 #1073 追补（三态门 + 真写面腿 = 批内件 `docs/batches/2026-10-10-tail-residues.test.mjs`）∥ §5 **U-S19** 行增无写径判据 + 依据行补本批。**零新语义**（显式化既有守卫——回执 ⟺ 真写）。明细 = 批档 §5。
+- 2026-10-10（**桌面行为残渣批 · 实施轮 · eng-coder**——承批档 `docs/batches/2026-10-10-desktop-behavior-residues.md` §2 · 台账 #1041）：§2.16 ② 首启板交棒句收正（坐标 `:62 ⇒ :63`；**分支前移**（custom 先于 key 校验 ⇒ 空键亦交棒）+ **携 key 预填**（`window._openAddProviderDialog?.({ key })` ⇒ `#pa-key`——开框重置序之后落））。**零新语义**（落形随实装）。明细 = 批档 §5。
+- 2026-10-10（**vsc-consistency 批 · 设计档随正轮 · eng-coder**——承 `docs/batches/2026-10-10-vsc-consistency.md` §2（`1051-5`）· 台账 #1051）：§2.16 ① 代际句 ⇒ **探针结果归属句**（`_fetchSeq` / `_pendingFetchId`；落框按 id 判；开 ∥ 关框双清）——随实装收正（代际变量已退场）。**零新语义**（判据随正）。

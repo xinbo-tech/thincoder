@@ -71,7 +71,7 @@
 **现状（行数 = 2026-09-29 收口轮实读）**：CLI 面住 `thincoder-cli/src/tui/suspension-drive.mjs`（**211 行**——核 `startSuspension` 装配 + 壳）；VSC 面住 `thincoder-vscode/src/extension/suspension.mjs`（**291 行**——核驱动装配面 + 会话外壳；核驱动动态装载——W8 契约②）。
 两面语义同源（挂起状态机：池 live → 挂起；用户输入优先 → 消化轮 → 池空退出）、差异面 = **载体**与**呈现** ⇒ 按「机制归核 + 注入面」落核（非机械随迁——故 S1 报告列为未完成面）。
 
-**核内模块**：`thincoder-core/agent/suspension.mjs`（新档 · **已落 2026-09-14——2026-09-29 实读 297 行**（原估 +170±40 行被实际取代；B1 增补 C ∕ D +16）· ≤300 软线）。
+**核内模块**：`thincoder-core/agent/suspension.mjs`（新档 · **已落 2026-09-14——2026-09-29 实读 297 行**（原估 +170±40 行被实际取代；B1 增补 C ∕ D +16）· ≤500 软线）。
 内容 = 挂起状态机：池 live 判据 · 竞态清扫（settle 未及移交 → pending）· 主循环（用户输入优先 → pending 消化轮 → 池空退出 → 等待 settle / 唤醒）· 消化轮驱动 · 唤醒栓 · 退出清场（abort = 清池不注入 / idle = 残余直注入）。**核内零文案、零渲染、零端名分支**（契约 5 / 10）。
 
 **现态（2026-09-29 · parity-b1-vsc-core 全修收编）**：**挂起面单源 = 核驱动（三端消费）**——CLI ∕ VSC ∕ desktop 皆以 `startSuspension` 为唯一驱动，端差只在装配面（carrier ∕ hooks ∕ 输入缝）。
@@ -173,6 +173,7 @@
 **本批（核面小修批 · 2026-10-04）落点表** = `docs/batches/2026-10-04-core-patch-batch.md` §2（唯一承载面——一次性批次材料）。
 **本批（issue 修复批·一 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round1.md` §2（唯一承载面——一次性批次材料）。
 **本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
+**本批（agent-loop-allotment · 2026-10-10）落点表** = `docs/batches/2026-10-10-agent-loop-allotment.md` §2（唯一承载面——一次性批次材料）。
 
 ## 6. 机制面（自 CLI 产品档并入 · 2026-09-14 · B 轮）
 
@@ -260,10 +261,20 @@ VSC 端壳自有 depth-0 循环同址（`thincoder-vscode/src/agent.mjs:197`（a
 2. **目录树**（顶层）：`listWorkDir`（根 ≤30 项、子目录 ≤10 项，隐藏折叠，超限截断）。
 3. **项目指令**：`AGENTS.md` / `CLAUDE.md` / `project_rules.md`（≤32K 字符，`<untrusted_project_instructions>` 包裹）。
 4. **记忆检索**：`memory search` 前 3 条（`<untrusted_memory>` 包裹 + XML 转义）。
-5. **文档检索**：`doc_search` 前 5 条 chunk（`<untrusted_doc_chunk>` 包裹）。
+5. **文档检索**：`doc_search` 前 5 条 chunk（`<untrusted_doc_chunk>` 包裹）；**声明源会话 = 双腿分取配额**（本仓 ≤5 零减 + 声明源 ≤5 补位，上限 10——见下方配额段）。
 6. **依赖大纲**：`repomap` 输出（`OUTLINE_INJECT_PREFIX`）。
 7. **用户输入**（`pushReal`：双线）。
 8. **多模态图像**（视觉模型：附加到首条 user 消息）。
+
+**文档注入·声明源保底名额（#1100 · 2026-10-10 · 需求 §4.17；实现 = `thincoder-core/agent/setup.mjs`）**：注入点按检索 origin 集分腿——
+集 ≤1（无声明源）⇒ **原单调用路径逐字保留**（`docSearch(memory, input, { limit: 5 })`）；集 >1 ⇒ **双腿 `Promise.all` 并行**：
+本仓腿 `origins: [normalizeOrigin(memory.codeOrigin)]` ∥ 声明腿 `origins: 集 − 本仓`，各 `DOC_SEARCH_LIMIT`（5），
+合并序 = 本仓 ≤5 在前 + 声明 ≤5 补位（两腿 origin 集互斥 ⇒ 行不可能重复，无需去重）。
+**保底语义 = 任一侧 top-5 齐**——单次调用的全局排序在候选池有界（`max(limit*4,20)`）下不可达（池全被一侧占据 ⇒ 另一侧不可达）；
+块形 · `<untrusted_doc_chunk>` 包裹 · 300 字符预览 · `more` 计数行口径**逐字不变**（计数仍 = 全 origin 集）；`doc_search` 工具面 / depth-0 门 / 检索排序 ∥ origin 归一 ∥ 声明解析零改；无配置开关（F-DI1 边界）。
+**成本（登记）**：声明源会话每回合查询向量计算 1 ⇒ 2 次（两腿各一）——嵌入 I/O 重叠（≈1 次嵌入量级）+ 本地 FTS ∕ 扫描 ×2（FTS 为同步 `.all()`、向量扫描行处理在单事件循环内串行）；
+升级条件 = 单回合召回墙钟复测越线（`docs/core/design/MEMORY.md` §6.14 L-②-5 口径）⇒ 另裁共享查询向量形。
+**F-DI3「来源可辨（路径已在块形内——保持）」按需求括注本身即确认**（现值满足——命中行为相对路径）；根名前缀增强形不入本批。
 
 **system prompt 字节稳定（前缀缓存契约——2026-09-18 精化，批 PROMPT-FACE · 台账 #23）**：**同一 agent 的相邻请求前缀逐字节相同**（= 缓存命中的操作条件）；
 可入 system 的输入 = 在 agent 生命周期内逐字节稳定的那些——槽位装配（`base`）· 项目指令 · skills 清单 · **spawn 固块**（`AGENT-LOOP-SUBAGENT.md` §6.26）；
@@ -284,7 +295,7 @@ JSON 参数解析失败 → error
 未知工具 → error
 planMode && 非只读 → denied "plan mode"
 eng-coder && 未过设计评审 && FILE_MUTATORS → denied "engineering design gate"
-父 agent && 工程模式 && 无设计 token && 触及代码文件 → denied（docs/ 与根级文档豁免）
+父 agent && 工程模式 && 无设计 token && 目标在 manifest 树内 && 判 code → denied（树外一律放行；doc / temp / aux / state 豁免——辖域 = 目标所属项目：PORTABILITY.md §3.9）
 非只读 && !autoApprove → onPermissionRequest / onBatchPermissionRequest（用户确认）；无 handler → denied
 PreToolUse hooks → 阻断
 ```
@@ -495,6 +506,7 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 | D-AL24 | VSC 侧接线面 = **只登记接线事实、不复制机制本体**（挂起 / 协议 / 呈现 / 权限门回指既有节） | 机制权威已单源（§2.3 / SUBAGENT 档 / WEBVIEW 档 / 工程模式板）——平行档 / 重复叙述 = 漂移源 |
 | D-AL25 | child permission gate **按现状并入**（C-2 契约——非「无此状态」） | 批 2 发现「审批态已实装」（activity-view.js ⏸ + 等待审批）——活档口径按现状（VSC 源档为参照历史） |
 | D-AL26 | auto-think 分类 = **可关思考守卫 + 关思考小预算请求 + 失败一次可见** | 思考型模型上分类调用 100% 失败（38/38 实测——思考吃光 `maxTokens: 10` + 无思考开关守卫；catch 静默 ⇒ 功能失效无感知）。修法：`thinkOffPath(spec)` 假 ⇒ 不调用（+ 一次 warn）；真 ⇒ `thinking = thinkOffShape(spec)` + `reasoningEffort` 清空 + `maxTokens = 32`；失败一次可见 warn（回退 null 语义不变）。被否：加大 maxTokens 让思考跑完（延迟 / 成本与 cheap 分类意图相悖）· 换分类渠道（超本批范围）。 |
+| D-AL27 | 文档注入配额 = **双腿分取**（本仓腿 ∥ 声明腿）+ `docSearch` 可选 `origins` 覆盖参 | 单次调用的全局排序在候选池有界（`max(limit*4,20)`）下不保任一侧 top-5（F-DI1 保底不可达）⇒ 两腿各独立 top-5、合并序 = 本仓 ≤5 + 声明 ≤5（上限 10）；`origins` 缺省 `null` ⇒ 现行为逐字（无声明源零变）· 给定 ⇒ 以其为集 · 空数组 ⇒ 现「不过滤」语义。被否：单调用后按 origin 切分（行不含 origin 且相对路径可重名——不可判源）· 配额下沉进 `docSearch` 内部（注入策略混入记忆层 + 工具面语义连带）· 加大候选池（池有界——无上界保证）· 共享查询向量形（先按成本登记，复测越线再另裁）。机制 = `docs/core/design/MEMORY.md` §6.15；实现 = `thincoder-core/agent/setup.mjs` ∥ `thincoder-core/memory/docs.mjs`。 |
 
 ## 8. 不并项与历史沿革
 
@@ -532,6 +544,8 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 | VSC 档 §2 / §12 / §17（runAgent 主循环 · async 保真 · 上下文注入对齐） | VSC 侧实现细节叙述 | 与 §2.3 / `AGENT-LOOP-SUBAGENT.md` · `AGENT-LOOP-ASYNC-POOL.md` §6.7–§6.12 已并面同族（端差登记 = §6.18 表）——不重并（D2） |
 
 ## 变更记录
+
+- 2026-10-10（**agent-loop-allotment 批 · 实施轮 · eng-coder**——承批档 `docs/batches/2026-10-10-agent-loop-allotment.md` §2 · 台账 #1100 · 需求 §4.17）：§6.3 条目 5 扩写 + 新增**文档注入·声明源保底名额**段（无声明源 = 单调用逐字 ∥ 有声明源 = 双腿 `Promise.all`，本仓 ≤5 + 声明 ≤5、上限 10；成本登记 + 升级条件；F-DI3 按需求括注即确认）；§7 补 **D-AL27**；§5 批指针补一行。实现 = 本批实施轮（`thincoder-core/agent/setup.mjs` ∥ `thincoder-core/memory/docs.mjs`）。
 
 - 2026-10-04（**核面小修批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-core-patch-batch.md` §2 · 台账 #793）：§6.2 步 4 补中止态例外句 + 中断语义列表补**环边界中止前置**条（环头/环尾两检查点——`abortError`：不开启新轮 ∥ 不落 `ContinueError`）。实现 = 本批实施轮。
 

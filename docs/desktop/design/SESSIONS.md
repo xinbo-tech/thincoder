@@ -129,7 +129,7 @@
 | `thincoder-desktop/renderer/views/session-control.mjs` | **238**（实读 2026-09-29——桌面收尾批（#659 形内判源）后；R13-B 新档 ∕ RF 波 2 后） | 会话控制面纯构树三件：`sessionModel` ∕ `sessionBarTree` ∕ `sessionDropdownTree`（+ 节点助手族；import = `../i18n.mjs` ∕ `../store.mjs` ∕ `./chrome.mjs`——零 `node:` ∕ 零裸包） |
 | `thincoder-desktop/src/main/session-flags.mjs`（R1 输入面板移植新档） | **96**（实读 2026-09-29） | 模式位四写面（`session:flags`——核 `setSlot*` 四写 + 活代理重施 + `flagsOf` 回执 + ENG×PLAN 互斥） |
 
-**行数面机检**：本表迁出后，`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`）读取面 = `docs/desktop/design/PROJECT.md` §4.1（运行根单读）——本表行按同值同步；后续本域新档由落盘批在本表补行（沿 §4.1 纪律）。
+**行数面机检**：`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`，运行根单读）**逐条声明节域——本表为其一**（本域值行单源）；后续本域新档由落盘批在本表补值行，`docs/desktop/design/PROJECT.md` §4.1 同拍补指针行（沿 §4.1 纪律）。
 
 ### 3.2 现有文件改动 · 批块（本域 · 迁自 `PROJECT.md` §4.2——逐字；块内「本档」类回指已按新落点改指）
 

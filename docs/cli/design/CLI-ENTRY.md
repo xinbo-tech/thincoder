@@ -64,6 +64,7 @@
 
 - **发射面** = `printCompletion(shell)`（`thincoder-cli/src/completions.mjs`）；`completion` 分支在 `bin/thincoder.mjs` 分发（非法 shell ⇒ usage + 退出 1）。
 - **横深对齐**：三套脚本须覆盖 §2 表内旗标词面——**ledger 族已对齐（#677 I8 已落）**；余缺口在册 = `session gc ∕ index` 旗标（`docs/cli/design/CLI-DEBT.md` §3-T1）。
+  ledger 词表现读含 `list`（三套发射 `migrate audit list`——源档 `thincoder-cli/src/completions.mjs:27` ∥ `:138`）；MS-2 发射锁面字面断言随词表收正（2026-10-10 · #894——批内件 `docs/batches/2026-09-30-defect-fixes-cli.test.mjs` 复跑 5/5）。
 - **bash 源文本形 ≡ 发射字节形**（防改形漂移；同族各分支行逐字节同形）：
   - 形（源档 `completions.mjs` 模板字面量内直写 = 发射字节，**零反斜杠**）：`$(compgen -W "<词表>" -- "$cur")`；分派行 = `case "$prev" in`。
   - **JS 插值险位例外**：发射面须含字面 `${…}` 的段（`"\${COMP_WORDS[1]}"` 一类）在源档保留 `\${` 转义（模板字面量内 `\$` ⇒ 发射 `$`）。
@@ -94,6 +95,8 @@
 **本批（read-data-interface · 2026-10-03）落点表** = `docs/batches/2026-10-03-read-data-interface.md` §2（唯一承载面——一次性批次材料）。
 **本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
 **本批（盘根门 ∥ 索引排除批 · 2026-10-08）落点表** = `docs/batches/2026-10-08-diskroot-gate-index-excludes.md` §2（唯一承载面——一次性批次材料）。
+
+- 2026-10-10（**core-small-fixes 批 · 实施轮设计面回填（fix 轮）· eng-coder**——承批档 `docs/batches/2026-10-10-core-small-fixes.md` §2.6 ∥ §5；台账 #894）：§3 横深对齐条补 **as-of 注**（ledger 词表含 `list`——三套 `migrate audit list`；MS-2 锁面断言随词表收正——批内件 `docs/batches/2026-09-30-defect-fixes-cli.test.mjs` 复跑 5/5）。**零新语义**（= 词表/锁面态的 as-built 登记）。
 
 - 2026-10-08（**盘根门 ∥ 索引排除批 · 实施后随动修正轮 · eng-designer**——承批档 `docs/batches/2026-10-08-diskroot-gate-index-excludes.md` §5 上抛 ∥ §2 尾修正轮记录块）：§1 盘根门条**落点引程改指**（`thincoder-cli/bin/thincoder.mjs`：argv 解析 `:41` 后 ∥ TUI 包装块 `:52` 前——实施后实读）。**零新语义**。
 - 2026-10-08（**盘根门 ∥ 索引排除批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-08-diskroot-gate-index-excludes.md` §2 · 台账 #1080）：§1 启动前置校验族新增**盘根启动门**条（会话面硬拦 + 维护面放行 + 落点 = `bin/thincoder.mjs` argv 解析后 + 判定纯函数新档；实现 = 本批实施轮）。

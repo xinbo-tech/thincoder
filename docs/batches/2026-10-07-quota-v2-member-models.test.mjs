@@ -28,7 +28,7 @@
  *      禁用勾选即时写（在飞禁用 ∥ 失败回弹 + 窗内状态行 ∥ 成功静默）∥ 离表注行只数覆盖键 ∥ 两态共用取数（单次）
  *   ⑪ 服务模型页配额列 ∥ 审计页单标题（WEBUI §2.4③/#1003 ∥ #995）：三态（值 ∥「不限」 ∥ 嵌入「—」）∥
  *      保存后列表刷新随动（与 F 组单源）∥ `audit.title` 单点引用
- *   ⑫ 静态面（§6 AC-23 续）：档目 29 ∥ 30（结构轮后）∥ 十四档行宽 ≤300 ∥ `:root` 38 ∥ 悬停清单七条（AC-19 canon 不破）
+ *   ⑫ 静态面（§6 AC-23 续）：档目 31 ∥ 32（结构轮后）∥ 十四档行宽 ≤300 ∥ `:root` 38 ∥ 悬停清单七条（AC-19 canon 不破）
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -223,9 +223,9 @@ test("② 禁用写/读面：键级合并 200 ∥ 400（键形/值——库零�
     assert.deepEqual(added.json.modelDisables, { "mock/mock-chat": true, "prov/other": true })
     const removed = await post(app.base, DISABLE_URL(alice.id), { cookie: adminSession.cookie, body: { disables: { "mock/mock-chat": null } } }) // null = 删键（未出现键不动）
     assert.deepEqual(removed.json.modelDisables, { "prov/other": true })
-    // 400：键形四例 ∥ 值非 true/null（B27）——库零变
+    // 400：键形四例（空白 ∥ 前空段 ∥ 后空段 ∥ 空串——裸名合法 = #1008）∥ 值非 true/null（B27）——库零变
     const before = db.prepare("SELECT model_disabled_json FROM members WHERE id = ?").get(alice.id).model_disabled_json
-    for (const bad of [{ "m": true }, { "/m": true }, { "p/": true }, { "": true }]) {
+    for (const bad of [{ " m ": true }, { "/m": true }, { "p/": true }, { "": true }]) {
       const res = await post(app.base, DISABLE_URL(alice.id), { cookie: adminSession.cookie, body: { disables: bad } })
       assert.deepEqual([res.status, res.json.error.code], [400, "invalid_request_error"], JSON.stringify(bad))
     }
@@ -396,7 +396,7 @@ test("⑥ #1001③：keyUsageStats 窗沿 = 近 30 个本地日（-29 含 ∥ -3
 
 // ── ⑦ #1001②：键形助手两 merge 共用（裸名/空段 ⇒ 400——库零变）──────────────
 
-test("⑦ #1001②：模型禁用与配额覆盖同一键形助手（裸名/空段 ⇒ 400）", async () => {
+test("⑦ #1001②：模型禁用与配额覆盖同一键形助手（空白/空段 ⇒ 400——裸名合法）", async () => {
   const mock = await startMockUpstream()
   const db = DB.openDatabase(":memory:")
   const app = await startServer({ db, config: await validatedConfig(mock.base) })
@@ -405,13 +405,13 @@ test("⑦ #1001②：模型禁用与配额覆盖同一键形助手（裸名/空�
     const alice = await makeMember(db)
     const adminSession = await login(app.base, "admin", "admin-password")
     const before = db.prepare("SELECT model_quotas_json, model_disabled_json FROM members WHERE id = ?").get(alice.id)
-    // 直接面：两 merge 同助手（裸名 ∥ 空段 ⇒ 400——键形非法）
-    assert.throws(() => MEMBERS.mergeMemberModelQuotas(db, alice.id, { m: 5 }), (error) => error.status === 400 && error.code === "invalid_request_error")
-    assert.throws(() => MEMBERS.mergeMemberModelDisables(db, alice.id, { m: true }), (error) => error.status === 400 && error.code === "invalid_request_error")
-    // HTTP 面：`model-quotas` 裸名键 ⇒ 400（#1001②——覆盖键同拍）
-    const quotaRes = await post(app.base, QUOTA_URL(alice.id), { cookie: adminSession.cookie, body: { quotas: { m: 5 } } })
+    // 直接面：两 merge 同助手（空白 ∥ 空段 ⇒ 400——键形非法；裸名合法 = #1008）
+    assert.throws(() => MEMBERS.mergeMemberModelQuotas(db, alice.id, { " m ": 5 }), (error) => error.status === 400 && error.code === "invalid_request_error")
+    assert.throws(() => MEMBERS.mergeMemberModelDisables(db, alice.id, { " m ": true }), (error) => error.status === 400 && error.code === "invalid_request_error")
+    // HTTP 面：`model-quotas` 空白键 ⇒ 400（#1001②——覆盖键同拍；裸名合法）
+    const quotaRes = await post(app.base, QUOTA_URL(alice.id), { cookie: adminSession.cookie, body: { quotas: { " m ": 5 } } })
     assert.deepEqual([quotaRes.status, quotaRes.json.error.code], [400, "invalid_request_error"])
-    const disableRes = await post(app.base, DISABLE_URL(alice.id), { cookie: adminSession.cookie, body: { disables: { m: true } } })
+    const disableRes = await post(app.base, DISABLE_URL(alice.id), { cookie: adminSession.cookie, body: { disables: { " m ": true } } })
     assert.deepEqual([disableRes.status, disableRes.json.error.code], [400, "invalid_request_error"])
     assert.deepEqual(db.prepare("SELECT model_quotas_json, model_disabled_json FROM members WHERE id = ?").get(alice.id), before, "400 ⇒ 库零变")
   } finally {
@@ -421,11 +421,11 @@ test("⑦ #1001②：模型禁用与配额覆盖同一键形助手（裸名/空�
   }
 })
 
-// ── ⑧ 门禁清单（`prepublishOnly` 三十三件含本批两件 ∥ 清单在盘）──────────────────
+// ── ⑧ 门禁清单（`prepublishOnly` 三十八件含本批两件 ∥ 清单在盘）──────────────────
 
-test("⑧ 门禁清单：`prepublishOnly` 三十三件含本批件（新建 ∥ 随正）∥ 清单目标在盘", () => {
+test("⑧ 门禁清单：`prepublishOnly` 三十八件含本批件（新建 ∥ 随正）∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 33, `门禁清单件数（二十六 ⇒ 三十三——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 38, `门禁清单件数（二十六 ⇒ 三十八——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链 ∥ 10-09 alias 批件入链 ∥ 10-09 代理页批件入链 ∥ 10-10 服务面残迹批件入链 ∥ 10-10 服务小修批两件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-v2-member-models.test.mjs"), "本批件应入列")
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-per-model.test.mjs"), "随正件应在列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
@@ -725,9 +725,9 @@ test("⑪ 服务模型页配额列三态（值 ∥「不限」 ∥ 嵌入「—�
 
 // ── ⑫ 静态面（§6 AC-23 续——档目 ∥ 行宽 ∥ AC-19 canon）───────────────────────────────
 
-test("⑫ 静态面：档目 29 ∥ 30 ∥ 十四档行宽 ≤300 ∥ `:root` 38 ∥ 悬停清单七条（AC-19 canon 不破）", () => {
+test("⑫ 静态面：档目 31 ∥ 32 ∥ 十四档行宽 ≤300 ∥ `:root` 38 ∥ 悬停清单七条（AC-19 canon 不破）", () => {
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [31, 30], "档目 30 ∥ 31（结构轮后——十一新档）")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [32, 31], "档目 31 ∥ 32（结构轮后——十一新档）")
   for (const file of ["views-admin.mjs", "views-models.mjs", "views-audit.mjs", "i18n.mjs", ...readdirSync(PUBLIC_DIR).filter((name) => /^i18n-(zh|en)/.test(name)).sort()]) {
     for (const line of readPublic(file).split("\n")) assert.ok(line.length <= 300, `${file} 行宽越界：${line.slice(0, 60)}…`)
   }

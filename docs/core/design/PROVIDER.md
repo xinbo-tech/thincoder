@@ -168,7 +168,7 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 / `thinkAlwaysOn`（服务端强制思考标记——语义单源 = `doc:MODEL-SPECS.md:§16.3`）/ `reasoningEffortEnum` / `tempRange` / `noUsageStream`；VSC 侧每行多 `reasoningEffortDefault`。
 
 - 新模型只加一行 spec，transport / 续写 / thinking 全自动适配；未知模型保守 `DEFAULT_SPEC`（128K 上下文 / 32K 输出）+ warn once。
-- **厂商前缀剥离**：完整名未命中且含 `/` 时剥掉首个 `/` 前 namespace 再匹配一次（`ZHIPU/GLM-5.3 → glm-5.3`）；显式 alias 行保留；只影响 spec 查询，不改 `provider.model`。
+- **厂商前缀剥离**：完整名未命中且含 `/` 时取**最后一个** `/` 之后的段再匹配一次（`qwen/ZHIPU/GLM-5.3 → glm-5.3`；单段名同判——`ZHIPU/GLM-5.3 → glm-5.3`）。末段形 = 2026-10-10 用户裁定「只取最后一段」（测试服务器外标 `provider/上游名` 链式叠加所致；VSC 端差面同判随正——详 `doc:MODEL-SPECS.md:§17`）；显式 alias 行保留；只影响 spec 查询，不改 `provider.model`。
 - **规格来源可判定**：`specMatch(model) → { spec, matched }`（与 `specForModel` 共享同一查表实现——单次查表）；`matched: false` = `DEFAULT_SPEC` 兜底。
 - **退役 / 路由名是否保留成行按服务端状态判**：服务端**仍受理**旧名时删行 → 旧配置降 `DEFAULT_SPEC`（压缩阈值 / 窗口显示错）——故默认**保留为独立行**；
   仅当服务端**已 404**（名真退役）或用户明令退役时删行，且**须逐名认账退化后果**（不得静默）。参数与能力位**是否随新模型按「当下合同」判**
@@ -289,6 +289,7 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
 
 - **M1 清单拉取（按 format 分派）**：`openai` → `GET {baseURL}/models`（`Authorization: Bearer`，解析 `data[].id`）；`anthropic` → `GET {baseURL}/models?limit=1000`（`x-api-key` + `anthropic-version`，`has_more` / `after_id` 翻页）；
 `google` → `GET {baseURL}/models?key=…&pageSize=1000`（`models[].name` 剥 `models/` 前缀，`nextPageToken` 翻页）。URL 组合 = `{baseURL}` + 相对路径（与 chat 各 transport 同构）；**翻页上限 10 页**（任一分页失败即整体抛出——不部分返回）；HTTP 非 2xx / 网络失败**抛出**。候选**不做对话能力过滤**（embedding 等一并返回——不造第二个人工清单）。
+- **M1 错误面（2026-10-10 · #1068）**：载荷读取失败（断流 ∥ idle 超时 ∥ 网络）⇒ **原错误直抛**（根因可辨——`response.text().catch(() => "")` 吞口已去）；真非 JSON（HTML 等）⇒ `GET /models failed: non-JSON response`（文案逐字零改）；非 2xx 径照旧（读失败含在文案面）。落点 `thincoder-core/provider/list-models.mjs` `fetchJson`。
 - **M2 候选面 = 拉取**（CLI）：`/model` L2 与 `/config → 默认模型` L2 同源；**会话级缓存 + TTL 60s（失败不缓存）**（`thincoder-cli/src/tui/model-catalog.mjs`，缓存时钟可注入）。
 - **M3 渠道默认模型面（单值 `providers[].model` 退场 · 2026-10-09 清除批）**：原三用途 ⇒ ①新装种子 = **零播种**（`presetToEntry` / 添加表单不产 `model` 键）②会话槽位空兜底 =
   收为「槽模型 → `defaultModel` 属渠段 → **明示未设置**」（模型面单源 = §6.22；缺 ⇒ 沿既有「model 缺失」处置，**绝不静默回落**）③显示回退 = 渠道行显 `baseURL`。
@@ -304,6 +305,9 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
 - **M10 候选未命中 = 保持当前选择**：候选清单未命中「偏好 / 当前选择」时**不得静默写会话槽**——该场景写槽仅来自显式用户动作（候选行点击 / `/model` 选择）；未命中分支显示与状态同步回落会话槽复合、零 `selectModel` / `selectReasoning` post；**命中分支维持现状**（同值幂等回写 / 无槽复合时沿用 workspaceState 播种 / reasoning 归一改写）。
   CLI 对位 = 会话值优先链（`sessionModel ?? dm.model`——`keep.model` 回落随 2026-10-09 清除批退场；缺 ⇒ 明示未设置，**绝不静默回落**）。
 - **UI / 交互决策（已定）**：候选列表行**直接可选**（不再区分「候选 / 建议」两组）；**渠道行显示回退 = `baseURL`**（单值模型退场——原「渠道无默认模型」词族删除）；**模型选择面不加手输行**（命令面 `provider:model` 仍放行任意串）；**添加表单不设 model 输入件**（渠道条目不携模型——单值模型退场；「拉取模型」钮收为渠道校验）；本批**不加** VSC 面板 spec 来源回显。**open 项：无**。
+- **模型菜单行语义（`#1121` 批 · 2026-10-10 · 核件 `thincoder-render-core/composer/model-menu.mjs`）**：provider 行 = **分组/展开控件**（零选中语义——`role="button"` + `aria-expanded` 随本行组体开合同拍，无 `aria-selected`；「当前模型归属」由组体内条目 ✓ 勾选承载）；
+  行点击 = **展开⇄收起**，且**组体开合与菜单层开合解耦**（行点击不关菜单；点外 ∥ Esc ∥ 条目拾取照旧关）；行径**恒零 `post` 零槽写**（零 `selectModel` / `selectReasoning`）。
+  **选中 ⇒ 生效仅在模型条目**（拾取单点 = `click`；`onPick` 携 `row` 直传——菜单在场期候选换行集零丢点）；**写失败可见**（会话槽写失败 ∥ `defaultModel` 写回失败 ⇒ 渲染面失败行 + 零乐观写回滚——单源 = `docs/desktop/design/COMPOSER.md` §2 本批注）。
 
 ### 6.17 请求头装配（`provider.headers`）
 
@@ -324,7 +328,7 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
 模型调 `read_image` 带图进载荷。历史内容保持字符串（不回放 images）；贴图临时件清理 = 端侧时序面（核件零回收）：桌面 = 回合尾 `cleanupTurn` ∥ CLI ∥ VSC = 贴图落盘写时 mtime 扫除（3 天窗——核 `thincoder-core/agent/helpers.mjs` `cleanupOldToolResults` 单源）。
 
 **贴图降级链（非视觉模型自动降级）**：非视觉模型贴图不再硬报错——自动降级为视觉模型子代理读图、文本描述注入主会话——用户无感换模型（VSC 主；CLI 镜像软引导）。触发点 = `routeUserTurn`（savePastedImages 后、主回合 LLM 请求前）：
-非视觉模型（`specForModel(provider.model).multimodal` 假）+ images 非空 + depth-0 → ① 视觉渠道查找（核 `thincoder-core/vision-reader.mjs` `findVisionChannel`——**判定源（渠道单值模型）随 2026-10-09 清除批退场 ⇒ 恒 `null` ⇒ 走 F-IDG-2 可读报错径（不静默丢图）；判定源重定在途（台账 #1125）**）
+非视觉模型（`specForModel(provider.model).multimodal` 假）+ images 非空 + depth-0 → ① 视觉渠道查找（核 `thincoder-core/vision-reader.mjs` `findVisionChannel`——**判定源（渠道单值模型）随 2026-10-09 清除批退场 ⇒ 恒 `null` ⇒ 走 F-IDG-2 可读报错径（不静默丢图）——本态 = `#1125` 落 B（**明书不恢复**：无替代载体，零网络约束下无逐渠模型源可扫——父裁 2026-10-10）：「非视觉模型 + 贴图 ⇒ 可读报错」即常规态**）
 ② extension 内直跑一次性视觉子代理读图（`runVisionReader`——`thincoder-core/vision-reader.mjs:47`，复用 runAgent / runChild 换渠道模式；**超时 60s**（`VISION_READ_TIMEOUT_MS` `:30`）；seam = `visionReader ?? runVisionReader` 参数注入 `panel-messages.mjs:128`）
 ③ 描述注入：text 改 `[图片 <路径> 描述: <视觉子代理描述>]`、images 清空（appendImagePointer throw 路径不达）④ fallback：
 无视觉渠道 / spawn 失败 / 超时 / 空返回 → 保留现可读报错（不静默丢图）。
@@ -360,7 +364,7 @@ claude / gemini 携 `format: "anthropic" / "google"`；`opencode-go-anthropic` �
 minimax 携 `chatPath: "/text/chatcompletion_v2"`；`presetToEntry`（核单源 = `thincoder-core/config-presets.mjs:57`——as-built 2026-10-04 收口重校）剥离 `desc` 余下发成 provider 条目
 （**不产 `model` 键**——单值默认模型退场，§6.11 同源）。
 
-**模型选择 UI（面板接线）**：主下拉列 provider 行（名 + 当前模型 + `›`；渠道行显示回退 = `baseURL`——§6.16）+ hover flyout 子菜单（webview 无键盘导航）；选中 = 写当前会话槽；设置面板「默认模型」项 = provider →
+**模型选择 UI（面板接线）**：主下拉列 provider 行（名 + `›`——行 = 分组/展开控件，零选中语义；渠道行显示回退 = `baseURL`；§6.16 本批行）+ hover ∕ 点击 flyout 子菜单（组体 = 该渠模型候选；webview 无键盘导航）；条目拾取 = 写当前会话槽（拾取单点 = `click`；写失败 ⇒ 失败行 + 钮回滚槽现值）；设置面板「默认模型」项 = provider →
 运行期拉取候选两级（写 `raw.defaultModel`）。Add / Remove / Key 流 = 核单源 `thincoder-core/provider-flows.mjs`（`addProviderFlow` `:137`——QuickPick preset 过滤已添加或 Custom 手输 name / baseURL + format → `addProviderEntry` → 问 key → `setProviderKey`）；
   VSC 薄壳 `thincoder-vscode/src/extension/provider-flows.mjs` 住 Remove ∥ Key 两流程 + 探针转口——`addProviderFlow` 包装随 #1054 净删）；
 `settings.mjs` `fullStatus`（`:308`）单源拉取
@@ -702,3 +706,6 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - 2026-10-09（**provider-default-model-purge 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §3 轮次 1 · 台账 #1122）：§6.19 两处残留收正——添加流字段面「Custom 手输 name / baseURL + format」（去 `model`）∥ 渠道行补显示回退半句（回指 §6.16）；全档批内注记名统一「2026-10-09 清除批」。**零新语义**（评审发现 #2 直接导出项）。明细 = 批档 §2 修复轮块。
 - 2026-10-09（**provider-default-model-purge 批 · 实施期收正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §2 收正块 · 台账 #1122）：§6.16 M3 裸渠名拒文案逐字对齐实装（「渠道无默认模型，请用 `provider:model`」——实装 = `thincoder-core/agent-tools/subagent-async.mjs:177`）∥ M10 CLI 对位链删 `keep.model` 回落（`sessionModel ?? dm.model`——绝不静默回落同口径）∥ §6.18 视觉链判定源收正（恒 `null` ⇒ F-IDG-2 可读报错径；判定源重定在途 = 台账 #1125）∥ §6.19 Add/Remove/Key 流指针收正（VSC `addProviderFlow` 随 #1054 净删 ⇒ 核单源 `thincoder-core/provider-flows.mjs:137`）。**零新语义**（实装对齐 ∥ 裁定落地）。
 - 2026-10-09（**server-gemini-openai-preset 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-server-gemini-openai-preset.md` §2 · 台账 #1128；用户 2026-10-09 13:45 令）：§6.11 预设计数 24 ⇒ **25**（D3 计数与清单同变）+ 新登 `gemini-openai` 预置（Google 官方 OpenAI 兼容端点——与 `gemini` 同 key 两形态并存 ∕ 最小字段集「不设 = 不发」 ∕ 「待验」注）；§6.19 预设名单与计数同变（24 ⇒ 25 preset）。**产品码零触（设计轮）**。明细 = 批档 §2。
+- 2026-10-10（**spec-namespace-last-segment 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-spec-namespace-last-segment.md` §2 · 台账 #1167；用户 2026-10-10 03:05 裁「只取最后一段」）：§6.9 厂商前缀剥离句随正——兜底改取**最后一个** `/` 之后的段（测试服务器双段外标 `qwen/ZHIPU/GLM-5.3` 查表误报的修法）；VSC 端差表同判随正（主 agent 03:1x 裁）。改法逐字 / 用例 / 边界 = `doc:MODEL-SPECS.md:§17`。**产品码零触（设计轮）**。
+- 2026-10-10（**core-small-fixes 批 · 实施轮设计面回填（fix 轮）· eng-coder**——承批档 `docs/batches/2026-10-10-core-small-fixes.md` §2.6 ∥ §5；台账 #1068）：§6.16 M1 补**错误面句**（载荷读取失败 ⇒ 原错误直抛；真非 JSON ⇒ 原文案；非 2xx 径照旧——落点 `thincoder-core/provider/list-models.mjs`）。**零新语义**（= as-built 收正）。明细 = 批档 §2.6 ∥ §5。
+- 2026-10-10（**purge-residue-sweep 批 · 设计档随动轮 · eng-coder**——承批档 `docs/batches/2026-10-10-purge-residue-sweep.md` §2 设计档落点表 · 台账 #1121 ∥ #1125）：§6.16 增**模型菜单行语义**行（行 = 分组/展开控件、零选中语义 ∥ 行点击 = 展开⇄收起 · 组体开合与菜单层开合解耦 ∥ 行径恒零 `post` 零槽写 ∥ 选中 ⇒ 生效仅在模型条目 + `onPick` 携 `row` 直传 ∥ 写失败可见）；§6.16 面板接线句收正（行形去「当前模型」选中语义；条目拾取 = 槽写 + 写回）；§6.18 视觉链判定源随 `#1125` 落 **B**——「明书不恢复」（恒 `null` + 可读报错 = 常规态；「判定源重定在途」句清零）。**产品码零触（设计档）**。明细 = 批档 §2 ∥ §5。

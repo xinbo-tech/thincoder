@@ -252,7 +252,7 @@ const SETTINGS_SEED = {
   configured: true,
   providers: { state: "ready", presets: [{ name: "preset-a" }, { name: "preset-b" }], providers: [], edit: null, probe: null, draft: null },
   mcp: { state: "ready", servers: [], details: {}, form: { editing: null, type: "stdio" } },
-  env: { state: "ready", proxy: { uri: "http://model.invalid/v1", web: true, model: false }, shell: { current: null, candidates: [{ name: "bash", value: "/bin/bash" }] }, test: null },
+  env: { state: "ready", proxy: { uri: "http://model.invalid/v1", web: true }, shell: { current: null, candidates: [{ name: "bash", value: "/bin/bash" }] }, test: null }, // #1090 去键（父侧随正 2026-10-10 · 可 revert）
   tools: { state: "ready", status: { built: true, files: 1, chunks: 2 }, building: false, keys: { embedding: { hasKey: true }, websearch: { hasKey: false } }, edit: "embedding" },
 }
 
@@ -268,7 +268,7 @@ const WIZARD_SEED = {
 // 【#1059 重锚注 —— 观测根按现拓扑改位（断言面零删 · 对照表见批档 §2.3）】三端对齐批 #1027–#1029 起渠道两形表单入
 // `providerAdd` 弹窗体且**单形渲染**（类型切换换骨 —— `providers.addShape`）⇒ 本腿改断「两宿主两轮重绘保真」：
 // 弹窗体富形（`[data-form-shape="custom"]` —— 第二闸卡根）六值面 + 焦点 ∥ 光标 + 卡根滚位；页槽两件（工具 key ∥
-// env shell）+ 槽根滚位同轮；覆盖缺口去处（两形同刷矩阵 ∥ nth 消歧 ∥ 跨形切换 —— 登记）见批档 §2.3 缺口 1–3。
+// env shell）+ 槽根滚位同轮；覆盖缺口去处（两形同刷矩阵 —— 登记；nth 消歧 ∥ 跨形切换 —— 已补腿，2026-10-10 #1071）见批档 §2.3 缺口 1–3。
 test("M-604a·两宿主两轮重绘（弹窗体富形 ∥ 页槽）：值 ∕ checked ∕ 焦点 ∕ 光标区间 ∕ 两根 scrollTop 保真", async () => {
   installFakeDom()
   try {
@@ -315,6 +315,51 @@ test("M-604a·两宿主两轮重绘（弹窗体富形 ∥ 页槽）：值 ∕ ch
     assert.equal(focusNow.selectionEnd, 5, "光标区间止")
     assert.equal(settingsModalNode().scrollTop, 120, "卡根 scrollTop 保真")
     assert.equal(slot.scrollTop, 60, "槽根 scrollTop 保真")
+  } finally {
+    restoreDom()
+  }
+})
+
+test("M-604a·nth 消歧（同标记键双例并存）：页槽 ∥ 组弹窗体两宿主跨两轮重绘各保己值", async () => {
+  installFakeDom()
+  try {
+    const { store, slot, patchSettings, face } = await mountFace(SETTINGS_SEED)
+    const { settingsModalNode } = await import(at("thincoder-desktop/renderer/settings-modal.mjs"))
+    face.openSettingsModal("tools") // 双例并存：页槽工具段（种子 `edit: embedding`）∥ 组弹窗体工具段（文档序末位 = 交互面——`keySave` 宿主无关取件）
+    const slotInput = control(slot, '[data-key-input="embedding"]')
+    const dialogInput = control(settingsModalNode(), '[data-key-input="embedding"]')
+    slotInput.value = "sk-slot-draft"
+    dialogInput.value = "sk-dialog-draft"
+
+    // 两轮重绘（`verify` 切片写 ⇒ 唯一重绘点径 —— 两宿主同轮）
+    store.set(patchSettings(store.get(), { verify: { kind: "ok", count: 1, reason: null } }))
+
+    const slot2 = control(slot, '[data-key-input="embedding"]')
+    const dialog2 = control(settingsModalNode(), '[data-key-input="embedding"]')
+    assert.notEqual(slot2, slotInput, "页槽同轮重建（新节点）")
+    assert.equal(slot2.value, "sk-slot-draft", "页槽例保己值（同标记键零互串——捕获位序 `nth`）")
+    assert.equal(dialog2.value, "sk-dialog-draft", "弹窗体例保己值（同标记键零互串——捕获位序 `nth`）")
+  } finally {
+    restoreDom()
+  }
+})
+
+test("M-604a·跨形切换折返（custom ⇒ preset ⇒ custom）：换形净起步 —— 旧形草稿零回写（沿 M-604b 作用域锁）", async () => {
+  installFakeDom()
+  try {
+    const { store, patchSettings, face } = await mountFace(SETTINGS_SEED)
+    const { settingsModalNode } = await import(at("thincoder-desktop/renderer/settings-modal.mjs"))
+    face.openSettingsModal("providerAdd")
+    const setShape = (shape) =>
+      store.set(patchSettings(store.get(), { providers: { ...store.get().settings.providers, state: "ready", addShape: shape } }))
+    setShape("custom")
+    const custom = control(settingsModalNode(), '[data-form-shape="custom"]')
+    control(custom, '[name="name"]').value = "draft-name"
+    setShape("preset") // 折返第一跳：换骨（富形退场 —— 表单身份换）
+    setShape("custom") // 折返第二跳：富形回归 ⇒ 新形净起步（旧形草稿零回写——身份换 ⇒ 键不达，沿 `M-604b·作用域锁` 先例）
+    const back = control(settingsModalNode(), '[data-form-shape="custom"]')
+    assert.notEqual(back, custom, "折返 = 新节点（换骨重建）")
+    assert.equal(control(back, '[name="name"]').value, "", "换形净起步：旧形草稿零回写（实测 2026-10-10 #1071 补腿）")
   } finally {
     restoreDom()
   }
@@ -434,7 +479,7 @@ test("M-604b·负向锁：非申报控件重建后取新模型值（旧 DOM 值�
     // 模型面变（同批切片写 ⇒ 唯一重绘点径）
     store.set(patchSettings(store.get(), {
       mcp: { ...store.get().settings.mcp, form: { editing: null, type: "http" } },
-      env: { ...store.get().settings.env, proxy: { uri: "http://model.invalid/v2", web: true, model: false } },
+      env: { ...store.get().settings.env, proxy: { uri: "http://model.invalid/v2", web: true } }, // #1090 去键（父侧随正 2026-10-10 · 可 revert）
     }))
 
     assert.equal(control(doc.body, '[data-form="mcp"] [name="type"]').value, "http", "类型 select 取新模型值（旧值 ws 零回写）")

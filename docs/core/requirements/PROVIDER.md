@@ -141,6 +141,26 @@ N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自
   判定句：置超龄件（mtime > 3 天）后经一次贴图落盘 ⇒ 超龄件被回收 ∧ 未超龄件保留 ∧ 落盘出口 `{paths, dropped}` 零变。
 **范围边界（不做 / 移出）**：UI 前置（模型下拉 vision 标记 + 贴图前提示）= UX 增强后批（F-4 移出本批）；`depth>0` 子代理回合非视觉贴图沿用现报错（不降级）；非 raster（svg / heic）现 toast 不变；retry 不回带 images（另行登记）；`maxTurns` 固定 10（观察登记——候选按图数伸缩）。
 
+### 4.6 模型规格查表 · 命名空间取末段（测试服务器 GLM-5.3 形报障 · 2026-10-10 · 用户报障）
+
+**来源（用户逐字）**：2026-10-10 02:56「thincoder匹配model_spec的时候应该忽略大小写。」+ 03:01「thincoder使用测试服务器提供的GLM-5.3系列的几个模型时会报model_spec没找到。」+ 03:05「只取最后一段就可以。」（修法裁定——取代主 agent 初报的「逐段迭代」形）
+
+**症状与根因（父侧实跑复现 · 2026-10-10 03:0x）**：测试服务器（ECS 10.0.0.5）清单内 `qwen/ZHIPU/GLM-5.3` ∥ `qwen/ZHIPU/GLM-5.3-FlashX` 两名 ⇒ `specMatch` 判 `matched:false` ⇒ 告警 + `DEFAULT_SPEC`（128K/32K）。
+同清单其余名（抽测：裸名 `glm-5.3-flash` ∥ 单段 `qwen/qwen3.7-max` ∥ `deepseek/deepseek-flash`）全命中。根因 = `lookupSpec` 命名空间剥离为**单跳**（`thincoder-core/model-specs.mjs:268-274`——只剥首个 `/` 前一段、重试一次）。
+服务端外标 = `provider/上游名`，而上游名自身含厂商前缀（`ZHIPU/GLM-5.3`）⇒ 双段，单跳后得 `zhipu/glm-5.3` 仍无行命中。
+
+**大小写口径（用户首判之澄清——实跑钉证）**：查表双侧现行已 `.toLowerCase()`（`thincoder-core/model-specs.mjs:263-265`）——`Qwen/ZHIPU/GLM-5.3` 与 `qwen/ZHIPU/GLM-5.3` 实跑同判（均未命中）⇒ 大小写非本障成因；本项保留不敏感口径，且要求其不随剥离逻辑回归。
+
+| # | 需求 | 判定句（验收口径——摘要） |
+|---|---|---|
+| R22 | `lookupSpec` 命名空间兜底改**取末段**（完整名未命中且含 `/` ⇒ 取最后一个 `/` 之后的段重试前缀匹配——`qwen/ZHIPU/GLM-5.3` ⇒ `glm-5.3` 命中；单段名两法等价、零回归）；大小写不敏感口径不变；未知名回落语义零变 | ① `specMatch("qwen/ZHIPU/GLM-5.3").matched === true` 且 context = 1_000_000（`glm-5.3` 行）；② `specMatch("qwen/ZHIPU/GLM-5.3-FlashX").matched === true`（`glm-5.3-flashx` 行）；③ 大小写变体（`Qwen/ZHIPU/GLM-5.3`）与①同判；④ 既有面零回归（单段 `ZHIPU/GLM-5.3` ∥ 裸名 `glm-5.3-flash` ∥ 单段对照 `qwen/qwen3.7-max`）；⑤ 未知名（如 `zzz/unknown-x`）仍 `matched:false` + `DEFAULT_SPEC` 兜底 |
+
+**非功能**：N13 热路径形态不变（查表仍为纯函数前缀扫描——多段名 = 一次末段重试）· N14 过匹配防回归（未知名仍兜底；既有单段命中面逐一回归）。
+
+**范围边界（不做）**：不改规格表任何行值 ∥ 不改 `SORTED_SPECS` 排序机制 ∥ 不改告警文案与回退语义 ∥ 不动服务器侧外标形（`provider/model` 不变）∥ 不引入别名映射表。
+**VSC 同判随正（在册交付面）**：`thincoder-vscode/src/specs.mjs:55-57` 单跳 ⇒ 取末段，随本批落（父裁 2026-10-10 03:2x · #44 上抛）；守卫为既有端差（核 `slash > 0` ∥ VSC `slash >= 0`——首位斜杠形 `/glm-5.3`：核 miss ∥ VSC 命中 `glm-5` 默档），本批不动、显式认账。
+
+
 ## 5. 不并项与历史沿革（B 轮 · 2026-09-14）
 
 | 旧档节 | 内容 | 何故不并 |
@@ -165,3 +185,4 @@ N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自
 - 2026-10-03（**死指针收正 · 主 agent 直接执行 · 可 revert**——承 crash-guards 批修复轮报备）：§4 R19 载体注收正——`test/provider-headers.test.mjs` 已随 2026-09-28 测试树全清退场（本行判据 as-of 批次窗），消除死指针。**零新语义**。（迁移期引文）
 - 2026-10-04（**#907 判据条目落档 · 主 agent**）：§2.1 新增 responses 适配面健壮性三判据条目（判据-D9/D8/D5——批 `docs/batches/2026-10-04-responses-robustness.md` §2；设计 = `PROVIDER.md` §6.13 + D-PR34/35/36）。〔评审 #5 发现 6：落档时漏行，本行随补〕
 - 2026-10-09（**清除批 · 需求档同拍 · 主 agent**〔自动跑完授权 · 可 revert〕——承批 `docs/batches/2026-10-09-provider-default-model-purge.md` · 台账 #1122）：§4.1 R3 立法句收正（**渠道不携模型**——单值 `providers[].model` ∥ 预设 `model` 全退场；模型身份唯二 = 顶层 `defaultModel`（复合串）∥ 会话槽选定；缺 ⇒ 明示「未设置」不静默回落）+ R2 ∥ R6 ∥ N1 同拍；§4.2 总体需求句 ∥ §4.4 边界句随正；**R15 退场删除**（判据对象随清除对象不存在——表后注在册）；§4.5 F-IDG-1 判定源退场注（渠道单值模型退场——重定在途 · 台账 #1125）。**本档新增需求 0**（收正 + 退场登记）。
+- 2026-10-10（**模型规格查表命名空间取末段 · 需求新增 · 主 agent 直接执行 · 可 revert**——承用户 2026-10-10 02:56/03:01 报障）：新增 **§4.6**（R22 / N13–N14）——测试服务器 `qwen/ZHIPU/GLM-5.3` 形误报 spec not found（父侧实跑复现：`qwen/ZHIPU/GLM-5.3` ∥ `qwen/ZHIPU/GLM-5.3-FlashX` = `matched:false`；根因 = `lookupSpec` 单跳剥离 `thincoder-core/model-specs.mjs:268-274`；大小写非成因——`:263-265` 双侧已小写化，`Qwen/` 变体同判）；修向 = 取末段（用户 03:05 裁「只取最后一段就可以」）。**本档新增需求 1 条**。

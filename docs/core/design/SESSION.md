@@ -880,6 +880,7 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 - **线选**：`contextHistory` 非空 ⇒ 取之；否则 `history` 经 `stripTruncatedToolArgs` 回退（v1 老档同径——与 `applySession` 机读线选择同判）。
 - **回声归并**：`mergeAdjacentAssistantEchoes`（`thincoder-core/context-echo.mjs`——经 `context.mjs` 转口可达；`applySession` 装线前同一步；干净输入同引用返回）。
 - **渠道合并**：槽 `activeProvider` 在册**且持 key** ⇒ `{ ...entry, model }`——`model` 按统一模型面序取（槽 `data.activeModel` ∥ `defaultModel` 属本渠道 ⇒ 其模型段；单源 = `doc:PROVIDER.md:§6.22`）；未命中（不在册 ∥ 无 key）⇒ `fallback`（支 ②「静默保持现状」的装配口径 = `loadConfig().provider`）。
+  **实现坐标（2026-10-10 · #1135 实施落）**：`thincoder-core/session-lifecycle.mjs:395` find 谓词 = `pr.name === data.activeProvider && hasKey(pr)`（key 门单源 `thincoder-core/model-ref.mjs` `hasKey`——与 `doc:PROVIDER.md:§6.22` 同判；本文「同源同式」句实读成立）。
 - **公式**：`historyPercent`（`thincoder-core/token-window.mjs`——与 CLI 状态行 / VSC `ctxPercentForHistory` 同式；不新增第三口径）。
 
 **判据句 3（端壳转口 · 零算法副本）**：桌面端壳 `thincoder-desktop/src/main/session-slots.mjs` 只做出参装配（`loadConfig()` → `providersList` / `provider` / `defaultModel` 传入）与有效门（数字 ∧ `> 0` ⇒ 携读数；否则键缺席）；配置不可读 / 读数计算抛 ⇒ `usage` 键缺席 + `console.error`（零静默；`history:page` 读面保持 fail-soft）。
@@ -1006,7 +1007,7 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
     - **`key` 规范形 = `sub:<role>#<id>`**（写面归一——CLI 原无前缀形收正（含非族键 `compress#N` ⇒ `sub:compress#N`）；VSC ∥ 桌面已规范、零改）；
       读面必容**旧形**（存量无前缀记录 append-only 不可迁移）：CLI 读面剥 `sub:` 前缀（显示 ∥ 折叠键 = 本地无前缀形）∥ VSC 读面补 `sub:` 再解析。
     - **词面判据三条（`status` 读面归一——跨端单源 · 2026-10-02 · #794 ∥ #795）**：① 停止面 = `stopped` ∥ `cancelled` ∥ `terminated` ⇒ ⏹ + stopped；② 错误面 = `error` ∥ `failed` ⇒ ⏹ + error（+ 文本注记）；③ done 面 = `done` ∥ `settled` ∥ `answered` ∥ 缺省 ∥ 未知 ⇒ ✓ + done。
-      **写面词表零动**（三端各写各词——CLI `stopped` ∥ VSC ∥ 桌面 `cancelled`）；读面按本三条容多写词（各端自做）；CLI error 面维持文本载（显示面差在册）。
+      **写面词表零动**（三端各写各词——CLI `stopped` ∥ VSC ∥ 桌面 `cancelled`）；读面按本三条容多写词（各端自做）。
     - **读面归一义务（字段级——沿上 `key` 读义务先例）**：他端记录读入 ⇒ 归一到本端归档块同形（产物 = 读面新对象——记录 ∥ 存储零写）：`key` 非空且无 `sub:` 前缀 ⇒ 补前缀；`label` ∥ `role` ∥ `id` 由 `key` 派生（头文载体 ∥ `dataset.subid` 门）∥ `frozen` 恒 `true`（记录 = 归档快照）∥ `status` 按上三条词面归一 ∥
       两时间戳互填（缺 `doneAt` ⇒ `startedAt` ∥ 缺 `startedAt` ⇒ `doneAt ?? 0`——冻结耗时算式）；其余字段原样携带。
     - **两形值域（互查面）**：digest `ask` 的 `from`（显示形域 = `role#id`）∥ `subagent.meta.key`（规范形域异形同轴）；读面义务 = **按键互查须前缀归一**（按 `from` 查块 ∥ 按 `key` 匹配提问者——现盘未见此类消费面，预防性在册）。
@@ -1149,6 +1150,8 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 | 源档 §10 注入序的 `loadSession` 同步会话级 UI（_autoApprove/planMode 面板标志 + 工具条按钮同步） | VSC 装配细节 | 面板 UI 同步 = VSC 专有面（`thincoder-vscode/**`）；注入序本体已入 §6.15 |
 
 ## 变更记录
+- 2026-10-10（**跨端对齐批 · 实施轮随动 · eng-coder**——承批档 `docs/batches/2026-10-10-cross-end-alignment.md` §2 · 台账 #821）：§6.26 词面判据三条句**删豁免半句**（CLI error 面显示面差登记退场——前提消失：CLI error 面已归一为 `⏹` + `error` + 括号外注记，与核件冻结头同形）。**零机制改**（显示面差归一面落位——记录形 ∥ 写面词表零动）。
+- 2026-10-10（**core-small-fixes 批 · 实施轮设计面回填（fix 轮）· eng-coder**——承批档 `docs/batches/2026-10-10-core-small-fixes.md` §2.6 ∥ §5；台账 #1135）：§6.24 判据句 2 渠道合并补**实现坐标注**（`thincoder-core/session-lifecycle.mjs:395`——补 `hasKey` 门，实现回归设计面，「同源同式」实读成立）。**零新语义**（= as-built 收正）。
 - 2026-10-09（**provider-default-model-purge 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §3 轮次 1 · 台账 #1122）：§6.8 D-S3 注记补批名前缀（「渠道单值模型退场」⇒「2026-10-09 清除批：渠道单值模型退场」——扫描口径统一）。**零新语义**（注记名收正）。明细 = 批档 §2 修复轮块。
 - 2026-10-02（**记录形残项批（#794 ∥ #795）· 设计档随动轮 · eng-designer**——承批档 `docs/batches/2026-10-02-record-shape-residuals.md` §2 随动表）：§6.26 补**词面判据三条**（`status` 读面归一——停止 ∥ 错误 ∥ done 三面词集 + 写面词表零动）＋**读面归一义务（字段级）**（他端记录 ⇒ 块头字段归一：`label`/`role`/`id` 由 `key` 派生 ∥ `frozen` 恒真 ∥ 两时间戳互填）。**零机制改**（判据单源落位）。
 

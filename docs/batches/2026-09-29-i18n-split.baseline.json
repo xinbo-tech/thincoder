@@ -1,5 +1,5 @@
 {
-  "_note": "i18n 拆分批（2026-09-29 · 台账 #614）搬前基线：renderer/i18n.mjs HOST_DICT 两语全量条目（保序 [[key,value],...]）——搬前届盘实读冻结；对拍件 = docs/batches/2026-09-29-i18n-split.test.mjs（A2）。【重锚 2026-09-29 18:3x · 父侧收位】#637 增 `session.occupied` 两语（session.deleteConfirm 后位）——条目 294 ⇒ 295。【重锚 2026-10-04 · 台账 #889】HOST_DICT 随后续批条目增殖——条目 295 ⇒ 314（现盘全量重冻；对拍语义 = 现盘全量等值等序 + 三档子序列相对序保）。",
+  "_note": "i18n 拆分批（2026-09-29 · 台账 #614）搬前基线：renderer/i18n.mjs HOST_DICT 两语全量条目（保序 [[key,value],...]）——搬前届盘实读冻结；对拍件 = docs/batches/2026-09-29-i18n-split.test.mjs（A2）。【重锚 2026-09-29 18:3x · 父侧收位】#637 增 `session.occupied` 两语（session.deleteConfirm 后位）——条目 294 ⇒ 295。【重锚 2026-10-04 · 台账 #889】HOST_DICT 随后续批条目增殖——条目 295 ⇒ 314（现盘全量重冻；对拍语义 = 现盘全量等值等序 + 三档子序列相对序保）。 【重锚 2026-10-10 · 随正轮（父侧）】HOST_DICT 随后续批条目增殖——条目 314 ⇒ 322（现盘全量重冻；对拍语义 = 现盘全量等值等序 + 三档子序列相对序保）。",
   "en": [
     [
       "rail.action.openDir",
@@ -251,7 +251,7 @@
     ],
     [
       "settings.section.model",
-      "Model & tier"
+      "Model"
     ],
     [
       "settings.section.agent",
@@ -322,6 +322,14 @@
       "Probe failed"
     ],
     [
+      "settings.addProvider",
+      "+ Add"
+    ],
+    [
+      "settings.addProviderTitle",
+      "Add Provider"
+    ],
+    [
       "settings.providers.nameLabel",
       "Name"
     ],
@@ -343,19 +351,11 @@
     ],
     [
       "settings.providers.keyLabel",
-      "API key"
+      "API Key"
     ],
     [
-      "settings.providers.activeToggle",
-      "Set as active provider"
-    ],
-    [
-      "settings.providers.addCustom",
-      "Add custom provider"
-    ],
-    [
-      "settings.providers.addPreset",
-      "Add preset provider"
+      "settings.providers.customChoice",
+      "Custom (manual config)"
     ],
     [
       "settings.providers.verify",
@@ -379,7 +379,7 @@
     ],
     [
       "settings.providers.noKey",
-      "No API key"
+      "No API Key"
     ],
     [
       "settings.providers.remove",
@@ -395,7 +395,7 @@
     ],
     [
       "settings.proxyRowTitle",
-      "Route this provider's model requests through the proxy (needs global proxy.model on)"
+      "Route this provider's model requests through the proxy."
     ],
     [
       "settings.fetchModels",
@@ -418,14 +418,6 @@
       "Delete? This cannot be undone — the original credential cannot be recovered; you would have to reconfigure it or get a new one from the provider."
     ],
     [
-      "settings.agent.readonly",
-      "Read-only"
-    ],
-    [
-      "settings.agent.save",
-      "Save"
-    ],
-    [
       "settings.model.current",
       "Current model"
     ],
@@ -436,10 +428,6 @@
     [
       "settings.model.use",
       "Use"
-    ],
-    [
-      "settings.model.tier",
-      "Tier"
     ],
     [
       "settings.mcp.kind.url",
@@ -460,6 +448,18 @@
     [
       "settings.mcp.add",
       "Add server"
+    ],
+    [
+      "settings.mcpAdd",
+      "+ Add Server"
+    ],
+    [
+      "settings.mcp.addTitle",
+      "Add MCP Server"
+    ],
+    [
+      "settings.mcp.editTitle",
+      "Edit MCP Server"
     ],
     [
       "wizard.title",
@@ -500,14 +500,6 @@
     [
       "wizard.save",
       "Save provider"
-    ],
-    [
-      "effort.auto",
-      "Auto"
-    ],
-    [
-      "effort.off",
-      "Off"
     ],
     [
       "status.usage",
@@ -667,7 +659,7 @@
     ],
     [
       "model.setKey",
-      "Key…"
+      "API Key…"
     ],
     [
       "reasoning.max",
@@ -754,8 +746,36 @@
       "Default model missing or invalid — using an available channel"
     ],
     [
+      "composer.send.noDefaultModelFallbackUnset",
+      "Default model missing — channel available, model not chosen"
+    ],
+    [
       "paste.unsupportedFormat",
       "Only png / jpg / gif / webp images are supported (got ${type})"
+    ],
+    [
+      "composer.attach.tooLarge",
+      "File too large (max 256 KB): ${name}"
+    ],
+    [
+      "composer.attach.tooMany",
+      "Too many text attachments (max 4): ${name}"
+    ],
+    [
+      "composer.attach.totalLimit",
+      "Attachment total exceeds 512 KB for this turn: ${name}"
+    ],
+    [
+      "composer.attach.binary",
+      "Not a text file (binary content): ${name}"
+    ],
+    [
+      "composer.attach.unsupported",
+      "Unsupported file type: ${name}"
+    ],
+    [
+      "composer.attach.readFailed",
+      "Could not read file: ${name}"
     ],
     [
       "approval.diff.large",
@@ -994,10 +1014,6 @@
       "Web tools (websearch/fetch)"
     ],
     [
-      "settings.proxyModel",
-      "Model requests (providers with proxy: true)"
-    ],
-    [
       "settings.proxyTest",
       "Test Connection"
     ],
@@ -1055,7 +1071,7 @@
     ],
     [
       "settings.addKey",
-      "Add Key"
+      "Add API Key"
     ],
     [
       "settings.changeKey",
@@ -1079,7 +1095,7 @@
     ],
     [
       "settings.deleteKey",
-      "Delete key"
+      "Delete API Key"
     ],
     [
       "settings.mcp.tools",
@@ -1116,6 +1132,10 @@
     [
       "settings.consultAdd",
       "+ Add consult model"
+    ],
+    [
+      "settings.consultAddTitle",
+      "Add Consult Model"
     ],
     [
       "settings.consultRemove",
@@ -1183,7 +1203,7 @@
     ],
     [
       "settings.mcp.env",
-      "Env (KEY=value, comma-separated)"
+      "Env"
     ],
     [
       "settings.mcp.url",
@@ -1199,7 +1219,23 @@
     ],
     [
       "settings.mcp.headers",
-      "Headers (KEY=value, comma-separated)"
+      "Headers"
+    ],
+    [
+      "settings.mcp.kvAdd",
+      "+ Add row"
+    ],
+    [
+      "settings.mcp.kvRemove",
+      "Remove row"
+    ],
+    [
+      "settings.mcp.kvKey",
+      "KEY"
+    ],
+    [
+      "settings.mcp.kvValue",
+      "value"
     ],
     [
       "settings.mcp.reconnecting",
@@ -1224,10 +1260,6 @@
     [
       "slash.unknown",
       "Unknown command: ${name} (/help for available commands)"
-    ],
-    [
-      "slash.busy",
-      "Unavailable while the turn is running — try again when it finishes"
     ],
     [
       "slash.args",
@@ -1509,7 +1541,7 @@
     ],
     [
       "settings.section.model",
-      "模型与档位"
+      "模型"
     ],
     [
       "settings.section.agent",
@@ -1580,6 +1612,14 @@
       "探活失败"
     ],
     [
+      "settings.addProvider",
+      "+ 添加"
+    ],
+    [
+      "settings.addProviderTitle",
+      "添加 Provider"
+    ],
+    [
       "settings.providers.nameLabel",
       "名称"
     ],
@@ -1601,19 +1641,11 @@
     ],
     [
       "settings.providers.keyLabel",
-      "API 密钥"
+      "API Key"
     ],
     [
-      "settings.providers.activeToggle",
-      "设为当前渠道"
-    ],
-    [
-      "settings.providers.addCustom",
-      "添加自定义渠道"
-    ],
-    [
-      "settings.providers.addPreset",
-      "添加预设渠道"
+      "settings.providers.customChoice",
+      "自定义（手动配置）"
     ],
     [
       "settings.providers.verify",
@@ -1637,7 +1669,7 @@
     ],
     [
       "settings.providers.noKey",
-      "未配置密钥"
+      "未配置 API Key"
     ],
     [
       "settings.providers.remove",
@@ -1653,7 +1685,7 @@
     ],
     [
       "settings.proxyRowTitle",
-      "该 provider 的模型请求走代理（需全局 proxy.model 开启）"
+      "该 provider 的模型请求走代理。"
     ],
     [
       "settings.fetchModels",
@@ -1676,14 +1708,6 @@
       "确定删除？删除后无法恢复——凭证原文不可复得，只能重新配置或回服务商重取。"
     ],
     [
-      "settings.agent.readonly",
-      "只读"
-    ],
-    [
-      "settings.agent.save",
-      "保存"
-    ],
-    [
       "settings.model.current",
       "当前模型"
     ],
@@ -1694,10 +1718,6 @@
     [
       "settings.model.use",
       "采用"
-    ],
-    [
-      "settings.model.tier",
-      "档位"
     ],
     [
       "settings.mcp.kind.url",
@@ -1718,6 +1738,18 @@
     [
       "settings.mcp.add",
       "添加服务器"
+    ],
+    [
+      "settings.mcpAdd",
+      "+ 添加服务器"
+    ],
+    [
+      "settings.mcp.addTitle",
+      "添加 MCP 服务器"
+    ],
+    [
+      "settings.mcp.editTitle",
+      "编辑 MCP 服务器"
     ],
     [
       "wizard.title",
@@ -1758,14 +1790,6 @@
     [
       "wizard.save",
       "保存渠道"
-    ],
-    [
-      "effort.auto",
-      "自动"
-    ],
-    [
-      "effort.off",
-      "关闭"
     ],
     [
       "status.usage",
@@ -1925,7 +1949,7 @@
     ],
     [
       "model.setKey",
-      "设置密钥…"
+      "设置 API Key…"
     ],
     [
       "reasoning.max",
@@ -2001,7 +2025,7 @@
     ],
     [
       "composer.send.noProvider",
-      "未配置 API 密钥 — 点击 ⚙ 设置"
+      "未配置 API Key — 点击 ⚙ 设置"
     ],
     [
       "composer.send.noDefaultModel",
@@ -2012,8 +2036,36 @@
       "默认模型未设置或无效 — 正在使用可用渠道"
     ],
     [
+      "composer.send.noDefaultModelFallbackUnset",
+      "默认模型未设置 — 渠道可用、模型未定"
+    ],
+    [
       "paste.unsupportedFormat",
       "仅支持 png / jpg / gif / webp 图片（收到 ${type}）"
+    ],
+    [
+      "composer.attach.tooLarge",
+      "文件过大（上限 256 KB）：${name}"
+    ],
+    [
+      "composer.attach.tooMany",
+      "文本附件过多（每回合最多 4 个）：${name}"
+    ],
+    [
+      "composer.attach.totalLimit",
+      "本回合附件合计超过 512 KB：${name}"
+    ],
+    [
+      "composer.attach.binary",
+      "非文本文件（二进制内容）：${name}"
+    ],
+    [
+      "composer.attach.unsupported",
+      "不支持的文件类型：${name}"
+    ],
+    [
+      "composer.attach.readFailed",
+      "无法读取文件：${name}"
     ],
     [
       "approval.diff.large",
@@ -2252,10 +2304,6 @@
       "Web 工具（websearch/fetch）"
     ],
     [
-      "settings.proxyModel",
-      "模型请求（proxy: true 的 provider）"
-    ],
-    [
       "settings.proxyTest",
       "测试连接"
     ],
@@ -2313,7 +2361,7 @@
     ],
     [
       "settings.addKey",
-      "添加 Key"
+      "添加 API Key"
     ],
     [
       "settings.changeKey",
@@ -2337,7 +2385,7 @@
     ],
     [
       "settings.deleteKey",
-      "删除密钥"
+      "删除 API Key"
     ],
     [
       "settings.mcp.tools",
@@ -2374,6 +2422,10 @@
     [
       "settings.consultAdd",
       "+ 添加会诊模型"
+    ],
+    [
+      "settings.consultAddTitle",
+      "添加会诊模型"
     ],
     [
       "settings.consultRemove",
@@ -2441,7 +2493,7 @@
     ],
     [
       "settings.mcp.env",
-      "环境变量（KEY=value，逗号分隔）"
+      "环境变量"
     ],
     [
       "settings.mcp.url",
@@ -2457,7 +2509,23 @@
     ],
     [
       "settings.mcp.headers",
-      "请求头（KEY=value，逗号分隔）"
+      "请求头"
+    ],
+    [
+      "settings.mcp.kvAdd",
+      "+ 添加行"
+    ],
+    [
+      "settings.mcp.kvRemove",
+      "删除行"
+    ],
+    [
+      "settings.mcp.kvKey",
+      "KEY"
+    ],
+    [
+      "settings.mcp.kvValue",
+      "值"
     ],
     [
       "settings.mcp.reconnecting",
@@ -2482,10 +2550,6 @@
     [
       "slash.unknown",
       "未知命令：${name}（/help 查看可用命令）"
-    ],
-    [
-      "slash.busy",
-      "回合运行中不可用——请等回合结束后重试"
     ],
     [
       "slash.args",

@@ -24,7 +24,7 @@
 | 1 | 以**满载读数**为判据（§1 父侧初测 800.1–2267.1 ms） | 与拦截线同源；但同一用例跨跑漂移大——实测同例 `:274` 905→416 ms、`:124` 960→1240 ms | 判据不可复现 ⇒ 复跑读数红/绿漂移，无法作为验收证据 | **否决**：不可复现的判据 = 不可验收 |
 | 2 | 以**单跑读数**为判据（§1 口径句；先例 = 批 2 片 1「T-CG18 单跑 450 ms ⇒ 不归册」） | 可复现（例独占进程）；与 `thincoder-vscode/test/slow.mjs:4`「单测 >500ms」同线 | 需逐例 12 次单跑（成本 ≈12 次进程启动）——本批一次性成本可接受 | **选定** （机检豁免——用例退场登记） |
 
-**两线分立**（承 `thincoder-vscode/test/slow.mjs:4,16`）：**归册线 = 500 ms（单跑）** · **拦截线 = 800 ms（满载实测）**。800 ms 是**负载缓冲**（满并发下的抖动余量），**不是**归册线——二者职责不同，不得混用。 （迁移期引文——v1 慢测层两线机制；v2 已收敛为单入口）
+**两线分立**（承 `thincoder-vscode/test/slow.mjs:4,16`）：**归册线 = 500 ms（单跑）** · **拦截线 = 800 ms（满载实测）**。800 ms 是**负载缓冲**（满并发下的抖动余量），**不是**归册线——二者职责不同，不得混用。 （v1 慢测层两线机制；v2 已收敛为单入口）
 
 ### 2.2 D-2 对表的落点
 
@@ -281,7 +281,8 @@
 `thincoder-vscode/src/extension/permission-gate.mjs` **109 → 117**（+8：门体改经核 `askPermission` 的 `io.ask` 缝；<300 咨询线）；
 `thincoder-vscode/test/files.mjs` **现势回填 120**（+3 = `vsc-stream-rules.test.mjs` / `scoped-rules.test.mjs` / `nested-token-relay.test.mjs` 登记）。
 **触发线未触（as-of 2026-09-20 复测）**：`agent.mjs` 494（线 >495）· `setup.mjs` 495（线 >497）；距 500 硬限 **6 / 5** 行。
-**逐档触线（单源）**：`agent.mjs` **>495** · `setup.mjs` **>497** · `run-stages.mjs` / `execute-tools.mjs` **>450**（源 = `docs/batches/2026-09-20-vsc-rules-retry-batch.md` §2.4 / §5.8）；未列档触发 = 触碰时复核（拆分候选按 §12.2 各档）——§12.1 各行「触发」口径以此为准（`:265` 同指）。
+**逐档触线（单源）**：`agent.mjs` · `setup.mjs` · `run-stages.mjs` / `execute-tools.mjs`——**行数超线（拆分）复核触发**（源 = `docs/batches/2026-09-20-vsc-rules-retry-batch.md` §2.4 / §5.8；
+**现行口径：软线 500 行 / 硬限 800 行**；四档现态 = `agent.mjs` 已归核（9 行）∥ `setup.mjs` 298 ∥ `run-stages.mjs` / `execute-tools.mjs` 已迁核——读数源 = 本档 `:330` ∥ `:278-279` 块）；未列档触发 = 触碰时复核（拆分候选按 §12.2 各档）——§12.1 各行「触发」口径以此为准（`:265` 同指）。
 本批新增用例档（均 <300 咨询线）：`test/lifecycle-hooks.test.mjs` **264** · `test/dispatch-hooks.test.mjs` **217** · `test/permission-gate-seam.test.mjs` **102**。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 **测试档越线登记（续）**：`thincoder-vscode/test/ledger.test.mjs` **324**（`wc -l`；>300 咨询线——本批 T-LQ 组追加后；≤500 硬限，无拆分义务）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 
@@ -674,7 +675,7 @@
 **搬运契约（控制流保真）**：interrupt 提交段的 `throw`（helper 内抛 ⇒ 随栈传播——调用点必须在主 `try`（:182-478）内）；流规则 abort 的 `continue` ⇒ helper 回传判别式 `{action:"continue"}`、调用侧翻译（先例 = §12.2.1 段 A `{done:true}` 式）；字段写点（`agent._lastPromptTokens` / `_usageAtLen`）随迁。
 **import 面与环**：该档 import 面 = `run-helpers.mjs`（`pushReal`）· `rules-face.mjs`（`applyRuleTriggered`）· `stop-trace.mjs`（`traceStop`）· `run-stages.mjs`（`injectResponseReminders`）；
 其中 `run-stages.mjs`（`:42`）自 `agent.mjs` import `ContinueError` ⇒ 环 = `agent.mjs` ⇄ `run-stages.mjs` ⇄ `response-stages.mjs` 三节点（既有两节点环的扩展）。环安全按 §12.5 判据——环上各档顶层只 import 绑定、零跨环读取（解引用全在函数体）；机判 = 该档顶层零解引用（顶层语句集 = import 声明 ∪ 函数声明——静态可扫）。
-**残余留档**：`:346-409` 提交分支 ⇒ 该档下一轮候选；触发句 **>495** 保持（§12.1 单源行）。
+**残余留档**：`:346-409` 提交分支 ⇒ 该档下一轮候选；触发句「行数超线（拆分）复核触发」保持（§12.1 单源行）。
 **锚**：`test/upstream-parity.test.mjs:207-215` / `test/integration/reasoning-echo-live.test.mjs:97-99` 两计数锚**零改**（本次搬移不触其计数面——`assistantToolCallMessage(` 单点住 :400 留档）。（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文）
 **验收**：≤460 ∧ 新档 ≤300 ∧ 两锚零破 ∧ VSC `npm test` 绿。
 

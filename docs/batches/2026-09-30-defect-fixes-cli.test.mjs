@@ -59,7 +59,7 @@ test("bash 发射字节形逐字：源档形 ≡ 发射形（直写 —— 零�
     "--type=rule --type=knowledge --type=decision --type=pattern",
     "--type= --title= --content= --tags=",
     "--origin= --dry-run --confirm",
-    "migrate audit",
+    "migrate audit list",
     "--dry-run --confirm --from",
     "--root",
     "--yes --layer=",
@@ -92,7 +92,7 @@ test("旧形零残留：bash ∥ zsh 发射面零 `\\$`（旧转义形逐族零�
 })
 
 test("fish 侧零改锁定（旗标 token 形 ∥ 子命令行逐字）", () => {
-  assert.ok(fish.includes("__fish_seen_subcommand_from ledger' -a 'migrate audit'"), "fish 子命令行")
+  assert.ok(fish.includes("__fish_seen_subcommand_from ledger' -a 'migrate audit list'"), "fish 子命令行")
   assert.ok(fish.includes("-n '__fish_seen_subcommand_from memory' -a sweep  -d 'Sweep dead origins'"), "fish memory sweep 行")
   assert.ok(fish.includes("-n '__fish_seen_subcommand_from memory; and __fish_seen_subcommand_from sweep' -l origin"), "fish sweep origin 旗标（直写形）")
 })

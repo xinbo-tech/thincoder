@@ -6,7 +6,7 @@
  *
  * 用例 = 两档 AC 判据面（`2026-09-29-desktop-susp-queue.md` §2.5 AC-1–AC-11 之可用例面 +
  * `2026-09-29-desktop-window-queue-parity.md` §2.6 AC-1–AC-4）：
- *   T1 窗队模块：五帧 + 投影操作（步边界取批 ∕ 倾出 ∕ 清队；`ts` 缺省不携——禁假造）
+  *   T1 窗队模块：六帧 + 投影操作（步边界取批 ∕ 倾出 ∕ 清队；`ts` 缺省不携——禁假造）
  *   T2 挂起驱动：窗内受理（受理帧）⇒ 核消费 ⇒ 消费帧（纯文本径）+ 投影读面
  *   T3 携图窗内对齐 × 真送达面（`prepareTurnAttachments`）：多模态指针段 ∕ 非视觉降级码浮出 + 落盘件
  *   T4 窗中止（#561 AC-6）：清队 + 状态帧 + 读面归空
@@ -72,7 +72,7 @@ function makeDrive({ agent, prepare = null, degrade = null, hold = null } = {}) 
   return { drive, runs, frames, events }
 }
 
-test("T1 窗队模块：五帧 + 投影操作（步边界取批 ∕ 倾出 ∕ 清队；ts 缺省不携——禁假造）", async () => {
+test("T1 窗队模块：六帧 + 投影操作（步边界取批 ∕ 倾出 ∕ 清队；ts 缺省不携——禁假造）", async () => {
   const frames = []
   const q = wqMod.createWindowQueue({ postQueue: (key, delivered = null) => frames.push({ key, delivered }) })
   const pending = []
@@ -313,7 +313,7 @@ test("T7 写面：队形回执 ⇒ 退流 + 挂起空闲复位；失败回执 �
   await three.wire.post("userMessage", { text: "本地先行" })
   await settle()
   assert.equal(three.state().blocks.length, 0, "本地块退流（失败径 —— 稿逐字留 + 零块）")
-  assert.equal(three.wire.failure(), "queue-full", "失败行源（B21）")
+  assert.equal(three.wire.failure()?.reason, "queue-full", "失败行源（B21——记录形 `reason` 字段；父侧随正 2026-10-10）")
   assert.deepEqual(three.loading, [false, "reset"], "loading 复位（宿主未起跑）")
   assert.equal(three.repaints.length, 1, "提示行重挂")
   // ④ 抑制径恒登记（noteEcho null）：退流锚恒指本提交 ⇒ 既往真块不被误摘

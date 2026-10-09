@@ -565,7 +565,7 @@ D14（E2E）归属届盘定（`E2E-TESTING` 镜像 ∥ 总览——分卷执行�
 > - **One-line criterion**: would two tasks running in parallel write the same file — if yes ⇒ split further; if it cannot be split ⇒ same-domain sequencing (serial) = expected, not a defect.
 > - **When reorganizing existing content**: move text verbatim (restructuring changes no wording); leave a one-line pointer at the old site — no duplicate copy; counts reconcile against the moved content.
 
-**随动面**：① 双面同批同改（正本 + 落地；**节名对应**——各面取该面草案名逐字：正本中文名 ∥ 落地英文名）；② 计数——两档无「N 节」类外露计数（落笔后回读核）；③ 指针——他档行号引用位于插入位之上（`docs/core/design/TOOLS.md:782` 的 `:6` ∥ `:35` as-of 2026-09-21）⇒ 零漂；`PROMPT-SYSTEM.md:115` 族 = 分叉分析登记（他面文件，零随动）——落笔后复核零新悬空；④ 笔权 = 主 agent 内容权 + eng-coder 落笔（D1）；⑤ 波次 = 实施波（本设计轮**零写提示词**）。
+**随动面**：① 双面同批同改（正本 + 落地；**节名对应**——各面取该面草案名逐字：正本中文名 ∥ 落地英文名）；② 计数——两档无「N 节」类外露计数（落笔后回读核）；③ 指针——他档行号引用位于插入位之上（`docs/core/design/TOOLS.md:782` 的 `:6` ∥ `:35` as-of 2026-09-21）⇒ 零漂；`PROMPT-SYSTEM.md:115` 族 = 分叉分析登记（他面文件，零随动）——落笔后复核零新悬空；④ 笔权 = 主 agent 内容权 + 落笔按面分述（D1）；⑤ 波次 = 实施波（本设计轮**零写提示词**）。
 
 ### 11.8 验收（逐条回指 §3.16 ∥ 批档条目）
 

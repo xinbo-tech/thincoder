@@ -308,6 +308,7 @@
 | KD-M1-38 | agent 工具面**写形 = 点改**（`write`：`key` 点分路径 + `value`）；写面白名单 = **全键族**（`version` / `phase` / `promptsLanding` / `codePaths` 整键 ∥ `docRoot.*` / `checkConfig.*` / `index.*` / `advisor.*` 子键——判据单源 = `MANIFEST_SCHEMA`）；白名单外 ⇒ 拒 | 需求 ②.7「各节点」口径（用户 15:52 逐字「各节点都能被 agent 读写」）。**被否**：① 整档写——模型重建全档，漏键 ⇒ 缺键非拒 + 默认值补回 = **静默重置**（KD-M1-2 / M1-7 同族要消灭的形）② raw 基底读改写（第二读取器——KD-M1-33 同族否）③ 不设白名单（拼写错写盘 = 静默死键——KD-M1-36 问题本体；挡在写入口） |
 | KD-M1-39 | 目标面**判据复用零新解析器**：`read` = `projectView`（五态报明）；`init` / `write` = `projectRootView`（歧义 ⇒ 拒 + 候选全列）；**init 不覆盖**（已带档 ⇒ 拒——`initManifest` 无覆盖保护，工具面补闸）；**write 不建档**（缺档 ⇒ 拒 + 引导 `init`） | 「歧义不猜」硬口径（需求 ②.7）：`resolveProjectRoot` 对歧义塌缩 `null` 再回落 cwd ⇒ 直用 = 静默挑锚——故写 / 建面一律取 `projectRootView` 直读形。init 不覆盖 = 默认档会碾掉现档（数据丢失面）；write 不建档 = 建档是独立动作（KD-M1-29 建档站点收窄零改） |
 | KD-M1-40 | 报告面 = **随动（零改）**：工具写盘 ⇒ 情境行经既有 ③b mtime 门控于下回合采纳；**不新增**工具 → 内存值同步通道（`agent.manifest` 写点保持「钩子附着 ∥ ③b 采纳」两处） | ③b 盘面驱动（#34）已覆盖「会话内改档 ⇒ 下回合行更新」（T32 语义）；第二写点 = 第二值源（单源纪律）；且工具目标可为**非锚项目**——直写内存值会把非锚项目状态错当锚项目状态（违 §2.9 D「注入物 = 会话锚项目」） |
+| KD-M1-41 | `manifest` 工具**明文豁免**变更记账通道（不登记）：登记通道三形逐否——裸加名 ⇒ 目标 ≠ args ⇒ `read` 亦被保守拒（行为回归）· 补 `touchedPaths` 钩子 ⇒ 谓词契约四消费面连带 + 落点判据复刻（双源）· 工具内自记账 ⇒ 第二记账点。**解除条件**在册（多实例并发实证 ∥ 审计清单完备性入验收 ∥ 该面触碰需求——具名首例 = `manifest write` 改 `index.publicRepos` / `codePaths`） | 通道 = 代码变更为轴；`manifest` 与 `settings` / `memory` / `ledger` / `batch` 同类（非文件编辑工具）——「不在通道」非缺陷，缺的只是一行显式在档（防下轮再当缺陷发现）。细则 = §2.10 末段（变更记账面） |
 
 ### 2.5 与既有纪律冲突核对
 
@@ -621,6 +622,15 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 
 **报告面（KD-M1-40——判定 = 随动，零改）**：工具写盘 = 盘面变化 ⇒ 情境行经既有 ③b mtime 门控于下回合采纳（`thincoder-core/agent/setup-reminders.mjs:122-140` `refreshManifest`——KD-M1-17 零改）；**不新增**「工具写后同步内存值」通道——`agent.manifest` 写点保持两处（钩子附着 ∥ ③b 采纳；第二值源否）；且工具目标可为**非锚项目**——直写内存值会把非锚项目状态错当锚项目状态（违 §2.9 D「注入物 = 会话锚项目」）。
 
+**变更记账面（KD-M1-41——豁免 · 2026-10-10 · 台账 #1106）**：`manifest` 工具**不入变更记账通道**（明文豁免——非「待修」）。四面逐条：
+① **门禁**（工程模式父侧写门）：通道以 (工具, args) 取目标路径（`thincoder-core/agent/helpers.mjs` 的 `toolTouchPaths`——无钩子 ⇒ `[args.path]`）；`manifest` 写目标 ≠ args
+（目标 = `<项目根>/PROJECT-MANIFEST.json`，解析在 execute 内——`thincoder-core/agent-tools/manifest.mjs`）⇒ 裸加名（进 `FILE_MUTATORS`）会把**每个** manifest 调用（含 `read`）在无活设计槽时推入保守拒（非字符串目标 × 父门保守拒）——行为回归，非修复。
+② **记账**（`_touchedFiles` / `noteMutations`）：工具内自记账 = 第二记账点（违唯一记账点纪律——`thincoder-core/agent/dispatch-gates.mjs`）。
+③ **L3**（peer 写重叠面——`FILE_MUTATORS ∪ file_ops`，`thincoder-core/peer-domains.mjs`）：peer 面按 (工具, args) 取路径 ⇒ 工具侧接不上。
+④ **作用域规则**（spawn `files` 二道防线）：`PROJECT-MANIFEST.json` 已有专用拒（`MANIFEST_BASENAME` 分支——KD-M1-14），语义独立于本通道。
+判据 = 通道语义以**代码变更为轴**（失效链住 `thincoder-core/agent/record-results.mjs`）；成员历来**枚举制**——`manifest` 与 `settings` / `memory` / `ledger` / `batch` 同类（非文件编辑工具），「不在通道」非缺陷——缺的只是一行**显式在档**（防下轮再当缺陷发现）。
+**解除条件**（三式，触发 ⇒ 另批走通道级扩展——**先扩谓词契约、禁裸加名**）：① 多实例并发改同一 manifest 实证 ∥ ② 审计清单完备性成为验收项 ∥ ③ 该面触碰需求出现——首个具名实例 = `manifest write` 可改 `index.publicRepos` / `codePaths` ⇒ 直接改检索 origin 集（`thincoder-core/declaration.mjs` → `thincoder-core/memory/code-search.mjs`）与写门分类，且该改动作零入四面。
+
 **边界（本工具面不做）**：单目标逐次调用（不做批量自动发现——不取候选并集 / 不扫全盘多档齐建）；不做 CLI 子命令（人面另议）；不替代装配侧既有调用点（翻转 ∥ 情境行 ∥ 钩子零动——需求 ③ 逐字）；不新增 manifest 键 / 不改校验器判据 / 不改写门 / 不动二道防线；不做键删除动作（「本面无」= 写 `null`——KD-M1-37 既有表达）。
 
 **登记（本批零动——父侧裁）**：`promptsLanding` 校验面 = `validateManifest` 无形态校验；消费面 = 核内未见读取方（as-of 2026-10-08 实读）——⇒ 写面可落任意形态且当下无消费方感知。既有状态（非本批引入）；补校验 / 补消费面 = 另裁。
@@ -797,6 +807,8 @@ AC-16 接线锁（`bin` 源码序）零改 · **AC-N5 / T13 收正**（门控第
 **本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
 **本批（引擎面缺口 · 2026-10-05）落点表** = `docs/batches/2026-10-05-engine-face-gaps.md` §2（唯一承载面——一次性批次材料；#941 ∥ #944 面）。
 **本批（manifest agent 工具面 · 2026-10-08）落点表** = `docs/batches/2026-10-08-manifest-agent-tool.md` §2（唯一承载面——一次性批次材料）。
+
+- 2026-10-10（**agent-loop-allotment 批 · 实施轮 · eng-coder**——承批档 `docs/batches/2026-10-10-agent-loop-allotment.md` §2 · 台账 #1106）：§2.10 新增**变更记账面（KD-M1-41——豁免）**段（四面点名 ∥ 判据 ∥ 解除条件三式——含 `manifest write` 改 `index.publicRepos` / `codePaths` 具名实例）；§2.4 补 **KD-M1-41**。**零码面**（豁免裁定落地——产品码零触）。
 
 - 2026-10-08（**批 manifest-agent-tool · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-08-manifest-agent-tool.md` §1 · 用户 2026-10-08 三条指令 · 台账 #1098）：新增 **§2.10**（agent 工具面——`manifest` 工具三动作：点改写形 ∥ 全键族白名单 ∥ 目标面复用 `projectView` / `projectRootView` ∥ 写路径复用 ∥ 装配落法 file:line ∥ 报告面随动）；§1.2 补 **F8** · §1.4 边界句 · §2.3 行 50–56 + Δ 块（十批并列）· §2.4 **KD-M1-38–M1-40** · §2.5 新条（既有面零碰 + `PROMPT-SYSTEM.md:402` 口径核对 + `:306` 登记承接句）· §3.1 **AC-40–AC-43** · §3.2 **T63–T69**。实施 = 本批实施轮。
 

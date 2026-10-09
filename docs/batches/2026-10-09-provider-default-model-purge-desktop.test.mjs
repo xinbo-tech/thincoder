@@ -114,14 +114,14 @@ test("T5 A4：激活渠道 ∥ 当前模型两读数 = 回执 `defaultModel` 复
   const hit = await drive({ ok: true, active: "alpha", defaultModel: "alpha:m1", providers: rows, presets: [] })
   assert.equal(hit.settings.model.provider, "alpha")
   assert.equal(hit.settings.model.current, "alpha:m1")
-  assert.equal(hit.settings.defaultModel, "alpha:m1", "存储切片 `defaultModel` 应同源落值")
+  assert.equal(hit.settings.defaultModel, undefined, "切片退场（#1126——父侧随正 2026-10-10）：零落值")
   assert.ok(hit.calls.some((c) => c.channel === "model:list" && c.payload?.provider === "alpha"), "候选面应按复合串渠段取数")
 
   // 缺档：`defaultModel` 缺（即便 `active` 有值）⇒ 两读数 `null` ⇒ 全渠扇出（#842 缺 defaultModel 态）
   const missing = await drive({ ok: true, active: "alpha", defaultModel: null, providers: rows, presets: [] })
   assert.equal(missing.settings.model.provider, null)
   assert.equal(missing.settings.model.current, null)
-  assert.equal(missing.settings.defaultModel, null)
+  assert.equal(missing.settings.defaultModel, undefined, "切片退场（#1126）——零落值")
   assert.ok(missing.calls.some((c) => c.channel === "model:catalog"), "缺 composite ⇒ 应走全渠扇出 `model:catalog`")
 
   // 畸形：无冒号 / 冒号段空 ⇒ 两读数 `null`（未知不造串）

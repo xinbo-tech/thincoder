@@ -39,6 +39,7 @@ export function toBlob(vec) { return Buffer.from(vec.buffer, vec.byteOffset, vec
 export function fromBlob(buf) { if (buf.byteOffset % 4 !== 0) buf = new Uint8Array(buf); if (buf.byteLength % 4 !== 0) return new Float32Array(0); return new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4) }
 export async function embed(embedder, texts) { return texts.map(() => new Float32Array(${PROBE_DIM}).fill(${PROBE_UNIT})) }
 export function createEmbedder(config) { return { baseURL: config?.baseURL ?? "stub://", apiKey: "stub", model: config?.model ?? "stub-model" } }
+export async function embedTolerant(embedder, texts, opts = {}) { return { vectors: await embed(embedder, texts, opts), skipped: [] } }
 `)
 registerHooks({
   resolve(specifier, context, next) {

@@ -132,7 +132,7 @@ ACP 官方 SDK 是 npm 依赖——违反零依赖哲学，故自写精简层。
 
 ### 3.5 处理器模块划分（函数档判据驱动 · 2026-09-18 批）
 
-**判据**：**函数档是第一判据**——文件 ≤500 行而内含 ≥300 行单体函数**仍不合规**
+**判据**：**函数档是第一判据**——文件 ≤800 行而内含 ≥300 行单体函数**仍不合规**
 （`docs/core/requirements/METHODOLOGY.md` F3-1「函数 ≥300 必拆」+ `docs/core/design/prompts/advisor-design.md` 第 8 条）。
 现状 `buildAcpHandlers`（`acp.mjs:99`–`:466` = **368 行**，含 jsdoc 375 行）（as-of 2026-09-29）越线；本批既改其大半正文（12 个 handler 中 10 个改形），**当轮拆**——不留给「下次触碰」。
 
@@ -152,7 +152,7 @@ ACP 官方 SDK 是 npm 依赖——违反零依赖哲学，故自写精简层。
 **共享态经单一 `ctx` 传入**（不散落成各模块私有闭包）：
 `{ getCwd, sessions, notifyRef, requestRef, createSession, requireConfigured, releaseClosedSlot, log }`（`allocSessionId` 撤）——
 `findSession` / 门助手 / 认领释放单点都由入口建一次、按引用传（**会话 id = 持久槽号**——load/new 同命名空间；`releaseClosedSlot` = 认领释放单点）。
-**每模块 ≤300（函数与文件两档）；`acp.mjs` 目标 ≈130 行。** 受影响文件与逐档读数 = 批次档 §2.3（一次性材料，不入本档）。
+**每模块 ≤500（文件档）· ≤300（函数档）；`acp.mjs` 目标 ≈130 行。** 受影响文件与逐档读数 = 批次档 §2.3（一次性材料，不入本档）。
 
 ## 4. 鉴权与配置
 
@@ -371,7 +371,7 @@ ACP 不转发工具输出流式增量——**父工具与子代理工具同口�
 | D14 | onWait 三消费点（TUI / headless / ACP 日志）= **调用核单源映射** | 相位值域（五相：`gate` / `retry` / `overloaded` 带秒 · `warn` / `quota` 带 message）无单源 ⇒ 三处各自 `else` 兜底，`warn` / `quota` 渲染 `undefined`。否决「三处各自补两支」（漂移根因不除）、否决「CLI 侧建 i18n 层」（新范围）。映射表与判据见 `docs/core/design/PROVIDER.md` §6.20 |
 | D15 | **认证门 = 凭据即时判据**（撤 `authenticated` 闩锁） | 契约上 `authenticate` 是**可选**流程（`NewSessionRequest` 逐字：「**May** return an `auth_required` error … **if** the agent requires authentication」）⇒ 闩锁使「不调 `authenticate` 的客户端」会话一律起不来（编排器常见姿势——本批核心缺陷）。否决「保留闩锁 + 在 `initialize` 里置真」（= 永不返回 `-32000`，把契约门变成装饰） |
 | D16 | `authMethods` = **对象数组 + `clientCapabilities.auth.terminal` 门控** | schema `AuthMethodTerminal` 逐字：「Agents **MUST** advertise this method **only when the client enabled its terminal authentication capability**」+ 必填 `id`/`name`；裸字符串 `"terminal"` 既不匹配 `anyOf` 任一分支也无 `id`。否决 `_meta['terminal-auth']` legacy 兜底（v1 已把 `terminal` 升为一等 `type`；legacy 面需 agent 侧给 `command` 绝对路径，我们拿不到可靠值——kimi `auth-methods.ts:48-63` 属旧 SDK 过渡面） |
-| D17 | 凭据面**收回文档声称**：本批**不实现** env fallback | 项目现行裁定 = 「env vars are not a key source」（`DOC-CODE-RECONCILE` A6 · 2026-09-15「实装为准改文档」），四处逐字在位（`model-picker.mjs:37` · `thincoder-vscode/src/extension/presets.mjs:30/64/94` · `embed-config.mjs:5` · `subagent-async.mjs:137`）；（as-of 2026-09-29）仅在 ACP 面实现 = 同一产品两套凭据语义（把一处漂移换成更深的语义分裂）。且无 TTY 的真实阻塞是 D15（认证闩锁），不是 key 来源少一条。env 通道属 CONFIG / PROVIDER 板块（§11.9 登记） |
+| D17 | 凭据面**收回文档声称**：本批**不实现** env fallback | 项目现行裁定 = 「env vars are not a key source」（`DOC-CODE-RECONCILE` A6 · 2026-09-15「实装为准改文档」），四处逐字在位（`thincoder-cli/src/tui/model-picker.mjs:43` · `thincoder-vscode/src/extension/presets.mjs:31/66/96` · `embed-config.mjs:5` · `thincoder-core/agent-tools/subagent-async.mjs:143`）；（as-of 2026-09-29）仅在 ACP 面实现 = 同一产品两套凭据语义（把一处漂移换成更深的语义分裂）。且无 TTY 的真实阻塞是 D15（认证闩锁），不是 key 来源少一条。env 通道属 CONFIG / PROVIDER 板块（§11.9 登记） |
 | D18 | **契约形状以 schema 逐字段为准**，不以「某客户端能跑就行」为准 | 本批实核出四处响应形状不合契约（§11.3 G2 族）：`agentCapabilities` 键名 · `session/new` 必填 `sessionId` · `session/prompt` 必填 `params.prompt` · `session/list` 条目 `sessionId`（另 `configOptions[]` 的 `id`/`name`）。否决「只修原 G2 的 `initialize`」——另三处使「可挂可用」不可达 |
 | D19 | fs 反向 RPC **按客户端能力位门控**，未宣告 ⇒ 回落本地 | schema `FileSystemCapabilities` 默认 `false` + 文档「MUST treat all capabilities omitted … as UNSUPPORTED」；现状无条件发 `fs/*` ⇒ 不支持者干等 30s（`bridge.mjs:106/114/291`）（as-of 2026-09-29）。判据同构 = kimi `server.ts:626-636`（皆否 ⇒ 回落 `LocalKaos`）；能力位来源 = §3.4 快照（“initialize 单次交换”语义） |
 | D20 | 结构化子代理事件 = `session/update` → `session_info_update`（全字段可省载体）+ `update._meta["thincoder.dev/subagent"]` | 零契约字段虚构（唯一零必填变体）；`_meta` = schema 预留扩展位（MUST NOT assume——通用客户端忽略即合规）。否决：非标枚举（严格客户端反序列化失败）/ `agent_message_chunk` 空文本（假造会话消息）/ `tool_call_update` 挂卡（跨轮注册表 + 卡生命周期相抵）/ 自定义 `_` 通知（方法面边界）。详见 §12 |
@@ -563,7 +563,7 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 **裁定：收回文档声称——本批不实现 env fallback。** 理由三条：
 
 1. **与既有裁定冲突**：项目**现行**姿势 = 「**env vars are not a key source**」，且它是 2026-09-15 批 `DOC-CODE-RECONCILE`（A6）的**裁定结果**（「实装为准」→ 改文档）。实核四处逐字：
-   `thincoder-cli/src/tui/model-picker.mjs:37` · `thincoder-vscode/src/extension/presets.mjs:30,64,94` · `thincoder-vscode/src/embed-config.mjs:5` · `thincoder-core/agent-tools/subagent-async.mjs:137`。
+   `thincoder-cli/src/tui/model-picker.mjs:43` · `thincoder-vscode/src/extension/presets.mjs:31,66,96` · `thincoder-vscode/src/embed-config.mjs:5` · `thincoder-core/agent-tools/subagent-async.mjs:143`。
    仅在 ACP 面实现 ⇒ **同一产品两套凭据语义**（TUI 不认、ACP 认）——把一处漂移换成一处更深的语义分裂。
 2. **不是本批的瓶颈**：无 TTY 编排器的真实阻塞是 **D15（认证闩锁）**，不是「key 来源少一条」。D15 修完，预置 `~/.thincoder/config.json`（挂卷 / `docker cp`）即可无人值守启动——批档 §1.2 已实核该姿势可行。
 3. **射程外**：env fallback 是**跨产品凭据源**变更（`loadConfig()` 被 CLI / VSC / core 三面共用），属 **CONFIG / PROVIDER 板块**，须各自的需求 + 设计轮；不等价于 ACP 面的一条修补。
@@ -698,7 +698,7 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 - 导出（定形）：`EVENT_SENTINEL` · `parseSubagentEvent(text)` → `{ name, progress?, detail? } | null`（形态判据 = **单源**——唯一表达式住本模块（`^⟦ev⟧[a-z]+\x1e`）；桥剥离式即本判据（`parseSubagentEvent` 非空 ⇒ 剥），防第二套平行文法（§7.2 纪律）；终止符约束 load-bearing——沿 D13 负向边界：正文含 `⟦ev⟧` 无终止符 ⇒ null ⇒ 仍转发）。
 - 哨兵单源：`spawn-child.mjs` 的 `EVENT_SENTINEL` 定义位迁入本模块（该档 import + 再导出——既有 import 面零改；先例 = 同档 `child-marks` 再导出手法）。
 - 消费方（本批）= `acp/bridge` 一处；显示面三消费点（TUI `routeSubToken` ∥ VSC / 桌面 `relayEventToSubPatch`）**不动**（收敛 = 登记，§12.6）。
-- 核面量级：新档 ~85 行；`spawn-child.mjs` +2/−1；其余核档**零触**。`bridge.mjs` 408 → ~436（>300 咨询档——沿既有登记口径：随 callback 族扩展一并评估）。
+- 核面量级：新档 ~85 行；`spawn-child.mjs` +2/−1；其余核档**零触**。`bridge.mjs` 408 → ~436。
 
 ### 12.5 用例与验收（回指批条目）
 
@@ -795,3 +795,4 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 - 2026-10-04（**ACP 用户文档批 · 评审修正轮**（评审 #46——pass · 🔴0/🟡5/🔵1）· eng-designer——fix 轮；承批档 `docs/batches/2026-10-04-acp-user-docs.md` §3 发现 #5）：§11.6 链接现状描述收正——README 现指设计档（`:60`——G10 批产物）；登录入口句已在（`:61`）；改指目标裁定不变（站内指南）。**零协议语义**。
 - 2026-10-04（**ACP 用户文档批 · 收口轮 · 父侧直接执行〔可 revert〕**——台账 #916）：§11.6 链接现状句加「实施已落」注（`README.md:60` 已按目标改指——读回逐字；`:61` 登录句零改）；批内件补 `stderr` ∥ 日志捕获命令两锚（评审 🔵 #3 采纳）。**零协议语义**。
 - 2026-10-07（**文档清账批 · fix 轮 · eng-designer**——承批档 `docs/batches/2026-10-07-doc-cleanup.md` §2 · 台账 #924）：§14 面清单跨仓坐标去前缀改述（`thincoder.com/www/*.html` ⇒ 裸页名——十锚；站仓 = 表头单源；体裁判例 = `docs/desktop/design/PACKAGING.md` §6 行同式）∥ §7.2 测试面 ∥ §9 用例宿主表 ∥ §11.8 回归面两档补退场注 + 迁移期引文标（四锚——2026-09-28 测试树全清，档不在盘）。**零协议语义**（文档面）。
+- 2026-10-08（**代码长度上限 500/800 口径更换批 · 实施轮 · eng-coder**——承 `docs/batches/2026-10-08-code-limit-500-800.md` §2 · 台账 #1072）：§3.5 判据句文件档半改数（≤500 ⇒ ≤800）+ 每模块句半拆（文件档 ≤500 ∥ 函数档 ≤300）+ §12.4「>300 咨询档」括注删（丙——义务前提消失）。**零协议语义**（文档面 · 可 revert）。

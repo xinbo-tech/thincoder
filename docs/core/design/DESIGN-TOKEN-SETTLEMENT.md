@@ -37,7 +37,8 @@
   - agent 对象**无该字段初始化**：`thincoder-core/agent.mjs:69`–`:71`。
   - 会话复位不再清镜像：`thincoder-core/session.mjs:437`–`:438`。
 - **存量兼容**：旧会话槽文件可能残留镜像字段值——恢复时**一次性**读取迁入 Map（**唯一迁移读点**，此后不写不读）：`thincoder-core/token-ttl.mjs:131`（`restoreEngTokens`）；落盘时该 legacy 字段被一并删除（`token-ttl.mjs:271`）。
-- **dispatch 写门**：资格判定改问**「任一活槽存在」**——`thincoder-core/token-ttl.mjs:211`（`anyLiveDesignSlot`），调用点 `thincoder-core/agent/dispatch.mjs:95`。
+- **dispatch 写门**：资格判定改问**「任一活槽存在」**——`thincoder-core/token-ttl.mjs:211`（`anyLiveDesignSlot`），调用点 `thincoder-core/agent/dispatch.mjs:99`（实施后实读 2026-10-10）。
+- **轻通道轮在盘放行（2026-10-09 增——代码笔通路批）**：无活槽时，**轻通道轮在盘**（轮次行 `在途` 携「收尾链待跑」+ 指针指向「进行中」轮档）亦放行——判据 = `docs/core/design/LIGHT-CHANNEL.md` §2.8（本档不重述）；调用点 = 同条件式**末位合取项**（`thincoder-core/agent/dispatch.mjs:98-101` 条件式——末位合取 `:101`；实施后实读 2026-10-10）。
 
 ## 5. consume 落盘对称（交付 🔴 复活洞修复）与用例面
 
@@ -52,7 +53,7 @@
 | 正常 | settle 当场落盘 → 进程 kill（不等回合尾）→ resume → spawn | 门禁从槽读到 token，通过 |
 | 正常 | 缓存 miss 回读 | 内存 miss → 回读槽文件 → 命中 |
 | 正常 | consume 后 kill → restart → 同 designId 再 spawn | **不复活**（旧台账已删） |
-| 正常 | dispatch 写门任一活槽判定 | 有活槽放行 / 无活槽拦 |
+| 正常 | dispatch 写门资格判定 | 有活槽放行 / 无活槽拦（轻通道轮在盘除外——§4 D3） |
 | 边界 | 过期 token 槽 | 恢复 / 门禁 TTL 过滤——过期拒 |
 | 边界 | 残留镜像一次性迁移 | 迁入 Map，随后不再写镜像 |
 | 错误 | settle 落盘失败 | settle 失败可重评，不留半结算态 |
@@ -70,11 +71,11 @@
 | 槽序列化 / 恢复 | `thincoder-core/token-ttl.mjs:112` · `:131` | 在位 |
 | spawn 门禁解析 | `thincoder-core/agent-tools/subagent-spawn.mjs:100` | 在位 |
 | consume 落盘对称 | `thincoder-core/agent-tools/design-slots.mjs:150` · `:152` | 在位 |
-| dispatch 写门 | `thincoder-core/agent/dispatch.mjs:95` | 在读任一活槽 |
+| dispatch 写门 | `thincoder-core/agent/dispatch.mjs:95` | 在读任一活槽 ∨ 轻通道轮在盘（§4 D3——判据 = `docs/core/design/LIGHT-CHANNEL.md` §2.8） |
 | 镜像零写 | `thincoder-core/agent.mjs:69`–`:71` · `thincoder-core/session.mjs:437`–`:438` | 无字段初始化 |
 | 轮转守卫（拆分产物） | `thincoder-core/session-guard.mjs:35` | 与 `saveSession` 共用 |
 | 凭证工具组（拆分产物） | `thincoder-core/agent-tools/design-token.mjs` | 签发 / 校验 / 结算纯函数 |
-| 测试 | `thincoder-cli/test/design-token-settlement.test.mjs` | 9 例在位 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
+| 测试 | `thincoder-cli/test/design-token-settlement.test.mjs` | 9 例（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 
 ### 6.2 双端与依赖方向
 
@@ -216,6 +217,11 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 
 **2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
 **本批（会话锚解析修复（多档并存支持） · 2026-10-02）落点表** = `docs/batches/2026-10-02-manifest-resolution-fix.md` §2（唯一承载面——一次性批次材料）。
+**本批（代码笔通路 · 2026-10-09）落点表** = `docs/batches/2026-10-09-light-channel-code-path.md` §2（唯一承载面——一次性批次材料）。
+
+- 2026-10-09（**代码笔通路批 · 设计评审修正轮 1（发现 #4）· eng-designer**——承批档 `docs/batches/2026-10-09-light-channel-code-path.md` §3 轮次 1）：§6.1 测试行自抵消正——删「在位」（档不在盘；形式对齐 §5 用例面 ∥ §6.3 测试面行）。**零新语义**。
+
+- 2026-10-09（**代码笔通路批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-light-channel-code-path.md` · 台账 #1155 ∥ #1156）：§4 D3 补**轻通道轮在盘放行**件（判据 = `docs/core/design/LIGHT-CHANNEL.md` §2.8——本档不重述）；§5 用例表 dispatch 行 ∥ §6.1 写门行随动。**token 链本体零改**（签发 ∥ TTL ∥ 消费 ∥ spawn 门零动）。
 
 - 2026-10-07（**文档清账批 · fix 轮 · eng-designer**——承批档 `docs/batches/2026-10-07-doc-cleanup.md` §2 · 台账 #953）：§9 F3「路径归一增量」行删失真子句「write-gate 同名再出口保指针面」（现盘核：`thincoder-core/agent/write-gate.mjs` 对 `resolveReviewDocPaths` 零再出口——单源 = `review-facts.mjs`）；`:226` 同句随正。`resolveReviewRootsFor` 再出口谓词 = 现盘真，逐字保留。**零语义**（失真子句删）。
 

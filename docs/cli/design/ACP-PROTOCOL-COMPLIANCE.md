@@ -278,15 +278,6 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 | `docs/batches/2026-10-04-issue-fix-round2.test.mjs` | 新 | ~290 | ≤300 | 批内单测（§10；拟新增） |
 | `docs/cli/requirements/ACP-CLIENT.md` | 151 | 补笔 | — | R-A5.4 补述 + 新判定句——**主 agent 笔**（§1.3） |
 
-**拆分评审（本批 · 判据 8 · 300 咨询档）**：
-
-- `handlers-session.mjs` **292 → ~345**（跨 300 咨询档；500 硬限未破）：**结论 = 本批不拆**。
-  - 理由①：新增面 = 同主题 handler 族（投影函数 / new 重排 + 回滚 / prompt 接线 / 通知收正——单一会话 handler 内聚面）；
-  - 理由②：拟抽两函数（`sessionConfigOptions` / `createSlotReleaser`）为双模块共用（`handlers-slots.mjs` 消费）——按 Δ 预算抽后本档仍 ~320（>300）⇒ 咨询档跨越不因抽取消解、移面成本空付；
-  - 理由③：跨幅小（预算 +~55 含 −~15）——本批增量级。
-- **后续拆分点**：① `sessionConfigOptions` / `createSlotReleaser` 任一再度扩展（如候选列表供货 / 释放语义扩展）⇒ 抽独立小档；② prompt / `resource_link` 接线复增 ⇒ 该段先抽。本档下次实质改动时先做此评估。
-- `bridge.mjs` **397 → ~406**（同处 >300 咨询档；未跨档、500 硬限未破）：本批 Δ = +~9（头注 / 签名 `agent` / onUsage）——本批不拆；随下次 bridge 面扩展（callback 族）一并评估。
-
 ## 8. 关键决策记录（含被否）
 
 - **D-1 `size` = `providerSpec(agent.provider).context`**（上下文窗口；含 provider 级 `context` 覆写）∥ 被否：`provider.maxTokens`（输出上限——语义相抵）∥ 被否：`specForModel().context`（漏 `providers[].context` 覆写单源）∥ 被否：硬编码 131072。
@@ -371,6 +362,8 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 
 **2026-10-0x 批次落点指针**（本档涉批——落点表 = 各批档 §2 · 一次性材料承载面）：
 **本批（issue 修复批·二 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round2.md` §2（唯一承载面——一次性批次材料）。
+
+- 2026-10-08（**代码长度上限 500/800 口径更换批 · 实施轮 · eng-coder**——承 `docs/batches/2026-10-08-code-limit-500-800.md` §2 · 台账 #1072）：§7「拆分评审」块删（丙——两档现读 ≤500，义务前提消失；含 `bridge.mjs` 同注）；§7 表两处 ≤300 预算格 = 闭合批叙述面（B 史实保留 ⇒ 零动）。**零协议语义**（文档面 · 可 revert）。
 
 - 2026-10-04（**issue 修复批·二 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-04-issue-fix-round2.md` §1 · 台账 #870 ∥ #871 ∥ #872 ∥ #873）：建档——① 复验 5/5 在档（§1.2）；② 四条收正目标形（usage_update ∥ list updatedAt ∥ configOptions 全形 ∥ 会话 id = 持久槽号 + 两通知字段）+ resource_link 基线支持（新档拟新增）；③ schema 复取复核（SHA 逐字同 2026-09-18）；④ ACP-CLIENT.md 同拍落点表；⑤ #862 拆批裁定 + 后续批 scope 草案。
 - 2026-10-04（**fix 轮 · 设计评审 #66 号 1–5 收正 · eng-designer**）：§1.2 行锚收正（`acp.mjs:101,108`）∥ §2.2 判据改发射值往返恒等 ∥ §2.4 增「替换点钉定（拒载安全）」+ §10 T12 拒载腿 ∥ §7 增拆分评审（本批不拆 + 后续拆分点；`bridge.mjs` 同注）∥ §11 增 thinking 语义登记。号 6 = 判据降级限制声明（保持）。

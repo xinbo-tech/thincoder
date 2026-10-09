@@ -4,7 +4,7 @@
 > 需求侧 = 需求分卷（本域卷 = `docs/desktop/requirements/MENU.md`——**D36 ∥ D38**；查卷口 = `docs/desktop/requirements/PROJECT.md` §4 **D 表索引**）；
 > 总览 ∥ 跨域决策 ∥ 索引 = `docs/desktop/design/PROJECT.md`；通道面 = `docs/desktop/design/IPC.md` §1 `ev:menu` 行 ∥ §2 `theme:state` 行；宿主面 = `docs/desktop/design/SHELL.md` §1 树行 + §2 菜单行；界面总则 = `docs/desktop/design/UI.md`。
 > 建档 = 2026-10-02（文档体系重组批 #813 · 波 1——内容逐字迁自 `docs/desktop/design/PROJECT.md` §2 / §4.1 / §4.2 / §6.1 / §7 / §10 ∥ `docs/desktop/design/UI.md` §1，as-of 2026-10-02；迁移前原址 = 各源档保位指针）。
-> **行数纪律（300 建议 ∕ 500 硬限）只对代码档**（`.mjs` ∥ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
+> **行数纪律（500 建议 ∕ 800 硬限）只对代码档**（`.mjs` ∥ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
 
 ## 1. 关键决策（KD-65）
 
@@ -46,6 +46,7 @@
 | `thincoder-desktop/src/main/menu-words.mjs`（残余族清账批 · 新档；菜单体系批扩键；设置体系升级批扩键；桌面发布·阶段二批扩键） | **145**（实读 2026-10-03——桌面发布·阶段二批实施落盘（115 ⇒ 145：+11 键（菜单四 + 对话框 ∥ 通知七）× zh/en ⇒ 键集 43 + `{version}` 占位三句）；前读 **115**（实读 2026-10-02——设置体系升级批（#817）实施落盘（86 ⇒ 115：+3 键（`settings` ∥ `settingsOpen` ∥ `aboutShortcuts`——键集 29 ⇒ 32）+ `settingsSectionLabels` 读器）；前读 **86**（实读 2026-10-02——菜单体系批实施落盘（30 ⇒ 86）；扩至全菜单键集：组名五 + 条目 + role 标签 + 主题三值 + 最近/关于/占位词））） | **应用菜单词表**（zh/en 常量对 + `menuLabels(locale)` 纯函数；零 `electron` ⇒ 平 node 直测；zh = 语义直译值 ∕ en = 回归面现值——单源 = `docs/batches/2026-09-29-desktop-residuals-sweep.md` §2 #533 行 · `docs/batches/2026-10-02-desktop-menu-system.md` §2） |
 | `thincoder-desktop/src/main/app-menu.mjs`（菜单体系批 · 已落；设置体系升级批重组；桌面发布·阶段二批扩项） | **已落 · 158**（实读 2026-10-03——桌面发布·阶段二批实施落盘（143 ⇒ 158：帮助组 +「检查更新…」首项 + sep ∥ `update` 注入（状态 ⇒ label ∥ enabled））；前读 **143**（实读 2026-10-02——设置体系升级批（#817）实施落盘（111 ⇒ 143：设置组重组 + `SETTINGS_GROUPS` 镜像闭集同导出）；前读 111（菜单体系批实施落盘））） | 应用菜单模板纯函数（`menuTemplate({ words, edit, recent, theme, onAction, onNative })`——五组 ∥ 条目 ∥ role/加速键 ∥ 主题▸/最近▸ 子菜单 ∥ 主题勾选态（`checked` 判等；`THEME_VALUES` 导出）∥ `onAction` ∥ `onNative` 两接缝（`onNative(action)` = 宿主自办**四项** `gc` ∥ `index` ∥ `about` ∥ `update`（末项 = 桌面发布·阶段二批 +1）——不经 `ev:menu`）；零 `electron` ⇒ 平 node 直测；决策单源 = 本档 §1 **KD-65**） |
 | `thincoder-desktop/renderer/menu-actions.mjs`（菜单体系批 · 已落；设置体系升级批扩支） | **已落 · 44**（实读 2026-10-02——设置体系升级批（#817）实施落盘（37 ⇒ 44：+`openSettings` 分支——六动作闭集）；前读 37（菜单体系批实施落盘）） | 菜单动作落面（`ev:menu` 六动作 → 各既有单一实现分派（#817 收正——五 ⇒ 六：+`openSettings`）；注入缝 ⇒ 平 node 直测；决策单源 = 本档 §1 **KD-65**） |
+**行数面机检**：`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`，运行根单读）**逐条声明节域——本表为其一**（本域值行单源）；后续本域新档由落盘批在本表补值行，`docs/desktop/design/PROJECT.md` §4.1 同拍补指针行（沿 §4.1 纪律）。
 
 ### 3.2 现有文件改动 · 菜单体系批（实施落盘）
 
@@ -53,7 +54,7 @@
 
 | # | 档 | 现行 ⇒ 实读（实施落盘） | 面 |
 |---|---|---|---|
-| 1 | `thincoder-desktop/src/main/window.mjs` | **229 ⇒ 283**（实施落盘）（buildMenu 改消费 `menuTemplate`（携 `theme` 回读缓存）+ `refreshMenu` + `setMenuTheme`（勾选态缓存收面——表外值零变更）+ focus 重建 + 关于面两行 + `onAction` 接缝；菜单行注「只挂主进程动作面 ∥ 零 IPC 依赖项」句随 KD-65 收正；**越 300 顾问线远内**） | 宿主菜单面 |
+| 1 | `thincoder-desktop/src/main/window.mjs` | **229 ⇒ 283**（实施落盘）（buildMenu 改消费 `menuTemplate`（携 `theme` 回读缓存）+ `refreshMenu` + `setMenuTheme`（勾选态缓存收面——表外值零变更）+ focus 重建 + 关于面两行 + `onAction` 接缝；菜单行注「只挂主进程动作面 ∥ 零 IPC 依赖项」句随 KD-65 收正；**500 顾问线远内**） | 宿主菜单面 |
 | 2 | `thincoder-desktop/src/main/menu-words.mjs` | **30 ⇒ 86**（实施落盘）（全菜单键集；结构 ∥ `normalizeLocale` 归一 ∥ en 回落零改） | 词表面 |
 | 3 | `thincoder-desktop/src/main/app-menu.mjs` | **无 ⇒ 111**（实施落盘）（新档——模板纯函数 `menuTemplate({ words, edit, recent, theme, onAction, onNative })`；主题三值 + 勾选态 `checked` 判等 ∥ `THEME_VALUES` 闭集同导出；`onNative(action)` = 宿主自办三项 `gc` ∥ `index` ∥ `about`——不经 `ev:menu`） | 菜单模板面 |
 | 4 | `thincoder-desktop/src/main/ipc.mjs` | **270 ⇒ 276**（实施落盘）（`openProjectChannel` 成功径 `refreshMenu()` 调用 + `theme:state` 处理体（`setMenuTheme` 转口 + 回执）+ import ∕ 注） | 项目面 |
@@ -62,7 +63,7 @@
 | 5 | `thincoder-desktop/src/preload/preload.cjs` | **80 ⇒ 83**（实施落盘）（`EVENT_CHANNELS` + `"ev:menu"`（23 ⇒ 24）∥ `CHANNELS` + `"theme:state"`（46 ⇒ 47）+ 头注计数随正） | 桥面 |
 | 6 | `thincoder-desktop/renderer/events-subscribe.mjs` | **93 ⇒ 101**（实施落盘）（`CHANNELS` + `"ev:menu"` + 窄口 `onMenu` 参 + 分派行 + 头注） | 订阅面 |
 | 7 | `thincoder-desktop/renderer/menu-actions.mjs` | **无 ⇒ 37**（实施落盘）（新档——五动作分派） | 动作落面 |
-| 8 | `thincoder-desktop/renderer/app.mjs` | **305 ⇒ 319**（实施落盘）（`searchFace` 捕获 + `onMenu` 接线 + `menuActions` 建面 + import + **主题态回读接线**（装配初值报告 = 写点①）；**越 300 顾问线在册**——随趟登记，拆分预案随下次结构性触碰评估；**本批触属性 = 装配接线（非结构性）**〔新增行全为接线点〕——窗口沿「任一后续批择机」顺延（越层段条目同拍）） | 装配面 |
+| 8 | `thincoder-desktop/renderer/app.mjs` | **305 ⇒ 319**（实施落盘）（`searchFace` 捕获 + `onMenu` 接线 + `menuActions` 建面 + import + **主题态回读接线**（装配初值报告 = 写点①）；**本批触属性 = 装配接线（非结构性）**〔新增行全为接线点〕——**≤500 ⇒ 免拆（500/800 口径更换批）**） | 装配面 |
 | 9 | `thincoder-desktop/renderer/mount-composer.mjs` | **296 ⇒ 297**（实施落盘）（face 暴露 `printHelp`——**#761 冻结邻接披露**，批档 §2 上抛 U4） | 输入区面 |
 | 10 | `thincoder-desktop/renderer/mount-settings.mjs` | **179 ⇒ 181**（实施落盘）（face 暴露 `setTheme` = 既有 `exits.handlers.onSetTheme` 转名——零第二实现） | 设置面 |
 | 10b | `thincoder-desktop/renderer/mount-settings-exits.mjs` | **242 ⇒ 248**（实施落盘）（`setThemeFace` 落地径补主题态回读报告——写点②（`ask("theme:state")`；菜单 ∥ 设置两入口同痕） | 设置出口面 |
@@ -81,7 +82,7 @@
 | 2 | `thincoder-desktop/src/main/app-menu.mjs` | **111 ⇒ 143**（实施落盘）（设置组重组——改名 + 设置… + 七组项（`sections` 注入）+ 两子组；`SETTINGS_GROUPS` 镜像闭集同导出） | 模板面 |
 | 3 | `thincoder-desktop/src/main/window.mjs` | **283 ⇒ 288**（实施落盘）（`buildMenu` 读 `settingsSectionLabels` + 注入 `sections`） | 宿主菜单面 |
 | 4 | `thincoder-desktop/renderer/menu-actions.mjs` | **37 ⇒ 44**（实施落盘）（+`openSettings` 分支；deps +1） | 动作落面 |
-| 5 | `thincoder-desktop/renderer/app.mjs` | **319 ⇒ 321**（实施落盘）（deps.`openSettings` 注入——设置面临时双口（页 ∥ 弹窗）转接；**越 300 在册**——本批触属性 = 装配接线（非结构性）） | 装配面 |
+| 5 | `thincoder-desktop/renderer/app.mjs` | **319 ⇒ 321**（实施落盘）（deps.`openSettings` 注入——设置面临时双口（页 ∥ 弹窗）转接；本批触属性 = 装配接线（非结构性）——**≤500 ⇒ 免拆（500/800 口径更换批）**） | 装配面 |
 | 6 | 弹窗族（设置域） | `docs/desktop/design/SETTINGS.md` §3.2 本批块（新档 `settings-modal.mjs` ∥ `settings-modal.css` + 改档五） | 设置域 |
 | 7 | 批内件 | `docs/batches/2026-10-02-desktop-settings-menu-upgrade.test.mjs`（已建成 · 六腿——波 1 三 + 波 2 三） | 全批 |
 | 8 | 设计档 | 本档 §1 **KD-67** ∥ §2 本批注 ∥ §3.3 本块 ∥ §4 本批块 ∥ §5 交叉行 ∥ §6 **DI**；`docs/desktop/design/SETTINGS.md`（§1 **KD-68** ∥ §2.10 ∥ §3.2 ∥ §4 ∥ §5 ∥ §6）；`docs/desktop/design/IPC.md` §1 `ev:menu` 行（五 ⇒ 六 + `value` 携主二）+ §1「事件映射」`:52` ∥「载荷键集」`:88`（同拍收正）+ §2 菜单面段；`docs/desktop/design/{SHELL,UI}.md`；`docs/desktop/design/PROJECT.md` §2 登记行二 + §6.1 + §7 + §10 **DI** | 全批 |
@@ -111,7 +112,7 @@
 |---|---|---|---|
 | 1 | `thincoder-desktop/src/main/menu-words.mjs` | **115 ⇒ 145**（实施落盘）（+11 键 × zh/en（菜单四 + 对话框 ∥ 通知七）；键集 32 ⇒ 43；宪章句扩「应用菜单与更新面词表」） | 词表面 |
 | 2 | `thincoder-desktop/src/main/app-menu.mjs` | **143 ⇒ 158**（实施落盘）（帮助组 +「检查更新…」项（首项 + sep）∥ `update` 注入（状态 ⇒ label ∥ enabled；`ready` ⇒ 「重启以安装更新」）） | 菜单模板面 |
-| 3 | `thincoder-desktop/src/main/window.mjs` | **288 ⇒ 336**（实施落盘）（`onNative` +`update` 转口（`setUpdateFace` 注入——沿 `setMenuTheme` 先例）∥ 确认 ∥ 结果对话框两枚；**越 300 顾问线在册**——拆分预案 ∥ 消解窗口 = `docs/desktop/design/PROJECT.md` §4.1 越层段本批行） | 宿主菜单面 |
+| 3 | `thincoder-desktop/src/main/window.mjs` | **288 ⇒ 336**（实施落盘）（`onNative` +`update` 转口（`setUpdateFace` 注入——沿 `setMenuTheme` 先例）∥ 确认 ∥ 结果对话框两枚；**（≤500 ⇒ 免拆——500/800 口径更换批）**） | 宿主菜单面 |
 | 4 | 零改面 | 渲染面全档（`menu-actions.mjs` ∥ `events-subscribe.mjs` ∥ `app.mjs`）∥ `context-menu.mjs` ∥ `projects.mjs` ∥ 通道集（事件 24 ∥ 白名单 47）∥ 动作集（六动作——`ev:menu` 零动）∥ `preload.cjs` ∥ `ipc-registry.mjs` ∥ 核 ∥ `thincoder-render-core` ∥ CLI ∥ VSC | 零触 |
 | 5 | 设计档 | `docs/desktop/design/PACKAGING.md`（§1 **KD-71** ∥ §2.8.1 ∥ §3.3 本批块 ∥ §4.3 ∥ §5 **T-DSK60** ∥ §6 **DK**）；本档 §1 **KD-65** ①/②/⑦ 随拍 + 本块 + 变更记录；`docs/desktop/design/PROJECT.md`（§2 ∥ §5 ∥ §8 ∥ §10 **DK** ∥ §7 **T-DSK60**） | 全批 |
 

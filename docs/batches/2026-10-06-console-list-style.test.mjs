@@ -17,7 +17,7 @@
  *      全档计数同拍（19——错态不外溢）
  *   ⑤ 类名双向闭合（AC-19 续）：档面字面类 ⊆ `style.css` 类选择器 ∥ `style.css` 类选择器 ⊆ 档面字面类 ∪ 态类 ∥
  *      死类零残留（`key-line`/`stat`/`view`——规则与字面两向）
- *   ⑥ 静态面：档目 29 ∥ 30（结构轮后）逐名同拍 ∥ `public/**` 零外链 ∥ 静态直发（200 ∥ mime ∥ 字节等于磁盘）
+ *   ⑥ 静态面：档目 31 ∥ 32（结构轮后）逐名同拍 ∥ `public/**` 零外链 ∥ 静态直发（200 ∥ mime ∥ 字节等于磁盘）
  *   ⑦ 门禁清单：`prepublishOnly` 三十件含本批件（文档清账批拆档后）∥ 清单目标在盘
  */
 import test from "node:test"
@@ -165,10 +165,10 @@ test("④ 错态面：`.hint error` 逐面套用（八处 loadFailed + 系统页
   // 2026-10-07 模型元数据批：views-providers-modals 退役提示 +2（退役徽标 ∥ 退役注行）⇒ 15 ⇒ 17
   // 2026-10-07 me-keys 批：views-me 双弹窗窗内状态行 +2（签发/吊销失败）⇒ 17 ⇒ 19
   // 2026-10-07 me 用量图表化批：views-me 用量页失败面两区 +1（报表卡/明细卡各一）⇒ 19 ⇒ 20
-  // 2026-10-09 配置面批：views-system 配置卡 +1（读档失败）⇒ 20 ⇒ 21；新档 views-system-config 入扫 +3（读档失败 ∥ 校验提示 ∥ 保存提示）⇒ 21 ⇒ 24
-  const total = ["views-admin.mjs", "views-me.mjs", "views-models.mjs", "views-usage.mjs", "views-audit.mjs", "views-providers.mjs", "views-providers-modals.mjs", "views-system-config.mjs", "views-system.mjs"]
+  // 2026-10-09 配置面批：views-system 配置卡 +1（读档失败）⇒ 20 ⇒ 21；新档 views-system-config 入扫 +3（读档失败 ∥ 校验提示 ∥ 保存提示）⇒ 21 ⇒ 24；2026-10-09 alias 批 +1（别名面）⇒ 25；2026-10-09 代理页批：views-proxy.mjs 入扫 +5 ⇒ 30
+  const total = ["views-admin.mjs", "views-me.mjs", "views-models.mjs", "views-usage.mjs", "views-audit.mjs", "views-providers.mjs", "views-providers-modals.mjs", "views-proxy.mjs", "views-system-config.mjs", "views-system.mjs"]
     .reduce((sum, file) => sum + (readPublic(file).match(/"hint error"/g) ?? []).length, 0)
-  assert.equal(total, 24, `\`"hint error"\` 计数不同拍：${total}`)
+  assert.equal(total, 30, `\`"hint error"\` 计数不同拍：${total}`)
 })
 
 // ── ⑤ 类名双向闭合（AC-19 续）：档面字面类 ↔ style.css 类选择器 ∥ 死类零残留 ─────────────────
@@ -199,15 +199,15 @@ test("⑤ 类名双向闭合 ∥ 死类零残留（`key-line`/`stat`/`view`）",
   }
 })
 
-// ── ⑥ 静态面：档目 29 ∥ 30 ∥ 零外链 ∥ 直发（200 ∥ mime ∥ 字节等于磁盘）────────────────────────
+// ── ⑥ 静态面：档目 31 ∥ 32 ∥ 零外链 ∥ 直发（200 ∥ mime ∥ 字节等于磁盘）────────────────────────
 
-test("⑥ 静态面：档目 29 ∥ 30 逐名同拍（结构轮后）∥ `public/**` 零外链 ∥ 直发", async () => {
+test("⑥ 静态面：档目 31 ∥ 32 逐名同拍（结构轮后）∥ `public/**` 零外链 ∥ 直发", async () => {
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [31, 30], "全目录 31 ∥ UI 代码档 30")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [32, 31], "全目录 32 ∥ UI 代码档 31")
   assert.deepEqual(names, [
     "app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs",
     "i18n-zh-me.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
-    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs",
+    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-proxy.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs",
   ])
   for (const name of names) {
     const text = readPublic(name)
@@ -231,11 +231,11 @@ test("⑥ 静态面：档目 29 ∥ 30 逐名同拍（结构轮后）∥ `public
   }
 })
 
-// ── ⑦ 门禁清单：`prepublishOnly` 三十三件（含本批件）∥ 清单目标在盘 ─────────────────────────────
+// ── ⑦ 门禁清单：`prepublishOnly` 三十八件（含本批件）∥ 清单目标在盘 ─────────────────────────────
 
-test("⑦ 门禁清单：`prepublishOnly` 三十三件含本批件 ∥ 清单目标在盘", () => {
+test("⑦ 门禁清单：`prepublishOnly` 三十八件含本批件 ∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 33, `门禁清单件数（二十二 ⇒ 三十三——me-keys 批两件入链 ∥ me-usage-charts 批两件入链 ∥ 结构轮件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 38, `门禁清单件数（二十二 ⇒ 三十八——me-keys 批两件入链 ∥ me-usage-charts 批两件入链 ∥ 结构轮件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链 ∥ 10-09 alias 批件入链 ∥ 10-09 代理页批件入链 ∥ 10-10 服务面残迹批件入链 ∥ 10-10 服务小修批两件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-06-console-list-style.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

@@ -337,7 +337,8 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
    **与墓碑存活闸（§6.8.3.2 P0-a）的交互**：写入时该条目已终态（`cancelled` + `done` + 出池）⇒ 存活判据 false ⇒ 维持丢弃（不再建块）；
    若同 key 条目仍存活（未来重启路径清终态位）⇒ 闸门摘墓碑 + 重建块（`ev:subagent-block-revived` 留痕）——**不构成永久失明**。
    同一幻影的**另一面已同批封死（c1）**：补位不启动终态条目（`AGENT-LOOP-SUBAGENT.md` §6.9）——「取消后仍被 settle」的燃料族无关消失。
-- **冻结头**：`[✓ explore#1 · sync · model · done 45s]`——**图标三态互斥（M5）**：`⏸`（审批态）→ `⏹`（`stopped`）→ `✓`（其余），与动词同源（`thincoder-cli/src/tui/render-segments.mjs` `frozenSubTaskLines` 图标行；跨端标尺 = VSC `webview/activity-view.js` 的 cancelled → `⏹`；运行中面板头无 `stopped` 分支 ⇒ 不并）；
+- **冻结头**：`[✓ explore#1 · sync · model · done 45s]`——**图标三态互斥（M5）**：`⏸`（审批态）→ `⏹`（`stopped` ∪ `error`）→ `✓`（其余），与动词同源（三词 `stopped` / `error` / `done`；错误面注记 ` — <err>` 居括号外——#821 跨端归一面；
+  `thincoder-cli/src/tui/render-segments.mjs` `frozenSubTaskLines` 图标行；跨端标尺 = 核件 `thincoder-render-core/subblocks/activity-view.mjs` 冻结头——`error` 面与 stopped 面同形；运行中面板头无 `stopped` 分支 ⇒ 不并）；
   动词按状态（cancel 冻结 → `stopped`；interrupt 清场 → `interrupted` 标）；**已结算待消化中间态**（settle 一律 `⟦ev⟧settled`——挂起 ∥ 非挂起两态统一 · #746）——等待消化，面板显示 `done · awaiting digestion`。
 - **advisor 块**：运行中 = 对话流内可折叠框（key = `advisor-blocks`，单实例；头 `[advisor · review] N lines` + tail 3；
   展开 = `renderBlockTimeline` 有序块时间线——think ↔ tool 交替按发射序）；完成 → 冻结 `_frozenAdvisor` 载体；
@@ -481,11 +482,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 | 4 | CLI·测（**拟新增**） | `thincoder-cli/test/subagent-zero-block.test.mjs` | 新 | T-ZB1–T-ZB6（§6.8.3.6）；直驱 `routeSubToken` / `freezeAllSubTasks` / `refreshQueuedTokens`——零网络、零定时器 | ~120（已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | 5 | 设计档 | `docs/cli/design/TUI.md` | 555 | 本节（§6.8.3）+ §6.8.1 指针行 + 变更记录一行 | 本档已落（→ 576 行——本 fix 轮后） |
 
-**跨文件限**：三份源档预计后均 < 500 硬限（460 / 205 / 437）——**无拆分需要**。
-
-**>300 advisory 档审视结论（F-R24a——评审 #6 收正）**：
-- `subagent-blocks.mjs`：改动面 = 既有 `ensureSubTaskKey` 内一分支 + 一条摘行调用（未新增职责 / 未新增模块级函数）⇒ **无需拆分**；>300 为存量（2026-09-05 由 625 行拆出后的漂移）——档位登记（读数 / 触发）= `docs/cli/design/CLI-DEBT.md` §2.1 A9 行（数据单一活面；本档不复读读数）。
-- `subagent-scheduler.mjs`（429 → ~437）：改动面 = 既有 `catch` 内补一条 `logEvent` + 顶注 import（未新增职责）⇒ **无需拆分**；>300 为存量——登记存量债。
+**跨文件限**：三份源档预计后均 < 800 硬限（460 / 205 / 437）——**无拆分需要**。
 
 **6.8.3.5 关键决策记录（含否决备选）**
 
@@ -780,6 +777,8 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 **本批（消化重放口径批（#771 ∥ #773） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-replay-choices.md` §2（唯一承载面——一次性批次材料）。
 **本批（消化行只留当轮收正 · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-row-current-only.md` §2（唯一承载面——一次性批次材料）。
 **本批（消化行自然形·两端跟正（CLI ∥ VSC） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §2（唯一承载面——一次性批次材料）。
+- 2026-10-10（**跨端对齐批 · 实施轮随动 · eng-coder**——承批档 `docs/batches/2026-10-10-cross-end-alignment.md` §2 · 台账 #821）：§6.8 冻结头句随正——图标三态第二态扩 `stopped` ∪ `error`（verb 三词 stopped/error/done；错误面注记 ` — <err>` 居括号外）；跨端标尺改指核件冻结头。**零机制改**（跨端显示面差归一面落位）。
+- 2026-10-08（**代码长度上限 500/800 口径更换批 · 实施轮 · eng-coder**——承 `docs/batches/2026-10-08-code-limit-500-800.md` §2 · 台账 #1072）：§6.8.3.4 跨文件限改数（<500 硬限 ⇒ <800）+「>300 advisory 档审视结论」块删（丙——义务前提消失）。**零新语义**（可 revert）。
 - 2026-09-30（**crossline-clearance 批 · 实施后随动轮 · eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2.13）：§7.4 标题段收正（空值回退链已落——#677 I2；可机判行同变）；§7.5 宽度口径收正（编号前缀预扣除已落——#677 I6；指位 `:375` → `:387`）。**零新语义**。
 
 - 2026-09-30（**跨线清零轮 · 设计档收正（修正轮 1 补落变更记录）· eng-designer**——承 `docs/batches/2026-09-30-crossline-clearance.md` §2 · 台账 #677）：§7.4 空窗差行 = 消（本段补同款回退链，对位 `thincoder-vscode/src/extension/panel-session.mjs:235-243`——实施清单 I2）；§7.5 宽度口径行 = 消（编号前缀预扣除——实施清单 I6）。**零机制改**。

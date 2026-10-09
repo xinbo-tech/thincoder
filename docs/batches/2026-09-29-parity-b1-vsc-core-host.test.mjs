@@ -53,12 +53,14 @@ const readSrc = (rel) => readFileSync(resolve(ROOT, rel), "utf8")
 test("G7 结构机检：批内受影响档行数读数（§2.0 口径）+ 删档缺席 + 悬空 import 零", () => {
   // 断代重锚 2026-10-04（父侧 · 台账 #798）：全表行数读数随各档后续批落盘齐平（原 09-29 读数——断代红）；
   // `rules-face.mjs` 已随后续批退场（原行数行撤——下行缺席断言接）。
+  // 断代重锚 2026-10-10（本批 · #1108 归档批内件重基）：六档随后续批再漂齐平（run-helpers 89⇒88 ∥ tool-table 191⇒188 ∥
+  // 端 suspension 329⇒338 ∥ panel-turn-loop 304⇒307 ∥ suspension-drive 255⇒262 ∥ 核 suspension 327⇒352——19 档全表随现盘）。
   const readings = {
     "thincoder-vscode/src/agent.mjs": 10,
     "thincoder-vscode/src/agent/setup.mjs": 310,
-    "thincoder-vscode/src/agent/run-helpers.mjs": 89,
+    "thincoder-vscode/src/agent/run-helpers.mjs": 88,
     "thincoder-vscode/src/agent/setup-reminders.mjs": 66,
-    "thincoder-vscode/src/agent/tool-table.mjs": 191,
+    "thincoder-vscode/src/agent/tool-table.mjs": 188,
     "thincoder-vscode/src/agent/setup-tooltable.mjs": 104,
     "thincoder-vscode/src/agent/turn-domains.mjs": 38,
     "thincoder-vscode/src/agent/agent-state.mjs": 159,
@@ -66,13 +68,13 @@ test("G7 结构机检：批内受影响档行数读数（§2.0 口径）+ 删档
     "thincoder-vscode/src/extension/peer-claims.mjs": 35,
     "thincoder-vscode/src/extension/peer-domains.mjs": 33,
     "thincoder-vscode/src/extension/peer-instances.mjs": 21,
-    "thincoder-vscode/src/extension/suspension.mjs": 329,
-    "thincoder-vscode/src/extension/panel-turn-loop.mjs": 304,
+    "thincoder-vscode/src/extension/suspension.mjs": 338,
+    "thincoder-vscode/src/extension/panel-turn-loop.mjs": 307,
     "thincoder-vscode/src/extension/panel-turn-stages.mjs": 247,
     "thincoder-vscode/src/extension/panel-chat.mjs": 261,
     "thincoder-vscode/src/extension/image-handler.mjs": 59,
-    "thincoder-cli/src/tui/suspension-drive.mjs": 255,
-    "thincoder-core/agent/suspension.mjs": 327,
+    "thincoder-cli/src/tui/suspension-drive.mjs": 262,
+    "thincoder-core/agent/suspension.mjs": 352,
   }
   for (const [rel, expect] of Object.entries(readings)) {
     assert.equal(readSrc(rel).split("\n").length, expect, `${rel} 行数读数 = ${expect}`)
@@ -145,7 +147,7 @@ export async function runAgent(agent, input, callbacks = {}, opts = {}) {
   throw new Error(step.message ?? "provider boom");
 }
 `)
-  // VSC host 装配桩（hydrateRun ∕ setupAgentRun —— 对齐 §2.3 件 1 逐段对位：载体 + adapter 三键写回）
+  // VSC host 装配桩（hydrateRun ∕ setupAgentRun —— 对齐 §2.3 件 1 逐段对位：载体 + adapter 两键写回——B7 3b：promptTail 已退役）
   const SETUP = encStub(`
 export const hydrateCalls = [];
 export const setupCalls = [];
@@ -162,7 +164,6 @@ function assemble(agent, ctx) {
   agent._tasks = agent._tasks ?? [];
   agent._goal = agent._goal ?? null;
   agent._planMode = false;
-  opts.promptTail = "TAIL-BLOCK";
   opts.turnDomainText = "DOMAIN-TEXT";
   opts.toolDecorate = { marker: "decorate" };
   return { agent, history: opts.history, fullHistory: opts.fullHistory, input };
@@ -257,7 +258,9 @@ export async function setupAgentRun(ctx) {
     eq("coreOpts.resume（首段）", core.opts.resume, false)
     eq("coreOpts.suspDriven", core.opts.suspDriven, true)
     ok("coreOpts.signal = 回合 controller signal", core.opts.signal === panel._abortController.signal)
-    eq("A2 promptTail（装配写回）", core.opts.promptTail, "TAIL-BLOCK")
+    // A2 退役锁（本批重基 2026-10-10）：promptTail 全链退役（B7 3b——`docs/batches/2026-09-29-parity-b7-minor.md:91`）
+    // ⇒ 核 opts 键面负向锁（防复活）；现役两键写回照旧 = A3 ∥ 裁定① 两断言（下两行）。
+    ok("A2 promptTail 键退役（核 opts 键面零 promptTail）", !("promptTail" in core.opts))
     eq("A3 turnDomainText（装配写回）", core.opts.turnDomainText, "DOMAIN-TEXT")
     ok("裁定① toolDecorate（装配写回）", core.opts.toolDecorate?.marker === "decorate")
     eq("B distillSignal = 面板 controller signal", core.opts.distillSignal, panel._distillController.signal)

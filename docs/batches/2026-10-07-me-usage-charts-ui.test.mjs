@@ -379,7 +379,7 @@ test("腿 C 键集：+8 两表同步 ∥ `me.usage.summary` 退役零残留 ∥ 
   assert.deepEqual(baseKeys(ZH), baseKeys(EN), "两表基键集双向相等")
   for (const key of Object.keys(EN).filter((item) => item.endsWith(".one"))) assert.ok(!(key in ZH), `zh 表含 .one 变体：${key}`)
   const refs = []
-  for (const name of readdirSync(PUBLIC_DIR).filter((item) => item.endsWith(".mjs") && !["i18n-zh.mjs", "i18n-en.mjs"].includes(item))) {
+  for (const name of readdirSync(PUBLIC_DIR).filter((item) => item.endsWith(".mjs") && !/^i18n-(zh|en)/.test(item))) {
     for (const match of readPublic(name).matchAll(/\bt\(\s*"([^"]+)"\s*[,)]/g)) refs.push([name, match[1]])
   }
   assert.ok(refs.length >= 150, `t 字面量过少（扫描失效？）：${refs.length}`)

@@ -103,8 +103,8 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
 - **按传输的 config 形态**：`stdio: { name, command, args?, env? }` · `HTTP: { name, url, token?, headers? }` · `WS: { name, wsUrl, token?, headers? }`；name 是唯一键控名（不可改）；`headers` / `env` 为键值对象；`token` 为**一等可选字段**（HTTP/WS）；项目级 `.mcp.json` 亦可提供 server，但 `/mcp` 管理入口操作的仍是 `config.json` 的 `mcp.servers`。
 - **token 合成规则**：client 自动合成 `headers.Authorization = "Bearer " + token`——**仅当 headers 未显式含 Authorization 时**（显式 headers 优先）；合成发生在传给 transport 前，**不写回 config**；WS 经 **subprotocol**（`bearer.<token>`）传递（Node 内置 WebSocket 无法自定义请求头；不注入 URL query——防日志泄露凭证）；
 **fingerprint 计入 `token` 字段**（改 token → 指纹变更 → 重连）；token 明文存 `config.json`（不引入 keychain）——`token` ∕ `headers` ∕ `env` 值亦可存 `${env:VAR}` 引用（落盘不落明文；解析 = MCP 传输建连侧，单源 = `doc:CONFIG.md:§6.3`；指纹 ∕ 漂移比对仍按存储原文——env 变更不伪装为配置漂移；重连按当时环境重解析）。
-- **headers / env 键值对输入**：**CLI `/mcp` 表单面 = 逗号分隔**（`key=value, key2=value2`，value 可含空格）——取代旧空格 `split`（后者把 `Authorization=Bearer xxx` 截成 `"Bearer"`，token 丢失）。字段输入语义：空输入 = 不变；`-` = 删除可选字段；`key=`（空 value）= 删除该项；required 字段（name / url / wsUrl / command）拒绝 `-`。
-  **射程（2026-10-07 · 台账 #1036）**：本条 = **CLI `/mcp` 表单面**输入语义；GUI 两端（VSC ∥ 桌面）表单 = **行式键值编辑器**（每行键格 + 值格 + ✕；加删行——口径单源 = `docs/vsc/design/SETTINGS.md` §2.4 ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-76**）——三端**管理面输入形现不一致**（CLI 串式 vs GUI 行式），端差登记在册。
+- **headers / env 键值对输入**：**三端行集语义同源**——键值对按「行 = 一对」逐对编辑；提交四判据同源（trim ∥ 空键/空值行不提交 ∥ 重复键后行胜 ∥ 全空 ⇒ 字段删除）；值 = **字面**（逗号 ∥ 等号 ∥ 引号 ∥ 空格原样——零切分零剥离）。字段输入语义（非行集字段——name / url / wsUrl / command / token / args）：空输入 = 不变；`-` = 删除可选字段；required 字段（name / url / wsUrl / command）拒绝 `-`。
+  **载体差（登记 · 2026-10-10 · 台账 #1046）**：CLI = 逐对「选择 + 问句」序（终端行流；键原地改名 = 删 + 加两步）∥ GUI 两端 = 同屏行格（每行键格 + 值格 + ✕；加删行——口径单源 = `docs/vsc/design/SETTINGS.md` §2.4 ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-76**）——**实证例外（宿主差——终端行流 ∥ DOM 行格）**。
 
 ### 6.6 传输层与活性（isAlive 三态）
 
@@ -190,7 +190,7 @@ MCP 工具、下轮重试）。**子代理不含 MCP**：装配仅 depth-0 展�
 | D-MC6 | 连接幂等 = **fingerprint 键控复用** | 重复 add 同一 server 不产生双实例；config 变更才重建 |
 | D-MC7 | `token` = **一等可选字段 + 自动合成 Bearer** | 简化配置；显式 headers 优先（向后兼容）；不写回 config |
 | D-MC8 | WS 认证走 **subprotocol**（非 URL query） | Node 内置 WebSocket 无法自定义请求头；防代理 / 网关日志泄露凭证 |
-| D-MC9 | headers / env 输入 = **逗号分隔**（取代空格 split）；**射程 = CLI `/mcp` 表单面**（GUI 两端行式键值——2026-10-07 · 台账 #1036，见 §6.5 射程句） | 后者把 `Authorization=Bearer xxx` 截成 `"Bearer"`（token 丢失） |
+| D-MC9 | headers / env 输入 = **行集语义（三端同源）**——「行 = 一对」逐对编辑；**载体**：CLI = 逐对「选择 + 问句」序 ∥ GUI 两端 = 行格（2026-10-10 · 台账 #1046，见 §6.5） | 旧 CLI 串式半语法（逗号切分 ∥ 首 `=` ∥ 成对引号剥离）值含逗号即坏（`KEY=va,lue` ⇒ 残片——与 GUI 修复前病灶同型）；行集化后值为字面、零解析零剥离——与 GUI 行格同语义 |
 | D-MC10 | **postOnly 三态**（不因 `eventSource == null` 误判死） | 曾致 `ensureAlive` 误判死连接 → 无意义重连循环 |
 | D-MC11 | `probeMcpServer` **零副作用 + 不复用 connectMcpServer** | 避免污染 session 幂等表（`_sessions`）；探完必关 |
 | D-MC12 | 保存前探活确认环 —— **save-anyway 整个废除** | 失败配置零保存（不落盘）；防“保存了但连不上”的隐性故障 |
@@ -250,3 +250,4 @@ MCP 工具、下轮重试）。**子代理不含 MCP**：装配仅 depth-0 展�
   同批设计轮条「端差归零」辖域限定 = **消费面**。**零新语义**（时态 ∥ 辖域收正；#701 实况 = 台账已核销 + `thincoder-vscode/src/config-mcp.mjs:85-104` ∥ `thincoder-vscode/src/extension/panel-turn-loop.mjs:165` 在盘实读）。
 - 2026-10-07（**MCP 键值行式输入批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-mcp-kv-input.md` §1 ∥ §2 · 台账 #1036）：§6.5 「headers / env 键值对输入」条补 **射程句**（本条 = CLI `/mcp` 表单面；GUI 两端 = 行式键值编辑器——口径单源 = `docs/vsc/design/SETTINGS.md` §2.4 ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-76**；三端管理面输入形不一致 = 端差在册）· §7 **D-MC9** 同拍（射程括注）。**零新语义**（射程 ∥ 辖域收正——原「统一」措辞对三端面不再成立）。明细 = 批档 §2。
 - 2026-10-07（**MCP 键值行式输入批 · 设计评审修复轮（§3 轮次 1 · 发现 1）· eng-designer**——承批档 `docs/batches/2026-10-07-mcp-kv-input.md` §3 轮次 1 ∥ §2 修复轮块 · 台账 #1036）：§6.5「headers / env 键值对输入」**主句改 CLI 作用域表述**（「统一为逗号分隔」⇒「**CLI `/mcp` 表单面 = 逗号分隔**」——「统一」残句删；射程句 ∥ §7 **D-MC9** 括注零动）。**零新语义**（辖域表述收正）。明细 = 批档 §2 修复轮块。
+- 2026-10-10（**跨端对齐批 · 实施轮随动 · eng-coder**——承批档 `docs/batches/2026-10-10-cross-end-alignment.md` §2 · 台账 #1046）：§6.5「headers / env 键值对输入」条**改述为行集语义**（三端「行 = 一对」同源 + 载体差登记——CLI 逐对「选择 + 问句」序 ∥ GUI 行格；旧 CLI 串式半语法退场）· §7 **D-MC9** 同拍（裁决语义 ∥ 理由列改写）。**零新语义**（跨端对齐——输入形语义收正）。明细 = 批档 §2 三.3。

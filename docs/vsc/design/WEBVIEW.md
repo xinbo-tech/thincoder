@@ -124,7 +124,7 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
   三成员同形 = 独占行 + 括号 + 状态词；**退出码槽只接受数字**（`error.code` 非数字 ⇒ 不许塞进退出码槽：宿主产者曾产 `(exit code ENOENT)`，判据不认 ⇒ 卡读绿，本批收正）；判据布尔 = `toolFailureStatus(text)` ∕ 摘要状态文本 = `toolStatusText(text)`——两出口同引语法单源 `STATUS_LINE`（#677 I16b 已落；零第二份语法）。
 - 活卡（`finishToolCard`——核单源 `thincoder-render-core/flow/tool-card.mjs`；本端 `ui.js` 转口）与恢复卡（`buildFinishedToolCard`——核单源 `thincoder-render-core/flow/tool-card-restore.mjs`；本端 = 2 行 shim）**同读该判据**——两卡面终态同形（F-W4）的机器面。
 - 失败面三信号（同一判据派生，零散点）：状态词 = `tool.error` + 红；**保持展开**（不自动折叠）；摘要含状态位（`→ bash: <末行输出> (exit code 1)`；无输出时 `→ bash: (exit code 1)`——不读作 `(empty)`；spawn 失败则 `→ bash: (spawn failed)`——`bash: ` 前缀随 X7 摘要分派落位）。
-- **CLI 对位**：失败面口径同源（末行输出 + 状态位入摘要——`thincoder-cli/src/tui/tool-summaries.mjs:60-68`）；端差二条（2026-09-30 重审 · #677）：① 卡态为本端独有形态 = **实证例外**（宿主差——DOM 交互卡 ∥ 终端行流；证据 = 两实现树）；② 成功面 `(exit code 0)` 拼接口径 = **消**（归一——以 CLI 标尺为准；#677 实施清单）；登记面 = `requirements/WEBVIEW.md` §4。
+- **CLI 对位**：失败面口径同源（末行输出 + 状态位入摘要——`thincoder-cli/src/tui/tool-summaries.mjs:60-68`）；端差二条（2026-09-30 重审 · #677）：① 卡态为本端独有形态 = **实证例外**（宿主差——DOM 交互卡 ∥ 终端行流；证据 = 两实现树）；② 成功面 `(exit code 0)` 拼接口径 = **消**（已落——归一以 CLI 标尺；#677 · I16b）；登记面 = `requirements/WEBVIEW.md` §4。
   **spawn 形态两端同读**：CLI 摘要 = `bash: (spawn failed)`（同档「末条非包装行」规则 ⇒ 端侧零改即得可见信号；2026-09-18 实跑读数在案）；本端 = 红 + 保持展开 + 同文本。
   **失败信号数端差**：本端 = 判据（红 + 保持展开）+ 摘要两处；CLI = 摘要一处（TUI 无卡态、完成行不判色）——**实证例外（2026-09-30 重审 · #677——宿主 + 行为：信号数差 = 卡态面派生〔DOM 卡 ∥ 终端行流〕；失败可见性两端在位——CLI 摘要状态位 ∥ 本端判据红）**；登记面 = `requirements/WEBVIEW.md` §4。
 - **摘要族单源与分派（X3 · X7——显示面消差批）**：活卡与恢复卡的**一行式摘要** = 核单源 `thincoder-render-core/tool-summary.mjs:35` 的 `formatToolSummary(name, text)`（本端 `webview/tool-summary.js` = 3 行再导出 shim；前身 = 端侧叶，自 `ui.js` `resultSummary` 整段迁出——500 行硬限）；
@@ -626,13 +626,13 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | U-W7 | 可调常量（批准环节可翻转）：`max-height: 32vh` · 60px 数值本身 | 已定（open 面 = 数值，非语义） |
 | U-W8 | 合并权限卡释放形态 = **卡消失**（不做「已拒绝态」变体） | 已定（§4.1 · D-W15） |
 | U-W9 | 模型 / 推理按钮**随处可点**（零 `disabled` / `aria-disabled`；进忙态不关浮层） | 已定（2026-10-04 解锁批收正——§4.2 · D-W16） |
-| U-W10 | 失败工具卡 = 红 + **保持展开** + 摘要含退出状态；成功面不拼 `(exit code 0)` | 已定（§4.3 · D-W18） |
+| U-W10 | 失败工具卡 = 红 + **保持展开** + 摘要含退出状态；成功面拼接已归一（`(exit code 0)` 拼——#677 · I16b） | 已定（§4.3 · D-W18） |
 | U-W11 | spawn 失败（无退出码）摘要 = 状态位本体（`→ (spawn failed)`）；三信号同形不改 | 已定（§4.3 · D-W19） |
 | U-W12 | 未钉底时新块出生 = **区首计数钮**（`↓ N 新块`，点击回底）；不抢用户阅读位、不牵动 `#messages` | 已定（§5.5 · D-W27） |
 | U-W13 | 中止后未结算工具卡 = 状态词「已中断」+ 摘要 `→ (interrupted)`（不套错误色；已结算卡零改写） | 已定（§4.5 · D-W32） |
 | U-W14 | 工具结果截断 = 正文尾标记行 + 摘要尾部标注（端特有键 `tool.truncated`；恰 64K 与超出同判） | 已定（§4.5 · D-W38） |
 | U-W15 | advisor 卡头 / 状态行 = CLI `roundTag` 逐字形 `(round N · model)`（无 model ⇒ `(round N)`） | 已定（§4.5 · D-W36） |
-| U-W16 | 工具摘要 = CLI 标尺结构化分派（`N lines` / `N matches` / `N files` / `wrote N bytes` / `bash: <末行>`；成功面不拼 `(exit code 0)`） | 已定（§4.3 · D-W37） |
+| U-W16 | 工具摘要 = CLI 标尺结构化分派（`N lines` / `N matches` / `N files` / `wrote N bytes` / `bash: <末行>`；成功面拼接已归一（`(exit code 0)` 拼——#677 · I16b）） | 已定（§4.3 · D-W37） |
 | U-W17 | 冻结块头注记 = `— <note>`（turn-cap / 停因 / `interrupted`）；error 面注记保留 | 已定（§5.2 · D-W39） |
 | U-W18 | sync 运行块 ⏹ 可见（宿主确证可中止时；registry 不可读 ⇒ 降级为登记） | 已定（§5.2 · D-W40） |
 | U-W19 | digest 计数行随 `n > 0`（两档同规）；ask-only 轮（`n = 0`）= 标签行在 ∧ 无计数行；ask 档标签携 `from` / `msg` | 已定（§5.1 · D-W35；F-UC8 批） |
@@ -703,6 +703,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 **边界（本节不做）**：不做常驻仪表（默认一次性探针）；不加 webview `performance` 标记（真画证据归真机 QA · 台账 #162）；口径 A 不入本批。**读数留档** = 批次档 §5 / §6（一次性材料）；探针撤除后 `git diff` 空 = 方案自身验证面。
 
 ## 变更记录
+- 2026-10-10（**跨端对齐批 · 实施轮随动 · eng-coder**——承批档 `docs/batches/2026-10-10-cross-end-alignment.md` §2 · 台账 #1011）：§4.3 CLI 对位句括注收正（「#677 实施清单」⇒「已落——归一以 CLI 标尺；#677 · I16b」——与同节「端差」句同式）；§8 **U-W10** ∥ **U-W16** 两行成功面句收正为「拼接已归一（已落——#677 · I16b）」（需求档 §4 同拍已落）。**零新语义**（时态 ∥ 内张力收正）。
 - 2026-10-09（**stale-fixes 批 · 坐标 sweep（#1066）· 父侧笔**——承批档 `docs/batches/2026-10-09-stale-fixes.md` §2.2-10 · 台账 #1131；复核记录 = 批档 §6）：全档正文面（`:1-704`）逐锚坐标 sweep 随正（≈130 处——行号漂移 ∥ 归属漂移〔端 shim ⇒ 核件〕∥ 归档址指针 ∥ 行数读数；变更记录面自身零改）+ 档头注补 sweep 口径（`:8`）。**零新语义**（坐标 ∥ 读数随正——判据 ∥ 契约 ∥ 决策零变）。
 - 2026-10-09（**provider-default-model-purge 批 · 实施期收正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §2 ∥ §5 舱4 · 台账 #1122）：§4.8 fallback 第二字面键名补登（`banner.defaultModelFallbackNoModel`——`data-banner-key` 取值闭集闭合；#22 实装键名）+ 登记条同拍。**零新语义**（键名补登）。
 - 2026-10-09（**provider-default-model-purge 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §3 轮次 1 · 台账 #1122）：§4.8 补批名登记（两字面与渠道单值模型退场后口径零冲突 ⇒ 零改在册）。**零新语义**（零改登记）。明细 = 批档 §2 修复轮块。

@@ -194,8 +194,9 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
   - `digest` 记录 ⇒ 痕行：`start` ⇒ 标签行（`tier==="ask"` 携 `from`/`msg` 取 `digest.turnLabelAsk` ∥ `digest.turnLabel`）+ `n>0` 计数行（`digest.start`）；`cap` ⇒ `digest.capStop`（`turns`）；`end` ⇒ 终态行（`ok!==false` ⇒ `digest.done`（`n` + `seconds`）∥ `digest.aborted`（`seconds`）——**文案与活流同算式**）。
   - **终态行 `n` 解析**：页内（含 ±1 页沿）有本轮 `start` ⇒ 直用；缺席（跨页分裂）⇒ **存储回扫**（`store.page` 向更早逐段回读，至命中本轮 `start` 止）⇒ **跨页零损（容差①于 CLI 不成立——绑定态；模式 F 未绑 ⇒ 不适用——模式 F = 未绑定，单源 = `docs/core/design/SESSION.md` §6.26）**。解析由调用面（`restoreLines` ∥ `createLoadOlder`——持有存储读口）预完成；`historyToLines` 仅增分支（形零改）。
   - `subagent` 记录 ⇒ 冻结载体行 `{ text:"subagent activity: <key>", color:C.dim, _frozenSubTask: 合成件 }`——合成件 = 由 `meta`/`rows` 构建（`key`（剥 `sub:` 前缀——显示 = 本地无前缀形；行文取值同源自合成件 `key`）
-    ∥ `role ∥ model ∥ done:true ∥ doneAt ∥ blocks(=rows 行集) ∥ stopped ∥ _charCount(=行集字符和——账实一致 §5.4）` ∥ `async(= meta.pool === true)` ∥ `queued(= meta.queued === true)`），**渲染端零改**（`render-segments.mjs` 折叠头 + tail-3 原式消费——模式词 waiting/async/sync 三态照出）。
+    ∥ `role ∥ model ∥ done:true ∥ doneAt ∥ blocks(=rows 行集) ∥ stopped ∥ errored ∥ _charCount(=行集字符和——账实一致 §5.4）` ∥ `async(= meta.pool === true)` ∥ `queued(= meta.queued === true)`），**渲染端零改**（`render-segments.mjs` 折叠头 + tail-3 原式消费——模式词 waiting/async/sync 三态照出）。
     **停面词判据（#795）**：合成件 `stopped` = 记录 `status` 停止面词集（词面判据单源 = `docs/core/design/SESSION.md` §6.26——本档不复述）。
+    **错误面词判据（#821）**：合成件 `errored` = 记录 `status` 错误面词集（词面判据单源 = `docs/core/design/SESSION.md` §6.26——本档不复述）。
   - 负控 = 记录缺 ⇒ 恢复面逐字等价；未绑（模式 F）⇒ 既有径零改（无 sidecar 存储腿——记录入人读线、落盘随既有保存链）。
 - **翻页**：数据源零改（`store.page`——记录已在存储、随页自然可见）；「N more earlier messages」与「N messages」口径含记录（与桌面 KD-55 ⑤ 同口径容忍）。
 - **容差（CLI 侧状态）**：① 跨页分裂 = **消**（上「`n` 解析」）；② 归档快照晚一拍 = **消**（产生面 = 进程内冻结点，先于回合落盘 ∥ 读径 = 存储直读——追加即达）；③ 复活径双记录（墓碑复活 ⇒ 同键两代冻结 ⇒ 重建面双块 ∥ 活流单块）——**在册**（低频异常修复径 ∥ 数据零损；重开条件 = 实测走查命中 ⇒ 另批）。
@@ -235,6 +236,8 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 **本批（消化行自然形·两端跟正（CLI ∥ VSC） · 2026-10-01）落点表** = `docs/batches/2026-10-01-digest-rows-natural-form-cli-vsc.md` §2（唯一承载面——一次性批次材料）。
 **本批（零语义清账批 #2 · 2026-10-01）落点表** = `docs/batches/2026-10-01-zero-semantic-cleanup-2.md` §2（唯一承载面——一次性批次材料）。
 **本批（记录形残项批（#795） · 2026-10-02）落点表** = `docs/batches/2026-10-02-record-shape-residuals.md` §2（唯一承载面——一次性批次材料）。
+
+- 2026-10-10（**跨端对齐批 · 实施轮随动 · eng-coder**——承批档 `docs/batches/2026-10-10-cross-end-alignment.md` §2 · 台账 #821）：§6 合成件字段句补 `errored` + **错误面词判据句**（`errored` = 记录 `status` 错误面词集——词面判据单源 = `docs/core/design/SESSION.md` §6.26）。**零新语义**（判据单源落位）。
 
 - 2026-10-02（**记录形残项批（#795）· 设计档随动轮 · eng-designer**——承批档 `docs/batches/2026-10-02-record-shape-residuals.md` §2 随动表）：§6 合成件补**停面词判据句**（`stopped` = 记录 `status` 停止面词集——词面判据单源 = `docs/core/design/SESSION.md` §6.26）。**零新语义**（判据单源落位）。
 

@@ -735,6 +735,7 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
    声明根缺位 ⇒ **整根跳过**（展开前判存在性——同步面不扫不删；存量行归 §6.14 面 ⑤ 维护面回收（备份窗内可回滚；树恢复 ⇒ 重新同步）；树改名 ⇒ 旧 origin 存量行同此；ops `sweep --origin` 通路仍在）+ 一行 `logEvent`。
 2. **读面 origin 集（读侧）**：`docSearch` ∥ `codeSearch` 过滤集 = 项目 origin ∪ 声明公共仓 origin（各经 `normalizeOrigin`）；**单 origin（未声明 / 无项目）⇒ 逐字零行为**；多 origin ⇒ **逐 origin 分趟**：矢量扫描支 = 每趟**单 origin 等值**（`AND origin = ?`——游标键 `["path","line_start"]`，与单 origin 快径逐字同形同计划）；FTS 支 = `origin IN (…)` 单趟（无游标面）。
    **不取**「`origin IN (…)` + 全 PK 游标」形（与 D-MEM22 否决形同构相邻——未取证形不引）；**合并** = 各趟候选统一收集后经既有稳定排序，并列分数定序 = **PK 元组升序**（`origin` → `path` → `line_start`——单 origin 面即扫描序；与趟序 / 到达序无关）。`thincoder-core/agent/setup.mjs` 每回合召回注入与计数行（B3）同用该集。
+   注入块自 #1100 起**按腿分取**（本仓腿 ∥ 声明腿）——`docSearch` 可选 `origins` 覆盖参：缺省 `null` ⇒ 本函数自取 `searchOrigins`（现行为逐字）∥ 给定 ⇒ 以其为 origin 集（复用既有单/多 origin SQL 形）∥ 空数组 ⇒ 现「不过滤」语义；配额策略 = `AGENT-LOOP.md` §6.3（本档不复述）。
 3. **跨仓引用（可核形——记录面同用）**：形态 / 解析序 / 处置 = `docs/core/design/DOC-DISCIPLINE.md` §4.2.2；记录面有界例外 = `docs/core/design/LEDGER-SELF-CONTAINED.md` §5.1；本档登记**解析消费面** = 锚机检声明源候选（`scripts/doc-check-anchors.mjs` 接线）。
 
 **判据腿（机检——单源批档 §2；号 = §6.15 面）**：
@@ -838,6 +839,8 @@ SQLite 的 `wal_checkpoint` 是否走 busy handler（从而是否真受该上界
 - **`D:/dgx-spark` 系 origin（含变体）与未归一变体 `D:\teamcode`**：存量行处置 = sweep 面（信号 A 折叠 + 用户裁定的 origin ∕ 子树删除）；非本批默认动作。
 
 ## 变更记录
+
+- 2026-10-10（**agent-loop-allotment 批 · 实施轮 · eng-coder**——承批档 `docs/batches/2026-10-10-agent-loop-allotment.md` §2 · 台账 #1100）：§6.15 机制 2 补 **`docSearch` 可选 `origins` 覆盖参**句（三态：缺省 `null` = 现行为逐字 ∥ 给定 = 以其为 origin 集 ∥ 空数组 = 现「不过滤」语义）+ 注入块按腿分取句。**零机制改**（读面集语义不变——参数面加法；配额策略单源 = `AGENT-LOOP.md` §6.3）。实现 = 本批实施轮（`thincoder-core/memory/docs.mjs` ∥ `thincoder-core/agent/setup.mjs`）。
 
 - 2026-10-08（**行预算用户面收正批 · 设计评审修正轮 1（评审 #14 · 发现 1–6 + 外注②——父侧逐条裁定接受）· eng-designer**——承批档 `docs/batches/2026-10-08-memory-budget-surface.md` §3 轮次 1）：P2 点名测试注入缝（`createRowBudget` `baseOffset` 计数注入——缺省 = 实读核计数）∥ L-②-5 换算式带时点标注（26 µs ∕ 行〔2026-09-30 读数〕）∥ P2「每趟至多一行」⇒「每 origin 每趟至多一行」∥ P1 端面零改句补档名（`docs/batches/2026-09-30-memory-db-family.md` §2.12【补块 4】）∥ 「代码零改」⇒「功能零改（`thincoder-core/agent/setup.mjs:115` 注释值面一行收正）」（初始轮行 ∥ L-③-5 ④ 同族收正）。**零机制改**（发现逐号落位）。
 - 2026-10-08（**行预算用户面收正批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-08-memory-budget-surface.md` §2 · 台账 #1107）：§6.14 面③ P2 收正（WARN ∥ CAP = **100k ∕ 300k**；WARN 行 = 一行中性信息 ∕ CAP 行 = 优雅降级说明——两行逐字入册；`declare ∕ prune` 指令形退出默认输出）+ 面③ 需求锚行（§4.10 + §4.13）+ B3 ∥ B4 界值随动（「+」界 = WARN 线随动——功能零改：`thincoder-core/agent/setup.mjs:115` 注释值面一行收正）+ L-②-2 ∥ L-②-5 现值收正 + **新增 L-③-5**；

@@ -1,4 +1,4 @@
-<!-- 槽位:特殊-advisor-round2 消费方:[advisor round-2+ 代码评审注入——自含，不属于主装配链] -->
+<!-- 槽位:[特殊-advisor-round2] 消费方:[advisor round-2+ 代码评审注入——自含，不属于主装配链] -->
 
 你是独立评审 advisor。
 

@@ -14,7 +14,7 @@
  *      （baseURL/四端/curl）∥ `views-me` 用成员变体 ∥ `views-system` 走 admin 变体
  *   ⑤ 静态面：新 25 键两表在场 ∥ 死键 2 枚零残留 ∥ 改值 4 键列内形 ∥ 基键集双向相等 ∥ 占位符一致 ∥ en 零 CJK
  *      ∥ 「提示形」零残留（本页文案与新键值）∥ 类名零残留（`key-list`/`key-item`/`key-meta`——样式与档面两向）
- *      ∥ 行悬停声明 = 2 条 ∥ 档目 29 ∥ 30（结构轮后）∥ key 页不入壳五页钉表
+ *      ∥ 行悬停声明 = 2 条 ∥ 档目 31 ∥ 32（结构轮后）∥ key 页不入壳五页钉表
  *
  * 桩说明：页面档经桩浏览器全局直载（`dom.mjs` 顶层触 `document`——先桩后 import）；`ctx` = 桩面（h/table 取真件
  * `dom.mjs` 导出）；无网络、无真 DOM——零碰真库/生产数据。
@@ -339,7 +339,7 @@ test("④ 接入卡：admin 面行（零改）∥ 成员面四键措辞 ∥ 素�
 
 // ── ⑤ 静态面（i18n 键族 ∥ 死键 ∥ 类名 ∥ 档目 ∥ 非壳）────────────────────────
 
-test("⑤ 静态面：新 25 键两表 ∥ 死键零残留 ∥ 改值 4 键列内形 ∥ 基键集/占位符/en 零 CJK ∥ 「提示形」与类名零残留 ∥ 档目 29 ∥ 30", () => {
+test("⑤ 静态面：新 25 键两表 ∥ 死键零残留 ∥ 改值 4 键列内形 ∥ 基键集/占位符/en 零 CJK ∥ 「提示形」与类名零残留 ∥ 档目 31 ∥ 32", () => {
   const zhKeys = Object.keys(ZH)
   const enKeys = Object.keys(EN)
   const enBase = enKeys.filter((key) => !key.endsWith(".one"))
@@ -386,9 +386,9 @@ test("⑤ 静态面：新 25 键两表 ∥ 死键零残留 ∥ 改值 4 键列�
   }
   const hover = [...cssCode.matchAll(/([^{}]*:hover[^{}]*)\{/g)].map((match) => match[1].trim().replace(/\s+/g, " "))
   assert.deepEqual(hover.filter((selector) => selector === ".nav-item:hover" || selector.includes("tr:hover")), [".nav-item:hover", "tbody tr:hover"], "行悬停声明 = 2 条（li.key-item:hover 删净）")
-  // 档目 29 ∥ 30（结构轮后）∥ key 页不入壳五页钉表 ∥ 行数硬限
+  // 档目 31 ∥ 32（结构轮后）∥ key 页不入壳五页钉表 ∥ 行数硬限
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [31, 30], "全目录 31 ∥ UI 代码档 30")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [32, 31], "全目录 32 ∥ UI 代码档 31")
   const shell = readPublic("app.mjs").match(/SHELL_PAGES = new Set\(\[([^\]]*)\]\)/)?.[1] ?? ""
   assert.equal(shell.includes("/me/keys"), false, "key 页非壳（钉表五页不扩——§2.6① 排除面）")
   assert.ok(readPublic("views-me.mjs").split("\n").length <= 800, "views-me 行数 ≤800 硬限")

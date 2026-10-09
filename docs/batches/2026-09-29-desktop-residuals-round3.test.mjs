@@ -1,24 +1,23 @@
 /**
  * 2026-09-29-desktop-residuals-round3.test.mjs — 桌面残余三轮 · **波 A（注释面 · 零行为）+ 波 C（设置面）** 批次本地件
- * ⚠ 断代失效（2026-09-30 · 台账 #731 核处）：本件白盒断言所测内部形态已随后续批次演进（#719 消化面重构 ∥ chat-tree 拆档 ∥ 锚链序变更等）——重跑必红为预期；特性现形态的回归锚以近期批件为准。本件留档参考，勿按红态排障。
- * （潜行形：`docs/batches/` 落位走父侧收位 —— 写门相抵同 #545 先例；运行 = 自 `thincoder/` 根
- *  `node --test .thincoder/tmp/2026-09-29-desktop-residuals-round3.test.mjs`，收位后换 `docs/batches/` 同法）。
+ * **2026-10-10 重基（本批 · #844 ∥ #1108）：已对现盘全绿（17/17）——现役回归锚**（原 #731 断代红警示随重基收束；各腿重锚注见腿内）。
+ * （运行 = 自 `thincoder/` 根 `node --test docs/batches/2026-09-29-desktop-residuals-round3.test.mjs`；本批重基暂存位 `.thincoder/tmp/` 同深、同法可跑——收位 = 父侧）。
  * 腿集 · 波 A（§2.2 #539 ∕ #610 ∕ #618②；纯 fs 扫描，零产品码 import）：
- *   ① #539 引注收正：四扫式零命中（沿 `rail-row` ∕ `views/sessions.mjs:` ∕ `views/info-row.mjs` ∕ `chat-copy`）+ 新锚在盘
+ *   ① #539 引注收正：四扫式零命中（沿 `rail-row` ∕ `views/sessions.mjs:` ∕ `views/info-row.mjs` ∕ `chat-copy`）+ 新锚在盘（信息行挂载档随退场转缺席锁——2026-10-10）
  *   ② #610 「待发送面不得以『流内』命名」：「流内待发送」∧「改住流内」零命中 + 五改述处含「输入区上方」
  *   ③ #618② 注值一致：`settings-sections-tools.mjs` 注面载 `****`（对齐指示位实值 `settings.keySet`）
- *   ④ 零行为自证：13 处改行皆注释形（块注释状态机 + 注释起始形）∧ 13 处旧文零残留
+ *   ④ 零行为自证：12 处改行皆注释形（块注释状态机 + 注释起始形）∧ 12 处旧文零残留
  * 腿集 · 波 C（设置面 · 2026-09-29；⑤–⑨ 真档 import —— `/rc/` 钩子随本件自注）：
  *   ⑤ #617-CH 主进程臂：`agentFields` 五键出（slotAuthority 真 ∕ 假）∧ 单源随迁 ∧ 拒码 `slot-authority` 保留
- *   ⑥ #617-CH 渲染臂：slot 权威键行只读（零控件 ∧ 拒写词）∧ 保存判据排除 ∕ 普通布尔键仍可编辑 ∧ 提交集不含
+ *   ⑥ #617-CH 渲染臂：slot 权威键零行（零控件——旧只读行形退场）∧ 普通布尔键仍可编辑 ∧ 单键写路不含 slot path
  *   ⑦ #615② 失败草稿链：失败落 `keyDraft`（trim 同点）∕ 成功·取消·开·关四复位 ∕ 渲染按名回填
  *   ⑧ #617-CJ 错误面非模态：error 转顶部横幅（点击穿透 ∕ z 序居设置面下）∧ 基规则全窗零改（loading 反例）
  *   ⑨ 零越面：波 C 渲染档静态闭包（零 `node:` ∕ 零 `require`）
  * 腿集 · 波 B（行为面小件 · 同口径；⑩–⑯ —— 产品码动态取件 ∕ 迷你假 DOM ∕ 沙箱）：
- *   ⑩ #541 归约臂（`onDigest`：cap 并前片保 `n` · cap 事实跨 `end` 存续 · 下一轮 `start` 换代清 · 归一）
+ *   ⑩ #541 归约臂（`onDigest`：全轮累积 `start` 追加 · `cap` 就末轮保 `n` · `cap` 事实跨 `end` 存续 · 旧轮零清理 · 归一）
  *   ⑪ #541 发射臂（`createTurnFace`：边界轮撞帽 ⇒ `ev:digest` cap 帧恰一；timer 轮 ∕ 用户回合 ⇒ 零 cap 帧）
- *   ⑫ #541 cap 帧尾臂（`syncChrome`：组在场 ∧ 含 `[data-digest-cap]` ∧ 行文 = `digest.capStop` 投影 ∧ 二帧零写）
- *   ⑬ #541 end 帧尾臂（携 cap ⇒ 驻留 ∧ 计数行 = `digest.done`（n=5））+ 对照 ∕ 自愈 ∕ 换代三臂
+ *   ⑫ #541 cap 帧尾臂（`syncChrome`：行族在场 ∧ 含 `[data-digest-cap]` ∧ 行文 = `digest.capStop` 投影 ∧ 二帧零写）
+ *   ⑬ #541 end 帧尾臂（携 cap ⇒ 行族驻留 ∧ 终态行 = `digest.done`（n=5））+ 对照 ∕ 自愈 ∕ 换代三臂
  *   ⑭ #541 样式臂（`chat.css` 两规则 + 值面 `--fg-muted` ∕ `--warn`）
  *   ⑮ #613 双提交竞态臂（滞后失败回执不得错摘后提交块）+ 单提交反例（失败 ⇒ 退流）
  *   ⑯ #599 relay 保形臂（含 `⟦ev⟧` 字面的内层内容 chunk ⇒ `ev:subchunk`；事件面消费 ∕ `[model]` patch 保持；VSC 同判）
@@ -80,14 +79,15 @@ function commentStartFlags(text) {
   return flags
 }
 
-/** 13 处改行（旧文 → 新文 —— 届盘落值；零行为自证基准）。 */
+/** 12 处改行（旧文 → 新文 —— 届盘落值；零行为自证基准）。
+ *  2026-10-10 重基：原 13 处中「`renderer/mount-info.mjs`（本档」一件随 mount-info 全退场按 D8 收束（注面净删——
+ *  零目标文可锚）；同轴另两件按现盘现文重锚（原 info-row ∕ mount-info 轴线现仅余 onboarding 单挂载面）。 */
 const EDITS = [
   ["renderer/chat-composer.css", "沿 `.rail-row:focus-visible` 先例", "沿 `.session-item:focus-visible` 先例"], // #539 ①
   ["renderer/views/chat.mjs", "接线两态沿 `renderer/views/sessions.mjs:161` 通则", "接线两态沿 `renderer/views/chat-tool.mjs` 通则"], // #539 ②
   ["renderer/views/chat-tool.mjs", "接线两态（通则沿 `renderer/views/sessions.mjs:161`）", "接线两态（两态原语单源 = 本档 `wire` ∕ `withKey`）"], // #539 ③
-  ["renderer/views/settings.mjs", "`renderer/views/info-row.mjs`（本档", "`renderer/mount-info.mjs`（本档"], // #539 ④
-  ["renderer/views/settings.mjs", "`views/onboarding.mjs` / `views/info-row.mjs` 两挂载共用本表", "`views/onboarding.mjs` / `renderer/mount-info.mjs` 两挂载共用本表"], // #539 ⑤
-  ["renderer/settings.css", "`views/onboarding.mjs`（向导）· `views/info-row.mjs`（信息行）", "`views/onboarding.mjs`（向导）· `renderer/mount-info.mjs`（信息行）"], // #539 ⑥b
+  ["renderer/views/settings.mjs", "`views/onboarding.mjs` / `views/info-row.mjs` 两挂载共用本表", "`views/onboarding.mjs` 向导挂载取用本表"], // #539 ⑤（2026-10-10 重锚）
+  ["renderer/settings.css", "`views/onboarding.mjs`（向导）· `views/info-row.mjs`（信息行）", "`views/onboarding.mjs`（向导）。"], // #539 ⑥b（2026-10-10 重锚）
   ["renderer/settings.css", "变量单源 = `styles.css` `:root`", "变量单源 = `theme.css` `:root`"], // #539 ⑥c
   ["renderer/mount-composer.mjs", "⇒ 流内待发送气泡组 + 帧尾核", "⇒ 输入区上方待发送带 + 帧尾核"], // #610
   ["renderer/store.mjs", "读面 = 流内待发送气泡组（输入区上方）", "读面 = 输入区上方待发送带"], // #610
@@ -115,15 +115,16 @@ test("① #539 四扫式零命中 + 新锚在盘", () => {
   assert.ok(ct.includes("export function wire("))
   assert.ok(ct.includes("export function withKey("))
   assert.ok(read("renderer/views/chat.mjs").includes("接线两态沿 `renderer/views/chat-tool.mjs` 通则"), "chat.mjs 侧引注同锚")
-  // 新锚④⑤⑥：信息行挂载档在盘（renderer/mount-info.mjs）
-  assert.ok(existsSync(dskPath("renderer/mount-info.mjs")))
+  // 新锚④⑤⑥重锚（2026-10-10 · 本批重基）：信息行挂载档（原 `renderer/mount-info.mjs`）随会话模型轮全退场 ⇒ 原在盘断言
+  // 撤、缺席断言接（沿 b1-host `rules-face.mjs` 先例）；旧档 `views/info-row.mjs` 同轴线（下方缺席断言）。
+  assert.ok(!existsSync(dskPath("renderer/mount-info.mjs")), "mount-info.mjs 不在盘（原新锚已退场——缺席锁）")
   // 新锚⑦：变量单源现位（renderer/theme.css `:root`）
   assert.ok(read("renderer/theme.css").includes(":root {"))
   // 旧档确不在盘（新锚语义成立之前提）
   assert.ok(!existsSync(dskPath("renderer/views/sessions.mjs")))
   assert.ok(!existsSync(dskPath("renderer/views/info-row.mjs")))
   out("① 四扫式命中", patterns.map((p) => `${p}=${hitsOf(p).length}`).join(" · "))
-  out("① 新锚", "session-list.css 三值 ✓ ∕ chat-tool.mjs wire ∕ withKey ✓ ∕ mount-info.mjs ✓ ∕ theme.css :root ✓")
+  out("① 新锚", "session-list.css 三值 ✓ ∕ chat-tool.mjs wire ∕ withKey ✓ ∕ mount-info.mjs 已退场（缺席锁）✓ ∕ theme.css :root ✓")
 })
 
 // ─── ② #610 「待发送面不得以『流内』命名」 ───────────────────────────────────
@@ -151,8 +152,8 @@ test("③ #618② 注面载 `****`（对齐指示位实值）", () => {
   out("③ 注值", "settings-sections-tools.mjs:7 ⇒ `****` · i18n-views settings.keySet = **** ✅")
 })
 
-// ─── ④ 零行为自证（13 处改行皆注释形 ∧ 旧文零残留） ────────────────────────
-test("④ 零行为：13 处改行皆注释形 ∧ 旧文零残留", () => {
+// ─── ④ 零行为自证（12 处改行皆注释形 ∧ 旧文零残留） ────────────────────────
+test("④ 零行为：12 处改行皆注释形 ∧ 旧文零残留", () => {
   for (const [rel, oldText, newText] of EDITS) {
     const text = read(rel)
     const list = text.split("\n")
@@ -219,41 +220,35 @@ test("⑤ #617-CH 主进程臂：agentFields 五键出（slotAuthority 真 ∕ �
 })
 
 // ─── ⑥ #617-CH 渲染臂 ────────────────────────────────────────────────────────
-test("⑥ #617-CH 渲染臂：slot 键行只读（零控件 ∧ 拒写词）∧ 保存判据排除 ∕ 反例仍可编辑 ∧ 提交集不含", async () => {
+test("⑥ #617-CH 渲染臂：slot 权威键零行（零控件 ∕ 假可供性消）∧ 普通布尔键仍可编辑 ∧ 单键写路不含 slot path", async () => {
   const FIELD = (path, value, slotAuthority) => ({ path, value, sensitive: false, kind: "boolean", slotAuthority })
-  const fields = [FIELD("agent.engineering", true, true), FIELD("agent.someOtherFlag", false, false)]
-  const tree = agentView.agentBody({ state: "ready", fields }, { onSaveAgent: () => {} })
-  const rowOf = (path) => findNode(tree, (n) => n?.props?.["data-field"] === path)
-  const slotRow = rowOf("agent.engineering")
-  assert.ok(slotRow !== undefined, "slot 键行在场")
-  assert.equal(slotRow.props["data-readonly"], "", "只读锚在位")
-  assert.equal(JSON.stringify(slotRow).includes('"input"'), false, "零控件（假可供性消）")
-  assert.equal(JSON.stringify(slotRow).includes("会话级选项——请从输入面板修改"), true, "拒写词键词值（零新词）")
-  const normalRow = rowOf("agent.someOtherFlag")
-  assert.ok(JSON.stringify(normalRow).includes('"type":"checkbox"'), "反例：普通布尔键仍可编辑")
-  const onlySlot = agentView.agentBody({ state: "ready", fields: [fields[0]] }, { onSaveAgent: () => {} })
-  assert.equal(onlySlot[onlySlot.length - 1].props.disabled, true, "段尾保存判据排除 slot 行")
-  // 提交集不含：出口面 `data-readonly` 行 skip（既有单点 —— 只读行零写）
-  const attr = (row, name) => (row[name] === undefined ? null : row[name])
-  const rows = [
-    { read: (n) => attr({ "data-field": "agent.engineering", "data-readonly": "" }, n), querySelector: () => ({ type: "checkbox", checked: true }) },
-    { read: (n) => attr({ "data-field": "agent.someOtherFlag" }, n), querySelector: () => ({ type: "checkbox", checked: true }) },
-  ].map((r) => ({ getAttribute: r.read, querySelector: r.querySelector }))
-  const prevDoc = globalThis.document
-  globalThis.document = { querySelector: () => ({ querySelectorAll: () => rows }) }
-  try {
-    const calls = []
-    const exits = agentExitsMod.createAgentExits({
-      ask: async (channel, payload) => { calls.push([channel, payload]); return { ok: true, reason: null, fields: [] } },
-      store: { get: () => ({ settings: { agent: { fields: [{ path: "agent.someOtherFlag", value: false }] } } }) },
-      setSettings: () => {}, report: () => {}, clearReport: () => {}, slot: '[data-slot="settings"]', paintSettings: () => {},
-    })
-    exits.handlers.onSaveAgent()
-    await settle(() => calls.length >= 1)
-    assert.equal(calls.length, 1, "有变更 ⇒ 一发")
-    assert.deepEqual(calls[0][1].patch, { "agent.someOtherFlag": true }, "提交集不含 slot path")
-  } finally { globalThis.document = prevDoc }
-  out("⑥ 渲染臂", "只读行零控件 ✓ · 拒写词 ✓ · 保存判据 ✓ · 提交集零该 path ✓")
+  const fields = [FIELD("agent.engineering", true, true), FIELD("agent.autoThink", false, false)]
+  const rows = agentView.agentBody({ state: "ready", fields }, { onNamedField: () => {} })
+  // slot 权威键 = **整行不落**：该 path 不在具名十八键面 ⇒ 零行（渲染面零 `slotAuthority` 门——判据 = 表缺席，非门拦；同族 `agent.advisor.guard` 经 `SELF_FACED_KINDS` 照出行）；写面拒码另锁于 ⑤（2026-10-10 重基：旧「只读行 + `data-readonly`」形退场）
+  assert.equal(rows.some((row) => row?.props?.["data-field-name"] === "agent.engineering"), false, "slot 权威键零行")
+  assert.equal(JSON.stringify(rows).includes("agent.engineering"), false, "slot path 零残留（零行 ∕ 零控件）")
+  assert.equal(JSON.stringify(rows).includes("data-readonly"), false, "旧只读行锚零残留")
+  // 拒写词在册（零新词）：拒码 → 词键映射 + zh 词值
+  assert.equal(settingsView.REASON_WORD["slot-authority"], "settings.reason.slotAuthority", "拒写词键映射在册（零新词）")
+  assert.ok(read("renderer/i18n-views.mjs").includes('"settings.reason.slotAuthority": "会话级选项——请从输入面板修改"'), "拒写词值在册")
+  // 反例：普通布尔键行在场 ∧ 控件可编辑（checkbox + onChange 接线 + 非 disabled）
+  const normal = rows.find((row) => row?.props?.["data-field-name"] === "agent.autoThink")
+  assert.ok(normal !== undefined, "普通布尔键行在场")
+  const control = normal.children?.[1]
+  assert.equal(control?.tag, "input", "控件在场")
+  assert.equal(control?.props?.type, "checkbox", "布尔键 ⇒ checkbox")
+  assert.equal(typeof control?.props?.onChange, "function", "onChange 接线在场（可编辑）")
+  assert.equal(control?.props?.disabled === true, false, "非 disabled（可编辑）")
+  // 单键写路（P15 即改即存）：出值 = 本键唯一 patch；slot path 无行进路（零行 ⇒ 零控件 ⇒ 不可发）
+  const calls = []
+  const exits = agentExitsMod.createAgentExits({
+    ask: async (channel, payload) => { calls.push([channel, payload]); return { ok: true, reason: null, fields: [] } },
+    store: { get: () => ({}) }, setSettings: () => {}, report: () => {}, clearReport: () => {}, paintSettings: () => {},
+  })
+  exits.handlers.onNamedField({ path: "agent.autoThink", kind: "boolean" }, { target: { checked: true } })
+  await settle(() => calls.length >= 1)
+  assert.deepEqual(calls, [["settings:agent", { patch: { "agent.autoThink": true } }]], "单键 patch 恰本键（有变更 ⇒ 一发）")
+  out("⑥ 渲染臂", "slot 键零行 ✓ · 拒写词在册 ✓ · 普通布尔键可编辑 ✓ · 单键 patch 恰本键 ✓")
 })
 
 // ─── ⑦ #615② 失败草稿链 ──────────────────────────────────────────────────────
@@ -268,8 +263,10 @@ test("⑦ #615② 失败草稿链：失败落 keyDraft（trim 同点）∕ 成�
     })
     return { exits, patches }
   }
+  // 现读 = 宿主无关（文档序末位 —— `document.querySelectorAll("[data-provider-key-input]")`）：此处以单件桩就位（2026-10-10 重锚）
+  const keyInput = { value: " sk-typed ", getAttribute: (name) => (name === "data-draft-scope" ? "key:p1" : null) }
   const prevDoc = globalThis.document
-  globalThis.document = { querySelector: () => ({ value: " sk-typed " }) }
+  globalThis.document = { querySelectorAll: () => [keyInput] }
   try {
     const fail = mk({ ok: false, reason: "mtime-conflict" })
     await fail.exits.handlers.onProviderKeySave("p1")
@@ -405,22 +402,22 @@ const chromeModelOf = (digest) => ({
 const digestStart = (n) => ({ status: "start", n, tier: null, from: null, msg: null })
 
 // ─── ⑩ #541 归约臂 ──────────────────────────────────────────────────────────
-test("⑩ #541 归约臂：cap 并前片保 n · cap 事实跨 end 存续 · 下一轮 start 换代清 · 归一", async () => {
+test("⑩ #541 归约臂：全轮累积（start 追加）· cap 就末轮保 n · cap 事实跨 end 存续 · 旧轮零清理 · 归一", async () => {
   const { onDigest } = await import(at("renderer/events-wake.mjs"))
   const KEY = "1"
   let state = onDigest({}, { key: KEY, status: "start", n: 5 })
-  assert.deepEqual(state.digest[KEY], { status: "start", n: 5, tier: null, from: null, msg: null }, "start 起跑态")
+  assert.deepEqual(state.digest[KEY], [{ status: "start", n: 5, tier: null, from: null, msg: null }], "start 追加本轮（切片 = 单轮数组）")
   state = onDigest(state, { key: KEY, status: "cap", mode: "stop", turns: 3 })
-  assert.deepEqual(state.digest[KEY], { status: "cap", n: 5, tier: null, from: null, msg: null, cap: { mode: "stop", turns: 3 } }, "cap 帧：并前片保 n=5 + cap 事实")
+  assert.deepEqual(state.digest[KEY].at(-1), { status: "cap", n: 5, tier: null, from: null, msg: null, cap: { mode: "stop", turns: 3 } }, "cap 帧：就末轮记撞帽事实 + 保 n=5")
   state = onDigest(state, { key: KEY, status: "end", ok: true, ms: 1200 })
-  assert.equal(state.digest[KEY].status, "end")
-  assert.equal(state.digest[KEY].n, 5, "end 保 n=5（免 n=0）")
-  assert.deepEqual(state.digest[KEY].cap, { mode: "stop", turns: 3 }, "cap 事实跨 end 存续")
+  assert.deepEqual(state.digest[KEY].at(-1), { status: "end", n: 5, tier: null, from: null, msg: null, cap: { mode: "stop", turns: 3 }, ok: true, ms: 1200, unsettled: 0 }, "end 就末轮更新：保 n=5 ∧ cap 事实存续（+ ok ∕ ms ∕ unsettled 面）")
   state = onDigest(state, { key: KEY, status: "start", n: 1 })
-  assert.deepEqual(state.digest[KEY], { status: "start", n: 1, tier: null, from: null, msg: null }, "下一轮 start 换代重写 ⇒ cap 事实清")
+  assert.equal(state.digest[KEY].length, 2, "下一轮 start 追加第二轮（全轮累积——行出即留）")
+  assert.deepEqual(state.digest[KEY].at(-1), { status: "start", n: 1, tier: null, from: null, msg: null }, "新轮起跑态（旧轮零清理）")
+  assert.deepEqual(state.digest[KEY][0].cap, { mode: "stop", turns: 3 }, "旧轮 cap 事实驻留（不清）")
   const norm = onDigest(onDigest({}, { key: KEY, status: "start", n: 0 }), { key: KEY, status: "cap", mode: "weird", turns: "x" })
-  assert.deepEqual(norm.digest[KEY].cap, { mode: "auto", turns: null }, "mode 表外 ⇒ auto · turns 非数 ⇒ null")
-  out("⑩ #541 归约", "start(n=5) ⇒ cap(保 n) ⇒ end(保 n ∧ 保 cap) ⇒ start(清)；归一 auto ∕ null ✓")
+  assert.deepEqual(norm.digest[KEY].at(-1).cap, { mode: "auto", turns: null }, "mode 表外 ⇒ auto · turns 非数 ⇒ null")
+  out("⑩ #541 归约", "start 追加 ⇒ cap 保 n ⇒ end 保 n ∧ 保 cap ⇒ 下一轮追加（旧轮驻留）；归一 auto ∕ null ✓")
 })
 
 // ─── ⑪ #541 发射臂 ──────────────────────────────────────────────────────────
@@ -468,33 +465,31 @@ test("⑪ #541 发射臂：边界轮撞帽 ⇒ ev:digest cap 帧恰一；timer �
 })
 
 // ─── ⑫ #541 cap 帧尾臂 ──────────────────────────────────────────────────────
-test("⑫ #541 cap 帧尾臂：组在场 ∧ 含 [data-digest-cap] ∧ 行文 = digest.capStop 投影 ∧ 计数行在 ∧ 二帧零写", async () => {
+test("⑫ #541 cap 帧尾臂：行族在场 ∧ 含 [data-digest-cap] ∧ 行文 = digest.capStop 投影 ∧ 计数行在 ∧ 二帧零写", async () => {
   const { El } = installMiniDom()
   const { initDict, t } = await import(at("renderer/i18n.mjs"))
   const { projectDictionary } = await import(coreRel("i18n.mjs"))
   initDict({ locale: "en", dict: projectDictionary("en") })
   const { syncChrome } = await import(at("renderer/views/chat-chrome.mjs"))
   const root = new El("div")
-  syncChrome(root, chromeModelOf(digestStart(5)), {})
-  assert.ok(root.querySelector("[data-digest]"), "start 帧：组在场（前置）")
+  syncChrome(root, chromeModelOf([digestStart(5)]), {})
+  assert.ok(root.querySelector("[data-digest-label]"), "start 帧：起跑标签行在场（前置）")
   const capSlice = { status: "cap", n: 5, tier: null, from: null, msg: null, cap: { mode: "stop", turns: 3 } }
-  syncChrome(root, chromeModelOf(capSlice), {})
-  const group = root.querySelector("[data-digest]")
-  assert.ok(group, "cap 帧：组在场")
-  const capRow = group.querySelector("[data-digest-cap]")
-  assert.ok(capRow, "含 [data-digest-cap]")
+  syncChrome(root, chromeModelOf([capSlice]), {})
+  const capRow = root.querySelector("[data-digest-cap]")
+  assert.ok(capRow, "cap 帧：cap 行在场（尾追）")
   assert.equal(capRow.textContent, t("digest.capStop", { turns: 3 }), "行文 = digest.capStop 投影（携 turns）")
   assert.equal(typeof projectDictionary("en")["digest.capStop"], "string", "词键在核字典（零新键前提 —— 非缺键回退）")
   assert.notEqual(capRow.textContent, "digest.capStop", "词面已投影（非键名回退）")
-  assert.equal(capRow.getAttribute("class"), "digest-cap digest-cap-stop", "stop 档 class")
-  assert.ok(group.querySelector("[data-digest-count]"), "计数行在")
-  syncChrome(root, chromeModelOf(capSlice), {})
-  assert.equal(root.querySelector("[data-digest]"), group, "同态二帧 ⇒ 零写（节点身份不变）")
-  out("⑫ #541 cap 帧尾", "组在场 · cap 行文 = digest.capStop(3) · 计数行在 · 二帧零写 ✓")
+  assert.equal(capRow.getAttribute("class"), "chat-digest digest-cap digest-cap-stop", "stop 档 class")
+  assert.ok(root.querySelector("[data-digest-count]"), "计数行在")
+  syncChrome(root, chromeModelOf([capSlice]), {})
+  assert.equal(root.querySelector("[data-digest-cap]"), capRow, "同态二帧 ⇒ 零写（节点身份不变）")
+  out("⑫ #541 cap 帧尾", "标签行在 · cap 行文 = digest.capStop(3) · 计数行在 · 二帧零写 ✓")
 })
 
 // ─── ⑬ #541 end 帧尾臂 ∕ 对照 ∕ 自愈 ∕ 换代 ──────────────────────────────────
-test("⑬ #541 end 帧尾臂：携 cap ⇒ 组驻留 ∧ 计数行 = digest.done(n=5) ∧ cap 行在；对照臂 ∕ 自愈臂 ∕ 换代臂", async () => {
+test("⑬ #541 end 帧尾臂：携 cap ⇒ 行族驻留 ∧ 终态行 = digest.done(n=5) ∧ cap 行在；对照臂 ∕ 自愈臂 ∕ 换代臂", async () => {
   const { El } = installMiniDom()
   const { initDict, t } = await import(at("renderer/i18n.mjs"))
   const { projectDictionary } = await import(coreRel("i18n.mjs"))
@@ -503,28 +498,28 @@ test("⑬ #541 end 帧尾臂：携 cap ⇒ 组驻留 ∧ 计数行 = digest.done
   const capSlice = { status: "cap", n: 5, tier: null, from: null, msg: null, cap: { mode: "stop", turns: 3 } }
   const endCap = { status: "end", n: 5, tier: null, from: null, msg: null, cap: { mode: "stop", turns: 3 }, ok: true, ms: 1200 }
   const root = new El("div")
-  syncChrome(root, chromeModelOf(digestStart(5)), {})
-  syncChrome(root, chromeModelOf(capSlice), {})
-  syncChrome(root, chromeModelOf(endCap), {})
-  const group = root.querySelector("[data-digest]")
-  assert.ok(group, "携 cap 的 end ⇒ 组仍在场（驻留）")
-  const countRow = group.querySelector("[data-digest-count]")
-  assert.ok(countRow, "计数行在位")
-  assert.equal(countRow.textContent, t("digest.done", { n: 5, seconds: "1.2" }), "计数行已更新为 digest.done（n=5）")
-  assert.ok(group.querySelector("[data-digest-cap]"), "cap 行在")
+  syncChrome(root, chromeModelOf([digestStart(5)]), {})
+  syncChrome(root, chromeModelOf([capSlice]), {})
+  syncChrome(root, chromeModelOf([endCap]), {})
+  assert.ok(root.querySelector("[data-digest-label]"), "携 cap 的 end ⇒ 行族仍在场（驻留）")
+  const endRow = root.querySelector("[data-digest-end]")
+  assert.ok(endRow, "终态行追加（行出即留 —— 零就地换文）")
+  assert.equal(endRow.textContent, t("digest.done", { n: 5, seconds: "1.2" }), "终态行 = digest.done（n=5）")
+  assert.equal(root.querySelector("[data-digest-count]").textContent, t("digest.start", { n: 5 }), "计数行恒起跑文（零就地换文）")
+  assert.ok(root.querySelector("[data-digest-cap]"), "cap 行在")
   const other = new El("div")
-  syncChrome(other, chromeModelOf(digestStart(5)), {})
-  syncChrome(other, chromeModelOf({ status: "end", n: 5, tier: null, from: null, msg: null, ok: true, ms: 100 }), {})
-  assert.equal(other.querySelector("[data-digest]"), null, "对照臂：不携 cap 的 end ⇒ 更新后摘除")
+  syncChrome(other, chromeModelOf([digestStart(5)]), {})
+  syncChrome(other, chromeModelOf([{ status: "end", n: 5, tier: null, from: null, msg: null, ok: true, ms: 100 }]), {})
+  assert.equal(other.querySelector("[data-digest-cap]"), null, "对照臂：不携 cap 的 end ⇒ cap 行零在场")
+  assert.ok(other.querySelector("[data-digest-end]"), "对照臂：终态行在场（行出即留 —— 零摘除）")
   const fresh = new El("div")
-  syncChrome(fresh, chromeModelOf(endCap), {})
-  const healed = fresh.querySelector("[data-digest]")
-  assert.ok(healed && healed.querySelector("[data-digest-cap]"), "自愈臂：缺席 ∧ 携 cap ⇒ 按终态构树（含 cap 行）")
-  assert.equal(healed.querySelector("[data-digest-count]").textContent, t("digest.done", { n: 5, seconds: "1.2" }), "自愈臂：计数行即终态句")
-  syncChrome(root, chromeModelOf(digestStart(2)), {})
-  const next = root.querySelector("[data-digest]")
-  assert.ok(next && next.querySelector("[data-digest-cap]") === null, "换代臂：下一轮 start ⇒ cap 行清")
-  out("⑬ #541 end 帧尾", "驻留 ∧ digest.done(n=5) ∧ cap 行在 ✓ · 对照臂摘除 ✓ · 自愈构树 ✓ · 换代清 ✓")
+  syncChrome(fresh, chromeModelOf([endCap]), {})
+  assert.ok(fresh.querySelector("[data-digest-cap]"), "自愈臂：缺席 ∧ 携 cap ⇒ 按终态构树（含 cap 行）")
+  assert.equal(fresh.querySelector("[data-digest-end]").textContent, t("digest.done", { n: 5, seconds: "1.2" }), "自愈臂：终态行即终态句")
+  syncChrome(root, chromeModelOf([endCap, digestStart(2)]), {})
+  assert.equal(root.querySelectorAll("[data-digest-label]").length, 2, "换代臂：下一轮 start ⇒ 新轮标签行追加（行出即留）")
+  assert.ok(root.querySelector("[data-digest-cap]"), "换代臂：旧轮 cap 行留置（零摘除）")
+  out("⑬ #541 end 帧尾", "驻留 ∧ digest.done(n=5) ∧ cap 行在 ✓ · 对照臂 cap 零在场 ✓ · 自愈构树 ✓ · 换代追加 ✓")
 })
 
 // ─── ⑭ #541 样式臂 ──────────────────────────────────────────────────────────

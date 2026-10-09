@@ -17,32 +17,43 @@
 
 - `uri`：http 代理地址（`url` 字段名也兼容）——**代理目标本体（非门槛）**；全仓单一 `proxy.uri`。旧格式 `"proxy": "http://..."`（裸字符串）兼容，等价于 `web: true`。
 - `model` 键：**已退役**（2026-10-08 裁 A——键随归一键形 ∥ 三端全局面 UI ∥ 写链 ∥ 词表全清；施行已落）。运行期判定不读该键（逐渠独立——§4）；载入归一恒收窄为 `{ uri, web }`。
-- 归一化：`thincoder-core/config.mjs:259`（`normalizeProxy`）→ `{ uri, web }` 或 `undefined`；加载时调用点 `thincoder-core/config.mjs:384`。缺省 `web: true`；无 uri / uri 非字符串 / 非对象类型（数字 / 数组等）一律**丢弃**。
+- 归一化：`thincoder-core/config.mjs:261`（`normalizeProxy`）→ `{ uri, web }` 或 `undefined`；加载时调用点 `thincoder-core/config.mjs:385`。缺省 `web: true`；无 uri / uri 非字符串 / 非对象类型（数字 / 数组等）一律**丢弃**。
+- `injectProxy` 判定同源同函数（2026-10-10 · #1082）：`normalizeProxy(config?.proxy)?.uri ?? null`——`""` ∥ 空对象 ∥ 非法型 ⇒ 零注入
+  （`!= null` 过闸后的 env 回供理论口封死——模型代理永不吃 env，D-PX4 判据加强）。
 - `web` 与**逐渠代理**（渠道条目 `providers[].proxy`）的**现行消费面**见 §4。
 - 环境回落：`HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY`——**仅在未配置 `proxy` 字段时生效**（`resolveProxyConfig`——拆档后家位 `thincoder-core/proxy-target.mjs`），且该路径不供模型代理（逐渠旗只对在案 `uri` 生效）。
 
 ## 2. 传输实现（`thincoder-core/proxy-transport.mjs` ∥ `thincoder-core/proxy.mjs`）
 
-- **`https://` 目标**：HTTP CONNECT 隧道（`tunnelHttps`，`thincoder-core/proxy-transport.mjs:166`）——连代理发 `CONNECT host:port`，隧道上建 TLS，隧道建立后移交 `streamHttpResponse`（`:205`），再发请求。响应头到齐即返回，body 为**流式**（SSE 边收边吐；abort 全阶段可中断）。
-- **`http://` 目标**：经典代理转发（`tcpConnectProxy` `thincoder-core/proxy-transport.mjs:216` + `streamHttpResponse(..., absoluteForm=true)`）——TCP 直连代理，请求行发**绝对 URI**。非标准绝对 URI 实现的代理（极少见）不支持。
-- **无代理 / 未命中**：原生 `fetch` 直连（`proxyFetch` `thincoder-core/proxy.mjs:33`）。
-- 统一出口 `proxyFetch(url, opts, proxyUri)`（`:33`–`:50`）：无 `proxyUri` → `globalThis.fetch`（**直连分支 = 断流通道建设点**——见下）；`https:` → 隧道；`http:` → 转发。
+- **`https://` 目标**：HTTP CONNECT 隧道（`tunnelHttps`，`thincoder-core/proxy-transport.mjs:219`）——连代理发 `CONNECT host:port`，隧道上建 TLS，隧道建立后移交 `streamHttpResponse`（`:258`），再发请求。响应头到齐即返回，body 为**流式**（SSE 边收边吐；abort 全阶段可中断）。
+- **`http://` 目标**：经典代理转发（`tcpConnectProxy` `thincoder-core/proxy-transport.mjs:269` + `streamHttpResponse(..., absoluteForm=true)`）——TCP 直连代理，请求行发**绝对 URI**。非标准绝对 URI 实现的代理（极少见）不支持。
+- **无代理 / 未命中**：原生 `fetch` 直连（`proxyFetch` `thincoder-core/proxy.mjs:36`）。
+- 统一出口 `proxyFetch(url, opts, proxyUri)`（`:36`–`:53`）：无 `proxyUri` → `globalThis.fetch`（**直连分支 = 断流通道建设点**——见下）；`https:` → 隧道；`http:` → 转发。
 - **loopback 旁路（2026-10-07 补 · #1026）**：目标为 loopback（`localhost` ∥ `*.localhost` ∥ `127.0.0.0/8` ∥ `::1`——判定 `isLoopbackTarget()` `thincoder-core/proxy-target.mjs:44`；含尾点 ∥ IPv6 括号归一）时，即便在案代理串也**一律直连**
-  （`proxyFetch` 入口旁路 `thincoder-core/proxy.mjs:35`；NO_PROXY 语义）。本地网关 / 开发服务（如 `127.0.0.1:8787` 渠道）被塞进企业代理 ⇒ 连接失败 / 403 假红（用户 2026-10-07 案）。
+  （`proxyFetch` 入口旁路 `thincoder-core/proxy.mjs:38`；NO_PROXY 语义）。本地网关 / 开发服务（如 `127.0.0.1:8787` 渠道）被塞进企业代理 ⇒ 连接失败 / 403 假红（用户 2026-10-07 案）。
 - **拆档（#1037 · 2026-10-08 批——先拆后改）**：原档 303 行越 300 咨询线。落法 = 三段切开：`thincoder-core/proxy-target.mjs`（新——`resolveProxyConfig` ∥ `resolveWebProxy` ∥ `isLoopbackTarget`：目标 ∥ 配置解析面）·
   `thincoder-core/proxy-transport.mjs`（新——`streamHttpResponse` ∥ `tunnelHttps` ∥ `tcpConnectProxy` + `FETCH_TIMEOUT`：传输面）· `proxy.mjs`（留 `injectProxy` + `proxyFetch` 编排 + 兼容再出口 facade——**消费面 import 零改**）。
-  三档 = `proxy-target.mjs` 54 ∥ `proxy-transport.mjs` 245 ∥ `proxy.mjs` 50 行（2026-10-08 按盘实读——`proxy-transport.mjs` 含同窗 #1065 集成；≤500 咨询线）。
-- 错误形态：坏代理串**友好报错**（`Invalid proxy URI: "…" — expected http://host:port`，`thincoder-core/proxy-transport.mjs:175` / `:223`——融合自 VSC 侧）。
+  三档 = `proxy-target.mjs` 54 ∥ `proxy-transport.mjs` 298 ∥ `proxy.mjs` 53 行（2026-10-10 按盘实读——`proxy-transport.mjs` 含 #1065 ∥ #1067 ∥ #1087 集成；≤500 咨询线）。
+- 错误形态：坏代理串**友好报错**（`Invalid proxy URI: "…" — expected http://host:port`，`thincoder-core/proxy-transport.mjs:228` / `:276`——融合自 VSC 侧）。
 - 超时语义：CONNECT/TLS 阶段用 `FETCH_TIMEOUT`（15s）；**响应头**用 `opts._headerTimeoutMs`（默认 60s——消费面 = **代理分支**；直连面（无 `proxyUri`）无本仓头阶段超时〔纳入 = 设计轮面——在册；同族收窄 = `PROVIDER.md:114`（§6.3）〕）；**body 空闲**看门狗 `opts._bodyIdleMs`（默认 120s）。
 - **响应体分块解码（2026-10-08 补 · #1065）**：响应携 `Transfer-Encoding: chunked` 时，传输层按块长帧**剥帧解码**后入 body
-  （单点 = `streamHttpResponse`——https 隧道 ∥ http 转发两条代理分支共用：汇流坐标 = `tunnelHttps` `thincoder-core/proxy-transport.mjs:205` ∥ `proxyFetch` `thincoder-core/proxy.mjs:49` 均移交本函数；解码器 = `thincoder-core/proxy-chunked.mjs`）。**流式保形**：边收边吐、只保有帧头（块长行），零整包缓冲
+  （单点 = `streamHttpResponse`——https 隧道 ∥ http 转发两条代理分支共用：汇流坐标 = `tunnelHttps` `thincoder-core/proxy-transport.mjs:258` ∥ `proxyFetch` `thincoder-core/proxy.mjs:52` 均移交本函数；解码器 = `thincoder-core/proxy-chunked.mjs`）。**流式保形**：边收边吐、只保有帧头（块长行），零整包缓冲
   ——SSE 面 `data:` 行与事件流不受帧字节干扰；终止 = `0` 块（其后 trailer ∥ 余字节读取即弃，body 随 0 块结束）；`Connection: close` 语义不变。
   **畸形帧回退 = 透传**（块长行非十六进制 ∥ 块长数值越界（非安全整数）∥ 块尾非 CRLF ⇒ 停解码、余字节原样吐——不报错、不截断）；判定按 `Transfer-Encoding` 末段 token（大小写不敏感），**头缺席而帧在场（协议违规）不解码**。
-  **管线拓扑**：解码器居源 `sock` 与目标 body 之间、**函数式改写**（body 本体零替换——chunked 径 `sock.on('data')` ⇒ `decoder.push(d)` ⇒ `onData` ⇒ `body.write()`（经写门 `!destroyed && !writableEnded`——终止后解码器余出不再入 body，与非 chunked 径 `pipe` 自摘语义齐）；非 chunked 径 `sock.pipe(body)` 不变）。
-  **错误面归口（#16 契约零变）**：解码器 = 纯状态机、无自有 `'error'` 面（畸形帧回退透传——不 emit）；body 终止守卫族（`destroyBody` ∥ `_bodyIdleMs` 看门狗 ∥ `terminateBody`）照旧对 body 单点直作、不经解码器；`sock` 级错误沿现径（`thincoder-core/proxy-transport.mjs:141-144` ⇒ `fail` ⇒ `destroyBody`）。
-  **行数注记**：新档 `proxy-chunked.mjs` = **102 行** ∥ `streamHttpResponse` 改动面落 `thincoder-core/proxy-transport.mjs`（**219 ⇒ 245 行**）∥ 批内件 = **301 行**（含 C16 CONNECT 腿；按盘记录；明细 = 批档 `docs/batches/2026-10-08-proxy-chunked-frame.md` §2.4 ∥ §2.12）。
+  **管线拓扑**：解码器居源 `sock` 与目标 body 之间、**函数式改写**（body 本体零替换——chunked 径 `sock.on('data')` ⇒ `decoder.push(d)` ⇒ `onData` ⇒ **推入 body 前最后一级可写流**（带 CE = 解压器，否则 = body；经写门 `!destroyed && !writableEnded`——终止后解码器余出不再入 body，与非 chunked 径 `pipe` 自摘语义齐）；非 chunked 无 CE 径 `sock.pipe(body)` 不变（带 CE ⇒ 推送臂接解压器）。）
+  **错误面归口（#16 契约零变）**：解码器 = 纯状态机、无自有 `'error'` 面（畸形帧回退透传——不 emit）；body 终止守卫族（`destroyBody` ∥ `_bodyIdleMs` 看门狗 ∥ `terminateBody`）照旧对 body 单点直作、不经解码器；`sock` 级错误沿现径（`thincoder-core/proxy-transport.mjs:194-197` ⇒ `fail` ⇒ `destroyBody`）。
+  **行数注记**（as-of 2026-10-08；现读见 §6.1）：新档 `proxy-chunked.mjs` = **102 行** ∥ `streamHttpResponse` 改动面落 `thincoder-core/proxy-transport.mjs`（**219 ⇒ 245 行**）∥ 批内件 = **301 行**（含 C16 CONNECT 腿；按盘记录；明细 = 批档 `docs/batches/2026-10-08-proxy-chunked-frame.md` §2.4 ∥ §2.12）。
   回归面（旧缺此解码）：代理响应体首段携 `<hex>\r\n` 帧 ⇒ 一切走代理的请求 body 污染（模型清单探针 `non-JSON response` ∥ 聊天 SSE 事件被打断——用户 2026-10-08 案）。
-- **body 终止守卫（#16 · 崩溃族）**：body = 响应体 `PassThrough`（管线两端 = 源 `sock`（net socket）→ 目标 body；body 建于 `thincoder-core/proxy-transport.mjs:43`；头到齐后写入 = 非 chunked 径 `:109` `sock.pipe(body)` ∥ chunked 径经解码器逐段 `body.write()`——body 本体零替换）
+- **响应体内容编码解压（2026-10-10 补 · #1067）**：TE 剥帧后接**解压阶段**（单 token 且已列编码——gzip ∥ x-gzip ⇒ gunzip ∥ deflate ⇒ inflate ∥ br ⇒ brotli；`node:zlib`；`deflate` = RFC1950 zlib 包裹形，非合规裸形（RFC1951）不支持 ⇒ 走明错误径、不透传）。
+  `identity` ∥ 头缺席 ∥ 未知编码 ∥ 多 token 列表 ⇒ **透传零动**；**不发 `Accept-Encoding`**（请求头零改——上游自发压缩才走本阶段，请求面语义不变）。
+  零输入（空体 + CE 在场）⇒ 不解压（sawInput 门——零误报：空 gunzip 结束会抛 `unexpected end of file`）；**解压失败 ⇒ body 以明错误终止**
+  （部分解码已发生——无「原字节」可回退；错误形 = `Response body decompression failed (content-encoding: …)`）。落点 = `streamHttpResponse`（`thincoder-core/proxy-transport.mjs:128-139`；chunked ∥ 非 chunked 两径同点）；解压器 ⇒ body 走 `pipe`（自带背压）。
+- **chunked 径背压传播 + 停止门（2026-10-10 补 · #1087）**：暂停级 = **body 前最后一级可写流**（带 CE = 解压器 ∥ 无 CE = body；`thincoder-core/proxy-transport.mjs:90-98` `pushDownstream`）
+  ——`write()` 返 false ⇒ 暂停上游源 `sock`（推送臂 `:144` ∥ `:149`），排空 ⇒ 恢复（背压旗幂等；带 CE 时恢复信号在解压器 `'drain'`、无 CE 时在 body `'drain'`）。
+  **看门狗复位源扩 `drain`**（`:161`——排空 = 消费进度信号，防「暂停期无数据到达 ⇒ 误杀慢而健康的消费者」）；消费方永停摆 ⇒ 照旧 `bodyIdleMs` 断流。
+  **停止门**（`:170-173`——评审 F3）：body 终止（watchdog ∥ abort ∥ 消费方 destroy）时上游仍在暂停态 ⇒ `resume()` + `destroy()` 源（被暂停的 sock 不因 body 消亡自行关闭——悬挂口闭合）。
+  与非 chunked 径 `pipe` 语义对齐（pipe 自带 pause/drain）；非 chunked 无 CE 径零动。
+- **body 终止守卫（#16 · 崩溃族）**：body = 响应体 `PassThrough`（管线两端 = 源 `sock`（net socket）→ 目标 body；body 建于 `thincoder-core/proxy-transport.mjs:50`；头到齐后写入 = 非 chunked 无 CE 径 `:153` `sock.pipe(body)` ∥ chunked 径经解码器逐段推入（带 CE = 解压器）——body 本体零替换）
   ——头后失败 ∥ body 空闲看门狗以 `destroy(err)` 终止 body **前**，先挂**永久** no-op `'error'` 监听者
   （单点 `destroyBody(body, err)`——`thincoder-core/stream-destroy.mjs`（已落；proxy ∥ provider 三文件共用）；契约与理由 = §7 D-PX7）。
   无监听者瞬间的 `destroy(err)`（含 pipe 内部监听者触发即自摘后的重发）产生未处理 `'error'` ⇒ `uncaughtException` ⇒ **整个进程被杀**（2026-09-22/23 三份 crash-report 签名 `Response body timeout (idle)` = 此路径——GitHub #16）。
@@ -56,13 +67,13 @@
 **现行语义**：CONNECT 隧道内的 TLS 握手**默认全量证书校验**；仅当显式传 `opts.insecureTls === true` 才放行。
 
 ```js
-// thincoder-core/proxy-transport.mjs:200
+// thincoder-core/proxy-transport.mjs:253
 const tlsSock = tlsConnect({ socket: sock, servername: target.hostname, rejectUnauthorized: opts?.insecureTls !== true })
 ```
 
 | 面 | 内容 |
 |---|---|
-| **实装事实** | `thincoder-core/proxy-transport.mjs:200`：`rejectUnauthorized: opts?.insecureTls !== true` ⇒ **默认 true（全量校验）**；`:160`–`:161` 与 `:199` 注释逐字：「TLS 默认全量证书校验（rejectUnauthorized: true）——走代理的流量（含 API key）不得在未验证链路上传输；确需自签 / 内网代理时 opts.insecureTls=true 显式放行」。 |
+| **实装事实** | `thincoder-core/proxy-transport.mjs:253`：`rejectUnauthorized: opts?.insecureTls !== true` ⇒ **默认 true（全量校验）**；`:213`–`:214` 与 `:252` 注释逐字：「TLS 默认全量证书校验（rejectUnauthorized: true）——走代理的流量（含 API key）不得在未验证链路上传输；确需自签 / 内网代理时 opts.insecureTls=true 显式放行」。 |
 | **新档写法** | **默认校验**；自签 / 企业 MITM 代理须**显式 opt-in**。 |
 
 - **opt-in 通道**：`insecureTls` 目前**无 config / UI 入口**（实核：全仓仅 `thincoder-core/proxy.mjs` 三处出现，无调用方注入）——它是 `opts` 层契约，为测试与将来接入保留。
@@ -84,6 +95,10 @@ const tlsSock = tlsConnect({ socket: sock, servername: target.hostname, rejectUn
 
 > 探针字段面（2026-10-08 · #1048①）：探针目标构造单源 `probeTargetOf`（`thincoder-core/provider-flows.mjs:79-90`）目标形**携 `headers`**（仅 plain-object 才携；缺 ∥ 非法 ⇒ 零键——同 `apiKey` 归一律）；
 > 来源面 = 盘上条目（准入 ∥ 拉取探针取落盘条目——自带 `headers` 随行）∥ 表单（VSC 添加表单探针——表单无 `headers` 录入位 ⇒ 该径零键）；消费点 = `list-models` 各 format 分支请求头展开（`thincoder-core/provider/list-models.mjs:61` ∥ `:66` ∥ `:82`）。
+
+> 配置写径归一（2026-10-10 · `#1090` · purge-residue-sweep 批）：`proxy` 形 = **两键**（`{ uri, web }`）——退役键 `model`（2026-10-08 裁退役 ⇒ 2026-10-09 清除批退场）**零回读零保留**；CLI 写径 `seturi` **写即归一**
+> （`raw.proxy = { uri: newUri, web: … }`——两键重建，不「原样保留」旧对象 ⇒ 残键随一次写清零 · `thincoder-cli/src/tui/cmd-config.mjs:136-137`）∥ `toggleweb` 在归一态两键上翻转（`:143`）∥ `clear` 整键删（`:163`）；桌面 ∥ 种子同两键
+> （投影 = `thincoder-desktop/renderer/views/settings.mjs` ∥ 种子 = `thincoder-desktop/renderer/store.mjs`——单源 = `docs/desktop/design/SETTINGS.md` §2.20）。归一语义本体单源 = 核 `normalizeProxy`（`thincoder-core/config.mjs:261`——§6.1 行）；菜单与保存链 = §5。
 
 ## 5. `/config` Proxy 子菜单与保存链
 
@@ -112,19 +127,21 @@ Clear proxy
 
 | 面 | 落点 | 实核 |
 |---|---|---|
-| 配置归一化 | `thincoder-core/config.mjs:259`（`normalizeProxy`）· 调用 `:384` | 在位 |
+| 配置归一化 | `thincoder-core/config.mjs:261`（`normalizeProxy`）· 调用 `:385` | 在位 |
 | 代理解析（含 env 回落） | `thincoder-core/proxy-target.mjs`（拆档后家位，现位 `:17-31` ∥ `:34-37`；原 `thincoder-core/proxy.mjs:22` ∥ `:40`） | 在位 |
-| model 注入（逐渠判定） | `thincoder-core/proxy.mjs`（`injectProxy`——判定式 = 逐渠旗 ∧ `uri`；拆档后重锚——现位 `:19-24`（2026-10-08 按盘实读）） | 在位 |
-| TLS 校验判定 | `thincoder-core/proxy-transport.mjs`（`tunnelHttps` 内——拆档后家位，现位 `:200`；原 `thincoder-core/proxy.mjs:232`） | 默认全量校验 |
-| CONNECT 隧道 | `thincoder-core/proxy-transport.mjs`（`tunnelHttps`——拆档后家位，现位 `:166`；原 `thincoder-core/proxy.mjs:198`） | 在位 |
-| 经典转发 / 流式响应 | `thincoder-core/proxy-transport.mjs`（`tcpConnectProxy` ∥ `streamHttpResponse`——拆档后家位，现位 `:216` ∥ `:34`；原 `thincoder-core/proxy.mjs:248` ∥ `:85`） | 在位 |
+| model 注入（逐渠判定） | `thincoder-core/proxy.mjs`（`injectProxy`——判定式 = 逐渠旗 ∧ `uri`，归一化单源 `normalizeProxy`（#1082，2026-10-10）；拆档后重锚——现位 `:22-27`（2026-10-10 按盘实读）） | 在位 |
+| TLS 校验判定 | `thincoder-core/proxy-transport.mjs`（`tunnelHttps` 内——拆档后家位，现位 `:253`；原 `thincoder-core/proxy.mjs:232`） | 默认全量校验 |
+| CONNECT 隧道 | `thincoder-core/proxy-transport.mjs`（`tunnelHttps`——拆档后家位，现位 `:219`；原 `thincoder-core/proxy.mjs:198`） | 在位 |
+| 经典转发 / 流式响应 | `thincoder-core/proxy-transport.mjs`（`tcpConnectProxy` ∥ `streamHttpResponse`——拆档后家位，现位 `:269` ∥ `:41`；原 `thincoder-core/proxy.mjs:248` ∥ `:85`） | 在位 |
 | 响应体分块解码（#1065） | `thincoder-core/proxy-chunked.mjs`（解码器 `createChunkedDecoder`）· 单点 = `proxy.mjs` `streamHttpResponse`（拆档后 = `proxy-transport.mjs`） | 已落（#1065 实施落讫——解码器 102 行） |
-| 统一出口 | `thincoder-core/proxy.mjs`（`proxyFetch` 编排——直连分支 = 断流通道建设点；拆档后重锚——现位 `:33-50`（2026-10-08 按盘实读）） | 在位 |
-| loopback 旁路（#1026） | `thincoder-core/proxy-target.mjs`（`isLoopbackTarget`——拆档后家位，现位 `:44`）· 旁路点 = `proxy.mjs` `proxyFetch` 入口（现位 `:35`） | 在位 |
+| 内容编码解压（#1067） | `thincoder-core/proxy-transport.mjs`（`streamHttpResponse` 内——TE 剥帧后接，现位 `:128-139`；chunked ∥ 非 chunked 两径同点） | 已落（#1067 实施落讫——批 2026-10-10） |
+| 背压传播 + 停止门（#1087） | `thincoder-core/proxy-transport.mjs`（`pushDownstream` ∥ 推送臂 ∥ 看门狗复位 ∥ 停止门——现位 `:90-98` ∥ `:144` ∥ `:161` ∥ `:170-173`） | 已落（#1087 实施落讫——批 2026-10-10） |
+| 统一出口 | `thincoder-core/proxy.mjs`（`proxyFetch` 编排——直连分支 = 断流通道建设点；拆档后重锚——现位 `:36-53`（2026-10-10 按盘实读）） | 在位 |
+| loopback 旁路（#1026） | `thincoder-core/proxy-target.mjs`（`isLoopbackTarget`——拆档后家位，现位 `:44`）· 旁路点 = `proxy.mjs` `proxyFetch` 入口（现位 `:38`） | 在位 |
 | web 工具代理参数 | `thincoder-core/tools/web.mjs:96` · `:188` | 逐次调用参数 |
 | TUI 子菜单 | `thincoder-cli/src/tui/cmd-config.mjs:104`–`:114` | 在位 |
 | VSC 对位实现 | 经 `@thincoder/core/proxy.mjs` 引用（W10 已迁核——镜像已删）· 配置面 = 核 `config-io.mjs` 引用（VSC 自持副本已退场——实核 2026-10-08）· **运行期注入点 = `thincoder-vscode/src/extension/presets.mjs:134`（`providerFromConfig`——逐渠判定）** | 同实现 |
-| body 终止守卫（#16） | `thincoder-core/stream-destroy.mjs`（已落——单点 `destroyBody` ∥ `terminateBody`（web 流 abort 通道）+ `IDLE_ABORT`）· **abort 通道建设点 = `thincoder-core/proxy.mjs` 直连分支（`proxyFetch`——评审轮 1 收正）** · 消费点 `thincoder-core/proxy-transport.mjs:61` ∥ `:74` ∥ `thincoder-core/provider/sse.mjs:207` ∥ `thincoder-core/provider/google.mjs:219` | 本批落位；2026-10-04 扩 abort 通道 |
+| body 终止守卫（#16） | `thincoder-core/stream-destroy.mjs`（已落——单点 `destroyBody` ∥ `terminateBody`（web 流 abort 通道）+ `IDLE_ABORT`）· **abort 通道建设点 = `thincoder-core/proxy.mjs` 直连分支（`proxyFetch`——评审轮 1 收正）** · 消费点 `thincoder-core/proxy-transport.mjs:71` ∥ `:102` ∥ `thincoder-core/provider/sse.mjs:207` ∥ `thincoder-core/provider/google.mjs:219` | 本批落位；2026-10-04 扩 abort 通道 |
 | server 对位实现（2026-10-09 代理批） | `thincoder-server/src/gateway/proxy.mjs`（自持——`proxyFetch` fetch-like：loopback 旁路 ∥ CONNECT 隧道 ∥ 经典转发 ∥ 超时族；node:http/https 内建 + 自建 CONNECT——std） | 逐渠判定镜像（D-PX1）；机制全文 = `docs/server/design/gateway/API.md` §6 KD-SV-55 |
 
 ### 6.2 测试面
@@ -151,7 +168,9 @@ Clear proxy
 | D-PX8 | web `ReadableStream` 断流 = **内部 abort 通道**（`IDLE_ABORT` 挂 response；`terminateBody` 分流） | 守卫对 web 流 no-op ⇒ 直连 fetch 看门狗静默失效（crash-guards U-CG-1 · 台账 #878）；**建设点 = `proxyFetch` 直连分支单点**（覆盖两条流式直连链 `readSSE` ∥ `parseGeminiStream`；proxy 两分支不挂——自有 `_bodyIdleMs`；直连面调用点收口恒走 `proxyFetch`）；被否：`ReadableStream.cancel` 面（`for-await` 锁定流上 cancel 拒 TypeError——解锁重构读循环 = 大改）∥ 给直连 fetch 加绝对墙钟（2026-09-01 已裁废——腰斩长任务；idle 语义保留）。 |
 | D-PX9 | loopback 目标**永不经代理**（`localhost` ∥ `*.localhost` ∥ `127.0.0.0/8` ∥ `::1`——`isLoopbackTarget()`；`proxyFetch` 入口单点旁路） | 本地网关 / 开发服务（如 `127.0.0.1:8787` 渠道）被企业代理劫持 ⇒ 连接失败 / 403 假红（用户 2026-10-07 案）；NO_PROXY 语义——本地可达性不取决于代理运营方。 |
 | D-PX10 | `proxy.mjs` **分档**：`proxy-target.mjs`（配置解析 + loopback）∥ `proxy-transport.mjs`（tunnel/传输）析出；本档留 `injectProxy` + `proxyFetch` 编排 + 兼容再出口 facade | 原档 303 行越 300 咨询线（#1037）；「先拆后改」= 本批本就触碰判定式（避免在越线档上叠加改）；facade 再出口 ⇒ 消费面 import 零改。被否：单档内联压缩注释（治标）∥ 全仓改指新档（调用面波及 ≫ 收益） |
-| D-PX11 | 响应体 **chunked 剥帧在传输层单点**（`streamHttpResponse`；解码器 = `proxy-chunked.mjs`）；畸形帧**回退透传**；`content-encoding` 不处置（列册——台账 **#1067**） | 旧缺解码 ⇒ 一切走代理的请求 body 污染（帧字节 `7378\r\n{…` 直入 `text()` ⇒ 探针 `non-JSON response` ∥ SSE 事件被 CRLF+hex 打断——用户 2026-10-08 gemini 案）；判定按头（curl 同代理解得 24315B ⇒ 头在场）；被否：消费点自防（漏面）∥ 启发式嗅探（头缺席而帧在场——易误判）∥ 畸形帧报错 ∥ 截断（违协议代理从「能用」退化；截断在 SSE 面 = 静默丢尾）。 |
+| D-PX11 | 响应体 **chunked 剥帧在传输层单点**（`streamHttpResponse`；解码器 = `proxy-chunked.mjs`）；畸形帧**回退透传**；`content-encoding` 列册转**已处置**（2026-10-10 · 台账 **#1067** ⇒ D-PX12） | 旧缺解码 ⇒ 一切走代理的请求 body 污染（帧字节 `7378\r\n{…` 直入 `text()` ⇒ 探针 `non-JSON response` ∥ SSE 事件被 CRLF+hex 打断——用户 2026-10-08 gemini 案）；判定按头（curl 同代理解得 24315B ⇒ 头在场）；被否：消费点自防（漏面）∥ 启发式嗅探（头缺席而帧在场——易误判）∥ 畸形帧报错 ∥ 截断（违协议代理从「能用」退化；截断在 SSE 面 = 静默丢尾）。 |
+| D-PX12 | 响应体 **`content-encoding` 解压单点**（`streamHttpResponse`——TE 剥帧后接，chunked ∥ 非 chunked 两径同点）：单 token 已知编码 ⇒ 解压（gzip ∥ x-gzip ⇒ gunzip ∥ deflate ⇒ inflate ∥ br ⇒ brotli）；`identity` ∥ 头缺席 ∥ 未知 ∥ 多 token 列表 ⇒ 透传；**零输入（空体）不解压**（sawInput 门）；解压失败 ⇒ body 明错误终止；**不发 `Accept-Encoding`** | 上游自发压缩（未请仍压缩）⇒ 消费面得明文（探针 JSON.parse 成功 ∥ SSE 事件可解）；被否：① 发 `Accept-Encoding` 协商（请求面语义改 + 范围扩）② 逐消费点自防（漏面——D-PX11 同族否决）③ 不处置（用户案由被架空）。来源 = 上游批 `2026-10-08-proxy-chunked-frame.md` §2.8 P2「同单点加解压阶段」 |
+| D-PX13 | **chunked 径背压传播**：暂停级 = body 前最后一级可写流（带 CE = 解压器 ∥ 无 CE = body），`write()` 返 false ⇒ 暂停上游源，排空 ⇒ 恢复（旗守卫幂等）；**看门狗复位源扩 `drain`**（readable ∪ drain）；**停止门**：body 终止时上游仍在暂停态 ⇒ 恢复 + 销毁源 | 与非 chunked 径 `pipe` 同语义对齐；冻结顾虑 =「背压暂停期无数据到达 ⇒ 看门狗误杀慢而健康的消费者」——排空信号 = 消费进度；消费方永停摆 ⇒ 照旧 `bodyIdleMs` 断流（不新增悬挂口——评审 F3 停止门闭合）。被否：① Transform 管线重写（动 `proxy-chunked.mjs` 已测单点）② 暂停期停表（消费永停摆时无杀口 + 与 pipe 径语义分叉）③ 不处置（大 chunked 响应内存无界） |
 
 ## 8. 不并项与历史沿革
 
@@ -209,4 +228,7 @@ Clear proxy
 - 2026-10-08（**proxy 逐渠独立批（去全局闸）· A/B 三点裁定落定（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-08-proxy-per-channel.md` §2.15 · 用户 2026-10-08 三点裁（项1 = A ∥ 项2 = 形A ∥ 项3 = 补步）· 台账 #1042 ∥ #1049 ∥ #1037）：**待裁注解除**——§1 `model` 键注 ⇒ 定案单形 A（键退役；施行已落）∥ 归一句去 `model` 支 ∥ §5 菜单块 Model requests 行删（删行形）∥ `proxySummary` 条收述（去 `model` 段 ∥ 消费坐标按盘）∥ §7 D-PX1 尾注收述。**§5 #1049 补步设计落法**（两向导定位 ∥ 问句形 ≡ add 流 ∥ 旗写入点 ∥ 验收面——实施 = 产品腿另轮）。**零新语义**（= 裁定直接导出项）。明细 = 批档 §2.15。
 - 2026-10-08（**proxy 逐渠独立批（去全局闸）· as-built 回填轮（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-08-proxy-per-channel.md` §5 各腿报表（产品 ∥ 测试 ∥ A 案 ∥ 测试补全 ∥ #1049 补步）· 台账 #1042 ∥ #1049）：§5 #1049 条「实施 = 产品腿另轮」⇒ **已落**（两向导坐标 ∥ TUI 装配注入点 `thincoder-cli/src/tui/index.mjs:196`）∥ 补**重配语义**（答 No ∥ Esc 零写——upsert 保留既有旗；2026-10-08 父裁〔a〕）∥ §6.2 批内件「拟落」⇒「已落」（448 行——T1–T8 + W1 ∥ W2；10/10 绿）。**零新语义**（= 各腿报表 ∥ 父裁的直接导出项）；产品码零触（回填轮）。明细 = 批档 §2.4。
 - 2026-10-08（**代码长度上限 500/800 口径更换批 · 候窗② 清账轮 · eng-designer**——承批档 `docs/batches/2026-10-08-code-limit-500-800.md` §2 · 台账 #1072）：§2 三档合规标注随口径（`≤300 咨询线` ⇒ `≤500 咨询线`）∥ §2 行数注记残句删（`越 ≤300 咨询线 1 行——批内件不计线（豁免在案）`——301 行 ≤500 ⇒ 越线/豁免前提消失，读数留守）。**零新语义**（线值随口径 ∥ 失效残句删——D8）；产品码零触。明细 = 批档 §2（清账轮块）。
-- 2026-10-09（**server 代理批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-server-gemini-openai-preset.md` §2 · 台账 #1129；用户 13:5x 令）：§4 增 server 上游链消费行（逐渠镜像——无全局闸）∥ §6.1 增 server 对位实现行（自持 `thincoder-server/src/gateway/proxy.mjs`——零第三方）。**零语义改**（= server 面登记的成文；机制全文 = server 档 `docs/server/design/gateway/API.md` §6 KD-SV-55——本档不复制）。
+- 2026-10-10（**core-small-fixes 批 · 实施轮设计面回填（fix 轮）· eng-coder**——承批档 `docs/batches/2026-10-10-core-small-fixes.md` §2.6 ∥ §5；台账 #1067 ∥ #1082 ∥ #1087）：§1 归一化坐标收正（`thincoder-core/config.mjs` 归一化点 259 ⇒ 261 ∥ 调用点 384 ⇒ 385——漂移随正）+ **`injectProxy` 判定同源句（#1082）**；
+  §2 补 **内容编码解压阶段（#1067）** + **chunked 径背压传播 + 停止门（#1087）** + 同因坐标扫正（`tunnelHttps :166 ⇒ :219` ∥ 移交 `:205 ⇒ :258` ∥ `tcpConnectProxy :216 ⇒ :269` ∥ 坏串报错 `:175/:223 ⇒ :228/:276` ∥ 分块条汇流 `:205/:49 ⇒ :258/:52` ∥ `sock` 级错误 `:141-144 ⇒ :194-197` ∥ body 条 `:43 ⇒ :50` ∥ `:109 ⇒ :153`）+ 三档行数按盘（54 ∥ 298 ∥ 53）；
+  §3 TLS 条坐标收正（`:200 ⇒ :253` ∥ 注释 `:160-161/:199 ⇒ :213-214/:252`）∥ §6.1 坐标行按盘重锚 + 新增 #1067 ∥ #1087 两行 ∥ §7 **D-PX11 尾注收正**（列册 ⇒ 已处置）+ **D-PX12 / D-PX13**。**零新语义**（= 实施后的 as-built 收正）。明细 = 批档 §2.6 ∥ §5。
+- 2026-10-10（**purge-residue-sweep 批 · 设计档随动轮 · eng-coder**——承 `docs/batches/2026-10-10-purge-residue-sweep.md` §2 设计档落点表 · 台账 #1090）：§4 增**配置写径归一**注（形 = 两键 `{ uri, web }`；退役键 `model` **零回读零保留**——CLI `seturi` 写即归一（两键重建）∥ `toggleweb` 归一态两键翻转（`:143`）∥ `clear` 整键删；桌面投影 ∥ 种子同两键）。**零新语义**（= as-built 口径落档）。明细 = 批档 §2 ∥ §5。

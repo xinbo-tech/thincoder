@@ -30,6 +30,7 @@ export function toBlob(vec) { return Buffer.from(vec.buffer, vec.byteOffset, vec
 export function fromBlob(buf) { if (buf.byteOffset % 4 !== 0) buf = new Uint8Array(buf); if (buf.byteLength % 4 !== 0) return new Float32Array(0); return new Float32Array(buf.buffer, buf.byteOffset, buf.byteLength / 4) }
 export async function embed(embedder, texts) { return texts.map(() => new Float32Array(${PROBE_DIM}).fill(${PROBE_UNIT})) }
 export function createEmbedder(config) { return { baseURL: config?.baseURL ?? "stub://", apiKey: "stub", model: config?.model ?? "stub-model" } }
+export async function embedTolerant(embedder, texts, opts = {}) { return { vectors: await embed(embedder, texts, opts), skipped: [] } }
 `)
 registerHooks({
   resolve(specifier, context, next) {
@@ -337,7 +338,7 @@ test("T11 行预算：既有行数置于 CAP 邻域 ⇒ budgetSkipped>0 ∧ 跳�
     try {
       const res = await codeSyncMod.codeSync(memory, dir)
       const rowsOf = (rel) => memory.db.prepare(`SELECT COUNT(*) AS n FROM code_chunks WHERE origin = ? AND path = ?`).get(origin, rel).n
-      return { res, warns: counted.filter((l) => l.includes("≥ WARN")), rowsOf }
+      return { res, warns: counted.filter((l) => l.includes("(code + doc)")), rowsOf }
     } finally { console.warn = orig }
   }
   const run1 = await runOnce()
@@ -458,17 +459,17 @@ test("T16 探针：缺省工作集基线（1.9 万行）单回合召回墙钟 + 
 // ─── T17：B3 ∕ B4 接线（L-②-2）───────────────────────────────────────────────
 
 test("T17 B3 ∕ B4 接线：SQL 含 origin 绑定 + LIMIT 20001 形；越界「+」形 ∕ 提示行", async () => {
-  // B4 越界：20,001 条 distinct path ⇒ 提示行 + 跳过大纲构建
+  // B4 越界：100,001 条 distinct path（= WARN+1 形；WARN = 100000）⇒ 提示行 + 跳过大纲构建
   const sbOver = sandbox("t17over")
   const memOver = createMemory({ dbPath: join(sbOver, "mem.db") })
   const overOrigin = "D:/fxt/t17-over"
-  withTxn(memOver.db, () => { for (let i = 0; i < 20001; i++) insCode(memOver.db, overOrigin, `bulk/p${String(i).padStart(5, "0")}.mjs`, 1) })
+  withTxn(memOver.db, () => { for (let i = 0; i < 100001; i++) insCode(memOver.db, overOrigin, `bulk/p${String(i).padStart(5, "0")}.mjs`, 1) })
   const sinkB4 = []
   const hint = await repomap.buildSummary(spyDb(memOver.db, sinkB4), overOrigin, { origin: overOrigin })
-  assert.ok(hint.includes("> 20000 files"), `越界提示行：${hint}`)
+  assert.ok(hint.includes("> 100000 files"), `越界提示行：${hint}`)
   assert.ok(hint.includes("index.excludePaths") && hint.includes("sweep --origin"), "提示行指路 声明 ∕ 剪枝")
   const b4Sql = sinkB4.find((s) => s.includes("DISTINCT path"))
-  assert.ok(b4Sql?.includes("origin = ?") && b4Sql?.includes("LIMIT 20001"), `B4 文件行形：${b4Sql}`)
+  assert.ok(b4Sql?.includes("origin = ?") && b4Sql?.includes("LIMIT 100001"), `B4 文件行形：${b4Sql}`)
 
   // B4 正常档：3 个在盘文件 ⇒ 照常构建大纲
   const dirOk = sandbox("t17ok")
@@ -480,13 +481,13 @@ test("T17 B3 ∕ B4 接线：SQL 含 origin 绑定 + LIMIT 20001 形；越界「
   const summary = await repomap.buildSummary(memOk.db, dirOk, { origin: normalizeOrigin(dirOk) })
   assert.ok(summary.includes("3 source files indexed."), `正常档构建：${summary.slice(0, 120)}`)
 
-  // B3：越界回「20000+」∧ SQL = 计数子查询 LIMIT 20001 形；≤ WARN 回准确数
+  // B3：越界回「100000+」∧ SQL = 计数子查询 LIMIT 100001 形；≤ WARN 回准确数
   const sbB3 = sandbox("t17b3")
   const memB3 = createMemory({ dbPath: join(sbB3, "mem.db") })
   const b3Origin = normalizeOrigin(sbB3)
   withTxn(memB3.db, () => {
     insDoc(memB3.db, b3Origin, "docs/hit.md", 1, { seg: "hello", content: "hello world" })
-    for (let i = 0; i < 20000; i++) insDoc(memB3.db, b3Origin, `docs/f${String(i).padStart(5, "0")}.md`, 1, { content: "filler" })
+    for (let i = 0; i < 100000; i++) insDoc(memB3.db, b3Origin, `docs/f${String(i).padStart(5, "0")}.md`, 1, { content: "filler" })
   })
   const sinkB3 = []
   const spied = { ...memB3, db: spyDb(memB3.db, sinkB3), codeOrigin: b3Origin }
@@ -494,9 +495,9 @@ test("T17 B3 ∕ B4 接线：SQL 含 origin 绑定 + LIMIT 20001 形；越界「
   const agent = { cwd: sbB3, history: [], _pendingReminders: [], config: {}, tools: [], memory: spied }
   await prepareRun(agent, "hello", {}, { depth: 0 })
   const text = agent.history.map((m) => String(m.content ?? "")).join("\n")
-  assert.ok(text.includes("20000+ chunks indexed total"), "越界回「+」形")
+  assert.ok(text.includes("100000+ chunks indexed total"), "越界回「+」形")
   const b3Sql = sinkB3.find((s) => s.includes("FROM (SELECT 1 FROM doc_chunks"))
-  assert.ok(b3Sql?.includes("origin = ?") && b3Sql?.includes("LIMIT 20001"), `B3 计数子查询形：${b3Sql}`)
+  assert.ok(b3Sql?.includes("origin = ?") && b3Sql?.includes("LIMIT 100001"), `B3 计数子查询形：${b3Sql}`)
 
   const sbSmall = sandbox("t17small")
   const memSmall = createMemory({ dbPath: join(sbSmall, "mem.db") })

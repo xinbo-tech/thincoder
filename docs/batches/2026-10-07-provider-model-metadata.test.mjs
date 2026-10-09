@@ -15,7 +15,7 @@
  *      （有则示 ∥ 零字段零占位 ∥ 存储补齐）∥ 上游退役只提示（行标 + 注行；勾选/保存照常零停用）∥ 加载三态（在飞 ⇒ `.hint` + 钮禁用）
  *      ∥ 保存线形（空图 ⇒ 省略键；非空 ⇒ 携）∥ 添加窗探针随 POST 携图（无探针 ⇒ 省略键）
  *   ⑤ 求交滑落（AC-24②——`filterModelMeta` 直测）：白名单 + 形不符即略 + 与 `models` 求交（非开放不入库）∥ 非对象 ⇒ 抛
- *   ⑥ i18n + 静态面（WEBUI §2.2 键族 +7 ∥ §6 AC-24 续）：两表 7 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集双向相等 ∥ 档目 29 ∥ 30（结构轮后）∥ 视图件行宽 ≤300 ∥ `style.css` 零新增（`:root` 38 ∥ 悬停七条——AC-19 canon）∥ 门禁链 30 件
+ *   ⑥ i18n + 静态面（WEBUI §2.2 键族 +7 ∥ §6 AC-24 续）：两表 7 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集双向相等 ∥ 档目 31 ∥ 32（结构轮后）∥ 视图件行宽 ≤300 ∥ `style.css` 零新增（`:root` 38 ∥ 悬停七条——AC-19 canon）∥ 门禁链 30 件
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -459,7 +459,7 @@ test("⑤ 求交滑落：白名单 + 形不符即略 + 与 models 求交（非�
 
 // ── ⑥ i18n + 静态面（WEBUI §2.2 键族 +7 ∥ §6 AC-24 续）──────────────────────────────
 
-test("⑥ i18n + 静态面：两表 7 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集相等 ∥ 档目 29 ∥ 30（结构轮后）∥ 行宽 ≤300 ∥ AC-19 canon ∥ 门禁链 30 件", () => {
+test("⑥ i18n + 静态面：两表 7 键在场（en 零 CJK ∥ 占位符一致）∥ 基键集相等 ∥ 档目 31 ∥ 32（结构轮后）∥ 行宽 ≤300 ∥ AC-19 canon ∥ 门禁链 38 件", () => {
   const NEW_KEYS = ["admin.providers.candidatesLoading", "admin.providers.metaVision", "admin.providers.upstreamRetiredBadge",
     "admin.providers.upstreamRetiredNote", "admin.providers.colDisplayName", "admin.providers.colContext", "admin.providers.colStatus"]
   for (const key of NEW_KEYS) {
@@ -477,18 +477,18 @@ test("⑥ i18n + 静态面：两表 7 键在场（en 零 CJK ∥ 占位符一致
   // 视图件行宽 ≤300（行宽口径零变）
   const modalLines = readPublic("views-providers-modals.mjs").split("\n")
   for (const line of modalLines) assert.ok(line.length <= 300, `行宽越界：${line.slice(0, 60)}…`)
-  // 档目 29 ∥ 30（结构轮后——十新档：i18n 部件八档 + `dom.mjs`/`health.mjs`）
+  // 档目 31 ∥ 32（结构轮后——十新档：i18n 部件八档 + `dom.mjs`/`health.mjs`）
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [31, 30], "档目 30 ∥ 31（结构轮后）")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [32, 31], "档目 31 ∥ 32（结构轮后）")
   // AC-19 canon（`style.css` 零新增）：`:root` 变量族 38 ∥ 悬停声明七条
   const css = readPublic("style.css").replace(/\/\*[\s\S]*?\*\//g, "")
   const rootVars = (css.match(/:root\s*\{[^{}]*\}/)?.[0] ?? "").match(/--[\w-]+\s*:/g) ?? []
   assert.equal(rootVars.length, 38, `:root 变量族计数（零新增）：${rootVars.length}`)
   const hover = [...css.matchAll(/([^{}]*:hover[^{}]*)\{/g)].map((match) => match[1].trim().replace(/\s+/g, " ")).sort()
   assert.deepEqual(hover, [".nav-item:hover", "tbody tr:hover", "button:hover", "button.tiny:hover", "button.danger:hover", "button.link:hover", ".modal-close:hover"].sort(), "悬停声明清单（七条——零新增）")
-  // 门禁链 33 件（结构轮批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链）∥ 清单目标在盘
+  // 门禁链 38 件（结构轮批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链 ∥ 10-09 alias 批件入链 ∥ 10-09 代理页批件入链）∥ 清单目标在盘
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 33, `门禁清单件数（二十六 ⇒ 三十三——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 38, `门禁清单件数（二十六 ⇒ 三十八——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链 ∥ 10-09 alias 批件入链 ∥ 10-09 代理页批件入链 ∥ 10-10 服务面残迹批件入链 ∥ 10-10 服务小修批两件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-provider-model-metadata.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

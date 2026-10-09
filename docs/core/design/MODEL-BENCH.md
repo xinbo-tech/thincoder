@@ -681,10 +681,10 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 **2026-09-23 建档批（`2026-09-23-model-bench`）**：全部为新增档；存量档仅地图登记一处（`docs/README.md`：登记本档 + 计数收正，±3 行——**已随批落地，勿重复应用**）。三端产品树（`thincoder-core/` · `thincoder-cli/` · `thincoder-vscode/`）**零改动**。
 下表各行为该批已实现档（2026-09-23 实施轮创建；实读行数以批次档 §5.1 表为准）：
 
-| 文件 | 现状 | 预算 | 说明（拆分触发 = 超 300 行） |
+| 文件 | 现状 | 预算 | 说明（拆分触发 = 超 500 行） |
 |---|---|---|---|
 | `bench/README.md`（已实现） | 0 | ~140 | 快速开始 + 五口径 + **复跑工作流**（三场景 + 何时复跑 + 跨时点对比须知）+ 结果解读 + 维护（models/prices）+ 边界 |
-| `bench/run.mjs`（已实现） | 0 | ~250 | CLI 解析 / 编排 / 进度输出 / 退出码 / dry-run（夹具固定响应表内联于此档）+ recompute 分支（超 300 ⇒ 拆 `lib/pipeline.mjs`） |
+| `bench/run.mjs`（已实现） | 0 | ~250 | CLI 解析 / 编排 / 进度输出 / 退出码 / dry-run（夹具固定响应表内联于此档）+ recompute 分支（超 500 ⇒ 拆 `lib/pipeline.mjs`） |
 | `bench/models.json`（已实现） | 0 | ~40 | 参测清单（数据档） |
 | `bench/prices.json`（已实现） | 0 | ~40 | 价格表（数据档） |
 | `bench/cases/index.mjs`（已实现） | 0 | ~70 | `SUITE_VERSION` + 维度注册表 + 轴定义 |
@@ -703,7 +703,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/lib/metrics.mjs`（已实现） | 0 | ~90 | ttft / tok_s / 中位 / 聚合 |
 | `bench/lib/prices.mjs`（已实现） | 0 | ~80 | 装载 + schema 校验 + 匹配 + 成本式 |
 | `bench/lib/roster.mjs`（已实现） | 0 | ~70 | 装载 + 校验 + 解析（label / 复合键 / 维度面） |
-| `bench/lib/report.mjs`（已实现） | 0 | ~260 | md 骨架渲染 + 三表 + 发现 + 局限（超 300 ⇒ 拆 `lib/report-tables.mjs`） |
+| `bench/lib/report.mjs`（已实现） | 0 | ~260 | md 骨架渲染 + 三表 + 发现 + 局限（超 500 ⇒ 拆 `lib/report-tables.mjs`） |
 | `bench/lib/sanitize.mjs`（已实现） | 0 | ~70 | 脱敏谓词 + 写档断言（报告与 JSON 共用） |
 | `bench/lib/haystack.mjs`（已实现） | 0 | ~60 | 确定性长文生成（固定语料 + 定种子） |
 | `bench/lib/png.mjs`（已实现） | 0 | ~70 | PNG 生成（`node:zlib` deflate + 手写 CRC32）→ data URL |
@@ -717,14 +717,14 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 **2026-09-24 判分升级批（`2026-09-24-judge-hybrid`）受影响文件与行数预算**（现状 = 2026-09-24 实读行数 · 含 fix 轮双判 / 题面增量；三端零改动不变；夹具档 = `bench/test/fixtures.mjs`（拆分产物）；**实施实测读数（最终态全部 ≤300）= 批次档 §5.6**——预算住本表、实测住批档）：
 
-| 文件 | 现状 | 预算 | 说明（拆分触发 = 超 300 行） |
+| 文件 | 现状 | 预算 | 说明（拆分触发 = 超 500 行） |
 |---|---|---|---|
 | `bench/lib/judge.mjs`（已实现） | 300 | ~265 | 判官对/仲裁/复核会话：`judge.json` 装载 + schema 与身份校验（A≠B · 仲裁员第三方 / 冻结，fail-closed）+ 与被测重合明示（逐位三级 · 无拒跑闸）· provider 条目构造（克隆 + 覆写，§2.9-1）· 核 `chat` 调用（经 `liveTransport`）· 超时 · 级内单发（不可解析 / 传输失败 ⇒ 该级失败——§2.10.1）· **A / B 并行发起 + 合成（一致 / 第三判仲裁 · 多数决 / 无多数 ⇒ error）** · **分歧计数** · 逐位逐尝试记账（tokens / cost / at）· 判官与复核两版提示构建 + 严格解析（各自 `promptVersion`） |
 | `bench/judge.json`（已实现 · 数据档） | 25 | ~26 | 判官对（A / B）+ 仲裁员（C）身份与预算（§2.10.3） |
 | `bench/lib/grade.mjs` | 288 | ~245 | 增：`{ error }` 结果通路 + 判官结果合成件；删：语义词表件（`keywordSet` / `COLOR_FAMILIES` / `colorMatch` / `countEnumerations` + `enumerateCount` 规则——判官化后零调用者）；`numEquals` / `vmRun` / `strictJson` / `jsonFields` / `toolShape` / `parseToolArgs` / `textRules` 其余规则**行为零改动** |
-| `bench/lib/pipeline.mjs` | 279 | ~295 | 判官会话装配 + judge / review 记录（合成分 + 分歧计数落盘）+ 题面采集（`cases[].prompt`）+ `error` 通路 + 合成全灭退出码；**拆分触发条件**：超 300 行 ⇒ `recomputeMain` + `validateResultShape` → `bench/lib/recompute.mjs`（已实现 ~70 行）· `writePair` / `refuseIfExists` / `isoLocal` / `displayPath` → `bench/lib/output.mjs`（已实现 ~50 行） |
+| `bench/lib/pipeline.mjs` | 279 | ~295 | 判官会话装配 + judge / review 记录（合成分 + 分歧计数落盘）+ 题面采集（`cases[].prompt`）+ `error` 通路 + 合成全灭退出码；**拆分触发条件**：超 500 行 ⇒ `recomputeMain` + `validateResultShape` → `bench/lib/recompute.mjs`（已实现 ~70 行）· `writePair` / `refuseIfExists` / `isoLocal` / `displayPath` → `bench/lib/output.mjs`（已实现 ~50 行） |
 | `bench/lib/prices.mjs` | 142 | ~175 | 判官 / 复核成本应用与聚合（同一成本式；缺价 / 缺 usage 纪律同源） |
-| `bench/lib/report-tables.mjs` | 239 | ~300 | 成本表两列 + 逐维明细（**题面行** + 逐位判官行 / 复核行 + `⟲` / `⇄` 标记）+ 《判官分歧》小节 + 分歧率 + 《复核翻案》小节（超 300 ⇒ 拆 `bench/lib/report-review.mjs`（已实现 ~70 行：分歧 / 复核两小节 + 标记渲染）） |
+| `bench/lib/report-tables.mjs` | 239 | ~300 | 成本表两列 + 逐维明细（**题面行** + 逐位判官行 / 复核行 + `⟲` / `⇄` 标记）+ 《判官分歧》小节 + 分歧率 + 《复核翻案》小节（超 500 ⇒ 拆 `bench/lib/report-review.mjs`（已实现 ~70 行：分歧 / 复核两小节 + 标记渲染）） |
 | `bench/lib/report.mjs` | 162 | ~185 | 概览判官三行 + 分歧率 + 方法判分条 + 告警计数（含分歧 / 未决）+ 局限两条 |
 | `bench/cases/index.mjs` | 61 | ~72 | `SUITE_VERSION` 2 → 3；判官面 / 机械面集合导出（§2.10.2 分层表机检素材） |
 | `bench/cases/{reasoning,instructions,tools,multiturn,longctx,vision}.mjs` | 50 / 55 / 94 / 86 / 81 / 67 | 净增 ~10–25 / 档 | 判官声明 + `mechRubric` + 判据改写（删词表 / 正则）；`tools.4` 同轮并行要求落题面（§5.12） |
@@ -734,11 +734,11 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/test/judge.test.mjs`（已实现） | 300 | ~265 | 桩传输测试（**不触网**）：解析 / 单发（不重发同模型）/ **双判一致 / 分歧仲裁 / 单判官失败 / 无多数** / A≠B 与仲裁员身份 / 与被测重合明示（自判放行 + 标注）/ 冻结 / 逐位成本记账 / 复核触发与改判 / 渲染面断言 |
 | `bench/test/graders.test.mjs` | 146 | ~120 | 删被删函数用例；增判官结果合成件用例 |
 | `bench/test/suite.test.mjs` | 161 | ~200 | 判官面 / 机械面集合 = 冻结清单；`judge.turn` / `rubric` 齐；多轮 `question` 含 `followUps`；`judge.json` schema = 三槽 + A≠B + 仲裁员第三方；价格孤儿判据扩「或任一位判官键」 |
-| `bench/test/report-recompute.test.mjs`（已拆删——拆分方案见本行「说明」列） | 300 | ~330 | 判官逐位成本随新价重算 + 题面行渲染 / 截断 + 分歧面渲染（`render.1–3`）；**拆分触发条件**：超 300 行 ⇒ 拆两档（`recompute.test.mjs` ~135 = 重算面；`report-render.test.mjs` ~140 = 渲染 + dry-run 产物断言），夹具提取至 `bench/test/fixtures.mjs`（已实现 ~50 行） （迁移期引文） |
+| `bench/test/report-recompute.test.mjs`（已拆删——拆分方案见本行「说明」列） | 300 | ~330 | 判官逐位成本随新价重算 + 题面行渲染 / 截断 + 分歧面渲染（`render.1–3`）；**拆分触发条件**：超 500 行 ⇒ 拆两档（`recompute.test.mjs` ~135 = 重算面；`report-render.test.mjs` ~140 = 渲染 + dry-run 产物断言），夹具提取至 `bench/test/fixtures.mjs`（已实现 ~50 行） （迁移期引文） |
 | `bench/results/` | 1 对（v3 · 当批唯一在档） | +1 对 | v3 重跑报告对（当批唯一在档 · 实施轮 · AC-7；该对已按 KD-25 出档——在档 = v5 对 · v4 对出档（用户 2026-09-24 16:01 裁定——时点 = v5 落档验收后）） |
 | `docs/core/design/MODEL-BENCH.md` | 505 | 就地更新 | 本档（§1.3 口径 2 / §2.2–2.3 / §2.10–2.12 / §5.11–5.13 / §6 / §7 / §9 为本轮面） |
 
-**2026-09-24 判官约束放宽批（`2026-09-24-judge-constraint-relax`）受影响文件**（现状 = 本批设计轮实读行数；三端产品树零改动；**零新增档**——全部就地更新；无 300 行拆分触发）：
+**2026-09-24 判官约束放宽批（`2026-09-24-judge-constraint-relax`）受影响文件**（现状 = 本批设计轮实读行数；三端产品树零改动；**零新增档**——全部就地更新；无 500 行拆分触发）：
 
 | 文件 | 现状 | 预期增量 | 说明 |
 |---|---|---|---|
@@ -751,7 +751,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/test/report-render.test.mjs` | 240 | +1 | 方法行断言同步 + 概览判官行标注断言 |
 | `docs/core/design/MODEL-BENCH.md` | —（本档） | 就地更新 | 本档（§1.3-2 / §2.1-5 / §2.3 / §2.10.3–2.10.4 / §3 / §5.13 `judge.5` / §6 / §9 / 变更记录） |
 
-**2026-09-24 判据修复批（`2026-09-24-judge-reversal-fix`）受影响文件**（现状 = 本批设计轮实读行数 · **读数单源**：跨批漂移属正常，下轮判拆分触发（>300）以最新实读为准、实施最终读数入批次档 §5；三端产品树零改动；零新增档——全部就地更新；**降载（修正轮 #1）**：`judge.13` 迁 `graders.test.mjs` + 题面冻结清单迁 `fixtures.mjs`——两越线档收至 ≤300，见对应行）：
+**2026-09-24 判据修复批（`2026-09-24-judge-reversal-fix`）受影响文件**（现状 = 本批设计轮实读行数 · **读数单源**：跨批漂移属正常，下轮判拆分触发（>500）以最新实读为准、实施最终读数入批次档 §5；三端产品树零改动；零新增档——全部就地更新；**降载（修正轮 #1）**：`judge.13` 迁 `graders.test.mjs` + 题面冻结清单迁 `fixtures.mjs`——两越线档收至 ≤300，见对应行）：
 
 | 文件 | 现状 | 预期增量 | 说明 |
 |---|---|---|---|
@@ -771,7 +771,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/results/` | 1 对（v3） | −1 对 + 1 对 | 重跑对入库（`flash-compare-v4` · 唯一在档）+ v3 对清理（重跑落档后 · KD-25） |
 | `docs/core/design/MODEL-BENCH.md` | 925 | 就地更新 | 本档（§2.2-7 / §2.3 / §2.6 / §2.10.2 / §2.10.3 / §2.11 / §2.12 / §3 / §4 / §5.5 / §5.11 / §5.13 / §6 / §7 / §9 / 变更记录） |
 
-**2026-09-24 复核改判批（`2026-09-24-review-override`）受影响文件**（现状 = 本批设计轮实读行数（2026-09-24）；三端产品树零改动；**零新增档**——全部就地更新；无 300 行拆分触发；**`bench/results/` 不重跑**）：
+**2026-09-24 复核改判批（`2026-09-24-review-override`）受影响文件**（现状 = 本批设计轮实读行数（2026-09-24）；三端产品树零改动；**零新增档**——全部就地更新；无 500 行拆分触发；**`bench/results/` 不重跑**）：
 
 | 文件 | 现状 | 预期增量 | 说明 |
 |---|---|---|---|
@@ -796,7 +796,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | 文件 | 现状 | 预期增量 | 说明 |
 |---|---|---|---|
 | `bench/lib/report-tables.mjs` | 292 | −6 ±3 | 成本表列集 = **五列**（删判官成本 + 复核成本两列渲染）+ 脚注句改为分账原则句（不列金额）+ `judgeCostNotes` / `modelStats.judgeCostCny` / `modelStats.reviewCostCny` 三处死件删除（金额零展示后零消费者——金额只住 JSON）+ `modelStats` 增用时面字段（`totalMsSum` / `sampledRuns`） |
-| `bench/lib/report-time.mjs` | 0（新增） | ~45 | 用时表分段（**超 300 拆分触发**：`report-tables.mjs` 292 + 用时表 ~25 ⇒ 越线；体例同 `report-review.mjs` 拆分）——Σ / 倍率 / 排名 / 脚注 |
+| `bench/lib/report-time.mjs` | 0（新增） | ~45 | 用时表分段——Σ / 倍率 / 排名 / 脚注 |
 | `bench/lib/report.mjs` | 196 | +3 ±2 | 概览判官面两处收正（判官行去「成本」字段；账目句 → **评估开销分账句**（不列金额））+ 结果装配插入用时表（速度表后 · `speed` 轴门控；`report.1` 段序断言同步） |
 | `bench/test/report-render.test.mjs` | 293 | −2 ±2 | `render.1`：成本表表头断言串收正（五列）+ 概览账目断言 → 分账句断言 + 缺价 md 断言两条删除（金额零展示后无指涉——缺价面由 `warnings` 断言承载）+ `report.1` 段清单增 `### 用时表` · 标题串「三表」→「四表」（均就地 · ±0 行） |
 | `bench/test/report-present.test.mjs` | 0（新增） | ~55 | `render.3`（成本表列集 + 定域反例 + 报告零金额 + 账目面反控（JSON 字段零改））/ `render.4`（用时表 Σ 定域 + 倍率 / 排名 / null 脚注 + 轴门控） |
@@ -874,19 +874,19 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/test/report-render.test.mjs` | 291 | ±3（#263）+ **~+4 ±2（增补轮）** + **增补③：±0** | `render.1` 缺价腿加固（表头五列正控 + 覆写补 `host` / `sameVendorAsTested` + 判官 B 行标注断言）——台账 #263；**增补轮**：`report.1` 段清单增 `### 速度表 A` / `### 速度表 B` 断言（`:106`）+ 矩阵断言面随两列同步（`:153` / `:288`——分块计数按新列对读）；**增补③（#276）**：`render.1` 成本表头正控串（`:33` / `:69`）+ 标题串「五列」→「八列」——**±0 行**（字面替换；该档实测 299——余量 1 行，不得加行） |
 | `bench/test/fixtures.mjs` | 180 | +6 ±3（#269）+ ±0（承接修复——核对零改） | 夹具 `models[]` 补 `reasoningEffort` / `reasoningEffortFrom`（缺省 + 覆写两态）+ `note` 键已在（`bench/test/fixtures.mjs:99` 实读——`render.6` ⑤ 生效性腿沿用，实施轮复读为准）；承接修复：题面冻结清单（`FROZEN_PROMPTS`）核对零改——本批零改题（28 条逐字未动） |
 | `bench/README.md` | 178 | +10 ±4 + **增补③：+2 ±2** | `reasoningEffort` 字段说明 + 逐档参数表一句 + 预检命令（`node bench/preflight.mjs [--live]`）+ 版本句改 6 + 判官 B 槽 + **速度表双表 / 矩阵两列一句**（结果解读节——增补轮）；**增补③（#276）**：`:107` / `:137` 两处「五列」→「八列」+ 用时表 / 成本表段交叉列句 |
-| `thincoder-core/model-specs.mjs` | 292 | +~45（10 行 + 行注）⇒ ~337 | 建行 10 档 + 4 档视觉声明分态 + `mimo×3` / `MiniMax-M3` 行注补实弹事实——**取值与证据等级逐条 = `docs/core/design/MODEL-SPECS.md` §13**（行注草案住彼）；**>300 ⇒ 登记 + 拆分计划**（行数上限复读 / 拆点 / 落点 / 消解窗口 = §13.6「行数处置」段——单一落点） |
+| `thincoder-core/model-specs.mjs` | 292 | +~45（10 行 + 行注）⇒ ~337 | 建行 10 档 + 4 档视觉声明分态 + `mimo×3` / `MiniMax-M3` 行注补实弹事实——**取值与证据等级逐条 = `docs/core/design/MODEL-SPECS.md` §13**（行注草案住彼） |
 | `thincoder-core/test/model-specs.test.mjs` | 477 | **±0**（G-1..G-7 迁新载体档——500 硬限余量 23 行） | 仅 `[qwen] T-4/A-14` 退化锚**就地同名替换**（`qwen3.7-plus` 建行后不再是退化样本——改用仍在兜底的名字）；新增锚（建行逐名命中 / 「未探」词在场 / `multimodal` 分态）随 G-1..G-7 落新载体档（下行） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `thincoder-core/test/model-specs-bench.test.mjs`（已实现——`thincoder-core/test/model-specs-bench.test.mjs`） | 0 | ~90–140 | G-1..G-7 承载档（`MODEL-SPECS.md` §13.8）；循 `model-specs-mimo.test.mjs` / `model-specs-qwen36.test.mjs` 先例（helpers 就地重定义 · 零 import 主档）；≤300 免登记 （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `thincoder-core/test/core-hygiene.test.mjs` | 183 | +4 ±1 | `SOFT_LINE_REGISTRY` 增 `model-specs.mjs`（建行后 >300 登记——`MODEL-SPECS.md` §13.6「行数处置」段） （已随 2026-09-28 测试树全清退场——档不在盘）（迁移期引文） |
 | `bench/results/` | 1 对（v5 · 已落档） | **重出 1 对**（`--recompute` 新形态——用户点名） | 不重跑；**数值不追补 · 形态随重出**（§2.3-10③）——重出 = 速度表 A/B + 矩阵两列 + 逐档参数表（v5 未采集 `reasoningEffort` ⇒ 该格 `—`）；存量重判不可行照旧（KD-33）；v5 记录面注 = 父侧落；**增补③（#276）**：交叉列形态——在档对（已重出一次）如需再出 = 用户点名 `--recompute`（数值不追补 · 形态随重出——同 ③）；不自动执行 |
 | `docs/core/design/MODEL-BENCH.md` · `docs/core/design/MODEL-SPECS.md` | 1218 · 1315（本批前读数——增补②后就地更新后 1359 行；**审计后收正微轮后就地更新后 1361 行**；**B 终值修订轮后就地更新后 1364 行**；**增补③（#276）后就地更新后 1375 行**；**设计收正轮（轮 4）后就地更新后 1378 行**（末行空尾不计）） | 就地更新 | 本档：§1.3 / §2.1-4 / §2.1-5 / §2.2 / §2.3（含规则 10）/ §2.4 / §2.6 / §2.9 / §2.10.1 / §2.10.2 / §2.10.3 / §2.11 / §2.13（新增）/ §3 / §4（KD-32…37）/ §5.6 / §5.10 / §5.11 / §5.13 / §6（#271–#274 + #276）/ §8 / §9 / 变更记录；`MODEL-SPECS.md`：§13（新增）+ 变更记录（承接修复零改） |
 **2026-09-25 判官替代判批（`2026-09-25-judge-fallback`）受影响文件**（现状 = 本批设计轮实读行数 · 2026-09-25 · 计数尺 = 末行含换行者不计空尾行；三端产品树零改动；
-**新增三档**（均已实现 · 本表为设计轮读数，实施实测以批次档 `2026-09-25-judge-fallback.md` §5.5 为准）= `bench/lib/judge-fallback.mjs` + `bench/lib/prices-judge.mjs` + `bench/lib/rejudge.mjs`（三拆点 = 300 行上限触发）；**版本口径 = 6 → 7**（判分合成规则 + 判官身份面（替代池）——§1.3-2 / KD-40）；`bench/results/` 零触）：
+**新增三档**（均已实现 · 本表为设计轮读数，实施实测以批次档 `2026-09-25-judge-fallback.md` §5.5 为准）= `bench/lib/judge-fallback.mjs` + `bench/lib/prices-judge.mjs` + `bench/lib/rejudge.mjs`（三拆点 = 行数超线触发——现行口径：软线 500 行 / 硬限 800 行）；**版本口径 = 6 → 7**（判分合成规则 + 判官身份面（替代池）——§1.3-2 / KD-40）；`bench/results/` 零触）：
 
-| 文件 | 现状 | 预期增量 | 说明（拆分触发 = 超 300 行） |
+| 文件 | 现状 | 预期增量 | 说明（拆分触发 = 超 500 行） |
 |---|---|---|---|
 | `bench/lib/judge.mjs` | 298 | −25 ±5（实施读数 271） | 合成段迁出（级联编排 → `judge-fallback.mjs`）；**池装载 / schema 与身份校验留在本档 `loadJudgeConfig`**（唯一装载点的 fail-closed 闸——防「直调 loader 绕过池校验」；批次档 §5.2-1 父侧裁定）；`callSlot` / 提示 / 解析 / 记录形状保留（导出复用） |
-| `bench/lib/judge-fallback.mjs`（已实现） | 0 | ~150（实施读数 87） | 级联执行（级内单发语义 · 身份占用跳过 · 逐级记账）+ 合成裁决（unanimous / arbitrated / single / none）；池装载 / 身份校验住 `judge.mjs` 唯一装载点（§5.2-1）——`judge.mjs` 300 行上限的拆分落点 |
+| `bench/lib/judge-fallback.mjs`（已实现） | 0 | ~150（实施读数 87） | 级联执行（级内单发语义 · 身份占用跳过 · 逐级记账）+ 合成裁决（unanimous / arbitrated / single / none）；池装载 / 身份校验住 `judge.mjs` 唯一装载点（§5.2-1）——`judge.mjs` 行数超线拆分的落点（现行口径：软线 500 行 / 硬限 800 行） |
 | `bench/judge.json`（数据档） | 25 | +~52 | 增 `fallbacks`（替代池 6 项——§9 逐字）+ `frozenAtSuiteVersion` 6 → 7（§2.10.3 冻结绑定） |
 | `bench/lib/pipeline.mjs` | 277 | +6 ±3 | 替代池传入（`makeJudgeEnv`）+ `--rejudge` 分支判别转派 + 控制台替代行 |
 | `bench/lib/rejudge.mjs`（已实现） | 0 | ~120（实施读数 133） | 补判分支（§2.14）：读档 + 对象筛选 + 定点重取素材（import client——触网分支）+ 级联补判 + 溯源块 + 新对落盘 |
@@ -913,7 +913,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 **2026-09-25 矛盾上抛探针批（`2026-09-25-conflict-escalation-probe` · 设计轮）受影响文件**（现状 = 设计轮实读行数 · 2026-09-25 · 计数尺 = 末行含换行者不计空尾行；三端产品树零改动；
 **新增档 10 个**（`bench/probe/**` 七档 + `bench/test/**` 三档）+ 现有档一处（`bench/README.md`）；**版本口径 = 本面自带 `PROBE_VERSION`（§10.2）——`SUITE_VERSION` / `judge.json` / `bench/cases/` 零触**；本批 = 设计轮（零实现）——下表 = 实施轮落点与行数预算）：
 
-| 文件 | 现状 | 预算 | 说明（拆分触发 = 超 300 行） |
+| 文件 | 现状 | 预算 | 说明（拆分触发 = 超 500 行） |
 |---|---|---|---|
 | `bench/probe.mjs`（已实现） | 0 | ~140 | CLI 解析 + 编排 + 逐 run 进度行 + 摘要表 + 退出码 + `--dry-run` 分支 |
 | `bench/probe/fixtures.mjs`（已实现） | 0 | ~230 | `PROBE_VERSION` + 夹具族逐字（3 任务书 + 沙箱树描述 + 沙箱批次档骨架）+ 夹具 schema 校验 |
@@ -940,7 +940,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/lib/report-tables.mjs` | 288 | ±0 | `:75` 注释补「未记录」定性（与 §2.3-7 同源；零代码） |
 | `bench/test/timing.test.mjs` | 58 | +40 ±10 | `timing.2`（判官 / 复核逐尝试失败耗时）+ `timing.3`（失败路径 `throttled` 观测 + 形状单源）+ 头注扩（采集面 = 失败路径补全族） |
 | `bench/test/judge-fallback.test.mjs` | 228 | +1 | `judge.14` 延伸一行断言（失败级 `calls[0].totalMs` 非 `null`） |
-| `bench/test/report-present.test.mjs` | 299 | +3 ±2 | `render.4` ⑫（`skipped` 腿不入部分未记录分支）；**超 300 软线 299 → ~302**（拆分计划 = 交叉列三腿（⑨⑩⑪）与 ⑫ 按族迁出至新档 `report-cross.test.mjs`——触发 = **本批之后**首次触碰该档或 ≥ 320 行，先到者） |
+| `bench/test/report-present.test.mjs` | 299 | +3 ±2 | `render.4` ⑫（`skipped` 腿不入部分未记录分支） |
 | `bench/cases/index.mjs` · `bench/judge.json` | 68 · 63 | **±0** | 不 bump（`SUITE_VERSION` 恒 7 · `frozenAtSuiteVersion` 恒 7——采集完整度 / 谓词口径 / 注释，KD-47） |
 | `bench/README.md` | 230 | **±0** | 用时表条已含「`skipped` 不入 · `null` = 未记录 · 部分 call 未记录 ⇒ 下界和 + 脚注」三短语（本批语义零偏——对读核讫） |
 | `bench/results/` | 11 档（5 对 + v6-rejudged pdf） | **±0** | 不重跑 · 不重出 · 不追改；在档对拍（一次性）以 `2026-09-25-roster-29-v6-rejudged` 为锚（现盘可逐字节复现——实测 `IDENTICAL`） |
@@ -950,7 +950,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 **新增档 9 个**（`bench/toolcall/**` 六档含入口 + `bench/test/**` 三档）+ 现有档两处（`bench/README.md` · `docs/core/design/MODEL-BENCH.md`）；**版本口径 = 本面自带 `TOOL_PROBE_VERSION`（§11.2）——`SUITE_VERSION` / `PROBE_VERSION` / `judge.json` / `bench/cases/` 零触**；
 本批 = 设计轮（零实现）——下表 = 实施轮落点与行数预算；**实施收口（2026-09-25）：「（拟新增）」→「（已实现）」，实读行数以批次档 §5.1 为准**——父侧直接执行 · 可 revert）：
 
-| 文件 | 现状 | 预算 | 说明（拆分触发 = 超 300 行） |
+| 文件 | 现状 | 预算 | 说明（拆分触发 = 超 500 行） |
 |---|---|---|---|
 | `bench/toolcall.mjs`（已实现） | 0 | ~160 | CLI 解析 + 编排（模型 × 变体 × 用例 × n）+ 成本闸（`skipped`）+ 进度行 + 摘要表 + 退出码 + `--dry-run` 分支 |
 | `bench/toolcall/fixture.mjs`（已实现） | 0 | ~150 | `TOOL_PROBE_VERSION` 单源 + `SYSTEM_BASE` + V1 枚举块逐字（5 档——§11.4）+ V2 取句规则 |
@@ -958,7 +958,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | `bench/toolcall/variants.mjs`（已实现） | 0 | ~180 | 三变体载荷构造（V0 实面逐字 / V1 变换 / V2 变换）+ 静态读数（chars / bytes / descriptionChars）；>280 行 ⇒ 拆 `bench/toolcall/variants-v2.mjs`（拟新增 · 未落） |
 | `bench/toolcall/grade.mjs`（已实现） | 0 | ~150 | 轻量 schema 校验（`type` / `required` / `enum` / `items` / `minimum` / `maximum`——§11.1 全集）+ 三轴判定与分母口径 + 聚合 |
 | `bench/toolcall/report.mjs`（已实现） | 0 | ~200 | 报告对（md 骨架 §11.8 + JSON）+ 混淆矩阵 + 成本聚合 |
-| `bench/test/toolcall.test.mjs`（已实现） | 0 | ~250 | §11.11 结构级 + 行为级（`--dry-run` 全链路）；>280 行 ⇒ 拆两份 |
+| `bench/test/toolcall.test.mjs`（已实现） | 0 | ~250 | §11.11 结构级 + 行为级（`--dry-run` 全链路）；行数超线（拆分）——现行口径：软线 500 行 / 硬限 800 行 |
 | `bench/test/toolcall-fixtures.frozen.mjs`（已实现） | 0 | ~150 | 夹具冻结副本（用例集 + V1 块 + `SYSTEM_BASE` + 版本——两层机检另一侧） |
 | `bench/test/toolcall-report.test.mjs`（已实现） | 0 | ~150 | 报告面 / 落档（前缀强制 / 拒写 / 脱敏）/ 成本闸 |
 | `bench/README.md` | 231 | +8 ±4 | 工具调用探针节（命令 / 落档命名 / 与 QA 面关系 / 非门控声明）——实施面 |
@@ -981,7 +981,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | KD-9 | 人工 lane 独立：不判分、不入矩阵/成本归一化、不阻塞退出码 | AC-6；中文歧义本身无客观判据，只做证据保留 | 用 LLM-as-judge 打分（被否：§1.5 边界明令不做） |
 | KD-10 | 覆盖保护 = 同名拒写（无 `--force`） | 留档不可被静默覆盖；删旧档 = 人工显式动作 | `--force` 旗标（被否：V1 无必要，破坏留档直觉）；自动改名（被否：文件名会漂移，跨档对比难） |
 | KD-11 | `bench/test/` 存在但**不进 CI**（AC-8） | 判分器/成本式/脱敏是有判断语义的代码，需开发期回归；CI 面按用户边界零改 | 全不测（被否：判分器是核心资产，回归无保护）；进 CI（被否：AC-8 明令不进） |
-| KD-12 | 判官面落点 = **独立档 `bench/lib/judge.mjs`（已实现）**（判官 + 复核共用会话） | ① `grade.mjs` 的档内契约（「纯函数 · 无网络」）是判分器族的根基（§2.6）；判官/复核两套提示 + 解析 + 传输 + 记账 ≈ +120 行 ⇒ 该档必然超 300 行触发拆分；② 判官面自成一档 = 网络 / 配置 / 记账面与确定性原语分档（可单测、可 mock） | 塞进 `bench/lib/grade.mjs`（被否：破档不变量 + 顶破 300 行线）；判官逻辑内联进 `pipeline.mjs`（被否：编排档不该兼判据实现） |
+| KD-12 | 判官面落点 = **独立档 `bench/lib/judge.mjs`（已实现）**（判官 + 复核共用会话） | ① `grade.mjs` 的档内契约（「纯函数 · 无网络」）是判分器族的根基（§2.6）；判官/复核两套提示 + 解析 + 传输 + 记账 ≈ +120 行；② 判官面自成一档 = 网络 / 配置 / 记账面与确定性原语分档（可单测、可 mock） | 塞进 `bench/lib/grade.mjs`（被否：破档不变量）；判官逻辑内联进 `pipeline.mjs`（被否：编排档不该兼判据实现） |
 | KD-13 | 判官身份配置 = **独立数据档 `bench/judge.json`（已实现）** | 判官不是被测条目（`models.json` 的语义 = 参测清单，`selectEntries` / `--models` 会把它当选测项）；单职责数据档与 `models.json` / `prices.json` 同构（配置 = 数据，改配置不改码） | 落 `models.json`（被否：语义混淆——判官不是被测条目）；通用配置档（被否：仅一类配置，过度抽象）；写死源码常量（被否：换判官要改码，AC-3 要求可配置） |
 | KD-14 | **判官必备**（缺 ⇒ 拒跑），不做「无判官跑法」 | 同一 suiteVersion 只能有一种判分口径——按选中维度懒加载或缺失即跳过语义面 = 同一版本两种判据面（静默降级） | 判官可选 / 缺省跳过语义面（被否：口径分裂 + 静默降级）；缺判官回退词表（被否：批次边界明禁——回退即假阴回归） |
 | KD-15 | 判官 = **判官对（A / B）双判**；分歧 ⇒ **第三判（仲裁员 C）· 多数决**；合成无多数 ⇒ run `error`（fail-closed） | 用户 2026-09-24 01:26 裁定（推翻 V1 单判）：单模型视角偏差是单判的固有风险，双判把它从「不可见」变成「可计数」（分歧率）；分歧样本付第三判 ⇒ 冗余成本只对分歧付（×2 → 分歧 ×3）；「同模型双判无冗余」（D1）⇒ A≠B 机检 + 仲裁员第三方（≠ A / B）机检；确定性路径 = 多数决（3 票二元无平局），任何无多数路径 ⇒ `error` 不猜（D3）；POC 的 5 条样本全为「判准」案（无判官错误样本）⇒ 判官能力有证、判官误判率无证——双判的收益（分歧显影）本身需跑起来才有数据（首轮 v3 即产出分歧率） | ① 单判（原 KD-15 述；POC 5/5 判准为证据。被否：POC 无判官错误样本 ⇒ 单点误判不可见）；② 双判一致即定 · 分歧取 A（主位）票（被否：单判等价——B 成本 +100% 而判定力零增益）；③ 双判一致即定 · 分歧 ⇒ `error`（被否：分歧是判官质量信号而非故障，降 error 让语义面系统性空洞化）；④ 双判 + 人工裁决分歧样本（被否：破「一条命令跑通」与可复现）；⑤ 双判同模型（被否：同模型双判无冗余——D1 原文） |
@@ -1027,7 +1027,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | KD-50 | **变体构造 = 声明式变换**：V0 = 实面逐字 · V1 = 枚举块（5 档）+ V0 文本逐字 + 参数描述唯一缺口补齐（`edit.edits[].*` 7 项）· V2 = 路由句（取句规则）+ 实面参数面逐字 | ① 实读所得：参数面（`type` / `required` / `enum` / `items`）在现形已近饱和（103 带类型参数 / 7 缺描述，全在 `edit.edits[].*`——`thincoder-core/tools/file.mjs:240-251`）⇒ 可动自变量主要是**描述文本（= 选择面）**；② V1 样本 = 近邻枢纽档（`read` / `grep` / `bash` / `git` / `edit`——逐档证据 = `thincoder-core/tool-docs/*.md` 的路由散文）；③ V2 取句 = 确定性规则（不涉判断）；④ 差异面可机检（V1 − V0 = 5 档描述 + 7 项嵌套参数描述；V2 参数面逐字节等值） | ① 全档重写描述（被否：夹具体积 × 全档载荷（23 档静态表 + 能力位 `read_image`——§11.4 计数口径），且与「3–5 档样例」需求相抵）；② 只做 V0 vs V2（被否：缺「枚举补强」中枢臂）；③ V2 也删参数描述（被否：需求面「仅路由句 + schema」——schema 面逐字保留）；④ 探针自抄描述快照（被否：与产品面漂移——V0 必须经产品单点构造，KD-54） |
 | KD-51 | **三轴判据与分母口径（冻结）**：轴① = 首调用名（`expect.name === null` ⇒ 判「无调用」）· 轴② = 全调用 schema 合法 · 轴③ = 轴① ∧ 逐例参数谓词；分母 = 轴① 全有效 run（`terminal ∉ {error, skipped}`）· 轴② / ③ 期望有调用的 run；无调用 run 逐轴按轴表判（轴① 期望无调用者 `true` / 期望有调用者 `false`；轴② / ③ 期望有调用者 `false`、期望无调用者 `null`）+ 单列 `noCall` | ① 需求面三轴逐例机读；② 「首调用」= 单点判定面（多调用 run 单列 `multiCall`，不改主判定面）；③ 分母显式成文（承 §10 评审 🔴#1 教训——截断 / 失败面不入分母，读数不漂移）；④ `perfect = legal ∧ semOk`（完全正确率 = 四率之一，可拆解） | ① 轴③ 用判官（被否：谓词机械可判——判官只增成本与方差，本面无「结论必得」义务）；② 分母混用且不成文（被否：读数不可比）；③ 多调用 run 整体判失败（被否：与「首调用」单点判定面相抵、且丢 `multiCall` 信息） |
 | KD-52 | **上下文成本读数 = 静态 + 实测两腿**：静态 = 逐变体载荷 `chars` / `bytes` / `descriptionChars`（确定性）；实测 = 逐 run `usage.prompt_tokens` → 逐变体中位 + Δ vs V0（同案同模型差分） | ① 「散文 vs 结构」的核心代价 / 收益就是上下文成本；② 静态腿零网络可复跑、实测腿同源核 usage（不估）；③ 差分法消掉提示 / 模型面常数 | ① 按字符估 token（被否：KD-6 同源——估算把口径漂移藏进数字）；② 只出静态（被否：真实 token 面受分词器影响——须实测腿）；③ 只出实测（被否：缺确定性基线，跨运行不可对读） |
-| KD-53 | **独立 runner + 自持版本轴与落档前缀**：`bench/toolcall.mjs`（**已落** · 实读 **261**）· `TOOL_PROBE_VERSION` · 标签必 `toolcall-` 起 · JSON `kind` / `toolProbeVersion` | ① `bench/probe.mjs` 已 299 行（§10 面 · 300 上限余量 1）⇒ 并入即超线；② 两探针形态不同（多轮行为面 vs 单发工具选择面）⇒ CLI 合同与版本轴分立（§10.2 同源理由）；③ 单一 `bench/results/` 家 + 文件名自描述（KD-46 体例） | ① 并入 `bench/probe.mjs` 加 `--mode`（被否：超 300 行 + 两版本轴搅进同一 CLI）；② 并入 `bench/run.mjs` 的 `--dims`（被否：动既有判分合同与 `SUITE_VERSION` 轴）；③ 独立 `bench/toolcall/results/`（被否：第二留档家——D1 / D2 纪律） |
+| KD-53 | **独立 runner + 自持版本轴与落档前缀**：`bench/toolcall.mjs`（**已落** · 实读 **261**）· `TOOL_PROBE_VERSION` · 标签必 `toolcall-` 起 · JSON `kind` / `toolProbeVersion` | ① `bench/probe.mjs` 已 299 行（§10 面）⇒ 并入即越 500 线；② 两探针形态不同（多轮行为面 vs 单发工具选择面）⇒ CLI 合同与版本轴分立（§10.2 同源理由）；③ 单一 `bench/results/` 家 + 文件名自描述（KD-46 体例） | ① 并入 `bench/probe.mjs` 加 `--mode`（被否：超 500 行 + 两版本轴搅进同一 CLI）；② 并入 `bench/run.mjs` 的 `--dims`（被否：动既有判分合同与 `SUITE_VERSION` 轴）；③ 独立 `bench/toolcall/results/`（被否：第二留档家——D1 / D2 纪律） |
 | KD-54 | **产品面零改：V0 载荷经产品单点构造**（`builtinTools`（`thincoder-core/tools/index.mjs:19-27`）+ `toOpenAISchema`（`thincoder-core/tools/shared.mjs:169`）+ 能力位判据 `:64`）——探针只做载荷级变换，不写 `tool-docs/**` / schema 本体 / 注册面 | ① 边界红线（产品面零改）；② V0 必须 = 用户真实所见（否则测的不是现形）；③ 变体只在夹具内构造 ⇒「没改产品面而改的描述面」可审计（`git diff` 零命中） | ① 探针自抄描述快照（被否：与产品面漂移，「现形」失真）；② 运行时猴补 `DESC()` / 装载点（被否：脆 + 非真实面 + 隐蔽改行为）；③ 直改 `tool-docs/**` 造变体后回滚（被否：违红线 + git 面留痕） |
 | KD-55 | **版本轴独立**：`TOOL_PROBE_VERSION` 单源（夹具 / 用例 / 判据 / system / 参数口径变化 ⇒ +1；呈现面不 bump）；`SUITE_VERSION`（恒 7）/ `PROBE_VERSION` / `judge.json.frozenAtSuiteVersion` / `bench/cases/` 零触 | ① 三轴与夹具 = 测量口径 ⇒ 版本轴承载（同 §10.2 / KD-27 体例）；② 本面不参与既有两条版本轴——三条轴各管自己的面（QA 判分面 / 行为面 / 本面） | ① 复用 `PROBE_VERSION`（被否：两探针夹具面互不相关，合轴会让一方变化误标另一方）；② 不设版本轴（被否：夹具 / 判据一变，历史读数失真且无迹可查） |
 | KD-56 | **建议面归批次档收口**：报告只出读数；「要不要结构补强 / 怎么补」= 批次档 §5 / §6 人工判读（父侧 / 用户笔），并接池内 #15 并案 | ① 报告面纪律 = 模板化读数、禁主观评价词（§2.3《关键发现》同源）；② 建议是**判断**——须在读数之上由人（或父侧）作；③ 报告是对外可留档物，掺评价会失真 | ① 报告内直接写建议句（被否：破模板化纪律 + 留档掺评价）；② 报告加「建议」段但由模板生成（被否：模板不能作判断——空段或伪判断） |
@@ -1798,7 +1798,7 @@ stdout：逐 run 一行（`[i/总数] <模型> <夹具> → <行为类> | 首次
 - **沙箱**：根自检（向上无 `.git`——§10.9-②）→ 物化 → 快照 → diff 三态（新增 / 改动 / 无变）+ 清运策略（缺省留档 · `--dry-run` 不留）。
 - **成本闸**：假成本到顶 ⇒ 余面 `skipped` 入 `runs[]` + 聚合分母排除 + warning + 退出码 0。
 - **落档面**：同名拒写 / 标签前缀校验 / 脱敏两腿（凭据命中 ⇒ 拒写；沙箱根 / 绝对路径 ⇒ `<sandbox>` / `<abs>` 占位 + warning——§10.7）。
-- **例数预算**：三包（core / CLI / VSC）**零新增例**；`bench/test/` 设计轮读数 11 档 / 92 例（**读数时点 = 探针实现前** · 2026-09-25 实读；现盘 = 13 档 / 105 例）⇒ 本批 ≤ +16 例（新档 2-3 个，单档 >280 行即拆）。
+- **例数预算**：三包（core / CLI / VSC）**零新增例**；`bench/test/` 设计轮读数 11 档 / 92 例（**读数时点 = 探针实现前** · 2026-09-25 实读；现盘 = 13 档 / 105 例）⇒ 本批 ≤ +16 例（新档 2-3 个，单档行数超线即拆）。
 
 ## 11. 工具面调用准确率探针（tool-call probe · 2026-09-25 设计轮）
 
@@ -2017,7 +2017,7 @@ stdout：逐 run 一行（`[i/总数] <模型> <变体> <用例> → <首调用|
 ### 11.10 与真实工具面的已知偏差（如实登记 · 入报告局限）
 
 ① system 面 = 仅 `SYSTEM_BASE` 一行（真实会话另有人格 / 纪律槽 + 项目 AGENTS.md）——**绝对值不可外推**；变体间可比性不受影响；
-② 载荷面 = `builtinTools` 静态表 + 能力位 `read_image`；**不含**实例绑定族（memory / `code_search` / `doc_search` / `repo_outline` / `settings` / `peer_instances` / 台账查询）与 depth 绑定族（`subagent` / `advisor` / …）⇒ 那些工具参与的选择面（如 `read` ↔ `code_search`）不在本面；
+② 载荷面 = `builtinTools` 静态表 + 能力位 `read_image`；**不含**实例绑定族（memory / `code_search` / `doc_search` / `repo_outline` / `settings` / `peer_instances` / `ledger`）、depth 绑定族（`subagent` / `advisor` / …）与 consult 族（`consult_start` / `consult_stop` / `main_history`）⇒ 那些工具参与的选择面（如 `read` ↔ `code_search`）不在本面；
 ③ 单发单轮（`maxRounds = 1`）⇒ 无「读过工具结果后修正选择」面、无跨步序面；
 ④ 工具不真执行、提示中的路径为假想路径（无文件系统）——判定只看参数成形；
 ⑤ 每档样本量 = n（缺省 3）⇒ 不构成统计显著性检验（不做区间估计——同 §7-6 口径）；
@@ -2027,11 +2027,11 @@ stdout：逐 run 一行（`[i/总数] <模型> <变体> <用例> → <首调用|
 
 - **结构级**（零网络）：用例集 schema（计数 14 / id 唯一 / 逐例 `prompt` + `expect` 在场 / 期望工具名 ∈ 载荷面（`expect.name === null` 例除外）/ 5 对偶与 3 边界计数）+ 冻结副本**逐字等值** + `TOOL_PROBE_VERSION` 单源；
   变体差异面断言：**V0 = 实面逐字**（`builtinTools` + `toOpenAISchema` 逐档等值）· **V1 − V0 = 5 档描述前缀 + 7 项嵌套参数描述**（差集恰好，多一处即红）· **V2 − V0 = 描述替换**（参数面逐字节等值）· `read_image` 能力位两态 · **`payloadDigest` 确定性**（V0 载荷同源单点构造 ⇒ 复算等值——§11.8）。
-  **V1 枚举块点名工具名 ⊆ 载荷面**（5 块逐名对读——载荷外工具名零命中；载荷面口径 = §11.10-②）。
+  **V1 枚举块点名工具名 ⊆ 载荷面**（5 块逐名对读——载荷外工具名零命中；载荷面口径 = §11.10-②）。 **负向名单自锚**（名数（12）/ 去重（含子串最小性）/ 现役对读——tool-docs 逐名在册（basename 全等判） ∧ 不在载荷面 ∧ consult 族现役名覆盖）。
 - **行为级**（`--dry-run` 全链路 · 零网络）：夹具响应六形态（命中 / 误选近邻 / 无调用 / 多调用 / `arguments` 非 JSON / schema 违规（缺 `required` 或 enum 越界））⇒ 三轴判定 + 分母口径 + 报告对产物断言（md 段清单 + JSON 字段 + 混淆矩阵 + 逐例 × 变体矩阵行数）+ 期望无调用例（tool.13）的轴面处置腿（零调用 ⇒ 轴① `true` · 轴② / 轴③ `null` · `noCall` 计数；误答调用 ⇒ 轴① `false`——§11.6）。
 - **落档面**：标签前缀强制 / 同名拒写 / 脱敏（`writePair` 断言）——沿既有单点。
 - **成本闸**：假成本到顶 ⇒ 余面 `skipped` 入 `runs[]` + 分母排除 + warning + 退出码 0。
-- **例数预算**：三包（core / CLI / VSC）**零新增例**；`bench/test/` 现盘 **13 档 / 105 例**（2026-09-25 实读）⇒ 本批 ≤ **+14 例（≤ 119）**（新档 3 个，单档 >280 行即拆）；`bench/test/` 不进 CI（沿 AC-8 既有口径）。
+- **例数预算**：三包（core / CLI / VSC）**零新增例**；`bench/test/` 现盘 **13 档 / 105 例**（2026-09-25 实读）⇒ 本批 ≤ **+14 例（≤ 119）**（新档 3 个，单档行数超线即拆）；`bench/test/` 不进 CI（沿 AC-8 既有口径）。
 
 ## 变更记录
 
@@ -2201,3 +2201,7 @@ stdout：逐 run 一行（`[i/总数] <模型> <变体> <用例> → <首调用|
   + 新载体测试档收正×3（`核内 model-specs-bench 用例档`）。
   条件拆分项标记处置（父侧裁 ① · 批档 §3 轮次 1 发现 4）：`report-params` ∕ `report-speed` 转「（已实现）」（在盘为实）；`driver-spawn` ∕ `variants-v2` 保留（盘上确未落）。**零新语义**。
 - 2026-09-29（**doc-sync-residuals 批 · 设计面残留收正轮 · eng-designer**——承 `docs/batches/2026-09-28-tech-debt-closeout.md` §5 三登记句 · 台账 #255）：§2.11 补**已知盲区（登记）**——deepseek-flash 两例复核截断 ⇒ 判据演进信号缺失（设计允许的降级；收窄建议未采纳）。**零新语义**（登记）。
+- 2026-10-10（**bench-face-residues 批 · eng-coder**——承 `docs/batches/2026-10-10-bench-face-residues.md` §2 · 台账 #1085）：① 注释拆分引文随现行口径（命名 5 处——三档代码注释 + §3 两处；余量 10 处纯化为「行数超线」）；
+  ② §11.10-② 补 consult 族三枚（负向名单 10 → 12——`consult` 占格置换为 `consult_start` / `consult_stop` / `main_history`）；③ §11.11 补负向名单自锚（名数（12）/ 去重（含子串最小性）/ 现役对读）；
+  ④ §3 toolcall 档旧「>280 行 ⇒ 拆两份」预算句随收正（行数超线（拆分）——现行口径：软线 500 行 / 硬限 800 行）。零新语义句。
+- 2026-10-10（**同批 · 父侧同法收正 · 可 revert**——承 `docs/batches/2026-10-10-bench-face-residues.md` §6 收口）：§10 / §11.11 两处例数预算句「单档 >280 行即拆」⇒「单档行数超线即拆」（与 ④ 同口径——现行：软线 500 行 / 硬限 800 行）；§3 各批拆分计划快照族（`:920` ∥ `:925` ∥ `:958`）按序不动；另两处随收：§11.10-② 实例族「台账查询」⇒ `ledger` ∥ §11.11 自锚句补「（basename 全等判）」（随评审 F4 实现——精确名比对已在码，`toolcall.test.mjs:162-166`）。

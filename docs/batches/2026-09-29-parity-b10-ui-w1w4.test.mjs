@@ -40,15 +40,15 @@ test("E1 判据：有效档位（串 key ∕ 缺 key ∕ proxy 两向）逐字�
     // ② 缺 key ⇒ ""（探针照常构造——如实失败）
     assert.deepEqual(flows.probeTargetOf({ name: "b" }),
       { name: "b", baseURL: undefined, apiKey: "", format: undefined, proxyUri: undefined })
-    // ③ proxy 正向：渠级 proxy:true ∧ 全局 proxy.model:true ⇒ 走代理
+    // ③ proxy 正向：渠级 proxy:true ∧ 盘上 uri 在案 ⇒ 走代理（逐渠——model 键零影响）
     assert.equal(flows.probeTargetOf({ name: "c", apiKey: "k", proxy: true }).proxyUri, "http://proxy.local:3128")
     // ④ proxy 反向：渠级 proxy:false ⇒ 直连
     assert.equal(flows.probeTargetOf({ name: "d", apiKey: "k", proxy: false }).proxyUri, undefined)
     // ⑤ 非串 key：不再抛（KD-B10-4 行为微正）⇒ ""
     assert.equal(flows.probeTargetOf({ name: "e", apiKey: 123 }).apiKey, "")
-    // ⑥ proxy 反向（全局）：proxy.model:false ⇒ 渠级 true 亦直连
+    // ⑥ proxy.model:false 零影响（逐渠独立·去全局闸）：渠级 true ∧ uri 在案 ⇒ 仍走代理
     writeFileSync(cfg, JSON.stringify({ proxy: { uri: "http://proxy.local:3128", model: false } }))
-    assert.equal(flows.probeTargetOf({ name: "f", apiKey: "k", proxy: true }).proxyUri, undefined)
+    assert.equal(flows.probeTargetOf({ name: "f", apiKey: "k", proxy: true }).proxyUri, "http://proxy.local:3128")
   } finally {
     coreIo._resetConfigPathForTest()
   }
@@ -89,12 +89,12 @@ test("I1 判据：susp.* zh 三端逐字同（VSC 改 = CLI 措辞）；en 零�
 test("I6 判据：VSC zh 两键补译（零英文残留）；en 零变", () => {
   const vscZh = JSON.parse(read("thincoder-vscode/locales/zh.json"))
   const vscEn = JSON.parse(read("thincoder-vscode/locales/en.json"))
-  assert.equal(vscZh["settings.mcp.headers"], "请求头（KEY=value，逗号分隔）")
+  assert.equal(vscZh["settings.mcp.headers"], "请求头")
   assert.equal(vscZh["settings.mcp.token"], "认证令牌（Bearer）")
   for (const key of ["settings.mcp.headers", "settings.mcp.token"]) {
     assert.ok(!/Headers|Auth/.test(vscZh[key]), `${key}: 零英文残留`)
   }
-  assert.equal(vscEn["settings.mcp.headers"], "Headers (KEY=value, comma-separated)", "en 零变")
+  assert.equal(vscEn["settings.mcp.headers"], "Headers", "en 零变")
   assert.equal(vscEn["settings.mcp.token"], "Auth token (Bearer)", "en 零变")
 })
 

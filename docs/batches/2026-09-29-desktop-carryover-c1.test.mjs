@@ -12,19 +12,11 @@
  *   M-652c 后台读数径 ⇒ 不误伤（非 providers 背景读落地：渠表单 ∕ 钥行两草稿皆存续）。
  *   M-652d 钥行携标记（`data-draft` + `data-draft-scope`）+ 背景重挂 ⇒ 键入 ∕ 焦点 ∕ 光标区间保真。
  *   M-652e 源面扫描：失效集落点 ∕ `dropDrafts` 纯函数 ∕ 标记面（表单独携 ∕ 钥行件自携）在位。
- * 跑法（自仓库根）：`node --test .thincoder/tmp/2026-09-29-desktop-carryover-c1.test.mjs`
- * （两层深 ⇒ 与终位 `docs/batches/` 同深；暂存位 = 写门拒 `docs/batches` 直落 —— 父侧收口转正，披露见批档 §5）。
+ * 跑法（自仓库根）：`node --test docs/batches/2026-09-29-desktop-carryover-c1.test.mjs`（默认跑全 9 例 —— 内存门已解除）。
  * **2026-10-09 清除批随正（本批面两处）**：表单 `model` 件随渠道单值模型退场 ⇒ 清空腿删该件键入 ∕ 回填两行。
- * **2026-10-09 内存警示（用户上报 + 父侧实测定标）**：本件假 DOM 族可使进程内存涨至 **GB–10GB 级**（用户观测两例 ≈10GB；
- *   父侧 512MB 帽复跑 ⇒ `# Error: Data cannot be cloned, out of memory.`，死于 M-652c→d 交界；单例隔离复跑各自 ≤512MB 通过
- *   ⇒ 膨胀为**跨例累计型**（失败报告 × 巨型假树值）。**纪律：整档合跑勿裸跑**——重载族已默认跳过（`TC_HEAVY_TESTS=1` 开；
- *   开跑须携 `--max-old-space-size=1024` 上限）。根治 = 全量重基（弹窗面改写 + 假 DOM 补宿主）后解除，归 #1108。
- * **余红分类（存量——非本批；父侧已记账在办。实跑 = 2 绿 ∕ 7 红；M-652d 偶发进程 OOM 崩——崩时 d ∥ e 例不达）**：① 清空 ∥ M-652b ∥ M-652c「两形在场」＝ 10-07 弹窗批（两形常显表单
- *   退场 ⇒ 表单只在 `settingsModalTree` 弹窗、挂 `document.body`；本测试台假 DOM 无 body/modal 宿主）；
- *   ② 收形 ∥ 取消两例「编辑态件」＝ 10-07 宿主无关读（源 = `document.querySelectorAll("[data-provider-key-input]")`；
- *   本测试台 `querySelectorAll: () => []`）；③ M-652d ∥ M-652e **不达**：d 例令进程 OOM 崩（假 DOM × 现盘渲染链存量——
- *   原档复跑同崩；渲染链零点本批核件）· e 例另含 10-07 单骨漂移锁（`add:custom` ∥ `add:preset` ⇒ 现盘 `add:provider`）。全量重基（改写四用例为弹窗面 + 假 DOM 补 body/modal 宿主 +
- *   形状切换流）超随正射程——归 10-07 弹窗批存量处置。
+ * **2026-10-10 重基收口（本批 · #1134 ∥ #1108）**：弹窗面改写（渠表单住 `settingsModalTree(state, "providerAdd", …)` 弹窗——
+ *   两形常显表单退场后的存量红三源）+ 假 DOM 补 `body` ∥ modal 宿主（`document.querySelectorAll` 接真树——文档序末位语义真切）
+ *   + 断言摘取值投影（弃整树序列化）⇒ 原 GB–10GB 级跨例累计膨胀已收；512MB 帽实跑全 9 例绿 ∧ 零 OOM（读数见批档 §5）。
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -36,9 +28,6 @@ import "../../thincoder-desktop/test/rc-resolve.mjs" // `/rc/` 解析钩子（�
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..")
 const readRepo = (rel) => readFileSync(join(repoRoot, rel), "utf8")
 const RENDERER = "thincoder-desktop/renderer"
-
-// 重载族开关（2026-10-09 内存警示——见档头；缺省跳过假 DOM 重载例）
-const HEAVY = process.env.TC_HEAVY_TESTS === "1"
 
 // ─── 假 DOM（值面 ∕ 选择器面 ∕ 焦点面 ∕ 结构面 —— 收窄至本批所需；沿 M-604 ∕ M-606 件先例）──────────────
 
@@ -254,14 +243,18 @@ let doc = null
 let prevDoc = null
 let prevNode = null
 let prevFormData = null
+let prevWindow = null
 
 /** 假文档装填（设置槽查询 = `[data-slot="settings"]`；活动件 = `focus()` 落点；`createElement` 供 `dom.mjs`）。 */
 function installFakeDom() {
   prevDoc = globalThis.document
   prevNode = globalThis.Node
   prevFormData = globalThis.FormData
+  prevWindow = globalThis.window
+  const body = new FakeNode("body")
   doc = {
     slot: null,
+    body, // 宿主根（2026-10-10 重基：`renderSettingsModal` ∥ 确认件挂 `document.body`；文档序 = slot → 弹窗体）
     activeElement: null,
     listeners: [],
     createElement: (tag) => new FakeNode(tag),
@@ -273,9 +266,10 @@ function installFakeDom() {
       if (doc.slot !== null && String(sel).startsWith('[data-slot="settings"] ')) {
         return doc.slot.querySelector(String(sel).slice('[data-slot="settings"] '.length))
       }
-      return null
+      return body.querySelector(sel)
     },
-    querySelectorAll: () => [],
+    // 真树全量查询（宿主无关读 —— 文档序末位 = 交互面；弃 `() => []` 桩）
+    querySelectorAll: (sel) => body.querySelectorAll(sel),
   }
   globalThis.document = doc
   globalThis.Node = FakeNode
@@ -287,6 +281,7 @@ function restoreDom() {
   globalThis.document = prevDoc
   globalThis.Node = prevNode
   globalThis.FormData = prevFormData
+  globalThis.window = prevWindow
   doc = null
 }
 
@@ -324,6 +319,7 @@ const settle = async (rounds = 4) => {
 const defaultReceipts = (seed) => ({
   "provider:list": { ok: true, presets: seed.providers?.presets ?? [], providers: seed.providers?.providers ?? [], active: null },
   "settings:agent": { ok: true, fields: [], models: null },
+  "model:catalog": { ok: true, models: [] }, // 无激活渠 ⇒ 候选面扇出（2026-10-10 重基就位：缺 ⇒ 每次装面假失败通知 ⇒ 树形变 ∕ 焦点回退错位）
   "mcp:list": { ok: true, servers: [] },
   "settings:env": { ok: true, proxy: { uri: "", web: true, model: false }, shell: { current: null, candidates: [] } },
   "settings:tools": { ok: true },
@@ -341,6 +337,7 @@ async function mountSettingsFace(seed, receipts = {}) {
   const slot = new FakeNode("div")
   slot.setAttribute("data-slot", "settings")
   doc.slot = slot
+  doc.body.append(slot) // 文档序：slot 居前 ∥ 弹窗体（后挂 body）居后 —— 末位 = 交互面
   const table = { ...defaultReceipts(seed), ...receipts }
   const calls = []
   const host = {
@@ -382,6 +379,18 @@ const click = (el) => fire(el, "click")
 
 /** 渠表单提交按钮（两形各一）。 */
 const SUBMIT_OF = { preset: '[data-action="settings:addPreset"]', custom: '[data-action="settings:addCustom"]' }
+
+/** 添加弹窗卡根读面（宿主单例 —— `renderer/settings-modal.mjs` `settingsModalNode()`；无弹窗 ⇒ `null`）。 */
+const modalCard = async () => (await import("../../thincoder-desktop/renderer/settings-modal.mjs")).settingsModalNode()
+
+/** 开添加弹窗并切自定形（两形常显表单退场后渠表单现径；返回卡内自定形表单）。 */
+async function openCustomForm(slot) {
+  click(slot.querySelector('[data-action="settings:addProvider"]'))
+  await settle()
+  fire((await modalCard()).querySelector('[name="preset"]'), "change", { target: { value: "custom" } })
+  await settle()
+  return (await modalCard()).querySelector('[data-form="custom"]')
+}
 
 // ─── #659 形内让行 ────────────────────────────────────────────────────────────
 
@@ -471,41 +480,45 @@ test("T-659b·假 DOM 真结构：形内空格可键入 ∧ 形内 Enter 不关�
 
 // ─── #652 M-652a（成功径 ⇒ 件取模型面新值 · 口令件分腿）────────────────────────────
 
-test("M-652a·清空腿：渠表单提交成功 ⇒ 本形草稿作废（口令件清空 ∕ 对照组零误伤）", { skip: !HEAVY && "重载径（假 DOM 族——默认跳过，见档头「2026-10-09 内存警示」；TC_HEAVY_TESTS=1 开）" }, async () => {
+test("M-652a·清空腿：渠表单提交成功 ⇒ 宿主关框 + 本表单草稿作废（口令件清空 ∕ 跨域对照组零误伤）", async () => {
   installFakeDom()
   try {
     const { slot, calls } = await mountSettingsFace(SETTINGS_SEED, { "provider:save": { ok: true } })
-    const custom = slot.querySelector('[data-form="custom"]')
-    const preset = slot.querySelector('[data-form="preset"]')
-    assert.ok(custom !== null && preset !== null, "两形表单在场")
+    // 跨域对照组：钥行键入（作用域 `key:alpha` —— 渠表单提交一击不得波及）
+    click(slot.querySelector('[data-action="settings:providerKeyEdit"]'))
+    slot.querySelector("[data-provider-key-input]").value = "sk-row-kept"
+    // 渠表单住添加弹窗（两形常显表单退场 ⇒ 开框 ∥ 切自定形）
+    const custom = await openCustomForm(slot)
+    assert.ok(custom !== null, "自定形表单在场（弹窗卡内）")
     custom.querySelector('[name="name"]').value = "draft-name"
     custom.querySelector('[name="baseURL"]').value = "http://draft.invalid/v1"
     custom.querySelector('[name="format"]').value = "anthropic"
     custom.querySelector('[name="key"]').value = "sk-typed"
-    preset.querySelector('[name="key"]').value = "sk-preset-kept"
-    preset.querySelector('[name="name"]').value = "preset-b"
 
-    click(slot.querySelector(SUBMIT_OF.custom))
+    click(custom.querySelector(SUBMIT_OF.custom))
     await settle()
     const save = calls.find(([channel]) => channel === "provider:save")
     assert.equal(save?.[1]?.key, "sk-typed", "提交载荷携键入值（前置态真切）")
+    assert.ok((await modalCard()) === null, "成功 ⇒ 宿主关框（KD-75 ⑥）")
 
-    const custom2 = slot.querySelector('[data-form="custom"]')
-    assert.ok(custom2 !== null, "提交后自定形仍在场（重建）")
-    assert.equal(custom2.querySelector('[name="key"]').value, "", "口令件清空（旧值零留驻 —— 零重提）")
-    assert.equal(custom2.querySelector('[name="baseURL"]').value, "", "非口令件同作废（该表单草稿一次性）")
-    assert.equal(custom2.querySelector('[name="name"]').value, "", "name 件回模型新值")
-    assert.equal(custom2.querySelector('[name="format"]').value, "openai", "format 回模型缺省首项")
+    // 重开 ⇒ 本表单草稿一次性作废（口令件 ∥ 非口令件同清）
+    const again = await openCustomForm(slot)
+    assert.ok(again !== null, "重开自定形在场")
+    assert.equal(again.querySelector('[name="key"]').value, "", "口令件清空（旧值零留驻 —— 零重提）")
+    assert.equal(again.querySelector('[name="baseURL"]').value, "", "非口令件同作废（该表单草稿一次性）")
+    assert.equal(again.querySelector('[name="name"]').value, "", "name 件回模型新值")
+    assert.equal(again.querySelector('[name="format"]').value, "openai", "format 回模型缺省首项")
 
-    const preset2 = slot.querySelector('[data-form="preset"]')
-    assert.equal(preset2.querySelector('[name="key"]').value, "sk-preset-kept", "对照组：预设形草稿存续（提交一击只废本形）")
-    assert.equal(preset2.querySelector('[name="name"]').value, "preset-b", "对照组：预设选保存续")
+    // 跨域对照组：钥行键入存续（作用域 `key:alpha` 不受 `add:provider` 失效波及）
+    const kept = slot.querySelector("[data-provider-key-input]")
+    assert.ok(kept !== null, "对照组：钥行编辑态存续（跨域零误伤）")
+    assert.equal(kept.value, "sk-row-kept", "对照组：钥行键入存续")
   } finally {
     restoreDom()
   }
 })
 
-test("M-652a·收形腿：钥行存成功 ⇒ 编辑态收（输入离场）∧ 再开零留驻", { skip: !HEAVY && "重载径（假 DOM 族——默认跳过，见档头「2026-10-09 内存警示」；TC_HEAVY_TESTS=1 开）" }, async () => {
+test("M-652a·收形腿：钥行存成功 ⇒ 编辑态收（输入离场）∧ 再开零留驻", async () => {
   installFakeDom()
   try {
     // mcp 段持 `loading` = 树在途（残件携带窗开启 —— 旧值复活路径可达 ⇒ 本腿判别力）
@@ -519,7 +532,7 @@ test("M-652a·收形腿：钥行存成功 ⇒ 编辑态收（输入离场）∧ 
 
     click(slot.querySelector('[data-action="settings:providerKeySave"]'))
     await settle()
-    assert.equal(slot.querySelector("[data-provider-key-input]"), null, "收形：编辑态输入离场")
+    assert.ok(slot.querySelector("[data-provider-key-input]") === null, "收形：编辑态输入离场")
     assert.equal(store.get().settings.providers.edit ?? null, null, "收形：编辑态归空（模型面 —— 复位写 null；后续读落地取代为缺位）")
 
     click(slot.querySelector('[data-action="settings:providerKeyEdit"]'))
@@ -531,7 +544,7 @@ test("M-652a·收形腿：钥行存成功 ⇒ 编辑态收（输入离场）∧ 
   }
 })
 
-test("M-652a·取消腿（弃输入）：取消后复开零留驻（在途窗内亦不复活）", { skip: !HEAVY && "重载径（假 DOM 族——默认跳过，见档头「2026-10-09 内存警示」；TC_HEAVY_TESTS=1 开）" }, async () => {
+test("M-652a·取消腿（弃输入）：取消后复开零留驻（在途窗内亦不复活）", async () => {
   installFakeDom()
   try {
     // mcp 段持 `loading` = 树在途（残件携带窗开启 —— 与收形腿同窗；本腿判别力所在）
@@ -543,7 +556,7 @@ test("M-652a·取消腿（弃输入）：取消后复开零留驻（在途窗内
 
     click(slot.querySelector('[data-action="settings:providerKeyCancel"]'))
     await settle()
-    assert.equal(slot.querySelector("[data-provider-key-input]"), null, "取消 ⇒ 输入离场（静止态）")
+    assert.ok(slot.querySelector("[data-provider-key-input]") === null, "取消 ⇒ 输入离场（静止态）")
 
     click(slot.querySelector('[data-action="settings:providerKeyEdit"]'))
     const again = slot.querySelector("[data-provider-key-input]")
@@ -556,23 +569,28 @@ test("M-652a·取消腿（弃输入）：取消后复开零留驻（在途窗内
 
 // ─── #652 M-652b（失败径 ⇒ 草稿保真 · 负向）──────────────────────────────────────
 
-test("M-652b·失败径 ⇒ 草稿保真（负向：渠表单 ∕ 钥行两腿）", { skip: !HEAVY && "重载径（假 DOM 族——默认跳过，见档头「2026-10-09 内存警示」；TC_HEAVY_TESTS=1 开）" }, async () => {
+test("M-652b·失败径 ⇒ 草稿保真（负向：渠表单 ∕ 钥行两腿）", async () => {
   installFakeDom()
   try {
-    // 腿 1：渠表单提交失败 ⇒ 草稿存续（且后续无关读数落地不再伤 —— 零声明零过滤）
+    // 腿 1：渠表单（弹窗卡内）提交失败 ⇒ 留框 + 草稿存续（且后续无关读数落地不再伤 —— 零声明零过滤）
     const { slot, face } = await mountSettingsFace(SETTINGS_SEED, { "provider:save": { ok: false, reason: "invalid-key" } })
-    const custom = slot.querySelector('[data-form="custom"]')
+    const custom = await openCustomForm(slot)
+    assert.ok(custom !== null, "自定形表单在场（弹窗卡内）")
+    custom.querySelector('[name="name"]').value = "draft-name"
     custom.querySelector('[name="key"]').value = "sk-typed"
     custom.querySelector('[name="baseURL"]').value = "http://draft.invalid/v1"
-    click(slot.querySelector(SUBMIT_OF.custom))
+    click(custom.querySelector(SUBMIT_OF.custom))
     await settle()
-    assert.ok(slot.querySelector("[data-notice]") !== null, "失败面在场（回执落到面）")
-    assert.equal(slot.querySelector('[data-form="custom"] [name="key"]').value, "sk-typed", "失败径：口令件草稿保真")
-    assert.equal(slot.querySelector('[data-form="custom"] [name="baseURL"]').value, "http://draft.invalid/v1", "失败径：其余申报件保真")
+    const card = await modalCard()
+    assert.ok(card !== null, "失败径留框（弹窗卡在场）")
+    assert.ok(card.querySelector("[data-notice]") !== null, "失败面在场（回执落到卡内）")
+    assert.equal(card.querySelector('[data-form="custom"] [name="key"]').value, "sk-typed", "失败径：口令件草稿保真")
+    assert.equal(card.querySelector('[data-form="custom"] [name="baseURL"]').value, "http://draft.invalid/v1", "失败径：其余申报件保真")
 
     face.handlers.onBuildIndex() // 无关读数落地（工具与服务段）—— 草稿不受波及
     await settle()
-    assert.equal(slot.querySelector('[data-form="custom"] [name="key"]').value, "sk-typed", "读数落地后：草稿仍保真")
+    const card2 = await modalCard()
+    assert.equal(card2.querySelector('[data-form="custom"] [name="key"]').value, "sk-typed", "读数落地后：草稿仍保真")
 
     // 腿 2：钥行存失败 ⇒ 键入值保真（#615② 种子 + 草稿两路；编辑态保持）
     const second = await mountSettingsFace(SETTINGS_SEED, { "provider:setKey": { ok: false, reason: "invalid-key" } })
@@ -592,11 +610,13 @@ test("M-652b·失败径 ⇒ 草稿保真（负向：渠表单 ∕ 钥行两腿�
 
 // ─── #652 M-652c（后台读数径 ⇒ 不误伤）──────────────────────────────────────────
 
-test("M-652c·后台读数径 ⇒ 不误伤（非 providers 背景读落地：两草稿皆存续）", { skip: !HEAVY && "重载径（假 DOM 族——默认跳过，见档头「2026-10-09 内存警示」；TC_HEAVY_TESTS=1 开）" }, async () => {
+test("M-652c·后台读数径 ⇒ 不误伤（非 providers 背景读落地：两宿主两草稿皆存续）", async () => {
   installFakeDom()
   try {
     const { slot, face } = await mountSettingsFace(SETTINGS_SEED)
-    slot.querySelector('[data-form="custom"] [name="key"]').value = "sk-kept"
+    const custom = await openCustomForm(slot)
+    assert.ok(custom !== null, "自定形表单在场（弹窗卡内）")
+    custom.querySelector('[name="key"]').value = "sk-kept"
     click(slot.querySelector('[data-action="settings:providerKeyEdit"]'))
     const row = slot.querySelector("[data-provider-key-input]")
     row.value = "sk-row-kept"
@@ -604,7 +624,8 @@ test("M-652c·后台读数径 ⇒ 不误伤（非 providers 背景读落地：�
     face.handlers.onBuildIndex() // 背景读数径（工具与服务段读落地 —— 零声明）
     await settle()
 
-    assert.equal(slot.querySelector('[data-form="custom"] [name="key"]').value, "sk-kept", "背景读落地：渠表单草稿存续（零误伤）")
+    const card = await modalCard()
+    assert.equal(card.querySelector('[data-form="custom"] [name="key"]').value, "sk-kept", "背景读落地：弹窗草稿存续（零误伤）")
     const row2 = slot.querySelector("[data-provider-key-input]")
     assert.ok(row2 !== null, "背景读落地：钥行编辑态存续")
     assert.equal(row2.value, "sk-row-kept", "背景读落地：钥行键入存续")
@@ -615,7 +636,7 @@ test("M-652c·后台读数径 ⇒ 不误伤（非 providers 背景读落地：�
 
 // ─── #652 M-652d（钥行携标记 + 背景重挂 ⇒ 键入 ∕ 光标保真）────────────────────────
 
-test("M-652d·钥行携标记 + 背景重挂 ⇒ 键入 ∕ 焦点 ∕ 光标区间保真", { skip: !HEAVY && "重载径（假 DOM 族——默认跳过，见档头「2026-10-09 内存警示」；TC_HEAVY_TESTS=1 开）" }, async () => {
+test("M-652d·钥行携标记 + 背景重挂 ⇒ 键入 ∕ 焦点 ∕ 光标区间保真", async () => {
   installFakeDom()
   try {
     const { slot, face } = await mountSettingsFace(SETTINGS_SEED)
@@ -634,9 +655,9 @@ test("M-652d·钥行携标记 + 背景重挂 ⇒ 键入 ∕ 焦点 ∕ 光标区
 
     const input2 = slot.querySelector("[data-provider-key-input]")
     assert.ok(input2 !== null, "重挂后编辑态仍在场")
-    assert.notEqual(input2, input, "重挂 = 新件（旧树摘除 —— 复填非身份存续）")
+    assert.equal(input2 !== input, true, "重挂 = 新件（旧树摘除 —— 复填非身份存续）")
     assert.equal(input2.value, "sk-row-typed", "键入保真（草稿复填）")
-    assert.equal(doc.activeElement, input2, "焦点保真")
+    assert.equal(doc.activeElement === input2, true, "焦点保真")
     assert.equal(input2.selectionStart, 3, "光标区间起保真")
     assert.equal(input2.selectionEnd, 6, "光标区间止保真")
   } finally {
@@ -651,7 +672,7 @@ test("M-652e·源面扫描：失效集 ∕ 过滤纯函数 ∕ 标记面 ∕ 让
   const mount = readRepo(`${RENDERER}/mount-settings.mjs`)
   const exits = readRepo(`${RENDERER}/mount-settings-exits.mjs`)
   const providers = readRepo(`${RENDERER}/mount-settings-segments-providers.mjs`)
-  const sections = readRepo(`${RENDERER}/views/settings-sections.mjs`)
+  const providerSections = readRepo(`${RENDERER}/views/settings-sections-providers.mjs`) // 钥行族现住渠道段体档（2026-10-10 重锚：原 `-sections.mjs` 转 re-export 面）
   const controls = readRepo(`${RENDERER}/views/settings-controls.mjs`)
   const sessionControl = readRepo(`${RENDERER}/views/session-control.mjs`)
 
@@ -665,9 +686,9 @@ test("M-652e·源面扫描：失效集 ∕ 过滤纯函数 ∕ 标记面 ∕ 让
   assert.match(mount, /invalidateDrafts\(scope\)/, "#652 声明缝（注入面）在场")
   assert.match(exits, /invalidateDrafts\?\.\(typeof form\.getAttribute === "function" \? form\.getAttribute\("data-draft-scope"\) : null\)/, "#652 两形提交成功径声明（作用域自表单自携）")
   assert.match(providers, /invalidateDrafts\?\.\(typeof input\.getAttribute === "function" \? input\.getAttribute\("data-draft-scope"\) : null\)/, "#652 钥存成功径声明（作用域自输入件自携）")
-  assert.match(providers, /const cancelKeyEdit = \(\) => \{\n\s+const input = typeof document\?\.querySelector/, "#652 取消径同拍声明（弃输入 = 草稿作废）")
-  assert.match(sections, /"data-draft": row\.name,/, "#652 钥行补 `[data-draft]` 标记")
-  assert.match(sections, /"data-draft-scope": `key:\$\{row\.name\}`/, "#652 钥行作用域面")
-  assert.match(controls, /"data-draft-scope": shape === "custom" \? "add:custom" : "add:preset"/, "#652 渠两形表单作用域面")
+  assert.match(providers, /const cancelKeyEdit = \(\) => \{\n\s+const inputs = typeof document\?\.querySelectorAll === "function" \? document\.querySelectorAll\("\[data-provider-key-input\]"\) : \[\]/, "#652 取消径同拍声明（弃输入 = 草稿作废；现读 = 宿主无关文档序末位——2026-10-10 重锚）")
+  assert.match(providerSections, /"data-draft": row\.name,/, "#652 钥行补 `[data-draft]` 标记")
+  assert.match(providerSections, /"data-draft-scope": `key:\$\{row\.name\}`/, "#652 钥行作用域面")
+  assert.match(controls, /"data-draft-scope": "add:provider"/, "#652 渠表单作用域面（单骨 `add:provider`——跨形切换键不换骨；2026-10-10 重锚）")
   assert.match(sessionControl, /event\?\.target\?\.closest\?\.\('\[data-form="rename"\]'\) != null/, "#659 形内判源在档")
 })

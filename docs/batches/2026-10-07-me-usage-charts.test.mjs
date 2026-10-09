@@ -9,7 +9,7 @@
  *      ② 逐值/零填充（N32：totals 四字段 = 明细归并 ∥ trend 按日零填充全长 ∥ 两维序逐（维值 × 日）零填充 ∥ byModel 降序）∥
  *      ③ 过滤器同门（model ∥ endpoint ∥ from/to 生效；非法 endpoint ⇒ 400）∥ ④ 同源（N33：summary 逐值 = 明细日对齐归并）∥
  *      ⑤ B25 空集（totals 全 0 ∥ trend 全零全长 ∥ 三面空数组）∥ ⑥ admin 端点零动（`/api/usage/summary` 响应形与汇总回归——无拆字段）
- *   腿 D（门禁）：`prepublishOnly` 三十三件含本批两件 ∥ 清单目标在盘
+ *   腿 D（门禁）：`prepublishOnly` 三十四件含本批两件 ∥ 清单目标在盘
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -33,6 +33,9 @@ const REPORT = await load("thincoder-server/src/metering/report.mjs")
 const ACCOUNT_ROUTES = await load("thincoder-server/src/accounts/routes.mjs")
 const ADMIN_ROUTES = await load("thincoder-server/src/accounts/routes-admin.mjs")
 const METERING_ROUTES = await load("thincoder-server/src/metering/routes.mjs")
+
+/** #1057① 钉钟基准：本地正午中点日（2026-06-15 12:00 本地）——窗沿远零点，腿 A 全链确定性。 */
+const BASE_MS = new Date(2026, 5, 15, 12, 0, 0, 0).getTime()
 
 const PASSWORD = "password-123"
 const BATCH_FILES = [
@@ -96,7 +99,8 @@ async function makeMember(db, { username = "alice", role = "user", password = PA
 
 // ── 腿 A（端点——真 HTTP 面）─────────────────────────────────────────────────
 
-test("腿 A 端点：判权（E22 ∥ 恒本人）∥ N32 逐值/零填充 ∥ 过滤器同门 ∥ N33 同源 ∥ admin 端点零动", async () => {
+test("腿 A 端点：判权（E22 ∥ 恒本人）∥ N32 逐值/零填充 ∥ 过滤器同门 ∥ N33 同源 ∥ admin 端点零动（#1057① 钉钟——基准 2026-06-15 12:00 本地）", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: BASE_MS }) // #1057① 钉钟：修前 live 钟（近零点必抖——见近零点腿）
   const app = await startServer()
   try {
     await makeMember(app.db, { username: "admin", role: "admin", password: "admin-password" })
@@ -104,7 +108,7 @@ test("腿 A 端点：判权（E22 ∥ 恒本人）∥ N32 逐值/零填充 ∥ �
     const bob = await makeMember(app.db, { username: "bob" })
     const aliceKey = KEYS.issueKey(app.db, alice.id)
     const bobKey = KEYS.issueKey(app.db, bob.id)
-    const now = Date.now()
+    const now = Date.now() // = BASE_MS（钉钟在效——窗沿/日键随之确定）
     const dayA = REPORT.localDayStart(now, 0)
     const dayB = REPORT.localDayStart(now, -1)
     const at = (day) => day + 3600000 // 当日 01:00（本地）——日键确定性
@@ -217,12 +221,45 @@ test("腿 A 空集：B25（totals 全 0 ∥ trend 全零全长 ∥ 三面空数�
   }
 })
 
+
+// ── 腿 A 近零点（#1057①：日界算术——钉钟 23:59:59.500；修前 live 钟近零点必抖条件显式复现）────
+
+test("腿 A 近零点：钉钟 23:59:59.500 ⇒ 日界前日键/窗沿一致 ∥ 跨日推进 1s ⇒ 窗沿随钟走 ∧ 行不丢", async (t) => {
+  const EDGE_MS = new Date(2026, 5, 15, 23, 59, 59, 500).getTime()
+  t.mock.timers.enable({ apis: ["Date"], now: EDGE_MS })
+  const app = await startServer()
+  try {
+    const alice = await makeMember(app.db)
+    const aliceKey = KEYS.issueKey(app.db, alice.id)
+    const session = await login(app.base, "alice", PASSWORD)
+    const now1 = Date.now()
+    assert.equal(now1, EDGE_MS, "钉钟在效（23:59:59.500）")
+    const day1 = REPORT.localDayStart(now1, 0)
+    USAGE.recordUsage(app.db, { ts: day1 + 3600000, memberId: alice.id, keyId: aliceKey.id, endpoint: "chat", provider: "bailian", model: "qwen3.5-plus", status: "ok", promptTokens: 11, completionTokens: 22, totalTokens: 33 })
+    const s1 = await get(app.base, "/api/me/usage/summary", { cookie: session.cookie })
+    assert.equal(s1.status, 200)
+    assert.equal(s1.json.trend[s1.json.trend.length - 1].day, REPORT.dayKey(now1), "日界前：窗末 = 当日")
+    assert.equal(s1.json.totals.totalTokens, 33)
+    // 跨日：钟推进 1s ⇒ 次日 00:00:00.500——修前（live 钟）此处为抖源（捕获 now 与请求时 now 不同日）
+    t.mock.timers.setTime(EDGE_MS + 1000)
+    const now2 = Date.now()
+    assert.notEqual(REPORT.dayKey(now2), REPORT.dayKey(now1), "日键随钟翻页")
+    const s2 = await get(app.base, "/api/me/usage/summary", { cookie: session.cookie })
+    assert.equal(s2.status, 200)
+    assert.equal(s2.json.trend[s2.json.trend.length - 1].day, REPORT.dayKey(now2), "日界后：窗沿随钟走")
+    assert.equal(s2.json.trend[s2.json.trend.length - 2].day, REPORT.dayKey(now1), "原日落入前一日槽")
+    assert.equal(s2.json.totals.totalTokens, 33, "行不丢（30 天窗恒含）")
+  } finally {
+    await app.close()
+  }
+})
+
 // ── 腿 D（门禁）─────────────────────────────────────────────────────────────
 
-test("腿 D 门禁：`prepublishOnly` 三十三件含本批两件 ∥ 清单目标在盘", () => {
+test("腿 D 门禁：`prepublishOnly` 三十八件含本批两件 ∥ 清单目标在盘", () => {
   const PKG = JSON.parse(readRepo("thincoder-server/package.json"))
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 33, `门禁清单件数（二十六 ⇒ 三十三——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 38, `门禁清单件数（二十六 ⇒ 三十八——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链 ∥ 10-09 alias 批件入链 ∥ 10-09 代理页批件入链 ∥ 10-10 服务面残迹批件入链 ∥ 10-10 服务小修批两件入链）：${batchFiles.length}`)
   for (const file of BATCH_FILES) assert.ok(batchFiles.includes(file), `本批件应入列：${file}`)
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

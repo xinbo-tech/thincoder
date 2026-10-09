@@ -9,7 +9,8 @@
 - 落库 = **请求终结后同一事务三写**（请求结束 ∥ 流终结 ∥ 客户端断开时）：`usage` 行 INSERT + `usage_daily` upsert（计数 +1 ∥ token/时长/错误数累加） + `quota_counters` upsert（token 累加）——单写点 `recordUsage`（KD-SV-8 修订——§6）；
   两 upsert 的 `day`/`month` 键 = 行 `ts` 推导（`strftime(…, ts / 1000, 'unixepoch', 'localtime')`——与 v5 回填/对账 SQL 同表达式；非入账时刻）；
   任一步失败 ⇒ 整事务回滚（两派生面零漂移）；表结构 = `store/STORE.md` §2 v5 段。
-- 行形 = 一行/请求：成员 × key × 模型（**`provider` ∥ `model` 两字段**——对外标识 `provider/model` 无损回拼（首斜杠切分同派发面；`model` 可含斜杠）；嵌入行 `provider = ''`——无前缀命名空间，仅统计照记） × 时段（`ts`） × token（三列 + 状态/端点/流式标记/耗时）；token 三列 = **上游 usage 原值**（逐值不加工——AC-3 判据单源）；上游未回 ⇒ 三列 NULL（status 照记实况；派生日表该行 token 计 0）。
+- 行形 = 一行/请求：成员 × key × 模型（**`provider` ∥ `model` 两字段** = 内部真名（转发/存储零涉）——对外显示 = **别名回映射**（配别名 ⇒ 别名 ∥ 未配 ⇒ `provider/model`；回映射单源 = `thincoder-server/src/gateway/providers.mjs` 别名索引——KD-SV-59）；`model` 可含斜杠；嵌入行 `provider = ''`——无前缀命名空间，仅统计照记） × 时段（`ts`） × token（三列 + 状态/端点/流式标记/耗时）；
+  token 三列 = **上游 usage 原值**（逐值不加工——AC-3 判据单源）；上游未回 ⇒ 三列 NULL（status 照记实况；派生日表该行 token 计 0）。
 - 提取来源 = gateway 侧 tap 扫描（`gateway/API.md` §2.1）。
 - **派生两表 = 汇表面读源 ∥ 检查面点查源**（`usage_daily` ∥ `quota_counters`——粒度/字段 = §2.3；**可随时自 usage 重算**——对账命令 = §2.5）；仅 `usage` 为真源——明细/导出/审计毫秒精度零改。
 - 保留 = **保留窗（配置化——`usageRetentionDays`，`ops/OPS.md` §1）**：缺省 90 天（论证 = 配额周期 = 月 ⇒ 跨月可见必需；统计回看惯例 = 一季 ⇒ 90 天覆盖；表只增不减 = 无界增长面 ⇒ 缺省窗收口）；`null` = 不限（保留全量——显式开）；非正整数 ⇒ 拒启。
@@ -22,7 +23,8 @@
 
 ### 2.1 三级生效（需求 §2:21——用户 09:28）
 
-- ① **成员 × 模型覆盖** = `members.model_quotas_json`（JSON map——键 = 对外标识；值 = ≥0 整数；未设 = 用平台） ⇒ ② **模型平台默认** = `providers.settings_json[上游模型名].quotaTokens`（未设 = 不限） ⇒ ③ **不限**。覆盖 = 整值替换（可高于 ∥ 低于平台——用户 09:28「覆盖平台设置」字面）。
+- ① **成员 × 模型覆盖** = `members.model_quotas_json`（JSON map——键 = 对外标识（别名 ∥ `provider/model`）；值 = ≥0 整数；未设 = 用平台） ⇒ ② **模型平台默认** = `providers.settings_json[上游模型名].quotaTokens`（未设 = 不限） ⇒ ③ **不限**。覆盖 = 整值替换（可高于 ∥ 低于平台——用户 09:28「覆盖平台设置」字面）。
+  **键随别名随动**（2026-10-09 alias 批——KD-SV-59）：写面键形 = 当前对外标识（配别名模型 ⇒ 别名形）；别名变更 ⇒ 旧形键落入离表键（恒保留、不生效——无历史/迁移）。
 - 单位 = token（`total_tokens` 口径） ∥ 周期 = 自然月（服务器本地时区；月键 = `'YYYY-MM'`——平台 ∥ 覆盖同窗，用户 09:30）。
 - 配置落点 = 服务模型页配置弹窗（平台——`webui/WEBUI.md` §2.4③） ∥ 成员弹窗（覆盖——§2.4②）；写面 = `POST /api/members/:id/model-quotas`（键级合并——§3） ∥ PATCH `settings`（平台）。
 
@@ -36,7 +38,7 @@
 
 - **`quota_counters`**（检查面）：粒度 = 成员 × provider × 模型 × 自然月（`tokens` 列）；维护 = 随记账**同事务 upsert 累加**（§1——单写点防漂移）；全记账行照计（含嵌入——检查只读 chat 键）；月翻滚 = 新月份键自然归零（零翻转逻辑）；期初 = v5 迁移自 usage 一次性聚合回填。
 - **`usage_daily`**（汇表面——#990）：粒度 = 日 × 成员 × key × provider × model × endpoint（请求数 ∥ 三 token 和 ∥ 时长和 ∥ 错误数）；维护 = 同事务 upsert 累加（同上）；日键翻滚自然归零；期初 = v5 回填。
-- **计数表读面两形**（配额 v2 批）：① 点查（准入——§2.4）∥ ② 成员月表读（`monthlyCountersByMember`——成员弹窗逐行已用：Map 成员 → 外标 → tokens；外标回拼 = `provider = '' ? model : provider + '/' + model`（同记账口径）；`memberId` 给定 ⇒ 唯一键前缀查询 ∥ 缺省 = 全员一次装配（免 N+1））。
+- **计数表读面两形**（配额 v2 批）：① 点查（准入——§2.4）∥ ② 成员月表读（`monthlyCountersByMember`——成员弹窗逐行已用：Map 成员 → 外标 → tokens；外标回拼 = **读面回映射**：配别名 ⇒ 别名 ∥ 未配 ⇒ `provider = '' ? model : provider + '/' + model`；`memberId` 给定 ⇒ 唯一键前缀查询 ∥ 缺省 = 全员一次装配（免 N+1））。
 - 两表 = 可重算派生面（真源 = usage）；保留/清理同窗（§1）；**键时基 = 行 `ts` 同源**（`day`/`month` 随 `usage.ts` 推导——与回填/对账同表达式；跨零点/月初终结请求 ⇒ 键归 `ts` 所在日/月——对账零幻影漂移；§1）。
 
 ### 2.4 检查查询与性能（用户 09:31 点名——硬要求；#991 转正）
@@ -65,10 +67,13 @@
 | `GET /api/usage` | admin | 全队用量明细（过滤：member ∥ model ∥ endpoint ∥ from ∥ to ∥ limit——缺省 100 ∥ 上限 500）；返回 `{ "rows": [ { "id", "ts", "member", "keyHint", "endpoint", "model", "status", "stream", "promptTokens", "completionTokens", "totalTokens", "durationMs" } ] }`（`ts` 原样 unix ms——页面本地化显示） |
 | `GET /api/usage/summary` | admin | 用量报表读数（功能点 15②；数据源 = `usage_daily`——KD-SV-39）：过滤面同上；时段缺省 = **近 30 天**（`USAGE_SUMMARY_DAYS`）；返回 `{ totals: { requests, totalTokens }, trend: [{ day, requests, totalTokens }], byModel: [{ model, requests, totalTokens }], byMember: [{ member, requests, totalTokens }] }`——trend = 按日（服务器本地日界）**零填充**全序列；byModel/byMember = 降序聚合（聚合与排行同数据面——降序即排行）；`byModel` = provider×model **两列聚合**（`model` 字段 = 回拼对外标识——形不变） |
 | `GET /api/usage/export` | admin | 同过滤面 ⇒ **CSV 下载**（`text/csv; charset=utf-8` ∥ `Content-Disposition: attachment; filename="usage.csv"`）：列 = `ts,member,key_hint,endpoint,model,status,stream,prompt_tokens,completion_tokens,total_tokens,duration_ms`（表头英文——机器面）；`ts` = ISO 8601（UTC）∥ `stream` = 1/0 ∥ NULL token = 空单元格；RFC 4180 引号规则 + 行尾 CRLF + UTF-8 BOM（Excel 中文兼容）；行数上限 `USAGE_EXPORT_MAX = 100000`（超 ⇒ 400「收窄时段」；常量注入口径） |
-| `POST /api/members/:id/model-quotas` | admin | 设分模型覆盖（键级合并）：`{quotas: {"<provider/model>": N|null}}`——值 null = 删键 ∥ ≥0 整数；未出现键不动；返回 `{id, modelQuotas}` |
+| `POST /api/members/:id/model-quotas` | admin | 设分模型覆盖（键级合并）：`{quotas: {"<对外标识（别名 ∥ provider/model）>": N|null}}`——值 null = 删键 ∥ ≥0 整数；未出现键不动；**键形校验** = 非空 ∥ 无首尾空白 ∥ 含斜杠时两段非空（裸名 = 别名形合法——#1008 收正）∥ 非法键 ⇒ 400（库零变）；返回 `{id, modelQuotas}` |
 
-（过滤参数 `endpoint` ∈ `chat` ∥ `embeddings`（缺省 = 不过滤；非法值 ⇒ 400 `invalid_request_error`）——五读端点同门（两明细 ∥ 两报表 ∥ 导出）；`model` 过滤 = 对外标识形；解析优先级：`endpoint = embeddings` 在场 ⇒ 全串按 `provider = ''`（嵌入命名空间——嵌入名可含斜杠，不切分）∥ 否则含斜杠 ⇒ `(provider, model)` 逐值对 ∥ 否则 ⇒ `provider = ''`。
+（过滤参数 `endpoint` ∈ `chat` ∥ `embeddings`（缺省 = 不过滤；非法值 ⇒ 400 `invalid_request_error`）——五读端点同门（两明细 ∥ 两报表 ∥ 导出）；`model` 过滤 = 对外标识形；解析优先级：`endpoint = embeddings` 在场 ⇒ 全串按 `provider = ''`（嵌入命名空间——嵌入名可含斜杠，不切分）∥ 否则**先经别名索引反查**（命中 ⇒ 真名对——KD-SV-59）∥ 未命中且含斜杠 ⇒ `(provider, model)` 逐值对 ∥ 否则 ⇒ `provider = ''`。
+  **读面回映射**（2026-10-09 alias 批）：明细行 `model` ∥ 报表 `byModel`/`trendByModel` 维值 ∥ 成员月表 —— 配别名 ⇒ 显示别名（改别名 ⇒ 当即随动——无历史；映射单源 = `thincoder-server/src/gateway/providers.mjs` 别名索引）。
   **数据源分面**：明细 ∥ 导出 = `usage`（真源——毫秒精度零改）∥ 报表两面（`summary`——管理面 ∥ 本人面）/totals/key 窗/成员月累计 = 预聚合日表 `usage_daily`（本地日粒度——窗沿取整含端日；API 形零变）；**key 窗 ∥ 报表缺省窗 = 近 30 个本地日（今日起回溯——同构；`KEY_USAGE_WINDOW_DAYS` ∥ `USAGE_SUMMARY_DAYS`；#1001③ 收正）**。）
+
+**派发 ∥ 过滤两径不对称**（澄清——事实源 = `thincoder-server/src/metering/report.mjs:48-56`（过滤） ∥ `gateway/API.md:32-33`（派发））：派发 = 对外标识精确匹配、未命中 ⇒ **404 `model_not_found`**（配了别名只认别名）；过滤 = **逐值可达**——`model` 过滤值不校可达性（别名反查命中 ⇒ 真名对 ∥ 未命中 ⇒ 逐值对回落）——**过滤值不必是可达的派发名**：已配别名模型的 `provider/model` 名派发 404、过滤照经逐值对命中既有行；两径互不代偿。
 
 ## 4. 验收判据（机检面）
 
@@ -83,17 +88,18 @@
 | AC-22（功能点 22——模型标识分字段；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① 记账 ∥ 计数行备 `provider`/`model` 两字段（回拼无损——含 `model` 带斜杠 ∥ 嵌入 `provider = ''`）∥ ② 统计聚合 = 列直操作（provider ∥ model ∥ 两者——`summary.byModel` 两列聚合；无字符串切分）∥ ③ 迁移拆分回填抽样比对（与旧复合值首斜杠拆逐值相等）∥ 对外契约不变（API/展示斜杠形——回拼） | 批内件 |
 | AC-15⑥（功能点 15——key 明细数据面；已落需求档） | `keyUsageStats`：`lastUsedAt` = `MAX(ts)`（key_id 归因——读 `usage`） ∥ `windowTokens` = 近 30 个本地日（今日起回溯——与报表窗同构；读 `usage_daily`；`KEY_USAGE_WINDOW_DAYS`——#1001③ 收正）——逐值 = 注入 usage 行推导；从未使用 ⇒ `null`/0；`/api/me` 与 `/api/members` key 行同形（单源 = `memberView`） | 批内件 |
 | AC-26（功能点 26——我的用量页图表化） | `GET /api/me/usage/summary`：① 判权 = 本人（无会话 ⇒ 401；user ∥ admin 会话 ⇒ 200 且恒本人——双成员注入 ⇒ 响应只含本人值）∥ ② 逐值/零填充（totals 四字段 = 明细归并（日对齐窗）——prompt/completion/total 各自相等 ∥ trend 按日零填充全长 ∥ 两维序逐（维值 × 日）零填充（缺日 = 0） ∥ byModel 降序）∥ ③ 过滤器同门（model ∥ endpoint ∥ from/to 生效；非法 endpoint ⇒ 400——五读端点同门）∥ ④ 空集 ⇒ totals 全 0 + trend 全零全长 + 两维序/排行空数组（零错）∥ ⑤ admin 端点零动（`/api/usage/summary` 响应形与既有件回归零改） | 批内件 |
+| AC-29④（功能点 29——成员面随动；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 配额/禁用键 = 对外标识（配别名模型 ⇒ 别名形写入；键形校验 = 非空 ∥ 无首尾空白 ∥ 含斜杠时两段非空（裸名 = 别名形合法——#1008））∥ 记账对外标识 = 别名（读面回映射：`/api/usage` 行 `model` ∥ 导出 ∥ summary/totals 维值 ∥ `/api/me/usage/summary` 两维序 ∥ `memberView.modelUsage`——逐值 = 别名；内部两字段真名零改）∥ `model` 过滤 = 对外标识（别名先解析）∥ 改别名/清别名 ⇒ 读面当即随动（旧形键 = 离表键保留、不生效——无历史/迁移）；用例 = §7 N34/B26/E23 | 批内件 + 收口轮 |
 
 ## 5. 本域文件与行数预算（本域族行）
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/metering/usage.mjs`（已落盘） | **147 ⇒ ≈230**（2026-10-06 实读）**⇒ 实读 278 ⇒ ≈255**（本批：记账三写 +≈18 ∥ 拆列/回拼 +≈9 ∥ `model` 过滤两字段 +≈10 ∥ 报表读族迁出 −≈60）⇒ **实读 170（2026-10-07——实施后回填轮复读；对估 ≈255 差 85——前账估差随小计实读收口）** | 记账（单写点） ∥ 明细查询 ∥ 导出 ∥ 过滤构建 ∥ 保留清理 ∥ 时间助手 |
-| `thincoder-server/src/metering/aggregates.mjs`（已落盘） | **≈150**（设计估）**⇒ 实读 141 ⇒ ≈160 ⇒ 实读 173（2026-10-07）**（配额 v2 批落地：`monthlyCountersByMember`（月表读两形） ∥ `--fix` 事务合围重排；+32——越估 13） | 派生两表写（`usage_daily` ∥ `quota_counters` upsert） ∥ 计数点查 ∥ 成员月表读 ∥ 对账重算 ∥ 派生清理 |
-| `thincoder-server/src/metering/report.mjs`（已落盘） | **≈105**（设计估——自 usage.mjs 迁出）**⇒ 实读 169 ⇒ ≈170 ⇒ 实读 168（2026-10-07）⇒ ≈223（me 用量图表化批：`memberUsageSummary` 新增 +≈55——调 `usageSummary({ memberId })` + 独立拆 totals 查询 + 两维序；admin 读函数/响应组装零触）⇒ 实读 226（2026-10-07——本批落地后；估 ≈223——越估 3）**（配额 v2 批落地：key 窗沿同构收正——#1001③；死常量 `DAY_MS` 随删） | 汇表面读（summary ∥ totals ∥ key 窗 ∥ 成员月累计——读 `usage_daily`） |
+| `thincoder-server/src/metering/usage.mjs`（已落盘） | **147 ⇒ ≈230**（2026-10-06 实读）**⇒ 实读 278 ⇒ ≈255**（本批：记账三写 +≈18 ∥ 拆列/回拼 +≈9 ∥ `model` 过滤两字段 +≈10 ∥ 报表读族迁出 −≈60）⇒ **实读 170（2026-10-07——实施后回填轮复读；对估 ≈255 差 85——前账估差随小计实读收口）⇒ ≈182**（2026-10-09 alias 批：明细行回映射（两字段选择 + 映射助手接入）+≈12——实读待回填） | 记账（单写点） ∥ 明细查询 ∥ 导出 ∥ 过滤构建 ∥ 保留清理 ∥ 时间助手 |
+| `thincoder-server/src/metering/aggregates.mjs`（已落盘） | **≈150**（设计估）**⇒ 实读 141 ⇒ ≈160 ⇒ 实读 173（2026-10-07）**（配额 v2 批落地：`monthlyCountersByMember`（月表读两形） ∥ `--fix` 事务合围重排；+32——越估 13）**⇒ ≈183**（2026-10-09 alias 批：月表回映射（外标回拼换形）+≈10——实读待回填） | 派生两表写（`usage_daily` ∥ `quota_counters` upsert） ∥ 计数点查 ∥ 成员月表读 ∥ 对账重算 ∥ 派生清理 |
+| `thincoder-server/src/metering/report.mjs`（已落盘） | **≈105**（设计估——自 usage.mjs 迁出）**⇒ 实读 169 ⇒ ≈170 ⇒ 实读 168（2026-10-07）⇒ ≈223（me 用量图表化批：`memberUsageSummary` 新增 +≈55——调 `usageSummary({ memberId })` + 独立拆 totals 查询 + 两维序；admin 读函数/响应组装零触）⇒ 实读 226（2026-10-07——本批落地后；估 ≈223——越估 3）**（配额 v2 批落地：key 窗沿同构收正——#1001③；死常量 `DAY_MS` 随删）**⇒ ≈252**（2026-10-09 alias 批：`byModel`/`trendByModel` 回映射（映射后排序）+ 过滤别名反查 +≈26——实读待回填） | 汇表面读（summary ∥ totals ∥ key 窗 ∥ 成员月累计——读 `usage_daily`） |
 | `thincoder-server/src/metering/quota.mjs`（已落盘） | **27 ⇒ ≈55**（本批 +≈28 = 三级解析 ∥ 覆盖 map 读 ∥ 计数点查准入 ∥ 短路 ∥ 429 形（模型口径））⇒ **实读 40（2026-10-07——实施后回填轮复读；对估 ≈55 差 15——前账估差随小计实读收口）** | 配额准入（点查——非 SUM） ∥ 429 形 |
 | `thincoder-server/src/metering/routes.mjs`（已落盘） | **59 ⇒ ≈120**（2026-10-06 实读）**⇒ 实读 111（2026-10-07 复读——含 quota 端点换形）⇒ ≈119**（me 用量图表化批：`/api/me/usage/summary` 路由 +≈8）⇒ 实读 117（2026-10-07——本批落地后；估 ≈119——低于估 2） | 用量查询 ∥ 配额设置端点（分模型覆盖） |
-| **小计** | **≈260 ⇒ 218 ⇒ 233 ⇒ ≈377 ⇒ 实读 416 ⇒ ≈690**（配额分模型批：+2 新档（aggregates ≈150 ∥ report ≈105） ∥ 三档净 +≈19）**⇒ ≈710**（配额 v2 批：aggregates +≈19 ∥ report +≈1）**⇒ ≈773**（me 用量图表化批：report +≈55 ∥ routes +≈8——余档零动）⇒ **实读 726（2026-10-07——本批落地后；五档实读和；对链上 ≈773 差 47——累计估差收口）** | —— |
+| **小计** | **≈260 ⇒ 218 ⇒ 233 ⇒ ≈377 ⇒ 实读 416 ⇒ ≈690**（配额分模型批：+2 新档（aggregates ≈150 ∥ report ≈105） ∥ 三档净 +≈19）**⇒ ≈710**（配额 v2 批：aggregates +≈19 ∥ report +≈1）**⇒ ≈773**（me 用量图表化批：report +≈55 ∥ routes +≈8——余档零动）⇒ **实读 726（2026-10-07——本批落地后；五档实读和；对链上 ≈773 差 47——累计估差收口）⇒ ≈774**（2026-10-09 alias 批：+≈48 = usage ≈182 ∥ aggregates ≈183 ∥ report ≈252——quota/routes 零动；实读待回填） | —— |
 
 ## 6. 关键决策（本域）
 
@@ -131,12 +137,16 @@
 | N33 | 正常 | 同过滤参数 ⇒ `/api/me/usage/summary` ∥ `/api/me/usage` | 两读同源（同过滤器）：summary 逐值 = 明细日对齐归并（窗沿取整含端日——KD-SV-39 口径） |
 | B25 | 边界 | 空行集 ⇒ `/api/me/usage/summary` | totals 全 0；trend 全零全长；trendByEndpoint/trendByModel/byModel = 空数组（零错） |
 | E22 | 错误 | 无会话 ⇒ `GET /api/me/usage/summary` | 401 `unauthorized`（本人面端点判权——非 403） |
+| N34 | 正常 | 注入：provider `mock` 模型 `mock-chat` 配别名 `fast`；两笔记账（请求名 = `fast`） ⇒ `/api/usage` ∥ `/api/usage/summary` ∥ `monthlyCountersByMember` ∥ `model=fast` 过滤 | 行 `model` = `fast`（别名回映射）∥ byModel 维值 = `fast` ∥ 月表键 = `fast` ∥ 过滤 `model=fast` 命中同一笔（真名对反查）；库内两字段仍 = `mock`/`mock-chat`（真名零改） |
+| B26 | 边界 | 别名改后（`fast` ⇒ `quick`）读历史行（记账在 `fast` 期）∥ 过滤旧名 `fast` | 读面当即显示 `quick`（无历史/迁移）；过滤 `fast` 零命中（旧别名 = 离表键语义） |
+| E23 | 错误 | 成员键写入：`{" mock/m": 1}`（首尾空白）∥ 键 = 裸名（别名形——合法） | 400（首尾空白——#1008 收正；库零变）∥ 裸名键照收（别名形——形状面单源） |
 
 ## 8. 本域边界（不做的面）
 
 - 归档面不做（清理 = 删除式保留窗——§1；`null` 可关）∥ 阈值告警（80% 等——需求 §4 不做）∥ 金额/计费（对外计费 = 不做项）∥ token 预估/预扣（无 tokenizer——不做）。
 - **明细导出 = 在**（CSV——§3；「导出」= 当前数据集下载，非归档语义——不涉保留窗）；JSON 导出不另设（`/api/usage` 即 JSON 面）∥ **汇表面 = 预聚合日表**（本批——#990；覆盖索引未采——§2.4）∥ 明细面毫秒精度不变（真源）∥ **我的用量页图表 = 在**（me 用量图表化批——本人过滤复用：`GET /api/me/usage/summary`；管理面专属面收窄 = 跨成员过滤/排行 ∥ CSV 导出 ∥ 管理看板页——`webui/WEBUI.md` §2.3⑦）；本人面导出不另设（本批判否）∥ 小时/周粒度未设（日/月两键为限）。
 - 成员面读（逐模型已用）= 与配额同窗（自然月——§2.3）；报表/key 面 = 近 30 个本地日——两窗并存为设计（配额周期 = 自然月——KD-SV-6）；成员总额（`usedTokens`）含嵌入行（现口径保持）。
+- 别名面不做（2026-10-09 alias 批——KD-SV-59）：记账/计数存储 = 真名两字段零改（对外标识 = 读面回映射）；别名历史/迁移不做（改别名 ⇒ 读面当即随动、旧形键 = 离表键保留）；CLI `usage reconcile` 读数 = 内部真名（运维面——非成员对外面）。
 
 ## 变更记录
 
@@ -156,3 +166,5 @@
 - 2026-10-07：fix 轮（评审轮次 1——批 `docs/batches/2026-10-07-me-usage-charts.md` §3 八发现〔🟡1–3 ∥ 🔵4–8〕，本档面 = 🔵5/6/8）：§3 实现接缝钉死（调 `usageSummary({ memberId })` + 独立拆 totals 查询——§5 同拍归一；admin 端点/读函数/响应组装零触）∥ §4 AC-26② 补「（日对齐窗）」（与 AC-15② 同拍）∥ §5 `report` 算术平（**≈225 ⇒ ≈223**——168 + ≈55 之平；小计 ≈773 不动）。
 - 2026-10-07：轮 2 残余小收正（主 agent 直接执行 · 可 revert——评审轮次 2 残余 ②）：§5 `routes` ⇒ ≈120 ⇒ **≈119**（111 + ≈8 之平）。
 - 2026-10-07：实施后回填轮（me 用量图表化批——批 `docs/batches/2026-10-07-me-usage-charts.md`）：§5 四档实读收正（`report` **226**（估 ≈223——越估 3） ∥ `routes` **117**（估 ≈119——低于估 2） ∥ `usage` **170** ∥ `quota` **40**——后两行 = 前账欠项随拍，使小计可逐行核验）+ 小计按实读平账（**726**——对链上 ≈773 差 47，累计估差收口）；同源随动 = `webui/WEBUI.md` §5 ∥ `design/PROJECT.md` §6。
+- 2026-10-09（**server-model-alias 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-server-model-alias.md` §2 · 台账 #1153 + 并入 #1008 ∥ #1152；需求 §2:29 + AC-29）：§1 行形条随正（两字段 = 内部真名；对外显示 = 别名回映射）∥ §2.1 覆盖键随别名随动句 ∥ §2.3 月表读回映射 ∥ §3 `model-quotas` 行键形（对外标识 + 首尾空白收正——#1008）+ 过滤面别名反查优先级 + 读面回映射句 ∥ §4 增 AC-29④ 行 ∥ §5 预算（usage ⇒ ≈182 ∥ aggregates ⇒ ≈183 ∥ report ⇒ ≈252；小计 ⇒ ≈774）∥ §7 增 N34/B26/E23 ∥ §8 增别名面不做句。**产品码零触（设计轮）**。
+- 2026-10-10：清账轮簇Ⅱ server 面小收批（批 `docs/batches/2026-10-10-server-face-residues.md` · 台账 #1161 + 并入 #1162 ∥ #1169 ∥ #1170；2026-10-10 实施轮）：§3 增「派发 ∥ 过滤两径不对称」澄清句（#1162——派发 404 ∥ 过滤逐值可达；事实源 = `thincoder-server/src/metering/report.mjs:48-56` ∥ `gateway/API.md:32-33`）；同源随动 = `thincoder-server/src/metering/routes.mjs` 报文句（#1161 句族收正）。**机制零变**（澄清 ∥ 句面）。
