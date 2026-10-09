@@ -207,8 +207,11 @@ export function bindConsultRows() {
   const refreshAddBtn = () => { addBtn.disabled = rows.querySelectorAll(".consult-row").length >= 5 }
   refreshAddBtn()
   rows.addEventListener("consult-rows-changed", refreshAddBtn)
-  for (const row of rows.querySelectorAll(".consult-row")) {
-    row.querySelector(".consult-del")?.addEventListener("click", () => { row.remove(); rows.dispatchEvent(new window.Event("consult-rows-changed", { bubbles: true })) })
-
-  }
+  // #1058 容器级委托：逐行绑定 ⇒ `#consult-rows` 一件 click（追加行即点即删 —— 滞绑类免疫；`closest` 守卫式沿同面先例 `settings-mcp-dialog.js:130`；事件名 ∥ 移除语义 ∥ 派发逐字同原）。
+  rows.addEventListener("click", (e) => {
+    const del = e.target.closest ? e.target.closest(".consult-del") : null
+    if (!del) return
+    del.closest(".consult-row")?.remove()
+    rows.dispatchEvent(new window.Event("consult-rows-changed", { bubbles: true }))
+  })
 }

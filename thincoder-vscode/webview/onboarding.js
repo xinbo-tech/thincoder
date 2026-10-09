@@ -55,14 +55,15 @@ export function maybeShowWelcome(status, keyOk) {
 ctx.welcomeSaveBtn.addEventListener("click", () => {
   const name = ctx.welcomeProvider.value
   const key = ctx.welcomeKey.value.trim()
-  if (!key) { ctx.welcomeKey.focus(); return }
   if (name === "custom") {
     // Custom providers need more fields — hand off to the settings panel's add-provider dialog.
+    // 键随交棒入框（#1041）：板面不再强制键（框内可补）⇒ 分支前移至键校验之前；预填 = trim 后原串。
     hideWelcomePanel()
     _openSettings?.()
-    window._openAddProviderDialog?.()
+    window._openAddProviderDialog?.({ key })
     return
   }
+  if (!key) { ctx.welcomeKey.focus(); return }
   vscode.postMessage({ type: "addProvider", preset: name, key })
   // The panel closes itself when the refreshed providerStatus reports keyOk=true.
 })

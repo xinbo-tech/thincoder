@@ -42,7 +42,6 @@ extension.mjs        Extension entry — 注册 ChatPanel（类已迁 src/extens
 src/agent.mjs         ContinueError 转口残面（主循环归核 @thincoder/core/agent.mjs runAgent——host 包装 = src/extension/panel-turn-loop.mjs）
 src/agent/           端壳装配面（W15 重定保留；2026-09-29 parity-b1 收口核后现态）—— setup.mjs（host 装配：config ∕ 槽 ∕ 基础集 ∕ 镜像 ∕ 历史 ∕ manifest ∕ 记忆句柄 ∕ A2 ∕ A3 ∕ 贴图）· setup-tooltable.mjs（装配层缝接线面——W9 记账缝 / W14 三缝 / 编辑器诊断段）· tool-table.mjs（工具表装配装饰面——基础集 + `vscSubagentFace` 装饰体；缝 = `setup-tooltable.mjs` 同名 re-export）· turn-domains.mjs（端侧回合域文本组合单点——核基座转口 + 端 overlay）· setup-reminders.mjs（端特有提醒残件 + 核转口）· agent-state.mjs · run-helpers.mjs（核单源转口 + 端独有件）；已删（主循环归核随动）：context-injections.mjs · execute-tools.mjs · response-stages.mjs · run-stages.mjs · tool-gates.mjs
 src/agent-tools/index.mjs  自持工具集转口（W9 起 = 核登记册 `@thincoder/core/agent-tools.mjs` 单源；端侧不再自持名清单）
-src/agent-tools/async-discard.mjs  Stop 丢弃面（端壳档；池/墓碑读改指核 `async-settle` 单源）
 src/config-mcp.mjs    MCP 配置端壳（面板增删改 → 端壳写盘通道 `vscPersistRaw`）
 src/embed-config.mjs  嵌入/向量配置端壳面（消费核 embedding 读点）
 src/explore-distill.mjs  探索摘要端壳适配器（核 `summarizeRunExplorations` 包装——共享 history 原位回收）

@@ -32,6 +32,8 @@ import { showAtDropdown } from "./autocomplete.js"
 import { applyUiPrefs } from "./ui-prefs.js"
 // C-B2-6 细则⑦（queue-visible 批 2026-09-24）：排队「待发送」标记面（逐条标记 / 消费即清 / 多批合泡）
 import { applyBusyQueued } from "./queued-mark.js"
+// #1053（协议 §3.2 行 25）：密钥行保存受理回执消费位（`providerKeySaved` → 恢复静态行 + 闪徽标）
+import { onProviderKeySaved } from "./settings-providers.js"
 
 /** 停滞轻显形重置点（WEBVIEW.md §4.7——2026-09-29 批 stall-indicator · 语义单源 = `docs/cli/design/TUI.md` §7.7）：
  *  三类可见输出事件命中 ⇒ 静默起算置现刻（① 流式 = `token` ∕ `reasoning`；② 工具面 = `toolCall` ∕ `toolOutput` ∕
@@ -154,6 +156,8 @@ export function initMessageLoop(deps) {
       case "providerError":
         showSettingsError(m.scope, m.reason)
         break
+      // #1053 密钥行保存受理回执（协议 §3.2 行 25——host 成功径才发；拒径零回执 ⇒ 零闪 ∥ 行不关）
+      case "providerKeySaved": onProviderKeySaved(m.name); break
       case "autoApprove":      handleAutoApprove(m); break
       case "agentSettings":    handleAgentSettings(m, updateAgentSettings); notifyAgentSettingsRefreshed(); break
       // #875（协议 §3.2 行 23 · `WEBVIEW.md` §5.8）：视图偏好三键——应用 = `ui-prefs.js`

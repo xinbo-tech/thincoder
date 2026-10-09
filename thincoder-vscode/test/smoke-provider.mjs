@@ -1,6 +1,6 @@
 /**
  * smoke-provider.mjs — Direct connection test for each provider
- * Usage: node test/smoke-provider.mjs <provider-name> <api-key>
+ * Usage: node test/smoke-provider.mjs <provider-name> <api-key> <model>（模型须显式给——渠道不携模型 · 2026-10-09 清除批）
  *
  * Dumps raw response headers, raw SSE lines, and parsed result.
  * Does NOT import any VS Code modules — pure Node.js.
@@ -15,9 +15,10 @@ const PRESETS = PROVIDER_PRESETS
 
 const name = process.argv[2]
 const apiKey = process.argv[3]
+const model = process.argv[4] // 显式模型（渠道不携模型——2026-10-09 清除批）
 
-if (!name || !apiKey) {
-  console.error("Usage: node test/smoke-provider.mjs <name> <api-key>")
+if (!name || !apiKey || !model) {
+  console.error("Usage: node test/smoke-provider.mjs <name> <api-key> <model>")
   console.error("  names: " + Object.keys(PRESETS).join(" | "))
   process.exit(1)
 }
@@ -27,7 +28,7 @@ if (!preset) { console.error(`Unknown: ${name}. Valid: ${Object.keys(PRESETS).jo
 const provider = {
   baseURL: preset.baseURL,
   apiKey,
-  model: preset.model ?? "", // MODEL-SELECTION：预设单值默认模型（候选清单字段已退场）
+  model, // 显式模型（渠道不携模型——2026-10-09 清除批；预设零 model 键）
   maxTokens: preset.maxTokens,
   ...(preset.thinking ? { thinking: preset.thinking } : {}),
   ...(preset.reasoningEffort ? { reasoningEffort: preset.reasoningEffort } : {}),

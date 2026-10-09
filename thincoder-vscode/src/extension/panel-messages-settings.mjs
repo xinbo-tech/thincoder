@@ -25,10 +25,23 @@ import { handleAddProvider as persistAddProvider, handleRemoveProvider as persis
 import { setSlotAdvisorGuard, setSlotEngineering } from "./session-io.mjs"
 import { _cwd } from "./panel-messages.mjs"
 
-/** 迁出自 `panel-messages.mjs` 的 case "saveProviderKey"（#695：写结果捕获——冲突 ⇒ `providers` 段失败面）。 */
+/** 迁出自 `panel-messages.mjs` 的 case "saveProviderKey"（#695：写结果捕获——冲突 ⇒ `providers` 段失败面）。
+ *  #1053：成功径发受理回执 `providerKeySaved { name }`（webview 闪徽标 / 恢复密钥行的唯一触发）；
+ *  拒径 = `providerError` + `return`——零回执 ⇒ 徽标零闪 ∥ 行不关（语义单源 = `docs/vsc/design/SETTINGS.md` §2.18）。
+ *  #1073：回执 ⟺ **真写**——写面三态（`ok` ⇒ 回执；`no-write`（空钥守卫）⇒ 零回执 + warn 一条（零静默）；
+ *  `conflict` ⇒ `providerError` 映射照旧）。 */
 export async function handleSaveProviderKey(panel, msg) {
-  const err = await panel._saveProviderKey(msg.name, msg.key)
-  if (err) postProviderError(panel, "providers", err)
+  const result = await panel._saveProviderKey(msg.name, msg.key)
+  if (result?.status === "no-write") {
+    console.warn(`[vsc] saveProviderKey "${msg.name}": empty key — no write, no receipt`)
+    return
+  }
+  if (result?.status === "conflict") {
+    postProviderError(panel, "providers", result.hint)
+    return
+  }
+  if (result?.status !== "ok") return // #1073：回执 ⟺ 真写（未知态零回执——零假成功）
+  panel._panel?.webview.postMessage({ type: "providerKeySaved", name: msg.name })
 }
 
 /** 迁出自 `panel-messages.mjs` 的 case "deleteProviderKey"（#695：同式）。 */
@@ -140,11 +153,13 @@ export function handleDeleteWebsearchKey(panel) {
   panel._pushSettingsLight()
 }
 
-/** 迁出自 `panel-messages.mjs` 的 case "testProvider"。③′：载荷 +`proxy` 透传（未勾 ∥ 缺省 ⇒ 直连）。 */
+/** 迁出自 `panel-messages.mjs` 的 case "testProvider"。③′：载荷 +`proxy` 透传（未勾 ∥ 缺省 ⇒ 直连）。
+ *  #1051（2026-10-10 vsc-consistency 批）：请求归属判据面——**结果原样回显 `id`**（webview 落框前
+ *  按 id 判归属：旧框在飞果 ∥ 重放果弃）；载荷缺 `id`（无请求 id 的发送方）⇒ 结果不携。 */
 export async function handleTestProvider(panel, msg) {
   // M1 三 format 分派：format 随表单透传（anthropic/google 与 openai 端点/头不同）
   const r = await testProviderConnection({ baseURL: msg.baseURL, apiKey: msg.apiKey, format: msg.format, proxy: msg.proxy })
-  panel._panel?.webview.postMessage({ type: "testProviderResult", ...r })
+  panel._panel?.webview.postMessage({ type: "testProviderResult", ...r, ...(msg.id !== undefined ? { id: msg.id } : {}) })
 }
 
 /** 迁出自 `panel-messages.mjs` 的 case "buildIndex"。 */

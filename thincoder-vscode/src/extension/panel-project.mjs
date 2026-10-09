@@ -4,23 +4,25 @@
  */
 import * as vscode from "vscode"
 import { t } from "../i18n.mjs"
-import { resumeSlot } from "./session-io.mjs"
+import { resumeSlot, loadProjectFolder, saveProjectFolder } from "./session-io.mjs"
 // F-CR4 跨 cwd 认领释放（台账 #168② · SESSION.md §6.15 / §6.16）：核薄函数（容忍逻辑全在核——
 // 永不抛出 / 返回 boolean）；直引 manifest 档（与 `session-io.mjs` 的退出释放同源面）。
 import { releaseClaimsAll } from "@thincoder/core/session-slots-manifest.mjs"
-import { _cwd, setProjectFolder } from "./panel-messages.mjs"
+import { _cwd, setProjectFolder, hasProjectOverride } from "./panel-messages.mjs"
 import { loadSession } from "./panel-session.mjs"
 import { ensureMemoryHandle } from "../embed-config.mjs"
 import { pushIndexStatus, maybePromptIndex } from "./panel-index.mjs"
 import { refreshLedger } from "./ledger-surface.mjs" // LEDGER-SURFACE：台账 item 刷新
 
-  /** Snapshot for the webview's project button: { folders, current, multi, followActive }. */
+  /** Snapshot for the webview's project button: { folders, current, multi, followActive, chosen }. */
 export function projectInfo(_panel) {
     const folders = (vscode.workspace.workspaceFolders ?? []).map((f) => ({
       name: f.name, path: f.uri.fsPath,
     }))
     const follow = vscode.workspace.getConfiguration("thincoder.project").get("followActiveEditor", false)
-    return { folders, current: _cwd(), multi: folders.length > 1, followActive: !!follow }
+    // #1101㈠ (a)（2026-10-10 vsc-consistency 批）：未选定态可见化判据——「没选过不猜」面
+    // （webview 按钮标记读本字段；单根面按钮隐藏，本字段不消费）。
+    return { folders, current: _cwd(), multi: folders.length > 1, followActive: !!follow, chosen: hasProjectOverride() }
   }
 
 export function pushProject(panel) {
@@ -35,6 +37,15 @@ export function pushProject(panel) {
 export function releaseOldCwdClaims(oldCwd) {
     if (!oldCwd || oldCwd === _cwd()) return false
     return releaseClaimsAll(oldCwd)
+  }
+
+  /** 锚记忆写点（#1101㈠ (b)——2026-10-10 vsc-consistency 批 · `PROJECT-SWITCHER.md` §3.1）：
+   *  成功切换后记「最后所在」（workspaceState 键 `thincoder.projectFolder`）——显式切换器
+   *  （picker 径 + `setProject`-fsPath 径）∥ 跟随自动切换（chat-panel）两路同点同义。
+   *  **记录 = 最后一次成功切换的锚——非活锚**：工作区兜底回落径（chat-panel 第三支路）
+   *  改活锚而不写本记录（两义分立）。 */
+export function rememberProjectFolder(panel, fsPath) {
+    saveProjectFolder(panel?._context?.workspaceState, fsPath)
   }
 
   /** Apply a project switch (validated): rebind the slot and reload everything per-cwd. */
@@ -55,6 +66,9 @@ export async function applyProjectSwitch(panel, fsPath) {
       vscode.window.showErrorMessage(`ThinCoder: ${r.error}`)
       return
     }
+    // #1101㈠ (b)：锚记忆写点之一——「一切成功切换后」（本点覆盖两径）；拒径（busy ∥ 非成员）
+    // 在上方已 return ⇒ 零写。
+    rememberProjectFolder(panel, fsPath)
     // 释放落点：cwd 已翻、本端绑定已失效（下一行 _agent 置空 / onProjectChanged 重绑新 cwd）。
     releaseOldCwdClaims(oldCwd)
     // 销毁点（2026-09-08）：换项目 → 会话级 agent 销毁（AC4——agent
@@ -115,4 +129,46 @@ export async function pickProject(panel) {
       await applyProjectSwitch(panel, sel.folder.uri.fsPath)
       return
     }
+  }
+
+  /** 「已弹过」标记读写（宽容——同 `loadProjectFolder`/`saveProjectFolder` 先例；标记 = 每工作区
+   *  恰一次的有效载荷，结果无关——ESC ∥ 选中 ∥ 取消同判「已弹」）。 */
+const PICK_OFFERED_KEY = "thincoder.projectPickOffered"
+function pickOffered(workspaceState) {
+    try { return workspaceState.get(PICK_OFFERED_KEY) === true } catch { return false }
+  }
+function markPickOffered(workspaceState) {
+    try { workspaceState.update(PICK_OFFERED_KEY, true) } catch {}
+  }
+
+  /** 锚记忆恢复点（#1101㈠ (b)——2026-10-10 vsc-consistency 批 · `PROJECT-SWITCHER.md` §3.1）：
+   *  调用点 = `ChatPanel` 构造内 · 订阅块之前（先于一切 `_cwd()` 消费）。
+   *  条件 = 多根 ∧ 无活 override ∧ 记录 ∈ folders；**单根 ∥ 无工作区 = 不读不写**（先于读早退）。
+   *  恢复动作 = `setProjectFolder(记录)` 单点（成员校验在内：失效记录 ⇒ `{ok:false}`——零抛
+   *  零写零动作）；`_cwd()` 全链随动（会话槽 / 索引 / `@` 补全 / agent 工具目录同源）。
+   *  @returns {boolean} 真 = 本次恢复生效（测试直驱面）。 */
+export function restoreProjectFolder(panel) {
+    const folders = vscode.workspace.workspaceFolders ?? []
+    if (folders.length < 2) return false
+    if (hasProjectOverride()) return false
+    const saved = loadProjectFolder(panel?._context?.workspaceState)
+    if (!saved) return false
+    return setProjectFolder(saved).ok === true
+  }
+
+  /** 首开弹拍（#1101㈠ (a)——「多根首启让用户选一次」）：调用点 = `resolveWebviewView`（面板首开拍）。
+   *  门四 = 多根 ∧ `!hasProjectOverride()` ∧ 未弹过（`thincoder.projectPickOffered`）∧ 空闲
+   *  （`!turnBusy()`）。命中 ⇒ 写弹过标记（**弹即写——ESC 后不再主动弹**）→ 复用 `pickProject`
+   *  （零新选择器）；余 ⇒ 零动作。频度 = 每工作区**恰一次**（标记住 workspaceState，跨窗口存活）。
+   *  @returns {Promise<boolean>} 真 = 本次弹拍发生（测试直驱面）。 */
+export async function maybeOfferProjectPick(panel) {
+    const folders = vscode.workspace.workspaceFolders ?? []
+    if (folders.length < 2) return false
+    if (hasProjectOverride()) return false
+    if (panel.turnBusy()) return false
+    const ws = panel?._context?.workspaceState
+    if (pickOffered(ws)) return false
+    markPickOffered(ws)
+    await pickProject(panel)
+    return true
   }

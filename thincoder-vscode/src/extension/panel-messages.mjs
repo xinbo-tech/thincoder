@@ -43,6 +43,12 @@ import { pushUiPrefs } from "./ui-prefs.mjs"
 let _cwdOverride = null
 export const _cwd = () => _cwdOverride ?? (vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath || process.cwd())
 
+/** 未选定判据（#1101㈠ (a)——2026-10-10 vsc-consistency 批）：「没选过不猜」面单点。
+ *  无活 override ⇒ 当前锚 = 无根兜底（`folders[0]`）——UI 面据此显未选定标记（多根才显）。 */
+export function hasProjectOverride() {
+  return _cwdOverride !== null
+}
+
 // ─── 出生自愈心跳（D-W20/D-W21——§5.3）──────────────────────────────
 // 拍体 = `reassertLiveChildren` 本体（单一存活投影）；起 = `webviewReady` case；止 = panel dispose。
 // 两前置：未就绪不拍（不向队列堆重复出生事件）；空拍零留痕（n 变化即记 + 每 30 拍兜底）。

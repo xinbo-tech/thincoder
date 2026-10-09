@@ -289,12 +289,12 @@ export async function testProxyConnection(uri) {
 
 /** Store a provider API key (settings provider command face — writes go through the panel write channel). */
 export async function saveProviderKey(name, key) {
-  // storeProviderKey performs the same !key || !key.trim() guard — delegate only.
-  const err = await storeProviderKey(name, key) // #695：核写结果（mtime 冲突 → 提示串）穿透返回
+  // storeProviderKey owns the empty-key guard — the write result passes through（#1073 三态：ok ∕ no-write ∕ conflict）。
+  const result = await storeProviderKey(name, key)
   // M9：设 API key = 配置写入面——探一次 GET /models（探不通 → 标不可用 + 不入候选；
   // 不阻断保存——key 已落盘）。探针失败不缓存——下次配置动作重探。
   await probeProviderAdmission(name)
-  return err
+  return result
 }
 
 export async function deleteProviderKey(name) {

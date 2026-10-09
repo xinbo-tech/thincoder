@@ -3,21 +3,26 @@
  *
  * 三端对齐批（2026-10-07 · 台账 #1027 / #1028 / #1029 / #1031 / #1033）——设计单源 =
  * `docs/vsc/design/SETTINGS.md` §2.16：单例开合 ∥ 开框重置 ∥ 五路关（保存 ∥ 取消 ∥ 背板 ∥
- * 框内 Esc〔stopPropagation——不连带关设置面板〕∥ `closeSettings()` 同清）∥ 框实例代际
- * （在飞探果跨框零污染）∥ 字段序 = 用户填写序（名称→baseURL→格式→API Key→走 proxy→拉取；
+ * 框内 Esc〔stopPropagation——不连带关设置面板〕∥ `closeSettings()` 同清）∥ 请求 id 归属
+ * （在飞探果跨框零污染——#1051：发时记在飞 id ∥ 宿主原样回显 ∥ 落框按 id 比对）∥ 字段序 =
+ * 用户填写序（名称→baseURL→格式→API Key→走 proxy→拉取；
  * **`model` 输入件退场**——2026-10-09 清除批：渠道不携模型（C4）；「拉取」钮 = 渠道校验）。
  *
  * 框幕 = 独立类 `.settings-dialog-backdrop`（z 999——不入确认族共用类 `.auto-backdrop`：
  * 确认族帚扫站点零误扫）；卡 = `#prov-add-dialog` + 新类 `.settings-dialog`（z 1000）。
  * 两件挂 `document.body`（卡外于 providers 卡 ⇒ 卡重绘不触碰在编弹窗）。
+ * **交棒预填（#1041）**：`openAddProviderDialog({ key })` —— 首启板 custom 径携键入框（重置序之后落）。
  */
 import { t } from "./i18n.js"
 import { SS } from "./settings-state.js"
 import { flashSaved } from "./settings-widgets.js"
 
-/** 框实例代际（开 ∥ 关自增）∥ 最近一次拉取发起时的代际（落框前比对——不符 ⇒ 弃）。 */
-let _addDialogEpoch = 0
-let _fetchEpoch = 0
+/** 拉取请求 id 单源（模块级单调自增） ∥ 最近一次在飞请求的 id（落框前比对——不符 ⇒ 弃）。
+ *  #1051（2026-10-10 vsc-consistency 批）：代际变量退场——单变量收窄（`_pendingFetchId`）＋
+ *  开/关框清空覆盖同判：代际只证「本实例有在飞」，不证结果归属（旧框在飞果在新框——新框
+ *  亦有在飞时旧判据判落框）；现判据 = id 归属（跨框果 id 必不符）。 */
+let _fetchSeq = 0
+let _pendingFetchId = null
 
 /** 开框建面的实件面（关框即弃——模块内唯一持有；`null` = 框不在场）。 */
 let _els = null
@@ -175,10 +180,11 @@ function buildDialog() {
   return { backdrop, card, type, presetInfo, customFields, customTail, name, url, format, key, proxy, status }
 }
 
-/** 开框（单例：已在框 ⇒ 零动作）：建两件 + 开框重置 + 代际自增 + 初始焦点 = `#pa-type`（+50ms）。 */
-export function openAddProviderDialog() {
+/** 开框（单例：已在框 ⇒ 零动作）：建两件 + 开框重置 + 弃旧在飞 id + 初始焦点 = `#pa-type`（+50ms）。
+ *  `key` = 交棒预填（首启板 custom 径 —— #1041；非串 ∥ 缺省 ⇒ 零预填）：重置序**之后**落 —— 零第二重置面。 */
+export function openAddProviderDialog({ key = "" } = {}) {
   if (document.getElementById("prov-add-dialog")) return
-  _addDialogEpoch += 1
+  _pendingFetchId = null // #1051：开框弃旧在飞（旧框果到达 ⇒ id 不符 ⇒ 弃）
   const els = buildDialog()
   _els = els
   // 开框重置（§2.16 ①）：类型回首项 ∥ key 清空 ∥ 走 proxy 未勾 ∥ 状态行空
@@ -187,16 +193,17 @@ export function openAddProviderDialog() {
   els.proxy.checked = false
   els.status.textContent = ""
   paTypeChanged()
+  if (typeof key === "string") els.key.value = key // 交棒预填（重置序之后 —— 重置清空后再落）
   setTimeout(() => els.type.focus(), 50)
 }
 
 /** 关框（五路同效的清除入口，幂等）：只清自身两件（卡 ∥ 幕——#1054 收窄：原按 `.settings-dialog*`
- *  类全扫 ⇒ 第二弹窗入场即互清；各弹窗自清现为同规）+ 代际自增 + 实件面弃置。 */
+ *  类全扫 ⇒ 第二弹窗入场即互清；各弹窗自清现为同规）+ 弃旧在飞 id + 实件面弃置。 */
 export function closeAddProviderDialog() {
   _els?.card?.remove()
   _els?.backdrop?.remove()
   _els = null
-  _addDialogEpoch += 1
+  _pendingFetchId = null // #1051：关框弃旧在飞（同开框判）
 }
 
 /** 〔拉取〕：探 baseURL+key（携 format ∥ 勾选态）——探果落框见 `updateTestProviderResult`。 */
@@ -213,8 +220,10 @@ function paFetchModels() {
   statusEl.style.color = ""
   // M1 三格式分派：探针必须携带表单选的 format（anthropic/google 与 openai 不同端点/头）；
   // ③′ 拉取路由随勾选：勾 ⇒ 宿主按核 `probeTargetOf` 双门槛判定；未勾 ∥ 缺省 ⇒ 直连。
-  _fetchEpoch = _addDialogEpoch // 在飞代际：跨框弃果（落框前比对）
-  const payload = { type: "testProvider", baseURL, apiKey: _els.key.value?.trim(), format: _els.format.value }
+  // #1051：请求 id 归属——发时记在飞 id（单调）∥ 载荷携 `id`（宿主原样回显）；同框双发 ⇒
+  // 后发覆盖在飞 id（先发果到达即弃）。
+  _pendingFetchId = ++_fetchSeq
+  const payload = { type: "testProvider", baseURL, apiKey: _els.key.value?.trim(), format: _els.format.value, id: _pendingFetchId }
   if (_els.proxy.checked === true) payload.proxy = true
   window._vscode.postMessage(payload)
 }
@@ -246,9 +255,12 @@ function paSave() {
   return true
 }
 
-/** 探果落框：代际不符 ⇒ 弃；探通 ⇒ 状态行 ✓（渠道校验——不喂候选：模型件已退场）∥ 探败 ⇒ 状态行 ✗。 */
+/** 探果落框：**请求 id 归属判据**（#1051）——`!_els` ∥ 无 id ∥ id ≠ 在飞 id ⇒ 弃（旧框在飞果 ∥
+ *  重放果同判）；命中 ⇒ 渲染 + 清在飞 id（防重放）。探通 ⇒ 状态行 ✓（渠道校验——不喂候选：
+ *  模型件已退场）∥ 探败 ⇒ 状态行 ✗。 */
 export function updateTestProviderResult(r) {
-  if (!_els || _fetchEpoch !== _addDialogEpoch) return
+  if (!_els || r?.id === undefined || r.id !== _pendingFetchId) return
+  _pendingFetchId = null
   const statusEl = _els.status
   if (r?.ok) {
     statusEl.textContent = t("settings.connOk", { count: r.models?.length ?? 0 })

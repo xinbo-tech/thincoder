@@ -247,3 +247,21 @@ export function loadModelPrefs(workspaceState) {
 export function saveModelPrefs(workspaceState, prefs) {
   try { workspaceState.update("thincoder.modelPrefs", prefs) } catch {}
 }
+
+// ─── 多根锚记忆（workspaceState · 台账 #1101㈠ (b)——2026-10-10 vsc-consistency 批）──────
+
+/** 读「最后所在」锚：多根工作区**最近一次成功切换**的项目根（fsPath 串）。
+ *  宽容读（workspaceState 缺 / 抛 ⇒ 空串——**永不抛**）；失效记录（根已移出工作区）
+ *  由调用侧成员校验兜底（`setProjectFolder` 拒），本档不做有效性判断。 */
+export function loadProjectFolder(workspaceState) {
+  try { return workspaceState.get("thincoder.projectFolder") || "" } catch { return "" }
+}
+
+/** 写「最后所在」锚（成功切换后单点写入——显式切换器 ∥ 跟随自动切换两路同点）。
+ *  宽容写（更新失败不反扑切换本身）；空值不落盘（成功切换的 fsPath 恒为真串——不允许
+ *  把「无锚」写成记录）。**记录 = 最后一次成功切换的锚——非活锚**（工作区兜底回落径改
+ *  活锚而不写本记录）。 */
+export function saveProjectFolder(workspaceState, fsPath) {
+  if (typeof fsPath !== "string" || !fsPath) return
+  try { workspaceState.update("thincoder.projectFolder", fsPath) } catch {}
+}

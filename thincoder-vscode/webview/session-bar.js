@@ -155,10 +155,14 @@ export function handleProjectMessage(m) {
     btn.style.display = ""
     const name = (m.folders || []).find((f) => f.path === m.current)?.name
       || String(m.current || "").split(/[\\/]/).pop()
-    btn.textContent = "📁 " + name
-    btn.title = m.followActive
+    // #1101㈠ (a)（2026-10-10 vsc-consistency 批 · `PROJECT-SWITCHER.md` §3.1）：「没选过不猜」——
+    // 未选定（`chosen` 缺 ∥ false）⇒ 名后附标记（文本 ∥ title 同携）；已选 ∥ 单根零变。
+    const notChosen = m.chosen ? "" : ` · ${t("project.notChosen")}`
+    btn.textContent = "📁 " + name + notChosen
+    const title = m.followActive
       ? `${m.current} · ${t("project.followActiveOn")}`
       : m.current
+    btn.title = title + notChosen
   } else {
     btn.style.display = "none"
   }

@@ -17,7 +17,7 @@ import { estimateTokens } from "@thincoder/core/context.mjs"
 export { providerSpec, assistantToolCallMessage }
 
 /** 端差字段表（`reasoningEffortDefault`）：前缀匹配、最长优先；未命中且 ID 含 `vendor/` 命名空间
- *  时按裸模型段重试（与核 `lookupSpec` 命名空间剥离同法——聚合网关惯例 `vendor/model`）；仍未命中 → undefined
+ *  时按末段重试（链式网关可叠多段）（与核 `lookupSpec` 命名空间剥离同法——聚合网关惯例 `vendor/model`）；仍未命中 → undefined
  *  （webview 侧 `effortSelectView` 落占位「—」——`webview/settings-state.js`，不再取枚举首项回落）。行为 = 旧 VSC 规格表逐行同值。 */
 const EFFORT_DEFAULT_PREFIXES = [
   ["deepseek-v4-flash-vision-exp", "high"],
@@ -52,8 +52,8 @@ function effortDefaultFor(model) {
   }
   const hit = scan(m)
   if (hit !== undefined) return hit
-  // 聚合网关惯例 `vendor/model`：原文未命中 ⇒ 按裸模型段重试（与核 `lookupSpec` 剥离同法）
-  const slash = m.indexOf("/")
+  // 聚合网关惯例 `vendor/model`：原文未命中 ⇒ 按末段重试（链式网关可叠多段）（与核 `lookupSpec` 剥离同法）
+  const slash = m.lastIndexOf("/")
   return slash >= 0 ? scan(m.slice(slash + 1)) : undefined
 }
 

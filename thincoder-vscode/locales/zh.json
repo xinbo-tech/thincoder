@@ -275,6 +275,7 @@
   "project.followActiveHint": "自动切换到活动编辑器所在的项目",
   "project.pickPlaceholder": "切换当前项目",
   "project.followActiveOn": "已开启跟随活动文件",
+  "project.notChosen": "未选定",
   "search.placeholder": "搜索消息…",
   "search.prev": "上一个匹配",
   "search.next": "下一个匹配",

@@ -16,7 +16,7 @@ import { SS } from "./settings-state.js"
 import { flashSaved } from "./settings-widgets.js"
 
 /** 控件基线（§2.8 基线判据——模块内状态：SS 形状本批零改）。 */
-const _pxBaseline = { uri: "", web: false, model: false }
+const _pxBaseline = { uri: "", web: false }
 const _shBaseline = { select: "", custom: "" }
 
 /** Shell 回显全表达式（§2.9——建面渲染 / 推送回填 / 就地回显**同一式**）：`current` 匹配候选
@@ -53,7 +53,6 @@ export function envCardHtml() {
   html += `<div class="settings-subtitle">${t("settings.proxySection")}</div>`
   html += `<div class="key-field"><label title="${t("settings.proxyUriHelp")}">${t("settings.proxyUri")}</label><input id="px-uri" placeholder="http://127.0.0.1:7890" value="${escHtml(px.uri || "")}"></div>`
   html += `<label class="switch" title="${t("settings.proxyWebHelp")}"><input type="checkbox" id="px-web" ${px.web !== false ? "checked" : ""}> ${t("settings.proxyWeb")}</label>`
-  html += `<label class="switch" title="${t("settings.proxyModelHelp")}"><input type="checkbox" id="px-model" ${px.model ? "checked" : ""}> ${t("settings.proxyModel")}</label>`
   html += `<div> <button id="px-test-btn" class="key-btn">${t("settings.proxyTest")}</button></div>`
   html += `<div id="px-test-result" style="font-size:12px;opacity:0.7;padding:4px 0">—</div>`
   html += `<div class="settings-subtitle">${t("settings.shellSection")}</div>`
@@ -69,10 +68,8 @@ export function envCardHtml() {
 function seedBaselines() {
   const uri = document.getElementById("px-uri")
   const web = document.getElementById("px-web")
-  const model = document.getElementById("px-model")
   _pxBaseline.uri = uri ? uri.value.trim() : ""
   _pxBaseline.web = web ? !!web.checked : false
-  _pxBaseline.model = model ? !!model.checked : false
   _shBaseline.select = document.getElementById("sh-select")?.value ?? ""
   _shBaseline.custom = document.getElementById("sh-custom")?.value.trim() ?? ""
 }
@@ -84,7 +81,7 @@ function seedBaselines() {
  *  silently deleting it. */
 export function bindEnvControls() {
   seedBaselines()
-  for (const id of ["px-uri", "px-web", "px-model"]) {
+  for (const id of ["px-uri", "px-web"]) {
     document.getElementById(id)?.addEventListener("change", () => saveProxyField(id))
   }
   document.getElementById("sh-select")?.addEventListener("change", onShellSelectChange)
@@ -105,7 +102,7 @@ export function bindEnvControls() {
  *  blur / Enter 未改值 / 快照未达拍 ⇒ 零发值）；payload 只含本次被编辑字段。发值后
  *  基线 ← 本次屏值（同值 change 连发 ⇒ 恰 1 次 post——幂等门）。 */
 function saveProxyField(id) {
-  const field = id === "px-uri" ? "uri" : id === "px-web" ? "web" : "model"
+  const field = id === "px-uri" ? "uri" : "web"
   const el = document.getElementById(id)
   if (!el) return
   const value = field === "uri" ? el.value.trim() : !!el.checked
@@ -158,11 +155,6 @@ function refillProxyControls() {
   if (web && web !== document.activeElement) {
     web.checked = px.web !== false
     _pxBaseline.web = !!web.checked
-  }
-  const model = document.getElementById("px-model")
-  if (model && model !== document.activeElement) {
-    model.checked = !!px.model
-    _pxBaseline.model = !!model.checked
   }
 }
 

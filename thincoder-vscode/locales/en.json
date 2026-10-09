@@ -275,6 +275,7 @@
   "project.followActiveHint": "auto-switch to the active editor's folder",
   "project.pickPlaceholder": "Switch current project",
   "project.followActiveOn": "follow-active-file on",
+  "project.notChosen": "not chosen",
   "search.placeholder": "Search messages…",
   "search.prev": "Previous match",
   "search.next": "Next match",

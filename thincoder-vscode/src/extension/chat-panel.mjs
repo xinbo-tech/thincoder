@@ -24,7 +24,7 @@ import { logEvent } from "@thincoder/core/log.mjs"
 import { initStopTrace } from "./stop-trace.mjs"
 import { initUiPrefs } from "./ui-prefs.mjs" // #875 视图偏好推送：变更订阅接线（webviewReady 握手在 panel-messages）
 import { ensureSlot, activeData, activeHistory, activeLines, saveLines, loadModelPrefs, loadSession, loadOlder, newSession, deleteSession, pushSessions, generateTitle, status as bootstrapStatus, openSessionContent } from "./panel-session.mjs"
-import { projectInfo, pushProject, applyProjectSwitch, onProjectChanged, pickProject, releaseOldCwdClaims } from "./panel-project.mjs"
+import { projectInfo, pushProject, applyProjectSwitch, onProjectChanged, pickProject, releaseOldCwdClaims, rememberProjectFolder, restoreProjectFolder, maybeOfferProjectPick } from "./panel-project.mjs"
 import { pushIndexStatus, atComplete, saveEmbeddingConfig, maybePromptIndex, buildIndex, maybePromptLegacyIndexRemoval } from "./panel-index.mjs"
 import { closeAllMcp, pushMcpStatus, reconnectMcp, editMcp, testMcp } from "./panel-mcp.mjs"
 // Settings 段整段外提（2026-09-25 file-tier-sweep 批 S1——同名薄委托传 `this`，外部调用点零改）。
@@ -89,6 +89,12 @@ export class ChatPanel {
     this._agent = null
     this._notifier = createVscNotify(this) // parity-b4 W1：零宿主句柄 ⇒ 无释放点；调用点 `?.` 防御
 
+    // #1101㈠ (b)（2026-10-10 vsc-consistency 批 · `PROJECT-SWITCHER.md` §3.1）：锚记忆恢复——
+    // 构造内 · 订阅块**之前**（首个 `context.subscriptions.push` 之前；先于一切 `_cwd()` 消费）。
+    // 多根 ∧ 无活 override ∧ 记录 ∈ folders ⇒ 恢复 `_cwd()` 到「最后所在」；余（单根 ∥ 无工作区 ∥
+    // 有 override ∥ 无记录 ∥ 记录失效）⇒ 零动作零写。
+    restoreProjectFolder(this)
+
     // Follow-active-file project switching (multi-root): when the setting is on and the
     // active editor's folder differs from the current project, switch automatically.
     // Guarded by turnBusy() — never yank the cwd out from under a running turn OR a
@@ -105,6 +111,8 @@ export class ChatPanel {
         const oldCwd = _cwd()
         const r = setProjectFolder(folder.uri.fsPath)
         if (r.ok) {
+          // #1101㈠ (b)：锚记忆写点之二——跟随自动切换同记「最后所在」（与显式切换器同点同义）。
+          rememberProjectFolder(this, folder.uri.fsPath)
           // 销毁点（切换边界守卫在上方 turnBusy() 检查——销毁安全）
           this._agent = null
           releaseOldCwdClaims(oldCwd)
@@ -171,6 +179,10 @@ export class ChatPanel {
     // ① 无工作区守卫：面板启用即提示（每空窗**恰一次**——去重，`_wsGuardNotified`）。
     // 面板照常建（webview 要在位才能显示占位符/toast，且工作区变化时靠它投守卫态）——本点只提示。
     blockOnNoWorkspace(this, { once: true })
+    // #1101㈠ (a)（2026-10-10 vsc-consistency 批 · `PROJECT-SWITCHER.md` §3.1）：「没选过不猜」——
+    // 多根首开弹拍（门四全过 ⇒ 写 `thincoder.projectPickOffered` + 复用 `pickProject`）；
+    // 非阻塞（不等选择——选择抵达走既有 `setProject` 径）。
+    void maybeOfferProjectPick(this).catch((e) => console.error("[chat-panel] project pick offer failed:", e.message))
     webviewView.webview.options = {
       enableScripts: true,
       retainContextWhenHidden: true,

@@ -41,10 +41,13 @@ export function isProviderConfigured(name) {
 }
 
 /** Store an API key into config.json (kept async for call-site compatibility).
- *  #695：核写结果（`{ok:false,reason:"mtime-conflict"}` → 提示串）穿透返回。 */
+ *  #695：核写结果（`{ok:false,reason:"mtime-conflict"}` → 提示串）穿透。
+ *  #1073：写面显式三态（**回执 ⟺ 真写**）——`{status:"ok"}`（写成功）∥ `{status:"no-write"}`（空钥守卫零写——零写盘 ∥ 零错误）
+ *  ∥ `{status:"conflict", hint}`（mtime 冲突；`hint` = 既有 `CONFIG_CONFLICT_HINT` 透传）。 */
 export async function storeProviderKey(name, key) {
-  if (!key || !key.trim()) return
-  return setProviderKey(name, key.trim())
+  if (!key || !key.trim()) return { status: "no-write" }
+  const hint = setProviderKey(name, key.trim())
+  return hint ? { status: "conflict", hint } : { status: "ok" }
 }
 
 /** Remove an API key from config.json (the provider entry itself stays). #695：核写结果穿透返回。 */
