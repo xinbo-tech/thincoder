@@ -23,6 +23,7 @@ import { renderOverview } from "./views-overview.mjs"
 import { renderAudit } from "./views-audit.mjs"
 import { renderModels } from "./views-models.mjs"
 import { renderSandbox } from "./views-sandbox.mjs"
+import { renderChat } from "./views-chat.mjs"
 
 const appEl = document.getElementById("app")
 const navEl = document.getElementById("nav")
@@ -95,6 +96,7 @@ const PAGES = {
   "/me/usage": renderMeUsage,
   "/me/account": renderMeAccount,
   "/admin/overview": renderOverview,
+  "/admin/chat": renderChat,
   "/admin/members": renderMembers,
   "/admin/providers": renderProviders,
   "/admin/models": renderModels,

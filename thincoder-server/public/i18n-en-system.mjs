@@ -137,7 +137,7 @@ export const EN_SYSTEM = Object.freeze({
   "usageReport.export": "Export CSV",
   "usageReport.exported": "CSV exported",
 
-  // ── Admin · audit (§2.3④——ten types = accounts/ACCOUNTS.md §2.1) ─────────
+  // ── Admin · audit (§2.3④——type enum = accounts/ACCOUNTS.md §2.1: 11 types here) ──
   "audit.title": "Audit",
   "audit.typeLabel": "Type",
   "audit.typeAll": "All types",
@@ -167,4 +167,5 @@ export const EN_SYSTEM = Object.freeze({
   "audit.type.password_reset": "Password reset",
   "audit.type.member_create": "Member created",
   "audit.type.config_update": "Config updated",
+  "audit.type.agent_event": "Console chat",
 })

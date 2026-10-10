@@ -1,5 +1,5 @@
 /**
- * nav.mjs — 控制台导航单源（webui/WEBUI.md §2 ∥ KD-SV-20）：组/项数据（我的 3 ∥ 管理 8——2026-10-10 代理回迁批去代理项 ∥ 沙盒运行面批 +「沙盒」项）∥ `resolveRoute` 纯函数
+ * nav.mjs — 控制台导航单源（webui/WEBUI.md §2 ∥ KD-SV-20）：组/项数据（我的 3 ∥ 管理 9——2026-10-10 代理回迁批去代理项 ∥ 沙盒运行面批 +「沙盒」项 ∥ admin-agent-chat 批 +「对话」项〔总览后〕）∥ `resolveRoute` 纯函数
  * （无 DOM——批内件直测：别名重定向 ∥ 角色默认 ∥ admin 面 `denied`）∥ 侧栏渲染（品牌 ∥ 组标题/项/活动态 ∥
  * 底部 meta 槽（健康状态灯 + 版本行 + 语言切换器）+ 退出登录）。
  *
@@ -18,6 +18,7 @@ export const NAV_GROUPS = [
   ] },
   { key: "admin", labelKey: "nav.group.admin", adminOnly: true, items: [
     { key: "overview", labelKey: "nav.page.admin.overview", path: "/admin/overview" },
+    { key: "chat", labelKey: "nav.page.admin.chat", path: "/admin/chat" },
     { key: "members", labelKey: "nav.page.admin.members", path: "/admin/members" },
     { key: "providers", labelKey: "nav.page.admin.providers", path: "/admin/providers" },
     { key: "models", labelKey: "nav.page.admin.models", path: "/admin/models" },

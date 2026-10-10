@@ -2,12 +2,13 @@
  * views-audit.mjs — 管理·审计（webui/WEBUI.md §2/§2.3④——`#/admin/audit`）：过滤三轴（类型/成员/时段）∥
  * 事件表（时间 ∥ 类型 ∥ 操作者 ∥ 对象 ∥ 详情——按型模板渲染）∥ 空态；`GET /api/audit` 取数（倒序，新在前）。
  *
- * 十型枚举与 detail 形 = accounts/ACCOUNTS.md §2.1；详情字段（IP ∥ 维度 ∥ key 提示形 ∥ 角色 ∥ keys（配置变更
- * 键名清单——“十型”））按在场渲染；对象与操作者同名 ⇒「—」（名快照口径——改/删后记录自足）。渲染一律节点 + textContent；文案经 `t()` 取值。
+ * 类型枚举与 detail 形 = accounts/ACCOUNTS.md §2.1（型面十三型——本页收编已落型；沙盒两型随沙盒余面批）；
+ * 详情字段（IP ∥ 维度 ∥ key 提示形 ∥ 角色 ∥ `keys`（配置变更键名清单） ∥ `summary`（agent_event 会话动作摘要——§2.10））
+ * 按在场渲染；对象与操作者同名 ⇒「—」（名快照口径——改/删后记录自足）。渲染一律节点 + textContent；文案经 `t()` 取值。
  */
 import { t } from "./i18n.mjs"
 
-/** 审计十型（类型值 ∥ 文案键——accounts/ACCOUNTS.md §2.1 类型枚举；未知型 ⇒ 原值兜底）。 */
+/** 审计类型枚举（类型值 ∥ 文案键——accounts/ACCOUNTS.md §2.1；未知型 ⇒ 原值兜底——未来新型零遗漏）。 */
 const AUDIT_TYPES = [
   ["login_success", "audit.type.login_success"],
   ["login_failure", "audit.type.login_failure"],
@@ -19,6 +20,7 @@ const AUDIT_TYPES = [
   ["password_reset", "audit.type.password_reset"],
   ["member_create", "audit.type.member_create"],
   ["config_update", "audit.type.config_update"],
+  ["agent_event", "audit.type.agent_event"],
 ]
 
 export async function renderAudit(ctx, mount) {
@@ -61,7 +63,7 @@ export async function renderAudit(ctx, mount) {
   await loadEvents()
 }
 
-/** 事件表：时间 ∥ 类型 ∥ 操作者 ∥ 对象（与操作者同名 ⇒ 「—」）∥ 详情（按型模板：IP/维度/key/角色）。 */
+/** 事件表：时间 ∥ 类型 ∥ 操作者 ∥ 对象（与操作者同名 ⇒ 「—」）∥ 详情（按型模板：IP ∥ 维度 ∥ key 提示形 ∥ 角色 ∥ keys ∥ agent_event 摘要）。 */
 function eventsTable(ctx, events) {
   const { h } = ctx
   if (events.length === 0) return h("p", { class: "hint", text: t("audit.empty") })
@@ -75,13 +77,13 @@ function eventsTable(ctx, events) {
   return ctx.table([t("audit.col.time"), t("audit.col.type"), t("audit.col.actor"), t("audit.col.target"), t("audit.col.detail")], rows, { foot: true })
 }
 
-/** 类型文案（十型枚举内 ⇒ 表键；枚举外 ⇒ 原值兜底——未来新型零遗漏）。 */
+/** 类型文案（枚举内 ⇒ 表键；枚举外 ⇒ 原值兜底——未来新型零遗漏）。 */
 function typeLabel(type) {
   const hit = AUDIT_TYPES.find(([value]) => value === type)
   return hit ? t(hit[1]) : String(type)
 }
 
-/** 详情按型模板（在场字段渲染）：IP ∥ 维度 ∥ key 提示形 ∥ 角色 ∥ 配置变更键名清单；无字段 ⇒ 「—」。 */
+/** 详情按型模板（在场字段渲染）：IP ∥ 维度 ∥ key 提示形 ∥ 角色 ∥ 配置变更键名清单 ∥ agent_event 会话摘要（§2.10）；无字段 ⇒ 「—」。 */
 function detailText(detail) {
   const parts = []
   if (detail?.ip) parts.push(`${t("audit.ip")}: ${detail.ip}`)
@@ -89,5 +91,6 @@ function detailText(detail) {
   if (detail?.keyHint) parts.push(`${t("audit.keyHint")}: ${detail.keyHint}`)
   if (detail?.role) parts.push(`${t("audit.role")}: ${detail.role}`)
   if (Array.isArray(detail?.keys) && detail.keys.length > 0) parts.push(`${t("audit.keys")}: ${detail.keys.join(", ")}`)
+  if (typeof detail?.summary === "string" && detail.summary !== "") parts.push(detail.summary) // agent_event（§2.10）
   return parts.length === 0 ? "—" : parts.join(" · ")
 }

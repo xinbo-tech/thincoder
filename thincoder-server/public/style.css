@@ -214,6 +214,20 @@ dialog.modal::backdrop { background: var(--backdrop); }
 .config-field .hint { margin: 0; }
 .config-group > .hint { margin: var(--sp-3) 0 0; }
 
+/* ── 对话页（views-chat.mjs——§2.10）：会话条 ∥ 消息流四形 ∥ 输入区（零新变量 ∥ 零新悬停规则）──────── */
+.chat-list { display: flex; flex-direction: column; gap: var(--sp-3); max-height: 240px; overflow-y: auto; } /* 尺寸字面（非刻度面——原值保留，同 .quota 先例） */
+.chat-row { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-1); width: 100%; padding: var(--sp-3) var(--sp-4); text-align: left; } /* 取用面 = `button.tiny`（悬停沿既有声明） */
+.chat-row.active { background: var(--selected); border-color: var(--accent); color: var(--accent); } /* ① 选中态（.lang-switch .active 同形） */
+.chat-thread { display: flex; flex-direction: column; gap: var(--sp-4); max-height: 52vh; overflow-y: auto; } /* 尺寸字面（同上） */
+.chat-msg { border-radius: var(--r-2); padding: var(--sp-3) var(--sp-4); white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-msg.user { background: var(--selected); }
+.chat-msg.assistant { background: var(--fill); }
+.chat-msg.notice { background: var(--fill); color: var(--muted); } /* 灰条（中断/预算/模型错误——§2.10） */
+.chat-msg.tool { background: var(--panel); border: var(--bw) solid var(--border); }
+.chat-msg.tool.failed { border-color: var(--danger); } /* 失败红标（行边 + `.badge off` 徽标） */
+.chat-tool-arrow { color: var(--muted); }
+.chat-form { display: flex; flex-direction: column; gap: var(--sp-3); }
+
 /* ── 数据表页视口高壳（§2.6②——高度链声明单源：页头固定 ∥ 表区吃剩高；表尾行计数 = 表内 tfoot〔吸附表底〕；回退见下）────── */
 body.data-shell .content { height: 100dvh; display: flex; flex-direction: column; }
 body.data-shell main { flex: 1; min-height: 0; display: flex; flex-direction: column; }

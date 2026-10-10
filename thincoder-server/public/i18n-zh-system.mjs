@@ -137,7 +137,7 @@ export const ZH_SYSTEM = Object.freeze({
   "usageReport.export": "导出 CSV",
   "usageReport.exported": "已导出 CSV",
 
-  // ── 管理·审计（§2.3④——十型枚举 = accounts/ACCOUNTS.md §2.1） ──────────────
+  // ── 管理·审计（§2.3④——类型枚举 = accounts/ACCOUNTS.md §2.1：本表 11 型在册） ────
   "audit.title": "审计",
   "audit.typeLabel": "类型",
   "audit.typeAll": "全部类型",
@@ -167,4 +167,5 @@ export const ZH_SYSTEM = Object.freeze({
   "audit.type.password_reset": "密码重置",
   "audit.type.member_create": "成员创建",
   "audit.type.config_update": "配置变更",
+  "audit.type.agent_event": "管理面会话",
 })

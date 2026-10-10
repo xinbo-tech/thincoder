@@ -49,6 +49,7 @@ export const ZH_SHELL = Object.freeze({
   "nav.page.admin.audit": "审计",
   "nav.page.admin.system": "系统",
   "nav.page.admin.sandbox": "沙盒",
+  "nav.page.admin.chat": "对话",
   "nav.logout": "退出登录",
 
   // ── 语言切换器（自称名——固定取本档渲染，不自译） ───────────────────────────

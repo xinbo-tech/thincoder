@@ -51,6 +51,7 @@ export const EN_SHELL = Object.freeze({
   "nav.page.admin.audit": "Audit",
   "nav.page.admin.system": "System",
   "nav.page.admin.sandbox": "Sandbox",
+  "nav.page.admin.chat": "Chat",
   "nav.logout": "Sign out",
 
   // ── 登录 ───────────────────────────────────────────────────────────────────

@@ -70,6 +70,7 @@
 | `thincoder-server/public/app.mjs` | 194 ⇒ ≈196 | 改（import ∥ `PAGES` 行） |
 | `thincoder-server/public/i18n-{zh,en}-admin.mjs` | 226 ∥ 230 ⇒ ≈258 ∥ ≈262 | 改（+≈32 键/表） |
 | `thincoder-server/public/i18n-{zh,en}-shell.mjs` | 74 ∥ 72 ⇒ ≈75 ∥ ≈73 | 改（`nav.page.admin.chat`） |
+| `thincoder-server/public/i18n-{zh,en}-system.mjs` | 170 ∥ 170 ⇒ **171 ∥ 171**（本批 +1 键/表——前端舱已落，实读回核） | 改（`audit.type.agent_event` 落点 = system 部件——审计族键域界；`views-audit.mjs` 型面表消费） |
 | `thincoder-server/public/style.css` | 242 ⇒ ≈252 | 改（对话族——零新变量/零新悬停规则） |
 | `thincoder-server/package.json` | `prepublishOnly` 42 ⇒ 44 | 改（两件入链） |
 | 批内件两件（`…-admin-agent-chat.test.mjs` ∥ `…-admin-agent-chat-tools.test.mjs`） | 新 | 单元测试文件（随批档留存） |
@@ -130,6 +131,21 @@
 
 **未入本轮（列报）**：① #4 = 需求档链尾计数（`requirements/PROJECT.md:64`/`:69`/`:219`/`:221` 计数链 33 ∥ 34 悬于 32 ∥ 33 之后）——需求档笔 = 主 agent；② 版本链尾随正面（v13 ⇒ 14——既有尾钉断言约十余件）+ i18n 键数/指纹断言件（`-server-public-structure.test.mjs`）未登记于注⑲——沿前批「收口同步轮」先例（runner 批 26 档先例在册），供父侧裁。
 
+### 实施轮上抛回笔（fix 轮）——三号落位 + 记录补登记（2026-10-11 · eng-designer）
+
+**口径**：承批档 §6 实施轮上抛处置（② notice `data` 契约行）+ §6 notice 补裁（#195——④ 空回合单列 · 四值枚举定稿）。**零新语义**（上抛裁决直接导出项）；**产品码零触**；实施舱范围零动；评审未点段落零触（两处一致性面同拍除外——「同拍」行列报）。
+
+| 号 | 落点（改动后实读 file:line） | 改动 |
+|---|---|---|
+| ① | `design/PROJECT.md:203` ∥ `agent/ADMIN-AGENT.md:52`/`:98` ∥ `webui/WEBUI.md:568` | KD-SV-87 机械读法四处同词（读回校验 = 4 处逐字同词）——「缺省 = 最近一次成功所用」后补：机械读法 = `GET /api/admin/agent/chats` 倒序首行 `model`；该模型不在下拉源 ⇒ 空选；「成功」位 = 数据面无（题设近似——如实登记，不引入新位） |
+| ② | `gateway/API.md:168` ∥ `agent/ADMIN-AGENT.md:116`/`:121` ∥ `store/STORE.md:369` ∥ `webui/WEBUI.md:571` | notice `data` 契约钉死——四值枚举 `{ reason: "restart" ∥ "budget" ∥ "model_error" ∥ "empty_turn" }`（②③④ 行处 + 重启行各点名；人话文本 = `content` 面）；§2.10 增映射句（四值 ⇒ 四键 `admin.chat.noticeInterrupted` ∥ `noticeBudget` ∥ `noticeModelError` ∥ `noticeEmpty` + 枚举外/缺位原文兜底；en 面零 CJK 判据 = 枚举命中前提） |
+| ③ | 本节 §2.3 表（`i18n-{zh,en}-system.mjs` 行——补登记，`:73`） | `audit.type.agent_event` 落点 = system 部件（审计族键域界；`views-audit.mjs` 型面表消费）；**§2.6 核：不涉**——键面/指纹断言件（`-server-public-structure.test.mjs`）已裁随收口同步轮（父侧 04:5x 裁在案），本清单零改；型面数断言件（注⑲ 在册）无需另动 |
+| 同拍 | `webui/WEBUI.md:133`（§2.2 键族登记）∥ `:567`（§2.10 页形行） | 一致性面：notice 三形 ⇒ **四形**（空回合入列）——四值枚举裁决的直接导出项；列报 |
+
+**落点档五件**：`design/PROJECT.md:663` ∥ `agent/ADMIN-AGENT.md:151` ∥ `gateway/API.md:379` ∥ `store/STORE.md:449` ∥ `webui/WEBUI.md:805`（各 +1 变更记录行）。**产品码零触（本轮）**。
+
+**实施舱咬合（#191/#192）**：前端舱已落四键——`views-chat.mjs:46-51`（精确值判定映射表）+ `i18n-{zh,en}-admin.mjs` 四键 + 批内件 `-admin-agent-chat-ui.test.mjs`（`:47` 键表 ∥ `:318` 精确值用例）；**无须另派**。后端舱（#192）按四值落枚举（父侧随轮知会在案）。doc-check 读数（本轮后）：**本批五档零新增超宽 ∥ 零新增悬空**（候选 57042 · 悬空 8——全数 core/desktop 域既有，非本批面）。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -155,7 +171,52 @@
 VERDICT: pass
 
 ## §4 用户批准（主 agent）
+
+**§4 用户批准（主 agent 代签——用户 2026-10-11 05:46「自动跑完」授权）**
+
+- **三条件齐备**：① 设计评审 **#187 = pass**（🔴 0 ∥ 🟡 6 ∥ 🔵 5；轮次 1 全文 = §3）；② **修正轮 #188 已落地并经父侧逐条核验**（十号点修 + 闸面收净；父侧抽面实读 `:118`/`:132`/`:67`/`:300`/`:562`/`:124` 等在册；发现表 11/11 = Fixed）；③ **token 已签发**（评审 Approved 回执在会话——#187）。
+- **授权口径**：用户 05:46「自动跑完」= 全链授权（代点火 ∥ §4 代签 ∥ 修正/实施派发 ∥ 收口核销 ∥ 提交推送 ∥ token 消费）；父侧自缚三条同本仓惯例：新范围 ∥ 用户口径裁决 ⇒ 停并只摆一条；破坏性 ∥ 不可逆 ⇒ 先停；复评再出 🔴 即停。
+- **本批射程确认**：三件——控制台 chat 页 ∥ 浏览器流式会话通路 ∥ 工具面扩展七件；实施 = 双舱派发（后台舱 ∥ 前端舱，共用本设计 token）；需求档回笔已落（04:5x——八处）；上抛处置 = §6 登记。
+
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（九件声明面 + 2 件清单外（system 两表 audit 型键） + 批内件落盘；12 腿全绿；内审第 2 轮 pass（1 条可选打磨项未改））
+
+
+
+### §5 实施记录（eng-coder · admin-agent-chat 批 · 前端舱）
+
+**交付摘要**（声明面九件 + 清单外 2 件 + 批内件 1 件）：
+- `thincoder-server/public/views-chat.mjs`（**新建**，398 行——设计估 ≈300，超估约 33%，仍 ≤500 软线；纯函数 `splitLines/parseFrame/argsText/noticeText/toolArgsIndex` 导出直测）；`nav.mjs`（管理组 +`chat` 位次 2〔总览后〕⇒ 管理 9 ∥ 头注随正）；`app.mjs`（`import { renderChat }` + `PAGES["/admin/chat"]`；非壳页）；`i18n-zh-admin.mjs` / `i18n-en-admin.mjs`（+31 键/表——`admin.chat.*`）；`i18n-zh-shell.mjs` / `i18n-en-shell.mjs`（+`nav.page.admin.chat`）；`views-audit.mjs`（`agent_event` 型 + `detail.summary` 支）；`style.css`（对话族 12 条规则——零新变量 ∥ 零新悬停）。
+- **清单外 2 件**：`i18n-zh-system.mjs` / `i18n-en-system.mjs`（+`audit.type.agent_event`——§2.2 拆表域界 `audit.*` ⇒ system 部件，与 `audit.type.sandbox_*` 同部件；批档 §2.3 受影响文件表原缺登记，父侧修正轮回笔）。
+- **批内件**：`docs/batches/2026-10-11-admin-agent-chat-ui.test.mjs`（新建，625 行，12 腿；不入 `package.json` 门禁链——入链与否由父侧裁，见交付报告披露）。
+- 键数终值：**zh 501 ∥ en 506**（+33/表）；首轮收口同步轮的结构断言件（`468 ∥ 473`）待父侧收口轮收正（批档 §6 已登记）。
+
+**实施轮验证读数（本舱自跑）**：
+- `node --check` 十件源档 + 批内件 → 全 `Syntax OK`；
+- `node --test docs/batches/2026-10-11-admin-agent-chat-ui.test.mjs`（自 `thincoder/` 仓根）→ **12 腿全绿**（含腿 ⑫ 流归属回归、腿 ⑦ 断连/离页/草稿三态）；
+- 静态读数：`public/` 33 件（32 + `favicon.png`）∥ `:root` 38 变量 ∥ `:hover` 恰 7 条 ∥ `views-chat.mjs` 398 行、行宽 ≤300、零外链、代码段零 CJK、类名与 CSS 双向闭合。
+- **未跑**：仓门禁套件（`npm test`）——按批内纪律，repo 套件由父侧收口轮统一跑（本舱不跑）。
+
+**决策透明表**（实施当刻判断——依据 ∥ 后果，收口可裁）：
+
+| 判断点 | 抉择 | 依据 | 后果/边界 |
+|---|---|---|---|
+| 流归属 | 直播帧与 `end` 重读只在 `activeId === chatId` 时落地（切走丢帧） | 内审第 1 轮 must-fix（切会话 ⇒ 帧串台 + `end` 把视图换成另一会话）；设计裁「跨会话并发不设限」 | 切走后本会话进度不可见；回来重读即全量（落库单源，零内容丢） |
+| notice 判定 | 由子串改**精确值**映射（`restart`/`budget`/`model_error`/`empty_turn`）+ 未命中原文兜底 | 父侧裁定四值枚举（#191/#195）；子串 `model` 会误吞未来新值 | 后端若落人话句 ⇒ 原文兜底（en 面现中文，零信息丢） |
+| 缺省模型 | 保留「倒序首行所用」列表面读法（未加成功位读取） | 父侧裁定；会话行无逐轮成功位 | 设计侧回笔 KD-SV-87 机械读法 |
+| 离页中止 | 挂载点卫（`mount.isConnected === false`）+ 重渲代际双判 | §2.10「断连/离页：读流中止」；沿 `views-sandbox.mjs` 先例 | 回合照跑（落库单源），零未押异常 |
+| 草稿还原 | 仅「未受理」还原（网络 ∥ 信封拒 ∥ 200-无流体）；流中/断连不还原 | 零副作用 ⇒ 还原（沿弹窗体例）；流已起 ⇒ 重发有双发风险 | 200-无流体支亦还原——内审标「可选」未改（近不可达支；改动会使已 pass 轮失效） |
+| 输入区在途门 | 页级单流（`busy` 全局——切换会话期间别会话亦禁用发送） | 设计只写「在途禁用」；单流页不发明跨会话并发 | 期间隔会话发送被拒（服务端本可并发）——记入收口可裁清单 |
+| 运行中指示 | `busy ∥ detail.chat.status === "running"`（页级） | 同上（保守读法） | 在别会话期间亦显「运行中……」（语义 = 本页有回合在跑） |
+| 会话行徽标 ∥ 重读钮 ∥ 新帧底吸附 | 三件均落 | §2.2 键族已登记「重读」；§2.10 页形未逐件列 | 低风险交互补全——报告披露，收口可裁 |
+
+**审计与代码评审轮次与终态**：
+- **发散审计（explore，read-only）×1** → DEVIATIONS：PARTIAL 1（离页中止缺挂载点卫）∥ SILENT-SIMPLIFICATION 1（缺省模型近似未标注）∥ DOC-DRIFT 1（system 两档未登记）；OUT-OF-LIST 不成立（改动为设计必需）；🔴 零。
+- **内审（advisor·code）第 1 轮** → **changes-required**：must-fix 1（流归属：切会话 ⇒ 直播帧串台 + `end` 换视图）∥ 协调 1（notice `reason` 值域未钉）∥ 🔵 4（`getReader` 角落未押 ∥ 缺省模型措辞 ∥ WEBUI 数值未回填 ∥ 腿 ⑩ 类名闭合启发式）。
+- **自修轮次**：审计后 1 轮 + 评审后 1 轮（共 2 轮，≤5 上限内）。
+- **内审第 2 轮（仅核修正主张）** → **pass**：must-fix 与四条 🔵 逐条核到位、无回退、无新增面；余 1 条新 🔵（200-无流体支返 `false` 与提示句语义相左 + 该支零腿）标「可选」，**未改**（改动会使本轮 pass 失效；该支近不可达——`Response.body` 仅在 204/205/304/HEAD 为 null）。
+- **终点态 = clean**（第 2 轮 pass；1 条评审标记「可选」的打磨项如实登记未改；文档面回笔项〔WEBUI 数值 ∥ notice 四值三处单源 ∥ 结构件键数〕归父侧收口轮）。
+
 ## §6 验证与收口（父代理）
 
 ### 2026-10-11 04:5x · fix 轮上抛处置（父侧裁决——登记防漂）
@@ -167,3 +228,13 @@ VERDICT: pass
 
 - 落点（八处）：AC-37 新增（`:250`）∥ AC-28 十三型（`:240`）∥ AC-12 管理 9 + 档目链尾两轮序（`:219`）∥ AC-14 链尾（`:221`）∥ §2:13/:14 管理九页/合计十三页（`:64`/`:69`）∥ §5 ④ 形态落点（`:331`）∥ 注行 AC-31–37（`:252`）∥ 变更记录（`:520`）。**评审发现 #4 落定**（链尾两轮序收口 **34 ∥ 35**——地面实读 `public/` 全目录 32 件佐证 **31 ∥ 32**；评分基线吻合）。
 - **发现并挂号**（不并改）：控制台「我的」页数口径不一（`nav.mjs:2` 实读「我的 3」⇄ 需求 `:64`/`:219`「四」⇄ 设计 `:67`「四」；含「成员沙盒页」在册未落）——台账新行挂号。
+
+### 2026-10-11 06:0x · 实施轮上抛处置（父侧裁决——#191 两问 + 附报）
+
+- **① 缺省模型**：裁 = **采纳近似 + 设计回笔**——机械读法 = `GET /api/admin/agent/chats` 倒序首行 `model`（不在下拉源 ⇒ 空选）；「成功」位 = 数据面无（不引入新位；题设近似如实登记）。修正轮已派（KD-SV-87 单源 + 各随拍处同词）。
+- **② notice `data` 契约**：裁 = **stable 枚举** `{ reason: "restart" | "budget" | "model_error" }`（三径 = 重启收尾/预算超限/模型错误；人话文本 = `content` 面）；设计钉单源（`gateway/API.md` §2.8 ∥ `ADMIN-AGENT.md` §11 ∥ `store/STORE.md` v14 段）+ WEBUI §2.10 记三键映射（`admin.chat.notice.*` + 原文兜底）；后端实现 = #192 轮内落（父侧随轮知会），前端映射保留；收口端到端核（en 面零 CJK 判据依赖枚举命中）。
+- **③ 附报**：`i18n-{zh,en}-system.mjs` 两件 = `audit.type.agent_event` 正确落点（审计族键 = system 部件域界；§2.3 表缺登记——修正轮补记）。
+
+### 2026-10-11 06:0x · notice 枚举补裁（#195 上抛——④ 空回合覆盖缺口）
+
+- **裁**：④ 空回合**单列**——枚举定稿**四值** = `{ reason: "restart" | "budget" | "model_error" | `empty_turn` }`（不并入 `model_error`——机器值失真；不取「无 reason ⇒ 原文兜底」——en 面回退中文违零 CJK 取向）。#195 按四值写三处单源；前端映射补第四键（#191 随轮或收口后小修轮）；后端实现 = #192 轮内落（父侧随轮知会——四值）。
