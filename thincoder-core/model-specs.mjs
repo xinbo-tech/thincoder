@@ -205,6 +205,13 @@ const MODEL_SPECS = [
   // gemini-3.1-pro（2026-09-25 批 §14.2 #2-6 · §1.7.1 父侧交付）：**尺寸行**——context 1_048_576 / maxOutput 65_536（多源
   // 网络转述级，本机无该渠道——行值 + 行注即标级）；thinking「有·计入输出预算」= 弱源读数 ⇒ 零口径不落字段（§14.3）。
   ["gemini-3.1-pro",    { context: 1_048_576, maxOutput: 65_536 }],
+  // gemini-3.8-flash ∥ gemini-3.7-flash（2026-10-10 批 §18 · 台账 #1198）：官方逐档规格页实核（as-of 2026-10-10）——
+  // 尺寸位（官方口径）：context 1_048_576 ∥ maxOutput 65_536；入 = 文/图/音/视、出 = 文（本表 multimodal = 图像面，§2.7——
+  // 音/视仅行注承载）；思考恒开（thinking_level 受理 LOW/MEDIUM/HIGH、无关闭档；显式 MINIMAL ⇒ API 校验错——官方逐档页注）
+  // ⇒ thinking + thinkAlwaysOn = 官方口径（§16.3 机制位）；机制位其余不声明（google 传输面实读——§18.3）。
+  // GA 2026-09-02（3.8）∥ 2026-08-13（3.7）；3.7 退役 2027-01-28（日程注）。
+  ["gemini-3.8-flash",  { context: 1_048_576, maxOutput: 65_536, thinking: true, thinkAlwaysOn: true, multimodal: true }],
+  ["gemini-3.7-flash",  { context: 1_048_576, maxOutput: 65_536, thinking: true, thinkAlwaysOn: true, multimodal: true }],
   // Tencent Hunyuan (TokenHub — 聚合网关 `https://tokenhub.tencentmaas.com/v1`；批 2026-09-20-channel-onboarding)
   // hy3：thinking / thinkApi / effort 枚举 = **本渠道实测**——裸请求 reasoning_content 在场（tok=16），
   // `reasoning_effort:"none"` 即消失（实测唯一有效 off 路径）。枚举 = 七值**受理级探针**（七值全 200 受理；
