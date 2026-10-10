@@ -30,14 +30,14 @@
 - **单写者**：仅登录/退出流程写 `team` 段与派生条目（`writeConfigAtomic` 一次 mutate——核既有写盘执行体；端侧零自写盘，三端同源）。
 - **加载归一**：`loadConfig` 归一 `team` 段（形不符 ⇒ null——软失败不阻启动；沿 `proxy` 段先例）。
 - **登录态判据**：`loggedIn` ⇔ `team.token`（trim 非空）。**= 团队功能开关**（后续各面消费本判据——口径④）。
-- **`team` 段不入 `DEFAULTS`**（沿 `providers` / `proxy` 先例）：不进入 settings 工具的已知键面（agent 不可写）；`team.token` 若经读面到达 = 敏感段词表天然遮罩（`thincoder-core/agent-tools/settings.mjs:22`）。
+- **`team` 段不入 `DEFAULTS`**（沿 `providers` / `proxy` 先例）：不进入 settings 工具的已知键面（**未知键原样通过**——agent 可写、零类型校验；工具不主动写 `team` 段；`thincoder-core/agent-tools/settings.mjs:144`）；`team.token` 若经读面到达 = 敏感段词表天然遮罩（`thincoder-core/agent-tools/settings.mjs:22`）。
 
 ### 2.2 登录流程（三端同构）
 
 1. 收集：服务器地址 + 用户名 + 密码（+ 本端标签自动生成 = `端名@主机名`——`node:os` `hostname()`；总长 ≤40 裁剪）。
 2. 请求：`POST <server>/api/client/login`（形 = `client/CLIENT.md` §2）。
 3. 成 ⇒ 一次写盘：`team` 段（server/member/label/token）+ 派生条目 upsert（按名 `team` + `derived` 定位——有则更新，无则**追加 `providers[]` 表尾**——不劫持既有回退序）。
-4. 败 ⇒ 分类出词（网络不可达 ∥ 凭据错 ∥ 锁定期）——零写盘。
+4. 败 ⇒ 分类出词（网络不可达 ∥ 凭据错 ∥ 锁定期 ∥ 本机配置写入失败）——零写盘。
 
 **同名手工条目冲突**（口径②）：`providers[]` 内已有非派生 `team` 条目 ⇒ 登录仍成（数据面可用），但**不写派生条目**；**返回形** = `{ ok: true, notice: "manual-name-conflict" }`（**码不携文**——`notice` 仅本冲突时在场；提示文本 = 端侧 i18n）。
   端侧收 `notice` ⇒ **登录当刻就地提示**「已存在同名 provider「team」——未自动添加；请改名或删除后重登」（三端逐字同句——§2.5）；**不覆盖、不弹窗、不阻断**。
@@ -70,6 +70,8 @@
 
 **失败理由域（失败形 `{ ok:false, reason }`——四值单源）**：`network` ⇔「网络不可达」∥ `credentials` ⇔「用户名或密码错误」∥ `rate_limited` ⇔「登录尝试过于频繁」∥ `write_failed`（本机配置落盘失败）⇔「本机配置写入失败」。
 
+**`reason` 判据（核心分类单源）**：不可达 ∥ 其余状态 ⇒ `network` ∥ 401 ⇒ `credentials` ∥ 429 ⇒ `rate_limited` ∥ 本机配置写盘失败 ⇒ `write_failed`（逐值对位；端侧只做「理由→句」映射，不自创分类）。
+
 **文案同构判据**：「未登录提示」∥「失败出词」（四句）∥ 两条**一次性提示**（同名冲突 ∥ 吊销未达）三端**逐字同句**（VSC/桌面 = zh i18n 键值逐字相等；CLI = 单语直出同句）；**读面零提示字段**——CLI `team status` ∥ VSC `teamStatus` ∥ 桌面 `team:status` 不带提示字段（两提示 = 一次性事件——登录/退出当刻就地显示，不随状态复显）。
 
 ## 3. 关键决策记录
@@ -101,7 +103,7 @@
 | VSC | `thincoder-vscode/src/extension/panel-messages-settings.mjs`（已落盘） | **253 ⇒ ≈270**（实读——+3 处理体） |
 | VSC | `thincoder-vscode/src/extension/settings.mjs`（已落盘） | **408 ⇒ ≈420**（实读——teamStatus 读面 + push 点） |
 | VSC | `thincoder-vscode/src/extension/panel-settings-push.mjs`（已落盘） | **121 ⇒ ≈130**（实读——teamStatus 推送） |
-| VSC | `thincoder-vscode/locales/en.json` ∥ `zh.json`（已落盘） | **296 ∥ 296 ⇒ ≈310 ∥ ≈310**（实读——+≈14 键/表） |
+| VSC | `thincoder-vscode/locales/en.json` ∥ `zh.json`（已落盘） | **296 ∥ 296 ⇒ ≈311 ∥ ≈311**（实读——+≈15 键/表） |
 | 桌面 | `thincoder-desktop/renderer/views/settings-sections-team.mjs`（拟新增） | **≈110**（设计估——团队段体） |
 | 桌面 | `thincoder-desktop/renderer/views/settings.mjs`（已落盘） | **436 ⇒ ≈443**（实读——SECTIONS + 分派） |
 | 桌面 | `thincoder-desktop/renderer/views/settings-sections.mjs`（已落盘） | **96 ⇒ ≈97**（实读——re-export） |
@@ -110,7 +112,7 @@
 | 桌面 | `thincoder-desktop/src/main/team.mjs`（拟新增） | **≈70**（设计估——三通道处理体） |
 | 桌面 | `thincoder-desktop/src/main/ipc-registry.mjs`（已落盘） | **94 ⇒ ≈99**（实读——+3 HANDLERS） |
 | 桌面 | `thincoder-desktop/src/preload/preload.cjs`（已落盘） | **85 ⇒ ≈88**（实读——+3 CHANNELS） |
-| 桌面 | `thincoder-desktop/renderer/i18n-settings.mjs`（已落盘） | **156 ⇒ ≈168**（实读——+≈12 键） |
+| 桌面 | `thincoder-desktop/renderer/i18n-settings.mjs`（已落盘） | **156 ⇒ ≈169**（实读——+≈13 键） |
 
 - 批内件两件（跨档集——件数口径与服务端板档 §6 本批块对拍）：服务端单件 = `docs/batches/2026-10-10-team-login-client-access.test.mjs`（估 ≈260——**入 server 链**（`prepublishOnly` 38 ⇒ 39））∥ 本册件 = `docs/batches/2026-10-10-team-login-client-access-ends.test.mjs`（核 + 三端结构面——估 ≈380；**不入链**——跨面件无宿主产品链）。
 - `thincoder-core/agent-tools/settings.mjs` ±0（`team` 不入 `DEFAULTS`——工具面零改）。
@@ -131,7 +133,7 @@
 |---|---|---|
 | N1 | 登录成 ⇒ 一次写盘：`team` 四键在场 ∥ 派生条目在场（表尾）；两处同值 | 批内件（写盘面 = 临时 config 路径 + 本地 HTTP 桩） |
 | B1 | 同名手工 `team` 条目 ⇒ 登录成 + 提示 + 手工条目逐字零改（零覆盖） | 批内件 |
-| E1 | 登录败（网络不可达 ∥ 401 ∥ 429）⇒ 零写盘 + 分类出词 | 批内件 |
+| E1 | 登录败（网络不可达 ∥ 401 ∥ 429）⇒ 零写盘 + 分类出词；本机配置写盘失败 ⇒ `write_failed`（零假成功） | 批内件 |
 | N2 | 退出 ⇒ token 摘除 ∥ apiKey 摘除 ∥ `derived` 保留 ∥ 服务端收到吊销请求；网络失败 ⇒ 本地照清 + 提示 | 批内件 |
 | B2 | 派生条目无 key ⇒ 三端列表过滤判据（纯函数）判真 ∥ 有 key 判假 | 批内件 |
 | E2 | 地址归一：缺协议补 `http://` ∥ 尾斜杠去 ∥ 尾 `/v1` 去；label 裁剪 ≤40 | 批内件 |
@@ -148,3 +150,5 @@
 - 2026-10-10（**team-login-client-access 批（B1）· 设计评审轮 1 修正（fix 轮 · 发现 3 ∥ 7 ∥ 8 ∥ 9 ∥ 12）· eng-designer**——承批档 §3 轮次 1 · 台账 #1212）：§4 批内件对账（服务端单件入链 ∥ 本册件不入链）+ `config.mjs` 行越线注与拆分预案指针 ∥ §2.5 删「（含等待秒数）」（秒数无载体——三句逐字同判据保持；三端已同拍）∥ §2.4 ∥ §3 D-TM3 消费面计数统一「四消费面」（与 `PROVIDER.md` §6.25 同拍）∥ §7 增 token 生命周期已认账两条。**零新语义**（评审发现的直接导出项）。
 - 2026-10-10（**team-login-client-access 批（B1）· 实施期设计相抵修复 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212）：§2.2 ∥ §2.3 补**返回形 + 端侧就地提示**句（`notice: "manual-name-conflict"` 仅同名冲突时在场 ∥ `revokeDelivered`——缺席 = true）∥ §2.5 增**一次性提示**行 + 判据扩（三端逐字同句 ∥ 读面零提示字段）。**零新语义**（父侧裁定直接导出项）。
 - 2026-10-10（**team-login-client-access 批（B1）· 实施期档-码差一修复（`write_failed` 补设计）· eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212；父侧裁定 = 保留第四值并补设计——写盘失败须真报警；第四句用词 = 「本机配置写入失败」）：§2.5 新增**失败理由域四值句**（`network` / `credentials` / `rate_limited` / `write_failed`——本机配置落盘失败；与出词四句同序对位）+ 出词表补第四句 + 判据行同拍。**零新语义**（父侧裁定直接导出项）。明细 = 批档 §2 实施期修复块。
+- 2026-10-10（**team-login-client-access 批（B1）· 实施期收尾小修 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212）：§2.2 步 4 分类出词补第四值（本机配置写入失败）∥ §2.5 补 **`reason` 判据句**（核心分类单源）∥ §6 E1 补写盘失败位（`write_failed`）；
+  §2.1 `team` 段行措辞收正（未知键原样通过——与 settings 工具实装对齐）∥ §4 i18n 估数随第四句顺正（VSC **+≈15 键/表** ∥ 桌面 **+≈13 键**）。**零新语义**（父侧派发项直接导出）。明细 = 批档 §2 实施期修复块。
