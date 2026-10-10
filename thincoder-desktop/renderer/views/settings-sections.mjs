@@ -7,13 +7,15 @@
  *   - agent 段体（含具名十键表 `NAMED_FIELDS`）随 R8 拆出 `./settings-agent.mjs`（本档 re-export 两件）；
  *   - 「工具与服务」段体随 R2 拆出 `./settings-sections-tools.mjs`（本档 re-export 一件）；
  *   - R7 两新段体拆出 `./settings-sections-env.mjs` ∥ `./settings-sections-models.mjs`（本档 re-export 两件）；
- *   - MCP 段体随两钮出档 `./settings-sections-mcp.mjs`（本档 re-export 一件）。
+ *   - MCP 段体随两钮出档 `./settings-sections-mcp.mjs`（本档 re-export 一件）；
+ *   - 「团队」段体随 B1 登录面批（2026-10-10 · 台账 #1212）自立出档 `./settings-sections-team.mjs`（本档 re-export 一件）。
  * 面形要点：各段体供 `settings.mjs` 段体分派（段体经 `deps` 注入取用两导出面（`verifyControl`）
  * 与词表（`reasonWord`），本档零 import 反向（无环）—— **R7 起 = 六段体**（env ∕ models 两新段
  * 经本档 re-export 面入分派；MCP 体第三参 `deps` 供 `reasonWord` 出词）。
  * 导出面：`modelHeadNode` / `modelChoicesTree` 供首启向导第二步复用（单一 owner、零副本）；`providersBody` = D37 拆档 re-export（消费面零改）；
  * 三端对齐批：`providerAddBody`（添加弹窗体）随渠道族同档经本档 re-export；
- * 添加入口弹窗统一批（KD-77 ①②）：`mcpFormBody`（MCP 表单弹窗体）∥ `consultAddBody`（会诊添加弹窗体）同径 re-export。
+ * 添加入口弹窗统一批（KD-77 ①②）：`mcpFormBody`（MCP 表单弹窗体）∥ `consultAddBody`（会诊添加弹窗体）同径 re-export；
+ * B1 批（台账 #1212）：`teamBody`（团队段体——登录表单 ∥ 状态行两态）同径 re-export。
  * 纪律：零 DOM（描述符树）；文案一律经 `t()`；零 `node:` / 零裸包 / 零 `store.mjs` import。
  */
 import { t } from "../i18n.mjs"
@@ -31,6 +33,8 @@ export { mcpBody, mcpFormBody } from "./settings-sections-mcp.mjs"
 // 渠道族（行族 + 段体）随 D37 先拆后改出档 `./settings-sections-providers.mjs`；本档 re-export ⇒ 分派面零改。
 // 三端对齐批：同档增出 `providerAddBody`（添加弹窗体 —— `views/settings.mjs` `providerAdd` 支消费）随本行 re-export。
 export { providerAddBody, providersBody } from "./settings-sections-providers.mjs"
+// B1 批（台账 #1212）「团队」段体自立出档；本档 re-export ⇒ 分派面零改（消费 = `views/settings.mjs` 段体分派 `team` 支）。
+export { teamBody } from "./settings-sections-team.mjs"
 
 /** 列表切片：缺 / 非数组 ⇒ 空表（零节点 —— 禁假数据）。 */
 const listOf = (value) => (Array.isArray(value) ? value : [])

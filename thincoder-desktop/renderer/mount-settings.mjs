@@ -25,6 +25,10 @@
  *   ⑥ 向导步 3 目录出口走装配面注入的项目面链（`onProjectOpened` = `app.mjs` `openDir`，含刷新 + 「点开即可续」）：
  *      注入点在本档、连线归向导接线族，本档零算法副本。
  *   ⑦ 「对齐第三批」三面（随出口族迁 `mount-settings-exits.mjs`）：P14 出值规范化 ∕ P15 具名控件即改即存 ∕ F-Esc 关面板。
+ * **B1 批（2026-10-10 · 台账 #1212 ∥ `docs/desktop/design/SETTINGS.md` §2.21）**：团队段接线族并入 ——
+ * `createTeam`（出档 `mount-settings-team.mjs`）产 `loadTeam` + 两出口（登录 ∥ 退出）；`loadTeam` 经装配并入
+ * `reads` 检索面（`MODAL_READS.team`——组弹窗读链），出口经装配并入单一 `exits.handlers` 表（页 ∥ 弹窗两面同表）；
+ * **开面随读**：本档 `openSettings` = `exits.openSettings` 包装（原样 + `loadTeam`）——沿各段「开面即读」同口径。
  * 纪律：零 `node:` / 零裸包（静态闭包判据 = `test/guard-closure.test.mjs`）· 逐通道回执形单源 = IPC.md §2。
  */
 import { patchSettings, store as defaultStore } from "./store.mjs"
@@ -32,6 +36,7 @@ import { captureView, dropDrafts, mergeViewSnaps, restoreView } from "./view-sta
 import { createWizard } from "./mount-onboarding.mjs"
 import { createReads } from "./mount-settings-reads.mjs"
 import { createExits } from "./mount-settings-exits.mjs"
+import { createTeam } from "./mount-settings-team.mjs"
 import { renderSettingsModal, settingsModalNode } from "./settings-modal.mjs"
 import { closeSettingsConfirm } from "./settings-confirm.mjs"
 import { mountWizard, wizardModel } from "./views/onboarding.mjs"
@@ -45,13 +50,14 @@ export const SETTINGS_KEYS = Object.freeze(["settings", "locale", "theme"])
 /** 段名闭集（**由视图 `SECTIONS` 派生** —— 同源单份，零双抄；失败面段标域；表外 ⇒ `panel`）。
  *  **三端对齐批（KD-75 ①②）**：七 ⇒ 八 —— 增添加弹窗组名 `ADD_MODAL_GROUP`（`providerAdd`——非段名，
  *  名单单源 = 视图档导出，本档 ∥ `MODAL_READS` ∥ 开径出口三面同领）。
- *  **添加入口弹窗统一批（KD-77 ①②）**：八 ⇒ **十** —— 增 `MCP_FORM_MODAL_GROUP` ∥ `CONSULT_ADD_MODAL_GROUP`（同径同领）。 */
+ *  **添加入口弹窗统一批（KD-77 ①②）**：八 ⇒ **十** —— 增 `MCP_FORM_MODAL_GROUP` ∥ `CONSULT_ADD_MODAL_GROUP`（同径同领）。
+ *  **B1 批（台账 #1212）**：十 ⇒ **十一** —— 团队段入段名序（`SECTIONS` 追尾，本档零枚举改）。 */
 const SCOPES = Object.freeze([...SECTIONS.map((section) => section.name), ADD_MODAL_GROUP, MCP_FORM_MODAL_GROUP, CONSULT_ADD_MODAL_GROUP])
 
 /** 弹窗读取链（KD-68 ③ 逐组指名表：`model` 随渠道面（含模型候选随动）∥ `models` 随 agent 面（models 块 —— R7 同拍）；
  *  **添加弹窗**（KD-75 ②）随 `providers` 面 —— 体 = 单表，预设 ∥ 候选项两源皆 `provider:list` 回执；
  *  **两新组**（KD-77 ①②）：`mcpForm` 随 `mcp` 面（表单预填取行 `config` —— `mcp:list` 回执）∥ `consultAdd` 随 agent 面
- *  （models 块 —— 两 picker 与行族同源）。 */
+ *  （models 块 —— 两 picker 与行族同源）；**B1 批**：`team` 随团队段（`loadTeam` —— 团队状态读）。 */
 const MODAL_READS = Object.freeze({
   providers: "loadProviders",
   model: "loadProviders",
@@ -60,6 +66,7 @@ const MODAL_READS = Object.freeze({
   env: "loadEnv",
   tools: "loadTools",
   models: "loadAgent",
+  team: "loadTeam",
   [ADD_MODAL_GROUP]: "loadProviders",
   [MCP_FORM_MODAL_GROUP]: "loadMcp",
   [CONSULT_ADD_MODAL_GROUP]: "loadAgent",
@@ -138,15 +145,25 @@ export function attachSettings(host, deps = {}) {
     else console.error("[renderer] invalidateDrafts dropped: missing draft scope")
   }
 
+  /** 团队段接线族（B1 批 —— 状态读 ∥ 登录 ∥ 退出；出档 `mount-settings-team.mjs`；写成功径复读两调用点住该族）：
+   *  `loadTeam` 经装配并入 `reads` 检索面（`MODAL_READS.team` + 开面随读 + `refreshSettings` 复读口），
+   *  出口经装配并入单一 handlers 表（对外零改）。 */
+  const team = createTeam({ ask, store, setSettings, report, loadProviders: reads.loadProviders, invalidateDrafts })
+  /** 读数面全表（基础族 + 团队状态读 —— 检索面单源）。 */
+  const allReads = { ...reads, loadTeam: team.loadTeam }
+
   /** 出口族 + 写路辅助（出档 `mount-settings-exits.mjs` —— 共享项注入，本档零副本；`paintSettings` 迟绑定穿透）。
    *  **开 ∕ 关双向注入**（函数声明提升 ⇒ 注入先于定义安全）：`openModal` = 添加弹窗开径（`settings:addProvider`
    *  出口 —— KD-75 ②，沿 `paintSettings` 迟绑定先例）；`closeModal` = 保存成功径宿主关（KD-75 ⑥——§2.4 行 6
    *  「提交 ⇒ 宿主关（KD-68 关径）」）。 */
   const exits = createExits({
-    ask, store, setSettings, report, clearReport, occupies, reads, onProvidersChanged, invalidateDrafts,
+    ask, store, setSettings, report, clearReport, occupies, reads: allReads, onProvidersChanged, invalidateDrafts,
     slot: SETTINGS_SLOT, paintSettings: (state) => paintSettings(state),
     openModal: (group) => openSettingsModal(group), closeModal: () => closeSettingsModal(),
   })
+
+  /** 出口全表（B1 批：团队段出口族经装配并入 —— 单一 `exits.handlers` 表对外零改；页 ∥ 弹窗两面同表）。 */
+  Object.assign(exits.handlers, team.handlers)
 
   /** 弹窗出口面（KD-68 ③⑥ —— 出口链 = **同一 `exits.handlers` 全表**（零第二份）+ 关三路（✕ ∥ 背板 ∥ 卡内 Esc）
    *  同引 `onCloseModal`；函数声明提升 —— 常量求值先于装配体调用）。 */
@@ -165,7 +182,8 @@ export function attachSettings(host, deps = {}) {
       return false
     }
     setSettings({ modal: group, notice: null, ...exits.resetFacets(state, group) })
-    void reads[MODAL_READS[group]]()
+    if (group === "team") team.resetNotice() // B1：本组面态复位（限本组——团队段无 facets，唯当刻一次性提示）
+    void allReads[MODAL_READS[group]]()
     return true
   }
 
@@ -240,23 +258,33 @@ export function attachSettings(host, deps = {}) {
   paintSettings()
   void reads.loadProviders()
 
-  /** config 写盘感知复读（R8 · `ev:config` 窄口 —— 接线 = `renderer/app.mjs`）：设置 ∕ 向导面**在场** ⇒ 七段读数
-   *  复读（providers ∕ agent〔携 models〕 ∕ mcp ∕ env ∕ tools —— 与 `openSettings` 同批同源；R7 随段闭集扩：
-   *  `loadIndex` 更名 `loadTools` + 增 `loadEnv`）；**D39：组弹窗在场（`modal != null`）同复读**；关态 ⇒ 零动作
+  /** 设置面开（**B1 批装配口包装**：`exits.openSettings` 原样 + 团队段读随开面触发 —— 各段「开面即读」同口径；
+   *  页面面开在弹窗读链（`MODAL_READS.team`）外 —— 本包装为其读触发点；团队段当刻一次性提示随开面清）。 */
+  function openSettings() {
+    const opened = exits.openSettings()
+    team.resetNotice()
+    void allReads.loadTeam()
+    return opened
+  }
+
+  /** config 写盘感知复读（R8 · `ev:config` 窄口 —— 接线 = `renderer/app.mjs`）：设置 ∕ 向导面**在场** ⇒ 八段读数
+   *  复读（providers ∕ agent〔携 models〕 ∕ mcp ∕ env ∕ tools ∕ team —— 与 `openSettings` 同批同源；R7 随段闭集扩：
+   *  `loadIndex` 更名 `loadTools` + 增 `loadEnv`；B1 增 `loadTeam`）；**D39：组弹窗在场（`modal != null`）同复读**；关态 ⇒ 零动作
    *  （下次开面自读 —— 免空转）。返回是否复读（读数 ∕ 走查面）。 */
   function refreshSettings() {
     const state = store.get()
     if (!occupies(state) && state?.settings?.open !== true && state?.settings?.modal == null) return false
-    void reads.loadProviders()
-    void reads.loadAgent()
-    void reads.loadMcp()
-    void reads.loadEnv()
-    void reads.loadTools()
+    void allReads.loadProviders()
+    void allReads.loadAgent()
+    void allReads.loadMcp()
+    void allReads.loadEnv()
+    void allReads.loadTools()
+    void allReads.loadTeam()
     return true
   }
 
   return {
-    paintSettings, openSettings: exits.openSettings, refreshSettings,
+    paintSettings, openSettings, refreshSettings,
     openSettingsModal, closeSettingsModal, // D39：菜单「组弹窗」开 ∥ 关出口（face 返回 —— 消费面 = `renderer/app.mjs` 注入）
     handlers: exits.handlers, wizardHandlers, keys: SETTINGS_KEYS, detach,
     setTheme: exits.handlers.onSetTheme, // D36：菜单「主题▸」出口（转名暴露——零第二实现）

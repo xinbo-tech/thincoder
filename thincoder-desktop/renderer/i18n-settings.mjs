@@ -2,7 +2,7 @@
  * i18n-settings.mjs — 设置面词族第四档（i18n 拆分批 `docs/batches/2026-09-29-i18n-split.md` §2 · 台账 #614
  * 顶格消解：主档 `renderer/i18n.mjs` 内容行 500 顶格 ⇒ 自有 `settings.*` 族 55 键整族出档，本档承接）。
  *
- * 键面（**62 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59；**三端对齐批（2026-10-07 · 台账 #1027–#1035 · KD-75 ②③）**：增 `settings.addProvider` ∥ `settings.addProviderTitle` ∥ `settings.providers.customChoice` 三键，净删 `settings.providers.addCustom` ∥ `.addPreset` 两键（旧双表单提交词——表单退场随退）——59 ⇒ **60**；**添加入口弹窗统一批（2026-10-07 · 台账 #1054 · KD-77 ①）**：增 `settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle` 三键（MCP 添加入口 + 表单两态标题——值逐字同 VSC 同批落地 `locales` 同名键）——60 ⇒ **63**；**2026-10-09 清除批（实施期 fix 轮）**：净删 `settings.providers.activeToggle` 一键（向导步 1 复选退场——无消费者随实现净删）——63 ⇒ **62**）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
+ * 键面（**77 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59；**三端对齐批（2026-10-07 · 台账 #1027–#1035 · KD-75 ②③）**：增 `settings.addProvider` ∥ `settings.addProviderTitle` ∥ `settings.providers.customChoice` 三键，净删 `settings.providers.addCustom` ∥ `.addPreset` 两键（旧双表单提交词——表单退场随退）——59 ⇒ **60**；**添加入口弹窗统一批（2026-10-07 · 台账 #1054 · KD-77 ①）**：增 `settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle` 三键（MCP 添加入口 + 表单两态标题——值逐字同 VSC 同批落地 `locales` 同名键）——60 ⇒ **63**；**2026-10-09 清除批（实施期 fix 轮）**：净删 `settings.providers.activeToggle` 一键（向导步 1 复选退场——无消费者随实现净删）——63 ⇒ **62**；**B1 批（2026-10-10 · 台账 #1212）**：增团队段词族**十五键**（段名 + 表单三标 + 登录 ∥ 退出两钮 + 未登录提示 + 状态行两标 + 失败四句 + 一次性提示两句——未登录句 ∥ 四失败句 ∥ 两提示句 = 三端逐字同句，单源 = `docs/core/design/TEAM.md` §2.5）——62 ⇒ **77**）：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
  * 四段名 / 两段态 / 十三失败码 / 添加入口两键 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
  * 当前标 · 自定项键（KD-75 ③）/ 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
  * 移除 · 增键 · 添加入口 + 表单两态标题（KD-77 ①）—— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）。
@@ -14,10 +14,11 @@
  *
  * 值源：搬前主档原链注全述（键名 ∕ 两语值**逐字保原** —— 出档 = 纯搬零改；合并表两语键序同理零变，
  * 原位展开于 `question.cancel` 与向导注释之间）。
- * 消费面（设置面 **9** 档 · 皆 `t()` 取词、导入面零改动）：`renderer/settings-confirm.mjs`（密钥删除确认）·
+ * 消费面（设置面 **10** 档 · 皆 `t()` 取词、导入面零改动）：`renderer/settings-confirm.mjs`（密钥删除确认）·
  * `renderer/views/settings.mjs`（标题 ∕ 关闭 ∕ 语言 ∕ 段名 ∕ 态词 ∕ 失败码三表出词）·
  * `views/settings-controls.mjs` · `views/settings-sections.mjs` · `views/settings-sections-providers.mjs` · `views/settings-sections-env.mjs` ·
- * `views/settings-sections-mcp.mjs` · `views/settings-sections-models.mjs` · `views/settings-sections-tools.mjs`。
+ * `views/settings-sections-mcp.mjs` · `views/settings-sections-models.mjs` · `views/settings-sections-tools.mjs` ·
+ * `views/settings-sections-team.mjs`（B1 团队段 —— 段名 ∥ 表单 ∥ 状态行 ∥ 四失败句 ∥ 两提示句）。
  * 合并点 = `renderer/i18n.mjs` `HOST_DICT` 两语展开 —— 单一装配点仍 = `initDict`（本档零装配逻辑，纯词表）。
  * 两语键集须相等（增键两语同增、禁单语落键）；零落盘 · 零 `node:` / 零裸包 · 零 `/rc/` 静态导入
  * （渲染面静态闭包判据 —— 经合并点主档保持平 node 可装载）。
@@ -87,6 +88,23 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.mcpAdd": "+ Add Server",
     "settings.mcp.addTitle": "Add MCP Server",
     "settings.mcp.editTitle": "Edit MCP Server",
+    // ── B1 批（2026-10-10 · 台账 #1212）团队段词族（消费 = `views/settings-sections-team.mjs`；
+    // 未登录句 ∥ 四失败句 ∥ 两提示句 = 三端逐字同句，单源 = `docs/core/design/TEAM.md` §2.5）──
+    "settings.section.team": "Team",
+    "settings.team.serverLabel": "Server address",
+    "settings.team.usernameLabel": "Username",
+    "settings.team.passwordLabel": "Password",
+    "settings.team.login": "Log in",
+    "settings.team.logout": "Log out",
+    "settings.team.loggedOut": "Not logged in — available after login",
+    "settings.team.memberLabel": "Member",
+    "settings.team.labelLabel": "Client label",
+    "settings.team.reason.network": "Network unreachable",
+    "settings.team.reason.credentials": "Wrong username or password",
+    "settings.team.reason.rateLimited": "Too many login attempts",
+    "settings.team.reason.writeFailed": "Failed to write local config",
+    "settings.team.notice.manualNameConflict": "A provider named \"team\" already exists — not added automatically; rename or delete it, then log in again",
+    "settings.team.notice.revokeNotDelivered": "Server revocation not delivered",
   },
   zh: {
     // ── 设置面（批 9：`views/settings.mjs` + `views/settings-sections.mjs`）──
@@ -152,5 +170,21 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.mcpAdd": "+ 添加服务器",
     "settings.mcp.addTitle": "添加 MCP 服务器",
     "settings.mcp.editTitle": "编辑 MCP 服务器",
+    // ── B1 批（2026-10-10 · 台账 #1212）团队段词族（消费 = `views/settings-sections-team.mjs`）──
+    "settings.section.team": "团队",
+    "settings.team.serverLabel": "服务器地址",
+    "settings.team.usernameLabel": "用户名",
+    "settings.team.passwordLabel": "密码",
+    "settings.team.login": "登录",
+    "settings.team.logout": "退出登录",
+    "settings.team.loggedOut": "未登录——登录后可用",
+    "settings.team.memberLabel": "成员",
+    "settings.team.labelLabel": "端标签",
+    "settings.team.reason.network": "网络不可达",
+    "settings.team.reason.credentials": "用户名或密码错误",
+    "settings.team.reason.rateLimited": "登录尝试过于频繁",
+    "settings.team.reason.writeFailed": "本机配置写入失败",
+    "settings.team.notice.manualNameConflict": "已存在同名 provider「team」——未自动添加；请改名或删除后重登",
+    "settings.team.notice.revokeNotDelivered": "服务端吊销未达",
   },
 })

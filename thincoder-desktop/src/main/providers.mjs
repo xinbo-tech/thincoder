@@ -52,6 +52,13 @@ function hasKeyOf(entry) {
   return typeof entry?.apiKey === "string" && entry.apiKey.length > 0
 }
 
+/** 派生条目隐藏判据（B1 批 · 台账 #1212 —— 单源 = `docs/core/design/TEAM.md` §2.4 ∥ `PROVIDER.md` §6.25）：
+ *  `derived === true` ∧ 无 key ⇒ **本消费面隐藏**（退出后的单条过滤规则——登录态（有 key）照常在场；
+ *  四消费面各一处过滤，本档 = 桌面 `provider:list` 面）。 */
+function isHiddenDerived(entry) {
+  return entry?.derived === true && !hasKeyOf(entry)
+}
+
 /**
  * 预设候选面（端侧零表 · KD-10）：逐条取自核表 `PROVIDER_PRESETS`（`thincoder-core/config-presets.mjs:16`）
  * ——转发三字段 `{ name, desc, baseURL }`（**S7 增 `desc`**：候选项标签 `name — desc` 串形归渲染面；
@@ -75,6 +82,8 @@ function presetChoices() {
  * （= `defaultModel` 的 provider 段 ⇒ 命中行同时 `provider.active` 与顶层 `active` 双读一致）。
  * **S5 增**：逐行 `proxy` = 渠级代理位（布尔投影）；**S3 增**：逐行 `available` ∕ `unavailableReason` **读核落账**
  * （`admissionOf` —— 最近一次落账；**未落账 ⇒ 两键缺席** —— 禁假造；`unavailableReason` = 核失败句逐字）。
+ * **B1 批增（台账 #1212）**：派生条目隐藏判据——`derived === true` ∧ 无 key（团队段退出态）不入行集
+ * （`isHiddenDerived`）——登录态（有 key）照常在场；判据单源 = 核 `team.mjs` 条目形。
  * 畸形档不吞：核 `loadRaw` 抛 ⇒ 本档零 catch ⇒ invoke 拒绝直传。
  */
 export function providerList() {
@@ -86,7 +95,7 @@ export function providerList() {
     active: activeProvider ?? null,
     // 2026-10-09 清除批：两读数载荷载体（复合串单源直取；缺 ∕ 非串 ⇒ null —— 禁假造）。
     defaultModel: typeof defaultModel === "string" && defaultModel !== "" ? defaultModel : null,
-    providers: providers.map((p) => {
+    providers: providers.filter((p) => !isHiddenDerived(p)).map((p) => {
       const hasKey = hasKeyOf(p)
       const admission = admissionOf(p.name) // S3：读账优先（端侧零再分类副本）
       return {

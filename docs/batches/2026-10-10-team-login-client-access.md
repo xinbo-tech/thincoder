@@ -204,6 +204,9 @@ VERDICT: pass
 - **父侧保留项**（不派舱）：`IPC.md` `ev:menu` 行计数 ∥ 桌面档头「七段」⇒「八段」（档面单行修正）∥ `API-CONTRACT` 重生成（脚本面）∥ 全链门禁（`prepublishOnly`）与收口轮（含三端实走——R50④⑤）。
 
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（舱 D（桌面）· 审计零阻断偏差 ∥ 评审 pass ∥ fix 1）
+
+
 
 ### 5.A · 舱 A（核 + server）· eng-coder · 2026-10-10
 
@@ -296,5 +299,66 @@ VERDICT: pass
 - **内部分歧审计（只读 explore · 阻塞 ×1）**：结论 = **零分歧**（PARTIAL ∥ SILENT-SIMPLIFICATION ∥ DOC-DRIFT ∥ OUT-OF-LIST 四类各 0）；独立复证 = 六档 `node --check` 全绿 + 逐字句/隐藏判据/消息链实读；限制如实登记 = 无执行面 ⇒ 未复跑测试；并独立复核出 smoke 既有红一条（与本批零因果——读数在册）。
 - **代码评审（advisor · code ×1）**：**VERDICT: pass**（🔴 0 ∥ 🟡 3 ∥ 🔵 3）。fix round = **0**（无 must-fix 项）：三 🟡 = ① 登录成拍不刷模型候选面（模型面唯一来源 = `fullStatus` 的 `models` 载荷——实现与 §2.20 写面一致，时点取舍归父侧/设计侧 ∥ 收口轮口径）② `WEBVIEW-PROTOCOL.md` §3.2 五行登记（设计侧 #121）③ `chat-messages.js` 表补登（设计侧 #121）；三 🔵 = ① 快照载体两制（`_teamStatus` vs `SS`）② 两门收敛条件未明示 ③ 两处行数读数 vs 设计估。
 - **终态 = clean**（审计零分歧 ∥ 评审 pass ∥ 零 must-fix ⇒ 零修正轮；评审后未再触产品码）。
+
+### 5.D · 舱 D（桌面 · 设置第 8 段「团队」）· eng-coder · 2026-10-10
+
+**范围**：派发计划 D 舱——桌面设置面第 8 段「团队」（两态 + 结果行）∥ 三新档（核转口 ∥ 段体 ∥ 装配）∥ 段集与闭集随动（`SECTIONS` ∥ `SCOPES` ∥ `MODAL_READS`）∥ 通道三件套（`preload.cjs` ∥ `ipc-registry.mjs` ∥ `ipc.mjs` 档头计数）∥ 隐藏判据一处（`providerList`）∥ i18n 十五键两语 ∥ 批内件（桌面面）。非本舱：跨批 `docs/batches/*.test.mjs` 随正（写界拒）∥ `-ends` 件 ∥ `IPC.md ev:menu` 行与桌面档头单行（父侧保留项）∥ 核 ∥ server ∥ CLI ∥ VSC。
+
+**交付（九随动 + 三新 + 批内件一件）**：
+
+| # | 档 | 动作 | 实读行数 | 对设计预算 |
+|---|---|---|---|---|
+| 1 | `thincoder-desktop/src/main/team.mjs` | 新建（核转口三件：状态 ∥ 登录 ∥ 退出——零状态零自写盘） | **35** | ≈70（纯转口——低估 35） |
+| 2 | `thincoder-desktop/renderer/views/settings-sections-team.mjs` | 新建（段体两态 ∥ 结果行六句 ∥ 草稿标记） | **118** | ≈110（+8） |
+| 3 | `thincoder-desktop/renderer/mount-settings-team.mjs` | 新建（`createTeam`：状态读 ∥ 登录/退出两出口 ∥ 写成功复读两调用点 ∥ 开面复位） | **131** | ≈80（+51） |
+| 4 | `thincoder-desktop/renderer/views/settings.mjs` | `SECTIONS` +1（序尾）∥ 段模型 team 切片 ∥ 段分派支 ∥ 档头**八段** | 436 ⇒ **448** | ≈443（+5） |
+| 5 | `thincoder-desktop/renderer/views/settings-sections.mjs` | re-export `teamBody` | 96 ⇒ **100** | ≈97（+3） |
+| 6 | `thincoder-desktop/renderer/mount-settings.mjs` | `MODAL_READS` +1 行 ∥ `SCOPES` 十一 ∥ `createTeam` 装配 ∥ handlers 合并 ∥ `openSettings` 包装 ∥ `refreshSettings` +`loadTeam` ∥ 组开复位 | 264 ⇒ **292** | ≈269（+23） |
+| 7 | `thincoder-desktop/renderer/i18n-settings.mjs` | +15 键两语（62 ⇒ **77**） | 156 ⇒ **190** | ≈169（+21；键 +15 vs 估 +13） |
+| 8 | `thincoder-desktop/renderer/i18n.mjs` | 键数链注续链（62 ⇒ 77 ∥ 323 ⇒ 338 + 前批未续计订正） | 432 ⇒ **436** | ≈433（+3） |
+| 9 | `thincoder-desktop/src/main/ipc-registry.mjs` | +3 HANDLERS（末位 49–51）∥ 档头计数 48 ⇒ 51 | 94 ⇒ **99** | ≈99 ✓ |
+| 10 | `thincoder-desktop/src/preload/preload.cjs` | +3 CHANNELS（末位三）∥ 定序注 ∥ 档头计数随动 | 83 ⇒ **87** | ≈88（−1） |
+| 11 | `thincoder-desktop/src/main/ipc.mjs`（**越设计文件表**） | 档头计数 48 ⇒ 51（与随正③ 计数件同族） | 297 ⇒ **299** | 无预算行（已在册报告） |
+| 12 | `thincoder-desktop/src/main/providers.mjs`（**设计表缺行**） | +`isHiddenDerived` 过滤（隐藏判据一处——`derived ∧ 无 key` ⇒ 滤除） | 302 ⇒ **311** | 无预算行（三表缺行——上抛） |
+| 13 | `docs/batches/2026-10-10-team-login-client-access-desktop.test.mjs` | 新建（桌面面批内件 **10 例**——含跨端 zh 逐字同句腿） | **345** | 设计名册只列 `-ends` 件（名册差——上抛） |
+
+**随正**：③ 桌面 IPC 白名单计数件（48 ⇒ 51，七件断言 48/47）——**被系统写界拒绝（跨批兄弟件），已上抛**（与舱 A ② 同因）；④ 两旧漂移件排除句（`2026-10-02-desktop-settings-menu-upgrade.test.mjs:204` ∥ `2026-10-02-settings-menu-trim.test.mjs:103/:107`——去「模型」⇒ 去「模型」去「团队」）——**同上被拒，上抛**；⑤⑥ = 父侧保留项（本席零触，见披露 4）。
+
+**决策透明表（本舱裁量面）**：
+
+| # | 决策点 | 取法 | 依据 |
+|---|---|---|---|
+| 1 | 开面即读的落点 | 装配口包装 `openSettings`（`exits.openSettings` 原样 + `loadTeam`）——不动 `mount-settings-exits.mjs`（不在设计文件表） | §2.21 ⑤「开（两径）⇒ 本组读取链」∥ KD-68；越文件清单在册 |
+| 2 | 出口表合并 | `Object.assign(exits.handlers, team.handlers)`——单一 `exits.handlers` 表，对外零改 | 「唯一 handler 表」纪律（页 ∥ 弹窗两面同表） |
+| 3 | 结果行载体 | `settings.team.notice` 段切片（登录/退出**当刻就地**）——不用面板级 `settings.notice`（留给各段 `report`） | §2.21 ④「失败 ⇒ 就地错误行」∥ 三端逐字句 |
+| 4 | 一次性提示清除 | 开面两径（页 ∥ 弹窗）`resetNotice()` 清（切片余键并持）；`loadTeam` 复读**零清**（读面零提示字段） | §2.21 ⑤「本组面态复位（限本组）」∥ ④ |
+| 5 | 表单空字段分类兜底（档未穷举） | 无地址 ⇒ `network`；凭据不全 ⇒ `credentials`——**两径零发送** | 保守归并（沿 5.A 决策 2 同法） |
+| 6 | 成员显示值 | `member.name ?? member.username ?? null`（两缺 ⇒ 空，零假造） | `TEAM.md` §2.1 成员形（`name` 可缺） |
+| 7 | 无 in-flight 态 | 不加 pending 门（连点两次会发两次 `team:login`）——设计未作要求，既有 provider 写面同式 | 评审 🔵 登记（可选收敛） |
+| 8 | i18n en 三句 | 收正为与 VSC en 同句（`Failed to write local config` ∥ `…not added automatically; rename or delete it…` ∥ `Server revocation not delivered`） | 评审 🔵④ 建议；zh 判据已逐字达，en 无钉取跨端一致 |
+| 9 | 批内件另立 | 桌面面批内件 `…-desktop.test.mjs`（与设计名册 `-ends` 并列） | 单测「随批留存」纪律：本舱改动期反馈环留档 |
+
+**验证读数（全实跑）**：
+
+- 批内件 **10/10 绿**（`node --test docs/batches/2026-10-10-team-login-client-access-desktop.test.mjs`，自 `thincoder/` 仓根）：词面十五键两语 + 跨端 zh 七句逐字 ∥ 八段序尾 ∥ 未登录表单三字段 + 草稿标记（地址 ∥ 用户名携、**密码不携**）∥ 已登录状态行三读 + 退出钮 ∥ 结果行六句 + 段态门 ∥ 装配七径（开面随读 ∥ 弹窗读链恰一通道 ∥ 表外组拒 ∥ 登录 ∥ 退出 ∥ 失败 ∥ 空表单门两态）∥ 隐藏判据两态 ∥ 通道三件套（51 ∥ 末位三 ∥ HANDLERS 闭合 ∥ 三档头 ∥ 订阅面 24 零动）∥ 转口档直调四态。
+- 临时区探针 **23/23 + 9/9 绿**（`.thincoder/tmp/2026-10-10-b1-desktop-probe/probe.mjs` ∥ `probe2.mjs`——诊断件，非批内件）：段形 ∥ i18n ∥ 装配 ∥ 隐藏判据 ∥ 通道闭合 ∥ 转口四态。
+- 桌面定向跑（新红逐件归因；**pre-B1 基线 = `git stash` 本舱十档后同仓实测**，排除他舱在场干扰）：B1 新红全部为「闭集/计数随动件」——`model-menu-parity:117` ∥ `parity-b10-ui-w2:505/:508/:511/:514` ∥ `parity-b10-ui-w3:555/:556/:560/:563` ∥ `desktop-residuals:379` ∥ `menu-system:286-288` ∥ `subagent-panel-live-face:323/:324` ∥ `parity-b8-ipc:42` ∥ `menu-upgrade:171/:204 ∥ :271/:278-279` ∥ `settings-menu-trim:103/:107` ∥ `add-dialog-unify-desktop:166`（SCOPES 十 ⇒ 十一）∥ 计数与键数件（`channel-tier-retire:173/:174` ∥ `attach-file-support:363/:364` ∥ `i18n-split:58/:120/:123`——`SETTINGS_DICT` 62 ⇒ 77 ∥ `HOST_DICT` 322 ⇒ 338 ∥ `settings.mjs` 437 ⇒ 448 ∥ `settings-sections.mjs` 96 ⇒ 100）；**与本批零因果的预存红**（pre-B1 同红，实测）：`settings-layout` 3 条 ∥ `trim:134` ∥ `menu-upgrade:505` ∥ `w3:116`（S11/T8 agent 投影）∥ `residuals:322`（M-679b——假 DOM `querySelectorAll` 桩缺）∥ `channel-tier-retire:165`（HOST 322 ⇒ 323 前批漂移）∥ `attach-file-support:341`（VIEWS 149 ⇒ 150 前批漂移）∥ `i18n-split` 四腿（A1/A2/A4/A6）∥ 抖动腿 `attach-file-support:107/:117`（时敏，两跑异））；恒绿对照片 `provider-config-parity-desktop` 6/6 ∥ `light-round-6` 3/3。
+- 语法：十三档 `node --check` 全 OK；预载档 CJS `require` 过 + `CHANNELS` 51 ∥ `EVENT_CHANNELS` 24 实读。
+- 未跑：仓套件（按纪律归父侧收口拍）。
+
+**关键披露**：
+
+1. **越出清单（已报告）**：`src/main/ipc.mjs` 档头计数（越设计文件表——与随正③ 计数件同族）∥ `renderer/mount-settings.mjs` 加装开面包装与组开复位（同档表内，行数超估）∥ 新增批内件一件（设计名册只列 `-ends`）。
+2. **设计表缺行（上抛）**：`src/main/providers.mjs` 系 B1 实改件（隐藏判据一处——`TEAM.md` §2.4 ∥ §4 指名「桌面 `providerList`」），但 `TEAM.md` §4 ∥ `SETTINGS.md` §3.2 ∥ `IPC.md` §3.1 三表均无该件行，且 `IPC.md` 该件行载 302（实读 311）——建议回填轮补入表与行数账。
+3. **跨批随正被拒（上抛）**：③ 白名单计数件（七件断言 48/47）+ i18n 键数件（`2026-09-29-i18n-split` 基线 322 条内零 `settings.team.*` 新键 ⇒ 与现 `HOST_DICT` 338 不等）——`docs/batches/*.test.mjs` 属他批，系统写界拒（实测两件拒收）；父侧择批落。
+4. **本席曾误改一处并已回退**：曾据「随正⑤」将 `docs/desktop/design/IPC.md:39` 的 `SCOPES` 计数收正为「十一」；随即发现该项为**父侧保留项**（§2 父侧保留项行「`IPC.md` `ev:menu` 行计数 ∥ 桌面档头单行修正」），即行回退——现盘 byte 复原（`git status -- docs/desktop/design/IPC.md` 干净）；⑤⑥ 仍归父侧，零残留。
+5. **实读 vs 设计估（回填轮按实读收正）**：`mount-settings-team.mjs` 131 ⇒ 估 ≈80（+51——档头注 12 ∥ 归一 helpers ∥ 表单现读 ∥ 状态读 ∥ 两出口 ∥ 复位，全为判据面所必需）∥ `i18n-settings.mjs` +21 行、键 **+15**（估 +13）∥ `mount-settings.mjs` +23 ∥ `src/main/team.mjs` −35（估按含逻辑体估、实为纯转口）∥ `settings-sections-team.mjs` +8；皆 < 500 软线。
+6. **零改确认**：`src/main/app-menu.mjs`（`SETTINGS_GROUPS` 六名不动——团队不入菜单）∥ `renderer/mount-settings-exits.mjs`（不在设计文件表）——两件现盘零 B1 痕迹。
+
+**审计与代码评审轮次与终态**：
+
+- **内部分歧审计（只读 explore · 阻塞 ×1）**：结论 = **DEVIATIONS（报告级，零阻断）**——PARTIAL 1（④ 两旧漂移件随正被写界拒——上抛在案）∥ DOC-DRIFT 1（`providers.mjs` 三表缺行 + 行数账未随动）∥ SILENT-SIMPLIFICATION 0 ∥ OUT-OF-LIST 0（**无未报告越出项**）；独立复证 = 十三档 `node --check` 全绿 + A–J 逐条实读；限制如实登记 = 该席位无执行面 ⇒ 未复跑测试（读数均提交方实跑）。
+- **代码评审（advisor · code ×1 · 阻塞）**：**VERDICT: pass**（🔴 0 ∥ 🟡 2 ∥ 🔵 4）。**fix round = 1**：🔵④（en 三句与 VSC en 同句）就地收正 + 批内件补「跨端 zh 逐字同句」腿（`A2` 腿）——随即复跑批内件 **10/10 绿**、两探针绿；其余登记不动作：🟡① `providers.mjs` 表缺行（父侧/设计侧笔）∥ 🟡② 批内件名册登记与 `-ends` 去重（父侧）∥ 🔵③ 行数/键数估漂（回填轮）∥ 🔵⑤ 无在途门（可选）∥ 🔵⑥ `i18n.mjs:27` 键数链机检指针指向 `thincoder-desktop/test/views-chrome-vocab.test.mjs`（现盘不存在——存量行，登记）。
+- **终态 = clean**（审计零阻断偏差 ∥ 评审 pass ∥ fix 1 已复跑；评审后产品码零再触——除已复跑的 i18n 三句收正）。
 
 ## §6 验证与收口（父代理）

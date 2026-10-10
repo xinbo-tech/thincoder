@@ -1,7 +1,7 @@
 /**
  * settings.mjs — 设置面 + 两导出面（批 9 · 批档 §2.12–§2.14；设计单源 = `docs/desktop/design/UI.md` §1 设置面行）。
- * 面形 = **七段**（`data-section` = `providers` / `model` / `agent` / `mcp` / `env`〔R7 增：proxy + shell〕/
- * `tools`〔R2 增：embedding ∕ websearch ∕ 索引状态〕/ `models`〔R7 增：consult ∕ advisor 行〕）
+ * 面形 = **八段**（`data-section` = `providers` / `model` / `agent` / `mcp` / `env`〔R7 增：proxy + shell〕/
+ * `tools`〔R2 增：embedding ∕ websearch ∕ 索引状态〕/ `models`〔R7 增：consult ∕ advisor 行〕/ `team`〔B1 增：登录态 ＋ 登录表单——2026-10-10 · 台账 #1212〕）
  * 各三态（`data-state` = `none` / `loading` /
  * `ready`）：`none` / `loading` ⇒ 词表提示、`ready` ⇒ 行内容；表单在 `loading` 外常在；失败面 = `notice` 节点
  * （**核错误串直传** —— `REASON_WORD` 表内码出词、表外原样，不吞、不自造码）；面头 = 标题 + **主题三态钮族**
@@ -32,13 +32,13 @@ import { t } from "../i18n.mjs"
 import { THEMES } from "../theme.mjs"
 import { wire } from "./chat-tool.mjs"
 import { channelFormTree, verifyControl } from "./settings-controls.mjs"
-import { agentBody, consultAddBody, envBody, mcpBody, mcpFormBody, modelBody, modelIdOf, modelsBody, providerAddBody, providersBody, toolsBody } from "./settings-sections.mjs"
+import { agentBody, consultAddBody, envBody, mcpBody, mcpFormBody, modelBody, modelIdOf, modelsBody, providerAddBody, providersBody, teamBody, toolsBody } from "./settings-sections.mjs"
 
 // 两导出面随 R7 出档 `settings-controls.mjs`；本档 re-export ⇒ 导出面零改（消费面 = 首启向导）。
 export { channelFormTree, verifyControl } from "./settings-controls.mjs"
 
 /** 段闭集（序固定 = 渠道 → 模型 → agent 参数 → MCP → 环境〔R7 增〕→ 工具与服务〔R2 增〕→
- *  咨询与顾问〔R7 增〕；R7 终态枚举行「providers ∕ model ∕ agent ∕ mcp ＋ env ＋ tools ＋ models」同序）：
+ *  咨询与顾问〔R7 增〕→ 团队〔B1 增——追加序尾，不重排既有七段〕；B1 终态枚举行「providers ∕ model ∕ agent ∕ mcp ＋ env ＋ tools ＋ models ＋ team」同序）：
  *  名（`data-section`）+ 词键单源。 */
 export const SECTIONS = Object.freeze([
   { name: "providers", word: "settings.section.providers" },
@@ -48,6 +48,7 @@ export const SECTIONS = Object.freeze([
   { name: "env", word: "settings.section.env" },
   { name: "tools", word: "settings.section.tools" },
   { name: "models", word: "settings.section.models" },
+  { name: "team", word: "settings.section.team" },
 ])
 
 /** 添加弹窗组名（KD-75 ①②）：**非段名** —— 弹窗体 = `providers` 段域的单表（无行族）；
@@ -151,7 +152,7 @@ function advisorTargetOf(settings) {
   return str(advisor.model) ?? modelSegmentOf(settings.model?.current)
 }
 
-/** 面模型（纯 · 零 DOM）：开合 + 失败面 + 七段（各段现态直读 —— 渲染面零推导）。 */
+/** 面模型（纯 · 零 DOM）：开合 + 失败面 + 八段（各段现态直读 —— 渲染面零推导）。 */
 export function settingsModel(state) {
   const settings = state?.settings ?? {}
   const notice = settings.notice !== null && typeof settings.notice === "object" ? settings.notice : null
@@ -238,6 +239,15 @@ export function settingsModel(state) {
         model: str(settings.models?.advisorPicker?.model),
       },
     },
+    // B1 批（台账 #1212）团队切片：登录态 + 三值投影（缺 ∕ 形不合 ⇒ null——禁假造）+ 当刻一次性提示。
+    team: {
+      state: stateOf(settings.team),
+      loggedIn: settings.team?.loggedIn === true,
+      server: str(settings.team?.server),
+      member: objOf(settings.team?.member),
+      label: str(settings.team?.label),
+      notice: objOf(settings.team?.notice),
+    },
   }
 }
 
@@ -259,9 +269,9 @@ function sectionStateNode(state) {
   return { tag: "div", props: { class: "settings-section-state", "data-state-word": "" }, children: [t(STATE_WORD[state])] }
 }
 
-/** 段体分派（七段各一形；段名闭集 —— 表外段零节点）：各段体住 `settings-sections*.mjs`（经本档导入面），
- *  本档经 `deps` 注入两导出面 + 词表（单一 owner —— 零副本）。**段态门**（三态单源）：`env` ∕ `models` 两
- *  新段 = `ready` 才落行（`none` / `loading` ⇒ 零行节点 —— 防未读达即落默认值〔假读数〕）；`agent` 沿旧
+/** 段体分派（八段各一形；段名闭集 —— 表外段零节点）：各段体住 `settings-sections*.mjs`（经本档导入面），
+ *  本档经 `deps` 注入两导出面 + 词表（单一 owner —— 零副本）。**段态门**（三态单源）：`env` ∕ `models` ∕ `team`
+ *  三段 = `ready` 才落体（`none` / `loading` ⇒ 零体节点 —— 防未读达即落默认值〔假读数〕）；`agent` 沿旧
  *  （`loading` 期零体）；`providers` ∕ `model` ∕ `mcp` ∕ `tools` 沿各自旧判（零行为改）。 */
 function sectionBody(name, model, handlers) {
   const deps = { channelForm: channelFormTree, verifyControl, reasonWord, formats: FORMATS, edit: model?.providers?.edit ?? null, keyDraft: model?.providers?.keyDraft ?? null }
@@ -275,6 +285,8 @@ function sectionBody(name, model, handlers) {
   if (name === "env") return [sectionStateNode(model.env.state), ...(model.env.state === "ready" ? envBody(model.env, handlers) : [])]
   if (name === "tools") return [sectionStateNode(model.tools.state), ...toolsBody(model.tools, handlers)]
   if (name === "models") return [sectionStateNode(model.models.state), ...(model.models.state === "ready" ? modelsBody(model.models, handlers) : [])]
+  // B1 批团队段（台账 #1212）：段态词 + `ready` 才落体（未登录 = 表单 ∥ 已登录 = 状态行——见 `settings-sections-team.mjs`）。
+  if (name === "team") return [sectionStateNode(model.team.state), ...(model.team.state === "ready" ? teamBody(model.team, handlers) : [])]
   // 两新组弹窗体（KD-77 ①②）：段态词恰一（本支首件）+ 体件；`mcpForm` 载入中零表单（闸住 `mcpFormBody` 内——沿段体旧闸）；`consultAdd` = `ready` 才落体（沿 models 段门）。
   if (name === MCP_FORM_MODAL_GROUP) return [sectionStateNode(model.mcp.state), ...mcpFormBody(model.mcp, handlers)]
   if (name === CONSULT_ADD_MODAL_GROUP) return [sectionStateNode(model.models.state), ...(model.models.state === "ready" ? consultAddBody(model.models, handlers) : [])]
