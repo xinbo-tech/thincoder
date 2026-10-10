@@ -204,7 +204,7 @@ VERDICT: pass
 - **父侧保留项**（不派舱）：`IPC.md` `ev:menu` 行计数 ∥ 桌面档头「七段」⇒「八段」（档面单行修正）∥ `API-CONTRACT` 重生成（脚本面）∥ 全链门禁（`prepublishOnly`）与收口轮（含三端实走——R50④⑤）。
 
 ## §5 实施记录（eng-coder）
-**状态行**：实施完成（四舱交付块全落（5.A ∥ 5.B ∥ 5.C ∥ 5.D）；舱 B（CLI）· 审计零分歧 ∥ 评审 pass ×3 ∥ fix 2）
+**状态行**：实施完成（五舱交付块全落（5.A ∥ 5.B ∥ 5.C ∥ 5.D ∥ 5.E）；舱 B（CLI）· 审计零分歧 ∥ 评审 pass ×3 ∥ fix 2；舱 E（端侧跨面批内件）· 审计零分歧 ∥ 评审 pass ×2 ∥ fix 1）
 
 
 
@@ -413,5 +413,60 @@ VERDICT: pass
 - **内部分歧审计（只读 explore · 阻塞 ×1）**：结论 = **零分歧**（PARTIAL ∥ SILENT-SIMPLIFICATION ∥ DOC-DRIFT ∥ OUT-OF-LIST 四类各 0）；独立复证 = 六档 `node --check` 全绿 + 六句逐字双向比对 + 零自写盘 ∥ 命令面无越界 ∥ `hasKey` 复用 ∥ 补全三套实读；限制如实登记 = 该席位无执行面 ⇒ 未复跑测试（「全绿」为提交方实跑读数 + 断言文本实读）。
 - **代码评审（advisor · code · 阻塞 ×3 轮）**：轮 1 = **VERDICT: pass**（🔴 0 ∥ 🟡 2 ∥ 🔵 3）。**fix round 1**：① 非 TTY EOF 粘性标志 + TTY `askVisible` close 兜底 ② 空旗标视同缺省 ③ 两处注释枚举收正——随即复跑（`node --check` 6/6 ∥ 探针 53/53 ∥ e2e 49 检全绿 ∥ 既有件同读数）；🟡② `TEAM.md` §4 缺行 ⇒ 上抛（不动档）∥ 🔵③ 行数漂移 ⇒ 登记（收口/回填轮收正）。轮 2 = **VERDICT: pass**（6 行：4 Fixed ∥ 2 Accepted ∥ 1 New——`bin/thincoder.mjs:26` 同句残留）。**fix round 2**：`bin/thincoder.mjs:26`「八⇒九」+ 复跑（`node --check` 出口 0 ∥ `team status` 出口 0）。轮 3 = **VERDICT: pass**（唯一变更点验证收正 ∥ 代码面零「八薄命令族」残留 ∥ 前轮各条无回退）。
 - **终态 = clean**（审计零分歧 ∥ 评审 pass ×3 ∥ fix 2 已复跑；评审后产品码变更仅 `bin/thincoder.mjs:26` 注释一行且已复跑）。
+
+### 5.E · 舱 E（端侧跨面批内件）· eng-coder · 2026-10-10
+
+**范围**：派发计划 E 舱——跨面批内件一件（「核 + 三端结构面」：源码扫描 + 断言，零跑真机）：`docs/batches/2026-10-10-team-login-client-access-ends.test.mjs`（核写形/段形 ∥ B2 隐藏判据 ∥ E2 归一 ∥ 三端文案逐字 ∥ 桌面闭集 ∥ CLI 注册 ∥ VSC 第 6 卡 ∥ 桌面第 8 段 + 三 IPC 通道）。禁：改产品码 ∥ 改上游舱文件 ∥ `prepublishOnly` 链 ∥ 需求∥设计档正文；只断言设计 §5/§6 所列。**不入链**（跨面件无宿主产品链——`TEAM.md` §4 对账）。
+
+**交付（一档）**：
+
+| # | 档 | 动作 | 实读行数 | 对设计预算 |
+|---|---|---|---|---|
+| 1 | `docs/batches/2026-10-10-team-login-client-access-ends.test.mjs` | 新建（跨面批内件 **19 例**——核 + 三端结构面；不入链） | **411** | ≈380（+31——< 500 软线） |
+
+**覆盖点（任务书九组 → 腿映射，逐组在位）**：
+
+| 组 | 判据面 | 腿 |
+|---|---|---|
+| ① | `team` 段形（核 `team.mjs` 单写者 ∥ 三端七档零自写盘） | 腿2 |
+| ② | 派生条目形（固定名 `team` + `derived:true` ∥ 表尾 ∥ 同值 token） | 腿1a |
+| ③ | 隐藏判据四消费面各一处（逐点定位 ∥ 面外零余处） | 腿3a ∥ 腿3b（纯函数真值表） |
+| ④ | 三端文案逐字同句（未登录 1 + 失败 4 + 提示 2 = 七句跨端同拍） | 腿5a ∥ 腿5b ∥ 腿5c |
+| ⑤ | 未登录态句「未登录——登录后可用」（三端 ∥ CLI 两出口） | 腿5a |
+| ⑥ | 桌面闭集随动（`SECTIONS` 八 ∥ `SCOPES` 十一 ∥ 菜单镜像零改名） | 腿6a ∥ 腿6b |
+| ⑦ | CLI 命令族注册（USAGE ∥ 命令表 case ∥ 三子命令 ∥ 补全三套） | 腿7a ∥ 腿7b |
+| ⑧ | VSC 第 6 卡（复合序尾 ∥ 三字段 ∥ 两钮 ∥ 消息链 5 case） | 腿8a ∥ 腿8b |
+| ⑨ | 桌面第 8 段 + 三 IPC 通道（51/末位三 ∥ `HANDLERS` 闭合 ∥ 转口档） | 腿9a ∥ 腿9b |
+
+**决策透明表（本舱裁量面）**：
+
+| # | 决策点 | 取法 | 依据 |
+|---|---|---|---|
+| 1 | 仓根定位（两 cwd 兼容） | `ROOT` 按件位 `HERE` 相对两候选（找 `thincoder-core`）——工作区根 ∥ `thincoder/` 仓根两跑法均在案 | 任务书跑法 + 兄弟舱先例 |
+| 2 | 「三端零自写盘」判据 | 禁名集三查：写调用形（`persistRaw`/`writeConfigAtomic`/…`(`）∥ 具名 import 绑定 ∥ `node:fs` 零命中——不误伤注释提及 | 设计 §2.1「端侧零自写盘 ∥ 写盘 = 核一次 mutate」 |
+| 3 | 「面外零余处」判据 | `.derived` 属性读全树扫描（五域）恰三档 + `model-picker` 同引用（零第二定义） | `TEAM.md` §2.4 四消费面各一处 |
+| 4 | 文案同拍判据 | CLI 常量 ∥ VSC `locales/zh.json` ∥ 桌面 `i18n-settings.mjs` zh 表（末次命中）三向逐字 `assert.equal` | 设计 §2.5 单源逐字 |
+| 5 | 纯函数腿 vs 源码扫描分界 | B2/E2 判据直调纯函数（CLI 谓词 ∥ 核归一/标签）；其余全源码扫描——零写盘 ∥ 零网络 ∥ 零真机 | 设计 §6 明写「纯函数」面 + 本件结构面定形（§4） |
+| 6 | 计数口径 | `persistRaw`×2 ∥ `write_failed`×4（两径 × 两流程）∥ 未登录出口×2 ∥ 退出删除集×2 ∥ `slice(0, LABEL_MAX)`×2 ∥ 通道 51 | 设计各条 + 实读对齐（首跑红 1 处即此口径自误——修本件） |
+
+**验证读数（全实跑）**：
+
+- 定向跑 **19/19 绿**（`node --test thincoder/docs/batches/2026-10-10-team-login-client-access-ends.test.mjs`）：自工作区根（`teamcode/`）∥ 自 `thincoder/` 仓根两读数均在案（ROOT 按件位定位）。腿1a–9b = 19 例（首跑 18/19——腿1c 计数口径自误；修本件复跑 19/19；fix round 后复跑 19/19）。
+- 语法：`node --check` 全 OK（write/edit 工具内置逐次 + 全档）。
+- 未跑：仓套件（按纪律归父侧收口拍）；本件不入 `prepublishOnly` 链（跨面件——`TEAM.md` §4）。
+
+**关键披露**：
+
+1. **零产品码改动（`git status` 自证）**：自 `thincoder/` 仓根——本件 = 唯一新增（untracked）；无 M 行涉 `thincoder-core` ∥ `thincoder-cli` ∥ `thincoder-vscode` ∥ `thincoder-desktop`。工作树另有 `docs/server/requirements/PROJECT.md`（M）∥ `docs/batches/2026-10-10-ledger-family-anchor-local.md`（untracked）——非本舱（父侧/他批面）。
+2. **行数偏差 vs 设计估**：411 ⇒ 估 ≈380（+31）；< 500 软线 ✓。
+3. **行为面载体缺口（评审轮 1 🟡 · 报告级 · 上抛）**：设计 §6 N1 机制句「批内件（写盘面 = 临时 config 路径 + 本地 HTTP 桩）」∥ §5②「实读 config.json 零密码字段」在本件无落点（本件 = 结构面，零写盘/零网络 = §4 定形）；姊妹服务端件不触核登录（`teamLogin` 零命中）⇒ 行为读数现出自临时区探针（舱 A/B 在册）。是否补行为腿或收正设计句——归父侧裁定（本舱不动档）。
+4. 评审残余（🟡/🔵 非 must-fix，未动）：绝对计数/精确集合（51 ∥ 面外零余处 ∥ `deskZhValue` 末次命中不变量）——设计所钉、保留；爆半径低（不入链）。
+5. designId：未随任务书到达本席 ⇒ 无值可回显（令牌值零字）。
+
+**审计与代码评审轮次与终态**：
+
+- **内部分歧审计（只读 explore · 阻塞 ×1）**：结论 = **零分歧**（PARTIAL ∥ SILENT-SIMPLIFICATION ∥ DOC-DRIFT ∥ OUT-OF-LIST 四类各 0）；独立复证 = 九组逐点回源 + 七句三端实读 + 计数实读（`persistRaw`×2 ∥ `write_failed`×4 ∥ 删除×2 ∥ 51/末位三）+ 本件不入链实读；限制如实登记 = 该席位无执行面（未复跑测试）∥ 无 git 面（未独立跑 `git status`）。
+- **代码评审（advisor · code · 阻塞 ×2 轮）**：轮 1 = **VERDICT: pass**（🔴 0 ∥ 🟡 1 ∥ 🔵 6）。**fix round 1**（评审自身建议项就地 ×6）：① 腿1c 存在性断言 → 下标序断言（guard 下标 vs 成径点）② 腿1d 注释为证 → 结构判据（退出删除集恰二 + 零 splice）③ 腿3b 补两行（`apiKey` 键缺席 ∥ 空白 key——回源核 `hasKey` trim 非空）④ 腿3a 补 `provider-admin` 过滤调用断言 ⑤ VSC 面披露注（本件只钉字面；语义归舱 C）⑥ `deskZhValue` 加「两表形（en ∥ zh）」断言——随即复跑 19/19 全绿；🟡①（行为面载体）⇒ 上抛（不动档）∥ 🔵⑦ 行数漂移 ⇒ 登记（回填/收口轮收正）。轮 2 = **VERDICT: pass**（7 行：4 Fixed ∥ 3 Unfixed（非 must-fix 零原因保留）∥ New 0；四项修正逐条回源证实为真）。
+- **终态 = clean**（审计零分歧 ∥ 评审 pass ×2 ∥ fix 1 已复跑；评审后本件变更 = 六处修正，均复跑 19/19）。
 
 ## §6 验证与收口（父代理）
