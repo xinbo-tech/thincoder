@@ -1,6 +1,6 @@
 /**
  * proxy-admin.mjs — 代理连通测试面（控制台——仅 admin；gateway/API.md §2.4 ∥ KD-SV-60 · 台账 #1158）：
- * `POST /api/admin/proxy/test`（**真打**——`webui/WEBUI.md` §2.7 代理页）。
+ * `POST /api/admin/proxy/test`（**真打**——`webui/WEBUI.md` §2.7 系统页「服务配置」卡内）。
  *
  * body `{ uri, target }`（**双必传**——trim 非空）；`uri` 须 `http:` URL（口径沿 `validateProxyConfig`——`ops/OPS.md` §1
  * 单源复用）∥ `target` 须 http(s) URL；缺 ∥ 非法 ⇒ 400 `invalid_request_error`（零副作用——无网络触面）。

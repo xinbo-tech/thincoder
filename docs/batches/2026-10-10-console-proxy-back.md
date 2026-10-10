@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-10 · 来源 = 用户 2026-10-10 08:22「服务器的代理设置还是放回系统设置页面。」+ 08:41「测试要保留。」。
 > 台账 = #1199（server · 归批）。前情 = docs/batches/2026-10-09-console-proxy-page.md（已收口 2026-10-09 · 其第一半「代理独立入口」本次回改）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-10
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 **来源**：用户 2026-10-10 08:22「服务器的代理设置还是放回系统设置页面。」+ 08:41「测试要保留。」——回改 #1158 第一半（代理独立页 `#/admin/proxy` 退役）；**测试功能保留随迁**（系统页服务配置卡内——目标预填 ∥ 真打读数 ∥ 空值就地拒三语义零变）。
@@ -32,6 +32,22 @@
 - **部署（ECS `10.0.0.5`）**：`git pull` ⇒ `docker build -t thincoder-server:0.1.0` ⇒ `docker compose up -d --force-recreate` ⇒ 容器 **Up (healthy)**；`/healthz` 200 ∥ `views-system-config.mjs` 200 ∥ `views-proxy.mjs` **404**（退役实证）。
 - **浏览器走查（真机 admin 会话）**：侧栏 = 我的三页 + 管理**七项**（无「代理」）✓ ∥ 系统页服务配置卡含「上游代理地址」行（值 = 现场配置 `http://10.1.4.5:3128`）+ 业务 hint（代理范围句）✓ ∥ 连通测试块 = 目标预填首 provider `https://api.deepseek.com` + 实测读数 **「代理连通——HTTP 401（378 ms）」**（真打经代理 ✓）∥ 旧链 `#/admin/proxy` ⇒ 重定向 `#/admin/system` ✓；截图存证（`.thincoder/browser/shots/shot-2026-10-10T00-49-28-992Z-18396.png`）。
 - **本段即本轮落笔集**（产品码面无进一步笔）；设计形式化 = eng-designer #108（在途）。
+
+### 评审修正轮（2026-10-10 11:45–12:0x · 主 agent 直接执行 · 逐笔可 revert）
+
+**来源** = 本档 §3 轮次 1（设计评审 #109 · pass · 🟡3 ∥ 🔵2）；用户 2026-10-10 11:39 令「代理回迁那个先自动跑完」= 全链授权（评审点火 ∥ 修正轮 ∥ §4 代签 ∥ 收口核销提交）。
+
+| 发现 | 处置 | 落点（实读回报） |
+|---|---|---|
+| 1（🟡 档目链跳段） | **Fixed**——AC-12/AC-14 两行补回「provider 重做批后 **18 ∥ 19**」段（replace_all 2 处命中） | `docs/server/requirements/PROJECT.md:208` ∥ `:210`；变更记录 `:357`（同笔登记） |
+| 2（🟡 批档披露 × 现盘相抵） | **Fixed（父侧处置核销）**——上抛②所指两处现盘已收正（父侧实读）：`thincoder-server/public/nav.mjs:2` 现含「管理 7——2026-10-10 代理回迁批去代理项」∥ `thincoder-server/public/i18n-zh-system.mjs:3` 现含 `proxy.*` ⇒ 该披露**按已解决核销**（§2 原文不代笔——eng-designer 面）；提交面：两处收正笔若不在 `15aff6ea`／`2d26efef` 内 ⇒ 需补记（提交面核，归本轮收口项） | 本行（处置在案） |
+| 3（🟡 跨批件注记缺） | **Fixed（机械补注 · 计数）**——15 档逐档行数补注（实读 2026-10-10 ⇒ ±0；口径 = `split("\n").length − 1`）；`-server-console-config` **795**（逼近 800——余 5 行）⇒ 拆分预案挂账 **#1214** | `docs/server/design/PROJECT.md:227-229`（父侧补注句内"可 revert"标） |
+| 4（🔵 测试件头注残留） | **Fixed**——modals 件 3 处（头注 `:10` ∥ 节注 `:402` ∥ 题名 `:404`）+ proxy-page 件 4 处（腿 B `:10` ∥ 腿 C `:12-13` ∥ 题名 `:310`）同拍（管理 7 ∥ 四写控件 ∥ 档目 30 ∥ 31 ∥ views-proxy 退役）；评审该条判据经父侧 grep 复核为真（宿主校验报 "file unreadable" = 读取面问题，非判据为假） | 两测试件（注释/题名面——断言面本身已随正） |
+| 5（🔵 码面指针残留） | **Fixed**——`views-system-config.mjs:77` 指针 §2.8 ⇒ **§2.7**；`src/gateway/proxy-admin.mjs:3` 述语 ⇒「系统页「服务配置」卡内」 | 两档（注释面——零行为） |
+
+**机检读数**：`node scripts/doc-check.mjs`（仓根）= **EXIT 0**（锚 0 悬空 ∥ 行宽 OK）；两测试件与两产品档 node --check = OK（逐笔随编辑回报）。
+
+**修正轮边界**：仅评审五条直接派生的修正 + 同面同拍 2 处（proxy-page 件腿 B 题名/头注——发现 4 同面）；零新语义、零行为改（除注释面 2 处）。
 
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成（console-proxy-back 设计形式化（四档 + 生成区机械随正；闸门 EXIT 0））
@@ -90,6 +106,54 @@
 - [上抛·知会] 需求档回笔与产品码/测试面均为已完成面（`15aff6ea` ∥ `2d26efef`）——本轮零触；如需回改请另开批。
 
 ## §3 设计评审（评审子代理）
+
+### 轮次 1（评审子代理）
+
+评审对象 = console-proxy-back（设计形式化（四档）+ 实施落地（产品面）+ 档-码-记录对账）；范围 = 五档（需求档 ∥ WEBUI ∥ API ∥ OPS ∥ design/PROJECT）+ 批档/产品面抽查。
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | 一致性（需求档 ↔ 设计侧档目链） | 🟡 | 需求档 AC-12/AC-14 静态档目链跳段：`thincoder/docs/server/requirements/PROJECT.md:208`/`:210` 现文 =「弹窗批后 **17 ∥ 18** ⇒ 配置面批后 **19 ∥ 20**」——缺「provider 重做批后 **18 ∥ 19**」段（设计侧 `thincoder/docs/server/design/webui/WEBUI.md:574` 链含该段；需求档自身变更记录 `thincoder/docs/server/requirements/PROJECT.md:338` 记为「档目链补（18 ∥ 19 ⇒ **19 ∥ 20**）」——三方对不上；链末值 30 ∥ 31 一致，机制面无涉） | 补回「provider 重做批后 18 ∥ 19」段（AC-12/AC-14 两行与设计侧链逐字同拍） |
+| 2 | 记录对账（批档披露 ↔ 码现盘） | 🟡 | 批档 §2 上抛「旁见不一致（产品码注释面——本轮零触）」（`thincoder/docs/batches/2026-10-10-console-proxy-back.md:89`）列两处残留——「头注仍列「管理 8」（现盘面 7）」∥「域界前缀列表缺 `proxy.*`」；现盘两处均已收正：`thincoder/thincoder-server/public/nav.mjs:2` 现含「管理 7——2026-10-10 代理回迁批去代理项」、`thincoder/thincoder-server/public/i18n-zh-system.mjs:3` 现含「`system.*` ∥ `vector.*` ∥ `proxy.*`」——披露与现盘相抵（按披露派单 = 空工单） | 核销/改述该披露（标注「已收正」并回指两档现盘行）；若两处收正笔不在 `15aff6ea`/`2d26efef` 两提交内 ⇒ 提交面补记 |
+| 3 | 受影响文件注记（判据 8） | 🟡 | 跨批测试件十五档仅以名单登记（`thincoder/docs/server/design/PROJECT.md:224`「**跨批件十五档随正**」起）——无逐档「现读行数 ⇒ 预期增量（≤±N）」；与本档既有口径（`thincoder/docs/server/design/PROJECT.md:335`「断言文本就地收正 ⇒ 明写 ±0」）不合；15 件均 ≤800 硬限（无需拆分预案——`-quota-v2-member-models` 741 ∥ `-console-completeness-2` 504 在册） | 补逐档「实读 ⇒ ±0（断言文本就地收正）」注（沿 §6 注⑮ 口径） |
+| 4 | 注释面残留（跨批测试件头注） | 🔵 | 随正头注未同拍两处：`thincoder/docs/batches/2026-10-06-console-modals.test.mjs:10` 头注「管理 8 ∥ 新路径 ∥ denied ∥ 重定向/默认页不破」+「档目 31 ∥ 32」与同件正文 `:386`/`:388`「管理 7」相抵；`thincoder/docs/batches/2026-10-09-console-proxy-page.test.mjs:12` 头注「服务配置卡三写控件（保存体零 proxyUri）」与同件正文 `:407`/`:419`「四写控件」∥ `:447`「管理 7（2026-10-10 代理回迁批 −1）」相抵；断言面本身已随正（不涉判据） | 两处头注随正文同拍（管理 7 ∥ 四写控件 ∥ 档目 30 ∥ 31） |
+| 5 | 码面设计指针残留 | 🔵 | `thincoder/thincoder-server/public/views-system-config.mjs:77` 注释引「（服务端口径——WEBUI §2.8）」——WEBUI.md 无 §2.8（语义在 §2.7）；`thincoder/thincoder-server/src/gateway/proxy-admin.mjs:3` 述「`webui/WEBUI.md` §2.7 代理页」——§2.7 本批已重写为「系统页「服务配置」卡内」（`thincoder/docs/server/design/webui/WEBUI.md:503`）——旧述未随拍 | 指针改 §2.7 ∥ 述语随正（注释面零行为） |
+
+范围外注记（无严重度）：旁档 `thincoder/docs/core/design/API-CONTRACT.md`（批档披露「生成区机械随正」12+/13−）在五档范围外；抽查 = 零 `views-proxy`/`renderProxy` 残留（与披露相符）；diff 实数 unverified。
+
+实读抽查命中（供对账）：`views-system-config.mjs` **166** ∥ `nav.mjs` **88**（管理 7 项 + `ROUTE_ALIASES` 含 `"/admin/proxy": "/admin/system"`）∥ `app.mjs` 零 `proxy` 引用（末行 = `boot()`）∥ i18n system **170 ∥ 170**（15 `proxy.*` 键在册；退役 3 键零残留）∥ shell **73 ∥ 71** ∥ `views-proxy.mjs` 不在盘（public 31 档 = JS 28 + style + index + favicon；`views-*` 十一档）∥ `package.json` `prepublishOnly` 恰 **38 件** ∥ 跨批随正抽查四处命中（`-console-list-style:168/171` ∥ `-console-providers:402/424` ∥ `-console-proxy-page:444/447/452` ∥ `-server-public-structure:50-53` ∥ `-server-console-config:629`）∥ `CONFIG_WRITABLE_KEYS`（五键含 `proxyUri`）与 `POST /api/admin/proxy/test` 注册行在盘。未跑：`npm run prepublishOnly`（337/337 按记录）；测试全链绿 = 以记录为准。
+
+VERDICT: pass
+
+计数：🔴 0 ∥ 🟡 3 ∥ 🔵 2（另有范围外注记 1）
+
 ## §4 用户批准（主 agent）
+
+## 4. 用户批准（主 agent）
+
+**父侧代签（2026-10-10 · 用户 11:39「代理回迁那个先自动跑完」全链授权内——先例同规：2026-09-30 00:14 ∥ 2026-10-03 23:14「都自动跑完」批级授权）**——三条件齐备：
+
+1. **设计评审 pass** ✓（#109 · 🔴 0 ∥ 🟡 3 ∥ 🔵 2——五条全数处置：4 Fixed ∥ 1 父侧核销）；
+2. **修正轮已落地并逐条核验** ✓（§1 修正轮表；doc-check EXIT 0；五处落点逐笔编辑回报）；
+3. **token 已签发** ✓（凭据值不落档——沿纪律）。
+
+⇒ 本批 = **轻通道轮**（产品面已于 2026-10-10 早间落地——ECS 走查在 §1；本轮零 eng-coder 实施段）：批准即入 §6 收口。
+
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）
+
+## 6. 验证与收口（主 agent）
+
+**收口检查（2026-10-10 12:0x）**：
+
+| # | 项 | 读数 / 证据 |
+|---|---|---|
+| ① | 机检 | `node scripts/doc-check.mjs`（仓根）= **EXIT 0**（锚 0 悬空 ∥ 行宽 OK）；本轮四档 node --check = OK |
+| ② | 评审与修正 | §3 轮次 1（#109）= pass（🔴 0）；修正五条全落地（§1 表）——父侧逐笔核验 |
+| ③ | 档-码-记录对账 | 需求档 §2:30 ∥ AC-30 ∥ AC-12/AC-14 ∥ §5 与四档设计 + 产品面现盘一致（评审抽查 + 修正轮补正后复读）；码面指针两处已闭合（§1 发现 5） |
+| ④ | 测试面 | 跨批 15 件随正（判据 = 重跑全链 337/337——**按批记录，父侧本轮未复跑**（注明）；本轮仅注释/题名面 7 处，零断言改） |
+| ⑤ | 台账 | #1199（代理回迁——轻通道）在途 ⇒ 待核销 ⇒ **已核销**（证据 = 本档 §6 + 收口提交）；新挂 #1214（`-server-console-config.test.mjs` 795 逼近硬限） |
+| ⑥ | 真机走查 | ECS 部署走查（2026-10-10 00:49 截图登记在 §1——按登记） |
+| ⑦ | 冻结清册 | 本档 + 五档（需求 1 + 设计 4）+ 两测试件 + 两产品档注释笔——收口提交（哈希随 git log 实读） |
+
+**收口判定：达成**——本档冻结（已收口 2026-10-10）。

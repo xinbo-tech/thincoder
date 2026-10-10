@@ -74,7 +74,7 @@ function configCard(ctx, config) {
       autoUpdate: MODE_VALUES[autoSelect.value],
       trustProxy: trustBox.checked,
       usageRetentionDays: days,
-      proxyUri: proxyInput.value.trim(), // "" ⇒ 删段（服务端口径——WEBUI §2.8）
+      proxyUri: proxyInput.value.trim(), // "" ⇒ 删段（服务端口径——WEBUI §2.7）
     }
     try {
       await ctx.api("/api/admin/config", { method: "PATCH", body })

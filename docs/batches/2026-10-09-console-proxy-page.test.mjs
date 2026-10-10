@@ -7,10 +7,10 @@
  *   A 端点腿：假代理 + 假目标 ⇒ ok:true + status/ms + 假代理命中（真打实证）∥ 代理死 ⇒ unreachable ∥
  *     超时注入 ⇒ timeout ∥ loopback 目标 ⇒ 直连（假代理零命中）∥ 非 2xx 照实回读 ∥ 入参 400 族（零副作用）∥
  *     判权三态 ∥ 零落库零计费（usage/配额/审计零行）∥ 自含形（不走统一错误信封）∥ 入参助手直测
- *   B 前端腿：views-proxy 结构（两卡 ∥ 输入/钮/读数行）∥ 保存体 { proxyUri }（空 = 删段语义）∥ 测试体双必传
+ *   B 前端腿：代理设置块结构（服务配置卡内两表单——2026-10-10 回迁：断言重指向 `views-system-config.mjs`）∥ 保存体 { proxyUri }（空 = 删段语义）∥ 测试体双必传
  *     （读卡一草稿——所见即所测）∥ 空值前端先行 ∥ 预填首个 provider baseURL ∥ 在飞禁用 ∥ 成败两态读数
- *   C 回归腿：服务配置卡三写控件（保存体零 proxyUri）∥ 误删段护栏（服务面回读）∥ nav 直测（管理 8 ∥
- *     `/admin/proxy` ∥ denied）∥ i18n 键族（+18 ∥ −2 ∥ `useProxy` 改值）∥ 静态面（新档在册 ∥ 零外部引用 ∥ 直发）
+ *   C 回归腿：服务配置卡四写控件（保存体携 proxyUri 明传）∥ 误删段护栏（服务面回读）∥ nav 直测（管理 7 ∥
+ *     旧链 `/admin/proxy` ⇒ `/admin/system` ∥ denied）∥ i18n 键族（18 ⇒ 15 ∥ 退役 3 键零残留 ∥ `useProxy` 改值）∥ 静态面（views-proxy.mjs 退役 ∥ 零外部引用 ∥ 直发）
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -307,7 +307,7 @@ const fProviders = () => ({ providers: [{ id: 1, name: "px", baseURL: "http://12
 const fCards = (mount) => fFindAll(mount, (n) => n.tag === "section" && n.className === "card")
 const fResultLine = (card) => fFindAll(card, (n) => n.tag === "p").at(-1)
 
-test("B1 代理页结构 ∥ 保存体 { proxyUri }（空 = 删段语义）∥ 测试体双必传（读卡一草稿——所见即所测）", async () => {
+test("B1 代理设置块结构（服务配置卡内） ∥ 保存体 { proxyUri }（空 = 删段语义）∥ 测试体双必传（读卡一草稿——所见即所测）", async () => {
   const { ctx, calls } = fCtx({
     "GET /api/admin/config": () => ({ config: fConfig() }),
     "GET /api/admin/providers": () => fProviders(),
