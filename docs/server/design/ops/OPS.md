@@ -62,7 +62,7 @@
 - 对外模型标识 = **别名（配了）∥ `provider/model`（未配）**——别名 = 唯一显示名与请求名（2026-10-09 alias 批——KD-SV-59）；未配时 = `provider/model`（**首斜杠切分**——首段 = provider `name` ∥ 余段 = 上游模型名（可含斜杠）；两段非空；裸名不解析（别名形除外）；**同名模型跨 provider 并存且各自可达**）；`/v1/models` = 对外标识清单。
 - 模板 = `thincoder-server/config.example.json`（已落盘——预设形 ∥ 手写形并存）；真档 = `thincoder-server/config.json`（部署机本地——不入 git）（机检豁免——部署机本地档）。
 - provider key 轮换 = 控制台改 provider 并保存（**保存即热生效**——机制 = `gateway/API.md` §2.2；用户 2026-10-06 16:01 令）。
-- **配置写面（控制台——`#/admin/system`「服务配置」卡 + 向量卡 + 「代理」页（`proxy.uri`——2026-10-09 代理页批迁入；`webui/WEBUI.md` §2.7）；2026-10-09 配置批）**：可写项 = `autoUpdate` ∥ `trustProxy` ∥ `usageRetentionDays` ∥ `proxy.uri`（顶层段） ∥ `embedding.{baseURL,model,apiKey}`；
+- **配置写面（控制台——`#/admin/system`「服务配置」卡（含 `proxy.uri` 行 + 连通测试块——2026-10-10 代理回迁批；`webui/WEBUI.md` §2.7） + 向量卡；2026-10-09 配置批）**：可写项 = `autoUpdate` ∥ `trustProxy` ∥ `usageRetentionDays` ∥ `proxy.uri`（顶层段） ∥ `embedding.{baseURL,model,apiKey}`；
   只读展示 = `host` ∥ `port` ∥ `db`（部署拓扑项——改端口 = 自断连接 ∥ 改库 = 迁移动作；**定则例外显式说明**：不做写面）+ `bootstrap`（一次性——口令永不回显）+ `providers[]`（指针：常态管理 = 控制台 Provider 页）。
   读写形 = **文件面**（读 = config.json 现值（缺省回填展示） ∥ 写 = 读改写）；
   写路径 = ① 白名单（未知键 ⇒ 400）→ ② 合并原档（**保未知键**；`proxyUri: ""` ⇒ 删 `proxy` 段）→ ③ 门 = `resolveEnvRefs` + `validateConfig`（**载入面等价两跳**——写入的文件必可载入；不过 ⇒ 400 原报文，文件零变）→ ④ 原子写（同目录 tmp ⇒ `rename` 覆盖；写盘形 = 2 空格缩进 + 末尾换行——与现档同形）→ ⑤ 审计 `config_update`（detail = 键名清单；值永不入）。
@@ -363,3 +363,4 @@ first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10
 - 2026-10-09：设计修正轮（fix——批 `docs/batches/2026-10-09-console-proxy-page.md` §3 评审发现 4，本档面）：§5.1 门禁件数链随两在途批收正（30 ⇒ 31 ⇒ 32 ⇒ 33 ⇒ 34 ⇒ **35 件**）∥ 组成式重算对账（补「弹窗批件」项——8 + 4 + 1 + 20 = 33 平）+ 基数口径明写「以当刻盘面实读为准」。**零新语义**（评审发现直接导出项）。明细 = 批档 §2 修复轮块。
 - 2026-10-09：实施后回填轮（代理页批——批 `docs/batches/2026-10-09-console-proxy-page.md` · eng-designer）：§6 `bin` 行实读收正（**182**）∥ `README.md` 行实读收正（**258**——本批净 0）∥ 小计实读增量 **+2**。**零语义**（读数）。
 - 2026-10-10：随正件（实施轮 · 机械计数 · 可 revert——server-face-residues 批 · 台账 #1161）：§5.1 门禁件数链收正（35 ⇒ **36 件**——本批件入链）+ 组成式同拍（后续各批 22 ⇒ 23 件；alias ∥ 代理页批件已入链）；同源随动 = `design/PROJECT.md` §6 板级行/注⑰。**零新语义**（计数）。
+- 2026-10-10（**console-proxy-back 批 · 设计形式化轮 · eng-designer**——承批档 `docs/batches/2026-10-10-console-proxy-back.md` §2 · 台账 #1199；需求 §2:30 + AC-30 回改；用户 08:22「服务器的代理设置还是放回系统设置页面。」+ 08:41「测试要保留。」）：§1 配置写面块落面句收正（「「代理」页（`proxy.uri`——代理页批迁入）」⇒「「服务配置」卡（含 `proxy.uri` 行 + 连通测试块）——代理回迁批」——可写项/写路径/生效口径零变）；控制台面全文 = `webui/WEBUI.md` §2.7 ∥ 端点 = `gateway/API.md` §2.4。**产品码零触**（形式化轮——码已落）。
