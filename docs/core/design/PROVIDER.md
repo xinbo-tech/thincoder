@@ -182,7 +182,7 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 ### 6.10 畸形 tool_calls 防御解析
 
 OpenAI 兼容 SSE 流中畸形 `tool_calls`（数组含 null 元素、缺 `function` / `name` / `id` / `index`）不再崩溃或静默丢工具——槽选择优先级：① `index` 有效 → 按 index 取槽；② 缺 index 但有 `id` → 按 id 在既有槽中查找归并；③ 缺 index 无 id 但有 `function.name` → 新建尾部槽；④ 其余（纯 arguments 增量）→ 延续最后一个槽，无槽可延续则丢弃并计数。流结束收尾（`finalizeToolCalls`）：稀疏 hole 剔除、
-name 空槽丢弃并计数、缺 id 合成 `call_N`。告警（`droppedToolCalls > 0`）进**机读线** `_warnings`（`malformed-tool-calls`）——模型需知道其工具调用未执行；agent 层零改动。只防御与降级，不替模型修复语义。
+name 空槽丢弃并计数、缺 id 合成 `call_N`。告警（`droppedToolCalls > 0`）进**机读线** `_warnings`（`malformed-tool-calls`）——模型需知道其工具调用未执行；agent 层零改动。只防御与降级，不替模型修复语义。**槽附加字段**（`extra_content`——Gemini 思考签名透传）机制单源 = §6.24。
 
 ### 6.11 模型支持与预设（PROVIDER_PRESETS）
 
@@ -559,6 +559,46 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 
 **认账（无钥渠道）**：无钥渠道不可运行 = 设计态——**已认账行为变更，非缺陷**（方向 = §6.22「持 key」单一判据的先行化——`createProvider` 必填守卫先例同向）；先前无守卫时该径不拦（请求实发、凭据字面 `undefined`；忽略鉴权头的端点类此前可通——对端应答与否取决于对端）——该径由本守卫关闭；无鉴权端点如需保留 = 配非空占位钥（守卫只判 trim 非空）。
 
+### 6.24 Gemini 思考签名透传（thought signature · 2026-10-10 · 台账 #1205）
+
+> **来源**：用户 2026-10-10 09:53 转述另端排查 + 09:57「开批吧，也自动跑。」；批档 = `docs/batches/2026-10-10-gemini-thought-signature.md` §2。本节 = 该机制**长期单源**。
+
+**先例（closest-precedent）**：`docs/batches/2026-09-20-reasoning-echo-gap.md`（thinking 回传缺口批——同点加字段）：承载面同为单构造点 `assistantToolCallMessage`（实现坐标 = `thincoder-core/model-specs.mjs:352`）；其设计档节 = `docs/core/design/CONTEXT-COMPACTION.md` §6.10 #9 ∥ §7 D-CC22。
+**对齐** = 单构造点穿过、调用点零改；**偏离** ① 白名单构造（理由 = §7 D-PR37）· ② 原生路回带缓（理由 = §7 D-PR38）。
+
+**问题（实证）**：Gemini 3 工具调用随带**思考签名**（thought signature——加密推理态；官方要求多轮工具链回带，缺 ⇒ 4xx）；本仓修前整链零捕获零回带 ⇒ 「调工具 → 回传 → 再请求」第 2 次请求必 400（`Function call is missing a thought_signature in functionCall parts`）。
+
+- 双证 trace = `61ca071934e3-3364.jsonl` ∥ `-3366.jsonl`（本机 `~/.thincoder/traces/2026-10-10/`，00:31 / 00:33；链路 = 渠道 → 网关（10.0.0.5:8787）→ Google `v1beta/openai`）。
+- 修前全仓三词零命中：`thought_signature` ∥ `thoughtSignature` ∥ `extra_content`。
+
+**两形态字段位**：
+
+| 形态 | 响应字段位 / 回带位 | 证据级 |
+|---|---|---|
+| OpenAI 兼容路（含网关链） | `tool_calls[].extra_content.google.thought_signature`（响应与回带同形） | 官方兼容页（「Gemini 3 supports OpenAI compatibility for thought signatures in chat completion APIs」）+ 社区实样 `"extra_content":{"google":{"thought_signature":"Ctke…"}}` |
+| 原生路（`format:"google"`） | `functionCall` part 级 `thoughtSignature`（回带位同此；本批缓，见边界） | 官方口径；本机无原生流样本 ⇒ **unverified** |
+
+（本机 wire 未直存——trace 记录 = 解析后 toolCalls；捕获面以「在场才建」兜底：字段位不符 ⇒ 零副作用。）
+
+**机制（三面 · 单点各一）**：
+
+1. **捕获**——槽附加字段 `extra_content`（白名单构造 `{google:{thought_signature}}`，在场才建；白名单理由 = 只认官方实样路径，回显未知子字段会改变他家上游线形）：
+   - OpenAI 兼容路 = `thincoder-core/provider/sse.mjs` `mergeToolCalls` 槽落定单点（四条槽路径 + 非 SSE JSON 兜底帧同经）；
+   - 原生路 = `thincoder-core/provider/google.mjs` `parseGeminiStream` 的 `part.functionCall` 支；
+   - 重试 / 续写合并保真 = `thincoder-core/provider/core.mjs` `mergeRetryToolCalls`（合并时缺则搬，首见胜）。
+2. **承载**——`thincoder-core/model-specs.mjs` `assistantToolCallMessage`（工具轮 assistant 消息**单构造点**）的 tool_calls 映射：`extra_content` **在场才带**（缺 ⇒ 键不存在；调用点零改——构造单点穿过）。
+3. **回传**——OpenAI 兼容路请求体 = `messages` 原样（`thincoder-core/provider/core.mjs` body 组装；净化链 `normalizeToolPairing` ∥ `escapeMessages` ∥ `stripLocalMessageFields` 均保 tc 字段）⇒ **零新增回传构造点**；网关层 `thincoder-server` 请求体展开透传 + 响应字节零改中继（`src/gateway/forward.mjs`）⇒ **网关零改**。
+
+**零回归判据**：捕获与携带**均以在场为条件**——无签名上游的槽 / 消息键集逐字不变（他家 provider 零变更）。
+
+**认账（跨 provider 携带）**：签名随历史走——会话切到非 Gemini 渠道时该字段同行（同 `reasoning_content` 携带族）；**不做**发送面按 host / format 剥离（用户链过网关 → Google，host 判别不可靠，且剥离会杀掉要保的字段）。
+
+**残余（修复前历史）**：修复前落盘、含无签名工具调用的会话——重发时其史形仍无签名（回传面零改），仍可能落同一 400（服务端对既有无签名史形的容忍度 = 本批无读数）；缓解径 = `/compact` ∥ 新会话。
+
+**边界（本批不做）**：**原生路回带**不在本批——原生路 `convertMessages` 现不复建 functionCall parts（工具轮历史压平为文本）⇒ 触不到本 400；补建 = 另一机制（functionCall / functionResponse 史形 + 修复前历史无签名 ⇒ 直接补发反引新 400），另议。规格表 / 预设表 / 三端 UI / 服务器快照零涉。
+
+**可机检断言**（批内件 = `docs/batches/2026-10-10-gemini-thought-signature.test.mjs`）：① 捕获——合成帧喂 `readSSE` ⇒ 槽含签名字段（原生路经 `google.mjs` `chat()` + fetch 桩同判）；② 承载——`assistantToolCallMessage` 直调：有 ⇒ 键在场逐字同值 ∥ 无 ⇒ 键不存在；③ 零回归——无签名字段帧 ⇒ 槽 / 消息键集与批前逐字同形。
+
 ## 7. 关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -599,6 +639,8 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 | D-PR34 | responses 流内 error 帧 = **错误上抛 + partial 抢救双支**（分界判据 = 是否已有流出；帧两形同处置） | error 帧 = 本回合响应已死：`_warnings`-only 会让空内容当正常交付（恰是被修的静默形态）、`interrupted` 形挪用用户中断专用语义；已有流出 ⇒ partial 同构 `sse.mjs` ∥ `google.mjs` 网络部分出口，消费面 `thincoder-core/provider/core.mjs:242-247` 既有，agent 层零改。 |
 | D-PR35 | `body.error.code` 映射 = **最小集五码**（宿主 errors.mjs 分类族单源）；未列码 `null` 透传 | 只映射 responses 面实际会出现的码（勿整抄 codex 全表——`usage_not_included` 为 ChatGPT 订阅语境特有）；未列码不发明分类（服务端消息原样透传）；HTTP 级分类零改（码级映射只服务流内错误面）。 |
 | D-PR36 | `max_output_tokens` = **显式才发**（`spec.maxOutput` 退出发送面，内部用途保留） | 参考面双例均显式才发（opencode / codex）；本仓同病实锤（opencode-go-anthropic 超渠道口径）；规格值非渠道合同值（`DEFAULT_SPEC` 类保守猜测）。回退形态预置 + 真机验证项在册（批档 §2 上抛 1）。 |
+| D-PR37 | 思考签名承载 = **白名单字段 `extra_content.google.thought_signature`** ∥ **单构造点穿过**（`assistantToolCallMessage`）∥ 发送面零新构造点 | 白名单（非原样透带整个 `extra_content`）：只认官方实样路径——回显未知子字段会改变他家上游线形；单点穿过 = 既有唯一构造点（先例 = `2026-09-20-reasoning-echo-gap` 批同点加字段）。被否：原样透带（他家上游线形被动改变）· 各调用点旁路挂字段（破单构造点）· 发送面按 host / format 剥离（用户链过网关 → Google，判别不可靠且会剥掉要保字段）。 |
+| D-PR38 | **原生路回带**（functionCall parts 复建）= 本批边界外（捕获在位 · 回带缓） | 原生路现不复建 functionCall parts（工具轮历史压平为文本）⇒ 不触本 400；补建 = 新机制（functionResponse 配对 + 修复前历史无签名 ⇒ 直接补发反引新 400）。被否：同批补建（范围外 + 自伤风险）。 |
 
 ## 8. 不并项与历史沿革
 
@@ -709,3 +751,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - 2026-10-10（**spec-namespace-last-segment 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-spec-namespace-last-segment.md` §2 · 台账 #1167；用户 2026-10-10 03:05 裁「只取最后一段」）：§6.9 厂商前缀剥离句随正——兜底改取**最后一个** `/` 之后的段（测试服务器双段外标 `qwen/ZHIPU/GLM-5.3` 查表误报的修法）；VSC 端差表同判随正（主 agent 03:1x 裁）。改法逐字 / 用例 / 边界 = `doc:MODEL-SPECS.md:§17`。**产品码零触（设计轮）**。
 - 2026-10-10（**core-small-fixes 批 · 实施轮设计面回填（fix 轮）· eng-coder**——承批档 `docs/batches/2026-10-10-core-small-fixes.md` §2.6 ∥ §5；台账 #1068）：§6.16 M1 补**错误面句**（载荷读取失败 ⇒ 原错误直抛；真非 JSON ⇒ 原文案；非 2xx 径照旧——落点 `thincoder-core/provider/list-models.mjs`）。**零新语义**（= as-built 收正）。明细 = 批档 §2.6 ∥ §5。
 - 2026-10-10（**purge-residue-sweep 批 · 设计档随动轮 · eng-coder**——承批档 `docs/batches/2026-10-10-purge-residue-sweep.md` §2 设计档落点表 · 台账 #1121 ∥ #1125）：§6.16 增**模型菜单行语义**行（行 = 分组/展开控件、零选中语义 ∥ 行点击 = 展开⇄收起 · 组体开合与菜单层开合解耦 ∥ 行径恒零 `post` 零槽写 ∥ 选中 ⇒ 生效仅在模型条目 + `onPick` 携 `row` 直传 ∥ 写失败可见）；§6.16 面板接线句收正（行形去「当前模型」选中语义；条目拾取 = 槽写 + 写回）；§6.18 视觉链判定源随 `#1125` 落 **B**——「明书不恢复」（恒 `null` + 可读报错 = 常规态；「判定源重定在途」句清零）。**产品码零触（设计档）**。明细 = 批档 §2 ∥ §5。
+- 2026-10-10（**gemini-thought-signature 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-gemini-thought-signature.md` §2 · 台账 #1205；用户 09:57「开批吧，也自动跑。」）：新增 **§6.24 Gemini 思考签名透传**（两形态捕获面 ∥ 单构造点承载 ∥ 回传零新构造点 ∥ 网关零改判 ∥ 认账与边界）+ §6.10 槽附加字段指针 + §7 补 **D-PR37 / D-PR38**。**产品码零触（设计轮）**。明细 = 批档 §2。
+- 2026-10-10（**gemini-thought-signature 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-gemini-thought-signature.md` §3 轮次 1 · 台账 #1205）：§6.24 补**先例对照**（先例批 = `docs/batches/2026-09-20-reasoning-echo-gap.md`——同点加字段；对齐 ∥ 偏离句各带指针：D-PR37 ∥ D-PR38）
+  · 补**残余（修复前历史）**段（重发仍可能同一 400 + 缓解径 = `/compact` ∥ 新会话）· §6.24 机制 3 引路补全（`thincoder-core/provider/core.mjs`——本批面悬空收正）；批档 §2 修复轮块 = AC-4 行为用例 ∥ AC-8 两枪形 ∥ AC-9 零第二构造点 ∥ AC-10 桩面断言 + 锚 / 读数收正。**零新语义**（评审发现直接导出项）；**产品码零触（fix 轮）**。明细 = 批档 §2 修复轮块。
+- 2026-10-10（**gemini-thought-signature 批 · 收口机械笔 · 父侧直执行 · 可 revert**）：§6.24 机制 1 末条措辞收正——「新建槽时搬字段」⇒「**合并时缺则搬**」（与 `thincoder-core/provider/core.mjs:364` 实现及批档 AC-4 终形对齐——实施轮上抛 #1）；`thincoder-core/model-specs.mjs` `assistantToolCallMessage` 文档串调用点清单随正（主循环 `thincoder-core/agent/turn-loop.mjs` ∥ 镜像 `thincoder-core/advisor/loop.mjs` ∥ `bench/lib/client.mjs`；VSC 转口 `thincoder-vscode/src/specs.mjs:13/:17` 零调用点——实施轮上抛 #2）。**零语义**（措辞 / 坐标与实况对齐）。
