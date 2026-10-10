@@ -242,6 +242,10 @@ test("N49+N53 裸机全链：S1→S8 逐条 ∥ 每 exec 审计行 ∥ 登记行
     const install = ssh.calls.find((rec) => rec.command.includes("apt-get install"))
     assert.equal(install.env.SSHPASS, SECRET, "密码经 `sshpass -e` 环境注入（不入 argv）")
     assert.equal(install.args.includes(SECRET), false, "口令不入 argv")
+    assert.equal(install.args.includes("BatchMode=yes"), false, "口令径不含 `BatchMode`（带了直接弃用口令面——真机 A/B 核 2026-10-11）")
+    for (const option of ["NumberOfPasswordPrompts=1", "PreferredAuthentications=password", "PubkeyAuthentication=no"]) {
+      assert.equal(install.args.includes(option), true, `口令径含 ${option}（单提示、仅口令面——KD-SV-85）`)
+    }
     assert.equal(install.input, `${SUDO}\n`, "sudo 口令经 stdin（`sudo -S`）")
   } finally {
     await app.close()
@@ -518,6 +522,7 @@ test("B46 server 重启（run 在途）⇒ 启动收尾：interrupted + 审计�
     const keyFile = join(app.dir, ".ssh", `onboarding-${started.json.run.id}.key`)
     for (let i = 0; i < 300 && !existsSync(keyFile); i++) await new Promise((resolve) => setTimeout(resolve, 20))
     assert.equal(existsSync(keyFile), true, "在途时私钥文件在盘（key 认证形——用完即弃待收尾）")
+    assert.equal(ssh.calls[0].args.includes("BatchMode=yes"), true, "密钥径保持 `BatchMode=yes`（不弹交互——口令径去而不动此径）")
     // 重启面：重新注册（= 进程重启的启动收尾点）
     const routes2 = SERVER.createRouteTable()
     SANDBOX.registerSandboxRoutes(routes2, { db: app.db, config: app.config, log: null, deps: app.deps })

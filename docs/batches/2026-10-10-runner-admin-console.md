@@ -564,3 +564,9 @@ VERDICT: pass
 - ⑦ 托管接入：表单八字段、（模型下拉 = 注册表实读）；起跑异步 + 3s 轮询；**失败径全链**：S1 受理 → S2 登录被拒 → 自动重试一次（决定句在册）→ S8 汇总人话「零宿主改动、零登记、凭据 burned」+ 步读数展开。✅ 失败因 = 我无 .6 的 SSH 登录口令（喂的是 sudo 口令）；**happy 径（⇒「已就绪」）未走**。⏸ 待用户给 .6 SSH 凭据。
 - 走查后状态：`.5` 库 = `runner-06` 在册在线；`.6` = `tc-ws-1`（Exited，留机）∥ `walk-1` 已删净；走查用临时管理员 `walker`（id=4）留在 `.5` 库内。
 - **账目：四账仍在途**（两腿未闭环——A 项：.6 SSH 凭据；B 项：`acc-1010`/`tc-ws-1` 处置裁决）——不收口；SG 前置条件（#1260）已满足，待 A/B 闭环后一并核销。
+
+### 2026-10-11 04:0x · 走查缺陷修复二（口令径 `BatchMode`）——#184 中断的父侧代记
+
+- **缺陷**：SSH 口令径被 `BatchMode=yes` 直接弃用（托管接入口令路径整条不可用）。真机 A/B 铁证（.5 容器内同口令）：A = 带 `BatchMode=yes` ⇒ `Permission denied (publickey,password)`（rc=255）∥ B = 去之 ⇒ `LOGIN_OK`（rc=0）。
+- **修复**：`ssh.mjs` 口令径去 `BatchMode`、换 `NumberOfPasswordPrompts=1` + `PreferredAuthentications=password` + `PubkeyAuthentication=no`（无人值守由「单提示 + 仅口令面」承接）；密钥径保持 `BatchMode=yes`。设计档随正（`SANDBOX.md` §3 S2 ∥ §14 KD-SV-85；变更记录 2026-10-11 第二轮行）。
+- **#184 中断说明**：修正轮 #184 于 provider abort 信号中断——其改动**已完整落盘**（父侧逐条核验：args 两径五处）、批内件判别性断言已加（口令径「不含 BatchMode ∥ 含三新项」+ 密钥径「保持 BatchMode」——吸取上一轮「假件与实现同形自证一致」的教训）；**§5 未写入**（中断所致），本 §6 代记；复跑 `-agent.test.mjs` = **tests 13 ∥ pass 13 ∥ fail 0**。

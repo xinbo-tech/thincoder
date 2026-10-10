@@ -3,7 +3,8 @@
  * spawn 系统 openssh（密钥 `-i <0600 文件>` ∥ 密码 `sshpass -e`——环境变量口径，不入 argv/ps）∥ keyfile/known_hosts 落数据目录
  * ∥ 主机指纹 TOFU（`accept-new` + 首见记录；变更 ⇒ 停 + 「重新信任」重试）∥ 超时/输出截断；`execImpl` 注入 = 测试面。
  *
- * 无人值守口径：`BatchMode=yes`（不弹交互）∥ `ConnectTimeout=10` ∥ 逐条命令、非交互；sudo 口令经 stdin（`sudo -S`——§3）。
+ * 无人值守口径：密钥径 = `BatchMode=yes`（不弹交互）∥ 口令径 = 不带 `BatchMode`（带了直接弃用口令面——真机 A/B 核 2026-10-11），
+ * 改 `NumberOfPasswordPrompts=1` + `PreferredAuthentications=password` ∥ `PubkeyAuthentication=no`（单提示、仅口令面——KD-SV-85）∥ `ConnectTimeout=10`；逐条命令、非交互；sudo 口令经 stdin（`sudo -S`——§3）。
  * 零第三方运行期依赖（系统 openssh——KD-SV-85）；本档只做传输，决定/重试/步骤 = 上层（agent 环 ∥ 任务面）。
  */
 import { spawn } from "node:child_process"
@@ -160,8 +161,7 @@ export function createSshExecutor({ baseDir, execImpl = spawnSsh, defaultTimeout
     if (typeof host !== "string" || host.trim() === "" || typeof user !== "string" || user.trim() === "") throw new SshError("spawn", "缺目标主机或用户名")
     const dir = ensureSshDir(baseDir)
     const knownHosts = join(dir, "known_hosts")
-    const baseArgs = [
-      "-o", "BatchMode=yes",
+    const commonArgs = [
       "-o", "ConnectTimeout=10",
       "-o", "StrictHostKeyChecking=accept-new", // TOFU：首见记录；变更 ⇒ 传输级失败（下方分类）
       "-o", `UserKnownHostsFile=${knownHosts}`,
@@ -176,11 +176,18 @@ export function createSshExecutor({ baseDir, execImpl = spawnSsh, defaultTimeout
         writeKeyFile(baseDir, keyName, String(secret ?? ""))
         keyWritten = true
       }
-      args = ["-i", file, ...baseArgs, `${user}@${host}`, "--", command]
+      args = ["-i", file, "-o", "BatchMode=yes", ...commonArgs, `${user}@${host}`, "--", command]
     } else if (authKind === "password") {
-      // `sshpass -e`：口令经环境变量（不入 argv/ps——KD-SV-85）
+      // `sshpass -e`：口令经环境变量（不入 argv/ps——KD-SV-85）；口令径不带 `BatchMode`（带了 openssh 直接弃用口令面——真机 A/B 核 2026-10-11）
+      // 无人值守改由「单提示 + 仅口令面」承接（KD-SV-85）：`NumberOfPasswordPrompts=1` ∥ `PreferredAuthentications=password` ∥ `PubkeyAuthentication=no`
       cmd = "sshpass"
-      args = ["-e", "ssh", ...baseArgs, `${user}@${host}`, "--", command]
+      args = [
+        "-e", "ssh", ...commonArgs,
+        "-o", "NumberOfPasswordPrompts=1",
+        "-o", "PreferredAuthentications=password",
+        "-o", "PubkeyAuthentication=no",
+        `${user}@${host}`, "--", command,
+      ]
       env = { ...process.env, SSHPASS: String(secret ?? "") }
     } else {
       throw new SshError("spawn", `认证方式仅收 key ∥ password：${String(authKind)}`)
