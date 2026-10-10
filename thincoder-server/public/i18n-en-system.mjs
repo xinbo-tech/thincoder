@@ -54,9 +54,7 @@ export const EN_SYSTEM = Object.freeze({
   "system.cfgLoadFailed": "Failed to load the config",
   "system.cfgRestartNote": "Takes effect after a restart (the config file is not hot-reloaded)",
 
-  // ── System · proxy page (§2.7——settings ∥ connectivity test; 2026-10-09 proxy-page batch: proxy.uri moved out of the server config card) ──
-  "proxy.title": "Proxy",
-  "proxy.settingsTitle": "Proxy settings",
+  // ── System · config card proxy block (2026-10-10 proxy-move-back batch: proxy.uri moved back from the Proxy page + connectivity test follows) ──
   "proxy.uriLabel": "Upstream proxy address",
   "proxy.uriPh": "http:\/\/host:port (empty = disabled)", // "\/" keeps the designed value; the raw text scan bans the literal URL form under public/**
   "proxy.hint": "Scope = providers with “Use proxy” checked (chat forwarding and model discovery); loopback targets always connect directly.",

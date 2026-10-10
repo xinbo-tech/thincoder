@@ -105,7 +105,7 @@ export const EN_ADMIN = Object.freeze({
   "admin.providers.baseURLPh": "baseURL (OpenAI-compatible root, e.g. api.example.com/v1)",
   "admin.providers.apiKeyPh": "apiKey (optional; env:VAR supported)",
   "admin.providers.clearKey": "Clear key (no Authorization header after save)",
-  "admin.providers.useProxy": "Use proxy (upstream requests for this provider go through the proxy — set the proxy address on the Proxy page)",
+  "admin.providers.useProxy": "Use proxy (upstream requests for this provider go through the proxy — set the proxy address in the System page's server config card)",
   "admin.providers.openList": "Served models (checked = open to the team)",
   "admin.providers.candidatesEmpty": "No candidates yet — click “{action}” to fetch",
   "admin.providers.retiredNote": "Open models not in the upstream discovery list: {models} — disable them on the Served models page",

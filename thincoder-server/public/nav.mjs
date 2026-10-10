@@ -24,14 +24,13 @@ export const NAV_GROUPS = [
     { key: "usage", labelKey: "nav.page.admin.usage", path: "/admin/usage" },
     { key: "audit", labelKey: "nav.page.admin.audit", path: "/admin/audit" },
     { key: "system", labelKey: "nav.page.admin.system", path: "/admin/system" },
-    { key: "proxy", labelKey: "nav.page.admin.proxy", path: "/admin/proxy" },
   ] },
 ]
 
 export const LOGIN_PATH = "/login"
 
-/** 旧链别名（重定向——旧书签可达）：`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/overview`（§2）。 */
-export const ROUTE_ALIASES = { "/me": "/me/keys", "/admin": "/admin/overview" }
+/** 旧链别名（重定向——旧书签可达）：`#/me` ⇒ `#/me/keys` ∥ `#/admin` ⇒ `#/admin/overview` ∥ `#/admin/proxy` ⇒ `#/admin/system`（2026-10-10 代理回迁批——§2）。 */
+export const ROUTE_ALIASES = { "/me": "/me/keys", "/admin": "/admin/overview", "/admin/proxy": "/admin/system" }
 
 const KNOWN_PAGES = new Set([...NAV_GROUPS.flatMap((group) => group.items.map((item) => item.path)), LOGIN_PATH])
 const ADMIN_PREFIX = "/admin/"

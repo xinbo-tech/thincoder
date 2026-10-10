@@ -54,9 +54,7 @@ export const ZH_SYSTEM = Object.freeze({
   "system.cfgLoadFailed": "配置读取失败",
   "system.cfgRestartNote": "重启生效（配置文件不热载）",
 
-  // ── 系统·代理页（§2.7——代理设置 ∥ 连通测试；2026-10-09 代理页批：`proxy.uri` 自服务配置卡迁出） ──────
-  "proxy.title": "代理",
-  "proxy.settingsTitle": "代理设置",
+  // ── 系统·服务配置卡代理块（2026-10-10 代理回迁批：`proxy.uri` 自「代理」页回迁 + 连通测试随迁） ──────
   "proxy.uriLabel": "上游代理地址",
   "proxy.uriPh": "http:\/\/host:port（留空 = 不启用）", // 「\/」转义 = 评估值同设计文案；原文本受 `public/**` 零外部引用扫描限
   "proxy.hint": "代理范围 = 勾选「走代理」的 provider（chat 转发 ∥ 模型发现）；loopback 目标恒直连。",
