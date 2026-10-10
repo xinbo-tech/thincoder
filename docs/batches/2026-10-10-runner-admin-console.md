@@ -305,6 +305,36 @@
 
 VERDICT: changes-required
 
+### 轮次 2（评审子代理）
+
+**runner-admin-console 批 · 复核轮 2（验证 §3 轮次 1 十四修正声明）** · 评审面 = 设计十档 + 批档 §2 修正块 14 处落点 + 父侧面三件（`requirements/PROJECT.md` ∥ `docs/TEST-ENV-ECS.md` ∥ 孤儿件实盘核）
+
+| # | Orig# | File | Severity | Status | Notes |
+|---|---|---|---|---|---|
+| 1 | 1 | `design/sandbox/SANDBOX.md` | 🔴 | Fixed | :13 ——「**盒级超时/快照 = 控制端（server）自己的定时器（余面批——节点存活 = 读时探活，非定时器面：§14 KD-SV-80）**」；与 :47 ∥ KD-SV-80 两说消除 |
+| 2 | 2 | `requirements/PROJECT.md` | 🟡 | Fixed（父侧） | :13 ——「**runner 无需公网入向端口**（14:59 裁在册——19:52「runner = 远程 Docker API 节点」口径后含义收窄：server → 节点 Docker API `:2375` 仅内网/安全组可达，节点不开任何面向公网的端口）」。记录面残余（:477/:485/:499/:512）照「记录面照旧」惯例不回改——advisory：:485 仍称「runner 侧无需任何入向端口——口径 = 用户 2026-10-10 19:52 定」，与节点须监听 TCP 的现设计相抵（非阻断，如父侧愿收可随余面批一笔回笔） |
+| 3 | 3 | `design/PROJECT.md` ∥ `design/sandbox/SANDBOX.md` | 🟡 | Fixed | §4 索引 KD-SV-64/65/66/75/77 行与 §5 KD-SV-77 条删净（:159 起 63 ⇒ 67 跳档）；SANDBOX §14 同删；grep 全设计面零活面命中（余 = 变更记录行） |
+| 4 | 4 | `design/sandbox/SANDBOX.md` | 🟡 | Fixed | :268 ——「`routes.mjs` 拆分预案（本批后越 500 软线——≈545）：**触发点** = 实施轮实读 > 500（越线即拆）；**拆后余量** ≈50…」候选 = 容器面独立成档（首选）∥ 节点面备选 |
+| 5 | 5 | `design/agent/ADMIN-AGENT.md` ∥ `SANDBOX.md` ∥ `PROJECT.md` | 🟡 | Fixed | 三处同拍 = 四端点经 `sandbox/routes.mjs` 转注册（`bin` ±0）——ADMIN-AGENT :62 ∥ SANDBOX :254/:265 ∥ PROJECT :283/:287 |
+| 6 | 6 | `design/webui/WEBUI.md` | 🟡 | Fixed | :127 ——「表体量：zh admin ≈141 ⇒ **≈167**（运行面批）⇒ ≈197（托管接入增补）⇒ ≈231（余面批） ∥ en ≈145 ⇒ **≈171** ⇒ ≈201（同拍）⇒ ≈235」；与 §5 链（:598/:603）取齐 |
+| 7 | 7 | `design/PROJECT.md` | 🟡 | Fixed | :11「侧栏分组导航十二页」∥ :67「十二页两区（…我的四页 ∥ 管理八页…）」——与 WEBUI ∥ 需求同拍 |
+| 8 | 8 | `design/store/STORE.md` | 🔵 | Fixed | :264 ∥ :299 两表定义处补注在册（列面差 = 去 `required_labels_json` ∥ 去 `claimed_at`——旁注 = v12 段） |
+| 9 | 9 | `design/ops/OPS.md` | 🔵 | Fixed | :121 ——「⇒ runner-admin-console 批两件入链 **+2 ⇒ 42** ⇒ 托管接入增补件入链 **+1 ⇒ 43**））」；:267 Dockerfile「**⇒ ≈37（…+≈3 = `openssh-client` + `sshpass`…）**」 |
+| 10 | 10 | `design/accounts/ACCOUNTS.md` | 🔵 | Fixed | :67 detail 形补 `kept?`/`removed?`（`runner_delete` 携计数——与 SANDBOX §3 ∥ §12 N48 同拍） |
+| 11 | 11 | `design/sandbox/SANDBOX.md` | 🔵 | Fixed | :46/:50 ——「**引导步 = 先取无前缀版本读数、再定前缀**」+ 自检三步（无前缀读数 → 协商 → 复读）+ :291 KD-SV-81 同拍 |
+| 12 | 12 | `SANDBOX.md` ∥ `OPS.md` | 🔵 | Fixed | SANDBOX :106 ∥ OPS :250——宿主缺 `sshpass` ⇒ S2 停 + 报因（检查并报） |
+| 13 | 13 | `design/webui/WEBUI.md` | 🔵 | Fixed | :534 ——「**窗内预告知句**：开 API 监听需重启 Docker ⇒ 既有容器短暂中断（S5；`sandbox/SANDBOX.md` §3）」 |
+| 14 | 14 | `design/agent/ADMIN-AGENT.md` | 🔵 | Fixed | :51 指针写全 ⇒ `PROJECT.md` §9 R53③（同族：:61「构建/发布形」指针同拍） |
+| N1 | (new) | `design/PROJECT.md` | 🟡 | New | :12「（板 2 档 + 域 8 档——见 §2.1 ∥ §3）」与 :21「**九域 = gateway ∥ accounts ∥ metering ∥ store ∥ webui ∥ ops ∥ client ∥ sandbox ∥ agent**」/:77「## 3. 文档地图（板 2 + 域 9）」自抵（`EVOLUTION.md` :16「设计 = 板 2 档 + 域 9 档」亦 9）——应随正为「域 9 档」 |
+| N2 | (new) | `design/PROJECT.md` ∥ `docs/batches/` | 🟡 | New | R52③ 登记「孤儿件 `docs/batches/2026-10-10-server-exec-sandbox-runner.fixtures.mjs`（实读核过零引用——随余面批清）」（:532）——实盘核：read ⇒ ENOENT ∥ glob `**/2026-10-10-server-exec-sandbox-runner*` 零命中 ∥ docs/batches `*fixtures*` 零命中；登记销项或文件缺失待核 |
+| N3 | (new) | `docs/TEST-ENV-ECS.md` | 🟡 | New | §7 只见手工接线链（:118「③ 回控制台：「沙盒 → 运行面 → 添加节点」填 http://10.0.0.6:2375…」）；R53②「补「托管接入」跑法」未落（grep「托管」零命中）——协调项（父侧）；R52② 已落（:105「**无自驻进程**（旧 `thincoder-runner.service` 已清除…）」∥ :106 节点前置 ∥ :109–119 接线链） |
+| N4 | (new) | `design/sandbox/SANDBOX.md` | 🔵 | New | :53 ——「步 = 父侧运维笔——`docs/TEST-ENV-ECS.md` §7 待补」陈（§7 已补节点接线链——TEST-ENV :109「**节点接线链（2026-10-10 修订——旧「装机链」随守护进程清除作废）**」）——指针随正 |
+
+**计数**：🔴 ×0 ∥ 🟡 ×3（新）∥ 🔵 ×1（新）；轮次 1 十四项 = 逐号核过全数 Fixed（零 Unfixed）。
+**结论**：零新 🔴、前轮 🔴 已收 ⇒ 不阻断批准。
+
+VERDICT: pass
+
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）

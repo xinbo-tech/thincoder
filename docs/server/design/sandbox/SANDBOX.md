@@ -50,7 +50,7 @@
   **连通自检**（引导步 → 协商 → 复读）：① 无前缀 `GET <base>/version` 先取版本读数 ⇒ ② 协商 `ver = max(1.44, MinAPIVersion)` 须 ≤ `ApiVersion`（否则拒）⇒
   ③ `GET <base>/<ver>/version` 复读全量 `{ Version, ApiVersion, MinAPIVersion, Os, Arch }` ⇒ 通过 ⇒ 落 `sandbox_runners` 行（`status='active'`；`runtime_json` = 自检读数）+ 审计行 `sandbox_event`（`kind=runner_add`）。
   失败（不可达 ∥ 超时 ∥ 非 Docker API 响应 ∥ 版本不兼容）⇒ **502 `upstream_error`** + 逐句人话 + **零落库** + 审计行（`runner_selfcheck_failed`）；重名 ∥ 地址形非法 ⇒ 400。
-  **节点侧前置**：节点机 Docker 引擎须监听 TCP（测试机 = `dockerd -H fd:// -H tcp://0.0.0.0:2375` systemd override；步 = 父侧运维笔——`docs/TEST-ENV-ECS.md` §7 待补）；TLS 不做（内网——提议①）。
+  **节点侧前置**：节点机 Docker 引擎须监听 TCP（测试机 = `dockerd -H fd:// -H tcp://0.0.0.0:2375` systemd override；前置步已落文——`docs/TEST-ENV-ECS.md` §7「节点接线链」，2026-10-10）；TLS 不做（内网——提议①）。
 - **运行面读数**（`GET /api/admin/sandbox/overview`）：每节点现打 `GET <base>/<ver>/info`（3s ∥ 并发）⇒ 行 = `{ id, name, address, status, online, version, containers: { total, running } ∥ null, selfCheck, createdAt }`（`online=false` ⇒ `version`/`containers` = `null`——离线读数不外推）。
   `status = available ⇔ 至少一个节点在线`（无节点 ⇒ unavailable「无节点注册」；全离线 ⇒ unavailable「节点全部不可达」）；**节点面（添加/删除）恒可用**（不随门禁）。
   写门（`requireSandboxAvailable`——需节点的写路径（工作区创建/动作；规则 ∥ 设置 ∥ 待批裁定不设门）= 静态判据（存在 `active` 节点）；本批零改——实时门统一随重做批）。
