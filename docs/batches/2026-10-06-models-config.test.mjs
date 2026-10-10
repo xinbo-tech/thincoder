@@ -213,13 +213,13 @@ test("⑧ i18n：两表基键集相等 ∥ en 零 CJK ∥ 占位符一致 ∥ �
 
 // ── ⑨ 静态面（档目 31 ∥ 32 ∥ 零外链 ∥ 键引用闭合 ∥ 直发）────────────────────
 
-test("⑨ 静态面：档目 31 ∥ 32 ∥ 零外链 ∥ 键引用闭合 ∥ 新档静态直发（200 ∥ text/javascript）", async () => {
+test("⑨ 静态面：档目 36 ∥ 37 ∥ 零外链 ∥ 键引用闭合 ∥ 新档静态直发（200 ∥ text/javascript）", async () => {
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [32, 31], "全目录 32 ∥ UI 代码档 31（2026-10-10 沙盒运行面批 +1）")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [37, 36], "全目录 37 ∥ UI 代码档 36（2026-10-11 两批 + 拆分层后）")
   assert.deepEqual(names, [
-    "app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs",
-    "i18n-zh-me.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
-    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-sandbox.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs",
+    "app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-sandbox.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs",
+    "i18n-zh-me.mjs", "i18n-zh-sandbox.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
+    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-chat.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-sandbox-containers.mjs", "views-sandbox-images.mjs", "views-sandbox.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs",
   ])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")

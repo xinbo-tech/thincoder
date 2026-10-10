@@ -405,7 +405,7 @@ test("D4 零别名配置 ⇒ 零迁移回落 `provider/model`（v10 结构零动
   USAGE.recordUsage(db, { ts: now, memberId: 1, keyId: 1, provider: "mock", model: "mock-chat", endpoint: "chat", status: "ok", stream: false, promptTokens: 1, completionTokens: 1, totalTokens: 7, durationMs: 1 })
   assert.equal(USAGE.queryUsage(db, {})[0].model, "mock/mock-chat", "无别名 ⇒ 外标回落前缀形（存量零迁移）")
   assert.equal(USAGE.usageSummary(db, { now }).byModel[0].model, "mock/mock-chat", "summary 同口径")
-  assert.equal(DB.readVersion(db), 13, "结构版本保持 v13（零迁移——STORE §3）")
+  assert.equal(DB.readVersion(db), 14, "结构版本保持 v14（零迁移——STORE §3）")
 })
 
 // ── E 界面面（AC-29①②③ ∥ #1151）──────────────────────────────────────────────

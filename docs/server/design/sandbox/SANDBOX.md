@@ -292,7 +292,7 @@
 
 | 档 | 行数（设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/sandbox/routes.mjs`（已落盘 **493**——2026-10-11 现读） | **⇒ ≈496**（本批：镜像族注册一行 + import + 头注 +≈3；**余量 ≈4——下批触本档前须先拆**） | 控制台面端点（§8/§9） |
+| `thincoder-server/src/sandbox/routes.mjs`（已落盘 **442**——2026-10-11 实读：净差 ≈51 = 并飞 chat 批抽删节点链 ∥ 本批 +3 行） | **本批 +3 已入盘；余量 ≈58——拆分触发点 = 越 500 软线（下批无需先拆）** | 控制台面端点（§8/§9） |
 | `thincoder-server/src/sandbox/registry.mjs`（已落盘 **522**——2026-10-10 现读） | **⇒ ≈500**（runner-admin-console 批：runner 面重写（登记/读数/可用性随新模型）∥ `runnerHealth` 删 ∥ `sweepStuckTasks` 去心跳判据；队列/心跳死件不动——实读核过无调用方） | 登记/读数（§3）∥ 队列（§5/§6） |
 | `thincoder-server/src/sandbox/docker.mjs`（已落盘 **187**——2026-10-11 现读） | **⇒ ≈330**（本批：+≈143 = 详情/日志（含解复用）/用量两读/重启/强杀/镜像三件/拉取流扫描/形校验 ∥ 常量/头注） | Docker API 客户端（§3） |
 | `thincoder-server/src/sandbox/container-routes.mjs`（已落盘 **168**——2026-10-11 现读） | **⇒ ≈330**（本批：+≈162 = 详情≈18 ∥ 日志≈22 ∥ 重启/强杀≈25 ∥ 用量≈28 ∥ 校验/错误映射≈45 ∥ 路由注册与头注≈24） | 容器面路由（§3 家族——拆分档） |
@@ -308,14 +308,14 @@
 | `thincoder-server/bin/thincoder-server.mjs`（已落盘 182） | **±0**（注册面不变） | import + 注册行 |
 | **小计** | **≈+1172 ⇒ 本批 ≈+316**（runner-admin-console 批：routes +≈133 ∥ registry −≈22 ∥ docker 新 ≈170 ∥ db +≈35；errors ∥ bin ±0）**⇒ 增补 ≈+640**（托管接入：ssh 新 ≈180 ∥ onboarding 新 ≈300 ∥ onboarding-routes 新 ≈130 ∥ routes ±≈5 ∥ db +≈25；agent 域另计——`agent/ADMIN-AGENT.md` §6）**⇒ 本批 ≈+438**（sandbox-docker-admin：container-routes +≈162 ∥ image-routes 新 ≈130 ∥ docker +≈143 ∥ routes ±≈3；webui 面 = `webui/WEBUI.md` §5） | —— |
 
-- `routes.mjs` 拆分预案（**首选已执行**——容器面拆 `container-routes.mjs`（已落盘 168）；**实读 493（2026-10-11）⇒ 本批再注册一行 ≈496——余量 ≈4**）：**触发点 = 下次触碰本档的面（越 500 即拆）**；**候选拆法**（落域内、端点路径零变）：① 工作区面（工作区四路由 + 视图函数）独立成档（≈150——首选）∥ ② 规则/待批/设置三面独立成档（≈120）。
+- `routes.mjs` 拆分预案（**首选已执行**——容器面拆 `container-routes.mjs`（已落盘 168）；**实读 442（2026-10-11）——本批 +3 已入盘；余量 ≈58**）：**触发点 = 越 500 软线（下批无需先拆）**；**候选拆法**（落域内、端点路径零变）：① 工作区面（工作区四路由 + 视图函数）独立成档（≈150——首选）∥ ② 规则/待批/设置三面独立成档（≈120）。
 - `rules.mjs`/`credentials.mjs` 两行「拟新增」= 陈值（两档已落盘）——清账另轮；执行面预算随重做批重建；webui 预算 = `webui/WEBUI.md` §5；批内件预算 = 批档 §2；板账 = `docs/server/design/PROJECT.md` §6。
 - 批内件三件（入 server 链）：`docs/batches/2026-10-10-runner-admin-console.test.mjs`（服务面——Docker 客户端 ∥ 路由 ∥ v12 迁移；估 ≈420）∥
   `docs/batches/2026-10-10-runner-admin-console-ui.test.mjs`（前端面——运行面渲染 ∥ nav ∥ i18n 键集；估 ≈260 ⇒ ≈330——+托管接入块）∥
   `docs/batches/2026-10-10-runner-admin-console-agent.test.mjs`（托管接入/agent——假 ssh ∥ 五工具 ∥ 任务生命周期 ∥ 凭据加密/零化 ∥ v13 迁移；估 ≈420）；批档 §2 列全。
 - **本批件（sandbox-docker-admin——入 server 链）**：`docs/batches/2026-10-11-sandbox-docker-admin.test.mjs`（服务面——估 ≈420：docker 客户端读数/流解复用/拉取扫描 ∥ 八路由 ∥ 假 Docker）∥
   `docs/batches/2026-10-11-sandbox-docker-admin-ui.test.mjs`（前端面——估 ≈280：容器详情/日志/用量面渲染 ∥ 镜像区 ∥ 弹窗 ∥ i18n 键集 ∥ 档目）。
-  **随正件**（父侧落——实施轮同拍）：`docs/batches/2026-10-06-server-gateway-webui-deploy.test.mjs`（档目断言 +2 名——`views-sandbox-containers.mjs` ∥ `views-sandbox-images.mjs`）∥ 门禁件数断言件七件（42 ⇒ **44**——以实施当刻盘面实读为准）∥ `thincoder-server/package.json`（`prepublishOnly` 42 ⇒ **44**——本批两件入链）。
+  **随正件**（父侧落——实施轮同拍）：`docs/batches/2026-10-06-server-gateway-webui-deploy.test.mjs`（档目断言 +2 名——`views-sandbox-containers.mjs` ∥ `views-sandbox-images.mjs`）∥ 门禁件数断言件七件（**45 ⇒ 47**——chat 批三件 + 本批两件；盘面实读）∥ `thincoder-server/package.json`（`prepublishOnly` **45 ⇒ 47**——本批两件入链；盘面实读）。
 
 ## 14. 关键决策（本域）
 
@@ -370,3 +370,4 @@
 - 2026-10-11（**admin-agent-chat 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-11-admin-agent-chat.md` §3 轮次 1 之 1–3/5–11）：闸面收净（doc-check 行宽读数）——§3 连线口径行折行（330 ⇒ ≤300；本笔 = 非本批面之闸面清尾——父侧如异议可 revert）。**零语义**。
 - 2026-10-11（**sandbox-docker-admin 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-11-sandbox-docker-admin.md` §1 · 台账 #1265；用户 2026-10-11 04:36/04:39 两族同批）：§3 增「容器面补齐 + 镜像族」块（八端点 ∥ 自加项表六条）∥ §8① 容器区/镜像区随正 ∥ §11 增判据行 + 机检口径句改指针（单源 = `webui/WEBUI.md` §6；陈值「档目 33 ∥ 34」删）∥ §12 增用例（N53–N56 ∥ B47–B50 ∥ E39–E41）∥ §13 预算随正（routes 493 ⇒ ≈496 ∥ container-routes 168 ⇒ ≈330 ∥ image-routes 新 ≈130 ∥ docker 187 ⇒ ≈330）+ 拆分预案收正（首选已执行）∥ §14 增 KD-SV-92–95。**产品码零触（设计轮）**。
 - 2026-10-11（**sandbox-docker-admin 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-11-sandbox-docker-admin.md` §3 轮次 1 之 1/2/3/6）：#1 §15 余项去「镜像管理」（已交付——列表/拉取/删除）；「清单下拉」（建容器镜像选择器）转列余项 ∥ #2 §12 增 B51（超 256 KiB ⇒ `truncated: true`）∥ E42（五端点节点不可达 ⇒ 502）+ §11 判据行随拍（B47–B51 ∥ E39–E42）∥ #3 删除条 detail 改单源指针（`accounts/ACCOUNTS.md` §2.1）+ N54/N56 键集指针同拍 ∥ #6 §13 两行分项闭式收平（+≈162：路由注册与头注≈24；image-routes：头注≈15）。**零新语义**（评审发现直接导出项）。
+- 2026-10-11（**sandbox-docker-admin 批 · 记录收正（fix 轮）· eng-designer**——父侧裁定（#194 上抛处置 + 拆分账 #1270）：§13 routes 行读数收正（实读 **442**——净差 ≈51（chat 批抽删节点链）∥ 本批 +3；「下批先拆」前提取消——余量 ≈58）∥ §13 随正件行链基收正（**45 ⇒ 47**——chat 三件 + 本批两件；盘面实读）。**产品码零触。**

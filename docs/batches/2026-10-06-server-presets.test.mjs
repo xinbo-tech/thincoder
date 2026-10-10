@@ -335,7 +335,7 @@ test("依赖面：thincoder-server 全树 import 仅 node:/相对 ∥ package.js
   const specifiers = []
   for (const rel of files) {
     const text = readFileSync(join(dir, rel), "utf8")
-    for (const match of text.matchAll(/\bfrom\s*["']([^"']+)["']/g)) specifiers.push([rel, match[1]])
+    for (const match of text.matchAll(/\bfrom\s*["']([^"'()\s]+)["']/g)) specifiers.push([rel, match[1]])
     for (const match of text.matchAll(/\bimport\s*["']([^"']+)["']/g)) specifiers.push([rel, match[1]])
     for (const match of text.matchAll(/\bimport\(\s*["']([^"']+)["']\s*\)/g)) specifiers.push([rel, match[1]])
     for (const match of text.matchAll(/\brequire\(\s*["']([^"']+)["']\s*\)/g)) specifiers.push([rel, match[1]])

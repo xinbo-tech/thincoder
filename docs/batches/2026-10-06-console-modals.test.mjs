@@ -385,10 +385,10 @@ test("③ 服务模型：`deriveModels` 同源派生 ∥ 列表/空态/失败态
 
 // ── ④ nav（管理 7 ∥ 新路径 ∥ denied ∥ 重定向/默认页不破）────────────────────
 
-test("④ nav：管理 7 ∥ `/admin/models` 在册 ∥ denied ∥ 重定向/默认页不破 ∥ labelKey 闭包", () => {
+test("④ nav：管理 9 ∥ `/admin/models` 在册 ∥ denied ∥ 重定向/默认页不破 ∥ labelKey 闭包", () => {
   const [me, admin] = NAV.NAV_GROUPS
   assert.deepEqual(me.items.map((item) => item.path), ["/me/keys", "/me/usage", "/me/account"])
-  assert.deepEqual(admin.items.map((item) => item.path), ["/admin/overview", "/admin/members", "/admin/providers", "/admin/models", "/admin/usage", "/admin/audit", "/admin/system", "/admin/sandbox"])
+  assert.deepEqual(admin.items.map((item) => item.path), ["/admin/overview", "/admin/chat", "/admin/members", "/admin/providers", "/admin/models", "/admin/usage", "/admin/audit", "/admin/system", "/admin/sandbox"])
   for (const item of [...me.items, ...admin.items]) {
     assert.ok(item.labelKey && !("label" in item), item.path)
     assert.ok(item.labelKey in ZH && item.labelKey in EN, `labelKey 悬空：${item.labelKey}`)
@@ -401,13 +401,13 @@ test("④ nav：管理 7 ∥ `/admin/models` 在册 ∥ denied ∥ 重定向/默
 
 // ── ⑤ 静态面（档目 30 ∥ 31 ∥ 零外链 ∥ i18n 键集/键引用闭合 ∥ 直发）────────────
 
-test("⑤ 静态面：档目 30 ∥ 31 ∥ 零外链 ∥ 两表键集/占位符 ∥ 本批新键 ∥ 键引用闭合 ∥ 两新档直发", async () => {
+test("⑤ 静态面：档目 36 ∥ 37 ∥ 零外链 ∥ 两表键集/占位符 ∥ 本批新键 ∥ 键引用闭合 ∥ 两新档直发", async () => {
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [32, 31]) // 含 favicon 全目录 ∥ UI 代码档（2026-10-10 沙盒运行面批 +1）
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [37, 36]) // 含 favicon 全目录 ∥ UI 代码档（2026-10-11 两批 + 拆分层后）
   assert.deepEqual(names, [
-    "app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs",
-    "i18n-zh-me.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
-    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-sandbox.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs",
+    "app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-sandbox.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs",
+    "i18n-zh-me.mjs", "i18n-zh-sandbox.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css",
+    "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-chat.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-sandbox-containers.mjs", "views-sandbox-images.mjs", "views-sandbox.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs",
   ])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")

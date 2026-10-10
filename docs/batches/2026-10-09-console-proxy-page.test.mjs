@@ -441,10 +441,10 @@ test("C2 误删段护栏（服务面）：PATCH 三项 ⇒ 文件 proxy 段与 G
   } finally { await app.close(); db.close() }
 })
 
-test("C3 nav 直测：管理 7 项（代理项退役）∥ 旧链 `/admin/proxy` ⇒ `/admin/system` 重定向 ∥ user ⇒ denied ∥ app.mjs 接线退场", () => {
+test("C3 nav 直测：管理 9 项（代理项退役 ∥ chat/sandbox 在列）∥ 旧链 `/admin/proxy` ⇒ `/admin/system` 重定向 ∥ user ⇒ denied ∥ app.mjs 接线退场", () => {
   const admin = NAV.NAV_GROUPS.find((group) => group.key === "admin")
   const me = NAV.NAV_GROUPS.find((group) => group.key === "me")
-  assert.deepEqual([me.items.length, admin.items.length], [3, 8], "我的 3 ∥ 管理 8（2026-10-10 代理回迁批 −1 ∥ 沙盒运行面批 +1）")
+  assert.deepEqual([me.items.length, admin.items.length], [3, 9], "我的 3 ∥ 管理 9（2026-10-11 两批后）")
   assert.deepEqual([admin.items.at(-1).key, admin.items.at(-1).path, admin.items.at(-1).labelKey], ["sandbox", "/admin/sandbox", "nav.page.admin.sandbox"], "管理末项 = 沙盒（设计 KD-SV-20 顺序：系统 ⇒ 沙盒）")
   assert.deepEqual(NAV.resolveRoute("/admin/proxy", "admin"), { path: "/admin/system", redirect: true }, "旧链 ⇒ 重定向系统页（旧书签可达）")
   assert.deepEqual(NAV.resolveRoute("/admin/system", "user"), { path: "/admin/system", denied: true }, "user ⇒ denied 块")

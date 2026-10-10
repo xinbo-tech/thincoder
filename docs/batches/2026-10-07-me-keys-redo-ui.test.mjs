@@ -339,7 +339,7 @@ test("④ 接入卡：admin 面行（零改）∥ 成员面四键措辞 ∥ 素�
 
 // ── ⑤ 静态面（i18n 键族 ∥ 死键 ∥ 类名 ∥ 档目 ∥ 非壳）────────────────────────
 
-test("⑤ 静态面：新 25 键两表 ∥ 死键零残留 ∥ 改值 4 键列内形 ∥ 基键集/占位符/en 零 CJK ∥ 「提示形」与类名零残留 ∥ 档目 31 ∥ 32", () => {
+test("⑤ 静态面：新 25 键两表 ∥ 死键零残留 ∥ 改值 4 键列内形 ∥ 基键集/占位符/en 零 CJK ∥ 「提示形」与类名零残留 ∥ 档目 36 ∥ 37", () => {
   const zhKeys = Object.keys(ZH)
   const enKeys = Object.keys(EN)
   const enBase = enKeys.filter((key) => !key.endsWith(".one"))
@@ -386,9 +386,9 @@ test("⑤ 静态面：新 25 键两表 ∥ 死键零残留 ∥ 改值 4 键列�
   }
   const hover = [...cssCode.matchAll(/([^{}]*:hover[^{}]*)\{/g)].map((match) => match[1].trim().replace(/\s+/g, " "))
   assert.deepEqual(hover.filter((selector) => selector === ".nav-item:hover" || selector.includes("tr:hover")), [".nav-item:hover", "tbody tr:hover"], "行悬停声明 = 2 条（li.key-item:hover 删净）")
-  // 档目 31 ∥ 32（结构轮后）∥ key 页不入壳五页钉表 ∥ 行数硬限
+  // 档目 36 ∥ 37（2026-10-11 两批 + 拆分层后）∥ key 页不入壳五页钉表 ∥ 行数硬限
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [32, 31], "全目录 32 ∥ UI 代码档 31（2026-10-10 沙盒运行面批 +1）")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [37, 36], "全目录 37 ∥ UI 代码档 36（2026-10-11 两批 + 拆分层后）")
   const shell = readPublic("app.mjs").match(/SHELL_PAGES = new Set\(\[([^\]]*)\]\)/)?.[1] ?? ""
   assert.equal(shell.includes("/me/keys"), false, "key 页非壳（钉表五页不扩——§2.6① 排除面）")
   assert.ok(readPublic("views-me.mjs").split("\n").length <= 800, "views-me 行数 ≤800 硬限")

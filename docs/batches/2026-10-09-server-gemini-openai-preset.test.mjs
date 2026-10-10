@@ -260,11 +260,11 @@ test("A4 loopback 判定（NO_PROXY 语义）：localhost ∥ *.localhost ∥ 12
 test("B1 空库直落 10 ∥ providers.proxy 列形（INTEGER NOT NULL DEFAULT 0）∥ 迁移链尾 = v10", () => {
   const fresh = DB.openDatabase(":memory:")
   try {
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [13, 13])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [14, 14])
     const column = fresh.prepare("PRAGMA table_info(providers)").all().find((item) => item.name === "proxy")
     assert.ok(column, "providers.proxy 缺位")
     assert.deepEqual([column.type, column.notnull, String(column.dflt_value)], ["INTEGER", 1, "0"])
-    assert.equal(DB.MIGRATIONS.at(-1).v, 13)
+    assert.equal(DB.MIGRATIONS.at(-1).v, 14)
   } finally { fresh.close() }
 })
 
@@ -276,9 +276,9 @@ test("B2 v8 库自动升 10：存量行得 0（缺省直连）∥ 迁移幂等 �
   legacy.close()
   const db = DB.openDatabase(file) // 启动自动升
   try {
-    assert.equal(DB.readVersion(db), 13, "v8 库自动升 13")
+    assert.equal(DB.readVersion(db), 14, "v8 库自动升 14")
     assert.equal(db.prepare("SELECT proxy FROM providers WHERE name = 'old'").get().proxy, 0, "存量行即刻得 0")
-    assert.equal(DB.migrate(db), 13, "幂等（再跑迁移链零效）")
+    assert.equal(DB.migrate(db), 14, "幂等（再跑迁移链零效）")
     const row = () => db.prepare("SELECT * FROM providers WHERE name = 'old'").get()
     assert.equal(PROVIDERS.rowToEntry(row()).proxy, false, "解码 0 ⇒ false")
     db.prepare("UPDATE providers SET proxy = 1 WHERE name = 'old'").run()

@@ -469,7 +469,7 @@ test("⑦ 断连（读流中止——零未押异常，部分文本留场，草�
 
 // ── ⑧ i18n 两表（§2.2——键族 ∥ 占位符 ∥ en 零 CJK ∥ 键集 ∥ 键数）────────────────
 
-test("⑧ i18n：本批 33 键逐键在场 ∥ 占位符对位 ∥ en 零 CJK ∥ 基键集双向相等 ∥ 键数终值 501 ∥ 506", () => {
+test("⑧ i18n：本批 33 键逐键在场 ∥ 占位符对位 ∥ en 零 CJK ∥ 基键集双向相等 ∥ 键数终值 555 ∥ 560", () => {
   for (const key of NEW_KEYS) {
     for (const [lang, table] of [["zh", ZH], ["en", EN]]) {
       assert.ok(typeof table[key] === "string" && table[key].trim() !== "", `${lang} 表缺键：${key}`)
@@ -486,7 +486,7 @@ test("⑧ i18n：本批 33 键逐键在场 ∥ 占位符对位 ∥ en 零 CJK �
   assert.deepEqual([...enBase].filter((key) => !zhBase.has(key)), [], "仅 en 键（`.one` 变体族除外）")
   assert.equal(ZH["nav.page.admin.chat"], "对话", "nav 键（zh）")
   assert.equal(EN["nav.page.admin.chat"], "Chat", "nav 键（en）")
-  assert.deepEqual([Object.keys(ZH).length, Object.keys(EN).length], [501, 506], "键数终值（468 ∥ 473 ⇒ +33/表）")
+  assert.deepEqual([Object.keys(ZH).length, Object.keys(EN).length], [555, 560], "键数终值（2026-10-11 两批后）")
 })
 
 // ── ⑨ 审计面（`agent_event` 型接 ∥ 详情 summary 支）──────────────────────────
@@ -513,9 +513,9 @@ test("⑨ 审计面：`agent_event` 型接（下拉 + 表）∥ 详情 `summary`
 
 // ── ⑩ 静态面（档目 ∥ nav ∥ app 接线 ∥ 非壳页 ∥ 行数/行宽 ∥ 零外链 ∥ 键/类闭合 ∥ canon）─────
 
-test("⑩ 静态面：档目 +1（32 ∥ 33）∥ nav 管理 9（对话位次 2）∥ app 接线 ∥ 非壳页 ∥ 行数/行宽/零外链 ∥ 键/类闭合 ∥ AC-19 canon", () => {
+test("⑩ 静态面：档目 36 ∥ 37 ∥ nav 管理 9（对话位次 2）∥ app 接线 ∥ 非壳页 ∥ 行数/行宽/零外链 ∥ 键/类闭合 ∥ AC-19 canon", () => {
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [33, 32], "档目 32 ∥ 33（本批 +1）")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [37, 36], "档目 37 ∥ 36（2026-10-11 两批 + 拆分层后）")
   assert.ok(names.includes("views-chat.mjs"), "新档在册")
   // nav（管理 9 ∥ 「对话」第 2 位——总览后）
   const admin = NAV.NAV_GROUPS.find((group) => group.key === "admin")

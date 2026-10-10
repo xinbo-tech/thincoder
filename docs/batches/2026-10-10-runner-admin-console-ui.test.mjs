@@ -471,20 +471,20 @@ test("⑦ i18n：82 键逐键在场 ∥ 占位符对位 ∥ en 零 CJK ∥ 基�
   assert.equal(EN["err.upstream_error"], "Upstream service error: {detail}", "en 改值")
   assert.equal(ZH["nav.page.admin.sandbox"], "沙盒", "nav 键（zh）")
   assert.equal(EN["nav.page.admin.sandbox"], "Sandbox", "nav 键（en）")
-  // 键数终值（实读 2026-10-10：386 ∥ 391 ⇒ 468 ∥ 473——沙盒 81 + nav 1，两表同增 82）
-  assert.deepEqual([Object.keys(ZH).length, Object.keys(EN).length], [468, 473], "键数终值")
+  // 键数终值（实读 2026-10-11：555 ∥ 560——沙盒-docker 批 +54 ∥ chat 批 +33；键集零语义，拆分为文件面）
+  assert.deepEqual([Object.keys(ZH).length, Object.keys(EN).length], [555, 560], "键数终值")
 })
 
 // ── ⑧ 静态面（档目 ∥ nav ∥ app 接线 ∥ 行数 ∥ 零外链 ∥ 键/类闭合）────────────────
 
-test("⑧ 静态面：档目 +1 ∥ nav 管理 8（sandbox）∥ app 接线 ∥ 行数/行宽 ∥ 零外链 ∥ t 字面量闭合 ∥ 类名双向闭合", () => {
-  // 档目（31 ∥ 32 ⇒ 32 ∥ 33——本批 +1 档）
+test("⑧ 静态面：档目 36 ∥ 37 ∥ nav 管理 9 ∥ app 接线 ∥ 行数/行宽 ∥ 零外链 ∥ t 字面量闭合 ∥ 类名双向闭合", () => {
+  // 档目（31 ∥ 32 ⇒ 36 ∥ 37——2026-10-11 两批 + 拆分层后）
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [32, 31], "档目 32 ∥ 31（本批 +1）")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [37, 36], "档目 37 ∥ 36（2026-10-11 两批 + 拆分层后）")
   assert.ok(names.includes("views-sandbox.mjs"), "新档在册")
-  // nav（管理 8 ∥ sandbox 项末位）
+  // nav（管理 9 ∥ sandbox 项末位）
   const admin = NAV.NAV_GROUPS.find((group) => group.key === "admin")
-  assert.equal(admin.items.length, 8, "管理 8（sandbox +1）")
+  assert.equal(admin.items.length, 9, "管理 9（2026-10-11：chat ∥ sandbox +2）")
   assert.deepEqual(admin.items.at(-1), { key: "sandbox", labelKey: "nav.page.admin.sandbox", path: "/admin/sandbox" }, "sandbox 项末位（labelKey 单源）")
   // app.mjs 接线（import + PAGES 行）
   const appSrc = readPublic("app.mjs")

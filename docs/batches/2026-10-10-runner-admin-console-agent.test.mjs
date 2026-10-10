@@ -578,27 +578,27 @@ test("腿 F Docker 客户端缓存驱逐：首打失败（微态）⇒ 自愈后
 
 // ── 腿：v13 迁移六条（STORE.md §2 v13 段判据）─────────────────────────────────
 
-test("v13 建表：空库直落 13 ∥ v12 库升后 13 ∥ 幂等 ∥ 十八列在场 ∥ 凭据读写往返（密文 ≠ 明文 ∥ 零化后 NULL）∥ 状态 CHECK 四值放行/越值拒", async () => {
+test("v13 建表：空库直落 14 ∥ v12 库升后 14 ∥ 幂等 ∥ 十八列在场 ∥ 凭据读写往返（密文 ≠ 明文 ∥ 零化后 NULL）∥ 状态 CHECK 四值放行/越值拒", async () => {
   const file = join(tempRoot, "v13.db")
   const fresh = DB.openDatabase(file)
-  assert.equal(DB.readVersion(fresh), 13, "空库直落 13")
+  assert.equal(DB.readVersion(fresh), 14, "空库直落 14")
   const cols = fresh.prepare("PRAGMA table_info(sandbox_onboarding)").all().map((row) => row.name)
   assert.equal(cols.length, 18, `列面十八列在场（实 ${cols.length}）`)
   for (const name of ["host", "ssh_port", "ssh_user", "auth_kind", "secret_cipher", "sudo_cipher", "credential_mode", "credential_state", "name", "model", "status", "step", "steps_json", "runner_id", "created_by", "created_at", "finished_at"]) {
     assert.equal(cols.includes(name), true, `列在场：${name}`)
   }
   fresh.close()
-  // v12 库升后 = 13
+  // v12 库升后 = 14
   const file12 = join(tempRoot, "v12.db")
   const v12 = DB.openDatabase(file12, { migrations: DB.MIGRATIONS.slice(0, 12) })
   assert.equal(DB.readVersion(v12), 12)
   v12.close()
   const upgraded = DB.openDatabase(file12)
-  assert.equal(DB.readVersion(upgraded), 13, "v12 库升后读数 13")
+  assert.equal(DB.readVersion(upgraded), 14, "v12 库升后读数 14")
   upgraded.close()
   // 幂等（再开零变）
   const reopened = DB.openDatabase(file12)
-  assert.equal(DB.readVersion(reopened), 13, "v13 段幂等（再开零变）")
+  assert.equal(DB.readVersion(reopened), 14, "v13/v14 段幂等（再开零变）")
   assert.equal(reopened.prepare("PRAGMA table_info(sandbox_onboarding)").all().length, 18, "再开列面零变")
   // 凭据读写往返（密文 ≠ 明文 ∥ 零化后 NULL）
   const key = ONBOARDING.loadOrCreateCredentialKey(join(tempRoot, "v13-credentials.key"))

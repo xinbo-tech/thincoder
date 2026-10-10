@@ -380,7 +380,7 @@ test("B9 并发（同步段单写者）：两 PATCH 并发 ⇒ 两键并存（�
 test("C1 空库直落 10：CHECK 含 `config_update`（可写）∥ 两索引在场 ∥ 重建残留零 ∥ 链尾 v10", () => {
   const db = DB.openDatabase(":memory:")
   try {
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(db), DB.MIGRATIONS.at(-1).v], [13, 13, 13])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(db), DB.MIGRATIONS.at(-1).v], [14, 14, 14])
     assert.ok(AUDIT.AUDIT_TYPES.includes("config_update"), "事件目录十型（+ config_update）")
     const id = AUDIT.recordAudit(db, { type: "config_update", actor: "admin", detail: { keys: ["autoUpdate"] } })
     assert.ok(id >= 1)
@@ -403,18 +403,18 @@ test("C2 v9 库自动升 10：存量行逐值保形 ∥ `config_update` 可写 �
   legacy.close()
   const db = DB.openDatabase(file) // 启动自动升
   try {
-    assert.equal(DB.readVersion(db), 13, "v9 库自动升 13")
+    assert.equal(DB.readVersion(db), 14, "v9 库自动升 14")
     const after = db.prepare("SELECT id, ts, type, actor_id, actor_name, target_id, target_name, detail FROM audit_events ORDER BY id").all()
     assert.deepEqual(after, before, "存量行逐值保形（含 id 空洞 1/2/5）")
     const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'audit_events'").all().map((row) => row.name).sort()
     assert.deepEqual(indexes, ["idx_audit_ts", "idx_audit_type_ts"])
     assert.equal(AUDIT.recordAudit(db, { type: "config_update", actor: "admin" }), 6, "新事件 id 不撞存量（sqlite_sequence 连续）")
-    assert.equal(DB.migrate(db), 13, "再跑迁移链零效（幂等）")
+    assert.equal(DB.migrate(db), 14, "再跑迁移链零效（幂等）")
     assert.equal(db.prepare("SELECT COUNT(*) AS n FROM audit_events").get().n, 4, "二跑行数不变")
   } finally { db.close() }
   const again = DB.openDatabase(file) // 二跑同态
   try {
-    assert.equal(DB.readVersion(again), 13)
+    assert.equal(DB.readVersion(again), 14)
     assert.equal(again.prepare("SELECT COUNT(*) AS n FROM audit_events").get().n, 4)
   } finally { again.close() }
 })
@@ -720,7 +720,7 @@ test("F2 系统页五节 ∥ 向量卡三输入 ∥ 保存体三态 ∥ 草稿�
 })
 // ── F3 审计十型 + `keys` 详情支（§2.3④）─────────────────────────────────────────────────────
 
-test("F3 审计：十型下拉（全部 + 十型）∥ `config_update` 行详情 = 键名清单", async () => {
+test("F3 审计：十三型下拉（全部 + 十三型）∥ `config_update` 行详情 = 键名清单", async () => {
   globalThis.document = stubDocument()
   try {
     const events = [
@@ -731,8 +731,8 @@ test("F3 审计：十型下拉（全部 + 十型）∥ `config_update` 行详情
     const mount = fNode("section")
     await AUDIT_VIEW.renderAudit(ctx, mount)
     const select = fFind(mount, (n) => n.tag === "select")
-    assert.equal(fFindAll(select, (n) => n.tag === "option").length, 11, "全部 + 十型")
-    assert.equal(fFind(select, (n) => n.value === "config_update")?.textContent, ZH["audit.type.config_update"], "十型含 `config_update`")
+    assert.equal(fFindAll(select, (n) => n.tag === "option").length, 12, "全部 + 十一型（含 agent_event；sandbox_* 两型随余面批登记）")
+    assert.equal(fFind(select, (n) => n.value === "config_update")?.textContent, ZH["audit.type.config_update"], "型表含 `config_update`")
     const cells = fFindAll(mount, (n) => n.tag === "td").map((td) => td.textContent)
     assert.ok(cells.includes(`${ZH["audit.keys"]}: autoUpdate, proxyUri`), `config_update 详情 = 键名清单：${cells.join(" | ")}`)
     assert.ok(cells.includes("IP: 10.0.0.1"), "既有详情支（IP）不破")

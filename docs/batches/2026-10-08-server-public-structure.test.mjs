@@ -38,35 +38,40 @@ const I18N = await load("thincoder-server/public/i18n.mjs")
 const DOM = await load("thincoder-server/public/dom.mjs")
 const HEALTH = await load("thincoder-server/public/health.mjs")
 
-/** 部件域界（键首段前缀——`.one` 变体随基键；KD-SV-51）：键集归属 = 机器可判。 */
-const PARTS = ["shell", "me", "admin", "system"]
+/** 部件域界（键首段前缀；`admin.sandbox.*` = 二级前缀单列——KD-SV-51）：键集归属 = 机器可判。 */
+const PARTS = ["shell", "me", "admin", "sandbox", "system"]
 const DOMAINS = {
   shell: ["app", "common", "col", "denied", "nav", "lang", "login", "err"],
   me: ["usage", "me"],
   admin: ["admin"],
+  sandbox: ["admin.sandbox"],
   system: ["system", "vector", "health", "overview", "usageReport", "audit", "proxy"],
 }
-const domainOf = (key) => PARTS.find((part) => DOMAINS[part].includes(key.replace(/\.one$/, "").split(".")[0])) ?? null
-/** 键集指纹基线（2026-10-08 拆表零语义基线；2026-10-09 代理批 +1 键（`admin.providers.useProxy`）随正 ∥ 2026-10-09 配置面批 +29 键随正 ∥ 2026-10-09 embed 解耦批 +1 键随正（system +2 ∥ admin −1）⊕ 2026-10-09 alias 批 +4 键随正（两表各 +4——别名面）⊕ 2026-10-09 代理页批（+18 ∥ 退役 2——代理面）⊕ 2026-10-10 server-small-fixes 批（14 键值改——「API Key」统一：nav/管理/审计/接入卡/页题/秘密标签/用量报表键列；键集零变 389 ∥ 394）⊕ 2026-10-10 代理回迁批（−3 键：`nav.page.admin.proxy` ∥ `proxy.title` ∥ `proxy.settingsTitle`——代理面页/卡题/nav 三键退役；键数 386 ∥ 391））。 */
+const domainOf = (key) => {
+  const base = key.replace(/\.one$/, "")
+  const two = base.split(".").slice(0, 2).join(".")
+  return PARTS.find((part) => DOMAINS[part].includes(two)) ?? PARTS.find((part) => DOMAINS[part].includes(base.split(".")[0])) ?? null
+}
+/** 键集指纹基线（2026-10-08 拆表零语义基线；… ⊕ 2026-10-11 两批：chat +33 ∥ 沙盒-docker +54——键数 555 ∥ 560；`admin.sandbox.*` 族外拆 `i18n-{zh,en}-sandbox.mjs` 独立部件（十部件——结构轮守卫「拆后应回线内」之执行））。 */
 const ANCHOR = {
-  zh: "a053d2b62d3a3935c97237a5b9091e91da0038c82e3fa4a87c135658b3513eff",
-  en: "5f3f9aebebfaa349a2093c1ab1f4f903d142ef6207a4776c78349ee92b2ac60d",
+  zh: "f2771f02560fb0628aa43ded853b7d4b92f1e4027c6818144a96ef044f8cd690",
+  en: "a2f68ee5dd3cc099723580d32f10e8af86cd1d6c8409b86c7c0f4c140ddcce37",
 }
 const fingerprint = (TABLE) => createHash("sha256").update(JSON.stringify(Object.keys(TABLE).sort().map((key) => [key, TABLE[key]]))).digest("hex")
 
 // ── ① 键集指纹（拆表 = 纯结构；基线随后续增键批同拍随正）────────────────────────────
 
-test("① 键集指纹：`ZH`/`EN` sorted-key 序列化 sha256 = 基线（拆表 ⊕ 10-09 代理批 ⊕ 配置面批 ⊕ embed 解耦批 ⊕ 10-09 alias 批 ⊕ 代理页批 ⊕ 10-10 small-fixes 批〔值改——14 键〕⊕ 10-10 代理回迁批〔−3 键〕）∥ 键数 386 ∥ 391 ∥ 门面冻结", () => {
+test("① 键集指纹：`ZH`/`EN` sorted-key 序列化 sha256 = 基线（拆表 ⊕ 历批随正 ⊕ 2026-10-11 两批：chat +33 ∥ 沙盒-docker +54）∥ 键数 555 ∥ 560 ∥ 门面冻结", () => {
   assert.equal(fingerprint(ZH), ANCHOR.zh, "zh 指纹漂移（键集/值须逐字同基线）")
   assert.equal(fingerprint(EN), ANCHOR.en, "en 指纹漂移（键集/值须逐字同基线）")
-  assert.equal(Object.keys(ZH).length, 468, "zh 键数 468（拆表 338 + 代理批 1 + 配置面批 29 + embed 解耦批 1 + alias 批 4 + 代理页批 18 − 退役 2 − 回迁批 3 + 沙盒运行面批 82）")
-  assert.equal(Object.keys(EN).length, 473, "en 键数 473（含 `.one` 变体族；回迁批 −3 ∥ 沙盒运行面批 +82）")
+  assert.equal(Object.keys(ZH).length, 555, "zh 键数 555（拆表 338 + 历批增额 + 2026-10-11 两批：沙盒-docker +54 ∥ chat +33）")
+  assert.equal(Object.keys(EN).length, 560, "en 键数 560（含 `.one` 变体族；2026-10-11 两批后）")
   assert.ok(Object.isFrozen(ZH) && Object.isFrozen(EN), "门面 `Object.freeze`（聚合门面封闭）")
 })
 
 // ── ② 部件互斥/并集（域界 = 键首段前缀——四部件 × 两语言）─────────────────────
 
-test("② 部件互斥/并集：八部件两两互斥 ∧ 并集 = 门面全键 ∧ 归属 = 剥 `.one` 首段前缀", async () => {
+test("② 部件互斥/并集：十部件两两互斥 ∧ 并集 = 门面全键 ∧ 归属 = 剥 `.one`（首段 ∥ `admin.sandbox.*` 二级前缀）", async () => {
   for (const [lang, FACADE] of [["zh", ZH], ["en", EN]]) {
     const seen = new Map()
     for (const part of PARTS) {
@@ -80,7 +85,7 @@ test("② 部件互斥/并集：八部件两两互斥 ∧ 并集 = 门面全键 
         assert.equal(domainOf(key), part, `${lang} 域界不符：${key} 应属 ${part}`)
       }
     }
-    assert.deepEqual([...seen.keys()].sort(), Object.keys(FACADE).sort(), `${lang} 八部件并集 = 门面全键（无缺无余）`)
+    assert.deepEqual([...seen.keys()].sort(), Object.keys(FACADE).sort(), `${lang} 十部件并集 = 门面全键（无缺无余）`)
   }
 })
 
@@ -104,9 +109,9 @@ test("③ 门面 identity：`i18n.mjs` 取件行零改 ∥ `t()` 缺省 zh ∥ �
   assert.equal(I18N.t("common.rowCount", { count: 1 }), fillCount(ZH["common.rowCount"], 1), "zh 复数落基键（无复数区分）")
 })
 
-// ── ④ 静态直发（十新档——200 ∥ `text/javascript` ∥ 字节 = 磁盘）──────────────
+// ── ④ 静态直发（十二新档——200 ∥ `text/javascript` ∥ 字节 = 磁盘）──────────────
 
-test("④ 静态直发：十新档 200 ∥ `text/javascript` ∥ 字节 = 磁盘（真 `static.mjs` 句柄）", async () => {
+test("④ 静态直发：十二新档 200 ∥ `text/javascript` ∥ 字节 = 磁盘（真 `static.mjs` 句柄）", async () => {
   const site = (await load("thincoder-server/src/webui/static.mjs")).createStaticSite()
   const server = createServer((req, res) => {
     if (!site.serve(req, res, new URL(req.url, "http://localhost").pathname)) { res.writeHead(404); res.end() }
@@ -144,9 +149,9 @@ test("⑤ 拆分接线：`app.mjs` 三拆收窄（零重复定义 ∥ 导入两�
   for (const name of ["onHealth", "healthSnapshot", "renderHealthLight", "startHealthPolling", "stopHealthPolling", "clearHealthListeners"]) assert.equal(typeof HEALTH[name], "function", `health.mjs 导出：${name}`)
 })
 
-// ── ⑥ 行数核（十新档 + 两门面 + `app.mjs`——拆后回软线内）────────────────────
+// ── ⑥ 行数核（十二新档 + 两门面 + `app.mjs`——拆后回软线内）────────────────────
 
-test("⑥ 行数核：十新档 + 两门面 + `app.mjs` ≤300（硬限 ≤500 全绿）", () => {
+test("⑥ 行数核：十二新档 + 两门面 + `app.mjs` ≤300（硬限 ≤500 全绿）", () => {
   const targets = ["app.mjs", "dom.mjs", "health.mjs", "i18n-zh.mjs", "i18n-en.mjs", ...PARTS.flatMap((part) => [`i18n-zh-${part}.mjs`, `i18n-en-${part}.mjs`])]
   for (const name of targets) {
     const lines = linesOf(name)

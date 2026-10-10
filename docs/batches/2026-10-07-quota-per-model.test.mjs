@@ -147,7 +147,7 @@ function runCli(args) {
 test("① v5 迁移：空库直落 10（链尾——配置控制台批后）∥ v4 库自动升 10 ∥ 幂等 ∥ 拆列抽样逐值 ∥ 回填逐值 = usage 重算 ∥ 旧列已删", () => {
   const fresh = DB.openDatabase(":memory:")
   try {
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [13, 13])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [14, 14])
     assert.ok(fresh.prepare("PRAGMA table_info(usage)").all().some((column) => column.name === "provider"), "usage.provider 缺位")
     const memberColumns = fresh.prepare("PRAGMA table_info(members)").all().map((column) => column.name)
     assert.ok(memberColumns.includes("model_quotas_json"), "members.model_quotas_json 缺位")
@@ -177,7 +177,7 @@ test("① v5 迁移：空库直落 10（链尾——配置控制台批后）∥ 
     legacy.close()
     const db = DB.openDatabase(file) // 启动自动升
     try {
-      assert.equal(DB.readVersion(db), 13)
+      assert.equal(DB.readVersion(db), 14)
       // 拆列抽样逐值（判据 = endpoint='chat' + 首斜杠；嵌入行 provider = ''）
       assert.deepEqual(
         db.prepare("SELECT provider, model, endpoint FROM usage ORDER BY id").all().map((row) => [row.provider, row.model, row.endpoint]),
@@ -190,7 +190,7 @@ test("① v5 迁移：空库直落 10（链尾——配置控制台批后）∥ 
       assert.deepEqual([bailian.requests, bailian.prompt_tokens, bailian.completion_tokens, bailian.total_tokens, bailian.errors], [2, 10, 20, 30, 1])
       assert.equal(db.prepare("SELECT tokens FROM quota_counters WHERE provider = 'meta' AND model = 'inner/llama'").get().tokens, 3)
       // 幂等：再跑迁移链 ⇒ 版本不变 ∥ 回填不重复
-      assert.equal(DB.migrate(db), 13)
+      assert.equal(DB.migrate(db), 14)
       assert.equal(db.prepare("SELECT COUNT(*) AS n FROM usage_daily").get().n, 3)
     } finally {
       db.close()
@@ -439,9 +439,9 @@ test("⑥ 端到端：平台层热生效 ⇒ 429 ∥ 成员覆盖 ⇒ 放行 ∥
 
 // ── ⑦ 门禁清单（`prepublishOnly` 三十九件含本批件 ∥ 清单在盘）──────────────────
 
-test("⑦ 门禁清单：`prepublishOnly` 三十九件含本批件 ∥ 清单目标在盘", () => {
+test("⑦ 门禁清单：`prepublishOnly` 四十七件含本批件 ∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 42, `门禁清单件数（二十六 ⇒ 三十九——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链 ∥ 10-09 alias 批件入链 ∥ 10-09 代理页批件入链 ∥ 10-10 服务面残迹批件入链 ∥ 10-10 服务小修批两件入链 ∥ 10-10 团队登录批件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 47, `门禁清单件数（⇒ 四十七——2026-10-11 两批后 ∥ 历批入链在案）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-per-model.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

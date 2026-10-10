@@ -477,7 +477,7 @@ test("部署件结构：Dockerfile 壳形（预装本地 tgz ∥ PATH ∥ USER n
   assert.match(unit, /^ExecStart=\/opt\/thincoder-server\/\.npm-global\/bin\/thincoder-server --config \/opt\/thincoder-server\/config\.json$/m)
   assert.match(unit, /^Restart=always$/m)
   const batchFiles = (PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? [])
-  assert.equal(batchFiles.length, 42, `prepublishOnly 应列三十九件：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 47, `prepublishOnly 应列四十七件：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-06-server-auto-update.test.mjs"), "本批件应入列")
 })
 
@@ -487,7 +487,7 @@ test("依赖面：thincoder-server 全树 import 仅 node:/相对 ∥ package.js
   const specifiers = []
   for (const rel of files) {
     const text = readFileSync(join(SERVER_DIR, rel), "utf8")
-    for (const match of text.matchAll(/\bfrom\s*["']([^"']+)["']/g)) specifiers.push([rel, match[1]])
+    for (const match of text.matchAll(/\bfrom\s*["']([^"'()\s]+)["']/g)) specifiers.push([rel, match[1]])
     for (const match of text.matchAll(/\bimport\s*["']([^"']+)["']/g)) specifiers.push([rel, match[1]])
     for (const match of text.matchAll(/\bimport\(\s*["']([^"']+)["']\s*\)/g)) specifiers.push([rel, match[1]])
     for (const match of text.matchAll(/\brequire\(\s*["']([^"']+)["']\s*\)/g)) specifiers.push([rel, match[1]])

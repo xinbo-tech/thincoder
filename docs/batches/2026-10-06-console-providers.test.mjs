@@ -398,11 +398,11 @@ test("⑦ 校验单源：非法 ∥ 重名 ∥ env: 缺位 ⇒ 400 且库与运�
 })
 
 // ── ⑧ 导航直测 + 静态三十档 ───────────────────────────────────────────────────
-test("⑧ nav.mjs 直测（组/项结构 ∥ 重定向 ∥ 角色默认 ∥ denied）+ 静态三十档（含 favicon 共三十一档 ∥ 零外链 ∥ 接线 ∥ 直发）", async () => {
-  // 组/项结构：我的 3 ∥ 管理 7（弹窗批后 ∥ 2026-10-10 代理回迁批 −1） ∥ admin 组仅 admin；label 单源（文案挂点）
+test("⑧ nav.mjs 直测（组/项结构 ∥ 重定向 ∥ 角色默认 ∥ denied）+ 静态三十六档（含 favicon 共三十七档 ∥ 零外链 ∥ 接线 ∥ 直发）", async () => {
+  // 组/项结构：我的 3 ∥ 管理 9（2026-10-11：chat +1 ∥ 沙盒 +1） ∥ admin 组仅 admin；label 单源（文案挂点）
   const [me, adminGroup] = NAV.NAV_GROUPS
   assert.deepEqual(me.items.map((i) => i.path), ["/me/keys", "/me/usage", "/me/account"])
-  assert.deepEqual(adminGroup.items.map((i) => i.path), ["/admin/overview", "/admin/members", "/admin/providers", "/admin/models", "/admin/usage", "/admin/audit", "/admin/system", "/admin/sandbox"])
+  assert.deepEqual(adminGroup.items.map((i) => i.path), ["/admin/overview", "/admin/chat", "/admin/members", "/admin/providers", "/admin/models", "/admin/usage", "/admin/audit", "/admin/system", "/admin/sandbox"])
   assert.equal(adminGroup.adminOnly, true)
   assert.equal(me.adminOnly, undefined)
   for (const group of NAV.NAV_GROUPS) for (const item of group.items) assert.ok(item.labelKey, `缺 labelKey：${item.path}`)
@@ -421,9 +421,9 @@ test("⑧ nav.mjs 直测（组/项结构 ∥ 重定向 ∥ 角色默认 ∥ deni
   assert.deepEqual(NAV.resolveRoute("/admin/providers", "user"), { path: "/admin/providers", denied: true })
   assert.deepEqual(NAV.resolveRoute("/admin/members", "admin"), { path: "/admin/members" })
 
-  // 静态三十档（含 favicon 共三十一档）+ 零外链 + 模块接线（views.mjs 退役；2026-10-10 代理回迁批：views-proxy.mjs 退役 −1）
+  // 静态三十六档（含 favicon 共三十七档）+ 零外链 + 模块接线（views.mjs 退役；2026-10-10 代理回迁批：views-proxy.mjs 退役 −1）
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual(names, ["app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs", "i18n-zh-me.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-sandbox.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs"])
+  assert.deepEqual(names, ["app.mjs", "dom.mjs", "favicon.png", "health.mjs", "i18n-en-admin.mjs", "i18n-en-me.mjs", "i18n-en-sandbox.mjs", "i18n-en-shell.mjs", "i18n-en-system.mjs", "i18n-en.mjs", "i18n-zh-admin.mjs", "i18n-zh-me.mjs", "i18n-zh-sandbox.mjs", "i18n-zh-shell.mjs", "i18n-zh-system.mjs", "i18n-zh.mjs", "i18n.mjs", "index.html", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "style.css", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-chat.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-sandbox-containers.mjs", "views-sandbox-images.mjs", "views-sandbox.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs"])
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
     assert.ok(!/https?:\/\//.test(text), `${name} 含外部链接（内网不达——KD-SV-9）`)
