@@ -122,7 +122,7 @@
   - **拉取**（`POST …/images/pull`）：入参 `{ image }`（形 = `名[:标签]`——标签 = 末个 `/` 之后的末个 `:` 起；缺省 `latest`；含 `@`（digest 形）⇒ 400 人话）⇒ `POST <base>/v<ver>/images/create?fromImage=<名>&tag=<标签>`（**超时 10 分钟**——沿 agent 工具面同值；同步请求）⇒ 200 ⇒ `{ ok: true, image, tag }`；
     **失败两形皆收**：引擎非 2xx ⇒ 400（携引擎原文）∥ 200 流内 `error`/`errorDetail` ⇒ 400（携引擎原文）；不可达/超时 ⇒ 502；审计 `image_pull`。
   - **删除**（`DELETE …/images`）：入参 `{ ref, force? }`（`ref` = 镜像 id 或 `名:标签`——字符集 `[A-Za-z0-9][A-Za-z0-9._:/@-]*`（禁空白/`?`/`#`/`%`）；缺/空/形非法 ⇒ 400；**走请求体**——镜像引用字符集含 `/`/`:`，路径段路由不兼容——沿 `DELETE /runners/:id` 体参先例）
-    ⇒ `DELETE <base>/v<ver>/images/<ref>?force=<0|1>`（缺省 force=0）⇒ 200 ⇒ `{ ok: true, ref }`；引擎 404（无此镜像）⇒ 404 `not_found`；**409（被容器引用/多标签）⇒ 400 人话**（携引擎原文 + 处置句）；余 ⇒ 502；审计 `image_delete`（detail 携 force）。
+    ⇒ `DELETE <base>/v<ver>/images/<ref>?force=<0|1>`（缺省 force=0）⇒ 200 ⇒ `{ ok: true, ref }`；引擎 404（无此镜像）⇒ 404 `not_found`；**409（被容器引用/多标签）⇒ 400 人话**（携引擎原文 + 处置句）；余 ⇒ 502；审计 `image_delete`（detail 键集 = `accounts/ACCOUNTS.md` §2.1）。
   **本批自加项（逐条带理由）**：
 
   | # | 项 | 来源 | 为什么 | 不做的代价 |
@@ -236,7 +236,7 @@
 | 成员面 = 本人自助（用户 14:56——AC-36 ⑧） | §8 成员面（`#/me/sandbox` 本人工作区读 + 待批发起方提示）∥ 信号 = `gateway/API.md` §2.7 | 批内件 + 收口轮（浏览器实走） |
 | **最小切片**（runner-admin-console 批——台账 #1252；用户 19:59 四件） | ① 添加节点（自检读数落库逐值 ∥ 失败 ⇒ 502 + 零落库 + 审计行）② 建容器（引擎请求体逐值 ∥ 列表可见）③ 启/停（幂等：304 ⇒ 成功）④ 删节点（保留 ∥ 连删二选一 ∥ 连删失败 ⇒ 行保留）；判据全文 = §3 ∥ §12（N40 ∥ N46–N48 ∥ B41–B43 ∥ E34–E36）；**真机跑**（收口轮——`10.0.0.6`，Docker 29.1.3 ∥ 盒镜像在机）：添节点 ⇒ 在列（online + 版本）；建容器 ⇒ `docker ps -a` 见 `Created` ⇒ 启动 ⇒ `docker ps` 见 `Up` ⇒ 停止 ⇒ `Exited` ⇒ 删 ⇒ 无；删节点「保留」⇒ 容器留机 ∥「连删」⇒ 容器净 + 节点消 | 批内件 + 收口轮（真机） |
 | **托管接入**（本批增补——台账 #1236/#1237；用户 22:19–22:29 + 15:00/15:02） | 步骤表两径覆盖（裸机 ∥ 已装——§3；S 序列分叉逐条）∥ 每步成功判据 = 可复读读数（run 详情/审计行）∥ 失败 = 停在哪步 + 人话 + 宿主处置如实 ∥ 凭据五件（加密 ∥ 低权引导 ∥ 可撤 ∥ 审计 ∥ 弃置——§3）∥ 硬点两答案（§3 网络路径 ∥ `agent/ADMIN-AGENT.md` §4 边界）；判据全文 = §3 ∥ §12（N49–N52 ∥ B44–B46 ∥ E37/E38）∥ `agent/ADMIN-AGENT.md` §7 ∥ `gateway/API.md` §2.5 托管接入四行；**真机**（收口轮——无 Docker 机器：只给地址+凭据 ⇒ 「已就绪」+ 每步读数可复读） | 批内件 + 收口轮（真机） |
-| **容器面补齐 + 镜像族**（本批——sandbox-docker-admin；台账 #1265；用户 04:36/04:39 两族同批） | 容器五件：详情读数逐值（挂载/端口/环境/命令）∥ 日志（tail 有界 + 非 TTY 帧解复用——零帧头残渣）∥ 重启/强杀（引擎调用逐条 + 审计两 kind）∥ 用量（cpuPercent/内存/磁盘逐值；一次采样口径）；镜像三件：列表逐值 ∥ 拉取（`fromImage`/`tag` 逐值 ∥ 缺省 `latest` ∥ 失败两形 ⇒ 400）∥ 删除（`force` 0/1 逐值 ∥ 409 ⇒ 400 人话）；判据全文 = §3（本批块）∥ §12（N53–N56 ∥ B47–B50 ∥ E39–E41）∥ `gateway/API.md` §2.5 新八行 ∥ `webui/WEBUI.md` §2.8① ∥ §6 沙盒行（本批随正）；审计 kind 面 = `accounts/ACCOUNTS.md` §2.1（型面计数零增）；**真机**（收口轮——10.0.0.6：真容器详/日志/重启/强杀/用量 ∥ 真镜像列/删；拉取视源可达性如实报） | 批内件 + 收口轮（真机） |
+| **容器面补齐 + 镜像族**（本批——sandbox-docker-admin；台账 #1265；用户 04:36/04:39 两族同批） | 容器五件：详情读数逐值（挂载/端口/环境/命令）∥ 日志（tail 有界 + 非 TTY 帧解复用——零帧头残渣）∥ 重启/强杀（引擎调用逐条 + 审计两 kind）∥ 用量（cpuPercent/内存/磁盘逐值；一次采样口径）；镜像三件：列表逐值 ∥ 拉取（`fromImage`/`tag` 逐值 ∥ 缺省 `latest` ∥ 失败两形 ⇒ 400）∥ 删除（`force` 0/1 逐值 ∥ 409 ⇒ 400 人话）；判据全文 = §3（本批块）∥ §12（N53–N56 ∥ B47–B51 ∥ E39–E42）∥ `gateway/API.md` §2.5 新八行 ∥ `webui/WEBUI.md` §2.8① ∥ §6 沙盒行（本批随正）；审计 kind 面 = `accounts/ACCOUNTS.md` §2.1（型面计数零增）；**真机**（收口轮——10.0.0.6：真容器详/日志/重启/强杀/用量 ∥ 真镜像列/删；拉取视源可达性如实报） | 批内件 + 收口轮（真机） |
 
 ## 12. 用例（本域）
 
@@ -275,16 +275,18 @@
 | E37 | 错误 | 控制面 | 认证被拒（假 ssh 恒 1）∥ 不可达（死端口） | S2 停 + 逐句人话；宿主零动作（假件零写断言） |
 | E38 | 错误 | 控制面 | Docker API 版本不兼容（`MinAPIVersion` 1.50 ⇒ 协商 > `ApiVersion`） | S6 停 +「版本不兼容」；零落库 |
 | N53 | 正常 | 控制面 | 容器详情 + 日志 + 用量三读（假 Docker：`containers/{id}/json` ∥ `/logs`（多路复用流样件） ∥ `/stats?stream=false&one-shot=true` ∥ `/json?size=1` 在案） | 详情逐值（挂载/端口/环境/命令）；日志 = 解复用后文本（零帧头残渣；`truncated=false`）；用量 { cpuPercent, memUsed, memLimit, diskRw } 逐值；**零审计行**（读动作） |
-| N54 | 正常 | 控制面 | 重启 ∥ 强杀各一次 | 引擎调用逐条命中（`POST …/restart` ∥ `POST …/kill`）；204 ⇒ 200 `{ ok: true, id }`；审计两行（`container_restart` ∥ `container_kill`——detail 逐值） |
+| N54 | 正常 | 控制面 | 重启 ∥ 强杀各一次 | 引擎调用逐条命中（`POST …/restart` ∥ `POST …/kill`）；204 ⇒ 200 `{ ok: true, id }`；审计两行（`container_restart` ∥ `container_kill`——detail 逐值；键集 = `accounts/ACCOUNTS.md` §2.1） |
 | N55 | 正常 | 控制面 | 镜像列表 ∥ 拉取（假 Docker：`images/json` ∥ `images/create` 流式 200） | 列表逐值（id/tags/size/created）；拉取引擎入参逐值（`fromImage=<名>` ∥ `tag=<标签>`——缺省 `latest`）；200 `{ ok, image, tag }`；审计 `image_pull` 一行 |
-| N56 | 正常 | 控制面 | 镜像删除两形：`ref` = `名:标签`（force 缺省）∥ force:true | 引擎调用逐值（`DELETE /images/<ref>?force=0` ∥ `?force=1`）；200 `{ ok, ref }`；审计 `image_delete`（携 force） |
+| N56 | 正常 | 控制面 | 镜像删除两形：`ref` = `名:标签`（force 缺省）∥ force:true | 引擎调用逐值（`DELETE /images/<ref>?force=0` ∥ `?force=1`）；200 `{ ok, ref }`；审计 `image_delete`（detail 逐值；键集 = `accounts/ACCOUNTS.md` §2.1） |
 | B47 | 边界 | 控制面 | 日志 `tail` 越界（0 ∥ 5000）∥ 非数 ∥ 缺省 | 400（范围人话） ∥ 400 ∥ 200（缺省 tail=200） |
 | B48 | 边界 | 控制面 | 强杀未运行容器（引擎 409） | 400 人话「容器未在运行——无需强杀」（非幂等成功——≠ stop 的 304） |
 | B49 | 边界 | 控制面 | 删除镜像被引用（引擎 409）∥ `force: true` 同击 | 400（携引擎原文 + 处置句）；force:true ⇒ 引擎 `force=1` 再走 |
 | B50 | 边界 | 控制面 | 拉取形非法：空 ∥ 含 `@`（digest）∥ 超长 | 400（逐形人话）；**零引擎调用**（假件断） |
+| B51 | 边界 | 控制面 | 日志超 256 KiB（假 Docker 大样件） | `truncated: true` + 尾句标记（文本体 ≤ 256 KiB） |
 | E39 | 错误 | 控制面 | 详情/日志/用量/重启/强杀目标不存在（引擎 404） | 404 `not_found` |
 | E40 | 错误 | 控制面 | 拉取：引擎非 2xx ∥ 200 流内 `error` 两形 ∥ 节点不可达 | 400（携引擎原文）∥ 400（携引擎原文）∥ 502 `upstream_error` |
 | E41 | 错误 | 控制面 | `user` ∥ 无会话 打新八端点 | 403 ∥ 401 |
+| E42 | 错误 | 控制面 | 详情/日志/用量/重启/强杀节点不可达（假 Docker 关停——五端点逐打） | 502 `upstream_error`（逐句人话 + 引擎原文） |
 
 ## 13. 本域文件与行数预算（控制面）
 
@@ -293,8 +295,8 @@
 | `thincoder-server/src/sandbox/routes.mjs`（已落盘 **493**——2026-10-11 现读） | **⇒ ≈496**（本批：镜像族注册一行 + import + 头注 +≈3；**余量 ≈4——下批触本档前须先拆**） | 控制台面端点（§8/§9） |
 | `thincoder-server/src/sandbox/registry.mjs`（已落盘 **522**——2026-10-10 现读） | **⇒ ≈500**（runner-admin-console 批：runner 面重写（登记/读数/可用性随新模型）∥ `runnerHealth` 删 ∥ `sweepStuckTasks` 去心跳判据；队列/心跳死件不动——实读核过无调用方） | 登记/读数（§3）∥ 队列（§5/§6） |
 | `thincoder-server/src/sandbox/docker.mjs`（已落盘 **187**——2026-10-11 现读） | **⇒ ≈330**（本批：+≈143 = 详情/日志（含解复用）/用量两读/重启/强杀/镜像三件/拉取流扫描/形校验 ∥ 常量/头注） | Docker API 客户端（§3） |
-| `thincoder-server/src/sandbox/container-routes.mjs`（已落盘 **168**——2026-10-11 现读） | **⇒ ≈330**（本批：+≈162 = 详情≈18 ∥ 日志≈22 ∥ 重启/强杀≈25 ∥ 用量≈28 ∥ 校验/错误映射≈45 ∥ 头注） | 容器面路由（§3 家族——拆分档） |
-| `thincoder-server/src/sandbox/image-routes.mjs`（拟新增——本批） | ≈**130**（设计估 = 列表≈20 ∥ 拉取≈40 ∥ 删除≈30 ∥ 校验≈25 ∥ 头注；分族成档缘由 = 容器面/镜像族按族拆——卷/网络族可循此例，不预建） | 镜像族路由（§3） |
+| `thincoder-server/src/sandbox/container-routes.mjs`（已落盘 **168**——2026-10-11 现读） | **⇒ ≈330**（本批：+≈162 = 详情≈18 ∥ 日志≈22 ∥ 重启/强杀≈25 ∥ 用量≈28 ∥ 校验/错误映射≈45 ∥ 路由注册与头注≈24） | 容器面路由（§3 家族——拆分档） |
+| `thincoder-server/src/sandbox/image-routes.mjs`（拟新增——本批） | ≈**130**（设计估 = 列表≈20 ∥ 拉取≈40 ∥ 删除≈30 ∥ 校验≈25 ∥ 头注≈15；分族成档缘由 = 容器面/镜像族按族拆——卷/网络族可循此例，不预建） | 镜像族路由（§3） |
 | `thincoder-server/src/sandbox/ssh.mjs`（拟新增——托管接入增补） | ≈180（设计估——SSH 传输：spawn openssh（key `-i` ∥ `sshpass -e`） ∥ keyfile/known_hosts 落数据目录 ∥ 指纹 TOFU ∥ 超时/输出截断；`execImpl` 注入 = 测试面） | 主机执行传输（§3） |
 | `thincoder-server/src/sandbox/onboarding.mjs`（拟新增——托管接入增补） | ≈300（设计估——任务生命周期（起/收尾/重启恢复） ∥ 凭据加解密（AES-256-GCM）∥ 步骤日志 ∥ 任务简报文 ∥ registry 登记桥） | 托管接入任务面（§3） |
 | `thincoder-server/src/sandbox/onboarding-routes.mjs`（拟新增——托管接入增补） | ≈130（设计估——四端点：起 ∥ 列表 ∥ 详情 ∥ 撤销凭据；独立成档缘由 = `routes.mjs` 加后 ≈545 逼近 500 软线） | 托管接入端点（§9） |
@@ -349,7 +351,7 @@
 - **IPv6**（v1 只 IPv4——docker IPv6 关为前置）。
 - **项目权限面**（#1216②——接口已留：§4/§9 同守卫点）∥ **多租户** ∥ **per-workspace 独立额度池**（复用成员配额——如需另议）。
 - **成员写面**（成员对自己的工作区做启动/停止/销毁/轮换——随 #1216 ② 权限模型；本批只落读面 + 待批提示——§8 成员面）。
-- **最小切片余项**（runner-admin-console 批——一行带过，等以后按需再上）：出站闸 ∥ 磁盘限额 ∥ 探针 ∥ 心跳/放置 ∥ Swarm 集群 ∥ WIP 快照 ∥ 待批队列 ∥ 镜像管理（拉取/删除/清单下拉）∥ 工作区↔容器映射（盒）∥ 卷删除 ∥ 资源限额（cpus/mem/pids/磁盘）∥ 端口映射/网络面 ∥ 节点禁用/排空 ∥ TLS（§3 提议①）。
+- **最小切片余项**（runner-admin-console 批——一行带过，等以后按需再上）：出站闸 ∥ 磁盘限额 ∥ 探针 ∥ 心跳/放置 ∥ Swarm 集群 ∥ WIP 快照 ∥ 待批队列 ∥ 清单下拉（建容器镜像选择器）∥ 工作区↔容器映射（盒）∥ 卷删除 ∥ 资源限额（cpus/mem/pids/磁盘）∥ 端口映射/网络面 ∥ 节点禁用/排空 ∥ TLS（§3 提议①）。
 - **托管接入余项（本批不做——§3）**：TLS（`:2375` 明文——沿 §3 提议①）∥ 安全组/防火墙操作（可达性由 S6 自检兜底报告）∥ 节点机既有 Docker 形态的迁移/升级 ∥ 出站闸/磁盘限额后置（随重做批）∥ 批量多机并装 ∥ 任务中途取消。
 
 ## 变更记录
@@ -367,3 +369,4 @@
 - 2026-10-11（**runner-admin-console 批 · 真机走查缺陷修复（fix 轮二）· 父侧**——承批档 §6 走查记录；真机 A/B 核）：**口令径去 `BatchMode`**（§3 S2 行 ∥ §14 KD-SV-85）——`BatchMode=yes` 下 openssh 直接弃用口令面（A：`Permission denied (publickey,password)` ∥ B：去之 `LOGIN_OK`）。密钥径保持 `BatchMode=yes`。**产品码触 = `ssh.mjs` 口令径一条**。
 - 2026-10-11（**admin-agent-chat 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-11-admin-agent-chat.md` §3 轮次 1 之 1–3/5–11）：闸面收净（doc-check 行宽读数）——§3 连线口径行折行（330 ⇒ ≤300；本笔 = 非本批面之闸面清尾——父侧如异议可 revert）。**零语义**。
 - 2026-10-11（**sandbox-docker-admin 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-11-sandbox-docker-admin.md` §1 · 台账 #1265；用户 2026-10-11 04:36/04:39 两族同批）：§3 增「容器面补齐 + 镜像族」块（八端点 ∥ 自加项表六条）∥ §8① 容器区/镜像区随正 ∥ §11 增判据行 + 机检口径句改指针（单源 = `webui/WEBUI.md` §6；陈值「档目 33 ∥ 34」删）∥ §12 增用例（N53–N56 ∥ B47–B50 ∥ E39–E41）∥ §13 预算随正（routes 493 ⇒ ≈496 ∥ container-routes 168 ⇒ ≈330 ∥ image-routes 新 ≈130 ∥ docker 187 ⇒ ≈330）+ 拆分预案收正（首选已执行）∥ §14 增 KD-SV-92–95。**产品码零触（设计轮）**。
+- 2026-10-11（**sandbox-docker-admin 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-11-sandbox-docker-admin.md` §3 轮次 1 之 1/2/3/6）：#1 §15 余项去「镜像管理」（已交付——列表/拉取/删除）；「清单下拉」（建容器镜像选择器）转列余项 ∥ #2 §12 增 B51（超 256 KiB ⇒ `truncated: true`）∥ E42（五端点节点不可达 ⇒ 502）+ §11 判据行随拍（B47–B51 ∥ E39–E42）∥ #3 删除条 detail 改单源指针（`accounts/ACCOUNTS.md` §2.1）+ N54/N56 键集指针同拍 ∥ #6 §13 两行分项闭式收平（+≈162：路由注册与头注≈24；image-routes：头注≈15）。**零新语义**（评审发现直接导出项）。
