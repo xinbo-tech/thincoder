@@ -5,7 +5,7 @@
  *
  * 射程（判据源 = 批档 §2；腿 ↔ 判据在括号）：
  *   腿 A（#1025 术语值面 = §2 2.1 表）：14 键 × 两语逐字 ∥ 交叉一致（`system.accessHint` ⊃ nav 键值）∥
- *     旧形扫描（zh 14 值零「密钥」∧ 零裸小写 `key`）∥ 零触已合规面（me.keys 族两语含统一形）∥ 键数 389 ∥ 394（键集零变）
+ *     旧形扫描（zh 14 值零「密钥」∧ 零裸小写 `key`）∥ 零触已合规面（me.keys 族两语含统一形）∥ 键数 386 ∥ 391（本批值改零变；后随 2026-10-10 代理回迁批 −3 键）
  *   腿 B（#1056 statCard 去重 = §2 2.2）：`views-usage.mjs` 零 `function statCard` ∧ import 单源 ∧ 单源签名冻结 ∥
  *     桩 DOM：两卡 `section.card > .stat-label + .stat-value` 逐值（DOM 保形——修前逐字）
  *   腿 C（#1146 有界流式读 = §2 2.4）：假引擎（非 2xx + 32MiB 体 + 字节计数）⇒ 写法有界（≤ 读帽 + 容差 ∧ 非整段）
@@ -65,14 +65,14 @@ const TERMS = [
   ["system.teamKey", "团队 API Key", "Team API key"],
 ]
 
-test("腿 A 术语值面：14 键 × 两语逐字 = 批 §2 2.1 表 ∥ 键集零变（389 ∥ 394）", () => {
+test("腿 A 术语值面：14 键 × 两语逐字 = 批 §2 2.1 表 ∥ 键集（386 ∥ 391——2026-10-10 代理回迁批 −3 键）", () => {
   assert.equal(TERMS.length, 14, "14 键面")
   for (const [key, zh, en] of TERMS) {
     assert.equal(ZH[key], zh, `zh 值不符：${key}`)
     assert.equal(EN[key], en, `en 值不符：${key}`)
   }
-  assert.equal(Object.keys(ZH).length, 389, "zh 键数 389（值改——键集零变）")
-  assert.equal(Object.keys(EN).length, 394, "en 键数 394（含 `.one` 变体族）")
+  assert.equal(Object.keys(ZH).length, 386, "zh 键数 386（本批值改零变；后随代理回迁批 −3 键）")
+  assert.equal(Object.keys(EN).length, 391, "en 键数 391（含 `.one` 变体族；后随代理回迁批 −3 键）")
 })
 
 test("腿 A 交叉一致 ∥ 旧形扫描（14 键 zh）∥ 零触已合规面（me.keys 族）", () => {

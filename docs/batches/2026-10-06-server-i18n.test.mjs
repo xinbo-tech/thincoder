@@ -122,7 +122,7 @@ test("② 检测矩阵：pickLang——记忆优先 ∥ zh*/en* 首命中 ∥ �
 // ── ③ 零 CJK 口径 ───────────────────────────────────────────────────────────
 
 test("③ 零 CJK 口径：前端 JS 代码档（排除 i18n 表族）注释外零 CJK 字面量", () => {
-  assert.deepEqual(JS_FILES, ["app.mjs", "dom.mjs", "health.mjs", "i18n.mjs", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-proxy.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs"])
+  assert.deepEqual(JS_FILES, ["app.mjs", "dom.mjs", "health.mjs", "i18n.mjs", "modal.mjs", "model-specs-snapshot.mjs", "nav.mjs", "views-admin.mjs", "views-audit.mjs", "views-auth.mjs", "views-me.mjs", "views-models.mjs", "views-overview.mjs", "views-providers-modals.mjs", "views-providers.mjs", "views-system-config.mjs", "views-system.mjs", "views-usage.mjs"])
   for (const name of JS_FILES) {
     const stripped = stripComments(readFileSync(join(PUBLIC_DIR, name), "utf8"))
     const hit = stripped.match(CJK)
@@ -161,7 +161,7 @@ test("④ 静态面：t 字面量 ⊆ 表键 ∥ nav labelKey 面 ∥ import 图
       labelKeys.push(item.labelKey)
     }
   }
-  assert.equal(labelKeys.length, 13, "组 2 + 项 11 = 13 个 labelKey（十一页 + 两组）")
+  assert.equal(labelKeys.length, 12, "组 2 + 项 10 = 12 个 labelKey（十页 + 两组——2026-10-10 代理回迁批 −1 项）")
   for (const key of labelKeys) assert.ok(key in EN, `labelKey 悬空（shared 键）：${key}`)
   // 动态键面（不裹 `t("…")` 的裸键字面量——如 nav `labelKey` ∥ views-system 四端清单）⊆ 表键
   for (const name of JS_FILES) {

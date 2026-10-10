@@ -479,7 +479,7 @@ test("⑥ i18n + 静态面：两表 7 键在场（en 零 CJK ∥ 占位符一致
   for (const line of modalLines) assert.ok(line.length <= 300, `行宽越界：${line.slice(0, 60)}…`)
   // 档目 31 ∥ 32（结构轮后——十新档：i18n 部件八档 + `dom.mjs`/`health.mjs`）
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [32, 31], "档目 31 ∥ 32（结构轮后）")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [31, 30], "档目 31 ∥ 30（2026-10-10 代理回迁批 −1）")
   // AC-19 canon（`style.css` 零新增）：`:root` 变量族 38 ∥ 悬停声明七条
   const css = readPublic("style.css").replace(/\/\*[\s\S]*?\*\//g, "")
   const rootVars = (css.match(/:root\s*\{[^{}]*\}/)?.[0] ?? "").match(/--[\w-]+\s*:/g) ?? []

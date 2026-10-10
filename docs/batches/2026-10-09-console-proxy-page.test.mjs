@@ -34,8 +34,8 @@ const ACCOUNT_ROUTES = await load("thincoder-server/src/accounts/routes.mjs")
 
 const PUBLIC_DIR = join(ROOT, "thincoder-server", "public")
 const loadPublic = (name) => import(pathToFileURL(join(PUBLIC_DIR, name)).href)
-const [{ ZH }, { EN }, PROXY_VIEW, CONFIG_VIEW, NAV, STATIC] = await Promise.all([
-  loadPublic("i18n-zh.mjs"), loadPublic("i18n-en.mjs"), loadPublic("views-proxy.mjs"),
+const [{ ZH }, { EN }, CONFIG_VIEW, NAV, STATIC] = await Promise.all([
+  loadPublic("i18n-zh.mjs"), loadPublic("i18n-en.mjs"),
   loadPublic("views-system-config.mjs"), loadPublic("nav.mjs"), load("thincoder-server/src/webui/static.mjs"),
 ])
 
@@ -244,7 +244,7 @@ test("A7 import 面：proxy-admin.mjs 零第三方（`node:` ∥ 相对路径）
   assert.deepEqual(bad, [], "零第三方（红线）")
 })
 
-// ── B 前端腿（webui/WEBUI.md §2.7——views-proxy）────────────────────────────────
+// ── B 前端腿（2026-10-10 代理回迁批随正：代理块并入服务配置卡——断言重指向 `views-system-config.mjs`）────────────────
 
 /** 桩节点 ∥ `h` ∥ 查树（`dom.mjs` 语义近似——沿配置控制台批件口径）。 */
 function fNode(tag) {
@@ -314,34 +314,31 @@ test("B1 代理页结构 ∥ 保存体 { proxyUri }（空 = 删段语义）∥ �
     "PATCH /api/admin/config": () => ({ ok: true }),
     "POST /api/admin/proxy/test": () => ({ ok: true, status: 200, ms: 12 }),
   })
-  const mount = fNode("section")
-  PROXY_VIEW.renderProxy(ctx, mount)
+  const card = CONFIG_VIEW.systemConfigSection(ctx)
   await fTick()
-  const cards = fCards(mount)
-  assert.equal(cards.length, 2, "两卡")
-  assert.ok(fFind(cards[0], (n) => n.tag === "h3" && n.textContent === ZH["proxy.settingsTitle"]) !== null, "卡一题")
-  assert.ok(fFind(cards[1], (n) => n.tag === "h3" && n.textContent === ZH["proxy.testTitle"]) !== null, "卡二题")
-  const uriInput = fFind(cards[0], (n) => n.tag === "input")
-  const targetInput = fFind(cards[1], (n) => n.tag === "input")
+  const forms = fFindAll(card, (n) => n.tag === "form")
+  assert.equal(forms.length, 2, "卡内两表单（配置 ∥ 连通测试——2026-10-10 代理回迁批并入）")
+  const [saveForm, testForm] = forms
+  const uriInput = fFind(saveForm, (n) => n.tag === "input" && n.attrs.type === undefined)
+  const targetInput = fFind(testForm, (n) => n.tag === "input")
   assert.equal(uriInput.value, fConfig().proxyUri, "值 = 文件面有效值")
   assert.equal(uriInput.attrs.placeholder, ZH["proxy.uriPh"], "占位 = 文案键")
   assert.equal(targetInput.value, fProviders().providers[0].baseURL, "目标预填 = 首个 provider baseURL（库序）")
-  assert.ok(fFind(cards[0], (n) => n.tag === "label") !== null && fFind(cards[1], (n) => n.tag === "label") !== null, "两卡 label 形")
-  assert.equal(fFind(cards[0], (n) => n.tag === "button" && n.textContent === ZH["common.save"]) !== null, true, "保存钮")
-  assert.equal(fFind(cards[1], (n) => n.tag === "button" && n.textContent === ZH["proxy.testBtn"]) !== null, true, "测试钮")
-  const saveForm = fFind(cards[0], (n) => n.tag === "form")
+  assert.ok(fFind(saveForm, (n) => n.tag === "label") !== null && fFind(testForm, (n) => n.tag === "label") !== null, "两表单 label 形")
+  assert.equal(fFind(saveForm, (n) => n.tag === "button" && n.textContent === ZH["common.save"]) !== null, true, "保存钮")
+  assert.equal(fFind(testForm, (n) => n.tag === "button" && n.textContent === ZH["proxy.testBtn"]) !== null, true, "测试钮")
   uriInput.value = " http://127.0.0.1:8080 "
   await saveForm.fire("submit")
-  assert.deepEqual(fPatches(calls).at(-1)[2], { proxyUri: "http://127.0.0.1:8080" }, "保存体 = { proxyUri }（所见即所存——trim）")
+  assert.equal(fPatches(calls).at(-1)[2].proxyUri, "http://127.0.0.1:8080", "保存体携 proxyUri（所见即所存——trim）")
   assert.deepEqual(fFlash(calls), ["flash", ZH["system.cfgSaved"]], "成功 ⇒ flash（统一文案）")
   uriInput.value = ""
   await saveForm.fire("submit")
-  assert.deepEqual(fPatches(calls).at(-1)[2], { proxyUri: "" }, "空 ⇒ 删段语义（服务端既有——原样明传）")
+  assert.equal(fPatches(calls).at(-1)[2].proxyUri, "", "空 ⇒ 删段语义（服务端既有——原样明传）")
   uriInput.value = "http://127.0.0.1:9999" // 未保存草稿
   targetInput.value = "http://upstream.test/ping"
-  await fFind(cards[1], (n) => n.tag === "form").fire("submit")
+  await testForm.fire("submit")
   assert.deepEqual(fTests(calls).at(-1)[2], { uri: "http://127.0.0.1:9999", target: "http://upstream.test/ping" }, "测试体双必传（草稿 uri——未保存亦可先验）")
-  const result = fResultLine(cards[1])
+  const result = fResultLine(card)
   assert.equal(result.className, "hint", "成功 = 静态 hint")
   assert.equal(result.textContent, ZH["proxy.testOk"].replace("{status}", "200").replace("{ms}", "12"), "成功读数 =「代理连通——HTTP {status}（{ms} ms）」")
 })
@@ -353,14 +350,13 @@ test("B2 空值前端先行（不提交）∥ 在飞「测试中……」+ 钮�
     "GET /api/admin/providers": () => ({ providers: [] }),
     "POST /api/admin/proxy/test": () => new Promise((resolve) => { settle = resolve }),
   })
-  const mount = fNode("section")
-  PROXY_VIEW.renderProxy(ctx, mount)
+  const card = CONFIG_VIEW.systemConfigSection(ctx)
   await fTick()
-  const card = fCards(mount)[1]
-  const form = fFind(card, (n) => n.tag === "form")
-  const uriInput = fFind(fCards(mount)[0], (n) => n.tag === "input")
-  const targetInput = fFind(card, (n) => n.tag === "input")
-  const button = fFind(card, (n) => n.tag === "button")
+  const forms = fFindAll(card, (n) => n.tag === "form")
+  const form = forms[1]
+  const uriInput = fFind(forms[0], (n) => n.tag === "input" && n.attrs.type === undefined)
+  const targetInput = fFind(form, (n) => n.tag === "input")
+  const button = fFind(form, (n) => n.tag === "button")
   const result = fResultLine(card)
   assert.equal(uriInput.value, "", "空值 = 不启用（null ⇒ 空串）")
   assert.equal(targetInput.value, "", "零 provider ⇒ 预填空")
@@ -383,27 +379,35 @@ test("B2 空值前端先行（不提交）∥ 在飞「测试中……」+ 钮�
   assert.equal(result.textContent, ZH["proxy.testFail"].replace("{kind}", ZH["proxy.kind.unreachable"]).replace("{message}", "连接被拒（ECONNREFUSED）"), "失败读数 = kind 文案 + 底层诊断")
 })
 
-test("B3 取数失败两径：读档失败 ⇒ 就地错态（fail 收口）∥ 预填取数失败 ⇒ 空输入不报错", async () => {
+test("B3 取数失败两径：读档失败 ⇒ 就地错态（fail 收口 ∥ 零表单）∥ 预填取数失败 ⇒ 空输入不报错", async () => {
   const { ctx, calls } = fCtx({
     "GET /api/admin/config": () => { throw new Error("EIO: 注入") },
     "GET /api/admin/providers": () => { throw new Error("EIO: 注入") },
   })
-  const mount = fNode("section")
-  PROXY_VIEW.renderProxy(ctx, mount)
+  const card = CONFIG_VIEW.systemConfigSection(ctx)
   await fTick()
-  const cards = fCards(mount)
-  assert.ok(fFind(cards[0], (n) => n.textContent === ZH["system.cfgLoadFailed"]) !== null, "读档失败 ⇒ 就地错态")
+  assert.ok(fFind(card, (n) => n.textContent === ZH["system.cfgLoadFailed"]) !== null, "读档失败 ⇒ 就地错态")
   assert.equal(calls.filter(([tag]) => tag === "fail").length, 1, "读档失败 ⇒ fail 收口")
-  assert.equal(fFind(cards[1], (n) => n.tag === "input").value, "", "预填取数失败 ⇒ 空输入（用户自填）")
-  assert.equal(calls.filter(([tag]) => tag === "fail").length, 1, "预填失败 ⇒ 零 fail 面（不反噬页面）")
+  assert.equal(fFind(card, (n) => n.tag === "form"), null, "读档失败 ⇒ 零表单（测试块不单独渲染——已并入卡体）")
+
+  // 预填取数失败径（配置读档成功 ∥ providers 失败 ⇒ 空输入，用户自填——不报错）
+  const { ctx: ctx2, calls: calls2 } = fCtx({
+    "GET /api/admin/config": () => ({ config: fConfig() }),
+    "GET /api/admin/providers": () => { throw new Error("EIO: 注入") },
+  })
+  const card2 = CONFIG_VIEW.systemConfigSection(ctx2)
+  await fTick()
+  const testForm = fFindAll(card2, (n) => n.tag === "form")[1]
+  assert.equal(fFind(testForm, (n) => n.tag === "input").value, "", "预填取数失败 ⇒ 空输入（用户自填）")
+  assert.equal(calls2.filter(([tag]) => tag === "fail").length, 0, "预填失败 ⇒ 零 fail 面（不反噬页面）")
 })
 
 // ── C 回归腿（受影响既有面：服务配置卡 ∥ nav ∥ i18n ∥ 静态面）────────────────────
 
-test("C1 服务配置卡回归：零 proxy 行（档面）∥ 三写控件 ∥ 保存体恰三键（零 proxyUri——误删段护栏之面）∥ 写白名单五键零变（proxyUri 在册）", async () => {
+test("C1 服务配置卡回归：代理行在册（proxy.uri 回迁）∥ 四写控件 ∥ 保存体携四键（proxyUri 明传）∥ 写白名单五键零变", async () => {
   const src = readFileSync(join(PUBLIC_DIR, "views-system-config.mjs"), "utf8")
-  assert.equal(src.includes("proxyUri"), false, "档面零 proxyUri（保存键退场）")
-  assert.equal(src.includes("cfgProxyUri"), false, "档面零 proxy 文案键引用")
+  assert.equal(src.includes("proxyUri"), true, "档面携 proxyUri（回迁——2026-10-10 代理回迁批）")
+  assert.equal(src.includes("proxy.uriLabel"), true, "档面引代理文案键")
   const { ctx, calls } = fCtx({ "GET /api/admin/config": () => ({ config: fConfig() }), "PATCH /api/admin/config": () => ({ ok: true }) })
   const card = CONFIG_VIEW.systemConfigSection(ctx)
   await fTick()
@@ -412,12 +416,14 @@ test("C1 服务配置卡回归：零 proxy 行（档面）∥ 三写控件 ∥ �
   const boxes = fFindAll(form, (n) => n.tag === "input" && n.attrs.type === "checkbox")
   const days = fFind(form, (n) => n.tag === "input" && n.attrs.type === "number")
   const extra = fFindAll(form, (n) => n.tag === "input" && n.attrs.type === undefined)
-  assert.deepEqual([select.value, boxes.length, days.value, extra.length], ["notify", 2, "90", 0], "三写控件（select ∥ checkbox ∥ number——零第四文本输入）")
+  assert.deepEqual([select.value, boxes.length, days.value, extra.length], ["notify", 2, "90", 1], "四写控件（select ∥ checkbox ∥ number ∥ 代理文本输入）")
+  assert.equal(extra[0].value, fConfig().proxyUri, "代理行初值 = 文件面")
+  extra[0].value = " http://127.0.0.1:8080 "
   await form.fire("submit")
   const body = fPatches(calls).at(-1)[2]
-  assert.deepEqual(Object.keys(body).sort(), ["autoUpdate", "trustProxy", "usageRetentionDays"], "保存体恰三键")
-  assert.equal("proxyUri" in body, false, "零 proxyUri 键（误删段护栏）")
-  // 白名单零变（AC-30 ①「导出直测」——误删段护栏之服务面：卡片不再写，但写面仍收）
+  assert.deepEqual(Object.keys(body).sort(), ["autoUpdate", "proxyUri", "trustProxy", "usageRetentionDays"], "保存体恰四键")
+  assert.equal(body.proxyUri, "http://127.0.0.1:8080", "proxyUri 明传（trim——所见即所存）")
+  // 白名单零变（AC-30 ①「导出直测」）
   assert.deepEqual(CONFIG_ADMIN.CONFIG_WRITABLE_KEYS, ["autoUpdate", "trustProxy", "usageRetentionDays", "proxyUri", "embedding"], "写白名单五键逐值零变")
   assert.ok(CONFIG_ADMIN.CONFIG_WRITABLE_KEYS.includes("proxyUri"), "`proxyUri` 在册（PATCH 可达——删段语义不破）")
 })
@@ -435,30 +441,31 @@ test("C2 误删段护栏（服务面）：PATCH 三项 ⇒ 文件 proxy 段与 G
   } finally { await app.close(); db.close() }
 })
 
-test("C3 nav 直测：管理 8 项含 /admin/proxy（附「系统」之后）∥ user ⇒ denied ∥ app.mjs PAGES 在册", () => {
+test("C3 nav 直测：管理 7 项（代理项退役）∥ 旧链 `/admin/proxy` ⇒ `/admin/system` 重定向 ∥ user ⇒ denied ∥ app.mjs 接线退场", () => {
   const admin = NAV.NAV_GROUPS.find((group) => group.key === "admin")
   const me = NAV.NAV_GROUPS.find((group) => group.key === "me")
-  assert.deepEqual([me.items.length, admin.items.length], [3, 8], "我的 3 ∥ 管理 8")
-  assert.deepEqual([admin.items.at(-1).key, admin.items.at(-1).path, admin.items.at(-1).labelKey], ["proxy", "/admin/proxy", "nav.page.admin.proxy"], "管理第 8 项 = 代理（附系统之后）")
-  assert.deepEqual(NAV.resolveRoute("/admin/proxy", "admin"), { path: "/admin/proxy" }, "admin ⇒ 直达")
-  assert.deepEqual(NAV.resolveRoute("/admin/proxy", "user"), { path: "/admin/proxy", denied: true }, "user ⇒ denied 块")
+  assert.deepEqual([me.items.length, admin.items.length], [3, 7], "我的 3 ∥ 管理 7（2026-10-10 代理回迁批 −1）")
+  assert.deepEqual([admin.items.at(-1).key, admin.items.at(-1).path, admin.items.at(-1).labelKey], ["system", "/admin/system", "nav.page.admin.system"], "管理末项 = 系统")
+  assert.deepEqual(NAV.resolveRoute("/admin/proxy", "admin"), { path: "/admin/system", redirect: true }, "旧链 ⇒ 重定向系统页（旧书签可达）")
+  assert.deepEqual(NAV.resolveRoute("/admin/system", "user"), { path: "/admin/system", denied: true }, "user ⇒ denied 块")
   const appSrc = readFileSync(join(PUBLIC_DIR, "app.mjs"), "utf8")
-  assert.ok(appSrc.includes('import { renderProxy } from "./views-proxy.mjs"'), "import 在册")
-  assert.ok(appSrc.includes('"/admin/proxy": renderProxy,'), "PAGES 行在册")
+  assert.equal(appSrc.includes("views-proxy.mjs"), false, "import 退场")
+  assert.equal(appSrc.includes('\"/admin/proxy\"'), false, "PAGES 行退场")
 })
 
-/** 本批键族（§2.2 键族登记——两表逐键同步）。 */
+/** 本批键族（§2.2 键族登记——两表逐键同步；2026-10-10 代理回迁批：页标题/卡题/nav 三键退役 ⇒ 15 键在册）。 */
 const PROXY_NEW_KEYS = [
-  "nav.page.admin.proxy", "proxy.title", "proxy.settingsTitle", "proxy.uriLabel", "proxy.uriPh", "proxy.hint",
+  "proxy.uriLabel", "proxy.uriPh", "proxy.hint",
   "proxy.testTitle", "proxy.testHint", "proxy.targetLabel", "proxy.targetPh", "proxy.testBtn", "proxy.testing",
   "proxy.testOk", "proxy.testFail", "proxy.uriRequired", "proxy.targetRequired", "proxy.kind.timeout", "proxy.kind.unreachable",
 ]
+const PROXY_DEAD_KEYS = ["nav.page.admin.proxy", "proxy.title", "proxy.settingsTitle"]
 const F_CJK = /[\u3000-\u303f\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff00-\uffef]/
 const fPlaceholders = (text) => [...String(text).matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(",")
 const fBaseKeys = (table) => Object.keys(table).filter((key) => !key.startsWith("lang.")).map((key) => key.replace(/\.one$/, ""))
 
-test("C4 i18n：+18 键两表在位（非空 ∥ 占位对位 ∥ en 零 CJK）∥ 退役 2 键零残留 ∥ useProxy 逐值改 ∥ 基键集相等", () => {
-  assert.equal(PROXY_NEW_KEYS.length, 18, "本批新键计数 = 18（§2.2）")
+test("C4 i18n：15 键两表在位（18 − 回迁退役 3）∥ 占位对位 ∥ en 零 CJK ∥ 退役 3 键零残留 ∥ useProxy 逐值改 ∥ 基键集相等", () => {
+  assert.equal(PROXY_NEW_KEYS.length, 15, "在册新键计数 = 15（18 − 回迁退役 3）")
   for (const key of PROXY_NEW_KEYS) {
     assert.ok(key in ZH, `zh 表缺新键：${key}`)
     assert.ok(key in EN, `en 表缺新键：${key}`)
@@ -473,12 +480,12 @@ test("C4 i18n：+18 键两表在位（非空 ∥ 占位对位 ∥ en 零 CJK）�
     assert.ok(example !== "", `targetPh 未携合法示例：${table["proxy.targetPh"]}`)
     assert.ok(["http:", "https:"].includes(new URL(example.replace("(s)", "")).protocol), `targetPh 示例须可解析为目标 URL：${example}`)
   }
-  for (const dead of ["system.cfgProxyUri", "system.cfgProxyUriPh"]) {
+  for (const dead of ["system.cfgProxyUri", "system.cfgProxyUriPh", ...PROXY_DEAD_KEYS]) {
     assert.equal(dead in ZH, false, `zh 退役键零残留：${dead}`)
     assert.equal(dead in EN, false, `en 退役键零残留：${dead}`)
   }
-  assert.ok(ZH["admin.providers.useProxy"].includes("「代理」页"), `useProxy 改向（zh）：${ZH["admin.providers.useProxy"]}`)
-  assert.ok(EN["admin.providers.useProxy"].includes("Proxy page"), `useProxy 改向（en）：${EN["admin.providers.useProxy"]}`)
+  assert.ok(ZH["admin.providers.useProxy"].includes("「系统」页"), `useProxy 改向（zh）：${ZH["admin.providers.useProxy"]}`)
+  assert.ok(EN["admin.providers.useProxy"].includes("System page"), `useProxy 改向（en）：${EN["admin.providers.useProxy"]}`)
   assert.deepEqual(fBaseKeys(EN).filter((key) => !(key in ZH)), [], "en 基键 ⊆ zh 基键")
   assert.deepEqual(fBaseKeys(ZH).filter((key) => !(key in EN)), [], "zh 基键 ⊆ en 基键（键集口径不破）")
 })
@@ -506,15 +513,15 @@ function fStripComments(src) {
   return out
 }
 
-test("C5 静态面：views-proxy.mjs 在册 + 直发 ∥ `public/**` 零外部引用 ∥ 本批两档注释外零 CJK ∥ t() 字面量 ⊆ 表键", async () => {
+test("C5 静态面：views-proxy.mjs 退役（零残）∥ `public/**` 零外部引用 ∥ 本批两档注释外零 CJK ∥ t() 字面量 ⊆ 表键", async () => {
   const names = readdirSync(PUBLIC_DIR)
-  assert.ok(names.includes("views-proxy.mjs"), "缺新档：views-proxy.mjs")
+  assert.equal(names.includes("views-proxy.mjs"), false, "退役档零残留：views-proxy.mjs")
   for (const name of names) {
     const text = readFileSync(join(PUBLIC_DIR, name), "utf8")
     // 裸文本扫描（族内既有断言口径）；i18n 表族内 `\/` 转义 = 承重（`proxy.uriPh` 行注）——「清理转义」会在此处静默转红
     assert.deepEqual([/https?:\/\//.test(text), /@import/.test(text)], [false, false], `${name} 含外部引用（内网不达——KD-SV-9）`)
   }
-  for (const name of ["views-proxy.mjs", "views-system-config.mjs"]) {
+  for (const name of ["views-system-config.mjs", "views-system.mjs"]) {
     const stripped = fStripComments(readFileSync(join(PUBLIC_DIR, name), "utf8"))
     assert.equal(stripped.match(F_CJK), null, `${name} 注释外含 CJK——文案应入 zh 族`)
     for (const match of stripped.matchAll(/\bt\(\s*"([^"]+)"/g)) {
@@ -529,10 +536,10 @@ test("C5 静态面：views-proxy.mjs 在册 + 直发 ∥ `public/**` 零外部�
   await new Promise((done) => server.listen(0, "127.0.0.1", done))
   try {
     const { port } = server.address()
-    const response = await fetch(`http://127.0.0.1:${port}/views-proxy.mjs`)
+    const response = await fetch(`http://127.0.0.1:${port}/views-system-config.mjs`)
     assert.equal(response.status, 200, "新档静态直发")
     assert.match(response.headers.get("content-type"), /text\/javascript/, "mime = text/javascript")
-    assert.equal(await response.text(), readFileSync(join(PUBLIC_DIR, "views-proxy.mjs"), "utf8"), "字节等于磁盘")
+    assert.equal(await response.text(), readFileSync(join(PUBLIC_DIR, "views-system-config.mjs"), "utf8"), "字节等于磁盘")
   } finally {
     server.closeAllConnections?.()
     await new Promise((done) => server.close(done))
