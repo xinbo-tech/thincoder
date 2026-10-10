@@ -1,6 +1,6 @@
 /**
  * i18n-zh-system.mjs — 控制台文案表·中文·系统与看板面（webui/WEBUI.md §2.2——KD-SV-51 拆表）：域界 = 键首段前缀
- * （`system.*` ∥ `vector.*` ∥ `health.*` ∥ `overview.*` ∥ `usageReport.*` ∥ `audit.*`——`.one` 变体随基键）；
+ * （`system.*` ∥ `vector.*` ∥ `proxy.*` ∥ `health.*` ∥ `overview.*` ∥ `usageReport.*` ∥ `audit.*`——`.one` 变体随基键）；
  * 门面 = `i18n-zh.mjs`（四部件展开合体 + `Object.freeze`——`ZH` 导出名不变）；键序 = 原档相对序（逐字搬移——零语义；段注释同移）。
  * 本档 = zh 族（唯一 CJK 载体——零 CJK 机检口径 §6 AC-14 按前缀排除）。
  */

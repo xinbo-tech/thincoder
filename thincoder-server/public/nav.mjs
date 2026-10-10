@@ -1,5 +1,5 @@
 /**
- * nav.mjs — 控制台导航单源（webui/WEBUI.md §2 ∥ KD-SV-20）：组/项数据（我的 3 ∥ 管理 8）∥ `resolveRoute` 纯函数
+ * nav.mjs — 控制台导航单源（webui/WEBUI.md §2 ∥ KD-SV-20）：组/项数据（我的 3 ∥ 管理 7——2026-10-10 代理回迁批去代理项）∥ `resolveRoute` 纯函数
  * （无 DOM——批内件直测：别名重定向 ∥ 角色默认 ∥ admin 面 `denied`）∥ 侧栏渲染（品牌 ∥ 组标题/项/活动态 ∥
  * 底部 meta 槽（健康状态灯 + 版本行 + 语言切换器）+ 退出登录）。
  *
