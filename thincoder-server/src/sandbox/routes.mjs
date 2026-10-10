@@ -3,9 +3,7 @@
  * `/api/admin/sandbox/*`（六面对应——判权 `requireAdmin`）∥ `/api/me/sandbox/*`（成员面——会话 + 恒本人过滤）。
  *
  * 可用性门（KD-SV-71）：`overview` 常回应（`status: unavailable` + 原因——控制台整页 disabled）；**需要 runner 的写动作**
- * （工作区创建 ∥ 工作区动作）⇒ 503 `sandbox_unavailable`（不降级）；join-token ∥ 规则 ∥ 设置 ∥ 待批裁定 = 不设门
- * （开箱预配 + 首个 runner 的入场券）；成员面读 = 契约明文（API §2.7）——不可用 ⇒ 503。
- * 写动作入队后唤醒目标 runner 的在飞长轮询（`signalRunner`）；规则/设置变更 ⇒ `rulesRev` +1 + `signalAll`（下发即生效）。
+ * （工作区创建 ∥ 工作区动作）⇒ 503 `sandbox_unavailable`（不降级）；规则 ∥ 设置 ∥ 待批裁定 = 不设门；成员面读 = 契约明文（API §2.7）——不可用 ⇒ 503。
  */
 import { HttpError, sendJson } from "../gateway/errors.mjs"
 import { readJsonBody } from "../gateway/server.mjs"
@@ -34,7 +32,6 @@ import {
 } from "./registry.mjs"
 import { bumpRulesRev, createRule, deleteRule, getRulesRev, listPending, listRules, openPendingOf, resolvePending, updateRule } from "./rules.mjs"
 import { issueWorkspaceKey, rotateWorkspaceKey, revokeWorkspaceKey } from "./credentials.mjs"
-import { createJoinToken, signalAll, signalRunner } from "./runner-api.mjs"
 
 export const WORKSPACE_ACTIONS = Object.freeze(["start", "stop", "destroy", "rotate-key", "restore"])
 
@@ -125,7 +122,6 @@ function workspaceView(db, workspace, { now = Date.now() } = {}) {
 
 function enqueueForWorkspace(db, workspace, kind, payload = {}, { now = Date.now() } = {}) {
   const id = enqueueTask(db, { runnerId: workspace.runner_id, kind, workspaceId: workspace.id, payload, now })
-  signalRunner(workspace.runner_id)
   return id
 }
 
@@ -148,19 +144,12 @@ export function registerSandboxRoutes(routes, { db, config = {}, now = Date.now 
     })
   })
 
-  routes.add("POST", "/api/admin/sandbox/runners/join-token", (req, res) => {
-    requireAdmin(db, req)
-    const { token, expiresAt } = createJoinToken(db, { now: now() })
-    sendJson(res, 200, { token, expiresAt })
-  })
-
   routes.add("POST", "/api/admin/sandbox/runners/:id/drain", (req, res, ctx) => {
     const { member: admin } = requireAdmin(db, req)
     const runner = runnerRowOr404(db, ctx.params.id)
     db.prepare("UPDATE sandbox_runners SET status = 'draining' WHERE id = ? AND status = 'active'").run(runner.id)
     const updated = db.prepare("SELECT * FROM sandbox_runners WHERE id = ?").get(runner.id)
     recordAudit(db, { type: "sandbox_event", actor: admin.name, actorId: admin.id, target: runner.name, detail: { kind: "runner_drain" }, ts: now() })
-    signalRunner(runner.id) // 在飞长轮询即刻回读排空旗（收旗停盒）
     sendJson(res, 200, { ok: true, id: runner.id, status: updated.status })
   })
 
@@ -323,7 +312,6 @@ export function registerSandboxRoutes(routes, { db, config = {}, now = Date.now 
       if (e instanceof HttpError) throw e
       throw new HttpError("invalid_request_error", e.message)
     }
-    signalAll() // 下发即生效（不重建盒——P11）
     sendJson(res, 200, { rule: created.rule, rulesRev: created.rulesRev })
   })
 
@@ -337,14 +325,12 @@ export function registerSandboxRoutes(routes, { db, config = {}, now = Date.now 
       if (e instanceof HttpError) throw e
       throw new HttpError("invalid_request_error", e.message)
     }
-    signalAll()
     sendJson(res, 200, { rule: updated.rule, rulesRev: updated.rulesRev })
   })
 
   routes.add("DELETE", "/api/admin/sandbox/rules/:id", (req, res, ctx) => {
     const { member: admin } = requireAdmin(db, req)
     const removed = deleteRule(db, ctx.params.id, { actor: admin.name, actorId: admin.id })
-    signalAll()
     sendJson(res, 200, { rule: removed.rule, rulesRev: removed.rulesRev })
   })
 
@@ -366,8 +352,6 @@ export function registerSandboxRoutes(routes, { db, config = {}, now = Date.now 
       if (e instanceof HttpError) throw e
       throw new HttpError("invalid_request_error", e.message)
     }
-    signalRunner(row.runner_id) // 裁定经 poll 下发（≤1s 级）
-    if (resolved.rule) signalAll() // remember ⇒ 规则表变更（全量下发）
     sendJson(res, 200, { ok: true, pending: resolved.pending, rule: resolved.rule, rulesRev: resolved.rulesRev })
   })
 
@@ -390,7 +374,6 @@ export function registerSandboxRoutes(routes, { db, config = {}, now = Date.now 
     const changed = JSON.stringify(before) !== JSON.stringify(after)
     if (changed) {
       bumpRulesRev() // §2.5：设置变更 ⇒ rulesRev +1（下发即生效）
-      signalAll()
       recordAudit(db, { type: "config_update", actor: admin.name, actorId: admin.id, target: "sandbox_settings", detail: { keys: Object.keys(body ?? {}) }, ts: now() }) // 沿配置控制台先例（键名清单——值永不入；SANDBOX §2 审计型面未列设置 ⇒ 用既有 config_update，见批档 §5）
     }
     sendJson(res, 200, { settings: after, rulesRev: getRulesRev() })

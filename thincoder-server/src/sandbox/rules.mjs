@@ -322,7 +322,7 @@ export function ensureSegmentDeny(db, cidr, { note = "注册动态项", actor = 
 
 // ── 待批队列（§6）────────────────────────────────────────────────────────────
 
-/** 挂起登记（`POST /api/runner/pending`）：同 workspace × host（大小写不敏感）open 行 ⇒ hits++/更新 last_seen_at；
+/** 挂起登记：同 workspace × host（大小写不敏感）open 行 ⇒ hits++/更新 last_seen_at；
  *  否则新行。返回 `{ id, hits, timeoutSeconds }`（超时值 = 设置项 `pendingTimeoutSeconds`——runner 挂起窗同源）。 */
 export function markPending(db, { runnerId, workspaceId, host, now = Date.now() } = {}) {
   const normalized = String(host ?? "").trim()

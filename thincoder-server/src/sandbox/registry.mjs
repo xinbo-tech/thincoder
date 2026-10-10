@@ -273,7 +273,7 @@ export function applyHeartbeat(db, row, payload = {}, { now = Date.now() } = {})
   return { ...row, status, runtime_json: JSON.stringify(next), last_heartbeat_at: now }
 }
 
-/** 盒状态变化上报（`POST /api/runner/report` 的 `boxes` 支——与心跳同径）。 */
+/** 盒状态变化登记（盒清单随心跳块保存）。 */
 export function applyBoxReport(db, row, boxes, { now = Date.now() } = {}) {
   const block = heartbeatBlock(row)
   const normalized = normalizeBoxes(boxes)

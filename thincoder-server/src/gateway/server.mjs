@@ -6,8 +6,6 @@
  * 不塞主干 if-else。处理函数签名 `(req, res, ctx)`，ctx = `{ config, log, routes, params }`。
  * 静态面（webui——`public/` 直发） = 注册路由之后的 GET/HEAD 兜底：`/v1/*` ∥ `/api/*` 不走（优先级 = API.md §1）。
  *
- * 路由级豁免（KD-SV-77——`POST /api/runner/checkpoint` 快照上送）：型门豁免（收 `application/octet-stream`——`/api/*` 写端点中唯一）
- * ∥ 体限抬高（200 MiB——其余写端点照旧 32 MiB + JSON 门）；豁免落在 `requiresJsonWrite`/`exceedsBodyLimit` 两处路由化分支（仅此路径）。
  */
 import { createServer } from "node:http"
 
@@ -16,20 +14,6 @@ import { HttpError, sendError } from "./errors.mjs"
 /** 请求体上限（gateway/API.md §3——413 `payload_too_large`；超限不转发）。 */
 export const MAX_BODY_BYTES = 32 * 1024 * 1024
 
-/** 快照上送体上限（路由级——`POST /api/runner/checkpoint`，KD-SV-77；与 runner 侧本地跳过阈值同值）。 */
-export const MAX_CHECKPOINT_BYTES = 200 * 1024 * 1024
-
-/** 快照上送路径（型门豁免 + 体限抬高的唯一路由——KD-SV-77）。 */
-export const CHECKPOINT_UPLOAD_PATH = "/api/runner/checkpoint"
-
-export function isCheckpointUpload(method, pathname) {
-  return String(method).toUpperCase() === "POST" && pathname === CHECKPOINT_UPLOAD_PATH
-}
-
-/** 路由级体限（缺省 32 MiB；快照上送 200 MiB）——预检面 = 本函数（常量单源）；流内面 = 路由自身限（缺省同源），生产两层同值。 */
-export function bodyLimitFor(method, pathname) {
-  return isCheckpointUpload(method, pathname) ? MAX_CHECKPOINT_BYTES : MAX_BODY_BYTES
-}
 
 /**
  * 路由注册表（G1）：`add(method, path, handler)` 注册一行；`/段/:名` 段 = 路径参数（捕获进 `params`；
@@ -97,7 +81,7 @@ export function createGatewayServer({ config = {}, routes, log = null, staticSit
       sendError(res, "invalid_request_error", "写端点仅收 application/json（Content-Type 须为 application/json）")
       return
     }
-    const bodyLimit = bodyLimitFor(req.method, pathname)
+    const bodyLimit = MAX_BODY_BYTES
     if (exceedsBodyLimit(req, bodyLimit)) {
       sendError(res, "payload_too_large", `请求体超过上限（${bodyLimit} 字节）`)
       return
@@ -210,7 +194,7 @@ function failRequest(res, err, log) {
   sendError(res, "internal_error", "服务内部错误")
 }
 
-/** `Content-Length` 预检（流式体由 `readJsonBody`/`readStreamBody` 兜底；限值 = 路由级——`bodyLimitFor`）。 */
+/** `Content-Length` 预检（流式体由 `readJsonBody`/`readStreamBody` 兜底；限值 = `MAX_BODY_BYTES`）。 */
 function exceedsBodyLimit(req, limit) {
   const length = Number(req.headers["content-length"])
   return Number.isFinite(length) && length > limit
@@ -230,9 +214,8 @@ function isServicePath(pathname) {
 
 /** `/api/*` 写端点（非 GET/HEAD）仅收 `application/json`（accounts/ACCOUNTS.md §3 ∥ metering/METERING.md §3）——
  *  跨站防护第二道（配合 `SameSite=Strict`）：非 JSON 体属跨站可直发形，一律 400。
- *  唯一豁免 = `POST /api/runner/checkpoint`（快照上送收 `application/octet-stream`——KD-SV-77）。 */
+ */
 function requiresJsonWrite(method, pathname) {
-  if (isCheckpointUpload(method, pathname)) return false
   return pathname.startsWith("/api/") && method !== "GET" && method !== "HEAD"
 }
 

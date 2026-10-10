@@ -235,20 +235,11 @@ server {
         proxy_set_header X-Real-IP $remote_addr;   # ③ set 形覆盖客户端伪造
     }
 
-    # ④ 沙盒快照路由（runner 通道——≤200 MiB；仅此路由放宽，其余仍 32m）
-    location = /api/runner/checkpoint {
-        proxy_pass http://127.0.0.1:8787;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_request_buffering off;  #    流式上送（服务端流式落盘——不整段缓冲）
-        client_max_body_size 200m;    #    路由级上限 = 200 MiB（与 runner 本地跳过阈值同值）
-    }
 }
 ```
 
 - 置 `trustProxy: true` 后服务端按 `X-Real-IP` 计登录防爆破 IP 维。
 - **前提**：`trustProxy: true` 只在**服务端口仅反代可达**时使用（同机仅听回环 ∥ 防火墙白名单）——否则直连可伪造 `X-Real-IP`。
-- **沙盒快照**（`POST /api/runner/checkpoint`——路由级上限 200 MiB）经上块单独放宽；其余路由保持 32m（服务端全局 32 MiB 通则不动）。
 
 ## 12. 排障（健康检查）
 
