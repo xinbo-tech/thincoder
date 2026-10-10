@@ -120,7 +120,7 @@ stub 表（回执逐形 = 实读锚）：
 | 档 | 现行 | 预期 | 说明 |
 |---|---|---|---|
 | `thincoder-desktop/tools/web-quickcheck/serve.mjs`（已落） | 0 | **144**（实读 2026-10-02） | 静态服务（§3.1） |
-| `thincoder-desktop/tools/web-quickcheck/host-shim.mjs`（已落） | 0 | **42**（实读 2026-10-02） | host shim（§3.2） |
+| `thincoder-desktop/tools/web-quickcheck/host-shim.mjs`（已落） | 0 | **44**（实读 2026-10-10——2026-10-02 记 42；父侧扩表 +2：`theme:state` ∥ `team:status`） | host shim（§3.2） |
 | `thincoder-desktop/tools/web-quickcheck/run.mjs`（已落） | 0 | **191**（实读 2026-10-02） | 快筛冒烟（§3.3） |
 | `thincoder-desktop/package.json` | **23**（实读 2026-10-01——内容行数口径） | 24（+1 行——`quickcheck` script） | `devDependencies` 零改（`playwright-core` 在册复用；`dependencies` 零改） |
 | `docs/batches/2026-09-30-web-quickcheck.test.mjs`（已建成 · 137 行——批内件） | 0 | **137**（实读 2026-10-02） | 服务路由 ∥ 门 ∥ shim 契约 ∥ 注入锚面腿；随批留存 · 不进仓套件 |
@@ -179,7 +179,7 @@ stub 表（回执逐形 = 实读锚）：
 | 文件 | 预估行数 | 说明 |
 |---|---|---|
 | `thincoder-desktop/tools/web-quickcheck/serve.mjs`（已落 · web 快筛批） | **144**（实读 2026-10-02） | 静态服务（三根映射：`/rc/` → 核包根 ∥ `/` → `renderer/` ∥ `/__quickcheck/` → 工具资产；MIME 白名单 + 逃逸 ∥ 点段门；`/` 注入 host shim 脚本行；`127.0.0.1` 绑定 · 端口 0）——机制 ∕ 判据单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.1 |
-| `thincoder-desktop/tools/web-quickcheck/host-shim.mjs`（已落 · web 快筛批） | **42**（实读 2026-10-02） | host shim（`window.thincoder` 窄桥同形 + 有限 stub 表（7 通道）+ 表外拒 + `__quickcheck` 记录面）——单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.2 |
+| `thincoder-desktop/tools/web-quickcheck/host-shim.mjs`（已落 · web 快筛批） | **44**（实读 2026-10-10） | host shim（`window.thincoder` 窄桥同形 + 有限 stub 表（9 通道）+ 表外拒 + `__quickcheck` 记录面）——单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.2 |
 | `thincoder-desktop/tools/web-quickcheck/run.mjs`（已落 · web 快筛批） | **191**（实读 2026-10-02） | 快筛冒烟（系统浏览器 channel（缺省 `msedge`）+ 九段断言序 + 截图落 `thincoder-desktop/test/artifacts/quickcheck-boot.png`）——单源 = `docs/desktop/design/WEB-QUICKCHECK.md` §3.3 |
 
 **行数面机检**：`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`，运行根单读）**逐条声明节域——本表为其一**（本域值行单源）；后续本域新档由落盘批在本表补值行，`docs/desktop/design/PROJECT.md` §4.1 同拍补指针行（沿 §4.1 纪律）。
@@ -192,7 +192,7 @@ stub 表（回执逐形 = 实读锚）：
 | # | 档 | 现行 ⇒ 预期 | 面 |
 |---|---|---|---|
 | 1 | `thincoder-desktop/package.json` | **23 ⇒ 24**（scripts +`quickcheck` 一条（`node tools/web-quickcheck/run.mjs`）；devDeps 零改——`playwright-core` 在册复用） | 脚本面 |
-| 2 | `thincoder-desktop/tools/web-quickcheck/`（已落 · 新目录） | 0 ⇒ **377**（= 144 + 42 + 191——实读 2026-10-02）（`serve.mjs` ∥ `host-shim.mjs` ∥ `run.mjs`——逐档行 = `docs/desktop/design/PROJECT.md` §4.1） | 工具面 |
+| 2 | `thincoder-desktop/tools/web-quickcheck/`（已落 · 新目录） | 0 ⇒ **379**（= 144 + 44 + 191——实读 2026-10-10）（`serve.mjs` ∥ `host-shim.mjs` ∥ `run.mjs`——逐档行 = `docs/desktop/design/PROJECT.md` §4.1） | 工具面 |
 | 3 | 批内件 | `docs/batches/2026-09-30-web-quickcheck.test.mjs`（已建成 · 137 行 · 实读 2026-10-02——服务路由 ∥ 门 ∥ shim 契约 ∥ 注入锚面；随批留存 · 不进仓套件） | 全批 |
 | 4 | 设计档 | `docs/desktop/design/WEB-QUICKCHECK.md`（新档——本批主交付）· `docs/desktop/design/PROJECT.md` §4.1 三行 + 值列随动 ∥ §4.2 本块 ∥ §5 script 行 ∥ 变更记录 · `docs/desktop/design/SHELL.md` §1 树一行 + 变更记录 · `docs/README.md`（地图 6 ⇒ 7） | 全批 |
 

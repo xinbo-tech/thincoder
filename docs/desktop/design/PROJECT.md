@@ -376,7 +376,7 @@ D21 视觉对齐批落形同径（`docs/desktop/design/UI.md` §1「本批注（
 | `thincoder-desktop/build/icon.ico`（本批新档 · 二进制） | → `docs/desktop/design/PACKAGING.md` §3.1（文件账 · as-of 2026-10-02） | — |
 | `thincoder-desktop/CHANGELOG.md`（发布窗首建 · 已落） | → `docs/desktop/design/PACKAGING.md` §3.1（文件账 · as-of 2026-10-02） | — |
 | `thincoder-desktop/tools/web-quickcheck/serve.mjs`（已落 · web 快筛批） | → `docs/desktop/design/WEB-QUICKCHECK.md` §9.1（文件账 · as-of 2026-10-02） | — |
-| `thincoder-desktop/tools/web-quickcheck/host-shim.mjs`（已落 · web 快筛批） | → `docs/desktop/design/WEB-QUICKCHECK.md` §9.1（文件账 · as-of 2026-10-02） | — |
+| `thincoder-desktop/tools/web-quickcheck/host-shim.mjs`（已落 · web 快筛批） | → `docs/desktop/design/WEB-QUICKCHECK.md` §9.1（文件账 · as-of 2026-10-10） | — |
 | `thincoder-desktop/tools/web-quickcheck/run.mjs`（已落 · web 快筛批） | → `docs/desktop/design/WEB-QUICKCHECK.md` §9.1（文件账 · as-of 2026-10-02） | — |
 | `thincoder-desktop/test/run.mjs` · `thincoder-desktop/test/files.mjs` | → `docs/desktop/design/E2E-TESTING.md` §9.1（文件账 · as-of 2026-10-02） | — |
 | 用例模块（原 48 档） | → `docs/desktop/design/E2E-TESTING.md` §9.1（文件账 · as-of 2026-10-02） | — |
