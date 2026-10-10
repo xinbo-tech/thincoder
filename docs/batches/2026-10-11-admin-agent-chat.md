@@ -62,7 +62,12 @@
 | `thincoder-server/src/agent/tools.mjs` | 288 ⇒ ≈200 | 改（执行器迁出） |
 | `thincoder-server/src/agent/run.mjs` | 137 | ±0（环复用） |
 | `thincoder-server/src/store/db.mjs` | 409 ⇒ ≈450 | 改（v14 段：两表 + 索引 + 审计 CHECK 十三型重建 + 迁移段） |
-| `thincoder-server/src/accounts/audit.mjs` | 113 | ±0 |
+| `thincoder-server/src/accounts/audit.mjs` | 113 ⇒ **115**（本批 +2） | 改（`AUDIT_TYPES` +`agent_event`——类型门必需；父侧裁定项） |
+| `thincoder-server/src/accounts/members.mjs` | 239 ⇒ **253**（本批 +14） | 改（新增共享助手 `resetMemberPassword`——改密 + 清计 + 既有会话吊销；审计写留调用侧） |
+| `thincoder-server/src/accounts/routes-admin.mjs` | 109 ⇒ **107**（本批 −2） | 改（重置路由改调共享助手——行为同效；`password_reset` 审计留调用侧） |
+| `thincoder-server/src/gateway/provider-admin.mjs` | 312 ⇒ **349**（本批 +37） | 改（四个共享写函数提取——六端点改薄壳；两调用点单源） |
+| `thincoder-server/src/sandbox/registry.mjs` | 467 ⇒ **535**（本批 +68） | 改（新增 `deleteRunnerChain`——六步链含续放置；越 500 软线——拆分决策见 §5.4） |
+| `thincoder-server/src/sandbox/routes.mjs` | 493 ⇒ **437**（本批 −56） | 改（删除节点路由改调该链——行为同效；`sandbox_event` 审计留调用侧） |
 | `thincoder-server/bin/thincoder-server.mjs` | 187 ⇒ ≈189 | 改（import + 注册两行） |
 | `thincoder-server/public/views-chat.mjs` | 新 ≈300 | 新增（页） |
 | `thincoder-server/public/views-audit.mjs` | 93 ⇒ ≈97 | 改（型面 + `summary` 支） |
@@ -72,8 +77,10 @@
 | `thincoder-server/public/i18n-{zh,en}-shell.mjs` | 74 ∥ 72 ⇒ ≈75 ∥ ≈73 | 改（`nav.page.admin.chat`） |
 | `thincoder-server/public/i18n-{zh,en}-system.mjs` | 170 ∥ 170 ⇒ **171 ∥ 171**（本批 +1 键/表——前端舱已落，实读回核） | 改（`audit.type.agent_event` 落点 = system 部件——审计族键域界；`views-audit.mjs` 型面表消费） |
 | `thincoder-server/public/style.css` | 242 ⇒ ≈252 | 改（对话族——零新变量/零新悬停规则） |
-| `thincoder-server/package.json` | `prepublishOnly` 42 ⇒ 44 | 改（两件入链） |
-| 批内件两件（`…-admin-agent-chat.test.mjs` ∥ `…-admin-agent-chat-tools.test.mjs`） | 新 | 单元测试文件（随批档留存） |
+| `thincoder-server/package.json` | `prepublishOnly` 42 ⇒ **45**（盘面实读） | 改（三件入链——含前端舱 `…-admin-agent-chat-ui.test.mjs`） |
+| 批内件三件（`…-admin-agent-chat.test.mjs` ∥ `…-admin-agent-chat-tools.test.mjs` ∥ `…-admin-agent-chat-ui.test.mjs`） | 新 | 单元测试文件（随批档留存；三件均入 `package.json` 链） |
+
+**补登记（实施轮——本 fix 轮）**：上表六件 = 实施轮清单外触碰（依据 = KD-SV-90「两调用点单源」；逐件理由 = §5.3；行数 = 本批修改后实读）。`routes.mjs` 当刻盘面 **441**（= 本批 437 + 并行批 sandbox-docker-admin 在飞 +4）——并行批以其自身记录为准。
 
 **跨文件口径**：新增四档均 ≤500 软线；`tools.mjs` 288 ⇒ ≈200（迁出后回落）；`views-chat.mjs` ≈300 恰在软线（≥500 = 拆档触发点）。
 
@@ -87,7 +94,7 @@
 | 审计面 | `accounts/ACCOUNTS.md` §2.1 `agent_event` 行 + §5/§7（逐调用一行 ∥ 掩蔽） |
 | 控制台面 | `webui/WEBUI.md` §6 本批行（页在册 ∥ 流读取假流桩逐帧 ∥ 四形渲染 ∥ 断连零未押异常 ∥ 键族两表同步 ∥ nav 管理 9 ∥ 非壳页 ∥ AC-19 canon 不破 ∥ 档目 32 ∥ 33） |
 | 工具面 | `agent/ADMIN-AGENT.md` §12 逐件回指（members/providers/models/usage/audit/runners/docker 动词面 + 参数校验） |
-| 计数随动 | 档目 31 ∥ 32 ⇒ **32 ∥ 33**；审计型面 十二 ⇒ **十三型**；nav 管理 8 ⇒ **9**；KD 索引 1–87 ⇒ **1–91**；`prepublishOnly` 42 ⇒ **44** |
+| 计数随动 | 档目 31 ∥ 32 ⇒ **32 ∥ 33**；审计型面 十二 ⇒ **十三型**；nav 管理 8 ⇒ **9**；KD 索引 1–87 ⇒ **1–91**；`prepublishOnly` 42 ⇒ **45**（三件入链） |
 
 **2.5 设计轮发现（如实登记）**
 
@@ -105,7 +112,7 @@
 
 **披露（不阻塞）**：chat 不收 SSH 凭据（KD-SV-84 面不破）；跨会话并发未设限；`@thincoder/core` 带核发布形（R53③ 在册——本批不新增依赖）。
 
-**随正件（父侧落——实施轮同拍，以当刻盘面实读为准）**：`views-audit` 型面数断言件 ∥ nav 计数件（管理 8 ⇒ 9） ∥ 档目断言件（`views-chat.mjs` 入列表） ∥ 门禁件数断言件（42 ⇒ 44）+ `thincoder-server/package.json`。
+**随正件（父侧落——实施轮同拍，以当刻盘面实读为准）**：`views-audit` 型面数断言件 ∥ nav 计数件（管理 8 ⇒ 9） ∥ 档目断言件（`views-chat.mjs` 入列表） ∥ 门禁件数断言件（42 ⇒ **45**——三件入链）+ `thincoder-server/package.json`。
 
 **产品码零触（设计轮）**。落盘档：`agent/ADMIN-AGENT.md` ∥ `store/STORE.md` ∥ `accounts/ACCOUNTS.md` ∥ `client/CLIENT.md` ∥ `sandbox/SANDBOX.md` ∥ `gateway/API.md` ∥ `webui/WEBUI.md` ∥ `design/PROJECT.md`（八档 + 本段）。
 
@@ -145,6 +152,22 @@
 **落点档五件**：`design/PROJECT.md:663` ∥ `agent/ADMIN-AGENT.md:151` ∥ `gateway/API.md:379` ∥ `store/STORE.md:449` ∥ `webui/WEBUI.md:805`（各 +1 变更记录行）。**产品码零触（本轮）**。
 
 **实施舱咬合（#191/#192）**：前端舱已落四键——`views-chat.mjs:46-51`（精确值判定映射表）+ `i18n-{zh,en}-admin.mjs` 四键 + 批内件 `-admin-agent-chat-ui.test.mjs`（`:47` 键表 ∥ `:318` 精确值用例）；**无须另派**。后端舱（#192）按四值落枚举（父侧随轮知会在案）。doc-check 读数（本轮后）：**本批五档零新增超宽 ∥ 零新增悬空**（候选 57042 · 悬空 8——全数 core/desktop 域既有，非本批面）。
+
+### 实施交付后记录收正（fix 轮）——六件补登记 + 计数 42 ⇒ 45（2026-10-11 · eng-designer）
+
+**口径**：承父侧路由（#192 报告 [上抛·待裁] ② = 回笔——补登记 + 计数收正；doc 层）。**零新语义**（补记既成事实）；**产品码零触**；评审未点段落零触——例外 = §9 R54② 同件基数收正（一致性面，列报，见 ③）。
+
+| 号 | 落点（改动后实读 file:line） | 改动 |
+|---|---|---|
+| ① | 本节 §2.3 表（`:65`–`:70`——`audit.mjs` 行收正 + 五行补登记）∥ 表下补登记注（`:83`） | 六件逐件（行数实读 ⇒ 改动性质）：`audit.mjs` 113 ⇒ **115**（+2）∥ `members.mjs` 239 ⇒ **253**（+14）∥ `routes-admin.mjs` 109 ⇒ **107**（−2）∥ `provider-admin.mjs` 312 ⇒ **349**（+37）∥ `registry.mjs` 467 ⇒ **535**（+68）∥ `routes.mjs` 493 ⇒ **437**（−56） |
+| ② | 本节 §2.3 `package.json` 行（`:80`）∥ 批内件行（`:81`）∥ §2.4 计数随动行（`:97`）∥ §2.6 随正件行（`:115`） | `prepublishOnly` 42 ⇒ **45**（三件入链——含 `…-admin-agent-chat-ui.test.mjs`）；批内件两 ⇒ **三件** |
+| ③ | `design/PROJECT.md`（注⑲ `:462`/`:464` ∥ 本批预算行 `:311`/`:312` ∥ §9 R54② `:579` ∥ 变更记录 `:665`） | 42 ⇒ **45** 同拍（三件入链）；批内件三件；清单外六件增量注（`+2` ∥ `+14` ∥ `−2` ∥ `+37` ∥ `+68` ∥ `−56`）入本批行；变更记录一笔 |
+
+**证据基线**：六件行数 = 实施前提交态 `8a84132e` ⇒ 当刻盘面实读（另经 `7cded00e` 提交 stat 与工作区 numstat 交叉核对）；链数 = `package.json` 机读计数（HEAD 42 ⇒ 当刻 45）。**并行变量**：`routes.mjs` 当刻盘面 **441** = 本批 437 + sandbox-docker-admin 批（并行在飞）镜像族注册 +4——并行批以其自身记录为准。
+
+**形式披露**：§2.3 表内插入/就地收正 = 文件直编（`batch` 工具仅段尾追加）——沿上轮「表格内插入」先例。
+
+**机检读数（本轮后）**：`node scripts/doc-check.mjs`（仓根）EXIT 1——宽面 **OK**（源域无 >300 字符单行）；锚面 **悬空 25**（闸态阈值 0）。本档新增两处已收正清零：§6 六件行目录短形（`gateway/provider-admin.mjs` ∥ `sandbox/routes.mjs`——目录短形解析不中且同 basename 多档 ⇒ 悬空）⇒ 纯名形（`:312`；纯名不产锚）——复跑 27 ⇒ **25**（−2 = 本档两处；余 = 非本批面既有/其他域，列报父侧）。行数面差异 = desktop 域既有（非本批面）。
 
 ## §3 设计评审（评审子代理）
 
@@ -216,6 +239,62 @@ VERDICT: pass
 - **自修轮次**：审计后 1 轮 + 评审后 1 轮（共 2 轮，≤5 上限内）。
 - **内审第 2 轮（仅核修正主张）** → **pass**：must-fix 与四条 🔵 逐条核到位、无回退、无新增面；余 1 条新 🔵（200-无流体支返 `false` 与提示句语义相左 + 该支零腿）标「可选」，**未改**（改动会使本轮 pass 失效；该支近不可达——`Response.body` 仅在 204/205/304/HEAD 为 null）。
 - **终点态 = clean**（第 2 轮 pass；1 条评审标记「可选」的打磨项如实登记未改；文档面回笔项〔WEBUI 数值 ∥ notice 四值三处单源 ∥ 结构件键数〕归父侧收口轮）。
+
+实施者 = eng-coder（后台舱 · thincoder-server）。以下为逐件摘要、决策、披露、审计/评审轮次与实跑读数。
+
+### 5.1 交付摘要（逐件一行 · 行数为实读）
+
+| 件 | 类 | 行数 | 交付语义 |
+|---|---|---|---|
+| `thincoder-server/src/agent/chat.mjs` | 新 | 498 | 会话 CRUD（建/列/详）∥ `claimChatTurn` 在途门（同步段）∥ `resumeRunningChats` 装配期重启收尾 ∥ `replayMessages`（notice 滤除）∥ `runChatTurn` 环体（四终止形：succeeded∥budget∥model_error∥empty_turn）∥ `capText/capToolContent/argsTextOf/summaryOfResult/capSummary`（掩蔽 + 尾注截断，上限含注记）∥ 注入缝（`setChatTestDeps` 模块级 + `deps` 参数级，默认 null 回落真件） |
+| `thincoder-server/src/agent/chat-routes.mjs` | 新 | 105 | 四端点（建/列/详/发）全 `requireAdmin`；流前信封错误（404 ∥ content 400 ∥ 在途 400 ∥ 模型不可用 400）；NDJSON 流（`delta`/`call`/`result`/`end`）；装配期重启恢复钩；流中异常 ⇒ `end` 帧 |
+| `thincoder-server/src/agent/chat-tools.mjs` | 新 | 475 | 七件工具（`members` 六 ∥ `providers` 五 ∥ `models` 五 ∥ `usage` summary/rows ∥ `audit` query ∥ `runners` list/add/remove ∥ `docker` 十动词）——进程内直取域件、写链与控制台同函数、错误 ⇒ `{ok:false,message}` 回灌（不抛） |
+| `thincoder-server/src/agent/docker-ops.mjs` | 新 | 90 | 十动词执行器 + `DOCKER_OPS/assertDockerOp/requireText/truncateText`（自 `tools.mjs` 内联表迁出——单源） |
+| `thincoder-server/src/agent/tools.mjs` | 改 | 241 | docker 执行器改导入；其余 ±0 |
+| `thincoder-server/src/store/db.mjs` | 改 | 458 | v14 段：`agent_chats`/`agent_chat_messages` 两表 + `(chat_id,seq)` 索引 + 审计 CHECK 十二⇒十三型重建；`MIGRATIONS` 追加 v14 |
+| `thincoder-server/src/accounts/audit.mjs` | 改 | 115（+2） | `AUDIT_TYPES` +`agent_event`；三处注释型面随正十三型 |
+| `thincoder-server/bin/thincoder-server.mjs` | 改 | 189 | import + 注册一行（deps = `runtime`/`config`/`guard`） |
+| `thincoder-server/package.json` | 改 | — | 批内件三件入链（42 ⇒ 45） |
+| `docs/batches/2026-10-11-admin-agent-chat.test.mjs` | 新 | 715 | 19 腿：判权三态×4 ∥ 帧序 ∥ 掩蔽（帧/落库/审计/含工具回显同值）∥ 尾注截断不越上限 ∥ 在途门（含「在途先行于模型校」）∥ 断连（B48）∥ 三异常终态 ∥ 空回合 ∥ 重启收尾 ∥ 模型出口缺位 ∥ notice 回放滤除 ∥ 重放逐行 ∥ 工具结果 ≤4000 ∥ v14 三径 + 型可写 ∥ bin 注册 ∥ 包链三件 |
+| `docs/batches/2026-10-11-admin-agent-chat-tools.test.mjs` | 新 | 395 | 8 腿：七件在场 ∥ 错误回灌 ∥ members 六动词（含重置清计 + 既有域型零增）∥ providers 五（含 discover 探针 + 换表）∥ models 五（含别名唯一性）∥ usage/audit 过滤与上限 ∥ runners/docker（假 Docker 引擎真 HTTP；未在册 ⇒ 工具级错误）∥ 承载工作区未确认 ⇒ 拒删 |
+
+**关键口径落地**：`call` 帧 `args` = 字符串（掩蔽后 ≤500 含注记）∥ `result` 摘要 ≤300 ∥ 工具结果 ≤4000 且回放逐字 ∥ notice `data.reason` 四值枚举 + 人话入 `content` ∥ 预算中途触发 ⇒ 未执行调用补落 tool 行（消息序一致）∥ `run.mjs` 真 ±0（环复用 `DEFAULT_MAX_CALLS`/`DEFAULT_MAX_DURATION_MS`/`loadCoreChat`；chat 自建 `buildChatExit` 以透传 `onToken`）。
+
+### 5.2 决策透明表
+
+| 决策 | 依据 | 影响 |
+|---|---|---|
+| `accounts/audit.mjs` +2（`agent_event` + 注释） | 类型门拒未知型；父侧裁「设计面已登记、§2.3 ±0 = 估误」 | 清单外文件 +1（已披露） |
+| provider 写链四助手提取（`provider-admin.mjs`）+ 六端点改薄壳 | 设计 §12「路由内联写链提取共享写函数（两调用点单源）」 | 清单外 +1 件（已披露） |
+| `resetMemberPassword`（`members.mjs`）+ 重置路由改调 | 设计 §12 成员行「共享助手边界 = 改密 + 清计；与路由同效」；审计写留调用侧 | 同上 |
+| `deleteRunnerChain`（`registry.mjs`）+ 删除路由改调 | 设计 §12 runners 行「与控制台同函数同效」 | 同上 |
+| `discoverFetchImpl` 独立注入缝（缺省 `proxyFetch`） | `API.md` §2.2 代理条件 ⇒ 探针出口同转发口径（自修轮发现：单 `fetchImpl` 会静默丢代理旗） | chat-tools 增一参；`fetchImpl` 专司 Docker 传输 |
+| 工具结果/摘要再掩蔽（本轮入参敏感值集合） | 沿任务面 `maskSecrets(text, secrets)` 口径——工具回显同值亦不入库 | 掩蔽腿有正向断言 |
+| 预算/模型错误文本 ≤300（`capSummary`） | 与 `chat_stop` 审计 ∥ `end` 帧三面同源（单源单文） | 长错文截断带注记 |
+| 在途门先行于模型校（`assertChatIdle` 只读预检 + `CHAT_BUSY_MESSAGE` 单文单源） | `API.md` §2.8 错误行序（内审采纳项） | 报文分先后；两门同码 400 |
+
+### 5.3 清单外改动披露（六件 · 逐件理由）
+
+1. `src/accounts/audit.mjs`——类型门必需（父侧已裁，见上表）。
+2. `src/gateway/provider-admin.mjs`——设计 §12 明写提取共享写函数（四个）；无第二份写链。
+3. `src/accounts/members.mjs`——共享助手 `resetMemberPassword` 落点（改密 + 清计 + 既有会话吊销；零审计写）。
+4. `src/accounts/routes-admin.mjs`——重置路由改调该助手（行为同效；`password_reset` 审计留调用侧）。
+5. `src/sandbox/registry.mjs`——共享链 `deleteRunnerChain` 落点（六步链；含续放置）。
+6. `src/sandbox/routes.mjs`——删除节点路由改调该链（行为同效；`sandbox_event` 审计留调用侧）。
+
+### 5.4 审计与代码评审轮次 · 终态
+
+- **发散审计（explore · 1 轮）**：7 项（0 阻断）——① `bin` 装配漏 `guard` ⇒ chat 重置清计空跳；② chat `discover` 恒走原生 fetch ⇒ 代理旗静默丢；③ 批内件三处缺腿（掩蔽 ∥ E41 工具级错误回合不停 ∥ notice 回放滤除断言空转）；④⑤ 注释漂移两处（`audit.mjs` 十二型、`db.mjs` v14 的 `chat_stop` 原因枚举）；⑥ 批档 §2.4 `prepublishOnly` 42⇒44 与实测 45 的计数差（父侧知会②已定三件入链）；⑦ 截断口径越上限（尾注使 500⇒505 / 300⇒305）。
+- **自修（1 轮）**：① `bin` 补 `guard: loginGuard`；② 拆 `discoverFetchImpl` 注入缝；③ 补三腿（掩蔽含「工具回显同值不入库」、E41 第二腿、notice 滤除非空断言 + 成功轮零 `chat_stop`）；④⑤ 注释随正；⑦ 上限含注记（`capText`——总长恒 ≤ 上限），工具结果同法。
+- **内审（advisor · code · 1 轮）**：**pass**（0 🔴；2 🟡 建议、5 🔵 风格/口径）。采纳并修：在途门先行于模型校、`deleteRunnerChain` 补 `publicBase`（续放置载荷与控制台同源）、`createChatTools` 文档随正。未修（披露）：`registry.mjs` 535 行越 500 软线（本批 +63 行落点；拆分 = 结构决策，留父侧裁定）、批内件 715 行（`docs/batches/` 体量先例）、批档 §2.3 五件未登记与 §2.4 计数（doc 层，非本舱笔）。
+- **终态：`clean`**（无未决阻断项）。
+
+### 5.5 实跑读数（命令 + 结果）
+
+- `node --test docs/batches/2026-10-11-admin-agent-chat.test.mjs docs/batches/2026-10-11-admin-agent-chat-tools.test.mjs` ⇒ **tests 27 · pass 27 · fail 0**（19 + 8）。
+- 定向回归（既有件）：`2026-10-06-server-gateway-accounts` ∥ `2026-10-09-server-bin-guard-fix` ∥ `2026-10-10-runner-admin-console-agent` ∥ provider 四件 ∥ `2026-10-07-me-keys-redo` ∥ `2026-10-10-server-exec-sandbox` ∥ `2026-10-06-models-config` ∥ `2026-10-07-provider-model-metadata` ⇒ 仅 6 条**预登记**随正面失败（v13⇒14 版本尾钉 3 条；档目 31∥32⇒33∥32 计数 3 条），零本批行为回归。
+- 真机引导冒烟（临时配置 + 临时库，端口 18987）：`healthz` 200 ∥ `login` 200 ∥ 建会话 200 ∥ 列表 200 ∥ 未登录 401 ∥ 模型不在注册表 400（信封）∥ 发消息 200 `application/x-ndjson` ⇒ `end failed`（本机未装 `@thincoder/core` ⇒ 归 `model_error`——四终态机制按设计运行）∥ 库内 `PRAGMA user_version = 14`、两表在场、审计行 = `login_success` + `agent_event(chat_start)` + `agent_event(chat_stop)`。临时件已清（仓内零残留）。
+- 未跑：仓库全链（本批交付约定——全链 = 父侧收口轮唯一一次跑）。
 
 ## §6 验证与收口（父代理）
 
