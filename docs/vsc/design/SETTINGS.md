@@ -635,7 +635,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   在场 ⇒ 卡内就地提示——同名冲突（登录当刻）：「已存在同名 provider「team」——未自动添加；请改名或删除后重登」∥ 吊销未达（退出当刻）：「服务端吊销未达」——两句逐字同句（`docs/core/design/TEAM.md` §2.5）· 文本归本端 i18n；
   两提示 = 一次性事件（登录/退出当刻就地显示）——**`teamStatus` 零提示字段**（形不变：`{ loggedIn, server, member, label }`）。
 - **密码面**：请求内存即弃（零落盘 ∥ 零回显广播）；重建/切卡清空密码格。
-- **失败出词**：网络不可达 ∥ 用户名或密码错误 ∥ 登录尝试过于频繁——三句逐字同（i18n 键 zh/en 双表 +≈14 键）。
+- **失败出词**：网络不可达 ∥ 用户名或密码错误 ∥ 登录尝试过于频繁 ∥ 本机配置写入失败——四句逐字同（i18n 键 zh/en 双表 +≈14 键）。
 
 ## 3. 已知待办与已知限制
 
@@ -747,6 +747,8 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 | U-S20 | **团队卡（本批）**：登录表单 = 服务器地址 ∥ 用户名 ∥ 密码三字段；未登录提示句 = 「未登录——登录后可用」（三端逐字同句）；退出 = 卡内钮（服务端吊销 best-effort——网络失败照清本地 + 提示）；同名手工 `team` 条目 ⇒ 登录成 + 就地提示（不覆盖不弹窗） | 已定（§2.20——B1 批） |
 
 ## 变更记录
+
+- 2026-10-10（**team-login-client-access 批（B1）· 实施期档-码差一修复（`write_failed` 补设计）· eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212；父侧裁定 = 保留第四值并补设计）：**§2.20** 失败出词补第四句「本机配置写入失败」（四句逐字同——单源 = `docs/core/design/TEAM.md` §2.5）。**零新语义**（父侧裁定直接导出项）。明细 = 批档 §2 实施期修复块。
 
 - 2026-10-10（**team-login-client-access 批（B1）· 实施期设计相抵修复 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212）：**§2.20** 补**回执形与一次性提示**条（`teamLogin` / `teamLogout` 回执携 `notice?` / `revokeDelivered?`——同名冲突 ∥ 吊销未达句卡内就地提示；`teamStatus` 零提示字段）。**零新语义**（父侧裁定直接导出项）。明细 = 批档 §2 实施期修复块。
 

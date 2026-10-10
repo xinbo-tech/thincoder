@@ -310,7 +310,7 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 - **回执形与一次性提示（实施期设计相抵修复——2026-10-10）**：`team:login` 回执 `{ ok, reason?, notice? }` ∥ `team:logout` 回执 `{ ok, revokeDelivered? }`（形单源 = `docs/desktop/design/IPC.md` §2 团队族行）；
   `notice` 在场（`"manual-name-conflict"`）⇒ 段内就地提示「已存在同名 provider「team」——未自动添加；请改名或删除后重登」（登录当刻）∥ `revokeDelivered === false`（缺席 = true）⇒ 段内就地提示「服务端吊销未达」（退出当刻）——两句逐字同句（`docs/core/design/TEAM.md` §2.5）；
   两提示 = 一次性事件（登录/退出当刻就地显示）——`team:status` 复读不带提示字段。
-- **草稿保真（#604 口径）**：地址/用户名现存值重建保留；**密码恒不保真**（重建即清空——安全面有意）；写失败 ⇒ 就地错误行（三句逐字同——`TEAM.md` §2.5）。
+- **草稿保真（#604 口径）**：地址/用户名现存值重建保留；**密码恒不保真**（重建即清空——安全面有意）；写失败 ⇒ 就地错误行（网络不可达 ∥ 用户名或密码错误 ∥ 登录尝试过于频繁 ∥ 本机配置写入失败——四句逐字同——`TEAM.md` §2.5）。
 
 ## 3. 文件账（本域）
 
@@ -552,6 +552,8 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 （上列三行全文已迁讫（CG ∥ CH ∥ DH）；§10 本域余行（CT ∥ CV ∥ CX ∥ CY ∥ DB ∥ DD② 等他域行）留 `docs/desktop/design/PROJECT.md` §10 原址。）
 
 ## 变更记录
+
+- 2026-10-10（**team-login-client-access 批（B1）· 实施期档-码差一修复（`write_failed` 补设计）· eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212；父侧裁定 = 保留第四值并补设计）：**§2.21** 写失败错误行出词补第四句「本机配置写入失败」（四句逐字同——单源 = `docs/core/design/TEAM.md` §2.5）。**零新语义**（父侧裁定直接导出项）。明细 = 批档 §2 实施期修复块。
 
 - 2026-10-10（**team-login-client-access 批（B1）· 实施期设计相抵修复 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212）：**§2.21** 补**回执形与一次性提示**条（`team:login` 回执 `{ ok, reason?, notice? }` ∥ `team:logout` 回执 `{ ok, revokeDelivered? }`——同名冲突 ∥ 吊销未达句段内就地提示；`team:status` 零提示字段）。**零新语义**（父侧裁定直接导出项）。明细 = 批档 §2 实施期修复块。
 
