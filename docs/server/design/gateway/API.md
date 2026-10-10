@@ -114,6 +114,7 @@
 ### 2.5 沙盒控制台面（admin——server-exec-sandbox 批；机制全文 = `sandbox/SANDBOX.md` §3/§8）
 
 （端点族 = `/api/admin/sandbox/*`；判权 = `requireAdmin` 口径——`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401；错误形 = §3 全码 + `sandbox_unavailable`；**节点/容器面（runner-admin-console 批）**：引擎失败 ⇒ 502 `upstream_error`（消息 = 逐句人话 + 引擎原文）∥ 容器/节点不存在 ⇒ 404 ∥ 形非法/重名/镜像缺/名占用 ⇒ 400（零新码）；
+**容器面补齐/镜像族（sandbox-docker-admin 批增补——#1265）**：读三件（详情/日志/用量）读类 3s ∥ 重启/强杀动作类 15s ∥ 拉取超时 10 分钟；强杀未运行（409）∥ 拉取失败（非 2xx ∥ 流内 `error` 两形）∥ 镜像被引用（409）⇒ 400（零新码）；
 **托管接入面（runner-admin-console 批增补——#1236/#1237）**：起跑异步（200 先于执行完——进度经读时轮询）∥ 仅 400/404（零新码）∥ 响应面零秘密字段（凭据永不回显）；写端点 JSON 型门同 §1 前言）
 
 | 方法 + 路径 | 语义 |
@@ -125,6 +126,14 @@
 | `POST /api/admin/sandbox/runners/:id/containers` | 创建容器（三件）：`{ name, image, volume? }` ⇒ `POST …/containers/create?name=<名>`（体 = `{ Image, HostConfig: { Binds: ["<卷>:/workspace"] } }`——卷缺 ⇒ 省略 `HostConfig`）⇒ 200 `{ container: { id, name, image, state: "created" } }` + 审计行（`container_create`）；引擎 404（无此镜像）∥ 409（名占用）⇒ 400（含引擎原文）；不可达 ⇒ 502 |
 | `POST /api/admin/sandbox/runners/:id/containers/:containerId/start` ∥ `…/stop` | 启动 ∥ 停止：`POST …/containers/{id}/start` ∥ `…/stop`（`t` 不带 = 引擎缺省 10s）——204 ⇒ 200 `{ ok: true, id }`；**304（已启/已停）⇒ 幂等成功**；404 ⇒ 404 `not_found`；余 ⇒ 502；审计行（`container_start` ∥ `container_stop`） |
 | `DELETE /api/admin/sandbox/runners/:id/containers/:containerId` | 删除容器：`DELETE …/containers/{id}?force=1`（运行中强停强删；**卷不随删**）——204 ⇒ 200；404/502 同上；审计行（`container_delete`） |
+| `GET /api/admin/sandbox/runners/:id/containers/:containerId` | 容器详情（读时读 `GET …/containers/{id}/json`）：`{ container: { id, name, image, state, status, created, startedAt, finishedAt, restartCount, command: { entrypoint, cmd }, env, mounts: [{ type, source, destination, mode, rw }], ports: [{ port, hostIp, hostPort }] } }`（端口未映射 ⇒ hostIp/hostPort = null）；引擎 404 ⇒ 404 `not_found`；不可达 ⇒ 502；**零审计**（读动作） |
+| `GET /api/admin/sandbox/runners/:id/containers/:containerId/logs?tail=N` | 容器日志：`tail` 缺省 200（范围 1–2000；越界/非数 ⇒ 400）⇒ 引擎 `logs?stdout=1&stderr=1&tail=N`（非 TTY = 8 字节帧头多路复用 ⇒ 解复用后输出；文本截断 256 KiB）⇒ `{ logs, truncated, tail }`；404/502 同上；零审计（读动作） |
+| `POST /api/admin/sandbox/runners/:id/containers/:containerId/restart` | 重启：`POST …/containers/{id}/restart`（`t` 不带 = 引擎缺省 10s）⇒ 204 ⇒ 200 `{ ok: true, id }`；404 ⇒ 404；余 ⇒ 502；审计行（`container_restart`） |
+| `POST /api/admin/sandbox/runners/:id/containers/:containerId/kill` | 强杀（SIGKILL）：`POST …/containers/{id}/kill` ⇒ 204 ⇒ 200；**引擎 409（未运行）⇒ 400 人话**（非幂等成功——≠ stop 的 304）；404 ⇒ 404；余 ⇒ 502；审计行（`container_kill`） |
+| `GET /api/admin/sandbox/runners/:id/containers/:containerId/stats` | 用量（读时读两并发）：`stats?stream=false&one-shot=true`（CPU/内存）+ `json?size=1`（磁盘）⇒ `{ usage: { cpuPercent, memUsed, memLimit, diskRw, diskRoot, sampledAt } }`（`cpuPercent` = `cpuΔ/systemΔ × 在线 CPU 数 × 100`；一次采样基线不足 ⇒ null）；404/502 同上；零审计 |
+| `GET /api/admin/sandbox/runners/:id/images` | 镜像列表（读时读 `GET …/images/json`）：`{ images: [{ id, tags, size, created }] }`（`RepoTags` 缺/null ⇒ `[]`）；不可达 ⇒ 502；零审计 |
+| `POST /api/admin/sandbox/runners/:id/images/pull` | 拉取：`{ image }`（形 = `名[:标签]`——缺省 `latest`；含 `@` ⇒ 400）⇒ `POST …/images/create?fromImage=<名>&tag=<标签>`（**超时 10 分钟**）⇒ 200 `{ ok: true, image, tag }`；失败（引擎非 2xx ∥ 200 流内 `error`）⇒ 400 携引擎原文；不可达/超时 ⇒ 502；审计行（`image_pull`） |
+| `DELETE /api/admin/sandbox/runners/:id/images` | 删除镜像：`{ ref, force? }`（`ref` = 镜像 id 或 `名:标签`——含空白/`?`/`#`/`%` ⇒ 400；**走请求体**——引用字符集含 `/`/`:`）⇒ `DELETE …/images/<ref>?force=<0|1>`（缺省 0）⇒ 200 `{ ok: true, ref }`；404（无此镜像）⇒ 404；**409（被容器引用/多标签）⇒ 400 人话 + 处置句**；余 ⇒ 502；审计行（`image_delete`——detail 携 force） |
 | `GET/POST /api/admin/sandbox/workspaces` | 列表（名/负责人/绑定节点/盒状态/dirty/快照/资源覆写）∥ 创建 `{ name, ownerMemberId, limits? }` ⇒ 绑定节点 + key 签发 + 建盒（控制面直调 Docker API——`sandbox/SANDBOX.md` §1；`limits` = 初始覆写——缺省 `{}`） |
 | `PATCH /api/admin/sandbox/workspaces/:id` | 资源档覆写：`{ limits: { cpus ∥ memMb ∥ pids ∥ diskMb ∥ idleTtlMinutes ∥ wallclockTtlHours } }`——键级合并（出现键 = 应用；值 `null` = 删键回落全局默认）；校验不过 ⇒ 400（库零变）；**生效 = 下次建盒/重建**（运行中盒零触——容器旗不可热改）；不回队指令 |
 | `POST /api/admin/sandbox/workspaces/:id/:action` | 动作：`start` ∥ `stop` ∥ `destroy`（二次确认旗）∥ `rotate-key` ∥ `restore`（快照恢复）——入 `sandbox_tasks` 队列（执行机制随重做批定形） |
@@ -161,7 +170,7 @@
 
 - **流帧**（每行一帧 JSON；headers = `Content-Type: application/x-ndjson; charset=utf-8` ∥ `Cache-Control: no-store`；流中失败 = `end` 帧——headers 已发，不再走信封）：
   - `{ "type": "delta", "text": "…" }`——模型文本增量（核 `onToken`）；
-  - `{ "type": "call", "id": "…", "name": "…", "args": { … } }`——工具调用开始（参数摘要 ≤500 字——掩蔽后）；
+  - `{ "type": "call", "id": "…", "name": "…", "args": "…" }`——工具调用开始（`args` = **字符串**（参数摘要——JSON 序列化 ⇒ 掩蔽后截断 ≤500 字；恒为字符串，非对象））；
   - `{ "type": "result", "id": "…", "ok": true, "summary": "…" }`——工具结果摘要（≤300 字——掩蔽后）；
   - `{ "type": "end", "status": "succeeded" | "failed", "reason": "…"? }`——回合终态（`failed` 原因 = 人话：预算超限 ∥ 模型错误 ∥ 空回合）。
 - **执行不依赖连接**（断连照跑到终态——落库单源；重读详情即全量）；重启恢复（`running` ⇒ `idle` + notice + 审计）在装配期执行（无端点）。
@@ -365,3 +374,5 @@
 - 2026-10-10（**runner-admin-console 批 · A 批最小切片设计 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 19:59 令）：§2.5 运行面行重写（读时探活形）+ 添/删节点行收正 + **增容器四行**（列表 ∥ 创建三件 ∥ 启/停 ∥ 删——引擎请求/映射逐项）∥ §2.5 前括注补节点/容器面错误形（502/404/400——零新码）∥ §4 `errors.mjs` 行补本批 ±0 ∥ §5 沙盒行补最小切片判据指针；同源随动 = `sandbox/SANDBOX.md` §3 ∥ `store/STORE.md` §2 v12 段 ∥ `webui/WEBUI.md` §2.8①。**产品码零触（设计轮）**。
 - 2026-10-10（**runner-admin-console 批 · 托管接入（管理面 agent）设计 · eng-designer**——承批档 §2 · 台账 #1236/#1237；用户 22:19–22:29 四句 + 15:00/15:02 裁）：§2.5 前括注补托管接入面语义（异步起跑 ∥ 零新码 ∥ 零秘密回显）+ **增四行**（起 ∥ 列表 ∥ 详情 ∥ 撤销凭据）∥ §5 增托管接入判据行；同源随动 = `sandbox/SANDBOX.md` §3 ∥ `agent/ADMIN-AGENT.md` ∥ `store/STORE.md` §2 v13 段 ∥ `webui/WEBUI.md` §2.8①。**产品码零触（设计轮）**。
 - 2026-10-11（**admin-agent-chat 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-11-admin-agent-chat.md` §1 · 台账 #1254；需求 §5「两个 chat 界面」②④）：§1 路由族表增管理面 agent 面行（四端点——NDJSON 流）∥ **增 §2.8**（会话面四端点表 + NDJSON 四帧形（`delta`/`call`/`result`/`end`）∥ 执行不依赖连接 ∥ 流前信封/流中 `end` 帧分界 ∥ 重启恢复在装配期）∥ §4 小计补 ±0 条（会话面四端点 = agent 域档组——本表不列）∥ §5 增判据行 ∥ §7 增用例指针行 ∥ §8 增不做面指针；机制全文 = `agent/ADMIN-AGENT.md` §11 ∥ 存储 = `store/STORE.md` §2 v14 段 ∥ 审计 = `accounts/ACCOUNTS.md` §2.1。**产品码零触（设计轮）**。
+- 2026-10-11（**admin-agent-chat 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-11-admin-agent-chat.md` §3 轮次 1 之 1）：§2.8 流帧 `call` 帧 `args` 钉死为**字符串**（参数摘要——JSON 序列化 ⇒ 掩蔽后截断 ≤500 字；非对象——与 `agent/ADMIN-AGENT.md` §11 单源逐字同拍）。**零新语义**（评审发现直接导出项）。
+- 2026-10-11（**sandbox-docker-admin 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-11-sandbox-docker-admin.md` §1 · 台账 #1265；用户 04:36/04:39 两族同批）：§2.5 前括注补容器面补齐/镜像族错误形句（读三件 3s ∥ 重启/强杀 15s ∥ 拉取 10 分钟；三形 ⇒ 400）+ **增八行**（容器详情 ∥ 日志 ∥ 重启 ∥ 强杀 ∥ 用量 ∥ 镜像列表 ∥ 拉取 ∥ 删除镜像）；同源随动 = `sandbox/SANDBOX.md` §3（本批块）∥ `webui/WEBUI.md` §2.8① ∥ `accounts/ACCOUNTS.md` §2.1（kind 面）。**产品码零触（设计轮）**。
