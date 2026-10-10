@@ -13,7 +13,7 @@ import {
   providerStatus as settingsProviderStatus, saveProviderKey as settingsSaveProviderKey,
   deleteProviderKey as settingsDeleteProviderKey, saveMcpServer as settingsSaveMcpServer,
   deleteMcpServer as settingsDeleteMcpServer, pushStatus as settingsPushStatus, fullStatus,
-  agentSettings, proxySettings, shellCandidates, websearchSettings,
+  agentSettings, proxySettings, shellCandidates, websearchSettings, pushTeamStatus as settingsPushTeamStatus,
 } from "./settings.mjs"
 import { _cwd } from "./panel-messages.mjs"
 import { loadRaw } from "@thincoder/core/config-io.mjs"
@@ -95,6 +95,8 @@ export async function pushSettingsLight(panel) {
   panel._panel?.webview.postMessage({ type: "proxySettings", settings: proxySettings() })
   panel._panel?.webview.postMessage({ type: "websearchSettings", settings: websearchSettings() })
   panel._panel?.webview.postMessage({ type: "shellCandidates", candidates: await shellCandidates(), current: loadRaw().shell ?? null })
+  // B1（`SETTINGS.md` §2.20 读面）：团队态随快照族下发（agentSettings 仍居末位——打开等待器唯一触发拍不变量保持）
+  settingsPushTeamStatus(panel._panel)
   panel._panel?.webview.postMessage({ type: "agentSettings", settings: agentSettings(panel._agentSettingsSession()) })
 }
 
@@ -106,6 +108,7 @@ export async function pushSettings(panel) {
   panel._panel?.webview.postMessage({ type: "proxySettings", settings: proxySettings() })
   panel._panel?.webview.postMessage({ type: "websearchSettings", settings: websearchSettings() })
   panel._panel?.webview.postMessage({ type: "shellCandidates", candidates, current: loadRaw().shell ?? null })
+  settingsPushTeamStatus(panel._panel) // B1：团队态（全量推送拍同携——快照族一致）
   panel._pushMcpStatus()
   panel._pushIndexStatus()
 }

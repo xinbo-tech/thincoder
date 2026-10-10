@@ -21,8 +21,9 @@
 import { loadRaw } from "@thincoder/core/config-io.mjs"
 import { loadMcpServers } from "../config-mcp.mjs"
 import { removeProviderFlow, setKeyFlow, probeProviderAdmission, ui } from "./provider-flows.mjs"
-import { handleAddProvider as persistAddProvider, handleRemoveProvider as persistRemoveProvider, handleSetProviderProxy as persistSetProviderProxy, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection, postProviderError } from "./settings.mjs"
+import { handleAddProvider as persistAddProvider, handleRemoveProvider as persistRemoveProvider, handleSetProviderProxy as persistSetProviderProxy, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection, postProviderError, pushTeamStatus } from "./settings.mjs"
 import { setSlotAdvisorGuard, setSlotEngineering } from "./session-io.mjs"
+import { teamLogin, teamLogout } from "./team.mjs"
 import { _cwd } from "./panel-messages.mjs"
 
 /** 迁出自 `panel-messages.mjs` 的 case "saveProviderKey"（#695：写结果捕获——冲突 ⇒ `providers` 段失败面）。
@@ -250,4 +251,31 @@ export function handleSaveProxySettings(panel, msg) {
 export async function handleTestProxy(panel, msg) {
   const result = await testProxyConnection(msg.uri)
   panel._panel?.webview.postMessage({ type: "proxyTestResult", result })
+}
+
+// ─── B1（团队族——登录 ∥ 退出；机制单源 = `docs/core/design/TEAM.md` §2 ∥ 端面 = `SETTINGS.md` §2.20）───
+
+/** case "teamLogin"（webview → host）：三字段 ⇒ 核 `teamLogin`（端侧零自写盘）⇒ 成 ⇒ 推 `teamStatus`
+ *  + `providerStatus`（派生条目入列表——Providers 卡随动）⇒ 回执 `teamLoginResult` `{ ok, notice? }` ∥
+ *  `{ ok:false, reason }`（码不携文——出词归 webview i18n——§2.20 回执形）。回执殿后：推送先落（卡面
+ *  转新态）⇒ 一次性提示（同名手工条目冲突）就地显于新态卡面（`teamStatus` 零提示字段）。 */
+export async function handleTeamLogin(panel, msg) {
+  const r = await teamLogin({ server: msg.server, username: msg.username, password: msg.password })
+  if (r.ok) {
+    pushTeamStatus(panel._panel)
+    panel._pushStatus()
+  }
+  panel._panel?.webview.postMessage({ type: "teamLoginResult", ...r })
+}
+
+/** case "teamLogout"（webview → host）：核 `teamLogout`（吊销 best-effort——网络失败照清本地）⇒ 成 ⇒
+ *  推 `teamStatus` + `providerStatus`（派生条目退场——无 key ⇒ 列表隐藏——`TEAM.md` §2.4）⇒ 回执
+ *  `teamLogoutResult` `{ ok, revokeDelivered? }`（缺席 = true；false ⇒ webview 卡内就地提示）。 */
+export async function handleTeamLogout(panel) {
+  const r = await teamLogout()
+  if (r.ok) {
+    pushTeamStatus(panel._panel)
+    panel._pushStatus()
+  }
+  panel._panel?.webview.postMessage({ type: "teamLogoutResult", ...r })
 }

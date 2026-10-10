@@ -20,6 +20,7 @@ import { MASKED } from "@thincoder/core/agent-tools/settings.mjs"
 import { effortEnumForModel } from "../specs.mjs"
 import { loadModelPrefs, loadSlot } from "./session-io.mjs"
 import { _probeWindow, _probeBatch, _retryFailed } from "./provider-probe-window.mjs"
+import { teamStatus } from "./team.mjs"
 
 /** Agent settings merged view（W16：自 config-io 迁入——本端面板/运行读面）。默认值 = 核
  *  `DEFAULTS.agent`（单一来源）；compactThreshold 保持本端**显示口径**：null = auto
@@ -81,6 +82,10 @@ export function providerStatus() {
   for (const name of providerNames()) {
     const configured = isProviderConfigured(name)
     const entry = providers[name] || {}
+    // B1（隐藏判据单源 = `docs/core/design/TEAM.md` §2.4 ∥ `PROVIDER.md` §6.25）：派生条目
+    // 无 key ⇒ 从 provider 列表/模型候选面隐藏（四消费面各一处——本端 = 本处）；登录态
+    // （有 key）照常在场（key 掩码显示）；手工条目（非 derived）零涉。
+    if (entry.derived === true && !configured) continue
     const admission = admissionOf(name)
     status[name] = {
       configured, masked: configured ? MASKED : "",
@@ -344,6 +349,13 @@ export function pushStatus(panel) {
   const ps = s.providerState
   const keyOk = !!ps && ps.state !== "invalid" && !ps.invalidReason
   panel?.webview.postMessage({ type: "providerStatus", keyOk, status: s })
+}
+
+/** 团队态推送（`docs/vsc/design/SETTINGS.md` §2.20 读面——宿主 → webview）：投影四键直发
+ *  `{ loggedIn, server, member, label }`（渲染面只读）；推送点 = 打开/保存拍快照族
+ *  （`panel-settings-push.mjs`）+ 登录/退出成拍（`handleTeamLogin` / `handleTeamLogout`）。 */
+export function pushTeamStatus(panel) {
+  panel?.webview.postMessage({ type: "teamStatus", ...teamStatus() })
 }
 
 // MODEL-MERGE-SESSION：最近一次 models 载荷缓存（loadSession 复用既有 "models" 消息把

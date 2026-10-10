@@ -16,6 +16,7 @@ import { agentCardHtml, consultAdvisorCardHtml, bindAgentControls, updateAgentSe
 import { installToolsKeyHandlers, toolsCardHtml, bindToolsControls, updateWebsearchSettings, updateIndexStatus } from "./settings-tools.js"
 import { renderMcpList, updateMcpTools, updateMcpTestResult } from "./settings-mcp.js"
 import { envCardHtml, bindEnvControls, updateShellCandidates, updateProxySettings, updateProxyTestResult } from "./settings-env.js"
+import { teamCardHtml, bindTeamControls } from "./settings-team.js"
 
 // openSettings refresh (GitHub #3): one-shot callbacks waiting for the next agentSettings
 // push, plus their timeout-fallback timers (see openSettings / notifyAgentSettingsRefreshed).
@@ -184,7 +185,8 @@ function closeSettings() {
  *  Binding order matches the pre-split buildSettings exactly. */
 function buildSettings() {
   const body = document.getElementById("settings-body")
-  body.innerHTML = providersCardHtml() + agentCardHtml() + consultAdvisorCardHtml() + toolsCardHtml() + envCardHtml()
+  // 第 6 卡「团队」（B1 批——序尾追加，不重排前五卡；`SETTINGS.md` §1 六卡）
+  body.innerHTML = providersCardHtml() + agentCardHtml() + consultAdvisorCardHtml() + toolsCardHtml() + envCardHtml() + teamCardHtml()
 
   // Card-row bindings: default-model menu button + provider-row ✕ delete buttons
   bindAddProviderForm()
@@ -194,6 +196,8 @@ function buildSettings() {
   bindEnvControls()
   // MCP form/list, index build, MCP status request
   bindToolsControls()
+  // 团队卡两钮（登录 ∥ 退出——B1 批）
+  bindTeamControls()
   // #640：失败面补渲（关面板时落槽的一条在开面板建面后补显）
   renderSettingsError()
 }

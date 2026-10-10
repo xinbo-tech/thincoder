@@ -144,6 +144,25 @@
 **机检读数** = `node scripts/doc-check.mjs` **EXIT 0**——汇总 = 候选 55509 · 悬空 0 · 注记豁免 320 · 拟新增 27 · 迁移期引文 326 · 声明源缺位 0；行宽 = 源域无 >300 字符单行（区带豁免在效）；行数面差异 6 条（报告态——非本批面）；
 **未动（报告——非本轮授权面）** = 桌面 `docs/desktop/design/SETTINGS.md` §3.2 两处 i18n 估数（`+≈12 键` ∥ `156 ⇒ ≈168`——与 VSC 同理应 +1 顺正（+≈13 ∥ ≈169）；本轮零动待父侧同步）。
 
+### B1 设计面登记与估数补齐（修复轮 · 2026-10-10 · eng-designer）
+
+**号** = ① 桌面 `docs/desktop/design/SETTINGS.md` §3.2 两处 i18n 估数未随第四句顺正（`156 ⇒ ≈168` ∥ `+≈12 键`——#120 报告未动项）；② 设计 §4 VSC 表未列 `thincoder-vscode/webview/chat-messages.js`（舱 C 上抛）；③ 本批五新消息无 `docs/vsc/design/WEBVIEW-PROTOCOL.md` §3.2 行（舱 C 上抛）；④ 判据位「本机配置写盘失败」与句面「本机配置写入失败」一字微差（#120 披露）。
+
+**由** = 第四句 +≈1 键顺正欠账 ∥ `chat-messages.js` = webview 唯一消息分发表（`window.addEventListener("message")` 单点、三 `case` 接线 ≈+5）∥ §3.2「新增／变更一律入本节登记表」纪律 ∥ 用户可见句 = 「本机配置写入失败」（判据侧随正——同一档内一致）。
+
+**落点（号 → 改动，行位以现盘为准）**：
+1 → 桌面 `SETTINGS.md` §3.2 本批块两处——`156 ⇒ ≈169` ∥ `+≈13 键`（与 `TEAM.md` §4 同拍）。
+2 → **落点校正**：派单写 `docs/vsc/design/SETTINGS.md` §4——实查该档 §4 = 不并项与历史沿革、全档无受影响文件表；「设计 §4 VSC 表」（舱 C 披露原文）按盘面 = `docs/core/design/TEAM.md` §4（受影响文件与行数预算）——VSC 块 +`webview/chat-messages.js` 行（**271 ⇒ ≈276**——三 `case` 接线 ≈+5）。
+3 → `WEBVIEW-PROTOCOL.md` §3.2 **+行 27–31**（`teamStatus` ∥ `teamLogin` ∥ `teamLogout` ∥ `teamLoginResult` ∥ `teamLogoutResult`——方向 / 载荷 / 回执面在册）+ 计数三处同拍（标题 ∥ 纪律行 ∥ §7 D-P11）。
+4 → `TEAM.md` §2.5 `reason` 判据句 ∥ §6 E1——「本机配置写盘失败」⇒「本机配置写入失败」（与句面同字）。
++ 三档变更记录一行（桌面 `SETTINGS.md` ∥ `TEAM.md` ∥ `WEBVIEW-PROTOCOL.md`）。
+
+**零新语义**（父侧派发项直接导出）：产品码零触 ∥ `docs/desktop/design/IPC.md` 零动 ∥ `TEAM.md` §2 机制句零动（仅 ④ 同字面）∥ 零新消息 / 字段 ∥ §12 / §13 对表行随实施后重出（在册）。
+
+**机检读数** = `node scripts/doc-check.mjs` **EXIT 0**——汇总 = 候选 55548 · 悬空 0 · 注记豁免 320 · 拟新增 27 · 迁移期引文 326 · 声明源缺位 0；行宽 = 源域无 >300 字符单行（区带豁免在效：变更记录 ∥ 历史沿革）；行数面 = 差异 11 条（报告态——含在飞实施读数漂移）。首跑悬空 1（本轮自修：新增行 27 发射点短形路径 ⇒ 全前缀 `thincoder-vscode/src/extension/settings.mjs`——复跑 0）。
+
+**未动（报告——非本轮四项）**：① `TEAM.md` §2.5 域句括注「（本机配置落盘失败）」= 语义注（非句面用词）——未动（如需同字 ⇒ 示下）；② 桌面 §3.2 `mount-settings.mjs` **264 ⇒ ≈269** 与 `TEAM.md` §4 同档行 **264 ⇒ ≈268** 估数差一；③ `TEAM.md` §4 本批 VSC 两行与在飞实装读数存差（`panel-messages.mjs`「+3 case」vs 现盘两 `case` ∥ `panel-settings-push.mjs`「teamStatus 推送」vs 现盘 push 点住 `settings.mjs`）——#115 在飞、未证，供收口轮核；④ 批档 §2 初稿「三、受影响文件」VSC 行同缺 `chat-messages.js`——非本轮四处，供父侧择批。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -226,5 +245,56 @@ VERDICT: pass
 - **内部分歧审计（只读 explore · 阻塞 ×1）**：结论 = **零分歧**（四类 PARTIAL ∥ SILENT-SIMPLIFICATION ∥ DOC-DRIFT ∥ OUT-OF-LIST 各 0）；独立复证 = 五档 `node --check` 全绿；限制如实登记 = 该席位无执行面 ⇒ 未复跑测试（「全绿」为提交方实跑读数 + 断言文本实读）。
 - **代码评审（advisor · code ×1 · 阻塞）**：**VERDICT: pass**（🟡1 + 🔵3，无 🔴）。fix round（评审后就地 ×2——均为评审自身建议项，随即复跑）：① `routes.mjs` 头注链路序收正（守卫先行 = 实装序）；② `team.mjs` 显式 `label` 同口径裁剪 ≤40。登记不动作两条：🟡 `config.mjs` 越 500 软线（档面已注越线 + 拆分预案——非 must-fix）∥ 🔵 行数预算漂移（`team.mjs` 195 ∥ 批内件 306——收口/回填轮按实读收正）。
 - **终态 = clean**（审计零分歧 ∥ 评审 pass ∥ 评审后修正两处已复跑读数在册）。
+
+### 5.C · 舱 C（VSC）· eng-coder · 2026-10-10
+
+**范围**：派发计划 C 舱——VSC 设置面第 6 卡「团队」（两态：登录表单 ∥ 已登录态）+ 插件团队转口 + 登录/退出消息链 + 派生条目隐藏判据（`providerStatus` 一处过滤）+ 双语文案（14 键/表）。含表外必要接线一件（`webview/chat-messages.js`——消息分发单点，已上抛、父侧裁定继续实装、设计侧随补 #121）。核 ∥ server ∥ CLI ∥ 桌面 ∥ -ends 批内件 = 其他舱；设计档正文（`WEBVIEW-PROTOCOL.md` §3.2 五行登记 ∥ 受影响文件表补登）= 设计侧 #121，本舱零触。
+
+**交付（八档 + 表外一件）**：
+
+| # | 档 | 动作 | 实读行数（物理行口径） | 对设计预算 |
+|---|---|---|---|---|
+| 1 | `thincoder-vscode/src/extension/team.mjs` | 新建（核转口：`teamStatus`/`teamLogin`/`teamLogout`——零状态零副作用） | **34** | ≈80（三处理体实际落 `panel-messages-settings.mjs`） |
+| 2 | `thincoder-vscode/webview/settings-team.js` | 新建（第 6 卡：两态渲染 ∥ 控件绑定 ∥ 回执出词 ∥ 就地重绘两门 ∥ 密码面） | **141** | ≈110 |
+| 3 | `thincoder-vscode/src/extension/settings.mjs` | +import +隐藏判据（一处过滤）+ `pushTeamStatus` | 408 ⇒ **420** | ≈420 ✓ |
+| 4 | `thincoder-vscode/src/extension/panel-settings-push.mjs` | +import +两条推送链调用（快照族拍） | 121 ⇒ **124** | ≈130 |
+| 5 | `thincoder-vscode/src/extension/panel-messages-settings.mjs` | +import +`handleTeamLogin` ∥ `handleTeamLogout`（成 ⇒ 先推 `teamStatus` + `providerStatus` 再发回执） | 253 ⇒ **281** | ≈270 |
+| 6 | `thincoder-vscode/src/extension/panel-messages.mjs` | +import 名 +2 case（`teamLogin` ∥ `teamLogout`——读面纯推送，无上行请求） | 385 ⇒ **389** | ≈390（实为 2 case，设计估 3） |
+| 7 | `thincoder-vscode/webview/settings.js` | +import +第 6 卡序尾合成 + `bindTeamControls()` | 199 ⇒ **203** | ≈205 ✓ |
+| 8 | `thincoder-vscode/locales/{zh,en}.json` | +14 键/表（未登录句 ∥ 状态行 ∥ 四失败句 ∥ 两提示句 ∥ 六标签） | 296 ⇒ **310/310** | ≈311（+≈15 估——实 14：逐字句全在，差 1 为估差） |
+| 9 | `thincoder-vscode/webview/chat-messages.js`（表外·已披露） | +import 三函数 +3 case（`teamStatus`/`teamLoginResult`/`teamLogoutResult`） | 272 ⇒ **278** | 设计无预算行（#121 随补） |
+
+**决策透明表（本舱裁量面）**：
+
+| # | 决策点 | 取法 | 依据 |
+|---|---|---|---|
+| 1 | 团队态推送点 | `pushTeamStatus(panel)` 住 `settings.mjs`（vscode panel 级，镜像 `pushStatus`）；`panel-settings-push.mjs` 两条链调用（light 中置 agentSettings 之前 ∥ full 中置 shellCandidates 后） | §2.20 读面 = 推送；agentSettings 末位 = 打开等待器唯一触发拍不变量 |
+| 2 | 无 `getTeamStatus` 上行 | 读面纯推送（快照族拍 + 登录/退出成拍）——不新增第三上行 | §2.20 写面只列 `teamLogin`/`teamLogout` 两条上行 |
+| 3 | 端侧零自写盘 | handler 直调 `./team.mjs`（纯转口核）——不触 `config-io` 写面 | §2.20「端侧零自写盘」 |
+| 4 | 成拍推送序 | 先推 `teamStatus` + `providerStatus` **再**发回执（同拍三消息序） | 一次性提示须落新态卡面（登录/退出当刻） |
+| 5 | 隐藏判据位置 | `providerStatus()` 循环内 `if (entry.derived === true && !configured) continue`（`labels` 同循环后段同滤） | `TEAM.md` §2.4「四消费面各一处」——VSC = `providerStatus` |
+| 6 | 快照载体 | 档内模块级 `_teamStatus`（父侧已裁 `settings-state.js` 零改） | 免动 `settings-state.js`（评审 🔵④登记两载体并存） |
+| 7 | 重绘两门 | 变更门（JSON 比对，镜像 `updateProviderStatus`）+ 聚焦跳绘门（U-S10 同判）；面板未开 ⇒ 零动作 | §2.20 重建制 + U-S10（评审 🔵⑤登记收敛条件） |
+| 8 | 密码面 | 零 trim 上行 ∥ 零缓存 ∥ 重建即清（重绘恒重建 DOM） | §2.20 密码面 |
+| 9 | 请求容错 | 面板未开 ∥ 元素缺席 ⇒ 可选链零抛错（守卫容 `document.activeElement` 为 undefined） | 防推送早于建面（smoke 桩面无 activeElement） |
+
+**验证读数（全实跑）**：
+- 语法：`node --check` 八档全 OK（`team.mjs` ∥ `settings.mjs` ∥ `panel-settings-push.mjs` ∥ `panel-messages-settings.mjs` ∥ `panel-messages.mjs` ∥ `settings-team.js` ∥ `settings.js` ∥ `chat-messages.js`）；两 locale `JSON.parse` 过 + 键集对账 308/308 同集（14 键同位）。
+- 逐字对账：7 条设计句（未登录句 ∥ 四失败句 ∥ 两提示句）对 `docs/core/design/TEAM.md` ∥ `docs/vsc/design/SETTINGS.md` 原文 `includes` 核——**7/7 逐字相等**。
+- 临时区探针 **50/50 绿**（`.thincoder/tmp/b1-vsc-probe/probe.mjs`——诊断件，非批内件）：卡面/载荷/出词/守卫 26 ∥ 宿主链 20（登录三态 ∥ 退出两态 ∥ 隐藏判据两态 ∥ 消息序与盘面）∥ 接线源锁 4。
+- 既有 smoke 件：`test/smoke-settings.mjs` 现盘 **red**——崩点 `webview/settings-providers.js:191`（本批零改档）+ 该测试 document 桩缺 `querySelector`（测试件本批零改）⇒ **既有红，与本批零因果**（守卫线属 #1053 批 2026-10-09 落；smoke 上次触碰 2026-09-30）；补桩后同件 **SMOKE-OK 绿**（预载件 `.thincoder/tmp/b1-vsc-probe/preload-doc-queryselector.mjs`——仅测试时补桩，产品码零动）。补桩小修归父侧择批。
+- 未跑：仓套件（VSC 两清单现为空——按纪律归父侧收口拍）。
+
+**关键披露**：
+1. 表外必要接线 = `webview/chat-messages.js`（三 case 唯一落点）——已上抛、父裁「继续实装 + 设计侧随补」；如实披露即合规。
+2. 设计侧两项在途（#121）：`WEBVIEW-PROTOCOL.md` §3.2 五行登记 ∥ 受影响文件表补登（`chat-messages.js`）——本舱零触。
+3. 行数偏差（实读 ⇒ 预算）：`team.mjs` 34 ⇒ ≈80 ∥ `settings-team.js` 141 ⇒ ≈110 ∥ `panel-messages-settings.mjs` 281 ⇒ ≈270 ∥ `panel-settings-push.mjs` 124 ⇒ ≈130；均 < 500 硬限。
+4. 消息计数（面板估「+3 case」实为 2——读面无上行 request）∥ settings 处理体 2（设计估 +3）。
+5. designId：未随任务书到达本席 ⇒ 无值可回显（令牌值零字）。
+
+**审计与代码评审轮次与终态**：
+- **内部分歧审计（只读 explore · 阻塞 ×1）**：结论 = **零分歧**（PARTIAL ∥ SILENT-SIMPLIFICATION ∥ DOC-DRIFT ∥ OUT-OF-LIST 四类各 0）；独立复证 = 六档 `node --check` 全绿 + 逐字句/隐藏判据/消息链实读；限制如实登记 = 无执行面 ⇒ 未复跑测试；并独立复核出 smoke 既有红一条（与本批零因果——读数在册）。
+- **代码评审（advisor · code ×1）**：**VERDICT: pass**（🔴 0 ∥ 🟡 3 ∥ 🔵 3）。fix round = **0**（无 must-fix 项）：三 🟡 = ① 登录成拍不刷模型候选面（模型面唯一来源 = `fullStatus` 的 `models` 载荷——实现与 §2.20 写面一致，时点取舍归父侧/设计侧 ∥ 收口轮口径）② `WEBVIEW-PROTOCOL.md` §3.2 五行登记（设计侧 #121）③ `chat-messages.js` 表补登（设计侧 #121）；三 🔵 = ① 快照载体两制（`_teamStatus` vs `SS`）② 两门收敛条件未明示 ③ 两处行数读数 vs 设计估。
+- **终态 = clean**（审计零分歧 ∥ 评审 pass ∥ 零 must-fix ⇒ 零修正轮；评审后未再触产品码）。
 
 ## §6 验证与收口（父代理）

@@ -34,6 +34,9 @@ import { applyUiPrefs } from "./ui-prefs.js"
 import { applyBusyQueued } from "./queued-mark.js"
 // #1053（协议 §3.2 行 25）：密钥行保存受理回执消费位（`providerKeySaved` → 恢复静态行 + 闪徽标）
 import { onProviderKeySaved } from "./settings-providers.js"
+// B1（团队卡——B1 批）：态推送 + 两回执消费位（`teamStatus` / `teamLoginResult` / `teamLogoutResult`
+// ——形 ∥ 语义单源 = `SETTINGS.md` §2.20；回执码 → 词 = `settings-team.js` 内两表）
+import { updateTeamStatus, onTeamLoginResult, onTeamLogoutResult } from "./settings-team.js"
 
 /** 停滞轻显形重置点（WEBVIEW.md §4.7——2026-09-29 批 stall-indicator · 语义单源 = `docs/cli/design/TUI.md` §7.7）：
  *  三类可见输出事件命中 ⇒ 静默起算置现刻（① 流式 = `token` ∕ `reasoning`；② 工具面 = `toolCall` ∕ `toolOutput` ∕
@@ -158,6 +161,10 @@ export function initMessageLoop(deps) {
         break
       // #1053 密钥行保存受理回执（协议 §3.2 行 25——host 成功径才发；拒径零回执 ⇒ 零闪 ∥ 行不关）
       case "providerKeySaved": onProviderKeySaved(m.name); break
+      // B1（团队卡——消费位）：态推送（打开/保存拍 + 登录/退出成拍）+ 两回执（登录当刻 / 退出当刻）
+      case "teamStatus": updateTeamStatus(m); break
+      case "teamLoginResult": onTeamLoginResult(m); break
+      case "teamLogoutResult": onTeamLogoutResult(m); break
       case "autoApprove":      handleAutoApprove(m); break
       case "agentSettings":    handleAgentSettings(m, updateAgentSettings); notifyAgentSettingsRefreshed(); break
       // #875（协议 §3.2 行 23 · `WEBVIEW.md` §5.8）：视图偏好三键——应用 = `ui-prefs.js`
