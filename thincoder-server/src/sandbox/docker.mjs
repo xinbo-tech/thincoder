@@ -41,7 +41,7 @@ export function normalizeDockerAddress(raw) {
   const text = typeof raw === "string" ? raw.trim() : ""
   if (text === "") throw new Error("地址不可为空")
   if (/^https:/i.test(text)) throw new Error(`地址不收 https:（TLS 不做——内网明文 2375）：${text}`)
-  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(text) ? text : `http://${text}`
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(text) ? text : `http://${text}`
   let url
   try {
     url = new URL(withScheme)
