@@ -477,7 +477,7 @@ test("部署件结构：Dockerfile 壳形（预装本地 tgz ∥ PATH ∥ USER n
   assert.match(unit, /^ExecStart=\/opt\/thincoder-server\/\.npm-global\/bin\/thincoder-server --config \/opt\/thincoder-server\/config\.json$/m)
   assert.match(unit, /^Restart=always$/m)
   const batchFiles = (PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? [])
-  assert.equal(batchFiles.length, 39, `prepublishOnly 应列三十九件：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 42, `prepublishOnly 应列三十九件：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-06-server-auto-update.test.mjs"), "本批件应入列")
 })
 
@@ -493,6 +493,6 @@ test("依赖面：thincoder-server 全树 import 仅 node:/相对 ∥ package.js
     for (const match of text.matchAll(/\brequire\(\s*["']([^"']+)["']\s*\)/g)) specifiers.push([rel, match[1]])
   }
   assert.ok(specifiers.length >= 8)
-  for (const [rel, spec] of specifiers) assert.ok(spec.startsWith("node:") || spec.startsWith("."), `${rel} 出现非标准库 import：${spec}`)
-  assert.deepEqual(PKG.dependencies ?? {}, {})
+  for (const [rel, spec] of specifiers) assert.ok(spec.startsWith("node:") || spec.startsWith(".") || spec.startsWith("@thincoder/core"), `${rel} 出现非许可 import（仅 node: ∥ 相对 ∥ @thincoder/core——本仓包）：${spec}`)
+  assert.deepEqual(PKG.dependencies ?? {}, { "@thincoder/core": "^0.10.4" }, "dependencies 仅 @thincoder/core（本仓包——KD-SV-78；零第三方）")
 })

@@ -161,13 +161,13 @@ test("config：缺省值 ∥ env: 解析 ∥ 库路径归一 ∥ 0.0.0.0 告警"
 
 // ── ③ db 迁移链 ──────────────────────────────────────────────────────────────
 
-test("db：迁移链 ⇒ 八表 + 六索引 + user_version=10 ∥ 约束生效", () => {
+test("db：迁移链 ⇒ 八表 + 六索引 + user_version=13 ∥ 约束生效", () => {
   const db = DB.openDatabase(":memory:")
   try {
-    assert.equal(DB.SCHEMA_VERSION, 10)
-    assert.equal(DB.readVersion(db), 10)
+    assert.equal(DB.SCHEMA_VERSION, 13)
+    assert.equal(DB.readVersion(db), 13)
     const names = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row) => row.name)
-    for (const table of ["members", "api_keys", "sessions", "usage", "providers", "audit_events", "usage_daily", "quota_counters"]) assert.ok(names.includes(table), `缺表：${table}`)
+    for (const table of ["members", "api_keys", "sessions", "usage", "providers", "audit_events", "usage_daily", "quota_counters", "sandbox_workspaces", "sandbox_rules", "sandbox_pending", "sandbox_tasks", "sandbox_checkpoints", "sandbox_settings", "sandbox_runners", "sandbox_onboarding"]) assert.ok(names.includes(table), `缺表：${table}`)
     const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'").all()
     assert.equal(indexes.length, 6)
     assert.equal(db.prepare("PRAGMA foreign_keys").get().foreign_keys, 1)
@@ -183,7 +183,7 @@ test("db：迁移链 ⇒ 八表 + 六索引 + user_version=10 ∥ 约束生效",
       /CHECK/i,
     )
     // 幂等：同库再跑迁移 ⇒ 版本不变、不报错
-    assert.equal(DB.migrate(db), 10)
+    assert.equal(DB.migrate(db), 13)
   } finally {
     db.close()
   }
@@ -198,15 +198,15 @@ test("db：文件库重开幂等（旧库自动升 ∥ 数据保留）∥ 迁移
     first.close()
 
     const second = DB.openDatabase(file)
-    assert.equal(DB.readVersion(second), 10)
+    assert.equal(DB.readVersion(second), 13)
     assert.equal(second.prepare("SELECT count(*) AS n FROM members").get().n, 1)
 
     // 失败迁移：段内先建表再抛 ⇒ 整段回滚（表不落 ∥ 版本不动）
-    const failing = [...DB.MIGRATIONS, { v: 11, up: (handle) => { handle.exec("CREATE TABLE v11_probe (x INTEGER)"); throw new Error("boom") } }]
+    const failing = [...DB.MIGRATIONS, { v: 14, up: (handle) => { handle.exec("CREATE TABLE v14_probe (x INTEGER)"); throw new Error("boom") } }]
     try {
-      assert.throws(() => DB.migrate(second, { migrations: failing }), /迁移失败（v11）/)
-      assert.equal(DB.readVersion(second), 10)
-      assert.equal(second.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name = 'v11_probe'").get().n, 0)
+      assert.throws(() => DB.migrate(second, { migrations: failing }), /迁移失败（v14）/)
+      assert.equal(DB.readVersion(second), 13)
+      assert.equal(second.prepare("SELECT count(*) AS n FROM sqlite_master WHERE name = 'v14_probe'").get().n, 0)
     } finally {
       second.close()
     }
@@ -391,10 +391,10 @@ test("依赖面：全树 import 仅 node:/相对 ∥ package.json dependencies �
   }
   assert.ok(specifiers.length >= 7)
   for (const [rel, spec] of specifiers) {
-    assert.ok(spec.startsWith("node:") || spec.startsWith("."), `${rel} 出现非标准库 import：${spec}`)
+    assert.ok(spec.startsWith("node:") || spec.startsWith(".") || spec.startsWith("@thincoder/core"), `${rel} 出现非许可 import（仅 node: ∥ 相对 ∥ @thincoder/core——本仓包）：${spec}`)
   }
   const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"))
-  assert.deepEqual(pkg.dependencies ?? {}, {})
+  assert.deepEqual(pkg.dependencies ?? {}, { "@thincoder/core": "^0.10.4" }, "dependencies 仅 @thincoder/core（本仓包——KD-SV-78；零第三方）")
 })
 
 // ── ⑨ 入口冒烟（CLI 真实进程）───────────────────────────────────────────────

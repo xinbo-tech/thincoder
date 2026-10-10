@@ -148,7 +148,7 @@ test("① 保留集抽取：deepseek/kimi/vLLM 三形逐字段 ∥ ark 状态命
 test("② v7 迁移：空库直落 10 ∥ v6 库自动升 10（存量行得 '{}'）∥ 幂等 ∥ 新列常量默认在场 + rowToEntry 往返/坏 JSON", () => {
   const fresh = DB.openDatabase(":memory:")
   try {
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [10, 10])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [13, 13])
     const column = fresh.prepare("PRAGMA table_info(providers)").all().find((item) => item.name === "model_meta_json")
     assert.ok(column, "providers.model_meta_json 缺位")
     assert.deepEqual([column.type, column.notnull, column.dflt_value], ["TEXT", 1, "'{}'"]) // 常量默认 = '{}'（未存 = 无元数据）
@@ -165,10 +165,10 @@ test("② v7 迁移：空库直落 10 ∥ v6 库自动升 10（存量行得 '{}'
     legacy.close()
     const db = DB.openDatabase(file) // 启动自动升
     try {
-      assert.equal(DB.readVersion(db), 10)
+      assert.equal(DB.readVersion(db), 13)
       assert.equal(db.prepare("SELECT model_meta_json FROM providers WHERE name = 'old'").get().model_meta_json, "{}", "存量行即刻得 '{}'")
       // 幂等：再跑迁移链 ⇒ 版本不变 ∥ 存量值不动
-      assert.equal(DB.migrate(db), 10)
+      assert.equal(DB.migrate(db), 13)
       assert.equal(db.prepare("SELECT model_meta_json FROM providers WHERE name = 'old'").get().model_meta_json, "{}")
       // rowToEntry 往返逐值 ∥ 坏 JSON ∥ 非对象 ⇒ 行数据损坏抛（沿 settings_json 口径）
       const spec = { m: { displayName: "M", contextWindow: 8192, vision: true, status: "Shutdown" } }
@@ -380,7 +380,7 @@ test("④ 弹窗 DOM 桩：富信息（有则示 ∥ 零占位 ∥ 存储补齐�
     const down = MODALS.openProviderDetailModal(downCtx, { provider: { ...provider, modelMeta: {} } })
     await tick()
     const errLine = findNode(down.root, (node) => node.className === "hint error" && node.parent?.className === "pick-box")
-    assert.deepEqual([errLine?.textContent ?? null, byText(down.root, ZH["admin.providers.refreshCandidates"]).disabled], [ZH["err.upstream_error"], false], "失败 ⇒ `.hint error` + 重试钮可点")
+    assert.deepEqual([errLine?.textContent ?? null, byText(down.root, ZH["admin.providers.refreshCandidates"]).disabled], [fill(ZH["err.upstream_error"], { detail: "boom" }), false], "失败 ⇒ `.hint error` + 重试钮可点")
 
     // ── 添加窗：探针在飞 ⇒ 加载态 ⇒ 完成 ⇒ 富信息行；保存 = POST 携探针图（无探针 ⇒ 省略键） ──
     let releaseAdd = null
@@ -479,7 +479,7 @@ test("⑥ i18n + 静态面：两表 7 键在场（en 零 CJK ∥ 占位符一致
   for (const line of modalLines) assert.ok(line.length <= 300, `行宽越界：${line.slice(0, 60)}…`)
   // 档目 31 ∥ 32（结构轮后——十新档：i18n 部件八档 + `dom.mjs`/`health.mjs`）
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [31, 30], "档目 31 ∥ 30（2026-10-10 代理回迁批 −1）")
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [32, 31], "档目 32 ∥ 31（2026-10-10 沙盒运行面批 +1）")
   // AC-19 canon（`style.css` 零新增）：`:root` 变量族 38 ∥ 悬停声明七条
   const css = readPublic("style.css").replace(/\/\*[\s\S]*?\*\//g, "")
   const rootVars = (css.match(/:root\s*\{[^{}]*\}/)?.[0] ?? "").match(/--[\w-]+\s*:/g) ?? []
@@ -488,7 +488,7 @@ test("⑥ i18n + 静态面：两表 7 键在场（en 零 CJK ∥ 占位符一致
   assert.deepEqual(hover, [".nav-item:hover", "tbody tr:hover", "button:hover", "button.tiny:hover", "button.danger:hover", "button.link:hover", ".modal-close:hover"].sort(), "悬停声明清单（七条——零新增）")
   // 门禁链 38 件（结构轮批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链 ∥ 10-09 alias 批件入链 ∥ 10-09 代理页批件入链）∥ 清单目标在盘
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 39, `门禁清单件数（二十六 ⇒ 三十九——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链 ∥ 10-09 alias 批件入链 ∥ 10-09 代理页批件入链 ∥ 10-10 服务面残迹批件入链 ∥ 10-10 服务小修批两件入链 ∥ 10-10 团队登录批件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 42, `门禁清单件数（二十六 ⇒ 三十九——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链 ∥ 10-09 alias 批件入链 ∥ 10-09 代理页批件入链 ∥ 10-10 服务面残迹批件入链 ∥ 10-10 服务小修批两件入链 ∥ 10-10 团队登录批件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-provider-model-metadata.test.mjs"), "本批件应入列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)
 })

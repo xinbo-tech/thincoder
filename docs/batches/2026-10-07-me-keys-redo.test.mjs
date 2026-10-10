@@ -117,7 +117,7 @@ const chat = (base, plain, model = "mock/mock-chat") => post(base, "/v1/chat/com
 test("① v8 迁移：空库直落 10 ∥ v7 库升 10（存量回填 key-N 按签发序）∥ 幂等 ∥ 新列在场 ∥ 空串零残留", () => {
   const fresh = DB.openDatabase(":memory:")
   try {
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [10, 10], "空库直落 v9")
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(fresh)], [13, 13], "空库直落 v13")
     const column = fresh.prepare("PRAGMA table_info(api_keys)").all().find((item) => item.name === "name")
     assert.ok(column, "api_keys.name 缺位")
     assert.deepEqual([column.type, column.notnull, column.dflt_value], ["TEXT", 1, "''"], "常量默认 = ''")
@@ -141,7 +141,7 @@ test("① v8 迁移：空库直落 10 ∥ v7 库升 10（存量回填 key-N 按�
     legacy.close()
     const db = DB.openDatabase(file) // 启动自动升
     try {
-      assert.equal(DB.readVersion(db), 10, "v7 库升后读数 10")
+      assert.equal(DB.readVersion(db), 13, "v7 库升后读数 13")
       // 回填抽查：key-N 按成员签发序（id 升序；吊销行照回填——单调不复用）
       assert.deepEqual(
         db.prepare("SELECT id, member_id, name FROM api_keys ORDER BY id").all().map((row) => [row.id, row.member_id, row.name]),
@@ -154,7 +154,7 @@ test("① v8 迁移：空库直落 10 ∥ v7 库升 10（存量回填 key-N 按�
       )
       assert.equal(db.prepare("SELECT COUNT(*) AS n FROM api_keys WHERE name = ''").get().n, 0, "空串零残留")
       // 幂等：再跑迁移链 ⇒ 版本不变 ∥ 回填值不动
-      assert.equal(DB.migrate(db), 10)
+      assert.equal(DB.migrate(db), 13)
       assert.deepEqual(db.prepare("SELECT name FROM api_keys ORDER BY id").all().map((row) => row.name), ["key-1", "key-2", "key-3", "key-1"])
     } finally {
       db.close()

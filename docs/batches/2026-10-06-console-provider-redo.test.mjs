@@ -309,7 +309,7 @@ test("④ 错误径：发现失败 ⇒ 段内提示 +「刷新候选」重试可
     const provider = { id: 3, name: "p3", baseURL: "http://x/v1", apiKey: "", models: ["kept-1", "retired-2"] }
     const modal = MODALS.openProviderDetailModal(down.ctx, { provider, reload: async () => {} })
     await tick()
-    assert.ok(textOf(modal.root).includes(ZH["err.upstream_error"]), "失败 ⇒ 段内提示（映射文案）")
+    assert.ok(textOf(modal.root).includes(fill(ZH["err.upstream_error"], { detail: "upstream boom" })), "失败 ⇒ 段内提示（映射文案）")
     assert.ok(byText(modal.root, ZH["admin.providers.refreshCandidates"]) !== null, "「刷新候选」重试在位")
     const baseURLInput = findAll(modal.root, (node) => node.tag === "input" && node.attrs.type !== "checkbox")[1]
     baseURLInput.value = "http://y/v1"
@@ -325,7 +325,7 @@ test("④ 错误径：发现失败 ⇒ 段内提示 +「刷新候选」重试可
     } })
     const modal2 = MODALS.openProviderDetailModal(retry.ctx, { provider, reload: async () => {} })
     await tick()
-    assert.ok(textOf(modal2.root).includes(ZH["err.upstream_error"]))
+    assert.ok(textOf(modal2.root).includes(fill(ZH["err.upstream_error"], { detail: "upstream boom" })))
     fail = false
     await byText(modal2.root, ZH["admin.providers.refreshCandidates"]).fire("click")
     assert.deepEqual(pickBoxes(modal2.root).map((box) => box.parent.children[1]), ["fresh-1", "kept-1"], "重试 ⇒ 候选可达（名称升序——2026-10-07 走查收正）")

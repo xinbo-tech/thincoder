@@ -380,7 +380,7 @@ test("B9 并发（同步段单写者）：两 PATCH 并发 ⇒ 两键并存（�
 test("C1 空库直落 10：CHECK 含 `config_update`（可写）∥ 两索引在场 ∥ 重建残留零 ∥ 链尾 v10", () => {
   const db = DB.openDatabase(":memory:")
   try {
-    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(db), DB.MIGRATIONS.at(-1).v], [10, 10, 10])
+    assert.deepEqual([DB.SCHEMA_VERSION, DB.readVersion(db), DB.MIGRATIONS.at(-1).v], [13, 13, 13])
     assert.ok(AUDIT.AUDIT_TYPES.includes("config_update"), "事件目录十型（+ config_update）")
     const id = AUDIT.recordAudit(db, { type: "config_update", actor: "admin", detail: { keys: ["autoUpdate"] } })
     assert.ok(id >= 1)
@@ -403,18 +403,18 @@ test("C2 v9 库自动升 10：存量行逐值保形 ∥ `config_update` 可写 �
   legacy.close()
   const db = DB.openDatabase(file) // 启动自动升
   try {
-    assert.equal(DB.readVersion(db), 10, "v9 库自动升 10")
+    assert.equal(DB.readVersion(db), 13, "v9 库自动升 13")
     const after = db.prepare("SELECT id, ts, type, actor_id, actor_name, target_id, target_name, detail FROM audit_events ORDER BY id").all()
     assert.deepEqual(after, before, "存量行逐值保形（含 id 空洞 1/2/5）")
     const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'audit_events'").all().map((row) => row.name).sort()
     assert.deepEqual(indexes, ["idx_audit_ts", "idx_audit_type_ts"])
     assert.equal(AUDIT.recordAudit(db, { type: "config_update", actor: "admin" }), 6, "新事件 id 不撞存量（sqlite_sequence 连续）")
-    assert.equal(DB.migrate(db), 10, "再跑迁移链零效（幂等）")
+    assert.equal(DB.migrate(db), 13, "再跑迁移链零效（幂等）")
     assert.equal(db.prepare("SELECT COUNT(*) AS n FROM audit_events").get().n, 4, "二跑行数不变")
   } finally { db.close() }
   const again = DB.openDatabase(file) // 二跑同态
   try {
-    assert.equal(DB.readVersion(again), 10)
+    assert.equal(DB.readVersion(again), 13)
     assert.equal(again.prepare("SELECT COUNT(*) AS n FROM audit_events").get().n, 4)
   } finally { again.close() }
 })
@@ -511,10 +511,10 @@ test("E1 import 扫描零第三方：src ∥ bin ∥ deploy 全档（`node:` 前
   for (const file of files) {
     for (const match of readFileSync(file, "utf8").matchAll(importRe)) {
       const spec = match[1]
-      if (!spec.startsWith("node:") && !spec.startsWith(".") && !spec.startsWith("/")) violations.push(`${file}: ${spec}`)
+      if (!spec.startsWith("node:") && !spec.startsWith(".") && !spec.startsWith("/") && !spec.startsWith("@thincoder/core")) violations.push(`${file}: ${spec}`)
     }
   }
-  assert.deepEqual(violations, [], "第三方 import 零（零第三方运行期依赖 = 红线）")
+  assert.deepEqual(violations, [], "第三方 import 零（本仓包 @thincoder/core 除外——KD-SV-78；零第三方运行期依赖 = 红线）")
 })
 
 // ══ F 界面面块（界面面舱 append——判据源 = webui/WEBUI.md §2.1 §2.2 §2.3④ ∥ §6 AC-28 续）══════════════════════

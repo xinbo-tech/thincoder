@@ -286,8 +286,8 @@ sandbox 域 = 2026-10-10 沙盒批新立；agent 域 = 2026-10-10 runner-admin-c
   托管接入（管理面 agent）增补预算（2026-10-10 设计轮——runner-admin-console 批增补；台账 #1236/#1237；用户 22:19–22:29 + 15:00/15:02 裁）：服务端产品面 ≈**+1110**——逐档 = **agent 域新立**（`run.mjs` 新 ≈230 ∥ `tools.mjs` 新 ≈240——KD-SV-82） ∥
   sandbox 域（`ssh.mjs` 新 ≈180 ∥ `onboarding.mjs` 新 ≈300 ∥ `onboarding-routes.mjs` 新 ≈130 ∥ `routes.mjs` ±≈5 ∥ `db.mjs` ≈400 ⇒ ≈425（v13 段 +≈25）） ∥ `Dockerfile` +≈3（`openssh-client` + `sshpass`） ∥ `bin` ±0；
   webui ≈**+141**（`views-sandbox.mjs` ≈210 ⇒ ≈285 ∥ i18n admin 两部件 +≈30/表 ∥ `style.css` +≈6；零新档——档目 31 ∥ 32 不变）；域档 +1（agent 域——域档计数 8 ⇒ **9**）；
-  批内件：`docs/batches/2026-10-10-runner-admin-console-agent.test.mjs`（估 ≈420——假 ssh/五工具/任务生命周期/凭据加密/v13 迁移；**入 server 链**）+ ui 件随增（≈260 ⇒ ≈330）；`thincoder-server/package.json`（`prepublishOnly` 42 ⇒ **43**——本批件入链；单行清单行数零变）；
-  机制全文 = `sandbox/SANDBOX.md` §3 ∥ `agent/ADMIN-AGENT.md`；随正件（父侧落——实施轮同拍）：`docs/batches/2026-10-10-runner-admin-console.test.mjs`（v13 读点/句） ∥ `-ui.test.mjs` ∥ 门禁件数断言件（42 ⇒ 43）。
+  批内件：`docs/batches/2026-10-10-runner-admin-console-agent.test.mjs`（估 ≈420——假 ssh/五工具/任务生命周期/凭据加密/v13 迁移；**入 server 链**）+ ui 件随增（≈260 ⇒ ≈330）；`thincoder-server/package.json`（`prepublishOnly` 39 ⇒ **42**——本批三件入链；单行清单行数零变）；
+  机制全文 = `sandbox/SANDBOX.md` §3 ∥ `agent/ADMIN-AGENT.md`；随正件（父侧落——实施轮同拍）：`docs/batches/2026-10-10-runner-admin-console.test.mjs`（v13 读点/句） ∥ `-ui.test.mjs` ∥ 门禁件数断言件（39 ⇒ 42——以收口实读为准）。
 
   控制台布局收正批回填（2026-10-07——批 `docs/batches/2026-10-07-console-layout.md`；功能点 20 四件——五页视口高壳 ∥ 页脚行计数 ∥ 左对齐 ∥ 弹窗内列表表格化）：产品面实读——webui 八档：`app` **318**（`dataShell` :94 ∥ `SHELL_PAGES` 恰五路径 :255） ∥ `style` **215**（高度链 :191-200 ∥ 回退媒体查询 :203-205） ∥
   `views-admin` **185** ∥ `views-providers` **61** ∥ `views-models` **199** ∥ `views-audit` **94** ∥ `views-me` **125** ∥ `views-providers-modals` **287** ∥ i18n 两表 **334 ∥ 331**（+6 键/表）；`package.json` ±0（`prepublishOnly` 十七 ⇒ **十八件**）；零新档（public 档目 19 ∥ 20 不变）；

@@ -415,4 +415,73 @@ VERDICT: pass
 
 **施工中上抛并已解的两条**：① `@thincoder/core` 依赖声明（R53③「实施轮定」）——已落 `^0.10.4`；② 步骤日志机制（同上表 #1）。
 
+### 收口同步轮（陈旧断言随正 · 46 红）· eng-coder（2026-10-11）——**受阻：跨批写门禁（终态 stalled）**
+
+**一句话**：46 处随正 —— **0 处落笔**。系统「跨批写门禁」机械拒绝本子代理写任何非本批档；红单 26 档全属其他批。已上抛 ask 待裁（① 父侧执行清单 ∥ ② 解绑/换绑后重派 ∥ ③ 认定跨批件归父侧）；逐件清单随录于下（行号 = 本刻实读、未受后续写影响）。
+
+**门禁原文**（实测 7 档 × edit ∥ apply_patch 全 refuse——console-completeness-2 ∥ console-list-style ∥ server-gateway ∥ team-login-client-access ∥ server-small-fixes ∥ server-console-config ∥ console-list-style）：
+> cross-batch batch-record write: this child is bound to 2026-10-10-runner-admin-console.md; `<file>` belongs to a different batch. Write only your own bound record and its companion files; the parent agent handles other batch records.
+
+**处置依据**：「授权口径 ≠ 门禁绕行——两者相抵 ⇒ 停下上报、不得绕」（含 bash 旁路在内零尝试）；另：本批三件（`…runner-admin-console{,-agent,-ui}.test.mjs`）∥ `src/**` ∥ `public/**` ∥ 设计/需求档 = **全数零触**（未动）。
+
+**目标值（盘面实读——供父侧逐件核对）**
+- `SCHEMA_VERSION` / 迁移链尾 = **13**（`thincoder-server/src/store/db.mjs` 13 段）；「空库直落 ∥ 旧库自动升 ∥ 幂等 ∥ migrate 返回值」各断言一律 **13**。
+- i18n 键数 = **468 ∥ 473**（en `.one` ×7）；指纹 **zh = `a053d2b62d3a3935c97237a5b9091e91da0038c82e3fa4a87c135658b3513eff`** ∥ **en = `5f3f9aebebfaa349a2093c1ab1f4f903d142ef6207a4776c78349ee92b2ac60d`**（公式 = 批内件原式：sorted keys → `[[key, value]]` → JSON → sha256）。
+- `public/` 档目 = **32 ∥ 31**（全目录含 favicon=32 ∥ UI 代码档=31；新增 `views-sandbox.mjs`，排序位 = `views-providers.mjs` 后）。
+- nav 管理 = **8**（末位 `/admin/sandbox`；labelKey `nav.page.admin.sandbox`；labelKey 总数 = 组 2 + 项 11 = **13**）。
+- 门禁链 = **42** 件（`thincoder-server/package.json` prepublishOnly；39 ⇒ +3 本批件）。
+- 审计型 = **12**（`+sandbox_rule` ∥ `+sandbox_event`）；console 审计下拉仍十型（`sandbox_*` 标签随沙盒余面批）。本档九写入点面（②）不受影响。
+- `err.upstream_error` = 「上游服务出错：`{detail}`」——`mapError` 已按参数码传 `detail`（渲染 = 模板替换后的句）。
+- dependencies = `{ "@thincoder/core": "^0.10.4" }`（本仓包——KD-SV-78；import 扫描**例外项**）。
+- 家族计数零变：`vector.` 26 ∥ `health.` 10 ∥ `overview.` 8 ∥ `usageReport.` 14 ∥ `audit.` 29——**不需改**。
+
+**逐件清单（26 档 / 46 断言点；`⇒` = 旧值 ⇒ 新值；【】= 同族字样收正）**
+
+1. `2026-10-06-console-completeness-2.test.mjs`：:146 题「空库直落 10…九型 CHECK」⇒「13…十二型 CHECK」∥ :7/:150「九型 CHECK」⇒「十二型 CHECK」∥ :152 `[10, 10]`⇒`[13, 13]` ∥ :157 `length, 10)`⇒`12)` ∥ :162 `retentionDays: 2 }), 10)`⇒`12)` ∥ :167/:173/:175 升 10⇒13（`[1, 10]`⇒`[1, 13]`）∥ :236 过滤「!== "config_update"」⇒「!["config_update","sandbox_rule","sandbox_event"].includes(name)」∥ :436 `[31, 30]`⇒`[32, 31]`+msg「全目录 32 ∥ UI 代码档 31（2026-10-10 沙盒运行面批 +1）」∥ :440 名单 +`views-sandbox.mjs` ∥ :459 `AUDIT.AUDIT_TYPES` 过滤 +「!name.startsWith("sandbox_")」∥ :470/:473「管理 8」+ 数组 +`/admin/sandbox`
+2. `2026-10-06-console-list-style.test.mjs`：:234/:236「三十九件」⇒「四十二件」∥ :238 `39`⇒`42`+msg「（二十二 ⇒ 四十二——… ∥ 10-10 沙盒运行面批三件入链）」∥ :206 `[31, 30]`⇒`[32, 31]`+msg ∥ :210 名单 +`views-sandbox.mjs`
+3. `2026-10-06-console-modals.test.mjs`：:10/:386/:388「管理 7」⇒「8」∥ :391 数组 +`/admin/sandbox` ∥ :402/:404「档目 30 ∥ 31」⇒「31 ∥ 32」∥ :406 `[31, 30]`⇒`[32, 31]`（注「代理回迁批 −1」⇒「沙盒运行面批 +1」）∥ :410 名单 +`views-sandbox.mjs`
+4. `2026-10-06-console-provider-redo-runtime.test.mjs`：:294 `[31, 30]`⇒`[32, 31]`+msg ∥ :298 名单 +`views-sandbox.mjs`
+5. `2026-10-06-console-provider-redo.test.mjs`：:312/:328 `includes(ZH["err.upstream_error"])`⇒`includes(fill(ZH["err.upstream_error"], { detail: "upstream boom" }))`（该件 :30 已有 `fill` 助手）
+6. `2026-10-06-console-providers.test.mjs`：:400/:401/:424「静态三十档（含 favicon 共三十一档）」⇒「静态三十一档（含 favicon 共三十二档）」∥ :402「管理 7」⇒「8」∥ :405 数组 +`/admin/sandbox` ∥ :426 名单 +`views-sandbox.mjs`
+7. `2026-10-06-models-config.test.mjs`：:218 `[31, 30]`⇒`[32, 31]`+msg ∥ :222 名单 +`views-sandbox.mjs`
+8. `2026-10-06-server-auto-update.test.mjs`：:480 `39`⇒`42`+「三十九件」⇒「四十二件」∥ :484 题「dependencies 空」⇒「dependencies 仅 @thincoder/core（本仓包——KD-SV-78）」∥ :496 扫描 +`|| spec.startsWith("@thincoder/core")` ∥ :497 `{}`⇒`{ "@thincoder/core": "^0.10.4" }` ∥ :9/:439 头注「三十四件」⇒「四十二件」
+9. `2026-10-06-server-gateway-webui-deploy.test.mjs`：:272 题「三十档在册（含 favicon 共三十一档）」⇒「三十一档在册（含 favicon 共三十二档）」∥ :274 名单 +`views-sandbox.mjs` ∥ :319 `{}`⇒`{ "@thincoder/core": "^0.10.4" }`
+10. `2026-10-06-server-gateway.test.mjs`：:9 头注「八表 + 六索引 + user_version=9」⇒「十六表 + 六索引 + user_version=13」∥ :12 头注「dependencies 空」同拍 ∥ :164 题同 :9 措辞（=13）∥ :167/:168 ⇒13 ∥ :170 表名单 +8 表（`sandbox_workspaces` ∥ `sandbox_rules` ∥ `sandbox_pending` ∥ `sandbox_tasks` ∥ `sandbox_checkpoints` ∥ `sandbox_settings` ∥ `sandbox_runners` ∥ `sandbox_onboarding`）∥ :186/:201/:208 ⇒13 ∥ :205 probe `{ v: 11 … v11_probe`⇒`{ v: 14 … v14_probe` ∥ :207 `/迁移失败（v11）/`⇒`（v14）` ∥ :209 `v11_probe`⇒`v14_probe` ∥ :380/:394/:397 依赖面三处（题 ∥ 扫描例外 ∥ deps 值）
+11. `2026-10-06-server-i18n.test.mjs`：:125 名单 +`views-sandbox.mjs` ∥ :164 `12`⇒`13`+msg「组 2 + 项 11 = 13 个 labelKey（十一页 + 两组）」∥ :222 注 ⇒「参数码携 {detail}」∥ :227 参数支 +`|| code === "upstream_error"` ∥ :228 msg「应句末附服务端原文」⇒「应附服务端原文」
+12. `2026-10-06-server-presets.test.mjs`：:331 题 ⇒「dependencies 仅 @thincoder/core（本仓包——KD-SV-78）」∥ :345 扫描 +例外 ∥ :348 `{}`⇒`{ "@thincoder/core": "^0.10.4" }`
+13. `2026-10-07-console-layout.test.mjs`：:16 头注「三十四件」⇒「四十二件」∥ :447 题同拍 ∥ :449 `39`⇒`42`+msg 链 +「10-10 沙盒运行面批三件入链」
+14. `2026-10-07-me-keys-redo-ui.test.mjs`：:391 `[31, 30]`⇒`[32, 31]`+msg
+15. `2026-10-07-me-keys-redo.test.mjs`：:117 题「空库直落 10 ∥ v7 库升 10」⇒13∥13 ∥ :120 `[10, 10]`⇒`[13, 13]`+msg「空库直落 v13」∥ :144 `10, "v7 库升后读数 10"`⇒`13, "…13"` ∥ :157 `migrate(db), 10`⇒`13`
+16. `2026-10-07-me-usage-charts.test.mjs`：:12 头注 ⇒「四十二件」∥ :259 题同拍 ∥ :262 `39`⇒`42`+msg
+17. `2026-10-07-provider-model-metadata.test.mjs`：:18 头注「门禁链 30 件」⇒「42 件」∥ :148 题 10⇒13 ∥ :151 `[10, 10]`⇒`[13, 13]` ∥ :168/:171 ⇒13 ∥ :383 `[ZH["err.upstream_error"], false]`⇒`[fill(ZH["err.upstream_error"], { detail: "boom" }), false]`（该件 :316 已有 `fill` 助手）∥ :462 题「门禁链 38 件」⇒「42 件」∥ :482 `[31, 30]`⇒`[32, 31]`+msg ∥ :489 注 38⇒42 ∥ :491 `39`⇒`42`+msg
+18. `2026-10-07-quota-per-model.test.mjs`：:19 头注「三十四件」⇒「四十二件」∥ :147 题「空库直落 10（链尾——配置控制台批后）∥ v4 库自动升 10」⇒「空库直落 13（链尾）∥ v4 库自动升 13」∥ :150 `[10, 10]`⇒`[13, 13]` ∥ :180/:193 ⇒13 ∥ :440/:442 题「三十九件」⇒42 ∥ :444 `39`⇒`42`+msg
+19. `2026-10-07-quota-v2-member-models.test.mjs`：:24 头注「三十件」⇒「四十二件」∥ :164 题 10⇒13 ∥ :167 `[10, 10]`⇒`[13, 13]` ∥ :184/:188 ⇒13 ∥ :424/:426 ⇒42 ∥ :428 `39`⇒`42`+msg ∥ :730 `[31, 30]`⇒`[32, 31]`+msg
+20. `2026-10-08-server-public-structure.test.mjs`：:7 头注链尾 ⇒「（键数 468 ∥ 473）」∥ :50 注 +「⊕ 2026-10-10 沙盒运行面批（+82 键；键数 468 ∥ 473）」∥ :52 `ANCHOR.zh`⇒`a053d2…3513eff`（全串）∥ :53 `ANCHOR.en`⇒`5f3f9a…2b2ac60d`（全串）∥ :59 题 +「⊕ 10-10 沙盒运行面批〔+82 键〕」（键数 468 ∥ 473）∥ :62 `386`⇒`468`+msg ∥ :63 `391`⇒`473`+msg
+21. `2026-10-09-console-proxy-page.test.mjs`：:12 头注「管理 7」⇒8 ∥ :444 题「管理 7 项」⇒8 ∥ :447 `[3, 7]`⇒`[3, 8]`+msg「我的 3 ∥ 管理 8（2026-10-10 代理回迁批 −1 ∥ 沙盒运行面批 +1）」∥ :448 末项⇒`["sandbox", "/admin/sandbox", "nav.page.admin.sandbox"]`+msg「管理末项 = 沙盒」
+22. `2026-10-09-server-console-config.test.mjs`：:11 头注「空库直落 10 ∥ v9 库自动升 10」⇒13∥13 ∥ :380 题「空库直落 10…链尾 v10」⇒「13…链尾 v13」∥ :383 `[10, 10, 10]`⇒`[13, 13, 13]` ∥ :384 msg「事件目录十型」⇒「十二型（含 config_update）」∥ :394 题「自动升 10」⇒13 ∥ :406/:412/:417 ⇒13 ∥ :514 扫描 +例外 ∥ :517 msg +「例外 = @thincoder/core——本仓包，KD-SV-78」
+23. `2026-10-09-server-gemini-openai-preset.test.mjs`：:9 头注「空库直落 10 ∥ v8 库自动升 10」⇒13∥13 ∥ :260 题「空库直落 10…迁移链尾 = v10」⇒13 ∥ :263 `[10, 10]`⇒`[13, 13]` ∥ :267 `at(-1).v, 10`⇒`13` ∥ :271 题「自动升 10」⇒13 ∥ :279/:281 ⇒13
+24. `2026-10-09-server-model-alias.test.mjs`：:399 题「（v10 结构零动）」⇒「（结构零动）」∥ :408 `10, "结构版本保持 v10…"`⇒`13, "结构版本 = 链尾 v13（零迁移——STORE §3）"` ∥ :686 `[], "dependencies 保持空"`⇒`["@thincoder/core"], "dependencies 仅 @thincoder/core（本仓包——KD-SV-78）"`
+25. `2026-10-10-server-small-fixes.test.mjs`：:8 头注「键数 386 ∥ 391（…回迁批 −3 键）」⇒「468 ∥ 473（…；后随回迁批 −3 ∥ 沙盒运行面批 +82）」∥ :68 题「（386 ∥ 391——…）」⇒「（468 ∥ 473——沙盒运行面批 +82）」∥ :74 `386`⇒`468`+msg ∥ :75 `391`⇒`473`+msg
+26. `2026-10-10-team-login-client-access.test.mjs`：:15 头注「十型零增」⇒「十二型（本批零增）」∥ :256/:258 同拍 ∥ :274 `10`⇒`12`+msg ∥ :283 题「结构版本 v10 不动」⇒「v13 不动」∥ :284 `10, "client 域零迁移（…v10）"`⇒`13, "…v13"` ∥ :291 ⇒13
+
+**复跑口径**：`cd thincoder-server && npm run prepublishOnly`——改后必跑；若余红 = 首波断言遮蔽的次波同类点（期望值），按同一口径顺正；出现非同族红 ⇒ 停下上报（可能为真缺陷）。
+
+**审计与代码评审轮次**：**0**（无落盘可审——写门禁未开；本轮「待审物」= 上列清单本身）。**终态 = `stalled`**（受阻 ∥ 非收敛）。
+
+**决策透明表**
+
+| # | 项 | 决定 | 理由 |
+|---|---|---|---|
+| 1 | 门禁 vs 任务书冲突 | 不绕行、立即上抛 ask（附完整清单） | 纪律：门禁优先、不得绕（bash 旁路零尝试） |
+| 2 | 「档目 X ∥ Y」序号 | 已为「31 ∥ 32」者不动；只修陈值对（30 ∥ 31 ⇒ 31 ∥ 32） | 最小干预——序混用为先例既有、非本轮引入 |
+| 3 | 断言消息序 | 沿本件既有「全目录 X ∥ UI 代码档 Y」形 | 各件自洽 |
+| 4 | 门禁链消息 | 「（… ⇒ 四十二——… ∥ 10-10 沙盒运行面批三件入链）」 | 沿逐批增链先例 |
+| 5 | `[10, 10]` 类 | 全数 ⇒ 13（链尾）——不分档 | 迁移链逐段单调；空库直落/旧库升皆达链尾 |
+| 6 | gateway :192 EPERM | 非独立缺陷：断言失败级联（`second` 未 close 即 rmSync）——修版本 + probe v14 后自解 | 修 :201 读数 13 + probe v14；勿以「先 close」绕过 |
+| 7 | 审计页「十型」 | 控制台下拉十型 = **现态正确**（`views-audit.mjs` 硬列十型）——只改 `AUDIT_TYPES` 计数/标签面 | `sandbox_*` 模板 = 余面批登记项 |
+
+**父侧待办两件（若取径 ①）**：① 按上列清单落写 26 档（我侧无法落笔）；② 改后全链复跑一次（= 本任务验收）并回填本段。
+
+**勘误（同轮）**：上段门禁实测计数收正 = **6 档 / 7 次**（`console-completeness-2` ∥ `console-list-style` ∥ `server-gateway` ∥ `team-login-client-access` ∥ `server-small-fixes` ∥ `server-console-config`；其中 `completeness-2` 另经 apply_patch 一试）——「7 档」为笔误。
+
 ## §6 验证与收口（父代理）

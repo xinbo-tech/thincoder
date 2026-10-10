@@ -342,8 +342,8 @@ test("依赖面：thincoder-server 全树 import 仅 node:/相对 ∥ package.js
   }
   assert.ok(specifiers.length >= 8)
   for (const [rel, spec] of specifiers) {
-    assert.ok(spec.startsWith("node:") || spec.startsWith("."), `${rel} 出现非标准库 import：${spec}`)
+    assert.ok(spec.startsWith("node:") || spec.startsWith(".") || spec.startsWith("@thincoder/core"), `${rel} 出现非许可 import（仅 node: ∥ 相对 ∥ @thincoder/core——本仓包）：${spec}`)
   }
   const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"))
-  assert.deepEqual(pkg.dependencies ?? {}, {})
+  assert.deepEqual(pkg.dependencies ?? {}, { "@thincoder/core": "^0.10.4" }, "dependencies 仅 @thincoder/core（本仓包——KD-SV-78；零第三方）")
 })

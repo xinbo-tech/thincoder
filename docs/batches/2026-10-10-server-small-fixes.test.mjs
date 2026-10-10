@@ -71,8 +71,8 @@ test("腿 A 术语值面：14 键 × 两语逐字 = 批 §2 2.1 表 ∥ 键集�
     assert.equal(ZH[key], zh, `zh 值不符：${key}`)
     assert.equal(EN[key], en, `en 值不符：${key}`)
   }
-  assert.equal(Object.keys(ZH).length, 386, "zh 键数 386（本批值改零变；后随代理回迁批 −3 键）")
-  assert.equal(Object.keys(EN).length, 391, "en 键数 391（含 `.one` 变体族；后随代理回迁批 −3 键）")
+  assert.equal(Object.keys(ZH).length, 468, "zh 键数 468（本批值改零变；含沙盒运行面批 +82）")
+  assert.equal(Object.keys(EN).length, 473, "en 键数 473（含 `.one` 变体族；含沙盒运行面批 +82）")
 })
 
 test("腿 A 交叉一致 ∥ 旧形扫描（14 键 zh）∥ 零触已合规面（me.keys 族）", () => {

@@ -405,7 +405,7 @@ test("D4 零别名配置 ⇒ 零迁移回落 `provider/model`（v10 结构零动
   USAGE.recordUsage(db, { ts: now, memberId: 1, keyId: 1, provider: "mock", model: "mock-chat", endpoint: "chat", status: "ok", stream: false, promptTokens: 1, completionTokens: 1, totalTokens: 7, durationMs: 1 })
   assert.equal(USAGE.queryUsage(db, {})[0].model, "mock/mock-chat", "无别名 ⇒ 外标回落前缀形（存量零迁移）")
   assert.equal(USAGE.usageSummary(db, { now }).byModel[0].model, "mock/mock-chat", "summary 同口径")
-  assert.equal(DB.readVersion(db), 10, "结构版本保持 v10（零迁移——STORE §3）")
+  assert.equal(DB.readVersion(db), 13, "结构版本保持 v13（零迁移——STORE §3）")
 })
 
 // ── E 界面面（AC-29①②③ ∥ #1151）──────────────────────────────────────────────
@@ -683,7 +683,7 @@ test("F3 import 扫描：本批改动面零第三方依赖（`node:` 前缀 ∥ 
     }
   }
   const pkg = JSON.parse(readFileSync(join(ROOT, "thincoder-server", "package.json"), "utf8"))
-  assert.deepEqual(Object.keys(pkg.dependencies ?? {}), [], "dependencies 保持空")
+  assert.deepEqual(Object.keys(pkg.dependencies ?? {}), ["@thincoder/core"], "dependencies 仅 @thincoder/core（本仓包——KD-SV-78）")
 })
 
 /** 占位替换（与 `i18n.mjs` `fill` 同式——仅本件断言用）。 */

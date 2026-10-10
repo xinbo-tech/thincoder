@@ -49,8 +49,8 @@ const DOMAINS = {
 const domainOf = (key) => PARTS.find((part) => DOMAINS[part].includes(key.replace(/\.one$/, "").split(".")[0])) ?? null
 /** 键集指纹基线（2026-10-08 拆表零语义基线；2026-10-09 代理批 +1 键（`admin.providers.useProxy`）随正 ∥ 2026-10-09 配置面批 +29 键随正 ∥ 2026-10-09 embed 解耦批 +1 键随正（system +2 ∥ admin −1）⊕ 2026-10-09 alias 批 +4 键随正（两表各 +4——别名面）⊕ 2026-10-09 代理页批（+18 ∥ 退役 2——代理面）⊕ 2026-10-10 server-small-fixes 批（14 键值改——「API Key」统一：nav/管理/审计/接入卡/页题/秘密标签/用量报表键列；键集零变 389 ∥ 394）⊕ 2026-10-10 代理回迁批（−3 键：`nav.page.admin.proxy` ∥ `proxy.title` ∥ `proxy.settingsTitle`——代理面页/卡题/nav 三键退役；键数 386 ∥ 391））。 */
 const ANCHOR = {
-  zh: "41b6a2783f2022b2e5231a3e4bf311ca7d2a0ab9b9711201e26023b14ab38a5b",
-  en: "8fd692cd9844615e7c1efc2d64cba9f48222e1624711de082e7e4f6fca8d316f",
+  zh: "a053d2b62d3a3935c97237a5b9091e91da0038c82e3fa4a87c135658b3513eff",
+  en: "5f3f9aebebfaa349a2093c1ab1f4f903d142ef6207a4776c78349ee92b2ac60d",
 }
 const fingerprint = (TABLE) => createHash("sha256").update(JSON.stringify(Object.keys(TABLE).sort().map((key) => [key, TABLE[key]]))).digest("hex")
 
@@ -59,8 +59,8 @@ const fingerprint = (TABLE) => createHash("sha256").update(JSON.stringify(Object
 test("① 键集指纹：`ZH`/`EN` sorted-key 序列化 sha256 = 基线（拆表 ⊕ 10-09 代理批 ⊕ 配置面批 ⊕ embed 解耦批 ⊕ 10-09 alias 批 ⊕ 代理页批 ⊕ 10-10 small-fixes 批〔值改——14 键〕⊕ 10-10 代理回迁批〔−3 键〕）∥ 键数 386 ∥ 391 ∥ 门面冻结", () => {
   assert.equal(fingerprint(ZH), ANCHOR.zh, "zh 指纹漂移（键集/值须逐字同基线）")
   assert.equal(fingerprint(EN), ANCHOR.en, "en 指纹漂移（键集/值须逐字同基线）")
-  assert.equal(Object.keys(ZH).length, 386, "zh 键数 386（拆表 338 + 代理批 1 + 配置面批 29 + embed 解耦批 1 + alias 批 4 + 代理页批 18 − 退役 2 − 回迁批 3）")
-  assert.equal(Object.keys(EN).length, 391, "en 键数 391（含 `.one` 变体族；回迁批 −3）")
+  assert.equal(Object.keys(ZH).length, 468, "zh 键数 468（拆表 338 + 代理批 1 + 配置面批 29 + embed 解耦批 1 + alias 批 4 + 代理页批 18 − 退役 2 − 回迁批 3 + 沙盒运行面批 82）")
+  assert.equal(Object.keys(EN).length, 473, "en 键数 473（含 `.one` 变体族；回迁批 −3 ∥ 沙盒运行面批 +82）")
   assert.ok(Object.isFrozen(ZH) && Object.isFrozen(EN), "门面 `Object.freeze`（聚合门面封闭）")
 })
 
