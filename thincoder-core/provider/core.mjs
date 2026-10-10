@@ -361,6 +361,7 @@ function mergeRetryToolCalls(result, toolCalls) {
     }
     if (tc.id && !s.id) s.id = tc.id
     if (tc.name && !s.name) s.name = tc.name
+    if (tc.extra_content && !s.extra_content) s.extra_content = tc.extra_content // §6.24：签名合并保真（首见胜）
     s.arguments += tc.arguments ?? ""
   }
 }

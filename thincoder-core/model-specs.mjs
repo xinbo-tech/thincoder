@@ -346,8 +346,11 @@ export function providerSpec(provider) {
  * string all 200 — the 2026-09-20 "must be passed back" 400 was NOT reproduced). `optional` /
  * undeclared families (incl. DEFAULT_SPEC) never get the field (behavior byte-identical).
  *
- * Callers: thincoder-core/agent.mjs (main loop) · thincoder-core/advisor/loop.mjs (review
- * mirror) · thincoder-vscode/src/agent.mjs (shell loop) — each passes its own spec face.
+ * 思考签名（PROVIDER.md §6.24）：`tool_calls[].extra_content` 在场才带（缺 ⇒ 键不存在——无签名上游键集逐字不变）。
+ *
+ * Callers (as-of 2026-10-10): thincoder-core/agent/turn-loop.mjs (main loop) · thincoder-core/advisor/loop.mjs
+ * (review mirror) · bench/lib/client.mjs (bench client) — each passes its own spec face; VSC 转口
+ * (thincoder-vscode/src/specs.mjs:13/:17) 零调用点（父侧收口机械笔 · 可 revert）。
  */
 export function assistantToolCallMessage(response, spec) {
   const msg = {
@@ -356,6 +359,7 @@ export function assistantToolCallMessage(response, spec) {
     tool_calls: response.toolCalls.map((tc) => ({
       id: tc.id, type: "function",
       function: { name: tc.name, arguments: tc.arguments },
+      ...(tc.extra_content ? { extra_content: tc.extra_content } : {}),
     })),
   }
   if (spec?.reasoningEcho === "required") {

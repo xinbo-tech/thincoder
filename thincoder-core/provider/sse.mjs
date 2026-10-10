@@ -53,6 +53,9 @@ function mergeToolCalls(result, delta, { snapshot = false } = {}) {
       existed = !!slot
       if (!slot) { result.droppedToolCalls++; continue }
     }
+    // §6.24 思考签名捕获（Gemini）：白名单构造、在场才建 / 在场覆写（四条槽路径共经）
+    const sig = tc.extra_content?.google?.thought_signature
+    if (typeof sig === "string" && sig) slot.extra_content = { google: { thought_signature: sig } }
     if (tc.id && !slot.id) slot.id = tc.id
     if (tc.function?.name && !slot.name) slot.name = tc.function.name
     const arg = tc.function?.arguments

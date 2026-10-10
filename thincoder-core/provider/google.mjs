@@ -193,13 +193,14 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
         result.content += part.text
         onToken?.(part.text)
       } else if (part.functionCall) {
-        const existing = result.toolCalls.find((tc) => tc.name === part.functionCall.name)
-        if (!existing) {
-          result.toolCalls.push({
-            id: part.functionCall.name + "_" + result.toolCalls.length,
-            name: part.functionCall.name,
-            arguments: JSON.stringify(part.functionCall.args || {}),
-          })
+        let slot = result.toolCalls.find((tc) => tc.name === part.functionCall.name)
+        if (!slot) {
+          slot = { id: part.functionCall.name + "_" + result.toolCalls.length, name: part.functionCall.name, arguments: JSON.stringify(part.functionCall.args || {}) }
+          result.toolCalls.push(slot)
+        }
+        // §6.24 原生路签名捕获（字段名 `thoughtSignature`——官方口径 unverified；在场才建 ⇒ 字段名不符零副作用）
+        if (typeof part.thoughtSignature === "string" && part.thoughtSignature) {
+          slot.extra_content = { google: { thought_signature: part.thoughtSignature } }
         }
       }
     }
