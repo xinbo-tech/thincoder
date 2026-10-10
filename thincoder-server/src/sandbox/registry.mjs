@@ -1,24 +1,19 @@
 /**
- * registry.mjs — 沙盒编排核心（sandbox/SANDBOX.md §3/§5/§8）：runner 注册/健康/可用性 ∥ 放置 ∥ 任务队列（含悬挂回收）∥
- * 全局设置与每工作区资源覆写 ∥ 盒状态读数（心跳上报块）。
+ * registry.mjs — 沙盒编排核心（sandbox/SANDBOX.md §2/§3/§5/§8）：节点登记/读数/可用性（**Docker API 节点**——runner-admin-console 批重写）∥
+ * 放置（本批 = 静态判据）∥ 任务队列（悬挂回收）∥ 全局设置与每工作区资源覆写 ∥ 盒读数与载荷。
  *
- * 心跳上行块（`sandbox_runners.runtime_json`——心跳/上报更新）：`{ version, runtime, runtimeAvailable, diskFreeMb, boxes }`
- * —— runtime = 自检读数（RUNNER.md §7）∥ boxes = 盒清单与状态 `{ workspaceId, state, stopReason, dirty }`（§3 心跳携带；
- * 盒是瞬时面、七表零承载 ⇒ 无别的落点，存心跳块；陈旧性由 `last_heartbeat_at` + health 明示）。
- * 容量描述符（`sandbox_runners.labels_json`）：`{ labels: { <键>: <值> }, maxBoxes }`——放置判据（§5「注册携 {labels, maxBoxes}」）。
- * 健康 = 3 拍缺（45s——常量）⇒ unhealthy（展示面派生，DDL 注释同拍）；软状态族（join 令牌 ∥ 待批已下发 ∥ rulesRev）见各档头。
+ * 节点面（KD-SV-79/80/81）：登记 = 连通自检读数落 `runtime_json`（`address` ∥ `status` active/disabled）；读数 = 读时探活
+ * （`docker.mjs` 现打 `/info`——无心跳 ∥ 无后台定时器）；可用性 = 静态判据（存在 active 节点——实时门随重做批）；容器不落库。
+ * **心跳/队列死件**（`applyHeartbeat` ∥ `applyBoxReport` ∥ `claimTasks` ∥ `reportTask` ⋯）：执行面通道已随 2026-10-10 守护进程清除，
+ * 无调用方——本批不动（收正随执行面重做批）；`runnerHealth` 已删（心跳面退场——设计明文）。
  *
- * 指令生命周期（§3）：enqueue（queued）⇒ claim（poll 领取 ⇒ claimed）⇒ report（done/failed/unsupported）；
- * 悬挂回收 = `claimed` 逾期（5 分钟——常量）∧ runner 失联 ⇒ 幂等 kind 回 `queued`（重派）∥ `exec` ⇒ `failed`（不自动重跑）。
+ * 指令生命周期（§3——死件同注）：enqueue（queued）⇒ claim（poll 领取 ⇒ claimed）⇒ report（done/failed/unsupported）；
+ * 悬挂回收 = `claimed` 逾期（5 分钟——常量）⇒ 幂等 kind 回 `queued`（重派）∥ 非幂等 ⇒ `failed`（不自动重跑；心跳判据已去）。
  * 资源取值序（§2）：全局默认（`sandbox_settings`）⇒ 逐键叠加工作区覆写（覆写优先）——解析结果随 create/重建载荷下发。
- * 本档导出协议常量（kind 全集 ∥ 幂等集 ∥ 失联界）——runner 批消费；enqueue 只校 kind 形不封集（KD-SV-72 可扩）。
+ * 本档导出协议常量（kind 全集 ∥ 幂等集）——enqueue 只校 kind 形不封集（KD-SV-72 可扩）。
  */
 import { HttpError } from "../gateway/errors.mjs"
 import { recordAudit } from "../accounts/audit.mjs"
-
-/** 心跳周期（15s——§3）与失联界（3 拍缺 = 45s ⇒ unhealthy）。 */
-export const HEARTBEAT_INTERVAL_MS = 15000
-export const RUNNER_STALE_MS = 45000
 
 /** 指令悬挂回收界（§3「缺省 5 分钟——常量」）。 */
 export const CLAIM_TIMEOUT_MS = 5 * 60 * 1000
@@ -41,10 +36,9 @@ export const STOP_REASONS = Object.freeze(["idle_ttl", "wallclock_ttl", "manual"
 /** 每工作区覆写键集（SANDBOX §2——资源 + TTL）。 */
 export const LIMIT_KEYS = Object.freeze(["cpus", "memMb", "pids", "diskMb", "idleTtlMinutes", "wallclockTtlHours"])
 
-/** 工作区名上限（`sandbox:<名>` 须入 key 名（≤ 40 字符）——`sandbox:` 前缀 8 字符）。 */
+/** 工作区名上限（`sandbox:<名>` 须入 key 名（≤ 40 字符）——`sandbox:` 前缀 8 字符）∥ 节点名上限（§3）。 */
 export const WORKSPACE_NAME_MAX = 30
 export const RUNNER_NAME_MAX = 40
-export const LABELS_MAX = 20
 
 /** 全局默认设置（键全集与值形 = gateway/API.md §2.5；缺省值 = 实现定值——控制台可改）。 */
 export const DEFAULT_SETTINGS = Object.freeze({
@@ -57,9 +51,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   checkpointEveryMinutes: 15,    // WIP 快照周期（U5）
   checkpointKeep: 5,             // 快照保留份数（§5）
   pendingTimeoutSeconds: 60,     // 待批挂起窗（§6）
-  joinTtlMinutes: 30,            // 加入令牌有效期（§3）
+  joinTtlMinutes: 30,            // 加入令牌有效期（§3）——死件键：join 面已随守护进程清除（保留随重做批收正）
   tmpfsMb: 256,                  // tmpfs /tmp 容积（披露 D1）
-  image: "thincoder-sandbox:1",  // 盒镜像（RUNNER §3）
+  image: "thincoder-sandbox:1",  // 盒镜像（§3「镜像 = 控制台预填设置」缺省值）
 })
 
 export const SETTING_KEYS = Object.freeze(Object.keys(DEFAULT_SETTINGS))
@@ -162,8 +156,82 @@ export function resolveLimits(db, workspace, settings = getSettings(db)) {
   return out
 }
 
-// ── runner（注册/心跳/健康/可用性——§3）──────────────────────────────────────
+// ── 节点（登记/读数/可用性——§3；Docker API 节点）────────────────────────────
 
+/** 节点名归一（≤ 40 字符——§3；空 ⇒ 抛）。 */
+export function normalizeRunnerName(raw) {
+  return trimText(raw, RUNNER_NAME_MAX, { field: "节点名" })
+}
+
+/** 节点读数（§3 `overview` 基础行——`online`/`version`/`containers` 三值由路由面读时探活并上）。 */
+export function runnerView(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    address: row.address,
+    status: row.status,
+    selfCheck: parseJson(row.runtime_json, {}),
+    createdAt: row.created_at,
+  }
+}
+
+/** 节点行（id 序——登记/探活/删除面共用）。 */
+export function runnerRows(db) {
+  return db.prepare("SELECT * FROM sandbox_runners ORDER BY id").all()
+}
+
+export function listRunners(db) {
+  return runnerRows(db).map(runnerView)
+}
+
+/** 节点行 or 404（`not_found`）。 */
+export function runnerRowOr404(db, id) {
+  const row = db.prepare("SELECT * FROM sandbox_runners WHERE id = ?").get(Number(id))
+  if (!row) throw new HttpError("not_found", `节点不存在：${id}`)
+  return row
+}
+
+/** 登记一行（连通自检通过后落库——§3；`runtime` = 自检读数逐值）。重名 ⇒ 抛（调用方 400——零落库）。 */
+export function insertRunner(db, { name, address, runtime = {}, now = Date.now() } = {}) {
+  const resolved = normalizeRunnerName(name)
+  if (typeof address !== "string" || address.trim() === "") throw new Error("登记缺节点地址（address）")
+  try {
+    const info = db
+      .prepare("INSERT INTO sandbox_runners (name, address, status, runtime_json, created_at) VALUES (?, ?, 'active', ?, ?)")
+      .run(resolved, address.trim(), JSON.stringify(runtime ?? {}), new Date(now).toISOString())
+    return db.prepare("SELECT * FROM sandbox_runners WHERE id = ?").get(Number(info.lastInsertRowid))
+  } catch (e) {
+    if (/UNIQUE constraint failed: sandbox_runners\.name/.test(String(e?.message))) {
+      throw new Error(`节点名已存在：${resolved}（换一个名字，或先清理旧登记）`)
+    }
+    throw e
+  }
+}
+
+/** 可用节点（静态判据——§3：`status = 'active'`；实时探活归运行面读数——KD-SV-80）。 */
+export function usableRunners(db) {
+  return runnerRows(db).filter((row) => row.status === "active")
+}
+
+/** 可用性门（KD-SV-71 语义保持；本批 = 静态判据：存在 `active` 节点——实时门随重做批；仅沙盒功能面不可用）。 */
+export function sandboxAvailability(db) {
+  const rows = runnerRows(db)
+  if (rows.length === 0) return { status: "unavailable", reason: "无节点注册" }
+  if (!rows.some((row) => row.status === "active")) return { status: "unavailable", reason: "无可用节点（节点均非 active）" }
+  return { status: "available" }
+}
+
+/** 写门（需要节点的写动作——B35：写动作 ⇒ 503 `sandbox_unavailable`，不降级）。 */
+export function requireSandboxAvailable(db, { detail = null } = {}) {
+  const availability = sandboxAvailability(db)
+  if (availability.status === "unavailable") {
+    throw new HttpError("sandbox_unavailable", detail ? `${detail}（${availability.reason}）` : `沙盒不可用：${availability.reason}`)
+  }
+}
+
+// ── 心跳/队列死件（执行面通道已清除——本批不动；收正随执行面重做批）────────────
+
+/** 心跳块读取（死件读取面——`boxStateOf` 仍读 `boxes`；写入面已无调用方）。 */
 function heartbeatBlock(row) {
   const block = parseJson(row.runtime_json, {})
   return {
@@ -173,13 +241,6 @@ function heartbeatBlock(row) {
     diskFreeMb: Number.isFinite(block.diskFreeMb) ? block.diskFreeMb : null,
     boxes: normalizeBoxes(block.boxes),
   }
-}
-
-function descriptorOf(row) {
-  const raw = parseJson(row.labels_json, {})
-  const labels = raw.labels !== null && typeof raw.labels === "object" && !Array.isArray(raw.labels) ? raw.labels : {}
-  const maxBoxes = Number.isInteger(raw.maxBoxes) && raw.maxBoxes > 0 ? raw.maxBoxes : null
-  return { labels, maxBoxes }
 }
 
 /** 盒清单归一（上报形：`[{ workspaceId, state, stopReason?, dirty? }]`——非法条目略过）。 */
@@ -197,56 +258,7 @@ export function normalizeBoxes(input) {
   return out
 }
 
-/** 健康派生（3 拍缺 ⇒ unhealthy；未心跳的新 runner 宽限 45s——created_at 起算）。 */
-export function runnerHealth(row, now = Date.now()) {
-  if (row.last_heartbeat_at === null || row.last_heartbeat_at === undefined) {
-    const created = Date.parse(row.created_at ?? "")
-    return Number.isFinite(created) && now - created <= RUNNER_STALE_MS ? "healthy" : "unhealthy"
-  }
-  return now - row.last_heartbeat_at <= RUNNER_STALE_MS ? "healthy" : "unhealthy"
-}
-
-/** 注册一行（join 兑换后落库——token_hash 只存 sha256；容量描述符 + 版本面）。 */
-export function registerRunner(db, { name, tokenHash, labels = {}, maxBoxes = null, version = null, runtime = null, runtimeAvailable = null, now = Date.now() } = {}) {
-  if (typeof tokenHash !== "string" || tokenHash.length === 0) throw new Error("registerRunner 缺 tokenHash")
-  const resolvedName = name === null || name === undefined || String(name).trim() === ""
-    ? `runner-${Math.random().toString(16).slice(2, 10)}`
-    : trimText(name, RUNNER_NAME_MAX, { field: "runner 名" })
-  const map = {}
-  for (const [key, value] of Object.entries(labels ?? {})) {
-    if (Object.keys(map).length >= LABELS_MAX) throw new Error(`标签数超上限（≤ ${LABELS_MAX}）`)
-    map[trimText(key, 63, { field: "标签键" })] = trimText(String(value), 63, { field: "标签值", allowEmpty: true })
-  }
-  if (maxBoxes !== null && maxBoxes !== undefined && (!Number.isInteger(Number(maxBoxes)) || Number(maxBoxes) <= 0)) {
-    throw new Error(`maxBoxes 须为正整数或 null：${JSON.stringify(maxBoxes)}`)
-  }
-  const block = {
-    version: typeof version === "string" ? version : null,
-    runtime: runtime ?? null,
-    runtimeAvailable: runtimeAvailable !== false,
-    diskFreeMb: null,
-    boxes: [],
-  }
-  let info
-  try {
-    info = db
-      .prepare(
-        `INSERT INTO sandbox_runners (name, token_hash, labels_json, status, runtime_json, last_heartbeat_at, created_at)
-       VALUES (?, ?, ?, 'active', ?, NULL, ?)`,
-      )
-      .run(resolvedName, tokenHash, JSON.stringify({ labels: map, maxBoxes: maxBoxes === null || maxBoxes === undefined ? null : Number(maxBoxes) }), JSON.stringify(block), new Date(now).toISOString())
-  } catch (e) {
-    // 重名 ⇒ 人话（不向外透库面原文——join 面逐句人话口径）
-    if (/UNIQUE constraint failed: sandbox_runners\.name/.test(String(e?.message))) {
-      throw new Error(`runner 名「${resolvedName}」已存在——请改用 --name 指定别的名字，或在控制台清理旧 runner 记录`)
-    }
-    throw e
-  }
-  return db.prepare("SELECT * FROM sandbox_runners WHERE id = ?").get(Number(info.lastInsertRowid))
-}
-
-/** 心跳（§3）：版本 ∥ 自检读数 ∥ 盒清单/状态 ∥ 磁盘余量 ∥ 排空旗；盒状态变化落审计（盒起停拆）；
- *  draining 收旗 ⇒ drained。返回更新后行。 */
+/** 心跳（死件——通道已清除、无调用方；引 `last_heartbeat_at` 列已随 v12 退场）。 */
 export function applyHeartbeat(db, row, payload = {}, { now = Date.now() } = {}) {
   const block = heartbeatBlock(row)
   const next = { ...block }
@@ -273,7 +285,7 @@ export function applyHeartbeat(db, row, payload = {}, { now = Date.now() } = {})
   return { ...row, status, runtime_json: JSON.stringify(next), last_heartbeat_at: now }
 }
 
-/** 盒状态变化登记（盒清单随心跳块保存）。 */
+/** 盒状态变化登记（死件——同注）。 */
 export function applyBoxReport(db, row, boxes, { now = Date.now() } = {}) {
   const block = heartbeatBlock(row)
   const normalized = normalizeBoxes(boxes)
@@ -318,82 +330,19 @@ function recordBoxTransitions(db, row, transitions, { now = Date.now() } = {}) {
   }
 }
 
-/** runner 读数（控制台运行面——§2.5 `GET .../overview`）。 */
-export function runnerView(row, { now = Date.now() } = {}) {
-  const block = heartbeatBlock(row)
-  const descriptor = descriptorOf(row)
-  return {
-    id: row.id,
-    name: row.name,
-    status: row.status,
-    health: runnerHealth(row, now),
-    labels: descriptor.labels,
-    maxBoxes: descriptor.maxBoxes,
-    version: block.version,
-    runtime: block.runtime,
-    runtimeAvailable: block.runtimeAvailable,
-    diskFreeMb: block.diskFreeMb,
-    lastHeartbeatAt: row.last_heartbeat_at ?? null,
-    boxCount: block.boxes.length,
-    boxes: block.boxes,
-    createdAt: row.created_at,
-  }
-}
-
-export function listRunners(db, { now = Date.now() } = {}) {
-  return db.prepare("SELECT * FROM sandbox_runners ORDER BY id").all().map((row) => runnerView(row, { now }))
-}
-
-/** 可用放置面 = status active ∧ 健康 ∧ 运行时可用（doctor 核心项失败 ⇒ runtimeAvailable=false——E32）。 */
-export function usableRunners(db, { now = Date.now() } = {}) {
-  return db
-    .prepare("SELECT * FROM sandbox_runners ORDER BY id")
-    .all()
-    .filter((row) => row.status === "active" && runnerHealth(row, now) === "healthy" && heartbeatBlock(row).runtimeAvailable)
-}
-
-/** 可用性门（KD-SV-71）：无 runner 注册 ∥ 无可用运行时 ⇒ unavailable + 原因（仅沙盒面不可用）。 */
-export function sandboxAvailability(db, { now = Date.now() } = {}) {
-  const total = Number(db.prepare("SELECT COUNT(*) AS n FROM sandbox_runners").get().n)
-  if (total === 0) return { status: "unavailable", reason: "无 runner 注册" }
-  if (usableRunners(db, { now }).length === 0) return { status: "unavailable", reason: "无可用运行时（无健康 runner 上报可用的容器运行时）" }
-  return { status: "available" }
-}
-
-/** 写门（需要 runner 的写动作——B35：写动作 ⇒ 503 `sandbox_unavailable`，不降级）。 */
-export function requireSandboxAvailable(db, { now = Date.now(), detail = null } = {}) {
-  const availability = sandboxAvailability(db, { now })
-  if (availability.status === "unavailable") {
-    throw new HttpError("sandbox_unavailable", detail ? `${detail}（${availability.reason}）` : `沙盒不可用：${availability.reason}`)
-  }
-}
-
 // ── 放置（§5）───────────────────────────────────────────────────────────────
 
-function labelsSatisfy(required, labels) {
-  return Object.entries(required).every(([key, value]) => String(labels[key] ?? "") === String(value))
+/** 放置判据（本批静态——§3：取 id 最小 active 节点；标签/容量/实时探活随执行面重做批）。无 ⇒ null（排队等待）。 */
+export function placeWorkspace(db) {
+  return usableRunners(db)[0] ?? null
 }
 
-/** 放置判据：标签满足（required ⊆ runner labels）∧ 健康 ∧ 容量未满；取盒数最少者（并列取 id 小者）。无 ⇒ null。 */
-export function placeWorkspace(db, workspace, { now = Date.now() } = {}) {
-  const required = parseJson(workspace.required_labels_json, {})
-  const candidates = usableRunners(db, { now }).filter((row) => {
-    const descriptor = descriptorOf(row)
-    if (!labelsSatisfy(required, descriptor.labels)) return false
-    if (descriptor.maxBoxes !== null && heartbeatBlock(row).boxes.length >= descriptor.maxBoxes) return false
-    return true
-  })
-  if (candidates.length === 0) return null
-  candidates.sort((a, b) => heartbeatBlock(a).boxes.length - heartbeatBlock(b).boxes.length || a.id - b.id)
-  return candidates[0]
-}
-
-/** 未放置工作区补放置（runner join/心跳触达——「无满足者 ⇒ 排队等待」的续跑点）：绑定 + create/start 入队。 */
+/** 未放置工作区补放置（节点登记触达——「无满足者 ⇒ 排队等待」的续跑点）：绑定 + create/start 入队。 */
 export function tryPlacePending(db, { now = Date.now(), publicBase = null } = {}) {
   const unbound = db.prepare("SELECT * FROM sandbox_workspaces WHERE runner_id IS NULL ORDER BY id").all()
   const placed = []
   for (const workspace of unbound) {
-    const runner = placeWorkspace(db, workspace, { now })
+    const runner = placeWorkspace(db)
     if (!runner) continue
     db.prepare("UPDATE sandbox_workspaces SET runner_id = ? WHERE id = ?").run(runner.id, workspace.id)
     const bound = { ...workspace, runner_id: runner.id }
@@ -405,7 +354,7 @@ export function tryPlacePending(db, { now = Date.now(), publicBase = null } = {}
   return placed
 }
 
-// ── 指令队列（§3）───────────────────────────────────────────────────────────
+// ── 指令队列（§3——死件同注；悬挂回收面在）──────────────────────────────────
 
 /** 入队（queued）：payload = `{ workspaceId, ...字段 }`（单存——投递时拆出 workspaceId）。返回行 id。 */
 export function enqueueTask(db, { runnerId, kind, workspaceId, payload = {}, now = Date.now() } = {}) {
@@ -417,7 +366,7 @@ export function enqueueTask(db, { runnerId, kind, workspaceId, payload = {}, now
   return Number(info.lastInsertRowid)
 }
 
-/** 领取（poll——queued ⇒ claimed；返回投递形 `{ id, kind, workspaceId, payload }`）。 */
+/** 领取（poll——queued ⇒ claimed；返回投递形 `{ id, kind, workspaceId, payload }`）。死件（无调用方）。 */
 export function claimTasks(db, runnerId, { now = Date.now() } = {}) {
   const rows = db.prepare("SELECT * FROM sandbox_tasks WHERE runner_id = ? AND status = 'queued' ORDER BY id").all(Number(runnerId))
   const out = []
@@ -429,7 +378,7 @@ export function claimTasks(db, runnerId, { now = Date.now() } = {}) {
   return out
 }
 
-/** 上报指令结果：done ∥ failed ∥ unsupported（须属本 runner）。返回更新后行。 */
+/** 上报指令结果：done ∥ failed ∥ unsupported（须属本 runner）。死件（无调用方）。 */
 export function reportTask(db, runnerId, { taskId, status, result = null, now = Date.now() } = {}) {
   const id = Number(taskId)
   const row = db.prepare("SELECT * FROM sandbox_tasks WHERE id = ? AND runner_id = ?").get(id, Number(runnerId))
@@ -439,25 +388,21 @@ export function reportTask(db, runnerId, { taskId, status, result = null, now = 
   return db.prepare("SELECT * FROM sandbox_tasks WHERE id = ?").get(id)
 }
 
-/** 悬挂回收（§3）：claimed 逾期 ∧ runner 失联 ⇒ 幂等 kind 回 queued（重派——同 runner 复联）∥ exec ⇒ failed + 原因。 */
+/** 悬挂回收（§3）：`claimed` 逾期（5 分钟）⇒ 幂等 kind 回 queued（重派）∥ 非幂等 ⇒ failed + 原因。
+ *  心跳判据已去（KD-SV-80——节点存活 = 读时探活；本批零改队列语义）。 */
 export function sweepStuckTasks(db, { now = Date.now() } = {}) {
   const rows = db
-    .prepare(
-      `SELECT t.*, r.name AS runner_name, r.last_heartbeat_at, r.created_at AS runner_created_at
-       FROM sandbox_tasks t JOIN sandbox_runners r ON r.id = t.runner_id
-       WHERE t.status = 'claimed' AND t.claimed_at IS NOT NULL AND t.claimed_at <= ?`,
-    )
+    .prepare("SELECT * FROM sandbox_tasks WHERE status = 'claimed' AND claimed_at IS NOT NULL AND claimed_at <= ?")
     .all(now - CLAIM_TIMEOUT_MS)
   const reclaimed = []
   for (const row of rows) {
-    if (runnerHealth({ last_heartbeat_at: row.last_heartbeat_at, created_at: row.runner_created_at }, now) === "healthy") continue
     if (IDEMPOTENT_TASK_KINDS.includes(row.kind)) {
       db.prepare("UPDATE sandbox_tasks SET status = 'queued' WHERE id = ?").run(row.id) // claimed_at 留作「重派中」标记
       reclaimed.push({ id: row.id, kind: row.kind, action: "requeued" })
     } else {
       db.prepare("UPDATE sandbox_tasks SET status = 'failed', finished_at = ?, result_json = ? WHERE id = ?").run(
         now,
-        JSON.stringify({ reason: "runner 失联（3 拍缺）且领取逾期——非幂等指令不自动重跑" }),
+        JSON.stringify({ reason: "指令领取逾期（5 分钟）——非幂等指令不自动重跑" }),
         row.id,
       )
       reclaimed.push({ id: row.id, kind: row.kind, action: "failed" })
@@ -487,7 +432,8 @@ export function lastTaskView(db, workspaceId) {
 
 // ── 盒读数与载荷（§2 取值序 / §7 env）───────────────────────────────────────
 
-/** 工作区盒读数（心跳块派生）：`{ boxState, stopReason, dirty }`。 */
+/** 工作区盒读数（心跳块派生——死件读取面：新模型下 `boxes` 恒空 ⇒ 「stopped/无 dirty」；
+ *  真实盒态随执行面重做批经 Docker API 读）。 */
 export function boxStateOf(workspace, runnerRow) {
   if (!runnerRow) return { boxState: "stopped", stopReason: null, dirty: false }
   const box = heartbeatBlock(runnerRow).boxes.find((item) => item.workspaceId === workspace.id)
@@ -506,7 +452,7 @@ export function boxPayload(db, workspace, runner, { publicBase = null } = {}) {
     network: `tc-ws-${workspace.id}`,
     volume: String(workspace.id),
     env: {
-      OPENAI_BASE_URL: publicBase, // http://<server>:<port>/v1——config.host 为通配地址（0.0.0.0）时该值不可直连，runner 侧以其 --server 地址替换（实施注）
+      OPENAI_BASE_URL: publicBase, // http://<server>:<port>/v1——config.host 为通配地址（0.0.0.0）时该值不可直连，执行面侧以其 --server 地址替换（实施注）
       OPENAI_API_KEY: workspace.key_plain, // 工作区 key（盒内零服务器密钥——§7）
     },
   }

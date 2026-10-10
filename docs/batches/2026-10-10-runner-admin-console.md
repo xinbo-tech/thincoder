@@ -345,4 +345,74 @@ VERDICT: pass
 - **实施派遣**：两派并行（服务面 ∥ 控制台面——文件域不交叠）；真机验收 = 10.0.0.6 端到端九步；收口 = 本档 §6。
 
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成 2026-10-11（控制台面 8/8 绿；悬项 = 门禁链旧件随正（父侧范围）∥ 承载工作区 confirm 面（待裁））
+
+
+
+### 控制台面（沙盒页——运行面 + 容器区 + 托管接入）· eng-coder 记录（2026-10-11）
+
+**交付摘要**（文件域 = 控制台面；与服务面 `src/**` 不交叠）：
+
+- 新建 `thincoder-server/public/views-sandbox.mjs`（实读 **494 行**；软线 300 ∥ 顾问线 500 ∥ 硬限 800——线内）：运行面卡（可用性提示两态（无节点 ∥ 全离线——不整页禁用）+ 节点表六列 + 添加/删除节点弹窗）+ 容器区（节点行展开懒加载 ∥ 容器表四列 ∥ 启停删 ∥ 创建容器弹窗（镜像预填 = 设置读面））+ 托管接入弹窗（八字段 + S5 窗内预告知句 + 模型下拉源 = provider 注册表）+ 装机任务区（四列 ∥ 三态 ∥ 展开 = 详情面懒取步骤读数 ∥ 在途 3s 读时轮询定终态停 ∥ keep 态「撤销凭据」二次确认）。
+- 随动五件：`nav.mjs`（管理 7 ⇒ **8**——sandbox 末位）∥ `app.mjs`（import + PAGES 行）∥ `i18n-{zh,en}-admin.mjs`（+81 键/表）∥ `i18n-{zh,en}-shell.mjs`（+`nav.page.admin.sandbox`；`err.upstream_error` 值改携 `{detail}`）∥ `style.css`（+`.badge`/`.badge.ok`/`.badge.off`/`.detail-row`/`.stack-box`/`.step-list` 六条；`input/select` 行扩 `textarea`；**零新 `:root` 变量/零新悬停**——AC-19 canon 附加腿复跑绿）。
+- 新增批内件 `docs/batches/2026-10-10-runner-admin-console-ui.test.mjs`（8 腿：运行面 ∥ 添加节点两路 ∥ 删除节点三态 ∥ 容器区 ∥ 托管接入 ∥ 装机任务区 + 轮询 ∥ i18n 两表 ∥ 静态面）——**`node --test docs/batches/2026-10-10-runner-admin-console-ui.test.mjs`（自 `thincoder/` 仓根）= 8/8 通过**。
+- `thincoder-server/package.json`：`prepublishOnly` +1 链目（本批 ui 件，单行清单行数零变）；姊妹两件由服务面批入链 ⇒ 链实读 **39 ⇒ 42**。
+
+**决策透明表**（逐项均在交付报告披露；零静默改动）：
+
+| # | 项 | 事实 | 定性 | 处置 |
+|---|---|---|---|---|
+| 1 | 键数 | 实读 +82/批（81 沙盒 + nav 1；两表终值 468 ∥ 473）vs 设计估 ≈26（运行面）+ ≈30（托管） | 估算漂移——逐键有一处 §2.8① UI 串背书，零死键、零越面 | 设计侧/§6 按实读回填（不阻断） |
+| 2 | 行数 | views-sandbox 实读 494 vs 估 ≈210 ⇒ ≈285；ui 件实读 503 vs 估 ≈260 | 估算漂移（线内） | 余面批扩前定拆分触发点（沿 `routes.mjs` 预案同式） |
+| 3 | 地址占位 | 取 `"http:\/\/10.0.0.6:2375"`（转义形；评估值 = 设计字面 `http://10.0.0.6:2375` 逐字同） | 非偏差：裸形受 `public/**` 零外部引用闸（链内实件扫面）；先例 = `proxy.uriPh` | 已收；`public/**` 全目录零命中复核过 |
+| 4 | 任务读数源 | 列表面不携 `steps[].readings`（服务面实读 `onboarding.mjs` `steps: detail ? steps : steps.map(…)`）⇒ 展开须取 `GET …/onboarding/:id` 一次（步变重取） | 初版误读列表面；对账服务面实装后正 | 已修 + 批内件 ⑥ 锁形（懒取一次 ∥ 对象读数逐键 ∥ 失败 ⇒ fail 收口零假造） |
+| 5 | 可用性提示判据 | 后端总态 ∪ 行态自推（`runners.every((runner) => runner.online !== true)`） | 防御式读（防服务面总态词表口径差；行态即真相） | 已披露 |
+| 6 | 门禁链旧件 | ≥15 件批外旧件的档目/名册、nav 项数、键数与链件数断言现态必红（本批改动即触发源） | **不属于本派文件域**——设计载「随正件（父侧落——实施轮同拍）」 | 已上抛（附逐件目标值清单）；本派未动批外档 |
+| 7 | 承载工作区面 | 删节点调用不带 `confirm: true`（API §2.5 行要求；工作区面 = 余面批，本切片不可达） | 潜在缺口（本派不擅加语义） | 已上抛待裁 |
+
+**审计与代码评审轮次与终态**：
+
+- 内部偏差审计（explore ∥ 只读）轮 1：**VERDICT divergence found**——四发现：①键数 81 vs 估 ≈56（裁定 = 估算漂移，非范围爬行）②行数 494 vs 估 ≈285（🟡，线内）③地址占位省形（我收正为转义形——与设计字面逐字同）④任务读数源存疑（对账服务面实装 ⇒ 详情面懒取，已修）。OUT-OF-LIST = 零。
+- 内部代码评审（advisor ∥ code）轮 1：**VERDICT changes-required**——🔴 = 批外旧件随正（父侧范围，已列清单上抛）∥ 🟡 = 承载工作区 `confirm` 面（上抛待裁）∥ 🟡 = 占位形（已以转义形收口 ⇒ 设计档无需随正）∥ 🔵 = 估算漂移（本表已录）。
+- fix 轮（本派，1 轮）：占位两表转义形落地 ∥ 批内件线称收正（顾问线 500 ∥ 硬限 800）∥ 复跑 = 自件 8/8 绿 + `public/**` 零外链全扫零命中 + AC-19 canon 附加腿绿。
+- **终态 = `clean`（本派文件域内）**；悬项两项（链随正清单 ∥ 承载工作区 confirm 面）= 父侧/用户裁。
+
+### 服务面 + 托管接入面实施记录 · eng-coder（2026-10-10）
+
+**交付摘要**（文件域 = `thincoder-server/src/sandbox/**` ∥ `src/agent/**` ∥ `src/store/db.mjs` ∥ `Dockerfile` ∥ `package.json` ∥ 两批内件；与并行前端派 `public/**` 零交叠）：
+
+- 新增 7 档：`src/sandbox/docker.mjs`（187）∥ `src/sandbox/ssh.mjs`（215）∥ `src/sandbox/container-routes.mjs`（169——§13 拆分预案①）∥ `src/sandbox/onboarding.mjs`（373）∥ `src/sandbox/onboarding-routes.mjs`（103）∥ `src/agent/run.mjs`（138）∥ `src/agent/tools.mjs`（289）。
+- 改动 5 档：`src/sandbox/registry.mjs`（522 ⇒ 468——runner 面重写 ∥ `runnerHealth` 删 ∥ `sweepStuckTasks` 去心跳判据 ∥ 队列/心跳死件不动）∥ `src/sandbox/routes.mjs`（407 ⇒ 494——+添/删节点、运行面读时探活；删 drain 路由；容器四路由 ∥ 托管接入四端点转注册）∥ `src/store/db.mjs`（365 ⇒ 410——v12 重建 ∥ v13 建表）∥ `Dockerfile`（+3：openssh-client ∥ sshpass）∥ `package.json`（`@thincoder/core ^0.10.4` 依赖 + 门禁链入两件）。
+- 零触（声明）：`bin/thincoder-server.mjs` ±0（四端点经 `routes.mjs` 转注册）∥ `src/gateway/errors.mjs` ±0（零新码）∥ `public/**` 不属本派。
+- 批内件两件：`docs/batches/2026-10-10-runner-admin-console.test.mjs`（491）∥ `docs/batches/2026-10-10-runner-admin-console-agent.test.mjs`（632）；跑法 `node --test <件>`（自 `thincoder/` 仓根）。
+
+**验收读数**（本机实跑）：服务面 11/11 绿（N40 ∥ E34 ∥ B42 ∥ B41 ∥ N46 ∥ E35 ∥ N47 ∥ E36 ∥ N48 ∥ B43 ∥ v12 六条）∥ 托管接入面 13/13 绿（N49+N53 ∥ N50+N51 ∥ N52 ∥ B44 ∥ B45 ∥ E37 ∥ E38 ∥ E39 ∥ B47 ∥ B46 ∥ 腿 F ∥ v13 六条 ∥ 腿 E 链自检）。**不跑全仓套件**（父侧收口跑一次）；**真机面未跑**（`10.0.0.6` ∥ 无 Docker 机 = 收口轮）。
+
+**决策透明表（设计留白形 + 我地盘内的定夺；逐条理由）**
+
+| # | 项 | 决定 | 理由 / 出处 |
+|---|---|---|---|
+| 1 | 步骤日志机制（N49 断言面） | 工具调用携可选 `step`（S1–S8）入参 ⇒ 工具层把该步读数写 `steps_json`；S3 定策句由 driver 从模型纯文本回合捕获（要求此前已有工具调用）；S1/S8 由 driver 写 | 设计只钉「步骤表 + 读数面」，未钉落点机制；任务模型 = 模型驱动五工具环（KD-SV-83 非固定脚本）⇒ 步骤归属只能由调用自带 |
+| 2 | `step` 列语义 | 成功面 = `report.step`（通常 S8）；失败面 = 停在哪步（S2/S3/S6…）；S8 收尾条目入 `steps_json` 但不覆盖「停步」 | 控制台/审计要答的是「停在哪步」；收尾条目属读数明细而非停点 |
+| 3 | 核装载（KD-SV-78/82） | `run.mjs` 运行期 `import("@thincoder/core/provider/index.mjs")` 取 `chat`；批内件经 `chat` 注入口替身 ⇒ 测试零依赖核 | `workspace` 内 server 无 `node_modules`（实读）——静态 import 会破坏启动/测试；依赖声明已钉 `^0.10.4`（与 CLI 同形） |
+| 4 | `routes.mjs` 越 500 软线 | 容器面独立成档 `container-routes.mjs`（§13 预案①）；托管接入四端点再独立 `onboarding-routes.mjs`；`routes.mjs` 收至 494 | §13 明文预案；拆后仍余 510 ⇒ 进口块折行收至 494（零语义改） |
+| 5 | 容器面错误映射细化 | 创建面：引擎 404/409 ⇒ 400 携引擎原文；动作面：404 ⇒ 404 `not_found`，余（含 409）⇒ 502 | API §2.5 两行分述（创建行 vs 动作行）；README 头注同拍 |
+| 6 | 工作区视图字段 | `runnerHealth`（心跳派生）⇒ `runnerStatus`（新模型无心跳）；`descriptorOf` 随标签/容量放置退场删除 | 心跳面已废（KD-SV-80）；字段语义按新模型取直 |
+| 7 | 凭据纪律落点 | `sshpass -e`（口令经 env，不入 argv）∥ key 文件 0600 ∥ sudo 口令经 stdin ∥ 指纹变更 ⇒ `forgetHost` 清 stale（重交任务 = 重新信任）∥ 中断收尾同清 key 文件 | KD-SV-84/85；「免人工翻 known_hosts」= 提议⑬；口令路径与 argv 断言在批内件（`:242-245`） |
+| 8 | 0600 断言的平台面 | 批内件在非 win32 断言 `credentials.key` 0600，win32 只断言在场 | Node 无 POSIX 位面（本机 win32）——0600 归 Linux 容器面 |
+| 9 | 门禁链入件 | 入我两件（+ UI 件已在位，实读三件全在场 = 42 件） | 设计链 40 ⇒ 42 ⇒ 43；盘面实读 42（见下「设计档漂移」） |
+
+**审计与评审轮次与终态**
+
+- **内部偏离审计（explore，只读，1 轮）**：24 条 N/B/E 判据 + v12/v13 迁移判据逐条对位；`OUT-OF-LIST = 0`；发现 4 项低危（F1 步骤日志 stdout/stderr 未过掩蔽 ∥ F2 动作面 409 误归 400 ∥ F3 `routes.mjs` 511 行越软线 ∥ F4 设计档 `ACCOUNTS.md:67` 写入点指针陈）。**自修 3 项**：F1（`mask(stdout/stderr)`）∥ F2（动作面余项 ⇒ 502）∥ F3（进口折行 ⇒ 494）。F4 属设计档面，按纪律列报不改。
+- **内部代码评审（advisor，2 轮）**：轮 1 全档评审（14 档 + 6 设计档）——12 行 findings（🟡 4 ∥ 🔵 8），**零 🔴**，判据面 24 条 + 迁移判据逐条有落点；**修 2 项 🟡**：`dockerClientFor` 失败不入缓存（陈旧 rejection 拦住自愈重试——腿 F 锁）∥ `resumeInterrupted` 同清在途私钥文件（用完即弃不含中断径——B46 扩展锁）。轮 2 fix 核验：两项 = Fixed（路径逐字对位 ∥ 断言有鉴别力），新问题扫描零。
+- **终态 = clean**（审计/评审发现全部收敛：修 5 项 ∥ 列报 2 项设计档面）。**未修列报（不阻断，父侧裁）**：agent 批内件 632 行（顾问线——未越 800 硬限）∥ 删节点不可达 + keep 径 `kept/removed` 报 0（实况未知 ⇒ 读数措辞面，批内件 `:283` 锁值为损止值）∥ `appendStep` 时钟未走注入缝 ∥ docker/register/verify 的 `endpoint` 不绑 `host`（无围栏设计内，口径留口子）∥ `report` 调用一失败即收口 ∥ 死件引已删列（设计明载不动）。
+- **本机实跑证据**：两件 11/11 + 13/13（命令与读数见上）；`bin`/`errors.mjs` 零触为内容核（无 git 面）。
+
+**[上抛·知会] 设计档漂移两处（非我文件域，列报不改）**：① `accounts/ACCOUNTS.md:67` 写入点仍列 `routes.mjs`（容器面已拆 `container-routes.mjs`）② `ops/OPS.md:120-121` 门禁链值「⇒ 43」与盘面实读 42 差 1（该链算术仍含已随守护进程清除删除的 server-exec-sandbox 批两件）。
+
+**[上抛·知会] 前批遗留（父侧收口范围）**：门禁链内 ≥12 件批外旧件以 `[10, 10]` 硬断结构版本（如 `docs/batches/2026-10-06-console-completeness-2.test.mjs:152` ∥ `2026-10-09-server-console-config.test.mjs:383` ∥ `2026-10-10-team-login-client-access.test.mjs:284`）——v11 起即已失效，v12/v13 后更必红；本批未改（非本批文件域），父侧收口跑前需处置。
+
+**施工中上抛并已解的两条**：① `@thincoder/core` 依赖声明（R53③「实施轮定」）——已落 `^0.10.4`；② 步骤日志机制（同上表 #1）。
+
 ## §6 验证与收口（父代理）

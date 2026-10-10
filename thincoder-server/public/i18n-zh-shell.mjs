@@ -48,6 +48,7 @@ export const ZH_SHELL = Object.freeze({
   "nav.page.admin.usage": "全队用量",
   "nav.page.admin.audit": "审计",
   "nav.page.admin.system": "系统",
+  "nav.page.admin.sandbox": "沙盒",
   "nav.logout": "退出登录",
 
   // ── 语言切换器（自称名——固定取本档渲染，不自译） ───────────────────────────
@@ -66,7 +67,7 @@ export const ZH_SHELL = Object.freeze({
   "err.forbidden": "无权限——该操作需要 admin 角色",
   "err.not_found": "未找到目标（{detail}）",
   "err.invalid_request_error": "请求无效（{detail}）",
-  "err.upstream_error": "上游服务出错，请稍后再试",
+  "err.upstream_error": "上游服务出错：{detail}",
   "err.internal_error": "服务器内部错误，请稍后再试",
   "err.too_many_attempts": "登录尝试过多，请 {seconds} 秒后再试",
   "err.rate_limited": "模型限流：请 {seconds} 秒后再试",

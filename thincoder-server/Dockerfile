@@ -5,6 +5,10 @@
 # 升级/回滚 = 改 TC_SERVER_VERSION + docker compose up -d（重跑壳收敛——§5.4(e)）；重建镜像 = 换 Node 基座/壳时。
 FROM node:24-slim
 
+# 托管接入宿主前提（sandbox/SANDBOX.md §3 ∥ ops/OPS.md §5.10——镜像侧）：SSH 传输 = 系统 openssh（KD-SV-85）；
+# 密码认证 = sshpass（`-e` 环境变量口径）；缺 ⇒ S2 停 + 报因（宿主前提检查在案）。
+RUN apt-get update && apt-get install -y --no-install-recommends openssh-client sshpass && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # 前缀 = node 账号自有（运行期收敛/自升可写——§5.1）；PATH 含前缀 bin（入口 exec thincoder-server 依赖）

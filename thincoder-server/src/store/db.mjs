@@ -299,6 +299,49 @@ INSERT INTO sandbox_rules (kind, action, target, port, protocol, priority, note,
   ('domain', 'allow', '*.gitee.com', NULL, NULL, 0, '默认单：代码仓资源（单层左通配）', 'default', strftime('%Y-%m-%dT%H:%M:%fZ','now'), 'seed');
 `
 
+/** v12 增段（`sandbox_runners` 表重建——旧通道形态 ⇒ Docker 节点形态——store/STORE.md §2 v12 段逐字；sandbox 域）。
+ *  ① 建新表（列面 = v11 段所列：id/name/address/status/runtime_json/created_at）⇒ ② 存量行弃（旧通道行无地址可取、令牌/心跳语义整废——一次性过渡）
+ *  ⇒ ③ DROP ⇒ ④ RENAME（沿 v10 表重建先例——SQLite 不可改列集/CHECK）。 */
+const DDL_V12 = `
+-- ① 建新表（Docker 节点形态——无 token_hash ∥ 无 labels_json ∥ 无 last_heartbeat_at）
+CREATE TABLE sandbox_runners_v12 (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,                  -- 节点名（登记时给）
+  address TEXT NOT NULL,                      -- Docker API 地址（登记时给）
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','disabled')),
+  runtime_json TEXT NOT NULL DEFAULT '{}',    -- 连通自检读数
+  created_at TEXT NOT NULL
+);
+-- ② 存量行弃（不迁——见上注）⇒ ③ DROP ⇒ ④ RENAME
+DROP TABLE sandbox_runners;
+ALTER TABLE sandbox_runners_v12 RENAME TO sandbox_runners;
+`
+
+/** v13 增段（`sandbox_onboarding` 建表——托管接入任务 + 凭据——store/STORE.md §2 v13 段逐字；sandbox 域）。
+ *  加表（零重建）：任务态/步骤读数/凭据密文共一行；加密密钥 = `data/credentials.key`（不落库——KD-SV-84）。 */
+const DDL_V13 = `
+CREATE TABLE IF NOT EXISTS sandbox_onboarding (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  host TEXT NOT NULL,                          -- 主机地址原文
+  ssh_port INTEGER NOT NULL DEFAULT 22,
+  ssh_user TEXT NOT NULL,
+  auth_kind TEXT NOT NULL CHECK (auth_kind IN ('key','password')),
+  secret_cipher TEXT,                          -- AES-256-GCM 包（iv|tag|ct —— base64 三段）；零化后 NULL
+  sudo_cipher TEXT,                            -- 可选（同形）
+  credential_mode TEXT NOT NULL CHECK (credential_mode IN ('burn','keep')),
+  credential_state TEXT NOT NULL DEFAULT 'sealed' CHECK (credential_state IN ('sealed','burned','revoked')),
+  name TEXT,                                   -- 节点名（可选；缺省取探测主机名）
+  model TEXT NOT NULL,                         -- 提交时所选模型
+  status TEXT NOT NULL CHECK (status IN ('running','succeeded','failed','interrupted')),
+  step TEXT,                                   -- 当前/最后一步 id
+  steps_json TEXT NOT NULL DEFAULT '[]',       -- 步骤日志（读数面）
+  runner_id INTEGER,                           -- 成功后关联（未成 NULL）
+  created_by INTEGER,                          -- admin 成员 id
+  created_at TEXT NOT NULL,
+  finished_at TEXT
+);
+`
+
 /** 迁移链：每段 = `{ v, up(db) }`（v = 目标结构版本，自 1 起递增）；结构每变一次追一段（+1）。 */
 export const MIGRATIONS = [
   { v: 1, up: (db) => db.exec(DDL_V1) },
@@ -312,6 +355,8 @@ export const MIGRATIONS = [
   { v: 9, up: (db) => db.exec(DDL_V9) },
   { v: 10, up: (db) => db.exec(DDL_V10) },
   { v: 11, up: (db) => db.exec(DDL_V11) },
+  { v: 12, up: (db) => db.exec(DDL_V12) },
+  { v: 13, up: (db) => db.exec(DDL_V13) },
 ]
 
 /** 当前结构版本（= 链尾段号——store/STORE.md §1）。 */

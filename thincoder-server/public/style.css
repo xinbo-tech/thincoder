@@ -72,7 +72,7 @@ tbody tr:hover { background: var(--hover); } /* ① 行悬停（表格数据行�
 .row-clickable:focus-visible { outline: var(--bw-strong) solid var(--accent); outline-offset: -2px; } /* ① 行内环（−2px） */
 
 /* ── 表单控件（③）∥ 钮族（②——五型 + 悬停/聚焦/禁用态面）────────────────────────────────────── */
-input:not([type="checkbox"]), select { padding: var(--sp-3) var(--sp-4); border: var(--bw) solid var(--border); border-radius: var(--r-2); font: inherit; }
+input:not([type="checkbox"]), select, textarea { padding: var(--sp-3) var(--sp-4); border: var(--bw) solid var(--border); border-radius: var(--r-2); font: inherit; }
 input[type="checkbox"] { accent-color: var(--accent); } /* ③ 勾选框 = 原生 + accent-color（零自绘） */
 input:focus-visible, select:focus-visible, button:focus-visible { outline: var(--bw-strong) solid var(--accent); outline-offset: 2px; } /* ④ 聚焦环单形（控件外偏 2px） */
 label { display: inline-flex; gap: var(--sp-3); align-items: center; font-size: var(--fs); color: var(--muted); }
@@ -109,7 +109,7 @@ pre.snippet { font-family: var(--mono); font-size: var(--fs); margin: var(--sp-3
 /* ── Provider 页与双弹窗件（§2.4④——工具条 ∥ 函数表单 ∥ 勾选清单 ∥ 段头 ∥ 危险钮行）────────── */
 .provider-form { display: flex; flex-wrap: wrap; gap: var(--sp-4); align-items: flex-end; margin-bottom: var(--sp-4); }
 .provider-form > label { display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-start; }
-.provider-form input { min-width: 210px; } /* 尺寸字面（非刻度面——原值保留） */
+.provider-form input, .provider-form textarea { min-width: 210px; } /* 尺寸字面（非刻度面——原值保留） */
 .provider-form input[type="checkbox"] { min-width: 0; } /* 勾选形豁免最小宽（210px 面向文本/数值输入——实测：勾选形落 210px 拉伸） */
 .provider-form .key-clear { flex-direction: row; align-items: center; }
 /* `.provider-form.stacked` 竖排修饰（服务配置卡 ∥ 代理页两表单；2026-10-09 走查收正——横排折行致标签/输入错位；每项 = 标题行 + 控件）*/
@@ -193,6 +193,15 @@ dialog.modal::backdrop { background: var(--backdrop); }
 .detail-grid { display: grid; grid-template-columns: max-content 1fr; gap: var(--sp-3) var(--sp-5); margin: 0 0 var(--sp-5); font-size: var(--fs); }
 .detail-grid dt { color: var(--muted); }
 .detail-grid dd { margin: 0; }
+
+/* ── 沙盒页·运行面与托管接入（views-sandbox.mjs——§2.8①）：状态徽标 ∥ 展开行 ∥ 容器/步骤块 ──── */
+.badge { border: var(--bw) solid var(--border); border-radius: var(--r-2); padding: 0 var(--sp-2); } /* ② 徽标（中性——在线/离线与装机三态同形） */
+.badge.ok { color: var(--ok); border-color: var(--ok); }
+.badge.off { color: var(--danger); border-color: var(--danger); }
+.detail-row > td { background: var(--panel); white-space: normal; } /* 展开行（容器区/步骤读数——长文可折行） */
+.stack-box { display: flex; flex-direction: column; gap: var(--sp-4); }
+.step-list { margin: 0; padding-left: var(--sp-6); font-size: var(--fs); }
+.step-list li { margin: var(--sp-2) 0; }
 
 /* ── 服务模型配置面（views-models.mjs——§2.4③）：配置区五组（A/C/F/D/E） ∥ 表单网格 ∥ 停用钮行 ∥ 元数据行 ─── */
 .config-group { margin-top: var(--sp-4); }

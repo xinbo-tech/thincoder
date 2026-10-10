@@ -50,6 +50,7 @@ export const EN_SHELL = Object.freeze({
   "nav.page.admin.usage": "Team usage",
   "nav.page.admin.audit": "Audit",
   "nav.page.admin.system": "System",
+  "nav.page.admin.sandbox": "Sandbox",
   "nav.logout": "Sign out",
 
   // ── 登录 ───────────────────────────────────────────────────────────────────
@@ -64,7 +65,7 @@ export const EN_SHELL = Object.freeze({
   "err.forbidden": "Permission denied — this action requires the admin role",
   "err.not_found": "Not found ({detail})",
   "err.invalid_request_error": "Invalid request ({detail})",
-  "err.upstream_error": "The upstream service failed — please try again later",
+  "err.upstream_error": "Upstream service error: {detail}",
   "err.internal_error": "Internal server error — please try again later",
   "err.too_many_attempts": "Too many sign-in attempts — try again in {seconds} seconds",
   "err.rate_limited": "Rate limited — try again in {seconds} seconds",
