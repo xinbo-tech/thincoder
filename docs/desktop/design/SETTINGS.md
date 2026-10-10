@@ -307,6 +307,9 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 - **闭集随动（B1 批）**：团队入 `SECTIONS`（八段）⇒ `SCOPES` 派生十一（校验宽容面——菜单侧不发）；`MODAL_READS` +1 行（`team → loadTeam`——读件 = 团队段读，经装配并入 `reads` 检索面）；**菜单不发**（`SETTINGS_GROUPS` 六名不动——`app-menu.mjs` 零改）；闭集关系 ∥ 漂移检测排除句单源 = 本档 §1 **KD-68** ④。
 - **写面**：段出口调 `team:login` / `team:logout` → 主进程处理体（`thincoder-desktop/src/main/team.mjs`（拟新增））→ 核 `thincoder-core/team.mjs`（拟新增——`writeConfigAtomic` 单写者）；
   **成 ⇒ 回执后渲染面复读**（零新推送通道——写经 `writeConfigAtomic` ⇒ `ev:config` 自写抑制沿既有）：`team:status` 复读（段转登录态）+ provider 列表复读（`loadProviders()` 既有读链——派生条目随动）——调用点 = `mount-settings-team.mjs`（写成功径；`loadProviders` 经装配注入）。
+- **回执形与一次性提示（实施期设计相抵修复——2026-10-10）**：`team:login` 回执 `{ ok, reason?, notice? }` ∥ `team:logout` 回执 `{ ok, revokeDelivered? }`（形单源 = `docs/desktop/design/IPC.md` §2 团队族行）；
+  `notice` 在场（`"manual-name-conflict"`）⇒ 段内就地提示「已存在同名 provider「team」——未自动添加；请改名或删除后重登」（登录当刻）∥ `revokeDelivered === false`（缺席 = true）⇒ 段内就地提示「服务端吊销未达」（退出当刻）——两句逐字同句（`docs/core/design/TEAM.md` §2.5）；
+  两提示 = 一次性事件（登录/退出当刻就地显示）——`team:status` 复读不带提示字段。
 - **草稿保真（#604 口径）**：地址/用户名现存值重建保留；**密码恒不保真**（重建即清空——安全面有意）；写失败 ⇒ 就地错误行（三句逐字同——`TEAM.md` §2.5）。
 
 ## 3. 文件账（本域）
@@ -549,6 +552,8 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 （上列三行全文已迁讫（CG ∥ CH ∥ DH）；§10 本域余行（CT ∥ CV ∥ CX ∥ CY ∥ DB ∥ DD② 等他域行）留 `docs/desktop/design/PROJECT.md` §10 原址。）
 
 ## 变更记录
+
+- 2026-10-10（**team-login-client-access 批（B1）· 实施期设计相抵修复 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212）：**§2.21** 补**回执形与一次性提示**条（`team:login` 回执 `{ ok, reason?, notice? }` ∥ `team:logout` 回执 `{ ok, revokeDelivered? }`——同名冲突 ∥ 吊销未达句段内就地提示；`team:status` 零提示字段）。**零新语义**（父侧裁定直接导出项）。明细 = 批档 §2 实施期修复块。
 
 - 2026-10-10（**team-login-client-access 批（B1）· 设计评审轮 1 修正（fix 轮 · 发现 5 ∥ 6）· eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §3 轮次 1 ∥ §2 修复轮块 · 台账 #1212）：**KD-68** 闭集随动（③ 复用链 **八行**（+team）∥ ④ `SCOPES` **十一**名 ∥ `settings.modal` 十一值 ∥ `SECTIONS` 八段 ∥ 菜单六名派生「去「模型」∥ 去「团队」」+ 漂移排除句）∥ **§2.1** 七段 ⇒ **八段**（+团队）∥ **§2.10** 复用链八组 ∥ **§2.11** 现值注随正；
   **§2.21** 写面改「回执后复读」（`team:status` + `loadProviders`——零新推送通道）+ 闭集随动条 ∥ **§3.2** 本批块随正（`MODAL_READS` +1 ∥ 写成功径复读调用点 ∥ 旧漂移件随正 ∥ 闭集三件处置行）+ **§4** 机检面补闭集随动。**零新语义**（评审发现的直接导出项）。

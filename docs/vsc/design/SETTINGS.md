@@ -631,6 +631,9 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - **机制单源** = `docs/core/design/TEAM.md` §2（本档只收**面板 ↔ config 契约**端差面：承载 = 新卡 ∥ 消息面）。
 - **读面**：`teamStatus` 推送（宿主 → webview）= `{ loggedIn, server, member, label }`（形 = `thincoder-vscode/src/extension/team.mjs`（拟新增）投影；渲染面只读——单一状态源 = config.json 重建制不变）。
 - **写面**：webview → 宿主 `teamLogin { server, username, password }` ∥ `teamLogout`；宿主处理体调核 `thincoder-core/team.mjs`（拟新增——`writeConfigAtomic` 单写者；**端侧零自写盘**）；成 ⇒ 推 `teamStatus` + `providerStatus`（派生条目入列表——Providers 卡随动）。
+- **回执形与一次性提示（实施期设计相抵修复——2026-10-10 · 与桌面同拍）**：`teamLogin` 回执携 `notice?`（仅同名手工条目冲突时在场——值 `"manual-name-conflict"`）∥ `teamLogout` 回执携 `revokeDelivered?`（缺席 = true = 服务端吊销已送达）；
+  在场 ⇒ 卡内就地提示——同名冲突（登录当刻）：「已存在同名 provider「team」——未自动添加；请改名或删除后重登」∥ 吊销未达（退出当刻）：「服务端吊销未达」——两句逐字同句（`docs/core/design/TEAM.md` §2.5）· 文本归本端 i18n；
+  两提示 = 一次性事件（登录/退出当刻就地显示）——**`teamStatus` 零提示字段**（形不变：`{ loggedIn, server, member, label }`）。
 - **密码面**：请求内存即弃（零落盘 ∥ 零回显广播）；重建/切卡清空密码格。
 - **失败出词**：网络不可达 ∥ 用户名或密码错误 ∥ 登录尝试过于频繁——三句逐字同（i18n 键 zh/en 双表 +≈14 键）。
 
@@ -744,6 +747,8 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 | U-S20 | **团队卡（本批）**：登录表单 = 服务器地址 ∥ 用户名 ∥ 密码三字段；未登录提示句 = 「未登录——登录后可用」（三端逐字同句）；退出 = 卡内钮（服务端吊销 best-effort——网络失败照清本地 + 提示）；同名手工 `team` 条目 ⇒ 登录成 + 就地提示（不覆盖不弹窗） | 已定（§2.20——B1 批） |
 
 ## 变更记录
+
+- 2026-10-10（**team-login-client-access 批（B1）· 实施期设计相抵修复 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212）：**§2.20** 补**回执形与一次性提示**条（`teamLogin` / `teamLogout` 回执携 `notice?` / `revokeDelivered?`——同名冲突 ∥ 吊销未达句卡内就地提示；`teamStatus` 零提示字段）。**零新语义**（父侧裁定直接导出项）。明细 = 批档 §2 实施期修复块。
 
 - 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212；需求 §2:31 + AC-31）：新增 **§2.20 团队卡**（登录与接入——读面 / 写面 / 密码面 / 失败出词）+ **§1** 五卡 ⇒ **六卡**（+团队行）∥ **§5** +U-S20；机制单源 = `docs/core/design/TEAM.md` §2（本档不复制——D2）。**产品码零触（设计轮）**。
 - 2026-10-07（**添加入口弹窗统一批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-add-dialog-unify.md` §2 · 台账 #1054）：新增 **§2.17**（添加入口统一判据 + VSC 三面：MCP 表单 ⇒ 弹窗 ∥ 会诊添加 ⇒ 弹窗 ∥ 模型菜单页脚 ⇒ 直开）；**§1** 两卡行随动（Tools & Services MCP 弹窗体 ∥ Consult & Advisor 添加弹窗 + 两新档登记）；**§2.4** 增面形指针；**§2.10** 判据域边界档数 10 ⇒ 12 ∥ 合域 11 ⇒ 13 + 实施后回填面句；**§5** +U-S18。**零新语义**（定形 + 落点；明细 = 批档 §2）。

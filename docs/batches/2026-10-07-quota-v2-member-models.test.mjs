@@ -421,11 +421,11 @@ test("⑦ #1001②：模型禁用与配额覆盖同一键形助手（空白/空�
   }
 })
 
-// ── ⑧ 门禁清单（`prepublishOnly` 三十八件含本批两件 ∥ 清单在盘）──────────────────
+// ── ⑧ 门禁清单（`prepublishOnly` 三十九件含本批两件 ∥ 清单在盘）──────────────────
 
-test("⑧ 门禁清单：`prepublishOnly` 三十八件含本批件（新建 ∥ 随正）∥ 清单目标在盘", () => {
+test("⑧ 门禁清单：`prepublishOnly` 三十九件含本批件（新建 ∥ 随正）∥ 清单目标在盘", () => {
   const batchFiles = PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? []
-  assert.equal(batchFiles.length, 38, `门禁清单件数（二十六 ⇒ 三十八——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链 ∥ 10-09 alias 批件入链 ∥ 10-09 代理页批件入链 ∥ 10-10 服务面残迹批件入链 ∥ 10-10 服务小修批两件入链）：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 39, `门禁清单件数（二十六 ⇒ 三十九——结构轮批件入链 ∥ 10-09 bin 修复批件入链 ∥ 10-09 控制台测试 key 修复批件入链 ∥ 10-09 清除批件入链 ∥ 10-09 代理批件入链 ∥ 10-09 配置控制台批件入链 ∥ 10-09 embed 解耦批件入链 ∥ 10-09 alias 批件入链 ∥ 10-09 代理页批件入链 ∥ 10-10 服务面残迹批件入链 ∥ 10-10 服务小修批两件入链 ∥ 10-10 团队登录批件入链）：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-v2-member-models.test.mjs"), "本批件应入列")
   assert.ok(batchFiles.includes("docs/batches/2026-10-07-quota-per-model.test.mjs"), "随正件应在列")
   for (const file of batchFiles) assert.ok(existsSync(join(ROOT, file)), `清单目标缺档：${file}`)

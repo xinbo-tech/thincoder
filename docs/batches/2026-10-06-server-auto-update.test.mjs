@@ -477,7 +477,7 @@ test("部署件结构：Dockerfile 壳形（预装本地 tgz ∥ PATH ∥ USER n
   assert.match(unit, /^ExecStart=\/opt\/thincoder-server\/\.npm-global\/bin\/thincoder-server --config \/opt\/thincoder-server\/config\.json$/m)
   assert.match(unit, /^Restart=always$/m)
   const batchFiles = (PKG.scripts.prepublishOnly.match(/docs\/batches\/[^\s"]+/g) ?? [])
-  assert.equal(batchFiles.length, 38, `prepublishOnly 应列三十八件：${batchFiles.length}`)
+  assert.equal(batchFiles.length, 39, `prepublishOnly 应列三十九件：${batchFiles.length}`)
   assert.ok(batchFiles.includes("docs/batches/2026-10-06-server-auto-update.test.mjs"), "本批件应入列")
 })
 
