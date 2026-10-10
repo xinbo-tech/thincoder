@@ -8,9 +8,10 @@
 import { HttpError } from "../gateway/errors.mjs"
 import { DEFAULT_USAGE_RETENTION_DAYS } from "../ops/config.mjs"
 
-/** 事件目录（十二型——与 `audit_events.type` CHECK 同集；v10 扩 `config_update`——配置控制台批；
+/** 事件目录（十三型——与 `audit_events.type` CHECK 同集；v10 扩 `config_update`——配置控制台批；
  *  v11 扩 `sandbox_rule`（规则增删——detail = { action, rule }）∥ `sandbox_event`（沙盒事件——detail.kind：审批三态/超时 ∥
- *  盒起停拆 ∥ runner 注册/排空/删除 ∥ join 失败 ∥ 快照——server-exec-sandbox 批）。 */
+ *  盒起停拆 ∥ runner 注册/排空/删除 ∥ join 失败 ∥ 快照——server-exec-sandbox 批）；
+ *  v14 扩 `agent_event`（管理面 agent 会话——detail.kind：chat_start ∥ chat_call ∥ chat_stop——admin-agent-chat 批 · KD-SV-91）。 */
 export const AUDIT_TYPES = Object.freeze([
   "login_success",
   "login_failure",
@@ -24,6 +25,7 @@ export const AUDIT_TYPES = Object.freeze([
   "config_update",
   "sandbox_rule",
   "sandbox_event",
+  "agent_event",
 ])
 
 export const AUDIT_LIMIT_DEFAULT = 100 // 列表缺省行数（沿用量口径——METERING §3）
@@ -32,7 +34,7 @@ export const AUDIT_LIMIT_MAX = 500     // 列表上限（同上）
 const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
- * 落一条审计事件（事件目录 = §2.1 十二型——调用侧显式传型/主体）：返回行 id。
+ * 落一条审计事件（事件目录 = §2.1 十三型——调用侧显式传型/主体）：返回行 id。
  * `{ type, actor, actorId = null, target = "", targetId = null, detail = {}, ts = Date.now() }`。
  */
 export function recordAudit(db, { type, actor, actorId = null, target = "", targetId = null, detail = {}, ts = Date.now() } = {}) {
@@ -48,7 +50,7 @@ export function recordAudit(db, { type, actor, actorId = null, target = "", targ
 }
 
 /**
- * 列表查询（`GET /api/audit` 数据面——倒序新在前）：过滤 `type`（十二型枚举——非法 ⇒ 400）∥ `memberId`
+ * 列表查询（`GET /api/audit` 数据面——倒序新在前）：过滤 `type`（十三型枚举——非法 ⇒ 400）∥ `memberId`
  * （解析后 = 成员 id——匹配 actor_id ∥ target_id，同 usage 口径）∥ `from`/`to`（unix ms）。
  * `limit` 夹在 1..`AUDIT_LIMIT_MAX`（缺省 100——沿用量口径）。
  */

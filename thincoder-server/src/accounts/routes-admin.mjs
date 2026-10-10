@@ -14,9 +14,9 @@ import { keyUsageStats, monthlyTokensByMember, parseUsageLimit, parseUsageTime }
 import { queryAudit, recordAudit } from "./audit.mjs"
 import { getKeyById, revokeKey } from "./keys.mjs"
 import { defaultLoginGuard } from "./login-guard.mjs"
-import { createMember, findMemberById, findMemberByName, generateTempPassword, listMembers, mergeMemberModelDisables, parseModelDisables, setMemberPassword } from "./members.mjs"
+import { createMember, findMemberById, findMemberByName, listMembers, mergeMemberModelDisables, parseModelDisables, resetMemberPassword } from "./members.mjs"
 import { memberView } from "./routes.mjs"
-import { requireAdmin, revokeMemberSessions } from "./session.mjs"
+import { requireAdmin } from "./session.mjs"
 
 /** `member` 过滤取值（同 usage 口径：全数字 ⇒ id；否则按展示名；未命中 ⇒ 空集哨兵 -1）。 */
 function resolveMemberFilter(db, raw) {
@@ -82,10 +82,8 @@ export function registerAdminRoutes(routes, { db, guard = defaultLoginGuard } = 
     const { member: admin } = requireAdmin(db, req)
     const member = findMemberById(db, Number(ctx.params.id))
     if (!member) throw new HttpError("not_found", `成员不存在：${ctx.params.id}`)
-    const tempPassword = generateTempPassword() // 一次性回显——同签发语义（KD-SV-14）
-    await setMemberPassword(db, member.id, tempPassword)
-    guard.clearUsername(member.username) // 清计：目标用户名维（HTTP 面；本机 CLI 重置跨进程不达——在案）
-    revokeMemberSessions(db, member.id) // 该成员全部会话吊销
+    // 重置链单源 = `resetMemberPassword`（改密 + 清计 + 会话吊销——§12 KD-SV-90；chat 工具面同函数）
+    const tempPassword = await resetMemberPassword(db, member, { guard })
     recordAudit(db, { type: "password_reset", actor: admin.name, actorId: admin.id, target: member.name, targetId: member.id })
     sendJson(res, 200, { id: member.id, tempPassword })
   })

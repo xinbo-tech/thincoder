@@ -342,6 +342,54 @@ CREATE TABLE IF NOT EXISTS sandbox_onboarding (
 );
 `
 
+/** v14 增段（agent chat 两表 + 审计 CHECK 再扩（十三型）——store/STORE.md §2 v14 段逐字；agent 域——admin-agent-chat 批）。
+ *  ① `agent_chats`（会话：`model` ∥ `status` 在途标记）+ `agent_chat_messages`（消息序：`role` 四值 ∥ `content` ∥ `data_json`）+ `(chat_id, seq)` 索引；
+ *  ② 审计表重建（十二型 ⇒ 十三型：+ `agent_event`——步序与 v10/v11 同构）。对象模型 = `agent/ADMIN-AGENT.md` §11/§12（单源）。 */
+const DDL_V14 = `
+-- ① 管理面 chat 两表（KD-SV-89——消息逐条增量落库；无 FK——沿 audit_events 口径）
+CREATE TABLE IF NOT EXISTS agent_chats (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  model TEXT NOT NULL,                        -- 建会话时选定（KD-SV-87 同口径）
+  status TEXT NOT NULL DEFAULT 'idle' CHECK (status IN ('idle','running')),  -- running = 一轮在途（重启 ⇒ idle——如实收尾）
+  created_by INTEGER,                         -- 发起 admin 成员 id（无 FK——沿先例）
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS agent_chat_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  chat_id INTEGER NOT NULL,                   -- 无 FK（历史/瞬态面自足——沿 audit_events 口径）
+  seq INTEGER NOT NULL,                       -- 会话内序（1 起）
+  role TEXT NOT NULL CHECK (role IN ('user','assistant','tool','notice')),
+  content TEXT NOT NULL DEFAULT '',           -- 工具结果 = 模型可见形（截断 ≤4000 字——回放逐字一致）
+  data_json TEXT,                             -- role 附加形：assistant 的 toolCalls ∥ tool 的 toolCallId/名/摘要 ∥ notice 的 reason（四值枚举——重启收尾 "restart" ∥ 预算超限 "budget" ∥ 模型错误 "model_error" ∥ 空回合 "empty_turn"）
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_agent_chat_messages ON agent_chat_messages(chat_id, seq);
+
+-- ② 审计 CHECK 再扩（十二型 ⇒ 十三型——表重建，步序与 v10/v11 同构）
+-- + 'agent_event'（管理面 agent 会话——kind：chat_start（会话创建）∥ chat_call（每工具调用）∥ chat_stop（异常收尾：预算超限 ∥ 模型错误 ∥ 空回合 ∥ 重启中断）；
+--   detail = { kind, chatId, tool?, call?, resultCode?, summary?, reason? }（notice 的 reason 四值枚举——重启收尾 "restart" ∥ 预算超限 "budget" ∥ 模型错误 "model_error" ∥ 空回合 "empty_turn"）；
+--   摘要截断 + 秘密掩蔽口径沿任务面）
+CREATE TABLE audit_events_v14 (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts          INTEGER NOT NULL,              -- unix ms（事件时刻）
+  type        TEXT NOT NULL CHECK (type IN ('login_success','login_failure','login_locked',
+    'key_rotate','key_issue','key_revoke','password_change','password_reset','member_create','config_update',
+    'sandbox_rule','sandbox_event','agent_event')),
+  actor_id    INTEGER,                       -- 行为人成员 id（无会话 ∥ 未知用户名 ⇒ NULL；无 FK——历史记录自足）
+  actor_name  TEXT NOT NULL,                 -- 行为人名快照（用户名 ∥ 展示名 ∥ 'cli'）
+  target_id   INTEGER,                       -- 对象成员 id（无对象 ⇒ NULL）
+  target_name TEXT NOT NULL DEFAULT '',      -- 对象名快照（无对象 ⇒ 空串）
+  detail      TEXT NOT NULL DEFAULT '{}'     -- 附加形（JSON：ip ∥ dimension ∥ keyHint ∥ role ∥ kind ∥ chatId 等）
+);
+INSERT INTO audit_events_v14 (id, ts, type, actor_id, actor_name, target_id, target_name, detail)
+  SELECT id, ts, type, actor_id, actor_name, target_id, target_name, detail FROM audit_events;
+DROP TABLE audit_events;
+ALTER TABLE audit_events_v14 RENAME TO audit_events;
+CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_events(ts);
+CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
+`
+
 /** 迁移链：每段 = `{ v, up(db) }`（v = 目标结构版本，自 1 起递增）；结构每变一次追一段（+1）。 */
 export const MIGRATIONS = [
   { v: 1, up: (db) => db.exec(DDL_V1) },
@@ -357,6 +405,7 @@ export const MIGRATIONS = [
   { v: 11, up: (db) => db.exec(DDL_V11) },
   { v: 12, up: (db) => db.exec(DDL_V12) },
   { v: 13, up: (db) => db.exec(DDL_V13) },
+  { v: 14, up: (db) => db.exec(DDL_V14) },
 ]
 
 /** 当前结构版本（= 链尾段号——store/STORE.md §1）。 */

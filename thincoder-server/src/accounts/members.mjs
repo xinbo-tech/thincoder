@@ -13,6 +13,7 @@ import { promisify } from "node:util"
 import { HttpError } from "../gateway/errors.mjs"
 import { isExternalModelRef } from "../gateway/providers.mjs"
 import { MIN_PASSWORD_LENGTH } from "../ops/config.mjs"
+import { revokeMemberSessions } from "./session.mjs"
 
 const scrypt = promisify(scryptCallback)
 
@@ -133,6 +134,19 @@ export async function setMemberPassword(db, memberId, password) {
   const hash = await hashPassword(password)
   const info = db.prepare("UPDATE members SET password_hash = ? WHERE id = ?").run(hash, memberId)
   if (Number(info.changes) === 0) throw new HttpError("not_found", `成员不存在：${memberId}`)
+}
+
+/** 重置链（KD-SV-14 ∥ KD-SV-90 §12——**共享助手**：控制台重置路由与 chat 工具面两调用点单源）：
+ *  边界 = 改密 + 清计（`guard.clearUsername`——装配面注入）+ 既有会话吊销（KD-SV-14 全效；同路由）；
+ *  **审计写不随迁**（`recordAudit` 各留调用侧——路由侧 `password_reset` ∥ chat 侧只 `chat_call` 行；KD-SV-91）。
+ *  `guard` 缺省 ⇒ 跳清计（CLI 面跨进程不达先例——ACCOUNTS §2 清计路径在案）。出 = 一次性临时密码。 */
+export async function resetMemberPassword(db, member, { guard = null } = {}) {
+  if (!member || typeof member.id !== "number") throw new HttpError("not_found", `成员不存在：${String(member?.id)}`)
+  const tempPassword = generateTempPassword()
+  await setMemberPassword(db, member.id, tempPassword)
+  guard?.clearUsername?.(member.username) // 清计：目标用户名维（HTTP 面；跨进程不达——在案）
+  revokeMemberSessions(db, member.id) // 该成员全部会话吊销（KD-SV-14）
+  return tempPassword
 }
 
 /** 分模型覆盖表解析（`model_quotas_json` ⇒ map；缺省 ∥ 畸形 ∥ 非对象 ⇒ `{}`——零覆盖，不抛）。 */

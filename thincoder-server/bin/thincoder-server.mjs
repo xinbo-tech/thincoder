@@ -25,6 +25,7 @@ import { registerConfigAdminRoutes } from "../src/gateway/config-admin.mjs"
 import { registerOverviewRoutes } from "../src/gateway/overview.mjs"
 import { registerProxyAdminRoutes } from "../src/gateway/proxy-admin.mjs"
 import { registerSandboxRoutes } from "../src/sandbox/routes.mjs"
+import { registerChatRoutes } from "../src/agent/chat-routes.mjs"
 import { ensureBootstrap, findMemberByUsername } from "../src/accounts/members.mjs"
 import { createLoginGuard } from "../src/accounts/login-guard.mjs"
 import { pruneAuditEvents, recordAudit } from "../src/accounts/audit.mjs"
@@ -154,6 +155,7 @@ export async function run(argv = process.argv.slice(2), log = createLogger(), { 
     registerProxyAdminRoutes(routes, { db, log }) // 代理连通测试面（§2.4——真打 ∥ 自含形；零落库零计费——KD-SV-60）
     // 沙盒面（§2.5/§2.6——server-exec-sandbox 批）：控制台 ∥ 成员面 + runner 通道（无 runner ⇒ 仅沙盒功能面不可用——KD-SV-71）
     registerSandboxRoutes(routes, { db, config, log })
+    registerChatRoutes(routes, { db, log, deps: { runtime: providerRuntime, config, guard: loginGuard } }) // 管理面 agent 会话面（gateway/API.md §2.8——四端点 + 重启恢复钩）
     // D4 面：webui 静态面（`public/` 直发——注册路由优先；`/v1/*` ∥ `/api/*` 不走静态面）
     const server = createGatewayServer({ config, routes, log, staticSite: createStaticSite() })
     app = { server, db }

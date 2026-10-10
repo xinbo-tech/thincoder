@@ -119,6 +119,168 @@ function asInvalidRequest(fn) {
   }
 }
 
+// ── 共享写链（KD-SV-90 §12——控制台六端点与 chat 工具面**两调用点单源**）──────────────────
+// 步序同 §2.2「保存即热生效」四步：① 校验（单源 `validateProviderEntry`）→ ② 建候选注册表（`env:` 解析 + 别名全服唯一）
+// → ③ 落库 → ④ `runtime.set(候选)`（原子换表）；失败 ⇒ 库与运行时零变。审计写不随迁（各调用侧自持——KD-SV-91 不双记）。
+
+/** 行定位（id 非法/不存在 ⇒ null——调用方转 404）。 */
+export function findProviderRow(db, rawId) {
+  const id = Number(rawId)
+  if (!Number.isInteger(id)) return null
+  return db.prepare("SELECT * FROM providers WHERE id = ?").get(id) ?? null
+}
+
+/** provider 名冲突检查（重名 ⇒ 400；`exceptId` = 自身改 name 时豁免）。 */
+export function assertProviderNameFree(db, name, { exceptId = null } = {}) {
+  if (listProviderEntries(db).some((entry) => entry.name === name && entry.id !== exceptId)) {
+    throw new HttpError("invalid_request_error", `provider 名已存在：${name}（重名——库与运行时零变）`)
+  }
+}
+
+/** 候选注册表（保存路径②）：`env:` 解析 + 顶层代理串注入（旗随保存热生效——KD-SV-55）+
+ *  别名全服唯一（保存径对既有集；KD-SV-59③ 三径同助手——撞 ⇒ 400）。 */
+function buildCandidateFor({ db, config = {}, env = process.env }, entries) {
+  assertAliasesUnique(entries)
+  return createProviderRegistry(entries, { env, engineModel: config?.embedding?.model ?? null, proxyUri: config?.proxy?.uri ?? null })
+}
+
+/** 写面上下文校验（`runtime` = gateway 注册行装配期引导的**同一实例**——换表两族同见）。 */
+function assertWriteCtx(runtime) {
+  if (!runtime || typeof runtime.set !== "function") throw new Error("provider 写面缺运行时（runtime——装配面接线）")
+}
+
+/** 新增 provider（§2.2 POST 写链）：出 = `{ id, entry }`；形/重名/别名撞 ⇒ 抛（调用侧转 400）。 */
+export function addProviderEntry(ctx = {}, { name, baseURL, apiKey = "", models = [], proxy, modelMeta } = {}) {
+  const { db, runtime, log = null } = ctx
+  assertWriteCtx(runtime)
+  const entry = asInvalidRequest(() => validateProviderEntry({ name, baseURL, apiKey, models, proxy }, { where: "provider" }))
+  // `modelMeta` 期望图（白名单 + 形不符即略 + 与提交 `models` 求交；缺省 ⇒ `{}`；非对象 ⇒ 400 库零变）
+  const meta = asInvalidRequest(() => filterModelMeta(modelMeta === undefined ? {} : modelMeta, entry.models))
+  assertProviderNameFree(db, entry.name)
+  const candidate = asInvalidRequest(() => buildCandidateFor(ctx, [...listProviderEntries(db), entry])) // ②
+  const now = new Date().toISOString()
+  const info = db
+    .prepare("INSERT INTO providers (name, base_url, api_key, models_json, proxy, model_meta_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(entry.name, entry.baseURL, entry.apiKey, JSON.stringify(entry.models), entry.proxy === true ? 1 : 0, JSON.stringify(meta), now, now) // ③
+  runtime.set(candidate) // ④ 原子换表（零重启）
+  const id = Number(info.lastInsertRowid)
+  log?.info("provider_created", { id, name: entry.name })
+  return { id, entry }
+}
+
+/** 改 provider（§2.2 PATCH 写链——字段级：缺省 = 不动；`settings` 键级合并；`modelMeta` 缺省 = 现存按求交滑动）：出 = `{ id, entry }`。 */
+export function updateProviderEntry(ctx = {}, rawId, patch = {}) {
+  const { db, runtime, log = null } = ctx
+  assertWriteCtx(runtime)
+  const row = findProviderRow(db, rawId)
+  if (!row) throw new HttpError("not_found", `provider 不存在：${rawId}`)
+  const body = bodyFields(patch)
+  const current = rowToEntry(row)
+  // `settings` 键级合并（值 null ⇒ 删键；未出现键 = 不动）——合并后与其余字段同走单源校验
+  const settings = asInvalidRequest(() => mergeProviderSettings(current.settings, body.settings))
+  const entry = asInvalidRequest(() => validateProviderEntry({
+    name: body.name !== undefined ? body.name : current.name,
+    baseURL: body.baseURL !== undefined ? body.baseURL : current.baseURL,
+    apiKey: body.apiKey !== undefined ? body.apiKey : current.apiKey, // `apiKey: ""` = 清除（§2.2）
+    models: body.models !== undefined ? body.models : current.models,
+    proxy: body.proxy !== undefined ? body.proxy : current.proxy, // 布尔直写；缺省 = 不动（§2.2）
+    settings,
+  }, { where: "provider" }))
+  if (entry.name !== current.name) assertProviderNameFree(db, entry.name, { exceptId: current.id })
+  // `modelMeta` 期望图：键在场 = 提交图（白名单 + 形不符即略 + 求交）；缺省 = 现存图按求交滑动（删项随之滑落——零孤儿）
+  const meta = asInvalidRequest(() => filterModelMeta(body.modelMeta === undefined ? current.modelMeta : body.modelMeta, entry.models))
+  const candidate = asInvalidRequest(() => buildCandidateFor(ctx, listProviderEntries(db).map((item) => (item.id === current.id ? { ...entry, id: current.id } : item))))
+  db.prepare("UPDATE providers SET name = ?, base_url = ?, api_key = ?, models_json = ?, proxy = ?, settings_json = ?, model_meta_json = ?, updated_at = ? WHERE id = ?")
+    .run(entry.name, entry.baseURL, entry.apiKey, JSON.stringify(entry.models), entry.proxy === true ? 1 : 0, JSON.stringify(entry.settings), JSON.stringify(meta), new Date().toISOString(), current.id)
+  runtime.set(candidate)
+  log?.info("provider_updated", { id: current.id, name: entry.name })
+  return { id: current.id, entry }
+}
+
+/** 删 provider（§2.2 DELETE 写链——硬删，用量行零触；不存在 ⇒ 404）：出 = `{ id, name }`。 */
+export function removeProviderEntry(ctx = {}, rawId) {
+  const { db, runtime, log = null } = ctx
+  assertWriteCtx(runtime)
+  const row = findProviderRow(db, rawId)
+  if (!row) throw new HttpError("not_found", `provider 不存在：${rawId}`)
+  const rest = listProviderEntries(db).filter((entry) => entry.id !== row.id)
+  const candidate = asInvalidRequest(() => buildCandidateFor(ctx, rest))
+  db.prepare("DELETE FROM providers WHERE id = ?").run(row.id) // 硬删——用量行零触（§2.2）
+  runtime.set(candidate)
+  log?.info("provider_deleted", { id: row.id, name: row.name })
+  return { id: row.id, name: row.name }
+}
+
+/** 模型发现（§2.2 discover 写链——草稿探针；不落库）：出 = `{ models, modelMeta }`。 */
+export async function discoverProviderModels(ctx = {}, { baseURL, apiKey, providerId, proxy } = {}) {
+  const { db, config = {}, env = process.env, fetchImpl = proxyFetch, discoverTimeoutMs = PROVIDER_DISCOVER_TIMEOUT_MS, log = null } = ctx
+  // 草稿 baseURL 过单源校验（`name` 占位 ∥ `models` 空占位——发现只用 `baseURL`）；apiKey 明传优先，否则取库内该 provider 的 key
+  const draft = asInvalidRequest(() => validateProviderEntry({ name: "discover-draft", baseURL, apiKey: "", models: [] }, { where: "body" }))
+  // `providerId` 条目（key ∥ 代理旗双兜底面；id 非法/不存在 ⇒ 404）
+  const storedRow = providerId !== undefined && providerId !== null ? findProviderRow(db, providerId) : null
+  let resolvedApiKey = ""
+  if (apiKey !== undefined && apiKey !== null) {
+    resolvedApiKey = apiKey
+  } else if (storedRow !== null) {
+    resolvedApiKey = storedRow.api_key
+  } else if (providerId !== undefined && providerId !== null) {
+    throw new HttpError("not_found", `provider 不存在：${providerId}`)
+  }
+  // 代理判定（KD-SV-55——与 chat 转发同判定）：明传优先 → providerId 条目旗兜底 → 皆无 ⇒ 直连
+  let useProxy = false
+  if (proxy !== undefined) {
+    if (typeof proxy !== "boolean") {
+      throw new HttpError("invalid_request_error", `discover.proxy 须为布尔（true ∥ false——现 ${JSON.stringify(proxy)}）`)
+    }
+    useProxy = proxy
+  } else if (storedRow !== null) {
+    useProxy = storedRow.proxy === 1
+  }
+  const proxyUri = useProxy === true ? (config.proxy?.uri ?? null) : null
+  const resolvedKey = asInvalidRequest(() => resolveProviderKey(resolvedApiKey, { env, where: "discover.apiKey" })) // `env:` 引用服务端解析
+  let upstream
+  try {
+    upstream = await fetchImpl(upstreamUrl(draft.baseURL, "/models"), {
+      method: "GET",
+      headers: resolvedKey ? { authorization: `Bearer ${resolvedKey}` } : {}, // Authorization 同转发口径——key 空不发
+      signal: AbortSignal.timeout(discoverTimeoutMs),
+    }, proxyUri)
+  } catch (e) {
+    log?.warn("provider_discover_failed", { baseURL: draft.baseURL, message: e.message })
+    throw new HttpError("upstream_error", `模型发现失败（上游不可达或超时）：${e.message}——请检查上游可达性后重试`)
+  }
+  let text
+  try {
+    text = await upstream.text()
+  } catch (e) {
+    log?.warn("provider_discover_failed", { baseURL: draft.baseURL, message: e.message })
+    throw new HttpError("upstream_error", `模型发现失败（响应读取失败）：${e.message}——请检查上游可达性后重试`)
+  }
+  let payload
+  try {
+    payload = JSON.parse(text)
+  } catch {
+    log?.warn("provider_discover_failed", { baseURL: draft.baseURL, message: `非 JSON（HTTP ${upstream.status}）` })
+    throw new HttpError("upstream_error", `模型发现失败：上游响应非 JSON（HTTP ${upstream.status}）——请检查上游可达性后重试`)
+  }
+  if (payload === null || typeof payload !== "object" || !Array.isArray(payload.data)) {
+    log?.warn("provider_discover_failed", { baseURL: draft.baseURL, message: `无 data 清单（HTTP ${upstream.status}）` })
+    throw new HttpError("upstream_error", `模型发现失败：上游响应无 data 清单（HTTP ${upstream.status}）——请检查上游可达性后重试`)
+  }
+  const models = []
+  const modelMeta = {}
+  const seen = new Set()
+  for (const item of payload.data) {
+    const id = item?.id
+    if (typeof id !== "string" || id === "" || seen.has(id)) continue // 去重首见（与 models 同集）
+    seen.add(id)
+    models.push(id)
+    const meta = extractModelMeta(item, id)
+    if (Object.keys(meta).length > 0) modelMeta[id] = meta // ≥1 字段才入键（缺就空着——零兜底值、零占位）
+  }
+  return { models, modelMeta } // 草稿键经 body 传入不落库（§2.2）
+}
+
 /**
  * 注册 provider 管理面六端点（§2.2）：`db` = openDatabase 产物 ∥ `config` = 校验后配置 ∥
  * `runtime` = gateway 注册行装配期引导的**同一实例**（换表两族同见）。
@@ -127,27 +289,7 @@ function asInvalidRequest(fn) {
  */
 export function registerProviderAdminRoutes(routes, { db, config, runtime, log = null, env = process.env, fetchImpl = proxyFetch, discoverTimeoutMs = PROVIDER_DISCOVER_TIMEOUT_MS } = {}) {
   if (!db || !config || !runtime) throw new Error("registerProviderAdminRoutes：缺少 db ∥ config ∥ runtime（同一实例——装配面接线）")
-
-  /** 候选注册表（保存路径②——`env:` 解析；顶层代理串同源注入——旗随保存热生效：KD-SV-55）；
-   *  别名全服唯一（保存径对既有集——候选 = 既有全部 + 本次条目；KD-SV-59③ 三径同助手——撞 ⇒ 400）。 */
-  const buildCandidate = (entries) => {
-    assertAliasesUnique(entries)
-    return createProviderRegistry(entries, { env, engineModel: config.embedding?.model ?? null, proxyUri: config.proxy?.uri ?? null })
-  }
-
-  /** 行定位（id 非法/不存在 ⇒ null——调用方转 404）。 */
-  const findRow = (rawId) => {
-    const id = Number(rawId)
-    if (!Number.isInteger(id)) return null
-    return db.prepare("SELECT * FROM providers WHERE id = ?").get(id) ?? null
-  }
-
-  /** provider 名冲突检查（重名 ⇒ 400；`exceptId` = 自身改 name 时豁免）。 */
-  const assertNameFree = (name, { exceptId = null } = {}) => {
-    if (listProviderEntries(db).some((entry) => entry.name === name && entry.id !== exceptId)) {
-      throw new HttpError("invalid_request_error", `provider 名已存在：${name}（重名——库与运行时零变）`)
-    }
-  }
+  const ctx = { db, config, runtime, log, env, fetchImpl, discoverTimeoutMs } // 共享写面上下文（六端点与 chat 工具面同源——§12 KD-SV-90）
 
   routes.add("GET", "/api/admin/providers", (req, res) => {
     requireAdmin(db, req)
@@ -169,134 +311,29 @@ export function registerProviderAdminRoutes(routes, { db, config, runtime, log =
   routes.add("POST", "/api/admin/providers", async (req, res) => {
     requireAdmin(db, req)
     const body = bodyFields(await readJsonBody(req))
-    const entry = asInvalidRequest(() => validateProviderEntry(
-      { name: body.name, baseURL: body.baseURL, apiKey: body.apiKey ?? "", models: body.models ?? [], proxy: body.proxy },
-      { where: "provider" },
-    ))
-    // `modelMeta` 期望图（白名单 + 形不符即略 + 与提交 `models` 求交；缺省 ⇒ `{}`；非对象 ⇒ 400 库零变）
-    const modelMeta = asInvalidRequest(() => filterModelMeta(body.modelMeta === undefined ? {} : body.modelMeta, entry.models))
-    assertNameFree(entry.name)
-    const candidate = asInvalidRequest(() => buildCandidate([...listProviderEntries(db), entry])) // ②
-    const now = new Date().toISOString()
-    const info = db.prepare("INSERT INTO providers (name, base_url, api_key, models_json, proxy, model_meta_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(entry.name, entry.baseURL, entry.apiKey, JSON.stringify(entry.models), entry.proxy === true ? 1 : 0, JSON.stringify(modelMeta), now, now) // ③
-    runtime.set(candidate) // ④ 原子换表（零重启）
-    const id = Number(info.lastInsertRowid)
-    log?.info("provider_created", { id, name: entry.name })
+    // 写链单源 = `addProviderEntry`（§2.2 四步——校验 ∥ 候选注册表 ∥ 落库 ∥ 换表；见档头共享写面）
+    const { id } = addProviderEntry(ctx, { name: body.name, baseURL: body.baseURL, apiKey: body.apiKey ?? "", models: body.models ?? [], proxy: body.proxy, modelMeta: body.modelMeta })
     sendJson(res, 200, { ok: true, id })
   })
 
-  routes.add("PATCH", "/api/admin/providers/:id", async (req, res, ctx) => {
+  routes.add("PATCH", "/api/admin/providers/:id", async (req, res, handlerCtx) => {
     requireAdmin(db, req)
-    const row = findRow(ctx.params.id)
-    if (!row) throw new HttpError("not_found", `provider 不存在：${ctx.params.id}`)
     const body = bodyFields(await readJsonBody(req))
-    const current = rowToEntry(row)
-    // `settings` 键级合并（值 null ⇒ 删键；未出现键 = 不动）——合并后与其余字段同走单源校验
-    const settings = asInvalidRequest(() => mergeProviderSettings(current.settings, body.settings))
-    const entry = asInvalidRequest(() => validateProviderEntry({
-      name: body.name !== undefined ? body.name : current.name,
-      baseURL: body.baseURL !== undefined ? body.baseURL : current.baseURL,
-      apiKey: body.apiKey !== undefined ? body.apiKey : current.apiKey, // `apiKey: ""` = 清除（§2.2）
-      models: body.models !== undefined ? body.models : current.models,
-      proxy: body.proxy !== undefined ? body.proxy : current.proxy, // 布尔直写；缺省 = 不动（§2.2）
-      settings,
-    }, { where: "provider" }))
-    if (entry.name !== current.name) assertNameFree(entry.name, { exceptId: current.id })
-    // `modelMeta` 期望图：键在场 = 提交图（白名单 + 形不符即略 + 求交）；缺省 = 现存图按求交滑动（删项随之滑落——零孤儿）
-    const modelMeta = asInvalidRequest(() => filterModelMeta(body.modelMeta === undefined ? current.modelMeta : body.modelMeta, entry.models))
-    const candidate = asInvalidRequest(() => buildCandidate(
-      listProviderEntries(db).map((item) => (item.id === current.id ? { ...entry, id: current.id } : item)),
-    ))
-    db.prepare("UPDATE providers SET name = ?, base_url = ?, api_key = ?, models_json = ?, proxy = ?, settings_json = ?, model_meta_json = ?, updated_at = ? WHERE id = ?")
-      .run(entry.name, entry.baseURL, entry.apiKey, JSON.stringify(entry.models), entry.proxy === true ? 1 : 0, JSON.stringify(entry.settings), JSON.stringify(modelMeta), new Date().toISOString(), current.id)
-    runtime.set(candidate)
-    log?.info("provider_updated", { id: current.id, name: entry.name })
-    sendJson(res, 200, { ok: true, id: current.id })
+    const { id } = updateProviderEntry(ctx, handlerCtx.params.id, body) // 写链单源（字段级：缺省 = 不动）
+    sendJson(res, 200, { ok: true, id })
   })
 
-  routes.add("DELETE", "/api/admin/providers/:id", (req, res, ctx) => {
+  routes.add("DELETE", "/api/admin/providers/:id", (req, res, handlerCtx) => {
     requireAdmin(db, req)
-    const row = findRow(ctx.params.id)
-    if (!row) throw new HttpError("not_found", `provider 不存在：${ctx.params.id}`)
-    const rest = listProviderEntries(db).filter((entry) => entry.id !== row.id)
-    const candidate = asInvalidRequest(() => buildCandidate(rest))
-    db.prepare("DELETE FROM providers WHERE id = ?").run(row.id) // 硬删——用量行零触（§2.2）
-    runtime.set(candidate)
-    log?.info("provider_deleted", { id: row.id, name: row.name })
-    sendJson(res, 200, { ok: true, id: row.id })
+    const { id } = removeProviderEntry(ctx, handlerCtx.params.id) // 写链单源（硬删——用量行零触）
+    sendJson(res, 200, { ok: true, id })
   })
 
   routes.add("POST", "/api/admin/providers/discover", async (req, res) => {
     requireAdmin(db, req)
     const body = bodyFields(await readJsonBody(req))
-    // 草稿 baseURL 过单源校验（`name` 占位 ∥ `models` 空占位——发现只用 `baseURL`）；apiKey 明传优先，否则取库内该 provider 的 key
-    const draft = asInvalidRequest(() => validateProviderEntry(
-      { name: "discover-draft", baseURL: body.baseURL, apiKey: "", models: [] },
-      { where: "body" },
-    ))
-    // `providerId` 条目（key ∥ 代理旗双兜底面；id 非法/不存在 ⇒ 404——仅 key 兜底径判，沿原行为）
-    const storedRow = body.providerId !== undefined && body.providerId !== null ? findRow(body.providerId) : null
-    let apiKey = ""
-    if (body.apiKey !== undefined && body.apiKey !== null) {
-      apiKey = body.apiKey
-    } else if (storedRow !== null) {
-      apiKey = storedRow.api_key
-    } else if (body.providerId !== undefined && body.providerId !== null) {
-      throw new HttpError("not_found", `provider 不存在：${body.providerId}`)
-    }
-    // 代理判定（KD-SV-55——与 chat 转发同判定）：明传优先 → providerId 条目旗兜底 → 皆无 ⇒ 直连
-    let proxy = false
-    if (body.proxy !== undefined) {
-      if (typeof body.proxy !== "boolean") {
-        throw new HttpError("invalid_request_error", `discover.proxy 须为布尔（true ∥ false——现 ${JSON.stringify(body.proxy)}）`)
-      }
-      proxy = body.proxy
-    } else if (storedRow !== null) {
-      proxy = storedRow.proxy === 1
-    }
-    const proxyUri = proxy === true ? (config.proxy?.uri ?? null) : null
-    const resolvedKey = asInvalidRequest(() => resolveProviderKey(apiKey, { env, where: "discover.apiKey" })) // `env:` 引用服务端解析
-    let upstream
-    try {
-      upstream = await fetchImpl(upstreamUrl(draft.baseURL, "/models"), {
-        method: "GET",
-        headers: resolvedKey ? { authorization: `Bearer ${resolvedKey}` } : {}, // Authorization 同转发口径——key 空不发
-        signal: AbortSignal.timeout(discoverTimeoutMs),
-      }, proxyUri)
-    } catch (e) {
-      log?.warn("provider_discover_failed", { baseURL: draft.baseURL, message: e.message })
-      throw new HttpError("upstream_error", `模型发现失败（上游不可达或超时）：${e.message}——请检查上游可达性后重试`)
-    }
-    let text
-    try {
-      text = await upstream.text()
-    } catch (e) {
-      log?.warn("provider_discover_failed", { baseURL: draft.baseURL, message: e.message })
-      throw new HttpError("upstream_error", `模型发现失败（响应读取失败）：${e.message}——请检查上游可达性后重试`)
-    }
-    let payload
-    try {
-      payload = JSON.parse(text)
-    } catch {
-      log?.warn("provider_discover_failed", { baseURL: draft.baseURL, message: `非 JSON（HTTP ${upstream.status}）` })
-      throw new HttpError("upstream_error", `模型发现失败：上游响应非 JSON（HTTP ${upstream.status}）——请检查上游可达性后重试`)
-    }
-    if (payload === null || typeof payload !== "object" || !Array.isArray(payload.data)) {
-      log?.warn("provider_discover_failed", { baseURL: draft.baseURL, message: `无 data 清单（HTTP ${upstream.status}）` })
-      throw new HttpError("upstream_error", `模型发现失败：上游响应无 data 清单（HTTP ${upstream.status}）——请检查上游可达性后重试`)
-    }
-    const models = []
-    const modelMeta = {}
-    const seen = new Set()
-    for (const item of payload.data) {
-      const id = item?.id
-      if (typeof id !== "string" || id === "" || seen.has(id)) continue // 去重首见（与 models 同集）
-      seen.add(id)
-      models.push(id)
-      const meta = extractModelMeta(item, id)
-      if (Object.keys(meta).length > 0) modelMeta[id] = meta // ≥1 字段才入键（缺就空着——零兜底值、零占位）
-    }
+    // 探针单源 = `discoverProviderModels`（草稿校验 ∥ key/代理兜底 ∥ 上游 `/models`）
+    const { models, modelMeta } = await discoverProviderModels(ctx, { baseURL: body.baseURL, apiKey: body.apiKey, providerId: body.providerId, proxy: body.proxy })
     sendJson(res, 200, { models, modelMeta }) // 草稿键经 body 传入不落库（§2.2）
   })
 

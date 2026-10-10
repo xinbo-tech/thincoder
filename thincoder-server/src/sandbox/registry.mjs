@@ -14,6 +14,7 @@
  */
 import { HttpError } from "../gateway/errors.mjs"
 import { recordAudit } from "../accounts/audit.mjs"
+import { clientForRunner } from "./docker.mjs"
 
 /** 指令悬挂回收界（§3「缺省 5 分钟——常量」）。 */
 export const CLAIM_TIMEOUT_MS = 5 * 60 * 1000
@@ -464,4 +465,71 @@ export function sandboxPublicBase(config = {}) {
   const port = Number(config.port) > 0 ? Number(config.port) : 80
   const hostPart = host.includes(":") && !host.startsWith("[") ? `[${host}]` : host
   return `http://${hostPart}:${port}/v1`
+}
+
+/**
+ * 删节点链（SANDBOX §3 删除行 ∥ KD-SV-90 §12——**共享助手**：控制台删除路由与 chat 工具面两调用点单源）。
+ * 步序：① 承载工作区确认（`confirm` 缺 ⇒ 400）⇒ ② 容器处置校验（`keep` ∥ `remove`）⇒ ③ 读时列容器（不可达 ⇒ 仅 `keep` 可过）
+ * ⇒ ④ `remove` 逐删强删（任一失败 ⇒ 502 + 登记行保留）⇒ ⑤ 作废在途指令 + 工作区解绑 + 删登记行 ⇒ ⑥ 弃置工作区续放置。
+ * **审计写不随迁**（调用侧各留：控制台 = `sandbox_event`/`runner_delete` ∥ chat = 只 `chat_call` 行——KD-SV-91）。
+ * 出 = `{ id, name, kept, removed }`（`fetchImpl` = Docker 传输注入面——批内件替身）。 */
+export async function deleteRunnerChain(db, runner, { containers = undefined, confirm = false } = {}, { fetchImpl = fetch, now = Date.now, publicBase = null } = {}) {
+  const bound = db.prepare("SELECT id, name FROM sandbox_workspaces WHERE runner_id = ? ORDER BY id").all(runner.id)
+  if (bound.length > 0 && confirm !== true) {
+    throw new HttpError(
+      "invalid_request_error",
+      `节点上仍有 ${bound.length} 个工作区（${bound.map((item) => item.name).join(" ∥ ")}）——先重建到新机，或确认丢弃 ⇒ confirm: true`,
+    )
+  }
+  const disposition = containers
+  if (disposition !== undefined && disposition !== "keep" && disposition !== "remove") {
+    throw new HttpError("invalid_request_error", `containers 仅收 keep ∥ remove：${String(disposition)}`)
+  }
+  let listed = []
+  let reachable = true
+  try {
+    const res = await clientForRunner(runner, { fetchImpl }).containers()
+    listed = Array.isArray(res.json) ? res.json : []
+  } catch {
+    reachable = false
+  }
+  if (!reachable && disposition !== "keep") {
+    throw new HttpError("upstream_error", `节点不可达——仅「保留」处置可过（连删需节点可达）：${runner.name}`)
+  }
+  if (reachable && listed.length > 0 && disposition === undefined) {
+    throw new HttpError("invalid_request_error", `节点上承载 ${listed.length} 个容器——请选处置：containers: "keep"（容器原样留机）∥ "remove"（逐个强删）`)
+  }
+  let kept = 0
+  let removed = 0
+  if (disposition === "remove") {
+    const failed = []
+    for (const item of listed) {
+      const id = item.Id
+      const name = String(item.Names?.[0] ?? id).replace(/^\//, "")
+      try {
+        await clientForRunner(runner, { fetchImpl }).deleteContainer(id, { force: true })
+        removed += 1
+      } catch (e) {
+        failed.push(`${name}（${e?.message ?? e}）`)
+      }
+    }
+    if (failed.length > 0) {
+      throw new HttpError(
+        "upstream_error",
+        `连删未净：已删 ${removed}/${listed.length}——失败清单：${failed.join(" ∥ ")}（登记行保留；修好后重试）`,
+      )
+    }
+    kept = 0
+  } else {
+    kept = listed.length
+  }
+  db.prepare("UPDATE sandbox_tasks SET status = 'failed', finished_at = ?, result_json = ? WHERE runner_id = ? AND status IN ('queued','claimed')").run(
+    now(),
+    JSON.stringify({ reason: "节点已退役——指令作废" }),
+    runner.id,
+  )
+  db.prepare("UPDATE sandbox_workspaces SET runner_id = NULL WHERE runner_id = ?").run(runner.id)
+  db.prepare("DELETE FROM sandbox_runners WHERE id = ?").run(runner.id)
+  tryPlacePending(db, { now: now(), publicBase }) // 弃置工作区续跑（有 active 节点即重放置）
+  return { id: runner.id, name: runner.name, kept, removed }
 }

@@ -1,6 +1,7 @@
 /**
  * tools.mjs — 管理面 agent 工具面五件（agent/ADMIN-AGENT.md §3 ∥ sandbox/SANDBOX.md §3 托管接入；runner-admin-console 批——台账 #1237）：
- * `exec(host, command, step?, timeoutS?)`（目标机真跑一条命令——SSH 传输）∥ `docker(host, op, args?, step?)`（Docker API 动词——与控制台同一客户端）
+ * `exec(host, command, step?, timeoutS?)`（目标机真跑一条命令——SSH 传输）∥ `docker(host, op, args?, step?)`（Docker API 动词——与控制台同一客户端；
+ * 十动词执行器 = `docker-ops.mjs`（两驱动单源——admin-agent-chat 批提取））
  * ∥ `register(host, endpoint, name?, step?)`（连通自检 + 登记进控制面——与「添加节点」同函数）∥ `verify(host, endpoint?, step?)`（自检读数复述）
  * ∥ `report(ok, summary, step?, readings?)`（终态报告）。
  *
@@ -11,6 +12,7 @@
  */
 import { createDockerClient, selfCheckDocker } from "../sandbox/docker.mjs"
 import { insertRunner } from "../sandbox/registry.mjs"
+import { DOCKER_OPS, assertDockerOp, runDockerOp } from "./docker-ops.mjs"
 
 /** 工具名全集（五件——§3 表；断言面）。 */
 export const TOOL_NAMES = Object.freeze(["exec", "docker", "register", "verify", "report"])
@@ -39,8 +41,6 @@ function asString(value, { field, max = 500, allowEmpty = false } = {}) {
   if (text.length > max) throw new Error(`${field}超长（≤ ${max}）`)
   return text
 }
-
-const DOCKER_OPS = Object.freeze(["version", "info", "ps", "images", "pull", "create", "start", "stop", "rm", "logs"])
 
 /**
  * 装配五工具（§3）：`ssh` = `createSshExecutor` 产物 ∥ `auth` = 本任务凭据（含 host/port/user/authKind/secret/sudoSecret——
@@ -81,57 +81,10 @@ export function createOnboardingTools({ db, runId, auth, ssh, fetchImpl = fetch,
 
   async function runDocker({ host, op, args = {} }) {
     const target = assertHost(host)
-    if (!DOCKER_OPS.includes(op)) throw new Error(`未知 docker 动词：${String(op)}（${DOCKER_OPS.join(" ∥ ")}）`)
+    assertDockerOp(op) // 未知动词 ⇒ 抛（调用侧 catch 转工具级错误）
     const endpoint = args?.endpoint ?? `http://${target}:2375`
-    const { check, client } = await dockerClientFor(endpoint)
-    switch (op) {
-      case "version": {
-        const res = await client.version()
-        return { resultCode: res.status, data: res.json }
-      }
-      case "info": {
-        const res = await client.info()
-        return { resultCode: res.status, data: res.json }
-      }
-      case "ps": {
-        const path = args?.all === false ? "/containers/json" : "/containers/json?all=1"
-        const res = await client.raw("GET", path)
-        return { resultCode: res.status, data: res.json }
-      }
-      case "images": {
-        const res = await client.raw("GET", "/images/json")
-        return { resultCode: res.status, data: res.json }
-      }
-      case "pull": {
-        const image = asString(args?.image, { field: "pull.image", max: 200 })
-        const tag = typeof args?.tag === "string" && args.tag.trim() !== "" ? args.tag.trim() : "latest"
-        const res = await client.raw("POST", `/images/create?fromImage=${encodeURIComponent(image)}&tag=${encodeURIComponent(tag)}`, { timeoutMs: 10 * 60 * 1000 })
-        return { resultCode: res.status, data: { image, tag } }
-      }
-      case "create": {
-        const name = asString(args?.name, { field: "create.name", max: 128 })
-        const res = await client.createContainer(name, args?.body ?? {})
-        return { resultCode: res.status, data: res.json }
-      }
-      case "start":
-      case "stop": {
-        const id = asString(args?.id, { field: `${op}.id`, max: 200 })
-        const res = op === "start" ? await client.startContainer(id) : await client.stopContainer(id)
-        return { resultCode: res.status, data: { id } }
-      }
-      case "rm": {
-        const id = asString(args?.id, { field: "rm.id", max: 200 })
-        const res = await client.deleteContainer(id, { force: args?.force !== false })
-        return { resultCode: res.status, data: { id } }
-      }
-      case "logs": {
-        const id = asString(args?.id, { field: "logs.id", max: 200 })
-        const res = await client.raw("GET", `/containers/${encodeURIComponent(id)}/logs?stdout=1&stderr=1`)
-        return { resultCode: res.status, data: truncate(res.text) }
-      }
-      default:
-        return { resultCode: 0, data: { endpoint: check.baseUrl, apiVer: check.apiVer, op } }
-    }
+    const { client } = await dockerClientFor(endpoint)
+    return runDockerOp({ client, op, args }) // 动词语义单源 = `docker-ops.mjs`（任务面/聊天面两驱动同函数）
   }
 
   const schemas = [
