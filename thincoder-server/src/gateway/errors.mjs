@@ -15,11 +15,12 @@ export const ERROR_CODES = {
   not_found: { status: 404, type: "invalid_request_error" },         // 成员 ∥ key ∥ 路由不存在
   model_not_found: { status: 404, type: "invalid_request_error" },   // 未配置模型（KD-SV-4 派发未命中）
   invalid_request_error: { status: 400, type: "invalid_request_error" }, // body 非 JSON ∥ 缺 model
-  payload_too_large: { status: 413, type: "invalid_request_error" }, // 请求体超上限（32 MiB）
+  payload_too_large: { status: 413, type: "invalid_request_error" }, // 请求体超上限（缺省 32 MiB；快照上送路由 200 MiB——§2.6 路由级例外）
   quota_exceeded: { status: 429, type: "insufficient_quota" },       // 超额（message 含已用/额度）
   rate_limited: { status: 429, type: "rate_limit_error" },           // per-model 限流（message 含模型/限值；`Retry-After` 秒——KD-SV-35）
   too_many_attempts: { status: 429, type: "rate_limit_error" },      // 登录锁定期（`Retry-After` 秒；两维同文案——ACCOUNTS §2）
   upstream_error: { status: 502, type: "upstream_error" },           // 上游不可达
+  sandbox_unavailable: { status: 503, type: "server_error" },        // 无 runner ∥ 无可用运行时（KD-SV-71——server-exec-sandbox 批：仅沙盒功能面不可用）
   internal_error: { status: 500, type: "server_error" },             // 500 兜底（处理函数自身异常——API.md §3 表行）
 }
 

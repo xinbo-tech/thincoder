@@ -93,3 +93,16 @@ export function requireAdmin(db, req, { now } = {}) {
   if (session.member.role !== "admin") throw new HttpError("forbidden", "需要管理员权限")
   return session
 }
+
+/** runner 门（第三门——sandbox/SANDBOX.md §3「独立守卫」）：`Authorization: Bearer <runner 令牌>` ⇒
+ *  按 `sha256` 查 `sandbox_runners`；命中 ⇒ `{ runner }`。缺失 ∥ 未知 ∥ 吊销 一律 401 `invalid_api_key`
+ *  （不区分——沿团队 key 口径，防信息泄露）。只对 `/api/runner/*` 生效（最小权限——不入 `api_keys`、不打 `/v1`）。 */
+export function requireRunner(db, req) {
+  const header = typeof req.headers.authorization === "string" ? req.headers.authorization.trim() : ""
+  const match = /^Bearer\s+(.+)$/i.exec(header)
+  const token = match ? match[1].trim() : ""
+  if (!token) throw new HttpError("invalid_api_key", "缺少 runner 令牌（Authorization: Bearer <令牌>）")
+  const row = db.prepare("SELECT * FROM sandbox_runners WHERE token_hash = ?").get(hashToken(token))
+  if (!row) throw new HttpError("invalid_api_key", "runner 令牌无效")
+  return { runner: row }
+}

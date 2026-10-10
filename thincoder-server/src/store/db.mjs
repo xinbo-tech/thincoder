@@ -191,6 +191,114 @@ CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_events(ts);
 CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
 `
 
+/** v11 增段（沙盒七表 + 审计 CHECK 再扩（十二型）+ 默认单种子——store/STORE.md §2 v11 段逐字；sandbox ∥ accounts 域）。
+ *  ① 七表 CREATE（对象模型 = `sandbox/SANDBOX.md` §2 单源）；② 审计表重建（十型 ⇒ 十二型——步序与 v10 同构）；
+ *  ③ 种子八行（`source='default'`——本段一次性写入、可改可删、不复活：deny 三 + allow 五）。 */
+const DDL_V11 = `
+-- ① 沙盒七表（对象模型 = sandbox/SANDBOX.md §2——单源；表结构全文 = store/STORE.md §2 v11 段）
+CREATE TABLE IF NOT EXISTS sandbox_runners (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,                  -- runner 名（注册时给）
+  token_hash TEXT NOT NULL UNIQUE,            -- sha256(runner 令牌) hex
+  labels_json TEXT NOT NULL DEFAULT '{}',     -- 容量描述符（标签 + maxBoxes——放置判据；形 = src/sandbox/registry.mjs 档头）
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','draining','drained','disabled')),
+  runtime_json TEXT NOT NULL DEFAULT '{}',    -- 最近心跳上行块（版本 ∥ 自检读数 ∥ 磁盘余量 ∥ 盒清单——心跳更新）
+  last_heartbeat_at INTEGER,                  -- unix ms（3 拍缺 ⇒ unhealthy——展示面派生）
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sandbox_workspaces (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  owner_member_id INTEGER NOT NULL REFERENCES members(id),
+  key_id INTEGER NOT NULL REFERENCES api_keys(id),
+  key_plain TEXT NOT NULL,                    -- 工作区 key 明文（盒重建再注入——披露 D2）
+  runner_id INTEGER,                          -- 放置绑定（未放置 ⇒ NULL）
+  required_labels_json TEXT NOT NULL DEFAULT '{}',
+  limits_json TEXT NOT NULL DEFAULT '{}',     -- 每工作区覆写（资源 + TTL；键集/取值序 = sandbox/SANDBOX.md §2；空 = 随全局默认）
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sandbox_rules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL CHECK (kind IN ('cidr','domain')),
+  action TEXT NOT NULL CHECK (action IN ('allow','deny')),
+  target TEXT NOT NULL,                       -- CIDR ∥ 域名（含单层左通配）
+  port INTEGER,                               -- NULL = 不限
+  protocol TEXT,                              -- 'tcp' ∥ 'udp' ∥ NULL（不限）
+  priority INTEGER NOT NULL DEFAULT 0,        -- 同动作内排序
+  note TEXT NOT NULL DEFAULT '',
+  source TEXT NOT NULL DEFAULT 'admin' CHECK (source IN ('default','admin','approval')),
+  created_at TEXT NOT NULL,
+  created_by TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS sandbox_pending (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  runner_id INTEGER NOT NULL,
+  workspace_id INTEGER NOT NULL,
+  host TEXT NOT NULL,
+  hits INTEGER NOT NULL DEFAULT 1,            -- 三次批准建议判据
+  first_seen_at INTEGER NOT NULL,
+  last_seen_at INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','approved_once','approved_remember','denied','timeout')),
+  resolved_at INTEGER
+);
+CREATE TABLE IF NOT EXISTS sandbox_tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  runner_id INTEGER NOT NULL,
+  kind TEXT NOT NULL,                         -- 'sandbox.*' 本批；'ci.*' 预留（可扩——KD-SV-72）
+  payload_json TEXT NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued','claimed','done','failed','unsupported')),
+  created_at TEXT NOT NULL,
+  claimed_at INTEGER,
+  finished_at INTEGER,
+  result_json TEXT
+);
+CREATE TABLE IF NOT EXISTS sandbox_checkpoints (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  workspace_id INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  size INTEGER NOT NULL,                      -- 字节
+  blob_path TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS sandbox_settings (
+  k TEXT PRIMARY KEY,                         -- 全局默认——键全集与值形 = gateway/API.md §2.5（单源）；「默认单」非本表（= sandbox_rules 种子行）
+  v TEXT NOT NULL                             -- JSON 文本（数字 ∥ 字符串统一 JSON 编码）
+);
+
+-- ② 审计 CHECK 再扩（十型 ⇒ 十二型——表重建，步序与 v10 同构）
+-- + 'sandbox_rule'（规则增删——detail = { action, rule }）∥ + 'sandbox_event'（审批三态/超时 ∥ 盒起停拆 ∥ runner 注册/排空/删除 ∥ join 失败 ∥ 快照——detail = { kind, ... }）
+CREATE TABLE audit_events_v11 (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts          INTEGER NOT NULL,              -- unix ms（事件时刻）
+  type        TEXT NOT NULL CHECK (type IN ('login_success','login_failure','login_locked',
+    'key_rotate','key_issue','key_revoke','password_change','password_reset','member_create','config_update',
+    'sandbox_rule','sandbox_event')),
+  actor_id    INTEGER,                       -- 行为人成员 id（无会话 ∥ 未知用户名 ⇒ NULL；无 FK——历史记录自足）
+  actor_name  TEXT NOT NULL,                 -- 行为人名快照（用户名 ∥ 展示名 ∥ 'cli' ∥ 'runner:<名>'）
+  target_id   INTEGER,                       -- 对象成员 id（无对象 ⇒ NULL）
+  target_name TEXT NOT NULL DEFAULT '',      -- 对象名快照（无对象 ⇒ 空串）
+  detail      TEXT NOT NULL DEFAULT '{}'     -- 附加形（JSON：ip ∥ dimension ∥ keyHint ∥ role ∥ keys 等）
+);
+INSERT INTO audit_events_v11 (id, ts, type, actor_id, actor_name, target_id, target_name, detail)
+  SELECT id, ts, type, actor_id, actor_name, target_id, target_name, detail FROM audit_events;
+DROP TABLE audit_events;
+ALTER TABLE audit_events_v11 RENAME TO audit_events;
+CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_events(ts);
+CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
+
+-- ③ 种子八行（初始化点 = 本段一次性写入；可改可删——不复活）：deny（cidr）三条 = RFC1918 ∥ allow（domain）五条 = 默认单
+--   恒拒（127.0.0.0/8 ∥ 169.254.0.0/16）= 内置（非行——不入种子）；动态项（服务器网段 ∥ runner 自身网段）= 注册时自动带入
+INSERT INTO sandbox_rules (kind, action, target, port, protocol, priority, note, source, created_at, created_by) VALUES
+  ('cidr', 'deny', '10.0.0.0/8', NULL, NULL, 0, '默认禁单：RFC1918 私网', 'default', strftime('%Y-%m-%dT%H:%M:%fZ','now'), 'seed'),
+  ('cidr', 'deny', '172.16.0.0/12', NULL, NULL, 0, '默认禁单：RFC1918 私网', 'default', strftime('%Y-%m-%dT%H:%M:%fZ','now'), 'seed'),
+  ('cidr', 'deny', '192.168.0.0/16', NULL, NULL, 0, '默认禁单：RFC1918 私网', 'default', strftime('%Y-%m-%dT%H:%M:%fZ','now'), 'seed'),
+  ('domain', 'allow', 'registry.npmjs.org', NULL, NULL, 0, '默认单：npm 依赖', 'default', strftime('%Y-%m-%dT%H:%M:%fZ','now'), 'seed'),
+  ('domain', 'allow', 'github.com', NULL, NULL, 0, '默认单：代码仓', 'default', strftime('%Y-%m-%dT%H:%M:%fZ','now'), 'seed'),
+  ('domain', 'allow', '*.githubusercontent.com', NULL, NULL, 0, '默认单：代码仓资源（单层左通配）', 'default', strftime('%Y-%m-%dT%H:%M:%fZ','now'), 'seed'),
+  ('domain', 'allow', 'gitee.com', NULL, NULL, 0, '默认单：代码仓', 'default', strftime('%Y-%m-%dT%H:%M:%fZ','now'), 'seed'),
+  ('domain', 'allow', '*.gitee.com', NULL, NULL, 0, '默认单：代码仓资源（单层左通配）', 'default', strftime('%Y-%m-%dT%H:%M:%fZ','now'), 'seed');
+`
+
 /** 迁移链：每段 = `{ v, up(db) }`（v = 目标结构版本，自 1 起递增）；结构每变一次追一段（+1）。 */
 export const MIGRATIONS = [
   { v: 1, up: (db) => db.exec(DDL_V1) },
@@ -203,6 +311,7 @@ export const MIGRATIONS = [
   { v: 8, up: (db) => db.exec(DDL_V8) },
   { v: 9, up: (db) => db.exec(DDL_V9) },
   { v: 10, up: (db) => db.exec(DDL_V10) },
+  { v: 11, up: (db) => db.exec(DDL_V11) },
 ]
 
 /** 当前结构版本（= 链尾段号——store/STORE.md §1）。 */

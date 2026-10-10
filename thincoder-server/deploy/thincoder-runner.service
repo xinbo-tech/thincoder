@@ -1,0 +1,28 @@
+# thincoder-runner.service — systemd unit 模板（沙盒 runner 机——ops/OPS.md §5.10 ∥ sandbox/RUNNER.md §8）
+#
+# 装机（三步——OPS §5.10）：
+#   ① 装 Node ≥24 + 容器运行时（docker ∥ podman）+ 网络工具（nft ∥ iptables）+ 磁盘配额机制（xfs pquota ∥ ext4 prjquota ∥ loopback）
+#   ② npm i -g @thincoder/server ⇒ thincoder-runner doctor（核心项全 PASS——任一 FAIL ⇒ 拒跑）
+#   ③ thincoder-runner join --server <url> --join-token <t> ⇒ 安放本档 ⇒ systemctl enable --now thincoder-runner
+#
+# 日志：stdout 单行 JSON 由 journald 收 —— journalctl -u thincoder-runner -f
+# 配置：--config 指机本地 runner.json（不入 git；join 写 token——0600）；改配置 ⇒ systemctl restart。
+[Unit]
+Description=Thincoder Sandbox Runner（执行面——跑盒 + 本地强制）
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# 运行账号：需容器运行时访问 ∥ CAP_NET_ADMIN（nft/iptables 链）∥ 配额命令（chattr/setquota/losetup——root）。
+# 专用账号可行时：SupplementaryGroups=docker + AmbientCapabilities=CAP_NET_ADMIN CAP_SYS_ADMIN。
+User=root
+WorkingDirectory=/opt/thincoder-runner
+# 前缀式装机（与 server 同先例——OPS §5.1）：装机与升级同前缀
+Environment=NPM_CONFIG_PREFIX=/opt/thincoder-runner/.npm-global
+ExecStart=/opt/thincoder-runner/.npm-global/bin/thincoder-runner run --config /opt/thincoder-runner/runner.json
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
