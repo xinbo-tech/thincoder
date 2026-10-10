@@ -88,6 +88,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
     // blocks "talk then code".
     // F-LC5（LIGHT-CHANNEL §2.8 · 2026-10-09）：轻通道轮在盘 = 机械开路——轮次台账行（在途 · title 携「收尾链
     // 待跑」· 携指针）与所指轮档（§1 状态行「进行中」）双在盘期间父侧代码笔放行（谓词 fail-closed）。
+    // 查找面 = 会话锚 + 其直接子目录一层（纯向下——工作区锚会话同判）。
     // F11（#1104 · PORTABILITY §3.9 / D20）：辖域 = 目标所属项目——逐目标沿祖先链取最近带档
     // 目录（`declarationForTarget`——nearest wins ∥ 纯向上 ∥ 发现梯不参与）；出辖（祖先链无档）
     // ⇒ 放行（门只管 manifest 树以内的内容）。相对形先按会话 cwd 解析（cwd 只是相对基，非声明源）；
@@ -124,7 +125,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
           toolCall, tool, denied: true,
           reason: "engineering design gate",
           hint: `Engineering mode: write the design document first（location per your project's document conventions）, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.${convNote} ` +
-            `If this is a light-channel code pen: book the round first — an in-flight batch record plus a 在途 ledger row carrying 「收尾链待跑」 pointing at the record — code pens pass once that is on disk.`,
+            `If this is a light-channel code pen: the gate looks for the round from the session anchor and its direct subdirectories — book the round first (an in-flight batch record plus a 在途 ledger row carrying 「收尾链待跑」 pointing at the record); code pens pass once that is on disk.`,
         })
         continue
       }

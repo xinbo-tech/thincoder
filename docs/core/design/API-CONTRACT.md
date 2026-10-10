@@ -97,10 +97,11 @@
 | `memoryCommand` | `thincoder-cli/src/cli/memory-command.mjs:12` | `fn` |
 | `summarize, formatPermission, askPermission` | `thincoder-cli/src/cli/permission.mjs:4` | `named` |
 | `setupWizard` | `thincoder-cli/src/cli/setup-wizard.mjs:10` | `fn` |
+| `teamCommand` | `thincoder-cli/src/cli/team-command.mjs:38` | `fn` |
 | `chatCommand` | `thincoder-cli/src/command-interactive.mjs:18` | `fn` |
 | `tuiCommand` | `thincoder-cli/src/command-interactive.mjs:121` | `fn` |
 | `acpCommand` | `thincoder-cli/src/command-interactive.mjs:195` | `fn` |
-| `runCommandTable` | `thincoder-cli/src/command-table.mjs:18` | `fn` |
+| `runCommandTable` | `thincoder-cli/src/command-table.mjs:19` | `fn` |
 | `printCompletion` | `thincoder-cli/src/completions.mjs:10` | `fn` |
 | `crashReportsDir` | `thincoder-cli/src/crash-reports.mjs:34` | `fn` |
 | `prepareCrashReporting` | `thincoder-cli/src/crash-reports.mjs:79` | `fn` |
@@ -263,7 +264,7 @@
 | `modelSeries` | `thincoder-cli/src/tui/model-catalog.mjs:73` | `fn` |
 | `dedupeModels` | `thincoder-cli/src/tui/model-catalog.mjs:81` | `fn` |
 | `createModelPicker` | `thincoder-cli/src/tui/model-picker.mjs:26` | `fn` |
-| `cascadeRemoveProvider` | `thincoder-cli/src/tui/model-picker.mjs:323` | `named` |
+| `cascadeRemoveProvider, isDerivedProviderHidden` | `thincoder-cli/src/tui/model-picker.mjs:324` | `named` |
 | `handleWheel` | `thincoder-cli/src/tui/mouse.mjs:30` | `fn` |
 | `parseMouseClicks` | `thincoder-cli/src/tui/mouse.mjs:80` | `fn` |
 | `mouseOob` | `thincoder-cli/src/tui/mouse.mjs:92` | `fn` |
@@ -271,8 +272,9 @@
 | `handleMouseClick` | `thincoder-cli/src/tui/mouse.mjs:112` | `fn` |
 | `createMouseDispatch` | `thincoder-cli/src/tui/mouse.mjs:197` | `fn` |
 | `createPickers` | `thincoder-cli/src/tui/pickers.mjs:14` | `fn` |
-| `createProviderAdmin` | `thincoder-cli/src/tui/provider-admin.mjs:23` | `fn` |
-| `cascadeRemoveProvider` | `thincoder-cli/src/tui/provider-admin.mjs:222` | `fn` |
+| `isDerivedProviderHidden` | `thincoder-cli/src/tui/provider-admin.mjs:26` | `fn` |
+| `createProviderAdmin` | `thincoder-cli/src/tui/provider-admin.mjs:31` | `fn` |
+| `cascadeRemoveProvider` | `thincoder-cli/src/tui/provider-admin.mjs:230` | `fn` |
 | `MAX_MERGE_ITEMS, MAX_MERGE_CHARS, QUEUED_MAX_ITEMS, formatMergedMessages, planQueuedInput` | `thincoder-cli/src/tui/queued-merge.mjs:12` | `named` |
 | `pickupQueuedAtStepBoundary` | `thincoder-cli/src/tui/queued-pickup.mjs:22` | `fn` |
 | `_rmpw as _renderMarkdownPreservingWidth` | `thincoder-cli/src/tui/render-conversation.mjs:24` | `named` |
@@ -809,7 +811,7 @@
 | `TIMER_TURN_DOMAIN` | `thincoder-core/agent/helpers.mjs:469` | `const` |
 | `DIGEST_ACCOUNT_DOMAIN` | `thincoder-core/agent/helpers.mjs:477` | `const` |
 | `injectEngineeringReminder` | `thincoder-core/agent/helpers.mjs:483` | `fn` |
-| `lightRoundOpen` | `thincoder-core/agent/light-round.mjs:27` | `fn` |
+| `lightRoundOpen` | `thincoder-core/agent/light-round.mjs:31` | `fn` |
 | `LIVE_HEARTBEAT_MS` | `thincoder-core/agent/live-beat.mjs:20` | `const` |
 | `createLiveBeat` | `thincoder-core/agent/live-beat.mjs:30` | `fn` |
 | `STALL_WINDOW_SIZE` | `thincoder-core/agent/post-turn.mjs:9` | `const` |
@@ -998,8 +1000,9 @@
 | `sanitizeSubagentModels` | `thincoder-core/config.mjs:226` | `fn` |
 | `findProvider` | `thincoder-core/config.mjs:250` | `fn` |
 | `normalizeProxy` | `thincoder-core/config.mjs:261` | `fn` |
-| `loadConfig` | `thincoder-core/config.mjs:290` | `fn` |
-| `reloadMcpFromDisk` | `thincoder-core/config.mjs:434` | `fn` |
+| `normalizeTeamSection` | `thincoder-core/config.mjs:272` | `fn` |
+| `loadConfig` | `thincoder-core/config.mjs:301` | `fn` |
+| `reloadMcpFromDisk` | `thincoder-core/config.mjs:448` | `fn` |
 | `pruneStaleToolOutputs` | `thincoder-core/context-degrade.mjs:19` | `fn` |
 | `shrinkOversized` | `thincoder-core/context-degrade.mjs:52` | `fn` |
 | `COMPACTION_PLACEHOLDER` | `thincoder-core/context-echo.mjs:10` | `const` |
@@ -1143,17 +1146,18 @@
 | `entryTitle` | `thincoder-core/ledger.mjs:41` | `fn` |
 | `findProject` | `thincoder-core/ledger.mjs:52` | `fn` |
 | `MAX_SIBLING_SCAN` | `thincoder-core/ledger.mjs:64` | `const` |
-| `discoverFamily` | `thincoder-core/ledger.mjs:92` | `fn` |
-| `buildScan` | `thincoder-core/ledger.mjs:116` | `fn` |
-| `formatMarker` | `thincoder-core/ledger.mjs:146` | `fn` |
-| `scopeMarkerOf` | `thincoder-core/ledger.mjs:156` | `fn` |
-| `formatDetailLine` | `thincoder-core/ledger.mjs:174` | `fn` |
-| `detailScans` | `thincoder-core/ledger.mjs:179` | `fn` |
-| `AGING_DAYS, ALLOWED_MIGRATIONS, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn` | `thincoder-core/ledger.mjs:188` | `named` |
-| `ledgerAdd, ledgerClose, ledgerCount, ledgerQuery, ledgerUpdate` | `thincoder-core/ledger.mjs:189` | `named` |
-| `ledgerTool, ledgerReadTool, ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool` | `thincoder-core/ledger.mjs:190` | `named` |
-| `runLedgerAudit, runLedgerMigrate` | `thincoder-core/ledger.mjs:191` | `named` |
-| `resolveExecutorStates, executorTail, _setExecutorProbeTtlForTest` | `thincoder-core/ledger.mjs:192` | `named` |
+| `ledgerChildren` | `thincoder-core/ledger.mjs:68` | `fn` |
+| `discoverFamily` | `thincoder-core/ledger.mjs:93` | `fn` |
+| `buildScan` | `thincoder-core/ledger.mjs:110` | `fn` |
+| `formatMarker` | `thincoder-core/ledger.mjs:140` | `fn` |
+| `scopeMarkerOf` | `thincoder-core/ledger.mjs:150` | `fn` |
+| `formatDetailLine` | `thincoder-core/ledger.mjs:168` | `fn` |
+| `detailScans` | `thincoder-core/ledger.mjs:173` | `fn` |
+| `AGING_DAYS, ALLOWED_MIGRATIONS, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, _setLedgerDirForTest, _resetLedgerDirForTest, ensureExecutorColumn` | `thincoder-core/ledger.mjs:182` | `named` |
+| `ledgerAdd, ledgerClose, ledgerCount, ledgerQuery, ledgerUpdate` | `thincoder-core/ledger.mjs:183` | `named` |
+| `ledgerTool, ledgerReadTool, ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool` | `thincoder-core/ledger.mjs:184` | `named` |
+| `runLedgerAudit, runLedgerMigrate` | `thincoder-core/ledger.mjs:185` | `named` |
+| `resolveExecutorStates, executorTail, _setExecutorProbeTtlForTest` | `thincoder-core/ledger.mjs:186` | `named` |
 | `MAX_LINE` | `thincoder-core/log.mjs:37` | `const` |
 | `_setLogsDirForTest` | `thincoder-core/log.mjs:51` | `fn` |
 | `_resetLogsDirForTest` | `thincoder-core/log.mjs:52` | `fn` |
@@ -1327,10 +1331,10 @@
 | `hasKey` | `thincoder-core/model-ref.mjs:80` | `fn` |
 | `resolveChannelModel` | `thincoder-core/model-ref.mjs:91` | `fn` |
 | `resolveProviderPlan` | `thincoder-core/model-ref.mjs:116` | `fn` |
-| `specForModel` | `thincoder-core/model-specs.mjs:291` | `fn` |
-| `specMatch` | `thincoder-core/model-specs.mjs:301` | `fn` |
-| `providerSpec` | `thincoder-core/model-specs.mjs:324` | `fn` |
-| `assistantToolCallMessage` | `thincoder-core/model-specs.mjs:345` | `fn` |
+| `specForModel` | `thincoder-core/model-specs.mjs:298` | `fn` |
+| `specMatch` | `thincoder-core/model-specs.mjs:308` | `fn` |
+| `providerSpec` | `thincoder-core/model-specs.mjs:331` | `fn` |
+| `assistantToolCallMessage` | `thincoder-core/model-specs.mjs:355` | `fn` |
 | `NOTIFY_TEXTS` | `thincoder-core/notify-policy.mjs:23` | `const` |
 | `createNotifier` | `thincoder-core/notify-policy.mjs:34` | `fn` |
 | `CLAIM_TTL_MS` | `thincoder-core/peer-claims.mjs:29` | `const` |
@@ -1477,7 +1481,7 @@
 | `chat` | `thincoder-core/provider/responses.mjs:226` | `fn` |
 | `requestWithRetry` | `thincoder-core/provider/retry.mjs:20` | `fn` |
 | `normalizeUsageCache` | `thincoder-core/provider/sse.mjs:14` | `fn` |
-| `readSSE` | `thincoder-core/provider/sse.mjs:89` | `fn` |
+| `readSSE` | `thincoder-core/provider/sse.mjs:92` | `fn` |
 | `waitStatusOf` | `thincoder-core/provider/wait-status.mjs:36` | `fn` |
 | `waitStatusText` | `thincoder-core/provider/wait-status.mjs:53` | `fn` |
 | `createChunkedDecoder` | `thincoder-core/proxy-chunked.mjs:30` | `fn` |
@@ -1699,6 +1703,12 @@
 | `destroyBody` | `thincoder-core/stream-destroy.mjs:33` | `fn` |
 | `IDLE_ABORT` | `thincoder-core/stream-destroy.mjs:43` | `const` |
 | `terminateBody` | `thincoder-core/stream-destroy.mjs:54` | `fn` |
+| `NOTICE_MANUAL_NAME_CONFLICT` | `thincoder-core/team.mjs:38` | `const` |
+| `normalizeTeamServer` | `thincoder-core/team.mjs:47` | `fn` |
+| `defaultTeamLabel` | `thincoder-core/team.mjs:59` | `fn` |
+| `teamStatus` | `thincoder-core/team.mjs:70` | `fn` |
+| `teamLogin` | `thincoder-core/team.mjs:86` | `fn` |
+| `teamLogout` | `thincoder-core/team.mjs:153` | `fn` |
 | `test as slow` | `thincoder-core/test/slow.mjs:6` | `named` |
 | `fillMarker` | `thincoder-core/text-budget.mjs:16` | `fn` |
 | `capText` | `thincoder-core/text-budget.mjs:28` | `fn` |
@@ -1959,16 +1969,16 @@
 | `refreshLiveBlocks` | `thincoder-desktop/renderer/heartbeat.mjs:22` | `fn` |
 | `createHeartbeat` | `thincoder-desktop/renderer/heartbeat.mjs:37` | `fn` |
 | `COMPOSER_DICT` | `thincoder-desktop/renderer/i18n-composer.mjs:23` | `const` |
-| `SETTINGS_DICT` | `thincoder-desktop/renderer/i18n-settings.mjs:25` | `const` |
+| `SETTINGS_DICT` | `thincoder-desktop/renderer/i18n-settings.mjs:26` | `const` |
 | `VIEWS_DICT` | `thincoder-desktop/renderer/i18n-views.mjs:50` | `const` |
-| `HOST_DICT` | `thincoder-desktop/renderer/i18n.mjs:155` | `const` |
-| `SUPPORTED_LOCALES` | `thincoder-desktop/renderer/i18n.mjs:373` | `const` |
-| `FALLBACK_LOCALE` | `thincoder-desktop/renderer/i18n.mjs:376` | `const` |
-| `setStringsSink` | `thincoder-desktop/renderer/i18n.mjs:387` | `fn` |
-| `normalizeLocale` | `thincoder-desktop/renderer/i18n.mjs:393` | `fn` |
-| `initDict` | `thincoder-desktop/renderer/i18n.mjs:407` | `fn` |
-| `locale` | `thincoder-desktop/renderer/i18n.mjs:416` | `fn` |
-| `t` | `thincoder-desktop/renderer/i18n.mjs:428` | `fn` |
+| `HOST_DICT` | `thincoder-desktop/renderer/i18n.mjs:159` | `const` |
+| `SUPPORTED_LOCALES` | `thincoder-desktop/renderer/i18n.mjs:377` | `const` |
+| `FALLBACK_LOCALE` | `thincoder-desktop/renderer/i18n.mjs:380` | `const` |
+| `setStringsSink` | `thincoder-desktop/renderer/i18n.mjs:391` | `fn` |
+| `normalizeLocale` | `thincoder-desktop/renderer/i18n.mjs:397` | `fn` |
+| `initDict` | `thincoder-desktop/renderer/i18n.mjs:411` | `fn` |
+| `locale` | `thincoder-desktop/renderer/i18n.mjs:420` | `fn` |
+| `t` | `thincoder-desktop/renderer/i18n.mjs:432` | `fn` |
 | `createMenuActions` | `thincoder-desktop/renderer/menu-actions.mjs:18` | `fn` |
 | `CARDS_SLOT` | `thincoder-desktop/renderer/mount-cards.mjs:29` | `const` |
 | `CARDS_KEYS` | `thincoder-desktop/renderer/mount-cards.mjs:32` | `const` |
@@ -1998,9 +2008,10 @@
 | `createModelsExits` | `thincoder-desktop/renderer/mount-settings-segments-models.mjs:26` | `fn` |
 | `createProviderExits` | `thincoder-desktop/renderer/mount-settings-segments-providers.mjs:38` | `fn` |
 | `createSegmentExits` | `thincoder-desktop/renderer/mount-settings-segments.mjs:27` | `fn` |
-| `SETTINGS_SLOT` | `thincoder-desktop/renderer/mount-settings.mjs:41` | `const` |
-| `SETTINGS_KEYS` | `thincoder-desktop/renderer/mount-settings.mjs:43` | `const` |
-| `attachSettings` | `thincoder-desktop/renderer/mount-settings.mjs:78` | `fn` |
+| `createTeam` | `thincoder-desktop/renderer/mount-settings-team.mjs:25` | `fn` |
+| `SETTINGS_SLOT` | `thincoder-desktop/renderer/mount-settings.mjs:46` | `const` |
+| `SETTINGS_KEYS` | `thincoder-desktop/renderer/mount-settings.mjs:48` | `const` |
+| `attachSettings` | `thincoder-desktop/renderer/mount-settings.mjs:85` | `fn` |
 | `STATUS_SLOT` | `thincoder-desktop/renderer/mount-status.mjs:15` | `const` |
 | `STATUS_KEYS` | `thincoder-desktop/renderer/mount-status.mjs:20` | `const` |
 | `attachStatus` | `thincoder-desktop/renderer/mount-status.mjs:34` | `fn` |
@@ -2231,31 +2242,33 @@
 | `modelsBody` | `thincoder-desktop/renderer/views/settings-sections-models.mjs:150` | `fn` |
 | `providersBody` | `thincoder-desktop/renderer/views/settings-sections-providers.mjs:194` | `fn` |
 | `providerAddBody` | `thincoder-desktop/renderer/views/settings-sections-providers.mjs:205` | `fn` |
+| `teamBody` | `thincoder-desktop/renderer/views/settings-sections-team.mjs:113` | `fn` |
 | `toolsBody` | `thincoder-desktop/renderer/views/settings-sections-tools.mjs:199` | `fn` |
-| `agentBody, NAMED_FIELDS` | `thincoder-desktop/renderer/views/settings-sections.mjs:23` | `named` |
-| `toolsBody` | `thincoder-desktop/renderer/views/settings-sections.mjs:25` | `named` |
-| `envBody` | `thincoder-desktop/renderer/views/settings-sections.mjs:27` | `named` |
-| `consultAddBody, modelsBody` | `thincoder-desktop/renderer/views/settings-sections.mjs:28` | `named` |
-| `mcpBody, mcpFormBody` | `thincoder-desktop/renderer/views/settings-sections.mjs:30` | `named` |
-| `providerAddBody, providersBody` | `thincoder-desktop/renderer/views/settings-sections.mjs:33` | `named` |
-| `modelIdOf` | `thincoder-desktop/renderer/views/settings-sections.mjs:41` | `fn` |
-| `modelHeadNode` | `thincoder-desktop/renderer/views/settings-sections.mjs:48` | `fn` |
-| `modelChoicesTree` | `thincoder-desktop/renderer/views/settings-sections.mjs:60` | `fn` |
-| `modelBody` | `thincoder-desktop/renderer/views/settings-sections.mjs:94` | `fn` |
+| `agentBody, NAMED_FIELDS` | `thincoder-desktop/renderer/views/settings-sections.mjs:25` | `named` |
+| `toolsBody` | `thincoder-desktop/renderer/views/settings-sections.mjs:27` | `named` |
+| `envBody` | `thincoder-desktop/renderer/views/settings-sections.mjs:29` | `named` |
+| `consultAddBody, modelsBody` | `thincoder-desktop/renderer/views/settings-sections.mjs:30` | `named` |
+| `mcpBody, mcpFormBody` | `thincoder-desktop/renderer/views/settings-sections.mjs:32` | `named` |
+| `providerAddBody, providersBody` | `thincoder-desktop/renderer/views/settings-sections.mjs:35` | `named` |
+| `teamBody` | `thincoder-desktop/renderer/views/settings-sections.mjs:37` | `named` |
+| `modelIdOf` | `thincoder-desktop/renderer/views/settings-sections.mjs:45` | `fn` |
+| `modelHeadNode` | `thincoder-desktop/renderer/views/settings-sections.mjs:52` | `fn` |
+| `modelChoicesTree` | `thincoder-desktop/renderer/views/settings-sections.mjs:64` | `fn` |
+| `modelBody` | `thincoder-desktop/renderer/views/settings-sections.mjs:98` | `fn` |
 | `channelFormTree, verifyControl` | `thincoder-desktop/renderer/views/settings.mjs:38` | `named` |
 | `SECTIONS` | `thincoder-desktop/renderer/views/settings.mjs:43` | `const` |
-| `ADD_MODAL_GROUP` | `thincoder-desktop/renderer/views/settings.mjs:55` | `const` |
-| `MCP_FORM_MODAL_GROUP` | `thincoder-desktop/renderer/views/settings.mjs:59` | `const` |
-| `CONSULT_ADD_MODAL_GROUP` | `thincoder-desktop/renderer/views/settings.mjs:60` | `const` |
-| `STATE_WORD` | `thincoder-desktop/renderer/views/settings.mjs:63` | `const` |
-| `REASON_WORD` | `thincoder-desktop/renderer/views/settings.mjs:69` | `const` |
-| `FORMATS` | `thincoder-desktop/renderer/views/settings.mjs:90` | `const` |
-| `reasonWord` | `thincoder-desktop/renderer/views/settings.mjs:115` | `fn` |
-| `settingsModel` | `thincoder-desktop/renderer/views/settings.mjs:155` | `fn` |
-| `settingsTree` | `thincoder-desktop/renderer/views/settings.mjs:354` | `fn` |
-| `settingsModalTree` | `thincoder-desktop/renderer/views/settings.mjs:375` | `fn` |
-| `syncHostProps` | `thincoder-desktop/renderer/views/settings.mjs:419` | `fn` |
-| `mountSettings` | `thincoder-desktop/renderer/views/settings.mjs:428` | `fn` |
+| `ADD_MODAL_GROUP` | `thincoder-desktop/renderer/views/settings.mjs:56` | `const` |
+| `MCP_FORM_MODAL_GROUP` | `thincoder-desktop/renderer/views/settings.mjs:60` | `const` |
+| `CONSULT_ADD_MODAL_GROUP` | `thincoder-desktop/renderer/views/settings.mjs:61` | `const` |
+| `STATE_WORD` | `thincoder-desktop/renderer/views/settings.mjs:64` | `const` |
+| `REASON_WORD` | `thincoder-desktop/renderer/views/settings.mjs:70` | `const` |
+| `FORMATS` | `thincoder-desktop/renderer/views/settings.mjs:91` | `const` |
+| `reasonWord` | `thincoder-desktop/renderer/views/settings.mjs:116` | `fn` |
+| `settingsModel` | `thincoder-desktop/renderer/views/settings.mjs:156` | `fn` |
+| `settingsTree` | `thincoder-desktop/renderer/views/settings.mjs:366` | `fn` |
+| `settingsModalTree` | `thincoder-desktop/renderer/views/settings.mjs:387` | `fn` |
+| `syncHostProps` | `thincoder-desktop/renderer/views/settings.mjs:431` | `fn` |
+| `mountSettings` | `thincoder-desktop/renderer/views/settings.mjs:440` | `fn` |
 | `BANNER_CODES` | `thincoder-desktop/renderer/views/statusline-banner.mjs:14` | `const` |
 | `bannerSegments` | `thincoder-desktop/renderer/views/statusline-banner.mjs:20` | `fn` |
 | `badgeCodes` | `thincoder-desktop/renderer/views/statusline-segments.mjs:38` | `fn` |
@@ -2371,7 +2384,7 @@
 | `engineFloorMet` | `thincoder-desktop/src/main/host-floor.mjs:40` | `fn` |
 | `readIndexCounts` | `thincoder-desktop/src/main/index-status.mjs:37` | `fn` |
 | `runIndexBuild` | `thincoder-desktop/src/main/index-status.mjs:54` | `fn` |
-| `registerIpcHandlers` | `thincoder-desktop/src/main/ipc-registry.mjs:85` | `fn` |
+| `registerIpcHandlers` | `thincoder-desktop/src/main/ipc-registry.mjs:90` | `fn` |
 | `indexBuild` | `thincoder-desktop/src/main/ipc-relays.mjs:24` | `fn` |
 | `indexStatusChannel` | `thincoder-desktop/src/main/ipc-relays.mjs:25` | `fn` |
 | `settingsEnvChannel` | `thincoder-desktop/src/main/ipc-relays.mjs:32` | `fn` |
@@ -2443,16 +2456,16 @@
 | `registerAppScheme` | `thincoder-desktop/src/main/protocol.mjs:43` | `fn` |
 | `serveAppProtocol` | `thincoder-desktop/src/main/protocol.mjs:50` | `fn` |
 | `isAppNavigation` | `thincoder-desktop/src/main/protocol.mjs:74` | `fn` |
-| `providerList` | `thincoder-desktop/src/main/providers.mjs:80` | `fn` |
-| `probeAfterWrite` | `thincoder-desktop/src/main/providers.mjs:117` | `fn` |
-| `providerSave` | `thincoder-desktop/src/main/providers.mjs:140` | `fn` |
-| `providerRemove` | `thincoder-desktop/src/main/providers.mjs:164` | `fn` |
-| `providerSetKey` | `thincoder-desktop/src/main/providers.mjs:176` | `fn` |
-| `providerDelKey` | `thincoder-desktop/src/main/providers.mjs:193` | `fn` |
-| `providerSetProxy` | `thincoder-desktop/src/main/providers.mjs:209` | `fn` |
-| `providerVerify` | `thincoder-desktop/src/main/providers.mjs:236` | `fn` |
-| `providerModels` | `thincoder-desktop/src/main/providers.mjs:254` | `fn` |
-| `testProxy` | `thincoder-desktop/src/main/providers.mjs:278` | `fn` |
+| `providerList` | `thincoder-desktop/src/main/providers.mjs:89` | `fn` |
+| `probeAfterWrite` | `thincoder-desktop/src/main/providers.mjs:126` | `fn` |
+| `providerSave` | `thincoder-desktop/src/main/providers.mjs:149` | `fn` |
+| `providerRemove` | `thincoder-desktop/src/main/providers.mjs:173` | `fn` |
+| `providerSetKey` | `thincoder-desktop/src/main/providers.mjs:185` | `fn` |
+| `providerDelKey` | `thincoder-desktop/src/main/providers.mjs:202` | `fn` |
+| `providerSetProxy` | `thincoder-desktop/src/main/providers.mjs:218` | `fn` |
+| `providerVerify` | `thincoder-desktop/src/main/providers.mjs:245` | `fn` |
+| `providerModels` | `thincoder-desktop/src/main/providers.mjs:263` | `fn` |
+| `testProxy` | `thincoder-desktop/src/main/providers.mjs:287` | `fn` |
 | `textOf` | `thincoder-desktop/src/main/queued-input.mjs:22` | `const` |
 | `entryTimeOf` | `thincoder-desktop/src/main/queued-input.mjs:25` | `const` |
 | `createQueuedInput` | `thincoder-desktop/src/main/queued-input.mjs:28` | `fn` |
@@ -2522,6 +2535,9 @@
 | `BATCH_VERDICTS` | `thincoder-desktop/src/main/suspensions.mjs:20` | `const` |
 | `QUESTION_CANCELLED` | `thincoder-desktop/src/main/suspensions.mjs:24` | `const` |
 | `createGates` | `thincoder-desktop/src/main/suspensions.mjs:40` | `fn` |
+| `teamStatusChannel` | `thincoder-desktop/src/main/team.mjs:18` | `fn` |
+| `teamLoginChannel` | `thincoder-desktop/src/main/team.mjs:24` | `fn` |
+| `teamLogoutChannel` | `thincoder-desktop/src/main/team.mjs:33` | `fn` |
 | `timerWakeEnabled` | `thincoder-desktop/src/main/timer-watch.mjs:17` | `named` |
 | `deliverExpiredTimers` | `thincoder-desktop/src/main/timer-watch.mjs:22` | `fn` |
 | `createTimerWatch` | `thincoder-desktop/src/main/timer-watch.mjs:34` | `fn` |
@@ -2667,10 +2683,10 @@
 | `ensureSubBlock` | `thincoder-render-core/subblocks/state.mjs:318` | `fn` |
 | `showToast` | `thincoder-render-core/toast.mjs:10` | `fn` |
 | `formatToolSummary` | `thincoder-render-core/tool-summary.mjs:35` | `fn` |
-| `USAGE` | `thincoder-server/bin/thincoder-server.mjs:36` | `const` |
-| `parseArgs` | `thincoder-server/bin/thincoder-server.mjs:39` | `fn` |
-| `closeApp` | `thincoder-server/bin/thincoder-server.mjs:52` | `fn` |
-| `run` | `thincoder-server/bin/thincoder-server.mjs:75` | `fn` |
+| `USAGE` | `thincoder-server/bin/thincoder-server.mjs:37` | `const` |
+| `parseArgs` | `thincoder-server/bin/thincoder-server.mjs:40` | `fn` |
+| `closeApp` | `thincoder-server/bin/thincoder-server.mjs:53` | `fn` |
+| `run` | `thincoder-server/bin/thincoder-server.mjs:76` | `fn` |
 | `USAGE` | `thincoder-server/deploy/backup.mjs:21` | `const` |
 | `stamp` | `thincoder-server/deploy/backup.mjs:24` | `fn` |
 | `parseArgs` | `thincoder-server/deploy/backup.mjs:30` | `fn` |
@@ -2818,6 +2834,7 @@
 | `deleteExpiredSessions` | `thincoder-server/src/accounts/session.mjs:79` | `fn` |
 | `requireSession` | `thincoder-server/src/accounts/session.mjs:84` | `fn` |
 | `requireAdmin` | `thincoder-server/src/accounts/session.mjs:91` | `fn` |
+| `registerClientRoutes` | `thincoder-server/src/client/routes.mjs:28` | `fn` |
 | `CONFIG_WRITABLE_KEYS` | `thincoder-server/src/gateway/config-admin.mjs:30` | `const` |
 | `CONFIG_EMBEDDING_KEYS` | `thincoder-server/src/gateway/config-admin.mjs:33` | `const` |
 | `isMaskEcho` | `thincoder-server/src/gateway/config-admin.mjs:41` | `fn` |
@@ -3080,34 +3097,36 @@
 | `handleRenameSession` | `thincoder-vscode/src/extension/panel-messages-session.mjs:84` | `fn` |
 | `handleSetProject` | `thincoder-vscode/src/extension/panel-messages-session.mjs:101` | `fn` |
 | `handleLoadOlder` | `thincoder-vscode/src/extension/panel-messages-session.mjs:114` | `fn` |
-| `handleSaveProviderKey` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:33` | `fn` |
-| `handleDeleteProviderKey` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:48` | `fn` |
-| `handleSaveMcpServer` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:54` | `fn` |
-| `handleDeleteMcpServer` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:61` | `fn` |
-| `handleReconnectMcp` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:71` | `fn` |
-| `handleEditMcp` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:74` | `fn` |
-| `handleTestMcp` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:77` | `fn` |
-| `handleAddProvider` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:82` | `fn` |
-| `handleRemoveProvider` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:110` | `fn` |
-| `handleSetProviderProxy` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:121` | `fn` |
-| `handleSetKey` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:128` | `fn` |
-| `handleSaveEmbedKey` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:131` | `fn` |
-| `handleDeleteEmbedKey` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:137` | `fn` |
-| `handleSaveWebsearchKey` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:143` | `fn` |
-| `handleDeleteWebsearchKey` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:150` | `fn` |
-| `handleTestProvider` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:159` | `fn` |
-| `handleBuildIndex` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:166` | `fn` |
-| `handleGetMcpStatus` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:169` | `fn` |
-| `handleMcpTools` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:172` | `fn` |
-| `handleSaveAgentSettings` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:188` | `fn` |
-| `handleGetAgentSettings` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:202` | `fn` |
-| `handleSetAdvisorGuard` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:208` | `fn` |
-| `handleSetEngineeringEnabled` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:216` | `fn` |
-| `handleSetPlanMode` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:228` | `fn` |
-| `handleGetShellCandidates` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:233` | `fn` |
-| `handleSaveShellSettings` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:236` | `fn` |
-| `handleSaveProxySettings` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:243` | `fn` |
-| `handleTestProxy` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:250` | `fn` |
+| `handleSaveProviderKey` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:34` | `fn` |
+| `handleDeleteProviderKey` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:49` | `fn` |
+| `handleSaveMcpServer` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:55` | `fn` |
+| `handleDeleteMcpServer` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:62` | `fn` |
+| `handleReconnectMcp` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:72` | `fn` |
+| `handleEditMcp` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:75` | `fn` |
+| `handleTestMcp` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:78` | `fn` |
+| `handleAddProvider` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:83` | `fn` |
+| `handleRemoveProvider` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:111` | `fn` |
+| `handleSetProviderProxy` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:122` | `fn` |
+| `handleSetKey` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:129` | `fn` |
+| `handleSaveEmbedKey` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:132` | `fn` |
+| `handleDeleteEmbedKey` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:138` | `fn` |
+| `handleSaveWebsearchKey` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:144` | `fn` |
+| `handleDeleteWebsearchKey` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:151` | `fn` |
+| `handleTestProvider` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:160` | `fn` |
+| `handleBuildIndex` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:167` | `fn` |
+| `handleGetMcpStatus` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:170` | `fn` |
+| `handleMcpTools` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:173` | `fn` |
+| `handleSaveAgentSettings` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:189` | `fn` |
+| `handleGetAgentSettings` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:203` | `fn` |
+| `handleSetAdvisorGuard` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:209` | `fn` |
+| `handleSetEngineeringEnabled` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:217` | `fn` |
+| `handleSetPlanMode` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:229` | `fn` |
+| `handleGetShellCandidates` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:234` | `fn` |
+| `handleSaveShellSettings` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:237` | `fn` |
+| `handleSaveProxySettings` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:244` | `fn` |
+| `handleTestProxy` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:251` | `fn` |
+| `handleTeamLogin` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:262` | `fn` |
+| `handleTeamLogout` | `thincoder-vscode/src/extension/panel-messages-settings.mjs:274` | `fn` |
 | `handleAbort` | `thincoder-vscode/src/extension/panel-messages-turn.mjs:28` | `fn` |
 | `handleCancelSubagent` | `thincoder-vscode/src/extension/panel-messages-turn.mjs:59` | `fn` |
 | `handleInterrupt` | `thincoder-vscode/src/extension/panel-messages-turn.mjs:128` | `fn` |
@@ -3166,8 +3185,8 @@
 | `engineeringOn` | `thincoder-vscode/src/extension/panel-settings-push.mjs:74` | `fn` |
 | `pushStatus` | `thincoder-vscode/src/extension/panel-settings-push.mjs:78` | `fn` |
 | `pushSettingsLight` | `thincoder-vscode/src/extension/panel-settings-push.mjs:88` | `fn` |
-| `pushSettings` | `thincoder-vscode/src/extension/panel-settings-push.mjs:101` | `fn` |
-| `agentSettingsSession` | `thincoder-vscode/src/extension/panel-settings-push.mjs:116` | `fn` |
+| `pushSettings` | `thincoder-vscode/src/extension/panel-settings-push.mjs:103` | `fn` |
+| `agentSettingsSession` | `thincoder-vscode/src/extension/panel-settings-push.mjs:119` | `fn` |
 | `queuedInfoOf` | `thincoder-vscode/src/extension/panel-subagent-relay.mjs:73` | `fn` |
 | `relaySubagentEventToken` | `thincoder-vscode/src/extension/panel-subagent-relay.mjs:91` | `fn` |
 | `emitToolPanel` | `thincoder-vscode/src/extension/panel-subagent-relay.mjs:124` | `fn` |
@@ -3266,32 +3285,33 @@
 | `saveAgentSettingsFromPanel` | `thincoder-vscode/src/extension/settings-panel-write.mjs:66` | `fn` |
 | `saveShellSettingsFromPanel` | `thincoder-vscode/src/extension/settings-panel-write.mjs:179` | `fn` |
 | `carryoverDefaultModel` | `thincoder-vscode/src/extension/settings-panel-write.mjs:196` | `fn` |
-| `loadAgentSettings` | `thincoder-vscode/src/extension/settings.mjs:28` | `fn` |
-| `shellCandidates, _setShellDetectForTest` | `thincoder-vscode/src/extension/settings.mjs:57` | `named` |
-| `providerStatus` | `thincoder-vscode/src/extension/settings.mjs:75` | `fn` |
-| `handleAddProvider` | `thincoder-vscode/src/extension/settings.mjs:126` | `fn` |
-| `handleRemoveProvider` | `thincoder-vscode/src/extension/settings.mjs:127` | `fn` |
-| `handleSetProviderProxy` | `thincoder-vscode/src/extension/settings.mjs:131` | `fn` |
-| `agentSettings` | `thincoder-vscode/src/extension/settings.mjs:145` | `fn` |
-| `saveAgentSettingsFromPanel, saveShellSettingsFromPanel` | `thincoder-vscode/src/extension/settings.mjs:183` | `named` |
-| `proxySettings` | `thincoder-vscode/src/extension/settings.mjs:186` | `fn` |
-| `websearchSettings` | `thincoder-vscode/src/extension/settings.mjs:192` | `fn` |
-| `saveWebsearchKeyFromPanel` | `thincoder-vscode/src/extension/settings.mjs:198` | `fn` |
-| `deleteWebsearchKeyFromPanel` | `thincoder-vscode/src/extension/settings.mjs:208` | `fn` |
-| `testProviderConnection` | `thincoder-vscode/src/extension/settings.mjs:228` | `fn` |
-| `saveProxySettingsFromPanel` | `thincoder-vscode/src/extension/settings.mjs:243` | `fn` |
-| `testProxyConnection` | `thincoder-vscode/src/extension/settings.mjs:265` | `fn` |
-| `saveProviderKey` | `thincoder-vscode/src/extension/settings.mjs:291` | `fn` |
-| `deleteProviderKey` | `thincoder-vscode/src/extension/settings.mjs:300` | `fn` |
-| `getMcpServers` | `thincoder-vscode/src/extension/settings.mjs:315` | `fn` |
-| `saveMcpServer` | `thincoder-vscode/src/extension/settings.mjs:322` | `fn` |
-| `deleteMcpServer` | `thincoder-vscode/src/extension/settings.mjs:328` | `fn` |
-| `postProviderError` | `thincoder-vscode/src/extension/settings.mjs:335` | `fn` |
-| `pushStatus` | `thincoder-vscode/src/extension/settings.mjs:340` | `fn` |
-| `lastModelsPayload` | `thincoder-vscode/src/extension/settings.mjs:352` | `fn` |
-| `lastPushedPrefs` | `thincoder-vscode/src/extension/settings.mjs:359` | `fn` |
-| `endProbeWindow, _resetProbeWindowsForTest, _setProbeRetryDelayForTest` | `thincoder-vscode/src/extension/settings.mjs:363` | `named` |
-| `fullStatus` | `thincoder-vscode/src/extension/settings.mjs:375` | `fn` |
+| `loadAgentSettings` | `thincoder-vscode/src/extension/settings.mjs:29` | `fn` |
+| `shellCandidates, _setShellDetectForTest` | `thincoder-vscode/src/extension/settings.mjs:58` | `named` |
+| `providerStatus` | `thincoder-vscode/src/extension/settings.mjs:76` | `fn` |
+| `handleAddProvider` | `thincoder-vscode/src/extension/settings.mjs:131` | `fn` |
+| `handleRemoveProvider` | `thincoder-vscode/src/extension/settings.mjs:132` | `fn` |
+| `handleSetProviderProxy` | `thincoder-vscode/src/extension/settings.mjs:136` | `fn` |
+| `agentSettings` | `thincoder-vscode/src/extension/settings.mjs:150` | `fn` |
+| `saveAgentSettingsFromPanel, saveShellSettingsFromPanel` | `thincoder-vscode/src/extension/settings.mjs:188` | `named` |
+| `proxySettings` | `thincoder-vscode/src/extension/settings.mjs:191` | `fn` |
+| `websearchSettings` | `thincoder-vscode/src/extension/settings.mjs:197` | `fn` |
+| `saveWebsearchKeyFromPanel` | `thincoder-vscode/src/extension/settings.mjs:203` | `fn` |
+| `deleteWebsearchKeyFromPanel` | `thincoder-vscode/src/extension/settings.mjs:213` | `fn` |
+| `testProviderConnection` | `thincoder-vscode/src/extension/settings.mjs:233` | `fn` |
+| `saveProxySettingsFromPanel` | `thincoder-vscode/src/extension/settings.mjs:248` | `fn` |
+| `testProxyConnection` | `thincoder-vscode/src/extension/settings.mjs:270` | `fn` |
+| `saveProviderKey` | `thincoder-vscode/src/extension/settings.mjs:296` | `fn` |
+| `deleteProviderKey` | `thincoder-vscode/src/extension/settings.mjs:305` | `fn` |
+| `getMcpServers` | `thincoder-vscode/src/extension/settings.mjs:320` | `fn` |
+| `saveMcpServer` | `thincoder-vscode/src/extension/settings.mjs:327` | `fn` |
+| `deleteMcpServer` | `thincoder-vscode/src/extension/settings.mjs:333` | `fn` |
+| `postProviderError` | `thincoder-vscode/src/extension/settings.mjs:340` | `fn` |
+| `pushStatus` | `thincoder-vscode/src/extension/settings.mjs:345` | `fn` |
+| `pushTeamStatus` | `thincoder-vscode/src/extension/settings.mjs:357` | `fn` |
+| `lastModelsPayload` | `thincoder-vscode/src/extension/settings.mjs:364` | `fn` |
+| `lastPushedPrefs` | `thincoder-vscode/src/extension/settings.mjs:371` | `fn` |
+| `endProbeWindow, _resetProbeWindowsForTest, _setProbeRetryDelayForTest` | `thincoder-vscode/src/extension/settings.mjs:375` | `named` |
+| `fullStatus` | `thincoder-vscode/src/extension/settings.mjs:387` | `fn` |
 | `loadSkillsSync as loadSkills, readSkillSync as readSkill, formatSkillListing` | `thincoder-vscode/src/extension/skills.mjs:5` | `named` |
 | `initStopTrace` | `thincoder-vscode/src/extension/stop-trace.mjs:18` | `fn` |
 | `onTrace` | `thincoder-vscode/src/extension/stop-trace.mjs:31` | `fn` |
@@ -3302,6 +3322,9 @@
 | `poolLive` | `thincoder-vscode/src/extension/suspension.mjs:60` | `fn` |
 | `reassertLiveChildren` | `thincoder-vscode/src/extension/suspension.mjs:79` | `fn` |
 | `suspensionSession` | `thincoder-vscode/src/extension/suspension.mjs:240` | `fn` |
+| `teamStatus` | `thincoder-vscode/src/extension/team.mjs:22` | `fn` |
+| `teamLogin` | `thincoder-vscode/src/extension/team.mjs:27` | `fn` |
+| `teamLogout` | `thincoder-vscode/src/extension/team.mjs:32` | `fn` |
 | `deliverExpiredTimers` | `thincoder-vscode/src/extension/timer-watch.mjs:29` | `fn` |
 | `fireTimerWake` | `thincoder-vscode/src/extension/timer-watch.mjs:48` | `fn` |
 | `syncTimerWatch` | `thincoder-vscode/src/extension/timer-watch.mjs:62` | `fn` |

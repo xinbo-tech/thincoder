@@ -4,6 +4,10 @@
  * `lightRoundOpen(agent)`：闸读判据——**两件双在盘**才算轻通道轮在盘：
  *   ① 轮次台账行：`status = 在途` ∧ `title` 携「收尾链待跑」（轮型标记 = 闸凭据）∧ `task_book` 非空；
  *   ② 该指针指向的轮次批档：`§1` 状态行 = 「进行中」（判定器单源 = `readBatchStatusLine`）。
+ * 查找面（纯向下）= 会话锚 + 其直接子目录一层（候选枚举单源 = `ledgerChildren`——与族发现同级判据
+ * 同源；不递归 ∥ 不取同胞）：逐候选查行 ∥ 以各候选为基解析指针（台账写门同式）。歧义候选
+ * （`projectRootView` 判 `ambiguous`——如工作区锚自身）⇒ 跳过该候选、照查其余（既定观察态，非读错）；
+ * 候选读错 ∥ 不可判 ⇒ 停本候选（总判不因他候选读错而失——开路凭据仍是「两件校验全过」）。
  * 语义：开门动作 ≡ 开轮两件落盘（「启动即挂账」本体——无独立于账的开门面）；单件不放行
  * （轮档独在 ∥ 行独在 ∥ 无标记 ∥ 行非在途 ∥ 指针失据 ∥ 档已收口 ⇒ 皆 false）；收口即自闭
  * （信号生命周期 = 账生命周期——零撤销动作 ∥ 零跨轮残留）。
@@ -13,7 +17,7 @@
  */
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
-import { resolveProjectRoot } from "../manifest.mjs"
+import { projectRootView, resolveProjectRoot } from "../manifest.mjs"
 import { resolveDeclaredRef } from "../declaration.mjs"
 import { readBatchStatusLine } from "../agent-tools/batch-skeleton.mjs"
 
@@ -28,23 +32,32 @@ export async function lightRoundOpen(agent) {
   try {
     const cwd = agent?.cwd
     if (typeof cwd !== "string" || cwd.trim() === "") return false
-    // W8 契约②：node:sqlite 链只经动态 import 进入（勿升静态）。
-    const { ledgerQuery } = await import("../ledger-cmd.mjs")
-    const rows = ledgerQuery({ cwd, status: "在途" })
-    if (!Array.isArray(rows) || rows.length === 0) return false
-    // 指针基准 = 台账写门同式（`ledger-cmd.mjs` assertTaskBookGate 同一子表达式）。
-    const base = resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")
-    for (const row of rows) {
-      if (!String(row?.title ?? "").includes(ROUND_MARKER)) continue // 无标记 ⇒ 非轻通道轮（全链批行）
-      const taskBook = row?.task_book
-      if (typeof taskBook !== "string" || taskBook.trim() === "") continue // 缺指针 ⇒ 单件不放行
-      const part = taskBook.split("§")[0].trim() // 台账写门同式：首个 § 前子串
-      if (part === "") continue
-      const hit = resolveDeclaredRef(base, part)
-      if (!hit.ok) continue // 指针失据 ⇒ 不放行
-      let src
-      try { src = readFileSync(hit.abs, "utf8") } catch { continue } // 档读不到 ⇒ 不放行
-      if (readBatchStatusLine(src) === "open") return true // 两件双在盘 ⇒ 放行
+    // W8 契约②：node:sqlite 链只经动态 import 进入（勿升静态）——候选枚举与逐候选查行同取本档公共面。
+    const { ledgerChildren, ledgerQuery } = await import("../ledger.mjs")
+    const anchor = resolve(cwd)
+    // 候选面 = 锚自身 + 直接子目录一层（纯向下；子项枚举单源 = `ledgerChildren`）。
+    const candidates = [anchor, ...ledgerChildren(anchor).map((p) => p.root)]
+    for (const cand of candidates) {
+      // 歧义候选（≥2 候选项目——`projectRootView`）⇒ 跳过、照查其余（歧义锚不充当项目 = AC-M2-19 同判；
+      // `openLedger` 歧义拒 = AC-M2-17——既定观察态，非读错）。
+      if (projectRootView(cand).state === "ambiguous") continue
+      let rows
+      try { rows = ledgerQuery({ cwd: cand, status: "在途" }) } catch { continue } // 候选读错 ⇒ 停本候选
+      if (!Array.isArray(rows) || rows.length === 0) continue
+      // 指针基准 = 台账写门同式（`ledger-cmd.mjs` assertTaskBookGate 同一子表达式）——以各候选为基。
+      const base = resolveProjectRoot(cand) ?? resolve(cand ?? ".")
+      for (const row of rows) {
+        if (!String(row?.title ?? "").includes(ROUND_MARKER)) continue // 无标记 ⇒ 非轻通道轮（全链批行）
+        const taskBook = row?.task_book
+        if (typeof taskBook !== "string" || taskBook.trim() === "") continue // 缺指针 ⇒ 单件不放行
+        const part = taskBook.split("§")[0].trim() // 台账写门同式：首个 § 前子串
+        if (part === "") continue
+        const hit = resolveDeclaredRef(base, part)
+        if (!hit.ok) continue // 指针失据 ⇒ 不放行
+        let src
+        try { src = readFileSync(hit.abs, "utf8") } catch { continue } // 档读不到 ⇒ 不放行
+        if (readBatchStatusLine(src) === "open") return true // 两件双在盘 ⇒ 放行
+      }
     }
     return false
   } catch {

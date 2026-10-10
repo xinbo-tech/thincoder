@@ -105,17 +105,18 @@
 
 ### 2.8 代码笔通路（F-LC5——闸认轻通道在盘 · 2026-10-09）
 
-**问题**：轻通道笔落点为代码文件（产品代码面）时，父侧直改被工程模式父侧门（`thincoder-core/agent/dispatch.mjs:98-131`——无任一活设计槽 ⇒ 代码写全拒）机械拦断；历史几轮能直改 = 恰有其他批活槽垫着（耦合，非机制保障）。本件 = 给该通路一条与机制咬合的机械口：**闸认轻通道轮在盘即放行**。
+**问题**：轻通道笔落点为代码文件（产品代码面）时，父侧直改被工程模式父侧门（`thincoder-core/agent/dispatch.mjs:99-132`——无任一活设计槽 ⇒ 代码写全拒）机械拦断；历史几轮能直改 = 恰有其他批活槽垫着（耦合，非机制保障）。本件 = 给该通路一条与机制咬合的机械口：**闸认轻通道轮在盘即放行**。
 
 **信号形（闸读判据——两件双在盘才算）**：
 
 | # | 在盘状态 | 判据 | 读取点 |
 |---|---|---|---|
-| ① | 轮次台账行 | `status = 在途`（查询过滤）∧ `title` 携「收尾链待跑」（§2.3 开轮形既有标记）∧ `task_book` 非空 | `ledgerQuery({ cwd, status: "在途" })`——`thincoder-core/ledger-cmd.mjs`（只读开库；动态 import——W8 契约②） |
-| ② | 轮次批档 | §1 状态行含「进行中」（`readBatchStatusLine === "open"`——与批档机制「在飞」判定同源） | ①行 `task_book` 按台账写门同式解析（`resolveDeclaredRef`——`thincoder-core/declaration.mjs`）⇒ 读该档（判定器 `thincoder-core/agent-tools/batch-skeleton.mjs:122`） |
+| ① | 轮次台账行 | `status = 在途`（查询过滤）∧ `title` 携「收尾链待跑」（§2.3 开轮形既有标记）∧ `task_book` 非空 | 逐候选 `ledgerQuery({ cwd: <候选>, status: "在途" })`——候选面 = 会话锚 + 直接子目录一层；动态 import 面 = `thincoder-core/ledger.mjs`（W8 契约②） |
+| ② | 轮次批档 | §1 状态行含「进行中」（`readBatchStatusLine === "open"`——与批档机制「在飞」判定同源） | ①行 `task_book` **以各候选为基**按台账写门同式解析（基式 = `resolveProjectRoot(候选) ?? resolve(候选 ?? ".")`；`resolveDeclaredRef`——`thincoder-core/declaration.mjs`）⇒ 读该档（判定器 `thincoder-core/agent-tools/batch-skeleton.mjs:122`） |
 
-**闸读点**：新增只读谓词 `lightRoundOpen(agent)`（拟新增——`thincoder-core/agent/light-round.mjs`，实施轮落盘）；调用点 = `thincoder-core/agent/dispatch.mjs:98-101` 条件式**末位合取项** `&& !(await lightRoundOpen(agent))`（短路序在 `anyLiveDesignSlot` ∥ `FILE_MUTATORS` 之后——有活槽会话零新增 I/O）。
-读错 ∥ 不可判 ⇒ `false`（照拦——fail-closed；被拦时文案不因读错而变）。
+**闸读点**：只读谓词 `lightRoundOpen(agent)`（在盘——`thincoder-core/agent/light-round.mjs`，67 行 · as-of 2026-10-10）；读法 = **候选面**（会话锚 + 直接子目录一层——候选枚举单源 = `ledgerChildren`）。
+逐候选查行 ∥ 以各候选为基解析指针；歧义候选（`projectRootView` 判 `ambiguous`——如工作区锚自身）⇒ 跳过、照查其余；候选读错 ∥ 不可判 ⇒ 停本候选（净效果只减命中面——开路凭据仍是「两件校验全过」）；外层异常（枚举 ∥ import）⇒ `false`（照拦——fail-closed；被拦时文案不因读错而变）。
+调用点 = `thincoder-core/agent/dispatch.mjs:99-102` 条件式**末位合取项** `&& !(await lightRoundOpen(agent))`（短路序在 `anyLiveDesignSlot` ∥ `FILE_MUTATORS` 之后——有活槽会话无新增 I/O）。
 
 **防伪最小锚**：两件**双在盘**才算——轮档独在（全链批 ∥ 随手档）不放行；行独在（无标记 ∥ 无指针 ∥ 指针失据）不放行；档已收口 ∥ 行离在途 ⇒ 信号消失（收口自闭 ∥ 核销自闭）。
 **语义**：开门动作 ≡ 开轮两件落盘（「启动即挂账」本体）——不存在独立于账的开门面（无裸口可开）；开门 = 上账，两件即收尾机器（§2.3 ∥ §2.4 ∥ §2.5）盯住的同一对象——机械面造不出脱离收尾链的开口。
@@ -132,14 +133,18 @@
 - 非轻通道代码写仍拦：无在盘轻通道轮时，闸判据逐字同前（辖域 ∥ 分类 ∥ 保守拦截 ∥ 全链笔语义零变——talk-then-code 零弱化）；
 - 机械面不判笔的归属：轮内一笔是否属轮（三样清单 ∥ 一句边界 ∥ 交底）仍为判断面——误用交收尾全链兜底（判据收口原理不变）；谓词为真时闸体整跳（含逐目标分类）⇒ 全目标放行。
 - 不动面：eng-coder 角色门 ∥ spawn 门 ∥ D5 冻结窗 ∥ 批档写门 ∥ 分类器 ∥ 辖域 ∥ 端面——零改。
+- **命中面 = 会话锚辖域**：轮的查找面 = 会话锚 + 直接子目录一层——辖域外（兄弟 ∥ 祖先层 ∥ 他项目）的轮不构成信号；门开后的放行面 = 全目标（含跨项目目标——闸体整跳）。
 
-**实证判据（两笔机检 · 用例 J1–J5 · 直驱 `executeToolCalls` + auto-approve 夹具）**（拟新增——批内件 `docs/batches/2026-10-09-light-channel-code-path.test.mjs`，实施轮落盘）：
+**实证判据（两笔机检 · 用例 J1–J5 · 直驱 `executeToolCalls` + auto-approve 夹具）**（批内件 `docs/batches/2026-10-09-light-channel-code-path.test.mjs`——在盘）：
 
 - ①在盘放行（J1）：工程 agent（depth 0 · 零活槽）+ 两件在盘 ⇒ 写代码目标**无「engineering design gate」拒**（到达执行段）；
 - ②无盘仍拒（J2）：同夹具撤两件 ⇒ 拒；三反例同判（J3 无标记 ∥ J4 行非在途 ∥ J5 档已收口）⇒ 逐形仍拒（回指需求 §2.5 F-LC5 判定句 ② ∥ ③）。
+- **候选面批（2026-10-10）实证腿** = W1–W4（批档 `docs/batches/2026-10-10-ledger-family-anchor-local.md` §2.6——工作区锚放行 ∥ 缺席仍拒 ∥ 缺一件仍拒 ∥ 坏档候选并存）。
 
 **提示词面**：persona 双档增两句——父侧定句（开轮挂账 ⇒ 直改放行 ∥ 无盘 ⇒ 先挂账再笔 ∥ 被拒 ⇒ 停笔报告、禁静默转全链）+ 轮次行标记半句；逐字 = 批档 §2 围栏块（落笔 = 实施轮；内容权 = 主 agent）。
-**闸拒文**：`thincoder-core/agent/dispatch.mjs:126-127` hint 增轻通道条件半句——**取**（① 拒绝时刻 = 最需修法指引的时刻，承 #1102「hint 指名修法」先例；② 条件冠句防全链笔误读；③ 与提示词句互补：提示词 = 事前知会，拒文 = 事发指引）；逐字候选 = 批档 §2。
+**闸拒文**：`thincoder-core/agent/dispatch.mjs:128` hint 轻通道句（as-built 逐字）：
+`If this is a light-channel code pen: the gate looks for the round from the session anchor and its direct subdirectories — book the round first (an in-flight batch record plus a 在途 ledger row carrying 「收尾链待跑」 pointing at the record); code pens pass once that is on disk.`
+**取**（① 拒绝时刻 = 最需修法指引的时刻，承 #1102「hint 指名修法」先例；② 条件冠句防全链笔误读；③ 与提示词句互补：提示词 = 事前知会，拒文 = 事发指引）。
 
 ## 3. 提示词落点清册（段落 → 档 → 节）与咬合处置
 
@@ -217,7 +222,7 @@
 | K13 | 性能观察类 = **附则件**（无结构变更 ∧ 前后读数可证） | 判据收口定形：附则持有（入口从简——兜底 = 收尾全链）；否决「观察窗（先跑 1–2 笔）」（入口约束堆——22:36–22:58 裁）·「无限观察」（无到期条件 = 永久先例） |
 | K14 | 「轮次界 = 收口」入文 = 需求 §2.3 新增条 ∥ 提示词「派发与收尾纪律」节内新增行（双面） | 续笔归属需明文（#725 设计轮观察——需求 ∥ 提示词面未载）；落点候选 = 需求 F-LC3 邻位 ∥ 提示词 P2 块邻位（#727 归批）；否决「只落设计档」（立案前提即缺口）·「只落需求」（跨会话续笔的提示词依据仍缺） |
 | K15 | **判据收口（入口重定）**：准入 = 三样清单 + 一句边界；核销面（挂账 ∥ 收口 ∥ 接手 ∥ 未核销不关轮）= 机制重心（第一优先级）；工程工具面直改硬约束 ② 撤——管辖面并入一句边界 | 用户 2026-10-02 22:36–22:58 五裁（bugfix 路由指正 ∥「简单明确」批评 ∥「没必要把门槛设置得那么高」∥ 分流句复核撤 ∥「开始」）；兜底原理 = 收尾全链自然捕获误准入；否决「保留约束堆」（反过度工程）·「新增分流句」（22:57 复核）·「收口加新机制」（撤多增少） |
-| K16 | **代码笔通路 = 闸认轻通道在盘（两件双在盘：轮次行 `在途` 携「收尾链待跑」+ 指针指向「进行中」轮档）**；新增只读谓词 `lightRoundOpen`（拟新增——`thincoder-core/agent/light-round.mjs`）+ 父侧门条件式末位合取项（§2.8） | 信号 = 既有「开轮两件」（零新记账面）；生命周期 = 账生命周期（收口自闭——零撤销动作 ∥ 零漂移面）；轮型标记防全链批误开（§2.3 既有形升格）；读错 fail-closed 照拦。**否决「开轮发轻量槽」**：新状态载体 + TTL/撤销漂移面（忘撤 = 闸开放超期）·**否决「复用设计槽」**：伪造「设计已过」语义（各消费面联动误读）·**否决「无标记版（行在途 + 指针即放行）」**：全链批状态漂移窗可误开（talk-then-code 弱化） |
+| K16 | **代码笔通路 = 闸认轻通道在盘（两件双在盘：轮次行 `在途` 携「收尾链待跑」+ 指针指向「进行中」轮档）**；新增只读谓词 `lightRoundOpen`（在盘——`thincoder-core/agent/light-round.mjs`，67 行 · as-of 2026-10-10）+ 父侧门条件式末位合取项（§2.8）；候选面 = 会话锚 + 直接子目录一层（候选枚举单源 = `ledgerChildren`） | 信号 = 既有「开轮两件」（零新记账面）；生命周期 = 账生命周期（收口自闭——零撤销动作 ∥ 零漂移面）；轮型标记防全链批误开（§2.3 既有形升格）；读错 fail-closed 照拦。**否决「开轮发轻量槽」**：新状态载体 + TTL/撤销漂移面（忘撤 = 闸开放超期）·**否决「复用设计槽」**：伪造「设计已过」语义（各消费面联动误读）·**否决「无标记版（行在途 + 指针即放行）」**：全链批状态漂移窗可误开（talk-then-code 弱化） |
 
 ## 8. 变更记录
 
@@ -225,7 +230,7 @@
 **本批（轻通道扩容批 · 2026-10-02）落点表** = `docs/batches/2026-10-02-light-channel-expansion.md` §2（唯一承载面——一次性批次材料）。
 **本批（轻通道判据收口（降门槛 · 核销紧固） · 2026-10-02）落点表** = `docs/batches/2026-10-02-light-channel-simplification.md` §2（唯一承载面——一次性批次材料）。
 **本批（提示词面收正批 · 2026-10-02）落点表** = `docs/batches/2026-10-02-prompt-face-rectification.md` §2（唯一承载面——一次性批次材料）。
-**本批（代码笔通路 · 2026-10-09）落点表** = `docs/batches/2026-10-09-light-channel-code-path.md` §2（唯一承载面——一次性批次材料；含提示词逐字块）。受影响文件行数（as-of 2026-10-09 实读）：`thincoder-core/agent/dispatch.mjs` 268 行 ⇒ 预期 ≈+6/-1 ∥ `thincoder-core/agent/light-round.mjs`（拟新增）⇒ 预期 ≈70 行。
+**本批（代码笔通路 · 2026-10-09）落点表** = `docs/batches/2026-10-09-light-channel-code-path.md` §2（唯一承载面——一次性批次材料；含提示词逐字块）。受影响文件行数（as-of 2026-10-09 实读）：`thincoder-core/agent/dispatch.mjs` 268 行 ⇒ 预期 ≈+6/-1 ∥ `thincoder-core/agent/light-round.mjs`（在盘——67 行 · as-of 2026-10-10）。
 
 - 2026-09-30：建档（设计轮）——机制设计（五问 ∥ 量级阈值 ∥ 交底 ∥ 记录在档 ∥ 收尾全链 ∥ 核销前置）+ 提示词落点清册（§3）+ 验收映射（§4）；逐字正文 = 批档 `docs/batches/2026-09-30-light-channel-mechanism.md` §2（一次性材料不混入本档——D2）。
 
@@ -254,3 +259,7 @@
 - 2026-10-09（**代码笔通路批 · 设计评审修正轮 1（发现 #1–#3 ∥ #5 ∥ #6）· eng-designer**——承批档 `docs/batches/2026-10-09-light-channel-code-path.md` §3 轮次 1）：§4 标题计数收正 ①–⑧ + 补 ⑧ 行（F-LC5——通路实证两笔）；§2.8 批内件点名（拟新增——`docs/batches/2026-10-09-light-channel-code-path.test.mjs`）+ 指针重锚（需求 §2.5 F-LC5 判定句 ② ∥ ③）；§3 人格档坐标重锚（`:77-78` ∥ `:85`）；§8 行数注补（`dispatch.mjs` 268 行 ⇒ ≈+6/-1；`light-round.mjs`（拟新增）⇒ ≈70 行）。**零新语义**。
 
 - 2026-10-09（**代码笔通路批 · 设计侧收尾修正轮 · eng-designer**——承批档 `docs/batches/2026-10-09-light-channel-code-path.md` §5.4 代码评审 🟡1 ∥ §5.5 披露）：§2.8 坐标随交付态实读收正（问题行 ∥ 闸读点 ∥ 闸拒文三处 = `thincoder-core/agent/dispatch.mjs:98-131` ∥ `:98-101` ∥ `:126-127`——原设计时点坐标随本批实施自身位移）；§2.8 边界补半句「谓词为真时闸体整跳（含逐目标分类）⇒ 全目标放行」。**零新语义**。
+
+- 2026-10-10（**批 ledger-family-anchor-local · 收口轮设计档落点 · eng-designer**——承批档 `docs/batches/2026-10-10-ledger-family-anchor-local.md` §2 ∥ §2.10 ∥ §5 · 台账 #1218）：§2.8 五处收正——①行读取点 ⇒ 逐候选查询（候选面 = 会话锚 + 直接子目录一层）；闸读点句 ⇒ 候选面读法 + 两层级错误面；②行解析基 ⇒ 以各候选为基（基式 = `resolveProjectRoot(候选) ?? resolve(候选 ?? ".")`）；
+  边界块补**命中面 = 会话锚辖域**半句；闸拒文句 ⇒ as-built 逐字（`dispatch.mjs:128`）。
+  §2.8 坐标随交付态实读收正（问题行 ∥ 闸读点 = `dispatch.mjs:99-132` ∥ `:99-102`）；§7 K16 补候选面半句 + 『（拟新增）』收正为在盘（67 行）；实证判据块补候选面批 W 腿指针。**语义 = 已落修复的形式化**（实现 = 本批实施轮；腿面读数 = 批档 §5）。
