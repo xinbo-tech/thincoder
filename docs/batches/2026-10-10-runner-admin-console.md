@@ -570,3 +570,13 @@ VERDICT: pass
 - **缺陷**：SSH 口令径被 `BatchMode=yes` 直接弃用（托管接入口令路径整条不可用）。真机 A/B 铁证（.5 容器内同口令）：A = 带 `BatchMode=yes` ⇒ `Permission denied (publickey,password)`（rc=255）∥ B = 去之 ⇒ `LOGIN_OK`（rc=0）。
 - **修复**：`ssh.mjs` 口令径去 `BatchMode`、换 `NumberOfPasswordPrompts=1` + `PreferredAuthentications=password` + `PubkeyAuthentication=no`（无人值守由「单提示 + 仅口令面」承接）；密钥径保持 `BatchMode=yes`。设计档随正（`SANDBOX.md` §3 S2 ∥ §14 KD-SV-85；变更记录 2026-10-11 第二轮行）。
 - **#184 中断说明**：修正轮 #184 于 provider abort 信号中断——其改动**已完整落盘**（父侧逐条核验：args 两径五处）、批内件判别性断言已加（口令径「不含 BatchMode ∥ 含三新项」+ 密钥径「保持 BatchMode」——吸取上一轮「假件与实现同形自证一致」的教训）；**§5 未写入**（中断所致），本 §6 代记；复跑 `-agent.test.mjs` = **tests 13 ∥ pass 13 ∥ fail 0**。
+
+### 2026-10-11 04:12–04:16 · 真机走查 · 第二轮（口令径修复后重跑）
+
+- 前置：口令径修复上线（镜像 `7f116dc1ab0f`；提交 `ba3c9580` 双推）；**最终码全链套件重跑 379/379 绿**。
+- ⑦ 托管接入 **happy 径全链通过** ✅：S1 受理 → S2 登录与探明（真实读数逐项：Ubuntu 22.04.5 ∥ 5.15.0-117 ∥ cgroup2 ∥ MEM 7267MB ∥ 盘余 15877MB ∥ systemd ✓ ∥ `sudo -S` 口令 ⇒ uid=0 ✓ ∥ Docker 29.1.3 ∥ :2375 在听 ∥ apt ∥ 出网 ✓）→ S3 定策（直登径——既有安装 + 监听在场，**零宿主改动**）→ S6 自检登记（id=2 `runner-06-b`；自检读数逐值；协商 1.44）→ S7/S8 ⇒ 控制台「**已就绪**」；凭据 burn（burned）；响应面零秘密回显。
+- ⑥a 删节点「保留」径 **全链通过** ✅：弹窗（该节点上有 1 个容器——选择处置）→ 保留容器（只删登记）→ 提交 ⇒ 登记行消（overview 只剩 `runner-06`）∥ `.6` 实机复核 `tc-ws-1` 原样留机 ✅。走查件 `runner-06-b`（同机重复登记）即由本步清理。
+- ⑥b 「连删」径 + `runner-06`（id=1）本体：**仍卡守卫**——`acc-1010` 工作区处置未裁（B 项）⏸。
+- 审计复核 ✅（`#/admin/audit`）：`sandbox_event` 行 03:47–04:13 全谱在册（runner 添/删 ∥ 容器四动作 ∥ 自检失败 ∥ onboarding 起/步/成/败 ∥ 删除行 target=`runner-06-b`）；审计页 sandbox 两型模板缺省 = 设计已列（余面批，R52③）。
+- 观察（🟡 记账 **#1263**）：装机任务完成（成功）后运行面**节点表不随刷新**——任务行经 3s 轮询如实变「已就绪」，但节点表需重进/刷新才见新登记行（添加/删除按钮链自身刷新正常，唯 onboarding 外部完成无回灌）。
+- **账目：四账在途，仅剩 B 项**（`acc-1010`/`tc-ws-1` 处置裁决）⇒ 闭环后核销 + 收口。
