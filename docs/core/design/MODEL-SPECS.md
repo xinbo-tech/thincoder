@@ -179,7 +179,7 @@
 | 七个消费点：核 `thincoder-core/tools/index.mjs:64` · `thincoder-core/tools/file.mjs:159` · `thincoder-core/agent/record-results.mjs:51` · `thincoder-core/agent/setup-reminders.mjs:251` · `thincoder-core/provider/normalize.mjs:22` · VSC `thincoder-vscode/src/agent/setup-tooltable.mjs:305` · `thincoder-vscode/src/extension/image-handler.mjs:110` | `multimodal`（共 7 处，逐处语义见 §2.7 第 1 项） | **七个消费点全部零改**；四新行置 true ⇒ 两 flash 档由「蹭来」变「声明」，布尔语义无失真（实测见 §2.7）。**后记（2026-10-10 · `#1127`）**：原第八项 `thincoder-vscode/src/extension/vision-channel.mjs` 随批删档退场（零引用——计数 八 ⇒ 七）（迁移期引文） |
 
 **关键事实（修正批次档 §1.1 的后果评估）**：核/CLI 路径上**没有任何一处读 `spec.thinking`**
-（全仓 `spec.thinking` 仅 1 处消费 = 上面 VSC 那行（`thincoder-vscode/src/extension/provider-probe-window.mjs:66`）+ 1 处测试断言）。
+（全仓 `spec.thinking` 仅 1 处消费 = 上面 VSC 那行（`thincoder-vscode/src/extension/provider-probe-window.mjs:66`）（as-of 2026-09-22；2026-10-10 复读见 §18.4）+ 1 处测试断言）。
 ⇒ 本批危害面 = **VSC 下拉显隐 + effort 枚举缺失 + autoThink 静默失效**，
 **不是**「请求体发错字段」——请求体的思考开关由 `thincoder-core/config.mjs:133` 名称白名单兜住
 （`doc:PROVIDER.md:§12`）。
@@ -1986,6 +1986,138 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 - VSC 面（同判）：仅「双段外标名的 effort 默认档由占位「—」转注册默认档」= 数据面修复自动生效；下拉本体零改。
 - 无 `open` 项。
 
+## 18. gemini-3.8-flash ∥ gemini-3.7-flash 两行入表（2026-10-10 批 · 台账 #1198）
+
+> 来源 = 用户 2026-10-10 08:39 点名两档 + 08:40「点火」。证据 = 官方逐档规格页实核（as-of 2026-10-10，父侧实读）。
+> 需求面 = `docs/batches/2026-10-10-gemini-model-specs.md` §1；本节 = 本批交付面（两行入表 / 字段口径 / 影响面 / 用例 / 边界）。
+> 行值单源 = `thincoder-core/model-specs.mjs`；机制位语义（`thinkAlwaysOn` / `thinkOffPath`）单源 = 本档 §16.3 / §16.4，本节引用不复述。
+
+### 18.1 方案与理由
+
+**问题（grep 实证）**：`gemini-3.8-flash` ∥ `gemini-3.7-flash` 全族无行 ⇒ 查表落 `DEFAULT_SPEC`（128K / 32K）+ 首请求告警：
+1M 上下文 / 64K 输出不被识别（压缩阈值按 128K 档提前触发）；视觉面不声明（`read_image` 不注册）；思考面按未知名处理（无恒思考机判）。
+
+**修法**：两行入表（Gemini 族段 · `thincoder-core/model-specs.mjs:207` 后）。字段按证据档位纪律逐位裁（§9.1 / §13.3 口径）：
+尺寸位 = 官方口径随行；`multimodal` = 官方口径 + 族据；`thinking` / `thinkAlwaysOn` = 官方口径；机制位其余按 google 传输面实读裁 ⇒ 不声明。
+识别层 = 规格表单面（`presetToEntry` 不产 `model` 键——预设面零动）。
+
+**最近先例（合并行）**：行增批 = 本档 §10（单行新增）/ §11（五行新增）——对齐其形态（独立行 + 行注标级 + 字段口径表 + 消费面 / 影响文件 + AC 回指 + 用例表 + 边界）；同族尺寸行先例 = `gemini-3.1-pro`（§14.2 #2–6——零 `format` / 零 `thinking` 键，机制位不落键同沿）；偏差 = 思考面声明（`thinking: true` + `thinkAlwaysOn: true`，理由 = KD-1——存量行 `thinking: false` 无单批理由、不照抄）。
+
+**关键裁定（含被否）**：
+
+| # | 裁定 | 理由 | 被否替代 |
+|---|---|---|---|
+| KD-1 | `thinking: true` + `thinkAlwaysOn: true` | 官方：thinking_level 受理 LOW/MEDIUM/HIGH（默认 MEDIUM）——枚举无关闭档，显式 MINIMAL ⇒ API 校验错 ⇒ 恒思考（= §16.3 机制位语义；先例 = `glm-5.3` 行同形、同证据档） | ①沿存量 gemini 行 `thinking: false`——与官方事实相抵（模型恒思考），且 false 会被 `effortEnumForModel` 当「非思考族」落回退全档（语义更假）；存量 false 系 S1 建仓导入值（`git log -S` 实测：该档计数变更仅命中建仓批与他族行批，无 gemini 单批设计理由）⇒ 照抄 = 无据继承；②不声明思考面——有官方证据不落 = 违「有读数照写」纪律 |
+| KD-2 | 机制位其余全不声明（`thinkApi` / `reasoningEffortEnum` / `tempRange` / `noUsageStream` / `format` / `partialMode` / `prefixMode`） | google 传输面零可达 / 零消费（逐键实读凭据 = §18.4 表后「机制位逐键凭据」段）：「未取证 ⇒ 不设」+「无消费面 ⇒ 不落键」 | ①声明 `["low","medium","high"]` 枚举——该字段消费面（UI 档位 / autoThink / 校验钳制）全指向 OpenAI 参数面，google 路径零可达 ⇒ 假控制面（§16.1 同旨）；②携带存量行 `noUsageStream` / `format`——两键在本传输面零消费（实读），携带 = 无据字段 |
+| KD-3 | 存量 gemini 行零改 + 差异认账 | 本批禁改他行；存量 `thinking: false` 与新行并存 = 同族不同声明，成因 = S1 建仓导入（不为其背书、亦不以存量约束新行）——差异写进 §18.4 认账行与报告尾注 | 随批收正存量行 = 越禁改面 |
+
+### 18.2 表变更清单（两行新增，零删除、零改既有行）
+
+插入锚 = `thincoder-core/model-specs.mjs:207`（`gemini-3.1-pro` 行）之后——Gemini 族段尾；行序不影响命中（`SORTED_SPECS` 按前缀长度降序，`thincoder-core/model-specs.mjs:256`）。
+
+**前缀遮蔽自查（实读）**：两新名等长（16）且互非前缀；与存量四行（`gemini-3-pro` / `gemini-2.5-pro` / `gemini-2.5-flash` / `gemini-3.1-pro`）无遮蔽（无一是新名前缀，反之亦然）。
+两新行将前缀覆盖未来同族名（`gemini-3.x-flash-*` 类）= 有意继承（同族在册名随覆盖面巡检复核）。
+
+**行文草案（含行注 · 实施轮照此落笔；行注为逐行标级义务）**：
+
+```js
+  // gemini-3.8-flash ∥ gemini-3.7-flash（2026-10-10 批 §18 · 台账 #1198）：官方逐档规格页实核（as-of 2026-10-10）——
+  // 尺寸位（官方口径）：context 1_048_576 ∥ maxOutput 65_536；入 = 文/图/音/视、出 = 文（本表 multimodal = 图像面，§2.7——
+  // 音/视仅行注承载）；思考恒开（thinking_level 受理 LOW/MEDIUM/HIGH、无关闭档；显式 MINIMAL ⇒ API 校验错——官方逐档页注）
+  // ⇒ thinking + thinkAlwaysOn = 官方口径（§16.3 机制位）；机制位其余不声明（google 传输面实读——§18.3）。
+  // GA 2026-09-02（3.8）∥ 2026-08-13（3.7）；3.7 退役 2027-01-28（日程注）。
+  ["gemini-3.8-flash",  { context: 1_048_576, maxOutput: 65_536, thinking: true, thinkAlwaysOn: true, multimodal: true }],
+  ["gemini-3.7-flash",  { context: 1_048_576, maxOutput: 65_536, thinking: true, thinkAlwaysOn: true, multimodal: true }],
+```
+
+### 18.3 字段口径表（逐字段 + 证据等级）
+
+| 字段 | 值 | 证据等级 | 依据 / 不声明理由 |
+|---|---|---|---|
+| `context` | `1_048_576` | **官方口径** | 逐档规格页实核；非 API 实测（本机无该渠道密钥）——行注标级 |
+| `maxOutput` | `65_536` | **官方口径** | 同上 |
+| `multimodal` | `true` | **官方口径 + 族据** | 官方入模态含图像（本表语义 = 图像面，§2.7）；族据 = 同族在册三行均声明 true（点名来源行） |
+| `thinking` | `true` | **官方口径** | 受理枚举含档位（LOW/MEDIUM/HIGH）、默认 MEDIUM ⇒ 思考在场 |
+| `thinkAlwaysOn` | `true` | **官方口径** | 受理枚举无关闭档 ∧ 显式 MINIMAL ⇒ 校验错 ⇒ 无 off 路径（§16.3 语义；官方逐档页注） |
+| 机制位其余 | 不声明 | —— | google 传输面零可达 / 零消费（逐键实读凭据 = §18.4 表后「机制位逐键凭据」段）；「无消费面 ⇒ 不落键」 |
+| 其余官方读数（不进字段） | —— | 官方口径 | 参数默认 temperature 1.0 / topP 0.95 / topK 64（默认值 ≠ 值域 ⇒ 不构成 `tempRange` 证据；该键在本传输面亦零消费）；出 = 文本（无字段承载） |
+
+### 18.4 消费面与影响（本批动谁、谁零改）
+
+| 字段 | 消费点（实读） | 行为变化（批前 → 批后） |
+|---|---|---|
+| `context` | `providerSpec` → 压缩阈值（`thincoder-core/config.mjs:139-146`；`COMPACT_RATIO = 0.6` `:113`）· 上下文占比显示（`thincoder-vscode/src/specs.mjs:82` / `:96`）· advisor 预算（`thincoder-core/advisor/compaction.mjs:35-36`） | 压缩阈值按 1M 窗口重算——预设渠（`maxTokens: 8192`，`thincoder-core/config-presets.mjs:30`）：≈ 71 884 ⇒ **624 230**；无显式 `maxTokens` 渠：**589 824**（= floor((1 048 576 − 65 536) × 0.6)）；长会话不再被 128K 档提前压缩 |
+| `maxOutput` | `outputReserve`（`thincoder-core/config.mjs:117-121`）——仅无显式 `provider.maxTokens` 时生效 | 预留 32 000 ⇒ 65 536（计入上式）；显式 `maxTokens` 渠零变化（预设主导）。**发送面**：spec 值不达 google 请求（`thincoder-core/provider/google.mjs:86` 发 `maxOutputTokens` 仅取 `provider.maxTokens`，实读） |
+| `multimodal` | 图像门族（清单与语义单源 = §2.7 第 1 项——**as-of 2026-09-22；2026-10-10 复读疑滞**：`thincoder-core/attachments.mjs:54` 未列 ∥ `thincoder-vscode/src/agent/setup-tooltable.mjs:305` 现读 = `thincoder-vscode/src/agent/tool-table.mjs:177` ∥ `thincoder-vscode/src/extension/image-handler.mjs:110` 现读 = `:43`；实施方以现读为准；本批零改） | 两档由「非多模态」（`true` 之外一切）转「多模态」：`read_image` 注册门（`thincoder-core/tools/index.mjs:66`——读点 `specForModel(model)?.multimodal`；注册表达式 `:69`；as-of 2026-10-10）、贴图 / 读图 / 注入门放行；google 侧 `inlineData` 通路既有（`thincoder-core/provider/google.mjs:54-59`） |
+| `thinking` | `effortEnumForModel`——本批实读（as-of 2026-10-10）：`spec.thinking` 直接读点 = `thincoder-vscode/src/specs.mjs:72`（读形 `s.reasoningEffortEnum || (s.thinking ? ["enabled"] : ["high","max"])`）此一处；消费面（调用点）= `thincoder-vscode/src/extension/provider-probe-window.mjs:66` | 该两档 VSC 档位面落 `["enabled"]` 单档（思考开关族既有形；选档归一落中性档、零 patch——§16.6-⑴）；其余面零变 |
+| `thinkAlwaysOn` | `thinkOffPath`（`thincoder-core/think-off.mjs:22-26`）→ 既有条件分支族 | ①CLI `/think`：无 Thinking 开关项 ∧ `/think off` 拒绝（§16.4 两菜单面落点）；②`/advisor`：Disabled 项不渲染；③生成标题零发禁用形（`thincoder-core/generate-title.mjs:46` / `:74`——「无有效 off 路径 ⇒ 不发禁用形」；判据单源 = §16.4）；④auto-think 无枚率先行 `return null`（`thincoder-core/auto-think.mjs:73-74`，先于恒思考守卫）；⑤桌面模型菜单 `thinkOff: false` ∧ `effortEnum: []`（`thincoder-desktop/src/main/settings.mjs:96-99`） |
+
+**机制位逐键凭据（不声明面 · as-of 2026-10-10 全仓实读）**：
+
+- `thinkApi`：读点全在端侧 off 形族（`thincoder-cli/src/tui/cmd-think.mjs:16` · `thincoder-cli/src/tui/cmd-advisor.mjs:130` / `:265` · `thincoder-core/think-off.mjs:15` · `thincoder-core/provider/core.mjs:222` · `thincoder-vscode/src/extension/reasoning-mode.mjs:32`）；
+  两新档 `thinkAlwaysOn: true` ⇒ off 形族动作不可达（`thinkOffPath === false`）⇒ 无消费后果。
+- `reasoningEffortEnum`：读点全为 `reasoning_effort` 参数面（CLI 档位 `thincoder-cli/src/tui/cmd-think.mjs:19` / `cmd-advisor.mjs:267` / `cmd-config.mjs:182` / `thincoder-cli/src/tui/slash-commands.mjs:157`）；
+  核 `thincoder-core/provider/core.mjs:206` / `thincoder-core/agent/spawn-child.mjs:211` / `thincoder-core/auto-think.mjs:73` · 端 `thincoder-vscode/src/specs.mjs:72` / `thincoder-desktop/src/main/settings.mjs:77`；
+  google 发送面排除（`thincoder-core/provider/core.mjs:205`；`:153` 分派即返）⇒ 零可达（假控制面——KD-2）。
+- `tempRange`：钳制点 = OpenAI 兼容体组装段（`thincoder-core/provider/core.mjs:195-196`）∥ responses（`thincoder-core/provider/responses-request.mjs:208-209`）∥ anthropic（`thincoder-core/provider/anthropic.mjs:66`）——google 在 `thincoder-core/provider/core.mjs:153` 分派即返、不经该段 ⇒ 本传输面零消费；
+- `noUsageStream`：唯一消费点 = OpenAI 兼容体组装段（`thincoder-core/provider/core.mjs:191`）——google 走原生 transport、不经该段 ⇒ 不可达（§15.2 逐族表同判）；
+- `format`：全仓入码面无 `spec.format` 读取点（as-of 2026-10-10 实读）；`format` 值的运行时消费全为 `provider.format`（传输分派 `thincoder-core/provider/core.mjs:143` / `:153` / `:163` / `:205`）；
+  取值源 = 预设表（`thincoder-core/config-presets.mjs:30`）∥ 条目自定义（`thincoder-core/config-io.mjs:245-248`），非本表键；同族先例 = 存量 `gemini-3.1-pro` 尺寸行无 `format`（§14.2 #2–6；§15.2 记录面同引）。
+
+**认账（存量差异 · 如实登记）**：存量 gemini 四行（其中三行 `thinking: false`；第四行 `gemini-3.1-pro` 尺寸行无该键）沿用（本批禁改他行）——其「标题路径照发禁用形」的既有行为与新行「零发」并存；成因 = S1 建仓导入无单批理由（KD-1 被否栏）。
+另：`/think off` 拒绝文案括注（「use /think effort <level>」）对本族**不生效**（档位项可选中——`thincoder-cli/src/tui/cmd-think.mjs:19` 兜底档；值经 `thincoder-core/provider/core.mjs:205` 被 google 发送面排除、不达载荷；§16.4 定形文案同源）。
+
+**零触面**：存量 gemini 四行 · `SORTED_SPECS` / 查表语义 / 告警文案 / `DEFAULT_SPEC` · 预设表（`thincoder-core/config-presets.mjs`）· 传输面（`thincoder-core/provider/**`）· 三端代码。
+
+### 18.5 影响文件清单（as-of 2026-10-10 设计轮实读 · `split("\n").length − 1` 口径）
+
+| 文件 | 现状 | 预期增删 | 说明 |
+|---|---|---|---|
+| `thincoder-core/model-specs.mjs` | **359** | **+~7**（行注 5 行 + 两表行） | §18.2 行文草案；零结构 / 零导出面 / 零存量行改。>300 处置 = 登记 + 拆分计划（落点 = 本档 §13.6「行数处置」段——拆点 / 落点 / 消解窗口住彼；机检登记面已随 2026-09-28 测试树退场）；本次 ∉「实质改动」——拆点未触发；改后 ~366（≤500 硬限） |
+| `docs/batches/2026-10-10-gemini-model-specs.test.mjs`（拟新增 · 批内件） | 0 | ~60–80 | §18.7 用例 G-1..G-7；复跑 = 仓根 `node --test docs/batches/2026-10-10-gemini-model-specs.test.mjs`；形态循 `docs/batches/2026-10-10-spec-namespace-last-segment.test.mjs`；`config.mjs` 导入先例 = `docs/batches/2026-10-09-provider-default-model-purge-core.test.mjs:34` |
+| `docs/core/design/MODEL-SPECS.md` | **2202** | +本节 ∥ +变更记录 1 行 | 本节 |
+| `docs/batches/2026-10-10-gemini-model-specs.md` | —（纯 `.md` 免档位判定） | 随批轮次追加（非产品面） | §2 批次任务与设计（eng-designer 笔） |
+
+### 18.6 验收标准回指（与批次档 §2 / 台账 #1198 三分同源）
+
+| 判据 | 条目 | 设计落点 | 判定方式（机器核） |
+|---|---|---|---|
+| AC-1 | #1198 | §18.2 / §18.3 | 两行逐字段在场：`specForModel("gemini-3.8-flash")` ∧ `("gemini-3.7-flash")` 各 deepEqual `{ context: 1_048_576, maxOutput: 65_536, thinking: true, thinkAlwaysOn: true, multimodal: true }`；`specMatch` 双名 `matched === true` |
+| AC-2 | #1198 | §18.2 | 零改既有面：存量 gemini 四行逐名与批前同判（`gemini-3.1-pro` 保持 `{ context: 1_048_576, maxOutput: 65_536 }`）；未知名面零变（`gemini-3.9-flash` / 裸段 `gemini-3.8` ⇒ `matched: false` + `DEFAULT_SPEC`） |
+| AC-3 | #1198 | §18.3 | 机制位不声明面（防空扫）：两行 `thinkApi` / `reasoningEffortEnum` / `tempRange` / `noUsageStream` / `format` 全 `undefined`；`thinkOffPath(spec) === false` |
+| AC-4 | #1198 | §18.4 | 影响面读数：`outputReserve({ model: "gemini-3.8-flash" }, spec)` = 65 536；`resolveCompactThreshold(null, { model: "gemini-3.8-flash" })` = `{ value: 589_824, auto: true }`；显式 `{ maxTokens: 8192 }` ⇒ 624 230。实施前确认两函数导出面（as-of 2026-10-10 实读 = 均具名导出，见 `thincoder-core/config.mjs` 行 117 / 139）；若现读为模块内函数 ⇒ 改经公开消费面取读数 |
+
+### 18.7 用例表（正常 / 边界 / 错误 · 落点 = 批内件（拟新增））
+
+**用例号注**：`G-` = 行批用例面——与 §13.8 bench 批 `G-1..G-7` 同前缀、异批（两批各自成组；判定以所属节表为准）。
+
+| id | 类 | 输入 / 动作 | 期望输出与判据 |
+|---|---|---|---|
+| G-1 | 正常 | `specForModel("gemini-3.8-flash")` | deepEqual `{ context: 1_048_576, maxOutput: 65_536, thinking: true, thinkAlwaysOn: true, multimodal: true }`；`specMatch` `matched: true` |
+| G-2 | 正常 | 同上：`gemini-3.7-flash` | 同 G-1（两行同形、各自独立行） |
+| G-3 | 边界 | `GEMINI-3.8-FLASH`（大小写变体）∥ `gemini-3.8-flash-preview`（未来同族名） | 大小写不敏感同判；`…-preview` 经前缀继承命中本行（`matched: true`、同对象——有意继承） |
+| G-4 | 错误 | `gemini-3.9-flash`（无行）；裸段 `gemini-3.8` | 均 `matched: false` + `DEFAULT_SPEC`（128 000 / 32 000）+ 告警一次（既有 dedupe 面）——未知名兜底零变 |
+| G-5 | 回归 | 存量四行：`gemini-3-pro` / `gemini-2.5-pro` / `gemini-2.5-flash` / `gemini-3.1-pro` | 逐名与批前同判（取值逐字段不变；`gemini-3.1-pro` = `{ context: 1_048_576, maxOutput: 65_536 }` 零改） |
+| G-6 | 边界 | `thinkOffPath(specForModel("gemini-3.8-flash"))` + 机制位缺位断言 | `false`（恒思考族）；`thinkApi` / `reasoningEffortEnum` / `tempRange` / `noUsageStream` / `format` 全 `undefined` |
+| G-7 | 正常 | `outputReserve` / `resolveCompactThreshold`（`thincoder-core/config.mjs`）两态 | 无显式：预留 65 536、阈值 `{ value: 589_824, auto: true }`；显式 `maxTokens: 8192`：阈值 624 230。实施前确认两函数导出面（as-of 2026-10-10 实读 = 均具名导出；若现读为模块内函数 ⇒ 改经公开消费面取读数） |
+
+### 18.8 边界（本节不做）
+
+- 不动存量表行（四行——其中三行携 `thinking: false` / `noUsageStream` / `format`；本批禁改他行；差异认账见 §18.1 KD-3）。
+- 不动预设面（`thincoder-core/config-presets.mjs`）· 传输面（`thincoder-core/provider/**`）· 三端代码 · VSC 端差表（`thincoder-vscode/src/specs.mjs`——两新档无枚举 / 无注册默认档，零改）。
+- 旁档不入（gemini 3.6 / 3.5 各族及其他未在册 gemini 名）。
+- 服务器手工同步快照（`thincoder-server/public/model-specs-snapshot.mjs`）零触——按该面既定「核表更新后由后续版本手工同步」机制处理。
+- google 传输面 chat 载荷的思考 / effort 通路缺口（`thincoder-core/provider/google.mjs` 无 `thinkingConfig`；`thincoder-core/provider/core.mjs:205` 排除 google 的 `reasoning_effort` 发送）——本轮禁改面，如实尾注（报告），不立条目。
+
+### 18.9 UI/交互决策（全落地，无 `open`）
+
+| 面 | 决策 |
+|---|---|
+| CLI `/think` / `/advisor` | 零形态变更——两档落 `thinkOffPath === false` ⇒ 既有条件分支生效（开关项 / Disabled 项不渲染——§16.4 语义，不新增 UI） |
+| VSC（聊天面板 / 设置面板）· 桌面模型菜单 | 零形态变更——档位面随数据面（`["enabled"]` 单档 / `effortEnum: []` / `thinkOff: false`），既有渲染规则承接 |
+
+无 `open` 项。
+
 ## 变更记录
 - 2026-10-09（**provider-default-model-purge 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §2 · 台账 #1122）：渠道单值模型退场——§9 病例 P-1..P-3 随正（计数 24 / 逐条无 `model` 键）；探针脚本入参改显式 `provider:model`（§2.2 / §7）；§12 预设面随正。**零新语义**（本批立法落位）。
 - 2026-10-07（**文档清账批 · fix 轮 · eng-designer**——承批档 `docs/batches/2026-10-07-doc-cleanup.md` §2 · 台账 #977）：§12.4「压缩阈值」行「读什么」列补 `maxOutput`（完成预留——可用窗口 = 窗口 − 预留；阈值 = 可用窗口 × 0.6）∥ 核侧坐标 `thincoder-core/config.mjs:104-110` ⇒ `:137-144` 随正。**零语义**。
@@ -2199,3 +2331,6 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 - 2026-10-10（**spec-namespace-last-segment 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-spec-namespace-last-segment.md` §3 轮次 1（🔴1 / 🟡1 / 🔵5）· 台账 #1167）：逐号收正——① §17.6 U-7 期望改钉真实读数——`glm-5.3/` 直扫即中（`"glm-5.3/".startsWith("glm-5.3")`）⇒ `matched === true` ∧ spec = `glm-5.3` 行、兜底支不可达（一行注）；② §17.3 登记指针收正（拆分计划 ⇒ 本档 §13.6「行数处置」段；机检登记面随 2026-09-28 测试树退场——档不在盘；`docs/core/design/CORE-UNIFICATION.md` §2.8.1 子表空壳）；③ 两行「±0」⇒ 实笔净 +1（`thincoder-core/model-specs.mjs` 档头注 7 行 ⇒ 8 行 ∥ `docs/core/design/PROVIDER.md` 704 ⇒ 705——KD-4 口径复算）；④ 批档行去读数（纯 `.md` 免档位判定）；⑤ §17.2 / §17.7 补守卫端差注（`/glm-5.3`：核 miss ∥ VSC 命中 `glm-5` 默档——既有端差、认账）；⑦ §17.1 / §17.4 补 U-6 名类 = 认账的行为变更（⑥ 需求档措辞 = 父侧笔已落，本档零触）。**零新语义**（评审发现的直接导出项）。
 - 2026-10-10（**purge-residue-sweep 批 · 设计档随动轮 · eng-coder**——承 `docs/batches/2026-10-10-purge-residue-sweep.md` §2 设计档落点表 · 台账 #1127）：VSC 薄壳档 `vision-channel.mjs` 随批删档（零引用）⇒ `spec.multimodal` 消费点面随动：
   §2.7 第 1 项**消费点清单与计数八 ⇒ 七**（`:179` 表行改七项 + 后记 ∥ `:155` ∥ `:211` ∥ `:400` ∥ `:1070`）；`:115` 门位改指 `thincoder-vscode/src/extension/image-handler.mjs:110`；`:215-216` 贴图门枚举「三处 ⇒ 两处」（该项退场）；`:2136` 裸路径改叙述（原项退场）。**零新语义**（= 删档随动读数与枚举收正）。
+- 2026-10-10（**gemini-model-specs 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-gemini-model-specs.md` §2 · 台账 #1198；用户 2026-10-10 08:39 点名两档 + 08:40「点火」）：新增 **§18**——`gemini-3.8-flash` ∥ `gemini-3.7-flash` 两行入表（尺寸位官方口径随行；thinking + thinkAlwaysOn 官方口径；multimodal 官方口径 + 族据；机制位其余不声明 = google 传输面实读）；影响面 / 用例 G-1..G-7 / 边界。**产品码零触（设计轮）**。
+- 2026-10-10（**gemini-model-specs 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-gemini-model-specs.md` §3 轮次 1（🔴0 / 🟡4 / 🔵8）· 台账 #1198）：逐号收正——① §18.4 `thinking` 行改双坐标（直接读点 `thincoder-vscode/src/specs.mjs:72` ∥ 消费面 `thincoder-vscode/src/extension/provider-probe-window.mjs:66`；as-of 2026-10-10）+ §2.5 `:182` 补 as-of 注（§2.5 仅此一处）；② §18.3 / §18.4 补「机制位逐键凭据」（`thinkApi` / `reasoningEffortEnum` / `tempRange` / `noUsageStream` / `format` 逐键实读坐标）+ `format` 点名同族先例（`gemini-3.1-pro` 尺寸行无该键）；③ `thinkAlwaysOn` 枢轴句补来源指针「官方逐档页注」（行注 + §18.3；判据语义零改——父侧 2026-10-10 实核）；④ §18.4 multimodal 行携 §2.7 清单疑滞 as-of 指针（`thincoder-core/attachments.mjs:54` / `thincoder-vscode/src/agent/tool-table.mjs:177` / `thincoder-vscode/src/extension/image-handler.mjs:43`）；⑤ `read_image` 注册门坐标统一（`thincoder-core/tools/index.mjs:66` 读点——注册表达式 `:69`，as-of 2026-10-10）；⑥ §18.4 ③ 引证收正（「§363③ 契约」⇒「判据单源 = §16.4」）；⑦ 存量行计数统一「四行（其中三行 `thinking: false`）」（§18.4 认账行 / 零触面行 / §18.8）；⑧ §18.7 补用例号注（`G-` 与 §13.8 同前缀异批）；⑨ AC-4 / G-7 补「实施前确认两函数导出面」句（as-of 实读 = 已具名导出）；⑪ §18.1 补合并「最近先例」行（§10 / §11 行增批 ∥ `gemini-3.1-pro` 尺寸行 §14.2 #2–6）；⑫ §18.4 认账行补「`/think off` 拒绝文案括注对本族不可达（无枚举）」句。**零新语义**（评审发现的直接导出项）。机检（doc-check）复跑：本档面悬空 0 / 行宽 0（全树残余 1 条 = `docs/core/design/PROVIDER.md:587`——非本档面，报告项）。
+- 2026-10-10（**gemini-model-specs 批 · 收口机械笔 · 父侧直执行 · 可 revert**）：§18.4 认账行 `/think off` 括注理由收正——「不可达（无枚举）」⇒「不生效（档位项可选中；值经 `thincoder-core/provider/core.mjs:205` 被 google 发送面排除、不达载荷）」；实读依据 = 实施轮面外注记 + 父侧复读（`thincoder-cli/src/tui/cmd-think.mjs:19`）。**零语义**（理由与实况对齐）。
