@@ -10,11 +10,11 @@
 | 项 | 值 |
 |---|---|
 | 主机 | `10.0.0.5`（内网；主机名 `ha-proxy`；阿里云 ECS · Ubuntu） |
-| 账号 | `thincoder`（部署专用——**无免密 sudo**） |
-| 密钥 | 本机 `C:\Users\liwei\.ssh\thincoder_ecs`——**必须 `ssh -i` 显式带上**（默认钥匙链里没有它；漏掉 `-i` ⇒ `publickey,password` 被拒） |
+| 账号 | `thincoder`（用户单开给 agent 的账号——部署专用；**无免密 sudo**） |
+| 密钥 | 本机 `$env:USERPROFILE\.ssh\thincoder_ecs`——**必须 `ssh -i` 显式带上**（默认钥匙链里没有它；漏掉 `-i` ⇒ `publickey,password` 被拒） |
 | 端口 | 8787（server 测试口；阿里云安全组已开 TCP 8787，来源 = 内网） |
 | 控制台 | `http://10.0.0.5:8787/`（账号由用户管理——**本档不载账号名与口令**） |
-| 连接 | `ssh -i C:\Users\liwei\.ssh\thincoder_ecs thincoder@10.0.0.5` |
+| 连接 | `ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.5` |
 
 ## 2. 机器上的布局（实读 2026-10-10）
 
@@ -40,7 +40,7 @@ git push origin main ; git push github main     # 箱子的 remote = gitee（ori
 上箱（一条 ssh；远端命令**平铺单层**——见 §6 坑 2）：
 
 ```
-ssh -i C:\Users\liwei\.ssh\thincoder_ecs thincoder@10.0.0.5 "set -e; cd ~/thincoder; git pull --ff-only; docker tag thincoder-server:0.1.0 thincoder-server:pre-<日期>; docker build -t thincoder-server:0.1.0 thincoder-server; cd ~/thincoder-server-deploy; docker compose up -d --force-recreate; sleep 6; docker ps --format '{{.Names}} | {{.Image}} | {{.Status}}'"
+ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.5 "set -e; cd ~/thincoder; git pull --ff-only; docker tag thincoder-server:0.1.0 thincoder-server:pre-<日期>; docker build -t thincoder-server:0.1.0 thincoder-server; cd ~/thincoder-server-deploy; docker compose up -d --force-recreate; sleep 6; docker ps --format '{{.Names}} | {{.Image}} | {{.Status}}'"
 ```
 
 要点：
@@ -55,7 +55,7 @@ ssh -i C:\Users\liwei\.ssh\thincoder_ecs thincoder@10.0.0.5 "set -e; cd ~/thinco
 ## 4. 更新后自检（四条探针——期望读数口径）
 
 ```
-ssh -i C:\Users\liwei\.ssh\thincoder_ecs thincoder@10.0.0.5 "curl -s -m 5 -o /dev/null -w 'healthz=%{http_code}\n' http://127.0.0.1:8787/healthz; curl -s -m 5 -o /dev/null -w 'client/me=%{http_code}\n' http://127.0.0.1:8787/api/client/me; curl -s -m 5 -X POST -H 'Content-Type: application/json' -d '{}' -o /dev/null -w 'client/login=%{http_code}\n' http://127.0.0.1:8787/api/client/login"
+ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.5 "curl -s -m 5 -o /dev/null -w 'healthz=%{http_code}\n' http://127.0.0.1:8787/healthz; curl -s -m 5 -o /dev/null -w 'client/me=%{http_code}\n' http://127.0.0.1:8787/api/client/me; curl -s -m 5 -X POST -H 'Content-Type: application/json' -d '{}' -o /dev/null -w 'client/login=%{http_code}\n' http://127.0.0.1:8787/api/client/login"
 ```
 
 | 探针 | 期望 | 含义 |
@@ -70,7 +70,7 @@ ssh -i C:\Users\liwei\.ssh\thincoder_ecs thincoder@10.0.0.5 "curl -s -m 5 -o /de
 ## 5. 回滚
 
 ```
-ssh -i C:\Users\liwei\.ssh\thincoder_ecs thincoder@10.0.0.5 "cd ~/thincoder-server-deploy; docker tag thincoder-server:pre-<日期> thincoder-server:0.1.0; docker compose up -d --force-recreate"
+ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.5 "cd ~/thincoder-server-deploy; docker tag thincoder-server:pre-<日期> thincoder-server:0.1.0; docker compose up -d --force-recreate"
 ```
 
 回滚把**镜像**退回去；数据库如需回退 = 走 §6 坑 3 的备份面（尚无成型径——按需补）。
