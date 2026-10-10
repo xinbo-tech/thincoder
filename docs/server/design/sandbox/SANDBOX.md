@@ -260,7 +260,7 @@
 | `thincoder-server/src/sandbox/rules.mjs`（拟新增） | ≈230 | 规则/待批/修订号（§4/§6） |
 | `thincoder-server/src/sandbox/credentials.mjs`（拟新增） | ≈80 | 工作区 key（§7） |
 | `thincoder-server/src/store/db.mjs`（已落盘 365——2026-10-10 现读） | **⇒ ≈400**（runner-admin-console 批：v12 段 +≈35）**⇒ ≈425**（托管接入：v13 段 +≈25） | v11–v13 段（§2） |
-| `thincoder-server/src/accounts/audit.mjs`（已落盘 109） | ≈+3（托管接入：±0——五 kind 走 `sandbox_event`，非枚举） | 十二型（§2） |
+| `thincoder-server/src/accounts/audit.mjs`（已落盘 109） | ≈+3（托管接入：±0——五 kind 走 `sandbox_event`，非枚举） | 十三型（§2） |
 | `thincoder-server/src/gateway/errors.mjs`（已落盘 64——2026-10-10 现读） | **±0**（runner-admin-console 批——零新码） | `sandbox_unavailable`（§9） |
 | `thincoder-server/bin/thincoder-server.mjs`（已落盘 182） | **±0**（注册面不变） | import + 注册行 |
 | **小计** | **≈+1172 ⇒ 本批 ≈+316**（runner-admin-console 批：routes +≈133 ∥ registry −≈22 ∥ docker 新 ≈170 ∥ db +≈35；errors ∥ bin ±0）**⇒ 增补 ≈+640**（托管接入：ssh 新 ≈180 ∥ onboarding 新 ≈300 ∥ onboarding-routes 新 ≈130 ∥ routes ±≈5 ∥ db +≈25；agent 域另计——`agent/ADMIN-AGENT.md` §6） | —— |

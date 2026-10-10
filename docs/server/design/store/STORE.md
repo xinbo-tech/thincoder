@@ -8,14 +8,15 @@
 
 - 单库单连接（`DatabaseSync`）；PRAGMA：WAL ∥ `synchronous=NORMAL` ∥ `busy_timeout=5000` ∥ `foreign_keys=ON`。
 - 库文件默认 = `thincoder-server/data/gateway.db`（运行期生成，不入 git）。
-- 结构版本 = `PRAGMA user_version`（当前 = **13**——v2 增 `providers` ∥ v3 增 `audit_events` 与三索引 ∥ v4 增 `providers.settings_json`（模型设置——服务模型配置面） ∥
+- 结构版本 = `PRAGMA user_version`（当前 = **14**——v2 增 `providers` ∥ v3 增 `audit_events` 与三索引 ∥ v4 增 `providers.settings_json`（模型设置——服务模型配置面） ∥
   v5 增模型标识两字段拆列 + 派生两表 + 成员配额列 ∥ v6 增成员模型禁用列（详见 §2 v5/v6 段） ∥ v7 增 provider 模型元数据留存列 ∥ **v8 增 key 名称列（`api_keys.name`——me-keys 批）**（详见 §2 v7/v8/v9 段） ∥
   v9 增 provider 上游代理旗（`providers.proxy`——server 代理批） ∥ **v10 增审计型 `config_update`（`audit_events` 重建——CHECK 扩型；配置控制台批）**（详见 §2 v10 段） ∥ **v11 增沙盒七表 + 审计 CHECK 再扩（十二型——server-exec-sandbox 批）**（详见 §2 v11 段） ∥
-  **v12 `sandbox_runners` 表重建（Docker 节点形态——runner-admin-console 批）**（详见 §2 v12 段） ∥ **v13 增 `sandbox_onboarding` 表（托管接入——runner-admin-console 批增补）**（详见 §2 v13 段）；
+  **v12 `sandbox_runners` 表重建（Docker 节点形态——runner-admin-console 批）**（详见 §2 v12 段） ∥ **v13 增 `sandbox_onboarding` 表（托管接入——runner-admin-console 批增补）**（详见 §2 v13 段） ∥
+  **v14 增 agent chat 两表 + 审计 CHECK 再扩（十三型——admin-agent-chat 批）**（详见 §2 v14 段）；
   未发布期连续演进，无历史库迁移包袱——旧库启动自动升；迁移链机制自 v1 起备）。
 - server-model-alias 批（2026-10-09——台账 #1153）：**零结构变更**（别名落 `models_json` 元素——JSON 文本内演进；无新列/新表/新段——结构版本保持 **10**）。
 
-## 2. DDL（v1 基线四表 + v2–v13 增段）
+## 2. DDL（v1 基线四表 + v2–v14 增段）
 
 ### v1 基线（四表——逐字）
 
@@ -236,7 +237,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
 ```
 
 - 形 = 十型（九型 + `config_update`——配置写入事件）；`detail.keys` = 变更键名清单（值永不入——密钥/uri 洁癖）；actor = admin 名快照（target = 无——空串）。
-- 语义与写入点 = `accounts/ACCOUNTS.md` §2.1（写入面 = `src/gateway/config-admin.mjs`（已落盘 · 实读 **182** 行）——写盘成功后一条；失败 ⇒ warn，不反噬已落盘事实）；消费 = 审计页类型下拉/文案（`webui/WEBUI.md` §2.3④——型面现状 = 十二型，v11 段）。
+- 语义与写入点 = `accounts/ACCOUNTS.md` §2.1（写入面 = `src/gateway/config-admin.mjs`（已落盘 · 实读 **182** 行）——写盘成功后一条；失败 ⇒ warn，不反噬已落盘事实）；消费 = 审计页类型下拉/文案（`webui/WEBUI.md` §2.3④——型面现状 = 十三型，v14 段）。
 - 圈界：重建净零新表/新列——判据 = 行拷贝逐值（含 id 连续）+ 两索引在场。
 
 ### v11 增段（沙盒七表 + 审计 CHECK 再扩——sandbox 域；server-exec-sandbox 批）
@@ -345,6 +346,41 @@ CREATE TABLE IF NOT EXISTS sandbox_settings (
 - **加密密钥** = `data/credentials.key`（32 字节；首用生成；0600——**不落库**；如实披露 = `sandbox/SANDBOX.md` §3）。
 - **判据（批内件）**：空库直落 13 ∥ v12 库升后读数 13 ∥ v13 段幂等（再开零变）∥ 列面十八列在场（`pragma_table_info`）∥ 凭据列读写往返（密文 ≠ 明文 ∥ 零化后 NULL）∥ 状态 CHECK 四值放行/越值拒。
 
+### v14 增段（agent chat 两表 + 审计 CHECK 再扩——agent 域；admin-agent-chat 批）
+
+（背景：管理面 chat = 会话 + 消息序两表（对象模型 = `agent/ADMIN-AGENT.md` §11——单源）；审计新型 `agent_event`（KD-SV-91）。）
+
+```sql
+-- ① 管理面 chat 两表
+CREATE TABLE IF NOT EXISTS agent_chats (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  model TEXT NOT NULL,                        -- 建会话时选定（KD-SV-87 同口径）
+  status TEXT NOT NULL DEFAULT 'idle' CHECK (status IN ('idle','running')),  -- running = 一轮在途（重启 ⇒ idle——如实收尾）
+  created_by INTEGER,                         -- 发起 admin 成员 id（无 FK——沿先例）
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS agent_chat_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  chat_id INTEGER NOT NULL,                   -- 无 FK（历史/瞬态面自足——沿 audit_events 口径）
+  seq INTEGER NOT NULL,                       -- 会话内序（1 起）
+  role TEXT NOT NULL CHECK (role IN ('user','assistant','tool','notice')),
+  content TEXT NOT NULL DEFAULT '',           -- 工具结果 = 模型可见形（截断 ≤4000 字——回放逐字一致）
+  data_json TEXT,                             -- role 附加形：assistant 的 toolCalls ∥ tool 的 toolCallId/名/摘要 ∥ notice 的 reason
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_agent_chat_messages ON agent_chat_messages(chat_id, seq);
+
+-- ② 审计 CHECK 再扩（十二型 ⇒ 十三型——表重建，步序与 v10/v11 同构）
+-- + 'agent_event'（管理面 agent 会话——kind：chat_start（会话创建）∥ chat_call（每工具调用）∥ chat_stop（异常收尾：预算超限 ∥ 模型错误 ∥ 重启中断）；
+--   detail = { kind, chatId, tool?, call?, resultCode?, summary?, reason? }——摘要截断 + 秘密掩蔽口径沿任务面）
+-- 重建步（建新表（十三型 CHECK） ∥ 拷贝 ∥ DROP ∥ RENAME ∥ 两索引重建——SQL 形同 v10 段，逐字替换型清单）。
+```
+
+- 语义/对象模型 = `agent/ADMIN-AGENT.md` §11/§12（单源）；端点 = `gateway/API.md` §2.8；控制台面 = `webui/WEBUI.md` §2.10；审计型面 = `accounts/ACCOUNTS.md` §2.1。
+- 圈界：`agent_chat_messages.chat_id` 无 FK（沿 `audit_events`/沙盒瞬态表口径）；消息不回写/不归档（保留口径未裁——不设清零——`agent/ADMIN-AGENT.md` §10）。
+- **判据（批内件）**：空库直落 14 ∥ v13 库升后读数 14 ∥ v14 段幂等（再开零变）∥ 两表列面在场（`pragma_table_info`）∥ `(chat_id, seq)` 索引在场 ∥ 存量审计行逐值保形 + 两索引在场 ∥ `agent_event` 型可写（CHECK 放行）∥ `role`/`status` CHECK 枚举放行/越值拒。
+
 ## 3. 迁移链（`user_version` 逐版升）
 
 - `thincoder-server/src/store/db.mjs`（已落盘）持 `MIGRATIONS` 数组——每段 = `{ v, up(db) }`（v = 目标 `user_version`，自 1 起递增；v1 = 基线段 = §2 全量 DDL）。
@@ -366,12 +402,13 @@ CREATE TABLE IF NOT EXISTS sandbox_settings (
   旧库（v1–v10）启动自动升 ∥ 空库直落 v11；判据（批内件）= 空库读数 11 ∥ v10 库升后读数 11 ∥ v11 段幂等（再开零变） ∥ 七表在场（`pragma_table_info`） ∥ 存量审计行逐值保形 + 两索引在场 ∥ 两新型可写（CHECK 放行） ∥ 种子八行在场（`source='default'`——deny 三 + allow 五） ∥ 覆写列在场（`sandbox_workspaces.limits_json` 默认 `'{}'`）。
 - v12 = `sandbox_runners` 表重建（旧通道形态 ⇒ Docker 节点形态——**runner-admin-console 批** ∥ 台账 #1252）：**表重建**（建新表 ∥ 存量行弃 ∥ DROP ∥ RENAME——见 §2 v12 段）；旧库（v1–v11）启动自动升 ∥ 空库直落 v12；判据（批内件）= 空库读数 12 ∥ v11 库升后读数 12 ∥ v12 段幂等（再开零变）∥ 列面五行在场 ∥ 旧三列名不在 ∥ 存量行弃（含旧行 ⇒ 空表）∥ `sandbox_workspaces.runner_id` 引用面零变。
 - v13 = `sandbox_onboarding` 建表（托管接入任务 + 凭据——**runner-admin-console 批增补** ∥ 台账 #1236/#1237）：**加表**（零重建——见 §2 v13 段）；旧库（v1–v12）启动自动升 ∥ 空库直落 v13；判据（批内件）= 空库读数 13 ∥ v12 库升后读数 13 ∥ v13 段幂等（再开零变）∥ 列面十八列在场 ∥ 凭据读写往返（密文 ≠ 明文 ∥ 零化后 NULL）∥ 存量表零变。
+- v14 = agent chat 两表 + 审计 CHECK 再扩（十三型——**admin-agent-chat 批** ∥ 台账 #1254）：**加两表 + 表重建**（SQLite 不可改 CHECK——步序与 v10/v11 同构；见 §2 v14 段）；旧库（v1–v13）启动自动升 ∥ 空库直落 v14；判据（批内件）= 空库读数 14 ∥ v13 库升后读数 14 ∥ v14 段幂等（再开零变）∥ 两表列面在场 + `(chat_id, seq)` 索引在场 ∥ 存量审计行逐值保形 + 两索引在场 ∥ `agent_event` 型可写。
 
 ## 4. 本域文件与行数预算（本域族行）
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/store/db.mjs`（已落盘） | **124 ⇒ ≈160 ⇒ 144**（实读——v3 落地后）**⇒ ≈155**（服务模型配置面批 +≈11 = v4 段（ALTER + 迁移段））**⇒ 实读 150 ⇒ ≈205**（配额分模型批 +≈55 = v5 段：拆列 ALTER/UPDATE ∥ 建两表 ∥ 两回填 INSERT ∥ 成员列增删）**⇒ 实读 202 ⇒ ≈214**（配额 v2 批 +≈12 = v6 段（ALTER + 迁移段））**⇒ 实读 210（v6 落地后）⇒ ≈218**（模型元数据批 +≈8 = v7 段（ALTER + 迁移段——与 v6 段同构））**⇒ ≈228**（me-keys 批 +≈10 = v8 段（ALTER + 回填 UPDATE + 迁移段——较 v6/v7 段多一条回填））**⇒ 实读 ≈224（2026-10-09）⇒ ≈234**（本批代理：v9 段 +≈10——实读待回填）**⇒ 实读 231（2026-10-09——本设计轮复读）⇒ ≈256（配置控制台批：v10 重建段 +≈25——建新表/拷贝/换名/索引重建 ∥ 迁移段；实读待回填）⇒ 实读 255（2026-10-09——配置控制台批落地后）∥ ±0（2026-10-09 alias 批：零结构变更）⇒ ≈350（server-exec-sandbox 批：v11 段 +≈95 = 七表 + 种子 + 审计重建——实读待回填）** ⇒ 实读 **365**（2026-10-10——runner-admin-console 批现读）⇒ ≈400（本批：v12 段 +≈35——实读待回填）⇒ **≈425**（托管接入增补：v13 段 +≈25——实读待回填）** | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
+| `thincoder-server/src/store/db.mjs`（已落盘） | **124 ⇒ ≈160 ⇒ 144**（实读——v3 落地后）**⇒ ≈155**（服务模型配置面批 +≈11 = v4 段（ALTER + 迁移段））**⇒ 实读 150 ⇒ ≈205**（配额分模型批 +≈55 = v5 段：拆列 ALTER/UPDATE ∥ 建两表 ∥ 两回填 INSERT ∥ 成员列增删）**⇒ 实读 202 ⇒ ≈214**（配额 v2 批 +≈12 = v6 段（ALTER + 迁移段））**⇒ 实读 210（v6 落地后）⇒ ≈218**（模型元数据批 +≈8 = v7 段（ALTER + 迁移段——与 v6 段同构））**⇒ ≈228**（me-keys 批 +≈10 = v8 段（ALTER + 回填 UPDATE + 迁移段——较 v6/v7 段多一条回填））**⇒ 实读 ≈224（2026-10-09）⇒ ≈234**（本批代理：v9 段 +≈10——实读待回填）**⇒ 实读 231（2026-10-09——本设计轮复读）⇒ ≈256（配置控制台批：v10 重建段 +≈25——建新表/拷贝/换名/索引重建 ∥ 迁移段；实读待回填）⇒ 实读 255（2026-10-09——配置控制台批落地后）∥ ±0（2026-10-09 alias 批：零结构变更）⇒ ≈350（server-exec-sandbox 批：v11 段 +≈95 = 七表 + 种子 + 审计重建——实读待回填）** ⇒ 实读 **365**（2026-10-10——runner-admin-console 批现读）⇒ ≈400（本批：v12 段 +≈35——实读待回填）⇒ **≈425**（托管接入增补：v13 段 +≈25——实读待回填）** ⇒ 实读 **409**（2026-10-11——本设计轮现读）⇒ ≈450（本批：v14 段 +≈41（两表 + 重建 + 迁移段）——实读待回填）** | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
 
 ## 5. 关键决策（本域）
 
@@ -407,4 +444,5 @@ CREATE TABLE IF NOT EXISTS sandbox_settings (
 - 2026-10-10（**runner-admin-console 批 · 设计档随正 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 2026-10-10 19:52–19:56 口径「runner = 远程 Docker API 节点」）：§2 v11 段列面随正——`sandbox_runners` 去 token_hash/labels_json/last_heartbeat_at、增 address（Docker API 地址）、status 枚举收窄（active/disabled）、runtime_json 注释 = 连通自检读数 ∥ `sandbox_workspaces` 去 required_labels_json（runner_id 注释 = 绑定节点）∥ `sandbox_tasks` 去 claimed_at（status 去 claimed）∥ 审计注/种子注/端点注随正；**`db.mjs` v11 列面实现与本节差 = 实施侧收正项（重做批）**；同源随动 = `sandbox/SANDBOX.md` §2 ∥ `accounts/ACCOUNTS.md` §2.1 ∥ `gateway/API.md` §2.5。**产品码零触**。
 - 2026-10-10（**runner-admin-console 批 · A 批最小切片设计 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 19:59 令）：§1 结构版本 11 ⇒ **12** ∥ §2 标题随正（v2–v11 ⇒ v2–v12）+ **增 v12 增段**（`sandbox_runners` 表重建——旧通道形态 ⇒ Docker 节点形态；重建步 ∥ 存量行弃 ∥ 幂等判据；列面不重复 = v11 段所列为准）∥ §3 迁移链补 v12 段（判据）∥ §4 预算（db 实读 **365** ⇒ ≈400——v12 段 +≈35）；同源随动 = `sandbox/SANDBOX.md` §2/§3。**产品码零触（设计轮）**。
 - 2026-10-10（**runner-admin-console 批 · 托管接入（管理面 agent）设计 · eng-designer**——承批档 §2 · 台账 #1236/#1237；用户 22:19–22:29 四句 + 15:00/15:02 裁）：§1 结构版本 12 ⇒ **13** ∥ §2 标题随正（v2–v12 ⇒ v2–v13）+ **增 v13 增段**（`sandbox_onboarding` 建表——任务态/步骤日志/凭据密文；密钥文件显式不落库 ∥ 十八列）∥ §3 迁移链补 v13 段（判据）∥ §4 预算（≈400 ⇒ ≈425——v13 段 +≈25）；同源随动 = `sandbox/SANDBOX.md` §2/§3 ∥ `accounts/ACCOUNTS.md` §2.1。**产品码零触（设计轮）**。
+- 2026-10-11（**admin-agent-chat 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-11-admin-agent-chat.md` §1 · 台账 #1254；需求 §5「两个 chat 界面」②④）：§1 结构版本 13 ⇒ **14** ∥ §2 标题随正（v2–v13 ⇒ v2–v14）+ **增 v14 增段**（agent chat 两表 —— 会话/消息序 ∥ 审计 CHECK 再扩十二 ⇒ 十三型：+ `agent_event`；重建步同 v10/v11 同构）∥ §3 迁移链补 v14 段（判据）∥ §4 预算（db 实读 **409** ⇒ ≈450——v14 段 +≈41）；同源随动 = `agent/ADMIN-AGENT.md` §11/§12 ∥ `accounts/ACCOUNTS.md` §2.1（十三型） ∥ `gateway/API.md` §2.8。**产品码零触（设计轮）**。
 - 2026-10-10（**runner-admin-console 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §3 轮次 1 之 8）：§2 v11 段 `sandbox_workspaces` ∥ `sandbox_tasks` 两表定义处就近补注（列面差 = 去 `required_labels_json` ∥ 去 `claimed_at`——与 v12 段旁注同指；实现收正随执行面重做批）。**零新语义**（评审发现直接导出项）。

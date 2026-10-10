@@ -15,7 +15,7 @@
 - **兼作 `/v1` 凭据**：同一 token 两用——`/api/client/*`（数据面，本档）∥ `/v1/*`（模型面，`gateway/API.md` §2）；校验单源 = `verifyKey`（账号 key 面）；客户端面门面 = 复用 `requireApiKey`（`thincoder-server/src/gateway/routes.mjs:25`）。**无第二校验面**。
 - **列表可撤销**：token 即具名 key——列表/吊销面 = 既有「我的 · key」页（`webui/WEBUI.md` §2.3⑥）∥ `GET /api/me` 成员行 key 清单 ∥ CLI `key list` / `key revoke`（`ops/OPS.md` §3）；**零新列表端点**。
 - **与控制台会话面关系**：`sessions` 表（浏览器 cookie 面——KD-SV-12）**零改、零复用**——客户端登录不落 `sessions` 表；两族凭证物理分离（cookie ∥ `Authorization: Bearer`）保持（理由 = §5 KD-SV-61 被否候选栏）。
-- **审计**：登录成/败 = 既有 `login_success` / `login_failure`（detail 携 `surface:"client"`）；签发/吊销 = 既有 `key_issue` / `key_revoke`（detail 同携 surface）；**审计十型零增**（零迁移）。
+- **审计**：登录成/败 = 既有 `login_success` / `login_failure`（detail 携 `surface:"client"`）；签发/吊销 = 既有 `key_issue` / `key_revoke`（detail 同携 surface）；**审计零增型**（零迁移——现行型面 = 十三型，不因本面增型）。
 
 ## 2. 端点表（`/api/client/*`——数据面命名空间骨架）
 

@@ -16,6 +16,7 @@
 | 控制台数据面 | `GET /api/overview`（管理总览读数） ∥ `GET /api/admin/embedding` ∥ `POST /api/admin/embedding/test`（向量服务面——探活/试跑） ∥ `GET/PATCH /api/admin/config`（配置面——读写 config.json；`ops/OPS.md` §1） ∥ `POST /api/admin/proxy/test`（代理连通测试——真打；`webui/WEBUI.md` §2.7） | admin 会话（服务端判定——`user` ⇒ 403） | 本档 §2.4 |
 | 沙盒控制台面 | `GET/POST/PATCH/DELETE /api/admin/sandbox/*`（runner ∥ 工作区 ∥ 规则 ∥ 待批 ∥ 设置——`sandbox/SANDBOX.md` §8） | admin 会话（服务端判定——`user` ⇒ 403） | 本档 §2.5 |
 | 沙盒成员面 | `GET /api/me/sandbox/workspaces`（本人工作区读数——`sandbox/SANDBOX.md` §8 成员面） | 会话（本人——admin/user 恒本人过滤） | 本档 §2.7 |
+| 管理面 agent 面 | `POST/GET /api/admin/agent/chats*`（会话 + 回合 NDJSON 流——admin-agent-chat 批） | admin 会话（服务端判定——`user` ⇒ 403） | 本档 §2.8 |
 | 前端静态面 | `GET /` ∥ `public/**`（`app.mjs` ∥ `nav.mjs` ∥ `views-*` 十四档 ∥ `style.css`） | 公开（页面壳零数据） | `webui/WEBUI.md` §1 |
 | 其余 | —— | —— | 404（JSON 错误形 = §3） |
 
@@ -147,6 +148,25 @@
 
 - 写面零端点（成员对工作区的动作随 #1216 ② 权限模型——`sandbox/SANDBOX.md` §8 成员面）。
 
+### 2.8 管理面 agent 会话面（控制台——仅 admin；机制全文 = `agent/ADMIN-AGENT.md` §11）
+
+（端点族 = `/api/admin/agent/*`；判权 = `requireAdmin` 口径（`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401）；错误形 = §3 全码沿用——**零新码**；写端点 JSON 型门同 §1 前言）
+
+| 方法 + 路径 | 语义 |
+|---|---|
+| `POST /api/admin/agent/chats` | 建会话 `{ model }` ⇒ 200 `{ chat: { id, model, status, createdAt, updatedAt } }`；`model` 不在开放清单 ⇒ 400 `invalid_request_error`（人话——「模型不可用」；KD-SV-87 同判）；库零变 |
+| `GET /api/admin/agent/chats` | 会话列表（倒序）：`{ chats: [{ id, model, status, createdAt, updatedAt, excerpt }] }`（`excerpt` = 首条用户消息截断 ≤40 字；无消息 ⇒ 空串） |
+| `GET /api/admin/agent/chats/:id` | 会话详情：`{ chat, messages: [{ seq, role, content, data, createdAt }] }`（`role` = `user`/`assistant`/`tool`/`notice`；`data` = 附加形——assistant 的 `toolCalls` ∥ tool 的 `toolCallId`/`name`/`ok`/`summary`；序 = `seq` 升序）；不存在 ⇒ 404 `not_found` |
+| `POST /api/admin/agent/chats/:id/messages` | 发一条（一轮）：`{ content }` ⇒ **NDJSON 流**（`application/x-ndjson`——帧 = `delta` ∥ `call` ∥ `result` ∥ `end`；见下）；不存在 ⇒ 404 ∥ `content` 空/非字符串 ⇒ 400 ∥ 会话 `status = running` ⇒ 400（「本会话正在执行——等它结束」）∥ 模型不可用 ⇒ 400（流未起——信封形） |
+
+- **流帧**（每行一帧 JSON；headers = `Content-Type: application/x-ndjson; charset=utf-8` ∥ `Cache-Control: no-store`；流中失败 = `end` 帧——headers 已发，不再走信封）：
+  - `{ "type": "delta", "text": "…" }`——模型文本增量（核 `onToken`）；
+  - `{ "type": "call", "id": "…", "name": "…", "args": { … } }`——工具调用开始（参数摘要 ≤500 字——掩蔽后）；
+  - `{ "type": "result", "id": "…", "ok": true, "summary": "…" }`——工具结果摘要（≤300 字——掩蔽后）；
+  - `{ "type": "end", "status": "succeeded" | "failed", "reason": "…"? }`——回合终态（`failed` 原因 = 人话：预算超限 ∥ 模型错误 ∥ 空回合）。
+- **执行不依赖连接**（断连照跑到终态——落库单源；重读详情即全量）；重启恢复（`running` ⇒ `idle` + notice + 审计）在装配期执行（无端点）。
+- 审计 = `agent_event` 逐调用（`accounts/ACCOUNTS.md` §2.1）；用例 = `agent/ADMIN-AGENT.md` §8；不做面 = 其 §10。
+
 ## 3. 错误形（全码单源）
 
 - 统一形：`{ "error": { "message": "…", "type": "…", "code": "…" } }`。
@@ -177,7 +197,7 @@
 | `thincoder-server/src/gateway/proxy-admin.mjs`（已落盘——2026-10-09 代理页批） | **无 ⇒ 实读 81**（2026-10-09 代理页批落地后——设计估 ≈95；代理测试面（§2.4）：判权 ∥ 入参轻校验（`validateProxyConfig` 单源复用） ∥ 代打（`proxyFetch` 注入） ∥ kind 二分类 ∥ 自含形；零落库不计量） | 代理连通测试面（控制台——仅 admin） |
 | `thincoder-server/src/gateway/overview.mjs`（已落盘） | **≈70 ⇒ 实读 28 ⇒ ≈30**（本批：今日合计读源 = `report.mjs`（`usageTotals` 迁址）——口径零变）**⇒ 实读 27（2026-10-07——清账批复读）** | 管理总览读数（控制台——仅 admin） |
 | `thincoder-server/src/gateway/errors.mjs`（已落盘） | **56 ⇒ ≈65**（实读 2026-10-06——设计估 ≈50；#963 +1 = `too_many_attempts` 码；服务模型配置面批 +≈9 = `rate_limited` 码 ∥ `HttpError`/`sendError` 可选 headers（`Retry-After`））**⇒ 实读 63（2026-10-07——清账批复读）⇒ 实读 64（2026-10-10——本设计轮现读；旧读收正 1）⇒ ≈66（server-exec-sandbox 批：`sandbox_unavailable` +≈2——实施后回填）⇒ **±0（runner-admin-console 批——零新码；节点/容器面映射沿族）** | 错误形构造 ∥ 发送助手（含账号面码） |
-| **小计** | **≈770 ⇒ 658 ⇒ 951**（#962 实读：+293）**⇒ 1007**（#963 实读：+56 = system 新 55 ∥ errors +1——口径 = #962 后）**⇒ ≈1192**（二轮 +≈185 = embedding-admin 新 ≈110 ∥ overview 新 ≈70 ∥ system +≈5）**⇒ ≈1363**（服务模型配置面批估）**⇒ ≈1385**（配额分模型批：routes +≈14 ∥ forward +≈8；overview 实读回填）**⇒ ≈1393**（配额 v2 批：routes +≈8）**⇒ ≈1439**（模型元数据批：providers +≈8 ∥ provider-admin +≈38；以 v2 落定实读为基）**⇒ 实读 1362（2026-10-07——清账批逐档复读和）⇒ ≈1605（2026-10-09 代理批：proxy 新档 ∥ forward ∥ providers ∥ provider-admin 四档）⇒ 实读 1664**（2026-10-09——本批四档实读和：proxy 267 ∥ forward 208 ∥ providers 184 ∥ provider-admin 305）⇒ ≈1836（配置控制台批：+≈172 = `config-admin.mjs` 新 ≈160 ∥ `embedding-admin.mjs` ≈+12；余档零动）⇒ 实读增量 **+196**（2026-10-09 配置控制台批落地后：`config-admin.mjs` **182** 新 ∥ `embedding-admin.mjs` **110**）⇒ ≈1847（2026-10-09 embed 解耦批：+≈11 = routes +≈6 ∥ embedding-admin +≈8 ∥ providers −≈3）**⇒ 实读净收正 ≈1845**（embed 批三档实读：routes **114** ∥ providers **183** ∥ `embedding-admin` **117**）**⇒ ≈1889**（2026-10-09 alias 批：+≈44 = providers ≈208 ∥ provider-admin ≈322 ∥ forward ≈210——实读待回填）⇒ ≈1984（2026-10-09 代理页批：+≈95 = `proxy-admin.mjs` 新 ≈95；余档零动——在途批链值以实施实读为准）⇒ 实读增量 **+81**（2026-10-09 代理页批落地后：`proxy-admin.mjs` **81** 新——设计估 ≈95；余档零动）⇒ 沙盒批 +≈2（`errors.mjs`；sandbox 域档组预算 = `sandbox/SANDBOX.md` §13——本表不列） | —— |
+| **小计** | **≈770 ⇒ 658 ⇒ 951**（#962 实读：+293）**⇒ 1007**（#963 实读：+56 = system 新 55 ∥ errors +1——口径 = #962 后）**⇒ ≈1192**（二轮 +≈185 = embedding-admin 新 ≈110 ∥ overview 新 ≈70 ∥ system +≈5）**⇒ ≈1363**（服务模型配置面批估）**⇒ ≈1385**（配额分模型批：routes +≈14 ∥ forward +≈8；overview 实读回填）**⇒ ≈1393**（配额 v2 批：routes +≈8）**⇒ ≈1439**（模型元数据批：providers +≈8 ∥ provider-admin +≈38；以 v2 落定实读为基）**⇒ 实读 1362（2026-10-07——清账批逐档复读和）⇒ ≈1605（2026-10-09 代理批：proxy 新档 ∥ forward ∥ providers ∥ provider-admin 四档）⇒ 实读 1664**（2026-10-09——本批四档实读和：proxy 267 ∥ forward 208 ∥ providers 184 ∥ provider-admin 305）⇒ ≈1836（配置控制台批：+≈172 = `config-admin.mjs` 新 ≈160 ∥ `embedding-admin.mjs` ≈+12；余档零动）⇒ 实读增量 **+196**（2026-10-09 配置控制台批落地后：`config-admin.mjs` **182** 新 ∥ `embedding-admin.mjs` **110**）⇒ ≈1847（2026-10-09 embed 解耦批：+≈11 = routes +≈6 ∥ embedding-admin +≈8 ∥ providers −≈3）**⇒ 实读净收正 ≈1845**（embed 批三档实读：routes **114** ∥ providers **183** ∥ `embedding-admin` **117**）**⇒ ≈1889**（2026-10-09 alias 批：+≈44 = providers ≈208 ∥ provider-admin ≈322 ∥ forward ≈210——实读待回填）⇒ ≈1984（2026-10-09 代理页批：+≈95 = `proxy-admin.mjs` 新 ≈95；余档零动——在途批链值以实施实读为准）⇒ 实读增量 **+81**（2026-10-09 代理页批落地后：`proxy-admin.mjs` **81** 新——设计估 ≈95；余档零动）⇒ 沙盒批 +≈2（`errors.mjs`；sandbox 域档组预算 = `sandbox/SANDBOX.md` §13——本表不列）⇒ ±0（admin-agent-chat 批：会话面四端点 = agent 域档组——`agent/ADMIN-AGENT.md` §6；本表不列） | —— |
 
 ## 5. 验收判据（机检面）
 
@@ -197,6 +217,7 @@
 | AC-30（功能点 30②——代理连通测试面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 真打（mock 假代理 + mock 目标 ⇒ `ok:true` + `status`/`ms` 逐值 ∥ 假代理命中即证经代理）∥ 代理不可达（死端口）⇒ `ok:false` + `kind=unreachable` ∥ 超时（注入 `timeoutMs`）⇒ `kind=timeout` ∥ loopback 目标 ⇒ 直连（假代理零命中——旁路与生产同判）∥ 非 2xx 照实回读（`ok:true` + 状态值）∥ 入参（缺/空 `uri` ∥ `uri` 非 `http:` ∥ 缺/非法 `target` ⇒ 400 `invalid_request_error`——文件与运行态零变）∥ 判权三态（user ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200）∥ **零落库零计费**（usage 行零增 ∥ 配额零涉 ∥ 审计零行）∥ 自含形（结果 200 体——不走统一错误信封） | 批内件 |
 | 沙盒（server-exec-sandbox 批——台账 #1224；需求 §5 沙盒块 + 14:00 裁定；AC-36——已落需求档） | 端点面机检（判权三态：`user` ⇒ 403 ∥ 无会话 ⇒ 401 ∥ 成员面恒本人过滤——§2.7）∥ 无可用节点 ⇒ 503 `sandbox_unavailable` ∥ 规则校验（两类型 ∥ 通配单层左 ∥ 显式 deny 恒先）∥ 待批三态 ∥ 资源覆写（PATCH ⇒ 建盒载荷逐值——§2.5）；**最小切片（节点/容器——§2.5 前七行；runner-admin-console 批）**：添/删节点 ∥ 容器四动作（502/404/400 映射 ∥ 幂等 304 语义 ∥ 连删失败行保留）= `sandbox/SANDBOX.md` §3 ∥ 用例 §12（N40 ∥ N46–N48 ∥ B41–B43 ∥ E34–E36）；判据全文 = `sandbox/SANDBOX.md` §11（执行面判据随重做批） | 批内件 + 收口轮 |
 | 托管接入（runner-admin-console 批增补——#1236/#1237；表 = §2.5 托管接入四行） | 步 → 前置 → 动作 → 判据 → 停点四段在案（`sandbox/SANDBOX.md` §3）；两径（裸机 ∥ 已装）覆盖 ∥ 凭据四态（弃/留/撤/掩蔽）∥ run 态（读时轮询 ∥ 重启 `interrupted`）∥ 零新码；判据全文 = `sandbox/SANDBOX.md` §11 托管接入行 ∥ §12（N49–N52 ∥ B44–B46 ∥ E37/E38）∥ `agent/ADMIN-AGENT.md` §7 | 批内件 + 收口轮（真机） |
+| 管理面 agent 会话面（admin-agent-chat 批——台账 #1254） | 判据全文 = `agent/ADMIN-AGENT.md` §7 聊天式行 ∥ §8（N54/N55 ∥ B48/B49 ∥ E40/E41）；端点面机检 = 本节 §2.8（四端点三态码 ∥ 帧形逐帧 ∥ 流前信封/流中 `end` 帧分界 ∥ 会话/在途门/重启收尾） | 批内件 |
 | AC-28（功能点 28——配置控制台写面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | GET = 文件面值（有效值回填 ∥ 密钥掩码零泄漏 ∥ `bootstrap.password` 面零列）∥ PATCH：白名单（未知键 ⇒ 400）∥ 合并保未知键 ∥ 校验门（非法值 ∥ `env:` 缺位 ⇒ 400 且文件字节零变）∥ 原子写（tmp 零残留 ∥ rename 覆盖）∥ 审计 `config_update`（detail = 键名 ∥ 值零入）∥ 并发（同步段单写者）∥ 写后 GET 回读逐值（round-trip）∥ 草稿探活（test 端点明传优先——缺省回落）∥ **缺段创建**（缺 `embedding` 段 ⇒ PATCH 建段 ⇒ 门通过 ∥ 缺段档 PATCH 他键过门；2026-10-09 embed 解耦批） | 批内件 |
 
 ## 6. 关键决策（本域）
@@ -278,6 +299,7 @@
 | E27 | 错误 | 缺 `uri` ∥ `uri` 空串 ∥ `uri` 非 `http:`（如 `https://…`）∥ 缺 `target` ∥ `target` 非法 URL ∥ user ∥ 无会话 | 400 `invalid_request_error`（消息明示）∥ 400 ∥ 400 ∥ 400 ∥ 400 ∥ 403 `forbidden` ∥ 401 `unauthorized` |
 
 - 沙盒面用例 = `sandbox/SANDBOX.md` §12（列全案，此处不复制）。
+- 管理面 agent 会话面用例 = `agent/ADMIN-AGENT.md` §8（N54/N55 ∥ B48/B49 ∥ E40/E41——端点面逐条覆盖）。
 
 ## 8. 本域边界（不做的面）
 
@@ -293,6 +315,7 @@
 - 别名面不做（2026-10-09 alias 批——KD-SV-59）：别名历史/迁移（改别名 = 当即生效）∥ 别名级独立限流/配额配置（键随对外标识自然随动）∥ 一名多模型/一组多名 ∥ 嵌入面别名（用户裁「嵌入面不相干」）∥ 成员键的存在性/别名交叉校验（键形校验 = 形状面单源——`accounts/ACCOUNTS.md` §2.2）。
 - 配置面不做（2026-10-09 配置批）：配置文件热载/运行态注入（生效 = 重启——`ops/OPS.md` §1）∥ `host`/`port`/`db` 写面（部署拓扑项）∥ 配置版本史/回滚 ∥ 写前备份 ∥ 多实例并发写（单写者部署模型）∥ `providers[]`/`bootstrap` 写面（各有其面）。
 - 沙盒面不做（server-exec-sandbox 批——`sandbox/SANDBOX.md` §15）：执行面细节 ∥ 盒内协议 ∥ 配额机制——本档零复述。
+- 管理面 agent 会话面不做（admin-agent-chat 批——`agent/ADMIN-AGENT.md` §10）：SSH 凭据经 chat 文本输入 ∥ 会话删除/重命名/自动清理 ∥ 回合中途中止 ∥ 会话内换模型 ∥ 节点排空/禁用工具 ∥ 沙盒其余面工具——本档零复述。
 
 ## 变更记录
 
@@ -341,3 +364,4 @@
 - 2026-10-10（**runner-admin-console 批 · 设计档随正 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 2026-10-10 19:52–19:56 口径「runner = 远程 Docker API 节点」）：§1 去沙盒 runner 面行 ∥ **§2.6 删**（端点族随执行面重定退场）∥ §2.5 运行面读数行收正 + join-token/排空行 ⇒ 节点添加/删除行 ∥ §3 去 413 路由级例外、沙盒面族去 `/api/runner/*` ∥ §4 `server.mjs` 行去 checkpoint 口径（实读链止 192）+ 小计 sandbox 域指针随正 ∥ §5 沙盒行随正 ∥ §7 B27 删 ∥ §8 沙盒不做面指针随正；同源随动 = `sandbox/SANDBOX.md` ∥ `store/STORE.md` ∥ `ops/OPS.md`。**产品码零触**。
 - 2026-10-10（**runner-admin-console 批 · A 批最小切片设计 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 19:59 令）：§2.5 运行面行重写（读时探活形）+ 添/删节点行收正 + **增容器四行**（列表 ∥ 创建三件 ∥ 启/停 ∥ 删——引擎请求/映射逐项）∥ §2.5 前括注补节点/容器面错误形（502/404/400——零新码）∥ §4 `errors.mjs` 行补本批 ±0 ∥ §5 沙盒行补最小切片判据指针；同源随动 = `sandbox/SANDBOX.md` §3 ∥ `store/STORE.md` §2 v12 段 ∥ `webui/WEBUI.md` §2.8①。**产品码零触（设计轮）**。
 - 2026-10-10（**runner-admin-console 批 · 托管接入（管理面 agent）设计 · eng-designer**——承批档 §2 · 台账 #1236/#1237；用户 22:19–22:29 四句 + 15:00/15:02 裁）：§2.5 前括注补托管接入面语义（异步起跑 ∥ 零新码 ∥ 零秘密回显）+ **增四行**（起 ∥ 列表 ∥ 详情 ∥ 撤销凭据）∥ §5 增托管接入判据行；同源随动 = `sandbox/SANDBOX.md` §3 ∥ `agent/ADMIN-AGENT.md` ∥ `store/STORE.md` §2 v13 段 ∥ `webui/WEBUI.md` §2.8①。**产品码零触（设计轮）**。
+- 2026-10-11（**admin-agent-chat 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-11-admin-agent-chat.md` §1 · 台账 #1254；需求 §5「两个 chat 界面」②④）：§1 路由族表增管理面 agent 面行（四端点——NDJSON 流）∥ **增 §2.8**（会话面四端点表 + NDJSON 四帧形（`delta`/`call`/`result`/`end`）∥ 执行不依赖连接 ∥ 流前信封/流中 `end` 帧分界 ∥ 重启恢复在装配期）∥ §4 小计补 ±0 条（会话面四端点 = agent 域档组——本表不列）∥ §5 增判据行 ∥ §7 增用例指针行 ∥ §8 增不做面指针；机制全文 = `agent/ADMIN-AGENT.md` §11 ∥ 存储 = `store/STORE.md` §2 v14 段 ∥ 审计 = `accounts/ACCOUNTS.md` §2.1。**产品码零触（设计轮）**。
