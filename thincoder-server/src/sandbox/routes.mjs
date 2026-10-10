@@ -1,6 +1,6 @@
 /**
  * routes.mjs — 沙盒控制台面与成员面（sandbox/SANDBOX.md §3/§8/§9；端点表 = gateway/API.md §2.5/§2.7；runner-admin-console 批——
- * 节点增/删 + 运行面读数 + 托管接入转注册；容器四路由与托管接入四端点已拆 `container-routes.mjs` ∥ `onboarding-routes.mjs`——§13 预案①）。
+ * 节点增/删 + 运行面读数 + 托管接入转注册；容器面十路由与镜像族三路由已拆 `container-routes.mjs` ∥ `image-routes.mjs`——§13 预案①/分族成档）。
  * `/api/admin/sandbox/*`（判权 `requireAdmin`）∥ `/api/me/sandbox/*`（成员面——会话 + 恒本人过滤）。
  *
  * 节点面（§3）：添加 = 连通自检（引导步 → 协商 → 复读——`docker.mjs`）⇒ 落行 + 审计；删除 = 二选一（保留 ∥ 连删）；
@@ -15,12 +15,13 @@ import { getKeyById } from "../accounts/keys.mjs"
 import { recordAudit } from "../accounts/audit.mjs"
 import { requireAdmin, requireSession } from "../accounts/session.mjs"
 import {
-  WORKSPACE_NAME_MAX, boxPayload, boxStateOf, enqueueTask, getSettings, insertRunner, lastTaskView, mergeLimits, normalizeRunnerName,
+  WORKSPACE_NAME_MAX, boxPayload, boxStateOf, deleteRunnerChain, enqueueTask, getSettings, insertRunner, lastTaskView, mergeLimits, normalizeRunnerName,
   patchSettings, placeWorkspace, requireSandboxAvailable, resolveLimits, runnerRowOr404, runnerRows, runnerView, sandboxAvailability,
-  sandboxPublicBase, sweepStuckTasks, tryPlacePending,
+  sandboxPublicBase, sweepStuckTasks,
 } from "./registry.mjs"
 import { clientForRunner, normalizeDockerAddress, selfCheckDocker } from "./docker.mjs"
 import { registerContainerRoutes } from "./container-routes.mjs"
+import { registerImageRoutes } from "./image-routes.mjs"
 import { registerOnboardingRoutes } from "./onboarding-routes.mjs"
 import { bumpRulesRev, createRule, deleteRule, getRulesRev, listPending, listRules, openPendingOf, resolvePending, updateRule } from "./rules.mjs"
 import { issueWorkspaceKey, rotateWorkspaceKey, revokeWorkspaceKey } from "./credentials.mjs"
@@ -183,67 +184,12 @@ export function registerSandboxRoutes(routes, { db, config = {}, log = null, now
     sendJson(res, 200, { runner: { id: row.id, name: row.name, address: row.address, status: row.status, selfCheck: check.readings, createdAt: row.created_at } })
   })
 
-  // 删除节点（§3——二选一「保留 ∥ 连删」；连删任一失败 ⇒ 502 + 登记行保留；不可达 ⇒ 仅 keep 可过）
+  // 删除节点（§3——二选一「保留 ∥ 连删」；链全文 = `registry.deleteRunnerChain`（chat 工具面同函数——KD-SV-90 §12））
   routes.add("DELETE", "/api/admin/sandbox/runners/:id", async (req, res, ctx) => {
     const { member: admin } = requireAdmin(db, req)
     const runner = runnerRowOr404(db, ctx.params.id)
     const body = await readJsonBody(req).catch(() => ({}))
-    const bound = db.prepare("SELECT id, name FROM sandbox_workspaces WHERE runner_id = ? ORDER BY id").all(runner.id)
-    if (bound.length > 0 && body?.confirm !== true) {
-      throw new HttpError(
-        "invalid_request_error",
-        `节点上仍有 ${bound.length} 个工作区（${bound.map((item) => item.name).join(" ∥ ")}）——先重建到新机，或确认丢弃 ⇒ confirm: true`,
-      )
-    }
-    const disposition = body?.containers
-    if (disposition !== undefined && disposition !== "keep" && disposition !== "remove") {
-      throw new HttpError("invalid_request_error", `containers 仅收 keep ∥ remove：${String(disposition)}`)
-    }
-    let containers = []
-    let reachable = true
-    try {
-      const listed = await clientForRunner(runner, { fetchImpl }).containers()
-      containers = Array.isArray(listed.json) ? listed.json : []
-    } catch {
-      reachable = false
-    }
-    if (!reachable && disposition !== "keep") {
-      throw new HttpError("upstream_error", `节点不可达——仅「保留」处置可过（连删需节点可达）：${runner.name}`)
-    }
-    if (reachable && containers.length > 0 && disposition === undefined) {
-      throw new HttpError("invalid_request_error", `节点上承载 ${containers.length} 个容器——请选处置：containers: "keep"（容器原样留机）∥ "remove"（逐个强删）`)
-    }
-    let kept = 0
-    let removed = 0
-    if (disposition === "remove") {
-      const failed = []
-      for (const item of containers) {
-        const id = item.Id
-        const name = String(item.Names?.[0] ?? id).replace(/^\//, "")
-        try {
-          await clientForRunner(runner, { fetchImpl }).deleteContainer(id, { force: true })
-          removed += 1
-        } catch (e) {
-          failed.push(`${name}（${e?.message ?? e}）`)
-        }
-      }
-      if (failed.length > 0) {
-        throw new HttpError(
-          "upstream_error",
-          `连删未净：已删 ${removed}/${containers.length}——失败清单：${failed.join(" ∥ ")}（登记行保留；修好后重试）`,
-        )
-      }
-      kept = 0
-    } else {
-      kept = containers.length
-    }
-    db.prepare("UPDATE sandbox_tasks SET status = 'failed', finished_at = ?, result_json = ? WHERE runner_id = ? AND status IN ('queued','claimed')").run(
-      now(),
-      JSON.stringify({ reason: "节点已退役——指令作废" }),
-      runner.id,
-    )
-    db.prepare("UPDATE sandbox_workspaces SET runner_id = NULL WHERE runner_id = ?").run(runner.id)
-    db.prepare("DELETE FROM sandbox_runners WHERE id = ?").run(runner.id)
+    const { kept, removed } = await deleteRunnerChain(db, runner, { containers: body?.containers, confirm: body?.confirm === true }, { fetchImpl, now, publicBase })
     recordAudit(db, {
       type: "sandbox_event",
       actor: admin.name,
@@ -252,7 +198,6 @@ export function registerSandboxRoutes(routes, { db, config = {}, log = null, now
       detail: { kind: "runner_delete", kept, removed },
       ts: now(),
     })
-    tryPlacePending(db, { now: now(), publicBase }) // 弃置工作区续跑（有 active 节点即重放置）
     sendJson(res, 200, { ok: true, id: runner.id, kept, removed })
   })
 
@@ -486,6 +431,9 @@ export function registerSandboxRoutes(routes, { db, config = {}, log = null, now
 
   // ── 容器面（拆分档——SANDBOX §13 预案①）────────────────────────────────────
   registerContainerRoutes(routes, { db, fetchImpl, now })
+
+  // ── 镜像族（拆分档——SANDBOX §13 分族成档；sandbox-docker-admin 批）──────────
+  registerImageRoutes(routes, { db, fetchImpl, now })
 
   // ── 托管接入面（四端点转注册——`bin` ±0；起跑后立即交回，进度经读时轮询）────
   const onboarding = registerOnboardingRoutes(routes, { db, config, log, now, deps })

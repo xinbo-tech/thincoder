@@ -157,4 +157,72 @@ VERDICT: pass
 - **本批射程确认**：两族（容器面补齐五件 ∥ 镜像族三件）+ 控制台面 + 审计四 kind（型面十三型不变、CHECK 零动）；实施 = 单舱派发（14 件；与在飞 chat 批四档共写面——调度器排队，落盘以当刻盘面实读为准）；随正件（档目断言件九件 ∥ 门禁件数断言件七件 + `package.json`）= 父侧实施轮同拍（注⑳）。
 
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（14 件落盘 ∥ 两批内件 19/19 pass ∥ 分歧审计 1 轮 · 代码评审 1 轮（pass）· 终态 clean ∥ 上抛三件见 5.5）
+
+
+
+### 5.1 交付摘要（14 件 —— 落盘实读；估差见 5.5）
+
+| # | 件 | 动作 | 实读行数（设计估） | 内容一句话 |
+|---|---|---|---|---|
+| 1 | `src/sandbox/docker.mjs` | 改 | 328（≈330） | 常量六件（`PULL_TIMEOUT_MS` ∥ `LOG_TAIL_DEFAULT` ∥ `LOG_TAIL_MAX` ∥ `LOG_TEXT_LIMIT_BYTES` ∥ `IMAGE_REF_MAX` ∥ `LOG_TRUNCATED_MARK`）+ 纯函数五（`clipUtf8` ∥ `demuxDockerLogs` ∥ `findStreamError` ∥ `parseImageRef` ∥ `normalizeImageRef`）+ `requestBytes`（字节体，不先转字串）+ 客户端八方法（`containerDetail` ∥ `containerLogs` ∥ `containerRestart` ∥ `containerKill` ∥ `containerStats` ∥ `images` ∥ `pullImage` ∥ `removeImage`）+ `pullTimeoutMs` 注入 |
+| 2 | `src/sandbox/container-routes.mjs` | 改 | 312（≈330） | `dockerFailure` 增 `kill` 选项（409 ⇒ 400 人话）+ 视图/判据三（`containerDetailView` ∥ `usageView` ∥ `parseLogTail`）+ 五路由（详情 ∥ 日志 ∥ 重启 ∥ 强杀 ∥ 用量） |
+| 3 | `src/sandbox/image-routes.mjs` | 新 | 133（≈130） | `imageView` ∥ `pullFailure`（两形皆收）∥ `imageDeleteFailure`（409 处置句 ∥ 404 归 404）+ 三路由（列表 ∥ 拉取 ∥ 删除） |
+| 4 | `src/sandbox/routes.mjs` | 改 | 442（493 ⇒ ≈496） | `registerImageRoutes` import + 注册行 + 头注（+3 行）——**底数陈值见 5.5①** |
+| 5 | `public/modal.mjs` | 改 | 121（≈115） | 窗体助手四件迁入（`showNote` ∥ `field` ∥ `submitThen` ∥ `confirmModal`——避循环 import；行为零变） |
+| 6 | `public/views-sandbox.mjs` | 改 | 373（≈355） | 只外拆减负：四助手出档、两区件接线（容器区 ∥ 镜像区）+ `containerStateLabel` re-export（单源住容器件） |
+| 7 | `public/views-sandbox-containers.mjs` | 新 | 297（≈300） | `createContainerSection`（展开懒加载 ∥ 动作后失缓存重取）+ `containerStateLabel` + `formatBytes` + 容器表六钮 + 四窗（详情 ∥ 日志 ∥ 建 ∥ 删） |
+| 8 | `public/views-sandbox-images.mjs` | 新 | 119（≈140） | `createImageSection`（同展开懒加载）+ 镜像表（多标签逐行 ∥ 无标签）+ 拉取窗（在飞态/钮禁用）+ 删除窗（强制勾选缺省不勾） |
+| 9 | `public/i18n-zh-admin.mjs` | 改 | 316 | `admin.sandbox.*` +54 键（容器详情/日志/用量/镜像族） |
+| 10 | `public/i18n-en-admin.mjs` | 改 | 320 | 同键逐键同步（en 零 CJK ∥ 占位符对位） |
+| 11 | `public/style.css` | 改 | 262（261 ⇒ +≈10） | +3 规则 5 行（`.snippet.wrap` ∥ `.pre-scroll` ∥ `.row-form > h4`）；零新 `:root` 变量（38 不变）∥ 零新悬停（7 不变） |
+| 12 | `docs/batches/2026-10-11-sandbox-docker-admin.test.mjs` | 新 | 572（≈420） | 服务面 14 腿：N53–N56 ∥ B47–B51 ∥ E39–E42 + 纯函数面（假 Docker = 真 HTTP） |
+| 13 | `docs/batches/2026-10-11-sandbox-docker-admin-ui.test.mjs` | 新 | 408（≈280） | 前端面 5 腿：容器六钮/详情窗 ∥ 日志窗 ∥ 镜像区两窗 ∥ i18n 键集 ∥ 静态面（档目/行数/行宽/零 CJK/类名闭合/canon/链） |
+| 14 | `thincoder-server/package.json` | 改 | 30 | `prepublishOnly` 链 **45 ⇒ 47**（本批两件入链） |
+
+**产品码面全链（服务端 4 ∥ 前端 7 ∥ 批内件 2 ∥ `package.json`）；设计档零触（本舱）。**
+
+### 5.2 决策透明表（实施舱内的自决——逐条给依据）
+
+| 号 | 决策点 | 选定 | 依据 | 备选与否 |
+|---|---|---|---|---|
+| 1 | i18n 键落位 | 54 键全落 `i18n-{zh,en}-admin.mjs`（批内不拆新部件） | 父侧 2026-10-11 裁定「按①继续」：结构决策不在实施舱；且明示不为绕 300 守卫改键位/删注释/压缩格式 | 否——拆 `i18n-*-sandbox.mjs`（+2 档、需动两门面）已上抛并被裁否决 |
+| 2 | 两区并发读重取 | 取空前先落 `{ loading: true }` 占位 | 实施期实测发现：容器区与镜像区同拍落定会各触发一次 `refresh`，第二次渲染看到对方缓存为空 ⇒ 重复取 | 否——重复读为可见缺陷（对假件腿位也是不确定性源） |
+| 3 | 详情/日志窗题 | `t("…Title", { name })`（CJK 全在 i18n 表） | 控制台硬口径「代码档注释外零 CJK」——窗题含容器名，故参数化收进表值 | 否——原写法（模板串拼全角冒号）实读含 CJK 形，已收正 |
+| 4 | `containerStateLabel` 单源 | 定义住容器件、`views-sandbox.mjs` re-export | 旧批件（`2026-10-10-runner-admin-console-ui.test.mjs`）消费该导出面；单源避免两处枚举 | 否——双定义 = 单源破 |
+| 5 | `formatBytes` 单源 | 定义住容器件，镜像件单向 import | 用量块与镜像大小同格式；单向 import 无环（两件皆引 `modal.mjs`，不可反向） | 否——入 `dom.mjs` 会触未点到档（越表） |
+| 6 | 注释计数（评审 🔵 两条） | 收正：`container-routes.mjs:144`「注册容器四路由 ⇒ 容器面十路由」∥ `routes.mjs:3`「容器面五+四路由 ⇒ 十路由」 | 评审（advisor）证据：该函数实注册十条（`routes.add` 十处）；注释与代码须一致 | 否——纯注释，零行为 |
+| 7 | 镜像引用路径点段（`..`） | **不加固**，只上抛（见 5.5③） | 设计明文 = 字符集 `[A-Za-z0-9][A-Za-z0-9._:/@-]*` 且「引擎 path 直插 ref（不 encode）」（KD-SV-95）；实施舱单方收严 = 偏离设计 | 待裁——父侧/设计层裁定后另轮落 |
+| 8 | 两区件 `reset` 出参 | 保留（虽当前零调用方） | 设计指定导出形 = `{ area(runner, {reload, refresh}), reset }` | 否——删 = 偏离设计导出面 |
+
+### 5.3 审计与代码评审轮次与终态
+
+- **分歧审计（explore 只读子代理，1 轮）**：判定 `DEVIATIONS` 1 条 = **DOC-DRIFT**（`routes.mjs` 行数陈值；见 5.5①），**无** PARTIAL ∥ SILENT-SIMPLIFICATION ∥ OUT-OF-LIST 三类；八端点/错误映射/审计键集/日志/用量/镜像形/UI/i18n 八项逐条判「实现」。
+- **代码评审（advisor `type=code`，1 轮）**：**VERDICT: pass**（🔴 0 ∥ 🟡 3 ∥ 🔵 4）——🟡 = 行数陈值（文档层报告）∥ 门禁链计数 47 vs 44（父侧协同）∥ `ref` 路径点段加固建议（非阻塞）；🔵 = 注释计数两处（已修）∥ 容器表钮形态措辞（设计档措辞，报告）∥ i18n 两部件越 300（用户已裁定保留）∥ 三处无用导出面（设计指定，保留）。
+- **fix 轮（1 轮）**：仅落注释收正两条（`container-routes.mjs:144` ∥ `routes.mjs:3`）；其余 = 报告/上抛（设计档与父侧随正件不在本舱改）。评审给「无 must-fix」⇒ 不启第 2 轮。
+- **终态：`clean`**（🔴 0 ∥ 无 must-fix；两批内件 19/19 pass ∥ 旧批件红点全为已登记随正/陈旧断言，见 5.4）。
+
+### 5.4 验证读数（命令 + 结果——本舱自跑）
+
+| 命令（自 `thincoder/` 仓根） | 结果 |
+|---|---|
+| `node --test docs/batches/2026-10-11-sandbox-docker-admin.test.mjs docs/batches/2026-10-11-sandbox-docker-admin-ui.test.mjs` | **19/19 pass**（服务件 14 ∥ UI 件 5；≈4.3s）——**本批验收面** |
+| `node --test …/2026-10-10-runner-admin-console-ui.test.mjs`（旧件回归） | 6/8——两红 = ⑦ 键数 [555,560] vs 陈旧 [468,473] ∥ ⑧ 档目 [35,34] vs 陈旧 [32,31]（**非功能面**；前批 chat + 本批双重漂移，属父侧随正件） |
+| `node --test …/2026-10-10-runner-admin-console.test.mjs`（同拍 2 件） | 14/17——三红 = v13/v14 迁移版本陈旧（2 条）∥ 档目 [35,34]（1 条），全为 pre-existing |
+| `node --test …/2026-10-06-console-list-style.test.mjs` ∥ `-console-completeness-2` ∥ `-server-i18n` ∥ `-server-public-structure.test.mjs` ∥ `-console-modals.test.mjs` | 红点归类见 5.5②（全为计数/指纹/版本随正件 + chat 批陈值，无一为功能断言） |
+| 盘面读数 | 档目 **35 ∥ 34**（test 口径 = [总 ∥ 除 favicon]；文档口径 **34 ∥ 35**）∥ 链 **47** ∥ i18n 键 zh **555** ∥ en **560**（本批各 +54）∥ i18n admin 两部件 316 ∥ 320（越 300 守卫——用户已裁定保留） |
+
+**repo 全链不在本舱跑（父侧收口轮）**——本报告「未跑全链」如实；已跑面 = 上表。
+
+### 5.5 披露（不阻塞——逐条供复核）
+
+① **`routes.mjs` 底数陈值（文档层，非实施面）**：`SANDBOX.md:295`/`:311` 记「已落盘 **493**——2026-10-11 现读 ⇒ 本批 ≈496；**余量 ≈4——下批触本档前须先拆**」；落盘实读 = **442 行**（末行 441 `}` + 收尾空行；`routes.mjs:438` = `// ── 托管接入面（四端点转注册…`）。差额 ≈51 行的成因可追：并飞 chat 批把删节点链抽去 `registry.mjs:476`（`deleteRunnerChain`；`routes.mjs:18` import ∥ `:187-192` 调用），**本批在 `routes.mjs` 只 +3 行**（设计预期一致）。后果：**「余量 ≈4 ⇒ 下批须先拆」的决策前提失真（实余 ≈58）**——文档层收正归父侧。
+② **门禁链计数（父侧随正件口径修正）**：链现 **47 件** = 42 + chat 批 3 + 本批 2；设计给的终值 **44**（`SANDBOX.md:318` ∥ 批档 §2.4）未计 chat 批 +3 ⇒ 七件计数断言（现仍断 `42`，如 `2026-10-06-console-list-style.test.mjs:238`）**照 44 随正仍红**；正确目标 = **47**。同族：`2026-10-06-server-gateway-webui-deploy.test.mjs:274` 档目 `deepEqual` 名单连 `views-chat.mjs` 都缺（本批应补三档）。
+③ **路径点段加固（上抛·供裁——非阻塞）**：`ref` 走体后由 `removeImage` 直插引擎路径（`docker.mjs:298` `/images/${ref}?force…`），而 `normalizeImageRef` 字符集（`docker.mjs:181` = KD-SV-95 原样）许可 `.` 与 `/` ⇒ 形如 `a/../../containers/<id>` 可携 `..` 段；URL 点段归一会把 `/v<ver>/images/…` 归出 `images/` 命名空间。**平台余处一律「卷不随删」**，是否可及属平台语义——**标记 unverified**（本舱无真机面）。缓解面：须 admin 会话 + 同舱已有 agent `raw` 动词面 ⇒ 越权增量有限。倾向 = 下轮收严（段级校验/断言归一后前缀）；改则同拍动 `SANDBOX.md` §3 与 KD-SV-95。
+④ **行数估差（估面，全 ≤500 硬限）**：`views-sandbox.mjs` 373（估 ≈355）∥ 测试两件 572 ∥ 408（估 420 ∥ 280——超估 152 ∥ 128；沿前批测试件超 500 先例，未压）∥ `style.css` +5（估 +≈10）∥ `image-routes.mjs` 119（估 ≈140）∥ `modal.mjs` 121（估 ≈115）。
+⑤ **未取真机样本（沿设计 §2.7⑤）**：拉取失败两形（非 2xx ∥ 200 流内 `error`）与日志解复用判据全走假件覆盖；`env` 原文可见、用量首采 `cpuPercent = null` 两披露沿设计，未改。
+⑥ **设计档措辞差（报告，不代改）**：`WEBUI.md:539` 写容器表操作「详情/启动（停止）/重启/日志/删除」（五钮·启停合一），实现为六钮（启 ∥ 停各一枚，恒双显）；`SANDBOX.md:182` 正列「启动/停止」两件 ⇒ 档内两说，归父侧/设计层收口（功能面无碍：启/停各自幂等，引擎 304 ⇒ 200 已由服务端收编）。
+
+**本舱零设计档改动；上表 ① ② ③ 为父侧/设计层待办，本舱不代裁、不代改。**
+
 ## §6 验证与收口（父代理）

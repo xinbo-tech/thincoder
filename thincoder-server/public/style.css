@@ -203,6 +203,11 @@ dialog.modal::backdrop { background: var(--backdrop); }
 .step-list { margin: 0; padding-left: var(--sp-6); font-size: var(--fs); }
 .step-list li { margin: var(--sp-2) 0; }
 
+/* ── 沙盒·容器详情/日志/用量与镜像族（views-sandbox-containers.mjs ∥ views-sandbox-images.mjs——§2.8①；零新变量 ∥ 零新悬停规则）── */
+.snippet.wrap { white-space: pre-wrap; overflow-wrap: anywhere; } /* 环境块：长值折行 */
+.pre-scroll { max-height: 46vh; overflow-y: auto; } /* 日志码面：纵滚（尺寸字面——非刻度面，同 .chat-list 先例） */
+.row-form > h4 { margin: 0; } /* 行内小标题（详情窗用量块——同 `.row-form h3` 先例） */
+
 /* ── 服务模型配置面（views-models.mjs——§2.4③）：配置区五组（A/C/F/D/E） ∥ 表单网格 ∥ 停用钮行 ∥ 元数据行 ─── */
 .config-group { margin-top: var(--sp-4); }
 .config-group h5 { margin: 0 0 var(--sp-3); font-size: var(--fs); color: var(--muted); }

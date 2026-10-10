@@ -1,19 +1,22 @@
 /**
- * views-sandbox.mjs — 管理·沙盒页（webui/WEBUI.md §2/§2.8①——`#/admin/sandbox`；runner-admin-console 批）：运行面卡（可用性提示 ∥ 节点表 ∥
- * 添加/删除节点弹窗 ∥ 容器区（节点行展开——懒加载：容器表 + 创建/删除容器弹窗））+ 托管接入（弹窗（八字段 + S5 预告知句）∥
- * 装机任务区（三态 + 步骤读数展开 + keep 态「撤销凭据」钮；在途 3s 读时轮询、定终态停））——本批 = ① 运行面 + 容器区。契约 = gateway/API.md §2.5（节点/容器七路由 + 托管接入四路由；
- * 建容器镜像预填 = 设置读面；步骤读数在详情面）；判权全在后端（服务端 403 为准）；渲染一律节点 + textContent（零拼串）；文案经 `t()` 取值（§2.2）。
- * 批内件直测面 = `renderSandbox`（桩 ctx + 假 fetch 路由表）。
+ * views-sandbox.mjs — 管理·沙盒页（webui/WEBUI.md §2/§2.8①——`#/admin/sandbox`）：运行面卡（可用性提示 ∥ 节点表 ∥
+ * 添加/删除节点弹窗 ∥ 容器区/镜像区（节点行展开——懒加载；两区件 = `views-sandbox-containers.mjs` ∥ `views-sandbox-images.mjs`，
+ * sandbox-docker-admin 批外拆——§2.8①））+ 托管接入（弹窗（八字段 + S5 预告知句）∥ 装机任务区（三态 + 步骤读数展开 + keep 态
+ * 「撤销凭据」钮；在途 3s 读时轮询、定终态停））。契约 = gateway/API.md §2.5；判权全在后端（服务端 403 为准）；
+ * 渲染一律节点 + textContent（零拼串）；文案经 `t()` 取值（§2.2）；窗体助手四件住 `modal.mjs`（`showNote`/`field`/`submitThen`/`confirmModal`）。
+ * 批内件直测面 = `renderSandbox`（桩 ctx + 假 fetch 路由表）∥ `TASK_POLL_MS`/`runStateLabel` ∥ `containerStateLabel`（re-export——容器件单源）。
  */
 import { mapError, t } from "./i18n.mjs"
-import { openModal } from "./modal.mjs"
+import { confirmModal, field, openModal, showNote, submitThen } from "./modal.mjs"
 import { deriveModels } from "./views-models.mjs"
+import { createContainerSection } from "./views-sandbox-containers.mjs"
+import { createImageSection } from "./views-sandbox-images.mjs"
+
+/** 容器态文案（re-export——单源住 `views-sandbox-containers.mjs`；沿旧导出面）。 */
+export { containerStateLabel } from "./views-sandbox-containers.mjs"
 
 /** 在途装机任务的读时轮询间隔（§2.8①——定终态停；无后台常驻定时器）。 */
 export const TASK_POLL_MS = 3000
-
-/** 容器态文案（枚举内 ⇒ 表键；枚举外 ⇒ 原值兜底——Docker 新态零遗漏）。 */
-const CONTAINER_STATE_KEYS = { created: "admin.sandbox.stateCreated", running: "admin.sandbox.stateRunning", exited: "admin.sandbox.stateExited" }
 
 /** 装机终态集（轮询停点）：成功三形 ⇒「已就绪」∥ 余（`failed` ∥ `interrupted`）⇒「失败」；不在集内 ⇒ 在途「装机中」。 */
 const RUN_READY = new Set(["ready", "done", "succeeded"])
@@ -21,12 +24,6 @@ const RUN_TERMINAL = new Set([...RUN_READY, "failed", "interrupted"])
 
 /** 渲染代际（重渲/离页 ⇒ 旧轮询环自停——零全局清理钩子）。 */
 let pollGeneration = 0
-
-/** 容器态文案（纯函数——批内件直测）。 */
-export function containerStateLabel(state) {
-  const key = CONTAINER_STATE_KEYS[state]
-  return key === undefined ? String(state ?? "—") : t(key)
-}
 
 /** 装机态文案（三态——§2.8①：装机中 ∥ 已就绪 ∥ 失败；枚举外视为在途）。 */
 export function runStateLabel(status) {
@@ -40,47 +37,6 @@ function runStateClass(status) {
   if (RUN_READY.has(status)) return "badge ok"
   if (RUN_TERMINAL.has(status)) return "badge off"
   return "badge"
-}
-
-// ── 弹窗件共用（窗内一切反馈落窗内——2026-10-07 走查口径）────────────────────────
-
-/** 窗内状态行（`note` 节点置文 + 类：错 ⇒ `hint error` ∥ 中性 ⇒ `hint`）。 */
-function showNote(note, text, isError = true) {
-  note.hidden = false
-  note.className = isError ? "hint error" : "hint"
-  note.textContent = text
-}
-
-/** 表单字段（标题行 + 控件——`.provider-form.stacked` 逐项竖排）。 */
-function field(h, labelKey, ...controls) {
-  return h("label", {}, h("span", { text: t(labelKey) }), ...controls)
-}
-
-/** 确认类提交收口：成功 ⇒ flash + 关窗 + 刷新；失败 ⇒ 窗内人话（钮复位——可重试）。 */
-async function submitThen(ctx, { note, button, modal, call, flash, reload }) {
-  note.hidden = true
-  button.disabled = true
-  try {
-    await call()
-    ctx.flash(flash)
-    modal.close()
-    await reload()
-  } catch (error) {
-    button.disabled = false
-    showNote(note, mapError(error))
-  }
-}
-
-/** 确认弹窗骨（说明段 + 脚区：危险确认 + 取消）；调用方传入提交动作。 */
-function confirmModal(ctx, { title, bodyText, confirmText, submit }) {
-  const { h } = ctx
-  const note = h("p", { class: "hint error", hidden: true })
-  const confirmBtn = h("button", { type: "button", class: "danger", text: confirmText, onclick: submit })
-  const modal = openModal({
-    title: t(title), body: h("div", {}, h("p", { class: "hint", text: t(bodyText) }), note),
-    footer: h("div", { class: "row-form" }, confirmBtn, h("button", { type: "button", class: "tiny", text: t("common.cancel"), onclick: () => modal.close() })),
-  })
-  return { modal, note, confirmBtn }
 }
 
 /** 集内切换（展开/收起）。 */
@@ -108,10 +64,11 @@ function stepItem(h, entry) {
 export async function renderSandbox(ctx, mount) {
   const { h } = ctx
   const generation = ++pollGeneration
-  const expandedNodes = new Set() // 展开的节点 id（容器区懒加载）
-  const containerCache = new Map() // 节点 id ⇒ { containers } ∥ { error }
+  const expandedNodes = new Set() // 展开的节点 id（容器区/镜像区懒加载）
   const expandedTasks = new Set() // 展开的装机任务 id
   const detailCache = new Map() // 任务 id ⇒ { step, steps }（步骤读数在详情面——列表携步骤无读数，§2.5）
+  const containers = createContainerSection(ctx) // 容器区件（本批外拆——§2.8①）
+  const images = createImageSection(ctx) // 镜像区件（本批外拆——§2.8①）
   let runners = []
   let runs = []
   let pollTimer = null
@@ -131,7 +88,6 @@ export async function renderSandbox(ctx, mount) {
 
   /** 离页/重渲即停的存活判据（挂载点被换 ⇒ 停机；桩环境（无 isConnected）⇒ 视为存活）。 */
   const alive = () => generation === pollGeneration && mount.isConnected !== false
-  const invalidate = (runner, reload = loadRunners) => { containerCache.delete(runner.id); reload() }
 
   // ── 运行面（节点表 ∥ 可用性提示——读时探活，§2.5）────────────────────────────
 
@@ -170,50 +126,26 @@ export async function renderSandbox(ctx, mount) {
         h("td", {},
           h("button", { type: "button", class: "tiny", text: t(expandedNodes.has(runner.id) ? "admin.sandbox.collapse" : "admin.sandbox.expand"), onclick: toggle }),
           h("button", { type: "button", class: "tiny", text: t("admin.sandbox.remove"), onclick: () => openRemoveRunnerModal(ctx, { runner, reload: loadRunners }) }))))
-      if (expandedNodes.has(runner.id)) body.push(h("tr", { class: "detail-row" }, h("td", { colspan: String(headers.length) }, containerArea(runner))))
+      if (expandedNodes.has(runner.id)) body.push(h("tr", { class: "detail-row" }, h("td", { colspan: String(headers.length) },
+        h("div", { class: "stack-box" }, containerArea(runner), imageArea(runner)))))
     }
     return h("div", { class: "table-wrap" },
       h("table", {}, h("thead", {}, h("tr", {}, ...headers.map((label) => h("th", { text: label })))), h("tbody", {}, ...body)))
   }
 
-  /** 容器区（懒加载——首次展开取一次；动作后失缓存重取）。 */
+  /** 容器区（懒加载——件 = `views-sandbox-containers.mjs`；动作后件内失缓存重取）。 */
   function containerArea(runner) {
-    const box = h("div", { class: "stack-box" })
-    const cached = containerCache.get(runner.id)
-    if (cached === undefined) {
-      box.append(h("p", { class: "hint", text: t("common.loading") }))
-      ctx.api(`/api/admin/sandbox/runners/${runner.id}/containers`).then((data) => {
-        containerCache.set(runner.id, { containers: data?.containers ?? [] })
-        if (expandedNodes.has(runner.id)) renderNodes()
-      }).catch((error) => { containerCache.set(runner.id, { error: mapError(error) }); if (expandedNodes.has(runner.id)) renderNodes() })
-      return box
-    }
-    box.append(h("div", { class: "info-actions" },
-      h("button", { type: "button", class: "tiny", text: t("admin.sandbox.createContainer"), onclick: () => openCreateContainerModal(ctx, { runner, reload: () => invalidate(runner) }) })))
-    if (cached.error !== undefined) return box.append(h("p", { class: "hint error", text: cached.error })), box
-    if (cached.containers.length === 0) return box.append(h("p", { class: "hint", text: t("admin.sandbox.containerEmpty") })), box
-    const headers = [t("admin.sandbox.containerName"), t("admin.sandbox.image"), t("admin.sandbox.colState"), t("admin.sandbox.colActions")]
-    const rows = cached.containers.map((container) => h("tr", {},
-      h("td", { text: container.name }),
-      h("td", { text: container.image }),
-      h("td", { text: containerStateLabel(container.state) }),
-      h("td", {},
-        h("button", { type: "button", class: "tiny", text: t("admin.sandbox.start"), onclick: () => containerAction(runner, container, "start") }),
-        h("button", { type: "button", class: "tiny", text: t("admin.sandbox.stop"), onclick: () => containerAction(runner, container, "stop") }),
-        h("button", { type: "button", class: "tiny", text: t("admin.sandbox.remove"), onclick: () => openRemoveContainerModal(ctx, { runner, container, reload: () => invalidate(runner) }) }))))
-    box.append(h("div", { class: "table-wrap" },
-      h("table", {}, h("thead", {}, h("tr", {}, ...headers.map((label) => h("th", { text: label })))), h("tbody", {}, ...rows))))
-    return box
+    return containers.area(runner, { reload: loadRunners, refresh: refreshOf(runner) })
   }
 
-  /** 容器动作（启动 ∥ 停止——幂等成功面由服务端收编；成功 ⇒ 失缓存重取 = 界面上新）。 */
-  async function containerAction(runner, container, action) {
-    try {
-      await ctx.api(`/api/admin/sandbox/runners/${runner.id}/containers/${container.id}/${action}`, { method: "POST" })
-      invalidate(runner)
-    } catch (error) {
-      ctx.fail(error)
-    }
+  /** 镜像区（同展开懒加载——件 = `views-sandbox-images.mjs`）。 */
+  function imageArea(runner) {
+    return images.area(runner, { reload: loadRunners, refresh: refreshOf(runner) })
+  }
+
+  /** 区数据落定后的立即重渲（页守卫展开态——收起后落定不外渲）。 */
+  function refreshOf(runner) {
+    return () => { if (expandedNodes.has(runner.id)) renderNodes() }
   }
 
   // ── 装机任务区（三态 + 步骤读数展开；在途 3s 读时轮询、定终态停）──────────────
@@ -342,68 +274,15 @@ function openRemoveRunnerModal(ctx, { runner, reload }) {
   })
 
   ctx.api(`/api/admin/sandbox/runners/${runner.id}/containers`).then((data) => {
-    const containers = data?.containers ?? []
-    bodyBox.replaceChildren(...(containers.length === 0
+    const listed = data?.containers ?? []
+    bodyBox.replaceChildren(...(listed.length === 0
       ? [h("p", { class: "hint", text: t("admin.sandbox.removeRunnerConfirm", { name: runner.name }) }), note]
-      : [h("p", { class: "hint", text: t("admin.sandbox.runnerContainers", { count: containers.length }) }), radio("keep", "admin.sandbox.keepContainers"), radio("remove", "admin.sandbox.removeContainers"), note]))
+      : [h("p", { class: "hint", text: t("admin.sandbox.runnerContainers", { count: listed.length }) }), radio("keep", "admin.sandbox.keepContainers"), radio("remove", "admin.sandbox.removeContainers"), note]))
     footBox.replaceChildren(confirmBtn, cancelButton())
   }).catch(() => {
     choice = "keep" // 不可达 ⇒ 仅 keep 可过（§2.5 删除节点行）
     bodyBox.replaceChildren(h("p", { class: "hint", text: t("admin.sandbox.runnerUnreachable") }), note)
     footBox.replaceChildren(confirmBtn, cancelButton())
-  })
-}
-
-/** 创建容器弹窗（名 + 镜像（预填设置 `image` 值）+ 卷（可空 = 不挂）⇒ POST 三件；卷空 ⇒ 省略键）。 */
-function openCreateContainerModal(ctx, { runner, reload }) {
-  const { h } = ctx
-  const nameInput = h("input")
-  const imageInput = h("input", { placeholder: t("admin.sandbox.imagePh") })
-  const volumeInput = h("input", { placeholder: t("admin.sandbox.volumePh") })
-  const note = h("p", { class: "hint error", hidden: true })
-  const submitBtn = h("button", { type: "submit", text: t("admin.sandbox.createContainer") })
-  const modal = openModal({
-    title: t("admin.sandbox.createContainer"),
-    body: h("form", { class: "provider-form stacked", novalidate: true, onsubmit: submit },
-      field(h, "admin.sandbox.containerName", nameInput), field(h, "admin.sandbox.image", imageInput), field(h, "admin.sandbox.volume", volumeInput), note, submitBtn),
-  })
-
-  // 镜像预填（设置读面——§2.8①）；取数失败/空值 ⇒ 空输入（用户自填——不反噬窗）
-  ctx.api("/api/admin/sandbox/settings").then((data) => {
-    const image = data?.settings?.image
-    if (typeof image === "string" && image !== "") imageInput.value = image
-  }).catch(() => {})
-
-  async function submit(event) {
-    event.preventDefault()
-    note.hidden = true
-    const name = nameInput.value.trim()
-    const image = imageInput.value.trim()
-    if (name === "") return showNote(note, t("admin.sandbox.fieldRequired", { field: t("admin.sandbox.containerName") }))
-    if (image === "") return showNote(note, t("admin.sandbox.fieldRequired", { field: t("admin.sandbox.image") }))
-    const body = { name, image }
-    const volume = volumeInput.value.trim()
-    if (volume !== "") body.volume = volume // 卷缺 ⇒ 省略键（不挂）
-    submitBtn.disabled = true
-    try {
-      await ctx.api(`/api/admin/sandbox/runners/${runner.id}/containers`, { method: "POST", body })
-      ctx.flash(t("admin.sandbox.containerCreated", { name }))
-      modal.close()
-      await reload()
-    } catch (error) {
-      submitBtn.disabled = false
-      showNote(note, mapError(error))
-    }
-  }
-}
-
-/** 删除容器确认弹窗（运行中将强停强删提示——卷不随删）。 */
-function openRemoveContainerModal(ctx, { runner, container, reload }) {
-  const { modal, note, confirmBtn } = confirmModal(ctx, { title: "admin.sandbox.removeContainerTitle", bodyText: "admin.sandbox.removeContainerNote", confirmText: t("admin.sandbox.remove"), submit: () => submit() })
-  const submit = () => submitThen(ctx, {
-    note, button: confirmBtn, modal, reload,
-    call: () => ctx.api(`/api/admin/sandbox/runners/${runner.id}/containers/${container.id}`, { method: "DELETE" }),
-    flash: t("admin.sandbox.containerDeleted", { name: container.name }),
   })
 }
 
