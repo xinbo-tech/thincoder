@@ -52,16 +52,18 @@
 
 | 类型 | 主体（actor） | 对象（target） | detail JSON | 写入点（现值坐标） |
 |---|---|---|---|---|
-| `login_success` | 登录者 username | —— | `{ ip }` | `thincoder-server/src/accounts/routes.mjs` POST /api/login 成功路径（`recordSuccess` 后） |
-| `login_failure` | 提交用户名（成员存在 ⇒ 其 id） | —— | `{ ip }` | 同上——失败路径（`recordFailure` 侧） |
+| `login_success` | 登录者 username | —— | `{ ip, surface? }` | `thincoder-server/src/accounts/routes.mjs` POST /api/login 成功路径（`recordSuccess` 后） |
+| `login_failure` | 提交用户名（成员存在 ⇒ 其 id） | —— | `{ ip, surface? }` | 同上——失败路径（`recordFailure` 侧） |
 | `login_locked` | 提交用户名 | —— | `{ ip, dimension, retryAfterS }` | `thincoder-server/src/accounts/login-guard.mjs` 置锁处——经 `onLock` 回调（装配接线 = `thincoder-server/bin/thincoder-server.mjs` 建守卫处） |
 | `key_rotate` | 本人 | —— | `{ keyHint }` | `thincoder-server/src/accounts/routes.mjs` POST /api/me/keys/rotate |
-| `key_issue` | 成员 ∥ `cli` | —— | `{ keyHint }` | `thincoder-server/src/accounts/routes.mjs` POST /api/me/keys/issue（本人——me-keys 批） ∥ `thincoder-server/src/ops/cli.mjs` `key issue` |
-| `key_revoke` | 本人 ∥ admin ∥ `cli` | key 失主 | `{ keyHint }` | `thincoder-server/src/accounts/routes.mjs` POST /api/me/keys/:keyId/revoke（本人——me-keys 批） ∥ `thincoder-server/src/accounts/routes-admin.mjs` 吊销路由 ∥ `thincoder-server/src/ops/cli.mjs` `key revoke` |
+| `key_issue` | 成员 ∥ `cli` | —— | `{ keyHint, surface? }` | `thincoder-server/src/accounts/routes.mjs` POST /api/me/keys/issue（本人——me-keys 批） ∥ `thincoder-server/src/ops/cli.mjs` `key issue` |
+| `key_revoke` | 本人 ∥ admin ∥ `cli` | key 失主 | `{ keyHint, surface? }` | `thincoder-server/src/accounts/routes.mjs` POST /api/me/keys/:keyId/revoke（本人——me-keys 批） ∥ `thincoder-server/src/accounts/routes-admin.mjs` 吊销路由 ∥ `thincoder-server/src/ops/cli.mjs` `key revoke` |
 | `password_change` | 本人 | —— | —— | `thincoder-server/src/accounts/routes.mjs` POST /api/me/password |
 | `password_reset` | admin ∥ `cli` | 目标成员 | —— | `thincoder-server/src/accounts/routes-admin.mjs` 重置路由 ∥ `thincoder-server/src/ops/cli.mjs` `member passwd` |
 | `member_create` | admin ∥ `cli` | 新成员 | `{ role }` | `thincoder-server/src/accounts/routes-admin.mjs` 建成员路由 ∥ `thincoder-server/src/ops/cli.mjs` `member add` |
 | `config_update` | admin（名快照） | —— | `{ keys }`（变更键名清单——值永不入） | `thincoder-server/src/gateway/config-admin.mjs`（已落盘 · 实读 **182** 行）PATCH /api/admin/config 写盘成功后一条（失败 ⇒ warn——不反噬已落盘事实） |
+
+- **`surface` 字段（B1 批——2026-10-10）**：上表四行（`login_success` ∥ `login_failure` ∥ `key_issue` ∥ `key_revoke`）detail 列 `surface?` = 客户端面机读位——取值域 = `"client"`（现唯一值）；写入面 = `/api/client/login`（成 ∥ 败 ∥ 签发）∥ `/api/client/logout`（吊销）两写点；**其余各面（控制台 / 自助 / CLI / admin）该键缺席**（单源 = `client/CLIENT.md` §1）。
 
 - **「成员删」= 零写入点**：全库零成员删除路径（实核）；审计面只覆盖「增」——需求措辞面（「成员增删」含删）已上抛披露（成员删除功能本身不在任何功能点内）。
 - **列表**：`GET /api/audit`（admin——§3 端点表）；过滤 = 类型 ∥ 成员 ∥ 时段（`member` 取 id ∥ 展示名——解析同 usage 口径；匹配 `actor_id` ∥ `target_id`）。
@@ -219,3 +221,4 @@
 - 2026-10-09：fix 轮（射程外收口——承批 `docs/batches/2026-10-09-server-console-config.md` §3 轮 1 ∥ 同批修轮射程外发现）：审计面随 v10 十型——§2.1 事件目录增 `config_update` 行（actor = admin 名快照 ∥ detail = 键名清单、值永不入 ∥ 写入点 = `thincoder-server/src/gateway/config-admin.mjs`（拟新增））∥ 全档审计型表述随正为「十型」（§1.1 ∥ §2.1 边界 ∥ §5 AC-23/AC-25 ∥ §6 KD-SV-28/KD-SV-48 ∥ §7 N34）；同源 = `store/STORE.md` §2 v10 段。
 - 2026-10-09（**server-model-alias 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-server-model-alias.md` §2 · 台账 #1153 + 并入 #1008；需求 §2:29 + AC-29）：§2.2 语义/写面条随正（外标 = 别名 ∥ `provider/model`；键形 = 非空 ∥ 无首尾空白 ∥ 含斜杠两段非空——裸名合法；首尾空白 400——#1008 收正）∥ §3 `GET /api/me` 同拍句 + `model-disables` 行键形 ∥ §5 AC-23 行键形收正 + 增 AC-29④ 行 ∥ §7 B27 重写 + 增 N35 ∥ §8 增成员键别名面不做句。**产品码零触（设计轮）**。
 - 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212；需求 §2:31 + AC-31）：§1 增**客户端登录签发路径**条（签发 = 一枚具名 key ∥ 端标签落 `name` ∥ 不设过期 ∥ 免 20 上限 ∥ 审计两型沿用）∥ §3 增客户端面端点指针行 ∥ §5 增 AC-31 行；同源 = `client/CLIENT.md`（新档）。**产品码零触（设计轮）**。
+- 2026-10-10（**team-login-client-access 批（B1）· 设计评审轮 1 修正（fix 轮 · 发现 4）· eng-designer**——承批档 §3 轮次 1 · 台账 #1212）：§2.1 审计事件目录四行（`login_success` ∥ `login_failure` ∥ `key_issue` ∥ `key_revoke`）detail 列补 `surface?` + 取值域注（客户端面 = `"client"`；余面键缺席）——与 §1 客户端登录条 ∥ `client/CLIENT.md` §1 逐字同拍。**零新语义**（评审发现的直接导出项）。

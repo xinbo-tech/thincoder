@@ -4,10 +4,10 @@
 > 配对需求档 = `docs/cli/requirements/FEATURES.md`（§2.13 对外文档契约面 + §3 N9 ∥ N10——N9 = 命令 · 子命令 · 旗标「文档说得到、敲得通」的判据句；N10 = 盘根启动门（§1 门条）；层归属不对称：机制设计住本档）。
 > 对位档 = **无**（VSC 端无 argv 命令面——结构性不对称，P2 产品面 ⇒ 落 `docs/cli/`）。
 > 建档：2026-09-25（**cli-small-items 批 · 台账 #350 命令入口面载体收口**——承设计评审轮 1 发现 11：命令入口面设计档归属缺位 = 本册指定的收口）。
-> 论域文件 = `thincoder-cli/bin/thincoder.mjs`（壳：argv 预处理 + `USAGE` 常量装配 + 分发入口；**178**）· `thincoder-cli/src/command-table.mjs`（命令分发表——拆档批 R4 外提：分发骨架 + 八薄命令族 + help ∕ version；**186**）
-> · `thincoder-cli/src/command-interactive.mjs`（交互长驻三命令 chat ∕ tui ∕ acp；**187**）· `thincoder-cli/src/completions.mjs`（三套补全脚本发射）。
+> 论域文件 = `thincoder-cli/bin/thincoder.mjs`（壳：argv 预处理 + `USAGE` 常量装配 + 分发入口；**188**）· `thincoder-cli/src/command-table.mjs`（命令分发表——拆档批 R4 外提：分发骨架 + 八薄命令族 + help ∕ version；**192**）
+> · `thincoder-cli/src/command-interactive.mjs`（交互长驻三命令 chat ∕ tui ∕ acp；**205**）· `thincoder-cli/src/completions.mjs`（三套补全脚本发射）。
 > · `thincoder-cli/src/cli/team-command.mjs`（拟新增——team 命令族：`team login` ∥ `logout` ∥ `status`；2026-10-10 B1 批 · 台账 #1212）。
-> 行数口径 = `wc -l`；读数 as-of 2026-09-29 实读（仓根 = `thincoder/`）。
+> 行数口径 = `wc -l`；读数 as-of 2026-10-10 实读（仓根 = `thincoder/`；B1 批增量基线 = `docs/core/design/TEAM.md` §4）。
 
 ## 1. 定位与边界
 
@@ -98,6 +98,7 @@
 **本批（issue 修复批·五 · 2026-10-04）落点表** = `docs/batches/2026-10-04-issue-fix-round5.md` §2（唯一承载面——一次性批次材料）。
 **本批（盘根门 ∥ 索引排除批 · 2026-10-08）落点表** = `docs/batches/2026-10-08-diskroot-gate-index-excludes.md` §2（唯一承载面——一次性批次材料）。
 
+- 2026-10-10（**team-login-client-access 批（B1）· 设计评审轮 1 修正（fix 轮 · 发现 10）· eng-designer**——承批档 §3 轮次 1 · 台账 #1212）：§1 论域文件读数收正当刻实读（`bin/thincoder.mjs` **188** ∥ `src/command-table.mjs` **192** ∥ `src/command-interactive.mjs` **205**——as-of 2026-10-10；与 `docs/core/design/TEAM.md` §4 同批基线同拍）。**零新语义**（读数收正）。
 - 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212；需求 §2:31 + AC-31）：§2 命令树增 `team` 行（`login` ∥ `logout` ∥ `status`——地址/用户名旗标 + 密码隐藏回显问句）∥ §1 论域文件增 `src/cli/team-command.mjs`（拟新增）∥ §3 补全三套随增 `team` 词面（实施轮；本档契约 = 词表）；机制全文 = `docs/core/design/TEAM.md` §2。**产品码零触（设计轮）**。
 - 2026-10-10（**core-small-fixes 批 · 实施轮设计面回填（fix 轮）· eng-coder**——承批档 `docs/batches/2026-10-10-core-small-fixes.md` §2.6 ∥ §5；台账 #894）：§3 横深对齐条补 **as-of 注**（ledger 词表含 `list`——三套 `migrate audit list`；MS-2 锁面断言随词表收正——批内件 `docs/batches/2026-09-30-defect-fixes-cli.test.mjs` 复跑 5/5）。**零新语义**（= 词表/锁面态的 as-built 登记）。
 

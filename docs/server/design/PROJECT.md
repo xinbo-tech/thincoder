@@ -9,7 +9,7 @@
 ## 1. 定位与落点
 
 - **一句话**：一台内网常驻的 Node 单进程——OpenAI 兼容入口（chat ∥ embeddings ∥ models），网关代持全部真实 provider key，逐请求记账、按成员限额度；另配登录制控制台（vanilla 静态前端——侧栏分组导航十页——IA/多语言 = `webui/WEBUI.md` §2/§2.2）与本机运维 CLI（兜底）；首版完备化面 = `/healthz` ∥ 登录防爆破 ∥ 用量保留窗 ∥ 控制台系统页（版本/更新/接入——§7 AC-13）∥ 可见面二轮六面（向量/看板/总览/审计/健康/key 细节——§7 AC-15）。
-- **落点**：代码 = `thincoder-server/`（新顶层目录——与 `thincoder-core/` ∥ `thincoder-cli/` ∥ `thincoder-vscode/` ∥ `thincoder-desktop/` ∥ `thincoder-render-core/` 同级）；设计档 = `docs/server/design/`（板 2 档 + 域 6 档——见 §2.1 ∥ §3）。
+- **落点**：代码 = `thincoder-server/`（新顶层目录——与 `thincoder-core/` ∥ `thincoder-cli/` ∥ `thincoder-vscode/` ∥ `thincoder-desktop/` ∥ `thincoder-render-core/` 同级）；设计档 = `docs/server/design/`（板 2 档 + 域 7 档——见 §2.1 ∥ §3）。
 - **形态**：单进程单库（`node:http` + `node:sqlite`）；无构建步骤；纯 ESM（`.mjs`）。
 - **零第三方运行期依赖**（沿仓纪律）：全树 import 仅 `node:*` 标准库 + 相对路径；不 import `thincoder-core/*`（论证 = §5 KD-SV-2）。
 
@@ -17,7 +17,7 @@
 
 ### 2.1 模块边界与责任地图
 
-**三层结构（板 → 域 → 档——代码与文档同拍，用户 2026-10-06 08:14 令）**：代码 = `thincoder-server/src/<域>/<档>.mjs`（入口 `bin/` 与静态 `public/` 除外）；文档 = `docs/server/design/<域>/<档>.md`。六域 = gateway ∥ accounts ∥ metering ∥ store ∥ webui ∥ ops（域目录自第一步立；拆分落域内——`EVOLUTION.md` §1-G4）。
+**三层结构（板 → 域 → 档——代码与文档同拍，用户 2026-10-06 08:14 令）**：代码 = `thincoder-server/src/<域>/<档>.mjs`（入口 `bin/` 与静态 `public/` 除外）；文档 = `docs/server/design/<域>/<档>.md`。**七域 = gateway ∥ accounts ∥ metering ∥ store ∥ webui ∥ ops ∥ client**（前六域目录自第一步立；client 域 = 2026-10-10 B1 批新立；拆分落域内——`EVOLUTION.md` §1-G4）。
 
 | 域 | 代码（本域档） | 职责 | 域档（文档） |
 |---|---|---|---|
@@ -28,6 +28,7 @@
 | store | `thincoder-server/src/store/` 一档（db）（已落盘） | 库 ∥ DDL ∥ 迁移链（各域共用；v5 = 模型标识两字段拆列 + 派生两表 + 成员配额列） | `store/STORE.md` |
 | webui | `thincoder-server/src/webui/` 一档（static）+ `thincoder-server/public/` 三十档（静态——`index.html` ∥ `app.mjs` ∥ `dom.mjs` ∥ `health.mjs` ∥ `nav.mjs` ∥ `views-*` 十一档（+ `views-system-config.mjs`——2026-10-09 配置控制台批落盘；2026-10-10 代理回迁批：代理行 ∥ 连通测试块并入） ∥ `modal.mjs` ∥ `i18n.mjs` ∥ `i18n-zh.mjs` ∥ `i18n-en.mjs` ∥ i18n 部件八档（`i18n-{zh,en}-{shell,me,admin,system}.mjs`） ∥ `model-specs-snapshot.mjs` ∥ `style.css`；含 favicon 全目录三十一档；`views.mjs` ∥ `views-proxy.mjs` 退役） | 页面路由 ∥ HTML/JS/CSS ∥ 静态直发 ∥ IA/导航 ∥ 多语言（§2.2） ∥ 可见面二轮（§2.3） ∥ 弹窗与服务模型配置面（§2.4） ∥ 样式族规范（§2.5） ∥ 系统页配置控制台（含代理设置与连通测试——§2.1 ∥ §2.7） | `webui/WEBUI.md` |
 | ops | `thincoder-server/src/ops/` 五档（config ∥ log ∥ cli ∥ presets ∥ update）+ 部署档组（`thincoder-server/deploy/thincoder-server.service` ∥ `thincoder-server/deploy/docker-entrypoint.sh` ∥ `thincoder-server/deploy/converge.mjs` ∥ `thincoder-server/deploy/backup.mjs` ∥ `thincoder-server/Dockerfile` ∥ `thincoder-server/.dockerignore` ∥ `thincoder-server/docker-compose.yml`）+ 模板/说明档（`thincoder-server/config.example.json` ∥ `thincoder-server/README.md`）（已落盘） | 配置（含 provider 预设） ∥ 日志 ∥ 运维 CLI ∥ 更新机制（自检/自升/收敛） ∥ 部署面（npm ∥ Docker ∥ systemd ∥ 备份） | `ops/OPS.md` |
+| client | `thincoder-server/src/client/` 一档（routes）（拟新增） | 客户端接入：客户面登录 ∥ 退出（token 吊销） ∥ 当前态读数（`me`）——token = 具名成员 key（复用 accounts key 面） | `client/CLIENT.md` |
 
 （各域「不做」面 = 各域档「本域边界」段；全局范围 = 头注「范围注」；逐档行数 = 各域档「本域文件与行数预算」。）
 
@@ -232,7 +233,8 @@
   `-quota-v2-member-models` **740** ∥ `-server-public-structure` **156** ∥ `-console-proxy-page` **547** ∥ `-server-console-config` **795**（十五件均 ≤800 硬限；本件逼近——余 5 行，拆分预案宜随档） ∥ `-server-small-fixes` **349**。（父侧补注——设计评审 #109 发现 3 对账；可 revert）
   team-login-client-access 批预算（2026-10-10 设计轮——本批；台账 #1212；需求 §2:31 + AC-31）：服务端产品面 ≈**+77**——逐档 = `thincoder-server/src/client/routes.mjs`（拟新增）≈75（login ∥ logout ∥ me 三处理 + 注册行；复用 members/keys/guard/audit 单源——零迁移零新码） ∥
   `thincoder-server/bin/thincoder-server.mjs` 实读 **182** ⇒ ≈184（import ∥ 注册行）；域面 = **client 域新立（一档）**；accounts ∥ store ∥ gateway ±0（结构版本保持 v10）；
-  `thincoder-server/package.json` ±0（`prepublishOnly` 清单 38 ⇒ **39**——本批件入链；单行清单行数零变）；批内件一件（`docs/batches/2026-10-10-team-login-client-access.test.mjs`——估 ≈260 行）；机制全文 = `client/CLIENT.md` §1/§5（KD-SV-61/62）；端侧清单（核 + 三端）另册 = `docs/core/design/TEAM.md` §4。
+  `thincoder-server/package.json` ±0（`prepublishOnly` 清单 38 ⇒ **39**——本批件入链；单行清单行数零变）；**批内件两件（跨档集）**：服务端单件 = `docs/batches/2026-10-10-team-login-client-access.test.mjs`（估 ≈260 行——**入 server 链**：`prepublishOnly` 38 ⇒ 39）；
+  核 + 三端结构件 = `docs/batches/2026-10-10-team-login-client-access-ends.test.mjs`（估 ≈380 行——**不入 server 链**：跨面件无宿主产品链——登记面 = `docs/core/design/TEAM.md` §4 ∥ `docs/desktop/design/SETTINGS.md` §3.2）；机制全文 = `client/CLIENT.md` §1/§5（KD-SV-61/62）；端侧清单（核 + 三端）另册 = `docs/core/design/TEAM.md` §4。
   控制台布局收正批回填（2026-10-07——批 `docs/batches/2026-10-07-console-layout.md`；功能点 20 四件——五页视口高壳 ∥ 页脚行计数 ∥ 左对齐 ∥ 弹窗内列表表格化）：产品面实读——webui 八档：`app` **318**（`dataShell` :94 ∥ `SHELL_PAGES` 恰五路径 :255） ∥ `style` **215**（高度链 :191-200 ∥ 回退媒体查询 :203-205） ∥
   `views-admin` **185** ∥ `views-providers` **61** ∥ `views-models` **199** ∥ `views-audit` **94** ∥ `views-me` **125** ∥ `views-providers-modals` **287** ∥ i18n 两表 **334 ∥ 331**（+6 键/表）；`package.json` ±0（`prepublishOnly` 十七 ⇒ **十八件**）；零新档（public 档目 19 ∥ 20 不变）；
   批内件 `docs/batches/2026-10-07-console-layout.test.mjs`（腿 A–G——**8/8 绿**）；父侧门禁 **148/148**；随正五件（stub ctx 三 + 门禁计数二——父侧落）；估/实读差 = 该批 §5 披露（`app` ≈316/318 ∥ `style` ≈222/215 ∥ `views-admin` ≈189/185 ∥ `views-modals` ≈280/287）。
@@ -535,3 +537,4 @@
 - 2026-10-10：清账轮簇Ⅱ server 面小修/清账批（批 `docs/batches/2026-10-10-server-small-fixes.md` · 台账 #1024 ∥ #1025 ∥ #1056 ∥ #1057 ∥ #1137 ∥ #1146；2026-10-10 实施轮）：§6 滞账注两条 ⇒ 删（D8——失效表达式不留现面）+ 原位补 2026-10-07 五批总账行（布局收正 ∥ 配额分模型 ∥ 配额 v2 · 成员模型 ∥ 模型元数据 ∥ 列式收正——五行实读逐批取数）∥ §6 板级行 `prepublishOnly` 件数链收正（⇒ **38 件**——盘面实读 36 + 本批两件）∥ §9 R40② 滞账 ⇒ 已补（五行在 §6）∥ §9 R40③ 词汇口径 ⇒ 统一已办（台账 #1025）；同源随动 = `webui/WEBUI.md` §2.2/§2.3⑥/§2.6⑤/变更记录 ∥ `ops/OPS.md` §5.1。**零新语义**（句面 ∥ 读数 ∥ 登记）。
 - 2026-10-10（**console-proxy-back 批 · 设计形式化轮 · eng-designer**——承批档 `docs/batches/2026-10-10-console-proxy-back.md` §2 · 台账 #1199；需求 §2:30 + AC-30 回改；用户 08:22「服务器的代理设置还是放回系统设置页面。」+ 08:41「测试要保留。」）：§1 定位句（侧栏分组导航十页）∥ §2.1 webui 行三十一 ⇒ **三十档**（`views-*` 十一档；含 favicon 三十一档；`views-proxy.mjs` 退役）+ 职责面（系统页配置控制台含代理设置与连通测试——§2.1 ∥ §2.7）∥ §2.2 控制链十页/管理七页随正 ∥ §4 索引 KD-SV-60 重写（回迁形）+ KD-SV-20 枚举去代理 ∥ §6 添本批预算行（实读增量 **−65**；档目 **30 ∥ 31**；跨批件十五档随正 ∥ 零新件）∥ §7 AC-12/AC-16/AC-18 三行档目链补「代理回迁批后 **30 ∥ 31**」+ AC-28 行代理回迁句 + AC-30 行承载面重写 ∥ §9 本行；同源随动 = `webui/WEBUI.md` ∥ `gateway/API.md` ∥ `ops/OPS.md`。**产品码零触**（形式化轮——码已落）。
 - 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212；需求 §2:31 + AC-31）：**client 域新立**——§3 文档地图板 2 + 域 **7**（+ `client/CLIENT.md`）∥ §4 索引增 KD-SV-61/62（标题 1–60 ⇒ **1–62**）∥ §6 添本批预算行（产品面 ≈+77；client 域新立）∥ §7 增 AC-31 行（两面判据指针）∥ §9 增 R50（需求读法披露 ∥ 随正件 ∥ 部署收尾）；同源随动 = `client/CLIENT.md`（新档） ∥ `accounts/ACCOUNTS.md` ∥ `gateway/API.md` ∥ `EVOLUTION.md` ∥ 端侧 = `docs/core/design/TEAM.md`。**产品码零触（设计轮）**。
+- 2026-10-10（**team-login-client-access 批（B1）· 设计评审轮 1 修正（fix 轮 · 发现 1 ∥ 3）· eng-designer**——承批档 §3 轮次 1 · 台账 #1212）：§2.1 补 **client 域行** + 「六域」⇒ **七域**（含 §1 落点句「域 6 ⇒ 7 档」同拍）∥ §6 本批块**批内件两件对账**（服务端单件入链 ∥ -ends 件不入链——逐件给由）；同源随动 = `EVOLUTION.md` §1-G4（第一步六域 + client 补立）。**零新语义**（评审发现的直接导出项）。

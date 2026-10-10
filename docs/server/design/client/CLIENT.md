@@ -11,6 +11,7 @@
 - **端标签**：落 `api_keys.name`（如 `CLI@台式机`；端侧生成 ∥ 服务端校验沿用 key 名口径——trim 后 ≤40 字符；缺省/空 ⇒ 默认名助手 `key-N`——单源 = `accounts/ACCOUNTS.md` §1.1）。
 - **不设过期**：`api_keys` 无过期列——天然成立；**逐请求查库**（KD-SV-11 不变——吊销下一次请求即判）。
 - **签发 ∥ 吊销**：每次登录签发一枚（**不受 20 上限**——沿「轮转 ∥ CLI 不受限」先例，`accounts/ACCOUNTS.md` §1.1）；退出 = 吊销该枚（软删——行保留）；不自动清理旧 token（「列表可撤销」= 用户面机制——口径①）。
+- **已认账（token 生命周期——口径①）**：累积可预期（每次登录一枚 ∥ 无过期 ∥ 不自动清理）——清理 = 用户面（key 列表逐把吊销——§1「列表可撤销」面）；换 server 重登（单登录态覆盖）⇒ 旧 server 的 token 不在本机——撤销径 = 旧 server 控制台 key 列表（`webui/WEBUI.md` §2.3⑥ ∥ `GET /api/me` ∥ CLI `key revoke`）。
 - **兼作 `/v1` 凭据**：同一 token 两用——`/api/client/*`（数据面，本档）∥ `/v1/*`（模型面，`gateway/API.md` §2）；校验单源 = `verifyKey`（账号 key 面）；客户端面门面 = 复用 `requireApiKey`（`thincoder-server/src/gateway/routes.mjs:25`）。**无第二校验面**。
 - **列表可撤销**：token 即具名 key——列表/吊销面 = 既有「我的 · key」页（`webui/WEBUI.md` §2.3⑥）∥ `GET /api/me` 成员行 key 清单 ∥ CLI `key list` / `key revoke`（`ops/OPS.md` §3）；**零新列表端点**。
 - **与控制台会话面关系**：`sessions` 表（浏览器 cookie 面——KD-SV-12）**零改、零复用**——客户端登录不落 `sessions` 表；两族凭证物理分离（cookie ∥ `Authorization: Bearer`）保持（理由 = §5 KD-SV-61 被否候选栏）。
@@ -50,7 +51,7 @@
 | AC-31②（token 落本地 ∥ 明文密码零落盘） | login 200 携 `token`（仅一次回显）∥ 服务端库存 hash（实读 `api_keys.key_hash` 行在场）∥ 端侧零密码字段（`docs/core/design/TEAM.md` §5） | 批内件 |
 | AC-31③（登录后自动 provider——模型可用） | 服务面：该 token 对 `/v1/models` 与 `/v1/chat/completions` 可用（同 key 面判据——`gateway/API.md` §2）；端侧派生条目面 = `docs/core/design/TEAM.md` §5 | 批内件 + 收口轮 |
 | AC-31④（未登录 ⇒ 团队各面不启用） | 端侧登录态门 = `docs/core/design/TEAM.md` §5；服务面 = 无 token 请求 `/api/client/*` ⇒ 401 | 批内件 + 收口轮 |
-| AC-31⑤（退出 ⇒ 服务端会话撤销 + 团队面关闭） | logout ⇒ 该 token 下一次 `/api/client/*` 与 `/v1/*` 请求 ⇒ 401（吊销即判——无缓存）；端侧关闭面 = `docs/core/design/TEAM.md` §5 | 批内件 + 收口轮 |
+| AC-31⑤（退出 ⇒ 登录 token 吊销（`api_keys` 行）+ 团队面关闭） | logout ⇒ 该 token 下一次 `/api/client/*` 与 `/v1/*` 请求 ⇒ 401（吊销即判——无缓存）；端侧关闭面 = `docs/core/design/TEAM.md` §5 | 批内件 + 收口轮 |
 
 ## 5. 关键决策（本域）
 
@@ -78,3 +79,5 @@
 ## 变更记录
 
 - 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212；需求 §2:31 + AC-31）：建档——客户端 token 面（token = 具名成员 key）∥ `/api/client/*` 骨架（login ∥ logout ∥ me）∥ 端点表 ∥ 文件预算 ∥ 验收判据（AC-31）∥ 决策 KD-SV-61/62 ∥ 用例 ∥ 边界。实施 = 本批实施轮。
+- 2026-10-10（**team-login-client-access 批（B1）· 设计评审轮 1 修正（fix 轮 · 发现 9）· eng-designer**——承批档 §3 轮次 1 · 台账 #1212）：§1 增 token 生命周期**已认账**条（累积可预期 ∥ 用户面清理；换 server 重登旧 token 处置）——文案面，零机制改。**零新语义**（评审发现的直接导出项）。
+- 2026-10-10（**B1 批 · 评审回笔随动（发现 2 呼应）· eng-designer**——承批档 §3 发现 2（需求档已由主 agent 收正——`docs/server/requirements/PROJECT.md` §2:31③ ∥ AC-31）：§4 AC-31⑤ 行标题随正——「服务端会话撤销」⇒「登录 token 吊销（`api_keys` 行）」（与需求档收正句逐字同拍；机制面零改）。**零新语义**。

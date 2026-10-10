@@ -50,7 +50,8 @@
 ### 2.4 派生条目的可见性（停用/隐藏）
 
 - **可用性**：派生条目无 `apiKey` ⇒ 不参与运行时解析（`hasKey` 既有判据——零新代码）；不触发「渠道无效」类提示（回退序跳过）。
-- **列表可见性**：`derived === true` ∧ 无 key ⇒ 从 provider 列表/模型候选面隐藏（三端各一处过滤：CLI `thincoder-cli/src/tui/model-picker.mjs` ∥ CLI provider-admin ∥ VSC `providerStatus`（`thincoder-vscode/src/extension/settings.mjs`）∥ 桌面 `providerList`（`thincoder-desktop/src/main/providers.mjs`））；**登录态下在场**（正常参与，key 掩码显示）。
+- **列表可见性**：`derived === true` ∧ 无 key ⇒ 从 provider 列表/模型候选面隐藏（**四消费面各一处过滤**：CLI 模型候选（`thincoder-cli/src/tui/model-picker.mjs`） ∥ CLI provider-admin ∥ VSC `providerStatus`（`thincoder-vscode/src/extension/settings.mjs`）∥
+  桌面 `providerList`（`thincoder-desktop/src/main/providers.mjs`）——与 `docs/core/design/PROVIDER.md` §6.25 同拍）；**登录态下在场**（正常参与，key 掩码显示）。
 - **不自动改**：不写 `defaultModel` ∥ 不切换当前会话模型 ∥ 不动既有手工条目（登录唯一副作用 = §2.2 两处写）。
 
 ### 2.5 三端同构面（能力与文案）
@@ -63,7 +64,7 @@
 | 退出动作 | `team logout` | 卡内「退出登录」钮 | 段内同钮 |
 | 当前态 | `team status`（未登录 ∥ 已登录：server + member + label） | 卡内状态行 | 段内状态行 |
 | 未登录提示 | 「未登录——登录后可用」+ 指引进登录 | 同句 | 同句 |
-| 失败出词 | 网络不可达 ∥ 用户名或密码错误 ∥ 登录尝试过于频繁（含等待秒数） | 同三句 | 同三句 |
+| 失败出词 | 网络不可达 ∥ 用户名或密码错误 ∥ 登录尝试过于频繁 | 同三句 | 同三句 |
 
 **文案同构判据**：「未登录提示」与「失败出词」三端**逐字同句**（VSC/桌面 = zh i18n 键值逐字相等；CLI = 单语直出同句）。
 
@@ -73,7 +74,7 @@
 |---|---|---|
 | D-TM1 | **登录态单源 = `team` 段（`token` 在场）；派生条目 = 派生物**（apiKey 镜像） | 「派生」语义正向（登录 → provider）；后续数据面读 `team.token` 不依赖 provider 条目存亡；被否：以「派生条目 apiKey 在场」为登录态（语义倒置；手工删条目 ⇒ 登录态失） |
 | D-TM2 | **退出 ⇒ 条目保留（摘 apiKey）+ `derived` 标记保留**；provider 面零新字段 | 口径②「停用/隐藏（不删标记）」直译；零新字段（apiKey 空缺即不可用——既有判据）；被否：加 `disabled` 字段（跨端列表/解析全链各加判据——面大收益零） |
-| D-TM3 | **隐藏判据 = `derived && !hasKey`**（列表/候选面） | 登录态（有 key）照常可见可用；退出后单条过滤规则（三端各一处）；被否：登录态下也隐藏（用户不可见登录带来的渠道——诊断面差） |
+| D-TM3 | **隐藏判据 = `derived && !hasKey`**（列表/候选面） | 登录态（有 key）照常可见可用；退出后单条过滤规则（四消费面各一处）；被否：登录态下也隐藏（用户不可见登录带来的渠道——诊断面差） |
 | D-TM4 | **同名手工条目 ⇒ 提示不覆盖** | 用户既有配置零破坏（登录不夺本机面）；数据面不受累（token 独立）；被否：自动覆盖（静默毁用户条目）· 阻断登录（数据面明明可用） |
 | D-TM5 | **端标签 = `端名@主机名` 自动生成**（≤40 裁剪） | 口径①示例形；零输入字段（口径③字段表三件）；被否：表单加标签字段（面增） |
 | D-TM6 | **密码问句 = CLI 隐藏回显（TTY）/ stdin 行（非 TTY）** | 对齐 VSC/桌面 `type=password` 能力（文案同构）；非 TTY 保留脚本化直登径；被否：`--password` 旗标（shell 历史泄漏）· 明文回显 |
@@ -83,7 +84,7 @@
 | 域 | 档 | 行数（实读——设计估） |
 |---|---|---|
 | core | `thincoder-core/team.mjs`（拟新增） | **≈180**（设计估——登录 ∥ 退出 ∥ 状态 ∥ 标签 ∥ 条目 upsert/停用 ∥ 地址归一 ∥ 错误分类） |
-| core | `thincoder-core/config.mjs`（已落盘） | **495 ⇒ ≈503**（实读——`team` 段加载归一 +≈8） |
+| core | `thincoder-core/config.mjs`（已落盘） | **495 ⇒ ≈503**（实读——`team` 段加载归一 +≈8；**越 500 软线 ⇒ 主动拆分评估层**——拆分预案指针 = `docs/core/design/CONFIG.md` §5（核内落点行数）→ `docs/core/design/CORE-UNIFICATION.md` §2.8.1「核内逐档行数与拆分计划」） |
 | core | `thincoder-core/config-io.mjs`（已落盘） | **282**（实读——零改：写面复用 `writeConfigAtomic`） |
 | CLI | `thincoder-cli/src/cli/team-command.mjs`（拟新增） | **≈150**（设计估——三子命令 ∥ 旗标 ∥ 隐藏回显读件） |
 | CLI | `thincoder-cli/src/command-table.mjs`（已落盘） | **192 ⇒ ≈200**（实读——+import +case） |
@@ -107,7 +108,7 @@
 | 桌面 | `thincoder-desktop/src/preload/preload.cjs`（已落盘） | **85 ⇒ ≈88**（实读——+3 CHANNELS） |
 | 桌面 | `thincoder-desktop/renderer/i18n-settings.mjs`（已落盘） | **156 ⇒ ≈168**（实读——+≈12 键） |
 
-- 批内件两件：`docs/batches/2026-10-10-team-login-client-access.test.mjs`（服务端面）∥ `docs/batches/2026-10-10-team-login-client-access-ends.test.mjs`（核 + 三端结构面——估 ≈380 行）。
+- 批内件两件（跨档集——件数口径与服务端板档 §6 本批块对拍）：服务端单件 = `docs/batches/2026-10-10-team-login-client-access.test.mjs`（估 ≈260——**入 server 链**（`prepublishOnly` 38 ⇒ 39））∥ 本册件 = `docs/batches/2026-10-10-team-login-client-access-ends.test.mjs`（核 + 三端结构面——估 ≈380；**不入链**——跨面件无宿主产品链）。
 - `thincoder-core/agent-tools/settings.mjs` ±0（`team` 不入 `DEFAULTS`——工具面零改）。
 
 ## 5. 验收判据（端侧面——回指 AC-31 ①–⑤）
@@ -134,8 +135,10 @@
 ## 7. 边界（不做）
 
 - 不做 TUI 斜杠命令（`/team`——随团队面入 TUI 时另批） ∥ 不做登录 token 管理面（清单/吊销 = 控制台 key 页 ∥ CLI key 命令——既有面） ∥ 不做多账号/多服务器切换（单登录态） ∥ 不做离线缓存 ∥ 不做授权码/device-flow（已搁置）。
+- **已认账（token 生命周期——口径①）**：累积可预期（每次登录一枚 ∥ 无过期 ∥ 不自动清理）——清理 = 用户面（key 列表逐把吊销——既有面）；换 server 重登（单登录态覆盖）⇒ 旧 server 的 token 不在本机——撤销径 = 旧 server 控制台 key 列表（`webui/WEBUI.md` §2.3⑥ ∥ `GET /api/me` ∥ CLI `key revoke`）。
 - 不改 `memory.team`（B3 面） ∥ 不动 personal/project 记忆 ∥ 不自动改 `defaultModel` ∥ 不切换会话模型 ∥ 不动手工 provider 条目。
 
 ## 变更记录
 
 - 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212）：建档——定位与边界 ∥ 机制面（`team` 段 ∥ 派生条目 ∥ 登录/退出流程 ∥ 可见性 ∥ 三端同构）∥ 决策 D-TM1–6 ∥ 受影响文件预算（24 行）∥ 验收判据（AC-31 ①–⑤）∥ 用例 ∥ 边界。实施 = 本批实施轮。
+- 2026-10-10（**team-login-client-access 批（B1）· 设计评审轮 1 修正（fix 轮 · 发现 3 ∥ 7 ∥ 8 ∥ 9 ∥ 12）· eng-designer**——承批档 §3 轮次 1 · 台账 #1212）：§4 批内件对账（服务端单件入链 ∥ 本册件不入链）+ `config.mjs` 行越线注与拆分预案指针 ∥ §2.5 删「（含等待秒数）」（秒数无载体——三句逐字同判据保持；三端已同拍）∥ §2.4 ∥ §3 D-TM3 消费面计数统一「四消费面」（与 `PROVIDER.md` §6.25 同拍）∥ §7 增 token 生命周期已认账两条。**零新语义**（评审发现的直接导出项）。

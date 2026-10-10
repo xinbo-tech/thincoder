@@ -38,7 +38,7 @@
 用户 11:56「开」= **B1 批点火**（设计轮派发）。设计评审点火 ∥ 批准 ∥ 实施派发**逐段待用户**（本批未获全链自动授权）。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：（eng-designer 写入时更新）
+**状态行**：设计完成（修复轮（评审轮次 1 · 十号）逐条落地——供父侧核验）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 **批任务与设计（eng-designer · 设计轮 · 2026-10-10——台账 #1212；需求 §2:31 + AC-31；§1 已读；轮次 = 初始轮（设计））**
@@ -102,7 +102,60 @@
 
 本设计轮内自修两处（均报告）：① `docs/desktop/design/SETTINGS.md` 变更记录行 `src/main/team.mjs` 缺「（拟新增）」标记 ⇒ 悬空 1 条（闸态）——同行补标；② 四处正文行超 300 字符（`IPC.md` 白名单面 ∥ 计数行、桌面 `SETTINGS.md` §4 块、`ACCOUNTS.md` §1 条）⇒ 折行（零语义）。修正后复跑绿。
 
+### 修复轮块（评审轮次 1 · 十号落修——2026-10-10 · eng-designer）
+
+**裁定承据**：批档 §3 轮次 1——发现 2 = 父侧已直接收正需求档（`docs/server/requirements/PROJECT.md` §2:31③ ∥ AC-31——「会话撤销」⇒「登录 token 吊销（`api_keys` 行）」）+ 设计侧回声随正（`docs/server/design/client/CLIENT.md` §4 AC-31⑤ 行标题）；发现 11 = 非问题。**本修复轮 = 号 1 ∥ 3 ∥ 4 ∥ 5 ∥ 6 ∥ 7 ∥ 8 ∥ 9 ∥ 10 ∥ 12**（设计级修正——零机制改；6 ∥ 7 = 钉死句；5「不入菜单」∥ 7「删秒数」= 评审二选一的选定项，由在逐号行内）。
+
+**逐号（号 → 改动——行位以现盘为准）**：
+
+1 → `docs/server/design/PROJECT.md`：§1 落点句「域 6 ⇒ 7 档」+ §2.1「六域」⇒ **七域** + §2.1 表 **+client 域行**；`docs/server/design/EVOLUTION.md`：§1-G4/G6 句明示（第一步六域 + client 域 2026-10-10 B1 批补立）。
+3 → `PROJECT.md` §6 本批块 ∥ `docs/core/design/TEAM.md` §4：批内件**两件对账**——服务端单件**入链**（`prepublishOnly` 38 ⇒ 39）∥ -ends 件**不入链**（跨面件无宿主产品链——登记面 = 两档互指）——逐件给由。
+4 → `docs/server/design/accounts/ACCOUNTS.md` §2.1：`login_success` ∥ `login_failure` ∥ `key_issue` ∥ `key_revoke` 四行 detail 补 `surface?` + 取值域注（`"client"`——客户端面两写点 ∥ 余面键缺席）。
+5 → `docs/desktop/design/SETTINGS.md`：KD-68 ③（复用链 **八行**——+team 行）∥ ④（`SCOPES` **十一**名 ∥ `settings.modal` 十一值 ∥ `SECTIONS` **八段** ∥ 菜单六名派生「去「模型」∥ 去「团队」」∥ 漂移排除句）∥ §2.1 **八段**枚举 ∥ §2.10 复用链八组 ∥ §2.11 现值注两处 ∥ §2.21 闭集随动条 ∥ §3.2 本批块随正（`MODAL_READS` **+1 行**（`team → loadTeam`）∥ `app-menu.mjs` **零改**（团队不入菜单——`SETTINGS_GROUPS` 六名不动）∥ `i18n.mjs` **432 ⇒ ≈433**（键数链注续链）∥ **闭集随动三件处置行**）+ **旧漂移件随正登记**（`docs/batches/2026-10-02-desktop-settings-menu-upgrade.test.mjs` ∥ `docs/batches/2026-10-02-settings-menu-trim.test.mjs`——排除句去「模型」⇒ 去「模型」去「团队」）∥ §4 机检面补闭集随动。
+6 → 同档 §2.21 写面：「推 `teamStatus`」⇒「**回执后渲染面复读**」（`team:status` 复读 + provider 列表复读（`loadProviders` 既有读链）——零新推送通道 ∥ IPC 零动）；刷新调用点入 §3.2 行。
+7 → `docs/core/design/TEAM.md` §2.5：删「（含等待秒数）」——由 = 秒数无载体（桌面回执 reason 三值闭集；补载体须动 IPC 回执形）+「三句逐字同句」判据优先；三端现即同拍（`docs/vsc/design/SETTINGS.md` §2.20 ∥ 桌面 §2.21 零改）。
+8 → `TEAM.md` §4：`config.mjs` 行补越线注（>500 软线 ⇒ 主动拆分评估层）+ 拆分预案指针（`docs/core/design/CONFIG.md` §5 → `CORE-UNIFICATION.md` §2.8.1「核内逐档行数与拆分计划」）。
+9 → `CLIENT.md` §1 ∥ `TEAM.md` §7：token 生命周期**已认账**两条——① 累积可预期（每次登录一枚 ∥ 无过期）·清理 = 用户面（key 列表逐把吊销）；② 换 server 重登 ⇒ 旧 server 的 token 不在本机·撤销径 = 旧 server 控制台 key 列表（仅文案；机制零改）。
+10 → `docs/cli/design/CLI-ENTRY.md`：论域读数收正当刻实读——`bin/thincoder.mjs` **188** ∥ `src/command-table.mjs` **192** ∥ `src/command-interactive.mjs` **205**（as-of 2026-10-10；与 `TEAM.md` §4 基线同拍——同批两套基线消除）。
+12 → `TEAM.md` §2.4 ∥ §3 D-TM3：消费面计数统一「**四消费面**」（与 `docs/core/design/PROVIDER.md` §6.25 同拍）。
+
+**随正（同缺陷邻位——报告在案）**：`PROJECT.md` §1 落点句（域 6 ⇒ 7 档）；`TEAM.md` §3 D-TM3（「三端各一处」⇒「四消费面各一处」）；桌面 §2.11 现值注两处；桌面 KD-68 ③ 复用链（含于号 5）；`TEAM.md` §2.4 行宽折二行（行宽闸）。
+
+**机检**（`node scripts/doc-check.mjs` · 仓根 `thincoder/`）：**EXIT 0**——汇总 = 候选 55468 · **悬空 0** · 注记豁免 320 · 拟新增 56 · 迁移期引文 326 · 声明源缺位 0；分面悬空 = 用例号 0 ∥ 路径/坐标 0 ∥ 符号·窄 0（符号·宽 = 报告面·不入闸——存量 930）；行宽 = 非豁免区带 0 行超 300；行数面 = 差异 4 条（报告态·回填工单——他档：`desktop/UI.md:501` ∥ `desktop/SHELL.md:183` ∥ `desktop/RENDERER.md:338` ∥ `desktop/PACKAGING.md:340`——非本批面）。
+
+**未动（报告——非本轮授权面）**：`docs/desktop/design/IPC.md` §1 `ev:menu` 行「`SCOPES` 七名宽容」计数陈旧（现 10 ∥ B1 后 11）+「= `SECTIONS` 名序去「模型」」派生句 B1 后不精确——登记供父侧择批；`PROJECT.md` §6（2026-10-06 批记录行「板 2 档 + 域 6 档」）= 建档期史句——记录面不回改；档头「设置面板（七段）」与批注边界史句（「七段值面语义」类）= 非定义位未动。
+
+**零新语义**（评审发现的直接导出项）。
+
 ## §3 设计评审（评审子代理）
+
+### 轮次 1（评审子代理）
+
+**设计评审（B1 批 team-login-client-access：两新档 `client/CLIENT.md` ∥ `core/TEAM.md` + 随动 11 档 + 需求 §2:31/AC-31）——发现表 + VERDICT + 计数**
+
+范围 = 在册 13 档全读（含两新档）；声明限制两条：① 无项目标准档 ⇒ 方法学合规以 AGENTS.md 项目指南 + 各档既有建档/变更记录先例判；② 仓根无文档地图 ⇒ Document ownership 降级为「档内/跨档单一权威源（D2 不复制）+ 板档 §3 文档地图」判。档-码对账三项（token 面 ∥ 端点断言 ∥ 受影响文件行数）已逐项核（详见发现 8/10/12 与行数对账）。
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | Document ownership（域图） | 🟡 | 服务器板档 §2.1 责任地图仍述「六域 = gateway ∥ accounts ∥ metering ∥ store ∥ webui ∥ ops」（`thincoder/docs/server/design/PROJECT.md:20`）且表内无 client 域行，而 §3 文档地图已作「板 2 + 域 7」（同档 `:71`）——同档两处域集/域数不一，新域目录 `thincoder-server/src/client/` 未入责任地图；`EVOLUTION.md:14` G4 行同句「六域目录自第一步立」。 | 在 §2.1 表补 client 域行（代码 `thincoder-server/src/client/`；职责 = 客户端接入 login/logout/me；域档 = `client/CLIENT.md`）并把「六域」收正为含 client 的计数；G4 行同拍或明示该计数为「第一步六域」的史句。 |
+| 2 | Requirements（规范面措辞） | 🟡 | AC-31 判据行仍作「退出 ⇒ 服务端会话撤销 + 团队面关闭」（`thincoder/docs/server/requirements/PROJECT.md:236`），§2:31③ 同句（`:169`），而 §2:31① 已收正为「端侧 token 落账号 key 面」（`:167`）+ 设计按 token（`api_keys` 行）吊销实现、`sessions` 零涉（`CLIENT.md:16`）——「会话」一词在规范面可被读成 `sessions` 表撤销，与已确认读法相抵。 | 把 AC-31 与 §2:31③ 的「会话撤销」逐字收正为「登录 token（`api_keys` 行）吊销」或就地加读法括注（沿 §2:31① 口径），使机检判据不可被读成 `sessions` 表撤销。 |
+| 3 | Doc-state（跨档计数） | 🟡 | 批内件件数两处不一：服务器板档 §6 本批行作「批内件一件（`docs/batches/2026-10-10-team-login-client-access.test.mjs`——估 ≈260 行）」（`PROJECT.md:235`），而 `TEAM.md:110` 作「批内件两件：…（服务端面）∥ …-ends.test.mjs（核 + 三端结构面——估 ≈380 行）」（桌面侧亦按 -ends 件登记 = `docs/desktop/design/SETTINGS.md:470`）。 | 两处对账：服务器板面明示仅列服务端单件（`prepublishOnly` 入链件）并把 -ends 件登记为核/端侧批内件，或两处统一计为两件（含 -ends 件归属与是否计入门禁清单）。 |
+| 4 | Document ownership（审计目录） | 🟡 | 审计事件目录 detail 列未随本批同步：`ACCOUNTS.md` §2.1 仍作 `{ ip }`（`:55`）/ `{ keyHint }`（`:59`），而本批在 §1 新增条（`:15`）与 `CLIENT.md:17` 均声明「detail 携 `surface:"client"`」——同一机制（审计 detail 形）在 owning 档内两处描述不一，且 `surface` 取值域（仅 client？控制台面缺省？）无定义。 | 在 §2.1 表相关四行 detail 列补 `surface` 字段并给取值域说明（客户端面 = `{ ip, surface:"client" }` / `{ keyHint, surface:"client" }`；余面键缺席），使批内件断言有单源形。 |
+| 5 | Document ownership（桌面闭集涟漪） | 🟡 | 桌面加第 8 段后，`SECTIONS` 派生闭集未随动：本档 §2.1 仍枚举「面 = **七段**（渠道 / 模型 / agent 参数 / MCP / env（proxy ∕ shell） / tools（embedding ∥ websearch 两 key + 索引状态行） / models（consult ≤5 ∕ advisor 两 picker）」（`docs/desktop/design/SETTINGS.md:41`）、KD-68 ④ 仍作「菜单发出闭集 = 六名」+ 漂移检测「`SETTINGS_GROUPS` ≡ `SECTIONS` 名序**去「模型」**」（`:29`，镜像件 = `thincoder-desktop/src/main/app-menu.mjs`），而 §2.21 明写「设置面第 8 段「团队」（`SECTIONS` 追加序尾——不重排既有七段）」（`:306`）——`app-menu.mjs`（SETTINGS_GROUPS）∥ `MODAL_READS` ∥ `renderer/i18n.mjs`（键数链注）均未入本批受影响文件表。 | 明写「团队」是否入菜单组项（入 ⇒ `SETTINGS_GROUPS`/`app-menu.mjs` 与菜单闭集计数随正；不入 ⇒ 漂移检测判据补排除句），并把 `app-menu.mjs`、`MODAL_READS` 行、`i18n.mjs` 链注补入受影响文件表（或明示零改并给由）。 |
+| 6 | Clarity / Feasibility（桌面刷新面） | 🟡 | 桌面「成 ⇒ 推 `teamStatus` + provider 列表刷新（派生条目随动）」（`docs/desktop/design/SETTINGS.md:307`）无通道载体：`IPC.md` 通道面为闭集——§2 白名单「48 项 ⇒ 51 项」仅三请求通道（`IPC.md:154`），§1 事件面「**二十四通道**一律携 `key`」（`:55`）无团队推送；`ev:config` 自写抑制（写经 `writeConfigAtomic` ⇒ 零推送）——该「推」与本体刷新（含 provider 列表随动的调用点）均无落点入表。 | 把桌面写面收正为「回执后渲染面复读」（沿桌面既有写后复读口径）并点名落点（团队段接线档 + provider 列表刷新调用点），或明确新增推送通道并同步 `IPC.md` 通道/白名单计数。 |
+| 7 | Clarity（失败出词载荷） | 🟡 | 「登录尝试过于频繁（含等待秒数）」（`TEAM.md:66`）的秒数无载体：桌面回执「`{ ok, reason? }`」+「reason 三值 = `network` / `credentials` / `rate_limited`」（`IPC.md:145`）不含秒数字段，VSC 同句亦作「登录尝试过于频繁——三句逐字同」（`docs/vsc/design/SETTINGS.md:635`）——core `team.mjs` 错误分类返回形未定义，「逐字同句」与「含等待秒数」无法同时机检。 | 钉定 core `team.mjs` 错误分类返回形（如 `{ kind, retryAfterS? }`）并让三端渲染载荷携秒（或删「含等待秒数」括注），使三端文案同构判据可机检。 |
+| 8 | Affected-file annotations（越线） | 🟡 | `thincoder-core/config.mjs` 标注「**495 ⇒ ≈503**」（`TEAM.md:86`）越 500 软线（>500 = 主动拆分评估层），该行未带越线/拆分预案注；`CONFIG.md` §5 仅有指 `CORE-UNIFICATION.md` §2.8.1 的指针（`docs/core/design/CONFIG.md:76` 括注「`thincoder-core/config.mjs`（带拆分计划）」）。 | 在 `TEAM.md` §4 该行补越线注 + 拆分预案指针（沿 `CONFIG.md` §5 指法），或在 `CONFIG.md` §6.4 就地注明 +≈8 后越线及其预案落点。 |
+| 9 | Scope / Risk（token 生命周期） | 🟡 | 登录 token 累积与残留无处置且与既有上限相冲：每次登录新签一枚（`CLIENT.md:13`「**不受 20 上限**——沿「轮转 ∥ CLI 不受限」先例 …；不自动清理旧 token」），而自助签发上限为「每成员 **active key ≤ 20**（自助面判据）」（`ACCOUNTS.md:22`）——反复登录可先耗尽 20 ⇒ 控制台自助签发 400、`/api/me` key 清单膨胀；换 server 重登（单登录态覆盖）亦不吊销旧 server 的 token。 | 补一条 token 生命周期处置（同 `label` 登录先吊销旧枚 ∥ 登录 token 单独计数不计入 20 上限 ∥ 明确「累积可预期、由用户面清理」），并把该后果与换 server 重登的旧 token 处置明写为已认账项（含 AC 边界句）。 |
+| 10 | Doc-state（读数漂移） | 🔵 | 同一批内两套基线：`CLI-ENTRY.md:7` 论域读数「`thincoder-cli/bin/thincoder.mjs`（壳：argv 预处理 + `USAGE` 常量装配 + 分发入口；**178**）」（as-of 2026-09-29）与 `TEAM.md:89`/`:90` 实读 192 ∥ 188 不一（本批增量基线取后者）。 | 顺手把该行读数收正到当刻实读，或注明「本批基线以 `TEAM.md` §4 为准」，消除同批两套基线。 |
+| 11 | Clarity（未证符号） | 🔵 | 设计引用的两个符号/坐标在评审范围内无他处可证（unverified）：「客户端面门面 = 复用 `requireApiKey`（`thincoder-server/src/gateway/routes.mjs:25`）」（`CLIENT.md:14`）与「吊销当前 token 对应 key 行（`revokeKey`——立即生效）」（`CLIENT.md:26`）——在册服务器各档只述 `verifyKey` 与「每请求查库」。 | 实施前就地核对该两符号的导出名与行号（或改述为可核点名的单源入口），以免 ≈75 行预算建在未证门面上。 |
+| 12 | Doc-state（计数口径） | 🔵 | 「隐藏判据 = `derived && !hasKey`」的消费面计数不一：`TEAM.md:53` 作「三端各一处过滤」却列 4 处（CLI 模型候选 ∥ CLI provider-admin ∥ VSC `providerStatus` ∥ 桌面 `providerList`），`PROVIDER.md:609` 同面作「四消费面各一处过滤」。 | 两处计数口径统一（「四消费面」），与 `PROVIDER.md` §6.25 逐字同拍。 |
+
+**Out-of-scope note（无严重度）**：① `store/STORE.md` 不在册 ⇒ AC-31② 引用的列名 `api_keys.key_hash`（`CLIENT.md:50`）无法在册内核对（unverified）；② `docs/batches/2026-10-10-team-login-client-access.md`（批档）不在册 ⇒ 各档「口径①②③④」指涉与 R50 披露原文未逐条核；③ `webui/WEBUI.md`/`metering/METERING.md` 不在册 ⇒ 「既有 key 页/列表可撤销」面未核。
+
+计数：🔴 0 ∥ 🟡 9 ∥ 🔵 3（共 12 条）。
+
+VERDICT: pass
+
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）
