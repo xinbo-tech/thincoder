@@ -30,7 +30,7 @@
 |---|---|
 | `thincoder-cli/src/tui/pickers.mjs` | 通用列表选择器（标题 / 条目 / filter / 位置指示 / 栈式嵌套）+ **`showPicker` 入口契约守卫**（§5.2）+ **删除类二次确认件 `confirmDelete`**（§5.4） |
 | `thincoder-cli/src/tui/wizard.mjs` | 首启配置向导：**首屏两路**（登录团队服务器 ∥ 配置本地 provider ∥ 以后再说——登录面补全批 · §3.1）→ provider 菜单（existing / preset / custom）→ 文本步 → 落盘 → 模型选择；团队路 = 三问步 → 核 `teamLogin` → 模型选择；Esc 全步可跳（无半配置落盘） |
-| `thincoder-cli/src/tui/ask-steps.mjs`（拟新增——登录面补全批） | 问句步进小件（步定义 ∥ 校验 ∥ 推进 ∥ 问句行构造 ∥ 掩码位）——wizard 文本步与 `/team login` 两消费方共用（单源：掩码与提交语义一处） |
+| `thincoder-cli/src/tui/ask-steps.mjs`（登录面补全批增） | 问句步进小件（步定义 ∥ 校验 ∥ 推进 ∥ 问句行构造 ∥ 掩码位）——wizard 文本步与 `/team login` 两消费方共用（单源：掩码与提交语义一处） |
 | `thincoder-cli/src/tui/interaction.mjs` | 权限确认 / 批量确认 / 自由提问（question 工具桥）+ 权限内容预览 |
 | `thincoder-cli/src/tui/config-helpers.mjs` | 配置落盘收口（`persistRaw` / `syncProviderField` / `maskKey`） |
 
@@ -187,7 +187,7 @@
 
 > 需求 = `docs/cli/requirements/TUI.md` F20 范围边界（入口 = `/team` 命令族）；机制单源 = `docs/core/design/TEAM.md` §2。**与 argv 命令族同名同序**（login ∥ logout ∥ status——一词一事）。
 
-- **登记**：`SLASH_COMMANDS` + `HANDLERS` + 新档 `thincoder-cli/src/tui/cmd-team.mjs`（拟新增——各命令实现独立成档：§1 同族先例）。
+- **登记**：`SLASH_COMMANDS` + `HANDLERS` + 新档 `thincoder-cli/src/tui/cmd-team.mjs`（登录面补全批增——各命令实现独立成档：§1 同族先例）。
 - **子命令面**：
   - `/team`（裸 ∥ `status`）——状态面：未登录 ⇒ 「未登录——登录后可用」（逐字）∥ 已登录 ⇒ server + member + label 三行（argv `team status` 同形）+ **活校验**（`teamVerify()`——`invalid` ⇒ 追「已失效——重新登录」句；`unreachable` ⇒ 照显本地态——离线容忍）。
   - `/team login` —— 三问步（地址 → 账号 → 密码；**掩码回显**——同 §3.1 团队步）+ 核 `teamLogin`；成 ⇒ 结果行（argv 同形——同名冲突 `notice` ⇒ 就地提示·逐字同句）+ `state.team` 复读 +（`defaultModel` 未设 ⇒ 追开模型 picker——「登录成即用」兜现；已设 ⇒ 零打断）；败 ⇒ **四句逐字**（`TEAM.md` §2.5）。
@@ -236,6 +236,7 @@
 - 2026-10-10（**login-entry-completion 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §1 · 台账 #1229 ∥ #1230；用户 14:33–14:49 裁定链）：新增 **§3.1 首启向导两路**（F19——route 屏三行 ∥ 同屏换取 ∥ 已填保真 ∥ 以后再说 ∥ 可机判）∥ **§5.5 `/team` 命令族**（三子命令 ∥ 活校验 ∥ 掩码 ∥ 边界）∥ §1 模块地图两行（`cmd-team.mjs` 入册 ∥ `ask-steps.mjs` 新行 ∥ wizard 行随正）。语义单源 = `docs/core/design/TEAM.md` §2 ∥ §2.6。
 - 2026-10-10（**login-entry-completion 批 · 设计评审轮 1 修正（fix 轮 · 发现 4）· eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §3 轮次 1 · 台账 #1229–#1230）：§3.1 ∥ §5.5 补同名冲突 `notice` 就地提示落点（结果行位——逐字同句；一次性事件）。**零新语义**（评审发现的直接导出项）。
 - 2026-10-10（**login-entry-completion 批 · 交互细节补（父侧轻通道笔 · 可 revert）**——承 #150 设计缺口上抛：CLI 首启向导「← 换一种方式」的键盘激活未点名）：§3.1 该行补**键盘激活**口径——provider 步 = 行作列表**末行**（↑↓ 选中 + Enter）；团队三问步 = **↑ 聚焦该行 + Enter**（输入框 Enter=提交 ∥ Esc=取消 语义零改）；行文本**须含可见提示**。**零新语义**（键位 ∥ 提示文案级；被否 = 专属键 ∥ 仅显示不可激活——后者等于给用户一个谎）。
+- 2026-10-10（**login-entry-completion 批 · 设计档回填轮（fix · 三端交卷后）· eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §5（#150 CLI 交卷）· 台账 #1242）：§1 `ask-steps.mjs` 行 ∥ §5.5 登记行去「（拟新增）」标记（两档已落——登录面补全批增）。**零新语义**（标记随实读收正）。
 
 - 2026-10-09（**provider-default-model-purge 批 · 实施期收正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §5 舱2（上抛④）· 台账 #1122）：§4 示例行收正——渠级模型段退场（L1 渠行显示回退 = `baseURL` 同全域口径；`model-picker.mjs` `buildProviderEntries` 模型段只随会话槽值）；**零新语义**（示例随正）。
 

@@ -37,10 +37,14 @@ cd d:\teamcode\thincoder
 git push origin main ; git push github main     # 箱子的 remote = gitee（origin）
 ```
 
-上箱（一条 ssh；远端命令**平铺单层**——见 §6 坑 2）：
+上箱（**分步跑**——每条一行；远端命令**平铺单层**，见 §6 坑 2）：
 
 ```
-ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.5 "set -e; cd ~/thincoder; git pull --ff-only; docker tag thincoder-server:0.1.0 thincoder-server:pre-<日期>; docker build -t thincoder-server:0.1.0 thincoder-server; cd ~/thincoder-server-deploy; docker compose up -d --force-recreate; sleep 6; docker ps --format '{{.Names}} | {{.Image}} | {{.Status}}'"
+$k = "$env:USERPROFILE\.ssh\thincoder_ecs"          # 本机 PowerShell：密钥路径（一次设定）
+ssh -i $k thincoder@10.0.0.5 "cd ~/thincoder && git pull --ff-only"
+ssh -i $k thincoder@10.0.0.5 "docker tag thincoder-server:0.1.0 thincoder-server:pre-<日期>"
+ssh -i $k thincoder@10.0.0.5 "docker build -t thincoder-server:0.1.0 ~/thincoder/thincoder-server"
+ssh -i $k thincoder@10.0.0.5 "cd ~/thincoder-server-deploy && docker compose up -d --force-recreate && sleep 6 && docker ps"
 ```
 
 要点：
@@ -55,7 +59,10 @@ ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.5 "set -e; cd ~/thin
 ## 4. 更新后自检（四条探针——期望读数口径）
 
 ```
-ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.5 "curl -s -m 5 -o /dev/null -w 'healthz=%{http_code}\n' http://127.0.0.1:8787/healthz; curl -s -m 5 -o /dev/null -w 'client/me=%{http_code}\n' http://127.0.0.1:8787/api/client/me; curl -s -m 5 -X POST -H 'Content-Type: application/json' -d '{}' -o /dev/null -w 'client/login=%{http_code}\n' http://127.0.0.1:8787/api/client/login"
+$k = "$env:USERPROFILE\.ssh\thincoder_ecs"
+ssh -i $k thincoder@10.0.0.5 "curl -s -m 5 -o /dev/null -w 'healthz=%{http_code}\n' http://127.0.0.1:8787/healthz"
+ssh -i $k thincoder@10.0.0.5 "curl -s -m 5 -o /dev/null -w 'client/me=%{http_code}\n' http://127.0.0.1:8787/api/client/me"
+ssh -i $k thincoder@10.0.0.5 "curl -s -m 5 -X POST -H 'Content-Type: application/json' -d '{}' -o /dev/null -w 'client/login=%{http_code}\n' http://127.0.0.1:8787/api/client/login"
 ```
 
 | 探针 | 期望 | 含义 |

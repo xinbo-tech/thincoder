@@ -233,7 +233,7 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
   团队卡（标题「登录团队服务器」+ 说明「用团队发的账号登录——模型由服务器提供，不用自己填 key」+ 行动钮——锚 `button[data-route="team"]`）∥ 本地卡（标题「配置本地 provider」+ 说明「自己填 API key，不依赖团队服务器」+ 行动钮——锚 `button[data-route="local"]`）；跳过钮 = 既有 skip（**值改**：`welcome.skip`——zh「以后再说」∥ en「Later」，与桌面 ∥ CLI 同字面；登记为值改）。
 - **换取（同屏内——不叠弹层）**：点团队卡 ⇒ 换取区换团队表单（三字段（server ∥ username ∥ password）+ 登录钮 + 失败行 + 「← 换一种方式」回退）；点本地卡 ⇒ 换取区换**既有表单**（preset select + key + 保存——现欢迎板内容原样迁入换取区；零重构）；「← 换一种方式」⇒ 回路由屏（**先保留**：已填 server ∥ username 保留；密码恒清——沿 B1 口径）。
 - **提交链（复用既有）**：团队表单提交 ⇒ 出站 `teamLogin { server, username, password }`（既有——本档 §2.20）；回执 `teamLoginResult` ⇒ 成 ⇒ 既有 `providerStatus` 闸放行 ⇒ 板退场（`maybeShowWelcome(status, keyOk)`——`keyOk` 真 ⇒ `hideWelcomePanel()`；`thincoder-vscode/webview/onboarding.js:47-53`）；
-  `notice`（同名冲突）⇒ 板内就地提示（登成当刻——逐字同句；一次性事件）；败 ⇒ 板内就地错误行（四句逐字——`settings.team.reason.*` 语汇）+ 停留可重试。
+  `notice`（同名冲突）⇒ 板内就地提示（登成当刻——逐字同句；一次性事件）；败 ⇒ 板内就地错误行（四句逐字——`settings.team.fail.*` 语汇）+ 停留可重试。
 - **接线**：`thincoder-vscode/webview/onboarding.js`（+route 状态 ∥ 换取 ∥ 团队表单提交/回退）+ `thincoder-vscode/webview/index.html`（#welcome-panel 结构）+ `thincoder-vscode/webview/settings.css`（卡样式段）
   + `thincoder-vscode/webview/state.js`（ctx 引用）+ `thincoder-vscode/webview/chat-messages.js`（`teamLoginResult` 既有两消费位——+板面钩）；**零新协议消息**。
 - **跳过/以后再说**：⇒ 既有 `_welcomeDismissed`（webview 生存期——板不再显）；登录路仍可达 = 状态栏团队 item（§4.12）；**零第二引导面**。
@@ -242,7 +242,7 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 
 ### 4.12 团队常显与直达（状态栏 item + 命令 · F-W21 · 2026-10-10 · 登录面补全批 · 台账 #1231）
 
-- **常态化指示**（宿主侧——新档 `thincoder-vscode/src/extension/team-surface.mjs`（拟新增））：`vscode.window.createStatusBarItem`（Right，优先级 = 98——台账 99 邻位）——三态：
+- **常态化指示**（宿主侧——新档 `thincoder-vscode/src/extension/team-surface.mjs`（登录面补全批增））：`vscode.window.createStatusBarItem`（Right，优先级 = 98——台账 99 邻位）——三态：
   ① 未登录 ⇒ 文本「登录团队服务器」（入口）② 已登录 ⇒ 成员名（`member.name ?? member.username`；**tooltip = 服务器 + 端标签**——服务器形（host），不搬 URL 全串）③ 已失效（`verify === invalid`）⇒ 文本「已失效——重新登录」+ `backgroundColor`（`warning` 族——沿 VS Code 警示面）；命令 = `thincoder.team`（点击即流）。
 - **登/退直达流（命令 `thincoder.team`）**：起手 = 活校验（`teamVerify`——触发点制）；态分流：未登录 / 已失效 ⇒ 登录流（`showInputBox` 三问：server（预填留存值）→ username → password（`password: true`））
   ⇒ `teamLogin`（核）⇒ 成 ⇒ 复读 + 刷新 item + 推 `teamStatus`/`providerStatus`（设置面板随动——既有推送链）；`notice`（同名冲突）⇒ `showWarningMessage` 提示（逐字同句；一次性事件）；已登录 ⇒ QuickPick（「退出登录」）⇒ `teamLogout` ⇒ 刷新 + 推送 + 吊销未达提示（逐字）；失败 = 四句逐字（`showErrorMessage`——词表复用）。
@@ -898,3 +898,4 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-10-05（**批 digest-accounting · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §1 · 需求 §4.15 · 台账 #930）：§5.1 增**残余元素**条（`end` 载荷 `unsettled > 0` ⇒ 追加 `.digest-status` 残余元素——词键 `digest.residue` 核字典直取；`= 0` ⇒ 零元素）。**零新语义**（判据 / 机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31）。明细 = 批档 §2。
 - 2026-10-07（**MCP 键值行式输入批 · 实施后回填轮（设计面）· eng-designer**——承批档 `docs/batches/2026-10-07-mcp-kv-input.md` §5 ∥ §2 追记⑧ · 台账 #1036）：§3 文件表 +`settings-mcp.js` 行（**273 行**——自 `settings-tools.js` 拆出）+ `settings-tools.js` 读数（拆后 **212** ∥ 拆前 433）；模块计数随正（**44 ⇒ 47**——实读 2026-10-07）。**零新语义**（读数 ∥ 登记）。明细 = 批档 §2 追记⑧。
 - 2026-10-10（**login-entry-completion 批 · 设计评审轮 1 修正（fix 轮 · 发现 4 ∥ 5 ∥ 6 ∥ 13）· eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §3 轮次 1 · 台账 #1229–#1232）：§4.11 提交链（板退场实锚 `maybeShowWelcome`/`hideWelcomePanel` ∥ 同名冲突 `notice` 落点 ∥ 跳过钮值改登记）∥ §4.12（同名冲突落点 = `showWarningMessage` ∥ `teamVerify` 转口点名）。**零新语义**（评审发现的直接导出项；值改一项已登记）。
+- 2026-10-10（**login-entry-completion 批 · 设计档回填轮（fix）· eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §5（#151 VSC 交卷）· 台账 #1242）：§4.11 括注死指针删改（`settings.team.reason.*` ⇒ **`settings.team.fail.*`**——实件族）∥ §4.12 `team-surface.mjs`「（拟新增）」标记退场（已落——#151 交卷）。**零新语义**（指针 ∥ 标记收正）。

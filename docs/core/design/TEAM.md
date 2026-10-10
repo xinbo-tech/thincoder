@@ -115,8 +115,8 @@
 | CLI | `thincoder-cli/src/completions.mjs`（已落盘） | **143 ⇒ 156**（实施落盘——三套补全 `team` 词面） |
 | CLI | `thincoder-cli/src/tui/model-picker.mjs`（已落盘） | **324**（实施落盘——`isDerivedProviderHidden` 再出口 ∥ 两处过滤（模型候选 ∥ 槽位面）；`Remove provider…` 守卫改用过滤后计数——设计表缺行，补登） |
 | CLI | `thincoder-cli/src/tui/provider-admin.mjs`（已落盘） | **248**（实施落盘——`isDerivedProviderHidden` 谓词单源 ∥ 三流过滤（remove ∥ key ∥ context）——设计表缺行，补登） |
-| VSC | `thincoder-vscode/webview/settings-team.js`（已落） | **141**（实施落盘——团队卡：两态 ∥ 控件绑定 ∥ 回执出词 ∥ 密码面） |
-| VSC | `thincoder-vscode/webview/settings.js`（已落盘） | **199 ⇒ 203**（实施落盘——+import ∥ 第 6 卡序尾合成 ∥ `bindTeamControls()`） |
+| VSC | `thincoder-vscode/webview/settings-team.js`（已落） | **141 ⇒ 133**（登录面补全批实读——卡降管理面：端标签 + 详情三读数 + 未登录句；零登/退控件） |
+| VSC | `thincoder-vscode/webview/settings.js`（已落盘） | **199 ⇒ 203**（实施落盘——+import ∥ 第 6 卡序尾合成；登录面补全批 `bindTeamControls` 净删） |
 | VSC | `thincoder-vscode/webview/chat-messages.js`（已落盘） | **271 ⇒ 278**（实施落盘——三 `case` 接线：`teamStatus` ∥ `teamLoginResult` ∥ `teamLogoutResult`） |
 | VSC | `thincoder-vscode/src/extension/team.mjs`（已落） | **34 ⇒ ≈44**（登录面补全批设计估——+`teamVerify` 转口（转口四件）；实施落盘回填）；前读 **34**（实施落盘——核转口三件：`teamStatus` ∥ `teamLogin` ∥ `teamLogout`——零状态） |
 | VSC | `thincoder-vscode/src/extension/panel-messages.mjs`（已落盘） | **385 ⇒ 389**（实施落盘——+import 名 +2 `case`（`teamLogin` ∥ `teamLogout`——读面纯推送，无上行请求）） |
@@ -192,3 +192,4 @@
 - 2026-10-10（**login-entry-completion 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §1 · 台账 #1229–#1232；用户 14:33–14:46 连续四提 + 14:48 点火）：§2.5 增**入口（登/退）∥ 常显面 ∥ 设置面（管理）**三行并按新面收正四行（登录/退出动作 ∥ 当前态 ∥ 一次性提示括注）∥ 增 **§2.6 登录态校验与吊销感知**（`teamVerify` 三值 ∥ 触发点制 ∥ 态模型 ∥ 词形 ∥ 引导重登）∥ §3 增 **D-TM7**（校验制）∥ **D-TM8**（登/退移出设置面）∥ §4 增 core 两行（`team.mjs` ∥ `i18n.mjs`）∥ §5 增补全批判据 ⑥⑦⑧ ∥ §6 增 N3 ∥ B3 ∥ §7 边界收正（`/team` 已落句退场；增轮换另裁 ∥ 零轮询 ∥ 零新文案三条）。**产品码零触（设计轮）**。
 - 2026-10-10（**login-entry-completion 批 · 设计评审轮 1 修正（fix 轮 · 发现 10）· eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §3 轮次 1 · 台账 #1229–#1232）：§2.6 态模型判序写死（未登录首判——`verify` 值不参与渲染）+ `verify` 清位补全（logout 落盘 ∥ 状态复读见 token 缺席）。**零新语义**（评审发现的直接导出项）。
 - 2026-10-10（**login-entry-completion 批 · 设计评审轮 2 修正（fix 轮 · 发现 2）· eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §3 轮次 2 · 台账 #1229–#1232）：§4 VSC 块 `thincoder-vscode/src/extension/team.mjs` 行补**现行 ⇒ 预期**（**34 ⇒ ≈44**——+`teamVerify` 转口（转口四件）；前读 34 保留）。**零新语义**（评审发现的直接导出项）。明细 = 批档 §2 fix 轮补记。
+- 2026-10-10（**login-entry-completion 批 · 设计档回填轮（fix）· eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §5（#151 VSC 交卷）· 台账 #1242）：§4 VSC 两行按实读收正（`settings-team.js` **141 ⇒ 133**——卡降管理面 ∥ `settings.js` 句去 B1 期 `bindTeamControls()` 形——登录面补全批净删；**199 ⇒ 203** 读数不变）。**零新语义**（读数 ∥ 形态随正）。

@@ -17,7 +17,7 @@
 | **Consult & Advisor** | 会诊行（modelMenu + effort 档 + ✕）+ **添加弹窗**（`#consult-add-dialog`——provider ∥ model 两字段 + 提交；§2.17 ②）+ Advisor（guard + provider/model + effort） | `thincoder-vscode/webview/settings-agent.js` · `thincoder-vscode/webview/settings-consult-dialog.js` |
 | **Tools & Services** | MCP servers（列表 + **添加/编辑弹窗**（stdio/http/ws 表单；env ∥ headers = 行式键值——§2.4；§2.17 ①）+ 连接状态 ●/○ + Reconnect）+ Web Search key + Semantic Index（key + Build） | `thincoder-vscode/webview/settings-tools.js`（卡壳 ∥ 键行族 ∥ 索引）+ `thincoder-vscode/webview/settings-mcp.js`（MCP 列表面——§2.10 拆档产出）+ `thincoder-vscode/webview/settings-mcp-dialog.js`（MCP 弹窗体——§2.17 ①） |
 | **Environment** | Proxy（URI / web / Test）+ Shell（平台感知候选） | `thincoder-vscode/webview/settings-env.js` |
-| **团队** | 登录表单（服务器地址 ∥ 用户名 ∥ 密码）+ 登录钮 ∥ 已登录态（server ∥ 成员 ∥ 端标签 + 退出钮）+ 提示行；未登录提示句 = 「未登录——登录后可用」（三端逐字同句——`docs/core/design/TEAM.md` §2.5） | `thincoder-vscode/webview/settings-team.js`（已落） |
+| **团队** | 管理面（登录入口补全批收正）：端标签 + 详情（server ∥ member ∥ label）+ 未登录提示句 = 「未登录——登录后可用」（三端逐字同句——`docs/core/design/TEAM.md` §2.5）；零登/退控件（登/退 = 首启板团队卡 ∥ 状态栏 item + 命令 `thincoder.team`——§2.20 条 6） | `thincoder-vscode/webview/settings-team.js`（已落） |
 
 ## 2. 面板 ↔ config 契约
 
@@ -702,6 +702,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
   拆分计划 = 触发阈值 **750 行** 或 **设置面样式族下次结构改动**（先到即拆）；
   组边界（三段 · 按现分节注释）= ① 面板骨架 + 通用件（面板框 ∕ 卡框 ∕ 字段 ∕ 按钮 ∕ 开关）② 卡面样式族（providers ∕ MCP ∕ consult ∕ agent 徽标 ∕ model-menu）③ first-run 面板段。
   到期条件 = 触发阈值到达时 ∕ 设置面样式族下次结构改动时。
+  **登录面补全批（2026-10-10）读数登记**：本批 +73（**412 ⇒ 485**——路由/换取值 ∥ 管理面读数行三段）；**距 500 建议线 15 行**——本批不拆（非结构性）；处置 = 下次触碰该样式族者（阈值与组边界如上）。
 
 ## 4. 不并项与历史沿革
 
@@ -752,6 +753,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 | U-S20 | **团队卡（本批）**：登录表单 = 服务器地址 ∥ 用户名 ∥ 密码三字段；未登录提示句 = 「未登录——登录后可用」（三端逐字同句）；退出 = 登/退面钮（**登录入口补全批收正**：卡内登/退退场 ⇒ 首启板团队卡 ∥ 状态栏 item 流——`docs/vsc/design/WEBVIEW.md` §4.11 ∥ §4.12；卡 = 管理面 label ∥ 详情）；同名手工 `team` 条目 ⇒ 登录成 + 就地提示（不覆盖不弹窗） | 已定（§2.20——B1 批；收正 = 登录入口补全批 §2.20 条 6） |
 
 ## 变更记录
+- 2026-10-10（**login-entry-completion 批 · 设计档回填轮（fix）· eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §5（#151 VSC 交卷）· 台账 #1242）：§1 团队行收正为管理面（登录表单与两钮退场——与 §2.20 条 6 同拍；登/退 = 首启板团队卡 ∥ 状态栏 item + 命令 `thincoder.team`）∥ §3 `settings.css` 登记行补本批读数（**412 ⇒ 485**——距 500 建议线 15 行；本批不拆）。**零新语义**（实读收正 ∥ 登记）。
 - 2026-10-10（**login-entry-completion 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §1 · 台账 #1231；用户 14:42 ∥ 14:46 裁）：§2.20 +**条 6 收正**（卡 = 管理面——登录表单与退出钮退场；登/退 = 首启板 ∥ 状态栏 item + 命令 `thincoder.team`；轮换 = 另裁；读面 ∥ 消息面形零改）∥ §5 **U-S20** 行收正（退出面随正 + 状态列注）。对位面 = `docs/vsc/design/WEBVIEW.md` §4.11 ∥ §4.12。**产品码零触（设计轮）**。明细 = 批档 §2。
 
 - 2026-10-10（**team-login-client-access 批（B1）· 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §5 · 台账 #1212）：**§2.20** 补**实施收口登记**行（推送点 ∥ 两条链 ∥ 上行恰两条 ∥ 重绘两门）+ 键数收正（+≈15 ⇒ **+14**）∥ **§1 ∥ §2.20** 去「（拟新增）」（三处）。**零新语义**（读数 ∥ 登记）。明细 = 批档 §2 实施后回填块。

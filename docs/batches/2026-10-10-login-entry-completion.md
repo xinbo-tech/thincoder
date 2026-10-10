@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-10 · 来源 = 用户 2026-10-10 14:33–14:46 连续四提（① 首启向导增「登录团队服务器」入口 ② CLI TUI 会话内怎么登录 ③ 主界面登录态看不见不行 ④ 「桌面端和vsc要用户进设置界面不合理，应该有更简洁的登录退出方式」）+ 14:48「这样差不多，可以开批了」⇒ 点火。四台账行（#1229 ∥ #1230 ∥ #1231 ∥ #1232）合并本批。。
 > 台账 = #1229（三端登录面（桌面 ∥ VSC ∥ CLI） · 归批）。前情 = docs/batches/2026-10-10-team-login-client-access.md（**在途**——本批为其登录面补全续批：B1 收口条件之一 = 本批交付；用户 14:39「当然不能收口啊！没干完呢！」）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-10
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 ### 批件（点火 2026-10-10 14:48）
@@ -113,7 +113,7 @@
 - 「复跑统一用大写盘符」教训随之**下调**（该件已大小写无关）。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（设计面八件 + 评审轮 1（13 条）∥ 评审轮 2（5+1 条）修正逐号落定 + 计数族残值收齐（#148）逐处落定；本笔四档零新增悬空 ∥ 行宽 OK；机检悬空 5 = 登录批实施落点（mount-settings-team.mjs 旧路径——非本笔）；行数面 = 报告态（2026-10-10））
+**状态行**：设计完成（设计面八件 + 评审轮 1（13 条）∥ 评审轮 2（5+1 条）修正逐号落定 + 计数族残值收齐（#148）+ 设计档回填轮（#1242 · 五处 · fix 轮 3）逐处落定；机检 EXIT 1——悬空 7 ∥ 行宽 3 ∥ 行数面差异 9 + 行式异常 9（均非本笔四档；本笔四档零新增悬空 ∥ 零行宽 FAIL ∥ 零行数面项）；行数面残值 = 桌面文件账（#1242 前半——报告态 · 待路由））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 **批次**：登录面补全（login-entry-completion）· 2026-10-10 · 台账 #1229–#1232 · 来源 = §1（用户 2026-10-10 14:33–14:48 裁定链：四提 + 点火）。**设计轮** = eng-designer。
@@ -253,6 +253,40 @@
 **doc-check 读数**（`node scripts/doc-check.mjs` · 仓根 `thincoder/` · 2026-10-10T08:02Z）：**EXIT 1**——悬空 **5** 条，**全 = `thincoder-desktop/renderer/mount-settings-team.mjs` 旧路径引用**（`docs/core/design/API-CONTRACT.md:2011` ∥ `TEAM.md:130` ∥ `docs/desktop/design/SETTINGS.md:491` ∥ `:504` ∥ `UI.md:602`）＝登录批「净删（并入 `mount-team.mjs`）」实施已发生的落点（`mount-team.mjs` 已在盘、旧档已删）——**非本笔因果**（本笔四档零新增悬空）。行宽 **OK**（无 >300 行）；行数面差异 8 条 = 报告态。**处置建议**：5 处归该批实施后回填轮（旧路径 ⇒ 新路径 ∥ 史实句加「迁移期引文」标记——逐处判形态）；收定后重跑取 EXIT 0 终读。跑读 1（07:53Z）另见 `docs/core/design/MODEL-BENCH.md:2208` 一条，二次读已消（父侧在途「锚悬空收正」面推进——非本笔）。
 
 **变更记录**：四档各 +1 行（`ACTIVITY.md:478` ∥ `IPC.md:578` ∥ `UI.md:870` ∥ `PROJECT.md:1815-1816`——2026-10-10 · #148）。
+
+### 设计档回填轮（#1242 · fix 轮 3 · 2026-10-10 · eng-designer）
+
+**对象** = 三端交卷（#149 桌面+core ∥ #150 CLI ∥ #151 VSC）后，父侧派发的设计档回填（点修五处）；**改动面 = 下列四档 + 各自变更记录**；产品码 ∥ 需求档零触。**零新语义**（标记 ∥ 指针 ∥ 读数 ∥ 形态逐处随正）。**回填位** = 本块（批档 append-only——§2 原列不动）。
+
+**① CLI 行数实读回填**（原列 = §2 设计估，本块列实读；本席逐件实读复核——与 #150 交卷值全等）：
+
+| 件（`thincoder-cli/` 起） | §2 设计估 | 实读（#150 ∥ 本席复核） |
+|---|---|---|
+| `src/tui/wizard.mjs` | 246 ⇒ ≈360 | **246 ⇒ 405** |
+| `src/tui/cmd-team.mjs` | 新 ≈150 | **新 235** |
+| `src/tui/ask-steps.mjs` | （拟新）≈90 | **61** |
+| `src/tui/slash-commands.mjs` | 190 ⇒ ≈196 | **190 ⇒ 192** |
+| `src/tui/render-frame.mjs` | 461 ⇒ ≈472 | **461 ⇒ 487** |
+| `src/tui/tui-state.mjs` | 67 ⇒ ≈72 | **67 ⇒ 68** |
+| `src/tui/index.mjs` | 265 ⇒ ≈285 | **265 ⇒ 275** |
+
+**② 四处设计档落定**（各档变更记录一行同拍；file:line = 落定后）：
+
+| # | 档 | 落定 | 变更记录 |
+|---|---|---|---|
+| 1 | `docs/cli/design/TUI-COMMANDS.md` | §1 `ask-steps.mjs` 行（`:33`）∥ §5.5 登记行（`:190`）去「（拟新增）」（两档已落——登录面补全批增） | `:239` |
+| 2 | `docs/vsc/design/SETTINGS.md` | §1 团队行（`:20`）⇒ **管理面**（与 §2.20 条 6 同拍——登录表单 ∥ 两钮退场；端标签 + 详情 + 未登录句；零登/退控件）∥ §3 `settings.css` 登记行（`:705`）补读数 **412 ⇒ 485**（距 500 建议线 15 行——本批不拆） | `:756` |
+| 3 | `docs/core/design/TEAM.md` | §4 VSC 两行实读收正（`settings-team.js` **141 ⇒ 133**——卡降管理面 ∥ `settings.js` 去 B1 期 `bindTeamControls()` 形——净删；**199 ⇒ 203** 读数不变） | `:195` |
+| 4 | `docs/vsc/design/WEBVIEW.md` | §4.11 括注死指针（`:236`）`settings.team.reason.*` ⇒ **`settings.team.fail.*`** ∥ **扫面所得 +1**：§4.12 `team-surface.mjs`（`:245`）「（拟新增）」退场（已落） | `:901` |
+
+**③ doc-check 读数**（`node scripts/doc-check.mjs` · 仓根 `thincoder/` · 本笔落定后实跑 · 2026-10-10T09:1xZ）：**EXIT 1**（闸态——悬空 > 0）。锚：扫描域 docs · 193 档；候选 56430 · **悬空 7** · 注记豁免 303 · 拟新增 33（列报）· 迁移期引文 330（列报）· 声明源缺位 0；FAIL(锚) = 7 条悬空（阈值 0）。行宽：**FAIL 3 行**——`docs/TEST-ENV-ECS.md:43`（362 字符）∥ `:58`（391 字符）∥ `docs/server/requirements/PROJECT.md:13`（346 字符）——**均非本笔四档**。行数面：**差异 9 条 + 行式异常 9 条**——全在桌面四档（见 ④1）。**本笔四档：零新增悬空 ∥ 零行宽 FAIL ∥ 零行数面项**（悬空 7 = mount-settings-team 旧路径 5 + server 两处——非本笔）。
+
+**④ 报告项（非本笔域——父侧路由；不修只报）**：
+
+1. **#1242 前半 = 桌面文件账残值**（未入本笔派发单）：行数面差异 9 条 = `docs/desktop/design/UI.md:515`（mount-team 表 150 → 实读 324）∥ `:517`（mount-status 43 → 45）∥ `SETTINGS.md:347`（settings.mjs 448 → 454）∥ `:348`（settings-sections 100 → 101）∥ `:357`（mount-settings 292 → 306）∥ `:369`（settings.css 306 → 348）∥ `:372`（mount-settings-team 盘无档）∥ `RENDERER.md:328`（app 338 → 342）∥ `:338`（store 369 → 374）；行式异常 9 条（配对失败（档 1 ∥ 数 2））= `UI.md:513/:514/:520/:523` ∥ `IPC.md:362` ∥ `SETTINGS.md:356/:368/:371/:373`。
+2. `mount-settings-team.mjs` 旧路径引用 **5 处**（悬空闸态）：`docs/core/design/API-CONTRACT.md:2011` ∥ `docs/core/design/TEAM.md:130` ∥ `docs/desktop/design/SETTINGS.md:493`／`:506` ∥ `docs/desktop/design/UI.md:602`（§1 16:05 注在册——待 #149 全量清单轮）；另 `docs/server/requirements/PROJECT.md:483`／`:495`（`session-slots.mjs:89`——非本笔）。
+3. `docs/cli/design/CLI-ENTRY.md:9`／`:60` 仍载 `team-command.mjs`「（拟新增）」（B1 批残值——B1 未收口）。
+4. `thincoder-vscode/.thincoder/tmp/vsc-team-drive.mjs` 引已删导出 `bindTeamControls`（临时件——非产品码）。
 
 ## §3 设计评审（评审子代理）
 
@@ -605,3 +639,15 @@ VERDICT: pass
 ### 6.5 结算行（ledger query 面）
 
 本批：「登录面补全」= 三端交卷 ∥ 批内件全绿 ∥ 待办 = **用户验收** + 清理轮（#1245）+ 回填轮（#155）+ 真机走查（T-DSK66，归用户）。
+
+### 6.6 设计档回填轮（#155 · 2026-10-10 17:20 落定）
+
+- **五处 + 扫面 +1 全落**：`docs/cli/design/TUI-COMMANDS.md:33/:190`（「（拟新增）」去——`:239` 变更记录）∥ `docs/vsc/design/SETTINGS.md:20`（§1 团队行 ⇒ 管理面）+ `:705`（`settings.css` 412 ⇒ **485**）∥ `docs/core/design/TEAM.md:118/:119`（`settings-team.js` 141 ⇒ 133 · 去 B1 期 `bindTeamControls()` 形）∥ `docs/vsc/design/WEBVIEW.md:236`（死指针 ⇒ `settings.team.fail.*`）+ `:245`（`team-surface.mjs`「拟新增」退场）∥ 批档 §2 回填块 `:257-289`。
+- **行数实读回填 10 项**（表见 §2）：`wizard.mjs` 405 ∥ `cmd-team.mjs` 235 ∥ `ask-steps.mjs` 61 ∥ `slash-commands.mjs` 192 ∥ `render-frame.mjs` 487 ∥ `tui-state.mjs` 68 ∥ `index.mjs` 275 ∥ `settings-team.js` 133 ∥ `settings.js` 203 ∥ `settings.css` 485。
+- **doc-check 复跑 = EXIT 1**（存量面）：本笔四档 **零新增悬空 ∥ 零行宽 FAIL ∥ 零行数面项** ✓；悬空 7（旧路径族 5 + 需求档 2）∥ 行宽 FAIL 3 ∥ 行数面 9+9（桌面四档）——另见 §6.7。
+- **父侧随拍自伤修复（可 revert）**：doc-check 抓出 `TEST-ENV-ECS.md:43/:58` ∥ `server/requirements/PROJECT.md:13` 三处行宽 FAIL（= 本晚父侧自己的笔）⇒ 已折行收正（runbook §3 分步化 ∥ §4 三条探针分行 ∥ TLS 行拆分）✓。
+
+### 6.7 收口余项（转台账）
+
+- 桌面四档行数面 9 条 + 行式异常 9 条（`desktop/design/{UI.md ∥ SETTINGS.md ∥ RENDERER.md ∥ IPC.md}`——#155 上抛①）⇒ 续 #1242（前半未入本轮派发单）。
+- 旧路径族 **5 处悬空**（`mount-settings-team.mjs` 删档后的引用面）+ `CLI-ENTRY.md:9/:60`「（拟新增）」残（B1 残值——B1 批未收口）⇒ 新行挂号（#155 上抛②③）。
