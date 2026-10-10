@@ -470,10 +470,10 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 
 | 文件 | 现行 ⇒ 估（构成） | 批 |
 |---|---|---|
-| `thincoder-desktop/renderer/views/settings.mjs` ∥ `thincoder-desktop/renderer/views/settings-sections.mjs` ∥ `thincoder-desktop/renderer/mount-settings.mjs` ∥ `thincoder-desktop/renderer/i18n-settings.mjs` | **436 ⇒ ≈443**（SECTIONS 追加 ∥ 段分派） ∥ **96 ⇒ ≈97**（re-export） ∥ **264 ⇒ ≈269**（`MODAL_READS` +1 行（`team → loadTeam`）∥ `SCOPES` 派生随动 ∥ team 读/出口装配） ∥ **156 ⇒ ≈168**（+≈12 键） | B1 |
+| `thincoder-desktop/renderer/views/settings.mjs` ∥ `thincoder-desktop/renderer/views/settings-sections.mjs` ∥ `thincoder-desktop/renderer/mount-settings.mjs` ∥ `thincoder-desktop/renderer/i18n-settings.mjs` | **436 ⇒ ≈443**（SECTIONS 追加 ∥ 段分派） ∥ **96 ⇒ ≈97**（re-export） ∥ **264 ⇒ ≈269**（`MODAL_READS` +1 行（`team → loadTeam`）∥ `SCOPES` 派生随动 ∥ team 读/出口装配） ∥ **156 ⇒ ≈169**（+≈13 键） | B1 |
 | `thincoder-desktop/src/main/ipc-registry.mjs` ∥ `thincoder-desktop/src/preload/preload.cjs` | **94 ⇒ ≈99**（+3 HANDLERS） ∥ **85 ⇒ ≈88**（+3 CHANNELS） | B1 |
 | 新档三件 + 测试面 | `thincoder-desktop/renderer/views/settings-sections-team.mjs` ∥ `thincoder-desktop/renderer/mount-settings-team.mjs` ∥ `thincoder-desktop/src/main/team.mjs`（拟新增——估 ≈110 ∥ ≈80 ∥ ≈70）；`mount-settings-team.mjs` 构成补**写成功径复读两调用点**（`team:status` 复读 + `loadProviders` 复读——派生条目随动）；批内件 = `docs/batches/2026-10-10-team-login-client-access-ends.test.mjs`（拟新增——估 ≈380 行）；**旧件随正** = 漂移扫描排除句（`docs/batches/2026-10-02-desktop-settings-menu-upgrade.test.mjs` · `:204` ∥ `docs/batches/2026-10-02-settings-menu-trim.test.mjs` · `:107`——断点以当刻盘面为准） | B1 |
-| 闭集随动三件（B1 · 修复轮补） | `thincoder-desktop/src/main/app-menu.mjs`（**158 ⇒ ±0——零改**：团队不入菜单——`SETTINGS_GROUPS` 六名不动 ∥ 镜像闭集零动） ∥ `MODAL_READS` 行（住 `thincoder-desktop/renderer/mount-settings.mjs`——**+1 行**（`team → loadTeam`）；行数并入上行） ∥ `thincoder-desktop/renderer/i18n.mjs`（**432 ⇒ ≈433**——键数链注续链：本批设置词 +≈12 键随拍） | B1 |
+| 闭集随动三件（B1 · 修复轮补） | `thincoder-desktop/src/main/app-menu.mjs`（**158 ⇒ ±0——零改**：团队不入菜单——`SETTINGS_GROUPS` 六名不动 ∥ 镜像闭集零动） ∥ `MODAL_READS` 行（住 `thincoder-desktop/renderer/mount-settings.mjs`——**+1 行**（`team → loadTeam`）；行数并入上行） ∥ `thincoder-desktop/renderer/i18n.mjs`（**432 ⇒ ≈433**——键数链注续链：本批设置词 +≈13 键随拍） | B1 |
 
 ## 4. 验收回指（本域需求条目 · 判据全文——迁自 `PROJECT.md` §6.1 本域行 · as-of 2026-10-02）
 
@@ -552,6 +552,9 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 （上列三行全文已迁讫（CG ∥ CH ∥ DH）；§10 本域余行（CT ∥ CV ∥ CX ∥ CY ∥ DB ∥ DD② 等他域行）留 `docs/desktop/design/PROJECT.md` §10 原址。）
 
 ## 变更记录
+
+- 2026-10-10（**team-login-client-access 批（B1）· 设计面登记与估数补齐 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212）：**§3.2** 本批块两处 i18n 估数随第四句 +1 顺正（`156 ⇒ ≈168` ⇒ **`≈169`** ∥ `+≈12 键` ⇒ **`+≈13 键`**；
+  与 `docs/core/design/TEAM.md` §4 同拍）。**零新语义**（父侧派发项直接导出）。明细 = 批档 §2 实施期修复块。
 
 - 2026-10-10（**team-login-client-access 批（B1）· 实施期档-码差一修复（`write_failed` 补设计）· eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212；父侧裁定 = 保留第四值并补设计）：**§2.21** 写失败错误行出词补第四句「本机配置写入失败」（四句逐字同——单源 = `docs/core/design/TEAM.md` §2.5）。**零新语义**（父侧裁定直接导出项）。明细 = 批档 §2 实施期修复块。
 

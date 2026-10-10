@@ -70,7 +70,7 @@
 
 **失败理由域（失败形 `{ ok:false, reason }`——四值单源）**：`network` ⇔「网络不可达」∥ `credentials` ⇔「用户名或密码错误」∥ `rate_limited` ⇔「登录尝试过于频繁」∥ `write_failed`（本机配置落盘失败）⇔「本机配置写入失败」。
 
-**`reason` 判据（核心分类单源）**：不可达 ∥ 其余状态 ⇒ `network` ∥ 401 ⇒ `credentials` ∥ 429 ⇒ `rate_limited` ∥ 本机配置写盘失败 ⇒ `write_failed`（逐值对位；端侧只做「理由→句」映射，不自创分类）。
+**`reason` 判据（核心分类单源）**：不可达 ∥ 其余状态 ⇒ `network` ∥ 401 ⇒ `credentials` ∥ 429 ⇒ `rate_limited` ∥ 本机配置写入失败 ⇒ `write_failed`（逐值对位；端侧只做「理由→句」映射，不自创分类）。
 
 **文案同构判据**：「未登录提示」∥「失败出词」（四句）∥ 两条**一次性提示**（同名冲突 ∥ 吊销未达）三端**逐字同句**（VSC/桌面 = zh i18n 键值逐字相等；CLI = 单语直出同句）；**读面零提示字段**——CLI `team status` ∥ VSC `teamStatus` ∥ 桌面 `team:status` 不带提示字段（两提示 = 一次性事件——登录/退出当刻就地显示，不随状态复显）。
 
@@ -98,6 +98,7 @@
 | CLI | `thincoder-cli/src/completions.mjs`（已落盘） | **143 ⇒ ≈146**（实读——三套补全 `team` 词面） |
 | VSC | `thincoder-vscode/webview/settings-team.js`（拟新增） | **≈110**（设计估——团队卡：表单 ∥ 登录态 ∥ 提示行） |
 | VSC | `thincoder-vscode/webview/settings.js`（已落盘） | **199 ⇒ ≈205**（实读——合成式 ∥ 词 ∥ init 面） |
+| VSC | `thincoder-vscode/webview/chat-messages.js`（已落盘） | **271 ⇒ ≈276**（实读——三 `case` 接线：`teamStatus` ∥ `teamLoginResult` ∥ `teamLogoutResult` ≈+5） |
 | VSC | `thincoder-vscode/src/extension/team.mjs`（拟新增） | **≈80**（设计估——status/login/logout 三处理体） |
 | VSC | `thincoder-vscode/src/extension/panel-messages.mjs`（已落盘） | **385 ⇒ ≈390**（实读——+3 case） |
 | VSC | `thincoder-vscode/src/extension/panel-messages-settings.mjs`（已落盘） | **253 ⇒ ≈270**（实读——+3 处理体） |
@@ -133,7 +134,7 @@
 |---|---|---|
 | N1 | 登录成 ⇒ 一次写盘：`team` 四键在场 ∥ 派生条目在场（表尾）；两处同值 | 批内件（写盘面 = 临时 config 路径 + 本地 HTTP 桩） |
 | B1 | 同名手工 `team` 条目 ⇒ 登录成 + 提示 + 手工条目逐字零改（零覆盖） | 批内件 |
-| E1 | 登录败（网络不可达 ∥ 401 ∥ 429）⇒ 零写盘 + 分类出词；本机配置写盘失败 ⇒ `write_failed`（零假成功） | 批内件 |
+| E1 | 登录败（网络不可达 ∥ 401 ∥ 429）⇒ 零写盘 + 分类出词；本机配置写入失败 ⇒ `write_failed`（零假成功） | 批内件 |
 | N2 | 退出 ⇒ token 摘除 ∥ apiKey 摘除 ∥ `derived` 保留 ∥ 服务端收到吊销请求；网络失败 ⇒ 本地照清 + 提示 | 批内件 |
 | B2 | 派生条目无 key ⇒ 三端列表过滤判据（纯函数）判真 ∥ 有 key 判假 | 批内件 |
 | E2 | 地址归一：缺协议补 `http://` ∥ 尾斜杠去 ∥ 尾 `/v1` 去；label 裁剪 ≤40 | 批内件 |
@@ -152,3 +153,5 @@
 - 2026-10-10（**team-login-client-access 批（B1）· 实施期档-码差一修复（`write_failed` 补设计）· eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212；父侧裁定 = 保留第四值并补设计——写盘失败须真报警；第四句用词 = 「本机配置写入失败」）：§2.5 新增**失败理由域四值句**（`network` / `credentials` / `rate_limited` / `write_failed`——本机配置落盘失败；与出词四句同序对位）+ 出词表补第四句 + 判据行同拍。**零新语义**（父侧裁定直接导出项）。明细 = 批档 §2 实施期修复块。
 - 2026-10-10（**team-login-client-access 批（B1）· 实施期收尾小修 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212）：§2.2 步 4 分类出词补第四值（本机配置写入失败）∥ §2.5 补 **`reason` 判据句**（核心分类单源）∥ §6 E1 补写盘失败位（`write_failed`）；
   §2.1 `team` 段行措辞收正（未知键原样通过——与 settings 工具实装对齐）∥ §4 i18n 估数随第四句顺正（VSC **+≈15 键/表** ∥ 桌面 **+≈13 键**）。**零新语义**（父侧派发项直接导出）。明细 = 批档 §2 实施期修复块。
+- 2026-10-10（**team-login-client-access 批（B1）· 设计面登记与估数补齐 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212）：**§4** VSC 块 +`webview/chat-messages.js` 行（**271 ⇒ ≈276**——三 `case` 接线 ≈+5，舱 C 披露补登记）
+  ∥ **§2.5** `reason` 判据句 ∥ **§6** E1 判据位措辞同字（「本机配置写盘失败」⇒「本机配置写入失败」——与句面同字）。**零新语义**。明细 = 批档 §2 实施期修复块。

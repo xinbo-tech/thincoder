@@ -83,7 +83,7 @@ reasoning, provider, images? } → extension _chat()
 
 历史断链事故：只改发射端与渲染端、漏桥 ⇒ `model` 字段自发布首日被丢弃（2026-08-26 修复 + 锁桥测试）。string / 对象双分支在 payload 构造处统一推导（对象载荷字段透传、string 分支字段 `undefined` 安全降级）。
 
-### 3.2 协议增量登记（二十六项——只增不改）
+### 3.2 协议增量登记（三十一项——只增不改）
 
 | # | 消息面 | 增量 | 发射点 | 接收点 |
 |---|---|---|---|---|
@@ -119,8 +119,13 @@ reasoning, provider, images? } → extension _chat()
 | 24 | `digest`（增字段） | `unsettled`（本轮未销账条数——**非上行轮且 > 0 才携**；残余元素判据——§5；消化账务批 · 2026-10-05） | `thincoder-vscode/src/extension/suspension.mjs` 收尾点（`driveTurn` finally——帧 ∥ 记录同点双动作） | `webview/chat-messages.js:194` `case "digest"` → `webview/chat-status.js` `showDigestStatus`（`unsettled > 0` ⇒ 残余行元素——§5） |
 | 25 | `providerKeySaved`（**新消息**——host → webview） | `{ name }`——密钥行保存**受理回执**（宿主保存成功径才发；拒径零回执 ⇒ 徽标零闪 ∥ 行不关——拒因走既有 `providerError`；回执语义单源 = `SETTINGS.md` §2.18） | `thincoder-vscode/src/extension/panel-messages-settings.mjs:43-44` `handleSaveProviderKey` | `webview/chat-messages.js:160` `case` → `webview/settings-providers.js:97` `onProviderKeySaved`（恢复静态行 + `flashSaved`） |
 | 26 | `testProvider` ∥ `testProviderResult`（增字段 `id`） | 请求归属 id——单调 `_fetchSeq` 发时记在飞；宿主原样回显；落框 `r.id === _pendingFetchId` 才渲染（缺 / 不符 ⇒ 弃）；开 ∥ 关框双清（#1051） | `webview/settings-provider-dialog.js` `paFetchModels`（`:226` 载荷携 `id`） | `thincoder-vscode/src/extension/panel-messages-settings.mjs` `handleTestProvider`（`:162` 原样回显）→ `webview/settings-provider-dialog.js` `updateTestProviderResult`（`:262` 归属判） |
+| 27 | `teamStatus`（**新消息**——host → webview） | `{ loggedIn, server, member, label }`——团队态投影（推送 = 打开快照族 ∥ 登录/退出成后；读面零提示字段——单源 = `SETTINGS.md` §2.20） | `thincoder-vscode/src/extension/settings.mjs`（读面 + push 点——实施后实读回填） | `webview/chat-messages.js` `case` → `webview/settings-team.js` `updateTeamStatus` |
+| 28 | `teamLogin`（**新消息**——webview → host） | `{ server, username, password }`——直登上行（密码随上行即弃——零落盘；写面 = 核 `team.mjs` 单写者） | `webview/settings-team.js`（登录钮上发） | `src/extension/panel-messages.mjs` `case` → `panel-messages-settings.mjs` `handleTeamLogin`（实施后实读回填） |
+| 29 | `teamLoginResult`（**新消息**——host → webview） | `{ ok, reason?, notice? }`——登录回执（`reason` 四值 → 四句出词；`notice` 单码 → 同名冲突一次性提示——单源 = `SETTINGS.md` §2.20） | `panel-messages-settings.mjs` `handleTeamLogin`（实施后实读回填） | `webview/chat-messages.js` `case` → `webview/settings-team.js` `onTeamLoginResult` |
+| 30 | `teamLogout`（**新消息**——webview → host） | 无载荷——退出上行（服务端吊销 best-effort；网络失败照清本地） | `webview/settings-team.js`（退出钮上发） | `src/extension/panel-messages.mjs` `case` → `panel-messages-settings.mjs` `handleTeamLogout`（实施后实读回填） |
+| 31 | `teamLogoutResult`（**新消息**——host → webview） | `{ ok, revokeDelivered? }`——退出回执（缺席 = true；`false` ⇒「服务端吊销未达」一次性提示） | `panel-messages-settings.mjs` `handleTeamLogout`（实施后实读回填） | `webview/chat-messages.js` `case` → `webview/settings-team.js` `onTeamLogoutResult` |
 
-纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–26 即全部在案增量；表外增量不入）。发射 / 接收落点：
+纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–31 即全部在案增量；表外增量不入）。发射 / 接收落点：
 `thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:29` ·
 `thincoder-vscode/webview/chat.js:260` · `thincoder-vscode/webview/status-bar.js:27-30/46`。
 
@@ -347,7 +352,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | D-P8 | 状态文本载体 = **结构化 `statusText` 消息**（kind 判别 → webview 按 locale 渲染） | 否决 host 直发成品文本（host 不知 locale——复制 i18n = 双源）· 否决不做（判定句要求用例锁新增状态文本） |
 | D-P9 | Send 可见性 = running 期**隐藏** | 否决禁用态（双范式 + 仍占位） |
 | D-P10 | `scrolled N` 段不设——滚动状态 = 悬浮回底钮（§6.1 滚动行：实证例外——行为证据） | 否决补文本段（N 需新造单位 + 与钮重复） |
-| D-P11 | 协议增量 = **只增不改**、**二十六项**登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
+| D-P11 | 协议增量 = **只增不改**、**三十一项**登记（§3.2） | 否决 host 直发成品文本 · 否决新增 `turnStart` 族 |
 | D-P12 | 合并权限卡**并入 `promptId` 族**（单一释放通道 `releasePermission` + id 精确匹配 + 孤儿回写） | 否决单开释放语义（同语义两通道 · 消费者按类分支）；`shift()` 队列头匹配已驳（D-P4 同据——陈旧卡不误 resolve） |
 | D-P13 | `waiting` 判据含**批权限队列** + **释放即刷**（刷新点 = 释放通道单点 `releasePermission`） | 否决逐路径各补 `_refreshStatus()`（散点——漏一处即残留）· 否决判据只列权限 / question（批卡停驻期读作 idle——状态栏失去「需你输入」语义） |
 | D-P14 | 诊断上行 `panelDiag` = **新消息（行 8 登记）**——出生 / 终态事件面痕迹入主侧日志 | 否决只留 webview 环形日志（DevTools 不可回读——本次事故正因不可回读而盲；理由详见 `WEBVIEW.md` D-W22）· 否决并入既有上行消息字段（无同缝——`webviewReady` 是一次性启动拍） |
@@ -541,6 +546,10 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 **方向口径**：本表只收 webview → host。**「删」= host 消费位在位而 webview 发射恒无（死 handler）**——处置逐条入批档（`docs/batches/2026-09-18-vsc-settings-wiring.md` §2）并已随实现落地（三删 + 一接线转活——**本表现零 `删` 行**）；**删除落地 ⇒ 源零位 ⇒ 表行同步退场**（不留悬空行——同 §12 口径）。**「补」= 发射在位而 host 缺消费位**（本表现零行）。
 
 ## 变更记录
+
+- 2026-10-10（**team-login-client-access 批（B1）· 设计面登记与估数补齐 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212）：
+  **§3.2 补行 27–31**——团队族五新消息（`teamStatus` ∥ `teamLogin` ∥ `teamLogout` ∥ `teamLoginResult` ∥ `teamLogoutResult`）：方向 / 载荷 / 回执面在册（形单源 = `docs/vsc/design/SETTINGS.md` §2.20）
+  + 计数三处同拍（标题「二十六项 ⇒ **三十一项**」∥ 纪律行「行 1–26 ⇒ 1–31」∥ §7 D-P11 同改）∥ **协议判别式集 ∥ 既有消息名 ∥ 载荷字段零变**；§12 / §13 对表行随实施后重出。明细 = 批档 §2 实施期修复块。
 
 - 2026-10-10（**vsc-consistency 批 · 设计档随正轮 · eng-coder**——承 `docs/batches/2026-10-10-vsc-consistency.md` §2（`1051-4`）· 台账 #1051）：§13 `testProvider` 行 ∥ §12 `testProviderResult` 行备注随正（载荷 `id` 登记——上行携 ∥ 宿主原样回显 ∥ 落框判归属）+ **§3.2 补行 26** + 计数三处同拍（标题「二十五项 → **二十六项**」∥ 纪律行「行 1–25 → 1–26」∥ §7 D-P11 同改）。**协议判别式集 ∥ 消息名 ∥ ④ 处置列零变**（载荷增 `id` 已入 §3.2 登记）。明细 = 批档 §2。
 
