@@ -19,7 +19,7 @@
 
 ## 2. 端点表（`/api/client/*`——数据面命名空间骨架）
 
-（错误形 = `gateway/API.md` §3 全码复用——**零新码**；写端点仅收 `application/json`，其它 content-type ⇒ 400——分派层统一；**例外** = `POST /api/runner/checkpoint`（octet-stream——`gateway/API.md` §2.6））
+（错误形 = `gateway/API.md` §3 全码复用——**零新码**；写端点仅收 `application/json`，其它 content-type ⇒ 400——分派层统一）
 
 | 方法 + 路径 | 鉴权 | 语义 |
 |---|---|---|
@@ -82,3 +82,4 @@
 - 2026-10-10（**team-login-client-access 批（B1）· 设计评审轮 1 修正（fix 轮 · 发现 9）· eng-designer**——承批档 §3 轮次 1 · 台账 #1212）：§1 增 token 生命周期**已认账**条（累积可预期 ∥ 用户面清理；换 server 重登旧 token 处置）——文案面，零机制改。**零新语义**（评审发现的直接导出项）。
 - 2026-10-10（**B1 批 · 评审回笔随动（发现 2 呼应）· eng-designer**——承批档 §3 发现 2（需求档已由主 agent 收正——`docs/server/requirements/PROJECT.md` §2:31③ ∥ AC-31）：§4 AC-31⑤ 行标题随正——「服务端会话撤销」⇒「登录 token 吊销（`api_keys` 行）」（与需求档收正句逐字同拍；机制面零改）。**零新语义**。
 - 2026-10-10（**server-exec-sandbox 批 · 残差对齐（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §2 残差项 ②；父侧裁定：收口前对齐）：§2 前言补写端点 JSON 门例外括注——**例外** = `POST /api/runner/checkpoint`（octet-stream——`gateway/API.md` §2.6）；与 `accounts/ACCOUNTS.md` §3 ∥ `metering/METERING.md` §3 逐字同拍。**零新语义**（KD-SV-77 路由级豁免的残差对齐）。
+- 2026-10-10（**runner-admin-console 批 · 设计档随正 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252）：§2 前言去端点 JSON 门例外括注（随执行面重定——`gateway/API.md` §2.6 退场）；与 `accounts/ACCOUNTS.md` §3 ∥ `metering/METERING.md` §3 逐字同拍。**零新语义**。

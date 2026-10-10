@@ -63,8 +63,8 @@
 | `password_reset` | admin ∥ `cli` | 目标成员 | —— | `thincoder-server/src/accounts/routes-admin.mjs` 重置路由 ∥ `thincoder-server/src/ops/cli.mjs` `member passwd` |
 | `member_create` | admin ∥ `cli` | 新成员 | `{ role }` | `thincoder-server/src/accounts/routes-admin.mjs` 建成员路由 ∥ `thincoder-server/src/ops/cli.mjs` `member add` |
 | `config_update` | admin（名快照） | —— | `{ keys }`（变更键名清单——值永不入） | `thincoder-server/src/gateway/config-admin.mjs`（已落盘 · 实读 **182** 行）PATCH /api/admin/config 写盘成功后一条（失败 ⇒ warn——不反噬已落盘事实） |
-| `sandbox_rule` | admin（名快照） | —— | `{ action, rule }`（规则增删原文——审计面所需） | `thincoder-server/src/sandbox/rules.mjs`（拟新增）——规则增/删各一条 |
-| `sandbox_event` | admin ∥ runner（名快照） | —— | `{ kind, workspaceId? }`（审批三态/超时 ∥ 盒起停拆 ∥ runner 注册/排空/删除 ∥ 快照） | `thincoder-server/src/sandbox/registry.mjs`（拟新增）∥ `sandbox/rules.mjs`——§2.5/§2.6 动作处 |
+| `sandbox_rule` | admin（名快照） | —— | `{ action, rule }`（规则增删原文——审计面所需） | `thincoder-server/src/sandbox/rules.mjs`——规则增/删各一条 |
+| `sandbox_event` | admin（名快照） | —— | `{ kind, workspaceId? }`（审批三态/超时 ∥ 盒起停拆 ∥ 节点添加/删除（含连通自检失败行） ∥ 快照） | `thincoder-server/src/sandbox/registry.mjs` ∥ `thincoder-server/src/sandbox/rules.mjs`——§2.5 动作处 |
 
 - **型面现状（v11——沙盒批后）**：**十二型**（上表十型 + `sandbox_rule` ∥ `sandbox_event`；CHECK 扩型重建 = `store/STORE.md` §2 v11 段）。
 
@@ -88,7 +88,7 @@
 
 ## 3. 端点表（`/api/*`——登录 ∥ 自助 ∥ 管理）
 
-（错误形 = `gateway/API.md` §3；写端点仅收 `application/json`，其它 content-type ⇒ 400；**例外** = `POST /api/runner/checkpoint`（octet-stream——`gateway/API.md` §2.6））
+（错误形 = `gateway/API.md` §3；写端点仅收 `application/json`，其它 content-type ⇒ 400）
 
 | 方法 + 路径 | 鉴权/角色 | 语义 |
 |---|---|---|
@@ -229,3 +229,4 @@
 - 2026-10-10（**team-login-client-access 批（B1）· 设计评审轮 1 修正（fix 轮 · 发现 4）· eng-designer**——承批档 §3 轮次 1 · 台账 #1212）：§2.1 审计事件目录四行（`login_success` ∥ `login_failure` ∥ `key_issue` ∥ `key_revoke`）detail 列补 `surface?` + 取值域注（客户端面 = `"client"`；余面键缺席）——与 §1 客户端登录条 ∥ `client/CLIENT.md` §1 逐字同拍。**零新语义**（评审发现的直接导出项）。
 - 2026-10-10（**server-exec-sandbox 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §2 · 台账 #1224）：§1 增**沙盒工作区 key**条（复用本表 key 面——具名 `sandbox:<ws>` ∥ 免 20 上限 ∥ 明文另存 ∥ 轮换口径）∥ §2.1 事件目录增两型（`sandbox_rule` ∥ `sandbox_event`——写入点坐标）+ 型面现状句（**十二型**——v11 重建）∥ §1/§2.1 两处「十型零增」计数随正；同源 = `store/STORE.md` §2 v11 段 ∥ `sandbox/SANDBOX.md` §2/§7。**产品码零触（设计轮）**。
 - 2026-10-10（**server-exec-sandbox 批 · 残差对齐（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §2 残差项 ②；父侧裁定：收口前对齐）：§3 前言补写端点 JSON 门例外括注——**例外** = `POST /api/runner/checkpoint`（octet-stream——`gateway/API.md` §2.6）；与 `client/CLIENT.md` §2 ∥ `metering/METERING.md` §3 逐字同拍。**零新语义**（KD-SV-77 路由级豁免的残差对齐）。
+- 2026-10-10（**runner-admin-console 批 · 设计档随正 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 2026-10-10 19:52–19:56 口径「runner = 远程 Docker API 节点」）：§2.1 `sandbox_event` 行随正（actor 去 runner ∥ detail 枚举 = 节点添加/删除（含连通自检失败行） ∥ 写入点标记收正）∥ §3 前言去端点 JSON 门例外括注（随执行面重定——`gateway/API.md` §2.6 退场）；与 `client/CLIENT.md` §2 ∥ `metering/METERING.md` §3 逐字同拍。**产品码零触**。

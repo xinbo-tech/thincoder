@@ -244,12 +244,10 @@ CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
 -- ① 沙盒七表（对象模型 = `sandbox/SANDBOX.md` §2——单源）
 CREATE TABLE IF NOT EXISTS sandbox_runners (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,                  -- runner 名（注册时给）
-  token_hash TEXT NOT NULL UNIQUE,            -- sha256(runner 令牌) hex
-  labels_json TEXT NOT NULL DEFAULT '{}',     -- 容量标签（放置判据）
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','draining','drained','disabled')),
-  runtime_json TEXT NOT NULL DEFAULT '{}',    -- 本机自检读数（心跳更新）
-  last_heartbeat_at INTEGER,                  -- unix ms（3 拍缺 ⇒ unhealthy——展示面派生）
+  name TEXT NOT NULL UNIQUE,                  -- 节点名（登记时给）
+  address TEXT NOT NULL,                      -- Docker API 地址（登记时给）
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','disabled')),
+  runtime_json TEXT NOT NULL DEFAULT '{}',    -- 连通自检读数
   created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS sandbox_workspaces (
@@ -258,8 +256,7 @@ CREATE TABLE IF NOT EXISTS sandbox_workspaces (
   owner_member_id INTEGER NOT NULL REFERENCES members(id),
   key_id INTEGER NOT NULL REFERENCES api_keys(id),
   key_plain TEXT NOT NULL,                    -- 工作区 key 明文（盒重建再注入——披露 D2）
-  runner_id INTEGER,                          -- 放置绑定（未放置 ⇒ NULL）
-  required_labels_json TEXT NOT NULL DEFAULT '{}',
+  runner_id INTEGER,                          -- 绑定节点（未绑定 ⇒ NULL）
   limits_json TEXT NOT NULL DEFAULT '{}',     -- 每工作区覆写（资源 + TTL；键集/取值序 = `sandbox/SANDBOX.md` §2；空 = 随全局默认）
   created_at TEXT NOT NULL
 );
@@ -290,11 +287,10 @@ CREATE TABLE IF NOT EXISTS sandbox_pending (
 CREATE TABLE IF NOT EXISTS sandbox_tasks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   runner_id INTEGER NOT NULL,
-  kind TEXT NOT NULL,                         -- 'sandbox.*' 本批；'ci.*' 预留（可扩——KD-SV-72）
+  kind TEXT NOT NULL,                         -- 'sandbox.*'；'ci.*' 预留（执行面与 CI 共用——KD-SV-72）
   payload_json TEXT NOT NULL DEFAULT '{}',
-  status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued','claimed','done','failed','unsupported')),
+  status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued','done','failed','unsupported')),
   created_at TEXT NOT NULL,
-  claimed_at INTEGER,
   finished_at INTEGER,
   result_json TEXT
 );
@@ -312,15 +308,15 @@ CREATE TABLE IF NOT EXISTS sandbox_settings (
 );
 
 -- ② 审计 CHECK 再扩（十型 ⇒ 十二型——表重建，步序与 v10 同构）
--- + 'sandbox_rule'（规则增删——detail = { action, rule }）∥ + 'sandbox_event'（审批三态/超时 ∥ 盒起停拆 ∥ runner 注册/排空/删除 ∥ join 失败 ∥ 快照——detail = { kind, ... }）
+-- + 'sandbox_rule'（规则增删——detail = { action, rule }）∥ + 'sandbox_event'（审批三态/超时 ∥ 盒起停拆 ∥ 节点添加/删除（含连通自检失败行） ∥ 快照——detail = { kind, ... }）
 -- 重建步（建新表（十二型 CHECK） ∥ 拷贝 ∥ DROP ∥ RENAME ∥ 两索引重建——SQL 形同 v10 段，逐字替换型清单）。
 -- ③ 种子（初始化点 = 本段一次性写入；可改可删——不复活）
 --   sandbox_rules 八行（source='default'）：deny（cidr）= 10.0.0.0/8 ∥ 172.16.0.0/12 ∥ 192.168.0.0/16；
 --   allow（domain）= registry.npmjs.org ∥ github.com ∥ *.githubusercontent.com ∥ gitee.com ∥ *.gitee.com；
---   恒拒（127.0.0.0/8 ∥ 169.254.0.0/16）= 内置（非行——不入种子）；动态项（服务器网段 ∥ runner 自身网段）注册时自动带入。
+--   恒拒（127.0.0.0/8 ∥ 169.254.0.0/16）= 内置（非行——不入种子）；动态项（服务器网段 ∥ 节点自身网段）登记时自动带入。
 ```
 
-- 语义/对象模型 = `sandbox/SANDBOX.md` §2/§3–§7（单源）；端点 = `gateway/API.md` §2.5/§2.6；执行面读写 = `sandbox/RUNNER.md`。
+- 语义/对象模型 = `sandbox/SANDBOX.md` §2/§3–§7（单源）；端点 = `gateway/API.md` §2.5/§2.7。
 - 圈界：`sandbox_settings` = 键值设置面（全局默认——键全集/值形 = `gateway/API.md` §2.5）；`sandbox_*` 与 `members`/`api_keys` 的引用 = `owner_member_id` ∥ `key_id`（沿 `api_keys` 先例）；`sandbox_pending`/`sandbox_tasks`/`sandbox_checkpoints` 无 FK（历史/瞬态面自足——沿 `audit_events` 口径）。
 
 - 表归属：`members` ∥ `api_keys` ∥ `sessions` ∥ `audit_events` = accounts 域（`accounts/ACCOUNTS.md`）；`usage` ∥ `usage_daily` ∥ `quota_counters` = metering 域（`metering/METERING.md`）；`providers` = gateway 域（provider 管理面 ∥ v4 模型设置——`gateway/API.md` §2.2）；
@@ -383,3 +379,4 @@ CREATE TABLE IF NOT EXISTS sandbox_settings (
 - 2026-10-09（**server-model-alias 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-server-model-alias.md` §2 · 台账 #1153；需求 §2:29 + AC-29）：§1 补零结构变更句 ∥ §2 v2 段 `models_json` 注释两形 + 增条目两形/别名语义条 ∥ v5 拆列注释随正（内部真名）+ `provider` 约定句补别名回映射 ∥ v6 禁令键形收正（裸名合法 + 首尾空白 400——#1008）∥ §3 补零结构变更条（版本保持 **10**）∥ §4 db.mjs 行 ±0 句。**产品码零触（设计轮）**。
 - 2026-10-10（**server-exec-sandbox 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §2 · 台账 #1224；需求 §5 沙盒块 + 用户 14:00 两平面裁定）：§1 结构版本 10 ⇒ **11** ∥ §2 增 v11 增段（沙盒七表 DDL ∥ 审计 CHECK 再扩（十型 ⇒ 十二型）重建注）∥ §2 标题随正 ∥ 表归属补 sandbox 行 ∥ §3 迁移链补 v11 段（判据）∥ §4 预算（db 实读 255 ⇒ ≈345——v11 段 +≈90）；同源随动 = `sandbox/SANDBOX.md` §2 ∥ `accounts/ACCOUNTS.md` §2.1（十二型） ∥ `gateway/API.md` §2.5/§2.6。**产品码零触（设计轮）**。
 - 2026-10-10（**server-exec-sandbox 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §3 轮次 1 之 1/2 + 用户 14:56 直令）：§2 v11 段 `sandbox_workspaces` 增 `limits_json` 列（每工作区覆写——键集/取值序 = `sandbox/SANDBOX.md` §2）∥ `sandbox_settings` 注释收正（键全集/值形单源 = `gateway/API.md` §2.5；「默认单」非本表 = `sandbox_rules` 种子行）∥ 增 ③ 种子注（初始化点 = 本段一次性写入——八行：deny 三 + allow 五；恒拒两项非行）∥ `sandbox_event` 注补 join 失败 ∥ §3 v11 判据补种子八行 + 覆写列 ∥ §4 db.mjs 行随正（⇒ ≈350）。**零新语义**（评审发现直接导出项 + 用户直令）。
+- 2026-10-10（**runner-admin-console 批 · 设计档随正 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 2026-10-10 19:52–19:56 口径「runner = 远程 Docker API 节点」）：§2 v11 段列面随正——`sandbox_runners` 去 token_hash/labels_json/last_heartbeat_at、增 address（Docker API 地址）、status 枚举收窄（active/disabled）、runtime_json 注释 = 连通自检读数 ∥ `sandbox_workspaces` 去 required_labels_json（runner_id 注释 = 绑定节点）∥ `sandbox_tasks` 去 claimed_at（status 去 claimed）∥ 审计注/种子注/端点注随正；**`db.mjs` v11 列面实现与本节差 = 实施侧收正项（重做批）**；同源随动 = `sandbox/SANDBOX.md` §2 ∥ `accounts/ACCOUNTS.md` §2.1 ∥ `gateway/API.md` §2.5。**产品码零触**。
