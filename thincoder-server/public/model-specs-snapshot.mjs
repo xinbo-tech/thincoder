@@ -73,6 +73,8 @@ const DISPLAY_SPECS = [
   ["gemini-2.5-pro", 2_000_000, 64_000, true],
   ["gemini-2.5-flash", 1_000_000, 64_000, true],
   ["gemini-3.1-pro", 1_048_576, 65_536],
+  ["gemini-3.8-flash", 1_048_576, 65_536, true],
+  ["gemini-3.7-flash", 1_048_576, 65_536, true],
   ["hy3", 256_000, 128_000],
   ["hy3-preview", 256_000, 128_000],
   ["hy4-preview", 256_000, 128_000],

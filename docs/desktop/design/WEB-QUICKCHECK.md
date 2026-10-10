@@ -60,7 +60,7 @@
 
 `window.thincoder`（= `globalThis.thincoder`）逐形同窄桥：
 
-- `invoke(channel, payload) → Promise<receipt>`——channel ∈ 下表（5 通道 = 引导链实际调用集）⇒ 回定形回执；**表外 ⇒ `Promise.reject(Error("[quickcheck] channel not stubbed: " + channel))`**（沿 preload 表外 reject 先例——`thincoder-desktop/src/preload/preload.cjs:73`）。
+- `invoke(channel, payload) → Promise<receipt>`——channel ∈ 下表（**9 通道 = 引导链调用集 7 + boot 主题往返 1 + 设置面团队卡读面 1**）⇒ 回定形回执；**表外 ⇒ `Promise.reject(Error("[quickcheck] channel not stubbed: " + channel))`**（沿 preload 表外 reject 先例——`thincoder-desktop/src/preload/preload.cjs:73`）。
 - `on(name, cb) → off`——登记入记录面后返回空退订（v1 零事件发射——事件面不在本冒烟）。
 - 记录面 `globalThis.__quickcheck = { calls: [], unstubbed: [], subscriptions: [] }`——冒烟末断言 `unstubbed` 为空（**产品 boot 新增通道时此处红** ⇒ 同批扩表——防静默漏面）。
 
@@ -73,8 +73,12 @@ stub 表（回执逐形 = 实读锚）：
 | `sessions:list` | `{ sessions: [], ledger: null }` | `thincoder-desktop/renderer/session-wire.mjs:44-48` |
 | `model:catalog` | `{ ok: true, models: [], unavailable: [] }` | `thincoder-desktop/renderer/composer-sync.mjs:205-219`（两空 ⇒ 零推送） |
 | `provider:list` | `{ ok: true, active: null, presets: [], providers: [] }` | `thincoder-desktop/renderer/mount-settings-reads.mjs:51-71`（无激活 ⇒ 模型段零请求） |
-**5 通道来源**（引导链实际调用点实读——逐通道）：`config:read` = `thincoder-desktop/renderer/app.mjs:213`（boot 往返）∥ `project:recent` + `sessions:list` = `renderer/session-wire.mjs:43`（`refreshRail` 并发两读）
-∥ `model:catalog` = `renderer/composer-sync.mjs:232`（装配首跑恰一次）∥ `provider:list` = `renderer/mount-settings.mjs:158`（`reads.loadProviders()`）。
+| `ledger:read` | `{ ok: true, counts: null, thresholdReached: false }` | 形 = `thincoder-desktop/src/main/project-info.mjs:36`（主侧契约；渲染面调用点未实读——本冒烟不触） |
+| `batch:status` | `{ ok: true, phase: null }` | 形 = `thincoder-desktop/src/main/project-info.mjs:161`（同上） |
+| `theme:state` | `{ ok: true }` | 形 = `thincoder-desktop/src/main/ipc.mjs`（`themeState` ⇒ `{ ok:true }` ∥ `invalid-theme`）；调用 = `thincoder-desktop/renderer/app.mjs:299`（boot 主题回写；`ok !== true` ⇒ `console.error` ⇒ 干净面红） |
+| `team:status` | `{ ok: true, loggedIn: false, server: null, member: null, label: null }` | 形 = `IPC.md` §2 团队族行（核 `teamStatus()` 投影）；消费 = `thincoder-desktop/renderer/mount-settings-team.mjs`（设置面团队卡读面——为手动浏览与设置面冒烟备） |
+**9 通道来源**（引导链实际调用点实读——逐通道）：`config:read` = `thincoder-desktop/renderer/app.mjs:213`（boot 往返）∥ `project:recent` + `sessions:list` = `renderer/session-wire.mjs:43`（`refreshRail` 并发两读）
+∥ `model:catalog` = `renderer/composer-sync.mjs:232`（装配首跑恰一次）∥ `provider:list` = `renderer/mount-settings.mjs:158`（`reads.loadProviders()`）∥ `theme:state` = `renderer/app.mjs:299`（boot 主题回写——菜单体系批 D36 落通道、同批未扩表 ⇒ 2026-10-10 父侧补齐）∥ `team:status` = `renderer/mount-settings-team.mjs`（设置面团队卡读面——B1 批落通道）∥ `ledger:read` + `batch:status` = 主侧契约面（`src/main/project-info.mjs:36` ∥ `:161`——渲染面调用点未实读）。
 表外行为 = 拒 + 记录——**不猜、不造回执**。
 
 ### 3.3 冒烟路径（`run.mjs` · 九段）
