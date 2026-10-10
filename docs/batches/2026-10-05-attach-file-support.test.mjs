@@ -21,7 +21,7 @@
  *   T14（红→绿 · `text/*` 支）：无扩展名（`README`）+ `text/plain` ⇒ 芯片在场 ∥ 发送块 info string 省略（裸围栏）。
  *   T15（红→绿 · 读取失败）：`FileReader` `error` ∥ `abort` ⇒ toast `composer.attach.readFailed` ∥ 零芯片。
  *   AC-7（红→绿 · 词面对拍）：VSC `locales/{en,zh}` 键集相等 ∥ 六键值 = canon 逐字 ∥ `toolbar.attach` 两语收正
- *       ∥ 桌面第二档六键值逐字同 VSC ∥ 键数链（`VIEWS_DICT` 149 ∥ `HOST_DICT` 合并表 322）。
+ *       ∥ 桌面第二档六键值逐字同 VSC ∥ 键数链（`VIEWS_DICT` 150 ∥ `HOST_DICT` 合并表 338）。
  *
  * 车具：happy-dom 真 DOM + `/rc/` 解析钩子 + 桌面词表注册，沿 `docs/batches/2026-10-04-composer-queue-gate-stick.test.mjs` 先例；
  *   file 注入 = `Object.defineProperty(input, "files", { value: [file] })` + `change` 派发；T15 腿 = `globalThis.FileReader` 注桩。
@@ -358,8 +358,8 @@ test("AC-7（红→绿 · 词面对拍）：键集相等 ∥ 六键 canon 逐字
   }
   assert.equal(enVsc["toolbar.attach"], "Attach file", "en toolbar.attach 收正")
   assert.equal(zhVsc["toolbar.attach"], "添加文件", "zh toolbar.attach 收正")
-  assert.equal(Object.keys(VIEWS_DICT.en).length, 149, "VIEWS_DICT en = 149（键数链）")
-  assert.equal(Object.keys(VIEWS_DICT.zh).length, 149, "VIEWS_DICT zh = 149")
-  assert.equal(Object.keys(hostI18n.HOST_DICT.en).length, 322, "HOST_DICT 合并表 en = 322")
-  assert.equal(Object.keys(hostI18n.HOST_DICT.zh).length, 322, "HOST_DICT 合并表 zh = 322")
+  assert.equal(Object.keys(VIEWS_DICT.en).length, 150, "VIEWS_DICT en = 150（键数链 + B1 随正）")
+  assert.equal(Object.keys(VIEWS_DICT.zh).length, 150, "VIEWS_DICT zh = 150")
+  assert.equal(Object.keys(hostI18n.HOST_DICT.en).length, 338, "HOST_DICT 合并表 en = 338")
+  assert.equal(Object.keys(hostI18n.HOST_DICT.zh).length, 338, "HOST_DICT 合并表 zh = 338")
 })

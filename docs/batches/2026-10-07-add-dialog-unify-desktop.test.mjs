@@ -5,7 +5,7 @@
  *   桌面四腿（§2.18 项 7）：树面（两新组卡 ∥ 段体零表单 + 两入口钮 ∥ 焦点声明）∥ 出口面（入口 ⇒ `openSettingsModal`
  *     两值 ∥ 成功径 ⇒ `closeModal` ∥ 取消 ⇒ 关框）∥ 页脚（`addProvider` ⇒ `openSettings(ADD_MODAL_GROUP)`）∥
  *     词面（四新键两语在场）
- *   附加（同批设计件，随腿机检）：段态词恰一（§2.18 项 5）∥ `SCOPES`/`MODAL_READS` 十值随动（§2.18 项 6）∥
+ *   附加（同批设计件，随腿机检）：段态词恰一（§2.18 项 5）∥ `SCOPES`/`MODAL_READS` 十一值随动（§2.18 项 6）∥
  *     会诊上限 5（§2.1 条目 B：入口 disabled ∥ 提交守卫）
  *   VSC 七腿（`thincoder/docs/vsc/design/SETTINGS.md` §2.17 :555）住同批姊妹件
  *     `docs/batches/2026-10-07-add-dialog-unify.test.mjs`（500 行硬限二分 —— 两档腿集合并 = 原单档腿集，零删腿）。
@@ -135,7 +135,7 @@ test("B1 桌面树面：两新组卡（标题逐态 ∥ 焦点声明）∥ 段�
   assert.equal(dCollect(dByClass(envLoading.card, "settings-modal-body"), (n) => n?.props?.["data-state-word"] !== undefined).length, 1, "段态词恰一")
 })
 
-test("B2 桌面出口面 · 入口 ⇒ openSettingsModal 两值（真装配 ∥ SCOPES 十值 ∥ 读取链）", async () => {
+test("B2 桌面出口面 · 入口 ⇒ openSettingsModal 两值（真装配 ∥ SCOPES 十一值 ∥ 读取链）", async () => {
   const calls = []
   const host = { invoke: async (channel, payload) => { calls.push([channel, payload ?? null]); return { ok: true, servers: [], fields: [], models: null } } }
   const store = deskStore.createStore()
@@ -158,12 +158,12 @@ test("B2 桌面出口面 · 入口 ⇒ openSettingsModal 两值（真装配 ∥ 
     deskMcpExits.createMcpExits(deps).handlers.onMcpAddOpen()
     deskModelExits.createModelsExits(deps).handlers.onConsultAddOpen()
     assert.deepEqual(opened, ["mcpForm", "consultAdd"], "两入口 ⇒ openSettingsModal 两值")
-    // 源面：SCOPES 十值 ∥ MODAL_READS +2 行
+    // 源面：SCOPES 十一值 ∥ MODAL_READS +2 行
     const mountSrc = src("thincoder-desktop/renderer/mount-settings.mjs")
-    assert.match(mountSrc, /const SCOPES = Object\.freeze\(\[\.\.\.SECTIONS\.map\(\(section\) => section\.name\), ADD_MODAL_GROUP, MCP_FORM_MODAL_GROUP, CONSULT_ADD_MODAL_GROUP\]\)/, "SCOPES = 段名序 + 三组名（十值）")
+    assert.match(mountSrc, /const SCOPES = Object\.freeze\(\[\.\.\.SECTIONS\.map\(\(section\) => section\.name\), ADD_MODAL_GROUP, MCP_FORM_MODAL_GROUP, CONSULT_ADD_MODAL_GROUP\]\)/, "SCOPES = 段名序 + 三组名（十一值）")
     assert.match(mountSrc, /\[MCP_FORM_MODAL_GROUP\]: "loadMcp"/, "MODAL_READS：mcpForm ⇒ loadMcp")
     assert.match(mountSrc, /\[CONSULT_ADD_MODAL_GROUP\]: "loadAgent"/, "MODAL_READS：consultAdd ⇒ loadAgent")
-    assert.equal(deskSettings.SECTIONS.length + 3, 10, "SCOPES 值数 = 段名序（七）+ 三组名 = 十值（随动式）")
+    assert.equal(deskSettings.SECTIONS.length + 3, 11, "SCOPES 值数 = 段名序（八）+ 三组名 = 十一值（随动式——B1 团队段入段名序）")
   } finally {
     face.closeSettingsModal()
     face.detach()

@@ -1,6 +1,6 @@
 /**
  * 2026-10-02-desktop-menu-system.test.mjs — 批内件（菜单体系批 · 台账 #811 · 实施轮）。
- * **重锚（2026-10-04 · 台账 #889）——断言 = 现盘形**：菜单树形 ∕ 动作集 ∕ 键集（43）∥ 通道计数（48）随后续批演进（#817 设置体系 ∥ #888 更名 ∥ 桌面发布批 `panel:state` 等）——本档逐腿改钉至现读（复跑 8/8）；平行判据 = `docs/batches/2026-10-02-desktop-settings-menu-upgrade.test.mjs` ∥ `docs/batches/2026-10-02-settings-menu-trim.test.mjs`。
+ * **重锚（2026-10-04 · 台账 #889）——断言 = 现盘形**：菜单树形 ∕ 动作集 ∕ 键集（43）∥ 通道计数（51）随后续批演进（#817 设置体系 ∥ #888 更名 ∥ 桌面发布批 `panel:state` 等）——本档逐腿改钉至现读（复跑 8/8）；平行判据 = `docs/batches/2026-10-02-desktop-settings-menu-upgrade.test.mjs` ∥ `docs/batches/2026-10-02-settings-menu-trim.test.mjs`。
  * 判据表 = 批档 `docs/batches/2026-10-02-desktop-menu-system.md` §2.4（机检五腿）+ §2.1（条目覆盖）；
  * 决策单源 = `docs/desktop/design/PROJECT.md` §2 **KD-65**；通道契约 = `docs/desktop/design/IPC.md` §1 `ev:menu` 行
  * ∥ §2 `theme:state` 行。
@@ -274,7 +274,7 @@ test("腿 ④ 词表纪律：键集 = 预期集（两语同集）∥ Edit 四值
 
 // ─── 腿 ⑤ · 通道面 + 回读面（双表 ∥ 白名单末位 ∥ 注册闭合）──────────────────────────────────
 
-test("腿 ⑤ 通道面 + 回读面：双表含 ev:menu 且等值（24）∥ CHANNELS 末位 48 = panel:state ∥ HANDLERS 闭合", () => {
+test("腿 ⑤ 通道面 + 回读面：双表含 ev:menu 且等值（24）∥ CHANNELS 末位 51 = team:logout ∥ HANDLERS 闭合", () => {
   // 双表等值（preload `EVENT_CHANNELS` ∥ `events-subscribe.mjs` `CHANNELS` —— 后者不导出，取源提取）
   const subscribe = src("thincoder-desktop/renderer/events-subscribe.mjs")
   const subChannels = ((subscribe.match(/const CHANNELS = \[[\s\S]*?\]/) ?? [""])[0].match(/"[^"]+"/g) ?? []).map((name) => name.slice(1, -1))
@@ -282,10 +282,10 @@ test("腿 ⑤ 通道面 + 回读面：双表含 ev:menu 且等值（24）∥ CHA
   assert.deepEqual([...preload.EVENT_CHANNELS], subChannels, "双表等值（逐名逐序）")
   assert.equal(preload.EVENT_CHANNELS.length, 24)
 
-  // 请求白名单 47 ⇒ 48：末位 = panel:state（唯一新项；零改名零位移——theme:state 仍在册）
-  assert.equal(preload.CHANNELS.length, 48)
-  assert.equal(preload.CHANNELS.at(-1), "panel:state")
-  assert.equal(new Set(preload.CHANNELS).size, 48)
+  // 请求白名单 48 ⇒ 51：末三 = team:status ∥ team:login ∥ team:logout（B1 团队三增；零改名零位移——panel:state 仍在册）
+  assert.equal(preload.CHANNELS.length, 51)
+  assert.equal(preload.CHANNELS.at(-1), "team:logout")
+  assert.equal(new Set(preload.CHANNELS).size, 51)
 
   // 回读面注册闭合：HANDLERS 表行集 = 白名单集（含 theme:state —— 一白名单项 = 一处理体行）
   const registry = src("thincoder-desktop/src/main/ipc-registry.mjs")

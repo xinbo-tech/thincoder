@@ -204,7 +204,7 @@ VERDICT: pass
 - **父侧保留项**（不派舱）：`IPC.md` `ev:menu` 行计数 ∥ 桌面档头「七段」⇒「八段」（档面单行修正）∥ `API-CONTRACT` 重生成（脚本面）∥ 全链门禁（`prepublishOnly`）与收口轮（含三端实走——R50④⑤）。
 
 ## §5 实施记录（eng-coder）
-**状态行**：实施完成（舱 D（桌面）· 审计零阻断偏差 ∥ 评审 pass ∥ fix 1）
+**状态行**：实施完成（四舱交付块全落（5.A ∥ 5.B ∥ 5.C ∥ 5.D）；舱 B（CLI）· 审计零分歧 ∥ 评审 pass ×3 ∥ fix 2）
 
 
 
@@ -360,5 +360,58 @@ VERDICT: pass
 - **内部分歧审计（只读 explore · 阻塞 ×1）**：结论 = **DEVIATIONS（报告级，零阻断）**——PARTIAL 1（④ 两旧漂移件随正被写界拒——上抛在案）∥ DOC-DRIFT 1（`providers.mjs` 三表缺行 + 行数账未随动）∥ SILENT-SIMPLIFICATION 0 ∥ OUT-OF-LIST 0（**无未报告越出项**）；独立复证 = 十三档 `node --check` 全绿 + A–J 逐条实读；限制如实登记 = 该席位无执行面 ⇒ 未复跑测试（读数均提交方实跑）。
 - **代码评审（advisor · code ×1 · 阻塞）**：**VERDICT: pass**（🔴 0 ∥ 🟡 2 ∥ 🔵 4）。**fix round = 1**：🔵④（en 三句与 VSC en 同句）就地收正 + 批内件补「跨端 zh 逐字同句」腿（`A2` 腿）——随即复跑批内件 **10/10 绿**、两探针绿；其余登记不动作：🟡① `providers.mjs` 表缺行（父侧/设计侧笔）∥ 🟡② 批内件名册登记与 `-ends` 去重（父侧）∥ 🔵③ 行数/键数估漂（回填轮）∥ 🔵⑤ 无在途门（可选）∥ 🔵⑥ `i18n.mjs:27` 键数链机检指针指向 `thincoder-desktop/test/views-chrome-vocab.test.mjs`（现盘不存在——存量行，登记）。
 - **终态 = clean**（审计零阻断偏差 ∥ 评审 pass ∥ fix 1 已复跑；评审后产品码零再触——除已复跑的 i18n 三句收正）。
+
+### 5.B · 舱 B（CLI）· eng-coder · 2026-10-10
+
+**范围**：派发计划 B 舱——CLI 侧 `team` 命令族（login ∥ logout ∥ status：旗标 ∥ 问句 ∥ 隐藏回显 ∥ 逐字文案）∥ 注册三处（`command-table.mjs` ∥ `bin/thincoder.mjs` USAGE ∥ `completions.mjs` 三套）∥ 派生条目隐藏判据两消费面（`model-picker.mjs` ∥ `provider-admin.mjs`）。非本舱：核 ∥ server（舱 A）∥ VSC（舱 C）∥ 桌面（舱 D）∥ 批内件（其他舱范畴）∥ 设计档正文（禁改）∥ 跨批锁件（写界拒——上抛）。
+
+**交付（六档）**：
+
+| # | 档 | 动作 | 实读行数 | 对设计预算 |
+|---|---|---|---|---|
+| 1 | `thincoder-cli/src/cli/team-command.mjs` | 新建（三子命令 ∥ 旗标解析 ∥ 三态输入面：TTY 可见 ∥ TTY 隐藏回显 ∥ 非 TTY 行读 + 粘性 EOF 兜底 ∥ 四失败句 + 两提示句逐字映射） | **239** | ≈150（+89——输入面三态 ∥ 粘性兜底 ∥ 逐字映射） |
+| 2 | `thincoder-cli/src/command-table.mjs` | +import +`case "team"`（`exitSoon(code)`） | 192 ⇒ **201** | ≈200（+1） |
+| 3 | `thincoder-cli/bin/thincoder.mjs` | USAGE +2 行 ∥ 白名单外命令注列举 +`team` ∥ 头注「九薄命令族」 | 188 ⇒ **190** | ≈190 ✓ |
+| 4 | `thincoder-cli/src/completions.mjs` | 三套 `team` 词面（bash 顶层 + `case "$prev"` ∥ zsh 顶层 + `$words[2]` ∥ fish 顶层 + 子命令 + 旗标） | 143 ⇒ **156** | ≈146（+10——设计估 +3） |
+| 5 | `thincoder-cli/src/tui/model-picker.mjs`（**设计表缺行**） | +import/再出口 ∥ 两处过滤（模型候选 ∥ 槽位面）∥ `Remove provider…` 守卫改用过滤后计数 | **324** | 无预算行（上抛） |
+| 6 | `thincoder-cli/src/tui/provider-admin.mjs`（**设计表缺行**） | +import `hasKey` + `isDerivedProviderHidden` 谓词（单源）∥ 三流过滤（remove ∥ key ∥ context） | **248** | 无预算行（上抛） |
+
+**决策透明表（本舱裁量面）**：
+
+| # | 决策点 | 取法 | 依据 |
+|---|---|---|---|
+| 1 | 未登录态出口码 | `logout` ∥ `status` 未登录 ⇒ 未登录句 + 指引，出口 **0**（幂等）；失败 ⇒ 出口 1 | 未登录 = 状态面非错误；fail-closed 仅对未知参/缺子命令 |
+| 2 | 输出流分派 | 结果行 = stdout；问句 ∥ 失败句 ∥ 一次性提示 = stderr | 问句先例 = `setup-wizard.mjs`；提示须落登录/退出当刻（读面零提示字段） |
+| 3 | 非 TTY 输入面 | stdin 行读 + 读完补行尾；EOF ⇒ **粘性**标志（后续读取恒取空串 ⇒ 上层凭据门分类出词，不静默/不悬挂） | 评审轮 1 🟡① 修正；「不产出假成功」同族 |
+| 4 | 空旗标 | `--server ""`/纯空白 ⇒ 视同缺省回落问句 | 评审轮 1 🔵⑤ 修正——失败理由与实际对位 |
+| 5 | 隐藏判据单源 | `isDerivedProviderHidden(provider)` 定义于 `provider-admin.mjs`，`model-picker.mjs` 再出口（同引用）；「持 key」= 核 `model-ref.mjs` `hasKey` | `TEAM.md` §2.4 ∥ `PROVIDER.md` §6.25/§6.22（trim 非空单源） |
+| 6 | Remove 守卫 | `agent.providers.length > 1` ⇒ 过滤后可见数 | 防「唯一可移除项被隐 ⇒ 菜单开空表」死路 |
+| 7 | 文案口径 | 固定句（未登录句 ∥ 四失败句 ∥ 两提示句）逐字中文；问句/结果行英文 | `TEAM.md` §2.5 单源；`notice` 携码不携文（CLI 映射文本） |
+
+**验证读数（全实跑）**：
+
+- 语法：六档 `node --check` 全 OK。
+- 临时区探针 **53/53 绿**（`.thincoder/tmp/2026-10-10-b1-cli-probe/probe.mjs`——诊断件，非批内件）：隐藏判据真值表 ∥ 两消费面过滤行为 ∥ 六句逐字 ∥ 注册面 ∥ 补全发射。
+- 端到端 **49 检查全绿**（同目录 `e2e.mjs`——进程内桩 HTTP `login` ∥ `logout`，CLI 真入口子进程 + 沙箱 HOME/USERPROFILE）：`status` 三读（未登录/已登录/退出后）∥ `login`（管道密码）⇒ config 派生条目形 ∥ `logout`（Bearer 吊销 + token 摘除 + 派生条目摘 key；`revokeDelivered` 面）∥ 重登 upsert ∥ 同名手工条目零覆盖 + 一次性提示逐字 ∥ 错凭据/网络不可达失败句逐字 ∥ usage 四态 ∥ `--help` 两行 ∥ 空旗标回落问句 ∥ EOF 空输入/半程（出口 1 + 失败句，不静默/不悬挂）。
+- 补全真壳腿：`bash -n` 出口 0 ∥ source 冒烟（`complete -F _thincoder thincoder`）∥ 逐态驱动（`team→login logout status` ∥ `team login --→--server --user` ∥ 顶层含 `team`）。zsh ∥ fish 本机不可得（真壳未跑——沿既有先例）。
+- 真 HOME 读数：`thincoder team status`（未登录）= 「未登录——登录后可用」+ 指引行，出口 0；`team login --badflag` ⇒ usage（stderr）+ 出口 1。
+- 既有件复跑：批内件 **10/10** ∥ `session-carryover-cli-vsc` **11/11** ∥ `provider-config-parity-cli` **4/4** ∥ `provider-default-model-purge-cli` **8/8** 绿；`defect-fixes-cli` **3/5**（2 红 = 本批补全词面变更所致）∥ `crossline-clearance-cli` **3/4**（1 红——含 #894 前置红）；两件修正副本复跑 **5/5** ∥ **4/4** 绿（同目录 `fixed-*.test.mjs`）；`structure-split-2` **1/5**（4 红 = 前置红，改动前同读数）。
+- 未跑：仓套件（按纪律归父侧收口拍）。
+
+**关键披露**：
+
+1. **设计表缺行（上抛）**：`model-picker.mjs` ∥ `provider-admin.mjs` 系判据必触件（`TEAM.md` §2.4「四消费面」CLI 两侧 + 派发任务书要点），但 `TEAM.md` §4 CLI 表仅四行（少此两行）；桌面 `src/main/providers.mjs` 同族缺行（舱 D 在册）——建议回填轮补入表与行数账。
+2. **跨批锁件被写界拒（上抛）**：`2026-09-30-defect-fixes-cli.test.mjs`（词表 +`team` ∥ bash/zsh 分派计数 2⇒3）∥ `2026-09-30-crossline-clearance-cli.test.mjs`（`"migrate audit list"` ∥ fish 子命令行 ∥ 顶层词表 +`team` ∥ zsh ledger literal——其中两处为 #894 前置陈旧）——修正副本已验绿，条文在报告（父侧落）。
+3. 行数偏差 vs 设计估：`team-command.mjs` 239 ⇒ 估 ≈150（+89）∥ `completions.mjs` 156 ⇒ 估 ≈146（+10）；均 < 500 软线。
+4. 注释枚举收正两处：`command-table.mjs` 头注「八⇒九薄命令族」∥ `bin/thincoder.mjs` 白名单列举 +`team`；评审轮 2 New 行（`bin/thincoder.mjs:26` 同句「八」残留）于轮 3 前收正为「九」。
+5. `structure-split-2` 前置红 4/5（冻结行数/sha 陈旧 + ENOENT，涉其它档）——非本舱；本批仅使其 model-picker 行数读数 324（该件本已红）。
+6. designId：未随任务书到达本席 ⇒ 无值可回显（令牌值零字）。
+7. 临时区诊断件留存（探针 ∥ e2e ∥ 桩 ∥ 两修正副本 ∥ 完成面驱动脚本）——非产品树。
+
+**审计与代码评审轮次与终态**：
+
+- **内部分歧审计（只读 explore · 阻塞 ×1）**：结论 = **零分歧**（PARTIAL ∥ SILENT-SIMPLIFICATION ∥ DOC-DRIFT ∥ OUT-OF-LIST 四类各 0）；独立复证 = 六档 `node --check` 全绿 + 六句逐字双向比对 + 零自写盘 ∥ 命令面无越界 ∥ `hasKey` 复用 ∥ 补全三套实读；限制如实登记 = 该席位无执行面 ⇒ 未复跑测试（「全绿」为提交方实跑读数 + 断言文本实读）。
+- **代码评审（advisor · code · 阻塞 ×3 轮）**：轮 1 = **VERDICT: pass**（🔴 0 ∥ 🟡 2 ∥ 🔵 3）。**fix round 1**：① 非 TTY EOF 粘性标志 + TTY `askVisible` close 兜底 ② 空旗标视同缺省 ③ 两处注释枚举收正——随即复跑（`node --check` 6/6 ∥ 探针 53/53 ∥ e2e 49 检全绿 ∥ 既有件同读数）；🟡② `TEAM.md` §4 缺行 ⇒ 上抛（不动档）∥ 🔵③ 行数漂移 ⇒ 登记（收口/回填轮收正）。轮 2 = **VERDICT: pass**（6 行：4 Fixed ∥ 2 Accepted ∥ 1 New——`bin/thincoder.mjs:26` 同句残留）。**fix round 2**：`bin/thincoder.mjs:26`「八⇒九」+ 复跑（`node --check` 出口 0 ∥ `team status` 出口 0）。轮 3 = **VERDICT: pass**（唯一变更点验证收正 ∥ 代码面零「八薄命令族」残留 ∥ 前轮各条无回退）。
+- **终态 = clean**（审计零分歧 ∥ 评审 pass ×3 ∥ fix 2 已复跑；评审后产品码变更仅 `bin/thincoder.mjs:26` 注释一行且已复跑）。
 
 ## §6 验证与收口（父代理）

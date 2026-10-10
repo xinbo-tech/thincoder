@@ -13,7 +13,7 @@
  *      `{ id, effortEnum, thinkOff }`（结构机检）+ 核导入形（`thinkOffPath` 保留）∥
  *      `session:prefs` 键闭集含 `effort` + 失败径四档（bad-key ∥ invalid-patch ∥ model-required ∥ slot-missing）
  *   ⑤ 词键零残留：两语零 `settings.model.tier` / `effort.auto` / `effort.off` ∥ 两语键集相等 ∥
- *      键数按盘（`SETTINGS_DICT` 62 ∥ `HOST_DICT` 322——键数注同源）
+ *      键数按盘（`SETTINGS_DICT` 77 ∥ `HOST_DICT` 338——键数注同源）
  *   ⑥ U1 段名收正：两语 `settings.section.model` 精确等值 = zh「模型」∕ en「Model」∥ 注释面两树
  *      （`renderer/` + `src/`）零「模型与档位」∧ 零「Model & tier」
  * 纪律：只读面 ∥ 行为断言（真档取件 · config 走测试缝临时档）；真机走查归父侧。
@@ -162,7 +162,7 @@ test("腿④-C：`session:prefs` 键闭集含 `effort` + 失败径四档（真�
 })
 
 // ─── 腿 ⑤ · 词键零残留 ──────────────────────────────────────────────────────
-test("腿⑤：词键零残留 —— 两语零三键 ∥ 键集相等 ∥ 键数按盘（62 ∥ 322）", () => {
+test("腿⑤：词键零残留 —— 两语零三键 ∥ 键集相等 ∥ 键数按盘（77 ∥ 338）", () => {
   for (const key of ["settings.model.tier", "effort.auto", "effort.off"]) {
     for (const lang of ["en", "zh"]) assert.equal(Object.hasOwn(hostDict[lang], key), false, `${lang} 零 ${key}`)
   }
@@ -170,8 +170,8 @@ test("腿⑤：词键零残留 —— 两语零三键 ∥ 键集相等 ∥ 键�
   assert.equal(Object.hasOwn(settingsDict.zh, "settings.model.tier"), false, "`SETTINGS_DICT` zh 零 `settings.model.tier`")
   assert.deepEqual(Object.keys(hostDict.en).sort(), Object.keys(hostDict.zh).sort(), "两语键集相等")
   assert.deepEqual(Object.keys(settingsDict.en).sort(), Object.keys(settingsDict.zh).sort(), "第四档两语键集相等")
-  assert.equal(Object.keys(settingsDict.en).length, 62, "`SETTINGS_DICT` = 62 键（键数注同源）")
-  assert.equal(Object.keys(hostDict.en).length, 322, "`HOST_DICT` 合并表 = 322 键（键数链同源）")
+  assert.equal(Object.keys(settingsDict.en).length, 77, "`SETTINGS_DICT` = 77 键（键数注同源 + B1 团队段 15 键）")
+  assert.equal(Object.keys(hostDict.en).length, 338, "`HOST_DICT` 合并表 = 338 键（键数链同源 + B1 团队段 15 键）")
 })
 
 // ─── 腿 ⑥ · U1 段名收正（词面 ∥ 注释面）──────────────────────────────────────

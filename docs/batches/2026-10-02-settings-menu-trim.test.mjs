@@ -5,11 +5,11 @@
  * 通道契约 = `docs/desktop/design/IPC.md` §1 `ev:menu` 行。
  *
  * 面（只测本批改动面 —— 平 node；纯函数腿直测，装配面以桩 `document` 直测决策 ∥ 调度面）：
- *   腿 ① 六项集：条目序 = 设置… ∥ sep ∥ 六组项（序 = `SECTIONS` 去「模型与档位」）∥ sep ∥ 维护▸ 两项
+ *   腿 ① 六项集：条目序 = 设置… ∥ sep ∥ 六组项（序 = `SECTIONS` 去「模型与档位」去「团队」）∥ sep ∥ 维护▸ 两项
  *          ∥ 关于与快捷键▸ 两项；六项 emit = `("openSettings", undefined, 组名)` 闭集；「模型与档位」零在场（label ∥ emit 双检）；
- *   腿 ② 跨面闭集一致性：`SETTINGS_GROUPS`（主）≡ `SECTIONS` 名序去「模型与档位」（渲染）源扫 ∥ 读取面键序同值
- *          ∥ 设置页七段零动 pin（`SECTIONS` 仍七段含 `model`）；
- *   腿 ③ 弹窗仍达六组：六组逐开 ⇒ 切片写 + 读取链（沿 #817 腿⑤形）∥ 校验七名宽容 pin（`model` 受理——支 A；
+ *   腿 ② 跨面闭集一致性：`SETTINGS_GROUPS`（主）≡ `SECTIONS` 名序去「模型与档位」去「团队」（渲染）源扫 ∥ 读取面键序同值
+ *          ∥ 设置页八段零动 pin（`SECTIONS` 仍八段含 `model`）；
+ *   腿 ③ 弹窗仍达六组：六组逐开 ⇒ 切片写 + 读取链（沿 #817 腿⑤形）∥ 校验八名宽容 pin（`model` 受理——支 A；
  *          表外 ⇒ 拒 + 记错）。
  *
  * 本件不进仓套件（批内件 · 随批留存）；跑法（任意 cwd —— 路径按本档自身位置解析）：
@@ -36,7 +36,7 @@ const { SECTIONS, settingsModalTree } = await import(at("thincoder-desktop/rende
 const { initialState, createStore } = await import(at("thincoder-desktop/renderer/store.mjs"))
 const { attachSettings } = await import(at("thincoder-desktop/renderer/mount-settings.mjs"))
 
-/** 六组名闭集（预期 —— 序 = `SECTIONS` 名序去「模型与档位」；防被读成「任意六项」）。 */
+/** 六组名闭集（预期 —— 序 = `SECTIONS` 名序去「模型与档位」去「团队」；防被读成「任意六项」）。 */
 const EXPECT_GROUPS = ["providers", "agent", "mcp", "env", "tools", "models"]
 
 /** 建模板（真词表 + 真段名读数 + 两缝捕获）。 */
@@ -95,16 +95,16 @@ test("腿① 六项集：条目序 ∥ 六项 emit 闭集 ∥ 「模型与档位
   assert.deepEqual(template[4].submenu.map((i) => i.label ?? i.type), ["检查更新…", "separator", "命令与快捷键…", "关于 ThinCoder…"], "帮助组 = 检查更新… 首项 + sep（桌面发布·阶段二批新增——父侧随正 2026-10-03）∥ 命令与快捷键… ∥ 关于 ThinCoder…")
 })
 
-// ─── 腿 ② · 跨面闭集一致性（镜像 ≡ 视图名序去「模型与档位」∥ 读取面键序同值 ∥ 七段零动 pin）──────
+// ─── 腿 ② · 跨面闭集一致性（镜像 ≡ 视图名序去「模型与档位」去「团队」∥ 读取面键序同值 ∥ 八段零动 pin）──────
 
-test("腿② 跨面闭集一致性：SETTINGS_GROUPS ≡ SECTIONS 去「模型与档位」（源扫）∥ 读取面键序同值", () => {
-  // 设置页七段零动 pin（渲染面 `SECTIONS` 不收 —— 「模型与档位」段仍在设置页）
+test("腿② 跨面闭集一致性：SETTINGS_GROUPS ≡ SECTIONS 去「模型与档位」去「团队」（源扫）∥ 读取面键序同值", () => {
+  // 设置页八段零动 pin（渲染面 `SECTIONS` 不收 —— 「模型与档位」段仍在设置页）
   const names = SECTIONS.map((s) => s.name)
-  assert.equal(names.length, 7, "`SECTIONS` = 七段（设置页面七段零动）")
+  assert.equal(names.length, 8, "`SECTIONS` = 八段（设置页面八段零动 + B1 团队段）")
   assert.ok(names.includes("model"), "「模型与档位」段仍在设置页")
 
   // 跨面闭集：主侧镜像 ≡ 视图单源名序去「模型与档位」（六名，序固定）
-  assert.deepEqual([...SETTINGS_GROUPS], names.filter((name) => name !== "model"), "SETTINGS_GROUPS ≡ SECTIONS 名序去「模型与档位」")
+  assert.deepEqual([...SETTINGS_GROUPS], names.filter((name) => name !== "model" && name !== "team"), "SETTINGS_GROUPS ≡ SECTIONS 名序去「模型与档位」去「团队」")
   assert.deepEqual([...SETTINGS_GROUPS], EXPECT_GROUPS, "六名闭集（序 = 渠道 → agent → MCP → 运行环境 → 工具与服务 → 会诊与审查）")
   assert.equal(SETTINGS_GROUPS.includes("model"), false, "镜像零 `model`")
 
@@ -129,9 +129,9 @@ test("腿② 跨面闭集一致性：SETTINGS_GROUPS ≡ SECTIONS 去「模型�
   assert.deepEqual(JSON.parse(`[${wordsMatch[1]}]`), EXPECT_GROUPS, "源扫：`SETTINGS_SECTION_KEYS` 字面 ≡ 六名闭集")
 })
 
-// ─── 腿 ③ · 弹窗仍达六组（六组逐开 ⇒ 切片写 + 读取链 ∥ 七名宽容 pin）──────────────────────────
+// ─── 腿 ③ · 弹窗仍达六组（六组逐开 ⇒ 切片写 + 读取链 ∥ 八名宽容 pin）──────────────────────────
 
-test("腿③ 弹窗仍达六组：六组逐开 ⇒ 切片写 + 读取链 ∥ 校验七名宽容 pin（`model` 受理；表外 ⇒ 拒 + 记错）", async () => {
+test("腿③ 弹窗仍达六组：六组逐开 ⇒ 切片写 + 读取链 ∥ 校验八名宽容 pin（`model` 受理；表外 ⇒ 拒 + 记错）", async () => {
   const prevDoc = globalThis.document
   globalThis.document = { querySelector: () => null, addEventListener: () => {} } // 桩 document（本腿只测决策 ∥ 调度面）
   const errors = []
@@ -167,9 +167,9 @@ test("腿③ 弹窗仍达六组：六组逐开 ⇒ 切片写 + 读取链 ∥ 校
       assert.ok(settingsModalTree(store.get(), name, {}) !== null, `弹窗树仍达：${name}`)
     }
 
-    // 校验七名宽容 pin（支 A）：`model` 受理（菜单不发第七名——零改 `SCOPES`）
+    // 校验八名宽容 pin（支 A）：`model` 受理（菜单不发「模型与档位」∕「团队」两名——零改 `SCOPES` 十一）
     calls.length = 0
-    assert.equal(face.openSettingsModal("model"), true, "`model` 受理（七名宽容）")
+    assert.equal(face.openSettingsModal("model"), true, "`model` 受理（八名宽容）")
     assert.equal(store.get().settings.modal, "model", "切片写：model")
     await settle()
     assert.deepEqual(calls, ["provider:list"], "读取链：model = 渠道面（含模型候选随动）")

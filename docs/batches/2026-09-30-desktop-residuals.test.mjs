@@ -9,7 +9,7 @@
  *   M-679a–d  草稿失效声明（#679）：MCP 增 ∕ tools 钥存 ∕ env shell 三成功径 ⇒ 本形草稿零复活（失败径零声明）；
  *             作用域件在场；跨形零误伤；scope=null 永不误伤（`dropDrafts` 直调）；agent 径零改（源扫）。
  *   M-685a–c  拆档落形（#685）：`ipc.mjs` ≤300 内容行 + 转口群档 24 导出；注册面零改（`registerIpcHandlers` 真跑 ——
- *             48 项全解析为函数 ∕ 注册序 = 白名单序）；转口直传抽查（源抽取 + 替身注入 —— 回执恒等 ∕ 两缝注入）。
+ *             51 项全解析为函数 ∕ 注册序 = 白名单序）；转口直传抽查（源抽取 + 替身注入 —— 回执恒等 ∕ 两缝注入）。
  *   M-686a–c  拒绝面（#686）：调用点注入恒拒 ⇒ `console.error` 落 ∧ 回执正常返回 ∧ 零未处理拒绝逃逸；`void` 语义锁
  *             （回执不候后台面）；静态面零裸 `void pushLedgerLines`。
  * 形态：electron 桩 = data: URL `registerHooks`（主侧三档装载面 —— 沿 enddiff 件先例）；设置面 = 真接线
@@ -375,14 +375,14 @@ test("M-685a · `ipc.mjs` ≤300 内容行回线 + 转口群档在位（24 导�
   assert.equal(typeof ipcMod.providerListChannel, "undefined", "转口名不在核心档（去 24 转口名）")
 })
 
-test("M-685b · 注册面零改：`registerIpcHandlers` 真跑 —— 48 项全解析为函数 ∕ 注册序 = 白名单序", () => {
-  assert.equal(ipcMod.CHANNELS.length, 48, "白名单 48 项（单源 = 预载档；#1054 轮实读收正）")
+test("M-685b · 注册面零改：`registerIpcHandlers` 真跑 —— 51 项全解析为函数 ∕ 注册序 = 白名单序", () => {
+  assert.equal(ipcMod.CHANNELS.length, 51, "白名单 51 项（单源 = 预载档；#1054 轮实读收正 + B1 团队三增）")
   globalThis.__ipcHandles.length = 0
   registryMod.registerIpcHandlers()
   const rows = [...globalThis.__ipcHandles]
-  assert.deepEqual(rows.map((row) => row.channel), [...ipcMod.CHANNELS], "注册 48 项且序 = 白名单序（零缺 ∕ 零增）")
-  assert.ok(rows.every((row) => typeof row.handler === "function"), "HANDLERS 全 48 项解析为函数（缺 ⇒ 注册期抛，未抛即证）")
-  assert.equal(rows[rows.length - 1].channel, "panel:state", "定序末位 = 白名单现末位（panel:state）")
+  assert.deepEqual(rows.map((row) => row.channel), [...ipcMod.CHANNELS], "注册 51 项且序 = 白名单序（零缺 ∕ 零增）")
+  assert.ok(rows.every((row) => typeof row.handler === "function"), "HANDLERS 全 51 项解析为函数（缺 ⇒ 注册期抛，未抛即证）")
+  assert.equal(rows[rows.length - 1].channel, "team:logout", "定序末位 = 白名单现末位（team:logout——B1 团队三增）")
 })
 
 test("M-685c · 转口直传抽查（源抽取 + 替身注入 ⇒ 回执恒等 ∕ `liveAgents` ∖ `currentCwd` 两缝）", () => {

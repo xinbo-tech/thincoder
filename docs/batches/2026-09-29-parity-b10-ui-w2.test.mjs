@@ -7,7 +7,7 @@
  * 零第三方依赖（仅 node: 内建）；盘面用临时 config（`_setConfigPathForTest`）；探针经核测试缝注入（零真网络，
  * 仅 S2 死端口一支走真探 —— 本机回环拒绝即返）。
  * **2026-10-09 清除批随正（fix 轮）**：① 本批面——`draft` ∥ 行面 ∥ 表单树 ∥ S7 去 `model`（渠道单值模型退场：
- *   行 model 段 ∥ 候选 `datalist` ∥ model 输入件 ∥ 预设 `(model)` 后缀全退场）；② 跨批点修——通道计数锁 45⇒48
+ *   行 model 段 ∥ 候选 `datalist` ∥ model 输入件 ∥ 预设 `(model)` 后缀全退场）；② 跨批点修——通道计数锁 45⇒48⇒51
  *   （后续三增 `record:append` ∥ `theme:state` ∥ `panel:state`）· 拉取钮断言改查表单件所在树面（`settingsModalTree`
  *   添加弹窗体——两形常显表单退场批）· 钥输入假 DOM 面随「宿主无关读」补 `querySelectorAll` 面。
  */
@@ -498,20 +498,20 @@ test("集成冒烟：settingsTree 全树（S1 ∕ S2 切片键经归一入段）
 })
 
 
-// ─── 通道面（结构）：48 项两向相等 ∕ W2/W3 六新连块定序 ∕ 档头计数 ∕ 渲染面闭包纪律 ──────
+// ─── 通道面（结构）：51 项两向相等 ∕ W2/W3 六新连块定序 ∕ 档头计数 ∕ 渲染面闭包纪律 ──────
 
-test("通道面：白名单 48 项 ≡ 注册表 HANDLERS（两向相等）；W2/W3 六新连块定序；三档头计数四十八（跨批随动——含后续三增）", () => {
+test("通道面：白名单 51 项 ≡ 注册表 HANDLERS（两向相等）；W2/W3 六新连块定序；三档头计数五十一（跨批随动——含后续三增 + B1 团队三增）", () => {
   const preload = deskReq(join(ROOT, "thincoder-desktop/src/preload/preload.cjs"))
-  assert.equal(preload.CHANNELS.length, 48, "48 项（W2/W3 六增 + 后续三增：`record:append` ∥ `theme:state` ∥ `panel:state`）")
+  assert.equal(preload.CHANNELS.length, 51, "51 项（W2/W3 六增 + 后续三增 + B1 团队三增：`team:status` ∥ `team:login` ∥ `team:logout`）")
   const w23 = preload.CHANNELS.indexOf("provider:setKey")
   assert.deepEqual(preload.CHANNELS.slice(w23, w23 + 6), ["provider:setKey", "provider:delKey", "provider:models", "provider:setProxy", "mcp:update", "mcp:reconnect"], "W2 四新 + W3 两新 = 连块定序（后续三增随其后）")
-  assert.deepEqual(preload.CHANNELS.slice(-3), ["record:append", "theme:state", "panel:state"], "后续三增定序末位（他批增量——随动）")
+  assert.deepEqual(preload.CHANNELS.slice(-3), ["team:status", "team:login", "team:logout"], "B1 团队三增定序末位（他批增量——随动）")
   const registrySrc = read("thincoder-desktop/src/main/ipc-registry.mjs")
   const rows = [...registrySrc.matchAll(/^\s{2}"([^"]+)":/gm)].map((m) => m[1])
-  assert.equal(rows.length, 48)
+  assert.equal(rows.length, 51)
   assert.deepEqual([...new Set(rows)].sort(), [...preload.CHANNELS].sort(), "白名单 ↔ 注册表两向相等")
   for (const file of ["thincoder-desktop/src/main/ipc.mjs", "thincoder-desktop/src/main/ipc-registry.mjs", "thincoder-desktop/src/preload/preload.cjs"]) {
-    assert.match(read(file), /四十八项/, `${file} 档头计数随动`)
+    assert.match(read(file), /五十一项/, `${file} 档头计数随动`)
   }
   // 渲染面静态闭包纪律（零 `node:` ∕ 零裸包 —— 本批新改渲染档）
   for (const file of [

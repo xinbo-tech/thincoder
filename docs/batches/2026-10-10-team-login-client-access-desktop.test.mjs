@@ -296,7 +296,9 @@ test("C 装配面：开面随读 ∥ 弹窗读链 ∥ 闭集 ∥ 登录 ∥ 退�
 // ─── D 隐藏判据（`providerList`）────────────────────────────────────────────────────────────
 
 test("D 隐藏判据：`derived === true` ∧ 无 key ⇒ 滤除；derived 有 key ∥ 手工 ⇒ 在场", async () => {
-  const coreConfig = await import(at("thincoder-core/config-io.mjs"))
+  // 核件取件须与**桌面主面**同实例（否则 `_setConfigPathForTest` 缝不生效 —— 会读真配置）：
+  // 桌面 `@thincoder/core` 经 `thincoder-desktop/node_modules/@thincoder/core` 链接解析 ⇒ 本段同径取件（沿 provider-config-parity-desktop 批同注）。
+  const coreConfig = await import(new URL("node_modules/@thincoder/core/config-io.mjs", pathToFileURL(join(ROOT, "thincoder-desktop") + "/")).href)
   const dir = mkdtempSync(join(tmpdir(), "b1-team-providers-"))
   const cfg = join(dir, "config.json")
   writeFileSync(cfg, JSON.stringify({

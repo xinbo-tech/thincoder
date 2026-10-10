@@ -1,6 +1,6 @@
 /**
  * b10-w3.test.mjs — parity-b10-ui 批 · W3 设置面余面（S8–S11 ∕ S14 ∕ S17）批内件。
- * 覆盖 = §2.6 逐行「判据」列 + §2.12 用例表（T7 ∕ T8 ∕ T9）+ 通道面结构（48 项两向相等）+ S17 候选面对拍。
+ * 覆盖 = §2.6 逐行「判据」列 + §2.12 用例表（T7 ∕ T8 ∕ T9）+ 通道面结构（51 项两向相等）+ S17 候选面对拍。
  * 跑法：`node --test .thincoder/tmp/b10-w3.test.mjs`（cwd 任意；本件自锚仓根）——W6 汇总并入
  * `docs/batches/2026-09-29-parity-b10-ui.test.mjs`（本件 = 暂存件，勿直接写批内目录）。
  * 零第三方依赖（仅 node: 内建）；盘面用临时 config（`_setConfigPathForTest`）；槽面用临时 sessions 根
@@ -548,19 +548,19 @@ test("S17 ∕ 结构：两端零自持候选表（薄壳 re-export 核单源）�
   assert.match(coreSrc, /3000/, "超时值在核")
 })
 
-// ─── 通道面（结构）：48 项两向相等 ∕ 本批两通道在册 ∕ 三档头计数 ∕ 渲染面闭包 ──────
+// ─── 通道面（结构）：51 项两向相等 ∕ 本批两通道在册 ∕ 三档头计数 ∕ 渲染面闭包 ──────
 
-test("通道面：白名单 48 项 ≡ 注册表 HANDLERS（两向相等）；本批两通道在册；三档头计数四十八", () => {
+test("通道面：白名单 51 项 ≡ 注册表 HANDLERS（两向相等）；本批两通道在册；三档头计数五十一", () => {
   const preload = deskReq(join(ROOT, "thincoder-desktop/src/preload/preload.cjs"))
-  assert.equal(preload.CHANNELS.length, 48)
-  assert.deepEqual(preload.CHANNELS.slice(-2), ["theme:state", "panel:state"], "末位两通道（#1054 轮实读收正：他批续并后）")
+  assert.equal(preload.CHANNELS.length, 51)
+  assert.deepEqual(preload.CHANNELS.slice(-2), ["team:login", "team:logout"], "末位两通道（#1054 轮实读收正：他批续并后 + B1 团队三增）")
   assert.ok(preload.CHANNELS.includes("mcp:update") && preload.CHANNELS.includes("mcp:reconnect"), "本批两通道在册")
   const registrySrc = read("thincoder-desktop/src/main/ipc-registry.mjs")
   const rows = [...registrySrc.matchAll(/^\s{2}"([^"]+)":/gm)].map((m) => m[1])
-  assert.equal(rows.length, 48)
+  assert.equal(rows.length, 51)
   assert.deepEqual([...new Set(rows)].sort(), [...preload.CHANNELS].sort(), "白名单 ↔ 注册表两向相等")
   for (const file of ["thincoder-desktop/src/main/ipc.mjs", "thincoder-desktop/src/main/ipc-registry.mjs", "thincoder-desktop/src/preload/preload.cjs"]) {
-    assert.match(read(file), /四十八项/, `${file} 档头计数随动`)
+    assert.match(read(file), /五十一项/, `${file} 档头计数随动`)
   }
   // 渲染面静态闭包纪律（零 `node:` ∕ 零裸包 —— 本批新改渲染档）
   for (const file of [

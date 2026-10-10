@@ -3,14 +3,14 @@
  * 判据表 = 批档 `docs/batches/2026-10-02-desktop-settings-menu-upgrade.md` §2.4（机检六腿：波 1 三 + 波 2 三）+ §2.1；
  * 决策单源 = `docs/desktop/design/MENU.md` §1 **KD-67** ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-68**；
  * 通道契约 = `docs/desktop/design/IPC.md` §1 `ev:menu` 行。
- * **重锚（2026-10-04 · 台账 #889）——断言 = 现盘形**：波 1 腿①/② 已按 #820 六项形改钉（设置组条目 = 设置… ∥ sep ∥ 六组项 ∥ sep ∥ 维护▸ ∥ 关于与快捷键▸；`SETTINGS_GROUPS` ≡ `SECTIONS` 名序去「模型与档位」，设置页七段零动）＋ 词表键集 43 ∥ 白名单 48 随读改钉（复跑 8/8）。
+ * **重锚（2026-10-04 · 台账 #889）——断言 = 现盘形**：波 1 腿①/② 已按 #820 六项形改钉（设置组条目 = 设置… ∥ sep ∥ 六组项 ∥ sep ∥ 维护▸ ∥ 关于与快捷键▸；`SETTINGS_GROUPS` ≡ `SECTIONS` 名序去「模型与档位」，设置页七段零动）＋ 词表键集 43 ∥ 白名单 51 随读改钉（复跑 8/8）。
  *
  * 面（只测本批改动面 —— 平 node；纯函数腿直测，装配面以桩 `document` 直测决策 ∥ 调度面）：
  *   波 1 腿 ① 树形：五组序 ∥ 设置组条目序（设置… ∥ sep ∥ 六组项 ∥ sep ∥ 维护▸ ∥ 关于与快捷键▸）∥ 六组项 emit 闭集
  *          ∥ 跨面闭集一致性（`SETTINGS_GROUPS` ≡ `SECTIONS` 名序去「模型与档位」≡ 读取面键序）∥ `maintenance` 键值保持 ∥ 帮助组零动；
  *   波 1 腿 ② 词面 ∥ 回落：键集 43 ∥ `settingsSectionLabels` = HOST_DICT `settings.section.*` 投影 ∥ 未知 ⇒ en 回落
  *          ∥ 缺键 ⇒ 键名终态 ∥ 与 HOST_DICT 零重叠键；
- *   波 1 腿 ③ 通道双表 + 动作闭集六：双表含 `ev:menu` 且等值（24）∥ 白名单 48 不动 ∥ HANDLERS 闭包 ∥ `menu-actions`
+ *   波 1 腿 ③ 通道双表 + 动作闭集六：双表含 `ev:menu` 且等值（24）∥ 白名单 51 不动 ∥ HANDLERS 闭包 ∥ `menu-actions`
  *          六动作（`openSettings` 两形：缺 `value` ⇒ undefined ∥ 携组名 ⇒ 组名）∥ 表外 ⇒ 记错零动作 ∥ app.mjs 双口转接源扫；
  *   波 2 腿 ④ 弹窗树：`settingsModalTree` 平 node（背板 ∥ 卡 `role`/`aria-modal`/`aria-label` ∥ 头（组名 + ✕ 锚）∥
  *          体恰一组（七组逐组跨面互斥）∥ notice 过滤两向（本组 ∨ panel 显 ∥ 他组隐）∥ 三关 handler 在场 ∥ 表外组 ⇒ null
@@ -201,7 +201,7 @@ test("波1腿① 树形：五组序 ∥ 设置组条目序 ∥ 六组项 emit �
   assert.deepEqual(template[4].submenu.map((i) => i.label ?? i.type), ["检查更新…", "separator", "命令与快捷键…", "关于 ThinCoder…"])
 
   // 跨面闭集一致性：主侧镜像 ≡ 视图单源名序去「模型与档位」（设置页面七段零动）∥ 读取面键序（源 ∕ 镜像三面同值）
-  assert.deepEqual([...SETTINGS_GROUPS], SECTIONS.map((s) => s.name).filter((name) => name !== "model"), "SETTINGS_GROUPS ≡ SECTIONS 名序去「模型与档位」")
+  assert.deepEqual([...SETTINGS_GROUPS], SECTIONS.map((s) => s.name).filter((name) => name !== "model" && name !== "team"), "SETTINGS_GROUPS ≡ SECTIONS 名序去「模型与档位」去「团队」")
   assert.deepEqual(Object.keys(settingsSectionLabels("zh")), [...SETTINGS_GROUPS], "读取面键序同值")
   assert.equal(SETTINGS_GROUPS.length, 6)
 
@@ -269,14 +269,14 @@ test("波1腿② 词面 ∥ 回落：键集 43 ∥ 段名 = HOST_DICT 投影 ∥
 // ─── 波 1 腿 ③ · 通道双表 + 动作闭集六 ──────────────────────────────────────────────────────
 
 test("波1腿③ 通道双表 + 动作闭集六（零新通道 ∥ 表外记错 ∥ app.mjs 双口转接）", () => {
-  // 零新通道：事件双表含 ev:menu 且等值（24）；白名单 48 与注册表闭包不动
+  // 零新通道：事件双表含 ev:menu 且等值（24）；白名单 51 与注册表闭包不动
   const subscribe = read("thincoder-desktop/renderer/events-subscribe.mjs")
   const subChannels = ((subscribe.match(/const CHANNELS = \[[\s\S]*?\]/) ?? [""])[0].match(/"[^"]+"/g) ?? []).map((name) => name.slice(1, -1))
   assert.ok(subChannels.includes("ev:menu"), "订阅面表含 ev:menu")
   assert.deepEqual([...preload.EVENT_CHANNELS], subChannels, "双表等值（逐名逐序）")
   assert.equal(preload.EVENT_CHANNELS.length, 24)
-  assert.equal(preload.CHANNELS.length, 48)
-  assert.equal(new Set(preload.CHANNELS).size, 48)
+  assert.equal(preload.CHANNELS.length, 51)
+  assert.equal(new Set(preload.CHANNELS).size, 51)
   const registry = read("thincoder-desktop/src/main/ipc-registry.mjs")
   const table = (registry.match(/const HANDLERS = Object\.freeze\(\{[\s\S]*?\n\}\)/) ?? [""])[0]
   const rows = [...table.matchAll(/"([^"]+)":/g)].map((match) => match[1])
@@ -522,9 +522,9 @@ test("波2腿⑥ 样式 ∥ 链序：z-20/21 ∥ 零新变量 ∥ 零新断点 �
   // 样式纪律：零新变量 ∥ 零新断点
   assert.equal(css.split("\n").filter((line) => /^\s*--[\w-]+\s*:/.test(line)).length, 0, "零 `--` 定义")
   assert.equal(stripComments(css).includes("@media"), false, "零 `@media`（源面；注释内字面不计）")
-  // settings.css 零触（303 在盘 ∥ 无 modal 规则 —— 行数为指纹值，随实读收正）
+  // settings.css 零触（306 在盘 ∥ 无 modal 规则 —— 行数为指纹值，随实读收正）
   const settings = read("thincoder-desktop/renderer/settings.css")
-  assert.equal(contentLines(settings), 303, "settings.css 行数不动（303 在盘）")
+  assert.equal(contentLines(settings), 306, "settings.css 行数不动（306 在盘）")
   assert.equal(/settings-modal/.test(stripComments(settings)), false, "settings.css 无 modal 规则（注释内字面不计——沿本件同式）")
   // z 族在位（设置面 10 < 弹窗 20/21 < 确认 40/41）
   assert.ok(blockOf(stripComments(settings), "[data-slot=\"settings\"]").includes("z-index: 10"), "设置面 z-10 在位")

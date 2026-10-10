@@ -305,7 +305,7 @@ test("T-B2 回读·边界：同签名二次 settle 零二次上报；status 翻�
   assert.equal(readout.settle({ activeSession: "8", subBlocks: { "8": [] } }), true); assert.equal(calls.length, 3, "会话切换 ⇒ 一报")
 })
 
-test("T-B3 回读·正常：缓存 report/get ∥ 后报覆前报 ∥ 缺键；通道面闭合（末位 48 · 表行 = 白名单 · 四处接线）", async () => {
+test("T-B3 回读·正常：缓存 report/get ∥ 后报覆前报 ∥ 缺键；通道面闭合（末位 51 · 表行 = 白名单 · 四处接线）", async () => {
   const { createPanelLive } = await load("thincoder-desktop/src/main/panel-live.mjs")
   let clock = 1000
   const live = createPanelLive({ now: () => clock })
@@ -318,10 +318,10 @@ test("T-B3 回读·正常：缓存 report/get ∥ 后报覆前报 ∥ 缺键；�
   live.report("1", b2)
   assert.deepEqual(live.get("1"), { blocks: b2, receivedAt: 1500 }, "后报覆前报")
   assert.equal(live.get("2"), null)
-  // 通道面闭合：白名单末位 48 ∥ HANDLERS 表行 = 白名单集 ∥ 四处接线在场（源读取）
+  // 通道面闭合：白名单末位 51 ∥ HANDLERS 表行 = 白名单集 ∥ 四处接线在场（源读取）
   const preload = require(rel("thincoder-desktop/src/preload/preload.cjs"))
-  assert.equal(preload.CHANNELS.length, 48)
-  assert.equal(preload.CHANNELS.at(-1), "panel:state")
+  assert.equal(preload.CHANNELS.length, 51)
+  assert.equal(preload.CHANNELS.at(-1), "team:logout")
   const registry = src("thincoder-desktop/src/main/ipc-registry.mjs")
   const table = (registry.match(/const HANDLERS = Object\.freeze\(\{[\s\S]*?\n\}\)/) ?? [""])[0]
   const rows = [...table.matchAll(/"([^"]+)":/g)].map((m) => m[1])

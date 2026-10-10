@@ -1,5 +1,5 @@
 {
-  "_note": "i18n 拆分批（2026-09-29 · 台账 #614）搬前基线：renderer/i18n.mjs HOST_DICT 两语全量条目（保序 [[key,value],...]）——搬前届盘实读冻结；对拍件 = docs/batches/2026-09-29-i18n-split.test.mjs（A2）。【重锚 2026-09-29 18:3x · 父侧收位】#637 增 `session.occupied` 两语（session.deleteConfirm 后位）——条目 294 ⇒ 295。【重锚 2026-10-04 · 台账 #889】HOST_DICT 随后续批条目增殖——条目 295 ⇒ 314（现盘全量重冻；对拍语义 = 现盘全量等值等序 + 三档子序列相对序保）。 【重锚 2026-10-10 · 随正轮（父侧）】HOST_DICT 随后续批条目增殖——条目 314 ⇒ 322（现盘全量重冻；对拍语义 = 现盘全量等值等序 + 三档子序列相对序保）。",
+  "_note": "i18n 拆分批（2026-09-29 · 台账 #614）搬前基线：renderer/i18n.mjs HOST_DICT 两语全量条目（保序 [[key,value],...]）——搬前届盘实读冻结；对拍件 = docs/batches/2026-09-29-i18n-split.test.mjs（A2）。【重锚 2026-09-29 18:3x · 父侧收位】#637 增 `session.occupied` 两语（session.deleteConfirm 后位）——条目 294 ⇒ 295。【重锚 2026-10-04 · 台账 #889】HOST_DICT 随后续批条目增殖——条目 295 ⇒ 314（现盘全量重冻；对拍语义 = 现盘全量等值等序 + 三档子序列相对序保）。 【重锚 2026-10-10 · 随正轮（父侧）】HOST_DICT 随后续批条目增殖——条目 314 ⇒ 322（现盘全量重冻；对拍语义 = 现盘全量等值等序 + 三档子序列相对序保）。 【重锚 2026-10-10 · B1 团队登录批随正（父侧）】HOST_DICT 随后续批条目增殖——条目 322 ⇒ 338（现盘全量重冻；B1 团队段 +15 键 ∥ 前批未续计 1 键——`VIEWS_DICT` 实读 150；对拍语义不变 = 现盘全量等值等序 + 三档子序列相对序保）。",
   "en": [
     [
       "rail.action.openDir",
@@ -462,6 +462,66 @@
       "Edit MCP Server"
     ],
     [
+      "settings.section.team",
+      "Team"
+    ],
+    [
+      "settings.team.serverLabel",
+      "Server address"
+    ],
+    [
+      "settings.team.usernameLabel",
+      "Username"
+    ],
+    [
+      "settings.team.passwordLabel",
+      "Password"
+    ],
+    [
+      "settings.team.login",
+      "Log in"
+    ],
+    [
+      "settings.team.logout",
+      "Log out"
+    ],
+    [
+      "settings.team.loggedOut",
+      "Not logged in — available after login"
+    ],
+    [
+      "settings.team.memberLabel",
+      "Member"
+    ],
+    [
+      "settings.team.labelLabel",
+      "Client label"
+    ],
+    [
+      "settings.team.reason.network",
+      "Network unreachable"
+    ],
+    [
+      "settings.team.reason.credentials",
+      "Wrong username or password"
+    ],
+    [
+      "settings.team.reason.rateLimited",
+      "Too many login attempts"
+    ],
+    [
+      "settings.team.reason.writeFailed",
+      "Failed to write local config"
+    ],
+    [
+      "settings.team.notice.manualNameConflict",
+      "A provider named \"team\" already exists — not added automatically; rename or delete it, then log in again"
+    ],
+    [
+      "settings.team.notice.revokeNotDelivered",
+      "Server revocation not delivered"
+    ],
+    [
       "wizard.title",
       "Initial setup"
     ],
@@ -732,6 +792,10 @@
     [
       "composer.send.failed",
       "Send failed (${reason}) — the text was kept"
+    ],
+    [
+      "composer.prefs.failed",
+      "Model switch did not take effect (${reason})"
     ],
     [
       "composer.send.noProvider",
@@ -1752,6 +1816,66 @@
       "编辑 MCP 服务器"
     ],
     [
+      "settings.section.team",
+      "团队"
+    ],
+    [
+      "settings.team.serverLabel",
+      "服务器地址"
+    ],
+    [
+      "settings.team.usernameLabel",
+      "用户名"
+    ],
+    [
+      "settings.team.passwordLabel",
+      "密码"
+    ],
+    [
+      "settings.team.login",
+      "登录"
+    ],
+    [
+      "settings.team.logout",
+      "退出登录"
+    ],
+    [
+      "settings.team.loggedOut",
+      "未登录——登录后可用"
+    ],
+    [
+      "settings.team.memberLabel",
+      "成员"
+    ],
+    [
+      "settings.team.labelLabel",
+      "端标签"
+    ],
+    [
+      "settings.team.reason.network",
+      "网络不可达"
+    ],
+    [
+      "settings.team.reason.credentials",
+      "用户名或密码错误"
+    ],
+    [
+      "settings.team.reason.rateLimited",
+      "登录尝试过于频繁"
+    ],
+    [
+      "settings.team.reason.writeFailed",
+      "本机配置写入失败"
+    ],
+    [
+      "settings.team.notice.manualNameConflict",
+      "已存在同名 provider「team」——未自动添加；请改名或删除后重登"
+    ],
+    [
+      "settings.team.notice.revokeNotDelivered",
+      "服务端吊销未达"
+    ],
+    [
       "wizard.title",
       "初始设置"
     ],
@@ -2022,6 +2146,10 @@
     [
       "composer.send.failed",
       "发送失败（${reason}）——文本已保留"
+    ],
+    [
+      "composer.prefs.failed",
+      "模型切换未生效（${reason}）"
     ],
     [
       "composer.send.noProvider",
