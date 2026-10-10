@@ -92,7 +92,7 @@ ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.5 "cd ~/thincoder-se
 5. **`config/` 与 `data/` 属 `ecs-user`**（部署目录本身属 `thincoder`）——直接 `cp` 这两处的文件可能被拒。
 6. **别在大负载时硬上**：这台同时是桌面 Linux 构建机；历史上出现过旁路进程撑满 + sshd 饿死（须重启恢复）——重活并行时先 `uptime` ∥ `free -m` 看一眼。
 7. **盒镜像构建源慢**（runner 机）：容器内打 `deb.debian.org` = **19 kB/s**（9.4MB 用 8min13s）⇒ 直建 20min+。绕行 = **构建期换源副本**（仅改副本、产品 Dockerfile 不动）——台账 #1250。
-8. **Docker Hub 不可达**（runner 机实测 `registry-1.docker.io:443` i/o timeout）⇒ `runner image` 的 pull 路径必败、build 路径需本地有底镜像；跨机取像 = `docker save │ gzip` ⇒ scp ⇒ `docker load`（本次 111MB tgz 走 .5⇒本机⇒.6）。
+8. **Docker Hub 不可达**（runner 机实测 `registry-1.docker.io:443` i/o timeout）⇒ 节点机上直接 pull 必败；盒镜像在 .5 构建后搬运 = `docker save │ gzip` ⇒ scp ⇒ `docker load`（本次 111MB tgz 走 .5⇒本机⇒.6）。
 
 ## 7. runner 机（sh-mgr · 10.0.0.6——沙盒执行面）
 
@@ -101,26 +101,25 @@ ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.5 "cd ~/thincoder-se
 | 连接 | `ssh -i $env:USERPROFILE\.ssh\thincoder_ecs thincoder@10.0.0.6`（与 .5 同一把钥匙） |
 | 机器 | Ubuntu 22.04.5 ∥ cgroup v2 ✓ ∥ 无 IPv6 缺省路由 ✓ ∥ 盘 40G（余 ~17G）；`thincoder` 在 `sudo` 组（**需密码**）与 `docker` 组 |
 | 已装（2026-10-10） | Docker 29.1.3（apt `docker.io`）∥ quota 4.06 ∥ Node v24.21.0（nodesource）∥ nft 1.0.2（自带） |
-| 角色 | 沙盒 **runner #1**（server = `http://10.0.0.5:8787`）；用户明言事后更换此机密码 ⇒ 访问按**公钥**面 |
-| 服务 | `thincoder-runner.service`（unit 源 = repo `deploy/thincoder-runner.service`；`User=root`）；配置 `/opt/thincoder-runner/runner.json`（0600） |
-| 盒镜像 | `thincoder-sandbox:1`——**本机拉不动 Docker Hub**（实测 i/o timeout）⇒ 在 .5 构建后搬运（坑 7/8） |
-| 探针 | `sudo thincoder-runner probe --workspace <id> --config /opt/thincoder-runner/runner.json`（**以 root**）——P1–P14 |
+| 角色 | **沙盒执行节点**（runner）——按「runner = 远程 Docker API 节点」口径（2026-10-10 19:52 定）；控制台「沙盒 → 运行面」填地址 `http://10.0.0.6:2375` 即接入 |
+| 服务 | **无自驻进程**（旧 `thincoder-runner.service` 已清除——2026-10-10 20:0x：服务停 ∥ unit 移走 ∥ 包卸载 ∥ 令牌清空）；机器侧只留 **Docker 引擎** |
+| 节点前置 | Docker 引擎须监听 TCP 2375（内网、无 TLS——最小切片口径）：见下「节点接线链」；`sudo` 需先 `echo <口令> | sudo -S -v` 刷票 |
+| 盒镜像 | `thincoder-sandbox:1`——**本机拉不动 Docker Hub**（实测 i/o timeout）⇒ 在 .5 构建后搬运（坑 7/8）|
 
-**装机链（逐条实跑过）**——辅助命令里 `sudo` 需先 `echo <口令> | sudo -S -v` 刷票：
+**节点接线链（2026-10-10 修订——旧「装机链」随守护进程清除作废）**：
 
 ```
-git clone --depth 1 https://gitee.com/shanghai-xinbo/thincoder ~/thincoder-clone
-cd ~/thincoder-clone/thincoder-server && npm pack --silent
-sudo mkdir -p /opt/thincoder-runner/.npm-global
-sudo env NPM_CONFIG_PREFIX=/opt/thincoder-runner/.npm-global npm i -g ./thincoder-server-0.1.0.tgz
-sudo /opt/thincoder-runner/.npm-global/bin/thincoder-runner join --server http://10.0.0.5:8787 --join-token <t> --config /opt/thincoder-runner/runner.json
-sudo cp /home/thincoder/thincoder-clone/thincoder-server/deploy/thincoder-runner.service /etc/systemd/system/
-sudo systemctl daemon-reload && sudo systemctl enable --now thincoder-runner
+# ① 让 Docker 引擎监听 TCP（systemd override；改完生效 = 重启 docker）
+sudo mkdir -p /etc/systemd/system/docker.service.d
+printf '[Service]\nExecStart=\nExecStart=/usr/bin/dockerd -H fd:// -H tcp://0.0.0.0:2375\n' | sudo tee /etc/systemd/system/docker.service.d/tcp.conf
+sudo systemctl daemon-reload && sudo systemctl restart docker
+# ② 本机自证（能读版本 = 就绪）
+curl -s http://127.0.0.1:2375/version
+# ③ 回控制台：「沙盒 → 运行面 → 添加节点」填 http://10.0.0.6:2375（连通自检不过 ⇒ 不下发落库）
 ```
 
-- **join-token 从哪来**：控制台管理员会话铸——`POST /api/admin/sandbox/runners/join-token`（页面面未部署时走 API 直调）。
-- **doctor 以 root 跑**：非 root ⇒ #3 FAIL（nft 需 CAP_NET_ADMIN）——「拒跑」是正确语义，不是装坏。
-- **收工口径（2026-10-10 用户逐字）**：「能联通就行以后有的是时间发现问题解决问题」——联通 = runner #1 healthy ∥ 工作区 `acc-1010` 放置成功 ∥ 盒 `tc-ws-1` 起 ✓。
+- **安全边界（如实）**：2375 = **无鉴权的 Docker 根等价口**——仅限内网（安全组只放 server 机；上 TLS/证书 = 另批——最小切片明示不做）。
+- **验收口径（真机）**：控制台「运行面」添加节点 ⇒ 在线；容器区建/启/停/删各走一遍——读数以页面与 `docker ps` 为准（真机 = 10.0.0.6）。
 
 ## 8. 相关档
 

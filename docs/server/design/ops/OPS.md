@@ -244,7 +244,8 @@ services:
 ### 5.10 沙盒 runner（执行面——接入与运维；server-exec-sandbox 批 · 台账 #1224）
 
 - **形态** = 远程 Docker API 节点：控制面直调 Docker API ∥ **主机侧两件**（出站闸 nft ∥ 卷的磁盘限额）= SSH 进主机执行 ∥ 集群化 = 用 Docker 自己的集群 ∥ 机器上不驻留我们的进程——用户 2026-10-10 19:52–19:56 定。
-- **接入** = 控制台「添加节点」（填 Docker API 地址——连通自检；失败逐句人话 + 审计行）∥ 删除节点（有承载工作区 ⇒ 二次确认）；托管接入（管理员给主机地址 + 登录方式 ⇒ server 代部署）= 需求在册（AC-36 ⑨/⑩）——设计归服务端开发面（#1236/#1237）。
+- **节点前置（最小切片——runner-admin-console 批）**：节点机 Docker 引擎须**监听 TCP**（`dockerd -H fd:// -H tcp://0.0.0.0:2375` systemd override）∥ server 机 → 节点 `:2375` 网络可达（安全组/防火墙面）；**TLS 不做**（内网——`sandbox/SANDBOX.md` §3 提议①，明文 2375 = 无鉴权 root 等价口——限内网）；控制台容器面 = 建/启/停/删（机制 = `sandbox/SANDBOX.md` §3）。
+- **接入** = 控制台「添加节点」（填 Docker API 地址——连通自检；失败逐句人话 + 审计行）∥ 删除节点（有容器 ⇒ 二选一「保留 ∥ 连删」；有承载工作区 ⇒ 二次确认）；托管接入（管理员给主机地址 + 登录方式 ⇒ server 代部署）= 需求在册（AC-36 ⑨/⑩）——设计归服务端开发面（#1236/#1237）。
 - **网络面**：盒流量在节点本机、出站经本机闸（不占 server 侧带宽——KD-SV-63 动机）；细形（端口/凭据）随重做批定形。
 
 ## 6. 本域文件与行数预算（本域族行）
@@ -398,3 +399,4 @@ first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10
 - 2026-10-10（**server-exec-sandbox 批 · 残差对齐（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §2 残差项 ①；父侧裁定：收口前对齐）：§5.6 反代样例 ① 按 location 分路由——缺省 32m 保持（其余路由从严）∥ 快照路由例外 = `location = /api/runner/checkpoint` 块 `client_max_body_size 200m`（= 路由级上限 200 MiB 同值——`gateway/API.md` §2.6；≤200 MiB 上送不被反代先挡）；§8 KD-SV-25 行同拍（body 上限 = 缺省 32m ∥ 快照路由 200m）；完整样例（`thincoder-server/README.md` §11）随动待落——产品面/另轮。**零新语义**（KD-SV-77 路由级豁免的残差对齐）。
 - 2026-10-10（**server-exec-sandbox 批 · 残差对齐（fix 轮）· eng-designer**——承评审 #143 交卷点出的同族残留；父侧裁定：换依据不删观点）：§1 预设覆盖面行 ∥ §1 漂移纪律行 ∥ §8 KD-SV-17 行三处引核依据收正——「被 KD-SV-2 禁」⇒ 引核口径 KD-SV-78（KD-SV-2 范围 = 网关（provider 层）面——`design/PROJECT.md` §5）；自持快照口径（KD-SV-17 ∥ 对照取数 = 只读、非运行期依赖）零变。同族收正 = `webui/WEBUI.md` §7（KD-SV-34 行）。**零新语义**（KD-SV-78 裁定的残差对齐）。
 - 2026-10-10（**runner-admin-console 批 · 设计档随正 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 2026-10-10 19:52–19:56 口径「runner = 远程 Docker API 节点」）：§5.1 `bin` 行去第二入口 ∥ §5.6 反代样例去快照路由例外（body 上限 = 32m）∥ **§5.10 重写**（形态 = 远程 Docker API 节点；接入 = 添加/删除节点（连通自检）∥ 托管接入归 #1236/#1237）∥ §6 去 runner unit 行、盒镜像行随正 ∥ §7 沙盒判据行随正 ∥ §8 不做面随正 + KD-SV-25 行随拍；同源随动 = `sandbox/SANDBOX.md` ∥ `gateway/API.md`。**产品码零触**。
+- 2026-10-10（**runner-admin-console 批 · A 批最小切片设计 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 19:59 令）：§5.10 增**节点前置**条（Docker 引擎 TCP 监听 ∥ 网络可达 ∥ TLS 不做——提议①）∥ 接入条补删节点二选一（保留 ∥ 连删）。**产品码零触（设计轮）**。

@@ -35,11 +35,40 @@
 - **明文落库**：`sandbox_workspaces.key_plain`（工作区 key 明文——盒每次重建须再注入；先例 = provider key 明文（KD-SV-19）；披露 = §10-D2）。
 - **每工作区资源档（覆写）**：`sandbox_workspaces.limits_json`（JSON 对象——键 = `cpus` ∥ `memMb` ∥ `pids` ∥ `diskMb` ∥ `idleTtlMinutes` ∥ `wallclockTtlHours`；缺键 = 随全局默认）；写端点 = PATCH（§9 ∥ `gateway/API.md` §2.5）；**取值序 = 全局默认（`sandbox_settings`）⇒ 逐键叠加工作区覆写（覆写优先）**。
   解析结果 = 建盒/重建时的容器参数（控制面直调 Docker API——§1）；生效 = 下次建盒/重建（运行中盒零触——容器旗不可热改）。
+- **容器不落表**（runner-admin-console 批）：容器 = 节点上的 Docker 容器——**Docker 引擎即真源**（读时读 ∥ 动作直调；控制面零镜像 ∥ 零同步机制——§14 KD-SV-79）。
 
-## 3. 节点登记（最小接入面）
+## 3. 节点与容器（最小切片——runner-admin-console 批）
 
-- **添加节点**（控制台——需求 §5 沙盒块运行面①）：填 **Docker API 地址**（+ 名称）⇒ **连通自检**（server 直连 Docker API 探活）；失败 ⇒ **逐句人话** + 审计行（`sandbox_event`）⇒ 通过 ⇒ 落 `sandbox_runners` 行。
-- **删除节点**：有承载工作区 ⇒ **二次确认**（控制台明示承载清单）；不存在 ⇒ 404。
+> **本批射程（用户 2026-10-10 19:59 令）**：① 添加节点（登记一台 Docker API 节点）② 创建容器 ③ 启动 ∥ 停止容器 ④ 删除节点（+ 容器删除——提议④）。**其余全部不做**（一行带过：出站闸 ∥ 磁盘限额 ∥ 探针 ∥ 心跳/放置 ∥ 托管装机 ∥ Swarm ∥ 快照 ∥ 待批 ∥ 镜像管理 ∥ 工作区↔容器映射 ∥ 卷删除 ∥ 限额/端口/网络 ∥ TLS——§15）。
+> **连线口径**：地址 = `http://<host>:<port>`（登记输入归一：缺协议补 `http://`、缺端口补 `2375`；`https:` 拒）；**调用恒带版本前缀**（登记时协商 = `max(1.44, MinAPIVersion)`，须 ≤ `ApiVersion`，否则拒登记——提议⑤）；读类超时 3s ∥ 动作类 15s（常量；测试可注入 `fetchImpl`）。
+> **读时探活（非心跳）**：运行面/列表读数 = 请求内现打（并发；无后台定时器 ∥ 无心跳机制——§14 KD-SV-80）。
+
+- **添加节点**（`POST /api/admin/sandbox/runners`——提议①）：入参 `{ name, address }`（名 ≤ 40 字符；地址归一形如上）。
+  **连通自检** = `GET <base>/<ver>/version` ⇒ 读 `{ Version, ApiVersion, MinAPIVersion, Os, Arch }` + 协商版本 ⇒ 通过 ⇒ 落 `sandbox_runners` 行（`status='active'`；`runtime_json` = 自检读数）+ 审计行 `sandbox_event`（`kind=runner_add`）。
+  失败（不可达 ∥ 超时 ∥ 非 Docker API 响应 ∥ 版本不兼容）⇒ **502 `upstream_error`** + 逐句人话 + **零落库** + 审计行（`runner_selfcheck_failed`）；重名 ∥ 地址形非法 ⇒ 400。
+  **节点侧前置**：节点机 Docker 引擎须监听 TCP（测试机 = `dockerd -H fd:// -H tcp://0.0.0.0:2375` systemd override；步 = 父侧运维笔——`docs/TEST-ENV-ECS.md` §7 待补）；TLS 不做（内网——提议①）。
+- **运行面读数**（`GET /api/admin/sandbox/overview`）：每节点现打 `GET <base>/<ver>/info`（3s ∥ 并发）⇒ 行 = `{ id, name, address, status, online, version, containers: { total, running } ∥ null, selfCheck, createdAt }`（`online=false` ⇒ `version`/`containers` = `null`——离线读数不外推）。
+  `status = available ⇔ 至少一个节点在线`（无节点 ⇒ unavailable「无节点注册」；全离线 ⇒ unavailable「节点全部不可达」）；**节点面（添加/删除）恒可用**（不随门禁）。
+  写门（`requireSandboxAvailable`——需节点的写路径（工作区创建/动作；规则 ∥ 设置 ∥ 待批裁定不设门）= 静态判据（存在 `active` 节点）；本批零改——实时门统一随重做批）。
+- **创建容器**（`POST …/runners/:id/containers`——提议②）：入参 `{ name, image, volume? }`（名 = Docker 容器名形；镜像 = 控制台预填设置 `image` 值（现缺省 `thincoder-sandbox:1`）；卷 = Docker 卷名，空 = 不挂）。
+  ⇒ `POST <base>/<ver>/containers/create?name=<名>`（体 = `{ Image, HostConfig: { Binds: ["<卷>:/workspace"] } }`；卷缺 ⇒ 省略 `HostConfig`）⇒ 201 ⇒ `{ container: { id, name, image, state: "created" } }` + 审计行（`container_create`）。
+  引擎 404（无此镜像）∥ 409（名占用）⇒ 400（含引擎原文）；不可达 ⇒ 502。**创建 ≠ 启动**（两动作分列——用户四项逐条）。
+- **容器读取与动作**：列表 = `GET …/containers`（读时读 `GET <base>/<ver>/containers/json?all=1` ⇒ `{ containers: [{ id, name, image, state, status }] }`——名去前导 `/`）。
+  **启动** ∥ **停止** = `POST …/containers/:containerId/{start,stop}`（204 ⇒ 200；**304（已启/已停）⇒ 幂等成功**；`t` 不带 = 引擎缺省 10s）∥ **删除** = `DELETE …/containers/:containerId`（`?force=1`——运行中强停强删；**卷不随删**）。
+  动作各落审计行（`container_start` ∥ `container_stop` ∥ `container_delete`）；引擎无此容器 ⇒ 404 `not_found`；余 ⇒ 502。
+- **删除节点**（`DELETE …/runners/:id`——提议③）：先读承载容器 ⇒ 有容器未给处置 ⇒ 400（「请选保留 ∥ 连删」）∥ `containers:"keep"` ⇒ 只删登记（容器原样留机）∥ `"remove"` ⇒ 逐个强删 ⇒ 全成 ⇒ 删行；**任一失败 ⇒ 502 + 登记行保留**（消息携失败清单）；无容器 ⇒ 直接删行。
+  **节点不可达 ⇒ 仅 keep 可过**（连删 ⇒ 502）。**有承载工作区 ⇒ `confirm: true`**（现行为保留——工作区面本批零改）；不存在 ⇒ 404；审计行（`runner_delete`；detail 携 kept/removed）。**删登记 ≠ 动机器**（节点机 ⧺ 容器 ⧺ 卷均原样）。
+- **本批提议与自加项**（用户今日三令：自加项必须带理由、禁冒充用户口径——逐条）：
+
+| # | 项 | 来源 | 为什么 | 不做的代价 |
+|---|---|---|---|---|
+| ① | 连接形 = 直连 Docker API（地址 + 端口；内网；**不做 TLS**） | 父侧提议 | 最小切片——证书面（签发/续期/信任链/节点配置）大于本切片本身；内网 | 不做 TLS 本身的代价明示：2375 明文 = 无鉴权的 root 等价口暴露于网内（限内网；网不可信 ⇒ 必先上 TLS = 另批）；不采纳（先上 TLS）⇒ 切片推不动 |
+| ② | 建容器最小形 = 名称 + 镜像 + 卷 三件 | 父侧提议 | 最小可跑（镜像 = 容器之锚；卷 = 数据落点、工作区卷前身）；镜像用现成盒镜像 | 按完整盒参数集（read-only ∥ cap-drop ∥ 每工作区网络 ∥ 限额）⇒ 工作量与设计面远超本切片（用户明令先不上） |
+| ③ | 删节点有容器 ⇒ 二选一「保留 ∥ 连删」 | 父侧提议 | 删节点两义（换机 = 容器还想要 ∥ 退役 = 机器要清）——裁量交用户 | 直接删行不动容器 ⇒ 以为删净、机器上留孤儿容器；无问连删 ⇒ 误删运行中容器 = 事故 |
+| ④ | 容器删除 = 独立动作（不只随节点连删） | 设计自加 | 「连删」能力已在本切片（节点删除径）；独立成钮 = 生命周期闭环（建了能删） | 仅节点级连删 ⇒ 单个容器删不掉——只能删整个节点，明显别扭 |
+| ⑤ | 调用恒带 API 版本前缀（登记时协商） | 设计自加 | 官方文档明示**无版本前缀调用已废弃**（将来移除）；固定档不协商 ⇒ 未来 daemon 抬底即坏 | 裸无前缀 ⇒ 随官方移除一起坏；固定 1.44 —— Docker 29（最低 1.44）恰贴底无余量 |
+| ⑥ | 容器动作落审计行（`container_*`） | 设计自加 | 用户既有「过程留痕」口径 + 审计型已备（`sandbox_event`）；一行成本 | 谁建/停了哪个容器无据（排障面） |
+
 - **托管接入**（需求 §5「接入两径」①——管理员给主机地址 + 登录方式 ⇒ server 代部署）：执行者 = server 端 agent（能力面从实际装机场景反推——用户 15:02 裁）；设计归服务端开发面（#1236/#1237）。
 - **手工登记径**（需求 §5 ②——硬化环境用）**保留**（用户 14:59 裁）：即上「添加节点」直填 Docker API 地址。
 
@@ -87,7 +116,7 @@
 
 - **落点（已裁 U4）**：server webui 新管理页「沙盒」`#/admin/sandbox`；**非壳页**（卡多——沿看板页先例，不扩「钉表五页」）。
 - 卡面（**六面**——必交面（用户 14:08 行）：运行面 ∥ 工作区 ∥ 出站规则 ∥ 待批队列 ∥ 资源与 TTL ∥ 审计可查）：
-  - **运行面**（可用性门：无可用节点 ⇒ disabled + 原因文本 ∥ 节点清单：名/地址/状态/版本/自检读数；写入口 = **添加节点**（填 Docker API 地址——连通自检；失败逐句人话 + 审计行）∥ **删除节点**（有承载工作区 ⇒ 二次确认）；其余动作随设计轮定——口径：runner = 远程 Docker API 节点）；
+  - **运行面**（本批落定——§3）：可用性门（无节点 ∥ 全离线 ⇒ unavailable + 原因；节点面恒可用）∥ 节点表（名 ∥ 地址 ∥ 在线态 ∥ 版本 ∥ 容器（运行/总） ∥ 操作：展开容器 ∥ 删除）∥ 写入口 = **添加节点**（名 + Docker API 地址——连通自检；失败逐句人话 + 审计行）∥ **删除节点**（有容器 ⇒ 二选一「保留 ∥ 连删」；有承载工作区 ⇒ 二次确认）∥ **容器区**（节点行展开：列表（名/镜像/状态）+ 创建（名/镜像/卷三件）+ 启动/停止/删除——§3）；UI 定形 = `webui/WEBUI.md` §2.8①；
   - **工作区**（列表：名/负责人/绑定 runner/盒状态/dirty/快照/操作：启动/停止/销毁/轮换 key/快照恢复；写入口 = **每工作区覆写**（资源 + TTL：`cpus`/`memMb`/`pids`/`diskMb`/空闲 TTL/墙钟 TTL——行内编辑；生效 = 下次建盒/重建））；
   - **出站规则**（安全组式表：方向（恒出站）∥ 协议 ∥ 端口 ∥ 目标 ∥ 动作 ∥ 优先级 ∥ 备注；增删行内；默认单 = `source=default` 种子行（可改可删））；
   - **待批队列**（实时表 + 三钮 + 「建议入默认单」行；写入口 = 待批超时）；
@@ -102,7 +131,7 @@
 ## 9. 端点与判权（表在 API.md——单源）
 
 - 控制台面 = `/api/admin/sandbox/*`（§8 六面对应）；成员面 = `/api/me/sandbox/*`（§8 成员面）。
-- 表 = `gateway/API.md` §2.5（控制台面）∥ §2.7（成员面）；错误形 = §3 全码 + **一码新增** `sandbox_unavailable`（503——无可用节点）；判权 = `requireAdmin`（`thincoder-server/src/accounts/session.mjs`）∥ 成员面 = 会话（本人过滤——§8 成员面）。
+- 表 = `gateway/API.md` §2.5（控制台面）∥ §2.7（成员面）；错误形 = §3 全码 + **一码新增** `sandbox_unavailable`（503——无可用节点）；节点/容器面（本批——§3）：引擎失败 ⇒ 502 `upstream_error`（消息 = 逐句人话 + 引擎原文）∥ 容器/节点不存在 ⇒ 404 ∥ 形非法/重名/镜像缺/名占用 ⇒ 400（零新码）；判权 = `requireAdmin`（`thincoder-server/src/accounts/session.mjs`）∥ 成员面 = 会话（本人过滤——§8 成员面）。
 
 ## 10. 已裁决策与读法披露
 
@@ -141,12 +170,13 @@
 | 14:00 裁定（两平面分离 ∥ 无节点不可用 ∥ CI 共用） | §1 ∥ §14 KD-SV-63/71/72 | 设计在档 |
 | 管理与配置界面 = 必交面（用户 14:08——六面 + 每项配置有界面写入口） | §8 六面在册（含运行面节点接入：添加/删除 ∥ 连通自检 ∥ 失败审计行）∥ 每配置项有 UI 写入口（`sandbox_settings` 逐键对照表 + 每工作区覆写——§8）∥ 控制台机检口径 = `webui/WEBUI.md` §6 沙盒行（含 `#/admin/sandbox` 路由 ∥ nav 管理 8 ∥ 档目 33 ∥ 34 ∥ i18n `admin.sandbox.*` 两表同步） | 批内件 + 收口轮（浏览器实走） |
 | 成员面 = 本人自助（用户 14:56——AC-36 ⑧） | §8 成员面（`#/me/sandbox` 本人工作区读 + 待批发起方提示）∥ 信号 = `gateway/API.md` §2.7 | 批内件 + 收口轮（浏览器实走） |
+| **最小切片**（runner-admin-console 批——台账 #1252；用户 19:59 四件） | ① 添加节点（自检读数落库逐值 ∥ 失败 ⇒ 502 + 零落库 + 审计行）② 建容器（引擎请求体逐值 ∥ 列表可见）③ 启/停（幂等：304 ⇒ 成功）④ 删节点（保留 ∥ 连删二选一 ∥ 连删失败 ⇒ 行保留）；判据全文 = §3 ∥ §12（N40 ∥ N46–N48 ∥ B41–B43 ∥ E34–E36）；**真机跑**（收口轮——`10.0.0.6`，Docker 29.1.3 ∥ 盒镜像在机）：添节点 ⇒ 在列（online + 版本）；建容器 ⇒ `docker ps -a` 见 `Created` ⇒ 启动 ⇒ `docker ps` 见 `Up` ⇒ 停止 ⇒ `Exited` ⇒ 删 ⇒ 无；删节点「保留」⇒ 容器留机 ∥「连删」⇒ 容器净 + 节点消 | 批内件 + 收口轮（真机） |
 
 ## 12. 用例（本域）
 
 | # | 类 | 面 | 输入 | 预期输出 |
 |---|---|---|---|---|
-| N40 | 正常 | 控制面 | 添加节点（填 Docker API 地址）⇒ 连通自检 | `sandbox_runners` 行诞生（名/地址/状态）；控制台运行面在列；控制面直调 Docker API 可达（§1） |
+| N40 | 正常 | 控制面 | 添加节点：名 + Docker API 地址（假 Docker `GET <ver>/version` 在案）⇒ 连通自检 | `sandbox_runners` 行（name/address/status=active；`runtime_json` = 自检读数逐值 ∥ 协商版本在场）；运行面在列（online=true ∥ 版本）；审计 `sandbox_event`（kind=`runner_add`） |
 | N41 | 正常 | 控制面 | 建工作区（负责人）⇒ 建盒 | key 签发（`api_keys` 行名 `sandbox:<ws>`）+ 绑定节点 + 建盒/启动（控制面直调 Docker API——§1） |
 | N42 | 正常 | 控制面 | 规则增删各一（`sandbox_rules`） | `rulesRev` +1；**即生效 ∥ 不重建盒**（需求块）；审计 `sandbox_rule` 两行 |
 | N43 | 正常 | 控制面 | 待批三态各一次（once ∥ remember ∥ deny） | 挂起 ≤60s；once = 当次放行再访问再挂；remember = 规则入表（source=approval）即生效；审计 `sandbox_event` |
@@ -160,23 +190,33 @@
 | E29 | 错误 | 控制面 | `user` ∥ 无会话打 `/api/admin/sandbox/*` | 403 ∥ 401 |
 | E31 | 错误 | 控制面 | 销毁工作区（dirty 未确认）∥ 轮换后旧 key 再用 | 拒/警示（二次确认要求）；旧 key 再用 ⇒ 401（吊销即断）；轮换 = 拆容器重建（卷保留）后新 key 生效 |
 | E33 | 错误 | 执行面 | 盒写超磁盘配额 | ENOSPC（应用可见）；节点盘不破界（配额兜底） |
+| N46 | 正常 | 控制面 | 建容器：名/镜像/卷三件（假 Docker `POST <ver>/containers/create` 在案） | 引擎请求体逐值（`Image` ∥ `Binds`=`<卷>:/workspace`）；200 `{ container }`（id 逐值）；列表含（state=created）；审计行 `container_create` |
+| N47 | 正常 | 控制面 | 启 ∥ 停 ∥ 删容器（各一次；启/停各重复一次） | 引擎调用逐条命中（start ∥ stop ∥ DELETE `?force=1`）；204 ⇒ 200 ∥ 304（已启/已停）⇒ 幂等成功；审计行三枚 |
+| N48 | 正常 | 控制面 | 删节点三径：有容器 ⇒ `keep` ∥ `remove` ∥ 无处置（无容器 ⇒ 直接删） | keep ⇒ 登记行删、引擎零删调用；remove ⇒ 逐删命中（N 次）⇒ 行删；无处置 ⇒ 400；无容器 ⇒ 直接删行；审计行 `runner_delete`（detail 逐值） |
+| B41 | 边界 | 控制面 | 节点不可达（假 Docker 关停） | 运行面 online=false（version/containers = null）；容器列表 ⇒ 502 人话；添节点 ⇒ 502 + 审计 `runner_selfcheck_failed` + 零落库；删节点 = 仅 keep 过（remove ⇒ 502） |
+| B42 | 边界 | 控制面 | 自检版本不兼容（`MinAPIVersion` 1.50 ⇒ 协商 > ApiVersion） | 拒登记（502 人话「API 版本不兼容」）；零落库 |
+| B43 | 边界 | 控制面 | 删节点连删中途失败（2 容器，第 2 个引擎 500） | 502 + 登记行保留 + 消息携失败清单；已删者如实回报（不假装未删） |
+| E34 | 错误 | 控制面 | 添节点：重名 ∥ 地址形非法（`https:` ∥ 空） ∥ `user` ∥ 无会话 | 400 ∥ 400 ∥ 403 ∥ 401 |
+| E35 | 错误 | 控制面 | 建容器：镜像不存在（引擎 404）∥ 名占用（409）∥ 节点不可达 | 400（含引擎原文）∥ 400 ∥ 502 |
+| E36 | 错误 | 控制面 | 容器动作目标引擎 404（容器不存在——被外部删了） | 404 `not_found` |
 
 ## 13. 本域文件与行数预算（控制面）
 
 | 档 | 行数（设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/sandbox/routes.mjs`（拟新增） | ≈270 | 控制台面端点（§8/§9） |
-| `thincoder-server/src/sandbox/registry.mjs`（拟新增） | ≈250 | 登记/任务队列（§3） |
+| `thincoder-server/src/sandbox/routes.mjs`（已落盘 **407**——2026-10-10 现读） | **⇒ ≈540**（runner-admin-console 批：+≈133 = 添加节点 ≈45 ∥ 容器四路由 ≈85 ∥ 删节点收正 ≈15 ∥ drain 路由删 −≈10 ∥ 头注） | 控制台面端点（§8/§9） |
+| `thincoder-server/src/sandbox/registry.mjs`（已落盘 **522**——2026-10-10 现读） | **⇒ ≈500**（runner-admin-console 批：runner 面重写（登记/读数/可用性随新模型）∥ `runnerHealth` 删 ∥ `sweepStuckTasks` 去心跳判据；队列/心跳死件不动——实读核过无调用方） | 登记/读数（§3）∥ 队列（§5/§6） |
+| `thincoder-server/src/sandbox/docker.mjs`（拟新增——本批） | ≈170（设计估——Docker API 客户端：版本协商 ∥ version/info/create/start/stop/DELETE ∥ 错误映射 ∥ 超时 ∥ `fetchImpl` 注入面） | Docker API 客户端（§3） |
 | `thincoder-server/src/sandbox/rules.mjs`（拟新增） | ≈230 | 规则/待批/修订号（§4/§6） |
 | `thincoder-server/src/sandbox/credentials.mjs`（拟新增） | ≈80 | 工作区 key（§7） |
-| `thincoder-server/src/store/db.mjs`（已落盘 255） | ≈+90 | v11 段（§2） |
+| `thincoder-server/src/store/db.mjs`（已落盘 365——2026-10-10 现读） | **⇒ ≈400**（runner-admin-console 批：v12 段 +≈35） | v11/v12 段（§2） |
 | `thincoder-server/src/accounts/audit.mjs`（已落盘 109） | ≈+3 | 十二型（§2） |
-| `thincoder-server/src/gateway/errors.mjs`（已落盘 64——2026-10-10 现读） | ≈+2 | `sandbox_unavailable`（§9） |
-| `thincoder-server/bin/thincoder-server.mjs`（已落盘 182） | ≈+6 | import + 注册行 |
-| **小计** | **≈+1172** | —— |
+| `thincoder-server/src/gateway/errors.mjs`（已落盘 64——2026-10-10 现读） | **±0**（runner-admin-console 批——零新码） | `sandbox_unavailable`（§9） |
+| `thincoder-server/bin/thincoder-server.mjs`（已落盘 182） | **±0**（注册面不变） | import + 注册行 |
+| **小计** | **≈+1172 ⇒ 本批 ≈+316**（runner-admin-console 批：routes +≈133 ∥ registry −≈22 ∥ docker 新 ≈170 ∥ db +≈35；errors ∥ bin ±0） | —— |
 
-- 执行面预算随重做批重建；webui 预算 = `webui/WEBUI.md` §5；批内件预算 = 批档 §2；板账 = `docs/server/design/PROJECT.md` §6。
-- 批内件两件（均入 server 链）：`docs/batches/2026-10-10-server-exec-sandbox.test.mjs`（服务面——估 ≈480） ∥ `docs/batches/2026-10-10-server-exec-sandbox-runner.test.mjs`（执行面——估 ≈450）；批档 §2 列全。
+- `rules.mjs`/`credentials.mjs` 两行「拟新增」= 陈值（两档已落盘）——清账另轮；执行面预算随重做批重建；webui 预算 = `webui/WEBUI.md` §5；批内件预算 = 批档 §2；板账 = `docs/server/design/PROJECT.md` §6。
+- 批内件两件（入 server 链）：`docs/batches/2026-10-10-runner-admin-console.test.mjs`（服务面——Docker 客户端 ∥ 路由 ∥ v12 迁移；估 ≈420）∥ `docs/batches/2026-10-10-runner-admin-console-ui.test.mjs`（前端面——运行面渲染 ∥ nav ∥ i18n 键集；估 ≈260）；批档 §2 列全。
 
 ## 14. 关键决策（本域）
 
@@ -196,6 +236,9 @@
 | KD-SV-74 | **磁盘配额 = 项目配额优先 ∥ loopback 备选**（主机侧——SSH 执行；用户 19:52 定） | 项目配额（xfs pquota ∥ ext4 prjquota）零额外设备；loopback 全平台可落但耗 loop 设备 | 无配额（需求块明列——否）；容内自填盘监控（用户态不可靠——否） |
 | KD-SV-75 | **作废**（2026-10-10——执行面重定：runner = 远程 Docker API 节点） | —— | —— |
 | KD-SV-76 | **网络层闸 = nft 优先 ∥ iptables 备 + 全量重算幂等**（主机侧——SSH 执行；用户 19:52 定） | 主机异构；全量重算避免增量残渣与漂移 | 纯 iptables（旧栈机器兼容但表达弱——备选）；增量改链（残渣风险——否） |
+| KD-SV-79 | **容器态不落库**（runner-admin-console 批）：Docker 引擎即真源——读时读（`containers/json`）∥ 动作直调（create/start/stop/DELETE）；控制面零镜像 ∥ 零同步机制 | 双源必漂移（外部 `docker` 命令 ∥ 机器重启 ∥ 别的工具都在改容器）；同步/对账机制 = 白增面（最小切片不取） | 落库镜像表 + 对账（同步机制/陈旧窗口——否）；心跳式上报（用户 19:52 口径已排除——机器上不驻留进程 ∥ 无心跳） |
+| KD-SV-80 | **节点存活 = 读时探活（非心跳）**：运行面/读数 = 请求内现打 `GET …/info`（3s ∥ 并发）∥ 动作 = 现打现报；无后台定时器 ∥ 无心跳落库 | 用户 19:52 口径（无自驻进程）；探活只服务展示与当下动作，无独立可用性状态可陈 | 心跳上报（通道已废——否）；常驻探针进程（用户口径排除——否） |
+| KD-SV-81 | **Docker API 版本 = 登记时协商 + 调用恒带前缀**：`ver = max(1.44, MinAPIVersion)`，须 ≤ `ApiVersion`（否则拒登记）；版本存 `runtime_json` | 官方文档明示无版本前缀调用已废弃（将移除）；协商 = 老 daemon（min < 1.44）与新 daemon（min ≥ 1.44，如 Docker 29）两头都接得住 | 裸无前缀（官方废弃面——否）；固定档不协商（未来 daemon 抬底即坏——否） |
 
 ## 15. 本域边界（不做）
 
@@ -205,6 +248,7 @@
 - **IPv6**（v1 只 IPv4——docker IPv6 关为前置）。
 - **项目权限面**（#1216②——接口已留：§4/§9 同守卫点）∥ **多租户** ∥ **per-workspace 独立额度池**（复用成员配额——如需另议）。
 - **成员写面**（成员对自己的工作区做启动/停止/销毁/轮换——随 #1216 ② 权限模型；本批只落读面 + 待批提示——§8 成员面）。
+- **最小切片余项**（runner-admin-console 批——一行带过，等以后按需再上）：出站闸 ∥ 磁盘限额 ∥ 探针 ∥ 心跳/放置 ∥ 托管装机 ∥ Swarm 集群 ∥ WIP 快照 ∥ 待批队列 ∥ 镜像管理（拉取/删除/清单下拉）∥ 工作区↔容器映射（盒）∥ 卷删除 ∥ 资源限额（cpus/mem/pids/磁盘）∥ 端口映射/网络面 ∥ 节点禁用/排空 ∥ TLS（§3 提议①）。
 
 ## 变更记录
 
@@ -214,3 +258,4 @@
 - 2026-10-10（**server-exec-sandbox 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §3 轮次 1 十五发现之 1–14 + 用户当日并入 A 节）：#1 每工作区资源档落机制（`limits_json` ∥ PATCH 写端点 ∥ 取值序 ∥ create 载荷 ∥ N45）∥ #2 默认单单源收正（= `sandbox_rules` 种子行；settings 键撤——§2/§4/§8）∥ #3 冲突序限定「显式 deny 恒先」+ 种子 deny ≺ 显式 allow（§4/§10）∥ #4 轮换 = 卷保留的容器重建（P13 补新 key 半支 ∥ E31 随正）∥ #5 join token 落点 = 进程内存 + 重启作废（N40/E30 随拍）∥ #6 `requireRunner` 守卫落点钉定 + 预算行（session.mjs）∥ #8 AC-36 标记收正（已落需求档）∥ #10 指令悬挂回收（§3 + B41）∥ #13 P8 改结构判据（canary 真值不下行）。A 节 = A1 成员面（§8 成员面 + `#/me/sandbox`）/ A2 加入流程三件 / A3 牵连计数随正（档目 33 ∥ 34）。**零新语义**（评审发现直接导出项 + 用户直令）。
 - 2026-10-10（**server-exec-sandbox 批 · checkpoint 通路口径 fix 轮 · eng-designer**——2026-10-10 裁定落档）：§5 上送句补通路口径（octet-stream ∥ 路由级 200 MiB ∥ 流式落盘——`gateway/API.md` §2.6）；§13 B40 保持（未触——与路由上限同值）。**产品码零触**。
 - 2026-10-10（**runner-admin-console 批 · 设计档随正 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 2026-10-10 19:52–19:56 口径「runner = 远程 Docker API 节点」）：执行面重定随正——§1 两平面口径重写 ∥ §3 重写为「节点登记（最小接入面）」（添加/删除 + 连通自检；托管接入 = 需求在册，归 #1236/#1237）∥ §2 列面/审计/修订号随正 ∥ §4/§5/§6 执行机制句清（强制机制归重做批）∥ §8 运行面/§9 端点判权随正 ∥ §10 U1 改判（Docker）∥ §11 判据去探针引用 ∥ §12 红队探针套件删（需求 AC-36 ⑦ 判据待重做批重建）∥ 用例表随正；旧 §13–§16 顺移 ⇒ **§12–§15** ∥ §14 决策面：KD-SV-64/65/66/75 作废、63/67/68/69/71/72 收正、73/74/76 自 `RUNNER.md` 迁入本表 ∥ §13 预算表去执行面条目；`sandbox/RUNNER.md` 已删（迁移期引文——执行面重定）。**产品码零触**。
+- 2026-10-10（**runner-admin-console 批 · A 批最小切片设计 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 19:59 令）：§3 重写为「节点与容器（最小切片）」（添加节点 ∥ 运行面读数 ∥ 建容器 ∥ 容器读取与动作 ∥ 删节点 ∥ 提议与自加项六条＝父侧提议三 + 设计自加三）∥ §2 补「容器不落表」句 ∥ §8① 运行面落定 ∥ §9 节点/容器面错误形一句 ∥ §11 增最小切片判据行（真机 10.0.0.6）∥ §12 增用例（N46–N48 ∥ B41–B43 ∥ E34–E36；N40 收正）∥ §13 预算随正（+ `docker.mjs` 拟新增；批内件两件随正——旧两件已随执行面清除）∥ §14 增 KD-SV-79/80/81 ∥ §15 增最小切片余项。**产品码零触（设计轮）**。

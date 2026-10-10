@@ -125,7 +125,7 @@
 ⇒ **管理面 agent = 唯一一个**（不另立第二个；父侧上一条「独立面」的读法作废）。它的**能力面 = 整个 server 管理面**（成员 ∥ provider ∥ 模型选择 ∥ 用量/配额 ∥ 审计 ∥ 沙盒各面 ⋯），**逐步长**——#172（托管加机）设计的就是**这一个 agent** 及其第一个活；其余管理面此后陆续入它的工具面（同 agent、同源、同口径）。需求档 §1 后续议题同刻收正。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：（eng-designer 写入时更新）
+**状态行**：设计完成（#1252 随正（#170）+ A 批最小切片（#171）两件落定）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 ### #1252 设计档随正（runner = 远程 Docker API 节点）——落点表与验收
@@ -160,6 +160,67 @@
 - ③ 计数/账目陈值未收（`PROJECT.md` §6 批内件行 ∥ `OPS.md` §5.1 件数链 ∥ `SANDBOX.md` §13「拟新增」标记）——不在本件射程（§1 明示不自选活），另轮。
 
 **§2 状态行**：留待 #171（A 批最小切片设计）落定后一并设——本 §2 含两件（#1252 随正 + A 设计），本件只落其一。
+
+### A 批最小切片设计（#171——用户 19:59 四件）——落点、机制与验收
+
+**口径**（承 §1「范围重定」19:59 逐字）：射程 = ① 添加 runner（登记一台 Docker API 节点）② 创建容器 ③ 启动 ∥ 停止容器 ④ 删除 runner 节点。**其余全部不做**（出站闸 ∥ 磁盘限额 ∥ 探针 ∥ 心跳/放置 ∥ 托管装机 ∥ Swarm ∥ 快照 ∥ 待批 ∥ 镜像管理 ∥ 工作区↔容器映射 ∥ 卷删除 ∥ 限额/端口/网络 ∥ TLS——`SANDBOX.md` §15 + §3 表）。设计自加项三条（独立删容器 ∥ API 版本协商 ∥ 容器动作落审计）逐条带来源与理由，不冒充用户口径（`SANDBOX.md` §3 提议表）。
+
+**落点表（5 档——本件已落）**
+
+| # | 档 | 处置 | 要点 |
+|---|---|---|---|
+| 1 | `sandbox/SANDBOX.md` | 改（**§3 重写** + §2/§8①/§9/§11/§12/§13/§14/§15/变更记录） | 四件逐条 + 运行面读数 + 提议表六条 + KD-SV-79/80/81 + 用例 N40/N46–N48/B41–B43/E34–E36 |
+| 2 | `gateway/API.md` | 改（§2.5 前区 + §4/§5/变更记录） | 端点表 = 单源：overview 重写 + 添/删节点收正 + **容器四行新增** |
+| 3 | `store/STORE.md` | 改（**增 v12 增段** + §1/§2 标题/§3/§4/变更记录） | 结构版本 11 ⇒ **12**（`sandbox_runners` 表重建——列面 = v11 段所列为准） |
+| 4 | `webui/WEBUI.md` | 改（§2.8① 定形 + §1/§2.2/§5/§6/变更记录） | 运行面批 vs 沙盒余面批（两轮分落——计数链/AC 行全部二段化） |
+| 5 | `ops/OPS.md` §5.10 ∥ `accounts/ACCOUNTS.md` §2.1 ∥ `design/PROJECT.md`（§2.1/§3/§4/§5/§6/§7/§9/变更记录） | 随正 | 节点前置（dockerd TCP 监听）+ `sandbox_event` 补 `container_*` + KD-SV-79/80/81 索引/全形 + R52 |
+
+**机制要点（逐件）**
+
+- **① 添加节点**（`POST /api/admin/sandbox/runners`）：入参 `{ name, address }`（名 ≤ 40；地址归一 `http://<host>:<port>`——缺协议/端口补全，`https:` 拒）；连通自检 = `GET <base>/<ver>/version`（读 Version/ApiVersion/MinAPIVersion/Os/Arch + 协商版本 = `max(1.44, MinAPIVersion)`，须 ≤ `ApiVersion`）⇒ 通过落行（`status='active'`；`runtime_json` = 自检读数）+ 审计 `runner_add`；失败 ⇒ 502 `upstream_error` + 逐句人话 + **零落库** + 审计 `runner_selfcheck_failed`；重名/形非法 ⇒ 400。
+- **② 建容器**（`POST …/runners/:id/containers`）：三件 `{ name, image, volume? }`（镜像预填设置 `image` 值；卷可空）⇒ 引擎 `POST containers/create?name=<名>`（体 `{ Image, HostConfig: { Binds: ["<卷>:/workspace"] } }`——卷缺则省略 HostConfig）⇒ `{ container: { id, name, image, state: "created" } }` + 审计 `container_create`；引擎 404/409 ⇒ 400（含引擎原文）；不可达 ⇒ 502。
+- **③ 启动 ∥ 停止**（`POST …/containers/:cid/start` ∥ `…/stop`）：204 ⇒ 200；**304（已启/已停）⇒ 幂等成功**；404 ⇒ 404 `not_found`；余 ⇒ 502；审计 `container_start`/`container_stop`。**容器删除**（设计自加——`DELETE …/containers/:cid?force=1`；卷不随删；审计 `container_delete`）。
+- **④ 删除节点**（`DELETE …/runners/:id`）：先读承载容器 ⇒ 有容器未给处置 ⇒ 400（二选一「保留 ∥ 连删」）∥ `keep` ⇒ 只删登记 ∥ `remove` ⇒ 逐个强删 ⇒ 全成 ⇒ 删行，**任一失败 ⇒ 502 + 登记行保留**（消息携失败清单）；**节点不可达 ⇒ 仅 keep**；**有承载工作区 ⇒ `confirm: true`（现行为保留——实现实读核过 `routes.mjs:161`）**；审计 `runner_delete`（detail 携 kept/removed）。
+- **运行面读数**（`overview`）：读时探活（每节点现打 `/info`——3s ∥ 并发；无后台定时器/心跳——KD-SV-80）⇒ `online`/`version`/`containers{total,running}`；`status = available ⇔ 至少一节点在线`；**节点面恒可用**（不整页禁用）；写门 `requireSandboxAvailable` = 静态判据（存在 `active` 节点；本批零改——实时门随重做批）。
+- **数据面**：**v12 = `sandbox_runners` 表重建**（列面 = v11 段所列；旧通道形态 token_hash/labels_json/last_heartbeat_at 随重建exit；**存量旧行弃**——无地址可取、令牌/心跳语义整废；测试库仅一行 daemon 期残留）；容器**不落库**（Docker 引擎即真源——KD-SV-79）。
+- **关键决策**：KD-SV-79（容器不落库）∥ KD-SV-80（读时探活非心跳）∥ KD-SV-81（版本协商 + 恒带前缀）——见 `SANDBOX.md` §14 / `PROJECT.md` §4/§5。
+
+**受影响文件与测试面（实施侧——本件不落码）**
+
+| 档 | 现读 | 本批 |
+|---|---|---|
+| `thincoder-server/src/sandbox/routes.mjs` | 407 | ⇒ ≈540（+≈133：添/删节点 ∥ 容器四路由；drain 路由删；头注） |
+| `thincoder-server/src/sandbox/registry.mjs` | 522 | ⇒ ≈500（runner 面重写 ∥ `runnerHealth` 删 ∥ `sweepStuckTasks` 去心跳判据；死件不动） |
+| `thincoder-server/src/sandbox/docker.mjs` | 无 | 新 ≈170（Docker API 客户端：协商 ∥ version/info/create/start/stop/DELETE ∥ 错误映射 ∥ 超时 ∥ `fetchImpl` 注入——沿 `proxy-admin.mjs:52` 先例） |
+| `thincoder-server/src/store/db.mjs` | 365 | ⇒ ≈400（v12 段 +≈35） |
+| `thincoder-server/public/views-sandbox.mjs` | 无 | 新 ≈210（运行面卡 + 容器区——两表 + 三弹窗） |
+| `nav.mjs` 88 ⇒ ≈89 ∥ `app.mjs` 192 ⇒ ≈195 ∥ `i18n-{zh,en}-admin.mjs` ≈141/≈145 ⇒ ≈167/≈171（+≈26/表）∥ `i18n-{zh,en}-shell.mjs` 73/71 ⇒ ≈74/≈72（+`nav.page.admin.sandbox`；`err.upstream_error` 值改携 `{detail}`——±0）∥ `style.css` 233 ⇒ ≈240 | | 运行面批（余面批另计：见 `WEBUI.md` §5） |
+| 批内件两件（入 server 链） | 无 | `docs/batches/2026-10-10-runner-admin-console.test.mjs`（估 ≈420）∥ `…-ui.test.mjs`（估 ≈260） |
+| 零触 | | `errors.mjs` ∥ `bin/thincoder-server.mjs` ∥ `rules.mjs` ∥ `credentials.mjs` ±0 |
+
+**验收对照（三链同源：本表 = 设计档判据条目 = 需求侧可检验物）**
+
+- ① 添加节点：`SANDBOX.md` §11 最小切片行 + §12 N40/E34/B41/B42 + `API.md` §2.5 添节点行（自检读数落库逐值 ∥ 失败零落库 + 审计行）。
+- ② 建容器：§12 N46/E35 + `API.md` 创建行（引擎请求体逐值 ∥ 列表可见）。
+- ③ 启/停/删：§12 N47/E36 + `API.md` 启/停/删行（304 ⇒ 幂等成功 ∥ 卷不随删）。
+- ④ 删节点：§12 N48/B43 + `API.md` 删节点行（二选一 ∥ 连删失败行保留 ∥ 不可达仅 keep）。
+- 数据面：`STORE.md` §2 v12 段 + §3 v12 行（空库读数 12 ∥ v11 库升 12 ∥ 幂等 ∥ 列面五行在场 ∥ 旧三列名不在 ∥ 存量行弃）。
+- 控制台：`WEBUI.md` §6 沙盒页行（运行面批段——档目 **31 ∥ 32** ∥ nav 管理 8 ∥ i18n `admin.sandbox.*` 两表同步；UI 定形 = §2.8①）。
+- **真机判据（收口轮——`10.0.0.6`，Docker 29.1.3 ∥ 盒镜像在机）**：添节点 ⇒ 在列（online + 版本）；建容器 ⇒ `docker ps -a` 见 `Created` ⇒ 启动 ⇒ `docker ps` 见 `Up` ⇒ 停止 ⇒ `Exited` ⇒ 删 ⇒ 无；删节点「保留」⇒ 容器留机 ∥「连删」⇒ 容器净 + 节点消。
+
+**上抛项 / 登记项**
+
+- ① 需求档（主 agent 笔）：需求 §5/AC-36 的阶段口径（六面分两轮）宜回笔——**写法/计数 = 主 agent 决定**（同源 = `PROJECT.md` §9 R52①）。
+- ② 父侧补笔：`docs/TEST-ENV-ECS.md` §7——现为 `thincoder-runner.service` 残留口径（服务已不存在）+ 需补节点前置步（dockerd 监听 TCP——`OPS.md` §5.10 节点前置条）。
+- ③ 登记（不阻塞）：审计页 `sandbox_event` 模板随沙盒余面批（原始型名兜底可用）∥ 孤儿件 `docs/batches/2026-10-10-server-exec-sandbox-runner.fixtures.mjs`（实读核过零引用——随余面批清）。
+- ④ 披露：v12 存量旧行弃（一次性过渡行为——测试库仅一行 daemon 期残留）∥ `err.upstream_error` 值改（携 `{detail}`——连带既有使用点文案细化，语义零变）∥ 沙盒页其余五面卡 + 成员面 = 沙盒余面批（计数链已在设计档二段化，余批不返工）。
+
+### 机检读数（本件交付时 · `node scripts/doc-check.mjs` 现读）
+
+- **行宽：OK**（源域 .md 无 >300 字符单行；本件初次现读 10 行超宽 = 本件新增正文——**已逐行折行收正**，复跑 OK）。
+- **锚：5 条悬空（闸态）——均非本批面**（`mount-settings-team.mjs` 桌面族：`API-CONTRACT.md:2011` ∥ `TEAM.md:130` ∥ `SETTINGS.md:493/506` ∥ `UI.md:602`——既有悬空，列报）；本件引入的两条（`SANDBOX.md` docker.mjs 行 ∥ `WEBUI.md` views-sandbox 行）已随**拟新增标记**补齐（拟新增 31 ⇒ 33——列报 · 不入闸）。
+- **汇总**：候选 56448 · 悬空 5 · 注记豁免 303 · 拟新增 33 · 迁移期引文 338 · 声明源缺位 0（exit 1 = 上述既有 5 条）。
+- 机制面：`err.upstream_error` 值改（携 `{detail}`）为**共享键值改**——既有使用点（provider 发现等）文案随细、语义零变（`WEBUI.md` §2.2/§5 在册）。
 
 ## §3 设计评审（评审子代理）
 ## §4 用户批准（主 agent）
