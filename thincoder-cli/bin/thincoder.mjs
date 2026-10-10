@@ -23,7 +23,7 @@ import { setTuiActive, restoreTerminalAfterCrash, _setCleanupOutPathForTest } fr
 import { spawnTuiWrapped } from "../src/tui/wrapped-spawn.mjs"
 import { configurePromptInjections } from "@thincoder/core/prompt-files.mjs"
 import { CLI_PROMPT_INJECTIONS } from "../src/prompt-injections.mjs"
-// 拆档批 R4（2026-09-28）：命令分发表外提——分发骨架 + 八薄命令族 + help ∕ version =
+// 拆档批 R4（2026-09-28）：命令分发表外提——分发骨架 + 九薄命令族 + help ∕ version =
 // `src/command-table.mjs`；交互长驻三命令（chat ∕ tui ∕ acp）= `src/command-interactive.mjs`。
 import { runCommandTable } from "../src/command-table.mjs"
 import { diskRootGateError } from "./disk-root-gate.mjs"
@@ -148,6 +148,8 @@ Usage:
                             Read-only ledger export as single-segment JSON (--full adds evidence; --family exports the discovered family)
   thincoder upgrade         Update to the latest version from npm
   thincoder completion <sh>  Generate shell completion script (bash / zsh / fish)
+  thincoder team login [--server <url>] [--user <name>]  Log in to a team server (password prompt — hidden echo)
+  thincoder team logout | status                         Log out (revoke the team token) / show login state
   thincoder -v, --version   Print version
 
 Config: ~/.thincoder/config.json — providers[] (one default model per channel) + defaultModel (new-session starting point); the available-model list is fetched from the provider at runtime (GET /models); manage via /config → 默认模型 and /model (session-level) in TUI
@@ -167,7 +169,7 @@ function exitSoon(code) {
 // （fire-and-forget——不阻塞启动——失败静默——与轨迹写盘同纪律）。
 // D-TR13（2026-09-21 · STARTUP-LATENCY 批 · TRACES.md §6.4）：触发面 = **会话型命令白名单**
 // （`tui` 含无参默认路径 `command === undefined` / `chat` / `acp`）；白名单外命令（`--version` /
-// `--help` / `completion` / `memory` / `sync` / `reindex` / `distill` / `upgrade` / `session`）
+// `--help` / `completion` / `memory` / `sync` / `reindex` / `distill` / `upgrade` / `session` / `team`）
 // 零启动清理。**启动清理 = 启动窗外延迟拍**——核侧 `scheduleTraceCleanup`（`TRACE_CLEANUP_DELAY_MS` = 3s，自调度点起；失败静默 / 不 unref 保后台排空）。
 if (command === undefined || command === "tui" || command === "chat" || command === "acp") {
   try {

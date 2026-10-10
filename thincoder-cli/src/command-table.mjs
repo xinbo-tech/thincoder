@@ -1,7 +1,7 @@
 /**
  * command-table.mjs — CLI 命令分发表（`bin/thincoder.mjs` 外提——2026-09-28 拆档批 R4 · 纯移动 ·
- *   命令行为 ∕ USAGE 文本 ∕ 旗标语义零改）：分发骨架 + 八薄命令族（memory ∕ sync ∕ distill ∕
- *   reindex ∕ completion ∕ upgrade ∕ session ∕ ledger）+ help ∕ version；交互长驻三命令
+ *   命令行为 ∕ USAGE 文本 ∕ 旗标语义零改）：分发骨架 + 九薄命令族（memory ∕ sync ∕ distill ∕
+ *   reindex ∕ completion ∕ upgrade ∕ session ∕ ledger ∕ team）+ help ∕ version；交互长驻三命令
  *   （chat ∕ tui ∕ acp）经 `command-interactive.mjs` 承接。依赖经 ctx 注入（`usage` ∕ `version` ∕
  *   `exitSoon`——bin 装配面注入；先例 = `src/tui/turn-face.mjs` 出档）。
  */
@@ -13,6 +13,7 @@ import { teamConfig } from "./cli/make-agent.mjs"
 import { memoryCommand } from "./cli/memory-command.mjs"
 import { distillCommand } from "./cli/distill-command.mjs"
 import { chatCommand, tuiCommand, acpCommand } from "./command-interactive.mjs"
+import { teamCommand } from "./cli/team-command.mjs"
 
 /** 命令分发（原 `bin/thincoder.mjs` 顶层 switch 骨架逐字搬移——命令行为零改）。 */
 export async function runCommandTable(command, args, ctx) {
@@ -168,6 +169,14 @@ export async function runCommandTable(command, args, ctx) {
       }
       console.error("Usage: thincoder ledger migrate --dry-run | --confirm [--from <key>] | thincoder ledger audit [--root <dir>] | thincoder ledger list --json [--full] [--family] [--cwd <dir>]")
       exitSoon(1)
+      break
+    }
+
+    case "team": {
+      // 团队登录命令族（B1 批 · `docs/core/design/TEAM.md` §2）：login ∥ logout ∥ status——机制单源 = 核
+      // `@thincoder/core/team.mjs`（本档只分发；退出码 0 成 ∥ 1 败——先例 = memory ∥ distill 薄命令族）。
+      const code = await teamCommand(args)
+      if (code) exitSoon(code)
       break
     }
 

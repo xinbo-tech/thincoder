@@ -20,7 +20,7 @@ import { providerSpec, specMatch } from "@thincoder/core/config.mjs"
 import { saveSession, loadSlotFile } from "@thincoder/core/session.mjs"
 import { carryoverDefaultModel } from "./config-helpers.mjs"
 import { getProviderModels, modelListFailureText, dedupeModels } from "./model-catalog.mjs"
-import { createProviderAdmin } from "./provider-admin.mjs"
+import { createProviderAdmin, isDerivedProviderHidden } from "./provider-admin.mjs"
 
 /** createModelPicker(ctx) → { openModelPicker, selectModel, setProviderKey, setContextFlow, pickModelForSlot } */
 export function createModelPicker(ctx) {
@@ -112,7 +112,8 @@ export function createModelPicker(ctx) {
    *  其余显示回退 = 行 note 的 `baseURL`。 */
   function buildProviderEntries() {
     const entries = []
-    for (const p of agent.providers) {
+    const providers = agent.providers.filter((p) => !isDerivedProviderHidden(p)) // 派生无 key ⇒ 隐藏（TEAM.md §2.4——模型候选面）
+    for (const p of providers) {
       const active = p.name === agent.activeProvider
       const shown = active && agent.activeModel ? ` ${agent.activeModel}` : ""
       const marker = active ? "●" : ""
@@ -134,7 +135,7 @@ export function createModelPicker(ctx) {
     }
     entries.push({ type: "header", text: "Management" })
     entries.push({ type: "item", text: "Add provider…", action: "add" })
-    if (agent.providers.length > 1) entries.push({ type: "item", text: "Remove provider…", action: "remove" })
+    if (providers.length > 1) entries.push({ type: "item", text: "Remove provider…", action: "remove" })
     entries.push({ type: "item", text: "Set / change API key…", action: "key" })
     entries.push({ type: "item", text: "Set context window (K units)…", action: "context" })
     return entries
@@ -267,7 +268,7 @@ export function createModelPicker(ctx) {
    *  或自由值——与 subagent 工具 model 参数同语义）。返回 { provider, model } 或 null。 */
   async function pickModelForSlot() {
     for (;;) {
-      const providers = agent.providers
+      const providers = agent.providers.filter((p) => !isDerivedProviderHidden(p)) // 派生无 key ⇒ 隐藏（TEAM.md §2.4——槽位面同判据）
       if (!providers.length) return null
       const e = await showPicker("Select provider", providers.map((p) => ({
         type: "item",
@@ -320,4 +321,4 @@ export function createModelPicker(ctx) {
   return { openModelPicker, selectModel, setProviderKey: admin.setProviderKey, setContextFlow: admin.setContextFlow, pickModelForSlot }
 }
 
-export { cascadeRemoveProvider } from "./provider-admin.mjs"
+export { cascadeRemoveProvider, isDerivedProviderHidden } from "./provider-admin.mjs"

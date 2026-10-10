@@ -64,11 +64,11 @@ test("bash 发射字节形逐字：源档形 ≡ 发射形（直写 —— 零�
     "--root",
     "--yes --layer=",
     "bash zsh fish",
-    "tui chat acp memory sync reindex distill upgrade completion session ledger -v --version -h --help",
+    "tui chat acp memory sync reindex distill upgrade completion session ledger team -v --version -h --help",
   ]) {
     assert.ok(bash.includes(row(wordList)), `bash 行逐字（直写形）：${wordList}`)
   }
-  assert.equal(bash.split('case "$prev" in').length - 1, 2, "分派行 `case \"$prev\" in` 恰两处（memory ∥ ledger）")
+  assert.equal(bash.split('case "$prev" in').length - 1, 3, "分派行 `case \"$prev\" in` 恰三处（memory ∥ ledger ∥ team）")
   // JS 插值险位（CLI-ENTRY.md §3 例外）：须发射字面 `${…}` 的段在源档保留 `\${` ⇒ 发射面含 `${`
   assert.ok(bash.includes('cur="${COMP_WORDS[COMP_CWORD]}"'), "险位 `${COMP_WORDS[COMP_CWORD]}` 发射保留")
   assert.ok(bash.includes('case "${COMP_WORDS[1]}" in'), "险位 `${COMP_WORDS[1]}` 发射保留")
@@ -78,7 +78,7 @@ test("bash 发射字节形逐字：源档形 ≡ 发射形（直写 —— 零�
 test("zsh 分派行直写形：`case \"$state\" in` ∥ `case \"$words[…]\" in`（双引号内直写 `$`）", () => {
   assert.ok(zsh.includes('case "$state" in'), "zsh 一级分派行直写形")
   assert.ok(zsh.includes('case "$words[1]" in'), "zsh 二级分派行（words[1]）直写形")
-  assert.equal(zsh.split('case "$words[2]" in').length - 1, 2, "zsh 三级分派行（words[2]）恰两处（memory ∥ ledger）")
+  assert.equal(zsh.split('case "$words[2]" in').length - 1, 3, "zsh 三级分派行（words[2]）恰三处（memory ∥ ledger ∥ team）")
   assert.ok(zsh.includes("ledger) case \"$words[2]\" in"), "zsh ledger 分支家族同形")
 })
 

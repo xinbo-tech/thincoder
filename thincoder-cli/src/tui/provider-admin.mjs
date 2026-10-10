@@ -16,8 +16,16 @@
  * 三端探针目标构造收敛核 `probeTargetOf`（③′）。
  */
 import { PROVIDER_PRESETS as PRESETS, providerSpec } from "@thincoder/core/config.mjs"
+import { hasKey } from "@thincoder/core/model-ref.mjs"
 import { probeTargetOf } from "@thincoder/core/provider-flows.mjs"
 import { probeChannelModels } from "./model-catalog.mjs"
+
+/** 派生条目隐藏判据（TEAM.md §2.4 ∥ PROVIDER.md §6.25）：`derived === true` ∧ 无 key ⇒ 列表/候选面
+ *  隐藏（四消费面各一处过滤——CLI 模型候选 ∥ CLI provider-admin ∥ VSC ∥ 桌面）；登录态（有 key）在场。
+ *  「持 key」判据单源 = 核 `model-ref.mjs` `hasKey`（PROVIDER.md §6.22——trim 非空）。 */
+export function isDerivedProviderHidden(provider) {
+  return provider?.derived === true && !hasKey(provider)
+}
 
 /** createProviderAdmin(ctx) → { addProviderFlow, removeProviderFlow, setKeyFlow, setProviderKey, setContextFlow } */
 export function createProviderAdmin(ctx) {
@@ -113,7 +121,7 @@ export function createProviderAdmin(ctx) {
   }
 
   async function removeProviderFlow() {
-    const candidates = agent.providers.filter((p) => p.name !== agent.activeProvider)
+    const candidates = agent.providers.filter((p) => p.name !== agent.activeProvider && !isDerivedProviderHidden(p)) // 派生无 key ⇒ 隐藏（TEAM.md §2.4）
     if (!candidates.length) return
     const se = await showPicker("Remove Provider", [
       { type: "header", text: "Select provider to remove" },
@@ -140,7 +148,7 @@ export function createProviderAdmin(ctx) {
   async function setKeyFlow() {
     const se = await showPicker("Configure API Key", [
       { type: "header", text: "Select provider" },
-      ...agent.providers.map((p) => ({ type: "item", text: `${p.name} ${p.apiKey ? `(has key: ${maskKey(p.apiKey)})` : "(no key)"}`, name: p.name })),
+      ...agent.providers.filter((p) => !isDerivedProviderHidden(p)).map((p) => ({ type: "item", text: `${p.name} ${p.apiKey ? `(has key: ${maskKey(p.apiKey)})` : "(no key)"}`, name: p.name })),
     ])
     if (!se) return
     const key = await askQuestion(`Enter API key for ${se.name}:`)
@@ -167,7 +175,7 @@ export function createProviderAdmin(ctx) {
   async function setContextFlow() {
     const se = await showPicker("Set Context Window", [
       { type: "header", text: "Select provider" },
-      ...agent.providers.map((p) => ({
+      ...agent.providers.filter((p) => !isDerivedProviderHidden(p)).map((p) => ({
         type: "item",
         text: `${p.name} (ctx ${fmtContextK(providerSpec(p).context)})`,
         name: p.name,
