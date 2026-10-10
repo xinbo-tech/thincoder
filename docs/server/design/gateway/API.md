@@ -12,6 +12,7 @@
 | provider 管理面 | `GET/POST/PATCH/DELETE /api/admin/providers*` | admin 会话（服务端判定——`user` ⇒ 403） | 本档 §2.2 |
 | 账号/自助/管理面 | `/api/*`（成员/用量族——provider 管理面另列） | 会话 cookie + 角色判定 | `accounts/ACCOUNTS.md` §3 ∥ `metering/METERING.md` §3（用量/配额端点） |
 | 系统面 | `GET /healthz`（公开——零鉴权只读探活） ∥ `GET /api/system`（会话——版本/更新状态） | 无 ∥ 会话 | 本档 §2.3 |
+| 客户端数据面 | `POST /api/client/login` ∥ `POST /api/client/logout` ∥ `GET /api/client/me`（骨架——B1 批） | 登录 token（`Authorization: Bearer`——与 /v1 同校验单源） | `client/CLIENT.md` §2 |
 | 控制台数据面 | `GET /api/overview`（管理总览读数） ∥ `GET /api/admin/embedding` ∥ `POST /api/admin/embedding/test`（向量服务面——探活/试跑） ∥ `GET/PATCH /api/admin/config`（配置面——读写 config.json；`ops/OPS.md` §1） ∥ `POST /api/admin/proxy/test`（代理连通测试——真打；`webui/WEBUI.md` §2.7） | admin 会话（服务端判定——`user` ⇒ 403） | 本档 §2.4 |
 | 前端静态面 | `GET /` ∥ `public/**`（`app.mjs` ∥ `nav.mjs` ∥ `views-*` 十一档 ∥ `style.css`） | 公开（页面壳零数据） | `webui/WEBUI.md` §1 |
 | 其余 | —— | —— | 404（JSON 错误形 = §3） |
@@ -114,6 +115,7 @@
   400 `invalid_request_error`（body 非 JSON ∥ 缺 model）· 413 `payload_too_large`（请求体超上限——上限常量 32 MiB）· 502 `upstream_error`（上游不可达）。
 - 500 `internal_error`（兜底——处理函数自身异常）。
 - 账号面（`/api/*`——同形）：401 `unauthorized`（无 ∥ 过期会话）· 401 `invalid_credentials`（登录失败 ∥ 旧密错误——同措辞同耗时）· 403 `forbidden`（角色不足）· 404 `not_found`（成员 ∥ key 不存在）· 429 `too_many_attempts`（登录锁定期——`Retry-After` 头（秒）；两维同文案——`accounts/ACCOUNTS.md` §2）。
+- 客户端面（`/api/client/*`——同形）：401 `invalid_api_key`（无/无效 token——三态不区分）· 401 `invalid_credentials` ∥ 429 `too_many_attempts`（登录——沿账号面同码）；**零新码**（全码单源不变——机制 = `client/CLIENT.md` §1/§2）。
 - **上游已到达的错误**（4xx/5xx）：状态码与 body **原样透传**（不包不改）；仍记 error 行（token 未知记 NULL）。
 - **消息语言口径**：服务端消息 = 中文单语（机器面零改——CLI/curl 消费方口径不变）；控制台按 `code` 前端映射本地化（中文 ∥ English——机制 = `webui/WEBUI.md` §2.2）；上游透传错误照原样（控制台原文回显）。
 
@@ -287,3 +289,4 @@
 - 2026-10-09：设计修正轮（fix——批 `docs/batches/2026-10-09-console-proxy-page.md` §3 评审发现 3，本档面）：§1 路由族表前端静态面行 `views-*` 枚数收正（十档 ⇒ **十二档**——配置控制台批 + `views-system-config.mjs` ∥ 代理页批 + `views-proxy.mjs` 各 +1）。**零新语义**（评审发现直接导出项）。明细 = 批档 §2 修复轮块。
 - 2026-10-09：实施后回填轮（代理页批——批 `docs/batches/2026-10-09-console-proxy-page.md` · eng-designer）：§4 `proxy-admin.mjs` 行「拟新增」翻正（**实读 81**）∥ 小计实读增量 **+81**。**零语义**（读数 ∥ 标记）。
 - 2026-10-10（**console-proxy-back 批 · 设计形式化轮 · eng-designer**——承批档 `docs/batches/2026-10-10-console-proxy-back.md` §2 · 台账 #1199；需求 §2:30 + AC-30 回改；用户 08:22/08:41 令）：§1 路由族表前端静态面行 `views-*` 十二 ⇒ **十一档**（`views-proxy.mjs` 退役）∥ §2.4 代理测试行承载描述收正（「控制台代理页」⇒「控制台系统页「服务配置」卡·连通测试块」——端点/契约零变）∥ §8 代理测试面不做项批名 ⇒ 决策指针（KD-SV-60——`webui/WEBUI.md` §7）。**产品码零触**（形式化轮——码已落）。
+- 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212；需求 §2:31 + AC-31）：§1 路由族表增客户端数据面行（骨架三端点——登录 token 鉴权）∥ §3 增客户端面复用句（零新码）；同源 = `client/CLIENT.md`。**产品码零触（设计轮）**。

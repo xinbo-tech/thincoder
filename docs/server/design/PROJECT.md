@@ -68,7 +68,7 @@
 - 同仓直连的优势（协议两端一提交同改同审）保留待用：非 OpenAI 协议翻译类需求（现为不做项）出现时再按批直连，不预先耦合。
 - 存储选 `node:sqlite` 与核 `thincoder-core/ledger-db.mjs` 同技术（`DatabaseSync`），零代码共享——各持各的库与 DDL。
 
-## 3. 文档地图（板 2 + 域 6）
+## 3. 文档地图（板 2 + 域 7）
 
 | 档 | 层 | 域 | 内容（各档自带决策段与变更记录） |
 |---|---|---|---|
@@ -80,8 +80,9 @@
 | `store/STORE.md` | 域 | store | 库 ∥ DDL ∥ 迁移链 ∥ 本域文件与预算 ∥ 决策 |
 | `webui/WEBUI.md` | 域 | webui | 静态面 ∥ 控制台 IA 与视图 ∥ 多语言（i18n） ∥ 可见面二轮（§2.3） ∥ 弹窗机制（§2.4） ∥ 样式族规范（§2.5） ∥ 数据表壳布局（§2.6） ∥ 判权/自托管约束 ∥ 本域文件与预算 ∥ 验收判据 |
 | `ops/OPS.md` | 域 | ops | 配置面 ∥ 首启引导 ∥ 运维 CLI ∥ 启动/停机/部署面 ∥ 日志 ∥ 本域文件与预算 ∥ 验收判据 ∥ 用例 |
+| `client/CLIENT.md` | 域 | client | 客户端接入：客户端 token 面 ∥ `/api/client/*` 数据面骨架 ∥ 端点表 ∥ 本域文件与预算 ∥ 验收判据（AC-31）∥ 用例 ∥ 边界（2026-10-10 B1 批建档） |
 
-## 4. 决策索引（KD-SV-1–60）
+## 4. 决策索引（KD-SV-1–62）
 
 | # | 决策一句话 | 所在档 |
 |---|---|---|
@@ -145,6 +146,8 @@
 | KD-SV-58 | 引擎模型退出通用清单（单独命名空间）：`/v1/models` 与控制台服务模型页零引擎行（`modelList` ∥ `deriveModels`）；派发面零动 | `gateway/API.md` §6 |
 | KD-SV-59 | 服务模型别名 = `models_json` 条目两形（字符串 = 无别名 ∥ 对象 `{name, alias}`——**零迁移**）；校验 = 非空/无斜杠/无首尾空白 + 全服唯一（撞 ⇒ 拒启/400；别名 vs 前缀名 = 形上不相交）；对外标识 = 别名回映射（清单/派发/成员键/记账——内部真名零改） | `gateway/API.md` §6 |
 | KD-SV-60 | 代理设置与连通测试 = 系统页「服务配置」卡内：`proxy.uri` = 第四写控件（保存体四键——白名单零变）+ 连通测试块（`POST /api/admin/proxy/test`——表单明传 uri ∥ 目标可填+预填首个 provider baseURL ∥ 自含读数 `{ ok, status ∥ error{kind}, ms }` ∥ 预算 10s ∥ 零落库零计费）∥ 旧链 `#/admin/proxy` ⇒ `#/admin/system` | `webui/WEBUI.md` §7 |
+| KD-SV-61 | 客户端 token = 一枚具名成员 key（`api_keys` 行——端标签落 `name`；无过期天然 ∥ 不受 20 上限；`/api/client/*` 与 `/v1/*` 同源校验；不进 `sessions` 表） | `client/CLIENT.md` §5 |
+| KD-SV-62 | 客户端数据面命名空间 = `/api/client/*`（骨架 = login ∥ logout ∥ me；鉴权 = 登录 token（Bearer——`requireApiKey` 单源复用）；错误形复用全码——零新码） | `client/CLIENT.md` §5 |
 
 ## 5. 关键决策（本档）
 
@@ -227,6 +230,9 @@
   跨批件十五档逐档行数（实读 2026-10-10 ⇒ ±0——断言文本就地收正；口径 = `split("\n").length − 1`）：`-console-completeness-2` **504** ∥ `-console-list-style` **241** ∥ `-console-modals` **468** ∥ `-console-provider-redo-runtime` **350** ∥
   `-console-providers` **479** ∥ `-models-config` **270** ∥ `-server-gateway-webui-deploy` **322** ∥ `-server-i18n` **303** ∥ `-me-keys-redo-ui` **395** ∥ `-provider-model-metadata` **494** ∥
   `-quota-v2-member-models` **740** ∥ `-server-public-structure` **156** ∥ `-console-proxy-page` **547** ∥ `-server-console-config` **795**（十五件均 ≤800 硬限；本件逼近——余 5 行，拆分预案宜随档） ∥ `-server-small-fixes` **349**。（父侧补注——设计评审 #109 发现 3 对账；可 revert）
+  team-login-client-access 批预算（2026-10-10 设计轮——本批；台账 #1212；需求 §2:31 + AC-31）：服务端产品面 ≈**+77**——逐档 = `thincoder-server/src/client/routes.mjs`（拟新增）≈75（login ∥ logout ∥ me 三处理 + 注册行；复用 members/keys/guard/audit 单源——零迁移零新码） ∥
+  `thincoder-server/bin/thincoder-server.mjs` 实读 **182** ⇒ ≈184（import ∥ 注册行）；域面 = **client 域新立（一档）**；accounts ∥ store ∥ gateway ±0（结构版本保持 v10）；
+  `thincoder-server/package.json` ±0（`prepublishOnly` 清单 38 ⇒ **39**——本批件入链；单行清单行数零变）；批内件一件（`docs/batches/2026-10-10-team-login-client-access.test.mjs`——估 ≈260 行）；机制全文 = `client/CLIENT.md` §1/§5（KD-SV-61/62）；端侧清单（核 + 三端）另册 = `docs/core/design/TEAM.md` §4。
   控制台布局收正批回填（2026-10-07——批 `docs/batches/2026-10-07-console-layout.md`；功能点 20 四件——五页视口高壳 ∥ 页脚行计数 ∥ 左对齐 ∥ 弹窗内列表表格化）：产品面实读——webui 八档：`app` **318**（`dataShell` :94 ∥ `SHELL_PAGES` 恰五路径 :255） ∥ `style` **215**（高度链 :191-200 ∥ 回退媒体查询 :203-205） ∥
   `views-admin` **185** ∥ `views-providers` **61** ∥ `views-models` **199** ∥ `views-audit` **94** ∥ `views-me` **125** ∥ `views-providers-modals` **287** ∥ i18n 两表 **334 ∥ 331**（+6 键/表）；`package.json` ±0（`prepublishOnly` 十七 ⇒ **十八件**）；零新档（public 档目 19 ∥ 20 不变）；
   批内件 `docs/batches/2026-10-07-console-layout.test.mjs`（腿 A–G——**8/8 绿**）；父侧门禁 **148/148**；随正五件（stub ctx 三 + 门禁计数二——父侧落）；估/实读差 = 该批 §5 披露（`app` ≈316/318 ∥ `style` ≈222/215 ∥ `views-admin` ≈189/185 ∥ `views-modals` ≈280/287）。
@@ -390,6 +396,7 @@
 | AC-28（功能点 28——server 配置控制台；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `webui/WEBUI.md` §6 AC-28 两行（配置项全量 ∥ 掩码 ∥ 保存往返 ∥ 重启生效 ∥ 探活草稿 ∥ 审计 ∥ 文案改向 ∥ 缺段创建）+ `gateway/API.md` §5 AC-28 行（写路径机检）+ `ops/OPS.md` §7 AC-28 行 + §8 KD-SV-56/57；代理回迁批：`proxy.uri` 承载回迁服务配置卡（§2.7）——第四写控件 ∥ 连通测试块（文案改向句改指——AC-30 行同拍） | 批内件 + 收口轮（浏览器实走） |
 | AC-29（功能点 29——服务模型别名；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 分五面判据：`gateway/API.md` §5 AC-29 行（① 配置形两形/非法 400·拒启 ∥ ② 对外别名生效（清单/请求命中/旧名 404） ∥ ③ 唯一性（撞别名拒 ∥ 形上不相交））∥ `metering/METERING.md` §4 AC-29④ 行（记账外标 = 别名 ∥ 过滤反查 ∥ 键随动）∥ `accounts/ACCOUNTS.md` §5 AC-29④ 行（配额/禁用键 = 外标形）∥ `webui/WEBUI.md` §6 AC-29① 行（G · 别名组 ∥ 列表外标）∥ `ops/OPS.md` §7 AC-29①③ 行（配置/种子面：两形 ∥ 校验 ∥ 拒启）∥ `store/STORE.md` §2 v2 段（条目两形——零迁移） ∥ ⑤ 嵌入面零涉（设计句 = `gateway/API.md` §6 KD-SV-59 ∥ §8 不做项「嵌入面别名」；回归面 = 嵌入面判据零动——批内件断言） | 批内件 + 收口轮（浏览器实走） |
 | AC-30（功能点 30——代理设置与连通测试（服务配置卡内）+ 旧链重定向；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 分三面判据：① 承载 = `webui/WEBUI.md` §6 AC-30 行（服务配置卡 = 四写控件 + 连通测试块 ∥ `views-proxy.mjs` 不在盘（档目 30 ∥ 31）∥ nav 管理 7 ∥ 旧链 `#/admin/proxy` ⇒ `#/admin/system`）+ `gateway/API.md` §5（白名单零变——`CONFIG_WRITABLE_KEYS` 导出直测） ∥ ② 测试功能 = `gateway/API.md` §5 AC-30 行 + §7 用例（N36/B26/E27）+ `webui/WEBUI.md` §6 AC-30 续行（真打读数 ∥ 就地错态 ∥ 零落库零计费） ∥ ③ 语义零变 = `ops/OPS.md` §1 写面句 + 保存往返/重启生效 + Provider 勾选零回归 + `proxy.mjs` 零触（KD-SV-55 不变） | 批内件 + 收口轮（浏览器实走） |
+| AC-31（功能点 31——三端登录与接入；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 分两面判据：① 服务面 = `client/CLIENT.md` §4（login 三态 ∥ token 兼用 /v1 ∥ logout 即吊销——§6 用例 N37/B27/E28/N39）∥ ② 端侧面 = `docs/core/design/TEAM.md` §5（三端入口 ∥ token 落本地 ∥ 派生 provider ∥ 未登录态 ∥ 退出关闭） | 批内件 + 收口轮（三端实走） |
 | 非功能 · 零依赖 | 本档 §1 ∥ §5 KD-SV-2（口径）；全树 import 扫描断言 = 批内件 | 批内件 |
 | 非功能 · 仅内网 | `ops/OPS.md` 验收判据（`host` 必填 fail-closed + `0.0.0.0` 警告） | 批内件 |
 | 非功能 · 前端自洽 | `webui/WEBUI.md` 验收判据（零外部引用扫描） | 批内件 |
@@ -457,6 +464,7 @@
 | R47 | **embed 解耦批（本批）——需求档回笔 + 随正件 + 披露**：① 需求档回笔（主 agent 笔——随本批评审/收口）：`docs/server/requirements/PROJECT.md` 功能点 6 补「嵌入配置可缺 + 禁用语义 + 嵌入模型不入通用清单」句 ∥ 功能点 15① 补向量卡「未配置」态 ∥ 功能点 17 补「嵌入引擎模型不入本清单」 ∥ 功能点 21② 删「嵌入行 = —」（退场） ∥ AC-6 / AC-15① / AC-28 判据句随补（**编号零增——均 = 收正既有条目**）+ 变更记录 ∥ ② 随正件（父侧落——实施轮同拍）：十件断言件（旧「引擎模型入清单/入页」断言面——清单 = §6 注⑭）+ `thincoder-server/package.json`（`prepublishOnly` 32 ⇒ 33——本批件入链）∥ ③ 披露（不阻塞）：`/api/system.embedding.model` 保留下发（用户面提示条——非「模型列表」面）∥ `GET /api/admin/embedding` 端点在册（UI 消费者已退场——契约零动）∥ 控制台删除/清空 `embedding` 段不做（缺段 = 编辑配置文件）∥ 本批落修（一致性面——登记）：§7 AC-27/AC-28 两行滞账补齐（前两批漏登——沿 R40② 先例）∥ ④ 部署收尾（父侧执行——ECS）：镜像重建 + 重收敛 + 可选 `/v1/models` 实走核对（模型清单零引擎行） | 披露（上抛——如无异议按设计实施；部署收尾 = 父侧） | 评审/用户复核 |
 | R48 | **server-model-alias 批（本批）——需求档回笔 + 随正件 + 披露**：① 需求档回笔（**已办**——2026-10-09；主 agent 笔）：`docs/server/requirements/PROJECT.md` 边界行 `:216`（当刻盘面）已删「模型别名」（现文 = 「v1 不做**模型路由**（已降级为后续可选）；」）；变更记录在册（`:300`——§4 不做项行逐字替换）；AC-29 编号零增（本批已落 `:194`） ∥ ② 随正件（父侧落——实施轮同拍，**以当刻盘面实读为准**）：门禁件数断言 N ⇒ N+1（现值 33 ⇒ 34——七件注释同拍）+ `thincoder-server/package.json`（`prepublishOnly` 33 ⇒ 34——本批件入链）+ 旧断言件核（预计零——既有断言无别名配置：外标仍回落 `provider/model`；清单 = §6 注⑮） ∥ ③ 披露（不阻塞）：别名与成员键互为外标（改别名 ⇒ 旧形键 = 离表键保留、不生效——无历史/迁移）∥ 停用/重开两径换外标（停用 = `models` 减项离表 ∥ 重开 = Provider 页勾选按字符串形重建——别名不再存在 ⇒ 旧别名请求 404 `model_not_found`；如需保留 = 另轮）∥ CLI `usage reconcile` 读数 = 内部真名（运维面）∥ #967 残 nuance 已落 `ops/OPS.md` §1 + `README.md` 一行 ∥ #1010（撤销面 ∥ displayName 源 ∥ 富项分列）∥ #1152（判据改指运行时 accessor）∥ #1151（向量卡「用法」行随段显隐）——四并入项落修均在册 ∥ ④ 版本面：零迁移（结构版本保持 v10——`store/STORE.md` §3） | 披露（上抛——如无异议按设计实施） | 评审/用户复核 |
 | R49 | **console-proxy-page 批（本批）——需求档回笔 + 随正件 + 披露**：① 需求档回笔（主 agent 笔——随本批评审/收口）：`docs/server/requirements/PROJECT.md` AC-28 行文案改向句改指（「系统 → 服务配置」⇒「代理」页——`:193` 当刻盘面）∥ 页数/项数链随正（§2:13 侧栏「十页」⇒**十一页** `:52` ∥ §2:14 管理「七页」⇒**八页** `:57` ∥ AC-12 行「管理 7」⇒ **8** `:172`）∥ ② 随正件（父侧落——实施轮同拍，**以当刻盘面实读为准**）：档目断言件九件（`-console-completeness-2` ∥ `-console-list-style` ∥ `-console-modals` ∥ `-console-provider-redo-runtime` ∥ `-console-providers` ∥ `-models-config` ∥ `-server-gateway-webui-deploy` ∥ `-server-i18n` ∥ `-server-console-config`——`views-proxy.mjs` 入列表）+ nav 计数件三件（管理 7 ⇒ 8）+ 配置批 F1/F4 断言件（`-server-console-config`——四写控件 ⇒ 三写控件 ∥ 提交体去 `proxyUri` ∥ 键清单去 2 键 ∥ `useProxy` 改向断言改指）+ 门禁件数断言 N ⇒ N+1（现值 33——在途批入链先后影响绝对值）+ `thincoder-server/package.json`（`prepublishOnly` 同基数）∥ ③ 披露（不阻塞）：测试 uri = **表单明传（所见即所测——草稿先验，KD-SV-54/57 同源）**；如裁「必须打运行配置值」⇒ 翻案点（保存→重启→测试链）∥ 重定向两径差（直连径 fetch 缺省跟随 ∥ 经代理径单请求不跟随（3xx 原样回读））——生产同链同行为，不改传输 ∥ `proxy.mjs` 零触（KD-SV-55 传输语义不变） | 披露（上抛——如无异议按设计实施） | 评审/用户复核 |
+| R50 | **team-login-client-access 批（B1——本批）——需求读法披露 + 随正件 + 部署收尾**：① 披露（需求读法——供复核）：§2:31①「复用既有账号/密码散列与会话机制」本设计读法 = 复用散列校验 + 登录守卫 + token 签发（**`sessions` 表不用**——浏览器 cookie 面专属；客户端 token 落 `api_keys`，理由 = token 须兼作 /v1 凭据 ∥ 无过期 ∥ 记账归因——KD-SV-61）；如用户本意 = 复用 `sessions` 表 ⇒ 翻案点（与「不设过期」「模型可用」两条相抵面需重裁）∥ ② 披露（存储面）：token 明文落 `~/.thincoder/config.json`（0600 先例——沿 provider apiKey 口径；keychain 不用）；登录 token 在控制台「我的 · key」页自然可见（不设区分列——如需标记 ⇒ 另轮）∥ ③ 披露（能力面）：CLI 密码隐藏回显 = 新建能力（非 TTY 回落 stdin 行读——脚本化直登径）；端标签自动生成（≤40 裁剪）∥ ④ 随正件（父侧落——实施轮同拍，以当刻盘面为准）：`thincoder-server/package.json`（`prepublishOnly` 38 ⇒ 39——本批件入链）+ 门禁件数断言件随正（39 ⇒ 40）∥ ⑤ 部署收尾（父侧执行）：server 侧零迁移零配置——新代码部署（镜像/进程重建）+ 三端拾新版本；收口轮实走（CLI/VSC/桌面各一轮：登录 → 模型可用 → 退出） | 披露（上抛——如无异议按设计实施；部署收尾 = 父侧） | 评审/用户复核 |
 
 ## 变更记录
 
@@ -526,3 +534,4 @@
 - 2026-10-10：随正件（实施轮 · 机械计数 · 可 revert——server-face-residues 批 · 台账 #1161）：§6 板级行 `prepublishOnly` 件数链收正（35 ⇒ **36 件**——本批件入链）+ 组成式同拍（后续各批 22 ⇒ 23 件；alias ∥ 代理页批件已入链）∥ §6 增**注⑰**（本批随正件登记：门禁件数断言件七件 35 ⇒ 36 ∥ 文档链两处 ∥ 新批件一件）；同源随动 = `ops/OPS.md` §5.1。**零新语义**（计数 ∥ 登记）。
 - 2026-10-10：清账轮簇Ⅱ server 面小修/清账批（批 `docs/batches/2026-10-10-server-small-fixes.md` · 台账 #1024 ∥ #1025 ∥ #1056 ∥ #1057 ∥ #1137 ∥ #1146；2026-10-10 实施轮）：§6 滞账注两条 ⇒ 删（D8——失效表达式不留现面）+ 原位补 2026-10-07 五批总账行（布局收正 ∥ 配额分模型 ∥ 配额 v2 · 成员模型 ∥ 模型元数据 ∥ 列式收正——五行实读逐批取数）∥ §6 板级行 `prepublishOnly` 件数链收正（⇒ **38 件**——盘面实读 36 + 本批两件）∥ §9 R40② 滞账 ⇒ 已补（五行在 §6）∥ §9 R40③ 词汇口径 ⇒ 统一已办（台账 #1025）；同源随动 = `webui/WEBUI.md` §2.2/§2.3⑥/§2.6⑤/变更记录 ∥ `ops/OPS.md` §5.1。**零新语义**（句面 ∥ 读数 ∥ 登记）。
 - 2026-10-10（**console-proxy-back 批 · 设计形式化轮 · eng-designer**——承批档 `docs/batches/2026-10-10-console-proxy-back.md` §2 · 台账 #1199；需求 §2:30 + AC-30 回改；用户 08:22「服务器的代理设置还是放回系统设置页面。」+ 08:41「测试要保留。」）：§1 定位句（侧栏分组导航十页）∥ §2.1 webui 行三十一 ⇒ **三十档**（`views-*` 十一档；含 favicon 三十一档；`views-proxy.mjs` 退役）+ 职责面（系统页配置控制台含代理设置与连通测试——§2.1 ∥ §2.7）∥ §2.2 控制链十页/管理七页随正 ∥ §4 索引 KD-SV-60 重写（回迁形）+ KD-SV-20 枚举去代理 ∥ §6 添本批预算行（实读增量 **−65**；档目 **30 ∥ 31**；跨批件十五档随正 ∥ 零新件）∥ §7 AC-12/AC-16/AC-18 三行档目链补「代理回迁批后 **30 ∥ 31**」+ AC-28 行代理回迁句 + AC-30 行承载面重写 ∥ §9 本行；同源随动 = `webui/WEBUI.md` ∥ `gateway/API.md` ∥ `ops/OPS.md`。**产品码零触**（形式化轮——码已落）。
+- 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212；需求 §2:31 + AC-31）：**client 域新立**——§3 文档地图板 2 + 域 **7**（+ `client/CLIENT.md`）∥ §4 索引增 KD-SV-61/62（标题 1–60 ⇒ **1–62**）∥ §6 添本批预算行（产品面 ≈+77；client 域新立）∥ §7 增 AC-31 行（两面判据指针）∥ §9 增 R50（需求读法披露 ∥ 随正件 ∥ 部署收尾）；同源随动 = `client/CLIENT.md`（新档） ∥ `accounts/ACCOUNTS.md` ∥ `gateway/API.md` ∥ `EVOLUTION.md` ∥ 端侧 = `docs/core/design/TEAM.md`。**产品码零触（设计轮）**。

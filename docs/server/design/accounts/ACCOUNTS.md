@@ -10,6 +10,9 @@
 - 存储：`sha256(明文)` hex 单列唯一索引；库内**无明文**（DDL = `store/STORE.md` §2）。
 - 签发 ∥ 吊销：页面（**自助签发 §1.1 ∥ 自助逐把吊销 §1.1** ∥ admin 吊销 §3）与本机 CLI（`ops/OPS.md` §3）——同库同语义；吊销 = `status` 置 `revoked`（软删、行保留）；签发 = 新行（**多把并存**——一人多把；轮转 = 新签 + 吊销旧——**页面不再露出**，端点保留 = API 兼容不变量（§1.1）；不做同 key 换 hash）。
 - 校验：每请求查库（唯一索引查找——无内存缓存）⇒ **吊销下一次请求即 401**（AC-5 结构性成立）——KD-SV-11（§6）。
+- **客户端登录签发路径（B1 批——2026-10-10 · 台账 #1212）**：客户端面登录（`POST /api/client/login`）签发 = **一枚具名 key**（本表 §1 面全量适用——hash 存储 ∥ 逐请求查库 ∥ 软删吊销 ∥ 多把并存）；端标签落 `name`（trim ≤40；空 ⇒ 默认名助手——§1.1）；**不设过期**（本表天然）∥ **不受 20 上限**（服务端签发面不判上限——沿「轮转 ∥ CLI 不受限」先例）；
+  退出 = 吊销该枚；
+  审计两型沿用（`login_success`/`login_failure` + `key_issue`/`key_revoke`——detail 携 `surface:"client"`；十型零增）。机制全文 = `client/CLIENT.md` §1/§5（KD-SV-61）。
 
 ### 1.1 key 自助面（功能点 25——多把并存 ∥ 命名 ∥ 逐把吊销；me-keys 批）
 
@@ -99,6 +102,7 @@
 - 用量与配额端点（`/api/me/usage` ∥ `/api/usage` ∥ `/api/members/:id/model-quotas`）= `metering/METERING.md` §3。
 - 成员行三 map（`modelQuotas` ∥ `modelUsage` ∥ `modelDisables`）键 = 对外标识（别名 ∥ `provider/model`）——读面回映射随别名即改（`metering/METERING.md` §2.3 ∥ §4 AC-29④ 行；2026-10-09 alias 批）。
 - provider 管理端点（`/api/admin/providers/*`）= `gateway/API.md` §2.2——判权同本表口径（`requireAdmin`：`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401；写端点 JSON 型门同前言）。
+- 客户端面端点（`/api/client/*`——login ∥ logout ∥ me；鉴权 = 登录 token（`Authorization: Bearer`——与 /v1 同校验单源））= `client/CLIENT.md` §2（token 即本表 key 面——§1 客户端登录签发路径条）。
 - **双角色规则**：角色判定与写权限强制在服务端（页面显隐非判据）；`user` 触管理端点 ⇒ 403 `forbidden`；admin 兼有自助面；无 ∥ 过期会话 ⇒ 401 `unauthorized`。
 - **跨站防护**：`SameSite=Strict`（跨站不携 cookie）+ 写端点仅 JSON + 无 CORS 放行头。
 
@@ -127,6 +131,7 @@
 | AC-23（功能点 23③——成员模型禁用写/读面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 写面：`POST /api/members/:id/model-disables` 键级合并（`true` = 禁用 ∥ `null` = 删键 ∥ 未出现键不动）∥ 键形非法（空 ∥ 首尾空白 ∥ 含斜杠时空段）⇒ 400（裸名 = 别名形合法——2026-10-09 alias 批）∥ 值非 `true`/`null` ⇒ 400（库零变）∥ 不存在 ⇒ 404 ∥ 返回 `{id, modelDisables}` ∥ 判权三态（user ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200）；读面：`memberView` 新字段 `modelUsage`（当月逐模型已用——键 = 外标）∥ `modelDisables`——`/api/me` ∥ `/api/members` 同形；变更不入审计（十型零增）；覆盖键形校验同拍（#1001② ∥ #1008——`model-quotas` 首尾空白键 ⇒ 400；裸名 = 别名形合法） | 批内件 |
 | AC-29④（功能点 29——成员面随动：配额/禁用键；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 写面键形 = 对外标识（配别名模型 ⇒ 别名形——裸名合法；首尾空白 ⇒ 400；含斜杠 ⇒ 两段非空）；`memberView` 三 map 键 = 对外标识；别名变更 ⇒ 键面当即随动（旧形键 = 离表键保留、不生效——无历史/迁移）；记账面判据 = `metering/METERING.md` §4 AC-29④ 行；用例 = §7 N35 | 批内件 |
 | AC-25（功能点 25——key 多把并存/命名/自助签发/逐把吊销；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 签发：`POST /api/me/keys/issue`（会话）——`{name?}` ⇒ 200 `{id,name,hint,plain}`（明文一次性；**旧 key 照常可用**——多把并存）；空名 ⇒ 默认 `key-N`（单调——含吊销行）；名 ≤40 字符（trim；超长/非字符串 ⇒ 400 `invalid_request_error`）；重名允许；active ≥20 ⇒ 400（消息明示上限——防滥用；CLI 不设限在案）∥ 吊销：`POST /api/me/keys/:keyId/revoke` ⇒ 200；**他人 key ⇒ 404 `not_found`**（不属本人与不存在不区分——防枚举）；已吊销 ⇒ 幂等 200；吊销即断（下一 `/v1` 请求 401——逐请求查库）∥ 行形：`/api/me` ∥ `/api/members` key 行 += `name`/`createdAt`（单源 = `memberView`；仅未吊销）∥ 审计：两型既有（`key_issue` ∥ `key_revoke`——主体 = 本人；十型零增）∥ 判权：无会话 ⇒ 401；轮换端点保留（页面不再露出——兼容不变量）∥ 数据面：`api_keys.name`（v8 迁移——存量行回填默认名）∥ **空串零残留断点**（v8 回填后全表实读——全部创建路径经默认名助手；空串仅限迁移前存量） | 批内件 |
+| AC-31（功能点 31——三端登录 token 面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | login ⇒ 200 携 token（`api_keys` 新行：name = 端标签 ∥ key_hash = sha256(token)）；错凭据 ⇒ 401 同措辞；锁定期 ⇒ 429 + `Retry-After`（沿双维锁——§2）；logout ⇒ 吊销即判（下一请求 401——无缓存）；token 兼用 `/v1/*` 与 `/api/client/*`；label ≤40（空 ⇒ 默认名 `key-N`）；签发不受 20 上限；审计两型沿用（十型零增）；`sessions` 表零涉 | 批内件 |
 
 ## 6. 关键决策（本域）
 
@@ -213,3 +218,4 @@
 - 2026-10-07：fix 轮（评审 #43——批 `docs/batches/2026-10-07-me-keys-redo.md` §3 七号落修；本档面 = #2）：命名面闭合——全部创建路径（自助签发 ∥ 轮换新签 ∥ CLI `key issue`）共用默认名助手（§1.1 增「命名落位」条 ∥ §1.1 端点行 ∥ §3 轮换行 `name` 落位同拍）∥ §5 AC-25 行增「空串零残留」断点（库内空串 = 仅限迁移前存量——v8 回填后零残留）；`store/STORE.md` 零动（不变量在闭合后成立）。
 - 2026-10-09：fix 轮（射程外收口——承批 `docs/batches/2026-10-09-server-console-config.md` §3 轮 1 ∥ 同批修轮射程外发现）：审计面随 v10 十型——§2.1 事件目录增 `config_update` 行（actor = admin 名快照 ∥ detail = 键名清单、值永不入 ∥ 写入点 = `thincoder-server/src/gateway/config-admin.mjs`（拟新增））∥ 全档审计型表述随正为「十型」（§1.1 ∥ §2.1 边界 ∥ §5 AC-23/AC-25 ∥ §6 KD-SV-28/KD-SV-48 ∥ §7 N34）；同源 = `store/STORE.md` §2 v10 段。
 - 2026-10-09（**server-model-alias 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-server-model-alias.md` §2 · 台账 #1153 + 并入 #1008；需求 §2:29 + AC-29）：§2.2 语义/写面条随正（外标 = 别名 ∥ `provider/model`；键形 = 非空 ∥ 无首尾空白 ∥ 含斜杠两段非空——裸名合法；首尾空白 400——#1008 收正）∥ §3 `GET /api/me` 同拍句 + `model-disables` 行键形 ∥ §5 AC-23 行键形收正 + 增 AC-29④ 行 ∥ §7 B27 重写 + 增 N35 ∥ §8 增成员键别名面不做句。**产品码零触（设计轮）**。
+- 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212；需求 §2:31 + AC-31）：§1 增**客户端登录签发路径**条（签发 = 一枚具名 key ∥ 端标签落 `name` ∥ 不设过期 ∥ 免 20 上限 ∥ 审计两型沿用）∥ §3 增客户端面端点指针行 ∥ §5 增 AC-31 行；同源 = `client/CLIENT.md`（新档）。**产品码零触（设计轮）**。

@@ -599,6 +599,16 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 
 **可机检断言**（批内件 = `docs/batches/2026-10-10-gemini-thought-signature.test.mjs`）：① 捕获——合成帧喂 `readSSE` ⇒ 槽含签名字段（原生路经 `google.mjs` `chat()` + fetch 桩同判）；② 承载——`assistantToolCallMessage` 直调：有 ⇒ 键在场逐字同值 ∥ 无 ⇒ 键不存在；③ 零回归——无签名字段帧 ⇒ 槽 / 消息键集与批前逐字同形。
 
+### 6.25 派生渠道条目（团队登录——`derived` 标记 · 2026-10-10 · 台账 #1212）
+
+> **来源**：B1 批（team-login-client-access——需求 §2:31 + AC-31）；机制全文（登录/退出流程 ∥ 配置形 ∥ 三端同构）= `docs/core/design/TEAM.md` §2（本档只收**条目面语义**）。
+
+- **条目形**：`{ name:"team", baseURL:"<server>/v1", apiKey:"<token>", derived:true }`——固定名 `team` ∥ 字段 `derived: true` = 「派生」标记（登录写入 / 退出保留）。
+- **写面**：唯一写者 = `thincoder-core/team.mjs`（拟新增——登录 upsert（有则更新 ∥ 无则**追加表尾**——不劫持既有回退序）∥ 退出摘 `apiKey`）；端侧零自写盘；迁移面零改（实核：`thincoder-core/config-migrate.mjs:48-51` 只删 `model`/`models`——未知字段不剥离）。
+- **运行时语义**：无 `apiKey` ⇒ 不参与解析（`hasKey` 既有判据——持 key 判据单源 = §6.22；零新代码 ∥ 不触发「渠道无效」明示——回退序跳过）。
+- **列表/候选面**：`derived === true` ∧ 无 key ⇒ 隐藏（四消费面各一处过滤——CLI 模型候选 ∥ CLI provider-admin ∥ VSC `providerStatus` ∥ 桌面 `providerList`；登录态下在场（key 掩码显示））。
+- **边界**：不改 `defaultModel` ∥ 不切换会话模型 ∥ 不动手工条目；同名手工条目 ⇒ 登录不覆盖（提示——`TEAM.md` §2.2）。
+
 ## 7. 关键决策记录（含否决备选）
 
 | # | 决策 | 理由 / 否决备选 |
@@ -755,3 +765,4 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - 2026-10-10（**gemini-thought-signature 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-gemini-thought-signature.md` §3 轮次 1 · 台账 #1205）：§6.24 补**先例对照**（先例批 = `docs/batches/2026-09-20-reasoning-echo-gap.md`——同点加字段；对齐 ∥ 偏离句各带指针：D-PR37 ∥ D-PR38）
   · 补**残余（修复前历史）**段（重发仍可能同一 400 + 缓解径 = `/compact` ∥ 新会话）· §6.24 机制 3 引路补全（`thincoder-core/provider/core.mjs`——本批面悬空收正）；批档 §2 修复轮块 = AC-4 行为用例 ∥ AC-8 两枪形 ∥ AC-9 零第二构造点 ∥ AC-10 桩面断言 + 锚 / 读数收正。**零新语义**（评审发现直接导出项）；**产品码零触（fix 轮）**。明细 = 批档 §2 修复轮块。
 - 2026-10-10（**gemini-thought-signature 批 · 收口机械笔 · 父侧直执行 · 可 revert**）：§6.24 机制 1 末条措辞收正——「新建槽时搬字段」⇒「**合并时缺则搬**」（与 `thincoder-core/provider/core.mjs:364` 实现及批档 AC-4 终形对齐——实施轮上抛 #1）；`thincoder-core/model-specs.mjs` `assistantToolCallMessage` 文档串调用点清单随正（主循环 `thincoder-core/agent/turn-loop.mjs` ∥ 镜像 `thincoder-core/advisor/loop.mjs` ∥ `bench/lib/client.mjs`；VSC 转口 `thincoder-vscode/src/specs.mjs:13/:17` 零调用点——实施轮上抛 #2）。**零语义**（措辞 / 坐标与实况对齐）。
+- 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212）：新增 **§6.25 派生渠道条目**（`derived` 标记——条目形 ∥ 写面单源 ∥ 运行时语义（无 key ⇒ 不参与解析）∥ 列表/候选面隐藏判据 ∥ 边界）；机制全文 = `docs/core/design/TEAM.md` §2。**产品码零触（设计轮）**。

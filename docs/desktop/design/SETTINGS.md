@@ -300,6 +300,13 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 **判据**（AC-1090/1–5）：① 种子两键 ② 投影行零命中 ③ `cmd-config` 两写径读回同形（残键清零）④ M604 夹具零 `model` 字面 ⑤ 批内件 T8 覆盖 `store` / `views` 两档（零残断言在场——实跑绿）。
 **边界**：proxy 语义 ∥ 通道 ∥ 载荷 ∥ 白名单零改（形面只涉「未配置投影」与「写径归一」两处）；`env.proxy.model` 键本身随 2026-10-09 清除批退场（批 `docs/batches/2026-10-09-provider-default-model-purge.md`）——本批 = 残留面清。
 
+### 2.21 团队段批注（登录与接入——B1 批 · 2026-10-10 · 台账 #1212）
+
+- **机制单源** = `docs/core/design/TEAM.md` §2；通道面 = `docs/desktop/design/IPC.md` §2（`team:status` ∥ `team:login` ∥ `team:logout`——三通道）。
+- **段形**：设置面第 8 段「团队」（`SECTIONS` 追加序尾——不重排既有七段）——未登录 = 表单（地址 ∥ 用户名 ∥ 密码 + 登录钮）+ 提示行「未登录——登录后可用」；已登录 = 状态行（server ∥ 成员 ∥ 端标签）+ 「退出登录」钮。
+- **写面**：段出口调 `team:login` / `team:logout` → 主进程处理体（`thincoder-desktop/src/main/team.mjs`（拟新增））→ 核 `thincoder-core/team.mjs`（拟新增——`writeConfigAtomic` 单写者）；成 ⇒ 推 `teamStatus` + provider 列表刷新（派生条目随动）。
+- **草稿保真（#604 口径）**：地址/用户名现存值重建保留；**密码恒不保真**（重建即清空——安全面有意）；写失败 ⇒ 就地错误行（三句逐字同——`TEAM.md` §2.5）。
+
 ## 3. 文件账（本域）
 
 ### 3.1 本端文件清单与行数预算（设置族行 · 迁自 `PROJECT.md` §4.1——逐字）
@@ -338,6 +345,9 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 | `thincoder-desktop/renderer/mount-onboarding.mjs`（批 B · ⑥ 拆档） | **96**（实读 2026-10-07——三端对齐批（#1027–#1035）实施落盘（95 ⇒ 96——`presetValue` 选择器随单表改名）；前读 **95**（实读 2026-10-03——首跑渠道提示修复批（#840）实施落盘（89 ⇒ 95——B③ 模型步「采用」接线（`useModel` 注入消费——缺 ⇒ 不落键）+ 注））；前读 **89**（实读 2026-10-01——复核扫面收正批实施后（90 ⇒ 89——M7 步 3 删）；更前实读 2026-09-30——#667 批后；批 B 末实读 88 ⇒ 90——判据两处 + 头注锚） | 向导接线族（自 `thincoder-desktop/renderer/mount-settings.mjs` 拆出——`presetValue` / `pickDir` / `nextStep` / `finishWizard` / `wizardHandlers`；共享项 `submitChannel` / `verifyChannel` / `loadModels` 留原档 ⇒ deps 注入）；通道面 = `docs/desktop/design/IPC.md` §2 设置族注；形态单源 = `docs/desktop/design/UI.md` §1 首启向导行 |
 | `thincoder-desktop/renderer/settings.css` | **306**（实读 2026-10-10——desktop-behavior-residues 批（#1039）实施落盘（304 ⇒ 306——a11y `scroll-padding-top`：+2 = 声明 + 注；**越 300 咨询线在册** ∥ ≤500 ✓）；前读 **304**（实读 2026-10-09——stale-fixes 批（#1044）实施落盘（303 ⇒ 304——档头「越 300 在册」自携句回位 +1；≤500 ✓）；前读 **303**（实读 2026-10-07——头行粘顶批（#1030 · 轻通道）实施落盘（296 ⇒ 303——页 ∥ 向导头行粘顶：+7 = 注释 3 + 声明 4；**≤500 ✓（500/800 口径更换批）**）；前读 **296**（实读 2026-10-04——泛化编辑器退役批实施落盘（304 ⇒ 296：死类族净删 + 档头「越 300 在册」自携句随消））；前读 **304**（实读 2026-10-02——D37 实施落盘（268 ⇒ 304））））） | 设置面板 / 向导样式（分档理由 = `styles.css` 实读 284 贴 300 层——沿 `chat.css` / `pool.css` 先例）；**主题钮族（D33）带上**——次级键族成员（计数镜随 #713 收口以 `docs/desktop/design/UI.md` §1 为单源） |
 
+| `thincoder-desktop/renderer/views/settings-sections-team.mjs`（拟新增——B1 批） | **≈110**（设计估——团队段体：表单 ∥ 登录态 ∥ 提示行） | 设置面团队段体（登录 ∥ 退出 ∥ 状态行） |
+| `thincoder-desktop/renderer/mount-settings-team.mjs`（拟新增——B1 批） | **≈80**（设计估——读 ∥ 出口 ∥ 草稿保真） | 团队段接线（`team:status` 注入 ∥ 登录/退出出口） |
+| `thincoder-desktop/src/main/team.mjs`（拟新增——B1 批） | **≈70**（设计估——三通道处理体） | 团队通道主进程处理体（核 `team.mjs` 转口） |
 **行数面机检**：`checkConfig.lineCounts`（`PROJECT-MANIFEST.json`，运行根单读）**逐条声明节域——本表为其一**（本域值行单源）；后续本域新档由落盘批在本表补值行，`docs/desktop/design/PROJECT.md` §4.1 同拍补指针行（沿 §4.1 纪律）。
 **原址指针**：本族各行在 `docs/desktop/design/PROJECT.md` §4.1 已改一行指针（as-of 2026-10-02）。
 
@@ -451,6 +461,14 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 
 零触面：段集 ∥ 段序 ∥ 七段值面语义 ∥ 现有页 ∥ 通道载荷形 ∥ 核 ∥ `thincoder-render-core` ∥ CLI；测试面随修随加——不占设计条目（2026-09-27 裁定）。
 
+**team-login-client-access 批（B1 · 2026-10-10 · 台账 #1212）——团队段（本批）行「现行 ⇒ 设计估」**（实施后回填实读；机制单源 = `docs/core/design/TEAM.md` §2 ∥ 通道面 = `docs/desktop/design/IPC.md` §2）：
+
+| 文件 | 现行 ⇒ 估（构成） | 批 |
+|---|---|---|
+| `thincoder-desktop/renderer/views/settings.mjs` ∥ `thincoder-desktop/renderer/views/settings-sections.mjs` ∥ `thincoder-desktop/renderer/mount-settings.mjs` ∥ `thincoder-desktop/renderer/i18n-settings.mjs` | **436 ⇒ ≈443**（SECTIONS 追加 ∥ 段分派） ∥ **96 ⇒ ≈97**（re-export） ∥ **264 ⇒ ≈268**（SCOPES + 装配） ∥ **156 ⇒ ≈168**（+≈12 键） | B1 |
+| `thincoder-desktop/src/main/ipc-registry.mjs` ∥ `thincoder-desktop/src/preload/preload.cjs` | **94 ⇒ ≈99**（+3 HANDLERS） ∥ **85 ⇒ ≈88**（+3 CHANNELS） | B1 |
+| 新档三件 + 测试面 | `thincoder-desktop/renderer/views/settings-sections-team.mjs` ∥ `thincoder-desktop/renderer/mount-settings-team.mjs` ∥ `thincoder-desktop/src/main/team.mjs`（拟新增——估 ≈110 ∥ ≈80 ∥ ≈70）；批内件 = `docs/batches/2026-10-10-team-login-client-access-ends.test.mjs`（拟新增——估 ≈380 行） | B1 |
+
 ## 4. 验收回指（本域需求条目 · 判据全文——迁自 `PROJECT.md` §6.1 本域行 · as-of 2026-10-02）
 
 | 需求 | 机检判据（点回需求卷） | 验证面 |
@@ -484,6 +502,10 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 **轻通道轮六（验收面 · 设置半 · 2026-10-02 · 台账 #819）**：需求回指 = **D7**（key 校验面——反馈呈现）+ **D37**（渠道段行形态——校验钮态）+ **D39**（弹窗体——头行粘顶）；设计单源 = 本档 §1 **KD-66** ② ∥ **KD-68** ① ∥ §2.12。
 机检面 = 批内件 `docs/batches/2026-10-02-light-round-6.test.mjs`（已建成——笔一三径：匹配行本行态（`data-verify-state` ∥ 本行明细）∥ 无行渲出结果段末回退 ∥ 空态零节点）；真机面 = **T-DSK58**（① 行结构——校验钮态）+ **T-DSK59**（③ 弹窗体——头行粘顶）；**离线不可产面**（真渲染视觉 ∥ 真交互）= 人工走查 + 父侧真跑闭合（D16 义务）；测试档随修随加——不占设计面条目（2026-09-27 裁定）。
 
+**team-login-client-access 批（B1 · 2026-10-10 · 台账 #1212）——团队段验收面**：需求回指 = `docs/server/requirements/PROJECT.md` §2:31 + AC-31（跨板锚——本域机制单源 = `docs/core/design/TEAM.md` §2）；
+  判据 = 本档 §2.21（段形 ∥ 写面 ∥ 草稿保真）+ 批内件（`docs/batches/2026-10-10-team-login-client-access-ends.test.mjs`（拟新增）——段结构 ∥ 通道三件套结构机检 ∥ 核直调）；
+  真机面 = 收口轮（登录 → 模型可用 → 退出 三段实走）；**离线不可产面**（真渲染视觉）= 人工走查 + 父侧真跑闭合；测试档随修随加——不占设计面条目（2026-09-27 裁定）。
+
 ## 5. 用例（本域 · 全文迁自 `PROJECT.md` §7 涉行 · as-of 2026-10-02）
 
 | 用例 | 场景 | 输入 | 预期输出 | 机检面 / 落点 |
@@ -505,6 +527,7 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 | **R6** | 正常 · 设置面加渠随现（真机） | 设置面加渠 ⇒ 回输入区 | 菜单随现（免重启） | 真机（父侧收口） |
 | **R7** | 边界 · 已配渠集 → 空（真机） | 设置面逐渠删至零 | 菜单保持现状（旧行驻留——有意边界；零崩、控制台零静默）；重新配渠 ⇒ 随推送复现（免重启） | 真机（父侧收口） |
 | T-DSK59 | 正常 / 边界 · 设置菜单升级（D38 ∥ D39 · 真 Electron） | 真 Electron（fixture 家已配）⇒ 逐项走查（两波合一） | ① 菜单「设置」组在场（组名双语；条目序 = 设置… ∥ **六组项**（渠道 ∥ agent 参数 ∥ MCP ∥ 运行环境 ∥ 工具与服务 ∥ 会诊与审查——收窄批 #820）∥ 维护▸（两项）∥ 关于与快捷键▸（两项））② 「设置…」⇒ **现有设置页**开（`[data-slot="settings"]` 非空——零动）③ **六组项**逐开：弹窗在场（背板 + 居中卡 + 组名标题 + ✕）∥ 内容 = 该组段（态词 ∥ 行 ∥ 表单）∥ 真操作一面（如渠道段展开编辑态 ⇒ 存/消在）∥ 渠道段校验触发 ⇒ 本行按钮态短形 + 本行明细（**轮六**）∥ **头行粘顶（轮六）**：卡内滚 ⇒ 标题 ∥ ✕ 不随体滚出④ 关三路：Esc ∥ 背板 ∥ ✕（各关后 DOM 零残留；**页未被连带关**——同开场景）⑤ 键盘：开后焦点 = ✕ ∥ Tab 可达组内控件 ∥ 卡内 Esc 不冒（页保持开）⑥ 主题切换（亮 ∥ 暗）∥ 语言切换（en ∥ zh）⇒ 弹窗随动 ⑦ 维护两项 = 原生对话框零改 ∥ 关于 = 原生面板零改 ∥ 命令与快捷键 = `/help` 流内打印零改 ∥ 帮助组零改 ⑧ 现有页两入口（⚙ ∥ footer）零改 ⑨ 全程零 `pageerror` | 机检面 = 批内件 `docs/batches/2026-10-02-desktop-settings-menu-upgrade.test.mjs`（已建成 · 六腿；随批留存 · 不进仓套件）；用例号自铸披露 = 本档 §6 **DI（设置半）** |
+| **T-DSK65** | 正常 / 边界 · 团队段（B1 · 真 Electron） | 真 Electron（未登录态）⇒ 设置面「团队」段：① 填地址/账号/密码 ⇒ 登录 ② 登录态渲染（server ∥ 成员 ∥ 端标签）③ 退出 ④ 密码重建清空 ⑤ 错凭据再登 | ① 登录成 ⇒ 段转登录态 ∧ `config.json` `team.token` 在场 ∧ `providers[]` 见 `team` 条目（`derived:true`） ② 状态行逐值 ③ 退出 ⇒ token 摘除 ∧ 条目 `apiKey` 摘 ∧ `derived` 保留 ④ 重建/重开段 ⇒ 密码格空（地址/用户名保留） ⑤ 错凭据 ⇒ 就地错误行（逐字同句）+ 零写盘；全程零 `pageerror` | 机检面 = 批内件（段结构 ∥ 核直调）；真机面 = 收口轮（**用例号自铸披露**——若并行批占号 ⇒ 父侧并号裁定） |
 
 （本域用例全文迁讫（T-DSK8 ∥ 9 ∥ 10 ∥ 13 ∥ 32 ∥ 58 + **R1–R7**——真机条目，模型菜单全渠批）；
   批注齐平 = **模型菜单全渠批注**（机检面 = 单元测试档 `docs/batches/2026-09-29-model-menu-parity.test.mjs`（**300** 行 · 9 用例——handler 面（真核探针径 + 本地回环 HTTP 桩）· 通道四件套结构机检 · store 纯动作 · 触发六径；复跑 = `node --test docs/batches/2026-09-29-model-menu-parity.test.mjs`）；
@@ -524,6 +547,7 @@ consultAdd：开 = `openSettingsModal("consultAdd")`（`resetFacets` 复位 `mod
 
 ## 变更记录
 
+- 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212；需求 §2:31 + AC-31）：新增 **§2.21 团队段批注**（段形 / 写面 / 草稿保真）+ **§3.1** 三新档行（`settings-sections-team.mjs` ∥ `mount-settings-team.mjs` ∥ `src/main/team.mjs`——三件均（拟新增）· 设计估）+ **§3.2** 本批块（六件现行 ⇒ 估）+ **§4** 本批验收块 + **§5** T-DSK65（自铸披露在册）；机制单源 = `docs/core/design/TEAM.md` §2。**产品码零触（设计轮）**。
 - 2026-10-09（**provider-default-model-purge 批 · 实施期收正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §2 ∥ §5 舱3 · 台账 #1122）：向导步 1 `activeDefault` 复选随 2026-10-09 清除批退场（`active` 参退场 ⇒ 死控——父侧裁定；等价路径 = 模型段「采用」）——KD-75② ∥ §2.16 项 5（尾 ∥ 条件渲染句）三处同拍收正。**零新语义**（裁定落地）。明细 = 批档 §2 收正块。
 
 - 2026-10-09（**provider-default-model-purge 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §3 轮次 1 · 台账 #1122）：批内注记名统一「2026-10-09 清除批」（§2 渠道行 ∥ §2.2 渠道校验 ∥ §2.14 补全行 ∥ §3 字段面——逐处七笔）。**零新语义**（注记名收正）。明细 = 批档 §2 修复轮块。

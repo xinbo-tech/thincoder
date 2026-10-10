@@ -70,7 +70,7 @@
   需求 5：`ACP-CLIENT.md` · `CRASH-REPORTS.md` · `FEATURES.md` · `TUI-TOOL-OUTPUT.md` · `TUI.md`（P2——2026-09-15 首迁 2 档后历批续迁；`design/RELEASE.md` 已随三端合一迁根 = `docs/RELEASE.md`——2026-09-20）；
 - `vsc/` **11 档**：`design/` = `VSC-MIGRATION.md` · `SETTINGS.md` · `PROJECT-SWITCHER.md` · `WEBVIEW.md` · `WEBVIEW-PROTOCOL.md` · `WEBVIEW-INPUT.md` · `VSC-DEBT.md` · `VSC-MIGRATION-INVENTORY.md`；`requirements/` = `VSC-MIGRATION.md` · `WEBVIEW.md` · `PROJECT.md`。
 
-**`core/design/` 其余 37 档（工具 · 机制 · 流程面——批 11 补登 · 2026-10-07 补登记一档 · 判据 = `core/design/DOC-MIGRATION.md` §9.3 A21 · 计数随批收正 2026-10-07）**：
+**`core/design/` 其余 38 档（工具 · 机制 · 流程面——批 11 补登 · 2026-10-07 补登记一档 · 2026-10-10 补登记一档 · 判据 = `core/design/DOC-MIGRATION.md` §9.3 A21 · 计数随批收正 2026-10-10）**：
 - 文件 / 编辑 / 执行工具面 **8 档**：`APPLY-PATCH.md` · `EDIT.md` · `EDIT-HELPERS.md` · `HASHLINE-EDIT.md` · `INSERT-AFTER.md` · `TOOL-OUTPUT-LIMITS.md` · `WRITE.md` · `BASH-EXECUTOR-FACE.md`（bash 执行器语义面——运行时探测与声明单源；2026-10-04 建档，2026-10-07 补登记）；
 - 浏览器工具面 **1 档**：`BROWSER-TOOL.md`（浏览器工具——自启浏览器驱动面：十六动作契约（基线八 + 输入域八：press/hover/wheel/mouse/drag/touch/insert/clipboard）∥ 引用 / 几何机制 ∥ 会话模型 ∥ 写闸 ∥ 剪贴板面；2026-10-07 建档）；
 - 顾问 / 协作 / 子代理面 **9 档**：`ADVISOR-CONVERGENCE.md` · `ADVISOR-GUARDS.md` · `AGENT-LOOP-ASYNC-POOL.md` · `AGENT-LOOP-SUBAGENT.md` · `AGENT-LOOP-UPSTREAM.md` · `ESCALATE.md` · `MULTI-INSTANCE-COLLAB.md` · `PROXY.md` · `SEND-STALL-DISTILL.md`；
@@ -78,7 +78,8 @@
 - 流程 / 文档机制面 **12 档**：`ANCHOR-DEBT-REPAIR.md` · `BATCH-RECORD.md` · `DOC-CODE-RECONCILE.md` · `DOC-DISCIPLINE.md` · `ENGINEERING-MODE-V2.md` · `LEDGER.md` · `LEDGER-SELF-CONTAINED.md` · `LIGHT-CHANNEL.md`（轻通道机制——细节面 ∥ 收敛面受控旁路设计；2026-09-30 建档 · 2026-10-02 扩容）·
   `MANIFEST.md` · `TESTING.md` · `TURN-CAP-CONTINUE.md` · `API-CONTRACT.md`（核接口按需索引——生成区 ∥ 语义区两区制；2026-09-29 建档）；
 - 基准测试面 **2 档**：`MODEL-BENCH.md`（模型基准测试套件——仓级 `bench/` 工具的设计面；2026-09-23 model-bench 批建档）· `MODEL-SPECS.md`（模型规格表设计档——bench 名单面规格行承载；2026-09-24 参数批建行）；
-- **计数核对（复跑 as-of 2026-10-07 · 浏览器工具批 · 按名对账）**：`core/design/` 实档 **59** = 本图登记 **59** + **待补登 0**（逐名相等；2026-09-30 基线 57 ⇒ + `BASH-EXECUTOR-FACE.md`（补登记——2026-10-04 建档漏登）⇒ + `BROWSER-TOOL.md`——2026-10-07 本批建档）。
+- 团队客户端面 **1 档**：`TEAM.md`（团队客户端——登录与接入：`team` 段 ∥ 派生 provider 条目 ∥ 三端同构 ∥ 决策 D-TM1–6；2026-10-10 B1 批建档）；
+- **计数核对（复跑 as-of 2026-10-10 · B1 批（team-login-client-access）· 按名对账）**：`core/design/` 实档 **60** = 本图登记 **60** + **待补登 0**（逐名相等；2026-10-07 基线 59 ⇒ + `TEAM.md`——2026-10-10 本批建档）。
   （前值 **51 = 51** 为 as-of 2026-09-17 读数；此后实增五档：`MODEL-SPECS.md`（他批）+ `AGENT-LOOP-ASYNC-POOL.md` · `AGENT-LOOP-UPSTREAM.md`（structure-debt 批同批登记）+ `MODEL-BENCH.md`（model-bench 批同批登记）+ `LIGHT-CHANNEL.md`（轻通道机制批 · 2026-09-30）。）
 
 **工作流档** = `core/design/CORE-UNIFICATION.md`（注册表 · 事实基线 · 核形态 · 选型 · 分段执行 · 决策 · 验收 · 契约策略 · 测试——**计入上条实档计数**）——子系统档由它索引、**不复制**其内容（D2 单一权威源）；裁决行的**列定义**亦住该档 §2.5。
@@ -94,6 +95,7 @@
 
 ## 变更记录
 
+- 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212）：§4「其余」组组内新增**团队客户端面 1 档**（`TEAM.md`——团队客户端登录与接入设计档，2026-10-10 本批建档）+ 组计数 37 ⇒ **38**，计数核对行收正 **实档 60 = 登记 60 + 待补登 0**（复跑 as-of 2026-10-10——逐名对账）。
 - 2026-10-07（**浏览器输入最大化批（browser-input）· 设计轮 · eng-designer**——承 `docs/batches/2026-10-07-browser-input.md` §2 · 台账 #1018 ∥ #1019）：§4 浏览器工具面登记行描述随动（八动作 ⇒ 十六动作 + 几何 / 剪贴板面）；档数不变（59 = 59——计数核对行不动，不触发复跑）。
 
 - 2026-10-07（**浏览器工具批 · 设计轮 + 父侧笔**——承批档 `docs/batches/2026-10-07-browser-tool.md` §2 · 台账 #1007）：§4「其余」组 **35 ⇒ 37 档**（+ 浏览器工具面 **1 档**：`BROWSER-TOOL.md`——浏览器工具设计档，2026-10-07 建档；+ 补登记 `BASH-EXECUTOR-FACE.md`——bash 执行器语义面（2026-10-04 建档漏登）），计数核对行收正 **实档 59 = 登记 59 + 待补登 0**（复跑 as-of 2026-10-07）。

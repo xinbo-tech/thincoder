@@ -6,7 +6,7 @@
 > 来源 = `thincoder-vscode/docs/design/SETTINGS.md`（VSC 产品树）——**原地一字未改，留作参照历史**（保留 ≠ 维护）。
 > 建档：2026-09-15（**B 式迁移轮 · VSC 第 1 批**）。坐标 = as-of 2026-09-15 实核（含**源档漂移收正 2 处**，见 §7）。
 
-## 1. 信息架构（5 卡）
+## 1. 信息架构（6 卡）
 
 面板打开时**整体重建**——**单一状态源 = config.json**（DOM / 模块变量不持独立状态；回声压制等历史补丁随 2026-08-15 重组移除）。卡片按使用频率排序：
 
@@ -17,6 +17,7 @@
 | **Consult & Advisor** | 会诊行（modelMenu + effort 档 + ✕）+ **添加弹窗**（`#consult-add-dialog`——provider ∥ model 两字段 + 提交；§2.17 ②）+ Advisor（guard + provider/model + effort） | `thincoder-vscode/webview/settings-agent.js` · `thincoder-vscode/webview/settings-consult-dialog.js` |
 | **Tools & Services** | MCP servers（列表 + **添加/编辑弹窗**（stdio/http/ws 表单；env ∥ headers = 行式键值——§2.4；§2.17 ①）+ 连接状态 ●/○ + Reconnect）+ Web Search key + Semantic Index（key + Build） | `thincoder-vscode/webview/settings-tools.js`（卡壳 ∥ 键行族 ∥ 索引）+ `thincoder-vscode/webview/settings-mcp.js`（MCP 列表面——§2.10 拆档产出）+ `thincoder-vscode/webview/settings-mcp-dialog.js`（MCP 弹窗体——§2.17 ①） |
 | **Environment** | Proxy（URI / web / Test）+ Shell（平台感知候选） | `thincoder-vscode/webview/settings-env.js` |
+| **团队** | 登录表单（服务器地址 ∥ 用户名 ∥ 密码）+ 登录钮 ∥ 已登录态（server ∥ 成员 ∥ 端标签 + 退出钮）+ 提示行；未登录提示句 = 「未登录——登录后可用」（三端逐字同句——`docs/core/design/TEAM.md` §2.5） | `thincoder-vscode/webview/settings-team.js`（拟新增） |
 
 ## 2. 面板 ↔ config 契约
 
@@ -625,6 +626,14 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 行追加口 ∥ 保存链 ∥ 上限 5 判据 ∥ effort 档 ∥ advisor 面零改。**判据** = 批内件 `docs/batches/2026-10-08-residue-sweep.test.mjs`（真 webview：追加行 ✕ 即点即删 + 事件在案 ∥ 现存行回归）。
 **受影响文件（本批）** = 全量小表（跨两端——含本端两行：源档 `thincoder-vscode/webview/settings-models.js` ∥ 批内件 `docs/batches/2026-10-08-residue-sweep.test.mjs`）——落点 = `docs/desktop/design/SETTINGS.md` §2.19。
 
+### 2.20 团队卡（登录与接入——B1 批 · 2026-10-10 · 台账 #1212）
+
+- **机制单源** = `docs/core/design/TEAM.md` §2（本档只收**面板 ↔ config 契约**端差面：承载 = 新卡 ∥ 消息面）。
+- **读面**：`teamStatus` 推送（宿主 → webview）= `{ loggedIn, server, member, label }`（形 = `thincoder-vscode/src/extension/team.mjs`（拟新增）投影；渲染面只读——单一状态源 = config.json 重建制不变）。
+- **写面**：webview → 宿主 `teamLogin { server, username, password }` ∥ `teamLogout`；宿主处理体调核 `thincoder-core/team.mjs`（拟新增——`writeConfigAtomic` 单写者；**端侧零自写盘**）；成 ⇒ 推 `teamStatus` + `providerStatus`（派生条目入列表——Providers 卡随动）。
+- **密码面**：请求内存即弃（零落盘 ∥ 零回显广播）；重建/切卡清空密码格。
+- **失败出词**：网络不可达 ∥ 用户名或密码错误 ∥ 登录尝试过于频繁——三句逐字同（i18n 键 zh/en 双表 +≈14 键）。
+
 ## 3. 已知待办与已知限制
 
 - **添加弹窗径宿主后置拒仍走「发后关」**（回执面 · §2.16 ① 残余）：弹窗保存（`webview/settings-provider-dialog.js:231-258` `paSave`）= 发消息即关 + 受理径闪；
@@ -732,9 +741,11 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 | U-S17 | MCP 表单 env ∥ headers = **行式键值编辑器**（每行键格 + 值格 + ✕；行集下 `[+ 添加行]`；零项零行）；粘贴零解析；值 = 字面（零引号剥离）；提交四判据（空行丢 ∥ 重复后胜 ∥ 全空删字段 ∥ trim） | 已定（§2.4——MCP 键值行式输入批 · #1036；桌面逐元素同形 = `docs/desktop/design/SETTINGS.md` §1 **KD-76**） |
 | U-S18 | **添加入口统一判据（本批）**：表单类添加 ⇒ **弹窗**（单例 ∥ 五路关：保存（守卫通过才发 + 关）∥ 取消 ∥ 背板 ∥ 框内 Esc ∥ `closeSettings()` 同清 ∥ 开框重置 ∥ 初始焦点 = 首控件）；单字段就地编辑 ⇒ **行内**；首启 ∥ 宿主原生专面 ⇒ 各守其面。本端落形 = MCP 弹窗 ∥ 会诊弹窗 ∥ 页脚「+ Add provider…」直开（零宿主往返）；MCP name 空 ⇒ 拒因可见（`settings.mcp.nameRequired`） | 已定（§2.17——添加入口弹窗统一批 · #1054；桌面同判 = `docs/desktop/design/SETTINGS.md` §1 **KD-77**） |
 | U-S19 | 密钥行保存回执：受理（宿主保存成功径）⇒ 行就地恢复 + 闪；拒 ⇒ **零闪** + 行不关（卡重绘在编守卫）+ 拒因可见（`providerError` banner）——回执单消息 `providerKeySaved { name }`；**无写（空钥守卫）⇒ 零回执 + warn 一条**（回执 ⟺ 真写——#1073 · 2026-10-10） | 已定（§2.18——provider 密钥链守卫批 · #1053 ∥ 尾行收口批 · #1073） |
+| U-S20 | **团队卡（本批）**：登录表单 = 服务器地址 ∥ 用户名 ∥ 密码三字段；未登录提示句 = 「未登录——登录后可用」（三端逐字同句）；退出 = 卡内钮（服务端吊销 best-effort——网络失败照清本地 + 提示）；同名手工 `team` 条目 ⇒ 登录成 + 就地提示（不覆盖不弹窗） | 已定（§2.20——B1 批） |
 
 ## 变更记录
 
+- 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212；需求 §2:31 + AC-31）：新增 **§2.20 团队卡**（登录与接入——读面 / 写面 / 密码面 / 失败出词）+ **§1** 五卡 ⇒ **六卡**（+团队行）∥ **§5** +U-S20；机制单源 = `docs/core/design/TEAM.md` §2（本档不复制——D2）。**产品码零触（设计轮）**。
 - 2026-10-07（**添加入口弹窗统一批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-07-add-dialog-unify.md` §2 · 台账 #1054）：新增 **§2.17**（添加入口统一判据 + VSC 三面：MCP 表单 ⇒ 弹窗 ∥ 会诊添加 ⇒ 弹窗 ∥ 模型菜单页脚 ⇒ 直开）；**§1** 两卡行随动（Tools & Services MCP 弹窗体 ∥ Consult & Advisor 添加弹窗 + 两新档登记）；**§2.4** 增面形指针；**§2.10** 判据域边界档数 10 ⇒ 12 ∥ 合域 11 ⇒ 13 + 实施后回填面句；**§5** +U-S18。**零新语义**（定形 + 落点；明细 = 批档 §2）。
 
 - 2026-10-07（**添加入口弹窗统一批 · 设计评审轮 1 修正（fix 轮 · 发现 2 ∥ 3 ∥ 5 ∥ 8 ∥ 9 逐号 · 父侧裁 = 全采纳）· eng-designer**——承批档 `docs/batches/2026-10-07-add-dialog-unify.md` §3 轮次 1 ∥ §1.6 · 台账 #1054）：§2.17 补 **判据 / 机检面**（批内件 `docs/batches/2026-10-07-add-dialog-unify.test.mjs`——六腿：五路关 ∥ 开框重置 ∥ 单例 ∥ 拒因可见 ∥ 跨框互清 ∥ 页脚零出站）+ **受影响文件表**（十一行——现行 ⇒ 预估；现行读值按实读收正四处：`settings-provider-dialog.js` **282** ∥ `input.js` **125** ∥ `panel-messages-settings.mjs` **236** ∥ `provider-flows.mjs` **38**——批档 §2 原读 +1 差随正；`settings.css` 412 >300 在册随注）∥ ② 补**层序前提**（浮层 1000/1001/1002 与弹窗 999/1000——同层挂载序破平「后开者在上」）∥ ③ 页脚 `?.` ⇒ **裸调用**（`window._openAddProviderDialog()`——§2.10 纪律；缺门响亮失败）∥ ① 开框重置行收正（三组行集**零行**——「零项 ⇒ 零行」同判；原「各一空行」与两端实现 ∥ KV 批实读不符）∥ §2.4 补行集规则边界（存量回显 ∥ 新增态起手同判）。**产品码零触（fix 轮）· 零新语义**（计数 ∥ 措辞 ∥ 注 ∥ 边界面只）。明细 = 批档 §2 修正块。

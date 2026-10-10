@@ -186,6 +186,14 @@
 
 **边界（不做）**：非敏感值位（`baseURL` ∕ `model` ∕ `command` ∕ `args` 等）不解析；无缺省语法（`${env:VAR:-…}`）与转义形；MCP `url` ∕ `command` ∕ `args` 不解析；解析单遍（产物不再二次解析）。
 
+### 6.4 团队登录配置面（`team` 段——2026-10-10 B1 批 · 台账 #1212）
+
+- **键面**：顶层 `team` 段 = `{ server, member{username,name}, label, token }`（形与语义**全文** = `docs/core/design/TEAM.md` §2.1——本档不复制）；派生 provider 条目（`providers[].derived`）= `docs/core/design/PROVIDER.md` §6.25。
+- **通道归属**：① 配置键通道（本档 §6.2 名录第 ① 类）——`loadConfig` 归一（形不符 ⇒ null——软失败不阻启动；沿 `proxy` 段先例）；**不入 `DEFAULTS`**（沿 `providers` / `proxy` 先例——settings 工具面零涉 ∥ agent 不可写）。
+- **写面**：唯一写者 = `thincoder-core/team.mjs`（拟新增——登录/退出流程；`writeConfigAtomic` 一次 mutate；端侧零自写盘）。
+- **登录态判据**：`team.token`（trim 非空）——= 团队功能开关（口径④）；消费面 = 三端 + 后续团队面（各面设计轮）。
+- **边界**：不做 team 段的手工编辑入口（写面 = 登录/退出流程单源）∥ 不做多套登录态并存 ∥ 不写 `DEFAULTS`。
+
 ## 7. 并入的关键决策记录（含否决备选）
 
 现有决策面见 §3.1 A4 / A5 与 §4.1 第 1–4 行。**2026-09-15 批 5 并入**（自 `POOL-CONFIG-UNIFIED`）：
@@ -234,3 +242,4 @@
 - 2026-09-29（**provider-config-family 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承 `docs/batches/2026-09-29-provider-config-family.md` §3 轮次 1 发现 1 ∕ 2）：§6.3 解析点集**五处 → 六处**（补「会话标题生成径」+ 标题径非致命兜底句）；§6.2 补**值位显式引用 ≠ 配置通道**边界句 + D-CF5 补注（与 §6.3 双向指）。**零新语义**（= 评审发现的直接导出项）。
 - 2026-09-30（**doc-sweep 批 · 行宽收正 · eng-designer**——承 `docs/batches/2026-09-30-doc-sweep.md` §2 · 台账 #664）：provider-config-family 设计轮条（原单行 332 字符）**折行**（仅换行 ∕ 语义零改——doc-check 行宽闸收正）。**零新语义**。
 - 2026-09-30（**采集收网批 · eng-designer**——承 `docs/batches/2026-09-30-heap-snapshot-switch.md` §2）：§6.2 名录 `THINCODER_HEAP_SNAPSHOT` 行**默认值收正**（`true` ⇒ `false`——采集隐私默认关〔D-TR6 同族〕；桌面端运行期热读＝本批新机制）。**四类通道 ∥ D-CF5 ∥ D-CF6 零改**。
+- 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212）：新增 **§6.4 团队登录配置面（`team` 段）**——键面指针（全文 = `docs/core/design/TEAM.md` §2.1）∥ 通道归属（① 配置键 ∥ 不入 `DEFAULTS`）∥ 写面单源 ∥ 登录态判据（口径④）；机制单源 = `TEAM.md`（本档不复制——D2）。**四类通道 ∥ D-CF5 ∥ D-CF6 零改**。
