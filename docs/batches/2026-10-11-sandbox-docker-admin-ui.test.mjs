@@ -8,7 +8,7 @@
  *   ② 日志窗（`pre` 码面 + tail 选择 + 刷新 ∥ 截断标记 ∥ 空态 ∥ 失败窗内就地）
  *   ③ 镜像区（镜像表（多标签逐行 ∥ 无标签）∥ 大小/创建 ∥ 拉取窗（在飞态 + 钮禁用）∥ 删除窗（强制勾选——缺省不勾））
  *   ④ i18n 两表（本批 54 键逐键在场 ∥ 占位符对位 ∥ en 零 CJK ∥ 基键集双向相等）
- *   ⑤ 静态面（档目 34 ∥ 35 ∥ 两新档 ∥ 行数/行宽 ∥ 零外链/零 CJK ∥ `t` 字面量闭合 ∥ 类名双向闭合 ∥ canon 不破 ∥ 门禁链）
+ *   ⑤ 静态面（档目 36 ∥ 37 ∥ 新档在册（两视图件 + i18n 沙盒族两件） ∥ 行数/行宽 ∥ 零外链/零 CJK ∥ `t` 字面量闭合 ∥ 类名双向闭合 ∥ canon 不破 ∥ 门禁链）
  */
 import test from "node:test"
 import assert from "node:assert/strict"
@@ -367,11 +367,11 @@ test("④ i18n：54 键逐键在场 ∥ 占位符对位 ∥ en 零 CJK ∥ 基�
 
 // ── ⑤ 静态面（档目 ∥ 行数/行宽 ∥ canon ∥ 门禁链）─────────────────────────────
 
-test("⑤ 静态面：档目 34 ∥ 35 ∥ 行数/行宽 ∥ 零外链/零 CJK ∥ `t` 字面量闭合 ∥ 类名双向闭合 ∥ canon 不破 ∥ 门禁链", () => {
-  // 档目（34 ∥ 35——本批 +2 档；test 口径 = [总档数, 除 favicon 档数]）
+test("⑤ 静态面：档目 36 ∥ 37 ∥ 行数/行宽 ∥ 零外链/零 CJK ∥ `t` 字面量闭合 ∥ 类名双向闭合 ∥ canon 不破 ∥ 门禁链", () => {
+  // 档目（36 ∥ 37——本批 34 ∥ 35 + i18n 沙盒族再拆 +2 档（#1270）；test 口径 = [总档数, 除 favicon 档数]）
   const names = readdirSync(PUBLIC_DIR).sort()
-  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [35, 34], "档目 35 ∥ 34（test 口径）⇒ 文档口径 34 ∥ 35")
-  for (const name of ["views-sandbox-containers.mjs", "views-sandbox-images.mjs"]) assert.ok(names.includes(name), `新档在册：${name}`)
+  assert.deepEqual([names.length, names.filter((name) => name !== "favicon.png").length], [37, 36], "档目 37 ∥ 36（test 口径）⇒ 文档口径 36 ∥ 37")
+  for (const name of ["views-sandbox-containers.mjs", "views-sandbox-images.mjs", "i18n-zh-sandbox.mjs", "i18n-en-sandbox.mjs"]) assert.ok(names.includes(name), `新档在册：${name}`)
   const cssClasses = new Set([...CSS.matchAll(/\.([a-z][a-z0-9-]*)/g)].map((match) => match[1]))
   for (const [name, source] of Object.entries(SOURCES)) {
     const lines = source.split("\n").length
