@@ -13,7 +13,7 @@
 | 账号 | `thincoder`（部署专用——**无免密 sudo**） |
 | 密钥 | 本机 `C:\Users\liwei\.ssh\thincoder_ecs`——**必须 `ssh -i` 显式带上**（默认钥匙链里没有它；漏掉 `-i` ⇒ `publickey,password` 被拒） |
 | 端口 | 8787（server 测试口；阿里云安全组已开 TCP 8787，来源 = 内网） |
-| 控制台 | `http://10.0.0.5:8787/`（管理员账号 `liwei`——口令用户自持，本档不载） |
+| 控制台 | `http://10.0.0.5:8787/`（账号由用户管理——**本档不载账号名与口令**） |
 | 连接 | `ssh -i C:\Users\liwei\.ssh\thincoder_ecs thincoder@10.0.0.5` |
 
 ## 2. 机器上的布局（实读 2026-10-10）
@@ -26,6 +26,7 @@
 | 容器 | `thincoder-server-deploy-server-1`（`restart: unless-stopped`；`8787:8787`；挂载 config ∥ data） | — |
 | 旁路进程 | 内网嵌入引擎（ollama，`10.0.0.5:11434`，模型 `bge-m3`）——**已停**（2026-10-10 用户令）；server 配置里的 `embedding.baseURL` 仍指向它 | — |
 | 副用 | **桌面 Linux 构建机也在这台**（代号 ha-proxy）——别在大构建并行时做重装 | — |
+| **箱上运维 CLI**（直开库，不经 HTTP） | 镜内路径实读（2026-10-10）：`docker exec thincoder-server-deploy-server-1 node /home/node/.npm-global/lib/node_modules/@thincoder/server/src/ops/cli.mjs --config /app/config/config.json <命令>`——命令 = `member list` ∥ `member add` ∥ `member quota` ∥ `member passwd` ∥ `key list` ∥ `key issue`（全表见 `thincoder-server/README.md` §7） | — |
 
 ## 3. 更新部署（一条链——逐条实跑过）
 
@@ -77,8 +78,9 @@ ssh -i C:\Users\liwei\.ssh\thincoder_ecs thincoder@10.0.0.5 "cd ~/thincoder-serv
 ## 6. 坑（都踩过——读数在案）
 
 1. **`-i` 必须显式**：漏了 ⇒ `publickey,password` 被拒（本机默认钥匙里没有专用钥匙）。
-2. **PowerShell 里别用 `\$(...)` 嵌套命令替换**：会被 PS 抢先解析 ⇒ 远端命令碎裂（2026-10-10 实测：两处 `docker exec $(...)` 失败）。远端命令一律平铺、单层。
+2. **PowerShell 里别用 `\$(...)` 嵌套命令替换**：会被 PS 抢先解析 ⇒ 远端命令碎裂（2026-10-10 实测：两处 `docker exec $(...)` 失败）。远端命令一律平铺、单层；需要内侧引号时 = **PS 用单引号包整条 ssh 命令**（内侧引号原样透传——2026-10-10 实测可行姿势）。
 3. **`deploy/backup.mjs` 以 `thincoder` 跑会失败**（`EACCES: mkdir '.../config/backups'`——`config/` 属 `ecs-user`、本箱无免密 sudo）⇒ 更新前的兜底 = **旧镜像打标**；真备份 = 待补（用 `ecs-user` 侧能力或容器内路径）。
+   - 同族：箱上直接跑仓内运维 CLI 会挂（配置里 `db` = 容器内绝对路径 `/app/data`——宿主机跑必 `EACCES`）⇒ 运维命令一律**在容器内跑**（§2 表的镜内路径）。
 4. **容器名固定** = `thincoder-server-deploy-server-1`（compose 项目名 + 服务名派生）。
 5. **`config/` 与 `data/` 属 `ecs-user`**（部署目录本身属 `thincoder`）——直接 `cp` 这两处的文件可能被拒。
 6. **别在大负载时硬上**：这台同时是桌面 Linux 构建机；历史上出现过旁路进程撑满 + sshd 饿死（须重启恢复）——重活并行时先 `uptime` ∥ `free -m` 看一眼。
