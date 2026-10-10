@@ -76,10 +76,10 @@ stub 表（回执逐形 = 实读锚）：
 | `ledger:read` | `{ ok: true, counts: null, thresholdReached: false }` | 形 = `thincoder-desktop/src/main/project-info.mjs:36`（主侧契约；渲染面调用点未实读——本冒烟不触） |
 | `batch:status` | `{ ok: true, phase: null }` | 形 = `thincoder-desktop/src/main/project-info.mjs:161`（同上） |
 | `theme:state` | `{ ok: true }` | 形 = `thincoder-desktop/src/main/ipc.mjs`（`themeState` ⇒ `{ ok:true }` ∥ `invalid-theme`）；调用 = `thincoder-desktop/renderer/app.mjs:299`（boot 主题回写；`ok !== true` ⇒ `console.error` ⇒ 干净面红） |
-| `team:status` | `{ ok: true, loggedIn: false, server: null, member: null, label: null }` | 形 = `IPC.md` §2 团队族行（核 `teamStatus()` 投影）；消费 = `thincoder-desktop/renderer/mount-settings-team.mjs`（设置面团队卡读面——为手动浏览与设置面冒烟备） |
+| `team:status` | `{ ok: true, loggedIn: false, server: null, member: null, label: null }` | 形 = `IPC.md` §2 团队族行（核 `teamStatus()` 投影）；消费 = `thincoder-desktop/renderer/mount-team.mjs`（拟新增——段/面板读面；登录面补全批改制（`mount-settings-team.mjs` 净删）；为手动浏览与冒烟备） |
 **9 通道来源**（引导链实际调用点实读——逐通道）：`config:read` = `thincoder-desktop/renderer/app.mjs:213`（boot 往返）∥ `project:recent` + `sessions:list` = `thincoder-desktop/renderer/session-wire.mjs:43`（`refreshRail` 并发两读）
 ∥ `model:catalog` = `thincoder-desktop/renderer/composer-sync.mjs:232`（装配首跑恰一次）∥ `provider:list` = `thincoder-desktop/renderer/mount-settings.mjs:158`（`reads.loadProviders()`）∥ `theme:state` = `thincoder-desktop/renderer/app.mjs:299`（boot 主题回写——菜单体系批 D36 落通道、同批未扩表 ⇒ 2026-10-10 父侧补齐）
-∥ `team:status` = `thincoder-desktop/renderer/mount-settings-team.mjs`（设置面团队卡读面——B1 批落通道）∥ `ledger:read` + `batch:status` = 主侧契约面（`thincoder-desktop/src/main/project-info.mjs:36` ∥ `:161`——渲染面调用点未实读）。
+∥ `team:status` = `thincoder-desktop/renderer/mount-team.mjs`（拟新增——段/面板读面；B1 批落通道 ∥ 登录面补全批改制迁入）∥ `ledger:read` + `batch:status` = 主侧契约面（`thincoder-desktop/src/main/project-info.mjs:36` ∥ `:161`——渲染面调用点未实读）。
 表外行为 = 拒 + 记录——**不猜、不造回执**。
 
 ### 3.3 冒烟路径（`run.mjs` · 九段）
@@ -206,3 +206,4 @@ stub 表（回执逐形 = 实读锚）：
 - 2026-10-01（修复轮 · 评审轮次 1 · 发现 3/4/5）：WQ-4 机检形定形（不存在通道名 ⇒ 非零退出 + stderr 含通道名——§5③ ∥ §6 同拍）；§3.2「7 通道来源」改逐通道对应 + 装配链注（`mount-settings` → `mount-info`）；§5④ ∥ §7-4 零触句补「运行期产物根 `test/artifacts/` 除外」；`app.mjs` 调用点坐标实读收正 `:218 ⇒ :219`。
 - 2026-10-01（**复核扫面收正批（M7 派生）· 文档簇落地轮 · eng-designer**——承 `docs/batches/2026-10-01-audit-remediation.md` §2 · 台账 #769）：stub 表两行退场（`ledger:read` ∥ `batch:status`——复读面删）+ 通道计数 **7 ⇒ 5** 四处同拍（KD-W4 ∥ §3.2 表引 ∥ 来源注 ∥ §6 验收面）+ 装配链注届盘实读收正（`thincoder-desktop/renderer/app.mjs:213` ∥ `mount-settings.mjs:158`）。明细 = 批档 §2。
 - 2026-10-02（**文档体系重组批（DOC-MIGRATION）· 2c 前置步 · 文件账分片轮（切片 3 · 余量收尾）· eng-designer**——承批档 `docs/batches/2026-10-02-doc-structure-reorg.md` §2 · 台账 #813）：**§9 新立**（文件账）——§9.1 本域族行 **3** 行（`serve.mjs` ∥ `host-shim.mjs` ∥ `run.mjs`——自 `docs/desktop/design/PROJECT.md` §4.1 逐字迁入）＋ §9.2 批块 **1 块**（web 快筛——迁自 §4.2）。**零新语义**（迁移 ∥ 指针）。
+- 2026-10-10（**login-entry-completion 批 · 设计评审轮 2 修正（fix 轮 · 范围外残项）· eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §3 轮次 2 · 台账 #1229–#1232）：§3.2 两处 `team:status` 消费档随本批改制收正（**`mount-settings-team.mjs` ⇒ `mount-team.mjs`**——段/面板读面；`mount-settings-team.mjs` 净删）。**零新语义**（残值收正）。明细 = 批档 §2 fix 轮补记。

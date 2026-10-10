@@ -7,14 +7,14 @@
  * 射程（判据源 = `docs/desktop/design/SETTINGS.md` §2.21 ∥ `docs/desktop/design/IPC.md` §2 团队族行 ∥
  * `docs/core/design/TEAM.md` §2.5）：
  *   A 词面：团队段词族十五键两语在场；未登录句 ∥ 四失败句 ∥ 两提示句 = 逐字句；
- *   B 段形：`SECTIONS` 八段（团队追尾）；未登录 = 表单（三字段 + 登录钮 + 提示行；地址 ∥ 用户名携 `data-draft`，
- *     密码不携）∥ 已登录 = 状态行三读 + 退出钮；`loading` ⇒ 零体（段态门）；失败面段标覆盖 `team`；
+ *   B 段形：`SECTIONS` 八段（团队追尾）；**卡面 = 管理面**（三读数 ∥ 零登/退控件；`loading` ⇒ 零行）∥ **面板段体 `teamBody`**：未登录 = 表单（三字段 + 登录钮 + 提示行；地址 ∥ 用户名携 `data-draft`，
+ *     密码不携）∥ 已登录 = 状态行三读 + 退出钮；已失效 = 失效行 + 重登面；失败面段标覆盖 `team`；
  *   C 装配面：`SCOPES` 十一（`team` 受理 ∥ 表外拒 + 记错）；开面随读（`openSettings` ⇒ `team:status`）；
  *     组弹窗读链 `MODAL_READS.team`（恰一通道）；登录 = 载荷三键 + **回执后复读两调用点**（`team:status` + `provider:list`）;
  *     退出 = 复读两调用点 + `revokeDelivered:false` ⇒ 吊销未达提示；失败 = 就地错误行（reason 直落）；
  *     空表单 ∥ 空凭据 ⇒ **零发送** + 分类兜底（`network` ∥ `credentials`）；
  *   D 隐藏判据：`providerList` —— `derived === true` ∧ 无 key ⇒ 滤除；`derived` 有 key ∥ 手工 ⇒ 在场；
- *   E 通道三件套：`CHANNELS` 五十一项（末位三 = 团队族）∥ `HANDLERS` 行集 = 白名单集 ∥ 三档头计数 + 定序末位 ∥
+ *   E 通道三件套：`CHANNELS` 五十二项（末位四 = 团队族——含 `team:verify`）∥ `HANDLERS` 行集 = 白名单集 ∥ 三档头计数 + 定序末位 ∥
  *     `EVENT_CHANNELS` 二十四（零动）；
  *   F 转口档直调（主侧）：`team:status` 形 ∥ `team:login` 形门兜底（无地址 ⇒ `network`）∥ 网络不可达 ⇒ `network` ∥
  *     `team:logout` 无 token ⇒ `ok:true`。
@@ -39,6 +39,7 @@ await import(at("thincoder-desktop/test/rc-resolve.mjs")) // `/rc/` 解析钩子
 const i18n = await import(at("thincoder-desktop/renderer/i18n.mjs"))
 i18n.initDict({ locale: "zh" })
 const { SECTIONS, settingsModel, settingsModalTree } = await import(at("thincoder-desktop/renderer/views/settings.mjs"))
+const { teamBody } = await import(at("thincoder-desktop/renderer/views/settings-sections-team.mjs"))
 const { initialState, createStore } = await import(at("thincoder-desktop/renderer/store.mjs"))
 const { attachSettings } = await import(at("thincoder-desktop/renderer/mount-settings.mjs"))
 
@@ -121,9 +122,9 @@ test("B1 段集：`SECTIONS` = 八段（团队追尾，既有七段零重排）"
   assert.deepEqual(SECTIONS.map((s) => s.name), ["providers", "model", "agent", "mcp", "env", "tools", "models", "team"])
 })
 
-test("B2 未登录面：表单三字段 + 登录钮 + 提示行 ∥ 地址 ∥ 用户名携 `data-draft`、密码不携", () => {
-  const tree = teamTree({ state: "ready", loggedIn: false, server: "https://t.example/v1", member: { username: "u" }, label: null, notice: null })
-  const form = findDeep(tree.card, (n) => n?.props?.["data-form"] === "team")
+test("B2 未登录面（面板段体 `teamBody`）：表单三字段 + 登录钮 + 提示行 ∥ 地址 ∥ 用户名携 `data-draft`、密码不携", () => {
+  const nodes = teamBody({ state: "ready", loggedIn: false, server: "https://t.example/v1", member: { username: "u" }, label: null, notice: null }, { onTeamLogin: () => {}, onTeamLogout: () => {} })
+  const form = findDeep(nodes, (n) => n?.props?.["data-form"] === "team")
   assert.ok(form !== null, "登录表单在场")
   assert.equal(form.props["data-draft-scope"], "team", "表单草稿作用域 = team")
   const inputs = collectDeep(form, (n) => n?.tag === "input").map((n) => n.props)
@@ -133,22 +134,22 @@ test("B2 未登录面：表单三字段 + 登录钮 + 提示行 ∥ 地址 ∥ �
   assert.equal(Object.hasOwn(inputs[2], "data-draft"), false, "密码恒不保真（不携草稿标记）")
   assert.equal(inputs[0].value, "https://t.example/v1", "地址现存值重建保留")
   assert.equal(inputs[1].value, "u", "用户名现存值重建保留")
-  const hint = findDeep(tree.card, (n) => n?.props?.["data-team-hint"] !== undefined)
+  const hint = findDeep(nodes, (n) => n?.props?.["data-team-hint"] !== undefined)
   assert.equal(hint.children[0], "未登录——登录后可用", "提示行逐字")
-  assert.equal(typeof byAction(tree.card, "settings:teamLogin")?.props?.onClick, "function", "登录钮活件")
-  assert.equal(byAction(tree.card, "settings:teamLogout"), null, "未登录 ⇒ 零退出钮")
+  assert.equal(typeof byAction(nodes, "settings:teamLogin")?.props?.onClick, "function", "登录钮活件")
+  assert.equal(byAction(nodes, "settings:teamLogout"), null, "未登录 ⇒ 零退出钮")
 })
 
-test("B3 已登录面：状态行三读（server ∥ 成员 ∥ 端标签）+ 退出钮 ∥ 零表单", () => {
-  const tree = teamTree({ state: "ready", loggedIn: true, server: "https://t.example", member: { username: "u", name: "U" }, label: "desk@host", notice: null })
-  assert.deepEqual(byRead(tree.card), ["team-server", "team-member", "team-label"], "状态行三读")
-  assert.equal(findDeep(tree.card, (n) => n?.props?.["data-form"] === "team"), null, "已登录 ⇒ 零表单")
-  assert.equal(typeof byAction(tree.card, "settings:teamLogout")?.props?.onClick, "function", "退出钮活件")
+test("B3 已登录面（面板段体 `teamBody`）：状态行三读（server ∥ 成员 ∥ 端标签）+ 退出钮 ∥ 零表单", () => {
+  const nodes = teamBody({ state: "ready", loggedIn: true, server: "https://t.example", member: { username: "u", name: "U" }, label: "desk@host", notice: null }, { onTeamLogin: () => {}, onTeamLogout: () => {} })
+  assert.deepEqual(byRead(nodes), ["team-server", "team-member", "team-label"], "状态行三读")
+  assert.equal(findDeep(nodes, (n) => n?.props?.["data-form"] === "team"), null, "已登录 ⇒ 零表单")
+  assert.equal(typeof byAction(nodes, "settings:teamLogout")?.props?.onClick, "function", "退出钮活件")
 })
 
-test("B4 段内结果行：失败四句 ∥ 两提示句逐字 ∥ 段态 `loading` ⇒ 零体 ∥ 失败面段标覆盖 team", () => {
+test("B4 段内结果行 + 卡面管理面：失败四句 ∥ 两提示句逐字 ∥ 已失效 ⇒ 失效行 + 重登面 ∥ 卡面三行零登/退控件 ∥ `loading` ⇒ 零行 ∥ 失败面段标覆盖 team", () => {
   const sentenceOf = (notice) => {
-    const node = findDeep(teamTree({ state: "ready", loggedIn: false, server: null, member: null, label: null, notice }).card,
+    const node = findDeep(teamBody({ state: "ready", loggedIn: false, server: null, member: null, label: null, notice }),
       (n) => n?.props?.["data-team-notice"] !== undefined)
     return node === null ? null : node.children[0]
   }
@@ -158,8 +159,17 @@ test("B4 段内结果行：失败四句 ∥ 两提示句逐字 ∥ 段态 `loadi
   assert.equal(sentenceOf({ kind: "failure", reason: "write_failed" }), "本机配置写入失败")
   assert.equal(sentenceOf({ kind: "manualConflict" }), TEAM_ZH["settings.team.notice.manualNameConflict"])
   assert.equal(sentenceOf({ kind: "revokeFailed" }), "服务端吊销未达")
-  const loading = teamTree({ state: "loading", loggedIn: false, server: null, member: null, label: null, notice: null }).card
-  assert.equal(findDeep(loading, (n) => n?.props?.["data-form"] === "team"), null, "在途 ⇒ 零体（防假读数）")
+  // 已失效面（登录面补全批）：失效行 + 重登面（表单预填留存值）
+  const invalid = teamBody({ state: "ready", loggedIn: true, verify: "invalid", server: "https://t.example", member: { username: "u" }, label: null, notice: null })
+  assert.ok(findDeep(invalid, (n) => n?.props?.["data-team-invalid"] !== undefined) !== null, "已失效 ⇒ 失效行在场")
+  assert.ok(findDeep(invalid, (n) => n?.props?.["data-form"] === "team") !== null, "已失效 ⇒ 重登面在场")
+  // 卡面 = 管理面（卡降——登/退控件零在场；段态门 loading ⇒ 零行）
+  const cardReady = settingsModalTree(baseState({ state: "ready", loggedIn: true, server: "https://t.example", member: { username: "u" }, label: "desk@host", notice: null }), "team", {}).card
+  assert.deepEqual(byRead(cardReady), ["team-server", "team-member", "team-label"], "卡面三读数（管理面）")
+  assert.equal(byAction(cardReady, "settings:teamLogin"), null, "卡面零登录控件")
+  assert.equal(byAction(cardReady, "settings:teamLogout"), null, "卡面零退出控件")
+  const cardLoading = settingsModalTree(baseState({ state: "loading", loggedIn: false, server: null, member: null, label: null, notice: null }), "team", {}).card
+  assert.deepEqual(byRead(cardLoading), [], "段态 loading ⇒ 卡面零行（防假读数）")
   // 失败面段标（`SCOPE_WORD` 派生覆盖 team）
   const noticeTree = settingsModalTree(baseState({ state: "ready", loggedIn: false, server: null, member: null, label: null, notice: null }, { notice: { scope: "team", reason: "probe-failed" } }), "team", {})
   const scope = findDeep(noticeTree.card, (n) => n?.props?.class === "settings-notice-scope")
@@ -321,29 +331,29 @@ test("D 隐藏判据：`derived === true` ∧ 无 key ⇒ 滤除；derived 有 k
 
 // ─── E 通道三件套 ───────────────────────────────────────────────────────────────────────────
 
-test("E 通道三件套：白名单五十一 ∥ 末位三 = 团队族 ∥ 注册表闭包 ∥ 三档头计数 ∥ 订阅面零动", () => {
+test("E 通道三件套：白名单五十二 ∥ 末位四 = 团队族 ∥ 注册表闭包 ∥ 三档头计数 ∥ 订阅面零动", () => {
   const preload = require(join(ROOT, "thincoder-desktop/src/preload/preload.cjs"))
-  assert.equal(preload.CHANNELS.length, 51)
-  assert.equal(new Set(preload.CHANNELS).size, 51, "零重复项")
-  assert.deepEqual(preload.CHANNELS.slice(-3), ["team:status", "team:login", "team:logout"], "末位三 = 团队族（49–51）")
+  assert.equal(preload.CHANNELS.length, 52)
+  assert.equal(new Set(preload.CHANNELS).size, 52, "零重复项")
+  assert.deepEqual(preload.CHANNELS.slice(-4), ["team:status", "team:login", "team:logout", "team:verify"], "末位四 = 团队族（49–52）")
   assert.equal(preload.EVENT_CHANNELS.length, 24, "订阅面零动")
   const registry = read("thincoder-desktop/src/main/ipc-registry.mjs")
   const table = (registry.match(/const HANDLERS = Object\.freeze\(\{[\s\S]*?\n\}\)/) ?? [""])[0]
   const rows = [...table.matchAll(/"([^"]+)":/g)].map((m) => m[1])
-  assert.equal(rows.length, 51)
+  assert.equal(rows.length, 52)
   assert.deepEqual([...rows].sort(), [...preload.CHANNELS].sort(), "HANDLERS 行集 = 白名单集（闭合）")
-  assert.deepEqual(rows.slice(-3), ["team:status", "team:login", "team:logout"], "表尾三行")
-  assert.match(read("thincoder-desktop/src/main/ipc.mjs"), /\*\*五十一项\*\*白名单面/)
-  assert.match(registry, /\*\*五十一项\*\*（B1 批三新/)
+  assert.deepEqual(rows.slice(-4), ["team:status", "team:login", "team:logout", "team:verify"], "表尾四行")
+  assert.match(read("thincoder-desktop/src/main/ipc.mjs"), /\*\*五十二项\*\*白名单面/)
+  assert.match(registry, /\*\*五十二项\*\*（B1 批三新/)
   const preloadSrc = read("thincoder-desktop/src/preload/preload.cjs")
-  assert.match(preloadSrc, /请求白名单 = \*\*五十一项\*\*/)
-  assert.match(preloadSrc, /→ `team:status` → `team:login` → `team:logout`；顺序供白名单定序断言/)
+  assert.match(preloadSrc, /请求白名单 = \*\*五十二项\*\*/)
+  assert.match(preloadSrc, /→ `team:status` → `team:login` → `team:logout` → `team:verify`；顺序供白名单定序断言/)
 })
 
 // ─── F 转口档直调（主侧）────────────────────────────────────────────────────────────────────
 
 test("F 转口档：`team:status` 形 ∥ 形门兜底 ∥ 网络不可达 ∥ 无 token 退出", async () => {
-  const coreConfig = await import(at("thincoder-core/config-io.mjs"))
+  const coreConfig = await import(at("thincoder-desktop/node_modules/@thincoder/core/config-io.mjs"))
   const dir = mkdtempSync(join(tmpdir(), "b1-team-relay-"))
   const cfg = join(dir, "config.json")
   mkdirSync(dir, { recursive: true })

@@ -33,12 +33,12 @@
 | # | 对位（CLI ↔ VSC） | 分类 | 端差处置 | 前提校验 | 须用户裁 | 归属段 |
 |---|---|---|---|---|---|---|
 | 170 | `thincoder-core/skills.mjs` ↔ `thincoder-vscode/src/extension/skills.mjs` | ② | 融合：取一侧（发现规则两端同构：扁平 + `SKILL.md` / 排序 / 项目层优先）+ fs 面（同步 / 异步）按端注入 | 分叉 ＝ 目录 + loader 形态（VSC 头注自述「同构语义…语义同源、实现自持」`:3-5`——迁移期引文，随 2026-09-29 parity-b1 收编退场）⇒ 前提成立 ⇒ **已收编（2026-09-29 · parity-b1-vsc-core）：VSC 档 = 核单源转口（`loadSkillsSync` ∕ `readSkillSync` ∕ `formatSkillListing` 三名单源——消费面零改）** | — | S1（建核补齐） |
-| 171 | `thincoder-core/rules.mjs` ↔ `thincoder-vscode/src/extension/rules.mjs` | ② | **已消解（R10 上提 ∕ B7 3a 收编）**：读取面并入核（核 = stream + `.cursor/rules`）；VSC 两档已退役（B7 3a——VSC 经核件直取） | 分叉 ＝ 目录归属 ⇒ 以上提消解（非「取一侧」） | — | 已落（R10——核 54 ⇒ **124** · VSC 档 125 ⇒ **75**；B7 3a——核 **124 ⇒ 261** · VSC 两档 **75 ∕ 120 ⇒ 0（删）**） |
+| 171 | `thincoder-core/rules.mjs` ↔ `thincoder-vscode/src/extension/rules.mjs`（迁移期引文——已删） | ② | **已消解（R10 上提 ∕ B7 3a 收编）**：读取面并入核（核 = stream + `.cursor/rules`）；VSC 两档已退役（B7 3a——VSC 经核件直取） | 分叉 ＝ 目录归属 ⇒ 以上提消解（非「取一侧」） | — | 已落（R10——核 54 ⇒ **124** · VSC 档 125 ⇒ **75**；B7 3a——核 **124 ⇒ 261** · VSC 两档 **75 ∕ 120 ⇒ 0（删）**） |
 | 172 | `src/peer-instances.mjs` ↔ `thincoder-vscode/src/extension/peer-instances.mjs` | ② | 融合：取一侧 + 端判别面按端注入 | 分叉 ＝ 目录 + 端标记判别（VSC 头注自述「VS Code 镜像」`:2`）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
 | 173 | `src/peer-domains.mjs` ↔ `thincoder-vscode/src/extension/peer-domains.mjs` | ② | 融合：取一侧 | 分叉 ＝ 目录（VSC 头注自述「VS Code 镜像」`:3`）⇒ 前提成立 | — | S1（建核补齐） （迁移期引文） |
 | 174 | `thincoder-cli/src/tui/ledger-surface.mjs` ↔ `thincoder-vscode/src/extension/ledger-surface.mjs` | ② | 融合：取一侧 + 渲染面按端注入 | 分叉 ＝ 目录（CLI 住 `tui/` / VSC 住 `extension/`）；台账规则两端逐字同（`ledger.mjs` 同路径 #71）⇒ 前提成立 | — | S1（建核补齐） |
 
-**现状注（2026-09-20 · VSC 行为/能力两则批）**：#171 行「融合：取一侧」**前提不成立**——两档非同一职责（核 `thincoder-core/rules.mjs` = stream 规则发现 ∥ `thincoder-vscode/src/extension/rules.mjs` = `.cursor/rules` 作用域规则）⇒ 该行处置以下节 §2.3 定义与下条 2026-09-29 更新为准；「取一侧」不再作为该行处置。
+**现状注（2026-09-20 · VSC 行为/能力两则批）**：#171 行「融合：取一侧」**前提不成立**——两档非同一职责（核 `thincoder-core/rules.mjs` = stream 规则发现 ∥ `thincoder-vscode/src/extension/rules.mjs`（迁移期引文——已删） = `.cursor/rules` 作用域规则）⇒ 该行处置以下节 §2.3 定义与下条 2026-09-29 更新为准；「取一侧」不再作为该行处置。
 **2026-09-29 更新（R10 ∕ B7 3a）：`.cursor/rules` 读取面已上提核**（R10 纯搬——核 `rules.mjs` 54 ⇒ **124**；VSC 档 125 ⇒ **75** = 同名转口；**B7 3a 收编**——核 **124 ⇒ 261**，VSC 两档退役（**75 ∕ 120 ⇒ 0（删）**），读取 ∕ 分类 ∕ 匹配 ∕ JIT 面全入核）——读取面 = 核单源；三端同得。
 
 ### 2.3 规则发现面（**权威定义** · 2026-09-20 立 · 设计源 = `docs/batches/2026-09-20-vsc-rules-retry-batch.md` §2）

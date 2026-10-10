@@ -38,9 +38,9 @@ test("① CHANNELS ⇔ HANDLERS 两向相等（白名单单源零副本）", () 
   const rows = [...registry.slice(head, registry.indexOf("\n})", head)).matchAll(/^\s{2}"([^"]+)":\s*([A-Za-z_$][\w$]*),/gm)]
   assert.deepEqual(rows.map((row) => row[1]).sort(), [...channels].sort(), "白名单 ↔ 注册表逐项一致（两向）")
   assert.equal(rows.length, channels.length, "两向计数相等")
-  // 实读定格 = 51（45 + 后增三 + B1 团队三增 = `record:append` ∥ `theme:state` ∥ `panel:state` —— 定序末位；前链 45 = 39 + B10 W2 设置面四增 ∕ W3 两增；随动 = 父侧重锚 2026-10-04）
-  assert.equal(channels.length, 51, "白名单实读计数")
-  assert.equal(channels[channels.length - 1], "team:logout", "定序末位（B1 团队三增之末）")
+  // 实读定格 = 52（45 + 后增三 + B1 团队三增 = `record:append` ∥ `theme:state` ∥ `panel:state` + 桌面 teamVerify = `team:verify`——定序末位；随动 = 父侧 2026-10-10 收口）
+  assert.equal(channels.length, 52, "白名单实读计数")
+  assert.equal(channels[channels.length - 1], "team:verify", "定序末位（桌面 teamVerify 转口）")
   assert.equal(new Set(channels).size, channels.length, "白名单零重复项")
 })
 

@@ -99,7 +99,7 @@
 |---|---|
 | `git` | 综合工具：diff / status / log / checkpoint / add / commit / push / tag / branch / checkout / restore / stash / reset / revert / merge / cherry-pick 等动作族；快照为全量副本 |
 
-### 2.9 Slash 命令（27 个 · 实核——2026-10-01 父侧收正：26 ⇒ 27，补 `/timers`；登记面指针随动）
+### 2.9 Slash 命令（**28** 个 · 实核——2026-10-01 父侧收正：26 ⇒ 27，补 `/timers`；**2026-10-10 登录面补全批：27 ⇒ 28，补 `/team`**；登记面指针随动）
 
 登记面 = `thincoder-cli/src/tui/slash-commands.mjs:40`。
 
@@ -108,7 +108,7 @@
 | Agent | `/plan` · `/auto` · `/eng` · `/advisor` · `/model` · `/submodel` · `/goal` · `/timers` · `/think` |
 | Session | `/new` · `/session` · `/rename` · `/clear` · `/copy` · `/fold` · `/undo` |
 | Project | `/init` · `/skills` · `/mcp` · `/reindex` · `/extract` |
-| System | `/shell` · `/upgrade` · `/config` · `/restore` · `/exit` · `/help` |
+| System | `/shell` · `/upgrade` · `/config` · `/team` · `/restore` · `/exit` · `/help` |
 
 **别名**（`thincoder-cli/src/tui/slash-commands.mjs:71`）：`/h` → `/help` · `/x` → `/exit` · `/m` → `/model` · `/p` → `/plan` · `/t` → `/think` · `/c` → `/clear` · `/n` → `/new`。
 
@@ -217,3 +217,4 @@
 - 2026-10-05（**引擎工具面缺口批 · 需求侧同步 · 主 agent**）：§2.1 `delete` 行补「或空目录（非空拒绝，不递归）」。来源 = 批 `docs/batches/2026-10-05-engine-tools-gaps.md` §2（delete 空目录臂设计）；台账 #943。
 - 2026-10-07（**批 ledger-tool · 需求侧同步 · 主 agent 笔**——承批档上抛②）：§2.7 `subagent` 行动作清单补 `design-slots`（槽位清点只读——与 `consume-design` 并列）。批档 = `docs/batches/2026-10-07-ledger-tool.md`（台账 #998 / #927）。
 - 2026-10-08（**盘根门 ∥ 索引排除批 · 需求侧立案 · 主 agent**）：§3 增 **N10 盘根启动门**。批档 = `docs/batches/2026-10-08-diskroot-gate-index-excludes.md`（台账 #1080）；配对需求 = `docs/core/requirements/MEMORY.md` §4.11（F-S9）。
+- 2026-10-10（**登录面补全批 · 需求侧同步 · 主 agent 笔**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §5 上抛①，台账 #1212）：§2.9 命令清点 **27 ⇒ 28**（补 `/team`——登记面 `thincoder-cli/src/tui/slash-commands.mjs:54`，组 = System）；System 行同拍。零新语义（对盘收正）。

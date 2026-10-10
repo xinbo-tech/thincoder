@@ -163,6 +163,47 @@
 
 **未动（报告——非本轮四项）**：① `TEAM.md` §2.5 域句括注「（本机配置落盘失败）」= 语义注（非句面用词）——未动（如需同字 ⇒ 示下）；② 桌面 §3.2 `mount-settings.mjs` **264 ⇒ ≈269** 与 `TEAM.md` §4 同档行 **264 ⇒ ≈268** 估数差一；③ `TEAM.md` §4 本批 VSC 两行与在飞实装读数存差（`panel-messages.mjs`「+3 case」vs 现盘两 `case` ∥ `panel-settings-push.mjs`「teamStatus 推送」vs 现盘 push 点住 `settings.mjs`）——#115 在飞、未证，供收口轮核；④ 批档 §2 初稿「三、受影响文件」VSC 行同缺 `chat-messages.js`——非本轮四处，供父侧择批。
 
+**实施后回填轮（2026-10-10 · eng-designer · 点修轮——承父侧当轮派单 ①–⑥ 逐号）**
+
+**口径**：行数一律现盘实读（`[System.IO.File]::ReadAllLines` 口径 ≡ `scripts/doc-check.mjs` 内容行数 KD-4——已与机检读数交叉验证：`views/settings.mjs` **448** ∥ `providers.mjs` **311** ∥ `preload.cjs` **87** ∥ `mount-settings.mjs` **292** 与行数面实读一一相符）。
+
+**落点与读数（逐档）**：
+- **`docs/core/design/TEAM.md`**：§4 四块 25 行翻「现行 ⇒ 实读（实施落盘）」+ 补登三缺行 = `thincoder-cli/src/tui/model-picker.mjs` **324** ∥ `thincoder-cli/src/tui/provider-admin.mjs` **248** ∥ `thincoder-desktop/src/main/providers.mjs` **302 ⇒ 311**；批内件 = **305** ∥ **410**；§2.5 域句括注「本机配置落盘失败」⇒「本机配置写入失败」（同物一名收一）；§1 去「（拟新增）」；变更记录一行。
+- **`docs/desktop/design/SETTINGS.md`**：§3.1 四行实读回填（`views/settings.mjs` **448** ∥ `settings-sections.mjs` **100** ∥ `mount-settings.mjs` **292** ∥ `src/main/providers.mjs` **311**）+ 三新档行翻「已落」（**118** ∥ **131** ∥ **35**）；§3.2 本批块翻「实读（实施落盘）」+ 补登 `providers.mjs` 行 + 批内件 **410**；档头「七段」⇒「八段」；KD-68③ ∥ §2.21 写面 ∥ §4 机检面去「（拟新增）」；变更记录一行。
+- **`docs/desktop/design/IPC.md`**：§3.1 `preload.cjs` **85 ⇒ 87** + 补登 `providers.mjs` 行 **311**；§1 `ev:menu` `SCOPES` **七名 ⇒ 十一名**（派生句补「去「团队」」）；§1 ∥ §2 B1「设计目标态（实施批落）」**六处翻已落** + `team.mjs` 去「（拟新增）」；变更记录一行。
+- **`docs/vsc/design/SETTINGS.md`**：§2.20 补**实施收口登记行**（`teamStatus` 推送点 = `thincoder-vscode/src/extension/settings.mjs` ∥ `panel-settings-push.mjs` 两条链调用 ∥ 上行恰两条 ∥ 重绘两门——自 §5 双制表 #1/#2/#7 落档）+ 键数 **+≈15 ⇒ +14**；§1 ∥ §2.20 去「（拟新增）」三处；变更记录一行。
+- **扩档四档**（父侧当轮扩射程——只动读数行）：`docs/desktop/design/UI.md` `i18n.mjs` **436** ∥ `i18n-views.mjs` **416** ∥ `i18n-settings.mjs` **190**（键族 62 ⇒ 77）∥ `docs/desktop/design/SHELL.md` `agent-host.mjs` **337** ∥ `docs/desktop/design/RENDERER.md` `store.mjs` **369** ∥ `docs/desktop/design/PACKAGING.md` `materialize-deps.mjs` **146**。
+
+**机检读数** = `node scripts/doc-check.mjs`（仓根）**EXIT 1**——行数面差异 **1** 条（唯一余项 = `docs/desktop/design/WEB-QUICKCHECK.md` `host-shim.mjs` 行 42 ⇒ 44——父侧档）；**本批五档 ∥ 扩档四档差异 0**（比对 168 行 · 跳过 186）。锚 = 悬空 **3**（`docs/server/design/ops/OPS.md:253` ∥ `docs/server/design/sandbox/SANDBOX.md:38` ∥ `:99`——服务端沙箱族在飞面）∥ 行宽 = **5**（`OPS.md:227` ∥ `STORE.md:12` ∥ `:320` ∥ `:339` ∥ `WEBUI.md:12`——同族在飞档）——**均非本批面，出口报告逐条列明**。
+
+**残余/披露**：① 本册件 `docs/batches/2026-10-10-team-login-client-access-desktop.test.mjs`（实读 **364** 行）未入 `TEAM.md` §4 批内件句（原设计表未列——名册差，供父侧裁并）；② `IPC.md` §3.1 `ipc.mjs` 行读数 **299** 与现盘一致（B1 实施 Δ 未入其描述链——未动）；③ vsc §2.20「实施收口登记」行范围按「§5 双制表 #1/#2/#7 三事」落——如所指为它项，示下即回改；④ 六段结构 = 段尾追加（append-only）：原落点中「本册 §2 初稿 VSC 行缺 `chat-messages.js`」事项已随 #121 落 `TEAM.md` §4（本册 §5.D 表外行同件）。
+
+**零新语义**：均为读数 ∥ 登记 ∥ 时态收正；机制句 ∥ 产品码零触；禁触面（需求档 ∥ prompts ∥ `src/**`）零触。
+
+**实施后回填轮-2（2026-10-10 · eng-designer · 点修轮——承父侧派单 ①–⑥ 逐号）**
+
+**由** = B1 收口回填轮-2：#124 出口报告余项收干净（目标 = `doc-check` EXIT 0）。**口径** = 行数/宽度一律现盘实读；**②③⑤ 入场时已在盘上收正（非本笔）——逐号列读数；①④ 本席落笔；⑥ 本块**。
+
+**逐号（号 → 改动/读数——行位以现盘为准）**：
+
+1 → `docs/core/design/TEAM.md` §4 批内件句：**补登** `docs/batches/2026-10-10-team-login-client-access-desktop.test.mjs`（实读 **364**——#124 上抛①裁定 = 补）；计数「两件 ⇒ **三件**」；三件组 = 服务端 **305**（入 server 链（`prepublishOnly` 38 ⇒ 39））∥ 跨面 **410**（不入链——跨面件无宿主产品链）∥ 桌面 **364**（不入链——桌面包无 `prepublishOnly` 链）；句尾折续行（原行宽 274 零变 ∥ 续行 123）。
+
+2 → `docs/server/design/ops/OPS.md` `bin/thincoder-runner.mjs` 行（#124 报位 :253 ⇒ 现 :254）：**现盘已收正（非本笔）**——登记形 =「（拟新增）另档计（`RUNNER.md` §9）」；机检 = 拟新增——列报·不入闸；指针解析 = `RUNNER.md` §9 行数表 :120（实读）。本席零改。
+
+3 → 超宽 5 处：**现盘已拆（非本笔）**——现宽 = `OPS.md:227/:228` **163 ∥ 216** ∥ `STORE.md:12` **151** ∥ `STORE.md:319/:321/:322`（原 :320 拆区）**216 ∥ 247 ∥ 199** ∥ `STORE.md:339` **288** ∥ `WEBUI.md:12` **118**（全 ≤300）；行宽门全绿。本席零改。
+
+4 → 时态标四处核正（本席落笔，对现盘实读）：`docs/desktop/design/IPC.md:358`「设计目标态（实施批落）」⇒「**已落（实读 2026-10-10）**」（`panel:state` 已落实读——`thincoder-desktop/src/preload/preload.cjs:49` CHANNELS 在场）∥ `docs/vsc/design/SETTINGS.md:656` ∥ `:685`「（拟新增）」⇒「（拟新增 · **未落**）」（全仓零 `confirm-popover.js` ∥ 零 `settings-snapshots.mjs`——未落）∥ `docs/desktop/design/SETTINGS.md:528`「（拟新增）」⇒「**已落（实读 2026-10-10）**」（`docs/batches/2026-10-07-mcp-kv-input.test.mjs` 在盘——同档 :440 并载「已落 · 390 行 · 四腿 13 例」）。
+
+5 → `docs/server/design/sandbox/SANDBOX.md:38` ∥ `:99` 两悬空：**现盘已修（非本笔——#122 在飞面）**——机检悬空 0（原 `accounts/session.mjs:91-95` 越界引用已消）；本席零改。
+
+6 → 本块（段尾追加）。
+
+**机检读数**（终跑）= `node scripts/doc-check.mjs`（仓根）**EXIT 0**——汇总 = 候选 55987 · 悬空 0 · 注记豁免 320 · 拟新增 46 · 迁移期引文 326 · 声明源缺位 0；行宽 = 源域无 >300 字符单行（区带豁免在效）；行数面 = 差异 0（比对 168 · 跳过 186）。入场基线（本席首跑）= 同 EXIT 0。
+
+**零新语义**：读数 ∥ 登记 ∥ 时态标；产品码 ∥ 需求档 ∥ 机制句零触。
+
+**未动（报告——供父侧裁）**：① `docs/server/design/PROJECT.md` §6 本批块（:255–256）仍计「批内件两件（跨档集）」（服务端单件 + `-ends`——desktop 件未列）+ 两件估数 ≈260/≈380 未回填实读——与 `TEAM.md` §4（三件）计数现差一件；该档不在本轮八档内（禁触）——示下即回改。② 各档变更记录本轮未加行（派单未列——记录面 = 本块）。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -470,3 +511,28 @@ VERDICT: pass
 - **终态 = clean**（审计零分歧 ∥ 评审 pass ×2 ∥ fix 1 已复跑；评审后本件变更 = 六处修正，均复跑 19/19）。
 
 ## §6 验证与收口（父代理）
+
+### 收口暂缓（2026-10-10 14:39）
+
+**用户裁定（原话）：「当然不能收口啊！没干完呢！」**——承 14:37「你说cli端好了，那我在tui里怎么登录？」暴露的缺口。
+
+- **事实**：B1 的 CLI 面 = argv 子命令族（`thincoder team login ∥ logout ∥ status`——实读全 CLI 仓唯一命中 = `src/command-table.mjs:16`）；**TUI 会话内零入口**（`src/tui/**` 27 个斜杠命令无一 team 相关；TUI 内零未登录提示）。桌面面 = 设置→团队卡（已实跑 ✓）；VSC 面 = 待实跑核（unverified）。
+- **判据口径更正**：AC-31「三端登录入口在册（地址 + 账号 + 密码）」按字面 CLI 达标，按用户可用性不达标——「入口在哪张面里」是该判据的字面漏洞（父侧笔）。
+- **未完成项（收口条件）**：① CLI TUI 会话内团队登录入口（台账 #1230——斜杠命令：状态 + 登录 + 退出）；② 三端首启向导团队登录入口（台账 #1229——桌面 D11 ∥ CLI F19 ∥ VSC F-W20 需求行已落）。两行同族，拟并一批设计。
+- **本档状态**：**不收口**——§6 落定 + 台账 #1212 核销均待上述两行交付并经用户验收；届时时任父侧先补 VSC 面实跑读数。
+
+### VSC 面实跑核读（2026-10-10 14:4x——父侧）
+
+**方法**：happy-dom 注册真 DOM + 灌核 i18n 表（`locales/zh.json`——首跑未灌表 ⇒ `t()` 回落键名，属**驱动遗漏非产品缺陷**，补表后复跑）⇒ 直驱 `webview/settings-team.js` 全链。
+
+| 步 | 读数 |
+|---|---|
+| 未登录卡片 | 三输入（`#team-server` ∥ `#team-username` ∥ `#team-password`）+ 登录钮 + 提示行逐字「**未登录——登录后可用**」✓ |
+| 点登录上行 | `{type:"teamLogin", server:"http://127.0.0.1:8790", username:"admin", password:"team-bed-2026"}`——server/username **trim 生效** ∥ 密码**零加工**（原文上行）✓ |
+| 失败回执（credentials） | 提示行逐字「**用户名或密码错误**」✓（四句闭集之一） |
+| 已登录推送 | 状态行逐字「**已登录——http://127.0.0.1:8790 · admin · vsc@liwei-sh**」+ 退出钮在场 ✓ |
+| 退出上行 | `{type:"teamLogout"}` ✓ |
+
+**结论（三端入口面盘点）**：桌面 = 设置→团队卡**界面内** ✓（真 Electron 实跑）∥ VSC = 设置面板第 6 卡**界面内** ✓（本读数 + `…-ends.test.mjs` 结构件）∥ **CLI = 仅 argv 子命令，界面内零入口**（唯一端差 ⇒ #1230）。
+
+**未验边界（如实）**：本条为 webview 层（真 DOM ∥ 真 i18n ∥ 真上行报文）驱动；**真 VS Code 宿主内的端到端一步未跑**（宿主接线由 `…-ends.test.mjs` 结构件覆盖）。

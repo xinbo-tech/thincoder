@@ -739,6 +739,26 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 **观察（只报 · 父侧裁）**：① CLI 语言面现无 locale（台账 #7 未决——CLI 侧核键现渲缺省 en）⇒ 本读数 CLI 侧现为 en 值；键面已备（键面单源），CLI 多语言面落定即随动。② 「已提交未起跑（回执未现）」窗不在显示域——「发送回执超时」面（#568 另一半）未覆盖，如实登记（批档 §2 上抛项）。
 
 **VSC ∕ 桌面对位**：逐端实现面 ∕ 显示位 ∕ 判据 = `docs/vsc/design/WEBVIEW.md` §4.7 · `docs/desktop/design/UI.md` §1「本批注（停滞轻显形 · 2026-09-29）」（同语义、各自实现——非 byte-identical；一致性表见上）。
+### 7.8 团队登录态段（F20 · 2026-10-10 · 登录面补全批 · 台账 #1231）
+
+> 需求 = `docs/cli/requirements/TUI.md` F20（判定句 ∥ 范围边界点名）；语义单源 = `docs/core/design/TEAM.md` §2.5「常显面」行 ∥ §2.6（校验与吊销态）。VSC ∥ 桌面对位 = `docs/vsc/design/WEBVIEW.md` §4.12 ∥ `docs/desktop/design/UI.md` §1「本批注（团队登录态段 · 2026-10-10）」（同语义、各自实现）。
+
+**形态（三态闭集）**
+
+| 态 | 判据 | 段文 | 色 |
+|---|---|---|---|
+| 未登录 | `team.token` 缺席 | **零注入**（整行逐字节等价——负控 = F20 判定句） | — |
+| 已登录 | token 在场 ∧ `verify ≠ invalid`（`unreachable` ∥ `null` 同判——离线容忍） | ` │ <成员>@<主机>`（成员 = `member.name ?? member.username`；主机 = `URL.host`——非默认端口才带端口；**不搬 URL 全串**） | dim 常色 |
+| 已失效 | `verify === invalid` | ` │ 已失效——重新登录`（核字典键 `status.team.invalid`——词形单源） | 警示色 |
+
+**段位（簇尾序定形）**：状态段簇尾**末位**——`ledgerHint` → `timerHint` → `titleHint` → **`teamHint`**（F15/F17 位例族内；落点 = `thincoder-cli/src/tui/render-frame.mjs` `buildStatusLine` return 行 `titleHint` 之后、`│ <enterHint>` 之前）。段位与 F15/F17 不冲突（三者在场序并列；宽度超限走既有 `statusMax` 截断——同簇尾口径）。
+
+**数据源与刷新（触发点制——零新定时器）**：`state.team` 切片（新——`{ loggedIn, member, server, label, verify }`；落点 = `thincoder-cli/src/tui/tui-state.mjs` 状态初始化 + `thincoder-cli/src/tui/index.mjs` 装配）。
+写者三处：① 启动读（核 `teamStatus()`——随装）；② `/team` 命令成/退 ⇒ 复读；③ 启动 `teamVerify()` 异步回填（token 在场时）+ `/team status` 活校验回填。**每帧 recompute（活读切片）· 零缓存副本**（沿 F15/F17 口径）。
+
+**可机判**：`renderStatus` 纯函数直驱——已登录桩 ⇒ strip-ANSI 状态行含成员名与主机；未登录 ⇒ **零该段 + 整行逐字节等价**（负控）；`verify = "invalid"` ⇒ 含「已失效——重新登录」+ 警示色序列。
+
+**边界**：不做团队面板（状态 = 本段；入口 = `/team` 命令族——`docs/cli/design/TUI-COMMANDS.md` §5.5）；不搬服务器 URL 全串（主机形）；零新定时器（校验触发点制——`docs/core/design/TEAM.md` §2.6）；CLI 语言面现缺省 en（台账 #7 未决——沿 §7.7 观察①同注）。
 
 ## 8. 不并项与历史沿革
 
@@ -914,3 +934,4 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - 2026-10-02（**文档清账轮 · 执行轮 3（core/requirements + cli + vsc）· eng-designer**——承 `docs/batches/2026-10-02-doc-settlement-round.md` §2.3 · 台账 #806）：锚面 1 处 R5 行注记（「机检豁免——用例退场登记」入 §7.4 可机判行）；宽面 2 行折行（538 ∥ 539——语义零改）。**零新语义**。
 - 2026-10-05（**批 digest-accounting · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §1 · 需求 §4.15 · 台账 #930）：§6.9 增**未销账残余行**条（`digest.residue` 核字典新键——终态行之后追加；零未销账零行；记录面同携 `unsettled`）。**零新语义**（可见面落 CLI 形面；判据 / 机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31）。明细 = 批档 §2。
 - 2026-10-05（**批 digest-accounting · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §3 轮次 1 发现 13 · 父裁全收）：§6.9 补**两行同屏口径注**（终态行 N = 起跑数不扣减 ∥ 未销账数由残余行承载）；判据单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31.6。**零新语义**。明细 = 批档 §2 修正块。
+- 2026-10-10（**login-entry-completion 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §1 · 台账 #1230 ∥ #1231；用户 14:37 ∥ 14:42 提 + 14:48 点火）：新增 **§7.8 团队登录态段**（F20——三态闭集 ∥ 段位簇尾末位定形 ∥ `state.team` 切片与触发点制 ∥ 可机判 ∥ 边界）；语义单源 = `docs/core/design/TEAM.md` §2.5 ∥ §2.6。`.thincoder` 零触；同批 CLI 命令面 = `docs/cli/design/TUI-COMMANDS.md` §3 ∥ §5.5。

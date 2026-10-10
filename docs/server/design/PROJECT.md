@@ -11,7 +11,7 @@
 - **一句话**：一台内网常驻的 Node 单进程——OpenAI 兼容入口（chat ∥ embeddings ∥ models），网关代持全部真实 provider key，逐请求记账、按成员限额度；另配登录制控制台（vanilla 静态前端——侧栏分组导航十一页——IA/多语言 = `webui/WEBUI.md` §2/§2.2）与本机运维 CLI（兜底）；首版完备化面 = `/healthz` ∥ 登录防爆破 ∥ 用量保留窗 ∥ 控制台系统页（版本/更新/接入——§7 AC-13）∥ 可见面二轮六面（向量/看板/总览/审计/健康/key 细节——§7 AC-15）。
 - **落点**：代码 = `thincoder-server/`（新顶层目录——与 `thincoder-core/` ∥ `thincoder-cli/` ∥ `thincoder-vscode/` ∥ `thincoder-desktop/` ∥ `thincoder-render-core/` 同级）；设计档 = `docs/server/design/`（板 2 档 + 域 9 档——见 §2.1 ∥ §3）。
 - **形态**：单进程单库（`node:http` + `node:sqlite`）；无构建步骤；纯 ESM（`.mjs`）。
-- **零第三方运行期依赖**（沿仓纪律）：全树 import 仅 `node:*` 标准库 + 相对路径；不 import `thincoder-core/*`（论证 = §5 KD-SV-2）。
+- **零第三方运行期依赖**（沿仓纪律）：import 限 `node:*` 标准库 + 相对路径 + 从核引面（`@thincoder/core`——本仓包，非第三方；口径 = §2.3 ∥ §5 KD-SV-78）。
 
 ## 2. 架构总览
 
@@ -28,7 +28,7 @@ sandbox 域 = 2026-10-10 沙盒批新立（两平面两档）；拆分落域内�
 | accounts | `thincoder-server/src/accounts/` 七档（keys ∥ members ∥ session ∥ routes ∥ routes-admin ∥ login-guard + audit） | 团队 key ∥ 账号/成员 ∥ 会话/登录 ∥ 密码 ∥ 登录防爆破 ∥ 审计事件（§2.1） ∥ 自助/管理端点 | `accounts/ACCOUNTS.md` |
 | metering | `thincoder-server/src/metering/` 五档（usage ∥ aggregates ∥ report ∥ quota ∥ routes） | 记账（同事务三写：usage + 派生两表） ∥ 配额（三级计数准入） ∥ 用量/配额端点（含报表/导出——§3） ∥ 保留窗清理 | `metering/METERING.md` |
 | store | `thincoder-server/src/store/` 一档（db）（已落盘） | 库 ∥ DDL ∥ 迁移链（各域共用；v5 = 模型标识两字段拆列 + 派生两表 + 成员配额列） | `store/STORE.md` |
-| webui | `thincoder-server/src/webui/` 一档（static）+ `thincoder-server/public/` 三十二档（静态——`index.html` ∥ `app.mjs` ∥ `dom.mjs` ∥ `health.mjs` ∥ `nav.mjs` ∥ `views-*` 十三档（+ `views-system-config.mjs`——2026-10-09 配置控制台批落盘；2026-10-10 代理回迁批：代理行 ∥ 连通测试块并入；2026-10-10 沙盒批：+ `views-sandbox.mjs` ∥ `views-sandbox-egress.mjs`——§2.8） ∥ `modal.mjs` ∥ `i18n.mjs` ∥ `i18n-zh.mjs` ∥ `i18n-en.mjs` ∥ i18n 部件八档（`i18n-{zh,en}-{shell,me,admin,system}.mjs`） ∥ `model-specs-snapshot.mjs` ∥ `style.css`；含 favicon 全目录三十三档；`views.mjs` ∥ `views-proxy.mjs` 退役） | 页面路由 ∥ HTML/JS/CSS ∥ 静态直发 ∥ IA/导航 ∥ 多语言（§2.2） ∥ 可见面二轮（§2.3） ∥ 弹窗与服务模型配置面（§2.4） ∥ 样式族规范（§2.5） ∥ 系统页配置控制台（含代理设置与连通测试——§2.1 ∥ §2.7） ∥ 沙盒页六面（§2.8） | `webui/WEBUI.md` |
+| webui | `thincoder-server/src/webui/` 一档（static）+ `thincoder-server/public/` 三十三档（静态——`index.html` ∥ `app.mjs` ∥ `dom.mjs` ∥ `health.mjs` ∥ `nav.mjs` ∥ `views-*` 十四档（+ `views-system-config.mjs`——2026-10-09 配置控制台批落盘；2026-10-10 代理回迁批：代理行 ∥ 连通测试块并入；2026-10-10 沙盒批：+ `views-sandbox.mjs` ∥ `views-sandbox-egress.mjs`——§2.8；+ `views-me-sandbox.mjs`——§2.9 成员面） ∥ `modal.mjs` ∥ `i18n.mjs` ∥ `i18n-zh.mjs` ∥ `i18n-en.mjs` ∥ i18n 部件八档（`i18n-{zh,en}-{shell,me,admin,system}.mjs`） ∥ `model-specs-snapshot.mjs` ∥ `style.css`；含 favicon 全目录三十四档；`views.mjs` ∥ `views-proxy.mjs` 退役） | 页面路由 ∥ HTML/JS/CSS ∥ 静态直发 ∥ IA/导航 ∥ 多语言（§2.2） ∥ 可见面二轮（§2.3） ∥ 弹窗与服务模型配置面（§2.4） ∥ 样式族规范（§2.5） ∥ 系统页配置控制台（含代理设置与连通测试——§2.1 ∥ §2.7） ∥ 沙盒页六面（§2.8） | `webui/WEBUI.md` |
 | ops | `thincoder-server/src/ops/` 五档（config ∥ log ∥ cli ∥ presets ∥ update）+ 部署档组（`thincoder-server/deploy/thincoder-server.service` ∥ `thincoder-server/deploy/docker-entrypoint.sh` ∥ `thincoder-server/deploy/converge.mjs` ∥ `thincoder-server/deploy/backup.mjs` ∥ `thincoder-server/Dockerfile` ∥ `thincoder-server/.dockerignore` ∥ `thincoder-server/docker-compose.yml`）+ 模板/说明档（`thincoder-server/config.example.json` ∥ `thincoder-server/README.md`）（已落盘） | 配置（含 provider 预设） ∥ 日志 ∥ 运维 CLI ∥ 更新机制（自检/自升/收敛） ∥ 部署面（npm ∥ Docker ∥ systemd ∥ 备份） | `ops/OPS.md` |
 | client | `thincoder-server/src/client/` 一档（routes）（拟新增） | 客户端接入：客户面登录 ∥ 退出（token 吊销） ∥ 当前态读数（`me`）——token = 具名成员 key（复用 accounts key 面） | `client/CLIENT.md` |
 | sandbox | `thincoder-server/src/sandbox/` 十四档（routes ∥ runner-api ∥ registry ∥ rules ∥ credentials + `runner/` 九档（daemon ∥ client ∥ runtime ∥ boxes ∥ egress ∥ netfilter ∥ quota ∥ checkpoint ∥ probe））+ `thincoder-server/bin/thincoder-runner.mjs`（拟新增——连同上述各档） | 沙盒：控制面（编排/注册/放置/规则/待批/凭据/控制台——§1–§9） ∥ 执行面（runner 守护：盒/出站强制/配额/TTL/快照——`RUNNER.md`） | `sandbox/SANDBOX.md` ∥ `sandbox/RUNNER.md` |
@@ -63,12 +63,13 @@ sandbox 域 = 2026-10-10 沙盒批新立（两平面两档）；拆分落域内�
   │                        ├─ user 触管理端点 ⇒ 403
   │                        └─ 放行 ⇒ 自助面 /api/me* ∥ 管理面 /api/members* 等
   ▼
-十一页两区（`#/login` ∥ 我的三页 ∥ 管理八页——IA = `webui/WEBUI.md` §2）——数据全经 /api/*，判权全在后端；系统页数据 = `/api/system`（版本/更新/引擎模型——KD-SV-24/30）
+十一页两区（`#/login` ∥ 我的四页 ∥ 管理八页——IA = `webui/WEBUI.md` §2）——数据全经 /api/*，判权全在后端；系统页数据 = `/api/system`（版本/更新/引擎模型——KD-SV-24/30）
 ```
 
 ### 2.3 与 core 的关系（依赖决策摘要）
 
-- **不 import `thincoder-core/*`**：网关要「不认识内容」的字节级中继；核 provider 层（`thincoder-core/provider/sse.mjs`）是消费型客户端器件——完整论证 = §5 KD-SV-2。
+- **裁定（2026-10-10——用户指示 + 评估结论）：共有机制从核引；服务端专有域自持**。判据一句 = 「该机制三端是否也有？有 ⇒ 从核引；服务端专有 ⇒ 自持」。
+- **逐面**：网关 = 不引（「不认识内容」的字节级中继语义——KD-SV-2 三理由；范围限网关面）∥ **存储 ∥ 记账 ∥ 账号 ∥ 控制台 ∥ 沙盒 ∥ 运维 = 自持**（核里无该面）∥ **agent 面（#1237）与后续共有机制 = 从核引**（依赖声明形照 CLI——`@thincoder/core` 钉版本；server agent 的无人值守档面裁剪随 #1237 设计轮）。
 - 同仓直连的优势（协议两端一提交同改同审）保留待用：非 OpenAI 协议翻译类需求（现为不做项）出现时再按批直连，不预先耦合。
 - 存储选 `node:sqlite` 与核 `thincoder-core/ledger-db.mjs` 同技术（`DatabaseSync`），零代码共享——各持各的库与 DDL。
 
@@ -88,12 +89,12 @@ sandbox 域 = 2026-10-10 沙盒批新立（两平面两档）；拆分落域内�
 | `sandbox/SANDBOX.md` | 域 | sandbox | 沙盒·控制面：两平面 ∥ 对象模型与存储（v11） ∥ runner 注册与通道 ∥ 出站规则单源 ∥ 放置与牲口语义 ∥ 待批队列 ∥ 工作区凭据 ∥ 控制台六面（必交面——每配置项有 UI 写入口） ∥ 端点与判权 ∥ 已裁决策与披露 ∥ 验收判据 ∥ 探针套件 ∥ 用例 ∥ 本域文件与预算 ∥ 决策 ∥ 边界（2026-10-10 沙盒批建档） |
 | `sandbox/RUNNER.md` | 域 | sandbox | 沙盒·执行面：守护进程与通道客户端 ∥ 盒参数集 ∥ 出站强制（网络层 + 出站闸代理） ∥ 资源与磁盘配额 ∥ WIP 检查点 ∥ doctor 前置 ∥ 部署形态 ∥ 本域文件与预算 ∥ 探针跑法 ∥ 决策 ∥ 边界（2026-10-10 沙盒批建档） |
 
-## 4. 决策索引（KD-SV-1–76）
+## 4. 决策索引（KD-SV-1–78）
 
 | # | 决策一句话 | 所在档 |
 |---|---|---|
 | KD-SV-1 | 形态 = 单进程单服务 | 本档 §5 |
-| KD-SV-2 | 不 import `thincoder-core/*`（含 provider 层） | 本档 §5 |
+| KD-SV-2 | 网关（provider 层）不引 `thincoder-core/*` | 本档 §5 |
 | KD-SV-3 | 存储 = `node:sqlite`（WAL ∥ `user_version`） | `store/STORE.md` |
 | KD-SV-4 | 模型派发 = **对外标识**（配别名 ⇒ 别名 ∥ 未配 ⇒ `provider/model`）精确匹配；配了只认别名（旧前缀名 ⇒ 404——2026-10-09 alias 批 · KD-SV-59） | `gateway/API.md` |
 | KD-SV-5 | 流式计量 = 注入 `stream_options.include_usage` + 旁路 tap | `gateway/API.md` |
@@ -168,13 +169,17 @@ sandbox 域 = 2026-10-10 沙盒批新立（两平面两档）；拆分落域内�
 | KD-SV-74 | 磁盘配额 = 项目配额优先 ∥ loopback 备选；无机制 ⇒ 拒跑 | `sandbox/RUNNER.md` §11 |
 | KD-SV-75 | 出站闸代理 = node std + 源 IP 白名单 + 不 MITM | `sandbox/RUNNER.md` §11 |
 | KD-SV-76 | 网络层 = nft 优先 ∥ iptables 备 + 全量重算幂等 | `sandbox/RUNNER.md` §11 |
+| KD-SV-77 | 快照上送 = 路由级豁免（`POST /api/runner/checkpoint`：octet-stream 唯一收口 ∥ 路由级 200 MiB ∥ 流式落盘——全局 32 MiB 通则不动） | 本档 §5 |
+| KD-SV-78 | server 引核面 = agent 与后续共有机制；专有域自持（2026-10-10 裁定） | 本档 §5 |
 
 ## 5. 关键决策（本档）
 
 | # | 决策 | 理由 | 被否候选与何故否 |
 |---|---|---|---|
 | KD-SV-1 | **形态 = 单进程单服务**（`node:http`——模块表见 §2.1） | 「内网一台常驻」；团队规模并发；零依赖纪律下无必要拆进程 | 多进程拆（入口/计量分离——无收益增运维）· 引 Web 框架（违零依赖） |
-| KD-SV-2 | **不 import `thincoder-core/*`**（含 provider 层） | ① 核 `thincoder-core/provider/sse.mjs` 的 `readSSE` 是消费型（onToken 回调 ∥ 全量累积 ∥ 规则短路 ∥ 120s idle 判定）——中继复用会强制整段消费/再序列化，与「SSE 逐块透传」相抵；② 核 provider 层面向客户端多协议适配（anthropic/google/responses ∥ 重试 ∥ 限速 ∥ 思考映射）——网关零需要；③ 网关要「不认识内容」的代理语义——解析越少越稳。行数影响：自持 `thincoder-server/src/gateway/sse-tap.mjs`（≈80 行）覆盖全部所需（`data:` 行 JSON 取 usage） | **全引 `chat()`**（消费型语义错配 + 强制缓冲）· **引窄叶**（`normalizeUsageCache`——服务客户端缓存语义、网关不需要；`RETRYABLE_STATUS`——本设计不做重试）· **引 `embedding.mjs`**（自带批量/归一化/整流——网关须原样透传与计数，语义不符） |
+| KD-SV-2 | **网关（provider 层）不引 `thincoder-core/*`**（范围限定 = 网关面；全域口径 = KD-SV-78） | ① 核 `thincoder-core/provider/sse.mjs` 的 `readSSE` 是消费型（onToken 回调 ∥ 全量累积 ∥ 规则短路 ∥ 120s idle 判定）——中继复用会强制整段消费/再序列化，与「SSE 逐块透传」相抵；② 核 provider 层面向客户端多协议适配（anthropic/google/responses ∥ 重试 ∥ 限速 ∥ 思考映射）——网关零需要；③ 网关要「不认识内容」的代理语义——解析越少越稳。行数影响：自持 `thincoder-server/src/gateway/sse-tap.mjs`（≈80 行）覆盖全部所需（`data:` 行 JSON 取 usage） | **全引 `chat()`**（消费型语义错配 + 强制缓冲）· **引窄叶**（`normalizeUsageCache`——服务客户端缓存语义、网关不需要；`RETRYABLE_STATUS`——本设计不做重试）· **引 `embedding.mjs`**（自带批量/归一化/整流——网关须原样透传与计数，语义不符） |
+| KD-SV-77 | **沙盒快照上送 = 路由级豁免**（2026-10-10 裁定）：`POST /api/runner/checkpoint` = `/api/*` 写端点中唯一 `application/octet-stream` 收口（写端点 JSON 型门仅此路由豁免）∥ **路由级上限 200 MiB**（全局 32 MiB 通则不动；超 ⇒ 413 `payload_too_large`）∥ **流式落盘**（不整块缓冲）；鉴权照旧（runner 令牌）；零第三方依赖不变 | 两说相抵的裁定（实现轮上抛）：快照 ≤200 MiB（`sandbox/RUNNER.md` §6 ∥ `sandbox/SANDBOX.md` §13 B40）vs 网关全局 `Content-Length > 32 MiB ⇒ 413`（`thincoder-server/src/gateway/server.mjs` ∥ `gateway/API.md` §3）⇒ >32 MiB 二进制在任何通路不可达；裁定 = 保两设计意图（快照 200 MiB 不动 ∥ `/api/*` 其余写端点 32 MiB + JSON 门照旧——跨站防护面不扩） | 抬高全局 32 MiB（放宽全部写端点——跨站/滥用面扩大——否）· 快照砍到 ≤32 MiB（与 `sandbox/RUNNER.md` §6 ∥ B40 相抵——否）· 专用第二监听（机制重——否）· multipart/分片上传（客户端契约复杂化——否） |
+| KD-SV-78 | **server 引核面 = agent 面（#1237）与后续共有机制；专有域自持**（2026-10-10 裁定——用户指示 + 评估结论）：从核引 = 依赖声明形照 CLI（`@thincoder/core` 钉版本；server agent 的无人值守档面裁剪随 #1237 设计轮） | 判据 = 「该机制三端是否也有？有 ⇒ 从核引；服务端专有 ⇒ 自持」——存储 ∥ 记账 ∥ 账号 ∥ 控制台 ∥ 沙盒 ∥ 运维 = 核里无该面（自持）；agent 面与后续共有机制 = 三端共有（从核引） | **全树自持**（共有机制各写一套——重复与三端漂移；否）· **全树引核**（网关面语义错配——KD-SV-2 三理由；否） |
 
 ## 6. 受影响文件与行数预算（总账）
 
@@ -258,7 +263,7 @@ sandbox 域 = 2026-10-10 沙盒批新立（两平面两档）；拆分落域内�
   server-exec-sandbox 批预算（2026-10-10 设计轮——本批；台账 #1224；需求 §5 沙盒块 + 用户 14:00 两平面裁定 + 14:08 必交面行）：产品面 ≈**+3998**——逐面 = 控制面 ≈+1161（sandbox 域五档 ≈270 ∥ ≈230 ∥ ≈250 ∥ ≈230 ∥ ≈80 + `db.mjs` +≈90（v11 七表 + 审计重建） ∥ `audit.mjs` +≈3 ∥ `errors.mjs` +≈2 ∥ `bin/thincoder-server.mjs` +≈6）∥
   执行面 ≈+2095（`runner/` 九档 ≈1910 ∥ `bin/thincoder-runner.mjs`（拟新增）≈120 ∥ `deploy/sandbox/Dockerfile` ≈35 ∥ `deploy/thincoder-runner.service` ≈30）∥
   webui ≈+682（`views-sandbox.mjs` 新 ≈290（六面卡） ∥ `views-sandbox-egress.mjs` 新 ≈240 ∥ `nav.mjs` +1 ∥ `app.mjs` +3 ∥ i18n admin 两部件 +≈60/表 ∥ i18n system 两部件 +≈4/表 ∥ `views-audit` +≈8 ∥ `style.css` +≈12）∥ ops ≈+60（`README.md` runner 部署节——§5.10）；
-  档目：webui 30 ∥ 31 ⇒ **32 ∥ 33**（+2 档）；sandbox 域新立（代码十五档 + 域档两档）；`thincoder-server/package.json` ±0（`prepublishOnly` 38 ⇒ **40**——本批两件入链）；
+  档目：webui 30 ∥ 31 ⇒ **33 ∥ 34**（+3 档——沙盒两档 + 成员面一档）；sandbox 域新立（代码十五档 + 域档两档）；`thincoder-server/package.json` ±0（`prepublishOnly` 38 ⇒ **40**——本批两件入链）；
   批内件两件（**均入 server 链**）：`docs/batches/2026-10-10-server-exec-sandbox.test.mjs`（估 ≈480——控制面/服务面）∥ `docs/batches/2026-10-10-server-exec-sandbox-runner.test.mjs`（估 ≈450——盒参数/网络/配额假 runtime）；
   真机探针 P1–P14 = 收口轮（前置 = 一台合标 runner——`sandbox/RUNNER.md` §7）；机制全文 = `sandbox/SANDBOX.md` ∥ `sandbox/RUNNER.md`；随正件 = 注⑱。
 
@@ -392,7 +397,7 @@ sandbox 域 = 2026-10-10 沙盒批新立（两平面两档）；拆分落域内�
   文档链两处（`ops/OPS.md` §5.1 ∥ 本档 §6 板级行：链 35 ⇒ 36 + 组成式「后续各批 22 ⇒ 23 件」）；`thincoder-server/package.json`（`prepublishOnly` **35 ⇒ 36**——本批件入链；单行清单行数零变）；新批内件 = **一件**（`docs/batches/2026-10-10-server-face-residues.test.mjs`——估 ≈150 行）；实施后回填核销。
 
 - 注⑱（server-exec-sandbox 批随正件 + 新批内件——2026-10-10 设计轮）：随正件（**父侧落——实施轮同拍；以当刻盘面为准**）= 档目断言件九件（`-console-completeness-2` ∥ `-console-list-style` ∥ `-console-modals` ∥ `-console-provider-redo-runtime` ∥
-  `-console-providers` ∥ `-models-config` ∥ `-server-gateway-webui-deploy` ∥ `-server-i18n` ∥ `-server-console-config`——`views-sandbox*.mjs` 入列表 ∥ 档目 30 ∥ 31 ⇒ **32 ∥ 33**）+ nav 计数件三件（管理 7 ⇒ **8**）+
+  `-console-providers` ∥ `-models-config` ∥ `-server-gateway-webui-deploy` ∥ `-server-i18n` ∥ `-server-console-config`——`views-sandbox*.mjs` 入列表 ∥ 档目 30 ∥ 31 ⇒ **33 ∥ 34**（+3——含 `views-me-sandbox.mjs`））+ nav 计数件三件（管理 7 ⇒ **8**；**我的 3 ⇒ 4**）+
   审计型面件（`views-audit` ∥ i18n 键数——十二型）+ 门禁件数断言件七件（38 ⇒ **40**；注释同拍）∥ `thincoder-server/package.json`（`prepublishOnly` 38 ⇒ **40**——本批两件入链；单行清单行数零变）；
   新批内件 = **两件**（服务面 ≈480 ∥ 执行面 ≈450）；实施后回填核销。
 
@@ -431,9 +436,9 @@ sandbox 域 = 2026-10-10 沙盒批新立（两平面两档）；拆分落域内�
 | AC-28（功能点 28——server 配置控制台；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | `webui/WEBUI.md` §6 AC-28 两行（配置项全量 ∥ 掩码 ∥ 保存往返 ∥ 重启生效 ∥ 探活草稿 ∥ 审计 ∥ 文案改向 ∥ 缺段创建）+ `gateway/API.md` §5 AC-28 行（写路径机检）+ `ops/OPS.md` §7 AC-28 行 + §8 KD-SV-56/57；代理回迁批：`proxy.uri` 承载回迁服务配置卡（§2.7）——第四写控件 ∥ 连通测试块（文案改向句改指——AC-30 行同拍） | 批内件 + 收口轮（浏览器实走） |
 | AC-29（功能点 29——服务模型别名；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 分五面判据：`gateway/API.md` §5 AC-29 行（① 配置形两形/非法 400·拒启 ∥ ② 对外别名生效（清单/请求命中/旧名 404） ∥ ③ 唯一性（撞别名拒 ∥ 形上不相交））∥ `metering/METERING.md` §4 AC-29④ 行（记账外标 = 别名 ∥ 过滤反查 ∥ 键随动）∥ `accounts/ACCOUNTS.md` §5 AC-29④ 行（配额/禁用键 = 外标形）∥ `webui/WEBUI.md` §6 AC-29① 行（G · 别名组 ∥ 列表外标）∥ `ops/OPS.md` §7 AC-29①③ 行（配置/种子面：两形 ∥ 校验 ∥ 拒启）∥ `store/STORE.md` §2 v2 段（条目两形——零迁移） ∥ ⑤ 嵌入面零涉（设计句 = `gateway/API.md` §6 KD-SV-59 ∥ §8 不做项「嵌入面别名」；回归面 = 嵌入面判据零动——批内件断言） | 批内件 + 收口轮（浏览器实走） |
 | AC-30（功能点 30——代理设置与连通测试（服务配置卡内）+ 旧链重定向；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 分三面判据：① 承载 = `webui/WEBUI.md` §6 AC-30 行（服务配置卡 = 四写控件 + 连通测试块 ∥ `views-proxy.mjs` 不在盘（档目 30 ∥ 31）∥ nav 管理 7 ∥ 旧链 `#/admin/proxy` ⇒ `#/admin/system`）+ `gateway/API.md` §5（白名单零变——`CONFIG_WRITABLE_KEYS` 导出直测） ∥ ② 测试功能 = `gateway/API.md` §5 AC-30 行 + §7 用例（N36/B26/E27）+ `webui/WEBUI.md` §6 AC-30 续行（真打读数 ∥ 就地错态 ∥ 零落库零计费） ∥ ③ 语义零变 = `ops/OPS.md` §1 写面句 + 保存往返/重启生效 + Provider 勾选零回归 + `proxy.mjs` 零触（KD-SV-55 不变） | 批内件 + 收口轮（浏览器实走） |
-| 沙盒（server-exec-sandbox 批——台账 #1224；需求 §5 沙盒块 + 14:00 裁定 + 14:08 必交面行；建议编号 AC-36——待需求档落） | 分面判据：`sandbox/SANDBOX.md` §11 判据行（两平面 ∥ 出站两类型/两闸/deny 先/通配 ∥ 待批三态 ∥ 凭据 ∥ 必交面六面 + 每配置项有 UI 写入口）∥ §12 探针 P1–P14（收口轮真机）∥ §13 用例（N40–N44 ∥ B35–B40 ∥ E29–E33）∥ `sandbox/RUNNER.md` §7 doctor ∥ §3 盒参数表 ∥ `gateway/API.md` §2.5/§2.6（端点面机检）∥ `webui/WEBUI.md` §6 沙盒行（控制台机检）∥ `store/STORE.md` §3 v11 段（迁移判据） | 批内件 + 收口轮（真机 runner + 浏览器实走） |
+| 沙盒（server-exec-sandbox 批——台账 #1224；需求 §5 沙盒块 + 14:00 裁定 + 14:08 必交面行；**AC-36 = 已落需求档**（2026-10-10 沙盒批回笔）） | 分面判据：`sandbox/SANDBOX.md` §11 判据行（两平面 ∥ 出站两类型/两闸/显式 deny 先/通配 ∥ 待批三态 ∥ 凭据 ∥ 必交面六面 + 每配置项有 UI 写入口）∥ §12 探针 P1–P14（收口轮真机）∥ §13 用例（N40–N44 ∥ B35–B40 ∥ E29–E33）∥ `sandbox/RUNNER.md` §7 doctor ∥ §3 盒参数表 ∥ `gateway/API.md` §2.5/§2.6（端点面机检）∥ `webui/WEBUI.md` §6 沙盒行（控制台机检）∥ `store/STORE.md` §3 v11 段（迁移判据） | 批内件 + 收口轮（真机 runner + 浏览器实走） |
 | AC-31（功能点 31——三端登录与接入；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 分两面判据：① 服务面 = `client/CLIENT.md` §4（login 三态 ∥ token 兼用 /v1 ∥ logout 即吊销——§6 用例 N37/B27/E28/N39）∥ ② 端侧面 = `docs/core/design/TEAM.md` §5（三端入口 ∥ token 落本地 ∥ 派生 provider ∥ 未登录态 ∥ 退出关闭） | 批内件 + 收口轮（三端实走） |
-| 非功能 · 零依赖 | 本档 §1 ∥ §5 KD-SV-2（口径）；全树 import 扫描断言 = 批内件 | 批内件 |
+| 非功能 · 零第三方运行期依赖 | 本档 §1 ∥ §2.3 ∥ §5 KD-SV-2 / KD-SV-78（口径与范围）；import 扫描断言 = 批内件 | 批内件 |
 | 非功能 · 仅内网 | `ops/OPS.md` 验收判据（`host` 必填 fail-closed + `0.0.0.0` 警告） | 批内件 |
 | 非功能 · 前端自洽 | `webui/WEBUI.md` 验收判据（零外部引用扫描） | 批内件 |
 | 文档面 | `node scripts/doc-check.mjs` exit 0（悬空 0） | 收口轮（仓根机检） |
@@ -574,3 +579,5 @@ sandbox 域 = 2026-10-10 沙盒批新立（两平面两档）；拆分落域内�
 - 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212；需求 §2:31 + AC-31）：**client 域新立**——§3 文档地图板 2 + 域 **7**（+ `client/CLIENT.md`）∥ §4 索引增 KD-SV-61/62（标题 1–60 ⇒ **1–62**）∥ §6 添本批预算行（产品面 ≈+77；client 域新立）∥ §7 增 AC-31 行（两面判据指针）∥ §9 增 R50（需求读法披露 ∥ 随正件 ∥ 部署收尾）；同源随动 = `client/CLIENT.md`（新档） ∥ `accounts/ACCOUNTS.md` ∥ `gateway/API.md` ∥ `EVOLUTION.md` ∥ 端侧 = `docs/core/design/TEAM.md`。**产品码零触（设计轮）**。
 - 2026-10-10（**team-login-client-access 批（B1）· 设计评审轮 1 修正（fix 轮 · 发现 1 ∥ 3）· eng-designer**——承批档 §3 轮次 1 · 台账 #1212）：§2.1 补 **client 域行** + 「六域」⇒ **七域**（含 §1 落点句「域 6 ⇒ 7 档」同拍）∥ §6 本批块**批内件两件对账**（服务端单件入链 ∥ -ends 件不入链——逐件给由）；同源随动 = `EVOLUTION.md` §1-G4（第一步六域 + client 补立）。**零新语义**（评审发现的直接导出项）。
 - 2026-10-10（**server-exec-sandbox 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §2 · 台账 #1224；需求 §5 沙盒块 + 用户 14:00 两平面裁定 + 14:08 必交面行）：§1 定位句（侧栏十 ⇒ **十一页**）∥ §1 落点句（域 7 ⇒ **9 档**）∥ §2.1 域清单（七 ⇒ **八域**——sandbox 新立）+ webui 行（三十 ⇒ **三十二档** ∥ `views-*` 十一 ⇒ **十三档** ∥ 全目录三十一 ⇒ **三十三档**）+ **增 sandbox 行** ∥ §2.2 控制链（十页 ⇒ **十一页**）∥ §3 文档地图（域 7 ⇒ **9**）+ **增 `sandbox/SANDBOX.md` ∥ `sandbox/RUNNER.md` 两行** ∥ §4 索引（KD-SV-1–62 ⇒ **1–76**——14 行在册）∥ §6 本批预算块（产品面 ≈**+3998**；档目 ⇒ **32 ∥ 33**；批内件两件）+ 板级行（`prepublishOnly` 38 ⇒ **40**）+ 随动表行 + 注⑱ ∥ §7 **增沙盒行**（建议编号 AC-36）∥ §9 **增 R51**；同源随动 = `sandbox/SANDBOX.md` ∥ `sandbox/RUNNER.md` ∥ `store/STORE.md` §2 v11 ∥ `gateway/API.md` §2.5/§2.6 ∥ `webui/WEBUI.md` §2.8/§6 ∥ `accounts/ACCOUNTS.md` §2.1 ∥ `ops/OPS.md` §5.10 ∥ `EVOLUTION.md` §1-G4/G6。**产品码零触（设计轮）**。
+- 2026-10-10（**server-exec-sandbox 批 · checkpoint 通路口径 fix 轮 · eng-designer**——2026-10-10 裁定（实现轮上抛——相抵两说：快照 ≤200 MiB vs 全局 32 MiB）；承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §2 fix 轮块）：§4 索引标题 1–76 ⇒ **1–77** + 增索引行 ∥ §5 增 **KD-SV-77**（快照上送 = 路由级豁免——octet-stream ∥ 路由级 200 MiB ∥ 流式落盘）∥ §2 无适用行（架构总览未涉写门/体限句——已核）。**产品码零触**。
+- 2026-10-10（**server-exec-sandbox 批 · 与 core 关系收正 fix 轮 · eng-designer**——2026-10-10 裁定（用户指示 + 评估结论）「共有机制从核引；服务端专有域自持」；承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §2 fix 轮块）：§1 零依赖句收正（零第三方运行期依赖——删全树不引核句）∥ §2.3 裁定形（逐面 + 判据一句）∥ §4 索引 KD-SV-2 行范围限定「网关（provider 层）不引」+ 增 KD-SV-78 行（标题 1–77 ⇒ **1–78**）∥ §5 KD-SV-2 行同限定 + 增 KD-SV-78（全形四列）∥ §7 非功能行与机检句随正。**零新语义**（口径与范围收正——原全树句之论证射程仅网关面）；产品码零触。

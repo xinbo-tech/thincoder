@@ -58,7 +58,7 @@
 
 ## 3. 查询与额度端点（本域）
 
-（错误形 = `gateway/API.md` §3；写端点仅收 `application/json`；同族其余端点 = `accounts/ACCOUNTS.md` §3）
+（错误形 = `gateway/API.md` §3；写端点仅收 `application/json`；**例外** = `POST /api/runner/checkpoint`（octet-stream——`gateway/API.md` §2.6）；同族其余端点 = `accounts/ACCOUNTS.md` §3）
 
 | 方法 + 路径 | 鉴权/角色 | 语义 |
 |---|---|---|
@@ -168,3 +168,4 @@
 - 2026-10-07：实施后回填轮（me 用量图表化批——批 `docs/batches/2026-10-07-me-usage-charts.md`）：§5 四档实读收正（`report` **226**（估 ≈223——越估 3） ∥ `routes` **117**（估 ≈119——低于估 2） ∥ `usage` **170** ∥ `quota` **40**——后两行 = 前账欠项随拍，使小计可逐行核验）+ 小计按实读平账（**726**——对链上 ≈773 差 47，累计估差收口）；同源随动 = `webui/WEBUI.md` §5 ∥ `design/PROJECT.md` §6。
 - 2026-10-09（**server-model-alias 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-server-model-alias.md` §2 · 台账 #1153 + 并入 #1008 ∥ #1152；需求 §2:29 + AC-29）：§1 行形条随正（两字段 = 内部真名；对外显示 = 别名回映射）∥ §2.1 覆盖键随别名随动句 ∥ §2.3 月表读回映射 ∥ §3 `model-quotas` 行键形（对外标识 + 首尾空白收正——#1008）+ 过滤面别名反查优先级 + 读面回映射句 ∥ §4 增 AC-29④ 行 ∥ §5 预算（usage ⇒ ≈182 ∥ aggregates ⇒ ≈183 ∥ report ⇒ ≈252；小计 ⇒ ≈774）∥ §7 增 N34/B26/E23 ∥ §8 增别名面不做句。**产品码零触（设计轮）**。
 - 2026-10-10：清账轮簇Ⅱ server 面小收批（批 `docs/batches/2026-10-10-server-face-residues.md` · 台账 #1161 + 并入 #1162 ∥ #1169 ∥ #1170；2026-10-10 实施轮）：§3 增「派发 ∥ 过滤两径不对称」澄清句（#1162——派发 404 ∥ 过滤逐值可达；事实源 = `thincoder-server/src/metering/report.mjs:48-56` ∥ `gateway/API.md:32-33`）；同源随动 = `thincoder-server/src/metering/routes.mjs` 报文句（#1161 句族收正）。**机制零变**（澄清 ∥ 句面）。
+- 2026-10-10（**server-exec-sandbox 批 · 残差对齐（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §2 残差项 ②；父侧裁定：收口前对齐）：§3 前言补写端点 JSON 门例外括注——**例外** = `POST /api/runner/checkpoint`（octet-stream——`gateway/API.md` §2.6）；与 `accounts/ACCOUNTS.md` §3 ∥ `client/CLIENT.md` §2 逐字同拍。**零新语义**（KD-SV-77 路由级豁免的残差对齐）。

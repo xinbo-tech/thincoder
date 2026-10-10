@@ -8,12 +8,13 @@
 
 - 单库单连接（`DatabaseSync`）；PRAGMA：WAL ∥ `synchronous=NORMAL` ∥ `busy_timeout=5000` ∥ `foreign_keys=ON`。
 - 库文件默认 = `thincoder-server/data/gateway.db`（运行期生成，不入 git）。
-- 结构版本 = `PRAGMA user_version`（当前 = **10**——v2 增 `providers` ∥ v3 增 `audit_events` 与三索引 ∥ v4 增 `providers.settings_json`（模型设置——服务模型配置面） ∥
-  v5 增模型标识两字段拆列 + 派生两表 + 成员配额列 ∥ v6 增成员模型禁用列（详见 §2 v5/v6 段） ∥ v7 增 provider 模型元数据留存列 ∥ **v8 增 key 名称列（`api_keys.name`——me-keys 批）**（详见 §2 v7/v8/v9 段） ∥ v9 增 provider 上游代理旗（`providers.proxy`——server 代理批） ∥ **v10 增审计型 `config_update`（`audit_events` 重建——CHECK 扩型；配置控制台批）**（详见 §2 v10 段）；
+- 结构版本 = `PRAGMA user_version`（当前 = **11**——v2 增 `providers` ∥ v3 增 `audit_events` 与三索引 ∥ v4 增 `providers.settings_json`（模型设置——服务模型配置面） ∥
+  v5 增模型标识两字段拆列 + 派生两表 + 成员配额列 ∥ v6 增成员模型禁用列（详见 §2 v5/v6 段） ∥ v7 增 provider 模型元数据留存列 ∥ **v8 增 key 名称列（`api_keys.name`——me-keys 批）**（详见 §2 v7/v8/v9 段） ∥
+  v9 增 provider 上游代理旗（`providers.proxy`——server 代理批） ∥ **v10 增审计型 `config_update`（`audit_events` 重建——CHECK 扩型；配置控制台批）**（详见 §2 v10 段） ∥ **v11 增沙盒七表 + 审计 CHECK 再扩（十二型——server-exec-sandbox 批）**（详见 §2 v11 段）；
   未发布期连续演进，无历史库迁移包袱——旧库启动自动升；迁移链机制自 v1 起备）。
 - server-model-alias 批（2026-10-09——台账 #1153）：**零结构变更**（别名落 `models_json` 元素——JSON 文本内演进；无新列/新表/新段——结构版本保持 **10**）。
 
-## 2. DDL（v1 基线四表 + v2–v10 增段）
+## 2. DDL（v1 基线四表 + v2–v11 增段）
 
 ### v1 基线（四表——逐字）
 
@@ -234,10 +235,96 @@ CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
 ```
 
 - 形 = 十型（九型 + `config_update`——配置写入事件）；`detail.keys` = 变更键名清单（值永不入——密钥/uri 洁癖）；actor = admin 名快照（target = 无——空串）。
-- 语义与写入点 = `accounts/ACCOUNTS.md` §2.1（写入面 = `src/gateway/config-admin.mjs`（已落盘 · 实读 **182** 行）——写盘成功后一条；失败 ⇒ warn，不反噬已落盘事实）；消费 = 审计页十型下拉/文案（`webui/WEBUI.md` §2.3④）。
+- 语义与写入点 = `accounts/ACCOUNTS.md` §2.1（写入面 = `src/gateway/config-admin.mjs`（已落盘 · 实读 **182** 行）——写盘成功后一条；失败 ⇒ warn，不反噬已落盘事实）；消费 = 审计页类型下拉/文案（`webui/WEBUI.md` §2.3④——型面现状 = 十二型，v11 段）。
 - 圈界：重建净零新表/新列——判据 = 行拷贝逐值（含 id 连续）+ 两索引在场。
 
-- 表归属：`members` ∥ `api_keys` ∥ `sessions` ∥ `audit_events` = accounts 域（`accounts/ACCOUNTS.md`）；`usage` ∥ `usage_daily` ∥ `quota_counters` = metering 域（`metering/METERING.md`）；`providers` = gateway 域（provider 管理面 ∥ v4 模型设置——`gateway/API.md` §2.2）；结构单源 = 本档。
+### v11 增段（沙盒七表 + 审计 CHECK 再扩——sandbox 域；server-exec-sandbox 批）
+
+```sql
+-- ① 沙盒七表（对象模型 = `sandbox/SANDBOX.md` §2——单源）
+CREATE TABLE IF NOT EXISTS sandbox_runners (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,                  -- runner 名（注册时给）
+  token_hash TEXT NOT NULL UNIQUE,            -- sha256(runner 令牌) hex
+  labels_json TEXT NOT NULL DEFAULT '{}',     -- 容量标签（放置判据）
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','draining','drained','disabled')),
+  runtime_json TEXT NOT NULL DEFAULT '{}',    -- 本机自检读数（心跳更新）
+  last_heartbeat_at INTEGER,                  -- unix ms（3 拍缺 ⇒ unhealthy——展示面派生）
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sandbox_workspaces (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  owner_member_id INTEGER NOT NULL REFERENCES members(id),
+  key_id INTEGER NOT NULL REFERENCES api_keys(id),
+  key_plain TEXT NOT NULL,                    -- 工作区 key 明文（盒重建再注入——披露 D2）
+  runner_id INTEGER,                          -- 放置绑定（未放置 ⇒ NULL）
+  required_labels_json TEXT NOT NULL DEFAULT '{}',
+  limits_json TEXT NOT NULL DEFAULT '{}',     -- 每工作区覆写（资源 + TTL；键集/取值序 = `sandbox/SANDBOX.md` §2；空 = 随全局默认）
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sandbox_rules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL CHECK (kind IN ('cidr','domain')),
+  action TEXT NOT NULL CHECK (action IN ('allow','deny')),
+  target TEXT NOT NULL,                       -- CIDR ∥ 域名（含单层左通配）
+  port INTEGER,                               -- NULL = 不限
+  protocol TEXT,                              -- 'tcp' ∥ 'udp' ∥ NULL（不限）
+  priority INTEGER NOT NULL DEFAULT 0,        -- 同动作内排序
+  note TEXT NOT NULL DEFAULT '',
+  source TEXT NOT NULL DEFAULT 'admin' CHECK (source IN ('default','admin','approval')),
+  created_at TEXT NOT NULL,
+  created_by TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS sandbox_pending (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  runner_id INTEGER NOT NULL,
+  workspace_id INTEGER NOT NULL,
+  host TEXT NOT NULL,
+  hits INTEGER NOT NULL DEFAULT 1,            -- 三次批准建议判据
+  first_seen_at INTEGER NOT NULL,
+  last_seen_at INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','approved_once','approved_remember','denied','timeout')),
+  resolved_at INTEGER
+);
+CREATE TABLE IF NOT EXISTS sandbox_tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  runner_id INTEGER NOT NULL,
+  kind TEXT NOT NULL,                         -- 'sandbox.*' 本批；'ci.*' 预留（可扩——KD-SV-72）
+  payload_json TEXT NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued','claimed','done','failed','unsupported')),
+  created_at TEXT NOT NULL,
+  claimed_at INTEGER,
+  finished_at INTEGER,
+  result_json TEXT
+);
+CREATE TABLE IF NOT EXISTS sandbox_checkpoints (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  workspace_id INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  size INTEGER NOT NULL,                      -- 字节
+  blob_path TEXT NOT NULL,
+  note TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS sandbox_settings (
+  k TEXT PRIMARY KEY,                         -- 全局默认——键全集与值形 = `gateway/API.md` §2.5（单源）；「默认单」非本表（= sandbox_rules 种子行）
+  v TEXT NOT NULL                             -- JSON 文本（数字 ∥ 字符串统一 JSON 编码）
+);
+
+-- ② 审计 CHECK 再扩（十型 ⇒ 十二型——表重建，步序与 v10 同构）
+-- + 'sandbox_rule'（规则增删——detail = { action, rule }）∥ + 'sandbox_event'（审批三态/超时 ∥ 盒起停拆 ∥ runner 注册/排空/删除 ∥ join 失败 ∥ 快照——detail = { kind, ... }）
+-- 重建步（建新表（十二型 CHECK） ∥ 拷贝 ∥ DROP ∥ RENAME ∥ 两索引重建——SQL 形同 v10 段，逐字替换型清单）。
+-- ③ 种子（初始化点 = 本段一次性写入；可改可删——不复活）
+--   sandbox_rules 八行（source='default'）：deny（cidr）= 10.0.0.0/8 ∥ 172.16.0.0/12 ∥ 192.168.0.0/16；
+--   allow（domain）= registry.npmjs.org ∥ github.com ∥ *.githubusercontent.com ∥ gitee.com ∥ *.gitee.com；
+--   恒拒（127.0.0.0/8 ∥ 169.254.0.0/16）= 内置（非行——不入种子）；动态项（服务器网段 ∥ runner 自身网段）注册时自动带入。
+```
+
+- 语义/对象模型 = `sandbox/SANDBOX.md` §2/§3–§7（单源）；端点 = `gateway/API.md` §2.5/§2.6；执行面读写 = `sandbox/RUNNER.md`。
+- 圈界：`sandbox_settings` = 键值设置面（全局默认——键全集/值形 = `gateway/API.md` §2.5）；`sandbox_*` 与 `members`/`api_keys` 的引用 = `owner_member_id` ∥ `key_id`（沿 `api_keys` 先例）；`sandbox_pending`/`sandbox_tasks`/`sandbox_checkpoints` 无 FK（历史/瞬态面自足——沿 `audit_events` 口径）。
+
+- 表归属：`members` ∥ `api_keys` ∥ `sessions` ∥ `audit_events` = accounts 域（`accounts/ACCOUNTS.md`）；`usage` ∥ `usage_daily` ∥ `quota_counters` = metering 域（`metering/METERING.md`）；`providers` = gateway 域（provider 管理面 ∥ v4 模型设置——`gateway/API.md` §2.2）；
+  `sandbox_runners` ∥ `sandbox_workspaces` ∥ `sandbox_rules` ∥ `sandbox_pending` ∥ `sandbox_tasks` ∥ `sandbox_checkpoints` ∥ `sandbox_settings` = sandbox 域（`sandbox/SANDBOX.md` §2——对象模型单源）；结构单源 = 本档。
 
 ## 3. 迁移链（`user_version` 逐版升）
 
@@ -256,12 +343,14 @@ CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
 - v9 = provider 上游代理旗（`providers.proxy`——**server 代理批** ∥ 台账 #1129）：**列级 ALTER = 表不重建**（存量行即刻得 `0`——缺省直连）；旧库（v1–v8）启动自动升 ∥ 空库直落 v9；判据（批内件）= 空库读数 9 ∥ v8 库升后读数 9 ∥ v9 段幂等（再开零变）∥ 新列在场（`pragma_table_info('providers')` 含 `proxy`）∥ 存量默认值抽查（迁移后旧行 `proxy = 0`——直连缺省）。
 - v10 = 审计事件型扩（`audit_events` CHECK 扩十型——**配置控制台批** ∥ 台账 #1139）：**表重建**（SQLite 不可改 CHECK——建新表 ∥ 拷贝 ∥ 换名 ∥ 索引重建）；旧库（v1–v9）启动自动升 ∥ 空库直落 v10；判据（批内件）= 空库读数 10 ∥ v9 库升后读数 10 ∥ v10 段幂等（再开零变）∥ 存量行逐值保形（id/时刻/型/详情——拷贝前后全等）∥ 两索引在场 ∥ `config_update` 型可写（CHECK 放行）∥ `sqlite_sequence` 连续（新事件 id 不撞存量）。
 - server-model-alias 批（2026-10-09——台账 #1153）：**零结构变更**（别名 = `models_json` 元素升级——JSON 文本内演进；无新列/新表/新段——结构版本保持 **10**；旧行字符串天然兼容）；判据（批内件）= 迁移链读数仍 10 ∥ 别名增删往返不改库结构（`pragma_table_info('providers')` 零变）。
+- v11 = 沙盒七表 + 审计 CHECK 再扩（十二型）+ `sandbox_rules` 种子（八行——**server-exec-sandbox 批** ∥ 台账 #1224）：七表 CREATE（见 §2 v11 段）+ 种子写入（`source='default'`——一次性；可改可删不复活）+ `audit_events` 表重建（十型 ⇒ 十二型：+ `sandbox_rule` ∥ `sandbox_event`——步序与 v10 同构）；
+  旧库（v1–v10）启动自动升 ∥ 空库直落 v11；判据（批内件）= 空库读数 11 ∥ v10 库升后读数 11 ∥ v11 段幂等（再开零变） ∥ 七表在场（`pragma_table_info`） ∥ 存量审计行逐值保形 + 两索引在场 ∥ 两新型可写（CHECK 放行） ∥ 种子八行在场（`source='default'`——deny 三 + allow 五） ∥ 覆写列在场（`sandbox_workspaces.limits_json` 默认 `'{}'`）。
 
 ## 4. 本域文件与行数预算（本域族行）
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/store/db.mjs`（已落盘） | **124 ⇒ ≈160 ⇒ 144**（实读——v3 落地后）**⇒ ≈155**（服务模型配置面批 +≈11 = v4 段（ALTER + 迁移段））**⇒ 实读 150 ⇒ ≈205**（配额分模型批 +≈55 = v5 段：拆列 ALTER/UPDATE ∥ 建两表 ∥ 两回填 INSERT ∥ 成员列增删）**⇒ 实读 202 ⇒ ≈214**（配额 v2 批 +≈12 = v6 段（ALTER + 迁移段））**⇒ 实读 210（v6 落地后）⇒ ≈218**（模型元数据批 +≈8 = v7 段（ALTER + 迁移段——与 v6 段同构））**⇒ ≈228**（me-keys 批 +≈10 = v8 段（ALTER + 回填 UPDATE + 迁移段——较 v6/v7 段多一条回填））**⇒ 实读 ≈224（2026-10-09）⇒ ≈234**（本批代理：v9 段 +≈10——实读待回填）**⇒ 实读 231（2026-10-09——本设计轮复读）⇒ ≈256（配置控制台批：v10 重建段 +≈25——建新表/拷贝/换名/索引重建 ∥ 迁移段；实读待回填）⇒ 实读 255（2026-10-09——配置控制台批落地后）∥ ±0（2026-10-09 alias 批：零结构变更——无 v11 段）** | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
+| `thincoder-server/src/store/db.mjs`（已落盘） | **124 ⇒ ≈160 ⇒ 144**（实读——v3 落地后）**⇒ ≈155**（服务模型配置面批 +≈11 = v4 段（ALTER + 迁移段））**⇒ 实读 150 ⇒ ≈205**（配额分模型批 +≈55 = v5 段：拆列 ALTER/UPDATE ∥ 建两表 ∥ 两回填 INSERT ∥ 成员列增删）**⇒ 实读 202 ⇒ ≈214**（配额 v2 批 +≈12 = v6 段（ALTER + 迁移段））**⇒ 实读 210（v6 落地后）⇒ ≈218**（模型元数据批 +≈8 = v7 段（ALTER + 迁移段——与 v6 段同构））**⇒ ≈228**（me-keys 批 +≈10 = v8 段（ALTER + 回填 UPDATE + 迁移段——较 v6/v7 段多一条回填））**⇒ 实读 ≈224（2026-10-09）⇒ ≈234**（本批代理：v9 段 +≈10——实读待回填）**⇒ 实读 231（2026-10-09——本设计轮复读）⇒ ≈256（配置控制台批：v10 重建段 +≈25——建新表/拷贝/换名/索引重建 ∥ 迁移段；实读待回填）⇒ 实读 255（2026-10-09——配置控制台批落地后）∥ ±0（2026-10-09 alias 批：零结构变更）⇒ ≈350（server-exec-sandbox 批：v11 段 +≈95 = 七表 + 种子 + 审计重建——实读待回填）** | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
 
 ## 5. 关键决策（本域）
 
@@ -292,3 +381,5 @@ CREATE INDEX IF NOT EXISTS idx_audit_type_ts ON audit_events(type, ts);
 - 2026-10-09：配置控制台批设计轮（批 `docs/batches/2026-10-09-server-console-config.md`——台账 #1139；用户 15:51–15:57 三连）：§1 结构版本 9 ⇒ **10** ∥ §2 增 v10 增段（`audit_events` CHECK 扩型——表重建 SQL 逐字 ∥ 语义/圈界）∥ §2 标题随正 ∥ §3 迁移链补 v10 段（判据）∥ §4 预算（db 实读 231 ⇒ ≈256——v10 段 +≈25）；同源随动 = `accounts/ACCOUNTS.md` §2.1（事件型/写入面） ∥ `webui/WEBUI.md` §2.3④（十型）。**产品码零触（设计轮）**。
 - 2026-10-09：设计修正轮（fix——批 `docs/batches/2026-10-09-server-console-config.md` §3 评审发现 6，本档面）：§1 版本枚举补 v9 条（`providers.proxy`——server 代理批）。**零新语义**（评审发现直接导出项）。
 - 2026-10-09（**server-model-alias 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-server-model-alias.md` §2 · 台账 #1153；需求 §2:29 + AC-29）：§1 补零结构变更句 ∥ §2 v2 段 `models_json` 注释两形 + 增条目两形/别名语义条 ∥ v5 拆列注释随正（内部真名）+ `provider` 约定句补别名回映射 ∥ v6 禁令键形收正（裸名合法 + 首尾空白 400——#1008）∥ §3 补零结构变更条（版本保持 **10**）∥ §4 db.mjs 行 ±0 句。**产品码零触（设计轮）**。
+- 2026-10-10（**server-exec-sandbox 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §2 · 台账 #1224；需求 §5 沙盒块 + 用户 14:00 两平面裁定）：§1 结构版本 10 ⇒ **11** ∥ §2 增 v11 增段（沙盒七表 DDL ∥ 审计 CHECK 再扩（十型 ⇒ 十二型）重建注）∥ §2 标题随正 ∥ 表归属补 sandbox 行 ∥ §3 迁移链补 v11 段（判据）∥ §4 预算（db 实读 255 ⇒ ≈345——v11 段 +≈90）；同源随动 = `sandbox/SANDBOX.md` §2 ∥ `accounts/ACCOUNTS.md` §2.1（十二型） ∥ `gateway/API.md` §2.5/§2.6。**产品码零触（设计轮）**。
+- 2026-10-10（**server-exec-sandbox 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §3 轮次 1 之 1/2 + 用户 14:56 直令）：§2 v11 段 `sandbox_workspaces` 增 `limits_json` 列（每工作区覆写——键集/取值序 = `sandbox/SANDBOX.md` §2）∥ `sandbox_settings` 注释收正（键全集/值形单源 = `gateway/API.md` §2.5；「默认单」非本表 = `sandbox_rules` 种子行）∥ 增 ③ 种子注（初始化点 = 本段一次性写入——八行：deny 三 + allow 五；恒拒两项非行）∥ `sandbox_event` 注补 join 失败 ∥ §3 v11 判据补种子八行 + 覆写列 ∥ §4 db.mjs 行随正（⇒ ≈350）。**零新语义**（评审发现直接导出项 + 用户直令）。

@@ -498,20 +498,20 @@ test("集成冒烟：settingsTree 全树（S1 ∕ S2 切片键经归一入段）
 })
 
 
-// ─── 通道面（结构）：51 项两向相等 ∕ W2/W3 六新连块定序 ∕ 档头计数 ∕ 渲染面闭包纪律 ──────
+// ─── 通道面（结构）：52 项两向相等 ∕ W2/W3 六新连块定序 ∕ 档头计数 ∕ 渲染面闭包纪律 ──────
 
-test("通道面：白名单 51 项 ≡ 注册表 HANDLERS（两向相等）；W2/W3 六新连块定序；三档头计数五十一（跨批随动——含后续三增 + B1 团队三增）", () => {
+test("通道面：白名单 52 项 ≡ 注册表 HANDLERS（两向相等）；W2/W3 六新连块定序；三档头计数五十二（跨批随动——含后续三增 + B1 团队三增 + 桌面 teamVerify）", () => {
   const preload = deskReq(join(ROOT, "thincoder-desktop/src/preload/preload.cjs"))
-  assert.equal(preload.CHANNELS.length, 51, "51 项（W2/W3 六增 + 后续三增 + B1 团队三增：`team:status` ∥ `team:login` ∥ `team:logout`）")
+  assert.equal(preload.CHANNELS.length, 52, "52 项（W2/W3 六增 + 后续三增 + B1 团队三增：`team:status` ∥ `team:login` ∥ `team:logout` + 桌面 teamVerify：`team:verify`）")
   const w23 = preload.CHANNELS.indexOf("provider:setKey")
   assert.deepEqual(preload.CHANNELS.slice(w23, w23 + 6), ["provider:setKey", "provider:delKey", "provider:models", "provider:setProxy", "mcp:update", "mcp:reconnect"], "W2 四新 + W3 两新 = 连块定序（后续三增随其后）")
-  assert.deepEqual(preload.CHANNELS.slice(-3), ["team:status", "team:login", "team:logout"], "B1 团队三增定序末位（他批增量——随动）")
+  assert.deepEqual(preload.CHANNELS.slice(-3), ["team:login", "team:logout", "team:verify"], "团队族定序末位（含桌面 teamVerify 转口——随动）")
   const registrySrc = read("thincoder-desktop/src/main/ipc-registry.mjs")
   const rows = [...registrySrc.matchAll(/^\s{2}"([^"]+)":/gm)].map((m) => m[1])
-  assert.equal(rows.length, 51)
+  assert.equal(rows.length, 52)
   assert.deepEqual([...new Set(rows)].sort(), [...preload.CHANNELS].sort(), "白名单 ↔ 注册表两向相等")
   for (const file of ["thincoder-desktop/src/main/ipc.mjs", "thincoder-desktop/src/main/ipc-registry.mjs", "thincoder-desktop/src/preload/preload.cjs"]) {
-    assert.match(read(file), /五十一项/, `${file} 档头计数随动`)
+    assert.match(read(file), /五十二项/, `${file} 档头计数随动`)
   }
   // 渲染面静态闭包纪律（零 `node:` ∕ 零裸包 —— 本批新改渲染档）
   for (const file of [

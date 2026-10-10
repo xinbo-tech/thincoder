@@ -227,6 +227,31 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
   **boot 播种径**（无槽复合 ⇒ workspaceState prefs 随 `models` 下发 ⇒ 回写携该值）⇒ 选定复合命中**宿主簿记**（最近下发 prefs 复合——推送点 `settings.mjs`，沿 `_lastModelsPayload` 先例）∧ 槽基线档缺 ⇒ **播种回声门判零**（写面单点第三门）；首回合空槽播种（`resolveTurnModelAndStamp` → `saveLines`）不经 `selectModel` 消息 ⇒ 零触。
 - **边界**：空槽短路（`_ensureSlot` 未解析窗口）⇒ 零写回（无槽面）；标语面文案零改（横幅键 ∥ 词表不动）。
 
+### 4.11 首启板两路（F-W20 · 2026-10-10 · 登录面补全批 · 台账 #1230）
+
+- **形态**（用户 2026-10-10 14:49 裁定——图形端 = 两卡并排；都不预选；「以后再说」第三态保留）：`#welcome-panel` 路由屏 = 两卡并排（`div.welcome-routes`）：
+  团队卡（标题「登录团队服务器」+ 说明「用团队发的账号登录——模型由服务器提供，不用自己填 key」+ 行动钮——锚 `button[data-route="team"]`）∥ 本地卡（标题「配置本地 provider」+ 说明「自己填 API key，不依赖团队服务器」+ 行动钮——锚 `button[data-route="local"]`）；跳过钮 = 既有 skip（**值改**：`welcome.skip`——zh「以后再说」∥ en「Later」，与桌面 ∥ CLI 同字面；登记为值改）。
+- **换取（同屏内——不叠弹层）**：点团队卡 ⇒ 换取区换团队表单（三字段（server ∥ username ∥ password）+ 登录钮 + 失败行 + 「← 换一种方式」回退）；点本地卡 ⇒ 换取区换**既有表单**（preset select + key + 保存——现欢迎板内容原样迁入换取区；零重构）；「← 换一种方式」⇒ 回路由屏（**先保留**：已填 server ∥ username 保留；密码恒清——沿 B1 口径）。
+- **提交链（复用既有）**：团队表单提交 ⇒ 出站 `teamLogin { server, username, password }`（既有——本档 §2.20）；回执 `teamLoginResult` ⇒ 成 ⇒ 既有 `providerStatus` 闸放行 ⇒ 板退场（`maybeShowWelcome(status, keyOk)`——`keyOk` 真 ⇒ `hideWelcomePanel()`；`thincoder-vscode/webview/onboarding.js:47-53`）；
+  `notice`（同名冲突）⇒ 板内就地提示（登成当刻——逐字同句；一次性事件）；败 ⇒ 板内就地错误行（四句逐字——`settings.team.reason.*` 语汇）+ 停留可重试。
+- **接线**：`thincoder-vscode/webview/onboarding.js`（+route 状态 ∥ 换取 ∥ 团队表单提交/回退）+ `thincoder-vscode/webview/index.html`（#welcome-panel 结构）+ `thincoder-vscode/webview/settings.css`（卡样式段）
+  + `thincoder-vscode/webview/state.js`（ctx 引用）+ `thincoder-vscode/webview/chat-messages.js`（`teamLoginResult` 既有两消费位——+板面钩）；**零新协议消息**。
+- **跳过/以后再说**：⇒ 既有 `_welcomeDismissed`（webview 生存期——板不再显）；登录路仍可达 = 状态栏团队 item（§4.12）；**零第二引导面**。
+- **判据（机检 ∥ 真机）**：机检 = 批内件（happy-dom：路由屏两卡在场 ∥ 零预选 ∥ 换取（表单在场 ∧ 路由退场——同屏）∥ 回退（路由在场 ∧ 已填保留 ∧ 密码清）∥ 本地路既有表单逐字等价（负控）∥ 失败行四句）；真机 = 收口轮实走（首启 → 两路 → 登 → 模型面）。
+- **边界**：不改 `localStorage keyOk` 交棒判据 ∥ 不改设置面板 ∥ 零新协议 ∥ 不改 preset 表单语义（本地路零改）。
+
+### 4.12 团队常显与直达（状态栏 item + 命令 · F-W21 · 2026-10-10 · 登录面补全批 · 台账 #1231）
+
+- **常态化指示**（宿主侧——新档 `thincoder-vscode/src/extension/team-surface.mjs`（拟新增））：`vscode.window.createStatusBarItem`（Right，优先级 = 98——台账 99 邻位）——三态：
+  ① 未登录 ⇒ 文本「登录团队服务器」（入口）② 已登录 ⇒ 成员名（`member.name ?? member.username`；**tooltip = 服务器 + 端标签**——服务器形（host），不搬 URL 全串）③ 已失效（`verify === invalid`）⇒ 文本「已失效——重新登录」+ `backgroundColor`（`warning` 族——沿 VS Code 警示面）；命令 = `thincoder.team`（点击即流）。
+- **登/退直达流（命令 `thincoder.team`）**：起手 = 活校验（`teamVerify`——触发点制）；态分流：未登录 / 已失效 ⇒ 登录流（`showInputBox` 三问：server（预填留存值）→ username → password（`password: true`））
+  ⇒ `teamLogin`（核）⇒ 成 ⇒ 复读 + 刷新 item + 推 `teamStatus`/`providerStatus`（设置面板随动——既有推送链）；`notice`（同名冲突）⇒ `showWarningMessage` 提示（逐字同句；一次性事件）；已登录 ⇒ QuickPick（「退出登录」）⇒ `teamLogout` ⇒ 刷新 + 推送 + 吊销未达提示（逐字）；失败 = 四句逐字（`showErrorMessage`——词表复用）。
+- **登/退不再经设置面板**：面板团队卡 = 管理面（label ∥ 详情——`docs/vsc/design/SETTINGS.md` §2.20 收正）；「轮换」= 另裁项（服务端无 client rotate 端点——本批零控件）。
+- **接线**：`thincoder-vscode/extension.mjs`（+`registerCommand('thincoder.team')` + 初始化/销毁 item）+ `thincoder-vscode/package.json` contributes.commands（+1）+ `thincoder-vscode/locales/en.json ∥ zh.json`（+键）
+  + 复用 `thincoder-vscode/src/extension/team.mjs`（teamStatus/teamLogin/teamLogout + **`teamVerify` 转口**——转口四件；`team-surface.mjs` 经转口取核，与桌面 `thincoder-desktop/src/main/team.mjs` 同拍）∥ `thincoder-vscode/src/extension/settings.mjs` `pushTeamStatus`（既有——单一实现）；**零新 webview 协议**。
+- **判据（机检 ∥ 真机）**：机检 = 批内件（item 三态文本 ∥ tooltip 含 host ∥ 命令注册 ∥ 流：桩 `showInputBox` 三连 ⇒ `teamLogin` 调用序 ∥ 已登录 QuickPick ⇒ `teamLogout` ∥ 失败四句）；真机 = 收口轮（命令面板 → 登录 → item 变名 → 点击 → 退出 → item 回入口）。
+- **边界**：不改 webview 消息面 ∥ 不改 panel 推送链 ∥ 状态 item 不搬 URL 全串 ∥ 校验触发点制（零周期轮询）。
+
 ## 5. 子代理活动块与活动区
 
 子 agent / consult / escalate / advisor-async 的活动块**出生即 append 到固定活动区 `#subagent-activity` 区尾**（`thincoder-vscode/webview/activity.js:65`），在消息区与输入区之间——**live 固定可见，不随会话流滚动丢失**。
@@ -673,6 +698,8 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 | 15 | 块头注记与 ⏹ 门控扩支 · digest 两档（X6 · X10 · X11 · M4） | F-A4 · F-W7 · 台账 #125 |
 | 16 | 内容行合并粒度（CLI `pushBlock` 对齐 · 协议字段 `face` · RAW 拼接 + `pre-wrap` · 工具结果行面删净） | F-W1 · N-W5 · 台账 #148 |
 | 17 | 消化面记录恢复（痕元素 ∥ 归档块——记录承接 ∥ `recordAppend` 出站 ∥ 页级重建 ∥ 容差二态） | F-W1 · I-7 · core §4.4 F-S7 |
+| 18 | 首启板两路（两卡 ∥ 零预选 ∥ 同屏换取 ∥ 回退保真 ∥ 「以后再说」第三态 ∥ 提交链复用零新协议） | F-W20 |
+| 19 | 团队常显与直达（状态栏 item 三态 ∥ 命令 `thincoder.team` 登/退流 ∥ 校验触发点制 ∥ 卡降管理面） | F-W21 |
 
 **用例面**：本板块的测试资产原在 `thincoder-vscode/test/`（`activity-flow` · `activity-closure` · `activity-live-ux` ·
 `async-visibility` · `history-window` · `history-restore` · `session-boot`）——**退场注**：逐档随 2026-09-28 测试树全清重置退场；用例表归测试层，本档不复制（D2）。
@@ -703,6 +730,7 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 **边界（本节不做）**：不做常驻仪表（默认一次性探针）；不加 webview `performance` 标记（真画证据归真机 QA · 台账 #162）；口径 A 不入本批。**读数留档** = 批次档 §5 / §6（一次性材料）；探针撤除后 `git diff` 空 = 方案自身验证面。
 
 ## 变更记录
+- 2026-10-10（**login-entry-completion 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §1 · 台账 #1230 ∥ #1231；用户 14:33–14:49 裁定链）：新增 **§4.11 首启板两路**（F-W20——路由屏两卡 ∥ 零预选 ∥ 同屏换取 ∥ 回退保真 ∥ 提交链复用（零新协议）∥ 判据 ∥ 边界）∥ **§4.12 团队常显与直达**（F-W21——状态栏 item 三态 ∥ 命令 `thincoder.team` 登/退流 ∥ 校验触发点制 ∥ 卡降管理面）∥ §10 +两行（18 ∥ 19）。语义单源 = `docs/core/design/TEAM.md` §2.5 ∥ §2.6。**产品码零触（设计轮）**。明细 = 批档 §2。
 - 2026-10-10（**跨端对齐批 · 实施轮随动 · eng-coder**——承批档 `docs/batches/2026-10-10-cross-end-alignment.md` §2 · 台账 #1011）：§4.3 CLI 对位句括注收正（「#677 实施清单」⇒「已落——归一以 CLI 标尺；#677 · I16b」——与同节「端差」句同式）；§8 **U-W10** ∥ **U-W16** 两行成功面句收正为「拼接已归一（已落——#677 · I16b）」（需求档 §4 同拍已落）。**零新语义**（时态 ∥ 内张力收正）。
 - 2026-10-09（**stale-fixes 批 · 坐标 sweep（#1066）· 父侧笔**——承批档 `docs/batches/2026-10-09-stale-fixes.md` §2.2-10 · 台账 #1131；复核记录 = 批档 §6）：全档正文面（`:1-704`）逐锚坐标 sweep 随正（≈130 处——行号漂移 ∥ 归属漂移〔端 shim ⇒ 核件〕∥ 归档址指针 ∥ 行数读数；变更记录面自身零改）+ 档头注补 sweep 口径（`:8`）。**零新语义**（坐标 ∥ 读数随正——判据 ∥ 契约 ∥ 决策零变）。
 - 2026-10-09（**provider-default-model-purge 批 · 实施期收正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-09-provider-default-model-purge.md` §2 ∥ §5 舱4 · 台账 #1122）：§4.8 fallback 第二字面键名补登（`banner.defaultModelFallbackNoModel`——`data-banner-key` 取值闭集闭合；#22 实装键名）+ 登记条同拍。**零新语义**（键名补登）。
@@ -869,3 +897,4 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 - 2026-10-04（**收口轮 · 父侧直接执行〔可 revert〕**——承批档 `docs/batches/2026-10-04-stream-ledger-lines-retire.md` §6）：§3 文件表 `chat-messages.js` 读数 238 ⇒ **267**（收口复读）；引文重锚（`ledger-surface.mjs` 的 `:125-126` ⇒ `:83` ∥ `chat-messages.js` 的 `:194-200` ⇒ `:191-197`）。**零新语义**（读数 ∥ 坐标）。
 - 2026-10-05（**批 digest-accounting · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-05-digest-accounting.md` §1 · 需求 §4.15 · 台账 #930）：§5.1 增**残余元素**条（`end` 载荷 `unsettled > 0` ⇒ 追加 `.digest-status` 残余元素——词键 `digest.residue` 核字典直取；`= 0` ⇒ 零元素）。**零新语义**（判据 / 机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31）。明细 = 批档 §2。
 - 2026-10-07（**MCP 键值行式输入批 · 实施后回填轮（设计面）· eng-designer**——承批档 `docs/batches/2026-10-07-mcp-kv-input.md` §5 ∥ §2 追记⑧ · 台账 #1036）：§3 文件表 +`settings-mcp.js` 行（**273 行**——自 `settings-tools.js` 拆出）+ `settings-tools.js` 读数（拆后 **212** ∥ 拆前 433）；模块计数随正（**44 ⇒ 47**——实读 2026-10-07）。**零新语义**（读数 ∥ 登记）。明细 = 批档 §2 追记⑧。
+- 2026-10-10（**login-entry-completion 批 · 设计评审轮 1 修正（fix 轮 · 发现 4 ∥ 5 ∥ 6 ∥ 13）· eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §3 轮次 1 · 台账 #1229–#1232）：§4.11 提交链（板退场实锚 `maybeShowWelcome`/`hideWelcomePanel` ∥ 同名冲突 `notice` 落点 ∥ 跳过钮值改登记）∥ §4.12（同名冲突落点 = `showWarningMessage` ∥ `teamVerify` 转口点名）。**零新语义**（评审发现的直接导出项；值改一项已登记）。

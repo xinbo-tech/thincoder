@@ -59,7 +59,7 @@ const END_TEAM_FILES = [
   "thincoder-vscode/webview/settings-team.js",
   "thincoder-vscode/src/extension/panel-messages-settings.mjs",
   "thincoder-desktop/src/main/team.mjs",
-  "thincoder-desktop/renderer/mount-settings-team.mjs",
+  "thincoder-desktop/renderer/mount-team.mjs",
   "thincoder-desktop/renderer/views/settings-sections-team.mjs",
 ]
 
@@ -106,7 +106,7 @@ test("腿1b B1 同名手工：登录仍成 + notice 码（零覆盖）∥ 三端
   assert.match(core, /return notice !== null \? \{ ok: true, notice \} : \{ ok: true \}/, "成径返回形（notice 仅同名冲突在场）")
   assert.ok(read("thincoder-cli/src/cli/team-command.mjs").includes("result.notice === NOTICE_MANUAL_NAME_CONFLICT"), "CLI 码判定在位")
   assert.ok(read("thincoder-vscode/webview/settings-team.js").includes('"manual-name-conflict": "settings.team.notice.manualNameConflict"'), "VSC 码表在位")
-  assert.ok(read("thincoder-desktop/renderer/mount-settings-team.mjs").includes('const MANUAL_NAME_CONFLICT = "manual-name-conflict"'), "桌面码常量在位")
+  assert.ok(read("thincoder-desktop/renderer/mount-team.mjs").includes('const MANUAL_NAME_CONFLICT = "manual-name-conflict"'), "桌面码常量在位")
 })
 
 test("腿1c E1 失败面：分类早返零写盘（network ∥ credentials ∥ rate_limited）∥ write_failed 两径零假成功", () => {
@@ -271,7 +271,7 @@ test("腿5c 两提示句三端逐字同拍 ∥ 一次性事件门（notice 码 �
   assert.ok(cliCmd.includes("if (result.notice === NOTICE_MANUAL_NAME_CONFLICT) console.error(TEXT_MANUAL_CONFLICT)"), "CLI 登录当刻")
   assert.ok(cliCmd.includes("if (result.revokeDelivered === false) console.error(TEXT_REVOKE_UNDELIVERED)"), "CLI 退出当刻")
   assert.ok(read("thincoder-vscode/webview/settings-team.js").includes('result.revokeDelivered === false ? t("settings.team.notice.revokeUndelivered") : null'), "VSC 退出当刻（缺席 = true）")
-  const deskMount = read("thincoder-desktop/renderer/mount-settings-team.mjs")
+  const deskMount = read("thincoder-desktop/renderer/mount-team.mjs")
   assert.ok(deskMount.includes('receipt.notice === MANUAL_NAME_CONFLICT ? { kind: "manualConflict" } : null'), "桌面登录当刻")
   assert.ok(deskMount.includes('receipt.revokeDelivered === false ? { kind: "revokeFailed" } : null'), "桌面退出当刻（缺席 = true）")
   const statusBlock = core.match(/export function teamStatus\(\) \{[\s\S]*?return \{([\s\S]*?)\n  \}/)?.[1] ?? ""
@@ -337,21 +337,22 @@ test("腿7b CLI 补全三套：bash ∥ zsh ∥ fish team 词面（顶层 + 子�
 
 // ─── 腿 8 · VSC 第 6 卡 ──────────────────────────────────────────────────────────────────────
 
-test("腿8a VSC 第 6 卡：复合序尾 ∥ 三字段（密码型 ∥ 密码零 trim）∥ 两钮 ∥ 未登录提示行", () => {
+test("腿8a VSC 第 6 卡：复合序尾 ∥ 管理面三读数 ∥ 零字段零钮零上行 ∥ 两回执消费位", () => {
   const settingsJs = read("thincoder-vscode/webview/settings.js")
   assert.ok(settingsJs.includes("providersCardHtml() + agentCardHtml() + consultAdvisorCardHtml() + toolsCardHtml() + envCardHtml() + teamCardHtml()"), "六卡复合（团队序尾）")
-  assert.ok(settingsJs.includes("bindTeamControls()"), "开面绑定")
+  assert.ok(!settingsJs.includes("bindTeamControls()"), "开面绑定退役")
   const card = read("thincoder-vscode/webview/settings-team.js")
-  assert.ok(card.includes('id="team-server"') && card.includes('id="team-username"') && card.includes('id="team-password" type="password"'), "三字段（密码 type=password）")
-  assert.ok(card.includes('id="team-login-btn"') && card.includes('id="team-logout-btn"'), "两钮（登录 ∥ 退出）")
+  assert.ok(card.includes('t("settings.team.server")') && card.includes('t("settings.team.memberLabel")') && card.includes('t("settings.team.labelLabel")'), "卡档三读数（服务器地址 → 成员 → 端标签）")
   assert.ok(card.includes('t("settings.team.notLoggedIn")'), "未登录提示行")
-  assert.ok(card.includes('const password = document.getElementById("team-password")?.value ?? ""'), "密码零 trim（安全面）")
-  assert.ok(card.includes('type: "teamLogin"') && card.includes('type: "teamLogout"'), "两条上行")
+  assert.ok(!card.includes('id="team-server"') && !card.includes('id="team-username"') && !card.includes('id="team-password"'), "零字段")
+  assert.ok(!card.includes('id="team-login-btn"') && !card.includes('id="team-logout-btn"'), "零钮")
+  assert.ok(!card.includes('type: "teamLogin"') && !card.includes('type: "teamLogout"'), "零上行")
+  assert.ok(card.includes("export function onTeamLoginResult") && card.includes("export function onTeamLogoutResult"), "两回执消费位")
 })
 
 test("腿8b VSC 消息链：上行 2 case ∥ 回执 3 case ∥ 成拍推送（先 teamStatus + providerStatus、后回执）∥ 转口档", () => {
   const chat = read("thincoder-vscode/webview/chat-messages.js")
-  const cases = [["teamStatus", "updateTeamStatus(m)"], ["teamLoginResult", "onTeamLoginResult(m)"], ["teamLogoutResult", "onTeamLogoutResult(m)"]]
+  const cases = [["teamStatus", "updateTeamStatus(m)"], ["teamLoginResult", "onTeamLoginResult(m); onWelcomeTeamLoginResult(m)"], ["teamLogoutResult", "onTeamLogoutResult(m)"]]
   for (const [message, fn] of cases) assert.ok(chat.includes(`case "${message}": ${fn}; break`), `回执 case ${message}`)
   const panel = read("thincoder-vscode/src/extension/panel-messages.mjs")
   assert.ok(panel.includes('case "teamLogin": await handleTeamLogin(panel, msg); break'), "上行 case teamLogin")
@@ -367,44 +368,44 @@ test("腿8b VSC 消息链：上行 2 case ∥ 回执 3 case ∥ 成拍推送（�
   const push = read("thincoder-vscode/src/extension/panel-settings-push.mjs")
   assert.equal(count(push, /settingsPushTeamStatus\(panel\._panel\)/g), 2, "快照族两拍（light ∥ full）")
   const relay = read("thincoder-vscode/src/extension/team.mjs")
-  assert.ok(relay.includes("teamStatus as coreTeamStatus") && relay.includes("teamLogin as coreTeamLogin") && relay.includes("teamLogout as coreTeamLogout"), "转口档三件（核单源 ∥ 端侧零自写盘）")
+  assert.ok(relay.includes("teamStatus as coreTeamStatus") && relay.includes("teamVerify as coreTeamVerify") && relay.includes("teamLogin as coreTeamLogin") && relay.includes("teamLogout as coreTeamLogout"), "转口档四件（核单源 ∥ 端侧零自写盘）")
 })
 
 // ─── 腿 9 · 桌面第 8 段 + 三 IPC 通道 ────────────────────────────────────────────────────────
 
-test("腿9a 桌面第 8 段：段体两态（三字段 ∥ 三读数 ∥ 两动作）∥ re-export ∥ 段分派 + 段态门 ∥ 装配（读链 ∥ 出口合并 ∥ 开面随读）", () => {
+test("腿9a 桌面第 8 段：**卡面管理面**（三读数 ∥ 零登/退控件；段态门）∥ 面板段体（三字段 ∥ 三读数 ∥ 两动作）∥ re-export（teamAdminBody）∥ 段分派 ∥ 装配（读链 ∥ 出口合并 ∥ 开面随读）", () => {
   const seg = read("thincoder-desktop/renderer/views/settings-sections-team.mjs")
   assert.ok(seg.includes('"data-form": "team"') && seg.includes('"data-draft-scope": "team"'), "表单锚 + 草稿作用域")
   assert.ok(seg.includes('fieldPair("team-server", "server", "text"') && seg.includes('fieldPair("team-username", "username", "text"') && seg.includes('fieldPair("team-password", "password", "password"'), "三字段（密码型）")
   assert.ok(seg.includes('t("settings.team.loggedOut")'), "未登录提示行")
   assert.ok(seg.includes('statusRowNode("team-server"') && seg.includes('statusRowNode("team-member"') && seg.includes('statusRowNode("team-label"'), "已登录三读数")
   assert.ok(seg.includes('"data-action": "settings:teamLogin"') && seg.includes('"data-action": "settings:teamLogout"'), "两动作")
-  assert.ok(read("thincoder-desktop/renderer/views/settings-sections.mjs").includes('export { teamBody } from "./settings-sections-team.mjs"'), "re-export")
+  assert.ok(read("thincoder-desktop/renderer/views/settings-sections.mjs").includes('export { teamAdminBody } from "./settings-sections-team.mjs"'), "re-export")
   const view = read("thincoder-desktop/renderer/views/settings.mjs")
-  assert.ok(view.includes('if (name === "team") return [sectionStateNode(model.team.state), ...(model.team.state === "ready" ? teamBody(model.team, handlers) : [])]'), "段分派 + 段态门（ready 才落体）")
+  assert.ok(view.includes('if (name === "team") return [sectionStateNode(model.team.state), ...(model.team.state === "ready" ? teamAdminBody(model.team) : [])]'), "段分派 + 段态门（ready 才落体）")
   assert.ok(view.includes("state: stateOf(settings.team)"), "段切片")
   const mount = read("thincoder-desktop/renderer/mount-settings.mjs")
-  assert.ok(mount.includes('import { createTeam } from "./mount-settings-team.mjs"'), "接线族装配")
+  assert.ok(mount.includes('import { attachTeamPanel, createTeam } from "./mount-team.mjs"'), "接线族装配")
   assert.ok(mount.includes("const allReads = { ...reads, loadTeam: team.loadTeam }"), "读链并入（MODAL_READS ∥ 开面 ∥ 复读三口同源）")
   assert.ok(mount.includes("Object.assign(exits.handlers, team.handlers)"), "出口并入单一表")
   assert.equal(count(mount, /allReads\.loadTeam\(\)/g), 2, "两调用点（开面随读 ∥ config 复读）")
   assert.equal(count(mount, /team\.resetNotice\(\)/g), 2, "两面开清（页 ∥ 弹窗）")
 })
 
-test("腿9b 桌面三 IPC 通道：白名单 51（末位三）∥ HANDLERS 闭合 + 末位映射 ∥ 转口档直连核", () => {
+test("腿9b 桌面三 IPC 通道：白名单 52（末位四）∥ HANDLERS 闭合 + 末位映射 ∥ 转口档直连核", () => {
   const preload = read("thincoder-desktop/src/preload/preload.cjs")
   const channels = [...(preload.match(/const CHANNELS = Object\.freeze\(\[([\s\S]*?)\n\]\)/)?.[1] ?? "").matchAll(/"([^"]+)"/g)].map((m) => m[1])
-  assert.equal(channels.length, 51, "白名单 51 项")
-  assert.equal(new Set(channels).size, 51, "零重复项")
-  assert.deepEqual(channels.slice(-3), ["team:status", "team:login", "team:logout"], "末位三 = 团队族")
+  assert.equal(channels.length, 52, "白名单 52 项")
+  assert.equal(new Set(channels).size, 52, "零重复项")
+  assert.deepEqual(channels.slice(-4), ["team:status", "team:login", "team:logout", "team:verify"], "末位四 = 团队族")
   const registry = read("thincoder-desktop/src/main/ipc-registry.mjs")
   const block = registry.match(/const HANDLERS = Object\.freeze\(\{([\s\S]*?)\n\}\)/)?.[1] ?? ""
   const rows = [...block.matchAll(/"([^"]+)":/g)].map((m) => m[1])
-  assert.equal(rows.length, 51, "HANDLERS 51 行")
-  assert.deepEqual(rows.slice(-3), ["team:status", "team:login", "team:logout"], "表尾三行")
+  assert.equal(rows.length, 52, "HANDLERS 52 行")
+  assert.deepEqual(rows.slice(-4), ["team:status", "team:login", "team:logout", "team:verify"], "表尾四行")
   assert.deepEqual([...rows].sort(), [...channels].sort(), "HANDLERS 行集 = 白名单集（闭合）")
-  assert.match(block, /"team:status": teamStatusChannel,\s*\n\s*"team:login": teamLoginChannel,\s*\n\s*"team:logout": teamLogoutChannel,\s*$/, "末位映射（处理体单源）")
+  assert.match(block, /"team:status": teamStatusChannel,\s*\n\s*"team:login": teamLoginChannel,\s*\n\s*"team:logout": teamLogoutChannel,\s*\n\s*"team:verify": teamVerifyChannel,\s*$/, "末位映射（处理体单源）")
   const relay = read("thincoder-desktop/src/main/team.mjs")
-  assert.ok(relay.includes('import { teamLogin, teamLogout, teamStatus } from "@thincoder/core/team.mjs"'), "转口档 = 核单源 import")
-  assert.ok(relay.includes("export function teamStatusChannel()") && relay.includes("export function teamLoginChannel(payload)") && relay.includes("export function teamLogoutChannel()"), "三通道处理体导出")
+  assert.ok(relay.includes('import { teamLogin, teamLogout, teamStatus, teamVerify } from "@thincoder/core/team.mjs"'), "转口档 = 核单源 import")
+  assert.ok(relay.includes("export function teamStatusChannel()") && relay.includes("export function teamLoginChannel(payload)") && relay.includes("export function teamLogoutChannel()") && relay.includes("export async function teamVerifyChannel("), "四通道处理体导出")
 })

@@ -12,7 +12,8 @@
 - 校验：每请求查库（唯一索引查找——无内存缓存）⇒ **吊销下一次请求即 401**（AC-5 结构性成立）——KD-SV-11（§6）。
 - **客户端登录签发路径（B1 批——2026-10-10 · 台账 #1212）**：客户端面登录（`POST /api/client/login`）签发 = **一枚具名 key**（本表 §1 面全量适用——hash 存储 ∥ 逐请求查库 ∥ 软删吊销 ∥ 多把并存）；端标签落 `name`（trim ≤40；空 ⇒ 默认名助手——§1.1）；**不设过期**（本表天然）∥ **不受 20 上限**（服务端签发面不判上限——沿「轮转 ∥ CLI 不受限」先例）；
   退出 = 吊销该枚；
-  审计两型沿用（`login_success`/`login_failure` + `key_issue`/`key_revoke`——detail 携 `surface:"client"`；十型零增）。机制全文 = `client/CLIENT.md` §1/§5（KD-SV-61）。
+  审计两型沿用（`login_success`/`login_failure` + `key_issue`/`key_revoke`——detail 携 `surface:"client"`；该批零新型）。机制全文 = `client/CLIENT.md` §1/§5（KD-SV-61）。
+- **沙盒工作区 key（server-exec-sandbox 批——2026-10-10 · 台账 #1224）**：工作区创建 ⇒ 签发一枚具名 key（`api_keys` 行——名 `sandbox:<workspace>`；归属 = 工作区负责人）；**不判 20 上限**（沿客户端登录 ∥ CLI 先例）；明文另存控制面（`sandbox_workspaces.key_plain`——盒重建再注入；披露 = `sandbox/SANDBOX.md` §10-D2）；轮换 = 吊销 + 签发（本表 §1 面全量适用）；机制全文 = `sandbox/SANDBOX.md` §7。
 
 ### 1.1 key 自助面（功能点 25——多把并存 ∥ 命名 ∥ 逐把吊销；me-keys 批）
 
@@ -21,7 +22,7 @@
 - **命名落位（各创建路径）**：自助签发 ∥ 轮换端点新签 ∥ CLI `key issue`（无命名参数——在案）**共用同一默认名助手**——空名入参 ⇒ 同口径落 `key-N`；**库内空串 = 仅限迁移前存量行**（v8 回填后零残留——`store/STORE.md` §2 v8 段）。
 - **上限（防滥用）**：每成员 **active key ≤ 20**（自助面判据）：签发前计数（`COUNT(*) … status='active'`）⇒ 已达 ⇒ 400 `invalid_request_error`（消息明示上限与处置）；计数与 INSERT 同同步段（无 await 间点——单写者 SQLite 下无竞态面）；**CLI `key issue` 不设限**（本机兜底面——操作者可控；在案）；轮转端点不受限（先吊销后签发 ⇒ 计数归 1）。
 - **吊销语义**：立即生效（逐请求查库——KD-SV-11 不变）；幂等（已吊销 ⇒ 200——软删纪律，行保留）；吊销后 key 行离列表（仅列未吊销——KD-SV-16 口径不变；页面行消失 + flash）。
-- **审计**：入既有两型（写作点 = §2.1 表：`key_issue` ∥ `key_revoke`——主体 = 本人）；**十型零增**。
+- **审计**：入既有两型（写作点 = §2.1 表：`key_issue` ∥ `key_revoke`——主体 = 本人）；**型面零增**（批时十型 ⇒ 沙盒批后十二型——§2.1）。
 - **数据面**：`api_keys.name`（v8 迁移——`store/STORE.md` §2/§3；存量行回填默认名）；`created_at` 既有（本批起随行下发——§3 行形）。
 - **端点**：`POST /api/me/keys/issue` ∥ `POST /api/me/keys/:keyId/revoke`（§3 表）；轮换端点 `POST /api/me/keys/rotate` = **保留**（既有批内件与审计型零动——页面露出面 = `webui/WEBUI.md` §2.3⑥）；其新签行 `name` = 默认名助手（空名入参——请求/响应形零改）。
 - **边界**：不做改名 ∥ 不做 key 级有效期/过期 ∥ 不做删除行（软删纪律）∥ CLI 命名参数（后续如需——在案）。
@@ -62,12 +63,16 @@
 | `password_reset` | admin ∥ `cli` | 目标成员 | —— | `thincoder-server/src/accounts/routes-admin.mjs` 重置路由 ∥ `thincoder-server/src/ops/cli.mjs` `member passwd` |
 | `member_create` | admin ∥ `cli` | 新成员 | `{ role }` | `thincoder-server/src/accounts/routes-admin.mjs` 建成员路由 ∥ `thincoder-server/src/ops/cli.mjs` `member add` |
 | `config_update` | admin（名快照） | —— | `{ keys }`（变更键名清单——值永不入） | `thincoder-server/src/gateway/config-admin.mjs`（已落盘 · 实读 **182** 行）PATCH /api/admin/config 写盘成功后一条（失败 ⇒ warn——不反噬已落盘事实） |
+| `sandbox_rule` | admin（名快照） | —— | `{ action, rule }`（规则增删原文——审计面所需） | `thincoder-server/src/sandbox/rules.mjs`（拟新增）——规则增/删各一条 |
+| `sandbox_event` | admin ∥ runner（名快照） | —— | `{ kind, workspaceId? }`（审批三态/超时 ∥ 盒起停拆 ∥ runner 注册/排空/删除 ∥ 快照） | `thincoder-server/src/sandbox/registry.mjs`（拟新增）∥ `sandbox/rules.mjs`——§2.5/§2.6 动作处 |
+
+- **型面现状（v11——沙盒批后）**：**十二型**（上表十型 + `sandbox_rule` ∥ `sandbox_event`；CHECK 扩型重建 = `store/STORE.md` §2 v11 段）。
 
 - **`surface` 字段（B1 批——2026-10-10）**：上表四行（`login_success` ∥ `login_failure` ∥ `key_issue` ∥ `key_revoke`）detail 列 `surface?` = 客户端面机读位——取值域 = `"client"`（现唯一值）；写入面 = `/api/client/login`（成 ∥ 败 ∥ 签发）∥ `/api/client/logout`（吊销）两写点；**其余各面（控制台 / 自助 / CLI / admin）该键缺席**（单源 = `client/CLIENT.md` §1）。
 
 - **「成员删」= 零写入点**：全库零成员删除路径（实核）；审计面只覆盖「增」——需求措辞面（「成员增删」含删）已上抛披露（成员删除功能本身不在任何功能点内）。
 - **列表**：`GET /api/audit`（admin——§3 端点表）；过滤 = 类型 ∥ 成员 ∥ 时段（`member` 取 id ∥ 展示名——解析同 usage 口径；匹配 `actor_id` ∥ `target_id`）。
-- **边界**：不做告警推送 ∥ 不做事件导出 ∥ 不做不可篡改/防删面（库文件权限自担——内网工具面）；OpenAI 请求不入审计（= 用量面——`metering/METERING.md` §1）；**成员配置写（分模型覆盖 ∥ 模型禁用集）不入审计**（admin 成员管理动作——沿覆盖先例，审计十型零增）；被拒调用 = 网关行为（同口径）。
+- **边界**：不做告警推送 ∥ 不做事件导出 ∥ 不做不可篡改/防删面（库文件权限自担——内网工具面）；OpenAI 请求不入审计（= 用量面——`metering/METERING.md` §1）；**成员配置写（分模型覆盖 ∥ 模型禁用集）不入审计**（admin 成员管理动作——沿覆盖先例，该面零增）；被拒调用 = 网关行为（同口径）。
 
 ### 2.2 成员模型禁用（配额 v2——功能点 23③ ∥ 台账 #1004）
 
@@ -83,7 +88,7 @@
 
 ## 3. 端点表（`/api/*`——登录 ∥ 自助 ∥ 管理）
 
-（错误形 = `gateway/API.md` §3；写端点仅收 `application/json`，其它 content-type ⇒ 400）
+（错误形 = `gateway/API.md` §3；写端点仅收 `application/json`，其它 content-type ⇒ 400；**例外** = `POST /api/runner/checkpoint`（octet-stream——`gateway/API.md` §2.6））
 
 | 方法 + 路径 | 鉴权/角色 | 语义 |
 |---|---|---|
@@ -222,3 +227,5 @@
 - 2026-10-09（**server-model-alias 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-09-server-model-alias.md` §2 · 台账 #1153 + 并入 #1008；需求 §2:29 + AC-29）：§2.2 语义/写面条随正（外标 = 别名 ∥ `provider/model`；键形 = 非空 ∥ 无首尾空白 ∥ 含斜杠两段非空——裸名合法；首尾空白 400——#1008 收正）∥ §3 `GET /api/me` 同拍句 + `model-disables` 行键形 ∥ §5 AC-23 行键形收正 + 增 AC-29④ 行 ∥ §7 B27 重写 + 增 N35 ∥ §8 增成员键别名面不做句。**产品码零触（设计轮）**。
 - 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212；需求 §2:31 + AC-31）：§1 增**客户端登录签发路径**条（签发 = 一枚具名 key ∥ 端标签落 `name` ∥ 不设过期 ∥ 免 20 上限 ∥ 审计两型沿用）∥ §3 增客户端面端点指针行 ∥ §5 增 AC-31 行；同源 = `client/CLIENT.md`（新档）。**产品码零触（设计轮）**。
 - 2026-10-10（**team-login-client-access 批（B1）· 设计评审轮 1 修正（fix 轮 · 发现 4）· eng-designer**——承批档 §3 轮次 1 · 台账 #1212）：§2.1 审计事件目录四行（`login_success` ∥ `login_failure` ∥ `key_issue` ∥ `key_revoke`）detail 列补 `surface?` + 取值域注（客户端面 = `"client"`；余面键缺席）——与 §1 客户端登录条 ∥ `client/CLIENT.md` §1 逐字同拍。**零新语义**（评审发现的直接导出项）。
+- 2026-10-10（**server-exec-sandbox 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §2 · 台账 #1224）：§1 增**沙盒工作区 key**条（复用本表 key 面——具名 `sandbox:<ws>` ∥ 免 20 上限 ∥ 明文另存 ∥ 轮换口径）∥ §2.1 事件目录增两型（`sandbox_rule` ∥ `sandbox_event`——写入点坐标）+ 型面现状句（**十二型**——v11 重建）∥ §1/§2.1 两处「十型零增」计数随正；同源 = `store/STORE.md` §2 v11 段 ∥ `sandbox/SANDBOX.md` §2/§7。**产品码零触（设计轮）**。
+- 2026-10-10（**server-exec-sandbox 批 · 残差对齐（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §2 残差项 ②；父侧裁定：收口前对齐）：§3 前言补写端点 JSON 门例外括注——**例外** = `POST /api/runner/checkpoint`（octet-stream——`gateway/API.md` §2.6）；与 `client/CLIENT.md` §2 ∥ `metering/METERING.md` §3 逐字同拍。**零新语义**（KD-SV-77 路由级豁免的残差对齐）。

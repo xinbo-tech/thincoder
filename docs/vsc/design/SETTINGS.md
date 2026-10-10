@@ -17,7 +17,7 @@
 | **Consult & Advisor** | 会诊行（modelMenu + effort 档 + ✕）+ **添加弹窗**（`#consult-add-dialog`——provider ∥ model 两字段 + 提交；§2.17 ②）+ Advisor（guard + provider/model + effort） | `thincoder-vscode/webview/settings-agent.js` · `thincoder-vscode/webview/settings-consult-dialog.js` |
 | **Tools & Services** | MCP servers（列表 + **添加/编辑弹窗**（stdio/http/ws 表单；env ∥ headers = 行式键值——§2.4；§2.17 ①）+ 连接状态 ●/○ + Reconnect）+ Web Search key + Semantic Index（key + Build） | `thincoder-vscode/webview/settings-tools.js`（卡壳 ∥ 键行族 ∥ 索引）+ `thincoder-vscode/webview/settings-mcp.js`（MCP 列表面——§2.10 拆档产出）+ `thincoder-vscode/webview/settings-mcp-dialog.js`（MCP 弹窗体——§2.17 ①） |
 | **Environment** | Proxy（URI / web / Test）+ Shell（平台感知候选） | `thincoder-vscode/webview/settings-env.js` |
-| **团队** | 登录表单（服务器地址 ∥ 用户名 ∥ 密码）+ 登录钮 ∥ 已登录态（server ∥ 成员 ∥ 端标签 + 退出钮）+ 提示行；未登录提示句 = 「未登录——登录后可用」（三端逐字同句——`docs/core/design/TEAM.md` §2.5） | `thincoder-vscode/webview/settings-team.js`（拟新增） |
+| **团队** | 登录表单（服务器地址 ∥ 用户名 ∥ 密码）+ 登录钮 ∥ 已登录态（server ∥ 成员 ∥ 端标签 + 退出钮）+ 提示行；未登录提示句 = 「未登录——登录后可用」（三端逐字同句——`docs/core/design/TEAM.md` §2.5） | `thincoder-vscode/webview/settings-team.js`（已落） |
 
 ## 2. 面板 ↔ config 契约
 
@@ -629,13 +629,18 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 ### 2.20 团队卡（登录与接入——B1 批 · 2026-10-10 · 台账 #1212）
 
 - **机制单源** = `docs/core/design/TEAM.md` §2（本档只收**面板 ↔ config 契约**端差面：承载 = 新卡 ∥ 消息面）。
-- **读面**：`teamStatus` 推送（宿主 → webview）= `{ loggedIn, server, member, label }`（形 = `thincoder-vscode/src/extension/team.mjs`（拟新增）投影；渲染面只读——单一状态源 = config.json 重建制不变）。
-- **写面**：webview → 宿主 `teamLogin { server, username, password }` ∥ `teamLogout`；宿主处理体调核 `thincoder-core/team.mjs`（拟新增——`writeConfigAtomic` 单写者；**端侧零自写盘**）；成 ⇒ 推 `teamStatus` + `providerStatus`（派生条目入列表——Providers 卡随动）。
+- **读面**：`teamStatus` 推送（宿主 → webview）= `{ loggedIn, server, member, label }`（形 = `thincoder-vscode/src/extension/team.mjs`（已落）投影；渲染面只读——单一状态源 = config.json 重建制不变）。
+- **写面**：webview → 宿主 `teamLogin { server, username, password }` ∥ `teamLogout`；宿主处理体调核 `thincoder-core/team.mjs`（已落——`writeConfigAtomic` 单写者；**端侧零自写盘**）；成 ⇒ 推 `teamStatus` + `providerStatus`（派生条目入列表——Providers 卡随动）。
 - **回执形与一次性提示（实施期设计相抵修复——2026-10-10 · 与桌面同拍）**：`teamLogin` 回执携 `notice?`（仅同名手工条目冲突时在场——值 `"manual-name-conflict"`）∥ `teamLogout` 回执携 `revokeDelivered?`（缺席 = true = 服务端吊销已送达）；
   在场 ⇒ 卡内就地提示——同名冲突（登录当刻）：「已存在同名 provider「team」——未自动添加；请改名或删除后重登」∥ 吊销未达（退出当刻）：「服务端吊销未达」——两句逐字同句（`docs/core/design/TEAM.md` §2.5）· 文本归本端 i18n；
   两提示 = 一次性事件（登录/退出当刻就地显示）——**`teamStatus` 零提示字段**（形不变：`{ loggedIn, server, member, label }`）。
 - **密码面**：请求内存即弃（零落盘 ∥ 零回显广播）；重建/切卡清空密码格。
-- **失败出词**：网络不可达 ∥ 用户名或密码错误 ∥ 登录尝试过于频繁 ∥ 本机配置写入失败——四句逐字同（i18n 键 zh/en 双表 +≈15 键）。
+- **失败出词**：网络不可达 ∥ 用户名或密码错误 ∥ 登录尝试过于频繁 ∥ 本机配置写入失败——四句逐字同（i18n 键 zh/en 双表 +14 键）。
+- **实施收口登记（2026-10-10 · 回填轮）**：`teamStatus` 推送点 = `thincoder-vscode/src/extension/settings.mjs`（`pushTeamStatus(panel)`——panel 级，镜像 `pushStatus`）；
+  `thincoder-vscode/src/extension/panel-settings-push.mjs` 两条推送链调用（快照族拍：light 档中置 `agentSettings` 前 ∥ full 档中置 `shellCandidates` 后）；
+  上行恰 `teamLogin` ∥ `teamLogout` 两条（读面纯推送——无第三上行）；模型候选面唯一来源 = `fullStatus` 的 `models` 载荷（登录成拍不随刷）；重绘两门 = 变更门（JSON 比对，镜像 `updateProviderStatus`）∥ 聚焦跳绘门（U-S10 同判）——面板未开 ⇒ 零动作。
+6. **收正（登录入口补全批 · 2026-10-10 · 台账 #1231）**：**卡 = 管理面**——登录表单与退出钮自卡内退场（登/退 = 首启板团队卡 ∥ 状态栏团队 item + 命令 `thincoder.team`——`docs/vsc/design/WEBVIEW.md` §4.11 ∥ §4.12）；
+   卡面保留 = 端标签 + 详情（server ∥ member ∥ label）+ 未登录句；「轮换」= 另裁项（服务端无 client rotate 端点——本批零控件；未裁点 = 批档 §2）；读面 `{ loggedIn, server, member, label }` 形零改（`verify` 态住宿主 item——零出站）；写面消息面（`teamLogin` ∥ `teamLogout`）零改（命令流复用同一核链）。
 
 ## 3. 已知待办与已知限制
 
@@ -650,7 +655,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 - **快照未达拍的代理控件渲染值**（观感面 · §2.8 登记）：`#px-web` 在快照缺席时按渲染默认显示为勾选——打开拍必达落地后该拍仅在推送丢失时出现，且发值门（§2.8 基线判据）已消除其危害；消解路径 = 若日后引入推送回执 / 超时可见化，则在同一处显式化该拍；到期 = 设置面下次被触碰时。
 - **确认弹框形态三处同族重复**（结构面 · §2.10 登记）：同一弹框件现有三处实现——
   `thincoder-vscode/webview/session-bar.js:75-107`（会话删除确认）· `webview/mode-buttons.js:54-92`（AUTO 启用确认）· §2.10 的 settings 面一处；
-  本批只在 settings 面立单源（`showConfirmPopover`）。消解路径 = 抽公共件 `thincoder-vscode/webview/confirm-popover.js`（拟新增）并三点迁移（纯搬移、零语义改）；
+  本批只在 settings 面立单源（`showConfirmPopover`）。消解路径 = 抽公共件 `thincoder-vscode/webview/confirm-popover.js`（拟新增 · 未落）并三点迁移（纯搬移、零语义改）；
   到期 = 该两面下次被触碰时 / 父侧裁定本批扩写域。
 - **provider 行 − 的凭证归类张力**（归类面 · §2.10 入口册 #4）——**已消解（用户 2026-09-19 08:11 裁定 A）**：该行条目内含 `apiKey`（写入 = `thincoder-core/config-io.mjs:201-208` · 删条目的整条 filter = `:262-277`）⇒ 删行同时移除 key 原文 ⇒ 判入**不可复得类**（入口册 #4 本批改判——载体 = `webview/settings-providers.js:137` 卡 HTML + `:22-23` 编辑行取消重建位）。
   处置沿革：2026-09-18 22:21 例外汇总（已裁 ②——受裁例外条）⇒ 2026-09-19 08:11 **裁定 A 改判入本门**（判据句 = §2.10）；判据与实况的差口**随实况改正而关闭**——本批 = `docs/batches/2026-09-19-vsc-provider-delete-confirm.md`。
@@ -679,7 +684,7 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 
 - **`thincoder-vscode/src/extension/settings.mjs` 越 300 行建议线（拆分复核 · 评审发现 #3）**（结构面 · §2.13 载体档）：该档现 **406**（内容行数口径 · 三端对齐批届盘复读 2026-10-07——本批净增 +3〔探针收敛核 `probeTargetOf`〕；届盘前读 403；09-29 届记 350 ⇒ 359：+9〔#640 助手 `postProviderError` + #17 读链补环〕；
   上届 410 ⇒ 350 之净减沿革 = B10 S17 族出档、shell 候选面上提核 `thincoder-core/shell-candidates.mjs`）——**仍越 300 建议线**（< 750 触发阈值）⇒ 拆分计划维持（快照面透传语义不变）。
-  拆分组边界 = ① 快照族（`agentSettings` / `proxySettings` / `websearchSettings` / `fullStatus`）② 渠道路由族（provider 增删 / 代理旗标 / 连接测试）③ 密钥与 MCP 族（`saveProviderKey` / `deleteProviderKey` / MCP 三件）——① 拆出 = `thincoder-vscode/src/extension/settings-snapshots.mjs`（拟新增）。
+  拆分组边界 = ① 快照族（`agentSettings` / `proxySettings` / `websearchSettings` / `fullStatus`）② 渠道路由族（provider 增删 / 代理旗标 / 连接测试）③ 密钥与 MCP 族（`saveProviderKey` / `deleteProviderKey` / MCP 三件）——① 拆出 = `thincoder-vscode/src/extension/settings-snapshots.mjs`（拟新增 · 未落）。
   拆分计划 = 触发阈值 **750 行** 或该档下次结构改动（先到即拆）；到期条件 = 触发阈值到达时。
 
 - **`advisor.guard: null` 磁盘形态 vs 判据用例域**（边界面 · §2.14 载体）：种子循环（`settings-panel-write.mjs:135-139`）对 `v === null` 除 `thinking` 外 continue
@@ -744,9 +749,12 @@ P5 原文（`thincoder-vscode/docs/design/_archive/SETTINGS-REORG.md:12`）=「*
 | U-S17 | MCP 表单 env ∥ headers = **行式键值编辑器**（每行键格 + 值格 + ✕；行集下 `[+ 添加行]`；零项零行）；粘贴零解析；值 = 字面（零引号剥离）；提交四判据（空行丢 ∥ 重复后胜 ∥ 全空删字段 ∥ trim） | 已定（§2.4——MCP 键值行式输入批 · #1036；桌面逐元素同形 = `docs/desktop/design/SETTINGS.md` §1 **KD-76**） |
 | U-S18 | **添加入口统一判据（本批）**：表单类添加 ⇒ **弹窗**（单例 ∥ 五路关：保存（守卫通过才发 + 关）∥ 取消 ∥ 背板 ∥ 框内 Esc ∥ `closeSettings()` 同清 ∥ 开框重置 ∥ 初始焦点 = 首控件）；单字段就地编辑 ⇒ **行内**；首启 ∥ 宿主原生专面 ⇒ 各守其面。本端落形 = MCP 弹窗 ∥ 会诊弹窗 ∥ 页脚「+ Add provider…」直开（零宿主往返）；MCP name 空 ⇒ 拒因可见（`settings.mcp.nameRequired`） | 已定（§2.17——添加入口弹窗统一批 · #1054；桌面同判 = `docs/desktop/design/SETTINGS.md` §1 **KD-77**） |
 | U-S19 | 密钥行保存回执：受理（宿主保存成功径）⇒ 行就地恢复 + 闪；拒 ⇒ **零闪** + 行不关（卡重绘在编守卫）+ 拒因可见（`providerError` banner）——回执单消息 `providerKeySaved { name }`；**无写（空钥守卫）⇒ 零回执 + warn 一条**（回执 ⟺ 真写——#1073 · 2026-10-10） | 已定（§2.18——provider 密钥链守卫批 · #1053 ∥ 尾行收口批 · #1073） |
-| U-S20 | **团队卡（本批）**：登录表单 = 服务器地址 ∥ 用户名 ∥ 密码三字段；未登录提示句 = 「未登录——登录后可用」（三端逐字同句）；退出 = 卡内钮（服务端吊销 best-effort——网络失败照清本地 + 提示）；同名手工 `team` 条目 ⇒ 登录成 + 就地提示（不覆盖不弹窗） | 已定（§2.20——B1 批） |
+| U-S20 | **团队卡（本批）**：登录表单 = 服务器地址 ∥ 用户名 ∥ 密码三字段；未登录提示句 = 「未登录——登录后可用」（三端逐字同句）；退出 = 登/退面钮（**登录入口补全批收正**：卡内登/退退场 ⇒ 首启板团队卡 ∥ 状态栏 item 流——`docs/vsc/design/WEBVIEW.md` §4.11 ∥ §4.12；卡 = 管理面 label ∥ 详情）；同名手工 `team` 条目 ⇒ 登录成 + 就地提示（不覆盖不弹窗） | 已定（§2.20——B1 批；收正 = 登录入口补全批 §2.20 条 6） |
 
 ## 变更记录
+- 2026-10-10（**login-entry-completion 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-login-entry-completion.md` §1 · 台账 #1231；用户 14:42 ∥ 14:46 裁）：§2.20 +**条 6 收正**（卡 = 管理面——登录表单与退出钮退场；登/退 = 首启板 ∥ 状态栏 item + 命令 `thincoder.team`；轮换 = 另裁；读面 ∥ 消息面形零改）∥ §5 **U-S20** 行收正（退出面随正 + 状态列注）。对位面 = `docs/vsc/design/WEBVIEW.md` §4.11 ∥ §4.12。**产品码零触（设计轮）**。明细 = 批档 §2。
+
+- 2026-10-10（**team-login-client-access 批（B1）· 实施后回填轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §5 · 台账 #1212）：**§2.20** 补**实施收口登记**行（推送点 ∥ 两条链 ∥ 上行恰两条 ∥ 重绘两门）+ 键数收正（+≈15 ⇒ **+14**）∥ **§1 ∥ §2.20** 去「（拟新增）」（三处）。**零新语义**（读数 ∥ 登记）。明细 = 批档 §2 实施后回填块。
 
 - 2026-10-10（**team-login-client-access 批（B1）· 实施期收尾小修 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §2 实施期修复块 · 台账 #1212）：**§2.20** i18n 估数随第四句顺正（**+≈14 键 ⇒ +≈15 键**）。**零新语义**（父侧派发项直接导出）。明细 = 批档 §2 实施期修复块。
 

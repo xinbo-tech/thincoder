@@ -14,7 +14,10 @@
 | 系统面 | `GET /healthz`（公开——零鉴权只读探活） ∥ `GET /api/system`（会话——版本/更新状态） | 无 ∥ 会话 | 本档 §2.3 |
 | 客户端数据面 | `POST /api/client/login` ∥ `POST /api/client/logout` ∥ `GET /api/client/me`（骨架——B1 批） | 登录 token（`Authorization: Bearer`——与 /v1 同校验单源） | `client/CLIENT.md` §2 |
 | 控制台数据面 | `GET /api/overview`（管理总览读数） ∥ `GET /api/admin/embedding` ∥ `POST /api/admin/embedding/test`（向量服务面——探活/试跑） ∥ `GET/PATCH /api/admin/config`（配置面——读写 config.json；`ops/OPS.md` §1） ∥ `POST /api/admin/proxy/test`（代理连通测试——真打；`webui/WEBUI.md` §2.7） | admin 会话（服务端判定——`user` ⇒ 403） | 本档 §2.4 |
-| 前端静态面 | `GET /` ∥ `public/**`（`app.mjs` ∥ `nav.mjs` ∥ `views-*` 十一档 ∥ `style.css`） | 公开（页面壳零数据） | `webui/WEBUI.md` §1 |
+| 沙盒控制台面 | `GET/POST/PATCH/DELETE /api/admin/sandbox/*`（runner ∥ 工作区 ∥ 规则 ∥ 待批 ∥ 设置——`sandbox/SANDBOX.md` §8） | admin 会话（服务端判定——`user` ⇒ 403） | 本档 §2.5 |
+| 沙盒 runner 面 | `POST /api/runner/*`（join ∥ 心跳 ∥ 长轮询 ∥ 上报 ∥ 待批 ∥ 快照） | runner 令牌（Bearer——独立守卫 `requireRunner`，只此一族；join = 凭一次性 join token） | 本档 §2.6 |
+| 沙盒成员面 | `GET /api/me/sandbox/workspaces`（本人工作区读数——`sandbox/SANDBOX.md` §8 成员面） | 会话（本人——admin/user 恒本人过滤） | 本档 §2.7 |
+| 前端静态面 | `GET /` ∥ `public/**`（`app.mjs` ∥ `nav.mjs` ∥ `views-*` 十四档 ∥ `style.css`） | 公开（页面壳零数据） | `webui/WEBUI.md` §1 |
 | 其余 | —— | —— | 404（JSON 错误形 = §3） |
 
 - 分派 = `thincoder-server/src/gateway/server.mjs`（已落盘）注册行制——新端点 = 注册一行（断点列 = `EVOLUTION.md` §1-G1）。
@@ -108,14 +111,58 @@
 
 - **装配接线**：gateway 注册行一条（同 provider 管理面——`bin/thincoder-server.mjs` 一行注册）。
 
+### 2.5 沙盒控制台面（admin——server-exec-sandbox 批；机制全文 = `sandbox/SANDBOX.md` §8）
+
+（端点族 = `/api/admin/sandbox/*`；判权 = `requireAdmin` 口径——`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401；错误形 = §3 全码 + `sandbox_unavailable`；写端点 JSON 型门同 §1 前言）
+
+| 方法 + 路径 | 语义 |
+|---|---|
+| `GET /api/admin/sandbox/overview` | 运行面读数：`{ status: "available" ∥ "unavailable", reason?, runners: [{ id, name, status, labels, version, runtime, lastHeartbeatAt, boxCount }] }`——无 runner ∥ 无可用运行时 ⇒ `unavailable` + 原因（服务端一次读出） |
+| `POST /api/admin/sandbox/runners/join-token` | 生成加入令牌 ⇒ `{ token, expiresAt }`（一次性 ∥ 缺省 30 分钟——设置项 `joinTtlMinutes`）；**落点 = 进程内存（重启作废——重生成即可）**；控制台据 `expiresAt` 显示有效期 + 拼整条命令（可复制——`webui/WEBUI.md` §2.8） |
+| `POST /api/admin/sandbox/runners/:id/drain` ∥ `DELETE /api/admin/sandbox/runners/:id` | 排空（置 draining——收旗停盒）∥ 删机（要求工作区已重建或 `confirm: true` 丢弃）；不存在 ⇒ 404 |
+| `GET/POST /api/admin/sandbox/workspaces` | 列表（名/负责人/runner/盒状态/dirty/快照/资源覆写）∥ 创建 `{ name, ownerMemberId, requiredLabels?, limits? }` ⇒ 放置 + key 签发（通道下发 create——效果面；`limits` = 初始覆写——缺省 `{}`） |
+| `PATCH /api/admin/sandbox/workspaces/:id` | 资源档覆写：`{ limits: { cpus ∥ memMb ∥ pids ∥ diskMb ∥ idleTtlMinutes ∥ wallclockTtlHours } }`——键级合并（出现键 = 应用；值 `null` = 删键回落全局默认）；校验不过 ⇒ 400（库零变）；**生效 = 下次建盒/重建**（运行中盒零触——容器旗不可热改）；不回队指令 |
+| `POST /api/admin/sandbox/workspaces/:id/:action` | 动作：`start` ∥ `stop` ∥ `destroy`（二次确认旗）∥ `rotate-key` ∥ `restore`（快照恢复）——入队 `sandbox_tasks` 由 runner 领取执行 |
+| `GET/POST/PATCH/DELETE /api/admin/sandbox/rules*` | 出站规则增删改（校验 = 两类形/通配单层左/显式 deny 先；保存 ⇒ `rulesRev` +1 + 审计 `sandbox_rule`） |
+| `GET /api/admin/sandbox/pending` ∥ `POST /api/admin/sandbox/pending/:id/resolve` | 待批表 ∥ 裁定 `{ decision: "once" ∥ "remember" ∥ "deny" }`（remember ⇒ 规则入表 source=approval；审计 `sandbox_event`） |
+| `GET/PATCH /api/admin/sandbox/settings` | 设置读写（全局默认——值 = JSON 文本）：`cpus`（数） ∥ `memMb`/`pids`/`diskMb`/`idleTtlMinutes`/`wallclockTtlHours`/`checkpointEveryMinutes`/`checkpointKeep`/`pendingTimeoutSeconds`/`joinTtlMinutes`/`tmpfsMb`（正整数） ∥ `image`（字符串）；PATCH 逐键（键级合并——值 = 整键替换；形/范围校验不过 ⇒ 400 库零变）⇒ `rulesRev` +1（下发即生效）；**「默认单」非本表键**（= `sandbox_rules` 种子行——上行）；**每键有 UI 写入口**——`webui/WEBUI.md` §2.8 |
+
+- 用例 = `sandbox/SANDBOX.md` §13（N40–N44 ∥ B35–B40 ∥ E29–E33）。
+
+### 2.6 沙盒 runner 面（runner 令牌——机制全文 = `sandbox/SANDBOX.md` §3）
+
+（端点族 = `/api/runner/*`；鉴权 = `requireRunner`（独立守卫——只放行本族；join 除外）；错误形 = §3 全码沿用）
+
+| 方法 + 路径 | 语义 |
+|---|---|
+| `POST /api/runner/join` | 凭一次性 join token 兑换 runner 令牌（**免 runner 令牌**——唯一开口）⇒ `{ runnerId, token }`；过期/复用/伪造 ⇒ 400（**逐句人话**：过期 ∥ 已用过 ∥ 令牌不对）+ 失败审计行（`sandbox_event`——detail.kind = `runner_join_failed`） |
+| `POST /api/runner/heartbeat` | 15s 心跳：版本 ∥ 自检读数 ∥ 盒清单/状态 ∥ 磁盘余量 ∥ 排空旗 |
+| `POST /api/runner/poll` | 长轮询（等待 ≤25s；携本机 `rulesRev`）⇒ `{ tasks, rulesRev, rules?, pendingResolutions, drain }` |
+| `POST /api/runner/report` | 指令结果（taskId ∥ status ∥ result）与盒状态变化 |
+| `POST /api/runner/pending` | 待批登记（host/workspace/hits——同 host 去重 +1） |
+| `POST /api/runner/checkpoint` ∥ `GET /api/runner/checkpoint/:id` | WIP 快照上送（≤200 MiB——**通路口径**：本路由 = `/api/*` 写端点 JSON 型门的唯一豁免（收 `application/octet-stream`——仅此路由）∥ **路由级上限 200 MiB**（全局 32 MiB 通则不动——§3；超 ⇒ 413 `payload_too_large`）∥ **流式落盘**（边收边写——不整块缓冲））∥ 取回（换机重建套用） |
+
+- 表结构 = `store/STORE.md` §2 v11 段；执行面 = `sandbox/RUNNER.md`。
+
+### 2.7 沙盒成员面（本人——server-exec-sandbox 批；机制全文 = `sandbox/SANDBOX.md` §8 成员面）
+
+（端点族 = `/api/me/sandbox/*`；判权 = 会话（本人——admin/user 恒本人过滤）；错误形 = §3 全码 + `sandbox_unavailable`）
+
+| 方法 + 路径 | 语义 |
+|---|---|
+| `GET /api/me/sandbox/workspaces` | 本人工作区读数：`{ workspaces: [{ id, name, boxState, stopReason?, dirty, checkpointCount, pending }] }`（`boxState` = `running` ∥ `stopped`——`stopReason` 取值 `idle_ttl` ∥ `wallclock_ttl` ∥ `manual`；`pending` = 最近 open 待批 `{ host, since }` ∥ `null`）——恒本人过滤（`owner_member_id` = 会话成员）；`pending` 端侧渲染「等待管理员批准」提示（不得静默——`webui/WEBUI.md` §2.9）；不可用 ⇒ 503 `sandbox_unavailable` |
+
+- 写面零端点（成员对工作区的动作随 #1216 ② 权限模型——`sandbox/SANDBOX.md` §8 成员面）。
+
 ## 3. 错误形（全码单源）
 
 - 统一形：`{ "error": { "message": "…", "type": "…", "code": "…" } }`。
 - 本服务自产：401 `invalid_api_key`（无 key ∥ 未知 ∥ 吊销——不区分，防信息泄露）· 404 `model_not_found`（未配置模型 ∥ 该成员已禁用——消息区分）· 429 `quota_exceeded`（模型超额——message 含模型外标 + 已用/额度值；机制 = `metering/METERING.md` §2）· 429 `rate_limited`（per-model 限流——message 含模型/限值；`Retry-After` 秒头——沿 `too_many_attempts` 先例；机制 = §6 KD-SV-35）·
-  400 `invalid_request_error`（body 非 JSON ∥ 缺 model）· 413 `payload_too_large`（请求体超上限——上限常量 32 MiB）· 502 `upstream_error`（上游不可达）。
+  400 `invalid_request_error`（body 非 JSON ∥ 缺 model）· 413 `payload_too_large`（请求体超上限——上限常量 32 MiB；**路由级例外 = `POST /api/runner/checkpoint` 200 MiB**——§2.6）· 502 `upstream_error`（上游不可达）。
 - 500 `internal_error`（兜底——处理函数自身异常）。
 - 账号面（`/api/*`——同形）：401 `unauthorized`（无 ∥ 过期会话）· 401 `invalid_credentials`（登录失败 ∥ 旧密错误——同措辞同耗时）· 403 `forbidden`（角色不足）· 404 `not_found`（成员 ∥ key 不存在）· 429 `too_many_attempts`（登录锁定期——`Retry-After` 头（秒）；两维同文案——`accounts/ACCOUNTS.md` §2）。
 - 客户端面（`/api/client/*`——同形）：401 `invalid_api_key`（无/无效 token——三态不区分）· 401 `invalid_credentials` ∥ 429 `too_many_attempts`（登录——沿账号面同码）；**零新码**（全码单源不变——机制 = `client/CLIENT.md` §1/§2）。
+- 沙盒面（`/api/admin/sandbox/*` ∥ `/api/runner/*` ∥ `/api/me/sandbox/*`——同形前置）：503 `sandbox_unavailable`（无 runner ∥ 无可用运行时——**一码新增**）；余码沿用族口径（`user` ⇒ 403 ∥ runner 令牌打非 runner 面 ⇒ 401）。
 - **上游已到达的错误**（4xx/5xx）：状态码与 body **原样透传**（不包不改）；仍记 error 行（token 未知记 NULL）。
 - **消息语言口径**：服务端消息 = 中文单语（机器面零改——CLI/curl 消费方口径不变）；控制台按 `code` 前端映射本地化（中文 ∥ English——机制 = `webui/WEBUI.md` §2.2）；上游透传错误照原样（控制台原文回显）。
 
@@ -123,7 +170,7 @@
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/gateway/server.mjs`（已落盘） | **192 ⇒ ≈197**（实读 2026-10-06——设计估 ≈140；服务模型配置面批 +≈5 = `failRequest` 置 `Retry-After` 头）**⇒ 实读 192（2026-10-07——清账批复读）** | http 服务 ∥ 注册行分派 ∥ body 读限（32 MiB） ∥ 请求日志 |
+| `thincoder-server/src/gateway/server.mjs`（已落盘） | **192 ⇒ ≈197**（实读 2026-10-06——设计估 ≈140；服务模型配置面批 +≈5 = `failRequest` 置 `Retry-After` 头）**⇒ 实读 192（2026-10-07——清账批复读）⇒ ≈206（server-exec-sandbox 批 +≈14 = checkpoint 通路口径——octet-stream 门豁免（`requiresJsonWrite` 分支） ∥ 路由级 200 MiB 限（`exceedsBodyLimit` 路由化）；实读待回填）** | http 服务 ∥ 注册行分派 ∥ body 读限（32 MiB；快照路由 200 MiB——§2.6） ∥ 请求日志 |
 | `thincoder-server/src/gateway/routes.mjs`（已落盘） | **86 ⇒ ≈100**（实读 2026-10-06——设计估 ≈240；#962 +5 = 读运行时（`runtime.get()`）；服务模型配置面批 +≈14 = 限流准入接线（check + 用量回收口串联））**⇒ 实读 101 ⇒ ≈115**（配额分模型批：配额准入位移（体读前 ⇒ 派发后/转发前） ∥ 两字段传账 ∥ 嵌入面检查移除）**⇒ 实读 104 ⇒ ≈112 ⇒ 实读 111（2026-10-07）**（配额 v2 批落地：禁用准入条 ∥ `/v1/models` 过滤）**⇒ ≈117**（2026-10-09 embed 解耦批：缺配 404 支 ∥ 注释 +≈6——实读待回填） | chat ∥ models ∥ embeddings 三处理 |
 | `thincoder-server/src/gateway/forward.mjs`（已落盘） | **185 ⇒ ≈191**（实读 2026-10-06——设计估 ≈190；服务模型配置面批 +≈6 = `onUsage` 回调（用量到达即计入限流窗））**⇒ 实读 196 ⇒ ≈204**（本批：`provider`/`model` 两字段入账 +≈8）**⇒ 实读 201（2026-10-07——清账批复读）⇒ 实读 208**（2026-10-09 代理批：`proxyUri` 参 ∥ 出口换 `proxyFetch`——实读） | 上游 fetch ∥ 流式/非流式透传 ∥ tap 接线 ∥ 断连中止 ∥ 记账号 |
 | `thincoder-server/src/gateway/proxy.mjs`（已落盘） | **实读 267**（2026-10-09——本批新增；自持 std 传输；零第三方） | 上游代理传输：`proxyFetch`（fetch-like——无 uri ⇒ 原生 fetch 直连 ∥ https ⇒ CONNECT 隧道 ∥ http ⇒ 经典转发；loopback 旁路；超时族；响应适配）；KD-SV-55 |
@@ -136,8 +183,8 @@
 | `thincoder-server/src/gateway/config-admin.mjs`（已落盘） | **无 ⇒ ≈160**（设计估——配置面：GET 文件面读（有效值 ∥ 密钥掩码） ∥ PATCH 白名单合并/校验门/原子写/审计 ∥ 助手导出（合并 ∥ 原子写——批内件直测）；§2.4）**⇒ 实读 182**（2026-10-09 配置控制台批落地后——实读） | 配置面（控制台——仅 admin） |
 | `thincoder-server/src/gateway/proxy-admin.mjs`（已落盘——2026-10-09 代理页批） | **无 ⇒ 实读 81**（2026-10-09 代理页批落地后——设计估 ≈95；代理测试面（§2.4）：判权 ∥ 入参轻校验（`validateProxyConfig` 单源复用） ∥ 代打（`proxyFetch` 注入） ∥ kind 二分类 ∥ 自含形；零落库不计量） | 代理连通测试面（控制台——仅 admin） |
 | `thincoder-server/src/gateway/overview.mjs`（已落盘） | **≈70 ⇒ 实读 28 ⇒ ≈30**（本批：今日合计读源 = `report.mjs`（`usageTotals` 迁址）——口径零变）**⇒ 实读 27（2026-10-07——清账批复读）** | 管理总览读数（控制台——仅 admin） |
-| `thincoder-server/src/gateway/errors.mjs`（已落盘） | **56 ⇒ ≈65**（实读 2026-10-06——设计估 ≈50；#963 +1 = `too_many_attempts` 码；服务模型配置面批 +≈9 = `rate_limited` 码 ∥ `HttpError`/`sendError` 可选 headers（`Retry-After`））**⇒ 实读 63（2026-10-07——清账批复读）** | 错误形构造 ∥ 发送助手（含账号面码） |
-| **小计** | **≈770 ⇒ 658 ⇒ 951**（#962 实读：+293）**⇒ 1007**（#963 实读：+56 = system 新 55 ∥ errors +1——口径 = #962 后）**⇒ ≈1192**（二轮 +≈185 = embedding-admin 新 ≈110 ∥ overview 新 ≈70 ∥ system +≈5）**⇒ ≈1363**（服务模型配置面批估）**⇒ ≈1385**（配额分模型批：routes +≈14 ∥ forward +≈8；overview 实读回填）**⇒ ≈1393**（配额 v2 批：routes +≈8）**⇒ ≈1439**（模型元数据批：providers +≈8 ∥ provider-admin +≈38；以 v2 落定实读为基）**⇒ 实读 1362（2026-10-07——清账批逐档复读和）⇒ ≈1605（2026-10-09 代理批：proxy 新档 ∥ forward ∥ providers ∥ provider-admin 四档）⇒ 实读 1664**（2026-10-09——本批四档实读和：proxy 267 ∥ forward 208 ∥ providers 184 ∥ provider-admin 305）⇒ ≈1836（配置控制台批：+≈172 = `config-admin.mjs` 新 ≈160 ∥ `embedding-admin.mjs` ≈+12；余档零动）⇒ 实读增量 **+196**（2026-10-09 配置控制台批落地后：`config-admin.mjs` **182** 新 ∥ `embedding-admin.mjs` **110**）⇒ ≈1847（2026-10-09 embed 解耦批：+≈11 = routes +≈6 ∥ embedding-admin +≈8 ∥ providers −≈3）**⇒ 实读净收正 ≈1845**（embed 批三档实读：routes **114** ∥ providers **183** ∥ `embedding-admin` **117**）**⇒ ≈1889**（2026-10-09 alias 批：+≈44 = providers ≈208 ∥ provider-admin ≈322 ∥ forward ≈210——实读待回填）⇒ ≈1984（2026-10-09 代理页批：+≈95 = `proxy-admin.mjs` 新 ≈95；余档零动——在途批链值以实施实读为准）⇒ 实读增量 **+81**（2026-10-09 代理页批落地后：`proxy-admin.mjs` **81** 新——设计估 ≈95；余档零动） | —— |
+| `thincoder-server/src/gateway/errors.mjs`（已落盘） | **56 ⇒ ≈65**（实读 2026-10-06——设计估 ≈50；#963 +1 = `too_many_attempts` 码；服务模型配置面批 +≈9 = `rate_limited` 码 ∥ `HttpError`/`sendError` 可选 headers（`Retry-After`））**⇒ 实读 63（2026-10-07——清账批复读）⇒ 实读 64（2026-10-10——本设计轮现读；旧读收正 1）⇒ ≈66（server-exec-sandbox 批：`sandbox_unavailable` +≈2——实施后回填）** | 错误形构造 ∥ 发送助手（含账号面码） |
+| **小计** | **≈770 ⇒ 658 ⇒ 951**（#962 实读：+293）**⇒ 1007**（#963 实读：+56 = system 新 55 ∥ errors +1——口径 = #962 后）**⇒ ≈1192**（二轮 +≈185 = embedding-admin 新 ≈110 ∥ overview 新 ≈70 ∥ system +≈5）**⇒ ≈1363**（服务模型配置面批估）**⇒ ≈1385**（配额分模型批：routes +≈14 ∥ forward +≈8；overview 实读回填）**⇒ ≈1393**（配额 v2 批：routes +≈8）**⇒ ≈1439**（模型元数据批：providers +≈8 ∥ provider-admin +≈38；以 v2 落定实读为基）**⇒ 实读 1362（2026-10-07——清账批逐档复读和）⇒ ≈1605（2026-10-09 代理批：proxy 新档 ∥ forward ∥ providers ∥ provider-admin 四档）⇒ 实读 1664**（2026-10-09——本批四档实读和：proxy 267 ∥ forward 208 ∥ providers 184 ∥ provider-admin 305）⇒ ≈1836（配置控制台批：+≈172 = `config-admin.mjs` 新 ≈160 ∥ `embedding-admin.mjs` ≈+12；余档零动）⇒ 实读增量 **+196**（2026-10-09 配置控制台批落地后：`config-admin.mjs` **182** 新 ∥ `embedding-admin.mjs` **110**）⇒ ≈1847（2026-10-09 embed 解耦批：+≈11 = routes +≈6 ∥ embedding-admin +≈8 ∥ providers −≈3）**⇒ 实读净收正 ≈1845**（embed 批三档实读：routes **114** ∥ providers **183** ∥ `embedding-admin` **117**）**⇒ ≈1889**（2026-10-09 alias 批：+≈44 = providers ≈208 ∥ provider-admin ≈322 ∥ forward ≈210——实读待回填）⇒ ≈1984（2026-10-09 代理页批：+≈95 = `proxy-admin.mjs` 新 ≈95；余档零动——在途批链值以实施实读为准）⇒ 实读增量 **+81**（2026-10-09 代理页批落地后：`proxy-admin.mjs` **81** 新——设计估 ≈95；余档零动）⇒ 沙盒批 +≈2（`errors.mjs`；sandbox 域档组（控制面五 + 执行面十）预算 = `sandbox/SANDBOX.md` §14 ∥ `sandbox/RUNNER.md` §9——本表不列） | —— |
 
 ## 5. 验收判据（机检面）
 
@@ -155,6 +202,7 @@
 | 上游代理（台账 #1129——KD-SV-55） | 判定与同判定（chat ∥ discover 两链）：假代理（进程内 CONNECT 替身）命中 + 经代理完成请求 ∥ 无旗 ∥ 无 uri ∥ loopback ⇒ 直连（假代理零命中）∥ SSE 逐块经代理透传（非整段缓冲——mock 两帧间隔）∥ 代理不可达 ⇒ 502 `upstream_error` ∥ 代理路径断连 ⇒ 中止上游 + 记 `status='aborted'`（§2.1 契约零回归）∥ 启动 warn 两条（明文 `http:` ∥ 旗 `true` 缺 uri——触发/文案 = §6 KD-SV-55）∥ `proxy` 字段往返（POST/PATCH/GET ∥ 非布尔 400 库与运行时零变）∥ 热生效（PATCH 旗 ⇒ 下一请求随动；在途照旧） | 批内件 |
 | AC-29（功能点 29——服务模型别名；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① 配置形：`models` 条目两形（字符串 = 无别名 ∥ 对象 `{name, alias}` = 配别名）；`alias` 缺省/空（`null` ∥ `""`）⇒ 无别名（归一）；非对象非字符串条目 ∥ `name` 缺/空 ∥ `alias` 数字/布尔/对象/数组 ∥ 含 `/` ∥ 首尾空白 ⇒ 400（保存——库与运行时零变）∥ 拒启（种子/载入）∥ ② 对外别名生效（`/v1/models` `id` = 别名 ∥ 请求 `model=别名` ⇒ 命中且转发上游真名（mock 上游 `body.model` 逐值）∥ 旧 `provider/model` 名 ⇒ 404 `model_not_found` 消息含别名；清别名 ⇒ 外标回落 `provider/model`——当即生效）∥ ③ 唯一性（别名撞别名——跨 provider ∥ 含新增项：载入 ⇒ 拒启 ∥ 保存 ⇒ 400 库与运行时零变；别名撞带前缀名——形上不相交（别名无斜杠 ∥ 前缀名恒含斜杠），唯一可能撞法 = 别名含 `/` ⇒ 形校验拒）；用例 = §7 N35/B25/E26 | 批内件 + 收口轮 |
 | AC-30（功能点 30②——代理连通测试面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 真打（mock 假代理 + mock 目标 ⇒ `ok:true` + `status`/`ms` 逐值 ∥ 假代理命中即证经代理）∥ 代理不可达（死端口）⇒ `ok:false` + `kind=unreachable` ∥ 超时（注入 `timeoutMs`）⇒ `kind=timeout` ∥ loopback 目标 ⇒ 直连（假代理零命中——旁路与生产同判）∥ 非 2xx 照实回读（`ok:true` + 状态值）∥ 入参（缺/空 `uri` ∥ `uri` 非 `http:` ∥ 缺/非法 `target` ⇒ 400 `invalid_request_error`——文件与运行态零变）∥ 判权三态（user ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200）∥ **零落库零计费**（usage 行零增 ∥ 配额零涉 ∥ 审计零行）∥ 自含形（结果 200 体——不走统一错误信封） | 批内件 |
+| 沙盒（server-exec-sandbox 批——台账 #1224；需求 §5 沙盒块 + 14:00 裁定；AC-36——已落需求档） | 端点面机检（判权三态：`user` ⇒ 403 ∥ 无会话 ⇒ 401 ∥ runner 令牌打非 runner 面 ⇒ 401 ∥ 成员面恒本人过滤——§2.7）∥ 无 runner ⇒ 503 `sandbox_unavailable` ∥ 规则校验（两类型 ∥ 通配单层左 ∥ 显式 deny 恒先）∥ 待批三态 ∥ 工作区动作入队 ∥ 资源覆写（PATCH ⇒ 建盒载荷逐值——§2.5）∥ 快照上送通路（octet-stream 收口 ∥ 路由级 200 MiB ⇒ 超 413 ∥ 流式落盘——§2.6；用例 = §7 B27）；判据全文 = `sandbox/SANDBOX.md` §11（+ §12 探针 P1–P14——收口轮真机） | 批内件 + 收口轮（真机 runner） |
 | AC-28（功能点 28——配置控制台写面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | GET = 文件面值（有效值回填 ∥ 密钥掩码零泄漏 ∥ `bootstrap.password` 面零列）∥ PATCH：白名单（未知键 ⇒ 400）∥ 合并保未知键 ∥ 校验门（非法值 ∥ `env:` 缺位 ⇒ 400 且文件字节零变）∥ 原子写（tmp 零残留 ∥ rename 覆盖）∥ 审计 `config_update`（detail = 键名 ∥ 值零入）∥ 并发（同步段单写者）∥ 写后 GET 回读逐值（round-trip）∥ 草稿探活（test 端点明传优先——缺省回落）∥ **缺段创建**（缺 `embedding` 段 ⇒ PATCH 建段 ⇒ 门通过 ∥ 缺段档 PATCH 他键过门；2026-10-09 embed 解耦批） | 批内件 |
 
 ## 6. 关键决策（本域）
@@ -187,6 +235,7 @@
 | E5 | 错误 | 上游 4xx/5xx | 状态与 body**原样透传**；记 error 行 |
 | E6 | 错误 | 上游不可达（连不上/超时） | 502 `upstream_error`；记 error 行 |
 | E7 | 错误 | 请求体 > 32 MiB | 413 `payload_too_large`（不转发） |
+| B27 | 边界 | `POST /api/runner/checkpoint`（runner 令牌——§2.6 通路口径）：octet-stream 体 ≤200 MiB ∥ > 200 MiB（他写端点照旧 32 MiB + JSON 型门——E7 通则） | 首 ⇒ 200（流式落盘——不整块缓冲）；二 ⇒ 413 `payload_too_large`（不落盘） |
 | N16 | 正常 | admin 会话：`POST /api/admin/providers`（mock 上游）⇒ 立即 `GET /v1/models` 立含新模型 ∥ 经新 provider 完成一次请求 | 零重启生效；记账 ok |
 | N17 | 正常 | admin 会话：`POST /api/admin/providers/discover`（mock 上游 `/models` 回 3 个 id） | `{ models:[…], modelMeta:{} }`（去重；经典四件上游 ⇒ `modelMeta` = `{}`——与 §2.2/N27 同形）；勾选集保存后清单/派发按开放清单 |
 | N18 | 正常 | admin 会话：`PATCH` 改 `baseURL` 指第二 mock ∥ `DELETE` 一 provider | 下一请求命中新上游 ∥ 被删者下一请求 404（用量行零触） |
@@ -235,6 +284,8 @@
 | B26 | 边界 | 目标 = loopback（本机 mock）∥ 非 2xx（404）∥ 代理死端口 ∥ `timeoutMs` 注入口径缩短 | 直连（假代理零命中——NO_PROXY 语义）∥ `ok:true` + `status:404`（照实回读）∥ `ok:false` + `kind=unreachable` ∥ `ok:false` + `kind=timeout` |
 | E27 | 错误 | 缺 `uri` ∥ `uri` 空串 ∥ `uri` 非 `http:`（如 `https://…`）∥ 缺 `target` ∥ `target` 非法 URL ∥ user ∥ 无会话 | 400 `invalid_request_error`（消息明示）∥ 400 ∥ 400 ∥ 400 ∥ 400 ∥ 403 `forbidden` ∥ 401 `unauthorized` |
 
+- 沙盒面用例 = `sandbox/SANDBOX.md` §13（N40–N44 ∥ B35–B40 ∥ E29–E33——列全案，此处不复制）。
+
 ## 8. 本域边界（不做的面）
 
 - 非 OpenAI 协议翻译 ∥ 策略路由（别名 = 标识面已入——KD-SV-59；通配/规则路由仍不做） ∥ 上游重试（失败原样返回——重试语义留给客户端）∥ 并发/连接数限流（C = per-model RPM/TPM 速率限——KD-SV-35；配额 = 额度式双轨在案）∥ 跨进程/多实例限流（计数 = 单进程内存——多实例 = 触发项 `EVOLUTION.md` §2）∥ 限流窗口持久化（重启归零——软状态在案）∥ token 预估（TPM 计数 = 实际用量）∥ 请求体/响应的内容加工（压缩、改写、脱敏——纯透传）∥ CORS（消费方均为服务端工具）。
@@ -248,6 +299,7 @@
 - 上游代理面不做：全局代理闸 ∥ 环境变量回落（`HTTPS_PROXY` 一族——显式配置面）∥ `insecureTls` opt-in 通道 ∥ 代理认证（`Proxy-Authorization`——如内网代理需认证 ⇒ 停报另议）∥ 代理连接复用/连接池（每请求独立连接）∥ 按目标分层代理（单一 uri）∥ 嵌入面代理（零涉）。
 - 别名面不做（2026-10-09 alias 批——KD-SV-59）：别名历史/迁移（改别名 = 当即生效）∥ 别名级独立限流/配额配置（键随对外标识自然随动）∥ 一名多模型/一组多名 ∥ 嵌入面别名（用户裁「嵌入面不相干」）∥ 成员键的存在性/别名交叉校验（键形校验 = 形状面单源——`accounts/ACCOUNTS.md` §2.2）。
 - 配置面不做（2026-10-09 配置批）：配置文件热载/运行态注入（生效 = 重启——`ops/OPS.md` §1）∥ `host`/`port`/`db` 写面（部署拓扑项）∥ 配置版本史/回滚 ∥ 写前备份 ∥ 多实例并发写（单写者部署模型）∥ `providers[]`/`bootstrap` 写面（各有其面）。
+- 沙盒面不做（server-exec-sandbox 批——`sandbox/SANDBOX.md` §16 ∥ `sandbox/RUNNER.md` §12）：执行面细节 ∥ 盒内协议 ∥ 配额机制——本档零复述。
 
 ## 变更记录
 
@@ -290,3 +342,6 @@
 - 2026-10-09：实施后回填轮（代理页批——批 `docs/batches/2026-10-09-console-proxy-page.md` · eng-designer）：§4 `proxy-admin.mjs` 行「拟新增」翻正（**实读 81**）∥ 小计实读增量 **+81**。**零语义**（读数 ∥ 标记）。
 - 2026-10-10（**console-proxy-back 批 · 设计形式化轮 · eng-designer**——承批档 `docs/batches/2026-10-10-console-proxy-back.md` §2 · 台账 #1199；需求 §2:30 + AC-30 回改；用户 08:22/08:41 令）：§1 路由族表前端静态面行 `views-*` 十二 ⇒ **十一档**（`views-proxy.mjs` 退役）∥ §2.4 代理测试行承载描述收正（「控制台代理页」⇒「控制台系统页「服务配置」卡·连通测试块」——端点/契约零变）∥ §8 代理测试面不做项批名 ⇒ 决策指针（KD-SV-60——`webui/WEBUI.md` §7）。**产品码零触**（形式化轮——码已落）。
 - 2026-10-10（**team-login-client-access 批（B1）· 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-team-login-client-access.md` §1 · 台账 #1212；需求 §2:31 + AC-31）：§1 路由族表增客户端数据面行（骨架三端点——登录 token 鉴权）∥ §3 增客户端面复用句（零新码）；同源 = `client/CLIENT.md`。**产品码零触（设计轮）**。
+- 2026-10-10（**server-exec-sandbox 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §2 · 台账 #1224；需求 §5 沙盒块 + 用户 14:00 两平面裁定）：§1 路由族表增两行（沙盒控制台面 ∥ 沙盒 runner 面）∥ 前端静态面行 `views-*` 十一 ⇒ **十三档** ∥ **增 §2.5/§2.6**（控制台面八端点 ∥ runner 面七端点——表为端点单源）∥ §3 增码 `sandbox_unavailable`（503）∥ §4 预算（`errors.mjs` ⇒ ≈66；sandbox 域档组预算另册）∥ §5 增沙盒判据行 ∥ §7 增用例指针行 ∥ §8 增不做面指针；机制全文 = `sandbox/SANDBOX.md` ∥ `sandbox/RUNNER.md`。**产品码零触（设计轮）**。
+- 2026-10-10（**server-exec-sandbox 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §3 轮次 1 之 1/2/4/5/6/8/11/12/14 + 用户 14:56 直令）：§1 沙盒控制台面行方法面补全（`GET/POST/PATCH/DELETE`）+ 前端静态面行 `views-*` 十三 ⇒ **十四档** ∥ §1 增沙盒成员面行 ∥ §2.5 补 `PATCH /workspaces/:id`（资源覆写——键级合并/`null` 删键/生效面）+ 工作区行补 `limits` + join-token 行补落点（进程内存——重启作废）+ settings 行重写（值形逐键 ∥「默认单」非本表）+ rules 行「显式 deny 先」 ∥ §2.6 join 行补三态人话 + 失败审计 ∥ **增 §2.7**（沙盒成员面——本人读数单端点）∥ §3 沙盒面族补 `/api/me/sandbox/*` ∥ §4 errors 行实读收正（**实读 64**）+ 小计 §13 ⇒ §14 ∥ §5 沙盒行收正（AC-36 已落需求档 + 成员面 + 显式 deny 恒先）。**零新语义**（评审发现直接导出项 + 用户直令）。
+- 2026-10-10（**server-exec-sandbox 批 · checkpoint 通路口径 fix 轮 · eng-designer**——2026-10-10 裁定（实现轮上抛：快照 ≤200 MiB vs 全局 32 MiB 相抵））：§2.6 checkpoint 行补通路口径（octet-stream 唯一收口 ∥ 路由级 200 MiB ∥ 流式落盘）∥ §3 413 句补路由级例外 ∥ §4 `server.mjs` 行随拍（实读 192 ⇒ ≈206——+≈14）∥ §5 沙盒行 + §7 增 B27（快照上送边界——E7 通则保持）。**产品码零触**。
