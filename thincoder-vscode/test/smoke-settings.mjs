@@ -54,6 +54,7 @@ globalThis.window = {
 }
 globalThis.document = {
   getElementById(id) { if (!_byId.has(id)) _byId.set(id, makeEl(id)); return _byId.get(id) },
+  querySelector() { return null },
   querySelectorAll() { return [] },
   createElement() { return makeEl() },
 }
