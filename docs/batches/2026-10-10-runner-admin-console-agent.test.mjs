@@ -87,7 +87,7 @@ async function startFakeDocker(opts = {}) {
       res.writeHead(status, { "content-type": "application/json" })
       res.end(payload === undefined ? "" : JSON.stringify(payload))
     }
-    const p = url.pathname.replace(/^\/[0-9.]+/, "") || "/"
+    const p = url.pathname.replace(/^\/v?[0-9.]+/, "") || "/"
     if (p === "/version") return json(200, version)
     if (p === "/info") return json(200, { ServerVersion: version.Version, Containers: 0, ContainersRunning: 0 })
     if (p === "/containers/json") return json(200, state.containers)

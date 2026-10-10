@@ -107,7 +107,7 @@ export function createDockerClient({ baseUrl, apiVer = null, fetchImpl = fetch, 
   if (typeof baseUrl !== "string" || baseUrl === "") throw new Error("createDockerClient：缺 baseUrl")
   const prefix = () => {
     if (apiVer === null || apiVer === undefined || apiVer === "") throw new DockerError("api", "调用缺 API 版本前缀（须先经登记自检协商——KD-SV-81）")
-    return `/${apiVer}`
+    return `/v${apiVer}`
   }
 
   /** 单请求（超时 → kind 分类；非 2xx ⇒ `DockerError("api")`——304 属成功面，调用方自判）。 */
@@ -144,7 +144,7 @@ export function createDockerClient({ baseUrl, apiVer = null, fetchImpl = fetch, 
     baseUrl,
     apiVer,
     /** 版本读数（引导步无前缀 ∥ 常规带前缀——KD-SV-81）。 */
-    version: () => request("GET", `${apiVer ? `/${apiVer}` : ""}/version`),
+    version: () => request("GET", `${apiVer ? `/v${apiVer}` : ""}/version`),
     /** 节点读数（运行面探活——§3）。 */
     info: () => request("GET", `${prefix()}/info`),
     /** 容器列表（读时读——KD-SV-79；`all=1` 含未运行）。 */

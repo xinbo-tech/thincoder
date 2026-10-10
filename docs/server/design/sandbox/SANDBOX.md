@@ -43,21 +43,21 @@
 ## 3. 节点与容器（最小切片——runner-admin-console 批）
 
 > **本批射程（用户 2026-10-10 19:59 令）**：① 添加节点（登记一台 Docker API 节点）② 创建容器 ③ 启动 ∥ 停止容器 ④ 删除节点（+ 容器删除——提议④）。**其余全部不做**（一行带过：出站闸 ∥ 磁盘限额 ∥ 探针 ∥ 心跳/放置 ∥ Swarm ∥ 快照 ∥ 待批 ∥ 镜像管理 ∥ 工作区↔容器映射 ∥ 卷删除 ∥ 限额/端口/网络 ∥ TLS——§15）。**射程增补（用户 2026-10-10 22:19–22:29）**：托管接入（管理面 agent 执行）——见本 §「托管接入」块。
-> **连线口径**：地址 = `http://<host>:<port>`（登记输入归一：缺协议补 `http://`、缺端口补 `2375`；`https:` 拒）；**调用恒带版本前缀**（登记时协商 = `max(1.44, MinAPIVersion)`，须 ≤ `ApiVersion`，否则拒登记——提议⑤；**引导步 = 先取无前缀版本读数、再定前缀**——见下）；读类超时 3s ∥ 动作类 15s（常量；测试可注入 `fetchImpl`）。
+> **连线口径**：地址 = `http://<host>:<port>`（登记输入归一：缺协议补 `http://`、缺端口补 `2375`；`https:` 拒）；**调用恒带版本前缀**（**前缀形 = `v<协商版本>`**——如协商 `1.44` ⇒ 路径 `/v1.44/…`；2026-10-11 真机核：`/1.44/…` = 404 ∥ `/v1.44/…` = 200）；登记时协商 = `max(1.44, MinAPIVersion)`，须 ≤ `ApiVersion`，否则拒登记——提议⑤；**引导步 = 先取无前缀版本读数、再定前缀**——见下）；读类超时 3s ∥ 动作类 15s（常量；测试可注入 `fetchImpl`）。
 > **读时探活（非心跳）**：运行面/列表读数 = 请求内现打（并发；无后台定时器 ∥ 无心跳机制——§14 KD-SV-80）。
 
 - **添加节点**（`POST /api/admin/sandbox/runners`——提议①）：入参 `{ name, address }`（名 ≤ 40 字符；地址归一形如上）。
   **连通自检**（引导步 → 协商 → 复读）：① 无前缀 `GET <base>/version` 先取版本读数 ⇒ ② 协商 `ver = max(1.44, MinAPIVersion)` 须 ≤ `ApiVersion`（否则拒）⇒
-  ③ `GET <base>/<ver>/version` 复读全量 `{ Version, ApiVersion, MinAPIVersion, Os, Arch }` ⇒ 通过 ⇒ 落 `sandbox_runners` 行（`status='active'`；`runtime_json` = 自检读数）+ 审计行 `sandbox_event`（`kind=runner_add`）。
+  ③ `GET <base>/v<ver>/version` 复读全量 `{ Version, ApiVersion, MinAPIVersion, Os, Arch }` ⇒ 通过 ⇒ 落 `sandbox_runners` 行（`status='active'`；`runtime_json` = 自检读数）+ 审计行 `sandbox_event`（`kind=runner_add`）。
   失败（不可达 ∥ 超时 ∥ 非 Docker API 响应 ∥ 版本不兼容）⇒ **502 `upstream_error`** + 逐句人话 + **零落库** + 审计行（`runner_selfcheck_failed`）；重名 ∥ 地址形非法 ⇒ 400。
   **节点侧前置**：节点机 Docker 引擎须监听 TCP（测试机 = `dockerd -H fd:// -H tcp://0.0.0.0:2375` systemd override；前置步已落文——`docs/TEST-ENV-ECS.md` §7「节点接线链」，2026-10-10）；TLS 不做（内网——提议①）。
-- **运行面读数**（`GET /api/admin/sandbox/overview`）：每节点现打 `GET <base>/<ver>/info`（3s ∥ 并发）⇒ 行 = `{ id, name, address, status, online, version, containers: { total, running } ∥ null, selfCheck, createdAt }`（`online=false` ⇒ `version`/`containers` = `null`——离线读数不外推）。
+- **运行面读数**（`GET /api/admin/sandbox/overview`）：每节点现打 `GET <base>/v<ver>/info`（3s ∥ 并发）⇒ 行 = `{ id, name, address, status, online, version, containers: { total, running } ∥ null, selfCheck, createdAt }`（`online=false` ⇒ `version`/`containers` = `null`——离线读数不外推）。
   `status = available ⇔ 至少一个节点在线`（无节点 ⇒ unavailable「无节点注册」；全离线 ⇒ unavailable「节点全部不可达」）；**节点面（添加/删除）恒可用**（不随门禁）。
   写门（`requireSandboxAvailable`——需节点的写路径（工作区创建/动作；规则 ∥ 设置 ∥ 待批裁定不设门）= 静态判据（存在 `active` 节点）；本批零改——实时门统一随重做批）。
 - **创建容器**（`POST …/runners/:id/containers`——提议②）：入参 `{ name, image, volume? }`（名 = Docker 容器名形；镜像 = 控制台预填设置 `image` 值（现缺省 `thincoder-sandbox:1`）；卷 = Docker 卷名，空 = 不挂）。
-  ⇒ `POST <base>/<ver>/containers/create?name=<名>`（体 = `{ Image, HostConfig: { Binds: ["<卷>:/workspace"] } }`；卷缺 ⇒ 省略 `HostConfig`）⇒ 201 ⇒ `{ container: { id, name, image, state: "created" } }` + 审计行（`container_create`）。
+  ⇒ `POST <base>/v<ver>/containers/create?name=<名>`（体 = `{ Image, HostConfig: { Binds: ["<卷>:/workspace"] } }`；卷缺 ⇒ 省略 `HostConfig`）⇒ 201 ⇒ `{ container: { id, name, image, state: "created" } }` + 审计行（`container_create`）。
   引擎 404（无此镜像）∥ 409（名占用）⇒ 400（含引擎原文）；不可达 ⇒ 502。**创建 ≠ 启动**（两动作分列——用户四项逐条）。
-- **容器读取与动作**：列表 = `GET …/containers`（读时读 `GET <base>/<ver>/containers/json?all=1` ⇒ `{ containers: [{ id, name, image, state, status }] }`——名去前导 `/`）。
+- **容器读取与动作**：列表 = `GET …/containers`（读时读 `GET <base>/v<ver>/containers/json?all=1` ⇒ `{ containers: [{ id, name, image, state, status }] }`——名去前导 `/`）。
   **启动** ∥ **停止** = `POST …/containers/:containerId/{start,stop}`（204 ⇒ 200；**304（已启/已停）⇒ 幂等成功**；`t` 不带 = 引擎缺省 10s）∥ **删除** = `DELETE …/containers/:containerId`（`?force=1`——运行中强停强删；**卷不随删**）。
   动作各落审计行（`container_start` ∥ `container_stop` ∥ `container_delete`）；引擎无此容器 ⇒ 404 `not_found`；余 ⇒ 502。
 - **删除节点**（`DELETE …/runners/:id`——提议③）：先读承载容器 ⇒ 有容器未给处置 ⇒ 400（「请选保留 ∥ 连删」）∥ `containers:"keep"` ⇒ 只删登记（容器原样留机）∥ `"remove"` ⇒ 逐个强删 ⇒ 全成 ⇒ 删行；**任一失败 ⇒ 502 + 登记行保留**（消息携失败清单）；无容器 ⇒ 直接删行。
@@ -90,8 +90,8 @@
   | S2 | 登录与探明 | run 在途 | SSH 登录 + 探明脚本（`ssh -i <keyfile> -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new user@host -- <脚本>`；密码认证 = `sshpass -e` 形——KD-SV-85）——读数十项（见下） | exit 0 + 读数十项全列（命令原文/读数入 run 详情——可复读） | 「无法登录：<一句人话>」（认证被拒 ∥ 不可达/超时 ∥ 非 Linux）；宿主零变 |
   | S3 | 定策（无动作） | S2 读数 | 判路径：装运行时（选包管理器/装法）∥ 仅开监听 ∥ 直登；不合前提 ⇒ 停 | 决定句 + 依据读数入 run 详情 | 前提不满足（非 Linux ∥ 无 cgroup v2 ∥ 磁盘不足 ∥ sudo 不可用）⇒ 停下 + 逐句建议 |
   | S4 | 装容器运行时（缺时才走） | S3 判「缺」 | 按实况装（例：Ubuntu ⇒ `sudo apt-get install -y docker.io`；瞬态失败重试 ≤1） | `docker version` 服务端在场 ∥ `systemctl is-active docker` = active（读数记录） | 「安装失败（退出码）：<原文尾>」；**不回滚**（机器现状为准） |
-  | S5 | 开 API 监听（未监听时才走） | S3 判「缺监听」+ sudo 可用 | 写 systemd drop-in（`-H tcp://0.0.0.0:2375`）⇒ `daemon-reload` + `restart docker`（既有容器短暂中断——表单预告知） | `systemctl is-active` = active ∧ 本机 `:2375/<ver>/version` 200 | 守护进程未回 ⇒ **撤 drop-in + 复位尝试**再停；撤也败 ⇒ 报警级报告（逐条现状） |
-  | S6 | 接 API + 登记 | S4/S5 完成（或本就具备） | 自检 `GET http://<host>:2375/<ver>/version`（协商 `max(1.44, MinAPIVersion)` ≤ `ApiVersion`）⇒ 落行 + 审计 `runner_add` | 自检读数逐值 ∥ 运行面在列 `online=true` | 「server → 主机 :2375 不可达（安全组/防火墙面）」∥ 版本不兼容 ∥ 重名——零落库 |
+  | S5 | 开 API 监听（未监听时才走） | S3 判「缺监听」+ sudo 可用 | 写 systemd drop-in（`-H tcp://0.0.0.0:2375`）⇒ `daemon-reload` + `restart docker`（既有容器短暂中断——表单预告知） | `systemctl is-active` = active ∧ 本机 `:2375/v<ver>/version` 200 | 守护进程未回 ⇒ **撤 drop-in + 复位尝试**再停；撤也败 ⇒ 报警级报告（逐条现状） |
+  | S6 | 接 API + 登记 | S4/S5 完成（或本就具备） | 自检 `GET http://<host>:2375/v<ver>/version`（协商 `max(1.44, MinAPIVersion)` ≤ `ApiVersion`）⇒ 落行 + 审计 `runner_add` | 自检读数逐值 ∥ 运行面在列 `online=true` | 「server → 主机 :2375 不可达（安全组/防火墙面）」∥ 版本不兼容 ∥ 重名——零落库 |
   | S7 | 自检与就绪 | 登记在列 | 复读运行面（online ∥ version ∥ 容器 0/0） | 控制台「已就绪」；读数可复读 | 探活失败 ⇒「已登记但当前不可达」+ 原因 |
   | S8 | 收尾与报告 | —— | 终态行 + 审计（`onboarding_done`/`onboarding_failed`）；凭据按模式处置 | 终态可见（已就绪 ∥ 失败原因 + 步读数） | —— |
 
@@ -214,7 +214,7 @@
 
 | # | 类 | 面 | 输入 | 预期输出 |
 |---|---|---|---|---|
-| N40 | 正常 | 控制面 | 添加节点：名 + Docker API 地址（假 Docker `GET <ver>/version` 在案）⇒ 连通自检 | `sandbox_runners` 行（name/address/status=active；`runtime_json` = 自检读数逐值 ∥ 协商版本在场）；运行面在列（online=true ∥ 版本）；审计 `sandbox_event`（kind=`runner_add`） |
+| N40 | 正常 | 控制面 | 添加节点：名 + Docker API 地址（假 Docker `GET v<ver>/version` 在案）⇒ 连通自检 | `sandbox_runners` 行（name/address/status=active；`runtime_json` = 自检读数逐值 ∥ 协商版本在场）；运行面在列（online=true ∥ 版本）；审计 `sandbox_event`（kind=`runner_add`） |
 | N41 | 正常 | 控制面 | 建工作区（负责人）⇒ 建盒 | key 签发（`api_keys` 行名 `sandbox:<ws>`）+ 绑定节点 + 建盒/启动（控制面直调 Docker API——§1） |
 | N42 | 正常 | 控制面 | 规则增删各一（`sandbox_rules`） | `rulesRev` +1；**即生效 ∥ 不重建盒**（需求块）；审计 `sandbox_rule` 两行 |
 | N43 | 正常 | 控制面 | 待批三态各一次（once ∥ remember ∥ deny） | 挂起 ≤60s；once = 当次放行再访问再挂；remember = 规则入表（source=approval）即生效；审计 `sandbox_event` |
@@ -228,7 +228,7 @@
 | E29 | 错误 | 控制面 | `user` ∥ 无会话打 `/api/admin/sandbox/*` | 403 ∥ 401 |
 | E31 | 错误 | 控制面 | 销毁工作区（dirty 未确认）∥ 轮换后旧 key 再用 | 拒/警示（二次确认要求）；旧 key 再用 ⇒ 401（吊销即断）；轮换 = 拆容器重建（卷保留）后新 key 生效 |
 | E33 | 错误 | 执行面 | 盒写超磁盘配额 | ENOSPC（应用可见）；节点盘不破界（配额兜底） |
-| N46 | 正常 | 控制面 | 建容器：名/镜像/卷三件（假 Docker `POST <ver>/containers/create` 在案） | 引擎请求体逐值（`Image` ∥ `Binds`=`<卷>:/workspace`）；200 `{ container }`（id 逐值）；列表含（state=created）；审计行 `container_create` |
+| N46 | 正常 | 控制面 | 建容器：名/镜像/卷三件（假 Docker `POST v<ver>/containers/create` 在案） | 引擎请求体逐值（`Image` ∥ `Binds`=`<卷>:/workspace`）；200 `{ container }`（id 逐值）；列表含（state=created）；审计行 `container_create` |
 | N47 | 正常 | 控制面 | 启 ∥ 停 ∥ 删容器（各一次；启/停各重复一次） | 引擎调用逐条命中（start ∥ stop ∥ DELETE `?force=1`）；204 ⇒ 200 ∥ 304（已启/已停）⇒ 幂等成功；审计行三枚 |
 | N48 | 正常 | 控制面 | 删节点三径：有容器 ⇒ `keep` ∥ `remove` ∥ 无处置（无容器 ⇒ 直接删） | keep ⇒ 登记行删、引擎零删调用；remove ⇒ 逐删命中（N 次）⇒ 行删；无处置 ⇒ 400；无容器 ⇒ 直接删行；审计行 `runner_delete`（detail 逐值） |
 | B41 | 边界 | 控制面 | 节点不可达（假 Docker 关停） | 运行面 online=false（version/containers = null）；容器列表 ⇒ 502 人话；添节点 ⇒ 502 + 审计 `runner_selfcheck_failed` + 零落库；删节点 = 仅 keep 过（remove ⇒ 502） |
@@ -288,7 +288,7 @@
 | KD-SV-76 | **网络层闸 = nft 优先 ∥ iptables 备 + 全量重算幂等**（主机侧——SSH 执行；用户 19:52 定） | 主机异构；全量重算避免增量残渣与漂移 | 纯 iptables（旧栈机器兼容但表达弱——备选）；增量改链（残渣风险——否） |
 | KD-SV-79 | **容器态不落库**（runner-admin-console 批）：Docker 引擎即真源——读时读（`containers/json`）∥ 动作直调（create/start/stop/DELETE）；控制面零镜像 ∥ 零同步机制 | 双源必漂移（外部 `docker` 命令 ∥ 机器重启 ∥ 别的工具都在改容器）；同步/对账机制 = 白增面（最小切片不取） | 落库镜像表 + 对账（同步机制/陈旧窗口——否）；心跳式上报（用户 19:52 口径已排除——机器上不驻留进程 ∥ 无心跳） |
 | KD-SV-80 | **节点存活 = 读时探活（非心跳）**：运行面/读数 = 请求内现打 `GET …/info`（3s ∥ 并发）∥ 动作 = 现打现报；无后台定时器 ∥ 无心跳落库 | 用户 19:52 口径（无自驻进程）；探活只服务展示与当下动作，无独立可用性状态可陈 | 心跳上报（通道已废——否）；常驻探针进程（用户口径排除——否） |
-| KD-SV-81 | **Docker API 版本 = 登记时协商 + 调用恒带前缀**：`ver = max(1.44, MinAPIVersion)`，须 ≤ `ApiVersion`（否则拒登记）；版本存 `runtime_json`；**引导步 = 先取无前缀版本读数、再定前缀**（§3 自检） | 官方文档明示无版本前缀调用已废弃（将移除）；协商 = 老 daemon（min < 1.44）与新 daemon（min ≥ 1.44，如 Docker 29）两头都接得住 | 裸无前缀（官方废弃面——否）；固定档不协商（未来 daemon 抬底即坏——否） |
+| KD-SV-81 | **Docker API 版本 = 登记时协商 + 调用恒带前缀**：`ver = max(1.44, MinAPIVersion)`，须 ≤ `ApiVersion`（否则拒登记）；版本存 `runtime_json`；**引导步 = 先取无前缀版本读数、再定前缀**（§3 自检）；**前缀形 = `v<ver>`**（如 `/v1.44/…`——2026-10-11 真机核：`/1.44/…` 404 ∥ `/v1.44/…` 200） | 官方文档明示无版本前缀调用已废弃（将移除）；协商 = 老 daemon（min < 1.44）与新 daemon（min ≥ 1.44，如 Docker 29）两头都接得住 | 裸无前缀（官方废弃面——否）；固定档不协商（未来 daemon 抬底即坏——否） |
 | KD-SV-83 | **托管接入 = agent 逐案执行**（探明 → 决定 → 执行 → 验证 → 报告——非固定脚本）：步骤骨架在案（§3）∥ 自主 = 技术路线（包管理器/装法/重试 ≤1/次序）∥ 停下报告六边界（agent 档 §4）∥ 失败处置 = 仅撤自改可逆配置（drop-in）∥ 装包不回滚 ∥ 登记失败零宿主回滚 ∥ 预算（20 分钟 ∥ 60 调用） | 用户 15:00/15:02 口径（执行者 = server 端 agent；能力从场景反推）；无人值守须保险丝与停点；「回滚还是停下」= 按动作可逆性分类 | 固定安装脚本（用户已否——「不是固定安装脚本」）；全量回滚（装包卸载更危险——否）；无预算（跑飞面——否） |
 | KD-SV-84 | **凭据 = AES-256-GCM + 密钥文件（`data/credentials.key` 0600）+ 默认用完即弃 + 可撤销 + 每步审计（掩蔽）** | 需求凭据纪律五件定形（#1236）；`node:crypto` 零第三方；默认弃 = 信任最小化；如实披露（同机密钥不防整机沦陷；撤销只及 server 侧） | 明文落库（跳板凭据面——否）；外部 KMS（另立级——本批否）；默认保留（长期持凭据——否） |
 | KD-SV-85 | **SSH 传输 = 容器内系统 openssh**（密钥 `-i`（0600 文件）∥ 密码 `sshpass -e`（环境变量——不入 argv））+ 主机指纹 TOFU（accept-new + 首见记录；变更 ⇒ 停 + 「重新信任」重试）+ `.ssh` 落数据目录 | 零第三方运行期依赖（仓纪律——JS 自写 SSH 不现实）；`sshpass -e` = ps 无泄漏形；数据目录 = 容器重建不丢 | 自写 SSH 协议（体量/安全——否）；`-p` 明文 argv（ps 泄漏——否）；不验指纹（网内中间人——否）；硬拒一切指纹变更（重装常态——否） |

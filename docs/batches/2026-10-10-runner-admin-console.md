@@ -345,7 +345,7 @@ VERDICT: pass
 - **实施派遣**：两派并行（服务面 ∥ 控制台面——文件域不交叠）；真机验收 = 10.0.0.6 端到端九步；收口 = 本档 §6。
 
 ## §5 实施记录（eng-coder）
-**状态行**：实施完成 2026-10-11（控制台面 8/8 绿；悬项 = 门禁链旧件随正（父侧范围）∥ 承载工作区 confirm 面（待裁））
+**状态行**：实施完成 2026-10-11（fix 轮：Docker API 前缀 v 补齐——两件 11/11 ∥ 13/13 绿；终态 clean（审计/评审轮次见段内））
 
 
 
@@ -483,6 +483,50 @@ VERDICT: pass
 **父侧待办两件（若取径 ①）**：① 按上列清单落写 26 档（我侧无法落笔）；② 改后全链复跑一次（= 本任务验收）并回填本段。
 
 **勘误（同轮）**：上段门禁实测计数收正 = **6 档 / 7 次**（`console-completeness-2` ∥ `console-list-style` ∥ `server-gateway` ∥ `team-login-client-access` ∥ `server-small-fixes` ∥ `server-console-config`；其中 `completeness-2` 另经 apply_patch 一试）——「7 档」为笔误。
+
+### fix 轮：Docker API 版本前缀缺 v（真机走查唯一缺陷）· eng-coder（2026-10-11）
+
+**交付摘要**（文件域 = 三档；与设计档 ∥ 其余 src ∥ 本批 ui 件零交叠；OUT-OF-LIST = 零——触碰面 = 任务书明列三档）：
+
+- 缺陷（.6 真机实测）：`/version` = 200 ∥ `/v1.44/version` = 200 ∥ `/1.44/version` = 404——原码前缀拼成 `/<apiVer>`（缺 `v`）⇒ 带前缀调用全 404。
+- 修复 = 前缀补 `v`（构造点 2 处）+ 两批内件同拍（期望 3 处 + 文案 1 处 + 剥离正则 1 处）；**零新语义**。
+
+**落点表（file:line → 旧 ⇒ 新）**
+
+| # | file:line | 旧 ⇒ 新 |
+|---|---|---|
+| 1 | `thincoder-server/src/sandbox/docker.mjs:110` | `` `/${apiVer}` `` ⇒ `` `/v${apiVer}` `` |
+| 2 | `thincoder-server/src/sandbox/docker.mjs:147` | `` `${apiVer ? `/${apiVer}` : ""}/version` `` ⇒ `` `${apiVer ? `/v${apiVer}` : ""}/version` `` |
+| 3 | `docs/batches/2026-10-10-runner-admin-console.test.mjs:211` | `"/1.44/version"` ⇒ `"/v1.44/version"` |
+| 4 | 同上 `:214` | 同拍（文案「形式 /<ver>/...」⇒「/v<ver>/...」） |
+| 5 | 同上 `:358`–`:360` | `/1.44/containers/…` 三处 ⇒ `/v1.44/…` |
+| 6 | `docs/batches/2026-10-10-runner-admin-console-agent.test.mjs:90` | 剥离正则 `/^\/[0-9.]+/` ⇒ `/^\/v?[0-9.]+/`（与主件 `:62` 同形——不改则带前缀调用 404，腿 F 等必红） |
+
+引导步（`apiVer=null` ⇒ 无前缀 `/version`）不变；设计档（`SANDBOX.md` §3 `v<ver>` ∥ KD-SV-81）已是正确形——实现对齐，设计档零触。
+
+**复跑读数**（自 `thincoder/` 仓根——原文）：
+
+- `node --test docs/batches/2026-10-10-runner-admin-console.test.mjs` ⇒ tests 11 ∥ pass 11 ∥ fail 0。
+- `node --test docs/batches/2026-10-10-runner-admin-console-agent.test.mjs` ⇒ tests 13 ∥ pass 13 ∥ fail 0。
+- 全仓套件不跑（父侧收口跑一次——本任务书明示）。
+
+**审计与代码评审轮次与终态**
+
+- 内部偏差审计（explore ∥ 只读）轮 1：**零偏差**——6 项逐条 ✅（构造点恰两处 ∥ 引导步无前缀 ∥ 两件期望/剥离全候新形 ∥ 旧形零活面残留 ∥ 越界零 ∥ 鉴别力：还原旧形主件必红）；3 条范围外披露（见下）。
+- 内部代码评审（advisor ∥ code）轮 1：**VERDICT `pass`**，0🔴、零 must-fix；🟡×2（均 pre-existing/optional：`normalizeDockerAddress` 单冒号 scheme 判——主机名形输入被拒（我实测复现：`localhost:2375`/`runner-01:2375` ⇒ 400，话术自相矛盾）∥ agent 件 632 行超 500 行顾问线）🔵×3（agent 件零路径断言——自证力薄 ∥ 主件 info/create 腿无具形断言 ∥ `prefix()`/`version()` 空值口径不一）。
+- fix round（本派自修）：**0**（审计零偏差、评审零必改；🟡 均前置遗留——动即越「只改前缀形、零新语义」射程）。
+- **终态 = `clean`**（修复射程内）。
+
+**决策透明表**
+
+| # | 项 | 决定 | 理由 |
+|---|---|---|---|
+| 1 | agent 件同拍内容 | 只改剥离正则，不加新断言 | 修正后带前缀调用须被剥离；加断言 = 新语义（超射程）——列报 |
+| 2 | advisor 🟡×2 ∥ 🔵×3 | 全数不改、列报 | 均前置遗留或增强建议——本任务书「只改前缀形、零新语义、只动三档」明令 |
+| 3 | 旧形残留 | 全仓 grep `/1.44`（mjs/cjs/js/md/json/css/html）：仅设计档两处真机证据行（旧形 = 404 反例记录——正确陈述） | 零活面残留 |
+| 4 | `routes.mjs:7` 头注 `<ver>` 陈写法 | 不动、列报 | 禁改其余 src 档 |
+
+**披露（范围外——交父侧/另轮）**：① `normalizeDockerAddress` 主机名形输入被拒（实测复现；设计「缺协议补 http://」vs 实现单冒号 scheme 判分叉——仓内先例 `thincoder-core/team.mjs:50` 用 `://` 形）；② 批档 §2 `:180` 仍写 `GET <base>/<ver>/version`（与设计档 `v<ver>` 滞后）；③ `routes.mjs:7` 头注 `<ver>` 同族；④ `SANDBOX.md:93` S5 判据形（`v<ver>`）vs `onboarding.mjs:34/:355` 探活实形（无前缀 `/version`——真机两形皆 200，功能无碍）；⑤ `SANDBOX.md` 变更记录无本次修复行（`:46/:291` 有 2026-10-11 实机核实注）。
 
 ## §6 验证与收口（父代理）
 
