@@ -29,6 +29,7 @@ import { createLoginGuard } from "../src/accounts/login-guard.mjs"
 import { pruneAuditEvents, recordAudit } from "../src/accounts/audit.mjs"
 import { registerAccountRoutes } from "../src/accounts/routes.mjs"
 import { registerAdminRoutes } from "../src/accounts/routes-admin.mjs"
+import { registerClientRoutes } from "../src/client/routes.mjs"
 import { registerMeteringRoutes } from "../src/metering/routes.mjs"
 import { USAGE_PRUNE_INTERVAL_MS, pruneUsage } from "../src/metering/usage.mjs"
 import { createStaticSite } from "../src/webui/static.mjs"
@@ -141,6 +142,7 @@ export async function run(argv = process.argv.slice(2), log = createLogger(), { 
     registerProviderAdminRoutes(routes, { db, config, runtime: providerRuntime, log }) // provider 管理面（同实例——换表两族同见）
     registerAccountRoutes(routes, { db, guard: loginGuard }) // D2 面：login ∥ logout ∥ me ∥ me/password ∥ me/keys/rotate
     registerAdminRoutes(routes, { db, guard: loginGuard })   // D2 面：members 列表/建 ∥ 吊销 ∥ 重置
+    registerClientRoutes(routes, { db, guard: loginGuard })  // client 域（B1 批）：/api/client/login ∥ logout ∥ me（token 即成员 key——KD-SV-61/62）
     registerMeteringRoutes(routes, { db }) // D2 面：用量查询 ∥ 设额度
     // 系统面（gateway/API.md §2.3——首版完备化①③）：/healthz 探活 ∥ /api/system（惰性状态访问器——更新器在其后创建；embedding.model = 运行时 accessor`engineModel()`——#1152 ∥ 地址不下发）
     registerSystemRoutes(routes, { db, version, getUpdateStatus: () => updater?.getStatus() ?? null, embedding: config.embedding, providerRuntime }) // #1152：embedding 缺配判据 = 运行时 accessor（`engineModel()`——与派发面同源；`embedding` 段 = 替身回落）

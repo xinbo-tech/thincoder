@@ -266,6 +266,17 @@ export function normalizeProxy(proxy) {
   return { uri, web: proxy.web !== false }
 }
 
+/** 团队登录段加载归一（B1 批——`docs/core/design/TEAM.md` §2.1 ∥ CONFIG.md §6.4）：非对象 ⇒ null（软失败
+ *  不阻启动——沿 proxy 段先例）；键级 = trim 非空字符串（非串 ∥ 空 ⇒ null）；`member` 浅形 `{ username, name }`。
+ *  **不入 `DEFAULTS`**（settings 工具面零涉——agent 不可写；`team.token` 经读面到达 = 敏感段词表遮罩）。 */
+export function normalizeTeamSection(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return null
+  const str = (v) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null)
+  const raw = value.member
+  const member = raw !== null && typeof raw === "object" && !Array.isArray(raw) ? { username: str(raw.username), name: str(raw.name) } : null
+  return { server: str(value.server), member, label: str(value.label), token: str(value.token) }
+}
+
 /**
  * Load configuration.
  * No env-var overrides — config.json is the single source of truth
@@ -383,6 +394,9 @@ export function loadConfig() {
   // Normalize proxy: string → { uri, web:true }; object 补默认值；非法类型丢弃。
   // 保证 agent.config.proxy 永远是规范形态或 undefined
   merged.proxy = normalizeProxy(merged.proxy)
+
+  // 团队登录段（B1 批——TEAM.md §2.1）：加载归一（形不符 ⇒ null——软失败不阻启动）；不入 DEFAULTS
+  merged.team = normalizeTeamSection(merged.team)
 
   // Runtime provider = 统一解析（#841——resolveProviderPlan 单源：回退序 + 三态；PROVIDER.md §6.22）。
   // 不可运行（渠表空 ∥ 全表无 key）⇒ {} + providerInvalidReason（D-S1 处置不 throw——make-agent 打

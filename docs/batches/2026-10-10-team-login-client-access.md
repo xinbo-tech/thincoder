@@ -134,6 +134,8 @@
 **零新语义**（父侧裁定直接导出项）：`CLIENT.md` 零动（本修复不动 server 契约）∥ 零新错误码/提示句 ∥ 产品码零触。**机检读数** = `node scripts/doc-check.mjs` **EXIT 0**——汇总 = 候选 55491 · 悬空 0 · 注记豁免 320 · 拟新增 39 · 迁移期引文 326 · 声明源缺位 0；行宽 = 源域无 >300 字符单行。
 **未动（报告——非本轮授权面）**：① 核 `team.mjs` `reason` 实装四值（含 `write_failed`——服务端已应答、本地写盘失败）∥ 失败形 `{ ok: false, reason }`，而档面作「reason 三值」+ 三句出词（无 `write_failed` 对位句）——档-码差一，供父侧择批；② `TEAM.md` §5/§6 未随动（判据/用例未点两字段——不在本轮四落点内）。
 
+**档-码差一修复（`write_failed` 补设计——父侧已裁 · eng-designer）**：**号** = 上轮报告 `eng-designer#118` 待裁项 1；**由** = 核 `team.mjs` 失败形实装 `reason` **四值**（`network` ∥ `credentials` ∥ `rate_limited` ∥ `write_failed`——本机配置落盘失败），而档面作「reason 三值」（`docs/desktop/design/IPC.md` §2 团队族行）+ 出词三句（无第四句对位）——档-码差一，父侧已裁；**裁定** = 保留第四值并补设计（写盘失败须真报警——并入既有理由之一 = 误导，禁）；第四句形随三句（短语形）——用词「本机配置写入失败」（三端逐字同句判据照旧；i18n 键归端侧）；**落点（四处 + 各档变更记录一行）** = ① `docs/core/design/TEAM.md` §2.5——失败理由域句（四值单源；**§2.5 原无该句**——现盘「reason 三值」仅存 `IPC.md`，按裁定单源落此）+ 出词表第四句 + 判据行同拍；② `docs/desktop/design/IPC.md` §2 团队族行——`reason` 三值 ⇒ 四值（逐值列全）+「词三句」⇒「词四句」；③ `docs/vsc/design/SETTINGS.md` §2.20——失败出词补第四句；④ `docs/desktop/design/SETTINGS.md` §2.21——同拍（四句列全）。**机检读数** = `node scripts/doc-check.mjs` **EXIT 0**——汇总 = 候选 55504 · 悬空 0 · 注记豁免 320 · 拟新增 39 · 迁移期引文 326 · 声明源缺位 0；行宽 = 源域无 >300 字符单行（区带豁免在效）；行数面差异 4 条（报告态——非本批面）。**零新语义**（父侧裁定直接导出项）：产品码零触（`write_failed` 实装零改）∥ `docs/server/design/client/CLIENT.md` 零动（server 契约零涉）∥ 三句既有用词零改 ∥ 零第五值。**未动（报告——非本轮授权面）**：`TEAM.md` §2.2 步 4 分类出词括注 ∥ §6 E1 用例括注（网络不可达 ∥ 401 ∥ 429——未含 `write_failed`）——不在本轮四处内，供父侧择批。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -175,4 +177,46 @@ VERDICT: pass
 - **父侧保留项**（不派舱）：`IPC.md` `ev:menu` 行计数 ∥ 桌面档头「七段」⇒「八段」（档面单行修正）∥ `API-CONTRACT` 重生成（脚本面）∥ 全链门禁（`prepublishOnly`）与收口轮（含三端实走——R50④⑤）。
 
 ## §5 实施记录（eng-coder）
+
+### 5.A · 舱 A（核 + server）· eng-coder · 2026-10-10
+
+**范围**：派发计划 A 舱——server `client` 新域（`/api/client/*`）∥ 核 `team.mjs` 单源 ∥ 核 `config.mjs` `team` 段加载归一 ∥ 批内件（服务端面）。三端（B/C/D）与本册 `-ends` 批内件不在本舱；`IPC.md ev:menu` 行 ∥ 桌面档头 ∥ `API-CONTRACT` 重生成 = 父侧保留项。
+
+**交付（四档 + 批内件）**：
+
+| # | 档 | 动作 | 实读行数 | 对设计预算 |
+|---|---|---|---|---|
+| 1 | `thincoder-server/src/client/routes.mjs` | 新建（login ∥ logout ∥ me 三处理——复用 members/keys/guard/audit 单源） | **77** | ≈75（+2） |
+| 2 | `thincoder-server/bin/thincoder-server.mjs` | +import 行 +注册行（共享 `loginGuard`） | 182 ⇒ **184** | ≈184 ✓ |
+| 3 | `thincoder-server/package.json` | `prepublishOnly` 清单 38 ⇒ **39**（本批件入链；单行清单行数零变） | 在册 | ✓ |
+| 4 | `thincoder-core/team.mjs` | 新建（登录 ∥ 退出 ∥ 状态 ∥ 标签 ∥ 派生条目 upsert/停用 ∥ 地址归一 ∥ 分类 ∥ 写盘单源） | **195** | ≈180（+15） |
+| 5 | `thincoder-core/config.mjs` | `normalizeTeamSection` + `loadConfig` 归一行；不入 `DEFAULTS` | 495 ⇒ **510** | ≈503（+7——越 500 软线档面在册 + 拆分预案） |
+| 6 | `docs/batches/2026-10-10-team-login-client-access.test.mjs` | 新建（服务端面批内件 10 例——入链） | **306** | ≈260（+46） |
+
+**随正**：① `prepublishOnly` 38 ⇒ 39（本舱落）；② 七件门禁计数断言件 38 ⇒ 39——**本舱被系统写界拒绝（跨批兄弟件），已上抛；父侧已落讫**（父侧读数：清单 39 ∥ 断言 39 ∥ 缺档 0）。
+
+**决策透明表（本舱裁量面）**：
+
+| # | 决策点 | 取法 | 依据 |
+|---|---|---|---|
+| 1 | 端标签「端名」来源（档未钉） | 取**进程端名缝** `sessionEnd()`（cli/vscode/desktop）+ `node:os` `hostname()` ⇒ `端名@主机名`，≤40 裁剪；显式 `label` 同口径裁剪 | TEAM.md §2.2 步 1；端名单源 = `session-slots.mjs:115`；显式裁剪 = 评审发现修正（防服务端 400 误报网络不可达） |
+| 2 | 失败分类边界（档仅列三类） | 不可达 ∥ DNS/TLS ∥ 超时 ∥ 非 401/429 应答 ⇒ `network`；200 而形不符（无 token）⇒ `network` | 三值闭集（TEAM.md §2.2 步 4）——档未穷举面取保守归并 |
+| 3 | `write_failed` 第四值（档-码差一） | 实装保留——本地写盘失败（mtime 冲突 ∥ 畸形档）≠ 网络/凭据/限流；不产物假「登录成功」 | 父侧裁定保留 + 设计侧补句在办（端侧三舱对位句由父侧协调；本舱不自证文案） |
+| 4 | 写入口根形守卫（档未涉） | mutate 首行 `assertWritableRoot`：非对象/数组根 ⇒ 拒写 ⇒ 归 `write_failed` | `writeConfigAtomic` 不校验根形（数组根 mutate 静默落空 ⇒ 假成功）；本档 0 值「不产出假成功」 |
+| 5 | 登录/退出请求超时 | `AbortSignal.timeout(15_000)` ⇒ 超时归 `network` | 沿核内既有超时先例（auto-think ∥ generate-title ∥ embedding）；防悬挂 |
+| 6 | 写盘路径 | `persistRaw`（= `writeConfigAtomic` + 路径缝）一次 mutate——端侧零自写盘 | TEAM.md §2.1「写盘 = writeConfigAtomic 一次 mutate」 |
+| 7 | 上抛已裁项：D-TM4 ∥ §2.3 提示端侧载体缺位 | 核返回 `{ ok:true, notice?:"manual-name-conflict" }` ∥ 退出 `{ ok:true, revokeDelivered:boolean }`（`notice` 携码不携文） | 父侧 2026-10-10 裁定（端侧载体由设计修复轮补；三端文件本舱零触） |
+
+**验证读数（全实跑）**：
+- 批内件 **10/10 绿**（`node --test docs/batches/2026-10-10-team-login-client-access.test.mjs`，自 `thincoder/` 仓根）：N37 ∥ B27 三态（同措辞 ∥ 5 连败 429 + `Retry-After` ∥ label 三态）∥ N39 token 兼用 ∥ 20 上限豁免 ∥ E28 吊销即判 ∥ 审计四型 `surface:"client"` + 控制台键缺席 + 十型零增 ∥ v10 零迁移 + `sessions` 零涉 ∥ 链自检。
+- 核面探针 **30/30 绿**（`.thincoder/tmp/2026-10-10-b1-core-probe/probe.mjs`——临时区诊断件，非批内件）：三态分类 ∥ 地址归一四例 ∥ 标签生成/裁剪 ∥ 派生条目形/表尾/停用/恢复 ⟂ 同名手工 notice 零覆盖 ∥ 退出两态（`revokeDelivered` true/false）∥ 根形守卫 ∥ 审计/库面读数。
+- 归一化面 **5/5 绿**（一次性脚本）：形不符 ⇒ null ∥ 键级 trim ⟂ member 浅形 ∥ 完好段 + 派生条目消费链 ∥ `team` 不入 `DEFAULTS`。
+- 真入口启动自检 **5/5 绿**（`boot-check.mjs`）：`bin/thincoder-server.mjs` + 临时 config——`ready` 行 ∥ `/healthz` 200 ∥ 三端点活体（400 ∥ 401 ∥ 401）。
+- 语法：五档 `node --check` 全 OK。
+
+**审计与代码评审轮次与终态**：
+- **内部分歧审计（只读 explore · 阻塞 ×1）**：结论 = **零分歧**（四类 PARTIAL ∥ SILENT-SIMPLIFICATION ∥ DOC-DRIFT ∥ OUT-OF-LIST 各 0）；独立复证 = 五档 `node --check` 全绿；限制如实登记 = 该席位无执行面 ⇒ 未复跑测试（「全绿」为提交方实跑读数 + 断言文本实读）。
+- **代码评审（advisor · code ×1 · 阻塞）**：**VERDICT: pass**（🟡1 + 🔵3，无 🔴）。fix round（评审后就地 ×2——均为评审自身建议项，随即复跑）：① `routes.mjs` 头注链路序收正（守卫先行 = 实装序）；② `team.mjs` 显式 `label` 同口径裁剪 ≤40。登记不动作两条：🟡 `config.mjs` 越 500 软线（档面已注越线 + 拆分预案——非 must-fix）∥ 🔵 行数预算漂移（`team.mjs` 195 ∥ 批内件 306——收口/回填轮按实读收正）。
+- **终态 = clean**（审计零分歧 ∥ 评审 pass ∥ 评审后修正两处已复跑读数在册）。
+
 ## §6 验证与收口（父代理）
