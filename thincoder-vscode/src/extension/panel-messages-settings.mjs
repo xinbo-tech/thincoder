@@ -24,6 +24,8 @@ import { removeProviderFlow, setKeyFlow, probeProviderAdmission, ui } from "./pr
 import { handleAddProvider as persistAddProvider, handleRemoveProvider as persistRemoveProvider, handleSetProviderProxy as persistSetProviderProxy, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection, postProviderError, pushTeamStatus } from "./settings.mjs"
 import { setSlotAdvisorGuard, setSlotEngineering } from "./session-io.mjs"
 import { teamLogin, teamLogout } from "./team.mjs"
+// F-W21（登录面补全批）：状态栏团队 item 随动（webview 登/退成拍——命令流外的第二条写径）
+import { refreshTeamSurface } from "./team-surface.mjs"
 import { _cwd } from "./panel-messages.mjs"
 
 /** 迁出自 `panel-messages.mjs` 的 case "saveProviderKey"（#695：写结果捕获——冲突 ⇒ `providers` 段失败面）。
@@ -264,6 +266,7 @@ export async function handleTeamLogin(panel, msg) {
   if (r.ok) {
     pushTeamStatus(panel._panel)
     panel._pushStatus()
+    refreshTeamSurface() // F-W21：团队 item 随动（设置面板 ∥ 面板外常显面同拍）
   }
   panel._panel?.webview.postMessage({ type: "teamLoginResult", ...r })
 }
@@ -276,6 +279,7 @@ export async function handleTeamLogout(panel) {
   if (r.ok) {
     pushTeamStatus(panel._panel)
     panel._pushStatus()
+    refreshTeamSurface() // F-W21：团队 item 随动（退出 ⇒ 入口态／已失效清位）
   }
   panel._panel?.webview.postMessage({ type: "teamLogoutResult", ...r })
 }

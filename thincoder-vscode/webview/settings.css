@@ -367,6 +367,78 @@
 
 .welcome-actions .save-btn { flex: 1; margin-top: 0; }
 
+/* 登录面补全批（2026-10-10）：路由屏两卡（团队 ∥ 本地——并排、零预选）∥ 同屏换取区（团队表单 ∥ 本地表单） */
+.welcome-routes {
+  display: flex;
+  gap: 10px;
+}
+
+.welcome-route {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--hover-bg);
+}
+
+.welcome-route-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.welcome-route-desc {
+  flex: 1;
+  margin: 0;
+}
+
+.welcome-route .save-btn,
+.welcome-route .key-btn { margin-top: 0; }
+
+/* 团队卡管理面读数行（登录面补全批：三行 = 服务器地址 ∥ 成员 ∥ 端标签） */
+.team-admin-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.team-admin-label { opacity: 0.65; white-space: nowrap; }
+
+.team-admin-value { text-align: right; word-break: break-all; }
+
+.welcome-swap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#welcome-team-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#welcome-team-form .save-btn { margin-top: 0; }
+
+#welcome-team-fail {
+  font-size: 12px;
+  color: #f14c4c;
+  line-height: 1.4;
+}
+
+#welcome-team-back { align-self: flex-start; }
+
+#welcome-local-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 /* Consult rows: provider+model pair on one line */
 .consult-row {
   display: flex;

@@ -1,9 +1,9 @@
 /**
  * team.mjs — 团队登录机制（TEAM.md §2——三端共用单源：CLI ∥ VSC ∥ 桌面同 import）。
  *
- * 面：登录 ∥ 退出 ∥ 登录态读面 ∥ 端标签（自动生成）∥ 派生 provider 条目（登录写入 / 退出停用）∥
- * 服务地址归一 ∥ 失败分类。**写面单源** = 本档（`writeConfigAtomic` 一次 mutate——经 `persistRaw`；
- * 端侧零自写盘，三端同源）。
+ * 面：登录 ∥ 退出 ∥ 登录态读面 ∥ 活校验（`teamVerify`——只读三值，登录面补全批增）∥ 端标签（自动生成）∥
+ * 派生 provider 条目（登录写入 / 退出停用）∥ 服务地址归一 ∥ 失败分类。**写面单源** = 本档（`writeConfigAtomic`
+ * 一次 mutate——经 `persistRaw`；端侧零自写盘，三端同源）——`teamVerify` **只读**（零写盘、零状态）。
  *
  * 形（TEAM.md §2.1）：顶层 `team` 段 `{ server, member{username,name}, label, token }`——`token` 在场 ⇔
  * 已登录（权威源；不入 `DEFAULTS`）；派生条目 `{ name:"team", baseURL:"<server>/v1", apiKey:"<token>",
@@ -75,6 +75,33 @@ export function teamStatus() {
     member: team?.member ?? null,
     label: team?.label ?? null,
   }
+}
+
+/**
+ * 登录态**活校验**（TEAM.md §2.6 ∥ 登录面补全批 · 2026-10-10 · 台账 #1231——本批新增）：`GET <server>/api/client/me`
+ * （Bearer = `team.token`）⇒ **三值闭集**：`{ state: "valid" }`（200——token 有效）∥ `{ state: "invalid" }`（401——
+ * 被吊销 ∥ 无效）∥ `{ state: "unreachable" }`（网络不可达 ∥ 其他非 401 失败——**不判失效**：离线容忍）。
+ * **只读**——零写盘、零状态（调用面持结果）；零周期轮询（触发点制 = 启动一次 ∥ 登/退面开合 ∥ CLI `/team status`）。
+ * token ∥ 地址缺席（未登录 ∥ 畸形档）⇒ `unreachable`（无从校验——不假报失效；端侧未登录面零调本函数）。
+ */
+export async function teamVerify() {
+  const team = loadConfig().team
+  const token = typeof team?.token === "string" && team.token !== "" ? team.token : null
+  const server = typeof team?.server === "string" && team.server !== "" ? team.server : null
+  if (token === null || server === null) return { state: "unreachable" }
+  let res
+  try {
+    res = await fetch(`${server}/api/client/me`, {
+      headers: { authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(TEAM_FETCH_TIMEOUT_MS),
+    })
+  } catch {
+    return { state: "unreachable" } // 不可达 ∥ DNS ∥ TLS ∥ 超时
+  }
+  await res.text().catch(() => {}) // 回执体零消费面（三值只看状态）
+  if (res.status === 200) return { state: "valid" }
+  if (res.status === 401) return { state: "invalid" }
+  return { state: "unreachable" } // 其余（403 ∥ 404 地址非本服务 ∥ 5xx）⇒ 不判失效
 }
 
 /**

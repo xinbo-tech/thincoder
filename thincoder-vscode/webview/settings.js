@@ -16,7 +16,7 @@ import { agentCardHtml, consultAdvisorCardHtml, bindAgentControls, updateAgentSe
 import { installToolsKeyHandlers, toolsCardHtml, bindToolsControls, updateWebsearchSettings, updateIndexStatus } from "./settings-tools.js"
 import { renderMcpList, updateMcpTools, updateMcpTestResult } from "./settings-mcp.js"
 import { envCardHtml, bindEnvControls, updateShellCandidates, updateProxySettings, updateProxyTestResult } from "./settings-env.js"
-import { teamCardHtml, bindTeamControls } from "./settings-team.js"
+import { teamCardHtml } from "./settings-team.js"
 
 // openSettings refresh (GitHub #3): one-shot callbacks waiting for the next agentSettings
 // push, plus their timeout-fallback timers (see openSettings / notifyAgentSettingsRefreshed).
@@ -196,8 +196,8 @@ function buildSettings() {
   bindEnvControls()
   // MCP form/list, index build, MCP status request
   bindToolsControls()
-  // 团队卡两钮（登录 ∥ 退出——B1 批）
-  bindTeamControls()
+  // 团队卡 = 管理面（登录面补全批：卡内零登/退控件——登/退 = 首启板团队卡 ∥ 状态栏 item + 命令
+  // `thincoder.team`）；卡面重绘由 `updateTeamStatus` 推送驱动（无控件可绑）
   // #640：失败面补渲（关面板时落槽的一条在开面板建面后补显）
   renderSettingsError()
 }

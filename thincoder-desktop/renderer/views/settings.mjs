@@ -32,7 +32,7 @@ import { t } from "../i18n.mjs"
 import { THEMES } from "../theme.mjs"
 import { wire } from "./chat-tool.mjs"
 import { channelFormTree, verifyControl } from "./settings-controls.mjs"
-import { agentBody, consultAddBody, envBody, mcpBody, mcpFormBody, modelBody, modelIdOf, modelsBody, providerAddBody, providersBody, teamBody, toolsBody } from "./settings-sections.mjs"
+import { agentBody, consultAddBody, envBody, mcpBody, mcpFormBody, modelBody, modelIdOf, modelsBody, providerAddBody, providersBody, teamAdminBody, toolsBody } from "./settings-sections.mjs"
 
 // 两导出面随 R7 出档 `settings-controls.mjs`；本档 re-export ⇒ 导出面零改（消费面 = 首启向导）。
 export { channelFormTree, verifyControl } from "./settings-controls.mjs"
@@ -118,6 +118,9 @@ export function reasonWord(code) {
   const key = Object.hasOwn(REASON_WORD, code) ? REASON_WORD[code] : null
   return key === null ? String(code) : t(key)
 }
+
+/** 活校验三值闭集（登录面补全批 —— 段体投影用；表外 ⇒ `null`：禁假造）。 */
+const TEAM_VERIFY_STATES = Object.freeze(["valid", "invalid", "unreachable"])
 
 /** 段态归一（闭集三态；表外 / 缺 ⇒ `none` —— 不猜）。 */
 function stateOf(section) {
@@ -240,12 +243,15 @@ export function settingsModel(state) {
       },
     },
     // B1 批（台账 #1212）团队切片：登录态 + 三值投影（缺 ∕ 形不合 ⇒ null——禁假造）+ 当刻一次性提示。
+    // 登录面补全批（台账 #1231）：`verify` 三值入投影（`valid` ∥ `invalid` ∥ `unreachable`；表外 ⇒ `null`——禁假造），
+    // 消费面 = 首启向导团队屏（面板自取原切片——本投影同源供读数面）。
     team: {
       state: stateOf(settings.team),
       loggedIn: settings.team?.loggedIn === true,
       server: str(settings.team?.server),
       member: objOf(settings.team?.member),
       label: str(settings.team?.label),
+      verify: TEAM_VERIFY_STATES.includes(settings.team?.verify) ? settings.team.verify : null,
       notice: objOf(settings.team?.notice),
     },
   }
@@ -285,8 +291,8 @@ function sectionBody(name, model, handlers) {
   if (name === "env") return [sectionStateNode(model.env.state), ...(model.env.state === "ready" ? envBody(model.env, handlers) : [])]
   if (name === "tools") return [sectionStateNode(model.tools.state), ...toolsBody(model.tools, handlers)]
   if (name === "models") return [sectionStateNode(model.models.state), ...(model.models.state === "ready" ? modelsBody(model.models, handlers) : [])]
-  // B1 批团队段（台账 #1212）：段态词 + `ready` 才落体（未登录 = 表单 ∥ 已登录 = 状态行——见 `settings-sections-team.mjs`）。
-  if (name === "team") return [sectionStateNode(model.team.state), ...(model.team.state === "ready" ? teamBody(model.team, handlers) : [])]
+  // B1 批团队段（台账 #1212；登录面补全批收正 —— 卡降管理面）：段态词 + `ready` 才落体（详情三行；零登/退控件——见 `settings-sections-team.mjs`）。
+  if (name === "team") return [sectionStateNode(model.team.state), ...(model.team.state === "ready" ? teamAdminBody(model.team) : [])]
   // 两新组弹窗体（KD-77 ①②）：段态词恰一（本支首件）+ 体件；`mcpForm` 载入中零表单（闸住 `mcpFormBody` 内——沿段体旧闸）；`consultAdd` = `ready` 才落体（沿 models 段门）。
   if (name === MCP_FORM_MODAL_GROUP) return [sectionStateNode(model.mcp.state), ...mcpFormBody(model.mcp, handlers)]
   if (name === CONSULT_ADD_MODAL_GROUP) return [sectionStateNode(model.models.state), ...(model.models.state === "ready" ? consultAddBody(model.models, handlers) : [])]

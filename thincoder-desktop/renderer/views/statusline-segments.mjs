@@ -10,7 +10,7 @@
  * 段构建判据（逐段）与数据源 = 主档档头（不重述）；本档逐函数注释只记**该段自身**判据。
  * 承载段序（主档装配序）与本档函数一一对应：`attention` / `state`（含 R4 状态文本支）/ `tool` / `elapsed` /
  * `quiet`（停滞轻显形批 2026-09-29——序 = `elapsed` 之后）/ `tasks` / `turn` / `tokens` / `context` / `ledger` /
- * `timer` / `title` / `enter`。
+ * `timer` / `title` / `team`（登录面补全批 2026-10-10——表行 16，序 = `title` 后）/ `enter`。
  * **状态行 ⇒ CLI 补漏批（2026-09-29 · 台账 #600）**：段 9 读数改 CLI 形（`context <pct>% <tokens>` —— 令牌尾串
  * 源 = `usageTokens` 切片）；段 11 改**常驻**（在场判据 = `marker.text` 非空串 ∕ 警示色 = 核 `warn` 位）。
  */
@@ -210,6 +210,38 @@ export function titleSegment(sessions, key) {
   if (hit === undefined) return null
   const word = typeof hit.title === "string" && hit.title !== "" ? hit.title : t("rail.session.untitled")
   return { code: "title", parts: [{ text: word }] }
+}
+
+/** 非空串归一：非串 / 空串 ⇒ `null`（禁假造）。 */
+const str = (value) => (typeof value === "string" && value !== "" ? value : null)
+
+/** 服务器悬停形（`URL.host` —— 与 CLI「主机」同源同式，单源 = `docs/core/design/TEAM.md` §2.5；**不搬 URL 全串**）：
+ *  畸形 ∥ 无 host ⇒ `null`（零 `title` —— 不回落全串）。 */
+function serverHostOf(server) {
+  const text = str(server)
+  if (text === null) return null
+  try {
+    const host = new URL(text).host
+    return host === "" ? null : host
+  } catch {
+    return null
+  }
+}
+
+/** 段 16 · 团队登录态（登录面补全批 · 2026-10-10 · 台账 #1231——三态闭集，**判序写死**；
+ *  单源 = `docs/desktop/design/UI.md` §1 表行 16 ∥ 本批注（团队登录态段）∥ `TEAM.md` §2.5/§2.6）：
+ *  ① 未登录（`loggedIn` 假 —— **首判**；`verify` 不参与）⇒ 入口词 `status.team.entry`（点击 ⇒ 状态段就地面板——段接线归主档）；
+ *  ② 已失效（`loggedIn` 真 ∧ `verify === "invalid"`）⇒ 核字典键 `status.team.invalid`（核字典投影直取——零副本）+ 警示色；
+ *  ③ 已登录（其余 —— `valid` ∥ `null` ∥ `unreachable` 同判：**离线容忍**，不判失效）⇒ 成员名（`member.name ?? member.username`；
+ *     悬停 `title` = 服务器形（host））。
+ *  team 切片缺（未读达）⇒ 按 ①（入口面——点击即读）；已登录而成员名不可读 ⇒ **零节点**（禁假造）。 */
+export function teamSegment(team) {
+  if (team?.loggedIn !== true) return { code: "team", parts: [{ text: t("status.team.entry") }] }
+  if (team.verify === "invalid") return { code: "team", warn: true, parts: [{ text: t("status.team.invalid") }] }
+  const name = str(team.member?.name) ?? str(team.member?.username)
+  if (name === null) return null
+  const host = serverHostOf(team.server)
+  return { code: "team", ...(host === null ? {} : { attrs: { title: host } }), parts: [{ text: name }] }
 }
 
 /** 段 14 · 输入提示（表行 14 · 「对齐第二批」项 2 · **「回合中插入」批收正**：**源 = 本会话队快照镜面**

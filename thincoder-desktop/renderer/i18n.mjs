@@ -117,6 +117,9 @@
  *      登录 ∥ 退出两钮 + 未登录提示 + 状态行两标 + 失败四句 + 一次性提示两句 —— 未登录句 ∥ 四失败句 ∥ 两提示句三端逐字同，
  *      单源 = `docs/core/design/TEAM.md` §2.5）⇒ `HOST_DICT`（**合并表**，经合并点随动）**323 ⇒ 338**（届盘实读——前值 323 = 链面旧值 322 +
  *      前批未续计 1 键（`VIEWS_DICT` 实读 150）；两语同拍、键集相等）。
+ *      **登录面补全批增一键**（2026-10-10 · 台账 #1231）：`status.team.entry`（团队段未登录入口词——zh「登录团队服务器」；
+ *      已失效词 `status.team.invalid` 走**核字典投影**零副本——单源 = `thincoder-core/i18n.mjs`）⇒ **实读** `HOST_DICT`
+ *      （**合并表**，经合并点随动）**345 ⇒ 346**（两语同拍、键集相等；届盘实读续链——链文前值 338 系滞后值：并行批增键未逐笔续计，本行按盘收正）。
  *   ③ `t(key, params)` 解析序 = **宿主 → 核投影 → 键名自身**（缺键回落键名：不静默吞、不抛、
  *      永不返回空 / `undefined`）；插值 = **核同形** `${name}`（键值由核 `projectDictionary`
  *      原样投影 ⇒ 占位方言只能随核 —— `thincoder-core/i18n.mjs:12`「两端同约定」），缺参原样保留；
@@ -252,6 +255,7 @@ export const HOST_DICT = Object.freeze({
     "status.queue.n": "${n} queued message(s)",
     "status.ready": "Ready",
     "status.enter.send": "Enter: send",
+    "status.team.entry": "Log in to team server",
     "status.banner.plan": "PLAN",
     "status.banner.auto": "AUTO",
     "status.banner.advisor": "ADVISOR",
@@ -356,6 +360,7 @@ export const HOST_DICT = Object.freeze({
     "status.queue.n": "已排队 ${n} 条消息",
     "status.ready": "就绪",
     "status.enter.send": "Enter: send",
+    "status.team.entry": "登录团队服务器",
     "status.banner.plan": "PLAN",
     "status.banner.auto": "AUTO",
     "status.banner.advisor": "ADVISOR",

@@ -5,9 +5,9 @@
         （向导 ∥ 设置 —— 占槽裁决 = `renderer/mount-settings.mjs`）；两退场都清容器（构零子节点）⇒ 本档兜住
         空容器 / 关态（`:empty` + `[data-state="closed"]` 整层退场），否则定层盖住主 UI。
    树面锚：`views/settings.mjs`（头 / 段 / 体）· `views/settings-sections*.mjs`（段体 · 行 / 表单——D37 渠道族拆出
-   `views/settings-sections-providers.mjs`）· `views/onboarding.mjs`（向导）。字形面 = 关闭 / 退场两控件的 ✕（`content` ——
+   `views/settings-sections-providers.mjs`）· `views/onboarding.mjs`（向导：路由两卡 ∥ 团队表单 ∥ 本地三歩）。字形面 = 关闭 / 退场两控件的 ✕（`content` ——
    **视图档零字形字面**，沿 `pool.css` 折叠控件同纪律）；变量单源 = `theme.css` `:root`（零新变量 · 零断点常量）。
-   **该档越 300 顾问线，在册**（实读 **306** 行——口径 `split("\n").length−1`；2026-10-10 #1039 增两行后随正）。 */
+   **该档越 300 顾问线，在册**（实读 **348** 行——口径 `split("\n").length−1`；2026-10-10 登录面补全批 +两族（路由两卡 ∥ 就地面板）后随正）。 */
 
 /* ── ① 设置 / 向导：窗口级覆盖层面 ─────────────────────────────────────── */
 [data-slot="settings"] {
@@ -287,6 +287,48 @@ input.settings-field[type="checkbox"]:checked::after { left: 16px; }
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+}
+
+/* ── ④ 首启路由屏两卡族（登录面补全批 · 2026-10-10 · 台账 #1230）─────────────────────────────
+   两卡并排（**零预选** —— 等宽平分）；卡 = 标题 + 说明 + 行动钮（钮形复用 `.settings-submit` —— 本族只管卡壳）。
+   「以后再说」= 卡列下方次级钮（同形复用）。样式锚 = `renderer/views/onboarding.mjs` `routeBody`。 */
+.wizard-routes { display: flex; gap: var(--gap); align-items: stretch; }
+.wizard-route {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.wizard-route-title { margin: 0; font-size: var(--fs); font-weight: 400; } /* 排版统一（D29）：`h3` 承 UA 粗体 ⇒ 显式归零。 */
+.wizard-route-desc { margin: 0; color: var(--fg-muted); }
+
+/* ── ⑤ 团队就地面板族（登录面补全批 · 2026-10-10 · 台账 #1231）──────────────────────────────
+   `div.team-pop` = 状态段（段 16）点开的**就地浮层**（**零背板 ∥ 零遮罩** —— 非模态）：宿主 = `document.body`；
+   左 / 底两坐标由宿主按段矩形内联写（`renderer/mount-team.mjs` `anchorPanel`），本处只给面形与缺省落位
+   （右下角 —— 无布局面 ∥ 段缺位时的兜底阵位）；z 序 = **9**（低于设置面 10 —— 设置面开即盖住面板）。
+   面板内容面（表单 / 行 / 失败面 / 提示行）承 ② 段通则（全局类，零域级限）：本族只管浮层骨架。 */
+.team-pop {
+  position: fixed;
+  right: var(--gap);
+  bottom: calc(var(--fs) * var(--lh) + 2 * var(--gap));
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: max-content;
+  min-width: 16rem;
+  max-width: min(22rem, calc(100vw - 2 * var(--gap)));
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow);
+  color: var(--fg);
+  font: var(--fs)/var(--lh) var(--font);
 }
 
 /* 交互态组（D24 项 5 · 次级 6 键）：hover `--hover-bg` · 按下 `--hover-bg-strong` · 聚焦三值（强调 2 键保留 accent 框，零动）。 */

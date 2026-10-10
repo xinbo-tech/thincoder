@@ -18,6 +18,8 @@ import { runSessionIndexCommand, scheduleSessionIndexPassSafe } from "./src/exte
 // 判据在本侧解析（import vscode 侧——评审 #3 参数形钉死），包装保持 vscode-free。
 import { releaseClaimsOnExit } from "./src/extension/session-io.mjs"
 import { VSC_PROMPT_INJECTIONS } from "./src/prompt-injections.mjs"
+// F-W21（登录面补全批 · `WEBVIEW.md` §4.12）：团队常显 item + 命令 `thincoder.team`（登/退直达流）。
+import { initTeamSurface, disposeTeamSurface, runTeamCommand } from "./src/extension/team-surface.mjs"
 
 /** @type {ChatPanel} */
 let _panel
@@ -110,6 +112,9 @@ export async function activate(context) {
   _panel._statusBar = statusBar
   context.subscriptions.push(statusBar)
 
+  // 团队常显 item（F-W21——priority 98；点击 ∥ 命令面板 ⇒ `thincoder.team` 登/退流；启动触发点①在 init 内）
+  initTeamSurface(_panel)
+
   // Register sidebar webview provider
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider("thincoder.chat", _panel, {
@@ -168,6 +173,8 @@ export async function activate(context) {
     vscode.commands.registerCommand("thincoder.sessionIndexRebuild", () => {
       runSessionIndexCommand({ api: vscode }).catch(logFireAndForget)
     }),
+    // F-W21（`WEBVIEW.md` §4.12）：团队登/退直达（命令面板 ∥ 团队 item 点击同入口；起手 = 活校验）
+    vscode.commands.registerCommand("thincoder.team", () => runTeamCommand().catch(logFireAndForget)),
   )
 
   // SESSION.md §6.19 D-SE45 触发点②（同上）：启动窗外延迟拍（核侧 3s / 单趟 ≤2s 且 ≤40 会话）——
@@ -192,6 +199,7 @@ export async function deactivate() {
   // 宿主超时强杀残留 = 现状形态（认领保留走探测面，数据零险）。
   try { releaseClaimsOnExit(_cwd(), (vscode.workspace.workspaceFolders?.length ?? 0) > 0) } catch { /* 容忍面在核（D-SE41）——此层为 dispose 恒达兜底 */ }
   stopSampler() // F-W19（`SETTINGS.md` §2.12）：采样器随停用（幂等）——不留未清单定时器
+  disposeTeamSurface() // F-W21：团队 item 随停用（幂等——重载后 init 可重建）
   closeAllMcp()
   _panel?.dispose()
 }

@@ -70,6 +70,8 @@ export const CORE_MESSAGES = Object.freeze({
   "status.stopped": { en: "[stopped]", zh: "[已停止]" },
   "status.thinking": { en: "Thinking", zh: "思考中" },
   "status.turn": { en: "turn ${n}/${m}", zh: "轮次 ${n}/${m}" },
+  // ── 团队登录态（登录面补全批 · 2026-10-10 · 台账 #1231——TEAM.md §2.6：已失效段 ∥ 面板失效行；图形端经核字典投影直取）──
+  "status.team.invalid": { en: "Session expired — log in again", zh: "已失效——重新登录" },
   "tool.running": { en: "running…", zh: "执行中…" },
   "tool.done": { en: "done", zh: "完成" },
   // ── 台账（ledger）· F-LX3 变体键库首跑提示（批 2026-10-05-ledger-variant-db-notice · 台账 #935 · LEDGER.md §12.2 逐字；消费面 = CLI TUI 启动行）

@@ -15,7 +15,7 @@
  * 导出面：`modelHeadNode` / `modelChoicesTree` 供首启向导第二步复用（单一 owner、零副本）；`providersBody` = D37 拆档 re-export（消费面零改）；
  * 三端对齐批：`providerAddBody`（添加弹窗体）随渠道族同档经本档 re-export；
  * 添加入口弹窗统一批（KD-77 ①②）：`mcpFormBody`（MCP 表单弹窗体）∥ `consultAddBody`（会诊添加弹窗体）同径 re-export；
- * B1 批（台账 #1212）：`teamBody`（团队段体——登录表单 ∥ 状态行两态）同径 re-export。
+ * B1 批（台账 #1212）：`teamBody`（团队段体——登录表单 ∥ 状态行两态）同径 re-export（**登录面补全批收正**——改 `teamAdminBody`：卡降管理面，登/退面段体改由面板直取段体档）。
  * 纪律：零 DOM（描述符树）；文案一律经 `t()`；零 `node:` / 零裸包 / 零 `store.mjs` import。
  */
 import { t } from "../i18n.mjs"
@@ -34,7 +34,8 @@ export { mcpBody, mcpFormBody } from "./settings-sections-mcp.mjs"
 // 三端对齐批：同档增出 `providerAddBody`（添加弹窗体 —— `views/settings.mjs` `providerAdd` 支消费）随本行 re-export。
 export { providerAddBody, providersBody } from "./settings-sections-providers.mjs"
 // B1 批（台账 #1212）「团队」段体自立出档；本档 re-export ⇒ 分派面零改（消费 = `views/settings.mjs` 段体分派 `team` 支）。
-export { teamBody } from "./settings-sections-team.mjs"
+// 登录面补全批（台账 #1231）收正：卡降管理面 ⇒ re-export 改 `teamAdminBody`（`teamBody` 改由登/退面就地面板直取段体档——单一实现）。
+export { teamAdminBody } from "./settings-sections-team.mjs"
 
 /** 列表切片：缺 / 非数组 ⇒ 空表（零节点 —— 禁假数据）。 */
 const listOf = (value) => (Array.isArray(value) ? value : [])

@@ -42,10 +42,11 @@ export function createTimerWatch({ agent, onFire, timer = setTimeout, clear = cl
   return coreCreateTimerWatch({ getAgent: () => agent, onFire, timer, clear, now })
 }
 
-/** 用户自发模态判据（#448① · KD-6——单源：火面抑制 ∥「关闭后补评估」两处同谓词）：picker ∕ wizard
- *  在场即真（工具权限 ∕ 提问面板属**在飞回合**面——由 `state.processing` 门承担，不入本判据）。 */
+/** 用户自发模态判据（#448① · KD-6——单源：火面抑制 ∥「关闭后补评估」两处同谓词）：picker ∕ wizard ∕
+ *  团队问句面（登录面补全批——模态族第三支 `state.teamAsk`）在场即真（工具权限 ∕ 提问面板属**在飞回合**
+ *  面——由 `state.processing` 门承担，不入本判据）。 */
 export function modalOpen(state) {
-  return state?.picker != null || state?.wizard != null
+  return state?.picker != null || state?.wizard != null || state?.teamAsk != null
 }
 
 /**

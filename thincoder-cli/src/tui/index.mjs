@@ -43,6 +43,7 @@ import { createInputFace } from "./input-face.mjs"
 import { createConversationWriter } from "./conversation-writer.mjs"
 import { createTurnFace } from "./turn-face.mjs"
 import { createTimerWatch, fireTimerWake } from "./timer-watch.mjs"
+import { initTeamState, teamAskCancel, teamAskSubmit } from "./cmd-team.mjs"
 
 export { upgradeFailureText, pendingNoticeReady } from "./update-notice.mjs"
 
@@ -191,7 +192,9 @@ export async function startTUI(agent, opts = {}) {
   })
 
   // First-launch config wizard: implemented in wizard.mjs, closure deps passed via ctx
-  const { startWizard, renderWizard, wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems } = createWizard({
+  // （登录面补全批：新增三个转口——route 屏两件 + 回退行一件——键面 ctx 同源）
+  const { startWizard, renderWizard, wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems,
+          wizardRouteItems, wizardChooseRoute, wizardBackToRoute } = createWizard({
     agent, state, pushLine, pushLabel, render, persistRaw,
     showPicker, // #1049 补步：向导末问「走 proxy」picker（装配处注入——随 openModelPicker 先例）
     openModelPicker: () => openModelPicker(),
@@ -212,6 +215,7 @@ export async function startTUI(agent, opts = {}) {
     setProviderKey,
     pickModelForSlot,
     runDistill,
+    onModalClose: reevalTimerWake, // `/team login` 问句面退场 ⇒ 闩重武装（#448①——模态族第三支）
     exit: () => {
       cleanup()
       // F-XR1 退出释放（EXIT-CLAIM-RELEASE · SESSION.md §6.18）：同 key-handler 退出分支——
@@ -225,10 +229,14 @@ export async function startTUI(agent, opts = {}) {
 
   // ---------------------------------------------------------- Keyboard / Mouse
 
+  const teamCtx = { agent, state, pushLine, render, openModelPicker: () => openModelPicker(), onModalClose: reevalTimerWake }
+
   inputFace.mountKeys({
     agent, state, render, popPicker, renderPickerLines,
     handleSlash, handleTab, submit, pasteClipboardImage,
     wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems,
+    wizardRouteItems, wizardChooseRoute, wizardBackToRoute,
+    teamAskSubmit: () => teamAskSubmit(teamCtx), teamAskCancel: () => teamAskCancel(teamCtx),
     renderWizard, pushLine, cleanup, showPicker, loadOlder,
   })
 
@@ -243,6 +251,9 @@ export async function startTUI(agent, opts = {}) {
   await promptProviderIfInvalid(agent, () => openModelPicker(), pushLine)
 
   showStartup({ agent, state, opts, pushLine, pushLabel, render, startWizard })
+  // 团队登录态切片（登录面补全批 · TUI.md §7.8 写者①+③）：启动读（`teamStatus`——随装）+ token
+  // 在场 ⇒ `teamVerify()` 异步回填（零阻塞）
+  initTeamState({ state, render })
   // LEDGER-SURFACE：台账可见面——首扫（setImmediate）+ 周期；dispose 挂进程退出（同 cleanup 先例）
   const ledgerSurface = startLedgerSurface({ state, agent, render })
   // 端壳契约 = **恒同步返回 `{ dispose }`**（K-LX3 归核后与核形一致——核句柄异步就绪后桥接；

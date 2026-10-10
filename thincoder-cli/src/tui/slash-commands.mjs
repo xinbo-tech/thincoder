@@ -36,6 +36,7 @@ import { handleUpgradeCommand } from "./cmd-upgrade.mjs"
 import { handleFoldCommand } from "./cmd-fold.mjs"
 import { handleUndoCommand } from "./cmd-undo.mjs"
 import { handleEngCommand } from "./cmd-eng.mjs"
+import { handleTeamCommand } from "./cmd-team.mjs" // 团队登录（登录面补全批——/team login ∥ logout ∥ status）
 
 export const SLASH_COMMANDS = [
   { name: "/plan", group: "Agent", desc: "toggle plan mode (design first, then implement)" },
@@ -50,6 +51,7 @@ export const SLASH_COMMANDS = [
   { name: "/think", group: "Agent", desc: "thinking mode & reasoning effort" },
   { name: "/upgrade", group: "System", desc: "check for updates & upgrade" },
   { name: "/config", group: "System", desc: "agent config (embedding, proxy, turns, threshold, consult pool)" },
+  { name: "/team", group: "System", desc: "team login / logout / status" },
   { name: "/new", group: "Session", desc: "new session (old one archived to slot)" },
   { name: "/session", group: "Session", desc: "list/switch archived sessions" },
   { name: "/rename", group: "Session", desc: "rename the active session" },
@@ -92,6 +94,7 @@ export const HANDLERS = {
   "/submodel": handleSubmodelCommand,
   "/shell": handleShellCommand,
   "/config": handleConfigCommand,
+  "/team": handleTeamCommand,
   "/copy": handleCopyCommand,
   "/upgrade": handleUpgradeCommand,
   "/fold": handleFoldCommand,

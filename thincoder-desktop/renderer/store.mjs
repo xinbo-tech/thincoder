@@ -116,7 +116,8 @@ export function initialState() {
       notice: null,
       modal: null, // 组弹窗切片（D39 ∥ D38 · #817：`null` ∥ 组名十值闭集——七段名 + `providerAdd`（三端对齐批 · KD-75 ①②）∥ `mcpForm` ∥ `consultAdd`（添加入口弹窗统一批 · KD-77 ①②）；写者 = `renderer/mount-settings.mjs` `openSettingsModal` ∥ `closeSettingsModal`）
       configured: null,
-      wizard: { step: 1, dismissed: false, notice: null },
+      // 步初值 = 路由屏（`"route"` —— 登录面补全批：首启两路路由屏为第一屏；闭集见 `WIZARD_STEPS`）。
+      wizard: { step: "route", dismissed: false, notice: null },
       providers: { state: "none", presets: [], providers: [], edit: null, probe: null, draft: null, keyDraft: null, addShape: "preset" },
       verify: null,
       model: { state: "none", provider: null, current: null, models: [] },
@@ -300,10 +301,14 @@ export function configuredFlag(value) {
   return null
 }
 
-/** 向导步进（步域 1..3 闭集）：越界 / 非整数 / 同值 ⇒ **原引用**（无变化零通知）。 */
+/** 向导步闭集（**登录面补全批收正** —— 步界单源 = `docs/desktop/design/SETTINGS.md` §2.6：`"route"` ∥ `"team"` ∥ 1–3；
+ *  两屏（路由 ∥ 团队表单）的**表外值回落 `"route"`** 归显示面 `renderer/views/onboarding.mjs`（本表经其导入——零第二副本）。 */
+export const WIZARD_STEPS = Object.freeze(["route", "team", 1, 2, 3])
+
+/** 向导步进（步闭集 = `WIZARD_STEPS`——表外 / 同值 ⇒ **原引用**（无变化零通知））。 */
 export function setWizardStep(state, step) {
   const wizard = state.settings?.wizard ?? {}
-  if (!Number.isInteger(step) || step < 1 || step > 3 || wizard.step === step) return state
+  if (!WIZARD_STEPS.includes(step) || wizard.step === step) return state
   return patchSettings(state, { wizard: { ...wizard, step } })
 }
 

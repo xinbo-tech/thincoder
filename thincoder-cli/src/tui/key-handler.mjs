@@ -3,7 +3,7 @@ import { handleSearchKey } from "./key-handler-search.mjs"
 import { countConvLines } from "./render-conversation.mjs"
 import { handlePermissionMode, handleQuestionMode, handleInterruptMode } from "./key-modes.mjs"
 import { handleCtrlCFamily } from "./key-handler-ctrlc.mjs"
-import { handlePickerKeys, handleWizardKeys } from "./key-handler-modals.mjs"
+import { handlePickerKeys, handleWizardKeys, handleTeamAskKeys } from "./key-handler-modals.mjs"
 import { handleScrollKeys, handleHistoryKeys, handleCursorKeys } from "./key-handler-scroll.mjs"
 import { handleBusyEnter } from "./key-handler-busy.mjs"
 import { handleEditKeys } from "./key-handler-edit.mjs"
@@ -36,6 +36,8 @@ export function convMaxScroll(state) {
  *  ctx: { agent, state, render, renderPickerLines, popPicker,
  *         handleSlash, handleTab, submit, pasteClipboardImage,
  *         wizardChooseProvider, wizardSubmitText, cancelWizard, wizardProviderItems,
+ *         wizardRouteItems, wizardChooseRoute, wizardBackToRoute,
+ *         teamAskSubmit, teamAskCancel,
  *         renderWizard, pushLine, cleanup, showPicker } */
 export function createKeyHandler(ctx) {
   const { agent, state, render, pushLine, showPicker } = ctx
@@ -91,17 +93,25 @@ export function createKeyHandler(ctx) {
     // key-modes.mjs handleInterruptMode（D-S4）
     if (handleInterruptMode(str, key, { state, pushLine, render })) return
 
-    // 序 2：模态族（key-handler-modals.mjs）——picker 导航 / 初始配置 wizard
+    // 序 2：模态族（key-handler-modals.mjs）——picker 导航 / 初始配置 wizard / 团队问句面
     if (state.picker) { handlePickerKeys(str, key, ctx); return }
     if (state.wizard) {
-      // 守卫 = wizard 块内返回分支（provider 步恒返回；文本步仅 escape / return / ↑↓ / PgUp·PgDn 返回，
-      // 其余编辑键落空至编辑族 —— 守卫项与 key-handler-modals.mjs 块内返回点逐条对应）
+      // 守卫 = wizard 块内返回分支（route ∥ provider 列表步恒返回；团队步焦点在场恒返回（全键归面——
+      // 焦点在行上时零输入）；文本步仅 escape / return / ↑↓ / PgUp·PgDn 返回，其余编辑键落空至编辑族）
       const w = state.wizard
-      if (w.step === "provider" || key.name === "escape" || key.name === "return" ||
+      if (w.step === "provider" || w.step === "route" || w.teamFocusBack === true ||
+          key.name === "escape" || key.name === "return" ||
           key.name === "up" || key.name === "down" || key.name === "pageup" || key.name === "pagedown") {
         handleWizardKeys(str, key, ctx)
         return
       }
+    }
+    // 序 2b：团队问句面（模态族第三支——登录面补全批 · TUI-COMMANDS.md §5.5）：Esc 取消 ∥ Enter 提交；
+    // ↑↓/PgUp·PgDn 吞（面内零滚动/历史）；可打印键落空至编辑族（输入框编辑）
+    if (state.teamAsk && (key.name === "escape" || key.name === "return" ||
+        key.name === "up" || key.name === "down" || key.name === "pageup" || key.name === "pagedown")) {
+      handleTeamAskKeys(str, key, ctx)
+      return
     }
 
     // 序 3：scroll 族（key-handler-scroll.mjs）——PgUp/PgDn 翻页（含 loadOlder 边界加载）/

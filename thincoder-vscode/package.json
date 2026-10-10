@@ -81,6 +81,10 @@
       {
         "command": "thincoder.sessionIndexRebuild",
         "title": "ThinCoder: Rebuild Session Index"
+      },
+      {
+        "command": "thincoder.team",
+        "title": "ThinCoder: Team Login / Logout"
       }
     ],
     "menus": {

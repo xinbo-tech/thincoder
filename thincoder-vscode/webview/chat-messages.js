@@ -20,7 +20,7 @@ import { resetActivity, applySubagentApproval } from "./activity.js"
 import { renderStatusBar, handleUsageMessage } from "./status-bar.js"
 import { clearPanels, handleTaskProgress, handleSubagentMessage, handleGoalMessage, handleSuspensionMessage, handleTurnStateMessage } from "./panels.js"
 import { updateSessionTitle, handleProjectMessage } from "./session-bar.js"
-import { showWelcomePanel, maybeShowWelcome } from "./onboarding.js"
+import { showWelcomePanel, maybeShowWelcome, onWelcomeTeamLoginResult } from "./onboarding.js"
 import { handleAutoApprove, handleAgentSettings, handlePlanMode } from "./mode-buttons.js"
 import { handleModelsMessage } from "./model-picker.js"
 import { showQuestion } from "./question.js"
@@ -161,9 +161,10 @@ export function initMessageLoop(deps) {
         break
       // #1053 密钥行保存受理回执（协议 §3.2 行 25——host 成功径才发；拒径零回执 ⇒ 零闪 ∥ 行不关）
       case "providerKeySaved": onProviderKeySaved(m.name); break
-      // B1（团队卡——消费位）：态推送（打开/保存拍 + 登录/退出成拍）+ 两回执（登录当刻 / 退出当刻）
+      // B1（团队卡——消费位）：态推送（打开/保存拍 + 登录/退出成拍）+ 两回执（登录当刻 / 退出当刻）；
+      // 登录面补全批：`teamLoginResult` +板面钩（首启板团队表单——失败行 ∥ 同名冲突就地显；板退场交 providerStatus 闸）
       case "teamStatus": updateTeamStatus(m); break
-      case "teamLoginResult": onTeamLoginResult(m); break
+      case "teamLoginResult": onTeamLoginResult(m); onWelcomeTeamLoginResult(m); break
       case "teamLogoutResult": onTeamLogoutResult(m); break
       case "autoApprove":      handleAutoApprove(m); break
       case "agentSettings":    handleAgentSettings(m, updateAgentSettings); notifyAgentSettingsRefreshed(); break

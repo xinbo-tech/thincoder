@@ -1,5 +1,5 @@
 /**
- * ipc.mjs — IPC 通道处理体本体 + 宿主注入面（`docs/desktop/design/IPC.md` §1 / §2）：**五十一项**白名单面（菜单体系批 · D36 落 `theme:state`；消化面留档批 · #719 落 `record:append`；子代理面板批落 `panel:state`；B1 批落团队族三 —— `team:status` ∥ `team:login` ∥ `team:logout`，转口档 `team.mjs`）=
+ * ipc.mjs — IPC 通道处理体本体 + 宿主注入面（`docs/desktop/design/IPC.md` §1 / §2）：**五十二项**白名单面（菜单体系批 · D36 落 `theme:state`；消化面留档批 · #719 落 `record:append`；子代理面板批落 `panel:state`；B1 批落团队族三 —— `team:status` ∥ `team:login` ∥ `team:logout`；登录面补全批落 `team:verify`——团队登录态活校验，末位 52；转口档 `team.mjs`）=
  * 本档（配置读取 + 项目面 `project:open` / `project:recent` + 会话面 `sessions:list` / `session:create` /
  * `session:switch` / `session:rename` / `session:delete` / `session:resume` + 审批响应 `approval:respond` +
  * 作答响应 `question:respond` —— `question` 工具真作答面 + 历史页 `history:page` + 回合驱动 `msg:send` /

@@ -105,6 +105,14 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.team.reason.writeFailed": "Failed to write local config",
     "settings.team.notice.manualNameConflict": "A provider named \"team\" already exists — not added automatically; rename or delete it, then log in again",
     "settings.team.notice.revokeNotDelivered": "Server revocation not delivered",
+    // ── 登录面补全批（2026-10-10 · 台账 #1230）首启路由屏词族（消费 = `views/onboarding.mjs`——两卡四句复用团队段两键）──
+    "wizard.route.teamTitle": "Log in to team server",
+    "wizard.route.teamDesc": "Sign in with an account issued by your team — models come from the server, no API key to fill in",
+    "wizard.route.localTitle": "Configure a local provider",
+    "wizard.route.localDesc": "Fill in your own API key — no team server required",
+    "wizard.route.localAction": "Set up",
+    "wizard.later": "Later",
+    "wizard.backToRoute": "← Choose another way",
   },
   zh: {
     // ── 设置面（批 9：`views/settings.mjs` + `views/settings-sections.mjs`）──
@@ -186,5 +194,13 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.team.reason.writeFailed": "本机配置写入失败",
     "settings.team.notice.manualNameConflict": "已存在同名 provider「team」——未自动添加；请改名或删除后重登",
     "settings.team.notice.revokeNotDelivered": "服务端吊销未达",
+    // ── 登录面补全批（2026-10-10 · 台账 #1230）首启路由屏词族（消费 = `views/onboarding.mjs`——两卡四句复用团队段两键）──
+    "wizard.route.teamTitle": "登录团队服务器",
+    "wizard.route.teamDesc": "用团队发的账号登录——模型由服务器提供，不用自己填 key",
+    "wizard.route.localTitle": "配置本地 provider",
+    "wizard.route.localDesc": "自己填 API key，不依赖团队服务器",
+    "wizard.route.localAction": "开始配置",
+    "wizard.later": "以后再说",
+    "wizard.backToRoute": "← 换一种方式",
   },
 })

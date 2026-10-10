@@ -11,7 +11,7 @@
  * `mountChat` + 同帧态刷）∥ 结算径（`settleFrame` 六步：账 + 作业单整数结算）；窗限 `chatLimit` **只增**（`nextWindow` 收束沿 + 本页**实并入块数**）。
  * 出档面：池面一族 = `renderer/mount-pool.mjs` · 会话族 = `renderer/mount-sessions.mjs` · 输入区 = `renderer/mount-composer.mjs`
  * （面板主体 = 核件工厂 —— 输入面板上提批；发送面三件随 `renderer/composer-send.mjs` 退役入核件 ∕ 本档 deps 边）
- * · 状态行 = `renderer/mount-status.mjs`（D17 / D22 承载 17 段单点重建 + 面内差分门 + 切片键面 `STATUS_KEYS`）
+ * · 状态行 = `renderer/mount-status.mjs`（D17 / D22 承载 18 段单点重建 + 面内差分门 + 切片键面 `STATUS_KEYS`）
  * · 卡族两族 = `renderer/mount-cards.mjs`（提问 / 计划 —— 挂载 + 作答 / 取消出口）
  * · 事件归约 + 页应用 = `renderer/events.mjs` · 订阅接线 = `renderer/events-subscribe.mjs`；本档接线两处 = `attachScroll`
  * （回填 / 跟滚 / 停跟三出口 + 只读口 `guards()`；药丸回底 / 工具卡 toggle 两出口）· `attachEvents({ on })`
@@ -62,12 +62,16 @@ const panelReadout = createPanelReadout({ invoke: (channel, payload) => host?.in
 const { paintPool, handlers: poolHandlers } = attachPool(host) // 池面一族（右栏重挂 + 两出口 —— 出档 `renderer/mount-pool.mjs`）
 const { paintCards } = attachCards(host) // 卡面一族（提问 / 计划 —— 挂载 + 作答 / 取消出口；出档 `renderer/mount-cards.mjs`）
 // 设置面 / 向导一族（自持订阅 —— 出档 `renderer/mount-settings.mjs`；目录出口复用项目面链）；
-// `onProvidersChanged`（全渠扇出批 · #3）= 设置面 provider 写成功 ⇒ 输入区候选面强制刷新（迟绑定：`composer` 于下行装配）。
+// `onProvidersChanged`（全渠扇出批 · #3）= 设置面 provider 写成功 ⇒ 输入区候选面强制刷新（迟绑定：`composer` 于下行装配）；
+// 返回面 `team.refresh`（登录面补全批）= 团队面启动读口（于下行触发）。
 const settingsFace = attachSettings(host, { onProjectOpened: openDir, onProvidersChanged: () => composer.refreshCandidates() })
+// 团队面启动读（登录面补全批 · 台账 #1231——触发点制①：`team:status` + token 在场 ⇒ `team:verify`；
+// 段 16 常显随 `settings.team` 切片；就地面板宿主 ∥ 段点击接线住 `renderer/mount-team.mjs` —— 本档只触发启动读）。
+void settingsFace.team?.refresh()
 // 输入区一族（挂载 + deps 构造 → 核件工厂；出档 `renderer/mount-composer.mjs`）：`openSettings(group?)` = 控件行第 7 钮 ∥
 // footer 三出口（KD-77 ③：双口提升 —— 缺组 ⇒ 既有页 ∥ 携组名 ⇒ 组弹窗，同 `menuActions` 形）；`submit` = 直发径单副本（错误横幅重试消费）。
 const composer = attachComposer(host, { openSettings: (group) => (typeof group === "string" && group !== "" ? settingsFace.openSettingsModal(group) : settingsFace.openSettings()) })
-const { paintStatus } = attachStatus() // 状态行一族（D17 / D22 承载 17 段单点重建 —— 出档 `renderer/mount-status.mjs`）
+const { paintStatus } = attachStatus() // 状态行一族（D17 / D22 承载 18 段单点重建 —— 出档 `renderer/mount-status.mjs`）
 
 /** 菜单动作分派（D36 · #811 ∥ 设置菜单升级批 · #817 —— `ev:menu` 窄口消费）：六动作 ⇒ 既有单一实现（零第二份）；`searchFace` 迟绑定（装配序在下行）。 */
 const menuActions = createMenuActions({

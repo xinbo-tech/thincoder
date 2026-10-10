@@ -26,9 +26,13 @@
  *      注入点在本档、连线归向导接线族，本档零算法副本。
  *   ⑦ 「对齐第三批」三面（随出口族迁 `mount-settings-exits.mjs`）：P14 出值规范化 ∕ P15 具名控件即改即存 ∕ F-Esc 关面板。
  * **B1 批（2026-10-10 · 台账 #1212 ∥ `docs/desktop/design/SETTINGS.md` §2.21）**：团队段接线族并入 ——
- * `createTeam`（出档 `mount-settings-team.mjs`）产 `loadTeam` + 两出口（登录 ∥ 退出）；`loadTeam` 经装配并入
+ * `createTeam`（出档 `mount-team.mjs`）产 `loadTeam` + 两出口（登录 ∥ 退出）；`loadTeam` 经装配并入
  * `reads` 检索面（`MODAL_READS.team`——组弹窗读链），出口经装配并入单一 `exits.handlers` 表（页 ∥ 弹窗两面同表）；
  * **开面随读**：本档 `openSettings` = `exits.openSettings` 包装（原样 + `loadTeam`）——沿各段「开面即读」同口径。
+ * **登录面补全批（2026-10-10 · 台账 #1231）**：团队面迁出 `mount-settings-team.mjs`（**净删**，并入 `mount-team.mjs`
+ *  ——单实现），本档只留**装配两件**：① 团队段读数注入（`loadTeam` 并入 `reads` 检索面——照旧）；
+ *  ② 面板宿主接线（`attachTeamPanel({ store, team })`——团队面板开合施用面 + 文档级关两路 + 自持重绘订阅）；
+ *  ③ 启动读经返回面 `team.refresh` 出句柄（消费面 = `renderer/app.mjs`——触发点制①）。
  * 纪律：零 `node:` / 零裸包（静态闭包判据 = `test/guard-closure.test.mjs`）· 逐通道回执形单源 = IPC.md §2。
  */
 import { patchSettings, store as defaultStore } from "./store.mjs"
@@ -36,7 +40,7 @@ import { captureView, dropDrafts, mergeViewSnaps, restoreView } from "./view-sta
 import { createWizard } from "./mount-onboarding.mjs"
 import { createReads } from "./mount-settings-reads.mjs"
 import { createExits } from "./mount-settings-exits.mjs"
-import { createTeam } from "./mount-settings-team.mjs"
+import { attachTeamPanel, createTeam } from "./mount-team.mjs"
 import { renderSettingsModal, settingsModalNode } from "./settings-modal.mjs"
 import { closeSettingsConfirm } from "./settings-confirm.mjs"
 import { mountWizard, wizardModel } from "./views/onboarding.mjs"
@@ -145,10 +149,12 @@ export function attachSettings(host, deps = {}) {
     else console.error("[renderer] invalidateDrafts dropped: missing draft scope")
   }
 
-  /** 团队段接线族（B1 批 —— 状态读 ∥ 登录 ∥ 退出；出档 `mount-settings-team.mjs`；写成功径复读两调用点住该族）：
+  /** 团队面接线族（登录面补全批 —— 状态读 ∥ 活校验 ∥ 登录 ∥ 退出；出档 `mount-team.mjs`；写成功径复读两调用点住该族）：
    *  `loadTeam` 经装配并入 `reads` 检索面（`MODAL_READS.team` + 开面随读 + `refreshSettings` 复读口），
-   *  出口经装配并入单一 handlers 表（对外零改）。 */
+   *  出口经装配并入单一 handlers 表（对外零改）；面板宿主（`div.team-pop`）同拍接线。 */
   const team = createTeam({ ask, store, setSettings, report, loadProviders: reads.loadProviders, invalidateDrafts })
+  /** 状态段就地面板（装配三件：施用面注册 ∥ 文档级关两路 ∥ 自持重绘；返回面 `refresh` = 启动读口——`renderer/app.mjs` 触发）。 */
+  const teamPanel = attachTeamPanel({ store, team })
   /** 读数面全表（基础族 + 团队状态读 —— 检索面单源）。 */
   const allReads = { ...reads, loadTeam: team.loadTeam }
 
@@ -230,10 +236,16 @@ export function attachSettings(host, deps = {}) {
     const modalFresh = dropDrafts(captureView(modalPrev), draftInvalidation)
     const modalSnap = modalFresh === null ? null : dropDrafts(mergeViewSnaps(modalResidue, modalFresh, { trust: !inFlight(modalPrev) }), draftInvalidation)
     draftInvalidation.clear() // 一次性失效集：两捕获同轮消费即清（下轮零声明 ⇒ 零过滤）
+    /** **向导步切换残件并持**（登录面补全批 · 2026-10-10 · 台账 #1230 —— 「回退 / 换路 ⇒ 已填保留」判据的载体，
+     *  单源 = `docs/desktop/design/SETTINGS.md` §2.22 项 3「`[data-draft]` 域，沿 #604」）：现树为向导（宿主面
+     *  `data-onboarding` 在场 —— `syncHostProps` 应收）∧ 新树亦为向导 ⇒ 残件**仅草稿面**并持（焦点 ∥ 滚位随屏退场 ——
+     *  免跨屏聚焦跳动；步间无第三类草稿载面 ⇒ 零误携）；非向导径零改（#604 原判据「非在途 ⇒ 弃」不动）。 */
+    const wasWizard = typeof root?.getAttribute === "function" && root.getAttribute("data-onboarding") !== null
+    const wizardPair = wasWizard && occupies(state)
     const model = occupies(state) ? mountWizard(root, state, wizardHandlers) : mountSettings(root, state, exits.handlers)
     const modal = renderModal(state)
     const rest = restoreView(root, snap)
-    viewResidue = inFlight(root) ? rest : null
+    viewResidue = inFlight(root) ? rest : (wizardPair ? { scrolls: [], drafts: rest?.drafts ?? [], focus: null } : null)
     const modalRest = restoreView(modal, modalSnap)
     modalResidue = modal !== null && inFlight(modal) ? modalRest : null
     return model
@@ -245,6 +257,7 @@ export function attachSettings(host, deps = {}) {
     store, ask, report, clearReport, loadModels: reads.loadModels,
     submitChannel: exits.handlers.onSubmit, verifyChannel: exits.handlers.onVerify,
     useModel: exits.handlers.onUseModel,
+    loadProviders: reads.loadProviders, // 登录面补全批：团队路登录成 ⇒ 派生条目复读（`loadProviders` —— 同一实现）
     onProjectOpened,
   })
 
@@ -287,6 +300,7 @@ export function attachSettings(host, deps = {}) {
     paintSettings, openSettings, refreshSettings,
     openSettingsModal, closeSettingsModal, // D39：菜单「组弹窗」开 ∥ 关出口（face 返回 —— 消费面 = `renderer/app.mjs` 注入）
     handlers: exits.handlers, wizardHandlers, keys: SETTINGS_KEYS, detach,
+    team: teamPanel, // 登录面补全批：团队面板面（`refresh` = 启动读口 —— `renderer/app.mjs`；零第二实现）
     setTheme: exits.handlers.onSetTheme, // D36：菜单「主题▸」出口（转名暴露——零第二实现）
   }
 }

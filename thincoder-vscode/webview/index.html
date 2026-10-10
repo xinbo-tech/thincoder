@@ -69,21 +69,58 @@
       </div>
       <div class="panel-body" id="settings-body"></div>
     </div>
-    <!-- First-run onboarding: shown when no provider has a key configured -->
+    <!-- First-run onboarding（登录面补全批 · 2026-10-10）：路由屏两卡（团队 ∥ 本地——零预选）⇒
+         同屏换取表单（团队三字段 ∥ 本地既有表单原样迁入）；板退场 = providerStatus 闸（keyOk 真 ⇒ hide）；
+         「以后再说」= 既有 _welcomeDismissed（webview 生存期） -->
     <div id="welcome-panel" role="dialog" aria-label="Welcome" aria-hidden="true" style="display:none">
       <div class="welcome-inner">
         <h2 id="welcome-heading"></h2>
         <p id="welcome-text"></p>
-        <div class="key-field">
-          <label id="welcome-provider-label" for="welcome-provider"></label>
-          <select id="welcome-provider"></select>
+        <div id="welcome-routes" class="welcome-routes">
+          <div class="welcome-route" data-route-card="team">
+            <h3 id="welcome-route-team-title" class="welcome-route-title"></h3>
+            <p id="welcome-route-team-desc" class="welcome-route-desc"></p>
+            <button id="welcome-route-team-btn" class="save-btn" data-route="team"></button>
+          </div>
+          <div class="welcome-route" data-route-card="local">
+            <h3 id="welcome-route-local-title" class="welcome-route-title"></h3>
+            <p id="welcome-route-local-desc" class="welcome-route-desc"></p>
+            <button id="welcome-route-local-btn" class="key-btn" data-route="local"></button>
+          </div>
         </div>
-        <div class="key-field">
-          <label id="welcome-key-label" for="welcome-key"></label>
-          <input id="welcome-key" type="password" placeholder="sk-..." autocomplete="off">
+        <div id="welcome-swap" class="welcome-swap" style="display:none">
+          <div id="welcome-team-form">
+            <div class="key-field">
+              <label id="welcome-team-server-label" for="welcome-team-server"></label>
+              <input id="welcome-team-server" autocomplete="off" placeholder="http://host:port">
+            </div>
+            <div class="key-field">
+              <label id="welcome-team-username-label" for="welcome-team-username"></label>
+              <input id="welcome-team-username" autocomplete="off">
+            </div>
+            <div class="key-field">
+              <label id="welcome-team-password-label" for="welcome-team-password"></label>
+              <input id="welcome-team-password" type="password" autocomplete="off">
+            </div>
+            <button id="welcome-team-login-btn" class="save-btn"></button>
+            <div id="welcome-team-fail" style="display:none"></div>
+            <button id="welcome-team-back" class="key-btn"></button>
+          </div>
+          <div id="welcome-local-form">
+            <div class="key-field">
+              <label id="welcome-provider-label" for="welcome-provider"></label>
+              <select id="welcome-provider"></select>
+            </div>
+            <div class="key-field">
+              <label id="welcome-key-label" for="welcome-key"></label>
+              <input id="welcome-key" type="password" placeholder="sk-..." autocomplete="off">
+            </div>
+            <div class="welcome-actions">
+              <button id="welcome-save-btn" class="save-btn"></button>
+            </div>
+          </div>
         </div>
         <div class="welcome-actions">
-          <button id="welcome-save-btn" class="save-btn"></button>
           <button id="welcome-skip-btn" class="key-btn"></button>
           <button id="welcome-settings-btn" class="key-btn"></button>
         </div>

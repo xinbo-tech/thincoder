@@ -99,7 +99,7 @@ export function renderPicker(state, cols, panel, overlay) {
   const right = p && p.filteredItems?.length ? `${p.index + 1}/${p.filteredItems.length} ` : ""
   // 过滤提示：无filter时显示 "type to filter"，有filter时显示输入内容
   const filterHint = p ? (p.filter ? `│ ${p.filter}` : "│ type to filter") : ""
-  const rawLeft = p ? ` ❯ ${p.title} ${filterHint} ` : " ❯ Setup "
+  const rawLeft = p ? ` ❯ ${p.title} ${filterHint} ` : state.teamAsk != null ? " ❯ Team login " : " ❯ Setup "
   // 2026-08-31 会诊（advisor round1 🔵）：标题行与条目行一致留 8 格余量——Ambiguous 字符
   // （❯/│ 等）在 CJK 终端渲染 2 格，余量不足时右侧 n/m 位置指示会被截。
   const left = sliceByWidth(rawLeft, Math.max(1, cols - 8 - stringWidth(right)))
@@ -346,6 +346,8 @@ function inputBoxStyle(state) {
     title = " Select "
   } else if (state.wizard) {
     title = " Setup "
+  } else if (state.teamAsk) {
+    title = " Team login "
   } else if (state.processing) {
     title = " Processing... "
   } else {
@@ -382,10 +384,14 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
     return " y: approve │ n: deny │ a: approve all (AUTO)"
   }
   if (state.picker) return " type: filter │ ↑↓/PgUp/PgDn: select │ Enter: confirm │ Esc: cancel"
+  // 团队问句面（模态族第三支——登录面补全批）：主键面 = Esc 取消 ∥ Enter 提交（输入框编辑·零滚动）
+  if (state.teamAsk) return " Type then Enter │ Esc: cancel"
   if (state.wizard) {
-    return state.wizard.step === "provider"
-      ? " ↑↓: select │ Enter: confirm │ Esc: skip"
-      : " Type then Enter │ Esc: cancel"
+    const w = state.wizard
+    // route 屏与 provider 步同为列表步；团队步焦点在回退行上时 Enter = 确认回退
+    if (w.step === "provider" || w.step === "route") return " ↑↓: select │ Enter: confirm │ Esc: skip"
+    if (w.teamFocusBack === true) return " ↑↓: select │ Enter: confirm │ Esc: cancel"
+    return " Type then Enter │ Esc: cancel"
   }
   if (rawInput.startsWith("/") && !state.processing && !state.permission) {
     const [cmd] = rawInput.split(/\s+/)
@@ -456,5 +462,26 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   const titleRaw = typeof agent.title === "string" ? agent.title.trim() : ""
   const titleShown = titleRaw ? (stringWidth(titleRaw) > 40 ? sliceByWidth(titleRaw, 39) + "…" : titleRaw) : sessionTitleFallback(agent)
   const titleHint = ` │ ${titleShown}`
-  return ` ${statusText}${taskHint}${turnHint}${tokenHint}${ctxHint}${scrollHint}${ledgerHint}${timerHint}${titleHint} │ ${enterHint} │ /: commands │ wheel/PgUp/PgDn: scroll │ Ctrl+I: inject │ Ctrl+C: exit (×2)`
+  // 团队登录态段（登录面补全批 · `docs/cli/design/TUI.md` §7.8）：簇尾末位（titleHint 后、`│ <enterHint>` 前）
+  const teamHint = teamSegmentHint(state.team)
+  return ` ${statusText}${taskHint}${turnHint}${tokenHint}${ctxHint}${scrollHint}${ledgerHint}${timerHint}${titleHint}${teamHint} │ ${enterHint} │ /: commands │ wheel/PgUp/PgDn: scroll │ Ctrl+I: inject │ Ctrl+C: exit (×2)`
+}
+
+/** 团队状态段（TUI.md §7.8——三态闭集）：未登录 ⇒ `""`（**负控：零注入——整行逐字节等价**）；
+ *  已登录 ⇒ ` │ <成员>@<主机>`（成员 = `member.name ?? member.username`；主机 = `URL.host`——不搬
+ *  URL 全串）；`verify === "invalid"` ⇒ ` │ ` + 核字典键词形（警示色包裹——同 timerHint 到期态形；
+ *  `t()` 出词 ⇒ CLI 现渲缺省 en，沿 §7.7 同注）。成员 ∥ 主机两缺 ⇒ 零注入（防御位——不产空段）。 */
+function teamSegmentHint(team) {
+  if (team == null || team.loggedIn !== true) return ""
+  if (team.verify === "invalid") return ` │ ${ansi.reset}${C.warn}${t("status.team.invalid")}${ansi.reset}${ansi.dim}`
+  const member = team.member?.name ?? team.member?.username ?? ""
+  const host = teamServerHost(team.server)
+  const text = member !== "" && host !== "" ? `${member}@${host}` : (member !== "" ? member : host)
+  return text === "" ? "" : ` │ ${text}`
+}
+
+/** 团队服务器主机名（段面只显 `<主机>`）：`URL.host`（默认端口已去）；不可解析 ⇒ `""`。 */
+function teamServerHost(server) {
+  if (typeof server !== "string" || server === "") return ""
+  try { return new URL(server).host } catch { return "" }
 }

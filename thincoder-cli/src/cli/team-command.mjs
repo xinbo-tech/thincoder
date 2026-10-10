@@ -10,6 +10,9 @@
  * 核 `reason` 闭集）；两条一次性提示（同名冲突（登录当刻）∥ 吊销未达（退出当刻））——读面零提示字段。
  * 输出流：结果行 = stdout；问句 ∥ 失败句 ∥ 一次性提示 = stderr（问句先例 = setup-wizard.mjs `ask`）。
  * 返回 = 退出码（0 成 ∥ 1 败）；未知参 ∥ 缺子命令 ⇒ usage + 1（fail-closed，先例 ledger-read.mjs）。
+ * 词面导出面（登录面补全批 · 2026-10-10）：四句闭集表 ∥ 未登录句 ∥ 两条一次性提示 ∥ 结果行首句
+ *  ∥ `renderState`——TUI 面（`src/tui/cmd-team.mjs`）逐字同源消费（判据「CLI = 单语直出同句」），
+ *  本档行为零变（导出关键字与常量收拢；出词 ∥ 退出码 ∥ 旗标面逐字不动）。
  */
 import { createInterface } from "node:readline"
 
@@ -19,7 +22,7 @@ import { teamLogin, teamLogout, teamStatus, NOTICE_MANUAL_NAME_CONFLICT } from "
 const TEAM_USAGE = "Usage: thincoder team login [--server <url>] [--user <name>] | thincoder team logout | thincoder team status"
 
 /** 失败出词四句（TEAM.md §2.5 失败理由域；核 `reason` 四值闭集 ⇔ 四句——三端逐字同句）。 */
-const FAILURE_TEXT = {
+export const FAILURE_TEXT = {
   network: "网络不可达",
   credentials: "用户名或密码错误",
   rate_limited: "登录尝试过于频繁",
@@ -27,12 +30,16 @@ const FAILURE_TEXT = {
 }
 
 /** 未登录提示（§2.5 未登录行——三端逐字同句）+ 指引进登录。 */
-const NOT_LOGGED_IN = "未登录——登录后可用"
+export const NOT_LOGGED_IN = "未登录——登录后可用"
 const LOGIN_GUIDE = 'Run "thincoder team login" to log in.'
 
+/** 结果行首句（两流程各一——argv ∥ TUI 同形）。 */
+export const TEXT_LOGGED_IN = "Logged in."
+export const TEXT_LOGGED_OUT = "Logged out."
+
 /** 一次性提示两句（登录/退出当刻就地显示——读面不复显）：同名手工 provider ⇒ 派生条目未写（D-TM4）∥ 服务端吊销未达（§2.3）。 */
-const TEXT_MANUAL_CONFLICT = "已存在同名 provider「team」——未自动添加；请改名或删除后重登"
-const TEXT_REVOKE_UNDELIVERED = "服务端吊销未达"
+export const TEXT_MANUAL_CONFLICT = "已存在同名 provider「team」——未自动添加；请改名或删除后重登"
+export const TEXT_REVOKE_UNDELIVERED = "服务端吊销未达"
 
 /** 命令入口（`bin/thincoder.mjs` → command-table 分发）：返回退出码（0 成 ∥ 1 败）。 */
 export async function teamCommand(args) {
@@ -62,7 +69,7 @@ async function runLogin(rest) {
       console.error(FAILURE_TEXT[result.reason] ?? FAILURE_TEXT.network)
       return 1
     }
-    console.log("Logged in.")
+    console.log(TEXT_LOGGED_IN)
     for (const line of renderState(teamStatus())) console.log(line)
     if (result.notice === NOTICE_MANUAL_NAME_CONFLICT) console.error(TEXT_MANUAL_CONFLICT) // 登录当刻一次性提示（码 ⇒ 文）
     return 0
@@ -86,7 +93,7 @@ async function runLogout(rest) {
     console.error(FAILURE_TEXT[result.reason] ?? FAILURE_TEXT.network)
     return 1
   }
-  console.log("Logged out.")
+  console.log(TEXT_LOGGED_OUT)
   if (result.revokeDelivered === false) console.error(TEXT_REVOKE_UNDELIVERED) // 退出当刻一次性提示
   return 0
 }
@@ -113,7 +120,7 @@ function printNotLoggedIn() {
 }
 
 /** 当前态三行（server ∥ member ∥ label——§2.5 当前态行；值 = 核 `teamStatus()` 投影）。 */
-function renderState(st) {
+export function renderState(st) {
   const member = st.member !== null && st.member !== undefined && typeof st.member === "object"
     ? `${st.member.name ?? st.member.username ?? "(unknown)"} (${st.member.username ?? "?"})`
     : "(unknown)"

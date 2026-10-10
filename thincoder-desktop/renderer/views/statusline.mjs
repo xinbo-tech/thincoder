@@ -10,9 +10,15 @@
  * **停滞轻显形批（2026-09-29 · stall-indicator）**：+静默段 `quiet`（承载 16 ⇒ 17，序 = `elapsed` 之后）——
  * 判据 = `quietSegment`（切片 `lastOutputAt`，显示走拍）；语义单源 = `docs/cli/design/TUI.md` §7.7。
  *
- * 承载 17 段 = `STATUS_SEGMENTS`（序同 CLI —— 注意力 chip 行首 → banner 四态 → 状态段簇；**17 = 16 + 静默段**（`quiet`））· 旁置 1 = 滚动位（药丸 / 摘要块承载）·
+ * **登录面补全批（2026-10-10 · 台账 #1231）**：+团队登录态段 `team`（承载 17 ⇒ **18**，序 = `title` 后 ∥ `enter` 前 ——
+ * 单源 = `docs/desktop/design/UI.md` §1 表行 16 ∥ 本批注（团队登录态段）；源 = `settings.team` 切片；判据 = 段构建器族
+ * `teamSegment`）+ **状态段就地面板**（`div.team-pop` —— 开合态 = 本档模块级单值 `teamPanelOpen`，沿 🎯 目标面板先例；
+ * 面板宿主 ∥ 施用面 = `renderer/mount-team.mjs`）：段 = `role="button"` + tabindex + 点 / 键盘 ⇒ `toggleTeamPanel()`；
+ * **`team` 段不入「零会话 ⇒ 零段」通则**（无活动会话亦在场——四端同一常显面）。
+ *
+ * 承载 18 段 = `STATUS_SEGMENTS`（序同 CLI —— 注意力 chip 行首 → banner 四态 → 状态段簇；**18 = 17 + 团队登录态段**（`team`））· 旁置 1 = 滚动位（药丸 / 摘要块承载）·
  * 不适用 1 = 键位组（输入区 / 标签条自述）——**后两段零字段 ⇒ 零节点**（不造空段；逐项裁定单源 = `docs/desktop/design/UI.md` §1 本批注项 1）。
- * **R5 增非段位元素 1** = 🎯 目标徽标（锚 `data-goal` —— **不入 `STATUS_SEGMENTS` 闭集**，沿 `data-alert`「非 17 段之一」
+ * **R5 增非段位元素 1** = 🎯 目标徽标（锚 `data-goal` —— **不入 `STATUS_SEGMENTS` 闭集**，沿 `data-alert`「非段位元素」
  * 先例；在场判据随核件 = `renderer/views/goal.mjs` `goalBadgeVisible` —— 非 `active` 态 ⇒ 零节点）。
  * 承载段数据源（逐段）居段构建器族档（本档只给装配序与切片取值）；段 3 态机（挂起句 / 零节点 / 状态文本 / 运行中 / 就绪）单源 = 同档。
  * **R4（提示锚 + 状态面）**：段 3 态机增**状态文本支**（五 kind —— `ev:statusText` 切片；归约面写者 = `renderer/events-status.mjs`）。
@@ -23,7 +29,7 @@
  * `ev:ledger` `marker` 键转发 ∕ 核 `formatMarker` 逐字）；逐段判据 = 段构建器族档。
  * 判据（D17 · KD-25）：**未至 / 非正 / 缺片 ⇒ 该段零节点**（禁假造）；段锚 = `data-seg`（闭集 = `STATUS_SEGMENTS`）·
  * 段内件锚 = `data-part`（令牌三件）；跨会话告警位（**他会话**的待审批 / 运行提示 —— 源 = `sessions` 行投影，
- * 会话模型轮 R13：原标签键表随标签裁撤退场）沿既有面（`data-alert` —— 非 17 段之一）。
+ * 会话模型轮 R13：原标签键表随标签裁撤退场）沿既有面（`data-alert` —— 非段位元素）。
  * 形态：纯构树（`statusModel` → 态对象 · `statusTree` → 结构描述符树）+ 薄挂载（`mountStatus` = clear + build + append ——
  * **单点重建 = 状态行唯一 writer**，`docs/desktop/design/UI.md` §1 状态栏行）；文案一律经 `t()`（零硬编码）。
  * 零 DOM（挂载一段除外）/ 零 `node:` / 零裸包（渲染面静态闭包判据）。
@@ -39,25 +45,63 @@ import { goalBadgeVisible, toggleGoalPanel } from "./goal.mjs"
 // 段构建器族（R4 出档 —— 本批先拆后改）：本档只装配（段序 / 切片取值）与构树；逐段判据 = 该档档头与逐函数注释。
 import {
   attentionSegment, badgeCodes, contextSegment, elapsedSegment, enterSegment, ledgerSegment, quietSegment, stateSegment,
-  tasksSegment, timerSegment, titleSegment, tokensSegment, toolSegment, turnSegment,
+  tasksSegment, teamSegment, timerSegment, titleSegment, tokensSegment, toolSegment, turnSegment,
 } from "./statusline-segments.mjs"
 
-/** 承载 17 段（闭集 · 序 = CLI 序 —— 单源 = `docs/desktop/design/UI.md` §1 本批注项 1 + 「本批注（停滞轻显形 · 2026-09-29）」；旁置 1 / 不适用 1 不在本集）。
+/** 团队就地面板开合态（登录面补全批 —— **本地模块级单值**，沿 🎯 目标面板先例；非 store 切片：开合 = 瞬时 UI 态，
+ *  零跨窗 ∥ 零持久面）。段（`segment.code === "team"`）点 / 键盘 ⇒ `toggleTeamPanel()`；面板宿主（`div.team-pop`）
+ *  = `renderer/mount-team.mjs`，施用面经 `setTeamPanelApplier` 装配期注册（本档零 DOM、零面板树）；
+ *  applier 缺（未装配 ∥ 测试面）⇒ 翻态零动作（下次装配按新态出件 —— 沿 🎯「无卡 ⇒ 零动作」同判）。 */
+let teamPanelOpen = false
+let applyTeamPanel = null
+
+/** 面板现态读数（宿主 ∥ 判据面取用）。 */
+export function teamPanelVisible() {
+  return teamPanelOpen
+}
+
+/** 面板态唯一写点（翻转 ∥ 关两出口共用；同值 ⇒ 零发）。 */
+function setTeamPanelState(next) {
+  if (next === teamPanelOpen) return teamPanelOpen
+  teamPanelOpen = next
+  if (applyTeamPanel !== null) applyTeamPanel(teamPanelOpen)
+  return teamPanelOpen
+}
+
+/** 段出口：翻转（段再点 = 开合两用；Esc ∥ 面板外点击 ⇒ `closeTeamPanel`）。 */
+export function toggleTeamPanel() {
+  return setTeamPanelState(!teamPanelOpen)
+}
+
+/** 面板关出口（Esc ∥ 面板外点击 —— 幂等：已合 ⇒ 零发）。 */
+export function closeTeamPanel() {
+  return setTeamPanelState(false)
+}
+
+/** 施用面注册（装配期一次 —— `mount-team.mjs` 注入面板宿主施用函数；非函数 ⇒ 注销）。 */
+export function setTeamPanelApplier(fn) {
+  applyTeamPanel = typeof fn === "function" ? fn : null
+}
+
+/** 承载 18 段（闭集 · 序 = CLI 序 —— 单源 = `docs/desktop/design/UI.md` §1 本批注项 1 + 「本批注（停滞轻显形 · 2026-09-29）」
+ *  + 「本批注（团队登录态段 · 2026-10-10）」表行 16；旁置 1 / 不适用 1 不在本集）。
  *  banner 四码取自 `renderer/views/statusline-banner.mjs` `BANNER_CODES`（段构树与段码同源，不两处罗列）。 */
 export const STATUS_SEGMENTS = Object.freeze([
-  "attention", ...BANNER_CODES, "state", "tool", "elapsed", "quiet", "tasks", "turn", "tokens", "context", "ledger", "timer", "title", "enter",
+  "attention", ...BANNER_CODES, "state", "tool", "elapsed", "quiet", "tasks", "turn", "tokens", "context", "ledger", "timer", "title", "team", "enter",
 ])
 
 /** 告警码集（状态栏取值 = 三码中入告警的子集；`done` / `idle` 不入 —— 完成 / 空闲非跨会话告警面）。 */
 const ALERT_CODES = Object.freeze(["approval", "running"])
 
-/** 状态行模型：`segments` = 承载 17 段在场集（序 = CLI 序；缺段不占位）· `alerts` = 跨会话告警位（**他会话**两码，
+/** 状态行模型：`segments` = 承载 18 段在场集（序 = CLI 序；缺段不占位）· `alerts` = 跨会话告警位（**他会话**两码，
  *  序 = 会话列表序 —— 会话模型轮 R13：源 = `sessions` 行投影〔原 `tabs` 键表随标签裁撤退场〕）。
- *  入参 = 切片面（缺 / 非载体 ⇒ 该段零节点；段 3 支③源 = `statusText[<会话键>]` 切片 —— R4）；`now` 可注入（耗时段 ∕ 静默段现刻 —— 测试缝）。 */
+ *  入参 = 切片面（缺 / 非载体 ⇒ 该段零节点；段 3 支③源 = `statusText[<会话键>]` 切片 —— R4）；`now` 可注入（耗时段 ∕ 静默段现刻 —— 测试缝）。
+ *  **登录面补全批**：`team` = `settings.team` 切片（段 16 —— 三态判序归 `teamSegment`）；**不入「零会话 ⇒ 零段」通则**
+ *  （无活动会话时仅团队段在场——常显面）。 */
 export function statusModel({
   activeSession = null, badges = {}, usage = {}, usageTokens = {}, sessions = [], pending = {},
   blocks = [], tasks = {}, turns = {}, turnStarts = {}, lastOutputAt = {}, tokens = {}, timers = {},
-  sessionFlags = {}, susp = {}, statusText = {}, goal = {}, ledgerDetail = [], ledgerMarker = null, now = Date.now(),
+  sessionFlags = {}, susp = {}, statusText = {}, goal = {}, ledgerDetail = [], ledgerMarker = null, team = {}, now = Date.now(),
 } = {}) {
   const rows = Array.isArray(sessions) ? sessions : []
   const active = activeSession == null ? null : String(activeSession)
@@ -69,7 +113,9 @@ export function statusModel({
   const statusSlice = statusText !== null && typeof statusText === "object" ? statusText[active] : undefined
   // 非段位元素源 = `ev:goal` 切片（R5）；在场判据随核件（闸内 = 非段位元素 —— 不入段集）
   const goalSlice = goal !== null && typeof goal === "object" ? goal[active] : undefined
-  const segments = active === null ? [] : [
+  // 段 16 团队登录态（登录面补全批）：**不入「零会话 ⇒ 零段」通则**（无会话亦在场——唯一例外；单源 = `UI.md` §1 本批注）
+  const teamSeg = teamSegment(team)
+  const segments = active === null ? [teamSeg].filter((segment) => segment !== null) : [
     attentionSegment(codes),
     ...bannerSegments(flags),
     stateSegment(codes, suspend, statusSlice),
@@ -83,6 +129,7 @@ export function statusModel({
     ledgerSegment(ledgerMarker, ledgerDetail),
     timerSegment(timers, active),
     titleSegment(sessions, active),
+    teamSeg,
     enterSegment(pending, active, codes, suspend),
   ].filter((segment) => segment !== null)
   const alerts = []
@@ -95,7 +142,9 @@ export function statusModel({
   return { alerts, segments, goal: goalBadgeVisible(goalSlice) }
 }
 
-/** 段节点（锚 = `data-seg` 码；警示 class 两形 —— `status-usage-warn` 沿既有面，`status-seg-warn` 为余段单形）。 */
+/** 段节点（锚 = `data-seg` 码；警示 class 两形 —— `status-usage-warn` 沿既有面，`status-seg-warn` 为余段单形）。
+ *  **团队段（`code === "team"`）= 可点件**（登录面补全批）：`role="button"` + tabindex（键盘可达）+ 点 / Enter ∥ Space
+ *  ⇒ `toggleTeamPanel()`（键面沿 🎯 目标徽标先例 —— 点按 + 两键）。 */
 function segNode(segment) {
   const warnClass = segment.class === "status-usage" ? "status-usage-warn" : "status-seg-warn"
   const props = {
@@ -104,6 +153,16 @@ function segNode(segment) {
     ...(segment.attrs ?? {}),
   }
   if (segment.warn) props.class = `${props.class} ${warnClass}`
+  if (segment.code === "team") {
+    props.role = "button"
+    props.tabindex = "0"
+    props.onClick = () => { toggleTeamPanel() }
+    props.onKeydown = (event) => {
+      if (event?.key !== "Enter" && event?.key !== " ") return
+      event?.preventDefault?.()
+      toggleTeamPanel()
+    }
+  }
   return {
     tag: "span",
     props,
@@ -195,6 +254,7 @@ export function mountStatus(root, state) {
     susp: state?.susp ?? {},
     statusText: state?.statusText ?? {},
     goal: state?.goal ?? {},
+    team: state?.settings?.team ?? {}, // 段 16 团队登录态（登录面补全批——切片 = `settings.team`；`STATUS_KEYS` 含 `settings`）
   })
   if (sameStatusModel(root._statusModel, model)) return model // 面内差分门：模型等价 ⇒ 零写
   clear(root)

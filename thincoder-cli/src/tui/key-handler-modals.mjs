@@ -1,4 +1,6 @@
 import { computeLayout } from "./layout.mjs"
+import { C } from "./ansi.mjs"
+import { teamAskStepAt } from "./ask-steps.mjs"
 
 /** 模态族之一（2026-09-22 structure-debt §2.1 分族 2 · #226）：通用列表 picker——
  *  ↑↓/PgUp/PgDn/Home/End 导航 + 输入即过滤 + Enter 选中 + Esc 取消；块体自 key-handler.mjs
@@ -52,16 +54,45 @@ export function handlePickerKeys(str, key, ctx) {
   }
 }
 
+/** 模态族之三（登录面补全批 · TUI-COMMANDS.md §5.5）：会话内团队问句面——Esc 取消（退场）∥
+ *  Enter 提交当前步；↑↓/PgUp/PgDn 吞（无历史 ∥ 无滚动穿透）；可打印键回落编辑族（输入框编辑——
+ *  掩码回显走 `layout.mjs` `askMaskActive`）。路由 = 分派器 createKeyHandler（守卫 = 面在场 + 上列键）。 */
+export function handleTeamAskKeys(str, key, ctx) {
+  const { state, teamAskSubmit, teamAskCancel } = ctx
+  if (state.teamAsk == null) return false
+  if (key.name === "escape") { teamAskCancel(); return true }
+  if (key.name === "return") {
+    Promise.resolve(teamAskSubmit()).catch((e) => ctx.pushLine(`[error] ${e?.message ?? e}`, C.error))
+    return true
+  }
+  return true // ↑↓/PgUp/PgDn：吞（面内无滚动/历史——PgUp 不触发 loadOlder）
+}
+
 /** 模态族之二（分族 2 · #226）：初始配置 wizard——menu step ↑↓/Enter/Esc；text step Enter 提交 /
  *  Esc 取消，其余编辑键回落至编辑族（落空面由分派器守卫与块内返回点共同界定）。
  *  路由 = 分派器 createKeyHandler。 */
 export function handleWizardKeys(str, key, ctx) {
-  const { state, renderWizard, cancelWizard, wizardProviderItems, wizardChooseProvider, wizardSubmitText } = ctx
-  // initial config wizard: menu step ↑↓/Enter/Esc; text step Enter submit, Esc cancel, edit keys fall through to normal input
+  const { state, renderWizard, cancelWizard, wizardProviderItems, wizardChooseProvider, wizardSubmitText,
+          wizardRouteItems, wizardChooseRoute, wizardBackToRoute } = ctx
+  // initial config wizard: route/provider menu ↑↓/Enter/Esc; text step Enter submit, Esc cancel, edit keys fall through to normal input
   if (state.wizard) {
     const w = state.wizard
     if (key.name === "escape") {
       cancelWizard()
+      return
+    }
+    if (w.step === "route") {
+      // 首屏两路（登录面补全批 · §3.1）：零预选（光标 = 首行）；↑↓ 环绕导航；Enter 选中
+      const items = wizardRouteItems()
+      if (key.name === "up" && items.length) {
+        w.index = (w.index - 1 + items.length) % items.length
+        renderWizard()
+      } else if (key.name === "down" && items.length) {
+        w.index = (w.index + 1) % items.length
+        renderWizard()
+      } else if ((key.name === "return" || key.name === "enter" || str === "\r") && items.length) {
+        wizardChooseRoute(items[w.index])
+      }
       return
     }
     if (w.step === "provider") {
@@ -76,6 +107,18 @@ export function handleWizardKeys(str, key, ctx) {
         wizardChooseProvider(items[w.index])
       }
       return
+    }
+    if (teamAskStepAt(w.step) !== null) {
+      // 团队问句步（登录面补全批 · §3.1 键盘激活裁定）：↑ 聚焦回退行；焦点在场 ⇒ 全键归本支
+      // （Enter 确认回退 ∥ ↓ 回输入框）；未聚焦 ⇒ Enter 提交、编辑键回落编辑族。
+      if (w.teamFocusBack === true) {
+        if (key.name === "return") { wizardBackToRoute(); return }
+        if (key.name === "down") { w.teamFocusBack = false; renderWizard(); return }
+        return // ↑ ∥ PgUp/PgDn：焦点在行上——吞
+      }
+      if (key.name === "up") { w.teamFocusBack = true; renderWizard(); return }
+      if (key.name === "return") { wizardSubmitText(); return }
+      return // ↓ ∥ PgUp/PgDn：文本步吞（既有语义）
     }
     if (key.name === "return") {
       wizardSubmitText()
