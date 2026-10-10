@@ -8,13 +8,14 @@
 
 - 单库单连接（`DatabaseSync`）；PRAGMA：WAL ∥ `synchronous=NORMAL` ∥ `busy_timeout=5000` ∥ `foreign_keys=ON`。
 - 库文件默认 = `thincoder-server/data/gateway.db`（运行期生成，不入 git）。
-- 结构版本 = `PRAGMA user_version`（当前 = **12**——v2 增 `providers` ∥ v3 增 `audit_events` 与三索引 ∥ v4 增 `providers.settings_json`（模型设置——服务模型配置面） ∥
+- 结构版本 = `PRAGMA user_version`（当前 = **13**——v2 增 `providers` ∥ v3 增 `audit_events` 与三索引 ∥ v4 增 `providers.settings_json`（模型设置——服务模型配置面） ∥
   v5 增模型标识两字段拆列 + 派生两表 + 成员配额列 ∥ v6 增成员模型禁用列（详见 §2 v5/v6 段） ∥ v7 增 provider 模型元数据留存列 ∥ **v8 增 key 名称列（`api_keys.name`——me-keys 批）**（详见 §2 v7/v8/v9 段） ∥
-  v9 增 provider 上游代理旗（`providers.proxy`——server 代理批） ∥ **v10 增审计型 `config_update`（`audit_events` 重建——CHECK 扩型；配置控制台批）**（详见 §2 v10 段） ∥ **v11 增沙盒七表 + 审计 CHECK 再扩（十二型——server-exec-sandbox 批）**（详见 §2 v11 段） ∥ **v12 `sandbox_runners` 表重建（Docker 节点形态——runner-admin-console 批）**（详见 §2 v12 段）；
+  v9 增 provider 上游代理旗（`providers.proxy`——server 代理批） ∥ **v10 增审计型 `config_update`（`audit_events` 重建——CHECK 扩型；配置控制台批）**（详见 §2 v10 段） ∥ **v11 增沙盒七表 + 审计 CHECK 再扩（十二型——server-exec-sandbox 批）**（详见 §2 v11 段） ∥
+  **v12 `sandbox_runners` 表重建（Docker 节点形态——runner-admin-console 批）**（详见 §2 v12 段） ∥ **v13 增 `sandbox_onboarding` 表（托管接入——runner-admin-console 批增补）**（详见 §2 v13 段）；
   未发布期连续演进，无历史库迁移包袱——旧库启动自动升；迁移链机制自 v1 起备）。
 - server-model-alias 批（2026-10-09——台账 #1153）：**零结构变更**（别名落 `models_json` 元素——JSON 文本内演进；无新列/新表/新段——结构版本保持 **10**）。
 
-## 2. DDL（v1 基线四表 + v2–v12 增段）
+## 2. DDL（v1 基线四表 + v2–v13 增段）
 
 ### v1 基线（四表——逐字）
 
@@ -260,6 +261,7 @@ CREATE TABLE IF NOT EXISTS sandbox_workspaces (
   limits_json TEXT NOT NULL DEFAULT '{}',     -- 每工作区覆写（资源 + TTL；键集/取值序 = `sandbox/SANDBOX.md` §2；空 = 随全局默认）
   created_at TEXT NOT NULL
 );
+-- 注：本表列面（去 `required_labels_json`）仍与实表有差——实现收正随执行面重做批（旁注 = v12 段）。
 CREATE TABLE IF NOT EXISTS sandbox_rules (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   kind TEXT NOT NULL CHECK (kind IN ('cidr','domain')),
@@ -294,6 +296,7 @@ CREATE TABLE IF NOT EXISTS sandbox_tasks (
   finished_at INTEGER,
   result_json TEXT
 );
+-- 注：本表列面（去 `claimed_at`）仍与实表有差——实现收正随执行面重做批（旁注 = v12 段）。
 CREATE TABLE IF NOT EXISTS sandbox_checkpoints (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   workspace_id INTEGER NOT NULL,
@@ -331,6 +334,17 @@ CREATE TABLE IF NOT EXISTS sandbox_settings (
 - **判据（批内件）**：空库读数 12 ∥ v11 库升后读数 12 ∥ v12 段幂等（再开零变）∥ 列面五行在场（`pragma_table_info`）∥ 旧三列名不在（`token_hash` ∥ `labels_json` ∥ `last_heartbeat_at`）∥ 存量行弃（含旧行的 v11 库升后 ⇒ 空表）。
 - 同段旁注（不在本段射程——登记在案）：v11 段所列 `sandbox_workspaces`（去 `required_labels_json`）∥ `sandbox_tasks`（去 `claimed_at`）两处列面仍与实表有差——随执行面重做批收正。
 
+### v13 增段（`sandbox_onboarding` 建表——sandbox 域；runner-admin-console 批增补（托管接入））
+
+（背景：托管接入任务 + 凭据 = 单表；任务态/步骤读数/凭据密文共一行——机制 = `sandbox/SANDBOX.md` §3。）
+
+- **建表**（`CREATE TABLE sandbox_onboarding`——列面逐列）：`id`（INTEGER PRIMARY KEY）∥ `host`（TEXT NOT NULL——主机地址原文）∥ `ssh_port`（INTEGER NOT NULL DEFAULT 22）∥ `ssh_user`（TEXT NOT NULL）∥ `auth_kind`（TEXT NOT NULL CHECK `'key'`/`'password'`）∥
+  `secret_cipher`（TEXT——AES-256-GCM 包 `iv|tag|ct` base64；零化后 NULL）∥ `sudo_cipher`（TEXT——可选，同形）∥ `credential_mode`（TEXT NOT NULL CHECK `'burn'`/`'keep'`）∥ `credential_state`（TEXT NOT NULL DEFAULT `'sealed'` CHECK `'sealed'`/`'burned'`/`'revoked'`）∥
+  `name`（TEXT——节点名（可选；缺省取探测主机名））∥ `model`（TEXT NOT NULL——提交时所选模型）∥ `status`（TEXT NOT NULL CHECK `'running'`/`'succeeded'`/`'failed'`/`'interrupted'`）∥ `step`（TEXT——当前/最后一步 id）∥
+  `steps_json`（TEXT NOT NULL DEFAULT `'[]'`——步骤日志（读数面））∥ `runner_id`（INTEGER——成功后关联；未成 NULL）∥ `created_by`（INTEGER——admin 成员 id）∥ `created_at`（TEXT NOT NULL）∥ `finished_at`（TEXT）。
+- **加密密钥** = `data/credentials.key`（32 字节；首用生成；0600——**不落库**；如实披露 = `sandbox/SANDBOX.md` §3）。
+- **判据（批内件）**：空库直落 13 ∥ v12 库升后读数 13 ∥ v13 段幂等（再开零变）∥ 列面十八列在场（`pragma_table_info`）∥ 凭据列读写往返（密文 ≠ 明文 ∥ 零化后 NULL）∥ 状态 CHECK 四值放行/越值拒。
+
 ## 3. 迁移链（`user_version` 逐版升）
 
 - `thincoder-server/src/store/db.mjs`（已落盘）持 `MIGRATIONS` 数组——每段 = `{ v, up(db) }`（v = 目标 `user_version`，自 1 起递增；v1 = 基线段 = §2 全量 DDL）。
@@ -351,12 +365,13 @@ CREATE TABLE IF NOT EXISTS sandbox_settings (
 - v11 = 沙盒七表 + 审计 CHECK 再扩（十二型）+ `sandbox_rules` 种子（八行——**server-exec-sandbox 批** ∥ 台账 #1224）：七表 CREATE（见 §2 v11 段）+ 种子写入（`source='default'`——一次性；可改可删不复活）+ `audit_events` 表重建（十型 ⇒ 十二型：+ `sandbox_rule` ∥ `sandbox_event`——步序与 v10 同构）；
   旧库（v1–v10）启动自动升 ∥ 空库直落 v11；判据（批内件）= 空库读数 11 ∥ v10 库升后读数 11 ∥ v11 段幂等（再开零变） ∥ 七表在场（`pragma_table_info`） ∥ 存量审计行逐值保形 + 两索引在场 ∥ 两新型可写（CHECK 放行） ∥ 种子八行在场（`source='default'`——deny 三 + allow 五） ∥ 覆写列在场（`sandbox_workspaces.limits_json` 默认 `'{}'`）。
 - v12 = `sandbox_runners` 表重建（旧通道形态 ⇒ Docker 节点形态——**runner-admin-console 批** ∥ 台账 #1252）：**表重建**（建新表 ∥ 存量行弃 ∥ DROP ∥ RENAME——见 §2 v12 段）；旧库（v1–v11）启动自动升 ∥ 空库直落 v12；判据（批内件）= 空库读数 12 ∥ v11 库升后读数 12 ∥ v12 段幂等（再开零变）∥ 列面五行在场 ∥ 旧三列名不在 ∥ 存量行弃（含旧行 ⇒ 空表）∥ `sandbox_workspaces.runner_id` 引用面零变。
+- v13 = `sandbox_onboarding` 建表（托管接入任务 + 凭据——**runner-admin-console 批增补** ∥ 台账 #1236/#1237）：**加表**（零重建——见 §2 v13 段）；旧库（v1–v12）启动自动升 ∥ 空库直落 v13；判据（批内件）= 空库读数 13 ∥ v12 库升后读数 13 ∥ v13 段幂等（再开零变）∥ 列面十八列在场 ∥ 凭据读写往返（密文 ≠ 明文 ∥ 零化后 NULL）∥ 存量表零变。
 
 ## 4. 本域文件与行数预算（本域族行）
 
 | 档 | 行数（实读——设计估） | 职责 |
 |---|---|---|
-| `thincoder-server/src/store/db.mjs`（已落盘） | **124 ⇒ ≈160 ⇒ 144**（实读——v3 落地后）**⇒ ≈155**（服务模型配置面批 +≈11 = v4 段（ALTER + 迁移段））**⇒ 实读 150 ⇒ ≈205**（配额分模型批 +≈55 = v5 段：拆列 ALTER/UPDATE ∥ 建两表 ∥ 两回填 INSERT ∥ 成员列增删）**⇒ 实读 202 ⇒ ≈214**（配额 v2 批 +≈12 = v6 段（ALTER + 迁移段））**⇒ 实读 210（v6 落地后）⇒ ≈218**（模型元数据批 +≈8 = v7 段（ALTER + 迁移段——与 v6 段同构））**⇒ ≈228**（me-keys 批 +≈10 = v8 段（ALTER + 回填 UPDATE + 迁移段——较 v6/v7 段多一条回填））**⇒ 实读 ≈224（2026-10-09）⇒ ≈234**（本批代理：v9 段 +≈10——实读待回填）**⇒ 实读 231（2026-10-09——本设计轮复读）⇒ ≈256（配置控制台批：v10 重建段 +≈25——建新表/拷贝/换名/索引重建 ∥ 迁移段；实读待回填）⇒ 实读 255（2026-10-09——配置控制台批落地后）∥ ±0（2026-10-09 alias 批：零结构变更）⇒ ≈350（server-exec-sandbox 批：v11 段 +≈95 = 七表 + 种子 + 审计重建——实读待回填）** ⇒ 实读 **365**（2026-10-10——runner-admin-console 批现读）⇒ ≈400（本批：v12 段 +≈35——实读待回填）** | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
+| `thincoder-server/src/store/db.mjs`（已落盘） | **124 ⇒ ≈160 ⇒ 144**（实读——v3 落地后）**⇒ ≈155**（服务模型配置面批 +≈11 = v4 段（ALTER + 迁移段））**⇒ 实读 150 ⇒ ≈205**（配额分模型批 +≈55 = v5 段：拆列 ALTER/UPDATE ∥ 建两表 ∥ 两回填 INSERT ∥ 成员列增删）**⇒ 实读 202 ⇒ ≈214**（配额 v2 批 +≈12 = v6 段（ALTER + 迁移段））**⇒ 实读 210（v6 落地后）⇒ ≈218**（模型元数据批 +≈8 = v7 段（ALTER + 迁移段——与 v6 段同构））**⇒ ≈228**（me-keys 批 +≈10 = v8 段（ALTER + 回填 UPDATE + 迁移段——较 v6/v7 段多一条回填））**⇒ 实读 ≈224（2026-10-09）⇒ ≈234**（本批代理：v9 段 +≈10——实读待回填）**⇒ 实读 231（2026-10-09——本设计轮复读）⇒ ≈256（配置控制台批：v10 重建段 +≈25——建新表/拷贝/换名/索引重建 ∥ 迁移段；实读待回填）⇒ 实读 255（2026-10-09——配置控制台批落地后）∥ ±0（2026-10-09 alias 批：零结构变更）⇒ ≈350（server-exec-sandbox 批：v11 段 +≈95 = 七表 + 种子 + 审计重建——实读待回填）** ⇒ 实读 **365**（2026-10-10——runner-admin-console 批现读）⇒ ≈400（本批：v12 段 +≈35——实读待回填）⇒ **≈425**（托管接入增补：v13 段 +≈25——实读待回填）** | 开库 ∥ PRAGMA ∥ DDL ∥ 迁移链 ∥ 语句封装 |
 
 ## 5. 关键决策（本域）
 
@@ -391,3 +406,5 @@ CREATE TABLE IF NOT EXISTS sandbox_settings (
 - 2026-10-10（**server-exec-sandbox 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-server-exec-sandbox.md` §3 轮次 1 之 1/2 + 用户 14:56 直令）：§2 v11 段 `sandbox_workspaces` 增 `limits_json` 列（每工作区覆写——键集/取值序 = `sandbox/SANDBOX.md` §2）∥ `sandbox_settings` 注释收正（键全集/值形单源 = `gateway/API.md` §2.5；「默认单」非本表 = `sandbox_rules` 种子行）∥ 增 ③ 种子注（初始化点 = 本段一次性写入——八行：deny 三 + allow 五；恒拒两项非行）∥ `sandbox_event` 注补 join 失败 ∥ §3 v11 判据补种子八行 + 覆写列 ∥ §4 db.mjs 行随正（⇒ ≈350）。**零新语义**（评审发现直接导出项 + 用户直令）。
 - 2026-10-10（**runner-admin-console 批 · 设计档随正 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 2026-10-10 19:52–19:56 口径「runner = 远程 Docker API 节点」）：§2 v11 段列面随正——`sandbox_runners` 去 token_hash/labels_json/last_heartbeat_at、增 address（Docker API 地址）、status 枚举收窄（active/disabled）、runtime_json 注释 = 连通自检读数 ∥ `sandbox_workspaces` 去 required_labels_json（runner_id 注释 = 绑定节点）∥ `sandbox_tasks` 去 claimed_at（status 去 claimed）∥ 审计注/种子注/端点注随正；**`db.mjs` v11 列面实现与本节差 = 实施侧收正项（重做批）**；同源随动 = `sandbox/SANDBOX.md` §2 ∥ `accounts/ACCOUNTS.md` §2.1 ∥ `gateway/API.md` §2.5。**产品码零触**。
 - 2026-10-10（**runner-admin-console 批 · A 批最小切片设计 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 19:59 令）：§1 结构版本 11 ⇒ **12** ∥ §2 标题随正（v2–v11 ⇒ v2–v12）+ **增 v12 增段**（`sandbox_runners` 表重建——旧通道形态 ⇒ Docker 节点形态；重建步 ∥ 存量行弃 ∥ 幂等判据；列面不重复 = v11 段所列为准）∥ §3 迁移链补 v12 段（判据）∥ §4 预算（db 实读 **365** ⇒ ≈400——v12 段 +≈35）；同源随动 = `sandbox/SANDBOX.md` §2/§3。**产品码零触（设计轮）**。
+- 2026-10-10（**runner-admin-console 批 · 托管接入（管理面 agent）设计 · eng-designer**——承批档 §2 · 台账 #1236/#1237；用户 22:19–22:29 四句 + 15:00/15:02 裁）：§1 结构版本 12 ⇒ **13** ∥ §2 标题随正（v2–v12 ⇒ v2–v13）+ **增 v13 增段**（`sandbox_onboarding` 建表——任务态/步骤日志/凭据密文；密钥文件显式不落库 ∥ 十八列）∥ §3 迁移链补 v13 段（判据）∥ §4 预算（≈400 ⇒ ≈425——v13 段 +≈25）；同源随动 = `sandbox/SANDBOX.md` §2/§3 ∥ `accounts/ACCOUNTS.md` §2.1。**产品码零触（设计轮）**。
+- 2026-10-10（**runner-admin-console 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §3 轮次 1 之 8）：§2 v11 段 `sandbox_workspaces` ∥ `sandbox_tasks` 两表定义处就近补注（列面差 = 去 `required_labels_json` ∥ 去 `claimed_at`——与 v12 段旁注同指；实现收正随执行面重做批）。**零新语义**（评审发现直接导出项）。

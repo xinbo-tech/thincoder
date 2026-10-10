@@ -125,7 +125,7 @@
 ⇒ **管理面 agent = 唯一一个**（不另立第二个；父侧上一条「独立面」的读法作废）。它的**能力面 = 整个 server 管理面**（成员 ∥ provider ∥ 模型选择 ∥ 用量/配额 ∥ 审计 ∥ 沙盒各面 ⋯），**逐步长**——#172（托管加机）设计的就是**这一个 agent** 及其第一个活；其余管理面此后陆续入它的工具面（同 agent、同源、同口径）。需求档 §1 后续议题同刻收正。
 
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（#1252 随正（#170）+ A 批最小切片（#171）两件落定）
+**状态行**：设计完成（托管接入设计落笔——agent 域档新建 + 八档随正；机检行宽/锚面净；上抛四条在 §2 段内）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>
 
 ### #1252 设计档随正（runner = 远程 Docker API 节点）——落点表与验收
@@ -222,7 +222,89 @@
 - **汇总**：候选 56448 · 悬空 5 · 注记豁免 303 · 拟新增 33 · 迁移期引文 338 · 声明源缺位 0（exit 1 = 上述既有 5 条）。
 - 机制面：`err.upstream_error` 值改（携 `{detail}`）为**共享键值改**——既有使用点（provider 发现等）文案随细、语义零变（`WEBUI.md` §2.2/§5 在册）。
 
+### 托管接入（管理面 agent）设计轮（2026-10-10——台账 #1236/#1237；承 §1；用户 22:19–22:29 四句 + 15:00/15:02 裁）
+
+**本批覆盖（需求条目——已收口口径）**：① 管理员只给「地址 + 登录方式」⇒ server 端 agent（进程内）代做接入（探明 → 决定 → 执行 → 验证 → 报告）② 控制台三态（正在装机 ∥ 已就绪 ∥ 失败原因）③ 两径覆盖（裸机安装 ∥ 已装 Docker）④ 凭据纪律五件（存哪 ∥ 加密 ∥ 专用低权账号 ∥ 可撤销 ∥ 用完即弃）⑤ SSH 传输与指纹纪律（TOFU）。
+
+**不在本批（显式边界）**：多机并装 ∥ 任务中途取消 ∥ Docker `:2375` TLS（明文——沿提议①）∥ 管理面 chat 面（随会话面增量轮）∥ 失败自动重跑（= 重开弹窗重填）。
+
+**设计落点表**（档 → 落点）：
+- `sandbox/SANDBOX.md` §3 —— 托管接入机制全文（步骤骨架 S1–S8 ∥ 两径跳步 ∥ 探明读数十项 ∥ 凭据纪律 ∥ 网络路径（硬点① 答案）∥ run 态）；§14 KD-SV-83–86；§2/§8①/§11/§12/§13 随正；提议⑦–⑬。
+- `agent/ADMIN-AGENT.md`（**新建**——agent 域建档）——形态与定位（进程内，KD-SV-82）∥ 工具面五件（exec/docker/register/verify/report）∥ 自主边界与失败处置（硬点② 答案）∥ 无人值守裁剪 ∥ 预算 ∥ 验收 ∥ KD-SV-82/87。
+- `gateway/API.md` §2.5 —— 托管接入四端点（`POST/GET …/onboarding` ∥ `GET …/:id` ∥ `DELETE …/:id/credential`；异步起跑、仅 400/404、零秘密回显）+ §5 判据行。
+- `store/STORE.md` §2 v13 段/§3 —— `sandbox_onboarding` 表（18 列）+ 版本链 13。
+- `accounts/ACCOUNTS.md` §2.1 —— `sandbox_event` 五 kind（`onboarding_*`——CHECK 零动；零秘密掩蔽口径）。
+- `webui/WEBUI.md` §2.8① —— 托管接入块（弹窗八字段 ∥ 装机任务区 ∥ 3s 读时轮询）；§5 行数预算；§6 沙盒行。
+- `ops/OPS.md` §5.10 —— 接入条 + 托管接入落地。
+- `design/PROJECT.md`/`EVOLUTION.md` —— 域清单九域（agent 新立）∥ 索引 1–87 ∥ §5 六条 ∥ §6 预算 ∥ §7 沙盒行 ∥ §9 R53。
+
+**验收对照（可判据）**：#1236 ⇒ `sandbox/SANDBOX.md` §11 托管接入行 + §12 用例（N49–N52 ∥ B44–B46 ∥ E37/E38）+ `webui/WEBUI.md` §6 + `gateway/API.md` §2.5 + `store/STORE.md` §2 v13；#1237 ⇒ `agent/ADMIN-AGENT.md` §7 + §12 用例（N53 ∥ B47 ∥ E39）+ KD-SV-82；真机面 = 无 Docker 机只给地址+凭据 ⇒「已就绪」（收口轮）。
+
+**决策在册**：KD-SV-82（进程内 + 裁剪 + 工具面五件无围栏）∥ 83（逐案执行 + 六边界 + 失败处置）∥ 84（AES-256-GCM + 密钥 0600 + 默认弃）∥ 85（容器内 openssh + 指纹 TOFU）∥ 86（库行 + 读时轮询）∥ 87（模型 = 提交时选择）。
+
+**影响文件**：设计档九件（八件随正 + `agent/ADMIN-AGENT.md` 新建）；**产品码零触（设计轮）**；产品面预算 = `PROJECT.md` §6 增补块（≈+1120 ∥ webui ≈+141；批内件 `…-agent.test.mjs` 入链 42 ⇒ 43）。
+
+**机检读数**：`scripts/doc-check.mjs` —— 行宽 0 超（本批十处超宽已折行）∥ 锚面本批坐标均 `拟新增` 列报态 ∥ 无入闸旗。
+
+**上抛（待裁）**：① `#1239` 与 KD-SV-78 的依赖关系（agent 面从核引——本设计按依赖声明形写；核侧实现出口 = 另批/核仓）∥ ② agent 模型面：provider 注册表出口与出口代理旗复核（实施面——`agent/ADMIN-AGENT.md` §5）∥ ③ `@thincoder/server` 带核发布形（`@thincoder/core` 钉版本 ⇒ 构建期 registry 可达性——实施轮定）∥ ④ 预算两值（20 分钟 ∥ 60 调用）与 i18n 顺移值（≈231/≈235）为推断值——供复核。
+
+**登记/父侧（知会）**：① 需求档回笔：AC-36 ⑨/⑩ 与 §5「接入两径」判据面收口（写法/计数 = 主 agent）∥ ② `docs/TEST-ENV-ECS.md` §7 补「托管接入」跑法（手工前置路可作降级）∥ ③ `docs/README.md` 地图登记 agent 域 ∥ ④ 审计页 `sandbox_event` 模板随余面批（原始型名兜底可用）。
+
+**勘误（同轮——预算读数收正）**：服务端产品面 = **≈+1110**（agent 域 ≈470 ∥ sandbox 域 ≈640 ∥ `Dockerfile` +3）；上段「≈+1120」为笔误，以本条为准（`design/PROJECT.md` §6 行与变更记录已同拍为 +1110）。
+
+### 设计评审轮 1 修正（fix 轮——承 §3 轮次 1；1 ∥ 3–14，除 #2）
+
+**逐号落点（号 → 改动 file:line——现状行号 → 一句话）**
+
+| # | 落点 | 一句话 |
+|---|---|---|
+| 1 | `docs/server/design/sandbox/SANDBOX.md:13` | 「探活/超时/快照」⇒「**盒级超时/快照 = 控制端定时器（余面批）**——节点存活 = 读时探活（§14 KD-SV-80）」——两说消除 |
+| 3 | `docs/server/design/sandbox/SANDBOX.md` §14（原 :276–278/:287）∥ `docs/server/design/PROJECT.md` §4 索引（5 行）+ §5（1 行） | 作废尸标删净（编号留空档；历史 = 变更记录） |
+| 4 | `docs/server/design/sandbox/SANDBOX.md:268–269` | `routes.mjs` 拆分预案（触发点 = 实施轮实读 > 500 ∥ 余量 ≈50 ∥ 候选 = 容器面路由独立成档（拟新增——首选）∥ 节点面备选） |
+| 5 | `docs/server/design/agent/ADMIN-AGENT.md:62` ∥ `docs/server/design/sandbox/SANDBOX.md:254` | 注册路径定 = 四端点经 `routes.mjs` 转注册（`bin` **±0**）——与 §6 预算同拍 |
+| 6 | `docs/server/design/webui/WEBUI.md:125` ∥ `:127` | 键链补托管接入 +≈30 一步——**≈108 键** ∥ admin ≈90；链 ⇒ 167/171 ⇒ 197/201 ⇒ 231/235（与 §5 取齐） |
+| 7 | `docs/server/design/PROJECT.md:11` ∥ `:67` | 十一页 ⇒ **十二页**（我的 4 + 管理 8 = 12——与 WEBUI §2.2 ∥ 需求同拍） |
+| 8 | `docs/server/design/store/STORE.md:264` ∥ `:299` | v11 段两表定义处就近补注（列面差 = 去 `required_labels_json` ∥ 去 `claimed_at`——与 v12 段旁注同指） |
+| 9 | `docs/server/design/ops/OPS.md:120–121` ∥ `:267` | 门禁链 ⇒ 42 ⇒ **43** ∥ Dockerfile ⇒ ≈37（+≈3 = `openssh-client` + `sshpass`） |
+| 10 | `docs/server/design/accounts/ACCOUNTS.md:67` | detail 形补 `kept?`/`removed?`（节点删除行计数） |
+| 11 | `docs/server/design/sandbox/SANDBOX.md:46` ∥ `:50–51` ∥ `:291` | 自检引导步写明（① 无前缀版本读数 → ② 协商 → ③ 复读） |
+| 12 | `docs/server/design/sandbox/SANDBOX.md:106` ∥ `docs/server/design/ops/OPS.md:250` | 宿主前提（`sshpass` 缺 ⇒ S2 停 + 报因——检查并报） |
+| 13 | `docs/server/design/webui/WEBUI.md:534` | 弹窗字段单补 S5 预告知句（既有容器短暂中断） |
+| 14 | `docs/server/design/agent/ADMIN-AGENT.md:51` | 指针写全 ⇒ `PROJECT.md` §9 R53③ |
+
+- **#2** = 需求档（父侧直改）——不在本件射程。
+- **同族收正（单列披露）**：`docs/server/design/agent/ADMIN-AGENT.md:61`（「构建/发布形复核 = §9 上抛」——同一空指针病灶）同改指 `PROJECT.md` §9 R53③（评审建议「指针写全」直接导出项）。
+- **机检复跑（`node scripts/doc-check.mjs`——读数原文）**：汇总 = 候选 56632 · **悬空 5** · 注记豁免 303 · **拟新增 42** · 迁移期引文 338 · 声明源缺位 0；`FAIL(锚)` = 5 条（与基线同值——1 条 `API-CONTRACT.md:2011` + 4 条 mount-settings-team 族，均非本批面；本件新增 2 条已收正）∥ `FAIL(行宽)` = 1 行 = `docs/server/requirements/PROJECT.md:12`（386 字符——需求档/父侧面，非本件笔）。
+- **零新语义**（评审发现直接导出项 + 同族指针收正）；七档变更记录各附一行（SANDBOX :318 ∥ PROJECT :611 ∥ WEBUI :775 ∥ OPS :406 ∥ ACCOUNTS :235 ∥ ADMIN-AGENT :98 ∥ STORE :410）。
+- 拆分预案候选档以「拟新增」标记入列（拟新增 41 ⇒ 42——列报面，不入机检闸）。
+
 ## §3 设计评审（评审子代理）
+
+### 轮次 1（评审子代理）
+
+**设计评审 —— runner-admin-console 批（三件：设计档随正 #1252 ∥ 最小切片 #1251 四件事 ∥ 托管接入 #1236/#1237）** · 评审面 = 十档（ADMIN-AGENT ∥ SANDBOX ∥ API ∥ STORE ∥ ACCOUNTS ∥ WEBUI ∥ OPS ∥ design/PROJECT ∥ EVOLUTION ∥ requirements/PROJECT）；限制：无独立项目标准档/文档地图声明——归属口径按设计集内文档地图（`design/PROJECT.md` §3）判。
+
+| # | Category | Severity | Issue | Suggestion |
+|---|----------|----------|-------|------------|
+| 1 | Document ownership | 🔴 | 同一机制两处不同口径：`thincoder/docs/server/design/sandbox/SANDBOX.md:13` 载「探活/超时/快照 = 控制端（server）自己的定时器」，与 `SANDBOX.md:47`「运行面/列表读数 = 请求内现打（并发；无后台定时器 ∥ 无心跳机制——§14 KD-SV-80）」及 `SANDBOX.md:290` KD-SV-80 行「无后台定时器 ∥ 无心跳落库」相抵——节点探活（存活）机制两说（定时器 vs 读时现打）。 | 消除二说：§1 该分句收窄到盒级超时/快照（控制端驱动、余面批），去掉/改写「探活」表述，与 KD-SV-80 读时探活口径对齐；历史归变更记录。 |
+| 2 | Requirements | 🟡 | 需求陈句与现设计相抵：`thincoder/docs/server/requirements/PROJECT.md:12`「**runner 无需入向端口**（14:59 裁在册）」vs `SANDBOX.md:52`「节点机 Docker 引擎须监听 TCP」（`tcp://0.0.0.0:2375`）与 `thincoder/docs/server/design/ops/OPS.md:247`「server 机 → 节点 `:2375` 网络可达（安全组/防火墙面）」——19:52「runner = 远程 Docker API 节点」口径后该句已陈。 | 登记为需求档回笔项（方向：把「无需入向端口」限定为公网口径、明记节点机 Docker API 监听限内网/安全组可达），与既有回笔清单（`design/PROJECT.md` §9 R52①/R53②）同拍。 |
+| 3 | Doc hygiene | 🟡 | 失效表达式留在现面：`design/PROJECT.md:160`–`:162`/`:171`/`:173`（§4 索引）与 `:191`（§5）、`SANDBOX.md:276`–`:278`/`:287` 的「**作废**（2026-10-10——执行面重定：runner = 远程 Docker API 节点）」五行尸标仍居决策面。 | 按「失效表达式不留现面」删净该五行（历史 = 变更记录已有「⇒ 作废」条目；编号留空档即可）。 |
+| 4 | Affected-file size | 🟡 | 越 500 软线无拆分预案：`SANDBOX.md:252` 载 `routes.mjs`「（已落盘 **407**——2026-10-10 现读）⇒ **≈540**」（+≈133），托管接入再 ±≈5 ⇒ ≈545；全档仅对 `onboarding-routes.mjs` 写了「独立成档缘由」。 | §13 预算行补 routes.mjs 拆分预案（触发点/余量/候选拆法——如容器面路由独立成档），与 `registry.mjs` ≈500 落位说明同拍。 |
+| 5 | Affected-file size | 🟡 | 同档注解相抵：`agent/ADMIN-AGENT.md:62`「`bin/thincoder-server.mjs` 装配行 ≈+2」vs `design/PROJECT.md:293`「`bin` ±0」与 `SANDBOX.md:263`「**±0**（注册面不变）」——`onboarding-routes.mjs` 四端点装配落点口径不一。 | 统一三处：定新端点注册路径（经 `routes.mjs` 转注册 ⇒ ±0；bin 直注册 ⇒ +≈2），其余两处随正。 |
+| 6 | Document ownership | 🟡 | 键族登记与预算链相抵（同档两处）：`webui/WEBUI.md:125`「新增 ≈78 键」与 `:127` 链（zh admin ≈141 ⇒ **≈167**（运行面批）⇒ ≈201 ∥ en ≈145 ⇒ ≈171 ⇒ ≈205）未含托管接入 +≈30/表，而 `WEBUI.md:598`／`:603` 为「≈167（沙盒运行面批：+≈26 键）⇒ ≈197（托管接入增补：+≈30 键）⇒ ≈231」∥「≈171 ⇒ ≈201 ⇒ ≈235」。 | §2.2 登记补托管接入 ≈30 键一步（键计数与终值同拍），与 §5 链取齐。 |
+| 7 | Document ownership | 🟡 | 页数计数相抵：`design/PROJECT.md:11`「侧栏分组导航十一页」与 `:67`「十一页两区（… 我的四页 ∥ 管理八页 …）」自抵（4+8=12）；对档 `WEBUI.md:83`「十二页」、需求 `requirements/PROJECT.md:63`「侧栏合计 ⇒ **十二页**」。 | 计数收正（十一 ⇒ 十二，或使分项与合计一致），三档同拍。 |
+| 8 | Document ownership | 🔵 | v11 段 DDL 与实表差留档未销：`store/STORE.md:333` 旁注载 `sandbox_workspaces`／`sandbox_tasks`「两处列面仍与实表有差——随执行面重做批收正」；v12 仅重建 `sandbox_runners`（`STORE.md:328`「本段一次重建收正」）。 | 保持登记；§2 v11 两表定义处就近补同注（或 v12/v13 判据加「两表未随」行），免按 §2 列面直读实表。 |
+| 9 | Affected-file size | 🔵 | 行数链未随正（跨档）：`OPS.md:120` 门禁链止「server-exec-sandbox 批两件入链 **+2 ⇒ 40**」，而 `design/PROJECT.md:320` 已列「runner-admin-console 批两件入链 **+2 ⇒ 42**」、`:295` 再「42 ⇒ **43**」；`OPS.md:265` Dockerfile 行亦未注本批 +≈3（`openssh-client`+`sshpass`）。 | 文档链两处随正（OPS §5.1 链 + §6 Dockerfile 行），沿「文档链随正」先例。 |
+| 10 | Document ownership | 🔵 | 审计 detail 形面与用例不同步：`accounts/ACCOUNTS.md:67`（`sandbox_event` 行）形 = `{ kind, workspaceId? }`，而 `SANDBOX.md:63` 载「审计行（`runner_delete`；detail 携 kept/removed）」（N48 同断言）。 | `ACCOUNTS.md` §2.1 该行 detail 枚举补 kept/removed（或放宽形声明），与 SANDBOX 用例同拍。 |
+| 11 | Clarity | 🔵 | 自检首调表述循环：`SANDBOX.md:50`「`GET <base>/<ver>/version` ⇒ 读 `{ Version, ApiVersion, MinAPIVersion, Os, Arch }` + 协商版本」——`<ver>` 由本次读数协商而来（KD-SV-81），首调前缀形未写明。 | §3／§14 KD-SV-81 处写明引导步（先取版本读数、再定前缀），免实现分叉。 |
+| 12 | Feasibility | 🔵 | 密码认证前提只覆盖镜像侧：`SANDBOX.md:104`「镜像侧 = `Dockerfile` 加装 `openssh-client` + `sshpass`」；npm/裸机部署路（`OPS.md` §5.1）未注明宿主需 `sshpass`（缺 ⇒ 密码认证必败，报错面仅「认证被拒」）。 | 部署面注明前提或加检测（缺 ⇒ 明确报因），沿「检查并报」口径。 |
+| 13 | Clarity | 🔵 | S5「表单预告知」无 UI 落点：`SANDBOX.md:92`「（既有容器短暂中断——表单预告知）」，`WEBUI.md:534` 托管弹窗字段单未列该告知行。 | §2.8① 弹窗字段单/提示句补该行（或注明实现自由落于窗内）。 |
+| 14 | Clarity | 🔵 | 指针悬空：`ADMIN-AGENT.md:51`「出口代理旗随 provider 条目（复核点——§9）」——本档 §9 无该复核点；实际登记 = `design/PROJECT.md:539`（R53③）。 | 指针写全（指向 R53③ 或本档落点），免按 §9 空找。 |
+
+计数：🔴 ×1 ∥ 🟡 ×6 ∥ 🔵 ×7（共 14）。
+
+VERDICT: changes-required
+
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）

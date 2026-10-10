@@ -117,7 +117,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
 - **版本身份 = npm 包**（两路同源）：升级 = 装 npm 新版 + 重启（§5.4）；**镜像 tag 不承担版本语义**（tag 只标壳——除 Node 基座换代外无需重建镜像）。
 - **npm 路（包体就绪——发布动作 = 发布面轮）**：`thincoder-server/package.json` 转可发布形——撤 `private` ∥ 包名 = `@thincoder/server`（拟——发布轮验 registry 占用/scope 权限；更优命名可上抛） ∥ `bin` = `thincoder-server`
   ∥ `engines` node>=24 ∥ `prepublishOnly` 门禁（全树 `node --check` + 批内件 30 ⇒ 31 ⇒ 32 ⇒ 33 ⇒ 34 ⇒ 35 ⇒ 36 ⇒
-  **38 件**（八 + #962/#963/i18n/#972 件 + 弹窗批件 + 后续各批 18 ⇒ 19 ⇒ 20 ⇒ 21 ⇒ 22 ⇒ 23 ⇒ 25 件——alias ∥ 代理页批件已入链；以当刻盘面实读为准：盘面实读 **36**（2026-10-10 现读——含 server-face-residues 件）⇒ 本批（server-small-fixes 两件入链）**+2 ⇒ 38** ⇒ server-exec-sandbox 批两件入链 **+2 ⇒ 40**））。
+  **38 件**（八 + #962/#963/i18n/#972 件 + 弹窗批件 + 后续各批 18 ⇒ 19 ⇒ 20 ⇒ 21 ⇒ 22 ⇒ 23 ⇒ 25 件——alias ∥ 代理页批件已入链；以当刻盘面实读为准：盘面实读 **36**（2026-10-10 现读——含 server-face-residues 件）⇒ 本批（server-small-fixes 两件入链）**+2 ⇒ 38** ⇒ server-exec-sandbox 批两件入链 **+2 ⇒ 40**
+  ⇒ runner-admin-console 批两件入链 **+2 ⇒ 42** ⇒ 托管接入增补件入链 **+1 ⇒ 43**））。
   - `files` 白名单 = bin ∥ src ∥ public ∥ config.example.json ∥ README.md（`deploy/` 档组 = 仓内部署面——不入包）。
 - **npm 路装机 = 前缀式**（自升前提）：`NPM_CONFIG_PREFIX` 指**服务账号可写目录**（建议 `/opt/thincoder-server/.npm-global`——与配置/数据同根）⇒ 装机（`npm i -g @thincoder/server`）与自升（服务进程内——§5.4）同前缀、免 sudo 重写；安放后该根目录整归服务账号（`chown -R`）。
 - **Docker 路 = 壳镜像**（`thincoder-server/Dockerfile`——重设计）：基座 `node:24-slim` + 引导层（`thincoder-server/deploy/docker-entrypoint.sh`（已落盘 7 行） ∥ `thincoder-server/deploy/converge.mjs`（已落盘 197 行））；**App 代码由 npm 取装**——镜像本体只含壳（不带版本身份）。
@@ -245,7 +246,8 @@ services:
 
 - **形态** = 远程 Docker API 节点：控制面直调 Docker API ∥ **主机侧两件**（出站闸 nft ∥ 卷的磁盘限额）= SSH 进主机执行 ∥ 集群化 = 用 Docker 自己的集群 ∥ 机器上不驻留我们的进程——用户 2026-10-10 19:52–19:56 定。
 - **节点前置（最小切片——runner-admin-console 批）**：节点机 Docker 引擎须**监听 TCP**（`dockerd -H fd:// -H tcp://0.0.0.0:2375` systemd override）∥ server 机 → 节点 `:2375` 网络可达（安全组/防火墙面）；**TLS 不做**（内网——`sandbox/SANDBOX.md` §3 提议①，明文 2375 = 无鉴权 root 等价口——限内网）；控制台容器面 = 建/启/停/删（机制 = `sandbox/SANDBOX.md` §3）。
-- **接入** = 控制台「添加节点」（填 Docker API 地址——连通自检；失败逐句人话 + 审计行）∥ 删除节点（有容器 ⇒ 二选一「保留 ∥ 连删」；有承载工作区 ⇒ 二次确认）；托管接入（管理员给主机地址 + 登录方式 ⇒ server 代部署）= 需求在册（AC-36 ⑨/⑩）——设计归服务端开发面（#1236/#1237）。
+- **接入** = 控制台「添加节点」（填 Docker API 地址——连通自检；失败逐句人话 + 审计行）∥ 删除节点（有容器 ⇒ 二选一「保留 ∥ 连删」；有承载工作区 ⇒ 二次确认）；托管接入（管理员给主机地址 + 登录方式 ⇒ server 代部署）= **本批增补落地**（AC-36 ⑨/⑩——agent 代做：装运行时 ∥ 开 TCP 监听 ∥ 自检登记；机制全文 = `sandbox/SANDBOX.md` §3 ∥ `agent/ADMIN-AGENT.md`）。
+- **托管接入部署前提（npm/裸机路）**：server 宿主须装 `sshpass`（密码认证面）——缺 ⇒ S2 先检即停 + 明确报因（检查并报——`sandbox/SANDBOX.md` §3）；容器路 = 镜像已含（`openssh-client` + `sshpass`——§6 Dockerfile 行）。
 - **网络面**：盒流量在节点本机、出站经本机闸（不占 server 侧带宽——KD-SV-63 动机）；细形（端口/凭据）随重做批定形。
 
 ## 6. 本域文件与行数预算（本域族行）
@@ -262,7 +264,7 @@ services:
 | `thincoder-server/deploy/thincoder-server.service`（已落盘） | **34**（实读 2026-10-06——设计估 ≈40；本批 +2 = 前缀 env ∥ ExecStart） | systemd unit 模板（裸机路——Restart=always ∥ 开机自启 ∥ journald） |
 | `thincoder-server/deploy/docker-entrypoint.sh`（已落盘） | **7**（实读 2026-10-06——设计估 ≈12；§5.1）**⇒ ±0（配置控制台批：`--config` 路径随正 `/app/config/config.json`——文本改，行数零变）** | 容器入口（壳——`exec … --config /app/config/config.json`） |
 | `thincoder-server/deploy/converge.mjs`（已落盘） | **197**（实读 2026-10-06——设计估 ≈85；§5.4(d)） | 壳引导收敛（零 App 依赖——自足） |
-| `thincoder-server/Dockerfile`（已落盘） | **34**（实读 2026-10-06——设计估 ≈30；#961 +12 = 壳化重设计；#963 +6 = `HEALTHCHECK`——§5.9） | 镜像构建（壳 + 构建期预装——§5.1） |
+| `thincoder-server/Dockerfile`（已落盘） | **34**（实读 2026-10-06——设计估 ≈30；#961 +12 = 壳化重设计；#963 +6 = `HEALTHCHECK`——§5.9）**⇒ ≈37（runner-admin-console 批·托管接入：+≈3 = `openssh-client` + `sshpass`——设计估，实读待回填）** | 镜像构建（壳 + 构建期预装——§5.1） |
 | `thincoder-server/.dockerignore`（已落盘） | **8**（实读 2026-10-06——设计估 ≈10；本批 +1 = 注释随正——清单不变）**⇒ ≈9（配置控制台批：+1 = `config/` 排除——挂载形随正（构建上下文防泄）**⇒ 实读 12**（2026-10-09 配置控制台批落地后——+4）** | 构建上下文排除（config.json ∥ config/ ∥ data ∥ docs ∥ .git） |
 | `thincoder-server/docker-compose.yml`（已落盘） | **20**（实读 2026-10-06——设计估 ≈30；#961 +4 = env ∥ 注释；#963 +1 = healthy 继承注记——§5.9）**⇒ ≈24（配置控制台批：卷行改目录级 rw 挂载 ∥ 用法注释随正 +≈4）⇒ 实读 **22**（2026-10-09 配置控制台批落地后——+2）** | 容器样例（端口 ∥ 卷（配置目录 rw ∥ 数据） ∥ env_file ∥ restart: unless-stopped） |
 | `thincoder-server/deploy/backup.mjs`（已落盘） | **无 ⇒ 86**（实读 2026-10-06——设计估 ≈45；在线备份脚本：node:sqlite `backup()` ∥ `--config`/`--out` ∥ 时间戳命名——§5.5） | 备份（命令化——定时器样例在 README §9） |
@@ -400,3 +402,5 @@ first-release-completeness 面回填（2026-10-06——批 `docs/batches/2026-10
 - 2026-10-10（**server-exec-sandbox 批 · 残差对齐（fix 轮）· eng-designer**——承评审 #143 交卷点出的同族残留；父侧裁定：换依据不删观点）：§1 预设覆盖面行 ∥ §1 漂移纪律行 ∥ §8 KD-SV-17 行三处引核依据收正——「被 KD-SV-2 禁」⇒ 引核口径 KD-SV-78（KD-SV-2 范围 = 网关（provider 层）面——`design/PROJECT.md` §5）；自持快照口径（KD-SV-17 ∥ 对照取数 = 只读、非运行期依赖）零变。同族收正 = `webui/WEBUI.md` §7（KD-SV-34 行）。**零新语义**（KD-SV-78 裁定的残差对齐）。
 - 2026-10-10（**runner-admin-console 批 · 设计档随正 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 2026-10-10 19:52–19:56 口径「runner = 远程 Docker API 节点」）：§5.1 `bin` 行去第二入口 ∥ §5.6 反代样例去快照路由例外（body 上限 = 32m）∥ **§5.10 重写**（形态 = 远程 Docker API 节点；接入 = 添加/删除节点（连通自检）∥ 托管接入归 #1236/#1237）∥ §6 去 runner unit 行、盒镜像行随正 ∥ §7 沙盒判据行随正 ∥ §8 不做面随正 + KD-SV-25 行随拍；同源随动 = `sandbox/SANDBOX.md` ∥ `gateway/API.md`。**产品码零触**。
 - 2026-10-10（**runner-admin-console 批 · A 批最小切片设计 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 19:59 令）：§5.10 增**节点前置**条（Docker 引擎 TCP 监听 ∥ 网络可达 ∥ TLS 不做——提议①）∥ 接入条补删节点二选一（保留 ∥ 连删）。**产品码零触（设计轮）**。
+- 2026-10-10（**runner-admin-console 批 · 托管接入（管理面 agent）设计 · eng-designer**——承批档 §2 · 台账 #1236/#1237；用户 22:19–22:29 四句 + 15:00/15:02 裁）：§5.10 接入条随正——托管接入落地（agent 代做装机/监听/登记；原手工前置步保留；凭据纪律 = `sandbox/SANDBOX.md` §3）；机制全文 = `sandbox/SANDBOX.md` §3 ∥ `agent/ADMIN-AGENT.md`；镜像侧需 `openssh-client` + `sshpass`（`Dockerfile`——实施侧）；同源随动 = `sandbox/SANDBOX.md` ∥ `gateway/API.md`。**产品码零触（设计轮）**。
+- 2026-10-10（**runner-admin-console 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §3 轮次 1 之 9/12）：#9 §5.1 门禁链随正（runner-admin-console 批两件入链 **+2 ⇒ 42** ⇒ 托管接入增补件入链 **+1 ⇒ 43 件**）+ §6 Dockerfile 行补本批 +≈3（`openssh-client` + `sshpass`——设计估）∥ #12 §5.10 增托管接入部署前提行（宿主缺 `sshpass` ⇒ S2 停 + 报因——检查并报）。**零新语义**（评审发现直接导出项）。

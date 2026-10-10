@@ -112,7 +112,8 @@
 
 ### 2.5 沙盒控制台面（admin——server-exec-sandbox 批；机制全文 = `sandbox/SANDBOX.md` §3/§8）
 
-（端点族 = `/api/admin/sandbox/*`；判权 = `requireAdmin` 口径——`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401；错误形 = §3 全码 + `sandbox_unavailable`；**节点/容器面（runner-admin-console 批）**：引擎失败 ⇒ 502 `upstream_error`（消息 = 逐句人话 + 引擎原文）∥ 容器/节点不存在 ⇒ 404 ∥ 形非法/重名/镜像缺/名占用 ⇒ 400（零新码）；写端点 JSON 型门同 §1 前言）
+（端点族 = `/api/admin/sandbox/*`；判权 = `requireAdmin` 口径——`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401；错误形 = §3 全码 + `sandbox_unavailable`；**节点/容器面（runner-admin-console 批）**：引擎失败 ⇒ 502 `upstream_error`（消息 = 逐句人话 + 引擎原文）∥ 容器/节点不存在 ⇒ 404 ∥ 形非法/重名/镜像缺/名占用 ⇒ 400（零新码）；
+**托管接入面（runner-admin-console 批增补——#1236/#1237）**：起跑异步（200 先于执行完——进度经读时轮询）∥ 仅 400/404（零新码）∥ 响应面零秘密字段（凭据永不回显）；写端点 JSON 型门同 §1 前言）
 
 | 方法 + 路径 | 语义 |
 |---|---|
@@ -129,6 +130,10 @@
 | `GET/POST/PATCH/DELETE /api/admin/sandbox/rules*` | 出站规则增删改（校验 = 两类形/通配单层左/显式 deny 先；保存 ⇒ `rulesRev` +1 + 审计 `sandbox_rule`） |
 | `GET /api/admin/sandbox/pending` ∥ `POST /api/admin/sandbox/pending/:id/resolve` | 待批表 ∥ 裁定 `{ decision: "once" ∥ "remember" ∥ "deny" }`（remember ⇒ 规则入表 source=approval；审计 `sandbox_event`） |
 | `GET/PATCH /api/admin/sandbox/settings` | 设置读写（全局默认——值 = JSON 文本）：`cpus`（数） ∥ `memMb`/`pids`/`diskMb`/`idleTtlMinutes`/`wallclockTtlHours`/`checkpointEveryMinutes`/`checkpointKeep`/`pendingTimeoutSeconds`/`tmpfsMb`（正整数） ∥ `image`（字符串）；PATCH 逐键（键级合并——值 = 整键替换；形/范围校验不过 ⇒ 400 库零变）⇒ `rulesRev` +1（即生效）；**「默认单」非本表键**（= `sandbox_rules` 种子行——上行）；**每键有 UI 写入口**——`webui/WEBUI.md` §2.8 |
+| `POST /api/admin/sandbox/onboarding` | 托管接入起步（runner-admin-console 批增补——#1236/#1237）：`{ host, sshPort?, sshUser, auth: { kind: "key"∥"password", secret }, sudoSecret?, name?, model, credentialMode: "burn"∥"keep" }` ⇒ 200 `{ run }`（**异步起跑**——agent 逐案执行；进度经列表/详情读时轮询）；形非法 ∥ 无可用模型 ∥ 同主机任务在途 ⇒ 400（零落库）；判权 `requireAdmin`；审计 `onboarding_start` |
+| `GET /api/admin/sandbox/onboarding` | 任务列表（最近）：`{ runs: [{ id, host, sshUser, name, status, step, steps, credential: { mode, state }, runnerId?, startedAt, finishedAt }] }`——**零秘密字段** |
+| `GET /api/admin/sandbox/onboarding/:id` | 单任务详情（同上形 + 步骤读数明细 `steps[].readings`）；不存在 ⇒ 404 |
+| `DELETE /api/admin/sandbox/onboarding/:id/credential` | 撤销凭据（server 侧清密列——只及存留；目标机账号须到机处置）+ 审计 `onboarding_credential_revoke`；无凭据在留 ⇒ 400；不存在 ⇒ 404 |
 
 - 用例 = `sandbox/SANDBOX.md` §12。
 
@@ -191,6 +196,7 @@
 | AC-29（功能点 29——服务模型别名；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | ① 配置形：`models` 条目两形（字符串 = 无别名 ∥ 对象 `{name, alias}` = 配别名）；`alias` 缺省/空（`null` ∥ `""`）⇒ 无别名（归一）；非对象非字符串条目 ∥ `name` 缺/空 ∥ `alias` 数字/布尔/对象/数组 ∥ 含 `/` ∥ 首尾空白 ⇒ 400（保存——库与运行时零变）∥ 拒启（种子/载入）∥ ② 对外别名生效（`/v1/models` `id` = 别名 ∥ 请求 `model=别名` ⇒ 命中且转发上游真名（mock 上游 `body.model` 逐值）∥ 旧 `provider/model` 名 ⇒ 404 `model_not_found` 消息含别名；清别名 ⇒ 外标回落 `provider/model`——当即生效）∥ ③ 唯一性（别名撞别名——跨 provider ∥ 含新增项：载入 ⇒ 拒启 ∥ 保存 ⇒ 400 库与运行时零变；别名撞带前缀名——形上不相交（别名无斜杠 ∥ 前缀名恒含斜杠），唯一可能撞法 = 别名含 `/` ⇒ 形校验拒）；用例 = §7 N35/B25/E26 | 批内件 + 收口轮 |
 | AC-30（功能点 30②——代理连通测试面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 真打（mock 假代理 + mock 目标 ⇒ `ok:true` + `status`/`ms` 逐值 ∥ 假代理命中即证经代理）∥ 代理不可达（死端口）⇒ `ok:false` + `kind=unreachable` ∥ 超时（注入 `timeoutMs`）⇒ `kind=timeout` ∥ loopback 目标 ⇒ 直连（假代理零命中——旁路与生产同判）∥ 非 2xx 照实回读（`ok:true` + 状态值）∥ 入参（缺/空 `uri` ∥ `uri` 非 `http:` ∥ 缺/非法 `target` ⇒ 400 `invalid_request_error`——文件与运行态零变）∥ 判权三态（user ⇒ 403 ∥ 无会话 ⇒ 401 ∥ admin 200）∥ **零落库零计费**（usage 行零增 ∥ 配额零涉 ∥ 审计零行）∥ 自含形（结果 200 体——不走统一错误信封） | 批内件 |
 | 沙盒（server-exec-sandbox 批——台账 #1224；需求 §5 沙盒块 + 14:00 裁定；AC-36——已落需求档） | 端点面机检（判权三态：`user` ⇒ 403 ∥ 无会话 ⇒ 401 ∥ 成员面恒本人过滤——§2.7）∥ 无可用节点 ⇒ 503 `sandbox_unavailable` ∥ 规则校验（两类型 ∥ 通配单层左 ∥ 显式 deny 恒先）∥ 待批三态 ∥ 资源覆写（PATCH ⇒ 建盒载荷逐值——§2.5）；**最小切片（节点/容器——§2.5 前七行；runner-admin-console 批）**：添/删节点 ∥ 容器四动作（502/404/400 映射 ∥ 幂等 304 语义 ∥ 连删失败行保留）= `sandbox/SANDBOX.md` §3 ∥ 用例 §12（N40 ∥ N46–N48 ∥ B41–B43 ∥ E34–E36）；判据全文 = `sandbox/SANDBOX.md` §11（执行面判据随重做批） | 批内件 + 收口轮 |
+| 托管接入（runner-admin-console 批增补——#1236/#1237；表 = §2.5 托管接入四行） | 步 → 前置 → 动作 → 判据 → 停点四段在案（`sandbox/SANDBOX.md` §3）；两径（裸机 ∥ 已装）覆盖 ∥ 凭据四态（弃/留/撤/掩蔽）∥ run 态（读时轮询 ∥ 重启 `interrupted`）∥ 零新码；判据全文 = `sandbox/SANDBOX.md` §11 托管接入行 ∥ §12（N49–N52 ∥ B44–B46 ∥ E37/E38）∥ `agent/ADMIN-AGENT.md` §7 | 批内件 + 收口轮（真机） |
 | AC-28（功能点 28——配置控制台写面；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | GET = 文件面值（有效值回填 ∥ 密钥掩码零泄漏 ∥ `bootstrap.password` 面零列）∥ PATCH：白名单（未知键 ⇒ 400）∥ 合并保未知键 ∥ 校验门（非法值 ∥ `env:` 缺位 ⇒ 400 且文件字节零变）∥ 原子写（tmp 零残留 ∥ rename 覆盖）∥ 审计 `config_update`（detail = 键名 ∥ 值零入）∥ 并发（同步段单写者）∥ 写后 GET 回读逐值（round-trip）∥ 草稿探活（test 端点明传优先——缺省回落）∥ **缺段创建**（缺 `embedding` 段 ⇒ PATCH 建段 ⇒ 门通过 ∥ 缺段档 PATCH 他键过门；2026-10-09 embed 解耦批） | 批内件 |
 
 ## 6. 关键决策（本域）
@@ -334,3 +340,4 @@
 - 2026-10-10（**server-exec-sandbox 批 · checkpoint 通路口径 fix 轮 · eng-designer**——2026-10-10 裁定（实现轮上抛：快照 ≤200 MiB vs 全局 32 MiB 相抵））：§2.6 checkpoint 行补通路口径（octet-stream 唯一收口 ∥ 路由级 200 MiB ∥ 流式落盘）∥ §3 413 句补路由级例外 ∥ §4 `server.mjs` 行随拍（实读 192 ⇒ ≈206——+≈14）∥ §5 沙盒行 + §7 增 B27（快照上送边界——E7 通则保持）。**产品码零触**。
 - 2026-10-10（**runner-admin-console 批 · 设计档随正 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 2026-10-10 19:52–19:56 口径「runner = 远程 Docker API 节点」）：§1 去沙盒 runner 面行 ∥ **§2.6 删**（端点族随执行面重定退场）∥ §2.5 运行面读数行收正 + join-token/排空行 ⇒ 节点添加/删除行 ∥ §3 去 413 路由级例外、沙盒面族去 `/api/runner/*` ∥ §4 `server.mjs` 行去 checkpoint 口径（实读链止 192）+ 小计 sandbox 域指针随正 ∥ §5 沙盒行随正 ∥ §7 B27 删 ∥ §8 沙盒不做面指针随正；同源随动 = `sandbox/SANDBOX.md` ∥ `store/STORE.md` ∥ `ops/OPS.md`。**产品码零触**。
 - 2026-10-10（**runner-admin-console 批 · A 批最小切片设计 · eng-designer**——承批档 `docs/batches/2026-10-10-runner-admin-console.md` §1 · 台账 #1252；用户 19:59 令）：§2.5 运行面行重写（读时探活形）+ 添/删节点行收正 + **增容器四行**（列表 ∥ 创建三件 ∥ 启/停 ∥ 删——引擎请求/映射逐项）∥ §2.5 前括注补节点/容器面错误形（502/404/400——零新码）∥ §4 `errors.mjs` 行补本批 ±0 ∥ §5 沙盒行补最小切片判据指针；同源随动 = `sandbox/SANDBOX.md` §3 ∥ `store/STORE.md` §2 v12 段 ∥ `webui/WEBUI.md` §2.8①。**产品码零触（设计轮）**。
+- 2026-10-10（**runner-admin-console 批 · 托管接入（管理面 agent）设计 · eng-designer**——承批档 §2 · 台账 #1236/#1237；用户 22:19–22:29 四句 + 15:00/15:02 裁）：§2.5 前括注补托管接入面语义（异步起跑 ∥ 零新码 ∥ 零秘密回显）+ **增四行**（起 ∥ 列表 ∥ 详情 ∥ 撤销凭据）∥ §5 增托管接入判据行；同源随动 = `sandbox/SANDBOX.md` §3 ∥ `agent/ADMIN-AGENT.md` ∥ `store/STORE.md` §2 v13 段 ∥ `webui/WEBUI.md` §2.8①。**产品码零触（设计轮）**。
