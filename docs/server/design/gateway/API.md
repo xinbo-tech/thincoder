@@ -115,7 +115,9 @@
 
 （端点族 = `/api/admin/sandbox/*`；判权 = `requireAdmin` 口径——`user` ⇒ 403 ∥ 无/过期会话 ⇒ 401；错误形 = §3 全码 + `sandbox_unavailable`；**节点/容器面（runner-admin-console 批）**：引擎失败 ⇒ 502 `upstream_error`（消息 = 逐句人话 + 引擎原文）∥ 容器/节点不存在 ⇒ 404 ∥ 形非法/重名/镜像缺/名占用 ⇒ 400（零新码）；
 **容器面补齐/镜像族（sandbox-docker-admin 批增补——#1265）**：读三件（详情/日志/用量）读类 3s ∥ 重启/强杀动作类 15s ∥ 拉取超时 10 分钟；强杀未运行（409）∥ 拉取失败（非 2xx ∥ 流内 `error` 两形）∥ 镜像被引用（409）⇒ 400（零新码）；
-**托管接入面（runner-admin-console 批增补——#1236/#1237）**：起跑异步（200 先于执行完——进度经读时轮询）∥ 仅 400/404（零新码）∥ 响应面零秘密字段（凭据永不回显）；写端点 JSON 型门同 §1 前言）
+**托管接入面（runner-admin-console 批增补——#1236/#1237）**：起跑异步（200 先于执行完——进度经读时轮询）∥ 仅 400/404（零新码）∥ 响应面零秘密字段（凭据永不回显）；写端点 JSON 型门同 §1 前言
+**镜像源族（sandbox-image-sources 批增补——#1274）**：源清单五端点（列/预选/增/改/删）= 统一信封（400/404——零新码）∥ 目录/标签两端点 = **自含状态形**（成 ⇒ `{ ok: true, … }`；败 ⇒ `{ ok: false, error: { kind, message }, ms }`；
+  远端事实分类不套信封；沿 `POST /api/admin/proxy/test` 先例）∥ 读类预算 10s（跨公网；非节点面 3s）∥ 匿名 Bearer 挑战 = 零凭据（私有源 ⇒ 如实 `auth_required`）∥ 零涉沙盒可用性门（源面与节点无关））
 
 | 方法 + 路径 | 语义 |
 |---|---|
@@ -134,6 +136,13 @@
 | `GET /api/admin/sandbox/runners/:id/images` | 镜像列表（读时读 `GET …/images/json`）：`{ images: [{ id, tags, size, created }] }`（`RepoTags` 缺/null ⇒ `[]`）；不可达 ⇒ 502；零审计 |
 | `POST /api/admin/sandbox/runners/:id/images/pull` | 拉取：`{ image }`（形 = `名[:标签]`——缺省 `latest`；含 `@` ⇒ 400）⇒ `POST …/images/create?fromImage=<名>&tag=<标签>`（**超时 10 分钟**）⇒ 200 `{ ok: true, image, tag }`；失败（引擎非 2xx ∥ 200 流内 `error`）⇒ 400 携引擎原文；不可达/超时 ⇒ 502；审计行（`image_pull`） |
 | `DELETE /api/admin/sandbox/runners/:id/images` | 删除镜像：`{ ref, force? }`（`ref` = 镜像 id 或 `名:标签`——含空白/`?`/`#`/`%` ⇒ 400；**走请求体**——引用字符集含 `/`/`:`）⇒ `DELETE …/images/<ref>?force=<0|1>`（缺省 0）⇒ 200 `{ ok: true, ref }`；404（无此镜像）⇒ 404；**409（被容器引用/多标签）⇒ 400 人话 + 处置句**；余 ⇒ 502；审计行（`image_delete`——detail 携 force） |
+| `GET /api/admin/sandbox/image-sources` | 镜像源列表（sandbox-image-sources 批——#1274）：`{ sources: [{ id, name, address, kind, createdAt }] }`（`kind` = 按地址派生 `hub` ∥ `v2`——Hub 四别名；派生不入库）；零审计（读动作） |
+| `GET /api/admin/sandbox/image-sources/presets` | 常用源预选（静态表——server 端单源）：`{ presets: [{ name, address }] }`（六条——Hub ∥ `ghcr.io` ∥ `quay.io` ∥ ACR ∥ SWR ∥ DaoCloud）；表单只回填名 + 址；零审计 |
+| `POST /api/admin/sandbox/image-sources` | 增源：`{ name, address }`（名 ≤40 ∥ 址 = `[http://\|https://]主机[:端口]`——缺 scheme 补 `https://`；含路径/查询/空白 ⇒ 400）⇒ 200 `{ source }` + 审计行（`image_source_add`——detail 键集 = `accounts/ACCOUNTS.md` §2.1）；撞名/撞址 ⇒ 400（库零变） |
+| `PATCH /api/admin/sandbox/image-sources/:id` | 改源：`{ name?, address? }`（键级——出现键 = 应用）⇒ 200 `{ source }` + 审计行（`image_source_update`）；不存在 ⇒ 404；撞名/撞址 ⇒ 400 |
+| `DELETE /api/admin/sandbox/image-sources/:id` | 删源 ⇒ 200 `{ ok: true }` + 审计行（`image_source_delete`）；不存在 ⇒ 404 |
+| `GET /api/admin/sandbox/image-sources/:id/catalog` | 源仓库目录（server 直连源——读类 10s；`n` 缺省 200 ∥ 1–1000）：v2 = `GET <base>/v2/_catalog?n=<n>`；`kind=hub` ⇒ `unsupported`（Hub 无全站目录 API）；成 ⇒ 200 `{ ok: true, kind, repositories, truncated, ms }`（`truncated` = `Link: …rel="next"` 在场）∥ 败 ⇒ 200 `{ ok: false, error: { kind, message }, ms }`（`timeout` ∥ `unreachable` ∥ `auth_required` ∥ `unsupported` ∥ `bad_response`）；零审计 |
+| `GET /api/admin/sandbox/image-sources/:id/tags?name=<仓库>&n=<n>` | 源标签清单（读类 10s）：v2 = `GET <base>/v2/<name>/tags/list?n=<n>`（`name` 形非法 ⇒ 400 **零外呼**）∥ `kind=hub` ⇒ `GET https://hub.docker.com/v2/repositories/<ns>/<repo>/tags?page_size=<min(n,100)>`（裸名补 `library/`）；读形同上行（`truncated` = v2 `Link` ∥ Hub `next`）；401 + `WWW-Authenticate: Bearer` ⇒ 匿名换 token 后携 `Bearer` 复读一次（scope = `registry:catalog:*` ∥ `repository:<name>:pull`）；零审计 |
 | `GET/POST /api/admin/sandbox/workspaces` | 列表（名/负责人/绑定节点/盒状态/dirty/快照/资源覆写）∥ 创建 `{ name, ownerMemberId, limits? }` ⇒ 绑定节点 + key 签发 + 建盒（控制面直调 Docker API——`sandbox/SANDBOX.md` §1；`limits` = 初始覆写——缺省 `{}`） |
 | `PATCH /api/admin/sandbox/workspaces/:id` | 资源档覆写：`{ limits: { cpus ∥ memMb ∥ pids ∥ diskMb ∥ idleTtlMinutes ∥ wallclockTtlHours } }`——键级合并（出现键 = 应用；值 `null` = 删键回落全局默认）；校验不过 ⇒ 400（库零变）；**生效 = 下次建盒/重建**（运行中盒零触——容器旗不可热改）；不回队指令 |
 | `POST /api/admin/sandbox/workspaces/:id/:action` | 动作：`start` ∥ `stop` ∥ `destroy`（二次确认旗）∥ `rotate-key` ∥ `restore`（快照恢复）——入 `sandbox_tasks` 队列（执行机制随重做批定形） |

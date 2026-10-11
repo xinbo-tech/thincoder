@@ -16,9 +16,9 @@
 - **server 启动与运行零依赖沙盒/runner**（用户 14:24 裁定——原话「thincoder server启动应该是不依赖沙盒的，runner应该也只是相关功能不可用。」）：不因缺可用节点 ∥ 沙盒未配置而拒启或降级；缺 ⇒ **仅沙盒功能面不可用**（503 `sandbox_unavailable` + 控制台明示）；网关 ∥ 记账 ∥ 控制台其余页 ∥ 客户面零影响。
 - **非目标**（需求块明写）：内核 0day ∥ 侧信道 ∥ 国家级逃逸。
 
-## 2. 对象模型与存储（v11–v13）
+## 2. 对象模型与存储（v11–v13 ∥ v15）
 
-新表（v11 段建表 ∥ v12 重建 runners ∥ v13 增托管接入表——DDL 全文 = `store/STORE.md` §2 对应段；`db.mjs` 已落盘 365——2026-10-10 现读）：
+新表（v11 段建表 ∥ v12 重建 runners ∥ v13 增托管接入表 ∥ **v15 增镜像源表——本批**——DDL 全文 = `store/STORE.md` §2 对应段；`db.mjs` 已落盘 **458**——2026-10-11 本批现读）：
 
 | 表 | 内容 | 关键列 |
 |---|---|---|
@@ -30,10 +30,12 @@
 | `sandbox_checkpoints` | WIP 快照登记 | id ∥ workspace_id ∥ created_at ∥ size ∥ blob_path ∥ note |
 | `sandbox_settings` | 设置（键值——全局默认） | k ∥ v——**键全集与值形 = `gateway/API.md` §2.5（单源）**；「默认单」**不在本表**（= `sandbox_rules` 种子行——§4） |
 | `sandbox_onboarding` | 托管接入任务 + 凭据（v13——§3） | id ∥ host ∥ ssh_port ∥ ssh_user ∥ auth_kind ∥ secret_cipher ∥ sudo_cipher ∥ credential_mode ∥ credential_state ∥ name ∥ model ∥ status ∥ step ∥ steps_json ∥ runner_id ∥ created_by ∥ created_at ∥ finished_at（DDL 全文 = `store/STORE.md` §2 v13 段） |
+| `image_sources` | 远程镜像源清单（控制台维护——**server 全局**，非按节点） | id ∥ name ∥ address（名 ∥ 址**各自唯一**）∥ created_at ∥ created_by（DDL 全文 = `store/STORE.md` §2 v15 段） |
 
 - **审计**：`audit_events.type` CHECK 重建（v11——沿 v10 表重建先例 `db.mjs:171-192`）——**十型 ⇒ 十二型**（+ `sandbox_rule`（规则增删——detail.action + 规则原文）
   ∥ `sandbox_event`（审批三态/超时 ∥ 盒起停拆 ∥ 节点添加/删除（含连通自检失败行） ∥ 快照——detail.kind）；型面单源 = `accounts/audit.mjs`（已落盘 109 行））。
   **托管接入增补（v13 批）**：`sandbox_event` 增五 kind（`onboarding_start` ∥ `onboarding_exec` ∥ `onboarding_done` ∥ `onboarding_failed` ∥ `onboarding_credential_revoke`；kind 非枚举——CHECK 零动——`accounts/ACCOUNTS.md` §2.1）。
+  **镜像源增补（本批）**：`sandbox_event` 增三 kind（`image_source_add` ∥ `image_source_update` ∥ `image_source_delete`——detail 键集 = `accounts/ACCOUNTS.md` §2.1；kind 非枚举——CHECK 零动）。
 - **修订号（rulesRev）**：规则/设置变更 ⇒ 全局单调 +1。
 - **明文落库**：`sandbox_workspaces.key_plain`（工作区 key 明文——盒每次重建须再注入；先例 = provider key 明文（KD-SV-19）；披露 = §10-D2）。
 - **每工作区资源档（覆写）**：`sandbox_workspaces.limits_json`（JSON 对象——键 = `cpus` ∥ `memMb` ∥ `pids` ∥ `diskMb` ∥ `idleTtlMinutes` ∥ `wallclockTtlHours`；缺键 = 随全局默认）；写端点 = PATCH（§9 ∥ `gateway/API.md` §2.5）；**取值序 = 全局默认（`sandbox_settings`）⇒ 逐键叠加工作区覆写（覆写优先）**。
@@ -134,6 +136,37 @@
   | ⑤ | 强杀 409 ⇒ 400（非幂等成功） | 设计自加 | stop 的 304 是引擎给的幂等语义；kill 无此语义——如实报（未运行 = 无事可杀） | 假装成功 ⇒ 读数骗人 |
   | ⑥ | 用量 = 一次采样（`one-shot`）+ 磁盘 = inspect `size=1` | 设计自加 | 不加采样器/时序库（新机制——KD-SV-92）；读数如实（基线不足 ⇒ null） | 自建采集面 ⇒ 新机制（本批不做） |
 
+- **镜像源族（本批——sandbox-image-sources；台账 #1274；用户 2026-10-11 09:17 四点 + 09:19 预选）**：控制台管**远程镜像源清单**（增/删/改/列 + 常用源预选）∥ 对可达源列镜像目录（仓库 ∥ 标签）∥ 关键词过滤（本地镜像表 ∥ 源目录清单）。
+  **拉取行为零改**（仍由节点引擎拉取——源不写节点 dockerd 配置 ∥ 不注入镜像前缀 ∥ 无默认源）；端点七条 = `gateway/API.md` §2.5（镜像源七行）；存储 = `image_sources`（v15——`store/STORE.md` §2 v15 段）；
+  UI 落点 = `webui/WEBUI.md` §2.8①；审计 kind 单源 = `accounts/ACCOUNTS.md` §2.1（型面计数零增——十三型不变）。
+  **源清单（四端点 + 预选一）**：
+  - **列**（`GET /api/admin/sandbox/image-sources`）：`{ sources: [{ id, name, address, kind, createdAt }] }`；`kind` = **按地址派生**（`hub` ⇔ 主机 ∈ Hub 四别名（`docker.io` ∥ `index.docker.io` ∥ `registry-1.docker.io` ∥ `hub.docker.com`）；余 ⇒ `v2`）——派生不入库（单源 = `address`，零漂移）；零审计（读动作）。
+  - **增**（`POST …/image-sources`）∥ **改**（`PATCH …/image-sources/:id`）∥ **删**（`DELETE …/image-sources/:id`）：增/改入参 `{ name, address }`（改 = 键级——出现键 = 应用）；
+    ⇒ 200 `{ source }`（删 ⇒ `{ ok: true }`）+ 审计行（`image_source_add` ∥ `image_source_update` ∥ `image_source_delete`——detail 键集 = §2.1）；不存在 ⇒ 404；形非法/撞名/撞址 ⇒ 400（库零变）。
+  - **形**：`name` = 非空（≤40 字符；首尾空白 trim）；`address` = `[http://|https://]主机[:端口]`（缺 scheme ⇒ 补 `https://`；**含路径/查询/空白 ⇒ 400**）；**名与址各自唯一**（撞 ⇒ 400 人话）。
+  - **常用源预选**（用户 09:19）：静态表（server 端单源——沿 provider 预设先例 KD-SV-17）；`GET …/image-sources/presets` ⇒ `{ presets: [{ name, address }] }`；**表单只回填名 + 址两字段**（零隐藏语义）；
+    清单六条（随设计轮维护——源站关停/换址频繁，需求 ① 原话口径）：Docker Hub（`docker.io`）∥ GitHub Container Registry（`ghcr.io`）∥ Quay（`quay.io`）
+    ∥ 阿里云 ACR（`registry.cn-hangzhou.aliyuncs.com`）∥ 华为云 SWR（`swr.cn-north-4.myhuaweicloud.com`）∥ Docker Hub 镜像（DaoCloud——`docker.m.daocloud.io`）。
+  **源目录读取（两端点——server 直连源）**：
+  - **仓库目录**（`GET …/image-sources/:id/catalog`）∥ **标签清单**（`GET …/image-sources/:id/tags?name=<仓库>&n=<N>`）：读类预算 **10s**（跨公网——沿探活/发现家族；非节点面 3s）；**与节点零涉**（不查沙盒可用性门）。
+  - **v2 面**：目录 = `GET <base>/v2/_catalog?n=<N>` ∥ 标签 = `GET <base>/v2/<name>/tags/list?n=<N>`；`name` 形 = 仓库名（小写字母数字 + `._-/` 分隔——形非法 ⇒ 400 **零外呼**；`..`/`?`/`#`/空白/大写 ⇒ 拒（防路径穿越））。
+  - **Hub 面**（`kind=hub`）：目录 ⇒ **不支持**（`unsupported`——Hub 官方无全站目录 API，如实报）；标签 = `GET https://hub.docker.com/v2/repositories/<ns>/<repo>/tags?page_size=<min(N,100)>`（**API 主机 = `hub.docker.com`**，与登记址无关；该主机不可达 ⇒ 如实 `unreachable`）；**裸名补 `library/`**（`nginx` ⇒ `library/nginx`——Hub 命名空间惯例）。
+  - **匿名 Bearer 挑战**（本机实测 2026-10-11：ghcr ∥ quay ∥ ECR Public ∥ ACR ∥ SWR 皆 401 + `WWW-Authenticate: Bearer`）：401 且挑战可解析 ⇒ 取 `realm?service=&scope=`
+    （目录 = `registry:catalog:*` ∥ 标签 = `repository:<name>:pull`）⇒ 匿名换 token（响应键取 `token` ∥ `access_token`）⇒ **携 `Bearer` 复读一次**；**零凭据**（私有源 = 如实拒——本批零凭据面；§15）。
+  - **有界**：`n` 缺省 200（范围 1–1000；越界/非数 ⇒ 400）；`truncated` = 远端还有下一页（v2 = `Link: …rel="next"`（实测在） ∥ Hub = `next` 非空）；**不翻页**（有界首页——§15）。
+  - **读数形**（自含状态——沿 `/api/admin/proxy/test` 先例；远端事实分类不套统一信封）：成 ⇒ 200 `{ ok: true, kind, repositories ∥ tags, truncated, ms }`；
+    败 ⇒ 200 `{ ok: false, error: { kind, message }, ms }`——`kind` ∈ `timeout` ∥ `unreachable` ∥ `auth_required` ∥ `unsupported` ∥ `bad_response`；**空列表非错误**（实测 quay 匿名目录回 `{"repositories":[]}`——如实呈空态）；零审计（读动作）。
+  **控制台面**（UI 定形 = `webui/WEBUI.md` §2.8①）：镜像源卡（源表 + 增/改/删弹窗（含预选下拉）+ 目录浏览窗（仓库列表 ∥ 标签列表——两处过滤输入））+ 本地镜像表过滤输入（`views-sandbox-images.mjs`）。
+  **本批自加项（逐条带理由——设计侧提议，非用户口径）**：
+
+  | # | 项 | 来源 | 为什么 | 不做的代价 |
+  |---|---|---|---|---|
+  | ① | 匿名 Bearer 挑战换取（无凭据） | 设计侧提议 | 实测：公开源（ghcr ∥ quay ∥ ECR ∥ ACR ∥ SWR）目录与标签面**均**以 Bearer 挑战应答——不换取则预设清单多数源恒「需认证」 | 仅 Hub 面与匿名开放的自建源可用——② 名存实亡 |
+  | ② | 源清单 = **server 全局**（非按节点） | 设计侧提议 | 目录读取发生在 server（server → 源）；按节点 = 清单 × 节点数且复制维护；拉取仍走节点（零耦合） | 同一源重复登记；「在哪个节点上浏览」反成负担 |
+  | ③ | 目录/标签有界首页（`n` ≤1000 + `truncated`） | 设计自加 | 远端集合可无界（Hub 单镜像 1339 标签——父侧实测）；读类 10s 不悬停 | 整取 ⇒ 大源拖死连接/界面冻结 |
+  | ④ | 目录浏览窗过滤 = 前端（零新端点） | 设计自加 | 已载集合上过滤 = 纯前端（沿审计/用量页过滤先例）；远端无过滤 API | 服务端过滤端点 ⇒ 伪能力（远端不参与），徒增面 |
+  | ⑤ | 源目录「一键拉取」（预填拉取窗） | 设计侧提议——**本批不做**（§15；提请裁定） | 浏览 → 取用的自然收口（免手抄引用）；实现 ≈20 行（复用既有拉取窗） | 用户手抄 `<host>/<repo>:<tag>`（错抄 = 白拉一次） |
+
 ## 4. 出站规则（单源在本档）
 
 - **两类同表**（需求块）：① **CIDR 规则**（网络层——安全组同形：`allow ∥ deny` × `CIDR` × 端口/协议；零域名依赖）；② **域名规则**（应用层）。**各自可单独使用**（只用 CIDR ∥ 两者并用）。
@@ -180,6 +213,8 @@
 - 卡面（**六面**——必交面（用户 14:08 行）：运行面 ∥ 工作区 ∥ 出站规则 ∥ 待批队列 ∥ 资源与 TTL ∥ 审计可查）：
   - **运行面**（本批落定——§3）：可用性门（无节点 ∥ 全离线 ⇒ unavailable + 原因；节点面恒可用）∥ 节点表（名 ∥ 地址 ∥ 在线态 ∥ 版本 ∥ 容器（运行/总） ∥ 操作：展开容器 ∥ 删除）∥
     写入口 = **添加节点**（名 + Docker API 地址——连通自检；失败逐句人话 + 审计行）∥ **删除节点**（有容器 ⇒ 二选一「保留 ∥ 连删」；有承载工作区 ⇒ 二次确认）∥ **容器区**（节点行展开：列表（名/镜像/状态）+ 创建（名/镜像/卷三件）+ 启动/停止/重启/删除 + 详情（挂载/端口/环境/命令/用量——弹窗）∥ 日志（弹窗）∥ 强杀（详情窗内危险钮）——§3（本批补齐））∥ **镜像区**（同展开：列表（名/大小/创建）+ 拉取（名[:标签]）+ 删除（确认窗——强制删除勾选）——§3（本批））∥
+    **本地镜像表过滤输入**（本批——名/标签关键词；零新端点）∥
+    **镜像源卡**（本批——沙盒页新卡（全局面——非按节点）：源表（名 ∥ 地址 ∥ 面型提示）+「添加源」钮（弹窗——预选下拉 + 名/址两输入）+ 行「改/删」+ **目录浏览窗**（仓库列表 ∥ 标签列表——两处过滤输入；五分类读绪如实呈；Hub 源 ⇒ 改走「按名查标签」输入））∥
     **托管接入**（本批增补——§3：钮 + 弹窗（地址 ∥ 端口 ∥ 用户 ∥ 认证 ∥ sudo 口令（可选）∥ 名称（可选）∥ 模型 ∥ 凭据处置）∥ 装机任务区（三态 + 步骤读数展开 + keep 态「撤销凭据」）；在途读时轮询、定终态停）；UI 定形 = `webui/WEBUI.md` §2.8①；
   - **工作区**（列表：名/负责人/绑定 runner/盒状态/dirty/快照/操作：启动/停止/销毁/轮换 key/快照恢复；写入口 = **每工作区覆写**（资源 + TTL：`cpus`/`memMb`/`pids`/`diskMb`/空闲 TTL/墙钟 TTL——行内编辑；生效 = 下次建盒/重建））；
   - **出站规则**（安全组式表：方向（恒出站）∥ 协议 ∥ 端口 ∥ 目标 ∥ 动作 ∥ 优先级 ∥ 备注；增删行内；默认单 = `source=default` 种子行（可改可删））；
@@ -196,6 +231,7 @@
 
 - 控制台面 = `/api/admin/sandbox/*`（§8 六面对应）；成员面 = `/api/me/sandbox/*`（§8 成员面）。托管接入端点（本批增补——四行：起 ∥ 列表 ∥ 详情 ∥ 撤销凭据）= `gateway/API.md` §2.5；判权 `requireAdmin`；零新码（400/404）。
 - 表 = `gateway/API.md` §2.5（控制台面）∥ §2.7（成员面）；错误形 = §3 全码 + **一码新增** `sandbox_unavailable`（503——无可用节点）；节点/容器面（本批——§3）：引擎失败 ⇒ 502 `upstream_error`（消息 = 逐句人话 + 引擎原文）∥ 容器/节点不存在 ⇒ 404 ∥ 形非法/重名/镜像缺/名占用 ⇒ 400（零新码）；判权 = `requireAdmin`（`thincoder-server/src/accounts/session.mjs`）∥ 成员面 = 会话（本人过滤——§8 成员面）。
+  镜像源面（本批）＝ `gateway/API.md` §2.5 镜像源七行——判权 `requireAdmin`；零新码（400/404）；目录/标签读数 = 自含状态形（`{ ok, error: { kind, message } }`——沿 `/api/admin/proxy/test` 先例）；零涉沙盒可用性门（源面与节点无关）。
 
 ## 10. 已裁决策与读法披露
 
@@ -237,6 +273,7 @@
 | **最小切片**（runner-admin-console 批——台账 #1252；用户 19:59 四件） | ① 添加节点（自检读数落库逐值 ∥ 失败 ⇒ 502 + 零落库 + 审计行）② 建容器（引擎请求体逐值 ∥ 列表可见）③ 启/停（幂等：304 ⇒ 成功）④ 删节点（保留 ∥ 连删二选一 ∥ 连删失败 ⇒ 行保留）；判据全文 = §3 ∥ §12（N40 ∥ N46–N48 ∥ B41–B43 ∥ E34–E36）；**真机跑**（收口轮——`10.0.0.6`，Docker 29.1.3 ∥ 盒镜像在机）：添节点 ⇒ 在列（online + 版本）；建容器 ⇒ `docker ps -a` 见 `Created` ⇒ 启动 ⇒ `docker ps` 见 `Up` ⇒ 停止 ⇒ `Exited` ⇒ 删 ⇒ 无；删节点「保留」⇒ 容器留机 ∥「连删」⇒ 容器净 + 节点消 | 批内件 + 收口轮（真机） |
 | **托管接入**（本批增补——台账 #1236/#1237；用户 22:19–22:29 + 15:00/15:02） | 步骤表两径覆盖（裸机 ∥ 已装——§3；S 序列分叉逐条）∥ 每步成功判据 = 可复读读数（run 详情/审计行）∥ 失败 = 停在哪步 + 人话 + 宿主处置如实 ∥ 凭据五件（加密 ∥ 低权引导 ∥ 可撤 ∥ 审计 ∥ 弃置——§3）∥ 硬点两答案（§3 网络路径 ∥ `agent/ADMIN-AGENT.md` §4 边界）；判据全文 = §3 ∥ §12（N49–N52 ∥ B44–B46 ∥ E37/E38）∥ `agent/ADMIN-AGENT.md` §7 ∥ `gateway/API.md` §2.5 托管接入四行；**真机**（收口轮——无 Docker 机器：只给地址+凭据 ⇒ 「已就绪」+ 每步读数可复读） | 批内件 + 收口轮（真机） |
 | **容器面补齐 + 镜像族**（本批——sandbox-docker-admin；台账 #1265；用户 04:36/04:39 两族同批） | 容器五件：详情读数逐值（挂载/端口/环境/命令）∥ 日志（tail 有界 + 非 TTY 帧解复用——零帧头残渣）∥ 重启/强杀（引擎调用逐条 + 审计两 kind）∥ 用量（cpuPercent/内存/磁盘逐值；一次采样口径）；镜像三件：列表逐值 ∥ 拉取（`fromImage`/`tag` 逐值 ∥ 缺省 `latest` ∥ 失败两形 ⇒ 400）∥ 删除（`force` 0/1 逐值 ∥ 409 ⇒ 400 人话）；判据全文 = §3（本批块）∥ §12（N53–N56 ∥ B47–B51 ∥ E39–E42）∥ `gateway/API.md` §2.5 新八行 ∥ `webui/WEBUI.md` §2.8① ∥ §6 沙盒行（本批随正）；审计 kind 面 = `accounts/ACCOUNTS.md` §2.1（型面计数零增）；**真机**（收口轮——10.0.0.6：真容器详/日志/重启/强杀/用量 ∥ 真镜像列/删；拉取视源可达性如实报） | 批内件 + 收口轮（真机） |
+| **镜像源族**（本批——sandbox-image-sources；台账 #1274；用户 09:17 四点 ①②③ + 09:19 预选） | 源清单 CRUD（增/删/改/列——形校验拒非法 ∥ 名/址各自唯一 ∥ 每动作一审计行 ∥ 预选六条在册且表单只回填名/址）∥ 源目录可达（v2 目录/标签逐值 ∥ Hub 面标签 + 裸名补 `library/` ∥ 匿名 Bearer 逐跳命中（挑战解析 → 换 token → 复读） ∥ 不可达/认证失败/不支持三态如实呈）∥ 过滤生效（本地镜像表 ∥ 仓库列表 ∥ 标签列表——无匹配 ⇒ 空态句）；判据全文 = §3（本批块）∥ §12（N57–N59 ∥ B52–B55 ∥ E43–E45）∥ `gateway/API.md` §2.5 镜像源七行 ∥ `webui/WEBUI.md` §2.8① + §6 沙盒行（本批随正） ∥ `store/STORE.md` §2 v15 段/§3 v15；**收口轮** = 浏览器实走（增/改/删源 + 源目录读取（自建 registry ∥ 公网源按可达性如实）+ 两处过滤） | 批内件 + 收口轮（浏览器实走） |
 
 ## 12. 用例（本域）
 
@@ -287,6 +324,16 @@
 | E40 | 错误 | 控制面 | 拉取：引擎非 2xx ∥ 200 流内 `error` 两形 ∥ 节点不可达 | 400（携引擎原文）∥ 400（携引擎原文）∥ 502 `upstream_error` |
 | E41 | 错误 | 控制面 | `user` ∥ 无会话 打新八端点 | 403 ∥ 401 |
 | E42 | 错误 | 控制面 | 详情/日志/用量/重启/强杀节点不可达（假 Docker 关停——五端点逐打） | 502 `upstream_error`（逐句人话 + 引擎原文） |
+| N57 | 正常 | 控制面 | 镜像源增/改/删/列 + 预选（本面零外呼） | 行落库逐值（`address` = 归一形——缺 scheme 补 `https://`）；`kind` 派生逐值（Hub 四别名 ⇒ `hub` ∥ 余 ⇒ `v2`）；审计三行（detail 键集 = `accounts/ACCOUNTS.md` §2.1）；预选端点回六条（名/址两字段） |
+| N58 | 正常 | 控制面 | v2 源两读（假 registry：`/v2/_catalog` 200 + `Link` 下一页 ∥ `/v2/<name>/tags/list` 200） | `repositories` ∥ `tags` 逐值；`truncated` = `Link` 在场 ⇒ true；`n` 缺省（引擎入参逐值：`?n=200`）；**零审计**（读动作） |
+| N59 | 正常 | 控制面 | Hub 源两读（假 hub：`hub.docker.com/v2/repositories/library/nginx/tags` 200 + `next`） | 裸名 `nginx` ⇒ 路径 `library/nginx` 逐值；`page_size` = `min(n,100)`；目录读 ⇒ `{ ok: false, error: { kind: `unsupported` } }`（人话） |
+| B52 | 边界 | 控制面 | 匿名 Bearer 挑战（假 registry：401 + `WWW-Authenticate: Bearer realm=…` ⇒ 假 token 端点 200） | 逐跳命中（挑战解析 ⇒ 换 token ⇒ 携 `Bearer` 复读 ⇒ 200）；scope 逐值（目录 = `registry:catalog:*` ∥ 标签 = `repository:<name>:pull`）；**零凭据**（请求头零 Basic） |
+| B53 | 边界 | 控制面 | 源如实回空目录（假 registry：`{"repositories":[]}`——实测 quay 形） | 200 `{ ok: true, repositories: [], truncated: false }` + 控制台空态句（**非错误**）；零异常 |
+| B54 | 边界 | 控制面 | `n` 越界（0 ∥ 5000）∥ 非数 ∥ `name` 形非法（大写 ∥ `..` ∥ 空白 ∥ `?`） | 400（逐句人话）；**零外呼**（假件断） |
+| B55 | 边界 | 控制面 | 目录接口不支持（假 registry：405 `UNSUPPORTED`——实测 DaoCloud 形） | `{ ok: false, error: { kind: `unsupported`, message: 人话 } }`；控制台就地提示（不改写为「空目录」） |
+| E43 | 错误 | 控制面 | 增/改源：空名 ∥ 名超 40 ∥ 撞名 ∥ 撞址 ∥ 址含路径/空白 | 400（逐形人话）；**库零变**（回读逐行） |
+| E44 | 错误 | 控制面 | 源目录读：不可达（死端口）∥ 超时（假件挂起）∥ 401 挑战不可解析 ∥ token 端点 401 ∥ 复读仍 401 | `{ ok: false, error: { kind: `unreachable` ∥ `timeout` ∥ `auth_required` } }`（逐形人话）；零落库；控制台就地呈 |
+| E45 | 错误 | 控制面 | `user` ∥ 无会话 打镜像源七端点 ∥ 改/删不存在 id | 403 ∥ 401 ∥ 404 `not_found` |
 
 ## 13. 本域文件与行数预算（控制面）
 
@@ -296,17 +343,20 @@
 | `thincoder-server/src/sandbox/registry.mjs`（已落盘 **522**——2026-10-10 现读） | **⇒ ≈500**（runner-admin-console 批：runner 面重写（登记/读数/可用性随新模型）∥ `runnerHealth` 删 ∥ `sweepStuckTasks` 去心跳判据；队列/心跳死件不动——实读核过无调用方） | 登记/读数（§3）∥ 队列（§5/§6） |
 | `thincoder-server/src/sandbox/docker.mjs`（已落盘 **187**——2026-10-11 现读） | **⇒ ≈330**（本批：+≈143 = 详情/日志（含解复用）/用量两读/重启/强杀/镜像三件/拉取流扫描/形校验 ∥ 常量/头注） | Docker API 客户端（§3） |
 | `thincoder-server/src/sandbox/container-routes.mjs`（已落盘 **168**——2026-10-11 现读） | **⇒ ≈330**（本批：+≈162 = 详情≈18 ∥ 日志≈22 ∥ 重启/强杀≈25 ∥ 用量≈28 ∥ 校验/错误映射≈45 ∥ 路由注册与头注≈24） | 容器面路由（§3 家族——拆分档） |
-| `thincoder-server/src/sandbox/image-routes.mjs`（拟新增——本批） | ≈**130**（设计估 = 列表≈20 ∥ 拉取≈40 ∥ 删除≈30 ∥ 校验≈25 ∥ 头注≈15；分族成档缘由 = 容器面/镜像族按族拆——卷/网络族可循此例，不预建） | 镜像族路由（§3） |
+| `thincoder-server/src/sandbox/image-routes.mjs`（已落盘 **132**——2026-10-11 本批现读（在册 ≈130——越估 2）） | **±0**（本批零触） | 镜像族路由（§3） |
+| `thincoder-server/src/sandbox/image-sources.mjs`（拟新增——本批） | ≈**170**（设计估——预选表六条 ∥ 地址归一/形校验 ∥ `sourceKind` 派生 ∥ `image_sources` 存取） | 镜像源清单模型（§3） |
+| `thincoder-server/src/sandbox/registry-client.mjs`（拟新增——本批） | ≈**230**（设计估——v2 `_catalog`/`tags/list` ∥ Hub 公共 API ∥ 匿名 Bearer 挑战 ∥ 有界/`Link` 截断 ∥ 五分类错误映射；`fetchImpl` 注入 = 测试面） | 远端源客户端（§3） |
+| `thincoder-server/src/sandbox/image-source-routes.mjs`（拟新增——本批） | ≈**170**（设计估——七端点：列/预选/增/改/删/目录/标签 ∥ 校验与错误映射 ∥ 头注） | 镜像源端点（§9） |
 | `thincoder-server/src/sandbox/ssh.mjs`（拟新增——托管接入增补） | ≈180（设计估——SSH 传输：spawn openssh（key `-i` ∥ `sshpass -e`） ∥ keyfile/known_hosts 落数据目录 ∥ 指纹 TOFU ∥ 超时/输出截断；`execImpl` 注入 = 测试面） | 主机执行传输（§3） |
 | `thincoder-server/src/sandbox/onboarding.mjs`（拟新增——托管接入增补） | ≈300（设计估——任务生命周期（起/收尾/重启恢复） ∥ 凭据加解密（AES-256-GCM）∥ 步骤日志 ∥ 任务简报文 ∥ registry 登记桥） | 托管接入任务面（§3） |
 | `thincoder-server/src/sandbox/onboarding-routes.mjs`（拟新增——托管接入增补） | ≈130（设计估——四端点：起 ∥ 列表 ∥ 详情 ∥ 撤销凭据；独立成档缘由 = `routes.mjs` 加后 ≈545 逼近 500 软线） | 托管接入端点（§9） |
 | `thincoder-server/src/sandbox/rules.mjs`（拟新增） | ≈230 | 规则/待批/修订号（§4/§6） |
 | `thincoder-server/src/sandbox/credentials.mjs`（拟新增） | ≈80 | 工作区 key（§7） |
-| `thincoder-server/src/store/db.mjs`（已落盘 365——2026-10-10 现读） | **⇒ ≈400**（runner-admin-console 批：v12 段 +≈35）**⇒ ≈425**（托管接入：v13 段 +≈25） | v11–v13 段（§2） |
+| `thincoder-server/src/store/db.mjs`（已落盘 **458**——2026-10-11 本批现读） | **⇒ ≈490**（本批：v15 段 +≈32——建表 + 两唯一约束 + 迁移段） | v11–v13 ∥ v15 段（§2） |
 | `thincoder-server/src/accounts/audit.mjs`（已落盘 109） | ≈+3（托管接入：±0——五 kind 走 `sandbox_event`，非枚举） | 十三型（§2） |
 | `thincoder-server/src/gateway/errors.mjs`（已落盘 64——2026-10-10 现读） | **±0**（runner-admin-console 批——零新码） | `sandbox_unavailable`（§9） |
-| `thincoder-server/bin/thincoder-server.mjs`（已落盘 182） | **±0**（注册面不变） | import + 注册行 |
-| **小计** | **≈+1172 ⇒ 本批 ≈+316**（runner-admin-console 批：routes +≈133 ∥ registry −≈22 ∥ docker 新 ≈170 ∥ db +≈35；errors ∥ bin ±0）**⇒ 增补 ≈+640**（托管接入：ssh 新 ≈180 ∥ onboarding 新 ≈300 ∥ onboarding-routes 新 ≈130 ∥ routes ±≈5 ∥ db +≈25；agent 域另计——`agent/ADMIN-AGENT.md` §6）**⇒ 本批 ≈+438**（sandbox-docker-admin：container-routes +≈162 ∥ image-routes 新 ≈130 ∥ docker +≈143 ∥ routes ±≈3；webui 面 = `webui/WEBUI.md` §5） | —— |
+| `thincoder-server/bin/thincoder-server.mjs`（已落盘 **189**——2026-10-11 本批现读） | **+≈2**（本批：`image-source-routes` import + 注册行） | import + 注册行 |
+| **小计** | **≈+1172 ⇒ 本批 ≈+316**（runner-admin-console 批：routes +≈133 ∥ registry −≈22 ∥ docker 新 ≈170 ∥ db +≈35；errors ∥ bin ±0）**⇒ 增补 ≈+640**（托管接入：ssh 新 ≈180 ∥ onboarding 新 ≈300 ∥ onboarding-routes 新 ≈130 ∥ routes ±≈5 ∥ db +≈25；agent 域另计——`agent/ADMIN-AGENT.md` §6）**⇒ 本批 ≈+438**（sandbox-docker-admin：container-routes +≈162 ∥ image-routes 新 ≈130 ∥ docker +≈143 ∥ routes ±≈3；webui 面 = `webui/WEBUI.md` §5）**⇒ 本批 ≈+604**（sandbox-image-sources：image-sources 新 ≈170 ∥ registry-client 新 ≈230 ∥ image-source-routes 新 ≈170 ∥ db +≈32 ∥ bin +≈2——webui 面 = `webui/WEBUI.md` §5） | —— |
 
 - `routes.mjs` 拆分预案（**首选已执行**——容器面拆 `container-routes.mjs`（已落盘 168）；**实读 442（2026-10-11）——本批 +3 已入盘；余量 ≈58**）：**触发点 = 越 500 软线（下批无需先拆）**；**候选拆法**（落域内、端点路径零变）：① 工作区面（工作区四路由 + 视图函数）独立成档（≈150——首选）∥ ② 规则/待批/设置三面独立成档（≈120）。
 - `rules.mjs`/`credentials.mjs` 两行「拟新增」= 陈值（两档已落盘）——清账另轮；执行面预算随重做批重建；webui 预算 = `webui/WEBUI.md` §5；批内件预算 = 批档 §2；板账 = `docs/server/design/PROJECT.md` §6。
@@ -340,10 +390,17 @@
 | KD-SV-86 | **run 态 = 库行 + 读时轮询**（`sandbox_onboarding` v13——无后台常驻定时器）；重启 ⇒ 在途 `interrupted`（如实收尾 + 凭据按模式处置） | 沿 KD-SV-80（无后台常驻）；部署链真会重建容器（重启恢复必须诚实） | 内存态（刷新即失/重启悬挂——否）；后台监控定时器（无必要常驻——否） |
 | KD-SV-92 | **容器读数三件 = 读时读直取**（沙盒 docker 管理批）：详情 = `containers/{id}/json` ∥ 用量 = `stats?stream=false&one-shot=true` + `json?size=1`（`SizeRw`/`SizeRootFs`）∥ 日志 = `logs?tail` 有界（读类 3s）；零缓存零落库 | 沿 KD-SV-79（引擎即真源）；无陈旧窗（外部 `docker` 命令随时改物）；读数如实（一次采样基线不足 ⇒ null——不假装） | 定期采集/缓存表（新机制——否）；用量时序库（另立面——否） |
 | KD-SV-93 | **日志 = tail 有界 + 非 TTY 多路复用解复用 + 截断 256 KiB**：解复用判据 = 首字节 ∈ {0,1,2} ∧ 1–3 字节零 ∧ 帧长 ≤ 余量（判不出 ⇒ 原样透传） | 创建面不设 Tty ⇒ 引擎返回 8 字节帧头流；不解复用 ⇒ 输出带二进制残渣；有界 = 读类 3s/连接不悬停 | 强制 Tty 建容器（改既有容器参数——否）；整取无界（拖死连接——否） |
-| KD-SV-94 | **拉取 = 同步请求 + 超时 10 分钟 + 失败两形皆收**：引擎非 2xx ∥ 200 流内 `error`/`errorDetail` ⇒ 400 携原文；不做异步任务/进度流/镜像源 | 取像耗时可分钟级（专用常量——沿 agent 工具面同值）；两形皆收 = 不对引擎行为下注；网络现实如实披露（#1250 另线——零机制） | 15s 动作超时（正常拉取必超时——否）；异步任务 + 轮询（新机制——否）；SSE 进度（新机制——否） |
+| KD-SV-94 | **拉取 = 同步请求 + 超时 10 分钟 + 失败两形皆收**：引擎非 2xx ∥ 200 流内 `error`/`errorDetail` ⇒ 400 携原文；不做异步任务/进度流（镜像源族 = 独立面——KD-SV-96/97，与拉取路径零耦合） | 取像耗时可分钟级（专用常量——沿 agent 工具面同值）；两形皆收 = 不对引擎行为下注；网络现实如实披露（#1250 另线——零机制） | 15s 动作超时（正常拉取必超时——否）；异步任务 + 轮询（新机制——否）；SSE 进度（新机制——否） |
 | KD-SV-95 | **镜像删除 = `ref` 走请求体 + `force` 缺省 false**（`DELETE …/images` 体 `{ ref, force? }`；引擎 409 ⇒ 400 人话引导） | 引用字符集含 `/`/`:`/`@` ⇒ 路径段不兼容；沿 `DELETE /runners/:id` 体参先例；缺省不强删 = 误删爆炸半径最小（409 消息给人话处置） | 路径参数（带斜杠引用不可达——否）；缺省强删（误删面——否） |
+| KD-SV-96 | **镜像源清单 = server 全局配置表（`image_sources` v15）+ 与拉取链路零耦合**：源不写节点 dockerd 配置 ∥ 不注入镜像前缀 ∥ 无默认源 ∥ 目录读取 = server 直连源（不走节点 ∥ 不走 `proxy.uri`——本批） | 需求边界「拉取行为不变」（用户 09:17 撤代理后仅剩「管理/浏览」两义）；目录读取发生在 server（server → 源）⇒ 清单位置随读取方；按节点 = 清单 × 节点数（维护复制）且拉取面零消费 | 按节点源清单（重复登记 ∥ 无消费面——否）；源写节点 daemon 配置（改拉取行为——禁）；默认源（零消费面——否）；源读取经节点（节点无目录 API——不可行） |
+| KD-SV-97 | **源目录/标签读取 = 标准 v2（`_catalog`/`tags/list`）+ Hub 面（公开 API）+ 匿名 Bearer 挑战 + 有界首页 + 五分类如实报错**（`timeout` ∥ `unreachable` ∥ `auth_required` ∥ `unsupported` ∥ `bad_response`；自含状态形——沿 `/api/admin/proxy/test` 先例） | 本机实测（2026-10-11）：公开源（ghcr ∥ quay ∥ ECR ∥ ACR ∥ SWR）皆 401 + Bearer 挑战 ⇒ 不换取则多数源恒「需认证」；DaoCloud 405 ⇒ `unsupported` 必需；quay 匿名空目录 ⇒ 空非错；Hub 无全站目录 API（官方关闭）⇒ `unsupported` 如实 | 不做 token 换取（预设清单半数不可用——否）；引擎内置 `images/search`（实测已死——否）；Hub 全站目录（官方关闭——不可行）；私有源凭据（本批不做——§15）；统一错误信封（远端事实分类丢——否） |
+| KD-SV-98 | **镜像源 UI = 沙盒页新卡（不新开页 ∥ nav 零动）+ 目录浏览弹窗 + 前端过滤（零新端点）**：源表（名/址/面型）∥ 增/改/删弹窗（预选下拉 + 名/址两输入）∥ 浏览窗（仓库列表 ∥ 标签列表——两处过滤输入）∥ 本地镜像表加过滤输入 | 镜像族 UI 家 = 沙盒页（容器区/镜像区同页）；源 = 全局面（非按节点）⇒ 独立卡（非节点展开内）；过滤 = 已载集合纯前端（沿审计/用量页先例）；弹窗复用 `modal.mjs`（KD-SV-31） | 新管理页（nav +1 ∥ 页数链变更 ∥ 一页一职责已足——否）；源卡入节点展开（全局面错位——否）；服务端过滤端点（伪能力——否） |
 
 ## 15. 本域边界（不做）
+
+- **镜像源族余项（本批不做——§3）**：私有源凭据（用户名/口令——401 ⇒ 如实报 `auth_required`；本批零凭据面）∥ 源目录「一键拉取」（预填拉取窗——提请裁定；裁定为可 ⇒ 实施轮随批落，≈20 行）
+  ∥ 源读取走 `proxy.uri`（本批直连——提请裁定）∥ 分页/排序（有界首页 + `truncated`）∥ 源写入节点 dockerd 配置 ∥ 默认源语义（零消费面——拉取行为不变）∥ 按节点源清单
+  ∥ 保存时探活预校验（读时如实报，不预校验）∥ 子路径源（`https://host/prefix`——形拒）∥ 建容器表单的镜像选择器（清单下拉——与源目录非同件）∥ 源清单与节点的网络可达性交叉校验（server 可达 ≠ 节点可达——如实披露）。
 
 - **CI 实现**（#1216③——与沙盒共用执行面（§14 KD-SV-72）；CI 面不在本批）∥ **#1215 产品面**（web 开发会话 ∥ 移动端 ∥ agent 交互）。
 - **盒镜像内容治理**（内容 = 部署面）。
@@ -370,4 +427,4 @@
 - 2026-10-11（**admin-agent-chat 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-11-admin-agent-chat.md` §3 轮次 1 之 1–3/5–11）：闸面收净（doc-check 行宽读数）——§3 连线口径行折行（330 ⇒ ≤300；本笔 = 非本批面之闸面清尾——父侧如异议可 revert）。**零语义**。
 - 2026-10-11（**sandbox-docker-admin 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-11-sandbox-docker-admin.md` §1 · 台账 #1265；用户 2026-10-11 04:36/04:39 两族同批）：§3 增「容器面补齐 + 镜像族」块（八端点 ∥ 自加项表六条）∥ §8① 容器区/镜像区随正 ∥ §11 增判据行 + 机检口径句改指针（单源 = `webui/WEBUI.md` §6；陈值「档目 33 ∥ 34」删）∥ §12 增用例（N53–N56 ∥ B47–B50 ∥ E39–E41）∥ §13 预算随正（routes 493 ⇒ ≈496 ∥ container-routes 168 ⇒ ≈330 ∥ image-routes 新 ≈130 ∥ docker 187 ⇒ ≈330）+ 拆分预案收正（首选已执行）∥ §14 增 KD-SV-92–95。**产品码零触（设计轮）**。
 - 2026-10-11（**sandbox-docker-admin 批 · 设计评审轮 1 修正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-11-sandbox-docker-admin.md` §3 轮次 1 之 1/2/3/6）：#1 §15 余项去「镜像管理」（已交付——列表/拉取/删除）；「清单下拉」（建容器镜像选择器）转列余项 ∥ #2 §12 增 B51（超 256 KiB ⇒ `truncated: true`）∥ E42（五端点节点不可达 ⇒ 502）+ §11 判据行随拍（B47–B51 ∥ E39–E42）∥ #3 删除条 detail 改单源指针（`accounts/ACCOUNTS.md` §2.1）+ N54/N56 键集指针同拍 ∥ #6 §13 两行分项闭式收平（+≈162：路由注册与头注≈24；image-routes：头注≈15）。**零新语义**（评审发现直接导出项）。
-- 2026-10-11（**sandbox-docker-admin 批 · 记录收正（fix 轮）· eng-designer**——父侧裁定（#194 上抛处置 + 拆分账 #1270）：§13 routes 行读数收正（实读 **442**——净差 ≈51（chat 批抽删节点链）∥ 本批 +3；「下批先拆」前提取消——余量 ≈58）∥ §13 随正件行链基收正（**45 ⇒ 47**——chat 三件 + 本批两件；盘面实读）。**产品码零触。**
+- 2026-10-11（**sandbox-image-sources 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-11-sandbox-image-sources.md` §1 · 台账 #1274；用户 2026-10-11 09:17 四点（④ 撤）+ 09:19 预选）：§3 增「镜像源族」块（源清单四端点 + 预选 ∥ v2/Hub 两面读取 ∥ 匿名 Bearer 挑战 ∥ 有界首页 ∥ 五分类如实读绪 ∥ 自加项表五条）；§2 增 `image_sources` 行（v15）+ 审计三 kind + 读数收正（`db.mjs` 458——本批现读）；§8① 增镜像源卡 + 本地镜像表过滤句；§9 增镜像源面句；§11 增镜像源族判据行；§12 增用例（N57–N59 ∥ B52–B55 ∥ E43–E45）；§13 预算随正（+ 三新档；image-routes/db/bin 三行读数收正）+ 小计链补本批 ≈+604；§14 增 KD-SV-96/97/98 + **KD-SV-94 收正**（去「不做镜像源」半句——镜像源族 = 独立面）；§15 增镜像源族余项行。**产品码零触（设计轮）**。

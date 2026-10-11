@@ -87,10 +87,10 @@ sandbox 域 = 2026-10-10 沙盒批新立；agent 域 = 2026-10-10 runner-admin-c
 | `webui/WEBUI.md` | 域 | webui | 静态面 ∥ 控制台 IA 与视图 ∥ 多语言（i18n） ∥ 可见面二轮（§2.3） ∥ 弹窗机制（§2.4） ∥ 样式族规范（§2.5） ∥ 数据表壳布局（§2.6） ∥ 判权/自托管约束 ∥ 本域文件与预算 ∥ 验收判据 |
 | `ops/OPS.md` | 域 | ops | 配置面 ∥ 首启引导 ∥ 运维 CLI ∥ 启动/停机/部署面 ∥ 日志 ∥ 本域文件与预算 ∥ 验收判据 ∥ 用例 |
 | `client/CLIENT.md` | 域 | client | 客户端接入：客户端 token 面 ∥ `/api/client/*` 数据面骨架 ∥ 端点表 ∥ 本域文件与预算 ∥ 验收判据（AC-31）∥ 用例 ∥ 边界（2026-10-10 B1 批建档） |
-| `sandbox/SANDBOX.md` | 域 | sandbox | 沙盒：形态 ∥ 对象模型与存储（v11–v13） ∥ 节点与容器（最小切片——§3；**容器面补齐 + 镜像族——§3**） ∥ 托管接入（§3——步骤表/凭据定形/网络路径） ∥ 出站规则单源 ∥ 工作区生命周期与节点绑定 ∥ 待批队列 ∥ 盒内凭据 ∥ 控制台六面（必交面——每配置项有 UI 写入口） ∥ 端点与判权 ∥ 已裁决策与披露 ∥ 验收判据 ∥ 用例 ∥ 本域文件与行数预算 ∥ 决策（含 KD-SV-79/80/81/83–86/92–95） ∥ 边界（2026-10-10 沙盒批建档；runner-admin-console 批随正；托管接入增补 2026-10-10；sandbox-docker-admin 批 2026-10-11） |
+| `sandbox/SANDBOX.md` | 域 | sandbox | 沙盒：形态 ∥ 对象模型与存储（v11–v13 ∥ v15） ∥ 节点与容器（最小切片——§3；**容器面补齐 + 镜像族——§3**；**镜像源族——§3**） ∥ 托管接入（§3——步骤表/凭据定形/网络路径） ∥ 出站规则单源 ∥ 工作区生命周期与节点绑定 ∥ 待批队列 ∥ 盒内凭据 ∥ 控制台六面（必交面——每配置项有 UI 写入口） ∥ 端点与判权 ∥ 已裁决策与披露 ∥ 验收判据 ∥ 用例 ∥ 本域文件与行数预算 ∥ 决策（含 KD-SV-79/80/81/83–86/92–98） ∥ 边界（2026-10-10 沙盒批建档；runner-admin-console 批随正；托管接入增补 2026-10-10；sandbox-docker-admin 批 2026-10-11；sandbox-image-sources 批 2026-10-11） |
 | `agent/ADMIN-AGENT.md` | 域 | agent | 管理面 agent：形态与定位 ∥ 任务模型 ∥ 工具面五件 ∥ 自主边界与失败处置 ∥ 无人值守裁剪 ∥ **聊天式驱动（§11）** ∥ **工具面扩展七件（§12）** ∥ 本域预算 ∥ 验收 ∥ 本域决策（KD-SV-82/87/88/89/90/91） ∥ 边界（2026-10-10 runner-admin-console 批建档；2026-10-11 admin-agent-chat 批增 §11/§12） |
 
-## 4. 决策索引（KD-SV-1–95）
+## 4. 决策索引（KD-SV-1–98）
 
 | # | 决策一句话 | 所在档 |
 |---|---|---|
@@ -184,6 +184,9 @@ sandbox 域 = 2026-10-10 沙盒批新立；agent 域 = 2026-10-10 runner-admin-c
 | KD-SV-93 | 日志 = tail 有界（缺省 200 ∥ 1–2000）+ 非 TTY 多路复用解复用 + 截断 256 KiB | `sandbox/SANDBOX.md` §14 |
 | KD-SV-94 | 拉取 = 同步请求 + 超时 10 分钟 + 失败两形皆收（非 2xx ∥ 流内 `error` ⇒ 400 携原文） | `sandbox/SANDBOX.md` §14 |
 | KD-SV-95 | 镜像删除 = `ref` 走请求体 + `force` 缺省 false（409 ⇒ 400 人话引导） | `sandbox/SANDBOX.md` §14 |
+| KD-SV-96 | 镜像源清单 = server 全局配置表（v15）+ 与拉取链路零耦合（目录读取 = server 直连源） | `sandbox/SANDBOX.md` §14 |
+| KD-SV-97 | 源目录/标签读取 = 标准 v2 + Hub 面 + 匿名 Bearer 挑战 + 有界首页 + 五分类如实报错 | `sandbox/SANDBOX.md` §14 |
+| KD-SV-98 | 镜像源 UI = 沙盒页新卡 + 目录浏览弹窗 + 前端过滤（零新端点） | `webui/WEBUI.md` §2.8① |
 
 ## 5. 关键决策（本档）
 
@@ -207,7 +210,7 @@ sandbox 域 = 2026-10-10 沙盒批新立；agent 域 = 2026-10-10 runner-admin-c
 | KD-SV-91 | **审计型面 = `agent_event`（十三型）**：kind = `chat_start` ∥ `chat_call`（**每工具调用——读动作同落行**）∥ `chat_stop`（预算/模型错/重启）；**不双记**既有域型；掩蔽沿任务面 | 跨六域动作面（单一型 + kind）∥ 「每次动作落审计行」= 用户口径 ∥ 不双记 = 计数诚实 | 复用 `sandbox_event`（名不符）· 逐域既有型（枚举爆炸）· 不落审计（违口径）· turn 级行（噪声） |
 | KD-SV-92 | **容器读数三件 = 读时读直取**（sandbox-docker-admin 批）：详情 = `GET …/containers/{id}/json` ∥ 日志 = `logs?stdout=1&stderr=1&tail=N`（有界）∥ 用量 = `stats?stream=false&one-shot=true` + `json?size=1`（磁盘 = `SizeRw`/`SizeRootFs`）；读类 3s；**零缓存零落库** | 沿 KD-SV-79（引擎即真源——无陈旧窗：外部 `docker` 命令随时改物）；读数如实（一次采样基线不足 ⇒ `cpuPercent = null`——不假装） | 定期采集/缓存表（双源漂移——否）；用量时序库（另立面——否）；自建采样器（新机制——否） |
 | KD-SV-93 | **日志 = tail 有界 + 非 TTY 多路复用解复用 + 截断 256 KiB**：tail 缺省 200（范围 1–2000）；解复用判据 = 首字节 ∈ {0,1,2} ∧ 1–3 字节零 ∧ 帧长 ≤ 余量（判不出 ⇒ 原样透传——TTY 容器） | 创建面不设 Tty ⇒ 引擎返回 8 字节帧头流（不解 ⇒ 输出带二进制残渣）；有界 = 读类 3s 不悬停 | 强制 Tty 建容器（改既有容器参数——否）；整取无界（拖死连接——否）；不解复用（日志窗乱码——否） |
-| KD-SV-94 | **拉取 = 同步请求 + 超时 10 分钟 + 失败两形皆收**：引擎非 2xx ⇒ 400 携原文 ∥ 200 流内 `error`/`errorDetail` ⇒ 400 携原文；不做异步任务/进度流/镜像源 | 取像耗时可分钟级（专用常量——沿 agent 工具面同值）；两形皆收 = 不对引擎行为下注（错误形以实况为准）；网络现实如实披露（#1250 另线——零机制） | 15s 动作超时（正常拉取必超时——否）；异步任务 + 轮询（新机制——否）；SSE 进度（新机制——否）；镜像源/重试（另线——否） |
+| KD-SV-94 | **拉取 = 同步请求 + 超时 10 分钟 + 失败两形皆收**：引擎非 2xx ⇒ 400 携原文 ∥ 200 流内 `error`/`errorDetail` ⇒ 400 携原文；不做异步任务/进度流（镜像源族 = 独立面——KD-SV-96/97，与拉取路径零耦合） | 取像耗时可分钟级（专用常量——沿 agent 工具面同值）；两形皆收 = 不对引擎行为下注（错误形以实况为准）；网络现实如实披露（#1250 另线——零机制） | 15s 动作超时（正常拉取必超时——否）；异步任务 + 轮询（新机制——否）；SSE 进度（新机制——否）；重试（另线——否） |
 | KD-SV-95 | **镜像删除 = `ref` 走请求体 + `force` 缺省 false**（`DELETE /runners/:id/images` 体 `{ ref, force? }`；引擎 409 ⇒ 400 人话引导） | 引用字符集含 `/`/`:`/`@` ⇒ 路径段不兼容（沿 `DELETE /runners/:id` 体参先例）；缺省不强删 = 误删爆炸半径最小 | 路径参数（带斜杠引用不可达——否）；缺省强删（误删面——否）；409 直接透传（人话缺——否） |
 
 ## 6. 受影响文件与行数预算（总账）
@@ -467,6 +470,11 @@ sandbox 域 = 2026-10-10 沙盒批新立；agent 域 = 2026-10-10 runner-admin-c
   门禁件数断言件七件（**45 ⇒ 47**——注释/断言消息同拍；盘面实读）：`-console-list-style` ∥ `-server-auto-update` ∥ `-console-layout` ∥ `-me-usage-charts` ∥ `-provider-model-metadata` ∥ `-quota-per-model` ∥ `-quota-v2-member-models`；
   `thincoder-server/package.json`（`prepublishOnly` **45 ⇒ 47**——本批两件入链；盘面实读；单行清单行数零变）；新批内件 = **两件**（`docs/batches/2026-10-11-sandbox-docker-admin.test.mjs` ∥ `…-ui.test.mjs`——均入 server 链）；实施后回填核销。
 
+- sandbox-image-sources 批预算（2026-10-11 设计轮——本批；台账 #1274；设计档 = `sandbox/SANDBOX.md` §3/§13 ∥ `webui/WEBUI.md` §2.8①/§5）：服务端 **≈+604**（`image-sources.mjs` 拟新增 ≈170 ∥ `registry-client.mjs` 拟新增 ≈230
+  ∥ `image-source-routes.mjs` 拟新增 ≈170 ∥ `db.mjs` **458** ⇒ ≈490（v15 段 +≈32） ∥ `bin` **189** ⇒ ≈191（import + 注册行 +≈2）；`audit.mjs` ∥ `errors.mjs` ∥ `image-routes.mjs` ±0）；
+  webui **≈+272**（`views-sandbox-image-sources.mjs` 拟新增 ≈230 ∥ `views-sandbox-images.mjs` **118** ⇒ ≈138 ∥ `views-sandbox.mjs` **372** ⇒ ≈380 ∥ i18n sandbox 两部件 **147 ∥ 147** ⇒ ≈177 ∥ `style.css` **261** ⇒ ≈265；档目 **36 ∥ 37** ⇒ **37 ∥ 38**（+ 件一档）；余面批 ⇒ **39 ∥ 40**）；
+  批内件两件（`docs/batches/2026-10-11-sandbox-image-sources.test.mjs` ∥ `…-ui.test.mjs`——均入 server 链；`prepublishOnly` **47 ⇒ 49** ∥ 门禁件数断言件同拍）；随正件 = 档目断言件（+ `views-sandbox-image-sources.mjs` 名）∥ i18n 键集件（沙盒两部件 +≈30 键/表）；**产品码零触（设计轮）**。
+
 ## 7. 验收对照（需求 §2 验收表 → 判据域档）
 
 | 需求 AC | 判据（机检面）所在 | 载体 |
@@ -505,6 +513,7 @@ sandbox 域 = 2026-10-10 沙盒批新立；agent 域 = 2026-10-10 runner-admin-c
 | 管理面 agent 会话面（admin-agent-chat 批——台账 #1254；需求 §5「两个 chat 界面」②④；编号随需求档——建议 **AC-37**） | 分面判据：机制面 = `agent/ADMIN-AGENT.md` §7 聊天式行 ∥ §8（N54/N55 ∥ B48/B49 ∥ E40/E41——端到端：假模型 + 假工具：帧序/落库/重放/在途门/重启收尾/逐调用审计）∥ 端点面 = `gateway/API.md` §2.8（四端点三态码 ∥ NDJSON 帧形逐帧 ∥ 流前信封/流中 `end` 帧分界）∥ 控制台面 = `webui/WEBUI.md` §6 管理面 agent 会话页行（页在册 ∥ 流读取 ∥ 四形渲染 ∥ 两表键族）∥ 存储面 = `store/STORE.md` §3 v14 段（空库直落 14 ∥ v13 升后 14 ∥ 幂等 ∥ 两表 + 索引在场 ∥ `agent_event` 型可写）∥ 审计面 = `accounts/ACCOUNTS.md` §2.1 `agent_event` 行 + §7 用例；工具面 = §12 逐件回指（members/providers/models/usage/audit/runners/docker） | 批内件 + 收口轮（浏览器实走） |
 | AC-36（沙盒 · server-exec-sandbox 批——台账 #1224；需求 §5 沙盒块 + 14:00 裁定 + 14:08 必交面行；**AC-36 = 已落需求档**（2026-10-10 沙盒批回笔）；**分三轮落**：运行面 + 容器区（runner-admin-console 批）∥ 容器面补齐 + 镜像族（sandbox-docker-admin 批——本批）∥ 余面） | 分面判据：`sandbox/SANDBOX.md` §11 判据行（出站两类型/两闸/显式 deny 先/通配 ∥ 待批三态 ∥ 凭据 ∥ 必交面六面 + 每配置项有 UI 写入口）∥ §12 用例 ∥ `gateway/API.md` §2.5（端点面机检——节点登记/工作区/规则/待批）∥ `webui/WEBUI.md` §6 沙盒行（控制台机检）∥ `store/STORE.md` §3 v11 段（迁移判据）；执行面判据随重做批重建；**最小切片（runner-admin-console 批——台账 #1252）**：`sandbox/SANDBOX.md` §11 最小切片行 ∥ §3 ∥ §12（N40 ∥ N46–N48 ∥ B41–B43 ∥ E34–E36）∥ `gateway/API.md` §2.5 前七行 ∥ `webui/WEBUI.md` §2.8① ∥ `store/STORE.md` §2 v12 段/§3 v12 + 真机（10.0.0.6）；**托管接入（runner-admin-console 批增补——#1236/#1237）**：`sandbox/SANDBOX.md` §11 托管接入行 ∥ §12（N49–N52 ∥ B44–B46 ∥ E37/E38）∥ `agent/ADMIN-AGENT.md` §7 ∥ `gateway/API.md` §2.5 托管接入四行 ∥ `store/STORE.md` §2 v13 段/§3 v13 + 真机（无 Docker 机：只给地址+凭据 ⇒ 「已就绪」）；**容器面补齐 + 镜像族（sandbox-docker-admin 批——本批；台账 #1265）**：`sandbox/SANDBOX.md` §11 本批判据行 ∥ §3（本批块）∥ §12（N53–N56 ∥ B47–B51 ∥ E39–E42）∥ `gateway/API.md` §2.5 新八行 ∥ `webui/WEBUI.md` §2.8① + §6 沙盒行（本批随正） ∥ `accounts/ACCOUNTS.md` §2.1（四 kind——型面计数零增）+ 真机（10.0.0.6：真容器详/日志/重启/强杀/用量 ∥ 真镜像列/删） | 批内件 + 收口轮（浏览器实走 + 真机） |
 | AC-31（功能点 31——三端登录与接入；已落需求档——`docs/server/requirements/PROJECT.md` 验收表） | 分两面判据：① 服务面 = `client/CLIENT.md` §4（login 三态 ∥ token 兼用 /v1 ∥ logout 即吊销——§6 用例 N37/B27/E28/N39）∥ ② 端侧面 = `docs/core/design/TEAM.md` §5（三端入口 ∥ token 落本地 ∥ 派生 provider ∥ 未登录态 ∥ 退出关闭） | 批内件 + 收口轮（三端实走） |
+| AC-38（功能点 38——沙盒镜像源族；已落需求档——`docs/server/requirements/PROJECT.md` §2:38 + 验收表；2026-10-11 入册） | `sandbox/SANDBOX.md` §3（本批块——源清单四端点 + 预选 ∥ v2/Hub 两面读取 ∥ 匿名 Bearer 挑战 ∥ 有界首页 ∥ 五分类如实读绪）+ §11 本批判据行 ∥ §12 用例（N57–N59 ∥ B52–B55 ∥ E43–E45）∥ `gateway/API.md` §2.5 镜像源七行 ∥ `webui/WEBUI.md` §6 镜像源族行（沙盒页镜像源卡 + 本地镜像表过滤）∥ `store/STORE.md` §2 v15 段/§3 v15（`image_sources`）∥ `accounts/ACCOUNTS.md` §2.1（三 kind——型面计数零增） | 批内件 + 收口轮（浏览器实走） |
 | 非功能 · 零第三方运行期依赖 | 本档 §1 ∥ §2.3 ∥ §5 KD-SV-2 / KD-SV-78（口径与范围）；import 扫描断言 = 批内件 | 批内件 |
 | 非功能 · 仅内网 | `ops/OPS.md` 验收判据（`host` 必填 fail-closed + `0.0.0.0` 警告） | 批内件 |
 | 非功能 · 前端自洽 | `webui/WEBUI.md` 验收判据（零外部引用扫描） | 批内件 |
@@ -664,3 +673,4 @@ sandbox 域 = 2026-10-10 沙盒批新立；agent 域 = 2026-10-10 runner-admin-c
 - 2026-10-11（**admin-agent-chat 批 · 实施轮上抛回笔（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-11-admin-agent-chat.md` §6（实施轮上抛处置 + notice 补裁——④ 空回合单列 · 四值枚举））：§5 KD-SV-87 行补机械读法（`GET /api/admin/agent/chats` 倒序首行 `model`——四处同词）；同源随动 = `agent/ADMIN-AGENT.md` §5/§9 ∥ `webui/WEBUI.md` §2.10。**零新语义**（上抛裁决直接导出项）。
 - 2026-10-11（**admin-agent-chat 批 · 实施交付后记录收正（fix 轮）· eng-designer**——承批档 `docs/batches/2026-10-11-admin-agent-chat.md` §6（实施轮上抛 ② 回笔；#192））：§6 本批块收正（`prepublishOnly` 42 ⇒ **45**——三件入链；批内件三件）+ 清单外六件增量注（`audit.mjs` **+2** ∥ `members.mjs` **+14** ∥ `routes-admin.mjs` **−2** ∥ `provider-admin.mjs` **+37** ∥ `registry.mjs` **+68** ∥ `routes.mjs` **−56**——逐件 = 批档 §2.3 补登记）∥ 注⑲ 收正（42 ⇒ **45**——三件入链）∥ §9 R54② 同基数收正；同源随动 = 批档 §2.3/§2.4/§2.6。**零新语义**（补记 ∥ 读数）。
 - 2026-10-11（**sandbox-docker-admin 批 · 记录收正（fix 轮）· eng-designer**——父侧裁定（#194 + #1270））：§6 本批块 routes 行读数收正（**442**——余量 ≈58；「下批先拆」前提取消）+ `prepublishOnly` 链收正（**45 ⇒ 47**）∥ 注⑳ 门禁件数链收正（**45 ⇒ 47**）∥ 板级行链收正（chat 三件 + 本批两件 ⇒ 45 ⇒ **47**）∥ §9 R55② 同拍。**产品码零触。**
+- 2026-10-11（**sandbox-image-sources 批 · 设计轮 · eng-designer**——承批档 `docs/batches/2026-10-11-sandbox-image-sources.md` §1 · 台账 #1274；用户 09:17 四点（④ 撤）+ 09:19 预选）：§2.1 sandbox 行（镜像源族 + v15 + 决策面 92–98 + 批记 2026-10-11）∥ §4 索引（1–95 ⇒ **1–98**——三行在册）∥ §5 **KD-SV-94 收正**（去「不做镜像源」半句 + 被否栏去「镜像源/重试」中镜像源一项——镜像源族 = 独立面 KD-SV-96/97）∥ §6 添本批预算行（服务端 ≈+604 ∥ webui ≈+272；`prepublishOnly` 47 ⇒ **49**）∥ §7 增 AC-38 行；同源随动 = `sandbox/SANDBOX.md` §2/§3/§8①/§9/§11/§12/§13/§14/§15 ∥ `gateway/API.md` §2.5 ∥ `store/STORE.md` §2 v15 段/§3/§4 ∥ `accounts/ACCOUNTS.md` §2.1 ∥ `webui/WEBUI.md` §2.8①/§5/§6。**产品码零触（设计轮）**。
