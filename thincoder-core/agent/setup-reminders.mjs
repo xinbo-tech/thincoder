@@ -88,7 +88,7 @@ export function manifestStateLine({ phase }) {
  */
 export function manifestReportLine({ state, cwd, root, path, candidates, errors, matched } = {}) {
   if (state === "no-project") {
-    return `${MANIFEST_LINE_PREFIX}none — no project at ${cwd} (no manifest on the ancestor chain, none below). ` +
+    return `${MANIFEST_LINE_PREFIX}none — no project at ${cwd} (no manifest at this directory, none in the direct children). ` +
       `Parameters fall back to defaults. Create PROJECT-MANIFEST.json here to land a project (git optional).]`
   }
   if (state === "workspace") {

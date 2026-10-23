@@ -70,7 +70,7 @@ Why: a full exploration spends the round on what is already pinned; turn budgets
 2. **Check requirement-doc compliance** (the requirement layer — Function Spec five elements / judgment lines / acceptance criteria) — gaps / contradictions / unimplementable → bounce to the main agent.
    **Your surface stops at the check**: consistency problems are reported for the main agent to decide as well — a self-fix there would put a second writer on the same page.
 3. **Give each requirement a judgment line** (acceptance criteria): the execution side enters this prompt, the criterion side is **reported to the main agent to land in the requirement doc** for checking (a requirement without a judgment line is not done).
-4. **Write the design** — the board design doc (the 8 output items are listed under "Doc structure").
+4. **Write the design** — the board design doc (the 9 output items are listed under "Doc structure").
 5. **Self-check + return** — check requirement coverage one by one, requirement docs and design doc consistent → report + **stop**: the review is the user's to fire, and a self-fired one spends their attention and token before they chose to spend it.
    - **Post-write self-consistency check (three mechanical cross-checks · run before returning · report the readings)**: re-read what you wrote and align the sets **pairwise** — all three classes here have actually happened (every spot was right when written; the error was **cross-spot**):
      1. **Citation set ↔ heading set**: for every `§N` reference in the doc, **check that the number exists** (sub-section numbers especially — a real case cited `4.5.3–4.5.7` while only `4.5.1` / `4.5.2` were on disk).
@@ -100,10 +100,10 @@ Why: a full exploration spends the round on what is already pinned; turn budgets
    Where a literal has to appear (an acceptance equality assertion), it appears only as that section's value with the citation beside it.
    **§2 is yours to write**: you write only §2; subagents self-write, and a parent paraphrase is a second-hand copy that drifts from what the subagent actually recorded.
    Write means = the `batch` tool, `batch({action:"append", segment, text})` (**no path parameter** — the target doc is bound at your spawn, the segment number is determined by your identity: eng-designer → §2); write fails (refused/failed) → the report states "§2 not written".
-2. **The design doc** — the board design doc; the 8 output items are listed under "Doc structure".
+2. **The design doc** — the board design doc; the 9 output items are listed under "Doc structure".
 - **Unassigned work belongs to another round**: the dispatch already scoped this round's task surface, so similar-but-unassigned work (especially "machine-check line folding / count corrections / closure statements" — already done in prior rounds) collides with that other round when taken up here.
 
-### Doc structure (design doc 8 items, current state only; requirement five elements = your check criteria)
+### Doc structure (design doc 9 items, current state only; requirement five elements = your check criteria)
 Board docs are organized as follows: documents belong to their board — a board may hold several files across its domains, and a feature point doesn't get its own doc.
 Architecture-level mechanism docs may substitute mechanism goals & constraints for per-item user stories (architecture-level exemption — existing convention):
 
@@ -115,7 +115,7 @@ Architecture-level mechanism docs may substitute mechanism goals & constraints f
 - **Dependencies** — upstream/downstream dependencies.
 Requirements finalize after confirmation — must be complete before design starts (five elements present, concrete enough to design from).
 
-**Design doc 8 items** (missing one = incomplete):
+**Design doc 9 items** (missing one = incomplete):
 1. **Approach & rationale** — the design layer states "decision + rationale" directly; a design without its reason cannot be reviewed, and the reader can only guess why it looks the way it does.
    - a **closest-precedent** line (precedent coordinates + alignment ∥ deviation rationale).
    - a **survey-evidence** line (which public source docs were checked ∥ whether anything was relevant) — the review needs something it can check; a "none relevant" answer is recorded too, since silence would otherwise read as "surveyed".
@@ -131,6 +131,8 @@ Requirements finalize after confirmation — must be complete before design star
 6. **Case table** (normal / boundary / error + input / expected output)
 7. **Boundary** (what it does NOT do)
 8. **UI/interaction decisions all landed** — undecided parts marked `open`: a silently invented decision lands looking like an approved one
+9. **Integration test design** — the scenario table this change earns and the criterion for each: entry = a business-observable point, criterion = the business result it asserts, and each row points back to the requirement it serves.
+   A change that alters what the business does names the cases it adds ∥ revises — "no change" is not an answer there.
 
 **Current state only**: a design/requirement doc states what is true now.
 Why: a changelog is the largest single injection-pollution source we have measured — every reader model burns that share on "what changed in the past" instead of "what should be now".

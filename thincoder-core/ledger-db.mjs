@@ -87,23 +87,24 @@ export function ledgerChildren(dir) {
 }
 
 /** 项目根推导**单源**（设计档 §2.1「根解析面」/ §3.8——读写同一判据、同一实现）：
- *  自 `target`（「动作目标路径」；缺省 = `.`）起沿**祖先链**向上（含自身）取**最近一个「已注册」目录**
- *  ⇒ `{ root, basis: 'ancestor' }`（自明——回执逐字零改）。
- *  祖先链无命中 ∧ `descend: true` ⇒ **向下收敛**锚的直接子目录（`ledgerChildren` 同款惰性枚举 +
+ *  自 `target` 沿**祖先链**上溯取最近「已注册」目录——**以会话锚（`process.cwd()`）为界，越界即停**：
+ *  界内上溯 = 子目录归到自己的项目根（应该）；越过锚 = 挂到无关外层项目上（禁止）。
+ *  命中 ⇒ `{ root, basis: 'self' | 'ancestor' }`（自身 vs 界内祖先）；
+ *  界内无命中 ∧ `descend: true` ⇒ **向下收敛**锚的直接子目录（`ledgerChildren` 同款惰性枚举 +
  *  上限、名序升序）：恰一 ⇒ 取之；≥2 ⇒ ① 先取**有键控库**者（账已在盘 = 事实）② 该集名序首者 ⇒
  *  `{ root, basis: 'descendant' }`（向下发现——**须报明**）；零已注册子目录 ⇒ `null`（无根）。
- *  `descend: false` ⇒ 只问祖先支（族发现 ∥ 标记面——容器 ∥ 工作区锚 ⇒ `null` ⇒ 族求和）。
+ *  `descend: false` ⇒ 只问界内上溯支（族发现 ∥ 标记面——容器 ∥ 工作区锚 ⇒ `null` ⇒ 族求和）。
  *  **无自指**：内部「库在盘」判据只用 `ledgerKey` + `keyedDbFile`（不经 `ledgerDbPath`）。
  *  @param {string} [target] 动作目标路径（目录）
  *  @param {{descend?: boolean}} [opts] `descend` 缺省 `true`（动作面——`openLedger` / `ledgerDbPath` / 单范围读）
- *  @returns {{root: string, basis: 'ancestor'|'descendant'}|null} 项目根 + 判据来源 / 无根（`null`） */
+ *  @returns {{root: string, basis: 'self'|'ancestor'|'descendant'}|null} 项目根 + 判据来源 / 无根（`null`） */
 export function resolveLedgerRoot(target, { descend = true } = {}) {
   const start = resolve(target ?? ".")
   let dir = start
   for (;;) {
-    if (isRegistered(dir)) return { root: dir, basis: "ancestor" }
+    if (isRegistered(dir)) return { root: dir, basis: dir === start ? "self" : "ancestor" }
     const parent = dirname(dir)
-    if (parent === dir) break // 盘根 → 祖先链无已注册者
+    if (parent === dir) break
     dir = parent
   }
   if (!descend) return null
@@ -116,7 +117,7 @@ export function resolveLedgerRoot(target, { descend = true } = {}) {
 
 /** 无根文案（单源——设计档 §3.8「无根契约」逐字；`openLedger` 写面 ∥ `ledgerDbPath` 共用同一句）。 */
 const noRootMessage = (start) =>
-  `台账：自 ${start} 未能推导项目根——祖先链与本级子目录均无已注册项目（带 PROJECT-MANIFEST.json 或已有键控台账库）`
+  `台账：自 ${start} 未能推导项目根——该目录与本级子目录均无已注册项目（带 PROJECT-MANIFEST.json 或已有键控台账库）`
 
 /** 项目根 → 库路径（稳定键 = `ledgerKey` 前 16 位——路径唯一标识，不含分隔符）。
  *  **归单源**（2026-10-16 批 ledger-root-derivation）：根 = `resolveLedgerRoot(cwd)`——与读面 / 写面

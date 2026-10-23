@@ -3261,20 +3261,20 @@ B3 — `thincoder-core/prompts/discipline-engineering.md` · `## Engineering jud
 **上抛项（待裁）**：无。
 
 
-### 6.47 集成测试设计 = 设计交付物必项（三处提示词 + 设计席模板 · F29）
+### 6.47 集成测试设计 = 设计交付物必项（两档提示词 · 四处落点 · F34）
 
-**来源**：需求权威 = `docs/core/requirements/TESTING.md:198`（F29——判定句：设计档含集成测试设计段（场景表 + 判据，逐条回指业务需求）；业务修改批的设计缺该段 = 设计不合格；收口行「集成场景无变化」只在改动未触及业务行为时成立；窗口 50–100 是上限约束）。台账 `#1743`。
+**来源**：需求权威 = `docs/core/requirements/TESTING.md:198`（F34——判定句：设计档含集成测试设计段（场景表 + 判据，逐条回指业务需求）；业务修改批的设计缺该段 = 设计不合格；收口行「集成场景无变化」只在改动未触及业务行为时成立；窗口 50–100 是上限约束）。台账 `#1743`。
 
-用户 2026-10-23 22:58 逐字裁定：「业务设计必须设计集成测试，业务修改也必须更改集成测试，应该把集成测试的设计作为设计的一项任务要求下去。」需求 F29 = 该裁定的现状落点，语义以需求档为准。
+用户 2026-10-23 22:58 逐字裁定：「业务设计必须设计集成测试，业务修改也必须更改集成测试，应该把集成测试的设计作为设计的一项任务要求下去。」需求 F34 = 该裁定的现状落点，语义以需求档为准。
 
 **缺的那一半（实读 · 2026-10-23 本席）**
 
 | # | 坐标 | 现文（逐字） | 缺的那一半 |
 |---|---|---|---|
-| F1 | `thincoder-core/prompts/discipline-engineering.md:168` | `**Closeout test line**: … ② whether integration scenarios are affected (added / revised / none).` | 三选一中的 `none` 无门槛——业务修改可以报 none 收口，没有必须改用例的义务 |
-| F2 | 同档 `:171` | `**Permanent, and a single change adds no case to the set** …; a repo's integration-suite budget is **≈50–100 cases — beyond that is over-testing** (trim rather than add).` | 前半句明文禁止单次变更加用例，与新规正面相反；后半句的窗口仍须在（上限约束） |
-| F3 | 同档 `:182` | `**A repo with no integration tests ⇒ the gate stays honestly empty-green** — …` | 空集被写成合法稳态：报一句即过门，欠账不入任何可见清单 |
-| F4 | `thincoder-core/prompts/persona-eng-designer.md:106` / `:118` / `:119-129` | 设计档 **8 项**清单（item 6 = Case table；item 8 = UI/interaction decisions；逐字见勘察证据行） | 清单里没有「集成测试设计」：设计席没有落笔格，业务修改批可以在设计层完全不提集成用例 |
+| F1 | `thincoder-core/prompts/discipline-engineering.md:172` | `**Closeout test line**: … ② whether integration scenarios are affected (added / revised / none).` | 三选一中的 `none` 无门槛——业务修改可以报 none 收口，没有必须改用例的义务 |
+| F2 | 同档 `:175` | `**Permanent, and a single change adds no case to the set** …; a repo's integration-suite budget is **≈50–100 cases — beyond that is over-testing** (trim rather than add).` | 前半句明文禁止单次变更加用例，与新规正面相反；后半句的窗口仍须在（上限约束） |
+| F3 | 同档 `:186` | `**A repo with no integration tests ⇒ the gate stays honestly empty-green** — …` | 空集被写成合法稳态：报一句即过门，欠账不入任何可见清单 |
+| F4 | `thincoder-core/prompts/persona-eng-designer.md:106` / `:118` / `:119-133` | 设计档 **8 项**清单（item 6 = Case table；item 8 = UI/interaction decisions；逐字见勘察证据行） | 清单里没有「集成测试设计」：设计席没有落笔格，业务修改批可以在设计层完全不提集成用例 |
 
 **机制（为什么必须在设计层强制）**
 
@@ -3282,7 +3282,7 @@ B3 — `thincoder-core/prompts/discipline-engineering.md` · `## Engineering jud
 2. **收口层的口径挡不住空集**：`none` 无门槛时，「报 none ⇒ 批关 ⇒ 集仍空」是个自洽循环——每轮合规，集永久为空。三端集成集现量 0（2026-10-23 本席实读：CLI 无 `test/integration/` 目录；VSC `test/integration/files.mjs` = `export default []`；桌面 `test/files.mjs` = `[]`）。
 3. **空集报「诚实空绿」= 把欠账写成通过**：一句报告行让空集在收口面上与「已验证」无法区分；欠账不进台账就没人排期。报告行保留——它防的是拿单元档冒充集成档。
 4. **窗口是上限，不是冻结**：50–100 限制套件体量（超窗裁旧场景），不是「业务变更加用例」的许可证；旧句把两者绑在一起，上限被读成了禁令。
-5. **F10 不动**：F10 定流程（谁定形谁落），F29 定必做——「不需变」的出口由 B1 的 `none` 条件与 B3 的欠账规则关掉，F10 的流程句零改。
+5. **F10 不动**：F10 定流程（谁定形谁落），F34 定必做——「不需变」的出口由 B1 的 `none` 条件与 B3 的欠账规则关掉，F10 的流程句零改。
 
 **逐字英文文本（实施席照此落笔 · 唯一权威目标形）**
 
@@ -3290,25 +3290,28 @@ B3 — `thincoder-core/prompts/discipline-engineering.md` · `## Engineering jud
 写形照本档 §6.45：一条规则一行 · 行首短语点题（题眼加粗）· 条件与例外在规则之后 · 理由独立成行且以 `Why` 起头 · 每行 ≤300 字符——围栏块已按此形写好，**原样落、不折行**。
 围栏块同时是本档 §6.1「批次收尾核对」的比对基线——落地后按「围栏内的换行连起来、逐段比」执行（围栏内折行为本档行宽，不作落地基线）。
 
-B1 — `thincoder-core/prompts/discipline-engineering.md` · `## Testing discipline` 节 · 现盘 `:168` **整行替换为三行**：
+B1 — `thincoder-core/prompts/discipline-engineering.md` · `## Testing discipline` 节 · 现盘 `:172-176` 五行（已落）；本修正只改 ② 行（`:174`）的用例档落点：
 
 ```text
-- **Closeout test line**: each batch closeout reports — ① this batch's verification reading (one line: what was verified ∥ command ∥ result); ② the integration cases this batch added ∥ revised, by case name.
+- **Closeout test line**: each batch closeout reports two halves.
+  ① this batch's unit test files named, with one verification reading (what was verified ∥ command ∥ result).
+  ② the integration set as it now stands against the ≈50–100 window, plus the cases this batch added ∥ revised, by case name — each case file lands under the project's integration test directory.
 - **`none` stands only where the change does not touch business behavior**: a batch that changes what the business does and closes with no integration-case change is incomplete — the case it changes should have been designed before the code.
   Why: an unconditional `none` let every business change close against an empty set, so the set stayed empty while every closeout read green.
 ```
 
-B2 — 同档现盘 `:171` **整行替换为两行**（旧句零残留；窗口子句改写为上限规则——K1）：
+B2 — 同档现盘 `:175` **整行替换为两行**（旧句零残留；窗口子句改写为上限规则——K1）：
 
 ```text
 - **The integration window is an upper bound**: a repo's suite budget stays ≈50–100 cases — over the window, trim old scenarios rather than turn away a case a business change earned.
   Why: read as a freeze, the window would turn every business change away, and the suite would stop following the business.
 ```
 
-B3 — 同档现盘 `:182-183` **两行整替为三行**（空集 + 报告行 + why）：
+B3 — 同档现盘 `:191-194` **四行整替为四行**（仅首行改写：计量单位 = 集本身，不绑仓 / 端；其余三行逐字保留）：
 
 ```text
-- **A repo with no integration tests is a debt, not a steady state**: an empty set passes nothing — the closeout reports the count against the window (`0 / 50–100`) and books a ledger row to build the set.
+- **A missing integration suite is a debt, not a steady state**: an empty set passes nothing — the closeout reports the count against the window (`0 / 50–100`) and books a ledger row for each integration suite this project is missing.
+  Each row is booked once, at the first closeout that reports that set empty; later batches do not re-book it while the debt stands.
   Report line: "not integration-test verified — the parent-side closeout run is the only integration-test run."
   Why: a gate assembled out of unit files says only that something is green, not that the release is; the report keeps the debt visible while the row keeps it scheduled.
 ```
@@ -3324,13 +3327,13 @@ B4 的两处计数：现盘 `:106` 节标题 `### Doc structure (design doc 8 it
 
 **中文复核面（与英文面同一语义 · 供人复核，不入提示词）**
 
-- **B1 · 收口测试行**：每批收口报 ① 本批验证读数（一行：验了什么 ∥ 命令 ∥ 结果）；② 本批新增 ∥ 修订的集成用例，给出用例名。
+- **B1 · 收口测试行**：每批收口报两半——① 本批单元测试档逐个列名，附一行验证读数（验了什么 ∥ 命令 ∥ 结果）；② 集成集现量对 ≈50–100 窗口，加本批新增 ∥ 修订的用例名——② 点到的用例档一律落该项目的集成测试目录。
   `none` 只在改动未触及业务行为时成立；改了业务行为却在收口里没有集成用例变化的批次 = 收口不完整——它改的那条用例本应在写码前就设计出来。
   理由：`none` 无门槛时，每次业务修改都能对着空集收口；集一直空着，而每次收口都读作绿。
 - **B2 · 集成窗口是上限**：一仓套件预算维持 ≈50–100 用例——超窗时裁掉旧场景，而不是把业务变更挣来的新用例挡在门外。
   理由：把窗口读成冻结，它会把每次业务变更挡在门外，套件不再跟着业务走。
-- **B3 · 空集是欠账，不是稳态**：空集什么也证明不了——收口报现量对窗口（`0 / 50–100`），并在台账立一行「集成集待建」。
-  报告行保留：「未经集成测试验证——父侧收口跑是全仓唯一一次集成测试执行」。
+- **B3 · 缺一套集成集是欠账，不是稳态**：空集什么也证明不了——收口报现量对窗口（`0 / 50–100`），并为这个项目所缺的那套集成集立一行台账；该行在首次报空集的收口登记一次，债未清前后续批次不重立。
+  报告行保留：「未经集成测试验证——父侧收口跑是唯一一次集成测试执行」。
   理由：拿单元档拼出来的门只说明有东西是绿的，不说明发布是绿的；报告行让欠账可见，台账行让它被排期。
 - **B4 · 设计席第 9 项**：集成测试设计——这次改动挣来的场景表与逐行判据：入口 = 业务可观察点，判据 = 它断言的业务结果，每行回指它服务的需求。
   改了业务行为的改动，写明它新增 ∥ 修订了哪些用例——「无变化」在那里不是答案。
@@ -3340,72 +3343,76 @@ B4 的两处计数：现盘 `:106` 节标题 `### Doc structure (design doc 8 it
 
 | # | 文件 | 落点 | 动作 | 预期 Δ（估值 · 不作验收条） |
 |---|---|---|---|---|
-| L1 | `thincoder-core/prompts/discipline-engineering.md` | `:168` | 整行替换为 B1 三行 | +2 行 |
-| L2 | 同档 | `:171` | 整行替换为 B2 两行（旧句零残留） | +1 行 |
-| L3 | 同档 | `:182-183` | 两行整替为 B3 三行 | +1 行 |
+| L1 | `thincoder-core/prompts/discipline-engineering.md` | `:174` | B1 ② 行尾改项目中性（`test/integration/` ⇒ `the project's integration test directory`） | ±0 行 |
+| L2 | 同档 | `:175` | 整行替换为 B2 两行（旧句零残留） | +1 行 |
+| L3 | 同档 | `:191-194` | 四行整替为 B3 四行（仅首行改写：计量单位 = 集本身；其余三行逐字保留） | ±0 行 |
 | L4 | `thincoder-core/prompts/persona-eng-designer.md` | `:106` · `:118` | 计数 `8` ⇒ `9`（两处） | ±0 行 |
-| L5 | 同档 | `:129` 后 / `:131` 前 | 插入 B4 item 9（两行） | +2 行 |
-| L6 | `thincoder-core/prompts/advisor-design.md` · 其余提示词档 · `thincoder-core/tool-docs/**` · 产品代码 · 需求档 | — | 零改 | ±0 |
+| L5 | 同档 | `:133` 后 / `:135` 前 | 插入 B4 item 9（两行） | +2 行 |
+| L6 | `thincoder-core/prompts/advisor-design.md` · 其余提示词档 · `thincoder-core/tool-docs/**` · 产品代码 · 需求档 · `docs/core/design/TESTING.md` | — | 零改（`docs/core/design/TESTING.md` 实读见勘察行：F9 窗口读数在案且同向、旧句零副本） | ±0 |
 
-实施按**内容锚**定位（`**Closeout test line**` 行 · `**Permanent, and a single change adds no case**` 行 · `**A repo with no integration tests ⇒**` 行 · `8. **UI/interaction decisions all landed**` 行），行号只作现盘读数。
+实施按**内容锚**定位（`**Closeout test line**` 行 · `**Permanent, and a single change adds no case**` 行 · `**A repo with no integration tests is a debt**` 行 · `8. **UI/interaction decisions all landed**` 行），行号只作现盘读数（本修正轮按兄弟批 `2026-10-23-branch-must-have-evidence` 落笔后的盘面重读）。
 
-**验收（A1–A6 · 逐条回指 F29 与本批验收）**
+**验收（A1–A9 · 逐条回指 F34 与本批验收）**
 
 | # | 验收 | 判法 / 读数 |
 |---|---|---|
-| A1 | 三处提示词改动各给英文逐字块 + 中文复核面（本批 ①） | 本节 B1 / B2 / B3 三块英文 + 中文复核面三条在盘；B4 同形（英文块 + 中文面） |
-| A2 | 旧句整条删除、零残留（本批 ②） | 落地后 `thincoder-core/prompts/discipline-engineering.md` 扫 `Permanent, and a single change` / `adds no case to the set` / `per-change additions` / `trim rather than add` 各 0 次（`grep` 实读） |
+| A1 | 三处改动（B1–B3）各给英文逐字块 + 中文复核面（本批 ①） | 本节 B1 / B2 / B3 三块英文 + 中文复核面三条在盘；B4 同形（英文块 + 中文面） |
+| A2 | 旧句整条删除、零残留（本批 ②） | 落地后 `thincoder-core/prompts/discipline-engineering.md` 扫 `Permanent, and a single change` / `adds no case to the set` / `per-change additions` / `trim rather than add` / `gate stays honestly empty-green` 各 0 次；三处替换锚 `**Closeout test line**` ∥ `**The integration window is an upper bound**` ∥ `debt, not a steady state` 各 1 次（`grep` 实读） |
 | A3 | 设计席落笔格加「集成测试设计」项（本批 ③） | 落地后 `thincoder-core/prompts/persona-eng-designer.md` 含 `9. **Integration test design**` 恰 1 次 · `**Design doc 9 items**` 恰 1 次 · 节标题 `design doc 9 items` 恰 1 次 · `8 items` 0 次 |
 | A4 | 写形零回归（§6.45） | 落地后两档逐行 ≤300 字符（现盘基线：discipline max 300 · persona max 298；一次性 `node` 脚本读数） |
 | A5 | 提示词面零文档引用（§6.10） | 落地后 `node scripts/prompt-refs-check.mjs` ⇒ 命中 0（基线 = 本席 2026-10-23 实跑：提示词面 70 档 · 代码面 465 档 · 命中 0） |
 | A6 | `doc_check`（本批 ④） | 本节落笔后实跑 `doc_check(mode:"gate", docs=["docs/core/design/PROMPT-SYSTEM.md"])` ⇒ 首行 `DOC-CHECK GATE: PASS`；实施轮改提示词后父侧复跑同判 |
+| A7 | F9 ②半（窗口读数）在**每批**成立（评审 🔴1） | 落地后 B1 ② 含 `against the ≈50–100 window` 恰 1 次 · B3 含 `` `0 / 50–100` `` 恰 1 次 ⇒ 非空集批与空集批都有窗口读数；另 B1 ① 含 `unit test files named` 恰 1 次（F9 ① 清单义务） |
+| A8 | B3 计量单位 = 集本身，不绑仓 / 端（本批 ①） | 落地后 `thincoder-core/prompts/discipline-engineering.md` 扫 `a ledger row for the integration suite this project is missing` 恰 1 次 · `A missing integration suite is a debt` 恰 1 次 · `one ledger row per repo` 0 次 · `A repo with no integration tests is a debt` 0 次 |
+| A9 | B1 ② 用例档落点项目中性（本批 ①） | 落地后同档扫 `test/integration/` 0 次 · `the project's integration test directory` 恰 1 次 |
 
 **用例表（正常 / 边界 / 错误）**
 
 | # | 场景 | 输入 / 动作 | 期望 |
 |---|---|---|---|
-| C1 | 正常 · 业务修改批 | 设计档 item 9 列出新增场景 + 判据 + 需求回指；收口行报用例名 | 设计过、收口完整 |
+| C1 | 正常 · 业务修改批 | 设计档 item 9 列出新增场景 + 判据 + 需求回指；收口行报用例名 + 集成集现量对 ≈50–100 窗口，用例档落本项目集成测试目录（本仓实例 = `test/integration/`） | 设计过、收口完整、窗口读数在 |
 | C2 | 边界 · 未触及业务行为 | 纯文档 / 纯重构批：设计 item 9 写「未触及业务行为，无集成场景」；收口行 `none` | `none` 成立（唯一成立场合） |
 | C3 | 错误 · 业务修改 + 收口 `none` | 改了业务行为，收口行报 `none` | 收口不完整——按 B1 判缺 |
-| C4 | 错误 · 空集报「诚实空绿」 | 空集收口只报一句报告行，无现量对窗口、无台账行 | 欠账未登记——按 B3 判缺 |
+| C4 | 错误 · 空集报「诚实空绿」 | 空集收口只报一句报告行，无现量对窗口、无台账行 | 欠账未登记——按 B3 判缺；台账行每套缺失的集成集只立一次，重复立行同样是缺陷（K3） |
 | C5 | 边界 · 超窗 | 集已 100 例，新业务变更带来一条新用例 | 加新用例并裁一条旧场景（B2），不得以窗口为由拒绝 |
-| C6 | 错误 · 设计席写「无变化」 | 业务修改批的设计 item 9 写「无变化」 | 设计不合格（F29 判定句） |
+| C6 | 错误 · 设计席写「无变化」 | 业务修改批的设计 item 9 写「无变化」 | 设计不合格（F34 判定句） |
 
 **受影响文件（现行 = 本席 `node` 实读 2026-10-23；行数口径 = `split(/\r?\n/).length - 1`）**
 
 | 文件 | 现行 | Δ → 改后 |
 |---|---|---|
-| `thincoder-core/prompts/discipline-engineering.md` | 327 行 / 40,402 字符 / max 300 / >300 = 0 | L1 +2 · L2 +1 · L3 +1 ⇒ 331 行；逐行 ≤300 保持 |
-| `thincoder-core/prompts/persona-eng-designer.md` | 142 行 / 18,006 字符 / max 298 / >300 = 0 | L4 ±0 · L5 +2 ⇒ 144 行；逐行 ≤300 保持 |
-| `docs/core/design/PROMPT-SYSTEM.md` | 3,351 行 / 287,837 字符（本节写入前） | 本节 = 新增内容（设计档面，非验收对象） |
+| `thincoder-core/prompts/discipline-engineering.md` | 338 行 / 42,234 字符 / max 300 / >300 = 0 | L1 ② + L3 首行重落 ⇒ ±0 行；逐行 ≤300 保持 |
+| `thincoder-core/prompts/persona-eng-designer.md` | 146 行 / 18,815 字符 / max 298 / >300 = 0 | L4 ±0 · L5 +2 ⇒ 148 行；逐行 ≤300 保持 |
+| `docs/core/design/PROMPT-SYSTEM.md` | 本档（设计档面，非验收对象） | 本节 = 本节内的改写与新增 |
 | L6 所列各面 | — | ±0 |
 
 **关键决策**
 
 | # | 决策 | 理由 |
 |---|---|---|
-| K1 | `:171` 整行替换为窗口上限规则，不整行删空 | 删除对象 = 旧句前半（禁止单次变更加用例）；后半的窗口是本批明令保留的上限口径。删空会让 `:176` 的 `their budget`（`integration sets stay inside their budget`）失去所指，成为悬空引用 ⇒ 窗口在该坐标原地改写为上限规则 |
+| K1 | `:175` 整行替换为窗口上限规则，不整行删空 | 删除对象 = 旧句前半（禁止单次变更加用例）；后半的窗口是本批明令保留的上限口径。删空会让 `:180` 的 `their budget`（`integration sets stay inside their budget`）失去所指，成为悬空引用 ⇒ 窗口在该坐标原地改写为上限规则 |
 | K2 | `none` 加条件、不取消 | 未触及业务行为的改动（纯文档 / 纯重构）确实没有集成用例可加；取消 `none` 会逼出凑数用例 |
-| K3 | 空集规则保留报告行、另加台账行 | 报告行防「拿单元档冒充集成档」；台账行让欠账可排期——不落台账的欠账没人还。台账行 = 一次性欠账登记，不是每批新增簿记（F9「零新增簿记」指窗口读数是守闸读数） |
-| K4 | 设计席加 item 9，不并入 item 6（Case table） | F29 要的是设计交付物的一段：集成场景住业务可观察入口、逐条回指需求；item 6 是设计用例表（输入 / 输出），两者判据面不同，并项会让集成场景被当普通用例表审 |
+| K3 | 空集规则保留报告行、另加台账行 | 报告行防「拿单元档冒充集成档」；台账行让欠账可排期——不落台账的欠账没人还。台账行 = **每套缺失的集成集一行**、首次报空集时登记、债未清前不逐批重立（B3 英文块逐字定死频次与范围）——不是每批新增簿记（F9「零新增簿记」指窗口读数是守闸读数）。计量单位取「集本身」：提示词是通用产品文本，不绑任何项目的仓 / 端结构。按仓计在本项目会出错——三前端同住一仓 ⇒ 并成一行；核仓不设集成集 ⇒ 立一条永远结不清的行（N20）；按端计则把各项目自己的端划分写进产品文本 |
+| K4 | 设计席加 item 9，不并入 item 6（Case table） | F34 要的是设计交付物的一段：集成场景住业务可观察入口、逐条回指需求；item 6 是设计用例表（输入 / 输出），两者判据面不同，并项会让集成场景被当普通用例表审 |
 | K5 | 逐字块 = 英文落笔目标形 + 中文复核面（§6.44 双面形） | 只给中文的三处受伤：验收钉的英文串在落地时不存在（无可比对目标）· §6.1 收尾核对没有基线 · 实施席等于自写产品文案——英文块 = 唯一权威目标形 |
 | K6 | 50–100 的数字留在提示词面 | 该数字在提示词层只此一处；移走会让窗口在上限意义上无读数 |
 
 **先例 ∥ 偏离**：先例 = 本档 §6.44（英文逐字文本 / 中文复核面双面形）∥ §6.45（一条规则一行 · 逐行 ≤300 · 题眼加粗 · Why 独立成行）∥ §6.46（落点表 + 验收 + 用例表 + 关键决策 + 勘察证据行）。
 **对齐** = 双面形逐字照 §6.44；写形照 §6.45；落点给内容锚；验收给读法。
-**偏离** = ① 首次以「删规则」为落笔动作（既有形 = 追加 ∥ 原位替换一行）——旧句与新规正面相反，留着即许可；② 首次把「空集」从合法稳态改判为欠账（既有「honestly empty-green」句在 `thincoder-core/prompts/discipline-engineering.md:182`）。
+**偏离** = ① 首次以「删规则」为落笔动作（既有形 = 追加 ∥ 原位替换一行）——旧句与新规正面相反，留着即许可；② 首次把「空集」从合法稳态改判为欠账（既有「honestly empty-green」句在 `thincoder-core/prompts/discipline-engineering.md:186`）。
 
-**既有件三问（新增标签「Integration test design」· item 9）**：`existing but unusable: 8 项 item 6 Case table`（`thincoder-core/prompts/persona-eng-designer.md:127`——设计用例表按输入 / 输出组织，判的是设计用例，不是业务可观察入口上的集成场景与需求回指）⇒ 新项成立；标签 `none found`（8 项清单内无「集成测试设计」项——`thincoder-core/prompts/persona-eng-designer.md:119-129` 实读）。
+**既有件三问（新增标签「Integration test design」· item 9）**：`existing but unusable: 8 项 item 6 Case table`（`thincoder-core/prompts/persona-eng-designer.md:131`——设计用例表按输入 / 输出组织，判的是设计用例，不是业务可观察入口上的集成场景与需求回指）⇒ 新项成立；标签 `none found`（8 项清单内无「集成测试设计」项——`thincoder-core/prompts/persona-eng-designer.md:119-133` 实读）。
 
 **勘察证据行（本席实读 · 2026-10-23）**
 
-- `docs/core/requirements/TESTING.md:198`：F29 全行（判定句 + 与 F10 的关系 + 窗口 = 上限）——需求依据。
-- `thincoder-core/prompts/discipline-engineering.md:160-188`：测试纪律节；`:162` Unit tests · `:163-165` Delete on use + Why · `:167` 不互转 · `:168` 收口测试行。
-  `:169` Integration tests 定义 · `:170` project assets · `:171` 旧句 · `:172-173` 用例位置 / 只住前端口 · `:174-176` 体量 / The set does not accumulate（`their budget` 指回 `:171`）· `:182-183` 空集 + 报告行。
-- `thincoder-core/prompts/persona-eng-designer.md:106`（节标题 `design doc 8 items`）· `:118`（`**Design doc 8 items**`）· `:119-129`（item 1–8；`:125` item 4 · `:126` item 5 · `:127` item 6 · `:128` item 7 · `:129` item 8）· `:130-131`（空行 + `**Current state only**`）——B4 落点。
+- `docs/core/requirements/TESTING.md:198`：F34 全行（判定句 + 与 F10 的关系 + 窗口 = 上限）——需求依据；`:80` F9（收口测试行双半：① 单元档清单 + 一行读数，② 集成影响 + 窗口读数）· `:66` §1.3 执行形（两闸守闸动作挂收口测试行）· `:221` F30（用例档坐标 `test/integration/<场景名>.test.mjs`）· `:114` N20（集成集只住三前端）。
+- `thincoder-core/prompts/discipline-engineering.md:164-192`：测试纪律节；`:166` Unit tests · `:167` Delete on use + Why · `:171` 不互转 · `:172` 收口测试行。
+  `:173` Integration tests 定义 · `:174` project assets · `:175` 旧句 · `:176` 用例位置 · `:177` 只住前端口 · `:180` The set does not accumulate（`their budget` 指回 `:175`）· `:186-187` 空集 + 报告行。
+- `thincoder-core/prompts/persona-eng-designer.md:106`（节标题 `design doc 8 items`）· `:118`（`**Design doc 8 items**`）· `:119-133`（item 1–8；`:127` item 2 · `:131` item 6 · `:133` item 8）· `:134-135`（空行 + `**Current state only**`）——B4 落点。
+- `docs/core/design/TESTING.md:52` `:67` `:97` `:283`：窗口 50–100 与「守闸读数随收口测试行 ②半带出（需求 F9）」在案——与本批 B1 ② 补窗口读数同向；本批要删的两串旧句（`adds no case` / `empty-green`）该档零副本 ⇒ 该档零改（L6）。
 - `thincoder-core/prompts/advisor-design.md:21-47`：11 条评审维度；无「8 项」计数引用 ⇒ 零改。
 - `docs/core/design/PROMPT-SYSTEM.md:2746-2903`（§6.44 双面形）· `:3115-3261`（§6.46 形制）——形制先例。
-- 现盘宽度实读（`node` 一次性脚本）：discipline 327 行 / 40,402 字符 / max 300 / >300 = 0；persona 142 行 / 18,006 字符 / max 298 / >300 = 0；advisor-design 127 行 / 13,277 字符 / max 290 / >300 = 0。
+- 现盘宽度实读（`node` 一次性脚本 · 本修正轮）：discipline 331 行 / 41,270 字符 / max 300 / >300 = 0；persona 146 行 / 18,815 字符 / max 298 / >300 = 0；advisor-design 131 行 / 13,954 字符 / max 290 / >300 = 0。
 - 三端集成集现状（`fs` 实读，2026-10-23）：`thincoder-cli/test/integration/` 不存在；`thincoder-vscode/test/integration/files.mjs` = `export default []`；`thincoder-desktop/test/files.mjs` = `[]`。
 - `PROJECT-MANIFEST.json` `index.publicRepos` = 空（本席 2026-10-23 实读）——已查，无相关公共源。
 
@@ -3416,7 +3423,7 @@ B4 的两处计数：现盘 `:106` 节标题 `### Doc structure (design doc 8 it
 - 〔父侧 · 需求档随正〕`docs/core/requirements/METHODOLOGY.md:91` 记「设计档 8 项之①（`thincoder-core/prompts/persona-eng-designer.md:62`）」——计数 8 与行号 `:62` 均随本批失效（现盘 item 1 在 `:119`）；需求档笔 = 父侧。
 - 〔父侧 · 设计档数面〕本档旧节内的「8 项」/「8 items」引用十一处（`:137` `:643` `:647` `:651` `:2362` `:3146` `:3170` `:3233` `:3248` `:3460` `:3487`，本席 2026-10-23 实读）为各节当批的决策记录；现行计数单源 = `thincoder-core/prompts/persona-eng-designer.md`（9 项）。全档数面 sweep 是否另轮 = 父侧裁。
 - 〔父侧 · 编号〕本节未加 §7 D-PS 行：§6.46 在途未占号，D-PS46 / D-PS47 的归属由父侧收口时定。
-- 〔父侧 · F9 窗口读数〕需求 F9 要求每批收口测试行带窗口读数（现量 vs 50–100）；本批按派单把该读数落在 B3 空集规则（空集批必须报）。非空集的逐批窗口读数是否也进收口行 = 父侧裁。
+- 〔父侧 · 需求档残留〕`docs/core/requirements/TESTING.md:198` 的「与 F10 的关系」格内仍写「F29 定**必做**」——该行本批已由 F29 改为 F34，这处指代随同失效（同档 `:220` 的 F29 是 RTM 条，不是它）；需求档笔 = 父侧。
 
 ## 7. 关键决策记录
 

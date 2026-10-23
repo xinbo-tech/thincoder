@@ -169,10 +169,15 @@ The report must contain: what changed / why, the paths of files touched, how you
   So **accumulated test volume × the run-everything reflex = verification cost far above coding cost** — delete the runnable artifacts and there is no "everything" left to run.
 - **The change's implementer writes them and runs exactly those for the changed face** (nobody else, no per-round re-runs, not another batch's files).
 - **Unit test files are not promoted into integration tests** (integration cases are established from business needs, not graduated from unit files).
-- **Closeout test line**: each batch closeout reports — ① this batch's verification reading (one line: what was verified ∥ command ∥ result); ② whether integration scenarios are affected (added / revised / none).
+- **Closeout test line**: each batch closeout reports two halves.
+  ① this batch's unit test files named, with one verification reading (what was verified ∥ command ∥ result).
+  ② the integration set as it now stands against the ≈50–100 window, plus the cases this batch added ∥ revised, by case name — each case file lands under the project's integration test directory.
+- **`none` stands only where the change does not touch business behavior**: a batch that changes what the business does and closes with no integration-case change is incomplete — the case it changes should have been designed before the code.
+  Why: an unconditional `none` let every business change close against an empty set, so the set stayed empty while every closeout read green.
 - **Integration tests** exercise **components working together** (the real composition — a front-end scenario drives the core transitively) — the **pre-release acceptance loop**: walk through the real business from a user-visible entry.
 - **Project assets**: business scenarios + production-problem additions, asserting only business-observable results.
-- **Permanent, and a single change adds no case to the set** (per-change additions make cost scale with change frequency); a repo's integration-suite budget is **≈50–100 cases — beyond that is over-testing** (trim rather than add).
+- **The integration window is an upper bound**: a repo's suite budget stays ≈50–100 cases — over the window, trim old scenarios rather than turn away a case a business change earned.
+  Why: read as a freeze, the window would turn every business change away, and the suite would stop following the business.
 - **Where integration cases live**: together with the test code, in the project's `test/` directory.
 - **Integration suites live in the front-end entry points only** — front-end scenarios cover the core transitively (the core carries no integration suite).
 - **Test volume stays flat as the project grows** — a ballooning suite is a cost sink.
@@ -183,8 +188,10 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **The gate**: one `test` run, all green.
 - **Iteration = unit tests only**: verify **only your own change** — run the targeted unit tests for the changed face (single file / relevant subset); another batch's files are gone at its closeout, and re-running them multiplies verification cost by the number of rounds.
 - **Integration tests = the release gate, not a work rhythm**: they run **once at closeout, parent side** — outside the eng-coder chain.
-- **A repo with no integration tests ⇒ the gate stays honestly empty-green** — a gate assembled out of unit files says only that something is green, not that the release is.
+- **A missing integration suite is a debt, not a steady state**: an empty set passes nothing — the closeout reports the count against the window (`0 / 50–100`) and books a ledger row for each integration suite this project is missing.
+  Each row is booked once, at the first closeout that reports that set empty; later batches do not re-book it while the debt stands.
   Report line: "not integration-test verified — the parent-side closeout run is the only integration-test run."
+  Why: a gate assembled out of unit files says only that something is green, not that the release is; the report keeps the debt visible while the row keeps it scheduled.
 - **Assertions ride behavior, not prose**: a test that reads a non-test doc and asserts "sentence X present / absent" (`includes` / verbatim substring / sentence-matching regex) goes red on a wording change and proves no behavior.
 - **New assertions only in behavior form** (business-observable results) and **structure-machine-check form**.
 - **A business gate ships with its failure case**: a gate that must reject gets a unit case — deleted with the batch, like every other unit case — that feeds it unsatisfied input and asserts the rejection plus its readable reason (the gate named, the offending input named).

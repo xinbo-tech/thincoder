@@ -135,13 +135,13 @@ export function manifestFilePath(cwd) {
 /** #802（KD-M1-36）未知键告警去重 memo：档路径 → 上次观测键集（进程内）；读到零未知键即清该条。 */
 const unknownKeysSeen = new Map()
 
-/** 读面一行可见告警（#802）：含键名；同档同键集恰一次——console.warn + logEvent('manifest:unknown-keys')。 */
+/** 未知键诊断（#802 · 2026-10-23 改）：**不上界面**——只写 logEvent('manifest:unknown-keys')；同档同键集恰一次。 */
 function warnUnknownKeys(file, unknownKeys) {
   if (unknownKeys.length === 0) { unknownKeysSeen.delete(file); return }
   const sig = JSON.stringify([...unknownKeys].sort())
   if (unknownKeysSeen.get(file) === sig) return
   unknownKeysSeen.set(file, sig)
-  console.warn(`[manifest] ${MANIFEST_REL} unknown key(s) ignored: ${unknownKeys.join(", ")} — not an error; check spelling / version mismatch (KD-M1-36)`)
+  // 不上界面（2026-10-23 用户裁定：换别的项目也不能弹，不许骚扰用户）；只写诊断日志，`manifest read` 时才出现在结果里
   logEvent("manifest:unknown-keys", { path: file, keys: unknownKeys.join(",") })
 }
 
@@ -264,16 +264,28 @@ function workspaceProjectMessage(cwd, candidates) {
  * 不替被开发项目创建目录（§1.4 边界）——cwd 不存在时写失败自然上抛。
  * @returns {object} 传入的 manifest（校验通过后原样落盘）
  */
+/** 已退役的顶层键（FR42 八键 → 五键）：写入时静默丢弃——它们不是用户拼错，是产品自己退场的键，
+ *  留着只会让读面反复报「未知键」骚扰用户（2026-10-23 用户裁定「死键你删掉啊」）。 */
+const RETIRED_KEYS = ["promptsLanding", "checkConfig", "advisor"]
+
+/** 返回去掉退役键的新对象（不改入参）。 */
+function stripRetiredKeys(obj) {
+  const out = { ...obj }
+  for (const k of RETIRED_KEYS) delete out[k]
+  return out
+}
+
 export function writeManifest(cwd, manifest, { writer = "subagent" } = {}) {
   if (writer !== "main") {
     throw new Error("writeManifest 拒绝：非主 agent 无写权（writer 须为 \"main\"，fail-closed 缺省拒）")
   }
-  const validated = validateManifest(manifest)
+  const cleaned = stripRetiredKeys(manifest)
+  const validated = validateManifest(cleaned)
   if (!validated.ok) {
     throw new Error(`writeManifest 拒绝：manifest 校验不过——${validated.errors.join("；")}`)
   }
-  writeFileSync(manifestFilePath(cwd), JSON.stringify(manifest, null, 2) + "\n")
-  return manifest
+  writeFileSync(manifestFilePath(cwd), JSON.stringify(cleaned, null, 2) + "\n")
+  return cleaned
 }
 
 /**

@@ -2,9 +2,9 @@
 
 > 板块：工程模式 / 台账——**待办总账单一权威源（SQLite）** + **台账提醒与可见面（FR24 载体面）**。
 > **v2**：存储 = **SQLite 单表**（M2 模块设计语义并入本档——就地更新纪律）。
-> **F-LX1 执行者归属**：多实例并存下在途条目记「谁在做」+ 可见面判活展示——schema `executor` 列（§2）· 迁移写语义（§3.1）· 判活展示（§7.3.1）；需求层指针 = `requirements/ENGINEERING-MODE-V2-SPEC-LEDGER.md` §2.8 · AC-M2-7/8。
-> 需求层指针 = `requirements/ENGINEERING-MODE-V2.md` §3（M2 台账 SQLite）· §9。
-> 兄弟档：`design/LEDGER-SELF-CONTAINED.md`（L4「本仓可解析」判据）· `design/DOC-DISCIPLINE.md`（机检引擎）· `design/BATCH-RECORD.md`（核销同步清单槽位枚举 = `design/DOC-DISCIPLINE.md` D7 行）。
+> **F-LX1 执行者归属**：多实例并存下在途条目记「谁在做」+ 可见面判活展示——schema `executor` 列（§2）· 迁移写语义（§3.1）· 判活展示（§7.3.1）；需求层指针 = `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-LEDGER.md` §2.8 · AC-M2-7/8。
+> 需求层指针 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §3（M2 台账 SQLite）· §9。
+> 兄弟档：`docs/core/design/LEDGER-SELF-CONTAINED.md`（L4「本仓可解析」判据）· `docs/core/design/DOC-DISCIPLINE.md`（机检引擎）· `docs/core/design/BATCH-RECORD.md`（核销同步清单槽位枚举 = `docs/core/design/DOC-DISCIPLINE.md` D7 行）。
 > 落点：用户数据目录键控库 `~/.thincoder/ledger/<sha1(项目根)>[:16].db`（SQLite，工作树外——天然不进 git；用户裁定：不在项目目录）· `thincoder-core/ledger-db.mjs`（DDL / 开库 / 幂等迁移）· `ledger-cmd.mjs`（命令族 + 工具定义）· `ledger.mjs`（族发现 / scan 组装 / 判活解析 / 格式 helper + re-export 单源）· `ledger-surface.mjs` ×3（核机制 + CLI / VSC 端胶水——显示面）。
 
 ## 1. 机制目标与范围
@@ -77,7 +77,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 - **键不变性**：盘符本已大写（CLI 侧）⇒ 归一恒等 ⇒ **CLI 现状键零变**；小写盘符（VSC 侧）并入同键 ⇒ 两端同库。判据 = AC-M2-11。
 - **级联面**：`findProject` / `discoverFamily` / `buildScan` 全链随键收敛——**不新增归一函数、不改各调用点**（键只在 `ledgerKey` 一处生成）。
 - **单源判据射程**（AC-M2-11 第三分句）：grep 域限**台账键生成面**（`ledgerKey` 所在链）——他面哈希（会话 / checkpoint / 迁移报告等合法同形哈希）**不属本判据**。
-- **根解析面（读写同一推导）**：**项目根 = 自「动作目标路径」（缺省 = 会话锚 `cwd`）起，沿祖先链向上（含自身）取的最近一个「已注册」目录**——读写**同一判据、同一实现**（单源 = `ledger-db.mjs` `resolveLedgerRoot(target, { descend })`）。
+- **根解析面（读写同一推导）**：**项目根 = 自「动作目标路径」（缺省 = 会话锚 `cwd`）起（含自身）上溯取的最近一个「已注册」目录——上溯不设上界**（会话落在项目内层子目录时，这一路正是它归到自己项目根的通路）——读写**同一判据、同一实现**（单源 = `ledger-db.mjs` `resolveLedgerRoot`）。
   - **「已注册」判据（唯一 · 可观测事实）**：两臂取一即成立——
     - **档臂**：该目录**带项目声明档 `PROJECT-MANIFEST.json`**（档在盘）。
     - **库臂**：**以该目录自身路径为键的键控台账库在盘**（键 = `ledgerKey(dir)`、库位 = `ledgerDirPath()`——**不得经 `ledgerDbPath`**，见 §3.8「无自指」句）；**排除工作区态**：该目录 `projectRootView` `workspace` ⇒ 库臂不成立（键控库存在 ≠ 可作项目——与 §7.2 工作区根子例**同判据同处单源**）。
@@ -291,7 +291,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 
 **读面**：`query` 行集自然携带（`SELECT *` 纯增量——签名不破）；导出面入 `DATA_COLUMNS`（**已落 · 13 列**——`ledger-migrate.mjs:20`–`:23`）。
 
-**对齐（最近先例）**：批档侧暂缓纪律「暂缓 · 复核条件见批档 §1 状态行」（`design/BATCH-RECORD.md` §5.1 L8）——`resume_when` = 同一条件的**账内结构化形**；两处条件文本**各自单源**（账内句不复制批档条件句）。
+**对齐（最近先例）**：批档侧暂缓纪律「暂缓 · 复核条件见批档 §1 状态行」（`docs/core/design/BATCH-RECORD.md` §5.1 L8）——`resume_when` = 同一条件的**账内结构化形**；两处条件文本**各自单源**（账内句不复制批档条件句）。
 
 **schema 版本**：`LEDGER_SCHEMA_VERSION` 1 → 2（新列 = 结构变更 ⇒ 升号——`ledger-db.mjs` 常量注）；老库幂等迁移 `ALTER TABLE items ADD COLUMN resume_when TEXT`（与 `executor` 列同一迁移机制——列迁移抽共件，两列共用一份「复判列在否」逻辑）。
 
@@ -359,7 +359,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
   **偏离** = 不采「把档存在性当门」这一近邻做法（判据形态偏离）——理由 = 档可合法消失 ⇒ 当门则合法账务被拒、而出路正是被拒字段 ⇒ 死锁（用户 2026-10-16 当面指出「盘上的批次档不是稳定存在，不能把这作为判据」）。
 - **逐行计算字段（读数形态）**：先例 = 本档 §7.1 `ledgerQuery` 逐行携 `aged`（§5 老化；实现坐标 = `thincoder-core/ledger-cmd.mjs` `ledgerQuery` 的 `aged: isRowAged(r, now)` 计算点；先例批次 = 2026-10-07 批 ledger-tool）∥ `evidenceOversize`（§5 超限读数）——**逐行携、不入库、不入 `DATA_COLUMNS`**。**对齐** = `taskBookOnDisk` 同形（同径计算、存储零变更）。**偏离** = 无。
 - **判「本笔入参自身」**：先例 = §3.3 `batch` 入参自身门 ∥ §3.2 工具层参数守卫（判本笔入参；实现坐标 = `thincoder-core/ledger-tools.mjs` `assertToolArgs`，已落——先例批次 = 2026-09-28 守卫族微修批 · 台账 #473）。**对齐** = 门只判本笔自己声明的事实。**偏离** = 门对象由「结果行组合」换成两臂（臂① 结果行存在性 + 臂② 本笔新指名）——理由同首条。
-- **收口重锚（C）**：先例 = 批级批量体例（§3.3——取行 + 逐行落笔 + 单事务）∥ `design/BATCH-RECORD.md` §4.13（收口回执段：列名单、不阻断冻结）。
+- **收口重锚（C）**：先例 = 批级批量体例（§3.3——取行 + 逐行落笔 + 单事务）∥ `docs/core/design/BATCH-RECORD.md` §4.13（收口回执段：列名单、不阻断冻结）。
   **对齐** = 回执逐行点名 ∥ 不阻断冻结 ∥ 取行单源（实现坐标 = `thincoder-core/agent-tools/batch-lifecycle.mjs` 收口两路共调单源 `reanchorOnClose`——`close` 径 ∥ `status` 写 §1「已收口」径）。
   **偏离** = **只读零写** → **收径自动写行**（放开面 = 收口两路共一处写单源）——理由 = 用户 2026-10-16 10:41 采纳父侧所提 ②（零写报警只报不改，则行仍需人工脱钩）；两项代价用户已知情 = §8 边界 12 修正 + `归批` 意图降级（回执照报）。**被否** = 零写报警 + 建议处置句。
 - **无先例宣告**：**A / B = 有本仓在册同形先例**（见上——实现坐标已给）；**C = 本仓首次**（工具径自动写台账行无同形先例——原态「只读零写」是既有边界（`docs/core/design/BATCH-RECORD.md` §8 边界 12），本批放开收口写面即该项代价，用户 2026-10-16 10:41 知情）。
@@ -480,7 +480,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 
 **判据本体 = §2.1「根解析面」**（判据句 / 已注册判据 / 多解规则 / 报明形态；D2 不重述）。
 
-**单源与消费面**：单源 = `thincoder-core/ledger-db.mjs` 新导出 `resolveLedgerRoot(target, { descend = true }) → { root, basis } | null`——`basis` ∈ `'ancestor'`（祖先链命中——自明）∥ `'descendant'`（向下发现 / 收敛序——**须报明**）。
+**单源与消费面**：单源 = `thincoder-core/ledger-db.mjs` 新导出 `resolveLedgerRoot(target, { descend = true }) → { root, basis } | null`——`basis` ∈ `'self'`（目标自身即根——自明）∥ `'ancestor'`（上溯命中——自明）∥ `'descendant'`（向下发现 / 收敛序——**须报明**）。
 
 - **无自指**：本函数内部的「库在盘」判据只用 `ledgerKey(dir)` + `ledgerDirPath()` 拼得之库，**不得经 `ledgerDbPath`**（后者归本单源——互指即环，按文面不可实现）。
 - **落点取 `ledger-db.mjs`**：`ledger.mjs` 已静态依赖它、反向不成立——`ledgerChildren` / `MAX_SIBLING_SCAN` 常量**随迁**本档、其谓词放宽为「**已注册**」（§2.1 判据——**单谓词**，消「收敛序内部枚举」与「公共 `ledgerChildren`」两套判据），`ledger.mjs` re-export 保公共面**形**零改；W8 契约②下无环。
@@ -491,7 +491,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 |---|---|---|
 | `openLedger(cwd)`（五 action 存取入口） | 工作区锚 ⇒ `throw` 列候选 | 走 `resolveLedgerRoot`；**该抛退场**；无根（`null`）⇒ 写面抛 ∥ 读面空账（见下「无根契约」） |
 | `ledgerDbPath(cwd)`（库键路径） | `resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")` 自持一步 | 走 `resolveLedgerRoot`（单源）；无根 ⇒ 抛**同一**无根文案（键需根，不产第二答案） |
-| `findProject(anchor)`（族发现 `current`） | 祖先链 `isFile(ledgerDbPath(dir))` walk（**返回锚**） | 薄委托 `resolveLedgerRoot(anchor, { descend: false })`（**取祖先支**——返回根、消「根报成锚」旧差；容器 ∥ 工作区锚 ⇒ `null`——见「择一」句） |
+| `findProject(anchor)`（族发现 `current`） | 祖先链 `isFile(ledgerDbPath(dir))` walk（**返回锚**） | 薄委托 `resolveLedgerRoot(anchor, { descend: false })`（**取上溯支（含自身）**——返回根、消「根报成锚」旧差；容器 ∥ 工作区锚 ⇒ `null`——见「择一」句） |
 | `buildScan({ cwd })`（scan 组装——`root` / `name` / `ledger` 三字段） | `root` / `name` = `resolve(cwd)`（**锚**——非根）；`ledger` = `ledgerDbPath(锚)`（经 `ledgerDbPath`——**必随动**：该面无根即抛） | 三字段一律取 `resolveLedgerRoot(anchor)` 推导根（非锚）；无根（`null`）⇒ `ledger: null`（不落兜底根）、`root` / `name` 回落锚、行集空（该 scan 不进族枚举） |
 | `ledger-read.mjs:53`（单范围根） | `resolveProjectRoot(anchor) ?? resolve(anchor)` | 走 `resolveLedgerRoot`；无根 ⇒ `projects: []`（空集，**不落兜底根**） |
 | `cwdOf`（`ledger-tools.mjs:17`） | 缺省直取会话 cwd（**当根用**） | **零改**——它是锚源；「锚 → 根」在 `openLedger` 单点发生 |
@@ -499,7 +499,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 
 **收敛序（容器锚 = 锚自身及祖先链皆无已注册者；`descend: true`）**：向下枚举锚的直接子目录中**已注册**者（`ledgerChildren` 同款惰性枚举 + `MAX_SIBLING_SCAN` 上限、名序升序）——**恰一 ⇒ 取之**；**≥2 ⇒ ① 先取「有键控库」子集**（非空时以之为候选集——账已在盘 = 事实）**② 该集名序升序首者**（稳定序）；**零已注册子目录 ⇒ 返回 `null`**（无根——契约见下）。
 
-**报明形态**：**触发 = `basis === 'descendant'`**（报明面机械可判，非靠猜）；`add` / `update` / `close` / `count` 的**对象形回执增 `root` 键**（供值面 = 工具层调同一单源——单实现、多调用点；`ledger-cmd.mjs` 回执形零改）；`basis === 'ancestor'`（自明路径）⇒ 回执**逐字零改**；`query` 行集形不携（其可核性 = 行集本身 + `count`）。
+**报明形态**：**触发 = `basis === 'descendant'`**（报明面机械可判，非靠猜）；`add` / `update` / `close` / `count` 的**对象形回执增 `root` 键**（供值面 = 工具层调同一单源——单实现、多调用点；`ledger-cmd.mjs` 回执形零改）；`basis === 'self'` / `'ancestor'`（自明路径）⇒ 回执**逐字零改**；`query` 行集形不携（其可核性 = 行集本身 + `count`）。
 
 **族发现 ∥ 标记面取根（择一 · 本设计内写死 —— 不留实现者自择）**：**取「祖先支」**——`findProject(anchor)` = `resolveLedgerRoot(anchor, { descend: false })`（容器锚 ∥ 工作区锚 ⇒ `null` ⇒ `discoverFamily` 按容器形枚举子目录族 ⇒ 标记 = **族求和**）。
 
@@ -612,14 +612,14 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 ## 6. 机检（v2 收编）
 
 - **check-ledger 作废**——台账一致性由 **SQLite CHECK（枚举+咬合）+ `ledgerCount`（计数单源）** 承担；旧脚本 `scripts/check-ledger*.mjs` 归 **M8 机检引擎**删除（架构 §2.2 M8「check-ledger 作废」，无悬空窗口）。
-- **L4（本仓可解析）与形态合规 V4** = `design/LEDGER-SELF-CONTAINED.md`（跨仓登记面——正交保留）。
+- **L4（本仓可解析）与形态合规 V4** = `docs/core/design/LEDGER-SELF-CONTAINED.md`（跨仓登记面——正交保留）。
 
 ### 6.1 写门·指针点名（`task_book` → 批次档）
 
 **在册状态（单源）**：本节的**两臂形态**（判**本笔写入面**）**未落地在册（在册未落）**——实读 `thincoder-core/ledger-cmd.mjs:144` `assertTaskBookGate`（判据体 `:145`–`:151`；三条拒因文案在 `:146` / `:148` / `:151`）仍为旧形（`status ∈ {在途, 待核销}` ⇒ 必填 ∧ 可解析 ∧ **在盘**；无 `trigger=归批` 臂、无「本笔写入面」入参）；
 **落地批 = 台账 #1550**（单源 = §3.5 四件表：A 两臂 ∥ B 读数 ∥ C 收口重锚 ∥ 归批门同 helper 一并落；本批 #1530 只定形 P2(a)，不含该门实施）。
 
-**判据句**（架构 E1「咬合判据（两账）」后半幅 · `design/ENGINEERING-MODE-V2.md` §2.3）：`task_book` 的判据锚在**命令对象自身能给出答案**的两件事实上——① **点名非空**（`在途 / 待核销` 与 `trigger=归批` 的行必须点名一个任务书）；② **本笔新指名有效**（本笔写进去的那个指针须可解析 ∧ 指向在盘的档）。
+**判据句**（架构 E1「咬合判据（两账）」后半幅 · `docs/core/design/ENGINEERING-MODE-V2.md` §2.3）：`task_book` 的判据锚在**命令对象自身能给出答案**的两件事实上——① **点名非空**（`在途 / 待核销` 与 `trigger=归批` 的行必须点名一个任务书）；② **本笔新指名有效**（本笔写进去的那个指针须可解析 ∧ 指向在盘的档）。
 **「档此刻在不在盘」不入此判**：批档按设计可随时整体清理（`DOC-DISCIPLINE.md` §4.5.1）——把它当门，合法清档之后凡指该档的行连「改 `status` / 改 `evidence` / 重指」都被拒，而**出路正是被拒的那个字段** ⇒ 死锁；故「在盘」降为**读数**（§7.1 `taskBookOnDisk` · §6.2 收口重锚），门只判**本笔写入面**。
 
 **形态 = 写入时门（两臂，本笔写入面判）**：`thincoder-core/ledger-cmd.mjs` 两条写命令（`ledgerAdd` / `ledgerUpdate`）落盘前按**本笔改动的字段**判：
@@ -654,7 +654,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 前两句**只出在本笔新指名**时（新写的值不在盘 / 不可解析 ⇒ 拒）；行现值指向已清档而本笔未指名 ⇒ 不判（读数见 §7.1）。
 **缺指针文案单源**：上式第三句 = 结果行缺 `task_book` 的**唯一**拒因文案（全档只此一处定义）——`归批` 与 `在途 / 待核销` 是同一门臂① 的三个入触发条件，**不分文案**；§6.2 归批门 ∥ AC-M2-10 ∥ AC-M2-29 ∥ 用例 T106 均引用本句，不另写。
 
-**边界**：① 不做**事后拒写**（存量指针此后失效不阻其字段更新——档消失只体现为读数 `taskBookOnDisk = false`）；② 不做**仓界判**（指针是否落在仓内 = L4 判据 · `design/LEDGER-SELF-CONTAINED.md`——本条目不并）；③ 不改 DDL（存在性无 SQLite 表达面——CHECK 读不到 fs）；④ 不做**存量扫描修复**（读数照出，修复走写命令——§6.2 收口重锚）。
+**边界**：① 不做**事后拒写**（存量指针此后失效不阻其字段更新——档消失只体现为读数 `taskBookOnDisk = false`）；② 不做**仓界判**（指针是否落在仓内 = L4 判据 · `docs/core/design/LEDGER-SELF-CONTAINED.md`——本条目不并）；③ 不改 DDL（存在性无 SQLite 表达面——CHECK 读不到 fs）；④ 不做**存量扫描修复**（读数照出，修复走写命令——§6.2 收口重锚）。
 
 ### 6.2 归批指针门（`trigger=归批` 咬合 `task_book`）
 
@@ -738,7 +738,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 | `ledgerBatchRows({ cwd, batch })`（**新增**） | 本批行集（只读，任意状态）——批身份单源 = §3.3 解析同址；`cwd` = 批档所属项目根（§6.2 `cwd` 基准）；逐行携 `taskBookOnDisk`；**失败语义**：`batch` 不可解析 ∥ 无根 ⇒ 抛（同族 `assertBatchArg` 形）；**消费面 = 读面**（审计 / 人工查本批行）——收口两路均不调（回执单源 = `ledgerReanchorBatch`）；零写 |
 | `ledgerReanchorBatch({ cwd, batch })`（**新增**） | **收口重锚单源**（写命令，主 agent 面）——取 `ledgerBatchRows` 集（取行 = `status ∈ {待讨论, 待设计, 在途}`——§6.2）→ 滤现值已 `条件` 者（幂等）与 `trigger=认账不排期` 者（零触）→ 逐行改 `trigger=条件` + 复启句落 `resume_when`（现值非空 ⇒ 不覆盖、追加 `evidence`）→ 单事务；回 `{ batch, reanchored, alreadyAnchored, failed }`（`failed` = `null` 常态 ∥ 失败因串（含「批档所属项目根不可推导」）；失败 ⇒ 整集回滚、`reanchored = []`）；`cwd` 同 `ledgerBatchRows`；消费面 = 收口两路（`batch` close ∥ `status` 写 §1「已收口」——§6.2 · C） |
 | `findProject(anchor)` | 薄委托 `resolveLedgerRoot(anchor, { descend: false })`（§3.8——**取祖先支**）→ `{root, ledger}` / `null`——`root` = **推导所得项目根**（非锚） |
-| `resolveLedgerRoot(target, { descend = true })`（**新增**） | 项目根推导**单源**（§2.1 / §3.8）：沿祖先链取最近「已注册」目录 → `{ root, basis }`（`basis` = `'ancestor'` ∥ `'descendant'`——后者为报明触发）；容器锚 ⇒ 收敛序（零已注册子目录 ⇒ `null`）；`descend: false` ⇒ 仅祖先支；**无自指**（库判据不经 `ledgerDbPath`）；消费面 = §3.8 表 |
+| `resolveLedgerRoot(target, { descend = true })`（**新增**） | 项目根推导**单源**（§2.1 / §3.8）：**上溯**取最近「已注册」目录（含自身；不设上界）→ `{ root, basis }`（`basis` = `'self'`（自身即根）∥ `'ancestor'`（上溯祖先命中）∥ `'descendant'`（向下收敛——后者为报明触发））；祖链无已注册者 ⇒ 收敛序（零已注册子目录 ⇒ `null`）；`descend: false` ⇒ 仅上溯支（自身 ∥ 祖先）；**无自指**（库判据不经 `ledgerDbPath`）；消费面 = §3.8 表 |
 | `ledgerChildren(dir)`（**随迁**——自 `ledger.mjs` 迁入本档） | 目录下**已注册**（档 ∨ 库）的直接子目录（目录名升序；惰性枚举 + `MAX_SIBLING_SCAN` 上限——不可读 ∥ 超限 ⇒ 空集）——谓词 = §2.1「已注册」单谓词；消费面 = 族发现 ∥ 轻通道闸候选枚举（同级判据单源）；`ledger.mjs` re-export（公共面形零改） |
 | `discoverFamily(anchor)` | `{current, projects}`——current = `findProject`（**祖先支无命中 ⇒ `null`**——容器 ∥ 工作区锚按容器形落子目录族；§7.2）；projects = current + 其同级已注册目录；current 缺 ⇒ **锚本地**枚举（锚自身**已注册**的直接子目录——不沿祖先链上找） |
 | `formatMarker(scan)` | §7.3 逐字（**签名与键语义不变**——L1 标记零扩，§7.3.1；**范围限定**：单 scan 逐字模板——范围求和不在本函数，经 `scopeMarkerOf` 委托出文（§7.2）） |
@@ -748,7 +748,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 
 ### 7.2 口径契约
 
-- **计数 / 老化 / 阈值 / 可动作**：见 `requirements/ENGINEERING-MODE-V2.md` §9（D2 本节不重述）。
+- **计数 / 老化 / 阈值 / 可动作**：见 `docs/core/requirements/ENGINEERING-MODE-V2.md` §9（D2 本节不重述）。
 - **明细行集** = `{current} ∪ {可动作项目}`（发现序：current 在前，其余按目录名升序）；同项去重。
 - **标记范围（L1）**：`current` 在场 ⇒ 仅当前项目（命中但不可读 ⇒ 空范围——不掺兄弟）；否则 ⇒ 族内**已读**项目（不可读跳过——既有语义）；空范围 ⇒ `marker` = `null`（不落 `0·0`）；范围非空 ⇒ 两池**分列求和**（F1——不合并为一数）。三端消费：核拍面写 `state.ledger` · VSC item 直调 `scopeMarkerOf`（端零自算；在场判据 = `marker` 非空）· 桌面 `ev:ledger` `marker` 转发（端零重算）。
     - **范围推导**：`current` 在场 ⇒ 范围 = `scans` 中 `root` = `family.current.root` 的 scan（**项目根自身带档 / 带库** ⇒ `findProject` 命中该根 ⇒ 归属 = 该根自身——只显其自身数，不合计其下项目）；`current` 缺席（容器根锚）⇒ 族 = `discoverFamily` 枚举面 `projects`（**锚本地**：取锚自身**已注册**（档 ∨ 库）的直接子目录——不沿祖先链上找）。
@@ -840,14 +840,14 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 | AC-M2-14 | 收口两源：待讨论 / 待设计 → 已核销 **直通**（`evidence` 非空）；缺 `evidence` ⇒ 拒（行不变）；在途 → 已核销 ⇒ 拒（不可跳 待核销）；已核销 / 已废弃 现态 ⇒ 拒；撤回路径零改 | ②.2（用例 T33–T36） |
 | AC-M2-15 | 工具层参数守卫：写命令三 action（add / update / close——统一入口 `ledger`）非法入参（非对象 / 未知键 / 缺必填（含显式 `null`）/ 错型 / 非枚举 / `title` 空串 / 全空白）⇒ 拒（throw，零写、零库动作）+ 文案逐字（§3.2 P1–P6）；合法形（含复杂文本 / 可空 `null` 字段 / `cwd` 缺省）零回归 | §3.2（需求档补行已落——AC-M2-15） |
 | AC-M2-16 | 读命令守卫 + `executor` 空值口径：读命令二 action（query / count——统一入口 `ledger`）非法过滤参数（非对象 / 未知键 / 枚举外值（含数组 / 错型值）/ 错型）⇒ 拒（throw，零库动作）+ 文案逐字（§3.2 P1–P6）；合法形（缺省 / 可空 `null` / 过滤命中）零回归；`ledger(update)` 显式 `executor: null` 与略去同判（进「在途」自动写会话 sessionId——§3.1 优先级链） | §3.1 / §3.2（需求侧补行**已落**——AC-M2-15 射程注 + AC-M2-16） |
-| AC-M2-17 | **根解析面（读写同一推导）**：项目根 = 自「动作目标路径」（缺省 = 会话锚 `cwd`）起沿祖先链取最近「已注册」目录（已注册 = `PROJECT-MANIFEST.json` 在盘 ∨ **以目录自身路径为键**的库在盘 ∧ **非工作区态**）；读写同一实现；嵌套 ⇒ 取近者；容器锚 ⇒ 收敛序（有库者优先 → 名序首者）+ 回执携 `root`（写三 + count）；**族发现 ∥ 标记面取祖先支**（容器 ∥ 工作区锚 ⇒ `findProject` = `null` ⇒ 族求和）；**无根**：读面空账 ∥ 写面抛；旧文案 `node` 行扫零命中；`ledgerKey` / 状态机零改 | §2.1 ∥ §3.8 |
+| AC-M2-17 | **根解析面（读写同一推导）**：项目根 = 自「动作目标路径」（缺省 = 会话锚 `cwd`）起（含自身）**上溯取最近「已注册」目录**——上溯不设上界（子目录归自己的项目根）（已注册 = `PROJECT-MANIFEST.json` 在盘 ∨ **以目录自身路径为键**的库在盘 —— 判据见 §2.1） |
 | AC-M2-18 | **标记 = 当前打开范围合计**（需求 §13.3 第 1 条）：容器根锚（族 ≥1 已读项目）⇒ 标记 = 族内已读项目两池分列求和（`台账 <Σpool>·<Σtech>`）；具体项目锚 ⇒ 仅该项目自己（兄弟零掺——负向锁）；命中但不可读 ∥ 空范围 ⇒ `marker = null`（命中 = **可解析项目**）；`warn` 同范围聚合（范围内 `overdue>0 ∨ deadExecutors>0`——§3.7 口径） | FR24（需求 §13.3 第 1 条「状态行极简标记」） |
 | AC-M2-19 | **工作区锚不充当项目**（AC-M2-18 范围面子例）：命中锚 `projectRootView` `workspace`（如锚位存量键控库先于写门）⇒ 按容器根形落子目录族求和——键控库存在 ≠ 可作项目（消静默缺席）；T51 面（**可解析**项目命中但不可读 ⇒ `null`）不受触 | FR24（需求 §13.3 第 1 条「状态行极简标记」· 工作区根子例）——用例 = 登记态（K12 红绿对为载体；号码待定——T56 已占；下次触碰该面时补） |
 | AC-M2-26 | **批级批量迁移**（§3.3）：`ledger(update)` 携 `batch`（批档指针）+ `status` ⇒ 选出「批 → 行」集（`task_book` 文件部分经 `resolveDeclaredRef` 解析同址——任意状态），逐行按迁移表重判；表外行 / 门拒行 ⇒ 跳过并逐行点名（`{id, from, why}`）；一个事务包裹；`applied` 计数对；`id` / `batch` 同携 ∥ 双缺 ⇒ 拒（组判据 P7）；`batch` 入参自身可解析 ∧ 批档在盘 ⇒ 否则拒（fail-closed——**本笔指名判**，与 §6.1 臂② 同族） | §3.3 |
 | AC-M2-27 | **批级批量结算**（§3.3）：`ledger(close)` 携 `batch` ⇒ **只销已到 `待核销`** 的行（勾销）；`待讨论` / `待设计` / `在途` ⇒ 跳过 + 逐行点名（禁静默销账）；**追认核销不入批量面**；混批（部分落）与纯批两态各一拍（`applied` / `skipped` 计数对） | §3.3 |
 | AC-M2-28 | **`task_book` 等值过滤**（§7.1）：`ledger(query)` 增 `task_book` 过滤（与 status / kind / board / trigger 并列为第 5 枚）；`ledger(count)` 同增（现状零过滤 ⇒ 本批只增 `task_book` 一枚）；同值多批互不串（造 3 批各回各集）；非串值 ⇒ 拒（守卫 P4） | §7.1 |
 | AC-M2-29 | **归批指针点名门**（§6.2）：`trigger=归批` 的结果行 ⇒ `task_book` 非空（缺 ⇒ 拒，文案 = §6.1 载的同一句——本节不另立，行不变，零写）；**本笔新写** `trigger=归批` ⇒ 绑定指针非空 ∧ 可解析 ∧ 在盘（否则拒）；带 `trigger=归批` 而行指针所指档已清 ⇒ 其 `status` / `evidence` 更新**照过**（本笔未指名 ⇒ 零判）；`在途 / 待核销` 面逐字零回归；批量形同判（`applyRowUpdate`） | §6.2 |
-| AC-M2-30 | **收口自动重锚**（§6.2）：收口**两路**（`batch` close ∥ `status` 写 §1「已收口」）**同调单源 `reanchorOnClose`、零二写** ⇒ 未落行（`task_book` 解析同址指本档 ∧ `status ∈ {待讨论, 待设计, 在途}`——`待核销` 属已落只待结账，不取）**自动**改 `trigger=条件` + 复启句落 `resume_when`（§3.4——值非空；该列现值非空 ⇒ 不覆盖、改追加 `evidence`）；`trigger=认账不排期` 行零触；回执逐行点名所锚行、冻结照常；**幂等**（现值已 `条件` ⇒ 零写跳过）；**单事务**（失败整集回滚 + 回执照报）；**次序**（收口那一笔的全部拒因通过、状态行落盘之后才跑——被拒 ⇒ 台账零写）；**一次收口只出一份 `[ledger reanchor]` 清单**（两路不同拍）；**失败经返回形 `failed` 项报出 + 收口回执点名**；全已落 ⇒ 无该段；共存边界（批量结算 / 出口清单）= §6.2「收口三动作边界」 | §6.2 ∥ `design/BATCH-RECORD.md` §4.13 |
+| AC-M2-30 | **收口自动重锚**（§6.2）：收口**两路**（`batch` close ∥ `status` 写 §1「已收口」）**同调单源 `reanchorOnClose`、零二写** ⇒ 未落行（`task_book` 解析同址指本档 ∧ `status ∈ {待讨论, 待设计, 在途}`——`待核销` 属已落只待结账，不取）**自动**改 `trigger=条件` + 复启句落 `resume_when`（§3.4——值非空；该列现值非空 ⇒ 不覆盖、改追加 `evidence`）；`trigger=认账不排期` 行零触；回执逐行点名所锚行、冻结照常；**幂等**（现值已 `条件` ⇒ 零写跳过）；**单事务**（失败整集回滚 + 回执照报）；**次序**（收口那一笔的全部拒因通过、状态行落盘之后才跑——被拒 ⇒ 台账零写）；**一次收口只出一份 `[ledger reanchor]` 清单**（两路不同拍）；**失败经返回形 `failed` 项报出 + 收口回执点名**；全已落 ⇒ 无该段；共存边界（批量结算 / 出口清单）= §6.2「收口三动作边界」 | §6.2 ∥ `docs/core/design/BATCH-RECORD.md` §4.13 |
 | AC-M2-31 | **evidence 超限读数**（§5）：`query` 行集逐行携计算字段 `evidenceOversize`（`String(evidence).length > EVIDENCE_SOFT_LIMIT`（300）；缺 / 空 ⇒ false；不入库、不入 `DATA_COLUMNS`）；`count` 回报 `{ count, overdue, evidenceOversize }`（三键形——§7.1；`evidenceOversize` = 未决四态中超限行数）；**写入不拒**（读数非闸门） | §5 |
 | AC-M2-32 | **`resume_when` 可空字段**（§3.4）：items 增可空列（`LEDGER_SCHEMA_VERSION` 1 ⇒ 2；老库 `ALTER` 幂等补列、行不损、二次打开零副作用）；`ledger(add / update)` 可携（可空 · 串；空串 / 全空白 ⇒ 拒）；`query` 行集携带；导出面入 `DATA_COLUMNS`（13 列）；不带参零回归（存量行 NULL）；`migrate` 列集容忍集扩为 `{executor, resume_when}` | §3.4 |
 | AC-M2-33 | **指针在盘读数**（§6.1 / §7.1）：`query` 行集逐行携计算字段 `taskBookOnDisk`（`task_book` 文件部分经 `resolveDeclaredRef` 解析成立 ∧ 该档在盘 ⇒ `true`；缺指针 / 不可解析 / 档不在盘 ⇒ `false`）；**不入库、不入 `DATA_COLUMNS`**（`DATA_COLUMNS` 13 列零变）；**读数非闸门**（任何写入零阻）；**迁移 dry-run 的读数旗（`writeGateFlag`）同为读数**——不拦任何写入（§2.2 / §6.1 口径 5；验证由 T32 承载）；同夹具「档在盘 → 删档 → 再查」两拍读数翻转 | §7.1（B） |

@@ -102,10 +102,9 @@ function readAction(target, { canInit = true } = {}) {
   const lines = [`state=${view.state}`]
   if (view.path) lines.push(`path=${view.path}`)
   if (view.state === "ok") {
-    const m = readManifest(view.root) // 细节面：missingKeys / unknownKeys / errors（非空才出）
+    const m = readManifest(view.root) // 细节面：missingKeys / errors（非空才出）
     lines.push(`manifest=${JSON.stringify(m.manifest)}`)
     if (m.missingKeys?.length) lines.push(`missingKeys=${m.missingKeys.join(", ")}`)
-    if (m.unknownKeys?.length) lines.push(`unknownKeys=${m.unknownKeys.join(", ")}`)
     if (m.errors?.length) lines.push(`errors=${m.errors.join("；")}`)
   } else if (view.state === "missing") {
     lines.push(canInit
@@ -113,8 +112,8 @@ function readAction(target, { canInit = true } = {}) {
       : "hint: no manifest here — report it; creating one is a main-agent action")
   } else if (view.state === "no-project") {
     lines.push(canInit
-      ? "hint: no project on the ancestor chain and none below — manifest action=init can create one at the target"
-      : "hint: no project on the ancestor chain and none below — report it; creating one is a main-agent action")
+      ? "hint: no project at this directory and none in the direct children — manifest action=init can create one at the target"
+      : "hint: no project at this directory and none in the direct children — report it; creating one is a main-agent action")
   } else if (view.state === "workspace") {
     lines.push(`projects (${(view.candidates ?? []).length}):`)
     for (const c of view.candidates ?? []) lines.push(`- ${c}`)

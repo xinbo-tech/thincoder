@@ -9,7 +9,7 @@
  * （`MANIFEST_REL` ∥ `discoverProjects` ∥ `owningProject` ∥ `resolveProjectRoot`）随 import。
  * 零环：本档不引宿主（方向单行）；档外依赖 = `node:fs` ∥ `node:path`；机制详述 = `docs/core/design/MANIFEST.md` §2.2 / §2.9。
  */
-import { existsSync, readdirSync } from "node:fs"
+import { existsSync, readdirSync, statSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 
 /** 数据档文件名（**每个项目一份**——项目根 = 带档目录；**git 非前提**。2026-09-17 / 2026-09-21 用户裁定）。 */
@@ -88,25 +88,34 @@ export function discoverRepos(cwd) {
 }
 
 /**
- * **归属形单点**（KD-M1-30 / 设计 §2.9 A——2026-09-21 用户裁定「最近者优先」）：自 `target`
- * （目录含自身；文件路径自其父目录起）沿**祖先链**逐级上溯至盘根，取**最近**带 `MANIFEST_REL`
- * 的目录；无 ⇒ `null`（⇒ 调用方走发现兜底）。**嵌套合法**：子内归子、根其余归根。
- * **纯 fs**（只判存在性——不解析档内容 / 不问模式）· **不跨兄弟** · **无全局优先级**。
- * **覆盖位**（`_setProjectRootForTest` 在场）⇒ **头部短路**：直接返回覆盖值（不查档存在性——
- * 保「覆盖即覆盖值」语义，回归守卫 = 本批单元测试档基座用例（`docs/batches/2026-10-02-manifest-resolution-fix.test.mjs`——
- * 基座三态 + 覆盖位 + 薄委托等价逐格）+ `docs/batches/2026-09-29-structure-split-2.test.mjs` 导出枚举探针（`Object.keys` 名面核））。
+ * **归属形单点**（KD-M1-30 · 2026-10-23 用户裁定）：自 `target`（目录 = 自身；文件 = 其所在目录）
+ * 沿**祖先链**上溯，取最近带 `MANIFEST_REL` 的目录 ⇒ 该目录；无 ⇒ `null`（交发现兜底）。
+ * 会话落在项目内层子目录时，这一路上溯正是它归到自己项目根的通路（用户 2026-10-23 23:24
+ * 「本来就该爬到项目根啊」）；**发现梯（`discoverProjects`）仍纯向下**——从工作区容器只找直接
+ * 子目录，不把容器挂到外层项目上。**纯 fs** · **不跨兄弟** · **无全局优先级**。
+ * **覆盖位**（`_setProjectRootForTest` 在场）⇒ **头部短路**：直接返回覆盖值（不查档存在性）。
  * @param {string} [target] 目标路径（目录 / 文件）
- * @returns {string|null} 最近带档祖先目录绝对路径 / null
+ * @returns {string|null} 带档目录绝对路径 / null
  */
 export function owningProject(target) {
   if (_projectRootOverride) return resolve(_projectRootOverride)
   let dir = resolve(target ?? ".")
+  const st = statSync(dir, { throwIfNoEntry: false })
+  if (st && !st.isDirectory()) dir = dirname(dir)
   for (;;) {
     if (existsSync(join(dir, MANIFEST_REL))) return dir
     const parent = dirname(dir)
-    if (parent === dir) return null // 盘根 → 祖先链无档
+    if (parent === dir) return null
     dir = parent
   }
+}
+
+/** `dir` 是否等于 `bound` 或在其子树内（分隔符归一比较）。 */
+function isInsideOrEqual(dir, bound) {
+  const norm = (p) => p.replaceAll("\\", "/").replace(/\/+$/, "")
+  const d = norm(dir)
+  const b = norm(bound)
+  return d === b || d.startsWith(b + "/")
 }
 
 /** **项目根解析的直读形**（判定单点——设计 `MANIFEST.md` §2.2 `projectRootView` 契约行 / §2.5

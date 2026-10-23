@@ -89,7 +89,11 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
 ## Project state file (PROJECT-MANIFEST — resolved per use site)
 **One per project** — a project = a directory carrying `PROJECT-MANIFEST.json` (**git is not a prerequisite**), and the file sits at the project root (project stage / directory declarations — pure machine state).
 **Parameters are resolved per use site; a session is not bound to a project**: whichever project's path an action targets, that project's file is the one read (several projects coexisting = a normal state).
-**Ownership = nearest ancestor wins**: walk the target path's ancestor chain and take the nearest directory carrying the file.
+**Ownership climbs only inside the anchor**: a project is the directory that carries the file. From the target, walk up the ancestor chain to the nearest such directory — **but never past the session anchor (cwd)**.
+  Inside the anchor, climbing is what lets a subdirectory resolve to its own project root — that is correct and expected.
+  Above the anchor, climbing would bind the target to an unrelated enclosing project the user never chose — that is what the user has ruled out, repeatedly.
+**Nothing carries the file up to the anchor ⇒ no project** — discovery then looks **down** one level of direct children only.
+**A directory without the file is not a project** — it resolves to no project, and discovery then looks **down** one level of direct children only.
 **When nested, the child wins over the root** — an independent sub-project inside a root project keeps its own; siblings share no hierarchy, so a global priority could only pick one arbitrarily.
 **Project-root judgment walks DOWN** — walking up lands the manifest in an unrelated enclosing project; direct child directories only, no recursion.
 ① **The anchor itself carries the file** → the anchor is a project.

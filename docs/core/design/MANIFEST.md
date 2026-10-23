@@ -85,18 +85,19 @@
   **单源结构**：两梯共调**模块私有内核** `scanChildren(anchor, isHit)`（枚举直接子目录 + 按名排序 + 谓词过滤 ⇒ `hits`）——两梯差异**只**落谓词与级序表。
   **机判**（模块内结构断言 = T54）：源码面 `readdirSync` 全档恰 1 处 ∧ 居 `scanChildren` 体内 ∧ `discoverProjects` / `discoverRepos` 两函数体各含 `scanChildren(` 调用（读点 = `thincoder-core/manifest-discovery.mjs`）。
 - `resolveProjectRoot(cwd)` → `string|null`：**归属 ∨ 发现**的薄包装（`owningProject(cwd) ?? discoverProjects(cwd).root`——KD-M1-24 / M1-30）。
-  **取值（KD-M1-23 / M1-30）**：带档路径（自仓 / 带档子仓恰一 ⇒ 路径）；① 路径在项目树内（祖先带档）⇒ **该项目根**；② 裸仓恰一 ⇒ 该仓根（零档降级 = 建档机会）。
+  **取值（KD-M1-23 / M1-30）**：带档路径（自仓 / 带档子仓恰一 ⇒ 路径）；① 路径**自身所在目录**带档 ⇒ 该目录；自身不带档 ⇒ **上溯**取最近带档祖先（子目录归到自己的项目根——这是正常通路，不是兜底）；② 裸仓恰一 ⇒ 该仓根（零档降级 = 建档机会）。
   `none` / `workspace` ⇒ `null`。调用方（`manifestFilePath` / `docRootBase` / `ledger-db.mjs` / `ledger-cmd.mjs`）**零改**（行为随语义变更——§2.5 键面条 / 错层条）。
 - `projectRootView(cwd)` → `{ state, root, candidates }`（**新增**——`thincoder-core/manifest-discovery.mjs` 新导出，经本档 `manifest.mjs` 转口）：**项目根解析的直读形**——`state` ∈ `'ok'`（唯一解析：归属命中 ∥ `discoverProjects` `self` / `unique`）/ `'workspace'`（锚自身无档 ∧ 下辖 ≥2 个项目——**工作区常态，非错误态**）/ `'none'`（无项目）；非抛错 / 零写。
   `ok` ⇒ `root` = 解析值、`candidates` = `[]`；`workspace` ⇒ `root` = `null`、`candidates` = 下辖项目全列**按名排序**（同 `discoverProjects` 契约）；`none` ⇒ `root` = `null`、`candidates` = `[]`。
-  **态名（用户裁定「cwd 下面有多仓是常态」）**：`'workspace'`——「锚下并存多个项目」是工作区常态，不是异常、不是候选二义；唯一的解析律 = **用点路径 → 最近带档祖先**（§2.5「单项目解析律」条）。
+  **态名（用户裁定「cwd 下面有多仓是常态」）**：`'workspace'`——「锚下并存多个项目」是工作区常态，不是异常、不是候选二义；唯一的解析律 = **用点路径 → 自身所在目录带档即命中，否则上溯取最近带档祖先**（§2.5「单项目解析律」条）。
   **覆盖位**（`_setProjectRootForTest` 在场）⇒ 头部短路 ⇒ `{ state:'ok', root: resolve(_projectRootOverride), candidates: [] }`（同 `discoverProjects` 短路形）；
   **薄委托等价句**：`resolveProjectRoot(cwd)` ≡ `projectRootView(cwd).root`——既有导出**行为逐字零变**（含覆盖位短路；回归守卫 = 单元测试档——基座三态 ∥ 覆盖位 ∥ 薄委托等价逐格）。
   消费面接线 / 工作区语义 = §2.5「单项目解析律与四处会话级缺省收口」条（互指）。
-- `owningProject(target)` → `string|null`（**新增**，KD-M1-30——**归属形单点**，纯 fs：只判 `MANIFEST_REL` 存在性——不解析档内容 / 不问模式）：自 `target`（目录含自身）沿**祖先链**逐级上溯至盘根，取**最近**带档目录；无 ⇒ `null`。**覆盖位**（`_setProjectRootForTest` 在场）⇒ **头部短路**：直接返回 `resolve(_projectRootOverride)`（不查档存在性——保「覆盖即覆盖值」语义，见下方「覆盖位定形」）。
+- `owningProject(target)` → `string|null`（KD-M1-30——**归属形单点**，纯 fs：只判 `MANIFEST_REL` 存在性——不解析档内容 / 不问模式）：自 `target`（目录 = 自身；文件 = 其所在目录）沿祖先链上溯，取**最近**带档目录 ⇒ 该目录；不带 ⇒ `null`（交发现兜底）。
+  **上溯不设上界**：一路到盘根——会话落在项目内层子目录时，这一路正是它归到自己项目根的通路（用户 2026-10-23「本来就该爬到项目根啊」）；发现梯照旧**纯向下**（只看直接子目录一层），容器锚不会被挂到外层项目上。**覆盖位**在场 ⇒ **头部短路** ⇒ 直接返回 `resolve(_projectRootOverride)`（不查档存在性；见下方「覆盖位定形」）。
 - `projectView(target)` → `{ state, root, path, manifest?, candidates?, errors?, message?, matched }`（**新增**，KD-M1-24 / M1-30——**按用点解析**的读侧单点，**非抛错 / 零写**，无缓存）——**两段合成**：
-  · **归属（第一段——§⑥ 归属形）**：`owningProject(target)` 沿**祖先链**取**最近的带档目录**（自 target 起——target 为目录则含自身——逐级上溯至盘根；**不跨兄弟** / **无全局优先级**；嵌套合法：子内归子、根其余归根）。命中 ⇒ 读该档 ⇒ `ok` / `invalid`。
-  · **发现兜底（第二段——§⑥ 发现规则，纯向下）**：祖先链无档 ⇒ `discoverProjects(target)` ⇒ 命中（`self` / `unique`）⇒ 读其档（带档 ⇒ `ok` / `invalid`；缺档 ⇒ `missing`）；`workspace` ⇒ `workspace`（+ `candidates`）；`none` ⇒ `no-project`。
+  · **归属（第一段——§⑥ 归属形）**：`owningProject(target)` 自 **target** 起（目录 ⇒ 含自身；文件 ⇒ 取其所在目录）**上溯取最近带档目录**（**不跨兄弟** / **无全局优先级**；嵌套合法 = 子项目自身带档 ⇒ 归子，外层根不再收其内层路径）。命中 ⇒ 读该档 ⇒ `ok` / `invalid`。
+  · **发现兜底（第二段——§⑥ 发现规则，纯向下）**：祖链无档（`owningProject` ⇒ `null`）⇒ `discoverProjects(target)` ⇒ 命中（`self` / `unique`）⇒ 读其档（带档 ⇒ `ok` / `invalid`；缺档 ⇒ `missing`）；`workspace` ⇒ `workspace`（+ `candidates`）；`none` ⇒ `no-project`。
   写侧（建档）**不在**此函数（归入口决策树——KD-M1-25 / M1-29），故注入器 / 只读消费面不会变写点。
   · **`matched` 契约**：命中（或工作区）出自哪一级——归属段命中 ⇒ `'manifest'`；发现段 ⇒ `discoverProjects.matched` 逐字（`manifest` / `git`）；`no-project` / 覆盖位短路 ⇒ `null`——报明行工作区变体按它分野（§2.6 条 1b）。
   · **覆盖位定形**：`owningProject` 与 `discoverProjects` **两处头部短路**（`discoverRepos` 既有短路零改）⇒ 覆盖在场时 `resolveProjectRoot`（归属先行）与 `projectView`（归属段先行）均**不落真判据**。
@@ -269,7 +270,7 @@
 | KD-M1-27 | 无锚（`agent.cwd` 缺失）⇒ **零 I/O / 零报明**；**无锚 ∧ 有值（`agent.manifest` 在）⇒ 相位行 + 沿用内存值**；无锚 ∧ 无值 ⇒ 零注入（`false`） | 既有 §2.6 条 3 边界零改（无 cwd 夹具的既有用例零改）；生产面 cwd 恒在。 |
 | KD-M1-28 | 决策树失败码 = `no-project`（梯⑤）/ `workspace`（下辖 ≥2 项目）；文案族 = 「项目不可解析」（稳定锚句 `/项目不可解析/`——拒翻面（档非法格）用） | 两态处置不同（无项目 ⇒ 锚处可落地；工作区 ⇒ 报明事实 + 点名项目根，不建不猜）——单码装不下报明文案；启动零拒绝（KD-M1-25）后「启动拒绝」措辞无落点 |
 | KD-M1-29 | **建档站点** = 壳面入口（会话起点钩子 + 翻转面）+ **工具 `init`（动作侧显式调用、非自动建档——§2.10）**：**轻动作**（内容 = `DEFAULT_MANIFEST`，`writer:'main'`）覆盖梯②④⑤ 三格；**机制零自动 `git init`** | 用户「帮他初始化」+「项目落地 = 建 manifest」「`git init` 降为可选增强」；自动建档的适用面 = **「工作区 / 档非法不建」**。 |
-| KD-M1-30 | **归属形** = `owningProject(target)`（沿祖先链取最近带档目录）；`projectView` = **归属 ⇒ 发现兜底** 两段合成；`resolveProjectRoot` = `owningProject ?? discoverProjects().root` | 用户裁定（嵌套/重叠：**最近者优先**——子优于根 ✗ 嵌套合法 ✗ 不跨兄弟 ✗ 无全局优先级）。两段分离的理由：**归属（向上）**解「谁的参数」（含嵌套子项目）；**发现（向下）**解「锚在哪落地 / 锚项目是谁」——保容器语义（本仓锚 `D:\teamcode` ⇒ 向下恰一 ⇒ `thincoder`）。 |
+| KD-M1-30 | **归属形** = `owningProject(target)`（**最近者优先**——自目标沿祖先链上溯，取**最近**带档目录（含自身））；`projectView` = **归属 ⇒ 发现兜底** 两段合成；`resolveProjectRoot` = `owningProject ?? discoverProjects().root` | 用户裁定（嵌套 / 重叠：**最近者优先**——最近的带档目录即归属；不跨兄弟、无全局优先级）。**2026-10-23 改判**：先前一度砍成「不上溯」，过头——上溯正是子目录归到自己项目根的通路（`thincoder-core` ⇒ `thincoder`），砍掉它子目录就解析不到项目（用户 23:24「本来就该爬到项目根啊」）；现行 = **上溯取最近**。两段分离的理由不变：**归属**解「谁的参数」（含嵌套子项目——各自其主）；**发现（纯向下）**解「锚在哪落地 / 锚项目是谁」（本仓锚 `D:\teamcode` 下辖两项目 ⇒ 报明工作区）。 |
 | KD-M1-31 | **两族声明键并入 schema**（`codePaths` / `index.{codeExtensions,docExtensions}`）——顶层平级 + 缺省值入 `DEFAULT_MANIFEST`（`["src"]` / `[]`）；键名 / 形态逐字承前 | 用户裁定（退役 `.thincoder/conventions.json`——「必须的功能并入 project-manifest，不要同时保留二者」）⇒ 单一项目声明档；键名逐字承前 = 用户项目迁移零改名（必要性判据 = 两族对任意用户项目各有正当性：分类段位 / 索引扩展名，均解决一类不可硬编码的布局差异）；声明归属随项目归属（`owningProject`）⇒ 与档位解析同判据。 |
 | KD-M1-32 | 两族键**形态错 = `errors`（fail-closed）**；消费面（分类 / 索引）遇档不可用 ⇒ 两族逐条回默认 + 可见（缺档静默；非法 / 读错加 `console.warn` + 日志事件）（**例外**：`index.excludePaths` 元素层宽容——空 ∕ 非串元素由归一剔除，数组层仍 fail-closed；§2.2 `:118`） | 与 `docRoot` 子键同款（KD-M1-7：静默跳过 = 静默失踪——旧的逐键降级在 VS Code 扩展宿主里近乎不可见）；两层各归其位：档面 fail-closed（工程入口 / 翻转面既有语义零改）、运行面不崩不静默（N2）。 |
 | KD-M1-33 | 读向**单向**：`thincoder-core/declaration.mjs`（经其转口可达）经 `readManifest` / `manifestFilePath` 投影两族键（`loadProjectDeclaration`）；本模块零出边 | 同一档禁两份读取器 / 第二份根解析（KD-M1-18 同族）；两模块同属**模式无关面**（全模式消费）⇒ 耦合非模式耦合。 |
@@ -288,7 +289,7 @@
 - **翻转面 × 发现梯升级（交叉面 · 登记）**：#41 拒翻判据本体零改，但**可拒面收窄**——梯⑤（无项目）现由决策树建档（KD-M1-29）⇒ `/eng` · `/session` · `eng` 工具 · ACP 四路在该格不再拒；**工作区（`workspace`）格亦不落拒格**（放行——`agent.manifest` = null）⇒ 仍拒 = 仅「档非法」一格。FR11 口径单源 = `docs/core/requirements/PORTABILITY.md:63`（**git 非前提** / 无项目 ⇒ 不拒翻、走建档流）——本档只挂指针（D2）。
 - **台账键面**：`ledger-db.mjs` 键 / `ledger-cmd.mjs` base = `resolveProjectRoot(cwd) ?? resolve(cwd)`（零改）——键 = 项目根解析结果；既有台账数据**均不迁移**（不做迁移；键变化的目录需重新入账）。
 - **git 工具面**：`discoverRepos`（仓梯）含裸仓级 ⇒ ① 容器 + 恰一裸仓 ⇒ 重定向 + `(repo: …)` 注记；② 容器 + ≥2 裸仓 ⇒ `workspace` throw（列候选 + 指 workdir）；③ 带档行为**逐字不变**（A14–A20 零改全绿）。判据 / 用例同步住 `docs/core/design/TOOLS.md` §6.13（D2——本档不重述）。
-- **嵌套归属 / 错层**：① 目标路径在项目树内时 `writeRoot` / `manifestFilePath` 归**项目根**（不落子目录）；② **嵌套归属**：根 / 子双档时子内归子、根其余归根、不跨兄弟（§⑥ 归属形）。
+- **嵌套归属 / 错层**：① 目标路径**自身所在目录**带档时 `writeRoot` / `manifestFilePath` 归该目录（不落子目录；自身不带档 ⇒ **上溯**归最近带档祖先；祖链无档 ⇒ `resolveProjectRoot` = `null` ⇒ 落用点自身，不归无关外层项目）；② **嵌套归属**：根 / 子双档时子内归子（各自其主），根内不带档的子目录不归根（不跨兄弟——§⑥ 归属形）。
 - **写门 / schema 计数 / 值形态零改**：五键集合 · `REVIEW_ROOT_KEYS` · `docRoot` 值形态（F7）· `writeManifest` writer 闸 · spawn 二道防线（AC-M1-8）——均零碰。
 - **项目状态档（state）豁免工程写闸（#941）**：分类器五值增补 `state`（`PROJECT-MANIFEST.json` ∥ `.thincoder/conventions.json`——单源 = `PORTABILITY.md` §3.2 / §3.8）⇒ 工程模式父侧门对两档不再按产品代码拦（主 agent 可合规落盘 ∥ 清理）；**分层零改**：`writeManifest` writer 闸（KD-M1-3）· spawn `files` 域二道防线（KD-M1-14）· eng-coder 角色门——子代理面照旧。
 - **`docRoot`「本面无」= 显式 `null`（#944）**：值域增补（KD-M1-37）；删键仍补默认（KD-M1-6 缺键语义零改）——两分不混；消费面读数（`docRootPaths` 展开 = `[]`——各消费点零贡献；批档基底回退登记）= §2.7「本面无」句。
@@ -296,14 +297,14 @@
   **`manifest` 工具面已承接该动作侧「报明 / 建档」一格——读五态报明 ∥ init 建档（§2.10）；余消费面（写门 / 台账 / 机检）仍留后续批。**
 - **agent 工具面 × 既有面**：零碰面逐条——翻转族（§2.8 判据 / 文案 / 先判后翻）零改；情境行（§2.6 判据序 / 行形 / 单活体）零改——工具写盘 = 盘面变化，③b 既有门控随动（KD-M1-40）；两端装配钩子（§2.2 模式门 / 建档流）零改；写门（`writeManifest` writer 闸——KD-M1-3）与二道防线（`spawn-gates.mjs` `files` 域拒）零改；schema / 校验器判据零改；建档站点（KD-M1-29）零改（工具 init = 动作侧显式调用，非自动建档）。
   口径核对（指令优先级裁，用户新令 > 旧句）：`docs/core/design/PROMPT-SYSTEM.md:402`「清单维护者 = agent…**不造新工具 ∥ 不加机械门**」——**该半句被 ②.7 覆盖**（新令 = 全键读写出口）；§6.15 余句（维护者 = agent ∥ 随手补清单 ∥ 不加机械门）不受影响（限定句 + 例外句）。
-- **advisor 评审门文档合法根集（按用点收口）**：设计评审文档合法性判定 = **会话根集**（`resolveReviewTargetPaths(agent)`——原函数行为零变）∪ **逐文档所属项目根集**（文档路径 `owningProject` ⇒ `resolveReviewRootsFor(owner)`——`thincoder-core/agent/write-gate.mjs` 同单点新导出，非第二实现）；**无主档文档**（祖先链无档）回退会话根集判定（原行为零变）。
+- **advisor 评审门文档合法根集（按用点收口）**：设计评审文档合法性判定 = **会话根集**（`resolveReviewTargetPaths(agent)`——原函数行为零变）∪ **逐文档所属项目根集**（文档路径 `owningProject` ⇒ `resolveReviewRootsFor(owner)`——`thincoder-core/agent/write-gate.mjs` 同单点新导出，非第二实现）；**无主档文档**（文档的祖链上无带档目录）回退会话根集判定（回退路径零改）。
   **路径归一（本族）**：documents 相对形 cwd 基面落空时按候选项目根试探归一（单源 = `resolveReviewDocPaths`，宿主 `review-facts.mjs`——零新模块边；四项试探序 ∥ 多候选可读命中 ≥2 ⇒ fail-closed 拒 `scope-doc-ambiguous`——详述单源 = 本档该节）；冻结窗 `docAbs` 产出面同源。
   **锚祖先链（本族）**：第③项候选底座 = 现行 `projectRootView(cwd)` 集 ＋ **cwd 祖先链全量目录**（自父目录起至盘根、最近→远、去重、现行集在前）——容器相对形在子仓锚下受理；受理判据（目标解析位最近 manifest 声明面）∥ 围栏 ∥ 可读唯一化 ∥ fail-closed 歧义（`scope-doc-ambiguous`）零改。
   **依据 / 落地** = §2.9 A 解析轴——裁「参数按用点解析，会话不绑定项目」之评审门消费面收口（落地 = `thincoder-core/agent/write-gate.mjs` ∥ `thincoder-core/agent-tools/advisor.mjs` 两档单链）。
   **验收** = 功能级（设计评审文档受理）+ 行为级（会话重启后受理启动）+ 回归锚（单元测试档 4 例）。
   **边界 = 校验强度不变**（`criterion=scope-not-doc` 判据本体 ∥ 拒文案 ∥ `REVIEW_ROOT_KEYS` 键集零改——无主档回退会话根集判定 ∥ 声明外照拒，fail-closed 不减）；M4 单点 / M6 消费语义指针 = `docs/core/design/ENGINEERING-MODE-V2.md` §2.3 E6 ∥ §2.4 M6→M4 行 ∥ `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` F3（D2——本档不复述）。
 - **单项目解析律与四处会话级缺省收口（用户裁定「cwd 下面有多仓是常态 · 谁让他猜了」）**：
-  **律（唯一一条）**：一切项目解析 = 「**用点路径 → 最近带档祖先**」（`owningProject`）。**用点路径** = 动作显式给的路径；未给显式路径者，用点路径 = `cwd`（会话锚自身）。会话**不持**任何「当前项目」单值状态位。
+  **律（唯一一条）**：一切项目解析 = 「**用点路径 → 自身所在目录带档即命中；否则上溯取最近带档祖先；祖链无档 ⇒ 无项目**」（`owningProject`——**上溯**）。**用点路径** = 动作显式给的路径；未给显式路径者，用点路径 = `cwd`（会话锚自身）。会话**不持**任何「当前项目」单值状态位。
   **锚为工作区（`projectRootView` `workspace`）⇒ 无缺省**：报明事实（「本会话锚 = 工作区，下辖 N 个项目：…」）+ 可执行下一步（点名项目根 / 目标路径）——**不猜**（禁按名序取首）· **不抛「歧义」**· **不 brick 会话**。
   **矛盾收口**：「会话不绑定项目」与「四处会话级缺省（情境行 / ledger / git / batch）」原本自相矛盾——收口：
   · **留**「按用点解析」（唯一律——会话不持项目单值，参数按用点路径解析）；
@@ -327,8 +328,8 @@
   分类口径：**能带路径的 ⇒ 必须带**（缺路径时报明 + 下一步，不替它挑）；**不能带路径的（情境行）= 只播报事实，不做归属判断**。
   依据 = §2.9 A 解析轴 + 用户两条裁定；细节单源 = `docs/core/design/LEDGER.md` §2.1 ∥ `docs/core/design/BATCH-RECORD.md` §4.15 ∥ `TOOLS.md` §6.13（D2——各消费面持有其自身处置）。
   **随动面（引用 / 引文级）**：`LIGHT-CHANNEL.md:113` · `docs/core/design/ADVISOR-GUARDS.md:108`（哲学句零改——不静默挑一仍立）· `DESIGN-TOKEN-SETTLEMENT.md:126` · `docs/desktop/design/IPC.md:310 · :315`（引文含旧锚句「项目不可解析」——随措辞改）· `docs/desktop/design/UI.md:525`（档头注引文）。
-  **验收** = AC-36 / AC-44 / T78；**边界** = 安全面零砍（报明 = 显式可恢复）；发现 / 通知面语义零改；**不建工作区级声明档**（工作区自身不是项目——铁律 3）。
-- **需求侧口径（单源指针）**：① `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md` AC-M1-2（`:41`）= 会话权威值口径下「**不拒会话**（按用点报明 / 协助建档）」；② `PORTABILITY.md:63` FR11 =（**git 非前提** / 无项目 ⇒ 不拒翻、走建档流 / 可拒面 = **仅「档非法」一格**）。**待主 agent 同步**：需求侧 FR11 可拒面句 ∥ `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md` ②.2 / AC-M1-2 的态名与报明口径——本档只挂指针，不复述（D2）。
+- **需求侧口径（单源指针）**：① `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md` AC-M1-2（`:41`）= 会话权威值口径下「**不拒会话**（按用点报明 / 协助建档）」；② `PORTABILITY.md:63` FR11 =（**git 非前提** / 无项目 ⇒ 不拒翻、走建档流 / 可拒面 = **仅「档非法」一格**）。
+  **待主 agent 同步**：需求侧 FR11 可拒面句 ∥ `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md` ②.2 / AC-M1-2 的态名与报明口径——本档只挂指针，不复述（D2）。
 
 - **写门二道防线归属**：AC-M1-5「非主 agent 写 → 拒」的**机械主门** = 本模块 `writeManifest` 的 `writer` 闸；**二道防线** = M5 spawn 门 `files` 域排除 `PROJECT-MANIFEST.json`（子代理无法声明该路径为写域）。二道防线不在本模块实现，仅记录承接关系——与 M4 档 KD-M4-2「manifest 写门落 M1」同源（架构 §2.3 E3）。
   **实况**：`thincoder-core/agent-tools/spawn-gates.mjs` 常量 `MANIFEST_BASENAME` + `rejectEngineeringFilePaths` 分支（`files` 含该 basename——任意层 / 任意大小写 → 拒，专用文案）（本档 §3.2 T30 同款判据——KD-M1-14）。
@@ -540,7 +541,7 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 **A 装配形（单值附着 ⇒ 按用点解析）**：
 
 - **解析轴**：动作作用于哪个项目的路径 ⇒ 取那个项目的档（机检域 / 文档落点 / 台账归属 / 批次归属 / phase 情境）——**会话不绑定项目**（✗ 选择器 ✗ 记忆 ✗ 「当前项目」单值；用户裁定）。
-- **归属形（§⑥）**：目标路径 ⇒ 沿**祖先链**取**最近的带档目录**（`owningProject`——**子优于根** ✗ 嵌套合法（根项目内含独立子项目 ⇒ 各自其主）✗ 不跨兄弟 ✗ 无全局优先级）；祖先链无档 ⇒ 发现兜底（`discoverProjects`——纯向下）。**发现 ≠ 归属**（两条方向：发现纯向下 / 归属沿链向上），同住 `projectView` 两段合成（KD-M1-30）。
+- **归属形（§⑥）**：目标路径 ⇒ 自其所在目录**上溯取最近带档目录**（`owningProject`——**最近者优先**、不跨兄弟、无全局优先级；嵌套 = 子项目自身带档 ⇒ 各自其主）；祖链无档 ⇒ 发现兜底（`discoverProjects`——纯向下）。**发现 ≠ 归属**（归属 = 上溯取最近；发现纯向下），同住 `projectView` 两段合成（KD-M1-30）。
 - **读侧单点** = `projectView(target)`（§2.2——非抛错 / 零写 / 五态）；**会话起点不再 fatal**：钩子只做「解析 + 轻动作建档 + 附着 / 记账」，任何非 ok 态都不抛（KD-M1-25）。
 - **`agent.manifest` 定位**：由「会话唯一项目档」降为**缓存 / 种子**（值刷新仍走 §2.6 ③b 每回合 mtime 门控——KD-M1-17 零改）；会话起点解析结果记 `agent._projectView`（形状见 §2.2 钩子段；报明与测试的取证面）。
 - **消费面（收口现状）**：`write-gate.resolveReviewRootsFor`（评审门）/ 批档基底（`batch-paths.mjs`）/ 台账键（`ledger-db.mjs`）已具**按用点解析**（工作区面收口 = §2.5 同批条）；
@@ -558,7 +559,7 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 | 档非法 / 建档失败 | 不拒（会话照常起）+ 报明 | 报明面 |
 
 - **`git init` = 可选增强**：机制**零自动执行**（源码面判据：钩子 / 决策树无 `git init` 调用；`git` 工具 `init` 动作 = §6.13 例外——以 cwd 为落点，归用户 / 模型手，经确认语义 = 用户要版本管理时才提供）。
-- **落地判据**：建档恒落「命中项目根」（梯①–④）或「会话锚」（梯⑤）；**不递归、不向上**、不预建其他项目（多项目各建各的、用到时再建）。
+- **落地判据**：建档恒落「命中项目根」（梯①–④）或「会话锚」（梯⑤）；**不递归、不在锚界外预建**、不预建其他项目（多项目各建各的、用到时再建）。
 
 **D phase 情境注入形（多项目）**：注入物 = **会话锚项目**（`agent.cwd` 的解析结果）的状态；动作作用于别的项目时参数按该动作的路径解析（**不注入、不切换「当前项目」**）。行形 / 判据 / 四态见 §2.6。**锚为工作区**（`agent.cwd` 解析不出唯一项目）⇒ 注入物 = **工作区事实行**（无相位行——§2.6 条 1b），会话照常起。
 
@@ -1035,7 +1036,7 @@ const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recen
 | AC-21 | **双发现函数四态结构化**：`discoverRepos`（仓梯）/ `discoverProjects`（项目梯）四态各归其位（`self` / `unique` / `none` / `workspace`）；`candidates` **全列且按名排序**（`self` / `none` ⇒ `[]`）；`resolveProjectRoot` = 项目梯 `.root`——**变更面与回归见 AC-24** | AC-M1-2（发现口径） | ✅ 真判据夹具：逐态断 `kind` / `root` / `candidates` / `matched`（T41–T45） |
 | AC-22 | **启动零拒绝（不砖死 · 两端）**：工程模式 × 六格 cwd（梯① 锚带档（无 `.git`）· 梯② 锚 = 裸仓 · 梯③ 带档子仓恰一 · 梯④ 裸仓恰一 · 梯⑤ 无项目 · 工作区 ≥2）⇒ `attachManifest` **不抛**；`agent.manifest` = 附着或 null；`agent._projectView.state` 归位；CLI 直调与 VSC 钩子块同夹具同结果 | 规格 ②.3 / §⑥（不砖死） | ✅ 每格一断言（不抛 + `_projectView` 状态 + 档存在性）；CLI 子进程「工程模式 + 非仓 cwd」退出码 0（T51 / T52） |
 | AC-23 | **发现梯两表**：`discoverProjects` 五级 + `discoverRepos` 四级逐格归位；候选**按名排序**；`matched` ∈ `manifest` / `git` / `null` 与梯级一致；工作区 = 该级全列且**不越级**（带档非空 ⇒ 裸仓不入候选）；**递归零**（孙目录候选不可见）· **单源结构**：两梯共调私有内核 `scanChildren`（源码面——`readdirSync` 恰 1 处 ∧ 两函数各含内核调用） | 规格 ②.2 / §⑥（发现规则）· KD-M1-22 | ✅ tmp 夹具逐格断 `kind` / `root` / `candidates` / `matched`（T43 / T44）+ 源码面结构断言（T54） |
-| AC-24 | **`resolveProjectRoot` 变更面 + 覆盖位**：带档路径逐字（自仓 / 带档子仓恰一）；**非 git 锚带档 ⇒ 锚**；**裸仓恰一 ⇒ 该仓根**；**项目树内路径 ⇒ 项目根**；`none` / `workspace` ⇒ `null`；**覆盖位（`_setProjectRootForTest`）在场 ⇒ 覆盖值**（归属段与发现段双短路——§2.2 覆盖位定形） | 规格 ②.2 / §⑥（git 非前提） | ✅ 同夹具对（T45）；覆盖位断言 + 覆盖位短路回归守卫 = 单元测试档基座用例 |
+| AC-24 | **`resolveProjectRoot` 变更面 + 覆盖位**：带档路径逐字（自仓 / 带档子仓恰一）；**非 git 锚带档 ⇒ 锚**；**裸仓恰一 ⇒ 该仓根**；**路径自身所在目录带档 ⇒ 该目录**；**项目内不带档子目录 ⇒ 最近带档祖先（其项目根）**；**祖链无档 ⇒ `null`**；`none` / `workspace` ⇒ `null`；**覆盖位（`_setProjectRootForTest`）在场 ⇒ 覆盖值**（归属段与发现段双短路——§2.2 覆盖位定形） | 规格 ②.2 / §⑥（git 非前提） | ✅ 同夹具对（T45）；覆盖位断言 + 覆盖位短路回归守卫 = 单元测试档基座用例 |
 | AC-25 | **情境行状态选行**：`ok` ⇒ 相位行**逐字零改**（AC-N1 既有断言零改）；`no-project` / `workspace` ⇒ 报明行逐字（**工作区事实行按 `matched` 两变体**——带档级 / 裸仓级）；`missing` / `invalid`：有既往好值 ⇒ 行不变（T35 / T36 零改）、无既往好值 ⇒ 报明行；四态共用单活体 / 幂等 / 自愈 / `transient` 机制 | 规格 ②.3 / §⑥（不砖死） | ✅ 纯函数逐字断言（含两变体）+ 推注入（T46 / T47） |
 | AC-26 | **会话不绑定项目（多项目按用点）**：同 cwd 下两项目（各声明不同 `docRoot`）——对 B 的路径读档取 B 的声明；相位行 = 锚项目状态；机制**零「当前项目」单值状态位** | 规格 §⑥（解析模型） | ✅ `readManifest(B 路径)` / `docRootPaths(v, B 路径)` 取 B 声明；锚项目行不受 B 影响（T48） |
 | AC-27 | **建档规则（轻动作 + 零自动 git）**：梯②④⑤ 缺档 ⇒ 建档（内容 = `DEFAULT_MANIFEST`；落点 = 命中项目根 / 梯⑤ 会话锚；多项目各建各的）；工作区 / 档非法 ⇒ **零建档**；机制**零 `git init`**（源码面：三档无 `git init` 调用面 + 夹具断 `.git` 未被机制创建） | 规格 ②.3 / §⑥（建档规则） | ✅ 逐格断档内容 + 落点 + 未建格；源码面结构断言（T49 / T50） |
@@ -1046,7 +1047,7 @@ const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recen
 | AC-33 | **读向单向 + 投影**：`declaration.mjs`（经其转口可达）经 `readManifest` / `manifestFilePath` 取两族（源码面：该档无 `readFileSync` 读 manifest + 本模块零 `conventions` 出边） | **AC-M1-9** · KD-M1-33 | ✅ 源码面结构断言（禁第二读取器） |
 | AC-34 | **旧档在场 = 一行告警 + 内容零生效**：`.thincoder/conventions.json` 在场（含哨兵声明 / 坏 JSON 两态）⇒ 声明读数与无档逐条等值 + warn + 日志事件；内容零解析 | **AC-M1-9** · KD-M1-34 | ✅ 两态夹具断言（读数等值 + warn 在场 + 哨兵未生效）+ **告警基准断言**（旧档落项目根 = `manifestFilePath` 基准目录——cwd 深于项目根亦命中） |
 | AC-37 | **`index.publicRepos` 落 schema**：`DEFAULT_MANIFEST.index` 含 `publicRepos:[]`；缺键档读入 ⇒ `ok:true` + 补默认 + `missingKeys` 含 `index.publicRepos`；形态 = 数组层 fail-closed（非数组 ⇒ `errors`）/ 元素层宽容（`["./x/","",7]` ⇒ 归一 `["x"]`——**值形层**（归一后相对串）；解析层 = 绝对根集——细则单源 = `MEMORY.md` §6.15）；缺省 `[]` ⇒ 声明读数与基线等值（零行为） | **AC-M1-9** · KD-M1-35 | ✅ `readManifest` 夹具逐键断言 + 归一读数 |
-| AC-30 | **归属形（最近祖先 / 嵌套）**：`owningProject` 沿祖先链取最近带档目录（target 为目录 ⇒ 含自身）；**子优于根**；**不跨兄弟**（无档分叉不取旁支）；祖先链无档 ⇒ `null`（⇒ 发现兜底）；`projectView` 两段合成逐格归位 | 规格 §⑥（归属形） | ✅ tmp 多层夹具（盘 / 容器 / 根项目 / 子项目 / 兄弟）逐格断言（T48） |
+| AC-30 | **归属形（上溯 / 嵌套）**：`owningProject(target)` 自目标（目录 ⇒ 含自身；文件 ⇒ 取其所在目录）**上溯取最近带档目录**；带 ⇒ 该目录；祖链不带 ⇒ `null`（⇒ 发现兜底）；**不跨兄弟**（无档分叉不取旁支）；`projectView` 两段合成逐格归位 | 规格 §⑥（归属形） | ✅ tmp 多层夹具（容器 / 根项目 / 带档子项目 / 根内不带档子目录 / 兄弟）逐格断言（T48） |
 | AC-35 | **`projectRootView` 基座**：三态结构化——`ok`（唯一解析）⇒ `root` 非空 ∥ `candidates` = `[]`；`workspace`（下辖 ≥2 项目）⇒ `root` = `null` ∥ 下辖项目全列**按名排序**；`none` ⇒ 双空；覆盖位在场 ⇒ 头部短路（`ok` + 覆盖值）；**薄委托等价**：`resolveProjectRoot(cwd)` ≡ `projectRootView(cwd).root` 逐格全等（含覆盖位） | §2.2（判定单点） | ✅ 夹具三态逐态断 `{state, root, candidates}` + 覆盖位断言 + 等价逐格对（回归守卫 = 单元测试档基座用例） |
 | AC-36 | **工作区锚收口（报明 + 下一步 · 零猜）**：① 台账缺省（锚 = 工作区）⇒ 报明事实（下辖 N 项目）+ 点名项目根——零写（`docs/core/design/LEDGER.md` §8 AC-M2-17）；② 批档 create 无所属 ⇒ 报明 + 显式路径指引 ∥ 目标所属 ⇒ 落其基底（`docs/core/design/BATCH-RECORD.md` §4.8 BR-39–BR-42）；③ 文件工具 = **零改**（结语——无新行为面）；`ok` / `none` 两态逐一回归零变 | §2.2 ∥ §2.5（单项目解析律）· `docs/core/design/LEDGER.md` §8 · `docs/core/design/BATCH-RECORD.md` §4.15 | ✅ 同夹具（工作区锚双带档 tmp + 实景 `d:\teamcode` 双跑）；断言 = 报明含下辖项目全列 + **零「ambiguous / 歧义」字样** + 零写；文件工具零改 ⇒ 无断言（结语口径） |
 | AC-38 | **未知键可见化（#802）**：`validateManifest` 产 `unknownKeys`（顶层 + 四嵌套层；非拒——`ok:true` 定性零变）；`readManifest` 返回面携 `unknownKeys` + 一行告警（含键名；同档同键集去重）；零未知键 ⇒ 零告警（负向锁） | KD-M1-36 | ✅ 单元测试档（四项：枚举 ∥ 告警逐字含键名 ∥ 去重恰一次 ∥ 负向锁） |
@@ -1112,10 +1113,10 @@ const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recen
 | T42 | 边界：**带档路径回归**（`resolveProjectRoot` 带档格；变更面 = T45） | 同 T41 四态夹具（带档） | ①② ⇒ 路径；③④ ⇒ `null`——既有发现面同判据；既有发现面用例 **零改**即回归守卫（AC-21 / AC-24） |
 | T43 | 正常 / 边界：**发现梯两表六格** | tmp 夹具：① 锚带档（无 `.git`）② 锚 = 裸仓（`.git` 无档）③ 容器 + 恰一「`.git` + 档」子仓（旁夹一裸仓干扰项）④ 容器 + 恰一裸仓（无带档者）⑤ 空容器 ⑥ 容器 + 两带档子仓（旁夹裸仓） | `discoverProjects` ⇒ ① `self`/`manifest` ② `self`/`git` ③ `unique`/`manifest`（干扰裸仓不入选） ④ `unique`/`git` ⑤ `none` ⑥ `workspace`/两候选按名排序；`discoverRepos` 同夹具逐格对（③ ⇒ 重定向；④ = 裸仓级新命中；⑥ = 工作区）（AC-23） |
 | T44 | 边界：**不递归 / 不向上** | 容器 + 孙目录带档（子目录无档）；容器 + 子目录内嵌仓 | 两格皆 `none`（只看直接子目录一层；不向上）（AC-23） |
-| T45 | 边界：**`resolveProjectRoot` 变更面** | 同 T43 夹具 | ①② ⇒ 锚；③ ⇒ 子仓根；④ ⇒ **裸仓根（先红）**；⑤⑥ ⇒ `null`（AC-24） |
+| T45 | 边界：**`resolveProjectRoot` 变更面** | 同 T43 夹具 + 根项目内不带档子目录 | ①② ⇒ 锚；③ ⇒ 子仓根；④ ⇒ **裸仓根（先红）**；⑤⑥ ⇒ `null`；⑦ ⇒ **根项目根**（**上溯取最近**——子目录自身不带档 ⇒ 归其项目根）（AC-24） |
 | T46 | 正常 / 边界：**情境行四态逐字** | 纯函数 `manifestReportLine` 四态（工作区两变体各一：带档级 / 裸仓级）；推注入：工程 + depth-0 + `agent.cwd` = 各态夹具 | 四态行文逐字 + 工作区两变体逐字（AC-25）；`ok` 态 = 相位行（AC-N1 断言零改） |
 | T47 | 边界：**首观失败可见 / 有既往值保守** | ① 无既往好值（`agent.manifest` 未附着）+ 档非法 ⇒ 推 ⇒ 报明行；② 有既往好值（先推过相位行）+ 档删 / 档非法 ⇒ 行不变（T35 / T36 零改） | ① `true` + `invalid` 报明行；② `false` + 行不变（KD-M1-26） |
-| T48 | 正常：**归属形（嵌套 / 按用点）** | 夹具：根项目 R（带档）+ R 内子项目 S（带档）+ R 外兄弟目录 X（无档）+ 容器 C（非项目，R / X 在其下）；目标 = ① S 内文件 ② R 内 S 外文件 ③ X 内文件 ④ C 处 | ① ⇒ S 档（**子优于根**）② ⇒ R 档 ③ ⇒ 无项目（**不跨兄弟**）④ ⇒ R 档（发现兜底：向下恰一——容器锚语义保持）；相位行 = 锚项目状态（AC-26 / AC-30） |
+| T48 | 正常 / 边界：**归属形（自身所在目录 / 嵌套）** | 夹具：根项目 R（带档）+ R 内子项目 S（带档）+ R 内不带档子目录 D + R 外兄弟目录 X（无档）+ 容器 C（非项目，R / X 在其下）；目标 = ① S 内文件 ② R 根内文件 ③ D 内文件 ④ X 内文件 ⑤ C 处 | ① ⇒ S 档（自身所在目录）② ⇒ R 档 ③ ⇒ **R 档**（**上溯**——D 自身无档 ⇒ 最近带档祖先 R）④ ⇒ 无项目（**不跨兄弟**）⑤ ⇒ R 档（发现兜底：向下恰一——容器锚语义保持）；相位行 = 锚项目状态（AC-26 / AC-30） |
 | T49 | 正常：**建档三格（轻动作）** | 工程 + depth-0：梯②（锚 = 裸仓无档）· 梯④（容器 + 恰一裸仓）· 梯⑤（空目录） | 三格皆生成 `PROJECT-MANIFEST.json`（内容 = `DEFAULT_MANIFEST`）；落点 = ② 锚 / ④ 裸仓 / ⑤ 锚（AC-27） |
 | T50 | 错误：**零建档两格 + 零自动 git** | ① 工作区（两候选）② 档非法；源码面读三档 | ① 零建档 + 报明；② 零建档（不覆盖坏档）；源码面：`manifest.mjs` / `make-agent.mjs` / VSC `setup.mjs` 无 `git init` 调用面（AC-27） |
 | T51 | 端到端：**工程模式 + 非仓 cwd 启动** | 子进程 `chat "hello"`（伪 HOME + 非仓 cwd（梯⑤ 与 梯④ 两格）+ config `agent.engineering: true` + mock 端点） | 退出码 0；stderr 零拒绝句（锚 `/项目不可解析/` 零命中）；梯⑤ 格 ⇒ 锚处生成档 + 进入正常循环；梯④ 格 ⇒ 档落裸仓（**先红**：批前抛错退出）（AC-22） |
