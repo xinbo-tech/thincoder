@@ -283,7 +283,8 @@ export function providerSetProxy(payload) {
  *   `"128K"` / `"1.5"` / `"-1"` / `"abc"` / `"0"` 拒（`invalid-value`，盘上零变）。**端侧零 ×1024**——乘点只在核。
  * - 键处理 = 核末段尺子：命中既有键 ⇒ 改写该键（不新增第二种拼写）；未命中 ⇒ 模型 id 原样作键。
  * - 清除 = `k` 缺 ∥ `null` ∥ 空白串 ⇒ 删该模型键；对象删空 ⇒ `modelContext` 键整体删除（不留空对象）。
- * - 同侧两条键归一同撞（歧义）⇒ 拒 `ambiguous`（不猜、不择一——与读面「该模型视为未提供」同口径）。
+ * - 命中多条（归一后相等 = 同一模型）⇒ 一并改写为同一新值（R29⑤）；清除 ⇒ 一并删除全部命中键
+ *   （不选键、不排序、不比较——R29④⑤）。
  * - 写经核 `writeConfigAtomic`（端侧零自写盘）+ 回读核验（零假成功）。
  */
 export function providerSetModelContext(payload) {
@@ -296,8 +297,6 @@ export function providerSetModelContext(payload) {
   if (!clear && k === null) return { ok: false, reason: "invalid-value" }
   const entry = resolveProviders().providers.find((p) => p.name === name)
   if (entry === undefined) return { ok: false, reason: "unavailable" }
-  if (matchingContextKeys(rawModelContextOf(entry), model).length > 1) return { ok: false, reason: "ambiguous" }
-  let raced = false
   const w = writeConfigAtomic(_configPath(), (disk) => {
     const target = (Array.isArray(disk.providers) ? disk.providers : []).find((p) => p?.name === name)
     if (target === undefined) return
@@ -305,18 +304,16 @@ export function providerSetModelContext(payload) {
       ? target.modelContext
       : null
     const matches = table === null ? [] : matchingContextKeys(table, model)
-    if (matches.length > 1) { raced = true; return } // 写窗内变歧义 ⇒ 零写（下面按局部写结果判）
     if (clear) {
       if (table === null || matches.length === 0) return
       for (const key of matches) delete table[key]
       if (Object.keys(table).length === 0) delete target.modelContext
       return
     }
-    const key = matches.length === 1 ? matches[0] : model
-    if (table === null) target.modelContext = { [key]: k }
-    else table[key] = k
+    if (table === null) target.modelContext = { [model]: k }
+    else if (matches.length === 0) table[model] = k
+    else for (const key of matches) table[key] = k
   })
-  if (raced) return { ok: false, reason: "ambiguous" }
   if (!w.ok) return { ok: false, reason: w.reason }
   // 回读校验（同 `providerSetKey` ∥ `providerSetProxy`：零假成功）——**键存在判据用原表**（非法值条目也能删）
   const after = resolveProviders().providers.find((p) => p.name === name)
@@ -324,7 +321,8 @@ export function providerSetModelContext(payload) {
   const afterTable = rawModelContextOf(after)
   const afterMatches = matchingContextKeys(afterTable, model)
   if (clear) return afterMatches.length === 0 ? { ok: true, reason: null } : { ok: false, reason: "unavailable" }
-  return afterMatches.length === 1 && positiveInt(afterTable[afterMatches[0]]) === k ? { ok: true, reason: null } : { ok: false, reason: "unavailable" }
+  return afterMatches.length > 0 && afterMatches.every((key) => positiveInt(afterTable[key]) === k)
+    ? { ok: true, reason: null } : { ok: false, reason: "unavailable" }
 }
 
 /**

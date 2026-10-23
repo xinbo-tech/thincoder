@@ -298,7 +298,7 @@ advisor 径的 provider 解析（`thincoder-core/advisor/run.mjs` `resolveAdviso
 
 | 层 | 来源 | 单位 | 读点 |
 |---|---|---|---|
-| L1 | `providers[].modelContext[模型 ID]`（人工声明） | K，**×1024** | `thincoder-core/model-context.mjs` `manualContextK`（名带单位，取 K 原值）→ 解析乘点 `thincoder-core/model-specs.mjs:379` |
+| L1 | **99**（收口轮 `wc -l` 实读） | K，**×1024** | `thincoder-core/model-context.mjs` `manualContextK`（名带单位，取 K 原值）→ 解析乘点 `thincoder-core/model-specs.mjs:379` |
 | L2 | `providers[].context`（旧键，仅未被 L1 点名的模型） | K，**×1024** | `thincoder-core/model-specs.mjs:379`（**解析乘点唯一**——L1 ∥ L2 共用）；展示换算另列一处 —— `:323` `formatDeclaredContextK`（只出词，不回写解析值） |
 | L3 | 模型列表自报（三字段名任一） | token，不乘 | `thincoder-core/model-context.mjs` `listedContextTokens`（名带单位） |
 | L4 | `MODEL_SPECS` 静态表 | token，不乘 | `thincoder-core/model-specs.mjs` `lookupSpec`（`:271-280`，末段唯一——§6.9） |
@@ -334,7 +334,7 @@ L2 位于 L3 之上：旧键也是人工声明，按 2026-10-23 17:30 裁定「�
 | `/v1/models` 列表 id | 末段 + 小写 | `qwen/ZHIPU/GLM-5.3` ⇒ `glm-5.3` |
 
 - 为什么要三面归一：同一个模型在本仓有三种写法——列表 id（聚合网关带命名空间）、请求体 `provider.model`（可能是裸名）、用户手写键。只认逐字会让三者错位；`GLM-5.3` / `glm-5.3` 的大小写差会静默失效。
-- **歧义不猜**：同一侧两条键归一后相同（如 `qwen/glm-5.3` 与 `zhipu/glm-5.3`）⇒ **仅该模型**在 L1 视为未提供、落下一层，并告警一次；同渠道其它模型的声明**不受影响**（射程与列表侧同口径——**不废整层**）。**不按最长键 ∥ 配置序择一**——择一等于替用户做一遍它没做的决定。列表侧同理：同端点两个 id 末段相撞 ⇒ **该模型**在 L3 视为未报，落 L4。
+- **两条键归一后相同 = 同一个模型的两种写法**（如 `qwen/glm-5.3` 与 `zhipu/glm-5.3`）⇒ **命中同一条，取该条即用**——不拒写、不告警、不落下一层；取哪条不作判据（不排序、不比较——两条都是用户自己写的值，R29④）。列表侧同形：同端点两个 id 末段相撞 ⇒ 取**列表序第一条**即用（不排序、不比较），不告警、不落 L4。
 - 值非法（0 / 负 / 非数 / 非整 / 布尔）⇒ 该键视为未声明（落 L2），装载期告警一次（`thincoder-core/config.mjs` 归一，同 `providers[].context` 先例）。
 - 未点名的模型落到 L2（R29③）——不发散，不继承同渠道其它模型的值。
 - R29②「键与 id 逐字」在本尺子下自动成立：键写成列表原样 id（含命名空间）时末段相同 ⇒ 命中；写裸名同样命中。
@@ -397,8 +397,8 @@ L2 位于 L3 之上：旧键也是人工声明，按 2026-10-23 17:30 裁定「�
 - **值校验 = 先 parse 再判**：交互输入是**字符串**⇒ `Number(String(v).trim())` 后过读面同一个谓词 `positiveInt`（`typeof x === "number" && Number.isInteger(x) && x > 0`）。直接拿字符串喂 `positiveInt` 会全量拒绝（`typeof "128" === "string"`）——旧命令的单位事故不得换个形状重现。
   边界输入：`"128"` ⇒ **收**（128K）；`"128K"` / `"1.5"` / `"-1"` / `"abc"` / `"0"` ⇒ **拒** + 报错行（字面见「文案登记」表），盘上零变。空串不走校验分支（走第 4 步清除路径）。
   量级守卫**不在端侧**：写面只判「正整数 K」（`positiveInt`）这一条值域判据；量级判定全部由核 `providerSpecResolution` 承担（R32——值可能来自手改 JSON，不经任何界面，端上守不到；手改 JSON 与三端界面同判，见「人工声明的量级守卫（L1 ∥ L2 · R32）」）。
-- **键处理**：按本节「`modelContext` 键形与查表规则」的末段尺子找既有键——命中则改写该键（不新增第二种拼写）；未命中则用模型 id 原样作键（列表 id ∥ 手填原样）。
-- **清除语义**：「已声明值」的判据 = 该模型在本渠道 `modelContext` 里有归一后相等的键（键存在即算——值非法的条目同样要能删掉，确认行 current 段回 `Not declared`）。确认通过后 ⇒ `delete modelContext[<命中键>]`；删除后对象无键 ⇒ `delete providers[].modelContext`（不留空对象）。零匹配键 ⇒ 第 4 步即空操作，不删、不留收据。
+- **键处理**：按本节「`modelContext` 键形与查表规则」的末段尺子找既有键——命中则改写该键（不新增第二种拼写）；**命中多条（归一后相等 = 同一模型）⇒ 这几条键一并改写为同一新值**（R29⑤）——不选键、不排序、不比较（全写同一值 ⇒ 无需选），不拒写、不告警；未命中则用模型 id 原样作键（列表 id ∥ 手填原样）。
+- **清除语义**：「已声明值」的判据 = 该模型在本渠道 `modelContext` 里有归一后相等的键（键存在即算——值非法的条目同样要能删掉，确认行 current 段回 `Not declared`）。确认通过后 ⇒ **删除全部归一相等的键**（R29⑤——同一模型的多种写法一并清掉；只删一条会留下仍归一相等的残键——卡面继续显示已声明，清除看起来不生效）；删除后对象无键 ⇒ `delete providers[].modelContext`（不留空对象）。零匹配键 ⇒ 第 4 步即空操作，不删、不留收据。
 - **不预填任何非声明值**：L3 列表值 ∥ L4 静态值都不进输入框——一次回车就会把参考值固化成人工声明；输入框只回显该模型的**合法已声明值**（值非法 ⇒ 空，见「非法声明值的展示」）。
 - **读面回显取值 = 已声明值**（R31 ④）：三端读该渠道 `modelContext` 的原值（K）交核出词——**展示入口 ∥ 收 K 换算 ∥ 端侧禁令单源 = 本节「读面载荷（三端同源）」，不在此重述**。
   **不取 `providerSpec(provider).context`**：渠道条目不携模型（`thincoder-core/config-io.mjs:154` `delete p.model`），而 L1 的键取 `provider.model`（`thincoder-core/model-specs.mjs:345` `provider?.model ?? ""`）⇒ 渠道条目上 L1 永不命中；无旧键时解析落到 L5 的 128000，显示成 `125K`——把声明的 `128` 显示成 `125K`，是错的读数。
@@ -506,7 +506,9 @@ consumers = `thincoder-cli/src/tui/provider-admin.mjs`（`declaredContextText` �
 | W-15 清除取消（有值 · 桌面载体） | 同 W-14（桌面确认弹层 `confirmSecretDelete`） | 同 W-14（正文 `contextClearConfirm` 带当前值；默认焦点「取消」；回车 ∥ 框内 Esc ∥ 背板 ⇒ 盘上零变、行面仍显原值） |
 | W-16 声明异常大值（R32 守卫触发） | **手改 JSON** 写 `modelContext["glm-5.3"] = 262144`（整型 K，不经任何界面）；静态表行 `glm-5.3` = 1000000 | 解析 = 268435456（262144 × 1024），**未被截断**；量级告警恰一次；同值重复解析不重告、改成另一超限值再告一次 |
 | W-17 声明正常值（R32 不误报） | **手改 JSON** 写 `modelContext["glm-5.3"] = 128`；同一静态表行 | 解析 = 131072；**零**量级告警（131072 < 1000000 × 4） |
-| W-18 非法声明值展示 | **手改 JSON** 写 `modelContext["glm-5.3"] = "128"`（字符串）∥ `0`（各一例） | 卡面显示 `未声明` / `Not declared`（与 W-11 同面）；编辑弹窗输入框**空**（装载归一已把非法条目从内存镜像剔除 ⇒ 回填门只认合法值）；盘上字节不变（零改写、零清除）。**非法原值由装载期告警明示**（`[config] provider … must be a positive integer in K units`），不在弹窗里复述 |
+| W-18 | 非法声明值展示 | **手改 JSON** 写 `modelContext["glm-5.3"] = "128"`（字符串）∥ `0`（各一例） | 卡面显示 `未声明` / `Not declared`（与 W-11 同面）；编辑弹窗输入框**空**（装载归一已把非法条目从内存镜像剔除 ⇒ 回填门只认合法值）；盘上字节不变（零改写、零清除）。**非法原值由装载期告警明示**（`[config] provider … must be a positive integer in K units`），不在弹窗里复述 |
+| W-19 | 边界（撞键清除） | 该模型有两条归一相等的键（`qwen/glm-5.3` ∥ `zhipu/glm-5.3`），空输入 + 确认删除 | 两条键**一并删除**（同一模型的两种写法）；对象空 ⇒ `modelContext` 整键消失；零报错行 |
+| W-20 | 边界（撞键改写） | 同 W-19 的两条键，输 `256` | 两条键的值都改为 256（不选键、不排序、不比较）；盘上仍两条键、无新增第三种拼写；零报错行、零告警 |
 
 W-12 / W-14 / W-15 = **同一判据的三端各一例**（留空提交 ⇒ 先确认；默认 `Cancel` ⇒ 盘上零变），不是三套语义。
 W-16 / W-17 = R32 的两端（守卫生效 ∥ 不误报）；两例的输入都是**手改 JSON 直接落盘**——不经任何界面也能同判，即「守卫在核」的判别形（R32③）。
@@ -537,6 +539,8 @@ W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经�
 - anthropic / google 两端的列表形态不取窗口（零实测）。
 - L3 列表值是**进程内**缓存，跨进程不同步（VSC 扩展宿主 / 桌面主进程各一份）——三端回显判据（R31④）只覆盖 `modelContext` 的**已声明值**，不覆盖 L3；旧键仍作 L2 参与解析（执行面），但卡面行不展示它（只有旧键的渠道显示 `未声明`——卡面口径见「读面回显」）。
 - 列表值在会话中途由无到有 ⇒ 窗口变大、压缩阈值随之上移；与改配置同性质，不另设钳制。
+- 同侧两条键归一相同（如手改 JSON 写出两种命名空间写法）：读面取其中一条（按对象键序，不排序、不比较），写面把这几条一并改写为新值，清除面一并删除——取哪条不构成判据（R29④ · R29⑤）。
+- 两条归一相等的键携带**不同值**（只有手改 JSON 造得出）：读面静默取对象键序第一条、**零告警**——手改出值不等的用户不会再收到任何提示；写面一次改写即把两条拉平为新值（值是否相等不作判据——R29④ · R29⑤）。现网迄今一次未撞（读数与来源见 D4）。
 
 **关键决策**
 
@@ -545,7 +549,7 @@ W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经�
 | D1 | 模块级 `baseURL` 缓存 + 同步只读 | 热路径零 IO；provider 对象被反复浅拷贝，注入字段会丢 | 预取注入（拷贝丢字段）· async `providerSpec`（IO 进请求路径） |
 | D2 | 写面收在 `listModels` | 六个消费面本来就要拉，零新增请求 / 零新增失败面 | 会话启动预取（与 §6.16 M8/M9 启动零探测冲突） |
 | D3 | L2 旧键位于 L3 之上 | 旧键也是人工声明；17:30 裁定人工声明 > 列表 | 置于列表之下（用户确认过的事实输给上游一句话） |
-| D4 | 三面同一把尺子 = 末段唯一 + 歧义不猜 | 用户 17:34 裁定；同一模型三种写法（列表 id / 请求名 / 手写键） | 完整名先扫（`glm-5.3/zzz` 误命中）· 逐字匹配（命名空间形静默失效）· 择一（替用户做决定） |
+| D4 | 三面同一把尺子 = 末段归一相等；两条键归一相同 ⇒ 同一模型，命中取该条即用 | 用户 17:34 裁定（末段归一）+ 2026-10-23 20:15「删！」：撞键只是同一模型的两种写法，用户写哪条都是他写的值（R29④） | 完整名先扫（`glm-5.3/zzz` 误命中）· 逐字匹配（命名空间形静默失效）· 把撞键判成「未提供」+ 告警 + 三端拒写（对不存在场景的防御：用户本机 19 个渠道 `modelContext` 全空、一次未撞——读数来源 = 用户 2026-10-23 20:15 现场说明，设计轮未复核本机配置） |
 | D5 | 三字段取第一个**合法**值 | R25 与 R26 同时成立 | 取首字段（首字段非法时整层作废，丢真值） |
 | D6 | 异常值照用 + 告警，不截断 | R27 + R32 明示（L3 列表值 ∥ L1 · L2 人工声明同判）；截断 = 静默改写真事实 | 截断 / 丢弃 |
 | D7 | K 单位编辑命令退役 **+ 同批三端替代**（CLI 命令 · VSC 设置面板 providers 卡 · 桌面设置 providers 段，同一交互形） | R31③：只退役不替代 = 配置项全平台无写面；只补一端 = 另两端永远设不了（产品常识：任何配置项必须在每个端有配置界面）；旧命令的单位事故不得随替代命令复现 | 保留旧命令（继续生产单位事故）· 只退役不替代（配置项失去写入口）· 只补 CLI（VSC / 桌面留欠账） |
@@ -561,7 +565,7 @@ W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经�
 | R26 | 0 / 负 / 非数 / 非整各一例 ⇒ 与字段缺席逐字同判 | P-7 |
 | R27 | 8× 值 ⇒ 采用原值（未改写）+ 告警恰一次 | P-8 |
 | R28 | 既有模型在「列表不报」路径下 context 逐值不变 | P-9 |
-| R29 | 两模型各值各自生效；末段相等命中；未点名落 L2；`glm-5.3` × `glm-5.3-flashx` 不命中 | P-10 · P-11 |
+| R29 | 两模型各值各自生效；末段相等命中；未点名落 L2；`glm-5.3` × `glm-5.3-flashx` 不命中；两条键归一相同 ⇒ 取对象键序第一条即用、零告警、不落下一层；同一模型的多种写法 ⇒ 写面一并改写为新值、清除面一并删除 | P-10 · P-11 · W-19 · W-20 |
 | R30 | 写 `128` ⇒ 解析 131072；旧键同判 + 告警一次；回显 `128K` | W-1 · W-9 · P-2 |
 | R31① | `/model` 菜单无 K 旧项；`grep setContextFlow thincoder-cli/src` 零命中 | G-1 |
 | R31② | 写者枚举见下；生产面零写 `providers[].context` | G-2 |
@@ -585,8 +589,8 @@ W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经�
 | P-8 | 边界 | 列表值 = 表值 ×8 | 采用原值（未改写）+ 告警恰一次；同值重拉不重告；换值再告一次 |
 | P-9 | 回归 | qwen / glm / mimo 既有模型，列表不报窗口 | `providerSpec(...).context` 逐值 = 批前 |
 | P-10 | 边界 | 用户键 `glm-5.3` ∧ 模型 `glm-5.3-flashx` | **不命中**（L1 缺席 ⇒ 落下一层）——末段相等算子（§6.9 尺子表） |
-| P-11 | 边界 | 同侧两键归一后相同（`qwen/glm-5.3` ∥ `zhipu/glm-5.3`） | 仅该模型 L1 未提供、落下一层 + 告警一次；同渠道其它模型声明生效 |
-| P-12 | 边界 | 列表同端点两 id 末段相撞 | 该模型 L3 视为未报、落 L4 |
+| P-11 | 边界 | `modelContext` 两键归一后相同（`qwen/glm-5.3` ∥ `zhipu/glm-5.3`）且**值不同**：`{"qwen/glm-5.3": 128, "zhipu/glm-5.3": 256}`（手改 JSON，对象键序如上） | 取**对象键序第一条**的值 ⇒ 131072（`qwen/glm-5.3` 的 128K；不排序、不比较）；L1 生效、不落下一层；**零**撞键告警、**零**量级告警 |
+| P-12 | 边界 | 列表同端点两 id 末段相撞且**值不同**（载荷序如下）：`qwen/glm-5.3`（`context_window: 200000`）∥ `zhipu/glm-5.3`（`context_window: 300000`） | 取**列表序第一条**的值 ⇒ 200000（不排序、不比较）；L3 生效、不落 L4；**零**撞键告警、**零**量级告警（200000 < 静态表 ×4） |
 | P-13 | 边界 | `modelContext["x"] = 0` ∥ `"128"`（字符串）∥ `true` | 该键视为未声明（落 L2）+ 装载期告警一次 |
 
 **R31② 凭据（写者枚举 + grep 判据）**——本轮 `grep` 入仓码面实读（2026-10-23）：
@@ -603,37 +607,37 @@ W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经�
 
 | 文件 | 现量 | Δ | 性质 |
 |---|---|---|---|
-| `thincoder-core/model-context.mjs` | **111**（新） | +~100 | 缓存 ∥ 键归一 ∥ `manualContextK` ∥ `listedContextTokens` |
+| `thincoder-core/model-context.mjs` | **99**（收口轮 wc -l 实读） | +~100；本批 **净删 12**（111 → 99） | 缓存 ∥ 键归一 ∥ `manualContextK` ∥ `listedContextTokens`；本批净删 = 两处撞键分支与告警文案（`:78-84` · `:97-103`）及文件头/注释里的撞键描述；读面撞键 ⇒ 取一条 |
 | `thincoder-core/model-specs.mjs` | **442**（`wc -l` 实读 · 2026-10-23） | 本批 ±0 | 上一批已落链 ∥ 量级守卫（L1 ∥ L2）∥ `providerSpecResolution` ∥ `formatContextK` ∥ `formatDeclaredContextK`；本批零改（入口本体）。拆点判定：442 ≤ 500 软线 ⇒ **拆点未触发**（零表块位移、零结构重整——§13.6 口径） |
 | `thincoder-core/provider/list-models.mjs` | **199** | +~15 | openai 分支收集 id→窗口，返回前写缓存 |
 | `thincoder-core/config.mjs` | **438** | +~20 | `modelContext` 装载归一 ∥ `requestBudget` 改读 `providerSpecResolution().source` |
 | `thincoder-core/agent-tools/context.mjs` | **181** | ±0 | `:101` 只换来源枚举值（恒等映射，零新分支） |
 | `thincoder-core/CHANGELOG.md` | **311**（批后 `wc -l`） | +6 条（`:10-18`，含 A7 迁移说明一条） | §「旧键 `providers[].context`（K）退役形态」末条要求该档 |
-| `thincoder-cli/src/tui/provider-admin.mjs` | **417** （本轮 `wc -l` 实读） | 本批 +2 | `setModelContextFlow` 新增（含第 4 步清除确认，`confirmDelete` 复用）∥ `setContextFlow`（`:174-221`）删除；本批：四处窗口串改经核 `formatDeclaredContextK`（`:243` · `:272` · `:328` · `:370`） |
+| `thincoder-cli/src/tui/provider-admin.mjs` | **417** （本轮 `wc -l` 实读） | 展示串批 +2；本批 **净删 ~14** | `setModelContextFlow` 新增（含第 4 步清除确认，`confirmDelete` 复用）∥ `setContextFlow`（`:174-221`）删除；四处窗口串经核 `formatDeclaredContextK`（`:243` · `:272` · `:328` · `:370`）；本批净删 = 三处撞键拒写径（`:237-241` 预检 · `:266-269` 清除前判 · `:280`/`:289`/`:300-303` 盘面写窗）与相关注释；清除径删全部命中键 |
 | `thincoder-cli/src/tui/model-picker.mjs` | **322** | +~6 ∥ −5 | L1 管理项改 `Set context window (K)…` / `action:"model-context"`；`fmtContextK`（`:39`）上提核 |
-| `thincoder-vscode/webview/settings-providers.js` | **180** | +~35；本批 −12 | 渠道行动作簇 `Context…` 钮 + 弹窗装配；本批：行面改渲染宿主 `modelContextText`，删自拼串与其旧理由注释 |
-| `thincoder-vscode/webview/settings-provider-dialog.js` | **499** | +~60；本批 −1 | 上下文编辑弹窗体；本批：current 段（`:318`）改读 `modelContextText` |
-| `thincoder-vscode/src/extension/settings.mjs` | **444** （本轮 `wc -l`） | +~25；本批 ±0 | 转口 + 两键入载荷：`providerStatus()` 增 `modelContext` + `context`；`saveProviderModelContext` 按设计坐标 re-export——实现体已迁 `provider-context.mjs`（理由 = 本档经 `provider-flows.mjs` 引 `vscode`，Node 里不可 import、单测无法跑）；本批：`modelContextText` 随 `providerContextFields(entry)` 展开进载荷，本档零改 |
-| `thincoder-vscode/src/extension/panel-messages-settings.mjs` | **326** | +~12；本批 +1 | 新 case `saveProviderModelContext`；本批：回执载荷增 `kText`（宿主 `formatDeclaredContextK(k)` 出词） |
-| `thincoder-vscode/locales/zh.json` · `en.json` | **361** · **361**（`wc -l` 实读 · 2026-10-23） | +8 键 / 端；本批 ±0 | 八键 zh ∥ en 字面；本批：两键（`contextSaved` · `contextClearConfirm`）× zh ∥ en 去模板尾 `K`（值改用核出词串） |
-| `thincoder-vscode/src/extension/provider-context.mjs` | **97** （新；本轮 `wc -l`） | +88；本批 +10 | 读面两键（`providerContextFields`）∥ 写面体（`saveProviderModelContext`：值校验 · 末段尺子改写 · 歧义拒写 · 拒径零落盘）；纯 Node、零 `vscode` 依赖（可单测）；本批：读面增 `modelContextText` 投影（只投合法正整数） |
+| `thincoder-vscode/webview/settings-providers.js` | **180** | +~35；展示串批 −12 | 渠道行动作簇 `Context…` 钮 + 弹窗装配；展示串批：行面改渲染宿主 `modelContextText`，删自拼串与其旧理由注释 |
+| `thincoder-vscode/webview/settings-provider-dialog.js` | **499**（`wc -l` 实读 · 2026-10-23） | 本批 **±0**（不碰该档） | 上下文编辑弹窗体（既有件）；撞键拒写径在宿主 `provider-context.mjs` 与三端写面，本档无守卫代码（`blocked` 与撞键拒写标识零命中）⇒ 不在本批射程；拆点判定：499 ≤ 500 软线 ⇒ **拆点未触发**（口径同 `model-specs.mjs` 行） |
+| `thincoder-vscode/src/extension/settings.mjs` | **444** （本轮 `wc -l`） | +~25；展示串批 ±0 | 转口 + 两键入载荷：`providerStatus()` 增 `modelContext` + `context`；`saveProviderModelContext` 按设计坐标 re-export——实现体已迁 `provider-context.mjs`（理由 = 本档经 `provider-flows.mjs` 引 `vscode`，Node 里不可 import、单测无法跑）；展示串批：`modelContextText` 随 `providerContextFields(entry)` 展开进载荷，本档零改 |
+| `thincoder-vscode/src/extension/panel-messages-settings.mjs` | **326** | +~12；展示串批 +1 | 新 case `saveProviderModelContext`；展示串批：回执载荷增 `kText`（宿主 `formatDeclaredContextK(k)` 出词） |
+| `thincoder-vscode/locales/zh.json` · `en.json` | **361** · **361**（`wc -l` 实读 · 2026-10-23） | +8 键 / 端；展示串批 ±0 | 八键 zh ∥ en 字面；展示串批：两键（`contextSaved` · `contextClearConfirm`）× zh ∥ en 去模板尾 `K`（值改用核出词串） |
+| `thincoder-vscode/src/extension/provider-context.mjs` | **97** （新；本轮 `wc -l`） | +88；本批 **净删 ~9** | 读面两键（`providerContextFields`）∥ 写面体（`saveProviderModelContext`：值校验 · 末段尺子改写）；纯 Node、零 `vscode` 依赖（可单测）；本批净删 = 撞键拒写径（`:64` 报错串 · `:71-72` 预检 · `:82` 写窗复判 · `blocked` 管路）与相关注释；清除径改删全部命中键 |
 | `thincoder-vscode/src/extension/panel-messages.mjs` | **400**（本轮 `wc -l`） | +~2 | 分发 `case "saveProviderModelContext"`（`:318`） |
-| `thincoder-vscode/webview/chat-messages.js` | **301**（本轮 `wc -l`） | +~3；本批 ±0 | 回执消费 `providerContextSaved`（`:170`——转发行内保存行，`kText` 原样透传） |
+| `thincoder-vscode/webview/chat-messages.js` | **301**（本轮 `wc -l`） | +~3；展示串批 ±0 | 回执消费 `providerContextSaved`（`:170`——转发行内保存行，`kText` 原样透传） |
 | `thincoder-vscode/webview/settings.js` | **204**（本轮 `wc -l`） | +~2 | 关面板同清上下文弹窗族（含确认族遮罩——`:176`） |
 | `thincoder-desktop/renderer/views/settings-sections-providers.mjs` | **308** | +~30 | 渠道行 `Context…` 钮 + `providerContextBody` 弹窗体 |
 | `thincoder-desktop/renderer/views/settings.mjs` | **463** | +~10 | `providerContext` 弹窗支 |
 | `thincoder-desktop/renderer/mount-settings-segments-providers.mjs` | **330** | +~30 | handlers 增编辑 ∥ 保存出口 |
 | `thincoder-desktop/renderer/settings-confirm.mjs` | **83** | +~5 | 既有确认弹层增正文参数（清除确认带当前值；默认焦点 ∥ 框内 Esc ∥ 背板语义零改） |
 | `thincoder-desktop/renderer/mount-settings-reads.mjs` | **222** | +~8 | `provider:list` 回执透传两键；候选切片 `settings.model.models` 只读（零改） |
-| `thincoder-desktop/src/main/providers.mjs` | **406** | +~10 | `provider:list` 行面增 `modelContext` + `context` 两键（**不加 `models` 键**——候选不从此回执取） |
-| `thincoder-desktop/renderer/i18n-settings.mjs` | **230** | 本批 −1 键 | 上一批已落同名八键；本批删死键 `contextSaved`（桌面不出回执行）——其余七键零改 |
+| `thincoder-desktop/src/main/providers.mjs` | **405**（收口轮 `wc -l` 实读） | +~10；本批 **净删 1**（406 → 405） | `provider:list` 行面增 `modelContext` + `context` 两键（**不加 `models` 键**——候选不从此回执取）；本批净删 = 撞键预检与拒写（`:286` 注 · `:299` 预检 · `:308` 写窗复判 · `:319` `reason:"ambiguous"`）；写面撞键全改写、清除删全部命中键 |
+| `thincoder-desktop/renderer/i18n-settings.mjs` | **230** | 展示串批 −1 键 | 七键（`contextSaved` 死键已删）；本批零改 |
 | `thincoder-server/public/model-specs-snapshot.mjs` | **102** | ±0（一 token + 注改） | 第三载体随正（§17） |
-| 单元测试档（新增，收口删） | 0 | +~180 | P-1..P-13 ∥ W-1..W-18 ∥ G-1..G-2 |
-| 单元测试档（**本批**新增，收口删） | 0 | +~60 | W-9 ∥ W-9b ∥ R33③ 源扫（五档判据见下「R33③ 源扫」） |
+| 单元测试档（新增，收口删） | 0 | +~185 | P-1..P-13 ∥ W-1..W-20 ∥ G-1..G-2 |
+| 单元测试档（**展示串批**新增，收口删） | 0 | +~60 | W-9 ∥ W-9b ∥ R33③ 源扫（五档判据见下「R33③ 源扫」） |
 
-`thincoder-core/model-specs.mjs` 本批**零改**（入口本体）。`thincoder-desktop/**` 唯一改动 = `renderer/i18n-settings.mjs` 删死键 `contextSaved`；其余七键模板本就以核出词串入（`${current}`，无尾 `K`）⇒ 桌面展示面零改（已接 `modelContextText`）。
+`thincoder-core/model-specs.mjs` 入口本体零改；桌面 i18n 七键（`contextSaved` 死键已删）、展示面已接 `modelContextText` ⇒ 本批只动 `thincoder-desktop/src/main/providers.mjs`（撞键守卫回收）。
 
-本表读数 = `ReadAllLines().Length` 实读（2026-10-23，与 `wc -l` 同值）；标注「本轮」的六行为 VSC 面交付后复测值，其余为设计轮读数；标注「本批」的 Δ 为 R33 展示入口批的预估值。
+本表读数 = `ReadAllLines().Length` 实读（2026-10-23，与 `wc -l` 同值）；标注「本轮」的六行为 VSC 面交付后复测值，其余为设计轮读数；标注「展示串批」的 Δ 为展示串统一批的预估值；标注「本批净删」的 Δ 为撞键守卫回收批的预估删量。
 
 **R33③ 源扫（机检判据 · 五档射程）**
 
@@ -657,7 +661,7 @@ W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经�
 | `modelContext`（既有键名） | **existing**: `thincoder-core/config.mjs:272-289`（装载归一）∥ `thincoder-core/model-context.mjs` `manualContextK`（L1 取值）∥ 三端写面 ∥ 载荷（受影响文件表在册） |
 | `model-context.mjs`（既有模块） | **existing**: `thincoder-core/model-context.mjs`（111 行——缓存 ∥ 键归一 ∥ `manualContextK` ∥ `listedContextTokens`） |
 | `providerSpecResolution` / `formatDeclaredContextK`（既有导出） | **existing**: `thincoder-core/model-specs.mjs:358` `providerSpecResolution` · `:323` `formatDeclaredContextK`（收 K）；token 口径另为 `:314` `formatContextK`（收 token）——两导出分工见「读面回显」节末 |
-| 八键 i18n / `Context…` 钮文案 | **existing**: `thincoder-vscode/locales/zh.json:129-136` 八键已落（`:132` `contextSaved` · `:133` `contextClearConfirm` 带模板尾 `K`——本批去掉）；桌面 `thincoder-desktop/renderer/i18n-settings.mjs:73-80` 同名键（`contextSaved` 死键，本批删） |
+| 八键 i18n / `Context…` 钮文案 | **existing**: `thincoder-vscode/locales/zh.json:129-136` 八键已落（`:132` `contextSaved` · `:133` `contextClearConfirm`，模板尾不带 `K`）；桌面 `thincoder-desktop/renderer/i18n-settings.mjs:73-80` 同名键七键（`contextSaved` 死键已删） |
 
 ### 6.16 模型清单 provider 化与放行语义
 

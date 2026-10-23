@@ -209,10 +209,10 @@ export function createProviderAdmin(ctx) {
    *  唯一乘点在核 `model-specs.mjs` 的 L1∥L2 合流点（端侧自乘 = 下一次单位事故）。
    *  值校验 = 先 parse 再判：`Number(String(v).trim())` 后过核 `positiveInt`（交互输入是字符串，
    *  直接喂谓词会全量拒绝）。
-   *  清除语义：空输入 = 清除该模型的键；**有已声明值先过一道确认**（默认 Cancel）——CLI 自由文本态
+   *  清除语义：空输入 = 清除该模型的键（归一相等的多条一并删除——R29⑤）；**有已声明值先过一道确认**（默认 Cancel）——CLI 自由文本态
    *  Esc 与空回车同返 `""`（`key-modes.mjs`），不确认就是拿取消手势当删除；无声明 ⇒ 空操作。
    *  键处理 = 末段尺子（核 `normalizeModelKey`）：归一后相等的既有键就改它（不新增第二种拼写），
-   *  否则用模型 id 原样作键；歧义（两条键归一后相同）不猜——拒写并明示。
+   *  否则用模型 id 原样作键；命中多条（归一后相等 = 同一模型）⇒ 一并改写为同一新值（R29⑤）。
    *  **不预填任何非声明值**：提示里的 current 只取该模型的已声明 K——列表值 ∥ 静态表值都不进输入框
    *  （一次回车就会把参考值固化成人工声明）。
    *  读面回显 = 已声明值（R31④ / W-9 / W-11）：渠道行展示核出词串（逐条 `模型: <核出词>`，
@@ -235,12 +235,7 @@ export function createProviderAdmin(ctx) {
     if (!model) return // Esc ∥ 空输入 ⇒ 中止（盘上零变）
 
     const matches = matchingContextKeys(target.modelContext, model)
-    if (matches.length > 1) { // 歧义不猜（D4）——写哪一条都是替用户做决定
-      pushLine(`Ambiguous modelContext keys for ${se.name}:${model} (${matches.join(", ")}) — resolve the duplicate declarations first; nothing changed`, C.error)
-      return
-    }
-    const declaredKey = matches[0] ?? model // 命中既有键 ⇒ 改写它；否则模型 id 原样
-    const declaredK = matches.length === 1 ? positiveInt(target.modelContext[matches[0]]) : null
+    const declaredK = matches.length > 0 ? positiveInt(target.modelContext[matches[0]]) : null
     const current = declaredK !== null ? formatDeclaredContextK(declaredK) : "Not declared"
     const input = (await askQuestion(
       `Context window for ${se.name}:${model} in K (current: ${current} — e.g. 128 = 128K; empty to clear):`
@@ -263,10 +258,6 @@ export function createProviderAdmin(ctx) {
         pushLine(`Nothing to clear for ${model}`, C.text)
         return
       }
-      if (clearKeys.length > 1) {
-        pushLine(`Ambiguous modelContext keys for ${se.name}:${model} (${clearKeys.join(", ")}) — resolve the duplicate declarations first; nothing changed`, C.error)
-        return
-      }
       // 有已声明值：删一个声明值 = 破坏动作——先确认，默认 Cancel（Esc 回到这里 ⇒ 盘上零变）。
       // 确认行带当前值：不带值用户不知道自己删的是多少（值非法 ⇒ current 段回 `Not declared`）。
       const confirmed = await confirmDelete(
@@ -276,45 +267,37 @@ export function createProviderAdmin(ctx) {
     }
 
     // D-F5a 先盘后存：磁盘 fresh raw 上单键补丁（不取内存 providers 整数组）；键仍在盘面重判一次
-    // （对端的并发改写优先——盘面命中就沿盘面拼写；歧义则拒写，不新增第二种拼写）。
-    let diskAmbiguous = false
+    // （对端的并发改写优先——盘面命中就沿盘面拼写；命中多条 = 同一模型的多种写法 ⇒ 一并改写 ∥ 一并删除，R29⑤）。
     let diskMissing = false
     let diskNothing = false
-    let diskKey = declaredKey // 盘面命中的拼写（单命中时以盘面为准——内存镜像同用）
+    let diskKeys = [] // 盘面命中的全部拼写（空 ⇒ 写面用模型 id 原样作新键）
     await persistRaw((raw) => {
       raw.providers ??= []
       const t = raw.providers.find((p) => p?.name === se.name)
       if (!t) { diskMissing = true; return }
-      const hits = matchingContextKeys(t.modelContext, model)
-      if (hits.length > 1) { diskAmbiguous = true; return }
+      diskKeys = matchingContextKeys(t.modelContext, model)
       if (nextK === undefined) {
         // 清除：盘面已无该键（对端刚删）⇒ 不出假收据（下面回 Nothing to clear）
-        if (hits.length === 0) { diskNothing = true; return }
-        diskKey = hits[0]
-        applyModelContext(t, hits[0], undefined) // 删键；对象空 ⇒ 连 modelContext 一起删
+        if (diskKeys.length === 0) { diskNothing = true; return }
+        for (const key of diskKeys) applyModelContext(t, key, undefined) // 删键；对象空 ⇒ 连 modelContext 一起删
         return
       }
-      diskKey = hits[0] ?? declaredKey
-      applyModelContext(t, diskKey, nextK)
+      for (const key of (diskKeys.length ? diskKeys : [model])) applyModelContext(t, key, nextK)
     })
-    if (diskAmbiguous) {
-      pushLine(`Ambiguous modelContext keys for ${se.name}:${model} on disk — resolve the duplicate declarations first; nothing changed`, C.error)
-      return
-    }
     if (diskMissing) {
       pushLine(`Provider "${se.name}" no longer exists in the config file — nothing saved`, C.error)
       return
     }
     if (diskNothing) {
-      applyModelContext(target, diskKey, undefined) // 内存镜像对齐盘面（不留 ghost）
+      for (const key of matches) applyModelContext(target, key, undefined) // 内存镜像对齐盘面（不留 ghost）
       pushLine(`Nothing to clear for ${model}`, C.text)
       return
     }
 
     // 内存镜像就地改键（`agent.provider = { ...target }` 是浅拷贝——改同一对象 ∥ 指同一表，整替换会失配）；
-    // 盘面拼写与内存不同时先清旧拼写（否则归一后同名的两条键会让 L1 读面判歧义）
-    if (diskKey !== declaredKey) applyModelContext(target, declaredKey, undefined)
-    applyModelContext(target, diskKey, nextK)
+    // 盘面拼写与内存不同时先清旧拼写——内存镜像与盘面一一对应，不留 ghost 键
+    for (const key of matches) if (!diskKeys.includes(key)) applyModelContext(target, key, undefined)
+    for (const key of (diskKeys.length ? diskKeys : [model])) applyModelContext(target, key, nextK)
     if (se.name === agent.activeProvider && agent.provider) {
       if (target.modelContext === undefined) delete agent.provider.modelContext
       else agent.provider.modelContext = target.modelContext
@@ -347,7 +330,7 @@ function diskDeclaredKeys(providerName, model) {
 
 /** `modelContext` 键匹配（写面 `PROVIDER.md` §6.15「键形与查表规则」）：末段 + 小写归一后**相等**
  *  才是同一模型（核 `normalizeModelKey`——不是前缀：`glm-5.3` 不命中 `glm-5.3-flashx`）。
- *  返回全部命中的既有键（>1 = 歧义——写面不猜，调用侧拒写）。 */
+ *  返回全部命中的既有键（>1 = 同一模型的多种写法——写面一并改写 ∥ 清除一并删除，R29⑤）。 */
 function matchingContextKeys(table, model) {
   if (!table || typeof table !== "object" || Array.isArray(table)) return []
   const target = normalizeModelKey(model)

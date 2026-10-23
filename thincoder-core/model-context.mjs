@@ -14,7 +14,8 @@
  *
  * 键归一 = 末段 + 小写（规则单源 = `PROVIDER.md` §6.9）：`qwen/ZHIPU/GLM-5.3` ⇒ `glm-5.3`。
  * **本面算子 = 末段相等**（不是前缀）：用户键 `glm-5.3` 不命中模型 `glm-5.3-flashx`（R29③）。
- * 歧义不猜：同侧两条键归一后相撞 ⇒ **仅该模型**在本层视为未提供、落下一层，并告警一次（不废整层）。
+ * 同侧两条键归一后相撞 = 同一模型的两种写法 ⇒ **命中即取**（对象键序 ∥ 列表序第一条，不排序、
+ * 不比较；R29④）——不拒、不告警、不落下一层。
  */
 
 /** 值域校验单点（L1 K ∥ L3 token 共用谓词）：正整数才收，其余一律 `null`（= 未提供）。
@@ -46,7 +47,7 @@ export function warnContextOnce(key, message) {
 // 键 = 归一后的 baseURL（列表是端点的事实，不是本地别名的事实——探针目标常缺 name）。
 // 写 = 每次成功拉取**整条替换**（不合并）：列表不再报某模型 ⇒ 该模型回到 L4；拉取失败不写、
 // 不清空上次成功值（上次自报比静态表更接近事实）。归一索引在写时建好 ⇒ 读面是一次 `Map` 查表
-// （同键多条目 = 末段相撞，读面判歧义）。
+// （同键多条目 = 末段相撞，读面取列表序第一条——R29④）。
 const listedByEndpoint = new Map()
 
 /** L3 写面（唯一入口）：记录一个端点的列表自报窗口表。`entries` = `[id, tokens]` 可迭代
@@ -68,40 +69,26 @@ export function recordListedContext(baseURL, entries) {
   listedByEndpoint.set(base, index)
 }
 
-/** L3 读面：列表自报窗口（token，不乘）。未报 ∥ 歧义 ⇒ `null`（落下一层）。 */
+/** L3 读面：列表自报窗口（token，不乘）。未报 ⇒ `null`（落下一层）；同端点两 id 末段相撞
+ *  ⇒ 取列表序第一条即用（同一模型，R29④——不排序、不比较、不告警）。 */
 export function listedContextTokens(provider) {
   const base = normalizeBaseURL(provider?.baseURL)
   const target = normalizeModelKey(provider?.model)
   if (!base || !target) return null
   const bucket = listedByEndpoint.get(base)?.get(target)
-  if (!bucket) return null
-  if (bucket.length > 1) {
-    warnContextOnce(
-      `ambiguous-list\0${base}\0${target}`,
-      `[config] /models on ${base} lists ${bucket.length} ids whose last segment is "${target}" (${bucket.map((entry) => entry.id).join(", ")}) — the context for model "${provider?.model}" is ambiguous and ignored (falling through to the model spec table)`,
-    )
-    return null
-  }
-  return positiveInt(bucket[0].tokens)
+  return bucket ? positiveInt(bucket[0].tokens) : null
 }
 
-/** L1 读面：`providers[].modelContext[模型]` 人工声明（K 单位）。未声明 ∥ 值非法 ∥ 歧义 ⇒
- *  `null`（落下一层）。值非法在装载期已告警一次（`config.mjs`），此处只判不告（热路径）。 */
+/** L1 读面：`providers[].modelContext[模型]` 人工声明（K 单位）。未声明 ∥ 值非法 ⇒ `null`
+ *  （落下一层）；两条键归一后相同 = 同一模型的两种写法 ⇒ 取对象键序第一条即用（R29④——
+ *  不排序、不比较、不告警）。值非法在装载期已告警一次（`config.mjs`），此处只判不告（热路径）。 */
 export function manualContextK(provider) {
   const table = provider?.modelContext
   if (!table || typeof table !== "object" || Array.isArray(table)) return null
   const target = normalizeModelKey(provider?.model)
   if (!target) return null
-  const matches = []
-  for (const [key, value] of Object.entries(table)) if (normalizeModelKey(key) === target) matches.push([key, value])
-  if (matches.length > 1) {
-    warnContextOnce(
-      `ambiguous-modelContext\0${normalizeBaseURL(provider?.baseURL)}\0${target}`,
-      `[config] modelContext on provider "${provider?.name ?? ""}" declares ${matches.length} keys whose last segment is "${target}" (${matches.map(([key]) => key).join(", ")}) — the declaration for model "${provider?.model}" is ambiguous and ignored (falling through to the provider context / list / spec table)`,
-    )
-    return null
-  }
-  return matches.length === 1 ? positiveInt(matches[0][1]) : null
+  for (const [key, value] of Object.entries(table)) if (normalizeModelKey(key) === target) return positiveInt(value)
+  return null
 }
 
 /** 测试缝：清空 L3 缓存 + 告警去重（单元档用；生产零调用）。 */
