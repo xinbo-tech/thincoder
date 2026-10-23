@@ -13,6 +13,10 @@
 
 All notable changes to ThinCoder Desktop are documented here.
 
+### Changed
+
+- **上下文窗口展示串统一由核出词**：声明 `1024`（= 1M）此前显示 `1024K`，现显示 `1M`；`128` 仍是 `128K`。三端（CLI / VSC / 桌面）同源，端侧不再自拼单位。
+
 ## [0.10.10] — 2026-10-22
 
 > 随核依赖升版（本端面零改动）。

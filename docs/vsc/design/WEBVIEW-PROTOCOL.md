@@ -126,7 +126,7 @@ string / 对象双分支在 payload 构造处统一推导（对象载荷字段�
 | 32 | `secretInput`（**新消息**——host → webview） | `{ payload, promptId }`——凭据 / 秘密输入卡（SSH 会话批；`payload` = 核 `onSecretInput` 原样透传（`{ kind, sessionId, host, user, port, fields[], keys{} }`）；`promptId` = 面板单调计数（逐卡配对）；**值只在返回路**） | `src/extension/panel-callbacks.mjs` `makeAskSecretInPanel`（`:88`）+ `cbs.onSecretInput`（`:293`） | `webview/chat-messages.js:207` `case` → `webview/secret-input.js` `showSecretInput` |
 | 33 | `secretInputResponse`（**新消息**——webview → host） | `{ values:{…}|null, promptId }`——凭据卡应答（提交 = 值包 ∥ 取消 = `null`；host 按 `promptId` 精确配对，迟到 / 错序不误 resolve 队头） | `webview/secret-input.js:23`（发射位——字面量构造 `:21`） | `src/extension/panel-messages.mjs:297` `case` → `panel-messages-turn.mjs` `handleSecretInputResponse`（`:175-188`） |
 | 34 | `secretInputCancelled`（**新消息**——host → webview） | `{ promptId }`——abort（Stop）释放未答凭据卡（`questionCancelled` 同构：按 `promptId` 精确移除；无 `promptId`（旧 host）⇒ 移除全部凭据卡） | `src/extension/panel-callbacks.mjs:93`（`makeAskSecretInPanel` onAbort） | `webview/chat-messages.js:210` `case`（摘 `.secret-card`） |
-| 35 | `saveProviderModelContext` ∥ `providerContextSaved`（**新消息对**——上行 webview → host ∥ 下行 host → webview 回执） | 上行 `{ name, model, k }`——`k` = K 单位正整数；空 ∥ `null` = 清除（有已声明值时先过确认层）。下行 `{ name, model, k }`——保存成功受理回执（拒径零回执 ⇒ 拒因走既有 `providerError`；语义单源 = `SETTINGS.md` §2.21） | `webview/settings-provider-dialog.js`（表单保存上发；入口 = `webview/settings-providers.js:120` `Context…`） | `src/extension/panel-messages.mjs:318` `case` → `panel-messages-settings.mjs:130-151` → `src/extension/provider-context.mjs`；回执消费 = `webview/chat-messages.js:170` → `webview/settings-providers.js:76-90` |
+| 35 | `saveProviderModelContext` ∥ `providerContextSaved`（**新消息对**——上行 webview → host ∥ 下行 host → webview 回执） | 上行 `{ name, model, k }`——`k` = K 单位正整数；空 ∥ `null` = 清除（有已声明值时先过确认层）。下行 `{ name, model, k, kText }`——保存成功受理回执（`kText` = 宿主经核 `formatDeclaredContextK(k)` 出词——`128K` / `1M`；拒径零回执 ⇒ 拒因走既有 `providerError`；语义单源 = `SETTINGS.md` §2.21） | `webview/settings-provider-dialog.js`（表单保存上发；入口 = `webview/settings-providers.js:120` `Context…`） | `src/extension/panel-messages.mjs:318` `case` → `panel-messages-settings.mjs:130-151` → `src/extension/provider-context.mjs`；回执消费 = `webview/chat-messages.js:170` → `webview/settings-providers.js:76-90` |
 
 纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–35 即全部在案增量；表外增量不入）。发射 / 接收落点：
 `thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:29` ·
@@ -348,7 +348,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | D-P8 | 状态文本载体 = **结构化 `statusText` 消息**（kind 判别 → webview 按 locale 渲染） |
 | D-P9 | Send 可见性 = running 期**隐藏** |
 | D-P10 | `scrolled N` 段不设——滚动状态 = 悬浮回底钮（§6.1 滚动行：实证例外——行为证据） |
-| D-P11 | 协议增量 = **只增不改**、**三十四项**登记（§3.2） |
+| D-P11 | 协议增量 = **只增不改**、**三十五项**登记（§3.2） |
 | D-P12 | 合并权限卡**并入 `promptId` 族**（单一释放通道 `releasePermission` + id 精确匹配 + 孤儿回写） |
 | D-P13 | `waiting` 判据含**批权限队列** + **释放即刷**（刷新点 = 释放通道单点 `releasePermission`） |
 | D-P14 | 诊断上行 `panelDiag` = **新消息（行 8 登记）**——出生 / 终态事件面痕迹入主侧日志 |
@@ -417,7 +417,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `project` | src/extension/panel-project.mjs:27 | webview/chat-messages.js:141 | `活` | — |
 | `providerError` | thincoder-vscode/src/extension/settings.mjs:311（助手 `postProviderError`——**19 站点**汇聚——#695） | webview/chat-messages.js:154 | `活` | 载荷 v2 = `{ scope, reason }`（#640——§3.2 行 20）；段标 + 词化码 ∕ 单槽驻留（机制单源 = `SETTINGS.md` §2.15）； |
 | | | | | ②③ 列 = 计数终值复核（#695） |
-| `providerContextSaved` | src/extension/panel-messages-settings.mjs:130-151（`handleSaveProviderModelContext`——成功径才发） | webview/chat-messages.js:170 | `活` | 模型上下文声明保存**受理回执**（`{ name, model, k }`；`k === null` = 清除径；拒径零回执 ∥ 零落盘，拒因走既有 `providerError`；语义单源 = `SETTINGS.md` §2.21）；消费转发 → `webview/settings-providers.js:76-90`；§3.2 行 35 |
+| `providerContextSaved` | src/extension/panel-messages-settings.mjs:130-151（`handleSaveProviderModelContext`——成功径才发） | webview/chat-messages.js:170 | `活` | 模型上下文声明保存**受理回执**（`{ name, model, k, kText }`——`kText` = 宿主经核 `formatDeclaredContextK(k)` 出词；`k === null` = 清除径；拒径零回执 ∥ 零落盘，拒因走既有 `providerError`；语义单源 = `SETTINGS.md` §2.21）；消费转发 → `webview/settings-providers.js:76-90`；§3.2 行 35 |
 | `providerKeySaved` | src/extension/panel-messages-settings.mjs:43-44（`handleSaveProviderKey`） | webview/chat-messages.js:160 | `活` | 密钥行保存**受理回执**（#1053——实施落地；成功径才发，拒径零回执 ⇒ 徽标零闪 ∥ 行不关——拒因走既有 `providerError`；回执语义单源 = `SETTINGS.md` §2.18）；消费转发 → `webview/settings-providers.js:97` `onProviderKeySaved`（恢复静态行 + `flashSaved`）；§3.2 行 25 |
 | `providerStatus` | thincoder-vscode/src/extension/settings.mjs:340 | webview/chat-messages.js:143 | `活` | 载荷增 `status.providerState`（核统一解析三态 = `{ state, channel, model, reason, invalidReason }`——#841；`keyOk := 非 invalid 类`） |
 | `proxySettings` | src/extension/panel-settings-push.mjs:104/:93 | webview/chat-messages.js:171 | `活` | 打开拍回批（F-W8） |
@@ -499,7 +499,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | `saveEmbedKey` | webview/settings-tools.js:18 | src/extension/panel-messages.mjs:286 | `活` | — |
 | `saveMcpServer` | webview/settings-mcp-dialog.js（实施后回填坐标——表单族随拆档迁出 `settings-mcp.js`；原 `:134`） | src/extension/panel-messages.mjs:277 | `活` | 三元双分支（同点 `editMcp`）；弹窗体（添加入口弹窗统一批 · #1054——表单入弹窗，§2.17 ①） |
 | `saveProviderKey` | webview/settings-providers.js:37 | src/extension/panel-messages.mjs:275 | `活` | — |
-| `saveProviderModelContext` | webview/settings-provider-dialog.js（表单保存上发；入口 = `settings-providers.js:120` `Context…`） | src/extension/panel-messages.mjs:318 | `活` | 载荷 `{ name, model, k }`（K 单位正整数；空 = 清除）；回执 = `providerContextSaved`（§3.2 行 35；语义单源 = `SETTINGS.md` §2.21） |
+| `saveProviderModelContext` | webview/settings-provider-dialog.js（表单保存上发；入口 = `settings-providers.js:120` `Context…`） | src/extension/panel-messages.mjs:318 | `活` | 载荷 `{ name, model, k }`（K 单位正整数；空 = 清除）；回执 = `providerContextSaved`（`{ name, model, k, kText }`——`kText` = 宿主经核 `formatDeclaredContextK(k)` 出词；§3.2 行 35；语义单源 = `SETTINGS.md` §2.21） |
 | `saveProxySettings` | webview/settings-env.js:113 | src/extension/panel-messages.mjs:351 | `活` | 载荷 = 逐字段（`SETTINGS.md` §2.8） |
 | `saveShellSettings` | webview/settings-env.js:129/:144 | src/extension/panel-messages.mjs:350 | `活` | F-W11 接线落地（`SETTINGS.md` §2.9）；空值 ⇒ 删键 = 路径册 #2（`System default` 显式项） |
 | `saveWebsearchKey` | webview/settings-tools.js:36 | src/extension/panel-messages.mjs:288 | `活` | — |

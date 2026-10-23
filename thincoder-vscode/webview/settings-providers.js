@@ -9,19 +9,19 @@ import { SS, PROVIDER_LABELS } from "./settings-state.js"
 import { keyRowEdit, flashSaved } from "./settings-widgets.js"
 import { openProviderContextDialog } from "./settings-provider-dialog.js"
 
-/** 行面上下文回显（`docs/core/design/PROVIDER.md` §6.15「读面载荷」· R31③-VSC 行面）：读 `modelContext`
- *  （已声明映射，**K 原值**）——逐条 `模型: NK`；单条即 `NK`；无声明 ⇒ `未声明` ∥ `Not declared`。
- *  为什么不用 `providerSpec().context`：渠道条目无 `model`（`config-io.mjs` `delete p.model`）⇒ 链的 L1
- *  永不命中，该值最多走到 L2 旧键 ∥ L5 默认（写 128 会显 125K）。
- *  为什么不用核 `formatContextK`：它是 **token 口径**（`formatContextK(128)` ⇒ `0K`）；要用它就得端侧
- *  先把已声明的 K 值 ×1024——硬约束禁止（乘点唯一在核）。故 K 串 = 已声明值原样 + 模板里的 K（与本框
- *  提示行同一规则），不经格式器。 */
+/** 行面上下文回显（`docs/core/design/PROVIDER.md` §6.15「读面载荷」· R31③-VSC 行面 ∥ R33）：读宿主下发的
+ *  `modelContextText`（同键展示串——宿主经核 `formatDeclaredContextK` 出词，K→token 换算只在核一处）——
+ *  逐条 `模型: <核出词>`；单条即 `<核出词>`；无声明 ⇒ `未声明` ∥ `Not declared`。
+ *  为什么不在这里拼 K 串：声明 `1024` 时自拼出 `1024K`、核出 `1M`（R33 判缺陷写法一）；也不读
+ *  `modelContext` 原值自算。为什么不读 `providerSpec().context`：渠道条目无 `model`（`config-io.mjs`
+ *  `delete p.model`）⇒ 链的 L1 永不命中，该值最多走到 L2 旧键 ∥ L5 默认（写 128 会显 125K）。
+ *  webview 零 `@thincoder/core` 引用 ⇒ 串由宿主下发，面板内不 import 核。 */
 function contextDeclaredText(s0) {
-  const table = s0?.modelContext
+  const table = s0?.modelContextText
   const keys = table && typeof table === "object" && !Array.isArray(table) ? Object.keys(table) : []
   if (keys.length === 0) return t("settings.providers.contextNotDeclared")
-  const pair = (k2) => `${escHtml(k2)}: ${escHtml(String(table[k2]))}K`
-  return keys.length === 1 ? `${escHtml(String(table[keys[0]]))}K` : keys.map(pair).join(" · ")
+  const pair = (k2) => `${escHtml(k2)}: ${escHtml(String(table[k2]))}`
+  return keys.length === 1 ? escHtml(String(table[keys[0]])) : keys.map(pair).join(" · ")
 }
 
 /** 密钥行静态态恢复（#1053）：现读 SS——取消径 ∥ 保存受理回执径共用（不重建面板：其余卡在编编辑存活）。 */
@@ -79,16 +79,17 @@ export function onProviderKeySaved(name) {
 }
 
 /** 上下文保存受理回执消费（host → webview `providerContextSaved`——成径先重推 `providerStatus` 再发本回执）：
- *  写径 ⇒ 行内就地显 `settings.providers.contextSaved`（4s 自散）；清除径（`k === null`）⇒ 零提示
+ *  写径 ⇒ 行内就地显 `settings.providers.contextSaved`（4s 自散），模板 `<N>` = 宿主出词串 `kText`
+ *  （模板不补 `K`——补了 `1M` 会出 `1MK`）；清除径（`kText === null`）⇒ 零提示
  *  （行面已随状态重绘转 `未声明`）。 */
-export function onProviderContextSaved({ name, model, k } = {}) {
-  if (k === null || k === undefined) return
+export function onProviderContextSaved({ name, model, kText } = {}) {
+  if (kText === null || kText === undefined) return
   const row = document.getElementById("prov-" + name)
   if (!row) return
   const label = SS.providerStatus.labels?.[name] || PROVIDER_LABELS[name] || name
   const hint = document.createElement("div")
   hint.className = "prov-hint prov-context-saved"
-  hint.textContent = t("settings.providers.contextSaved", { provider: label, model, k })
+  hint.textContent = t("settings.providers.contextSaved", { provider: label, model, k: kText })
   row.appendChild(hint)
   setTimeout(() => hint.remove(), 4000)
 }

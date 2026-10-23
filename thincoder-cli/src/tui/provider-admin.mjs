@@ -20,6 +20,7 @@
 import { PROVIDER_PRESETS as PRESETS, resolveCompactThreshold } from "@thincoder/core/config.mjs"
 import { hasKey } from "@thincoder/core/model-ref.mjs"
 import { normalizeModelKey, positiveInt } from "@thincoder/core/model-context.mjs"
+import { formatDeclaredContextK } from "@thincoder/core/model-specs.mjs"
 import { loadRaw } from "@thincoder/core/config-io.mjs"
 import { probeTargetOf } from "@thincoder/core/provider-flows.mjs"
 import { probeChannelModels, getProviderModels, modelListFailureText } from "./model-catalog.mjs"
@@ -214,8 +215,8 @@ export function createProviderAdmin(ctx) {
    *  否则用模型 id 原样作键；歧义（两条键归一后相同）不猜——拒写并明示。
    *  **不预填任何非声明值**：提示里的 current 只取该模型的已声明 K——列表值 ∥ 静态表值都不进输入框
    *  （一次回车就会把参考值固化成人工声明）。
-   *  读面回显 = 已声明值（R31④ / W-9 / W-11）：渠道行展示 `modelContext` 原值（逐条 `模型: NK`，
-   *  单条即 `NK`，无声明 `Not declared`）——**不取 `providerSpec(p).context`**：渠道条目不携模型，
+   *  读面回显 = 已声明值（R31④ / W-9 / W-11）：渠道行展示核出词串（逐条 `模型: <核出词>`，
+   *  单条即 `<核出词>`，无声明 `Not declared`）——**不取 `providerSpec(p).context`**：渠道条目不携模型，
    *  该值只能落 L5 的 125K（把声明的 128 显示成 125K = 错读数，设计「读面回显」明令禁止）。 */
   async function setModelContextFlow() {
     const se = await showPicker("Set Context Window", [
@@ -240,7 +241,7 @@ export function createProviderAdmin(ctx) {
     }
     const declaredKey = matches[0] ?? model // 命中既有键 ⇒ 改写它；否则模型 id 原样
     const declaredK = matches.length === 1 ? positiveInt(target.modelContext[matches[0]]) : null
-    const current = declaredK !== null ? `${declaredK}K` : "Not declared"
+    const current = declaredK !== null ? formatDeclaredContextK(declaredK) : "Not declared"
     const input = (await askQuestion(
       `Context window for ${se.name}:${model} in K (current: ${current} — e.g. 128 = 128K; empty to clear):`
     ))?.trim() ?? ""
@@ -269,7 +270,7 @@ export function createProviderAdmin(ctx) {
       // 有已声明值：删一个声明值 = 破坏动作——先确认，默认 Cancel（Esc 回到这里 ⇒ 盘上零变）。
       // 确认行带当前值：不带值用户不知道自己删的是多少（值非法 ⇒ current 段回 `Not declared`）。
       const confirmed = await confirmDelete(
-        `Clear context for ${se.name}:${model} (currently ${declaredK !== null ? `${declaredK}K` : "Not declared"})?`
+        `Clear context for ${se.name}:${model} (currently ${current})?`
       )
       if (!confirmed) return // Cancel / Esc ⇒ 盘上零变
     }
@@ -322,10 +323,10 @@ export function createProviderAdmin(ctx) {
         agent.config.agent.compactThresholdResolved = resolveCompactThreshold(null, agent.provider).value
       }
     }
-    // 回显只给 K（`128K`）——不同时给 token 数（两个数并排又把人绕回单位问题）
+    // 回显串 = 核出词（`128K` / `1M`）——不同时给 token 数（两个数并排又把人绕回单位问题）
     pushLine(nextK === undefined
       ? `Context cleared for ${model}`
-      : `Context saved: ${se.name}:${model} = ${nextK}K`, C.tool)
+      : `Context saved: ${se.name}:${model} = ${formatDeclaredContextK(nextK)}`, C.tool)
   }
 
   return { addProviderFlow, removeProviderFlow, setKeyFlow, setProviderKey, setModelContextFlow }
@@ -361,13 +362,17 @@ function declaredContextOf(provider) {
   return Object.entries(table).filter(([, value]) => Number.isInteger(value) && value > 0)
 }
 
-/** 渠道行上下文回显串（读面 = 已声明值，R31④ / W-9 / W-11，**两端共用**：写面渠道行 ∥ `/model`
- *  L1 渠道行）：逐条 `模型: NK`；单条即 `NK`；无声明 ⇒ `Not declared`。三端同串（VSC ∥ 桌面同形——
- *  ` · ` 分隔）——**不取 `providerSpec`**（渠道条目无模型 ⇒ 只能落 L5 的 125K，会把声明的 128 显示错）。 */
+/** 渠道行上下文回显串（读面 = 已声明值，R31④ / W-9 / W-9b / W-11，**两端共用**：写面渠道行 ∥ `/model`
+ *  L1 渠道行）：逐条 `模型: <核出词>`；单条即 `<核出词>`；无声明 ⇒ `Not declared`。出词一律经核
+ *  `formatDeclaredContextK`（K→token 展示换算只在核一处——声明 `1024` 出 `1M`，端侧拼串会出 `1024K`）。
+ *  三端同串（VSC ∥ 桌面同形——` · ` 分隔）——**不取 `providerSpec`**（渠道条目无模型 ⇒ 只能落 L5 的
+ *  125K，会把声明的 128 显示错）。 */
 export function declaredContextText(provider) {
   const entries = declaredContextOf(provider)
   if (entries.length === 0) return "Not declared"
-  return entries.length === 1 ? `${entries[0][1]}K` : entries.map(([model, k]) => `${model}: ${k}K`).join(" · ")
+  return entries.length === 1
+    ? formatDeclaredContextK(entries[0][1])
+    : entries.map(([model, k]) => `${model}: ${formatDeclaredContextK(k)}`).join(" · ")
 }
 
 /** 内存 ∥ 磁盘共用的单键补丁：`k === undefined` ⇒ 删该键，对象空则连 `modelContext` 键一起删

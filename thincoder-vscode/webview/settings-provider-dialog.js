@@ -286,22 +286,28 @@ export function installProviderDialogHandlers() {
 let _ctxEls = null
 
 /** 末段 + 小写（与核 `normalizeModelKey` 同一把尺子——`PROVIDER.md` §6.9）：**只做已声明键匹配**，
- *  不做窗口解析（本档不乘 1024、不查静态表；提示行里的 `NK` = 已声明值原样 + 模板里的 K——与卡面
- *  同一规则；核 `formatContextK` 是 token 口径，要在 K 值上用就得 ×1024，硬约束禁止）。 */
+ *  不做窗口解析（本档不乘 1024、不查静态表、不拼 K 串——展示串一律取宿主 `modelContextText`）。 */
 function contextKeyOf(s) {
   const m = String(s ?? "").toLowerCase()
   const i = m.lastIndexOf("/")
   return i >= 0 ? m.slice(i + 1) : m
 }
 
-/** 某模型的**已声明** K 值；未声明 ⇒ `null`（列表值 ∥ 静态值一律不进框）。 */
-function declaredKOf(name, model) {
-  const table = SS.providerStatus.providers?.[name]?.modelContext
-  if (!table || typeof table !== "object") return null
-  if (!String(model ?? "").trim()) return null
-  const target = contextKeyOf(model)
-  for (const [key, value] of Object.entries(table)) if (contextKeyOf(key) === target) return value
-  return null
+/** 某模型的已声明条目：`{ value, text }`——`value` = K 原值（输入件回填）；`text` = 宿主展示串
+ *  （current 段 ∥ 清除确认正文只渲染它：核 `formatDeclaredContextK` 出词，模板不补 K——端侧拼串
+ *  在声明 `1024` 时出 `1024K`，核出 `1M`）。未声明 ⇒ `null`；列表值 ∥ 静态值一律不进框。
+ *  键匹配同一把尺子（末段 + 小写；本档只匹配已声明键，不做窗口解析）。 */
+function declaredOf(name, model) {
+  const target = String(model ?? "").trim() ? contextKeyOf(model) : ""
+  if (target === "") return null
+  const st = SS.providerStatus.providers?.[name]
+  const pick = (table) => {
+    if (!table || typeof table !== "object" || Array.isArray(table)) return null
+    const hit = Object.entries(table).find(([key]) => contextKeyOf(key) === target)
+    return hit === undefined ? null : hit[1]
+  }
+  const value = pick(st?.modelContext)
+  return value === null ? null : { value, text: pick(st?.modelContextText) }
 }
 
 /** 步骤③提示行 + 输入件回显：只回显已声明值（未声明 ⇒ 清零——回车不会把参考值固化成人工声明）。
@@ -311,13 +317,13 @@ function syncContextPrompt(prefillK = true) {
   if (!_ctxEls) return
   const els = _ctxEls
   const model = String(els.modelSelect?.value ?? els.modelInput?.value ?? "").trim()
-  const declared = declaredKOf(els.name, model)
+  const declared = declaredOf(els.name, model)
   els.prompt.textContent = t("settings.providers.contextPrompt", {
     provider: els.label,
     model: model || "—",
-    current: declared === null ? t("settings.providers.contextNotDeclared") : `${declared}K`,
+    current: declared?.text ?? t("settings.providers.contextNotDeclared"),
   })
-  if (prefillK) els.k.value = declared === null ? "" : String(declared)
+  if (prefillK) els.k.value = declared?.text ? String(declared.value) : ""
   els.error.textContent = ""
 }
 
@@ -457,7 +463,7 @@ function ctxSave() {
   if (!model) { markInputError(els.modelSelect ?? els.modelInput); return }
   const raw = String(els.k.value ?? "").trim()
   if (raw === "") {
-    const declared = declaredKOf(els.name, model)
+    const declared = declaredOf(els.name, model)
     if (declared === null) { // W-13：本来没有声明值 ⇒ 空操作（不弹确认、不留「已清除」回执）
       els.error.style.color = ""
       els.error.textContent = t("settings.providers.contextNothingToClear", { model })
@@ -468,7 +474,7 @@ function ctxSave() {
     // ⇒ 把牌面挂进弹窗卡内，否则被遮罩盖住（同件、零新增 CSS）。
     els.error.textContent = ""
     showConfirmPopover({
-      text: t("settings.providers.contextClearConfirm", { provider: els.label, model, k: declared }),
+      text: t("settings.providers.contextClearConfirm", { provider: els.label, model, k: declared.text ?? t("settings.providers.contextNotDeclared") }),
       yesLabel: t("session.delete"),
       noLabel: t("question.cancel"),
       onConfirm: () => {

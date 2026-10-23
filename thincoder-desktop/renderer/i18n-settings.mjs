@@ -2,7 +2,7 @@
  * i18n-settings.mjs — 设置面词族第四档（i18n 拆分批 `docs/batches/2026-09-29-i18n-split.md` §2 · 台账 #614
  * 顶格消解：主档 `renderer/i18n.mjs` 内容行 500 顶格 ⇒ 自有 `settings.*` 族 55 键整族出档，本档承接）。
  *
- * 键面（**96 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59；**三端对齐批（2026-10-07 · 台账 #1027–#1035 · KD-75 ②③）**：增 `settings.addProvider` ∥ `settings.addProviderTitle` ∥ `settings.providers.customChoice` 三键，净删 `settings.providers.addCustom` ∥ `.addPreset` 两键（旧双表单提交词——表单退场随退）——59 ⇒ **60**；**添加入口弹窗统一批（2026-10-07 · 台账 #1054 · KD-77 ①）**：增 `settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle` 三键（MCP 添加入口 + 表单两态标题——值逐字同 VSC 同批落地 `locales` 同名键）——60 ⇒ **63**；**2026-10-09 清除批（实施期 fix 轮）**：净删 `settings.providers.activeToggle` 一键（向导步 1 复选退场——无消费者随实现净删）——63 ⇒ **62**；**B1 批（2026-10-10 · 台账 #1212）**：增团队段词族**十五键**（段名 + 表单三标 + 登录 ∥ 退出两钮 + 未登录提示 + 状态行两标 + 失败四句 + 一次性提示两句——未登录句 ∥ 四失败句 ∥ 两提示句 = 三端逐字同句，单源 = `docs/core/design/TEAM.md` §2.5）——62 ⇒ **77**；**#1247 端口提示批（2026-10-13 · 清账轮）**：增 `settings.team.serverHint` 一键（登录补端口提示——三端同拍；值逐字 = VSC `locales` 同名键）——77 ⇒ **78**；**team-token-rotation 批（2026-10-16 · 台账 #1238）**：团队段增轮换四键（控件词 ∥ 确认句 ∥ 成句 ∥ `invalid` 失效句——确认句/成句/失效句值逐字同 VSC `locales` 同名键）——78 ⇒ **82**；**模型选择归位批（2026-10-16 · 台账 #1516 · KD-80）**：净退 `settings.section.model` 一键（设置页「模型」段撤场——消费面归零 ⇒ 键面随退）⇒ 实读 **96**（两语同拍、键集相等；链文前值 82 系滞后值——并行批增键未逐笔续计，本行按盘收正；**上下文写面批（2026-10-23 · 台账 #1739）**：增八键 `settings.providers.context` ∥ `.contextPrompt` ∥ `.contextInvalid` ∥ `.contextSaved` ∥ `.contextClearConfirm` ∥ `.contextNothingToClear` ∥ `.contextNoCandidates` ∥ `.contextNotDeclared`——与 VSC `locales` 同名同文））：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
+ * 键面（**95 键** · 两语键集相等且同序；轮六（2026-10-02）增 `providers.verify.okShort` ∥ `.failShort` 两键——60 ⇒ 62；泛化行退役（2026-10-04）净删 `settings.agent.readonly` ∥ `.save` 两键——62 ⇒ 60；渠道档位退役（2026-10-04）净删 `settings.model.tier` 一键——60 ⇒ 59；**三端对齐批（2026-10-07 · 台账 #1027–#1035 · KD-75 ②③）**：增 `settings.addProvider` ∥ `settings.addProviderTitle` ∥ `settings.providers.customChoice` 三键，净删 `settings.providers.addCustom` ∥ `.addPreset` 两键（旧双表单提交词——表单退场随退）——59 ⇒ **60**；**添加入口弹窗统一批（2026-10-07 · 台账 #1054 · KD-77 ①）**：增 `settings.mcpAdd` ∥ `settings.mcp.addTitle` ∥ `settings.mcp.editTitle` 三键（MCP 添加入口 + 表单两态标题——值逐字同 VSC 同批落地 `locales` 同名键）——60 ⇒ **63**；**2026-10-09 清除批（实施期 fix 轮）**：净删 `settings.providers.activeToggle` 一键（向导步 1 复选退场——无消费者随实现净删）——63 ⇒ **62**；**B1 批（2026-10-10 · 台账 #1212）**：增团队段词族**十五键**（段名 + 表单三标 + 登录 ∥ 退出两钮 + 未登录提示 + 状态行两标 + 失败四句 + 一次性提示两句——未登录句 ∥ 四失败句 ∥ 两提示句 = 三端逐字同句，单源 = `docs/core/design/TEAM.md` §2.5）——62 ⇒ **77**；**#1247 端口提示批（2026-10-13 · 清账轮）**：增 `settings.team.serverHint` 一键（登录补端口提示——三端同拍；值逐字 = VSC `locales` 同名键）——77 ⇒ **78**；**team-token-rotation 批（2026-10-16 · 台账 #1238）**：团队段增轮换四键（控件词 ∥ 确认句 ∥ 成句 ∥ `invalid` 失效句——确认句/成句/失效句值逐字同 VSC `locales` 同名键）——78 ⇒ **82**；**模型选择归位批（2026-10-16 · 台账 #1516 · KD-80）**：净退 `settings.section.model` 一键（设置页「模型」段撤场——消费面归零 ⇒ 键面随退）⇒ 实读 **96**（两语同拍、键集相等；链文前值 82 系滞后值——并行批增键未逐笔续计，本行按盘收正；**上下文写面批（2026-10-23 · 台账 #1739）**：增八键 `settings.providers.context` ∥ `.contextPrompt` ∥ `.contextInvalid` ∥ `.contextSaved` ∥ `.contextClearConfirm` ∥ `.contextNothingToClear` ∥ `.contextNoCandidates` ∥ `.contextNotDeclared`——与 VSC `locales` 同名同文；**上下文展示入口批（2026-10-23 · 台账 #1740）**：净删死键 `.contextSaved`（桌面不出回执行）——96 ⇒ **95**））：`settings.*` = 设置面（标题 ∕ 关闭 / 语言控件两键 = 目标语自名 / 主题三态族四键（D33） /
  * 四段名 / 两段态 / 十三失败码 / 添加入口两键 / 渠道段：字段标 · 校验两态 `${count}` 与 `${reason}` · 移除 `${name}` ·
  * 当前标 · 自定项键（KD-75 ③）/ 模型段：当前 · 空态 · 采用 / MCP 段：两 kind · 字段标 ·
  * 移除 · 增键 · 添加入口 + 表单两态标题（KD-77 ①）—— 段名键单源 = `renderer/views/settings.mjs` `SECTIONS`，失败面段标 `SCOPE_WORD` 同键）。
@@ -69,11 +69,10 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.providers.noKey": "No API Key",
     "settings.providers.remove": "Remove ${name}",
     "settings.providers.active": "Active",
-    // 上下文写面批（2026-10-23 · 台账 #1739 · `PROVIDER.md` §6.15「写面」）：八键——同 VSC `locales` 同名同文。
+    // 上下文写面批（2026-10-23 · 台账 #1739 · `PROVIDER.md` §6.15「写面」）：七键——同 VSC `locales` 同名同文（`contextSaved` 死键已删——桌面不出回执行）。
     "settings.providers.context": "Context…",
     "settings.providers.contextPrompt": "Context window for ${provider}:${model} in K (current: ${current} — e.g. 128 = 128K; empty to clear):",
     "settings.providers.contextInvalid": "Invalid context: \"${value}\" — must be a positive integer in K (e.g. 128 = 128K)",
-    "settings.providers.contextSaved": "Context saved: ${provider}:${model} = ${value}K",
     "settings.providers.contextClearConfirm": "Clear context for ${provider}:${model} (currently ${current})?",
     "settings.providers.contextNothingToClear": "Nothing to clear for ${model}",
     "settings.providers.contextNoCandidates": "No candidates (type the model ID)",
@@ -172,11 +171,10 @@ export const SETTINGS_DICT = Object.freeze({
     "settings.providers.noKey": "未配置 API Key",
     "settings.providers.remove": "移除 ${name}",
     "settings.providers.active": "当前",
-    // 上下文写面批（2026-10-23 · 台账 #1739 · `PROVIDER.md` §6.15「写面」）：八键——zh ∥ en 两字面齐。
+    // 上下文写面批（2026-10-23 · 台账 #1739 · `PROVIDER.md` §6.15「写面」）：七键——zh ∥ en 两字面齐（`contextSaved` 死键已删——桌面不出回执行）。
     "settings.providers.context": "上下文…",
     "settings.providers.contextPrompt": "上下文窗口 ${provider}:${model}，单位 K（当前: ${current} — 例：128 = 128K；留空清除）：",
     "settings.providers.contextInvalid": "上下文值非法：\"${value}\" — 须为正整数 K（例：128 = 128K）",
-    "settings.providers.contextSaved": "上下文已保存：${provider}:${model} = ${value}K",
     "settings.providers.contextClearConfirm": "清除 ${provider}:${model} 的上下文声明（当前 ${current}）？",
     "settings.providers.contextNothingToClear": "无可清除的上下文声明：${model}",
     "settings.providers.contextNoCandidates": "无候选（可手填模型 ID）",

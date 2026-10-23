@@ -19,6 +19,7 @@
  * ——仅在本档 handler 体内解引用（延迟解引用）⇒ 两模块顶层零跨环读取——环安全。
  */
 import { loadRaw } from "@thincoder/core/config-io.mjs"
+import { formatDeclaredContextK } from "@thincoder/core/model-specs.mjs"
 import { loadMcpServers } from "../config-mcp.mjs"
 import { removeProviderFlow, setKeyFlow, probeProviderAdmission, ui } from "./provider-flows.mjs"
 import { handleAddProvider as persistAddProvider, handleRemoveProvider as persistRemoveProvider, handleSetProviderProxy as persistSetProviderProxy, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection, postProviderError, pushTeamStatus, saveProviderModelContext } from "./settings.mjs"
@@ -129,8 +130,9 @@ export function handleSetProviderProxy(panel, msg) {
 
 /** case "saveProviderModelContext"（R31③-VSC · `docs/core/design/PROVIDER.md` §6.15「三端落点」VSC 行）
  *  ——形沿 `handleSaveProviderKey`（`:36-48`）：拒 ⇒ `providerError`（providers 段）+ 零回执（卡面零变更）；
- *  成 ⇒ **先**推 `providerStatus`（卡面按新声明重绘），**后**发受理回执 `providerContextSaved { name, model, k }`
- *  （回执殿后：重绘在前，行内保存提示才不被重绘吞掉）。`k === null` = 清除径（回执照发，卡面转 `未声明`）。
+ *  成 ⇒ **先**推 `providerStatus`（卡面按新声明重绘），**后**发受理回执 `providerContextSaved { name, model, k, kText }`
+ *  （回执殿后：重绘在前，行内保存提示才不被重绘吞掉）。`kText` = 宿主经核 `formatDeclaredContextK(k)` 出词
+ *  （展示入口三端同源——webview 零换算零拼串）；`k === null` = 清除径（回执照发，卡面转 `未声明`）。
  *  **缺 `k` 键 ≠ 清除**：清除是显式 `k: null`（webview 空输入 + 确认后才发）⇒ 缺字段只可能是发送端回归，
  *  拒（不当成删除——缺字段默认成删除就是一条没被确认的删除径）。 */
 export function handleSaveProviderModelContext(panel, msg) {
@@ -144,7 +146,11 @@ export function handleSaveProviderModelContext(panel, msg) {
     return
   }
   panel._pushStatus()
-  panel._panel?.webview.postMessage({ type: "providerContextSaved", name: msg.name, model: msg.model, k: msg.k })
+  // `kText` = 宿主出词（`k` 已由 `saveProviderModelContext` 过正值门——成功径必为正整数 K）。
+  panel._panel?.webview.postMessage({
+    type: "providerContextSaved", name: msg.name, model: msg.model, k: msg.k,
+    kText: msg.k === null ? null : formatDeclaredContextK(msg.k),
+  })
 }
 
 /** 迁出自 `panel-messages.mjs` 的 case "setKey"。 */

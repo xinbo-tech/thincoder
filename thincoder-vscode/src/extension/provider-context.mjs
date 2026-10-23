@@ -2,7 +2,8 @@
  * provider-context.mjs — VSC 面 `modelContext` 读写（宿主侧，**纯 Node**：零 `vscode` 依赖 ⇒ 可单测）。
  *
  * 机制单源 = `docs/core/design/PROVIDER.md` §6.15「写面：`modelContext` 编辑（三端同形 · 同批齐）」：
- *  - 读面载荷两键：`modelContext`（已声明映射，**K 原值**，供编辑面回显）+ `context`
+ *  - 读面载荷三键：`modelContext`（已声明映射，**K 原值**，供编辑面回显）+ `modelContextText`
+ *    （同键的展示串，宿主经核 `formatDeclaredContextK` 出词）+ `context`
  *    （`providerSpec(entry).context`，token，留给用量百分比面）。
  *  - 写面：值单位 **K**，端侧零乘 1024（乘点唯一在核 `model-specs.mjs` 的 L1 ∥ L2 合流点）。
  *    值校验 = 先 parse 再判（`Number(String(v).trim())` → 核 `positiveInt`）；空 ⇒ 清除语义。
@@ -15,18 +16,26 @@
  * 对外导入面不变。
  */
 import { providerSpec } from "../specs.mjs"
+import { formatDeclaredContextK } from "@thincoder/core/model-specs.mjs"
 import { normalizeModelKey, positiveInt } from "@thincoder/core/model-context.mjs"
 import { vscPersistRaw } from "./settings-panel-write.mjs"
 import { conflictError, loadRaw } from "@thincoder/core/config-io.mjs"
 
-/** 渠道条目的读面两键：`{ modelContext, context }`。
+/** 渠道条目的读面三键：`{ modelContext, modelContextText, context }`。
  *  `modelContext` = 盘上已声明映射的浅拷贝（空 ∥ 非法形 ⇒ `{}`——编辑面只读它）；
+ *  `modelContextText` = 同键的展示串（经核 `formatDeclaredContextK` 出词；**只投影合法正整数**，
+ *  非法值条目不投影——同桌面 `modelContextTextOf`）；
  *  `context` = 核解析值（token；渠道条目无 `model`，故通常是 L2 旧键 ∥ L4/L5——展示面不拿它当
- *  「已声明值」，那是 `modelContext`）。 */
+ *  「已声明值」，那是 `modelContextText`）。 */
 export function providerContextFields(entry) {
   const table = entry?.modelContext
   const declared = table && typeof table === "object" && !Array.isArray(table) ? { ...table } : {}
-  return { modelContext: declared, context: providerSpec(entry).context }
+  const text = {}
+  for (const [key, value] of Object.entries(declared)) {
+    const k = positiveInt(value)
+    if (k !== null) text[key] = formatDeclaredContextK(k)
+  }
+  return { modelContext: declared, modelContextText: text, context: providerSpec(entry).context }
 }
 
 /** 写 `providers[].modelContext[<模型>]`（值单位 **K**）。

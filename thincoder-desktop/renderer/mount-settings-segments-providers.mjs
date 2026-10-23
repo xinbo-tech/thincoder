@@ -255,7 +255,7 @@ export function createProviderExits(deps = {}) {
   /** 上下文保存出口：读弹窗体表单 ⇒ `provider:setModelContext({ name, model, k })`（单位 K，端侧零 ×1024）。
    *  **清除先确认（三端同形 · 设计五步）**：空值 ∧ 该模型已声明 ⇒ 既有确认弹层（正文 = `contextClearConfirm`
    *  带当前值，默认焦点 = 取消）；确认 ⇒ 空串写（= 删键）；取消 ⇒ 零动作。
-   *  空值 ∧ **未声明** ⇒ 空操作（零确认、零写、零回执 `contextSaved`；只出 `contextNothingToClear` 行）。
+    *  空值 ∧ **未声明** ⇒ 空操作（零确认、零写、零回执行 `contextSaved`——本端不出保存回执行；只出 `contextNothingToClear` 行）。
    *  `invalid-value` ⇒ 弹窗内非法值行（盘上零变，主侧谓词拒后再红）；其余失败 ⇒ 段级失败面；成功 ⇒ 关框 + 复读行面。 */
   async function saveProviderContext(event) {
     const form = typeof formOf === "function" ? formOf(event) : null

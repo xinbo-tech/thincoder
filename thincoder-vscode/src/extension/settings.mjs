@@ -76,9 +76,10 @@ export { shellCandidates, _setShellDetectForTest } from "@thincoder/core/shell-c
  * 成载荷 `{ state, channel, model, reason, invalidReason }`（形 = `docs/vsc/design/WEBVIEW.md`
  * §4.8）；配置不可读 ⇒ null（消费面按 invalid 类兜底）。
  * Providers are dynamic (config.json providers[]), so labels travel with the payload.
- * `modelContext` + `context`（`docs/core/design/PROVIDER.md` §6.15「读面载荷」）：前者 = 已声明映射
- * （K 原值，供编辑面回显 ∥ 卡面行内展示），后者 = 核 `providerSpec(entry).context`（token，留给用量
- * 百分比面）。渠道条目无 `model` ⇒ `context` 的 L1 永不命中，卡面不拿它当已声明值。
+ * `modelContext` + `modelContextText` + `context`（`docs/core/design/PROVIDER.md` §6.15「读面载荷」）：
+ * 首者 = 已声明映射（K 原值，供编辑面回填），次者 = 同键展示串（宿主经核 `formatDeclaredContextK` 出词，
+ * 卡面 ∥ current 段只渲染它），末者 = 核 `providerSpec(entry).context`（token，留给用量百分比面）。
+ * 渠道条目无 `model` ⇒ `context` 的 L1 永不命中，卡面不拿它当已声明值。
  */
 export function providerStatus() {
   const providers = readProviders()
@@ -99,7 +100,7 @@ export function providerStatus() {
       baseURL: entry.baseURL,
       isActive: name === activeProvider,
       proxy: entry.proxy === true, // per-provider proxy flag (row checkbox, preset/custom agnostic)
-      ...providerContextFields(entry), // `modelContext`（K 原值，编辑面）+ `context`（核解析 token 值，展示面）
+      ...providerContextFields(entry), // `modelContext`（K 原值，编辑面回填）+ `modelContextText`（核出词，展示面）+ `context`（核解析 token 值）
       ...(admission ? { available: admission.ok === true } : {}),
       // F-W19（`SETTINGS.md` §2.12 / `PROVIDER.md` §6.16 M8/M9 补）：失败分类随行下发——
       // `hostBusy` = 宿主忙证据（非渠道故障——展示面分档 `宿主繁忙`，不渲渠道故障 hint）；
