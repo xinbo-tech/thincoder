@@ -537,7 +537,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
   - `thincoder-core/ledger-migrate.mjs`（**301 ⇒ 301**——迁移计划解析基准（`:97`）归单源 = §6.1 口径 2 同一子表达式；备份 / 迁入 / 回收执行路径零触）
 - **用例**：一次性单测档 `thincoder-core/test/ledger-root-derivation.test.mjs`（T115–T122——**零留档**：随该批建 / 跑 / 删，**不在盘**；靶向单跑 `node --test test/ledger-root-derivation.test.mjs`）。
 - **文档 / 描述面**（模型可见文案——换写）：本档 §2.1 ∥ §3.8 ∥ §6.1 ∥ §7.1 ∥ §7.2 ∥ §8 ∥ §9（**文档档两列 `—`**——口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.7 条目 H：文档面不设行数门）；模型可见 `cwd` 文案单点 = `thincoder-core/ledger-tools.mjs` `CWD_DESC`（该档已列于「实现」——不另计行）。
-- **随动面（行为零变 · 登记）**：`thincoder-core/agent/light-round.mjs`（**67**——候选面经 `ledgerChildren` 等值扩集；逐候选查行为空 ⇒ 不进闸；其 `:48` 指针基准句 = 协调项见下）。
+- **随动面（行为零变 · 登记）**：`thincoder-core/agent/light-round.mjs`（**66**——候选面经 `ledgerChildren` 等值扩集；逐候选查行为空 ⇒ 不进闸；其 `:48` 指针基准句 = 协调项见下）。
 - **协调项（本批不触 · 登记 file:line）**：台账面其余「解析基准 = `resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")`」同子表达式站点（三处）：
   `thincoder-core/ledger-migrate.mjs:258` · `thincoder-core/ledger-variant-notice.mjs:42` · `thincoder-core/agent/light-round.mjs:48`（`manifest.mjs:97` / `:121` = manifest 面，不属本面）。
   处置 = 随该档下一次触碰同源化到 §2.1 单源；在此之前 `cwd` 为**项目内**时两式同值（零现患面——分叉仅现于会话锚为容器 ∥ 工作区时）。

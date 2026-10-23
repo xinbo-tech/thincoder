@@ -86,7 +86,7 @@
   **机判**（模块内结构断言 = T54）：源码面 `readdirSync` 全档恰 1 处 ∧ 居 `scanChildren` 体内 ∧ `discoverProjects` / `discoverRepos` 两函数体各含 `scanChildren(` 调用（读点 = `thincoder-core/manifest-discovery.mjs`）。
 - `resolveProjectRoot(cwd)` → `string|null`：**归属 ∨ 发现**的薄包装（`owningProject(cwd) ?? discoverProjects(cwd).root`——KD-M1-24 / M1-30）。
   **取值（KD-M1-23 / M1-30）**：带档路径（自仓 / 带档子仓恰一 ⇒ 路径）；① 路径**自身所在目录**带档 ⇒ 该目录；自身不带档 ⇒ **上溯**取最近带档祖先（子目录归到自己的项目根——这是正常通路，不是兜底）；② 裸仓恰一 ⇒ 该仓根（零档降级 = 建档机会）。
-  `none` / `workspace` ⇒ `null`。调用方（`manifestFilePath` / `docRootBase` / `ledger-db.mjs` / `ledger-cmd.mjs`）**零改**（行为随语义变更——§2.5 键面条 / 错层条）。
+  `none` / `workspace` ⇒ `null`。调用方分两类：`manifestFilePath` / `docRootBase` 走本解析（随语义变更）；**台账面不走本解析**——键与库路径由 `resolveLedgerRoot` 单点推导（见 LEDGER.md §2.1 / §3.8）。
 - `projectRootView(cwd)` → `{ state, root, candidates }`（**新增**——`thincoder-core/manifest-discovery.mjs` 新导出，经本档 `manifest.mjs` 转口）：**项目根解析的直读形**——`state` ∈ `'ok'`（唯一解析：归属命中 ∥ `discoverProjects` `self` / `unique`）/ `'workspace'`（锚自身无档 ∧ 下辖 ≥2 个项目——**工作区常态，非错误态**）/ `'none'`（无项目）；非抛错 / 零写。
   `ok` ⇒ `root` = 解析值、`candidates` = `[]`；`workspace` ⇒ `root` = `null`、`candidates` = 下辖项目全列**按名排序**（同 `discoverProjects` 契约）；`none` ⇒ `root` = `null`、`candidates` = `[]`。
   **态名（用户裁定「cwd 下面有多仓是常态」）**：`'workspace'`——「锚下并存多个项目」是工作区常态，不是异常、不是候选二义；唯一的解析律 = **用点路径 → 自身所在目录带档即命中，否则上溯取最近带档祖先**（§2.5「单项目解析律」条）。
@@ -181,8 +181,8 @@
 | 35 | `thincoder-core/agent-tools/advisor.mjs` | 281 | 修改 | 注释收正（`:13` 去退役符号名 `loadConventions`——J6 符号面零命中面；零语义） | Δ=0 |
 | 37 | `thincoder-vscode/src/agent/setup-tooltable.mjs` ∕ `thincoder-vscode/src/agent/tool-table.mjs` | **102** ∕ **250** | 修改 ∕ 新增 | 行 29 续拆落形（工具表族再出档；缝 = 既有导出面 re-export，消费档零改）——两档均 ≤500 | Δ 见行 29 |
 | 38 | `thincoder-core/manifest.mjs` | **249** | 修改（已落） | 双拆出档：发现 ∕ 归属族 ⇒ `manifest-discovery.mjs`（**119**）+ 校验 ∕ 默认族 + `isValidDocRootValue`（两段非连续 = 142 行）⇒ `manifest-schema.mjs`（**155**）；re-export 保消费者 import 面零改（**21** 消费档名面 ⊆ 宿主导出面）；拆后 **249** | **249** |
-| 39 | `thincoder-core/manifest-discovery.mjs` | **119** | 修改 | 新导出 `projectRootView(cwd)`（判定单点——§2.2 契约行）+ `resolveProjectRoot` 薄委托化（行为零变） | ≤ +14 |
-| 40 | `thincoder-core/ledger-db.mjs` | **126** | 修改 | `openLedger` 工作区报明（判定 = `projectRootView`；零写——下辖项目全列 + 点名项目根） | ≤ +10 |
+| 39 | `thincoder-core/manifest-discovery.mjs` | **143** | 修改 | 新导出 `projectRootView(cwd)`（判定单点——§2.2 契约行）+ `resolveProjectRoot` 薄委托化（行为零变） | ≤ +14 |
+| 40 | `thincoder-core/ledger-db.mjs` | **265** | 修改 | `openLedger` 工作区报明（判定 = `projectRootView`；零写——下辖项目全列 + 点名项目根） | ≤ +10 |
 | 41 | `thincoder-core/agent-tools/batch-paths.mjs` | **142** | 修改 | 工作区锚检查（`docs/core/design/BATCH-RECORD.md` §4.15 条 5）：create 按目标所属项目落基底 ∥ 无所属报明 + 显式路径指引；读面候选 + 在飞 ∥ 写门基底集 = 候选并集 | ≤ +55 |
 | 42 | 单元测试档（manifest-resolution-fix） | 0 | 新增 | 单元测试档（AC-1–AC-5——工作区实景三族；不进集成测试树） | 新增 |
 | 43 | 单元测试档（structure-split-2） | **219** | 修改 | 导出枚举 +`projectRootView`（`:110` ∥ `:112` ∥ `:122`） | ≤ ±2 |
@@ -287,7 +287,7 @@
 
 - **「不砖死」× 两分**：普通会话 = 装配钩子零 manifest I/O（裁定零改）；工程模式会话 = **启动零拒绝**（新增——非 ok 态不抛，记 `_projectView`；KD-M1-25）。前者管「读不读」，后者管「读不到怎么办」——互不取消。
 - **翻转面 × 发现梯升级（交叉面 · 登记）**：#41 拒翻判据本体零改，但**可拒面收窄**——梯⑤（无项目）现由决策树建档（KD-M1-29）⇒ `/eng` · `/session` · `eng` 工具 · ACP 四路在该格不再拒；**工作区（`workspace`）格亦不落拒格**（放行——`agent.manifest` = null）⇒ 仍拒 = 仅「档非法」一格。FR11 口径单源 = `docs/core/requirements/PORTABILITY.md:63`（**git 非前提** / 无项目 ⇒ 不拒翻、走建档流）——本档只挂指针（D2）。
-- **台账键面**：`ledger-db.mjs` 键 / `ledger-cmd.mjs` base = `resolveProjectRoot(cwd) ?? resolve(cwd)`（零改）——键 = 项目根解析结果；既有台账数据**均不迁移**（不做迁移；键变化的目录需重新入账）。
+- **台账键面**：`ledger-db.mjs` 键 / `ledger-cmd.mjs` base = **`resolveLedgerRoot(target).root`**（单源 = LEDGER.md §2.1 / §3.8——自目标沿祖先链上溯取最近「已注册」目录，无则向下收敛）——键 = 该推导结果；既有台账数据**均不迁移**（键变化的目录需重新入账）。
 - **git 工具面**：`discoverRepos`（仓梯）含裸仓级 ⇒ ① 容器 + 恰一裸仓 ⇒ 重定向 + `(repo: …)` 注记；② 容器 + ≥2 裸仓 ⇒ `workspace` throw（列候选 + 指 workdir）；③ 带档行为**逐字不变**（A14–A20 零改全绿）。判据 / 用例同步住 `docs/core/design/TOOLS.md` §6.13（D2——本档不重述）。
 - **嵌套归属 / 错层**：① 目标路径**自身所在目录**带档时 `writeRoot` / `manifestFilePath` 归该目录（不落子目录；自身不带档 ⇒ **上溯**归最近带档祖先；祖链无档 ⇒ `resolveProjectRoot` = `null` ⇒ 落用点自身，不归无关外层项目）；② **嵌套归属**：根 / 子双档时子内归子（各自其主），根内不带档的子目录不归根（不跨兄弟——§⑥ 归属形）。
 - **写门 / schema 计数 / 值形态零改**：五键集合 · `REVIEW_ROOT_KEYS` · `docRoot` 值形态（F7）· `writeManifest` writer 闸 · spawn 二道防线（AC-M1-8）——均零碰。
@@ -319,9 +319,10 @@
   | 3 | `thincoder-core/agent-tools/batch-paths.mjs:27-31 · :57-66 · :100-102 · :104-115 · :163-173` | 可（create `path`） | 带 path ⇒ `owningProject` 定项目 ⇒ 落其基底（既有零改）；无所属 ⇒ 报明 + 下一步（文案去 `ambiguous session anchor` 机检锚）；读面 / 在飞 / 写门基底集 = 候选**并集**（**非停手先例**，零改）；`ambiguousCandidates` 更名 `workspaceCandidates`（一名一物） |
   | 4 | `thincoder-core/tools/git.mjs:43-51 · :97-110` | 可（`workdir`） | 无 `workdir` ∧ 锚为工作区 ⇒ 报明（下辖 N 仓）+ 下一步（传 `workdir`）——**不猜**；文案去「Ambiguous」错误框定；`matched` 两变体保留；`self` / `unique` / `none` 三态零改 |
   | 5 | `thincoder-core/agent-tools/review-facts.mjs:72-125` + `thincoder-core/agent-tools/advisor.mjs:119-128`（评审 documents） | 可（`documents`） | 文档路径 ⇒ `owningProject` 定项目（分支② = 本律）；分支③ 候选底座态名更新；分支④ = **文档名撞车**（真二义，非锚二义）⇒ 保持 fail-closed 拒 + 文案去「锚歧义」措辞 + 下一步（传绝对路径）；`criterion=scope-doc-ambiguous` 名面零改（其指义 = 文档二义） |
-  | 6 | `thincoder-core/ledger-db.mjs:143-152`（`openLedger`）+ `thincoder-core/ledger.mjs:90-96` | 可（`cwd`） | 态名 + 措辞：锚为工作区 ⇒ **报明事实 + 点名项目根**（「报明 + 下一步」语义保留；错误框定「项目不可解析」×；`ambiguous` 字样 ×）；`ledger.mjs:96`「工作区根不充当项目、按容器根形落子目录族」= **既有非停手先例**，零改（态名更新） |
+  | 6 | `thincoder-core/ledger-db.mjs:143-152`（`openLedger`）+ `thincoder-core/ledger.mjs:90-96` | 可（`cwd`） | 根推导走 `resolveLedgerRoot`（LEDGER.md §3.8）：工作区锚 ⇒ 按收敛序取值 + **回执携 `root` 报明**（「该抛退场」）；`ledger.mjs:96`「工作区根不充当项目、按容器根形落子目录族」= 族发现面零改 |
   | 7 | `thincoder-core/manifest.mjs:227-258`（决策树）+ 翻转面（`thincoder-core/agent-tools/eng.mjs:81-84` · `/eng` · `/session` · ACP） | 不能（会话级） | 出口码 `workspace`；**拒翻面收窄**：`workspace` 不再拒翻（放行——`agent.manifest = null` + 事实行）⇒ 可拒面 = **仅「档非法」**；入口钩子面零改（启动零拒绝已含非 ok 态） |
   | 8 | `thincoder-core/agent/light-round.mjs:41-43` · `thincoder-core/ledger.mjs:90-96` | 会话级 | 态名更新（跳过该候选 / 不充当项目）——**非停手先例**，行为零改 |
+  | 8b | `thincoder-core/agent/light-round.mjs` | **66** | 结构不变（仅态名随正）——现读 2026-10-23 `\n` 计数 |
   | 9 | `scripts/doc-check.mjs`（工程工具面——`detectRoot` 与拒面已删，`--root` 必带） | 工程工具面 | **第二份发现实现**——**已收正：判据 = 显式 `--root` 必带**（零发现——`detectRoot` 与拒面删） |
   | 10 | `thincoder-vscode/src/agent/setup-reminders.mjs` | 端镜像 | re-export 面（零改）；行文随核（端零自持） |
 

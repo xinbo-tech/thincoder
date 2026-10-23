@@ -6,11 +6,11 @@
 
 为工程模式提供**项目状态账**——一个纯机器状态的 JSON 声明档，被开发项目用它申明「我是什么阶段、文档放哪、机检怎么判」。
 
-一次声明，多处读取：文档体系落点（`docRoot`）、机检判据（`checkConfig`）、情境旋钮（`phase`）、提示词落地（`promptsLanding`）全部从这一处取，机制不硬编码任何本仓路径。
+一次声明，多处读取：文档体系落点（`docRoot`）、代码路径段（`codePaths`）、索引面（`index`）、情境旋钮（`phase`）全部从这一处取，机制不硬编码任何本仓路径。
 
 ## ② 功能点
 
-1. **schema 定义**（**八键**）：`version` · `phase` · `docRoot` · `promptsLanding` · `checkConfig` · `codePaths` · `index` · `advisor`（末三键 = 项目声明三族）。
+1. **schema 定义**（**五键**）：`version` · `phase` · `docRoot` · `codePaths` · `index`——每一键都描述**这个项目自身**；产品内部事（提示词落地路径 / 机检配置 / 评审者配置）不挂在用户项目上。
 2. **读 / 写 / 校验器**（`thincoder-core/manifest.mjs`）——机制代码在核，操作对象 = 被开发项目**项目根**（git 仓根 **或** 带档目录——**git 非前提**）的 `PROJECT-MANIFEST.json`（数据档）。
    - **项目根解析 = 按用点解析**：**会话不绑定项目**——任何需要项目参数的动作（机检域 / 文档落点 / 台账归属 / 批次归属 / phase 情境）取**目标路径所属项目**的档（**归属 = 最近祖先** ✗ 嵌套时子优于根——见 §⑥）；多项目并存 = 正常态。
    - **发现规则**（纯向下不向上 ✗ 一层不递归 ✗ **git 非前提**；**梯 ①–④ 只认「已存在」信号——全新目录（无 git 无档）必走 ⑤**）：
@@ -29,7 +29,7 @@
 7. **agent 工具面**：主 agent 对 manifest 的**全键读写**出口。现状 = 机制代码在场但无出口——装配侧内部调用之外，agent 侧唯一写点 = 工程模式翻转对缺档锚建默认档。五项：
    - **读**：现档 + 校验态（`ok` / `missingKeys` / `unknownKeys` / `errors` / 缺档报明）——`readManifest` 语义；
    - **建**：缺档 ⇒ 建默认档（`initManifest`；默认档 = `DEFAULT_MANIFEST`）；
-   - **写**：**全键族**可改——`version` / `phase` / `docRoot.*` / `promptsLanding` / `checkConfig.*` / `codePaths` / `index.*`（含 `publicRepos`——「标记引用公共仓」）/ `advisor.*`；落盘前经 `validateManifest`（非法 ⇒ 拒 + 盘零变，fail-closed 照旧）；
+   - **写**：**五键逐节点**可改——`version` / `phase` / `docRoot.*`（五子键）/ `codePaths` / `index.*`（四子键）/ 另含台账指针面；落盘前经 `validateManifest`（非法 ⇒ 拒 + 盘零变，fail-closed 照旧）；已退役三键（`promptsLanding` / `checkConfig` / `advisor`）写入时静默剥离，读面不报、不上界面；
    - **目标面**：显式目标目录参数（缺省 = 会话锚 / 按用点解析语义——歧义不猜、多候选列报）；
    - **权限面**：写面（`init` / `write`）只挂**主 agent**（沿写门不变）；读面（`read`）子代理另有**只读变体**（同名工具、`action` 枚举只剩 `read`，写动作 schema 级不可达 + execute 入口再拒一次）。子代理写面两道防线不动（写动作不在其装配 + `files` 域拒）。
 
@@ -51,7 +51,7 @@
 | AC-M1-6 | 情境行注入：`phase` 逐回合注入模型上下文（幂等 / 单活体 / 压缩自愈 / 门控；值变检测 = mtime 门控重读（③b）——AC-N7 / N7b / N7c / N7d 在册） | 判据逐条 = 设计 `docs/core/design/MANIFEST.md` §3.1 AC-N1–AC-N6、AC-N3b、**AC-N7–AC-N7d** |
 | AC-M1-7 | `docRoot` 值形态：单串、数组、`null` 都要通过；`null` 解析为空且不被默认顶回；空串、空数组、混合数组拒绝。 | 设计 `docs/core/design/MANIFEST.md` §3.1 AC-7–AC-13、AC-39 |
 | AC-M1-8 | 二道防线（M5 spawn 门）：工程模式子代理 `files` 声明含 `PROJECT-MANIFEST.json`（任意层 / 任意大小写）→ 拒（专用文案） | 声明该路径 → 期望拒 |
-| AC-M1-9 | 项目声明三族键（`codePaths` / `index.*Extensions` / `advisor.*`）：形态非法 ⇒ 档非法（fail-closed）+ 消费面逐族回默认 + 可见；退役档（`.thincoder/conventions.json`）在场 ⇒ 零生效 + 一行告警（零并存） | 判据逐条 = 设计 `docs/core/design/MANIFEST.md` §3.1 AC-31–AC-34 ∕ §3.2 T56–T58 |
+| AC-M1-9 | 项目声明两族键（`codePaths` / `index.*`）：形态非法 ⇒ 档非法（fail-closed）+ 消费面逐族回默认 + 可见；退役档（`.thincoder/conventions.json`）在场 ⇒ 零生效 + 一行告警（零并存） | 判据逐条 = 设计 `docs/core/design/MANIFEST.md` §3.1 AC-31–AC-34 ∕ §3.2 T56–T58 |
 | AC-M1-10 | agent 工具面·读写往返（全键）：对样例项目读（含校验态）→ 各键族逐键写 → 回读逐键相等；缺档 ⇒ 建档 → 回读 `ok` | 工具调用往返 → 逐键 diff |
 | AC-M1-11 | agent 工具面·fail-closed：非法值写 ⇒ 拒（报明）+ 盘零变；缺档读 ⇒ 报明（不砖死） | 构造非法/缺档 → 期望拒/报明 ∧ 文件逐字节未变 |
 | AC-M1-12 | agent 工具面·权限面：子代理**写面**不可达（写动作未装配 + 写门拒）；子代理**读面** = 只读变体（`action` 枚举 `[\"read\"]`）；主 agent 写 ⇒ 放行 | 子代理实调 → 拒；主 agent 实调 → 过 |
@@ -59,15 +59,15 @@
 ## ⑤ 依赖
 
 - **上游**：无（基础模块）。
-- **下游**：M2 / M3 / M4 / M6 / M8 / M9 读 manifest 字段（`docRoot` / `checkConfig` / `phase` / `promptsLanding`）。
+- **下游**：M2 / M3 / M4 / M6 / M8 / M9 读 manifest 字段（`docRoot` / `phase` / `index`）。
 - **agent 工具面**：上游 = 本条读写校验器（`manifest.mjs` ∥ `manifest-schema.mjs`）+ 工具装配面（`agent/family-tools.mjs`）；下游 = 主 agent 运行面（工具调用）。
 
 ## ⑥ 解析模型与作用定位（按用点解析）
 
-**作用三身份**：① **项目状态账**（`phase` 存档 ⇒ 情境行注入）；② **声明面**（`docRoot` / `promptsLanding` / `checkConfig`——一次声明多处读取，机制不硬编码本仓路径）；
+**作用三身份**：① **项目状态账**（`phase` 存档 ⇒ 情境行注入）；② **声明面**（`docRoot` / `index`——一次声明多处读取，机制不硬编码本仓路径）；
 ③ **项目标记与管理单元凭证**（**每个项目（= 带 manifest 的目录）一份** ⇒ 在场 = 该项目已纳入工程模式管理（**项目侧管理声明** = 模式 ON 准入判据的**输入**）——✗ **不是模式状态载体**（模式状态 = **会话级**，住会话槽——见 `docs/core/design/SESSION.md`）；✗ git 非前提——非 git 目录同样可是项目）。
 
-**它不是什么**：✗ 决策记录（决策进文档 ✗ 待裁进台账）；✗ 任务台账（现**八键**）；✗ 用户 / 工具偏好（模型、凭据、**工程模式开关**住 `config.json` + 会话槽——不在档里）。
+**它不是什么**：✗ 决策记录（决策进文档 ✗ 待裁进台账）；✗ 任务台账（现**五键**）；✗ 用户 / 工具偏好（模型、凭据、**工程模式开关**住 `config.json` + 会话槽——不在档里）。
 
 **解析模型（核心）**：**会话不绑定项目** ✗ 无「启动选定 / 记住一个项目」✗ 参数**按用点解析**——动作作用于哪个项目的路径，就取那个项目的档（多项目并存 = 正常态 ✗ 工作目录下多仓 = 正常操作）。
 
