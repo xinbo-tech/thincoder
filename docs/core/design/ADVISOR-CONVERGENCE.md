@@ -3,18 +3,18 @@
 > 本档是 advisor 评审收敛机制的**设计权威**：定义「审查 → 修复 → 复审」循环如何**收敛**——要么全部问题确认修复，要么**以失败结论终止**（无机械轮次上限，§3）。
 > 轮次提示词与机械执行层（轮次衰减 / citations / guard / 失败结算结论）是本档语义的执行实现；评审契约句以本档为准。
 > 需求层指针 = `docs/core/requirements/ADVISOR-CONVERGENCE.md`（该板块需求档——现状绝对路径）。
-> 兄弟档：`design/ADVISOR-GUARDS.md`（评审链边缘守卫：判定族 / 凭证链 / 引文候选链 / 预算 / 冻结窗口 / 护栏 / 预算跟随 / 加权）·
-> `design/ENGINEERING-MODE-V2.md`（token / 门禁 / guard 开关 / 信任模型——v1 设计档已归档 `_archive/`）· `design/AGENT-LOOP-ASYNC-POOL.md`（异步评审实例机制 · 判定铁律 · 评审对象锚）。
-> 权威边界：**同步评审路径 = 本档**；**异步评审路径 = `design/AGENT-LOOP-ASYNC-POOL.md` §6.10**（轮次语义以实例机制落地）；
-> **判定铁律 R1–R7 = `design/AGENT-LOOP-ASYNC-POOL.md` §6.19**——与本档**正交**（本档管轮次衰减 / 终止语义——**无机械上限**（§3）；铁律管严重级怎么定）；冲突时以本档轮次表为准。
-> 实现载体：轮次提示词（`thincoder-core/prompts/advisor-round1.md` / `advisor-round2.md` / `advisor-round3.md` / `advisor-design.md`——硬加载，缺失即抛错）·
+> 兄弟档：`docs/core/design/ADVISOR-GUARDS.md`（评审链边缘守卫：判定族 / 凭证链 / 引文候选链 / 预算 / 冻结窗口 / 护栏 / 预算跟随 / 加权）·
+> `docs/core/design/ENGINEERING-MODE-V2.md`（token / 门禁 / guard 开关 / 信任模型——v1 设计档已归档 `_archive/`）· `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`（异步评审实例机制 · 判定铁律 · 评审对象锚）。
+> 权威边界：**同步评审路径 = 本档**；**异步评审路径 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.10**（轮次语义以实例机制落地）；
+> **判定铁律 R1–R7 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.19**——与本档**正交**（本档管轮次衰减 / 终止语义——**无机械上限**（§3）；铁律管严重级怎么定）；冲突时以本档轮次表为准。
+> 实现载体：轮次提示词（`thincoder-core/prompts/advisor-round1.md` / `thincoder-core/prompts/advisor-round2.md` / `thincoder-core/prompts/advisor-round3.md` / `thincoder-core/prompts/advisor-design.md`——硬加载，缺失即抛错）·
 > `thincoder-core/advisor.mjs`（system prompt 轮次选择 / follow-up 构建 / 评审会话组装）· `thincoder-core/advisor/run.mjs`（评审执行与启动拒绝契约）· `thincoder-core/advisor/notice.mjs`（失败结论 / 拒回文案 + 对象标识行单源）·
 > `thincoder-core/advisor/loop.mjs`（工具循环：硬墙 / 预算提示 / 结构化尾）· `thincoder-core/advisor/compaction.mjs`（压缩与守卫族）·
 > `thincoder-core/advisor/convergence.mjs`（round2+ 收敛消息体）· `thincoder-core/advisor/messages.mjs`（user 消息构建）·
 > `thincoder-core/advisor/citations.mjs`（host-verified citations）· `thincoder-core/advisor/history.mjs`（响应表 / 对话背景提取）·
 > `thincoder-core/advisor/repos.mjs`（评审范围采集）· `thincoder-core/agent-tools/advisor.mjs` / `advisor-async.mjs`（工具面与异步池）·
 > `thincoder-core/agent-tools/advisor-settle.mjs`（结算 / 陈旧判定）· `thincoder-core/agent/record-results.mjs`（工具结果记账）· `thincoder-core/agent/completion.mjs`（完成 guard 推回）。
-> 档位判据（>500 主动拆 / >800 硬顶）= 纪律层代码结构判据节；行数标注义务（限源 / 测试文件）——文档规范节不再承载行数义务；评审核查维度行为 = 本档 §9 ∥ §14 ∥ §15。
+> 档位判据（>500 主动拆 / >800 硬顶）= 纪律层代码结构判据节；行数标注义务（限源 / 测试文件）——文档规范节不再承载行数义务；评审核查维度行为 = 本档 §9 ∥ §14 ∥ §15 ∥ §16。
 
 ## 1. 目标
 
@@ -44,7 +44,7 @@
 - **轮次计数 = 已完成**的 advisor 评审尝试次数（同步路径：工具调用完成后记账——含失败/错误返回的尝试；拒发——类型门 / 池满 / 无范围——不计不置；异步路径：结算时递增——attempts 语义一致）。
 - round1 与 round2+ 的**语义判定是确定性的**：`轮次 > 0` **且**存有上一轮评审输出 → round 2+；否则 round 1（重启后归零 → 保守全量重评）。**无解析**：不解析 prior 表头、不匹配 all-clear 短语。
 - **提示词选择**：调用时已完成 0 → ROUND1，1 → ROUND2，≥2 → ROUND3。实现用「已完成次数 + 1」推导**即将进行**的轮次号——与已完成的次数相差 1，勿混淆。
-- **轮次预算按 review 实例计**（同步与异步工具路径共用实例注册表——reviewId = designId / 随机 id——round/prior 随实例；并发多评审的 round/prior 互不污染）。实例解析与结算细节权威 = `design/AGENT-LOOP-ASYNC-POOL.md` §6.10。
+- **轮次预算按 review 实例计**（同步与异步工具路径共用实例注册表——reviewId = designId / 随机 id——round/prior 随实例；并发多评审的 round/prior 互不污染）。实例解析与结算细节权威 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.10。
 - **重置语义**：无 prior 且本 run 未改代码 → 轮次归零、开新评审周期（首次评审 / 上次 all-clear / 纯文档或无修改的 run——各自获得完整预算）；本 run 改过代码 → **保留轮次**（completion guard 必推回；轮次用于提示词衰减与显示——**不作终止判据**）。每 runAgent 起始重置镜像状态（resume 续写保留——轮次跨续跑延续）。
 
 ### 2.3 工具轮预算
@@ -56,7 +56,7 @@
 
 - **通过 = 无未决 🔴**：全部 🔴 已解决（**fixed ∨ accepted**——accepted = 经争议窗收口的携理由不修项，§2.5）、仅剩 🟡/🔵 → 评审通过（🟡/🔵 不阻断 approval——照列不隐藏）。任一 🔴 未决（含零理由不修项）→ 不得声称 passed。
 - **宿主判定面**：评审的“通过/不通过”**不是宿主控制流输入**——宿主不做 findings/短语解析——guard 只消费“评审发生”+ 轮次预算；是否通过由主 agent 读评审输出自行判断。**唯一机械例外** = 设计评审的凭证回显即通过信号（凭证入槽 / 门禁解锁）。
-- **文档状态矛盾不卡 pass**：文档矛盾 / 状态不一致 → 🟡 报出即过（report-and-pass，评审只读不改）——**机制级描述不一致除外（= 🔴——必须处理后才可过）**。判据来源 = 判定铁律（`design/AGENT-LOOP-ASYNC-POOL.md` §6.19）——本档不重复铁律正文。
+- **文档状态矛盾不卡 pass**：文档矛盾 / 状态不一致 → 🟡 报出即过（report-and-pass，评审只读不改）——**机制级描述不一致除外（= 🔴——必须处理后才可过）**。判据来源 = 判定铁律（`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.19）——本档不重复铁律正文。
 
 ### 2.5 争议裁决窗与非修项收口（F32 / F33）
 
@@ -71,7 +71,7 @@
 - **零理由面的出口**（如实）：零理由项不受接受 ⇒ 保持未解（不可 pass）——出路 = 被审方补理由 ∥ 修复，或父侧上报用户裁（沿「未决 🔴 必须向用户呈现」纪律）；**接受收口只关评审者面，不免除父侧上报义务**。
 - **残余（如实注——非「不修」形态的不收敛路径）**：窗只覆盖「携理由的不修项」；① 评审者拒不执行接受句（轮 3+ 仍以同项打回）——机制层零强制（零解析 / 不驱动控制流），出口 = 父侧上报用户裁（沿「未决 🔴 必须向用户呈现」纪律，同零理由出口）；② 被审方虚报 `Fixed`（实际未落地）——轮 3+ 对 `Fixed` 的判定仍须对照当前文件验证，虚报 ⇒ 保持未解（不可 pass），出口同①。⇒ 窗的「必然终止」以提示词层遵从为机制边界。
 - **设计轨适用性**（需求档 F32 边界要求——「design 轨适用形由设计轮核」）：**两轨同形适用**。依据 = ① 轮 2 / 3 提示词两轨共用（`thincoder-core/advisor.mjs` 轮次选择——设计轮 2/3 与代码轨落同一对提示词）；② 争议结构同构（评审者 ⇄ 设计作者之响应表）；③ F33 的「解」定义轨无关；④ 设计评审 pass = 凭证回显——回显条件句随动后同受窗语义。
-- **归宿面（不可验证 ∥ 不完整 ⇒ 结论化）**：窗语义保证每个条目每轮有归宿（`Fixed` / `Accepted` / `Unfixed` 三态之一，无一悬置）；不可验证侧的精确分类与写作禁则 = `design/ADVISOR-GUARDS.md` §3；不完整（宿主截断族）⇒ 失败结论块 = 同档 §7（零改复核）。
+- **归宿面（不可验证 ∥ 不完整 ⇒ 结论化）**：窗语义保证每个条目每轮有归宿（`Fixed` / `Accepted` / `Unfixed` 三态之一，无一悬置）；不可验证侧的精确分类与写作禁则 = `docs/core/design/ADVISOR-GUARDS.md` §3；不完整（宿主截断族）⇒ 失败结论块 = 同档 §7（零改复核）。
 - **提示词面逐字建议**（**内容依据 = 机制文档**——落地形态照 D1；单份 = 运行期 EN，口径 = 该单份逐字）：
 
 **【轮 2 · 评估句】**替换 «not an issue» 评估句（`thincoder-core/prompts/advisor-round2.md` + 中文对位），并补状态词表行：
@@ -272,7 +272,7 @@ CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式�
 - 逐条磁盘比对：该文件该行的实际内容是否**包含**引用内容；引用路径有**路径围栏**（realpath 解析后必须仍在 cwd 内——LLM 生成的路径不可信，防越界读泄漏配置）。
 - 验证报告追加到评审结果：`[host-verified] N/M citations match current file state.` + 不匹配清单（至多 10 条，含失败原因）。
 - 父 agent（决策方）与用户看到验证报告后，对不匹配的 “Unfixed” 判定自动降权——**未通过校验的引用不能支撑打回**。效果：模型编造 / 复述旧证据的成本从“零”变为“必然被标记”。
-- **候选根派生（与`路径围栏`配合；实现契约见 `design/ADVISOR-GUARDS.md`）**：按声明路径派生候选根（工作区根 / 声明仓根 / 声明文件目录），逐引文按候选顺序试解析；失败原因四类（无候选文件存在 / 内容不符 / 越围栏 / 非连续引文——逐字分类 = `design/ADVISOR-GUARDS.md` §3）。
+- **候选根派生（与`路径围栏`配合；实现契约见 `docs/core/design/ADVISOR-GUARDS.md`）**：按声明路径派生候选根（工作区根 / 声明仓根 / 声明文件目录），逐引文按候选顺序试解析；失败原因四类（无候选文件存在 / 内容不符 / 越围栏 / 非连续引文——逐字分类 = `docs/core/design/ADVISOR-GUARDS.md` §3）。
 
 ## 6. 评审触发与失效（guard 推回）
 
@@ -359,9 +359,9 @@ advisor design review 标准维度补一条：
 
 ## 10. 工程模式集成（收敛相关）
 
-工程模式承诺「Advisor is mandatory at both design and code gates」。机械强制链的**完整机制权威 = `design/ENGINEERING-MODE-V2.md`**（v1 设计档已归档）——本档只留收敛相关语义：
+工程模式承诺「Advisor is mandatory at both design and code gates」。机械强制链的**完整机制权威 = `docs/core/design/ENGINEERING-MODE-V2.md`**（v1 设计档已归档）——本档只留收敛相关语义：
 
-- **Design gate**：spawn eng-coder 时 token 校验 + 写文件门禁——确保设计评审先行；design 评审通过（凭证回显）时同步置位。凭证机制（多槽 / 消费 / TTL）权威 = `design/DESIGN-TOKEN-SETTLEMENT.md`（v1 设计档已归档）。
+- **Design gate**：spawn eng-coder 时 token 校验 + 写文件门禁——确保设计评审先行；design 评审通过（凭证回显）时同步置位。凭证机制（多槽 / 消费 / TTL）权威 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md`（v1 设计档已归档）。
 - **Code gate**：eng-coder 返回后子代理改动合并使父代理 guard 触发（§6.2）——无法绕过代码评审。
 - **guard 在工程模式关闭**——评审义务由上述机械链承担，不靠 completion 推回。
 - **轮次与终止**：per-review 实例；**无机械轮次上限**（§3）——第 6 次及以后的发起照常受理；失败路径以结论终止、反复失败停下上报（§3.2）。
@@ -398,6 +398,7 @@ advisor design review 标准维度补一条：
 | A-AC14 | 跨评审隔离：并发 / 延迟下消息构建取本评审实例值（排队启动复核）；轮 2+ 响应表取件不小于本评审投递水印（前向取首表；无水印回落全文倒扫） | §4.3 / `AGENT-LOOP-ASYNC-POOL.md` §6.10 |
 | A-AC15 | 同类先例核查维度在位（「同类先例」行：先例坐标 + 对齐 ∥ 偏离理由；偏离理由显式判据；无先例须显式声明）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 9 条；**已落笔**（EN 在盘——2026-10-10） | 同类先例 |
 | A-AC16 | 勘察证据行核查维度在位（「勘察证据行」：查过哪些公共源文档 ∥ 有无相关；缺行 ⇒ 未查或未记；无相关须照记）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 10 条；**已落笔**（EN 在盘——2026-10-14） | 勘察证据 |
+| A-AC17 | 分支出处核查维度在位（每条新增分支带「依据」：真实观测 ∥ 复现命令；两者都给不出 ⇒ 🔴；真防御给得出复现路径即过）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 `6b` 条（第 6 条与第 7 条之间） | 分支出处 |
 
 **工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：`thincoder-core/advisor/loop.mjs:207-217` 推入 `messages` 的 assistant 消息由核单点 `assistantToolCallMessage(response, providerSpec(provider))`（`thincoder-core/model-specs.mjs`）构造——`reasoningEcho:"required"`
  族（继承主 provider 或显式 `advisor.provider`，均按 `providerSpec` 判定）**恒带** `reasoning_content`（本轮无推理 ⇒ 空串）；`optional` / 未声明族恒不带。
@@ -419,3 +420,13 @@ advisor design review 标准维度补一条：
 advisor design review 标准维度补一条：
 
 - **勘察证据行核查**：设计档是否携**勘察证据行**——查过哪些公共源文档（尤其独立文档仓）∥ 有没有相关。**缺行 ⇒ 未查或未记**；**无相关 ⇒ 也须照记**（不得静默省行）——复核链本无此项；「没查」得有地方现形。
+
+## 16. 分支出处核查（设计评审维度）
+
+> 权威链（指环单向化）：**义务** = 设计档每条针对输入 ∥ 状态的分支须带「依据」（真实观测 ∥ 可复现失败路径）= 纪律层设计步（需求 = `docs/core/requirements/METHODOLOGY.md` §2.1 F2-7）；**核查维度行为语义 = 本节**；执行实现 = 设计评审提示词的对应维度——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 `6b` 条（第 6 条与第 7 条之间）。
+
+advisor design review 标准维度补一条：
+
+- **分支出处核查**：设计档是否逐条给出新增分支的**出处**——真实观测（数据读数 ∥ 日志一行 ∥ 用户报告，引读数或原文）或可复现的失败路径（把它复现出来的命令）。**两者都给不出** ⇒ 该分支防的是一个没有发生过的场景 ⇒ **🔴**。
+- **真防御能过**：给得出复现路径的分支照过——本维度杀的是「说不出场景」的分支，不是防御本身。
+- **与第 6 条 `Scope` 的分工**：第 6 条判**范围总量**（该不该做 · 有无简化机会 · 有无蔓延）；本节判**单条分支的出处**——两条独立判红，不得以第 6 条过掩本节红，也不得把本节的红记成范围问题。

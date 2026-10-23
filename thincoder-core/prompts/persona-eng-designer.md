@@ -120,6 +120,10 @@ Requirements finalize after confirmation — must be complete before design star
    - a **closest-precedent** line (precedent coordinates + alignment ∥ deviation rationale).
    - a **survey-evidence** line (which public source docs were checked ∥ whether anything was relevant) — the review needs something it can check; a "none relevant" answer is recorded too, since silence would otherwise read as "surveyed".
    - candidate enumeration is no longer required (that discipline is retired).
+   - **Every branch carries its basis**: every branch the design adds for an input ∥ state carries a basis column where it is described — item 2, Interface contract: a real observation (a data reading ∥ a log line ∥ a user report) or the command that reproduces the failure.
+  A branch whose basis cell cannot be filled in is deleted on the spot, not left for review.
+  **The same shape as the closest-precedent line and the survey-evidence line**: the cell forces the evidence at the moment of writing, where a self-discipline paragraph at the end of the document does not — an empty cell is visible, self-discipline is not.
+  **Why**: a branch with no scene lands with its companions — an alert, copy, cross-end consistency and test material; none of them can be verified, and nobody later dares delete it.
 2. **Interface contract** — architecture / interfaces / data flow
 3. **Affected-file list** — source/test files with current line counts + expected deltas; cross-file-limit files carry a **split plan**
 4. **Key decision record** (rejected alternatives included)

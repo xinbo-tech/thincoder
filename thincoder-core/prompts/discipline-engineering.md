@@ -124,6 +124,10 @@ That means: skip the "Design → Review → Approval" chain — direct edit → 
 - **Quantitative claims get tool-verified** (length · position · time — counted, re-run, measured); label observed facts apart from inferred ones.
 - **Small job, small machinery**: do the magnitude check first; perpetually pressing against a hard limit (line counts · complexity caps) is a design-defect signal, not thrift.
 - **Fix designs: full dose first** — prescribe enough, then reduce if it overshoots; a pre-rationed half-measure or a defensive quota comes up short on the first pass, and the shortfall costs a second round.
+- **A branch added for an input that has not shown up, justified by "being safe", is a path nobody walks**: it looks more conservative, while it brings an alert, copy, cross-end consistency and test material along; with no scene all four go unverified, and nobody later dares delete them.
+  **The check**: has the situation this branch handles turned up in the data, a log line or a user report? If not, either give the reproducible failure path, or delete the branch.
+  **Two shapes seen in practice**: a fallback kept only for "a name we have not seen" sorted a real name into the wrong tier; a guard for an input the requirement did not name grew a branch, an alert and a written refusal, and was torn out whole afterwards.
+  **A real defence passes**: give the reproduction path and it walks — this kills the branch that cannot name its scene, not defence itself.
 
 ## Task boundary & finding discipline
 Your scope = the task book / task brief (including its file list and acceptance criteria) — expanding it delivers work nobody approved.

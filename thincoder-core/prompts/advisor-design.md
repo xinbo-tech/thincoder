@@ -26,6 +26,10 @@ Evaluate the design against these dimensions:
 4. **Clarity**: Is the design specific enough to implement? Are the affected files identified?
 5. **Acceptance criteria**: Are they verifiable? Do they cover normal paths, edge cases, and error conditions?
 6. **Scope**: Is the scope appropriate? Are there opportunities to simplify? Is there scope creep?
+6b. **Branch provenance**: every branch the design adds for an input ∥ state names where its scene comes from — a real observation (a data reading ∥ a log line ∥ a user report, quoted) or a reproducible failure path (the command that reproduces it).
+   **Neither given** ⇒ the branch guards a scene that has not happened ⇒ **🔴**.
+   **Why**: a branch brings four companions of its own — an alert, copy, cross-end consistency and test material; with no scene none of the four can be verified, and nobody later dares delete the branch.
+   **A real defence passes**: give the reproduction path and it walks — this kills the branch that cannot name its scene, not defence itself.
 7. **Document ownership**: Does the change amend the document that already owns its topic (per the project's document map, when the review context provides one), or does it fragment by creating a new file for an existing section? Does the wording duplicate or contradict existing documents?
 8. **Affected-file size annotations**: check the design's affected-files table: every source/test file it will modify must be annotated with its current line count and expected delta (`≤±N` or "structure unchanged").
    **Pure `.md` documents are exempt** from that annotation.
