@@ -43,7 +43,7 @@
 - **autoThink 档位开关**（Auto 组对齐桌面 ∕ CLI `/think` 同键）：键 = `agent.autoThink`（默认 false）。**读链**：`loadAgentSettings()`（`thincoder-vscode/src/extension/settings.mjs:42`）→ 快照 `agentSettings()` 携键（`:137`）→
   agent 卡两态渲染；**写链**：`saveAgentSettingsFromPanel`（`thincoder-vscode/src/extension/settings-panel-write.mjs:80`）显式布尔写（false 亦写——同 verifyGuard 式）；
   **控件**：`#ag-autothink` switch（`thincoder-vscode/webview/settings-agent.js:26-27`——verifyGuard 后位）+ 载荷 `autoThink: chk("ag-autothink")`（`:123`）。词面 = `settings.agent.autoThink`（两语 = 桌面同值）。
-- **注入开关三键**（PROMPT-SYSTEM.md §6.24 §6.27）：键 = `agent.injectProjectRules` ∥ `agent.injectDocs` ∥ `agent.injectMemories`（默认 true——判据 `!== false`；全局粒度）。
+- **注入开关三键**（docs/core/design/PROMPT-SYSTEM.md §6.24 §6.27）：键 = `agent.injectProjectRules` ∥ `agent.injectDocs` ∥ `agent.injectMemories`（默认 true——判据 `!== false`；全局粒度）。
   **职责切分**（用户裁定）——项目指令（① `AGENTS.md` / `project_rules.md`）∣ 相关文档（② 自动检索）∣ 相关记忆（③）三块各受各键，**三键互不影响**（§6.27）。
   **读链**：`loadAgentSettings()`（`thincoder-vscode/src/extension/settings.mjs:45-46`）→ 快照 `agentSettings()` 携键（`:165-166`）→
   agent 卡两态渲染（`!== false` 判勾）；**写链**：`saveAgentSettingsFromPanel`（`thincoder-vscode/src/extension/settings-panel-write.mjs:84-85`）显式布尔写（false 亦写——同 autoThink 式）；
@@ -63,10 +63,10 @@
 
 **面形**：表单 = **弹窗形态**（`#mcp-dialog`——五路关 ∥ 开框重置 ∥ 拒因可见；机制 = §2.17 ①）。本节只承存储 ∥ 字段集 ∥ 提交判据（三面零改）；形面 ∥ 关路 ∥ 入出口归 §2.17。
 
-**装配面第二源**：MCP **装配面**（`thincoder-vscode/src/extension/panel-turn-loop.mjs` ro 载荷——实施落点）另并项目根 `.mcp.json`——单层发现（`join(cwd, ".mcp.json")`）· 零交互信任 · config 同名优先 ∕ 异名追加（机制单源 = `doc:MCP.md:§6.4`）；**管理面**（本节列表 ∕ 增删改 ∕ 重连 ∕ 探活）仍 config 单源（`.mcp.json` 源不进管理列表——沿 CLI `/mcp` 口径）。
+**装配面第二源**：MCP **装配面**（`thincoder-vscode/src/extension/panel-turn-loop.mjs` ro 载荷——实施落点）另并项目根 `.mcp.json`——单层发现（`join(cwd, ".mcp.json")`）· 零交互信任 · config 同名优先 ∕ 异名追加（机制单源 = `doc:docs/core/design/MCP.md:§6.4`）；**管理面**（本节列表 ∕ 增删改 ∕ 重连 ∕ 探活）仍 config 单源（`.mcp.json` 源不进管理列表——沿 CLI `/mcp` 口径）。
 
 **MCP 警告消费**：装配失败（死 server）不再静默——装配面出参 `warnings` 入 `agent._mcpWarnings`，装配尾转提醒入 `agent._pendingReminders`
-（下一条 user 消息注入；首两段逐字同 CLI；末行 = 本端可达出口「设置面 MCP 段 Reconnect」；同指纹不重推；零警告零写）。机制单源 = `doc:MCP.md:§6.4`；
+（下一条 user 消息注入；首两段逐字同 CLI；末行 = 本端可达出口「设置面 MCP 段 Reconnect」；同指纹不重推；零警告零写）。机制单源 = `doc:docs/core/design/MCP.md:§6.4`；
 实现落点 = `thincoder-vscode/src/agent/setup.mjs` ∥ `thincoder-vscode/src/agent/tool-table.mjs` ∥ `thincoder-vscode/src/agent/setup-reminders.mjs`。
 可见面 = 会话内系统提醒（零新 UI ∥ 零新词键——沿 KD-70 ④ 同判）。
 
@@ -150,7 +150,7 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 | 1 | 代理整块（宿主删 `proxy` 键） | `#px-uri` 清空 + change（屏值 `""` ≠ 基线） | 未编辑 ⇒ 零发值；显式清空 ⇒ payload 恰含 `uri:""` ⇒ 宿主删键 |
 | 2 | Shell 键（宿主删 `shell` 键） | `#sh-select` 选 `System default`（值 `""`） | payload 恰含 `value:""` ⇒ 宿主删键（CLI `/shell reset` 同义） |
 | 3 | `#sh-custom` 清空 | **无**（空自定义路径 = 未完成输入，不发值） | change 且值为空 ⇒ 零发值 + 控件按快照**就地回显**（回显式 = §2.9「回显全表达式」） |
-| 4 | agent 卡 `null` 清空 · poolLimits 逐键 · 元素缺席形态 | —— | 登记不修——消解路径 + 到期条件 = `requirements/WEBVIEW.md` 在册（P2-3 / P2-4） |
+| 4 | agent 卡 `null` 清空 · poolLimits 逐键 · 元素缺席形态 | —— | 登记不修——消解路径 + 到期条件 = `docs/vsc/requirements/WEBVIEW.md` 在册（P2-3 / P2-4） |
 
 - **extension 侧删除语义零改**（空 uri ⇒ 删键 · 空 shell 值 ⇒ 删键——`thincoder-vscode/src/extension/settings.mjs:231` 与 `thincoder-vscode/src/extension/settings-panel-write.mjs:180`）——只把「触发」收紧到显式用户动作。
 
@@ -340,7 +340,7 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 ### 2.12 渠道准入探针：失败分类与有界重试（F-W19）
 
 **载荷（端侧装配）**：VSC 调用点 = `thincoder-vscode/src/extension/provider-probe-window.mjs:71` / `:76`（`recordAdmission` 落账）· `thincoder-vscode/src/extension/settings.mjs:78`（`admissionOf`）→ `:85` / `:89`（渠道项载荷装配）；
-字段与分类语义（`failure ∈ {timeout, malformed, hostBusy}` + `ts`）、失败文案零改纪律（`channelUnavailableMessage` 逐字不动）= `PROVIDER.md` §6.16（**不重述**——本档只承载端侧装配 + 采样器 / 重试 / 展示面）。
+字段与分类语义（`failure ∈ {timeout, malformed, hostBusy}` + `ts`）、失败文案零改纪律（`channelUnavailableMessage` 逐字不动）= `docs/core/design/PROVIDER.md` §6.16（**不重述**——本档只承载端侧装配 + 采样器 / 重试 / 展示面）。
 
 **`hostBusy` 判据**：采样器窗口内 lag ≥ 1 s（宿主事件循环繁忙——非渠道故障，分类可辨）；**同一采样器兼 loop-idle 重试闸**（宿主忙时不重试——不在忙循环上加压）。
 
@@ -371,11 +371,11 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 - `不可用`（渠道故障）：`failure ∈ {timeout, malformed}` ⇒ 状态词 `不可用`（`webview/settings-providers.js:189` 现状形态不变）+ `.prov-hint` 逐字渲 `unavailableReason`（`:192` 现状不变）；
 - `宿主繁忙`（非渠道故障）：`failure === "hostBusy"` ⇒ 状态词 `宿主繁忙`（硬编码同址、与 `:189` 同形）+ **抑制渠道故障 hint**——载体为宿主忙，不得渲渠道故障文案。
 
-载荷：`providerStatus` 渠道项除 `available` / `unavailableReason` 外增 `failure`（端侧装配 = `thincoder-vscode/src/extension/settings.mjs:78` `admissionOf` → `:85` / `:89` 载荷路径）；**字段语义 / 分类判据 = `PROVIDER.md` §6.16**（本档只承载端侧装配与展示面，不重述）。
+载荷：`providerStatus` 渠道项除 `available` / `unavailableReason` 外增 `failure`（端侧装配 = `thincoder-vscode/src/extension/settings.mjs:78` `admissionOf` → `:85` / `:89` 载荷路径）；**字段语义 / 分类判据 = `docs/core/design/PROVIDER.md` §6.16**（本档只承载端侧装配与展示面，不重述）。
 **双向机检判据**：词 ⇒ 落账（渲 `宿主繁忙` ⇔ 载荷 `failure === "hostBusy"`；渲 `不可用` ⇔ 载荷 `failure ∈ {timeout, malformed}`）· 落账 ⇒ 词（反方向逐条）——两向均断言。
 **被拒备选（验收③ 收窄裁定）**：不采纳「可辨 = 落账字段层」的收窄——与 `docs/vsc/requirements/WEBVIEW.md` F-W19 验收③ 的**展示面**字面不符；状态词分档不改版式、零渠道文案改动 ⇒ 成本为零。
 
-**机检**：窗口起止 / lag 判定 / 注入缝 / 零 exec。核侧锚（探测束 / 同步有界例外 / 零 execSync 扫描）= `MULTI-INSTANCE-COLLAB.md` §3.1 判据条（不在本档重复）。
+**机检**：窗口起止 / lag 判定 / 注入缝 / 零 exec。核侧锚（探测束 / 同步有界例外 / 零 execSync 扫描）= `docs/core/design/MULTI-INSTANCE-COLLAB.md` §3.1 判据条（不在本档重复）。
 
 ### 2.13 Advisor effort 键接线
 
@@ -387,14 +387,14 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
 |---|---|
 | 写入键 | `agent.advisor.reasoningEffort`（单源 = 核读取键；与 CLI 菜单同键） |
 | 档位值（枚举档） | 写字面档值（如 `low`/`high`/`max`） |
-| 关思考（枚举 `none`） | **off 形按族取形**（规则单源 = `doc:MODEL-SPECS.md:§15.4-2`）：effort 族（`thinkApi === "effort"`）⇒ `advisor.thinking = null`；自定义开值族 ⇒ `null`；其余 ⇒ `{type:"disabled"}`。载荷面：`none` **原样上送**（写面归一，不写字面进盘）+ **删** `reasoningEffort` 键 |
-| 「—」（未注册占位） | 删 `reasoningEffort` 键；**不动** `advisor.thinking`（off 形 `null` 的跨保存存活 = 写面种子循环 carve-out——`doc:MODEL-SPECS.md:§15.4-5`） |
-| 旧 `effort` 键 | 读面兜底：`reasoningEffort` 缺席时按 `effort` 日值显示（且 `thinking` off 形 ⇒ 预选 `none`；优先级 = `doc:MODEL-SPECS.md:§15.4-4`）；保存时删旧键（不回写的死键不得复活） |
+| 关思考（枚举 `none`） | **off 形按族取形**（规则单源 = `doc:docs/core/design/MODEL-SPECS.md:§15.4-2`）：effort 族（`thinkApi === "effort"`）⇒ `advisor.thinking = null`；自定义开值族 ⇒ `null`；其余 ⇒ `{type:"disabled"}`。载荷面：`none` **原样上送**（写面归一，不写字面进盘）+ **删** `reasoningEffort` 键 |
+| 「—」（未注册占位） | 删 `reasoningEffort` 键；**不动** `advisor.thinking`（off 形 `null` 的跨保存存活 = 写面种子循环 carve-out——`doc:docs/core/design/MODEL-SPECS.md:§15.4-5`） |
+| 旧 `effort` 键 | 读面兜底：`reasoningEffort` 缺席时按 `effort` 日值显示（且 `thinking` off 形 ⇒ 预选 `none`；优先级 = `doc:docs/core/design/MODEL-SPECS.md:§15.4-4`）；保存时删旧键（不回写的死键不得复活） |
 | select 未渲染（枚举空） | 载荷**不发** `reasoningEffort` 字段（缺席 ≠ 清空）——手写键存活 |
-| 读面（预选取值） | `advisorEffortCurrent`（`settings-state.js`）：`thinking` off 形 ⇒ `none` > `advisor.reasoningEffort` > legacy `advisor.effort` > 「—」（规则单源 = `doc:MODEL-SPECS.md:§15.4-4`）；**off 哨兵 × 档枚举无 `none` 的族 ⇒ 预选「—」（不落注册默认档——`doc:MODEL-SPECS.md:§16.5`）**； |
+| 读面（预选取值） | `advisorEffortCurrent`（`settings-state.js`）：`thinking` off 形 ⇒ `none` > `advisor.reasoningEffort` > legacy `advisor.effort` > 「—」（规则单源 = `doc:docs/core/design/MODEL-SPECS.md:§15.4-4`）；**off 哨兵 × 档枚举无 `none` 的族 ⇒ 预选「—」（不落注册默认档——`doc:docs/core/design/MODEL-SPECS.md:§16.5`）**； |
 | | 快照面（`thincoder-vscode/src/extension/settings.mjs:145`）为 spread 透传（新旧两键与 `thinking` 均随行）——端侧零改 |
 
-**归一规则（两 select 同源）**：`doc:MODEL-SPECS.md:§15.4` 的 `effortSelection`（已存值∈枚举 > 注册默认∈枚举 > 中性档）；面板渲染面 = `effortSelectView`（「—」恒首项）。
+**归一规则（两 select 同源）**：`doc:docs/core/design/MODEL-SPECS.md:§15.4` 的 `effortSelection`（已存值∈枚举 > 注册默认∈枚举 > 中性档）；面板渲染面 = `effortSelectView`（「—」恒首项）。
 
 **与需求档登记的关系（报告结论）**：`docs/vsc/requirements/WEBVIEW.md` P2-4「元素缺席 ≡ 显式清空」的 **advisor-effort 半由本节消解**（select 未渲染 ⇒ 不发字段）；P2-4 余项（advisor `provider` / `model` 与其他面板字段的缺席语义）= 需求档条目，不动。
 
@@ -620,6 +620,25 @@ webview：agentSettings 到达 ⇒ 打开等待器触发 buildSettings ⇒ 建�
   上行恰 `teamLogin` ∥ `teamLogout` 两条（读面纯推送——无第三上行）；模型候选面唯一来源 = `fullStatus` 的 `models` 载荷——登录成拍补齐（成支 `panel._pushStatus()` ⇒ `panel._pushSettings()`，同拍发 `models`；机制单源 = `docs/core/design/TEAM.md` §2.8）；重绘两门 = 变更门（JSON 比对，镜像 `updateProviderStatus`）∥ 聚焦跳绘门（U-S10 同判）——面板未开 ⇒ 零动作。
 6. **卡 = 管理面**——登录表单与退出钮不在卡内（登/退 = 首启板团队卡 ∥ 状态栏团队 item + 命令 `thincoder.team`——`docs/vsc/design/WEBVIEW.md` §4.11 ∥ §4.12）；
   卡面保留 = 端标签 + 详情（server ∥ member ∥ label）+ 未登录句；「轮换」在卡内（已登录在场——确认一步 + 结果行；机制单源 = `docs/core/design/TEAM.md` §2.7）；读面 `{ loggedIn, server, member, label }` 形零改（`verify` 态住宿主 item——零出站）；写面消息面（`teamLogin` ∥ `teamLogout`）零改（命令流复用同一核链）。
+
+### 2.21 模型上下文声明编辑（`providerContextSaved` 回执）
+
+> 协议面登记 = `WEBVIEW-PROTOCOL.md` §3.2（行 35）+ 该档 §12 对表行 ∥ §13 发面行。
+
+**机制单源** = `docs/core/design/PROVIDER.md` §6.15「写面：`modelContext` 编辑（三端同形 · 同批齐）」——本节只收 VSC 端的入口、协议对与状态面；交互五步 ∥ 值校验 ∥ 清除确认语义不复述。
+
+- **入口**：providers 卡渠道行动作簇 `Context…` 钮（`thincoder-vscode/webview/settings-providers.js:120`）——行内入口 ⇒ 弹窗「选渠道」一步 = 点该行。
+- **上行** `saveProviderModelContext { name, model, k }`（webview → host）：`k` = K 单位正整数；空 ∥ `null` ⇒ 清除径（有已声明值时先过确认层）。
+  分发 = `thincoder-vscode/src/extension/panel-messages.mjs:318` → `panel-messages-settings.mjs:130-151` → `provider-context.mjs` `saveProviderModelContext`（`thincoder-vscode/src/extension/settings.mjs:141` re-export）。
+- **回执** `providerContextSaved { name, model, k }`（host → webview）：宿主保存**成功**后才发——拒径（值非法 ∥ 渠道不存在 ∥ 键歧义）零回执、零落盘，拒因经既有 `providerError`（`scope:"providers"`）可见。
+  webview 收 ⇒ 行内保存行显示 4s 自散（`thincoder-vscode/webview/settings-providers.js:76-90`，消费壳 = `webview/chat-messages.js:170`）；清除径（`k === null`）零提示，卡面行随 `providerStatus` 重推复读 `未声明` / `Not declared`。
+- **状态面**：卡面行读载荷 `modelContext` 的已声明值（逐条 `模型: NK` ∥ 单条 `NK` ∥ 无声明 `未声明`）；合法性判据与读链同一个谓词（`positiveInt`）——值非法 ⇒ 与「无键」同面显示 `未声明`；编辑弹窗输入框回填**盘面原值**。规则单源 = `docs/core/design/PROVIDER.md` §6.15「读面回显」。
+  `providerStatus()` 另携 `context`（`providerSpec(entry).context`，token）——卡面不读它。
+
+**机检**：① 宿主：成功 ⇒ sink 恰 `providerStatus` + `providerContextSaved{name,model,k}`；值非法 ∥ 渠道不存在 ∥ 歧义键 ⇒ 零落盘 + 零回执 + 报错串在场；
+② webview：回执 ⇒ 保存行显示且 4s 自散；清除径 ⇒ 零提示 + 行面转 `未声明`；③ 卡面：手改 JSON 写非法值（`"128"` ∥ `0`）⇒ 行面 `未声明`、弹窗输入框回填原值、盘上零改写（用例 W-18）。
+
+**边界**：三端交互五步 ∥ 值校验 ∥ 键处理 ∥ 清除确认 = `docs/core/design/PROVIDER.md` §6.15 单源；本节零新增语义。
 
 ## 3. 已知待办与已知限制
 

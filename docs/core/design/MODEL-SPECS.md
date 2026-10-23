@@ -239,7 +239,7 @@
 | 文件 | 现行数 | 预期增删 | 内容 |
 |---|---|---|---|
 | `thincoder-core/model-specs.mjs` | **253** | — | 4 新行（每行配 2–3 行证据行注）+ 4 行删除（preview / qwen-max / qwen-plus / 泛前缀 `qwen`）——无新字段、无新导出 |
-| `thincoder-vscode/src/specs.mjs` | **84** | — | `EFFORT_DEFAULT_PREFIXES`（表体 `:22-36`，匹配器 `:38-52`）**补 5 档**（各自独立键、不用族前缀，A-13）——AC-13 |
+| `thincoder-vscode/src/specs.mjs` | **102**（2026-10-23 `wc -l`） | — | `EFFORT_DEFAULT_PREFIXES`（表体 `:22-36`，匹配器 `:38-52`）**补 5 档**（各自独立键、不用族前缀，A-13）——AC-13 |
 | `thincoder-vscode/test/image-downgrade.test.mjs` | **253** | — | VSC 端差表（`thincoder-vscode/src/specs.mjs`）的单元测试档就在此文件（T36 / W16 / T38 三段），但仅测 deepseek / glm / kimi 族，qwen 档的 `EFFORT_DEFAULT_PREFIXES` 展开不在射程（补行盲区）⇒ A-13 的测试落点 = 本文件新增用例（T-15） |
 | `thincoder-core/test/model-specs.test.mjs` | **395** | — | 新用例族：四档逐字段、两 flash 档枚举不等、托底删除后果（T-3/T-4）、退役名遮蔽与退化（T-5/T-6）、既有族零回归；**`:29` 一行删除**（`cacheMode` 断言移出用例，§4 D-10 / T-13） |
 | `thincoder-core/test/provider-merge.test.mjs` | **307** | — | `enable_thinking` 三态对两新档（A-7）；T-9 第四态（`:216-218`，同携态 ⇒ `false`，裁定② · A-18）；现行数含 `B-1…B-6` 增量 |
@@ -1376,7 +1376,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 **裁定：`advisor.thinking` 的 `null` 须穿透种子循环**——该键的 `null` = 有意义值（NF1 显式 off）；carve-out 只此一键，其余键维持「null = 清空、不复活」；
 兼保手写 off 标记在 select 未渲染面（枚举空 / 模型未定）不被保存吞掉。判据 = V-4（连续两次保存后 off 形仍在盘）。
 
-**§15.4-6 · #331 · VSC `advisor.effort` 键（死键 → 接线）**：面板写入键改 `advisor.reasoningEffort`（单源 = 核读取键 `thincoder-core/advisor/run.mjs:48/:64`，与 CLI `/advisor` 菜单同键）；off 形同 CLI（`thinking` 落 off 形 + 删 effort 键）；面板面细则 = `doc:SETTINGS.md:§2.13`。
+**§15.4-6 · #331 · VSC `advisor.effort` 键（死键 → 接线）**：面板写入键改 `advisor.reasoningEffort`（单源 = 核读取键 `thincoder-core/advisor/run.mjs:48/:64`，与 CLI `/advisor` 菜单同键）；off 形同 CLI（`thinking` 落 off 形 + 删 effort 键）；面板面细则 = `doc:docs/vsc/design/SETTINGS.md:§2.13`。
 
 ### 15.5 影响文件清单
 
@@ -1400,7 +1400,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 | 设计档 | — | 设计轮 + 修正轮笔 | 本档 §15 · `PROVIDER.md` §6.9/§6.11/§6.12 · `docs/vsc/design/SETTINGS.md` §2.13 + §3 + U-S12 · `docs/vsc/design/WEBVIEW.md` §6 D-W41 / §8 U-W20（WEBVIEW 两行为设计轮已落、修正轮零改） |
 
 **`settings.mjs` 拆分复核注**：组边界 = ① 快照族（`agentSettings` / `proxySettings` / `websearchSettings` / `fullStatus`）② 渠道路由族（provider 增删 / 代理旗标 / 连接测试）③ 密钥与 MCP 族（`saveProviderKey` / `deleteProviderKey` / MCP 三件）——① 拆出 = `src/extension/settings-snapshots.mjs`（拟新增）；
-拆分计划 = 触发阈值 **750 行** 或该档下次结构改动（先到即拆）；**登记 = `doc:SETTINGS.md:§3`**。
+拆分计划 = 触发阈值 **750 行** 或该档下次结构改动（先到即拆）；**登记 = `doc:docs/vsc/design/SETTINGS.md:§3`**。
 
 ### 15.6 验收标准回指
 
@@ -1412,7 +1412,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 | AC-4 | #326 | §15.3 | C-8 超限集 = **∅**（空名单绊网）；`NO_SPEC_ROW` 三名不动（P-3 零改绿） |
 | AC-5 | #329 | §15.4-2 / §15.4-3 / `PROVIDER.md` §6.12 | **生产者面**：off 形族规则落地（effort 族 ⇒ `thinking === null` ∧ 无 `reasoningEffort` 键——CLI `/advisor` 与 VSC 面板写面同式）+ `resolveAdvisorProvider` off 形两分支断言（保形 + 清档）+ 载荷面：effort 族 advisor provider + off ⇒ 体携 `reasoning_effort:"none"`；显式档面照发 |
 | AC-6 | #330 | §15.4 | `effortSelection` 三分支直驱（含负控：无注册默认 ⇒ `null`）；picker 两径（换模型 / 首推）不再落 `levels[0]`；面板「已存值 ∉ 枚举」⇒ selected「—」；两渲染径同源 |
-| AC-7 | #331 | §15.4-2 / §15.4-5 / `SETTINGS.md` §2.13 | 写面：面板保存后 `agent.advisor.reasoningEffort` 在盘、旧 `effort` 键不在盘；选 `none` ⇒ off 形**按族字面量**（effort 族（`hy3` 形）⇒ `advisor.thinking === null` ∧ 无 `reasoningEffort` 键；type 族默认（`deepseek-v4-flash` 形）⇒ `thinking.type === "disabled"` ∧ 无该键）；**连续两次保存后 off 形仍在盘**（种子循环 carve-out）；select 未渲染 ⇒ 载荷无该键（手写键存活） |
+| AC-7 | #331 | §15.4-2 / §15.4-5 / `docs/vsc/design/SETTINGS.md` §2.13 | 写面：面板保存后 `agent.advisor.reasoningEffort` 在盘、旧 `effort` 键不在盘；选 `none` ⇒ off 形**按族字面量**（effort 族（`hy3` 形）⇒ `advisor.thinking === null` ∧ 无 `reasoningEffort` 键；type 族默认（`deepseek-v4-flash` 形）⇒ `thinking.type === "disabled"` ∧ 无该键）；**连续两次保存后 off 形仍在盘**（种子循环 carve-out）；select 未渲染 ⇒ 载荷无该键（手写键存活） |
 | AC-8 | #331 / #330 | §15.4-4 | 读面：`advisor.reasoningEffort` 在场 ⇒ 预选该档；缺席 + legacy `advisor.effort` 在场 ⇒ 按旧值日值预选、保存即删旧键；`thinking` 为 off 形 ⇒ 预选 `none`（优先于档位键）；三态渲染与载荷同源（`effortSelection` / `advisorEffortCurrent`） |
 
 ### 15.7 用例表（正常 / 边界 / 错误）
@@ -1560,7 +1560,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 | 文件 | 现状 | 预期增删 | 说明 |
 |---|---|---|---|
 | `thincoder-core/think-off.mjs` | 0 | ~40 | §16.2 单源两函数（叶档 · 零 import；≤300 免登记） |
-| `thincoder-core/model-specs.mjs` | 348 | +~6 | §16.3 三行 `thinkAlwaysOn` + 表头字段注 + 行注句；**>300 已登记**（`thincoder-core/test/core-hygiene.test.mjs:96`）+ 拆分计划（§13.6）——本次 = 字段面补充（拆点未触发——判定见下注）  |
+| `thincoder-core/model-specs.mjs` | **370**（2026-10-23 `wc -l`） | +~6 | §16.3 三行 `thinkAlwaysOn` + 表头字段注 + 行注句；**>300 已登记**（`thincoder-core/test/core-hygiene.test.mjs:96`）+ 拆分计划（§13.6）——本次 = 字段面补充（拆点未触发——判定见下注）  |
 | `thincoder-core/advisor/run.mjs` | 200 | ±0（−1 标识符） | §16.6-⑷ |
 | `thincoder-cli/src/tui/cmd-think.mjs` | 151 | +~14 −3 | §16.2-2 + §16.4（拒绝 / 开关项门 / 头与回执条件化） |
 | `thincoder-cli/src/tui/cmd-advisor.mjs` | 278 | +~16 −6 | §16.2-1 + §16.4（状态行条件化 / Disabled 门）+ §16.6-⑵⑶ |
@@ -1573,7 +1573,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 | `thincoder-vscode/test/reasoning-mode.test.mjs` | 0 | ~45 | R-1..R-3（该面首测——无既有单元测试档）  |
 | `thincoder-vscode/test/model-picker-fallback.test.mjs` | 279 | +~20 | W-5 / W-10（off 哨兵 × picker 两径）  |
 | `thincoder-vscode/test/effort-select-views.test.mjs` | 172 | +~12 | W-9  |
-| 设计档 | — | 本节 + §10.1 订正 + §15.4-1 / §15.4-2 / §15.4-4 / §15.8 档面（指针 / 收正）+ `doc:PROVIDER.md:§6.9` / `§6.12` / `§6.19` + `doc:SETTINGS.md:§2.13` 指针 | — |
+| 设计档 | — | 本节 + §10.1 订正 + §15.4-1 / §15.4-2 / §15.4-4 / §15.8 档面（指针 / 收正）+ `doc:PROVIDER.md:§6.9` / `§6.12` / `§6.19` + `doc:docs/vsc/design/SETTINGS.md:§2.13` 指针 | — |
 
 **`model-specs.mjs` 消解窗口判定（§13.6 口径——本次改动 ∉「实质改动」）**：本节改动 = 字段面补充（三行机制位 + 表头字段注 + 行注句；零结构 / 零表块位移 / 零导出面变更）⇒ **∉ §13.6「实质改动」**——拆点（`MODEL_SPECS` 表块外提）未触发；改后 ~354（≤500 软线）。
 
@@ -1649,95 +1649,117 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 连带面（同变）= §15.4-2 表 · §16.2 派生与生产者第 2 行 · §16.4 表第 3 行 · §16.8 AC-1 / AC-3 · §16.9 T-4 / R-2。
 2. **`glm-5.2` / `glm-5` 的 `thinkAlwaysOn`——取证**：渠道校验级读数 = `{type:"disabled"}` **受理且生效**（载荷 200 · `reasoning_content` 缺席——off 路径存在，族形态与 `glm-5.3` 族相反）⇒ **维持不标**（D-11）· 判据默认侧（可宣称 OFF）成立。
 
-## 17. 查表命名空间兜底取末段
+## 17. 模型名匹配 · 末段唯一
 
-### 17.1 修法
+> **本节 = 实施目标形**（目标代码 + 行为变更表 + 用例）；规则单源 = `PROVIDER.md` §6.9（含**逐面算子表**：静态表 = 段内前缀、`modelContext` / 列表 = 末段相等），本节不复述理由。
+> **同步义务**：规则变更同批改 §6.9 与本节；**判据** = §17.6 的判别用例（U-6 / U-7 / U-8）把两处钉在同一行为上——任一处单改 ⇒ 用例红。
 
-**修法（用户裁定）**：兜底「取末段」——完整名未命中且含 `/` ⇒ 取**最后一个** `/` 之后的段重试前缀扫描**一次**；命中即返；仍不中 ⇒ `null`（调用侧 `DEFAULT_SPEC` + 告警零变）。完整名直扫保留最前；单段名两法等价（零回归）。
-**认账的行为变更 = U-6 名类**（≥2 斜杠 ∧ 倒数第二段为在册前缀——旧形取 `glm-5.3/zzz` 为裸段候选 ⇒ 命中 `glm-5.3` 行、`matched === true`；新形只扫末段 `zzz` ⇒ `false`）——该类不在「零回归」口径内，用例 U-6 钉新形。
+**先例（closest-precedent）**：对位 = `PROVIDER.md` §6.9（规格表与能力位 · 既有查表机制）。**对齐** = 同一函数 `lookupSpec` 单点、单次扫描、零新机制、零导出面变更；**偏离** = 归一从「完整名先扫 + 末段兜底」收为「末段唯一」（理由 = 用户 2026-10-23 17:34 裁定 + 旧法误命中面 §17.1）。
+
+**survey-evidence**：查过 `PROJECT-MANIFEST.json` 的 `index.publicRepos`（实读 = `[]`——本仓未声明独立公共源文档仓）、需求 §4.6 / §4.8 与设计 `PROVIDER.md` §6.9、
+三载体实现坐标（核 `thincoder-core/model-specs.mjs:270-284` ∥ VSC `thincoder-vscode/src/specs.mjs:44-59` ∥ 服务器 `thincoder-server/public/model-specs-snapshot.mjs:97`）；
+**none relevant**（无外部源文档可对位）。
+
+### 17.1 规则（用户 2026-10-23 17:34 裁定）
+
+模型 ID 按 `/` 拆开，**只拿最后一段**查表；前缀段不参与匹配，**不再先扫完整名**。
+单段名末段 = 自身（零回归）；段内仍按既有前缀匹配（`glm-5.3-flashx` 命中 `glm-5.3` 行）；末段为空（`foo/`）⇒ 未命中。
+**归一只有一套（末段 + 小写）；算子按面各不相同**（单源表 = `PROVIDER.md` §6.9）：`MODEL_SPECS` 静态表 = 段内**前缀**（`glm-5.3-flashx` 命中 `glm-5.3` 行）；`providers[].modelContext` 用户键 ∥ `/v1/models` 返回 id = 末段**相等**（键 `glm-5.3` × 模型 `glm-5.3-flashx` ⇒ **不命中**）。
+后两面的应用与歧义处置 = `PROVIDER.md` §6.15。
+
+**行为变更（全部是旧法的误命中面，认账）**：
+
+| 名 | 旧形 | 新形 | 用例 |
+|---|---|---|---|
+| `glm-5.3/zzz` | 完整名直扫 ⇒ 命中 `glm-5.3` 行（`matched === true`） | 末段 `zzz` ⇒ `false` + `DEFAULT_SPEC` + 告警 | U-6（判别性） |
+| `glm-5.3/` | 完整名直扫 ⇒ 命中（`"glm-5.3/".startsWith("glm-5.3")`） | 末段空 ⇒ `false` | U-7 |
+| `/glm-5.3` | 核 miss ∥ VSC 命中（守卫端差） | 末段 `glm-5.3` ⇒ 两端同判命中 | U-8 |
+
+**`kimi/kimi-k3` 行退役**：末段 `kimi-k3` 已达同值行（`thincoder-core/model-specs.mjs:44` 与 `:46` 逐值相同）；含 `/` 的键永远不可能是末段 ⇒ 该行不可达，留行即死行（D8）。发送路径不含该行的依赖。
 
 ### 17.2 机制改法逐字（目标形 · 实施轮照此落笔）
 
-**核侧 = `thincoder-core/model-specs.mjs`**（唯一 token 改动 = `:268` `m.indexOf("/")` ⇒ `m.lastIndexOf("/")`；守卫 `slash > 0` 保持）：
+**核侧 = `thincoder-core/model-specs.mjs`** `lookupSpec`（`:270-284`）——删「完整名直扫」，只扫末段：
 
 ```js
-  // Vendor-namespace strip: take the LAST "/"-separated segment — retry the prefix match on it.
+function lookupSpec(model) {
+  const m = (typeof model === "string" ? model : "").toLowerCase()
   const slash = m.lastIndexOf("/")
-  if (slash > 0) {
-    const bare = m.slice(slash + 1)
-    for (const [prefix, spec] of SORTED_SPECS) {
-      if (bare.startsWith(prefix.toLowerCase())) return spec
-    }
+  const bare = slash >= 0 ? m.slice(slash + 1) : m   // 末段唯一；单段名 = 自身
+  if (!bare) return null                             // 末段为空 ⇒ 未命中（空串不做前缀匹配）
+  for (const [prefix, spec] of SORTED_SPECS) {
+    if (bare.startsWith(prefix.toLowerCase())) return spec
   }
   return null
+}
 ```
 
-**核侧档头注（`:245-251` 现文）目标形**：
+档头注（`:245-259` 现文）改为末段唯一口径；`kimi/kimi-k3` 行与 `:45` 的 alias 说明一并删除（§17.1）。
+`SORTED_SPECS` 降序前缀排序、`warnUnknownModel` 文案、`specMatch` 返回形状、`DEFAULT_SPEC` 回落语义零改。
 
-```js
-/** Look up spec by model name prefix (case-insensitive), conservative default for unknown models.
- *
- * Vendor-namespace stripping（用户裁定「只取最后一段」）：第三方
- * token 市场（roapi/new-api/one-api/aiproxy 聚合网关）惯例在模型名前加厂商前缀（zhipu/glm-5.3、
- * openai/gpt-4o），链式网关下可叠多段（测试服务器 qwen/ZHIPU/GLM-5.3）。完整名未命中且含 "/" 时，
- * 取最后一个 "/" 之后的段再按前缀匹配一次——单段 ZHIPU/GLM-5.3 → glm-5.3（两法等价）、多段
- * qwen/ZHIPU/GLM-5.3 → glm-5.3 均命中真实规格，不再降级 128K 默认。kimi/kimi-k3 的显式 alias
- * 行保留为文档锚（发送路径 provider.core isRouter 依赖含 "/" 判定），通用机制已覆盖同类。 */
-```
+**VSC 侧 = `thincoder-vscode/src/specs.mjs:44-59` `effortDefaultFor`**：同形——`const seg = slash >= 0 ? m.slice(slash + 1) : m`，`if (!seg) return undefined`，再 `scan(seg)`；删「先扫完整名」一跳与 `:55` 的「按裸模型段重试」注。
 
-**VSC 侧 = `thincoder-vscode/src/specs.mjs`（同判随正）**：`:56` `indexOf` ⇒ `lastIndexOf` 一 token（守卫 `slash >= 0` = 该端现行形，保持）；行注 `:55` 与档头注 `:20` 的「按裸模型段重试」句改「按**末段**重试（链式网关可叠多段）」。语义 = 与核同形（双段名 `reasoningEffortDefault` 由 `undefined` 转注册默认档命中面——`EFFORT_DEFAULT_PREFIXES` 表体零改）。
-**守卫端差（既有 · 不动 · 认账）**：核 `slash > 0` ∥ VSC `slash >= 0`——首位斜杠形 `/glm-5.3`：核 miss（U-8）∥ VSC 命中 `glm-5` 默档（`reasoningEffortDefault === "max"`）；需求档 §4.6 同拍记「同判（守卫 = 既有端差）」。
+**端差消除**：原「核 `slash > 0` ∥ VSC `slash >= 0`」认账行随本规则退役——两端同为 `slash >= 0` + 空段守卫，`/glm-5.3` 两端同判命中（U-8 / V-4）。
+
+**第三载体 = `thincoder-server/public/model-specs-snapshot.mjs:97` `specForDisplay`**（父侧读）：同尺随正；父侧原记「射程外披露」，本批登记为同机制载体。
 
 ### 17.3 受影响文件清单
 
 | 文件 | 现状 | 预期增删 | 说明 |
 |---|---|---|---|
-| `thincoder-core/model-specs.mjs` | **357** | **+1**（档头注 7 行 ⇒ 8 行；+ 1 token 同位改） | §17.2 核侧目标形；零结构 / 零导出面 / 零表行。>300 处置 = 登记 + 拆分计划——现读落点 = 本档 §13.6「行数处置」段（拆点 / 落点 / 消解窗口住彼）；机检登记面 = `thincoder-core/test/core-hygiene.test.mjs` 的 `SOFT_LINE_REGISTRY`；`docs/core/design/CORE-UNIFICATION.md` §2.8.1 子表空壳；本次 ∉「实质改动」（§13.6 口径） |
-| `thincoder-vscode/src/specs.mjs` | **100** | ±0（注释改述 + 1 token） | §17.2 VSC 侧目标形（同判随正）；零结构 / 零导出面 |
-| `docs/core/design/PROVIDER.md` | **704** | **+1**（机制句 1 行改述 ±0） | §6.9 `:171` 随正（本设计轮笔） |
+| `thincoder-core/model-specs.mjs` | **370**（2026-10-23 `wc -l`） | 本机制 **-10**（`lookupSpec` 去完整名直扫 ~-8 · alias 行 + 说明 -2）；同批 §6.15 链改动另计 | §17.2 核侧目标形；零结构 / 零导出面 / 零表行（alias 行除外） |
+| `thincoder-vscode/src/specs.mjs` | **102**（同上读数） | ±0（一 token + 注改） | §17.2 VSC 侧目标形；零结构 / 零导出面 |
+| `thincoder-server/public/model-specs-snapshot.mjs` | **106**（同上读数） | ±0（一 token + 注改） | 第三载体（`:97` `specForDisplay`）；等价性判据 = §17.4 末行 / U-10 |
+| `docs/core/design/PROVIDER.md` | **886**（同上读数） | 本批已落（§6.9 规则 + §6.15 换代） | 单源 = §6.9；§6.15 引用不重述 |
 | `docs/core/design/MODEL-SPECS.md` | —（本档自指） | +本节 | 本节 |
+| 单元测试档（拟新增，收口删） | 0 | +~90 | §17.6 U-1..U-10 ∥ V-1..V-5 |
 
-**零触面**：规格表行值 · `SORTED_SPECS` 排序 · 告警文案（`warnUnknownModel`）· 回落语义（`DEFAULT_SPEC` / `specMatch` 返回形状）· 服务器侧（§17.7 披露）。
+**零触面**：规格表行值（`kimi/kimi-k3` 退役除外）· `SORTED_SPECS` 排序 · 告警文案（`warnUnknownModel`）· 回落语义（`DEFAULT_SPEC` / `specMatch` 返回形状）· 服务器侧外标形（§17.7）。
 
-### 17.4 验收标准回指（与需求档 §4.6 三分同源）
+### 17.4 验收标准回指（与需求档 §4.6 同源）
 
-| 判据 | 条目 | 设计落点 | 判定方式（机器核） |
-|---|---|---|---|
-| R22-① | #1167 | §17.2 | `specMatch("qwen/ZHIPU/GLM-5.3")` ⇒ `matched === true` ∧ spec = `glm-5.3` 行（context 1_000_000 / maxOutput 128_000） |
-| R22-② | #1167 | §17.2 | `specMatch("qwen/ZHIPU/GLM-5.3-FlashX")` ⇒ `matched === true` ∧ spec = `glm-5.3-flashx` 行（context 1_000_000 / maxOutput 131_072） |
-| R22-③ | #1167 | §17.2 | 大小写变体 `Qwen/ZHIPU/GLM-5.3` 与 ① 同判（双侧 `.toLowerCase()` 口径零改） |
-| R22-④ | #1167 | §17.2 | 既有面零回归：单段 `ZHIPU/GLM-5.3` · 裸名 `glm-5.3-flash` · 单段对照 `qwen/qwen3.7-max` · `deepseek/deepseek-flash` 逐名与批前同判（本行「零回归」面不含 U-6 名类——≥2 斜杠 ∧ 倒数第二段为在册前缀 = 认账的行为变更，见 §17.1） |
-| R22-⑤ | #1167 | §17.2 | `zzz/unknown-x` ⇒ `matched === false` ∧ spec = `DEFAULT_SPEC`（128_000 / 32_000）∧ 告警一次 |
-| R22 同判（VSC 载体） | #1167 | §17.2 VSC 段 | V-1..V-3（§17.6）——`specForModel` 双段名 `reasoningEffortDefault` 命中注册默认档；单段 / 未知名零变 |
-| N13 | #1167 | §17.2 | 形态不变（纯函数；完整名直扫 + 末段重试一次）——U-6 钉「不回扫中间段」（逐段迭代形负控） |
-| N14 | #1167 | §17.2 | 过匹配防回归：未知名仍兜底（⑤）+ 既有命中面逐一回归（④） |
+| 判据 | 设计落点 | 判定方式（机器核） |
+|---|---|---|
+| R22-① | §17.2 | `specMatch("qwen/ZHIPU/GLM-5.3")` ⇒ `matched === true` ∧ spec = `glm-5.3` 行（context 1_000_000 / maxOutput 128_000） |
+| R22-② | §17.2 | `specMatch("qwen/ZHIPU/GLM-5.3-FlashX")` ⇒ `matched === true` ∧ spec = `glm-5.3-flashx` 行（context 1_000_000 / maxOutput 131_072） |
+| R22-③ | §17.2 | 大小写变体 `Qwen/ZHIPU/GLM-5.3` 与 ① 同判（双侧 `.toLowerCase()` 口径零改） |
+| R22-④ | §17.2 | 既有面零回归：单段 `ZHIPU/GLM-5.3` · 裸名 `glm-5.3-flash` · 单段对照 `qwen/qwen3.7-max` · `deepseek/deepseek-flash` 逐名与批前同判（本行不含 §17.1 记的三类行为变更） |
+| R22 判别性（17:34 裁定新增） | §17.2 | `specMatch("glm-5.3/zzz")` ⇒ `matched === false` ∧ spec = `DEFAULT_SPEC`——旧实现会误命中 `glm-5.3` 行 |
+| R22-⑤ | §17.2 | `zzz/unknown-x` ⇒ `matched === false` ∧ spec = `DEFAULT_SPEC`（128_000 / 32_000）∧ 告警一次 |
+| R22 同判（VSC 载体） | §17.2 VSC 段 | V-1..V-4（§17.6） |
+| N13 | §17.2 | 形态不变（纯函数；单次末段扫描，无逐段迭代）——U-6 钉「不回扫中间段」 |
+| N14 | §17.2 | 过匹配防回归：未知名仍兜底（⑤）+ 既有命中面逐一回归（④）+ 三类误命中面转负（§17.1） |
+| 第三载体等价 | §17.2 第三载体 | **在册名**（U-1..U-4 · U-8 · U-9 的命中名）`specForDisplay(name)` 与核 `specForModel(name)` 逐名 `context` / `maxOutput` 相等；**未收录名**（U-5 `zzz/unknown-x` · U-6 `glm-5.3/zzz` · U-7 `glm-5.3/`）按快照自身契约 = `null`（零兜底），与核 `DEFAULT_SPEC` **不比**——展示面零兜底 ∥ 执行面有兜底，两个契约不可比。或快照由核表生成 + `diff` 机检（比生成结果与入仓快照） |
 
 ### 17.5 裁定（VSC 端差表 · 同判随正）
 
-裁定 = **同判随正**：多实现面纪律默认消除端差——同一机制第二载体（该档注释自述「与核 `lookupSpec` 命名空间剥离同法」），`qwen/ZHIPU/GLM-5.3` 形在 VSC 端同样落空 = 同一缺陷的第二载体；用户机制裁定（取末段）= 本族规则，适用于各载体。需求档边界句已同拍收正（主 agent 笔）；落点 = §17.2 VSC 段 + §17.6 `[vsc]` 段。
+裁定 = **同判随正**：同一机制的第二载体（VSC `effortDefaultFor`，注释自述「与核 `lookupSpec` 同法」）按同一把尺子落地。
+本规则同时**消除**原守卫端差（核 `slash > 0` ∥ VSC `slash >= 0`）：两端统一为 `slash >= 0` + 空段守卫，`/glm-5.3` 同判命中。
+需求档 §4.6 已由主 agent 同拍收正（末段唯一 + `glm-5.3/zzz ⇒ false`）。
 
-### 17.6 用例表（12 条 = 正常 / 边界 / 错误 · 落点 = 单元测试档（拟新增））
+### 17.6 用例表（14 条 · 落点 = 单元测试档（拟新增））
 
 | id | 类 | 输入 | 期望输出与判据 |
 |---|---|---|---|
 | U-1 | 正常 | `qwen/ZHIPU/GLM-5.3` | `matched === true`；spec = `glm-5.3` 行（context 1_000_000 · maxOutput 128_000）——R22① |
 | U-2 | 正常 | `qwen/ZHIPU/GLM-5.3-FlashX` | `matched === true`；spec = `glm-5.3-flashx` 行（context 1_000_000 · maxOutput 131_072；长前缀先命中）——R22② |
 | U-3 | 边界 | `Qwen/ZHIPU/GLM-5.3` | 与 U-1 同判（大小写不敏感）——R22③ |
-| U-4 | 回归 | 单段 `ZHIPU/GLM-5.3` · 裸名 `glm-5.3-flash` · 单段对照 `qwen/qwen3.7-max` · `deepseek/deepseek-flash` | 逐名命中与批前同判（单段名两法等价）——R22④ |
-| U-5 | 错误 | `zzz/unknown-x` | `matched === false`；spec = `DEFAULT_SPEC`（128_000 / 32_000）；告警一次（既有 dedupe 面零变）——R22⑤ |
-| U-6 | 边界 | `qwen/glm-5.3/zzz`（中间段为在册行、末段无行） | `matched === false`——**只取末段**：不得回扫中间段 / 不得叠剥（逐段迭代形负控）——N13 |
-| U-7 | 边界 | `glm-5.3/`（尾斜杠形） | `matched === true` ∧ spec = `glm-5.3` 行（context 1_000_000 · maxOutput 128_000）——直扫即中（`"glm-5.3/".startsWith("glm-5.3")`；在册行 `thincoder-core/model-specs.mjs:69`）；兜底支不可达 |
-| U-8 | 边界 | `/glm-5.3`（唯一斜杠在首位） | 兜底不触发（`slash > 0` 门保持）；`matched === false`——与批前同判 |
-| U-9 | 边界 | `/qwen/glm-5.3`（前导斜杠 + 多段；末斜杠非首位） | 取末段命中 `glm-5.3`（多段形同判） |
-| V-1 | 正常 | `[vsc]` `specForModel("qwen/ZHIPU/GLM-5.3")` | `reasoningEffortDefault === "max"`（`glm-5` 前缀条目命中）——R22 同判（VSC 载体） |
+| U-4 | 回归 | 单段 `ZHIPU/GLM-5.3` · 裸名 `glm-5.3-flash` · 单段对照 `qwen/qwen3.7-max` · `deepseek/deepseek-flash` | 逐名命中与批前同判——R22④ |
+| U-5 | 错误 | `zzz/unknown-x` | `matched === false`；spec = `DEFAULT_SPEC`（128_000 / 32_000）；告警一次——R22⑤ |
+| U-6 | **判别性** | `glm-5.3/zzz`（两段，首段恰为在册前缀） | `matched === false`——末段 `zzz` 无行；旧实现先扫完整名会命中 `glm-5.3` 行。**这是唯一能分开两套规则的形**（`qwen/glm-5.3/zzz` 旧法也 miss，无判别力） |
+| U-7 | 边界 | `glm-5.3/`（尾斜杠） | `matched === false`（末段为空 ⇒ 未命中）；旧法直扫会命中 |
+| U-8 | 边界 | `/glm-5.3`（首斜杠） | `matched === true` ∧ spec = `glm-5.3` 行——末段 = `glm-5.3`；两端同判 |
+| U-9 | 边界 | `/qwen/glm-5.3`（前导斜杠 + 多段） | 末段 `glm-5.3` ⇒ 命中 |
+| U-10 | 等价 | 第三载体 `specForDisplay`：喂 U-1 · U-6 · U-8 三名 | **在册名**（U-1 / U-8）与核 `specForModel` 逐名 `context` / `maxOutput` 相等；**未收录名**（U-6 `glm-5.3/zzz`）按快照自身契约 = `null`，与核 `DEFAULT_SPEC` **不比**（展示面零兜底 ∥ 执行面兜底——两个契约不可比，见 §17.4「第三载体等价」） |
+| V-1 | 正常 | `[vsc]` `specForModel("qwen/ZHIPU/GLM-5.3")` | `reasoningEffortDefault === "max"`——R22 同判（VSC 载体） |
 | V-2 | 回归 | `[vsc]` `specForModel("ZHIPU/GLM-5.3")` | `reasoningEffortDefault === "max"`——单段零回归 |
-| V-3 | 边界 | `[vsc]` `specForModel("zzz/unknown-x")` | `reasoningEffortDefault === undefined`（未知名不过匹配）∧ spec = 核 `DEFAULT_SPEC` 立面 |
+| V-3 | 错误 | `[vsc]` `specForModel("zzz/unknown-x")` | `reasoningEffortDefault === undefined` ∧ spec = 核 `DEFAULT_SPEC` 立面 |
+| V-4 | 边界 | `[vsc]` `specForModel("/glm-5.3")` | `reasoningEffortDefault === "max"`——与核 U-8 同判（端差已消） |
 
-### 17.7 边界（本节不做）与射程外披露
+### 17.7 边界（本节不做）
 
-- 不做：改表行值 / 改 `SORTED_SPECS` 排序 / 改告警文案 / 改回落语义 / 引入别名映射表 / 引入「逐段迭代」循环 / 动服务器侧（外标形 `provider/model` 不变）/ 改大小写口径。
-- **残余端差（既有 · 认账 · 不动）**：守卫取值端差——核 `slash > 0` ∥ VSC `slash >= 0`；首位斜杠形 `/glm-5.3`：核不触发兜底（`matched === false`，U-8）∥ VSC 触发兜底、命中 `glm-5` 端差默认档（`reasoningEffortDefault === "max"`）。
-- **射程外披露（报告项 · 零触）**：`thincoder-server/public/model-specs-snapshot.mjs:97`（`specForDisplay`）= **同形第三载体**（手工同步快照——注释自述「剥厂商命名空间再查——与核查表同口径」；`indexOf` 单跳）。
+不做：改表行值（`kimi/kimi-k3` 退役除外）/ 改 `SORTED_SPECS` 排序 / 改告警文案 / 改回落语义 / 引入别名映射表 / 引入「逐段迭代」循环 / 改大小写口径 / 改 `provider.model` 发送形。
+**端差**：原守卫端差已消除（§17.5）；三载体（核 / VSC / 服务器快照）同尺。
 
 ### 17.8 UI/交互决策（UI 面零改）
 
@@ -1817,7 +1839,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 
 | 文件 | 现状 | 预期增删 | 说明 |
 |---|---|---|---|
-| `thincoder-core/model-specs.mjs` | **359** | **+~7**（行注 5 行 + 两表行） | §18.2 行文草案；零结构 / 零导出面 / 零存量行改。>300 处置 = 登记 + 拆分计划（落点 = 本档 §13.6「行数处置」段——拆点 / 落点 / 消解窗口住彼）；本次 ∉「实质改动」——拆点未触发；改后 ~366（≤500 硬限） |
+| `thincoder-core/model-specs.mjs` | **370**（2026-10-23 `wc -l`） | **+~7**（行注 5 行 + 两表行） | §18.2 行文草案；零结构 / 零导出面 / 零存量行改。>300 处置 = 登记 + 拆分计划（落点 = 本档 §13.6「行数处置」段——拆点 / 落点 / 消解窗口住彼）；本次 ∉「实质改动」——拆点未触发；改后 ~377（≤500 硬限） |
 | `docs/core/design/MODEL-SPECS.md` | —（本档自指） | +本节 | 本节 |
 
 ### 18.6 验收标准回指

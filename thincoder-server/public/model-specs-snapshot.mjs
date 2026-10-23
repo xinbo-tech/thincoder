@@ -3,8 +3,9 @@
  * 源 = 核 `thincoder-core/model-specs.mjs` 的行表（只读对照——**运行期零 import 核件**，KD-SV-2）；
  * 子集 = 展示三面：上下文 `context` ∥ 最大输出 `maxOutput` ∥ 多模态 `multimodal`（未声明 ⇒ 位缺省）。
  *
- * `specForDisplay(name)` = 前缀查表纯函数（大小写不敏感 ∥ 最长前缀优先 ∥ 无命中且含 `/` 时取末段（最后一个 `/` 之后的段）重试前缀匹配一次——
- * 与核查表同口径）；**未知 ⇒ `null`（「未收录」——零兜底：不套 DEFAULT_SPEC）**；零端点零探针（纯表）。
+ * `specForDisplay(name)` = 前缀查表纯函数（大小写不敏感 ∥ 最长前缀优先 ∥ **末段唯一**——按 `/` 拆分后
+ * 只拿最后一段做前缀匹配，与核 `lookupSpec` 同一把尺子（PROVIDER.md §6.9）；完整名不再先扫）；
+ * **未知 ⇒ `null`（「未收录」——零兜底：不套 DEFAULT_SPEC）**；零端点零探针（纯表）。
  * 漂移 = 手工同步 + 单元测试档断言（重跑本批件即报——KD-SV-17 先例）。行序 = 核表行序（按名前缀长度降序排用于查表）。
  */
 const DISPLAY_SPECS = [
@@ -14,7 +15,6 @@ const DISPLAY_SPECS = [
   ["deepseek-v4-flash", 1_000_000, 384_000, true],
   ["deepseek-v4-flash-vision-exp", 1_000_000, 384_000, true],
   ["kimi-k3", 1_000_000, 131_072, true],
-  ["kimi/kimi-k3", 1_000_000, 131_072, true],
   ["k3", 1_000_000, 131_072, true],
   ["kimi-for-coding-highspeed", 262_144, 131_072, true],
   ["kimi-for-coding", 1_048_576, 131_072, true],
@@ -90,16 +90,13 @@ const DISPLAY_SPECS = [
 const SORTED_SPECS = [...DISPLAY_SPECS].sort((a, b) => b[0].length - a[0].length)
 const toSpec = ([, context, maxOutput, multimodal]) => ({ context, maxOutput, ...(multimodal === true ? { multimodal: true } : {}) })
 
-/** 展示规格查表（纯函数——单元测试档直测）：完整名无命中且含 `/` 时取末段（最后一个 `/` 之后的段）重试前缀匹配一次；未收录 ⇒ `null`。 */
+/** 展示规格查表（纯函数——单元测试档直测）：末段唯一（按 `/` 拆分后只拿最后一段）——
+ *  段内前缀匹配、最长前缀优先；末段为空或未收录 ⇒ `null`（零兜底——不套 DEFAULT_SPEC）。 */
 export function specForDisplay(name) {
   const m = (typeof name === "string" ? name : "").toLowerCase()
-  const hit = (text) => SORTED_SPECS.find(([prefix]) => text.startsWith(prefix.toLowerCase()))
-  const direct = hit(m)
-  if (direct) return toSpec(direct)
   const slash = m.lastIndexOf("/")
-  if (slash > 0) {
-    const bare = hit(m.slice(slash + 1))
-    if (bare) return toSpec(bare)
-  }
-  return null
+  const bare = slash >= 0 ? m.slice(slash + 1) : m
+  if (!bare) return null
+  const hit = SORTED_SPECS.find(([prefix]) => bare.startsWith(prefix.toLowerCase()))
+  return hit ? toSpec(hit) : null
 }

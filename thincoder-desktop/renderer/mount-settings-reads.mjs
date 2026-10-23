@@ -32,6 +32,18 @@ const pickerOf = (value) => ({
   model: str(value?.model),
 })
 
+/** 渠道行两键透传（上下文写面批 · `PROVIDER.md` §6.15 读面载荷）：`modelContext`（已声明映射，K——编辑面回显）
+ *  + `modelContextText`（展示串 —— 主侧经核 `formatDeclaredContextK` 出词，渲染面零拼串）
+ *  + `context`（`providerSpec(entry).context` 解析值，token——百分比面，卡面不读）。缺 ∥ 形不合 ⇒ 空表 ∥ null（禁假造）。 */
+const providerRowOf = (row) => (row !== null && typeof row === "object"
+  ? {
+    ...row,
+    modelContext: row.modelContext !== null && typeof row.modelContext === "object" && !Array.isArray(row.modelContext) ? row.modelContext : {},
+    modelContextText: row.modelContextText !== null && typeof row.modelContextText === "object" && !Array.isArray(row.modelContextText) ? row.modelContextText : {},
+    context: Number.isFinite(row.context) ? row.context : null,
+  }
+  : row)
+
 /** 激活渠道读数（**2026-10-09 清除批**）：由 `provider:list` 回执 `defaultModel` 复合串**直读**——
  *  provider = 段前（首个冒号前）、current = 全串；缺 ∕ 畸形（无冒号 ∕ 段空）⇒ 两者 `null`（**未知不造串**；
  *  渠道条目不携模型 ⇒ 原「找激活行、拼 `name:row.model`」径退场）。 */
@@ -68,7 +80,7 @@ export function createReads(deps = {}) {
     // #671 ready 写并持现切片（草稿四切片读面零复位 —— 同失败径）；`presets` ∕ 名单两键照刷。
     setSettings({
       notice: null,
-      providers: { ...store.get().settings?.providers, state: "ready", presets: listOf(receipt.presets), providers: listOf(receipt.providers) },
+      providers: { ...store.get().settings?.providers, state: "ready", presets: listOf(receipt.presets), providers: listOf(receipt.providers).map(providerRowOf) },
       model: { state: held.state ?? "none", provider, current, models: kept ? listOf(held.models) : [] },
     })
     if (!kept) await loadModels(provider)

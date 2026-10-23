@@ -92,7 +92,7 @@ function statsReport(agent) {
   return [
     `Context ≈${usage.total} tokens (${pct}% of ${usage.window} window); compaction line ${usage.threshold} (${toGo} to the line)`,
     // §6.16.4 字面单源（该行为唯一字面，逐字；预算面同源 requestBudget——不自算第二套）:
-    // window {window} ({spec|provider-override}) · max_tokens {maxTokens|not sent} ({explicit|spec|absent})
+    // window {window} ({modelContext|provider-override|list|spec|default}) · max_tokens {maxTokens|not sent} ({explicit|spec|absent})
     // · prompt {total} · to compaction line {threshold − total} · to window limit {limit − total}
     // 两距离带符号（负 = 已越）；maxTokens 未发写 not sent、来源写 absent（该档守卫不覆盖——§6.17 射程）。
     (() => {

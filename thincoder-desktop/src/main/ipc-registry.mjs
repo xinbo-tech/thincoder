@@ -1,6 +1,7 @@
 /**
- * ipc-registry.mjs — 通道注册表族（`docs/desktop/design/IPC.md` §2「唯一入册面」）：**五十四项**（B1 批三新 —— 团队族 `team:status` ∥ `team:login` ∥ `team:logout`，末位 49–51；登录面补全批一增 —— `team:verify`，末位 52；
- * SSH 会话批增一 —— `secret:respond`（凭据门出口），末位 53；team-token-rotation 批增一 —— `team:rotate`，末位 54；转口档 `src/main/team.mjs`）
+ * ipc-registry.mjs — 通道注册表族（`docs/desktop/design/IPC.md` §2「唯一入册面」）：**五十五项**（B1 批三新 —— 团队族 `team:status` ∥ `team:login` ∥ `team:logout`，末位 49–51；登录面补全批一增 —— `team:verify`，末位 52；
+ * SSH 会话批增一 —— `secret:respond`（凭据门出口），末位 53；team-token-rotation 批增一 —— `team:rotate`，末位 54；
+ * **上下文写面批增一 —— `provider:setModelContext`（按模型 K 声明），末位 55**；转口档 `src/main/team.mjs`）
  * = 白名单逐项 → 处理体映射（`HANDLERS` 表）+ 注册序（`registerIpcHandlers`）——**#28 拆点出档**
  * （批档 §2.5「通道注册表族出档」；纯搬零语义改 —— 表 ∕ 注册 ∕ 定序逐行沿出档前 `ipc.mjs`）。
  *
@@ -24,7 +25,7 @@ import {
 /** 转口群（#685 拆档）：二十四项设置族 ∕ 索引数据面 / 台账相位 / 配置写 —— 出档 `ipc-relays.mjs`（表行逐字不动）。 */
 import {
   providerListChannel, providerSaveChannel, providerRemoveChannel, providerVerifyChannel, modelListChannel,
-  providerSetKeyChannel, providerDelKeyChannel, providerModelsChannel, providerSetProxyChannel, modelCatalogChannel,
+  providerSetKeyChannel, providerDelKeyChannel, providerModelsChannel, providerSetProxyChannel, providerSetModelContextChannel, modelCatalogChannel,
   settingsAgentChannel, mcpListChannel, mcpSaveChannel, mcpRemoveChannel, configWriteChannel, ledgerReadChannel,
   batchStatusChannel, indexBuild, indexStatusChannel, settingsEnvChannel, settingsToolsChannel, mcpToolsChannel,
   mcpUpdateChannel, mcpReconnectChannel,
@@ -55,6 +56,7 @@ const HANDLERS = Object.freeze({
   "provider:delKey": providerDelKeyChannel,
   "provider:models": providerModelsChannel,
   "provider:setProxy": providerSetProxyChannel,
+  "provider:setModelContext": providerSetModelContextChannel,
   "model:list": modelListChannel,
   "model:catalog": modelCatalogChannel,
   "settings:agent": settingsAgentChannel,

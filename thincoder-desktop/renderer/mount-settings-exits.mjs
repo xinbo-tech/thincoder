@@ -188,9 +188,10 @@ export function createExits(deps = {}) {
    *  本档装配即合并，单一 `handlers` 表对外零改；`loadProviders` 绑定 `{ models: false }` —— 渠行面
    *  复读不重探模型面（候选面随动另路 = `onProvidersChanged`））。 */
   const providerSegments = createProviderExits({
-    ask, store, setSettings, report, clearReport, onProvidersChanged, formOf, invalidateDrafts,
+    ask, store, setSettings, report, clearReport, onProvidersChanged, formOf, invalidateDrafts, openModal, closeModal,
     loadProviders: () => loadProviders({ models: false }),
   })
+  // 上下文写面批（台账 #1739）：`createProviderExits` 同上注入 `openModal` ∥ `closeModal`（上下文弹窗开 ∥ 关径）。
   /** agent 段出口族（S10 ∕ S11 ∕ S14b —— 随本批按族拆出 `mount-settings-segments-agent.mjs`：本档装配
    *  即合并，单一 `handlers` 表对外零改）。 */
   const agentSegments = createAgentExits({ ask, store, setSettings, report, clearReport, paintSettings })
@@ -276,7 +277,7 @@ export function createExits(deps = {}) {
   }
 
   /** 设置面出口族（锚名逐字 = 视图 `data-action` 同域；具名控件面 = 单键同路；段族 **33** 项（`segments` 9 ∥ `modelSegments` 10 ∥
-   *  `mcpSegments` 12 ∥ `agentSegments` 2）经四族合并 + 渠道面 **7** 项经 `providerSegments` 合并 + **添加弹窗开径 1 项**
+   *  `mcpSegments` 12 ∥ `agentSegments` 2）经四族合并 + 渠道面 **10** 项经 `providerSegments` 合并 + **添加弹窗开径 1 项**
    *  （`onAddProvider` —— KD-75 ②；`openModal` 缺 ⇒ 本键不注册，钮面 `wire` 落 `disabled`；KD-77 ①②两入口开径同律，
    *  住两段族内 —— 上计数已含）—— 五档出口族工厂）。 */
   const handlers = {

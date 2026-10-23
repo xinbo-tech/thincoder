@@ -14,6 +14,7 @@ import { probeTargetOf } from "@thincoder/core/provider-flows.mjs"
 import { DEFAULTS, loadConfig, normalizeProxy } from "@thincoder/core/config.mjs"
 import { loadMcpServers, addMcpServer, updateMcpServer, removeMcpServer } from "../config-mcp.mjs"
 import { vscPersistRaw, saveAgentSettingsFromPanel, saveShellSettingsFromPanel } from "./settings-panel-write.mjs"
+import { providerContextFields } from "./provider-context.mjs"
 import { probeProviderAdmission } from "./provider-flows.mjs"
 import { listModels, admissionOf } from "@thincoder/core/provider/list-models.mjs"
 import { MASKED } from "@thincoder/core/agent-tools/settings.mjs"
@@ -75,6 +76,9 @@ export { shellCandidates, _setShellDetectForTest } from "@thincoder/core/shell-c
  * 成载荷 `{ state, channel, model, reason, invalidReason }`（形 = `docs/vsc/design/WEBVIEW.md`
  * §4.8）；配置不可读 ⇒ null（消费面按 invalid 类兜底）。
  * Providers are dynamic (config.json providers[]), so labels travel with the payload.
+ * `modelContext` + `context`（`docs/core/design/PROVIDER.md` §6.15「读面载荷」）：前者 = 已声明映射
+ * （K 原值，供编辑面回显 ∥ 卡面行内展示），后者 = 核 `providerSpec(entry).context`（token，留给用量
+ * 百分比面）。渠道条目无 `model` ⇒ `context` 的 L1 永不命中，卡面不拿它当已声明值。
  */
 export function providerStatus() {
   const providers = readProviders()
@@ -95,6 +99,7 @@ export function providerStatus() {
       baseURL: entry.baseURL,
       isActive: name === activeProvider,
       proxy: entry.proxy === true, // per-provider proxy flag (row checkbox, preset/custom agnostic)
+      ...providerContextFields(entry), // `modelContext`（K 原值，编辑面）+ `context`（核解析 token 值，展示面）
       ...(admission ? { available: admission.ok === true } : {}),
       // F-W19（`SETTINGS.md` §2.12 / `PROVIDER.md` §6.16 M8/M9 补）：失败分类随行下发——
       // `hostBusy` = 宿主忙证据（非渠道故障——展示面分档 `宿主繁忙`，不渲渠道故障 hint）；
@@ -130,6 +135,10 @@ export function providerStatus() {
 }
 
 // ─── Panel message handlers (pure persistence, error string or null) ───
+
+// `modelContext` 写面（§6.15 · R31③-VSC）：实现住 `provider-context.mjs`（纯 Node ⇒ 单测可驱动）；
+// 本档按设计坐标 re-export——消费面（`panel-messages-settings.mjs`）导入面不变。
+export { saveProviderModelContext } from "./provider-context.mjs"
 
 export function handleAddProvider(payload) { return addProviderEntry(payload) }
 export function handleRemoveProvider(name) { return removeProviderEntry(name) }

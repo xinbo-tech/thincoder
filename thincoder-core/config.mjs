@@ -37,8 +37,10 @@ export { DEFAULTS }
 // Model capability table + spec lookup live in model-specs.mjs (2026-08-31
 // extract — config.mjs had grown past the 300-line advisory). Re-exported here
 // so the 23 existing importers keep their import paths.
-import { specForModel, providerSpec, specMatch, assistantToolCallMessage } from "./model-specs.mjs"
-export { specForModel, providerSpec, specMatch, assistantToolCallMessage }
+import { specForModel, providerSpec, providerSpecResolution, specMatch, formatContextK, assistantToolCallMessage } from "./model-specs.mjs"
+export { specForModel, providerSpec, providerSpecResolution, specMatch, formatContextK, assistantToolCallMessage }
+// 上下文解析链的取值校验单点（PROVIDER.md §6.15）：装载归一与读面共用一个谓词。
+import { positiveInt, warnContextOnce } from "./model-context.mjs"
 
 
 // Window utilization ratio (CONTEXT-COMPACTION.md §6.2 / D-CC30 / §6.17 / D-CC32): auto threshold =
@@ -79,8 +81,10 @@ export function usableWindow(context, reserve) {
  *  maxTokens), the stats budget line (agent-tools/context.mjs), the pre-send guard
  *  (agent/run-stages.mjs). transport derives from provider.format ("anthropic" | "google" |
  *  "responses" | default = OpenAI-compatible). Fields:
- *  - window / windowSource: spec.context (providers[].context K override already merged by
- *    providerSpec); source = "provider-override" when the override is present, else "spec".
+ *  - window / windowSource: spec.context (the §6.15 chain — modelContext / legacy context /
+ *    /models self-report / static table / default — already resolved by providerSpec);
+ *    source = providerSpecResolution(provider).source — closed set { modelContext |
+ *    provider-override | list | spec | default }, passed through verbatim (no class merging).
  *  - maxTokens / maxTokensSource: the value THIS transport writes into the request body —
  *    anthropic always sends it (explicit ?? spec.maxOutput); the other three faces send only an
  *    explicit provider.maxTokens, absent ⇒ undefined / "absent". Never a guard criterion
@@ -90,16 +94,19 @@ export function usableWindow(context, reserve) {
  *  - threshold: min(usable, ⌊window × COMPACT_RATIO⌋) — the compaction trigger line.
  *  - limit: window − reserve — hard prompt ceiling; the guard's ONLY numeric criterion field
  *    (always a number; negative = any prompt overflows). */
-export function requestBudget(provider, spec = providerSpec(provider)) {
-  const window = spec?.context ?? 0
-  const k = Number(provider?.context)
-  const windowSource = Number.isInteger(k) && k > 0 ? "provider-override" : "spec"
+export function requestBudget(provider, spec) {
+  // windowSource = 五级链的同一次遍历出口（§6.15）——L1 / L3 命中也会如实报来源，不再二值猜。
+  // 调用方传 spec（core.mjs 已算过 providerSpec）时窗口值用它，来源仍读 resolution（恒等映射，不并类）。
+  const resolution = providerSpecResolution(provider)
+  const resolved = spec ?? resolution.spec
+  const window = resolved?.context ?? 0
+  const windowSource = resolution.source
   const explicitRaw = Number(provider?.maxTokens)
   const explicit = Number.isFinite(explicitRaw) && explicitRaw > 0 ? explicitRaw : undefined
   const anthropicAlwaysSends = provider?.format === "anthropic"
-  const maxTokens = explicit ?? (anthropicAlwaysSends ? spec?.maxOutput ?? 0 : undefined)
+  const maxTokens = explicit ?? (anthropicAlwaysSends ? resolved?.maxOutput ?? 0 : undefined)
   const maxTokensSource = explicit != null ? "explicit" : anthropicAlwaysSends ? "spec" : "absent"
-  const reserve = maxTokens ?? spec?.maxOutput ?? 0
+  const reserve = maxTokens ?? resolved?.maxOutput ?? 0
   const usable = usableWindow(window, reserve)
   return {
     window, windowSource, maxTokens, maxTokensSource, reserve, usable,
@@ -255,6 +262,30 @@ export function loadConfig() {
       console.warn(`[config] provider "${p.name}" context must be a positive integer in K units (e.g. 128 = 128K) — got ${JSON.stringify(p.context)} — ignored, using the model spec value`)
     }
     delete p.context
+  }
+
+  // providers[].modelContext（按模型的人工声明，K 单位——PROVIDER.md §6.15）：值只收正整数，
+  // 非法（0 / 负 / 非数 / 非整 / 布尔 / 数字字符串）⇒ 该键视为未声明（落 L2）+ 装载期告警一次
+  // （P-13）。数字字符串**不归一**（不同于旧键 context）：写面先 parse 再落盘，文件里的字符串是
+  // 手改/笔误，静默转数会把「想写哪个单位」藏起来（旧键两起 ×1024 事故的根因）。
+  // 读面（manualContextK）仍逐次防御——装载归一不产新键，只清内存镜像（磁盘原文零变）。
+  for (const p of merged.providers) {
+    if (p.modelContext === undefined) continue
+    const rawMC = p.modelContext
+    if (!rawMC || typeof rawMC !== "object" || Array.isArray(rawMC)) {
+      warnContextOnce(`modelContext-shape\0${p.name ?? ""}`,
+        `[config] provider "${p.name}" modelContext must be an object of model ID → positive integer K (e.g. 128 = 128K) — got ${JSON.stringify(rawMC)} — ignored`)
+      delete p.modelContext
+      continue
+    }
+    p.modelContext = { ...rawMC }
+    for (const [key, value] of Object.entries(p.modelContext)) {
+      if (positiveInt(value) !== null) continue
+      warnContextOnce(`modelContext-invalid\0${p.name ?? ""}\0${key}`,
+        `[config] provider "${p.name}" modelContext["${key}"] must be a positive integer in K units (e.g. 128 = 128K) — got ${JSON.stringify(value)} — ignored, falling through to the provider context / list / model spec value`)
+      delete p.modelContext[key]
+    }
+    if (Object.keys(p.modelContext).length === 0) delete p.modelContext // 不留空对象
   }
 
   // F-4 (IKCDMR) consultModels 软失败化——D-S1 范式（defaultModel 无效同族）：非法条目

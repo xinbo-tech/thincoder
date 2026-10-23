@@ -9,36 +9,34 @@
  * 切换成功回显规格来源（M6）；渠道条目不携模型（单值 `providers[].model` 退场——2026-10-09 清除批；
  * 渠道行显示回退 = 渠道 note 的 `baseURL`）。
  * 配置写入面（加渠道 / 设 key）探一次 `/models`（M9——探不通标「不可用」+ 明示原因，不阻断保存）。
- * 渠道管理流（add/remove/key/context）是 provider 级 config 写——语义不变；2026-09-29 结构拆分起
- * 四流居 provider-admin.mjs（本档装配 ∥ 尾同名再出口）。F-4 (ISSUE-FIX-BATCH)：removeProviderFlow
+ * 渠道管理流（add/remove/key/model-context）是 provider 级 config 写——语义不变；2026-09-29 结构拆分起
+ * 各流居 provider-admin.mjs（本档装配 ∥ 尾同名再出口）。F-4 (ISSUE-FIX-BATCH)：removeProviderFlow
  * 级联清理悬挂引用（cascadeRemoveProvider——定义同在 provider-admin.mjs）。
+ * 2026-10-23（PROVIDER.md §6.15 写面）：L1 管理项 = `Set context window (K)…` → `action:"model-context"`
+ * ——写面 `setModelContextFlow`（按模型写 `modelContext`，单位 K）；旧键 `providers[].context` 的
+ * K 编辑项退役。渠道行的窗口回显统一取已声明值（`declaredContextText`——与写面行、VSC / 桌面同串）；
+ * `formatContextK` 仍用于 token 值面（切模型的规格回显）。
  * ctx: { agent, state, render, ansi, C, pushLine, persistRaw, askQuestion, maskKey, showPicker,
  *      closePicker, renderPickerLines, confirmDelete }（后四者为 pickers.mjs 通用 picker 绑定——闭包入参，环安全）。
  */
 import { sliceByWidth } from "./render.mjs"
-import { providerSpec, specMatch, resolveCompactThreshold } from "@thincoder/core/config.mjs"
+import { providerSpec, specMatch, resolveCompactThreshold, formatContextK } from "@thincoder/core/config.mjs"
 import { saveSession, loadSlotFile } from "@thincoder/core/session.mjs"
 import { carryoverDefaultModel } from "./config-helpers.mjs"
 import { getProviderModels, modelListFailureText, dedupeModels } from "./model-catalog.mjs"
-import { createProviderAdmin, isDerivedProviderHidden } from "./provider-admin.mjs"
+import { createProviderAdmin, isDerivedProviderHidden, declaredContextText } from "./provider-admin.mjs"
 
-/** createModelPicker(ctx) → { openModelPicker, selectModel, setProviderKey, setContextFlow, pickModelForSlot } */
+/** createModelPicker(ctx) → { openModelPicker, selectModel, setProviderKey, setModelContextFlow, pickModelForSlot } */
 export function createModelPicker(ctx) {
   const { agent, state, pushLine, persistRaw, askQuestion, maskKey, showPicker, closePicker, renderPickerLines, confirmDelete = () => { throw new Error("ctx.confirmDelete missing — deletion refused (fail-closed)") } } = ctx
   const { ansi, C } = ctx
-  // 渠道管理四流 + 级联清理（provider-admin.mjs——structure-split-2 迁出：本档装配 ∥ 尾同名再出口）
-  const admin = createProviderAdmin({ agent, pushLine, persistRaw, askQuestion, maskKey, showPicker, confirmDelete, C, fmtContextK })
+  // 渠道管理流 + 级联清理（provider-admin.mjs——structure-split-2 迁出：本档装配 ∥ 尾同名再出口）
+  const admin = createProviderAdmin({ agent, pushLine, persistRaw, askQuestion, maskKey, showPicker, confirmDelete, C })
 
   /** entry 唯一标识：异步更新 entries 后按它恢复选中项 */
   function entryKey(e) {
     if (!e) return null
     return e.action === "switch" ? `switch:${e.provider}:${e.model}` : `action:${e.action}`
-  }
-
-  /** 模型信息显示的 context 窗口（PROVIDER.md §15 D-C5）：K 单位形态跟随覆盖值。 */
-  function fmtContextK(tokens) {
-    if (tokens >= 1_000_000) return `${Math.round(tokens / 1_048_576)}M`
-    return `${Math.round(tokens / 1024)}K`
   }
 
   /** Get API key for a provider (config.json only — env vars are not a key source) */
@@ -75,8 +73,8 @@ export function createModelPicker(ctx) {
         await admin.removeProviderFlow()
       } else if (e.action === "key") {
         await admin.setKeyFlow()
-      } else if (e.action === "context") {
-        await admin.setContextFlow()
+      } else if (e.action === "model-context") {
+        await admin.setModelContextFlow()
       }
     }
   }
@@ -123,7 +121,7 @@ export function createModelPicker(ctx) {
       const sessionNote = active ? " ← session" : ""
       const keyStatus = p.apiKey ? "" : " (no key)"
       const unavailable = p._unavailable ? " (不可用)" : ""
-      const ctxTag = ` (ctx ${fmtContextK(providerSpec(p).context)})`
+      const ctxTag = ` (ctx ${declaredContextText(p)})`
       entries.push({
         type: "item",
         text: `${p.name.padEnd(12)}${shown}${ctxTag}${keyStatus}${unavailable}${sessionNote}`,
@@ -137,7 +135,7 @@ export function createModelPicker(ctx) {
     entries.push({ type: "item", text: "Add provider…", action: "add" })
     if (providers.length > 1) entries.push({ type: "item", text: "Remove provider…", action: "remove" })
     entries.push({ type: "item", text: "Set / change API key…", action: "key" })
-    entries.push({ type: "item", text: "Set context window (K units)…", action: "context" })
+    entries.push({ type: "item", text: "Set context window (K)…", action: "model-context" })
     return entries
   }
 
@@ -253,7 +251,7 @@ export function createModelPicker(ctx) {
     const spec = providerSpec(agent.provider)
     pushLine(
       matched
-        ? `Model: ${item.provider}:${item.model} — spec found (ctx ${fmtContextK(spec.context)} / out ${fmtContextK(spec.maxOutput)})`
+        ? `Model: ${item.provider}:${item.model} — spec found (ctx ${formatContextK(spec.context)} / out ${formatContextK(spec.maxOutput)})`
         : `Model: ${item.provider}:${item.model} — spec not found in MODEL_SPECS — default 128K ctx / 32K out; set context in /config to override`,
       matched ? C.tool : C.error,
     )
@@ -318,7 +316,7 @@ export function createModelPicker(ctx) {
     renderPickerLines()
   }
 
-  return { openModelPicker, selectModel, setProviderKey: admin.setProviderKey, setContextFlow: admin.setContextFlow, pickModelForSlot }
+  return { openModelPicker, selectModel, setProviderKey: admin.setProviderKey, setModelContextFlow: admin.setModelContextFlow, pickModelForSlot }
 }
 
 export { cascadeRemoveProvider, isDerivedProviderHidden } from "./provider-admin.mjs"

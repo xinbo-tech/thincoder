@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+### Changed
+
+- **「设上下文窗口」命令改按模型、单位仍是 K**：旧的渠道级 `context`（K）编辑命令退役，新命令 `Set context window (K)…` 走「选渠道 → 选模型 → 输 K」，写 `providers[].modelContext`（键 = 模型 ID，值 = 正整数 K）。单位在输入 ∥ 存储 ∥ 提示 ∥ 回显四处一致，端侧不做任何 ×1024 换算（换算只在核一处）。
+- **清除需确认**：清空输入不再直接删声明——有已声明值时先弹确认（默认 Cancel，带当前值），无值时回 `Nothing to clear`（不留假收据）。原因：Esc 与空回车同返空串，直接删会让「取消」变成破坏动作。
+- **`/model` 渠道行改读已声明值**：渠道条目不携模型，`providerSpec().context` 在渠道粒度上只能落到兜底值；行面改读 `modelContext`（逐条 `模型: NK` / 单条 `NK` / 无声明 `Not declared`）。
+
 ## [0.12.77] — 2026-10-22
 
 ### Changed

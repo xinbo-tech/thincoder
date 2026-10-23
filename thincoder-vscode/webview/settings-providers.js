@@ -7,6 +7,22 @@ import { escHtml } from "./ui.js"
 import { t } from "./i18n.js"
 import { SS, PROVIDER_LABELS } from "./settings-state.js"
 import { keyRowEdit, flashSaved } from "./settings-widgets.js"
+import { openProviderContextDialog } from "./settings-provider-dialog.js"
+
+/** 行面上下文回显（`docs/core/design/PROVIDER.md` §6.15「读面载荷」· R31③-VSC 行面）：读 `modelContext`
+ *  （已声明映射，**K 原值**）——逐条 `模型: NK`；单条即 `NK`；无声明 ⇒ `未声明` ∥ `Not declared`。
+ *  为什么不用 `providerSpec().context`：渠道条目无 `model`（`config-io.mjs` `delete p.model`）⇒ 链的 L1
+ *  永不命中，该值最多走到 L2 旧键 ∥ L5 默认（写 128 会显 125K）。
+ *  为什么不用核 `formatContextK`：它是 **token 口径**（`formatContextK(128)` ⇒ `0K`）；要用它就得端侧
+ *  先把已声明的 K 值 ×1024——硬约束禁止（乘点唯一在核）。故 K 串 = 已声明值原样 + 模板里的 K（与本框
+ *  提示行同一规则），不经格式器。 */
+function contextDeclaredText(s0) {
+  const table = s0?.modelContext
+  const keys = table && typeof table === "object" && !Array.isArray(table) ? Object.keys(table) : []
+  if (keys.length === 0) return t("settings.providers.contextNotDeclared")
+  const pair = (k2) => `${escHtml(k2)}: ${escHtml(String(table[k2]))}K`
+  return keys.length === 1 ? `${escHtml(String(table[keys[0]]))}K` : keys.map(pair).join(" · ")
+}
 
 /** 密钥行静态态恢复（#1053）：现读 SS——取消径 ∥ 保存受理回执径共用（不重建面板：其余卡在编编辑存活）。 */
 function restoreKeyRow(row, name) {
@@ -40,6 +56,8 @@ export function installProviderHandlers() {
   }
 
   // Provider management (panel-internal, posts payloads to the extension host)
+  // 上下文编辑弹窗（R31③-VSC）：入口 = 渠道行动作簇 `Context…` 钮（弹窗体 = `settings-provider-dialog.js`）
+  window._openProviderContextDialog = openProviderContextDialog
   window._setProviderProxy = function(name, proxy) {
     window._vscode.postMessage({ type: "setProviderProxy", name, proxy })
   }
@@ -60,6 +78,21 @@ export function onProviderKeySaved(name) {
   flashSaved()
 }
 
+/** 上下文保存受理回执消费（host → webview `providerContextSaved`——成径先重推 `providerStatus` 再发本回执）：
+ *  写径 ⇒ 行内就地显 `settings.providers.contextSaved`（4s 自散）；清除径（`k === null`）⇒ 零提示
+ *  （行面已随状态重绘转 `未声明`）。 */
+export function onProviderContextSaved({ name, model, k } = {}) {
+  if (k === null || k === undefined) return
+  const row = document.getElementById("prov-" + name)
+  if (!row) return
+  const label = SS.providerStatus.labels?.[name] || PROVIDER_LABELS[name] || name
+  const hint = document.createElement("div")
+  hint.className = "prov-hint prov-context-saved"
+  hint.textContent = t("settings.providers.contextSaved", { provider: label, model, k })
+  row.appendChild(hint)
+  setTimeout(() => hint.remove(), 4000)
+}
+
 /**
  * Providers card HTML — the ONLY card that must refresh while the panel is open:
  * add/remove/provider-change pushes arrive after every provider mutation, and the
@@ -78,6 +111,7 @@ export function providersCardHtml() {
     // 类名 `prov-model` 沿旧（样式复用——内容 = baseURL）
     const sub = []
     if (s0.baseURL) sub.push(escHtml(s0.baseURL))
+    sub.push(`<span class="prov-context">${contextDeclaredText(s0)}</span>`)
     if (s0.available === false) sub.push(`<span class="prov-unavailable">${s0.failure === "hostBusy" ? t("settings.providerHostBusy") : t("settings.providerUnavailable")}</span>`)
     html += `<div class="prov-row" id="prov-${escHtml(name)}">
       <div class="prov-main" id="rowline-${escHtml(name)}">
@@ -86,6 +120,7 @@ export function providersCardHtml() {
         <span class="key-status ${configured ? "ok" : ""}">${configured ? escHtml(s0.masked) : t("settings.notConfigured")}</span>
         <span class="prov-actions">
           <button class="key-btn" onclick="window._editKey('${escHtml(name)}')">${configured ? t("settings.setKey") : t("settings.addKey")}</button>
+          <button class="key-btn ctx-btn" onclick="window._openProviderContextDialog('${escHtml(name)}')">${t("settings.providers.context")}</button>
           <button class="key-btn del-key" data-name="${escHtml(name)}" ${active ? "disabled" : ""} title="${t("settings.remove")}">✕</button>
         </span>
       </div>

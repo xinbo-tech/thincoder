@@ -4,7 +4,7 @@
  * 整块落装配函数体内；守卫谓词写死 = `typeof window !== "undefined"`（沙箱预载处为渲染进程上下文 ⇒ 装配；
  * 主进程 `createRequire` 读取与平 node 测试无 `window` ⇒ 零装配、不触 `electron`）。
  * 白名单 `CHANNELS` **单源**（主侧经 `createRequire` 读之据以注册——`src/main/ipc-registry.mjs`）；非白名单通道**立即 reject**（不入 IPC）。
- * 请求白名单 = **五十四项**（三十五 ⇒ 三十八 ⇒ 三十九 ⇒ 四十三 ⇒ 四十五 ⇒ 四十六 ⇒ 四十七 ⇒ 四十八 ⇒ 五十一 ⇒ 五十二 ⇒ 五十三 ⇒ 五十四 —— R7 设置补充三项：`settings:env` ∕ `settings:tools` ∕ `mcp:tools` · 模型菜单全渠扇出批增 `model:catalog` · B10 W2 设置面四增：`provider:setKey` ∕ `provider:delKey` ∕ `provider:models` ∕ `provider:setProxy` · B10 W3 MCP 两增：`mcp:update` ∕ `mcp:reconnect` · 菜单体系批一增 `theme:state`（勾选态回读——D36）· 子代理面板批一增 `panel:state`（渲染面实况回读上报——渲染→主单向）· B1 批三增：`team:status` ∕ `team:login` ∕ `team:logout`（团队族）· 登录面补全批一增：`team:verify`（团队登录态活校验——定序末位）· SSH 会话批一增：`secret:respond`（凭据门出口——定序末位）· team-token-rotation 批一增：`team:rotate`（轮换出口——定序末位））= 配置读取 + 项目面（打开 —— 原生目录选择 / 最近目录）+ 会话面（列表 / 新建 / 切换 / 重命名 /
+ * 请求白名单 = **五十五项**（三十五 ⇒ 三十八 ⇒ 三十九 ⇒ 四十三 ⇒ 四十五 ⇒ 四十六 ⇒ 四十七 ⇒ 四十八 ⇒ 五十一 ⇒ 五十二 ⇒ 五十三 ⇒ 五十四 ⇒ **五十五** —— R7 设置补充三项：`settings:env` ∕ `settings:tools` ∕ `mcp:tools` · 模型菜单全渠扇出批增 `model:catalog` · B10 W2 设置面四增：`provider:setKey` ∕ `provider:delKey` ∕ `provider:models` ∕ `provider:setProxy` · B10 W3 MCP 两增：`mcp:update` ∕ `mcp:reconnect` · 菜单体系批一增 `theme:state`（勾选态回读——D36）· 子代理面板批一增 `panel:state`（渲染面实况回读上报——渲染→主单向）· B1 批三增：`team:status` ∕ `team:login` ∕ `team:logout`（团队族）· 登录面补全批一增：`team:verify`（团队登录态活校验——定序末位）· SSH 会话批一增：`secret:respond`（凭据门出口——定序末位）· team-token-rotation 批一增：`team:rotate`（轮换出口——定序末位）· **上下文写面批一增：`provider:setModelContext`（按模型 K 声明——定序末位）**）= 配置读取 + 项目面（打开 —— 原生目录选择 / 最近目录）+ 会话面（列表 / 新建 / 切换 / 重命名 /
  * 删除 / 恢复）+ 审批响应（`approval:respond` —— 出口动作面，见 `src/main/ipc.mjs`）+ 作答响应
  * （`question:respond` —— `question` 工具真作答面）+ **凭据响应（`secret:respond` —— SSH 会话批增凭据门出口，
  * `ctx.onSecretInput` 缝的返回路；值零入上下文）** + 历史页（`history:page`）
@@ -31,7 +31,7 @@
  * `model:list` → `settings:agent` → `mcp:list` → `mcp:save` → `mcp:remove` → `config:write` → `ledger:read` →
  * `batch:status` → `question:respond` → `session:prefs` → `subagent:stop` → `file:open` → `session:flags` → `at:complete` → `session:gc` → `session:index` → `index:build` → `index:status` →
  * `settings:env` → `settings:tools` → `mcp:tools` → `model:catalog` → `provider:setKey` → `provider:delKey` →
- * `provider:models` → `provider:setProxy` → `mcp:update` → `mcp:reconnect` → `record:append` → `theme:state` → `panel:state` → `team:status` → `team:login` → `team:logout` → `team:verify` → `secret:respond` → `team:rotate`；顺序供白名单定序断言 —— 主侧据以注册）。
+ * `provider:models` → `provider:setProxy` → `mcp:update` → `mcp:reconnect` → `record:append` → `theme:state` → `panel:state` → `team:status` → `team:login` → `team:logout` → `team:verify` → `secret:respond` → `team:rotate` → `provider:setModelContext`；顺序供白名单定序断言 —— 主侧据以注册）。
  * 出站订阅面 `on(name, cb)`：白名单 = **二十五条** `ev:*`（`EVENT_CHANNELS` —— 菜单体系批增 `ev:menu`；SSH 会话批增 `ev:secret`）——表外名 **throw**（不入 IPC）；
  * 返回退订函数（同 listener 引用 ⇒ 二次退订零抛）。
  */
@@ -55,6 +55,7 @@ const CHANNELS = Object.freeze([
   "team:status", "team:login", "team:logout", "team:verify",
   "secret:respond",
   "team:rotate",
+  "provider:setModelContext",
 ])
 /** 出站订阅白名单（序同桥面表；名面与主侧 `webContents.send` 用名同；**二十五条** = 回调映射十四条（含 **R4 增 `ev:statusText` ∕ `ev:compress`**——桥 `onWait` ∕ `onCompressStart` ∕ `onCompress` ∕ `onCompressFail` 映射；**SSH 会话批增 `ev:secret`**——桥 `onSecretInput` 映射，凭据门）+ 宿主自产十一条（`ev:usage` / `ev:error` / `ev:susp` / `ev:digest` / `ev:ledger` [`ev:timer` —— timer-wake 阶段 2 增] / [`ev:queue` —— 「回合中插入」批增] / [`ev:flags` —— R1 输入面板移植增：工具驱动翻转 ∕ 写回执后] / [`ev:goal` —— **R5 增**：goal 工具结果时点采样] / [`ev:config` —— **R8 增**：config 写盘感知——宿主 watch onChange 出站，渲染面设置面复读] / [`ev:menu` —— **D36 增**：菜单动作（主→渲染单向；六动作闭集——#817 收正（五 ⇒ 六：+`openSettings`）；纯信号）]）—— 非回调映射；计数族权威数 / 三档同值收正 = 在册登记（`docs/desktop/design/PROJECT.md` §10 BE 行），事件映射段 = `docs/desktop/design/IPC.md` §1）。 */
 const EVENT_CHANNELS = Object.freeze([

@@ -21,7 +21,7 @@
 import { loadRaw } from "@thincoder/core/config-io.mjs"
 import { loadMcpServers } from "../config-mcp.mjs"
 import { removeProviderFlow, setKeyFlow, probeProviderAdmission, ui } from "./provider-flows.mjs"
-import { handleAddProvider as persistAddProvider, handleRemoveProvider as persistRemoveProvider, handleSetProviderProxy as persistSetProviderProxy, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection, postProviderError, pushTeamStatus } from "./settings.mjs"
+import { handleAddProvider as persistAddProvider, handleRemoveProvider as persistRemoveProvider, handleSetProviderProxy as persistSetProviderProxy, saveAgentSettingsFromPanel, saveProxySettingsFromPanel, testProxyConnection, shellCandidates, saveShellSettingsFromPanel, saveWebsearchKeyFromPanel, deleteWebsearchKeyFromPanel, testProviderConnection, postProviderError, pushTeamStatus, saveProviderModelContext } from "./settings.mjs"
 import { setSlotAdvisorGuard, setSlotEngineering } from "./session-io.mjs"
 import { teamLogin, teamLogout, teamRotate } from "./team.mjs"
 // F-W21（登录面补全批）：状态栏团队 item 随动（webview 登/退成拍——命令流外的第二条写径）
@@ -125,6 +125,26 @@ export function handleSetProviderProxy(panel, msg) {
   const err = persistSetProviderProxy(msg.name, msg.proxy === true)
   if (err) postProviderError(panel, "providers", err)
   panel._pushSettingsLight()
+}
+
+/** case "saveProviderModelContext"（R31③-VSC · `docs/core/design/PROVIDER.md` §6.15「三端落点」VSC 行）
+ *  ——形沿 `handleSaveProviderKey`（`:36-48`）：拒 ⇒ `providerError`（providers 段）+ 零回执（卡面零变更）；
+ *  成 ⇒ **先**推 `providerStatus`（卡面按新声明重绘），**后**发受理回执 `providerContextSaved { name, model, k }`
+ *  （回执殿后：重绘在前，行内保存提示才不被重绘吞掉）。`k === null` = 清除径（回执照发，卡面转 `未声明`）。
+ *  **缺 `k` 键 ≠ 清除**：清除是显式 `k: null`（webview 空输入 + 确认后才发）⇒ 缺字段只可能是发送端回归，
+ *  拒（不当成删除——缺字段默认成删除就是一条没被确认的删除径）。 */
+export function handleSaveProviderModelContext(panel, msg) {
+  if (!Object.hasOwn(msg ?? {}, "k")) {
+    postProviderError(panel, "providers", "saveProviderModelContext: missing k (send k: null to clear)")
+    return
+  }
+  const err = saveProviderModelContext(msg.name, msg.model, msg.k)
+  if (err) {
+    postProviderError(panel, "providers", err)
+    return
+  }
+  panel._pushStatus()
+  panel._panel?.webview.postMessage({ type: "providerContextSaved", name: msg.name, model: msg.model, k: msg.k })
 }
 
 /** 迁出自 `panel-messages.mjs` 的 case "setKey"。 */

@@ -15,6 +15,7 @@
  */
 import { proxyFetch } from "../proxy.mjs"
 import { resolveProviderSecrets } from "../env-ref.mjs"
+import { positiveInt, recordListedContext } from "../model-context.mjs"
 
 const LIST_TIMEOUT_MS = 15_000
 /** 翻页上限（cursor loop 防死循环——任一分页失败即整体抛出，不部分返回）。 */
@@ -57,10 +58,37 @@ function collect(rows, pick) {
   return out
 }
 
+/** 列表窗口三字段名（取用序 = `context_window` > `context_length` > `max_model_len`）。
+ *  只从 openai 形态（`data[]`）取：anthropic / google 两分支不取（零实测——需求 §4.8 边界）。 */
+const LISTED_CONTEXT_FIELDS = ["context_window", "context_length", "max_model_len"]
+
+/** 三字段按序取第一个合法值（不是「取首字段」）：字段缺失 ∥ 值非法 ⇒ 跳下一个；
+ *  都不可得 ⇒ `null`（L3 缺席——R26 与字段缺席逐字同判）。 */
+function listedWindowOf(row) {
+  for (const field of LISTED_CONTEXT_FIELDS) {
+    const value = positiveInt(row?.[field])
+    if (value !== null) return value
+  }
+  return null
+}
+
 async function listOpenai(provider, signal) {
   const url = `${provider.baseURL}/models`
   const data = await fetchJson(provider, url, { ...(provider.headers ?? {}), Authorization: `Bearer ${provider.apiKey ?? ""}` }, signal)
-  return collect(data?.data, (m) => m?.id)
+  // L3 写面的收集段（PROVIDER.md §6.15）：解析 `data[]` 时顺带收 `id → 窗口`——三字段按序取
+  // 第一个**合法**值（R25 ∥ R26），非法相当于该字段缺席；三字段都不可得 = 该模型列表未报（不进表）。
+  const ids = []
+  // 形状门：载荷读得出来（data 是数组）才建表；非数组 = 读不出，返回 null 让调用侧不写缓存
+  // （「不报」与「读不出」分开——后者不清空上次成功值，同「拉取失败不清空」口径）。
+  const windows = Array.isArray(data?.data) ? new Map() : null
+  for (const m of Array.isArray(data?.data) ? data.data : []) {
+    const id = m?.id
+    if (typeof id !== "string" || !id) continue
+    ids.push(id)
+    const tokens = listedWindowOf(m)
+    if (tokens !== null) windows.set(id, tokens)
+  }
+  return { ids, windows }
 }
 
 async function listAnthropic(provider, signal) {
@@ -94,18 +122,22 @@ async function listGoogle(provider, signal) {
   return out
 }
 
-/** List available model IDs from the provider's /models endpoint (format 分派——M1)。 */
+/** List available model IDs from the provider's /models endpoint (format 分派——M1)。
+ *  返回形态仍是 `string[]`（六个消费面只吃 id——零改）；`openai` 分支在返回前把
+ *  `id → 自报窗口` 写进核缓存（L3 写面——零新增请求）。 */
 export async function listModels(provider, { signal } = {}) {
   // #57（provider-config-family 批）：清单拉取入口凭据值位解析（CONFIG.md §6.3）——三 format 分支共享。
   provider = resolveProviderSecrets(provider)
   const base = String(provider?.baseURL ?? "").replace(/\/+$/, "")
   if (!base) throw new Error("GET /models failed: baseURL is missing") // §2.5 #115 并入（VSC 明确报错）
   const format = provider?.format
-  const ids = format === "anthropic" ? await listAnthropic(provider, signal)
-    : format === "google" ? await listGoogle(provider, signal)
+  const collected = format === "anthropic" ? { ids: await listAnthropic(provider, signal) }
+    : format === "google" ? { ids: await listGoogle(provider, signal) }
       : await listOpenai(provider, signal)
+  // L3 写面：成功拉取后才写（失败照旧抛出、不清空上次成功值——上次自报比静态表更接近事实）。
+  if (collected.windows) recordListedContext(base, collected.windows)
   // §2.5 #115 并入（VSC 排序）：返回前本端排序——UI 确定性。
-  return ids.filter((id) => typeof id === "string" && id).sort()
+  return collected.ids.filter((id) => typeof id === "string" && id).sort()
 }
 
 /** 渠道准入失败消息（§2.5 #115 / VSC M8 并入——逐字长句 = 消息本体；状态标签由 UI 层组合）。

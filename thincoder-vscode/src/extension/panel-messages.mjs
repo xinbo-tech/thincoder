@@ -20,7 +20,7 @@ import { handleNewSession, handleSwitchSession, handleDeleteSession, handleRenam
 // ——本档分发表按**同名 case 标签**转发行分发（case 标签集合零变化；两新档名带 `panel-messages`
 // 前缀以落在 reverse 机检的 `HOST_DISPATCH` 扫描域内）。
 import { handleAbort, handleCancelSubagent, handleInterrupt, handleOpenFile, handleOpenDiff, handleQuestionResponse, handleSecretInputResponse, handleSetAutoApprove, handleAtComplete, handlePermissionResponse, handleBatchPermissionResponse } from "./panel-messages-turn.mjs"
-import { handleSaveProviderKey, handleDeleteProviderKey, handleSaveMcpServer, handleDeleteMcpServer, handleReconnectMcp, handleEditMcp, handleTestMcp, handleAddProvider, handleRemoveProvider, handleSetProviderProxy, handleSetKey, handleSaveEmbedKey, handleDeleteEmbedKey, handleSaveWebsearchKey, handleDeleteWebsearchKey, handleTestProvider, handleBuildIndex, handleGetMcpStatus, handleMcpTools, handleSaveAgentSettings, handleGetAgentSettings, handleSetAdvisorGuard, handleSetEngineeringEnabled, handleSetPlanMode, handleGetShellCandidates, handleSaveShellSettings, handleSaveProxySettings, handleTestProxy, handleTeamLogin, handleTeamLogout, handleTeamRotate } from "./panel-messages-settings.mjs"
+import { handleSaveProviderKey, handleDeleteProviderKey, handleSaveMcpServer, handleDeleteMcpServer, handleReconnectMcp, handleEditMcp, handleTestMcp, handleAddProvider, handleRemoveProvider, handleSetProviderProxy, handleSaveProviderModelContext, handleSetKey, handleSaveEmbedKey, handleDeleteEmbedKey, handleSaveWebsearchKey, handleDeleteWebsearchKey, handleTestProvider, handleBuildIndex, handleGetMcpStatus, handleMcpTools, handleSaveAgentSettings, handleGetAgentSettings, handleSetAdvisorGuard, handleSetEngineeringEnabled, handleSetPlanMode, handleGetShellCandidates, handleSaveShellSettings, handleSaveProxySettings, handleTestProxy, handleTeamLogin, handleTeamLogout, handleTeamRotate } from "./panel-messages-settings.mjs"
 // C-B2-6 细则⑥（busy-injection 批 fix 轮 2026-09-22）：F-1 降级判决函数已迁 `image-handler.mjs`
 // ——本档只留触发（`downgradeNonVisionImages` + `visionReader` per-call 缝）。
 import { savePastedImages, downgradeNonVisionImages } from "./image-handler.mjs"
@@ -315,6 +315,7 @@ export async function handlePanelMessage(panel, msg) {
     case "addProvider": await handleAddProvider(panel, msg); break
     case "removeProvider": await handleRemoveProvider(panel, msg); break
     case "setProviderProxy": handleSetProviderProxy(panel, msg); break
+    case "saveProviderModelContext": handleSaveProviderModelContext(panel, msg); break
     case "setKey": await handleSetKey(panel); break
     case "saveEmbedKey": await handleSaveEmbedKey(panel, msg); break
     case "deleteEmbedKey": await handleDeleteEmbedKey(panel); break

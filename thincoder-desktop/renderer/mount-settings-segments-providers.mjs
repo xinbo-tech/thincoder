@@ -1,11 +1,12 @@
 /**
- * mount-settings-segments-providers.mjs — 设置面**渠道段出口族（S1 ∕ S2 ∕ S5）**（B10 W2 · 按族续拆出档：
+ * mount-settings-segments-providers.mjs — 设置面**渠道段出口族（S1 ∕ S2 ∕ S5 ∕ 上下文写面）**（B10 W2 · 按族续拆出档：
  * 自 `renderer/mount-settings-exits.mjs` 拆出 —— 该档越 300 ⇒ 渠道面写出口独立成档，装配面**合并回单
  * 一 `handlers` 表**对视图零改；沿 `mount-settings-segments.mjs`（env ∕ 工具 ∕ MCP）∥
  * `mount-settings-segments-models.mjs`（models）同族先例）。
  *
- * 出口（六件）：钥行编辑态两件（开 ∕ 消）· 设 ∕ 改钥 · 删钥（确认门经 `settings-confirm.mjs`）·
- * 渠级代理开关 · 渠道校验（暂存值直探 —— S2 收窄，2026-10-09 清除批）。
+ * 出口（十件）：钥行编辑态两件（开 ∕ 消）· 设 ∕ 改钥 · 删钥（确认门经 `settings-confirm.mjs`）·
+ * 渠级代理开关 · 渠道校验（暂存值直探 —— S2 收窄，2026-10-09 清除批）· 添加表单类型切换 ·
+ * **上下文三件（开径 ∥ 选模型回环 ∥ 保存 —— 2026-10-23 上下文写面批）**。
  * **三端对齐批（2026-10-07 · 台账 #1027–#1029 · KD-75 ③⑤）**：新增**添加表单类型切换出口** `onAddShape`
  * （写 `providers.addShape` —— 形状唯一源；值 = 类型选择现值：预设名 ∥ `"custom"`）；`fetchModels` 载荷 + `proxy`
  * （表单勾选 ⇒ `true`；未勾 ∥ 缺 ⇒ 直连 —— 探针路由随勾选，主侧 `probeTargetOf` 同判定）。
@@ -20,23 +21,79 @@
  * 写成功 ⇒ 清失败串 + 复读本段（`loadProviders` —— 单一 owner = 读数供给族）。
  * S2 面纪律：探针载荷 = **表单暂存值**（不落盘）；探果写切片 ⇒ 树重挂 ⇒ 表单现值以 `draft` 快照回填
  * （未落盘输入不丢）；探不通**零阻断保存**。
+ * **上下文写面批（2026-10-23 · 台账 #1739 · `PROVIDER.md` §6.15「写面」）**：新增三出口——
+ * `onProviderContextEdit`（开上下文弹窗：写 `providers.context` 切片 = 渠道 ∥ 候选模型快照，再开弹窗）·
+ * `onProviderContextModel`（选模型回环：重算已声明当前值 ∥ 值种子）· `onProviderContextSave`
+ * （读表单 ⇒ `provider:setModelContext({ name, model, k })`；**空值先过确认** ∥ 未声明空提交 = 空操作；成功 ⇒ 关框 + `loadProviders()` 复读行面）。
+ * 候选源 = **渲染面既有 `settings.model.models` 切片**（父裁 A：零新增请求；该渠无候选 ⇒ 手填模型 ID）。
+ * 值域判据零副本（主侧 `positiveInt`）——`invalid-value` 回执 ⇒ 弹窗内非法值行（`contextInvalid`）。
  * 纪律：零 `node:` / 零裸包 · 逐通道回执形单源 = IPC.md §2。
  */
 import { confirmSecretDelete } from "./settings-confirm.mjs"
+import { t } from "./i18n.mjs"
+import { PROVIDER_CONTEXT_MODAL_GROUP } from "./views/settings.mjs"
 
 /** 列表切片：缺 / 非数组 ⇒ 空表（零节点 —— 禁假数据）。 */
 const listOf = (value) => (Array.isArray(value) ? value : [])
 /** 失败串归一：回执 `reason` 非空串 ⇒ 直传（核错误串 ∕ 表内码）；缺 ⇒ 端侧形判码（零静默 —— 调用面另记错）。 */
 const reasonOf = (receipt) => (typeof receipt?.reason === "string" && receipt.reason !== "" ? receipt.reason : "invalid-shape")
 
+/** 末段尺子（视图侧**只做回声查找** —— 与核 `normalizeModelKey` 同规则：按 `/` 取末段 + 小写）。
+ *  窗口值不在本处推导（父裁 B：卡面 ∥ 编辑面回声均读 `modelContext` 原值）——本函数只做键匹配。 */
+const lastSegment = (value) => {
+  const text = String(value ?? "").toLowerCase()
+  const at = text.lastIndexOf("/")
+  return at >= 0 ? text.slice(at + 1) : text
+}
+
+/** 已声明展示串（主侧 `modelContextText` —— 核 `formatDeclaredContextK` 出词）：无 ⇒ null（非法值 ∥ 未声明）。 */
+function declaredTextOf(row, key) {
+  const text = row?.modelContextText
+  if (text === null || typeof text !== "object" || Array.isArray(text)) return null
+  return typeof text[key] === "string" && text[key] !== "" ? text[key] : null
+}
+
+/** 按末段尺子找已声明条目 ⇒ `{ key, value }` ∥ `null`（未声明 ∥ 歧义 ⇒ null——不猜）。 */
+function declaredOf(row, model) {
+  const table = row?.modelContext
+  if (table === null || typeof table !== "object" || Array.isArray(table)) return null
+  const target = lastSegment(model)
+  if (target === "") return null
+  const matches = Object.entries(table).filter(([key]) => lastSegment(key) === target)
+  return matches.length === 1 ? { key: matches[0][0], value: matches[0][1] } : null
+}
+
+/** 上下文弹窗模型候选（父裁 A：复用渲染面既有 `settings.model.models` 切片，零新增请求）：
+ *  行自带渠（全渠扇出面）⇒ 渠名对上；无渠行 ⇒ 仅属激活渠。 */
+function contextCandidatesOf(state, name) {
+  const modelState = state.settings?.model ?? {}
+  const active = typeof modelState.provider === "string" && modelState.provider !== "" ? modelState.provider : null
+  const ids = listOf(modelState.models)
+    .map((row) => (typeof row === "string"
+      ? { id: row, provider: null }
+      : row !== null && typeof row === "object"
+        ? { id: row.id, provider: typeof row.provider === "string" && row.provider !== "" ? row.provider : null }
+        : { id: null, provider: null }))
+    .filter((row) => (row.provider === null ? active === name : row.provider === name))
+    .map((row) => row.id)
+    .filter((id) => typeof id === "string" && id !== "")
+  return [...new Set(ids)]
+}
+
 /**
  * 渠道面出口族工厂。`deps = { ask, store, setSettings, report, clearReport, loadProviders, formOf,
- * onProvidersChanged }`（`loadProviders` = 读数供给族本段复读口，已绑定 `{ models: false }`；`formOf` =
- * 表单自取 —— 单一 owner 住 `mount-settings-exits.mjs`，经注入零副本）；返回 `{ handlers }`（并回单一
- * `handlers` 表）。
+ * onProvidersChanged, invalidateDrafts, openModal, closeModal }`（`loadProviders` = 读数供给族本段复读口，已绑定
+ * `{ models: false }`；`formOf` = 表单自取 —— 单一 owner 住 `mount-settings-exits.mjs`，经注入零副本；
+ * `openModal` ∥ `closeModal` = 上下文弹窗开 ∥ 关径 —— 缺 ⇒ 开径记错零动作）；返回 `{ handlers }`（并回单一 `handlers` 表）。
  */
 export function createProviderExits(deps = {}) {
   const { ask, store, setSettings, report, clearReport, loadProviders, formOf, onProvidersChanged, invalidateDrafts } = deps
+  const openModal = typeof deps.openModal === "function" ? deps.openModal : null
+  const closeModal = typeof deps.closeModal === "function" ? deps.closeModal : null
+  /** 清除确认载体（默认 = 桌面既有确认弹层；`deps.confirmAction` = 测试缝 —— 形 = `(text, onConfirm)`）。 */
+  const confirmAction = typeof deps.confirmAction === "function"
+    ? deps.confirmAction
+    : (text, onConfirm) => confirmSecretDelete(onConfirm, text)
 
   /** 渠道段切片局部写（引用不变 ⇒ 零通知 —— 同值写零重绘；沿段族 `setEnvSlice` 先例）。 */
   const setProvidersSlice = (patch) => {
@@ -146,6 +203,115 @@ export function createProviderExits(deps = {}) {
    *  写后重绘（已填输入经第二闸复填 —— 草稿作用域单骨 `add:provider` 跨形恒同）；表外 ∥ 空 ⇒ `"preset"`（不猜）。 */
   const setAddShape = (value) => setProvidersSlice({ addShape: typeof value === "string" && value !== "" ? value : "preset" })
 
+  /** 上下文弹窗开（渠道行入口）：写 `providers.context` = 渠道 ∥ 候选模型快照 ∥ 当前已声明值 ∥ 值种子，再开专用弹窗。
+   *  候选 = 既有模型切片（零新请求）；该渠无候选 ⇒ 弹窗体自动走手填模型 ID（`contextNoCandidates` 词）。 */
+  function openProviderContext(name) {
+    const state = store.get()
+    const row = listOf(state.settings?.providers?.providers).find((entry) => entry?.name === name)
+    if (row === undefined) {
+      console.error(`[renderer] provider:setModelContext: provider "${String(name)}" not in the list`)
+      return
+    }
+    const models = contextCandidatesOf(state, name)
+    const table = row.modelContext !== null && typeof row.modelContext === "object" && !Array.isArray(row.modelContext) ? row.modelContext : {}
+    const first = models[0] ?? Object.keys(table)[0] ?? ""
+    const declared = declaredOf(row, first)
+    const currentText = declared === null ? null : declaredTextOf(row, declared.key)
+    setProvidersSlice({
+      context: {
+        name,
+        models,
+        model: first,
+        currentText,
+        value: currentText === null ? "" : String(declared.value),
+        error: null,
+      },
+    })
+    if (openModal === null || openModal(PROVIDER_CONTEXT_MODAL_GROUP) !== true) {
+      console.error("[renderer] provider:setModelContext: modal open refused")
+      setProvidersSlice({ context: null })
+    }
+  }
+
+  /** 上下文弹窗选模型回环（下拉 change）：重算该模型的已声明当前值 ∥ 值种子（非声明值不预填）。 */
+  function setProviderContextModel(value) {
+    const held = store.get().settings?.providers ?? {}
+    const context = held.context !== null && typeof held.context === "object" ? held.context : null
+    if (context === null) return
+    const row = listOf(held.providers).find((entry) => entry?.name === context.name) ?? null
+    const declared = declaredOf(row, value)
+    const currentText = declared === null ? null : declaredTextOf(row, declared.key)
+    setProvidersSlice({
+      context: {
+        ...context,
+        model: String(value ?? ""),
+        currentText,
+        value: currentText === null ? "" : String(declared.value),
+        error: null,
+      },
+    })
+  }
+
+  /** 上下文保存出口：读弹窗体表单 ⇒ `provider:setModelContext({ name, model, k })`（单位 K，端侧零 ×1024）。
+   *  **清除先确认（三端同形 · 设计五步）**：空值 ∧ 该模型已声明 ⇒ 既有确认弹层（正文 = `contextClearConfirm`
+   *  带当前值，默认焦点 = 取消）；确认 ⇒ 空串写（= 删键）；取消 ⇒ 零动作。
+   *  空值 ∧ **未声明** ⇒ 空操作（零确认、零写、零回执 `contextSaved`；只出 `contextNothingToClear` 行）。
+   *  `invalid-value` ⇒ 弹窗内非法值行（盘上零变，主侧谓词拒后再红）；其余失败 ⇒ 段级失败面；成功 ⇒ 关框 + 复读行面。 */
+  async function saveProviderContext(event) {
+    const form = typeof formOf === "function" ? formOf(event) : null
+    if (form === null) return
+    const context = store.get().settings?.providers?.context
+    if (context === null || typeof context !== "object" || typeof context.name !== "string" || context.name === "") {
+      console.error("[renderer] provider:setModelContext: no open context dialog")
+      report("providers", { reason: "invalid-shape" }, "provider:setModelContext")
+      return
+    }
+    const data = new FormData(form)
+    const model = String(data.get("model") ?? "").trim()
+    const k = String(data.get("k") ?? "").trim()
+    if (model === "") {
+      console.error("[renderer] provider:setModelContext: empty model id")
+      report("providers", { reason: "invalid-shape" }, "provider:setModelContext")
+      return
+    }
+    if (k === "") {
+      const row = listOf(store.get().settings?.providers?.providers).find((entry) => entry?.name === context.name) ?? null
+      const declared = declaredOf(row, model)
+      if (declared === null) {
+        setProvidersSlice({ context: { ...context, model, value: "", error: { code: "nothing-to-clear", model } } })
+        return
+      }
+      // 确认行 current 段 = 已声明展示串（核 `formatDeclaredContextK` 出词）；值非法 ∥ 未声明（键存在但值不可用）
+      // ⇒ `Not declared`（设计 §6.15 清除语义）。
+      const current = declaredTextOf(row, declared.key) ?? t("settings.providers.contextNotDeclared")
+      confirmAction(t("settings.providers.contextClearConfirm", { provider: context.name, model, current }), () => {
+        void submitProviderContext(context.name, model, "")
+      })
+      return
+    }
+    await submitProviderContext(context.name, model, k)
+  }
+
+  /** 写请求单点（保存 ∥ 清除确认后同径）：成功 ⇒ 清失败串 + 关框 + 复读行面（清除回执 = 卡面回 `未声明`，不另出提示行）。 */
+  async function submitProviderContext(name, model, k) {
+    const receipt = await ask("provider:setModelContext", { name, model, k })
+    if (receipt.ok !== true) {
+      if (receipt.reason === "invalid-value") {
+        const held = store.get().settings?.providers?.context
+        const context = held !== null && typeof held === "object" ? held : { name, models: [], model, current: null, value: "", error: null }
+        setProvidersSlice({ context: { ...context, model, value: k, error: { code: "invalid-value", value: k } } })
+        return
+      }
+      report("providers", receipt, "provider:setModelContext")
+      return
+    }
+    clearReport()
+    setProvidersSlice({ context: null })
+    if (closeModal !== null) closeModal()
+    else console.error("[renderer] provider:setModelContext: modal close unavailable")
+    await loadProviders()
+  }
+
   /** 出口族表（锚名逐字 = 视图 `data-action` 同域）。 */
   const handlers = {
     onProviderKeyEdit: (name) => openKeyEdit(name),
@@ -155,6 +321,9 @@ export function createProviderExits(deps = {}) {
     onSetProxy: (name, value) => void setProviderProxy(name, value),
     onFetchModels: (event) => void fetchModels(event),
     onAddShape: (value) => setAddShape(value),
+    onProviderContextEdit: (name) => openProviderContext(name),
+    onProviderContextModel: (value) => setProviderContextModel(value),
+    onProviderContextSave: (event) => void saveProviderContext(event),
   }
 
   return { handlers }

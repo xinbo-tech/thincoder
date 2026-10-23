@@ -5,12 +5,24 @@ Format: Keep a Changelog · 中文 · 号在发布时定（CalVer——见 `docs
 
 ## [Unreleased]
 
+### Added
+
+- **`providers[].modelContext`（按模型的人工上下文声明，单位 K）**：键 = 模型 ID（末段归一等价——`qwen/ZHIPU/GLM-5.3` ≡ `glm-5.3`），值 = 正整数 K（`128` = 128K）。
+- **模型上下文五级解析链**：`modelContext` > 旧键 `providers[].context` > 渠道 `/models` 自报（`context_window` / `context_length` / `max_model_len`，取第一个合法值）> `MODEL_SPECS` 静态表 > 默认 128K；列表自报值是 token（直接采用），人工声明是 K（核内唯一乘点 ×1024）。
+- **核导出 `providerSpecResolution(provider)` / `formatContextK(tokens)`**：来源五值（`modelContext` / `provider-override` / `list` / `spec` / `default`）与三端同一展示格式器。
+
+### Changed
+
+- **旧键 `providers[].context` 退役为只读过渡层（A7 兼容）**：仍可读（L2，K 单位，仅未被 `modelContext` 点名的模型），但不再写入新配置——K 单位旧编辑命令退役，三端写面改用 `modelContext`（三端同批，随各端包发布）；实际用到 L2 时告警一次并给出迁移形 `modelContext: { "<模型>": <K> }`（单位同为 K）。
+- **`requestBudget().windowSource` 扩为五值**：读 `providerSpecResolution().source`（原二值 `provider-override` / `spec`），五个枚举值原样入 `Request budget:` 行（不并类）。
+- **模型名匹配改「末段唯一」**：按 `/` 拆分后只取最后一段查表，不再先扫完整名——`glm-5.3/zzz` 由误命中 `glm-5.3`（1M 上下文）改为未命中（`DEFAULT_SPEC` + 告警）；`kimi/kimi-k3` 表行退役（末段 `kimi-k3` 已有同值行，含 `/` 的键不可达）。
+
 ## [0.10.10] — 2026-10-22
 
 ### Added
 
 - **子代理 `manifest` 只读面**：同名工具、`action` 枚举只剩 `read`（schema 级不可达 + execute 入口再拒一次），挂全部 depth>0 角色段；写面仍归主 agent——`init` / `write` 不在其装配，只读位也不落在全量变体上，审批门不被绕过。`readAction` 增 `canInit`：子代理侧缺档 / 无项目两态的引导行不再指向它调不到的 `init`。
-- **`common.md` 新增「动手前先查文档」一节**：代码只记形状，理由与后果住在文档里；一次会话只完成大任务的一步、上下文只是项目已知内容的一小部分，不先查就是拿局部当整体。
+- **`thincoder-core/prompts/common.md` 新增「动手前先查文档」一节**：代码只记形状，理由与后果住在文档里；一次会话只完成大任务的一步、上下文只是项目已知内容的一小部分，不先查就是拿局部当整体。
 
 ### Changed
 
@@ -203,7 +215,9 @@ Format: Keep a Changelog · 中文 · 号在发布时定（CalVer——见 `docs
 
 ### Added
 
-- **规格表覆盖扩面（新名专行）**：`qwen-flash` / `qwen-vl-max`（实测输出上限 32_768——服务端直报 `[1, 32768]`；前者思考默认可开、后者不支持）、`claude-fable-5.1`（1_000_000 / 128_000）、`gemini-3.1-pro`（1_048_576 / 65_536）、`stepfun/step-3.7-flash`（262_144）；kimi-code 平台三行（`kimi-for-coding` / `kimi-for-coding-highspeed` / `k3-256k`——含 effort 枚举与默认档）——掉兜底名不再退默认。
+- **规格表覆盖扩面（新名专行）**：`qwen-flash` / `qwen-vl-max`（实测输出上限 32_768——服务端直报 `[1, 32768]`；前者思考默认可开、后者不支持）、
+  `claude-fable-5.1`（1_000_000 / 128_000）、`gemini-3.1-pro`（1_048_576 / 65_536）、`stepfun/step-3.7-flash`（262_144）；
+  kimi-code 平台三行（`kimi-for-coding` / `kimi-for-coding-highspeed` / `k3-256k`——含 effort 枚举与默认档）——掉兜底名不再退默认。
 - **bench 受测 10 档规格行**：此前经泛前缀/兜底解析的受测模型补独立行 + 视觉声明分态登记。
 - **跨实例意图认领层（P1）**：`peers/{sessionId}.json` 增 claims 意图域（TTL 30 分钟租约 · 进程死亡即失效）；写前命中他实例活认领 ⇒ 软提示（不阻写；与写后足迹登记分开存）。
 

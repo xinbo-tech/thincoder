@@ -44,7 +44,7 @@ import { attachTeamPanel, createTeam } from "./mount-team.mjs"
 import { renderSettingsModal, settingsModalNode } from "./settings-modal.mjs"
 import { closeSettingsConfirm } from "./settings-confirm.mjs"
 import { mountWizard, wizardModel } from "./views/onboarding.mjs"
-import { SECTIONS, ADD_MODAL_GROUP, CONSULT_ADD_MODAL_GROUP, MCP_FORM_MODAL_GROUP, mountSettings, settingsModalTree } from "./views/settings.mjs"
+import { SECTIONS, ADD_MODAL_GROUP, CONSULT_ADD_MODAL_GROUP, MCP_FORM_MODAL_GROUP, PROVIDER_CONTEXT_MODAL_GROUP, mountSettings, settingsModalTree } from "./views/settings.mjs"
 
 /** 设置 / 向导容器锚（**一容器两树互斥** —— 骨架属性住 `index.html`）。 */
 export const SETTINGS_SLOT = '[data-slot="settings"]'
@@ -56,8 +56,9 @@ export const SETTINGS_KEYS = Object.freeze(["settings", "locale", "theme"])
  *  名单单源 = 视图档导出，本档 ∥ `MODAL_READS` ∥ 开径出口三面同领）。
  *  **添加入口弹窗统一批（KD-77 ①②）**：八 ⇒ **十** —— 增 `MCP_FORM_MODAL_GROUP` ∥ `CONSULT_ADD_MODAL_GROUP`（同径同领）。
  *  **B1 批（台账 #1212）**：十 ⇒ **十一** —— 团队段入段名序（`SECTIONS` 追尾，本档零枚举改）。
- *  **模型选择归位批（KD-80）**：十一 ⇒ **十** —— 「模型」段撤场（`SECTIONS` 去项，本档零枚举改）。 */
-const SCOPES = Object.freeze([...SECTIONS.map((section) => section.name), ADD_MODAL_GROUP, MCP_FORM_MODAL_GROUP, CONSULT_ADD_MODAL_GROUP])
+ *  **模型选择归位批（KD-80）**：十一 ⇒ **十** —— 「模型」段撤场（`SECTIONS` 去项，本档零枚举改）。
+ *  **上下文写面批（2026-10-23 · 台账 #1739）**：十 ⇒ **十一** —— 增上下文编辑弹窗组名 `PROVIDER_CONTEXT_MODAL_GROUP`。 */
+const SCOPES = Object.freeze([...SECTIONS.map((section) => section.name), ADD_MODAL_GROUP, PROVIDER_CONTEXT_MODAL_GROUP, MCP_FORM_MODAL_GROUP, CONSULT_ADD_MODAL_GROUP])
 
 /** 弹窗读取链（KD-68 ③ 逐组指名表：`models` 随 agent 面（models 块 —— R7 同拍）；
  *  **添加弹窗**（KD-75 ②）随 `providers` 面 —— 体 = 单表，预设 ∥ 候选项两源皆 `provider:list` 回执；
@@ -190,7 +191,9 @@ export function attachSettings(host, deps = {}) {
     }
     setSettings({ modal: group, notice: null, ...exits.resetFacets(state, group) })
     if (group === "team") team.resetNotice() // B1：本组面态复位（限本组——团队段无 facets，唯当刻一次性提示）
-    void allReads[MODAL_READS[group]]()
+    // 上下文弹窗（台账 #1739）：候选 ∥ 行面已在开面时载入 ⇒ **不跑读取链**（「零新增请求」——父裁 A；
+    // `loadProviders` 会连带 `loadModels` 重探 `model:list`，正是本批要避免的第二请求）。
+    if (group !== PROVIDER_CONTEXT_MODAL_GROUP) void allReads[MODAL_READS[group]]()
     return true
   }
 

@@ -36,7 +36,8 @@ import { applyUiPrefs } from "./ui-prefs.js"
 // C-B2-6 细则⑦（queue-band 批 2026-10-20）：待发送带（输入区上沿派生面——带面重绘 / 消费出块）
 import { applyBusyQueued, clearPendingBand } from "./pending-band.js"
 // #1053（协议 §3.2 行 25）：密钥行保存受理回执消费位（`providerKeySaved` → 恢复静态行 + 闪徽标）
-import { onProviderKeySaved } from "./settings-providers.js"
+// R31③-VSC：上下文保存受理回执消费位（`providerContextSaved` → 卡面行内显保存行）
+import { onProviderKeySaved, onProviderContextSaved } from "./settings-providers.js"
 // B1（团队卡——B1 批）：态推送 + 两回执消费位（`teamStatus` / `teamLoginResult` / `teamLogoutResult`
 // ——形 ∥ 语义单源 = `SETTINGS.md` §2.20；回执码 → 词 = `settings-team.js` 内两表）
 import { updateTeamStatus, onTeamLoginResult, onTeamLogoutResult, onTeamRotateResult } from "./settings-team.js"
@@ -165,6 +166,8 @@ export function initMessageLoop(deps) {
         break
       // #1053 密钥行保存受理回执（协议 §3.2 行 25——host 成功径才发；拒径零回执 ⇒ 零闪 ∥ 行不关）
       case "providerKeySaved": onProviderKeySaved(m.name); break
+      // R31③-VSC 上下文保存受理回执（host 成径先重推 providerStatus 再发——本行内提示不被重绘吞掉）
+      case "providerContextSaved": onProviderContextSaved(m); break
       // B1（团队卡——消费位）：态推送（打开/保存拍 + 登录/退出成拍）+ 两回执（登录当刻 / 退出当刻）；
       // 登录面补全批：`teamLoginResult` +板面钩（首启板团队表单——失败行 ∥ 同名冲突就地显；板退场交 providerStatus 闸）
       case "teamStatus": updateTeamStatus(m); break

@@ -11,7 +11,7 @@ import { liveAgents } from "./ipc.mjs"
 import { configWrite, indexStatus, modelCatalog, modelList, settingsAgent } from "./settings.mjs"
 import { settingsEnv } from "./settings-env.mjs"
 import { settingsTools } from "./settings-tools.mjs"
-import { providerDelKey, providerList, providerModels, providerRemove, providerSave, providerSetKey, providerSetProxy, providerVerify } from "./providers.mjs"
+import { providerDelKey, providerList, providerModels, providerRemove, providerSave, providerSetKey, providerSetModelContext, providerSetProxy, providerVerify } from "./providers.mjs"
 import { mcpList, mcpReconnect, mcpRemove, mcpSave, mcpTools, mcpUpdate } from "./mcp-servers.mjs"
 import { batchStatus, ledgerRead } from "./project-info.mjs"
 import { runIndexBuild } from "./index-status.mjs"
@@ -48,6 +48,9 @@ export function providerSetKeyChannel(payload) { return providerSetKey(payload) 
 export function providerDelKeyChannel(payload) { return providerDelKey(payload) }
 export function providerModelsChannel(payload) { return providerModels(payload) }
 export function providerSetProxyChannel(payload) { return providerSetProxy(payload) }
+/** `provider:setModelContext(payload)` ⇒ `{ ok, reason }`：载荷 `{ name, model, k }`——按模型的人工上下文声明（K，
+ *  `128` = 128K；空 ⇒ 删键，对象空 ⇒ 连键删；值域 = 核 `positiveInt`——上下文写面批 · `PROVIDER.md` §6.15）。 */
+export function providerSetModelContextChannel(payload) { return providerSetModelContext(payload) }
 /** `model:list(payload)` ⇒ `{ ok, models }` ∥ `{ ok:false, reason }`：载荷 `{ provider }`（provider 名）。 */
 export function modelListChannel(payload) { return modelList(payload) }
 /** `model:catalog`（无载荷）⇒ `{ ok, models, unavailable }`（全渠扇出 —— 逐 `hasKey` 渠探针；失败渠零行 + 诊断项）。 */

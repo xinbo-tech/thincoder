@@ -14,8 +14,8 @@
  * **交棒预填（#1041）**：`openAddProviderDialog({ key })` —— 首启板 custom 径携键入框（重置序之后落）。
  */
 import { t } from "./i18n.js"
-import { SS } from "./settings-state.js"
-import { flashSaved } from "./settings-widgets.js"
+import { SS, PROVIDER_LABELS } from "./settings-state.js"
+import { flashSaved, markInputError, showConfirmPopover, closeConfirmPopover } from "./settings-widgets.js"
 
 /** 拉取请求 id 单源（模块级单调自增） ∥ 最近一次在飞请求的 id（落框前比对——不符 ⇒ 弃）。
  *  #1051（2026-10-10 vsc-consistency 批）：代际变量退场——单变量收窄（`_pendingFetchId`）＋
@@ -275,4 +275,219 @@ export function updateTestProviderResult(r) {
 export function installProviderDialogHandlers() {
   window._openAddProviderDialog = openAddProviderDialog
   window._paSave = paSave
+}
+
+// ─── 上下文编辑弹窗（R31③-VSC · 单源 = `docs/core/design/PROVIDER.md` §6.15「写面：`modelContext` 编辑」）───
+// 交互形 = 三端一把尺子**五步**：① 选渠道 = 点渠道行的 `Context…` 钮（开框时渠道已定）；② 选模型 = 该渠道
+// 既有 `/models` 候选（零新增请求）；无候选 ⇒ 换文本输入；③ 输 K（提示带 K 示例 + 当前**已声明**值）；
+// ④ （空输入）清除确认层；⑤ 保存。端侧零乘 1024、零自算窗口——本框只送 `{ name, model, k }`，单位即 K。
+
+/** 开框实件面（关框即弃；`null` = 框不在场）。 */
+let _ctxEls = null
+
+/** 末段 + 小写（与核 `normalizeModelKey` 同一把尺子——`PROVIDER.md` §6.9）：**只做已声明键匹配**，
+ *  不做窗口解析（本档不乘 1024、不查静态表；提示行里的 `NK` = 已声明值原样 + 模板里的 K——与卡面
+ *  同一规则；核 `formatContextK` 是 token 口径，要在 K 值上用就得 ×1024，硬约束禁止）。 */
+function contextKeyOf(s) {
+  const m = String(s ?? "").toLowerCase()
+  const i = m.lastIndexOf("/")
+  return i >= 0 ? m.slice(i + 1) : m
+}
+
+/** 某模型的**已声明** K 值；未声明 ⇒ `null`（列表值 ∥ 静态值一律不进框）。 */
+function declaredKOf(name, model) {
+  const table = SS.providerStatus.providers?.[name]?.modelContext
+  if (!table || typeof table !== "object") return null
+  if (!String(model ?? "").trim()) return null
+  const target = contextKeyOf(model)
+  for (const [key, value] of Object.entries(table)) if (contextKeyOf(key) === target) return value
+  return null
+}
+
+/** 步骤③提示行 + 输入件回显：只回显已声明值（未声明 ⇒ 清零——回车不会把参考值固化成人工声明）。
+ *  `prefillK`：仅**开框 ∥ 候选件改选**时回写 `pc-k`；手填模型逐键输入不回写——否则先输 K 再改模型 id
+ *  会把已输值抹掉（提示行照常随模型变）。 */
+function syncContextPrompt(prefillK = true) {
+  if (!_ctxEls) return
+  const els = _ctxEls
+  const model = String(els.modelSelect?.value ?? els.modelInput?.value ?? "").trim()
+  const declared = declaredKOf(els.name, model)
+  els.prompt.textContent = t("settings.providers.contextPrompt", {
+    provider: els.label,
+    model: model || "—",
+    current: declared === null ? t("settings.providers.contextNotDeclared") : `${declared}K`,
+  })
+  if (prefillK) els.k.value = declared === null ? "" : String(declared)
+  els.error.textContent = ""
+}
+
+/** 建两件（框幕 + 卡）并挂 `document.body`——字段序 = 交互序（渠道 → 模型 → K）。 */
+function buildContextDialog(name) {
+  const label = SS.providerStatus.labels?.[name] || PROVIDER_LABELS[name] || name
+  const st = SS.providerStatus.providers?.[name] || {}
+
+  const backdrop = document.createElement("div")
+  backdrop.className = "settings-dialog-backdrop"
+  backdrop.addEventListener("click", closeProviderContextDialog)
+
+  const card = document.createElement("div")
+  card.id = "prov-context-dialog"
+  card.className = "settings-dialog"
+  card.setAttribute("role", "dialog")
+  card.setAttribute("aria-modal", "true")
+  card.setAttribute("aria-label", t("settings.providers.context"))
+  // 框内 Esc：拦截冒泡 ⇒ 不连带关设置面板（沿添加弹窗同判）
+  card.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return
+    e.stopPropagation()
+    closeProviderContextDialog()
+  })
+
+  const body = document.createElement("div")
+  body.className = "settings-card-body"
+  const subtitle = document.createElement("div")
+  subtitle.className = "settings-subtitle"
+  subtitle.textContent = t("settings.providers.context")
+  // 步骤① 的产物：渠道已定（行内入口）——行内只显渠道名（数据，非文案）
+  const channel = document.createElement("div")
+  channel.className = "prov-model"
+  channel.textContent = label
+
+  // 步骤②：候选 = 该渠道**既有**的 `/models` 探针结果（`fullStatus` 的 `{ type: "models", models }`）——
+  // 零新增请求；拉不到 ⇒ 换文本输入（不设第二套入口，设计「手填入口形」）。
+  const ids = [...new Set((SS.getModels?.() ?? [])
+    .filter((m) => m?.provider === name && typeof m.id === "string" && m.id)
+    .map((m) => m.id))]
+  let modelSelect = null
+  let modelInput = null
+  if (ids.length > 0) {
+    modelSelect = document.createElement("select")
+    modelSelect.id = "pc-model"
+    for (const id of ids) {
+      const opt = document.createElement("option")
+      opt.value = id
+      opt.textContent = id
+      modelSelect.appendChild(opt)
+    }
+    modelSelect.addEventListener("change", () => syncContextPrompt(true))
+  } else {
+    modelInput = document.createElement("input")
+    modelInput.id = "pc-model"
+    modelInput.placeholder = "glm-5.3"
+    modelInput.addEventListener("input", () => syncContextPrompt(false))
+  }
+
+  const hints = []
+  if (st.available === false) {
+    const h = document.createElement("div")
+    h.className = "prov-hint"
+    h.textContent = st.failure === "hostBusy" ? t("settings.providerHostBusy") : t("settings.providerUnavailable")
+    hints.push(h)
+    if (st.unavailableReason && st.failure !== "hostBusy") {
+      const r = document.createElement("div")
+      r.className = "prov-hint"
+      r.textContent = st.unavailableReason
+      hints.push(r)
+    }
+  }
+  if (ids.length === 0) {
+    const h = document.createElement("div")
+    h.className = "prov-hint"
+    h.textContent = t("settings.providers.contextNoCandidates")
+    hints.push(h)
+  }
+
+  const k = document.createElement("input")
+  k.id = "pc-k"
+  k.placeholder = "128"
+  k.addEventListener("keydown", (e) => { if (e.key === "Enter") ctxSave() })
+  const prompt = document.createElement("label")
+  prompt.id = "pc-prompt"
+  const kField = document.createElement("div")
+  kField.className = "key-field"
+  kField.append(prompt, k)
+
+  const error = document.createElement("div")
+  error.id = "pc-error"
+  error.className = "key-status"
+
+  const saveBtn = document.createElement("button")
+  saveBtn.id = "pc-save-btn"
+  saveBtn.className = "key-btn"
+  saveBtn.textContent = t("settings.save")
+  saveBtn.addEventListener("click", ctxSave)
+  const cancelBtn = document.createElement("button")
+  cancelBtn.id = "pc-cancel-btn"
+  cancelBtn.className = "key-btn"
+  cancelBtn.textContent = t("settings.cancel")
+  cancelBtn.addEventListener("click", closeProviderContextDialog)
+
+  body.append(subtitle, channel, field(t("settings.model"), modelSelect ?? modelInput), ...hints, kField, error, saveBtn, cancelBtn)
+  card.appendChild(body)
+  document.body.append(backdrop, card)
+  return { backdrop, card, name, label, modelSelect, modelInput, k, prompt, error }
+}
+
+/** 开框（单例：已在框 ⇒ 零动作）：建两件 + 同步提示行（只回显已声明值）+ 初始焦点 = 模型件。 */
+export function openProviderContextDialog(name) {
+  if (!name || document.getElementById("prov-context-dialog")) return
+  const els = buildContextDialog(name)
+  _ctxEls = els
+  syncContextPrompt()
+  setTimeout(() => (els.modelSelect ?? els.modelInput)?.focus(), 50)
+}
+
+/** 关框（幂等）：只清自身两件（卡 ∥ 幕——各弹窗自清同规）+ **确认族同清**：确认层牌面虽住在卡内
+ *  （随卡同去），但它的全屏遮罩（`.auto-backdrop`）挂在 body ⇒ 不清就是一层盖住 webview 的孤儿遮罩。 */
+export function closeProviderContextDialog() {
+  closeConfirmPopover()
+  _ctxEls?.card?.remove()
+  _ctxEls?.backdrop?.remove()
+  _ctxEls = null
+}
+
+/** 保存（第 5 步）∥ 空输入的清除径（第 4 步）：值校验 = 先 parse 再判（设计「共同语义」）——
+ *  `Number(String(v).trim())` 后正整门；空输入 **不直接删**：该模型有声明 ⇒ 先弹确认层（默认焦点「取消」，
+ *  取消径零动作、盘上零变）；本来无声明 ⇒ 空操作（回 `contextNothingToClear`，不发消息、不留「已清除」回执）。
+ *  拒 ⇒ 报错行 + 零发消息 + 框不关；受理 ⇒ 发后关框。 */
+function ctxSave() {
+  if (!_ctxEls) return
+  const els = _ctxEls
+  const model = String(els.modelSelect?.value ?? els.modelInput?.value ?? "").trim()
+  if (!model) { markInputError(els.modelSelect ?? els.modelInput); return }
+  const raw = String(els.k.value ?? "").trim()
+  if (raw === "") {
+    const declared = declaredKOf(els.name, model)
+    if (declared === null) { // W-13：本来没有声明值 ⇒ 空操作（不弹确认、不留「已清除」回执）
+      els.error.style.color = ""
+      els.error.textContent = t("settings.providers.contextNothingToClear", { model })
+      return
+    }
+    // W-14：有声明值 ⇒ 确认层（正文带当前值；默认焦点「取消」；回车 ∥ Esc ∥ 背板 ⇒ 零动作）。
+    // 载体 = 面板内确认弹层（`showConfirmPopover`，与 `_confirmSecretDelete` 同件）；框在固定遮罩层下（z 999）
+    // ⇒ 把牌面挂进弹窗卡内，否则被遮罩盖住（同件、零新增 CSS）。
+    els.error.textContent = ""
+    showConfirmPopover({
+      text: t("settings.providers.contextClearConfirm", { provider: els.label, model, k: declared }),
+      yesLabel: t("session.delete"),
+      noLabel: t("question.cancel"),
+      onConfirm: () => {
+        window._vscode.postMessage({ type: "saveProviderModelContext", name: els.name, model, k: null })
+        closeProviderContextDialog()
+      },
+    })
+    const popover = document.querySelector(".auto-confirm")
+    if (popover) els.card.appendChild(popover)
+    return
+  }
+  const n = Number(raw)
+  // `"128K"` / `"1.5"` / `"-1"` / `"abc"` / `"0"` ⇒ 全拒 + 报错行（zh ∥ en 两字面）；盘上零变
+  if (!Number.isInteger(n) || n <= 0) {
+    els.error.style.color = "var(--red)"
+    els.error.textContent = t("settings.providers.contextInvalid", { v: raw })
+    return
+  }
+  els.error.textContent = ""
+  window._vscode.postMessage({ type: "saveProviderModelContext", name: els.name, model, k: n })
+  closeProviderContextDialog()
 }

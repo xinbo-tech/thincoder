@@ -32,7 +32,8 @@ export { consultAddBody, modelsBody } from "./settings-sections-models.mjs"
 export { mcpBody, mcpFormBody } from "./settings-sections-mcp.mjs"
 // 渠道族（行族 + 段体）随 D37 先拆后改出档 `./settings-sections-providers.mjs`；本档 re-export ⇒ 分派面零改。
 // 三端对齐批：同档增出 `providerAddBody`（添加弹窗体 —— `views/settings.mjs` `providerAdd` 支消费）随本行 re-export。
-export { providerAddBody, providersBody } from "./settings-sections-providers.mjs"
+// 上下文写面批（2026-10-23 · 台账 #1739）：同档增出 `providerContextBody`（上下文编辑弹窗体 —— `providerContext` 支消费）。
+export { providerAddBody, providerContextBody, providersBody } from "./settings-sections-providers.mjs"
 // B1 批（台账 #1212）「团队」段体自立出档；本档 re-export ⇒ 分派面零改（消费 = `views/settings.mjs` 段体分派 `team` 支）。
 // 登录面补全批（台账 #1231）收正：卡降管理面 ⇒ re-export 改 `teamAdminBody`（`teamBody` 改由登/退面就地面板直取段体档——单一实现）。
 export { teamAdminBody } from "./settings-sections-team.mjs"

@@ -7,8 +7,10 @@
  * config-presets.mjs — the core's single preset face, re-exported by config.mjs.)
  */
 
+import { listedContextTokens, manualContextK, warnContextOnce } from "./model-context.mjs"
+
 /**
- * Known model capability spec table (prefix match, longer first).
+ * Known model capability spec table (prefix match within the model's last "/"-segment, longer first).
  * Used for compaction threshold derivation, continuation protocol selection, and capability-aware optimization.
  *
  * context:           context window (tokens)
@@ -42,8 +44,6 @@ const MODEL_SPECS = [
   ["deepseek-v4-flash-vision-exp", { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 2], multimodal: true }],
   // Kimi series
   ["kimi-k3",           { context: 1_000_000, maxOutput: 131_072, thinking: true,  partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"] }],
-  // Qwen router prefixes model IDs with provider namespace: kimi/kimi-k3 → kimi-k3 (IK7K4V)
-  ["kimi/kimi-k3",      { context: 1_000_000, maxOutput: 131_072, thinking: true,  partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"] }],
   // Kimi For Coding endpoint uses the short model ID "k3" (same specs as kimi-k3) — IK5VGJ
   ["k3",                { context: 1_000_000, maxOutput: 131_072, thinking: true,  partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"] }],
   // kimi-for-coding / k3-256k / kimi-for-coding-highspeed（Kimi For Coding 端点三名 · 2026-09-25 批 §14.2 #7-9 · 活测 = §1.4 服务端 200 /models）：
@@ -249,36 +249,32 @@ const MODEL_SPECS = [
 ]
 const DEFAULT_SPEC = { context: 128_000, maxOutput: 32_000 }
 
-/** Look up spec by model name prefix (case-insensitive), conservative default for unknown models.
+/** 查表规则（单源 = PROVIDER.md §6.9 · 用户 2026-10-23 17:34 裁定「匹配 / 拆分以后的最后一段」）：
  *
- * Vendor-namespace stripping (2026-09-04；末段形 2026-10-10——用户裁定「只取最后一段」)：第三方
- * token 市场（roapi/new-api/one-api/aiproxy 聚合网关）惯例在模型名前加厂商前缀（zhipu/glm-5.3、
- * openai/gpt-4o），链式网关下可叠多段（测试服务器 qwen/ZHIPU/GLM-5.3）。完整名未命中且含 "/" 时，
- * 取最后一个 "/" 之后的段再按前缀匹配一次——单段 ZHIPU/GLM-5.3 → glm-5.3（两法等价）、多段
- * qwen/ZHIPU/GLM-5.3 → glm-5.3 均命中真实规格，不再降级 128K 默认。kimi/kimi-k3 的显式 alias
- * 行保留为文档锚（发送路径 provider.core isRouter 依赖含 "/" 判定），通用机制已覆盖同类。 */
+ * 模型名匹配 = **末段唯一**：按 "/" 拆开只拿最后一段查表（单段名末段 = 自身），段内仍按前缀匹配
+ * （`glm-5.3-flashx` 命中 `glm-5.3` 行）。完整名**不再先扫**——旧法把 `glm-5.3/zzz` 误判成
+ * `glm-5.3`（1M 上下文 ⇒ 压缩永不触发 ⇒ 溢出）；新法取末段 `zzz` ⇒ 未命中 ⇒ DEFAULT_SPEC + 告警。
+ * 聚合网关惯例 `vendor/model`（roapi/new-api/one-api/aiproxy）因此天然命中：`zhipu/glm-5.3` /
+ * 链式 `qwen/ZHIPU/GLM-5.3` ⇒ `glm-5.3`。末段为空（`foo/`）⇒ 未命中（空串不做匹配）。 */
 const warnedModels = new Set() // warn once per model name — spec lookup runs on every request (hot path)
 // Pre-sorted once at module scope — spec lookup runs on every request (agent, provider core,
 // context, auto-think, TUI rendering); re-sorting per call was wasteful.
 const SORTED_SPECS = [...MODEL_SPECS].sort((a, b) => b[0].length - a[0].length)
 
-/** Single table lookup shared by specForModel / specMatch — prefix match (case-insensitive)
- *  with vendor-namespace stripping. Returns null on a miss (DEFAULT_SPEC is the caller-side
- *  fallback and is deliberately NOT returned here — `matched` needs the miss itself).
+/** Single table lookup shared by specForModel / specMatch — prefix match (case-insensitive) on the
+ *  model's LAST "/"-segment only (末段唯一 · PROVIDER.md §6.9). The full name is NOT scanned first:
+ *  `glm-5.3/zzz` takes `zzz` and misses (the old full-name-first scan mis-hit `glm-5.3`).
+ *  Returns null on a miss (DEFAULT_SPEC is the caller-side fallback and is deliberately NOT
+ *  returned here — `matched` needs the miss itself).
  *  非串 model（外端脏载 / 手工档）归一等价空串 ⇒ 未命中 ⇒ 调用侧 DEFAULT_SPEC（#638 查表全性：
  *  下游无类型门——`.toLowerCase` 只认串，非串归一后本函数恒 total，同 providerSpec 文档句）。 */
 function lookupSpec(model) {
   const m = (typeof model === "string" ? model : "").toLowerCase()
-  for (const [prefix, spec] of SORTED_SPECS) {
-    if (m.startsWith(prefix.toLowerCase())) return spec
-  }
-  // Vendor-namespace strip: take the LAST "/"-separated segment — retry the prefix match on it.
   const slash = m.lastIndexOf("/")
-  if (slash > 0) {
-    const bare = m.slice(slash + 1)
-    for (const [prefix, spec] of SORTED_SPECS) {
-      if (bare.startsWith(prefix.toLowerCase())) return spec
-    }
+  const bare = slash >= 0 ? m.slice(slash + 1) : m   // 末段唯一；单段名 = 自身
+  if (!bare) return null                             // 末段为空 ⇒ 未命中（空串不做前缀匹配）
+  for (const [prefix, spec] of SORTED_SPECS) {
+    if (bare.startsWith(prefix.toLowerCase())) return spec
   }
   return null
 }
@@ -312,27 +308,104 @@ export function specMatch(model) {
   return { spec: DEFAULT_SPEC, matched: false }
 }
 
+/** Context window 展示串，**收 token**（核单源——三端读面同一格式器出词，R31④）：`128K` ∥ `1M`。
+ *  本批由 CLI 私有 `fmtContextK` 上提——三端各自拼串会漂。服务链上 L3/L4 值（token）的展示；
+ *  人工声明（K）的展示走 `formatDeclaredContextK`，一个换算方向一个入口，不混用。 */
+export function formatContextK(tokens) {
+  if (tokens >= 1_000_000) return `${Math.round(tokens / 1_048_576)}M`
+  return `${Math.round(tokens / 1024)}K`
+}
+
+/** 人工声明上下文的展示串，**收 K**（`modelContext` ∥ 旧键 `context` 的存储单位）：`128` ⇒ `128K`、
+ *  `1024` ⇒ `1M`。K→token 的展示换算**只此一处**（内部转 token 再交给 `formatContextK`）——三端读面
+ *  把已声明原值直接交进来，不自己换算、不自己拼 K 串（PROVIDER.md §6.15「读面回显」· R31④）。
+ *  前提：`k` 是先过 `positiveInt` 的正整数（与读链同一谓词）——非法值本函数不复判。 */
+export function formatDeclaredContextK(k) {
+  return formatContextK(k * 1024)
+}
+
 /**
- * providerSpec(provider) — spec with a provider-level context override (PROVIDER.md §15, 2026-09-02).
+ * providerSpec(provider) — spec with the context resolution chain (PROVIDER.md §6.15, 2026-10-23
+ * 五级链). `providerSpecResolution` = the single traversal; `providerSpec` = `resolution.spec`.
  *
- * providers[].context is configured in K units (128 = 128K = 131072 tokens) and overrides the
- * MODEL_SPECS value for THIS provider only — the same model can have different real context
- * windows on different endpoints (official vs local deployment). The ×1024 conversion happens
- * HERE and nowhere else.
+ * Chain (first available wins) — 单位差只在这里乘一次，且**解析乘点**全仓唯一（本函数内 L1 ∥ L2 共用；
+ * 展示面的另一次在 `formatDeclaredContextK`，不回写解析值）：
+ *   L1 `providers[].modelContext[模型]`（人工声明，K）       → ×1024
+ *   L2 `providers[].context`（旧键，K；仅未被 L1 点名的模型） → ×1024（同一乘点）
+ *   L3 `/models` 自报（三字段任一，token）                   → 不乘
+ *   L4 `MODEL_SPECS` 静态表（token）                          → 不乘
+ *   L5 `DEFAULT_SPEC`（128K，token）                          → 不乘
  *
- * Returns a COPY ({ ...spec, context }) — the shared spec object from the SORTED_SPECS lookup
- * must never be mutated, or the override would leak across providers (T-C1).
+ * L2 位于 L3 之上：旧键也是人工声明（2026-10-23 17:30 裁定「人工声明 > 列表」），只是粒度不对、
+ * 单位事故出过两次；`modelContext` 点名的模型一律走 L1，L2 不参与。L2 实际被用到时告警一次
+ * （provider 名去重——装载期告警会在 L1 已完全覆盖时误报）。
  *
- * Validation is defensive (pure function): absent/invalid context falls back to the plain spec
- * (config.mjs loadConfig already warns + strips invalid values; this guard covers direct callers
- * and keeps the function total). specForModel stays a pure table lookup — callers without a
- * provider keep using it.
+ * 量级守卫（R32）：L1 ∥ L2 的 K 值换算后 > 静态表 ×4（表无行时 = 4 × 128K）⇒ 照用 + 告警一次，
+ * 不截断、不拒写——与 L3 的 4× 守卫对称。守卫住在核里：值可能来自手改 JSON（不经任何界面），
+ * 端上守不到；手改 ∥ CLI ∥ VSC ∥ 桌面四条来源在这里同判。
+ *
+ * 同步纯函数、零 IO：L3 读 `model-context.mjs` 的模块级只读缓存（写面在 listModels 成功拉取时），
+ * 未命中即落下一层——providerSpec 在请求热路径上（每请求算预算），async 等于把 IO 塞进请求路径。
+ *
+ * Returns a COPY ({ ...spec, context }) when L1 / L2 / L3 supplies the window — the shared spec
+ * object from SORTED_SPECS ∥ DEFAULT_SPEC must never be mutated, or the override would leak across
+ * providers (T-C1). No L1-L3 value ⇒ the shared spec object itself (zero-copy hot path). `maxOutput`
+ * 与其余能力位仍取静态表 ∥ DEFAULT_SPEC（需求边界：不改 maxOutput 来源）。
+ *
+ * `source` 闭集五值（`windowSource` 的唯一来源，不并类）：`modelContext` ∥ `provider-override` ∥
+ * `list` ∥ `spec` ∥ `default`。`warnUnknownModel` 只在链落到 L4/L5 时触发（L1-L3 供值时 128K 告警为假）。
  */
+export function providerSpecResolution(provider) {
+  const model = provider?.model ?? ""
+  const hit = lookupSpec(model)
+  const base = hit ?? DEFAULT_SPEC
+  // L1 — 人工声明（按模型，K 单位）；L2 — 旧键（渠道级，K 单位）。两种「人工声明」粒度在这里合流：
+  // **解析面的 ×1024 只出现在合流后的那一次换算上**（L3 起是 token，不乘）——加第二个解析乘点 = 下一次单位事故。
+  // （展示面的 K→token 换算另在 `formatDeclaredContextK`，只出词、不回写解析值。）
+  const manualK = manualContextK(provider)
+  const legacyRaw = Number(provider?.context) // Number() 接受数字字符串（"128"）——旧键既有口径（code review #1）
+  const legacyK = Number.isInteger(legacyRaw) && legacyRaw > 0 ? legacyRaw : null
+  const kUnit = manualK ?? legacyK
+  if (kUnit !== null) {
+    if (manualK === null) {
+      warnContextOnce(
+        `legacy-context\0${provider?.name ?? ""}`,
+        `[config] provider "${provider?.name}" uses the legacy context override (K units) for models not listed in modelContext — migrate to modelContext: { "${model}": ${legacyK} } (K units, same as this key)`,
+      )
+    }
+    // R32 — 人工声明的量级守卫（L1 ∥ L2，与 L3 的守卫对称）：换算后 > 静态表 ×4 ⇒ 照用 + 告警一次，
+    // **不截断、不拒写**（异常值也可能为真；截断 = 静默改写真事实）。守卫住核——值可能来自手改 JSON
+    // （不经任何界面），端上守不到；四条来源（手改 / CLI / VSC / 桌面）在这里同判。去重键 = 渠道 + 模型 + K 值。
+    const declaredTokens = kUnit * 1024
+    if (declaredTokens > base.context * 4) {
+      warnContextOnce(
+        `declared-over-4x\0${provider?.name ?? ""}\0${model}\0${kUnit}`,
+        `[config] model "${model}" on provider "${provider?.name ?? ""}" declares context ${kUnit}K (= ${declaredTokens} tokens), over 4x the spec value ${base.context} — using the declared value as-is (not truncated)`,
+      )
+    }
+    return { spec: { ...base, context: declaredTokens }, source: manualK !== null ? "modelContext" : "provider-override" }
+  }
+  // L3 — 列表自报（token，不乘）；异常大值照用 + 告警一次（R27——截断 = 静默改写真事实）
+  const listedTokens = listedContextTokens(provider)
+  if (listedTokens !== null) {
+    const staticValue = base.context
+    if (listedTokens > staticValue * 4) {
+      const endpoint = String(provider?.baseURL ?? "").replace(/\/+$/, "")
+      warnContextOnce(
+        `listed-over-4x\0${endpoint}\0${model}\0${listedTokens}`,
+        `[config] model "${model}" on ${endpoint} reports context ${listedTokens}, over 4x the spec value ${staticValue} — using the reported value as-is (not truncated)`,
+      )
+    }
+    return { spec: { ...base, context: listedTokens }, source: "list" }
+  }
+  // L4 — 静态表命中；L5 — DEFAULT_SPEC 兜底（未知模型告警只在这里）
+  if (hit) return { spec: hit, source: "spec" }
+  warnUnknownModel(model)
+  return { spec: DEFAULT_SPEC, source: "default" }
+}
+
 export function providerSpec(provider) {
-  const spec = specForModel(provider?.model ?? "")
-  const k = Number(provider?.context) // Number() 接受数字字符串（"128"）——两端语义统一（code review #1）
-  if (Number.isInteger(k) && k > 0) return { ...spec, context: k * 1024 }
-  return spec
+  return providerSpecResolution(provider).spec
 }
 
 /**

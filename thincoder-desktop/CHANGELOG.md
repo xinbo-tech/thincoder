@@ -1,3 +1,14 @@
+## [Unreleased]
+
+### Added
+
+- **设置 → providers 段可按模型设上下文窗口（K）**：渠道行新增 `Context…` 入口——选模型（候选取已到手的切片，开弹窗零新增 IPC）→ 输 K → 保存写 `providers[].modelContext`；清除走确认弹层（默认取消，带当前值）。八键 zh ∥ en。
+- **`provider:setModelContext` 通道 + `provider:list` 回执三键**（`modelContext` / `modelContextText` / `context`）：窗口展示串由主进程经核 `formatDeclaredContextK` 单点出词，渲染面零拼串。
+
+### Changed
+
+- **渠道行窗口值改读已声明值**：不取 `providerSpec().context`（渠道条目不携模型，写 128 会显示 125K）。
+
 # Changelog
 
 All notable changes to ThinCoder Desktop are documented here.

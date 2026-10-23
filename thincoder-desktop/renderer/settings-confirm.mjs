@@ -29,8 +29,10 @@ export function closeSettingsConfirm() {
 /**
  * 确认弹层描述符（纯 —— 单元测试档直测面）：是 ⇒ 关框 + `onConfirm`；否 ∕ 背板 ∕ 框内 Escape ⇒ 关框零动作
  * （Escape 拦截冒泡 ⇒ 设置面 Esc 关面不连带触发）。
+ * `text` = 正文串（缺省 = `settings.secretDeleteConfirm`——既有删钥 ∥ 删渠道径零变；上下文清除确认批
+ * （2026-10-23 · 台账 #1739）传入带当前值的 `contextClearConfirm`——同一载体、同一判据）。
  */
-export function settingsConfirmTree(onConfirm) {
+export function settingsConfirmTree(onConfirm, text = t("settings.secretDeleteConfirm")) {
   const yes = {
     tag: "button",
     props: { type: "button", class: "auto-confirm-yes", "aria-label": t("session.delete"), onClick: () => { closeSettingsConfirm(); if (typeof onConfirm === "function") onConfirm() } },
@@ -54,17 +56,18 @@ export function settingsConfirmTree(onConfirm) {
         },
       },
       children: [
-        { tag: "div", props: { class: "auto-confirm-text" }, children: [t("settings.secretDeleteConfirm")] },
+        { tag: "div", props: { class: "auto-confirm-text" }, children: [text] },
         { tag: "div", props: { class: "auto-confirm-actions" }, children: [yes, no] },
       ],
     },
   }
 }
 
-/** 打开确认弹层（单例；宿主缺 `append` 面 ⇒ 记错零动作 —— 零静默）。 */
-export function confirmSecretDelete(onConfirm) {
+/** 打开确认弹层（单例；宿主缺 `append` 面 ⇒ 记错零动作 —— 零静默）。`text` = 正文串（缺省 = 删钥句——
+ *  既有两消费面零改；上下文清除传 `contextClearConfirm` 带当前值）。 */
+export function confirmSecretDelete(onConfirm, text) {
   closeSettingsConfirm()
-  const descriptor = settingsConfirmTree(onConfirm)
+  const descriptor = settingsConfirmTree(onConfirm, text)
   const body = typeof document !== "undefined" ? document.body ?? document.documentElement : null
   if (body === null || typeof body.append !== "function") {
     console.error("[renderer] settings confirm: overlay host unavailable")

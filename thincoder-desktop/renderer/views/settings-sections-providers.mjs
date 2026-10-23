@@ -6,8 +6,8 @@
  * 行形（单源 = `docs/desktop/design/PROJECT.md` §2 KD-66 ∥ `docs/desktop/design/UI.md` §1
  * 「本批注（设置面样式收正 · D37 · 2026-10-02）」项 2；值源 = VSC 实读
  * `updateProviderStatus`）：
- *  ① **两行卡**（`[data-provider]` 行根纵排）：**主行**（`.settings-row-main`）= 名 + 钥面（masked ∥ 未设词）+
- *     当前标 + 动作簇（修改 ∥ ✕ 删钥 ∥ 校验 ∥ 移除名 —— 四件全保留、序恒定 = 现盘序）；**副行**（`.settings-row-sub`）
+ *  ① **两行卡**（`[data-provider]` 行根纵排）：**主行**（`.settings-row-main`）= 名 + 钥面（masked ∥ 未设词）+ 已声明上下文回显 +
+ *     当前标 + 动作簇（修改 ∥ ✕ 删钥 ∥ **`Context…` 上下文 ∥ 校验 ∥ 移除名 —— 五件、序恒定 = 现盘序**）；**副行**（`.settings-row-sub`）
  *     = `baseURL`（2026-10-09 清除批：渠道条目不携模型——原 `模型 · baseURL` 两段式收为单段）+ 不可用标 + 行尾代理开关；**第三行**（条件）=
  *     不可用原因句（`!hostBusy` 时 —— S3 分档保持；锚 `[data-unavailable-reason]`）。
  *  ② **编辑态**（钥行编辑中，`deps.edit` = 本行名）= 主行换形：名 + 钥面 + 输入（伸缩）+ 存 ∥ 消；
@@ -21,7 +21,11 @@
  * `settings.addProvider`；原两形常显表单退场 ⇒ 添加入口 = `settings:addProvider` 开专用弹窗）；单表改供
  * **添加弹窗体**（`providerAddBody` —— 形状 ∥ 暂存值 ∥ 候选三源同住 `providers` 切片；`views/settings.mjs`
  * `providerAdd` 支消费）。
- * 纪律：零 DOM（描述符树）；文案一律经 `t()`；零 `node:` ∕ 零裸包 ∕ 零 `store.mjs` import；零新词键（除轮六 2 键：`okShort` ∥ `failShort`——同域内增；三端对齐批 1 键：`addProvider`——同域内增）。
+ * 纪律：零 DOM（描述符树）；文案一律经 `t()`；零 `node:` ∕ 零裸包 ∕ 零 `store.mjs` import；新增词键仅同域内增（轮六 2 键：`okShort` ∥ `failShort`；三端对齐批 1 键：`addProvider`；上下文写面批 6 键：`context*`——字面登记 = `renderer/i18n-settings.mjs`）。
+ * **上下文写面批（2026-10-23 · 台账 #1739 · `PROVIDER.md` §6.15「写面」）**：渠道行增 `Context…` 钮 + 卡面上下文回显
+ * （父裁：逐条 `模型: NK`；单条即 `NK`；无声明 ⇒ `未声明`——**不显示 `providerSpec().context`**：渠道粒度没有模型窗口）；
+ * 弹窗体 = `providerContextBody`（渠道行已定 → 模型 → K 值；空值 = 清除）。候选源 = 渲染面既有
+ * `settings.model.models` 切片（零新增请求——父裁 A）；该渠无候选 ⇒ 手填模型 ID（`contextNoCandidates` 词）。
  */
 import { t } from "../i18n.mjs"
 import { wire } from "./chat-tool.mjs"
@@ -96,6 +100,26 @@ function reasonNode(row) {
   return { tag: "span", props: { class: "settings-row-value", "data-unavailable-reason": "" }, children: [reason] }
 }
 
+/** 已声明展示串投影（**展示面**）：读主侧回执 `modelContextText`（已经核 `formatDeclaredContextK` 出词 —— 渲染面零拼串）；
+ *  非法值条目不在展示表里（设计 §6.15「确认行 current 段回 Not declared」）。 */
+function declaredEntries(row) {
+  const table = row?.modelContextText
+  if (table === null || typeof table !== "object" || Array.isArray(table)) return []
+  return Object.entries(table).filter(([, text]) => typeof text === "string" && text !== "")
+}
+
+/** 卡面上下文回显（父裁 B）：逐条 `模型: NK`；单条即 `NK`；无声明 ⇒ 未声明词。
+ *  **不读 `context` 解析值**（渠道条目无 `model` ⇒ 该值只能落 L5 默认——显示它 = 假读数）；
+ *  展示串 = 主侧 `modelContextText`（核 `formatDeclaredContextK` 单源 —— 1024K 出 `1M`，渲染面不拼串）。 */
+function contextFaceNode(row) {
+  const entries = declaredEntries(row)
+  if (entries.length === 0) {
+    return { tag: "span", props: { class: "settings-mark", "data-model-context": "none" }, children: [t("settings.providers.contextNotDeclared")] }
+  }
+  const word = entries.length === 1 ? entries[0][1] : entries.map(([model, text]) => `${model}: ${text}`).join(" · ")
+  return { tag: "span", props: { class: "settings-mark", "data-model-context": "declared" }, children: [word] }
+}
+
 /** 渠级代理复选（S5）：`change-to-save`（值 ⇒ `onSetProxy(name, checked)`）；缺 handler ⇒ `disabled`（沿段内先例）。 */
 function proxyNode(row, handlers) {
   const props = { type: "checkbox", class: "settings-field", "data-provider-proxy": "", checked: row.proxy === true ? true : undefined }
@@ -158,9 +182,10 @@ function providerRowNode(row, handlers, deps, verify = null) {
         children: [
           { tag: "span", props: { class: "settings-row-name" }, children: [row.name] },
           keyFaceNode(row),
+          contextFaceNode(row),
           row.active === true ? { tag: "span", props: { class: "settings-mark", "data-active": "" }, children: [t("settings.providers.active")] } : null,
           ...keyControls(row, handlers, editing, deps),
-          ...(editing ? [] : [deps.verifyControl(row.name, handlers, verifyState), remove]),
+          ...(editing ? [] : [contextButton(row, handlers), deps.verifyControl(row.name, handlers, verifyState), remove]),
         ],
       },
       subRowNode(row, handlers, editing),
@@ -168,6 +193,13 @@ function providerRowNode(row, handlers, deps, verify = null) {
       verifyState === null || editing ? null : verifyNode(verify, deps),
     ],
   }
+}
+
+/** 上下文入口钮（同一行动作簇；锚名 `settings:providerContextEdit`）——缺 handler ⇒ `wire` 落 `disabled`。 */
+function contextButton(row, handlers) {
+  const word = t("settings.providers.context")
+  const onEdit = typeof handlers?.onProviderContextEdit === "function" ? () => handlers.onProviderContextEdit(row.name) : undefined
+  return rowButton("settings:providerContextEdit", row.name, word, word, onEdit)
 }
 
 /** 拉取模型状态面（S2）：三态词 —— 探期 ∕ 探通（计数 = 候选数）∥ 探不通（`reason` 经 `deps.reasonWord`
@@ -209,4 +241,68 @@ export function providerAddBody(section, handlers, deps) {
     shape: section?.addShape, presets: section?.presets, formats: deps.formats,
     probe: probeFace(section?.probe ?? null, deps), draft: section?.draft ?? null,
   }, handlers)]
+}
+
+/** 上下文编辑弹窗体（`PROVIDER.md` §6.15「写面」同形：渠道行 → 模型 → K 值；空值 = 清除）。
+ *  状态切片 = `providers.context`：`{ name, models, model, currentText, value, error }`（开径写；选中模型改写）。
+ *  候选 = 渲染面既有 `settings.model.models` 切片（父裁 A：零新增请求）；该渠无候选 ⇒ 手填模型 ID。
+ *  展示串 = 主侧回执 `modelContextText`（核 `formatDeclaredContextK` 单源）；非法值行 = `context.error` 按码分流。 */
+export function providerContextBody(section, handlers) {
+  const context = section?.context !== null && typeof section?.context === "object" ? section.context : null
+  if (context === null) return [] // 开径必先写切片；缺 ⇒ 零体（防御档 —— 禁假造）
+  const models = listOf(context.models).filter((id) => typeof id === "string" && id !== "")
+  const model = typeof context.model === "string" ? context.model : ""
+  const selectedModel = model !== "" ? model : models[0] ?? ""
+  const declared = declaredEntries(listOf(section?.rows).find((row) => row?.name === context.name) ?? null)
+  const declaredWord = declared.length === 0
+    ? t("settings.providers.contextNotDeclared")
+    : declared.map(([id, text]) => `${id}: ${text}`).join(" · ")
+  const current = typeof context.currentText === "string" && context.currentText !== ""
+    ? context.currentText
+    : t("settings.providers.contextNotDeclared")
+  const onModel = typeof handlers?.onProviderContextModel === "function"
+    ? (event) => handlers.onProviderContextModel(event?.target?.value)
+    : undefined
+  const modelField = models.length > 0
+    ? {
+      tag: "select",
+      props: { class: "settings-field", id: "provider-context-model", name: "model", "data-context-model": "", ...(onModel === undefined ? {} : { onChange: onModel }) },
+      children: models.map((id) => ({ tag: "option", props: id === selectedModel ? { value: id, selected: true } : { value: id }, children: [id] })),
+    }
+    : {
+      tag: "input",
+      props: { class: "settings-field", id: "provider-context-model", type: "text", name: "model", "data-context-model": "", value: model === "" ? undefined : model, placeholder: t("settings.providers.modelLabel") },
+    }
+  const onSave = typeof handlers?.onProviderContextSave === "function" ? handlers.onProviderContextSave : undefined
+  // 反馈行（单点分流）：非法值 → `contextInvalid`；未声明空提交 → `contextNothingToClear`（清除确认批 · 台账 #1739）。
+  const feedback = (() => {
+    const error = context.error
+    if (error === null || typeof error !== "object") return null
+    if (error.code === "invalid-value") {
+      return { tag: "div", props: { class: "settings-verify", "data-context-error": "invalid-value" }, children: [t("settings.providers.contextInvalid", { value: String(error.value ?? "") })] }
+    }
+    if (error.code === "nothing-to-clear") {
+      return { tag: "div", props: { class: "settings-row-value", "data-context-notice": "nothing-to-clear" }, children: [t("settings.providers.contextNothingToClear", { model: String(error.model ?? "") })] }
+    }
+    return null
+  })()
+  return [{
+    tag: "form",
+    props: { class: "settings-form", "data-context": String(context.name ?? "") },
+    children: [
+      { tag: "div", props: { class: "settings-row" }, children: [
+        { tag: "span", props: { class: "settings-row-name" }, children: [String(context.name ?? "")] },
+        { tag: "span", props: { class: "settings-row-value", "data-context-declared": "" }, children: [declaredWord] },
+      ] },
+      { tag: "label", props: { class: "settings-field-label", for: "provider-context-model" }, children: [t("settings.providers.modelLabel")] },
+      modelField,
+      models.length > 0
+        ? null
+        : { tag: "div", props: { class: "settings-row-value", "data-context-no-candidates": "" }, children: [t("settings.providers.contextNoCandidates")] },
+      { tag: "div", props: { class: "settings-row-value", "data-context-prompt": "" }, children: [t("settings.providers.contextPrompt", { provider: String(context.name ?? ""), model: selectedModel === "" ? "—" : selectedModel, current })] },
+      { tag: "input", props: { class: "settings-field", id: "provider-context-k", name: "k", type: "text", inputMode: "numeric", "aria-label": t("settings.providers.context"), value: typeof context.value === "string" && context.value !== "" ? context.value : undefined, placeholder: "128" } },
+      feedback,
+      { tag: "button", props: wire({ class: "settings-submit", type: "button", "data-action": "settings:providerContextSave" }, onSave), children: [t("settings.save")] },
+    ],
+  }]
 }

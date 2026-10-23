@@ -1,6 +1,10 @@
 /**
- * providers.mjs — provider 族四通道：`provider:list` / `provider:save` / `provider:remove` /
- * `provider:verify`（批档 §2.4 契约）。
+ * providers.mjs — provider 族通道：`provider:list` / `provider:save` / `provider:remove` /
+ * `provider:verify`（批档 §2.4 契约）+ B10 W2 四出口 + **`provider:setModelContext`（上下文写面批 · 按模型 K 声明）**。
+ *
+ * **上下文写面批（2026-10-23 · `PROVIDER.md` §6.15「写面」）**：设计受影响文件表只列渲染面三档；本档与
+ * `ipc-relays.mjs` ∥ `ipc-registry.mjs` ∥ `src/preload/preload.cjs` 为通道落点（无通道 ⇒ 渲染面 `ask` 必拒，交付必需）。
+ * 写面判据 = 核 `normalizeModelKey` ∥ `positiveInt`（零端侧副本，零端侧 ×1024）。
  *
  * 纪律（§2.3 写面条款）：配置读写**只**经核 `config-io.mjs`（`resolveProviders` 读 /
  * `addProviderEntry`·`removeProviderEntry` 变更子 / `writeConfigAtomic` 唯一写盘执行体）；
@@ -34,6 +38,9 @@ import {
   _configPath, addProviderEntry, removeProviderEntry, removeProviderKeyFromConfig,
   resolveProviders, setProviderKey, writeConfigAtomic,
 } from "@thincoder/core/config-io.mjs"
+// L1 人工声明（按模型，K）的写面判据 = 核单源（键归一末段尺子 + 正值谓词）——端侧零第二套匹配语义。
+import { normalizeModelKey, positiveInt } from "@thincoder/core/model-context.mjs"
+import { formatDeclaredContextK, providerSpec } from "@thincoder/core/model-specs.mjs"
 import { customFieldsError, probeAdmission, probeTargetOf } from "@thincoder/core/provider-flows.mjs"
 import { admissionOf, probeChannelModels } from "@thincoder/core/provider/list-models.mjs"
 import { proxyFetch } from "@thincoder/core/proxy.mjs"
@@ -50,6 +57,34 @@ const SHAPES = ["preset", "custom"]
 /** 条目是否持密钥（空串 = 无——核 `apiKey` 缺省空串）。 */
 function hasKeyOf(entry) {
   return typeof entry?.apiKey === "string" && entry.apiKey.length > 0
+}
+
+/** 已声明映射投影（回执用）：**原值**透传（键存在即算——值非法的条目也保留，设计 §6.15：非法值条目同样要能删掉；
+ *  非对象 / 数组 ⇒ 空表）。 */
+function rawModelContextOf(entry) {
+  const table = entry?.modelContext
+  if (table === null || typeof table !== "object" || Array.isArray(table)) return {}
+  return { ...table }
+}
+
+/** 已声明展示串投影（回执用）：**经核 `formatDeclaredContextK(k)` 出词**（K→token 展示换算只一处——手拼会在
+ *  1024K 上出 `1024K` 而核出 `1M`）；只投影合法正整数（非法值条目保留在原值表里供删除，但不展示为 K）。 */
+function modelContextTextOf(entry) {
+  const table = entry?.modelContext
+  if (table === null || typeof table !== "object" || Array.isArray(table)) return {}
+  const out = {}
+  for (const [key, value] of Object.entries(table)) {
+    const k = positiveInt(value)
+    if (k !== null) out[key] = formatDeclaredContextK(k)
+  }
+  return out
+}
+
+/** 按末段尺子找既有键（写面键处理单源 = 核 `normalizeModelKey`——末段相等、大小写不敏感）。 */
+function matchingContextKeys(table, model) {
+  const target = normalizeModelKey(model)
+  if (!target) return []
+  return Object.keys(table).filter((key) => normalizeModelKey(key) === target)
 }
 
 /** 派生条目隐藏判据（B1 批 · 台账 #1212 —— 单源 = `docs/core/design/TEAM.md` §2.4 ∥ `PROVIDER.md` §6.25）：
@@ -73,7 +108,11 @@ function presetChoices() {
 }
 
 /**
- * `provider:list` ⇒ `{ ok, presets:[{ name, desc, baseURL }], providers:[{ name, shape, baseURL, hasKey, maskedKey, active, proxy, available?, unavailableReason? }], active, defaultModel }`。
+ * `provider:list` ⇒ `{ ok, presets:[{ name, desc, baseURL }], providers:[{ name, shape, baseURL, hasKey, maskedKey, active, proxy, modelContext, modelContextText, context, available?, unavailableReason? }], active, defaultModel }`。
+ * **上下文写面批（2026-10-23 · `PROVIDER.md` §6.15）**：逐行增三键——`modelContext`（已声明映射原值，K，供编辑面回显）
+ * + `modelContextText`（同键的展示串，经核 `formatDeclaredContextK` 出词——渲染面零拼串）
+ * + `context`（`providerSpec(entry).context` 解析值，token；渠道条目不携 `model` ⇒ 除旧键外落 L5 默认，供百分比面）。
+ * 行面展示读 `modelContextText`（父裁：`context` 留给带 `model` 的用量面——渠道粒度的解析值不属于卡片）。
  * **2026-10-09 清除批**：行去 `model` 键（渠道条目不携模型）；顶层增 `defaultModel`（核 `loadConfig` 单源
  * 直取 —— 渲染面「激活渠道 ∥ 当前模型」两读数由该复合串直读；缺 ∕ 非串 ⇒ `null`）。
  * `presets` = 核预设表投影（24 条 · 序 = 核表声明序——供设置面渠道段与首启向导第一步选预设，
@@ -106,6 +145,10 @@ export function providerList() {
         maskedKey: hasKey ? maskKey(`providers.${p.name}.apiKey`, p.apiKey) : null,
         active: p.name === activeProvider,
         proxy: p.proxy === true, // S5：渠级代理位投影
+        // 上下文写面批：已声明映射**原值**（键存在即算——非法值条目同样要能删掉）+ 展示串（核格式器单源）+ 链解析值。
+        modelContext: rawModelContextOf(p),
+        modelContextText: modelContextTextOf(p),
+        context: providerSpec(p).context,
         ...(admission ? { available: admission.ok === true } : {}),
         ...(admission && admission.ok === false && typeof admission.reason === "string" && admission.reason !== ""
           ? { unavailableReason: admission.reason } : {}),
@@ -230,6 +273,58 @@ export function providerSetProxy(payload) {
   const entry = resolveProviders().providers.find((p) => p.name === name) // 回读核验：写内 `!entry` 早退 ⇒ 零假成功
   if (entry === undefined || (entry.proxy === true) !== proxy) return { ok: false, reason: "unavailable" }
   return { ok: true, reason: null }
+}
+
+/**
+ * `provider:setModelContext(payload)` ⇒ `{ ok:true, reason:null }` ∥ `{ ok:false, reason }`：载荷 `{ name, model, k }`——
+ * **按模型的人工上下文声明**（`PROVIDER.md` §6.15 L1，单位 **K**：`128` = 128K）。
+ *
+ * - 值校验 = 先 parse 再判（交互输入是字符串）：`Number(String(v).trim())` → 核 `positiveInt`；`"128"` 收，
+ *   `"128K"` / `"1.5"` / `"-1"` / `"abc"` / `"0"` 拒（`invalid-value`，盘上零变）。**端侧零 ×1024**——乘点只在核。
+ * - 键处理 = 核末段尺子：命中既有键 ⇒ 改写该键（不新增第二种拼写）；未命中 ⇒ 模型 id 原样作键。
+ * - 清除 = `k` 缺 ∥ `null` ∥ 空白串 ⇒ 删该模型键；对象删空 ⇒ `modelContext` 键整体删除（不留空对象）。
+ * - 同侧两条键归一同撞（歧义）⇒ 拒 `ambiguous`（不猜、不择一——与读面「该模型视为未提供」同口径）。
+ * - 写经核 `writeConfigAtomic`（端侧零自写盘）+ 回读核验（零假成功）。
+ */
+export function providerSetModelContext(payload) {
+  const name = String(payload?.name ?? "").trim()
+  const model = typeof payload?.model === "string" ? payload.model.trim() : ""
+  if (!name || !model || !normalizeModelKey(model)) return { ok: false, reason: "invalid-shape" }
+  const rawK = payload?.k
+  const clear = rawK === undefined || rawK === null || (typeof rawK === "string" && rawK.trim() === "")
+  const k = clear ? null : positiveInt(Number(String(rawK).trim()))
+  if (!clear && k === null) return { ok: false, reason: "invalid-value" }
+  const entry = resolveProviders().providers.find((p) => p.name === name)
+  if (entry === undefined) return { ok: false, reason: "unavailable" }
+  if (matchingContextKeys(rawModelContextOf(entry), model).length > 1) return { ok: false, reason: "ambiguous" }
+  let raced = false
+  const w = writeConfigAtomic(_configPath(), (disk) => {
+    const target = (Array.isArray(disk.providers) ? disk.providers : []).find((p) => p?.name === name)
+    if (target === undefined) return
+    const table = target.modelContext !== null && typeof target.modelContext === "object" && !Array.isArray(target.modelContext)
+      ? target.modelContext
+      : null
+    const matches = table === null ? [] : matchingContextKeys(table, model)
+    if (matches.length > 1) { raced = true; return } // 写窗内变歧义 ⇒ 零写（下面按局部写结果判）
+    if (clear) {
+      if (table === null || matches.length === 0) return
+      for (const key of matches) delete table[key]
+      if (Object.keys(table).length === 0) delete target.modelContext
+      return
+    }
+    const key = matches.length === 1 ? matches[0] : model
+    if (table === null) target.modelContext = { [key]: k }
+    else table[key] = k
+  })
+  if (raced) return { ok: false, reason: "ambiguous" }
+  if (!w.ok) return { ok: false, reason: w.reason }
+  // 回读校验（同 `providerSetKey` ∥ `providerSetProxy`：零假成功）——**键存在判据用原表**（非法值条目也能删）
+  const after = resolveProviders().providers.find((p) => p.name === name)
+  if (after === undefined) return { ok: false, reason: "unavailable" }
+  const afterTable = rawModelContextOf(after)
+  const afterMatches = matchingContextKeys(afterTable, model)
+  if (clear) return afterMatches.length === 0 ? { ok: true, reason: null } : { ok: false, reason: "unavailable" }
+  return afterMatches.length === 1 && positiveInt(afterTable[afterMatches[0]]) === k ? { ok: true, reason: null } : { ok: false, reason: "unavailable" }
 }
 
 /**

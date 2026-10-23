@@ -1,3 +1,14 @@
+## [Unreleased]
+
+### Added
+
+- **设置面板可按模型设上下文窗口（K）**：providers 卡新增 `Context…` 入口——选模型（候选取已到手的模型切片，零新增请求；无候选可手填）→ 输 K → 保存写入 `providers[].modelContext`。八键文案 zh ∥ en 齐全；清除走确认层（默认取消，带当前值）。
+- **新协议对 `saveProviderModelContext` / `providerContextSaved`**（登记见 `docs/vsc/design/SETTINGS.md` §2.21 与 `docs/vsc/design/WEBVIEW-PROTOCOL.md` §3.2 行 35）。
+
+### Changed
+
+- **渠道行窗口值改读已声明值**：不取 `providerSpec().context`（渠道条目不携模型，该值在渠道粒度上只会落到兜底，写 128 会显示 125K）。展示与桥接同源，端侧零 ×1024。
+
 # Changelog
 
 All notable changes to ThinCoder VS Code are documented here.
