@@ -18,7 +18,7 @@
 | plan | 纯只读规划 | 普通 |
 | coder | 父全量读写执行 + verify / advisor 自评 + 强制交付表 | 普通 |
 | eng-coder | 工程模式替换 coder + 设计驱动 overlay + 必带 `designToken` + explore 受限审计 | 工程 |
-| eng-designer | 工程模式写稿面唯一作者（需求档 / 设计档 / 批次档 §2，含修订）+ **无 designToken**（授权 = 需求已确认）+ 必带 `batchDoc` + explore 受限勘察 | 工程 |
+| eng-designer | 工程模式写稿面唯一作者（设计档 / 批次档 §2，含修订；**需求档不归它**——只读，改动回主 agent）+ **无 designToken**（授权 = 需求已确认）+ 必带 `batchDoc` + explore 受限勘察 | 工程 |
 
 **模式过滤**：普通模式 explore / plan / coder；工程模式 explore / eng-designer / eng-coder——schema enum 反映现行模式（角色互斥：工程禁 plan 与 coder、普通禁 eng-coder 与 eng-designer；schema 枚举 + 运行期硬门禁双保险；裁定源 = §6.22 F5）。
 
@@ -66,7 +66,7 @@
 
 - **面**：CLI TUI **顶层 sync 块**运行中 ⏹ 可点——定向中止（只停子代理，父回合继续拿 stopped 报告）；嵌套层无独立 ⏹ 面；
   VSC webview 同步 spawn 块 ⏹ = 按 `syncLive` 门控（宿主只读采样核 `_syncChildAborts` registry——X10 甲案；
-  **判据 / 门控 / 路由三条已落，产者侧序缺陷致运行期未达 ⇒ 降级登记**——见 `WEBVIEW.md` §5.2）——
+  **判据 / 门控 / 路由三条已落，产者侧序缺陷致运行期未达 ⇒ 降级登记**——见 `docs/vsc/design/WEBVIEW.md` §5.2）——
   点击 ⇒ 宿主 sync 分支（`thincoder-vscode/src/extension/panel-messages-turn.mjs` `handleCancelSubagent`）经核 `cancelSyncChild` 单源直连（与 CLI 同法）；`action:"cancel"` 只对 async 池 / advisor 池。
 - **信号链**：`armSyncChildAbort` 建**自属** `AbortController` 并链到基信号 `buildChildSignal`（`_sessionSignal ?? ctx.signal`）；
   注册 `parent._syncChildAborts`（Map，key = relayPrefix 去尾 `role#N`）——try / finally **三路径注销**。
@@ -328,7 +328,7 @@
 - 不做 AC-M5 的核验本身（AC-M5-1/2/5/6 = 甲批）；
 - 不在正常模式删 `plan`/`coder`（F5 明文：normal 模式不删）；
 - 不动 advisor 通道与 `rejectEngineeringFilePaths` 谓词面；
-- 不改 `thincoder-cli/docs/**` / `thincoder-vscode/docs/**` 旧档中的同句散文（`docs/README.md` §2 政策：产品树旧档 = **迁移期参照历史**，保留 ≠ 维护；其中仅 `thincoder-cli/docs/design/AGENT-LOOP.md` 与 `thincoder-vscode/docs/design/AGENT-LOOP.md` 载同句——登记为参照历史，不随批改）；
+- 不改产品树旧档（`thincoder-cli/docs/**` / `thincoder-vscode/docs/**`）中的同句散文：`docs/README.md` §2 政策 = 产品树旧档属**迁移期参照历史**，保留 ≠ 维护——其中载同句者登记为参照历史，不随批改。
 - 不做 VSC 清单的**反向**自检（盘上未登记档 → 拒）——见 `TESTING.md` §10.1「不做」。
 
 ## 6.24 VSC 装配面（第三面）enum 收正 + 判据收紧

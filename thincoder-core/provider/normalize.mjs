@@ -148,6 +148,7 @@ export function normalizeToolPairing(messages) {
     out.push(m)
     if (m.role !== "assistant" || !m.tool_calls?.length) continue
     for (const tc of m.tool_calls) {
+      if (!tc || typeof tc !== "object") continue // 空元素不携带 id：跳过，不让整个回合崩（#31）
       const t = toolById.get(tc.id)
       if (t) {
         toolById.delete(tc.id)

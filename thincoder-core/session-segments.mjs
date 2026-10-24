@@ -41,6 +41,7 @@ export function slimForDisplay(m) {
   if (m && m.role === "assistant" && Array.isArray(m.tool_calls)) {
     let changed = false
     const tool_calls = m.tool_calls.map((tc) => {
+      if (!tc || typeof tc !== "object") return tc // 空元素原样带走：读取侧不许崩（#31）
       const args = tc.function?.arguments
       if (typeof args === "string" && args.length > 300) {
         changed = true

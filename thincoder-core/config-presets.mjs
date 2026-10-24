@@ -13,7 +13,7 @@
  * 候选清单字段亦不预置——运行期从 provider 拉取（`GET /models`）。
  */
 
-/** Built-in provider presets: shared by /provider add <preset> and first-run wizard. */
+/** Built-in provider presets: shared by the `/model` provider flow, the first-run wizard, and the desktop / VSC provider forms. */
 export const PROVIDER_PRESETS = {
   deepseek: { baseURL: "https://api.deepseek.com", thinking: { type: "enabled" }, reasoningEffort: "max", maxTokens: 384_000, desc: "DeepSeek" },
   kimi:     { baseURL: "https://api.moonshot.cn/v1", thinking: null, reasoningEffort: "max", maxTokens: 131072, desc: "Kimi / Moonshot" },
