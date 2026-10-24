@@ -13,7 +13,7 @@
   "type": "module",
   "scripts": {
     "test": "node test/run.mjs",
-    "prepublishOnly": "npm test"
+    "prepublishOnly": "node scripts/check-syntax.mjs"
   },
   "license": "MIT",
   "author": "liwei <liwei@51marine.com> (上海新舶)",

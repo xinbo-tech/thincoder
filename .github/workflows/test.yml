@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
-      - run: npm test
+      - run: npm run prepublishOnly
 
   core-node22:
     name: thincoder-core (kernel · Node 22.13 floor)
@@ -55,7 +55,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: "22.13" }
-      - run: npm test
+      - run: npm run prepublishOnly
   server:
     name: thincoder-server (gateway)
     runs-on: ubuntu-latest

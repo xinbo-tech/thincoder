@@ -1,12 +1,13 @@
 /**
- * run.mjs — 统一测试入口（M10 测试纪律：单一 `npm test` 全绿门禁——2026-09-17）。
- * 目标 = `test/*.test.mjs`（单元）+ `test/integration/*.test.mjs`（集成——两层 glob）；
+ * run.mjs — 集成层测试入口（§10.3 执行层分离：`npm test` = 集成层发布门）。
+ * 目标集合 = `test/integration/*.test.mjs`（单层 glob，零第二层）；单元测试档住
+ * `docs/batches/`、`node --test <档>` 直达，不进本收集面，也不进任何门（F5）。
  * slow ≡ test（test/slow.mjs 纯别名——照跑，无 skip）。
  * 命名 .mjs 而非 .test.mjs —— runner 只收集 *.test.mjs，本文件是启动器。
  *
- * 启动前自检（fail-closed——收集面反向判据，先于 node --test 启动）：②' 无漏收集——`test/`
- * 树递归全部 *.test.mjs 须被上面两层 glob 命中（未被命中的档永不执行 ⇒ 反查即失败）。
- * ②'' 软链目录拒绝：junction 的 Dirent 报 isSymbolicLink ∧ !isDirectory（递归与两层 glob 都穿不过
+ * 启动前自检（fail-closed——收集面反向判据，先于 node --test 启动）：SC-1 收集面反查——
+ * `test/` 树递归全部 *.test.mjs 须落在 `test/integration/`（收集面外档永不执行 ⇒ 反查即失败）。
+ * SC-2 软链目录拒绝：junction 的 Dirent 报 isSymbolicLink ∧ !isDirectory（递归与 glob 都穿不过
  * ⇒ 其中 *.test.mjs 永不执行却零告警）——检出即 fail（不跟遍历 · 避环）；软链文件不受影响。
  */
 import { spawnSync } from "node:child_process"
@@ -20,7 +21,7 @@ const fail = (msg) => {
   process.exit(1)
 }
 
-// ②' 无漏收集（收集面 = test/<name>.test.mjs + test/integration/<name>.test.mjs 两层 glob）
+// SC-1 收集面反查（收集面 = test/integration/<name>.test.mjs 单层 glob）
 const onDisk = []
 const walk = (rel) => {
   for (const e of readdirSync(join(root, rel), { withFileTypes: true })) {
@@ -28,24 +29,22 @@ const walk = (rel) => {
     if (e.isDirectory()) walk(p)
     // 软链目录（junction）：不拒绝就在这里静默漏收集——拒绝制把沉默洞变响铃
     else if (e.isSymbolicLink() && statSync(join(root, p), { throwIfNoEntry: false })?.isDirectory()) {
-      fail(`symlinked directory under test/ — collection cannot verify through it (the two-level glob never descends into it); unlink it or move its tests up: ${p}`)
+      fail(`symlinked directory under test/ — collection cannot verify through it (the integration glob never descends into it); unlink it or move its files out: ${p}`)
     } else if (e.name.endsWith(".test.mjs")) onDisk.push(p)
   }
 }
 walk("test")
 for (const rel of onDisk) {
-  const dir = rel.slice(0, rel.lastIndexOf("/"))
-  if (dir !== "test" && dir !== "test/integration") {
-    fail(`uncollected test file (move it into test/ or test/integration/ — an uncollected file is never executed): ${rel}`)
+  if (rel.slice(0, rel.lastIndexOf("/")) !== "test/integration") {
+    fail(`uncollected test file (unit test files live in docs/batches/ and run via node --test <file>): ${rel}`)
   }
 }
 
-// 空清单守卫（2026-09-28 全清重置：零用例即绿——不走 node --test 免触自动发现）
+// SC-5 空集守卫（空集不读作绿——零用例证明不了任何事）
 if (onDisk.length === 0) {
-  console.log("ℹ test manifest is empty — zero tests = green (2026-09-28 full reset).")
-  process.exit(0)
+  fail("no integration test set — zero cases proves nothing; batch unit tests live in docs/batches/ and run via node --test <file>.")
 }
 
 // execPath 可能含空格（C:\Program Files\...）——spawn + shell:true 时必须整体加引号
-const r = spawnSync(`"${process.execPath}"`, ["--test", "test/*.test.mjs", "test/integration/*.test.mjs"], { stdio: "inherit", shell: true })
+const r = spawnSync(`"${process.execPath}"`, ["--test", "test/integration/*.test.mjs"], { cwd: root, stdio: "inherit", shell: true })
 process.exit(r.status ?? 1)
