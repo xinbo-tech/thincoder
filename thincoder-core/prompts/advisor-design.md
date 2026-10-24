@@ -49,10 +49,10 @@ Evaluate the design against these dimensions:
     **The answer takes one of three forms**: `existing: …` · `none found: …` · `existing but unusable: …`.
     **Unused existing piece**: an existing piece left unused with no reason it is unusable ⇒ 🔴.
     **A missing line** stays 🟡.
-12. **Integration-test design**: the design document must contain an integration-test design section — the scenarios this change requires, the business result each asserts, and the business requirement each traces back to.
-    **A design missing that section ⇒ 🔴 (design incomplete)**; a change that alters no business behavior states so, with its reason, in that section.
-    **A reason that is not "this change alters no business behavior" does not stand** — e.g. the 50–100 case window being full ⇒ still 🔴.
-    **Why**: integration tests are the only acceptance run that starts from a user-visible entry, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves the change with no acceptance at all.
+12. **Integration-test design**: the design document must contain an integration-test design section — the scenarios this change requires, the **interaction between components** each evaluates, the business result each asserts, the project's entry, and the business requirement each traces back to.
+    **A design missing that section ⇒ 🔴 (design incomplete)**; a change that touches neither an interaction between components nor a business-observable result an existing case asserts states so, with its reason, in that section.
+    **A reason that is not "this change touches neither the interaction between components nor a business-observable result an existing case asserts" does not stand** — e.g. the 50–100 case window being full ⇒ still 🔴.
+    **Why**: no other acceptance run evaluates the interaction between components, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves that interaction with no acceptance at all.
     **A design's acceptance naming a full-suite run ⇒ 🔴 (the release gate written as a round cost)**: the criterion is the changed-face unit test file (`node --test <file>`), or a one-off reading when no runnable face exists; the integration half is reported in the closeout line, not run here.
     Why: acceptance is what the implementing round runs — a suite there turns the release gate into a round cost, and a repeat run proves nothing new.
 

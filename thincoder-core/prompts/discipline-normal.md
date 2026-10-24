@@ -188,10 +188,10 @@ The report must contain: what changed / why, the paths of files touched, how you
 - Code changes must be verified.
 - **Unit tests** exercise **a single component in isolation** (its external collaborators stubbed or faked) — the **feedback loop the developer runs right after the change**, answering "did this spot get fixed right?".
 - **Unit test cases stay with the batch record** (**development-time tools — they live with the batch, not in the project's `test/` tree**): a batch's unit tests are kept as **unit test files** — named after the batch record, kept in the batch directory, one to a few files per batch.
-- **Unit test files are not promoted into integration tests** — integration cases are established from business needs, not graduated from unit files.
-- **Integration tests** exercise components working together (the real composition).
+- **Unit test files are not promoted into integration tests**.
+- **Integration tests** combine components and test the **interaction between components**.
 - **The pre-release acceptance loop**: walk through the real business from a user-visible entry.
-- **Integration test assets**: business scenarios + production-problem additions, asserting only business-observable results; permanent, and a single change adds no case to the set (per-change additions make cost scale with change frequency).
+- **Integration test assets**: business scenarios + production-problem additions, asserting only business-observable results; permanent, and a change that alters an interaction between components or a business-observable result an existing case asserts must revise them.
 - **The release gate**: the project's full verification chain.
 - **Where integration cases live**: together with the test code, in the project's `test/` directory.
 - **Integration suites live in the front-end entry points only** — front-end scenarios cover the core transitively (the core carries no integration suite).

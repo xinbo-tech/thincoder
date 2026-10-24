@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-24 · 来源 = 用户 2026-10-24 19:41「咱能不把话说得这么死这么细吗？你这么一细化要求，就把事情搞串味儿了，你要不先上网学习一下集成测试的概念再来写？」+ 19:43「改」。
 > 台账 = #1768（TESTING · 归批）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-24
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成 2026-10-24（逐字块 B1–B12 + 落点表 L1–L13 + 验收 A1–A8；4 条上抛待裁）
@@ -152,5 +152,77 @@ VERDICT: pass
 VERDICT: pass
 
 ## §4 用户批准（主 agent）
+
+**批准依据**：用户 2026-10-24 19:43「改」+ 19:46「你别生造词，严肃认真一点」+ 22:15「都做吧，后续都自动推进」。设计评审链：轮 1 changes-required（1 🔴 + 5 🟡 + 6 🔵）→ 修正 → 轮 2 核 12 条全 Fixed（新增 1 🟡 + 1 🔵）→ 修正 → 轮 3 pass（token `5b0f52fa-…`）→ 实施（`#73`）。
+
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成 2026-10-24
+
+
+
+**实施完成 2026-10-24**
+
+**落笔**：设计 B1–B12 逐字落四档 12 个落点（L1–L12），逐处 ±0 行；L13 镜像块零改。
+
+| 落点 | 改了 file:line | Δ字符 |
+|---|---|---|
+| L1 | thincoder-core/prompts/discipline-engineering.md:171 | −87 |
+| L2 | 同档 :179-180 | +39 |
+| L3 | 同档 :181 | −54 |
+| L4 | 同档 :192 | +24 |
+| L5 | thincoder-core/prompts/discipline-normal.md:192 | +7 |
+| L6 | 同档 :194 | +28 |
+| L7 | 同档 :191 | −87 |
+| L8 | thincoder-core/prompts/persona-eng-designer.md:136-137 | +95 |
+| L9 | thincoder-core/prompts/advisor-design.md:52 | +76 |
+| L10 | 同档 :53 | +80 |
+| L11 | 同档 :54 | +81 |
+| L12 | 同档 :55 | −9 |
+
+**文件总量**：工程 43,352 → 43,274（−78）· 普通 38,866 → 38,814（−52）· 设计席 19,526 → 19,621（+95）· 评审 15,157 → 15,385（+228）——与设计 §6.50 受影响文件表一致。
+
+**验收读数**（一次性 node 读档；零常驻断言）：
+
+- A1：B1–B12 与设计围栏块逐字符一致 12/12（按落点坐标比对）；设计 A1 的逐档期望串各恰 1 次。
+- A2：`thincoder-core/prompts/` 16 档扫五旧词（`business behavior` ∥ `components working together` ∥ `established from business needs` ∥ `a single change adds no case` ∥ `the only acceptance run that starts from a user-visible entry`）⇒ 各 0。
+- A3：`interaction between components` = 工程 2 ∥ 普通 2 ∥ 设计席 2 ∥ 评审 4。
+- A4：全 16 档无 >300 字符行（四档 max = 300 ∥ 296 ∥ 298 ∥ 298）；B2 的 `Why` 行去缩进后以 `Why:` 起头。
+- A5：`node scripts/prompt-refs-check.mjs` ⇒ `命中 0`（提示词面 70 档 · 代码面 466 档）。
+- A6：行数 344 ∥ 314 ∥ 150 ∥ 137（逐处 ±0）。
+- A7：`docs/core/design/TESTING.md` 扫 `business behavior` ∥ `components working together` 各 0；`:104` 术语辨异行在盘。
+- A8：`doc_check(mode:"gate", docs=[四档])` ⇒ 首行 `DOC-CHECK GATE: PASS`（0 条命中）。
+
+**审计轮**：内部 explore 只读偏差审计 1 轮 ⇒ 12/12 MATCH · `OUT-OF-LIST CHANGES: none` · 两维形在 B2 ∥ B6 ∥ B7 ∥ B9 ∥ B10 俱在；terminal = clean。
+
+**代码评审轮**：内部 advisor `type=code` 1 轮（范围 = 四档）⇒ `VERDICT: pass`（🔴 0 · 🟡 2 · 🔵 3）。5 条均落设计块措辞面：轴一动词四面不一致（`touches` ↔ `alters`）· `:11` 的「UAT = integration testing」等式 · 评审面 `:53`/`:54` 冠词 `an`/`the` · `business result` ↔ `business-observable result` 两面用词（§3 轮 3 已记 🔵14）· 窗口句 `:183` 单维措辞。
+
+**修正轮**：0 —— 评审结论 pass、无必改项；5 条均落在设计逐字块上，改即偏离设计，原样上报父侧（设计席笔）。
+
+**并发事件（披露）**：父侧提交 `c165a157`（2026-10-24 22:15:37）在我落笔期间把 `discipline-engineering.md` 一并入库；其余三档改动当前在工作树未提交（内容以盘上实读为准）。
+
+**测试面**：本批零代码行为面，无单元测试档新增 ∥ 删除；验证 = 一次性读档计数。集成测试设计 = 两维都未触及（提示词 4 档 + 设计档笔；组件之间的交互零改、既有用例断言零改）⇒ 无集成用例新增 ∥ 修订。
+
+**未跑全量**：未跑 `npm test` ∥ 任何全量套件（本批不改可执行行为；全量 = 父侧收口门）。
+
 ## §6 验证与收口（父代理）
+
+## 验证与收口
+
+**父侧复核（独立复跑，不采信报告）**
+
+| 项 | 读数 |
+|---|---|
+| 旧词五串残留 | **0 档**（16 档全域） |
+| `interaction between components` | **2 ∥ 2 ∥ 2 ∥ 4**（工程 ∥ 普通 ∥ 设计席 ∥ 评审） |
+| 四档行数 | **344 ∥ 314 ∥ 150 ∥ 137**（逐处 ±0） |
+| `>300` 字符行 | **0**（四档） |
+
+**批内单测档**：无（提示词文本，无 `node --test` 可跑面）。
+
+**集成场景 = 无新增（记明理由）**：改动是判据文本，不改变任何代码路径；其效果由模型行为体现，无可确定性断言的前端入口。
+
+**收口测试行**：① 本批无单测档 · ② 集成集现量 15 例 / 窗口 50–100，本批增删 **0**。
+
+**评审遗留（已入台账）**：实施轮内部代码评审报的 5 条措辞项（动词 `touches` ∥ `alters` 四面不一 · `discipline-engineering.md:11` 的「UAT = integration testing」等式 · 冠词 `an`/`the` · `business result` ↔ `business-observable result` · 窗口句仍是单维措辞）——均非阻断，**并入 `#1771`**（提示词措辞收口批）。
+
+**本批的自我修正记录**：父侧曾在任务书里写「轴从业务行为**换成**组件之间的交互」，评审轮 1 的 🔴 指出该收窄与需求 F34 冲突；最终落为**两维取或**。父侧另自造「接缝」一词写入批档，经用户指出后撤回（该词非标准术语）。

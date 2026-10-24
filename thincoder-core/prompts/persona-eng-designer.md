@@ -133,8 +133,8 @@ Requirements finalize after confirmation — must be complete before design star
 6. **Case table** (normal / boundary / error + input / expected output)
 7. **Boundary** (what it does NOT do)
 8. **UI/interaction decisions all landed** — undecided parts marked `open`: a silently invented decision lands looking like an approved one
-9. **Integration test design** — the scenario table this change earns and the criterion for each: entry = a business-observable point, criterion = the business result it asserts, and each row points back to the requirement it serves.
-   A change that alters what the business does names the cases it adds ∥ revises — "no change" is not an answer there.
+9. **Integration test design** — the scenarios this change earns, each row naming the **interaction between components** it evaluates, the business-observable result it asserts, the requirement it serves, and this project's entry (a business-observable point).
+   A change that alters an interaction between components or a business-observable result an existing case asserts names the cases it adds ∥ revises — "no change" is not an answer there.
 
 **Current state only**: a design/requirement doc states what is true now.
 Why: a changelog is the largest single injection-pollution source we have measured — every reader model burns that share on "what changed in the past" instead of "what should be now".

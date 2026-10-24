@@ -598,7 +598,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 - **用例 → 行**：集成用例档内的用例标题以 RTM 编号开头（如 `test('1-1 …')`）——用例标识符与报告标识符同字，标准 §6.4.1.3 a) 的「测试用例的标识符」由此机判。**次序：先定 RTM 编号 → 再落用例标题**（编号先行）；**实施轮随用例设立**（本设计不写 `test/**`）。
 - **覆盖判据**：故事下每个用例一行；一个用例不出现在两张表（不重复登记）。
 - **设计轮 → 表**：设计的第一动作 = 读该端 `<包>/test/RTM.md` 出 delta（改坏 ∥ 冗余 ∥ 缺失三问）——机制与判据 = §11.15。
-- **现状**：CLI 集成层 5 档 15 例在盘，首批落表 = §11.16；vsc ∥ desktop 集成层尚未建立 ⇒ 两份表起步为骨架（无故事节、注「尚无集成用例」），故事节随首个用例设立；**不得以单元测试档凑行**（两层永不互转，§3.2）。
+- **现状**：CLI 集成层 5 档 15 例在盘，首批落表 = §11.16（性质 = **既有 15 例回填索引**，不是 §5.1 的起步批量；§5.1 起步批量 = 场景① × 三前端、例数窗 3–9，仍待落——CLI 缺的 3 行编号见 §11.16「D-3 缺失答案」）；vsc ∥ desktop 集成层尚未建立 ⇒ 两份表起步为骨架（无故事节、注「尚无集成用例」），故事节随首个用例设立；**不得以单元测试档凑行**（两层永不互转，§3.2）。
 
 ### 11.5 签署面
 
@@ -663,13 +663,14 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 | 文件 | 现（行） | Δ | 本批 |
 |---|---|---|---|
 | `docs/core/design/TESTING.md`（本档自身） | —（行数随本节改笔变化，不落固定读数） | +§11.15–§11.17 三节；§11.1 ∕ §11.2 ∥ §11.4 ∥ §11.8 ∥ §11.10–§11.12 ∥ §11.14 改笔 | 设计轮落 |
-| `docs/core/requirements/TESTING.md` | —（父侧笔） | F29 的名称 ∥ 路径定死 | 父侧落 |
-| `thincoder-core/prompts/persona-eng-designer.md` | 151 | 第 9 项按 §11.17 重写 | 实施轮落 |
-| `thincoder-core/prompts/advisor-design.md` | 138 | 第 12 条按 §11.17 加索引起点 | 实施轮落 |
-| `thincoder-core/prompts/discipline-engineering.md` | 345 | 集成段按 §11.17 加一条 | 实施轮落 |
-| CLI 包 `<包>/test/RTM.md` | 0（不存在） | 5 故事节 + 15 行 + 签署面（§11.16） | 实施轮建 |
-| CLI 包 `test/integration/*.test.mjs`（5 档） | 311 ∥ 216 ∥ 85 ∥ 93 ∥ 119 | 15 处标题改号（旧代号离场） | 实施轮落 |
-| vsc ∥ desktop 包 `<包>/test/RTM.md` | 0（不存在） | 骨架 + 「尚无集成用例」注；故事节随首个用例设立 | 实施轮建 |
+| `docs/core/requirements/TESTING.md` | —（父侧笔） | F29 的名称 ∥ 路径定死；N22 去「待裁 O-1」⇒ 已裁 = 每端一份 | 父侧落 |
+| `thincoder-core/prompts/persona-eng-designer.md` | 150 | 第 9 项（现 136–137 行）整项替换 ⇒ ≤±4 行（2 行 → ≤5 行） | 实施轮落 |
+| `thincoder-core/prompts/advisor-design.md` | 137 | 第 12 条（现 52–57 行）首句替换 + 一条 🔴 + 一句编号先行 ⇒ +2 行 | 实施轮落 |
+| `thincoder-core/prompts/discipline-engineering.md` | 342 | 集成段（现 181 行后）新增一条 ⇒ +2 行 | 实施轮落 |
+| CLI 包 `<包>/test/RTM.md` | 0（不存在） | ≈45 行：5 故事节（节标题 + 节注 + 表头 + 3 行）+「异常与更正」节 + 签署面（§11.16 建表结构） | 实施轮建 |
+| CLI 包 `test/integration/*.test.mjs`（5 档） | 345 ∥ 245 ∥ 99 ∥ 108 ∥ 132 | 15 处标题改号（旧代号离场） | 实施轮落 |
+| `docs/batches/2026-10-24-rtm-index.check.mjs`（机判脚本） | 0（不存在） | 新建 ≈30 行；**一次性读数用毕即删**（与批档同寿命；住批档目录 ⇒ 不进包根、不入 `check-syntax` 语法门） | 实施轮落 · 收口删 |
+| vsc ∥ desktop 包 `<包>/test/RTM.md` | 0（不存在） | 骨架 + 「尚无集成用例」注；故事节随首个用例设立（≈10 行） | 实施轮建 |
 
 ### 11.9 关键决策记录
 
@@ -694,7 +695,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 | AC-RTM-6 | 三处相抵各有正面解——§11.6 | RTM-6 |
 | AC-RTM-7 | 裁定项与落点单列（O-1…O-6 逐项带落点）——§11.12 | RTM-7 |
 | AC-RTM-8 | 边界与禁止范围在位（§11.14）· 术语表用带定义名词、无自造词（§11.13） | RTM-8 |
-| AC-RTM-9 | 名称 ∥ 路径定死：§11 全文无「拟」，落点唯一 = `<包>/test/RTM.md`（§11.1 · §11.2 · §11.12 O-2） | RTM-1 |
+| AC-RTM-9 | 名称 ∥ 路径定死：§11 全文无「拟」（**判据行自身除外**——该字仅由本行引述，写法同 A-TS19），落点唯一 = `<包>/test/RTM.md`（§11.1 · §11.2 · §11.12 O-2） | RTM-1 |
 | AC-RTM-10 | 设计轮起点 = RTM delta 三问（§11.15）＋三处提示词逐字文案在位（§11.17） | RTM-2 |
 | AC-RTM-11 | CLI 15 例逐条给出「故事节 → 编号 → 8 列」取值（§11.16），且编号 ∥ 标题机判双向对齐（§11.16 判据） | RTM-3 |
 | AC-RTM-12 | 改号机判可执行：编号集 ↔ 标题集双向零差、零重复、证据档对位（§11.16 脚本） | RTM-4 |
@@ -720,7 +721,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 | O-4 | 「质量特性」列（标准 §6.4.1.3 g) 为「可陈述」） | **不纳入**（甲方读不懂；本项目质量特性未在需求档逐条编号）；甲方要求再补。落点 = §11.3 列定义 |
 | O-5 | 多语言面 | **不纳入本轮**——现设计 = 中文单语（甲方可读）；双语需求另开条目。**父侧处置 · 用户可另裁**。落点 = §11.9 行 6 · §11.14 |
 | O-6 | RTM 是否入各包 doc-check 域（行宽判据） | **`doc-check` 覆盖 `test/**` ⇒ 实施轮核实**；设计侧已要求行宽 ≤300 字符。落点 = §11.2 第 2 条 · §11.14 |
-| O-7 | 首批 15 行的「执行人」取值 | **open**——倾向 `主 agent（自动化执行）`：执行人列记实际执行者，甲方签字在签署面（§11.5），不冒充人工。落点 = §11.16 列取值 |
+| O-7 | 首批 15 行的「执行人」取值 | **open**——倾向 `主 agent（自动化执行）`：执行人列记实际执行者，甲方签字在签署面（§11.5），不冒充人工。落点 = §11.16 列取值；O-7 未下前 §11.16 表内用兜底字面量 `主 agent（自动化执行）`（表内不留待定串） |
 
 ### 11.13 术语（带定义的名词，无自造词）
 
@@ -760,42 +761,62 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 ### 11.16 CLI 首批落表（15 例 · 5 故事节）
 
+**先例对齐**：落表体式对位 **§11.3** 的列定义 + 示例行（同一张 8 列表、同一取值域，不另造列名 ∥ 不另造取值）；用例表的「三态 + 判据」形对位 **§5**（场景表：正常 ∥ 边界 ∥ 错误 + 判据摘要）与 **§11.11**（RTM-T1–T4）；证据列命名沿 **§4.3**（`test/integration/<场景名>.test.mjs`）。先例批 = **无**（理由同 §11.1：批档为一次性载体、可整体清理）。偏离：无。
+
+**公共源勘察**：工作目录树内公共源已查，三处。
+
+- ① `thincoder-cli/test/integration/` 5 档——现标题形 = `test("<旧代号> …")`（**双引号**），15 条实读。
+- ② 本档 §5 ∥ §11.3 ∥ §11.4（落表体式与证据契约）· `docs/core/requirements/TESTING.md` §7 F29 ∥ F30（8 列 ∥ 可追溯）。
+- ③ `thincoder-core/scripts/check-syntax.mjs` 的遍历域（包根递归 `*.mjs`）——定机判脚本的落点。
+- 结论 = 相关件全在仓内；外部公共源 = 本批未引（列集依据已由 §11.7 持，不新增）。
+
 **故事节的切法** = 「用户在 CLI 里能做的一件事」——不按测试档切、不按模块切。5 节 × 3 行：
 
-| 节 | 故事（H3 标题） | 一句话目的 | 证据档 |
-|---|---|---|---|
-| 1 | 对话里用工具，结果必须回到模型 | 工具结果原样回到模型，对话能接着走 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
-| 2 | 未立项就写产品码：提醒一次，之后不再打断 | 提醒只在首次出现，写文档不消耗它 | `test/integration/unbooked-pen.test.mjs` |
-| 3 | 网页抓取的后端故障不外溢 | 单个后端故障不影响其它通路，无渠道时零变化 | `test/integration/web-backend-404.test.mjs` |
-| 4 | 浏览器起不来的等待窗口可调 | 默认 25s、可调，失败后会话仍可用 | `test/integration/browser-start-window.test.mjs` |
-| 5 | 顾问评审超时改了马上生效 | 超时可热改、可清除、非法值被拒 | `test/integration/advisor-timeout-hot.test.mjs` |
+| 节 | 故事（H3 标题） | 一句话目的 | 三态（行序） | 证据档 |
+|---|---|---|---|---|
+| 1 | 对话里用工具，结果必须回到模型 | 工具结果原样回到模型，对话能接着走 | 1-1 正常 · 1-2 边界 · 1-3 边界 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
+| 2 | 未立项就写产品码：提醒一次，之后不再打断 | 提醒只在首次出现，写文档不消耗它 | 2-1 正常 · 2-2 边界 · 2-3 边界 | `test/integration/unbooked-pen.test.mjs` |
+| 3 | 网页抓取的后端故障不外溢 | 单个后端故障不影响其它通路，无渠道时零变化 | 3-1 错误 · 3-2 错误 · 3-3 边界 | `test/integration/web-backend-404.test.mjs` |
+| 4 | 浏览器起不来的等待窗口可调 | 默认 25s、可调，失败后会话仍可用 | 4-1 正常 · 4-2 正常 · 4-3 边界 | `test/integration/browser-start-window.test.mjs` |
+| 5 | 顾问评审超时改了马上生效 | 超时可热改、可清除、非法值被拒 | 5-1 正常 · 5-2 边界 · 5-3 错误 | `test/integration/advisor-timeout-hot.test.mjs` |
+
+- **三态判读口径**（RTM 8 列固定、无态列——F29）：主路径 = 正常；环境 ∥ 次数 ∥ 顺序变体 = 边界；故障输入（坏后端 ∥ 非法值）= 错误。节注写本节的态归属，集级三态判据（A-TS3）从表可读出。本表读数 = 正常 5（1-1 ∥ 2-1 ∥ 4-1 ∥ 4-2 ∥ 5-1）· 边界 7（1-2 ∥ 1-3 ∥ 2-2 ∥ 2-3 ∥ 3-3 ∥ 4-3 ∥ 5-2）· 错误 3（3-1 ∥ 3-2 ∥ 5-3）。
+
+**建表结构（实施轮照此建 `<包>/test/RTM.md`）**：文档标题（「UAT 验收总表（RTM）」）→ 5 个故事节（各节 = H3 标题 + 节注〔回指需求条目 + 本节三行态归属〕+ 表头 + 3 行）→ **「异常与更正」节**（签后唯一可写面：异常号 ∥ 说明 ∥ 严重程度 ∥ 纠正日期 ∥ 纠正者 ∥ 再测结果——§11.5）→ 签署面（§11.5）。规模 ≈45 行。
 
 **15 行（8 列取值）**：
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
-| 1-1 | 在 CLI 里让助手调用一次工具，然后继续同一段对话 | 会话流里有这次调用与它的结果，助手回复引用了结果，没有 400 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
-| 1-2 | 同一轮里让助手连续调用两个工具，再继续对话 | 两个结果都回到模型，回复正常，没有 400 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
-| 1-3 | 关掉进程，重开同一会话，历史回放后继续对话 | 回复引用了上一程的工具结果，没有 400 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
-| 2-1 | 主 agent 首次写产品源文件 | 该笔回执以一行 [pen check] 结尾、只出现一次、含两处键句；文件确实写入 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/unbooked-pen.test.mjs` |
-| 2-2 | 同一会话紧接着再写一个产品源文件 | 第二笔回执没有任何 [pen check] 行 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/unbooked-pen.test.mjs` |
-| 2-3 | 另一个会话先写文档，再写产品源文件 | 写文档那笔零提示、不消耗提醒；随后写产品码仍有提醒 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/unbooked-pen.test.mjs` |
-| 3-1 | 让 fetch 收到 404 后，在同一会话里再搜一次 | 404 不熔断，搜索仍然打到 DeepSeek | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/web-backend-404.test.mjs` |
-| 3-2 | 让后端返回 401 | 只停该后端：fetch 回落到本地直取并成功，随后 websearch 零上游命中且正常结算 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/web-backend-404.test.mjs` |
-| 3-3 | 在没有 DeepSeek 渠道的配置下跑一次 | 回执逐字不变、零 (deepseek …) 提示行、替身零命中 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/web-backend-404.test.mjs` |
-| 4-1 | 设 `BROWSER_START_TIMEOUT_MS=2000` 后启动浏览器 | 失败句含 within 2s，失败后会话仍可用 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/browser-start-window.test.mjs` |
-| 4-2 | 不设该变量启动浏览器 | 失败句含 within 25s（默认窗口），不再出现 12s 时代的句子 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/browser-start-window.test.mjs` |
-| 4-3 | 真机上首个动作是 navigate | 自启段不吃动作预算；宿主无 Chromium 则该例 skip 并打印 | 见注 ★ | 2026-10-24 | open（O-7） | 无 | `test/integration/browser-start-window.test.mjs` |
-| 5-1 | `settings set` 把超时改成 3000，再跑下一次评审 | 下一次评审按 3s 结束并带回超时尾 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/advisor-timeout-hot.test.mjs` |
-| 5-2 | 把超时删掉（设为 null），再跑同一评审 | 评审跑完（约 5s 流），无超时尾 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/advisor-timeout-hot.test.mjs` |
-| 5-3 | 给超时写入非法值 abc | 被拒，回执点名该键与可消费形态；配置面读回不变 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/advisor-timeout-hot.test.mjs` |
+| 1-1 | 在 CLI 里让助手调用一次工具，然后继续同一段对话 | 会话流里有这次调用与它的结果，助手回复引用了结果，没有 400 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
+| 1-2 | 同一轮里让助手连续调用两个工具，再继续对话 | 两个结果都回到模型，回复正常，没有 400 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
+| 1-3 | 关掉进程，重开同一会话，历史回放后继续对话 | 回复引用了上一程的工具结果，没有 400 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
+| 2-1 | 主 agent 首次写产品源文件 | 该笔回执以一行 [pen check] 结尾、只出现一次、含两处键句；文件确实写入 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/unbooked-pen.test.mjs` |
+| 2-2 | 同一会话紧接着再写一个产品源文件 | 第二笔回执没有任何 [pen check] 行 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/unbooked-pen.test.mjs` |
+| 2-3 | 另一个会话先写文档，再写产品源文件 | 写文档那笔零提示、不消耗提醒；随后写产品码仍有提醒 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/unbooked-pen.test.mjs` |
+| 3-1 | 让 fetch 收到 404 后，在同一会话里再搜一次 | 404 不熔断，搜索仍然打到 DeepSeek | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/web-backend-404.test.mjs` |
+| 3-2 | 让后端返回 401 | 只停该后端：fetch 回落到本地直取并成功，随后 websearch 零上游命中且正常结算 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/web-backend-404.test.mjs` |
+| 3-3 | 在没有 DeepSeek 渠道的配置下跑一次 | 回执逐字不变、零 (deepseek …) 提示行、替身零命中 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/web-backend-404.test.mjs` |
+| 4-1 | 设 `BROWSER_START_TIMEOUT_MS=2000` 后启动浏览器 | 失败句含 within 2s，失败后会话仍可用 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/browser-start-window.test.mjs` |
+| 4-2 | 不设该变量启动浏览器 | 失败句含 within 25s（默认窗口），不再出现 12s 时代的句子 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/browser-start-window.test.mjs` |
+| 4-3 | 真机上首个动作是 navigate | 自启段不吃动作预算；宿主无 Chromium 则该例 skip 并打印 | 未执行 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/browser-start-window.test.mjs` |
+| 5-1 | `settings set` 把超时改成 3000，再跑下一次评审 | 下一次评审按 3s 结束并带回超时尾 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/advisor-timeout-hot.test.mjs` |
+| 5-2 | 把超时删掉（设为 null），再跑同一评审 | 评审跑完（约 5s 流），无超时尾 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/advisor-timeout-hot.test.mjs` |
+| 5-3 | 给超时写入非法值 abc | 被拒，回执点名该键与可消费形态；配置面读回不变 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/advisor-timeout-hot.test.mjs` |
 
 **列取值规则**：
 
-- **结果**：`通过` ⇐ 该例在 2026-10-24 当晚 `npm test` 输出中为 `✔`（各批 §6 先红后绿）；`﹣`（skip）⇒ `未执行`——skip 不算验过；没跑 ⇒ `未执行`。
-- **★ 4-3**：结果由实测读出——为 `﹣` 记 `未执行`，为 `✔` 记 `通过`；不得据「15/15 绿」推定（skip 也计入 tests 数）。
-- **执行日期**：`2026-10-24`（首批 = 当晚实测）。**执行人**：O-7 裁定后统一填。**异常**：`无`（当晚无缺陷单）。
+- **结果**：`通过` ⇐ 该例在 2026-10-24 当晚 `npm test` 输出中为 `✔`；`﹣`（skip）⇒ `未执行`——skip 不算验过；没跑 ⇒ `未执行`。
+- **★ 4-3**：本表记 `未执行`——该例仅在宿主有 Chromium 时实跑，无则 skip，而 skip 不算验过（不据「15/15 绿」推定：skip 也计入 tests 数）；在有效宿主上实跑为 `✔` ⇒ 改为 `通过` 并改执行日期。
+- **执行日期**：`2026-10-24`（首批 = 当晚实测）。**执行人**：本表填兜底字面量 `主 agent（自动化执行）`——O-7 未下前的取值（该列记实际执行者；甲方签字在签署面，不冒充人工）；O-7 裁定与此值不同 ⇒ 按裁定回填。**异常**：`无`（当晚无缺陷单）。
 - **证据**：`test/integration/<场景名>.test.mjs`（§11.4 契约不变）。
+
+**D-3 缺失答案（§11.15 D-3 对本表的回答）**：
+
+- **缺什么** = 场景①「普通模式的完整工具流」三态（本档 §5 场景① 行；需求 F13 点名必选）——本表 15 行无一行断言「读档 → 改档 → 校验 → verify 通过」，也无一行要求「报告含验证声明」。本表覆盖的业务面 = 工具回环 ∥ pen check ∥ 后端故障 ∥ 浏览器启动窗 ∥ 顾问超时；工具流能跑 ≠ 验证关口放行。
+- **编号先定**（§11.15 D-3 次序）：`6-1` 正常（读档 → 改档 → 校验 → verify 通过；目标文件被改 + 报告含验证声明）∥ `6-2` 边界（纯文档浅改 → 快路径放行，不要求验证声明）∥ `6-3` 错误（代码改动 + 验证状态失败 → verify 打回，不得声称完成）；故事节标题 = 「普通模式的完整工具流」，证据档 = `test/integration/tool-flow.test.mjs`（新建）。
+- **归批去向** = **§5.1 起步批量那一批**（场景① × 三前端）；本批不落：本批性质 = **既有 15 例回填索引**（`test/integration/` 现盘 5 档、零新增用例），新建用例属 §5.1 起步批量。
+- **两处「首批」不再互斥**：§5.1 起步批量 = 业务上必须落的最小集（本表不满足它，`6-1`–`6-3` 即其 CLI 部分）；§11.16 = 索引首次回填（15 行在盘用例）。两者是**两个不同批次的两种交付**，不是同一批的两种说法。
 
 **旧代号 → RTM 编号（标题改号）**：
 
@@ -810,35 +831,49 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 - 标题形 = `test('<编号> <原描述文字>', …)`；**旧代号不留在标题里**（编号即唯一标识；沿革由 git 提交信息承载）。
 
-**机判（实施轮一次性读数，不作常驻门——F29 边界「人签面 ≠ 机检面」）**：在 CLI 包根跑下列脚本，四项列表全空且 `rows = 15` 即对齐：
+**机判（实施轮一次性读数，不作常驻门——F29 边界「人签面 ≠ 机检面」）**：脚本住 `docs/batches/2026-10-24-rtm-index.check.mjs`——**一次性用毕即删**（与批档同寿命；住批档目录 ⇒ 不进包根、不入 `check-syntax` 语法门）。仓根跑 `node docs/batches/2026-10-24-rtm-index.check.mjs [包目录，缺省 thincoder-cli]`；四项列表全空且 `rows 15 titles 15` 即对齐：
 
 ```js
-// thincoder-cli 包根：node rtm-check.mjs
+// 仓根：node docs/batches/2026-10-24-rtm-index.check.mjs [包目录，缺省 thincoder-cli]
 import fs from 'node:fs';
-const rtm = fs.readFileSync('test/RTM.md', 'utf8');
-const rows = [...rtm.matchAll(/^\|\s*(\d+-\d+)\s*\|(?:[^|]*\|){5}\s*`([^`]+)`\s*\|$/gm)]
-  .map((m) => ({ id: m[1], file: m[2] }));
+import path from 'node:path';
+const pkg = process.argv[2] ?? 'thincoder-cli';
+const join = (...p) => path.join(pkg, ...p);
+const cells = (line) => line.split('|').slice(1, -1).map((s) => s.trim());
+const tableRows = fs.readFileSync(join('test/RTM.md'), 'utf8').split(/\r?\n/).filter((l) => /^\|\s*\d+-\d+\s*\|/.test(l));
+// 行：逐格取值，列数必须 = 8（F29 列集）；证据格 = 反引号内的用例档路径
+const rows = tableRows.map(cells).filter((c) => c.length === 8).map((c) => ({ id: c[0], file: (c[7].match(/`([^`]+)`/) ?? [])[1] }));
+const badColumnRows = tableRows.filter((l) => cells(l).length !== 8).length;
+// 标题：两种引号形都认（现盘 5 档用双引号，本档示例用单引号）；前缀 = 首个空白前的整段，旧代号就在此处现形
 const titles = [];
-for (const f of fs.readdirSync('test/integration')) {
+for (const f of fs.readdirSync(join('test/integration'))) {
   if (!f.endsWith('.test.mjs')) continue;
-  const s = fs.readFileSync(`test/integration/${f}`, 'utf8');
-  for (const m of s.matchAll(/test\("(\d+-\d+) /g)) titles.push({ id: m[1], file: `test/integration/${f}` });
+  const s = fs.readFileSync(join('test/integration', f), 'utf8');
+  for (const m of s.matchAll(/\btest\(\s*['"]([^'"]+)['"]/g)) titles.push({ id: m[1].split(/\s+/)[0], file: `test/integration/${f}` });
 }
 const ids = new Set(rows.map((r) => r.id));
 const tids = new Set(titles.map((t) => t.id));
+const empty = (a) => (a.length ? a : '[]');
 console.log('rows', rows.length, 'titles', titles.length);
-console.log('row-no-title', [...ids].filter((i) => !tids.has(i)));
-console.log('title-no-row', [...tids].filter((i) => !ids.has(i)));
-console.log('dup-ids', rows.map((r) => r.id).filter((v, i, a) => a.indexOf(v) !== i));
-console.log('evidence-mismatch', rows.filter((r) => !titles.some((t) => t.id === r.id && t.file === r.file)));
-console.log('legacy-code-titles', titles.filter((t) => !/^\d+-\d+$/.test(t.id)).length);
+console.log('row-no-title', empty([...ids].filter((i) => !tids.has(i))));
+console.log('title-no-row', empty([...tids].filter((i) => !ids.has(i))));
+console.log('dup-ids', empty(rows.map((r) => r.id).filter((v, i, a) => a.indexOf(v) !== i)));
+console.log('evidence-mismatch', empty(rows.filter((r) => !titles.some((t) => t.id === r.id && t.file === r.file)).map((r) => r.id)));
+console.log('legacy-code-titles', empty(titles.filter((t) => !/^\d+-\d+$/.test(t.id)).map((t) => t.id)));
+console.log('bad-column-rows', badColumnRows);
 ```
 
-判据：`rows 15 titles 15` ∧ 后四行列表皆 `[]`（∧ `legacy 0`）。另：`grep -c "test(\"[0-9]" test/integration/*.mjs` 与 RTM 行数一一对位。
+判据：`rows 15 titles 15` ∧ 后四行列表皆 `[]`（`row-no-title` ∥ `title-no-row` ∥ `dup-ids` ∥ `evidence-mismatch` ∥ `legacy-code-titles`）∧ `bad-column-rows 0`。
+
+**设计侧预跑读数**（2026-10-24 实跑，口径写明）：`rows` 取本表 15 行（与 `<包>/test/RTM.md` 表体同形）；`titles` 取在盘 5 档真实标题（现为双引号 + 旧代号）。读数 = `rows 15 titles 15` ∧ `bad-column-rows 0`；按上文「旧代号 → RTM 编号」换算后（即实施轮改号后的预期态）五项列表全为 `[]`，`legacy-code-titles` 亦空。改号前 `legacy-code-titles` = 15 条旧代号（G1…I-AP3），即 D-3 之外唯一待做的动作。
 
 ### 11.17 提示词落点（三处逐字）
 
 > 提示词是产品码（落地 = 实施轮）；本节持最终文字，三处同一句：**索引在哪（`<package>/test/RTM.md`）· 叫什么（RTM）· 设计从哪开始（读它出 delta）**。
+
+**先例对齐**：提示词条目形对位三档各自现行体式——persona 的编号项（重点句加粗 + 一句 Why）· advisor 的第 12 条（一段判定 + 一条 🔴）· discipline 的集成段（一条纪律 + 一句 Why）；同句三处共用 = 本档 §11.15 的 delta 三问（D-1 ∥ D-2 ∥ D-3）。先例批 = **无**（理由同 §11.1）。偏离：无。
+
+**公共源勘察**：工作目录树内公共源已查——`thincoder-core/prompts/persona-eng-designer.md`（第 9 项现文）· `thincoder-core/prompts/advisor-design.md`（第 12 条现文）· `thincoder-core/prompts/discipline-engineering.md`（集成段现文）· 本档 §11.15 ∥ §11.16（所持的机制与编号规则）。结论 = 三处均有现行条目可指，无新建条目；外部公共源 = 本批未引（提示词文字属项目自有体式）。
 
 **① `thincoder-core/prompts/persona-eng-designer.md` 第 9 项（现 136–137 行）整项替换为**：
 
@@ -853,6 +888,7 @@ console.log('legacy-code-titles', titles.filter((t) => !/^\d+-\d+$/.test(t.id)).
 ```text
 12. **Integration-test design**: the design document must contain an integration-test design section that starts from `<package>/test/RTM.md` — the RTM: one section per business story, one row per integration case. The section answers as a delta against it — which rows this change breaks, which are redundant, which are missing — and each row points back to the business requirement it serves.
     **An integration section that starts from a blank "which scenarios do we need" list, with no RTM read, ⇒ 🔴.**
+    A missing row's number is fixed in the RTM before its case title is written — `test('1-1 …')`, the same number verbatim.
 ```
 
 （该条其余现有行——缺段 🔴 ∥ 「业务行为未变」唯一正当理由 ∥ 窗口满不算理由 ∥ 全量跑 🔴 ∥ 两条 Why——原样保留。）
