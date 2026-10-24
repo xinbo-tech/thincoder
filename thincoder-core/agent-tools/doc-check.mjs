@@ -63,10 +63,9 @@ export const docCheckTool = {
     }
     const root = view.state === "ok" ? view.root : target
     if (mode === "gate") {
-      // 引擎版本校验先于引擎（A-DD30 ①）：stale 非空 ⇒ 直接 ERROR 串，不进引擎
-      const version = staleEngineFiles()
-      if (version.stale.length) return gateEngineError(version)
-      // 会话候选先取 `.md`（触达记账含代码档——代码档不是文档，不该进范围行）；可判集归引擎单源
+      // 引擎陈旧只作注记、不拦（2026-10-24 用户裁定：改了检查器就再也收不了口，太蠢）：
+      // 判据 = 读数仍由本会话加载的引擎产出，但「引擎文件的 mtime 晚于进程启动」不等于判据错了——
+      // 人看得到这一行就能自己判断，没必要把整条收口链停死。
       const docs = explicit ?? (Array.isArray(ctx?.agent?._touchedFiles) ? ctx.agent._touchedFiles : [])
         .filter((p) => typeof p === "string" && p.toLowerCase().endsWith(".md"))
       return runDocCheck(root, { mode: "gate", docs, docsSource: explicit ? "explicit" : "session" }).report

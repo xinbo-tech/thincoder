@@ -168,12 +168,10 @@ test("AC-51 · F8 面零改：六档清单逐字；stale ⇒ gate 首行 ERROR�
   assert.match(noted.split("\n")[0], /^\[doc_check note\] 引擎陈旧/)
 })
 
-test("AC-51 · 工具面 gate 分支先判引擎版本（陈旧 ⇒ 不进引擎）", () => {
+test("AC-51 · gate 分支仍取引擎版本读数，但陈旧不再短路（2026-10-24 裁定：不许没错造错）", () => {
   const tool = readFileSync(join(REPO, "thincoder-core/agent-tools/doc-check.mjs"), "utf8")
-  const gateIdx = tool.indexOf('if (mode === "gate")')
-  const versionIdx = tool.indexOf("staleEngineFiles()")
-  const engineIdx = tool.indexOf("runDocCheck(root, { mode: \"gate\"")
-  assert.ok(gateIdx >= 0 && versionIdx > gateIdx && engineIdx > versionIdx, "gate 分支内：版本校验先于引擎")
+  assert.ok(tool.includes("const version = staleEngineFiles()") || tool.includes("staleEngineFiles()"), "仍取版本读数")
+  assert.ok(!tool.includes("return gateEngineError(version)"), "陈旧不再直接返回 ERROR 串")
 })
 
 test("AC-47 · 无 manifest 的目录照常判（manifest 报错归 manifest 工具，不在本工具面）", () => {
