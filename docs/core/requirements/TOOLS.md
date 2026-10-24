@@ -4,7 +4,7 @@
 > **工作流档**（需求层）= `docs/core/requirements/CORE-UNIFICATION.md` §1–§4 + §5 登记表（统一目标 / 边界原则 / 量级读数基线 / 范围边界）——本档**不复制**（D2 单一权威源）。
 > **设计层** = `docs/core/design/TOOLS.md`（本子系统设计与测试）；工作流设计档 = `docs/core/design/CORE-UNIFICATION.md`。
 > **来源** = 用户明令「需求侧文档先拆」。**不新增需求**：条文分**搬移 / 回填 / 派生**三类并逐条标来源；无现成表述者由设计裁决派生，标「**派生 · 非用户原话**」。
-> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 产品地图 `thincoder-cli/docs/README.md` §3.2；三层归属见同图 §3.1。
+> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见本仓文档地图 `docs/README.md`；三层归属同见该图。
 > **需求条目面**（§4）：自 CLI 产品需求档并入的**既有需求条目正文**（编号承旧档的**产品级编号空间**，与 §2.2 回指的**工作流编号** F3/F6/F11–F13 不同空间）——**无新增需求**（该句射程 = §4.1–§4.6 并入面；**§4.7 / §4.8 / §4.9 = 新增能力条目**——非并入，见各节）。
 
 ## 1. 总体定位
@@ -38,7 +38,7 @@
 
 ## 4. 需求条目（自 CLI 产品需求档并入）
 
-> **来源** = `thincoder-cli/docs/requirements/TOOLS.md`（CLI 产品需求档——只读 · 不维护）。
+> **来源** = 原 CLI 产品需求档（产品树旧档，已随两仓合并退役；现行需求面 = 本档）。
 > **并入** = 需求条目正文（总体需求 / 功能性 / 非功能性 / 范围边界）——条目**编号与文本承旧档**。
 > **不并** = 变更记录（逐批流水账）· 「来源：…」注。
 > **§4.7 / §4.8 / §4.9 = 新增**——能力条目正文（**非并入**）；编号系 = 各子节自有（U / N ∥ S / N ∥ W / NW），与 §4.1–§4.5 各编号空间并列、不互指。
@@ -64,7 +64,7 @@
 | F10 | `task` 工具**工程模式机械停用** | 工程模式（`agent.engineering = true`）下 `task` 工具调用 = **机械拒绝**（可读错误句，指引追踪权威面 = 批次档 §5/§6 + 台账 `/ledger`）——先例形态 = plan（`thincoder-core/agent-tools/plan.mjs:36` 工程模式拒）/ escalate（`subagent-actions.mjs:348`）；普通模式 `task` 行为零变（会话级追踪面保留）。**边界**：不移除工具注册、不改普通模式行为、不做配置开关（模式判定 = 现值单查）；铁律 3 提示词面的工程模式分支由 PROMPT-SYSTEM 板块承接（提示词改动随该机制带上——设计裁定）；**提醒面**：工程模式下不得向模型发指向 `task` 追踪的提醒/指针（三面覆盖：催更门 / VSC 守卫副本 / 自动轮 digest 域——设计 `TOOLS.md` §6.15.3；两端一致——实施轮上抛同拍并入）。**判定句**：工程模式 `task({items:[...]})` ⇒ 错误句含「engineering」指引词 ∧ 零副作用（列表不变）；普通模式同调用成功（既有测试零回归）；**提醒面判定**：工程模式（含自动轮）⇒ 两端催更面 / 域文本零 `task` 指针，正常模式逐字对照不变。 |
 | F11 | `batch` 工具**词面协议结构化** | 状态语义与散文分离，词面错误从人眼抓变机器拦：① `status` 动作的 `value` 参数 **enum 化**（按段词表 = `batch-skeleton.mjs:30` STATUS_WORDS 单源）——散文说明走独立 `note` 字段落状态行括注（或拒绝再入）；② `create` 补 `source` 参数（来源句，填 `来源 = <讨论来源>` 占位）+ `prev` 传入值自动剥 `前情 = ` 前缀归一化（`<BATCH-ID>` 占位 = create 自动清除或生成）；③ append/status 落笔时档内 `<...>` 模板占位符残留 ⇒ **拒绝并列清单**（残留机检——判据 = 设计档 `TOOLS.md` §6.15 裁定点④：骨架死占位枚举单源；`<§N 模板占位>` 行 = 合法暂存不拦）。**边界**：六段 append-only 语义、一段一作者写域、冻结门语义全部零变；散文纪律句不删（机判加在纪律之上）。**判定句**：`status value="讨论已收口 2026-09-21"`（非法词）⇒ 拒绝+词表回显；`status value="进行中" note="..."` ⇒ 状态行 = 关键词 + 括注；create 带 prev 值「前情 = X」⇒ 落盘行 = `前情 = X`（单前缀）；append 时档内占位符 ⇒ 拒绝并列出残留行号。 |
 | F12 | `question` 工具**子代面过滤** | **depth>0 工具表一律不含 `question`**——交互工具要有活人在环，子代无用户可问（路由指引已在各人格档）；排除 = 装配层按面裁表（与只读过滤同族），**单源** = 核 `thincoder-core/agent/helpers.mjs` 的排除集 + 谓词；四个子代装配点（spawn / escalate 同步·异步 / consult）同过、排除随绑定值传子。**边界**：工具本体（含机械门）/ 静态注册表 / 主会话与 headless 面的**机制**零改（**注入措辞面**不在本句射程）/ 人格档文案零改；不加配置开关。**判定句**：子代工具表（四装配点）名集不含 `question` ∧ 主会话面（`assembleBuiltinTools`）含 `question`；VSC 端 depth>0 基础集同判据（端侧字面归核单源）。判据 = 设计档 `TOOLS.md` §6.16。 |
-| F13 | `edit` 工具**入参守卫与成形错误** | **非数组 `edits` 容器与非对象条目 ⇒ 成形错误（含期望形态 / 下标），不得裸 JS 错误外泄**——弱模型常见乱调形（JSON 字符串化 / 对象包裹 / `[null]`）下工具调用须以**可自纠的成形文案**终结（用户与模型都不该看到裸 `TypeError` / `Cannot read properties`）；`touchedPaths` 钩子**零抛**（非数组 ⇒ 零触达 · 非对象条目 ⇒ 按「缺 path」尽力提取——错误统一落 `execute` 成形面）。**单源** = 核 `thincoder-core/tools/edit-diff.mjs`（两守卫 + 五文案）；核 `edit-batch.mjs` 与 ACP 桥 `bridge.mjs` 一律引用调用（桥零字面副本）。**边界**：edit 语义 / schema / 描述面 / `applyEditBatch` 既有行为零改；钩子消费点未守卫族与 `args=null` 边界不入本句。**判定句**：`edits` 为字符串 / 对象 / 数字 / 空数组 ⇒ 容器成形文案 ∧ 零裸抛；`edits[i]` 为 `null` / 字符串 / 数字 / 数组 ⇒ 条目级成形错误含下标 ∧ 零裸抛；桥面同判据（经 `toolRouter` catch 渲染 `Error: <msg>`）。判据 = 设计档 `EDIT.md` §5 / §8 D-6·D-7。 |
+| F13 | `edit` 工具**入参守卫与成形错误** | **非数组 `edits` 容器与非对象条目 ⇒ 成形错误（含期望形态 / 下标），不得裸 JS 错误外泄**——弱模型常见乱调形（JSON 字符串化 / 对象包裹 / `[null]`）下工具调用须以**可自纠的成形文案**终结（用户与模型都不该看到裸 `TypeError` / `Cannot read properties`）；`touchedPaths` 钩子**零抛**（非数组 ⇒ 零触达 · 非对象条目 ⇒ 按「缺 path」尽力提取——错误统一落 `execute` 成形面）。**单源** = 核 `thincoder-core/tools/edit-diff.mjs`（两守卫 + 五文案）；核 `edit-batch.mjs` 与 ACP 桥 `bridge.mjs` 一律引用调用（桥零字面副本）。**边界**：edit 语义 / schema / 描述面 / `applyEditBatch` 既有行为零改；钩子消费点未守卫族与 `args=null` 边界不入本句。**判定句**：`edits` 为字符串 / 对象 / 数字 / 空数组 ⇒ 容器成形文案 ∧ 零裸抛；`edits[i]` 为 `null` / 字符串 / 数字 / 数组 ⇒ 条目级成形错误含下标 ∧ 零裸抛；桥面同判据（经 `toolRouter` catch 渲染 `Error: <msg>`）。判据 = 设计档 编辑工具需求档 §5 / §8 D-6·D-7。 |
 | F14 | `bash` 工具**异步 / 后台执行** | **长任务不占回合**：`bash` 增 `async` 参数——起跑即返 ack（含 id ∥ log 路径），退出 ⇒ settle 注入恰一次（零丢失）；池化（第 5 起显式拒——零静默丢）；终止 = pid ∥ id 两靶杀树（幂等）；超时 = 异步缺省不杀（显式 `timeout` 到点杀 + `killed: timeout`）；收尾两档（回合中断不杀 ∥ 会话中止逐条杀树）；口径同源 = consult ∥ escalate 族（形与对照表在册）。**边界**：同步径逐字零变 ∥ 既有工具语义零变（新增面 = `bash` `async` 参数 ∥ `process` `kill` action ∥ `wait_for` 条件（含 `bash id:N done`））。**判定句**：`bash({command, async:true})` ⇒ ack 含 id ∧ 同步径快照对照零变；异步退出 ⇒ settle 恰一次；第 5 起 ⇒ 显式拒；`process({action:"kill"})` ⇒ 树灭 + 出池 + 墓碑。判据 = 设计档 `TOOLS.md` §6.19。 |
 | F15 | 工具 schema **上下文占用优化**（描述外置统一 + 瘦身） | **工具描述 / schema 的上下文成本纪律**：预算表**唯一权威处 = `PROMPT-SYSTEM.md`** 描述面节（`TOOLS.md` §6.9 邻位 = 指针行——D2）；单档 ≤8,000 字符（「档」= 工具 schema 条目：`JSON.stringify({description, parameters})` 字符——与基线同式）；总量基线 = 10.5 万字符实测口径 ∥ 目标 −25%；三杠杆用尽仍未达 ⇒ **不硬削**（降档为报告态 + 上抛，零静默降级）。**边界**：工具语义 ∥ 行为零变；schema 字段面零改（只动描述文本量与放置）。**判定句**：预算表复算与 §2.2.1 口径同式（基线集 = depth-0 装配面全集 · 去重键 = 工具名）；单档超 8k ⇒ 逐档给由（不静默）。判据 = 设计档 `TOOLS.md`（§6.9 邻位 ∥ 预算节）。 |
 ### 4.3 非功能性需求（N1–N9）
@@ -90,7 +90,7 @@
 
 ### 4.5 工具输出上限系（TOOL-OUTPUT-LIMITS——旧专题需求档并入）
 
-> 来源 = `thincoder-cli/docs/requirements/TOOL-OUTPUT-LIMITS.md`（现行机制专题档）；设计面 = `docs/core/design/TOOL-OUTPUT-LIMITS.md`（本档只收需求条目）。与 §4.3 N5 的关系：N5 = 资源上限条目；本节 = 超长输出**落盘阈值与预览形态**（两轴并存）。
+> 来源 = 原 CLI 产品需求档（产品树旧档，已随两仓合并退役）；设计面 = `docs/core/design/TOOL-OUTPUT-LIMITS.md`（本档只收需求条目）。与 §4.3 N5 的关系：N5 = 资源上限条目；本节 = 超长输出**落盘阈值与预览形态**（两轴并存）。
 
 **总体目标**：工具输出「超长落盘」阈值 = **64K（65536 字符）**，落盘时的内联 preview 采用**保头保尾**构成，并让显示层全链路对齐 64K——减少大输出（尤其 advisor 评审、读大文件、grep 大仓库）被过早落盘 / 截断的频率。
 
@@ -105,13 +105,13 @@
 
 **非功能**：N1 一致性（全链路同一阈值 64 × 1024 = 65536，不引入第二套「64K」）· N2 两端一致（同一阈值 / 同一 preview 构成 / 同一 advisor 截断）· N3 可测试（阈值边界：恰好 65536 不落盘 / 65537 落盘；preview 双端构成；advisor 截断；失败回退均有单元测试）· N4 可维护（常量语义注释同步；不改落盘文件保留期（3 天）/ 写时自清理 / 失败回退逻辑）· N5 零破坏（落盘全文 / 清理 / 提示语路径格式不变）。
 
-**VSC 端显示层条目（并入）**——VSC 树需求档 `thincoder-vscode/docs/requirements/TOOL-OUTPUT-LIMITS.md` 的**端独有条目**（其 FR1–FR3 / FR6–FR8 / N1–N5 与上列共享条目同义——不重并，D2）：
+**VSC 端显示层条目（并入）**——原 VSC 树需求档（产品树旧档，已随两仓合并退役）的**端独有条目**（其 FR1–FR3 / FR6–FR8 / N1–N5 与上列共享条目同义——不重并，D2）：
 
 - **FR-V1 · 实时面板同宽**：面板实时看到的工具结果与上下文一致到 64K——panel `onToolResult` 发 webview 前 `slice(0, 65536)`（`thincoder-vscode/src/extension/panel-callbacks.mjs:165`）+ webview DOM 上限 `MAX_TOOL_OUTPUT = 64 × 1024`（`thincoder-vscode/webview/lib.js:27` · `capText` `:30` 承接）。
   验收语义：70 000 字符结果经 `onToolResult` 后 ≤ 65536。
 - **FR-V2 · 历史页工具卡同宽**：回看历史时工具卡内容与上下文一致到 64K——`sendHistoryPage` 工具卡 `slice(0, 65536)`（`thincoder-vscode/src/extension/panel-session.mjs:195` · `:199` 结果数组同限）。验收语义：70 000 字符工具消息经 `sendHistoryPage` 后 ≤ 65536 且 > 20000。
 
-### 4.6 VSC 端条目（并入 · 自 `thincoder-vscode/docs/requirements/TOOLS.md`）
+### 4.6 VSC 端条目（并入 · 自原 VSC 树需求档，已随两仓合并退役）
 
 语义同源——VSC 档 F1–F7 / N1–N7 与 §4.1–§4.3 逐条同义（不重并）；VSC 独有事实 = ① **描述外部装载**：`DESC(name)` 运行时装载（`thincoder-vscode/src/tools/shared.mjs:15`）
 ——`src/tools/*.md` 25 档在位、接线命中 25 处（工具选择面与对端同构；CLI 装载面已列 §4.2，两端语义一致）· ② **打包面 N6**：`.vscodeignore` 不排除 `src/**/*.md`——25 档随扩展发布（发布前 `vsce ls` 清单核对）·
@@ -218,6 +218,7 @@ thincoder 自身的 CLI / TUI **不定义**本能力——它只是其中一个�
 > **上游事实**（官方 API 实读 2026-10-17）：`POST https://api.deepseek.com/v1/tools/search`——`query` ≤128 字（支持 `site:` ∥ `lang:` ∥ `after:` / `before:` ∥ 引号运算符）· `count` 1–50 · `need_content` 缺省 false；
 > 结果 = `summary`（600–800 字，给模型读）∥ `snippet` ∥ `date` ∥ `authority` 0–4（**`-1` = 未知**——官方 Search API Reference「0 to 4 (-1 means unknown)」，2026-10-17 实读）∥ `rerank_score` 0–3。`POST /v1/tools/fetch`——`url` ⇒ `{title, content = Markdown}`。
 > 认证 = 既有 DeepSeek API key；计费 = **按成功请求 $0.75 / 千次**（失败 / 空结果不计，`count` 不影响单价）；限速 = 各 5 QPS（账号级）。
+> **错误码语义**（Gitee IKQ2KZ 现场 2026-10-23 实读）：`/v1/tools/fetch` 对目标页不存在返回 404——那是**被取页面的状态**，不是凭据或配额问题；401 / 402 / 403 才是「继续发请求没有意义」的三类。故 W4 的熔断名单只收后三者，404 归 W3 的逐 URL 回落。
 > **关联在册（指针，不展开）**：设计 §6.10（`websearch` 配置面历史）· `CONFIG.md` §6.2 / §6.3（配置键名录 ∥ `${env:VAR}` 消费侧解析）· §4.2 F6（后端选择面契约）。
 
 **总体目标（为谁解决什么问题）**：让 `websearch` / `fetch` 可直接消费 DeepSeek 官方搜索 / 抓取能力（结构化结果带权威度 ∥ 日期 ∥ 长摘要；抓取返回 Markdown），
