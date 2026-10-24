@@ -179,6 +179,9 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **`none` stands only where the change touches neither the interaction between components nor a business-observable result an existing case asserts**: a batch that touches either and closes with no integration-case change is incomplete — that case should have been designed before the code.
   Why: an unconditional `none` let any change close against an empty set, so the set stayed empty while every closeout read green.
 - **Integration tests** combine components and test the **interaction between components** — the **pre-release acceptance loop**, which this project enters from a user-visible entry.
+- **The integration index is `<package>/test/RTM.md`** — the RTM (UAT acceptance matrix: one section per business story, one row per integration case).
+  A design round opens by reading it and answers as a delta — rows broken, rows redundant, rows missing — never a blank "which scenarios does this change need" list; a row's number is fixed in the RTM before its case title is written.
+  Why: without the index a designer sees only this batch's scenes, so every case lands as a new one and the existing set is never revised.
 - **Project assets**: business scenarios + production-problem additions, asserting only business-observable results.
 - **The integration window is an upper bound**: a repo's suite budget stays ≈50–100 cases — over the window, trim old scenarios rather than turn away a case a business change earned.
   Why: read as a freeze, the window would turn every business change away, and the suite would stop following the business.

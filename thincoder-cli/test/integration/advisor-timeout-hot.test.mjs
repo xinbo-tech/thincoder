@@ -88,7 +88,7 @@ async function scene(t, { delayMs, timeoutMs }) {
 
 const review = (agent) => advisorTool.execute({ type: "code", async: false, paths: ["note.txt"] }, { agent })
 
-test("I-AP1 热生效：settings set 3000 后，下一次评审按 3s 结束并带回超时尾", { timeout: 90_000 }, async (t) => {
+test('5-1 热生效：settings set 3000 后，下一次评审按 3s 结束并带回超时尾', { timeout: 90_000 }, async (t) => {
   const s = await scene(t, { delayMs: 5_000, timeoutMs: 900_000 })
 
   const set = await s.settings.execute({ action: "set", key: "agent.advisor.timeoutMs", value: "3000" }, { agent: s.agent })
@@ -105,7 +105,7 @@ test("I-AP1 热生效：settings set 3000 后，下一次评审按 3s 结束并�
   assert.equal(s.endpoint.requests.length, 1, "一次评审 = 一次模型请求")
 })
 
-test("I-AP2 null 删除回退：清掉超时后同一评审跑完（≈5s 流）、无超时尾", { timeout: 90_000 }, async (t) => {
+test('5-2 null 删除回退：清掉超时后同一评审跑完（≈5s 流）、无超时尾', { timeout: 90_000 }, async (t) => {
   const s = await scene(t, { delayMs: 5_000, timeoutMs: 3_000 })
 
   const removed = await s.settings.execute({ action: "set", key: "agent.advisor.timeoutMs", value: "null" }, { agent: s.agent })
@@ -124,7 +124,7 @@ test("I-AP2 null 删除回退：清掉超时后同一评审跑完（≈5s 流）
   assert.equal(s.endpoint.requests.length, 1, "一次评审 = 一次模型请求")
 })
 
-test("I-AP3 写面拒非法值：abc 被拒且点名键与可消费形态，配置面读回不变", { timeout: 60_000 }, async (t) => {
+test('5-3 写面拒非法值：abc 被拒且点名键与可消费形态，配置面读回不变', { timeout: 60_000 }, async (t) => {
   const s = await scene(t, { delayMs: 100, timeoutMs: 3_000 })
 
   await assert.rejects(

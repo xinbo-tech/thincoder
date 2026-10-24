@@ -60,7 +60,7 @@ function stubTransport(t, responder) {
 const httpReply = (status) => ({ ok: false, status, body: { cancel() {} } })
 const jsonReply = (data) => ({ ok: true, status: 200, json: async () => data })
 
-test("I-WB1 404 不熔断：fetch 收到 404 后，同一会话的 websearch 仍打到 DeepSeek", { timeout: 60_000 }, async (t) => {
+test('3-1 404 不熔断：fetch 收到 404 后，同一会话的 websearch 仍打到 DeepSeek', { timeout: 60_000 }, async (t) => {
   const local = serveLocalFetch(t)
   const calls = stubTransport(t, (call) => call.url.endsWith("/fetch")
     ? httpReply(404)
@@ -78,7 +78,7 @@ test("I-WB1 404 不熔断：fetch 收到 404 后，同一会话的 websearch 仍
   assert.equal(calls.filter((c) => c.url.endsWith("/search")).length, 1, "同一会话的 search 恰 1 次 DeepSeek 请求（未熔断）")
 })
 
-test("I-WB2 401 熔断只停后端：fetch 回落本地直取成功，随后 websearch 零上游命中且结算", { timeout: 60_000 }, async (t) => {
+test('3-2 401 熔断只停后端：fetch 回落本地直取成功，随后 websearch 零上游命中且结算', { timeout: 60_000 }, async (t) => {
   serveLocalFetch(t)
   const calls = stubTransport(t, () => httpReply(401))
   const agent = deepseekAgent()
@@ -96,7 +96,7 @@ test("I-WB2 401 熔断只停后端：fetch 回落本地直取成功，随后 web
   assert.match(search, /^1\. \[bing\]/, `熔断只停后端、不停工具：回落腿承接结果，实际：${search}`)
 })
 
-test("I-WB3 无 DeepSeek 渠道零变化：回执逐字不变、零 (deepseek …) 提示行、替身零命中", { timeout: 60_000 }, async (t) => {
+test('3-3 无 DeepSeek 渠道零变化：回执逐字不变、零 (deepseek …) 提示行、替身零命中', { timeout: 60_000 }, async (t) => {
   serveLocalFetch(t)
   const calls = stubTransport(t, () => { throw new Error("no DeepSeek channel — the transport must never be called") })
   const agent = { config: { providers: [], providersList: [] } }

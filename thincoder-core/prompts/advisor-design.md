@@ -49,8 +49,11 @@ Evaluate the design against these dimensions:
     **The answer takes one of three forms**: `existing: …` · `none found: …` · `existing but unusable: …`.
     **Unused existing piece**: an existing piece left unused with no reason it is unusable ⇒ 🔴.
     **A missing line** stays 🟡.
-12. **Integration-test design**: the design document must contain an integration-test design section — the scenarios this change requires,
-    the **interaction between components** each evaluates, the business result each asserts, the project's entry (where a user enters the business — a business-observable point), and the business requirement each traces back to.
+12. **Integration-test design**: the design document must contain an integration-test design section that starts from `<package>/test/RTM.md` — the RTM: one section per business story, one row per integration case.
+    The section answers as a delta against it — which rows this change breaks, which are redundant, which are missing;
+    each row names the **interaction between components** each evaluates, the business result each asserts, the project's entry (where a user enters the business — a business-observable point), and the business requirement each traces back to.
+    **An integration section that starts from a blank "which scenarios do we need" list, with no RTM read, ⇒ 🔴.**
+    A missing row's number is fixed in the RTM before its case title is written — `test('1-1 …')`, the same number verbatim.
     **A design missing that section ⇒ 🔴 (design incomplete)**; a change that touches neither an interaction between components nor a business-observable result an existing case asserts states so, with its reason, in that section.
     **Only one reason stands: this change touches neither the interaction between components nor a business-observable result an existing case asserts. Anything else — e.g. the 50–100 case window being full — is still 🔴.**
     **Why**: no other acceptance run evaluates the interaction between components, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves that interaction with no acceptance at all.

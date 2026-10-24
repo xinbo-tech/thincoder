@@ -197,7 +197,7 @@ const penLines = (receipt) => receipt.split("\n").filter((line) => line.startsWi
 
 const I1_CONTENT = "export const penProbe = 1\n"
 
-test("I1 首次：主 agent 写产品源文件 ⇒ 该笔回执以 [pen check] 行结尾、恰一次、含两处键句；文件已写入", { timeout: SCENE_TIMEOUT_MS }, async (t) => {
+test('2-1 首次：主 agent 写产品源文件 ⇒ 该笔回执以 [pen check] 行结尾、恰一次、含两处键句；文件已写入', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
   const rounds = [[{ id: "toolu_i1", name: "write", input: { path: "src/x.mjs", content: I1_CONTENT } }]]
   const s = await scene(t, { rounds })
   const run = await s.run("Write src/x.mjs with the requested content.")
@@ -216,7 +216,7 @@ test("I1 首次：主 agent 写产品源文件 ⇒ 该笔回执以 [pen check] �
   assert.equal(readFileSync(join(s.cwd, "src/x.mjs"), "utf8"), I1_CONTENT, "文件已写入（笔真的落盘了）")
 })
 
-test("I2 第二笔：同一会话紧接第二笔产品源文件写 ⇒ 第二笔回执零 [pen check]", { timeout: SCENE_TIMEOUT_MS }, async (t) => {
+test('2-2 第二笔：同一会话紧接第二笔产品源文件写 ⇒ 第二笔回执零 [pen check]', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
   const firstContent = "export const firstPen = 1\n"
   const secondContent = "export const secondPen = 2\n"
   const rounds = [
@@ -239,7 +239,7 @@ test("I2 第二笔：同一会话紧接第二笔产品源文件写 ⇒ 第二笔
   assert.equal(readFileSync(join(s.cwd, "src/second.mjs"), "utf8"), secondContent)
 })
 
-test("I3 另一会话：先写文档再写产品源文件 ⇒ 文档笔零提示且不消耗闩，随后产品码笔仍有提示", { timeout: SCENE_TIMEOUT_MS }, async (t) => {
+test('2-3 另一会话：先写文档再写产品源文件 ⇒ 文档笔零提示且不消耗闩，随后产品码笔仍有提示', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
   const docContent = "# note\n"
   const codeContent = "export const afterDoc = 3\n"
   const rounds = [

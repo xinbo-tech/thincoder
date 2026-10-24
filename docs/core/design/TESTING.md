@@ -664,13 +664,31 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 |---|---|---|---|
 | `docs/core/design/TESTING.md`（本档自身） | —（行数随本节改笔变化，不落固定读数） | +§11.15–§11.17 三节；§11.1 ∕ §11.2 ∥ §11.4 ∥ §11.8 ∥ §11.10–§11.12 ∥ §11.14 改笔 | 设计轮落 |
 | `docs/core/requirements/TESTING.md` | —（父侧笔） | F29 的名称 ∥ 路径定死；N22 去「待裁 O-1」⇒ 已裁 = 每端一份 | 父侧落 |
-| `thincoder-core/prompts/persona-eng-designer.md` | 150 | 第 9 项（现 136–137 行）整项替换 ⇒ ≤±4 行（2 行 → ≤5 行） | 实施轮落 |
-| `thincoder-core/prompts/advisor-design.md` | 137 | 第 12 条（现 52–57 行）首句替换 + 一条 🔴 + 一句编号先行 ⇒ +2 行 | 实施轮落 |
-| `thincoder-core/prompts/discipline-engineering.md` | 342 | 集成段（现 181 行后）新增一条 ⇒ +2 行 | 实施轮落 |
+| `thincoder-core/prompts/persona-eng-designer.md` | 152 | 第 9 项（现 137–138 行）替换开篇口径、`#87` 字段句与注解逐字保留 ⇒ 2 行 → 5 行（+3） | 实施轮落 |
+| `thincoder-core/prompts/advisor-design.md` | 140 | 第 12 条（现 52–59 行）首句替换 + 一条 🔴 + 一句编号先行 ⇒ 2 行 → 5 行（+3） | 实施轮落 |
+| `thincoder-core/prompts/discipline-engineering.md` | 346 | 集成段（现 181 行后）新增一条 ⇒ +3 行 | 实施轮落 |
 | CLI 包 `<包>/test/RTM.md` | 0（不存在） | ≈45 行：5 故事节（节标题 + 节注 + 表头 + 3 行）+「异常与更正」节 + 签署面（§11.16 建表结构） | 实施轮建 |
 | CLI 包 `test/integration/*.test.mjs`（5 档） | 345 ∥ 245 ∥ 99 ∥ 108 ∥ 132 | 15 处标题改号（旧代号离场） | 实施轮落 |
 | `docs/batches/2026-10-24-rtm-index.check.mjs`（机判脚本） | 0（不存在） | 新建 ≈30 行；**一次性读数用毕即删**（与批档同寿命；住批档目录 ⇒ 不进包根、不入 `check-syntax` 语法门） | 实施轮落 · 收口删 |
 | vsc ∥ desktop 包 `<包>/test/RTM.md` | 0（不存在） | 骨架 + 「尚无集成用例」注；故事节随首个用例设立（≈10 行） | 实施轮建 |
+| `docs/core/design/PROMPT-SYSTEM.md` §6.6（操作数族判据源） | 4219 | 六名 → 七名：`:186`–`:187` 名单 ∥ 理由类 · `:193` J1 白名单 · `:195` ∥ `:200` 计数词 ⇒ ±0 行 | 实施轮落 · 与提示词同批 |
+| `docs/core/design/DOC-DISCIPLINE.md`（操作数族判据源） | 2200 | 六名 → 七名：`:1021` 名单 · `:1029` 行区 `:45`–`:48` → `:45`–`:49` · `:1031` ∥ `:1034` 计数词与围栏名单 ⇒ ±0 行 | 实施轮落 · 与提示词同批 |
+| `thincoder-core/doc-check/anchors.mjs` | 134 | `CANON_OPERANDS` 增第七名（RTM 总表的档名）（`:45`–`:48` → `:45`–`:49`）；`:10` ∥ `:38` ∥ `:50` 注释「六名」→「七名」 ⇒ +1 行 | 实施轮落 · 与提示词同批 |
+| `scripts/prompt-refs-check.mjs`（仓根） | 136 | `:34` 注释「六名」→「七名」；`J1_WHITELIST` 自 `CANON_OPERANDS` 派生 ⇒ 随动，零逻辑改 ⇒ ±0 行 | 实施轮落 · 与提示词同批 |
+| `thincoder-core/tool-docs/doc_check.md` | 66 | `:16`「Six names」→「Seven names」+ 围栏名单增第七名（RTM 总表的档名） ⇒ ±0 行 | 实施轮落 · 与提示词同批 |
+
+**操作数族登记面的检索读数（本席实跑 2026-10-24）**：检索式 = `CANON_OPERANDS` ∥ `CANON 操作数` ∥ `Six names` ∥ `六名`，域 = 跟踪面（`docs/**` 非批档 ∥ `thincoder-core/**` ∥ `scripts/**`；批档 ∥ `.thincoder/tmp/**` ∥ `_archive` = 记录面，不入判）。
+命中且须随本批改 = 上表五行，**零第六处**：`docs/core/design/PROMPT-SYSTEM.md`（`:195` ∥ `:200` 计数词）· `docs/core/design/DOC-DISCIPLINE.md`（`:1021` ∥ `:1026` ∥ `:1029` ∥ `:1031` ∥ `:1034`）· `thincoder-core/doc-check/anchors.mjs`（`:10` ∥ `:39` ∥ `:50`）·
+仓根 `scripts/prompt-refs-check.mjs`（`:15` ∥ `:34` ∥ `:39`）· `thincoder-core/tool-docs/doc_check.md`（`:16`）。
+命中而判零改 = `docs/core/design/API-CONTRACT.md:1176`（常量登记行：只记 const 名 ∥ 位置 ∥ 类型，无名单 ∥ 无计数词，扩表后仍真）。
+同形不同指（不属本族，零改）= 「六名」另四义：菜单组名（`docs/desktop/design/IPC.md:40` ∥ `docs/desktop/design/MENU.md:12`）· 跳过目录族（`docs/core/design/MEMORY.md:542`）· 模型名（`docs/core/design/MODEL-SPECS.md:1347`）· 事件名（`docs/cli/design/ACP-CLIENT.md:361`）。
+
+**第七名的既有件三问**：名逐字 = `RTM.md`（`none found:`——登记面已查：`grep -rn "RTM\.md" thincoder-core/doc-check/anchors.mjs thincoder-core/tool-docs/doc_check.md docs/core/design/PROMPT-SYSTEM.md docs/core/design/DOC-DISCIPLINE.md` 零命中）；
+住 = `CANON_OPERANDS` 第七位（`thincoder-core/doc-check/anchors.mjs:45`–`:49`）· 消费 = J1 白名单（`scripts/prompt-refs-check.mjs:36`）∥ doc-check 围栏名单（`thincoder-core/tool-docs/doc_check.md:16`–`:22`）∥ 两份判据源档（`:674` ∥ `:675`）。
+
+**操作数族同批的理由（结论 = 同批，不另批）**：RTM 总表的档名（全大写 + `.md`）命中 J1，而 J1 白名单直接取自该表——仓根 `scripts/prompt-refs-check.mjs:36` 的 `const J1_WHITELIST = new Set(CANON_OPERANDS)`。
+提示词三处写入 `<package>/test/RTM.md` 而不扩表，仓根 `scripts/prompt-refs-check.mjs` 即报三处命中；判据源（§6.6「三面逐字一致」）与代码表分叉 = 代码与其判据源互相矛盾。
+故白名单扩展随本批落，不另开批。
 
 ### 11.9 关键决策记录
 
@@ -799,7 +817,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 | 3-3 | 在没有 DeepSeek 渠道的配置下跑一次 | 回执逐字不变、零 (deepseek …) 提示行、替身零命中 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/web-backend-404.test.mjs` |
 | 4-1 | 设 `BROWSER_START_TIMEOUT_MS=2000` 后启动浏览器 | 失败句含 within 2s，失败后会话仍可用 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/browser-start-window.test.mjs` |
 | 4-2 | 不设该变量启动浏览器 | 失败句含 within 25s（默认窗口），不再出现 12s 时代的句子 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/browser-start-window.test.mjs` |
-| 4-3 | 真机上首个动作是 navigate | 自启段不吃动作预算；宿主无 Chromium 则该例 skip 并打印 | 未执行 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/browser-start-window.test.mjs` |
+| 4-3 | 真机上首个动作是 navigate | 自启段不吃动作预算；宿主无 Chromium 则该例 skip 并打印 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/browser-start-window.test.mjs` |
 | 5-1 | `settings set` 把超时改成 3000，再跑下一次评审 | 下一次评审按 3s 结束并带回超时尾 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/advisor-timeout-hot.test.mjs` |
 | 5-2 | 把超时删掉（设为 null），再跑同一评审 | 评审跑完（约 5s 流），无超时尾 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/advisor-timeout-hot.test.mjs` |
 | 5-3 | 给超时写入非法值 abc | 被拒，回执点名该键与可消费形态；配置面读回不变 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/advisor-timeout-hot.test.mjs` |
@@ -875,28 +893,42 @@ console.log('bad-column-rows', badColumnRows);
 
 **公共源勘察**：工作目录树内公共源已查——`thincoder-core/prompts/persona-eng-designer.md`（第 9 项现文）· `thincoder-core/prompts/advisor-design.md`（第 12 条现文）· `thincoder-core/prompts/discipline-engineering.md`（集成段现文）· 本档 §11.15 ∥ §11.16（所持的机制与编号规则）。结论 = 三处均有现行条目可指，无新建条目；外部公共源 = 本批未引（提示词文字属项目自有体式）。
 
-**① `thincoder-core/prompts/persona-eng-designer.md` 第 9 项（现 136–137 行）整项替换为**：
+**`#87` 保留件的并存口径（写死）**：① ② 一律「**替换开篇口径、`#87` 的字段句与注解逐字保留**」。
+**三个用名（一处定名，本节各条共用）**：**字段句** = 字段列举句；**注解括注** = 字段句内那句 `(where a user enters the business — a business-observable point)`（「注解」与「注解括注」是同一个东西）；**两维触发行** = 以 `A change that alters …` 开局、两维取或的那一行。
+注解括注在字段句之内 ⇒ 保留字段句即保留注解：① 的保留件 = 字段句 + 两维触发行；② 的 = 字段句 + `:54` 行（缺段 🔴 与两维取或句，按 `:914` 原样保留）。
+不取「只加不删」——留着 `the scenarios this change earns` 就是留着本批被取代的起点口径（批 §1 已定：设计步起点 = 读 RTM 出 delta，不再是「这次要什么场景」），两套起点并存比删更坏。
+也不取「整项替换」——`#87` 的判据轴、注解与两维触发行是上一批的交付物，替换即删。保留件逐处列在各小条里。
+
+**折行形（三段共用）**：每段按语义断行、逐行 ≤300 字符（本席实测最大 241）；**折行不折字**——断行处只以一个空格换行，不加字、不减字、不加连字符。
+三档提示词逐行 ≤300 是硬约束（现盘 persona 298 ∥ advisor 290 ∥ discipline 300，多一行超宽即破写形）。
+
+**① `thincoder-core/prompts/persona-eng-designer.md` 第 9 项（现 137–138 行）替换为**（保留件 = 字段句 `each row naming … business-observable point).`（含注解括注）与两维触发行，逐字不动）：
 
 ```text
-9. **Integration test design — start from the index**: `<package>/test/RTM.md` is the RTM (UAT acceptance matrix: one section per business story, one row per integration case, 8 columns). Read it before designing, then answer as a delta: which rows this change breaks (rewrite them), which rows are redundant (delete them), which rows are missing (new rows).
+9. **Integration test design — start from the index**: `<package>/test/RTM.md` is the RTM (UAT acceptance matrix: one section per business story, one row per integration case, 8 columns).
+   Read it before designing, then answer as a delta: which rows this change breaks (rewrite them), which rows are redundant (delete them), which rows are missing (new rows) —
+   with each row naming the **interaction between components** it evaluates, the business-observable result it asserts, the requirement it serves, and this project's entry (where a user enters the business — a business-observable point).
    A new row's number is fixed in the RTM before its case title is written — `test('1-1 …')`, the same number verbatim.
-   A change that alters what the business does names the three answers; "no change" is not an answer there.
+   A change that alters an interaction between components or a business-observable result an existing case asserts names the cases it adds ∥ revises — "no change" is not an answer there.
 ```
 
-**② `thincoder-core/prompts/advisor-design.md` 第 12 条（现 52–57 行）首句替换、并加一条 🔴**：
+**② `thincoder-core/prompts/advisor-design.md` 第 12 条（现 52–59 行）首句替换、并加一条 🔴**（保留件 = 字段句 `the **interaction between components** … each traces back to`（含注解括注），逐字不动）：
 
 ```text
-12. **Integration-test design**: the design document must contain an integration-test design section that starts from `<package>/test/RTM.md` — the RTM: one section per business story, one row per integration case. The section answers as a delta against it — which rows this change breaks, which are redundant, which are missing — and each row points back to the business requirement it serves.
+12. **Integration-test design**: the design document must contain an integration-test design section that starts from `<package>/test/RTM.md` — the RTM: one section per business story, one row per integration case.
+    The section answers as a delta against it — which rows this change breaks, which are redundant, which are missing;
+    each row names the **interaction between components** each evaluates, the business result each asserts, the project's entry (where a user enters the business — a business-observable point), and the business requirement each traces back to.
     **An integration section that starts from a blank "which scenarios do we need" list, with no RTM read, ⇒ 🔴.**
     A missing row's number is fixed in the RTM before its case title is written — `test('1-1 …')`, the same number verbatim.
 ```
 
-（该条其余现有行——缺段 🔴 ∥ 「业务行为未变」唯一正当理由 ∥ 窗口满不算理由 ∥ 全量跑 🔴 ∥ 两条 Why——原样保留。）
+（该条其余现有行——缺段 🔴 `:54` ∥ 唯一成立的理由 `:55` ∥ 窗口满不算理由 `:55` ∥ 全量跑 🔴 `:57`–`:58` ∥ 两条 Why `:56` ∥ `:59`——原样保留、逐字不动。）
 
-**③ `thincoder-core/prompts/discipline-engineering.md` 集成段（现 181 行之后）新增一条**：
+**③ `thincoder-core/prompts/discipline-engineering.md` 集成段（现 181 行之后）新增一条**（该段无 `#87` 保留件；该档 `:195`–`:196` 的验收例外句在新条之后，原文不动）：
 
 ```text
-- **The integration index is `<package>/test/RTM.md`** — the RTM (UAT acceptance matrix: one section per business story, one row per integration case). A design round opens by reading it and answers as a delta — rows broken, rows redundant, rows missing — never a blank "which scenarios does this change need" list; a row's number is fixed in the RTM before its case title is written.
+- **The integration index is `<package>/test/RTM.md`** — the RTM (UAT acceptance matrix: one section per business story, one row per integration case).
+  A design round opens by reading it and answers as a delta — rows broken, rows redundant, rows missing — never a blank "which scenarios does this change need" list; a row's number is fixed in the RTM before its case title is written.
   Why: without the index a designer sees only this batch's scenes, so every case lands as a new one and the existing set is never revised.
 ```
 

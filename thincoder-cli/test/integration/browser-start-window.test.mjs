@@ -63,7 +63,7 @@ function withEnv(t, env) {
 
 const navigate = () => browserTool.execute({ action: "navigate", url: "http://127.0.0.1:1/" }, ctx)
 
-test("I-BT1 env 旋钮生效：BROWSER_START_TIMEOUT_MS=2000 的失败句含 within 2s，且失败后会话仍可用", { timeout: 120_000 }, async (t) => {
+test('4-1 env 旋钮生效：BROWSER_START_TIMEOUT_MS=2000 的失败句含 within 2s，且失败后会话仍可用', { timeout: 120_000 }, async (t) => {
   withEnv(t, { BROWSER_PATH: process.execPath, BROWSER_START_TIMEOUT_MS: "2000" })
 
   const first = await navigate()
@@ -76,7 +76,7 @@ test("I-BT1 env 旋钮生效：BROWSER_START_TIMEOUT_MS=2000 的失败句含 wit
   assert.doesNotMatch(second, /session is already running/, "启动失败后会话态已复位，第二次是干净重开")
 })
 
-test("I-BT2 缺省窗口：不设 env 的失败句含 within 25s，12s 时代的句子不再出现", { timeout: 120_000 }, async (t) => {
+test('4-2 缺省窗口：不设 env 的失败句含 within 25s，12s 时代的句子不再出现', { timeout: 120_000 }, async (t) => {
   withEnv(t, { BROWSER_PATH: process.execPath, BROWSER_START_TIMEOUT_MS: undefined })
 
   const receipt = await navigate()
@@ -85,13 +85,13 @@ test("I-BT2 缺省窗口：不设 env 的失败句含 within 25s，12s 时代的
   assert.doesNotMatch(receipt, /within 12s/, "12s 时代句子不再出现")
 })
 
-test("I-BT3 真机首动作 navigate：自启段不吃动作预算（无 Chromium 则 skip 并打印）", { timeout: 180_000 }, async (t) => {
+test('4-3 真机首动作 navigate：自启段不吃动作预算（无 Chromium 则 skip 并打印）', { timeout: 180_000 }, async (t) => {
   withEnv(t, { BROWSER_PATH: undefined, BROWSER_START_TIMEOUT_MS: undefined })
 
   try {
     resolveBrowser()
   } catch {
-    console.log("no Chromium-based browser — I-BT3 skipped")
+    console.log("no Chromium-based browser — 4-3 skipped")
     t.skip("no Chromium-based browser")
     return
   }
