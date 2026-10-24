@@ -10,8 +10,6 @@
  * `gate` 面缺省 = 本会话触达记账里的 `.md`（交付面按轮次收窄的唯一来源）。
  * `report` 非门禁（硬）：输出不得被读作拒执行的理由（用户令 > 机检——§2 总则族）；
  * `gate` 的强制面住交付协议 + 批次档 §6 前置，工具本体同样不阻断任何动作。
- * gate 前置（fail-closed）= 引擎版本一致：本会话进程持启动时加载的 ESM 引擎，引擎档晚于启动 ⇒ ERROR
- * （判据单源 = `doc-check/version.mjs`——与 `batch-gate.mjs` 共用一份清单，不各持一份）。
  * 描述外置：模型可见文本单点 = `tool-docs/doc_check.md`（`DESC` 单一解析面）。
  * 装配段 = `agent/family-tools.mjs` 三处（depth-0 / eng-coder / eng-designer）——写文档 / 设计档的角色面。
  */
@@ -19,9 +17,6 @@ import { resolve } from "node:path"
 import { projectRootView } from "../manifest.mjs"
 import { runDocCheck } from "../doc-check/index.mjs"
 import { DESC } from "../tools/shared.mjs"
-
-// 版本函数单源 = `doc-check/version.mjs`（两消费面：本档 gate 分支 ∥ `batch-gate.mjs` 两机械点）——
-// 本档只转口，导出面不变（原五档清单已随之六档：`version.mjs` 自身入清单）。
 
 export const docCheckTool = {
   name: "doc_check",
@@ -65,7 +60,7 @@ export const docCheckTool = {
         .filter((p) => typeof p === "string" && p.toLowerCase().endsWith(".md"))
       return runDocCheck(root, { mode: "gate", docs, docsSource: explicit ? "explicit" : "session" }).report
     }
-    // 报告态：清单是唯一范围来源——不给就是拒绝（不是「全域」）。引擎陈旧 ⇒ 首行前一行注记（A-DD30 ①）。
+    // 报告态：清单是唯一范围来源——不给就是拒绝（不是「全域」）。
     if (explicit === null) {
       return "doc_check: `docs` is required in report mode — pass the explicit list of documents to judge (e.g. docs: [\"docs/design/X.md\"]). There is no default range: nothing is scanned unless you name it."
     }

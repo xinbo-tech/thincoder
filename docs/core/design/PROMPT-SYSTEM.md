@@ -899,13 +899,11 @@ EN 档**不在行宽机检域**（`scanDirs = ["docs"]`）——新行 406 字�
 | 条目 | 命令（仓根 `thincoder/`） | 期望读数 |
 |---|---|---|
 | `#1684` | `node scripts/prompt-refs-check.mjs` | 提示词面 69 档 · 代码面 459 档 · `命中 0` + `OK(prompt-refs)`（改前 = 5，本席实跑） |
-| `#1684` | doc-check 交付门（范围 = 本轮所写档） | 0 条命中（全仓报告态 261 条悬空 = 既有基线，非本批域）；读数取新进程（见下「已知代价」） |
+| `#1684` | doc-check 交付门（范围 = 本轮所写档） | 0 条命中（全仓报告态 261 条悬空 = 既有基线，非本批域） |
 | `#1683` | `grep -in "content authority" thincoder-core/agent/helpers.mjs` | 0 行（大小写不敏感——`:478` 现文小写，区分大小写形即使未改也读 0 = 假绿） |
 | `#1683` | `grep -n "parent-side final text" thincoder-core/agent/helpers.mjs` | 0 行（覆盖 `:469` / `:477` 的 `Verbatim from the parent-side final text`） |
 | `#1683` | `node --check thincoder-core/agent/helpers.mjs` | 退出码 0 |
 
-**已知代价（改引擎件）**：第 3 条改的 `thincoder-core/tool-docs/doc_check.md` 是 `doc_check` 门的六个引擎件之一（该档 `:33` 自述清单含本身；`:34`「newer, or unreadable, ⇒ `DOC-CHECK GATE: ERROR（引擎已更新…）`」）⇒ 实施后本会话内跑交付门只返回 ERROR，实施批的 `batch close`（文档机检门）fail-closed 拒收。
-**处置 = 实施批收口在重启会话后执行**（同族先例 `docs/batches/2026-10-18-doc-check-gate.md:828`）；本表读数一律取新进程。
 
 #### 6.31.5 用例表（正常 / 边界 / 错误）
 
@@ -1209,7 +1207,7 @@ node -e "const fs=require('fs'),d='thincoder-core/prompts';for(const f of fs.rea
 | A3 | 目标形零让步句词表命中（本应 ∥ 可以留 ∥ 没把握 ∥ 代价可控 ∥ should have been ∥ could be kept ∥ not sure ∥ the cost is acceptable） | 一次性词表扫描 |
 | A4 | 体量读数：改后字符数实读（无帽） | `node -e "console.log(require('fs').readFileSync('thincoder-core/prompts/discipline-engineering.md','utf8').length)"` ⇒ 读数即可；改前实读 36,574（2026-10-19） |
 | A5 | `node scripts/prompt-refs-check.mjs` ⇒ `命中 0` | 首行汇总打印「命中 0」+ `OK(prompt-refs)`。新文本 `batch record §5` = 批次档段号（`§1`–`§6` 裸段号 = 协议自名 = 合法正例，见 `:192` ∥ `:851–852`）⇒ 非死节号，不删号、不改述；命中 ⇒ 按 §6.6 删引用（非改址）复测 |
-| A6 | 设计档门 = `doc_check(mode:"gate", docs:["docs/core/design/PROMPT-SYSTEM.md"])` 首行 `DOC-CHECK GATE: PASS` | 本会话读数 ERROR（引擎已更新）⇒ 记为待核、不当作已过；收口前置 = 新进程复跑得 PASS（先例 `:1103`） |
+| A6 | 设计档门 = `doc_check(mode:"gate", docs:["docs/core/design/PROMPT-SYSTEM.md"])` 首行 `DOC-CHECK GATE: PASS` | 直跑该命令取首行 PASS |
 
 **边界（不做）**：不改需求档（why 的权威处零触）· 不动普通侧 `thincoder-core/prompts/discipline-normal.md`（该面 `:24` 是转指「retention per the test-lifecycle policy」、`:159` 只说放置，无删除规则，无可对齐的句子；要送 why 进普通侧另立一批）· 不改测试机制本体（门 ∥ 轮次 ∥ 谁写谁跑零触）· 不新增 `##` 块 · 不新增单测断言 · 其余 15 档零触。
 

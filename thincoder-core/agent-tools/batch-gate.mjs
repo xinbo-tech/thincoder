@@ -14,7 +14,7 @@
  *      `REFUSED`（K ≥ 1）∥ `ERROR` ⇒ 调用面 throw（fail-closed）；命中 ⊆ 他批在途集 ⇒ 不阻收口 + 固定行逐档列出。
  *
  * 判据零变：本档不新增判据——只决定「判谁」与「何时强制」；判据与裁定串由产品引擎
- * `doc-check/index.mjs` 产出（判据源唯一）。引擎版本前置同源 = `doc-check/version.mjs`。
+ * `doc-check/index.mjs` 产出（判据源唯一）。
  *
  * 两条边界（设计与实测同口径）：① **批档自身不入范围**（载体不是判据对象——判它只会把载体的行宽记成本批欠账）；
  * ② **本轮提交面不在工具面**——`<批起 sha>` 只有父侧掌握，
@@ -25,7 +25,6 @@ import { relative, resolve } from "node:path"
 
 import { owningProject, readManifest } from "../manifest.mjs"
 import { runDocCheck } from "../doc-check/index.mjs"
-import { firstVerdictLine } from "../doc-check/version.mjs"
 import { batchProjectRoot } from "./batch-paths.mjs"
 
 /** 平台路径键（win32 大小写不敏感——只作集比对，非判据面）。 */
@@ -93,20 +92,20 @@ const emptyRange = (basis) => ({ count: 0, k: 0, foreign: 0, basis })
 const errorState = (first, range = emptyRange("none")) => ({ state: "error", first, report: first, hitLines: [], noteLines: [], range })
 
 /**
- * 跑一次门（**非抛错**：三因之外的门自身异常收为 `error` 态，由调用面按 `scope` 消费）。
- * @param {{abs:string, cwd?:string, agent?:object, scope?:'writer'|'close', clock?:object}} o
- *   `abs` = 目标批次档绝对路径（根解析用）；`agent._touchedFiles` = 触达记账；`clock` = 版本判定的测试注入缝。
+ * 跑一次门（**非抛错**：两因之外的门自身异常收为 `error` 态，由调用面按 `scope` 消费）。
+ * @param {{abs:string, cwd?:string, agent?:object, scope?:'writer'|'close'}} o
+ *   `abs` = 目标批次档绝对路径（根解析用）；`agent._touchedFiles` = 触达记账。
  * @returns {{state:'pass'|'refused'|'error'|'not-applicable', first:string|null, report:string,
  *   hitLines:string[], noteLines:string[], range:{count:number, k:number, foreign:number, basis:string}}}
  *   `first` = 唯一机判串（首行 `DOC-CHECK GATE:`）；`not-applicable` ⇒ `first = null` + 固定回执行。
  */
-export function runBatchGate({ abs, cwd, agent = {}, scope = "writer", clock } = {}) {
+export function runBatchGate({ abs, cwd, agent = {}, scope = "writer" } = {}) {
   // `scope` 两取值、无第三值（设计「`scope` 语义」）——未知值不静默降级（降级即 ② 变 fail-open）
   if (scope !== "writer" && scope !== "close") {
     return errorState(`DOC-CHECK GATE: ERROR（未知 scope：${JSON.stringify(scope)}——取值只有 "writer" ∥ "close"）`)
   }
   try {
-    return evaluate({ abs, cwd, agent, scope, clock })
+    return evaluate({ abs, cwd, agent, scope })
   } catch (e) {
     const first = `DOC-CHECK GATE: ERROR（门自身异常：${e?.message ?? String(e)}）`
     return errorState(first)
@@ -114,7 +113,7 @@ export function runBatchGate({ abs, cwd, agent = {}, scope = "writer", clock } =
 }
 
 /** 门体（正常路径——异常由上抛给 `runBatchGate` 收口）。 */
-function evaluate({ abs, cwd, agent, scope, clock }) {
+function evaluate({ abs, cwd, agent, scope }) {
   const base = resolve(cwd ?? process.cwd())
   const root = owningProject(resolve(abs)) ?? batchProjectRoot(base)
   const close = scope === "close"

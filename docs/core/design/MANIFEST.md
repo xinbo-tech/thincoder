@@ -899,7 +899,6 @@ const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recen
 - `doc_check` 不再读 manifest（连「manifest 不可读 ⇒ ERROR」也删）——manifest 报错归 `manifest` 工具；`configError` / `gateParamError` / `readManifest` 调用整体退场。
 - 报面随正：gate 行去「声明域 N 档」「排除集」与「运行时取 checkConfig.lineWidth」；报告态声明句改「判据参数 = 工具内置常量；范围 = 传入文件」。**引擎面不再有全域扫描支**：`report` 模式不给清单即报错（零遍历、零兜底）；`gate` 模式范围 = 调用方传入并集。
 - **脚本面现状**：`scripts/doc-check*.mjs` 声明面已退场（不读 `scanDirs` / `anchors.exclude`），但仍以显式 `--root` 为域整树枚举 `.md`（`scripts/doc-check-anchors.mjs:215` 的 `walk`）——该枚举仍在盘，不在「引擎面不再有全域扫描支」的口径内。
-- **F8 面零改**：引擎版本一致性校验（引擎档 mtime > 进程启动时刻 ⇒ 首行 `ERROR`、不产 PASS）与 report 陈旧注记行（不改既有行 ∥ verdict ∥ PASS 语义）逐字保留（AC-51）。
 - 判据两条（锚 ∥ 行宽）的**度量与豁免谓词**零改（`[...line].length` > 300、表行 / 围栏 / 可执行行 / 引文四类）；变的是判定范围与解析序。
 - **why·范围 = 调用方给的那几档**：检查范围就是问题归属——判了本轮没碰过的档，别轮的存量问题会记到本轮头上，交付被档外债务拖住（当年「技术待办爆炸」的成因）；范围由调用方说清，本轮判了什么才可复述。
 - **why·无 `scanDirs` / `domain` / `roots`**：有域就有「未给清单时的默认范围」；默认范围一旦存在，调用方迟早依赖它 ⇒ 全仓扫描以隐形形式回来。参数少一层，行为只有一种。
@@ -941,7 +940,7 @@ const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recen
 | 13 | `scripts/doc-check-linecounts.mjs` · `scripts/doc-check-targets.mjs` | 工程工具面 | linecounts：头注一句随正（不读参数面）· targets：**删死码三处**（`collectSourceDomain` / `walkMd` / `LEDGER_NAMES`）——原「零改」不成立：该档是 `scanDirs` 最后一位消费者，AC-50① 要求零消费 ⇒ 必须删（128 → 97） | 140 · 128 | 实测 0（头注一句换写）· −31（原写 0） |
 | 14 | `thincoder-core/test/doc-check-scope.test.mjs` | 测试 | 夹具去 `checkConfig`（`:22`）· 补 AC-50② 读盘计数用例 | 83 | 实测 +25（预算 ±20，**超帽 5**：用例 4 → 9——补 AC-50② 四形态 ∥ `gate` 空清单「0 档受检」∥ 工具面 `report` 报错） |
 | 15 | 单元测试档（新增）`thincoder-core/test/manifest-five-keys.test.mjs` | 测试 | AC-45 / AC-46 | 0 | 新增 |
-| 16 | 单元测试档（新增）`thincoder-core/test/doc-check-builtins.test.mjs` | 测试 | AC-47 / AC-50 / AC-51 | 0 | 新增 |
+| 16 | 单元测试档（新增）`thincoder-core/test/doc-check-builtins.test.mjs` | 测试 | AC-47 / AC-50 | 0 | 新增 |
 | 17 | 单元测试档（新增）`thincoder-core/test/advisor-project-context.test.mjs` | 测试 | AC-48 / AC-49 | 0 | 新增 |
 | 18 | `PROJECT-MANIFEST.json` | 数据 | 删三键（`:25-50` · `:63-66`） | 67 | ≤ −30 |
 | 19 | `docs/core/design/ENGINEERING-MODE-V2.md` | 文档（设计档） | 键面图与 M1 行（`:64`）/ M8 行（`:71`）随正（M1 键枚举 → 五键；M8「声明面（manifest `checkConfig`）」→「参数内置常量」）：§1.3 N3（`:34`）「声明面（manifest `docRoot` + `checkConfig`）承载」→「声明面（manifest `docRoot`）承载」· §2.2 M9 行（`:72`）「运行期加载面——M9 落点读 manifest `promptsLanding`」→「运行期加载——落点 = 产品源码内固定路径，不读 manifest」· §2.1 依赖图（`:104-109`）· §2.3 E1 三账句（`:121`）+ 字段 schema（`:126-147`）+ 键注释（`:150-151`）+ 校验句（`:153`）· §2.3 E2 声明面（`:219-220`）· §2.3 E4 机检段（`:282`）· §2.4 接口表（`:438` / `:447`）· §2.6 KD2（`:474`）· §3.1 AC3（`:495`）/ AC6（`:498`）· §3.2 T3（`:514`） | 524 | ≤ ±15 |
@@ -970,7 +969,6 @@ const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recen
 | AC-48 | 无 `advisor` 键时 Document Map 产出于 `docRoot` 派生梯：① 声明根 README ② 公共祖先 README ③ 降级句；**零静默**（三态各一断言） | FR42 需求 3 · 验收 ⑦ | 纯函数注入夹具三态 + 本仓实跑（落到 `docs/README.md`） | `test/advisor-project-context.test.mjs` |
 | AC-49 | `advisor.docMap` / `advisor.standardsDoc` 读取分支零残留 | FR42 需求 3 | 源码面：`project-context.mjs` / `declaration.mjs` 两档 `advisor` 零命中（注释除外） | 同 AC-48 |
 | AC-50 | **点查面三条**：① 代码内 `scanDirs` 零消费（源码面 grep，含 `anchors.domain` / `anchors.roots` 零存在）；② **两面分明**——**`report` 面**：不给 `docs` ∥ `[]` ∥ 非数组 ∥ 非字符串条目 ⇒ **一律报错**（零遍历、零全域兜底）；**`gate` 面**：空清单 ⇒ 首行 `DOC-CHECK GATE: PASS（0 档）` 且输出行**必带「0 档受检」**字样（不许只给空范围——防「跳过」被读成「已检」）；③ 传两档 ⇒ 只读这两档 + 其引用目标（`readFileSync` 命中集断言） | FR42 需求 2 · 验收 ③ / `docs/core/requirements/DOC-CHECK.md` F10 · AC-8 | 夹具 + 源码面 + 读盘计数入批档 §2 | `test/doc-check-builtins.test.mjs` · `test/doc-check-scope.test.mjs` |
-| AC-51 | **F8 面零改**：引擎版本一致性（引擎档 mtime > 进程启动时刻 ⇒ gate 首行 `ERROR`、不产 PASS）+ report 陈旧注记行（不改既有行 / verdict / PASS 语义）逐字保留 | `docs/core/requirements/DOC-CHECK.md` F8 | 触碰引擎档 mtime → gate 首行 `ERROR`；report 首行前注记行在场 | `test/doc-check-builtins.test.mjs` |
 
 **未入本表的需求项（回指补全）**：需求 7（连带计数与文档）⇒ 受影响文件表行 8 / 9 / 19 / 22 逐行；验收 ⑤（本档「八键」**现态表述**零命中 ∥「五键」在位）⇒ 行 22；验收 ⑥（两工具描述不含三键参数说明）⇒ 行 8 / 9；验收 ⑧（本仓 696 条裸名指针，债务 `#1731`）⇒ 边界「本仓债」句（本批只保证不新增）；验收 ①–④ ∥ 需求 1–6 见上表各条回指。
 
@@ -1058,7 +1056,7 @@ const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recen
 | AC-42 | **agent 工具面·权限面**：① 子代理装配**只挂只读变体**——`assembleFamilyTools({depth:1, role})` 五格（eng-coder / eng-designer / coder / consult / 兜底）各含恰一 `manifest`，其 `action` 枚举 = `["read"]` 且无 `key` / `value`（写动作 schema 级不可达——§2.10.1）；`depth:0` 两模式（`engineering` 两值）皆含恰一全量变体（三动作）② 写门——工具落盘恒经 `writeManifest` / `initManifest`（源码面：`writer: "main"` 字面量；缺省 `'subagent'` 拒 = AC-5 同一闸）③ 主 agent `init` / `write` 实调 ⇒ 放行 | AC-M1-12（读面按用户令 2026-10-22 收正——§2.10.1） | ✅ 装配夹具五格 + `depth:0` 两格 + 源码面断言 + 实调放行格 + 只读变体 execute 拒绝格 |
 | AC-43 | **工具形 / 分类面 / 描述面（登记）**：① 参数面 = `action ∈ {read,init,write}`（必）+ `target?` / `key?` / `value?`；**两族整键写（`docRoot` / `index` 父键传整个对象）⇒ 拒**（谓词钉死 = §2.10）；② 分类——`readonlyActionOf(tool,"manifest",{action:"read"}) === true`；`write` ⇒ false（侧效门）③ 描述单源——`manifestTool.description === thincoder-core/tool-docs/manifest.md`逐字节（DESC）④ value 解析——`"null"` ⇒ `null`（`docRoot.*` 本面无）· `'["../shared"]'` ⇒ 数组 · 裸串 ⇒ 字面串 | ②.7（目标面 ∥ 权限面）· F15（描述面——`docs/core/requirements/TOOLS.md` §4.2 `:69`） | ✅ 参数面断言 + 分类谓词断言 + 描述逐字节 + 三值解析格（T70–T73） |
 | AC-44 | **判据面：`ambiguous` ⇒ `workspace`（工作区常态）**：`projectRootView` / `projectView` / 两发现梯 `kind` 的态名与语义逐处收正（§2.2）；**实景夹具 = `d:\teamcode`**（下辖带档者 2 = `thincoder` ∥ `thincoder.com`）⇒ `state="workspace"` + 下辖项目按名排序全列；**四会话级消费面行为**：情境行 = 事实行（信息行）∥ ledger = 报明 + 点名项目根 ∥ git = 报明 + 指 `workdir` ∥ batch = 报明 + 显式路径指引 ∥ 翻转面 = **放行**；**禁字样（可机判）**：上述各面输出**不得含** `ambiguous`（`node` 行扫）——`scope-doc-ambiguous` 判据名面不在此列（其指义 = 文档名二义） | 用户裁定 · §2.5 单项目解析律 | ✅ 实景夹具（`d:\teamcode`）逐面跑：态名断言 + 全列断言 + 禁字样行扫 + 零写断言 |
-| AC-45–AC-51 | **manifest 五键 / doc_check 点查 / 评审派生 / F8 零改**：并列附表住 §2.11（回指 FR42 **需求 1–7 · 验收 ①–⑧** + `docs/core/requirements/DOC-CHECK.md` F3 / F8 / F10），本表不重述 | §2.11 | ✅ 见 §2.11 各条核法 |
+| AC-45–AC-50 | **manifest 五键 / doc_check 点查 / 评审派生**：并列附表住 §2.11（回指 FR42 **需求 1–7 · 验收 ①–⑧** + `docs/core/requirements/DOC-CHECK.md` F3 / F10），本表不重述 | §2.11 | ✅ 见 §2.11 各条核法 |
 
 > AC-14 判据口径（KD-M1-16）：「未被读」无机械可观测缝 ⇒ 退为**可观测断言**（不抛 / 不建档 / `agent.manifest === null`）；下游仍读盘的消费面不在本 AC 范围（§2.5「普通会话的读面边界」）。
 

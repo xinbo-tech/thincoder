@@ -1,9 +1,5 @@
 Run a built-in documentation-discipline check on a project and report its findings.
 Read-only. In the default `report` mode it is non-gating: it reports, it never blocks, never sets an exit code, and its output is never a reason to refuse a task or a user instruction.
-When the engine files are newer than this session's start time (or unreadable), `report` prefixes its output with one
-`[doc_check note]` line naming the stale files — that reading came from an engine loaded at startup and is not usable as
-delivery evidence. Nothing else changes: `report` still produces no verdict and no existing line is altered (no stale files ⇒
-the report is byte-identical).
 
 What it checks — exactly two criteria, both built into the engine:
 - Anchors — every documentation pointer (a `*.md` token, optionally carrying directory segments, optionally followed by a section
@@ -43,11 +39,7 @@ pre-existing dangling pointer or overlong line anywhere in it counts, not only t
 machine-readable verdict — `DOC-CHECK GATE: PASS` / `DOC-CHECK GATE: REFUSED（命中 K 条）` / `DOC-CHECK GATE: ERROR（reason）` —
 and consumers judge by that prefix; the hits are fixed in the same round and are never booked to the ledger. The gate refuses
 **one delivery**, not a user instruction: an explicit user go-ahead is followed, with the hits written into the delivery.
-Before running the criteria the gate checks engine-version consistency: the six engine files (`doc-check/index.mjs` /
-`doc-check/anchors.mjs` / `doc-check/width.mjs` / `doc-check/version.mjs` / `agent-tools/doc-check.mjs` / this tool description) each have their mtime
-compared with this process's start time — newer, or unreadable, ⇒ `DOC-CHECK GATE: ERROR（引擎已更新…）` instead of a PASS,
-because a session keeps the engine modules it loaded at startup. `ERROR` is fail-closed (no PASS means not passed): restart the
-session and re-run; a multi-project workspace ⇒ name the project root, per the stated cause.
+`ERROR` is fail-closed (no PASS means not passed): a multi-project workspace ⇒ name the project root, per the stated cause.
 
 Do not wire it as a gate or CI step in `report` mode, and do not treat a finding as a reason to refuse an instruction — a
 machine check never outranks a user instruction.
