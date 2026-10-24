@@ -97,8 +97,15 @@ const TRUNCATED_ECHO_MARK = "注：回显被截断（uuid 之后缺失或不符�
 
 /** §5.2 verdict gate (#940): the echo alone is NOT the verdict — the receipt must
  *  carry a `VERDICT: pass` line and no `VERDICT: changes-required` line (fail-closed). */
-const VERDICT_PASS_LINE    = /^[ \t]*[*_`]*[ \t]*VERDICT:[ \t]*pass[ \t]*[*_`]*[ \t]*$/m
-const VERDICT_CHANGES_LINE = /^[ \t]*[*_`]*[ \t]*VERDICT:[ \t]*changes-required[ \t]*[*_`]*[ \t]*$/m
+// 裁定行接受本地化等价形（GitHub #32 / #14）：评审席用中文回执很常见，
+// 只认英文会让 pass 落成 no-pass-line、凭证永不签发；判据仍只认整行逐字面，
+// 不做「句中含『通过』」这类模糊匹配——那样会把「未通过」也放过。
+const _V_PRE = "^[ \\t]*[*_`]*[ \\t]*"
+const _V_SUF = "[ \\t]*[*_`]*[ \\t]*$"
+const VERDICT_PASS_LINE = new RegExp(
+  _V_PRE + "(?:VERDICT:[ \\t]*(?:pass|通过|通过。)|结论[:：][ \\t]*(?:通过|pass))" + _V_SUF, "mi")
+const VERDICT_CHANGES_LINE = new RegExp(
+  _V_PRE + "(?:VERDICT:[ \\t]*(?:changes-required|不通过|需修改)|结论[:：][ \\t]*(?:不通过|需修改|changes-required))" + _V_SUF, "mi")
 export function verdictGateFailure(rawResult) {
   if (typeof rawResult !== "string") return "no-pass-line"
   if (VERDICT_CHANGES_LINE.test(rawResult)) return "changes-required"

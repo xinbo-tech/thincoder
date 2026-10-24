@@ -206,10 +206,28 @@ function flatten(obj, prefix = "", out = []) {
   return out.sort((a, b) => (a.path < b.path ? -1 : 1))
 }
 
-/** 行格式化：`key = value (type)`——敏感键值遮罩 */
+/** 递归掩码：父对象不敏感、子键敏感时整棵子树替换为 MASKED（Gitee #21）。
+ *  只判查询路径本身会让 `get providers` 把 `providers[].apiKey` 明文吐出来——
+ *  而工具契约写着「敏感键永不明文回显」；父键不敏感不等于子树安全。 */
+function maskDeep(value, prefix) {
+  if (value === null || typeof value !== "object") return value
+  if (Array.isArray(value)) return value.map((v, i) => maskDeep(v, `${prefix}.${i}`))
+  const out = {}
+  for (const [k, v] of Object.entries(value)) {
+    const sub = `${prefix}.${k}`
+    out[k] = isSensitiveKey(sub) ? MASKED : maskDeep(v, sub)
+  }
+  return out
+}
+
+/** 行格式化：`key = value (type)`——敏感键值遮罩（含子树递归） */
 function formatLine({ path, value }) {
   // #58（hygiene-sweep 批）：对象值渲染收正（原 `[object Object]`——JSON 化；敏感键仍恒遮）
-  const shown = isSensitiveKey(path) ? MASKED : value !== null && typeof value === "object" ? JSON.stringify(value) : value
+  const shown = isSensitiveKey(path)
+    ? MASKED
+    : value !== null && typeof value === "object"
+      ? JSON.stringify(maskDeep(value, path))
+      : value
   return `${path} = ${shown} (${Array.isArray(value) ? "array" : typeof value})`
 }
 
