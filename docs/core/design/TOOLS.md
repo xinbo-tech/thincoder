@@ -693,13 +693,13 @@ Error: engineering mode is ON — task is unavailable (the batch record + the le
 **边界（本节不做）**：台账工具自身零改（六态 enum 已是对照面）· eng/plan/escalate 既有门零改 · 普通模式 task 行为零变（不移注册不加开关）· batch 六段 / append-only / 一段一作者 / 冻结门语义零变 · 散文纪律句不删 · 铁律 3 提示词分支 = PROMPT-SYSTEM 板块（本节带上——条目文本 = §6.15.2「提示词面条目文本」逐字固化；落档 = eng-coder（内容依据 = 机制文档））。
 VSC 副本 verify guard 分支同类缺差（`thincoder-vscode/src/agent/run-stages.mjs:105` 零 engineering 条件 vs 核 `thincoder-core/agent/completion.mjs:75` 有）= **随本节收口（hygiene-sweep 面）**。
 
-**提示词面条目文本（逐字固化——三撞点 = 提示词面（`thincoder-core/prompts/`）的 `discipline-engineering.md` §🔴 铁律 · 第 3 条 / §基本流程 · 步骤 1「需求完成判据」 · `persona-engineering.md:68`）**：
+**提示词面条目文本（逐字固化——三撞点 = 提示词面（`thincoder-core/prompts/`）的 `thincoder-core/prompts/discipline-engineering.md` §🔴 铁律 · 第 3 条 / §基本流程 · 步骤 1「需求完成判据」 · `thincoder-core/prompts/persona-engineering.md:68`）**：
 
-① **铁律 3**（`discipline-engineering.md` §🔴 铁律 · 第 3 条）——现行（EN）：
+① **铁律 3**（`thincoder-core/prompts/discipline-engineering.md` §🔴 铁律 · 第 3 条）——现行（EN）：
 「**Work is tracked by the batch record + the ledger**: after requirements are confirmed, build task entries one per requirement (entries land in batch record §2 + ledger rows); no entry = the requirement hasn't landed. (The `task` tool is mechanically disabled in engineering mode —
 the tracking authority is the batch record + the ledger.)」
-② **需求完成判据**（`discipline-engineering.md` §基本流程 · 步骤 1「需求完成判据」）——现行（EN）「…build task entries one per requirement — **the batch record §2 entry table + ledger rows** are the marker that requirements were accepted.」
-③ **欠账入清单**（`persona-engineering.md:68`）——现行「**欠账入清单**：未发 / 未完成的自有事项 ⇒ **立即写进任务清单**（或批次档 §6 未决）——欠账**必须看得见**，不得只活在报告文字里、靠用户催问兑现。」
+② **需求完成判据**（`thincoder-core/prompts/discipline-engineering.md` §基本流程 · 步骤 1「需求完成判据」）——现行（EN）「…build task entries one per requirement — **the batch record §2 entry table + ledger rows** are the marker that requirements were accepted.」
+③ **欠账入清单**（`thincoder-core/prompts/persona-engineering.md:68`）——现行「**欠账入清单**：未发 / 未完成的自有事项 ⇒ **立即写进任务清单**（或批次档 §6 未决）——欠账**必须看得见**，不得只活在报告文字里、靠用户催问兑现。」
    建议（EN）「**Debts go on the list**: undispatched / unfinished items of your own ⇒ **immediately written into batch record §6 unresolved (or a ledger row)** — debts **must be visible**, never living only in report prose waiting for the user to chase.」
 
 改因（一句）：F10 机械门上线后工程模式 `task` 调用被拒——三处仍指挥 / 引指 task 的句子 = 自相矛盾态（撞点修复）；提示词 = 产品代码（`thincoder-core/prompts/`，eng-coder 笔）。
@@ -1336,17 +1336,19 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 | 条件 | 重试 | 熔断 | 行为 | 工具结果 |
 |---|---|---|---|---|
 | `400` ∥ `413` ∥ 其它未列 4xx | 否 | 否 | 回落链 | 照常成功（Tavily/Bing ∥ 本地） |
-| `401` ∥ `402` ∥ `403` ∥ `404` | 否 | **是** | 回落链 | 照常成功；本会话后续不再发 DeepSeek |
+| `401` ∥ `402` ∥ `403` | 否 | **是**（限时 `BREAKER_TTL_MS` = 10 分钟，到期自动解封） | 回落链 | 照常成功；熔断未到期时本会话不再发 DeepSeek |
+| `404` | 否 | 否 | 本次调用回落链（fetch ⇒ 本地直取） | 照常成功；**不熔断**——404 = 目标页面不存在，不是凭据失效；后续 search 照常发 DeepSeek |
 | `408` ∥ `429` ∥ `5xx` | **一次**（固定 500 ms） | 否 | 仍失败 ⇒ 回落链 | 照常成功 |
 | 网络错误 ∥ 客户端超时（15 s）∥ JSON 畸形 | 否 | 否 | 回落链 | 照常成功 |
 | `200` + search 空结果 | — | 否 | 回落链（与 Tavily 空结果同判） | 日志 `n:0` |
 | `200` + fetch 空 `content` | — | 否 | 回落本地 | 日志 `n:0` |
-| 会话已熔断 | — | — | **不发请求**，直走回落链 | 照常成功 |
+| 熔断未到期 | — | — | **不发请求**，直走回落链 | 照常成功 |
 | 键 = `local` | — | — | 直走回落链 | 与无渠道逐字同 |
 | 私网 / 元数据 URL（fetch） | — | — | 抛现错——`isPrivateUrl` 门在**发请求之前**（`web.mjs:216-217`） | `Error: fetch blocked: …`（一字不改） |
 
 - **返回态映射**（四态 = `ok` ∥ `empty` ∥ `failed` ∥ `unavailable`——定义见「接口契约」）：上表失败类条件（含已熔断）⇒ `failed`；两行 `200` 空结果 ⇒ `empty`；无合格渠道 ⇒ `unavailable`；成功出结果 ⇒ `ok`。
-- **熔断域** = `ctx.agent` 对象身份（模块级 `WeakSet`；子代理各自独立；对象回收即清）；无 `ctx.agent`（直调 ∥ 测试）⇒ 不持久化（逐次判定）。
+- **熔断域** = `ctx.agent` 对象身份（模块级 `WeakMap<agent, expiresAtMs>`；子代理各自独立；对象回收即清）；无 `ctx.agent`（直调 ∥ 测试）⇒ 不持久化（逐次判定）。
+- **熔断时限** = `BREAKER_TTL_MS` = 600 000（10 分钟）——判活时读时钟：未到期 ⇒ 短路；已到期 ⇒ 删条目并放行（改完 key 无需重启会话）。时钟缝 `_setDeepseekClockForTest(fn)`（缺省 `Date.now`，与传输缝成对复位）。
 - **退避** = 固定 500 ms、单次（不解析 `Retry-After`——5 QPS 账号级限速下 429 罕见；见 ⑨ D-WB5）。
 - **回落提示（仅 search）**：资格命中而 DeepSeek 未出结果 ⇒ 结果末尾追加一行，**文案按返回态分叉**：`failed`（失败 ∥ 已熔断）⇒ `(deepseek backend unavailable — results from <tavily|bing>)`；`empty`（后端成功、零结果）⇒ `(deepseek returned no results — results from <tavily|bing>)`（`<tavily|bing>` = 实际承接腿名，小写）。
 - **零提示面**：fetch 内容面两态均不加（保正文保真——D-WB6）；无渠道（`unavailable`）∥ `local` ⇒ 零提示（零回归）；search 回落腿**零结果**（`tavily` ∥ `bing` 也没搜到——无承接腿可名）⇒ 零提示。
@@ -1354,7 +1356,7 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 #### ⑤ 日志行（NW3）
 
 - 成功调用恰一行：`logEvent("web:deepseek", { tool, n, ms, cost })`（`thincoder-core/log.mjs:114`——既有 JSON 单行事件面，无新级别）；`tool` = `"search"` ∥ `"fetch"`；`n` = 结果条数（search）∥ 内容字符数（fetch）；`cost` = `n > 0 ? 0.00075 : 0`（$0.75 / 千次，按成功请求）。
-- 熔断判定时追加一行：`{ tool, status, tripped: true, ms }`（瞬态回落不记——免噪声）。
+- 熔断判定时追加一行：`{ tool, status, tripped: true, ttlMs, ms }`（瞬态回落不记——免噪声）。
 - key ∥ query ∥ url 零入日志（只传数字 / 短枚举；`log.mjs` 字段黑名单 + 形态扫描为兜底）。
 - **不做**费用面板 / 预算闸（需求范围边界同句）。
 
@@ -1394,7 +1396,7 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 
 #### ⑦ 测试计划（单测 · 假 transport 替身 · 收口随批删）
 
-**测试缝**（③ 缝，`CONFIG.md` §6.2）：`web-deepseek.mjs` 导出 `_setDeepseekTransportForTest(fn)` / `_resetDeepseekTransportForTest()`（缺省 = `proxyFetch`；**复位即清熔断 WeakSet**——成对两半，无第三缝）；用例 `finally` 复位。
+**测试缝**（③ 缝，`CONFIG.md` §6.2）：`web-deepseek.mjs` 导出 `_setDeepseekTransportForTest(fn)` / `_resetDeepseekTransportForTest()`（缺省 = `proxyFetch`；**复位即清熔断 WeakMap 并复位时钟缝**——成对，无第三缝）与 `_setDeepseekClockForTest(fn)`（TTL 用例拨时钟）；用例 `finally` 复位。
 
 | # | 面 | 用例（输入 → 期望） |
 |---|---|---|
@@ -1404,7 +1406,7 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 | T4 | 选择 | `backend:"local"` ⇒ transport 零调用；键缺省 ⇒ auto |
 | T5 | 映射 | `limit:12` ⇒ `count:12`、`need_content:false`；`limit:99` ⇒ 20；`limit:0` ⇒ 1；带运算符 query 原样 |
 | T6 | 映射 | 渲染含 `[deepseek]` ∥ date ∥ authority ∥ rerank；`authority:-1` 省略；`summary` 空 ⇒ `snippet` |
-| T7 | 错误 | 400/413 ⇒ transport 1 次 + 回落；401/402/403/404 ⇒ 1 次 + 熔断 + 回落；熔断后 ⇒ 0 次 |
+| T7 | 错误 | 400/413 ⇒ transport 1 次 + 回落；401/402/403 逐码 ⇒ 1 次 + 熔断 + 回落；熔断未到期 ⇒ 0 次；**404 ⇒ 1 次 + 回落、不熔断**（同一 agent 紧随 search 仍 1 次） |
 | T8 | 错误 | 408/429/500 ⇒ 2 次 + 回落；网络错误 ∥ 客户端超时（15 s）∥ JSON 畸形 ⇒ 1 次 + 回落 |
 | T9 | fetch | 响应 ⇒ `[deepseek] title` + Markdown；空 content ⇒ 回落本地；>200K ⇒ 截断注 |
 | T10 | SSRF | 私网 URL ⇒ 抛错且 transport 零调用 |
@@ -1415,6 +1417,7 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 | T15 | 端侧装配 | VSC `applySlotSessionState`：cfgBag 带 `fetch:{backend:"local"}` ⇒ `agent.config.fetch.backend === "local"`；bag 缺 `fetch` ⇒ `"auto"`（DEFAULTS 兜底） |
 | T16 | 输出 | 失败形（`failed`）：search 腿 DeepSeek 失败（Tavily 承接）⇒ 结果末尾恰一行 `(deepseek backend unavailable — results from tavily)`；无渠道 ∥ `local` ⇒ 零提示；fetch 腿失败 ⇒ 零提示 |
 | T17 | 输出 | 空结果形（`empty`）：search 腿 DeepSeek `200` 零条（Bing 承接）⇒ 结果末尾恰一行 `(deepseek returned no results — results from bing)` ∧ **不含** unavailable 文案；fetch 腿空 `content` ⇒ 回落本地、零提示 |
+| T18 | 熔断时限 | `search` 腿 401 ⇒ 熔断；时钟 +599 999 ms ⇒ 再调 transport 0 次；再 +2 ms（越过 `BREAKER_TTL_MS`）⇒ transport 1 次 |
 
 文件 = `docs/batches/2026-10-17-deepseek-search-fetch.test.mjs`（新增 ≈260 行；**收口随批删**——零留存）。
 
@@ -1448,7 +1451,7 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 |---|---|---|
 | D-WB1 | key 来源 = `providers[]` 探测（用户裁定） | 独立 `websearch.deepseek.apiKey`——用户 19:11 明令零改动；双 key 违背「复用」 |
 | D-WB2 | 端点 = 固定常量，`baseURL` 只供资格判定 | 由 `baseURL` 拼端点——`/v1` 尾 ∥ 前缀差异会生双 `/v1`，且拼路径会把 key 送到非官方路径 |
-| D-WB3 | 熔断 = 单域（search ∥ fetch 共享，按 agent 身份） | 按工具分域——401/402 为账号级，且 W4 明言「熔断 DeepSeek 后端」；单域实现最小。**代价在册**：一次 fetch 404（无可提取内容）会连带停用本会话 search——按需求 W4 判据接受 |
+| D-WB3 | 熔断 = 单域（search ∥ fetch 共享，按 agent 身份）**且限时 10 分钟**（`BREAKER_TTL_MS`）；404 不熔断 | 按工具分域——401/402 为账号级，且 W4 明言「熔断 DeepSeek 后端」；单域实现最小。404 移出熔断名单——404 是目标页面的事实，不是凭据失效（W3 已按逐 URL 条件判它），把它列入熔断会让一次抓取失败停掉 search。无期限熔断 → 改完 key 仍要重启会话，故加 TTL 到期全开；半开探测 ∥ 指数退避被否（多一层状态机、分支无人走过） |
 | D-WB4 | 空结果 ⇒ 回落（不直返空）；返回态 `empty`（与 `failed` 分列——提示行换文案，见 ④） | 直返 `(no results)`——与 Tavily 今日判据不一致（`web.mjs:119`） |
 | D-WB5 | 退避 = 固定 500 ms 单次 | 解析 `Retry-After`——多一层解析且等待无界（可能超工具耐心）；5 QPS 下 429 罕见 |
 | D-WB6 | fetch 内容面零提示行 | 统一加提示——污染 Markdown 正文保真 |
@@ -1469,7 +1472,8 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 | 边界 | fetch 内容 > 200K | 截断 + 既有截断注 |
 | 边界 | search 腿 DeepSeek `200` 零结果（Bing 承接） | 回落结果 + 末尾恰一行 `(deepseek returned no results — results from bing)` |
 | 边界 | fetch 腿 DeepSeek `200` 空 `content` | 回落本地直取，零提示 |
-| 错误 | `401` | 熔断 + 回落，工具成功；后续 0 请求 |
+| 错误 | `401` | 熔断 + 回落，工具成功；熔断未到期时 0 请求；越过 10 分钟 ⇒ 恢复正常请求 |
+| 错误 | `404`（fetch 腿） | 本次回落本地直取，工具成功；**不熔断**——紧随的 search 仍请求 DeepSeek |
 | 错误 | `429` | 2 次请求后回落，工具成功，不熔断 |
 | 错误 | `400` | 1 次请求后回落 |
 | 错误 | `fetch` 私网 URL | `Error: fetch blocked: …`，零外发 |
@@ -1482,7 +1486,7 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 | W1 | 夹具 `providers:[{baseURL:"https://api.deepseek.com",apiKey:"sk-t"}]` ⇒ 结果前缀 `[deepseek]`；transport 计数 = 1；零新增必填配置 |
 | W2 | `limit:12` ⇒ 请求体 `count===12 ∧ need_content===false`；结果含 summary 与 date / authority / rerank 标；`limit:99` ⇒ 20 |
 | W3 | `fetch(public)` ⇒ 请求体 `{url}`，输出 `[deepseek] title` + Markdown；`fetch(private)` ⇒ 抛错且 transport 零调用 |
-| W4 | 401 / 404 ⇒ 回落成功 + 后续 0 请求；408 / 429 / 5xx ⇒ 恰 2 次后回落；400 / 413 ⇒ 恰 1 次；任何腿返回非 `Error` |
+| W4 | 401 / 402 / 403 逐码 ⇒ 回落成功 + 熔断期内 0 请求 + 越过 `BREAKER_TTL_MS` 后恢复 1 次；404 ⇒ 恰 1 次并回落、同一 agent 的 search 仍 1 次；408 / 429 / 5xx ⇒ 恰 2 次后回落；400 / 413 ⇒ 恰 1 次；任何腿返回非 `Error` |
 | W5 | `backend:"local"` ⇒ transport 零调用且输出与无渠道快照逐字同；键缺省 ⇒ auto；README 键面含两键两行 ∧ 两产品 CHANGELOG 有条目 |
 | W6 | 两描述档含运算符面 ∥ 结果标注 ∥ 后端优先级三句；`CONFIG.md` §6.5 ∥ 本节在册；需求 §4.9 已落（父侧） |
 | NW1 | 无渠道夹具 ⇒ 两工具输出与现实现快照 `===`；DeepSeek transport 零调用 |
@@ -1691,7 +1695,7 @@ export function gateDesignToken(parent, args) {
 
 | 舱 | 变更面 | 文件 | 验收 |
 |---|---|---|---|
-| 舱 A · 文本面 | 模型可见说明与提示词 | `tool-docs/subagent.md` · `agent-tools/subagent.mjs:146` · `prompts/persona-engineering.md` | A1 + §6.35 A1–A4 |
+| 舱 A · 文本面 | 模型可见说明与提示词 | `thincoder-core/tool-docs/subagent.md` · `agent-tools/subagent.mjs:146` · `thincoder-core/prompts/persona-engineering.md` | A1 + §6.35 A1–A4 |
 | 舱 B · 代码 + 测试面 | 门分支与拒句 | `agent-tools/subagent-spawn.mjs` · `test/subagent-design-token-gate.test.mjs` | A2 / A4 / A5 |
 
 不合并的理由：两个变更面各自有独立验收面（文本子串 vs 单测分支），且按派单尺寸纪律「跨面 ⇒ 按面拆」；两舱文件不重叠，可并行派工，`dependsOn` 不需要。

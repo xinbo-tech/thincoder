@@ -31,6 +31,11 @@ CLI 装配 = `thincoder-cli/src/cli/make-agent.mjs`（baseTools）。dispatch �
 （**D-F5b 语义**：磁盘新鲜读 + 只改被设键——**默认值不固化**——+ mtime 门控；冲突 / 畸形抛错 → 内存不热应用，零虚假成功——语义权威 = `MULTI-INSTANCE-COLLAB.md` §6.3）。
 **不整 reload**（直接改内存对象等价且无副作用）。
 
+**promoted 视图同步（承 §2.8 W16 端差条）**：`agent.config` 的部分段是**装载期派生副本**——`thincoder-core/config.mjs:354` 把 `agent.advisor` promote 成顶层 `advisor`，而运行读面读的是**副本**（`thincoder-core/advisor/loop.mjs:103`；VSC `thincoder-vscode/src/advisor/loop.mjs:98` 同形）。
+  所以 `set` 写到 `agent.advisor*` 之后必须调 `promoteAgentViews(config)` 重 derive 副本，`null` 删除腿在副本上同步删同一子键
+  否则盘与嵌套键都变了、读面仍是旧值——回显的「运行中已生效」就成了假承诺。
+  运行面独有的会话级键（如 `advisor.guard`）在合并（`{ ...config.advisor, ...config.agent.advisor }`）中保留。
+
 ### 2.4 敏感判定（判定谓词 = 两句**取或**）
 
 `isSensitiveKey(path)` 对完整点分键路径做**段级**测试（**完整段名**命中才算——段界 = 串首 / 串尾 / `.` / `_` / `-`），两句取或（同文件相邻两常量——落点 `thincoder-core/agent-tools/settings.mjs`）：

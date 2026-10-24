@@ -15,7 +15,9 @@ const timeoutMs = (Number.isFinite(cfg) && cfg > 0) ? cfg : REVIEW_TIMEOUT_MS
 ```
 
 - **运行期校验**：手写 `config.json` 的非法值（0 / 负数 / 字符串）不得静默禁用或立即触发超时——**非法一律回退默认**。
-- 读取链：`thincoder-core/config.mjs:323` 把 `merged.agent.advisor` promote 为 `merged.advisor`（decoupled copy）⇒ `agent.config.advisor.timeoutMs` 天然可见；`runAdvisorToolLoop` 已接收 `agent` 参数，**无需改签名**。
+- 读取链：`thincoder-core/config.mjs:354` 把 `merged.agent.advisor` promote 为 `merged.advisor`（decoupled copy）——**运行读面 = promoted 视图 `agent.config.advisor.timeoutMs`**（`thincoder-core/advisor/loop.mjs:103`；VSC `thincoder-vscode/src/advisor/loop.mjs:98` 同形）；`runAdvisorToolLoop` 已接收 `agent` 参数，**无需改签名**。
+- **写面不变式**：promoted 视图是装载期派生的副本，**内存里改 `agent.advisor.*` 不会自动流过读面** ⇒ 每个写点都得重 derive：`thincoder-core/config.mjs` 导出 `promoteAgentViews(config)`（`loadConfig` 与 `settings set` 共用同一条规则），`settings` 工具的 set ∥ `null` 删除腿在写内存后调用它。
+  运行面独有的会话级键（如 `advisor.guard`——`thincoder-cli/src/tui/cmd-advisor.mjs:14` 只写 promoted、会话恢复 `thincoder-core/session-lifecycle.mjs:138` 只恢复 promoted）在合并中保留。
 - **默认值单一来源**：**不**在 `DEFAULTS.agent.advisor` 写死 `timeoutMs`——默认值只住 `REVIEW_TIMEOUT_MS` 常量（`thincoder-core/advisor/compaction.mjs:42`），避免两处漂移（`thincoder-core/config-defaults.mjs:32` 的 advisor 默认块注释即登记 `timeoutMs` 为可覆盖项）。
 - **TUI 不新增编辑项**：`/config` 不提供 `timeoutMs` 菜单——手写 `config.json` 即可。
 
@@ -56,7 +58,7 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 |---|---|---|
 | 评审默认常量 | `thincoder-core/advisor/compaction.mjs:42`（`REVIEW_TIMEOUT_MS` = 600 000） | 在位 |
 | 评审读取 + 运行期校验 | `thincoder-core/advisor/loop.mjs:104` | `Number.isFinite(cfg) && cfg > 0` 回退 |
-| advisor 配置 promote | `thincoder-core/config.mjs:323` | `merged.advisor = { ...merged.agent.advisor }` |
+| advisor 配置 promote | `thincoder-core/config.mjs:354` | `promoteAgentViews(config)`——`{ ...config.advisor, ...config.agent.advisor }`；装载与 `settings set` 同源 |
 | advisor 默认块（含 timeoutMs 说明） | `thincoder-core/config-defaults.mjs:32` | 注释在位 |
 | `maxTurns` 默认 | `thincoder-core/config-defaults.mjs:18` · `thincoder-core/agent/helpers.mjs:24` | 均 200 |
 | `maxTurns` 三级回退 | `thincoder-core/agent/setup.mjs:50` | 在位 |

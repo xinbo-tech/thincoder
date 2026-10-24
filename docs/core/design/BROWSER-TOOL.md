@@ -131,7 +131,7 @@ browser {
 ### 2.4 会话模型
 
 - **单会话/进程**：模块级单例（`session.mjs`）——同进程所有 agent（主 ∥ 子代）共一份浏览器；动作**串行队列**（promise 链——批并行工具调用天然排队）。
-- **惰性开启**：首动作即开（`navigate` 为常规入口）；开启序 = 发现浏览器 → profile 锁 → spawn（`--headless=new` ∥ 有头；`--remote-debugging-port=0`）→ 轮询 `DevToolsActivePort`（≤12s，walkthrough `:124-127` 同式）
+- **惰性开启**：首动作即开（`navigate` 为常规入口）；开启序 = 发现浏览器 → profile 锁 → spawn（`--headless=new` ∥ 有头；`--remote-debugging-port=0`）→ 轮询 `DevToolsActivePort`（≤ `START_TIMEOUT_MS` = 25s 缺省；env `BROWSER_START_TIMEOUT_MS` 覆盖，钳 2–30s——walkthrough `:124-127` 同式）
   → `PUT /json/new?about:blank`（GET 兜底，walkthrough `:131-132`）→ WebSocket（`:133-141`）→ `Page.enable` + `Runtime.enable` + `Network.enable`。
 - **无头 ∥ 有头**（F-BT2）：`headless` 参数 = **会话开启参数**——默认 true；开启后传同值 = 忽略；传异值 = `Error: session is already running (headless=<现态>) — close it first to switch mode`。切换 = close → 下轮以新参数重开（同 profile ⇒ 登录态保留，F-BT6）。
 - **空闲自动关**：无动作 15 分钟 ⇒ 自动 close（资源卫生——桌面/CLI 长驻进程不为一次用过的浏览器永久占 100–200MB；任何动作重置计时）。**进程退出**：`process.on("exit")` 同步杀树兜底。
@@ -157,7 +157,8 @@ browser {
 | 桌面 | 经核装配自动获得（`thincoder-desktop/src/main/agent-assemble.mjs:113-127` `assembleFor` → coreAssemble） | 核登记即达——零端改 |
 | VSC | `thincoder-vscode/src/tools/index.mjs`（自持清单 `:172-186`——import 核工具 + 入列） | 一处登记（+1 import +1 列项） |
 
-**无浏览器降级**（F-BT8 / N-BT5）：不做装配期剔除（与 `read_image` 门控不同——浏览器是环境事实，不是模型能力）；**首用显式报错**：`Error: no Chromium-based browser found (Edge/Chrome) — install one or set BROWSER_PATH`；启动失败 ⇒ `Error: browser failed to start: DevToolsActivePort not written within 12s (<exe>)`。
+**无浏览器降级**（F-BT8 / N-BT5）：不做装配期剔除（与 `read_image` 门控不同——浏览器是环境事实，不是模型能力）；**首用显式报错**：`Error: no Chromium-based browser found (Edge/Chrome) — install one or set BROWSER_PATH`
+  ；启动失败 ⇒ `Error: browser failed to start: DevToolsActivePort not written within <秒>(<exe>)`（秒数 = 实际生效的启动窗：缺省 25s，随 `BROWSER_START_TIMEOUT_MS` 变化）。
 
 **子代理面**（自动成立，零新增）：read-only 角色的子代按既有过滤（`thincoder-vscode/src/agent/tool-table.mjs:171` 同式；核 family-tools 同族）拿不到本工具；写角色子代携本工具，过门项（click / evaluate + §3.1 扩展表）的审批经父链上抛（既有 relay——`thincoder-core/agent-tools/subagent-actions.mjs:193-205` 同款）。
 
@@ -192,7 +193,7 @@ Error: <action> timed out after <ms>ms (stuck in <步名>) — retry the action,
 
 | 动作 | 预算 | 说明 |
 |---|---|---|
-| navigate | 45s | 含会话自启（12s 启动帽内）+ 导航 + 就绪轮询 + 快照 |
+| navigate | 45s | 含会话自启（启动帽 25s 缺省 ∥ 上限 30s 在内）+ 导航 + 就绪轮询 + 快照 |
 | click / evaluate / screenshot / close / press / hover / wheel / mouse / drag / touch / insert / clipboard | 30s | — |
 | type / snapshot | 15s | 单页内快动作 |
 | wait | 谓词帽（`timeoutMs`：默认 30s · 上限 120s）+ 15s 余量 | 谓词语义零变（F-BT5） |
@@ -202,7 +203,7 @@ Error: <action> timed out after <ms>ms (stuck in <步名>) — retry the action,
 **三层帽**（无一条等待无帽）：
 
 - **动作内 CDP 调用**：随动作控制器——`h.call` / `evalRaw` / `h.once` / 轮询 sleep 全数受控；abort 后一切后续调用**快速失败**（清理路径不得再起命令——防僵尸命令与下一动作交错）。
-- **动作外路径显式帽**：`connectCdp` open 10s ∥ `/json/new` fetch 5s ∥ `Page.enable` / `Runtime.enable` / `Network.enable` 各 10s ∥ `Browser.close` 3s ∥ 健康探针 2s ∥ `launchBrowser` 12s（既有）∥ `closeSession` 等待 3s + 杀树兜底。
+- **动作外路径显式帽**：`connectCdp` open 10s ∥ `/json/new` fetch 5s ∥ `Page.enable` / `Runtime.enable` / `Network.enable` 各 10s ∥ `Browser.close` 3s ∥ 健康探针 2s ∥ `launchBrowser` 25s 缺省（`BROWSER_START_TIMEOUT_MS` 覆盖，钳 2–30s）∥ `closeSession` 等待 3s + 杀树兜底。
 - **兜底帽**：`cdp.call` 缺省 15s——任何未显式配帽的调用也不悬挂（机检）。
 
 **步名（`stuck in`）**：`h.call` 自动记为 CDP 方法名（`Page.navigate` / `Runtime.evaluate` …）；非调用阶段显式标注（`queue wait` / `launch browser` / `connect CDP` / `waitForReady` / `wait poll` / `scroll settle`）。**取消**（§2.11）与超时共用同一控制器——错误句分形（`cancelled` ∥ `timed out`），卡点步名同样入句（N-BT10）。
@@ -348,7 +349,7 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | `thincoder-core/browser/cdp.mjs` | 161 | 命令缺省帽 15s ∥ 断连回调 ∥ `connectCdp` 帽 10s ∥ `/json/new` 帽 5s |
 | `thincoder-core/browser/actions.mjs` | 163 | 步名标注 ∥ wait 余量口径 |
 | `thincoder-core/browser/input-actions.mjs` | 197 | `scroll settle` / html5 拦截步名 |
-| `thincoder-core/browser/launch.mjs` | 143 | 12s 启动帽已有（零改） |
+| `thincoder-core/browser/launch.mjs` | 189 | 启动帽 25s 缺省 + env `BROWSER_START_TIMEOUT_MS` 覆盖（钳 2–30s）；超时前已杀树（`:168`） |
 | `thincoder-core/browser/{snapshot,input,clipboard}.mjs` | 270 ∥ 256 ∥ 142 | 零改 |
 | `thincoder-core/agent-tools/browser-async.mjs`（新档） | 198 | 池 ∥ 起跑 ∥ 结算 ∥ 注入 ∥ 杀单点 ∥ wait 判据 ∥ subject 标签（复用 bg 族单点——D2） |
 | `thincoder-core/tools/browser.mjs` | 161 | `async` 参 ∥ `timeoutMs` 描述收正 ∥ depth 第二道 ∥ 起跑动态 import |

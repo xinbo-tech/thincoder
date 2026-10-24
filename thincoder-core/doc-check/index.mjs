@@ -142,12 +142,7 @@ export function runDocCheck(root, { docs, mode = "report", docsSource } = {}) {
   const checkFiles = range.check
   const { lineWidth, widthExemptZones } = DOC_CHECK_BUILTINS
   const anchors = checkAnchors(base, { files: checkFiles })
-  // 行宽只判**模型读的那一档**（提示词面 + 工具描述面）——用户 2026-10-23 裁定：300/500 只约束
-  // 程序代码，文档不受行数限制（DOC-DISCIPLINE §3.7 条目 H）。设计档 / 需求档 / 批档不判行宽，
-  // 拿它去卡收口就是「没错硬造错」。
-  const isPromptFace = (f) => /(^|[\\/])(prompts|tool-docs)[\\/]/.test(String(f).replaceAll("\\", "/"))
-  const widthFiles = checkFiles.filter(isPromptFace)
-  const widths = checkDocWidths({ lineWidth, exemptZones: widthExemptZones, files: widthFiles })
+  const widths = checkDocWidths({ lineWidth, exemptZones: widthExemptZones, files: checkFiles })
 
   const hits = { total: anchors.hits.length + widths.length, anchors: anchors.hits.length, width: widths.length }
   const shared = {
