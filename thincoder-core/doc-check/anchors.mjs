@@ -7,7 +7,7 @@
  * · 档不在盘 ⇒ `档缺`；带节指示 ∧ 节不在盘 ⇒ `节缺`。
  *
  * 抽取面：逐行扫；fenced 块整块跳过；可执行行（`isExecutableLine`）整行跳过（命令保字面）；
- *   提示词面另剥 CANON 操作数（面判据 = 本档 `OPERAND_FACE`——七名整串删除后再抽，见 `CANON_OPERANDS`）。
+ *   提示词面另剥 CANON 操作数（面判据 = `./paragraph.mjs` 的 `isPromptFace`——七名整串删除后再抽，见 `CANON_OPERANDS`）。
  * 解析序**两级**：① 仓根相对全路径 → ② 引用方档所在目录相对。零命中 ⇒ `档缺`。
  *   **裸名不跨目录解析**：跨目录解析须先建全域目录索引——为认出一个裸名而重建索引，等于把全仓扫描请回来；
  *   写全路径后解析零索引，逐档判就是全部（与 D4 实现坐标口径一致）。
@@ -17,7 +17,7 @@
  */
 import { readFileSync, statSync } from "node:fs"
 import { basename, dirname, resolve } from "node:path"
-import { fenceMark, isExecutableLine } from "./width.mjs"
+import { fenceMark, isExecutableLine, isPromptFace } from "./paragraph.mjs"
 
 /** 文档指针 token：`(目录段/)*名.md` + 可选行号坐标尾 + 可选节指示（`§` + 编号）。
  *  左界守卫排除更长 token 的尾段；右界排除后续字母数字（`.md` 之后紧邻 `[\w]` ⇒ 非完整 token）。 */
@@ -37,7 +37,7 @@ const PLACEHOLDER_STEMS = new Set([
 
 /** CANON 操作数族（**规范豁免串** · 判据单源 = `docs/core/design/PROMPT-SYSTEM.md` §6.6「判保留面」）：
  *  七个名字在模型面是**模型要写出来 / 读写的文件名**（行为操作数 · 路径操作数），不是「去读这个档」的指针——
- *  换个目录解析必然 `档缺`。**只对提示词面剥**（面判据 = 下方 `OPERAND_FACE`）：`docs/` 面不会因本条多放行一个名——
+ *  换个目录解析必然 `档缺`。**只对提示词面剥**（面判据 = `isPromptFace`，单源住 `./paragraph.mjs`）：`docs/` 面不会因本条多放行一个名——
  *  `README.md` / `MANIFEST.md` 在那里仍按指针判（其余四名早已走 `FILENAME_CLASSES` 类名免，非本条引入）。
  *  **一处定义、两处消费**：`scripts/prompt-refs-check.mjs` 的 J3 豁免从本档 import 本表与剥除函数（不复制）；
  *  反方向零 import——判据链自持 = `docs/core/design/DOC-DISCIPLINE.md` A-DD29 ⑤（`thincoder-core/**` 对
@@ -57,9 +57,9 @@ export function stripCanonOperands(line) {
 
 /** 操作数豁免的**作用面** = 提示词面（`thincoder-core/prompts/**`）——**只此一面**：`docs/` 面同名 token 仍按指针判
  *  （`README.md` / `MANIFEST.md` 在那里照报 `档缺`；其余四名走既有的 `FILENAME_CLASSES` 类名免，非本条引入）。
- *  这是锚判自己的面判据——与行宽判据零共享开关：行宽按传入档全量判（提示词面照判，无面级豁免）。 */
-const OPERAND_FACE = /(?:^|\/)thincoder-core\/prompts\//i
-const isOperandFace = (abs) => OPERAND_FACE.test(String(abs).replace(/\\/g, "/"))
+ *  这是锚判自己的面判据——与段判据零共享开关：段判据按传入档全量判（提示词面照判——逐行裸判，无面级豁免）。 */
+// 提示词面判据单源 = `./paragraph.mjs` 的 `isPromptFace`（§3.18 ②——形态与旧 `OPERAND_FACE` 逐字同）。
+const isOperandFace = isPromptFace
 
 /** 文件存在性（目录 / 读错 ⇒ false）。 */
 function isFile(p) { try { return statSync(p).isFile() } catch { return false } }
@@ -105,7 +105,7 @@ export function checkAnchors(root, { files = [] } = {}) {
     let text = ""
     try { text = readFileSync(f, "utf8") } catch { continue }
     const re = new RegExp(ANCHOR_RE.source, "g") // 每档一份实例（零共享 lastIndex 状态）
-    const stripOperands = isOperandFace(f) // 只有提示词面剥（见 `OPERAND_FACE`）
+    const stripOperands = isOperandFace(f) // 只有提示词面剥（面判据 = `isPromptFace`）
     let fence = null // 围栏标记（` ∥ ~）；null = 不在块内
     text.split("\n").forEach((l, i) => {
       const mark = fenceMark(l)

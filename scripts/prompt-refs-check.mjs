@@ -31,8 +31,9 @@ const CODE_EXTS = [".mjs", ".js", ".cjs"]
 
 // ── 判据三式（PROMPT-SYSTEM.md §6.6 逐字契约面 · 2026-09-29 重建——勿改语义）──────
 const J1_RE = /[A-Z][A-Z0-9-]{2,}\.md/g
-// J1 白名单 = 判保留面操作数族（与 J3 豁免**同一张表** = `CANON_OPERANDS` 六名；后二名小写永不命中 J1_RE，
-// 列全只为「三面逐字一致」结构性成立——本档不再持第二份手写名单）。
+// J1 白名单 = 判保留面操作数族（与 J3 豁免**同一张表** = `CANON_OPERANDS` 七名；小写两名（`.thincoder/advisor.md` ∥
+// `project_rules.md`）永不命中 J1_RE；大写名（含第七名 `RTM.md`）在名单内是功能必需——提示词面现含 `RTM.md`，缺它 J1 必报——
+// 本档不再持第二份手写名单）。
 const J1_WHITELIST = new Set(CANON_OPERANDS)
 const J2_RE = /§\s*(?:\d{2,}(?![\d\\.])|\d+\.\d)/g
 const J3_RE = /[a-z][a-z0-9-]*\.md/g

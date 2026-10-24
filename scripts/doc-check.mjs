@@ -16,10 +16,10 @@ import { relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DOC_CHECK_BUILTINS } from "../thincoder-core/doc-check/index.mjs";
 import { checkAnchors } from "./doc-check-anchors.mjs";
-import { checkDocWidths } from "./doc-check-width.mjs";
+import { checkParagraphs } from "./doc-check-paragraph.mjs";
 
 /** 判据项（D3 计数纪律：清单 = 单一数组，计数 = 列表长度——加键时改一处，计数自动同改）。 */
-const CRITERIA_KEYS = ["lineWidth", "widthExemptZones", "exemptions"];
+const CRITERIA_KEYS = ["paragraphMax", "lineMax", "paragraphExemptZones", "exemptions"];
 
 /** 锚报告（报告段逐条 + 汇总 + 两态固定句）。
  * 逐条行族标（§4.2.9 / §4.2.10）：拟新增 / 迁移期引文 = 列报 · 不入闸；标记失据 = 违规行行尾标；
@@ -61,16 +61,21 @@ export function main(argv = process.argv.slice(2), { log = console.log } = {}) {
     return 1;
   }
   log(`判据项 ${CRITERIA_KEYS.length} 项（${CRITERIA_KEYS.join(" / ")} = 工具内置常量——D3）`);
-  const zones = [...DOC_CHECK_BUILTINS.widthExemptZones];
-  const zoneNote = zones.length ? `（区带豁免在效——${zones.join(" ∥ ")}；区带内超宽行不计）` : "";
+  const zones = [...DOC_CHECK_BUILTINS.paragraphExemptZones];
+  const zoneNote = zones.length ? `（区带豁免在效——${zones.join(" ∥ ")}；区带内行不计入段）` : "";
   const r = checkAnchors(base, DOC_CHECK_BUILTINS, { gate: true, root });
   for (const line of formatReport(r)) log(line);
-  const widths = checkDocWidths({ lineWidth: DOC_CHECK_BUILTINS.lineWidth, exemptZones: zones, files: r.fileList });
-  for (const h of widths) log(`✗ 行宽 ${relative(root, h.file).replace(/\\/g, "/")}:${h.line}（${h.len} 字符）`);
-  log(widths.length
-    ? `FAIL(行宽): ${widths.length} 行超 ${DOC_CHECK_BUILTINS.lineWidth} 字符${zoneNote}——文档人类可读判据。`
-    : `OK(行宽): 源域全部 .md 无 >${DOC_CHECK_BUILTINS.lineWidth} 字符单行${zoneNote}。`);
-  return (r.danglingTotal > 0 || widths.length) ? 1 : 0;
+  const paragraphs = checkParagraphs({ paragraphMax: DOC_CHECK_BUILTINS.paragraphMax, lineMax: DOC_CHECK_BUILTINS.lineMax, exemptZones: zones, files: r.fileList });
+  for (const h of paragraphs) log(`✗ ${h.clazz} ${relative(root, h.file).replace(/\\/g, "/")}:${h.line}（${h.len} 字符）`);
+  const paraHits = paragraphs.filter((h) => h.clazz === "段太长");
+  const lineHits = paragraphs.filter((h) => h.clazz === "行太长");
+  log(paraHits.length
+    ? `FAIL(段太长): ${paraHits.length} 段超 ${DOC_CHECK_BUILTINS.paragraphMax} 字符${zoneNote}——文档人类可读判据。`
+    : `OK(段太长): 源域全部 .md 无 >${DOC_CHECK_BUILTINS.paragraphMax} 字符的段${zoneNote}。`);
+  log(lineHits.length
+    ? `FAIL(行太长): ${lineHits.length} 行超 ${DOC_CHECK_BUILTINS.lineMax} 字符——提示词面逐行裸判。`
+    : `OK(行太长): 提示词面无 >${DOC_CHECK_BUILTINS.lineMax} 字符单行。`);
+  return (r.danglingTotal > 0 || paragraphs.length) ? 1 : 0;
 }
 
 const isMain = process.argv[1] && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url;

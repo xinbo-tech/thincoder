@@ -1,7 +1,7 @@
 /**
  * agent-tools/doc-check.mjs — `doc_check` 工具：文档纪律机检（产品内建 · 两种问法）。
  *
- * 设计 = `docs/core/design/DOC-DISCIPLINE.md` §3.20 条目 S（判据 = 锚 ∥ 行宽 · 参数内置常量）。
+ * 设计 = `docs/core/design/DOC-DISCIPLINE.md` §3.20 条目 S（判据 = 锚 ∥ 段判据 · 参数内置常量）。
  * 工具形：**无动作枚举**——`mode` = 同一条判据的两种问法（`report` = 报告态 ∥ `gate` = 交付时点的裁定）；
  * **只读**（零副作用 · 免审批 · 可并行）；参数 `target` / `mode` / `docs`
  * （`target` 指向多项目工作区 ⇒ 报明候选并要求指名，同 `manifest` 工具面）。

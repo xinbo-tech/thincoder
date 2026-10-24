@@ -10,7 +10,7 @@
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { isTableRow } from "./doc-check-width.mjs";
+import { isTableRow } from "./doc-check-paragraph.mjs";
 
 /** 内容行数（KD-4）：split("\n") 末元素为空 ⇒ 减一。 */
 export function countContentLines(text) {

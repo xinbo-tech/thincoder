@@ -2,7 +2,7 @@
  * doc-check/index.mjs — 文档纪律机检 · 引擎入口（两条判据 + 报面行）。
  *
  * 判据两条（起步 · 闭集——口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20 条目 S）：
- *   ① 锚（档缺 / 节缺）——实现 = `./anchors.mjs`；② 行宽——口径 = §3.18 条目 Q，实现 = `./width.mjs`。
+ *   ① 锚（档缺 / 节缺）——实现 = `./anchors.mjs`；② 段判据（段太长 ∥ 行太长）——口径 = §3.18 条目 Q，实现 = `./paragraph.mjs`。
  * 判据参数 = **工具内置常量** `DOC_CHECK_BUILTINS`：不读任何项目的声明面，因而没有「缺参数 ⇒ 拒跑」这一层，
  *   也没有常量校验面——改判据 = 改代码、走评审。
  * 判定范围 = **调用方传入的文件清单**（判定范围 = 解析范围 = 传入的那几档；无目录遍历、无全域兜底）：
@@ -15,14 +15,15 @@
  */
 import { statSync } from "node:fs"
 import { relative, resolve } from "node:path"
-import { checkDocWidths } from "./width.mjs"
+import { checkParagraphs } from "./paragraph.mjs"
 import { checkAnchors } from "./anchors.mjs"
 
-/** 判据参数（内置常量 · 冻结）：阈值 300 字符；两项空列表 = 区带类 / 豁免类默认值且恒空
- *  ——豁免谓词（表行 / 围栏 / 可执行行 / 引文）住代码，没有「登记后放过」的写入口（空列表 ≠ 可登记豁免）。 */
+/** 判据参数（内置常量 · 冻结）：阈值 300 字符（一段 ∥ 一行同值——§3.18 ④）；两项空列表 = 区带类 / 豁免类默认值且恒空
+ *  ——豁免谓词（表行 / 围栏 / 列表项 / 引文）住代码，没有「登记后放过」的写入口（空列表 ≠ 可登记豁免）。 */
 export const DOC_CHECK_BUILTINS = Object.freeze({
-  lineWidth: 300,
-  widthExemptZones: Object.freeze([]),
+  paragraphMax: 300,
+  lineMax: 300,
+  paragraphExemptZones: Object.freeze([]),
   exemptions: Object.freeze([]),
 })
 
@@ -61,17 +62,20 @@ function resolveRange(base, docs) {
   return { check: check.sort(), undecidable, missing, notMarkdown, invalid }
 }
 
+/** 段判据命中行（报面单源——两类命中同形，按 `clazz` 分词）。 */
+const paragraphHitLine = (base, h) => `✗ ${h.clazz} ${rel(base, h.file)}:${h.line}（${h.len} 字符）`
+
 /** gate 报面（固定句形——§3.20「报面（固定句形 · 交付门 gate）」）：首行 verdict = 唯一机判串。 */
-function gateReport({ base, docsSource, checkFiles, skipped, anchors, widths, lineWidth }) {
-  const total = anchors.hits.length + widths.length
+function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs, paragraphMax }) {
+  const total = anchors.hits.length + paragraphs.length
   const src = docsSource === "session" ? "本会话写过的文档" : "显式 docs"
   const out = [
     total ? `DOC-CHECK GATE: REFUSED（命中 ${total} 条）` : (checkFiles.length ? "DOC-CHECK GATE: PASS" : "DOC-CHECK GATE: PASS（0 档）"),
     "文档纪律机检（交付门 · gate）",
     checkFiles.length
-      ? `范围：${src} ${checkFiles.length} 档 · 阈值 ${lineWidth} 字符（工具内置常量）`
-      : `范围：${src} —— **0 档受检**（空清单：本次没有判任何档，不得读作「已检」）· 阈值 ${lineWidth} 字符（工具内置常量）`,
-    "判据：工具内置常量（锚 ∥ 行宽）——判定范围 = 解析范围 = 传入档",
+      ? `范围：${src} ${checkFiles.length} 档 · 阈值 ${paragraphMax} 字符（工具内置常量）`
+      : `范围：${src} —— **0 档受检**（空清单：本次没有判任何档，不得读作「已检」）· 阈值 ${paragraphMax} 字符（工具内置常量）`,
+    "判据：工具内置常量（锚 ∥ 段判据）——判定范围 = 解析范围 = 传入档",
   ]
   if (skipped.missing.length) out.push(`跳过 ${skipped.missing.length} 档（已不在盘，未检）：${skipped.missing.map((p) => rel(base, p)).join(" ∥ ")}`)
   if (skipped.notMarkdown.length) out.push(`跳过 ${skipped.notMarkdown.length} 档（非 markdown 档，未检）：${skipped.notMarkdown.map((p) => rel(base, p)).join(" ∥ ")}`)
@@ -94,7 +98,7 @@ function gateReport({ base, docsSource, checkFiles, skipped, anchors, widths, li
         ? `✗ 锚·档缺 ${rel(base, h.file)}:${h.line} \`${h.token}\``
         : `✗ 锚·节缺 ${rel(base, h.file)}:${h.line} \`${h.token}\`（目标 ${rel(base, h.target)} 无 §${h.section}）`)
     }
-    for (const w of widths) out.push(`✗ 行宽 ${rel(base, w.file)}:${w.line}（${w.len} 字符）`)
+    for (const w of paragraphs) out.push(paragraphHitLine(base, w))
     out.push("处置：同轮修正后复跑（改文档 ∥ 修引擎）；不转台账；拿不准 ⇒ 上抛主 agent 裁决（主 agent 拿不准 ⇒ 转呈用户）")
   }
   return out.join("\n")
@@ -109,8 +113,8 @@ function gateReport({ base, docsSource, checkFiles, skipped, anchors, widths, li
  *   `PASS（0 档）` + 空范围说明（「本轮一档没碰」是真实读数）；`report` 面不可判档 ⇒ 报错、整次零判定；
  *   `gate` 面不可判档 ⇒ 跳过行；`docsSource` = 范围来源标签（`session` = 本会话触达记账 ∥ `explicit` = 显式
  *   `docs`）——缺省 = `explicit`；只影响报面措辞。
- * @returns {{report:string, hits:{total:number, anchors:number, width:number}, anchorHits:Array,
- *   widthHits:Array, files:string[], checkFiles:string[], lineWidth:number,
+ * @returns {{report:string, hits:{total:number, anchors:number, paragraph:number}, anchorHits:Array,
+ *   paragraphHits:Array, files:string[], checkFiles:string[], paragraphMax:number,
  *   skipped:{missing:string[], notMarkdown:string[]}}}
  *   消费面判「清」须读 `report` 首行（gate）∥ `hits.total`（report），不得只看其中一个。
  */
@@ -140,33 +144,33 @@ export function runDocCheck(root, { docs, mode = "report", docsSource } = {}) {
     throw new Error(`doc_check: docs names ${range.undecidable.length} document(s) that cannot be judged — no document was checked: ${named}. Fix the list and re-run; nothing is silently skipped and the check never widens beyond the list.`)
   }
   const checkFiles = range.check
-  const { lineWidth, widthExemptZones } = DOC_CHECK_BUILTINS
+  const { paragraphMax, lineMax, paragraphExemptZones } = DOC_CHECK_BUILTINS
   const anchors = checkAnchors(base, { files: checkFiles })
-  const widths = checkDocWidths({ lineWidth, exemptZones: widthExemptZones, files: checkFiles })
+  const paragraphs = checkParagraphs({ paragraphMax, lineMax, exemptZones: paragraphExemptZones, files: checkFiles })
 
-  const hits = { total: anchors.hits.length + widths.length, anchors: anchors.hits.length, width: widths.length }
+  const hits = { total: anchors.hits.length + paragraphs.length, anchors: anchors.hits.length, paragraph: paragraphs.length }
   const shared = {
-    hits, anchorHits: anchors.hits, widthHits: widths, files: checkFiles, checkFiles, lineWidth,
+    hits, anchorHits: anchors.hits, paragraphHits: paragraphs, files: checkFiles, checkFiles, paragraphMax,
     skipped: { missing: range.missing, notMarkdown: range.notMarkdown },
   }
   if (gate) {
-    return { ...shared, report: gateReport({ base, docsSource: source, checkFiles, skipped: shared.skipped, anchors, widths, lineWidth }) }
+    return { ...shared, report: gateReport({ base, docsSource: source, checkFiles, skipped: shared.skipped, anchors, paragraphs, paragraphMax }) }
   }
 
   const out = [
     "文档纪律机检（报告态 · 非门禁）",
-    `射程：${base} · 传入清单 ${checkFiles.length} 档 · 阈值 ${lineWidth} 字符（工具内置常量）· 区带豁免：${widthExemptZones.length ? widthExemptZones.join(" ∥ ") : "无"}`,
+    `射程：${base} · 传入清单 ${checkFiles.length} 档 · 阈值 ${paragraphMax} 字符（工具内置常量）· 区带豁免：${paragraphExemptZones.length ? paragraphExemptZones.join(" ∥ ") : "无"}`,
     "声明：判据参数 = 工具内置常量；范围 = 传入文件（判定范围 = 解析范围）",
     `范围：传入清单 ${checkFiles.length} 档（整档入判 · 判定范围 = 解析范围）`,
-    `命中 ${hits.total} 条（锚 ${anchors.hits.length} · 行宽 ${widths.length}）`,
+    `命中 ${hits.total} 条（锚 ${anchors.hits.length} · 段太长 ${paragraphs.filter((h) => h.clazz === "段太长").length} · 行太长 ${paragraphs.filter((h) => h.clazz === "行太长").length}）`,
   ]
   for (const h of anchors.hits) {
     out.push(h.clazz === "档缺"
       ? `✗ 锚·档缺 ${rel(base, h.file)}:${h.line} \`${h.token}\``
       : `✗ 锚·节缺 ${rel(base, h.file)}:${h.line} \`${h.token}\`（目标 ${rel(base, h.target)} 无 §${h.section}）`)
   }
-  for (const w of widths) out.push(`✗ 行宽 ${rel(base, w.file)}:${w.line}（${w.len} 字符）`)
-  out.push(hits.total ? `结论：${hits.total} 条命中——报告态，不作拒执行的理由` : "结论：0 条命中（锚 ∥ 行宽 均清）")
+  for (const w of paragraphs) out.push(paragraphHitLine(base, w))
+  out.push(hits.total ? `结论：${hits.total} 条命中——报告态，不作拒执行的理由` : "结论：0 条命中（锚 ∥ 段太长 ∥ 行太长 均清）")
 
   return { ...shared, report: out.join("\n") }
 }

@@ -15,12 +15,12 @@
  * 注记豁免：注记标记集（闭枚举）+ 并档叙述 + 内置豁免表（恒空）——命中即过。
  * 两族行标记（生效面 = 仅路径/坐标锚）：「（拟新增」（§4.2.9 · 前向引用）+「迁移期引文」
  *   （§4.2.10 · 后视引用 = 标记 + 史实谓词 + 悬空三合一）——列报 · 不入闸；失据照红 / 冗余出报告行。
- * 共享谓词单源：isExecutableLine / inCodeSpan = doc-check-width.mjs；采集面 = doc-check-targets.mjs。
+  * 共享谓词单源：isExecutableLine / inCodeSpan = doc-check-paragraph.mjs；采集面 = doc-check-targets.mjs。
  * 导出：checkAnchors / extractAnchors / resolveFile / pathState / codeSpanIdentifiers / pointerRanges。
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import { inCodeSpan, isExecutableLine } from "./doc-check-width.mjs";
+import { inCodeSpan, isExecutableLine } from "./doc-check-paragraph.mjs";
 import { collectCaseTitles, collectCodeTokens, collectTestTrees } from "./doc-check-targets.mjs";
 
 /** 注记标记集（闭枚举——DOC-DISCIPLINE §4.2.3）：行含任一标记 ⇒ 整行过。 */

@@ -19,8 +19,13 @@ What it checks — exactly two criteria, both built into the engine:
   ```
 ~~~
 
-- Line width — a line whose character count (CJK counts as 1) exceeds the built-in threshold, unless it is a table row, inside a
-  fenced code block, an executable line, a quote-block line, or inside an exempt zone.
+- Paragraph length — on a document face, adjacent non-blank body lines merge into one paragraph whose total character
+  count (CJK counts as 1) is judged against the built-in threshold; blank lines, table rows, headings, list items,
+  quote-block lines and fenced code blocks do not count into a paragraph and break it, and lines inside an exempt zone
+  are excluded. Breaking a paragraph into more lines changes nothing — only splitting it into more paragraphs or
+  writing it shorter passes.
+- Line length — a prompt-face file (`thincoder-core/prompts/**`) is judged line by line: the model reads raw text, so
+  one line is one block, and any single line over the threshold counts with no structural exemption.
 
 It cannot — in `report` mode — write anything, gate anything, or turn a finding into a refusal.
 
@@ -35,7 +40,7 @@ is judged; in `gate` mode such paths are listed as skipped instead. A pointer re
 against the pointing document's own directory — bare names are not resolved across other directories.
 
 Delivery gate — `mode: "gate"`, for the end of a design or development round. Every listed doc is judged **whole**: a
-pre-existing dangling pointer or overlong line anywhere in it counts, not only this round's edited lines. The first line is the
+pre-existing dangling pointer or overlong paragraph / line anywhere in it counts, not only this round's edited lines. The first line is the
 machine-readable verdict — `DOC-CHECK GATE: PASS` / `DOC-CHECK GATE: REFUSED（命中 K 条）` / `DOC-CHECK GATE: ERROR（reason）` —
 and consumers judge by that prefix; the hits are fixed in the same round and are never booked to the ledger. The gate refuses
 **one delivery**, not a user instruction: an explicit user go-ahead is followed, with the hits written into the delivery.

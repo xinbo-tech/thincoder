@@ -16,7 +16,7 @@
  * 判据零变：本档不新增判据——只决定「判谁」与「何时强制」；判据与裁定串由产品引擎
  * `doc-check/index.mjs` 产出（判据源唯一）。
  *
- * 两条边界（设计与实测同口径）：① **批档自身不入范围**（载体不是判据对象——判它只会把载体的行宽记成本批欠账）；
+ * 两条边界（设计与实测同口径）：① **批档自身不入范围**（载体不是判据对象——判它只会把载体的超段记成本批欠账）；
  * ② **本轮提交面不在工具面**——`<批起 sha>` 只有父侧掌握，
  * ② 的写入集只认触达账 + 回执明示「基 sha 未定」，提交面由父侧协议清单兜（不静默）。
  */
@@ -60,7 +60,7 @@ function gitSurface(root) {
  *   （报面单源不重写）；行数与命中数不等（引擎报面行序变动）⇒ `aligned: false` + 自造行，由调用面回执明示。 */
 function hitEntries(res, root) {
   const lines = res.report.split("\n").filter((l) => l.startsWith("✗ "))
-  const hits = [...res.anchorHits, ...res.widthHits]
+  const hits = [...res.anchorHits, ...res.paragraphHits]
   const aligned = lines.length === hits.length
   const entries = hits.map((h, i) => ({
     file: h.file,
@@ -127,7 +127,7 @@ function evaluate({ abs, cwd, agent, scope }) {
     return { state: "not-applicable", first: null, report: "[doc-check gate] 未跑（本项目无声明面）", hitLines: [], noteLines: [], range: emptyRange("none") }
   }
   // 范围（判谁）：writer = 写者触达账；close = 本批笔域集（触达账）∪ git 面。
-  // 批档自身不入范围（载体不是判据对象——判它只会把载体的行宽记成本批欠账）。
+  // 批档自身不入范围（载体不是判据对象——判它只会把载体的超段记成本批欠账）。
   const selfKey = pathKey(resolve(abs))
   const touched = docPaths(agent?._touchedFiles, base).filter((p) => pathKey(p) !== selfKey)
   const git = close ? gitSurface(root) : { ok: false, base: root, files: [] }
