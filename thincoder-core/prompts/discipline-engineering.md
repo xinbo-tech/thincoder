@@ -168,7 +168,7 @@ The report must contain: what changed / why, the paths of files touched, how you
   Why: after any change the reflex is to run everything, and this is an engineering-scale product — one agent-day produces code that would need hundreds of unit tests to verify, while unit tests are per-batch and one-off.
   So **accumulated test volume × the run-everything reflex = verification cost far above coding cost** — delete the runnable artifacts and there is no "everything" left to run.
 - **The change's implementer writes them and runs exactly those for the changed face** (nobody else, no per-round re-runs, not another batch's files).
-- **Unit test files are not promoted into integration tests** (integration cases are established from business needs, not graduated from unit files).
+- **Unit test files are not promoted into integration tests**.
 - **The wish to keep a permanent test around is an integration test talking**: when a few assertions from this change feel worth keeping to watch the spot, that is the moment to design an integration case.
   **A trimmed copy kept in a permanent file is the same unit test file under a new name**: that is the promotion above, not an integration test.
   **With no business scenario behind the urge, there is nothing to keep yet**: name it in the report as a ledger row for the parent to book — do not manufacture a permanent file to discharge the urge.
@@ -176,9 +176,9 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **Closeout test line**: each batch closeout reports two halves.
   ① this batch's unit test files named, with one verification reading (what was verified ∥ command ∥ result).
   ② the integration set as it now stands against the ≈50–100 window, plus the cases this batch added ∥ revised, by case name — each case file lands under the project's integration test directory.
-- **`none` stands only where the change does not touch business behavior**: a batch that changes what the business does and closes with no integration-case change is incomplete — the case it changes should have been designed before the code.
-  Why: an unconditional `none` let every business change close against an empty set, so the set stayed empty while every closeout read green.
-- **Integration tests** exercise **components working together** (the real composition — a front-end scenario drives the core transitively) — the **pre-release acceptance loop**: walk through the real business from a user-visible entry.
+- **`none` stands only where the change touches neither the interaction between components nor a business-observable result an existing case asserts**: a batch that touches either and closes with no integration-case change is incomplete — that case should have been designed before the code.
+  Why: an unconditional `none` let any change close against an empty set, so the set stayed empty while every closeout read green.
+- **Integration tests** combine components and test the **interaction between components** — the **pre-release acceptance loop**, which this project enters from a user-visible entry.
 - **Project assets**: business scenarios + production-problem additions, asserting only business-observable results.
 - **The integration window is an upper bound**: a repo's suite budget stays ≈50–100 cases — over the window, trim old scenarios rather than turn away a case a business change earned.
   Why: read as a freeze, the window would turn every business change away, and the suite would stop following the business.
@@ -189,9 +189,11 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **The set does not accumulate**: unit tests are deleted on use (zero retention), integration sets stay inside their budget.
 - **No conversion between the two** — a hard discipline.
 - **Verification spend**: proportional to the cost of failure, not code volume.
-- **The gate**: one `test` run, all green.
+- **The gate** (closeout, parent side): one `test` run, all green.
 - **Iteration = unit tests only**: verify **only your own change** — run the targeted unit tests for the changed face (single file / relevant subset); another batch's files are gone at its closeout, and re-running them multiplies verification cost by the number of rounds.
 - **Integration tests = the release gate, not a work rhythm**: they run **once at closeout, parent side** — outside the eng-coder chain.
+- **An acceptance criterion names the changed-face unit test file (`node --test <file>`), or a one-off reading when no runnable face exists, never a full-suite run**: the full suite is the parent-side closeout gate — the integration half is reported in the closeout line, not run here.
+  Why: written into a batch, the suite runs every round — a release gate turned into a round cost, and nothing new is proven by running it again.
 - **A missing integration suite is a debt, not a steady state**: an empty set passes nothing — the closeout reports the count against the window (`0 / 50–100`) and books a ledger row for each integration suite this project is missing.
   Each row is booked once, at the first closeout that reports that set empty; later batches do not re-book it while the debt stands.
   Report line: "not integration-test verified — the parent-side closeout run is the only integration-test run."

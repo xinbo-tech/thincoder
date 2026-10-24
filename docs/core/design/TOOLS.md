@@ -1526,7 +1526,7 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 - **端点固定常量 ⇒ 替身走既有传输缝**：① 判据只认 `api.deepseek.com`、端点 = 固定常量（D-WB2）⇒ 业务入口指不到本机假上游；门内用例用既有 `_setDeepseekTransportForTest(fn)` 作替身（⑦ 同一对缝，`finally` 复位），不放宽产品语义、不引新缝。
 - **10 分钟到期解封不设门内格**：业务入口没有时钟缝，门里断言它要实等 10 分钟（N16 单用例硬超时）。该半由单测 T18 判（`_setDeepseekClockForTest` 两读数：`+599 999 ms` ⇒ 0 次 ∥ 再 `+2 ms` ⇒ 1 次）；门内只判「窗口未到期时零请求」（I-WB2）。
 - **回落腿的文本面不进集成格**：`(deepseek backend unavailable — results from <腿名>)` 的文案分叉由单测 T16 / T17 判；集成格只判上游命中计数与调用结算——承接腿（Tavily ∥ Bing）是外网腿，门内零外网（N15）。
-- **落点**：`thincoder-cli/test/integration/web-backend-404.test.mjs`（常驻——随 `npm test` 走，不随批删；收集面 = `thincoder-cli/test/run.mjs:3` 两层 glob，别处的档被 `:38` 拒收集）。本批单测档仍随批删（⑦）；集成档是长期守点，与单测档是两个对象。
+- **落点**：`thincoder-cli/test/integration/web-backend-404.test.mjs`（常驻——随 `npm test` 走，不随批删；收集面 = `thincoder-cli/test/run.mjs` 的集成层单层 `test/integration/*.test.mjs`，别处的档被启动前反查拒收集）。本批单测档仍随批删（⑦）；集成档是长期守点，与单测档是两个对象。
 
 ### 6.24 `batch` 收口前置与重开径的文本面（链完整性门 · 带审计重开）
 

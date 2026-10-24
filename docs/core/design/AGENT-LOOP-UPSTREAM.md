@@ -314,7 +314,7 @@ Queue a message on the parent's side; your turn is not interrupted and nothing i
 | A3 | depth 门：depth-0 调 ⇒ 明确错误（T9）；文案族与 §6.7.2 fail-closed 形态同款 | 批 §2 条目 1（depth>0 专有——五角色装配 / depth-0 与 consult 不装配） |
 | A4 | 非阻塞 + 无答复路径：工具 execute 无父侧 await；**通道无拉取 / 等待导出**（导出面断言：仅 tool + push / drain + 常量）；未获答复的 ask 其队列消息**仍注入**（T7——信息不丢）；sync 形返回注不给「答复到达」承诺（T17——同用例两半） | 批 §2 条目 3 |
 | A5 | 三闸：未 drain ask ≤1（T10 红——窗口 = 未 drain：未 drain ⇒ 拒 / drain 后 ⇒ 放行，同用例两半）· 长度上限与队列上限（T11 / T12 红）· kind 枚举（T12 红） | 批 §2 条目 4 |
-| A7 | 提示词面：`common.md` `##` 块数 = 11；核 `prompts/` 文件集仍 15；零新增 `{{inject:...}}` 锚 | 批 §2 条目 6 |
+| A7 | 提示词面：`thincoder-core/prompts/common.md` `##` 块数 = 11；核 `prompts/` 文件集仍 15；零新增 `{{inject:...}}` 锚 | 批 §2 条目 6 |
 | A8 | 文档一致：设计档 §6.27 ↔ 批档 §2 ↔ 需求档条目三方一致；`node scripts/doc-check.mjs --root .` 触碰档零新增悬空锚 / 零新增行宽违规 | 批档自身约束（无对应条目——三方一致 + doc-check 按档零新增） |
 
 ### 6.27.11 边界（不做）
@@ -1110,7 +1110,7 @@ function traceText(child) {
 | A-ZW7 | 口径判定表逐条在盘：同文件重复编辑 ⇒ 计落笔；只读 / `git` / `bash` / `batch` / `file_ops` ⇒ 不计；写失败 ⇒ 不计；未跟踪（非整数）⇒ 不判——U-ZW9 / U-ZW10 / U-ZW11 绿 | F-ZW1（收正） |
 | A-ZW8 | B 面读数带分母 + 缺字段不渲染 + `_zeroWriteTurns ≤ _segmentTurns` 不变量在盘——U-ZW10 / U-ZW12 绿 | F-ZW4 |
 
-> 注：`cd thincoder-core && npm test` 绿 = 形式过门（核清单自 2026-09-28 空置——空清单 ⇒ 零用例 = 绿 · exit 0——非可红判据）。
+> 注：核仓无集成测试集（需求 N20）——`cd thincoder-core && npm test` 非零退出并说明（空集不读作绿），不作可红判据；核的验证面 = 批内单测档 `node --test` + 语法门。
 
 ### 6.32.10 边界（不做）
 

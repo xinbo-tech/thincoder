@@ -1172,7 +1172,7 @@ tier 判定：363 ∥ 479，均在 500 行软线内，不触发拆分；`normali
 **夹具（确定性）**：模型侧 = 本地脚本化假 Anthropic 端点，按 Messages API 回两个回合（第一回合 `tool_use`、第二回合文本），并对「请求体含 `role:"tool"`」按上游语义回 `400 Unexpected role "tool"`。
 该拒收规则是 G1–G3 的可证伪点：请求体残留 `role:"tool"` 即红。零外网、零付费端点；真端点 smoke 不属本套件。
 
-**落点**：`thincoder-cli/test/integration/anthropic-tool-roundtrip.test.mjs`（常驻档），由 `thincoder-cli/test/run.mjs:3` 的两层 glob 收集，随发布门跑——不是批内单测档（单元与集成两类永不互转）。
+**落点**：`thincoder-cli/test/integration/anthropic-tool-roundtrip.test.mjs`（常驻档），由 `thincoder-cli/test/run.mjs` 的集成层单层收集（`test/integration/*.test.mjs`）随发布门跑——不是批内单测档（单元与集成两类永不互转）。
 
 **边界**：只落 CLI 实例（本档持有的业务入口）；VSC ∥ desktop 的实例化按 F14 各端原文自持，不在本档单源。
 R7 畸形参数的处置只在单元层断言（T-7）——它不是生产报过的场景，集成层不复制。

@@ -323,4 +323,4 @@
 
 **身份项不进集成表**：子代理零提示由单元面覆盖（§4 ⑨ ② 的 `_role="eng-coder"` 反例）——集成表入口 = 主 agent 会话；子代理面的可观察差异只是「子块里少一行」的负断言，再驱动一个脚本化子会话不产生新的业务结论。
 
-**窗口读数（实读 2026-10-24）**：`thincoder-cli/test/integration/` 现量 **2 档 6 例**（`anthropic-tool-roundtrip.test.mjs` 3 例 · `unbooked-pen.test.mjs` 3 例）；本表 3 例计入其中，总量落在 50–100 窗口内。复测 = `cd thincoder-cli && node test/run.mjs`（收集面 = `thincoder-cli/test/run.mjs:50` 两层 glob `test/*.test.mjs` + `test/integration/*.test.mjs`）；窗口读数由父侧收口行报表（`docs/core/requirements/TESTING.md` F9 ②）。
+**窗口读数（实读 2026-10-24）**：`thincoder-cli/test/integration/` 现量 **5 档 15 例**（`anthropic-tool-roundtrip` 3 ∥ `browser-start-window` 3 ∥ `unbooked-pen` 3 ∥ `web-backend-404` 3 ∥ `advisor-timeout-hot` 3）；复测 = `cd thincoder-cli && node test/run.mjs`（收集面 = `thincoder-cli/test/run.mjs` 的集成层单层 `test/integration/*.test.mjs`）；窗口读数由父侧收口行报表（`docs/core/requirements/TESTING.md` F9 ②）。

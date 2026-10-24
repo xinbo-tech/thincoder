@@ -2,22 +2,22 @@
 
 > 板块：测试基建——**分层纪律与测试门（v2——单入口 `npm test`）** · **测试库存治理** · **测试生命周期（三层来源）与集成测试集** · **散文锚退役与禁令** · **UAT 验收总表（RTM）**。
 > §1 = **分层纪律与测试门**（活语义 = 收口分工：改动内单元测试 ∕ 链终收口时集成测试；**门禁权威 = §10**）· §4 = **集成测试集承载与执行**（§4.2 / §4.3）· §3 测试生命周期 = **现行**（口径 = 需求 F6–F14——单元测试档零留存〔用毕即删〕 ∕ 永不互转；§10 F4 只涉台账仪式面）· §11 = **UAT 验收总表（RTM）**（落点 ∕ 结构 ∕ 签署面 ∕ 标准读数）。
-> 需求层指针 = `requirements/TESTING.md`（§1 总体 / §2 F1–F14 / §3 N1–N9 ∕ N19–N21 / §5 F15–F22 · N10–N12）。
-> 兄弟档：无——终端程序自动验证的判据现住需求档 `requirements/TESTING.md` §6（内联判据）+ `TOOLS.md` §4.7（能力面判定句）——无第二设计档。
+> 需求层指针 = `docs/core/requirements/TESTING.md`（§1 总体 / §2 F1–F14 / §3 N1–N9 ∕ N19–N21 / §5 F15–F22 · N10–N12）。
+> 兄弟档：无——终端程序自动验证的判据现住需求档 `docs/core/requirements/TESTING.md` §6（内联判据）+ `TOOLS.md` §4.7（能力面判定句）——无第二设计档。
 > 权威源（实现）：`thincoder-cli/test/run.mjs`（单入口 = 集成层 `test/integration/*.test.mjs` 单层收集；单元测试档住 `docs/batches/`、`node --test <档>` 直达）+ `thincoder-cli/test/slow.mjs`（`slow` 纯别名）+ 两包 `package.json` scripts（`test` 一条入口）。
-> **多实现面（语义同源 · 各面原文自持 · 不做字节一致 · 不加面间同步依赖）**：CLI 面（上行所列）· VSC 对端面（其 `test/` 同构 runner 族——空集守卫未落，§10.3 面差登记）· **核树面**（`thincoder-core/test/run.mjs`——无集成测试层 ⇒ 入口非零退出并说明，§10.3）
+> **多实现面（语义同源 · 各面原文自持 · 不做字节一致 · 不加面间同步依赖）**：CLI 面（上行所列）· VSC 对端面（其 `test/` 同构 runner 族——空集守卫未落，§10.3 面差登记）· **核树面**（`thincoder-core/test/run.mjs`——无集成测试层 ⇒ 入口非零退出并说明，§10.3；核的门面 = 语法门，发布钩 ∥ CI 不调该入口）· **render-core 面**（`thincoder-render-core/test/run.mjs`——单层 glob + 包面自检；空集直通未落，§10.3 面差登记）
 > **桌面面**：`thincoder-desktop/test/run.mjs` + `thincoder-desktop/package.json` scripts——单入口，单元 + 集成同清单（集成测试域 = `thincoder-desktop/test/integration/`）；空集守卫未落（§10.3）；驱动 / 隔离 / 截图面单源 = `docs/desktop/design/E2E-TESTING.md`。
 > **服务面（server）**：`thincoder-server/package.json` scripts——**无集成测试**（无 `test` 入口）；发布钩 `prepublishOnly` = 语法门（3×`node --check`）；单元测试档（批次目录）零留存（用毕即删）、**不入任何门**（边界详 §2）。
-> 关联：本档 §1 分层纪律口径源 = `requirements/TESTING.md` §2 F1–F4（只引用不重述）；工程模式实现侧正文 = `thincoder-core/prompts/discipline-engineering.md`（测试纪律节）· `persona-engineering.md`（派单验收行）。
+> 关联：本档 §1 分层纪律口径源 = `docs/core/requirements/TESTING.md` §2 F1–F4（只引用不重述）；工程模式实现侧正文 = `thincoder-core/prompts/discipline-engineering.md`（测试纪律节）· `thincoder-core/prompts/persona-engineering.md`（派单验收行）。
 > 对端对位档 = 对端仓库的同名测试基建档（**语义同源、各端原文自持**）。
 > **先例对齐（单元测试档寿命口径）**：对位设计节 = **§3.1 ∥ §3.3**（既有寿命表述形态——「寿命 ∕ 去处」列写「零留存（用毕即删——批档 §5 留一行读数）」）；实施坐标 = 本档 §2.3 ∕ §3.1–§3.3 ∕ §5 ∕ §7 ∕ §10 ∕ §11.6；先例批 = 无（批档为一次性载体、可整体清理 ⇒ 长期面不指批次）。判 **对齐**（全档统一到 §3.1 既有形）；偏离：无。
-> **公共源勘察**：工作目录树内公共源文档已查（`docs/**` 设计 ∥ 需求两树 + 三前端 `test/**`）——相关 = 本档自身 ∥ `requirements/TESTING.md`（口径单源）；外部公共源（独立文档仓 ∥ 标准发布方站点）：无相关（对象 = 仓内两档寿命措辞）。
+> **公共源勘察**：工作目录树内公共源文档已查（`docs/**` 设计 ∥ 需求两树 + 三前端 `test/**`）——相关 = 本档自身 ∥ `docs/core/requirements/TESTING.md`（口径单源）；外部公共源（独立文档仓 ∥ 标准发布方站点）：无相关（对象 = 仓内两档寿命措辞）。
 
 ## 1. 分层纪律与测试门（v2）
 
 ### 1.1 分层纪律
 
-一次代码改动的验证**按层收口**（浅改浅验 ∕ 深改深验 ∕ 链终收口时一次集成测试）——口径 = 需求档 `requirements/TESTING.md` §1 总纲 + §2 F1–F4；**本档只引用不重述**（D2 单一权威源）：
+一次代码改动的验证**按层收口**（浅改浅验 ∕ 深改深验 ∕ 链终收口时一次集成测试）——口径 = 需求档 `docs/core/requirements/TESTING.md` §1 总纲 + §2 F1–F4；**本档只引用不重述**（D2 单一权威源）：
 
 | 面 | 时机 | 内容 | 谁跑 |
 |---|---|---|---|
@@ -25,7 +25,7 @@
 | **链终收口**（需求 F3） | 链末 | **集成测试**（收口时恰一次/端——= 集成测试集）——不在 eng-coder 链内；入口 = 各包 `npm test`（§10 F1） | 父侧 |
 
 - **报告义务句 = 需求 F2 原文逐字**（未跑集成测试时随报告带出）。
-- verify 只收模型的 `verification.status` 声明，**不代跑任何测试**（需求 F4；verify 语义 = `design/VERIFY-REDESIGN.md`）。
+- verify 只收模型的 `verification.status` 声明，**不代跑任何测试**（需求 F4；verify 语义 = `docs/core/design/VERIFY-REDESIGN.md`）。
 - **脏树零回归判据**（跨板块通用实践沉淀）：工作树含他批 ∕ 并发在途改动时，「零回归」只能判**增量零**——先以**点名命令**跑一次取**实测基线**读数，变更后同命令复跑，判读数**逐字相等**（增量零）；**不得以绝对绿值（「集成测试全绿」）冒充零回归**。
 
 ### 1.2 slow 标注
@@ -38,15 +38,19 @@
 | 脚本 | 入口 | 用途 |
 |---|---|---|
 | `npm test` | `thincoder-cli/test/run.mjs` | **集成层**（收口时）· `test/integration/*.test.mjs` 单层收集 + 启动前反查 + 空集非零 |
-| `npm test`（核） | `thincoder-core/test/run.mjs` | 无集成层 ⇒ exit 1 + `requirement N20` 说明（空集不读作绿） |
+| `npm test`（核） | `thincoder-core/test/run.mjs` | **空集说明器（非门）**：无集成层 ⇒ exit 1 + `requirement N20` 说明（空集不读作绿）；发布钩 ∥ CI 核作业不调它（走语法门——§10.3） |
 | `npm test`（VSC） | `thincoder-vscode/test/run.mjs` | 集成测试（收口时）· 显式清单 + 清单↔盘上两向自检（空集守卫未落——§10.3 面差） |
 | 手工 | `node --test docs/batches/<档>.test.mjs` | 单元测试档直达（不经入口——需求 F5） |
 
-**核树面**——第三实现面：`thincoder-core` scripts = `test`（`node test/run.mjs`）；**无集成测试层**（集成测试集射程 = cli ∕ vsc ∕ desktop——需求 §3 N20）⇒ 该入口不跑用例、exit 1 并说明（§10.3）；核的验证面 = 批内单测档 `node --test` + 语法门；CI 核作业（`.github/workflows/test.yml:36` ∥ `:48`）随本语义变红，处置 = CI 面另轮。
+**核树面**——第三实现面：`thincoder-core` scripts = `test`（`node test/run.mjs`——空集说明器）+ `prepublishOnly`（语法门 = `node scripts/check-syntax.mjs`）。
+
+- **无集成测试层**（集成测试集射程 = cli ∕ vsc ∕ desktop——需求 §3 N20）⇒ `npm test` 不跑用例、exit 1 并说明（§10.3）。
+- 核的验证面 = 批内单测档 `node --test` + 语法门——**核包不设测试门**：发布钩与 CI 两 job（`.github/workflows/test.yml:46` ∥ `:58`）跑 `npm run prepublishOnly`，不调 `npm test`。
+- 判据 = 核包既不自称已验，也不永远红（理由 ∥ 终态三件 = §10.3）。
 
 ## 2. 测试库存治理（按需加 · 两层形态）
 
-存量测试库存已清零，转入**两层形态**（口径 = 需求 `requirements/TESTING.md` §1 总纲 + §2 F6 ∕ §3 N1–N2；**本档只引用不重述**）：
+存量测试库存已清零，转入**两层形态**（口径 = 需求 `docs/core/requirements/TESTING.md` §1 总纲 + §2 F6 ∕ §3 N1–N2；**本档只引用不重述**）：
 
 - **单元 = 单元测试档**：零留存（用毕即删——批档 §5 留一行读数；一批带一至几个文件 · 名随批次档 · 住批次目录）——**永不进任何门**（集成测试 ∥ CI ∥ 发布钩子 ∥ 自建链——均含；零维护；**红不作门禁判据**）。
 - **集成 = `test/integration/`**：业务设立 + 生产补入，常驻（窗口 50–100 ∕ 仓 · 只住三前端——需求 §3 N19 ∕ N20）；
@@ -79,15 +83,14 @@
 ### 2.3 现行态认账（「认账为骨架」）
 
 > 本块 = 入口空集语义与现量读数的**唯一权威陈述面**（D2——包级文档引本块、不各自重述）；「认账」= 显式接受现状并使之可读、可见——**非**「测试已就绪」的宣称；**空集不读作绿**（§10 F5）：无集成用例 ⇒ 入口非零退出并说明。
-> 本块 = 该现状的**唯一权威陈述面**（D2——包级文档引本块、不各自重述）；「认账」= 显式接受现状并使之可读、可见——**非**「测试已就绪」的宣称（自动绿不得被误读为未测面已被验证——承需求 `requirements/TESTING.md` §6.2 F26 同判据）。
 
 **入口读数（复跑命令 = 各包 `node test/run.mjs`；cli ∥ 核为 2026-10-24 实测）**：
 
 | 包 | 启动期检查 | 读数形 |
 |---|---|---|
 | cli | 收集面反查（`test/` 下 `.test.mjs` 只许住 `test/integration/`）+ 软链目录拒绝 | 现量 5 档 / 15 例 ⇒ `ℹ tests 15` · `pass 15` · `fail 0` + exit 0；集成目录空 ⇒ `✖ no integration test set …` + exit 1 |
-| core | 收集面反查（零目标集合——任何 `test/**/*.test.mjs` 均判错位）+ 软链目录拒绝 | 常态 = `✖ no integration test set — … (requirement N20) …` + exit 1（不跑用例） |
-| vscode ∥ desktop ∥ render-core | 各自收集面自检（显式清单 ∥ 单层 ∥ ③④ 面） | **旧空集直通（exit 0）**——空集守卫未落这两面（面差登记 = §10.3） |
+| core | 收集面反查（零目标集合——任何 `test/**/*.test.mjs` 均判错位）+ 软链目录拒绝 | 常态 = `✖ no integration test set — … (requirement N20) …` + exit 1（不跑用例）；**非门**——发布钩 ∥ CI 走语法门（§10.3） |
+| vscode ∥ desktop ∥ render-core | 各自收集面自检（显式清单 ∥ 单层 glob ∥ 包面自检） | **旧空集直通（exit 0）**——空集守卫未落**这三面**（面差登记 = §10.3 三行） |
 
 **单元测试现行 = 单元测试档形态**（`docs/batches/*.test.mjs`；件数随批流动、不落固定读数——复算口径：逐档计数、后缀即匹配式；零留存（用毕即删）、**不进任何门**、零维护；生命口径 = §3.1）：**运行口径** = 批内单档直跑 `node --test docs/batches/<档>.test.mjs`（平 node；取件按 §2.2 挂载面规范）——用毕即删，**无「再跑旧档」面**；零新增命令 ∥ 零新机制。
 
@@ -98,7 +101,7 @@
 
 ## 3. 测试生命周期（三层来源）
 
-> 术语辨异：**技法层**（单元 = 最小可测单元 ∕ 隔离依赖〔桩 ∕ 假件〕· 集成 = 组件组合与交互〔真实装配、可贯穿整条链〕——口径 = 需求 §1 总纲；**两技法永不互转**）· **来源层**（①②③——测试的出身与寿命）· **收口分工**（改动内单元测试 ∕ 链终收口时集成测试——一次改动何时跑什么；口径 = `requirements/TESTING.md` §2 F1–F4）——**三者正交**，勿混。
+> 术语辨异：**技法层**（单元 = 最小可测单元 ∕ 隔离依赖〔桩 ∕ 假件〕· 集成 = 组件组合与交互〔真实装配、可贯穿整条链〕——口径 = 需求 §1 总纲；**两技法永不互转**）· **来源层**（①②③——测试的出身与寿命）· **收口分工**（改动内单元测试 ∕ 链终收口时集成测试——一次改动何时跑什么；口径 = `docs/core/requirements/TESTING.md` §2 F1–F4）——**三者正交**，勿混。
 
 ### 3.1 三层来源与寿命
 
@@ -117,7 +120,7 @@
 
 ### 3.3 批次档 §6 收口测试行契约（双半）与同步面
 
-「测试」行（收口测试行）落在批次档 §6 核销同步清单（槽位枚举权威 = `design/DOC-DISCIPLINE.md` D7 行 + 工程纪律档两档 D7 枚举）。行内容两半：
+「测试」行（收口测试行）落在批次档 §6 核销同步清单（槽位枚举权威 = `docs/core/design/DOC-DISCIPLINE.md` D7 行 + 工程纪律档两档 D7 枚举）。行内容两半：
 
 | 半 | 内容 | 对账面 |
 |---|---|---|
@@ -125,9 +128,9 @@
 | ② 集成影响核 | `新增 <场景>` / `修订 <场景>` / `无` ＋ **窗口读数**（现集成数 ∕ 窗口；需求 §1.3） | 主 agent 评估结论（F10——不外包不自动） |
 
 - **执行人** = 主 agent（§6 作者）；① 半零落手（用毕即删——零维护、零动作）。
-- **同步面（落笔清单）**：`design/DOC-DISCIPLINE.md` D7 行（槽位枚举权威）+ 同前需求档 D7 行（eng-designer 修订）· 工程纪律档（EN）的 D7 枚举（主 agent 内容权 + eng-coder 落笔）· 对端两文件同款。
+- **同步面（落笔清单）**：`docs/core/design/DOC-DISCIPLINE.md` D7 行（槽位枚举权威）+ 同前需求档 D7 行（eng-designer 修订）· 工程纪律档（EN）的 D7 枚举（主 agent 内容权 + eng-coder 落笔）· 对端两文件同款。
 - **落笔时机** = **无冻结窗口冲突时**（父侧排程）。
-- **收口走查纪律**：**收口看一张截图**——截图 ∕ 可见面工具只解决「**能不能看到**」，「**该看什么**」靠**程序级搁置清单回核**（逐条核设计档登记 ∕ 搁置项——口径 = `design/BATCH-RECORD.md` §5.3）；基建 = Electron `capturePage`（零依赖降级路）+ Playwright 直驱（可判引用件 = `thincoder-desktop/package.json` devDependencies 含 `playwright-core`）。
+- **收口走查纪律**：**收口看一张截图**——截图 ∕ 可见面工具只解决「**能不能看到**」，「**该看什么**」靠**程序级搁置清单回核**（逐条核设计档登记 ∕ 搁置项——口径 = `docs/core/design/BATCH-RECORD.md` §5.3）；基建 = Electron `capturePage`（零依赖降级路）+ Playwright 直驱（可判引用件 = `thincoder-desktop/package.json` devDependencies 含 `playwright-core`）。
 
 ### 3.4 演进评估与 ③ 收编
 
@@ -199,7 +202,7 @@
 
 ### 5.1 起步批量（N8 最小集）
 
-**选例**：起步 = 场景 **① 普通模式完整工具流**（需求 `requirements/TESTING.md` §2 F13 点名必选）× **三前端各自实例化**（需求 F14）；三态（正常 ∥ 边界 ∥ 错误）齐全——判据摘要 = §5 场景① 行。选例原则 = 用户可见入口 ∥ 业务场景（需求 §1.1）——不从单元测试档转换（需求 F8）。
+**选例**：起步 = 场景 **① 普通模式完整工具流**（需求 `docs/core/requirements/TESTING.md` §2 F13 点名必选）× **三前端各自实例化**（需求 F14）；三态（正常 ∥ 边界 ∥ 错误）齐全——判据摘要 = §5 场景① 行。选例原则 = 用户可见入口 ∥ 业务场景（需求 §1.1）——不从单元测试档转换（需求 F8）。
 
 **例数窗 3–9**：满形 = 三端 × 三态 = 9；某态在某端结构性不可产时按端减例（以证据登记）——三态齐全 = 集级判据（需求 F13）。
 
@@ -274,10 +277,10 @@
 | A-TS6 | 退役档不存在 + 并档差额对账（差额 = 清单数） | §7 清单制 |
 | A-TS7 | 削段后：一致性检查器族在岗 + 点名档零残留 | 保留面 |
 | A-TS8 | 「测试」行（收口测试行——双半：①本批单元测试档清单〔用毕即删——批档 §5 留一行读数〕∕ ②集成影响＋窗口读数）定义在位 + 同步面清单在位 | F9 · §1.3 |
-| A-TS9 | 两仓宽度 / 一致性检查新增违规 0；有集成集的包 `npm test` exit 0（cli ∥ vsc ∥ desktop），核 `npm test` 按 §10.3 非零并说明 | 批级 |
+| A-TS9 | 两仓宽度 / 一致性检查新增违规 0；`npm test` **按包判**：**cli** = exit 0 ∧ `ℹ tests 15`（集成层即收口门）；**核** = exit 1 ∧ `requirement N20` 说明（非门——语法门另判 A-SL7）；**vsc ∥ desktop ∥ render-core** = 面差落地前按现行读数且**不得引用为「已验」**，落地后 = 空集 ⇒ exit 1 + 说明（§10.3 面差登记） | 批级 · §10.3 面差登记 |
 | A-TS10 | 散文锚退役：`用例总数(批后) = 用例总数(批前) − 清单整删条数`；混装档行为断言零改 | F15–F22 · N10–N12 |
 | A-TS11 | 新增断言零散文锚（结构机检 F17 封闭枚举不变） | F19 |
-| A-TS12 | **核树面**：核仓无集成测试集（N20）⇒ `npm test`(核) **exit 1 + `requirement N20` 说明**（§10.3）；核的验证面 = 批内单测档 `node --test` + 语法门；CI 核作业随本语义变红，处置 = CI 面另轮 | §3 N20 · §10.3 |
+| A-TS12 | **核树面**：核仓无集成测试集（N20）⇒ `npm test`(核) **exit 1 + `requirement N20` 说明**（§10.3）；核的验证面 = 批内单测档 `node --test` + 语法门（`prepublishOnly` = `node scripts/check-syntax.mjs`）；CI 核两 job 跑语法门、不调 `npm test`（A-SL7 ∥ A-SL8） | §3 N20 · §10.3 |
 | A-TS13 | 本档 §1.1 ∕ §3 与需求 F1–F4 同口径（改动内单元测试 ∕ 链终收口时集成测试 · verify 不代跑） | F1–F4 |
 | A-TS14 | 集成测试集射程 = 三前端（cli ∕ vsc ∕ desktop）；核仓（`thincoder-core` ∕ `thincoder-render-core`）零集成测试档 / 零集成测试清单 | §3 N20 |
 | A-TS15 | 集成测试集规模窗口在位——一仓 **50–100 用例**（超窗裁减回窗内；§2.1 映射 · 落点 §2 ∕ §4）；守闸读数（现集成数 ∕ 窗口）随收口测试行 ②半带出（§3.3） | §3 N19 |
@@ -285,6 +288,7 @@
 | A-TS17 | 现行态认账在位（§2.3——五包读数表 ∥ 单元测试档零留存句 ∥ 集成欠账显式句）；包级收正面 5 处（cli `AGENTS.md` ∥ cli `README.md` ∥ core `README.md` ∥ desktop `AGENTS.md` ∥ vsc `AGENTS.md`）无陈旧声明（`offline unit tests` ∥ `offline unit suite` ∥ `Full suite` 零命中） | F6 ∥ F8 ∥ F9 ∥ F12 |
 | A-TS18 | 起步批量定形在位（§5.1——选例 = 场景①〔F13 点名〕∥ 例数窗 3–9 ∥ 三端落位与清单接线 ∥ 门 = `npm test` 单入口——四要素齐） | N8 ∥ F12 ∥ F13 ∥ F14 ∥ N20 |
 | A-TS19 | **单元测试档寿命口径两档统一**（grep 可直跑）：① 两档内旧式处置措辞零命中——判据正则 `可随批档清[理]` ∥ `随[批次]*档留存`，各命中 0（正则写法规避判据行自身）；② 设计档内凡「单元测试档」与「寿命 ∕ 留存 ∕ 归档 ∕ 清理」同行之句一律含「零留存」子串 | F33 |
+| A-TS20 | 执行层分离与空集语义在盘（§10.3 A-SL1–A-SL9 全绿）：`npm test` = 集成层单层收集；核 `npm test` 非零并说明 N20（非门——发布钩 ∥ CI 走语法门）；单档直达零回归 | F1 ∥ F3 ∥ F5 ∥ N20 ∥ AC-M10-4 |
 
 **用例表（正常 / 边界 / 错误——摘）**：
 
@@ -310,16 +314,16 @@
 
 **定位**：v1 测试门禁 = **三层**（`lint` → `test:full`（slow 门控放行）→ `test:integration`（集成测试集））+ 慢测层归册机制（`slow()` 门控 + `slow-gate.mjs` 防漏拦截）+ 五套 runner 脚本 + 「批次收口的测试退役三选一」的**独立台账仪式**。
 
-v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库存**；**测试口径仍按需求 `requirements/TESTING.md` §2 F6 ∕ F8 ∕ F9**（单元测试档零留存〔用毕即删〕 ∕ 永不互转）。
+v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库存**；**测试口径仍按需求 `docs/core/requirements/TESTING.md` §2 F6 ∕ F8 ∕ F9**（单元测试档零留存〔用毕即删〕 ∕ 永不互转）。
 
-**仓无集成测试口径**：仓无集成测试 ⇒ 入口 **非零退出并说明**（空集不读作绿——F5 ∕ AC-M10-4）；不得以单元测试档凑门（单元测试档边界 = §2）；发布钩 = 语法门，不是测试门（server `prepublishOnly` = 3×`node --check`）。
+**仓无集成测试口径**：仓无集成测试 ⇒ 入口 **非零退出并说明**（空集不读作绿——F5 ∕ AC-M10-4）；不得以单元测试档凑门（单元测试档边界 = §2）；发布钩 = 语法门，不是测试门（server `prepublishOnly` = 3×`node --check`；核 `prepublishOnly` = `node scripts/check-syntax.mjs`——§10.3）。
 
 **功能点**：
 
 | # | 功能点 | 方案 |
 |---|---|---|
 | F1 | 统一 `test` 命令 | 一条命令跑**集成测试**（收口时），全绿即门禁；目标集合 = `test/integration/*.test.mjs` 单层（单元测试档不经入口——§10.3） |
-| F2 | 砍多套脚本 | `run-fast` / `run-full` / `run-integration` / `slow-gate` / `slow`（门控面）→ 收敛为每包一条 `test`（`node test/run.mjs`——CLI 与核 glob · VSC 显式清单；**清单↔盘上两向自检**见 §10.2） |
+| F2 | 砍多套脚本 | `run-fast` / `run-full` / `run-integration` / `slow-gate` / `slow`（门控面）→ 收敛为每包一条 `test`（`node test/run.mjs`——CLI = `test/integration/*.test.mjs` 单层 glob · 核 = 零目标集合（不跑用例，exit 1 + `requirement N20` 说明——§10.3）· VSC = 显式清单；**清单↔盘上两向自检**见 §10.2） |
 | F3 | 砍慢测层归册 | `slow()` 不再 skip（慢就慢，照跑）；`slow-gate` 防漏拦截删除；`THINCODER_TEST_FULL` / `THINCODER_SLOW_GATE_MS` env 门全删。**`slow.mjs` 保留为纯别名**（`export { test as slow }`——复位前存量读数：35 档 + 2 fixture 的 `import { slow }` 零悬空；整档删 = 悬空 import + 35 档机械重写） |
 | F4 | 砍**独立**台账仪式 | 不做独立台账仪式；**测试口径 = 本节定位句**（只引用不重述——D2） |
 | F5 | 空集不读作绿 | 无集成用例 ⇒ 入口 exit 1 + 说明文案（cli ∥ 核）；不得以 exit 0 冒充已验（§10.3） |
@@ -349,7 +353,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 **为何 ③-2 属本条目的收口而非扩域**：F2 声明的设计是「VSC 显式清单 + 清单自检 ①②③」——实现只覆盖 integration 清单 ⇒ **声明与实况不符**（与本节条目 ① 同型缺陷）。
 不补 ③-2，③-1 就只是删 4 行的一次性清账：下一个随批删档的人仍会让清单静默虚报（已实证该路径无拦截）。
 
-**受影响文件与判据**：
+**受影响文件与判据**（本表读数 = 本条目落笔时快照；现量见 §10.3）：
 
 | 文件 | 现（`wc -l`） | Δ | 判据 |
 |---|---|---|---|
@@ -379,7 +383,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 | # | 改动 | 落点 |
 |---|---|---|
 | ④-1 | 自检 ② 扩为**两域各查一侧**：VSC 测试树全域（`test/` 递归）按子目录归属分派——非 `integration/` 者判「∈ 单元测试清单」、`integration/` 者判「∈ 集成测试清单」（既有集成侧文案逐字不变） | `thincoder-vscode/test/run.mjs` |
-| ④-2 | 新增自检 **②' 无漏收集**：`test/` 递归全部 `*.test.mjs` 须被 runner 的 glob 命中（未被命中 ⇒ 该档永不执行）——CLI = 两层 glob · 核 = 单层 glob | `thincoder-cli/test/run.mjs` · `thincoder-core/test/run.mjs` |
+| ④-2 | 新增自检 **SC-1 收集面反查**（代码注名 = `②'`）：`test/` 递归全部 `*.test.mjs` 须被 runner 的收集面命中（未被命中 ⇒ 该档永不执行）。**收集面定义不在此处**——口径 = §10.3（cli = `test/integration/*.test.mjs` 单层 · 核 = 零目标集合） | `thincoder-cli/test/run.mjs` · `thincoder-core/test/run.mjs` |
 
 **判据形态（三包同款——语义 / 体式 / 时序同，前缀相同、括注随包）**：
 
@@ -387,30 +391,29 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 2. **判据** = 域内每一档都在**对应执行集**内；否则 fail。
 3. **时序** = **先于 `node --test` 启动**（fail-closed——失败档不被执行、错误不被运行输出淹没）。
 4. **白名单 = 无按档豁免名单**；豁免判据 = **命名约定**（域只含 `*.test.mjs`——helper / fixture / smoke 档（`smoke-settings.mjs` 等）命名不含该后缀、天然不入域；VSC 清单里的非域条目两向皆不受影响）。将来真出现「须在盘但不可执行」的档 ⇒ **改名**（`*.fixture.mjs`），不得加名单——名单即又一个静默漏跑的藏身处。
-5. **文案（AC 断言对象）**——**三包同前缀** `✖ test manifest check failed: `；`<rel>` = **相对包根**的路径、正斜杠分隔（例 `test/foo.test.mjs`；基准 = `run.mjs` 自身的 `root`，同集成测试 ②）。下列三行 = **完整样例（逐字：前缀 + 故障类型 + 括注 + `<rel>`）**：
+5. **文案（AC 断言对象）**——**三包同前缀** `✖ test manifest check failed: `；`<rel>` = **相对包根**的路径、正斜杠分隔（例 `test/foo.test.mjs`；基准 = `run.mjs` 自身的 `root`，同集成测试 ②）。下列两行 = VSC 面**完整样例（逐字：前缀 + 故障类型 + 括注 + `<rel>`）**：
 
 ```text
 ✖ test manifest check failed: unregistered unit file (register it in test/files.mjs — an unregistered file is never executed): <rel>
-✖ test manifest check failed: uncollected test file (move it into test/ or test/integration/ — an uncollected file is never executed): <rel>
-✖ test manifest check failed: uncollected test file (move it up into test/ — this runner collects a single level; an uncollected file is never executed): <rel>
+✖ test manifest check failed: unregistered integration file (register it in test/integration/files.mjs — an unregistered file is never executed): <rel>
 ```
 
-（行 1 / 2 / 3 = VSC 单元测试 / CLI 收集面 / 核收集面。）
+（行 1 ∥ 行 2 = VSC 单元清单 ∥ VSC 集成清单。）**CLI ∥ 核的收集面故障文本唯一 home = §10.3 ①**——本表不复制（两包文案随收集面收窄改写）。
 6. **「零用例行」判据模式**（「自检先于测试运行」的机判面）：自检失败输出**不得含** `node --test` 的测试标记行（`ℹ tests <n>` / `ℹ pass <n>` / `ℹ fail <n>` 等 `ℹ ` 计数行——实测：跑过即打印 `✔ <用例名>` + `ℹ tests 1`）**且不得含** `✔ ` 用例行；`✖ test manifest check failed: ` 行自身 = 自检故障行（非用例行）。判据 = 命中该前缀行 **∧** 零 `ℹ ` 计数行。
 
 **受影响文件与判据**：
 
-| 文件 | 现（`wc -l`） | Δ | 判据 |
+| 文件 | 现量 | Δ（本条目，已落地） | 判据 |
 |---|---|---|---|
-| `thincoder-vscode/test/run.mjs` | 54 | +~12（② 分身两域 + 头注一行） | A-RC1：临时落 `test/__reverse-probe.test.mjs`（未登记）⇒ `node test/run.mjs` **exit 1** 且输出命中单元测试**完整样例行**（**先于** `node --test`——零 `ℹ ` 计数行）；删档复原 |
-| `thincoder-cli/test/run.mjs` | **10** | +~14（新增 ②' 段 + 头注） | A-RC2：临时落 `test/__reverse-probe/x.test.mjs`（未被 glob 命中）⇒ `node test/run.mjs` **exit 1** 且输出含 `uncollected test file`；删目录复原 |
-| `thincoder-core/test/run.mjs` | **9** | +~14（新增 ②' 段 + 头注） | A-RC5（核面先红）：临时落 `test/__reverse-probe/x.test.mjs`（未被单层 glob 命中）⇒ `node test/run.mjs` **exit 1** 且输出含 `uncollected test file`；删目录复原 |
-| 三包 `test/` 现盘 | — | 0 | A-RC3：零假阳——VSC 61 单元 + 12 集成 / CLI 77 / 核 42 全收集）⇒ 三包 `npm test` exit 0（回归） |
+| `thincoder-vscode/test/run.mjs` | 见 §10.3 面差登记 | +~12（② 分身两域 + 头注一行） | A-RC1：临时落 `test/__reverse-probe.test.mjs`（未登记）⇒ `node test/run.mjs` **exit 1** 且输出命中单元测试**完整样例行**（**先于** `node --test`——零 `ℹ ` 计数行）；删档复原 |
+| `thincoder-cli/test/run.mjs` | 见 §10.3 受影响文件表 | +~14（SC-1 段 + 头注） | A-RC2：临时落 `test/__reverse-probe/x.test.mjs`（收集面外）⇒ `node test/run.mjs` **exit 1** 且输出含 `uncollected test file`；删目录复原 |
+| `thincoder-core/test/run.mjs` | 见 §10.3 受影响文件表 | +~14（SC-1 段 + 头注） | A-RC5（核面先红）：临时落 `test/__reverse-probe/x.test.mjs`（核 = 零目标集合，任何位置皆收集面外）⇒ `node test/run.mjs` **exit 1** 且输出含 `uncollected test file`；删目录复原 |
+| 三包 `test/` 现盘 | — | 0 | A-RC3：零假阳——健康树面上自检不误报：cli（集成 5 档 15 例、`test/` 顶层零档）⇒ `npm test` exit 0 ∧ 零 `uncollected test file`；核（`test/` 零 `*.test.mjs`）⇒ 零 `uncollected test file`、出口 = 空集说明（exit 1 ∧ `requirement N20`——§10.3 A-SL4）；VSC 面 = 面差 ②（分层未落），读数不引为「已验」 |
 | VSC 集成测试自检 ② | 既有 | 0 | A-RC4：既有反向断言（集成测试域）逐字零回归 |
 
 **不做（明确出界）**：
 
-- **不给 CLI / 核引入清单文件**——三包收集机制差异 = §10 F2 的既有设计（**CLI 与核 glob · VSC 显式清单**）；本条目只补反向断言，不改收集机制（改机制 = 另案）。
+- **不给 CLI / 核引入清单文件**——三包收集机制差异 = §10 F2 的既有设计（**CLI = 单层 glob · 核 = 零目标集合 · VSC 显式清单**）；本条目只补反向断言，不改收集机制（改机制 = 另案）。
 - 不在 M8 机检加测试判据（单元测试档不入 `docs/**` 机检域）；不做用例级漏跑判据（用例被 `node:test` 收集失败的面归各档自持）。
 
 ### 10.3 执行层分离与空集处置（现行）
@@ -421,20 +424,39 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 - **单元层无入口**：单元测试档住 `docs/batches/`，`node --test <档>` 直达（F5）；不进任何入口的收集面，也不进任何门（§2）。
 - 因此 `npm test` 只证明一件事：集成层的发布门。改动内自查走单档直跑，不再与发布门共用一条命令。
 
+**收集面权威**：本节 = 收集面 ∥ 空集语义的**唯一权威陈述面**；§10.2 ④-2 的收集面括注与其 CLI ∥ 核样例行按本节改写（同档同步面 = 受影响文件表末行）。
+
+**需求口径**：本节的收集面收窄 = 需求 `docs/core/requirements/TESTING.md` §4 的同批修订（已随正）——收集根 = `test/integration/`（单根约定）；这不是按目录划分执行层，而是同一条门的两种失败面：档放错位 = 永不执行，故入口必须当场报错（SC-1）。`test/` 其他位置 ∥ `docs/batches/` = 非执行面。
+
 **核仓口径**（需求 N20：核仓不设集成测试集）：
 
 - `thincoder-core/test/run.mjs` **无目标集合**——不跑任何用例，只做收集面反查并说明「本包无集成测试集」。
 - 常态读数 = exit 1 + `✖ no integration test set — this package has none (requirement N20); node --test <file> runs batch unit tests. This run proves nothing.`
 - 该 exit 1 是**如实**：这条门什么也没验。不得改回 exit 0（空集不读作绿——§10 F5）。
+- **`npm test`(核) 不是门**：发布钩与 CI 核作业都不调它——它的用途 = 读一次即知「本包无测试门」。核的门面 = 语法门（`thincoder-core/scripts/check-syntax.mjs`，发布钩 ∥ CI 两 job 跑同一条）。
+- **核包终态三件**：① `test` script 保留（空集说明器——exit 1 语义零改）∥ ② `prepublishOnly` = 语法门（不再挂 `npm test`）∥ ③ CI 核两 job 步改 `npm run prepublishOnly`。
+- 判据 = **核包既不自称已验（无绿灯），也不永远红（语法门可绿）**——「永远 exit 1」不是门，是噪音：CI 常红无信息，`prepublishOnly` 挂它则核包永远发布不出去。
 
 **启动期自检**（fail-closed，先于 `node --test`；前缀 `✖ test manifest check failed: `）：
 
-| # | 检查 | 失败 / 读数文案 |
-|---|---|---|
-| ① | 收集面反查：`test/` 递归每个 `*.test.mjs` 必须落在收集面内——cli = 只许住 `test/integration/`；核 = 零目标集合，任何 `*.test.mjs` 都是错位 | `uncollected test file (unit test files live in docs/batches/ and run via node --test <file>): <rel>` |
-| ② | 软链目录拒绝（junction 不跟遍历 · 避环） | `symlinked directory under test/ — … : <rel>` |
-| ③ | cli 空集守卫：`test/integration/` 零档 | `✖ no integration test set — zero cases proves nothing; batch unit tests live in docs/batches/ and run via node --test <file>.` + exit 1 |
-| ④ | 核仓常态（无目标集合） | 见上「核仓口径」+ exit 1 |
+| id | # | 检查 | 失败 / 读数文案 |
+|---|---|---|---|
+| SC-1 | ① | 收集面反查：`test/` 递归每个 `*.test.mjs` 必须落在收集面内——cli = 只许住 `test/integration/`；核 = 零目标集合，任何 `*.test.mjs` 都是错位 | `uncollected test file (unit test files live in docs/batches/ and run via node --test <file>): <rel>` |
+| SC-2 | ② | 软链目录拒绝（junction 不跟遍历 · 避环） | `symlinked directory under test/ — … : <rel>` |
+| SC-3 | ③ | cli 空集守卫：`test/integration/` 零档 | `✖ no integration test set — zero cases proves nothing; batch unit tests live in docs/batches/ and run via node --test <file>.` + exit 1 |
+| SC-4 | ④ | 核仓常态（无目标集合） | 见上「核仓口径」+ exit 1 |
+
+**检查项编号（跨节唯一 id——§10.2 ∥ §10.3 以 id 互指；同一检查不另立新号）**：
+
+| id | 语义 | 代码落点（既有段） | 本批 | 失败串唯一 home |
+|---|---|---|---|---|
+| SC-1 | 收集面反查（盘上 ⊆ 收集面；未被收集 ⇒ 永不执行） | cli `test/run.mjs:23-41`（注名 `②'`）∥ 核 `:22-39`（`②'`）∥ render-core `:24-41`（`②'`）∥ vsc `:36-57`（②）∥ desktop `:35-40`（②） | 收集面定义改（cli 窄化 ∥ 核零目标）；检查段本身零改 | §10.3 ①（cli ∥ 核）· §10.2 判据 5 行 1 ∥ 行 2（VSC） |
+| SC-2 | 软链目录拒绝 | cli `:30-31` ∥ 核 `:29-30` ∥ render-core `:31-32` ∥ vsc `:45-46` | 零改 | §10.3 ② |
+| SC-3 | 清单在盘（VSC 两清单逐条 `existsSync`） | vsc `:30-35`（注名 ①） | 零改 | vsc `run.mjs:33` 原文（`listed <layer> file does not exist`） |
+| SC-4 | 零混入（集成档不得出现在单元清单） | vsc `:58-61`（注名 ③） | 零改 | vsc `run.mjs:60` 原文 |
+| SC-5 | 空集处置（目标集合空 ⇒ 非零 + 说明） | cli `:43-47` ∥ 核 `:41-45` ∥ render-core `:74-78` ∥ vsc `:63-67` ∥ desktop `:42-46`（五处均为「零用例即绿 + exit 0」） | cli ∥ 核改写为 exit 1 + 说明；其余三面 = 面差 ① | §10.3 ③ ∥ ④（cli ∥ 核）· 面差登记 ①（三面） |
+
+**`②'` 与 `①` 是同一段代码，不是两段**：SC-1 = 各 runner 里遍历 `test/` 树并逐档判收集面的那一段；§10.2 的「②' 无漏收集」与 §10.3 的「① 收集面反查」是它的两个历史名称，本表统一为 SC-1。
 
 **关键决策**：
 
@@ -444,16 +466,25 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 - **KD-4 空集非零在 cli ∥ 核两面都落**。同一判据（AC-M10-4「空集不读作绿」）；只改核会留下「cli 集成集清空即绿」的同型洞。
 - **KD-5 `slow.mjs` 零改**。纯别名（`export { test as slow }`）保留；实测 `docs/batches/*.test.mjs` 现盘零 `slow.mjs` 引用，保留理由 = M10 F3 的兼容面。
 
-**受影响文件**：
+**受影响文件**（现量读数 = as-of 2026-10-24，命令 = `wc -l`（末行空行计入）；**本节两表（受影响文件表 ∥ 面差登记表）= 全档唯一现量面**——其他节的读数列 = 该节落笔时的快照或指向本节的指针，不读作现量）：
 
 | 文件 | 现（行） | Δ | 判据 |
 |---|---|---|---|
 | `thincoder-cli/test/run.mjs` | 51 | ≈ −4 ∕ +6 | A-SL1 ∥ A-SL2 ∥ A-SL3 |
 | `thincoder-core/test/run.mjs` | 49 | ≈ −6 ∕ +8 | A-SL4 ∥ A-SL5 |
-| `thincoder-cli/test/slow.mjs` | 7 | 0 | 零改（KD-5） |
-| `thincoder-cli/package.json` | 44 | 0 | `test` script 零改（目标集合由 runner 定） |
-| `thincoder-core/package.json` | 55 | 0 | `test` script 保留（指向 runner；文案即门语义） |
-| `.github/workflows/test.yml` | 81 | 0 | **不改 CI 面**：核两 job（`:36` ∥ `:48`）跑 `npm test` ⇒ 随本语义变红；处置 = 另轮 CI 面批（撤核 test job ∥ 改语法门） |
+| `thincoder-cli/test/slow.mjs` | 6 | 0 | 零改（KD-5） |
+| `thincoder-cli/package.json` | 44 | 0 | `test` script 零改（目标集合由 runner 定）；cli CI job 零改（A-SL9） |
+| `thincoder-core/package.json` | 55 | 0（1 行替换） | `test` 保留（空集说明器）+ `prepublishOnly` = `node scripts/check-syntax.mjs`（语法门——A-SL7） |
+| `thincoder-core/scripts/check-syntax.mjs` | 0（不存在） | +64（新建；逐行同构 `thincoder-cli/scripts/check-syntax.mjs` 64 行） | 零依赖走包根递归 `*.mjs`（跳过 `.` 前缀 ∥ `node_modules`），逐档 `node --check`；失败列档 + exit 1，成功打印 `check-syntax: N file(s) OK`（A-SL7） |
+| `.github/workflows/test.yml` | 80 | 0（2 行改） | 核两 job 步 `npm test` ⇒ `npm run prepublishOnly`（`:46` ∥ `:58`）；其余四 job 零触（A-SL8） |
+| `docs/RELEASE.md` | 388 | 2 行 | 随正（父侧路由）：`:100` 的 `prepublishOnly → npm test` 读数 ∥ `:183`「核包 prepublishOnly 门禁 = npm test」——核钩改语法门后两处陈述失实 |
+| `docs/core/design/TESTING.md`（同档同步面） | —（本档自身；行数随本节改笔变化，不落固定读数） | 本席已落（§10.2 收集面 ∥ 样例行按本节改写；§7 A-TS9 按包拆；§2.3 三面措辞对齐） | 两节收集面陈述同口径 + ① 文案单一 home（评审发现 1 的闭环） |
+
+**先例对齐**：对位设计节 = **§10.1 ∥ §10.2** 的增量体式（改动表 + 判据 + 受影响文件 + 出界）；实施坐标 = 本节受影响文件表；先例批 = **无**（理由同 §11.1：批档为一次性载体、可整体清理 ⇒ 长期面不指批次）。偏离：无。
+
+**公共源勘察**：对象 = 本节引入的对外决策（CI 核两 job 改步 ∥ `prepublishOnly` 门面 ∥ `npm run` 用法）；已查 = `docs/**`（设计 ∥ 需求两树）· `.github/workflows/test.yml`（`:70` 已有 server job 跑 `npm run prepublishOnly`——同形先例在仓内）· 四包 `package.json` scripts · 仓内既有语法门实现（`thincoder-cli` ∥ `thincoder-vscode` 的 `scripts/check-syntax.mjs`）。结论 = 相关件均在仓内；外部公共源 = 本批未引（零新用法）。
+
+**既有件三问（`check-syntax.mjs`）**：`existing: thincoder-cli/scripts/check-syntax.mjs`（消费者 = `thincoder-cli/package.json:39` `lint`；CI `test.yml:19` ∥ `:35` 跑 `npm run lint`）∥ `thincoder-vscode/scripts/check-syntax.mjs`（消费者 = `thincoder-vscode/package.json:152` `lint`，经 `:145` `vscode:prepublish` 消费）· name = `check-syntax.mjs`（逐字）· 复用形 = **同构实例**（各包根自持——多实现面纪律；跨包共一份会把三包的可执行面耦成一处）⇒ 核包 = 第三实例，逐行同构 cli 版（64 行；`walk` 对缺失目录空走，核包无需裁剪）。压不到更短的理由 = 遍历 + `node --check` 子进程 + 失败汇总三段一项不可省。
 
 **验收标准**（机判）：
 
@@ -465,6 +496,9 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 | A-SL4 | 核空集：`cd thincoder-core && node test/run.mjs` ⇒ **exit 1** ∧ 输出含 `requirement N20` ∧ 不含 `zero tests = green` | AC-M10-4 ∥ N20 |
 | A-SL5 | 核反查：临时落 `thincoder-core/test/__probe.test.mjs` ⇒ exit 1 ∧ 输出含 `uncollected test file`；删档复原 | F6 |
 | A-SL6 | 单档直达：`node --test docs/batches/<档>.test.mjs` 不经任何 runner（F5 零回归） | F5 |
+| A-SL7 | 核门接线：`thincoder-core/package.json` `prepublishOnly` = `node scripts/check-syntax.mjs`；`cd thincoder-core && npm run prepublishOnly` exit 0 ∧ 输出 `check-syntax: N file(s) OK`；`npm publish --dry-run` 输出不再含 `no integration test set`（不再挂 `npm test`） | N20 ∥ AC-M10-4 |
+| A-SL8 | CI 核两 job（`.github/workflows/test.yml:46` ∥ `:58`）步 = `npm run prepublishOnly`；全档 `npm test` 只剩 cli ∥ vscode 两 job 各 1 次（grep 计数 = 2） | 核包终态 |
+| A-SL9 | cli CI job 零改且语义对位：该 job 文件面零行改（`git diff` 该段空）；`cd thincoder-cli && npm test` exit 0 ∧ `ℹ tests 15`——集成层即收口门，CI 跑它是对的 | F3 ∥ F12 |
 
 **用例表**（单元测试档：正常 / 边界 / 错误）：
 
@@ -476,13 +510,19 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 | U-4 | 边界 | 夹具：核测试树空，跑核 runner | exit 1 ∧ `requirement N20` ∧ 无 `zero tests = green` |
 | U-5 | 错误 | 夹具：核测试树落 `test/x.test.mjs` | exit 1 ∧ `uncollected test file`（单元档错位） |
 
-**面差登记**（VSC ∥ 桌面两面）：
+**面差登记**（VSC ∥ 桌面 ∥ render-core 三面——含可执行收口路径与复查触发；坐标读数 as-of 2026-10-24）：
 
-- 现状：`thincoder-vscode/test/run.mjs` ∥ `thincoder-desktop/test/run.mjs` 仍是旧空集直通（exit 0）；本批文件面只含 cli ∥ 核两 runner。
-- 处置：两面按本节同义落地（各自原文自持）；落地前，这两面的空集读数**不得**被引用为「已验」。
-- 本行删除条件 = 两面落地（面差是未完成，不是保留）。
+| 面差 | 坐标（现状实读） | 落地目标 | 判据（机判） |
+|---|---|---|---|
+| ① 空集直通 | `thincoder-vscode/test/run.mjs:63-67`（69 行）∥ `thincoder-desktop/test/run.mjs:42-46`（49 行）∥ `thincoder-render-core/test/run.mjs:74-78`（83 行）：目标集合为空 ⇒ 打印 `zero tests = green` + exit 0 | 空集 ⇒ exit 1 + 说明（`no integration test set` ∥ 同义文案，各面原文自持） | 夹具清空目标集合 ⇒ `node test/run.mjs` exit 1 ∧ 零 `ℹ tests` 行 |
+| ② 分层未落 | VSC `:68` spawn 两清单 ∥ desktop `:48` 单册 `--test` 全部清单；render-core `:81` 跑 `test/*.test.mjs`（单层 = 顶层单元档在收集面内） | §10.3 分层：集成层单层收集；单元测试档住 `docs/batches/`、`node --test` 直达；render-core 按 N20 无集成集 ⇒ 空集说明器（同核仓口径） | 单元清单非空时 `npm test` 不再执行单元档；集成层有集 ⇒ exit 0；render-core ⇒ exit 1 + `requirement N20` 说明 |
 
-**边界**：不改集成用例本身；不改发布门脚本（`release-check.mjs` 调 `node test/run.mjs`，语义随之变）；不改 CI（`.github/workflows/test.yml` 零触）；不新增测试框架 ∕ 依赖；不把单元测试档接回任何门。
+- **render-core 证据**：`thincoder-render-core/package.json` 有 `test`（`node test/run.mjs`）；现盘 `test/` = `run.mjs` + `model-menu-pure.test.mjs`（顶层单元档——新语义下判错位）。该档归宿（迁 `docs/batches/` 待删 ∥ 改写为集成）由该批定，本批不处置。
+- **收口路径（可执行）**：① 挂账 = 台账三行（一行一面），`trigger` = 归批，指向下一批 runner 面批——主 agent 建行；② 该批文件面 = 三 runner + 三清单（VSC `test/files.mjs` ∥ `test/integration/files.mjs`、desktop `test/files.mjs`）；③ 该批验收 = 上表两行判据逐条 ＋ 本节 A-SL1–A-SL5 同款（反查 ∥ 空集 ∥ 单档直达）；④ 落地前，三面的空集读数**不得**被引用为「已验」。
+- **复查触发**：下一批 runner 面批立项时必核（台账三行 `trigger = 归批` 已把它排进该批）；任一面空集读数被要求引用为「已验」时，立即回本表核对。
+- 本行删除条件 = 三面 ①② 落地（面差是未完成，不是保留）。
+
+**边界**：不改集成用例本身；不改发布门脚本（`release-check.mjs` 调 `node test/run.mjs`，语义随之变）；CI 面只改核两 job 的一步（`:46` ∥ `:58`），其余 job 零触；不新增测试框架 ∕ 依赖；不把单元测试档接回任何门。
 
 ## 11. UAT 验收总表（RTM）
 
@@ -492,7 +532,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 ### 11.1 方案与理由
 
-**目标状态一句话**：每个有集成用例的发布单元（端 = cli ∥ vsc ∥ desktop）在同测试目录下持有一份 Markdown 总表（`test/` 下的 RTM 总表——拟）——**按业务故事分节**，**一节一表、一行 = 一个集成用例**；行前段写「怎么做」（步骤），后段写「怎么算通过」（验收标准）；表尾 = 签署面。
+**目标状态一句话**：每个有集成用例的发布单元（端 = cli ∥ vsc ∥ desktop）在同测试目录下持有一份 Markdown 总表（`<包>/test/RTM.md`）——**按业务故事分节**，**一节一表、一行 = 一个集成用例**；行前段写「怎么做」（步骤），后段写「怎么算通过」（验收标准）；表尾 = 签署面。
 
 **理由三条**：
 
@@ -508,8 +548,8 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 | 项 | 取值 |
 |---|---|
-| 落点 | `<包>/test/` 下的 RTM 总表（拟；包 = 端，如 `thincoder-cli/test/`） |
-| 命名 | 文件名 = RTM 总表（拟）；文档标题 = 「UAT 验收总表（RTM）」 |
+| 落点 | `<包>/test/RTM.md`（包 = 端；如 cli 包 → 该包 `test/` 下） |
+| 命名 | 文件落在该包 `test/` 下，即 `<包>/test/RTM.md`；文档标题 = 「UAT 验收总表（RTM）」 |
 | 份数 | **已裁 = 每端一份**（cli ∥ vsc ∥ desktop）——RTM 是「该交付物验收的总表」，签署按交付物签 ∕ 行与用例同包 ∕ 零跨包引用；备选与取舍 = §11.12 O-1 |
 
 - 落点 `test/` 不触收集面自检：自检域 = `test/` 下 `*.test.mjs`（§10.2 判据 4 命名约定），`.md` 天然不入域。
@@ -553,11 +593,12 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 ### 11.4 与 `test/integration/**` 的对应形（双向）
 
-- **故事节 → 需求层用户故事**：节标题 = 该业务故事的用户故事名；节内注 = 本节所回指的需求条目（`requirements/TESTING.md` 功能需求层）。
+- **故事节 → 需求层用户故事**：节标题 = 该业务故事的用户故事名；节内注 = 本节所回指的需求条目（`docs/core/requirements/TESTING.md` 功能需求层）。
 - **行 → 用例**：行「证据」列写 `test/integration/<场景名>.test.mjs`（§4.3 的目录 ∕ 命名契约不变）。
 - **用例 → 行**：集成用例档内的用例标题以 RTM 编号开头（如 `test('1-1 …')`）——用例标识符与报告标识符同字，标准 §6.4.1.3 a) 的「测试用例的标识符」由此机判。**次序：先定 RTM 编号 → 再落用例标题**（编号先行）；**实施轮随用例设立**（本设计不写 `test/**`）。
 - **覆盖判据**：故事下每个用例一行；一个用例不出现在两张表（不重复登记）。
-- **重建期现状**：集成用例现量 0（§2.3）⇒ RTM 起步为空表（故事节在位、用例行数 0，注「尚无集成用例」）；**不得以单元测试档凑行**（两层永不互转，§3.2）。
+- **设计轮 → 表**：设计的第一动作 = 读该端 `<包>/test/RTM.md` 出 delta（改坏 ∥ 冗余 ∥ 缺失三问）——机制与判据 = §11.15。
+- **现状**：CLI 集成层 5 档 15 例在盘，首批落表 = §11.16；vsc ∥ desktop 集成层尚未建立 ⇒ 两份表起步为骨架（无故事节、注「尚无集成用例」），故事节随首个用例设立；**不得以单元测试档凑行**（两层永不互转，§3.2）。
 
 ### 11.5 签署面
 
@@ -621,8 +662,14 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 | 文件 | 现（行） | Δ | 本批 |
 |---|---|---|---|
-| `docs/core/design/TESTING.md` | 411 | **+209**（⇒ **620 行**——**行号口径**〔`read` ∥ 行号计数〕；`wc -l` 因末行空行少 1 ⇒ 619；§11 增 206 行 ∥ 设计评审修正增 3 行） | **本批落** |
-| `<包>/test/RTM.md`（cli ∥ vsc ∥ desktop） | 0（不存在） | +N（实施轮） | 本批不建 |
+| `docs/core/design/TESTING.md`（本档自身） | —（行数随本节改笔变化，不落固定读数） | +§11.15–§11.17 三节；§11.1 ∕ §11.2 ∥ §11.4 ∥ §11.8 ∥ §11.10–§11.12 ∥ §11.14 改笔 | 设计轮落 |
+| `docs/core/requirements/TESTING.md` | —（父侧笔） | F29 的名称 ∥ 路径定死 | 父侧落 |
+| `thincoder-core/prompts/persona-eng-designer.md` | 151 | 第 9 项按 §11.17 重写 | 实施轮落 |
+| `thincoder-core/prompts/advisor-design.md` | 138 | 第 12 条按 §11.17 加索引起点 | 实施轮落 |
+| `thincoder-core/prompts/discipline-engineering.md` | 345 | 集成段按 §11.17 加一条 | 实施轮落 |
+| CLI 包 `<包>/test/RTM.md` | 0（不存在） | 5 故事节 + 15 行 + 签署面（§11.16） | 实施轮建 |
+| CLI 包 `test/integration/*.test.mjs`（5 档） | 311 ∥ 216 ∥ 85 ∥ 93 ∥ 119 | 15 处标题改号（旧代号离场） | 实施轮落 |
+| vsc ∥ desktop 包 `<包>/test/RTM.md` | 0（不存在） | 骨架 + 「尚无集成用例」注；故事节随首个用例设立 | 实施轮建 |
 
 ### 11.9 关键决策记录
 
@@ -647,6 +694,10 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 | AC-RTM-6 | 三处相抵各有正面解——§11.6 | RTM-6 |
 | AC-RTM-7 | 裁定项与落点单列（O-1…O-6 逐项带落点）——§11.12 | RTM-7 |
 | AC-RTM-8 | 边界与禁止范围在位（§11.14）· 术语表用带定义名词、无自造词（§11.13） | RTM-8 |
+| AC-RTM-9 | 名称 ∥ 路径定死：§11 全文无「拟」，落点唯一 = `<包>/test/RTM.md`（§11.1 · §11.2 · §11.12 O-2） | RTM-1 |
+| AC-RTM-10 | 设计轮起点 = RTM delta 三问（§11.15）＋三处提示词逐字文案在位（§11.17） | RTM-2 |
+| AC-RTM-11 | CLI 15 例逐条给出「故事节 → 编号 → 8 列」取值（§11.16），且编号 ∥ 标题机判双向对齐（§11.16 判据） | RTM-3 |
+| AC-RTM-12 | 改号机判可执行：编号集 ↔ 标题集双向零差、零重复、证据档对位（§11.16 脚本） | RTM-4 |
 
 ### 11.11 用例表（正常 ∕ 边界 ∕ 错误）
 
@@ -657,25 +708,26 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 | RTM-T3 | 错误 | 某行缺「怎么算通过」段 | 不合格，不许登表（验收标准是用例内的必备段落） |
 | RTM-T4 | 错误 | 签字后直接改既有行 | 禁止；唯一可写面 = 追加更正行（§11.5） |
 
-**生效时序**：RTM-T1–T4 判据自实施轮生效（本批不建表——§11.14）；本批可落证据 = AC-RTM-1…8。
+**生效时序**：RTM-T1–T4 判据自表建立轮生效；首批落表 = §11.16（CLI 15 例）。
 
 ### 11.12 裁定项与落点（用户 2026-10-16 04:17 一次性批准）
 
 | # | 事项 | 裁定 + 落点 |
 |---|---|---|
 | O-1 | 份数 | **每端一份**（cli ∥ vsc ∥ desktop）——签署按交付物签 ∕ 零跨包引用。落点 = §11.2 份数行 · §11.5 · §11.6 行 3 · §11.8 表 |
-| O-2 | 文件名 | **RTM 总表（拟）**。落点 = §11.2 命名行 · §11.8 表 |
+| O-2 | 文件名 | **`<包>/test/RTM.md`（已定）**。落点 = §11.2 命名行 · §11.8 表 |
 | O-3 | 签署形态 | **纸质 ∕ PDF 签字 + 冻结提交**（git tag = 签后基线）。落点 = §11.5 时序 ⑤ ∕ ⑥ |
 | O-4 | 「质量特性」列（标准 §6.4.1.3 g) 为「可陈述」） | **不纳入**（甲方读不懂；本项目质量特性未在需求档逐条编号）；甲方要求再补。落点 = §11.3 列定义 |
 | O-5 | 多语言面 | **不纳入本轮**——现设计 = 中文单语（甲方可读）；双语需求另开条目。**父侧处置 · 用户可另裁**。落点 = §11.9 行 6 · §11.14 |
 | O-6 | RTM 是否入各包 doc-check 域（行宽判据） | **`doc-check` 覆盖 `test/**` ⇒ 实施轮核实**；设计侧已要求行宽 ≤300 字符。落点 = §11.2 第 2 条 · §11.14 |
+| O-7 | 首批 15 行的「执行人」取值 | **open**——倾向 `主 agent（自动化执行）`：执行人列记实际执行者，甲方签字在签署面（§11.5），不冒充人工。落点 = §11.16 列取值 |
 
 ### 11.13 术语（带定义的名词，无自造词）
 
 | 词 | 定义 ∕ 出处 |
 |---|---|
 | RTM（UAT 验收总表） | 本节所设计的文档；业界名 = Requirements Traceability Matrix（需求追溯矩阵） |
-| 集成测试（= UAT · 用户验收测试） | `requirements/TESTING.md` §0（IEEE 610.12 原文） |
+| 集成测试（= UAT · 用户验收测试） | `docs/core/requirements/TESTING.md` §0（IEEE 610.12 原文） |
 | 用例 ∕ 测试用例 | GB/T 25000.51-2016 §4.1.18 |
 | 验收标准 | 用例内的一个段落：前段「怎么做」+ 后段「怎么算通过」（用户 2026-10-16 裁定） |
 | 测试基准（test basis） | ISO/IEC/IEEE 29119-1:2013 §5.5.4 |
@@ -684,9 +736,133 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 ### 11.14 边界（本设计不做）
 
-- 本批**不建表**（`<包>/test/RTM.md` = 实施轮的活）· **不写 ∕ 不改任何 `test/**` 文件** · **不碰产品码**。
+- 表本体由实施轮建立（本设计只定结构、编号与落表映射）· 设计轮**不写 ∕ 不改任何 `test/**` 文件** · **不碰产品码**。
 - **不发明标准里没有的内容**；未读到的标准（29119-2 ∕ -3 ∕ -4、GB/T 9386 正文等）不作依据。
 - **不改**「单元测试零留存」（它仍是内部面）· **不改**集成测试集既有纪律（§3 ∕ §4 ∕ §10）。
 - **不自造词**：一律用带定义的名词（§11.13）。
 - 不做：电子签章系统 · 甲方业务语言之外的多语言面 · RTM 的自动生成（本轮 = 人工维护的表；自动化另开条目）。
+
+### 11.15 设计轮的起点 = RTM delta
+
+> 目的：设计席不再从空白问「这次要哪些场景」——先读该端的 `<包>/test/RTM.md`，对既有行出 delta。
+
+**三问（逐条落到设计档的集成测试设计段）**：
+
+| # | 问题 | 产出 |
+|---|---|---|
+| D-1 | 哪几行被这次改动改坏？ | 改写该行的「怎么做 ∕ 怎么算通过」；编号不变 |
+| D-2 | 哪几行冗余该删？ | 删行 + 删对应用例；超 50–100 窗时优先裁旧 |
+| D-3 | 缺哪几行？ | 新编号（先定号）→ 再落用例标题 `test('<编号> …')` |
+
+- 三问全空 ⇒ 集成测试设计段写「业务行为未变」并给理由（§11.4 覆盖判据不变）。
+- **行号永不复用**：删掉的行号不回收——甲方读历史时 `1-3` 永远是同一件事。
+- 设计档承载 delta；表本体由实施轮改（本设计不写 `test/**`）。
+
+### 11.16 CLI 首批落表（15 例 · 5 故事节）
+
+**故事节的切法** = 「用户在 CLI 里能做的一件事」——不按测试档切、不按模块切。5 节 × 3 行：
+
+| 节 | 故事（H3 标题） | 一句话目的 | 证据档 |
+|---|---|---|---|
+| 1 | 对话里用工具，结果必须回到模型 | 工具结果原样回到模型，对话能接着走 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
+| 2 | 未立项就写产品码：提醒一次，之后不再打断 | 提醒只在首次出现，写文档不消耗它 | `test/integration/unbooked-pen.test.mjs` |
+| 3 | 网页抓取的后端故障不外溢 | 单个后端故障不影响其它通路，无渠道时零变化 | `test/integration/web-backend-404.test.mjs` |
+| 4 | 浏览器起不来的等待窗口可调 | 默认 25s、可调，失败后会话仍可用 | `test/integration/browser-start-window.test.mjs` |
+| 5 | 顾问评审超时改了马上生效 | 超时可热改、可清除、非法值被拒 | `test/integration/advisor-timeout-hot.test.mjs` |
+
+**15 行（8 列取值）**：
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 1-1 | 在 CLI 里让助手调用一次工具，然后继续同一段对话 | 会话流里有这次调用与它的结果，助手回复引用了结果，没有 400 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
+| 1-2 | 同一轮里让助手连续调用两个工具，再继续对话 | 两个结果都回到模型，回复正常，没有 400 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
+| 1-3 | 关掉进程，重开同一会话，历史回放后继续对话 | 回复引用了上一程的工具结果，没有 400 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
+| 2-1 | 主 agent 首次写产品源文件 | 该笔回执以一行 [pen check] 结尾、只出现一次、含两处键句；文件确实写入 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/unbooked-pen.test.mjs` |
+| 2-2 | 同一会话紧接着再写一个产品源文件 | 第二笔回执没有任何 [pen check] 行 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/unbooked-pen.test.mjs` |
+| 2-3 | 另一个会话先写文档，再写产品源文件 | 写文档那笔零提示、不消耗提醒；随后写产品码仍有提醒 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/unbooked-pen.test.mjs` |
+| 3-1 | 让 fetch 收到 404 后，在同一会话里再搜一次 | 404 不熔断，搜索仍然打到 DeepSeek | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/web-backend-404.test.mjs` |
+| 3-2 | 让后端返回 401 | 只停该后端：fetch 回落到本地直取并成功，随后 websearch 零上游命中且正常结算 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/web-backend-404.test.mjs` |
+| 3-3 | 在没有 DeepSeek 渠道的配置下跑一次 | 回执逐字不变、零 (deepseek …) 提示行、替身零命中 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/web-backend-404.test.mjs` |
+| 4-1 | 设 `BROWSER_START_TIMEOUT_MS=2000` 后启动浏览器 | 失败句含 within 2s，失败后会话仍可用 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/browser-start-window.test.mjs` |
+| 4-2 | 不设该变量启动浏览器 | 失败句含 within 25s（默认窗口），不再出现 12s 时代的句子 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/browser-start-window.test.mjs` |
+| 4-3 | 真机上首个动作是 navigate | 自启段不吃动作预算；宿主无 Chromium 则该例 skip 并打印 | 见注 ★ | 2026-10-24 | open（O-7） | 无 | `test/integration/browser-start-window.test.mjs` |
+| 5-1 | `settings set` 把超时改成 3000，再跑下一次评审 | 下一次评审按 3s 结束并带回超时尾 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/advisor-timeout-hot.test.mjs` |
+| 5-2 | 把超时删掉（设为 null），再跑同一评审 | 评审跑完（约 5s 流），无超时尾 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/advisor-timeout-hot.test.mjs` |
+| 5-3 | 给超时写入非法值 abc | 被拒，回执点名该键与可消费形态；配置面读回不变 | 通过 | 2026-10-24 | open（O-7） | 无 | `test/integration/advisor-timeout-hot.test.mjs` |
+
+**列取值规则**：
+
+- **结果**：`通过` ⇐ 该例在 2026-10-24 当晚 `npm test` 输出中为 `✔`（各批 §6 先红后绿）；`﹣`（skip）⇒ `未执行`——skip 不算验过；没跑 ⇒ `未执行`。
+- **★ 4-3**：结果由实测读出——为 `﹣` 记 `未执行`，为 `✔` 记 `通过`；不得据「15/15 绿」推定（skip 也计入 tests 数）。
+- **执行日期**：`2026-10-24`（首批 = 当晚实测）。**执行人**：O-7 裁定后统一填。**异常**：`无`（当晚无缺陷单）。
+- **证据**：`test/integration/<场景名>.test.mjs`（§11.4 契约不变）。
+
+**旧代号 → RTM 编号（标题改号）**：
+
+| 旧代号 | 新编号 | 旧代号 | 新编号 | 旧代号 | 新编号 |
+|---|---|---|---|---|---|
+| G1 | 1-1 | I1 | 2-1 | I-WB1 | 3-1 |
+| G2 | 1-2 | I2 | 2-2 | I-WB2 | 3-2 |
+| G3 | 1-3 | I3 | 2-3 | I-WB3 | 3-3 |
+| I-BT1 | 4-1 | I-AP1 | 5-1 | | |
+| I-BT2 | 4-2 | I-AP2 | 5-2 | | |
+| I-BT3 | 4-3 | I-AP3 | 5-3 | | |
+
+- 标题形 = `test('<编号> <原描述文字>', …)`；**旧代号不留在标题里**（编号即唯一标识；沿革由 git 提交信息承载）。
+
+**机判（实施轮一次性读数，不作常驻门——F29 边界「人签面 ≠ 机检面」）**：在 CLI 包根跑下列脚本，四项列表全空且 `rows = 15` 即对齐：
+
+```js
+// thincoder-cli 包根：node rtm-check.mjs
+import fs from 'node:fs';
+const rtm = fs.readFileSync('test/RTM.md', 'utf8');
+const rows = [...rtm.matchAll(/^\|\s*(\d+-\d+)\s*\|(?:[^|]*\|){5}\s*`([^`]+)`\s*\|$/gm)]
+  .map((m) => ({ id: m[1], file: m[2] }));
+const titles = [];
+for (const f of fs.readdirSync('test/integration')) {
+  if (!f.endsWith('.test.mjs')) continue;
+  const s = fs.readFileSync(`test/integration/${f}`, 'utf8');
+  for (const m of s.matchAll(/test\("(\d+-\d+) /g)) titles.push({ id: m[1], file: `test/integration/${f}` });
+}
+const ids = new Set(rows.map((r) => r.id));
+const tids = new Set(titles.map((t) => t.id));
+console.log('rows', rows.length, 'titles', titles.length);
+console.log('row-no-title', [...ids].filter((i) => !tids.has(i)));
+console.log('title-no-row', [...tids].filter((i) => !ids.has(i)));
+console.log('dup-ids', rows.map((r) => r.id).filter((v, i, a) => a.indexOf(v) !== i));
+console.log('evidence-mismatch', rows.filter((r) => !titles.some((t) => t.id === r.id && t.file === r.file)));
+console.log('legacy-code-titles', titles.filter((t) => !/^\d+-\d+$/.test(t.id)).length);
+```
+
+判据：`rows 15 titles 15` ∧ 后四行列表皆 `[]`（∧ `legacy 0`）。另：`grep -c "test(\"[0-9]" test/integration/*.mjs` 与 RTM 行数一一对位。
+
+### 11.17 提示词落点（三处逐字）
+
+> 提示词是产品码（落地 = 实施轮）；本节持最终文字，三处同一句：**索引在哪（`<package>/test/RTM.md`）· 叫什么（RTM）· 设计从哪开始（读它出 delta）**。
+
+**① `thincoder-core/prompts/persona-eng-designer.md` 第 9 项（现 136–137 行）整项替换为**：
+
+```text
+9. **Integration test design — start from the index**: `<package>/test/RTM.md` is the RTM (UAT acceptance matrix: one section per business story, one row per integration case, 8 columns). Read it before designing, then answer as a delta: which rows this change breaks (rewrite them), which rows are redundant (delete them), which rows are missing (new rows).
+   A new row's number is fixed in the RTM before its case title is written — `test('1-1 …')`, the same number verbatim.
+   A change that alters what the business does names the three answers; "no change" is not an answer there.
+```
+
+**② `thincoder-core/prompts/advisor-design.md` 第 12 条（现 52–57 行）首句替换、并加一条 🔴**：
+
+```text
+12. **Integration-test design**: the design document must contain an integration-test design section that starts from `<package>/test/RTM.md` — the RTM: one section per business story, one row per integration case. The section answers as a delta against it — which rows this change breaks, which are redundant, which are missing — and each row points back to the business requirement it serves.
+    **An integration section that starts from a blank "which scenarios do we need" list, with no RTM read, ⇒ 🔴.**
+```
+
+（该条其余现有行——缺段 🔴 ∥ 「业务行为未变」唯一正当理由 ∥ 窗口满不算理由 ∥ 全量跑 🔴 ∥ 两条 Why——原样保留。）
+
+**③ `thincoder-core/prompts/discipline-engineering.md` 集成段（现 181 行之后）新增一条**：
+
+```text
+- **The integration index is `<package>/test/RTM.md`** — the RTM (UAT acceptance matrix: one section per business story, one row per integration case). A design round opens by reading it and answers as a delta — rows broken, rows redundant, rows missing — never a blank "which scenarios does this change need" list; a row's number is fixed in the RTM before its case title is written.
+  Why: without the index a designer sees only this batch's scenes, so every case lands as a new one and the existing set is never revised.
+```
+
+- 三处禁写文件名以外的引用语（不写「见设计档 §11.4」式指针）；`<package>/test/RTM.md` 是模型要读写的路径（操作数），保留。
 

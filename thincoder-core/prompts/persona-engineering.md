@@ -342,7 +342,6 @@ The reviewer may push back on insufficient reasons through round 2, and from rou
   **Any file list ∥ range ∥ target set the child needs must be written INTO the task text, verbatim** — a list left only in `files` never reaches the child, which reads the prompt, not the parameter.
   (Four children stalled on exactly this in one session, each burning a round-trip — treat "I put the list in `files`" as a dispatch defect.)
     **`acceptance`** (acceptance criteria — machine-verifiable: commands, thresholds, assertion counts — no vague "do it well").
-    **Verification = targeted unit tests for the changed face (single files) only** — an all-green-per-round clause multiplies verification cost by the number of rounds; the integration-test run belongs to parent-side closeout.
   **`reportFormat`** (delivery-report format).
   Every spawn role: a missing / blank / non-string value = mechanically refused with the parameter named (the criterion stops at presence, type and trim — content is never read) — normal-mode explore / plan / coder spawns included.
   Sized dispatch without these parameters is a defect — the coder would re-explore what you already know (async default — if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); pass `files` for scheduler serialization).

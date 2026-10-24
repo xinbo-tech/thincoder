@@ -3558,7 +3558,7 @@ B1 — `thincoder-core/prompts/discipline-engineering.md` · `## Testing discipl
 
 | # | 座位 | 实读坐标 | 缺的那一半 |
 |---|---|---|---|
-| F1 | 主 agent 派单 | 今晚任务书的 `acceptance` 参数 = `cd thincoder-cli && node test/run.mjs` 全绿 pass=35/44（本批 §1 来源行） | 提示词没有一句管「验收命令该写什么」；`thincoder-core/prompts/discipline-engineering.md:192` 的 `` `The gate`: one `test` run, all green `` 未限定谁 ∥ 何时，被读成每批都要过一遍的门 |
+| F1 | 主 agent 派单 | 今晚任务书的验收 =「全量套件全绿」——本批编制行逐字：`今晚任务书把「全量套件全绿」写成验收，逼每一轮跑集成`（`docs/batches/2026-10-24-acceptance-command-discipline.md:3`） | 提示词没有一句管「验收命令该写什么」；`thincoder-core/prompts/discipline-engineering.md:192` 的 `` `The gate`: one `test` run, all green `` 未限定谁 ∥ 何时，被读成每批都要过一遍的门 |
 | F2 | 设计席 | `docs/batches/2026-10-24-tool-timeouts.md:125` = `` `npm test` 绿（收集面 = `thincoder-cli/test/*.test.mjs` + `test/integration/*.test.mjs`） `` | 设计席的自查（`thincoder-core/prompts/persona-eng-designer.md:114`）只问「可机判」，不问「这条命令是不是本批的动作」 |
 | F3 | 评审兜底 | `thincoder-core/prompts/advisor-design.md:52-55`（第 12 条）只查「集成测试设计段在不在」 | 验收命令面无人查：全量写进验收时，第 12 条照样过 |
 | F4 | 既有副本 | `thincoder-core/prompts/persona-engineering.md:345`（`**Verification = targeted unit tests for the changed face (single files) only** — an all-green-per-round clause …; the integration-test run belongs to parent-side closeout.`） | 规则在盘、今晚仍被跳过：它是「验证范围」注记，不是「验收文本」禁令，也没有可写的替换形 ⇒ 语义并入 B1、旧副本删除（K2） |
@@ -3567,7 +3567,8 @@ B1 — `thincoder-core/prompts/discipline-engineering.md` · `## Testing discipl
 
 1. 一句话 = **验收写的是改动面单测单档；全量套件是父侧的收口动作**。三处只换动作主语：主 agent **写**（任务书 `acceptance`）· 设计席 **自查**（§2 验收对照与设计档验收）· advisor **审**（设计档）。
 2. why（三处同源）：集成是你的收口动作；写进任务书就变成每轮成本——每轮都跑的套件不再是发布门，只是回合成本（需求 F1 ∥ F3）。
-3. 给替换形：验收命令写 `node --test <改动面单档>`；集成那半用 F2 的义务句指路（`reported, not run`，不复述义务句原文），不让写者在边缘自己发明。
+3. 给替换形：验收命令写 `node --test <改动面单档>`；无可跑面的改动写一次性读数（C4 的正面形）。集成那半写成指向收口报告行的指针形（`reported in the closeout line, not run here`），不复述义务句原文，不让写者在边缘自己发明。
+   「无可跑面」的实读锚 = 本节受影响文件表前五行全为 `.md` 文本档（提示词 4 + 设计档 1），无 `.mjs` ∥ `.js` 档 ⇒ 不存在 `node --test <档>` 可跑面；本批自身即此态。
 4. 不给实施席加「拒绝违规验收」的检查（本批不做）：让执行者挡派单者，来回确认比派单前查一遍贵；也不开「任务书评审」维度。
 
 **逐字英文文本（实施席照此落笔 · 唯一权威目标形）**
@@ -3578,35 +3579,37 @@ B1 — `thincoder-core/prompts/discipline-engineering.md` · `## Testing discipl
 B1 — `thincoder-core/prompts/discipline-engineering.md` · `## Testing discipline` 节 · `**Integration tests = the release gate, not a work rhythm**` 行之后 ∥ `**A missing integration suite is a debt, not a steady state**` 行之前，插入两行：
 
 ```text
-- **An acceptance criterion names the changed-face unit test file (`node --test <file>`), never a full-suite run**: the full suite is the parent-side closeout gate — the integration half is reported, not run.
+- **An acceptance criterion names the changed-face unit test file (`node --test <file>`), or a one-off reading when no runnable face exists, never a full-suite run**: the full suite is the parent-side closeout gate — the integration half is reported in the closeout line, not run here.
   Why: written into a batch, the suite runs every round — a release gate turned into a round cost, and nothing new is proven by running it again.
 ```
 
 B2 — `thincoder-core/prompts/persona-eng-designer.md` · `- **Acceptance** — each criterion machine-checkable;` 行之后 ∥ `- **Dependencies** — upstream/downstream dependencies.` 行之前，插入两行：
 
 ```text
-   **An acceptance naming a full-suite run is not a batch criterion**: it names the parent-side closeout gate — the criterion is the changed-face unit test file (`node --test <file>`), and the integration half is reported, not run.
+   **A full-suite acceptance is not a batch criterion**: it names the parent-side closeout gate — the criterion is the changed-face unit test file (`node --test <file>`), or a one-off reading when no runnable face exists; the integration half is reported in the closeout line, not run here.
    Why: a suite run per batch is a round cost, not a release gate.
 ```
 
-B3 — `thincoder-core/prompts/advisor-design.md` · 第 12 条内 · `**A reason that is not "this change alters no business behavior" does not stand**` 行之后 ∥ `**Why**: integration tests are the only acceptance run` 行之前，插入一行：
+B3 — `thincoder-core/prompts/advisor-design.md` · 第 12 条末 · `**Why**: integration tests are the only acceptance run` 行之后 ∥ `## Output Format` 标题之前，插入两行（B3 判断句 + 它自己的 `Why` 行——理由紧随其规则，承本档 §6.45 写形；第 12 条 `:54`↔`:55` 的「规则 → Why」对因此不被拆）：
 
 ```text
-    **A design whose acceptance names a full-suite run ⇒ 🔴 (the release gate written as a round cost)**: the batch criterion names the changed-face unit test file (`node --test <file>`), and the integration half is reported, not run — a suite run every round proves nothing new.
+    **A design's acceptance naming a full-suite run ⇒ 🔴 (the release gate written as a round cost)**: the criterion is the changed-face unit test file (`node --test <file>`), or a one-off reading when no runnable face exists; the integration half is reported in the closeout line, not run here.
+    Why: acceptance is what the implementing round runs — a suite there turns the release gate into a round cost, and a repeat run proves nothing new.
 ```
 
 **中文复核面（与英文面同一语义 · 供人复核，不入提示词）**
 
-- **B1 · 验收只写改动面单档**：验收条件写的是改动面的单测档（`node --test <档>`），从不是全量套件的绿；全量套件是父侧收口动作——集成那半只报告、不跑。
+- **B1 · 验收只写改动面单档**：验收条件写的是改动面的单测档（`node --test <档>`）；无可跑面的改动写一次性读数；从不是全量套件的绿。全量套件是父侧收口动作——集成那半写在收口报告行里，这里不跑。
   理由：写进任务书，套件就每轮都跑——发布门被写成了回合成本，再跑一遍也证明不了新东西。
-- **B2 · 设计席自查**：把全量写进验收的，不是本批的验收条件——它指的是父侧的收口门；验收条件是改动面单测档（`node --test <档>`），集成那半只报告、不跑。
+- **B2 · 设计席自查**：把全量写进验收的，不是本批的验收条件——它指的是父侧的收口门；验收条件是改动面单测档（`node --test <档>`），无可跑面的改动写一次性读数；集成那半写在收口报告行里，这里不跑。
   理由：每批跑一遍套件是回合成本，不是发布门。
-- **B3 · 评审兜底**：设计档的验收写成全量套件跑 ⇒ 🔴（发布门被写成回合成本）——本批的验收条件是改动面单测档（`node --test <档>`），集成那半只报告、不跑；每轮跑一遍套件证明不了新东西。
+- **B3 · 评审兜底**：设计档的验收写成全量套件跑 ⇒ 🔴（发布门被写成回合成本）——本批的验收条件是改动面单测档（`node --test <档>`），无可跑面的改动写一次性读数；集成那半写在收口报告行里，这里不跑。
+  理由：验收就是实施轮要跑的那条命令——把套件写进它，发布门就成了每轮的回合成本，再跑一遍也证明不了新东西。
 
 **与既有句的不重复判据（D2）**
 
 - `thincoder-core/prompts/discipline-engineering.md:193`（`**Iteration = unit tests only**`）管**执行面**：迭代只跑改动面单测；`:194`（`**Integration tests = the release gate, not a work rhythm**`）管**集成跑几次 ∥ 谁跑**；B1 管**验收文本写什么命令**——三句各答一问，互不顶替。
-- 同档 `:197` 的报告行（F2 义务句）管**报告怎么说**；B1 的 `reported, not run` 只指过去，不复述义务句原文。
+- 同档 `:197` 的报告行（F2 义务句）管**报告怎么说**；B1 的 `reported in the closeout line, not run here` 只指过去，不复述义务句原文。
 - `thincoder-core/prompts/persona-eng-designer.md:130` 的 item 5（`Acceptance criteria pointing back`）管**回指需求**；B2 管**验收命令的形态**——不同判据面。
 - `thincoder-core/prompts/advisor-design.md` 第 12 条既有句管**集成测试设计段在不在**；B3 在同一维度里补**验收命令面**（不新开判据——本批明令）。
 - `thincoder-core/prompts/persona-engineering.md:345` 与 B1 同义 ⇒ 并入 B1 后删除旧副本（K2），不留两处成文。
@@ -3618,7 +3621,7 @@ B3 — `thincoder-core/prompts/advisor-design.md` · 第 12 条内 · `**A reaso
 | L1 | `thincoder-core/prompts/discipline-engineering.md` | `**Integration tests = the release gate, not a work rhythm**` 行之后 | 插入 B1 两行 | +2 行 |
 | L2 | `thincoder-core/prompts/persona-engineering.md` | `**Verification = targeted unit tests for the changed face (single files) only**` 行（`:345`） | 整行删除（旧副本零残留；语义 = B1） | −1 行 |
 | L3 | `thincoder-core/prompts/persona-eng-designer.md` | `- **Acceptance** — each criterion machine-checkable;` 行之后 | 插入 B2 两行 | +2 行 |
-| L4 | `thincoder-core/prompts/advisor-design.md` | 第 12 条 `**A reason that is not "this change alters no business behavior" does not stand**` 行之后 | 插入 B3 一行 | +1 行 |
+| L4 | `thincoder-core/prompts/advisor-design.md` | 第 12 条末 · `**Why**: integration tests are the only acceptance run` 行之后（`## Output Format` 前） | 插入 B3 两行（判断句 + `Why` 行） | +2 行 |
 | L5 | 其余提示词档 · `thincoder-core/tool-docs/**` · 产品代码 · 需求档 · `docs/core/design/TESTING.md` | — | 零改 | ±0 |
 
 实施按**内容锚**定位；行号只作现盘读数。`thincoder-core/prompts/discipline-engineering.md` 的 `## Testing discipline` 节即测试纪律单一出处（`:166-203`）。
@@ -3627,12 +3630,12 @@ B3 — `thincoder-core/prompts/advisor-design.md` · 第 12 条内 · `**A reaso
 
 | # | 验收 | 判法 / 读数 |
 |---|---|---|
-| A1 | B1 逐字落盘（本批 ①） | 落地后 `thincoder-core/prompts/discipline-engineering.md` 含 `An acceptance criterion names the changed-face unit test file` 恰 1 · `never a full-suite run` 恰 1；围栏块内容与本节 B1 逐字符一致 |
-| A2 | B1 位置可判 | 行首索引 `**Iteration = unit tests only**` < `An acceptance criterion names the changed-face unit test file` < `**A missing integration suite is a debt, not a steady state**` |
-| A3 | B2 落盘 + 位置 | `thincoder-core/prompts/persona-eng-designer.md` 含 `An acceptance naming a full-suite run is not a batch criterion` 恰 1；`- **Acceptance** — each criterion machine-checkable;` < 新行 < `- **Dependencies** — upstream/downstream dependencies.` |
-| A4 | B3 落盘 + 位置 | `thincoder-core/prompts/advisor-design.md` 含 `A design whose acceptance names a full-suite run` 恰 1；`**A reason that is not "this change alters no business behavior" does not stand**` < 新行 < `**Why**: integration tests are the only acceptance run` |
+| A1 | B1 逐字落盘（本批 ①） | 落地后 `thincoder-core/prompts/discipline-engineering.md` 含 `An acceptance criterion names the changed-face unit test file` 恰 1 · `never a full-suite run` 恰 1 · `or a one-off reading when no runnable face exists` 恰 1；围栏块内容与本节 B1 逐字符一致 |
+| A2 | B1 位置可判 | 行首索引 `**Iteration = unit tests only**` < `An acceptance criterion names the changed-face unit test file` < `**A missing integration suite is a debt, not a steady state**`；例外半句与规则同行（B1 仍两行，不另起行） |
+| A3 | B2 落盘 + 位置 | `thincoder-core/prompts/persona-eng-designer.md` 含 `A full-suite acceptance is not a batch criterion` 恰 1 · `or a one-off reading when no runnable face exists` 恰 1；`- **Acceptance** — each criterion machine-checkable;` < 新行 < `- **Dependencies** — upstream/downstream dependencies.` |
+| A4 | B3 落盘 + 位置 | `thincoder-core/prompts/advisor-design.md` 含 `A design's acceptance naming a full-suite run` 恰 1 · `or a one-off reading when no runnable face exists` 恰 1；`**Why**: integration tests are the only acceptance run` < B3 规则行 < `## Output Format`；规则行的下一行 = B3 自己的 `Why` 行（缩进后以 `Why:` 起头） |
 | A5 | 旧副本零残留（本批 ②） | `thincoder-core/prompts/persona-engineering.md` 扫 `all-green-per-round` ∥ `targeted unit tests for the changed face` ∥ `the integration-test run belongs to parent-side closeout` 各 0 命中 |
-| A6 | 写形零回归（本批 ③） | 四档逐行 ≤300 字符（现盘基线 = discipline max 300 · persona-eng max 300 · designer max 298 · advisor max 290）· `##` 块计数不变（10 ∥ 17 ∥ 9 ∥ 7）· `node scripts/prompt-refs-check.mjs` 命中 0 |
+| A6 | 写形零回归（本批 ③） | 四档逐行 ≤300 字符（现盘基线 = discipline max 300 · persona-eng max 300 · designer max 298 · advisor max 290）· `##` 块计数不变（10 ∥ 17 ∥ 9 ∥ 7）· B1 ∥ B2 ∥ B3 各带一行 `Why`（判法 = 各自规则行的下一行，去掉行首缩进后以 `Why:` 起头）· `node scripts/prompt-refs-check.mjs` 命中 0 |
 | A7 | `doc_check`（本批 ⑤） | 本节落笔后实跑 `doc_check(mode:"gate", docs=["docs/core/design/PROMPT-SYSTEM.md"])` ⇒ 首行 `DOC-CHECK GATE: PASS`；实施轮改提示词后父侧复跑同判 |
 
 写入读法 = **一次性落地读数**（`node` 逐档读 + 字串计数 + 行首索引比较），零常驻断言（承 F19 与新写散文锚禁令；一次性属性同 §6.48 A3 口径）。
@@ -3641,21 +3644,23 @@ B3 — `thincoder-core/prompts/advisor-design.md` · 第 12 条内 · `**A reaso
 
 | # | 场景 | 输入 / 动作 | 期望 |
 |---|---|---|---|
-| C1 | 正常 · 派单写验收 | 主 agent 为改动面派 eng-coder，`acceptance` 写 `node --test <改动面单档>`，集成半用义务句 | 验收只含改动面单档；集成零跑 |
-| C2 | 正常 · 设计席自查 | 设计席写 §2 验收对照 ∥ 设计档 item 5 | 验收命令 = 改动面单档；集成半写义务句，不写全量 |
-| C3 | 正常 · advisor 审设计 | 设计档验收写 `npm test` 全绿 | 按第 12 条 B3 判 🔴，实现前拦下 |
-| C4 | 边界 · 纯文档批 | 无代码改动（如本批自身） | 验收 = 一次性字串读数；无集成动作、无「全量绿」句 |
-| C5 | 错误 · 设计档写全量 | 设计档或 §2 的验收行写全量套件绿 | 设计不合格（B3 判 🔴；B2 应在本席自查时先拦） |
+| C1 | 正常 · 派单写验收 | 主 agent 为改动面派 eng-coder，`acceptance` 写 `node --test <改动面单档>`，集成半用义务句 | 验收只含改动面单档；无代码改动 ⇒ 一次性读数（C4 同形）；集成零跑 |
+| C2 | 正常 · 设计席自查 | 设计席写 §2 验收对照 ∥ 设计档 item 5 | 验收命令 = 改动面单档（无跑面 ⇒ 一次性读数）；集成半写义务句（指针形），不写全量 |
+| C3 | 正常 · advisor 审设计 | 设计档验收写 `npm test` 全绿 | 按第 12 条 B3 判 🔴，实现前拦下；无跑面的批不因缺测试档被判 🔴 |
+| C4 | 边界 · 纯文档批 | 无代码改动（如本批自身） | 验收 = 一次性字串读数（B1/B2/B3 例外半句的正面形）；无集成动作、无「全量绿」句 |
+| C5 | 错误 · 设计档写全量 | 设计档或 §2 的验收行写全量套件绿 | 设计不合格（B3 判 🔴；B2 应在本席自查时先拦）——判据是全量，不是「缺测试档」 |
 | C6 | 错误 · 换名字的全量 | 「全量套件全绿 pass=N」或 `cd <repo> && node test/run.mjs` | 同 C5：判据 = 该命令是不是父侧收口动作，不认措辞 |
 
-**受影响文件（现行 = 本席 `node` 实读 2026-10-24；行数口径 = `split(/\r?\n/).length`）**
+**集成测试设计（设计档第 9 项）**：本批不改业务行为（受影响面 = 提示词文本 4 处 + 设计档，零代码档）⇒ 无集成场景新增 ∥ 修订，也不新增可跑用例。理由：集成用例从用户可见入口走真实业务，本批没有业务面可走；`none` 的成立条件同 §6.46 K2（未触及业务行为的改动）。
+
+**受影响文件（现行 = 本席 `node` 实读 2026-10-24；行数口径 = `split(/\r?\n/).length - 1`）**
 
 | 文件 | 现行 | Δ → 改后 |
 |---|---|---|
 | `thincoder-core/prompts/discipline-engineering.md` | 342 行 / 42,920 字符 / max 300 / >300 = 0 / `##` 10 | L1 +2 ⇒ 344 行；逐行 ≤300 保持 |
 | `thincoder-core/prompts/persona-engineering.md` | 473 行 / 68,194 字符 / max 300 / >300 = 0 / `##` 17 | L2 −1 ⇒ 472 行；逐行 ≤300 保持 |
 | `thincoder-core/prompts/persona-eng-designer.md` | 148 行 / 19,168 字符 / max 298 / >300 = 0 / `##` 9 | L3 +2 ⇒ 150 行；逐行 ≤300 保持 |
-| `thincoder-core/prompts/advisor-design.md` | 135 行 / 14,710 字符 / max 290 / >300 = 0 / `##` 7 | L4 +1 ⇒ 136 行；逐行 ≤300 保持 |
+| `thincoder-core/prompts/advisor-design.md` | 135 行 / 14,710 字符 / max 290 / >300 = 0 / `##` 7 | L4 +2 ⇒ 137 行；逐行 ≤300 保持（新最长行 = B3 规则行 295，Why 行 150） |
 | `docs/core/design/PROMPT-SYSTEM.md` | 3,638 行 / 309,244 字符（本节写入前） | 本节新增（设计档面，非验收对象） |
 | L5 所列各面 | — | ±0 |
 
@@ -3682,9 +3687,10 @@ existing but unusable = `thincoder-core/prompts/persona-engineering.md:345`—�
 - `thincoder-core/prompts/discipline-engineering.md`：342 行 / 42,920 字符 / max 300 / >300 = 0 / `##` 10；`:192` 门句 · `:193` Iteration · `:194` release gate · `:197` 报告行。
 - `thincoder-core/prompts/persona-engineering.md`：473 行 / 68,194 字符 / max 300 / >300 = 0 / `##` 17；`:344` `**acceptance**` · `:345` 旧副本整行；档头 slot = `[1] consumers:[main session·engineering mode; …]`（本席实读 `:1`）。
 - `thincoder-core/prompts/persona-eng-designer.md`：148 行 / 19,168 字符 / max 298 / >300 = 0 / `##` 9；`:114` Acceptance 元素 · `:115` Dependencies · `:130` item 5。
-- `thincoder-core/prompts/advisor-design.md`：135 行 / 14,710 字符 / max 290 / >300 = 0 / `##` 7；`:52-55` 第 12 条全文（判断句 ∥ 例外句 ∥ Why）。
+- `thincoder-core/prompts/advisor-design.md`：135 行 / 14,710 字符 / max 290 / >300 = 0 / `##` 7；`:52-55` 第 12 条全文（判断句 ∥ 例外句 ∥ Why）· `:56` 空行 · `:57` `## Output Format`（B3 新落点 = `:55` 之后）。
 - `docs/batches/2026-10-24-tool-timeouts.md:125`：`npm test` 绿（收集面 = `thincoder-cli/test/*.test.mjs` + `test/integration/*.test.mjs`）——设计席写全量的实证。
-- 本批 §1 来源行：今晚任务书 `acceptance` = `cd thincoder-cli && node test/run.mjs` 全绿 pass=35/44；台账 `#1763`。
+- 本批编制行（`docs/batches/2026-10-24-acceptance-command-discipline.md:3`，逐字）：`今晚任务书把「全量套件全绿」写成验收，逼每一轮跑集成，违 TESTING.md F1/F3。`——F1 实证的承载处；台账 `#1763`。
+- `docs/core/design/TESTING.md`（L5 零改的判据 · 本席复扫 2026-10-24）：扫 `全量` ∥ `full suite` ∥ `full-suite` ∥ `acceptance` 各 0 命中；`:24` 管改动内执行（`只验本任务改动——跑改动面相关单元测试（单元测试档——§2；单档 ∕ 相关子集）；不得逐轮跑集成测试`）· `:422` 管发布门语义（`npm test 只证明一件事：集成层的发布门`）——两句都不管「验收文本写什么命令」⇒ B1 在该档无第二处成文，L5 零改成立。
 - 公共源勘察：`PROJECT-MANIFEST.json:35` `"publicRepos": []`（本席实读）——独立公共源文档仓无，已查、无相关。
 
 **UI / 交互决策**：无界面面——本批只改模型可见提示词文本与设计档。
@@ -3693,6 +3699,250 @@ existing but unusable = `thincoder-core/prompts/persona-engineering.md:345`—�
 
 - 〔父侧 · 落点 1 的既有副本〕`thincoder-core/prompts/persona-engineering.md:345` 在本批前已在盘（本席实读；今晚任务书仍写全量 ⇒ 规则存在但无人执行）。本设计按 K2 删除它并并入 B1；若父侧认为该副本应保留（例如认为它守着别的读法），删除项 L2 请驳回——不驳回则按 L2 落。
 - 〔父侧 · 编号〕本节未加 §7 D-PS 行（D-PS46 / D-PS47 归属仍待父侧收口时定，承 §6.47 ∥ §6.48 上抛项）。
+
+### 6.50 集成测试的判据轴 = 组件之间的交互（提示词四面 · 定义逐字 · 触发两维取或）
+
+**来源**：需求权威 = `docs/core/requirements/TESTING.md` §0（`:16-18` IEEE 610.12 逐字定义）+ F34（`:199`）；用户 2026-10-24 19:41 逐字「咱能不把话说得这么死这么细吗？你这么一细化要求，就把事情搞串味儿了，你要不先上网学习一下集成测试的概念再来写？」+ 19:46「你别生造词，严肃认真一点，交互/组合和你说的『接缝』差了十万八千里。」台账 `#1768`。本批 = 该裁定的现状落点；语义以需求档为准。
+
+**定义（第一手 · 逐字 · 不改写；本批不新引外部源）**
+
+- IEEE 610.12 ∕ ISO/IEC/IEEE 24765（逐字出处 = `docs/core/requirements/TESTING.md:17`）：`testing in which software components, hardware components, or both are combined and tested to evaluate the interaction between them.`
+
+两处原词 = `interaction between components`（中文「组件之间的交互」）与 `combined`。本节与落地文本只用这两个词的既有译法，不引入自造名（用户 19:46 裁定）。
+
+**实证（为什么改）**
+
+- 超时批（`docs/batches/2026-10-24-timeout-and-digest.md:37` 逐字：`→ effectiveBodyIdleMs(provider)（provider/core.mjs …）为唯一解析点 → 八处消费点原地改读`；
+  消费点 `:158` = `provider/core.mjs:256`（readSSE）· `:274`（重试 readSSE）· `:413`（`_bodyIdleMs`））：`provider` 与 SSE reader 之间的配合变了，业务上看不出变化 ⇒ 按现盘判据轴（`business behavior`）那一批会写成 `none`，那条交互就没有人测。
+- `#59` 评审两条 🟡（`docs/batches/2026-10-24-acceptance-command-discipline.md:153` 逐字：替换形只认单档 ∥ `:192` 门句未限定；`:178` 记两条并入本批 `#1768` 统一处理）。
+
+**判（逐处 · 现文实读 2026-10-24）**
+
+| # | 坐标 | 现文（摘 · 逐字） | 判 | 处置 |
+|---|---|---|---|---|
+| J1 | `thincoder-core/prompts/discipline-engineering.md:179` | none stands only where the change does not touch **business behavior** | 判据轴错位——**本节最重要一处**：不动业务行为、却改变组件之间交互的改动，按此句可写 `none`；反向也漏——只改业务可观察结果的批次会让既有断言静默失效 | 换轴 + 保留业务断言面（B2 两维取或） |
+| J2 | 同档 `:181` | `exercise **components working together** (the real composition — …) — … walk through the real business from a user-visible entry` | 前半 = 定义（措辞非逐字）；后半 = 本项目入口选择（N20），被写成定义 | 拆开（B3） |
+| J3 | 同档 `:171` | `(integration cases are established from business needs, not graduated from unit files)` | 取材口径写进定义位；取材在 `:182` 已有出处 | 删括号（B1） |
+| J4 | 同档 `:192` | **The gate**: one `test` run, all green. | `#59` 🟡②：未限定谁 ∥ 何时，仍可被读成每批全量 | 限定（B4） |
+| J5 | `thincoder-core/prompts/persona-eng-designer.md:136-137` | `entry = a business-observable point, criterion = the business result it asserts, and each row points back …` | 入口 ∥ 判据 ∥ 回指三件捆在一条定义位上 | 拆开（B7） |
+| J6 | `thincoder-core/prompts/advisor-design.md:52` | `…the business result each asserts, and the business requirement each traces back to` | 同 J5 的评审面：判据位只写业务结果 | 拆开（B8） |
+| J7 | 同档 `:53` ∥ `:54` | `a change that alters no business behavior …` | 清空条件挂在业务行为轴 | 换轴（B9 ∥ B10） |
+| J8 | 同档 `:55` | `integration tests are the only acceptance run that starts from a user-visible entry` | 事实错：入口是本项目选择，不是「唯一」的判据；收窄为定义面 | 收窄（B11） |
+| J9 | `thincoder-core/prompts/discipline-normal.md:192` | `**Integration tests** exercise components working together (the real composition).` | 定义措辞非逐字（工程面同句已改） | 换轴（B5） |
+| J10 | 同档 `:194` | `a single change adds no case to the set (per-change additions make cost scale with change frequency)` | 与 F34 正面相反：交互变了的改动必须同步改用例 | 换轴（B6） |
+| J11 | 同档 `:191` | `— integration cases are established from business needs, not graduated from unit files.` | 与 J3 同句（父侧清单未列；同机制同区域——只改工程面即造两面差异） | 删括号（B12） |
+| J12 | 同档 `:193` | `**The pre-release acceptance loop**: walk through the real business from a user-visible entry.` | 入口已单列成句，不在定义位 | 不改 |
+| J13 | 同档 `:197` | `Integration suites live in the front-end entry points only — front-end scenarios cover the core transitively …` | 放置决策（N20），不是定义位；与 `thincoder-core/prompts/discipline-engineering.md:186` 同文，单改一面即造两面差异 | 不改 |
+| J14 | `thincoder-core/prompts/persona-eng-designer.md:115` ∥ `thincoder-core/prompts/advisor-design.md:56` | the criterion is the changed-face unit test file (`node --test <file>`) | `#59` 🟡①：只认单档，未覆盖需求 F1 允许的「相关子集」；第三面 `thincoder-core/prompts/discipline-engineering.md:195` 在本批冻结区（`:193-197`）⇒ 三面不能只改两面 | 上抛（见上抛项 1） |
+
+**机制**
+
+1. **判据轴 = 定义原词**：集成测试评的是**组件之间的交互**；`business behavior` 不是判据轴——它是本项目的断言面（②③ 只断言业务可观察结果，`docs/core/design/TESTING.md` §4.5）。判据轴的设计面出处已在该档 `:104`（「集成 = 组件组合与交互」）——本节只做提示词面落点，不复述机制（D2）。
+   **触发两维取或，不是替换**：必须动集成用例的改动 = 触及**组件之间的交互**（判据轴）**或** 改动**既有用例所断言的业务可观察结果**（断言面——改了它，既有断言静默失效）。`none` 只在两维都未触及时成立；需求 F34 的业务触发保留。
+2. **三件各归其位**：判据 = 组件之间的交互（定义）· 入口 = user-visible entry（本项目的入口选择，N20）· 回指需求 = 记账（F30 的可追溯）。捆在一条定义位上，读者只能把入口与记账当成定义的一部分。断言的业务结果 = 断言面的主体（K4）：它在行字段里、不是判据。
+3. **改动量**：删四处旧词（`business behavior` 判据位 ∥ `components working together` ∥ `established from business needs` ∥ `a single change adds no case`）；每处行数持平；字符净增（两维取或的措辞比旧句长）。
+   逐处：L1 −87 · L2 +39 · L3 −54 · L4 +24 · L5 +7 · L6 +28 · L7 −87 · L8 +95 · L9 +76 · L10 +80 · L11 +81 · L12 −9；文件总量：工程 −78 · 普通 −52 · 设计席 +95 · 评审 +228。
+
+**逐字英文文本（实施席照此落笔 · 唯一权威目标形）**
+
+双面形照本档 §6.44：英文块 = 落地目标形；中文复核面 = 同一语义、供人复核、不入提示词。
+写形照本档 §6.45：一条规则一行 · 题眼加粗 · 理由以 `Why` 起头 · 每行 ≤300 字符——围栏块已按此形写好，**原样落、不折行**。
+
+B1 — `thincoder-core/prompts/discipline-engineering.md:171` 整行替换：
+
+```text
+- **Unit test files are not promoted into integration tests**.
+```
+
+B2 — 同档 `:179-180` 两行整替为两行：
+
+```text
+- **`none` stands only where the change touches neither the interaction between components nor a business-observable result an existing case asserts**: a batch that touches either and closes with no integration-case change is incomplete — that case should have been designed before the code.
+  Why: an unconditional `none` let any change close against an empty set, so the set stayed empty while every closeout read green.
+```
+
+B3 — 同档 `:181` 整行替换：
+
+```text
+- **Integration tests** combine components and test the **interaction between components** — the **pre-release acceptance loop**, which this project enters from a user-visible entry.
+```
+
+B4 — 同档 `:192` 整行替换：
+
+```text
+- **The gate** (closeout, parent side): one `test` run, all green.
+```
+
+B5 — `thincoder-core/prompts/discipline-normal.md:192` 整行替换：
+
+```text
+- **Integration tests** combine components and test the **interaction between components**.
+```
+
+B6 — 同档 `:194` 整行替换：
+
+```text
+- **Integration test assets**: business scenarios + production-problem additions, asserting only business-observable results; permanent, and a change that alters an interaction between components or a business-observable result an existing case asserts must revise them.
+```
+
+B7 — `thincoder-core/prompts/persona-eng-designer.md:136-137` 两行整替为两行：
+
+```text
+9. **Integration test design** — the scenarios this change earns, each row naming the **interaction between components** it evaluates, the business-observable result it asserts, the requirement it serves, and this project's entry (a business-observable point).
+   A change that alters an interaction between components or a business-observable result an existing case asserts names the cases it adds ∥ revises — "no change" is not an answer there.
+```
+
+B8 — `thincoder-core/prompts/advisor-design.md:52` 整行替换：
+
+```text
+12. **Integration-test design**: the design document must contain an integration-test design section — the scenarios this change requires, the **interaction between components** each evaluates, the business result each asserts, the project's entry, and the business requirement each traces back to.
+```
+
+B9 — 同档 `:53` 整行替换：
+
+```text
+    **A design missing that section ⇒ 🔴 (design incomplete)**; a change that touches neither an interaction between components nor a business-observable result an existing case asserts states so, with its reason, in that section.
+```
+
+B10 — 同档 `:54` 整行替换：
+
+```text
+    **A reason that is not "this change touches neither the interaction between components nor a business-observable result an existing case asserts" does not stand** — e.g. the 50–100 case window being full ⇒ still 🔴.
+```
+
+B11 — 同档 `:55` 整行替换：
+
+```text
+    **Why**: no other acceptance run evaluates the interaction between components, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves that interaction with no acceptance at all.
+```
+
+B12 — `thincoder-core/prompts/discipline-normal.md:191` 整行替换：
+
+```text
+- **Unit test files are not promoted into integration tests**.
+```
+
+**中文复核面（与英文面同一语义 · 供人复核，不入提示词）**
+
+- **B1 ∥ B12 · 不提升**：单元测试档不提升为集成测试——一句话，括号里的取材口径删掉（取材住 `:182` ∥ B6）。
+- **B2 · `none` 的成立条件**：`none` 只在改动**两维都未触及**时成立——**组件之间的交互**与**既有用例所断言的业务可观察结果**；任一维变了却在收口里没有集成用例变化 = 收口不完整——那条用例本应在写码前就设计出来。
+- **B3 ∥ B5 · 定义**：集成测试把组件**组合起来**，测**组件之间的交互**——上线前的验收回路；本项目从用户可见入口进入（入口是本项目的选择，不是定义）。
+- **B4 · 门**：门 = 一次 `test` 跑、全绿——收口时、父侧（谁 ∥ 何时写进门句）。
+- **B6 · 资产**：业务场景 + 生产补入，只断言业务可观察结果；常驻，**改动触及组件之间的交互、或改动既有用例所断言的业务可观察结果时必须改它们**。
+- **B7 · 设计席第 9 项**：集成测试设计——这次改动挣来的场景；每行写它评的**组件之间的交互**、它断言的**业务可观察结果**、它服务的需求、以及本项目的入口（业务可观察点）。交互变了、或既有用例断言的业务可观察结果变了的改动，写明新增 ∥ 修订了哪些用例——「无变化」不是答案。
+- **B8–B11 · 评审第 12 条**：设计档须含集成测试设计段——场景、每段评的**组件之间的交互**、断言的业务结果、本项目的入口、回指的业务需求（与 B7 的行字段同一集）；缺段 ⇒ 🔴。两维都未触及的改动写明并给理由；理由不是「两维都未触及」即不成立（窗口满不是理由）。理由 = 没有别的验收跑在组件之间的交互上，且本批单元测试档收口即删——设计不点名那些场景，这条交互就没有验收。
+
+**与既有句的分工（D2）**
+
+- 取材（业务场景 + 生产补入）已由 `thincoder-core/prompts/discipline-engineering.md:182` ∥ B6 承载 ⇒ B1 ∥ B12 删括号后无失。
+- 前端口放置与「核仓不设集」已由 `:186` ∥ `thincoder-core/prompts/discipline-normal.md:197` 承载 ⇒ B3 删 `front-end scenario drives the core transitively` 后覆盖论证仍有出处。
+- `:193-197` 的验收命令纪律本批冻结 ⇒ B4 只补谁 ∥ 何时，不改命令形态；`#59` 🟡① 的替换形因此三面不能同改（上抛项 1）。
+- `thincoder-core/prompts/discipline-engineering.md:190`（`No conversion between the two`）与 B1 ∥ B12 同向、各自可独立判读：`:190` 管两层永互转，B1 ∥ B12 管单测档不提升——不合并（合并会拆掉 `:190` 的独立可判性）。
+
+**落点表（实施席逐处执行 · 坐标 = 现盘实读 2026-10-24）**
+
+| # | 文件 | 落点（内容锚） | 动作 | 预期 Δ（估值 · 不作验收条） |
+|---|---|---|---|---|
+| L1 | `thincoder-core/prompts/discipline-engineering.md` | `**Unit test files are not promoted into integration tests**` 行 | 整行替换为 B1 | ±0 行 · −87 字符 |
+| L2 | 同档 | `does not touch business behavior` 两行块 | 两行整替为 B2 | ±0 行 · +39 字符 |
+| L3 | 同档 | `**Integration tests** exercise **components working together**` 行 | 整行替换为 B3 | ±0 行 · −54 字符 |
+| L4 | 同档 | `The gate` 行（`:192`） | 整行替换为 B4 | ±0 行 · +24 字符 |
+| L5 | `thincoder-core/prompts/discipline-normal.md` | `**Integration tests** exercise components working together` 行 | 整行替换为 B5 | ±0 行 · +7 字符 |
+| L6 | 同档 | `**Integration test assets**` 行 | 整行替换为 B6 | ±0 行 · +28 字符 |
+| L7 | 同档 | `**Unit test files are not promoted into integration tests**` 行 | 整行替换为 B12 | ±0 行 · −87 字符 |
+| L8 | `thincoder-core/prompts/persona-eng-designer.md` | `9. **Integration test design**` 两行块 | 两行整替为 B7 | ±0 行 · +95 字符 |
+| L9 | `thincoder-core/prompts/advisor-design.md` | `12. **Integration-test design**` 行 | 整行替换为 B8 | ±0 行 · +76 字符 |
+| L10 | 同档 | `**A design missing that section ⇒ 🔴` 行 | 整行替换为 B9 | ±0 行 · +80 字符 |
+| L11 | 同档 | `**A reason that is not` 行 | 整行替换为 B10 | ±0 行 · +81 字符 |
+| L12 | 同档 | `**Why**: integration tests are the only acceptance run` 行 | 整行替换为 B11 | ±0 行 · −9 字符 |
+| L13 | 其余提示词档 · `thincoder-core/tool-docs/**` · 产品代码 · 需求档 · `docs/core/design/TESTING.md` | — | 实施席零改（`docs/core/design/TESTING.md:104` 判据轴已在盘、同向；`docs/core/requirements/TESTING.md:199` F34 措辞由父侧另笔已落两维形） | ±0 |
+
+实施按**内容锚**定位；行号只作现盘读数。J12 ∥ J13 判「不改」，不入落点表。
+
+本节的 B2 ∥ B7 ∥ B9 ∥ B10 取代 §6.47 已落围栏块的两处：`none` 行 + 其 `Why`（§6.47 `:3299`–`:3300`）与设计席 item 9（`:3322`–`:3323`）——本档 §6.1「批次收尾核对」的比对基线以本节为当前形。
+
+**需求档 F34 的措辞同步 = 已落（父侧另笔）**：`docs/core/requirements/TESTING.md:199` 现为两维形——改动触及**组件之间的交互**或**既有用例所断言的业务可观察结果**时必须同步改动集成测试；收口行「集成场景无变化」只在**两维都未触及**时成立。需求档与提示词面对同一判据同一措辞，本批收口前置已满足。
+
+**验收（A1–A8 · 逐条回指需求 §0 ∥ F34 ∥ F1 与本批验收 ①–⑤）**
+
+| # | 验收 | 判法 / 读数 |
+|---|---|---|
+| A1 | 落笔逐字一致（本批 ①） | 落地后按档逐串恰 1 次（该串只在其落点档出现）——工程：`touches neither the interaction between components nor a business-observable result an existing case asserts` ∥ `combine components and test the **interaction between components**`；普通：`combine components and test the **interaction between components**`（各档各 1，非全档合计 1）∥ `a change that alters an interaction between components or a business-observable result an existing case asserts must revise them`；设计席：`the business-observable result it asserts` ∥ `A change that alters an interaction between components or a business-observable result an existing case asserts`；评审：`the business result each asserts` ∥ `the project's entry` ∥ `no other acceptance run evaluates the interaction between components`；围栏块与本节 B1–B12 逐字符一致（`node` 一次性读档比对） |
+| A2 | 旧词零残留（本批 ③ 减法的另一半） | 落地后 `thincoder-core/prompts/*.md` 扫 `business behavior` 0 · `components working together` 0 · `established from business needs` 0 · `a single change adds no case` 0 · `the only acceptance run that starts from a user-visible entry` 0（`node` 读档计数）；全档域可满足——本席预扫 16 档：命中只在改动面四档，其余 12 档五词各 0 |
+| A3 | 判据轴四处都在（本批 ②） | `interaction between components` 落地后计数：`thincoder-core/prompts/discipline-engineering.md` 2 ∥ `thincoder-core/prompts/discipline-normal.md` 2 ∥ `thincoder-core/prompts/persona-eng-designer.md` 2 ∥ `thincoder-core/prompts/advisor-design.md` 4（本席按替换模拟计） |
+| A4 | 写形零回归 | 四档逐行 ≤300 字符、`>300 = 0`（现盘基线 = max 300 ∥ 296 ∥ 298 ∥ 295）；B2 ∥ B7 各带一行 `Why:` 或两条规则行，`Why` 行去掉行首缩进后以 `Why:` 起头（同 §6.49 A6 口径） |
+| A5 | 提示词面零文档引用 | `node scripts/prompt-refs-check.mjs` ⇒ 命中 0 |
+| A6 | 行数持平 | 四档行数落地后 = 344 ∥ 314 ∥ 150 ∥ 137（本席实读；逐处 ±0） |
+| A7 | 设计面判据轴零改动 | `docs/core/design/TESTING.md` 扫 `business behavior` ∥ `components working together` 各 0；`:104` 的「集成 = 组件组合与交互」在盘（本席实读） |
+| A8 | `doc_check`（本批 ⑤） | 本节落笔后实跑 `doc_check(mode:"gate", docs=["docs/core/design/PROMPT-SYSTEM.md"])` ⇒ 首行 `DOC-CHECK GATE: PASS`；实施轮改提示词后父侧复跑同判 |
+
+写入读法 = **一次性落地读数**（`node` 逐档读 + 字串计数），零常驻断言（承需求 F19 与新写散文锚禁令）。
+
+**用例表（正常 / 边界 / 错误）**
+
+| # | 场景 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 组件之间的交互变了 | 改动不动业务行为，但改了 `provider` 与 SSE reader 的配合 | 设计第 9 项点名该交互的用例（新增 ∥ 修订）；收口不得写 `none`（B2 ∥ B6 ∥ B7） |
+| C2 | 正常 · 业务可观察结果变了 | 改动既有用例所断言的业务可观察结果，组件之间的交互未变 | 必须修订该用例的断言（第二维触发）；收口不得写 `none`（B2 ∥ B6 ∥ B7） |
+| C3 | 边界 · 纯文档 ∥ 提示词批（本批自身） | 零代码档、两维都未触及 | `none` 成立，理由 = 未触及组件之间的交互、且未改既有用例断言的业务可观察结果（B2 的正面形） |
+| C4 | 错误 · 任一维变了 + 收口 `none` | 改了组件之间的交互（或既有用例断言的业务可观察结果），收口行报 `none` | 收口不完整（B2 判缺） |
+| C5 | 错误 · 设计第 9 项写「无变化」 | 交互已变，设计写「无变化」 | 设计不合格（B9 ∥ B10 判 🔴；评审按 B8 判段缺） |
+| C6 | 边界 · 入口写进判据位 | 设计把「从用户可见入口进入」写成集成测试的判据 | 判据 = 组件之间的交互；入口是本项目选择（B3 ∥ B7 ∥ B11 分开承载） |
+
+**集成测试设计（设计档第 9 项）**：本批两维都未触及——组件之间的交互零改（改动面 = 提示词 4 档 + 设计档 1 档，零代码档；`provider` 与 SSE reader 的配合零改），既有集成用例所断言的业务可观察结果零改 ⇒ 无集成场景新增 ∥ 修订，不新增可跑用例。理由 = 两维都未触及（B2 的正面形）。
+
+**受影响文件（现行 = 本席 `node` 实读 2026-10-24；行数口径 = `split(/\r?\n/).length - 1`）**
+
+| 文件 | 现行 | Δ → 改后 |
+|---|---|---|
+| `thincoder-core/prompts/discipline-engineering.md` | 344 行 / 43,352 字符 / max 300 / >300 = 0 | L1–L4 ±0 行 · 字符 −78 ⇒ 344 行 / 43,274 字符 |
+| `thincoder-core/prompts/discipline-normal.md` | 314 行 / 38,866 字符 / max 296 / >300 = 0 | L5–L7 ±0 行 · 字符 −52 ⇒ 314 行 / 38,814 字符 |
+| `thincoder-core/prompts/persona-eng-designer.md` | 150 行 / 19,526 字符 / max 298 / >300 = 0 | L8 ±0 行 · 字符 +95 ⇒ 150 行 / 19,621 字符 |
+| `thincoder-core/prompts/advisor-design.md` | 137 行 / 15,157 字符 / max 295 / >300 = 0 | L9–L12 ±0 行 · 字符 +228 ⇒ 137 行 / 15,385 字符 |
+| `docs/core/design/PROMPT-SYSTEM.md` | 4,034 行 / 340,668 字符（本席实读·含本节） | 本节 = 设计档笔，非验收对象 |
+| `docs/core/design/TESTING.md` | 732 行 / 43,668 字符 | ±0（L13：判据轴已在 `:104`，零副本） |
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | 判据轴换成定义原词，不新加测试类别 | 用户 19:41 ∥ 19:46：再细化 ∥ 自造名都把事弄串。定义原词（`interaction between components`）就是现有测试层级里缺的那一维，加类别 = 又造一个维度 |
+| K2 | `none` 保留、触发两维取或 | 两维都未触及的改动（纯文档 ∥ 提示词 ∥ 纯重构）确实没有用例可改；取消 `none` 会逼出凑数用例（承 §6.47 K2）。只换判据轴会放走「只改业务可观察结果」的批次——既有断言静默失效 |
+| K3 | 入口选择保留，标成「this project」 | 入口 = 本项目的选择（N20），不是定义；删掉会让「从哪进入」无处可读，写成定义则把选择冒充定义（用户 19:41「别把话说得这么死」） |
+| K4 | `business result` 留在断言的位，不提升成判据——行字段与评审元素同一集（B7 ∥ B8），K4 服从该集 | ②③ 只断言业务可观察结果（需求 F7）是真规则，但它管断言形态，不管「测的是什么」；两者同桌会重演本批的错误。同一集 = 交互 · 断言的业务结果 · 需求回指 · 入口（B7 四件 ↔ B8 四件）；结果在断言位、判据 = 交互 |
+| K5 | 冻结区不碰，`#59` 🟡① 只到上抛 | 父侧明令不动 `:193-197`；替换形三面同源（§6.49「一句话三处」）——只改两面即造机制面差异（多实现面纪律：默认消，不默认留） |
+| K6 | J12 ∥ J13 判不改 | J12 的入口已单列成句；J13 是放置决策且与 `:186` 同文——单改一面即造两面差异，改动收益为零 |
+
+**先例 ∥ 偏离**：先例 = 本档 §6.47 ∥ §6.48 ∥ §6.49 形制（双面形 §6.44 + 写形 §6.45 + 落点表 + 验收 + 用例表 + 关键决策 + 勘察证据行）。
+**对齐** = 同形落笔；双面形逐字照 §6.44；落点给内容锚。
+**偏离** = ① 首次以「换判据轴 + 保留业务断言面触发」为落笔动作（前三次 = 加必做项 ∥ 加去处 ∥ 加验收命令禁令）——本批不动规则数量，只换判据轴的读法并补回一维触发；② 首次在受影响文件表里同时报「父侧已知数」与「本席实读」（`thincoder-core/prompts/discipline-normal.md` 462 ⟷ 314，见上抛项 4）；③ 首次出现「父侧清单列了、本席判不改」的项（J12 ∥ J13）——判据写明，不静默跳。
+
+**既有件三问（新增名）**：`none found` —— 本批不新增名：`interaction between components` ∥ `combined` = 定义原词（本节「定义」块逐字），`entry` ∥ `business-observable point` ∥ `unit test file` ∥ `integration case` 均在册（`thincoder-core/prompts/discipline-engineering.md` 现盘）。可复用件 = 各面原句（B1–B12 全部为原位替换，不新开句）。
+
+**勘察证据行（本席实读 · 2026-10-24）**
+
+- `docs/core/requirements/TESTING.md`：`:16-18` IEEE 610.12 逐字定义（本批判据根）· `:12-14` ISTQB 组件测试定义（对照面）· `:73` F1（改动内只跑单元测试，单档 ∥ 相关子集）· `:79` F7（②③ 只断言业务可观察结果）· `:81` F9（收口测试行双半）· `:199` F34（触发 = 两维取或——改动触及**组件之间的交互**或既有用例所断言的**业务可观察结果**；收口「无变化」条件 = 两维都未触及）· `:115` N20（集成集只住三前端）。
+- `thincoder-core/prompts/discipline-engineering.md`：344 行 / 43,352 字符 / max 300 / >300 = 0；`:171` `:179-180` `:181` `:182` `:186` `:190` `:192` `:193-197` 逐行实读（本席）。
+- `thincoder-core/prompts/discipline-normal.md`：314 行 / 38,866 字符 / max 296 / >300 = 0；`:189` `:191-198` 逐行实读。
+- `thincoder-core/prompts/persona-eng-designer.md`：150 行 / 19,526 字符 / max 298 / >300 = 0；`:114-116` `:120-137` 实读；item 9 现为两行（`:136-137`）。
+- `thincoder-core/prompts/advisor-design.md`：137 行 / 15,157 字符 / max 295 / >300 = 0；`:52-57` 第 12 条全文实读。
+- `docs/core/design/TESTING.md`：732 行 / 43,668 字符；`:104` 术语辨异行（「集成 = 组件组合与交互」）· §4.5（`:182`：②③ 只断言业务可观察结果）——判据轴同向 ⇒ L13 零改。
+- `docs/batches/2026-10-24-acceptance-command-discipline.md:153` ∥ `:178`：#59 两条 🟡 逐字与「并入 `#1768`」的决定。
+- `docs/batches/2026-10-24-timeout-and-digest.md`：`:37` 验收链路（loadConfig → `effectiveBodyIdleMs` → 八处消费点）· `:158` readSSE 消费点坐标（`provider/core.mjs:256` ∥ `:274` ∥ `:413`）——交互变了、业务不可见的新轴场景。
+- 16 档全扫（本席实读 2026-10-24，A2 的域）：`thincoder-core/prompts/*.md` 共 16 档；五个旧词的命中只在改动面四档（工程 3 ∥ 普通 3 ∥ 设计席 0 ∥ 评审 3），其余 12 档各 0 ⇒ A2 的全档域可满足，不需收窄。
+- 本档 §6.47（`:3264-3426`）∥ §6.48（`:3428-3549`）∥ §6.49（`:3551-3701`）：形制先例。
+- 公共源勘察：`PROJECT-MANIFEST.json` `index.publicRepos` = 空（本席实读）——独立公共源文档仓无、已查无相关；本批不新引外部源（口径 = 需求 §0 已逐字引的定义）。
+
+**UI / 交互决策**：无界面面——本批只改模型可见提示词文本与设计档。
+
+**上抛项（待裁）**
+
+1. 〔父侧 · `#59` 🟡① 的第三面〕替换形 `the criterion is the changed-face unit test file`（`node --test <file>`）在盘三处（`thincoder-core/prompts/persona-eng-designer.md:115` ∥ `thincoder-core/prompts/advisor-design.md:56` ∥ `thincoder-core/prompts/discipline-engineering.md:195`）；第三面落在本批冻结区 `:193-197`。
+   **本席未改任何一面**（三面同源，只改两面即造机制面差异）。裁法二选一：① 三面同改 `unit test file` ⇒ `unit test files`（各 +1 字符、±0 行，覆盖 F1 的「相关子集」）；② 本批不收，另起一笔。
+2. 〔父侧 · 需求档笔 · **已落 / 关闭**〕`docs/core/requirements/TESTING.md:199` F34 已由父侧另笔落成两维形：`改动触及**组件之间的交互**或**既有用例所断言的业务可观察结果**时必须同步改动集成测试`；`上述两维任一被触及的批，设计缺该段 = 设计不合格`；`收口行「集成场景无变化」只在**两维都未触及**时成立`。
+3. 〔父侧 · 冻结区〕若上抛 1 选 ①，`thincoder-core/prompts/discipline-engineering.md:195` 需一并改（+1 字符）；本批按父侧「不动 `:193-197`」未落。
+4. 〔父侧 · 已知数对账〕任务书给的行数（345 ∥ 462 ∥ 151 ∥ 138）与本席实读（344 ∥ 314 ∥ 150 ∥ 137）不一致：三档差 1，`thincoder-core/prompts/discipline-normal.md` 差 148。本席按实读落设计；差 1 三档口径不明（疑为末行 ∥ 行数计法），`thincoder-core/prompts/discipline-normal.md` 的 462 无对应读数——建议父侧以实读为准。
+5. 〔父侧 · 编号〕本节未加 §7 D-PS 行（编号待父侧收口时定，承 §6.47 ∥ §6.48 ∥ §6.49 同条上抛）。
 
 ## 7. 关键决策记录
 

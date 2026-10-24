@@ -579,5 +579,5 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 - **窗到点的时长半不入发布门**：要判「这个值真当期限用」得有常驻不退出、又不写 `DevToolsActivePort` 的替身可执行档；`launchBrowser` 的 spawn 不带 shell（`thincoder-core/browser/launch.mjs:160`）⇒ Windows 上 `.cmd` / `.js` 不能当 exe 起，造这种档等于往仓里加包装器。该半由单测 T45（取值）∥ `launch.mjs:163` 的 `deadline = Date.now() + timeoutMs`（同一值即期限）判。
 - **冷启首动作的墙钟半同理不入门**：真机自启耗时可复现但不可控；判据住单测 T47 / T48（假传输，两格红/绿），真机面 = 冒烟 S1（首动作 `navigate` 成功）。I-BT3 是门内那一格的真机抽样：宿主无 Chromium ⇒ skip 并打印 `no Chromium-based browser — I-BT3 skipped`（沿 §7 S7 先例），跳过不算绿。
 - **慢机（启动 13–17s）不再 12s 早夭不设门内格**：要一台真慢机或人工降速；证据面 = Gitee IKP6ZI 现场 + 用户机走查。设计侧不为此造假慢分支。
-- **落点**：`thincoder-cli/test/integration/browser-start-window.test.mjs`（常驻——随 `npm test` 走、不随批删）。收集面 = `thincoder-cli/test/run.mjs:3` 两层 glob；`test/integration/` 之外的档被同档 `:38` 拒收集。本批单测档（T45–T48）仍随批删，与集成档是两个对象。
+- **落点**：`thincoder-cli/test/integration/browser-start-window.test.mjs`（常驻——随 `npm test` 走、不随批删）。收集面 = `thincoder-cli/test/run.mjs` 的集成层单层（`test/integration/*.test.mjs`）；`test/integration/` 之外的档被启动前反查拒收集。本批单测档（T45–T48）仍随批删，与集成档是两个对象。
 
