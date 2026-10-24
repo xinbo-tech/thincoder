@@ -306,7 +306,7 @@ VS Code 端在 extension host 内运行的**端独有增强**（CLI 无对应面
 A9 真洁净仓（`git init` 空仓）⇒ 仍 `(clean — no changes)`（零假阳）；A10 抽样 `log`（非仓 cwd）⇒ 抛出而非 `(no commits)`（十处读动作同判据）；
 A11 unborn 仓（`git init` 零提交）：`status` ⇒ `(clean — no changes)`；`log` / `show` / `diff` / `blame` ⇒ 抛错（消息含上表对应 stderr 首行）；list 族 ⇒ 占位 / 输出不变；
 A12 谓词反证：非仓消息**含**指引句；unborn / bad-revision 消息**不含**（谓词 = 128 ∧ stderr 含 `not a git repository`）；
-A13 调用方普查 · 集成测试级：三包全量 `npm test` 失败集合 ⊆ 批前失败集合（口径同 A-MS6 · `AGENT-LOOP-SUBAGENT.md:713`）；H3 夹具读数落 §5。
+A13 调用方普查 · 集成测试级：三包集成测试集（`npm test`）失败集合 ⊆ 批前失败集合（口径同 A-MS6 · `AGENT-LOOP-SUBAGENT.md:713`）；H3 夹具读数落 §5。
 
 **测试**：两例分列（批次本地用例——收口随批删）——A9 洁净路径（`git init` 空仓 ⇒ `(clean — no changes)`；真洁净零假阳）∥
 ② 非仓路径 ⇒ `status` **抛错** + 消息含 `not a git repository`（A7，测试侧用 `assert.rejects`）。两例分离后「洁净」与「非仓」不再共用同一期望值。
@@ -548,7 +548,7 @@ timed out after <n>s (killed) — no interactive input is possible here (editor 
 | A24 | 错误 | 凭据 helper 族 + 超时兜底（= §1 ②③） | scratch 仓 + 本地 401 服务 URL + `-c credential.helper=<挂死夹具>`；`{action:"push"}`（**适配器层**：`_setGitTimeoutForTest(<小值>)` 注入 + `finally` 复位） | 返回 ≤ 注入值 + 3s · 文本含 `timed out after` ∧ 含恢复指引串 `checkpoint action=checkpoint checkpointAction=list` ∧ 含 `best-effort`（树杀尽力而为语义——防过度声称回潮）· 夹具进程不存活 | ✓ |
 | A25 | 正常 | 凭据 git 原生路（回归守卫） | 同 A24 但空 helper；夹具钉 locale（`LC_ALL=C`——注入同 `GIT_EDITOR` 式，`finally` 复位） | 快速失败（判据 = 远小于超时窗口；**< 5s = 经验界**、与机器负载相关、非契约值）· 文本含 `terminal prompts disabled`（英文句由 locale 钉死保证） | ✗（headless 无控制台——批前亦快失败 ⇒ 本格 = 回归守卫，非先红） |
 | A26 | 边界 | 超时三件套（`spawnGit` 直调） | `spawnGit(cwd, args, { timeout: 800 })` + 慢子进程夹具；附「孙进程持管道」格 | ① settle ≤ `timeout + 3s`（SIGTERM→1.5s 树杀→1.5s kick 上界）② `.timedOut === true` ∧ 消息含 `timed out after` ③ 夹具进程树不存活 ④ 孙持管道格仍 settle | ✓（批前：无超时 / 无树杀能力） |
-| A27 | 边界 | 形保真（成功路径零变 · = §1 边界） | **两包**全量：`thincoder-core` `node --test` + `thincoder-vscode` `npm test`（含新增 `test/tools-ide-changes.test.mjs`——VSC `ide` 工具面）+ 抽样对拍（`status` / `diff` / `log` / `branch list` 输出逐字比） | 两包失败集合 ⊆ 批前失败集合 · 抽样输出逐字同 | —（回归） |
+| A27 | 边界 | 形保真（成功路径零变 · = §1 边界） | **两包**集成测试集：`thincoder-core` `node --test` + `thincoder-vscode` `npm test`（含新增 `test/tools-ide-changes.test.mjs`——VSC `ide` 工具面）+ 抽样对拍（`status` / `diff` / `log` / `branch list` 输出逐字比） | 两包失败集合 ⊆ 批前失败集合 · 抽样输出逐字同 | —（回归） |
 | A28 | 结构 | 单点机判（读源码 · 无夹具） | 五档源码 + `git-run.mjs` | ① 五档（`shared` / `git` / `git-ext` / `git-checkpoint` / `patch`）`execFileSync` 命中 = **零**（`gitDiffOne` / `ls-files` 探针两处转 `spawnGit`）∧ `gitDiffOne` 经 `spawnGit`（import 命中）② 加固键字面在 `tools/` 域内仅 `git-run.mjs`（+ 既有 `bash.mjs`）命中 ③ 三适配器均 `spawnGit`（import 命中） | ✓（四档命中恰一处 = 白名单成立） |
 | A29 | 文档 | 清算表齐全（= §1 ④） | 本节清算表 | 行数 = **32**（= action 枚举逐项）· 四族列非空 · 值 ∈ {`—`, `固`, `固·超`, `实害`} | —（文档面） |
 

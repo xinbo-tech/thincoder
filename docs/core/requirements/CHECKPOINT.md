@@ -4,7 +4,7 @@
 > **工作流档**（需求层）= `docs/core/requirements/CORE-UNIFICATION.md` §1–§4 + §5 登记表（统一目标 / 边界原则 / 量级读数基线 / 范围边界）——本档**不复制**（D2 单一权威源）。
 > **设计层** = `docs/core/design/CHECKPOINT.md`（本子系统设计与测试）；工作流设计档 = `docs/core/design/CORE-UNIFICATION.md`。
 > **不新增需求**：条文分**搬移 / 回填 / 派生**三类并逐条标来源；无现成表述者由设计裁决派生，标「**派生 · 非用户原话**」。
-> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 CLI 产品地图 `thincoder-cli/docs/README.md` §3.2；三层归属见同图 §3.1。
+> 命名与层级 = **板块镜像**（`requirements/<板块>.md` ↔ `design/<板块>.md`，**同板块名**）——规则原文见 仓文档地图 `docs/README.md` §4（板块镜像形态）；三层归属见同档 §1。
 > **需求条目面**（§4）：自 CLI 产品需求档并入的**既有需求条目正文**（编号承旧档）——**无新增需求**。
 
 ## 1. 总体定位
@@ -61,7 +61,7 @@
 |---|---|
 | NF1 | **描述精简**：schema 描述文本增量 ≤ 60 字符 / 处 |
 | NF2 | **核心机制不动**：CLI 既有 `snapshotBefore` / `createCheckpoint` / `rewind` / `cat` / `versions` 执行逻辑不改；唯一例外 = `createCheckpoint` 末尾追加 NF6 上限检查 |
-| NF3 | **测试**：两端全量测试保持全绿；schema 描述 / 输出文本断言测试随改动更新 |
+| NF3 | **测试**：两端集成测试集保持全绿；schema 描述 / 输出文本断言测试随改动更新 |
 | NF4 | **幂等**：checkpoint list 提示行为单行、固定文本，不随调用次数累积 |
 | NF5 | **双向生效**：CLI 与 VS Code 两端同步落地（共享事故场景，单端落地无效） |
 | NF6 | **上限兜底**：不 commit 的 cwd 仍会累积——每 cwd 快照上限 100 + 最旧淘汰 |
