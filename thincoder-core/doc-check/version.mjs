@@ -18,6 +18,19 @@ import { fileURLToPath } from "node:url"
 /** 产品核根（版本清单基线——本档住 `doc-check/`，上跳一级）。 */
 const CORE_ROOT = fileURLToPath(new URL("..", import.meta.url))
 
+/**
+ * 是否位于 asar 归档内（路径含 `.asar` 段）。
+ *
+ * 归档在进程生命周期内不可改：Electron 对归档内条目返回的 `mtime` 是**挂载时刻**，
+ * 不是「档什么时候被写过」。拿它跟进程启动比，结果恒为「旧于启动之后」⇒ 闸永不放行。
+ * 所以归档内的档不参与 mtime 判据——判据防的「加载后被改写」在归档里不可能发生。
+ * @param {string} path 绝对路径
+ * @returns {boolean}
+ */
+export function isInsideArchive(path) {
+  return /(^|[\\/])[^\\/]+\.asar([\\/]|$)/i.test(String(path))
+}
+
 /** 引擎六档 = 版本一致性的判据面（§3.20「引擎版本一致」· 判据）。 */
 export const ENGINE_FILES = [
   "doc-check/index.mjs",
@@ -43,6 +56,7 @@ export function staleEngineFiles({ nowMs = Date.now(), uptimeSec = process.uptim
     let mtimeMs = null
     try { mtimeMs = stat(resolve(CORE_ROOT, file)).mtimeMs } catch { stale.push({ file, mtimeMs: null }); continue }
     if (typeof mtimeMs !== "number" || !Number.isFinite(mtimeMs)) { stale.push({ file, mtimeMs: null }); continue }
+    if (isInsideArchive(resolve(CORE_ROOT, file))) continue // 归档内：mtime 是挂载时刻，不携带「是否更新过」
     if (mtimeMs > startMs) stale.push({ file, mtimeMs })
   }
   return { startMs, stale }
