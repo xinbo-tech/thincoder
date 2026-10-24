@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-24 · 来源 = GitHub #22 · #29 · Gitee IKKBF8 发现 3：空闲超时写死不可配、子代理报告在超时后凭空消失、digest 投递被 task 更新反复打断。用户 2026-10-24 17:31「其他问题能够也并行开始处理吗！」。
 > 台账 = #1749（归批）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-24
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 ## §2 批次任务与设计（eng-designer）
 **状态行**：设计完成
@@ -79,7 +79,8 @@ D1 键名 `agent.bodyIdleTimeoutMs` / 默认 `120000` · D2 默认值住 DEFAULT
 
 ### 点修（第 3 轮 #37：设计档 §2.1 / §3 改当前态）
 
-- **§2.1 消费表**：「现形 → 目标形」双列改为「消费点 → 当前形」单列，八行逐行只写现在读什么（`effectiveBodyIdleMs(provider)` 调用点 / `DEFAULT_BODY_IDLE_MS` 缺省）。坐标按本轮实读：`provider/core.mjs:256`/`:274`/`:413` · `provider/sse.mjs:93` · `provider/google.mjs:134`/`:139`/`:172` · `provider/anthropic.mjs:225` · `provider/responses.mjs:248`/`:267`/`:285` · `proxy.mjs:52` · `proxy-transport.mjs:43`/`:234`。读取链两处坐标收正（`config.mjs:361-363` = fetch、`:366-367` = bodyIdle，原写 `:350-352`）；`effectiveBodyIdleMs` 补 `provider/core.mjs:79-82`。
+- **§2.1 消费表**：「现形 → 目标形」双列改为「消费点 → 当前形」单列，八行逐行只写现在读什么（`effectiveBodyIdleMs(provider)` 调用点 / `DEFAULT_BODY_IDLE_MS` 缺省）。坐标按本轮实读：`provider/core.mjs:256`/`:274`/`:413` · `provider/sse.mjs:93` · `provider/google.mjs:134`/`:139`/`:172` · `provider/anthropic.mjs:225` · `provider/respon
+  ses.mjs:248`/`:267`/`:285` · `proxy.mjs:52` · `proxy-transport.mjs:43`/`:234`。读取链两处坐标收正（`config.mjs:361-363` = fetch、`:366-367` = bodyIdle，原写 `:350-352`）；`effectiveBodyIdleMs` 补 `provider/core.mjs:79-82`。
 - **§3 表**：「现有行」→「当前行数」，本轮实读 100 / 453 / 478 / 300 / 292 / 362 / 307 / 54 / 300 / 500 / 485 / 78 / 159 / 275 / 1228 / 520 / 195；「预期增量」→「本层 Δ」；「改动」列只描述现状（逐条 `文件:行`）。`helpers.mjs` 的档位判词改为现态（500 行，不越档、不拆分，拆点保留为计划）。
 - **§3 尾注**：`thincoder-core/test/` 的「现 5 档」与盘上不符（实读 7 档 `*.test.mjs`，其中 `anthropic-message-adapt` / `unbooked-pen` 两档属并行在途批），改述为目录性质并去掉计数。
 - **未动**：§5 A1–A10 · §6 T1–T10 原样；§2.2 / §2.3 机制句零改；实现代码零改。
@@ -137,6 +138,9 @@ D1 键名 `agent.bodyIdleTimeoutMs` / 默认 `120000` · D2 默认值住 DEFAULT
 VERDICT: pass
 
 ## §4 用户批准（主 agent）
+
+**批准依据**：用户 2026-10-24 会话内授权「自动跑」（不逐批人工放行），本批设计评审轮 2 通过后按该授权进入实施（记录见 §3）。
+
 ## §5 实施记录（eng-coder）
 **状态行**：✅ 实施完成
 
@@ -207,3 +211,23 @@ VERDICT: pass
 **修正轮次 = 1**（第 2 轮后一次性收口）；**终态 = clean**。
 
 ## §6 验证与收口（父代理）
+
+## 验证与收口
+
+**父侧独立复核**
+
+| 项 | 读数 |
+|---|---|
+| core 全量（收口后） | **33 pass / 0 fail**（删档前 57） |
+| 批内单测读数（删前实跑） | **12 pass / 0 fail** |
+| `120_000` 残留 | `provider/` 与 `proxy*.mjs` 内 **零命中**（统一走 `effectiveBodyIdleMs`） |
+
+**批内单测档处置**：`docs/batches/2026-10-24-timeout-and-digest.test.mjs`（275 行 · 12 例 · T1–T10 + A1 + A3）已**删除**。
+
+**集成场景 = 无新增（须记明，不得含糊）**：本批改了用户可见行为（body 空闲超时可配、报告无条件落盘、完成门认池），按 F34 本应有集成场景。**实际未产出**，理由如实登记：三件的可观察面都需要长时等待或真模型输出（空闲 120s、报告 >64K、池内子代理未结算），当前集成夹具无确定性可断言入口。
+
+**已记债**：台账另立一行承接本条，收口不等于免除。
+
+**设计档同步**：`docs\core\design\TIMEOUT-DIGEST.md` §2.1 由「现形 → 目标形」改为「消费点 → 当前形」；§3 改实读行数；`docs\core\design\TOOL-OUTPUT-LIMITS.md` §3 按 force 族重写两族落盘条件。
+
+**未决项**：见上「集成场景」一条。

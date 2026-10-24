@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-24 · 来源 = GitHub #23 · #28 · Gitee IKLMGA：槽机制零结构化事件、设计凭证换槽静默丢弃、CLI 状态栏标题含换行导致滚屏。用户 2026-10-24 17:31 要求并行处理。
 > 台账 = #1750（归批）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-24
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 **讨论（主 agent）**
@@ -214,6 +214,9 @@ VERDICT: pass
 （本轮只核修复声明，未开新面；docs/cli/design/TUI.md 仅复读 §7.4 —— 上轮唯一涉及节。）
 
 ## §4 用户批准（主 agent）
+
+**批准依据**：用户 2026-10-24 会话内授权「自动跑」，本批设计评审轮 3 通过后按该授权进入实施（记录见 §3）。
+
 ## §5 实施记录（eng-coder）
 
 **状态行**：实施完成
@@ -251,7 +254,8 @@ VERDICT: pass
 - 注：两条 runner 用相对 glob（`test/*.test.mjs`），必须在各自包目录内跑；在仓根跑会收集 0 档（输出 `tests 0`——那是空清单，不是绿）。
 - `node --check` × 11 档（10 实现 + 1 测试）全 `Syntax OK`。
 - `doc_check(mode:"gate")` ⇒ `DOC-CHECK GATE: PASS（0 档）`——本会话未写 `.md` 档，空清单不得读作「已检」。
-- R1 现场读数（非测试进程，写真实日志）：`slot:rotate {"slot":1,"reason":"foreign-cwd","bak":true,"via":"write"}` · `{"reason":"newer-version","bak":true,"via":"guard"}` · `slot:allocate {"slot":2,"prevSlot":1,"reason":"all-slots-live"}` · `slot:new {"slot":2,"prevSlot":1,"reason":"new-session"}` · `slot:refuse {"reason":"parse-failed"}`；事件行不含标题 / 原文 / 路径（字段集只有数字与枚举）。
+- R1 现场读数（非测试进程，写真实日志）：`slot:rotate {"slot":1,"reason":"foreign-cwd","bak":true,"via":"write"}` · `{"reason":"newer-version","bak":true,"via":"guard"}` · `slot:allocate {"slot":2,"prevSlot":1,"reason":"all-slots-live"}` · `slot:new {"slot":2,"prevSlot":1,"reason":"new-session"}` ·
+  `slot:refuse {"reason":"parse-failed"}`；事件行不含标题 / 原文 / 路径（字段集只有数字与枚举）。
 
 ### 决策披露
 
@@ -268,9 +272,27 @@ VERDICT: pass
 
 ### 审计与评审轮次（终态 = converged）
 
-- **explore 分歧审计 1 轮**：结论 DEVIATIONS 2 条 🟡 doc-drift（① `session-lifecycle.mjs` 函数头 JSDoc 停在旧返回形 ⇒ 本轮已修；② `SESSION.md` 旧表述 ⇒ 归设计席）；逐条验收 ①–⑥ 全一致（事件字段闭集 / 离开集口径 / 三处单行化 / 契约零回归 / 行数增量 / 零夹带）。
+- **explore 分歧审计 1 轮**：结论 DEVIATIONS 2 条 🟡 doc-drift（① `session-lifecycle.mjs` 函数头 JSDoc 停在旧返回形 ⇒ 本轮已修；② `docs\core\design\SESSION.md` 旧表述 ⇒ 归设计席）；逐条验收 ①–⑥ 全一致（事件字段闭集 / 离开集口径 / 三处单行化 / 契约零回归 / 行数增量 / 零夹带）。
 - **advisor 代码评审 1 轮（`type:"code"`）**：`VERDICT: pass`；🔴 ×0 · 🟡 ×3（均非阻塞：prevSlot 缺席 · rotate 判别式 · 批档读数缺）· 🔵 ×2。
 - **自修轮次 1（已落）**：两处 JSDoc 同步（`applySession` / `resetSessionState` 返回形）；advisor 🔵2 全落——测试补 `longer-record` / `other-session` 两格（29 用例），隐私断言改按键排除（`k === "ev"` 放行，其余字符串字段一律过路径 / 换行扫描）。🟡 三项中 prevSlot / rotate 归设计席，批档读数由本段与 §6 承担。
 - **未覆盖**：VSC / 桌面报明（§8 不做）；集成面 I1–I4 由父侧收口跑；首个 `slot:new` 事件的键集按现状不锁测试（等设计档口径收正后再锁，避免锁错方向）。
 
 ## §6 验证与收口（父代理）
+
+## 验证与收口
+
+**父侧独立复核**
+
+| 项 | 读数 |
+|---|---|
+| core 全量（收口后） | **33 pass / 0 fail** |
+| cli 全量（收口后） | **15 pass / 0 fail** |
+| 批内单测读数（删前实跑） | **29 pass / 0 fail** |
+
+**批内单测档处置**：`thincoder-cli/test/session-observability.test.mjs`（29 例）已**删除**。
+
+**集成场景 = 无新增（记明理由）**：三件的可观察面都在槽位生命周期与日志行上（`slot:rotate` / `slot:allocate` / `slot:new` / `slot:refuse` 四类事件、凭证计数、标题单行化）。集成夹具若要断言，须构造多进程争槽与真实崩溃现场，当前无确定性可复现路径。**已记债**（台账承接）。
+
+**设计档同步**：`docs\core\design\SESSION-OBSERVABILITY.md` 已按实现收正。
+
+**未决项**：VSC / 桌面两端报明未做（台账 `#1752` 承接）；集成场景一条见上。

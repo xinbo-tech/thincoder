@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-24 · 来源 = GitHub #20 / Gitee IKKJEE（同一根因）：Anthropic 原生通道原样透传 OpenAI 形态会话历史，带工具调用的多轮对话必然被上游 400 拒收（`Unexpected role "tool"`）。用户 2026-10-24 17:30「开批」。。
 > 台账 = #1747（PROVIDER · 归批）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-24
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 **讨论（主 agent）**
@@ -93,13 +93,13 @@
 | 1 | system 抽离 `anthropic.mjs:41-49` ⇒ 实读 `:157-166`；anthropic 分支 `core.mjs:143` ⇒ `:151`；`convertMessages` 导出 `:97`、调用 `:169`、告警合并 `:232-234` | 已改 |
 | 2 | 同节其它 `file:line` 按实施后实读复核：`normalize.mjs:127` · `record-results.mjs:44/52/54-90/62/67-69/75-81/90` · `core.mjs:173/186/292/331-336` · `anthropic.mjs:172-192/248-362/290/302-304` · `google.mjs:42/48/51-63/65/82` | 已改 |
 | 3 | 受影响文件表：`anthropic.mjs` 现量 363（批前 240 ⇒ +123）· `core.mjs` 现量 479（本层两行；余量来自工作树其它在途改动）· 测试档 229 | 已改；tier 结论不变（均 < 500 软线） |
-| 4 | `API-CONTRACT.md` 生成区未再生（新导出缺席、`chat` 仍 `:39`） | 跑 `node scripts/api-contract.mjs --write` 再生：`anthropic.mjs:97` / `:156`；`--check` = 骨架零漂移 |
+| 4 | `docs\core\design\API-CONTRACT.md` 生成区未再生（新导出缺席、`chat` 仍 `:39`） | 跑 `node scripts/api-contract.mjs --write` 再生：`anthropic.mjs:97` / `:156`；`--check` = 骨架零漂移 |
 
 `doc_check(mode:"gate")` = PASS（2 档 · 0 命中）。
 
 **补记 · F34 集成测试设计段（设计席 · 2026-10-24）**
 
-**补什么**：`design/PROVIDER.md` §6.28「集成测试设计（Anthropic 消息适配层）」成段（`:1158`–`:1180`），形制对齐 `TIMEOUT-DIGEST.md` §9 ∥ `SESSION-OBSERVABILITY.md` §9（场景表 · 判据 · 回指）。依据 = `docs/core/requirements/TESTING.md` §6.1 F34 ∥ F28。
+**补什么**：`docs/core/design/PROVIDER.md` §6.28「集成测试设计（Anthropic 消息适配层）」成段（`:1158`–`:1180`），形制对齐 `docs\core\design\TIMEOUT-DIGEST.md` §9 ∥ `docs\core\design\SESSION-OBSERVABILITY.md` §9（场景表 · 判据 · 回指）。依据 = `docs/core/requirements/TESTING.md` §6.1 F34 ∥ F28。
 
 **为何判本批触及业务行为**：本批把带工具的会话在 Anthropic 通道下从「第二轮必 400」变成「能正常继续」——用户可见结果变了，不是内部形态调整。故收口行不能写「集成场景无变化」（F34：该行只在改动未触及业务行为时成立）。
 
@@ -166,6 +166,11 @@ VERDICT: changes-required
 VERDICT: pass
 
 ## §4 用户批准（主 agent）
+
+**批准依据**：用户 2026-10-24 会话内授权「自动跑」（不逐批人工放行），本批设计经评审通过后按该授权进入实施。设计评审链：轮 1 → 轮 2 通过（记录见 §3）。
+
+**未走人工逐条批准的原因**：用户明确要求本会话自动推进；如有语义级变更（改变已批准设计的边界），仍会上抛待裁。
+
 ## §5 实施记录（eng-coder）
 
 **状态行**：实施完成
@@ -281,3 +286,21 @@ report 态旧引擎读数：行宽 0 命中；锚 17 命中，全部位于 §3 �
 **修正轮次**：1（评审 optional 项 5 条就地修入；修后复跑 3/3 绿，先红读数同步重取——仍 3/3 红）。**终态**：clean。
 
 ## §6 验证与收口（父代理）
+
+## 验证与收口
+
+**父侧独立复核（不采信子代理报告，逐条实跑）**
+
+| 项 | 读数 |
+|---|---|
+| core 全量（收口后） | **33 pass / 0 fail**（删批内单测档前 57） |
+| cli 全量（收口后） | **15 pass / 0 fail**（全部为集成用例） |
+| 集成用例 | `thincoder-cli/test/integration/anthropic-tool-roundtrip.test.mjs` · 3 例 · **先红后绿可复现**（退回批前实现 3/3 红，失败原因 = `Anthropic API error 400: … Unexpected role "tool"`；还原后 3/3 绿） |
+
+**批内单测档处置**：`thincoder-core/test/anthropic-message-adapt.test.mjs`（16 例）已按测试纪律**删除**（用毕即删、零留存）。删前读数：通过。本批行为回归由常驻集成用例 G1–G3 承接。
+
+**集成集现状**：本仓 `thincoder-cli/test/integration/` 5 档 15 例（本批 3 例为首批之一）；窗口 50–100 为上限。
+
+**设计档同步**：`docs\core\design\PROVIDER.md` §6.28 新增「集成测试设计」段（G1–G3 场景表 + 判据 + 回指）；§6.27 规则面按实现收正。
+
+**未决项**：无。台账 `#1756`（同一场景）在本批集成用例落地后核销。
