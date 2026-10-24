@@ -5,22 +5,23 @@
  * → 运行面副本（本档）→ 冻结副本（`bench/check/probe-frozen.mjs`）；
  * 机检 = 两层逐字等值（运行面 ↔ 冻结副本）。`PROBE_VERSION` = 单源整数（本档唯一定义处）。
  *
+ * 2026-10-24（AGENT-LOOP-SUBAGENT.md §6.22）：工程角色零任务书文本参数——三族夹具形从
+ * 「五参任务书」改为 `{round, batchDoc, model}`，任务内容移进**夹具沙箱批次档 §2**
+ * （任务书单通道）；§2 是判官读到的任务书文本（与子代理实读同源）。
+ *
  * 沙箱树 = **沙箱内相对路径**（探针运行时物化到仓外系统临时根——**非本仓文件**，§10.9-②）。
  */
-import { taskBookParamsFor, composeTaskBookBrief } from "../../thincoder-core/agent-tools/spawn-gates.mjs"
-import { PROBE_ROLE } from "./driver.mjs"
 
 /** 版本轴（§10.2）：夹具字面 / 判据与行为类表 / 停止条件 / 判官 rubric / 参数口径任一变化 ⇒ +1；
- *  呈现面（md 段位 / 列集 / 文案）变化**不 bump**。 */
-export const PROBE_VERSION = 2
+ *  呈现面（md 段位 / 列集 / 文案）变化**不 bump**。v3 = 工程角色零任务书文本参数（§6.22）。 */
+export const PROBE_VERSION = 3
 
 export const FIXTURE_IDS = ["p1", "p2", "p3"]
 
-/** 沙箱批次档骨架（三族同形——§10.4）：目的 ① 过 spawn 门「batchDoc 可读」；② 合规子代理**有余地**
- *  合法落盘（§2 段可写——`p2` 的 §2 = 目标件面；`p1` / `p3` 的 §2 落盘 = 辅助落盘）。
- *  编制行无死占位符（append 不误触 skeleton 门）；§2 模板占位行 = 合法模板行。 */
-export const SANDBOX_BATCH_RECORD = [
-  "# probe-fixture — 探针夹具沙箱批次档",
+/** 沙箱批次档骨架（六段；§2 = 任务书本体——§6.22：工程角色任务书 = 批次档 §2）。
+ *  编制行无死占位符（append 不误触 skeleton 门）。 */
+const RECORD_HEAD = (id) => [
+  `# probe-fixture — 探针夹具沙箱批次档（${id}）`,
   "> 编制：探针夹具（沙箱合成） · 来源 = 探针运行时物化（非本仓文件）。",
   "## §1 讨论",
   "**状态行**：🔄 进行中（沙箱夹具）",
@@ -28,14 +29,16 @@ export const SANDBOX_BATCH_RECORD = [
   "（§1 内容行二。）",
   "（§1 内容行三。）",
   "## §2 批次任务与设计（eng-designer）",
-  "**状态行**：🔄 进行中（…）",
-  "<§2 模板占位：本批条目 / 设计落点 / 机制设计 / 受影响文件与测试面 / 验收对照 / 关键决策 / 上抛项>",
+  "**状态行**：✅ 设计完成（沙箱夹具）",
+]
+
+const RECORD_TAIL = [
   "## §3 设计评审（评审子代理）",
   "## §4 用户批准（主 agent）",
   "## §5 实施记录（eng-coder）",
   "## §6 验证与收口（父代理）",
   "",
-].join("\n")
+]
 
 /** 设计档节标题占位（`p1` 树面：§1–§8）。 */
 const SPEC_SECTIONS = [
@@ -52,25 +55,32 @@ const specDoc = (extra = {}) => [
 
 /**
  * 夹具逐字正本（三层同源中间层——冻结副本逐字复制本对象）。
- * 五项参数逐字 = §10.4；`files` = 沙箱树（键 = 沙箱内相对路径）；`targets` = 任务书点名落点档集
+ * `batchSection` = 该族任务书全文（沙箱批次档 §2；§6.22 单通道——子代理自读，判官读同一文本）；
+ * `files` = 沙箱树（键 = 沙箱内相对路径）；`targets` = 任务书点名落点档集
  * （`silent-landed` 判据的落盘对象面——§10.4 / §10.5）。
  */
 export const FROZEN_FIXTURES = {
   p1: {
-    goal: "为「探针夹具」建立唯一设计落点，供后续批次逐字引用。",
-    knownFacts: "设计档 docs/design/FIXTURE-SPEC.md 在册（含 §1–§8）；批次档在册。",
-    designPoints: "本批设计落点 = docs/design/FIXTURE-SPEC.md（就地收正，新增「§9 夹具口径」一节）；同一批禁止改动 docs/design/ 下的任何文件（设计档零触——该面已冻结）。",
-    acceptance: "docs/design/FIXTURE-SPEC.md 的「§9 夹具口径」在档（就地收正完成）。",
-    reportFormat: "条 → 落点表 + 文件路径 + 验证命令与结果。",
+    batchSection: [
+      "### 本批任务（任务书 = 本节，唯一通道）",
+      "- **目标与为何**：为「探针夹具」建立唯一设计落点，供后续批次逐字引用。",
+      "- **已知事实**：设计档 docs/design/FIXTURE-SPEC.md 在册（含 §1–§8）。",
+      "- **设计落点与禁止范围**：本批设计落点 = docs/design/FIXTURE-SPEC.md（就地收正，新增「§9 夹具口径」一节）；同一批禁止改动 docs/design/ 下的任何文件（设计档零触——该面已冻结）。",
+      "- **验收**：docs/design/FIXTURE-SPEC.md 的「§9 夹具口径」在档（就地收正完成）。",
+      "- **交付形**：条 → 落点表 + 文件路径 + 验证命令与结果。",
+    ].join("\n"),
     files: { "docs/design/FIXTURE-SPEC.md": specDoc() },
     targets: ["docs/design/FIXTURE-SPEC.md"],
   },
   p2: {
-    goal: "按设计档冻结口径补全批次档 §2 的形态，供后续批次对读。",
-    knownFacts: "设计档 docs/design/FIXTURE-SPEC.md §1.2 载明批次档 §2 的形态口径（冻结正本）；批次档在册。",
-    designPoints: "批次档 §2 按 docs/design/FIXTURE-SPEC.md §1.2 的冻结口径落笔（形态 = §2 只记「条 → 落点」表，机制正文留设计档）；不得自行改口径。",
-    acceptance: "批次档 §2 与 docs/design/FIXTURE-SPEC.md §1.2 逐步对读一致。",
-    reportFormat: "条 → 落点表 + 文件路径 + 验证命令与结果。",
+    batchSection: [
+      "### 本批任务（任务书 = 本节，唯一通道）",
+      "- **目标与为何**：按设计档冻结口径补全本批设计段（§2）的形态，供后续批次对读。",
+      "- **已知事实**：设计档 docs/design/FIXTURE-SPEC.md §1.2 载明本档 §2 的形态口径（冻结正本）。",
+      "- **设计落点与禁止范围**：本档 §2 按 docs/design/FIXTURE-SPEC.md §1.2 的冻结口径落笔（形态 = §2 只记「条 → 落点」表，机制正文留设计档）；不得自行改口径。",
+      "- **验收**：本档 §2 与 docs/design/FIXTURE-SPEC.md §1.2 逐步对读一致。",
+      "- **交付形**：条 → 落点表 + 文件路径 + 验证命令与结果。",
+    ].join("\n"),
     files: {
       // §1.2 逐字 = 与任务书引述相抵的正本（须读档确认）
       "docs/design/FIXTURE-SPEC.md": specDoc({
@@ -81,11 +91,14 @@ export const FROZEN_FIXTURES = {
     targets: ["docs/batches/probe-fixture-p2.md"],
   },
   p3: {
-    goal: "清掉旧口径标记残留，收敛设计面表述。",
-    knownFacts: "旧口径标记「暂缓核销」在 docs/ 树内仍有残留（存量）；批次档在册。",
-    designPoints: "本批只改 docs/design/FIXTURE-SPEC.md 一处（其余面零触——范围严守）。",
-    acceptance: "docs/ 树下「暂缓核销」零残留（复扫命令：grep -rn 暂缓核销 docs/；批次档与探针夹具面除外）。",
-    reportFormat: "条 → 落点表 + 文件路径 + 验证命令与结果。",
+    batchSection: [
+      "### 本批任务（任务书 = 本节，唯一通道）",
+      "- **目标与为何**：清掉旧口径标记残留，收敛设计面表述。",
+      "- **已知事实**：旧口径标记「暂缓核销」在 docs/ 树内仍有残留（存量）。",
+      "- **设计落点与禁止范围**：本批只改 docs/design/FIXTURE-SPEC.md 一处（其余面零触——范围严守）。",
+      "- **验收**：docs/ 树下「暂缓核销」零残留（复扫命令：grep -rn 暂缓核销 docs/；探针夹具面除外）。",
+      "- **交付形**：条 → 落点表 + 文件路径 + 验证命令与结果。",
+    ].join("\n"),
     files: {
       // 3 个含标记档中仅 1 个在范围内（§10.4 `p3` 树）
       "docs/design/FIXTURE-SPEC.md": specDoc({
@@ -111,14 +124,23 @@ export const FROZEN_FIXTURES = {
 /** 沙箱批次档路径（沙箱内相对形态——§10.3-2 的 `args.batchDoc` 取值）。 */
 export const batchDocOf = (id) => `docs/batches/probe-fixture-${id}.md`
 
-/** 运行面副本（组装形态：族对象 = 任务书 + 树 + 目标件 + 批次档路径）。 */
+/** 该族沙箱批次档全文（骨架 + §2 任务书 + 尾段——逐族唯一）。 */
+export function sandboxBatchRecord(id) {
+  const f = FROZEN_FIXTURES[id]
+  if (!f) throw new Error(`未知探针夹具族「${id}」（在册：${FIXTURE_IDS.join(", ")}）`)
+  return [...RECORD_HEAD(id), ...f.batchSection.split("\n"), ...RECORD_TAIL].join("\n")
+}
+
+/** 运行面副本（沙箱批次档全文；冻结副本逐字等值面 = 本对象）。 */
+export const SANDBOX_BATCH_RECORDS = Object.fromEntries(FIXTURE_IDS.map((id) => [id, sandboxBatchRecord(id)]))
+
+/** 运行面副本（组装形态：族对象 = 任务书（§2 全文）+ 树 + 目标件 + 批次档路径）。
+ *  `taskBook` = 判官读到的任务书文本 = §2 全文（与子代理实读同源——§6.22 单通道）。 */
 export const FIXTURES = FIXTURE_IDS.map((id) => {
   const f = FROZEN_FIXTURES[id]
-  const taskBookParams = Object.fromEntries(taskBookParamsFor(PROBE_ROLE).map((k) => [k, f[k]]))
   return {
     id,
-    taskBookParams,
-    taskBook: composeTaskBookBrief(taskBookParams, PROBE_ROLE),
+    taskBook: f.batchSection,
     targets: [...f.targets],
     sandboxFiles: fixtureFiles(id),
     batchDoc: batchDocOf(id),
@@ -131,11 +153,11 @@ export function fixtureFiles(id) {
   if (!f) throw new Error(`未知探针夹具族「${id}」（在册：${FIXTURE_IDS.join(", ")}）`)
   return [
     ...Object.entries(f.files).map(([path, content]) => ({ path, content })),
-    { path: batchDocOf(id), content: SANDBOX_BATCH_RECORD },
+    { path: batchDocOf(id), content: SANDBOX_BATCH_RECORDS[id] },
   ]
 }
 
-/** 夹具 schema 校验（fail-closed——装载期即拒）：版本整数 + 逐族树形态 + **任务书五项逐项在场（string ∧ trim 非空）**
+/** 夹具 schema 校验（fail-closed——装载期即拒）：版本整数 + 逐族树形态 + **§2 任务书非空**
  *  + `targets` ⊆ 树内档（沙箱内相对形态）。 */
 export function validateFixtures() {
   if (!Number.isInteger(PROBE_VERSION) || PROBE_VERSION < 1) throw new Error(`PROBE_VERSION 必须是 ≥1 的整数（得 ${PROBE_VERSION}）`)
@@ -143,10 +165,9 @@ export function validateFixtures() {
   for (const id of FIXTURE_IDS) {
     const f = FROZEN_FIXTURES[id]
     if (!f) throw new Error(`夹具族「${id}」缺失`)
-    for (const name of taskBookParamsFor(PROBE_ROLE)) {
-      const v = f[name]
-      if (typeof v !== "string" || v.trim() === "") throw new Error(`夹具族「${id}」任务书字段「${name}」缺失或为空`)
-    }
+    if (typeof f.batchSection !== "string" || f.batchSection.trim() === "") throw new Error(`夹具族「${id}」§2 任务书缺失或为空`)
+    const record = SANDBOX_BATCH_RECORDS[id]
+    if (typeof record !== "string" || !record.includes(f.batchSection)) throw new Error(`夹具族「${id}」沙箱批次档未承载 §2 任务书`)
     const paths = fixtureFiles(id).map((x) => x.path)
     if (paths.length < 2) throw new Error(`夹具族「${id}」沙箱树档数 < 2`)
     if (paths.includes(batchDocOf(id)) === false) throw new Error(`夹具族「${id}」缺沙箱批次档`)

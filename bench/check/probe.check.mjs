@@ -12,11 +12,12 @@ import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { after, check, run } from "./harness.mjs"
 
-import { DRY_RUN_FIXTURE, FIXTURES, FROZEN_FIXTURES, PROBE_VERSION, SANDBOX_BATCH_RECORD, batchDocOf, fixtureFiles, validateFixtures } from "../probe/data.mjs"
-import { FROZEN_FIXTURES as FROZEN_COPY, SANDBOX_BATCH_RECORD as BATCH_COPY } from "./probe-frozen.mjs"
-import { ENG_TASK_BOOK_MIN, PLAIN_TASK_BOOK_MIN, taskBookParamsFor, validateRoundParam, validateTaskBookParams } from "../../thincoder-core/agent-tools/spawn-gates.mjs"
+import { DRY_RUN_FIXTURE, FIXTURES, FROZEN_FIXTURES, PROBE_VERSION, SANDBOX_BATCH_RECORDS, batchDocOf, fixtureFiles, validateFixtures } from "../probe/data.mjs"
+import { FROZEN_FIXTURES as FROZEN_COPY, SANDBOX_BATCH_RECORDS as BATCH_COPY } from "./probe-frozen.mjs"
+import { ENG_REFUSED_PARAMS, PLAIN_TASK_BOOK_MIN, isEngineeringRole, rejectEngFreeTextParams, taskBookParamsFor, validateRoundParam, validateTaskBookParams } from "../../thincoder-core/agent-tools/spawn-gates.mjs"
 import { formatPermission } from "../../thincoder-core/permission.mjs"
-import { summarizeEngTaskBook } from "../../thincoder-core/agent-tools/audit-block.mjs"
+import { buildAuditBlock } from "../../thincoder-core/agent-tools/audit-block.mjs"
+import { buildSpawnChild } from "../../thincoder-core/agent-tools/subagent-spawn.mjs"
 import {
   askFromQueue, assembleProbeChild, assemblyLeg, buildProbeParent, createPhaseTracker, installProbeProvider,
   mutatorCallOf, parseTurnFrame, probeProviderEntry, promptsDigest, stubParentProvider, terminalOf,
@@ -59,39 +60,43 @@ check("夹具两层机检逐字等值（运行面副本 ↔ 冻结副本）+ PRO
   assert.equal(typeof PROBE_VERSION, "number")
   assert.equal(Number.isInteger(PROBE_VERSION), true)
   assert.ok(PROBE_VERSION >= 1, "PROBE_VERSION 须为 ≥1 的整数")
-  assert.equal(PROBE_VERSION, 2, "本批落档值（夹具 / 判据 / 停止条件 / rubric 任一变化 ⇒ +1）")
+  assert.equal(PROBE_VERSION, 3, "本批落档值（夹具 / 判据 / 停止条件 / rubric 任一变化 ⇒ +1）")
   assert.equal("PROBE_VERSION" in FROZEN_COPY, false, "冻结副本不得另立版本常量（单源 = probe/data.mjs）")
   assert.deepEqual(FROZEN_FIXTURES, FROZEN_COPY, "夹具两层机检：运行面副本与冻结副本必须逐字等值")
-  assert.equal(SANDBOX_BATCH_RECORD, BATCH_COPY, "沙箱批次档骨架两层逐字等值")
-  assert.equal(new Set(FIXTURES.map((f) => f.taskBook)).size, 3, "反例控制：三族任务书全文互不相同")
+  assert.deepEqual(SANDBOX_BATCH_RECORDS, BATCH_COPY, "沙箱批次档全文两层逐字等值")
+  assert.equal(new Set(FIXTURES.map((f) => f.taskBook)).size, 3, "反例控制：三族任务书（§2 全文）互不相同")
 })
 
-check("审计摘要抽取：五项拼装形三段均可抽 / 旧自由文本仍走原兜底（marker 面回归）", () => {
-  for (const f of FIXTURES) {
-    const brief = summarizeEngTaskBook(f.taskBook)
-    assert.equal(brief.includes("not found in the parent task book"), false, `${f.id} 有段抽取失败`)
-    assert.equal(brief.includes("Design points & forbidden scope"), true, `${f.id} 未抽到设计要点段`)
-    assert.equal(brief.includes("Acceptance criteria"), true, `${f.id} 未抽到验收段`)
-  }
-  assert.equal(summarizeEngTaskBook("一段没有任何 marker 的自由文本").includes("not found in the parent task book"), true, "旧形兜底仍在")
+check("审计块：批档路径行 + §2 指向句（A2 拼装摘要面已删）", () => {
+  const block = buildAuditBlock({ agent: { _touchedFiles: ["src/a.mjs"], _batchDoc: "D:/repo/docs/batches/b.md" } })
+  assert.equal(block.includes("Batch record (batchDoc): D:/repo/docs/batches/b.md"), true, "审计块须含批档路径行")
+  assert.equal(block.includes("Delivery task book: §2 of the batch record at D:/repo/docs/batches/b.md"), true, "审计块须含 §2 指向句（限定为交付任务书）")
+  assert.equal(block.includes("it is the criterion source for this audit"), true, "§2 是本审计的判据源")
+  assert.equal(block.includes("it is the only task channel for this spawn"), false, "审计子代理（explore）自带五项任务书——不得冒称本 child 的唯一通道")
+  assert.equal(block.includes("- src/a.mjs"), true, "touched 快照仍在")
+  assert.equal(block.includes("[Audit instructions — mechanical template"), true, "审计指令模板逐字仍在")
+  assert.equal(block.includes("[Audit budget — mechanical]"), true, "预算句仍在")
+  assert.equal(block.includes("[Audit report format — mechanical template"), true, "报告模板仍在")
 })
 
-check("夹具 schema：任务书五项齐备（各为非空串）/ targets ⊆ 树内档 / 路径沙箱内相对形态", () => {
+check("夹具 schema：§2 任务书非空 / targets ⊆ 树内档 / 路径沙箱内相对形态 / 工程角色零任务书名集", () => {
   assert.deepEqual(validateFixtures(), { families: 3 })
-  assert.deepEqual(Object.keys(ENG_TASK_BOOK_MIN).sort(), [...taskBookParamsFor("eng-designer")].sort(), "工程样例对象键集 = 工程角色名集（防漂移）")
   assert.deepEqual(Object.keys(PLAIN_TASK_BOOK_MIN).sort(), [...taskBookParamsFor("explore")].sort(), "非工程样例对象键集 = 非工程角色名集（防漂移）")
   assert.deepEqual(taskBookParamsFor("plan"), taskBookParamsFor("explore"), "plan / explore 名集相等")
   assert.deepEqual(taskBookParamsFor("coder"), taskBookParamsFor("explore"), "coder / explore 名集相等")
+  assert.deepEqual(taskBookParamsFor("eng-coder"), [], "工程角色零任务书名集（§6.22.1）")
+  assert.deepEqual(taskBookParamsFor("eng-designer"), [], "工程角色零任务书名集（§6.22.1）")
   for (const id of ["p1", "p2", "p3"]) {
     const paths = fixtureFiles(id).map((f) => f.path)
     assert.equal(paths.includes(batchDocOf(id)), true, `${id} 缺沙箱批次档`)
+    assert.equal(SANDBOX_BATCH_RECORDS[id].includes(FROZEN_FIXTURES[id].batchSection), true, `${id} 沙箱批次档未承载 §2 任务书`)
     assert.deepEqual(FROZEN_FIXTURES[id].targets.filter((t) => !paths.includes(t)), [], `${id} targets 须在树内`)
     assert.equal(paths.some((p) => /^([A-Za-z]:[\\/]|[\\/])/.test(p) || p.includes("..")), false, `${id} 档路径须为沙箱内相对形态`)
   }
   assert.deepEqual([...new Set(FIXTURES.map((f) => f.id))], ["p1", "p2", "p3"], "运行面副本族集")
 })
 
-check("实施轮腿：真 buildSpawnChild 直调——异步形 / 家族段 notify_parent / eng-designer 人格 / batchDoc 绑定 + 反例腿", async () => {
+check("实施轮腿：真 buildSpawnChild 直调——任务书行 / 异步形 / 家族段 notify_parent / eng-designer 人格 / batchDoc 绑定 + 拒收腿", async () => {
   const fixture = fixtureOf("p1")
   await withSandbox(async (base) => {
     const root = runSandbox(base, "assembly")
@@ -99,12 +104,17 @@ check("实施轮腿：真 buildSpawnChild 直调——异步形 / 家族段 noti
     const entry = { provider: "probe-fixture", model: "probe-fixture-model" }
     const parent = buildProbeParent({ cwd: root, config: { agent: { subagentTurns: 40 } }, model: entry.model })
     installProbeProvider(parent, probeProviderEntry({ entry, user: null, maxTokens: 4096 }).providerEntry)
-    const { facts } = await assemblyLeg({ parent, model: `${entry.provider}:${entry.model}`, batchDoc: fixture.batchDoc, taskBookParams: fixture.taskBookParams })
+    const model = `${entry.provider}:${entry.model}`
+    const { built, facts } = await assemblyLeg({ parent, model, batchDoc: fixture.batchDoc })
     assert.equal(facts.asyncForm, true, "wantAsync ⇒ 异步形返回注（_upstream.sync = false）")
     assert.equal(facts.notifyParent, true, "家族段含 notify_parent（§10.3-3）")
     assert.equal(facts.parentChannelWired, true, "上行通道父位接线")
     assert.equal(facts.personaEngDesigner, true, "人格装配 = eng-designer 场景")
     assert.equal(facts.batchDocBound, true, "batchDoc 绑定在场")
+    assert.equal(facts.taskBookLine, true, "任务书行 = 批档绝对路径 + §2 唯一通道句；_engTaskInput 同值")
+    assert.equal(built.child._engTaskInput, built.input, "记账面 _engTaskInput 与 input 同值")
+    assert.equal(built.input.includes("Task book: §2 of the batch record at "), true, "任务书行指向 §2")
+    assert.equal(built.input.includes(built.child._batchDoc), true, "任务书行含批档**绝对**路径（AC-SC-3）")
     assert.match(facts.relayPrefix, /^eng-designer#\d+\/$/, "relay 前缀 = 角色计数形")
     // 父面 provider 抛错桩（§10.3-1）：任何 LLM 路径键访问即硬失败（「父面零 LLM」可机检）
     const stub = stubParentProvider()
@@ -116,33 +126,56 @@ check("实施轮腿：真 buildSpawnChild 直调——异步形 / 家族段 noti
     assert.throws(() => stub.chat, /hard-error stub/, "chat 访问即抛")
     // 反例用例①：batchDoc 不可读 ⇒ spawn 门机械拒
     const ctx = { depth: 0, agent: parent, callbacks: {}, signal: null }
-    assert.throws(() => assembleProbeChild({ parent, ctx, model: `${entry.provider}:${entry.model}`, batchDoc: "docs/batches/not-there.md", taskBookParams: fixture.taskBookParams }), /batchDoc is required/)
-    // 反例用例②：round 结构化参数缺失 / 非法 ⇒ 机械拒（round 门；五项参数门见下）
+    assert.throws(() => assembleProbeChild({ parent, ctx, model, batchDoc: "docs/batches/not-there.md" }), /batchDoc is required/)
+    // 反例用例②：round 结构化参数缺失 / 非法 ⇒ 机械拒（round 门）
     assert.throws(() => validateRoundParam({}), /round/)
     assert.doesNotThrow(() => validateRoundParam({ round: "initial" }))
-    // 任务书：四项核心 + 角色第五项——齐全放行；缺 / 空白 / 非字符串 ⇒ 机械拒并点名该参数
-    const engTb = { goal: "g", knownFacts: "k", designPoints: "d", acceptance: "a", reportFormat: "r" }
+    // AC-SC-1 拒收断言组：工程角色 × 八键（含空白值）⇒ 逐键抛且点名；designPoints 带退役句
+    for (const role of ["eng-coder", "eng-designer"]) {
+      assert.equal(isEngineeringRole(role), true, `${role} 属工程角色`)
+      assert.doesNotThrow(() => rejectEngFreeTextParams({ round: "initial", batchDoc: fixture.batchDoc }, role), `${role} 无自由文本键 ⇒ 放行`)
+      for (const name of ENG_REFUSED_PARAMS) {
+        for (const value of ["x", "   "]) {
+          assert.throws(() => rejectEngFreeTextParams({ [name]: value }, role), new RegExp(name), `role=${role} ${name}=${JSON.stringify(value)} ⇒ 拒并点名`)
+        }
+      }
+      assert.throws(() => rejectEngFreeTextParams({ designPoints: "d" }, role), /designPoints is retired for every role/, `${role} designPoints ⇒ 退役句`)
+      assert.throws(() => rejectEngFreeTextParams({ task: "t", context: "c" }, role), /task \/ context/, `${role} 多键一次点名`)
+    }
+    // 端到端：拒收门在 buildSpawnChild 内——入参原对象（未声明键不被剥除）⇒ designPoints 可达门
+    const spawnArgs = (extra = {}) => ({ ...extra, round: "initial", batchDoc: fixture.batchDoc, model })
+    assert.throws(() => buildSpawnChild(parent, ctx, spawnArgs({ designPoints: "d" }), "eng-designer", false, [], [], null), /designPoints/)
+    assert.throws(() => buildSpawnChild(parent, ctx, spawnArgs({ goal: "g" }), "eng-designer", false, [], [], null), /goal/)
+    // 非工程角色零变：四项核心 + scope——齐全放行；缺 / 空白 / 非字符串 ⇒ 机械拒并点名
     const plainTb = { goal: "g", knownFacts: "k", scope: "s", acceptance: "a", reportFormat: "r" }
-    assert.doesNotThrow(() => validateTaskBookParams({ ...engTb, scope: "x" }, "eng-coder"))
-    assert.doesNotThrow(() => validateTaskBookParams({ ...plainTb, designPoints: "x" }, "explore"))
-    for (const [args, role] of [[engTb, "eng-designer"], [plainTb, "coder"]]) {
+    for (const role of ["explore", "plan", "coder"]) {
+      assert.equal(isEngineeringRole(role), false, `${role} 非工程角色`)
+      assert.doesNotThrow(() => validateTaskBookParams(plainTb, role))
       for (const name of taskBookParamsFor(role)) {
-        for (const bad of [undefined, "   ", 42]) assert.throws(() => validateTaskBookParams({ ...args, [name]: bad }, role), new RegExp(name), `role=${role} ${name}=${String(bad)} ⇒ 拒并点名`)
+        for (const bad of [undefined, "   ", 42]) assert.throws(() => validateTaskBookParams({ ...plainTb, [name]: bad }, role), new RegExp(name), `role=${role} ${name}=${String(bad)} ⇒ 拒并点名`)
       }
     }
-    // 跨角色误填：只给另一个第五项名 ⇒ 仍拒并点名本角色名（两者不互相顶替）
-    assert.throws(() => validateTaskBookParams(plainTb, "eng-coder"), /designPoints — missing.*got scope instead/)
-    assert.throws(() => validateTaskBookParams(engTb, "explore"), /scope — missing.*got designPoints instead/)
+    assert.doesNotThrow(() => validateTaskBookParams({ ...plainTb, designPoints: "x" }, "explore"), "非工程角色传 designPoints = 未声明键（行为同改前：放行）")
+    assert.throws(() => validateTaskBookParams({ ...plainTb, scope: undefined, designPoints: "x" }, "explore"), /scope — missing.*got designPoints instead/, "跨名指路文案（P13 改后形——AC-SC-4 例外登记）")
   })
 })
 
-check("AC-11 承重句在三处产品面在位（权限预览 / 内部 explore 通道描述 / 非工程参数骨架）", () => {
-  const preview = formatPermission("subagent", { action: "spawn", role: "eng-designer", goal: "g", knownFacts: "k", designPoints: "d", acceptance: "a", reportFormat: "r" })
-  assert.equal(preview.includes("Design points & forbidden scope:"), true, "权限预览须含第五项段（role 未传则丢）")
+check("AC-11 承重句在三处产品面在位（权限预览 / 内部 explore 通道描述 / 参数骨架）+ 任务书段归一逐字 = 设计档 §6.22.8-A", () => {
+  const engPreview = formatPermission("subagent", { action: "spawn", role: "eng-designer", batchDoc: "docs/batches/x.md", round: "initial" })
+  assert.equal(engPreview.includes("task book: batch record §2 (docs/batches/x.md)"), true, "工程 spawn 权限预览非空且指向 §2")
+  const plainPreview = formatPermission("subagent", { action: "spawn", role: "explore", goal: "g", knownFacts: "k", scope: "s", acceptance: "a", reportFormat: "r" })
+  assert.equal(plainPreview.includes("Goal & why:") && plainPreview.includes("Scope (what to read / what not to touch):"), true, "非工程预览 = 五参拼装（零变）")
   const familySrc = readFileSync(new URL("../../thincoder-core/agent/family-tools.mjs", import.meta.url), "utf8")
   assert.equal((familySrc.match(/The spawn carries the five task-book parameters[^\n]*scope[^\n]*a task-only spawn is refused/g) ?? []).length, 2, "两条内部 explore 通道描述各含契约句")
   const docsSrc = readFileSync(new URL("../../thincoder-core/tool-docs/subagent.md", import.meta.url), "utf8")
+  assert.equal(docsSrc.includes('subagent(role="eng-coder", round="initial", batchDoc="<batch record>", designToken="…", files=[…])'), true, "工程参数骨架行（§6.30 第 1 行逐字）")
   assert.equal(docsSrc.includes('subagent(role="explore"'), true, "非工程参数骨架行在描述面")
+  // AC-SC-5：tool-docs 的任务书段与设计档 §6.22.8-A 归一后逐字全等（折行不折字——`\n` 两侧空白折叠为单空格；正本住设计档，本档不复制）
+  const designSrc = readFileSync(new URL("../../docs/core/design/AGENT-LOOP-SUBAGENT.md", import.meta.url), "utf8")
+  const aBlock = designSrc.split("**§6.22.8-A（P1 的整段替换")[1]?.split("```text")[1]?.split("```")[0]?.trim()
+  assert.equal(typeof aBlock === "string" && aBlock.length > 0, true, "设计档 §6.22.8-A 块可解析")
+  const foldNl = (s) => s.replace(/\s*\n\s*/g, " ")
+  assert.equal(foldNl(docsSrc).split(foldNl(aBlock)).length - 1, 1, "tool-docs 任务书段 = §6.22.8-A 归一逐字（恰 1 处）")
 })
 
 check("行为类表逐态（含 skipped）+ 反例信号列 + §10.5 字段在场（含 continuation / landedFiles[].target）", () => {

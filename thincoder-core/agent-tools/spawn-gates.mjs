@@ -1,7 +1,10 @@
 /**
  * spawn-gates.mjs — M5 委派与 spawn 门新门禁统一落点（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.3）：
  * 全部新增门禁逻辑集中于此——装配点（buildSpawnChild / normalizeFileList）只加 import 调用。
- * 已实现：F2（round 枚举 + 任务书参数校验/拼装——四项核心 + 第五项按角色）· F6（files 声明面拦截谓词）。
+ * 已实现：F2（round 枚举 + 任务书参数门/拼装）· F6（files 声明面拦截谓词）。
+ * 2026-10-24（AGENT-LOOP-SUBAGENT.md §6.22）：任务书单通道 = 批次档 §2——工程角色
+ *   （eng-coder / eng-designer）零任务书文本参数，八个自由文本键（键在场即拒）命中即点名拒收；
+ *   非工程角色（explore / plan / coder）保持四项核心 + `scope`。
  * 裁撤（2026-09-17 主 agent 裁定——不落代码）：
  *   - F4 修复轮窄带：全量勘察散文 marker 不可机判（误拒风险不可接受）→ 由 F2 的 round 参数承载轮次语义；
  *   - F5 advisor 角色：advisor 不入 spawn 通道（评审走 advisor 工具）——enum 收正为
@@ -14,17 +17,14 @@
  */
 export const ROUND_VALUES = ["initial", "fix"]
 
-/** 任务书样例内容（供人照抄；不是门的判据——门只判存在 / 类型 / 非空）：核心四项一份，
- *  第五项按角色各一份（工程角色 = `designPoints` ∥ explore / plan / coder = `scope`）。 */
+/** 任务书样例内容（供人照抄；不是门的判据——门只判存在 / 类型 / 非空）：非工程角色
+ *  = 四项核心 + `scope`（工程角色无任务书文本参数——任务书 = 批次档 §2）。 */
 const TASK_BOOK_CORE_MIN = {
-  goal: "实现批准设计（样例任务书——四项核心 + 角色第五项齐备）。",
+  goal: "实现批准设计（样例任务书——四项核心 + `scope` 齐备）。",
   knownFacts: "设计已评审通过、token 已签发、批次档在册。",
   acceptance: "设计档的验收口径逐条可机验、项目验证链全绿。",
   reportFormat: "交付表 + 文件路径 + 验证命令与结果。",
 }
-
-/** 工程角色样例（核心四项 + `designPoints`）。 */
-export const ENG_TASK_BOOK_MIN = { ...TASK_BOOK_CORE_MIN, designPoints: "仅落设计档受影响文件清单；禁夹带新语义。" }
 
 /** 非工程角色样例（核心四项 + `scope`）——explore / plan / coder。 */
 export const PLAIN_TASK_BOOK_MIN = { ...TASK_BOOK_CORE_MIN, scope: "只读：相关源 / 设计档；不写任何文件、不碰 bench/。" }
@@ -46,61 +46,97 @@ export function validateRoundParam(args) {
   throw new Error(
     `Engineering spawn round gate: ${missing.join(" · ")}. ` +
     `The spawn contract requires the structured round parameter (initial|fix); ` +
-    `the five task-book parameters are enforced by a separate gate (validateTaskBookParams) — ` +
+    `task-book text parameters are refused for engineering roles by a separate gate (rejectEngFreeTextParams) — ` +
     `a missing or invalid round is a dispatch defect and the spawn is refused.`)
 }
 
+/** 工程角色名集（单一判据 = 是否有写权 ⇒ 只应有唯一任务来源——AGENT-LOOP-SUBAGENT.md §6.22）。 */
+const ENGINEERING_ROLES = new Set(["eng-coder", "eng-designer"])
+
+/** 角色 ∈ 工程角色（任务书 = 批次档 §2，零任务书文本参数）。 */
+export function isEngineeringRole(role) {
+  return ENGINEERING_ROLES.has(role)
+}
+
+/** 工程角色拒收的自由文本参数（八名单源）：全部进子代理 input 的自由文本 ⇒ 第二任务来源。
+ *  `designPoints` 已从 schema 退役；门取工具入参原对象（未声明键仍可达），故仍在名单内
+ *  ——拒收面不依赖 schema 声明。 */
+export const ENG_REFUSED_PARAMS = ["goal", "knownFacts", "acceptance", "reportFormat", "scope", "task", "context", "designPoints"]
+
+/** 工程角色必填集合（拒收文案的「还缺什么」面；判据本体 = batchDoc / round / token 各门）。 */
+const ENG_REQUIRED_NAMES = {
+  "eng-coder": "role · batchDoc (readable) · round · designToken (plus designId when several slots are held)",
+  "eng-designer": "role · batchDoc (readable) · round",
+}
+
 /**
- * F2 任务书名集（**所有 spawn 角色**）：core = 四项核心（全员必带）；fifth = 第五项两名
- * ——工程角色 = `designPoints` ∥ explore / plan / coder = `scope`。
+ * 工程角色任务书门（AGENT-LOOP-SUBAGENT.md §6.22.1）：**键在场即拒**——值全空白也拒
+ * （键在场说明派单方仍以为自己在写第二本任务书）。命中即抛，逐键点名并给出必填集合；
+ * `designPoints` 另附退役句。非工程角色不经本门（零改）。
+ */
+export function rejectEngFreeTextParams(args, role) {
+  const a = args ?? {}
+  const offending = ENG_REFUSED_PARAMS.filter((name) => a[name] !== undefined)
+  if (offending.length === 0) return
+  const names = offending
+    .map((name) => (name === "designPoints"
+      ? `${name} (designPoints is retired for every role — write §2, or scope for explore/plan/coder)`
+      : name))
+    .join(" / ")
+  const required = ENG_REQUIRED_NAMES[role] ?? "role · batchDoc (readable) · round"
+  throw new Error(
+    `Spawn task-channel gate (role='${role}'): ${names}. ` +
+    `An engineering spawn carries NO task-book text parameters — the task book is batch record §2 (batchDoc), read by the child itself. ` +
+    `Put everything the child needs into §2 before spawning; a thin §2 earns a bounce, not a supplement. ` +
+    `Required for role='${role}': ${required}.`)
+}
+
+/**
+ * F2 任务书名集（**非工程角色**：core = 四项核心 + fifth = `scope`）。工程角色 = 零任务书
+ * 文本参数（§6.22.1），不经本表。
  * 单源：本档为唯一名集处——校验 / 拼装 / 探针夹具校验一律经 `taskBookParamsFor(role)` 派生（D2）。
- * 样例对象 = `ENG_TASK_BOOK_MIN` / `PLAIN_TASK_BOOK_MIN`（供人照抄）。
+ * 样例对象 = `PLAIN_TASK_BOOK_MIN`（供人照抄）。
  */
 export const TASK_BOOK_PARAMS = {
   core: ["goal", "knownFacts", "acceptance", "reportFormat"],
-  fifth: { engineering: "designPoints", plain: "scope" },
+  fifth: "scope",
 }
 
-/** 角色 → 第五项类别（唯一判据；**与模式无关**——工程模式里的 explore 也取 plain）。
- *  未知角色取 plain：spawn 路径上角色 enum 门先拒收（`agent-tools/subagent.mjs` 的 `ROLES`），到不了本门。 */
-function fifthClassOf(role) {
-  return role === "eng-coder" || role === "eng-designer" ? "engineering" : "plain"
-}
-
-/** 角色 → 该角色的任务书名集（四项核心 + 第五项；序 = 拼装序：第五项插在 `knownFacts` 之后，
- *  与 C 之前 eng 角色的拼装序逐字相同——审计摘要 marker `/^Design points/i` 不受影响）。 */
+/** 角色 → 该角色的任务书名集（四项核心 + `scope`；序 = 拼装序：第五项插在 `knownFacts` 之后）。
+ *  工程角色返回空集——它们没有任务书文本参数（任务书 = 批次档 §2）。 */
 export function taskBookParamsFor(role) {
+  if (isEngineeringRole(role)) return []
   const core = TASK_BOOK_PARAMS.core
-  return [...core.slice(0, 2), TASK_BOOK_PARAMS.fifth[fifthClassOf(role)], ...core.slice(2)]
+  return [...core.slice(0, 2), TASK_BOOK_PARAMS.fifth, ...core.slice(2)]
 }
 
 /** 拼装标签（不导出；仅词面，不是判据——无任何匹配读它）。 */
 const TASK_BOOK_LABELS = {
   goal: "Goal & why",
   knownFacts: "Known facts",
-  designPoints: "Design points & forbidden scope",
   scope: "Scope (what to read / what not to touch)",
   acceptance: "Acceptance criteria",
   reportFormat: "Delivery report format",
 }
 
 /**
- * F2 任务书参数校验（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2）· **所有 spawn 角色**：
- * 名集按角色取（`taskBookParamsFor(role)`）。判据只有三条——参数存在 ∧ typeof string ∧
- * trim() 非空。不读内容：无正则、无标题匹配、无双语 marker。缺 / 空白 / 非字符串 → 合并抛，
- * 文案逐项点名该参数；第五项缺失而另一名在场时，文案附一句指路（只作文案，不加判据）。
+ * F2 任务书参数校验（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2）· **非工程角色**：
+ * 名集按角色取（`taskBookParamsFor(role)` = 四项核心 + `scope`）。判据只有三条——参数存在 ∧
+ * typeof string ∧ trim() 非空。不读内容：无正则、无标题匹配、无双语 marker。缺 / 空白 /
+ * 非字符串 → 合并抛，文案逐项点名该参数；`scope` 缺失而 `designPoints` 在场时，文案附一句
+ * 指路（只作文案，不加判据；工程角色不经本门——它们拒收全部自由文本键）。
  */
 export function validateTaskBookParams(args, role) {
   const a = args ?? {}
   const names = taskBookParamsFor(role)
-  const fifth = TASK_BOOK_PARAMS.fifth[fifthClassOf(role)]
-  const otherFifth = fifth === "designPoints" ? "scope" : "designPoints"
+  const fifth = TASK_BOOK_PARAMS.fifth
+  const otherFifth = "designPoints"
   const failed = []
   for (const name of names) {
     const v = a[name]
     if (v === undefined || v === null) {
       const hint = name === fifth && a[otherFifth] !== undefined && a[otherFifth] !== null
-        ? ` (got ${otherFifth} instead — that name belongs to the ${fifthClassOf(role) === "engineering" ? "explore/plan/coder" : "eng-coder/eng-designer"} spawns)`
+        ? ` (got ${otherFifth} instead — ${otherFifth} is retired for every role; the fifth parameter here is ${fifth})`
         : ""
       failed.push(`${name} — missing (the task book is four core parameters + the role's fifth)${hint}`)
     }
@@ -114,8 +150,9 @@ export function validateTaskBookParams(args, role) {
     `(the fifth parameter for role='${role}'); a missing, blank or non-string value is a dispatch defect and the spawn is refused.`)
 }
 
-/** 五参 → 子代理任务书文本（**非门禁**，纯拼装）：按 `taskBookParamsFor(role)` 固定序 + 标签，
- * 空值跳过，`\n\n` 分隔。拼装单源 = 本函数——子代理 input 与探针判官的「任务书全文」同源。 */
+/** 非工程角色任务书 → 子代理任务书文本（**非门禁**，纯拼装）：按 `taskBookParamsFor(role)` 固定序
+ * + 标签，空值跳过，`\n\n` 分隔。拼装单源 = 本函数——子代理 input、权限预览与探针判官同源。
+ * 工程角色名集为空 ⇒ 返回空串（任务书 = 批次档 §2，运行时不拼装——KD-SC5）。 */
 export function composeTaskBookBrief(args, role) {
   const a = args ?? {}
   const parts = []

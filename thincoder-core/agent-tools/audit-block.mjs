@@ -3,74 +3,26 @@
  *
  * 自 `subagent-spawn.mjs` **逐字搬移**（D23-3 外提：spawn 档越 300 软线 + 块构造成纯函数
  * ⇒ 判据可直测；D23-4：块内文本零改——含块内自指词，整块搬移不改真值）。本档承载
- * spawn 级固定机制性指令的第二块（审计模板 + A2 任务书摘要 + touched 快照）：
+ * spawn 级固定机制性指令的第二块（审计模板 + 批档 §2 指向 + touched 快照）：
  * 装配侧只收集（`thincoder-core/agent-tools/subagent-spawn.mjs`），下发面 = system 固块
  * （`child._spawnSystemBlock` → 核 `prepareRun` 拼接——`thincoder-core/agent/setup.mjs`）。
+ *
+ * 2026-10-24（§6.22 KD-SC6）：任务书 = 批次档 §2（子代理自读）；A2 拼装摘要面（按 marker 抽取
+ * 设计档 / 文件清单 / 验收三段）已随 KD-SC6 删除——审计块只注入批档路径行 + §2 指向句（路径取
+ * `ctx.agent._batchDoc`）。理由：工程角色 `_engTaskInput` 只剩一行机械文本，摘要失去来源。
  */
-
-/**
- * AGENT-LOOP-SUBAGENT.md §6.7.6 D-TS5 (A2): mechanically summarize the parent spawn task book for the
- * audit spawn — the three audit-relevant elements VERBATIM (design doc paths /
- * affected-file list / acceptance criteria); verbose context/background is
- * dropped (the auditor can read the design docs themselves — they stay
- * available outside this input). Independence preserved: the input is
- * _engTaskInput (mechanically kept by the parent spawn) — never the
- * eng-coder's self-report. Sections are located by header marker, prioritizing
- * header lines (structured task books: "## 文件清单 …") and falling back to
- * inline markers (flat one-line task books); a section runs to the next header
- * of the SAME OR HIGHER level ("## 文件清单" survives a "### 修改" sub-header).
- * Marker not found → the section is reported as missing (never fabricate).
- */
-export function summarizeEngTaskBook(taskInput) {
-  if (!taskInput) return "(unavailable)"
-  // 五项拼装形下，`designPoints` 一段同时承载「设计档落点」与「受影响文件清单」——
-  // 前两段同取该块是有意的（语义都在其中）；代价 = 摘要里该块出现两次，不是抽取失败。
-  const SECTIONS = [
-    { name: "Design docs involved", markers: [/Docs? involved/i, /涉及文档/, /^Design points/i] },
-    { name: "Affected-file list", markers: [/Files? (?:list|to (?:modify|change)|modified)/i, /受影响文件/, /文件清单/, /涉及文件/, /^Design points/i] },
-    { name: "Acceptance criteria", markers: [/Acceptance(?: criteria)?/i, /验收标准/] },
-  ]
-  const lines = taskInput.split("\n")
-  const headerLevel = (l) => {
-    const m = l.match(/^\s*(#{1,6})\s/)
-    return m ? m[1].length : 0
-  }
-  const headerIdx = lines.map((l, i) => (headerLevel(l) > 0 ? i : -1)).filter((i) => i >= 0)
-  const boundsFor = (from, level) => {
-    for (const j of headerIdx) {
-      if (j > from && (level === 0 || headerLevel(lines[j]) <= level)) return j
-    }
-    return lines.length
-  }
-  const out = []
-  for (const { name, markers } of SECTIONS) {
-    let from = -1
-    let level = 0
-    for (const i of headerIdx) {
-      if (markers.some((m) => m.test(lines[i]))) { from = i; level = headerLevel(lines[i]); break }
-    }
-    if (from === -1) {
-      for (let i = 0; i < lines.length; i++) {
-        if (markers.some((m) => m.test(lines[i]))) { from = i; level = 0; break }
-      }
-    }
-    if (from === -1) { out.push(`${name}: (not found in the parent task book)`); continue }
-    const body = lines.slice(from, boundsFor(from, level)).join("\n").trim()
-    out.push(body || `${name}: (empty section)`)
-  }
-  return out.join("\n\n")
-}
 
 /**
  * 审计块（spawn 级固定 ⇒ system 固块——§6.26 分类裁定表「审计块」行）：纯函数——touched 快照
- * （`ctx.agent._touchedFiles`——机制面证据，非 eng-coder 自述）+ A2 任务书摘要
- * （`summarizeEngTaskBook(ctx.agent._engTaskInput)`）+ 指令 / 范围 / 零 git 权威 / 预算 /
- * 报告格式五段模板**逐字**。零副作用（只读 ctx）；块内文本与搬移前逐字节一致。
- * @param {{ agent?: { _touchedFiles?: string[], _engTaskInput?: string } }} ctx
+ * （`ctx.agent._touchedFiles`——机制面证据，非 eng-coder 自述）+ 批档路径行与 §2 指向句
+ * （`ctx.agent._batchDoc`——任务书由审计子代理自读 §2）+ 指令 / 范围 / 零 git 权威 / 预算 /
+ * 报告格式五段模板**逐字**。零副作用（只读 ctx）。
+ * @param {{ agent?: { _touchedFiles?: string[], _batchDoc?: string } }} ctx
  * @returns {string} 块文本（不含与其它块之间的分隔符——分隔由装配侧 `join("\n\n")` 施加）
  */
 export function buildAuditBlock(ctx) {
   const touched = (ctx.agent._touchedFiles ?? []).map((f) => `- ${f}`).join("\n") || "- (none yet)"
+  const batchDoc = typeof ctx.agent?._batchDoc === "string" ? ctx.agent._batchDoc : "(unavailable)"
   return `[Audit scope — mechanical context, independent of the eng-coder's self-report:]\n` +
     // §6.7.6 D-TS4 A1：审计指令模板（四类偏差 + 范围限制 + 校验清单格式）——审计语义
     // 不再靠模型自悟；范围限制是 §6.7.4 D-AG3 声明（下方 Zero-git scope authority）
@@ -85,9 +37,11 @@ export function buildAuditBlock(ctx) {
     `workspace changes not listed there are unrelated to this delivery and are NOT grounds for an out-of-list finding.\n` +
     `Scope discipline (F-TS6 A1): read ONLY the audited files and the design-doc sections relevant to this delivery — do NOT re-read whole documents.\n` +
     `Every deviation item MUST be fieldized: file:line + design reference (doc path + section/AC id) + severity + evidence (quoted code or doc text).\n` +
-    // §6.7.6 D-TS5 A2：任务书从全量 verbatim 改机械摘要块（三要素逐字——排除冗长上下文）。
-    `[Parent spawn task book — mechanical summary: design docs + affected-file list + acceptance criteria verbatim; verbose context/background dropped — the design docs are still available for reading outside this input:]\n` +
-    `${summarizeEngTaskBook(ctx.agent._engTaskInput)}\n` +
+    // §6.22 KD-SC6：任务书 = 批次档 §2（审计子代理自读）——审计块注入批档路径 + §2 指向句
+    // （A2 拼装摘要面已删：工程角色 _engTaskInput = 一行机械文本，摘要无来源）。审计子代理本身是
+    // explore（任务书 = 父侧五项）——故指向句限定为「**交付**的任务书 = §2」，不冒称本 child 的唯一通道。
+    `Batch record (batchDoc): ${batchDoc}\n` +
+    `Delivery task book: §2 of the batch record at ${batchDoc} — read it before judging the delivery; it is the criterion source for this audit.\n` +
     `Files actually touched by the eng-coder (mechanical union — audit these against the file list):\n${touched}\n` +
     // §18.5 D-AG3（2026-09-04）：审计零 git 范围权威声明——本审计任务零 git（不注入
     // git 上下文——§6.7.4 全角色零 git）；_touchedFiles 为审计范围；工作区未列于
@@ -95,7 +49,7 @@ export function buildAuditBlock(ctx) {
     "Zero-git scope authority: this audit task receives NO git context — nothing is injected. " +
     "The evidence base is the design documents, the current disk state (read/glob/grep), and the _touchedFiles list above. " +
     "Workspace changes NOT listed in _touchedFiles are unrelated to this delivery — they are NOT grounds for an out-of-file-list finding." +
-    // §6.7.6 D-A1.2：审计预算句——A1 指令模板 + A2 摘要块之后、A3 报告模板之前（定序——评审 #7）。
+    // §6.7.6 D-A1.2：审计预算句——A1 指令模板 + 批档指向块之后、A3 报告模板之前（定序——评审 #7）。
     // 逐字设计锚（D-A1.2 代码块）：只读该读的——10 轮机械预算——超时报 PROBLEM 下结论。
     // 前导 \n 与 A3 同款块分隔约定（上一句 Zero-git 句末无换行——不触碰既有句）。
     `\n[Audit budget — mechanical]: read ONLY the touched files listed above and the design-doc sections the parent task book names (affected-files table, acceptance criteria, status line). Do NOT read whole documents. Budget = 10 tool rounds max — if you cannot conclude within it, report PROBLEM (inconclusive) rather than continuing to explore.\n` +

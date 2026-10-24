@@ -6,12 +6,12 @@
  * 另在 subagent-run.mjs。subagent.mjs execute 经本文件 import 调用。
  * 2026-09-07：executeConsumeDesignAction 消费执行器（token 链终消费制——与 spawn 侧
  * slot 族同域——ENGINEERING-MODE.md §2.6 F1——removeDesignTokenSlot 自 token-ttl.mjs）。
- * 2026-09-22（台账 #23 · AGENT-LOOP-SUBAGENT.md §6.26）：审计块构造器（summarizeEngTaskBook
- * + buildAuditBlock）外提 `./audit-block.mjs`；spawn 级固定机制性指令改走 system 固块
- * （`child._spawnSystemBlock` 单点绑定——消费点 = 核 `prepareRun`），`input` 只留任务书。
+ * 2026-09-22（台账 #23 · AGENT-LOOP-SUBAGENT.md §6.26）：审计块构造器外提 `./audit-block.mjs`；
+ * spawn 级固定机制性指令改走 system 固块（`child._spawnSystemBlock` 单点绑定——消费点 = 核
+ * `prepareRun`），`input` 只留任务书。2026-10-24（§6.22）：工程角色 `input` = 一行机械任务书行
+ * （批档绝对路径 + §2 指向句），任务书本体由子代理自读 §2。
  */
 
-import { basename, isAbsolute, relative } from "node:path"
 import {
   createAgent,
   readonlyToolNames, escapeXml, excludeSubagentTools,
@@ -28,15 +28,16 @@ import {
 } from "./subagent-scheduler.mjs"
 // M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.3）：任务书 round 枚举 + 五项结构化参数校验/拼装本体落
 // spawn-gates.mjs（纯谓词零依赖）——本处只加 import 调用。
-import { validateRoundParam, validateTaskBookParams, composeTaskBookBrief } from "./spawn-gates.mjs"
-// 台账 #23（AGENT-LOOP-SUBAGENT.md §6.26 · D23-3）：审计块构造器外提（`summarizeEngTaskBook`
-// + `buildAuditBlock` 纯函数）——spawn 档只做「收集 + 绑定」；块文本逐字搬移（D23-4）。
+import {
+  validateRoundParam, validateTaskBookParams, composeTaskBookBrief,
+  isEngineeringRole, rejectEngFreeTextParams,
+} from "./spawn-gates.mjs"
+// 台账 #23（AGENT-LOOP-SUBAGENT.md §6.26 · D23-3）：审计块构造器外提（`buildAuditBlock` 纯函数）
+// ——spawn 档只做「收集 + 绑定」；块文本逐字搬移（D23-4）。
 import { buildAuditBlock } from "./audit-block.mjs"
 // 批次档路径解析单源（BATCH-RECORD.md §4.15 · 台账 #287）：门内解析改经叶档（读面非抛形），
 // 与 append / create 同源——门判据仍「参数在 + 路径可读」，错误文案逐字零变。
-import { resolveBatchReadPath, batchDocBases } from "./batch-paths.mjs"
-// LOGGING（LOGGING.md）：#309 形三观测留痕走同一事件通道。
-import { logEvent } from "../log.mjs"
+import { resolveBatchReadPath } from "./batch-paths.mjs"
 
 /** 任务书播报文本：该角色名集拼装 + 可选 task 自由文本（拼装空 ⇒ 原 task 逐字——旧形零变）。 */
 function taskBriefOf(args, role) {
@@ -46,31 +47,9 @@ function taskBriefOf(args, role) {
   return extra ? `${composed}\n\n${extra}` : composed
 }
 
-/** #309 任务书 token 判据（`AGENT-LOOP-SUBAGENT.md` §6.29.3）：`.md` 结尾的连续路径型字面
- *  （含盘符形态——裸名 `AGENTS.md` 无分隔符且非绝对，见调用点过滤）。 */
-const MD_PATH_TOKEN = /[A-Za-z0-9_@.:\\/-]+\.md\b/g
-
-/** #309 形三·task↔batchDoc 观测留痕（§6.29.3——**不阻断**，spawn 照常放行）：任务书文本提及
- *  **他批存在档** ⇒ `logEvent` 留痕一条（键面 = 两侧基名，零任务书内容）；只提绑定档 / 无路径型
- *  `.md` 字面 ⇒ 零事件。token 逐条经 `resolveBatchReadPath` 解析（路径单源），命中 = 可读 ∧
- *  落基底内 ∧ ≠ 绑定档（同一档多 token 按解析后绝对路径去重）。 */
-function logBatchDocRefs(parent, role, task, boundAbs) {
-  const cwd = parent?.cwd ?? process.cwd()
-  const text = typeof task === "string" ? task : ""
-  const key = (p) => (process.platform === "win32" ? p.toLowerCase() : p)
-  const bases = batchDocBases(cwd) // 歧义锚 ⇒ 候选项目基底并集（#828——入基底判据覆盖范围随之对齐）
-  const seen = new Set()
-  for (const m of text.matchAll(MD_PATH_TOKEN)) {
-    const token = m[0]
-    if (!/[/\\]/.test(token) && !isAbsolute(token)) continue // 裸名（AGENTS.md 形态）不取
-    const abs = resolveBatchReadPath(cwd, token)
-    if (!abs || key(abs) === key(boundAbs ?? "")) continue // 不可读 / 就是绑定档 ⇒ 零事件
-    const inBase = bases.some((b) => { const r = relative(b, abs); return r && !r.startsWith("..") && !isAbsolute(r) })
-    if (!inBase || seen.has(key(abs))) continue // 他 .md 引用（设计档 / 需求档等）/ 同档重复
-    seen.add(key(abs))
-    logEvent("child:batchdoc-ref", { role, batchDocBase: basename(boundAbs ?? ""), refBase: basename(abs) })
-  }
-}
+/** 原 #309 任务书 token 观测（`child:batchdoc-ref`）已废止——2026-10-24 用户裁定
+ *  「不允许跨批引用」后，工程角色 input 只剩一行机械文本，扫描对象失效；无场景分支不留
+ *  （AGENT-LOOP-SUBAGENT.md §6.29.3）。 */
 
 /**
  * Effective subagent model override for a role (CLI parity shared with VS Code):
@@ -198,6 +177,8 @@ export function prepareScheduling(parent, filesRaw, dependsRaw, wantAsync) {
 export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, dependsOn, engAuditAttempt) {
   // Provider/model override: tool `model` arg > subagentModels[role] > subagentModel > parent provider
   const childProvider = resolveChildProvider(parent, effectiveSubagentModel(parent, role, args.model))
+  // 工程角色（任务书 = 批次档 §2，零任务书文本参数）——AGENT-LOOP-SUBAGENT.md §6.22.1。
+  const engineeringRole = isEngineeringRole(role)
 
   // ── batchDoc gate（ENGINEERING-MODE.md §2.12 + §2.15 D1——FR20 #9 机械面）────────
   // 工程模式下 spawn 工程角色（**eng-coder / eng-designer**——第 2 批扩为角色集合）必传
@@ -211,15 +192,13 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 工程专属、不移植）；传则须可读（同评审面判据）⇒ `child._batchDoc` 绑定 §5 记录通道；
   // 未携 ⇒ 不绑定、照常 spawn。
   let batchDocAbs = null
-  if (role === "eng-coder" || role === "eng-designer") {
+  if (engineeringRole) {
     const given = typeof args.batchDoc === "string" ? args.batchDoc.trim() : ""
     const refusal = (suffix = "") => new Error(
       `batchDoc is required for role='${role}' — pass the batch record path (e.g. <repo>/docs/batches/<batch>-<topic>.md; relative paths resolve against the session cwd first, then candidate project roots — or absolute); spawn refused without it.` + suffix)
     if (!given) throw refusal()
     batchDocAbs = resolveBatchReadPath(parent.cwd ?? process.cwd(), given)
     if (!batchDocAbs) throw refusal(" (given path is not a readable file)")
-    // #309 形三：任务书中的他批批次档引用观测留痕（不阻断——放行不受影响）。
-    logBatchDocRefs(parent, role, taskBriefOf(args, role), batchDocAbs)
   } else if (role === "coder") {
     const given = typeof args.batchDoc === "string" ? args.batchDoc.trim() : ""
     if (given) {
@@ -230,12 +209,17 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     }
   }
 
-  // M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2）：任务书参数门——**所有 spawn 角色**。
-  // 工程角色：round 枚举（initial|fix）+ 四项核心 + `designPoints`；explore / plan / coder：
-  // 四项核心 + `scope`。判据三条零改（存在 ∧ string ∧ trim 非空）；落点 = batchDoc 门之后、
-  // token 门之前（门序 = AGENT-LOOP-SUBAGENT.md §6.22）。
-  if (role === "eng-coder" || role === "eng-designer") validateRoundParam(args)
-  validateTaskBookParams(args, role)
+  // M5 F2 + §6.22（2026-10-24）任务书门——按角色分流：
+  //   工程角色（eng-coder / eng-designer）：零任务书文本参数——八个自由文本键命中即拒（键在场即拒）并点名
+  //     （值全空白也拒）；随后 round 枚举（initial|fix）。
+  //   explore / plan / coder：四项核心 + `scope` 必带（判据三条零改：存在 ∧ string ∧ trim 非空）。
+  // 落点 = batchDoc 门之后、token 门之前（门序 = AGENT-LOOP-SUBAGENT.md §6.22.1）。
+  if (engineeringRole) {
+    rejectEngFreeTextParams(args, role)
+    validateRoundParam(args)
+  } else {
+    validateTaskBookParams(args, role)
+  }
 
   // eng-coder token gate（TOOLS.md §6.25 ④）：判定本体 = gateDesignToken（本档模块尾）——
   // missing / mismatch / expired / invalid 四态各出互异拒句；拒绝集合与旧三条件合取全等。
@@ -289,7 +273,6 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // G6（施工②）+ §2.15 B4（第 2 批）：工程角色场景即工程纪律——engineering=true 使 setup
   // 场景映射落到 assemblePrompt("eng-coder"/"eng-designer")（persona-{role} + common +
   // discipline-engineering）；designer 也必须 engineering=true 才能装配工程纪律槽。
-  const engineeringRole = role === "eng-coder" || role === "eng-designer"
   const childConfig = engineeringRole
     ? { ...parent.config, agent: { ...parent.config.agent, engineering: true } }
     : parent.config
@@ -338,7 +321,12 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 审计/探索（"status 里这个文件算不算超清单？"）。注入分支整体删除（B 方案
   // git 只读变体亦随裁定废弃——D-AG5）。顶层主 agent 注入保留（§3 prepareRun——
   // setup.mjs depth===0——D-AG7 范围边界）。
-  let input = args.context ? `Context:\n${args.context}\n\nTask:\n${taskBriefOf(args, role)}` : taskBriefOf(args, role)
+  // §6.22.2 子代理任务输入：工程角色 `input` = 一行机械任务书行（批档绝对路径 + §2 指向句）——
+  // 任务书本体由子代理自读 §2（KD-SC5：运行时不抽取正文注入，避免过期副本 / 脆标题解析）；
+  // 非工程角色 = 既有拼装（context 前缀 + 任务书参数 + 可选 task——零变）。
+  const input = engineeringRole
+    ? `Task book: §2 of the batch record at ${batchDocAbs} — read it before acting; it is the only task channel for this spawn.`
+    : (args.context ? `Context:\n${args.context}\n\nTask:\n${taskBriefOf(args, role)}` : taskBriefOf(args, role))
   // 台账 #23（AGENT-LOOP-SUBAGENT.md §6.26 · D23-1）：**spawn 级固定机制性指令改走 system 固块**——
   // 两处（批次档路径行 + 审计模板块）原随 user 首条下发，压缩把首条并入摘要即丢（长任务中后期
   // 既看不到批次档路径、也看不到审计模板 ⇒ 过度勘察的真病根）；固块值在 child 生命周期内恒定
@@ -347,23 +335,16 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 的 system 逐字节同改前——§6.26 缓存契约兼容证明）。
   const spawnBlocks = []
   // §2.11 第 1 点（FR16 载体 + FR17 铁律 #5 的机械面）：批次档**绝对路径**下发给工程角色
-  // （eng-coder 实现 / eng-designer 写稿）——任务文本本身不动（批次档 §2 才是任务书本体；
-  // 本行让子代理"拿到本档路径"）。行文不含 summarizeEngTaskBook 的三组段 marker
-  // （Docs involved / Files list / Acceptance criteria）——段匹配不受影响。工程角色恒注入；
-  // 携绑定 coder（§4.16）随绑定注入（绑定 coder 要能读到本档）。
+  // （eng-coder 实现 / eng-designer 写稿）——任务书本体 = 本档 §2；本行让子代理"拿到本档路径"。
+  // 工程角色恒注入；携绑定 coder（§4.16）随绑定注入（绑定 coder 要能读到本档）。
   if (batchBound) spawnBlocks.push(`Batch record (batchDoc): ${batchDocAbs}`)
-  // AGENT-LOOP-SUBAGENT.md §6.7.6 D-E2 ③ (round4 #4, T-E13/T-E15): an eng-coder audit spawn's task book is
-  // the eng-coder's OWN spawn task — mechanically kept as _engTaskInput by the
-  // parent spawn and injected as the D-TS5 A2 mechanical summary (design docs /
-  // affected-file list / acceptance criteria verbatim, verbose context dropped)
-  // — ∪ the mechanically tracked _touchedFiles — NEVER the eng-coder's
-  // self-written list: a self-report could omit exactly the out-of-scope file
-  // the audit must catch. 块文本（含模板逐字）住 `./audit-block.mjs`（D23-3 外提）。
+  // AGENT-LOOP-SUBAGENT.md §6.7.6 D-E2 ③ + §6.22 KD-SC6：审计 spawn 的范围证据 = 机械跟踪的
+  // `_touchedFiles` ∪ 批档 §2（审计子代理自读）——**不是** eng-coder 自述（自述可恰好漏掉应抓的
+  // 越界档）。块文本（含模板逐字）住 `./audit-block.mjs`（D23-3 外提）。
   if (engAuditAttempt !== null) spawnBlocks.push(buildAuditBlock(ctx))
-  // The child's own task input rides the child object: an eng-coder's audit
-  // spawns reuse it as the task-book SOURCE — injected as the D-TS5 A2
-  // mechanical summary, not verbatim (see above). D23-6：语义 = **纯任务书**（不含固块）。
-  if (role === "eng-coder") child._engTaskInput = input
+  // The child's own task input rides the child object: D23-6 —— `_engTaskInput` 语义 = **一行机械
+  // 任务书行**（批档绝对路径 + §2 指向句；不含固块）。
+  if (engineeringRole) child._engTaskInput = input
   // spawn 固块单点绑定（sync / async 同点——buildSpawnChild 唯一调用点）：此后只读 ⇒ 同一
   // child 的任意 run（resume 续跑 / 报告追问重跑）逐字节恒定；消费点 = 核 `prepareRun`。
   if (spawnBlocks.length > 0) child._spawnSystemBlock = spawnBlocks.join("\n\n")

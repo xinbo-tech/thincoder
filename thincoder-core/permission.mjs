@@ -35,7 +35,9 @@ export function formatPermission(name, args) {
     return `${args.path}\n${oldLines}\n  ↓\n${newLines}`
   }
   if (base === "delete") return `${args.path}${args.force ? "（force：跟踪文件也删）" : ""}`
-  if (base === "subagent") return cap(composeTaskBookBrief(args, args.role) || args.task || "", 500)
+  // 工程角色无任务书文本参数（任务书 = 批次档 §2）：拼装空 ⇒ 回退到 §2 路径句，人审面不空白
+  // （AGENT-LOOP-SUBAGENT.md §6.22.8 P11）。
+  if (base === "subagent") return cap(composeTaskBookBrief(args, args.role) || (args.batchDoc ? `task book: batch record §2 (${args.batchDoc})` : "") || args.task || "", 500)
   if (base === "memory") {
     // §6 action-routed preview: put shows content, batch delete/clear show the gate args
     const action = String(args.action ?? "")

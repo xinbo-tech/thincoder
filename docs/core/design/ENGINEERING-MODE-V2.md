@@ -65,7 +65,7 @@
 | M2 | 台账（SQLite） | `thincoder-core/ledger.mjs`（228 行·**修改**）+ `ledger-surface.mjs`（77 行·**修改**）+ CLI/VSC 端 `ledger-surface.mjs`（70/119 行·**修改**，完整清单见接线表） | md 读面 → `node:sqlite` 读面 + 写命令 + 六态 CHECK schema | §5.2 |
 | M3 | 批次档生命周期工具 | `batch-segment.mjs` → **改名 `batch.mjs`**（265 行·**修改**——action 分发扩 create/status/close，超硬顶则拆 `batch-skeleton.mjs` 模板档） | 批次档生命周期（create/append/status/close）+ 段白名单 + 状态行冻结拒写 | §5.3 · `docs/core/design/BATCH-RECORD.md` §4.11–§4.13 |
 | M4 | 写权门禁（token 门 + 冻结窗口） | `thincoder-core/agent/dispatch.mjs`（490 行·**修改**）+ 新档 `write-gate.mjs`（`resolveReviewTargetPaths` + 冻结窗口判据组装）+ VSC `tool-gates.mjs`（165 行·**修改**，完整清单见接线表） | token 门 + D5 冻结窗口——评审对象/被审文件读 manifest `docRoot`（去硬编码 docs/） | §7 · §8.5 |
-| M5 | 委派与 spawn 门 | `thincoder-core/agent-tools/subagent-spawn.mjs`（484 行·**修改**，**拆分候选**）+ `subagent-scheduler.mjs`（428 行·**修改**，**拆分候选**） | 任务书四项核心 + 第五项按角色 + `round` + files 声明面拦截 | §8.1–8.2 · §9.3 |
+| M5 | 委派与 spawn 门 | `thincoder-core/agent-tools/subagent-spawn.mjs`（435 行·**修改**·as-of 2026-10-24，**拆分候选**）+ `subagent-scheduler.mjs`（428 行·**修改**，**拆分候选**） | 工程角色任务书 = 批次档 §2（零任务书文本参数，命中即点名拒收）+ `round` + designToken；非工程角色 = 四项核心 + `scope`；files 声明面拦截 | §8.1–8.2 · §9.3 |
 | M6 | 评审凭证（advisor + token） | `thincoder-core/advisor.mjs`（274 行·**修改**）+ `token-ttl.mjs`（286 行·**零改（继承）**）+ `agent-tools/design-token.mjs`（118 行·**零改（继承）**） | 评审对象来源读 `docRoot`（唯一微调，继承 v1 不重写） | §8.5 |
 | M7 | checklist 废除 | 删 checklist 族 3 档 + 摘挂载/移除注入（核 2 + VSC 2）+ 死指针 2 + 门禁 1 + 测试 5——完整清单见接线表 | 待办跟踪统一到台账六态 | §5.2 · §10.1 |
 | M8 | 机检引擎 | `scripts/doc-check.mjs` + `scripts/doc-check-anchors.mjs` + `scripts/doc-check-targets.mjs` + `scripts/doc-check-width.mjs`（**现状档**） | 单引擎（锚 + 行宽）+ 参数内置常量（判据参数不落声明面）；台账一致性由 SQLite schema 承接（`check-ledger` 作废） | §8.7 |
@@ -253,8 +253,9 @@ M10 测试（独立简化，无依赖）
 | 实现（多文件 / 跨模块 / 有批准设计） | eng-coder | `designId` + `designToken` + `batchDoc`（§2 任务书） |
 | 评审 | advisor | 设计评审需 Approval Signal |
 
-**委派治理（门槛 + 结构化参数）**（M5 落点）：sized 实现批默认委派 coder；任务书 = **四项核心 spawn 参数**（`goal` / `knownFacts` / `acceptance` / `reportFormat`——**所有 spawn 角色**缺任一 / 空白 / 非字符串即拒，判据只到类型与在场）+ **第五项按角色**（工程角色 = `designPoints` ∥ explore / plan / coder = `scope`——跨角色顶替仍拒）。
-另加 **轮次（`round`：初始/修复——结构化参数，eng-coder / eng-designer 必带）**；五项按固定序拼进子代理任务书，`task` 为可选自由文本补充（不再单独成载）。缺参 = 派单缺陷；内容够不够由执行者拒收兜底。
+**委派治理（门槛 + 任务书单通道）**（M5 落点，2026-10-24 收口）：sized 实现批默认委派 coder；**工程角色（eng-coder / eng-designer）的任务书只有一个来源 = 批次档 §2**（设计席写、经评审），spawn 不携带任何任务书文本参数（`goal` / `knownFacts` / `designPoints` / `acceptance` / `reportFormat` / `scope` / `task` / `context` 命中即点名拒收）。
+**非工程角色（explore / plan / coder）不动**：四项核心（`goal` / `knownFacts` / `acceptance` / `reportFormat`）+ `scope`，缺一 / 空白 / 非字符串即拒。
+另加 **轮次（`round`：初始/修复——eng-coder / eng-designer 必带）**。**范围判据**：只读角色改不动任何东西，通道不构成风险；有写权的角色必须只有一个任务来源。缺参 = 派单缺陷；§2 内容够不够由执行者打回兜底。
 
 **纪律兜底（纪律 → 机检映射）**（M8 落点）：
 
@@ -302,7 +303,7 @@ M10 测试（独立简化，无依赖）
 
 `phase` 字段保留（阶段旋钮落 manifest 不变）——**其模型侧可感知性由下方 E5.1 情境行承载**。
 
-轮次窄带（v2 §9.3）：「修复轮……**禁全量勘察**。派单必带 `round` 参数，修复轮小事回到分钟级」——轮次约束由任务书结构化参数承载（见模块设计 `docs/core/design/AGENT-LOOP-SUBAGENT.md` 的 §6.22 F2）。
+轮次窄带（v2 §9.3）：「修复轮……**禁全量勘察**。派单必带 `round` 参数，修复轮小事回到分钟级」——轮次约束由结构化参数 `round` 承载（必填集合见模块设计 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.22.1）。
 
 #### E5.1 情境值 → 模型注入（#28）
 

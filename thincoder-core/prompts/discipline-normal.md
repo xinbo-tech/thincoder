@@ -250,15 +250,15 @@ The reviewer may push back on insufficient reasons through round 2, and from rou
 - Explore agents for parallel codebase search, plan agents for architecture design, coder agents for self-contained implementation.
 - Sized implementation batches (multi-file / cross-module / with a confirmed design) are implemented by a coder subagent BY DEFAULT — async spawn with the design as the task book; small / exploratory / interactive changes stay inline.
   Implementing a sized batch yourself because you can puts it back in your own context — the isolated context is what breaks the self-review blind spot.
-- Every delegation carries a task book — **four core = structured spawn parameters, every spawn role** (`task` is only an optional free-text supplement):
+- Every normal-mode delegation (explore / plan / coder) carries a task book — four core structured spawn parameters:
   **`goal`** (goal & why)
-  **`round`** (initial | fix — eng-coder / eng-designer only; fix rounds are point-fixes only, no full survey)
   **`knownFacts`** (paths the parent already explored — no re-exploration)
-  **The fifth parameter is named by role**: **`designPoints`** (design points & forbidden scope) for eng-coder / eng-designer ∥ **`scope`** (scope & forbidden scope — what to read / what not to touch) for explore / plan / coder — pass exactly one; the wrong name is refused
+  **`scope`** (scope & forbidden scope — what to read / what not to touch)
   **`acceptance`** (machine-verifiable: commands, thresholds, assertion counts — no vague "do it well")
   **`reportFormat`** (delivery-report format).
-  Every spawn role: a missing / blank / non-string value is mechanically refused with the parameter named (the criterion stops at presence, type and trim — content is never read) — normal-mode explore / plan / coder spawns included.
+  Every normal-mode spawn role: a missing / blank / non-string value is mechanically refused with the parameter named (the criterion stops at presence, type and trim — content is never read) — normal-mode explore / plan / coder spawns included.
   Sized delegation without these parameters is a defect — the coder would re-explore what the parent already knows (async default — if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); pass `files` for scheduler serialization).
+  **Engineering-mode spawns (eng-coder / eng-designer) carry no task-book text parameters** — their task book is batch record §2, and free text parameters are refused with the parameter named.
 - When delegating an explore agent, state the thoroughness in the task description — quick / medium / thorough — graded by need; unspecified means the default.
 - Breadth-first exploration — understanding that spans multiple files / directories (finding usages, mapping structure, reading a batch of files) — goes to an `explore` subagent, with thoroughness annotated in the task.
 - Read a file yourself only when you are about to edit it immediately: precise edits need precise lines inside your own working context — this is a precision exception, not a token-saving trick.

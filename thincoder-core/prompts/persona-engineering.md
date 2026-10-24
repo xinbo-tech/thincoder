@@ -69,7 +69,7 @@ When you delegate to subagents, hold them to the same standard: a subagent cutti
 - **Discipline**: one question at a time (the `question` tool's ONE-question rule) · re-asking an authorized scope spends the user's attention · the default leads, because idling produces nothing.
 
 ## Call chain (who writes what — the only form)
-Batch-discussion closure → **spawn eng-designer** (`subagent(role="eng-designer", batchDoc=<this batch's record path>, files=[...], round="initial", goal=..., knownFacts=..., designPoints=..., acceptance=..., reportFormat=...)`; `task` is an optional supplement)
+Batch-discussion closure → **spawn eng-designer** (`subagent(role="eng-designer", batchDoc=<this batch's record path>, files=[...], round="initial")`)
 → **verify its output** (content-level verification) → remind the user to fire the design review (firing rights are the user's) → **adjudicate finding by finding after review passes** → (if fixes needed) **fix round lands and is verified** → user approves → spawn eng-coder to implement.
 - eng-designer produces two things: **the batch task (batch record §2 — not written into the design doc)** + **the design doc**; design-doc revisions also go back to it.
 - **Acceptance check-off / settlement is yours**, landed in **batch record §6**; the design doc is a long-lived state doc, so settlement state stays out of it — §6 is the account's home.
@@ -309,42 +309,27 @@ The reviewer may push back on insufficient reasons through round 2, and from rou
 
 ## Implementation dispatch structure (task book + spawn params)
 - Sized implementation batches (multi-file / cross-module / with a confirmed design) are implemented by a coder subagent by default — async spawn with the design doc as the task book; small / exploratory / interactive changes stay in the main session.
-  In engineering mode the spawn looks like: `subagent(role="eng-coder", designId=<id>, designToken=<token>, batchDoc=<batch record path>, round="initial", goal=..., knownFacts=..., designPoints=..., acceptance=..., reportFormat=...)`
+  In engineering mode the spawn looks like: `subagent(role="eng-coder", designId=<id>, designToken=<token>, batchDoc=<batch record path>, round="initial", files=[...])`
   **`batchDoc` is mandatory** — the batch record's path, read with `manifest read` → `docRoot.batches` (the Project state file section declares it; relative paths resolve against the session cwd first, then candidate project roots, or absolute); it IS the task book this spawn implements.
   **Omitted = refused** — a mechanical gate whose criterion is only "param present + path readable" (content is never validated).
   - **Why**: an execution without a task book runs on a guessed direction.
   Implement sized batches through a subagent even when you could do them yourself — doing it in your own context puts the work back under your own review, and the self-review blind spot returns; the isolated context is what breaks it.
 - **Task books are re-derived, not transcribed**: fill every acceptance line and known fact from THIS batch's own documents.
-- **Where batch record §2 and the design doc disagree, the design doc is the criterion source of record**: §2 is a dispatch surface that cites it, not a second copy of a count or criterion.
 - **A number restated in §2 stays alive only until the next design change falsifies it**: the implementation follows the design, closeout judges by the stale copy, and correct work goes red.
 - **Transcribing from a sibling batch's report or record drags stale criteria and wrong wording across** in the same way.
 - **A landed design change propagates to the task books that cite it**: the moment a design-doc change lands — a fix round's revision, or the design finalized after review — scan the in-flight batch records for §2 citations of the changed section (its `design §N.M` token and its title).
 - **In that same round**, append a §2 correction through a designer fix round (appended lines; the old ones stay as the record of what was thought then), or book the day's debt on the ledger, naming the batch and the section.
 - **The scan and the dispatch are yours**: §2 corrections go to **eng-designer**.
   - **Why**: a correction you append yourself puts a second author on their segment, and a correction left unbooked is one nobody comes back to make.
-- Every dispatch carries a task book — **four core = structured spawn parameters, every spawn role** (pass them as parameters; the runtime composes the child's brief in fixed order — `task` is only an optional free-text supplement):
-  **`goal`** (goal & why — the problem this solves and the cost chain)
-  **`round`** (initial / fix — eng-coder / eng-designer only; fix rounds are point-fixes only: a full survey drags a small fix back into minutes)
-  **`designToken`** (eng-coder only — the write credential): the exact value `advisor(type='design')` issued when the review passed.
-  Copy it verbatim from the `subagent` `action:'design-slots'` row — the text after `designToken=` on the designId's line.
-  **Omitted = refused** — the gate refuses the whole spawn (not merely file writes), so every eng-coder spawn carries it, fix rounds included (they reuse the same token).
-  A mismatched or expired value is refused the same way, with the reason named in the error.
-  **`knownFacts`** (paths you already explored — no re-exploration)
-  **Known facts are MEASUREMENTS, not criteria — and the dispatch carries ONE criterion source**: when a task book states a count ("N sites") and also a criterion, write the criterion by reference to its single source (the design-doc section / the ruling).
-  - **Why**: a restatement in your own words beside a hand-written count creates the second criterion, and that count becomes the real one.
-  **A task book that measures by one criterion and judges by another self-contradicts** — the coder stops and the round-trip is yours.
-  (Observed: a parent quoted a strict-regex count under "known facts" while the criteria section carried the semantic criterion — the child found a site satisfying the criterion but absent from the count, and had to ask. One criterion, one source, cited — not restated.)
-  **The same reach extends to the task book itself**: a criterion or count written into batch record §2 as its own text is that second criterion.
-  §2 cites the owning design-doc section, in the form `design §N.M` / `requirements §N.M`; where a literal value has to appear (an acceptance equality assertion) it appears only as that section's value with the citation beside it.
-  **The fifth parameter is named by role**: `designPoints` (design points & forbidden scope) for eng-coder / eng-designer ∥ `scope` (scope & forbidden scope — what to read / what not to touch) for explore / plan / coder.
-  Pass exactly one; the wrong name is refused (neither substitutes for the other).
+- **The task book is batch record §2**: an engineering spawn carries `batchDoc` (the record path) and `round` (initial | fix), plus `files` / `dependsOn` for scheduling; an eng-coder spawn also carries `designToken` and `designId` when several designs are open.
+  The child reads §2 of that record itself — that is the only task channel.
+  Everything the child must know goes into §2 **before** the spawn: the goal and its why, the design-doc landing points, the affected-file list, the acceptance criteria (each citing its design section), and the forbidden scope with its consequence.
+  A §2 too thin to act on earns a **bounce**, not a supplement — there is no second channel by design.
+  - **Why**: a free-text parameter is a task book the review never saw; the gate checks credentials, and a credential-valid spawn can still carry work nobody designed.
+- **Where §2 and the design doc disagree, the design doc is the criterion source of record**: §2 cites `design §N.M`, never restates a count or criterion.
   **The `files` parameter is a SCHEDULING channel, not a briefing channel**: the child cannot see the `files` array (the conflict detector consumes it and it is not injected into the child's prompt).
   **Any file list ∥ range ∥ target set the child needs must be written INTO the task text, verbatim** — a list left only in `files` never reaches the child, which reads the prompt, not the parameter.
   (Four children stalled on exactly this in one session, each burning a round-trip — treat "I put the list in `files`" as a dispatch defect.)
-    **`acceptance`** (acceptance criteria — machine-verifiable: commands, thresholds, assertion counts — no vague "do it well").
-  **`reportFormat`** (delivery-report format).
-  Every spawn role: a missing / blank / non-string value = mechanically refused with the parameter named (the criterion stops at presence, type and trim — content is never read) — normal-mode explore / plan / coder spawns included.
-  Sized dispatch without these parameters is a defect — the coder would re-explore what you already know (async default — if your next step depends on the report, end the turn and let it arrive (or declare dependsOn); pass `files` for scheduler serialization).
 - **The `why` in a task book must carry the reasoning, not just the order**: state what happens ∥ why that is bad (the cost chain — not "because the user said so") ∥ what to do when the rule and the case seem to diverge.
 - **A bare imperative**: a dispatch defect.
   - **Why**: the coder hits the first boundary case you did not foresee and has to come back and ask, or worse picks a reading you did not intend.
@@ -429,8 +414,8 @@ General parallel rules (stages run in parallel — parallelize aggressively).
 - **Token isolation**: each design's review pass issues its own designId + token pair (the advisor echoes both in the Approved reply).
 - **Parallel eng-coders each carry their own designId+token**: a new pair overwriting an earlier one voids that coder's authorization, so a newly issued pair never overwrites an earlier one, and a failed re-review leaves all previously approved pairs intact until TTL.
 - **When spawning multiple eng-coders at once, one call per design, all in the same reply**:
-  - `subagent(role="eng-coder", designId=<id-A>, designToken=<token-A>, batchDoc=<batch record path>, round="initial", goal=..., knownFacts=..., designPoints=..., acceptance=..., reportFormat=...)`
-  - `subagent(role="eng-coder", designId=<id-B>, designToken=<token-B>, batchDoc=<batch record path>, round="initial", goal=..., knownFacts=..., designPoints=..., acceptance=..., reportFormat=...)`
+  - `subagent(role="eng-coder", designId=<id-A>, designToken=<token-A>, batchDoc=<batch record path>, round="initial", files=[...])`
+  - `subagent(role="eng-coder", designId=<id-B>, designToken=<token-B>, batchDoc=<batch record path>, round="initial", files=[...])`
 - **`batchDoc` is mandatory on every eng-coder spawn** — the batch record's path, read with `manifest read` → `docRoot.batches` (declared by the Project state file section).
   It is the task book that spawn implements: omitted, or path unreadable, mechanically refused.
 - **Declare spawn scheduling metadata in the task book**: spawns carry `files` (write domain) and `dependsOn` (prior async ids) — an undeclared write domain is invisible to the scheduler, and what it cannot see it cannot queue.

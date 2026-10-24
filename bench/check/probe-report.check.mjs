@@ -60,7 +60,7 @@ check("dry-run 报告对——md 段清单六段 + 逐夹具表列集 + JSON 顶
   assert.ok(text.includes("非门控"), "局限声明含非门控句")
   const data = readJson(json)
   assert.equal(data.kind, "conflict-probe")
-  assert.equal(data.probeVersion, 2)
+  assert.equal(data.probeVersion, 3)
   assert.equal(data.label, label)
   assert.equal(typeof data.startedAt, "string")
   assert.equal(typeof data.finishedAt, "string")

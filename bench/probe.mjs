@@ -101,7 +101,7 @@ async function executeRun({ base, index, entry, user, config, model, fixture, op
   const parent = buildProbeParent({ cwd: root, config, model: entry.model })
   installProbeProvider(parent, probeProviderEntry({ entry, user, maxTokens: opts.maxTokens }).providerEntry)
   const { observed } = await runProbeRun({
-    parent, model, batchDoc: fixture.batchDoc, taskBookParams: fixture.taskBookParams,
+    parent, model, batchDoc: fixture.batchDoc,
     fixtureId: fixture.id, timeoutSec: opts.timeoutSec, baseSignal: ac.signal,
   })
   observed.landed = diffSnapshots(before, snapshot(root))
@@ -198,7 +198,7 @@ async function runDryRun(opts, entries, prices, cfg, ac, bases) {
     materialize(root, fixture.sandboxFiles)
     const parent = buildProbeParent({ cwd: root, config: { agent: { subagentTurns: opts.maxTurns } }, model: entries[0].model })
     installProbeProvider(parent, probeProviderEntry({ entry: entries[0], user: null, maxTokens: opts.maxTokens }).providerEntry)
-    const { facts } = await assemblyLeg({ parent, model: `${entries[0].provider}:${entries[0].model}`, batchDoc: fixture.batchDoc, taskBookParams: fixture.taskBookParams })
+    const { facts } = await assemblyLeg({ parent, model: `${entries[0].provider}:${entries[0].model}`, batchDoc: fixture.batchDoc })
     const bad = Object.entries(facts).filter(([k, v]) => k !== "relayPrefix" && v !== true).map(([k]) => k)
     if (bad.length > 0) throw new Error(`dry-run 装配腿（${fid}）断言失败：${bad.join(", ")}`)
     console.log(`[dry-run] 装配腿 ${fid}：异步形 ✓ · notify_parent ✓ · eng-designer 人格 ✓ · batchDoc 绑定 ✓（${facts.relayPrefix}）`)

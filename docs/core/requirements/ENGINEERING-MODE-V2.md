@@ -427,10 +427,10 @@ v2 把纪律从「文字」变成「机器」——**能靠结构拦的，就不
 
 ### 8.2 委派治理
 
-「该不该派 / 派什么 / 派出去怎么干」有门槛：小改父侧自做（判据句）· 派单任务书 = 四项核心（`goal`/`knownFacts`/`acceptance`/`reportFormat`）+ 第五项按角色（工程角色 = `designPoints` ∥ 其它 = `scope`——缺任一即拒）· `round` 仅 eng 两角色必带 · 禁「全量扫 X」。**结构**：门槛 + 结构化参数。
+「该不该派 / 派什么 / 派出去怎么干」有门槛：小改父侧自做（判据句）· **工程角色（eng-coder / eng-designer）的任务书 = 批次档 §2**（零任务书文本参数——自由文本参数传入即拒并点名；§2 不够厚 ⇒ 打回，没有第二通道）· 非工程角色（explore / plan / coder）任务书 = 四项核心（`goal`/`knownFacts`/`acceptance`/`reportFormat`）+ `scope`（缺任一即拒）· `round` 仅 eng 两角色必带 · 禁「全量扫 X」。**结构**：门槛 + 单通道。
 
 **工具面自解释**：结构化的约束要「用之前就能看到」，不能靠撞门来学。
-- **四项核心 + 第五项按角色 + `round` 要可见**：派单任务书的参数（四项核心 `goal`/`knownFacts`/`acceptance`/`reportFormat`；工程角色 `designPoints` ∥ explore/plan/coder `scope`；`round` = eng 两角色）必须在 `thincoder-core/tool-docs/subagent.md` 里写明，中文标签或英文等价形都行。机械门按 `TASK_BOOK_PARAMS` 逐项判存在 / 类型 / 非空——不读内容。
+- **任务书通道要可见**：工程角色 = 批次档 §2（零任务书文本参数，自由文本参数点名拒收）；非工程角色（explore/plan/coder）= 四项核心（`goal`/`knownFacts`/`acceptance`/`reportFormat`）+ `scope`；`round` = eng 两角色必带——这些必须在 `thincoder-core/tool-docs/subagent.md` 里写明，中文标签或英文等价形都行。机械门按参数面逐项判存在 / 类型 / 非空——不读内容。
 - **档头要能填**：`batch` create 增加两个可选参数，`ledger`（台账编号）和 `board`（板块），建档时就把 `> 台账 = …` 这行填上；没给的话，回执里说清楚怎么补。
 - **占位要能辨**：死占位扫描要分得清「占位没填」和「正文里引用了占位」。这条是自己踩出来的，讨论正文引到字面就被误杀。判据由设计定，不许放松成泛扫。
 - 边界：只补可见性、可填性、可辨性这三样；门禁的标记集字面不动，判据修改只限「怎么区分没填和引用」；不加新工具。
