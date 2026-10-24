@@ -192,7 +192,8 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **The gate** (closeout, parent side): one `test` run, all green.
 - **Iteration = unit tests only**: verify **only your own change** — run the targeted unit tests for the changed face (single file / relevant subset); another batch's files are gone at its closeout, and re-running them multiplies verification cost by the number of rounds.
 - **Integration tests = the release gate, not a work rhythm**: they run **once at closeout, parent side** — outside the eng-coder chain.
-- **An acceptance criterion names the changed-face unit test file (`node --test <file>`), or a one-off reading when no runnable face exists, never a full-suite run**: the full suite is the parent-side closeout gate — the integration half is reported in the closeout line, not run here.
+- **An acceptance criterion names the changed-face unit test file (`node --test <file>`), or — when the change has no runnable test — the check you actually ran and its result, never a full-suite run**: the full suite is the parent-side closeout gate —
+  the integration half is reported in the closeout line, not run here.
   Why: written into a batch, the suite runs every round — a release gate turned into a round cost, and nothing new is proven by running it again.
 - **A missing integration suite is a debt, not a steady state**: an empty set passes nothing — the closeout reports the count against the window (`0 / 50–100`) and books a ledger row for each integration suite this project is missing.
   Each row is booked once, at the first closeout that reports that set empty; later batches do not re-book it while the debt stands.
