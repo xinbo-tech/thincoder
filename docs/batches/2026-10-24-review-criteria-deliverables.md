@@ -121,4 +121,58 @@ VERDICT: pass
 
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
+
+**实施完成**（eng-coder · 2026-10-24）
+
+**落点**：`thincoder-core/prompts/advisor-design.md:52-55`——`## Review Criteria` 第 11 条（`:48-51`）之后、`## Output Format`（`:57`，改前 `:53`）之前，新增第 12 条 4 行。文案逐字取自 `docs/core/design/ADVISOR-CONVERGENCE.md:449-452`【提示词逐字建议】代码块，零改写。
+
+**落文（逐字，4 行）**：
+
+```text
+12. **Integration-test design**: the design document must contain an integration-test design section — the scenarios this change requires, the business result each asserts, and the business requirement each traces back to.
+    **A design missing that section ⇒ 🔴 (design incomplete)**; a change that alters no business behavior states so, with its reason, in that section.
+    **A reason that is not "this change alters no business behavior" does not stand** — e.g. the 50–100 case window being full ⇒ still 🔴.
+    **Why**: integration tests are the only acceptance run that starts from a user-visible entry, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves the change with no acceptance at all.
+```
+
+**验收自检**：
+
+| # | 验收 | 读数 | 结论 |
+|---|---|---|---|
+| ① | 第 12 条逐字在位 | 与 `docs/core/design/ADVISOR-CONVERGENCE.md:449-452` 四行逐字比对 = `true`（逐字读核对，非散文锚机检） | ✅ |
+| ② | `>300` 字符行 = 0 | 全档 136 行，最长 290 字符（`:33`，既有第 7 条）；新增 4 行 = 222 / 149 / 137 / 242 | ✅ |
+| ③ | 既有 11 条逐字不变 | `git diff` = +4 / −0；`## Output Format` 由 `:53` 顺移 `:57` | ✅ |
+| ④ | 落点位置 | `:51` 第 11 条末行 → `:52-55` 第 12 条 → `:56` 空行 → `:57 ## Output Format` | ✅ |
+
+**验证读数**：
+
+- `node test/run.mjs`（`thincoder-core`）= tests 33 · pass 33 · fail 0。
+- `doc_check(mode:"gate")`（`target` = `D:\teamcode\thincoder`，`docs` = `["thincoder-core/prompts/advisor-design.md"]`）= `DOC-CHECK GATE: PASS`（1 档 0 命中）。
+- 装载面：`loadAdvisorPrompt("advisor-design.md")` = 14710 字符 / 136 行，第 12 条读回在第 52 行。
+
+**决策披露**：
+
+| # | 决策 | 理由 |
+|---|---|---|
+| 1 | 只改 1 档、只增 4 行 | 派单边界：不改既有 11 条（含 6b）、不动 `## Output Format`、不改设计档；`git status` 仅本档改动 |
+| 2 | 未改 A-AC18「待落笔」 | 设计档已过评审、处冻结面，派单明禁；改标日期归设计席（见上抛 ①） |
+| 3 | 未新增集成测试用例 | 改动 = 评审判据文本（过程面），无用户可见入口的业务行为变化；验证面 = 逐字读核对 + doc-check gate |
+| 4 | 未动 `.thincoder/advisor.md` ∥ `PROMPT-SYSTEM.md` ∥ `persona-eng-designer.md` | 均不在本批文件表；`.thincoder/advisor.md` 且在本仓之外（写外仓 = 越界）——三项移交父侧（见上抛 ②③④） |
+
+**内部探索偏差审计**（1 轮 · 只读子代理）：终端状态 `clean`——部分实现 / 静默简化 / 档漂移 / 清单外改动四类偏差均无。审计侧无 git 工具，AC ③④ 以位移算术代验；本席随后自取 `git diff`（+4 / −0）与 `git status` 补齐，残留已消。
+
+**内部 advisor 代码评审**（1 轮 · `type:"code"`）：`VERDICT: pass`——6 条（🟡 3 · 🔵 3），无 🔴。处置：③号（§5 空缺）由本段补写闭环；①号（A-AC18 状态）∥ ②号（工作区判据面）∥ ④号（设计侧措辞）∥ ⑤号（提示词面登记 / 计数）∥ ⑥号（门禁读数）均在本笔写权之外，逐条移交父侧、未代改。
+
+**修正轮**：0（代码面无需修正；本轮唯一补笔 = 本段 §5）。
+
+**终端状态**：`clean`。
+
+**上抛（父侧）**：
+
+- ①【知会】`docs/core/design/ADVISOR-CONVERGENCE.md:402` A-AC18 仍读「**待落笔**（该档现止第 11 条 `:48`）」——第 12 条已在盘（`:52-55`），该行状态与坐标均已过期；改标「已落笔（EN 在盘——2026-10-24）」归设计席。
+- ②【待裁】`.thincoder/advisor.md` 工作区级判据（设计维度 `:23-28` 共 6 条）无「集成测试设计段」；经 `thincoder-core/advisor/history.mjs:53-58` → `thincoder-core/advisor/messages.mjs:239-241` 以 `## Review Criteria` 块注入评审用户消息 ⇒ cwd = `D:\teamcode` 时评审席仍见一份不问该问题的判据面。写权在仓外，本笔未动。
+- ③【知会】`docs/core/design/PROMPT-SYSTEM.md:2491` 仍读「设计评审 11 条」；本笔无 D-PS 登记行（先例 §6.46 ∥ §6.47）。计数 sweep 由父侧收口裁定。
+- ④【知会】`thincoder-core/prompts/persona-eng-designer.md:134` 义务面仍用 `the scenario table this change earns`，判据面已用 `requires`（`:52`）——同件两词，待父侧裁是否另起一笔对齐。
+- ⑤【知会】本批 §2 记的 `doc_check` ERROR 与 §3 的 `>300` 行命中（`:77`，304 字符，评审席笔、非本席面）：本席按显式 `target` 直调 `doc_check(mode:"gate")` 得 PASS（1 档 0 命中）；`batch` 收口门若仍报 ERROR 属引擎版本态，非文档命中，须重启复跑。
+
 ## §6 验证与收口（父代理）

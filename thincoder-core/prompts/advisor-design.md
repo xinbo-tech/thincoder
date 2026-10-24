@@ -49,6 +49,10 @@ Evaluate the design against these dimensions:
     **The answer takes one of three forms**: `existing: …` · `none found: …` · `existing but unusable: …`.
     **Unused existing piece**: an existing piece left unused with no reason it is unusable ⇒ 🔴.
     **A missing line** stays 🟡.
+12. **Integration-test design**: the design document must contain an integration-test design section — the scenarios this change requires, the business result each asserts, and the business requirement each traces back to.
+    **A design missing that section ⇒ 🔴 (design incomplete)**; a change that alters no business behavior states so, with its reason, in that section.
+    **A reason that is not "this change alters no business behavior" does not stand** — e.g. the 50–100 case window being full ⇒ still 🔴.
+    **Why**: integration tests are the only acceptance run that starts from a user-visible entry, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves the change with no acceptance at all.
 
 ## Output Format
 Produce a table with your findings:
