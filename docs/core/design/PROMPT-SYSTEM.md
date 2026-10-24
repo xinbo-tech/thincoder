@@ -2488,7 +2488,7 @@ B3 — `thincoder-core/prompts/discipline-engineering.md`：`- **Assertions ride
 | `thincoder-core/prompts/advisor-round1.md:53` R6 `??` default fallback（测试缝） | 测试接缝的注入默认（`default null → production behavior unchanged`） | 业务兜底 | 该 fallback 的成立理由逐字就是「生产行为不变」= B1 的唯一判据 ⇒ **正是本条要保留的合法形**（K7） |
 | `thincoder-core/prompts/advisor-round1.md:32` 严重度定义（🔴 = 用户明确要求未达成 / 🟡 = 达成但次优） | 评审严重度体系 | R8 两档 | R8 的 🔴 落在「业务规则被绕过」= 需求未达成；🟡 落在「缺证据」= 达成但无法核 ⇒ 与既有定义同轴，不新造严重度 |
 | `thincoder-core/prompts/discipline-engineering.md:103-113` 测试纪律（单元用完即删 ∥ 集成走收口 ∥ 断言走行为形） | 测试层级与体量 | 业务门的失败用例 | B3 只管**内容要求**（失败路径要有用例），层级词与既有条同（单元级 · 随批删）；体量帽沿用既有条 |
-| `thincoder-core/prompts/advisor-design.md`（设计评审 11 条） | 设计态判据 | 代码态判据 | **不同评审面**：设计轮不带 R8（设计文档里没有「兜底分支」可读）；R8 只进代码评审（K3） |
+| `thincoder-core/prompts/advisor-design.md`（设计评审 12 条） | 设计态判据 | 代码态判据 | **不同评审面**：设计轮不带 R8（设计文档里没有「兜底分支」可读）；R8 只进代码评审（K3） |
 
 **用例表（正常 / 边界 / 错误）**：
 
