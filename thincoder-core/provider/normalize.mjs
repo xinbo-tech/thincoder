@@ -4,8 +4,7 @@
  * Split from core.mjs (TODO #2: 420 lines, past the 300 advisory). These two
  * pure functions sanitize the message array right before it hits the wire;
  * no dependency on chat()/retry logic. core.mjs re-exports them so
- * provider/index.mjs and tool-pairing.test.mjs keep their import paths.
- * The caller passes the spec (providerSpec from core.mjs — provider-aware).
+ * provider/index.mjs keeps its import paths.
  */
 
 const RASTER_IMAGE_URL = /^data:image\/(png|jpe?g|gif|webp);base64,/

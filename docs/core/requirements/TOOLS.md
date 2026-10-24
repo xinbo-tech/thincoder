@@ -230,7 +230,7 @@ thincoder 自身的 CLI / TUI **不定义**本能力——它只是其中一个�
 | **W1** | 作为用户，我配了 DeepSeek 渠道就**该自动用上**，不想再填第二把 key | 资格 = `providers[]` 中 baseURL host = `api.deepseek.com` ∧ apiKey 非空 ⇒ `websearch` / `fetch` 自动走 DeepSeek 后端；零新增配置；结果标源（`[deepseek]`） |
 | **W2** | 作为 agent，我想要**结构化可判断的搜索结果** | 渲染以 `summary` 为主（模型阅读面），附 `date` ∥ `authority` ∥ `rerank_score`；`limit` → `count`（**工具面上限 20**——`web.mjs` 夹取零改；`< 1` 按 1 发；上游 1–50 能力 = 余量）；运算符原样透传；`need_content` 缺省 false（正文按需走 fetch） |
 | **W3** | 作为 agent，我想要**抓取直接得 Markdown 正文** | `fetch(url)` ⇒ `/v1/tools/fetch` ⇒ title + Markdown；**私网 / 元数据 URL 一律不发送**（沿用现 SSRF 门）；403（安全策略）/ 404（无可提取内容）/ 429 / 5xx ⇒ 回落本地直取 |
-| **W4** | 作为用户，我不接受**搜索工具因后端挂了而整体失败** | 软着陆：401 / 402 / 403 / 404 ⇒ 本会话**熔断** DeepSeek 后端（不再反复烧请求）、回落 Tavily → Bing（fetch：本地直取）；408 / 429 / 5xx ⇒ 退避重试一次后回落；任何路径工具调用不因后端失败而失败（有兜底） |
+| **W4** | 作为用户，我不接受**搜索工具因后端挂了而整体失败** | 软着陆：**401 / 402 / 403**（凭据 ∥ 计费 ∥ 策略类拒绝）⇒ 本会话**熔断** DeepSeek 后端、回落 Tavily → Bing（fetch：本地直取）；熔断**限时 10 分钟**，到期自动重新放行（改完 key 不必重启会话）。**404 不熔断**——404 = 本次抓取的目标页面不存在（W3 已判为逐 URL 条件），不是凭据失效；把它算成熔断会让一次抓空连带停掉整个搜索。408 / 429 / 5xx ⇒ 退避重试一次后回落；任何路径工具调用不因后端失败而失败（有兜底） |
 | **W5** | 作为用户，我想**关掉它**用回原路径 | 显式逃生口：`websearch.backend` / `fetch.backend` ∈ {`auto`, `local`}（缺省 `auto`；`local` = 跳过 DeepSeek）；无该键 ⇒ auto |
 | **W6** | 作为维护者，我要**文档与描述面同步** | 工具描述（模型可见：运算符可用面 ∥ 结果标注含义）· CONFIG / TOOLS 设计档 · 本档 F6 与 §4.4 边界随改（同拍） |
 
@@ -251,4 +251,4 @@ thincoder 自身的 CLI / TUI **不定义**本能力——它只是其中一个�
 - **不做费用面板 / 预算闸**；**不改** Tavily / Bing 语义；**不动** MCP 搜索面（工具观不变：MCP 搜索仍为首选，`websearch` 为后备）。
 - **不跨端各写一份**——核内单实现（CLI / VSC / 桌面 / server 会话同源）。
 
-**验收方向**：① 仅配 DeepSeek 预置渠道 ⇒ `websearch` 结果走 DeepSeek（含日期 ∥ 权威度 ∥ rerank 标）；② `fetch` 取一篇公开网页得 title + Markdown 正文；③ 无 DeepSeek 渠道 ⇒ 行为逐字零变（对照快照）；④ 401 / 404 腿 ⇒ 熔断回落且工具调用成功；⑤ 私网 URL ⇒ 拒发；⑥ 成功调用日志一行（`$0.75 / 千次` 口径）；⑦ `npm test` 绿。
+**验收方向**：① 仅配 DeepSeek 预置渠道 ⇒ `websearch` 结果走 DeepSeek（含日期 ∥ 权威度 ∥ rerank 标）；② `fetch` 取一篇公开网页得 title + Markdown 正文；③ 无 DeepSeek 渠道 ⇒ 行为逐字零变（对照快照）；④ 401 腿 ⇒ 熔断回落且 10 分钟后自动解封；404 腿 ⇒ 仅本次回落、**不熔断**（紧随其后 search 仍发 DeepSeek）；⑤ 私网 URL ⇒ 拒发；⑥ 成功调用日志一行（`$0.75 / 千次` 口径）；⑦ `npm test` 绿。
