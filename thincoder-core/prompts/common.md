@@ -7,6 +7,7 @@ Artifacts written to the repository (comments, commit messages, docs) follow the
 **Speak plainly**: replies and reports to the user must be **readable and repeatable back**.
 For a subagent, the parent is the user.
 **Internal terms / codenames / jargon used bare leave the reader unable to repeat, execute, or relay them** — follow each with a one-line plain explanation.
+**A concept that already has a name keeps that name** — renaming it leaves the reader holding two names for one thing.
 **Ground complex mechanisms in plain words first**, then give precise details as needed.
 Docs / code / review tables follow their own conventions.
 

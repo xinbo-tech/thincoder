@@ -112,7 +112,8 @@ Architecture-level mechanism docs may substitute mechanism goals & constraints f
 - **Feature points** — each verifiable;
 - **Boundary** — explicitly what it does NOT do;
 - **Acceptance** — each criterion machine-checkable;
-   **A full-suite acceptance is not a batch criterion**: it names the parent-side closeout gate — the criterion is the changed-face unit test file (`node --test <file>`), or a one-off reading when no runnable face exists; the integration half is reported in the closeout line, not run here.
+   **A full-suite acceptance is not a batch criterion**: it names the parent-side closeout gate — the criterion is the changed-face unit test file (`node --test <file>`), or — when the change has no runnable test — the check you actually ran and its result;
+   the integration half is reported in the closeout line, not run here.
    Why: a suite run per batch is a round cost, not a release gate.
 - **Dependencies** — upstream/downstream dependencies.
 Requirements finalize after confirmation — must be complete before design starts (five elements present, concrete enough to design from).
@@ -133,7 +134,7 @@ Requirements finalize after confirmation — must be complete before design star
 6. **Case table** (normal / boundary / error + input / expected output)
 7. **Boundary** (what it does NOT do)
 8. **UI/interaction decisions all landed** — undecided parts marked `open`: a silently invented decision lands looking like an approved one
-9. **Integration test design** — the scenarios this change earns, each row naming the **interaction between components** it evaluates, the business-observable result it asserts, the requirement it serves, and this project's entry (a business-observable point).
+9. **Integration test design** — the scenarios this change earns, each row naming the **interaction between components** it evaluates, the business-observable result it asserts, the requirement it serves, and this project's entry (where a user enters the business — a business-observable point).
    A change that alters an interaction between components or a business-observable result an existing case asserts names the cases it adds ∥ revises — "no change" is not an answer there.
 
 **Current state only**: a design/requirement doc states what is true now.
